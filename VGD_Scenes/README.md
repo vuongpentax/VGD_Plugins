@@ -1,6 +1,15 @@
-# VGD Scenes 1.3.0 — SketchUp 2022–2026.2
+# VGD Scenes 1.3.1 — SketchUp 2022–2026.2
 
 Plugin tạo view đối tượng, mặt cắt tùy chỉnh, quản lý scene và xuất ảnh/PDF. Thương hiệu VGD, giao diện sáng/tối dùng bảng màu nâu, trắng và than theo theme T+.
+
+### Luồng làm việc mới (1.3.1)
+
+1. **Tạo view**: chọn góc nhìn hoặc nhánh Mặt cắt. Cài đặt nguồn/đặt tên thu gọn. Tạo xong tự chuyển sang bước 2 và đánh dấu các scene vừa tạo.
+2. **Chọn scene**: đánh dấu, mở scene và sắp xếp. Mỗi dòng vẫn có rộng/cao/tỷ lệ/lề; nút **⋯** chứa Đổi tên/Lưu view. Chọn nhóm, chỉnh hàng loạt, cập nhật nguồn/xóa và chuyển scene giữa file nằm trong các mục mở khi cần.
+3. **Canh view**: chọn scene đang chỉnh ngay trên đầu, đặt khung và preset; mở thêm FOV/canh trục hoặc cao độ nếu cần. **Update view** luôn ở chân bảng. Khung tự lưu và camera chỉ lưu khi Update như bản 1.3.0.
+4. **Xuất file**: xem bộ scene và kích thước sau scale, chọn định dạng/scale/thư mục ngày rồi xuất. Có thể bỏ qua bước canh nếu scene đã sẵn sàng. Công cụ chuẩn bị SKP nằm trong mục thu gọn riêng.
+
+Giữ nguyên màu, font và theme sáng/tối. Chỉ tổ chức lại điều hướng, nhóm điều khiển và phần tóm tắt đầu ra; engine tạo/cắt/lưu camera/xuất file giữ nguyên.
 
 ### Khung tự lưu và camera xem trước (1.3.0)
 
@@ -25,6 +34,7 @@ Kiểm thử hồi quy mới đã qua Ruby 2.7.2 DLL (API giả lập), WASM 3.2
 - Lượt cài 1.2.1 ngày 03/10/2026: 17 file khớp runtime; **7.994 file plugin khác không đổi**. Backup: `outputs/install_20261003_183241_486/`.
 - Lượt cài 1.2.2 ngày 03/10/2026: 17 file khớp runtime; **8.011 file plugin khác không đổi**. Backup: `outputs/install_20261003_194856_747/`.
 - Lượt cài 1.3.0 ngày 04/10/2026: 17 file khớp runtime; **19.882 file plugin khác không đổi**. Backup: `outputs/install_20261004_010855_294/`. Không tắt hoặc đổi loader plugin khác.
+- Lượt cài 1.3.1 ngày 04/10/2026: 17 file khớp runtime; **19.881 file plugin khác không đổi**. Backup: `outputs/install_20261004_015555_095/`.
 - Báo cáo và bản sao loader cũ nằm trong `outputs/install_*/` trên máy đã cài, không đưa lên GitHub.
 
 Hãy lưu công việc và khởi động lại SketchUp khi thuận tiện. Mở **Extensions → VGD Scenes → VGD Scenes · Bảng điều khiển**. Nếu muốn toolbar, chọn **Hiện thanh công cụ VGD Scenes** trong menu này.
@@ -117,7 +127,7 @@ cd VGD_Plugins
 
 Kho công khai; cần quyền ghi khi push. Mở repository trong Codex và yêu cầu tiếp tục `VGD_Scenes`, đọc `CODEX_HANDOFF.md` trước. Nếu đã clone, chạy `git pull --ff-only` khi không có thay đổi chưa lưu.
 
-Để cài trên máy mới, dùng SketchUp **Window → Extension Manager → Install Extension**, chọn `VGD_Scenes/VGD_Scenes_v1.3.0.rbz`. Hoặc chạy script giới hạn phạm vi:
+Để cài trên máy mới, dùng SketchUp **Window → Extension Manager → Install Extension**, chọn `VGD_Scenes/VGD_Scenes_v1.3.1.rbz`. Hoặc chạy script giới hạn phạm vi:
 
 ```powershell
 .\VGD_Scenes\dev\deploy.ps1 -VerifyOnly

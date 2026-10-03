@@ -5,6 +5,7 @@ const assert=(value,message)=>{if(!value)throw Error(message);};
  const browser=await chromium.launch({headless:true,executablePath:process.env.VGD_BROWSER_EXECUTABLE});
  try {
   const page=await browser.newPage({viewport:{width:640,height:780}});
+  require('./ui_navigation.cjs')(page);
   const errors=[];page.on('pageerror',error=>errors.push(error.message));
   await page.addInitScript(()=>{window.calls=[];window.sketchup={ready(){},action(value){calls.push(JSON.parse(value));}};});
   await page.goto(pathToFileURL(path.resolve(__dirname,'../runtime/vgd_scenes/dialog.html')).href);

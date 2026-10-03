@@ -9,7 +9,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let dragging = null, dropMarker = null, dragY = 0, scrollFrame = null, navigationId = null;
   let savedFrameSignature = null, presetSignature = null;
   let frameFailureEpoch = 0;
-  const primaryActions = {views:$('generate'),sections:$('section'),export:$('exportButton')};
+  let currentTab = 'views', pendingCreate = false, composeSignature = null;
+  const primaryActions = {views:$('generate'),sections:$('section'),scenes:$('goCompose'),compose:$('updateCurrentView'),export:$('exportButton')};
   Object.values(primaryActions).forEach(button => $('primarySlot').append(button));
   Object.entries(primaryActions).forEach(([name,button]) => {button.hidden=name!=='views';});
   let theme = 'light';
@@ -50,19 +51,49 @@ document.addEventListener('DOMContentLoaded', () => {
     $('deletePreset').disabled = !context || busy || !$('namedPreset').value;
     $('removeAllFrames').disabled = !context || busy || context.editing || !(context.frame_cleanup && context.frame_cleanup.count || context.frame_active);
     $('restoreAllFrames').disabled = !context || busy || context.editing || !(context.frame_cleanup && context.frame_cleanup.restore);
+    $('goCompose').disabled = !context || busy || !context.scenes.length;
+    $('composeScene').disabled = !context || busy || context.editing || !context.scenes.length;
+    $('flowNext').disabled = !context || busy || (['scenes','compose'].includes(currentTab) ? !selected.size : !context.scenes.length);
+    renderExportSummary();
   }
   function send(action, extra = {}, lock = true) {
     if (!context || (busy && !['cancel','refresh'].includes(action))) return;
     if (!window.sketchup) { status('Bản xem trước: thao tác thực hiện trong SketchUp.'); return; }
+    if (action==='generate' || action==='section') pendingCreate=true;
     if (lock) { busy = true; enable(); }
     window.sketchup.action(JSON.stringify({ action, model: context.model, ...extra }));
   }
   function runSettings(action) { try { const opts = settings(); if (action === 'generate' && !opts.views.length) throw Error('Chọn ít nhất một góc nhìn.'); if (action === 'section' && !opts.section_name.trim()) throw Error('Điền tên mặt cắt.'); if (action === 'section' && opts.section_axis === 'CUSTOM' && ![opts.normal_x,opts.normal_y,opts.normal_z].some(n => Math.abs(n)>1e-9)) throw Error('Vector pháp tuyến không được bằng 0.'); send(action, { settings: opts }); } catch (error) { status(error.message, true); } }
   function tab(name) {
+    currentTab=name;
     document.querySelectorAll('.tab').forEach(panel => { panel.hidden = panel.id !== name; });
-    document.querySelectorAll('[data-tab]').forEach(button => button.setAttribute('aria-selected', String(button.dataset.tab === name)));
+    document.querySelectorAll('[data-tab]').forEach(button => button.setAttribute('aria-selected', String(button.dataset.tab === (name==='sections'?'views':name))));
+    $('createModes').hidden=!['views','sections'].includes(name);
+    document.querySelectorAll('[data-create]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.create===name)));
     document.querySelector('main').scrollTop = 0;
     Object.entries(primaryActions).forEach(([key,button]) => {button.hidden=key!==name;});
+    $('flowBack').hidden=['views','sections'].includes(name);
+    $('flowNext').hidden=name==='export';
+    $('flowNext').textContent=name==='compose'?'Tiếp: Xuất file →':name==='scenes'?'Bỏ qua canh view → Xuất':'Đã có scene →';
+    $('flowBack').textContent=name==='export'?'← Canh view':name==='compose'?'← Chọn scene':'← Tạo view';
+    enable();
+  }
+  function renderExportSummary() {
+    const list=$('exportSummary');list.replaceChildren();
+    if(!context) return;
+    const pages=context.scenes.filter(scene=>selected.has(scene.id));
+    if(!pages.length){list.textContent='Chưa có scene được đánh dấu. Quay lại bước 2 để chọn.';return;}
+    const scale=Number($('export_scale').value),validScale=Number.isFinite(scale)&&scale>0;
+    const title=document.createElement('h2');title.textContent='Bộ scene sẽ xuất'+(validScale?' · scale '+scale+'×':'');list.append(title);
+    pages.slice(0,4).forEach(scene=>{const row=document.createElement('div');row.className='export-summary-row';const name=document.createElement('span');name.textContent=scene.name;const size=document.createElement('small');size.textContent=scene.frame&&validScale?Math.round(scene.frame.width*scale)+' × '+Math.round(scene.frame.height*scale)+' px':'';row.append(name,size);list.append(row);});
+    if(pages.length>4){const more=document.createElement('small');more.textContent='Và '+(pages.length-4)+' scene khác, theo thứ tự ở bước 2.';list.append(more);}
+  }
+  function composeScenes() {
+    if(!context || !context.scenes.length) return;
+    const current=context.scenes.find(scene=>scene.selected);
+    const target=context.scenes.find(scene=>selected.has(scene.id)) || current || context.scenes[0];
+    tab('compose');
+    if(!current || selected.size && !selected.has(current.id)) send('visit',{id:target.id});
   }
   function filtered() { if (!context) return []; const query = $('search').value.toLocaleLowerCase(); return context.scenes.filter(scene => (!$('onlyVGD').checked || scene.owned || scene.imported) && scene.name.toLocaleLowerCase().includes(query)); }
   function modal(title, text, callback, value) {
@@ -102,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const focusedRow = active && active.closest('.scene-row');
     const focusedId = focusedRow && focusedRow.dataset.id;
     const focusedIndex = focusedRow ? [...focusedRow.children].indexOf(active) : -1;
+    const openMenus=new Set([...list.querySelectorAll('.row-menu[open]')].map(menu=>menu.closest('.scene-row').dataset.id));
     list.replaceChildren(); const scenes = filtered();
     if (!scenes.length) { const empty = document.createElement('div'); empty.className = 'empty'; empty.textContent = context && context.scenes.length ? 'Không có scene khớp bộ lọc.' : 'Chưa có scene. Tạo ở mục Góc nhìn hoặc Mặt cắt.'; list.append(empty); }
     for (const scene of scenes) {
@@ -121,7 +153,10 @@ document.addEventListener('DOMContentLoaded', () => {
         dragY = event.clientY; scrollFrame = requestAnimationFrame(scrollDrag);
       });
       grip.addEventListener('dragend',finishDrag);
-      row.append(check,name,badge,rename,capture,grip); list.append(row);
+      const menu=document.createElement('details');menu.className='row-menu';menu.open=openMenus.has(scene.id);
+      const more=document.createElement('summary');more.textContent='⋯';more.setAttribute('aria-label','Thao tác '+scene.name);
+      const actions=document.createElement('div');actions.className='row-menu-actions';actions.append(rename,capture);menu.append(more,actions);
+      row.append(check,name,badge,menu,grip); list.append(row);
       const frame = scene.frame || {width:1920,height:1080,margin:10};
       const fields = document.createElement('div'); fields.className = 'row-frame';
       const inputs = {};
@@ -229,6 +264,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.activeElement!==$('parallelHeight') && data.camera.height_mm != null) $('parallelHeight').value=Math.round(data.camera.height_mm*1000)/1000;
       }
       renderPresets();
+      const sceneSignature=JSON.stringify([data.model,data.scenes.map(scene=>[scene.id,scene.name]),currentId(data)]);
+      if(sceneSignature!==composeSignature){composeSignature=sceneSignature;$('composeScene').replaceChildren(new Option('Chọn scene để canh…',''));data.scenes.forEach(scene=>$('composeScene').add(new Option(scene.name,scene.id)));$('composeScene').value=currentId(data)||'';}
+      const composing=data.scenes.find(scene=>scene.selected);
+      $('composeContext').textContent=composing?'Đang chỉnh riêng scene này · khung tự lưu, camera cần Update view.':'Chọn một scene trong danh sách trên để bắt đầu.';
       cameraMode();
       $('selection').textContent = data.selection ? data.selection + ' đối tượng đang chọn' + (data.editing ? ' · đang edit group' : '') : 'Chọn Group / Component trong model';
       $('modelTitle').textContent = data.title; $('sceneCount').textContent = String(data.scenes.length);
@@ -241,6 +280,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!(data && data.success)) { savedFrameSignature=null; frameFailureEpoch++; }
       if (!(data && data.success)) navigationId = context && (context.scenes.find(scene=>scene.selected) || {}).id || null;
       if (data && data.ids) selected = new Set(data.ids);
+      if(pendingCreate && data && data.success && data.ids){pendingCreate=false;tab('scenes');}
+      if(!(data && data.success)) pendingCreate=false;
       enable();
     } else if (event === 'started') {
       busy = true; lastPath = null; $('progress').hidden = false; $('progress').value = 0; $('progress').max = data.total; status('Đang xuất ' + data.total + ' scene…'); enable();
@@ -253,6 +294,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }};
   document.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click', () => tab(button.dataset.tab)));
+  document.querySelectorAll('[data-create]').forEach(button=>button.addEventListener('click',()=>tab(button.dataset.create)));
+  $('flowBack').addEventListener('click',()=>tab(currentTab==='export'?'compose':currentTab==='compose'?'scenes':'views'));
+  $('flowNext').addEventListener('click',()=>tab(['views','sections'].includes(currentTab)?'scenes':'export'));
+  $('goCompose').addEventListener('click',composeScenes);
+  $('composeScene').addEventListener('change',()=>{if($('composeScene').value)send('visit',{id:$('composeScene').value});});
   document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => button.setAttribute('aria-pressed',String(button.getAttribute('aria-pressed') !== 'true'))));
   function preset(views) { document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed',String(views.includes(button.dataset.view)))); }
   $('preset4').addEventListener('click', () => preset(['ISO','TOP','FRONT','RIGHT'])); $('preset6').addEventListener('click', () => preset(['ISO','TOP','FRONT','RIGHT','BACK','LEFT'])); $('presetNone').addEventListener('click', () => preset([]));
@@ -265,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('selectAll').addEventListener('click', () => { filtered().forEach(scene => selected.add(scene.id)); render(); }); $('selectNone').addEventListener('click', () => { selected.clear(); render(); });
   $('update').addEventListener('click', () => modal('Cập nhật từ đối tượng','Đổi tên và căn lại ' + selected.size + ' scene VGD theo tên, hình học và thiết lập nguồn đã lưu; không cần chọn lại đối tượng. Bố cục camera chỉnh tay sẽ được thay bằng góc tự động.',() => send('update',{ids:[...selected]})));
   $('delete').addEventListener('click', () => modal('Xóa scene đã chọn','Xóa ' + selected.size + ' scene đã đánh dấu?',() => send('delete',{ids:[...selected]})));
-  $('goExport').addEventListener('click', () => tab('export')); $('exportButton').addEventListener('click', () => { try { send('export',{ids:[...selected],settings:settings()}); } catch (error) { status(error.message,true); } });
+  $('exportButton').addEventListener('click', () => { try { send('export',{ids:[...selected],settings:settings()}); } catch (error) { status(error.message,true); } });
   $('copyScenes').addEventListener('click', () => send('copyScenes',{ids:[...selected]}));
   $('saveScenes').addEventListener('click', () => send('saveScenes',{ids:[...selected],scope:$('sceneScope').value}));
   ['pasteScenes','loadScenes'].forEach(action => $(action).addEventListener('click', () => send(action)));
@@ -278,6 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('cancel').addEventListener('click', () => send('cancel',{},false)); $('refresh').addEventListener('click', () => send('refresh',{},false));
   $('openFolder').addEventListener('click', () => { if (window.sketchup && lastPath) send('openOutput',{path:lastPath},false); });
   $('format').addEventListener('change',showFormat);
+  $('export_scale').addEventListener('input',renderExportSummary);
   const ratios = {'16:9':[1920,1080],'4:3':[1600,1200],'3:4':[1200,1600],'1:1':[1500,1500],'9:16':[1080,1920],'A4_L':[2480,1754],'A4_P':[1754,2480]};
   let ratioDirty = false;
   let lockedAspect = 16/9, lockedRatioText = '16:9';

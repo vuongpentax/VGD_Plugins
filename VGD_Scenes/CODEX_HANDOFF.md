@@ -1,5 +1,15 @@
 # Bàn giao VGD Scenes
 
+## Thay đổi 1.3.1 · tổ chức lại flow, giữ theme
+
+Đã cài SU22 ngày 04/10/2026; backup `outputs/install_20261004_015555_095/`. 17 file runtime khớp nguồn, 19.881 file plugin khác không đổi SHA256, không đổi loader khác. Khởi động lại SU22 để nạp bản mới.
+
+Nav bốn bước `views → scenes → compose → export`. `sections` là nhánh tạo ở bước 1, chọn bằng `data-create`, không phải tab chính. Tạo thành công có IDs sẽ đi bước 2; chọn sẵn IDs trả về. Mỗi bước một primary action ở footer + đường quay lại/tiếp. `goCompose` mở current scene nếu đã thuộc bộ đánh dấu, nếu không mở scene đầu được đánh dấu. Chọn nhóm vẫn không visit.
+
+Khung/preset/camera/cao độ được chuyển khỏi export sang compose; dropdown `composeScene` mở scene theo ID. Export chỉ còn summary kích thước sau scale, định dạng/scale/date folder và mục chuẩn bị SKP. Native details thu gọn source, nhóm tên, batch, transfer, quản lý, camera, cao độ, preset, lưới. Row rename/capture vào menu ⋯, trạng thái mở giữ qua polling. Theme variables/font giữ nguyên.
+
+Backend không đổi ngoài version 1.3.1. Kiểm tra `test_flow_ui.cjs` chạy luồng thật không helper (auto-next, scene chooser, summary scale, one primary, light/dark 640×780 & 460×540). `ui_navigation.cjs` giúp hai bộ UI cũ tìm đúng tab/details sau di chuyển control; không dùng helper trong flow test. Cả ba UI suites đã qua Edge headless. RBZ/deploy vẫn chỉ 17 file Scenes.
+
 ## Thay đổi 1.3.0 · khung tự lưu, camera chỉ Update
 
 Đã cài SU22 ngày 04/10/2026; backup `outputs/install_20261004_010855_294/`. Cả 17 runtime files khớp nguồn và 19.882 file plugin khác giữ nguyên SHA256. Cần khởi động lại SketchUp để nhận bản mới; không sửa model đang mở.

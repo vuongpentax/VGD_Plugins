@@ -1,11 +1,11 @@
 {
   "name": "vgd-scenes-verification",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "private": true,
   "scripts": {
-    "test": "node check_ruby.cjs && node test_ui.cjs && node test_frame_ui.cjs",
+    "test": "node check_ruby.cjs && node test_ui.cjs && node test_frame_ui.cjs && node test_flow_ui.cjs",
     "test:ruby": "node check_ruby.cjs",
-    "test:ui": "node test_ui.cjs && node test_frame_ui.cjs"
+    "test:ui": "node test_ui.cjs && node test_frame_ui.cjs && node test_flow_ui.cjs"
   },
   "devDependencies": {
     "@ruby/3.2-wasm-wasi": "2.10.1",
