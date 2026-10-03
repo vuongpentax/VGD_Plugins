@@ -67,8 +67,9 @@ module VGD
         temporary = File.join(@tmp, format('%04d.%s', @index + 1, extension))
         begin
           frame = @frames[@index]
-          # A live fit/ratio preview must not replace an owned scene's saved camera.
-          camera = Scenes.camera_copy(SceneStore.owned?(page) ? page.camera : @model.active_view.camera)
+          # Opening the already selected page may leave a live preview intact.
+          # Every scene that saves a camera must export that saved composition.
+          camera = Scenes.camera_copy(SceneStore.owned?(page) || page.use_camera? ? page.camera : @model.active_view.camera)
           camera.aspect_ratio = frame['aspect']
           @model.active_view.camera = camera
           @model.active_view.refresh

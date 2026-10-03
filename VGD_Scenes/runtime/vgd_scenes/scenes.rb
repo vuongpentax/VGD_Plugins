@@ -20,8 +20,21 @@ module VGD
         ordered(model).map do |page|
           source = owned?(page) ? metadata(page) : {}
           { id: page.persistent_id.to_s, name: page.name, owned: owned?(page), imported: !page.get_attribute(DICT, 'transfer_origin').nil?,
+            frame: SceneFrame.read(page, Scenes.settings(model)), group: group_name(model, page, source),
             kind: source['kind'], selected: page == model.pages.selected_page }
         end
+      end
+
+      def self.group_name(model, page, source)
+        if source['paths'].is_a?(Array) && !source['paths'].empty?
+          leaf = Geometry.resolve(model, source['paths'].first)[0].last
+          name = leaf.name.to_s.strip
+          name = leaf.definition.name.to_s.strip if name.empty?
+          return name unless name.empty?
+        end
+        page.name.sub(/_(?:ISO|TOP|FRONT|RIGHT|BACK|LEFT|BOTTOM|SEC.*?)(?:_\d+)?\z/i, '')
+      rescue ArgumentError
+        page.name.sub(/_(?:ISO|TOP|FRONT|RIGHT|BACK|LEFT|BOTTOM|SEC.*?)(?:_\d+)?\z/i, '')
       end
 
       def self.ordered(model)

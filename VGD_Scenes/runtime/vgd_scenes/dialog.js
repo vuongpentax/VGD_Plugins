@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
   let context = null, busy = false, selected = new Set(), pendingModal = null, lastPath = null;
   let transfer = null, transferSelected = new Set();
   let dragging = null, dropMarker = null, dragY = 0, scrollFrame = null, navigationId = null;
+  let savedFrameSignature = null, presetSignature = null;
+  let frameFailureEpoch = 0;
   const primaryActions = {views:$('generate'),sections:$('section'),export:$('exportButton')};
   Object.values(primaryActions).forEach(button => $('primarySlot').append(button));
   Object.entries(primaryActions).forEach(([name,button]) => {button.hidden=name!=='views';});
@@ -42,6 +44,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('#transferList input').forEach(input => { input.disabled = busy; });
     document.querySelectorAll('.scene-grip').forEach(button => { button.disabled = !context || busy || !!context.editing; button.draggable = !button.disabled; });
     $('cameraApply').disabled = !context || busy || context.editing || !context.camera || !context.camera.supported;
+    document.querySelectorAll('[data-align],#previewLens').forEach(button => { button.disabled = $('cameraApply').disabled; });
+    $('selectGroup').disabled = !context || busy || !context.scenes.some(scene=>scene.selected);
+    $('updateCurrentView').disabled = !context || busy || context.editing || !context.scenes.some(scene=>scene.selected);
+    $('deletePreset').disabled = !context || busy || !$('namedPreset').value;
     $('removeAllFrames').disabled = !context || busy || context.editing || !(context.frame_cleanup && context.frame_cleanup.count || context.frame_active);
     $('restoreAllFrames').disabled = !context || busy || context.editing || !(context.frame_cleanup && context.frame_cleanup.restore);
   }
@@ -91,13 +97,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   function render() {
     const list = $('sceneList'), active = document.activeElement;
+    // Polling must never replace a field while a dimension is being typed.
+    if (active && list.contains(active) && active.matches('input:not([type=checkbox])') && active.closest('.scene-row').dataset.model===context.model) { enable(); return; }
     const focusedRow = active && active.closest('.scene-row');
     const focusedId = focusedRow && focusedRow.dataset.id;
     const focusedIndex = focusedRow ? [...focusedRow.children].indexOf(active) : -1;
     list.replaceChildren(); const scenes = filtered();
     if (!scenes.length) { const empty = document.createElement('div'); empty.className = 'empty'; empty.textContent = context && context.scenes.length ? 'Không có scene khớp bộ lọc.' : 'Chưa có scene. Tạo ở mục Góc nhìn hoặc Mặt cắt.'; list.append(empty); }
     for (const scene of scenes) {
-      const row = document.createElement('div'); row.className = 'scene-row' + (scene.selected ? ' current' : ''); row.dataset.id = scene.id;
+      const row = document.createElement('div'); row.className = 'scene-row' + (scene.selected ? ' current' : ''); row.dataset.id = scene.id; row.dataset.model=context.model;
       const check = document.createElement('input'); check.type = 'checkbox'; check.checked = selected.has(scene.id); check.setAttribute('aria-label','Chọn ' + scene.name);
       check.addEventListener('change', () => { check.checked ? selected.add(scene.id) : selected.delete(scene.id); enable(); });
       const name = document.createElement('button'); name.className = 'scene-name'; name.textContent = scene.name; name.title = scene.name; name.addEventListener('click', () => { navigationId = scene.id; list.focus({preventScroll:true}); send('visit',{id:scene.id}); });
@@ -114,6 +122,28 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       grip.addEventListener('dragend',finishDrag);
       row.append(check,name,badge,rename,capture,grip); list.append(row);
+      const frame = scene.frame || {width:1920,height:1080,margin:10};
+      const fields = document.createElement('div'); fields.className = 'row-frame';
+      const inputs = {};
+      for (const [key,labelText] of [['width','Rộng px'],['height','Cao px'],['ratio','Tỷ lệ'],['margin','Lề %']]) {
+        const label = document.createElement('label'); label.textContent = labelText;
+        const input = document.createElement('input'); input.type = key==='ratio'?'text':'number'; input.dataset.frameKey = key;
+        input.setAttribute('aria-label',labelText+' · '+scene.name);
+        input.value = key==='ratio'?ratioText(frame.width,frame.height):frame[key];
+        if (key!=='ratio') { input.min = key==='margin'?'0':'100'; input.max = key==='margin'?'100':'12000'; }
+        inputs[key] = input; label.append(input); fields.append(label);
+      }
+      let lastFrame = JSON.stringify(frame);
+      let committedEpoch = frameFailureEpoch;
+      function commitRow(key) { try {
+        if(row.dataset.model!==context.model || busy) return;
+        if (key==='ratio') { const pair = dimensionsForRatio(inputs.ratio.value,Math.max(Number(inputs.width.value),Number(inputs.height.value))); inputs.width.value=pair[0];inputs.height.value=pair[1]; }
+        const value = readFrame(inputs.width,inputs.height,inputs.margin); inputs.ratio.value=ratioText(value.width,value.height);
+        const signature = JSON.stringify(value); if (signature===lastFrame && committedEpoch===frameFailureEpoch) return;
+        lastFrame=signature; committedEpoch=frameFailureEpoch; send('saveFrames',{ids:[scene.id],frame:value},false);
+      } catch(error) { status(error.message,true); } }
+      for (const [key,input] of Object.entries(inputs)) onCommit(input,()=>commitRow(key));
+      row.append(fields);
       if (focusedId === scene.id && focusedIndex >= 0) row.children[focusedIndex].focus({preventScroll:true});
     }
     enable();
@@ -180,16 +210,25 @@ document.addEventListener('DOMContentLoaded', () => {
       const changed = !context || context.model !== data.model;
       const currentId = value => value && value.scenes.find(scene => scene.selected)?.id;
       const frameChanged = changed || currentId(context) !== currentId(data);
+      const frameUpdated = !frameChanged && JSON.stringify(context.current_frame)!==JSON.stringify(data.current_frame);
       if (changed) { selected.clear(); closeModal(); clearTransfer(); lastPath = null; for (const key of settingsKeys) if (data.settings[key] !== undefined) booleans.has(key) ? $(key).checked = data.settings[key] : $(key).value = data.settings[key]; document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed',String(data.settings.views.includes(button.dataset.view)))); }
       context = data; busy = !!data.busy; selected = new Set([...selected].filter(id => data.scenes.some(scene => scene.id === id)));
-      if (frameChanged && data.current_frame) {
+      if ((frameChanged || frameUpdated && !['width','height','margin','ratioInput'].includes(document.activeElement.id)) && data.current_frame) {
         ['width','height','margin'].forEach(key => { $(key).value = data.current_frame[key]; });
       }
-      if (frameChanged) syncRatio();
+      if (frameChanged || frameUpdated && !['width','height','margin','ratioInput'].includes(document.activeElement.id)) syncRatio();
+      if (frameChanged) savedFrameSignature = data.current_frame ? JSON.stringify([data.model,currentId(data),data.current_frame]) : null;
       if (frameChanged) navigationId = currentId(data) || null;
       if (changed) { $('cameraMode').value = 'absolute'; $('cameraFloor').value = '0'; $('cameraHeight').value = '1500'; $('cameraKeep').checked = true; }
       if (frameChanged && data.camera) $('cameraZ').value = Math.round(data.camera.eye_z_mm*100)/100;
       if (data.camera) $('cameraCurrent').textContent = 'Z mắt hiện tại: ' + (Math.round(data.camera.eye_z_mm*100)/100).toLocaleString('vi-VN') + ' mm' + (data.camera.supported ? '' : ' · Hai điểm / Match Photo chưa hỗ trợ');
+      if (data.camera) {
+        $('fovField').hidden=!data.camera.perspective; $('parallelField').hidden=!!data.camera.perspective;
+        $('fovAxis').textContent=data.camera.perspective ? 'FOV API SketchUp · đo theo '+(data.camera.fov_vertical?'chiều dọc':'chiều ngang')+' của khung hiện tại. 1–120°. Chỉ xem trước.' : 'Parallel Projection dùng chiều cao vùng nhìn, không dùng FOV.';
+        if (document.activeElement!==$('cameraFov') && data.camera.fov != null) $('cameraFov').value=Math.round(data.camera.fov*1000000)/1000000;
+        if (document.activeElement!==$('parallelHeight') && data.camera.height_mm != null) $('parallelHeight').value=Math.round(data.camera.height_mm*1000)/1000;
+      }
+      renderPresets();
       cameraMode();
       $('selection').textContent = data.selection ? data.selection + ' đối tượng đang chọn' + (data.editing ? ' · đang edit group' : '') : 'Chọn Group / Component trong model';
       $('modelTitle').textContent = data.title; $('sceneCount').textContent = String(data.scenes.length);
@@ -199,6 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (event === 'frame' && data) { frameStatus(!!data.frame_active, !!data.grid_active);
     } else if (event === 'result') {
       busy = false; status(data && data.message, !(data && (data.success || data.cancelled)));
+      if (!(data && data.success)) { savedFrameSignature=null; frameFailureEpoch++; }
       if (!(data && data.success)) navigationId = context && (context.scenes.find(scene=>scene.selected) || {}).id || null;
       if (data && data.ids) selected = new Set(data.ids);
       enable();
@@ -217,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function preset(views) { document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed',String(views.includes(button.dataset.view)))); }
   $('preset4').addEventListener('click', () => preset(['ISO','TOP','FRONT','RIGHT'])); $('preset6').addEventListener('click', () => preset(['ISO','TOP','FRONT','RIGHT','BACK','LEFT'])); $('presetNone').addEventListener('click', () => preset([]));
   $('generate').addEventListener('click', () => runSettings('generate')); $('section').addEventListener('click', () => runSettings('section'));
-  ['frame','fit'].forEach(action => $(action).addEventListener('click', () => runSettings(action))); $('toggleGrid').addEventListener('click', () => runSettings('grid'));
+  $('frame').addEventListener('click',()=>commitFrame(true)); $('fit').addEventListener('click',()=>runSettings('fit')); $('toggleGrid').addEventListener('click', () => runSettings('grid'));
   $('toggleFrame').addEventListener('click', () => runSettings('toggle_frame'));
   $('section_axis').addEventListener('change', () => { $('customNormal').hidden = $('section_axis').value !== 'CUSTOM'; });
   $('sectionSlider').addEventListener('input', () => { $('section_percent').value = $('sectionSlider').value; }); $('section_percent').addEventListener('input', () => { $('sectionSlider').value = $('section_percent').value; });
@@ -266,14 +306,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if ($('ratio_locked').checked) $('ratioInput').value = lockedRatioText;
   }
   $('ratioInput').addEventListener('input', () => { ratioDirty = true; });
-  $('ratioInput').addEventListener('change', () => { try { applyRatioInput(); } catch(error) { status(error.message,true); } });
-  $('ratioInput').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); try { applyRatioInput(); } catch(error) { status(error.message,true); } } });
-  $('ratio').addEventListener('change', () => { const pair = ratios[$('ratio').value]; if (pair) { $('width').value=pair[0]; $('height').value=pair[1]; syncRatio(); } });
+  onCommit($('ratioInput'),()=>commitFrame());
+  $('ratio').addEventListener('change', () => { const pair = ratios[$('ratio').value]; if (pair) { $('width').value=pair[0]; $('height').value=pair[1]; syncRatio(); commitFrame(); } });
   $('swapRatio').addEventListener('click', () => { try {
     applyRatioInput(); const aspect = lockedAspect, text = lockedRatioText;
     const width = $('width').value; $('width').value = $('height').value; $('height').value = width; syncRatio();
     if ($('ratio_locked').checked) { lockedAspect = 1/aspect; lockedRatioText = text.split(':').reverse().join(':'); $('ratioInput').value = lockedRatioText; }
-    runSettings('preview');
+    commitFrame();
   } catch(error) { status(error.message,true); } });
   $('lockRatio').addEventListener('click', () => { try { applyRatioInput(); $('ratio_locked').checked = !$('ratio_locked').checked; syncRatio(); lockStatus(); } catch(error) { status(error.message,true); } });
   ['width','height'].forEach(key => $(key).addEventListener('input', () => {
@@ -283,6 +322,67 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     syncRatio(!$('ratio_locked').checked);
   }));
+  ['width','height','margin'].forEach(key=>onCommit($(key),()=>commitFrame()));
+
+  function onCommit(input, callback) {
+    input.addEventListener('blur',callback);
+    input.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();callback();}});
+  }
+  function ratioText(width,height) {
+    const gcd=(a,b)=>b?gcd(b,a%b):a, divisor=gcd(Math.round(width),Math.round(height));
+    return Math.round(width)/divisor+':'+Math.round(height)/divisor;
+  }
+  function dimensionsForRatio(text,edge) {
+    const match=text.trim().match(/^(\d+(?:\.\d+)?)\s*[:\/]\s*(\d+(?:\.\d+)?)$/);
+    if(!match || !(Number(match[1])>0 && Number(match[2])>0)) throw Error('Nhập tỷ lệ hợp lệ, ví dụ 3:4.');
+    const aspect=Number(match[1])/Number(match[2]);
+    return aspect>=1?[Math.round(edge),Math.round(edge/aspect)]:[Math.round(edge*aspect),Math.round(edge)];
+  }
+  function readFrame(width,height,margin) {
+    if([width,height,margin].some(input=>!input.value.trim() || !Number.isFinite(Number(input.value)))) throw Error('Nhập đầy đủ rộng, cao và lề.');
+    const value={width:Math.round(Number(width.value)),height:Math.round(Number(height.value)),margin:Number(margin.value)};
+    if(value.width<100 || value.height<100 || value.width>12000 || value.height>12000 || value.width*value.height>64000000) throw Error('Khung: 100–12000 px, tối đa 64 triệu pixel.');
+    if(value.margin<0 || value.margin>100) throw Error('Lề cần nằm trong 0–100%.');
+    return value;
+  }
+  function commitFrame(force=false) { try {
+    if(!context || busy) return;
+    applyRatioInput(); const value=readFrame($('width'),$('height'),$('margin'));
+    const current=context.scenes.find(scene=>scene.selected);
+    const signature=JSON.stringify([context.model,current?.id,value]);
+    if(!force && signature===savedFrameSignature) return;
+    savedFrameSignature=signature;
+    if(current) send('saveFrames',{ids:[current.id],frame:value},false);
+    else send('frame',{settings:{...context.settings,...value}},false);
+  } catch(error) { status(error.message,true); } }
+  function renderPresets() {
+    const signature=JSON.stringify([context.model,context.presets || {}]); if(signature===presetSignature) return;
+    presetSignature=signature;
+    ['namedPreset','batchPreset'].forEach(id=>{const select=$(id),previous=select.value;select.replaceChildren(new Option('Chọn preset…',''));Object.keys(context.presets || {}).sort().forEach(name=>select.add(new Option(name,name)));select.value=previous;});
+  }
+  $('namedPreset').addEventListener('change',()=>{const name=$('namedPreset').value,value=context.presets?.[name];if(value){['width','height','margin'].forEach(key=>$(key).value=value[key]);$('presetName').value=name;syncRatio();commitFrame();}enable();});
+  $('batchPreset').addEventListener('change',()=>{const value=context.presets?.[$('batchPreset').value];if(value){$('batchWidth').value=value.width;$('batchHeight').value=value.height;$('batchMargin').value=value.margin;}});
+  $('savePreset').addEventListener('click',()=>{try {applyRatioInput();const name=$('presetName').value.trim();if(!name) throw Error('Nhập tên preset.');send('framePreset',{name,frame:readFrame($('width'),$('height'),$('margin'))});}catch(error){status(error.message,true);}});
+  $('deletePreset').addEventListener('click',()=>send('framePreset',{name:$('namedPreset').value,delete:true}));
+  $('applyBatchFrame').addEventListener('click',()=>{try {send('saveFrames',{ids:[...selected],frame:readFrame($('batchWidth'),$('batchHeight'),$('batchMargin')),keep_ratio:$('batchKeepRatio').checked});}catch(error){status(error.message,true);}});
+  function groupName(scene) {return scene.group || scene.name.replace(/_(ISO|TOP|FRONT|RIGHT|BACK|LEFT|BOTTOM|SEC.*?)(_\d+)?$/i,'');}
+  function selectGroup(query,exact=false) {
+    const key=query.trim().toLocaleLowerCase(); if(!key) {status('Nhập tên nhóm scene.',true);return;}
+    const matches=context.scenes.filter(scene=>exact?groupName(scene).toLocaleLowerCase()===key:(groupName(scene)+' '+scene.name).toLocaleLowerCase().includes(key));
+    matches.forEach(scene=>selected.add(scene.id));render();status('Đã đánh dấu '+matches.length+' scene theo tên.');
+  }
+  $('selectGroup').addEventListener('click',()=>{const scene=context.scenes.find(scene=>scene.selected);if(scene)selectGroup(groupName(scene),true);});
+  $('selectByName').addEventListener('click',()=>selectGroup($('groupQuery').value));
+  $('groupQuery').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();selectGroup($('groupQuery').value);}});
+  function previewLens() {try {
+    const perspective=context.camera?.perspective,input=perspective?$('cameraFov'):$('parallelHeight');
+    const value=Number(input.value);if(!input.value.trim() || !Number.isFinite(value) || (perspective?(value<1 || value>120):value<=0)) throw Error(perspective?'FOV phải từ 1–120°.':'Chiều cao vùng nhìn phải lớn hơn 0.');
+    send('cameraPreview',{camera:{kind:'lens',...(perspective?{fov:value}:{height_mm:value})}});
+  }catch(error){status(error.message,true);}}
+  $('previewLens').addEventListener('click',previewLens);
+  ['cameraFov','parallelHeight'].forEach(key=>$(key).addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();previewLens();}}));
+  document.querySelectorAll('[data-align]').forEach(button=>button.addEventListener('click',()=>send('cameraPreview',{camera:{kind:'align',axis_mode:$('alignAxes').value,direction:button.dataset.align}})));
+  $('updateCurrentView').addEventListener('click',()=>{const scene=context.scenes.find(scene=>scene.selected);if(scene)send('capture',{id:scene.id});});
   $('modalCancel').addEventListener('click',closeModal); $('modalConfirm').addEventListener('click', () => { const action = pendingModal; if (action) action(); closeModal(); });
   document.addEventListener('keydown',event => {
     if (event.key === 'Escape') { finishDrag(); closeModal(); if (!$('transferModal').hidden && !busy) $('transferCancel').click(); }

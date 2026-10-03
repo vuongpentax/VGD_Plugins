@@ -1,5 +1,17 @@
 # Bàn giao VGD Scenes
 
+## Thay đổi 1.3.0 · khung tự lưu, camera chỉ Update
+
+Đã cài SU22 ngày 04/10/2026; backup `outputs/install_20261004_010855_294/`. Cả 17 runtime files khớp nguồn và 19.882 file plugin khác giữ nguyên SHA256. Cần khởi động lại SketchUp để nhận bản mới; không sửa model đang mở.
+
+- Scene list hiển thị rộng/cao/tỷ lệ/lề riêng; Enter/blur mới commit. Poll không xóa số đang gõ. Chọn cùng tên gốc hoặc chuỗi chỉ đánh dấu, không visit. Nguồn VGD lấy tên đối tượng; scene thường bỏ hậu tố view chuẩn.
+- `SceneFrame.apply` preflight tất cả ID/kích thước rồi đổi trực tiếp aspect và lưu frame attribute. Giữ eye/target/up/projection/FOV API đã lưu; không `page.update`, không capture LIVE Orbit/FOV/fit. LIVE được giữ góc thử, chỉ đổi aspect. Rollback camera/attributes/working frame khi lỗi; giới hạn Undo SU22–25 như bên dưới.
+- Batch tùy chọn giữ tỷ lệ từng scene: cạnh dài = max(rộng,cao) đã nhập; cạnh còn lại làm tròn pixel. Bỏ tick dùng cùng rộng/cao. Preset có tên lưu trong model attribute `frame_presets`; chọn ở Xuất & Khung tự lưu current frame, ở batch chỉ điền thông số chờ Apply.
+- FOV nhập độ 1–120 đúng `Camera#fov`, UI ghi chiều đo `fov_is_height?`. Parallel nhập `Camera#height` đổi mm→inch. Preview chỉ LIVE, Update view mới lưu. Không có Overscan.
+- `CameraControl.preview`: +/− X/Y/Z là hướng từ eye đến target theo world/local. Giữ target, khoảng cách, projection/lens; AUTO tìm signed axis gần nhất theo dot, không refit. Local lấy selection đầu hoặc source path của current VGD page; chặn shear/degenerate/edit/two-point.
+- `dev/test_frame_camera.rb`: old-camera/new-frame export trước Update, batch preserve ratio/rollback/preflight, presets, FOV/parallel, six axes và rotated/mirrored local/AUTO. `dev/test_frame_ui.cjs`: Enter/blur/no-input-save, retry lỗi, stale-model editor, group no visit, preset/batch, FOV/axis/Update. Đã qua Ruby2.7.2 DLL fixture, WASM3.2 và Edge headless; chưa test kernel/CEF SketchUp thực tế.
+- Runtime/RBZ 1.3.0, deploy allowlist vẫn 17 file riêng Scenes. Không sửa Cabinet/Dim/BIM hoặc plugin khác.
+
 ## Thay đổi 1.2.2
 
 Đã cài SU22 lúc 19:49 +07 ngày 03/10/2026; backup `outputs/install_20261003_194856_747/`, 17 file khớp runtime, 8.011 file plugin khác hash không đổi. Không reload process hoặc sửa model đang mở; khởi động lại SketchUp để nhận bản mới.

@@ -26,6 +26,84 @@ module VGD
         page.set_attribute(DICT, 'frame', opts.select { |key, _| KEYS.include?(key) }.to_json)
       end
 
+      def self.presets(model)
+        value = JSON.parse(model.get_attribute(DICT, 'frame_presets', '{}'))
+        value.is_a?(Hash) ? value : {}
+      rescue JSON::ParserError, TypeError
+        {}
+      end
+
+      def self.preset(model, raw)
+        name = raw['name'].to_s.strip
+        raise ArgumentError, 'Nhập tên preset (tối đa 80 ký tự).' if name.empty? || name.length > 80
+        saved = presets(model)
+        if raw['delete'] == true
+          saved.delete(name)
+        else
+          opts = Scenes.options(raw.fetch('frame'))
+          saved[name] = opts.select { |key, _| KEYS.include?(key) }
+        end
+        Scenes.operation(model, 'Lưu preset khung') { model.set_attribute(DICT, 'frame_presets', saved.to_json) }
+        { success: true, message: 'Đã lưu danh sách preset khung trong model.' }
+      end
+
+      # Change the saved camera directly. Page#update would capture the LIVE
+      # camera, including an uncommitted Orbit, FOV or object-fit preview.
+      def self.apply(model, raw)
+        raise 'Đóng edit Group/Component trước khi lưu khung.' if model.active_path
+        ids = Array(raw['ids']).map(&:to_s).uniq
+        raise ArgumentError, 'Chọn scene cần lưu khung.' if ids.empty?
+        base = Scenes.options(raw.fetch('frame'))
+        changes = ids.map do |id|
+          page = SceneStore.find(model, id)
+          opts = base.dup
+          if raw['keep_ratio'] == true
+            old = read(page, Scenes.settings(model))
+            aspect = old['width'].to_f / old['height']
+            edge = [base['width'], base['height']].max
+            opts['width'], opts['height'] = aspect >= 1 ? [edge, (edge/aspect).round] : [(edge*aspect).round, edge]
+            opts = Scenes.options(opts)
+          end
+          camera = page.camera
+          raise 'Khung tự lưu chưa hỗ trợ camera hai điểm / Match Photo.' if SceneTransfer.two_point?(camera)
+          [page, camera, Scenes.camera_copy(camera), page.get_attribute(DICT, 'frame'), opts]
+        end
+        live = model.active_view.camera
+        preview = Scenes.camera_copy(live) unless SceneTransfer.two_point?(live)
+        live_fov = live.fov if preview && live.perspective?
+        working = model.get_attribute(DICT, 'working_frame')
+        current = changes.find { |page, *_| page == model.pages.selected_page }
+        raise 'Khung tự lưu chưa hỗ trợ camera hai điểm / Match Photo.' if current && !preview
+        Scenes.operation(model, 'Lưu thông số khung') do
+          begin
+            changes.each do |page, camera, snapshot, _, opts|
+              camera.aspect_ratio = opts['width'].to_f / opts['height']
+              Scenes.set_camera_fov(camera, snapshot.fov) if snapshot.perspective?
+              camera.height = snapshot.height unless snapshot.perspective?
+              store(page, opts)
+            end
+            if current
+              preview.aspect_ratio = current.last['width'].to_f / current.last['height']
+              Scenes.set_camera_fov(preview, live_fov) if preview.perspective?
+              model.active_view.camera = preview
+              model.set_attribute(DICT, 'working_frame', current.last.select { |k, _| KEYS.include?(k) }.to_json)
+            end
+          rescue StandardError => error
+            changes.each do |page, camera, snapshot, frame, _|
+              camera.aspect_ratio = snapshot.aspect_ratio
+              Scenes.set_camera_fov(camera, snapshot.fov) if snapshot.perspective?
+              camera.height = snapshot.height unless snapshot.perspective?
+              frame.nil? ? page.delete_attribute(DICT, 'frame') : page.set_attribute(DICT, 'frame', frame)
+            end
+            model.active_view.camera = live
+            working.nil? ? model.delete_attribute(DICT, 'working_frame') : model.set_attribute(DICT, 'working_frame', working)
+            raise error
+          end
+        end
+        model.active_view.invalidate
+        { success: true, message: "Đã lưu khung #{changes.length} scene; giữ góc nhìn đã lưu. Bấm Update view để lưu góc đang xem." }
+      end
+
       BACKUP_KEY = 'unlocked_camera_frames'.freeze
       def self.backup(model)
         saved = JSON.parse(model.get_attribute(DICT, BACKUP_KEY, '{}'))
@@ -176,6 +254,9 @@ module VGD
     end
 
     def self.apply_frame(model, opts, fit = false, save = !fit)
+      if save && model.pages.selected_page
+        return SceneFrame.apply(model, { 'ids' => [model.pages.selected_page.persistent_id.to_s], 'frame' => opts })
+      end
       target = Geometry.target(model, Geometry.selection_paths(model), opts['axis_mode']) if fit
       action = lambda do
         if fit
@@ -185,17 +266,11 @@ module VGD
           camera.aspect_ratio = opts['width'].to_f / opts['height']
           model.active_view.camera = camera
         end
-        page = model.pages.selected_page
-        if save && page
-          page.use_camera = true
-          raise 'Không lưu được khung vào scene hiện tại.' unless page.update(PAGE_USE_CAMERA)
-          SceneFrame.store(page, opts)
-        end
         model.set_attribute(DICT, 'working_frame', opts.select { |key, _| SceneFrame::KEYS.include?(key) }.to_json) if save
       end
       save ? Scenes.operation(model, 'Áp dụng và lưu khung', &action) : action.call
       model.active_view.invalidate
-      { success: true, message: save ? (model.pages.selected_page ? 'Đã áp dụng và lưu khung vào scene hiện tại.' : 'Đã áp dụng khung. Chưa có scene để lưu.') : 'Đã xem trước khung trên view hiện tại. Chưa lưu scene; bấm Áp dụng khung để lưu.' }
+      { success: true, message: save ? 'Đã áp dụng khung. Chưa có scene để lưu.' : 'Đã xem trước trên view hiện tại. Bấm Update view để lưu camera.' }
     end
 
     def self.toggle_frame(model, opts)

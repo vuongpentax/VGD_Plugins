@@ -10,13 +10,13 @@ require_relative 'transfer'
 require_relative 'camera'
 module VGD
   module Scenes
-    VERSION = '1.2.2'.freeze unless const_defined?(:VERSION, false)
+    VERSION = '1.3.0'.freeze unless const_defined?(:VERSION, false)
     class << self
       def state
         model = Sketchup.active_model
         { model: model.object_id.to_s, title: model.title.empty? ? 'Model chưa lưu' : model.title,
           selection: model.selection.count { |e| Geometry.instance?(e) }, editing: !model.active_path.nil?,
-          scenes: SceneStore.list(model), settings: settings(model), camera: CameraControl.state(model), frame_cleanup: SceneFrame.cleanup_state(model),
+          scenes: SceneStore.list(model), presets: SceneFrame.presets(model), settings: settings(model), camera: CameraControl.state(model), frame_cleanup: SceneFrame.cleanup_state(model),
           current_frame: model.pages.selected_page ? SceneFrame.read(model.pages.selected_page, settings(model)) : SceneFrame.from_camera(model.active_view.camera, settings(model)),
           frame_active: model.active_view.camera.aspect_ratio > 0, grid_active: FrameTool.active?, busy: !@job.nil?,
           transfer: @transfer_pending && @transfer_pending[:model].equal?(model) ? @transfer_pending[:preview] : nil }
@@ -53,6 +53,9 @@ module VGD
                  when 'delete' then SceneStore.delete(model, data['ids'])
                  when 'reorder' then SceneStore.reorder(model, data['id'], data['before'], data['order'])
                  when 'cameraElevation' then CameraControl.elevation(model, data['camera'])
+                 when 'cameraPreview' then CameraControl.preview(model, data['camera'])
+                 when 'saveFrames' then SceneFrame.apply(model, data)
+                 when 'framePreset' then SceneFrame.preset(model, data)
                  when 'removeAllFrames' then SceneFrame.cleanup(model)
                  when 'restoreAllFrames' then SceneFrame.cleanup(model, true)
                  when 'copyScenes', 'saveScenes' then transfer_export(model, data, action == 'copyScenes')

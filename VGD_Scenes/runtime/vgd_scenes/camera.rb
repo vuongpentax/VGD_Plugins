@@ -5,7 +5,61 @@ module VGD
       def self.state(model)
         camera = model.active_view.camera
         { eye_z_mm: camera.eye.z.to_f * 25.4, perspective: camera.perspective?,
+          fov: camera.perspective? ? camera.fov : nil, fov_vertical: camera.perspective? ? camera.fov_is_height? : nil,
+          height_mm: camera.perspective? ? nil : camera.height.to_f * 25.4,
           supported: !SceneTransfer.two_point?(camera) }
+      end
+
+      def self.preview(model, raw)
+        raise ArgumentError, 'Thông số camera không hợp lệ.' unless raw.is_a?(Hash)
+        raise 'Đóng edit Group/Component trước khi chỉnh camera.' if model.active_path
+        original = model.active_view.camera
+        raise 'Chưa hỗ trợ camera hai điểm / Match Photo.' if SceneTransfer.two_point?(original)
+        camera = Scenes.camera_copy(original)
+        if raw['kind'] == 'lens'
+          if original.perspective?
+            camera.fov = Scenes.number(raw['fov'], 1, 120, 'FOV (độ)')
+          else
+            camera.height = Scenes.number(raw['height_mm'], 0.001, 1e12, 'Chiều cao vùng nhìn (mm)') / 25.4
+          end
+        elsif raw['kind'] == 'align'
+          mode = raw['axis_mode']
+          raise ArgumentError, 'Hệ trục không hợp lệ.' unless %w[world local].include?(mode)
+          axes = [Geom::Vector3d.new(1,0,0), Geom::Vector3d.new(0,1,0), Geom::Vector3d.new(0,0,1)]
+          if mode == 'local'
+            paths = if model.selection.empty?
+                      page = model.pages.selected_page
+                      page && SceneStore.owned?(page) ? SceneStore.metadata(page)['paths'] : nil
+                    else
+                      Geometry.selection_paths(model)
+                    end
+            raise 'Chọn đối tượng hoặc mở scene VGD có đối tượng nguồn để dùng trục đối tượng.' unless paths.is_a?(Array) && !paths.empty?
+            transform = Geometry.resolve(model, paths.first)[1]
+            axes = [transform.xaxis, transform.yaxis, transform.zaxis].map(&:normalize)
+            raise 'Trục đối tượng suy biến hoặc bị shear.' if axes.any? { |v| v.length < 1e-9 } || axes.combination(2).any? { |a,b| a.dot(b).abs > 0.001 }
+          end
+          directions = axes.flat_map { |axis| [axis, axis.reverse] }
+          code = raw['direction']
+          current = original.target - original.eye
+          raise 'Khoảng cách camera bằng 0.' if current.length < 1e-9
+          direction = if code == 'AUTO'
+                        directions.max_by { |v| v.dot(current.normalize) }
+                      else
+                        index = %w[+X -X +Y -Y +Z -Z].index(code)
+                        raise ArgumentError, 'Hướng camera không hợp lệ.' unless index
+                        directions[index]
+                      end
+          up = original.up
+          up = axes[1] if direction.cross(up).length < 1e-6
+          up = axes[0] if direction.cross(up).length < 1e-6
+          up = direction.cross(up).normalize.cross(direction).normalize
+          camera.set(original.target.offset(direction.reverse, current.length), original.target, up)
+        else
+          raise ArgumentError, 'Lệnh camera không hợp lệ.'
+        end
+        model.active_view.camera = camera
+        model.active_view.invalidate
+        { success: true, message: 'Đã xem trước camera. Bấm Update view để lưu góc nhìn mới.' }
       end
 
       def self.elevation(model, raw)

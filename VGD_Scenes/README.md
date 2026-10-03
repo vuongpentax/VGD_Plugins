@@ -1,6 +1,18 @@
-# VGD Scenes 1.2.2 — SketchUp 2022–2026.2
+# VGD Scenes 1.3.0 — SketchUp 2022–2026.2
 
 Plugin tạo view đối tượng, mặt cắt tùy chỉnh, quản lý scene và xuất ảnh/PDF. Thương hiệu VGD, giao diện sáng/tối dùng bảng màu nâu, trắng và than theo theme T+.
+
+### Khung tự lưu và camera xem trước (1.3.0)
+
+- Danh sách scene có rộng/cao/tỷ lệ/lề ngay trên từng dòng. Nhập rồi Enter hoặc rời ô để lưu khung của dòng đó; không tự mở scene.
+- Trong Xuất & Khung, đổi rộng/cao/tỷ lệ/lề rồi Enter/rời ô, đảo ⇄ hoặc chọn preset tự lưu khung vào scene đang mở. Giữ eye, target, hướng, projection và FOV API của camera đã lưu. Không ghi lúc số đang gõ dở.
+- Orbit/Pan/Zoom, FOV, canh trục và Căn lề chỉ đổi camera đang xem. Bấm **Update view** mới lưu góc đó. Ví dụ Orbit thử rồi đổi sang 3:4: xuất trước Update lấy góc cũ với khung 3:4.
+- Chỉnh khung hàng loạt áp dụng cho scene đã đánh dấu. Tick **Giữ tỷ lệ riêng** dùng cạnh dài đã nhập, tính cạnh kia theo tỷ lệ từng scene và làm tròn px. Bỏ tick áp dụng cùng rộng/cao. Preset có tên lưu cùng file SKP; chọn preset hàng loạt chỉ điền thông số, bấm Lưu khung hàng loạt để áp dụng.
+- FOV dùng độ theo [Camera API](https://ruby.sketchup.com/Sketchup/Camera.html), 1–120°, chỉ Perspective; ghi rõ đo ngang/dọc theo camera hiện tại. Parallel nhập chiều cao vùng nhìn (mm). Không có Overscan.
+- Canh camera đủ **+X/−X, +Y/−Y, +Z/−Z** theo trục thế giới hoặc đối tượng. Dấu là hướng nhìn eye→target. Giữ điểm nhìn, khoảng cách và lens; **Tự động** chọn trục gần nhất, không căn lại đối tượng. Local dùng đối tượng chọn đầu tiên, hoặc nguồn của scene VGD đang mở.
+- **Chọn cùng tên scene đang mở** đánh dấu các view cùng tên gốc; nhập chuỗi như Tủ bếp để chọn nhanh. Cả hai thao tác giữ nguyên view.
+
+Kiểm thử hồi quy mới đã qua Ruby 2.7.2 DLL (API giả lập), WASM 3.2 và Edge headless. Chưa kiểm chứng các thao tác mới trong kernel/CEF SketchUp thực tế; Undo camera scene trên SU22–25 vẫn có giới hạn.
 
 ## Đã cài trên máy
 
@@ -12,6 +24,7 @@ Plugin tạo view đối tượng, mặt cắt tùy chỉnh, quản lý scene v�
 - Lượt cài 1.2.0 ngày 03/10/2026: 17 file khớp runtime; **7.939 file plugin khác không đổi**. Backup: `outputs/install_20261003_171852_481/`.
 - Lượt cài 1.2.1 ngày 03/10/2026: 17 file khớp runtime; **7.994 file plugin khác không đổi**. Backup: `outputs/install_20261003_183241_486/`.
 - Lượt cài 1.2.2 ngày 03/10/2026: 17 file khớp runtime; **8.011 file plugin khác không đổi**. Backup: `outputs/install_20261003_194856_747/`.
+- Lượt cài 1.3.0 ngày 04/10/2026: 17 file khớp runtime; **19.882 file plugin khác không đổi**. Backup: `outputs/install_20261004_010855_294/`. Không tắt hoặc đổi loader plugin khác.
 - Báo cáo và bản sao loader cũ nằm trong `outputs/install_*/` trên máy đã cài, không đưa lên GitHub.
 
 Hãy lưu công việc và khởi động lại SketchUp khi thuận tiện. Mở **Extensions → VGD Scenes → VGD Scenes · Bảng điều khiển**. Nếu muốn toolbar, chọn **Hiện thanh công cụ VGD Scenes** trong menu này.
@@ -73,7 +86,7 @@ Mục tiêu Windows: SketchUp Desktop **2022, 2023, 2024, 2025 và 2026 đến 2
 1. Chọn Group/Component. Trong **Góc nhìn**, chọn view, hệ trục theo đối tượng hoặc thế giới, gộp cụm hoặc từng đối tượng. Bấm **Tạo / Cập nhật góc nhìn**. Có ISO và sáu hướng tiêu chuẩn; lặp lại cùng đối tượng/view sẽ cập nhật scene VGD tương ứng và đổi tên tất cả scene VGD của bộ đối tượng đó theo tên mới, kể cả view không đang chọn và scene mặt cắt. Tên theo mẫu đã lưu; tên sửa tay sẽ được tạo lại khi cập nhật.
 2. Trong **Mặt cắt**, chọn X/Y/Z hoặc vector riêng; đặt vị trí theo phần trăm, dịch thêm bằng mm, đảo hướng và tên mặt cắt. Mỗi tên mặt cắt có scene riêng; chạy lại cùng tên sẽ cập nhật. Mặt cắt nằm bên trong từng Group/Component được chọn, không thêm mặt cắt ở cấp model. Component/Group dùng chung sẽ Make Unique bản chọn; với đối tượng nằm trong cha dùng chung, Make Unique cha trước. Camera luôn nhìn từ phía đã bỏ vào phần còn lại, kể cả khi đảo phía cắt.
 3. Trong **Scene**, bấm tên để mở, đánh dấu scene cần xuất, đổi tên, xóa hoặc lưu view hiện tại. **Cập nhật từ đối tượng** tính lại camera/mặt cắt và tên scene từ đối tượng nguồn bằng thông số đã lưu, không cần chọn lại đối tượng; **Lưu view** giữ bố cục bạn vừa chỉnh. Undo scene tùy phiên bản SketchUp; xem mục Tương thích.
-4. Trong **Xuất & Khung**, chọn preset hoặc nhập tỷ lệ rộng:cao như `3:4`. Nút **⇄** đổi ngang/dọc để xem trước. **Căn lề view hiện tại** chỉ căn và preview, giữ hướng nhìn/phối cảnh; không lưu scene. Bấm **Áp dụng khung** để lưu camera và kích thước riêng vào scene đang mở. **Bật/Tắt khung** đổi giữa khung tỷ lệ và khung nhìn đầy cửa sổ SketchUp; không đổi scene đã lưu. **Bật/Tắt lưới** độc lập, Esc tắt lưới. Sau khi Orbit/canh tay có thể dùng **Lưu view** để chủ động lưu bố cục.
+4. Trong **Xuất & Khung**, chọn preset hoặc nhập tỷ lệ rộng:cao như `3:4`. Enter/rời ô hoặc nút **⇄** tự lưu thông số khung, giữ góc đã lưu. **Căn lề view hiện tại** chỉ preview. **Áp dụng khung** lưu thông số khung; **Update view** mới lưu camera đang xem. **Bật/Tắt khung** đổi khung nhìn hiện tại, không đổi scene đã lưu; **Bật/Tắt lưới** độc lập, Esc tắt lưới.
 5. Đánh dấu scene và xuất PNG/JPG vào thư mục, hoặc PDF nhiều trang theo thứ tự riêng trong bảng VGD. Mỗi scene dùng kích thước và bố cục đã lưu riêng (ví dụ TOP 1200×1600, ISO 1920×1080). PDF giữ đúng tỷ lệ từng ảnh trên khổ giấy A4/A3 ngang/dọc đã chọn. Scene cũ chưa lưu kích thước được suy từ khung camera và độ phân giải nguồn/batch. File đã có được thêm số, không ghi đè. Tiến độ và lỗi hiển thị trong dialog; không tạo JSON báo cáo cạnh ảnh.
 
 ## Những điểm cần biết
@@ -104,7 +117,7 @@ cd VGD_Plugins
 
 Kho công khai; cần quyền ghi khi push. Mở repository trong Codex và yêu cầu tiếp tục `VGD_Scenes`, đọc `CODEX_HANDOFF.md` trước. Nếu đã clone, chạy `git pull --ff-only` khi không có thay đổi chưa lưu.
 
-Để cài trên máy mới, dùng SketchUp **Window → Extension Manager → Install Extension**, chọn `VGD_Scenes/VGD_Scenes_v1.2.2.rbz`. Hoặc chạy script giới hạn phạm vi:
+Để cài trên máy mới, dùng SketchUp **Window → Extension Manager → Install Extension**, chọn `VGD_Scenes/VGD_Scenes_v1.3.0.rbz`. Hoặc chạy script giới hạn phạm vi:
 
 ```powershell
 .\VGD_Scenes\dev\deploy.ps1 -VerifyOnly
