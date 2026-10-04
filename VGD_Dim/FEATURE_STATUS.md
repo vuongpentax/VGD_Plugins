@@ -1,4 +1,4 @@
-# VGD Dim · 3.0.0-beta.1
+# VGD Dim · 3.0.1-beta.1
 
 | Chức năng | Trạng thái |
 |---|---|
@@ -9,6 +9,7 @@
 | Rebuild size Model Info | Đã viết cho Dim tuyến tính; metadata/links/selection/failure mô phỏng đạt; radial skip |
 | Text font từ Model Info | Cầu nối Windows English, selected trực tiếp; native chưa xác minh |
 | Preset/Auto/Animation/Units | Đã viết và có kiểm thử; không popup hoàn tất |
+| Cấu hình SU2022 | JSON Base64, khôi phục Auto/Smart Dim/preset cũ không eval; lỗi đọc không chặn khởi động |
 | Native SketchUp | Font/Height, associations, observers, Undo/save-reopen cần kiểm chứng thực tế |
 
 ZIP gốc giữ trong dev/claude_reference. Không coi fixture là bằng chứng font/Height đã đổi trong SketchUp.

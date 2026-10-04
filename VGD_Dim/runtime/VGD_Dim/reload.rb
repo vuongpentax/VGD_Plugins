@@ -21,7 +21,7 @@ if defined?(VGD::Dim)
     VGD::Dim.send(:remove_const, name) if VGD::Dim.const_defined?(name, false)
   end
   VGD::Dim::Presets.send(:remove_const,:BUILTIN) if defined?(VGD::Dim::Presets::BUILTIN)
-  VGD::Dim.const_set(:VERSION, '3.0.0-beta.1'.freeze)
+  VGD::Dim.const_set(:VERSION, '3.0.1-beta.1'.freeze)
 end
 files.each { |path| load path }
 VGD::Dim.show_dialog

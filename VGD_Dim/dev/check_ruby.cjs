@@ -13,8 +13,21 @@ const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js')
   vm.eval('RubyVM::InstructionSequence.compile('+literal(fs.readFileSync(path.join(__dirname,'native_smoke.rb'),'utf8'))+')');
   vm.eval(fs.readFileSync(path.join(__dirname,'test_fixture.rb'),'utf8'));
   for(const name of names.filter(n=>!['main','reload'].includes(n)))vm.eval(fs.readFileSync(path.join(root,'VGD_Dim',name+'.rb'),'utf8'));
-  for(const [file,run] of [['test_engine.rb','run_engine_tests'],['test_native_style.rb','run_native_style_tests'],['test_core.rb','run_core_tests; run_service_tests'],['test_smartdim.rb','run_smartdim_tests']]){
+  for(const [file,run] of [['test_engine.rb','run_engine_tests'],['test_native_style.rb','run_native_style_tests'],['test_core.rb','run_core_tests; run_service_tests'],['test_smartdim.rb','run_smartdim_tests'],['test_store.rb','run_store_tests']]){
     vm.eval(fs.readFileSync(path.join(__dirname,file),'utf8'));vm.eval(run+'; $stdout.flush');
+  }
+  if(process.env.VGD_VERIFY_LOCAL_PREFERENCES){
+    const nativePath=path.join(process.env.LOCALAPPDATA,'SketchUp/SketchUp 2022/SketchUp/PrivatePreferences.json');
+    const saved=JSON.parse(fs.readFileSync(nativePath,'utf8').replace(/^\uFEFF/,''))['This Computer Only']?.VGDDim;
+    if(!saved)throw Error('Local VGD Dim preferences not found');
+    let count=0;
+    for(const key of ['auto','smartdim','presets']){
+      if(typeof saved[key]!=='string')continue;
+      vm.eval('actual=VGD::Dim::Store.decode_legacy('+literal(saved[key])+'); check(actual.is_a?(Hash), "Actual VGD Dim preferences not recovered")');
+      if(key==='auto')vm.eval('check(VGD::Dim::Core.validate_settings(actual.fetch("settings",{})).is_a?(Hash), "Actual Auto settings invalid")');
+      count++;
+    }
+    console.log(`PASS: ${count} actual SU2022 VGD Dim fields decoded read-only; native preferences unchanged and values not logged.`);
   }
   const main=fs.readFileSync(path.join(root,'VGD_Dim/main.rb'),'utf8').replace(/^require[^\n]*\n/gm,'');
   vm.eval(main);vm.eval(main);

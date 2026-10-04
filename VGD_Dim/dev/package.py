@@ -2,11 +2,12 @@ from pathlib import Path
 import zipfile
 import hashlib
 import json
+import re
 
 root = Path(__file__).resolve().parent.parent
 output = root / 'outputs'
 output.mkdir(exist_ok=True)
-version = '3.0.0-beta.1'
+version = re.search(r"VERSION\s*=\s*'([^']+)'", (root / 'runtime/vgd_dim.rb').read_text(encoding='utf-8')).group(1)
 files = ['vgd_dim.rb'] + ['VGD_Dim/' + name for name in [
     'main.rb', 'defaults.rb', 'reload.rb', 'engine.rb', 'native_style.rb',
     'store.rb', 'core.rb', 'presets.rb', 'autostyle.rb', 'animation.rb', 'smartdim.rb', 'probe.rb', 'dialog.rb',
@@ -20,7 +21,7 @@ with zipfile.ZipFile(source, 'w', zipfile.ZIP_DEFLATED) as archive:
     for name in files:
         archive.write(root / 'runtime' / name, 'runtime/' + name)
     for name in ['check_ruby.cjs', 'test_fixture.rb', 'test_engine.rb', 'test_native_style.rb', 'test_core.rb', 'test_smartdim.rb', 'test_ui.cjs', 'import_claude_ui.py',
-                 'native_smoke.rb', 'deploy.ps1', 'test_deploy.py', 'package.py']:
+                 'native_smoke.rb', 'deploy.ps1', 'test_deploy.py', 'test_store.rb', 'package.py']:
         archive.write(root / 'dev' / name, 'dev/' + name)
     for file in sorted((root / 'dev/claude_reference').iterdir()):
         archive.write(file, 'dev/claude_reference/' + file.name)

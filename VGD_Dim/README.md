@@ -1,4 +1,4 @@
-# VGD Dim · 3.0.0-beta.1
+# VGD Dim · 3.0.1-beta.1
 
 Gộp bộ Dim/Info trong files.zip vào VGD ANOT và đổi tên thành **VGD Dim**. Theo yêu cầu ngày 2026-10-05, bản này có đầy đủ chức năng trong giao diện Claude, giữ palette T+ sáng/nâu đồng.
 
@@ -20,7 +20,7 @@ ZIP có 5 file; thiếu 6 dependencies: store, core, presets, autostyle, animati
 
 ## Cài / chạy
 
-Gói outputs/VGD_Dim_v3.0.0-beta.1.rbz; source ZIP cùng phiên bản. Extension/toolbar tên **VGD Dim**, loader vgd_dim.rb và namespace VGD::Dim tiếp tục dùng để tránh tạo plugin thứ hai.
+Gói outputs/VGD_Dim_v3.0.1-beta.1.rbz; source ZIP cùng phiên bản. Extension/toolbar tên **VGD Dim**, loader vgd_dim.rb và namespace VGD::Dim tiếp tục dùng để tránh tạo plugin thứ hai.
 
 dev/deploy.ps1 chỉ cài whitelist 18 file vào SU2022, sao lưu và kiểm tra SHA256. Trong app đang mở có thể dùng Extensions → Nạp lại VGD Dim/Text (menu cũ) hoặc Nạp lại VGD Dim (menu mới). Khởi động lại SketchUp để tên extension/toolbar cập nhật hoàn toàn.
 
@@ -32,7 +32,11 @@ load File.join(Sketchup.find_support_file('Plugins'), 'VGD_Dim', 'reload.rb')
 
 ## Kiểm tra
 
-check_ruby.cjs: cú pháp; scopes/filters/dedup, style/units, mô phỏng rebuild/metadata/failure, Smart Dim chain/tổng/transform, preset/auto/animation, callbacks và cầu nối native. test_ui.cjs: các chức năng UI, payload, mặc định selection, lỗi inline/no popup và footer ở 540/360px. test_deploy.py: whitelist/backup/cài lặp/guard/Cabinet.
+check_ruby.cjs: cú pháp; scopes/filters/dedup, style/units, mô phỏng rebuild/metadata/failure, Smart Dim chain/tổng/transform, preset/auto/animation, callbacks và cầu nối native. test_store.rb tái hiện lỗi cấu hình SU2022, kiểm tra khôi phục/Unicode/kiểu JSON và khởi động khi cấu hình hỏng. test_ui.cjs: các chức năng UI, payload, mặc định selection, lỗi inline/no popup và footer ở 540/360px. test_deploy.py: whitelist/backup/cài lặp/guard/Cabinet.
+
+## Sửa lỗi khởi động 3.0.1-beta.1 — 05/10/2026
+
+SketchUp 2022 có thể báo SyntaxError ngay trong read_default khi đọc chuỗi JSON chứa dấu nháy. Store chuyển sang key json2_* với JSON mã hóa Base64. Trên Windows, cấu hình Auto-Style, Smart Dim và preset cũ được khôi phục từ section VGDDim trong PrivatePreferences.json bằng JSON.parse, không eval hoặc sửa tệp cấu hình native. Không đọc cấu hình của plugin khác. Cấu hình lỗi dùng giá trị mặc định; Auto-Style mặc định tắt nên không chặn khởi động. Sau khi cập nhật, lưu bản vẽ, đóng tất cả cửa sổ SketchUp và mở lại.
 
 Kết quả fixture không xác nhận font, liên kết hoặc Undo thực tế trong SketchUp. Xem outputs/VALIDATION.json. Các phần native vẫn beta cho đến khi kiểm chứng trong app.
 
