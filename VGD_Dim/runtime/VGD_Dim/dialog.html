@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VGD Dimension &amp; Text</title><link rel="stylesheet" href="dialog.css"></head>
+<body>
+<header class="header"><div><h1>VGD <span>DIMENSION &amp; TEXT</span></h1><small>CHỈ ÁP DỤNG CHO DIM / TEXT ĐANG CHỌN</small></div><span class="version">2.3 beta 1</span></header>
+<form id="settings">
+<main>
+<section>
+<h2>MẪU CHỮ TỪ MODEL INFO</h2>
+<div class="row"><label>Dim · Font / Size / Height</label><button type="button" id="dim_info" class="btn">Mở Model Info · Dimensions</button></div>
+<div class="row"><label>Text / Label · Font / Size</label><button type="button" id="text_info" class="btn">Mở Model Info · Text</button></div>
+<p class="info">Chỉnh mẫu trong Model Info trước: font, cỡ chữ Points hoặc Height của Dim; font và cỡ chữ của Text/Label.</p>
+<p class="info">Chọn Dim/Text cần đổi rồi bấm APPLY. Mẫu Model Info được áp vào vùng chọn; màu, endpoint và tag lấy theo bảng dưới. Endpoint “Giữ nguyên” sẽ giữ endpoint sau khi áp mẫu Model Info.</p>
+</section>
+<section>
+<h2>DIMENSION</h2>
+<div class="row"><label for="dim_color">Màu Dim</label><input id="dim_color" type="color" value="#000000"></div>
+<div class="row"><label for="dim_endpoint">Endpoint</label><select id="dim_endpoint">
+<option value="keep">Giữ nguyên</option><option value="none">Không có</option><option value="slash">Gạch chéo /</option>
+<option value="dot">Chấm tròn ●</option><option value="closed">Mũi tên kín</option><option value="open">Mũi tên mở</option></select></div>
+<div class="row"><label>Tag sau APPLY</label><span class="tag">000 DIM</span></div>
+</section>
+<section>
+<h2>TEXT / LABEL</h2>
+<div class="row"><label for="text_color">Màu chữ</label><input id="text_color" type="color" value="#000000"></div>
+<div class="row"><label for="label_endpoint">Endpoint Label</label><select id="label_endpoint">
+<option value="keep">Giữ nguyên</option><option value="none">Không có</option><option value="slash">Gạch chéo /</option>
+<option value="dot">Chấm tròn ●</option><option value="closed">Mũi tên kín</option><option value="open">Mũi tên mở</option></select></div>
+<div class="row"><label>Tag sau APPLY</label><span class="tag">000 TEXT</span></div>
+<p class="info">Endpoint chỉ đổi với Text có đường dẫn (Label).</p>
+</section>
+<p class="info scope">Chọn trực tiếp Dim/Text trong model hoặc bên trong nhóm đang mở. Chọn Group/Component không áp cho toàn bộ nội dung bên trong.</p>
+</main>
+<p id="error" role="alert" hidden></p>
+<footer><button type="button" id="cancel" class="cancel">ĐÓNG</button><button type="submit" id="apply" class="apply">ÁP DỤNG · APPLY</button></footer>
+</form><script src="dialog.js"></script>
+</body></html>

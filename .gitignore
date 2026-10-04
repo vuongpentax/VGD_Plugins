@@ -4,6 +4,7 @@ node_modules/
 __pycache__/
 *.py[cod]
 /TPlus_Dim/dev/vendor/
+/VGD_Dim/dev/vendor/
 
 # Local logs and temporary files
 *.log
@@ -20,6 +21,8 @@ Thumbs.db
 
 # Machine-specific installation reports and SketchUp backups
 /TPlus_Dim/outputs/install_*/
+/VGD_Dim/outputs/install_*/
+/VGD_Dim/outputs/deploy_fixture_*/
 /TPlus_Cabinet_Codex_Handoff_2026-10-01/outputs/sketchup_2022_backups/
 
 # VGD local exports, installation backups and original review snapshot
