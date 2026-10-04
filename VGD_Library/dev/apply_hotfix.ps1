@@ -5,8 +5,8 @@ $vgdPlugins = Join-Path $env:APPDATA 'SketchUp\SketchUp 2022\SketchUp\Plugins'
 $vgdResolvedPlugins = (Resolve-Path -LiteralPath $vgdPlugins).Path
 if ($vgdResolvedPlugins -ne [IO.Path]::GetFullPath($vgdPlugins)) { throw 'Unexpected plugin directory resolution.' }
 if (-not (Test-Path -LiteralPath (Join-Path $vgdResolvedPlugins 'vgd_library\catalog.rb') -PathType Leaf)) { throw 'VGD_Library is not installed in SketchUp 2022.' }
-$vgdFiles = @('vgd_library.rb', 'vgd_library\catalog.rb', 'vgd_library\main.rb', 'vgd_library\online.rb', 'vgd_library\seamless.rb', 'vgd_library\shell_sync.rb')
-$vgdBackup = Join-Path $vgdProject ('outputs\installed-backup-1.1.1-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8))
+$vgdFiles = @('vgd_library.rb', 'vgd_library\catalog.rb', 'vgd_library\main.rb', 'vgd_library\online.rb', 'vgd_library\seamless.rb', 'vgd_library\shell_sync.rb', 'vgd_library\drive.rb', 'vgd_library\dialog.css', 'vgd_library\dialog.js')
+$vgdBackup = Join-Path $vgdProject ('outputs\installed-backup-1.1.2-' + (Get-Date -Format 'yyyyMMdd-HHmmss') + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8))
 New-Item -ItemType Directory -Path (Join-Path $vgdBackup 'vgd_library') -Force | Out-Null
 foreach ($vgdRelative in $vgdFiles) {
     $vgdSource = Join-Path $vgdRuntime $vgdRelative
@@ -24,4 +24,4 @@ foreach ($vgdRelative in $vgdFiles) {
 }
 Write-Output "Updated and verified $($vgdFiles.Count) VGD_Library files for SketchUp 2022."
 Write-Output "Backup: $vgdBackup"
-Write-Output 'Save drawings, close every SketchUp window, then restart to load 1.1.1-beta.1.'
+Write-Output 'Save drawings, close every SketchUp window, then restart to load 1.1.2-beta.1.'

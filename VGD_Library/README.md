@@ -1,11 +1,11 @@
-# VGD_Library 1.1.1-beta.1
+# VGD_Library 1.1.2-beta.1
 
 Plugin SketchUp độc lập của VGD: thư viện vật liệu **ảnh/SKM**, thư viện model **SKP**, kho Drive đồng bộ và bộ công cụ map. Yêu cầu **SketchUp 2022 trở lên**. Đây là bản beta: phép tính và giao diện đã kiểm tra tự động, **chưa kiểm chứng trong SketchUp thực tế hoặc trên macOS**.
 
 ## Cài đặt và nối kho của bạn
 
-1. Vào **Extensions → Extension Manager → Install Extension**, chọn `VGD_Library_v1.1.1-beta.1.rbz`.
-2. Nếu đã cài bản 1.0, đóng và mở lại SketchUp sau khi cập nhật.
+1. Vào **Extensions → Extension Manager → Install Extension**, chọn `VGD_Library_v1.1.2-beta.1.rbz`.
+2. Nếu đã cài bản cũ, lưu bản vẽ, đóng tất cả cửa sổ SketchUp và mở lại sau khi cập nhật.
 3. Mở **Extensions → VGD_Library → Thư viện vật liệu**; bật toolbar VGD_Library trong View → Toolbars nếu cần.
 4. Bấm **+ Kho vật liệu Drive 03 MTL**. Plugin dùng đường dẫn đồng bộ đã xác minh trên máy hiện tại:
 
@@ -45,7 +45,7 @@ Lệnh sửa model dùng operation/Undo. Instance sửa được tách definitio
 
 ## Danh mục online riêng
 
-**+ Nguồn online** nhận URL JSON HTTPS; **Nhập danh mục online** nhận JSON local. Link thư mục Drive không phải danh mục JSON. Schema ví dụ (phải thay URL/hash bằng dữ liệu thật):
+**+ Nguồn online** nhận URL JSON HTTPS; **Nhập danh mục online** nhận JSON local. Link thư mục Drive 03 MTL được chuyển sang kho local đã đồng bộ; các link thư mục Drive khác hiện hướng dẫn thêm thư mục đồng bộ. Plugin không tải trang Drive làm danh mục JSON. Nguồn trả HTML hoặc JSON lỗi chỉ hiện thông báo ngắn, giữ nguyên vùng thư viện. Schema ví dụ (phải thay URL/hash bằng dữ liệu thật):
 
 ```json
 {

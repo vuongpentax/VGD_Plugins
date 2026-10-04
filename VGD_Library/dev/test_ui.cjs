@@ -1,5 +1,6 @@
 const fs = require('fs'), path = require('path'), { pathToFileURL } = require('url');
 const { resolve } = require('./dependencies.cjs'), { chromium } = require(resolve('playwright'));
+const version = fs.readFileSync(path.resolve(__dirname,'../runtime/vgd_library.rb'),'utf8').match(/VERSION\s*=\s*'([^']+)'/)[1];
 function assert(ok, message) { if (!ok) throw Error(message); }
 (async () => {
   const browser = await chromium.launch({ headless: true, ...(process.env.VGD_BROWSER_EXECUTABLE ? { executablePath: process.env.VGD_BROWSER_EXECUTABLE } : { channel: 'msedge' }) });
@@ -14,7 +15,7 @@ function assert(ok, message) { if (!ok) throw Error(message); }
     const items = Array.from({ length: 67 }, (_,i) => ({ id:String(i), name:i === 0 ? 'Gỗ sồi A01' : `Map ${i}`, root:'C:/VGD/Materials', category:i % 2 ? 'Đá' : 'Gỗ', format:'PNG', preview:svg(i%2 ? '#aea69b' : '#b49a76') }));
     items[66].name = '<img src=x onerror="window.injected=true">';
     const receive = (method, ...args) => page.evaluate(([method,args]) => VGD[method](...args), [method,args]);
-    await receive('begin',{ roots:['C:/VGD/Materials'], favorites:['0'], version:'1.0.0-beta.1' });
+    await receive('begin',{ roots:['C:/VGD/Materials'], favorites:['0'], version });
     await receive('append',items,true,[]);
     await receive('model',{ materials:[],current:null,model_id:'fixture-model' });
     assert(await page.locator('.card').count() === 60, 'Catalog not paginated');
@@ -33,6 +34,27 @@ function assert(ok, message) { if (!ok) throw Error(message); }
     await page.click('.inspector [data-action="rotate"]'); assert((await page.evaluate(() => calls.at(-1))).action==='rotate', 'Texture action payload');
     await page.fill('#angle','-30'); await page.click('#rotateAngle'); assert((await page.evaluate(() => calls.at(-1))).args.angle==='-30', 'Custom angle');
     await receive('feedback','Không có mặt được chọn.',true); assert(await page.locator('#status').getAttribute('class')==='error', 'Error not displayed');
+    // Regression: a full HTML response previously expanded the footer to the
+    // entire window and collapsed the material library to zero height.
+    const actualResponse = path.resolve(__dirname,'../outputs/drive_response.html');
+    const htmlResponse = fs.existsSync(actualResponse) ? fs.readFileSync(actualResponse,'utf8') : '<!DOCTYPE html><html><body>'+'<div>Drive folder</div>'.repeat(50000)+'</body></html>';
+    for (const viewport of [{width:1120,height:760},{width:720,height:600}]) {
+      await page.setViewportSize(viewport);
+      for (const message of ['Nguồn online: unexpected token at '+htmlResponse, 'Thông báo dài '.repeat(60000)]) {
+        await receive('append',[],true,[message]);
+        const layout = await page.evaluate(() => ({ footer:document.querySelector('footer').getBoundingClientRect().height, workspace:document.querySelector('.workspace').getBoundingClientRect().height, text:document.querySelector('#status').textContent, title:document.querySelector('#status').title, scrollWidth:document.documentElement.scrollWidth, width:innerWidth }));
+        assert(layout.footer===38 && layout.workspace===viewport.height-110 && layout.scrollWidth<=layout.width, 'Error message collapsed or overflowed the library');
+        assert(layout.text.length<=500 && layout.title.length<=500 && !layout.text.includes('<html'), 'Raw or unbounded response leaked to status');
+        assert(await page.locator('.card').count()>0 && await page.locator('#addFolder').isVisible(), 'Library controls disappeared after source error');
+      }
+      // CSS protects the viewport even if a future bridge bypasses feedback().
+      await page.evaluate(text => { document.querySelector('#status').textContent=text; },htmlResponse);
+      assert(await page.locator('footer').evaluate(el=>el.getBoundingClientRect().height)===38,'Footer missing independent CSS height guard');
+    }
+    await page.setViewportSize({width:1120,height:760});
+    await receive('feedback','Nguồn trả về trang web, không phải danh mục JSON.',true);
+    fs.mkdirSync(path.resolve(__dirname,'../outputs'),{recursive:true});
+    await page.screenshot({path:path.resolve(__dirname,'../outputs/drive_error_fixed.png')});
     await page.click('[data-view="library"]'); await page.selectOption('#category','Gỗ'); assert(await page.locator('.card').count()===34, 'Category filter');
     await page.locator('.folder-row .remove').click(); assert((await page.evaluate(() => calls.at(-1))).action==='remove_folder', 'Remove source action');
     const out=path.resolve(__dirname,'../outputs'); fs.mkdirSync(out,{recursive:true});
@@ -44,7 +66,7 @@ function assert(ok, message) { if (!ok) throw Error(message); }
     await page.screenshot({path:path.join(out,'vgd_library_compact.png')});
     // Library assets route SKP placement separately from image/SKM painting.
     await page.setViewportSize({width:1120,height:760});
-    await receive('begin',{roots:['C:/VGD/Assets'],online_roots:[{id:'online:test',label:'Kho VGD'}],favorites:['door'],version:'1.1.0-beta.1'});
+    await receive('begin',{roots:['C:/VGD/Assets'],online_roots:[{id:'online:test',label:'Kho VGD'}],favorites:['door'],version});
     await receive('append',[
       {id:'door',name:'Cánh tủ DC',kind:'model',format:'SKP',category:'Cánh tủ',root:'C:/VGD/Assets'},
       {id:'wood',name:'Sồi tự nhiên',kind:'material',format:'PNG',category:'Gỗ',root:'C:/VGD/Assets',preview:svg('#ba9d77')},
@@ -83,6 +105,6 @@ function assert(ok, message) { if (!ok) throw Error(message); }
     call=await seam.evaluate(() => calls.at(-1)); assert(call.action==='preview' && call.args.flatten===80 && call.args.feather===7,'Seamless preset not recalculated');
     await seam.evaluate(() => VGDSeam.message('Kiểm tra ảnh trước khi áp dụng')); await seam.screenshot({path:path.join(out,'vgd_library_seamless.png')});
     assert(errors.length===0, errors.join('; '));
-    console.log('PASS: library/model/online filtering, SKP insert and thumbnails, favorites, 720px layout, tool actions/settings, nesting audit safety, image tracing and auxiliary export payloads, seamless handshake/preview/apply/presets.');
+    console.log('PASS: real Drive HTML and oversized errors keep 38px footer and full workspace at 1120/720px; library/model/online filters, SKP insert/thumbnails, favorites, tool actions/settings, audit safety, tracing/aux payloads, seamless preview/apply/presets.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode=1; });

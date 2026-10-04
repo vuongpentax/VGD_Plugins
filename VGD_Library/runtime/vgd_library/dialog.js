@@ -12,7 +12,13 @@
     if (window.sketchup && typeof window.sketchup.vgd === 'function') window.sketchup.vgd(action, JSON.stringify(args));
     else feedback('Mở giao diện từ VGD_Library trong SketchUp để dùng công cụ.', true);
   }
-  function feedback(text, error = false) { $('status').textContent = text; $('status').className = error ? 'error' : 'success'; }
+  function feedback(text, error = false) {
+    text = String(text == null ? '' : text);
+    if (/<(?:!doctype|html|head|body|div)\b/i.test(text)) text = 'Nguồn trả về trang web, không phải danh mục JSON. Kiểm tra lại URL nguồn online.';
+    text = text.replace(/[\r\n\t]+/g, ' ');
+    if (text.length > 500) text = text.slice(0, 497) + '…';
+    $('status').textContent = text; $('status').title = text; $('status').className = error ? 'error' : 'success';
+  }
   function normalized(value) { return String(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase(); }
   function button(text, title, callback, className = '') { const el = document.createElement('button'); el.textContent = text; el.title = title; el.className = className; el.addEventListener('click', callback); return el; }
   function displayName(path) { return path.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || path; }

@@ -1,4 +1,4 @@
-# Đối chiếu N-TEXTURE 2.0.19 → VGD_Library 1.1.1-beta.1
+# Đối chiếu N-TEXTURE 2.0.19 → VGD_Library 1.1.2-beta.1
 
 Nhóm chức năng được xác định từ registry command, core dispatch, browser model/local/online và UI/callback của RBZ. Mọi mục đã viết dưới đây là mã VGD mới, đã kiểm tra mô phỏng/giao diện khi phù hợp, **chưa kiểm chứng SketchUp native**. Lõi Texture/Seamless, phép tính thay đối tượng và một số thuật toán nằm ở máy chủ/DLL không đủ trong RBZ. Không cam kết hành vi/chất lượng giống 100% bản gốc.
 

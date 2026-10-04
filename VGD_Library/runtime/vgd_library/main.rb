@@ -59,7 +59,20 @@ module VGD
       raise
     end
 
+    def self.feedback_text(text)
+      text = text.to_s
+      return 'Nguồn trả về trang web, không phải danh mục JSON. Kiểm tra lại URL nguồn online.' if text.match?(/<(?:!doctype|html|head|body|div)\b/i)
+      text = text.gsub(/[\r\n\t]+/, ' ')
+      text.length > 500 ? text[0, 497] + '…' : text
+    end
+
+    def self.error_text(error)
+      return 'Không đọc được dữ liệu JSON của nguồn thư viện.' if error.is_a?(JSON::ParserError)
+      feedback_text(error.message)
+    end
+
     def self.message(text, error = false)
+      text = feedback_text(text)
       Sketchup.status_text = "VGD Library: #{text}"
       if @dialog
         @dialog.execute_script("window.VGD.feedback(#{JSON.generate(text)}, #{error});")
@@ -71,8 +84,8 @@ module VGD
     def self.safely
       yield
     rescue StandardError, SyntaxError => e
-      puts "[VGD_Library] #{e.class}: #{e.message}\n#{e.backtrace.first(5).join("\n")}"
-      message(e.message, true)
+      puts "[VGD_Library] #{e.class}: #{error_text(e)}\n#{Array(e.backtrace).first(5).join("\n")}"
+      message(error_text(e), true)
     end
 
     # Native SU timers can fire again while a modal picker is open even with
@@ -116,6 +129,7 @@ module VGD
       generation = @scan_generation
       @items = {}
       return unless @dialog
+      Drive.migrate_sources
       has_online = !Online.sources.empty?
       online_roots = Online.sources.map { |source| { id: Online.root(source), label: source['label'] || URI.parse(source['url']).host || File.basename(source['local'].to_s) } }
       @dialog.execute_script("window.VGD.begin(#{JSON.generate({ roots: Catalog.roots, online_roots: online_roots, favorites: Catalog.favorites, version: VERSION, view: @requested_view })});")
@@ -160,7 +174,7 @@ module VGD
         rescue StandardError, SyntaxError => e
           stop_scan
           @scan_generation += 1
-          warnings << "Đã dừng quét thư viện: #{e.message}"
+          warnings << "Đã dừng quét thư viện: #{error_text(e)}"
           @dialog.execute_script("window.VGD.append([], true, #{JSON.generate(warnings)});") if @dialog
           message(warnings.last, true)
         ensure

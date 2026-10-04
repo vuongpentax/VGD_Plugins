@@ -12,10 +12,14 @@ const { RubyVM } = require(path.join(resolve('@ruby/wasm-wasi'), 'dist/cjs/vm.js
   const fixture = fs.readFileSync(path.join(__dirname, 'test_engine.rb'), 'utf8').split("require '/workspace/runtime/vgd_library.rb'\nrequire '/workspace/runtime/vgd_library/main.rb'");
   vm.eval(fixture[0]);
   for (const file of ['vgd_library.rb', ...['catalog','materials','geometry','storage','models','pixels','advanced','tools','seamless','online','drive','shell_sync','main'].map(name => `vgd_library/${name}.rb`)]) vm.eval(fs.readFileSync(path.join(root,'runtime',file),'utf8').replace(/^require_relative[^\n]*\n/gm,''));
+  // eval has no real __FILE__; native require resolves this directory itself.
+  vm.eval("VGD::Library.send(:remove_const, :ROOT); VGD::Library.const_set(:ROOT, '/workspace/runtime/vgd_library')");
   vm.eval(fixture[1]); vm.eval('$stdout.flush');
   vm.eval(fs.readFileSync(path.join(__dirname,'test_advanced.rb'),'utf8')); vm.eval('$stdout.flush');
   fs.mkdirSync(path.join(temp,'legacy/SketchUp/SketchUp 2022/SketchUp'),{recursive:true});
   try { vm.eval(fs.readFileSync(path.join(__dirname,'test_preferences_timers.rb'),'utf8')); }
+  finally { vm.eval('$stdout.flush'); }
+  try { vm.eval(fs.readFileSync(path.join(__dirname,'test_online_errors.rb'),'utf8')); }
   finally { vm.eval('$stdout.flush'); }
   // Actual ZIP structures verify the SKM central-directory and CRC reader.
   const JSZip=require(resolve('jszip')), thumbnailZip=new JSZip();

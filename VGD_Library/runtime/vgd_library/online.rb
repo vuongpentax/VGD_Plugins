@@ -4,6 +4,7 @@ module VGD
     module Online
       MAX_CATALOG = 5_000_000
       MAX_ASSET = 250_000_000
+      DRIVE_GUIDANCE = 'Link thư mục Drive không phải danh mục online. Bấm + Kho vật liệu Drive 03 MTL hoặc thêm thư mục Drive đã đồng bộ.'.freeze
 
       def self.sources
         value = Catalog.read_json('online_sources', [])
@@ -20,14 +21,36 @@ module VGD
 
       def self.add(url)
         url = https(url)
+        if Drive.folder_id(url)
+          return Drive.connect if Drive.folder_id(url) == Drive.folder_id(Drive.source.fetch('url'))
+          raise DRIVE_GUIDANCE
+        end
         Catalog.save('online_sources', (sources + [{ 'url' => url }]).uniq { |source| source['url'] })
+      end
+
+      def self.catalog_url(url)
+        url = https(url)
+        raise DRIVE_GUIDANCE if Drive.folder_id(url)
+        url
+      end
+
+      def self.parse_catalog(raw)
+        raise 'Danh mục online quá lớn.' if raw.bytesize > MAX_CATALOG
+        raise 'Nguồn trả về trang web, không phải danh mục JSON. Kiểm tra lại URL nguồn online.' if raw.lstrip.start_with?('<')
+        data = JSON.parse(raw)
+        raise 'Danh mục online phải là đối tượng JSON.' unless data.is_a?(Hash)
+        data
+      rescue JSON::ParserError
+        # Parser messages can contain the complete response, including megabytes
+        # of HTML. Never pass response bodies to the dialog or native status bar.
+        raise 'Không đọc được danh mục JSON. Kiểm tra lại URL hoặc tệp danh mục.'
       end
 
       def self.import_catalog(path)
         source = { 'url' => Catalog.file_url(path), 'local' => File.expand_path(path) }
         raw = File.binread(path)
         manifest(raw, source)
-        data = JSON.parse(raw)
+        data = parse_catalog(raw)
         source['label'] = data['name'].to_s.empty? ? File.basename(path, '.*') : data['name'].to_s
         Catalog.save('online_sources', (sources + [source]).uniq { |entry| entry['url'] })
       end
@@ -41,8 +64,7 @@ module VGD
       end
 
       def self.manifest(raw, source)
-        raise 'Danh mục online quá lớn.' if raw.bytesize > MAX_CATALOG
-        data = JSON.parse(raw)
+        data = parse_catalog(raw)
         raise 'Danh mục online cần mảng items.' unless data.is_a?(Hash) && data['items'].is_a?(Array)
         raise 'Danh mục online vượt 20000 mẫu.' if data['items'].size > Catalog::LIMIT
         data['items'].map do |entry|
@@ -83,13 +105,14 @@ module VGD
           remote = sources.find { |source| !source['local'] }
           input = UI.inputbox(['URL HTTPS thông tin cập nhật VGD (JSON)'], [remote ? remote['url'] : 'https://'], 'Nguồn cập nhật VGD')
           return unless input
-          url = https(input[0])
+          url = catalog_url(input[0])
           Catalog.save('update_manifest', url)
         end
+        url = catalog_url(url)
         request(url, MAX_CATALOG) do |raw, error|
           Library.safely do
             raise(error) if error
-            data = JSON.parse(raw)
+            data = parse_catalog(raw)
             info = data['extension']
             raise 'Danh mục chưa có mục extension.version / extension.url cho cập nhật VGD.' unless info.is_a?(Hash) && info['version'].is_a?(String) && info['url']
             download = https(info['url'])
@@ -118,6 +141,11 @@ module VGD
           end
           source = list[index]
           index += 1
+          if !source['local'] && Drive.folder_id(source['url'])
+            callback.call([], [DRIVE_GUIDANCE], false)
+            update.call
+            next
+          end
           cache = File.join(Storage.dir('online'), Digest::SHA256.hexdigest(source['url']) + '.json')
           consume = lambda do |raw, error|
             items, warnings = [], []
@@ -129,10 +157,10 @@ module VGD
                 items = manifest(File.binread(cache), source)
                 warnings << 'Dùng danh mục online đã lưu vì nguồn không truy cập được.'
               else
-                warnings << error
+                warnings << Library.feedback_text(error)
               end
             rescue StandardError => e
-              warnings << "Nguồn online: #{e.message}"
+              warnings << "Nguồn online: #{Library.error_text(e)}"
             end
             callback.call(items, warnings, false)
             update.call
