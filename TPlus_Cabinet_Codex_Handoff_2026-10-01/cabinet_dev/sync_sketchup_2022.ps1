@@ -5,7 +5,7 @@ param([switch]$VerifyOnly)
 $ErrorActionPreference = 'Stop'
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $sourceRoot = Join-Path $projectRoot 'cabinet_work'
-$pluginRoot = 'C:\Users\PC\AppData\Roaming\SketchUp\SketchUp 2022\SketchUp\Plugins'
+$pluginRoot = Join-Path $env:APPDATA 'SketchUp\SketchUp 2022\SketchUp\Plugins'
 $ownedFiles = @(
     'tplus_cabinet.rb',
     'TPlus_Cabinet\main43.rb', 'TPlus_Cabinet\geometry_engine.rb',

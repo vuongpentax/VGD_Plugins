@@ -1,38 +1,131 @@
 <!DOCTYPE html>
-<html lang="vi">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VGD Dimension &amp; Text</title><link rel="stylesheet" href="dialog.css"></head>
-<body>
-<header class="header"><div><h1>VGD <span>DIMENSION &amp; TEXT</span></h1><small>CHỈ ÁP DỤNG CHO DIM / TEXT ĐANG CHỌN</small></div><span class="version">2.3 beta 1</span></header>
-<form id="settings">
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VGD Dim</title>
+<link rel="stylesheet" href="dialog.css"></head><body>
+
+<header>
+ <h1>VGD Dim<small>SMART DIM · MODEL INFO · 3.0 beta 1</small></h1>
+ <div class="row" style="margin:0 0 6px"><select id="preset" aria-label="Preset" onchange="VGD.loadPreset()"></select>
+  <button class="quiet" id="del" onclick="VGD.delPreset()">Xóa</button></div>
+ <div class="row" style="margin:0"><input type="text" id="pname" placeholder="Tên preset" aria-label="Tên preset">
+  <button onclick="VGD.savePreset()">Lưu preset</button></div>
+</header>
+
 <main>
-<section>
-<h2>MẪU CHỮ TỪ MODEL INFO</h2>
-<div class="row"><label>Dim · Font / Size / Height</label><button type="button" id="dim_info" class="btn">Mở Model Info · Dimensions</button></div>
-<div class="row"><label>Text / Label · Font / Size</label><button type="button" id="text_info" class="btn">Mở Model Info · Text</button></div>
-<p class="info">Chỉnh mẫu trong Model Info trước: font, cỡ chữ Points hoặc Height của Dim; font và cỡ chữ của Text/Label.</p>
-<p class="info">Chọn Dim/Text cần đổi rồi bấm APPLY. Mẫu Model Info được áp vào vùng chọn; màu, endpoint và tag lấy theo bảng dưới. Endpoint “Giữ nguyên” sẽ giữ endpoint sau khi áp mẫu Model Info.</p>
-</section>
-<section>
-<h2>DIMENSION</h2>
-<div class="row"><label for="dim_color">Màu Dim</label><input id="dim_color" type="color" value="#000000"></div>
-<div class="row"><label for="dim_endpoint">Endpoint</label><select id="dim_endpoint">
-<option value="keep">Giữ nguyên</option><option value="none">Không có</option><option value="slash">Gạch chéo /</option>
-<option value="dot">Chấm tròn ●</option><option value="closed">Mũi tên kín</option><option value="open">Mũi tên mở</option></select></div>
-<div class="row"><label>Tag sau APPLY</label><span class="tag">000 DIM</span></div>
-</section>
-<section>
-<h2>TEXT / LABEL</h2>
-<div class="row"><label for="text_color">Màu chữ</label><input id="text_color" type="color" value="#000000"></div>
-<div class="row"><label for="label_endpoint">Endpoint Label</label><select id="label_endpoint">
-<option value="keep">Giữ nguyên</option><option value="none">Không có</option><option value="slash">Gạch chéo /</option>
-<option value="dot">Chấm tròn ●</option><option value="closed">Mũi tên kín</option><option value="open">Mũi tên mở</option></select></div>
-<div class="row"><label>Tag sau APPLY</label><span class="tag">000 TEXT</span></div>
-<p class="info">Endpoint chỉ đổi với Text có đường dẫn (Label).</p>
-</section>
-<p class="info scope">Chọn trực tiếp Dim/Text trong model hoặc bên trong nhóm đang mở. Chọn Group/Component không áp cho toàn bộ nội dung bên trong.</p>
+ <div class="stats" aria-live="polite">
+  <div><b id="st.dim">–</b><span>Dimension</span></div>
+  <div><b id="st.text">–</b><span>Text</span></div>
+  <div><b id="st.label">–</b><span>Label</span></div>
+  <div><b id="st.nested">–</b><span>Nằm trong nhóm</span></div>
+ </div>
+
+ <details id="smart-panel" open><summary>SMART DIM · TỦ ĐANG CHỌN</summary><div>
+  <div class="row"><label for="sd.face">Mặt đứng</label>
+   <select id="sd.face"><option value="camera">Mặt đang nhìn (camera)</option><option value="axis">Gần trục nhất</option><option value="-y">Mặt -Y (trước)</option><option value="+y">Mặt +Y (sau)</option><option value="-x">Mặt -X (trái)</option><option value="+x">Mặt +X (phải)</option></select></div>
+  <div class="row"><label class="chk"><input type="checkbox" id="sd.do_h" checked> Dim ngang</label>
+   <select id="sd.h_side" aria-label="Vị trí dim ngang"><option value="top">Phía trên</option><option value="bottom">Phía dưới</option></select></div>
+  <div class="row"><label class="chk"><input type="checkbox" id="sd.do_v" checked> Dim đứng</label>
+   <select id="sd.v_side" aria-label="Vị trí dim đứng"><option value="left">Bên trái</option><option value="right">Bên phải</option></select></div>
+  <div class="row"><label for="sd.off1">Cấp 1 (mm)</label><input type="number" min="1" id="sd.off1" value="150">
+   <label for="sd.off2" style="flex:0 0 auto;color:var(--mute)">Cấp 2</label><input type="number" min="1" id="sd.off2" value="300"></div>
+  <details style="margin-top:8px"><summary>Lọc chi tiết</summary><div>
+   <div class="row"><label for="sd.min_seg">Bỏ đoạn nhỏ hơn</label><input type="number" min="0" id="sd.min_seg" value="5"></div>
+   <div class="row"><label for="sd.min_part">Bỏ chi tiết nhỏ hơn</label><input type="number" min="0" id="sd.min_part" value="300"></div>
+   <div class="row"><label for="sd.depth">Sâu tối đa từ mặt trước</label><input type="number" min="1" id="sd.depth" value="100"></div>
+   <p class="note">Đơn vị mm. Chi tiết nhỏ như tay nắm bị bỏ; chi tiết nằm sâu hơn mặt trước quá ngưỡng cũng bị bỏ.</p>
+  </div></details>
+  <div class="row"><button class="solid" style="flex:1" onclick="VGD.smart()">Smart Dim cho tủ đang chọn</button></div>
+  <p class="note">Chọn Group hoặc Component của tủ rồi bấm. Cấp 1 là dim nối tiếp (hồi, cánh), cấp 2 là dim tổng. Ctrl+Z để hoàn tác. Smart Dim đo hộp bao tại lúc tạo; bấm lại sẽ tạo thêm bộ Dim.</p>
+ </div></details>
+
+ <section>
+  <h2>Phạm vi</h2>
+  <div class="seg" role="radiogroup" aria-label="Phạm vi">
+   <label><input type="radio" name="scope" value="selected" checked><span>Đang chọn</span></label>
+   <label><input type="radio" name="scope" value="context"><span>Group đang mở</span></label>
+   <label><input type="radio" name="scope" value="model"><span>Toàn model</span></label>
+  </div>
+  <div class="checks">
+   <label class="chk"><input type="checkbox" id="o.nested" checked> Group lồng nhau</label>
+   <label class="chk"><input type="checkbox" id="o.components" checked> Component</label>
+   <label class="chk"><input type="checkbox" id="o.hidden"> Đối tượng ẩn</label>
+   <label class="chk"><input type="checkbox" id="o.locked"> Đối tượng khóa</label>
+  </div>
+  <p class="note">Component dùng chung definition chỉ sửa một lần và đổi tất cả bản sao. Mặc định chỉ vùng chọn; hãy Make Unique nếu cần sửa riêng một bản.</p>
+ </section>
+
+ <section id="model-info">
+  <h2>Model Info · Font / Size / Height</h2>
+  <div class="bar"><button id="dim-info" onclick="sketchup.dim_info()">Dimensions</button><button id="text-info" onclick="sketchup.text_info()">Text / Label</button></div>
+  <div class="row"><button id="native-apply" style="flex:1" onclick="VGD.nativeApply()">APPLY mẫu Model Info · Dim/Text chọn trực tiếp</button></div>
+  <p class="note">Chỉnh mẫu chữ trong Model Info trước. APPLY mẫu chỉ áp Dim/Text chọn trực tiếp (Windows English); không quét trong group. Lưu SKP để mẫu đi cùng file.</p>
+ </section>
+ <section>
+  <h2>Dimension</h2>
+  <div class="row"><label class="chk"><input type="checkbox" id="dim.setcolor"> Đổi màu</label><input type="color" id="dim.color"></div>
+  <div class="row"><label for="dim.arrow">Đầu mũi tên</label>
+   <select id="dim.arrow"><option value="keep">Giữ nguyên</option><option value="none">Không có</option><option value="slash">Gạch chéo</option><option value="dot">Chấm</option><option value="closed">Mũi tên đặc</option><option value="open">Mũi tên hở</option></select></div>
+  <div class="row"><label for="dim.textorient">Hướng chữ</label>
+   <select id="dim.textorient"><option value="keep">Giữ nguyên</option><option value="aligned">Song song đường Dim</option><option value="screen">Theo màn hình</option></select></div>
+  <div class="row"><label for="dim.align">Vị trí chữ</label>
+   <select id="dim.align"><option value="keep">Giữ nguyên</option><option value="above">Phía trên</option><option value="center">Ở giữa</option><option value="outside">Bên ngoài</option></select></div>
+  <div class="row"><button class="right" onclick="VGD.run(['dim'])">Áp cho Dimension</button></div>
+  <div class="row"><button class="solid" style="flex:1" onclick="VGD.rebuild()">Làm mới size theo Model Info</button></div>
+  <p class="note">Chỉnh font và size ở Model Info &gt; Dimensions trước. Plugin tạo lại Dim tuyến tính với mẫu chữ đó; giữ điểm đo, liên kết, chữ ghi đè, màu, endpoint và Tag. Dim bán kính được bỏ qua. Ctrl+Z để hoàn tác.</p>
+ </section>
+
+ <p class="note">Tag sau áp style: 000 DIM.</p>
+ <section>
+  <h2>Text</h2>
+  <div class="row"><label class="chk"><input type="checkbox" id="text.setcolor"> Đổi màu</label><input type="color" id="text.color"></div>
+  <div class="row"><button class="right" onclick="VGD.run(['text'])">Áp cho Text</button></div>
+ </section>
+
+ <p class="note">Text / Label sau áp style: 000 TEXT.</p>
+ <section>
+  <h2>Label</h2>
+  <div class="row"><label class="chk"><input type="checkbox" id="label.setcolor"> Đổi màu</label><input type="color" id="label.color"></div>
+  <div class="row"><label for="label.leader">Kiểu leader</label>
+   <select id="label.leader"><option value="keep">Giữ nguyên</option><option value="view">Theo màn hình</option><option value="pushpin">Ghim vào model</option></select></div>
+  <div class="row"><label for="label.arrow">Đầu mũi tên</label>
+   <select id="label.arrow"><option value="keep">Giữ nguyên</option><option value="none">Không có</option><option value="slash">Gạch chéo</option><option value="dot">Chấm</option><option value="closed">Mũi tên đặc</option><option value="open">Mũi tên hở</option></select></div>
+  <div class="row"><button class="right" onclick="VGD.run(['label'])">Áp cho Label</button></div>
+ </section>
+
+ <section>
+  <h2>Tự áp cho đối tượng mới</h2>
+  <label class="chk"><input type="checkbox" id="auto.enabled" onchange="VGD.saveAuto()"> Dim, Text, Label vừa tạo tự dùng style trong form</label>
+  <div class="row"><button class="quiet" onclick="VGD.saveAuto()">Cập nhật theo form</button></div>
+  <p class="note">Chỉ chạy khi plugin đang nạp. File gửi cho người khác không mang theo thiết lập này.</p>
+ </section>
+
+ <section>
+  <h2>Animation</h2>
+  <div class="row"><label for="anim.transition">Chuyển cảnh (giây)</label><input type="number" step="0.1" min="0" id="anim.transition"></div>
+  <div class="row"><label for="anim.delay">Dừng mỗi cảnh (giây)</label><input type="number" step="0.1" min="0" id="anim.delay"></div>
+  <label class="chk"><input type="checkbox" id="anim.loop"> Lặp slideshow</label>
+  <div class="row"><button class="solid" onclick="VGD.anim(true)">Bật animation</button><button onclick="VGD.anim(false)">Tắt animation</button></div>
+  <p class="note" id="anim.state"></p>
+ </section>
+
+ <details>
+  <summary>Đơn vị của model</summary>
+  <div>
+   <p class="note warn">Đổi đơn vị và số lẻ của cả model, không chỉ Dimension.</p>
+   <label class="chk"><input type="checkbox" id="units.enabled"> Áp dụng khi bấm Chuẩn hóa</label>
+   <div class="row"><label for="units.unit">Đơn vị</label>
+    <select id="units.unit"><option value="0">inch</option><option value="1">feet</option><option value="2">mm</option><option value="3">cm</option><option value="4">m</option></select></div>
+   <div class="row"><label for="units.precision">Số lẻ</label><input type="number" min="0" max="8" id="units.precision"></div>
+   <label class="chk"><input type="checkbox" id="units.show_unit"> Hiện ký hiệu đơn vị</label>
+  </div>
+ </details>
 </main>
-<p id="error" role="alert" hidden></p>
-<footer><button type="button" id="cancel" class="cancel">ĐÓNG</button><button type="submit" id="apply" class="apply">ÁP DỤNG · APPLY</button></footer>
-</form><script src="dialog.js"></script>
-</body></html>
+
+<footer>
+ <div class="bar"><button onclick="VGD.scan()">Quét</button>
+  <button class="solid" onclick="VGD.run(['dim','text','label'])">Áp style theo phạm vi</button></div>
+ <div id="log" role="status">Sẵn sàng. Bấm Quét để đếm đối tượng trước khi áp.</div>
+</footer>
+
+<script src="dialog.js"></script></body></html>

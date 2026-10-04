@@ -9,7 +9,7 @@ module VGD
       def adapter
         @adapter ||= WindowsAdapter.new
       end
-      def apply(model, settings, &finished)
+      def apply(model, settings, apply_setters: true, &finished)
         raise ArgumentError, 'APPLY đang chạy.' if @job
         config = Engine.validate(settings)
         targets = Engine.selected(model)
@@ -17,7 +17,7 @@ module VGD
         Engine.check_context(model)
         api = adapter
         api.check_platform!
-        @job = Job.new(model, config, api, finished)
+        @job = Job.new(model, config, api, finished, apply_setters)
         @job.start
       end
       def cancel
@@ -127,10 +127,11 @@ module VGD
       end
 
       class Job
-        def initialize(model, config, api, finished)
+        def initialize(model, config, api, finished, apply_setters=true)
           @model = model; @config = config; @api = api; @finished = finished
           @snapshot = model.selection.to_a; @path = Array(model.active_path).dup
           @expected = @snapshot.dup; @updated = []
+          @apply_setters = apply_setters
           targets = Engine.selected(model)
           @stages = []
           dims = targets.select { |entity| entity.is_a?(Sketchup::Dimension) }
@@ -177,7 +178,11 @@ module VGD
               prepare(0, false)
             else
               select(@snapshot)
-              Engine.apply(@model, @config) # Plugin overrides color/endpoint, assigns tags.
+              if @apply_setters
+                Engine.apply(@model, @config)
+              else
+                Core.tag_selected(@model)
+              end
               finish(nil)
             end
             return
@@ -200,7 +205,7 @@ module VGD
             elsif attempts < 9
               wait_button(index,preflight,attempts + 1)
             else
-              raise "Không tìm được nút Update selected ở Model Info → #{page}. Chưa áp màu/tag của plugin."
+              raise "Không tìm được nút Update selected ở Model Info → #{page}. Chưa chạy bước gán tag/style."
             end
           end
         end

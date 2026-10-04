@@ -31,7 +31,7 @@ with tempfile.TemporaryDirectory(prefix='deploy_fixture_', dir=outputs) as direc
     assert not legacy.exists()
     assert other.read_bytes() == b'CABINET MUST BE PRESERVED'
     owned = ['vgd_dim.rb'] + ['VGD_Dim/' + name for name in
-        ['main.rb','defaults.rb','reload.rb','engine.rb','native_style.rb','dialog.html','dialog.css','dialog.js','dim.svg']]
+        ['main.rb','defaults.rb','reload.rb','engine.rb','native_style.rb','store.rb','core.rb','presets.rb','autostyle.rb','animation.rb','smartdim.rb','probe.rb','dialog.rb','dialog.html','dialog.css','dialog.js','dim.svg']]
     for name in owned:
         assert (plugins / name).read_bytes() == (root / 'runtime' / name).read_bytes(), name
     reports = [json.loads(path.read_text(encoding='utf-8-sig')) for path in outputs.glob('install_*/INSTALL_REPORT.json')]
@@ -51,4 +51,4 @@ with tempfile.TemporaryDirectory(prefix='deploy_fixture_', dir=outputs) as direc
     result = deploy()
     assert result.returncode != 0 and (plugins / 'vgd_dim.rb').read_bytes() == b'FOREIGN VGD LOADER'
     assert other.read_bytes() == b'CABINET MUST BE PRESERVED'
-print('PASS: deploy dry-run, T+ loader backup/retirement, 10 exact VGD files, repeated install, foreign-loader guards and Cabinet preservation')
+print('PASS: deploy dry-run, T+ loader backup/retirement, 18 exact VGD files, repeated install, foreign-loader guards and Cabinet preservation')

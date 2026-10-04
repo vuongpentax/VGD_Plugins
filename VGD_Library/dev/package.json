@@ -1,0 +1,7 @@
+{
+  "name": "vgd-library-dev",
+  "version": "1.1.1-beta.1",
+  "private": true,
+  "scripts": { "test": "node check_ruby.cjs && node test_ui.cjs", "package": "node package.cjs" },
+  "devDependencies": { "@ruby/3.2-wasm-wasi": "2.10.1", "@ruby/wasm-wasi": "2.10.1", "playwright": "1.58.2", "jszip": "3.10.1" }
+}

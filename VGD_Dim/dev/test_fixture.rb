@@ -34,10 +34,23 @@ module Geom
     def self.scaling(s); new(s); end
     def self.translation(v); t=new; 3.times { |i| t.matrix[i][3]=v[i] }; t; end
     def self.axes(p,x,y,z); t=new; 3.times { |i| [x,y,z,p].each_with_index { |v,j| t.matrix[i][j]=v.to_a[i] } }; t; end
-    def *(b); t=Transformation.new; 4.times { |i| 4.times { |j| t.matrix[i][j]=(0..3).sum { |k| matrix[i][k]*b.matrix[k][j] } } }; t; end
+    def *(b); return point(b) if b.is_a?(Point3d); t=Transformation.new; 4.times { |i| 4.times { |j| t.matrix[i][j]=(0..3).sum { |k| matrix[i][k]*b.matrix[k][j] } } }; t; end
     def vector(v); Vector3d.new(3.times.map { |i| (0..2).sum { |j| matrix[i][j]*v.to_a[j] } }); end
     def point(p); v=vector(p); Point3d.new(3.times.map { |i| v.to_a[i]+matrix[i][3] }); end
-    def inverse; Transformation.new(1.0/scale); end
+    def inverse
+      a=matrix.map(&:dup); result=Transformation.new
+      4.times do |i|
+        pivot=(i...4).max_by { |j| a[j][i].abs }
+        raise 'Singular' if a[pivot][i].abs<1e-12
+        a[i],a[pivot]=a[pivot],a[i]; result.matrix[i],result.matrix[pivot]=result.matrix[pivot],result.matrix[i]
+        factor=a[i][i]; 4.times { |j| a[i][j]/=factor; result.matrix[i][j]/=factor }
+        4.times do |k|
+          next if k==i
+          f=a[k][i]; 4.times { |j| a[k][j]-=f*a[i][j]; result.matrix[k][j]-=f*result.matrix[i][j] }
+        end
+      end
+      result
+    end
   end
   class PolygonMesh
     NO_SMOOTH_OR_HIDE=0
@@ -51,6 +64,19 @@ module Geom
     def max; Point3d.new(3.times.map { |i| @points.map { |p| p.to_a[i] }.max }); end
     def center; Point3d.linear_combination(0.5,min,0.5,max); end
     def width; max.x-min.x; end
+    def corner(i); Point3d.new((i&1)==0 ? min.x : max.x,(i&2)==0 ? min.y : max.y,(i&4)==0 ? min.z : max.z); end
+    def valid?; !@points.empty?; end
+  end
+  class BoundingBox < Bounds
+    def initialize; @points=[]; end
+    def add(value)
+      if value.is_a?(Bounds)
+        @points << value.min << value.max if value.valid?
+      else
+        @points << value
+      end
+      self
+    end
   end
 end
 module UI
@@ -124,6 +150,14 @@ module Sketchup
     def delete_attribute(d,k=nil); k ? @attrs[d]&.delete(k) : @attrs.delete(d); end
     def copy_to(p); c=dup; @@next_id+=1; c.instance_variable_set(:@pid,@@next_id); c.instance_variable_set(:@attrs,Marshal.load(Marshal.dump(@attrs))); c.parent=p; c.model=p.model; c; end
     def points; []; end
+    def bounds; Geom::Bounds.new(points); end
+    def attribute_dictionaries
+      @attrs.map do |name,values|
+        dict=values.dup
+        dict.define_singleton_method(:name) { name }
+        dict
+      end
+    end
   end
   class Edge < Entity
     attr_accessor :vertices
@@ -147,6 +181,15 @@ module Sketchup
     def add_circle(p,n,r,s); a=Geom::Point3d.new(p.x+r,p.y,p.z); b=Geom::Point3d.new(p.x,p.y+r,p.z); [add_line(p,a),add_line(a,b),add_line(b,p)]; end
     def add_face(*p); p=p.first if p.length==1; p=p.flat_map(&:points) if p.first.is_a?(Edge); f=Face.new(p); self << f; f; end
     def add_faces_from_mesh(mesh,*); mesh.polygons.each { |t| add_face(t) }; end
+    def add_dimension_linear(start_arg,end_arg,offset)
+      dim=DimensionLinear.new
+      dim.start_ref=start_arg; dim.end_ref=end_arg
+      dim.start_point=start_arg.is_a?(Array) ? start_arg[1] : start_arg
+      dim.end_point=end_arg.is_a?(Array) ? end_arg[1] : end_arg
+      dim.offset_vector=offset
+      self << dim
+      dim
+    end
     def transform_entities(t,list); list.each { |e| e.vertices=e.points.map { |p| p.transform(t) } if e.respond_to?(:vertices=) }; end
   end
   class Definitions < Array
@@ -178,12 +221,12 @@ module Sketchup
   end
   class DimensionLinear < Dimension
     ALIGNED_TEXT_ABOVE=0; ALIGNED_TEXT_CENTER=1; ALIGNED_TEXT_OUTSIDE=2
-    attr_accessor :aligned_text_position,:start_point,:end_point
+    attr_accessor :aligned_text_position,:start_point,:end_point,:start_ref,:end_ref,:start_attached_to,:end_attached_to,:text_position
     def initialize; super; @vector=Geom::Vector3d.new(0,2,0); @start_point=Geom::Point3d.new(0,0,0); @end_point=Geom::Point3d.new(800.mm,0,0); end
     def offset_vector; @vector.clone; end
     def offset_vector=(v); @vector=v; end
-    def start; [nil,start_point]; end
-    def end; [nil,end_point]; end
+    def start; start_ref.is_a?(Array) ? start_ref : [nil,start_point]; end
+    def end; end_ref.is_a?(Array) ? end_ref : [nil,end_point]; end
   end
   class DimensionRadial < Dimension; end
   class Text < Entity
@@ -210,13 +253,14 @@ module Sketchup
   class Camera
     def up; Geom::Vector3d.new(0,1,0); end
     def xaxis; Geom::Vector3d.new(1,0,0); end
+    def direction; Geom::Vector3d.new(0,1,0); end
   end
   class FakeModel < Entity
     attr_accessor :selection,:active_path
     attr_reader :entities,:definitions,:materials,:layers,:options,:operations,:aborts,:commits,:operation_flags
     def initialize
       super; @model=self; @selection=Selection.new; @definitions=Definitions.new; @entities=Entities.new(self)
-      @materials=Materials.new; @layers=Layers.new; @options={'UnitsOptions'=>{'LengthUnit'=>0,'LengthFormat'=>1}}
+      @materials=Materials.new; @layers=Layers.new; @options={'UnitsOptions'=>{'LengthUnit'=>0,'LengthFormat'=>1}, 'PageOptions'=>{'ShowTransition'=>true,'TransitionTime'=>1.0}, 'SlideshowOptions'=>{'SlideTime'=>2.0,'LoopSlideshow'=>false}}
       @operations=@aborts=@commits=0; @operation_flags=[]
     end
     def guid; "model-#{persistent_id}"; end

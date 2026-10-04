@@ -89,13 +89,14 @@ module Sketchup
     def instances;@instances ||= [];end
   end
   class SectionPlane < Drawingelement
-    attr_accessor :name,:plane
+    attr_accessor :name,:plane,:entities
     def initialize(plane);super();@plane=plane;end
     def set_plane(plane);@plane=plane;end
+    def erase!;entities.delete(self) if entities;invalidate!;end
   end
   class Entities < Array
     attr_accessor :active_section_plane
-    def add_section_plane(plane);e=SectionPlane.new(plane);self << e;e;end
+    def add_section_plane(plane);e=SectionPlane.new(plane);e.entities=self;self << e;e;end
   end
   class Layer < Entity
     attr_accessor :visible
@@ -197,7 +198,7 @@ module Sketchup
       @options={'PageOptions'=>{'ShowTransition'=>true}};@events=[]
     end
     def title;'Model test';end
-    def start_operation(label,_);@events << [:start,label];end
+    def start_operation(label,*_);@events << [:start,label];end
     def commit_operation;@events << [:commit];end
     def abort_operation;@events << [:abort];end
     def select_tool(tool);@tool.deactivate(active_view) if @tool;@tool=tool;tool.activate if tool;end

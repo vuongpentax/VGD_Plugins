@@ -1,27 +1,30 @@
-# VGD Dimension & Text Manager · 2.3.0-beta.1
+# VGD Dim · 3.0.0-beta.1
 
-Chỉnh mẫu trong **Model Info**, chọn các Dim/Text cần đổi, rồi bấm **APPLY**. Giao diện một trang theo style T+ Cabinet.
+Gộp bộ Dim/Info trong files.zip vào VGD ANOT và đổi tên thành **VGD Dim**. Theo yêu cầu ngày 2026-10-05, bản này có đầy đủ chức năng trong giao diện Claude, giữ palette T+ sáng/nâu đồng.
 
-1. Bấm **Mở Model Info · Dimensions** để chỉnh font, cỡ chữ Points hoặc Height (ví dụ 3 mm), endpoint và các thiết lập Dim native.
-2. Bấm **Mở Model Info · Text** để chỉnh mẫu chữ màn hình và chữ có đường dẫn. Lưu SKP sau khi chỉnh để các mẫu Model Info đi cùng file.
-3. Chọn trực tiếp Dim/Text/Label. Nếu nằm trong group, mở group rồi chọn đối tượng. Chọn cả group/component không áp vào nội dung bên trong.
-4. Chọn màu và endpoint trong plugin, rồi **APPLY**. Plugin gọi **Update selected dimensions** và **Update selected text** riêng từng loại; sau đó đổi màu/endpoint và đưa Dim vào **000 DIM**, Text/Label vào **000 TEXT**.
+- **Smart Dim**: chọn Group/Component tủ; tạo Dim ngang/đứng, dim nối tiếp và tổng trên mặt -X/+X/-Y/+Y, theo camera hoặc gần trục. Offset và bộ lọc dùng mm. Tạo trong context đang mở, tag 000 DIM, một operation. Hộp bao được tính tại thời điểm chạy; bấm lại tạo thêm bộ Dim. Dim không tự liên kết vào hình học của tủ. Hình xoay nghiêng được chiếu theo các trục mặt đứng này.
+- **Quét/Áp style**: Đang chọn (mặc định), Group đang mở, Toàn model. Bộ lọc nested/component/ẩn/khóa. Definition dùng chung sửa một lần và ảnh hưởng các bản sao; Make Unique nếu muốn sửa riêng.
+- **Dimension**: màu tùy bật, endpoint, hướng chữ song song/theo màn hình, Above/Center/Outside. Đưa vào 000 DIM.
+- **Text/Label**: màu riêng, kiểu leader và endpoint Label. Đưa vào 000 TEXT.
+- **Model Info**: mở bảng Dimensions/Text. **Làm mới size** tạo lại Dim tuyến tính với font/size/Height mặc định của Model Info và sao chép điểm đo, liên kết, text override, màu, tag, endpoint, vị trí chữ và attributes. Dim bán kính bỏ qua; lỗi sao chép giữ bản cũ. Persistent ID của Dim làm mới thay đổi.
+- **APPLY mẫu Model Info**: cầu nối nút Update selected trên Windows English cho Dim/Text chọn trực tiếp; tách khỏi phạm vi quét và không ghi đè màu bằng form. Native font/Height/Undo chưa xác minh trực tiếp.
+- **Preset/Auto-Style**: lưu cục bộ trên máy. Preset hệ thống không ghi đè/xóa. Auto-Style tắt mặc định, áp màu/endpoint/leader/tag cho annotation mới bằng observer trì hoãn; annotation mới dùng mẫu chữ Model Info. Không mang preset/Auto-Style theo SKP.
+- **Animation**: ghi ShowTransition/TransitionTime/SlideTime/LoopSlideshow trong model. Không chạy slideshow và không có Undo.
+- **Đơn vị model**: chỉ ghi khi bật ô Áp dụng; ảnh hưởng toàn model.
 
-Không có hộp thông báo hoàn tất. Lỗi hiện trong cửa sổ hoặc status bar. Endpoint “Giữ nguyên” nghĩa là plugin không ghi đè endpoint sau khi áp mẫu native. Màu/endpoint trong plugin chỉ áp lên vùng chọn, không ghi ngược vào mẫu Model Info.
+Không có popup hoàn tất; kết quả/lỗi trong dòng trạng thái của dialog. Thay font trong Model Info rồi lưu SKP để mẫu đi cùng file. APPLY style không tự đổi font; dùng Làm mới size hoặc APPLY mẫu Model Info.
 
-Bản beta hỗ trợ **SketchUp Windows với giao diện English**. SU2022 Ruby không có setter font/size của Dimension; plugin dùng Fiddle/user32 để tìm đúng bảng Model Info và nút native trong chính tiến trình SketchUp, rồi gửi BM_CLICK. Không dùng ID lệnh phỏng đoán, Select All, edge/mesh hoặc truy cập bộ nhớ entity. Chưa xác nhận việc gọi nút này và thay font/Height trong SketchUp thực tế.
+## Mã nhập
 
-Các nút được kiểm tra trước khi gọi cập nhật. Nếu không có hoặc có nhiều kết quả, thao tác dừng. Nếu người dùng đổi selection/model/ngữ cảnh khi đang áp, plugin dừng và không ghi đè vùng chọn mới. Đối tượng trong definition chia sẻ bị chặn trước mutation; cần Make Unique bản cần sửa.
+ZIP có 5 file; thiếu 6 dependencies: store, core, presets, autostyle, animation, probe. Các module thiếu đã được bổ sung; không phải bản nguyên vẹn đã chạy của Claude. Bản gốc và SHA256 lưu ở dev/claude_reference (chỉ tham khảo, không nạp runtime). HTML/JS/CSS xây từ giao diện gốc bằng dev/import_claude_ui.py; Smart Dim sửa để bỏ hidden/locked/tag tắt, kiểm tra dữ liệu, xử lý transform và dùng core mới.
 
-Mẫu native có thể đổi cả kiểu Dim, vị trí/hướng chữ hoặc leader theo Model Info. Plugin không thay UnitsOptions. Phần màu/endpoint/tag có một Undo; các lệnh native có Undo riêng. Nếu một cập nhật native đã chạy rồi phần sau lỗi, thông báo nêu phần đã gọi; không cam kết rollback toàn bộ các lệnh native.
+## Cài / chạy
 
-## Cài / nạp
+Gói outputs/VGD_Dim_v3.0.0-beta.1.rbz; source ZIP cùng phiên bản. Extension/toolbar tên **VGD Dim**, loader vgd_dim.rb và namespace VGD::Dim tiếp tục dùng để tránh tạo plugin thứ hai.
 
-RBZ: outputs/VGD_Dimension_Text_Manager_v2.3.0-beta.1.rbz.
+dev/deploy.ps1 chỉ cài whitelist 18 file vào SU2022, sao lưu và kiểm tra SHA256. Trong app đang mở có thể dùng Extensions → Nạp lại VGD Dim/Text (menu cũ) hoặc Nạp lại VGD Dim (menu mới). Khởi động lại SketchUp để tên extension/toolbar cập nhật hoàn toàn.
 
-dev/deploy.ps1 cài 10 file VGD vào SketchUp 2022, backup và kiểm tra SHA256. Không đổi Cabinet/plugin khác. Loader T+ Dim cũ được sao lưu và tắt khi chuyển thương hiệu.
-
-Trong SketchUp đang chạy: **Extensions → Nạp lại VGD Dim/Text**. Nếu cài lần đầu, restart SketchUp. Ruby Console cũng có thể nạp:
+Ruby Console:
 
 ```ruby
 load File.join(Sketchup.find_support_file('Plugins'), 'VGD_Dim', 'reload.rb')
@@ -29,10 +32,8 @@ load File.join(Sketchup.find_support_file('Plugins'), 'VGD_Dim', 'reload.rb')
 
 ## Kiểm tra
 
-- dev/check_ruby.cjs: cú pháp, engine selection-only, endpoint/tag/material isolation, guard/abort; mô phỏng native subsets, timeout, đổi selection/model, cancel và lỗi cập nhật một phần.
-- dev/test_ui.cjs: giao diện Edge, payload, Model Info, trạng thái đang áp, lỗi inline và footer.
-- dev/test_deploy.py: bộ cài PowerShell trong APPDATA mô phỏng, backup, whitelist và giữ nguyên Cabinet.
-- dev/native_smoke.rb: test thủ công trong model trống; chưa chạy trong phiên này.
-- outputs/VALIDATION.json phân biệt kết quả mô phỏng với native chưa xác minh.
+check_ruby.cjs: cú pháp; scopes/filters/dedup, style/units, mô phỏng rebuild/metadata/failure, Smart Dim chain/tổng/transform, preset/auto/animation, callbacks và cầu nối native. test_ui.cjs: các chức năng UI, payload, mặc định selection, lỗi inline/no popup và footer ở 540/360px. test_deploy.py: whitelist/backup/cài lặp/guard/Cabinet.
 
-Tài liệu: [Model Info / Update selected / Font / Height](https://help.sketchup.com/en/sketchup/adding-text-labels-and-dimensions-model), [Dimension Ruby API](https://ruby.sketchup.com/Sketchup/Dimension.html), [BM_CLICK](https://learn.microsoft.com/en-us/windows/win32/controls/bm-click).
+Kết quả fixture không xác nhận font, liên kết hoặc Undo thực tế trong SketchUp. Xem outputs/VALIDATION.json. Các phần native vẫn beta cho đến khi kiểm chứng trong app.
+
+Tài liệu chính thức: [DimensionLinear](https://ruby.sketchup.com/Sketchup/DimensionLinear.html), [Entities.add_dimension_linear](https://ruby.sketchup.com/Sketchup/Entities.html#add_dimension_linear-instance_method), [Entity.parent](https://ruby.sketchup.com/Sketchup/Entity.html#parent-instance_method), [Model Info fonts](https://help.sketchup.com/en/sketchup/adding-text-labels-and-dimensions-model).

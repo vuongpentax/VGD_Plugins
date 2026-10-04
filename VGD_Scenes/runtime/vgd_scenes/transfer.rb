@@ -145,6 +145,48 @@ module VGD
         File.join(root, 'VGD', 'Scenes', 'scene_clipboard_v1.json')
       end
 
+      def self.view_clipboard_path
+        File.join(File.dirname(clipboard_path), 'view_clipboard_v1.json')
+      end
+
+      def self.copy_view(model)
+        guard(model)
+        camera = model.active_view.camera
+        page = model.pages.selected_page
+        fallback = Scenes.live_frame(model) || (page ? SceneFrame.read(page, Scenes.settings(model)) : Scenes.settings(model))
+        working = page ? {} : JSON.parse(model.get_attribute(DICT, 'working_frame', '{}'))
+        frame = SceneFrame.from_camera(camera, fallback.merge(working))
+        data = camera_data(camera)
+        data['aspect'] = frame['width'].to_f / frame['height'] if data['aspect'] == 0
+        bundle = { 'format' => FORMAT, 'version' => 1, 'title' => '', 'scenes' => [
+          { 'id' => SecureRandom.hex(16), 'name' => 'Camera hiện tại', 'camera' => data, 'frame' => frame }
+        ] }
+        FileUtils.mkdir_p(File.dirname(view_clipboard_path))
+        write(view_clipboard_path, bundle, true)
+        { success: true, message: 'Đã copy camera và khung đang xem. Paste sẽ chỉ đổi view hiện tại.' }
+      end
+
+      def self.paste_view(model)
+        guard(model)
+        entry = read(view_clipboard_path)['scenes'].first
+        new_camera = camera(entry['camera'])
+        previous = Scenes.camera_copy(model.active_view.camera)
+        old_frame = model.get_attribute(DICT, 'working_frame')
+        Scenes.operation(model, 'Paste camera và khung hiện tại') do
+          begin
+            model.active_view.camera = new_camera
+            model.set_attribute(DICT, 'working_frame', entry['frame'].to_json)
+            model.active_view.invalidate
+          rescue StandardError
+            model.active_view.camera = previous
+            old_frame.nil? ? model.delete_attribute(DICT, 'working_frame') : model.set_attribute(DICT, 'working_frame', old_frame)
+            raise
+          end
+        end
+        Scenes.preview_frame(model, entry['frame'])
+        { success: true, message: 'Đã paste camera và khung vào view hiện tại. Scene giữ nguyên; bấm Lưu camera nếu muốn lưu.' }
+      end
+
       def self.write(path, raw, replace = false)
         data = JSON.pretty_generate(validate(raw))
         raise ArgumentError, 'Bộ scene vượt 8 MB.' if data.bytesize > MAX_BYTES

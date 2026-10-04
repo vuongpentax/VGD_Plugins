@@ -29,3 +29,6 @@ Thumbs.db
 /VGD_Scenes/outputs/
 /VGD_Scenes/*_source.zip
 /TPlus_Scenes_Review_2026-10-02/
+
+# Image Importer local verification and deployment backups
+/VGD_Image_Importer/outputs/

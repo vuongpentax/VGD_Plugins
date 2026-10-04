@@ -11,10 +11,12 @@ frames.store(first, s.options('width'=>1200,'height'=>1600))
 frames.store(second, s.options('width'=>1920,'height'=>1080))
 m.pages.selected_page = first
 saved = s.camera_copy(first.camera); identity = first.camera; flags = first.use_camera?
+assert(controls.state(m)[:sig] == controls.state(m)[:saved_sig], 'Initial camera signature differs from saved scene')
 rendering = first.saved[:rendering].dup
 m.active_view.camera = Sketchup::Camera.new(Geom::Point3d.new(200,100,90), Geom::Point3d.new(12,13,14), Geom::Vector3d.new(0,0,1), true)
 m.active_view.camera.fov = 62
 live = s.camera_copy(m.active_view.camera)
+assert(controls.state(m)[:sig] != controls.state(m)[:saved_sig], 'Live Orbit does not differ from saved camera signature')
 frames.apply(m, 'ids'=>[first.persistent_id.to_s], 'frame'=>{'width'=>1440,'height'=>1920,'margin'=>22})
 assert(first.camera.equal?(identity) && first.camera.eye==saved.eye && first.camera.target==saved.target && first.camera.up==saved.up && near(first.camera.fov,48), 'Auto frame captured live Orbit/FOV')
 assert(near(first.camera.aspect_ratio,0.75) && first.use_camera? == flags && first.saved[:rendering]==rendering, 'Frame changed scene flags/rendering')
@@ -27,6 +29,7 @@ written=m.active_view.last_written_camera
 assert(events.last[1][:success] && written.eye==saved.eye && near(written.fov,48) && near(written.aspect_ratio,0.75),'Export used uncommitted composition instead of old camera/new frame')
 s::SceneStore.capture(m,first.persistent_id.to_s)
 assert(first.camera.eye==live.eye && first.camera.target==live.target && near(first.camera.fov,62),'Update did not persist preview')
+assert(controls.state(m)[:sig] == controls.state(m)[:saved_sig], 'Camera capture did not update saved signature')
 current = m.pages.selected_page; live_identity=m.active_view.camera
 frames.apply(m,'ids'=>[first,second].map { |p| p.persistent_id.to_s },'frame'=>{'width'=>3000,'height'=>2000,'margin'=>15},'keep_ratio'=>true)
 assert(frames.read(first,s.settings(m))['width']==2250 && frames.read(first,s.settings(m))['height']==3000,'Batch lost portrait ratio')

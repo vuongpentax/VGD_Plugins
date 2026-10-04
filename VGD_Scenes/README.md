@@ -1,6 +1,31 @@
-# VGD Scenes 1.3.1 — SketchUp 2022–2026.2
+# VGD Scenes 1.5.0 — SketchUp 2022–2026.2
 
 Plugin tạo view đối tượng, mặt cắt tùy chỉnh, quản lý scene và xuất ảnh/PDF. Thương hiệu VGD, giao diện sáng/tối dùng bảng màu nâu, trắng và than theo theme T+.
+
+### Giao diện gọn và thao tác scene (1.5.0)
+
+- Năm tab ở cột trái: Tạo view, Mặt cắt, Scenes, Canh view, Xuất file. Giữ theme sáng/tối. Nút chọn góc chỉ có tên và sáng khi được chọn.
+- Mặt cắt chỉ có X/Y/Z, vị trí %, đảo phía cắt. Kéo thanh trượt xem trực tiếp bằng mặt cắt tạm trong đối tượng; dọn khi rời tab, tắt xem trước, tạo scene hoặc đóng dialog. Make Unique bản được chọn nếu definition dùng chung; các bản sao khác không bị cắt.
+- Bấm tên scene để mở; bấm đúp để đổi tên. Lưu camera và Xóa nằm ngay trên mỗi hàng. Bỏ Cập nhật từ đối tượng khỏi bảng; tạo/cập nhật view dùng tab Tạo view.
+- Shift chọn dải scene, Ctrl chọn thêm/bớt. Kéo tay nắm để di chuyển cả nhóm theo thứ tự đang có; có tự cuộn khi kéo đến mép danh sách.
+- Đổi tên hàng loạt theo tiền tố, tên chung (hoặc tên cũ), STT/chữ cái, hậu tố, dấu ngăn cách. Xem trước tên, chặn trùng trước khi ghi; giữ ID, camera và khung.
+- Xếp xong bấm Đồng bộ thứ tự SketchUp để áp dụng vào thanh scene gốc. API `Pages#reorder` chỉ có từ SU2025; SU2022–2024 giữ thứ tự bảng cho xuất và cần Move Left/Move Right trên thanh scene gốc. Không xóa/tạo lại scene để đổi vị trí.
+- Toolbar Copy/Paste chỉ copy camera đang xem và khung, paste vào view hiện tại. Không tạo/đổi tên/ghi scene; bấm Lưu camera để lưu. Copy/Paste bộ scene, đặt tên/nhập scene và JSON vẫn ở tab Scenes, dùng clipboard riêng.
+- Kiểm tra Ruby WASM và Playwright/Edge headless đã PASS, gồm 50 scene, Shift/kéo nhóm, tên trùng, preview mặt cắt và toolbar camera memory. Hiển thị/cắt thật trong SU2022 cần kiểm tra trên máy.
+
+Tài liệu API đổi thứ tự scene: https://ruby.sketchup.com/Sketchup/Pages.html#reorder-instance_method
+
+### Làm mới giao diện (1.4.0)
+
+Giữ nguyên bảng màu nâu/trắng/than, font, theme sáng/tối, ID và engine. Thay đổi chính:
+
+- Chữ tối thiểu 11px; nút chính nâu đậm hơn để đủ tương phản; nút chia ba cấp, trạng thái bật có dấu ✓; nút bị khóa có chú thích lý do khi rê chuột.
+- Thanh bước có đường nối và dấu ✓ cho bước đã qua. Theme mặc định theo hệ thống ở lần đầu; nút theme là biểu tượng ◐.
+- Bước 1: biểu tượng góc nhìn, nút chính ghi số scene, xem trước tên scene. Bước 2: mỗi scene một dòng gọn với nút kích thước `rộng×cao · tỷ lệ` mở ô sửa khung; menu ⋯ tự đóng; tìm kiếm/chọn nhanh ghim ở đầu danh sách. Bước 3: canh trục theo cặp +/−, huy hiệu **Camera đã đổi · chưa lưu**. Bước 4: nút PNG/JPG/PDF, dòng đường dẫn đầu ra, tiến trình có %.
+- Thuật ngữ thống nhất: **Lưu camera** thay cho Update view / Lưu view trong bảng (nút trên toolbar giữ tên cũ).
+- `camera.rb`: `CameraControl.state` thêm trường chỉ đọc `sig` để nhận biết camera đã đổi.
+- Nền khung lỗi dùng rgba, chỉ nâng cấp bằng `color-mix()` trong `@supports` vì SU2022 dùng Chromium 88.
+- Chưa kiểm chứng trong HtmlDialog SU2022 thật.
 
 ### Luồng làm việc mới (1.3.1)
 

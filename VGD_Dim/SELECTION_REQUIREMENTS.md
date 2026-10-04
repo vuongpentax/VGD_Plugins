@@ -1,10 +1,7 @@
-# Yêu cầu hiện tại · 2026-10-02
+# Yêu cầu hiện tại · 2026-10-05
 
-- Chỉnh mẫu trong Model Info, dùng APPLY của plugin áp lên Dim/Text được chọn.
-- Mẫu native gồm font, cỡ pt hoặc Height của Dim và kiểu Dim; không quy đổi mm sang pt.
-- Endpoint riêng Dimension/Label; sau APPLY gán tag 000 DIM / 000 TEXT.
-- Chọn trực tiếp Dim/Text, không quét toàn model/group/component.
-- Không hộp thông báo hoàn tất, không chuyển chữ thành edge/mesh.
-- Giữ VGD và style T+; chỉ sửa Dim/Text, không đổi Cabinet.
+User chọn đưa đầy đủ các chức năng trong giao diện Claude và bổ sung mã thiếu. Phạm vi quét mở rộng selected/context/model, mặc định selected; có nested/components/hidden/locked. Definition chia sẻ đổi các bản sao và được giải thích trong UI.
 
-SU2022 Windows English bridge gọi nút Update selected. Ruby/bridge fixture đạt nhưng dispatch Win32 và thay font/Height native chưa được kiểm chứng.
+Giữ Smart Dim, preset, Auto-Style, Animation, Units có opt-in, các setter Dim/Text/Label, tags, không popup; tên VGD Dim/style T+. APPLY mẫu Model Info chỉ selected trực tiếp. Rebuild Dim tuyến tính trên phạm vi quét, sao chép thuộc tính/links, radial skip.
+
+Chỉ sửa VGD_Dim; không ghép mã vào các plugin khác.

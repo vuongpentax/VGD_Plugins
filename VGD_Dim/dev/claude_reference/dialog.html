@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VGD Dim</title>
+<style>
+:root{--paper:#EEF2F4;--panel:#fff;--ink:#14232B;--mute:#5A6E78;--line:#9FB3BD;--field:#B7C6CD;--accent:#0B6E99;--accent-d:#095578;--warn:#9A5A12;--bad:#A8321F}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:13px/1.4 "Segoe UI Variable","Segoe UI",system-ui,sans-serif;color:var(--ink);background:var(--paper);display:flex;flex-direction:column}
+main{flex:1;overflow-y:auto;padding:0 14px 12px}
+header{padding:12px 14px 10px;background:var(--panel);border-bottom:1px solid var(--field)}
+header h1{font-size:15px;margin:0 0 8px;font-weight:700;letter-spacing:.2px}
+header h1 small{font-weight:400;color:var(--mute);margin-left:6px}
+section{margin-top:6px}
+h2{display:flex;align-items:center;gap:8px;margin:16px 0 8px;font-size:12.5px;font-weight:650;color:var(--ink)}
+h2::before,h2::after{content:"";flex:1;height:9px;border-left:1px solid var(--ink);background:linear-gradient(var(--line),var(--line)) center/100% 1px no-repeat}
+h2::after{border-left:0;border-right:1px solid var(--ink)}
+.row{display:flex;align-items:center;gap:8px;margin:6px 0;min-height:26px}
+.row>label:first-child{flex:0 0 96px;color:var(--mute)}
+select,input[type=text],input[type=number]{flex:1;min-width:0;height:26px;padding:0 6px;border:1px solid var(--field);border-radius:3px;background:#fff;color:var(--ink);font:inherit}
+input[type=color]{width:44px;height:26px;padding:1px;border:1px solid var(--field);border-radius:3px;background:#fff}
+input[type=checkbox],input[type=radio]{accent-color:var(--accent);margin:0}
+.chk{display:flex;align-items:center;gap:6px;cursor:pointer}
+.row>.chk:first-child{flex:0 0 96px;color:var(--mute)}
+button{height:28px;padding:0 12px;border:1px solid var(--accent);border-radius:3px;background:#fff;color:var(--accent);font:inherit;font-weight:600;cursor:pointer}
+button:hover{background:#E4F1F7}
+button.solid{background:var(--accent);color:#fff}
+button.solid:hover{background:var(--accent-d)}
+button.quiet{border-color:var(--field);color:var(--ink);font-weight:400}
+button.danger{border-color:var(--bad);color:var(--bad)}
+button.right{margin-left:auto}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--field);border:1px solid var(--field);margin-top:10px}
+.stats div{background:var(--panel);padding:6px 4px;text-align:center}
+.stats b{display:block;font-size:17px;font-variant-numeric:tabular-nums}
+.stats span{font-size:11px;color:var(--mute)}
+.seg{display:flex;border:1px solid var(--field);border-radius:3px;overflow:hidden;background:#fff}
+.seg label{flex:1;position:relative;text-align:center}
+.seg input{position:absolute;opacity:0}
+.seg span{display:block;padding:5px 2px;cursor:pointer;border-right:1px solid var(--field)}
+.seg label:last-child span{border-right:0}
+.seg input:checked+span{background:var(--accent);color:#fff}
+.seg input:focus-visible+span{outline:2px solid var(--accent);outline-offset:-2px}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;margin-top:8px}
+.note{font-size:11.5px;color:var(--mute);margin:4px 0 0}
+.warn{color:var(--warn)}
+details{border:1px solid var(--field);background:var(--panel);margin-top:14px;border-radius:3px}
+summary{padding:7px 9px;cursor:pointer;font-weight:650;font-size:12.5px}
+details>div{padding:0 9px 9px}
+footer{padding:10px 14px;background:var(--panel);border-top:1px solid var(--field)}
+.bar{display:flex;gap:8px}
+.bar button{flex:1}
+.bar button.solid{flex:2}
+#log{margin-top:8px;min-height:18px;font-size:12px;white-space:pre-wrap}
+#log.err{color:var(--bad)}
+</style></head><body>
+
+<header>
+ <h1>VGD Dim<small>chuẩn hóa Dimension, Text, Label</small></h1>
+ <div class="row" style="margin:0 0 6px"><select id="preset" aria-label="Preset" onchange="VGD.loadPreset()"></select>
+  <button class="quiet" id="del" onclick="VGD.delPreset()">Xóa</button></div>
+ <div class="row" style="margin:0"><input type="text" id="pname" placeholder="Tên preset" aria-label="Tên preset">
+  <button onclick="VGD.savePreset()">Lưu preset</button></div>
+</header>
+
+<main>
+ <div class="stats" aria-live="polite">
+  <div><b id="st.dim">–</b><span>Dimension</span></div>
+  <div><b id="st.text">–</b><span>Text</span></div>
+  <div><b id="st.label">–</b><span>Label</span></div>
+  <div><b id="st.nested">–</b><span>Nằm trong nhóm</span></div>
+ </div>
+
+ <section>
+  <h2>Smart Dim</h2>
+  <div class="row"><label for="sd.face">Mặt đứng</label>
+   <select id="sd.face"><option value="camera">Mặt đang nhìn (camera)</option><option value="axis">Gần trục nhất</option><option value="-y">Mặt -Y (trước)</option><option value="+y">Mặt +Y (sau)</option><option value="-x">Mặt -X (trái)</option><option value="+x">Mặt +X (phải)</option></select></div>
+  <div class="row"><label class="chk"><input type="checkbox" id="sd.do_h" checked> Dim ngang</label>
+   <select id="sd.h_side" aria-label="Vị trí dim ngang"><option value="top">Phía trên</option><option value="bottom">Phía dưới</option></select></div>
+  <div class="row"><label class="chk"><input type="checkbox" id="sd.do_v" checked> Dim đứng</label>
+   <select id="sd.v_side" aria-label="Vị trí dim đứng"><option value="left">Bên trái</option><option value="right">Bên phải</option></select></div>
+  <div class="row"><label for="sd.off1">Cấp 1 (mm)</label><input type="number" min="1" id="sd.off1" value="150">
+   <label for="sd.off2" style="flex:0 0 auto;color:var(--mute)">Cấp 2</label><input type="number" min="1" id="sd.off2" value="300"></div>
+  <details style="margin-top:8px"><summary>Lọc chi tiết</summary><div>
+   <div class="row"><label for="sd.min_seg">Bỏ đoạn nhỏ hơn</label><input type="number" min="0" id="sd.min_seg" value="5"></div>
+   <div class="row"><label for="sd.min_part">Bỏ chi tiết nhỏ hơn</label><input type="number" min="0" id="sd.min_part" value="300"></div>
+   <div class="row"><label for="sd.depth">Sâu tối đa từ mặt trước</label><input type="number" min="1" id="sd.depth" value="100"></div>
+   <p class="note">Đơn vị mm. Chi tiết nhỏ như tay nắm bị bỏ; chi tiết nằm sâu hơn mặt trước quá ngưỡng cũng bị bỏ.</p>
+  </div></details>
+  <div class="row"><button class="solid" style="flex:1" onclick="VGD.smart()">Smart Dim cho tủ đang chọn</button></div>
+  <p class="note">Chọn Group hoặc Component của tủ rồi bấm. Cấp 1 là dim nối tiếp (hồi, cánh), cấp 2 là dim tổng. Ctrl+Z để hoàn tác.</p>
+ </section>
+
+ <section>
+  <h2>Phạm vi</h2>
+  <div class="seg" role="radiogroup" aria-label="Phạm vi">
+   <label><input type="radio" name="scope" value="selected"><span>Đang chọn</span></label>
+   <label><input type="radio" name="scope" value="context"><span>Group đang mở</span></label>
+   <label><input type="radio" name="scope" value="model" checked><span>Toàn model</span></label>
+  </div>
+  <div class="checks">
+   <label class="chk"><input type="checkbox" id="o.nested" checked> Group lồng nhau</label>
+   <label class="chk"><input type="checkbox" id="o.components" checked> Component</label>
+   <label class="chk"><input type="checkbox" id="o.hidden"> Đối tượng ẩn</label>
+   <label class="chk"><input type="checkbox" id="o.locked"> Đối tượng khóa</label>
+  </div>
+  <p class="note">Component dùng chung definition chỉ sửa một lần và đổi tất cả bản sao.</p>
+ </section>
+
+ <section>
+  <h2>Dimension</h2>
+  <div class="row"><label class="chk"><input type="checkbox" id="dim.setcolor"> Đổi màu</label><input type="color" id="dim.color"></div>
+  <div class="row"><label for="dim.arrow">Đầu mũi tên</label>
+   <select id="dim.arrow"><option value="keep">Giữ nguyên</option><option value="none">Không có</option><option value="slash">Gạch chéo</option><option value="dot">Chấm</option><option value="closed">Mũi tên đặc</option><option value="open">Mũi tên hở</option></select></div>
+  <div class="row"><label for="dim.textorient">Hướng chữ</label>
+   <select id="dim.textorient"><option value="keep">Giữ nguyên</option><option value="aligned">Song song đường Dim</option><option value="screen">Theo màn hình</option></select></div>
+  <div class="row"><label for="dim.align">Vị trí chữ</label>
+   <select id="dim.align"><option value="keep">Giữ nguyên</option><option value="above">Phía trên</option><option value="center">Ở giữa</option><option value="outside">Bên ngoài</option></select></div>
+  <div class="row"><button class="right" onclick="VGD.run(['dim'])">Áp cho Dimension</button></div>
+  <div class="row"><button class="solid" style="flex:1" onclick="VGD.rebuild()">Làm mới size theo Model Info</button></div>
+  <p class="note">Chỉnh font và size ở Model Info &gt; Dimensions trước. Plugin tạo lại Dimension với font, size đó, giữ điểm đo, liên kết, chữ ghi đè, màu, mũi tên và Tag. Ctrl+Z để hoàn tác.</p>
+ </section>
+
+ <section>
+  <h2>Text</h2>
+  <div class="row"><label class="chk"><input type="checkbox" id="text.setcolor"> Đổi màu</label><input type="color" id="text.color"></div>
+  <div class="row"><button class="right" onclick="VGD.run(['text'])">Áp cho Text</button></div>
+ </section>
+
+ <section>
+  <h2>Label</h2>
+  <div class="row"><label class="chk"><input type="checkbox" id="label.setcolor"> Đổi màu</label><input type="color" id="label.color"></div>
+  <div class="row"><label for="label.leader">Kiểu leader</label>
+   <select id="label.leader"><option value="keep">Giữ nguyên</option><option value="view">Theo màn hình</option><option value="pushpin">Ghim vào model</option></select></div>
+  <div class="row"><label for="label.arrow">Đầu mũi tên</label>
+   <select id="label.arrow"><option value="keep">Giữ nguyên</option><option value="none">Không có</option><option value="slash">Gạch chéo</option><option value="dot">Chấm</option><option value="closed">Mũi tên đặc</option><option value="open">Mũi tên hở</option></select></div>
+  <div class="row"><button class="right" onclick="VGD.run(['label'])">Áp cho Label</button></div>
+ </section>
+
+ <section>
+  <h2>Tự áp cho đối tượng mới</h2>
+  <label class="chk"><input type="checkbox" id="auto.enabled" onchange="VGD.saveAuto()"> Dim, Text, Label vừa tạo tự dùng style trong form</label>
+  <div class="row"><button class="quiet" onclick="VGD.saveAuto()">Cập nhật theo form</button></div>
+  <p class="note">Chỉ chạy khi plugin đang nạp. File gửi cho người khác không mang theo thiết lập này.</p>
+ </section>
+
+ <section>
+  <h2>Animation</h2>
+  <div class="row"><label for="anim.transition">Chuyển cảnh (giây)</label><input type="number" step="0.1" min="0" id="anim.transition"></div>
+  <div class="row"><label for="anim.delay">Dừng mỗi cảnh (giây)</label><input type="number" step="0.1" min="0" id="anim.delay"></div>
+  <label class="chk"><input type="checkbox" id="anim.loop"> Lặp slideshow</label>
+  <div class="row"><button class="solid" onclick="VGD.anim(true)">Bật animation</button><button onclick="VGD.anim(false)">Tắt animation</button></div>
+  <p class="note" id="anim.state"></p>
+ </section>
+
+ <details>
+  <summary>Đơn vị của model</summary>
+  <div>
+   <p class="note warn">Đổi đơn vị và số lẻ của cả model, không chỉ Dimension.</p>
+   <label class="chk"><input type="checkbox" id="units.enabled"> Áp dụng khi bấm Chuẩn hóa</label>
+   <div class="row"><label for="units.unit">Đơn vị</label>
+    <select id="units.unit"><option value="0">inch</option><option value="1">feet</option><option value="2">mm</option><option value="3">cm</option><option value="4">m</option></select></div>
+   <div class="row"><label for="units.precision">Số lẻ</label><input type="number" min="0" max="8" id="units.precision"></div>
+   <label class="chk"><input type="checkbox" id="units.show_unit"> Hiện ký hiệu đơn vị</label>
+  </div>
+ </details>
+</main>
+
+<footer>
+ <div class="bar"><button onclick="VGD.scan()">Quét</button>
+  <button class="solid" onclick="VGD.run(['dim','text','label'])">Chuẩn hóa tất cả</button></div>
+ <div id="log" role="status">Sẵn sàng. Bấm Quét để đếm đối tượng trước khi áp.</div>
+</footer>
+
+<script>
+var VGD={
+ presets:{},builtin:[],delTimer:null,
+ ids:['dim.setcolor','dim.color','dim.arrow','dim.textorient','dim.align',
+      'text.setcolor','text.color',
+      'label.setcolor','label.color','label.leader','label.arrow',
+      'units.enabled','units.unit','units.precision','units.show_unit'],
+ el:function(i){return document.getElementById(i)},
+ get:function(){
+  var s={dim:{},text:{},label:{},units:{}};
+  this.ids.forEach(function(id){var p=id.split('.'),e=VGD.el(id);s[p[0]][p[1]]=e.type==='checkbox'?e.checked:e.value});
+  return s;
+ },
+ set:function(s){
+  this.ids.forEach(function(id){
+   var p=id.split('.'),e=VGD.el(id),v=(s[p[0]]||{})[p[1]];
+   if(v===undefined)return;
+   if(e.type==='checkbox')e.checked=!!v;else e.value=v;
+  });
+ },
+ opts:function(){
+  return{scope:document.querySelector('input[name=scope]:checked').value,
+   nested:this.el('o.nested').checked,components:this.el('o.components').checked,
+   hidden:this.el('o.hidden').checked,locked:this.el('o.locked').checked};
+ },
+ log:function(t,err){var l=this.el('log');l.textContent=t;l.className=err?'err':''},
+ scan:function(){sketchup.scan(JSON.stringify({opts:this.opts()}))},
+ run:function(kinds){
+  this.log('Đang xử lý…');
+  if(this.el('auto.enabled').checked)this.saveAuto();
+  sketchup.run(JSON.stringify({kinds:kinds,settings:this.get(),opts:this.opts()}));
+ },
+ rebuild:function(){
+  this.log('Đang làm mới Dimension…');
+  sketchup.rebuild(JSON.stringify({opts:this.opts()}));
+ },
+ onRebuild:function(r){
+  var t='Đã làm mới '+r.rebuilt+' Dimension'+(r.custom?' ('+r.custom+' cái giữ chữ ghi đè)':'')+'. Ctrl+Z để hoàn tác.',bad=false;
+  if(r.failed){t+='\nKhông làm mới được '+r.failed+' Dimension (giữ nguyên bản cũ).';bad=true}
+  if(r.skipped)t+='\nBỏ qua '+r.skipped+' Dimension bán kính (chưa hỗ trợ).';
+  this.log(t,bad);
+ },
+ sdKeys:['face','h_side','v_side','off1','off2','min_seg','min_part','depth'],
+ sdGet:function(){
+  var o={};this.sdKeys.forEach(function(k){o[k]=VGD.el('sd.'+k).value});
+  o.do_h=this.el('sd.do_h').checked;o.do_v=this.el('sd.do_v').checked;return o;
+ },
+ sdSet:function(o){
+  this.sdKeys.forEach(function(k){if(o[k]!==undefined)VGD.el('sd.'+k).value=o[k]});
+  if(o.do_h!==undefined)this.el('sd.do_h').checked=!!o.do_h;
+  if(o.do_v!==undefined)this.el('sd.do_v').checked=!!o.do_v;
+ },
+ smart:function(){
+  this.log('Đang dựng Dimension…');
+  sketchup.smart_dim(JSON.stringify({opts:this.sdGet(),settings:this.get()}));
+ },
+ onSmart:function(r){
+  var sum=function(a){return Math.round(a.reduce(function(x,y){return x+y},0)*10)/10};
+  var t='Đã tạo '+r.total+' Dimension trên mặt '+r.face+' (dùng '+r.parts+' chi tiết). Ctrl+Z để hoàn tác.';
+  if(r.h.length)t+='\nNgang: '+r.h.join(' + ')+' = '+sum(r.h);
+  if(r.v.length)t+='\nĐứng: '+r.v.join(' + ')+' = '+sum(r.v);
+  this.log(t);
+ },
+ saveAuto:function(){sketchup.set_auto(JSON.stringify({enabled:this.el('auto.enabled').checked,settings:this.get()}))},
+ anim:function(on){
+  sketchup.anim_set(JSON.stringify({enabled:on,transition:this.el('anim.transition').value,
+   delay:this.el('anim.delay').value,loop:this.el('anim.loop').checked}));
+ },
+ loadPreset:function(){
+  var n=this.el('preset').value;
+  if(this.presets[n])this.set(this.presets[n]);
+  this.el('pname').value=n;
+  this.el('del').disabled=this.builtin.indexOf(n)>=0;
+ },
+ savePreset:function(){
+  var n=this.el('pname').value.trim();
+  if(!n){this.log('Nhập tên preset trước khi lưu.',true);return}
+  sketchup.save_preset(JSON.stringify({name:n,settings:this.get()}));
+ },
+ delPreset:function(){
+  var b=this.el('del'),n=this.el('preset').value;
+  if(!this.delTimer){
+   b.textContent='Bấm lại để xóa';b.className='danger';
+   this.delTimer=setTimeout(function(){VGD.resetDel()},3000);return;
+  }
+  this.resetDel();sketchup.delete_preset(n);
+ },
+ resetDel:function(){clearTimeout(this.delTimer);this.delTimer=null;var b=this.el('del');b.textContent='Xóa';b.className='quiet'},
+ onState:function(d){
+  this.presets=d.presets;this.builtin=d.builtin;
+  var sel=this.el('preset'),cur=d.select||sel.value;sel.innerHTML='';
+  Object.keys(d.presets).forEach(function(n){var o=document.createElement('option');o.textContent=n;sel.appendChild(o)});
+  var first=!cur;
+  if(cur&&d.presets[cur])sel.value=cur;
+  this.el('pname').value=sel.value;
+  this.el('del').disabled=this.builtin.indexOf(sel.value)>=0;
+  if(d.auto)this.el('auto.enabled').checked=!!d.auto.enabled;
+  if(d.anim)this.onAnim(d.anim);
+  if(d.smart)this.sdSet(d.smart);
+  if(first){if(d.auto&&d.auto.settings)this.set(d.auto.settings);else this.loadPreset()}
+ },
+ onScan:function(r){
+  this.el('st.dim').textContent=r.dim;this.el('st.text').textContent=r.text;
+  this.el('st.label').textContent=r.label;this.el('st.nested').textContent=r.nested;
+  this.log('Đã quét xong. Chưa thay đổi gì trong model.');
+ },
+ onResult:function(r){
+  var t='Đã chuẩn hóa '+r.count.dim+' Dimension, '+r.count.text+' Text, '+r.count.label+' Label. Ctrl+Z để hoàn tác.',bad=false;
+  Object.keys(r.report).forEach(function(k){
+   var v=r.report[k];
+   if(v.unsupported||v.error){bad=true;t+='\n'+k+': '+(v.unsupported||0)+' không hỗ trợ, '+(v.error||0)+' lỗi'}
+  });
+  this.log(t,bad);
+ },
+ onAnim:function(a){
+  this.el('anim.transition').value=a.transition;this.el('anim.delay').value=a.delay;
+  this.el('anim.loop').checked=a.loop;
+  this.el('anim.state').textContent='Chuyển cảnh đang '+(a.enabled?'bật':'tắt')+'.';
+ },
+ onError:function(r){this.log('Lỗi: '+r.message,true)},
+ onToast:function(r){this.log(r.message)}
+};
+['dim','text','label'].forEach(function(k){
+ VGD.el(k+'.color').addEventListener('input',function(){VGD.el(k+'.setcolor').checked=true});
+});
+window.onload=function(){sketchup.ready()};
+</script></body></html>

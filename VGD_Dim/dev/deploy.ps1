@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 $taskRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $sourceRoot = Join-Path $taskRoot 'runtime'
 $pluginRoot = Join-Path $env:APPDATA 'SketchUp\SketchUp 2022\SketchUp\Plugins'
-$ownedFiles = @('vgd_dim.rb','VGD_Dim\main.rb','VGD_Dim\defaults.rb','VGD_Dim\reload.rb','VGD_Dim\engine.rb','VGD_Dim\native_style.rb','VGD_Dim\dialog.html','VGD_Dim\dialog.css','VGD_Dim\dialog.js','VGD_Dim\dim.svg')
+$ownedFiles = @('vgd_dim.rb','VGD_Dim\main.rb','VGD_Dim\defaults.rb','VGD_Dim\reload.rb','VGD_Dim\engine.rb','VGD_Dim\native_style.rb','VGD_Dim\store.rb','VGD_Dim\core.rb','VGD_Dim\presets.rb','VGD_Dim\autostyle.rb','VGD_Dim\animation.rb','VGD_Dim\smartdim.rb','VGD_Dim\probe.rb','VGD_Dim\dialog.rb','VGD_Dim\dialog.html','VGD_Dim\dialog.css','VGD_Dim\dialog.js','VGD_Dim\dim.svg')
 function Assert-TaskPath([string]$Path,[string]$Root) {
     $full = [IO.Path]::GetFullPath($Path)
     $allowed = [IO.Path]::GetFullPath($Root).TrimEnd('\')
@@ -98,4 +98,4 @@ try {
     }
     throw
 }
-Write-Output ("Đã cài VGD Dim/Text vào SketchUp 2022; {0}/{0} file khớp SHA256. T+ Dim loader đã tắt: {1}. Backup: {2}" -f $plan.Count,$legacyDisabled,$backupRoot)
+Write-Output ("Đã cài VGD Dim vào SketchUp 2022; {0}/{0} file khớp SHA256. T+ Dim loader đã tắt: {1}. Backup: {2}" -f $plan.Count,$legacyDisabled,$backupRoot)

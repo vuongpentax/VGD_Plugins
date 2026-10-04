@@ -1,0 +1,20 @@
+{
+  "archive": "files.zip",
+  "sha256": "f848b3c4b4d3b466eb3d2372a9a5be9196a51bfcaa277b5f65c6854387f5d0ce",
+  "provided": [
+    "VGD_Dim.rb",
+    "dialog.html",
+    "dialog.rb",
+    "main.rb",
+    "smartdim.rb"
+  ],
+  "missing_required": [
+    "store.rb",
+    "core.rb",
+    "presets.rb",
+    "autostyle.rb",
+    "animation.rb",
+    "probe.rb"
+  ],
+  "note": "Reference source only; never loaded by runtime."
+}

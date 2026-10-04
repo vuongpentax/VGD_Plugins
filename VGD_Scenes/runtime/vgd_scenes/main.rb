@@ -10,16 +10,31 @@ require_relative 'transfer'
 require_relative 'camera'
 module VGD
   module Scenes
-    VERSION = '1.3.1'.freeze unless const_defined?(:VERSION, false)
+    VERSION = '1.5.0'.freeze unless const_defined?(:VERSION, false)
     class << self
       def state
         model = Sketchup.active_model
+        SectionPreview.clear_if_stale(model)
         { model: model.object_id.to_s, title: model.title.empty? ? 'Model chưa lưu' : model.title,
           selection: model.selection.count { |e| Geometry.instance?(e) }, editing: !model.active_path.nil?,
-          scenes: SceneStore.list(model), presets: SceneFrame.presets(model), settings: settings(model), camera: CameraControl.state(model), frame_cleanup: SceneFrame.cleanup_state(model),
-          current_frame: model.pages.selected_page ? SceneFrame.read(model.pages.selected_page, settings(model)) : SceneFrame.from_camera(model.active_view.camera, settings(model)),
+          scenes: SceneStore.list(model), native_order_supported: model.pages.respond_to?(:reorder), native_order_dirty: SceneStore.ordered(model) != model.pages.to_a,
+          presets: SceneFrame.presets(model), settings: settings(model), camera: CameraControl.state(model), frame_cleanup: SceneFrame.cleanup_state(model),
+          current_frame: live_frame(model) || (model.pages.selected_page ? SceneFrame.read(model.pages.selected_page, settings(model)) : SceneFrame.from_camera(model.active_view.camera, settings(model))),
           frame_active: model.active_view.camera.aspect_ratio > 0, grid_active: FrameTool.active?, busy: !@job.nil?,
           transfer: @transfer_pending && @transfer_pending[:model].equal?(model) ? @transfer_pending[:preview] : nil }
+      end
+
+      def live_frame(model)
+        preview = @live_frame
+        unless preview && preview[:model].equal?(model) && preview[:page] == model.pages.selected_page
+          @live_frame = nil
+          return
+        end
+        preview[:frame]
+      end
+
+      def preview_frame(model, frame)
+        @live_frame = { model: model, page: model.pages.selected_page, frame: frame }
       end
 
       def send_event(event, data)
@@ -43,6 +58,7 @@ module VGD
         raise ArgumentError, 'Dữ liệu giao diện không hợp lệ.' unless data.is_a?(Hash)
         model = checked_model(data)
         raise 'Đang xuất. Hủy hoặc chờ hoàn tất trước khi đổi scene.' if @job && !%w[cancel refresh].include?(action)
+        SectionPreview.clear unless %w[sectionPreview refresh].include?(action)
         result = case action
                  when 'refresh' then nil
                  when 'generate' then SceneStore.generate(model, data.fetch('settings'))
@@ -51,7 +67,13 @@ module VGD
                  when 'capture' then SceneStore.capture(model, data['id'])
                  when 'update' then SceneStore.update_sources(model, data['ids'])
                  when 'delete' then SceneStore.delete(model, data['ids'])
-                 when 'reorder' then SceneStore.reorder(model, data['id'], data['before'], data['order'])
+                 when 'reorder' then SceneStore.reorder(model, data['ids'] || data['id'], data['before'], data['order'])
+                 when 'syncOrder' then SceneStore.sync_order(model, data['order'])
+                 when 'renameMany' then SceneStore.rename_many(model, data)
+                 when 'sectionPreview' then SectionPreview.update(model, data.fetch('settings'))
+                 when 'sectionCancel' then { success: true, message: 'Đã tắt xem trước mặt cắt.' }
+                 when 'copyView' then SceneTransfer.copy_view(model)
+                 when 'pasteView' then SceneTransfer.paste_view(model)
                  when 'cameraElevation' then CameraControl.elevation(model, data['camera'])
                  when 'cameraPreview' then CameraControl.preview(model, data['camera'])
                  when 'saveFrames' then SceneFrame.apply(model, data)
@@ -96,12 +118,13 @@ module VGD
                    nil
                  else raise ArgumentError, 'Lệnh không được hỗ trợ.'
                  end
-        send_event('result', result) if result
-        send_event('state', state)
+        @live_frame = nil if %w[visit generate section capture saveFrames update delete removeAllFrames restoreAllFrames].include?(action)
+        send_event(%w[sectionPreview sectionCancel].include?(action) ? 'preview' : 'result', result) if result
+        send_event('state', state) unless %w[sectionPreview sectionCancel].include?(action)
         result
       rescue StandardError => e
         puts "[VGD Scenes] #{action}: #{e.message}\n#{Array(e.backtrace).first(5).join("\n")}"
-        send_event('result', { success: false, message: e.message })
+        send_event(%w[sectionPreview sectionCancel].include?(action) ? 'preview' : 'result', { success: false, message: e.message })
         send_event('state', state)
         { success: false, message: e.message }
       end
@@ -179,7 +202,10 @@ module VGD
 
       def transfer_command(action)
         raise 'Đang xuất, hãy chờ hoàn tất.' if @job
+        SectionPreview.clear
         result = case action
+                 when 'copyView' then SceneTransfer.copy_view(Sketchup.active_model)
+                 when 'pasteView' then SceneTransfer.paste_view(Sketchup.active_model)
                  when 'copyScenes' then transfer_export(Sketchup.active_model, { 'ids' => [] }, true)
                  when 'saveScenes' then transfer_export(Sketchup.active_model, { 'scope' => 'all' }, false)
                  else transfer_load(Sketchup.active_model, action == 'pasteScenes')
@@ -201,7 +227,7 @@ module VGD
           return
         end
         @dialog = ::UI::HtmlDialog.new(dialog_title: "VGD Scenes · #{VERSION}", preferences_key: 'VGD.Scenes.Dialog.v1',
-          scrollable: false, resizable: true, width: 640, height: 780, min_width: 460, min_height: 540,
+          scrollable: false, resizable: true, width: 800, height: 760, min_width: 620, min_height: 540,
           style: ::UI::HtmlDialog::STYLE_DIALOG)
         @dialog.set_file(File.join(__dir__, 'dialog.html'))
         @dialog.add_action_callback('ready') { |_context, _payload| send_event('state', state) }
@@ -213,12 +239,13 @@ module VGD
             send_event('result', { success: false, message: "Dữ liệu không hợp lệ: #{e.message}" })
           end
         end
-        @dialog.set_on_closed { @dialog = nil; @transfer_pending = nil; @job.cancel if @job }
+        @dialog.set_on_closed { SectionPreview.clear; @dialog = nil; @transfer_pending = nil; @job.cancel if @job }
         @dialog.show
       end
 
       def quick_views
         raise 'Đang xuất, hãy chờ hoàn tất.' if @job
+        SectionPreview.clear
         model = Sketchup.active_model
         result = SceneStore.generate(model, settings(model).merge('views' => %w[ISO TOP FRONT RIGHT]))
         send_event('state', state)
@@ -233,7 +260,9 @@ module VGD
         raise 'Đóng edit Group/Component trước khi cập nhật view.' if model.active_path
         page = model.pages.selected_page
         raise 'Chọn một scene trước, chỉnh góc nhìn rồi bấm Cập nhật view hiện tại.' unless page && page.valid?
+        SectionPreview.clear
         result = SceneStore.capture(model, page.persistent_id.to_s)
+        @live_frame = nil
         Sketchup.status_text = "[VGD] #{result[:message]}"
         send_event('result', result)
         send_event('state', state)
@@ -267,8 +296,8 @@ module VGD
         open_command = ::UI::Command.new('VGD Scenes · Bảng điều khiển') { open }
         quick_command = ::UI::Command.new('VGD · Tạo/cập nhật 4 view nhanh') { quick_views }
         capture_command = ::UI::Command.new('VGD · Cập nhật view hiện tại') { capture_current_view }
-        copy_command = ::UI::Command.new('VGD · Copy scene hiện tại') { transfer_command('copyScenes') }
-        paste_command = ::UI::Command.new('VGD · Paste scenes') { transfer_command('pasteScenes') }
+        copy_command = ::UI::Command.new('VGD · Copy camera và khung') { transfer_command('copyView') }
+        paste_command = ::UI::Command.new('VGD · Paste camera và khung') { transfer_command('pasteView') }
         [open_command, quick_command].each do |command|
           command.small_icon = File.join(__dir__, 'icon.svg')
           command.large_icon = File.join(__dir__, 'icon.svg')
@@ -285,8 +314,8 @@ module VGD
           command.small_icon = File.join(__dir__, icon)
           command.large_icon = File.join(__dir__, icon)
         end
-        copy_command.tooltip = 'VGD · Copy camera và khung của scene đang chọn (đã lưu)'
-        paste_command.tooltip = 'VGD · Paste bộ scene từ file khác; chọn trước khi nhập'
+        copy_command.tooltip = 'VGD · Copy camera và khung đang xem'
+        paste_command.tooltip = 'VGD · Paste vào view hiện tại; không tạo hoặc cập nhật scene'
         menu.add_item(open_command); menu.add_item(quick_command); menu.add_item(capture_command)
         @toolbar = ::UI::Toolbar.new('VGD Scenes')
         @toolbar.add_item(open_command); @toolbar.add_item(quick_command); @toolbar.add_item(capture_command)

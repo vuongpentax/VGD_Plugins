@@ -1,8 +1,8 @@
 'use strict';
 document.addEventListener('DOMContentLoaded', () => {
   const $ = id => document.getElementById(id);
-  const settingsKeys = ['project','template','axis_mode','grouping','isolate','width','height','margin','grid','format','transparent','paper','section_axis','section_percent','section_offset','section_flip','section_name','normal_x','normal_y','normal_z','ratio_locked','export_scale','date_folder'];
-  const numeric = new Set(['width','height','margin','section_percent','section_offset','normal_x','normal_y','normal_z','export_scale']);
+  const settingsKeys = ['project','template','axis_mode','grouping','isolate','width','height','margin','grid','format','transparent','paper','section_axis','section_percent','section_flip','section_name','ratio_locked','export_scale','date_folder'];
+  const numeric = new Set(['width','height','margin','section_percent','export_scale']);
   const booleans = new Set(['isolate','transparent','section_flip','ratio_locked','date_folder']);
   let context = null, busy = false, selected = new Set(), pendingModal = null, lastPath = null;
   let transfer = null, transferSelected = new Set();
@@ -10,11 +10,14 @@ document.addEventListener('DOMContentLoaded', () => {
   let savedFrameSignature = null, presetSignature = null;
   let frameFailureEpoch = 0;
   let currentTab = 'views', pendingCreate = false, composeSignature = null;
+  const openFrames = new Set();
+  let camBase = null, camNow = null;
+  let selectionAnchor = null, lastSceneClick = 0, rowRenderTimer = null, sectionTimer = null;
   const primaryActions = {views:$('generate'),sections:$('section'),scenes:$('goCompose'),compose:$('updateCurrentView'),export:$('exportButton')};
   Object.values(primaryActions).forEach(button => $('primarySlot').append(button));
   Object.entries(primaryActions).forEach(([name,button]) => {button.hidden=name!=='views';});
-  let theme = 'light';
-  try { theme = localStorage.getItem('VGD.Scenes.Theme') || 'light'; } catch (_) {}
+  let theme = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  try { theme = localStorage.getItem('VGD.Scenes.Theme') || theme; } catch (_) {}
   document.body.classList.toggle('dark', theme === 'dark');
   function status(message, error = false) { $('status').textContent = message || 'Thao tác không thành công.'; $('status').classList.toggle('error', error); }
   function settings() {
@@ -22,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const out = {};
     for (const key of settingsKeys) out[key] = booleans.has(key) ? $(key).checked : numeric.has(key) ? Number($(key).value) : $(key).value;
     out.views = [...document.querySelectorAll('[data-view][aria-pressed=true]')].map(button => button.dataset.view);
+    out.section_offset = 0; out.normal_x = 0; out.normal_y = 1; out.normal_z = 0;
     if (settingsKeys.filter(key => numeric.has(key)).some(key => !Number.isFinite(out[key]) || $(key).value.trim() === '')) throw Error('Điền đầy đủ các thông số số.');
     if (out.width < 100 || out.height < 100 || out.width > 12000 || out.height > 12000 || out.width*out.height > 64000000) throw Error('Kích thước ảnh: 100–12000 px, tối đa 64 triệu pixel.');
     if (out.margin < 0 || out.margin > 100) throw Error('Lề cần nằm trong 0–100%.');
@@ -33,7 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('button:not(#theme):not(#modalCancel):not(#modalConfirm):not(#cancel):not(#openFolder)').forEach(button => { button.disabled = !context || busy; });
     document.querySelectorAll('[data-needs-selection]').forEach(button => { button.disabled = !context || busy || context.selection === 0; });
     document.querySelectorAll('[data-needs-scenes]').forEach(button => { button.disabled = !context || busy || selected.size === 0; });
-    $('update').disabled = !context || busy || selected.size === 0 || context.scenes.some(scene => selected.has(scene.id) && !scene.owned);
     $('selectedCount').textContent = selected.size + ' đã chọn';
     $('exportSelection').textContent = selected.size ? selected.size + ' scene đã chọn · Xuất theo thứ tự trong bảng VGD.' : 'Chưa chọn scene. Đánh dấu trong mục Scene.';
     $('cancel').hidden = !busy;
@@ -52,9 +55,13 @@ document.addEventListener('DOMContentLoaded', () => {
     $('removeAllFrames').disabled = !context || busy || context.editing || !(context.frame_cleanup && context.frame_cleanup.count || context.frame_active);
     $('restoreAllFrames').disabled = !context || busy || context.editing || !(context.frame_cleanup && context.frame_cleanup.restore);
     $('goCompose').disabled = !context || busy || !context.scenes.length;
+    $('syncOrder').disabled = !context || busy || context.editing || !context.native_order_supported || !context.native_order_dirty;
+    $('syncOrder').title = context && !context.native_order_supported ? 'SketchUp 2025 trở lên có API đồng bộ. SU2022 dùng Move Left / Move Right trên thanh scene.' : 'Áp dụng thứ tự trong bảng vào các tab scene SketchUp.';
+    $('orderHint').textContent = context && !context.native_order_supported ? 'SU2022: thứ tự bảng dùng để xuất. Thanh scene gốc cần Move Left / Move Right.' : context && context.native_order_dirty ? 'Đã đổi thứ tự bảng · bấm Đồng bộ khi đã xếp xong.' : 'Thứ tự bảng và thanh scene SketchUp đã khớp.';
     $('composeScene').disabled = !context || busy || context.editing || !context.scenes.length;
     $('flowNext').disabled = !context || busy || (['scenes','compose'].includes(currentTab) ? !selected.size : !context.scenes.length);
     renderExportSummary();
+    renderRenamePreview();
   }
   function send(action, extra = {}, lock = true) {
     if (!context || (busy && !['cancel','refresh'].includes(action))) return;
@@ -63,20 +70,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (lock) { busy = true; enable(); }
     window.sketchup.action(JSON.stringify({ action, model: context.model, ...extra }));
   }
-  function runSettings(action) { try { const opts = settings(); if (action === 'generate' && !opts.views.length) throw Error('Chọn ít nhất một góc nhìn.'); if (action === 'section' && !opts.section_name.trim()) throw Error('Điền tên mặt cắt.'); if (action === 'section' && opts.section_axis === 'CUSTOM' && ![opts.normal_x,opts.normal_y,opts.normal_z].some(n => Math.abs(n)>1e-9)) throw Error('Vector pháp tuyến không được bằng 0.'); send(action, { settings: opts }); } catch (error) { status(error.message, true); } }
+  function runSettings(action) { try { if(action==='section')clearTimeout(sectionTimer); const opts = settings(); if (action === 'generate' && !opts.views.length) throw Error('Chọn ít nhất một góc nhìn.'); if (action === 'section' && !opts.section_name.trim()) throw Error('Điền tên mặt cắt.'); send(action, { settings: opts }); } catch (error) { status(error.message, true); } }
   function tab(name) {
+    if(currentTab==='sections' && name!=='sections'){clearTimeout(sectionTimer);send('sectionCancel',{},false);}
     currentTab=name;
     document.querySelectorAll('.tab').forEach(panel => { panel.hidden = panel.id !== name; });
-    document.querySelectorAll('[data-tab]').forEach(button => button.setAttribute('aria-selected', String(button.dataset.tab === (name==='sections'?'views':name))));
-    $('createModes').hidden=!['views','sections'].includes(name);
-    document.querySelectorAll('[data-create]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.create===name)));
+    document.querySelectorAll('[data-tab]').forEach(button => button.setAttribute('aria-selected', String(button.dataset.tab === name)));
     document.querySelector('main').scrollTop = 0;
     Object.entries(primaryActions).forEach(([key,button]) => {button.hidden=key!==name;});
+    { const order=['views','scenes','compose','export'], at=order.indexOf(name==='sections'?'views':name);
+      document.querySelectorAll('nav [data-tab]').forEach(b=>b.classList.toggle('done',order.indexOf(b.dataset.tab)<at)); }
     $('flowBack').hidden=['views','sections'].includes(name);
     $('flowNext').hidden=name==='export';
-    $('flowNext').textContent=name==='compose'?'Tiếp: Xuất file →':name==='scenes'?'Bỏ qua canh view → Xuất':'Đã có scene →';
+    $('flowNext').textContent=name==='compose'?'Tiếp: Xuất file →':name==='scenes'?'Bỏ qua canh view → Xuất':'Tiếp: Chọn scene →';
     $('flowBack').textContent=name==='export'?'← Canh view':name==='compose'?'← Chọn scene':'← Tạo view';
     enable();
+    showUnsaved();
   }
   function renderExportSummary() {
     const list=$('exportSummary');list.replaceChildren();
@@ -130,33 +139,45 @@ document.addEventListener('DOMContentLoaded', () => {
     const list = $('sceneList'), active = document.activeElement;
     // Polling must never replace a field while a dimension is being typed.
     if (active && list.contains(active) && active.matches('input:not([type=checkbox])') && active.closest('.scene-row').dataset.model===context.model) { enable(); return; }
+    // Keep the clicked name node alive long enough for a real double click.
+    if(active && active.matches('.scene-name') && active.closest('.scene-row').dataset.model===context.model && Date.now()-lastSceneClick<400){
+      clearTimeout(rowRenderTimer);rowRenderTimer=setTimeout(render,410);enable();return;
+    }
     const focusedRow = active && active.closest('.scene-row');
     const focusedId = focusedRow && focusedRow.dataset.id;
     const focusedIndex = focusedRow ? [...focusedRow.children].indexOf(active) : -1;
-    const openMenus=new Set([...list.querySelectorAll('.row-menu[open]')].map(menu=>menu.closest('.scene-row').dataset.id));
+    const focusedControl = focusedRow && ['scene-name','scene-grip','size-chip','row-capture','row-delete'].find(cls=>active.classList.contains(cls));
     list.replaceChildren(); const scenes = filtered();
     if (!scenes.length) { const empty = document.createElement('div'); empty.className = 'empty'; empty.textContent = context && context.scenes.length ? 'Không có scene khớp bộ lọc.' : 'Chưa có scene. Tạo ở mục Góc nhìn hoặc Mặt cắt.'; list.append(empty); }
     for (const scene of scenes) {
-      const row = document.createElement('div'); row.className = 'scene-row' + (scene.selected ? ' current' : ''); row.dataset.id = scene.id; row.dataset.model=context.model;
+      const row = document.createElement('div'); row.className = 'scene-row' + (scene.selected ? ' current' : '') + (selected.has(scene.id)?' marked':''); row.dataset.id = scene.id; row.dataset.model=context.model;
       const check = document.createElement('input'); check.type = 'checkbox'; check.checked = selected.has(scene.id); check.setAttribute('aria-label','Chọn ' + scene.name);
-      check.addEventListener('change', () => { check.checked ? selected.add(scene.id) : selected.delete(scene.id); enable(); });
-      const name = document.createElement('button'); name.className = 'scene-name'; name.textContent = scene.name; name.title = scene.name; name.addEventListener('click', () => { navigationId = scene.id; list.focus({preventScroll:true}); send('visit',{id:scene.id}); });
+      check.addEventListener('click', event => { if(event.shiftKey) selectRange(scene.id);else{check.checked?selected.add(scene.id):selected.delete(scene.id);selectionAnchor=scene.id;} updateSelectionRows();enable(); });
+      const name = document.createElement('button'); name.className = 'scene-name'; name.textContent = scene.name; name.title = 'Bấm mở · bấm đúp đổi tên: '+scene.name;
+      name.addEventListener('click', event => {
+        if(event.detail>1)return;
+        lastSceneClick=Date.now();
+        if(event.shiftKey){selectRange(scene.id);updateSelectionRows();enable();return;}
+        if(event.ctrlKey||event.metaKey){selected.has(scene.id)?selected.delete(scene.id):selected.add(scene.id);selectionAnchor=scene.id;updateSelectionRows();enable();return;}
+        if(!selected.has(scene.id))selected=new Set([scene.id]);
+        selectionAnchor=scene.id;navigationId=scene.id;updateSelectionRows();send('visit',{id:scene.id},false);enable();
+      });
+      name.addEventListener('dblclick',()=>modal('Đổi tên scene',scene.name,()=>send('rename',{id:scene.id,name:$('renameInput').value.trim()}),scene.name));
+      row.addEventListener('click',event=>{if(event.target===row){name.focus({preventScroll:true});name.dispatchEvent(new MouseEvent('click',{bubbles:true,shiftKey:event.shiftKey,ctrlKey:event.ctrlKey,metaKey:event.metaKey}));}});
       const badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = scene.owned ? (scene.kind === 'SECTION' ? 'VGD · Cắt' : 'VGD') : scene.imported ? 'VGD · Nhập' : 'Scene';
-      const rename = document.createElement('button'); rename.className = 'row-action'; rename.textContent = 'Tên'; rename.title = 'Đổi tên scene'; rename.addEventListener('click', () => modal('Đổi tên scene',scene.name,() => send('rename',{id:scene.id,name:$('renameInput').value.trim()}),scene.name));
-      const capture = document.createElement('button'); capture.className = 'row-action'; capture.textContent = 'Lưu view'; capture.title = 'Cập nhật scene bằng góc nhìn hiện tại'; capture.addEventListener('click', () => modal('Lưu góc nhìn hiện tại','Cập nhật camera, visibility và mặt cắt hiện tại vào “' + scene.name + '”?',() => send('capture',{id:scene.id})));
+      const capture = document.createElement('button'); capture.className = 'row-action row-capture'; capture.textContent = 'Lưu camera'; capture.title = 'Lưu camera đang xem vào '+scene.name;capture.addEventListener('click',()=>send('capture',{id:scene.id}));
+      const remove = document.createElement('button');remove.className='row-delete';remove.textContent='×';remove.setAttribute('aria-label','Xóa '+scene.name);remove.title='Xóa scene';remove.addEventListener('click',()=>modal('Xóa scene','Xóa “'+scene.name+'”?',()=>send('delete',{ids:[scene.id]})));
       const grip = document.createElement('button'); grip.className = 'scene-grip'; grip.title = 'Kéo để sắp xếp bảng VGD'; grip.setAttribute('aria-label','Sắp xếp ' + scene.name);
       for (let i=0;i<3;i++) grip.append(document.createElement('span'));
       grip.addEventListener('dragstart',event => {
         if (busy || context.editing) { event.preventDefault(); return; }
-        dragging = { id:scene.id, model:context.model, order:context.scenes.map(item=>item.id), before:scene.id };
+        if(!selected.has(scene.id)){selected=new Set([scene.id]);selectionAnchor=scene.id;updateSelectionRows();}
+        dragging = { id:scene.id, ids:context.scenes.filter(item=>selected.has(item.id)).map(item=>item.id), model:context.model, order:context.scenes.map(item=>item.id), before:scene.id };
         event.dataTransfer.setData('text/plain',scene.id); event.dataTransfer.effectAllowed = 'move'; row.classList.add('dragging');
         dragY = event.clientY; scrollFrame = requestAnimationFrame(scrollDrag);
       });
       grip.addEventListener('dragend',finishDrag);
-      const menu=document.createElement('details');menu.className='row-menu';menu.open=openMenus.has(scene.id);
-      const more=document.createElement('summary');more.textContent='⋯';more.setAttribute('aria-label','Thao tác '+scene.name);
-      const actions=document.createElement('div');actions.className='row-menu-actions';actions.append(rename,capture);menu.append(more,actions);
-      row.append(check,name,badge,menu,grip); list.append(row);
+      row.append(check,name,badge,capture,remove,grip); list.append(row);
       const frame = scene.frame || {width:1920,height:1080,margin:10};
       const fields = document.createElement('div'); fields.className = 'row-frame';
       const inputs = {};
@@ -179,7 +200,11 @@ document.addEventListener('DOMContentLoaded', () => {
       } catch(error) { status(error.message,true); } }
       for (const [key,input] of Object.entries(inputs)) onCommit(input,()=>commitRow(key));
       row.append(fields);
-      if (focusedId === scene.id && focusedIndex >= 0) row.children[focusedIndex].focus({preventScroll:true});
+      decorateRow(row);
+      if (focusedId === scene.id && focusedIndex >= 0) {
+        const control=focusedControl?row.querySelector('.'+focusedControl):row.children[focusedIndex];
+        if(control)control.focus({preventScroll:true});
+      }
     }
     enable();
   }
@@ -212,7 +237,7 @@ document.addEventListener('DOMContentLoaded', () => {
     event.preventDefault(); const action = dragging; finishDrag();
     if (context.model !== action.model || busy) return;
     $('sceneList').focus({preventScroll:true});
-    send('reorder',{id:action.id,before:action.before,order:action.order});
+    send('reorder',{id:action.id,ids:action.ids,before:action.before,order:action.order});
   });
   function cameraMode() { const floor = $('cameraMode').value === 'floor'; $('cameraAbsolute').hidden = floor; $('cameraFloorFields').hidden = !floor; }
   function applyCamera() {
@@ -243,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
         finishDrag();
       }
       const changed = !context || context.model !== data.model;
+      if (changed) {openFrames.clear();selectionAnchor=null;clearTimeout(sectionTimer);}
       const currentId = value => value && value.scenes.find(scene => scene.selected)?.id;
       const frameChanged = changed || currentId(context) !== currentId(data);
       const frameUpdated = !frameChanged && JSON.stringify(context.current_frame)!==JSON.stringify(data.current_frame);
@@ -256,6 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (frameChanged) navigationId = currentId(data) || null;
       if (changed) { $('cameraMode').value = 'absolute'; $('cameraFloor').value = '0'; $('cameraHeight').value = '1500'; $('cameraKeep').checked = true; }
       if (frameChanged && data.camera) $('cameraZ').value = Math.round(data.camera.eye_z_mm*100)/100;
+      trackCamera(data.camera);
       if (data.camera) $('cameraCurrent').textContent = 'Z mắt hiện tại: ' + (Math.round(data.camera.eye_z_mm*100)/100).toLocaleString('vi-VN') + ' mm' + (data.camera.supported ? '' : ' · Hai điểm / Match Photo chưa hỗ trợ');
       if (data.camera) {
         $('fovField').hidden=!data.camera.perspective; $('parallelField').hidden=!!data.camera.perspective;
@@ -267,13 +294,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const sceneSignature=JSON.stringify([data.model,data.scenes.map(scene=>[scene.id,scene.name]),currentId(data)]);
       if(sceneSignature!==composeSignature){composeSignature=sceneSignature;$('composeScene').replaceChildren(new Option('Chọn scene để canh…',''));data.scenes.forEach(scene=>$('composeScene').add(new Option(scene.name,scene.id)));$('composeScene').value=currentId(data)||'';}
       const composing=data.scenes.find(scene=>scene.selected);
-      $('composeContext').textContent=composing?'Đang chỉnh riêng scene này · khung tự lưu, camera cần Update view.':'Chọn một scene trong danh sách trên để bắt đầu.';
+      $('composeContext').textContent=composing?'Đang chỉnh riêng scene này · khung tự lưu, camera cần Lưu camera.':'Chọn một scene trong danh sách trên để bắt đầu.';
       cameraMode();
       $('selection').textContent = data.selection ? data.selection + ' đối tượng đang chọn' + (data.editing ? ' · đang edit group' : '') : 'Chọn Group / Component trong model';
       $('modelTitle').textContent = data.title; $('sceneCount').textContent = String(data.scenes.length);
       $('frameCleanupCount').textContent = (data.frame_cleanup ? data.frame_cleanup.count : 0) + ' scene đang khóa khung camera';
-      $('customNormal').hidden = $('section_axis').value !== 'CUSTOM'; $('sectionSlider').value = $('section_percent').value;
+      $('sectionSlider').value = $('section_percent').value;
       frameStatus(!!data.frame_active, !!data.grid_active); lockStatus(); showFormat(); render(); showTransfer(data.transfer);
+    } else if (event === 'preview') { status(data && data.message, !(data && data.success));
     } else if (event === 'frame' && data) { frameStatus(!!data.frame_active, !!data.grid_active);
     } else if (event === 'result') {
       busy = false; status(data && data.message, !(data && (data.success || data.cancelled)));
@@ -294,7 +322,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }};
   document.querySelectorAll('[data-tab]').forEach(button => button.addEventListener('click', () => tab(button.dataset.tab)));
-  document.querySelectorAll('[data-create]').forEach(button=>button.addEventListener('click',()=>tab(button.dataset.create)));
   $('flowBack').addEventListener('click',()=>tab(currentTab==='export'?'compose':currentTab==='compose'?'scenes':'views'));
   $('flowNext').addEventListener('click',()=>tab(['views','sections'].includes(currentTab)?'scenes':'export'));
   $('goCompose').addEventListener('click',composeScenes);
@@ -305,11 +332,23 @@ document.addEventListener('DOMContentLoaded', () => {
   $('generate').addEventListener('click', () => runSettings('generate')); $('section').addEventListener('click', () => runSettings('section'));
   $('frame').addEventListener('click',()=>commitFrame(true)); $('fit').addEventListener('click',()=>runSettings('fit')); $('toggleGrid').addEventListener('click', () => runSettings('grid'));
   $('toggleFrame').addEventListener('click', () => runSettings('toggle_frame'));
-  $('section_axis').addEventListener('change', () => { $('customNormal').hidden = $('section_axis').value !== 'CUSTOM'; });
-  $('sectionSlider').addEventListener('input', () => { $('section_percent').value = $('sectionSlider').value; }); $('section_percent').addEventListener('input', () => { $('sectionSlider').value = $('section_percent').value; });
+  function previewSection(){clearTimeout(sectionTimer);try{send('sectionPreview',{settings:settings()},false);}catch(error){status(error.message,true);}}
+  function scheduleSection(){clearTimeout(sectionTimer);sectionTimer=setTimeout(()=>{if(currentTab==='sections')previewSection();},100);}
+  $('sectionSlider').addEventListener('input', () => { $('section_percent').value = $('sectionSlider').value;scheduleSection(); });
+  $('section_percent').addEventListener('input',()=>{$('sectionSlider').value=$('section_percent').value;scheduleSection();});
+  ['section_axis','section_flip'].forEach(id=>$(id).addEventListener('change',scheduleSection));
+  $('sectionPreview').addEventListener('click',previewSection);
+  $('sectionCancel').addEventListener('click',()=>{clearTimeout(sectionTimer);send('sectionCancel',{},false);});
   $('search').addEventListener('input', render); $('onlyVGD').addEventListener('change', render);
   $('selectAll').addEventListener('click', () => { filtered().forEach(scene => selected.add(scene.id)); render(); }); $('selectNone').addEventListener('click', () => { selected.clear(); render(); });
-  $('update').addEventListener('click', () => modal('Cập nhật từ đối tượng','Đổi tên và căn lại ' + selected.size + ' scene VGD theo tên, hình học và thiết lập nguồn đã lưu; không cần chọn lại đối tượng. Bố cục camera chỉnh tay sẽ được thay bằng góc tự động.',() => send('update',{ids:[...selected]})));
+  $('syncOrder').addEventListener('click',()=>send('syncOrder',{order:context.scenes.map(scene=>scene.id)}));
+  function selectRange(id){const visible=filtered().map(scene=>scene.id),anchor=visible.indexOf(selectionAnchor),target=visible.indexOf(id);if(anchor<0){selected.add(id);selectionAnchor=id;}else visible.slice(Math.min(anchor,target),Math.max(anchor,target)+1).forEach(pid=>selected.add(pid));}
+  function updateSelectionRows(){document.querySelectorAll('.scene-row').forEach(row=>{row.classList.toggle('marked',selected.has(row.dataset.id));row.querySelector('input[type=checkbox]').checked=selected.has(row.dataset.id);});}
+  function renameSettings(){return {ids:[...selected],prefix:$('renamePrefix').value,base:$('renameBase').value,suffix:$('renameSuffix').value,separator:$('renameSeparator').value,sequence:$('renameSequence').value,start:Number($('renameStart').value)};}
+  function renameText(scene,index,opts){let n=opts.start+index,token='';if(opts.sequence==='number')token=String(n).padStart(2,'0');if(opts.sequence==='letter'){while(n>0){n--;token=String.fromCharCode(65+n%26)+token;n=Math.floor(n/26);}}return [opts.prefix.trim(),opts.base.trim()||scene.name,token,opts.suffix.trim()].filter(Boolean).join(opts.separator.trim());}
+  function renderRenamePreview(){if(!context)return;const opts=renameSettings(),scenes=context.scenes.filter(scene=>selected.has(scene.id));const valid=Number.isInteger(opts.start)&&opts.start>=1&&opts.start<=999999;const names=valid?scenes.map((scene,index)=>renameText(scene,index,opts)):[];const foreign=context.scenes.filter(scene=>!selected.has(scene.id)).map(scene=>scene.name);const duplicate=new Set(names).size!==names.length||names.some(name=>foreign.includes(name));const error=!valid?'Số bắt đầu cần là số nguyên dương.':duplicate?'Tên trùng: thêm STT/chữ cái hoặc đổi tiền tố/hậu tố.':names.some(name=>!name||name.length>180)?'Tên cần có 1–180 ký tự.':'';$('renamePreview').textContent=error||names.slice(0,5).join('\n')+(names.length>5?'\n… '+names.length+' scene':'')||'Chọn scene để xem trước tên.';$('renamePreview').classList.toggle('error',!!error);$('renameMany').disabled=!scenes.length||busy||!!error;}
+  ['renamePrefix','renameBase','renameSuffix','renameSeparator','renameSequence','renameStart'].forEach(id=>$(id).addEventListener('input',renderRenamePreview));
+  $('renameMany').addEventListener('click',()=>send('renameMany',renameSettings()));
   $('delete').addEventListener('click', () => modal('Xóa scene đã chọn','Xóa ' + selected.size + ' scene đã đánh dấu?',() => send('delete',{ids:[...selected]})));
   $('exportButton').addEventListener('click', () => { try { send('export',{ids:[...selected],settings:settings()}); } catch (error) { status(error.message,true); } });
   $('copyScenes').addEventListener('click', () => send('copyScenes',{ids:[...selected]}));
@@ -450,4 +489,38 @@ document.addEventListener('DOMContentLoaded', () => {
   enable(); showFormat(); cameraMode();
   if (window.sketchup) window.sketchup.ready();
   setInterval(() => { if (context && !busy && !dragging && $('modal').hidden && window.sketchup) send('refresh',{},false); },2000);
+
+  // --- UI 1.4 helpers (presentation only) ---
+  function chipText(row){ const v=k=>{const i=row.querySelector('[data-frame-key="'+k+'"]');return i?i.value:'';}; return v('width')+'×'+v('height')+' · '+v('ratio'); }
+  function decorateRow(row){
+    if(row.querySelector('.size-chip')) return;
+    const chip=document.createElement('button'); chip.className='size-chip'; chip.title='Hiện/ẩn ô chỉnh khung';
+    chip.setAttribute('aria-label','Chỉnh khung '+(row.querySelector('.scene-name')||{}).title);
+    row.classList.toggle('open',openFrames.has(row.dataset.id)); chip.textContent=chipText(row);
+    chip.disabled = !context || busy;
+    chip.addEventListener('click',()=>{ const o=!row.classList.contains('open'); row.classList.toggle('open',o); o?openFrames.add(row.dataset.id):openFrames.delete(row.dataset.id); });
+    row.insertBefore(chip,row.querySelector('.row-capture')); }
+  $('sceneList').addEventListener('change',e=>{ const row=e.target.closest('.scene-row'), c=row&&row.querySelector('.size-chip'); if(c) setTimeout(()=>{c.textContent=chipText(row);},0); });
+  // clearer primary label: number of views to create
+  function viewCount(){ const n=document.querySelectorAll('[data-view][aria-pressed=true]').length; $('generate').textContent=n?'Tạo / cập nhật '+n+' scene':'Chọn ít nhất 1 góc nhìn'; }
+  document.querySelectorAll('[data-view]').forEach(b=>new MutationObserver(viewCount).observe(b,{attributes:true,attributeFilter:['aria-pressed']})); viewCount();
+  // explain why a button is disabled
+  const reasons={'data-needs-selection':'Chọn đối tượng trong SketchUp trước.','data-needs-scenes':'Đánh dấu ít nhất một scene ở bước 2 trước.'};
+  function explain(b){ for(const a in reasons) if(b.hasAttribute(a)){ if(b.disabled){if(b.dataset.t===undefined)b.dataset.t=b.title||'';b.title=reasons[a];} else if(b.dataset.t!==undefined){b.title=b.dataset.t;delete b.dataset.t;} } }
+  document.querySelectorAll('[data-needs-selection],[data-needs-scenes]').forEach(b=>{ new MutationObserver(()=>explain(b)).observe(b,{attributes:true,attributeFilter:['disabled']}); explain(b); });
+
+  // --- UI 1.4b: name preview, format segments, output path, progress %, unsaved camera ---
+  function namePreview(){ const v=(document.querySelector('[data-view][aria-pressed=true]')||{dataset:{view:'ISO'}}).dataset.view;
+    $('namePreview').textContent='Ví dụ tên scene: '+($('template').value||'<OBJECT>_<VIEW>').replace(/<PROJECT>/g,$('project').value.trim()||'CT01').replace(/<OBJECT>/g,'Tủ bếp').replace(/<VIEW>/g,v).replace(/<INDEX>/g,'1'); }
+  ['template','project'].forEach(id=>$(id).addEventListener('input',namePreview));
+  document.querySelectorAll('[data-view],#preset4,#preset6,#presetNone').forEach(b=>b.addEventListener('click',()=>setTimeout(namePreview,0))); namePreview();
+  function segSync(){ document.querySelectorAll('[data-fmt]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.fmt===$('format').value)));
+    const f=$('format').value.toUpperCase(); $('outPath').textContent='Nơi lưu → '+($('date_folder').checked?'YYYY.MM.DD → ':'')+f+($('format').value==='pdf'?' → tên tệp bạn đặt khi lưu':' → từng scene một tệp'); }
+  document.querySelectorAll('[data-fmt]').forEach(b=>b.addEventListener('click',()=>{ $('format').value=b.dataset.fmt; $('format').dispatchEvent(new Event('change',{bubbles:true})); segSync(); }));
+  ['format','date_folder'].forEach(id=>$(id).addEventListener('change',segSync)); setInterval(segSync,700); segSync();
+  const pct=document.createElement('span'); pct.id='progressText'; pct.className='progress-text'; pct.hidden=true; $('progress').before(pct);
+  function pctSync(){ const p=$('progress'); pct.hidden=p.hidden; pct.textContent=Math.round(100*p.value/(p.max||1))+'%'; }
+  new MutationObserver(pctSync).observe($('progress'),{attributes:true,attributeFilter:['value','max','hidden']});
+  function showUnsaved(){ $('unsavedBadge').hidden=!(camBase&&camNow&&camBase!==camNow&&currentTab==='compose'); }
+  function trackCamera(camera){ camNow=camera&&camera.sig||null; camBase=camera&&camera.saved_sig||null; showUnsaved(); }
 });

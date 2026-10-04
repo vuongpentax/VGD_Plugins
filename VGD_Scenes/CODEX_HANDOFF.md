@@ -1,5 +1,27 @@
 # Bàn giao VGD Scenes
 
+## 1.5.0 · Sidebar, preview mặt cắt, thao tác nhiều scene
+
+Giao diện có năm tab bên trái, vùng cấu hình và nút chính bên phải. Góc nhìn chỉ có tên. Scene dùng click/đúp, Shift/Ctrl, kéo nhóm, nút lưu/xóa trực tiếp và đổi tên hàng loạt có xem trước. Đã bỏ UI cập nhật nguồn, vector mặt cắt tùy chỉnh và dịch thêm; engine vẫn đọc thông số cũ để tương thích scene đã tạo.
+
+`SectionPreview` nằm trong scenes.rb, tạo mặt cắt tạm ở context của từng đối tượng, Make Unique instance dùng chung. Slider debounce 100ms, các bước dịch gộp bằng transparent operation; đổi % không tự căn lại camera. X/Y/Z hoặc đảo phía mới canh hướng camera. Dọn mặt cắt và trả view khi tắt/rời tab/tạo/đóng dialog. Copy/paste toolbar dùng `SceneTransfer.copy_view/paste_view` và `view_clipboard_v1.json`, khác clipboard scene. Paste chỉ thay live camera + working frame; `@live_frame` giữ kích thước cho dialog và capture thủ công.
+
+Thứ tự bảng vẫn lưu bằng ID. `reorder` nhận một ID hoặc mảng IDs, giữ thứ tự nội bộ cụm. `sync_order` gọi Pages#reorder trên SU2025+, không tạo lại scene, có preflight và rollback. SU2022 chưa có API này: nút không áp dụng được, có chú thích rõ trong dialog. Đổi tên hàng loạt giữ identity, dùng tên tạm khi đổi chéo và kiểm tra tên trùng trước khi ghi.
+
+`npm test` PASS với Ruby WASM và Edge headless; bổ sung test_scene_workflow.rb/cjs cho preview/cleanup, camera memory, nhóm 10/50 scene, Shift/kéo chuột thật/tự cuộn, batch names và native-order capability guard. Chưa kiểm chứng native HtmlDialog/cắt trong SU2022 sau thay đổi này. Chỉ triển khai VGD Scenes; không đổi plugin khác.
+
+## Thay đổi 1.4.0 · làm mới giao diện dialog
+
+### Kiểm tra bản Claude ngày 04/10/2026
+
+Đã nhập bản trong `Downloads/files.zip` và chạy toàn bộ `npm test` bằng Ruby WASM + Edge headless: PASS. Điều chỉnh test mở menu ⋯ trước khi capture vì menu mới tự đóng. Thêm `test_refresh_ui.cjs` cho compact rows, PNG/JPG/PDF thực tế, theme hệ thống, progress và trạng thái camera.
+
+Đã sửa huy hiệu camera: dùng `camera.saved_sig` đọc camera của scene và `camera.sig` đọc camera đang xem; không dùng timer để đoán đã lưu. Hỗ trợ mở dialog sau Orbit, chuyển scene từ SU/toolbar, lưu thất bại, chuyển scene chậm và model khác. Signature bao gồm kiểu chiếu và trục FOV, bỏ aspect ratio để thay khung không bị đánh dấu là đổi góc. Sửa theme lần đầu theo hệ thống, reset ô khung mở khi đổi model và giữ tooltip gốc qua polling. Các điểm chưa kiểm chứng: HtmlDialog SU2022 thật và nền RGBA trong Chromium 88; CSS fallback đã được đọc kiểm tra, nâng cấp color-mix nằm trong @supports.
+
+Thay đổi chính ở `dialog.css/html/js` và `camera.rb` (các trường chỉ đọc `sig`, `saved_sig`). Callback/ID giữ nguyên. Hàng scene: `decorateRows` (MutationObserver trên `#sceneList`) chèn `.size-chip`, các ô `.row-frame` ẩn trừ khi `.row.open`; trạng thái mở lưu trong `openFrames` qua polling. `#format` vẫn là select (ẩn bằng `.sr-only`) và đồng bộ với nút `[data-fmt]`. Huy hiệu `#unsavedBadge` so `camera.sig` với `camera.saved_sig`. `test_frame_ui.cjs` mở dòng 2 (`.size-chip`) trước khi dùng locator `[data-frame-key]`.
+
+SU2022 dùng libcef Chromium 88: không dùng `color-mix()` ngoài `@supports`. Đã chạy `npm test` bằng Edge headless sau sửa; chưa chụp native SU2022.
+
 ## Thay đổi 1.3.1 · tổ chức lại flow, giữ theme
 
 Đã cài SU22 ngày 04/10/2026; backup `outputs/install_20261004_015555_095/`. 17 file runtime khớp nguồn, 19.881 file plugin khác không đổi SHA256, không đổi loader khác. Khởi động lại SU22 để nạp bản mới.
@@ -137,3 +159,5 @@ RBZ là ZIP của **nội dung runtime/** (loader và thư mục ngang hàng), k
 - Target current xác minh release notes SU2026.2 ngày 2026-10-03. Ruby2.7-compatible syntax; actual SU22 Ruby2.7.2 DLL chạy trong console process với fixture đã qua; Ruby3.2 WASM/Chromium đã qua. `check_ruby27.py` không launch SketchUp/kernel, không đụng model đang làm; ghi test data chỉ trong outputs. SU2025 vpwidth/vpheight và draw2d đổi đồng thời sang logical pixels nên grid không scale tay thêm. **Chưa xác minh native các phiên bản SU2022–2026.2.**
 - Allowlist deploy 16 file, thêm transfer.rb/copy_scene.svg/paste_scene.svg. Chỉ cài SU22 theo yêu cầu hiện tại; không tự copy vào bản khác hoặc thay plugin khác. Dev native_smoke sửa kiểm tra scoped section vốn còn API plane_for cũ.
 - Đã cài 1.1.0 SU22 lúc 2026-10-03 11:17 +07:00, backup outputs/install_20261003_111743_242; 16 file khớp nguồn, 7.914 file khác hash không đổi; legacy_loader_retired=false (đã tắt từ trước). Toolbar mới cần restart SU; không thay đổi phiên model đang mở.
+
+Cài SU2022 ngày 04/10/2026 lúc 18:19 (Asia/Bangkok): 17 runtime file khớp SHA256; 19.867 file plugin khác không đổi. Backup: outputs/install_20261004_181828_694/. Gói: VGD_Scenes_v1.5.0.rbz. Đóng/mở lại SU2022 để nạp 1.5.0.

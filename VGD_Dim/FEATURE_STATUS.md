@@ -1,14 +1,16 @@
-# Trạng thái · 2.3.0-beta.1
+# VGD Dim · 3.0.0-beta.1
 
-| Yêu cầu | Thực hiện |
+| Chức năng | Trạng thái |
 |---|---|
-| Mẫu font/size/Height từ Model Info → APPLY | Đã viết cầu nối Update selected Windows English; native chưa xác minh |
-| Chỉ Dim/Text đang chọn | Lấy selection trực tiếp, tách Dim/Text rồi khôi phục selection |
-| Endpoint Dim/Label, tag | Setter native; Dim → 000 DIM, Text/Label → 000 TEXT |
-| Mẫu đi theo SKP | Chỉnh Model Info và lưu SKP; plugin không lưu file tự động |
-| Không thông báo hoàn tất | Im lặng; lỗi inline/status |
-| Undo | Native có thao tác riêng; màu/endpoint/tag một operation |
-| Ngữ cảnh dùng chung | Dừng trước khi sửa; cần Make Unique |
-| Kiểm thử | Ruby/bridge mô phỏng, UI Edge và bộ cài đạt; Win32/font/Height/Undo/save-reopen native chưa chạy |
+| Toàn bộ giao diện Claude | Đã gộp, style T+, tên VGD Dim |
+| 6 dependency thiếu | Đã bổ sung store/core/presets/autostyle/animation/probe |
+| Smart Dim | Mô phỏng đạt chain/tổng, 6 mặt chọn, dịch/chỉnh tỷ lệ/xoay 90°, orientation, tags, abort |
+| Scope/quét/style | Selected/context/model; hidden/locked/nested/components; dedup definition |
+| Rebuild size Model Info | Đã viết cho Dim tuyến tính; metadata/links/selection/failure mô phỏng đạt; radial skip |
+| Text font từ Model Info | Cầu nối Windows English, selected trực tiếp; native chưa xác minh |
+| Preset/Auto/Animation/Units | Đã viết và có kiểm thử; không popup hoàn tất |
+| Native SketchUp | Font/Height, associations, observers, Undo/save-reopen cần kiểm chứng thực tế |
 
-Đọc accessibility được trên SU2022. Chụp/input trước đó lỗi capture timeout/coordinate geometry unavailable; lần thử bàn phím mới không mở được menu Window. Không coi đọc cây UI là bằng chứng font đã được áp.
+ZIP gốc giữ trong dev/claude_reference. Không coi fixture là bằng chứng font/Height đã đổi trong SketchUp.
+
+Ngày 2026-10-05 đã mở SU2022; công cụ điều khiển lỗi “no screenshot targets found”, sau khi app vào Untitled thử lại lỗi “FrameArrived timed out”. Không chạy test native trên model.

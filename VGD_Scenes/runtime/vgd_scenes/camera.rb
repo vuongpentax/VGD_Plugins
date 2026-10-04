@@ -4,10 +4,19 @@ module VGD
     module CameraControl
       def self.state(model)
         camera = model.active_view.camera
+        page = model.pages.selected_page
         { eye_z_mm: camera.eye.z.to_f * 25.4, perspective: camera.perspective?,
           fov: camera.perspective? ? camera.fov : nil, fov_vertical: camera.perspective? ? camera.fov_is_height? : nil,
           height_mm: camera.perspective? ? nil : camera.height.to_f * 25.4,
-          supported: !SceneTransfer.two_point?(camera) }
+          supported: !SceneTransfer.two_point?(camera), sig: camera_signature(camera),
+          saved_sig: page && page.use_camera? ? camera_signature(page.camera) : nil }
+      end
+
+      def self.camera_signature(camera)
+        [camera.eye, camera.target, camera.up].map { |v| v.to_a.map { |n| n.to_f.round(3) } }.flatten.join(',') +
+          (camera.perspective? ? ":perspective:#{camera.fov_is_height?}:#{camera.fov.to_f.round(3)}" : ":parallel:#{camera.height.to_f.round(3)}")
+      rescue StandardError
+        nil
       end
 
       def self.preview(model, raw)

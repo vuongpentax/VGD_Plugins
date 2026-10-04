@@ -1,22 +1,22 @@
 {
-  "date": "2026-10-02",
-  "version": "2.3.0-beta.1",
-  "name": "VGD Dimension & Text Manager",
-  "requirements": "SELECTION_REQUIREMENTS.md",
-  "ruby": "PASS: syntax; engine directly selected Dimension/Text only, endpoints/tags/material isolation, unselected entities and global Units preserved, empty/invalid/shared/locked guards and abort",
-  "bridge_fixture": "PASS (simulation): preflight native controls before click, Dim/Text subsets, selection restoration, missing button timeout, synchronous failure, user selection/model change, cancel, duplicate apply, partial-error reporting; Win32 filtering by process/title/class/visibility/enabled/uniqueness",
-  "callbacks": "PASS: one toolbar/dialog, Model Info routes, async busy state, silent success, inline errors/status fallback",
-  "ui": "PASS: Edge headless VGD palette, Model Info workflow, four-field color/endpoint payload, exact tags, busy state, inline errors/no alerts, footer at 560x650 and 540x590",
-  "deployment_fixture": "PASS: actual deploy.ps1 in isolated APPDATA, dry-run/10 exact files/backup/legacy retirement/repeat/foreign-loader guards/Cabinet preservation",
-  "native": "UNVERIFIED: native Win32 DLL functions, button dispatch, font/Points/Height changes, native Undo and SKP save/reopen have not been tested. Accessibility reading works; keyboard attempt did not open Window menu. Prior capture/input errors remain.",
-  "platform": "Windows SketchUp English UI; guarded by current-process exact native dialog/button captions",
-  "scope": "Only directly selected Dimension/Text; shared edit contexts rejected before updates",
+  "date": "2026-10-05",
+  "name": "VGD Dim",
+  "version": "3.0.0-beta.1",
+  "import": "User-authorized full Claude UI integration. Original five files preserved with SHA256; six required modules absent from ZIP were implemented here.",
+  "ruby": "PASS: full runtime syntax, legacy selected engine, native bridge simulation; full scan scopes/definition dedup/filters, colors/orientation/leader/tags, opt-in Units, rebuild points/attachments/attributes/selection/failure preservation; correct owning Entities container",
+  "smartdim": "PASS (simulation): chain and overall dimensions, all face options, nested geometry translation/scaling/90-degree rotation, readable normals, style/tags, selection preservation, invalid inputs, hidden/locked and abort",
+  "services": "PASS (simulation): local presets/builtin guards, deferred/suspended/disabled/cancelled Auto-Style, Animation validation and option isolation",
+  "ui": "PASS: Edge headless, T+ palette, VGD Dim name, scopes default selected, Smart/Info/rebuild/preset/Auto/Animation/Units payloads, inline errors/no alerts, busy state, footer at 540x800 and 360x600",
+  "deployment_fixture": "PASS: deploy.ps1 in isolated APPDATA; 18 exact files, backups/legacy-loader guards/repeated installation/Cabinet preservation",
+  "native": "UNVERIFIED: launched SU2022, then capture failed with no screenshot targets found; refreshed app/window and retried once, FrameArrived timed out. No native font/Height/attachment/Auto-Style/Undo/save-reopen test performed.",
+  "scope": "Selected (default), active context, whole model. Shared definitions deduplicated; all copies reflect edits. Native Model Info bridge still direct selection only.",
   "tags": {
     "dimension": "000 DIM",
-    "text_and_label": "000 TEXT"
+    "text_label": "000 TEXT"
   },
-  "undo": "Native update commands have separate Undo; plugin setters have one operation. No combined atomic rollback promise.",
-  "global_units_changed": false,
+  "default_whole_model": false,
   "completion_popup": false,
-  "no_geometry_conversion": true
+  "units": "Write only when explicitly enabled; model-wide",
+  "animation": "Model-native options, not Undo",
+  "geometry": "Native Dimensions; no edge/mesh lettering; SmartDim uses sampled bounding boxes without source attachment"
 }

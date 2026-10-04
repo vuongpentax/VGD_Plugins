@@ -52,12 +52,15 @@ module VGD
         original = ordered(model)
         ids = original.map { |page| page.persistent_id.to_s }
         raise ArgumentError, 'Thứ tự scene đã đổi. Làm mới rồi kéo lại.' unless Array(expected_ids).map(&:to_s) == ids
-        page = find(model, id)
+        moving_ids = Array(id).map(&:to_s).uniq
+        raise ArgumentError, 'Chọn scene cần di chuyển.' if moving_ids.empty?
+        moving = moving_ids.map { |pid| find(model, pid) }
         raise ArgumentError, 'Vị trí thả scene không hợp lệ.' if before_id && !ids.include?(before_id.to_s)
-        return { success: true, message: 'Thứ tự scene giữ nguyên.' } if before_id.to_s == id.to_s
-        target = original.reject { |item| item == page }
+        return { success: true, message: 'Thứ tự scene giữ nguyên.' } if moving_ids.include?(before_id.to_s)
+        moving = original.select { |item| moving.include?(item) }
+        target = original.reject { |item| moving.include?(item) }
         index = before_id.nil? ? target.length : target.index { |item| item.persistent_id.to_s == before_id.to_s }
-        target.insert(index, page)
+        target.insert(index, *moving)
         return { success: true, message: 'Thứ tự scene giữ nguyên.' } if target == original
         previous = model.get_attribute(DICT, 'scene_order')
         Scenes.operation(model, 'Sắp xếp bảng scene VGD') do
@@ -69,7 +72,70 @@ module VGD
             raise error
           end
         end
-        { success: true, message: 'Đã lưu thứ tự bảng VGD. Xuất ảnh/PDF/JSON theo thứ tự này; scene SketchUp giữ nguyên.' }
+        { success: true, message: 'Đã sắp xếp bảng. Bấm Đồng bộ thứ tự SketchUp khi đã xếp xong.' }
+      end
+
+      def self.sync_order(model, expected_ids)
+        raise 'Đóng edit Group/Component trước khi sắp xếp scene.' if model.active_path
+        raise 'SU2022 chưa có API đổi thứ tự scene gốc. Dùng Move Left / Move Right trên thanh scene; đồng bộ tự động hỗ trợ SU2025 trở lên.' unless model.pages.respond_to?(:reorder)
+        original = model.pages.to_a
+        target = ordered(model)
+        raise ArgumentError, 'Danh sách scene đã đổi. Làm mới rồi đồng bộ lại.' unless Array(expected_ids).map(&:to_s) == target.map { |p| p.persistent_id.to_s }
+        live = Scenes.camera_copy(model.active_view.camera)
+        current = model.pages.selected_page
+        Scenes.operation(model, 'Đồng bộ thứ tự scene SketchUp') do
+          begin
+            target.each_with_index { |page, index| model.pages.reorder(page, index) unless model.pages.to_a[index] == page }
+            raise 'SketchUp chưa nhận đủ thứ tự scene.' unless model.pages.to_a == target
+          rescue StandardError
+            original.each_with_index { |page, index| model.pages.reorder(page, index) unless model.pages.to_a[index] == page }
+            raise
+          ensure
+            model.pages.selected_page = current if current && current.valid? && model.pages.selected_page != current
+            model.active_view.camera = live
+          end
+        end
+        { success: true, message: 'Đã đồng bộ thứ tự lên thanh scene SketchUp.' }
+      end
+
+      def self.rename_many(model, raw)
+        ids = Array(raw['ids']).map(&:to_s).uniq
+        pages = ordered(model).select { |page| ids.include?(page.persistent_id.to_s) }
+        raise ArgumentError, 'Danh sách scene đã đổi. Chọn lại.' if pages.empty? || pages.length != ids.length
+        parts = %w[prefix base suffix separator].map do |key|
+          text = raw[key].to_s
+          raise ArgumentError, 'Tên chứa ký tự không hợp lệ hoặc quá dài.' if text.length > 180 || text.match?(/[\x00-\x1f]/)
+          text.strip
+        end
+        prefix, base, suffix, separator = parts
+        mode = raw['sequence'].to_s
+        raise ArgumentError, 'Kiểu đánh số không hợp lệ.' unless %w[none number letter].include?(mode)
+        start = raw.fetch('start', 1)
+        raise ArgumentError, 'Số bắt đầu cần là số nguyên từ 1 tới 999999.' unless start.is_a?(Integer) && start.between?(1, 999999)
+        names = pages.each_with_index.map do |page, index|
+          number = start + index
+          token = if mode == 'number'
+                    format('%02d', number)
+                  elsif mode == 'letter'
+                    text = +''; while number > 0; number -= 1; text.prepend((65 + number % 26).chr); number /= 26; end; text
+                  end
+          [prefix, base.empty? ? page.name : base, token, suffix].compact.reject(&:empty?).join(separator)
+        end
+        raise ArgumentError, 'Tên scene cần có 1–180 ký tự.' if names.any? { |name| name.empty? || name.length > 180 }
+        foreign_names = (model.pages.to_a - pages).map(&:name)
+        raise ArgumentError, 'Tên bị trùng. Thêm STT/chữ cái hoặc đổi tiền tố, hậu tố.' if names.uniq.length != names.length || (names & foreign_names).any?
+        previous = pages.map(&:name)
+        Scenes.operation(model, 'Đổi tên hàng loạt scene') do
+          begin
+            pages.each_with_index { |page, index| page.name = unique_name(model, "__VGD_RENAME_#{page.persistent_id}_#{index}__", page) }
+            pages.zip(names).each { |page, name| page.name = name; raise 'SketchUp không nhận tên scene.' unless page.name == name }
+          rescue StandardError
+            pages.each { |page| page.name = unique_name(model, "__VGD_RESTORE_#{page.persistent_id}__", page) }
+            pages.zip(previous).each { |page, name| page.name = name }
+            raise
+          end
+        end
+        { success: true, message: "Đã đổi tên #{pages.length} scene." }
       end
 
       def self.name(options, target, kind, index)
@@ -291,7 +357,9 @@ module VGD
           page.use_section_planes = true
           raise 'Không lưu được scene.' unless page.update(flags)
           base = Scenes.settings(model)
-          working = if model.pages.selected_page == page && page.get_attribute(DICT, 'frame')
+          working = if model.pages.selected_page == page && Scenes.live_frame(model)
+                      Scenes.live_frame(model)
+                    elsif model.pages.selected_page == page && page.get_attribute(DICT, 'frame')
                       SceneFrame.read(page, base)
                     else
                       JSON.parse(model.get_attribute(DICT, 'working_frame', '{}'))
@@ -319,6 +387,93 @@ module VGD
           end
         end
         { success: true, message: "Đã xóa #{pages.length} scene." }
+      end
+    end
+
+    module SectionPreview
+      def self.clear_if_stale(model)
+        clear if @session && (!@session[:model].equal?(model) || @session[:page] != model.pages.selected_page)
+      end
+
+      def self.clear
+        session = @session
+        @session = nil
+        return unless session && session[:model].valid?
+        model = session[:model]
+        current_page = model.pages.selected_page
+        selection = model.selection.to_a
+        current_camera = Scenes.camera_copy(model.active_view.camera) if current_page != session[:page]
+        model.start_operation('Kết thúc xem trước mặt cắt', true, false, true)
+        begin
+          session[:planes].each { |plane| plane.erase! if plane.valid? }
+          session[:snapshot].restore
+          if current_page != session[:page]
+            model.pages.selected_page = current_page if current_page && current_page.valid?
+            model.active_view.camera = current_camera
+          end
+          model.selection.clear
+          model.selection.add(selection.select(&:valid?))
+          model.commit_operation
+        rescue StandardError
+          model.abort_operation
+          raise
+        end
+      end
+
+      def self.update(model, raw)
+        raise 'Đóng edit Group/Component trước khi xem mặt cắt.' if model.active_path
+        opts = Scenes.options(raw.merge('section_offset' => 0))
+        raise ArgumentError, 'Chọn trục X, Y hoặc Z.' unless %w[X Y Z].include?(opts['section_axis'])
+        paths = Geometry.selection_paths(model)
+        key = [model.object_id, paths, opts['axis_mode']]
+        clear if @session && @session[:key] != key
+        unless @session
+          target = Geometry.target(model, paths, opts['axis_mode'])
+          Geometry.validate_section_target(target)
+          snapshot = ViewState.new(model)
+          planes = []
+          Scenes.operation(model, 'Xem trước mặt cắt') do
+            begin
+              target = Geometry.unique_section_target(model, target, opts, snapshot)
+              point, normal = Geometry.section(target, opts)
+              target[:resolved].each do |_path, transform, entities|
+                plane = entities.add_section_plane(Geometry.local_plane(transform, point, normal))
+                raise 'Không tạo được mặt cắt xem trước.' unless plane
+                planes << plane
+                plane.set_attribute(DICT, 'preview', true)
+                plane.name = 'VGD · Xem trước'
+                plane.layer = model.layers[0]
+              end
+              @session = { key: key, model: model, page: model.pages.selected_page, snapshot: snapshot, target: target, planes: planes, axis: nil }
+            rescue StandardError
+              planes.each { |plane| plane.erase! if plane.valid? }
+              snapshot.restore
+              raise
+            end
+          end
+        end
+        session = @session
+        point, normal = Geometry.section(session[:target], opts)
+        model.start_operation('Di chuyển mặt cắt xem trước', true, false, true)
+        begin
+          session[:target][:resolved].zip(session[:planes]).each do |(_path, transform, entities), plane|
+            raise 'Mặt cắt xem trước đã bị xóa. Chọn lại đối tượng.' unless plane.valid?
+            plane.set_plane(Geometry.local_plane(transform, point, normal))
+            entities.active_section_plane = plane
+          end
+          model.rendering_options['DisplaySectionCuts'] = true
+          model.rendering_options['DisplaySectionPlanes'] = true
+          axis = [opts['section_axis'], opts['section_flip']]
+          Geometry.fit(model, session[:target], 'SECTION', opts, normal) if session[:axis] != axis
+          session[:axis] = axis
+          model.active_view.invalidate
+          model.commit_operation
+        rescue StandardError
+          model.abort_operation
+          clear
+          raise
+        end
+        { success: true, message: "Mặt cắt: #{opts['section_percent']}% · xem trước, chưa tạo scene." }
       end
     end
   end

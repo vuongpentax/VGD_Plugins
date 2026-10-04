@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="vi">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VGD Image Importer</title><link rel="stylesheet" href="dialog.css"></head>
+<body>
+  <header><div class="brand"><span class="mark">VGD</span><div>IMAGE IMPORTER<small>Ảnh 2D · Bố trí ảnh · Vật liệu</small></div></div><button id="theme" class="header-btn" title="Đổi giao diện sáng/tối" aria-label="Đổi giao diện sáng/tối" aria-pressed="false">◐</button></header>
+  <main>
+    <section class="source-pane" aria-labelledby="sourceTitle">
+      <div class="heading"><div><p class="eyebrow">01 / NGUỒN ẢNH</p><h1 id="sourceTitle">Chọn ảnh để nhập</h1></div><span id="count" class="badge">0 ảnh</span></div>
+      <div class="source-actions"><button id="chooseFolder">Chọn thư mục</button><button id="chooseFiles">+ Thêm ảnh lẻ</button></div>
+      <label class="check"><input type="checkbox" id="recursive"> Lấy cả ảnh trong thư mục con</label>
+      <div class="list-heading"><span>JPG · PNG · WEBP · GIF · TIFF · …</span><button id="clear" class="text-button" disabled>Xóa danh sách</button></div>
+      <div id="fileList" class="file-list" aria-label="Danh sách ảnh"></div>
+      <div id="empty" class="empty"><svg viewBox="0 0 60 60" aria-hidden="true"><rect x="9" y="10" width="42" height="40" rx="4"/><circle cx="23" cy="23" r="4"/><path d="m10 43 14-13 11 10 7-7 8 10"/></svg><h2>Ảnh của bạn, đúng tỉ lệ.</h2><p>Chọn thư mục hoặc thêm từng ảnh.<br>Danh sách được sắp theo tên và loại bỏ file trùng.</p></div>
+      <p class="hint">Ảnh lẻ: giữ Ctrl / Shift hoặc quét chọn nhiều ảnh, rồi bấm Open. Chọn thư mục sẽ thay danh sách hiện tại.</p>
+    </section>
+    <section class="settings-pane" aria-labelledby="settingsTitle">
+      <p class="eyebrow">02 / CẤU HÌNH NHẬP</p><h2 id="settingsTitle">Đặt vào SketchUp</h2>
+      <form id="config" novalidate>
+        <fieldset class="card"><legend>Loại đối tượng</legend>
+          <div class="modes" role="group" aria-label="Loại nhập">
+            <button type="button" data-type="comp_2d" aria-pressed="true"><strong>Component 2D</strong><small>Ảnh dựng đứng, gốc ở chân ảnh</small></button>
+            <button type="button" data-type="flat" aria-pressed="false"><strong>Ảnh nằm phẳng</strong><small>Component trên mặt phẳng XY</small></button>
+            <button type="button" data-type="texture_only" aria-pressed="false"><strong>Vật liệu</strong><small>Thêm vào khay Materials</small></button>
+          </div>
+        </fieldset>
+        <fieldset class="card"><legend>Kích thước thực</legend>
+          <label for="scaleMethod">Cách tính kích thước</label><select id="scaleMethod"><option value="pixel">Tỉ lệ mm / pixel</option><option value="height">Chiều cao cố định</option><option value="width">Chiều rộng cố định</option></select>
+          <div id="pixelRow" class="dimension"><label for="mmPerPixel">Milimét / pixel</label><input id="mmPerPixel" type="number" value="2" min="0.001" step="any" required></div>
+          <div id="heightRow" class="dimension" hidden><label for="targetHeight">Chiều cao (mm)</label><input id="targetHeight" type="number" value="2000" min="0.001" step="any" required></div>
+          <div id="widthRow" class="dimension" hidden><label for="targetWidth">Chiều rộng (mm)</label><input id="targetWidth" type="number" value="2000" min="0.001" step="any" required></div>
+          <p class="hint">Luôn giữ tỉ lệ gốc của ảnh. Ví dụ: ảnh 1000 × 500 px, 2 mm/px → 2000 × 1000 mm.</p>
+        </fieldset>
+        <fieldset class="card" id="layoutCard"><legend>Bố trí trong model</legend>
+          <label id="faceCamRow" class="check"><input id="alwaysFaceCamera" type="checkbox" checked> Luôn hướng về camera</label>
+          <div class="fields"><div><label for="spacing">Khoảng hở (mm)</label><input id="spacing" type="number" value="500" min="0" step="any" required></div><div><label for="itemsPerRow">Ảnh / hàng</label><input id="itemsPerRow" type="number" value="10" min="1" max="1000" step="1" required></div></div>
+          <p class="hint">Đặt tại gốc tọa độ của vùng đang chỉnh sửa. Mỗi hàng cách nhau theo ảnh cao nhất.</p>
+        </fieldset>
+      </form>
+      <details class="help"><summary>Hướng dẫn nhanh</summary><p>Component 2D phù hợp cây, người và ảnh tham chiếu. PNG và WebP giữ độ trong suốt. Ảnh nằm phẳng phù hợp mặt bằng. Vật liệu chỉ thêm vào Materials, không tạo đối tượng.</p><p>WebP, GIF, AVIF, ICO và SVG được chuyển sang PNG trước khi nhập. Ảnh động lấy khung đầu; HEIC/HEIF cần codec HEIF của Windows. TIFF/TGA có nhãn thay hình xem trước.</p><p>Sau khi nhập thành công, dùng Undo một lần để hoàn tác cả lượt.</p></details>
+    </section>
+  </main>
+  <footer><div class="feedback"><span id="status" role="status" aria-live="polite">Chọn ảnh để bắt đầu.</span><small id="version">VGD TOOLS · IMAGE IMPORTER</small></div><button id="import" class="primary" disabled>Nhập ảnh</button></footer>
+  <dialog id="resultDialog"><div class="result-heading"><h2>Kết quả nhập ảnh</h2><button id="closeResult" aria-label="Đóng kết quả">×</button></div><p id="resultSummary"></p><ul id="errors"></ul><p class="hint">Undo trong SketchUp sẽ hoàn tác lượt nhập thành công.</p></dialog>
+  <script src="dialog.js"></script>
+</body></html>

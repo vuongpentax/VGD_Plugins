@@ -13,6 +13,12 @@ module VGD
         %w[dim_endpoint label_endpoint].each do |key|
           raise ArgumentError, 'Endpoint không hợp lệ.' unless ENDPOINTS.include?(config[key])
         end
+        {'dim_orientation'=>%w[keep aligned screen], 'dim_alignment'=>%w[keep above center outside], 'label_leader'=>%w[keep view pushpin]}.each do |key, choices|
+          raise ArgumentError, "#{key}: lựa chọn không hợp lệ." unless choices.include?(config[key])
+        end
+        if config['dim_orientation'] == 'screen' && config['dim_alignment'] != 'keep'
+          raise ArgumentError, 'Above/Center/Outside cần hướng chữ song song đường Dim.'
+        end
         config
       end
       def selected(model)
@@ -50,15 +56,10 @@ module VGD
         }
         entity.arrow_type = types.fetch(style)
       end
-      def apply(model, settings)
-        config = validate(settings)
-        targets = selected(model)
-        raise ArgumentError, 'Hãy chọn trực tiếp Dim hoặc Text/Label trước khi APPLY.' if targets.empty?
-        check_context(model)
+      # Called inside an existing operation by SmartDim; never traverses groups.
+      def style_targets(model, config, targets)
         dimensions = targets.select { |entity| entity.is_a?(Sketchup::Dimension) }
         texts = targets.select { |entity| entity.is_a?(Sketchup::Text) }
-        model.start_operation('VGD Dim/Text — Vùng chọn', true)
-        begin
           unless dimensions.empty?
             tag = model.layers['000 DIM'] || model.layers.add('000 DIM')
             material = get_material(model, 'VGD_DIM_COLOR', config['dim_color'])
@@ -66,6 +67,14 @@ module VGD
               entity.material = material
               entity.layer = tag
               set_endpoint(entity, config['dim_endpoint'])
+              entity.has_aligned_text = (config['dim_orientation'] == 'aligned') unless config['dim_orientation'] == 'keep'
+              if entity.is_a?(Sketchup::DimensionLinear) && config['dim_alignment'] != 'keep'
+                entity.has_aligned_text = true
+                positions = {'above'=>Sketchup::DimensionLinear::ALIGNED_TEXT_ABOVE,
+                             'center'=>Sketchup::DimensionLinear::ALIGNED_TEXT_CENTER,
+                             'outside'=>Sketchup::DimensionLinear::ALIGNED_TEXT_OUTSIDE}
+                entity.aligned_text_position = positions.fetch(config['dim_alignment'])
+              end
             end
           end
           unless texts.empty?
@@ -74,16 +83,29 @@ module VGD
             texts.each do |entity|
               entity.material = material
               entity.layer = tag
-              set_endpoint(entity, config['label_endpoint']) if entity.has_leader?
+              if entity.has_leader?
+                set_endpoint(entity, config['label_endpoint'])
+                entity.leader_type = (config['label_leader'] == 'view' ? ALeaderView : ALeaderModel) unless config['label_leader'] == 'keep'
+              end
             end
           end
+        {dimensions: dimensions.length, texts: texts.length}
+      end
+      def apply(model, settings)
+        config = validate(settings)
+        targets = selected(model)
+        raise ArgumentError, 'Hãy chọn trực tiếp Dim hoặc Text/Label trước khi APPLY.' if targets.empty?
+        check_context(model)
+        model.start_operation('VGD Dim — Vùng chọn', true)
+        begin
+          result = style_targets(model, config, targets)
           model.commit_operation
         rescue StandardError
           model.abort_operation
           raise
         end
         model.active_view.invalidate
-        {dimensions: dimensions.length, texts: texts.length}
+        result
       end
     end
   end

@@ -29,6 +29,7 @@ const assert=(value,message)=>{if(!value)throw Error(message);};
   await page.click('[data-tab="scenes"]');count=(await mutations()).length;
   await page.click('#selectGroup');assert(await page.locator('.scene-row input[type=checkbox]:checked').count()===2&&(await mutations()).length===count,'Group selection moved camera');
   await page.click('#selectNone');await page.fill('#groupQuery','Tủ bếp');await page.press('#groupQuery','Enter');assert(await page.locator('.scene-row input[type=checkbox]:checked').count()===2&&(await mutations()).length===count,'Text group selection visited scene');
+  await page.click('[data-id="2"] .size-chip');
   const width=page.locator('[data-id="2"] [data-frame-key="width"]');
   await width.fill('20');await sync();assert(await width.inputValue()==='20'&&(await mutations()).length===count,'Poll erased inline draft');
   await width.fill('2000');await width.press('Enter');call=await last();assert(call.action==='saveFrames'&&call.ids.join()==='2'&&call.frame.width===2000,'Inline frame saved wrong page');

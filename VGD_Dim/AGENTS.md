@@ -1,15 +1,14 @@
-# VGD Dimension & Text Manager
+# VGD Dim
 
-Yêu cầu hiện tại ngày 2026-10-02 thay thế mẫu quét toàn model: chỉ Dim/Text được chọn, endpoint Dim/Label, tag 000 DIM/000 TEXT, không hộp thông báo hoàn tất.
+Yêu cầu ngày 2026-10-05: gộp đầy đủ giao diện Claude và bổ sung module thiếu, thay các giới hạn scope của bản 2.3. Chỉ phát triển Dim; không sửa Cabinet/Scenes/Importer/Library.
 
-- Giữ loader vgd_dim.rb, namespace VGD::Dim và thư mục VGD_Dim. Không đổi Cabinet.
-- Style T+ Cabinet: nền sáng, header tối, nâu đồng #B48963, Segoe UI/Inter; một trang và APPLY ở footer.
-- APPLY chỉ lấy Dimension/Text trực tiếp trong model.selection tại thời điểm bấm. Không quét Group/Component hay toàn model. Không có đối tượng phù hợp thì không ghi model.
-- Dim vào 000 DIM; Text/Label vào 000 TEXT. Màu và endpoint áp bằng setter native trong một operation; lỗi abort.
-- Không ghi UnitsOptions/model defaults trong APPLY. Người dùng chỉnh Model Info trước; native Update selected có thể thay vị trí/hướng chữ/leader theo mẫu. Giữ nội dung, điểm đo và hình học, khôi phục selection nếu người dùng chưa đổi vùng chọn.
-- Trong context definition chia sẻ, chặn thao tác trước mutation; không âm thầm đổi các bản copy ngoài vùng chọn.
-- Yêu cầu mới: Model Info → APPLY. Trên SU2022 không có setter font/size/Height. Windows English bridge tìm nút native Update selected trong chính process, kiểm tra trước rồi gọi cho Dim/Text riêng. Không dùng ID lệnh phỏng đoán/Select All. Height native không quy đổi mm sang pt.
-- Native có Undo riêng; không hứa rollback hay một Undo cho cả APPLY. Lỗi sau khi một lệnh native đã gọi phải báo rõ cập nhật một phần.
-- Không tạo ô nhập font/size/Height giả vờ APPLY được trên SU2022; không dùng edge/mesh, save/reimport model hoặc API bộ nhớ nội bộ.
-- APPLY thành công im lặng; lỗi hiện inline trong dialog hoặc status bar, không UI.messagebox.
-- Chỉ deploy whitelist của dev/deploy.ps1 vào SU2022; sao lưu và SHA256. Phân biệt fixture/UI với kiểm thử native.
+- Tên VGD Dim; loader vgd_dim.rb, namespace VGD::Dim, thư mục VGD_Dim. Style T+ sáng/nâu đồng.
+- Phạm vi selected/context/model, mặc định selected; bộ lọc nested/components/hidden/locked. Definition dùng chung dedup, ảnh hưởng các bản sao và giải thích trên UI.
+- Smart Dim quét hình học tủ được chọn; bỏ ẩn/khóa/tag tắt. Tạo Dim native trong active_entities, tag 000 DIM, một operation, giữ selection. Không tạo edge/mesh.
+- Core style: màu tùy bật; Dim endpoint/orientation/position; Label endpoint/leader; Text/Label tag 000 TEXT.
+- Rebuild Dim tuyến tính theo mẫu Model Info. Giữ điểm/liên kết/text override/style/attributes; tạo xong mới xóa Dim cũ; lỗi giữ bản cũ, radial skip, cập nhật selection sang replacement. Không hứa giữ persistent ID.
+- APPLY mẫu Model Info chỉ Dim/Text chọn trực tiếp trên Windows English. Native Undo riêng, lỗi một phần báo rõ; không nói đã xác minh native nếu chưa chạy.
+- Preset và Auto-Style lưu cục bộ. Auto mặc định tắt, observers phải trì hoãn setters, suspend khi thao tác manual, tắt/reload dọn observers/timers, không cản Undo.
+- Animation/Units ghi bằng options native; Units chỉ khi explicitly enabled; Animation không có Undo.
+- Không popup hoàn tất; lỗi/kết quả inline. Không nạp dev/claude_reference vào runtime.
+- Kiểm thử có ý nghĩa geometry/scopes/rebuild/error/services/UI. Deploy whitelist 18 file, backup/hash, không tác động plugin khác.
