@@ -1,4 +1,14 @@
-# Validation — 2026-10-03
+# Kiểm thử — cập nhật 2026-10-04
+
+## Bản 0.1.1-alpha
+
+- Kiểm thử Ruby với cửa sổ giả lập: chuyển menu và thanh chức năng giữ đúng một HtmlDialog; chuyển tính năng trước khi HTML sẵn sàng không mất trạng thái; hủy thế hệ scan cũ khi chuyển trang; observer selection được tháo đúng; đóng/mở lại tạo callback mới.
+- Kiểm thử xuất CSV: tiêu đề và hạng mục tiếng Việt, UTF-8 BOM, dấu phẩy thập phân, dấu chấm phẩy phân cột, mô tả nhiều dòng, escape văn bản có thể thành công thức Excel. Không đổi category/item_type trong metadata gốc khi dịch hiển thị.
+- Playwright + Edge: nhãn tiếng Việt, mẫu hạng mục giữ description cũ, chuyển tên loại tiếng Việt về mã schema, sửa quy tắc bằng form, bốn báo cáo CSV, chặn xuất trước khi scan xong, preview/xác nhận, chọn dòng kiểm tra, sáng/tối và cửa sổ nhỏ.
+- Đã xem ảnh giao diện màu nâu đồng bộ VGD.
+- Đã đóng gói RBZ 0.1.1, đối chiếu byte với runtime và cài/xác minh hash 27 file trong Plugins của SketchUp 2022; có bản sao lưu file cũ trong `outputs/install_*`.
+
+Các kiểm thử này kiểm chứng logic và giao diện ngoài SketchUp. Kiểm thử native đầy đủ bên dưới vẫn chưa được xác nhận lại cho bản 0.1.1.
 
 ## Đã pass
 

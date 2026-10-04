@@ -10,17 +10,17 @@ module VGD
       def self.normalize(hash)
         hash.each_with_object({}) do |(key, value), result|
           key = key.to_sym
-          raise ArgumentError, "Unknown field: #{key}" unless FIELDS.include?(key)
+          raise ArgumentError, "Trường dữ liệu không hợp lệ: #{key}" unless FIELDS.include?(key)
           if key == :include_boq
-            raise ArgumentError, 'include_boq must be boolean' unless value == true || value == false
+            raise ArgumentError, 'Mục đưa vào bảng khối lượng phải là Có hoặc Không.' unless value == true || value == false
           elsif key == :schema_version
-            raise ArgumentError, 'Unsupported schema version' unless value == 1
+            raise ArgumentError, 'Phiên bản dữ liệu chưa được hỗ trợ.' unless value == 1
           else
-            raise ArgumentError, "#{key} must be a string" unless value.is_a?(String)
+            raise ArgumentError, "#{Locale.field(key)} phải là văn bản." unless value.is_a?(String)
             value = value.strip
           end
           allowed = {category: CATEGORIES, unit: UNITS, quantity_method: METHODS}[key]
-          raise ArgumentError, "Invalid #{key}: #{value}" if allowed && !value.empty? && !allowed.include?(value)
+          raise ArgumentError, "Giá trị #{Locale.field(key)} không hợp lệ: #{value}" if allowed && !value.empty? && !allowed.include?(value)
           result[key] = value
         end
       end

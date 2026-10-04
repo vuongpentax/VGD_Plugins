@@ -1,0 +1,14 @@
+{
+  "fields":{"schema_version":"Phiên bản dữ liệu","category":"Nhóm hạng mục","item_type":"Loại hạng mục","code":"Mã hạng mục","description":"Mô tả tiếng Việt","unit":"Đơn vị","quantity_method":"Cách đo khối lượng","zone":"Khu vực / Phòng","floor":"Tầng","include_boq":"Đưa vào bảng khối lượng","finish_code":"Mã hoàn thiện","manufacturer":"Hãng sản xuất","model_number":"Mã sản phẩm","note":"Ghi chú"},
+  "category":{"architecture":"Kiến trúc","finish":"Hoàn thiện","furniture":"Nội thất","electrical":"Điện","equipment":"Thiết bị","plumbing":"Cấp thoát nước","hvac":"Điều hòa / Thông gió","other":"Khác"},
+  "unit":{"m2":"m²","m":"m dài","m3":"m³","pcs":"cái","set":"bộ","lot":"lô","kg":"kg","none":"Không tính"},
+  "quantity_method":{"area":"Diện tích","length":"Chiều dài","volume":"Thể tích","count":"Đếm số lượng","assembly":"Theo bộ / Cụm","manual":"Nhập thủ công"},
+  "item_type":{"wall":"Tường","floor":"Sàn","ceiling":"Trần","paint":"Sơn tường","tile":"Gạch ốp lát","stone":"Đá","wood_floor":"Sàn gỗ","glass":"Kính","wardrobe":"Tủ áo","kitchen_base":"Tủ bếp dưới","kitchen_upper":"Tủ bếp trên","tv_cabinet":"Tủ ti vi","lavabo_cabinet":"Tủ lavabo","bed":"Giường","table":"Bàn","chair":"Ghế","light":"Đèn","switch":"Công tắc","socket":"Ổ cắm","sanitary":"Thiết bị vệ sinh","appliance":"Thiết bị gia dụng","air_conditioner":"Máy điều hòa"},
+  "status":{"VGD READY":"Sẵn sàng","ERROR":"Có lỗi","INCOMPLETE":"Thiếu thông tin","UNCLASSIFIED":"Chưa phân loại","LOCKED":"Đã khóa","WARNING":"Cảnh báo","INFO":"Thông tin","PROTECTED":"Đã có dữ liệu / Được bảo vệ","READY":"Có thể chuyển đổi","REVIEW":"Cần xem lại"},
+  "source":{"VGD":"Dữ liệu VGD","MAPPED":"Đã chuyển đổi","RAW":"Dữ liệu gốc","MANUAL":"Nhập thủ công","RULE":"Quy tắc đã lưu","HEURISTIC":"Gợi ý theo tên"},
+  "confidence":{"HIGH":"Cao","MEDIUM":"Trung bình","LOW":"Thấp"},
+  "source_type":{"definition_name":"Tên định nghĩa","instance_name":"Tên đối tượng","tag":"Thẻ","material":"Vật liệu"},
+  "presets":{"Wardrobe":"Tủ áo","Kitchen Base":"Tủ bếp dưới","Kitchen Upper":"Tủ bếp trên","Socket":"Ổ cắm","Switch":"Công tắc","Light":"Đèn","Wall Paint":"Sơn tường"},
+  "modes":{"information":"Thông tin","convert_selection":"Chuyển đổi đối tượng đang chọn","scan":"Quét mô hình","mapping":"Phân loại / Chuyển đổi","validate_model":"Kiểm tra toàn bộ mô hình","validate_selection":"Kiểm tra đối tượng đang chọn","rules":"Quy tắc phân loại","export":"Xuất báo cáo"},
+  "metrics":{"groups":"Nhóm đối tượng","components":"Đối tượng thành phần","definitions":"Định nghĩa","materials":"Vật liệu","tags":"Thẻ","vgd_objects":"Đã có dữ liệu VGD","unclassified":"Chưa phân loại","coverage":"Tỷ lệ có dữ liệu (%)","raw_faces":"Mặt hình học","raw_edges":"Cạnh hình học","edge_length_m":"Tổng chiều dài cạnh (m)"}
+}

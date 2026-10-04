@@ -1,21 +1,26 @@
-# VGD BIM Lite v0.1.0-alpha
+# VGD BIM Lite v0.1.1-alpha
+
+Bản 0.1.1 dùng **một cửa sổ duy nhất**, giao diện màu nâu đồng bộ VGD Dim/Scenes và nhãn/thông báo tiếng Việt. Có hướng dẫn nhanh trong giao diện, màn hình quy tắc dễ nhập và mục **Xuất báo cáo** với bốn loại CSV mở được trong Excel. Đọc [hướng dẫn sử dụng](HUONG_DAN_SU_DUNG.md) để bắt đầu.
+
+CSV là báo cáo dữ liệu/khối lượng gốc, không tính đơn giá/thành tiền. Mã schema vẫn giữ nguyên để các plugin VGD dùng chung; bản dịch áp dụng ở giao diện và báo cáo. Khởi động lại SketchUp sau cập nhật để đóng các cửa sổ cũ.
 
 Plugin **VGD_BIM** cho SketchUp 2022+ / Windows. Phase 1: Core, Intake, Mapping và Validation. Namespace `VGD::BIM`; dữ liệu Group/ComponentInstance lưu trong dictionary `VGD_BIM` của file SKP.
 
 ## Cài đặt
 
-Trong SketchUp, mở **Extensions → Extension Manager → Install Extension**, chọn `VGD_BIM_Lite_v0.1.0-alpha.rbz`. Khởi động lại SketchUp. Menu: **Extensions → VGD → BIM Lite**. Có toolbar hai nút và context menu cho Group/Component.
+Trong SketchUp, mở **Extensions → Extension Manager → Install Extension**, chọn `VGD_BIM_Lite_v0.1.1-alpha.rbz`. Khởi động lại SketchUp. Menu: **Extensions → VGD → BIM Lite**. Có toolbar hai nút và context menu cho Group/Component.
 
 Hoặc chạy `dev/deploy.ps1` để cài nguồn runtime vào Plugins của SketchUp 2022. Script chỉ copy file plugin này, sao lưu file cũ và kiểm tra SHA256. `-PluginRoot` chọn bản SketchUp khác; `-VerifyOnly` kiểm tra cài đặt.
 
 ## Sử dụng
 
-1. Chọn Group/Component → **BIM Information**. Chọn preset hoặc bật checkbox các field cần đổi → **APPLY**. Field không bật giữ nguyên; field text bật và để trống được xóa. Các đối tượng khóa được bỏ qua. **CLEAR VGD DATA** chỉ xóa metadata.
-2. **Scan Model** đọc cả model, gồm nested instances, faces, edges và material kế thừa. Component report đếm occurrence thực tế, bao gồm shared nested component. W/D/H theo trục local sau transformation, dùng mm.
-3. **Map / Convert Model** gom theo definition và material. Gợi ý dựa trên VGD đã có → rule → definition name → instance name → tag → material. Keyword chỉ là gợi ý. **Edit / Apply** → chỉnh field → **Preview Convert** → **Confirm Convert** mới ghi dữ liệu. Native/mapped/manual data hiện có không bị convert ghi đè.
-4. **Convert Selection** áp dụng workflow preview cho Group/Component đang chọn. Mỗi batch ghi metadata trong một Undo operation. Không sửa geometry, tên, tag hoặc material.
-5. **Validate Selection / Model** kiểm tra schema, required fields, enum và unit/method. Click kết quả để mở editing context đúng occurrence rồi chọn/zoom entity. Entity bị xóa sau scan được báo và yêu cầu refresh.
-6. **Mapping Rules** chỉnh JSON, Export/Import giữa model. Rules lưu JSON trong dictionary model `VGD_BIM_RULES`, hỗ trợ Undo và tồn tại cùng SKP. Material mapping chỉ ghi rule, không gán BIM data vào raw face.
+1. Chọn nhóm/đối tượng thành phần → **Thông tin**. Chọn mẫu hạng mục hoặc bật ô đánh dấu các trường cần đổi → **Áp dụng thông tin**. Trường không bật giữ nguyên; trường văn bản bật và để trống được xóa. Các đối tượng khóa được bỏ qua. **Xóa dữ liệu VGD** chỉ xóa metadata.
+2. **Quét mô hình** đọc cả model, gồm đối tượng lồng nhau, mặt, cạnh và vật liệu kế thừa. Thống kê thành phần đếm lần xuất hiện thực tế. Rộng/sâu/cao theo trục của đối tượng sau biến đổi, dùng mm.
+3. **Phân loại** gom theo định nghĩa và vật liệu. Gợi ý dựa trên VGD đã có → quy tắc → tên định nghĩa → tên đối tượng → thẻ → vật liệu. Từ khóa chỉ là gợi ý. **Chỉnh thông tin** → **Xem trước chuyển đổi** → **Xác nhận chuyển đổi** mới ghi dữ liệu. Dữ liệu VGD hiện có không bị convert ghi đè.
+4. **Chuyển đổi lựa chọn** áp dụng bước xem trước cho các đối tượng đang chọn. Mỗi batch chỉ có một bước hoàn tác. Không sửa hình học, tên, thẻ hoặc vật liệu.
+5. **Kiểm tra** chọn phạm vi toàn model hoặc đối tượng đang chọn. Kiểm tra schema, trường bắt buộc và đơn vị/cách đo. Bấm kết quả để chọn đúng đối tượng lồng nhau và phóng tới nó. Đối tượng bị xóa sau quét được báo và yêu cầu làm mới.
+6. **Quy tắc** nhập/sửa bằng form và xuất/nhập giữa model. Rules lưu JSON trong dictionary model `VGD_BIM_RULES`, hỗ trợ hoàn tác và tồn tại cùng SKP. Phân loại vật liệu chỉ ghi rule, không gán BIM data vào từng mặt.
+7. **Xuất báo cáo** chọn một trong bốn loại CSV: danh mục đối tượng, thống kê thành phần, diện tích vật liệu gốc hoặc kết quả kiểm tra. Báo cáo dùng tiếng Việt, UTF-8 BOM và dấu chấm phẩy. Tên đối tượng có ký tự công thức được xuất thành văn bản an toàn khi mở trong Excel.
 
 ## Ý nghĩa dữ liệu và giới hạn
 
@@ -29,7 +34,7 @@ Hoặc chạy `dev/deploy.ps1` để cài nguồn runtime vào Plugins của Ske
 - Preset mặc định không gán description: người dùng cần nhập mô tả để đạt ready khi include_boq=true. Item type là chuỗi mở rộng.
 - Plugin chưa ký phát hành; tuân theo chính sách loading extensions hiện tại của SketchUp.
 
-Không triển khai Quantity hoàn chỉnh, BOQ, Excel, Pricing, IFC, room detection hoặc Cabinet BOM trong phase này. Không sửa VGD Cabinet.
+Theo yêu cầu bổ sung ngày 04/10/2026, có xuất CSV với tiêu đề tiếng Việt để mở trong Excel. Chưa triển khai Quantity hoàn chỉnh, bảng khối lượng tính giá, workbook Excel, Pricing, IFC, room detection hoặc Cabinet BOM. Không sửa VGD Cabinet.
 
 ## API
 

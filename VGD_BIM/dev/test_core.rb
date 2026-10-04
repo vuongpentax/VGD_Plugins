@@ -7,7 +7,7 @@ model = Sketchup.active_model
 entity = Sketchup::Group.new(model)
 data = VGD::BIM::Data
 assert(!data.has_data?(entity), 'Raw entity classified accidentally')
-assert(VGD::BIM::Validator.inspect_entity(entity).first[:message] == 'UNCLASSIFIED', 'Raw should not be error')
+assert(VGD::BIM::Validator.inspect_entity(entity).first[:message] == 'Chưa phân loại', 'Raw should not be error')
 data.update(entity, category: 'furniture', item_type: 'wardrobe', description: 'Tủ áo', unit: 'set', quantity_method: 'assembly', zone: 'MASTER')
 assert(data.valid?(entity), 'Native metadata invalid')
 assert(data.get(entity, :include_boq) == true && data.get(entity, :schema_version) == 1, 'Defaults missing')

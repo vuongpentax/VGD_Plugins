@@ -10,41 +10,65 @@ module VGD
         def onSelectionCleared(selection); @panel.selection_changed; end
       end
       class Dialog
+        MODES = %w[information convert_selection scan mapping validate_model validate_selection rules export].freeze
         def initialize(mode)
           @mode = mode
           @records = []
           @rows = []
           @targets = []
           @generation = 0
-          @dialog = ::UI::HtmlDialog.new(dialog_title: 'VGD BIM Lite', preferences_key: "VGD_BIM_#{mode}", scrollable: true, resizable: true, width: 960, height: 720, style: ::UI::HtmlDialog::STYLE_DIALOG)
+          @ready = false
+          @closed = false
+          @dialog = ::UI::HtmlDialog.new(dialog_title: 'VGD BIM Lite · Dữ liệu mô hình', preferences_key: 'VGD_BIM_Workspace', scrollable: true, resizable: true, width: 860, height: 740, style: ::UI::HtmlDialog::STYLE_DIALOG)
           @dialog.set_file(File.join(BIM::ROOT, 'html', 'index.html'))
-          @dialog.add_action_callback('ready') { |_ctx| safely { refresh } }
+          @dialog.add_action_callback('ready') { |_ctx| safely { @ready = true; refresh } }
           @dialog.add_action_callback('refresh') { |_ctx| safely { refresh } }
-          @dialog.add_action_callback('open_panel') { |_ctx, mode| safely { BIM.open_panel(mode) if %w[information scan mapping validate_model rules].include?(mode) } }
+          @dialog.add_action_callback('open_panel') { |_ctx, mode| safely { switch_mode(mode) } }
+          @dialog.add_action_callback('export_report') { |_ctx, kind| safely { export_report(kind) } }
+          @dialog.add_action_callback('save_rule') do |_ctx, payload|
+            safely do
+              check_model!
+              rule = JSON.parse(payload)
+              rules = MappingRules.read(@model)
+              rules.delete_at(rule.delete('index').to_i) if rule.key?('index')
+              rules.reject! { |r| r['source_type'] == rule['source_type'] && r['source_value'] == rule['source_value'] }
+              MappingRules.save(rules + [rule], @model)
+              refresh
+              emit('message', {text: 'Đã lưu quy tắc phân loại.'})
+            end
+          end
           @dialog.add_action_callback('apply') { |_ctx, payload| safely { apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('clear') { |_ctx| safely { clear } }
           @dialog.add_action_callback('select_entity') { |_ctx, index| safely { select_entity(index.to_i) } }
           @dialog.add_action_callback('preview_convert') { |_ctx, payload| safely { preview_convert(JSON.parse(payload)) } }
           @dialog.add_action_callback('confirm_convert') { |_ctx| safely { confirm_convert } }
           @dialog.add_action_callback('save_rules') { |_ctx, payload| safely { check_model!; MappingRules.save(JSON.parse(payload)); refresh } }
-          @dialog.add_action_callback('export_rules') { |_ctx| safely { check_model!; path = ::UI.savepanel('Export VGD mapping rules', '', 'vgd_mapping_rules.json'); MappingRules.export_file(path) if path } }
-          @dialog.add_action_callback('import_rules') { |_ctx| safely { check_model!; path = ::UI.openpanel('Import VGD mapping rules', '', 'JSON|*.json||'); if path; MappingRules.import_file(path); refresh; end } }
-          @dialog.set_on_closed { @generation += 1; detach }
+          @dialog.add_action_callback('export_rules') { |_ctx| safely { check_model!; path = ::UI.savepanel('Xuất quy tắc phân loại', '', 'VGD_Quy_tac_phan_loai.json'); if path; MappingRules.export_file(path); emit('message', {text: "Đã xuất quy tắc: #{path}"}); end } }
+          @dialog.add_action_callback('import_rules') { |_ctx| safely { check_model!; path = ::UI.openpanel('Nhập quy tắc phân loại', '', 'JSON|*.json||'); if path; MappingRules.import_file(path); refresh; end } }
+          @dialog.set_on_closed { @closed = true; @ready = false; @generation += 1; detach; ::UI.stop_timer(@selection_timer) if @selection_timer }
         end
-        def show; @dialog.show; end
+        def show; @dialog.visible? ? @dialog.bring_to_front : @dialog.show; end
         def visible?; @dialog.visible?; end
+        def closed?; @closed; end
+        def switch_mode(mode)
+          raise ArgumentError, 'Tính năng không hợp lệ.' unless MODES.include?(mode)
+          @mode = mode
+          refresh if @ready
+        end
         def safely
           yield
         rescue StandardError => error
           BIM.log(error.message)
-          emit('message', {error: error.message})
+          text = error.message.match?(/[À-ỹ]/) ? error.message : 'Không thực hiện được thao tác. Hãy làm mới dữ liệu và thử lại.'
+          text = 'Không ghi được tệp. Kiểm tra vị trí lưu và đóng tệp nếu đang mở trong Excel.' if error.is_a?(SystemCallError)
+          emit('message', {error: text})
         end
         def emit(event, payload)
           json = JSON.generate(payload).gsub('<', '\\u003c').gsub("\u2028", '\\u2028').gsub("\u2029", '\\u2029')
           @dialog.execute_script("window.VGD.receive(#{JSON.generate(event)}, #{json})")
         end
         def check_model!
-          raise 'Model changed. Refresh before continuing.' unless @model == Sketchup.active_model
+          raise 'Mô hình đã thay đổi. Hãy làm mới trước khi tiếp tục.' unless @model == Sketchup.active_model
         end
         def detach
           @model.selection.remove_observer(@observer) if @model && @observer
@@ -61,9 +85,13 @@ module VGD
         def refresh
           @generation += 1
           @pending = nil
+          @scan_complete = false
+          @rows = []
+          @validation = []
+          @targets = []
           detach
           @model = Sketchup.active_model
-          emit('config', {mode: @mode, version: BIM::VERSION, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets})
+          emit('config', {mode: @mode, version: BIM::VERSION, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.dictionary})
           case @mode
           when 'information', 'convert_selection'
             @observer = SelectionObserver.new(self)
@@ -114,6 +142,7 @@ module VGD
           ::UI.start_timer(0.01, false, &tick)
         end
         def finish_scan
+          @scan_complete = true
           if @mode.start_with?('validate')
             @validation = Validator.validate(@records)
             rows = @validation.each_with_index.map do |r, index|
@@ -122,7 +151,9 @@ module VGD
             emit('validation', rows)
           else
             report = RawScanner.report(@records, @model)
-            if @mode == 'mapping'
+            if @mode == 'export'
+              emit('export', {objects: @records.count { |r| Data.supported?(r[:entity]) }, faces: report[:summary][:raw_faces]})
+            elsif @mode == 'mapping'
               @rows = Mapping.rows(@records) + Mapping.material_rows(report)
               emit('mapping', @rows.each_with_index.map { |r, index| r.reject { |k, _| k == :occurrences }.merge(index: index) })
             else
@@ -133,18 +164,18 @@ module VGD
         def apply(payload)
           check_model!
           check_selection!
-          raise 'Select Group or Component first' if @targets.empty?
+          raise 'Hãy chọn nhóm hoặc đối tượng thành phần trong SketchUp trước.' if @targets.empty?
           values = Schema.normalize(payload)
-          raise 'No fields enabled' if values.empty?
+          raise 'Hãy đánh dấu ít nhất một trường cần cập nhật.' if values.empty?
           targets = writable_selection
           Data.transaction(@model) { targets.each { |e| Data.write(e, values, Data.source(e) == 'RAW' ? 'MANUAL' : Data.source(e)) } }
           refresh
-          emit('message', {text: "#{targets.size} objects updated; #{@targets.size - targets.size} locked objects skipped."})
+          emit('message', {text: "Đã cập nhật #{targets.size} đối tượng; bỏ qua #{@targets.size - targets.size} đối tượng bị khóa."})
         end
         def clear
           check_model!
           check_selection!
-          return unless ::UI.messagebox('Clear VGD data from the selected objects?', MB_YESNO) == IDYES
+          return unless ::UI.messagebox('Xóa dữ liệu VGD của các đối tượng đang chọn? Hình học vẫn được giữ nguyên.', MB_YESNO) == IDYES
           check_selection!
           targets = writable_selection
           Data.transaction(@model, 'VGD BIM Clear') { targets.each { |e| Data.erase(e) } }
@@ -152,7 +183,7 @@ module VGD
         end
         def check_selection!
           current = @model.selection.to_a.select { |e| Data.supported?(e) && e.valid? }
-          raise 'Selection changed. Refresh before applying.' unless current.size == @targets.size && (current - @targets).empty?
+          raise 'Lựa chọn đã thay đổi. Hãy làm mới trước khi áp dụng.' unless current.size == @targets.size && (current - @targets).empty?
         end
         def writable_selection
           # Explicit write-time check, never a full scan on selection-change/read.
@@ -180,7 +211,7 @@ module VGD
         def confirm_convert
           check_model!
           pending = @pending
-          raise 'Preview expired. Preview again.' unless pending && pending[:token] == @generation
+          raise 'Bản xem trước đã hết hiệu lực. Hãy xem trước lại.' unless pending && pending[:token] == @generation
           @pending = nil
           # Re-scan at confirmation so deleted, reparented, or newly locked objects are skipped.
           current = Scanner.scan_model(@model)
@@ -191,12 +222,12 @@ module VGD
           records.reject! { |r| blocked.include?(r[:entity]) }
           result = Converter.convert(records, pending[:values], pending[:rule], @model)
           refresh
-          emit('message', {text: "#{result[:entities].size} objects converted.#{pending[:rule] ? ' Mapping rule saved.' : ''}"})
+          emit('message', {text: "Đã chuyển đổi #{result[:entities].size} đối tượng.#{pending[:rule] ? ' Đã lưu quy tắc phân loại.' : ''}"})
         end
         def select_entity(index)
           check_model!
           record = @validation.fetch(index)
-          raise 'Entity no longer exists. Refresh validation.' unless record[:path].all?(&:valid?)
+          raise 'Đối tượng không còn tồn tại. Hãy chạy kiểm tra lại.' unless record[:path].all?(&:valid?)
           @model.active_path = record[:path][0...-1]
           @model.selection.clear
           @model.selection.add(record[:entity])
@@ -204,6 +235,16 @@ module VGD
           local = Geometry.definition(record[:entity]).bounds
           8.times { |i| bounds.add(local.corner(i).transform(record[:transform])) } unless local.empty?
           @model.active_view.zoom(bounds) unless bounds.empty?
+        end
+        def export_report(kind)
+          check_model!
+          raise 'Hãy đợi quét xong trước khi xuất báo cáo.' unless @mode == 'export' && @scan_complete
+          name = ReportExporter::NAMES.fetch(kind) { raise ArgumentError, 'Loại báo cáo không hợp lệ.' }
+          path = ::UI.savepanel('Xuất báo cáo để mở trong Excel', '', "VGD_#{name}.csv")
+          return unless path
+          path += '.csv' unless File.extname(path).downcase == '.csv'
+          count = ReportExporter.write(path, kind, @records, @model)
+          emit('message', {text: "Đã xuất #{count} dòng. Mở bằng Excel: #{path}"})
         end
       end
     end

@@ -14,7 +14,7 @@ module VGD
       def self.get(entity, key)
         read(entity)[key.to_sym]
       end
-      def self.transaction(model, name = 'VGD BIM Update')
+      def self.transaction(model, name = 'VGD BIM · Cập nhật dữ liệu')
         model.start_operation(name, true)
         begin
           result = yield
@@ -26,8 +26,8 @@ module VGD
         end
       end
       def self.write(entity, values, source)
-        raise ArgumentError, 'Unsupported entity' unless supported?(entity) && entity.valid?
-        raise ArgumentError, 'Locked entity' if entity.locked?
+        raise ArgumentError, 'Đối tượng không hỗ trợ dữ liệu VGD hoặc không còn tồn tại.' unless supported?(entity) && entity.valid?
+        raise ArgumentError, 'Đối tượng đang bị khóa.' if entity.locked?
         values = Schema.normalize(values)
         values = Schema::DEFAULTS.merge(values) unless has_data?(entity)
         values.each { |key, value| entity.set_attribute(Schema::DICTIONARY, key.to_s, value) }
@@ -41,10 +41,10 @@ module VGD
         update(entity, key => value)
       end
       def self.clear(entity)
-        transaction(entity.model, 'VGD BIM Clear') { erase(entity) }
+        transaction(entity.model, 'VGD BIM · Xóa dữ liệu') { erase(entity) }
       end
       def self.erase(entity)
-        raise ArgumentError, 'Locked entity' if entity.locked?
+        raise ArgumentError, 'Đối tượng đang bị khóa.' if entity.locked?
         entity.delete_attribute(Schema::DICTIONARY)
       end
       def self.source(entity)

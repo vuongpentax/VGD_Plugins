@@ -1,10 +1,12 @@
 from pathlib import Path
 import hashlib
 import json
+import re
 import zipfile
 
 root = Path(__file__).resolve().parent.parent
-target = root / 'VGD_BIM_Lite_v0.1.0-alpha.rbz'
+version = re.search(r"VERSION = '([^']+)'", (root / 'runtime/vgd_bim_lite.rb').read_text(encoding='utf-8')).group(1)
+target = root / f'VGD_BIM_Lite_v{version}.rbz'
 with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED) as archive:
     for path in sorted((root / 'runtime').rglob('*')):
         if path.is_file():
