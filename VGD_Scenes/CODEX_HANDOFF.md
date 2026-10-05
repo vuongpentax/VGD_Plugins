@@ -1,5 +1,17 @@
 # Bàn giao VGD Scenes
 
+## 1.5.2 · Hợp nhất bản cài 1.5.1, dọn CSS/DOM và preview
+
+Đã cài SU22 ngày 05/10/2026 lúc 16:05 +07; 17 file khớp nguồn, 8.162 file plugin khác không đổi SHA256. Backup 1.5.1: `outputs/install_20261005_160427_302/`. Không reload SketchUp hoặc sửa model đang mở; lưu công việc rồi khởi động lại để nạp 1.5.2.
+
+Nguồn 1.5.1 đã được sao lưu ở `outputs/review_installed_151_20261005_153046/runtime/` trước khi sửa. Giữ fix theme, summary SU22 và aria-expanded của size-chip; chỉ đổi nhãn người dùng thành Lưu view, không đổi ID/callback. CSS được gộp theo cascade, bỏ selector không còn DOM; 21.322 → 16.895 byte. Computed styles của 30 trạng thái không khác baseline 1.5.1. Bỏ badge/nav-step cũ, observer theo từng nút và timer 700 ms; view count, tên xem trước, tooltip và format cập nhật từ sự kiện/state. Một observer progress và refresh 2s vẫn cần thiết.
+
+SectionPreview tạo một plane gốc model, không gọi unique_section_target hoặc make_unique. ViewState shallow + danh sách root hidden thực sự đổi thay thế quét sâu definition. Isolate vẫn ẩn root không được chọn; giữ/restores tags/folders, active cut trước đó, camera và selection hiện tại. Chỉ trục/flip mới refit; slider dùng lại plane. Cleanup giữ session đến khi thành công để retry khi lỗi. Tạo scene cut thật không đổi, vẫn Make Unique khi cần. Không xóa definition/attribute/scene cũ hoặc mặt cắt thuộc plugin khác.
+
+Preview dùng operation thường để có thể abort mà không kéo theo operation người dùng; không dùng transparent operation. Vì mỗi thao tác là một mục Undo, native Undo/Redo trong khi preview cần kiểm tra riêng trên model mẫu; fixture chưa mô phỏng undo stack. Ctrl+S/Save trong lúc preview chưa có observer chặn: tắt preview trước khi lưu SKP. Không được khẳng định đã loại bỏ mọi crash hoặc kiểm chứng native SU22/SU2026.
+
+PASS: mọi bộ Ruby WASM 3.2 và Ruby 2.7.2 DLL; sáu UI suites Edge. Test_preview_lifecycle kiểm tra shared definition identity, single plane, không deep traversal, original root cut, hidden roots, setter/create failure, retry cleanup và model switch. Test_cleanup_ui kiểm tra 50 scene/20 refresh: tài nguyên không tăng theo số hàng, feedback không polling, nhãn/DOM/CSS mới và theme fix. Loader/main/package/RBZ/deploy 1.5.2, npm test gồm cleanup suite. Chỉ triển khai 17 file VGD; T+ bị vô hiệu hóa giữ nguyên làm tham khảo LayOut.
+
 ## 1.5.0 · Sidebar, preview mặt cắt, thao tác nhiều scene
 
 Giao diện có năm tab bên trái, vùng cấu hình và nút chính bên phải. Góc nhìn chỉ có tên. Scene dùng click/đúp, Shift/Ctrl, kéo nhóm, nút lưu/xóa trực tiếp và đổi tên hàng loạt có xem trước. Đã bỏ UI cập nhật nguồn, vector mặt cắt tùy chỉnh và dịch thêm; engine vẫn đọc thông số cũ để tương thích scene đã tạo.

@@ -1,6 +1,7 @@
 'use strict';
 document.addEventListener('DOMContentLoaded', () => {
   const $ = id => document.getElementById(id);
+  const reasons={'data-needs-selection':'Chọn đối tượng trong SketchUp trước.','data-needs-scenes':'Đánh dấu ít nhất một scene trong mục Scenes trước.'};
   const settingsKeys = ['project','template','axis_mode','grouping','isolate','width','height','margin','grid','format','transparent','paper','section_axis','section_percent','section_flip','section_name','ratio_locked','export_scale','date_folder'];
   const numeric = new Set(['width','height','margin','section_percent','export_scale']);
   const booleans = new Set(['isolate','transparent','section_flip','ratio_locked','date_folder']);
@@ -62,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
     $('flowNext').disabled = !context || busy || (['scenes','compose'].includes(currentTab) ? !selected.size : !context.scenes.length);
     renderExportSummary();
     renderRenamePreview();
+    document.querySelectorAll('[data-needs-selection],[data-needs-scenes]').forEach(explain);
   }
   function send(action, extra = {}, lock = true) {
     if (!context || (busy && !['cancel','refresh'].includes(action))) return;
@@ -78,8 +80,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-tab]').forEach(button => button.setAttribute('aria-selected', String(button.dataset.tab === name)));
     document.querySelector('main').scrollTop = 0;
     Object.entries(primaryActions).forEach(([key,button]) => {button.hidden=key!==name;});
-    { const order=['views','scenes','compose','export'], at=order.indexOf(name==='sections'?'views':name);
-      document.querySelectorAll('nav [data-tab]').forEach(b=>b.classList.toggle('done',order.indexOf(b.dataset.tab)<at)); }
     $('flowBack').hidden=['views','sections'].includes(name);
     $('flowNext').hidden=name==='export';
     $('flowNext').textContent=name==='compose'?'Tiếp: Xuất file →':name==='scenes'?'Bỏ qua canh view → Xuất':'Tiếp: Chọn scene →';
@@ -164,8 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       name.addEventListener('dblclick',()=>modal('Đổi tên scene',scene.name,()=>send('rename',{id:scene.id,name:$('renameInput').value.trim()}),scene.name));
       row.addEventListener('click',event=>{if(event.target===row){name.focus({preventScroll:true});name.dispatchEvent(new MouseEvent('click',{bubbles:true,shiftKey:event.shiftKey,ctrlKey:event.ctrlKey,metaKey:event.metaKey}));}});
-      const badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = scene.owned ? (scene.kind === 'SECTION' ? 'VGD · Cắt' : 'VGD') : scene.imported ? 'VGD · Nhập' : 'Scene';
-      const capture = document.createElement('button'); capture.className = 'row-action row-capture'; capture.textContent = 'Lưu camera'; capture.title = 'Lưu camera đang xem vào '+scene.name;capture.addEventListener('click',()=>send('capture',{id:scene.id}));
+      const capture = document.createElement('button'); capture.className = 'row-action row-capture'; capture.textContent = 'Lưu view'; capture.title = 'Lưu view đang xem vào '+scene.name;capture.addEventListener('click',()=>send('capture',{id:scene.id}));
       const remove = document.createElement('button');remove.className='row-delete';remove.textContent='×';remove.setAttribute('aria-label','Xóa '+scene.name);remove.title='Xóa scene';remove.addEventListener('click',()=>modal('Xóa scene','Xóa “'+scene.name+'”?',()=>send('delete',{ids:[scene.id]})));
       const grip = document.createElement('button'); grip.className = 'scene-grip'; grip.title = 'Kéo để sắp xếp bảng VGD'; grip.setAttribute('aria-label','Sắp xếp ' + scene.name);
       for (let i=0;i<3;i++) grip.append(document.createElement('span'));
@@ -177,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dragY = event.clientY; scrollFrame = requestAnimationFrame(scrollDrag);
       });
       grip.addEventListener('dragend',finishDrag);
-      row.append(check,name,badge,capture,remove,grip); list.append(row);
+      row.append(check,name,capture,remove,grip); list.append(row);
       const frame = scene.frame || {width:1920,height:1080,margin:10};
       const fields = document.createElement('div'); fields.className = 'row-frame';
       const inputs = {};
@@ -251,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('cameraMode').addEventListener('change',cameraMode);
   $('cameraApply').addEventListener('click',applyCamera);
   ['cameraZ','cameraFloor','cameraHeight'].forEach(key=>$(key).addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();applyCamera();}}));
-  function showFormat() { const isPng = $('format').value === 'png'; $('transparent').disabled = !isPng; $('transparentLabel').style.opacity = isPng ? '1' : '.45'; $('alphaHint').hidden = !isPng; $('paperLabel').hidden = $('format').value !== 'pdf'; }
+  function showFormat() { const isPng = $('format').value === 'png'; $('transparent').disabled = !isPng; $('transparentLabel').style.opacity = isPng ? '1' : '.45'; $('alphaHint').hidden = !isPng; $('paperLabel').hidden = $('format').value !== 'pdf'; segSync(); }
   function frameStatus(frameActive, gridActive) {
     $('toggleFrame').setAttribute('aria-pressed',String(frameActive)); $('toggleFrame').textContent = frameActive ? 'Tắt khung' : 'Bật khung';
     $('toggleGrid').setAttribute('aria-pressed',String(gridActive)); $('toggleGrid').textContent = gridActive ? 'Tắt lưới' : 'Bật lưới';
@@ -273,6 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const frameChanged = changed || currentId(context) !== currentId(data);
       const frameUpdated = !frameChanged && JSON.stringify(context.current_frame)!==JSON.stringify(data.current_frame);
       if (changed) { selected.clear(); closeModal(); clearTransfer(); lastPath = null; for (const key of settingsKeys) if (data.settings[key] !== undefined) booleans.has(key) ? $(key).checked = data.settings[key] : $(key).value = data.settings[key]; document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed',String(data.settings.views.includes(button.dataset.view)))); }
+      viewCount();
       context = data; busy = !!data.busy; selected = new Set([...selected].filter(id => data.scenes.some(scene => scene.id === id)));
       if ((frameChanged || frameUpdated && !['width','height','margin','ratioInput'].includes(document.activeElement.id)) && data.current_frame) {
         ['width','height','margin'].forEach(key => { $(key).value = data.current_frame[key]; });
@@ -294,7 +294,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const sceneSignature=JSON.stringify([data.model,data.scenes.map(scene=>[scene.id,scene.name]),currentId(data)]);
       if(sceneSignature!==composeSignature){composeSignature=sceneSignature;$('composeScene').replaceChildren(new Option('Chọn scene để canh…',''));data.scenes.forEach(scene=>$('composeScene').add(new Option(scene.name,scene.id)));$('composeScene').value=currentId(data)||'';}
       const composing=data.scenes.find(scene=>scene.selected);
-      $('composeContext').textContent=composing?'Đang chỉnh riêng scene này · khung tự lưu, camera cần Lưu camera.':'Chọn một scene trong danh sách trên để bắt đầu.';
+      $('composeContext').textContent=composing?'Đang chỉnh riêng scene này · khung tự lưu, camera cần Lưu view.':'Chọn một scene trong danh sách trên để bắt đầu.';
       cameraMode();
       $('selection').textContent = data.selection ? data.selection + ' đối tượng đang chọn' + (data.editing ? ' · đang edit group' : '') : 'Chọn Group / Component trong model';
       $('modelTitle').textContent = data.title; $('sceneCount').textContent = String(data.scenes.length);
@@ -326,8 +326,8 @@ document.addEventListener('DOMContentLoaded', () => {
   $('flowNext').addEventListener('click',()=>tab(['views','sections'].includes(currentTab)?'scenes':'export'));
   $('goCompose').addEventListener('click',composeScenes);
   $('composeScene').addEventListener('change',()=>{if($('composeScene').value)send('visit',{id:$('composeScene').value});});
-  document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => button.setAttribute('aria-pressed',String(button.getAttribute('aria-pressed') !== 'true'))));
-  function preset(views) { document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed',String(views.includes(button.dataset.view)))); }
+  document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => {button.setAttribute('aria-pressed',String(button.getAttribute('aria-pressed') !== 'true'));viewCount();}));
+  function preset(views) { document.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-pressed',String(views.includes(button.dataset.view)))); viewCount(); }
   $('preset4').addEventListener('click', () => preset(['ISO','TOP','FRONT','RIGHT'])); $('preset6').addEventListener('click', () => preset(['ISO','TOP','FRONT','RIGHT','BACK','LEFT'])); $('presetNone').addEventListener('click', () => preset([]));
   $('generate').addEventListener('click', () => runSettings('generate')); $('section').addEventListener('click', () => runSettings('section'));
   $('frame').addEventListener('click',()=>commitFrame(true)); $('fit').addEventListener('click',()=>runSettings('fit')); $('toggleGrid').addEventListener('click', () => runSettings('grid'));
@@ -490,34 +490,32 @@ document.addEventListener('DOMContentLoaded', () => {
   if (window.sketchup) window.sketchup.ready();
   setInterval(() => { if (context && !busy && !dragging && $('modal').hidden && window.sketchup) send('refresh',{},false); },2000);
 
-  // --- UI 1.4 helpers (presentation only) ---
+  // Presentation helpers called by render/state and input events.
   function chipText(row){ const v=k=>{const i=row.querySelector('[data-frame-key="'+k+'"]');return i?i.value:'';}; return v('width')+'×'+v('height')+' · '+v('ratio'); }
   function decorateRow(row){
     if(row.querySelector('.size-chip')) return;
     const chip=document.createElement('button'); chip.className='size-chip'; chip.title='Hiện/ẩn ô chỉnh khung';
     chip.setAttribute('aria-label','Chỉnh khung '+(row.querySelector('.scene-name')||{}).title);
-    row.classList.toggle('open',openFrames.has(row.dataset.id)); chip.textContent=chipText(row);
+    row.classList.toggle('open',openFrames.has(row.dataset.id)); chip.textContent=chipText(row); chip.setAttribute('aria-expanded',String(row.classList.contains('open')));
     chip.disabled = !context || busy;
-    chip.addEventListener('click',()=>{ const o=!row.classList.contains('open'); row.classList.toggle('open',o); o?openFrames.add(row.dataset.id):openFrames.delete(row.dataset.id); });
+    chip.addEventListener('click',()=>{ const o=!row.classList.contains('open'); row.classList.toggle('open',o); chip.setAttribute('aria-expanded',String(o)); o?openFrames.add(row.dataset.id):openFrames.delete(row.dataset.id); });
     row.insertBefore(chip,row.querySelector('.row-capture')); }
   $('sceneList').addEventListener('change',e=>{ const row=e.target.closest('.scene-row'), c=row&&row.querySelector('.size-chip'); if(c) setTimeout(()=>{c.textContent=chipText(row);},0); });
   // clearer primary label: number of views to create
-  function viewCount(){ const n=document.querySelectorAll('[data-view][aria-pressed=true]').length; $('generate').textContent=n?'Tạo / cập nhật '+n+' scene':'Chọn ít nhất 1 góc nhìn'; }
-  document.querySelectorAll('[data-view]').forEach(b=>new MutationObserver(viewCount).observe(b,{attributes:true,attributeFilter:['aria-pressed']})); viewCount();
+  function viewCount(){ const n=document.querySelectorAll('[data-view][aria-pressed=true]').length; $('generate').textContent=n?'Tạo / cập nhật '+n+' scene':'Chọn ít nhất 1 góc nhìn'; namePreview(); }
+  viewCount();
   // explain why a button is disabled
-  const reasons={'data-needs-selection':'Chọn đối tượng trong SketchUp trước.','data-needs-scenes':'Đánh dấu ít nhất một scene ở bước 2 trước.'};
   function explain(b){ for(const a in reasons) if(b.hasAttribute(a)){ if(b.disabled){if(b.dataset.t===undefined)b.dataset.t=b.title||'';b.title=reasons[a];} else if(b.dataset.t!==undefined){b.title=b.dataset.t;delete b.dataset.t;} } }
-  document.querySelectorAll('[data-needs-selection],[data-needs-scenes]').forEach(b=>{ new MutationObserver(()=>explain(b)).observe(b,{attributes:true,attributeFilter:['disabled']}); explain(b); });
 
-  // --- UI 1.4b: name preview, format segments, output path, progress %, unsaved camera ---
+  // Format, naming and camera feedback; no presentation polling timers.
   function namePreview(){ const v=(document.querySelector('[data-view][aria-pressed=true]')||{dataset:{view:'ISO'}}).dataset.view;
     $('namePreview').textContent='Ví dụ tên scene: '+($('template').value||'<OBJECT>_<VIEW>').replace(/<PROJECT>/g,$('project').value.trim()||'CT01').replace(/<OBJECT>/g,'Tủ bếp').replace(/<VIEW>/g,v).replace(/<INDEX>/g,'1'); }
   ['template','project'].forEach(id=>$(id).addEventListener('input',namePreview));
-  document.querySelectorAll('[data-view],#preset4,#preset6,#presetNone').forEach(b=>b.addEventListener('click',()=>setTimeout(namePreview,0))); namePreview();
+  namePreview();
   function segSync(){ document.querySelectorAll('[data-fmt]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.fmt===$('format').value)));
     const f=$('format').value.toUpperCase(); $('outPath').textContent='Nơi lưu → '+($('date_folder').checked?'YYYY.MM.DD → ':'')+f+($('format').value==='pdf'?' → tên tệp bạn đặt khi lưu':' → từng scene một tệp'); }
   document.querySelectorAll('[data-fmt]').forEach(b=>b.addEventListener('click',()=>{ $('format').value=b.dataset.fmt; $('format').dispatchEvent(new Event('change',{bubbles:true})); segSync(); }));
-  ['format','date_folder'].forEach(id=>$(id).addEventListener('change',segSync)); setInterval(segSync,700); segSync();
+  ['format','date_folder'].forEach(id=>$(id).addEventListener('change',segSync)); segSync();
   const pct=document.createElement('span'); pct.id='progressText'; pct.className='progress-text'; pct.hidden=true; $('progress').before(pct);
   function pctSync(){ const p=$('progress'); pct.hidden=p.hidden; pct.textContent=Math.round(100*p.value/(p.max||1))+'%'; }
   new MutationObserver(pctSync).observe($('progress'),{attributes:true,attributeFilter:['value','max','hidden']});

@@ -198,7 +198,7 @@ module VGD
         end
       end
 
-      def restore
+      def restore(restore_selection = true)
         return unless @model.valid?
         @model.pages.selected_page = @page if @page && @page.valid? && @model.pages.selected_page != @page
         if @style && @style.valid? && @model.styles.selected_style != @style && @style != @model.styles.active_style
@@ -217,7 +217,7 @@ module VGD
         axes = @model.axes
         axes.set(*@axes) if [axes.origin, axes.xaxis, axes.yaxis, axes.zaxis] != @axes
         surviving = @selection.select(&:valid?)
-        unless @model.selection.to_a == surviving
+        if restore_selection && @model.selection.to_a != surviving
           @model.selection.clear
           @model.selection.add(surviving)
         end

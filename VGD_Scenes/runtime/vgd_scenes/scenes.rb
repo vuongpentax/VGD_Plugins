@@ -392,32 +392,40 @@ module VGD
 
     module SectionPreview
       def self.clear_if_stale(model)
-        clear if @session && (!@session[:model].equal?(model) || @session[:page] != model.pages.selected_page)
+        return unless @session
+        clear if !@session[:model].equal?(model) || @session[:page] != model.pages.selected_page || model.active_path || @session[:planes].any? { |plane| !plane.valid? }
+      end
+
+      def self.restore_hidden(session)
+        session[:hidden].each do |entity, hidden|
+          entity.hidden = hidden if entity.valid? && entity.hidden? != hidden
+        end
       end
 
       def self.clear
         session = @session
-        @session = nil
-        return unless session && session[:model].valid?
+        return unless session
+        unless session[:model].valid?
+          @session = nil
+          return
+        end
         model = session[:model]
         current_page = model.pages.selected_page
         selection = model.selection.to_a
         current_camera = Scenes.camera_copy(model.active_view.camera) if current_page != session[:page]
-        model.start_operation('Kết thúc xem trước mặt cắt', true, false, true)
-        begin
+        # Separate operations cannot abort/merge a user's intervening edit.
+        Scenes.operation(model, 'Tắt xem trước mặt cắt') do
           session[:planes].each { |plane| plane.erase! if plane.valid? }
-          session[:snapshot].restore
+          restore_hidden(session)
+          session[:snapshot].restore(false)
           if current_page != session[:page]
             model.pages.selected_page = current_page if current_page && current_page.valid?
             model.active_view.camera = current_camera
           end
           model.selection.clear
           model.selection.add(selection.select(&:valid?))
-          model.commit_operation
-        rescue StandardError
-          model.abort_operation
-          raise
         end
+        @session = nil
       end
 
       def self.update(model, raw)
@@ -425,28 +433,47 @@ module VGD
         opts = Scenes.options(raw.merge('section_offset' => 0))
         raise ArgumentError, 'Chọn trục X, Y hoặc Z.' unless %w[X Y Z].include?(opts['section_axis'])
         paths = Geometry.selection_paths(model)
-        key = [model.object_id, paths, opts['axis_mode']]
+        key = [model.object_id, paths, opts['axis_mode'], opts['isolate']]
         clear if @session && @session[:key] != key
         unless @session
           target = Geometry.target(model, paths, opts['axis_mode'])
           Geometry.validate_section_target(target)
-          snapshot = ViewState.new(model)
-          planes = []
+          # Preview clips at model level, without editing any definition.
+          # Permanent section scenes still create their cuts inside the object.
+          snapshot = ViewState.new(model, false)
+          session = { key: key, model: model, page: model.pages.selected_page, snapshot: snapshot,
+                      target: target, planes: [], hidden: [], axis: nil }
           Scenes.operation(model, 'Xem trước mặt cắt') do
             begin
-              target = Geometry.unique_section_target(model, target, opts, snapshot)
-              point, normal = Geometry.section(target, opts)
-              target[:resolved].each do |_path, transform, entities|
-                plane = entities.add_section_plane(Geometry.local_plane(transform, point, normal))
-                raise 'Không tạo được mặt cắt xem trước.' unless plane
-                planes << plane
-                plane.set_attribute(DICT, 'preview', true)
-                plane.name = 'VGD · Xem trước'
-                plane.layer = model.layers[0]
+              if opts['isolate']
+                keep = target[:resolved].map { |path, _transform, _entities| path.first }
+                model.entities.each do |entity|
+                  next unless entity.is_a?(Sketchup::Drawingelement)
+                  hidden = !keep.include?(entity)
+                  next if entity.hidden? == hidden
+                  session[:hidden] << [entity, entity.hidden?]
+                  entity.hidden = hidden
+                end
+                keep.each do |entity|
+                  entity.layer.visible = true unless entity.layer.visible?
+                  folder = entity.layer.respond_to?(:folder) ? entity.layer.folder : nil
+                  while folder
+                    folder.visible = true unless folder.visible?
+                    folder = folder.respond_to?(:folder) ? folder.folder : nil
+                  end
+                end
               end
-              @session = { key: key, model: model, page: model.pages.selected_page, snapshot: snapshot, target: target, planes: planes, axis: nil }
+              point, normal = Geometry.section(target, opts)
+              plane = model.entities.add_section_plane([point, normal])
+              raise 'Không tạo được mặt cắt xem trước.' unless plane
+              session[:planes] << plane
+              plane.set_attribute(DICT, 'preview', true)
+              plane.name = 'VGD · Xem trước'
+              plane.layer = model.layers[0]
+              @session = session
             rescue StandardError
-              planes.each { |plane| plane.erase! if plane.valid? }
+              session[:planes].each { |plane| plane.erase! if plane.valid? }
+              restore_hidden(session)
               snapshot.restore
               raise
             end
@@ -454,22 +481,20 @@ module VGD
         end
         session = @session
         point, normal = Geometry.section(session[:target], opts)
-        model.start_operation('Di chuyển mặt cắt xem trước', true, false, true)
         begin
-          session[:target][:resolved].zip(session[:planes]).each do |(_path, transform, entities), plane|
+          Scenes.operation(model, 'Di chuyển mặt cắt xem trước') do
+            plane = session[:planes].first
             raise 'Mặt cắt xem trước đã bị xóa. Chọn lại đối tượng.' unless plane.valid?
-            plane.set_plane(Geometry.local_plane(transform, point, normal))
-            entities.active_section_plane = plane
+            plane.set_plane([point, normal])
+            model.entities.active_section_plane = plane
+            model.rendering_options['DisplaySectionCuts'] = true
+            model.rendering_options['DisplaySectionPlanes'] = true
+            axis = [opts['section_axis'], opts['section_flip']]
+            Geometry.fit(model, session[:target], 'SECTION', opts, normal) if session[:axis] != axis
+            session[:axis] = axis
+            model.active_view.invalidate
           end
-          model.rendering_options['DisplaySectionCuts'] = true
-          model.rendering_options['DisplaySectionPlanes'] = true
-          axis = [opts['section_axis'], opts['section_flip']]
-          Geometry.fit(model, session[:target], 'SECTION', opts, normal) if session[:axis] != axis
-          session[:axis] = axis
-          model.active_view.invalidate
-          model.commit_operation
         rescue StandardError
-          model.abort_operation
           clear
           raise
         end

@@ -184,7 +184,7 @@ module VGD
           end
         end
         Scenes.preview_frame(model, entry['frame'])
-        { success: true, message: 'Đã paste camera và khung vào view hiện tại. Scene giữ nguyên; bấm Lưu camera nếu muốn lưu.' }
+        { success: true, message: 'Đã paste camera và khung vào view hiện tại. Scene giữ nguyên; bấm Lưu view nếu muốn lưu.' }
       end
 
       def self.write(path, raw, replace = false)

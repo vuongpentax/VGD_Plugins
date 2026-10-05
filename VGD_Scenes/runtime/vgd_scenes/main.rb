@@ -10,7 +10,7 @@ require_relative 'transfer'
 require_relative 'camera'
 module VGD
   module Scenes
-    VERSION = '1.5.0'.freeze unless const_defined?(:VERSION, false)
+    VERSION = '1.5.2'.freeze unless const_defined?(:VERSION, false)
     class << self
       def state
         model = Sketchup.active_model
@@ -259,7 +259,7 @@ module VGD
         model = Sketchup.active_model
         raise 'Đóng edit Group/Component trước khi cập nhật view.' if model.active_path
         page = model.pages.selected_page
-        raise 'Chọn một scene trước, chỉnh góc nhìn rồi bấm Cập nhật view hiện tại.' unless page && page.valid?
+        raise 'Chọn một scene trước, chỉnh góc nhìn rồi bấm Lưu view.' unless page && page.valid?
         SectionPreview.clear
         result = SceneStore.capture(model, page.persistent_id.to_s)
         @live_frame = nil
@@ -295,7 +295,7 @@ module VGD
         menu = ::UI.menu('Extensions').add_submenu('VGD Scenes')
         open_command = ::UI::Command.new('VGD Scenes · Bảng điều khiển') { open }
         quick_command = ::UI::Command.new('VGD · Tạo/cập nhật 4 view nhanh') { quick_views }
-        capture_command = ::UI::Command.new('VGD · Cập nhật view hiện tại') { capture_current_view }
+        capture_command = ::UI::Command.new('VGD · Lưu view') { capture_current_view }
         copy_command = ::UI::Command.new('VGD · Copy camera và khung') { transfer_command('copyView') }
         paste_command = ::UI::Command.new('VGD · Paste camera và khung') { transfer_command('pasteView') }
         [open_command, quick_command].each do |command|
@@ -309,7 +309,7 @@ module VGD
         open_command.tooltip = 'VGD Scenes · Tạo scene, mặt cắt, quản lý và xuất ảnh/PDF'
         quick_command.tooltip = 'VGD · 4 view nhanh: ISO, TOP, FRONT, RIGHT từ đối tượng chọn'
         capture_command.tooltip = 'VGD · Lưu view hiện tại vào scene đang chọn'
-        capture_command.status_bar_text = 'Lưu camera, hiển thị, mặt cắt và khung hiện tại vào scene đang chọn.'
+        capture_command.status_bar_text = 'Lưu view, hiển thị, mặt cắt và khung hiện tại vào scene đang chọn.'
         [[copy_command, 'copy_scene.svg'], [paste_command, 'paste_scene.svg']].each do |command, icon|
           command.small_icon = File.join(__dir__, icon)
           command.large_icon = File.join(__dir__, icon)

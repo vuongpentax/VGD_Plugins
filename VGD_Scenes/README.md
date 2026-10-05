@@ -1,6 +1,17 @@
-# VGD Scenes 1.5.0 — SketchUp 2022–2026.2
+# VGD Scenes 1.5.2 — SketchUp 2022–2026.2
 
 Plugin tạo view đối tượng, mặt cắt tùy chỉnh, quản lý scene và xuất ảnh/PDF. Thương hiệu VGD, giao diện sáng/tối dùng bảng màu nâu, trắng và than theo theme T+.
+
+### Dọn gọn và an toàn preview (1.5.2)
+
+- Nhập các sửa giao diện từ bản 1.5.1 đã cài trên máy: nút theme tròn 32×32, marker thu gọn tương thích SU22, ô kích thước không có mũi tên thừa.
+- Thống nhất **Lưu view** trên toolbar, menu, hàng scene, mục Canh view và hướng dẫn. Giữ nguyên callback/ID để không làm hỏng dữ liệu cũ.
+- Gộp CSS trùng/ghi đè, bỏ rule và DOM không dùng của menu hàng, huy hiệu và thanh bước cũ. CSS từ 21.322 xuống 16.895 byte, giảm 20,8%; đối chiếu computed style ở 30 tổ hợp tab/theme/kích thước không có khác biệt.
+- Bỏ timer đồng bộ giao diện 700 ms và observer trên từng nút; phản hồi góc nhìn/định dạng cập nhật ngay theo thao tác. Giữ refresh 2 giây để theo dõi scene/camera thay đổi ngoài bảng và một observer tiến trình.
+- Preview mặt cắt tạo một plane tạm ở gốc model, không Make Unique, không ghi vào definition dùng chung và không snapshot sâu toàn bộ hình học. Chế độ chỉ hiện đối tượng ghi lại những root instance đổi trạng thái ẩn rồi phục hồi khi dọn. Mặt cắt scene thật vẫn tạo bên trong đối tượng như trước.
+- Preview dùng operation thường, tránh abort operation transparent kéo theo thao tác trước của người dùng. Thao tác preview hiện có mục Undo riêng; fixture không chứng minh hành vi Undo/Redo của kernel SketchUp. Sau khi xem thử nên tắt preview trước khi lưu SKP; không sửa/purge definition hoặc mặt cắt cũ của model.
+- Ruby WASM 3.2, Ruby 2.7.2 DLL với API mô phỏng và sáu bộ kiểm tra Edge headless đều PASS, gồm lỗi tạo/di chuyển/dọn preview, bản sao dùng chung, 50 scene và 20 lần refresh. Chưa chạy thử kernel/HtmlDialog SU22 thật; không bảo đảm mọi nguyên nhân crash đã được loại bỏ.
+- Chỉ cài 17 file VGD Scenes, có backup và đối chiếu SHA256 tất cả file plugin khác. Giữ nguyên bản T+ đã vô hiệu hóa để tham khảo tính năng LayOut sau này.
 
 ### Giao diện gọn và thao tác scene (1.5.0)
 
@@ -50,6 +61,8 @@ Kiểm thử hồi quy mới đã qua Ruby 2.7.2 DLL (API giả lập), WASM 3.2
 
 ## Đã cài trên máy
 
+Đã cài SU22 ngày 05/10/2026 lúc 16:05 +07; 17 file khớp nguồn, 8.162 file plugin khác không đổi SHA256. Backup 1.5.1: `outputs/install_20261005_160427_302/`. Không reload SketchUp hoặc sửa model đang mở; lưu công việc rồi khởi động lại để nạp 1.5.2.
+
 - Loader: `%APPDATA%/SketchUp/SketchUp 2022/SketchUp/Plugins/vgd_scenes.rb`
 - Thư mục riêng: `.../Plugins/vgd_scenes/`
 - Loader scene T+ cũ được sao lưu và đổi thành `tplus_scenes_to_layout.rb.vgd-disabled`; chỉ có hiệu lực tắt ở lần khởi động SketchUp kế tiếp.
@@ -66,7 +79,7 @@ Hãy lưu công việc và khởi động lại SketchUp khi thuận tiện. M�
 
 ### Cập nhật view bằng một nút
 
-Toolbar có năm nút: bảng điều khiển, 4 view nhanh, **Cập nhật view hiện tại**, **Copy scene hiện tại**, **Paste scenes**. Chọn scene, chỉnh camera/khung/mặt cắt rồi bấm nút thứ ba (máy ảnh/mũi tên vòng) để lưu vào scene đang chọn. Không cần mở bảng hoặc chọn đối tượng; giữ tên scene. Các lệnh cũng có trong **Extensions → VGD Scenes** để gán phím tắt.
+Toolbar có năm nút: bảng điều khiển, 4 view nhanh, **Lưu view**, **Copy scene hiện tại**, **Paste scenes**. Chọn scene, chỉnh camera/khung/mặt cắt rồi bấm nút thứ ba (máy ảnh/mũi tên vòng) để lưu vào scene đang chọn. Không cần mở bảng hoặc chọn đối tượng; giữ tên scene. Các lệnh cũng có trong **Extensions → VGD Scenes** để gán phím tắt.
 
 Lệnh lưu camera, hiển thị, mặt cắt và khung giống **Lưu view** trong bảng. Khi chưa có scene đang chọn, đang edit Group/Component hoặc đang xuất, lệnh báo lý do và không cập nhật.
 

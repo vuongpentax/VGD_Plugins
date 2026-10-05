@@ -32,16 +32,16 @@ m.selection.add(group)
 original_definition = group.definition
 before_camera = s.camera_copy(m.active_view.camera); before_render = m.rendering_options.dup; before_count = m.pages.length
 preview.update(m, s.options('section_axis'=>'X','section_percent'=>25))
-plane = group.entities.active_section_plane
-assert(plane && group.definition != original_definition && sibling.definition == original_definition && sibling.definition.entities.empty?, 'Preview cut affected shared sibling')
-assert(m.pages.length==before_count && m.entities.grep(Sketchup::SectionPlane).empty?, 'Preview created scene/root section')
+plane = m.entities.active_section_plane
+assert(plane && group.definition == original_definition && sibling.definition == original_definition && sibling.definition.entities.empty?, 'Preview modified shared definitions')
+assert(m.pages.length==before_count && m.entities.grep(Sketchup::SectionPlane)==[plane], 'Preview duplicated root section or scene')
 first_point = plane.plane[0].to_a
 preview_camera = s.camera_copy(m.active_view.camera)
 preview.update(m, s.options('section_axis'=>'X','section_percent'=>75))
-assert(group.entities.active_section_plane.equal?(plane) && plane.plane[0].to_a != first_point, 'Slider duplicates or does not move section')
+assert(m.entities.active_section_plane.equal?(plane) && plane.plane[0].to_a != first_point, 'Slider duplicates or does not move section')
 assert(m.active_view.camera.eye == preview_camera.eye, 'Slider repeatedly reframed camera')
 preview.clear
-assert(group.entities.empty? && m.active_view.camera.eye == before_camera.eye && m.rendering_options == before_render, 'Preview cleanup did not restore view/section state')
+assert(group.entities.empty? && m.entities.grep(Sketchup::SectionPlane).empty? && group.definition == original_definition && !sibling.hidden? && m.active_view.camera.eye == before_camera.eye && m.rendering_options == before_render, 'Preview cleanup did not restore definition/view/section state')
 assert(pages.map(&:saved)==saved,'Section preview persisted scene state')
 preview.update(m, s.options('section_axis'=>'Z','section_percent'=>50))
 s.dispatch('section',{'model'=>m.object_id.to_s,'settings'=>s.options('section_axis'=>'Z','section_percent'=>50)})

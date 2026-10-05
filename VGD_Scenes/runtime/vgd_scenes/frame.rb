@@ -101,7 +101,7 @@ module VGD
           end
         end
         model.active_view.invalidate
-        { success: true, message: "Đã lưu khung #{changes.length} scene; giữ góc nhìn đã lưu. Bấm Update view để lưu góc đang xem." }
+        { success: true, message: "Đã lưu khung #{changes.length} scene; giữ góc nhìn đã lưu. Bấm Lưu view để lưu góc đang xem." }
       end
 
       BACKUP_KEY = 'unlocked_camera_frames'.freeze
@@ -270,7 +270,7 @@ module VGD
       end
       save ? Scenes.operation(model, 'Áp dụng và lưu khung', &action) : action.call
       model.active_view.invalidate
-      { success: true, message: save ? 'Đã áp dụng khung. Chưa có scene để lưu.' : 'Đã xem trước trên view hiện tại. Bấm Update view để lưu camera.' }
+      { success: true, message: save ? 'Đã áp dụng khung. Chưa có scene để lưu.' : 'Đã xem trước trên view hiện tại. Bấm Lưu view để lưu camera.' }
     end
 
     def self.toggle_frame(model, opts)

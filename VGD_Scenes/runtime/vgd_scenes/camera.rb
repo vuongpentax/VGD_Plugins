@@ -68,7 +68,7 @@ module VGD
         end
         model.active_view.camera = camera
         model.active_view.invalidate
-        { success: true, message: 'Đã xem trước camera. Bấm Update view để lưu góc nhìn mới.' }
+        { success: true, message: 'Đã xem trước camera. Bấm Lưu view để lưu góc nhìn mới.' }
       end
 
       def self.elevation(model, raw)
@@ -97,7 +97,7 @@ module VGD
         Scenes.copy_camera_lens(camera, original, model.active_view)
         model.active_view.camera = camera
         model.active_view.invalidate
-        { success: true, message: "Đã xem trước cao độ mắt #{z.round(2)} mm theo Z thế giới. Bấm Cập nhật view để lưu vào scene." }
+        { success: true, message: "Đã xem trước cao độ mắt #{z.round(2)} mm theo Z thế giới. Bấm Lưu view để lưu cao độ mới." }
       end
     end
   end
