@@ -1,3 +1,11 @@
+## Đồng bộ bản cài SU2022 3.1.0 · 05/10/2026
+
+Đã nhập chín file có thay đổi nội dung từ plugin đang cài SU2022. Loader báo phiên bản 3.1.0; gói đồng bộ: outputs/VGD_Dim_v3.1.0.rbz và source ZIP cùng phiên bản. Không triển khai lại hoặc sửa plugin trong SketchUp.
+
+Đạt: cú pháp 14 file Ruby, fixture Smart Dim, preset/Auto-Style/Animation, lưu cấu hình, bộ cài whitelist 18 file và kiểm tra Edge tải dialog/nhận state/gửi callback quét, style, rebuild, native_apply. Các fixture dùng mô phỏng API; chưa xác minh native font/Undo/associations trong phiên đồng bộ.
+
+Bộ kiểm tra đầy đủ cũ chưa tương thích 3.1.0: test_engine gọi Engine.apply đã bỏ; test_ui tìm header/footer cũ. Không coi hai bộ này là PASS. Mã bản cài được giữ nguyên. Các mục 3.0.1 bên dưới mô tả bản trước.
+
 # VGD Dim · 3.0.1-beta.1
 
 Gộp bộ Dim/Info trong files.zip vào VGD ANOT và đổi tên thành **VGD Dim**. Theo yêu cầu ngày 2026-10-05, bản này có đầy đủ chức năng trong giao diện Claude, giữ palette T+ sáng/nâu đồng.

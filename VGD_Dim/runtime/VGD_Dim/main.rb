@@ -1,7 +1,6 @@
 # encoding: UTF-8
 require 'sketchup.rb'
 require 'json'
-require_relative 'defaults'
 require_relative 'engine'
 require_relative 'native_style'
 require_relative 'store'
@@ -10,7 +9,6 @@ require_relative 'presets'
 require_relative 'autostyle'
 require_relative 'animation'
 require_relative 'smartdim'
-require_relative 'probe'
 require_relative 'dialog'
 module VGD
   module Dim
@@ -25,19 +23,17 @@ module VGD
     rescue StandardError => error
       show_error(error.message)
     end
-    def reload_extension; load File.join(__dir__,'reload.rb'); end
-    unless @command
-      @command=UI::Command.new('VGD Dim') { show_dialog }
-      @command.small_icon=@command.large_icon=File.join(__dir__,'dim.svg')
-      UI.menu('Extensions').add_item(@command) unless file_loaded?(__FILE__)
-      @toolbar ||= UI::Toolbar.new('VGD Dim')
-      @toolbar.add_item(@command)
-      UI.menu('Extensions').add_item('Hiện toolbar VGD Dim') { @toolbar.show }
-      UI.menu('Extensions').add_item('Nạp lại VGD Dim') { reload_extension }
+    unless file_loaded?(__FILE__)
+      command=UI::Command.new('VGD Dim') { show_dialog }
+      command.small_icon=command.large_icon=File.join(__dir__,'dim.svg')
+      command.tooltip='VGD Dim'
+      command.status_bar_text='Smart Dim, font/size theo Model Info, màu/mũi tên, preset và Animation.'
+      UI.menu('Extensions').add_item(command)
+      toolbar=UI::Toolbar.new('VGD Dim')
+      toolbar.add_item(command)
+      UI.menu('Extensions').add_item('Hiện toolbar VGD Dim') { toolbar.show }
+      AutoStyle.start
       file_loaded(__FILE__)
     end
-    @command.tooltip='VGD Dim'
-    @command.status_bar_text='Smart Dim, Dim/Text/Label, Model Info, preset và Animation.'
-    AutoStyle.start
   end
 end

@@ -1,3 +1,7 @@
+# VGD Dim · 3.1.0 đã đồng bộ từ SU2022
+
+Xem README và outputs/VALIDATION.json cho kết quả kiểm tra đồng bộ; bảng dưới là lịch sử 3.0.1.
+
 # VGD Dim · 3.0.1-beta.1
 
 | Chức năng | Trạng thái |

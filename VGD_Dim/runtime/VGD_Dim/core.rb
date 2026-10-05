@@ -9,6 +9,8 @@ module VGD
         'label'=>{'setcolor'=>false,'color'=>'#000000','arrow'=>'keep','leader'=>'keep'},
         'units'=>{'enabled'=>false,'unit'=>'2','precision'=>'0','show_unit'=>false}
       }.freeze unless const_defined?(:STYLE, false)
+      LEADER_VIEW  = defined?(::ALeaderView)  ? ::ALeaderView  : 1 unless const_defined?(:LEADER_VIEW, false)
+      LEADER_MODEL = defined?(::ALeaderModel) ? ::ALeaderModel : 2 unless const_defined?(:LEADER_MODEL, false)
       SCAN = {'scope'=>'selected','nested'=>true,'components'=>true,'hidden'=>false,'locked'=>false}.freeze unless const_defined?(:SCAN, false)
 
       def validate_settings(settings)
@@ -114,7 +116,7 @@ module VGD
         color(entity,settings,'VGD_TEXT_COLOR')
         if type=='label'
           Engine.set_endpoint(entity,settings['arrow'])
-          entity.leader_type = (settings['leader']=='view' ? ALeaderView : ALeaderModel) unless settings['leader']=='keep'
+          entity.leader_type = (settings['leader']=='view' ? LEADER_VIEW : LEADER_MODEL) unless settings['leader']=='keep'
         end
         entity.layer = entity.model.layers['000 TEXT'] || entity.model.layers.add('000 TEXT')
       end
@@ -168,65 +170,74 @@ module VGD
         {'count'=>counts,'report'=>report}
       end
 
-      def endpoint(dim, side)
-        entity, point = dim.public_send(side)
-        getter="#{side}_attached_to"
-        attached=dim.public_send(getter) if dim.respond_to?(getter)
-        # Restore complete instance paths after creation; their point coordinate
-        # convention differs from add_dimension_linear's reference arguments.
-        return point if attached && attached[0]
-        return entity if entity && entity.respond_to?(:position) # Vertex / ConstructionPoint
-        entity ? [entity,point] : point
+      # Tạo lại Dimension tuyến tính để nhận font/size hiện tại của Model Info.
+      # Truyền nguyên start/end của Dim cũ (đã kiểm chứng giữ được liên kết bám),
+      # chỉ ghi đè chữ khi Dim cũ có chữ riêng khác chữ tự động.
+      def safely
+        yield
+      rescue StandardError
+        nil
+      end
+      def restore_attachments(old, new_dim)
+        %i[start end].each do |side|
+          getter = "#{side}_attached_to"; setter = "#{getter}="
+          next unless old.respond_to?(getter) && new_dim.respond_to?(setter)
+          attached = old.public_send(getter)
+          next unless attached && attached[0]
+          current = new_dim.public_send(getter)
+          next if current && current[0]
+          safely { new_dim.public_send(setter, attached) }
+        end
+      end
+      def copy_dim_props(old, new_dim)
+        safely { new_dim.material = old.material if old.material }
+        safely { new_dim.layer = old.layer }
+        safely { new_dim.hidden = old.hidden? }
+        safely { new_dim.arrow_type = old.arrow_type }
+        safely { new_dim.has_aligned_text = old.has_aligned_text? }
+        safely { new_dim.aligned_text_position = old.aligned_text_position unless old.aligned_text_position.nil? }
+        safely { new_dim.text_position = old.text_position if old.respond_to?(:text_position) }
+        safely do
+          (old.attribute_dictionaries || []).each do |dict|
+            dict.each_pair { |key, value| new_dim.set_attribute(dict.name, key, value) }
+          end
+        end
       end
       def rebuild_dims(opts)
         raise 'APPLY đang chạy.' if NativeStyle.running?
-        model=Sketchup.active_model
-        entries=scan(model,opts)['dim']
+        model = Sketchup.active_model
+        entries = scan(model, opts)['dim']
         raise 'Không tìm thấy Dimension trong phạm vi đã chọn.' if entries.empty?
-        selected=model.selection.to_a; replacements={}
-        result={'rebuilt'=>0,'custom'=>0,'skipped'=>0,'failed'=>0}
+        selected = model.selection.to_a; replacements = {}
+        result = {'rebuilt'=>0, 'custom'=>0, 'skipped'=>0, 'failed'=>0}
         AutoStyle.suspend do
-          model.start_operation('VGD Dim — Làm mới font/size',true)
+          model.start_operation('VGD Dim — Làm mới font/size', true)
           begin
             entries.each do |entry|
-              old=entry[:entity]
+              old = entry[:entity]
               unless old.is_a?(Sketchup::DimensionLinear)
-                result['skipped']+=1; next
+                result['skipped'] += 1; next
               end
-              new_dim=nil
+              new_dim = nil
               begin
-                # Create with current Model Info font defaults; preserve native links.
-                new_dim=entry[:entities].add_dimension_linear(endpoint(old,:start), endpoint(old,:end), old.offset_vector)
-                %i[start end].each do |side|
-                  getter="#{side}_attached_to"
-                  attached=old.public_send(getter) if old.respond_to?(getter)
-                  new_dim.public_send("#{getter}=",attached) if attached && attached[0]
+                new_dim = entry[:entities].add_dimension_linear(old.start, old.end, old.offset_vector)
+                restore_attachments(old, new_dim)
+                if old.text != new_dim.text
+                  new_dim.text = old.text
+                  result['custom'] += 1
                 end
-                custom_text=old.text
-                new_dim.text=custom_text
-                new_dim.material=old.material; new_dim.layer=old.layer; new_dim.hidden=old.hidden?
-                new_dim.arrow_type=old.arrow_type; new_dim.has_aligned_text=old.has_aligned_text?
-                position=old.aligned_text_position
-                new_dim.aligned_text_position=position unless position.nil?
-                new_dim.text_position=old.text_position if old.respond_to?(:text_position)
-                %i[casts_shadows? receives_shadows?].each do |method|
-                  setter=method.to_s.sub('?','=')
-                  new_dim.public_send(setter,old.public_send(method)) if old.respond_to?(method) && new_dim.respond_to?(setter)
-                end
-                if old.respond_to?(:attribute_dictionaries) && old.attribute_dictionaries
-                  old.attribute_dictionaries.each { |dict| dict.each_pair { |key,value| new_dim.set_attribute(dict.name,key,value) } }
-                end
-                old.erase! # Remove only after every preservation step succeeds.
-                replacements[old]=new_dim
-                result['rebuilt']+=1
-                result['custom']+=1 unless custom_text.to_s.empty?
+                copy_dim_props(old, new_dim)
+                replacements[old] = new_dim
+                old.erase!   # chỉ xóa bản cũ sau khi bản mới đã dựng xong
+                result['rebuilt'] += 1
               rescue StandardError
+                replacements.delete(old)
                 new_dim.erase! if new_dim && new_dim.valid?
-                result['failed']+=1
+                result['failed'] += 1
               end
             end
             model.selection.clear
-            model.selection.add(selected.map { |e| replacements.fetch(e,e) }.select(&:valid?))
+            model.selection.add(selected.map { |e| replacements.fetch(e, e) }.select(&:valid?))
             model.commit_operation
           rescue StandardError
             model.abort_operation

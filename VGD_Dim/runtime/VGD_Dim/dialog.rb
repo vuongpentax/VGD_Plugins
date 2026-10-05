@@ -24,7 +24,7 @@ module VGD
           return
         end
         @dlg=UI::HtmlDialog.new(dialog_title:'VGD Dim',preferences_key:'VGDDim',
-          width:540,height:800,min_width:360,min_height:520,resizable:true,style:UI::HtmlDialog::STYLE_DIALOG)
+          width:520,height:800,min_width:360,min_height:520,resizable:true,style:UI::HtmlDialog::STYLE_DIALOG)
         @dlg.set_file(File.join(__dir__,'dialog.html'))
         callback('ready') { push_state }
         callback('scan') { |json| send_js('onScan',Core.summary(Core.scan(Sketchup.active_model,JSON.parse(json).fetch('opts')))) }
@@ -63,16 +63,16 @@ module VGD
         callback('text_info') { VGD::Dim.open_model_info('Text') }
         callback('native_apply') do
           send_js('onBusy',true)
-          NativeStyle.apply(Sketchup.active_model,{},apply_setters:false) do |error|
+          NativeStyle.apply(Sketchup.active_model) do |error|
             send_js('onBusy',false)
-            error ? send_js('onError',{'message'=>error.message}) : send_js('onToast',{'message'=>''})
+            error ? send_js('onError',{'message'=>error.message}) : send_js('onToast',{'message'=>'Đã áp mẫu Model Info cho đối tượng đang chọn (Tag: 000 DIM / 000 TEXT).'})
           end
         end
         @dlg.set_on_closed { @dlg=nil; NativeStyle.cancel }
         @dlg.show
       end
       def push_state(select=nil)
-        send_js('onState',{'presets'=>Presets.all,'builtin'=>Presets::BUILTIN.keys,'select'=>select,
+        send_js('onState',{'version'=>VGD::Dim::VERSION,'presets'=>Presets.all,'builtin'=>Presets::BUILTIN.keys,'select'=>select,
           'auto'=>AutoStyle.load,'smart'=>Store.read('smartdim',{}),'anim'=>Animation.read(Sketchup.active_model)})
       end
       def send_js(fn,data)
