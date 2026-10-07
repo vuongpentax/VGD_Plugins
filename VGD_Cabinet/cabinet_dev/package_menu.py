@@ -6,9 +6,9 @@ import json
 root = Path(__file__).resolve().parents[1]
 out = root / 'outputs/vgd_cabinet_modeling'
 out.mkdir(parents=True, exist_ok=True)
-version = '4.4.0-beta.2.1'
+version = '4.5.0-beta.1'
 files = ['vgd_cabinet.rb'] + ['VGD_Cabinet/' + name for name in [
-    'main43.rb', 'geometry_engine.rb', 'modeling_rules.rb', 'modeling.rb', 'pano.rb', 'preset_store.rb', 'description_import.rb',
+    'main43.rb', 'geometry_engine.rb', 'modeling_rules.rb', 'modeling.rb', 'pano.rb','component_sharing.rb','frame_divisions.rb','rail_joinery.rb','preview_mesh.rb','library_store.rb', 'preset_store.rb', 'description_import.rb',
     'defaults.rb', 'draw_tool.rb', 'ui_renderer.rb', 'VGD_Cabinet_UI.html',
     'utilities.rb', 'reload.rb', 'combine.svg', 'untag.svg', 'logo.svg', 'HUONG_DAN.txt']]
 rbz = out / f'VGD_Cabinet_v{version}.rbz'
@@ -19,7 +19,7 @@ with ZipFile(rbz, 'w', ZIP_DEFLATED) as z:
 with ZipFile(source, 'w', ZIP_DEFLATED) as z:
     for file in files:
         z.write(root / 'cabinet_work' / file, 'cabinet_work/' + file)
-    for file in ['check_ruby.cjs', 'dependencies.cjs', 'sketchup_stub.rb', 'test_geometry.rb', 'test_vgd_features.rb', 'test_presets.rb', 'test_deploy.py',
+    for file in ['check_ruby.cjs', 'dependencies.cjs', 'sketchup_stub.rb', 'test_geometry.rb','test_upgrade.rb','test_library.rb','test_upgrade_ui.cjs','test_preview.cjs','native_upgrade.rb', 'test_vgd_features.rb', 'test_presets.rb', 'test_deploy.py',
                  'test_dom.cjs', 'test_payload.cjs', 'test_ui.cjs', 'test_description.rb', 'test_description.cjs', 'description_partial_fixture.json',
                  'defaults.json', 'presets.json', 'redesign_ui.cjs',
                  'ui_beta1.html', 'menu.css', 'menu.js', 'package_menu.py',
@@ -28,9 +28,9 @@ with ZipFile(source, 'w', ZIP_DEFLATED) as z:
         z.write(root / 'cabinet_dev' / file, 'cabinet_dev/' + file)
     z.write(root / 'CODEX_HANDOFF.md', 'CODEX_HANDOFF.md')
     z.write(root / 'AGENTS.md', 'AGENTS.md')
-    for file in ['README.md','PANO_RESEARCH.md','VALIDATION.json']:
+    for file in ['README.md','PANO_RESEARCH.md','UPGRADE_RESEARCH.md','VALIDATION.json']:
         z.write(root/file,file)
-    z.writestr('TESTS.txt', '''VGD Cabinet 4.4.0-beta.2.1 — source and verification
+    z.writestr('TESTS.txt', '''VGD Cabinet 4.5.0-beta.1 — source and verification
 
 Runtime used: Node 24, Ruby 3.2 WebAssembly, JSDOM, Playwright + local Edge.
 Tests run from the extracted root folder.
@@ -43,6 +43,8 @@ node cabinet_dev/redesign_ui.cjs
 node cabinet_dev/test_dom.cjs
 node cabinet_dev/test_payload.cjs
 node cabinet_dev/test_ui.cjs
+node cabinet_dev/test_upgrade_ui.cjs
+node cabinet_dev/test_preview.cjs
 node cabinet_dev/test_description.cjs
 python3 cabinet_dev/package_menu.py
 
@@ -53,7 +55,7 @@ tag recursion, failure transactions and menu/toolbar callbacks; not native geome
 Reload fixture evaluates real runtime files to verify dependency/HTML refresh, beta 4
 bootstrap, menu/toolbar idempotence, VGD observer cleanup, foreign-observer preservation,
 syntax preflight and the exact own-file reload list. No native hot-reload is claimed.
-sync_sketchup_2022.ps1 deploys only the 18 listed VGD Cabinet files to the fixed 2022 path,
+sync_sketchup_2022.ps1 deploys only the 23 listed VGD Cabinet files to the fixed 2022 path,
 backing up changed existing files and verifying SHA256. It does not deploy other plugins.
 No native SketchUp run was available. See HUONG_DAN.txt for manual acceptance checks.
 ''')

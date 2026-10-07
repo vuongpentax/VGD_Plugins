@@ -1,4 +1,15 @@
-VGD_Cabinet 4.4.0-beta.2.1
+VGD_Cabinet 4.5.0-beta.1
+
+NÂNG CẤP 4.5 BETA 1
+- Đặt/vẽ 3 điểm: preview trong suốt màu VGD, cấu kiện và ký hiệu mở thật theo thông số.
+- Component giống hình học/vật liệu và tên loại dùng chung trong tủ; cánh trái/phải tách. Sửa một chi tiết cập nhật các bản giống nó. Khác kích thước giữ riêng.
+- Cánh tủ > Chia khung: Không chia / Ngang / Dọc / Chéo X; ngang/dọc 2–6 ô. Pano/Shaker X dùng thanh đắp; cánh kính dùng ô kính riêng.
+- Cánh tủ > Pano / Shaker: độ lõm Shaker, bản khung, dày tấm, rãnh và khe co giãn. Mặc định chỉ là cấu hình khởi đầu để chỉnh.
+- Mặt hai cụm hộc che hồi giữa; hộc lộ che hồi ngoài theo kiểu phủ cánh. Xà khấu hồi và nối liền trừ module Độc lập.
+- Thư viện: chọn một tủ đã dựng > nhập tên > Lưu mẫu mới. Chọn mẫu > Đặt tủ từ Thư viện. Cập nhật mẫu và đổi tên riêng, không đè tên khác.
+- Lưu cả hình học đã sửa tay vào SKP. Mang mẫu sang máy khác: copy toàn bộ %APPDATA%/VGD/SketchUp/VGD_Cabinet/library, gồm index + assets.
+- Cập nhật thông số tủ sẽ dựng lại; hãy lưu bản sửa thủ công vào Thư viện trước nếu cần giữ nó.
+- Sau cài: Extensions > VGD Cabinet — Tiện ích > VGD — Nạp lại mã; hoặc mở lại SketchUp sau khi lưu model.
 
 DỰNG TỪ MÔ TẢ (BETA 2)
 - Dựng từ mô tả > Hướng dẫn cho ChatGPT: chọn toàn bộ, copy gửi cùng ảnh + rộng/sâu/cao mong muốn.
@@ -34,7 +45,7 @@ MẶC ĐỊNH VGD
 - Xà chặn cánh, xà đón hộc và xà che khe hộc có công tắc/thông số riêng.
 
 CÁNH PANO KHUNG GỖ
-Chọn Cánh tủ > Cấu tạo cánh > Pano khung gỗ, rồi chỉnh trong tab Pano.
+Chọn Cánh tủ > Cấu tạo cánh > Pano khung gỗ, rồi chỉnh trong tab Pano / Shaker.
 Bản đố/bản thanh ngang 60, dày khung 20, pano 6, rãnh 8, khe co giãn 1 mm mỗi cạnh.
 Có thể đổi số ô từ 1 đến 6 và bản thanh chia giữa.
 Khung và pano dùng vật liệu riêng. Rãnh thẳng có hình học thật; chưa dựng mộng góc hoặc soi profile trang trí.

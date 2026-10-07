@@ -11,9 +11,11 @@ require_relative 'utilities'
 require_relative 'reload'
 require_relative 'preset_store'
 require_relative 'description_import'
+require_relative 'preview_mesh'
+require_relative 'library_store'
 module VGD_Cabinet
   remove_const(:VERSION) if const_defined?(:VERSION, false)
-  VERSION = '4.4.0-beta.2.1'
+  VERSION = '4.5.0-beta.1'
   class CabinetSelectionObserver < Sketchup::SelectionObserver
     def onSelectionBulkChange(_s); VGD_Cabinet.sync_current_selection; end
     def onSelectionAdded(_s,_e); VGD_Cabinet.sync_current_selection; end
@@ -21,16 +23,39 @@ module VGD_Cabinet
     def onSelectionCleared(_s); VGD_Cabinet.sync_current_selection; end
   end
   class PlacementTool
-    def initialize(p); @p=p; @ip=Sketchup::InputPoint.new; end
+    def initialize(p, library_name=nil)
+      @p=p; @library_name=library_name; @model=Sketchup.active_model; @ip=Sketchup::InputPoint.new
+      @entry=library_name ? VGD_Cabinet.library_store.entry(library_name) : nil
+      @mesh=@entry ? PreviewMesh.from_data(VGD_Cabinet.library_store.preview(@entry)) : PreviewMesh.new(p)
+    end
     def activate; Sketchup.status_text='Click để đặt tủ theo trục của ngữ cảnh hiện tại; Esc để hủy.'; end
     def onMouseMove(_flags,x,y,view); @ip.pick(view,x,y); view.invalidate; end
-    def draw(view); @ip.draw(view) if @ip.valid?; end
+    def preview_transform
+      point=@ip.position.transform(@model.edit_transform.inverse)
+      @model.edit_transform*Geom::Transformation.translation(point.to_a)
+    end
+    def getExtents
+      bounds=Geom::BoundingBox.new
+      8.times { |i| bounds.add(@mesh.bounds.corner(i).transform(preview_transform)) } if @ip.valid? && !@mesh.bounds.empty?
+      bounds
+    end
+    def draw(view)
+      return unless @ip.valid?
+      @mesh.draw(view,preview_transform)
+      @ip.draw(view)
+      view.draw_text([24,24],"VGD · #{@library_name || 'Đặt tủ mới'} · Click để đặt / Esc để hủy",color:Sketchup::Color.new(125,89,58),size:11)
+    end
     def onLButtonDown(_flags,x,y,view)
       @ip.pick(view,x,y)
       return unless @ip.valid?
       model=Sketchup.active_model
       point=@ip.position.transform(model.edit_transform.inverse)
-      VGD_Cabinet.create_new_cabinet_at(@p,Geom::Transformation.translation(point.to_a))
+      return VGD_Cabinet.report_error(ModelingRules::Invalid.new('Đã đổi file SketchUp. Chọn lại mẫu để đặt.')) unless model.equal?(@model)
+      if @entry
+        VGD_Cabinet.place_library_cabinet(@entry,@library_name,Geom::Transformation.translation(point.to_a))
+      else
+        VGD_Cabinet.create_new_cabinet_at(@p,Geom::Transformation.translation(point.to_a))
+      end
       model.select_tool(nil)
     end
     def onCancel(_reason,_view); Sketchup.active_model.select_tool(nil); end
@@ -211,6 +236,51 @@ module VGD_Cabinet
     def presets
       preset_store.load
     end
+    def library_store
+      root=File.join(ENV['APPDATA'] || File.join(Dir.home,'Library','Application Support'),'VGD','SketchUp','VGD_Cabinet','library')
+      @library_store ||= LibraryStore.new(root)
+    end
+    def send_library
+      @dialog.execute_script("receiveLibrary(#{library_store.listing.to_json});") if dialog_visible?
+    end
+    def save_library(data)
+      model=Sketchup.active_model; inst=find_cabinet_instance
+      raise ModelingRules::Invalid,'Chọn đúng một tủ VGD đã vẽ để lưu vào Thư viện.' unless inst
+      raise ModelingRules::Invalid,'Tủ đang chọn đã đổi; chọn lại trước khi lưu.' unless data['__model_guid'].to_s==model.guid.to_s && data['__target_pid'].to_s==inst.persistent_id.to_s
+      p=normalize(get_cabinet_params(inst))
+      axes=[inst.transformation.xaxis,inst.transformation.yaxis,inst.transformation.zaxis]
+      raise ModelingRules::Invalid,'Tủ có Scale bằng 0 hoặc bị xiên; khôi phục trước khi lưu.' if axes.any? { |axis| axis.length<1e-8 } || axes.map(&:normalize).combination(2).any? { |a,b| a.dot(b).abs>1e-6 }
+      scale=axes.map(&:length); scale[0]*=-1 if axes[0].cross(axes[1]).dot(axes[2])<0
+      library_store.save(data['name'],inst.definition,p,scale,VERSION,data['replace']==true)
+      send_library
+      @dialog.execute_script("selectLibrary(#{data['name'].to_s.strip.to_json});showModelStatus('Đã lưu hình học tủ vào Thư viện.',false);") if dialog_visible?
+    rescue => e
+      report_error(e)
+    end
+    def place_library_cabinet(entry,name,transform)
+      model=Sketchup.active_model; active_tag=model.active_layer; started=false; @busy=true
+      begin
+        model.start_operation('VGD Đặt tủ từ Thư viện',true); started=true; model.active_layer=model.layers[0]
+        definition=library_store.with_load_copy(entry) { |path| model.definitions.load(path) }
+        raise ModelingRules::Invalid,'SketchUp không nạp được mẫu thư viện.' unless definition
+        scale=Geom::Transformation.scaling(*entry.fetch('scale',[1,1,1]))
+        inst=model.active_entities.add_instance(definition,transform*scale)
+        inst.make_unique
+        inst.name=name; inst.layer=model.layers['VGD_CABINET'] || model.layers.add('VGD_CABINET')
+        set_cabinet_params(inst,entry.fetch('params'))
+        model.selection.clear; model.selection.add(inst)
+        model.commit_operation; started=false
+      rescue => e
+        model.abort_operation if started
+        return report_error(e)
+      ensure
+        model.active_layer=active_tag; @busy=false
+      end
+      @description_draft=false
+      @dialog.execute_script('leaveDescriptionDraft();') if dialog_visible?
+      sync_current_selection
+      inst
+    end
     def show_dialog
       if dialog_visible?
         if @observed_model != Sketchup.active_model
@@ -236,9 +306,43 @@ module VGD_Cabinet
       @dialog.add_action_callback('ready') do
         @dialog.execute_script("receiveDescriptionContract(#{DescriptionImport.contract.to_json});")
         sync_current_selection
+        send_library
         @dialog.execute_script("showModelStatus(#{@preset_migration_warning.to_json},true);") if @preset_migration_warning
       end
       @dialog.add_action_callback('create_cabinet') { |_,p| create_new_cabinet(p) }
+      @dialog.add_action_callback('refresh_library') { send_library }
+      @dialog.add_action_callback('save_library') { |_,data| save_library(data) }
+      @dialog.add_action_callback('library_preview') do |_,name|
+        begin
+          entry=library_store.entry(name)
+          @dialog.execute_script("receiveLibraryPreview(#{name.to_json},#{library_store.thumbnail(entry).to_json});")
+        rescue => e
+          report_error(e)
+        end
+      end
+      @dialog.add_action_callback('place_library') do |_,name|
+        begin
+          entry=library_store.entry(name)
+          Sketchup.active_model.select_tool(PlacementTool.new(entry.fetch('params'),name))
+        rescue => e
+          report_error(e)
+        end
+      end
+      @dialog.add_action_callback('rename_library') do |_,data|
+        begin
+          library_store.rename(data['name'],data['source_name']); send_library
+          @dialog.execute_script("selectLibrary(#{data['name'].to_s.strip.to_json});")
+        rescue => e
+          report_error(e)
+        end
+      end
+      @dialog.add_action_callback('delete_library') do |_,name|
+        begin
+          library_store.delete(name); send_library
+        rescue => e
+          report_error(e)
+        end
+      end
       @dialog.add_action_callback('preview_description') { |_,data| preview_description(data) }
       @dialog.add_action_callback('apply_description') { |_,data| apply_description(data) }
       @dialog.add_action_callback('leave_description_draft') { |_,_| leave_description_draft }

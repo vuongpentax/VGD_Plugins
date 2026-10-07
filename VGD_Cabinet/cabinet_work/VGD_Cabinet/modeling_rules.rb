@@ -38,14 +38,22 @@ module VGD_Cabinet
       raise Invalid, 'Số cụm ngăn kéo phải là 1 hoặc 2.' unless [1,2].include?(p['drawer_columns'])
       raise Invalid, 'Chọn kiểu đáy hộc hợp lệ.' unless ['Âm hai bên','Âm bốn phía','Phủ dưới'].include?(p['drawer_bottom_mode'])
       raise Invalid, 'Độ ngậm hậu không được lớn hơn dày hồi.' if !p['back_groove_auto'] && p['back_groove_depth'] > p['t']
-      raise Invalid, 'Chọn kiểu dựng cánh hợp lệ.' unless ['Ván phẳng','Kính khung kim loại','Pano khung gỗ'].include?(p['door_style'])
-      if p['door_style']=='Pano khung gỗ'
+      raise Invalid, 'Chọn kiểu dựng cánh hợp lệ.' unless ['Ván phẳng','Kính khung kim loại','Pano khung gỗ','Shaker'].include?(p['door_style'])
+      raise Invalid, 'Chọn kiểu chia khung hợp lệ.' unless ['Không chia','Ngang','Dọc','Chéo X'].include?(p['frame_division'])
+      raise Invalid, 'Số ô khung cần số nguyên từ 2 đến 6.' unless p['frame_sections']==p['frame_sections'].to_i && p['frame_sections'].between?(2,6)
+      if ['Pano khung gỗ','Shaker'].include?(p['door_style'])
         %w[pano_stile_width pano_rail_width pano_depth pano_panel_thickness pano_groove_depth pano_mid_rail].each do |key|
           raise Invalid,"#{key}: phải từ 1 mm." unless p[key]>=1
         end
         raise Invalid,'Pano phải mỏng hơn khung để còn hai má rãnh.' unless p['pano_panel_thickness']<p['pano_depth']
         raise Invalid,'Ngậm rãnh phải lớn hơn khe co giãn và nhỏ hơn nửa bản khung.' unless p['pano_groove_depth']>p['pano_clearance'] && p['pano_groove_depth']<[p['pano_stile_width'],p['pano_rail_width'],p['pano_mid_rail']].min/2
         raise Invalid,'Số ô pano phải là số nguyên từ 1 đến 6.' unless p['pano_panel_count']==p['pano_panel_count'].to_i && p['pano_panel_count'].between?(1,6)
+        if ['Ngang','Dọc'].include?(p['frame_division']) && p['frame_bar_width']>0
+          raise Invalid,'Thanh chia khung phải rộng hơn hai rãnh ngậm pano.' unless p['frame_bar_width']>2*p['pano_groove_depth']
+        end
+        if p['door_style']=='Shaker'
+          raise Invalid,'Độ lõm Shaker phải còn má khung trước và sau tấm giữa.' unless p['shaker_recess']>=1 && p['shaker_recess']+p['pano_panel_thickness']<=p['pano_depth']-1
+        end
       end
       if p['door_style'] == 'Kính khung kim loại'
         %w[metal_frame_width metal_frame_depth glass_thickness].each do |key|
@@ -175,7 +183,7 @@ module VGD_Cabinet
       if p['front_bevel']
         door_t=Modeling.door_depth_mm(p)
         raise Invalid, 'Mép móc tay cánh phải nhỏ hơn dày cánh.' unless p['bevel_lip'] > 0 && p['bevel_lip'] < door_t
-        if p['door_style']=='Pano khung gỗ'
+        if ['Pano khung gỗ','Shaker'].include?(p['door_style'])
           raise Invalid,'Bản thanh trên pano quá nhỏ cho móc tay và rãnh.' unless p['pano_rail_width']>door_t-p['bevel_lip']+p['pano_groove_depth']
         end
       end

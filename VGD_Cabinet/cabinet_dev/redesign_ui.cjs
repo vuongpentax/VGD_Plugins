@@ -11,7 +11,7 @@ const field=id=>get(id).closest('.form-group,.checkbox-row');
 const section=(title)=>el('section',{class:'settings-section'},'<h3>'+title+'</h3>');
 const details=(title,id)=>el('details',{class:'advanced',...(id?{id}:{})},'<summary>'+title+'</summary>');
 const scripts=[...d.querySelectorAll('script')];
-const header=q('.header');header.querySelector('.header-left').innerHTML='<span>VGD_CABINET <small>4.4 · beta 2.1</small></span>';
+const header=q('.header');header.querySelector('.header-left').innerHTML='<span>VGD_CABINET <small>4.5 · beta 1</small></span>';
 const preset=q('.preset-section');const save=details('Lưu / xóa mẫu tủ');save.querySelector('summary').textContent='Lưu / xóa mẫu tủ';save.append(q('.preset-row'));preset.append(save);
 save.querySelector('summary').textContent='Lưu / đổi tên / xóa mẫu tủ';
 get('preset_name').placeholder='Tên mẫu mới / tên mới';
@@ -50,6 +50,18 @@ const description=el('section',{id:'page_description',class:'menu-page',hidden:'
 <button type="button" id="btn_description_leave" class="btn-secondary" onclick="returnToSelectedCabinet()" hidden>Trở lại tủ đang chọn</button>
 <p>Nhập chỉ đổi bản nháp. Không tự dựng, không cập nhật tủ đang chọn, không tự lưu mẫu. Kiểm tra các giá trị ước lượng trước khi bấm Đặt tủ mới.</p>`);
 content.append(description);
+nav.insertBefore(el('button',{type:'button',class:'menu-button','data-page':'library','aria-controls':'page_library',onclick:"selectPage('library')"},'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h7v16H3z M14 4h7v16h-7z M3 8h7 M14 8h7"/></svg><span>Thư viện</span>'),nav.lastChild);
+content.append(el('section',{id:'page_library',class:'menu-page',hidden:''},`<h2>Thư viện tủ</h2>
+<p>Lưu tủ đang chọn, gồm cả các chi tiết đã sửa thủ công. Mẫu được giữ trên máy để chọn và đặt lại sau.</p>
+<section class="settings-section"><h3>Lưu tủ đang chọn</h3>
+<label for="library_name">Tên mẫu tủ</label><input type="text" id="library_name" data-library-control maxlength="80" placeholder="Ví dụ: Tủ áo phòng ngủ">
+<div class="description-actions"><button type="button" id="btn_library_save" onclick="saveLibrary(false)" disabled>Lưu mẫu mới</button><button type="button" id="btn_library_replace" class="btn-secondary" onclick="saveLibrary(true)" disabled>Cập nhật mẫu đã chọn</button></div></section>
+<label for="library_search">Tìm mẫu</label><input type="search" id="library_search" data-library-control placeholder="Nhập tên mẫu" oninput="renderLibrary()">
+<div id="library_list" class="library-list" aria-label="Các mẫu tủ"></div><p id="library_empty" role="status">Chưa có mẫu. Chọn một tủ trong model rồi lưu mẫu mới.</p>
+<section id="library_detail" class="settings-section" hidden><h3 id="library_title"></h3><img id="library_thumbnail" alt="Hình mẫu tủ đã lưu" hidden><p id="library_dimensions"></p>
+<button type="button" onclick="placeLibrary()">Đặt tủ từ Thư viện</button>
+<div class="description-actions"><button type="button" class="btn-secondary" onclick="renameLibrary()">Đổi tên theo ô nhập</button><button type="button" class="btn-secondary" onclick="deleteLibrary()">Xóa khỏi danh sách</button></div></section>
+<button type="button" class="btn-secondary" onclick="refreshLibrary()">Nạp lại danh sách</button>`));
 const tabs=(parent,group,items)=>{const bar=el('div',{class:'subnav','aria-label':'Mục '+group});parent.append(bar);const out={};items.forEach(([id,title],i)=>{bar.append(el('button',{type:'button','data-subgroup':group,'data-subtab':id,onclick:"selectSubpage('"+group+"','"+id+"')",'aria-controls':'sub_'+group+'_'+id},title));const p=el('div',{id:'sub_'+group+'_'+id,'data-subpanel':group,hidden:''});parent.append(p);out[id]=p});return out};
 panels.general.append(preset);
 const dimensions=section('Kích thước phủ bì');dimensions.append(dim);panels.general.append(dimensions);
@@ -65,11 +77,17 @@ const c=tabs(panels.compartments,'compartments',[['dividers','Vách đứng'],['
 ['div_count','div_pos','auto_divider_wide','max_compartment_w'].forEach(id=>c.dividers.append(field(id)));
 ['shelf_count','shelf_type','shelf_side_clearance','shelf_front_setback'].forEach(id=>c.shelves.append(field(id)));c.tiers.append(over);
 c.dividers.append(el('p',{class:'hint'},'Vách và đợt áp dụng trong từng module.'));
-const dt=tabs(panels.doors,'doors',[['front','Cấu tạo cánh'],['glass','Khung/kính'],['pano','Pano'],['handle','Móc tay / xà chặn']]);dt.front.append(doors);dt.handle.append(bevel);
+const dt=tabs(panels.doors,'doors',[['front','Cấu tạo cánh'],['glass','Khung/kính'],['pano','Pano / Shaker'],['division','Chia khung'],['handle','Móc tay / xà chặn']]);dt.front.append(doors);dt.handle.append(bevel);
 const doorFields=el('div',{id:'door_fields'});[...doors.children].slice(1).forEach(x=>doorFields.append(x));doors.append(doorFields);
-doorFields.prepend(el('div',{class:'form-group'},'<label for="door_style">Kiểu dựng</label><select id="door_style" onchange="refreshContextUI();if(this.value===\'Kính khung kim loại\')selectSubpage(\'doors\',\'glass\');if(this.value===\'Pano khung gỗ\')selectSubpage(\'doors\',\'pano\')"><option>Ván phẳng</option><option>Kính khung kim loại</option><option>Pano khung gỗ</option></select>'));
+doorFields.prepend(el('div',{class:'form-group'},'<label for="door_style">Kiểu dựng</label><select id="door_style" onchange="refreshContextUI();if(this.value===\'Kính khung kim loại\')selectSubpage(\'doors\',\'glass\');if(this.value===\'Pano khung gỗ\'||this.value===\'Shaker\')selectSubpage(\'doors\',\'pano\')"><option>Ván phẳng</option><option>Kính khung kim loại</option><option>Pano khung gỗ</option><option>Shaker</option></select>'));
+dt.division.append(el('div',{class:'form-group'},'<label for="frame_division">Kiểu chia khung</label><select id="frame_division" onchange="document.getElementById(\'pano_panel_count\').value=1;refreshContextUI()"><option>Không chia</option><option>Ngang</option><option>Dọc</option><option>Chéo X</option></select>'));
+dt.division.append(el('div',{class:'frame-patterns'},[['Không chia',''],['Ngang','M4 12h16'],['Dọc','M12 4v16'],['Chéo X','M4 4l16 16 M20 4L4 20']].map(([name,path])=>'<button type="button" class="btn-secondary" onclick="chooseFrameDivision(\''+name+'\')" aria-label="'+name+'"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4z '+path+'"/></svg><span>'+name+'</span></button>').join('')));
+dt.division.append(el('div',{class:'form-group'},'<label for="frame_sections">Số ô chia đều</label><input type="number" id="frame_sections" min="2" max="6" step="1" value="2">'));
+dt.division.append(el('div',{class:'form-group'},'<label for="frame_bar_width">Bản thanh chia (0 = theo khung)</label><input type="number" id="frame_bar_width" min="0" step="0.5" value="0">'));
+dt.division.append(el('p',{class:'hint'},'Ngang/dọc chia đều 2–6 ô. Chéo X: cánh kính chia ô kính; pano/Shaker dùng thanh đắp chéo trên tấm lõm, giao nhau không chồng khối.'));
 [['pano_stile_width','Bản đố đứng',60],['pano_rail_width','Bản thanh trên/dưới',60],['pano_depth','Dày khung cánh',20],['pano_panel_thickness','Dày tấm pano',6],['pano_groove_depth','Sâu rãnh ngậm',8],['pano_clearance','Khe co giãn mỗi cạnh',1],['pano_mid_rail','Bản thanh chia giữa',60]].forEach(([id,label,n])=>dt.pano.append(el('div',{class:'form-group'},'<label for="'+id+'">'+label+' (mm)</label><input id="'+id+'" type="number" value="'+n+'" min="0" step="0.5">')));
 dt.pano.append(el('div',{class:'form-group'},'<label for="pano_panel_count">Số ô pano theo chiều cao</label><input id="pano_panel_count" type="number" value="1" min="1" max="6" step="1">'));
+dt.pano.append(el('div',{class:'form-group'},'<label for="shaker_recess">Độ lõm mặt tấm Shaker (mm)</label><input id="shaker_recess" type="number" value="6" min="1" step="0.5">'));
 dt.pano.append(el('p',{class:'hint'},'Khung gỗ và pano phẳng riêng; tấm giữa ngậm rãnh và chừa khe co giãn. Mặc định khung 60 × 20, pano 6, ngậm 8, khe 1 mm/cạnh. Chỉnh theo vật liệu; chưa dựng mộng góc hoặc profile soi trang trí.'));
 dt.glass.append(el('p',{class:'hint'},'Cánh kính khung kim loại. Khung 4 cạnh và kính giữa chiều dày; dùng chung khe cánh.'));
 [['metal_frame_width','Bản khung',20],['metal_frame_depth','Dày khung',20],['glass_thickness','Dày kính',5]].forEach(([id,label,n])=>dt.glass.append(el('div',{class:'form-group'},'<label for="'+id+'">'+label+' (mm)</label><input type="number" id="'+id+'" value="'+n+'" min="1" step="0.5">')));
@@ -119,8 +137,8 @@ for(const [id,value]of Object.entries(values)){
   html=html.replace(new RegExp("(getNumValue\\('"+id+"',\\s*)[0-9.]+(\\))",'g'),'$1'+value+'$2');
   html=html.replace(new RegExp('(id="'+id+'"[^>]*value=")[0-9.]+','g'),'$1'+value);
 }
-html=html.replace('VGD_Cabinet UI v4.3.0 beta','VGD Cabinet 4.4.0-beta.2.1');
-html=html.replace("document.getElementById('btn_update').disabled = !selectedPid;","document.getElementById('btn_update').disabled = !selectedPid;\n      document.getElementById('selection_mode').textContent = selectedPid ? 'Đang sửa tủ đã chọn' : 'Tạo tủ mới';");
+html=html.replace('VGD_Cabinet UI v4.3.0 beta','VGD Cabinet 4.5.0-beta.1');
+html=html.replace("document.getElementById('btn_update').disabled = !selectedPid;","document.getElementById('btn_update').disabled = !selectedPid;\n      document.getElementById('selection_mode').textContent = selectedPid ? 'Đang sửa tủ đã chọn' : 'Tạo tủ mới';\n      refreshContextUI();");
 html=html.replace('        renderDrawerGapUI();\n      } finally', '        renderDrawerGapUI();\n        refreshContextUI();\n      } finally');
 html=html.replace("      initTheme();", "      initMenu();\n      initTheme();");
 html=html.replaceAll('-- Chọn Preset --','-- Chọn mẫu tủ --');
@@ -128,6 +146,10 @@ html=html.replace('        back_mode:', `        door_style: document.getElement
         handle_split_v1: true,
         drawer_bevel: document.getElementById('drawer_bevel').checked,
         drawer_bevel_lip: getNumValue('drawer_bevel_lip',2),
+        frame_division: document.getElementById('frame_division').value,
+        frame_sections: getNumValue('frame_sections',2),
+        frame_bar_width: getNumValue('frame_bar_width',0),
+        shaker_recess: getNumValue('shaker_recess',6),
         ${['pano_stile_width','pano_rail_width','pano_depth','pano_panel_thickness','pano_groove_depth','pano_clearance','pano_panel_count','pano_mid_rail'].map(id=>id+': getNumValue(\''+id+'\','+(id==='pano_depth'?20:id==='pano_panel_thickness'?6:id==='pano_groove_depth'?8:id==='pano_clearance'||id==='pano_panel_count'?1:60)+'),').join('\n        ')}
         metal_frame_width: getNumValue('metal_frame_width',20),
         metal_frame_depth: getNumValue('metal_frame_depth',20),
@@ -168,6 +190,8 @@ html=html.replace('      if (!params) return;',`      if (!params) return;
         params=Object.assign({},params,{handle_split_v1:true,drawer_bevel:params.front_bevel||false,drawer_bevel_lip:params.bevel_lip===undefined?2:params.bevel_lip});
       }`);
 // Preserve imported fields without editable controls (e.g. shelf_depth_clearance).
+html=html.replaceAll("t.id !== 'preset_name' && t.id !== 'preset_select'", "t.id !== 'preset_name' && t.id !== 'preset_select' && !t.closest('#page_library')");
+html=html.replaceAll("t.id !== 'preset_name')", "t.id !== 'preset_name' && !t.closest('#page_library'))");
 html=html.replace('</script>', `
 var baseGetFormData=getFormData;
 getFormData=function(){

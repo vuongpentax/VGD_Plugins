@@ -2,6 +2,7 @@
 
 # Interactive three-click cabinet placement tool. Kept separate from the
 # cabinet data/orchestration layer so drawing UX can evolve independently.
+require_relative 'preview_mesh'
 module VGD_Cabinet
   class CabinetDrawTool
     def initialize(params)
@@ -10,6 +11,9 @@ module VGD_Cabinet
       @pt1 = nil
       @pt2 = nil
       @pt3 = nil
+      @preview_key = nil
+      @preview_mesh = nil
+      @placement_direction = nil
       @ip = Sketchup::InputPoint.new
       @ip_first = Sketchup::InputPoint.new
     end
@@ -19,6 +23,9 @@ module VGD_Cabinet
       @pt1 = nil
       @pt2 = nil
       @pt3 = nil
+      @preview_key = nil
+      @preview_mesh = nil
+      @placement_direction = nil
       Sketchup.vcb_label = "Rộng, Sâu W,D (mm)"
       Sketchup.vcb_value = ""
       Sketchup.status_text = "Click điểm 1: Chọn vị trí góc bắt đầu đáy tủ"
@@ -35,6 +42,10 @@ module VGD_Cabinet
         bb.add(@ip.position) if @ip && @ip.valid?
         bb.add(@pt2) if @pt2
         bb.add(@pt3) if @pt3
+        bb.add(@pt1.offset(Z_AXIS, @params['h'].to_f.mm))
+        if @preview_mesh && @preview_transform
+          8.times { |i| bb.add(@preview_mesh.bounds.corner(i).transform(@preview_transform)) }
+        end
       end
       bb
     end
@@ -93,6 +104,7 @@ module VGD_Cabinet
         @ip.pick(view, x, y)
         return unless @ip.valid?
         @pt1 = @ip.position
+        @placement_direction = view.camera.direction.clone
         @ip_first.copy!(@ip)
         @state = 1
         Sketchup.vcb_label = "Rộng, Sâu W,D (mm)"
@@ -147,6 +159,10 @@ module VGD_Cabinet
       if key == 27 # ESC Key
         if @state > 0
           @state -= 1
+          @pt2 = nil if @state == 1
+          @pt3 = nil
+          @preview_key = nil
+          @preview_mesh = nil
           @state == 0 ? reset_tool(view) : view.invalidate
         else
           Sketchup.active_model.select_tool(nil)
@@ -160,21 +176,21 @@ module VGD_Cabinet
 
       case @state
       when 0
-        step_title = "BƯỚC 1/2: CHỌN MẶT ĐÁY"
+        step_title = "ĐIỂM 1/3: CHỌN GÓC ĐÁY"
         w_str = "-- mm"
         d_str = "-- mm"
         h_def = (@params['h'] || 2400).to_f.round
         h_str = "#{h_def} mm (Mặc định)"
         guide_str = "Click điểm 1 để chọn góc bắt đầu đáy tủ"
       when 1
-        step_title = "BƯỚC 1/2: ĐỊNH HÌNH MẶT ĐÁY (SNAP 50mm)"
+        step_title = "ĐIỂM 2/3: CHỌN GÓC ĐỐI DIỆN"
         w_str = (w_mm && w_mm >= 10) ? "#{w_mm.round} mm" : "-- mm"
         d_str = (d_mm && d_mm >= 10) ? "#{d_mm.round} mm" : "-- mm"
         h_def = (@params['h'] || 2400).to_f.round
         h_str = "#{h_def} mm (Mặc định)"
         guide_str = "Click điểm 2 hoặc gõ W,D vào VCB rồi Enter"
       when 2
-        step_title = "BƯỚC 2/2: KÉO CHIỀU CAO (SNAP 50mm)"
+        step_title = "ĐIỂM 3/3: CHỌN CHIỀU CAO"
         w_str = (w_mm && w_mm >= 10) ? "#{w_mm.round} mm" : "-- mm"
         d_str = (d_mm && d_mm >= 10) ? "#{d_mm.round} mm" : "-- mm"
         h_str = (h_mm && h_mm >= 10) ? "#{h_mm.round} mm" : "-- mm"
@@ -216,7 +232,7 @@ module VGD_Cabinet
       view.draw_text([hud_x + 14, hud_y + 32], "Rộng (W): #{w_str}   |   Sâu (D): #{d_str}", { :color => Sketchup::Color.new(255, 255, 255), :size => 10, :bold => true })
 
       # Kích thước Cao (H) x Dày ván (t)
-      view.draw_text([hud_x + 14, hud_y + 53], "Cao (H):  #{h_str}   |   Dày ván: #{t_val} mm", { :color => Sketchup::Color.new(243, 156, 18), :size => 10, :bold => true })
+      view.draw_text([hud_x + 14, hud_y + 53], "Cao (H):  #{h_str}   |   Dày ván: #{t_val} mm", { :color => Sketchup::Color.new(200, 169, 138), :size => 10, :bold => true })
 
       # Dòng hướng dẫn thao tác
       view.draw_text([hud_x + 14, hud_y + 75], "💡 #{guide_str}", { :color => Sketchup::Color.new(180, 180, 180), :size => 9 })
@@ -224,149 +240,50 @@ module VGD_Cabinet
 
     def draw(view)
       @ip.draw(view) if @ip.valid?
-
-      if @state == 0
-        # HUD cố định ngay từ bước khởi tạo
+      unless @pt1
         draw_fixed_hud(view)
-
-      elsif @state == 1 && @pt1
-        pt = get_snapped_pt2(@ip.position)
-        min_x = [@pt1.x, pt.x].min
-        max_x = [@pt1.x, pt.x].max
-        min_y = [@pt1.y, pt.y].min
-        max_y = [@pt1.y, pt.y].max
-        z = @pt1.z
-
-        p1 = Geom::Point3d.new(min_x, min_y, z)
-        p2 = Geom::Point3d.new(max_x, min_y, z)
-        p3 = Geom::Point3d.new(max_x, max_y, z)
-        p4 = Geom::Point3d.new(min_x, max_y, z)
-
-        cfg = compute_cabinet_placement(min_x, max_x, min_y, max_y, z, z + 10.mm, view.camera.direction)
-        w_mm = cfg[:w_mm]
-        d_mm = cfg[:d_mm]
-
-        # 1. Fill mặt đáy bán trong suốt màu ấm
-        view.drawing_color = Sketchup::Color.new(180, 137, 99, 65)
-        view.draw(GL_POLYGON, [p1, p2, p3, p4])
-
-        # 2. Viền nét đáy rõ ràng
-        view.drawing_color = Sketchup::Color.new(142, 107, 76)
-        view.line_width = 3
-        view.draw(GL_LINE_LOOP, [p1, p2, p3, p4])
-
-        # 3. Nổi bật cạnh mặt cánh tủ hướng về camera
-        door_p1, door_p2 = cfg[:door_pts][0], cfg[:door_pts][1]
-        view.drawing_color = Sketchup::Color.new(230, 126, 34)
-        view.line_width = 5
-        view.draw(GL_LINES, [door_p1, door_p2])
-
-        # 4. HUD hiển thị kích thước W, D, H, Dày ván cố định góc trên màn hình
-        draw_fixed_hud(view, w_mm, d_mm, nil)
-
-      elsif @state == 2 && @pt1 && @pt2
-        min_x = [@pt1.x, @pt2.x].min
-        max_x = [@pt1.x, @pt2.x].max
-        min_y = [@pt1.y, @pt2.y].min
-        max_y = [@pt1.y, @pt2.y].max
-
-        z1 = @pt1.z
-        z2 = @pt3 ? @pt3.z : @pt1.z
-        min_z = [z1, z2].min
-        max_z = [z1, z2].max
-
-        cfg = compute_cabinet_placement(min_x, max_x, min_y, max_y, min_z, max_z, view.camera.direction)
-        w_mm = cfg[:w_mm]
-        d_mm = cfg[:d_mm]
-        h_mm = cfg[:h_mm]
-
-        p1 = Geom::Point3d.new(min_x, min_y, min_z)
-        p2 = Geom::Point3d.new(max_x, min_y, min_z)
-        p3 = Geom::Point3d.new(max_x, max_y, min_z)
-        p4 = Geom::Point3d.new(min_x, max_y, min_z)
-
-        t1 = Geom::Point3d.new(min_x, min_y, max_z)
-        t2 = Geom::Point3d.new(max_x, min_y, max_z)
-        t3 = Geom::Point3d.new(max_x, max_y, max_z)
-        t4 = Geom::Point3d.new(min_x, max_y, max_z)
-
-        # 1. Các mặt khối 3D bán trong suốt
-        view.drawing_color = Sketchup::Color.new(180, 137, 99, 45)
-        view.draw(GL_QUADS, [
-          p1, p2, t2, t1,
-          p2, p3, t3, t2,
-          p3, p4, t4, t3,
-          p4, p1, t1, t4,
-          p1, p2, p3, p4,
-          t1, t2, t3, t4
-        ])
-
-        # 2. Highlight mặt cánh tủ (hướng camera) màu ấm nổi bật
-        view.drawing_color = Sketchup::Color.new(230, 126, 34, 70)
-        view.draw(GL_QUADS, cfg[:door_pts])
-
-        # 3. Khung viền các cạnh tủ
-        view.drawing_color = Sketchup::Color.new(142, 107, 76)
-        view.line_width = 2
-        view.draw(GL_LINE_LOOP, [p1, p2, p3, p4])
-        view.draw(GL_LINE_LOOP, [t1, t2, t3, t4])
-        view.draw(GL_LINES, [p1, t1, p2, t2, p3, t3, p4, t4])
-
-        # Viền mặt cánh tủ đậm hơn
-        view.drawing_color = Sketchup::Color.new(211, 84, 0)
-        view.line_width = 3
-        view.draw(GL_LINE_LOOP, cfg[:door_pts])
-
-        # 4. Trục dóng chiều cao màu cam
-        view.drawing_color = Sketchup::Color.new(230, 126, 34)
-        view.line_width = 2
-        view.draw(GL_LINES, [Geom::Point3d.new(@pt1.x, @pt1.y, min_z), Geom::Point3d.new(@pt1.x, @pt1.y, max_z)])
-
-        # 5. Preview hồi giữa dùng đúng rule với GeometryEngine.
-        # Trước đây Draw Tool chỉ thêm tối đa 1 hồi nên preview có thể khác tủ thật khi tủ rất rộng.
-        div_count = GeometryEngine.effective_divider_count_mm(@params, w_mm)
-        if div_count > 0 && w_mm > 50
-          view.drawing_color = Sketchup::Color.new(100, 100, 100, 140)
-          view.line_width = 1
-          origin = cfg[:origin]
-          v_x = cfg[:v_x]
-          v_y = cfg[:v_y]
-          v_z = cfg[:v_z]
-          w_inch = w_mm.mm
-          d_inch = d_mm.mm
-          h_inch = h_mm.mm
-
-          (1..div_count).each do |i|
-            frac = i.to_f / (div_count + 1)
-            dist_x = w_inch * frac
-            dp1 = origin.offset(v_x, dist_x)
-            dp2 = dp1.offset(v_y, -d_inch)
-            dt2 = dp2.offset(v_z, h_inch)
-            dt1 = dp1.offset(v_z, h_inch)
-            view.draw(GL_LINE_LOOP, [dp1, dp2, dt2, dt1])
+        return
+      end
+      opposite=@pt2 || (@ip.valid? ? get_snapped_pt2(@ip.position) : @pt1)
+      min_x,max_x=[@pt1.x,opposite.x].minmax
+      min_y,max_y=[@pt1.y,opposite.y].minmax
+      min_z,max_z=@pt3 ? [@pt1.z,@pt3.z].minmax : [@pt1.z,@pt1.z+@params['h'].to_f.mm]
+      direction=@placement_direction || view.camera.direction
+      cfg=compute_cabinet_placement(min_x,max_x,min_y,max_y,min_z,max_z,direction)
+      w=cfg[:w_mm]; depth=cfg[:d_mm]; height=cfg[:h_mm]
+      if max_x-min_x>=100.mm && max_y-min_y>=100.mm && max_z-min_z>=100.mm
+        key=[w,depth,height].map { |value| value.round(1) }
+        if @preview_key!=key
+          @preview_key=key; @preview_mesh=nil; @preview_error=nil
+          begin
+            @preview_mesh=PreviewMesh.new(VGD_Cabinet.normalize(params_for_size(w,depth,height)))
+          rescue ModelingRules::Invalid => error
+            @preview_error=error.message
           end
         end
-
-        # 6. Preview đường chia tủ 2 tầng theo đúng rule của GeometryEngine.
-        split_rule = GeometryEngine.resolve_overheight_mm(@params, h_mm)
-        if split_rule[:is_overheight] && split_rule[:h_bottom]
-          split_h = split_rule[:h_bottom].to_f.mm
-          origin = cfg[:origin]
-          v_x = cfg[:v_x]
-          v_y = cfg[:v_y]
-          v_z = cfg[:v_z]
-          sp1 = origin.offset(v_z, split_h)
-          sp2 = sp1.offset(v_x, w_mm.mm)
-          sp3 = sp2.offset(v_y, -d_mm.mm)
-          sp4 = sp1.offset(v_y, -d_mm.mm)
-          view.drawing_color = Sketchup::Color.new(230, 126, 34, 210)
-          view.line_width = 2
-          view.draw(GL_LINE_LOOP, [sp1, sp2, sp3, sp4])
-        end
-
-        # 7. HUD hiển thị kích thước W, D, H, Dày ván cố định góc trên màn hình
-        draw_fixed_hud(view, w_mm, d_mm, h_mm)
+        @preview_transform=cfg[:tr]
+        @preview_mesh.draw(view,@preview_transform) if @preview_mesh
       end
+      view.drawing_color=Sketchup::Color.new(180,137,99,220)
+      view.line_stipple=''; view.line_width=2
+      base=[Geom::Point3d.new(min_x,min_y,min_z),Geom::Point3d.new(max_x,min_y,min_z),
+            Geom::Point3d.new(max_x,max_y,min_z),Geom::Point3d.new(min_x,max_y,min_z)]
+      view.draw(GL_LINE_LOOP,base)
+      draw_fixed_hud(view,w,depth,height)
+      view.draw_text([38,130],@preview_error,color:Sketchup::Color.new(125,89,58),size:10) if @preview_error
+    ensure
+      view.line_stipple=''; view.line_width=1
+    end
+
+    def params_for_size(width,depth,height)
+      result=@params.merge('w'=>width.round(1),'d'=>depth.round(1),'h'=>height.round(1))
+      if @params['module_mode']=='Độc lập' && !@params['module_widths'].to_s.strip.empty?
+        widths=ModelingRules.widths(@params)
+        resized=widths.map { |value| (value*width/widths.sum).round(3) }
+        resized[-1]=(width-resized[0...-1].sum).round(3)
+        result['module_widths']=resized.join(';')
+      end
+      result
     end
 
     private
@@ -463,6 +380,9 @@ module VGD_Cabinet
       @pt1 = nil
       @pt2 = nil
       @pt3 = nil
+      @preview_key = nil
+      @preview_mesh = nil
+      @placement_direction = nil
       Sketchup.vcb_label = "Rộng, Sâu W,D (mm)"
       Sketchup.vcb_value = ""
       Sketchup.status_text = "Click điểm 1: Chọn góc bắt đầu đáy tủ"
@@ -480,15 +400,13 @@ module VGD_Cabinet
       min_z = [z1, z2].min
       max_z = [z1, z2].max
 
-      cfg = compute_cabinet_placement(min_x, max_x, min_y, max_y, min_z, max_z, view.camera.direction)
+      cfg = compute_cabinet_placement(min_x, max_x, min_y, max_y, min_z, max_z, @placement_direction || view.camera.direction)
       w_mm = cfg[:w_mm]
       d_mm = cfg[:d_mm]
       h_mm = cfg[:h_mm]
       tr = cfg[:tr]
 
-      @params['w'] = w_mm.round(1)
-      @params['d'] = d_mm.round(1)
-      @params['h'] = h_mm.round(1)
+      @params = params_for_size(w_mm,d_mm,h_mm)
 
       # Resolve automatic structural rules using the exact same helpers as final geometry.
       split_rule = GeometryEngine.resolve_overheight_mm(@params, h_mm)

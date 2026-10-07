@@ -8,6 +8,7 @@ setTimeout(()=>{try{
   const oldIDs=[...old.window.document.querySelectorAll('input,select')].map(e=>e.id).filter(id=>id!=='master_card_toggle').sort();
   const newKeys=['door_style','metal_frame_width','metal_frame_depth','glass_thickness','metal_finish','glass_finish','back_groove_auto','back_groove_depth','drawer_columns','drawer_frame_depth','drawer_frame_rail_width','drawer_frame_stop_rail','drawer_frame_stop_rail_h','drawer_frame_stop_rail_drop','drawer_bottom_mode'];
   newKeys.push('handle_split_v1','drawer_bevel','drawer_bevel_lip','pano_stile_width','pano_rail_width','pano_depth','pano_panel_thickness','pano_groove_depth','pano_clearance','pano_panel_count','pano_mid_rail');
+  newKeys.push('frame_division','frame_sections','frame_bar_width','shaker_recess','library_name','library_search');
   const newIDs=[...now.window.document.querySelectorAll('input,select')].map(e=>e.id).filter(id=>!newKeys.includes(id)).sort();
   assert.deepStrictEqual(newIDs,oldIDs,'Missing/extra parameter controls');
   for(const [name,params] of Object.entries({defaults,...presets})){

@@ -29,10 +29,19 @@ function refreshContextUI() {
   var glass=byId('door_style').value==='Kính khung kim loại'&&byId('opt_door').value!=='Không Cánh';
   document.querySelector('[data-subgroup="doors"][data-subtab="glass"]').hidden=!glass;
   if(!glass&&!byId('sub_doors_glass').hidden)selectSubpage('doors','front');
-  var pano=byId('door_style').value==='Pano khung gỗ'&&byId('opt_door').value!=='Không Cánh';
+  var pano=['Pano khung gỗ','Shaker'].includes(byId('door_style').value)&&byId('opt_door').value!=='Không Cánh';
   document.querySelector('[data-subgroup="doors"][data-subtab="pano"]').hidden=!pano;
   if(!pano&&!byId('sub_doors_pano').hidden)selectSubpage('doors','front');
   showRow('pano_mid_rail',Number(byId('pano_panel_count').value)>1);
+  showRow('pano_panel_count',byId('frame_division').value==='Không chia');
+  showRow('shaker_recess',byId('door_style').value==='Shaker');
+  var framed=glass||pano;
+  document.querySelector('[data-subgroup="doors"][data-subtab="division"]').hidden=!framed;
+  if(!framed&&!byId('sub_doors_division').hidden)selectSubpage('doors','front');
+  showRow('frame_sections',['Ngang','Dọc'].includes(byId('frame_division').value));
+  showRow('frame_bar_width',byId('frame_division').value!=='Không chia');
+  if(byId('btn_library_save'))byId('btn_library_save').disabled=!selectedPid;
+  if(byId('btn_library_replace'))byId('btn_library_replace').disabled=!selectedPid||!selectedLibrary;
   showRow('max_door_w',byId('auto_door_count').checked);
   byId('drawer_fields').hidden=byId('opt_drawer').value==='Không';
   var frame=byId('opt_drawer').value==='Âm';
@@ -53,6 +62,46 @@ function initMenu() {
   document.addEventListener('input',refreshContextUI);document.addEventListener('change',refreshContextUI);
   refreshContextUI();
 }
+function chooseFrameDivision(name){
+  var field=document.getElementById('frame_division');field.value=name;document.getElementById('pano_panel_count').value=1;
+  field.dispatchEvent(new Event('change',{bubbles:true}));refreshContextUI();
+}
+var libraryItems=[],selectedLibrary=null;
+function receiveLibrary(items){libraryItems=Array.isArray(items)?items:[];if(!libraryItems.some(function(item){return item.name===selectedLibrary;}))selectedLibrary=null;renderLibrary();}
+function renderLibrary(){
+  var list=document.getElementById('library_list');list.replaceChildren();
+  var search=document.getElementById('library_search').value.toLocaleLowerCase();
+  var filtered=libraryItems.filter(function(item){return item.name.toLocaleLowerCase().includes(search);});
+  filtered.forEach(function(item){
+    var button=document.createElement('button');button.type='button';button.className='library-item';button.setAttribute('aria-pressed',String(item.name===selectedLibrary));
+    var name=document.createElement('strong');name.textContent=item.name;button.appendChild(name);
+    var size=document.createElement('span');size.textContent=(item.dimensions||[]).join(' × ')+' mm';button.appendChild(size);
+    button.onclick=function(){selectLibrary(item.name);};list.appendChild(button);
+  });
+  var empty=document.getElementById('library_empty');empty.hidden=filtered.length>0;
+  empty.textContent=libraryItems.length?'Không tìm thấy mẫu phù hợp.':'Chưa có mẫu. Chọn một tủ trong model rồi lưu mẫu mới.';
+  var item=libraryItems.find(function(value){return value.name===selectedLibrary;});
+  document.getElementById('library_detail').hidden=!item;
+  if(item){document.getElementById('library_title').textContent=item.name;document.getElementById('library_dimensions').textContent=item.dimensions.join(' × ')+' mm · VGD '+item.version;}
+  refreshContextUI();
+}
+function selectLibrary(name){
+  if(!libraryItems.some(function(item){return item.name===name;}))return;
+  selectedLibrary=name;document.getElementById('library_name').value=name;
+  document.getElementById('library_thumbnail').hidden=true;renderLibrary();
+  if(window.sketchup)window.sketchup.library_preview(name);
+}
+function receiveLibraryPreview(name,image){if(name!==selectedLibrary)return;var e=document.getElementById('library_thumbnail');e.hidden=!image;if(image)e.src=image;}
+function saveLibrary(replace){
+  var name=replace?selectedLibrary:document.getElementById('library_name').value.trim();
+  if(!selectedPid||!name){showModelStatus('Chọn tủ đã vẽ và nhập tên mẫu.',true);return;}
+  if(updateTimer){clearTimeout(updateTimer);updateTimer=null;}
+  if(window.sketchup)window.sketchup.save_library({name:name,replace:replace===true,__target_pid:selectedPid,__model_guid:selectedModel});
+}
+function placeLibrary(){if(selectedLibrary&&window.sketchup){if(updateTimer){clearTimeout(updateTimer);updateTimer=null;}window.sketchup.place_library(selectedLibrary);}}
+function renameLibrary(){var name=document.getElementById('library_name').value.trim();if(selectedLibrary&&name&&window.sketchup)window.sketchup.rename_library({name:name,source_name:selectedLibrary});}
+function deleteLibrary(){if(selectedLibrary&&window.sketchup)window.sketchup.delete_library(selectedLibrary);}
+function refreshLibrary(){if(window.sketchup)window.sketchup.refresh_library();}
 
 var descriptionContract=null, descriptionRequestId=0, descriptionPreview=null, descriptionDraftParams=null;
 function receiveDescriptionContract(contract) { descriptionContract=contract; }
@@ -70,7 +119,7 @@ function insertDescriptionExample() {
 }
 function showDescriptionPrompt() {
   if(!descriptionContract){showModelStatus('Đợi plugin nạp hướng dẫn.',true);return;}
-  var text='Phân tích ảnh tủ để dựng bằng VGD_Cabinet 4.4 beta 2. Hỏi tôi rộng/sâu/cao mong muốn nếu chưa có; không đo kích thước thật từ ảnh không có tỷ lệ. Chỉ xuất một khối JSON theo mẫu bên dưới, đơn vị mm. parameters chỉ dùng các tên trong danh sách mặc định; giữ đúng kiểu dữ liệu và giá trị lựa chọn. Không xuất mã Ruby/JavaScript. Các thông số không xác định có thể bỏ để plugin dùng mặc định, trừ w,d,h bắt buộc. Ghi giả định vào assumptions; tên thông số ước lượng có trong parameters vào estimated_fields. Cấu tạo chưa hỗ trợ ghi vào unsupported_features, không âm thầm lược bỏ. Các module chỉ khác rộng, dùng chung cấu hình cánh/đợt/hộc; không có modules dạng cây hay cấu hình riêng từng khoang. door_count là số cánh của từng module, drawer_count là số tầng mỗi cụm; không phải tổng cả tủ. Với số cánh/vách hoặc tầng đã chỉ định, không bật tự động tương ứng. Móc tay cánh front_bevel và móc tay hộc drawer_bevel độc lập. Kích thước phủ bì gồm cánh/hậu, cao gồm chân/nẹp.\n\nMẪU:\n'+JSON.stringify(descriptionContract.example,null,2)+'\n\nTHÔNG SỐ MẶC ĐỊNH (không phải số đo từ ảnh):\n'+JSON.stringify(descriptionContract.defaults,null,2)+'\n\nGIÁ TRỊ LỰA CHỌN HỢP LỆ:\n'+JSON.stringify(descriptionContract.enums,null,2);
+  var text='Phân tích ảnh tủ để dựng bằng VGD_Cabinet 4.5 beta 1. Hỏi tôi rộng/sâu/cao mong muốn nếu chưa có; không đo kích thước thật từ ảnh không có tỷ lệ. Chỉ xuất một khối JSON theo mẫu bên dưới, đơn vị mm. parameters chỉ dùng các tên trong danh sách mặc định; giữ đúng kiểu dữ liệu và giá trị lựa chọn. Không xuất mã Ruby/JavaScript. Các thông số không xác định có thể bỏ để plugin dùng mặc định, trừ w,d,h bắt buộc. Ghi giả định vào assumptions; tên thông số ước lượng có trong parameters vào estimated_fields. Cấu tạo chưa hỗ trợ ghi vào unsupported_features, không âm thầm lược bỏ. Các module chỉ khác rộng, dùng chung cấu hình cánh/đợt/hộc; không có modules dạng cây hay cấu hình riêng từng khoang. door_count là số cánh của từng module, drawer_count là số tầng mỗi cụm; không phải tổng cả tủ. Với số cánh/vách hoặc tầng đã chỉ định, không bật tự động tương ứng. Móc tay cánh front_bevel và móc tay hộc drawer_bevel độc lập. Kích thước phủ bì gồm cánh/hậu, cao gồm chân/nẹp.\n\nMẪU:\n'+JSON.stringify(descriptionContract.example,null,2)+'\n\nTHÔNG SỐ MẶC ĐỊNH (không phải số đo từ ảnh):\n'+JSON.stringify(descriptionContract.defaults,null,2)+'\n\nGIÁ TRỊ LỰA CHỌN HỢP LỆ:\n'+JSON.stringify(descriptionContract.enums,null,2);
   var box=document.getElementById('description_prompt_box'),area=document.getElementById('description_prompt');
   area.value=text;box.open=true;area.focus();area.select();
 }

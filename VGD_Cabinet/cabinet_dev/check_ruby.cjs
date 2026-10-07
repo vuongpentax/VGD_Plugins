@@ -20,17 +20,26 @@ const {RubyVM}=require('./dependencies.cjs').load('@ruby/wasm-wasi/dist/vm');
    console.log('Syntax OK:',name);
  }
  vm.eval(fs.readFileSync('cabinet_dev/sketchup_stub.rb','utf8'));
- for(const name of ['geometry_engine.rb','modeling_rules.rb','pano.rb','modeling.rb','defaults.rb','preset_store.rb','description_import.rb'])vm.eval(fs.readFileSync(root+name,'utf8').replace(/^require_relative .*$/gm,''));
+ for(const name of ['geometry_engine.rb','modeling_rules.rb','component_sharing.rb','frame_divisions.rb','rail_joinery.rb','pano.rb','modeling.rb','defaults.rb','preset_store.rb','preview_mesh.rb','library_store.rb','description_import.rb'])vm.eval(fs.readFileSync(root+name,'utf8').replace(/^require_relative .*$/gm,''));
  vm.eval(fs.readFileSync('cabinet_dev/test_geometry.rb','utf8'));
  vm.eval(fs.readFileSync('cabinet_dev/test_vgd_features.rb','utf8'));
+ try { vm.eval(fs.readFileSync('cabinet_dev/test_upgrade.rb','utf8')); }
+ catch(error) { vm.eval('$stdout.flush'); throw error; }
+ fs.writeFileSync('outputs/preview_upgrade.json',vm.eval('JSON.generate($upgrade_preview_data)').toString());
+ fs.writeFileSync('outputs/preview_draw.json',vm.eval('JSON.generate($upgrade_draw_data)').toString());
  const main=fs.readFileSync(root+'main43.rb','utf8').replace(/^require(?:_relative)? .*$/gm,'');
  vm.eval(main);
+ vm.eval(fs.readFileSync(root+'draw_tool.rb','utf8').replace(/^require_relative .*$/gm,''));
+ try { vm.eval(fs.readFileSync('cabinet_dev/test_library.rb','utf8')); }
+ catch(error) { vm.eval('$stdout.flush'); throw error; }
  vm.eval('$partial_description_json='+JSON.stringify(fs.readFileSync('cabinet_dev/description_partial_fixture.json','utf8')).replace(/#/g,'\\#'));
  vm.eval(fs.readFileSync('cabinet_dev/test_description.rb','utf8'));
  fs.writeFileSync('outputs/description_cases.json',vm.eval('JSON.generate($description_cases)').toString());
  vm.eval(fs.readFileSync('cabinet_dev/test_presets.rb','utf8'));
  const {vm:restartVM}=await makeVM();
  restartVM.eval(fs.readFileSync(root+'preset_store.rb','utf8'));
+ restartVM.eval(fs.readFileSync(root+'library_store.rb','utf8'));
+ restartVM.eval("library=VGD_Cabinet::LibraryStore.new('/tmp/vgd-library-test'); raise 'New VM lost library' unless library.entry('Mẫu mở lại')['dimensions']==[800,600,2400]; puts 'PASS: library index/assets survive a new Ruby VM'; $stdout.flush");
  restartVM.eval("store=VGD_Cabinet::PresetStore.new('/tmp/vgd-presets-test/presets.json',defaults: -> { raise 'Unexpected reset' },legacy: -> { raise 'Unexpected migration' }); raise 'New VM lost saved data' unless store.load['Mẫu nhiều 9']['w']==949; puts 'PASS: preset JSON survives a new Ruby VM using the same host-backed directory'; $stdout.flush");
  vm.eval('raise "Update stamped!" unless VGD_Cabinet.update_selected_cabinet({}).nil?; raise "Operation started without selection" unless Sketchup.active_model.operations==0; puts "PASS: update without selection does not create or mutate"');
  const defaults=vm.eval('require "json"; JSON.generate(VGD_Cabinet.default_params)').toString();

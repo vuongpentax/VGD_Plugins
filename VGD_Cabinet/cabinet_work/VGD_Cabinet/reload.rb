@@ -4,7 +4,7 @@ module VGD_Cabinet
   module Development
     class << self
       def ruby_files
-        %w[geometry_engine.rb modeling_rules.rb modeling.rb pano.rb defaults.rb preset_store.rb description_import.rb
+        %w[geometry_engine.rb modeling_rules.rb component_sharing.rb frame_divisions.rb rail_joinery.rb pano.rb modeling.rb defaults.rb preset_store.rb preview_mesh.rb library_store.rb description_import.rb
            ui_renderer.rb draw_tool.rb utilities.rb main43.rb]
       end
 

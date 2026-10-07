@@ -1,17 +1,23 @@
 # frozen_string_literal: true
 require_relative 'pano'
+require_relative 'component_sharing'
+require_relative 'frame_divisions'
+require_relative 'rail_joinery'
 module VGD_Cabinet
   module Modeling
     module_function
+    def context_model
+      Thread.current[:vgd_cabinet_preview_model] || Sketchup.active_model
+    end
     def metal_glass?(p)
       p['door_style'] == 'Kính khung kim loại'
     end
     def door_depth_mm(p)
-      return p['pano_depth'].to_f if p['door_style']=='Pano khung gỗ' && p['opt_door']!='Không Cánh' && !p['is_full_drawer']
+      return p['pano_depth'].to_f if ['Pano khung gỗ','Shaker'].include?(p['door_style']) && p['opt_door']!='Không Cánh' && !p['is_full_drawer']
       metal_glass?(p) && p['opt_door'] != 'Không Cánh' && !p['is_full_drawer'] ? p['metal_frame_depth'].to_f : p['t'].to_f
     end
     def concept_material(name, rgb, alpha=1.0)
-      materials = Sketchup.active_model.materials
+      materials = context_model.materials
       # Reuse existing swatches without overwriting colors edited by the user.
       return materials[name] if materials[name]
       legacy = name.sub('VGD Khung ', 'VGD Concept | Khung | ').sub('VGD Kính ', 'VGD Concept | Kính | ')
@@ -32,7 +38,7 @@ module VGD_Cabinet
       face.pushpull(height)
     end
     def door_front(entities, x, width, depth, height, p)
-      return pano_front(entities,x,width,depth,height,p) if p['door_style']=='Pano khung gỗ'
+      return pano_front(entities,x,width,depth,height,p) if ['Pano khung gỗ','Shaker'].include?(p['door_style'])
       return front_solid(entities,x,width,depth,height,p) unless metal_glass?(p)
       border = p['metal_frame_width'].to_f.mm
       glass_t = p['glass_thickness'].to_f.mm
@@ -55,7 +61,16 @@ module VGD_Cabinet
       glass_group = entities.add_group
       glass_group.name = 'Kính'
       glass_group.material = glass
-      concept_box(glass_group.entities,x+border,(depth-glass_t)/2,border,width-2*border,glass_t,height-2*border,glass)
+      bar_width=p['frame_bar_width'].to_f>0 ? p['frame_bar_width'].mm : border
+      layout=FrameDivisions.layout(width-2*border,height-2*border,bar_width,p['frame_division'],p['frame_sections'].to_i)
+      layout[:bars].each { |poly| framed_polygon(frame_group.entities,poly,x+border,border,0,depth,metal) }
+      layout[:panels].each { |poly| framed_polygon(glass_group.entities,poly,x+border,border,(depth-glass_t)/2,glass_t,glass) }
+    end
+    def framed_polygon(entities,poly,x,z,y,depth,material)
+      face=entities.add_face(poly.map { |px,pz| [x+px,y,z+pz] })
+      raise ModelingRules::Invalid,'Không dựng được ô chia khung.' unless face
+      face.reverse! if face.normal.y<0
+      face.pushpull(depth)
     end
     def front_solid(entities, x, dx, dy, dz, p)
       if p['front_bevel']
@@ -74,7 +89,7 @@ module VGD_Cabinet
       end
     end
     def clean_tags(entities)
-      model = Sketchup.active_model
+      model = context_model
       entities.each do |e|
         if e.is_a?(Sketchup::ConstructionLine)
           e.layer = model.layers['VGD_KY HIEU'] || model.layers.add('VGD_KY HIEU')
@@ -94,7 +109,7 @@ module VGD_Cabinet
         widths.each_with_index do |width, index|
           group = entities.add_group
           group.name = "Module #{format('%02d',index+1)} — #{width.round(1)} mm"
-          child = p.merge('w'=>width, 'module_mode'=>'Chung vách')
+          child = p.merge('w'=>width, 'module_mode'=>'Chung vách', '__independent_module'=>true)
           child['opt_left_side'] = 'Vuông' if index > 0
           child['opt_right_side'] = 'Vuông' if index < widths.size-1
           GeometryEngine.draw(group.entities, child)
@@ -104,7 +119,10 @@ module VGD_Cabinet
       else
         GeometryEngine.draw(entities,p)
       end
-      clean_tags(entities)
+      unless Thread.current[:vgd_cabinet_preview_model]
+        ComponentSharing.apply(entities)
+        clean_tags(entities)
+      end
     end
   end
 end

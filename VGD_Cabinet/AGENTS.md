@@ -13,3 +13,7 @@ Read CODEX_HANDOFF.md before editing. Current source is cabinet_work; tests/gene
 - Change UI through redesign_ui.cjs/menu.js/menu.css, regenerate HTML before packaging. ui_beta1 is a reference only.
 - Run meaningful geometry/preset/DOM/payload/UI/deployment tests. Distinguish WASM/stubs from native SketchUp; file locking is simulated in WASI.
 - Deliver RBZ and source ZIP with updated version/validation. Never claim native manifold, Undo or restart unless actually tested in SketchUp.
+
+- 4.5: matching name roles + geometry/materials share component definitions within a cabinet build; preserve left/right hinge separation and moving drawer/module containers.
+- Library SKP assets/index/preview belong under APPDATA/VGD/SketchUp/VGD_Cabinet/library; preserve user assets and atomic index/backup/locking. Export actual geometry, including manual edits; SU2022 loads must use a unique path to avoid reuse.
+- Preview uses an in-memory builder sink; never create temporary model entities/materials/tags/definitions. Native Tool drawing and SKP/manifold must be verified separately from fixtures.

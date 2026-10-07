@@ -14,6 +14,8 @@ module VGD_Cabinet
         "pano_stile_width" => 60.0, "pano_rail_width" => 60.0, "pano_depth" => 20.0,
         "pano_panel_thickness" => 6.0, "pano_groove_depth" => 8.0, "pano_clearance" => 1.0,
         "pano_panel_count" => 1, "pano_mid_rail" => 60.0,
+        "frame_division" => "Không chia", "frame_sections" => 2, "frame_bar_width" => 0.0,
+        "shaker_recess" => 6.0,
         "door_stop_rail" => false, "door_stop_rail_h" => 60.0,
         "w" => 800.0, "d" => 600.0, "h" => 2400.0,
         "t" => 17.5, "t_back" => 6.0, "back_recess" => 20.0,

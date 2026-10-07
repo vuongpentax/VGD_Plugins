@@ -496,7 +496,7 @@ module VGD_Cabinet
               face_x = (align == :right) ? -dx : 0.mm
               Modeling.door_front(board_group.entities, face_x, dx, dy, dz, p)
 
-              layer_guide = Sketchup.active_model.layers["VGD_KY HIEU"] || Sketchup.active_model.layers.add("VGD_KY HIEU")
+              layer_guide = Modeling.context_model.layers["VGD_KY HIEU"] || Modeling.context_model.layers.add("VGD_KY HIEU")
               if name.include?("Trái")
                 c1 = board_group.entities.add_cline(Geom::Point3d.new([face_x + dx, 0.mm, dz]), Geom::Point3d.new([face_x, 0.mm, dz / 2.0]))
                 c2 = board_group.entities.add_cline(Geom::Point3d.new([face_x + dx, 0.mm, 0.mm]), Geom::Point3d.new([face_x, 0.mm, dz / 2.0]))
@@ -512,7 +512,7 @@ module VGD_Cabinet
               inst = outer_group.to_component
               inst.definition.name = name + "_DC"
 
-              layer_door = Sketchup.active_model.layers["VGD_CANH"] || Sketchup.active_model.layers.add("VGD_CANH")
+              layer_door = Modeling.context_model.layers["VGD_CANH"] || Modeling.context_model.layers.add("VGD_CANH")
               inst.layer = layer_door
 
               pos_x = (align == :right) ? (x + dx) : x
@@ -1206,7 +1206,25 @@ module VGD_Cabinet
               dr_front_h = [1.mm, (dr_span_h - drg_top - drg_bottom - (drg_between * (drawer_count_val - 1))) / drawer_count_val.to_f].max
             end
 
-            if effective_opt_drawer == "Âm" || columns == 2
+            if columns == 2
+              # Fronts meet at the centre of the shared divider. Box/ray openings
+              # stay unchanged; only the faces overlay the divider/outer sides.
+              if effective_opt_drawer == 'Âm'
+                span_left = parent_drawer_x + parent_trim
+                span_right = parent_drawer_x + parent_drawer_width - parent_trim
+              else
+                overlay_l = ["Cánh Phủ toàn bộ", "Cánh Phủ Hồi Trái"].include?(opt_door) || opt_door == "Không Cánh"
+                overlay_r = ["Cánh Phủ toàn bộ", "Cánh Phủ Hồi Phải"].include?(opt_door) || opt_door == "Không Cánh"
+                span_left = c_idx == 0 ? (overlay_l ? (opt_left_side == 'Bo Cong' ? curve_w : 0.mm) : parent_drawer_x) : parent_drawer_x-t/2.0
+                span_right = c_idx == total_comps-1 ? (overlay_r ? w-(opt_right_side == 'Bo Cong' ? curve_w : 0.mm) : parent_drawer_x+parent_drawer_width) : parent_drawer_x+parent_drawer_width+t/2.0
+              end
+              seam = parent_drawer_x + parent_drawer_width/2.0
+              front_left = (column_index == 0 ? span_left : seam) + drg_left
+              front_right = (column_index == 0 ? seam : span_right) - drg_right
+              dr_front_x = front_left
+              dr_front_w = front_right-front_left
+              raise ModelingRules::Invalid, 'Khe mặt hộc chiếm hết chiều rộng cụm.' unless dr_front_w > 10.mm
+            elsif effective_opt_drawer == "Âm"
               dr_front_w = [1.mm, dr_w_inner - sub_side_w * 2 - drg_left - drg_right].max
               dr_front_x = dr_x_inner + sub_side_w + drg_left
             else
@@ -1268,7 +1286,7 @@ module VGD_Cabinet
               dr_grp = entities.add_group
               dr_grp.name = "Bộ Ngăn Kéo #{i+1}"
               begin
-                dr_grp.layer = Sketchup.active_model.layers[0]
+                dr_grp.layer = Modeling.context_model.layers[0]
               rescue
               end
               dr_ents = dr_grp.entities
@@ -1277,7 +1295,7 @@ module VGD_Cabinet
                 b_grp = dr_ents.add_group
                 b_grp.name = b_name
                 begin
-                  b_grp.layer = Sketchup.active_model.layers[0]
+                  b_grp.layer = Modeling.context_model.layers[0]
                 rescue
                 end
                 if b_name.start_with?("Mặt Ngăn Kéo")
@@ -1287,7 +1305,7 @@ module VGD_Cabinet
                 end
                 # Raw geometry luôn Untagged; chỉ group Mặt Ngăn Kéo mới được gán VGD_CANH.
                 begin
-                  untagged = Sketchup.active_model.layers[0]
+                  untagged = Modeling.context_model.layers[0]
                   b_grp.entities.each { |e| e.layer = untagged if e.respond_to?(:layer=) }
                 rescue
                 end
@@ -1301,7 +1319,7 @@ module VGD_Cabinet
               # Thùng/hộc kéo và component cha luôn để Untagged để không làm bẩn hệ tag cấu kiện.
               if front_grp && front_grp.valid?
                 begin
-                  model = Sketchup.active_model
+                  model = Modeling.context_model
                   layer_door = model.layers["VGD_CANH"] || model.layers.add("VGD_CANH")
                   layer_guide = model.layers["VGD_KY HIEU"] || model.layers.add("VGD_KY HIEU")
                   front_grp.layer = layer_door
@@ -1367,7 +1385,7 @@ module VGD_Cabinet
               dr_inst.definition.name = "Ngăn Kéo_DC"
               dr_inst.name = "Ngăn Kéo Khoang #{c_idx+1} Cụm #{column_index+1} Tầng #{i+1}"
               begin
-                model = Sketchup.active_model
+                model = Modeling.context_model
                 untagged = model.layers[0]
                 layer_door = model.layers["VGD_CANH"] || model.layers.add("VGD_CANH")
                 layer_guide = model.layers["VGD_KY HIEU"] || model.layers.add("VGD_KY HIEU")
@@ -1433,6 +1451,7 @@ module VGD_Cabinet
             end
           end
         end
+        RailJoinery.apply(entities,p)
         tr_shift = Geom::Transformation.translation(Geom::Vector3d.new(0, -d_cabinet, 0))
         entities.transform_entities(tr_shift, entities.to_a)
       end

@@ -1,6 +1,17 @@
-# VGD_Cabinet · 4.4.0-beta.2.1
+# VGD_Cabinet · 4.5.0-beta.1
 
 VGD_Cabinet thay tên T+ Cabinet trong hệ sinh thái VGD.
+
+## 4.5 beta 1 · Preview, component và Thư viện
+
+- Đặt tủ và vẽ 3 điểm xem trước cấu kiện trong suốt màu đồng VGD, có thùng/đợt/cánh và ký hiệu mở. Preview dùng bộ dựng trong bộ nhớ, không tạo hình học tạm vào model. Hướng mặt tủ chốt ở điểm đầu, xoay view không làm đổi hướng đang vẽ.
+- Chi tiết có cùng tên loại, hình học và vật liệu trong một lần dựng dùng chung component. Cánh trái/phải tách nhóm; khác kích thước giữ riêng. Sửa một component cập nhật các bản giống nó. Bộ ngăn kéo chuyển động và container module giữ riêng.
+- Cánh kính/Pano/Shaker: **Cánh tủ → Chia khung** chọn Không chia, Ngang, Dọc hoặc Chéo X. Ngang/dọc chia đều 2–6 ô; bản thanh 0 dùng theo khung. Kính chia thành các tấm riêng; X trên Pano/Shaker là thanh đắp trên tấm giữa. **Pano / Shaker** có độ lõm Shaker, rãnh và khe co giãn.
+- Hai cụm hộc kéo cạnh nhau chia mặt hộc đến tim hồi giữa, che hồi; hộc lộ phủ thêm hồi ngoài theo kiểu phủ cánh. Khe trái/phải đã nhập vẫn được giữ.
+- Các loại xà xuyên hồi ngoài/vách chung, khấu hình học hồi tương ứng, gộp xà liền hàng. Hồi bo giữ đường cong. **Module Độc lập** giữ xà lọt trong từng thùng.
+- **Thư viện**: chọn đúng một tủ VGD đã vẽ, nhập tên → Lưu mẫu mới. Lưu hình học SKP, kể cả sửa tay, ảnh và preview; chọn mẫu → Đặt tủ từ Thư viện. Cập nhật/đổi tên/xóa khỏi danh sách là lệnh riêng, không đè tên khác. Mẫu cũ trong file backup vẫn có tài sản để phục hồi.
+- Dữ liệu Thư viện: `%APPDATA%/VGD/SketchUp/VGD_Cabinet/library/` gồm index, `.bak` và `assets`. Sao chép **cả thư mục** nếu mang mẫu sang máy khác. Preset ở Tổng thể chỉ lưu thông số; Thư viện lưu tủ đã dựng.
+- Nếu cập nhật thông số một tủ đã sửa thủ công, bộ dựng sẽ dựng lại hình học theo thông số. Lưu mẫu Thư viện trước khi cập nhật nếu cần giữ bản sửa tay.
 
 ## Beta 2 · Dựng từ mô tả
 
@@ -24,7 +35,7 @@ Chiều rộng/sâu/cao giữ nguyên cho tủ cơ bản; không tự trừ ph�
 
 ## Cài máy nhà
 
-Gói mới nằm trong outputs/vgd_cabinet_modeling. Chạy cabinet_dev/sync_sketchup_2022.ps1 để cài đúng 18 file, sao lưu và tắt loader T+ cũ; không sửa plugin khác. Dữ liệu preset không bị bộ cài ghi đè.
+Gói mới nằm trong outputs/vgd_cabinet_modeling. Chạy cabinet_dev/sync_sketchup_2022.ps1 để cài đúng 23 file, sao lưu và tắt loader T+ cũ; không sửa plugin khác. Dữ liệu preset không bị bộ cài ghi đè.
 
 **Khởi động lại SketchUp 2022 sau khi đổi thương hiệu**, vì module/menu/bộ nạp khác tên. Sau đó dùng Extensions → VGD Cabinet — Tiện ích → VGD — Nạp lại mã cho các lần sửa tiếp. Không tự đóng model đang làm.
 
@@ -46,4 +57,4 @@ Kích thước tấm pano = ô lọt lòng + 2 × (sâu rãnh − khe co giãn).
 
 Node + Ruby WASM, JSDOM, Playwright/Edge và bộ cài PowerShell có kiểm tra tự động. File preset được ghi/đọc trên filesystem Windows qua WASI và được mở lại bởi Ruby VM mới; riêng flock bị mô phỏng do WASI không hỗ trợ. Chưa xác nhận trực tiếp native SketchUp: hình học solid/manifold, Undo, thao tác preset sau restart SketchUp hoặc lưu/mở SKP.
 
-Xem VALIDATION.json và PANO_RESEARCH.md. Dependencies: pnpm install --dir cabinet_dev --frozen-lockfile; trong kho có thể dùng dependency cache của handoff T+ cũ. Không đóng gói node_modules, preset người dùng hoặc backup cài đặt.
+Xem VALIDATION.json, UPGRADE_RESEARCH.md và PANO_RESEARCH.md. Dependencies: pnpm install --dir cabinet_dev --frozen-lockfile; trong kho có thể dùng dependency cache của handoff T+ cũ. Không đóng gói node_modules, preset người dùng hoặc backup cài đặt.
