@@ -1,19 +1,29 @@
 {
-  "version": "3.1.0",
-  "date": "2026-10-05",
-  "source": "Installed SketchUp 2022 VGD Dim",
-  "sync": "9 content changes; 18-file package",
-  "passed": [
-    "Ruby syntax: 14 files",
-    "Smart Dim geometry/scopes/errors fixture",
-    "Preset/Auto-Style/Animation fixture",
-    "Preference storage recovery fixture",
-    "Deployment whitelist/backup/guards fixture",
-    "Edge dialog state and scan/run/rebuild/native_apply callback smoke"
-  ],
-  "legacy_suite_incompatible": [
-    "check_ruby.cjs: test_engine.rb calls removed Engine.apply",
-    "test_ui.cjs: legacy header/footer selectors absent"
-  ],
-  "native_sketchup_verified": false
+  "date": "2026-10-08",
+  "name": "VGD Dim Online Update pilot",
+  "version": "3.3.0-beta.2",
+  "baseline": "VGD_Dim 3.3.0-beta.1 RBZ and matching source ZIP verified before pilot changes.",
+  "updater": {
+    "scope": "VGD Dim only",
+    "manifest": "Raw manifest is served from GitHub main; publish each new version only after its Release asset is public.",
+    "distribution": "GitHub Releases asset plus raw manifest on main; no paid service, domain, or license server.",
+    "behavior": "Automatic check at most once per 24 hours and manual Extensions menu check; user confirms; download verifies byte count and SHA-256; Windows helper waits for SketchUp to close, then swaps only the VGD_Dim folder and loader.",
+    "safety": "Exact 27-file RBZ whitelist, HTTPS GitHub redirects only, preserves unmanaged files and a backup, startup journal validates sibling backup paths and hashes, foreign/reparse loader or plugin tree is rejected."
+  },
+  "tests": {
+    "ruby": "PASS: runtime syntax and existing Dim fixtures; updater manifest/version checks; mocked download hash verification and timeout cancellation; journal path containment.",
+    "package": "PASS: 27 exact RBZ entries, CRC, runtime byte equality, source ZIP and manifest match.",
+    "deployment_fixture": "PASS: deploy dry-run, repeat install, backup, loader guard and Cabinet preservation with 27 managed files.",
+    "updater_fixture": "PASS: isolated outputs fixture swapped plugin folder, retained unmanaged file and old backup, removed journal/staging folder.",
+    "powershell": "PASS: updater helper, updater fixture and deploy script parsed.",
+    "ui": "PASS: existing Edge headless UI suite; dialog source unchanged by updater."
+  },
+  "native": "UNVERIFIED: no installation or live HTTP/close/reopen acceptance in SketchUp was performed.",
+  "release": "Follow HOW_TO_RELEASE.md. Live HTTP and native SketchUp close/reopen acceptance remain unverified.",
+  "package": {
+    "rbz": "VGD_Dim_v3.3.0-beta.2.rbz",
+    "bytes": 46069,
+    "sha256": "5f2a8c58f902ea961de0d510d8da9ba505f2dfd97031c2c08927646405d89d12",
+    "source_zip": "VGD_Dim_v3.3.0-beta.2_source.zip"
+  }
 }

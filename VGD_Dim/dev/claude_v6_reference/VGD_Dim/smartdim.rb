@@ -13,37 +13,18 @@ module VGD
                 '+z' => [0, 0, 1], '-z' => [0, 0, -1] }.freeze unless const_defined?(:SIDES, false)
       VERTICAL = %w[-y +y -x +x].freeze unless const_defined?(:VERTICAL, false)
       DEFAULTS = {
-        'face' => 'camera', 'use_section' => true, 'scene_only' => true, 'do_h' => true, 'do_v' => true,
+        'face' => 'camera', 'use_section' => true, 'do_h' => true, 'do_v' => true,
         'h_side' => 'top', 'v_side' => 'left',
         'off1' => 150, 'off2' => 300,
         'min_seg' => 5, 'min_part' => 300, 'depth' => 100
       }.freeze unless const_defined?(:DEFAULTS, false)
-
-      def self.saved
-        data = Store.read('smartlast', nil)
-        data = {'opts'=>Store.read('smartdim',{}), 'settings'=>{}} unless data.is_a?(Hash)
-        {'opts'=>validate(data.fetch('opts',{})), 'settings'=>Core.validate_settings(data.fetch('settings',{}))}
-      rescue ArgumentError, TypeError
-        {'opts'=>DEFAULTS.dup, 'settings'=>Core.validate_settings({})}
-      end
-      def self.execute(opts, style)
-        options = validate(opts)
-        settings = Core.validate_settings(style)
-        result = run(options, settings)
-        begin
-          Store.write('smartlast',{'opts'=>options,'settings'=>settings})
-        rescue StandardError => error
-          result['warnings'] << "Dim đã tạo nhưng chưa lưu được thiết lập: #{error.message}"
-        end
-        result
-      end
 
       def self.validate(opts)
         raise ArgumentError, 'Thông số Smart Dim không hợp lệ.' unless opts.is_a?(Hash)
         o = DEFAULTS.merge(opts.select { |key, _| DEFAULTS.key?(key) })
         raise ArgumentError, 'Mặt không hợp lệ.' unless (%w[camera axis] + SIDES.keys).include?(o['face'])
         raise ArgumentError, 'Vị trí Dim không hợp lệ.' unless %w[top bottom].include?(o['h_side']) && %w[left right].include?(o['v_side'])
-        %w[do_h do_v use_section scene_only].each { |key| raise ArgumentError, 'Lựa chọn Smart Dim không hợp lệ.' unless [true, false].include?(o[key]) }
+        %w[do_h do_v use_section].each { |key| raise ArgumentError, 'Lựa chọn Smart Dim không hợp lệ.' unless [true, false].include?(o[key]) }
         raise ArgumentError, 'Hãy bật Dim ngang hoặc Dim đứng.' unless o['do_h'] || o['do_v']
         %w[off1 off2 min_seg min_part depth].each do |key|
           value = Float(o[key]) rescue nil
@@ -60,25 +41,21 @@ module VGD
         o = validate(opts || {})
         config = Core.validate_settings(style || {})
         Engine.check_context(model)
-        sel = model.selection.to_a.select { |e| e.valid? && visible_entity?(e) && !Managed.owned?(e) && (e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)) }
+        sel = model.selection.to_a.select { |e| e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance) }
         raise 'Chưa chọn tủ. Hãy chọn Group/Component của tủ rồi bấm Smart Dim.' if sel.empty?
 
-        page = Managed.page(model, o['scene_only'])
-        basis = cabinet_axes(sel.first.transformation)
-        sel.each { |e| cabinet_axes(e.transformation); check_axes(e.transformation, basis) }
         parts = []
         planes = []
-        ctx_planes = context_sections(model)
-        collect(sel, Geom::Transformation.new, parts, [], planes, basis)
+        ctx_plane = section_plane_of(model.active_entities, Geom::Transformation.new)
+        planes << ctx_plane if ctx_plane
+        collect(sel, Geom::Transformation.new, parts, [], planes)
         raise 'Không tìm thấy chi tiết trong tủ đã chọn (bỏ qua đối tượng ẩn, khóa hoặc tag tắt).' if parts.empty?
 
-        candidates = ctx_planes.empty? ? planes : ctx_planes
-        raise 'Có nhiều mặt cắt đang bật trong phạm vi. Chỉ bật một mặt cắt hoặc bỏ tùy chọn đo mặt cắt.' if o['use_section'] && model.rendering_options['DisplaySectionCuts'] && candidates.size > 1
-        section = o['use_section'] && model.rendering_options['DisplaySectionCuts'] ? candidates.first : nil
+        section = o['use_section'] ? planes.first : nil
         bb = Geom::BoundingBox.new
         parts.each { |cs| cs.each { |c| bb.add(c) } }
-        face = section ? section_face(model, section, basis) : pick_face(model, bb, o['face'], basis, parts.flatten)
-        n, rv, uv = frame(face, basis)
+        face = section ? section_face(model, section) : pick_face(model, bb, o['face'])
+        n, rv, uv = frame(face)
 
         rows = parts.map do |cs|
           rs = cs.map { |c| dot(c, rv) }
@@ -90,7 +67,7 @@ module VGD
         raise 'Mọi chi tiết đều nhỏ hơn ngưỡng "bỏ chi tiết nhỏ". Hãy giảm ngưỡng này.' if big.empty?
 
         if section
-          f0 = dot(section[:point], n)             # dim nằm đúng trên mặt phẳng cắt
+          f0 = dot(section[0], n)                 # dim nằm đúng trên mặt phẳng cắt
           tol = 0.1.mm
           use = big.select { |p| p[:fmin] + tol < f0 && f0 < p[:fmax] - tol }
           raise 'Mặt cắt đang bật không cắt qua chi tiết nào của tủ đã chọn.' if use.empty?
@@ -121,28 +98,14 @@ module VGD
         raise 'Không có đoạn đo khác 0 trên mặt này.' if count <= 0
         raise 'Quá nhiều đoạn đo (>2000); hãy tăng ngưỡng lọc hoặc chọn ít tủ hơn.' if count > 2000
 
-        axis = face[1].upcase
-        name = section ? "000_DIM_SECTION_#{axis}_#{section[:id]}" : "000_DIM_#{axis}_#{face[0] == '+' ? 'PLUS' : 'MINUS'}"
-        name += "_S#{page.persistent_id}" if page
-        key = Managed.key(sel, page, section ? face[1] : face, section)
-        previous = Managed.matches(model.active_entities, key)
-        raise 'Bộ Dim cũ đang khóa; mở khóa Group trước khi cập nhật.' if previous.any?(&:locked?)
-        if previous.any? { |g| g.entities.any? { |e| !e.is_a?(Sketchup::Dimension) || !Managed.owned?(e) } }
-          raise 'Group Dim cũ có đối tượng được thêm thủ công. Tách các đối tượng đó ra trước khi cập nhật bộ Dim.'
-        end
+        name = "000_DIM_#{face[1].upcase}"
         created = []
-        group = nil; tag = nil; visibility = []; scene_count = 0
         AutoStyle.suspend do
           model.start_operation('VGD Dim — Smart Dim', true)
           begin
             group = model.active_entities.add_group
             group.name = name
-            group.set_attribute(Managed::DICT, 'owner', 'VGD Dim')
-            group.set_attribute(Managed::DICT, 'key', key)
-            group.set_attribute(Managed::DICT, 'sources', sel.map(&:persistent_id))
-            group.set_attribute(Managed::DICT, 'section', section ? section[:id] : '')
-            tag = Managed.tag(model, name, page)
-            group.layer = tag
+            group.layer = model.layers[name] || model.layers.add(name)
             ents = group.entities
             if o['do_h']
               hs = o['h_side'] == 'bottom' ? -1 : 1
@@ -157,56 +120,27 @@ module VGD
               created << make(ents, pt.call(rref, vb.first), pt.call(rref, vb.last), vec.call(rv, vs * off2), n) if vb.size > 2
             end
             # Tag do Group quyết định (000_DIM_X/Y/Z), nên Dim bên trong không gán Tag riêng.
-            created.each do |dimension|
-              dimension.set_attribute(Managed::DICT, 'owner', 'VGD Dim')
-              dimension.layer = model.layers[0]
-              Core.style_dim(dimension, config['dim'], {}, false)
-            end
-            visibility = Managed.visibility_snapshot(model, tag) if page
-            scene_count = Managed.bind_scene(model, tag, page)
-            # Construct/style/bind successfully before removing only our matching sets.
-            previous.each(&:erase!)
+            created.each { |dimension| Core.style_dim(dimension, config['dim'], {}, false) }
             model.commit_operation
           rescue StandardError => e
             model.abort_operation
-            errors = tag && tag.valid? ? Managed.restore_visibility(visibility, tag) : []
-            group.erase! if group && group.valid?
-            raise "#{e.message} Không trả được hiển thị Scene: #{errors.join('; ')}" unless errors.empty?
             raise e
           end
         end
         model.active_view.invalidate
 
-        { 'face' => face, 'section' => !section.nil?, 'group' => group.name, 'tag' => tag.name, 'total' => created.size,
-          'replaced' => previous.size, 'scenes' => scene_count, 'scene' => page && page.name,
-          'axis_mode' => 'cabinet', 'warnings' => (page ? [] : ['Bộ Dim chưa gắn Scene; Tag hiển thị dùng chung.']),
+        { 'face' => face, 'section' => !section.nil?, 'group' => name, 'total' => created.size,
           'h' => o['do_h'] ? seg_mm(hb) : [], 'v' => o['do_v'] ? seg_mm(vb) : [], 'parts' => use.size }
       end
 
       # ---- hình học ----
       # Trả về [pháp tuyến hướng ra người nhìn, trục "phải", trục "lên"] của mặt.
-      def self.frame(face, basis=[X,Y,Z])
-        n = basis['xyz'.index(face[1])]
-        n = n.reverse if face[0] == '-'
+      def self.frame(face)
+        n = Geom::Vector3d.new(*SIDES[face])
         case face
-        when '+z' then [n, basis[0], n.cross(basis[0])]
-        when '-z' then [n, basis[0], n.cross(basis[0])]
-        else [n, Z.cross(n).normalize, Z]
-        end
-      end
-
-      def self.cabinet_axes(tr, upright=true)
-        axes = [X,Y,Z].map { |a| a.transform(tr) }
-        raise 'Tủ có trục co về 0; không thể đo.' if axes.any? { |a| a.length < 1e-8 }
-        axes.map!(&:normalize)
-        raise 'Tủ bị shear (trục không vuông góc); chưa hỗ trợ Smart Dim.' if axes.combination(2).any? { |a,b| a.dot(b).abs > 1e-6 }
-        raise 'Tủ xoay nghiêng quanh X/Y; chỉ hỗ trợ tủ thẳng đứng xoay quanh Z.' if upright && axes[2].dot(Z) < 1.0 - 1e-6
-        axes
-      end
-      def self.check_axes(tr, basis)
-        axes = cabinet_axes(tr, false)
-        unless axes.all? { |a| basis.any? { |b| a.dot(b).abs > 1.0 - 1e-6 } }
-          raise 'Các khối không cùng hệ trục tủ. Đo từng tủ/hướng riêng; không dùng kích thước hình chiếu.'
+        when '+z' then [n, X, Y]
+        when '-z' then [n, X, Geom::Vector3d.new(0, -1, 0)]
+        else [n, Z.cross(n), Z]
         end
       end
 
@@ -225,7 +159,6 @@ module VGD
         end
         rs = rs.sort.uniq
         us = us.sort.uniq
-        raise 'Phép lọc che khuất quá phức tạp; hãy chọn nhóm tủ nhỏ hơn.' if (rs.size - 1) * (us.size - 1) * fronts.size > 1_000_000
         rs.each_cons(2) do |r0, r1|
           next if r1 - r0 < eps
           rc = (r0 + r1) / 2
@@ -269,22 +202,21 @@ module VGD
         model.active_view.camera.direction.transform(model.edit_transform.inverse)
       end
 
-      def self.pick_face(model, bb, mode, basis=[X,Y,Z], corners=nil)
+      def self.pick_face(model, bb, mode)
         return mode if SIDES[mode]
         look = camera_look(model)
         keys = SIDES.keys
         if mode == 'axis'
           keys = VERTICAL
-          corners ||= (0..7).map { |i| bb.corner(i) }
-          dist = VERTICAL.each_with_object({}) { |k,h| h[k] = corners.map { |c| dot(c, frame(k,basis)[0]) }.max.abs }
+          dist = { '-y' => bb.min.y.abs, '+y' => bb.max.y.abs, '-x' => bb.min.x.abs, '+x' => bb.max.x.abs }
           best = dist.values.min
           keys = keys.select { |k| dist[k] - best < 1.mm }
         end
-        keys.max_by { |k| -look.dot(frame(k,basis)[0]) }
+        keys.max_by { |k| -look.dot(Geom::Vector3d.new(*SIDES[k])) }
       end
 
       # ---- mặt cắt đang bật (tọa độ của context đang mở) ----
-      def self.section_plane_of(entities, tr, path=[])
+      def self.section_plane_of(entities, tr)
         return nil unless entities.respond_to?(:active_section_plane)
         sp = entities.active_section_plane
         return nil unless sp
@@ -294,33 +226,16 @@ module VGD
         len = Math.sqrt(len2)
         point = Geom::Point3d.new(-a * d / len2, -b * d / len2, -c * d / len2)
         normal = Geom::Vector3d.new(a / len, b / len, c / len)
-        # Transform normals as plane covectors, including mirror/nonuniform scale.
-        tangent = normal.cross(normal.x.abs < 0.9 ? X : Y).normalize
-        other = normal.cross(tangent).normalize
-        transformed = tangent.transform(tr).cross(other.transform(tr)).normalize
-        transformed = transformed.reverse if transformed.dot(normal.transform(tr)) < 0
-        {point:point.transform(tr), normal:transformed, id:(path + [sp.persistent_id]).join('_')}
+        [tr * point, (tr * normal).normalize]
+      rescue StandardError
+        nil
       end
 
-      def self.context_sections(model)
-        entities = model.entities; tr = Geom::Transformation.new; path = []
-        planes = []
-        inverse = model.edit_transform.inverse
-        chain = Array(model.active_path)
-        (chain + [nil]).each do |instance|
-          plane = section_plane_of(entities, inverse * tr, path)
-          planes << plane if plane
-          break unless instance
-          path << instance.persistent_id; tr = tr * instance.transformation; entities = instance.definition.entities
-        end
-        planes
-      end
-      def self.section_face(model, section, basis=[X,Y,Z])
-        nrm = section[:normal]
-        index = (0..2).max_by { |i| nrm.dot(basis[i]).abs }
-        raise 'Mặt cắt xiên so với trục tủ; chưa hỗ trợ đo giao tuyến xiên.' if nrm.dot(basis[index]).abs < 1.0 - 1e-6
-        axis = 'xyz'[index]
-        plus = basis[index]
+      def self.section_face(model, section)
+        nrm = section[1]
+        axis, val = { 'x' => nrm.x, 'y' => nrm.y, 'z' => nrm.z }.max_by { |_, v| v.abs }
+        raise 'Mặt cắt đang bật không song song trục X/Y/Z; Smart Dim chưa hỗ trợ mặt cắt xiên.' if val.abs < 0.9994
+        plus = Geom::Vector3d.new(*SIDES["+#{axis}"])
         camera_look(model).dot(plus) < 0 ? "+#{axis}" : "-#{axis}"   # mặt hướng về camera
       end
 
@@ -331,29 +246,20 @@ module VGD
 
       def self.visible_entity?(e)
         return false if e.hidden? || (e.respond_to?(:locked?) && e.locked?)
-        layer = e.layer
-        return false if layer && layer.respond_to?(:visible?) && !layer.visible?
-        folder = layer.folder if layer && layer.respond_to?(:folder)
-        while folder
-          return false unless folder.visible?
-          folder = folder.respond_to?(:folder) ? folder.folder : nil
-        end
-        true
+        !(e.layer && e.layer.respond_to?(:visible?) && !e.layer.visible?)
       end
 
-      def self.collect(list, tr, parts, path, planes, basis, ids=[])
+      def self.collect(list, tr, parts, path, planes)
         raise 'Tủ lồng quá sâu; hãy chọn một nhóm con.' if path.size > 64
         list.each do |e|
           next unless e.valid?
           next unless visible_entity?(e)
-          next if Managed.owned?(e)
           case e
           when Sketchup::Group, Sketchup::ComponentInstance
             t = tr * e.transformation
             defn = e.definition
             raise 'Component lồng vòng; không thể đo.' if path.include?(defn)
-            check_axes(t, basis)
-            plane = section_plane_of(defn.entities, t, ids + [e.persistent_id])
+            plane = section_plane_of(defn.entities, t)
             planes << plane if plane
             kids = defn.entities.select { |c| c.is_a?(Sketchup::Group) || c.is_a?(Sketchup::ComponentInstance) }
             faces = defn.entities.grep(Sketchup::Face).reject { |f| !visible_entity?(f) }
@@ -369,8 +275,7 @@ module VGD
                 parts << corners(bb, t)
               end
             end
-            raise 'Quá nhiều chi tiết (>500); chọn từng tủ để đo.' if parts.size > 500
-            collect(kids, t, parts, path + [defn], planes, basis, ids + [e.persistent_id])
+            collect(kids, t, parts, path + [defn], planes)
           when Sketchup::Face
             parts << corners(e.bounds, tr)
           end

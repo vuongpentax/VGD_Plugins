@@ -11,4 +11,4 @@ Yêu cầu ngày 2026-10-05: gộp đầy đủ giao diện Claude và bổ sung
 - Preset và Auto-Style lưu cục bộ. Auto mặc định tắt, observers phải trì hoãn setters, suspend khi thao tác manual, tắt/reload dọn observers/timers, không cản Undo.
 - Animation/Units ghi bằng options native; Units chỉ khi explicitly enabled; Animation không có Undo.
 - Không popup hoàn tất; lỗi/kết quả inline. Không nạp dev/claude_reference vào runtime.
-- Kiểm thử có ý nghĩa geometry/scopes/rebuild/error/services/UI. Deploy whitelist 18 file, backup/hash, không tác động plugin khác.
+- Kiểm thử có ý nghĩa geometry/scopes/rebuild/error/services/UI. Deploy whitelist 27 file, backup/hash, không tác động plugin khác.

@@ -96,6 +96,7 @@ module UI
   class Command
     attr_accessor :small_icon,:large_icon,:tooltip,:status_bar_text
     def initialize(*,&b); @block=b; end
+    def invoke; @block.call; end
   end
   class HtmlDialog
     STYLE_DIALOG = 0
@@ -170,7 +171,7 @@ module Sketchup
     def points; vertices; end
   end
   class Entities < Array
-    attr_accessor :model,:parent
+    attr_accessor :model,:parent,:active_section_plane
     def initialize(m,list=[]); @model=m; super(); list.each { |e| self << e }; end
     def <<(e); e.parent=self; e.model=model; super; end
     def add_observer(*); end
@@ -243,7 +244,34 @@ module Sketchup
     def [](n); items[n]; end
     def add(n); n+='_' while items.key?(n); items[n]=Material.new(n,Color.new(0,0,0)); end
   end
-  class Layers < Hash; def add(n); self[n]=n; end; end
+  class Layer < String
+    attr_accessor :visible,:page_behavior
+    def initialize(name); super(name); @visible=true; @page_behavior=0; @attrs={}; end
+    def name; to_s; end
+    def visible?; visible; end
+    def valid?; true; end
+    def get_attribute(d,k,v=nil); (@attrs[d]||{}).fetch(k,v); end
+    def set_attribute(d,k,v); (@attrs[d]||={})[k]=v; end
+  end
+  class Layers < Hash
+    def initialize; super; add('Layer0'); end
+    def [](n); n==0 ? values.first : super; end
+    def add(n); self[n]=Layer.new(n); end
+  end
+  class SectionPlane < Entity
+    attr_accessor :plane
+    def initialize(p); super(); @plane=p; end
+    def get_plane; plane; end
+  end
+  class Page < Entity
+    attr_accessor :name,:use_hidden_layers,:fail_visibility
+    attr_reader :overrides,:camera_token
+    def initialize(name); super(); @name=name; @use_hidden_layers=true; @overrides={}; @camera_token=Object.new; end
+    def use_hidden_layers?; use_hidden_layers; end
+    def layers; overrides.select { |tag,visible| visible != ((tag.page_behavior & 1)==0) }.keys; end
+    def set_visibility(tag,visible); raise 'Page write failed' if fail_visibility; @overrides[tag]=visible; end
+  end
+  class Pages < Array; attr_accessor :selected_page; end
   class Selection < Array
     def add_observer(*); end
     def remove_observer(*); end
@@ -257,10 +285,11 @@ module Sketchup
   end
   class FakeModel < Entity
     attr_accessor :selection,:active_path
-    attr_reader :entities,:definitions,:materials,:layers,:options,:operations,:aborts,:commits,:operation_flags
+    attr_reader :entities,:definitions,:materials,:layers,:options,:operations,:aborts,:commits,:operation_flags,:pages,:rendering_options
     def initialize
       super; @model=self; @selection=Selection.new; @definitions=Definitions.new; @entities=Entities.new(self)
       @materials=Materials.new; @layers=Layers.new; @options={'UnitsOptions'=>{'LengthUnit'=>0,'LengthFormat'=>1}, 'PageOptions'=>{'ShowTransition'=>true,'TransitionTime'=>1.0}, 'SlideshowOptions'=>{'SlideTime'=>2.0,'LoopSlideshow'=>false}}
+      @pages=Pages.new; @rendering_options={'DisplaySectionCuts'=>true}
       @operations=@aborts=@commits=0; @operation_flags=[]
     end
     def guid; "model-#{persistent_id}"; end

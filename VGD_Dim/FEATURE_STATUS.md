@@ -1,21 +1,18 @@
-# VGD Dim · 3.1.0 đã đồng bộ từ SU2022
-
-Xem README và outputs/VALIDATION.json cho kết quả kiểm tra đồng bộ; bảng dưới là lịch sử 3.0.1.
-
-# VGD Dim · 3.0.1-beta.1
+# VGD Dim · 3.3.0-beta.2
 
 | Chức năng | Trạng thái |
 |---|---|
-| Toàn bộ giao diện Claude | Đã gộp, style T+, tên VGD Dim |
-| 6 dependency thiếu | Đã bổ sung store/core/presets/autostyle/animation/probe |
-| Smart Dim | Mô phỏng đạt chain/tổng, 6 mặt chọn, dịch/chỉnh tỷ lệ/xoay 90°, orientation, tags, abort |
-| Scope/quét/style | Selected/context/model; hidden/locked/nested/components; dedup definition |
-| Rebuild size Model Info | Đã viết cho Dim tuyến tính; metadata/links/selection/failure mô phỏng đạt; radial skip |
-| Text font từ Model Info | Cầu nối Windows English, selected trực tiếp; native chưa xác minh |
-| Preset/Auto/Animation/Units | Đã viết và có kiểm thử; không popup hoàn tất |
-| Cấu hình SU2022 | JSON Base64, khôi phục Auto/Smart Dim/preset cũ không eval; lỗi đọc không chặn khởi động |
-| Native SketchUp | Font/Height, associations, observers, Undo/save-reopen cần kiểm chứng thực tế |
+| Nguồn V6 Claude 3.2.0 | Đã rà soát/tích hợp Smart/mặt cắt; snapshot 15 file có SHA256 |
+| Sidebar / scope / theme | 6 bảng, scope chung Font/Style, sáng/tối; Edge/keyboard/callbacks/760–360px PASS |
+| Smart Dim | 8 mặt lựa chọn; mô phỏng chain/tổng/yaw 0/30/45/90/123°, mirror/scale PASS; tilt/shear/khác trục bị chặn |
+| Mặt cắt | Tag riêng, plane/normals và lọc bbox; chỉ một mặt cắt bật, song song trục tủ; mô phỏng PASS |
+| Chống Group trùng | Owned metadata/source/face/Scene; dựng xong mới xóa bộ cũ; foreign/manual/lock/failure guards PASS |
+| Scene / Tag | Riêng Tag Smart, chỉ Scene lưu Tags, không update camera/style; visibility failure restore mô phỏng PASS |
+| Toolbar Smart một chạm | Dùng lại options/style thành công cuối, cập nhật bộ cũ; command wiring mô phỏng PASS |
+| Units riêng | Core.apply_units_model, readback/rollback; không ghi cùng style/preset; reset numeric opt-in PASS |
+| Model Info / rebuild | Giữ logic bảo toàn links/properties; tránh khóa measured text; native font/Height vẫn chưa xác minh |
+| Auto / preset / Animation | Giữ chức năng, JSON Base64; regression PASS |
+| Deploy fixture / gói | Whitelist 20 file, backup/guards/Cabinet preservation PASS; CRC/byte/SHA256 kiểm tra khi package |
+| SketchUp native 3.3 | Chưa chạy acceptance 3.3 trên kernel: Scene/Options Undo, font/Height, associations, observer, CEF cần test thực tế |
 
-ZIP gốc giữ trong dev/claude_reference. Không coi fixture là bằng chứng font/Height đã đổi trong SketchUp.
-
-Ngày 2026-10-05 đã mở SU2022; công cụ điều khiển lỗi “no screenshot targets found”, sau khi app vào Untitled thử lại lỗi “FrameArrived timed out”. Không chạy test native trên model.
+Không khẳng định fixture là kiểm chứng native. Giới hạn bbox, trục tủ baked và nâng cấp bộ V6 không metadata được ghi trong DEVELOPMENT_NOTES.md.

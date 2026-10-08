@@ -1,0 +1,21 @@
+{
+  "archive": "VGD_Dim_6.rbz",
+  "sha256": "550b58294f1a2f07cf0e75f584753e32816589859f84b654caf89c9918c1ce62",
+  "files": {
+    "VGD_Dim.rb": "85733a1c374ad48df957fd752794beecc52e9a98d7cad3ef2dd1f45cc783ffc7",
+    "VGD_Dim/smartdim.rb": "235192c9819194b498e71068b62d8b0124733941cdc36429cce5bc3a8f7178ca",
+    "VGD_Dim/dim.svg": "dcd6fed7ee1a718e345b8636eb00f6c3bc06a2b5faf15a5ea91d0ffa5b21b891",
+    "VGD_Dim/engine.rb": "8623ed8de1de32486cdae5886140377b3f132d6c1221566f35660d71b5897eb2",
+    "VGD_Dim/core.rb": "1809c84f3c91009029402d6599bff5ed2be474bc3865d1d0bcd1591dfca4fe1b",
+    "VGD_Dim/native_style.rb": "fbbefb838090fcb032f7a708c0342b7caf791b129efafb359c818524aa594742",
+    "VGD_Dim/dialog.html": "883956bebe9ad79f2771a9df823d2db86d7d8288edd90832e1d3a28ec1982fb9",
+    "VGD_Dim/dialog.css": "5f0c942e4b4cc6fc833cbf06a6ea93308d054537f384619c14f38ba992834062",
+    "VGD_Dim/animation.rb": "308a2b4a94db6ea6cbdebdbd55f15fd8d1c66c74ee0cca2ef38373d0bc3c17f6",
+    "VGD_Dim/store.rb": "07839d526cb9812128e1da8791b1b083e7521ab8cdcfb9407914ca7e2932095b",
+    "VGD_Dim/dialog.rb": "4d4e9ad7bb05e47faa3c9a673328a8ad3a0c25b32053f302bd497c2efa3f2e75",
+    "VGD_Dim/autostyle.rb": "40e6eab11fcc566a0c771b3aa3f2b7cb9c44138541c1e78f761496a3d8a54543",
+    "VGD_Dim/main.rb": "f91946b848cde160ef0646221f325f4e16413df50a5bc68be13578edd2c30f0b",
+    "VGD_Dim/dialog.js": "91447c1805be5a6e8ea2a0957447781391e6cbb478059f86631adfdb95cd99fc",
+    "VGD_Dim/presets.rb": "1ee655475f37ac6fbc33c9527c265d9d47e02dc3bcb7e0a170ea344a6f264eeb"
+  }
+}

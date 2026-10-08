@@ -6,9 +6,11 @@ module VGD
       STYLE = {
         'dim'=>{'setcolor'=>false,'color'=>'#000000','arrow'=>'keep','textorient'=>'keep','align'=>'keep'},
         'text'=>{'setcolor'=>false,'color'=>'#000000'},
-        'label'=>{'setcolor'=>false,'color'=>'#000000','arrow'=>'keep','leader'=>'keep'}
+        'label'=>{'setcolor'=>false,'color'=>'#000000','arrow'=>'keep','leader'=>'keep'},
+        'units'=>{'enabled'=>false,'unit'=>'2','precision'=>'0','show_unit'=>false,'reset_text'=>true}
       }.freeze unless const_defined?(:STYLE, false)
-      UNITS = {'unit'=>'2','precision'=>'0','show_unit'=>false,'reset_text'=>false}.freeze unless const_defined?(:UNITS, false)
+      LEADER_VIEW  = defined?(::ALeaderView)  ? ::ALeaderView  : 1 unless const_defined?(:LEADER_VIEW, false)
+      LEADER_MODEL = defined?(::ALeaderModel) ? ::ALeaderModel : 2 unless const_defined?(:LEADER_MODEL, false)
       SCAN = {'scope'=>'selected','nested'=>true,'components'=>true,'hidden'=>false,'locked'=>false}.freeze unless const_defined?(:SCAN, false)
 
       def validate_settings(settings)
@@ -30,6 +32,12 @@ module VGD
         raise ArgumentError, 'Kiểu leader không hợp lệ.' unless %w[keep view pushpin].include?(config['label']['leader'])
         if config['dim']['textorient']=='screen' && config['dim']['align']!='keep'
           raise ArgumentError, 'Above/Center/Outside cần chọn hướng chữ song song đường Dim.'
+        end
+        units = config['units']
+        %w[enabled show_unit reset_text].each { |key| raise ArgumentError, 'Thông số đơn vị phải là bật/tắt.' unless [true,false].include?(units[key]) }
+        if units['enabled']
+          raise ArgumentError, 'Đơn vị không hợp lệ.' unless %w[0 1 2 3 4].include?(units['unit'].to_s)
+          raise ArgumentError, 'Số lẻ phải từ 0 đến 8.' unless /\A[0-8]\z/.match?(units['precision'].to_s)
         end
         config
       end
@@ -91,6 +99,14 @@ module VGD
       def color(entity, settings, prefix)
         entity.material = Engine.get_material(entity.model, prefix, settings['color']) if settings['setcolor']
       end
+      # Dim nằm trong Group 000_DIM_X/Y/Z của Smart Dim thì Tag do Group quyết định.
+      def smart_dim_group?(entity)
+        parent = entity.parent
+        parent.is_a?(Sketchup::ComponentDefinition) && parent.group? &&
+          parent.instances.any? { |group| group.name.to_s.start_with?('000_DIM_') }
+      rescue StandardError
+        false
+      end
       def style_dim(entity, settings, report={}, assign_tag=true)
         color(entity,settings,'VGD_DIM_COLOR')
         Engine.set_endpoint(entity,settings['arrow'])
@@ -102,76 +118,54 @@ module VGD
         elsif settings['align']!='keep'
           (report['dim.align'] ||= {'unsupported'=>0})['unsupported'] += 1
         end
-        entity.layer = entity.model.layers['000 DIM'] || entity.model.layers.add('000 DIM') if assign_tag && !Managed.owned?(entity)
+        entity.layer = entity.model.layers['000 DIM'] || entity.model.layers.add('000 DIM') if assign_tag && !smart_dim_group?(entity)
       end
       def style_text(entity, settings, type)
         color(entity,settings,'VGD_TEXT_COLOR')
         if type=='label'
           Engine.set_endpoint(entity,settings['arrow'])
-          entity.leader_type = (settings['leader']=='view' ? ALeaderView : ALeaderModel) unless settings['leader']=='keep'
+          entity.leader_type = (settings['leader']=='view' ? LEADER_VIEW : LEADER_MODEL) unless settings['leader']=='keep'
         end
         entity.layer = entity.model.layers['000 TEXT'] || entity.model.layers.add('000 TEXT')
       end
-      def validate_units(settings)
-        raise ArgumentError, 'Thông số đơn vị không hợp lệ.' unless settings.is_a?(Hash)
-        config = UNITS.merge(settings.select { |key,_| UNITS.key?(key) })
-        %w[show_unit reset_text].each { |key| raise ArgumentError, 'Thông số đơn vị phải là bật/tắt.' unless [true,false].include?(config[key]) }
-        raise ArgumentError, 'Đơn vị không hợp lệ.' unless %w[0 1 2 3 4].include?(config['unit'].to_s)
-        raise ArgumentError, 'Số lẻ phải từ 0 đến 8.' unless /\A[0-8]\z/.match?(config['precision'].to_s)
-        config
-      end
-      def read_units(model)
-        p = model.options['UnitsOptions']
-        {'unit'=>p['LengthUnit'].to_s,'precision'=>p['LengthPrecision'].to_s,'show_unit'=>!p['SuppressUnitsDisplay'],'reset_text'=>false}
-      end
-      def apply_units(model, settings)
-        settings = validate_units(settings)
-        provider = model.options['UnitsOptions']
-        provider['LengthFormat'] = 0
-        provider['LengthUnit'] = settings['unit'].to_i
-        provider['LengthPrecision'] = settings['precision'].to_i
-        provider['SuppressUnitsDisplay'] = !settings['show_unit']
-        expected = {'LengthFormat'=>0, 'LengthUnit'=>settings['unit'].to_i,'LengthPrecision'=>settings['precision'].to_i,'SuppressUnitsDisplay'=>!settings['show_unit']}
-        raise 'SketchUp không nhận thiết lập đơn vị.' unless expected.all? { |k,v| provider[k] == v }
-      end
-      NUMERIC_TEXT = /\A\s*[+-]?(?:\d[\d.,\s]*)(?:mm|cm|m|km|in|ft|"|')?\s*\z/i unless const_defined?(:NUMERIC_TEXT, false)
-      def apply_units_model(settings)
-        raise 'APPLY đang chạy.' if NativeStyle.running?
-        config = validate_units(settings)
-        model = Sketchup.active_model
-        provider = model.options['UnitsOptions']
-        keys = %w[LengthFormat LengthUnit LengthPrecision SuppressUnitsDisplay]
-        before = keys.map { |k| [k,provider[k]] }.to_h
-        # Reset only numeric overrides, preserving labels, hidden tags and all styles.
-        dims = config['reset_text'] ? scan(model,{'scope'=>'model','hidden'=>true})['dim'].map { |e| e[:entity] } : []
-        texts = dims.map { |d| [d,d.text.to_s] }
+      # Chữ Dim dạng số thuần (kèm đơn vị) = chữ đo; chữ có từ khác (vd "Cao 2400") là chữ riêng, không đụng.
+      NUMERIC_TEXT = /\A\s*-?[\d.,\s]+\s*(mm|cm|m|km|in|ft|"|')?\s*\z/i unless const_defined?(:NUMERIC_TEXT, false)
+      # Dim bị "khóa" chữ (text đã ghi đè) sẽ không đổi theo thiết lập đơn vị; trả về chữ tự động đo.
+      def reset_numeric_text(dims)
         count = 0
-        AutoStyle.suspend do
-          model.start_operation('VGD Dim — Đơn vị toàn model',true)
-          begin
-            apply_units(model,config)
-            texts.each do |dim,text|
-              next unless NUMERIC_TEXT.match?(text)
-              dim.text = ''
-              count += 1
-            end
-            model.commit_operation
-          rescue StandardError
-            model.abort_operation
-            before.each { |k,v| provider[k] = v }
-            texts.each { |d,t| d.text = t if d.valid? }
-            raise
+        dims.each do |dim|
+          next unless dim.valid?
+          before = dim.text.to_s
+          next if before.empty? || !NUMERIC_TEXT.match?(before)
+          ok = ['', '<>'].any? do |token|
+            dim.text = token
+            now = dim.text.to_s
+            !now.empty? && now != '<>'
           end
+          if ok then count += 1 else dim.text = before end
         end
-        model.active_view.invalidate
-        read_units(model).merge('reset'=>count)
+        count
+      end
+      def apply_units(model, settings, dims=[])
+        return nil unless settings['enabled']
+        provider = model.options['UnitsOptions']
+        unit = settings['unit'].to_i; precision = settings['precision'].to_i; suppress = !settings['show_unit']
+        provider['LengthFormat'] = 0
+        provider['LengthUnit'] = unit
+        provider['LengthPrecision'] = precision
+        provider['SuppressUnitsDisplay'] = suppress
+        unless provider['LengthUnit'] == unit && provider['LengthPrecision'] == precision && provider['SuppressUnitsDisplay'] == suppress
+          raise 'SketchUp không nhận thiết lập đơn vị (đọc lại giá trị bị khác).'
+        end
+        reset = settings['reset_text'] ? reset_numeric_text(dims) : 0
+        {'unit'=>unit, 'precision'=>precision, 'show_unit'=>!suppress, 'reset'=>reset}
       end
       def tag_selected(model)
         model.start_operation('VGD Dim — Gán tag vùng chọn',true)
         begin
           Engine.selected(model).each do |entity|
             name=entity.is_a?(Sketchup::Dimension) ? '000 DIM' : '000 TEXT'
-            entity.layer=model.layers[name] || model.layers.add(name) unless Managed.owned?(entity)
+            entity.layer=model.layers[name] || model.layers.add(name)
           end
           model.commit_operation
         rescue StandardError
@@ -186,8 +180,8 @@ module VGD
         model = Sketchup.active_model
         acc = scan(model,opts)
         chosen = kinds.map(&:to_s).uniq
-        raise 'Không tìm thấy đối tượng trong phạm vi/bộ lọc đã chọn.' if chosen.all? { |k| acc[k].empty? }
-        report = {}; counts = {'dim'=>0,'text'=>0,'label'=>0}
+        raise 'Không tìm thấy đối tượng trong phạm vi/bộ lọc đã chọn.' if chosen.all? { |k| acc[k].empty? } && !config['units']['enabled']
+        report = {}; counts = {'dim'=>0,'text'=>0,'label'=>0}; units_result = nil
         AutoStyle.suspend do
           model.start_operation('VGD Dim — Áp style',true)
           begin
@@ -197,6 +191,7 @@ module VGD
                 counts[type]+=1
               end
             end
+            units_result = apply_units(model, config['units'], acc['dim'].map { |entry| entry[:entity] })
             model.commit_operation
           rescue StandardError
             model.abort_operation
@@ -204,70 +199,77 @@ module VGD
           end
         end
         model.active_view.invalidate
-        {'count'=>counts,'report'=>report}
+        {'count'=>counts,'report'=>report,'units'=>units_result}
       end
 
-      def endpoint(dim, side)
-        entity, point = dim.public_send(side)
-        getter="#{side}_attached_to"
-        attached=dim.public_send(getter) if dim.respond_to?(getter)
-        # Restore complete instance paths after creation; their point coordinate
-        # convention differs from add_dimension_linear's reference arguments.
-        return point if attached && attached[0]
-        return entity if entity && entity.respond_to?(:position) # Vertex / ConstructionPoint
-        entity ? [entity,point] : point
+      # Tạo lại Dimension tuyến tính để nhận font/size hiện tại của Model Info.
+      # Truyền nguyên start/end của Dim cũ (đã kiểm chứng giữ được liên kết bám),
+      # chỉ ghi đè chữ khi Dim cũ có chữ riêng khác chữ tự động.
+      def safely
+        yield
+      rescue StandardError
+        nil
+      end
+      def restore_attachments(old, new_dim)
+        %i[start end].each do |side|
+          getter = "#{side}_attached_to"; setter = "#{getter}="
+          next unless old.respond_to?(getter) && new_dim.respond_to?(setter)
+          attached = old.public_send(getter)
+          next unless attached && attached[0]
+          current = new_dim.public_send(getter)
+          next if current && current[0]
+          safely { new_dim.public_send(setter, attached) }
+        end
+      end
+      def copy_dim_props(old, new_dim)
+        safely { new_dim.material = old.material if old.material }
+        safely { new_dim.layer = old.layer }
+        safely { new_dim.hidden = old.hidden? }
+        safely { new_dim.arrow_type = old.arrow_type }
+        safely { new_dim.has_aligned_text = old.has_aligned_text? }
+        safely { new_dim.aligned_text_position = old.aligned_text_position unless old.aligned_text_position.nil? }
+        safely { new_dim.text_position = old.text_position if old.respond_to?(:text_position) }
+        safely do
+          (old.attribute_dictionaries || []).each do |dict|
+            dict.each_pair { |key, value| new_dim.set_attribute(dict.name, key, value) }
+          end
+        end
       end
       def rebuild_dims(opts)
         raise 'APPLY đang chạy.' if NativeStyle.running?
-        model=Sketchup.active_model
-        entries=scan(model,opts)['dim']
+        model = Sketchup.active_model
+        entries = scan(model, opts)['dim']
         raise 'Không tìm thấy Dimension trong phạm vi đã chọn.' if entries.empty?
-        selected=model.selection.to_a; replacements={}
-        result={'rebuilt'=>0,'custom'=>0,'skipped'=>0,'failed'=>0}
+        selected = model.selection.to_a; replacements = {}
+        result = {'rebuilt'=>0, 'custom'=>0, 'skipped'=>0, 'failed'=>0}
         AutoStyle.suspend do
-          model.start_operation('VGD Dim — Làm mới font/size',true)
+          model.start_operation('VGD Dim — Làm mới font/size', true)
           begin
             entries.each do |entry|
-              old=entry[:entity]
+              old = entry[:entity]
               unless old.is_a?(Sketchup::DimensionLinear)
-                result['skipped']+=1; next
+                result['skipped'] += 1; next
               end
-              new_dim=nil
+              new_dim = nil
               begin
-                # Create with current Model Info font defaults; preserve native links.
-                new_dim=entry[:entities].add_dimension_linear(endpoint(old,:start), endpoint(old,:end), old.offset_vector)
-                %i[start end].each do |side|
-                  getter="#{side}_attached_to"
-                  attached=old.public_send(getter) if old.respond_to?(getter)
-                  new_dim.public_send("#{getter}=",attached) if attached && attached[0]
+                new_dim = entry[:entities].add_dimension_linear(old.start, old.end, old.offset_vector)
+                restore_attachments(old, new_dim)
+                if old.text != new_dim.text
+                  new_dim.text = old.text
+                  result['custom'] += 1
                 end
-                custom_text=old.text
-                # A native measured string matching the fresh Dim must stay automatic.
-                preserve_text = !custom_text.to_s.empty? && custom_text != new_dim.text
-                new_dim.text=custom_text if preserve_text
-                new_dim.material=old.material; new_dim.layer=old.layer; new_dim.hidden=old.hidden?
-                new_dim.arrow_type=old.arrow_type; new_dim.has_aligned_text=old.has_aligned_text?
-                position=old.aligned_text_position
-                new_dim.aligned_text_position=position unless position.nil?
-                new_dim.text_position=old.text_position if old.respond_to?(:text_position)
-                %i[casts_shadows? receives_shadows?].each do |method|
-                  setter=method.to_s.sub('?','=')
-                  new_dim.public_send(setter,old.public_send(method)) if old.respond_to?(method) && new_dim.respond_to?(setter)
-                end
-                if old.respond_to?(:attribute_dictionaries) && old.attribute_dictionaries
-                  old.attribute_dictionaries.each { |dict| dict.each_pair { |key,value| new_dim.set_attribute(dict.name,key,value) } }
-                end
-                old.erase! # Remove only after every preservation step succeeds.
-                replacements[old]=new_dim
-                result['rebuilt']+=1
-                result['custom']+=1 if preserve_text
+                copy_dim_props(old, new_dim)
+                replacements[old] = new_dim
+                old.erase!   # chỉ xóa bản cũ sau khi bản mới đã dựng xong
+                result['rebuilt'] += 1
               rescue StandardError
+                replacements.delete(old)
                 new_dim.erase! if new_dim && new_dim.valid?
-                result['failed']+=1
+                result['failed'] += 1
               end
             end
             model.selection.clear
-            model.selection.add(selected.map { |e| replacements.fetch(e,e) }.select(&:valid?))
+            model.selection.add(selected.map { |e| replacements.fetch(e, e) }.select(&:valid?))
             model.commit_operation
           rescue StandardError
             model.abort_operation

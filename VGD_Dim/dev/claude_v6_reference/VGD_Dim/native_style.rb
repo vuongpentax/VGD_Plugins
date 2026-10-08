@@ -9,15 +9,14 @@ module VGD
       def adapter
         @adapter ||= WindowsAdapter.new
       end
-      def apply(model, settings, apply_setters: true, &finished)
+      def apply(model, &finished)
         raise ArgumentError, 'APPLY đang chạy.' if @job
-        config = Engine.validate(settings)
         targets = Engine.selected(model)
         raise ArgumentError, 'Hãy chọn trực tiếp Dim hoặc Text/Label trước khi APPLY.' if targets.empty?
         Engine.check_context(model)
         api = adapter
         api.check_platform!
-        @job = Job.new(model, config, api, finished, apply_setters)
+        @job = Job.new(model, api, finished)
         @job.start
       end
       def cancel
@@ -127,11 +126,10 @@ module VGD
       end
 
       class Job
-        def initialize(model, config, api, finished, apply_setters=true)
-          @model = model; @config = config; @api = api; @finished = finished
+        def initialize(model, api, finished)
+          @model = model; @api = api; @finished = finished
           @snapshot = model.selection.to_a; @path = Array(model.active_path).dup
           @expected = @snapshot.dup; @updated = []
-          @apply_setters = apply_setters
           targets = Engine.selected(model)
           @stages = []
           dims = targets.select { |entity| entity.is_a?(Sketchup::Dimension) }
@@ -178,11 +176,7 @@ module VGD
               prepare(0, false)
             else
               select(@snapshot)
-              if @apply_setters
-                Engine.apply(@model, @config)
-              else
-                Core.tag_selected(@model)
-              end
+              Core.tag_selected(@model)
               finish(nil)
             end
             return

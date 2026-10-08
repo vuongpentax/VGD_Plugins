@@ -1,43 +1,8 @@
 <!DOCTYPE html>
-<html lang="vi"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VGD Dim</title>
-<link rel="stylesheet" href="dialog.css"></head><body>
-
-<header>
- <h1>VGD Dim<small id="ver">Smart Dim · Font/size · Style</small></h1>
- <div class="presets">
-  <select id="preset" aria-label="Preset" onchange="VGD.loadPreset()"></select>
-  <input type="text" id="pname" placeholder="Tên preset" aria-label="Tên preset">
-  <button onclick="VGD.savePreset()">Lưu</button>
-  <button class="quiet" id="del" onclick="VGD.delPreset()">Xóa</button>
- </div>
-</header>
-
-<main>
- <section>
-  <h2>1 · Smart Dim</h2>
-  <div class="row"><label for="sd.face">Mặt đứng</label>
-   <select id="sd.face"><option value="camera">Mặt đang nhìn (camera)</option><option value="axis">Gần trục nhất</option><option value="-y">Mặt -Y (trước)</option><option value="+y">Mặt +Y (sau)</option><option value="-x">Mặt -X (trái)</option><option value="+x">Mặt +X (phải)</option></select></div>
-  <div class="row"><label class="chk"><input type="checkbox" id="sd.do_h" checked> Dim ngang</label>
-   <select id="sd.h_side" aria-label="Vị trí dim ngang"><option value="top">Phía trên</option><option value="bottom">Phía dưới</option></select>
-   <label class="chk"><input type="checkbox" id="sd.do_v" checked> Dim đứng</label>
-   <select id="sd.v_side" aria-label="Vị trí dim đứng"><option value="left">Bên trái</option><option value="right">Bên phải</option></select></div>
-  <div class="row"><label for="sd.off1">Cách tủ (mm)</label>
-   <input type="number" min="1" id="sd.off1" value="150" aria-label="Cấp 1">
-   <label for="sd.off2" class="inline">Cấp 2</label><input type="number" min="1" id="sd.off2" value="300"></div>
-  <details><summary>Lọc chi tiết (mm)</summary><div>
-   <div class="row"><label for="sd.min_seg">Bỏ đoạn nhỏ hơn</label><input type="number" min="0" id="sd.min_seg" value="5"></div>
-   <div class="row"><label for="sd.min_part">Bỏ chi tiết nhỏ hơn</label><input type="number" min="0" id="sd.min_part" value="300"></div>
-   <div class="row"><label for="sd.depth">Sâu tối đa</label><input type="number" min="1" id="sd.depth" value="100"></div>
-   <p class="note">Tay nắm và chi tiết nhỏ bị bỏ. Chi tiết nằm sâu hơn mặt trước quá ngưỡng cũng bị bỏ.</p>
-  </div></details>
-  <button class="solid wide" onclick="VGD.smart()">Smart Dim cho tủ đang chọn</button>
-  <p class="note">Chọn Group/Component của tủ rồi bấm. Cấp 1 là dim nối tiếp (hồi, cánh), cấp 2 là dim tổng. Dim mới dùng màu và mũi tên ở mục 4. Bấm lại sẽ tạo thêm một bộ Dim.</p>
- </section>
-
- <section>
-  <h2>2 · Phạm vi</h2>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VGD Dim</title><link rel="stylesheet" href="dialog.css"></head><body>
+<header><div class="brand"><span class="brand-mark">VGD</span><div><b>Dim</b><small id="ver">3.3.0 beta</small></div></div><button id="theme" class="theme-button" aria-label="Chuyển giao diện sáng tối" aria-pressed="false" onclick="VGD.toggleTheme()">◐</button></header>
+<div class="workspace"><aside><nav role="tablist" aria-label="Chức năng VGD Dim"><button id="tab-smart" class="nav-item" role="tab" aria-controls="panel-smart" aria-selected="true" tabindex="0" data-tab="smart" title="Smart Dim"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M5 3v6M19 3v6M5 12h14v8H5zM10 12v8"/></svg><span>Smart Dim</span></button><button id="tab-font" class="nav-item" role="tab" aria-controls="panel-font" aria-selected="false" tabindex="-1" data-tab="font" title="Font & cỡ chữ"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M12 5v15M7 20h10"/></svg><span>Font & cỡ chữ</span></button><button id="tab-style" class="nav-item" role="tab" aria-controls="panel-style" aria-selected="false" tabindex="-1" data-tab="style" title="Kiểu dáng"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M8 3v6M16 9v6M10 15v6"/></svg><span>Kiểu dáng</span></button><button id="tab-presets" class="nav-item" role="tab" aria-controls="panel-presets" aria-selected="false" tabindex="-1" data-tab="presets" title="Preset"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l3 3v15H4V3zM8 3v6h8V3M8 14h8v7"/></svg><span>Preset</span></button><button id="tab-animation" class="nav-item" role="tab" aria-controls="panel-animation" aria-selected="false" tabindex="-1" data-tab="animation" title="Animation"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z"/></svg><span>Animation</span></button><button id="tab-units" class="nav-item" role="tab" aria-controls="panel-units" aria-selected="false" tabindex="-1" data-tab="units" title="Đơn vị"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h18v8H3zM7 8v4M11 8v6M15 8v4M19 8v6"/></svg><span>Đơn vị</span></button></nav><div id="desktop-scope"><section id="shared-scope" class="scope-card">
+  <h2>Phạm vi áp dụng</h2>
   <div class="stats" aria-live="polite">
    <div><b id="st.dim">–</b><span>Dimension</span></div>
    <div><b id="st.text">–</b><span>Text</span></div>
@@ -54,22 +19,42 @@
    <label class="chk"><input type="checkbox" id="o.hidden"> Gồm đối tượng ẩn</label>
    <label class="chk"><input type="checkbox" id="o.locked"> Gồm đối tượng khóa</label>
   </div>
-  <button class="wide" onclick="VGD.scan()">Quét (chỉ đếm)</button>
-  <p class="note">Áp dụng cho mục 3 (làm mới Dimension) và mục 4 (áp style). Component dùng chung definition chỉ sửa một lần và đổi mọi bản sao.</p>
- </section>
-
- <section>
-  <h2>3 · Font &amp; size chữ</h2>
-  <p class="note">SketchUp 2022 không cho chỉnh font/size bằng code. Chỉnh trong Model Info trước, rồi áp lại bằng một trong hai nút dưới.</p>
-  <div class="bar"><button onclick="sketchup.dim_info()">Model Info › Dimensions</button><button onclick="sketchup.text_info()">Model Info › Text</button></div>
+  <button class="wide" onclick="VGD.scan()">Quét</button>
+  <p class="note">Chỉ dùng cho Font &amp; Kiểu dáng. Component chung definition đổi mọi bản sao; Make Unique để sửa riêng.</p>
+ </section></div><div class="sidebar-foot">DIM · TEXT · LABEL<br>SketchUp native</div></aside>
+<main><div id="mobile-scope"></div><div id="panel-smart" class="function-panel" role="tabpanel" aria-labelledby="tab-smart" ><div class="panel-heading"><h1>Smart Dim</h1><p>Đo tủ đang chọn · cập nhật bộ Dim cũ</p><span class="scope-badge" id="badge-smart"></span></div><section>
+  <h2>Smart Dim</h2>
+  <div class="row"><label for="sd.face">Mặt theo trục tủ</label>
+   <select id="sd.face"><option value="camera">Mặt đang nhìn (camera, gồm Z)</option><option value="axis">Gần gốc tọa độ (mặt đứng)</option><option value="-y">Mặt -Y (trước)</option><option value="+y">Mặt +Y (sau)</option><option value="-x">Mặt -X (trái)</option><option value="+x">Mặt +X (phải)</option><option value="+z">Mặt +Z (trên, mặt bằng)</option><option value="-z">Mặt -Z (dưới)</option></select></div>
+  <label class="chk sec"><input type="checkbox" id="sd.use_section" checked> Nếu đang bật mặt cắt thì dim đúng tại mặt cắt</label>
+  <div class="row"><label class="chk"><input type="checkbox" id="sd.do_h" checked> Dim ngang</label>
+   <select id="sd.h_side" aria-label="Vị trí dim ngang"><option value="top">Phía trên</option><option value="bottom">Phía dưới</option></select>
+   <label class="chk"><input type="checkbox" id="sd.do_v" checked> Dim đứng</label>
+   <select id="sd.v_side" aria-label="Vị trí dim đứng"><option value="left">Bên trái</option><option value="right">Bên phải</option></select></div>
+  <div class="row"><label for="sd.off1">Cách tủ (mm)</label>
+   <input type="number" min="1" id="sd.off1" value="150" aria-label="Cấp 1">
+   <label for="sd.off2" class="inline">Cấp 2</label><input type="number" min="1" id="sd.off2" value="300"></div>
+  <details><summary>Lọc chi tiết (mm)</summary><div>
+   <div class="row"><label for="sd.min_seg">Bỏ đoạn nhỏ hơn</label><input type="number" min="0" id="sd.min_seg" value="5"></div>
+   <div class="row"><label for="sd.min_part">Bỏ chi tiết nhỏ hơn</label><input type="number" min="0" id="sd.min_part" value="300"></div>
+   <div class="row"><label for="sd.depth">Sâu tối đa</label><input type="number" min="1" id="sd.depth" value="100"></div>
+   <p class="note">Tay nắm và chi tiết nhỏ bị bỏ. Chi tiết nằm sâu hơn mặt trước quá ngưỡng cũng bị bỏ.</p>
+  </div></details>
+  <label class="chk"><input type="checkbox" id="sd.scene_only" checked> Gắn bộ Dim vào Scene hiện tại</label>
+  <p class="note">Scene cần bật lưu Tags. Tag bộ này hiển thị trong Scene hiện tại và ẩn ở các Scene khác có lưu Tags.</p>
+  <button class="solid wide" onclick="VGD.smart()">Smart Dim cho tủ đang chọn</button>
+  <p class="note">Đo theo trục riêng của tủ, gồm tủ xoay quanh Z. Tủ nghiêng, shear hoặc các khối khác hệ trục sẽ được báo lỗi. Chạy lại cùng tủ/mặt/Scene sẽ thay bộ Dim cũ. Bộ mặt cắt dùng Tag riêng <b>000_DIM_SECTION…</b>.</p>
+ </section></div><div id="panel-font" class="function-panel" role="tabpanel" aria-labelledby="tab-font" hidden><div class="panel-heading"><h1>Font & cỡ chữ</h1><p>Mẫu chữ Model Info · đổi cỡ chữ và font</p><span class="scope-badge" id="badge-font"></span></div><section>
+  <h2>Font &amp; size chữ</h2>
+  <p class="note">Chỉnh font, cỡ chữ theo pt hoặc Height trong Model Info, rồi áp mẫu cho các đối tượng cần đổi.</p>
+  <div class="bar"><button id="dim-info" onclick="sketchup.dim_info()">Model Info › Dimensions</button><button id="text-info" onclick="sketchup.text_info()">Model Info › Text</button></div>
   <button class="solid wide" id="rebuild" onclick="VGD.rebuild()">Làm mới Dimension theo phạm vi</button>
   <p class="note">Tạo lại Dim tuyến tính với font/size của Model Info, vào được Group lồng. Giữ điểm đo, liên kết, chữ ghi đè, màu, mũi tên, Tag. Dim bán kính bị bỏ qua.</p>
   <button class="wide" id="native-apply" onclick="VGD.nativeApply()">Áp mẫu cho Dim/Text/Label đang chọn</button>
   <p class="note">Dùng nút Update selected của Model Info, nên chỉ áp cho đối tượng chọn trực tiếp (không quét trong Group), Windows giao diện English. Text/Label chỉ đổi size được bằng cách này.</p>
- </section>
-
- <section>
-  <h2>4 · Màu &amp; mũi tên</h2>
+ </section></div><div id="panel-style" class="function-panel" role="tabpanel" aria-labelledby="tab-style" hidden><div class="panel-heading"><h1>Kiểu dáng</h1><p>Màu, endpoint, hướng chữ và leader</p><span class="scope-badge" id="badge-style"></span></div><section>
+  <h2>Màu &amp; mũi tên</h2>
+  <div class="checks"><label class="chk"><input id="kind.dim" type="checkbox" checked> Dimension</label><label class="chk"><input id="kind.text" type="checkbox" checked> Text</label><label class="chk"><input id="kind.label" type="checkbox" checked> Label</label></div>
   <div class="sub">Đổi màu (tích để áp)</div>
   <div class="grid3">
    <div class="cell"><label class="chk"><input type="checkbox" id="dim.setcolor"> Dim</label><input type="color" id="dim.color" aria-label="Màu Dim"></div>
@@ -89,13 +74,16 @@
     <select id="label.leader"><option value="keep">Giữ nguyên</option><option value="view">Theo màn hình</option><option value="pushpin">Ghim vào model</option></select></div>
   </div>
   <button class="solid wide" onclick="VGD.run()">Áp style theo phạm vi</button>
-  <p class="note">Sau khi áp, Dim nằm ở Tag 000 DIM, Text/Label ở Tag 000 TEXT.</p>
+  <p class="note">Dim thường vào Tag 000 DIM; Text/Label vào 000 TEXT. Bộ Smart Dim giữ Tag của Group để Scene tiếp tục quản lý hiển thị. Đơn vị không đổi khi áp style.</p>
   <label class="chk auto"><input type="checkbox" id="auto.enabled" onchange="VGD.saveAuto()"> Tự áp style này cho Dim/Text/Label vừa tạo</label>
   <p class="note">Chỉ chạy khi plugin đang nạp; file gửi cho người khác không mang theo.</p>
- </section>
-
- <section>
-  <h2>5 · Animation</h2>
+ </section></div><div id="panel-presets" class="function-panel" role="tabpanel" aria-labelledby="tab-presets" hidden><div class="panel-heading"><h1>Preset</h1><p>Lưu bộ kiểu dáng trên máy này</p><span class="scope-badge" id="badge-presets"></span></div><section><h2>Bộ kiểu dáng</h2><div class="presets">
+  <select id="preset" aria-label="Preset" onchange="VGD.loadPreset()"></select>
+  <input type="text" id="pname" placeholder="Tên preset" aria-label="Tên preset">
+  <button onclick="VGD.savePreset()">Lưu</button>
+  <button class="quiet" id="del" onclick="VGD.delPreset()">Xóa</button>
+ </div><p class="note">Preset chỉ lưu kiểu dáng. Áp đơn vị là thao tác riêng; thiết lập Smart Dim được lưu sau lượt đo thành công.</p></section></div><div id="panel-animation" class="function-panel" role="tabpanel" aria-labelledby="tab-animation" hidden><div class="panel-heading"><h1>Animation</h1><p>Chuyển cảnh và thời gian slideshow</p><span class="scope-badge" id="badge-animation"></span></div><section>
+  <h2>Animation</h2>
   <div class="grid2">
    <div class="field"><label for="anim.transition">Chuyển cảnh (giây)</label><input type="number" step="0.1" min="0" id="anim.transition"></div>
    <div class="field"><label for="anim.delay">Dừng mỗi cảnh (giây)</label><input type="number" step="0.1" min="0" id="anim.delay"></div>
@@ -103,21 +91,19 @@
   <label class="chk"><input type="checkbox" id="anim.loop"> Lặp slideshow</label>
   <div class="bar"><button class="solid" onclick="VGD.anim(true)">Bật animation</button><button onclick="VGD.anim(false)">Tắt animation</button></div>
   <p class="note" id="anim.state"></p>
- </section>
-
- <details class="adv">
-  <summary>Nâng cao · Đơn vị của model</summary>
+ </section></div><div id="panel-units" class="function-panel" role="tabpanel" aria-labelledby="tab-units" hidden><div class="panel-heading"><h1>Đơn vị</h1><p>Thiết lập đơn vị chung cho cả model</p><span class="scope-badge" id="badge-units"></span></div> <section>
+  <h2>Đơn vị toàn model</h2>
   <div>
    <p class="note warn">Đổi đơn vị và số lẻ của cả model, không chỉ Dimension.</p>
-   <label class="chk"><input type="checkbox" id="units.enabled"> Đổi đơn vị khi bấm “Áp style theo phạm vi”</label>
    <div class="row"><label for="units.unit">Đơn vị</label>
-    <select id="units.unit"><option value="0">inch</option><option value="1">feet</option><option value="2">mm</option><option value="3">cm</option><option value="4">m</option></select></div>
-   <div class="row"><label for="units.precision">Số lẻ</label><input type="number" min="0" max="8" id="units.precision"></div>
-   <label class="chk"><input type="checkbox" id="units.show_unit"> Hiện ký hiệu đơn vị</label>
+    <select id="units.unit"><option value="0">inch</option><option value="1">feet</option><option value="2" selected>mm</option><option value="3">cm</option><option value="4">m</option></select></div>
+   <div class="row"><label for="units.precision">Số lẻ</label><input type="number" min="0" max="8" id="units.precision" value="0"></div>
+   <label class="chk"><input type="checkbox" id="units.show_unit"> Hiện ký hiệu đơn vị (bỏ tích = ẩn “mm”)</label>
+   <label class="chk"><input type="checkbox" id="units.reset_text"> Trả chữ Dim dạng số về tự động đo</label>
+   <button class="solid wide" onclick="VGD.unitsApply()">Áp đơn vị cho toàn model</button>
+   <p class="note">Dim có chữ bị khóa (ví dụ do làm mới cũ) sẽ không đổi theo thiết lập đơn vị; ô trên mở khóa chữ dạng số, chữ có từ khác như “Cao 2400” được giữ.</p>
   </div>
- </details>
-</main>
-
-<footer><div id="log" role="status">Sẵn sàng. Chọn tủ rồi bấm Smart Dim, hoặc bấm Quét để đếm Dim/Text/Label trước khi áp.</div></footer>
-
+ </section>
+</div></main></div>
+<footer><span class="status-dot" aria-hidden="true"></span><div id="log" role="status" aria-live="polite">Chọn tủ rồi bấm Smart Dim. Thiết lập đo được lưu sau khi chạy thành công.</div></footer>
 <script src="dialog.js"></script></body></html>

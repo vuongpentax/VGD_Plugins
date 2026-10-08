@@ -41,6 +41,8 @@ def run_core_tests
     check(m.operations==before,'Validation mutated')
   end
   core.run(['dim'],{'units'=>{'enabled'=>true,'unit'=>'2','precision'=>'3','show_unit'=>true}},{})
+  check(m.options['UnitsOptions']['LengthUnit']==0,'Style unexpectedly changed Units')
+  core.apply_units_model({'unit'=>'2','precision'=>'3','show_unit'=>true})
   check(m.options['UnitsOptions']=={'LengthUnit'=>2,'LengthFormat'=>0,'LengthPrecision'=>3,'SuppressUnitsDisplay'=>false},'Model Units wrong')
 
   m.selection.clear; m.selection.add(dim)
@@ -65,6 +67,25 @@ def run_core_tests
   vertex.define_singleton_method(:position) { Geom::Point3d.new(1,2,3) }
   direct=Sketchup::DimensionLinear.new; direct.start_ref=[vertex,vertex.position]
   check(core.endpoint(direct,:start).equal?(vertex),'Direct vertex reference passed as unsupported tuple')
+  m=Sketchup::FakeModel.new; Sketchup.active_model=m
+  number=Sketchup::DimensionLinear.new; number.text='2400 mm'; custom=Sketchup::DimensionLinear.new; custom.text='Cao 2400'
+  m.entities << number; m.entities << custom; m.selection.clear
+  result=core.apply_units_model({'unit'=>'3','precision'=>'1','show_unit'=>true,'reset_text'=>true})
+  check(result['reset']==1 && number.text=='' && custom.text=='Cao 2400','Global Units numeric reset lost custom label')
+  check(m.commits==1 && number.layer.nil? && custom.layer.nil?,'Units wrote styles/tags')
+  before=m.operations
+  begin
+    core.apply_units_model({'unit'=>'12'}); raise 'Invalid global unit accepted'
+  rescue ArgumentError
+    check(m.operations==before,'Unit validation mutated')
+  end
+  provider=m.options['UnitsOptions']; snapshot=provider.dup
+  def provider.[]=(key,value); super(key,key=='LengthPrecision' ? 7 : value); end
+  begin
+    core.apply_units_model({'unit'=>'2','precision'=>'3'}); raise 'Readback failure ignored'
+  rescue RuntimeError
+    check(m.aborts==1 && provider['LengthUnit']==snapshot['LengthUnit'],'Unit readback failure did not rollback')
+  end
   puts 'PASS: scopes/definition dedup/filters, colors/orientation/leader/tags, explicit Units, simulated Dim rebuild preservation/failure'
 end
 

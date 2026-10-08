@@ -61,7 +61,7 @@ def run_engine_tests
     engine.apply(empty,{})
     raise 'Group-only selection applied'
   rescue ArgumentError
-    check(empty.operations == 0 && empty.materials.items.empty? && empty.layers.empty?, 'Empty eligibility changed model')
+    check(empty.operations == 0 && empty.materials.items.empty? && empty.layers.size == 1, 'Empty eligibility changed model')
   end
   invalids = [{'dim_color'=>'#bad'}, {'text_color'=>nil},
               {'dim_endpoint'=>'wrong'}, {'label_endpoint'=>3}]

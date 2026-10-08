@@ -1,9 +1,9 @@
 var VGD={
- presets:{},builtin:[],delTimer:null,autoTimer:null,busy:false,tab:'smart',
+ presets:{},builtin:[],delTimer:null,autoTimer:null,
  ids:['dim.setcolor','dim.color','dim.arrow','dim.textorient','dim.align',
       'text.setcolor','text.color',
       'label.setcolor','label.color','label.leader','label.arrow',
-      'units.unit','units.precision','units.show_unit','units.reset_text'],
+      'units.enabled','units.unit','units.precision','units.show_unit','units.reset_text'],
  el:function(i){return document.getElementById(i)},
  get:function(){
   var s={dim:{},text:{},label:{},units:{}};
@@ -24,59 +24,46 @@ var VGD={
  },
  log:function(t,err){var l=this.el('log');l.textContent=t;l.className=err?'err':''},
  onBusy:function(v){
-  this.busy=v;
-  document.querySelectorAll('main button,#shared-scope button').forEach(function(b){b.disabled=v});
+  document.querySelectorAll('button').forEach(function(b){b.disabled=v});
   if(!v)this.el('del').disabled=this.builtin.indexOf(this.el('preset').value)>=0;
  },
  /* ---- Smart Dim ---- */
  sdKeys:['face','h_side','v_side','off1','off2','min_seg','min_part','depth'],
  sdGet:function(){
   var o={};this.sdKeys.forEach(function(k){o[k]=VGD.el('sd.'+k).value});
-  o.do_h=this.el('sd.do_h').checked;o.do_v=this.el('sd.do_v').checked;o.use_section=this.el('sd.use_section').checked;o.scene_only=this.el('sd.scene_only').checked;return o;
+  o.do_h=this.el('sd.do_h').checked;o.do_v=this.el('sd.do_v').checked;o.use_section=this.el('sd.use_section').checked;return o;
  },
  sdSet:function(o){
   this.sdKeys.forEach(function(k){if(o[k]!==undefined)VGD.el('sd.'+k).value=o[k]});
   if(o.do_h!==undefined)this.el('sd.do_h').checked=!!o.do_h;
   if(o.do_v!==undefined)this.el('sd.do_v').checked=!!o.do_v;
   if(o.use_section!==undefined)this.el('sd.use_section').checked=!!o.use_section;
-  if(o.scene_only!==undefined)this.el('sd.scene_only').checked=!!o.scene_only;
  },
  smart:function(){
-  if(this.busy)return;this.onBusy(true);
   this.log('Đang dựng Dimension…');
   sketchup.smart_dim(JSON.stringify({opts:this.sdGet(),settings:this.get()}));
  },
  onSmart:function(r){
-  this.onBusy(false);
   var sum=function(a){return Math.round(a.reduce(function(x,y){return x+y},0)*10)/10};
   var names={'-y':'-Y (trước)','+y':'+Y (sau)','-x':'-X (trái)','+x':'+X (phải)','+z':'+Z (trên)','-z':'-Z (dưới)'};
-  var t=(r.replaced?'Đã cập nhật':'Đã tạo')+' '+r.total+' Dim '+(r.section?'mặt cắt ':'mặt ')+(names[r.face]||r.face)+' · Tag '+(r.tag||r.group)+'.';
-  if(r.scene)t+=' Scene: '+r.scene+'.';
+  var t='Đã tạo '+r.total+' Dimension '+(r.section?'tại mặt cắt, hướng ':'trên mặt ')+(names[r.face]||r.face)+' (dùng '+r.parts+' chi tiết) trong Group/Tag '+r.group+'. Ctrl+Z để hoàn tác.';
   if(r.h.length)t+='\nNgang: '+r.h.join(' + ')+' = '+sum(r.h);
   if(r.v.length)t+='\nĐứng: '+r.v.join(' + ')+' = '+sum(r.v);
-  if(r.warnings&&r.warnings.length)t+='\n'+r.warnings.join('\n');
   this.log(t);
  },
  /* ---- Quét / áp ---- */
- scan:function(){if(this.busy)return;this.onBusy(true);sketchup.scan(JSON.stringify({opts:this.opts()}))},
+ scan:function(){sketchup.scan(JSON.stringify({opts:this.opts()}))},
  onScan:function(r){
-  this.onBusy(false);
   this.el('st.dim').textContent=r.dim;this.el('st.text').textContent=r.text;
   this.el('st.label').textContent=r.label;this.el('st.nested').textContent=r.nested;
   this.log('Đã quét xong. Chưa thay đổi gì trong model.');
  },
  run:function(){
-  if(this.busy)return;
-  var kinds=['dim','text','label'].filter(function(k){return VGD.el('kind.'+k).checked});
-  if(!kinds.length){this.log('Chọn Dimension, Text hoặc Label để áp.',true);return}
-  this.onBusy(true);
   this.log('Đang áp style…');
   this.saveAutoNow();
-  var settings=this.get();delete settings.units;
-  sketchup.run(JSON.stringify({kinds:kinds,settings:settings,opts:this.opts()}));
+  sketchup.run(JSON.stringify({kinds:['dim','text','label'],settings:this.get(),opts:this.opts()}));
  },
  onResult:function(r){
-  this.onBusy(false);
   var t='Đã áp style cho '+r.count.dim+' Dimension, '+r.count.text+' Text, '+r.count.label+' Label. Ctrl+Z để hoàn tác.',bad=false;
   Object.keys(r.report).forEach(function(k){
    var v=r.report[k];
@@ -90,20 +77,16 @@ var VGD={
  },
  /* ---- Font / size ---- */
  rebuild:function(){
-  if(this.busy)return;this.onBusy(true);
   this.log('Đang làm mới Dimension…');
   sketchup.rebuild(JSON.stringify({opts:this.opts()}));
  },
  onRebuild:function(r){
-  this.onBusy(false);
   var t='Đã làm mới '+r.rebuilt+' Dimension'+(r.custom?' ('+r.custom+' cái giữ chữ ghi đè)':'')+'. Ctrl+Z để hoàn tác.',bad=false;
   if(r.failed){t+='\nKhông làm mới được '+r.failed+' Dimension (giữ nguyên bản cũ).';bad=true}
   if(r.skipped)t+='\nBỏ qua '+r.skipped+' Dimension bán kính.';
   this.log(t,bad);
  },
- nativeApply:function(){if(this.busy)return;this.onBusy(true);this.log('Đang áp mẫu Model Info…');sketchup.native_apply()},
- unitsApply:function(){if(this.busy)return;this.onBusy(true);this.log('Đang áp đơn vị toàn model…');sketchup.units_apply(JSON.stringify({settings:this.get().units}))},
- onUnits:function(r){this.onBusy(false);this.set({units:r});this.log('Đã áp đơn vị toàn model: '+['inch','feet','mm','cm','m'][r.unit]+', '+r.precision+' số lẻ.'+(r.reset?' Đã mở '+r.reset+' chữ Dim dạng số.':''))},
+ nativeApply:function(){this.log('Đang áp mẫu Model Info…');sketchup.native_apply()},
  /* ---- Auto-Style: tự lưu khi form đổi ---- */
  saveAutoNow:function(){
   if(!this.el('auto.enabled').checked)return;
@@ -138,8 +121,7 @@ var VGD={
  savePreset:function(){
   var n=this.el('pname').value.trim();
   if(!n){this.log('Nhập tên preset trước khi lưu.',true);return}
-  var settings=this.get();delete settings.units;
-  sketchup.save_preset(JSON.stringify({name:n,settings:settings}));
+  sketchup.save_preset(JSON.stringify({name:n,settings:this.get()}));
  },
  delPreset:function(){
   var b=this.el('del'),n=this.el('preset').value;
@@ -151,7 +133,7 @@ var VGD={
  },
  resetDel:function(){clearTimeout(this.delTimer);this.delTimer=null;var b=this.el('del');b.textContent='Xóa';b.className='quiet'},
  onState:function(d){
-  if(d.version)this.el('ver').textContent='v'+d.version;
+  if(d.version)this.el('ver').textContent='Smart Dim · Font/size · Style · v'+d.version;
   this.presets=d.presets;this.builtin=d.builtin;
   var sel=this.el('preset'),cur=d.select||sel.value;sel.innerHTML='';
   Object.keys(d.presets).forEach(function(n){var o=document.createElement('option');o.textContent=n;sel.appendChild(o)});
@@ -162,29 +144,10 @@ var VGD={
   if(d.auto)this.el('auto.enabled').checked=!!d.auto.enabled;
   if(d.anim)this.onAnim(d.anim);
   if(d.smart)this.sdSet(d.smart);
-  if(first){if(d.auto&&d.auto.enabled&&d.auto.settings)this.set(d.auto.settings);else if(d.smart_style)this.set(d.smart_style);else this.loadPreset()}
-  if(d.units)this.set({units:d.units});
-  this.onBusy(false);this.updateScope();
+  if(first){if(d.auto&&d.auto.settings)this.set(d.auto.settings);else this.loadPreset()}
  },
- onError:function(r){this.onBusy(false);this.log('Lỗi: '+r.message,true)},
- onToast:function(r){this.onBusy(false);this.log(r.message)},
- nav:function(name,focus){
-  if(!this.el('panel-'+name))return;
-  this.tab=name;
-  document.querySelectorAll('[data-tab]').forEach(function(b){var on=b.dataset.tab===name;b.setAttribute('aria-selected',on?'true':'false');b.tabIndex=on?0:-1;if(on&&focus)b.focus()});
-  document.querySelectorAll('.function-panel').forEach(function(p){p.hidden=p.id!=='panel-'+name});
-  this.el('shared-scope').hidden=['font','style'].indexOf(name)<0;
-  this.updateScope();document.querySelector('main').scrollTop=0;
- },
- updateScope:function(){
-  var scope=document.querySelector('input[name=scope]:checked').value;
-  var labels={selected:'Đang chọn',context:'Group đang mở',model:'Toàn model'};
-  ['font','style'].forEach(function(k){VGD.el('badge-'+k).textContent=labels[scope]});
-  this.el('badge-smart').textContent='Group/Component đang chọn';this.el('badge-units').textContent='Toàn model';this.el('badge-animation').textContent='Toàn model';this.el('badge-presets').textContent='Lưu trên máy';
- },
- mountScope:function(){var target=this.el(innerWidth<=620?'mobile-scope':'desktop-scope');if(this.el('shared-scope').parentElement!==target)target.appendChild(this.el('shared-scope'))},
- toggleTheme:function(){this.setTheme(document.body.dataset.theme==='dark'?'light':'dark')},
- setTheme:function(theme){document.body.dataset.theme=theme;this.el('theme').setAttribute('aria-pressed',theme==='dark'?'true':'false');try{localStorage.setItem('vgd.dim.theme',theme)}catch(e){}}
+ onError:function(r){this.log('Lỗi: '+r.message,true)},
+ onToast:function(r){this.log(r.message)}
 };
 ['dim','text','label'].forEach(function(k){
  VGD.el(k+'.color').addEventListener('input',function(){VGD.el(k+'.setcolor').checked=true});
@@ -193,7 +156,4 @@ VGD.ids.forEach(function(id){
  VGD.el(id).addEventListener('change',function(){VGD.autoSoon()});
  VGD.el(id).addEventListener('input',function(){VGD.autoSoon()});
 });
-document.querySelectorAll('[data-tab]').forEach(function(b){b.addEventListener('click',function(){VGD.nav(b.dataset.tab)});b.addEventListener('keydown',function(e){var buttons=Array.from(document.querySelectorAll('[data-tab]')),i=buttons.indexOf(b),target=null;if(e.key==='ArrowDown'||e.key==='ArrowRight')target=(i+1)%buttons.length;if(e.key==='ArrowUp'||e.key==='ArrowLeft')target=(i+buttons.length-1)%buttons.length;if(e.key==='Home')target=0;if(e.key==='End')target=buttons.length-1;if(target!==null){e.preventDefault();VGD.nav(buttons[target].dataset.tab,true)}})});
-document.querySelectorAll('input[name=scope]').forEach(function(e){e.addEventListener('change',function(){VGD.updateScope()})});
-window.addEventListener('resize',function(){VGD.mountScope()});
-window.onload=function(){var theme='light';try{theme=localStorage.getItem('vgd.dim.theme')||theme}catch(e){}VGD.setTheme(theme);VGD.nav('smart');VGD.mountScope();sketchup.ready()};
+window.onload=function(){sketchup.ready()};
