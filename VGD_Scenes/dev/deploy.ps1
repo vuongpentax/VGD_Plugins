@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $pluginRoot = [IO.Path]::GetFullPath($PluginRoot).TrimEnd('\')
 $runtime = Join-Path $project 'runtime'
-$owned = @('vgd_scenes.rb','vgd_scenes\utils.rb','vgd_scenes\geometry.rb','vgd_scenes\scenes.rb','vgd_scenes\frame.rb','vgd_scenes\export.rb','vgd_scenes\main.rb','vgd_scenes\dialog.html','vgd_scenes\dialog.css','vgd_scenes\dialog.js','vgd_scenes\icon.svg','vgd_scenes\quick_views.svg','vgd_scenes\update_view.svg','vgd_scenes\transfer.rb','vgd_scenes\copy_scene.svg','vgd_scenes\paste_scene.svg','vgd_scenes\camera.rb')
+$owned = @('vgd_scenes.rb','vgd_scenes\utils.rb','vgd_scenes\geometry.rb','vgd_scenes\scenes.rb','vgd_scenes\frame.rb','vgd_scenes\export.rb','vgd_scenes\main.rb','vgd_scenes\dialog.html','vgd_scenes\dialog.css','vgd_scenes\dialog.js','vgd_scenes\icon.svg','vgd_scenes\quick_views.svg','vgd_scenes\update_view.svg','vgd_scenes\transfer.rb','vgd_scenes\copy_scene.svg','vgd_scenes\paste_scene.svg','vgd_scenes\camera.rb','vgd_scenes\vgd_logo_dark.svg','vgd_scenes\vgd_logo_light.svg')
 $legacy = Join-Path $pluginRoot 'tplus_scenes_to_layout.rb'
 $retired = Join-Path $pluginRoot 'tplus_scenes_to_layout.rb.vgd-disabled'
 function Assert-Target([string]$path) {
@@ -41,7 +41,7 @@ if ($RetireLegacy -and (Test-Path -LiteralPath $legacy)) {
   if ((Get-FileHash -LiteralPath $legacy).Hash -ne $reviewedHash) { throw 'Old loader differs from reviewed version; do not retire automatically.' }
   if (Test-Path -LiteralPath $retired) { throw 'Retired loader already exists; refuse overwrite.' }
 }
-if ($VerifyOnly) { Write-Output 'Verified: 17 exact VGD targets and reviewed legacy loader. Other plugins excluded.'; exit 0 }
+if ($VerifyOnly) { Write-Output 'Verified: 19 exact VGD targets and reviewed legacy loader. Other plugins excluded.'; exit 0 }
 $backup = Join-Path $project ('outputs\install_' + (Get-Date -Format 'yyyyMMdd_HHmmss_fff'))
 $null = New-Item -ItemType Directory -Path $backup
 $before = Other-Hashes

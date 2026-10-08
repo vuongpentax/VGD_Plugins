@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const primaryActions = {views:$('generate'),sections:$('section'),scenes:$('goCompose'),compose:$('updateCurrentView'),export:$('exportButton')};
   Object.values(primaryActions).forEach(button => $('primarySlot').append(button));
   Object.entries(primaryActions).forEach(([name,button]) => {button.hidden=name!=='views';});
-  let theme = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  let theme = 'dark';
   try { theme = localStorage.getItem('VGD.Scenes.Theme') || theme; } catch (_) {}
   document.body.classList.toggle('dark', theme === 'dark');
   function status(message, error = false) { $('status').textContent = message || 'Thao tác không thành công.'; $('status').classList.toggle('error', error); }
