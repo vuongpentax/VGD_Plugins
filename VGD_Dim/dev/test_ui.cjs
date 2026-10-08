@@ -61,8 +61,9 @@ const assert=(v,m)=>{if(!v)throw Error(m)};
   assert((await last()).action==='save_preset','Preset callback missing');
   await nav('animation');await page.getByRole('button',{name:'Tắt animation',exact:true}).click();assert((await last()).action==='anim_set','Animation callback missing');
   await nav('style');await page.locator('[id="auto.enabled"]').check();assert((await last()).action==='set_auto','Auto callback missing');
-  await page.click('#theme');assert(await page.locator('body').getAttribute('data-theme')==='dark','Dark theme missing');
-  await page.reload();assert(await page.locator('body').getAttribute('data-theme')==='dark','Theme not persisted');
+  assert(await page.locator('body').getAttribute('data-theme')==='dark','Dark theme should be the first-launch default');
+  await page.click('#theme');assert(await page.locator('body').getAttribute('data-theme')==='light','Light theme toggle missing');
+  await page.reload();assert(await page.locator('body').getAttribute('data-theme')==='light','Light theme preference not persisted');
   await page.locator('#tab-smart').focus();await page.keyboard.press('ArrowDown');assert(await page.locator('#tab-font').getAttribute('aria-selected')==='true','Keyboard tabs missing');
   const out=path.resolve(__dirname,'../outputs');fs.mkdirSync(out,{recursive:true});
   for(const theme of ['light','dark']) for(const [width,height] of [[760,760],[540,700],[360,600]]){

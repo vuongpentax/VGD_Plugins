@@ -1,1 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path fill="none" stroke="#8e6b4c" stroke-width="1.8" stroke-linejoin="round" d="M8 10h16v17H8zM8 15h16M16 10v17M5 7h22M5 4v6M27 4v6"/><path fill="#b48963" d="M6 7l4-2v4zm20 0l-4-2v4zM3 16l-2 7h3l-1 6 6-9H6l2-4z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby="title">
+  <title id="title">Smart Dim cho tủ</title>
+  <g fill="none" stroke="#A7B0BD" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M6.5 3.5h11v13h-11zM12 3.5v13M10.5 9v3M13.5 9v3"/>
+    <path d="M4 20h16M4 18v4M20 18v4"/>
+  </g>
+</svg>
