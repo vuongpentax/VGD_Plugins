@@ -11,7 +11,7 @@ module VGD_ImageImporter
     'importType' => 'comp_2d', 'scaleMethod' => 'pixel', 'mmPerPixel' => 2.0,
     'targetHeight' => 2000.0, 'targetWidth' => 2000.0, 'spacing' => 500.0,
     'itemsPerRow' => 10, 'alwaysFaceCamera' => true, 'recursive' => false,
-    'theme' => 'light'
+    'theme' => 'dark'
   }.freeze
 
   def self.options(input)

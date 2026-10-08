@@ -1,16 +1,23 @@
 <!doctype html>
 <html lang="vi">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VGD Image Importer</title><link rel="stylesheet" href="dialog.css"></head>
-<body>
-  <header><div class="brand"><span class="mark">VGD</span><div>IMAGE IMPORTER<small>Ảnh 2D · Bố trí ảnh · Vật liệu</small></div></div><button id="theme" class="header-btn" title="Đổi giao diện sáng/tối" aria-label="Đổi giao diện sáng/tối" aria-pressed="false">◐</button></header>
+<body class="dark">
+  <header>
+    <div class="brand">
+      <img class="brand-logo dark-only" src="brand_dark.svg" alt="VGD">
+      <img class="brand-logo light-only" src="brand_light.svg" alt="VGD">
+      <div class="brand-copy"><strong>VGD</strong><span>IMAGE IMPORTER</span></div>
+    </div>
+    <button id="theme" class="header-btn" title="Chuyển sang giao diện sáng" aria-label="Chuyển sang giao diện sáng" aria-pressed="true"></button>
+  </header>
   <main>
     <section class="source-pane" aria-labelledby="sourceTitle">
       <div class="heading"><div><p class="eyebrow">01 / NGUỒN ẢNH</p><h1 id="sourceTitle">Chọn ảnh để nhập</h1></div><span id="count" class="badge">0 ảnh</span></div>
-      <div class="source-actions"><button id="chooseFolder">Chọn thư mục</button><button id="chooseFiles">+ Thêm ảnh lẻ</button></div>
+      <div class="source-actions"><button id="chooseFolder"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h6l2 2h9v10h-17z"/></svg>Chọn thư mục</button><button id="chooseFiles"><svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="m5.5 16.8 4-4.1 3.1 2.8 2.3-2.1 3.1 3.4M16.4 7.2v3.6m-1.8-1.8h3.6"/></svg>Thêm ảnh lẻ</button></div>
       <label class="check"><input type="checkbox" id="recursive"> Lấy cả ảnh trong thư mục con</label>
       <div class="list-heading"><span>JPG · PNG · WEBP · GIF · TIFF · …</span><button id="clear" class="text-button" disabled>Xóa danh sách</button></div>
       <div id="fileList" class="file-list" aria-label="Danh sách ảnh"></div>
-      <div id="empty" class="empty"><svg viewBox="0 0 60 60" aria-hidden="true"><rect x="9" y="10" width="42" height="40" rx="4"/><circle cx="23" cy="23" r="4"/><path d="m10 43 14-13 11 10 7-7 8 10"/></svg><h2>Ảnh của bạn, đúng tỉ lệ.</h2><p>Chọn thư mục hoặc thêm từng ảnh.<br>Danh sách được sắp theo tên và loại bỏ file trùng.</p></div>
+      <div id="empty" class="empty"><svg viewBox="0 0 24 24" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="m5.5 16.8 4-4.1 3.1 2.8 2.3-2.1 3.1 3.4M16.4 7.2v3.6m-1.8-1.8h3.6"/></g></svg><h2>Ảnh của bạn, đúng tỉ lệ.</h2><p>Chọn thư mục hoặc thêm từng ảnh.<br>Danh sách được sắp theo tên và loại bỏ file trùng.</p></div>
       <p class="hint">Ảnh lẻ: giữ Ctrl / Shift hoặc quét chọn nhiều ảnh, rồi bấm Open. Chọn thư mục sẽ thay danh sách hiện tại.</p>
     </section>
     <section class="settings-pane" aria-labelledby="settingsTitle">
@@ -40,6 +47,6 @@
     </section>
   </main>
   <footer><div class="feedback"><span id="status" role="status" aria-live="polite">Chọn ảnh để bắt đầu.</span><small id="version">VGD TOOLS · IMAGE IMPORTER</small></div><button id="import" class="primary" disabled>Nhập ảnh</button></footer>
-  <dialog id="resultDialog"><div class="result-heading"><h2>Kết quả nhập ảnh</h2><button id="closeResult" aria-label="Đóng kết quả">×</button></div><p id="resultSummary"></p><ul id="errors"></ul><p class="hint">Undo trong SketchUp sẽ hoàn tác lượt nhập thành công.</p></dialog>
+  <dialog id="resultDialog"><div class="result-heading"><h2>Kết quả nhập ảnh</h2><button id="closeResult" aria-label="Đóng kết quả"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg></button></div><p id="resultSummary"></p><ul id="errors"></ul><p class="hint">Undo trong SketchUp sẽ hoàn tác lượt nhập thành công.</p></dialog>
   <script src="dialog.js"></script>
 </body></html>
