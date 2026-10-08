@@ -14,6 +14,16 @@ await page.route('http://vgd.test/',r=>r.fulfill({body:html,contentType:'text/ht
 await page.addInitScript(()=>{window.calls=[];window.sketchup=new Proxy({},{get:(_,k)=>(data)=>calls.push({action:k,data})});});
 await page.goto('http://vgd.test/');
 await page.waitForTimeout(650);
+if(!await page.locator('body').evaluate(e=>e.classList.contains('dark'))||await page.locator('html').evaluate(e=>e.style.colorScheme)!=='dark')throw Error('First launch is not dark');
+await page.locator('#btn_theme').click();
+if(await page.locator('body').evaluate(e=>e.classList.contains('dark'))||await page.evaluate(()=>localStorage.getItem('vgd_cabinet_theme'))!=='light')throw Error('Light theme did not persist to Cabinet preference');
+await page.evaluate(()=>{localStorage.removeItem('vgd_cabinet_theme');localStorage.setItem('vgd_theme','light');});
+await page.reload();await page.waitForTimeout(400);
+if(await page.locator('body').evaluate(e=>e.classList.contains('dark'))||await page.evaluate(()=>localStorage.getItem('vgd_cabinet_theme'))!=='light')throw Error('Legacy light preference migration');
+await page.screenshot({path:'cabinet_dev/ui_theme_light.png'});
+await page.locator('#btn_theme').click();
+if(!await page.locator('body').evaluate(e=>e.classList.contains('dark'))||await page.evaluate(()=>localStorage.getItem('vgd_cabinet_theme'))!=='dark')throw Error('Dark theme did not persist to Cabinet preference');
+await page.screenshot({path:'cabinet_dev/ui_theme_dark.png'});
 if(!await page.locator('#btn_update').isDisabled())throw Error('Update enabled without selection');
 await page.evaluate(()=>updateCabinet(true));
 if(await page.evaluate(()=>calls.some(c=>c.action==='update_cabinet')))throw Error('Update without selection');
