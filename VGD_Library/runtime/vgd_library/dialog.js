@@ -4,6 +4,21 @@
   const state = { items: [], roots: [], onlineRoots: [], favorites: new Set(), materials: [], view: 'library', root: '', page: 0, selected: null, scanning: false, current: null, modelId: null, thumbnailRequested: new Set() };
   const PAGE_SIZE = 60;
   let renderTimer;
+  function setTheme(theme) {
+    const dark = theme === 'dark';
+    document.body.classList.toggle('dark', dark);
+    $('themeToggle').setAttribute('aria-pressed', String(dark));
+    $('themeLabel').textContent = dark ? 'Giao diện sáng' : 'Giao diện tối';
+    $('themeToggle').title = dark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối';
+    $('themeIcon').innerHTML = dark
+      ? '<circle cx="12" cy="12" r="3.5"/><path d="M12 2.5v2m0 15v2M4.3 4.3l1.4 1.4m12.6 12.6 1.4 1.4M2.5 12h2m15 0h2M4.3 19.7l1.4-1.4M18.3 5.7l1.4-1.4"/>'
+      : '<path d="M20 14.4A8 8 0 0 1 9.6 4 8 8 0 1 0 20 14.4Z"/>';
+    try { localStorage.setItem('VGD.Library.Theme', dark ? 'dark' : 'light'); } catch (_) {}
+  }
+  let savedTheme = 'dark';
+  try { savedTheme = localStorage.getItem('VGD.Library.Theme') || savedTheme; } catch (_) {}
+  setTheme(savedTheme);
+  $('themeToggle').addEventListener('click', () => setTheme(document.body.classList.contains('dark') ? 'light' : 'dark'));
   function send(action, args = {}) {
     if (['apply','apply_model','export','rotate','random_rotate','shuffle','fit','auto_scale','restore','reset_uv','clear','reapply','resize','swap','rotate_face','paint','swap_pick','replace_pick','seamless','audit','aux','save_model','flow','fix_nesting','trace','insert'].includes(action)) {
       if (!state.modelId) { feedback('Đợi model sẵn sàng hoặc bấm Làm mới.', true); return; }
@@ -64,7 +79,7 @@
       const card = document.createElement('article'); card.className = 'card' + (state.selected && state.selected.id === item.id ? ' selected' : '');
       const swatch = button('', 'Chọn ' + (item.label || item.name), () => { state.selected = item; selected(); render(); }, 'swatch'); imageBox(swatch, item);
       swatch.addEventListener('dblclick', apply); card.append(swatch);
-      if (!item.model) card.append(button(state.favorites.has(item.id) ? '★' : '☆', 'Yêu thích ' + item.name, () => send('favorite', { id: item.id }), 'favorite' + (state.favorites.has(item.id) ? ' on' : '')));
+      if (!item.model) { const favorite = button('', (state.favorites.has(item.id) ? 'Bỏ yêu thích ' : 'Yêu thích ') + item.name, () => send('favorite', { id: item.id }), 'favorite' + (state.favorites.has(item.id) ? ' on' : '')); favorite.setAttribute('aria-pressed', String(state.favorites.has(item.id))); favorite.innerHTML = '<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7.5-4.5-7.5-10a4.2 4.2 0 0 1 7.5-2.5A4.2 4.2 0 0 1 19.5 10c0 5.5-7.5 10-7.5 10Z"/></svg>'; card.append(favorite); }
       const title = document.createElement('h3'); title.textContent = item.label || item.name; title.title = title.textContent; card.append(title);
       const detail = document.createElement('p'); detail.textContent = item.model ? (item.width ? `${item.width} × ${item.height} mm` : 'Màu đơn') : `${item.category} · ${item.format}`; detail.title = detail.textContent; card.append(detail); $('grid').append(card);
     }
@@ -92,8 +107,8 @@
     for (const root of [...state.roots, ...state.onlineRoots.map(source => source.id)]) {
       const row = document.createElement('div'); row.className = 'folder-row' + (root === state.root ? ' active' : '');
       const source = state.onlineRoots.find(source => source.id === root);
-      row.append(button((source ? '☁ ' : '▱ ') + (source ? source.label : displayName(root)), root, () => { if (state.view === 'model' || state.view === 'tools') setView('library'); state.root = state.root === root ? '' : root; state.page = 0; folders(); categories(); render(); }));
-      row.append(button('×', 'Bỏ thư mục khỏi danh sách (giữ nguyên tệp)', () => send('remove_folder', { root }), 'remove')); $('folders').append(row);
+      row.append(button((source ? 'Nguồn · ' : 'Thư mục · ') + (source ? source.label : displayName(root)), root, () => { if (state.view === 'model' || state.view === 'tools') setView('library'); state.root = state.root === root ? '' : root; state.page = 0; folders(); categories(); render(); }));
+      const remove = button('', 'Bỏ thư mục khỏi danh sách (giữ nguyên tệp)', () => send('remove_folder', { root }), 'remove'); remove.innerHTML = '<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>'; row.append(remove); $('folders').append(row);
     }
   }
   function setView(view) {
