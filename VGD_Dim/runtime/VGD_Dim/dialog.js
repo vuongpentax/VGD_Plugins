@@ -184,7 +184,7 @@ var VGD={
  },
  mountScope:function(){var target=this.el(innerWidth<=620?'mobile-scope':'desktop-scope');if(this.el('shared-scope').parentElement!==target)target.appendChild(this.el('shared-scope'))},
  toggleTheme:function(){this.setTheme(document.body.dataset.theme==='dark'?'light':'dark')},
- setTheme:function(theme){document.body.dataset.theme=theme;this.el('theme').setAttribute('aria-pressed',theme==='dark'?'true':'false');try{localStorage.setItem('vgd.dim.theme',theme)}catch(e){}}
+ setTheme:function(theme){document.documentElement.dataset.theme=theme;document.body.dataset.theme=theme;this.el('theme').setAttribute('aria-pressed',theme==='dark'?'true':'false');try{localStorage.setItem('vgd.dim.theme',theme)}catch(e){}}
 };
 ['dim','text','label'].forEach(function(k){
  VGD.el(k+'.color').addEventListener('input',function(){VGD.el(k+'.setcolor').checked=true});
@@ -196,4 +196,4 @@ VGD.ids.forEach(function(id){
 document.querySelectorAll('[data-tab]').forEach(function(b){b.addEventListener('click',function(){VGD.nav(b.dataset.tab)});b.addEventListener('keydown',function(e){var buttons=Array.from(document.querySelectorAll('[data-tab]')),i=buttons.indexOf(b),target=null;if(e.key==='ArrowDown'||e.key==='ArrowRight')target=(i+1)%buttons.length;if(e.key==='ArrowUp'||e.key==='ArrowLeft')target=(i+buttons.length-1)%buttons.length;if(e.key==='Home')target=0;if(e.key==='End')target=buttons.length-1;if(target!==null){e.preventDefault();VGD.nav(buttons[target].dataset.tab,true)}})});
 document.querySelectorAll('input[name=scope]').forEach(function(e){e.addEventListener('change',function(){VGD.updateScope()})});
 window.addEventListener('resize',function(){VGD.mountScope()});
-window.onload=function(){var theme='light';try{theme=localStorage.getItem('vgd.dim.theme')||theme}catch(e){}VGD.setTheme(theme);VGD.nav('smart');VGD.mountScope();sketchup.ready()};
+window.onload=function(){var theme='dark';try{theme=localStorage.getItem('vgd.dim.theme')||theme}catch(e){}VGD.setTheme(theme);VGD.nav('smart');VGD.mountScope();sketchup.ready()};
