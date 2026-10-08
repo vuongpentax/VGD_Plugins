@@ -1,4 +1,6 @@
-# VGD Scenes 1.5.2 — SketchUp 2022–2026.2
+# VGD Scenes 1.5.3-beta.1 — SketchUp 2022–2026.2
+
+Prerelease có thông báo cập nhật mỗi 24 giờ và lệnh kiểm tra thủ công. SketchUp hỏi trước khi mở trang tải RBZ; người dùng cài qua Extension Manager rồi khởi động lại.
 
 Plugin tạo view đối tượng, mặt cắt tùy chỉnh, quản lý scene và xuất ảnh/PDF. Thương hiệu VGD, giao diện sáng/tối dùng bảng màu nâu, trắng và than theo theme T+.
 

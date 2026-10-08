@@ -1,5 +1,6 @@
 require 'sketchup.rb'
 require 'json'
+require_relative 'update_notice'
 module VGD
   module BIM
     ROOT = File.dirname(__FILE__).freeze
@@ -28,6 +29,7 @@ unless file_loaded?(__FILE__)
   actions = [['Thông tin đối tượng', 'information'], ['Quét mô hình', 'scan'], ['Phân loại / Chuyển đổi', 'mapping'], ['Chuyển đổi đối tượng đang chọn', 'convert_selection'], ['Kiểm tra đối tượng đang chọn', 'validate_selection'], ['Kiểm tra toàn bộ mô hình', 'validate_model'], ['Quy tắc phân loại', 'rules'], ['Xuất báo cáo', 'export']]
   actions.each { |name, mode| menu.add_item(name) { VGD::BIM.open_panel(mode) } }
   menu.add_item('Giới thiệu') { ::UI.messagebox("VGD BIM Lite #{VGD::BIM::VERSION}\nDữ liệu / Phân loại / Kiểm tra / Xuất báo cáo\nSketchUp 2022+\nVGD") }
+  VGD::UpdateNotice.start('vgd-bim-lite', 'VGD BIM Lite', VGD::BIM::VERSION)
   ::UI.add_context_menu_handler do |context|
     if Sketchup.active_model.selection.any? { |e| VGD::BIM::Data.supported?(e) }
       context.add_item('VGD BIM · Thông tin đối tượng') { VGD::BIM.open_panel('information') }

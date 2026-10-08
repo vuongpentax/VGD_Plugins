@@ -12,6 +12,7 @@ require_relative 'seamless'
 require_relative 'online'
 require_relative 'drive'
 require_relative 'shell_sync'
+require_relative 'update_notice'
 
 module VGD
   module Library
@@ -396,5 +397,6 @@ module VGD
       end
       file_loaded(__FILE__)
     end
+    VGD::UpdateNotice.start('vgd-library', 'VGD Library', VERSION)
   end
 end

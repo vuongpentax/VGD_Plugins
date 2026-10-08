@@ -4,6 +4,7 @@ require 'json'
 require_relative 'engine'
 require_relative 'file_picker'
 require_relative 'conversion'
+require_relative 'update_notice'
 
 module VGD_ImageImporter
   SETTINGS = 'VGD_ImageImporter'.freeze
@@ -98,4 +99,5 @@ module VGD_ImageImporter
     @toolbar.restore
     file_loaded(__FILE__)
   end
+  VGD::UpdateNotice.start('vgd-image-importer', 'VGD Image Importer', VERSION)
 end

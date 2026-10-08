@@ -11,7 +11,7 @@ const { RubyVM } = require(path.join(resolve('@ruby/wasm-wasi'), 'dist/cjs/vm.js
   for (const file of files) { vm.eval('RubyVM::InstructionSequence.compile(' + JSON.stringify(fs.readFileSync(path.join(root, 'runtime', file), 'utf8')).replace(/#/g, '\\#') + ')'); console.log('Syntax OK:', file); }
   const fixture = fs.readFileSync(path.join(__dirname, 'test_engine.rb'), 'utf8').split("require '/workspace/runtime/vgd_library.rb'\nrequire '/workspace/runtime/vgd_library/main.rb'");
   vm.eval(fixture[0]);
-  for (const file of ['vgd_library.rb', ...['catalog','materials','geometry','storage','models','pixels','advanced','tools','seamless','online','drive','shell_sync','main'].map(name => `vgd_library/${name}.rb`)]) vm.eval(fs.readFileSync(path.join(root,'runtime',file),'utf8').replace(/^require_relative[^\n]*\n/gm,''));
+  for (const file of ['vgd_library.rb', ...['catalog','materials','geometry','storage','models','pixels','advanced','tools','seamless','online','drive','shell_sync','update_notice','main'].map(name => `vgd_library/${name}.rb`)]) vm.eval(fs.readFileSync(path.join(root,'runtime',file),'utf8').replace(/^require_relative[^\n]*\n/gm,''));
   // eval has no real __FILE__; native require resolves this directory itself.
   vm.eval("VGD::Library.send(:remove_const, :ROOT); VGD::Library.const_set(:ROOT, '/workspace/runtime/vgd_library')");
   vm.eval(fixture[1]); vm.eval('$stdout.flush');

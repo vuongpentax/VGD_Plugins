@@ -1,0 +1,11 @@
+{
+  "product_id": "vgd-scenes",
+  "version": "1.5.3-beta.1",
+  "channel": "beta",
+  "min_sketchup_year": 2022,
+  "filename": "VGD_Scenes_v1.5.3-beta.1.rbz",
+  "bytes": 62595,
+  "sha256": "5d913a0ec823790806ec4dc946aef4e93e550d830f1062663b9a64b82abd3f3a",
+  "download_url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-scenes-v1.5.3-beta.1/VGD_Scenes_v1.5.3-beta.1.rbz",
+  "changelog": "Thêm thông báo cập nhật prerelease; update section preview and startup notice behavior."
+}

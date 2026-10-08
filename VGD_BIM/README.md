@@ -1,4 +1,6 @@
-# VGD BIM Lite v0.1.1-alpha
+# VGD BIM Lite v0.1.2-alpha
+
+Prerelease: tự kiểm tra cập nhật mỗi 24 giờ, có lệnh kiểm tra thủ công. SketchUp hỏi trước khi mở trang tải RBZ; cài bằng Extension Manager rồi khởi động lại.
 
 Bản 0.1.1 dùng **một cửa sổ duy nhất**, giao diện màu nâu đồng bộ VGD Dim/Scenes và nhãn/thông báo tiếng Việt. Có hướng dẫn nhanh trong giao diện, màn hình quy tắc dễ nhập và mục **Xuất báo cáo** với bốn loại CSV mở được trong Excel. Đọc [hướng dẫn sử dụng](HUONG_DAN_SU_DUNG.md) để bắt đầu.
 
@@ -8,7 +10,7 @@ Plugin **VGD_BIM** cho SketchUp 2022+ / Windows. Phase 1: Core, Intake, Mapping 
 
 ## Cài đặt
 
-Trong SketchUp, mở **Extensions → Extension Manager → Install Extension**, chọn `VGD_BIM_Lite_v0.1.1-alpha.rbz`. Khởi động lại SketchUp. Menu: **Extensions → VGD → BIM Lite**. Có toolbar hai nút và context menu cho Group/Component.
+Trong SketchUp, mở **Extensions → Extension Manager → Install Extension**, chọn `VGD_BIM_Lite_v0.1.2-alpha.rbz`. Khởi động lại SketchUp. Menu: **Extensions → VGD → BIM Lite**. Có toolbar hai nút và context menu cho Group/Component.
 
 Hoặc chạy `dev/deploy.ps1` để cài nguồn runtime vào Plugins của SketchUp 2022. Script chỉ copy file plugin này, sao lưu file cũ và kiểm tra SHA256. `-PluginRoot` chọn bản SketchUp khác; `-VerifyOnly` kiểm tra cài đặt.
 

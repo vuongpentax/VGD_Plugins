@@ -1,6 +1,6 @@
 # VGD_Cabinet · bàn giao 2026-10-08
 
-Phiên bản 4.5.0-beta.1. Active source: cabinet_work/vgd_cabinet.rb, cabinet_work/VGD_Cabinet/main43.rb. Generator: cabinet_dev/redesign_ui.cjs từ ui_beta1/menu.css/menu.js. Bản T+ trong TPlus_Cabinet_Codex_Handoff_2026-10-01 giữ làm tham chiếu, không deploy nữa.
+Phiên bản 4.5.0-beta.2. Active source: cabinet_work/vgd_cabinet.rb, cabinet_work/VGD_Cabinet/main43.rb. Generator: cabinet_dev/redesign_ui.cjs từ ui_beta1/menu.css/menu.js. Bản T+ trong TPlus_Cabinet_Codex_Handoff_2026-10-01 giữ làm tham chiếu, không deploy nữa.
 
 4.5 beta 1: component_sharing.rb chia sẻ theo role + local geometry/material digest trong mỗi lần dựng, tách trái/phải/kích thước; không thêm DC formula ngoài animation sẵn có. frame_divisions.rb clip các thanh/ngăn X không chồng; pano.rb giữ rãnh cũ, thêm vertical stiles và applied X/Shaker recess. rail_joinery.rb nối các xà đồng hàng, khấu tiết diện YZ hồi thẳng; hồi bo dựng boundary giữa các footprint XY theo cao, giữ arc gốc, không có mặt nội bộ giữa band; __independent_module được engine skip. geometry_engine sửa overlay 2 cột hộc theo tim divider, giữ box/ray/gap.
 

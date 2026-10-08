@@ -1,0 +1,11 @@
+{
+  "product_id": "vgd-cabinet",
+  "version": "4.5.0-beta.2",
+  "channel": "beta",
+  "min_sketchup_year": 2022,
+  "filename": "VGD_Cabinet_v4.5.0-beta.2.rbz",
+  "bytes": 87453,
+  "sha256": "2da7b29ac0c10656d7e422b4fa1e05f11e5aac838d046ed5d95e6d439b68219d",
+  "download_url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-cabinet-v4.5.0-beta.2/VGD_Cabinet_v4.5.0-beta.2.rbz",
+  "changelog": "VGD Cabinet 4.5 beta 2, thêm thông báo cập nhật prerelease."
+}

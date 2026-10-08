@@ -6,11 +6,11 @@ import json
 root = Path(__file__).resolve().parents[1]
 out = root / 'outputs/vgd_cabinet_modeling'
 out.mkdir(parents=True, exist_ok=True)
-version = '4.5.0-beta.1'
+version = '4.5.0-beta.2'
 files = ['vgd_cabinet.rb'] + ['VGD_Cabinet/' + name for name in [
     'main43.rb', 'geometry_engine.rb', 'modeling_rules.rb', 'modeling.rb', 'pano.rb','component_sharing.rb','frame_divisions.rb','rail_joinery.rb','preview_mesh.rb','library_store.rb', 'preset_store.rb', 'description_import.rb',
     'defaults.rb', 'draw_tool.rb', 'ui_renderer.rb', 'VGD_Cabinet_UI.html',
-    'utilities.rb', 'reload.rb', 'combine.svg', 'untag.svg', 'logo.svg', 'HUONG_DAN.txt']]
+    'utilities.rb', 'reload.rb', 'update_notice.rb', 'combine.svg', 'untag.svg', 'logo.svg', 'HUONG_DAN.txt']]
 rbz = out / f'VGD_Cabinet_v{version}.rbz'
 source = out / f'VGD_Cabinet_v{version}_source.zip'
 with ZipFile(rbz, 'w', ZIP_DEFLATED) as z:

@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path');
-const deps=path.resolve(__dirname,'../../TPlus_Cabinet_Codex_Handoff_2026-10-01/cabinet_dev/node_modules');
+const deps=path.resolve(__dirname,'../../VGD_Scenes/dev/node_modules');
 const {RubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/vm.js'));
 const {WASI}=require('wasi');
 (async()=>{
@@ -25,8 +25,8 @@ const {WASI}=require('wasi');
  vm.eval(fs.readFileSync(path.join(__dirname,'test_reports.rb'),'utf8'));vm.eval('$stdout.flush');
  vm.eval(fs.readFileSync(path.join(__dirname,'dialog_fixture.rb'),'utf8'));
  vm.eval(fs.readFileSync(path.join(root,'vgd_bim_lite/ui/dialog.rb'),'utf8'));
- vm.eval(fs.readFileSync(path.join(root,'vgd_bim_lite/loader.rb'),'utf8').split('\n%w[')[0].replace(/^require 'sketchup.rb'\r?\n/gm,''));
- vm.eval('VGD::BIM.const_set(:VERSION, "0.1.1-alpha")');
+ vm.eval(fs.readFileSync(path.join(root,'vgd_bim_lite/loader.rb'),'utf8').split('\n%w[')[0].replace(/^require(?:_relative)? .*\r?\n/gm,''));
+ vm.eval('VGD::BIM.const_set(:VERSION, "0.1.2-alpha")');
  vm.eval('VGD::BIM.instance_variable_set(:@presets, [])');
  vm.eval(fs.readFileSync(path.join(__dirname,'test_dialog.rb'),'utf8'));vm.eval('$stdout.flush');
 })().catch(error=>{console.error(error);process.exitCode=1});

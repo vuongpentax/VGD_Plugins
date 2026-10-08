@@ -1,4 +1,6 @@
-# VGD_Cabinet · 4.5.0-beta.1
+# VGD_Cabinet · 4.5.0-beta.2
+
+Prerelease: tự kiểm tra cập nhật mỗi 24 giờ, có lệnh kiểm tra thủ công. SketchUp hỏi trước khi mở trang tải RBZ; cài qua Extension Manager rồi khởi động lại.
 
 VGD_Cabinet thay tên T+ Cabinet trong hệ sinh thái VGD.
 

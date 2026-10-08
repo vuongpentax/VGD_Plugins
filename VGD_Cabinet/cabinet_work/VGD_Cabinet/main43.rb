@@ -13,9 +13,10 @@ require_relative 'preset_store'
 require_relative 'description_import'
 require_relative 'preview_mesh'
 require_relative 'library_store'
+require_relative 'update_notice'
 module VGD_Cabinet
   remove_const(:VERSION) if const_defined?(:VERSION, false)
-  VERSION = '4.5.0-beta.1'
+  VERSION = '4.5.0-beta.2'
   class CabinetSelectionObserver < Sketchup::SelectionObserver
     def onSelectionBulkChange(_s); VGD_Cabinet.sync_current_selection; end
     def onSelectionAdded(_s,_e); VGD_Cabinet.sync_current_selection; end
@@ -409,6 +410,7 @@ module VGD_Cabinet
     menu=UI.menu('Extensions').add_submenu('VGD Cabinet — Tiện ích')
     [explode_command,untag_command].each { |item| menu.add_item(item) unless existing_commands.include?(item) }
     menu.add_item(reload_command)
+    ::VGD::UpdateNotice.start('vgd-cabinet', 'VGD Cabinet', VERSION)
     @toolbar ||= UI::Toolbar.new('VGD Cabinet — Dựng hình')
     [command,explode_command,untag_command].each { |item| @toolbar.add_item(item) unless existing_commands.include?(item) }
     @toolbar.restore

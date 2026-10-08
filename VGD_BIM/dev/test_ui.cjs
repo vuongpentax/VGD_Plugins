@@ -8,7 +8,7 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{window.calls=[];window.sketchup=new Proxy({}, {get:(_,name)=>(...args)=>window.calls.push({name,args})})});
   await page.goto(pathToFileURL(path.resolve(__dirname,'../runtime/vgd_bim_lite/html/index.html')).href);
-  const config={mode:'information',version:'0.1.1-alpha',categories:['furniture','electrical','finish'],units:['pcs','set','m2'],methods:['count','assembly','area'],presets:JSON.parse(fs.readFileSync(path.resolve(__dirname,'../runtime/vgd_bim_lite/config/presets.json'),'utf8')),locale:JSON.parse(fs.readFileSync(path.resolve(__dirname,'../runtime/vgd_bim_lite/config/vi.json'),'utf8'))};
+  const config={mode:'information',version:'0.1.2-alpha',categories:['furniture','electrical','finish'],units:['pcs','set','m2'],methods:['count','assembly','area'],presets:JSON.parse(fs.readFileSync(path.resolve(__dirname,'../runtime/vgd_bim_lite/config/presets.json'),'utf8')),locale:JSON.parse(fs.readFileSync(path.resolve(__dirname,'../runtime/vgd_bim_lite/config/vi.json'),'utf8'))};
   const receive=async(event,data)=>page.evaluate(([e,d])=>window.VGD.receive(e,d),[event,data]);
   await receive('config',config);
   await receive('information',{count:10,fields:{category:null,item_type:'socket',description:null,unit:'pcs',quantity_method:'count',include_boq:true},objects:[{entity_type:'Component',source:'RAW',instance_name:'<img src=x onerror="window.injected=true">',definition_name:'O_CAM_DOI',tag:'ELEC',material:'',dimensions:{width:120,depth:30,height:80},status:'UNCLASSIFIED',locked:false}]});

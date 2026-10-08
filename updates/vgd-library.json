@@ -1,0 +1,11 @@
+{
+  "product_id": "vgd-library",
+  "version": "1.1.2-beta.2",
+  "channel": "beta",
+  "min_sketchup_year": 2022,
+  "filename": "VGD_Library_v1.1.2-beta.2.rbz",
+  "bytes": 56887,
+  "sha256": "4b86c65930171291578a4104b61a94a8909deaea3944aa97702867af4939f6ba",
+  "download_url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-library-v1.1.2-beta.2/VGD_Library_v1.1.2-beta.2.rbz",
+  "changelog": "Thêm thông báo cập nhật prerelease; nguồn cập nhật JSON tự cấu hình vẫn hoạt động."
+}

@@ -8,9 +8,10 @@ require_relative 'frame'
 require_relative 'export'
 require_relative 'transfer'
 require_relative 'camera'
+require_relative 'update_notice'
 module VGD
   module Scenes
-    VERSION = '1.5.2'.freeze unless const_defined?(:VERSION, false)
+    VERSION = '1.5.3-beta.1'.freeze unless const_defined?(:VERSION, false)
     class << self
       def state
         model = Sketchup.active_model
@@ -326,6 +327,7 @@ module VGD
         menu.add_item('VGD · Bỏ khung xám tất cả scene để gửi SKP') { cleanup_frames_command }
         menu.add_item('VGD · Khôi phục khung scene đã bỏ') { cleanup_frames_command(true) }
         menu.add_item('Hiện thanh công cụ VGD Scenes') { @toolbar.show }
+        VGD::UpdateNotice.start('vgd-scenes', 'VGD Scenes', VERSION)
         @initialized = true
       end
     end

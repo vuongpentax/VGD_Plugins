@@ -1,6 +1,6 @@
 # VGD Image Importer — bàn giao
 
-Ngày 05/10/2026, phiên bản 1.1.0-beta.2. Nguồn gốc: `%APPDATA%/SketchUp/SketchUp 2022/SketchUp/Plugins/vgd_image_importer.rb` và folder cùng tên (bản 1.0.0). Snapshot nguyên bản ở `reference/`.
+Ngày 08/10/2026, phiên bản 1.1.0-beta.3. Nguồn gốc: `%APPDATA%/SketchUp/SketchUp 2022/SketchUp/Plugins/vgd_image_importer.rb` và folder cùng tên (bản 1.0.0). Snapshot nguyên bản ở `reference/`.
 
 Beta.2 sửa lỗi beta.1 coi `ImageRep.load_file` là Boolean. Phải gọi load_file rồi kiểm tra width/height; API có thể trả nil khi đọc thành công. Fixture cũ trả true đã che lỗi này; fixture mới trả nil và raise cho dữ liệu hỏng. Thêm hộp thoại Windows chọn nhiều file → Open và giải mã WebP/GIF/AVIF/ICO/SVG/JFIF thành PNG trong Chromium của HtmlDialog.
 

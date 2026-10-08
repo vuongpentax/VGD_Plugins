@@ -1,6 +1,6 @@
 # Bàn giao VGD_Library
 
-Cập nhật ngày 05/10/2026, bản 1.1.2-beta.1. Người dùng chọn VGD độc lập rồi yêu cầu mọi nhóm chức năng thấy trong N-TEXTURE RBZ, kể cả model. Kho Drive chỉ vật liệu; người dùng sẽ giải nén/sắp xếp sau. Không tổ chức lại kho.
+Cập nhật ngày 05/10/2026, bản 1.1.2-beta.2. Người dùng chọn VGD độc lập rồi yêu cầu mọi nhóm chức năng thấy trong N-TEXTURE RBZ, kể cả model. Kho Drive chỉ vật liệu; người dùng sẽ giải nén/sắp xếp sau. Không tổ chức lại kho.
 
 ## Cấu trúc
 
