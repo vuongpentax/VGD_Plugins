@@ -102,6 +102,7 @@ window.VGD={receive(event,data){
   if(event==='preview')preview(data);
 }};
 $('refresh').onclick=()=>call('refresh');$('cancel-preview').onclick=()=>$('preview').close();$('confirm-preview').onclick=()=>{$('confirm-preview').disabled=true;$('preview').close();call('confirm_convert')};document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>call('open_panel',b.dataset.mode));
-let dark=false;try{dark=localStorage.getItem('VGD_BIM_theme')==='dark'}catch(_){}document.body.classList.toggle('dark',dark);
-$('theme').onclick=()=>{dark=!dark;document.body.classList.toggle('dark',dark);try{localStorage.setItem('VGD_BIM_theme',dark?'dark':'light')}catch(_){}};
+let dark=true;try{dark=localStorage.getItem('VGD_BIM_theme')!=='light'}catch(_){}applyTheme();
+function applyTheme(){document.body.classList.toggle('dark',dark);document.body.classList.toggle('light',!dark);$('brand-logo').src=dark?'../assets/icons/vgd_primary_dark.svg':'../assets/icons/vgd_primary_light.svg';$('theme').textContent=dark?'Giao diện sáng':'Giao diện tối';$('theme').title=dark?'Chuyển sang giao diện sáng':'Chuyển sang giao diện tối';}
+$('theme').onclick=()=>{dark=!dark;applyTheme();try{localStorage.setItem('VGD_BIM_theme',dark?'dark':'light')}catch(_){}};
 document.addEventListener('DOMContentLoaded',()=>call('ready'));
