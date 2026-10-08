@@ -64,6 +64,20 @@ Use `color-scheme: dark` or `color-scheme: light` with the active theme so nativ
 - Prefer simple geometric metaphors that remain recognizable at 16–20 px. Avoid mixing emoji, text glyphs, filled icons, and unrelated stroke families in one toolbar.
 - Keep SketchUp toolbar icons legible at small sizes and provide a tooltip for every icon-only action.
 
+### SketchUp toolbar requirements
+
+- For raster toolbar assets, target 24 × 24 px for `small_icon` and 32 × 32 px for `large_icon`.
+- SketchUp supports vector toolbar assets from SketchUp 2016 onward: SVG on Windows and PDF on macOS. Vector assets scale to both sizes, so one vector file can serve as both `small_icon` and `large_icon`. Confirm platform and minimum-version support before packaging.
+- Keep toolbar commands compact and make every toolbar command available from a menu as well, so users can find it and assign a shortcut.
+- Keep each icon visually distinct while preserving a consistent family. Use SketchUp's own icons as a reference for line weight, detail, and color.
+- The toolbar tooltip should repeat the command title; use status-bar text for a short description of the action.
+
+### References
+
+- [SketchUp Ruby API: `UI::Command`](https://ruby.sketchup.com/UI/Command.html) — icon properties, recommended raster sizes, vector formats, tooltips, and status text.
+- [SketchUp UX Guidelines](https://developer.sketchup.com/article-ux-guidelines) — menus, compact toolbars, and consistent but distinguishable icons.
+- [Trimble Modus for SketchUp Extensions](https://developer.sketchup.com/trimble-modus) — SketchUp-aligned UI patterns and locally hosted stylesheet guidance. Treat Modus as a reference; VGD's tokens and bronze brand accent remain the shared VGD system.
+
 ## First-launch and preference behavior
 
 - A new user sees dark mode on the first launch.
