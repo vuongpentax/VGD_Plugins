@@ -1,11 +1,11 @@
 {
   "product_id": "vgd-cabinet",
-  "version": "4.5.0-beta.2",
+  "version": "4.5.0-beta.3",
   "channel": "beta",
   "min_sketchup_year": 2022,
-  "filename": "VGD_Cabinet_v4.5.0-beta.2.rbz",
-  "bytes": 87453,
-  "sha256": "2da7b29ac0c10656d7e422b4fa1e05f11e5aac838d046ed5d95e6d439b68219d",
-  "download_url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-cabinet-v4.5.0-beta.2/VGD_Cabinet_v4.5.0-beta.2.rbz",
-  "changelog": "VGD Cabinet 4.5 beta 2, thêm thông báo cập nhật prerelease."
+  "filename": "VGD_Cabinet_v4.5.0-beta.3.rbz",
+  "bytes": 89908,
+  "sha256": "bd7ab3d24653526614cfe9b342389360467f3f271e9c516fe4cd631194219ed8",
+  "download_url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-cabinet-v4.5.0-beta.3/VGD_Cabinet_v4.5.0-beta.3.rbz",
+  "changelog": "Đồng bộ dialog, màu sắc, trạng thái sáng/tối và bộ biểu tượng theo hệ thống VGD."
 }
