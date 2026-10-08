@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path');
-const deps=path.resolve(__dirname,'../../TPlus_Cabinet_Codex_Handoff_2026-10-01/cabinet_dev/node_modules');
+const deps=process.env.VGD_NODE_MODULES||path.resolve(__dirname,'../../VGD_Scenes/dev/node_modules');
 const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js'));
 (async()=>{
   const wasm=await WebAssembly.compile(fs.readFileSync(require.resolve(path.join(deps,'@ruby/3.2-wasm-wasi/dist/ruby+stdlib.wasm'))));
@@ -30,7 +30,7 @@ const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js')
     }
     console.log(`PASS: ${count} actual SU2022 VGD Dim fields decoded read-only; native preferences unchanged and values not logged.`);
   }
-  vm.eval(`check(VGD::Dim::UpdateCore::Updater.newer?('3.3.0-beta.2','3.3.0-beta.1'),'Beta version comparison failed'); check(VGD::Dim::UpdateCore::Updater.newer?('3.3.1','3.3.0'),'Stable version comparison failed'); info=VGD::Dim::UpdateCore::Manifest.parse(JSON.generate({'product_id'=>'vgd_dim','version'=>'3.3.0-beta.2','channel'=>'beta','min_sketchup_year'=>'2022','filename'=>'VGD_Dim_v3.3.0-beta.2.rbz','bytes'=>10,'sha256'=>'a'*64,'download_url'=>'https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0-beta.2/VGD_Dim_v3.3.0-beta.2.rbz','changelog'=>'pilot'})); check(info['version']=='3.3.0-beta.2','Manifest parse failed'); VGD::Dim::UpdateCore::Bootstrap.validate_expected!({'main.rb'=>'a'*64}); safe=VGD::Dim::UpdateCore::Bootstrap.sibling_path!('/tmp/VGD_Dim.backup_'+('a'*32),'/tmp',/\\AVGD_Dim\\.backup_[0-9a-f]{32}\\z/i); check(File.basename(safe).start_with?('VGD_Dim.backup_'),'Backup sibling validation failed'); unsafe=false; begin; VGD::Dim::UpdateCore::Bootstrap.sibling_path!('/tmp/../outside','/tmp',/\\AVGD_Dim\\.backup_[0-9a-f]{32}\\z/i); rescue StandardError; unsafe=true; end; check(unsafe,'Outside backup path was accepted');`);
+  vm.eval(`check(VGD::Dim::UpdateCore::Updater.newer?('3.3.0-beta.3','3.3.0-beta.1'),'Beta version comparison failed'); check(VGD::Dim::UpdateCore::Updater.newer?('3.3.1','3.3.0'),'Stable version comparison failed'); info=VGD::Dim::UpdateCore::Manifest.parse(JSON.generate({'product_id'=>'vgd_dim','version'=>'3.3.0-beta.3','channel'=>'beta','min_sketchup_year'=>'2022','filename'=>'VGD_Dim_v3.3.0-beta.3.rbz','bytes'=>10,'sha256'=>'a'*64,'download_url'=>'https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0-beta.3/VGD_Dim_v3.3.0-beta.3.rbz','changelog'=>'pilot'})); check(info['version']=='3.3.0-beta.3','Manifest parse failed'); VGD::Dim::UpdateCore::Bootstrap.validate_expected!({'main.rb'=>'a'*64}); safe=VGD::Dim::UpdateCore::Bootstrap.sibling_path!('/tmp/VGD_Dim.backup_'+('a'*32),'/tmp',/\\AVGD_Dim\\.backup_[0-9a-f]{32}\\z/i); check(File.basename(safe).start_with?('VGD_Dim.backup_'),'Backup sibling validation failed'); unsafe=false; begin; VGD::Dim::UpdateCore::Bootstrap.sibling_path!('/tmp/../outside','/tmp',/\\AVGD_Dim\\.backup_[0-9a-f]{32}\\z/i); rescue StandardError; unsafe=true; end; check(unsafe,'Outside backup path was accepted');`);
   vm.eval(`
     module Sketchup
       module Http
@@ -53,7 +53,7 @@ const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js')
     response=[]
     payload='fixture'
     digest=Digest::SHA256.hexdigest(payload)
-    info={'download_url'=>'https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0-beta.2/VGD_Dim_v3.3.0-beta.2.rbz','bytes'=>payload.bytesize,'sha256'=>digest}
+    info={'download_url'=>'https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0-beta.3/VGD_Dim_v3.3.0-beta.3.rbz','bytes'=>payload.bytesize,'sha256'=>digest}
     updater_client=VGD::Dim::UpdateCore::Client.new
     updater_client.download(info){|status,value| response << [status,value]}
     check(response.empty?,'Download callback fired before response')

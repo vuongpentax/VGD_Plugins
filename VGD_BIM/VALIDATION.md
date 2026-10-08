@@ -1,6 +1,6 @@
 # Kiểm thử — cập nhật 2026-10-04
 
-## Bản 0.1.2-alpha
+## Bản 0.1.3-alpha
 
 - Kiểm thử Ruby với cửa sổ giả lập: chuyển menu và thanh chức năng giữ đúng một HtmlDialog; chuyển tính năng trước khi HTML sẵn sàng không mất trạng thái; hủy thế hệ scan cũ khi chuyển trang; observer selection được tháo đúng; đóng/mở lại tạo callback mới.
 - Kiểm thử xuất CSV: tiêu đề và hạng mục tiếng Việt, UTF-8 BOM, dấu phẩy thập phân, dấu chấm phẩy phân cột, mô tả nhiều dòng, escape văn bản có thể thành công thức Excel. Không đổi category/item_type trong metadata gốc khi dịch hiển thị.

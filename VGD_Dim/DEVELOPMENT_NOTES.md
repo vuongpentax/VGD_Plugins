@@ -1,6 +1,6 @@
 # VGD Dim · rà soát và tiếp tục phát triển
 
-Ngày 07/10/2026, nguồn nhập: VGD_Dim_6.rbz (loader ghi 3.2.0). Bản phát hành thử 3.3.0-beta.2 bổ sung pilot updater online cho riêng VGD Dim. Snapshot/SHA256: dev/claude_v6_reference/IMPORT.json; dữ liệu gốc chỉ tham khảo, không chạy runtime.
+Ngày 07/10/2026, nguồn nhập: VGD_Dim_6.rbz (loader ghi 3.2.0). Bản phát hành thử 3.3.0-beta.3 bổ sung pilot updater online cho riêng VGD Dim. Snapshot/SHA256: dev/claude_v6_reference/IMPORT.json; dữ liệu gốc chỉ tham khảo, không chạy runtime.
 
 ## Các điểm đã sửa
 

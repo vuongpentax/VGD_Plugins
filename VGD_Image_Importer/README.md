@@ -1,6 +1,6 @@
 # VGD Image Importer
 
-Thành viên bộ plugin VGD cho SketchUp 2022+ trên Windows, nâng cấp từ folder `vgd_image_importer` trên máy. Phiên bản `1.1.0-beta.3` giữ namespace và đường dẫn extension cũ để cập nhật tại chỗ. Prerelease có thông báo cập nhật; cài RBZ thủ công qua Extension Manager.
+Thành viên bộ plugin VGD cho SketchUp 2022+ trên Windows, nâng cấp từ folder `vgd_image_importer` trên máy. Phiên bản `1.1.0-beta.4` giữ namespace và đường dẫn extension cũ để cập nhật tại chỗ. Prerelease có thông báo cập nhật; cài RBZ thủ công qua Extension Manager.
 
 ## Chức năng
 
@@ -15,7 +15,7 @@ Thành viên bộ plugin VGD cho SketchUp 2022+ trên Windows, nâng cấp từ 
 
 ## Cài đặt
 
-Trong SketchUp: **Extension Manager → Install Extension**, chọn `VGD_Image_Importer_v1.1.0-beta.3.rbz`. Thoát và mở lại SketchUp để bản mới được nạp đầy đủ; không nạp chồng main.rb lên bản cũ trong Ruby Console vì bản cũ không có chặn đăng ký toolbar lặp.
+Trong SketchUp: **Extension Manager → Install Extension**, chọn `VGD_Image_Importer_v1.1.0-beta.4.rbz`. Thoát và mở lại SketchUp để bản mới được nạp đầy đủ; không nạp chồng main.rb lên bản cũ trong Ruby Console vì bản cũ không có chặn đăng ký toolbar lặp.
 
 Mở bằng **Extensions → VGD Tools → VGD Image Importer** hoặc toolbar **VGD Image Importer**. Nếu toolbar chưa hiện, bật ở **View → Toolbars**.
 

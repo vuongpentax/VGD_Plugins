@@ -26,7 +26,7 @@ const {WASI}=require('wasi');
  vm.eval(fs.readFileSync(path.join(__dirname,'dialog_fixture.rb'),'utf8'));
  vm.eval(fs.readFileSync(path.join(root,'vgd_bim_lite/ui/dialog.rb'),'utf8'));
  vm.eval(fs.readFileSync(path.join(root,'vgd_bim_lite/loader.rb'),'utf8').split('\n%w[')[0].replace(/^require(?:_relative)? .*\r?\n/gm,''));
- vm.eval('VGD::BIM.const_set(:VERSION, "0.1.2-alpha")');
+ vm.eval('VGD::BIM.const_set(:VERSION, "0.1.3-alpha")');
  vm.eval('VGD::BIM.instance_variable_set(:@presets, [])');
  vm.eval(fs.readFileSync(path.join(__dirname,'test_dialog.rb'),'utf8'));vm.eval('$stdout.flush');
 })().catch(error=>{console.error(error);process.exitCode=1});
