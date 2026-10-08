@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $runtime = Join-Path $project 'runtime'
 $pluginRoot = [IO.Path]::GetFullPath($PluginRoot).TrimEnd('\')
-$owned = @('vgd_image_importer.rb','vgd_image_importer\engine.rb','vgd_image_importer\main.rb','vgd_image_importer\file_picker.rb','vgd_image_importer\conversion.rb','vgd_image_importer\convert_image.ps1','vgd_image_importer\dialog.html','vgd_image_importer\dialog.css','vgd_image_importer\dialog.js','vgd_image_importer\icon.svg','vgd_image_importer\vgd_icon.png')
+$owned = @('vgd_image_importer.rb','vgd_image_importer\engine.rb','vgd_image_importer\main.rb','vgd_image_importer\file_picker.rb','vgd_image_importer\conversion.rb','vgd_image_importer\convert_image.ps1','vgd_image_importer\dialog.html','vgd_image_importer\dialog.css','vgd_image_importer\dialog.js','vgd_image_importer\icon.svg','vgd_image_importer\vgd_icon.png','vgd_image_importer\brand_dark.svg','vgd_image_importer\brand_light.svg')
 function Assert-Target([string]$path) {
   $absolute = [IO.Path]::GetFullPath($path)
   if (-not $absolute.StartsWith($pluginRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw "Target outside Plugins: $absolute" }
