@@ -1,7 +1,7 @@
 {
   "date": "2026-10-08",
   "plugin": "VGD_Cabinet",
-  "version": "4.5.0-beta.2",
+  "version": "4.5.0-beta.3",
   "description_import": "PASS Ruby WASM + JSDOM: 10 valid geometry fixtures/full-parameter round-trip including exact user JSON, strict schema/units/WDH/type/enum/unknown/duplicate/oversize rejection. Partial mode requires boolean true plus exact omission-list acknowledgment; missing/reordered/stale approval rejected, invalid geometry and unknown keys still blocked. Keeps width 2200, discloses h_top 560 -> 580. Preview/import do not mutate model; draft selection/update isolation remains. Edge headless verifies confirm/cancel dialogs, callback payloads, persistent draft notice, placement, footer/overflow, screenshots inspected. No native SketchUp/image measurement acceptance claimed.",
   "ruby": "PASS: runtime/loader syntax, existing cabinet/glass/drawer/back/modules/tier geometry, utilities and reload guards",
   "presets": "PASS: actual Windows host filesystem IO through WASI, T+ migration, create/update/rename/delete, case-folded collision rejection, large library >20KB, new Ruby VM reopening same files, atomic write failure preserves original, backup recovery, malformed legacy raw backup",
