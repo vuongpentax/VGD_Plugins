@@ -389,7 +389,7 @@ module VGD_Cabinet
       command=UI::Command.new('VGD Cabinet — Dựng hình') { show_dialog }
       UI.menu('Extensions').add_item(command)
     end
-    icon=File.join(__dir__,'logo.svg')
+    icon=File.join(__dir__,'cabinet.svg')
     command.small_icon=icon; command.large_icon=icon
     command.tooltip="VGD Cabinet #{VERSION} — Dựng hình kỹ thuật"
     explode_command=existing_commands.find { |item| item.menu_text.include?('VGD_EXPLODE') }

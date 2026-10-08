@@ -1,6 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4A4A4A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" role="img" aria-labelledby="title">
-  <title id="title">Bỏ tag đối tượng con</title>
-  <path d="M4 5h9l6 6-7 7-6-6V5Z"/>
-  <circle cx="8" cy="9" r="1"/>
-  <path d="m4 20 16-16"/>
+  <title id="title">Dựng tủ</title>
+  <path d="M6 3.5h12a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1Z"/>
+  <path d="M12 3.5v17M9 11v2m6-2v2"/>
 </svg>

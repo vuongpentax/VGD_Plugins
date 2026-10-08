@@ -2,6 +2,7 @@ menu = UI.menus.fetch('Extensions').items.last
 toolbar = UI.toolbars.last
 assert(menu.items.size == 3 && toolbar.items.size == 3, 'Expected three menu and toolbar commands')
 assert(menu.items.first(2) == toolbar.items.drop(1), 'Utility menu and toolbar mismatch')
+assert(toolbar.items[0].small_icon.end_with?('cabinet.svg') && toolbar.items[0].large_icon.end_with?('cabinet.svg'), 'Wrong Cabinet command icon')
 assert(menu.items[0].name.include?('VGD_EXPLODE') && menu.items[1].name.include?('VGD_UNTAG'), 'Restored names missing')
 assert(menu.items[0].small_icon.end_with?('combine.svg'), 'Wrong combine icon')
 assert(menu.items[1].large_icon.end_with?('untag.svg'), 'Wrong untag icon')

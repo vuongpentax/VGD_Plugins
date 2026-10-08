@@ -37,7 +37,7 @@ Chiều rộng/sâu/cao giữ nguyên cho tủ cơ bản; không tự trừ ph�
 
 ## Cài máy nhà
 
-Gói mới nằm trong outputs/vgd_cabinet_modeling. Chạy cabinet_dev/sync_sketchup_2022.ps1 để cài đúng 23 file, sao lưu và tắt loader T+ cũ; không sửa plugin khác. Dữ liệu preset không bị bộ cài ghi đè.
+Gói mới nằm trong outputs/vgd_cabinet_modeling. Chạy cabinet_dev/sync_sketchup_2022.ps1 để cài đúng 24 file, sao lưu và tắt loader T+ cũ; không sửa plugin khác. Dữ liệu preset không bị bộ cài ghi đè.
 
 **Khởi động lại SketchUp 2022 sau khi đổi thương hiệu**, vì module/menu/bộ nạp khác tên. Sau đó dùng Extensions → VGD Cabinet — Tiện ích → VGD — Nạp lại mã cho các lần sửa tiếp. Không tự đóng model đang làm.
 
