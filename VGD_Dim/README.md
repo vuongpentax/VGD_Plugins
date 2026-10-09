@@ -1,4 +1,4 @@
-# VGD Dim · 3.3.0-beta.3
+# VGD Dim · 3.3.0-beta.4
 
 Tiếp tục từ **VGD_Dim_6.rbz (Claude 3.2.0)** theo yêu cầu 07/10/2026. Sidebar 6 mục và scope chung; giữ palette T+ / VGD, có theme sáng/tối. Đọc [UI_DESIGN.md](UI_DESIGN.md) cho cấu trúc bảng và [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md) cho rà soát/giới hạn/checklist native.
 
@@ -38,7 +38,7 @@ check_ruby.cjs: cú pháp; scopes/filters/dedup; style/Units tách riêng; rebui
 
 ## Cập nhật online pilot
 
-Bản 3.3.0-beta.3 bổ sung kiểm tra manifest GitHub cho riêng VGD Dim. Có thể kiểm tra thủ công ở Extensions → Kiểm tra cập nhật VGD Dim; kiểm tra tự động tối đa mỗi 24 giờ. Gói tải về được kiểm tra kích thước và SHA-256. Nếu người dùng đồng ý, helper chờ SketchUp đóng rồi thay file whitelist, lưu bản sao thư mục cũ và giữ file ngoài whitelist. Hệ thống chỉ thực sự phân phối bản mới sau khi RBZ được đăng ở GitHub Release và manifest được cập nhật trên nhánh main. Xem [HOW_TO_RELEASE.md](HOW_TO_RELEASE.md).
+Bản 3.3.0-beta.4 sửa tùy chọn tạo process group trên Windows để helper cài đặt được khởi chạy. Updater kiểm tra manifest GitHub cho riêng VGD Dim; có thể kiểm tra thủ công ở Extensions → Kiểm tra cập nhật VGD Dim, hoặc tự động tối đa mỗi 24 giờ. Gói tải về được kiểm tra kích thước và SHA-256. Nếu người dùng đồng ý, helper chờ SketchUp đóng rồi thay file whitelist, lưu bản sao thư mục cũ và giữ file ngoài whitelist. Xem [HOW_TO_RELEASE.md](HOW_TO_RELEASE.md).
 
 ## Sửa lỗi khởi động 3.0.1-beta.1 — 05/10/2026
 
