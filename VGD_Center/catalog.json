@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "channel": "stable",
+  "products": [
+    {
+      "id": "dim",
+      "name": "VGD Dim",
+      "extension_name": "VGD Dim",
+      "version": "3.1.0",
+      "description": "Đo kích thước, chỉnh kiểu Dim/Text và tạo Smart Dim.",
+      "icon": "dim",
+      "minimum_sketchup": "22.0.0",
+      "download": {
+        "filename": "VGD_Dim_v3.1.0.rbz",
+        "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/bec38b65d507dc5329d33d28b88ae3de6f86ab42/VGD_Dim/outputs/VGD_Dim_v3.1.0.rbz",
+        "size": 26711,
+        "sha256": "77485496846f21b3b70052f1eb09d53470629632fd62b9ea8ad375a53f44b97c"
+      },
+      "allowed_paths": ["vgd_dim.rb", "VGD_Dim/"]
+    },
+    {
+      "id": "scenes",
+      "name": "VGD Scenes",
+      "extension_name": "VGD Scenes",
+      "version": "1.5.2",
+      "description": "Quản lý góc nhìn, mặt cắt và xuất hồ sơ.",
+      "icon": "scenes",
+      "minimum_sketchup": "22.0.0",
+      "download": {
+        "filename": "VGD_Scenes_v1.5.2.rbz",
+        "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/bec38b65d507dc5329d33d28b88ae3de6f86ab42/VGD_Scenes/VGD_Scenes_v1.5.2.rbz",
+        "size": 60472,
+        "sha256": "1d26f7bb2d418028fff87b5e83dbacf4a94e1f29b5ea089619b8fbeec132f046"
+      },
+      "allowed_paths": ["vgd_scenes.rb", "vgd_scenes/"]
+    }
+  ]
+}
