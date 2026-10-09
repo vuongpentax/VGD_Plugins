@@ -1,5 +1,5 @@
 param(
-  [string]$Version = '1.0.7'
+  [string]$Version = '1.0.8'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -39,24 +39,28 @@ if ($catalog.schema_version -ne 1 -or $catalog.channel -ne 'latest') { throw 'Ca
 $centerManifest = Get-Content -LiteralPath $centerManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($centerManifest.schema_version -ne 1 -or $centerManifest.version -notmatch '^\d+\.\d+\.\d+$') { throw 'Manifest Center không đúng schema stable.' }
 if ($centerManifest.download.filename -ne "VGD_Center_v$($centerManifest.version).rbz") { throw 'Tên RBZ trong manifest Center không khớp phiên bản.' }
-if (-not $centerManifest.download.url.StartsWith('https://github.com/vuongpentax/VGD_Plugins/releases/download/') -or -not $centerManifest.download.url.EndsWith("/$($centerManifest.download.filename)")) { throw 'URL RBZ trong manifest Center không hợp lệ.' }
+$centerUrl = [string]$centerManifest.download.url
+$centerUrlAllowed = $centerUrl.StartsWith('https://github.com/vuongpentax/VGD_Plugins/releases/download/') -or $centerUrl.StartsWith('https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/')
+if (-not $centerUrlAllowed -or -not $centerUrl.EndsWith("/$($centerManifest.download.filename)")) { throw 'URL RBZ trong manifest Center không hợp lệ.' }
+if ($centerManifest.version -ne $Version) {
 $centerPackagePath = Join-Path $PSScriptRoot ("outputs\" + $centerManifest.download.filename)
 if (-not (Test-Path -LiteralPath $centerPackagePath)) { throw "Thiếu RBZ stable được khai báo trong manifest Center: $centerPackagePath" }
 $centerPackageInfo = Get-Item -LiteralPath $centerPackagePath
 $centerPackageHash = (Get-FileHash -LiteralPath $centerPackagePath -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($centerPackageInfo.Length -ne [int64]$centerManifest.download.size -or $centerPackageHash -ne $centerManifest.download.sha256.ToLowerInvariant()) { throw 'Dung lượng hoặc SHA-256 của RBZ stable VGD Center không khớp manifest.' }
+}
 if (Test-Path -LiteralPath $rbzPath) { throw "Đã tồn tại, không ghi đè: $rbzPath" }
 if (Test-Path -LiteralPath $sourcePath) { throw "Đã tồn tại, không ghi đè: $sourcePath" }
 if (Test-Path -LiteralPath $hashPath) { throw "Đã tồn tại, không ghi đè: $hashPath" }
 if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot "RELEASE_NOTES_v$Version.md"))) { throw "Thiếu release notes cho $Version." }
 
 $localPackages = @{
-  dim = 'VGD_Dim/outputs/VGD_Dim_v3.3.0-beta.4.rbz'
-  cabinet = 'VGD_Cabinet/outputs/vgd_cabinet_modeling/VGD_Cabinet_v4.5.0-beta.3.rbz'
-  library = 'VGD_Library/VGD_Library_v1.1.2-beta.3.rbz'
-  image_importer = 'VGD_Image_Importer/VGD_Image_Importer_v1.1.0-beta.4.rbz'
-  scenes = 'VGD_Scenes/VGD_Scenes_v1.5.3-beta.2.rbz'
-  bim_lite = 'VGD_BIM/VGD_BIM_Lite_v0.1.3-alpha.rbz'
+  dim = 'VGD_Dim/outputs/VGD_Dim_v3.3.0-beta.5.rbz'
+  cabinet = 'VGD_Cabinet/outputs/vgd_cabinet_modeling/VGD_Cabinet_v4.5.0-beta.4.rbz'
+  library = 'VGD_Library/VGD_Library_v1.1.2-beta.4.rbz'
+  image_importer = 'VGD_Image_Importer/VGD_Image_Importer_v1.1.0-beta.5.rbz'
+  scenes = 'VGD_Scenes/VGD_Scenes_v1.5.3-beta.3.rbz'
+  bim_lite = 'VGD_BIM/VGD_BIM_Lite_v0.1.4-alpha.rbz'
 }
 foreach ($product in $catalog.products) {
   if ($product.version -notmatch '^\d+\.\d+\.\d+(?:-(?:alpha|beta)(?:\.\d+)?)?$') { throw "Catalog chứa phiên bản không hỗ trợ: $($product.id)" }

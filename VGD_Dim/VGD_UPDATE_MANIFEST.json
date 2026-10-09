@@ -1,11 +1,11 @@
 {
   "product_id": "vgd_dim",
-  "version": "3.3.0-beta.4",
+  "version": "3.3.0-beta.5",
   "channel": "beta",
   "min_sketchup_year": "2022",
-  "filename": "VGD_Dim_v3.3.0-beta.4.rbz",
-  "bytes": 46329,
-  "sha256": "8e563f6e904368d913c200428ede3bc283df1b291ba366bab1514462b5c7681d",
-  "download_url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0-beta.4/VGD_Dim_v3.3.0-beta.4.rbz",
-  "changelog": "VGD Dim 3.3.0-beta.4: sửa lỗi khởi chạy helper cập nhật trên Windows; đồng bộ giao diện VGD và xác minh SHA-256."
+  "filename": "VGD_Dim_v3.3.0-beta.5.rbz",
+  "bytes": 46299,
+  "sha256": "c9f3242d1045a91392128adf299bf2aa07cfb5a51271f60f50675d6d7c16f605",
+  "download_url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/VGD_Dim_v3.3.0-beta.5.rbz",
+  "changelog": "VGD Dim 3.3.0-beta.5: sửa lỗi khởi chạy helper cập nhật trên Windows; đồng bộ giao diện VGD và xác minh SHA-256."
 }

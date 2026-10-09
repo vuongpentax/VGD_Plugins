@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-labelledby="title">
-  <title id="title">VGD Dim</title>
-  <g fill="none" stroke="#A7B0BD" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M6 4.5h12v10H6z"/>
-    <path d="M4 19.5h16M4 17.5v4M20 17.5v4"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="VGD Dim · Bảng Dim"><path fill="none" stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 6v12M19 6v12"/><path fill="none" stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 6h14"/><circle fill="#A67C58" stroke="#292B2D" stroke-width="1.5" stroke-linejoin="round" cx="5" cy="6" r="1.1"/><circle fill="#A67C58" stroke="#292B2D" stroke-width="1.5" stroke-linejoin="round" cx="19" cy="6" r="1.1"</svg>

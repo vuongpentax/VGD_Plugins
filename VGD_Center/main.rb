@@ -8,7 +8,7 @@ require 'securerandom'
 
 module VGD
   module Center
-    VERSION = '1.0.7'.freeze
+    VERSION = '1.0.8'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
@@ -305,8 +305,8 @@ module VGD
         filename = "VGD_Center_v#{version}.rbz"
         raise 'tên gói VGD Center không khớp phiên bản' unless download['filename'] == filename
         url = download['url'].to_s
-        allowed_prefix = 'https://github.com/vuongpentax/VGD_Plugins/releases/download/'
-        raise 'nguồn tải VGD Center không được phép' unless url.start_with?(allowed_prefix) && url.end_with?("/#{filename}")
+        allowed_prefixes = ["https://github.com/vuongpentax/VGD_Plugins/releases/download/", "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/"]
+        raise 'nguồn tải VGD Center không được phép' unless allowed_prefixes.any? { |prefix| url.start_with?(prefix) } && url.end_with?("/#{filename}")
         size = Integer(download['size'])
         raise 'dung lượng gói VGD Center không hợp lệ' unless size.positive? && size <= MAX_PACKAGE_BYTES
         sha = download['sha256'].to_s.downcase
