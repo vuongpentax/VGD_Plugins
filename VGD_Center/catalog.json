@@ -1,38 +1,108 @@
 {
   "schema_version": 1,
-  "channel": "stable",
+  "channel": "latest",
   "products": [
     {
       "id": "dim",
       "name": "VGD Dim",
       "extension_name": "VGD Dim",
-      "version": "3.1.0",
+      "version": "3.3.0-beta.4",
+      "release_channel": "beta",
       "description": "Đo kích thước, chỉnh kiểu Dim/Text và tạo Smart Dim.",
       "icon": "dim",
       "minimum_sketchup": "22.0.0",
       "download": {
-        "filename": "VGD_Dim_v3.1.0.rbz",
-        "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/bec38b65d507dc5329d33d28b88ae3de6f86ab42/VGD_Dim/outputs/VGD_Dim_v3.1.0.rbz",
-        "size": 26711,
-        "sha256": "77485496846f21b3b70052f1eb09d53470629632fd62b9ea8ad375a53f44b97c"
+        "filename": "VGD_Dim_v3.3.0-beta.4.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0-beta.4/VGD_Dim_v3.3.0-beta.4.rbz",
+        "size": 46329,
+        "sha256": "8e563f6e904368d913c200428ede3bc283df1b291ba366bab1514462b5c7681d"
       },
       "allowed_paths": ["vgd_dim.rb", "VGD_Dim/"]
+    },
+    {
+      "id": "cabinet",
+      "name": "VGD Cabinet",
+      "extension_name": "VGD Cabinet",
+      "version": "4.5.0-beta.3",
+      "release_channel": "beta",
+      "description": "Dựng tủ, chia khoang, cánh và ngăn kéo trong SketchUp.",
+      "icon": "cabinet",
+      "minimum_sketchup": "22.0.0",
+      "download": {
+        "filename": "VGD_Cabinet_v4.5.0-beta.3.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-cabinet-v4.5.0-beta.3/VGD_Cabinet_v4.5.0-beta.3.rbz",
+        "size": 89908,
+        "sha256": "bd7ab3d24653526614cfe9b342389360467f3f271e9c516fe4cd631194219ed8"
+      },
+      "allowed_paths": ["vgd_cabinet.rb", "VGD_Cabinet/"]
+    },
+    {
+      "id": "library",
+      "name": "VGD Library",
+      "extension_name": "VGD Library",
+      "version": "1.1.2-beta.3",
+      "release_channel": "beta",
+      "description": "Tìm kiếm và quản lý thư viện vật liệu, model VGD.",
+      "icon": "library",
+      "minimum_sketchup": "22.0.0",
+      "download": {
+        "filename": "VGD_Library_v1.1.2-beta.3.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-library-v1.1.2-beta.3/VGD_Library_v1.1.2-beta.3.rbz",
+        "size": 61119,
+        "sha256": "5410d8281d77abc0840ba8444388f31e3edac55ac738a068b6c8f83b6086acce"
+      },
+      "allowed_paths": ["vgd_library.rb", "vgd_library/"]
+    },
+    {
+      "id": "image_importer",
+      "name": "VGD Image Importer",
+      "extension_name": "VGD Image Importer",
+      "version": "1.1.0-beta.4",
+      "release_channel": "beta",
+      "description": "Nhập ảnh vào SketchUp dưới dạng component, mặt phẳng hoặc vật liệu.",
+      "icon": "image_importer",
+      "minimum_sketchup": "22.0.0",
+      "download": {
+        "filename": "VGD_Image_Importer_v1.1.0-beta.4.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-image-importer-v1.1.0-beta.4/VGD_Image_Importer_v1.1.0-beta.4.rbz",
+        "size": 64792,
+        "sha256": "db1e63dc3dae54b92f9c63cbb92378ed72cf624377777a575f60b2b016a85c7c"
+      },
+      "allowed_paths": ["vgd_image_importer.rb", "vgd_image_importer/"]
     },
     {
       "id": "scenes",
       "name": "VGD Scenes",
       "extension_name": "VGD Scenes",
-      "version": "1.5.2",
+      "version": "1.5.3-beta.2",
+      "release_channel": "beta",
       "description": "Quản lý góc nhìn, mặt cắt và xuất hồ sơ.",
       "icon": "scenes",
       "minimum_sketchup": "22.0.0",
       "download": {
-        "filename": "VGD_Scenes_v1.5.2.rbz",
-        "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/bec38b65d507dc5329d33d28b88ae3de6f86ab42/VGD_Scenes/VGD_Scenes_v1.5.2.rbz",
-        "size": 60472,
-        "sha256": "1d26f7bb2d418028fff87b5e83dbacf4a94e1f29b5ea089619b8fbeec132f046"
+        "filename": "VGD_Scenes_v1.5.3-beta.2.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-scenes-v1.5.3-beta.2/VGD_Scenes_v1.5.3-beta.2.rbz",
+        "size": 64105,
+        "sha256": "336bb2bcb7b1c70bed33594f45ab5d31ffdd8a3c4c8b758ffa048d79e431d005"
       },
       "allowed_paths": ["vgd_scenes.rb", "vgd_scenes/"]
+    },
+    {
+      "id": "bim_lite",
+      "name": "VGD BIM Lite",
+      "extension_name": "VGD BIM Lite",
+      "version": "0.1.3-alpha",
+      "release_channel": "alpha",
+      "description": "Đọc thông tin và rà soát dữ liệu mô hình SketchUp.",
+      "icon": "bim_lite",
+      "minimum_sketchup": "22.0.0",
+      "download": {
+        "filename": "VGD_BIM_Lite_v0.1.3-alpha.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-bim-lite-v0.1.3-alpha/VGD_BIM_Lite_v0.1.3-alpha.rbz",
+        "size": 35120,
+        "sha256": "e20d05ff2830cb855b44203de09f6b47f2048c2b5669d7cd0d06388a09fd4be4"
+      },
+      "allowed_paths": ["vgd_bim_lite.rb", "vgd_bim_lite/"]
     }
   ]
 }

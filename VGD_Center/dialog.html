@@ -135,6 +135,7 @@
     .empty-state{grid-column:1/-1;padding:24px;color:var(--muted);text-align:center}
     .badge{display:inline-flex;align-items:center;padding:3px 7px;border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:9px}
     .badge.stable{border-color:var(--success-border);color:var(--success)}
+    .badge.beta,.badge.alpha{border-color:var(--accent-line);background:var(--tint);color:var(--accent-strong)}
     .search{display:flex;align-items:center;gap:8px;min-width:220px;height:34px;padding:0 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--muted)}
     .search svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
     .search input{width:100%;border:0;outline:0;background:transparent;color:var(--text);font:inherit;font-size:11px}
@@ -232,7 +233,7 @@
         <section class="source-card" aria-label="Nguồn phân phối">
           <div class="source-label">Nguồn phân phối</div>
           <div class="source-value"><i class="dot"></i>GitHub · main</div>
-          <p>Catalog GitHub stable, gói cài được xác minh bằng SHA-256.</p>
+          <p>Danh mục phiên bản mới nhất từ GitHub; gói cài được xác minh bằng SHA-256.</p>
         </section>
         <div class="sketchup-foot"><svg viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/></svg><span id="hostLabel">SketchUp</span></div>
       </aside>
@@ -247,11 +248,11 @@
               <p class="eyebrow">VGD · PLUGIN CENTER</p>
               <h2>Chào mừng đến với VGD Center</h2>
               <p>Cài đặt và cập nhật plugin VGD trực tiếp trong SketchUp. Chọn thao tác; VGD Center sẽ tải gói, xác minh và cài đặt giúp bạn.</p>
-              <div class="pills"><span class="pill accent"><i class="dot"></i>Chỉ bản ổn định</span><span class="pill">Cài đặt có xác minh</span><span class="pill">Nhắc khởi động lại</span></div>
+              <div class="pills"><span class="pill accent"><i class="dot"></i>Có stable · beta · alpha</span><span class="pill">Cài đặt có xác minh</span><span class="pill">Nhắc khởi động lại</span></div>
             </section>
             <section class="card health">
-              <div class="health-head"><div class="health-title"><i class="status-dot"></i>VGD Center hoạt động bình thường</div><small id="syncLabel">Catalog stable</small></div>
-              <div class="health-metrics"><div class="health-metric"><span>SketchUp</span><strong id="hostVersion">—</strong></div><div class="health-metric"><span>Kênh phát hành</span><strong>Ổn định</strong></div><div class="health-metric"><span>Đồng bộ gần nhất</span><strong id="lastSync">Chưa kiểm tra</strong></div></div>
+              <div class="health-head"><div class="health-title"><i class="status-dot"></i>VGD Center hoạt động bình thường</div><small id="syncLabel">Danh mục mới nhất</small></div>
+              <div class="health-metrics"><div class="health-metric"><span>SketchUp</span><strong id="hostVersion">—</strong></div><div class="health-metric"><span>Danh mục</span><strong>Mới nhất</strong></div><div class="health-metric"><span>Đồng bộ gần nhất</span><strong id="lastSync">Chưa kiểm tra</strong></div></div>
             </section>
           </div>
           <div class="metrics">
@@ -260,21 +261,21 @@
             <article class="card metric"><div class="metric-icon accent"><svg><use href="#i-update"/></svg></div><div class="metric-copy"><b id="updatesMetric">0</b><span>Có bản cập nhật</span></div></article>
             <article class="card metric"><div class="metric-icon"><svg><use href="#i-shield"/></svg></div><div class="metric-copy"><b>SHA-256</b><span>Xác minh trước khi cài</span></div></article>
           </div>
-          <div class="section-head"><div><h2>Cập nhật dành cho bạn</h2><p>Các bản stable được duyệt trên GitHub.</p></div><div class="section-tools"><span class="pill accent" id="updatesPill">0 cập nhật</span><button class="btn primary small" data-action="install_updates"><svg><use href="#i-update"/></svg>Cập nhật tất cả</button></div></div>
+          <div class="section-head"><div><h2>Cập nhật dành cho bạn</h2><p>Phiên bản mới nhất đã được chọn trên GitHub, gồm cả beta/alpha.</p></div><div class="section-tools"><span class="pill accent" id="updatesPill">0 cập nhật</span><button class="btn primary small" data-action="install_updates"><svg><use href="#i-update"/></svg>Cập nhật tất cả</button></div></div>
           <div class="plugin-list" id="overviewUpdates"></div>
           <div class="bottom-note"><svg><use href="#i-restart"/></svg><span>Sau khi cài đặt hoặc cập nhật xong, VGD Center báo hoàn tất và nhắc bạn khởi động lại SketchUp để nạp phiên bản mới.</span></div>
         </section>
 
         <section class="page" id="page-catalog" data-view="catalog">
-          <div class="page-head"><div><p class="eyebrow">BỘ CÔNG CỤ VGD</p><h1>Kho plugin</h1><p class="page-intro">Các plugin stable dành cho phiên bản SketchUp trên máy này.</p></div><div class="button-row"><label class="search"><svg><use href="#i-search"/></svg><input id="searchInput" type="search" placeholder="Tìm plugin…" aria-label="Tìm plugin"></label></div></div>
+          <div class="page-head"><div><p class="eyebrow">BỘ CÔNG CỤ VGD</p><h1>Kho plugin</h1><p class="page-intro">Phiên bản mới nhất tương thích với SketchUp trên máy này.</p></div><div class="button-row"><label class="search"><svg><use href="#i-search"/></svg><input id="searchInput" type="search" placeholder="Tìm plugin…" aria-label="Tìm plugin"></label></div></div>
           <div class="catalog-grid" id="catalogGrid"></div>
-          <div class="bottom-note"><svg><use href="#i-shield"/></svg><span>Beta/prerelease không xuất hiện trong kho. Chỉ các bản stable đã được duyệt mới có thể cài từ VGD Center.</span></div>
+          <div class="bottom-note"><svg><use href="#i-shield"/></svg><span>Thẻ Beta và Alpha là bản thử nghiệm, có thể còn lỗi hoặc thay đổi. Kiểm tra nhãn phiên bản trước khi cài.</span></div>
         </section>
 
         <section class="page" id="page-installed" data-view="installed">
           <div class="page-head"><div><p class="eyebrow">TRÊN MÁY NÀY</p><h1>Đã cài</h1><p class="page-intro">Phiên bản plugin đang có trong SketchUp.</p></div><button class="btn" id="refreshInstalled"><svg><use href="#i-sync"/></svg>Làm mới danh sách</button></div>
           <div class="plugin-list" id="installedList"></div>
-          <div class="bottom-note"><svg><use href="#i-restart"/></svg><span>VGD Center kiểm tra plugin theo manifest stable và hiển thị đúng phiên bản cài trên máy.</span></div>
+          <div class="bottom-note"><svg><use href="#i-restart"/></svg><span>VGD Center so sánh đúng phiên bản stable, beta và alpha đã cài trên máy.</span></div>
         </section>
 
         <section class="page" id="page-updates" data-view="updates">
@@ -286,10 +287,10 @@
           <div class="page-head"><div><p class="eyebrow">TÙY CHỈNH</p><h1>Cài đặt</h1><p class="page-intro">Nguồn phân phối và cách VGD Center xử lý plugin.</p></div></div>
           <div class="settings-grid">
             <section class="card settings-card"><h2>Phân phối GitHub</h2>
-              <div class="setting-row"><div><strong>Catalog và manifest</strong><span>Lấy phiên bản stable từ commit main</span></div><div class="setting-value">GitHub<br>main</div></div>
+              <div class="setting-row"><div><strong>Catalog và manifest</strong><span>Lấy phiên bản mới nhất đã chọn từ commit main</span></div><div class="setting-value">GitHub<br>main</div></div>
               <div class="setting-row"><div><strong>Gói cài đặt RBZ</strong><span>Tải từ repo VGD theo catalog đã ghim</span></div><div class="setting-value">GitHub</div></div>
               <div class="setting-row"><div><strong>Kiểm tra toàn vẹn</strong><span>So dung lượng và SHA-256 trước cài</span></div><div class="setting-value">Bật</div></div>
-              <div class="setting-row"><div><strong>Kênh beta/prerelease</strong><span>Ẩn khỏi catalog và không tự cập nhật</span></div><div class="setting-value">Không dùng</div></div>
+              <div class="setting-row"><div><strong>Kênh beta/alpha</strong><span>Hiển thị theo nhãn phiên bản trong catalog</span></div><div class="setting-value">Đang dùng</div></div>
             </section>
             <section class="card settings-card"><h2>Cài đặt và thông báo</h2>
               <div class="setting-row"><div><strong>Kiểm tra bản mới</strong><span>Khi mở Center hoặc bấm kiểm tra</span></div><div class="setting-value">Thủ công</div></div>
@@ -302,7 +303,7 @@
         </section>
       </main>
     </div>
-    <footer class="footer"><div class="footer-left"><i class="status-dot"></i><span id="footerStatus">Đang nạp catalog stable…</span></div><span class="footer-right">SketchUp extension · VGD Center</span></footer>
+    <footer class="footer"><div class="footer-left"><i class="status-dot"></i><span id="footerStatus">Đang nạp danh mục phiên bản mới nhất…</span></div><span class="footer-right">SketchUp extension · VGD Center</span></footer>
   </div>
 
   <div class="overlay" id="overlay" role="presentation">
@@ -330,9 +331,10 @@
 
       const escapeHtml = value => String(value == null ? '' : value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
       const icon = id => `<svg aria-hidden="true"><use href="#${iconIds[id] || 'i-box'}"></use></svg>`;
+      const releaseLabel = channel => channel === 'beta' ? 'Beta' : channel === 'alpha' ? 'Alpha' : 'Stable';
       const statusText = product => {
         if (!product.compatible) return 'Cần SketchUp ' + product.minimum_sketchup + ' trở lên';
-        if (product.action === 'update') return 'Có bản stable mới';
+        if (product.action === 'update') return 'Có bản ' + releaseLabel(product.release_channel) + ' mới';
         if (product.action === 'install') return 'Chưa cài';
         return 'Đã ở phiên bản mới nhất';
       };
@@ -361,10 +363,11 @@
         document.getElementById('catalogGrid').innerHTML = compatibleItems.length ? compatibleItems.map(product => {
           const haystack = `${product.name} ${product.description} ${product.id}`.toLowerCase();
           const iconId = iconIds[product.icon] ? product.icon : product.id;
-          return `<article class="card catalog-card" data-search="${escapeHtml(haystack)}"><div class="plugin-icon">${icon(iconId)}</div><div><div class="plugin-name"><strong>${escapeHtml(product.name)}</strong><span>${escapeHtml(product.version)} · Ổn định</span></div><p class="desc">${escapeHtml(product.description)}</p><div class="catalog-meta"><span class="badge stable">Stable</span><span class="badge">SketchUp ${escapeHtml(product.minimum_sketchup)}+</span></div></div>${actionButton(product)}</article>`;
-        }).join('') : emptyMarkup('Chưa có plugin stable tương thích trong catalog.');
-        document.getElementById('overviewUpdates').innerHTML = updateItems.length ? updateItems.map(rowMarkup).join('') : emptyMarkup('Không có bản cập nhật stable. Mở Kho plugin để xem các plugin có thể cài.');
-        document.getElementById('updatesList').innerHTML = updateItems.length ? updateItems.map(rowMarkup).join('') : emptyMarkup('Các plugin stable đã cài đều đang mới nhất.');
+          const channel = releaseLabel(product.release_channel);
+          return `<article class="card catalog-card" data-search="${escapeHtml(haystack)}"><div class="plugin-icon">${icon(iconId)}</div><div><div class="plugin-name"><strong>${escapeHtml(product.name)}</strong><span>${escapeHtml(product.version)}</span></div><p class="desc">${escapeHtml(product.description)}</p><div class="catalog-meta"><span class="badge ${channel.toLowerCase()}">${channel}</span><span class="badge">SketchUp ${escapeHtml(product.minimum_sketchup)}+</span></div></div>${actionButton(product)}</article>`;
+        }).join('') : emptyMarkup('Chưa có plugin tương thích trong danh mục.');
+        document.getElementById('overviewUpdates').innerHTML = updateItems.length ? updateItems.map(rowMarkup).join('') : emptyMarkup('Không có bản cập nhật mới. Mở Kho plugin để xem các plugin có thể cài.');
+        document.getElementById('updatesList').innerHTML = updateItems.length ? updateItems.map(rowMarkup).join('') : emptyMarkup('Các plugin đã cài đều đang ở phiên bản mới nhất.');
         document.getElementById('installedList').innerHTML = installedItems.length ? installedItems.map(rowMarkup).join('') : emptyMarkup('Chưa phát hiện plugin VGD nào đã cài trong SketchUp này.');
         const count = products.length;
         setCount('catalogCount', count);
@@ -377,8 +380,8 @@
         document.getElementById('hostVersion').textContent = currentState.sketchup || '—';
         document.getElementById('hostLabel').textContent = 'SketchUp ' + (currentState.sketchup || '');
         document.getElementById('lastSync').textContent = currentState.last_sync || 'Chưa kiểm tra';
-        document.getElementById('syncLabel').textContent = currentState.source_status || 'Catalog stable';
-        document.getElementById('githubStatus').textContent = currentState.source_status || 'Catalog stable';
+        document.getElementById('syncLabel').textContent = currentState.source_status || 'Danh mục mới nhất';
+        document.getElementById('githubStatus').textContent = currentState.source_status || 'Danh mục mới nhất';
         const updateButtons = document.querySelectorAll('[data-action="install_updates"]');
         updateButtons.forEach(button => { button.disabled = !updateItems.length; });
         filterCatalog();

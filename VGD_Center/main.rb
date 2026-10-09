@@ -8,7 +8,7 @@ require 'securerandom'
 
 module VGD
   module Center
-    VERSION = '1.0.0'.freeze
+    VERSION = '1.0.1'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     ALLOWED_IDS = %w[dim cabinet library image_importer scenes bim_lite].freeze
     PLUGIN_LAYOUTS = {
@@ -71,7 +71,7 @@ module VGD
         dialog.add_action_callback('install_updates') do |_context|
           update_ids = current_products.select { |product| product[:action] == 'update' }.map { |product| product[:id] }
           if update_ids.empty?
-            notify('info', 'Đã cập nhật', 'Các plugin stable đã cài đều đang ở phiên bản mới nhất.')
+            notify('info', 'Đã cập nhật', 'Các plugin đã cài đều đang ở phiên bản mới nhất.')
           else
             queue_plugins(update_ids)
           end
@@ -81,7 +81,7 @@ module VGD
       def refresh_catalog
         return if @catalog_request
 
-        set_status('Đang lấy catalog stable từ GitHub…')
+        set_status('Đang lấy danh mục phiên bản mới nhất từ GitHub…')
         @catalog_request = Sketchup::Http::Request.new(CATALOG_URL)
         started = @catalog_request.start do |_request, response|
           @catalog_request = nil
@@ -90,20 +90,20 @@ module VGD
               @catalog = validate_catalog(JSON.parse(response.body))
               @catalog_error = nil
               @last_sync = Time.now
-              set_status('Đã đồng bộ catalog stable từ GitHub')
+              set_status('Đã đồng bộ danh mục phiên bản mới nhất từ GitHub')
             rescue StandardError => error
               @catalog_error = "Catalog GitHub không hợp lệ: #{error.message}"
               load_fallback_catalog
             end
           else
-            @catalog_error = 'Không thể kết nối catalog GitHub; đang dùng catalog ổn định đi kèm VGD Center.'
+            @catalog_error = 'Không thể kết nối danh mục GitHub; đang dùng danh mục đi kèm VGD Center.'
             load_fallback_catalog
           end
           send_state
         end
         unless started
           @catalog_request = nil
-          @catalog_error = 'Không thể bắt đầu kết nối GitHub; đang dùng catalog đi kèm.'
+          @catalog_error = 'Không thể bắt đầu kết nối GitHub; đang dùng danh mục đi kèm.'
           load_fallback_catalog
           send_state
         end
@@ -118,17 +118,17 @@ module VGD
         path = File.join(__dir__, 'catalog.json')
         validate_catalog(JSON.parse(File.read(path, 'r:UTF-8')))
       rescue StandardError
-        { 'schema_version' => 1, 'channel' => 'stable', 'products' => [] }
+        { 'schema_version' => 1, 'channel' => 'latest', 'products' => [] }
       end
 
       def load_fallback_catalog
         @catalog = read_bundled_catalog
-        set_status(@catalog_error || 'Đang dùng catalog stable đi kèm VGD Center')
+        set_status(@catalog_error || 'Đang dùng danh mục mới nhất đi kèm VGD Center')
       end
 
       def validate_catalog(catalog)
         raise 'sai phiên bản catalog' unless catalog.is_a?(Hash) && catalog['schema_version'] == 1
-        raise 'catalog không ở kênh stable' unless catalog['channel'] == 'stable'
+        raise 'catalog không ở kênh latest' unless catalog['channel'] == 'latest'
         products = catalog['products']
         raise 'thiếu danh sách plugin' unless products.is_a?(Array)
 
@@ -143,14 +143,16 @@ module VGD
           raise "tên extension không hợp lệ: #{id}" unless product['extension_name'] == expected_name
 
           version = product['version'].to_s
-          raise "phiên bản không stable: #{id}" unless version.match?(/\A\d+\.\d+\.\d+\z/)
+          version_match = version.match(/\A(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta)(?:\.(\d+))?)?\z/)
+          raise "phiên bản không hợp lệ: #{id}" unless version_match
+          release_channel = product['release_channel'].to_s
+          expected_channel = version_match[4] || 'stable'
+          raise "kênh phát hành không khớp phiên bản: #{id}" unless release_channel == expected_channel
           download = product['download']
           raise "thiếu gói tải: #{id}" unless download.is_a?(Hash)
           filename = download['filename'].to_s
           raise "tên gói không hợp lệ: #{id}" unless filename.match?(/\A[A-Za-z0-9_.-]+\.rbz\z/i)
-          if filename.match?(/alpha|beta|rc|preview|prerelease|dev/i) || !filename.include?(version)
-            raise "không cho phép gói prerelease: #{id}"
-          end
+          raise "tên gói không khớp phiên bản: #{id}" unless filename.include?(version)
           url = download['url'].to_s
           allowed_url = url.start_with?('https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/') ||
                         url.start_with?('https://github.com/vuongpentax/VGD_Plugins/releases/download/')
@@ -187,7 +189,7 @@ module VGD
                    end
           {
             id: product['id'], name: product['name'], description: product['description'],
-            version: product['version'], icon: product['icon'], minimum_sketchup: product['minimum_sketchup'],
+            version: product['version'], release_channel: product['release_channel'], icon: product['icon'], minimum_sketchup: product['minimum_sketchup'],
             installed: installed, installed_version: installed_version, action: action,
             compatible: min_ok, filename: product.dig('download', 'filename')
           }
@@ -212,7 +214,20 @@ module VGD
         return 0 if a_pre == b_pre
         return 1 if a_pre.nil?
         return -1 if b_pre.nil?
-        a_pre <=> b_pre
+        a_ids = a_pre.split('.')
+        b_ids = b_pre.split('.')
+        [a_ids.length, b_ids.length].min.times do |index|
+          a_id = a_ids[index]
+          b_id = b_ids[index]
+          next if a_id == b_id
+          a_numeric = a_id.match?(/\A\d+\z/)
+          b_numeric = b_id.match?(/\A\d+\z/)
+          return a_id.to_i <=> b_id.to_i if a_numeric && b_numeric
+          return -1 if a_numeric
+          return 1 if b_numeric
+          return a_id <=> b_id
+        end
+        a_ids.length <=> b_ids.length
       end
 
       def send_state
@@ -222,7 +237,7 @@ module VGD
           sketchup: Sketchup.version.to_s,
           products: current_products,
           last_sync: @last_sync ? @last_sync.strftime('%H:%M · %d/%m/%Y') : nil,
-          source_status: @catalog_error ? 'Dùng catalog đi kèm' : (@last_sync ? 'Đã đồng bộ GitHub' : 'Catalog stable'),
+          source_status: @catalog_error ? 'Dùng danh mục đi kèm' : (@last_sync ? 'Đã đồng bộ GitHub' : 'Danh mục mới nhất'),
           message: @catalog_error
         }
         script = "window.VGD && window.VGD.receiveState(#{JSON.generate(payload).gsub('</', '<\\/')});"
@@ -245,7 +260,7 @@ module VGD
         products = Array(ids).map do |id|
           @catalog['products'].find { |product| product['id'] == id.to_s }
         end.compact
-        return notify('error', 'Plugin không có trong catalog', 'Chỉ có thể cài plugin VGD stable đã được duyệt.') if products.empty?
+        return notify('error', 'Plugin không có trong danh mục', 'Chỉ có thể cài plugin VGD đã được duyệt trong danh mục.') if products.empty?
         incompatible = products.find do |product|
           compare_versions(Sketchup.version.to_s, product['minimum_sketchup'].to_s) < 0
         end

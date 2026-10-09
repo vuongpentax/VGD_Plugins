@@ -1,5 +1,5 @@
 param(
-  [string]$Version = '1.0.0'
+  [string]$Version = '1.0.1'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -23,23 +23,31 @@ $hashPath = Join-Path $outputDir "VGD_Center_v$Version.rbz.sha256"
 
 if (-not (Test-Path -LiteralPath $catalogPath)) { throw "Thiếu catalog: $catalogPath" }
 $catalog = Get-Content -LiteralPath $catalogPath -Raw -Encoding UTF8 | ConvertFrom-Json
-if ($catalog.schema_version -ne 1 -or $catalog.channel -ne 'stable') { throw 'Catalog không đúng schema stable.' }
+if ($catalog.schema_version -ne 1 -or $catalog.channel -ne 'latest') { throw 'Catalog không đúng schema latest.' }
 if (Test-Path -LiteralPath $rbzPath) { throw "Đã tồn tại, không ghi đè: $rbzPath" }
 if (Test-Path -LiteralPath $sourcePath) { throw "Đã tồn tại, không ghi đè: $sourcePath" }
 if (Test-Path -LiteralPath $hashPath) { throw "Đã tồn tại, không ghi đè: $hashPath" }
 if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot "RELEASE_NOTES_v$Version.md"))) { throw "Thiếu release notes cho $Version." }
 
+$localPackages = @{
+  dim = 'VGD_Dim/outputs/VGD_Dim_v3.3.0-beta.4.rbz'
+  cabinet = 'VGD_Cabinet/outputs/vgd_cabinet_modeling/VGD_Cabinet_v4.5.0-beta.3.rbz'
+  library = 'VGD_Library/VGD_Library_v1.1.2-beta.3.rbz'
+  image_importer = 'VGD_Image_Importer/VGD_Image_Importer_v1.1.0-beta.4.rbz'
+  scenes = 'VGD_Scenes/VGD_Scenes_v1.5.3-beta.2.rbz'
+  bim_lite = 'VGD_BIM/VGD_BIM_Lite_v0.1.3-alpha.rbz'
+}
 foreach ($product in $catalog.products) {
-  if ($product.version -notmatch '^\d+\.\d+\.\d+$') { throw "Catalog chứa bản prerelease: $($product.id)" }
-  if ($product.download.url -match '^https://raw\.githubusercontent\.com/vuongpentax/VGD_Plugins/[0-9a-f]{40}/(.+)$') {
-    $relativePackage = $Matches[1] -replace '/', '\'
-    $packagePath = Join-Path $repoRoot $relativePackage
-    if (-not (Test-Path -LiteralPath $packagePath)) { throw "Thiếu gói catalog: $packagePath" }
-    $packageInfo = Get-Item -LiteralPath $packagePath
-    $packageHash = (Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($packageInfo.Length -ne [int64]$product.download.size -or $packageHash -ne $product.download.sha256.ToLowerInvariant()) {
-      throw "Dung lượng hoặc SHA-256 không khớp catalog cho $($product.id)."
-    }
+  if ($product.version -notmatch '^\d+\.\d+\.\d+(?:-(?:alpha|beta)(?:\.\d+)?)?$') { throw "Catalog chứa phiên bản không hỗ trợ: $($product.id)" }
+  $expectedChannel = if ($product.version -match '-(alpha|beta)') { $Matches[1] } else { 'stable' }
+  if ($product.release_channel -ne $expectedChannel) { throw "Kênh phát hành không khớp phiên bản: $($product.id)" }
+  if (-not $localPackages.ContainsKey($product.id)) { throw "Không có đường dẫn kiểm tra gói cho $($product.id)." }
+  $packagePath = Join-Path $repoRoot ($localPackages[$product.id] -replace '/', '\')
+  if (-not (Test-Path -LiteralPath $packagePath)) { throw "Thiếu gói catalog: $packagePath" }
+  $packageInfo = Get-Item -LiteralPath $packagePath
+  $packageHash = (Get-FileHash -LiteralPath $packagePath -Algorithm SHA256).Hash.ToLowerInvariant()
+  if ($packageInfo.Length -ne [int64]$product.download.size -or $packageHash -ne $product.download.sha256.ToLowerInvariant()) {
+    throw "Dung lượng hoặc SHA-256 không khớp catalog cho $($product.id)."
   }
 }
 
