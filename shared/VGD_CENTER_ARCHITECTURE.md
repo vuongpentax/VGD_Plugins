@@ -1,6 +1,6 @@
 # VGD Center
 
-Trạng thái: bộ cài VGD Center 1.0.1 đã được dựng cục bộ; đang chờ phát hành lên GitHub.
+VGD Center 1.0.1 được đóng gói dưới dạng RBZ, dùng danh mục phiên bản mới nhất trên GitHub.
 
 ## Phạm vi hiện tại
 

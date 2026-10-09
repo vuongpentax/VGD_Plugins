@@ -116,7 +116,7 @@ module VGD
 
       def read_bundled_catalog
         path = File.join(__dir__, 'catalog.json')
-        validate_catalog(JSON.parse(File.read(path, 'r:UTF-8')))
+        validate_catalog(JSON.parse(File.read(path, encoding: 'UTF-8')))
       rescue StandardError
         { 'schema_version' => 1, 'channel' => 'latest', 'products' => [] }
       end
