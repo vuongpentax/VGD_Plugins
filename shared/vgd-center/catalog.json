@@ -33,7 +33,7 @@
       "minimum_sketchup": "22.0.0",
       "download": {
         "filename": "VGD_Cabinet_v4.5.0-beta.4.rbz",
-        "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/VGD_Cabinet_v4.5.0-beta.4.rbz",
+        "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/1eafcbb2efac7ad4d0d89d1294d500a32e9a2793/shared/vgd-center/packages/VGD_Cabinet_v4.5.0-beta.4.rbz",
         "size": 89854,
         "sha256": "ac2edcb9c3a5a2e92ad58336f6a9e58cf6c166af343bc55d09e21f53440b8964"
       },
