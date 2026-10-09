@@ -129,7 +129,8 @@
     .catalog-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
     .catalog-card{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:start;gap:11px;padding:13px}
     .catalog-card .desc{margin:5px 0 8px;color:var(--muted);font-size:10px}
-    .plugin-actions{display:flex;flex-direction:column;align-items:stretch;gap:6px}
+    .plugin-actions{display:flex;flex-direction:row;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px}
+    .catalog-card .plugin-actions{grid-column:1/-1;flex-direction:row;justify-content:flex-end}
     .catalog-meta{display:flex;flex-wrap:wrap;gap:6px}
     .empty-state{grid-column:1/-1;padding:24px;color:var(--muted);text-align:center}
     .badge{display:inline-flex;align-items:center;padding:3px 7px;border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:9px}
@@ -174,7 +175,7 @@
     .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
     .dialog-actions[hidden]{display:none}
     @media(max-width:920px){.shell{grid-template-columns:166px minmax(0,1fr)}main{padding:16px}.welcome-grid{grid-template-columns:1fr}.health-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.plugin-row{grid-template-columns:40px minmax(130px,1fr) minmax(145px,1fr) auto}}
-    @media(max-width:740px){.app{grid-template-rows:60px minmax(0,1fr) 32px}.topbar{padding:0 12px}.shell{grid-template-columns:54px minmax(0,1fr)}.sidebar{align-items:center;padding:12px 6px}.nav-caption,.nav span,.sketchup-foot{display:none}.nav{width:100%}.nav button{justify-content:center;padding:0}.nav svg{width:19px;height:19px}.nav .count{position:absolute;transform:translate(15px,-11px);min-width:15px;height:15px;padding:0 3px;font-size:8px}.sidebar-spacer{display:none}.plugin-row{grid-template-columns:38px minmax(0,1fr) auto}.version-line{grid-column:2/-1}.plugin-row>.plugin-actions{grid-column:3;grid-row:1/3}.catalog-grid,.settings-grid{grid-template-columns:1fr}.search{min-width:150px}.page-head{align-items:center}.page-intro{max-width:400px}}
+    @media(max-width:740px){.app{grid-template-rows:60px minmax(0,1fr) 32px}.topbar{padding:0 12px}.shell{grid-template-columns:54px minmax(0,1fr)}.sidebar{align-items:center;padding:12px 6px}.nav-caption,.nav span,.sketchup-foot{display:none}.nav{width:100%}.nav button{justify-content:center;padding:0}.nav svg{width:19px;height:19px}.nav .count{position:absolute;transform:translate(15px,-11px);min-width:15px;height:15px;padding:0 3px;font-size:8px}.sidebar-spacer{display:none}.plugin-row{grid-template-columns:38px minmax(0,1fr)}.version-line{grid-column:2/-1}.plugin-row>.plugin-actions{grid-column:2/-1;grid-row:auto;justify-content:flex-start}.catalog-grid,.settings-grid{grid-template-columns:1fr}.search{min-width:150px}.page-head{align-items:center}.page-intro{max-width:400px}}
     @media(max-width:520px){body{min-width:360px}main{padding:13px}.page-head{align-items:flex-start;flex-direction:column}.health-metrics{gap:5px}.health-metric{padding:7px}.metrics{gap:7px}.metric{padding:9px}.metric-copy span{font-size:9px}.section-head{align-items:flex-start;flex-direction:column}.section-tools{width:100%;justify-content:space-between}.plugin-row{padding:9px}.footer-right{display:none}}
   </style>
 </head>
@@ -205,6 +206,7 @@
     <symbol id="vgd-library" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4.5H19v11.5"/><path d="M4.5 7.5h6v6h-6z" fill="currentColor" stroke="none"/><path d="M4.5 7.5h12v12h-12z"/><path d="M10.5 7.5v12M4.5 13.5h12"/></g></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></symbol>
     <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4.5h10.5A3.5 3.5 0 0 1 19 8v11.5H8A3 3 0 0 1 5 16.5z"/><path d="M5 16.5a3 3 0 0 1 3-3h11M9 8h6M9 10.5h5"/></symbol>
     <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6z"/><path d="m8.5 12 2.3 2.3 4.8-5"/></symbol>
     <symbol id="i-restart" viewBox="0 0 24 24"><path d="M4 7v5h5M20 17v-5h-5"/><path d="M6.1 12a6 6 0 0 1 10.3-4.2L20 12M4 12l3.6 4.2A6 6 0 0 0 17.9 12"/></symbol>
     <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18H6a4 4 0 1 1 .8-7.9A6 6 0 0 1 18 9a4.5 4.5 0 0 1 0 9h-2"/><path d="M12 21v-8m-3 3 3-3 3 3"/></symbol>
@@ -376,7 +378,8 @@
         const label = product.action === 'update' ? tr('Cập nhật', 'Update') : product.action === 'install' ? tr('Cài đặt', 'Install') : product.installed ? tr('Đã cài', 'Installed') : tr('Không tương thích', 'Incompatible');
         const primary = product.action === 'update' || product.action === 'install';
         const uninstall = product.installed ? `<button class="btn small" data-action="uninstall_plugin" data-id="${escapeHtml(product.id)}">${tr('Gỡ cài đặt', 'Uninstall')}</button>` : '';
-        return `<div class="plugin-actions"><button class="btn ${primary ? 'primary ' : ''}small" data-action="install_plugin" data-id="${escapeHtml(product.id)}" ${disabled ? 'disabled' : ''}>${label}</button>${uninstall}</div>`;
+        const guide = `<button class="btn small" data-action="open_guide" data-id="${escapeHtml(product.id)}"><svg><use href="#i-book"/></svg>${tr('Hướng dẫn', 'Guide')}</button>`;
+        return `<div class="plugin-actions">${guide}<button class="btn ${primary ? 'primary ' : ''}small" data-action="install_plugin" data-id="${escapeHtml(product.id)}" ${disabled ? 'disabled' : ''}>${label}</button>${uninstall}</div>`;
       };
       const rowMarkup = product => {
         const iconId = iconIds[product.icon] ? product.icon : product.id;
@@ -538,6 +541,10 @@
         if (!button || button.disabled) return;
         if (button.dataset.action === 'install_plugin') requestNative('install_plugin', button.dataset.id);
         if (button.dataset.action === 'uninstall_plugin') requestNative('uninstall_plugin', button.dataset.id);
+        if (button.dataset.action === 'open_guide') {
+          if (window.sketchup && typeof window.sketchup.open_guide === 'function') requestNative('open_guide', button.dataset.id);
+          else window.open(`guides/${encodeURIComponent(button.dataset.id)}.html`, '_blank', 'noopener');
+        }
         if (button.dataset.action === 'install_all_plugins') requestNative('install_all_plugins');
         if (button.dataset.action === 'install_updates') requestNative('install_updates');
         if (button.dataset.action === 'update_center') requestNative('update_center');
@@ -580,7 +587,16 @@
       };
 
       if (window.sketchup && typeof window.sketchup.center_ready === 'function') window.sketchup.center_ready();
-      else setStatus('VGD Center cần chạy bên trong SketchUp');
+      else if (new URLSearchParams(window.location.search).has('preview') || (window.location.protocol === 'file:' && !window.sketchup)) {
+        const versions = {dim:'3.3.0-beta.4',cabinet:'4.5.0-beta.3',library:'1.1.2-beta.3',image_importer:'1.1.0-beta.4',scenes:'1.5.3-beta.2',bim_lite:'0.1.3-alpha'};
+        const descriptions = {dim:'Đo kích thước, chỉnh kiểu Dim/Text và tạo Smart Dim.',cabinet:'Dựng tủ, chia khoang, cánh và ngăn kéo trong SketchUp.',library:'Tìm kiếm và quản lý thư viện vật liệu, model VGD.',image_importer:'Nhập ảnh vào SketchUp dưới dạng component, mặt phẳng hoặc vật liệu.',scenes:'Quản lý góc nhìn, mặt cắt và xuất hồ sơ.',bim_lite:'Đọc thông tin và rà soát dữ liệu model SketchUp.'};
+        const names = {dim:'VGD Dim',cabinet:'VGD Cabinet',library:'VGD Library',image_importer:'VGD Image Importer',scenes:'VGD Scenes',bim_lite:'VGD BIM Lite'};
+        const channels = {dim:'beta',cabinet:'beta',library:'beta',image_importer:'beta',scenes:'beta',bim_lite:'alpha'};
+        const installedIds = ['dim','cabinet','library','image_importer','scenes'];
+        const updateIds = ['dim','scenes'];
+        window.VGD.receiveState({version:'1.0.7',sketchup:'22.0.316',settings:{language:'vi',auto_update:true},center_update:{state:'latest',current_version:'1.0.7',latest_version:'1.0.7'},products:Object.keys(versions).map(id=>({id,name:names[id],version:versions[id],release_channel:channels[id],description:descriptions[id],icon:id,minimum_sketchup:'22.0.0',compatible:true,installed:installedIds.includes(id),installed_version:installedIds.includes(id)?(updateIds.includes(id)?'bản cũ':'đang dùng'):null,action:!installedIds.includes(id)?'install':updateIds.includes(id)?'update':null}))});
+        setStatus('Bản xem thử · Nút cài đặt không thao tác thật');
+      } else setStatus('VGD Center cần chạy bên trong SketchUp');
     })();
   </script>
 </body>

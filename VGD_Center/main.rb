@@ -8,7 +8,7 @@ require 'securerandom'
 
 module VGD
   module Center
-    VERSION = '1.0.6'.freeze
+    VERSION = '1.0.7'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
@@ -78,6 +78,7 @@ module VGD
         dialog.add_action_callback('install_all_plugins') { |_context| install_all_plugins }
         dialog.add_action_callback('update_center') { |_context| queue_center_update }
         dialog.add_action_callback('refresh_center_update') { |_context| refresh_center_update }
+        dialog.add_action_callback('open_guide') { |_context, plugin_id| open_guide(plugin_id) }
         dialog.add_action_callback('uninstall_plugin') do |_context, plugin_id|
           uninstall_plugin(plugin_id)
         end
@@ -98,6 +99,44 @@ module VGD
             queue_plugins(update_ids)
           end
         end
+      end
+
+      def open_guide(plugin_id)
+        id = plugin_id.to_s
+        return UI.messagebox('Không tìm thấy hướng dẫn cho plugin này.') unless ALLOWED_IDS.include?(id)
+
+        @guide_dialogs ||= {}
+        if @guide_dialogs[id] && @guide_dialogs[id].visible?
+          @guide_dialogs[id].bring_to_front
+          return
+        end
+
+        path = File.join(__dir__, 'guides', "#{id}.html")
+        return UI.messagebox('Tài liệu hướng dẫn chưa có trong bản VGD Center này.') unless File.file?(path)
+
+        title = case id
+                when 'bim_lite' then 'VGD BIM Lite'
+                when 'image_importer' then 'VGD Image Importer'
+                else "VGD #{id.split('_').map(&:capitalize).join(' ')}"
+                end
+        guide = UI::HtmlDialog.new(
+          dialog_title: "Hướng dẫn · #{title}",
+          preferences_key: "com.vgd.center.guide.#{id}",
+          scrollable: true,
+          resizable: true,
+          width: 980,
+          height: 760,
+          min_width: 620,
+          min_height: 500,
+          style: UI::HtmlDialog::STYLE_WINDOW
+        )
+        @guide_dialogs[id] = guide
+        guide.set_file(path)
+        guide.set_on_closed { @guide_dialogs.delete(id) }
+        guide.center
+        guide.show
+      rescue StandardError => error
+        UI.messagebox("Không thể mở hướng dẫn.\n#{error.message}")
       end
 
       def refresh_catalog

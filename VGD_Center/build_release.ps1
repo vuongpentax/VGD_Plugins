@@ -1,5 +1,5 @@
 param(
-  [string]$Version = '1.0.6'
+  [string]$Version = '1.0.7'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -17,6 +17,15 @@ $supportFiles = @(
   @{ Source = (Join-Path $PSScriptRoot 'icon.svg'); Entry = 'VGD_Center/icon.svg' },
   @{ Source = $catalogPath; Entry = 'VGD_Center/catalog.json' },
   @{ Source = $centerManifestPath; Entry = 'VGD_Center/center-update.json' }
+)
+$guideFiles = @(
+  @{ Source = (Join-Path $PSScriptRoot 'guides\center.html'); Entry = 'VGD_Center/guides/center.html' },
+  @{ Source = (Join-Path $PSScriptRoot 'guides\dim.html'); Entry = 'VGD_Center/guides/dim.html' },
+  @{ Source = (Join-Path $PSScriptRoot 'guides\cabinet.html'); Entry = 'VGD_Center/guides/cabinet.html' },
+  @{ Source = (Join-Path $PSScriptRoot 'guides\library.html'); Entry = 'VGD_Center/guides/library.html' },
+  @{ Source = (Join-Path $PSScriptRoot 'guides\image_importer.html'); Entry = 'VGD_Center/guides/image_importer.html' },
+  @{ Source = (Join-Path $PSScriptRoot 'guides\scenes.html'); Entry = 'VGD_Center/guides/scenes.html' },
+  @{ Source = (Join-Path $PSScriptRoot 'guides\bim_lite.html'); Entry = 'VGD_Center/guides/bim_lite.html' }
 )
 $outputDir = Join-Path $PSScriptRoot 'outputs'
 $rbzPath = Join-Path $outputDir "VGD_Center_v$Version.rbz"
@@ -62,6 +71,9 @@ foreach ($product in $catalog.products) {
     throw "Dung lượng hoặc SHA-256 không khớp catalog cho $($product.id)."
   }
 }
+foreach ($guide in $guideFiles) {
+  if (-not (Test-Path -LiteralPath $guide.Source)) { throw "Thiếu hướng dẫn: $($guide.Source)" }
+}
 
 New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 $zip = [System.IO.Compression.ZipFile]::Open($rbzPath, [System.IO.Compression.ZipArchiveMode]::Create)
@@ -69,6 +81,9 @@ try {
   [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $rootLoader, 'VGD_Center.rb') | Out-Null
   foreach ($file in $supportFiles) {
     [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $file.Source, $file.Entry) | Out-Null
+  }
+  foreach ($guide in $guideFiles) {
+    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $guide.Source, $guide.Entry) | Out-Null
   }
 }
 finally {
@@ -80,6 +95,9 @@ try {
   [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $rootLoader, 'VGD_Center.rb') | Out-Null
   foreach ($file in $supportFiles) {
     [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $file.Source, $file.Entry) | Out-Null
+  }
+  foreach ($guide in $guideFiles) {
+    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $guide.Source, $guide.Entry) | Out-Null
   }
   [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, (Join-Path $PSScriptRoot 'README.md'), 'README.md') | Out-Null
   [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, (Join-Path $PSScriptRoot "RELEASE_NOTES_v$Version.md"), "RELEASE_NOTES_v$Version.md") | Out-Null
