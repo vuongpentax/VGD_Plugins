@@ -8,8 +8,10 @@ require 'securerandom'
 
 module VGD
   module Center
-    VERSION = '1.0.1'.freeze
+    VERSION = '1.0.6'.freeze
+    SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
+    CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
     ALLOWED_IDS = %w[dim cabinet library image_importer scenes bim_lite].freeze
     PLUGIN_LAYOUTS = {
       'dim' => ['VGD Dim', ['vgd_dim.rb', 'VGD_Dim/']],
@@ -17,7 +19,8 @@ module VGD
       'library' => ['VGD Library', ['vgd_library.rb', 'vgd_library/']],
       'image_importer' => ['VGD Image Importer', ['vgd_image_importer.rb', 'vgd_image_importer/']],
       'scenes' => ['VGD Scenes', ['vgd_scenes.rb', 'vgd_scenes/']],
-      'bim_lite' => ['VGD BIM Lite', ['vgd_bim_lite.rb', 'vgd_bim_lite/']]
+      'bim_lite' => ['VGD BIM Lite', ['vgd_bim_lite.rb', 'vgd_bim_lite/']],
+      'center' => ['VGD Center', ['VGD_Center.rb', 'VGD_Center/']]
     }.freeze
     MAX_PACKAGE_BYTES = 100 * 1024 * 1024
     MAX_ARCHIVE_FILES = 5000
@@ -30,6 +33,7 @@ module VGD
         end
 
         @catalog ||= read_bundled_catalog
+        @center_release ||= read_bundled_center_release
         @dialog = UI::HtmlDialog.new(
           dialog_title: 'VGD Center',
           preferences_key: 'com.vgd.center.dialog.v1',
@@ -56,7 +60,10 @@ module VGD
         end
         @dialog.center
         @dialog.show
-        UI.start_timer(0.2, false) { refresh_catalog }
+        UI.start_timer(0.2, false) do
+          refresh_catalog
+          refresh_center_update
+        end
       rescue StandardError => error
         @dialog = nil
         UI.messagebox("Không thể mở VGD Center.\n#{error.message}")
@@ -67,6 +74,21 @@ module VGD
         dialog.add_action_callback('refresh_catalog') { |_context| refresh_catalog }
         dialog.add_action_callback('install_plugin') do |_context, plugin_id|
           queue_plugins([plugin_id])
+        end
+        dialog.add_action_callback('install_all_plugins') { |_context| install_all_plugins }
+        dialog.add_action_callback('update_center') { |_context| queue_center_update }
+        dialog.add_action_callback('refresh_center_update') { |_context| refresh_center_update }
+        dialog.add_action_callback('uninstall_plugin') do |_context, plugin_id|
+          uninstall_plugin(plugin_id)
+        end
+        dialog.add_action_callback('set_auto_update') do |_context, enabled|
+          Sketchup.write_default(SETTINGS_KEY, 'auto_update', enabled.to_s == 'true')
+          send_state
+        end
+        dialog.add_action_callback('set_language') do |_context, language|
+          language = language.to_s
+          Sketchup.write_default(SETTINGS_KEY, 'language', language) if %w[auto vi en].include?(language)
+          send_state
         end
         dialog.add_action_callback('install_updates') do |_context|
           update_ids = current_products.select { |product| product[:action] == 'update' }.map { |product| product[:id] }
@@ -79,9 +101,10 @@ module VGD
       end
 
       def refresh_catalog
+        refresh_center_update
         return if @catalog_request
 
-        set_status('Đang lấy danh mục phiên bản mới nhất từ GitHub…')
+        set_status('Đang kiểm tra phiên bản plugin…')
         @catalog_request = Sketchup::Http::Request.new(CATALOG_URL)
         started = @catalog_request.start do |_request, response|
           @catalog_request = nil
@@ -90,28 +113,197 @@ module VGD
               @catalog = validate_catalog(JSON.parse(response.body))
               @catalog_error = nil
               @last_sync = Time.now
-              set_status('Đã đồng bộ danh mục phiên bản mới nhất từ GitHub')
+              set_status('Đã làm mới danh sách phiên bản')
             rescue StandardError => error
-              @catalog_error = "Catalog GitHub không hợp lệ: #{error.message}"
+              @catalog_error = "Danh sách phiên bản không hợp lệ: #{error.message}"
               load_fallback_catalog
             end
           else
-            @catalog_error = 'Không thể kết nối danh mục GitHub; đang dùng danh mục đi kèm VGD Center.'
+            @catalog_error = 'Không thể kết nối máy chủ cập nhật; đang dùng danh sách phiên bản đi kèm.'
             load_fallback_catalog
           end
           send_state
         end
         unless started
           @catalog_request = nil
-          @catalog_error = 'Không thể bắt đầu kết nối GitHub; đang dùng danh mục đi kèm.'
+          @catalog_error = 'Không thể bắt đầu kiểm tra phiên bản; đang dùng danh sách đi kèm.'
           load_fallback_catalog
           send_state
         end
       rescue StandardError => error
         @catalog_request = nil
-        @catalog_error = "Không thể kiểm tra GitHub: #{error.message}"
+        @catalog_error = "Không thể kiểm tra phiên bản: #{error.message}"
         load_fallback_catalog
         send_state
+      end
+
+      def read_bundled_center_release
+        path = File.join(__dir__, 'center-update.json')
+        validate_center_release(JSON.parse(File.read(path, encoding: 'UTF-8')))
+      rescue StandardError
+        nil
+      end
+
+      def refresh_center_update
+        return if @center_request
+
+        @center_release ||= read_bundled_center_release
+        @center_error = nil
+        @center_request = Sketchup::Http::Request.new(CENTER_UPDATE_URL)
+        send_state
+        started = @center_request.start do |_request, response|
+          @center_request = nil
+          record_center_update_check
+          if response && response.status_code == 200
+            begin
+              @center_release = validate_center_release(JSON.parse(response.body))
+              @center_update_checked = true
+              @center_error = nil
+            rescue StandardError => error
+              @center_update_checked = false
+              @center_error = "Thông tin cập nhật VGD Center không hợp lệ: #{error.message}"
+            end
+          else
+            @center_update_checked = false
+            @center_error = 'Không thể kiểm tra phiên bản VGD Center.'
+          end
+          auto_install = @auto_update_pending && auto_update_enabled? && @center_update_checked &&
+                         @center_release && compare_versions(active_center_version, @center_release['version']).negative?
+          @auto_update_pending = false
+          send_state
+          queue_center_update(automatic: true) if auto_install && !@busy
+        end
+        unless started
+          @center_request = nil
+          record_center_update_check
+          @auto_update_pending = false
+          @center_update_checked = false
+          @center_error = 'Không thể bắt đầu kiểm tra VGD Center.'
+          send_state
+        end
+      rescue StandardError => error
+        @center_request = nil
+        record_center_update_check
+        @auto_update_pending = false
+        @center_update_checked = false
+        @center_error = "Không thể kiểm tra VGD Center: #{error.message}"
+        send_state
+      end
+
+      def auto_update_enabled?
+        Sketchup.read_default(SETTINGS_KEY, 'auto_update', true) != false
+      end
+
+      def record_center_update_check
+        @last_center_check = Time.now.strftime('%Y-%m-%d %H:%M:%S')
+        Sketchup.write_default(SETTINGS_KEY, 'last_center_check', @last_center_check)
+      end
+
+      def auto_check_center_update
+        return unless auto_update_enabled?
+        @auto_update_pending = true
+        refresh_center_update
+      rescue StandardError => error
+        @auto_update_pending = false
+        @center_error = "Không thể kiểm tra phiên bản VGD Center: #{error.message}"
+      end
+
+      def uninstall_plugin(plugin_id)
+        return notify('error', 'Đang có thao tác', 'Hãy đợi thao tác hiện tại hoàn tất.') if @busy
+        id = plugin_id.to_s
+        product = (@catalog || read_bundled_catalog)['products'].find { |item| item['id'] == id }
+        return notify('error', 'Plugin không hợp lệ', 'Không tìm thấy plugin trong danh mục VGD.') unless product && ALLOWED_IDS.include?(id)
+        return notify('info', 'Plugin chưa được cài', "#{product['name']} hiện không có trên máy này.") unless find_installed_extension(product) || installed_version_for(id)
+
+        answer = UI.messagebox("Gỡ #{product['name']} khỏi SketchUp?\n\nCác tệp của plugin sẽ bị xóa. Hãy khởi động lại SketchUp sau khi gỡ.", MB_YESNO)
+        return unless answer == IDYES
+
+        plugin_root = File.expand_path(Sketchup.find_support_file('Plugins'))
+        backup_dir = Dir.mktmpdir('vgd-center-uninstall-')
+        moved = []
+        begin
+          PLUGIN_LAYOUTS.fetch(id)[1].each do |listed_path|
+            relative = listed_path.sub(%r{/\z}, '')
+            target = safe_target(plugin_root, relative)
+            next unless File.exist?(target) || File.symlink?(target)
+            raise "Không thể gỡ đường dẫn liên kết: #{relative}" if File.symlink?(target)
+            is_directory = listed_path.end_with?('/')
+            raise "Cấu trúc cài đặt không đúng: #{relative}" if is_directory != File.directory?(target)
+
+            backup = File.join(backup_dir, *relative.split('/'))
+            FileUtils.mkdir_p(File.dirname(backup))
+            FileUtils.mv(target, backup)
+            moved << [backup, target]
+          end
+          raise 'Không tìm thấy tệp cài đặt để gỡ.' if moved.empty?
+
+          @uninstalled_ids ||= []
+          @uninstalled_ids << id unless @uninstalled_ids.include?(id)
+          (@installed_versions ||= {}).delete(id)
+          FileUtils.remove_entry(backup_dir)
+          backup_dir = nil
+          send_state
+          notify('success', 'Đã gỡ plugin', "Đã gỡ #{product['name']}. Hãy khởi động lại SketchUp để áp dụng.")
+        rescue StandardError => error
+          moved.reverse_each do |backup, target|
+            FileUtils.mkdir_p(File.dirname(target))
+            FileUtils.mv(backup, target) if File.exist?(backup)
+          rescue StandardError
+            nil
+          end
+          notify('error', 'Không thể gỡ plugin', error.message)
+        ensure
+          FileUtils.remove_entry(backup_dir) if backup_dir && File.directory?(backup_dir)
+        end
+      end
+
+      def validate_center_release(release)
+        raise 'sai phiên bản manifest' unless release.is_a?(Hash) && release['schema_version'] == 1
+        version = release['version'].to_s
+        raise 'VGD Center chỉ nhận bản stable dạng x.y.z' unless version.match?(/\A\d+\.\d+\.\d+\z/)
+        download = release['download']
+        raise 'thiếu gói cài VGD Center' unless download.is_a?(Hash)
+        filename = "VGD_Center_v#{version}.rbz"
+        raise 'tên gói VGD Center không khớp phiên bản' unless download['filename'] == filename
+        url = download['url'].to_s
+        allowed_prefix = 'https://github.com/vuongpentax/VGD_Plugins/releases/download/'
+        raise 'nguồn tải VGD Center không được phép' unless url.start_with?(allowed_prefix) && url.end_with?("/#{filename}")
+        size = Integer(download['size'])
+        raise 'dung lượng gói VGD Center không hợp lệ' unless size.positive? && size <= MAX_PACKAGE_BYTES
+        sha = download['sha256'].to_s.downcase
+        raise 'SHA-256 VGD Center không hợp lệ' unless sha.match?(/\A[0-9a-f]{64}\z/)
+
+        {
+          'id' => 'center', 'name' => 'VGD Center', 'extension_name' => 'VGD Center',
+          'version' => version, 'release_channel' => 'stable',
+          'download' => { 'filename' => filename, 'url' => url, 'size' => size, 'sha256' => sha },
+          'allowed_paths' => PLUGIN_LAYOUTS.fetch('center')[1]
+        }
+      end
+
+      def install_all_plugins
+        ids = current_products.select { |product| product[:compatible] && product[:action] == 'install' }.map { |product| product[:id] }
+        if ids.empty?
+          notify('info', 'Đã cài đủ plugin', 'Không còn plugin nào cần cài đặt. Có thể kiểm tra mục Cập nhật để xem phiên bản mới.')
+        else
+          queue_plugins(ids)
+        end
+      end
+
+      def queue_center_update(automatic: false)
+        return notify('error', 'Đang có thao tác', 'Hãy đợi thao tác hiện tại hoàn tất.') if @busy
+        return refresh_center_update unless @center_update_checked
+        unless @center_release && compare_versions(active_center_version, @center_release['version']) < 0
+          return notify('info', 'VGD Center đã mới nhất', "Bạn đang dùng VGD Center #{active_center_version}.")
+        end
+
+        @queue = [@center_release]
+        @queue_total = 1
+        @completed_count = 0
+        @job_kind = :center
+        @automatic_center_update = automatic
+        @busy = true
+        process_next
       end
 
       def read_bundled_catalog
@@ -123,7 +315,7 @@ module VGD
 
       def load_fallback_catalog
         @catalog = read_bundled_catalog
-        set_status(@catalog_error || 'Đang dùng danh mục mới nhất đi kèm VGD Center')
+        set_status(@catalog_error || 'Đang dùng danh sách phiên bản đi kèm VGD Center')
       end
 
       def validate_catalog(catalog)
@@ -176,8 +368,8 @@ module VGD
         catalog = @catalog || read_bundled_catalog
         sketchup_version = Sketchup.version.to_s
         catalog['products'].map do |product|
-          extension = Sketchup.extensions[product['extension_name']]
-          installed_version = extension && extension.version.to_s
+          extension = find_installed_extension(product)
+          installed_version = installed_version_for(product['id']) || (extension && extension.version.to_s)
           installed = !installed_version.to_s.empty?
           min_ok = compare_versions(sketchup_version, product['minimum_sketchup'].to_s) >= 0
           action = if !min_ok
@@ -233,15 +425,41 @@ module VGD
       def send_state
         return unless @dialog
         payload = {
-          version: VERSION,
+          version: active_center_version,
           sketchup: Sketchup.version.to_s,
           products: current_products,
-          last_sync: @last_sync ? @last_sync.strftime('%H:%M · %d/%m/%Y') : nil,
-          source_status: @catalog_error ? 'Dùng danh mục đi kèm' : (@last_sync ? 'Đã đồng bộ GitHub' : 'Danh mục mới nhất'),
+          center_update: center_update_state,
+          settings: settings_state,
           message: @catalog_error
         }
         script = "window.VGD && window.VGD.receiveState(#{JSON.generate(payload).gsub('</', '<\\/')});"
         @dialog.execute_script(script)
+      end
+
+      def center_update_state
+        latest = @center_release && @center_release['version']
+        current = active_center_version
+        state = if @center_request || !@center_update_checked
+                  @center_error ? 'error' : 'checking'
+                elsif latest && compare_versions(current, latest) < 0
+                  'update'
+                elsif latest && compare_versions(current, latest) > 0
+                  'ahead'
+                else
+                  'latest'
+                end
+        { current_version: current, latest_version: latest, state: state, error: @center_error,
+          last_checked: @last_center_check || Sketchup.read_default(SETTINGS_KEY, 'last_center_check', '') }
+      end
+
+      def active_center_version
+        @center_update_applied || VERSION
+      end
+
+      def settings_state
+        language = Sketchup.read_default(SETTINGS_KEY, 'language', 'vi').to_s
+        language = 'vi' unless %w[auto vi en].include?(language)
+        { language: language, auto_update: auto_update_enabled? }
       end
 
       def set_status(message)
@@ -249,8 +467,36 @@ module VGD
         @dialog.execute_script("window.VGD && window.VGD.setStatus(#{JSON.generate(message)});")
       end
 
+      def find_installed_extension(product)
+        return nil if Array(@uninstalled_ids).include?(product['id'].to_s)
+        extensions = Sketchup.extensions
+        exact_match = extensions[product['extension_name']]
+        return exact_match if exact_match
+
+        matches = extensions.to_a.select do |extension|
+          name = extension.name.to_s
+          case product['id']
+          when 'cabinet'
+            name.match?(/\AVGD_Cabinet(?:\s|\z)/i)
+          when 'library'
+            name.casecmp('VGD_Library').zero?
+          else
+            false
+          end
+        end
+        matches.max { |left, right| compare_versions(left.version.to_s, right.version.to_s) }
+      end
+
+      def installed_version_for(plugin_id)
+        return nil if Array(@uninstalled_ids).include?(plugin_id.to_s)
+        (@installed_versions || {})[plugin_id.to_s]
+      end
+
       def notify(kind, title, message)
-        return unless @dialog
+        unless @dialog
+          UI.messagebox("#{title}\n\n#{message}")
+          return
+        end
         script = "window.VGD && window.VGD.notify(#{JSON.generate(kind)}, #{JSON.generate(title)}, #{JSON.generate(message)});"
         @dialog.execute_script(script)
       end
@@ -271,6 +517,7 @@ module VGD
         @queue = products
         @queue_total = products.length
         @completed_count = 0
+        @job_kind = :plugins
         @busy = true
         process_next
       end
@@ -280,12 +527,20 @@ module VGD
         unless product
           @busy = false
           send_state
-          notify('success', 'Đã hoàn tất', "Đã cài hoặc cập nhật #{@completed_count} plugin. Hãy lưu model và khởi động lại SketchUp để nạp phiên bản mới.")
+          if @job_kind == :center
+            @job_kind = nil
+            title = @automatic_center_update ? 'VGD Center đã tự cập nhật' : 'Đã cập nhật VGD Center'
+            @automatic_center_update = false
+            notify('success', title, 'Hãy lưu model và khởi động lại SketchUp để nạp phiên bản mới.')
+          else
+            @job_kind = nil
+            notify('success', 'Đã hoàn tất', "Đã cài hoặc cập nhật #{@completed_count} plugin. Hãy lưu model và khởi động lại SketchUp để nạp phiên bản mới.")
+          end
           return
         end
 
-        installed = Sketchup.extensions[product['extension_name']]
-        installed_version = installed && installed.version.to_s
+        installed = find_installed_extension(product)
+        installed_version = installed_version_for(product['id']) || (installed && installed.version.to_s)
         if installed_version && compare_versions(installed_version, product['version']) >= 0
           process_next
           return
@@ -304,7 +559,7 @@ module VGD
         started = @download_request.start do |_request, response|
           @download_request = nil
           begin
-            raise 'GitHub không trả về gói tải hợp lệ.' unless response && response.status_code == 200
+            raise 'Máy chủ không trả về gói cài đặt hợp lệ.' unless response && response.status_code == 200
             content = response.body
             raise 'Dung lượng tải về không khớp catalog.' unless content.bytesize == package['size']
             temp_path = File.join(Dir.tmpdir, "vgd_center_#{SecureRandom.hex(10)}.rbz")
@@ -340,12 +595,21 @@ module VGD
       end
 
       def stop_queue(title, message)
-        if @completed_count.to_i.positive?
+        if @job_kind == :center
+          title = 'Chưa cập nhật được VGD Center'
+          if @completed_count.to_i.positive?
+            message = "VGD Center chưa được thay đổi hoàn toàn. Hãy khởi động lại SketchUp rồi thử lại. #{message}"
+          else
+            message = "Không thể cài bản cập nhật VGD Center. #{message}"
+          end
+        elsif @completed_count.to_i.positive?
           title = 'Đã cài một phần'
           message = "Đã hoàn tất #{@completed_count} trong #{@queue_total} plugin trước khi gặp lỗi. Hãy lưu model, khởi động lại SketchUp rồi thử lại plugin còn lại. #{message}"
         end
         @queue = []
         @busy = false
+        @job_kind = nil
+        @automatic_center_update = false
         send_state
         notify('error', title, message)
       end
@@ -391,6 +655,10 @@ module VGD
 
           installed = Sketchup.install_from_archive(archive_path, false)
           raise 'SketchUp không xác nhận cài đặt thành công.' unless installed
+          @center_update_applied = product['version'].to_s if product['id'] == 'center'
+          @uninstalled_ids ||= []
+          @uninstalled_ids.delete(product['id'].to_s)
+          (@installed_versions ||= {})[product['id'].to_s] = product['version'].to_s
         rescue StandardError, Interrupt => error
           restore_archive_files(plugin_root, backup_dir, previous)
           raise error
@@ -487,7 +755,9 @@ module VGD
       end
 
       unless file_loaded?(__FILE__)
-        command = UI::Command.new('VGD Center') { show_dialog }
+        # Invoke through the module explicitly so SketchUp's toolbar command
+        # does not depend on the callback's implicit `self` when it fires.
+        command = UI::Command.new('VGD Center') { VGD::Center.show_dialog }
         command.tooltip = 'VGD Center'
         command.status_bar_text = 'Mở trung tâm cài đặt và cập nhật plugin VGD'
         icon = File.join(__dir__, 'icon.svg')
@@ -498,6 +768,7 @@ module VGD
         toolbar.add_item(command)
         toolbar.restore
         file_loaded(__FILE__)
+        UI.start_timer(6.0, false) { VGD::Center.auto_check_center_update }
       end
     end
   end

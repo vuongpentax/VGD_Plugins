@@ -39,9 +39,7 @@
     .brand-title{font-size:16px;font-weight:750;letter-spacing:.01em}
     .brand-subtitle{margin-top:5px;color:var(--muted);font-size:10px;letter-spacing:.09em;text-transform:uppercase}
     .top-actions{display:flex;align-items:center;gap:10px}
-    .preview-badge,.github-status{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--muted);font-size:10px;white-space:nowrap}
-    .preview-badge{color:var(--accent-strong);background:var(--tint);border-color:var(--accent)}
-    .github-status .dot,.status-dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 0 3px var(--success-soft)}
+    .status-dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 0 3px var(--success-soft)}
     .icon-button{display:grid;width:34px;height:34px;place-items:center;border:1px solid var(--border);border-radius:4px;background:var(--surface);cursor:pointer}
     .icon-button:hover{border-color:var(--accent);color:var(--accent-strong)}
     .icon-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -56,10 +54,6 @@
     .nav .count{display:grid;min-width:19px;height:19px;place-items:center;margin-left:auto;padding:0 5px;border-radius:10px;background:var(--elevated);color:var(--muted);font-size:10px;font-variant-numeric:tabular-nums}
     .nav button[aria-current="page"] .count{background:var(--accent);color:var(--on-accent)}
     .sidebar-spacer{flex:1}
-    .source-card{padding:11px;border:1px solid var(--border);border-radius:6px;background:var(--bg)}
-    .source-label{color:var(--muted);font-size:9px;letter-spacing:.12em;text-transform:uppercase}
-    .source-value{display:flex;align-items:center;gap:7px;margin-top:7px;font-size:11px;font-weight:650}
-    .source-card p{margin:6px 0 0;color:var(--muted);font-size:10px}
     .sketchup-foot{display:flex;align-items:center;gap:7px;padding:0 4px;color:var(--muted);font-size:10px}
     .sketchup-foot svg{width:15px;height:15px;fill:none;stroke:var(--accent-strong);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
     main{min-width:0;min-height:0;overflow:auto;padding:20px 22px 24px}
@@ -98,6 +92,10 @@
     .health-metric{min-height:57px;padding:8px 9px;border:1px solid var(--border);border-radius:4px;background:var(--bg)}
     .health-metric span{display:block;color:var(--muted);font-size:9px}
     .health-metric strong{display:block;margin-top:4px;font-size:11px;font-weight:650}
+    .center-update-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;padding-top:10px;border-top:1px solid var(--border)}
+    .center-update-row>div{min-width:0}
+    .center-update-row strong{display:block;font-size:11px}
+    .center-update-row span{display:block;margin-top:3px;color:var(--muted);font-size:9px;overflow-wrap:anywhere}
     .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0 18px}
     .metric{display:flex;align-items:center;gap:10px;padding:12px 13px}
     .metric-icon{display:grid;width:34px;height:34px;flex:none;place-items:center;border:1px solid var(--border);border-radius:5px;background:var(--elevated);color:var(--muted)}
@@ -131,6 +129,7 @@
     .catalog-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
     .catalog-card{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:start;gap:11px;padding:13px}
     .catalog-card .desc{margin:5px 0 8px;color:var(--muted);font-size:10px}
+    .plugin-actions{display:flex;flex-direction:column;align-items:stretch;gap:6px}
     .catalog-meta{display:flex;flex-wrap:wrap;gap:6px}
     .empty-state{grid-column:1/-1;padding:24px;color:var(--muted);text-align:center}
     .badge{display:inline-flex;align-items:center;padding:3px 7px;border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:9px}
@@ -139,9 +138,15 @@
     .search{display:flex;align-items:center;gap:8px;min-width:220px;height:34px;padding:0 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--muted)}
     .search svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
     .search input{width:100%;border:0;outline:0;background:transparent;color:var(--text);font:inherit;font-size:11px}
-    .settings-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+    .settings-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
     .settings-card{padding:16px}
     .settings-card h2{margin:0 0 12px;font-size:13px}
+    .settings-version{margin:0 0 6px;color:var(--muted);font-size:11px;font-weight:700}
+    .language-options{display:inline-flex;overflow:hidden;border:1px solid var(--border);border-radius:5px;background:var(--bg)}
+    .language-options button{min-width:86px;padding:8px 12px;border:0;background:transparent;color:var(--muted);font-size:10px;font-weight:650;cursor:pointer}
+    .language-options button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+    .settings-update-row{margin-top:0;padding-top:12px}
+    .settings-update-row small{display:block;margin-top:6px;color:var(--muted);font-size:9px}
     .setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid var(--border)}
     .setting-row:first-of-type{border-top:0}
     .setting-row strong{display:block;font-size:11px}
@@ -169,8 +174,8 @@
     .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
     .dialog-actions[hidden]{display:none}
     @media(max-width:920px){.shell{grid-template-columns:166px minmax(0,1fr)}main{padding:16px}.welcome-grid{grid-template-columns:1fr}.health-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.plugin-row{grid-template-columns:40px minmax(130px,1fr) minmax(145px,1fr) auto}}
-    @media(max-width:740px){.app{grid-template-rows:60px minmax(0,1fr) 32px}.topbar{padding:0 12px}.preview-badge{display:none}.shell{grid-template-columns:54px minmax(0,1fr)}.sidebar{align-items:center;padding:12px 6px}.nav-caption,.nav span,.source-card,.sketchup-foot{display:none}.nav{width:100%}.nav button{justify-content:center;padding:0}.nav svg{width:19px;height:19px}.nav .count{position:absolute;transform:translate(15px,-11px);min-width:15px;height:15px;padding:0 3px;font-size:8px}.sidebar-spacer{display:none}.plugin-row{grid-template-columns:38px minmax(0,1fr) auto}.version-line{grid-column:2/-1}.plugin-row>.btn{grid-column:3;grid-row:1/3}.catalog-grid,.settings-grid{grid-template-columns:1fr}.search{min-width:150px}.page-head{align-items:center}.page-intro{max-width:400px}}
-    @media(max-width:520px){body{min-width:360px}.top-actions .github-status{display:none}main{padding:13px}.page-head{align-items:flex-start;flex-direction:column}.health-metrics{gap:5px}.health-metric{padding:7px}.metrics{gap:7px}.metric{padding:9px}.metric-copy span{font-size:9px}.section-head{align-items:flex-start;flex-direction:column}.section-tools{width:100%;justify-content:space-between}.plugin-row{padding:9px}.footer-right{display:none}}
+    @media(max-width:740px){.app{grid-template-rows:60px minmax(0,1fr) 32px}.topbar{padding:0 12px}.shell{grid-template-columns:54px minmax(0,1fr)}.sidebar{align-items:center;padding:12px 6px}.nav-caption,.nav span,.sketchup-foot{display:none}.nav{width:100%}.nav button{justify-content:center;padding:0}.nav svg{width:19px;height:19px}.nav .count{position:absolute;transform:translate(15px,-11px);min-width:15px;height:15px;padding:0 3px;font-size:8px}.sidebar-spacer{display:none}.plugin-row{grid-template-columns:38px minmax(0,1fr) auto}.version-line{grid-column:2/-1}.plugin-row>.plugin-actions{grid-column:3;grid-row:1/3}.catalog-grid,.settings-grid{grid-template-columns:1fr}.search{min-width:150px}.page-head{align-items:center}.page-intro{max-width:400px}}
+    @media(max-width:520px){body{min-width:360px}main{padding:13px}.page-head{align-items:flex-start;flex-direction:column}.health-metrics{gap:5px}.health-metric{padding:7px}.metrics{gap:7px}.metric{padding:9px}.metric-copy span{font-size:9px}.section-head{align-items:flex-start;flex-direction:column}.section-tools{width:100%;justify-content:space-between}.plugin-row{padding:9px}.footer-right{display:none}}
   </style>
 </head>
 <body>
@@ -214,8 +219,6 @@
         <div class="brand-copy"><strong class="brand-title">VGD Center</strong><span class="brand-subtitle">Trung tâm plugin SketchUp</span></div>
       </div>
       <div class="top-actions">
-        <span class="preview-badge">CHỈ BẢN ỔN ĐỊNH</span>
-        <span class="github-status"><i class="dot"></i><span id="githubStatus">Đang kiểm tra GitHub…</span></span>
         <button class="icon-button" id="themeBtn" aria-label="Chuyển giao diện sáng/tối" title="Chuyển giao diện sáng/tối"><svg viewBox="0 0 24 24"><path d="M20 15.3A8.5 8.5 0 0 1 8.7 4 8.5 8.5 0 1 0 20 15.3Z"/></svg></button>
       </div>
     </header>
@@ -225,23 +228,16 @@
         <nav class="nav" aria-label="Điều hướng chính">
           <button data-page="overview" aria-current="page"><svg><use href="#i-home"/></svg><span>Tổng quan</span></button>
           <button data-page="catalog"><svg><use href="#i-box"/></svg><span>Kho plugin</span><i class="count" id="catalogCount">0</i></button>
-          <button data-page="installed"><svg><use href="#i-check"/></svg><span>Đã cài</span><i class="count" id="installedCountNav">0</i></button>
-          <button data-page="updates"><svg><use href="#i-update"/></svg><span>Cập nhật</span><i class="count" id="updatesCountNav">0</i></button>
           <button data-page="settings"><svg><use href="#i-settings"/></svg><span>Cài đặt</span></button>
         </nav>
         <div class="sidebar-spacer"></div>
-        <section class="source-card" aria-label="Nguồn phân phối">
-          <div class="source-label">Nguồn phân phối</div>
-          <div class="source-value"><i class="dot"></i>GitHub · main</div>
-          <p>Danh mục phiên bản mới nhất từ GitHub; gói cài được xác minh bằng SHA-256.</p>
-        </section>
         <div class="sketchup-foot"><svg viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/></svg><span id="hostLabel">SketchUp</span></div>
       </aside>
       <main>
         <section class="page active" id="page-overview" data-view="overview">
           <div class="page-head">
-            <div><p class="eyebrow">WORKSPACE · VGD</p><h1>Tổng quan</h1><p class="page-intro">Quản lý plugin VGD và cập nhật ngay trong SketchUp.</p></div>
-            <div class="button-row"><button class="btn" id="syncBtn"><svg><use href="#i-sync"/></svg><span>Kiểm tra cập nhật</span></button></div>
+            <div><p class="eyebrow">WORKSPACE · VGD</p><h1>Tổng quan</h1><p class="page-intro">Cài plugin còn thiếu, quản lý bản đã cài và cập nhật ngay trong SketchUp.</p></div>
+            <div class="button-row"><button class="btn primary" id="installAllBtn" data-action="install_all_plugins"><svg><use href="#i-box"/></svg><span>Cài tất cả</span></button><button class="btn" id="syncBtn"><svg><use href="#i-sync"/></svg><span>Kiểm tra cập nhật</span></button></div>
           </div>
           <div class="welcome-grid">
             <section class="card welcome">
@@ -251,8 +247,8 @@
               <div class="pills"><span class="pill accent"><i class="dot"></i>Có stable · beta · alpha</span><span class="pill">Cài đặt có xác minh</span><span class="pill">Nhắc khởi động lại</span></div>
             </section>
             <section class="card health">
-              <div class="health-head"><div class="health-title"><i class="status-dot"></i>VGD Center hoạt động bình thường</div><small id="syncLabel">Danh mục mới nhất</small></div>
-              <div class="health-metrics"><div class="health-metric"><span>SketchUp</span><strong id="hostVersion">—</strong></div><div class="health-metric"><span>Danh mục</span><strong>Mới nhất</strong></div><div class="health-metric"><span>Đồng bộ gần nhất</span><strong id="lastSync">Chưa kiểm tra</strong></div></div>
+              <div class="health-head"><div class="health-title"><i class="status-dot"></i>VGD Center hoạt động bình thường</div></div>
+              <div class="health-metrics"><div class="health-metric"><span>SketchUp</span><strong id="hostVersion">—</strong></div><div class="health-metric"><span>VGD Center</span><strong id="centerVersion">—</strong></div><div class="health-metric"><span>Plugin trong kho</span><strong id="healthPluginCount">6</strong></div></div>
             </section>
           </div>
           <div class="metrics">
@@ -261,7 +257,7 @@
             <article class="card metric"><div class="metric-icon accent"><svg><use href="#i-update"/></svg></div><div class="metric-copy"><b id="updatesMetric">0</b><span>Có bản cập nhật</span></div></article>
             <article class="card metric"><div class="metric-icon"><svg><use href="#i-shield"/></svg></div><div class="metric-copy"><b>SHA-256</b><span>Xác minh trước khi cài</span></div></article>
           </div>
-          <div class="section-head"><div><h2>Cập nhật dành cho bạn</h2><p>Phiên bản mới nhất đã được chọn trên GitHub, gồm cả beta/alpha.</p></div><div class="section-tools"><span class="pill accent" id="updatesPill">0 cập nhật</span><button class="btn primary small" data-action="install_updates"><svg><use href="#i-update"/></svg>Cập nhật tất cả</button></div></div>
+          <div class="section-head"><div><h2>Cập nhật dành cho bạn</h2><p>Phiên bản mới nhất của từng plugin, gồm cả beta và alpha.</p></div><div class="section-tools"><span class="pill accent" id="updatesPill">0 cập nhật</span><button class="btn primary small" data-action="install_updates"><svg><use href="#i-update"/></svg>Cập nhật tất cả</button></div></div>
           <div class="plugin-list" id="overviewUpdates"></div>
           <div class="bottom-note"><svg><use href="#i-restart"/></svg><span>Sau khi cài đặt hoặc cập nhật xong, VGD Center báo hoàn tất và nhắc bạn khởi động lại SketchUp để nạp phiên bản mới.</span></div>
         </section>
@@ -272,34 +268,27 @@
           <div class="bottom-note"><svg><use href="#i-shield"/></svg><span>Thẻ Beta và Alpha là bản thử nghiệm, có thể còn lỗi hoặc thay đổi. Kiểm tra nhãn phiên bản trước khi cài.</span></div>
         </section>
 
-        <section class="page" id="page-installed" data-view="installed">
-          <div class="page-head"><div><p class="eyebrow">TRÊN MÁY NÀY</p><h1>Đã cài</h1><p class="page-intro">Phiên bản plugin đang có trong SketchUp.</p></div><button class="btn" id="refreshInstalled"><svg><use href="#i-sync"/></svg>Làm mới danh sách</button></div>
-          <div class="plugin-list" id="installedList"></div>
-          <div class="bottom-note"><svg><use href="#i-restart"/></svg><span>VGD Center so sánh đúng phiên bản stable, beta và alpha đã cài trên máy.</span></div>
-        </section>
-
-        <section class="page" id="page-updates" data-view="updates">
-          <div class="plugin-list" id="updatesList"></div>
-          <div class="bottom-note"><svg><use href="#i-restart"/></svg><span>Sau khi cập nhật xong, lưu model và khởi động lại SketchUp để dùng phiên bản mới.</span></div>
-        </section>
-
         <section class="page" id="page-settings" data-view="settings">
-          <div class="page-head"><div><p class="eyebrow">TÙY CHỈNH</p><h1>Cài đặt</h1><p class="page-intro">Nguồn phân phối và cách VGD Center xử lý plugin.</p></div></div>
-          <div class="settings-grid">
-            <section class="card settings-card"><h2>Phân phối GitHub</h2>
-              <div class="setting-row"><div><strong>Catalog và manifest</strong><span>Lấy phiên bản mới nhất đã chọn từ commit main</span></div><div class="setting-value">GitHub<br>main</div></div>
-              <div class="setting-row"><div><strong>Gói cài đặt RBZ</strong><span>Tải từ repo VGD theo catalog đã ghim</span></div><div class="setting-value">GitHub</div></div>
-              <div class="setting-row"><div><strong>Kiểm tra toàn vẹn</strong><span>So dung lượng và SHA-256 trước cài</span></div><div class="setting-value">Bật</div></div>
-              <div class="setting-row"><div><strong>Kênh beta/alpha</strong><span>Hiển thị theo nhãn phiên bản trong catalog</span></div><div class="setting-value">Đang dùng</div></div>
-            </section>
-            <section class="card settings-card"><h2>Cài đặt và thông báo</h2>
-              <div class="setting-row"><div><strong>Kiểm tra bản mới</strong><span>Khi mở Center hoặc bấm kiểm tra</span></div><div class="setting-value">Thủ công</div></div>
-              <div class="setting-row"><div><strong>Tạo bản sao trước khi thay</strong><span>Khôi phục file cũ nếu cài đặt lỗi</span></div><div class="setting-value">Bật</div></div>
-              <div class="setting-row"><div><strong>Nhắc khởi động lại</strong><span>Hiện thông báo sau khi cài/cập nhật</span></div><div class="setting-value">Luôn bật</div></div>
-              <div class="setting-row"><div><strong>Giao diện</strong><span>Ưu tiên tối, có thể chuyển sáng</span></div><button class="btn small" id="themeSetting">Đổi giao diện</button></div>
-            </section>
-          </div>
-          <div class="bottom-note"><svg><use href="#i-shield"/></svg><span>Catalog chỉ chấp nhận plugin VGD trong danh sách cho phép; không cài file tùy ý từ link bên ngoài.</span></div>
+          <div class="page-head"><div><p class="eyebrow">VGD CENTER</p><h1>Cài đặt</h1></div></div>
+          <section class="card settings-card">
+            <p class="settings-version">VGD Center <strong id="centerVersionSetting">—</strong></p>
+            <div class="setting-row language-row">
+              <div><strong>Ngôn ngữ</strong><span>Chọn ngôn ngữ giao diện</span></div>
+              <div class="language-options" role="group" aria-label="Ngôn ngữ">
+                <button type="button" data-language="auto">Tự động</button>
+                <button type="button" data-language="vi">Tiếng Việt</button>
+                <button type="button" data-language="en">English</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div><strong>Tự động cập nhật VGD Center</strong><span>Tự kiểm tra và cài bản VGD Center stable mới khi mở SketchUp.</span></div>
+              <button type="button" class="switch" id="autoUpdateToggle" role="switch" aria-checked="true" aria-label="Tự động cập nhật VGD Center"></button>
+            </div>
+            <div class="center-update-row settings-update-row">
+              <div><strong id="centerUpdateTitle">Cập nhật VGD Center</strong><span id="centerUpdateStatus">Đang kiểm tra phiên bản mới…</span><small id="centerLastCheck">Lần kiểm tra cập nhật Center gần nhất: Chưa kiểm tra</small></div>
+              <button class="btn primary small" id="centerUpdateBtn" data-action="refresh_center_update" disabled>Đang kiểm tra…</button>
+            </div>
+          </section>
         </section>
       </main>
     </div>
@@ -310,7 +299,7 @@
     <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle" aria-describedby="dialogText">
       <div class="dialog-icon"><svg><use id="dialogIcon" href="#i-cloud"/></svg></div>
       <h2 id="dialogTitle">Đang chuẩn bị</h2>
-      <p id="dialogText">Mô phỏng tải và xác minh gói cài đặt từ GitHub.</p>
+      <p id="dialogText">Đang tải và xác minh gói cài đặt.</p>
       <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
       <div class="dialog-actions" id="dialogActions" hidden><button class="btn primary" id="doneBtn">Đã hiểu</button></div>
     </section>
@@ -328,63 +317,176 @@
       const iconIds = {dim:'vgd-dim', scenes:'vgd-scenes', cabinet:'vgd-cabinet', library:'vgd-library', image_importer:'vgd-import', bim_lite:'vgd-bim'};
       let currentState = {products:[]};
       let activePluginId = null;
+      let activeLanguage = 'vi';
+      const originalTextNodes = new WeakMap();
+      const englishText = {
+        'Trung tâm plugin SketchUp':'SketchUp Plugin Center','Tổng quan':'Overview','Kho plugin':'Plugin catalog','Cài đặt':'Settings',
+        'Quản lý plugin VGD và cập nhật ngay trong SketchUp.':'Manage VGD plugins and updates in SketchUp.',
+        'VGD · PLUGIN CENTER':'VGD · PLUGIN CENTER','Chào mừng đến với VGD Center':'Welcome to VGD Center',
+        'Cài đặt và cập nhật plugin VGD trực tiếp trong SketchUp. Chọn thao tác; VGD Center sẽ tải gói, xác minh và cài đặt giúp bạn.':'Install and update VGD plugins in SketchUp. VGD Center downloads, verifies, and installs each package.',
+        'Có stable · beta · alpha':'Stable · beta · alpha','Cài đặt có xác minh':'Verified installation','Nhắc khởi động lại':'Restart reminder',
+        'VGD Center hoạt động bình thường':'VGD Center is running','SketchUp':'SketchUp','Plugin trong kho':'Plugins in catalog',
+        'Đã cài trên máy':'Installed','Có bản cập nhật':'Updates available','Xác minh trước khi cài':'Verified before install',
+        'Cập nhật dành cho bạn':'Updates for you','Phiên bản mới nhất của từng plugin, gồm cả beta và alpha.':'Latest versions, including beta and alpha.',
+        'Cập nhật tất cả':'Update all','Không có bản cập nhật mới. Mở Kho plugin để xem các plugin có thể cài.':'No plugin updates. Open the catalog to install plugins.',
+        'Sau khi cài đặt hoặc cập nhật xong, VGD Center báo hoàn tất và nhắc bạn khởi động lại SketchUp để nạp phiên bản mới.':'After installation or update, save your model and restart SketchUp to load the new version.',
+        'BỘ CÔNG CỤ VGD':'VGD TOOLKIT','Cài plugin còn thiếu, quản lý bản đã cài và cập nhật ngay trong SketchUp.':'Install missing plugins, manage installed versions, and update in SketchUp.',
+        'Phiên bản mới nhất tương thích với SketchUp trên máy này.':'Latest versions compatible with this SketchUp installation.',
+        'Tìm plugin…':'Search plugins…','Thẻ Beta và Alpha là bản thử nghiệm, có thể còn lỗi hoặc thay đổi. Kiểm tra nhãn phiên bản trước khi cài.':'Beta and Alpha releases are experimental and may change. Check the release label before installing.',
+        'VGD CENTER':'VGD CENTER','Ngôn ngữ':'Language','Chọn ngôn ngữ giao diện':'Choose the interface language','Tự động':'Automatic',
+        'Tiếng Việt':'Vietnamese','Tự động cập nhật VGD Center':'Automatically update VGD Center',
+        'Tự kiểm tra và cài bản VGD Center stable mới khi mở SketchUp.':'Check for and install stable VGD Center updates when SketchUp starts.',
+        'Cập nhật VGD Center':'Update VGD Center','Đang kiểm tra phiên bản mới…':'Checking for updates…',
+        'Lần kiểm tra cập nhật Center gần nhất: Chưa kiểm tra':'Last Center update check: Never',
+        'Đang nạp danh mục phiên bản mới nhất…':'Loading the latest plugin catalog…','SketchUp extension · VGD Center':'SketchUp extension · VGD Center',
+        'Đang chuẩn bị':'Preparing','Đang tải và xác minh gói cài đặt.':'Downloading and verifying the package.','Đã hiểu':'OK',
+        'Kiểm tra cập nhật':'Check for updates','Đã làm mới danh sách phiên bản':'Plugin list refreshed','Cần SketchUp ':'Requires SketchUp ',
+        ' trở lên':' or later','Có bản ':'Update available: ',' mới':'','Chưa cài':'Not installed','Đã ở phiên bản mới nhất':'Up to date',
+        'Cập nhật':'Update','Đã cài':'Installed','Không tương thích':'Incompatible','Gỡ cài đặt':'Uninstall',
+        'Đang dùng':'Installed','Phiên bản':'Version','Đang dùng ':'Installed ','Không có bản cập nhật mới.':'No plugin updates available.',
+        'Đã cài đủ':'All installed','Kiểm tra lại':'Check again','Cập nhật ngay':'Update now','Tải và cài đặt':'Download and install',
+        'Đã mới nhất':'Up to date','Đã mới hơn':'Newer version installed','Thử lại':'Retry','Chưa kiểm tra được VGD Center':'Could not check VGD Center',
+        'Bản phát hành':'Latest release','Có bản VGD Center mới':'VGD Center update available','VGD Center đã mới nhất':'VGD Center is up to date',
+        'VGD Center đang dùng bản mới hơn':'Installed VGD Center is newer','Đã cài plugin':'Plugin installed','Đã cập nhật VGD Center':'VGD Center updated',
+        'Không có plugin tương thích trong danh mục.':'No compatible plugins in the catalog.','Không phát hiện plugin VGD nào đã cài trong SketchUp này.':'No VGD plugins detected.',
+        'Mở trong SketchUp':'Open in SketchUp','VGD Center cần chạy trong SketchUp để đọc trạng thái và cài plugin.':'VGD Center must run in SketchUp to read status and install plugins.',
+        'Beta':'Beta','Alpha':'Alpha','Stable':'Stable'
+      };
 
       const escapeHtml = value => String(value == null ? '' : value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
       const icon = id => `<svg aria-hidden="true"><use href="#${iconIds[id] || 'i-box'}"></use></svg>`;
+      const tr = (vi, en) => activeLanguage === 'en' ? en : vi;
+      const resolveLanguage = preference => preference === 'en' || (preference === 'auto' && /^en/i.test(navigator.language || '')) ? 'en' : 'vi';
       const releaseLabel = channel => channel === 'beta' ? 'Beta' : channel === 'alpha' ? 'Alpha' : 'Stable';
       const statusText = product => {
-        if (!product.compatible) return 'Cần SketchUp ' + product.minimum_sketchup + ' trở lên';
-        if (product.action === 'update') return 'Có bản ' + releaseLabel(product.release_channel) + ' mới';
-        if (product.action === 'install') return 'Chưa cài';
-        return 'Đã ở phiên bản mới nhất';
+        if (!product.compatible) return tr('Cần SketchUp ', 'Requires SketchUp ') + product.minimum_sketchup + tr(' trở lên', ' or later');
+        if (product.action === 'update') return tr('Có bản ', 'Update available: ') + releaseLabel(product.release_channel) + tr(' mới', '');
+        if (product.action === 'install') return tr('Chưa cài', 'Not installed');
+        return tr('Đã ở phiên bản mới nhất', 'Up to date');
+      };
+      const centerUpdate = () => currentState.center_update || {state:'checking'};
+      const notInstalled = () => currentState.products.filter(product => product.compatible && product.action === 'install');
+      const productDescription = product => {
+        if (activeLanguage !== 'en') return product.description;
+        const descriptions = {dim:'Measure dimensions and style labels, or create smart dimensions.',cabinet:'Design cabinets, compartments, doors, and drawers.',library:'Browse and manage VGD materials and models.',image_importer:'Import images as components, planes, or materials.',scenes:'Manage views, section cuts, and exports.',bim_lite:'Review and audit SketchUp model data.'};
+        return descriptions[product.id] || product.description;
       };
       const actionButton = product => {
         const disabled = !product.compatible || !product.action;
-        const label = product.action === 'update' ? 'Cập nhật' : product.action === 'install' ? 'Cài đặt' : product.installed ? 'Đã cài' : 'Không tương thích';
+        const label = product.action === 'update' ? tr('Cập nhật', 'Update') : product.action === 'install' ? tr('Cài đặt', 'Install') : product.installed ? tr('Đã cài', 'Installed') : tr('Không tương thích', 'Incompatible');
         const primary = product.action === 'update' || product.action === 'install';
-        return `<button class="btn ${primary ? 'primary ' : ''}small" data-action="install_plugin" data-id="${escapeHtml(product.id)}" ${disabled ? 'disabled' : ''}>${label}</button>`;
+        const uninstall = product.installed ? `<button class="btn small" data-action="uninstall_plugin" data-id="${escapeHtml(product.id)}">${tr('Gỡ cài đặt', 'Uninstall')}</button>` : '';
+        return `<div class="plugin-actions"><button class="btn ${primary ? 'primary ' : ''}small" data-action="install_plugin" data-id="${escapeHtml(product.id)}" ${disabled ? 'disabled' : ''}>${label}</button>${uninstall}</div>`;
       };
       const rowMarkup = product => {
         const iconId = iconIds[product.icon] ? product.icon : product.id;
-        const oldVersion = product.installed_version ? `<strong>Đang dùng ${escapeHtml(product.installed_version)}</strong><span class="arrow">→</span>` : '<strong>Chưa cài</strong><span class="arrow">→</span>';
+        const oldVersion = product.installed_version ? `<strong>${tr('Đang dùng ', 'Installed ')}${escapeHtml(product.installed_version)}</strong><span class="arrow">→</span>` : `<strong>${tr('Chưa cài', 'Not installed')}</strong><span class="arrow">→</span>`;
         const stateClass = product.action === 'update' ? 'update' : product.installed ? '' : 'uninstalled';
-        return `<article class="card plugin-row"><div class="plugin-icon">${icon(iconId)}</div><div class="plugin-name"><strong>${escapeHtml(product.name)}</strong><span>${escapeHtml(product.description)}</span></div><div class="version-line">${oldVersion}<strong>${escapeHtml(product.version)}</strong><div class="plugin-state"><i class="state-dot ${stateClass}"></i>${escapeHtml(statusText(product))}</div></div>${actionButton(product)}</article>`;
+        return `<article class="card plugin-row"><div class="plugin-icon">${icon(iconId)}</div><div class="plugin-name"><strong>${escapeHtml(product.name)}</strong><span>${escapeHtml(productDescription(product))}</span></div><div class="version-line">${oldVersion}<strong>${escapeHtml(product.version)}</strong><div class="plugin-state"><i class="state-dot ${stateClass}"></i>${escapeHtml(statusText(product))}</div></div>${actionButton(product)}</article>`;
       };
-      const emptyMarkup = message => `<div class="card empty-state"><strong>${escapeHtml(message)}</strong></div>`;
+      const emptyMarkup = message => `<div class="card empty-state"><strong>${escapeHtml(activeLanguage === 'en' ? (englishText[message] || message) : message)}</strong></div>`;
       const setCount = (id, value) => { const node = document.getElementById(id); if (node) node.textContent = String(value); };
       const updates = () => currentState.products.filter(product => product.action === 'update');
       const installed = () => currentState.products.filter(product => product.installed);
 
       function render() {
         const products = currentState.products || [];
+        const settings = currentState.settings || {language:'vi',auto_update:true};
+        activeLanguage = resolveLanguage(settings.language || 'vi');
         const updateItems = updates();
-        const installedItems = installed();
         const compatibleItems = products.filter(product => product.compatible);
         document.getElementById('catalogGrid').innerHTML = compatibleItems.length ? compatibleItems.map(product => {
-          const haystack = `${product.name} ${product.description} ${product.id}`.toLowerCase();
+          const description = productDescription(product);
+          const haystack = `${product.name} ${description} ${product.id}`.toLowerCase();
           const iconId = iconIds[product.icon] ? product.icon : product.id;
           const channel = releaseLabel(product.release_channel);
-          return `<article class="card catalog-card" data-search="${escapeHtml(haystack)}"><div class="plugin-icon">${icon(iconId)}</div><div><div class="plugin-name"><strong>${escapeHtml(product.name)}</strong><span>${escapeHtml(product.version)}</span></div><p class="desc">${escapeHtml(product.description)}</p><div class="catalog-meta"><span class="badge ${channel.toLowerCase()}">${channel}</span><span class="badge">SketchUp ${escapeHtml(product.minimum_sketchup)}+</span></div></div>${actionButton(product)}</article>`;
+          return `<article class="card catalog-card" data-search="${escapeHtml(haystack)}"><div class="plugin-icon">${icon(iconId)}</div><div><div class="plugin-name"><strong>${escapeHtml(product.name)}</strong><span>${escapeHtml(product.version)}</span></div><p class="desc">${escapeHtml(description)}</p><div class="catalog-meta"><span class="badge ${channel.toLowerCase()}">${channel}</span><span class="badge">SketchUp ${escapeHtml(product.minimum_sketchup)}+</span></div></div>${actionButton(product)}</article>`;
         }).join('') : emptyMarkup('Chưa có plugin tương thích trong danh mục.');
         document.getElementById('overviewUpdates').innerHTML = updateItems.length ? updateItems.map(rowMarkup).join('') : emptyMarkup('Không có bản cập nhật mới. Mở Kho plugin để xem các plugin có thể cài.');
-        document.getElementById('updatesList').innerHTML = updateItems.length ? updateItems.map(rowMarkup).join('') : emptyMarkup('Các plugin đã cài đều đang ở phiên bản mới nhất.');
-        document.getElementById('installedList').innerHTML = installedItems.length ? installedItems.map(rowMarkup).join('') : emptyMarkup('Chưa phát hiện plugin VGD nào đã cài trong SketchUp này.');
         const count = products.length;
         setCount('catalogCount', count);
         setCount('pluginCount', count);
-        setCount('installedCountNav', installedItems.length);
-        setCount('installedMetric', installedItems.length);
-        setCount('updatesCountNav', updateItems.length);
+        setCount('installedMetric', installed().length);
         setCount('updatesMetric', updateItems.length);
-        setCount('updatesPill', updateItems.length + ' cập nhật');
+        setCount('updatesPill', activeLanguage === 'en' ? `${updateItems.length} updates` : `${updateItems.length} cập nhật`);
         document.getElementById('hostVersion').textContent = currentState.sketchup || '—';
         document.getElementById('hostLabel').textContent = 'SketchUp ' + (currentState.sketchup || '');
-        document.getElementById('lastSync').textContent = currentState.last_sync || 'Chưa kiểm tra';
-        document.getElementById('syncLabel').textContent = currentState.source_status || 'Danh mục mới nhất';
-        document.getElementById('githubStatus').textContent = currentState.source_status || 'Danh mục mới nhất';
+        document.getElementById('centerVersion').textContent = currentState.version || '—';
+        document.getElementById('healthPluginCount').textContent = String(count);
+        const pendingInstalls = notInstalled().length;
+        const installAllButton = document.getElementById('installAllBtn');
+        installAllButton.disabled = pendingInstalls === 0;
+        installAllButton.querySelector('span').textContent = pendingInstalls ? tr(`Cài tất cả (${pendingInstalls})`, `Install all (${pendingInstalls})`) : tr('Đã cài đủ', 'All installed');
+        document.getElementById('centerVersionSetting').textContent = currentState.version || '—';
+        document.getElementById('autoUpdateToggle').classList.toggle('on', settings.auto_update !== false);
+        document.getElementById('autoUpdateToggle').setAttribute('aria-checked', settings.auto_update !== false ? 'true' : 'false');
+        document.querySelectorAll('[data-language]').forEach(button => button.setAttribute('aria-pressed', button.dataset.language === (settings.language || 'vi') ? 'true' : 'false'));
+        renderCenterUpdate();
         const updateButtons = document.querySelectorAll('[data-action="install_updates"]');
         updateButtons.forEach(button => { button.disabled = !updateItems.length; });
         filterCatalog();
+        applyLanguage();
+      }
+
+      function applyLanguage() {
+        document.documentElement.lang = activeLanguage;
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+          if (node.parentElement && node.parentElement.closest('#catalogGrid, #overviewUpdates, #installAllBtn, #updatesPill, #centerUpdateTitle, #centerUpdateStatus, #centerUpdateBtn, #centerLastCheck, #centerVersion, #centerVersionSetting, #hostVersion, #healthPluginCount')) continue;
+          if (!originalTextNodes.has(node)) originalTextNodes.set(node, node.nodeValue);
+          const original = originalTextNodes.get(node);
+          const leading = (original.match(/^\s*/) || [''])[0];
+          const trailing = (original.match(/\s*$/) || [''])[0];
+          const phrase = original.trim();
+          node.nodeValue = leading + (activeLanguage === 'en' ? (englishText[phrase] || phrase) : phrase) + trailing;
+        }
+        const search = document.getElementById('searchInput');
+        search.placeholder = tr('Tìm plugin…', 'Search plugins…');
+        search.setAttribute('aria-label', search.placeholder);
+        document.getElementById('autoUpdateToggle').setAttribute('aria-label', tr('Tự động cập nhật VGD Center', 'Automatically update VGD Center'));
+        document.querySelector('.language-options').setAttribute('aria-label', tr('Ngôn ngữ', 'Language'));
+      }
+
+      function renderCenterUpdate() {
+        const info = centerUpdate();
+        const button = document.getElementById('centerUpdateBtn');
+        const status = document.getElementById('centerUpdateStatus');
+        const title = document.getElementById('centerUpdateTitle');
+        const latest = info.latest_version ? `VGD Center ${info.latest_version}` : 'VGD Center';
+        if (info.state === 'update') {
+          title.textContent = tr('Có bản VGD Center mới', 'VGD Center update available');
+          status.textContent = tr(`Đang dùng ${info.current_version || currentState.version || '—'} · ${latest} đã sẵn sàng`, `Using ${info.current_version || currentState.version || '—'} · ${latest} is available`);
+          button.textContent = tr('Tải và cài đặt', 'Download and install');
+          button.disabled = false;
+          button.dataset.action = 'update_center';
+        } else if (info.state === 'latest') {
+          title.textContent = tr('VGD Center đã mới nhất', 'VGD Center is up to date');
+          status.textContent = `${tr('Phiên bản', 'Version')} ${info.current_version || currentState.version || '—'}`;
+          button.textContent = tr('Kiểm tra cập nhật', 'Check for updates');
+          button.disabled = false;
+          button.dataset.action = 'refresh_center_update';
+        } else if (info.state === 'ahead') {
+          title.textContent = tr('VGD Center đang dùng bản mới hơn', 'Installed VGD Center is newer');
+          status.textContent = tr(`Đang dùng ${info.current_version || currentState.version || '—'} · Bản phát hành ${latest}`, `Using ${info.current_version || currentState.version || '—'} · Latest release ${latest}`);
+          button.textContent = tr('Kiểm tra cập nhật', 'Check for updates');
+          button.disabled = false;
+          button.dataset.action = 'refresh_center_update';
+        } else if (info.state === 'error') {
+          title.textContent = tr('Chưa kiểm tra được VGD Center', 'Could not check VGD Center');
+          status.textContent = activeLanguage === 'en' ? 'Check your connection and try again.' : (info.error || 'Kiểm tra lại kết nối để tìm bản mới.');
+          button.textContent = tr('Thử lại', 'Retry');
+          button.disabled = false;
+          button.dataset.action = 'refresh_center_update';
+        } else {
+          title.textContent = tr('Cập nhật VGD Center', 'Update VGD Center');
+          status.textContent = tr('Đang kiểm tra phiên bản mới…', 'Checking for updates…');
+          button.textContent = tr('Đang kiểm tra…', 'Checking…');
+          button.disabled = true;
+          button.dataset.action = 'refresh_center_update';
+        }
+        const checked = info.last_checked || '';
+        document.getElementById('centerLastCheck').textContent = checked ? `${tr('Lần kiểm tra cập nhật Center gần nhất:', 'Last Center update check:')} ${checked}` : tr('Lần kiểm tra cập nhật Center gần nhất: Chưa kiểm tra', 'Last Center update check: Never');
       }
 
       function filterCatalog() {
@@ -399,7 +501,8 @@
       }
 
       function setStatus(message) {
-        document.getElementById('footerStatus').textContent = message;
+        const translated = activeLanguage === 'en' ? (englishText[message] || message) : message;
+        document.getElementById('footerStatus').textContent = translated;
       }
 
       function showOverlay(title, message, iconHref, finished) {
@@ -413,7 +516,7 @@
 
       function requestNative(name, value) {
         if (!window.sketchup || typeof window.sketchup[name] !== 'function') {
-          showOverlay('Mở trong SketchUp', 'VGD Center cần chạy trong SketchUp để đọc trạng thái và cài plugin.', '#i-info', true);
+          showOverlay(tr('Mở trong SketchUp', 'Open in SketchUp'), tr('VGD Center cần chạy trong SketchUp để đọc trạng thái và cài plugin.', 'VGD Center must run in SketchUp to read status and install plugins.'), '#i-info', true);
           return;
         }
         if (value === undefined) window.sketchup[name]();
@@ -423,15 +526,22 @@
       document.querySelectorAll('.nav [data-page]').forEach(button => button.addEventListener('click', () => openPage(button.dataset.page)));
       document.querySelectorAll('[data-page]:not(.nav button)').forEach(button => button.addEventListener('click', () => openPage(button.dataset.page)));
       document.getElementById('themeBtn').addEventListener('click', toggleTheme);
-      document.getElementById('themeSetting').addEventListener('click', toggleTheme);
       document.getElementById('syncBtn').addEventListener('click', () => requestNative('refresh_catalog'));
-      document.getElementById('refreshInstalled').addEventListener('click', () => { render(); setStatus('Đã làm mới trạng thái plugin trên SketchUp'); });
+      document.getElementById('autoUpdateToggle').addEventListener('click', () => {
+        const currentlyEnabled = !document.getElementById('autoUpdateToggle').classList.contains('on');
+        requestNative('set_auto_update', currentlyEnabled);
+      });
+      document.querySelectorAll('[data-language]').forEach(button => button.addEventListener('click', () => requestNative('set_language', button.dataset.language)));
       document.getElementById('searchInput').addEventListener('input', filterCatalog);
       document.addEventListener('click', event => {
         const button = event.target.closest('[data-action]');
         if (!button || button.disabled) return;
         if (button.dataset.action === 'install_plugin') requestNative('install_plugin', button.dataset.id);
+        if (button.dataset.action === 'uninstall_plugin') requestNative('uninstall_plugin', button.dataset.id);
+        if (button.dataset.action === 'install_all_plugins') requestNative('install_all_plugins');
         if (button.dataset.action === 'install_updates') requestNative('install_updates');
+        if (button.dataset.action === 'update_center') requestNative('update_center');
+        if (button.dataset.action === 'refresh_center_update') requestNative('refresh_center_update');
       });
       document.getElementById('doneBtn').addEventListener('click', () => overlay.classList.remove('open'));
       overlay.addEventListener('click', event => { if (event.target === overlay && !dialogActions.hidden) overlay.classList.remove('open'); });
@@ -452,7 +562,7 @@
         progress(data) {
           activePluginId = data.id;
           const product = currentState.products.find(item => item.id === data.id);
-          const name = product ? product.name : 'plugin';
+          const name = data.id === 'center' ? 'VGD Center' : product ? product.name : 'plugin';
           const total = Number(data.total);
           const current = Number(data.current);
           const percent = total > 0 ? Math.max(4, Math.min(100, Math.round(current * 100 / total))) : 12;

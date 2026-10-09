@@ -1,5 +1,5 @@
 param(
-  [string]$Version = '1.0.1'
+  [string]$Version = '1.0.6'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -9,12 +9,14 @@ if ($Version -notmatch '^\d+\.\d+\.\d+$') { throw 'Version phải là số stabl
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $catalogPath = Join-Path $repoRoot 'shared\vgd-center\catalog.json'
+$centerManifestPath = Join-Path $repoRoot 'shared\vgd-center\center-update.json'
 $rootLoader = Join-Path $repoRoot 'VGD_Center.rb'
 $supportFiles = @(
   @{ Source = (Join-Path $PSScriptRoot 'main.rb'); Entry = 'VGD_Center/main.rb' },
   @{ Source = (Join-Path $PSScriptRoot 'dialog.html'); Entry = 'VGD_Center/dialog.html' },
   @{ Source = (Join-Path $PSScriptRoot 'icon.svg'); Entry = 'VGD_Center/icon.svg' },
-  @{ Source = $catalogPath; Entry = 'VGD_Center/catalog.json' }
+  @{ Source = $catalogPath; Entry = 'VGD_Center/catalog.json' },
+  @{ Source = $centerManifestPath; Entry = 'VGD_Center/center-update.json' }
 )
 $outputDir = Join-Path $PSScriptRoot 'outputs'
 $rbzPath = Join-Path $outputDir "VGD_Center_v$Version.rbz"
@@ -22,8 +24,18 @@ $sourcePath = Join-Path $outputDir "VGD_Center_v$Version`_source.zip"
 $hashPath = Join-Path $outputDir "VGD_Center_v$Version.rbz.sha256"
 
 if (-not (Test-Path -LiteralPath $catalogPath)) { throw "Thiếu catalog: $catalogPath" }
+if (-not (Test-Path -LiteralPath $centerManifestPath)) { throw "Thiếu manifest cập nhật Center: $centerManifestPath" }
 $catalog = Get-Content -LiteralPath $catalogPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if ($catalog.schema_version -ne 1 -or $catalog.channel -ne 'latest') { throw 'Catalog không đúng schema latest.' }
+$centerManifest = Get-Content -LiteralPath $centerManifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+if ($centerManifest.schema_version -ne 1 -or $centerManifest.version -notmatch '^\d+\.\d+\.\d+$') { throw 'Manifest Center không đúng schema stable.' }
+if ($centerManifest.download.filename -ne "VGD_Center_v$($centerManifest.version).rbz") { throw 'Tên RBZ trong manifest Center không khớp phiên bản.' }
+if (-not $centerManifest.download.url.StartsWith('https://github.com/vuongpentax/VGD_Plugins/releases/download/') -or -not $centerManifest.download.url.EndsWith("/$($centerManifest.download.filename)")) { throw 'URL RBZ trong manifest Center không hợp lệ.' }
+$centerPackagePath = Join-Path $PSScriptRoot ("outputs\" + $centerManifest.download.filename)
+if (-not (Test-Path -LiteralPath $centerPackagePath)) { throw "Thiếu RBZ stable được khai báo trong manifest Center: $centerPackagePath" }
+$centerPackageInfo = Get-Item -LiteralPath $centerPackagePath
+$centerPackageHash = (Get-FileHash -LiteralPath $centerPackagePath -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($centerPackageInfo.Length -ne [int64]$centerManifest.download.size -or $centerPackageHash -ne $centerManifest.download.sha256.ToLowerInvariant()) { throw 'Dung lượng hoặc SHA-256 của RBZ stable VGD Center không khớp manifest.' }
 if (Test-Path -LiteralPath $rbzPath) { throw "Đã tồn tại, không ghi đè: $rbzPath" }
 if (Test-Path -LiteralPath $sourcePath) { throw "Đã tồn tại, không ghi đè: $sourcePath" }
 if (Test-Path -LiteralPath $hashPath) { throw "Đã tồn tại, không ghi đè: $hashPath" }
