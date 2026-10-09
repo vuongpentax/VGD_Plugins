@@ -19,7 +19,8 @@ module VGD
           args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', helper,
                   '-Archive', archive, '-Plugins', plugins, '-ExpectedSha256', info['sha256'],
                   '-ExpectedBytes', info['bytes'].to_s, '-Version', info['version']]
-          pid = Process.spawn('powershell.exe', *args, :out => File::NULL, :err => File::NULL, :pgroup => true)
+          # Windows Ruby uses :new_pgroup; :pgroup is POSIX-only here.
+          pid = Process.spawn('powershell.exe', *args, :out => File::NULL, :err => File::NULL, :new_pgroup => true)
           Process.detach(pid)
           true
         rescue StandardError

@@ -1,4 +1,4 @@
-# VGD Dim · 3.3.0-beta.3
+# VGD Dim · 3.3.0-beta.4
 
 | Chức năng | Trạng thái |
 |---|---|

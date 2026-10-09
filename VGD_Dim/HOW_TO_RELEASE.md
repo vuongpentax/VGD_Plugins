@@ -11,7 +11,7 @@ Quy trình này dành cho pilot updater online của VGD Dim. Hiện updater đ�
 
 ## Đưa lên GitHub theo thứ tự an toàn
 
-1. Tạo checkpoint source beta trên GitHub nhưng giữ VGD_UPDATE_MANIFEST.json ở bản hiện hành. Tạo tag dạng vgd-dim-v3.3.0-beta.3 từ commit đó.
+1. Tạo checkpoint source beta trên GitHub nhưng giữ VGD_UPDATE_MANIFEST.json ở bản hiện hành. Tạo tag theo phiên bản, ví dụ vgd-dim-v3.3.0-beta.4.
 2. Tạo và publish GitHub Release cho tag; đính kèm đúng RBZ đã tạo. Có thể đính kèm source ZIP để tham khảo.
 3. Xác minh RBZ tải công khai và SHA-256 khớp outputs/PACKAGES_SHA256.json.
 4. Sau khi asset đã công khai, cập nhật manifest beta mới lên nhánh main bằng checkpoint riêng. Máy người dùng chỉ thấy version mới sau bước này.
