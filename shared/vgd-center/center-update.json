@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "version": "1.0.8",
+  "version": "1.0.9",
   "download": {
-    "filename": "VGD_Center_v1.0.8.rbz",
-    "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/VGD_Center_v1.0.8.rbz",
-    "size": 41791,
-    "sha256": "3e3c8d76fbafae764f2ccc1d8a5fee8adf0fa0b6ac30a776d588479d84117493"
+    "filename": "VGD_Center_v1.0.9.rbz",
+    "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/VGD_Center_v1.0.9.rbz",
+    "size": 43777,
+    "sha256": "d7ded5f38bd1089b399caef6710f0a2add3c4211f80fb6c7ee68a9cfb2365e94"
   }
 }

@@ -121,6 +121,26 @@
         "vgd_bim_lite.rb",
         "vgd_bim_lite/"
       ]
+    },
+    {
+      "id": "reference",
+      "name": "VGD Reference",
+      "extension_name": "VGD Reference",
+      "version": "1.0.0-beta.6",
+      "release_channel": "beta",
+      "description": "Ghim và chỉnh sửa ảnh tham chiếu ngay trên khung nhìn SketchUp.",
+      "icon": "reference",
+      "minimum_sketchup": "23.0.0",
+      "download": {
+        "filename": "VGD_Reference_v1.0.0-beta.6.rbz",
+        "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/52a0c187a59f253c51af2c446ba2a96a42cebda6/shared/vgd-center/packages/VGD_Reference_v1.0.0-beta.6.rbz",
+        "size": 29727,
+        "sha256": "1b1ebb9c03ed67aff5aee5f86c66c07490e64ee38315076d17ff95a96d4aa6ab"
+      },
+      "allowed_paths": [
+        "vgd_reference.rb",
+        "vgd_reference/"
+      ]
     }
   ]
 }

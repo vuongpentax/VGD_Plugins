@@ -8,11 +8,11 @@ require 'securerandom'
 
 module VGD
   module Center
-    VERSION = '1.0.8'.freeze
+    VERSION = '1.0.9'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
-    ALLOWED_IDS = %w[dim cabinet library image_importer scenes bim_lite].freeze
+    ALLOWED_IDS = %w[dim cabinet library image_importer scenes bim_lite reference].freeze
     PLUGIN_LAYOUTS = {
       'dim' => ['VGD Dim', ['vgd_dim.rb', 'VGD_Dim/']],
       'cabinet' => ['VGD Cabinet', ['vgd_cabinet.rb', 'VGD_Cabinet/']],
@@ -20,6 +20,7 @@ module VGD
       'image_importer' => ['VGD Image Importer', ['vgd_image_importer.rb', 'vgd_image_importer/']],
       'scenes' => ['VGD Scenes', ['vgd_scenes.rb', 'vgd_scenes/']],
       'bim_lite' => ['VGD BIM Lite', ['vgd_bim_lite.rb', 'vgd_bim_lite/']],
+      'reference' => ['VGD Reference', ['vgd_reference.rb', 'vgd_reference/']],
       'center' => ['VGD Center', ['VGD_Center.rb', 'VGD_Center/']]
     }.freeze
     MAX_PACKAGE_BYTES = 100 * 1024 * 1024

@@ -1,5 +1,5 @@
 param(
-  [string]$Version = '1.0.8'
+  [string]$Version = '1.0.9'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -25,7 +25,8 @@ $guideFiles = @(
   @{ Source = (Join-Path $PSScriptRoot 'guides\library.html'); Entry = 'VGD_Center/guides/library.html' },
   @{ Source = (Join-Path $PSScriptRoot 'guides\image_importer.html'); Entry = 'VGD_Center/guides/image_importer.html' },
   @{ Source = (Join-Path $PSScriptRoot 'guides\scenes.html'); Entry = 'VGD_Center/guides/scenes.html' },
-  @{ Source = (Join-Path $PSScriptRoot 'guides\bim_lite.html'); Entry = 'VGD_Center/guides/bim_lite.html' }
+  @{ Source = (Join-Path $PSScriptRoot 'guides\bim_lite.html'); Entry = 'VGD_Center/guides/bim_lite.html' },
+  @{ Source = (Join-Path $PSScriptRoot 'guides\reference.html'); Entry = 'VGD_Center/guides/reference.html' }
 )
 $outputDir = Join-Path $PSScriptRoot 'outputs'
 $rbzPath = Join-Path $outputDir "VGD_Center_v$Version.rbz"
@@ -61,6 +62,7 @@ $localPackages = @{
   image_importer = 'VGD_Image_Importer/VGD_Image_Importer_v1.1.0-beta.5.rbz'
   scenes = 'VGD_Scenes/VGD_Scenes_v1.5.3-beta.3.rbz'
   bim_lite = 'VGD_BIM/VGD_BIM_Lite_v0.1.4-alpha.rbz'
+  reference = 'VGD_Reference/VGD_Reference_v1.0.0-beta.6.rbz'
 }
 foreach ($product in $catalog.products) {
   if ($product.version -notmatch '^\d+\.\d+\.\d+(?:-(?:alpha|beta)(?:\.\d+)?)?$') { throw "Catalog chứa phiên bản không hỗ trợ: $($product.id)" }

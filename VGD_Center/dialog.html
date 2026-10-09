@@ -193,7 +193,8 @@
     <symbol id="vgd-scenes" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 8.5h4l1.5-2h6l1.5 2h4v10h-17z"/><circle fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" cx="12" cy="13.5" r="3.1"/></symbol>
     <symbol id="vgd-bim" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 10 12 4l8.5 6v10h-17z"/><path fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8 12h8m-8 3h8m-8 3h8"/></symbol>
     <symbol id="vgd-library" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8 3.5h12v13M4 7h13v14H4z"/><path fill="var(--accent-strong)" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" d="M6 9h9v9H6z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M7.5 12c2-2 3 1 6-1m-6 4c2-2 3 1 6-1"/></symbol>
-    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></symbol>
+      <symbol id="vgd-reference" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M7 6.5H4.7a1.2 1.2 0 0 0-1.2 1.2v11.6a1.2 1.2 0 0 0 1.2 1.2h14.6a1.2 1.2 0 0 0 1.2-1.2V7.7a1.2 1.2 0 0 0-1.2-1.2H17M6 17l3.5-3.5 4 3.5 2.5-2.5 2 2.5"/><path fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M10 3.5h4v3l1.5 2h-7l1.5-2zM12 8.5v3"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></symbol>
     <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
     <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4.5h10.5A3.5 3.5 0 0 1 19 8v11.5H8A3 3 0 0 1 5 16.5z"/><path d="M5 16.5a3 3 0 0 1 3-3h11M9 8h6M9 10.5h5"/></symbol>
     <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6z"/><path d="m8.5 12 2.3 2.3 4.8-5"/></symbol>
@@ -305,7 +306,7 @@
       const dialogIcon = document.getElementById('dialogIcon');
       const dialogActions = document.getElementById('dialogActions');
       const progressBar = document.getElementById('progressBar');
-      const iconIds = {dim:'vgd-dim', scenes:'vgd-scenes', cabinet:'vgd-cabinet', library:'vgd-library', image_importer:'vgd-import', bim_lite:'vgd-bim'};
+      const iconIds = {dim:'vgd-dim', scenes:'vgd-scenes', cabinet:'vgd-cabinet', library:'vgd-library', image_importer:'vgd-import', bim_lite:'vgd-bim',reference:'vgd-reference'};
       let currentState = {products:[]};
       let activePluginId = null;
       let activeLanguage = 'vi';
@@ -359,7 +360,7 @@
       const notInstalled = () => currentState.products.filter(product => product.compatible && product.action === 'install');
       const productDescription = product => {
         if (activeLanguage !== 'en') return product.description;
-        const descriptions = {dim:'Measure dimensions and style labels, or create smart dimensions.',cabinet:'Design cabinets, compartments, doors, and drawers.',library:'Browse and manage VGD materials and models.',image_importer:'Import images as components, planes, or materials.',scenes:'Manage views, section cuts, and exports.',bim_lite:'Review and audit SketchUp model data.'};
+        const descriptions = {dim:'Measure dimensions and style labels, or create smart dimensions.',cabinet:'Design cabinets, compartments, doors, and drawers.',library:'Browse and manage VGD materials and models.',image_importer:'Import images as components, planes, or materials.',scenes:'Manage views, section cuts, and exports.',bim_lite:'Review and audit SketchUp model data.',reference:'Pin and edit reference images over the SketchUp viewport.'};
         return descriptions[product.id] || product.description;
       };
       const actionButton = product => {
@@ -577,10 +578,10 @@
 
       if (window.sketchup && typeof window.sketchup.center_ready === 'function') window.sketchup.center_ready();
       else if (new URLSearchParams(window.location.search).has('preview') || (window.location.protocol === 'file:' && !window.sketchup)) {
-        const versions = {dim:'3.3.0-beta.4',cabinet:'4.5.0-beta.3',library:'1.1.2-beta.3',image_importer:'1.1.0-beta.4',scenes:'1.5.3-beta.2',bim_lite:'0.1.3-alpha'};
-        const descriptions = {dim:'Đo kích thước, chỉnh kiểu Dim/Text và tạo Smart Dim.',cabinet:'Dựng tủ, chia khoang, cánh và ngăn kéo trong SketchUp.',library:'Tìm kiếm và quản lý thư viện vật liệu, model VGD.',image_importer:'Nhập ảnh vào SketchUp dưới dạng component, mặt phẳng hoặc vật liệu.',scenes:'Quản lý góc nhìn, mặt cắt và xuất hồ sơ.',bim_lite:'Đọc thông tin và rà soát dữ liệu model SketchUp.'};
-        const names = {dim:'VGD Dim',cabinet:'VGD Cabinet',library:'VGD Library',image_importer:'VGD Image Importer',scenes:'VGD Scenes',bim_lite:'VGD BIM Lite'};
-        const channels = {dim:'beta',cabinet:'beta',library:'beta',image_importer:'beta',scenes:'beta',bim_lite:'alpha'};
+        const versions = {dim:'3.3.0-beta.5',cabinet:'4.5.0-beta.4',library:'1.1.2-beta.4',image_importer:'1.1.0-beta.5',scenes:'1.5.3-beta.3',bim_lite:'0.1.4-alpha',reference:'1.0.0-beta.6'};
+        const descriptions = {dim:'Đo kích thước, chỉnh kiểu Dim/Text và tạo Smart Dim.',cabinet:'Dựng tủ, chia khoang, cánh và ngăn kéo trong SketchUp.',library:'Tìm kiếm và quản lý thư viện vật liệu, model VGD.',image_importer:'Nhập ảnh vào SketchUp dưới dạng component, mặt phẳng hoặc vật liệu.',scenes:'Quản lý góc nhìn, mặt cắt và xuất hồ sơ.',bim_lite:'Đọc thông tin và rà soát dữ liệu model SketchUp.',reference:'Ghim và chỉnh sửa ảnh tham chiếu ngay trên khung nhìn SketchUp.'};
+        const names = {dim:'VGD Dim',cabinet:'VGD Cabinet',library:'VGD Library',image_importer:'VGD Image Importer',scenes:'VGD Scenes',bim_lite:'VGD BIM Lite',reference:'VGD Reference'};
+        const channels = {dim:'beta',cabinet:'beta',library:'beta',image_importer:'beta',scenes:'beta',bim_lite:'alpha',reference:'beta'};
         const installedIds = ['dim','cabinet','library','image_importer','scenes'];
         const updateIds = ['dim','scenes'];
         window.VGD.receiveState({version:'1.0.7',sketchup:'22.0.316',settings:{language:'vi',auto_update:true},center_update:{state:'latest',current_version:'1.0.7',latest_version:'1.0.7'},products:Object.keys(versions).map(id=>({id,name:names[id],version:versions[id],release_channel:channels[id],description:descriptions[id],icon:id,minimum_sketchup:'22.0.0',compatible:true,installed:installedIds.includes(id),installed_version:installedIds.includes(id)?(updateIds.includes(id)?'bản cũ':'đang dùng'):null,action:!installedIds.includes(id)?'install':updateIds.includes(id)?'update':null}))});
