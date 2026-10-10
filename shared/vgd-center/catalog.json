@@ -86,16 +86,16 @@
       "id": "scenes",
       "name": "VGD Scenes",
       "extension_name": "VGD Scenes",
-      "version": "1.5.3-beta.3",
+      "version": "1.5.3-beta.4",
       "release_channel": "beta",
       "description": "Quản lý góc nhìn, mặt cắt và xuất hồ sơ.",
       "icon": "scenes",
       "minimum_sketchup": "22.0.0",
       "download": {
-        "filename": "VGD_Scenes_v1.5.3-beta.3.rbz",
-        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-scenes-v1.5.3-beta.3/VGD_Scenes_v1.5.3-beta.3.rbz",
+        "filename": "VGD_Scenes_v1.5.3-beta.4.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-scenes-v1.5.3-beta.4/VGD_Scenes_v1.5.3-beta.4.rbz",
         "size": 64567,
-        "sha256": "b054ac63a711de50eeda59852221a5cc70ec34c79d3841db59210ac37d7baa01"
+        "sha256": "1cdf59c98359b27feb3b1b28ddc989fee4ccd14bd6b2d3b0fedb29db70b91551ec"
       },
       "allowed_paths": [
         "vgd_scenes.rb",

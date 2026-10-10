@@ -1,4 +1,4 @@
-# VGD Scenes 1.5.3-beta.3 — SketchUp 2022–2026.2
+# VGD Scenes 1.5.3-beta.4 — SketchUp 2022–2026.2
 
 Prerelease có thông báo cập nhật mỗi 24 giờ và lệnh kiểm tra thủ công. SketchUp hỏi trước khi mở trang tải RBZ; người dùng cài qua Extension Manager rồi khởi động lại.
 
