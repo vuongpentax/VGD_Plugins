@@ -9,7 +9,7 @@
   "defaults": "PASS Ruby and DOM: ceiling strip 20, door gaps 0, drawer-front perimeter gaps 0, drawer/cabinet tier gaps 25",
   "independent_controls": "PASS: door vs drawer bevel and lip, legacy shared-bevel migration, door stop vs drawer backing rails",
   "pano": "PASS fixture dimensions: 5 door inset/overlay modes, straight groove cross-sections, separate panels, capture minus per-edge clearance, multiple panels, custom depth, modules and tiers, invalid/tiny geometry rejected",
-  "ui": "PASS: JSDOM and Edge headless; responsive icon-only navigation with tooltips at 560px and icon/name/description navigation at 720px; existing Cabinet UI workflows, previews and description flow pass.",
+  "ui": "PASS: JSDOM and Edge headless; responsive icon-only navigation with tooltips at 660px and icon/name/description navigation at 760px; existing Cabinet UI workflows, previews and description flow pass.",
   "payload": "PASS: existing modeling control IDs and values match beta.1 for complete defaults and 7 built-in presets; additive new fields",
   "deployment": "UNVERIFIED beta5: package prepared and archive integrity/source equality checked; beta5 was not installed into native SketchUp in this task.",
   "deployment_live": "Historical beta4 deployment: 23/23 owned files were copied and SHA256-checked on 2026-10-08; a later UI review found the brand header still displayed Beta 2. Beta5 corrects all registered/runtime/title/header version fields. Native SketchUp reload/run for beta5 remains unverified.",
