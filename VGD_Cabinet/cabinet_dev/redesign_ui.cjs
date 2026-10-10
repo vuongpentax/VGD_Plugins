@@ -146,7 +146,7 @@ for(const [id,value]of Object.entries(values)){
   html=html.replace(new RegExp("(getNumValue\\('"+id+"',\\s*)[0-9.]+(\\))",'g'),'$1'+value+'$2');
   html=html.replace(new RegExp('(id="'+id+'"[^>]*value=")[0-9.]+','g'),'$1'+value);
 }
-html=html.replace('VGD_Cabinet UI v4.3.0 beta','VGD Cabinet 4.5.0-beta.3');
+html=html.replace('VGD_Cabinet UI v4.3.0 beta','VGD Cabinet 4.5.0-beta.4');
 html=html.replace("document.getElementById('btn_update').disabled = !selectedPid;","document.getElementById('btn_update').disabled = !selectedPid;\n      document.getElementById('selection_mode').textContent = selectedPid ? 'Đang sửa tủ đã chọn' : 'Tạo tủ mới';\n      refreshContextUI();");
 html=html.replace('        renderDrawerGapUI();\n      } finally', '        renderDrawerGapUI();\n        refreshContextUI();\n      } finally');
 html=html.replace("      initTheme();", "      initMenu();\n      initTheme();");
