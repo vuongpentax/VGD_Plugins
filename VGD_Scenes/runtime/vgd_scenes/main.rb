@@ -11,7 +11,7 @@ require_relative 'camera'
 require_relative 'update_notice'
 module VGD
   module Scenes
-    VERSION = '1.5.3-beta.3'.freeze unless const_defined?(:VERSION, false)
+    VERSION = '1.5.3-beta.4'.freeze unless const_defined?(:VERSION, false)
     class << self
       def state
         model = Sketchup.active_model
