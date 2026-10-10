@@ -180,10 +180,15 @@ h2 { margin: 0 0 18px; font-size: 19px; font-weight: 550; }
 .card { min-width: 0; margin: 0 0 14px; padding: 12px; border: 1px solid var(--vgd-border); border-radius: 6px; background: var(--vgd-surface); }
 .card legend { padding: 0 5px; color: var(--vgd-active); font-size: 11px; font-weight: 650; }
 .modes { display: grid; gap: 6px; }
-.modes button { min-height: 48px; flex-direction: column; align-items: flex-start; gap: 3px; padding: 7px 10px; text-align: left; }
+.modes button { min-height: 48px; justify-content: flex-start; gap: 11px; padding: 8px 10px; text-align: left; }
+.mode-icon { display: grid; width: 24px; height: 24px; flex: 0 0 24px; place-items: center; color: var(--vgd-muted); }
+.mode-icon svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.mode-copy { display: block; min-width: 0; }
+.modes strong, .modes small { display: block; }
 .modes strong { font-size: 11px; font-weight: 600; }
-.modes small { color: var(--vgd-muted); font-size: 10px; }
+.modes small { margin-top: 2px; color: var(--vgd-muted); font-size: 10px; }
 .modes [aria-pressed="true"] { border-color: var(--vgd-accent); background: var(--vgd-tint); color: var(--vgd-active); }
+.modes [aria-pressed="true"] .mode-icon { color: var(--vgd-active); }
 .dimension { margin-top: 12px; }
 .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
 .help { color: var(--vgd-muted); font-size: 11px; line-height: 1.7; }
@@ -234,6 +239,10 @@ dialog::backdrop { background: #0008; }
   .thumb { width: 36px; height: 36px; flex-basis: 36px; }
   .file-row { gap: 6px; padding: 6px; }
   .primary { min-width: 120px; }
+  .modes { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .modes button { min-width: 0; min-height: 44px; justify-content: center; padding: 7px 4px; }
+  .mode-copy { display: none; }
+  .mode-icon { color: var(--vgd-muted); }
 }
 @media (max-height: 550px) {
   .empty svg { width: 38px; height: 38px; }
