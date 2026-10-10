@@ -10,7 +10,7 @@ const { chromium } = require(resolve('playwright'));
     page.on('pageerror', error => { throw error; });
     await page.addInitScript(() => { window.sketchup = { vgd_importer: () => {} }; });
     await page.goto(pathToFileURL(path.join(root, 'runtime', 'vgd_image_importer', 'dialog.html')).href);
-    await page.evaluate(() => VGDImporter.receive('settings', { theme: 'dark', importType: 'comp_2d', version: '1.1.0-beta.4' }));
+    await page.evaluate(() => VGDImporter.receive('settings', { theme: 'dark', importType: 'comp_2d', version: '1.1.0-beta.5' }));
     const imagePath = path.join(root, 'runtime', 'vgd_image_importer', 'vgd_icon.png');
     const files = [
       { id: 0, name: 'Cây bóng mát.webp', path: imagePath },
@@ -22,6 +22,9 @@ const { chromium } = require(resolve('playwright'));
     await page.evaluate(() => VGDImporter.receive('status', { message: 'Đã chọn 4 ảnh. Kiểm tra cấu hình rồi nhập.' }));
     await page.waitForTimeout(250);
     await page.screenshot({ path: path.join(output, 'vgd_image_importer_dark.png') });
+    await page.setViewportSize({ width: 540, height: 780 });
+    await page.screenshot({ path: path.join(output, 'vgd_image_importer_compact.png') });
+    await page.setViewportSize({ width: 960, height: 780 });
     await page.click('#theme');
     await page.waitForTimeout(150);
     await page.screenshot({ path: path.join(output, 'vgd_image_importer_light.png') });

@@ -1,6 +1,6 @@
 # VGD Image Importer — bàn giao
 
-Ngày 08/10/2026, phiên bản 1.1.0-beta.4. Nguồn gốc: `%APPDATA%/SketchUp/SketchUp 2022/SketchUp/Plugins/vgd_image_importer.rb` và folder cùng tên (bản 1.0.0). Snapshot nguyên bản ở `reference/`.
+Ngày 11/10/2026, phiên bản 1.1.0-beta.5. Nguồn gốc: `%APPDATA%/SketchUp/SketchUp 2022/SketchUp/Plugins/vgd_image_importer.rb` và folder cùng tên (bản 1.0.0). Snapshot nguyên bản ở `reference/`.
 
 Beta.2 sửa lỗi beta.1 coi `ImageRep.load_file` là Boolean. Phải gọi load_file rồi kiểm tra width/height; API có thể trả nil khi đọc thành công. Fixture cũ trả true đã che lỗi này; fixture mới trả nil và raise cho dữ liệu hỏng. Thêm hộp thoại Windows chọn nhiều file → Open và giải mã WebP/GIF/AVIF/ICO/SVG/JFIF thành PNG trong Chromium của HtmlDialog.
 
@@ -11,7 +11,7 @@ Beta.2 sửa lỗi beta.1 coi `ImageRep.load_file` là Boolean. Phải gọi loa
 - `main.rb`: singleton HtmlDialog, callback `vgd_importer`, JSON settings, chọn file/folder, toolbar/menu.
 - `file_picker.rb`: Fiddle gọi GetOpenFileNameW với OPENFILENAMEW đúng ABI x64 (152 bytes), Unicode, OFN_ALLOWMULTISELECT/EXPLORER; parse một/nhiều file và Cancel riêng, không lặp hộp thoại.
 - `conversion.rb`: mỗi batch snapshot model/entities/files, token phản hồi, gửi một ảnh/lần tới CEF, ghi PNG cache rồi gọi engine. Xóa các file PNG được tạo sau kết quả/đóng dialog. `convert_image.ps1` là WIC fallback cho HEIC/HEIF khi codec Windows có sẵn; không tải dependency.
-- `dialog.html/css/js`: UI tiếng Việt, màu và control theo VGD Scenes; CSS không dùng các tính năng Chromium mới như color-mix. Theme và settings được ghi qua Sketchup defaults; khóa localStorage `vgd.theme` dùng làm fallback lúc mở trang, không phải bus đồng bộ theme trực tiếp giữa plugin.
+- `dialog.html/css/js`: UI tiếng Việt theo VGD design system; ba chế độ nhập hiện icon, tên và mô tả ở dialog rộng, chỉ icon kèm tooltip/nhãn trợ năng ở dialog hẹp. CSS giữ tương thích Chromium của SketchUp 2022. Theme và settings được ghi qua Sketchup defaults; khóa localStorage riêng `vgd.image_importer.theme` làm fallback, không đồng bộ theme giữa các plugin.
 - `icon.svg`: toolbar VGD mới; `vgd_icon.png` giữ icon gốc để tương thích/snapshot và dùng làm dữ liệu test.
 - `dev/`: fixture Ruby và kiểm tra UI, đóng gói RBZ/source ZIP, deploy chính xác file có backup.
 

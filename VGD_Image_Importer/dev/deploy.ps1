@@ -54,7 +54,7 @@ try {
     Copy-Item -LiteralPath $source -Destination $target -Force
     if ((Get-FileHash -LiteralPath $target).Hash -ne (Get-FileHash -LiteralPath $source).Hash) { throw "Install mismatch: $relative" }
   }
-  $report = [ordered]@{ plugin_root=$pluginRoot; installed_at=(Get-Date -Format o); version='1.1.0-beta.4'; files=$owned; existed_before=$previous; original_hashes=$originalHashes; backup=$backup; verified=$true }
+  $report = [ordered]@{ plugin_root=$pluginRoot; installed_at=(Get-Date -Format o); version='1.1.0-beta.5'; files=$owned; existed_before=$previous; original_hashes=$originalHashes; backup=$backup; verified=$true }
   $report | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $backup 'install_report.json') -Encoding utf8
   Write-Output ($report | ConvertTo-Json -Depth 5)
 } catch {
