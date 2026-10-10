@@ -16,7 +16,7 @@ require_relative 'library_store'
 require_relative 'update_notice'
 module VGD_Cabinet
   remove_const(:VERSION) if const_defined?(:VERSION, false)
-  VERSION = '4.5.0-beta.3'
+  VERSION = '4.5.0-beta.4'
   class CabinetSelectionObserver < Sketchup::SelectionObserver
     def onSelectionBulkChange(_s); VGD_Cabinet.sync_current_selection; end
     def onSelectionAdded(_s,_e); VGD_Cabinet.sync_current_selection; end
