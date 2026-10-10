@@ -1,22 +1,30 @@
 # VGD Reference
 
-`VGD Reference` là tiện ích SketchUp để ghim ảnh JPG và PNG phía trên khung nhìn mô hình. Ảnh nằm trong lớp phủ theo màn hình và chỉ được giữ trong bộ nhớ của phiên SketchUp hiện tại; tiện ích không tạo entity và không ghi dữ liệu ảnh tham chiếu vào file `.skp`.
+`VGD Reference` là tiện ích SketchUp để ghim ảnh phía trên khung nhìn mô hình. Ảnh nằm trong lớp phủ theo màn hình và chỉ được giữ trong phiên SketchUp hiện tại; tiện ích không tạo entity và không ghi dữ liệu ảnh tham chiếu vào file `.skp`.
 
 ## Tính năng
 
 - SketchUp 2023 trở lên trên Windows 10/11.
 - Lớp phủ theo màn hình, có thể bật/tắt trong bảng **Overlays** của SketchUp.
-- Thêm ảnh JPG, JPEG, PNG hoặc dán ảnh từ bộ nhớ tạm Windows.
+- Thêm ảnh từ máy, kéo ảnh/link ảnh từ trình duyệt hoặc dán ảnh từ bộ nhớ tạm Windows.
+- Nhận JPG/JPEG, PNG, BMP, TIFF/TGA; chuyển WebP, GIF, AVIF, SVG, ICO và các định dạng khác qua bộ giải mã của HtmlDialog hoặc Windows. HEIC/HEIF và các định dạng cần codec chỉ nhận được khi máy có bộ giải mã phù hợp.
 - Quản lý nhiều ảnh bằng hình thu nhỏ; có chức năng ẩn/hiện, khóa và xóa.
 - Bảng quản lý tiếng Việt với theme sáng/tối và icon ảnh ghim đồng bộ bộ icon VGD.
 - Di chuyển, đổi kích thước giữ tỷ lệ, phóng to tại vị trí con trỏ, giữ Space và kéo để lia nội dung, khôi phục thu phóng, cắt ảnh và chỉnh mức hiển thị.
-- Kéo thả ảnh từ File Explorer vào bảng quản lý (tối đa 20 MiB mỗi ảnh).
+- Kéo thả ảnh từ File Explorer, Pinterest và các website vào bảng quản lý. Ưu tiên file ảnh được kéo theo, rồi nguồn ảnh trong HTML/URL; hỗ trợ link trang công khai có metadata ảnh.
+- Khi bảng hẹp, các nút chính chỉ hiện icon và chú thích khi rê chuột. Từ 420 px trở lên, hiện icon, tên và mô tả ngắn.
 - Texture được lưu đệm và giải phóng khi xóa ảnh, đổi model, tắt lớp phủ hoặc thoát SketchUp.
 - Tọa độ màn hình được chuyển đổi qua một bộ xử lý chung cho SketchUp 2023/2024 và 2025 trở lên.
 
 ## Cài đặt
 
-Trong SketchUp, mở **Extension Manager → Install Extension** và chọn file `VGD_Reference_v1.0.0-beta.6.rbz`. Khởi động lại SketchUp sau khi cài. Mở **Extensions → VGD Reference → Mở bảng quản lý** hoặc nhấn nút **VGD Reference** trên thanh công cụ.
+Trong SketchUp, mở **Extension Manager → Install Extension** và chọn file `VGD_Reference_v1.0.0-beta.7.rbz`. Khởi động lại SketchUp sau khi cài. Mở **Extensions → VGD Reference → Mở bảng quản lý** hoặc nhấn nút **VGD Reference** trên thanh công cụ.
+
+## Kéo ảnh từ Pinterest / web
+
+Giữ chuột trên ảnh đang xem trong trình duyệt, kéo sang bảng **VGD Reference** rồi thả. Bảng sẽ báo đang nhận ảnh và thêm hình thu nhỏ khi xong. Có thể kéo nhiều file ảnh từ Explorer hoặc kéo một link ảnh/trang công khai. Với nguồn `i.pinimg.com`, tiện ích thử bản gốc trước và quay lại URL đã kéo nếu bản gốc không có.
+
+Ảnh đầu vào tối đa 20 MiB, tối đa 32 triệu pixel; PNG sau chuyển đổi tối đa 64 MiB. Ảnh động dùng một khung hình tĩnh. Các định dạng có bộ giải mã phù hợp sẽ được chuyển sang PNG tạm, giữ độ trong suốt nếu nguồn có. Không thể cam kết mọi định dạng riêng như PSD/RAW hoặc mọi codec trên mọi máy. Trang yêu cầu đăng nhập hoặc chặn tải có thể không nhận được bằng link trang; khi đó kéo trực tiếp ảnh hoặc tải ảnh về máy rồi thả.
 
 ## Cách hoạt động
 
@@ -38,12 +46,14 @@ Cần kiểm tra tiếp độ trong suốt, bộ nhớ tạm, kéo thả, DPI v�
 
 SVG và bảng quản lý beta.6 đã được xem ảnh render và kiểm tra tự động bằng Edge ở cả hai theme, gồm setting icon toolbar, mọi callback nút và kích thước tối thiểu 280×340. Ruby kiểm tra 21 file runtime, đường dẫn icon và các fixture hồi quy đều đạt. Chưa kiểm tra icon/theme beta.6 trực tiếp trong SketchUp; xác nhận native ở trên áp dụng cho bản sửa hiển thị ảnh beta.5.
 
+Beta.7 được rà mã nguồn và biên dịch cú pháp Ruby/JavaScript/PowerShell; gói RBZ/source được đối chiếu từng file với nguồn. Chưa chạy phép thử tính năng mới, chưa thử kéo ảnh từ trình duyệt vào HtmlDialog SketchUp hoặc kiểm tra giao diện co giãn beta.7. Kết quả kiểm tra beta.6 ở trên là lịch sử, không chứng minh luồng nhập mới.
+
 ## SketchUp 2022
 
-**Beta.6 chưa hỗ trợ SketchUp 2022; minimum vẫn là SketchUp 2023.** Overlay chỉ có từ SU2023. SU2022 giới hạn texture theo vòng đời Ruby Tool, nên fallback Tool chưa giữ được ảnh thụ động khi dùng các công cụ dựng hình như bản Overlay. Bộ nạp và runtime kiểm tra phiên bản/capability trước khi nạp lớp Overlay. Chi tiết và probe phát triển độc lập nằm trong [đánh giá SU2022](dev/SU2022_COMPATIBILITY.md).
+**Beta.7 chưa hỗ trợ SketchUp 2022; minimum vẫn là SketchUp 2023.** Overlay chỉ có từ SU2023. SU2022 giới hạn texture theo vòng đời Ruby Tool, nên fallback Tool chưa giữ được ảnh thụ động khi dùng các công cụ dựng hình như bản Overlay. Bộ nạp và runtime kiểm tra phiên bản/capability trước khi nạp lớp Overlay. Chi tiết và probe phát triển độc lập nằm trong [đánh giá SU2022](dev/SU2022_COMPATIBILITY.md).
 
 ## Chẩn đoán hiển thị
 
 `dev/diagnose_rendering.rb` vẽ tám ô thử trong SketchUp và ghi báo cáo vào `outputs/render-diagnostics/`. Báo cáo kiểm tra dữ liệu ảnh đã giải mã, texture ID, View, UV, phiên bản và bộ máy đồ họa. Trên máy đã kiểm tra, `View#write_image` không chứa Ruby overlay; kết quả ảnh xuất được đánh dấu chưa đủ để kết luận và cần đối chiếu ảnh chụp màn hình.
 
-`dev/apply_render_fix.rb` nạp bản sửa UV beta.5 vào phiên SketchUp đang chạy để kiểm tra, giữ danh sách ảnh hiện tại và gỡ các ô thử. Để dùng bản sửa cùng icon/giao diện mới sau khi khởi động lại, cài gói beta.6.
+`dev/apply_render_fix.rb` nạp bản sửa UV beta.5 vào phiên SketchUp đang chạy để kiểm tra, giữ danh sách ảnh hiện tại và gỡ các ô thử. Script này không nâng cấp toàn bộ luồng nhập ảnh beta.7. Để dùng đầy đủ bản mới, cài gói beta.7 và khởi động lại SketchUp.

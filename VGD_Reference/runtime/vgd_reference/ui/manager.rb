@@ -58,7 +58,7 @@ module VGD
 
       def item_payload(item)
         {
-          id: item.id, name: File.basename(item.source_path),
+          id: item.id, name: item.display_name || File.basename(item.source_path),
           thumbnail: file_uri(item.source_path), visible: item.visible,
           locked: item.locked, opacity: item.opacity,
           selected: item.id == Session.store.selected_id,
@@ -72,6 +72,25 @@ module VGD
         "file:///#{encoded}"
       end
 
+      def ready?
+        visible? && !!@ready
+      end
+
+      def decode_image(data)
+        raise 'Bảng quản lý chưa sẵn sàng.' unless ready?
+        @dialog.execute_script("window.VGDReference&&window.VGDReference.decodeImage(#{JSON.generate(data)})")
+      end
+
+      def import_status(busy, text)
+        return unless visible?
+        @dialog.execute_script("window.VGDReference&&window.VGDReference.importStatus(#{JSON.generate(!!busy)},#{JSON.generate(text.to_s)})")
+      end
+
+      def acknowledge(method, token, index, result)
+        return unless ready?
+        @dialog.execute_script("window.VGDReference&&window.VGDReference.ack(#{JSON.generate(method)},#{JSON.generate(token.to_s)},#{JSON.generate(index)},#{JSON.generate(!!result)})")
+      end
+
       def create_dialog
         options = {
           dialog_title: 'VGD Reference | Ảnh tham chiếu', preferences_key: 'vgd.reference.manager',
@@ -82,11 +101,14 @@ module VGD
         dialog.set_file(File.join(__dir__, 'web', 'index.html'))
         dialog.set_on_closed do
           if @dialog.equal?(dialog)
+            ImageImport.cancel_all
             @dialog = nil
+            @ready = false
             @callbacks_bound = false
           end
         end
         @dialog = dialog
+        @ready = false
         @callbacks_bound = false
       end
       private_class_method :create_dialog
@@ -94,7 +116,7 @@ module VGD
       def bind_callbacks
         dialog = @dialog
         return unless dialog
-        dialog.add_action_callback('ready') { |_context| refresh }
+        dialog.add_action_callback('ready') { |_context| @ready = true; refresh }
         dialog.add_action_callback('addImage') { |_context| Session.add_from_picker }
         dialog.add_action_callback('pasteImage') { |_context| Session.paste_reference }
         dialog.add_action_callback('setToolbarTheme') do |_context, theme|
@@ -120,9 +142,15 @@ module VGD
         dialog.add_action_callback('editSelected') do |_context|
           Session.enter_edit(Session.store.selected_id) if Session.store && Session.store.selected_id
         end
-        dialog.add_action_callback('dropStart') { |_context, token, name, size, chunks| Session.drop_start(token, name, size, chunks) }
-        dialog.add_action_callback('dropChunk') { |_context, token, index, chunk| Session.drop_chunk(token, index, chunk) }
-        dialog.add_action_callback('dropFinish') { |_context, token| Session.drop_finish(token) }
+        dialog.add_action_callback('dropStart') { |_context, token, name, size, chunks, mime| acknowledge('dropStart', token, nil, Session.drop_start(token, name, size, chunks, mime)) }
+        dialog.add_action_callback('dropChunk') { |_context, token, index, chunk| acknowledge('dropChunk', token, index, Session.drop_chunk(token, index, chunk)) }
+        dialog.add_action_callback('dropFinish') { |_context, token| acknowledge('dropFinish', token, nil, Session.drop_finish(token)) }
+        dialog.add_action_callback('dropCancel') { |_context, token| Session.cancel_drop(token) }
+        dialog.add_action_callback('dropUrl') { |_context, urls, name| ImageImport.add_urls(urls, name) }
+        dialog.add_action_callback('convertedStart') { |_context, token, size, chunks| acknowledge('convertedStart', token, nil, ImageImport.conversion_start(token, size, chunks)) }
+        dialog.add_action_callback('convertedChunk') { |_context, token, index, chunk| acknowledge('convertedChunk', token, index, ImageImport.conversion_chunk(token, index, chunk)) }
+        dialog.add_action_callback('convertedFinish') { |_context, token| acknowledge('convertedFinish', token, nil, ImageImport.conversion_finish(token)) }
+        dialog.add_action_callback('convertedError') { |_context, token, error| ImageImport.conversion_error(token, error) }
         @callbacks_bound = true
       end
       private_class_method :bind_callbacks

@@ -19,6 +19,7 @@ module VGD
 
       def write_bytes(name, bytes, extension)
         safe_name = File.basename(name.to_s).gsub(/[^\p{Alnum}._-]+/u, '_')
+        safe_name = safe_name.each_char.take(96).join
         safe_name = 'reference' if safe_name.empty? || safe_name == '.'
         path = File.join(session_directory, "#{safe_name}-#{rand(1_000_000_000)}#{extension}")
         File.open(path, 'wb') { |file| file.write(bytes) }

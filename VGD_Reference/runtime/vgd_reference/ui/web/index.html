@@ -20,9 +20,9 @@
     <p>Lựa chọn được lưu cho lần mở sau. Bảng quản lý tự theo giao diện hệ thống.</p>
   </section>
   <nav class="actions">
-    <button class="primary" id="add"><svg class="ui-icon add-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Thêm</button>
-    <button id="paste">Dán</button>
-    <button id="hideAll">Ẩn tất cả</button>
+    <button class="primary" id="add" title="Thêm ảnh từ máy" aria-label="Thêm ảnh từ máy"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="action-copy"><b>Thêm</b><small>Mở file ảnh từ máy</small></span></button>
+    <button id="paste" title="Dán ảnh từ bộ nhớ tạm" aria-label="Dán ảnh từ bộ nhớ tạm"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12v13H6zM9 4h6v4H9zM12 11v5m-2-2 2 2 2-2"/></svg><span class="action-copy"><b>Dán</b><small>Ảnh từ bộ nhớ tạm</small></span></button>
+    <button id="hideAll" title="Ẩn tất cả ảnh tham chiếu" aria-label="Ẩn tất cả ảnh tham chiếu"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path id="hideAllGlyph" d="M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Z"/></svg><span class="action-copy"><b id="hideAllLabel">Ẩn tất cả</b><small id="hideAllDescription">Tạm ẩn trên khung nhìn</small></span></button>
   </nav>
   <main id="items" aria-live="polite"></main>
   <footer>
@@ -31,9 +31,11 @@
       <label for="opacity">Mức hiển thị <output id="opacityValue">100%</output></label>
       <input id="opacity" type="range" min="10" max="100" value="100">
     </div>
-    <div id="emptyHint">Thả ảnh JPG hoặc PNG vào đây</div>
+    <div id="emptyHint">Thả file ảnh hoặc kéo ảnh từ Pinterest / web vào đây</div>
+    <div id="importStatus" role="status" class="import-status hidden"></div>
     <div id="message" role="status" class="message hidden"></div>
   </footer>
+  <script src="import.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

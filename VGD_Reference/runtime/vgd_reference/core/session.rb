@@ -60,10 +60,14 @@ module VGD
         @current_tool = tool
       end
 
-      def add_reference(path, source_type: :file, allow_bitmap: false)
+      def add_reference(path, source_type: :file, allow_bitmap: false, display_name: nil, image_rep: nil)
         setup_for_model
         return nil unless @model && @store
-        image_rep, width_px, height_px = ImageLoader.load(path, allow_bitmap: allow_bitmap)
+        if image_rep
+          width_px, height_px = image_rep.width.to_i, image_rep.height.to_i
+        else
+          image_rep, width_px, height_px = ImageLoader.load(path, allow_bitmap: allow_bitmap)
+        end
         view = @model.active_view
         viewport_width, viewport_height = ScreenCoordinates.viewport_size(view)
         width = viewport_width * DEFAULT_FRAME_RATIO
@@ -77,7 +81,7 @@ module VGD
         y = (viewport_height - height) / 2.0
         item = ReferenceItem.new(
           id: @store.next_id, source_type: source_type,
-          source_path: File.expand_path(path), image_width: width_px,
+          source_path: File.expand_path(path), display_name: display_name, image_width: width_px,
           image_height: height_px, x: x, y: y, width: width,
           height: height, z_index: (@store.items.map(&:z_index).max || 0) + 1
         )
@@ -86,7 +90,7 @@ module VGD
         if overlay_active? && TextureCache.load(item, view, image_rep).nil?
           @store.remove(item.id)
           TextureCache.release_item(item)
-          TempFiles.release(item.source_path) if %i[clipboard drop].include?(item.source_type)
+          TempFiles.release(item.source_path)
           show_error('Không thể tải ảnh tham chiếu.')
           Manager.refresh if defined?(Manager)
           return nil
@@ -102,9 +106,10 @@ module VGD
       end
 
       def add_from_picker
-        path = UI.openpanel('Chọn ảnh tham chiếu', '', 'Ảnh JPG và PNG|*.jpg;*.jpeg;*.png||')
+        filter = 'Các định dạng ảnh|' + FILE_EXTENSIONS.map { |extension| '*' + extension }.join(';') + '|Tất cả file|*.*||'
+        path = UI.openpanel('Chọn ảnh tham chiếu', '', filter)
         return nil unless path
-        add_reference(path)
+        ImageImport.add_file(path)
       rescue StandardError => error
         ImageLoader.log_error('Image picker failed', error)
         show_error('Không thể mở hộp thoại chọn ảnh.')
@@ -128,13 +133,15 @@ module VGD
         nil
       end
 
-      def drop_start(token, name, size, chunks)
-        ext = File.extname(name.to_s).downcase
-        raise ArgumentError, 'Chỉ hỗ trợ ảnh JPG và PNG.' unless FILE_EXTENSIONS.include?(ext)
+      def drop_start(token, name, size, chunks, mime = nil)
+        raise ArgumentError, 'Mã truyền ảnh không hợp lệ.' unless token.to_s.match?(/\Adrop-[a-zA-Z0-9-]{1,90}\z/)
         total = size.to_i
-        raise ArgumentError, 'Ảnh phải có dung lượng không quá 20 MiB.' if total <= 0 || total > 20 * 1024 * 1024
+        raise ArgumentError, 'Ảnh phải có dung lượng không quá 20 MiB.' unless total.between?(1, MAX_IMAGE_BYTES)
+        count = chunks.to_i
+        raise ArgumentError, 'Số gói dữ liệu ảnh không hợp lệ.' unless count == (total + TRANSFER_CHUNK_BYTES - 1) / TRANSFER_CHUNK_BYTES
         @drop_buffers ||= {}
-        @drop_buffers[token.to_s] = { name: File.basename(name.to_s), size: total, chunks: chunks.to_i, data: ''.b }
+        raise ArgumentError, 'Đang nhận nhiều ảnh. Hãy chờ lượt hiện tại xong.' if @drop_buffers.size >= 8 || @drop_buffers.key?(token.to_s)
+        @drop_buffers[token.to_s] = { name: File.basename(name.to_s[0, 250]), size: total, chunks: count, next: 0, mime: mime.to_s, data: ''.b }
         UI.start_timer(60, false) { @drop_buffers.delete(token.to_s) if @drop_buffers }
         true
       rescue StandardError => error
@@ -145,13 +152,14 @@ module VGD
 
       def drop_chunk(token, index, encoded)
         entry = @drop_buffers && @drop_buffers[token.to_s]
-        return false unless entry && index.to_i >= 0 && index.to_i < entry[:chunks]
-        entry[:data] << Base64.decode64(encoded.to_s)
-        if entry[:data].bytesize > entry[:size]
-          @drop_buffers.delete(token.to_s)
-          show_error('Không thể tải ảnh được thả vào.')
-          return false
-        end
+        return false unless entry
+        raise ArgumentError, 'Gói dữ liệu ảnh sai thứ tự.' unless Integer(index) == entry[:next] && entry[:next] < entry[:chunks]
+        raise ArgumentError, 'Gói dữ liệu ảnh quá lớn.' if encoded.to_s.bytesize > TRANSFER_CHUNK_BYTES * 4 / 3 + 8
+        bytes = Base64.strict_decode64(encoded.to_s)
+        expected = [TRANSFER_CHUNK_BYTES, entry[:size] - entry[:data].bytesize].min
+        raise ArgumentError, 'Gói dữ liệu ảnh thiếu dung lượng.' unless bytes.bytesize == expected
+        entry[:data] << bytes
+        entry[:next] += 1
         true
       rescue StandardError => error
         @drop_buffers.delete(token.to_s) if @drop_buffers
@@ -162,11 +170,8 @@ module VGD
 
       def drop_finish(token)
         entry = @drop_buffers && @drop_buffers.delete(token.to_s)
-        return false unless entry && entry[:data].bytesize == entry[:size]
-        path = TempFiles.write_bytes(entry[:name], entry[:data], File.extname(entry[:name]).downcase)
-        item = add_reference(path, source_type: :drop)
-        TempFiles.release(path) unless item
-        !!item
+        return false unless entry && entry[:data].bytesize == entry[:size] && entry[:next] == entry[:chunks]
+        ImageImport.add_bytes(entry[:name], entry[:data], entry[:mime])
       rescue StandardError => error
         ImageLoader.log_error('Image drop failed', error)
         show_error('Không thể tải ảnh được thả vào.')
@@ -183,6 +188,10 @@ module VGD
         enter_edit(item.id)
         Manager.refresh if defined?(Manager)
         true
+      end
+
+      def cancel_drop(token)
+        @drop_buffers.delete(token.to_s) if @drop_buffers
       end
 
       def enter_edit(id)
@@ -269,7 +278,7 @@ module VGD
         item = @store && @store.remove(id)
         return false unless item
         TextureCache.release_item(item)
-        TempFiles.release(item.source_path) if %i[clipboard drop].include?(item.source_type)
+        TempFiles.release(item.source_path)
         exit_edit if @current_tool && @current_tool.item_id == item.id
         redraw
         Manager.refresh if defined?(Manager)
@@ -375,10 +384,11 @@ module VGD
       end
 
       def clear_store
+        ImageImport.cancel_all if defined?(ImageImport)
         removed = @store ? @store.clear : []
         removed.each do |item|
           TextureCache.release_item(item)
-          TempFiles.release(item.source_path) if %i[clipboard drop].include?(item.source_type)
+          TempFiles.release(item.source_path)
         end
         @store = ReferenceStore.new
         @current_tool = nil

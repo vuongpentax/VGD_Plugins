@@ -1,17 +1,30 @@
 # VGD Reference — handoff
 
-Current source version: `1.0.0-beta.6`. Runtime source is `runtime/`; packaged files are generated with `dev/package.cjs`.
+Current source version: `1.0.0-beta.7`. Runtime source is `runtime/`; packaged files are generated with `dev/package.cjs`.
 
 ## Architecture
 
 - `core/`: session state, reference items, and store.
 - `viewport/`: overlay drawing, cached textures, coordinate adapter, and hit testing.
 - `tools/`: edit state machine and crop controller.
-- `import/`: image validation, Windows clipboard reader, and session temp files.
+- `import/`: image validation, Windows clipboard reader, session temp files, public web downloads, and browser/WIC conversion queue.
 - `ui/`: compact HtmlDialog manager; Ruby state remains the source of truth.
 - `observers/`: per-model overlay lifecycle.
 
-No model entities or attribute dictionaries are used. Source image paths are read only, except clipboard and dropped image bytes which are written to a private temp directory and removed when their item/model/session ends.
+No model entities or attribute dictionaries are used. Original files are read only. Clipboard, dropped/web bytes and converted PNGs are privately owned temp files removed when their item/model/session ends. TempFiles.release only deletes tracked owned files, including normalized :file and :web sources.
+
+## Beta.7 — browser image drop and formats
+
+- `ui/web/import.js` reads File/HTML/URI/plain-text drop payloads synchronously. It prefers actual nonempty image files, then image src/srcset/lazy attributes, then public page/image links. Zero-byte browser files and internet shortcuts fall through to URL handling. Pinterest resized URLs also try an originals variant, retaining the dragged URL as fallback.
+- Input bytes travel in 192 KiB chunks with a Ruby acknowledgment before each next chunk. Both raw and converted transfers validate size, sequence and count. Limits: 20 MiB source, 32 million decoded pixels, 64 MiB converted PNG; up to 24 waiting jobs and eight URL candidates.
+- `ImageImport` schedules one job at a time on a UI timer. Native ImageRep decoding is attempted first. Unsupported formats go through HtmlDialog Image/canvas decoding; Windows WIC is the fallback. TIFF/TGA and other native formats outside JPG/JPEG/PNG/BMP are normalized to PNG so manager thumbnails and texture reloads use a readable source.
+- Web downloads and the hidden Windows converter run on worker threads; they never call SketchUp/model/HtmlDialog APIs. Worker results return through Queue to the main timer. Jobs capture model identity and are canceled when the model changes or manager closes; owned intermediates are released after worker completion.
+- `WebImages` downloads public HTTP(S) URLs, follows bounded redirects, parses Open Graph/Twitter metadata on public pages, validates and pins DNS destinations, checks TLS certificates, and bounds response bytes/time. It does not use browser cookies or access logged-in pages. Direct image drags usually carry a CDN URL or file and do not need Pinterest page parsing.
+- Standard browser formats include WebP, GIF, AVIF, SVG, ICO; native/WIC handle other installed codecs. HEIC/HEIF require a suitable Windows codec. The file picker offers common image extensions and All files; decoder availability decides unknown formats. Animated images become a static frame; proprietary PSD/RAW support is not promised.
+- `ReferenceItem.display_name` keeps original file/alt names even when the source becomes a temp PNG. Existing numeric Array UVs, edit tools, opacity, crop and theme preferences remain in place.
+- Main action buttons show icons with title/ARIA labels below 420 px, and icon + name + short description at wider sizes. Hide/show updates the glyph and copy without removing the SVG.
+- Source syntax compilation covers 24 Ruby and two JavaScript runtime files plus the PowerShell converter. No new feature tests or native browser drop checks were run. Historical beta.6 UI assertions do not cover the beta.7 action markup. Archive verification compares every packaged file to source; it is not native runtime evidence.
+- Install beta.7 RBZ and restart for the full dependency graph. `dev/apply_render_fix.rb` is the earlier UV-only reload helper and is not a beta.7 upgrade procedure.
 
 ## Spike status
 
@@ -31,8 +44,8 @@ No model entities or attribute dictionaries are used. Source image paths are rea
 - New images begin locked and passive. Selecting one in the manager temporarily unlocks it for editing; exiting the tool restores its prior locked state.
 - Crop controls adjust the four crop edges. The frame is refit to the crop aspect ratio on commit.
 - On Escape, Edit returns to SketchUp's native tool; Undo/reselect cancels only an in-progress drag or crop and leaves Edit in a clean idle state.
-- The UI's Explorer drop uses the HtmlDialog browser File API and chunks image bytes to Ruby. Verify on the exact Chromium versions shipped with supported SketchUp releases.
-- Dropped images are capped at 20 MiB to keep HtmlDialog memory and callback traffic bounded.
+- The UI's browser/Explorer drop uses HtmlDialog File/HTML/URI payloads; decoding availability depends on the Chromium and Windows codecs shipped/installed on the machine. Native beta.7 drop behavior remains unverified.
+- Input images are capped at 20 MiB and 32 million pixels to bound HtmlDialog memory and callback traffic; converted PNGs can be up to 64 MiB.
 - RMB quick move remains disabled until it passes the context-menu prototype in SketchUp.
 - The UV representation bug was reproduced in a live native renderer, not established by the mock UI tests. The regression fixture enforces numeric UV arrays and full/cropped UV orientation; it cannot validate GPU rendering on other SketchUp builds or hardware.
 - `View#write_image` omits Ruby overlays on the tested setup. The diagnostic exporter checks a magenta marker and reports an omitted overlay as inconclusive. Use a real screenshot for visual evidence.

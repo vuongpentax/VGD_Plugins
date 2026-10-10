@@ -1,7 +1,7 @@
 const fs=require('fs'),path=require('path'),crypto=require('crypto');
 const {resolve}=require('./dependencies.cjs'),JSZip=require(resolve('jszip'));
 require('./build_icons.cjs');
-const archiveDate=new Date('2026-10-10T00:00:00Z');
+const archiveDate=new Date('2026-10-11T00:00:00Z');
 async function add(zip,directory,prefix=''){
   for(const entry of fs.readdirSync(directory,{withFileTypes:true}).sort((a,b)=>a.name.localeCompare(b.name))){
     if(entry.name==='node_modules')continue;
@@ -37,7 +37,7 @@ async function add(zip,directory,prefix=''){
   const minimum=Number(fs.readFileSync(path.join(runtime,'vgd_reference/core/constants.rb'),'utf8').match(/MIN_SKETCHUP_VERSION = (\d+)/)[1]);
   const info={version,minimum_sketchup_major:minimum,sketchup_2022_supported:false,runtime_files:names.length,source_files:sourceNames.length,
     artifacts:[{filename,bytes:bytes.length,sha256:crypto.createHash('sha256').update(bytes).digest('hex')},{filename:sourceFilename,bytes:sourceBytes.length,sha256:crypto.createHash('sha256').update(sourceBytes).digest('hex')}],
-    verification:{archive_bytes_match_source:true,svg_themes_and_sizes:'Edge headless',manager_themes_and_callbacks:'Edge headless',ruby_fixtures:'Ruby 3.2 WASM',native_su2022:'not run',native_beta6_icons:'not run',native_image_rendering:'user confirmed SU24 beta.5 UV fix'}};
+    verification:{archive_bytes_match_source:true,runtime_syntax:'Ruby 3.2 WASM / Node syntax compilation',current_feature_tests:'not run',native_browser_drop:'not run',native_su2022:'not run',native_image_rendering:'user confirmed SU24 beta.5 UV fix',previous_beta6_icon_and_manager_checks:'Edge headless and Ruby fixtures'}};
   fs.writeFileSync(path.join(root,`BUILD_INFO_v${version}.json`),JSON.stringify(info,null,2)+'\n');
   console.log(`${filename}: ${names.length} runtime files, ${bytes.length} bytes; archive content verified.`);
   console.log(`${sourceFilename}: ${sourceNames.length} source files, ${sourceBytes.length} bytes; archive content verified.`);

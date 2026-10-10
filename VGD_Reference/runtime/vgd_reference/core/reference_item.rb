@@ -2,7 +2,7 @@ module VGD
   module Reference
     class ReferenceItem
       ATTRIBUTES = %i[
-        id source_type source_path image_width image_height x y width height
+        id source_type source_path display_name image_width image_height x y width height
         crop_u0 crop_v0 crop_u1 crop_v1 view_u0 view_v0 view_u1 view_v1
         opacity visible locked z_index
       ].freeze
@@ -12,10 +12,11 @@ module VGD
       attr_accessor :opacity_preview
 
       def initialize(id:, source_type:, source_path:, image_width:, image_height:,
-                     x:, y:, width:, height:, z_index:)
+                     x:, y:, width:, height:, z_index:, display_name: nil)
         @id = id.to_s
         @source_type = source_type.to_sym
         @source_path = source_path.to_s
+        @display_name = display_name.to_s.empty? ? File.basename(@source_path) : display_name.to_s
         @image_width = image_width.to_i
         @image_height = image_height.to_i
         @x = x.to_f

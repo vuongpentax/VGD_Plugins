@@ -54,7 +54,11 @@ header { height: 46px; flex: none; display: flex; align-items: center; justify-c
 .appearance-panel select { width: 100%; margin-top: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); color: var(--ink); font: inherit; }
 .appearance-panel p { margin: 8px 0 0; font-size: 11px; line-height: 1.5; color: var(--muted); }
 .actions { display: flex; gap: 6px; padding: 9px 10px; border-bottom: 1px solid var(--line); background: var(--bg); }
-.actions button { flex: 1; padding: 7px 5px; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 3px; }
+.actions button { flex: 1; min-width: 0; padding: 9px 8px; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.action-copy { display: block; min-width: 0; text-align: left; }
+.action-copy b { display: block; font-size: 12px; line-height: 1.3; }
+.action-copy small { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; line-height: 1.35; font-weight: 400; }
+@media (max-width: 419px) { .actions button { padding: 8px 5px; } .action-copy { display: none; } }
 .actions .primary { border-color: var(--accent); background: var(--accent-soft); font-weight: 600; }
 .actions .primary:hover { background: var(--hover); }
 .add-icon { width: 14px; height: 14px; }
@@ -83,3 +87,5 @@ footer { flex: none; border-top: 1px solid var(--line); padding: 9px 11px; backg
 input[type=range] { width: 100%; height: 18px; margin: 6px 0 0; accent-color: var(--accent); }
 #emptyHint { margin-top: 7px; color: var(--muted); text-align: center; font-size: 10px; }
 .message { padding-top: 6px; color: var(--danger); font-size: 11px; }
+.import-status { padding-top: 6px; color: var(--muted); font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+.drop-target::after { content: "Thả để thêm ảnh tham chiếu"; position: fixed; inset: 6px; z-index: 20; display: grid; place-items: center; pointer-events: none; border: 2px dashed var(--accent); border-radius: 10px; background: var(--panel); color: var(--ink); font-size: 14px; }

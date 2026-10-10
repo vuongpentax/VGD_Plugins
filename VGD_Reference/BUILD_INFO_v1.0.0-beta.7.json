@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0-beta.7",
+  "minimum_sketchup_major": 23,
+  "sketchup_2022_supported": false,
+  "runtime_files": 36,
+  "source_files": 61,
+  "artifacts": [
+    {
+      "filename": "VGD_Reference_v1.0.0-beta.7.rbz",
+      "bytes": 42097,
+      "sha256": "b8530216dd7a04d9719b7d2bd3c5f740b6a076fcaa9832eac950e4acab87fa1f"
+    },
+    {
+      "filename": "VGD_Reference_v1.0.0-beta.7_source.zip",
+      "bytes": 83559,
+      "sha256": "e648206f6df966844284dfc4b9cc75de538074c5238f3e1b363ebd31f4d77ee4"
+    }
+  ],
+  "verification": {
+    "archive_bytes_match_source": true,
+    "runtime_syntax": "Ruby 3.2 WASM / Node syntax compilation",
+    "current_feature_tests": "not run",
+    "native_browser_drop": "not run",
+    "native_su2022": "not run",
+    "native_image_rendering": "user confirmed SU24 beta.5 UV fix",
+    "previous_beta6_icon_and_manager_checks": "Edge headless and Ruby fixtures"
+  }
+}
