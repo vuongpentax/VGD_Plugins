@@ -57,7 +57,43 @@ var VGD={
   if(r.warnings&&r.warnings.length)t+='\n'+r.warnings.join('\n');
   this.log(t);
  },
- /* ---- Quét / áp ---- */
+ manualDim:function(){
+  if(this.busy)return;this.onBusy(true);this.log('Đang bật Dim thủ công…');
+  sketchup.manual_dim(JSON.stringify({settings:this.get()}));
+ },
+ setBoundary:function(){
+  if(this.busy)return;this.onBusy(true);this.log('Chọn hai góc đối diện để đặt Boundary.');
+  sketchup.set_boundary();
+ },
+ setDetail:function(){
+  if(this.busy)return;var name=this.el('region.name').value.trim();
+  if(!name){this.log('Nhập tên Detail Region trước khi tạo.',true);return}
+  this.onBusy(true);this.log('Chọn hai góc đối diện trong Boundary.');
+  sketchup.set_detail(JSON.stringify({name:name}));
+ },
+ activateRegion:function(){
+  sketchup.set_region(JSON.stringify({id:this.el('region.active').value}));
+ },
+ deleteRegion:function(){
+  var id=this.el('region.active').value;
+  if(!id){this.log('Chọn Detail Region cần xóa.',true);return}
+  sketchup.delete_region(id);
+ },
+ applyRegions:function(r){
+  if(!r)return;
+  this.el('region.boundary').textContent=r.boundary||'Chưa đặt';
+  var select=this.el('region.active'),current=r.active_detail||'';
+  select.innerHTML='';
+  var base=document.createElement('option');base.value='';base.textContent=r.boundary?'Toàn Boundary':'Chưa có Boundary';select.appendChild(base);
+  (r.details||[]).forEach(function(item){var option=document.createElement('option');option.value=item.id;option.textContent=item.name;select.appendChild(option)});
+  select.value=current;
+  this.el('region.delete').disabled=!current;
+ },
+ onRegions:function(r){this.applyRegions(r);this.log('Đã cập nhật vùng áp dụng.')},
+ onRegionSaved:function(r){this.onBusy(false);this.el('region.name').value='';this.applyRegions(r.state);this.log('Đã lưu '+r.name+'.')},
+ onToolStart:function(r){this.onBusy(true);this.log(r.message)},
+ onManualStatus:function(r){this.onBusy(false);this.log(r.message)},
+ onRegionCancelled:function(){this.onBusy(false);this.log('Đã hủy đặt vùng.')}, /* ---- Quét / áp ---- */
  scan:function(){if(this.busy)return;this.onBusy(true);sketchup.scan(JSON.stringify({opts:this.opts()}))},
  onScan:function(r){
   this.onBusy(false);
@@ -163,7 +199,7 @@ var VGD={
   if(d.anim)this.onAnim(d.anim);
   if(d.smart)this.sdSet(d.smart);
   if(first){if(d.auto&&d.auto.enabled&&d.auto.settings)this.set(d.auto.settings);else if(d.smart_style)this.set(d.smart_style);else this.loadPreset()}
-  if(d.units)this.set({units:d.units});
+  if(d.units)this.set({units:d.units});if(d.regions)this.applyRegions(d.regions);
   this.onBusy(false);this.updateScope();
  },
  onError:function(r){this.onBusy(false);this.log('Lỗi: '+r.message,true)},

@@ -1,10 +1,10 @@
 const fs=require('fs'),path=require('path');
-const deps=process.env.VGD_NODE_MODULES||path.resolve(__dirname,'../../VGD_Scenes/dev/node_modules');
+const deps=process.env.VGD_NODE_MODULES||process.env.VGD_RUBY_WASM_NODE_MODULES||path.resolve(__dirname,'../../VGD_Scenes/dev/node_modules');
 const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js'));
 (async()=>{
   const wasm=await WebAssembly.compile(fs.readFileSync(require.resolve(path.join(deps,'@ruby/3.2-wasm-wasi/dist/ruby+stdlib.wasm'))));
   const {vm}=await DefaultRubyVM(wasm),root=path.resolve(__dirname,'../runtime');
-  const names=['version','defaults','engine','native_style','store','managed','core','presets','autostyle','animation','smartdim','probe','dialog','update_core/manifest','update_core/bootstrap','update_core/client','update_core/installer','update_core/updater','main','reload'];
+  const names=['version','defaults','engine','native_style','store','managed','core','presets','autostyle','animation','smartdim','regions','manual_dim','probe','dialog','update_core/manifest','update_core/bootstrap','update_core/client','update_core/installer','update_core/updater','main','reload'];
   const installerSource=fs.readFileSync(path.join(root,'VGD_Dim/update_core/installer.rb'),'utf8');
   if(!installerSource.includes(':new_pgroup => true')||installerSource.includes(':pgroup => true'))throw Error('Windows updater must use :new_pgroup, not POSIX :pgroup');
   const literal=value=>JSON.stringify(Buffer.from(value,'utf8').toString('base64'))+'.unpack1("m0")';
@@ -13,6 +13,7 @@ const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js')
     console.log('Syntax OK:',file);
   }
   vm.eval('RubyVM::InstructionSequence.compile('+literal(fs.readFileSync(path.join(__dirname,'native_smoke.rb'),'utf8'))+')');
+  vm.eval("require 'securerandom'");
   vm.eval(fs.readFileSync(path.join(__dirname,'test_fixture.rb'),'utf8'));
   for(const name of names.filter(n=>!['main','reload','update_core/installer'].includes(n)))vm.eval(fs.readFileSync(path.join(root,'VGD_Dim',name+'.rb'),'utf8'));
 
@@ -74,7 +75,7 @@ const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js')
     check(UI.toolbars.length==1 && UI.toolbars.first.events==[:add,:add],'Toolbar duplicated')
     VGD::Dim.show_dialog
     dialog=VGD::Dim::Dialog.instance_variable_get(:@dlg)
-    expected=%w[ready scan run rebuild smart_dim save_preset delete_preset set_auto anim_set dim_info text_info native_apply units_apply]
+    expected=%w[ready scan run rebuild smart_dim save_preset delete_preset set_auto anim_set dim_info text_info native_apply units_apply set_boundary set_detail set_region delete_region manual_dim]
     check(dialog.callbacks.keys.sort==expected.sort,'Missing callback')
     VGD::Dim.show_dialog
     check(VGD::Dim::Dialog.instance_variable_get(:@dlg).equal?(dialog) && dialog.fronts==1,'Dialog duplicated')

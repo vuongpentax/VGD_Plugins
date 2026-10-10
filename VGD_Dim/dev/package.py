@@ -15,7 +15,7 @@ if not match:
 version = match.group(1)
 runtime_files = ['vgd_dim.rb'] + ['VGD_Dim/' + name for name in [
     'main.rb', 'defaults.rb', 'reload.rb', 'engine.rb', 'native_style.rb', 'store.rb',
-    'managed.rb', 'core.rb', 'presets.rb', 'autostyle.rb', 'animation.rb', 'smartdim.rb',
+    'managed.rb', 'core.rb', 'presets.rb', 'autostyle.rb', 'animation.rb', 'smartdim.rb', 'regions.rb', 'manual_dim.rb',
     'probe.rb', 'dialog.rb', 'dialog.html', 'dialog.css', 'dialog.js', 'dim.svg',
     'smart_dim.svg', 'version.rb', 'update_core/manifest.rb', 'update_core/bootstrap.rb',
     'update_core/client.rb', 'update_core/installer.rb', 'update_core/updater.rb',
