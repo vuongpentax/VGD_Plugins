@@ -38,12 +38,16 @@ workspace.append(nav,content);d.body.append(workspace);
 const panels={};
 const paths={general:'M4 6h16M4 12h16M4 18h16M8 4v4m8 0V4m-8 10v4m8-4v4',frame:'M5 3.5h14v17H5zM5 8h14M5 16h14',compartments:'M5 3.5h14v17H5zM12 3.5v17',doors:'M5 3.5h14v17H5zM12 3.5v17M9 11v2m6-2v2',drawers:'M5 3.5h14v17H5zM5 9h14M5 14.5h14M9 6v1m6-1v1m-6 5.5v1m6-1v1m-6 5.5v1m6-1v1',description:'M7 3.5h8l4 4v13H5v-17h2m7 0v4h4M8 12h8M8 16h5',library:'M3.5 6h6l2 2h9v11h-17zM3.5 10h17'};
 const navIcon=name=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+paths[name]+'"/></svg>';
-[['general','Tổng thể'],['frame','Thùng tủ'],['compartments','Chia khoang'],['doors','Cánh tủ'],['drawers','Ngăn kéo']].forEach(([id,title],i)=>{
- const b=el('button',{type:'button',class:'menu-button','data-page':id,'aria-controls':'page_'+id,onclick:"selectPage('"+id+"')"},navIcon(id)+'<span>'+title+'</span>');nav.append(b);
+const menuButton=(id,title,description)=>{
+ const tooltip=title+' — '+description;
+ return el('button',{type:'button',class:'menu-button','data-page':id,'aria-controls':'page_'+id,'aria-label':tooltip,title:tooltip,onclick:"selectPage('"+id+"')"},navIcon(id)+'<span class="menu-copy"><span class="menu-label">'+title+'</span><small class="menu-description">'+description+'</small></span>');
+};
+[['general','Tổng thể','Kích thước, preset và ghép module'],['frame','Thùng tủ','Hông, nóc, đáy, hậu và chân'],['compartments','Chia khoang','Vách, đợt và chia tầng'],['doors','Cánh tủ','Cánh, kính, pano và móc tay'],['drawers','Ngăn kéo','Bố trí, khung và mặt hộc']].forEach(([id,title,description])=>{
+ nav.append(menuButton(id,title,description));
  const p=el('section',{id:'page_'+id,class:'menu-page',hidden:''},'<h2>'+title+'</h2>');panels[id]=p;content.append(p);
 });
 nav.append(el('div',{class:'menu-note'},'DỰNG HÌNH<br><span>Đơn vị: mm</span>'));
-nav.insertBefore(el('button',{type:'button',class:'menu-button','data-page':'description','aria-controls':'page_description',onclick:"selectPage('description')"},navIcon('description')+'<span>Dựng từ mô tả</span>'),nav.lastChild);
+nav.insertBefore(menuButton('description','Dựng từ mô tả','Tạo tủ từ cấu hình JSON'),nav.lastChild);
 const description=el('section',{id:'page_description',class:'menu-page',hidden:''},`<h2>Dựng từ mô tả</h2>
 <p>Gửi ảnh và rộng × sâu × cao mong muốn cho ChatGPT cùng hướng dẫn bên dưới. Dán khối JSON trả về, không dán phần giải thích. Không cần API key.</p>
 <p>Beta 2 dùng cấu tạo hiện có. Các module dùng chung thiết lập cánh, đợt và hộc; chưa hỗ trợ mỗi module một cấu tạo khác nhau.</p>
@@ -55,7 +59,7 @@ const description=el('section',{id:'page_description',class:'menu-page',hidden:'
 <button type="button" id="btn_description_leave" class="btn-secondary" onclick="returnToSelectedCabinet()" hidden>Trở lại tủ đang chọn</button>
 <p>Nhập chỉ đổi bản nháp. Không tự dựng, không cập nhật tủ đang chọn, không tự lưu mẫu. Kiểm tra các giá trị ước lượng trước khi bấm Đặt tủ mới.</p>`);
 content.append(description);
-nav.insertBefore(el('button',{type:'button',class:'menu-button','data-page':'library','aria-controls':'page_library',onclick:"selectPage('library')"},navIcon('library')+'<span>Thư viện</span>'),nav.lastChild);
+nav.insertBefore(menuButton('library','Thư viện','Lưu và đặt lại mẫu tủ'),nav.lastChild);
 content.append(el('section',{id:'page_library',class:'menu-page',hidden:''},`<h2>Thư viện tủ</h2>
 <p>Lưu tủ đang chọn, gồm cả các chi tiết đã sửa thủ công. Mẫu được giữ trên máy để chọn và đặt lại sau.</p>
 <section class="settings-section"><h3>Lưu tủ đang chọn</h3>
