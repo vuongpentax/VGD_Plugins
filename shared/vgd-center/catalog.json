@@ -6,16 +6,16 @@
       "id": "dim",
       "name": "VGD Dim",
       "extension_name": "VGD Dim",
-      "version": "3.3.0-beta.6",
+      "version": "3.3.0-beta.7",
       "release_channel": "beta",
       "description": "Đo Dim thủ công và Smart Dim trong Boundary, có vùng chi tiết riêng.",
       "icon": "dim",
       "minimum_sketchup": "22.0.0",
       "download": {
-        "filename": "VGD_Dim_v3.3.0-beta.6.rbz",
-        "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/VGD_Dim_v3.3.0-beta.6.rbz",
-        "size": 52453,
-        "sha256": "aae338e85f02b65b2ff9d464b927bb1035b5f522c24c77486effe3ef9065ba5d"
+        "filename": "VGD_Dim_v3.3.0-beta.7.rbz",
+        "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/VGD_Dim_v3.3.0-beta.7.rbz",
+        "size": 52452,
+        "sha256": "c59c7c686d40cadc6b08540244075fe4f6dc0a3b29a0cdea299a6fc08fa7ce6a"
       },
       "allowed_paths": [
         "vgd_dim.rb",
@@ -46,16 +46,16 @@
       "id": "library",
       "name": "VGD Library",
       "extension_name": "VGD Library",
-      "version": "1.1.2-beta.4",
+      "version": "1.1.2-beta.5",
       "release_channel": "beta",
       "description": "Tìm kiếm và quản lý thư viện vật liệu, model VGD.",
       "icon": "library",
       "minimum_sketchup": "22.0.0",
       "download": {
-        "filename": "VGD_Library_v1.1.2-beta.4.rbz",
-        "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/VGD_Library_v1.1.2-beta.4.rbz",
-        "size": 61649,
-        "sha256": "d82f2c682aeca0e50caa44e70ee14b5320b17eb674a848548ae0b5146b798506"
+        "filename": "VGD_Library_v1.1.2-beta.5.rbz",
+        "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/VGD_Library_v1.1.2-beta.5.rbz",
+        "size": 61924,
+        "sha256": "34753411595be3fb4b8092a29e689513b29fb0a937fb5f4016dc84b446f44090"
       },
       "allowed_paths": [
         "vgd_library.rb",
