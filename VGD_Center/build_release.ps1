@@ -1,5 +1,5 @@
-param(
-  [string]$Version = '1.0.9'
+﻿param(
+  [string]$Version = '1.0.10'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,6 +14,7 @@ $rootLoader = Join-Path $repoRoot 'VGD_Center.rb'
 $supportFiles = @(
   @{ Source = (Join-Path $PSScriptRoot 'main.rb'); Entry = 'VGD_Center/main.rb' },
   @{ Source = (Join-Path $PSScriptRoot 'dialog.html'); Entry = 'VGD_Center/dialog.html' },
+  @{ Source = (Join-Path $PSScriptRoot 'assets\donate_qr.svg'); Entry = 'VGD_Center/assets/donate_qr.svg' },
   @{ Source = (Join-Path $PSScriptRoot 'icon.svg'); Entry = 'VGD_Center/icon.svg' },
   @{ Source = $catalogPath; Entry = 'VGD_Center/catalog.json' },
   @{ Source = $centerManifestPath; Entry = 'VGD_Center/center-update.json' }
@@ -56,13 +57,13 @@ if (Test-Path -LiteralPath $hashPath) { throw "Đã tồn tại, không ghi đè
 if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot "RELEASE_NOTES_v$Version.md"))) { throw "Thiếu release notes cho $Version." }
 
 $localPackages = @{
-  dim = 'VGD_Dim/outputs/VGD_Dim_v3.3.0-beta.5.rbz'
-  cabinet = 'VGD_Cabinet/outputs/vgd_cabinet_modeling/VGD_Cabinet_v4.5.0-beta.4.rbz'
-  library = 'VGD_Library/VGD_Library_v1.1.2-beta.4.rbz'
-  image_importer = 'VGD_Image_Importer/VGD_Image_Importer_v1.1.0-beta.5.rbz'
-  scenes = 'VGD_Scenes/VGD_Scenes_v1.5.3-beta.3.rbz'
-  bim_lite = 'VGD_BIM/VGD_BIM_Lite_v0.1.4-alpha.rbz'
-  reference = 'VGD_Reference/VGD_Reference_v1.0.0-beta.6.rbz'
+  dim = 'shared/vgd-center/packages/VGD_Dim_v3.3.0-beta.7.rbz'
+  cabinet = 'shared/vgd-center/packages/VGD_Cabinet_v4.5.0-beta.4.rbz'
+  library = 'shared/vgd-center/packages/VGD_Library_v1.1.2-beta.5.rbz'
+  image_importer = 'shared/vgd-center/packages/VGD_Image_Importer_v1.1.0-beta.5.rbz'
+  scenes = 'shared/vgd-center/packages/VGD_Scenes_v1.5.3-beta.3.rbz'
+  bim_lite = 'shared/vgd-center/packages/VGD_BIM_Lite_v0.1.4-alpha.rbz'
+  reference = 'shared/vgd-center/packages/VGD_Reference_v1.0.0-beta.6.rbz'
 }
 foreach ($product in $catalog.products) {
   if ($product.version -notmatch '^\d+\.\d+\.\d+(?:-(?:alpha|beta)(?:\.\d+)?)?$') { throw "Catalog chứa phiên bản không hỗ trợ: $($product.id)" }
@@ -117,3 +118,4 @@ Set-Content -LiteralPath $hashPath -Value "$digest  VGD_Center_v$Version.rbz" -E
 Write-Output "Created: $rbzPath"
 Write-Output "Created: $sourcePath"
 Write-Output "SHA-256: $digest"
+
