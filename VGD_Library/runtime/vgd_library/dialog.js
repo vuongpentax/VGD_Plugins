@@ -3,6 +3,11 @@
   const $ = id => document.getElementById(id);
   const state = { items: [], roots: [], onlineRoots: [], favorites: new Set(), materials: [], view: 'library', root: '', page: 0, selected: null, scanning: false, current: null, modelId: null, thumbnailRequested: new Set() };
   const PAGE_SIZE = 60;
+  document.querySelectorAll(".nav[data-view], .sidebar>.subtle, #addFolder").forEach(button => {
+    const label = button.querySelector("span")?.textContent.trim() || button.textContent.replace(/\s+/g, " ").trim();
+    button.setAttribute("aria-label", label);
+    button.setAttribute("title", label);
+  });
   let renderTimer;
   function setTheme(theme) {
     const dark = theme === 'dark';

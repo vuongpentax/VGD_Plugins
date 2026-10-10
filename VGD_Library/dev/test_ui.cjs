@@ -46,6 +46,10 @@ function assert(ok, message) { if (!ok) throw Error(message); }
     const htmlResponse = fs.existsSync(actualResponse) ? fs.readFileSync(actualResponse,'utf8') : '<!DOCTYPE html><html><body>'+'<div>Drive folder</div>'.repeat(50000)+'</body></html>';
     for (const viewport of [{width:1120,height:760},{width:720,height:600}]) {
       await page.setViewportSize(viewport);
+      const nav = await page.locator("[data-view=library]").evaluate(el => ({ fontSize:getComputedStyle(el).fontSize, title:el.title, label:el.getAttribute("aria-label"), icon:!!el.querySelector("svg.ui-icon") }));
+      assert(nav.title === "Thư viện vật liệu" && nav.label === nav.title && nav.icon, "Sidebar navigation needs accessible icon labels");
+      assert(viewport.width <= 900 ? nav.fontSize === "0px" : nav.fontSize !== "0px", "Sidebar navigation did not switch between text and icon layouts");
+      if (viewport.width <= 900) assert(await page.locator(".sidebar>.subtle").evaluateAll(buttons => buttons.every(button => !!button.title && getComputedStyle(button, "::before").content !== "none")), "Compact sidebar actions need labeled icons");
       for (const message of ['Nguồn online: unexpected token at '+htmlResponse, 'Thông báo dài '.repeat(60000)]) {
         await receive('append',[],true,[message]);
         const layout = await page.evaluate(() => ({ footer:document.querySelector('footer').getBoundingClientRect().height, workspace:document.querySelector('.workspace').getBoundingClientRect().height, text:document.querySelector('#status').textContent, title:document.querySelector('#status').title, scrollWidth:document.documentElement.scrollWidth, width:innerWidth }));

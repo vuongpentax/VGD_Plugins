@@ -10,3 +10,36 @@ button,input,select{color:var(--vgd-text)}button{background:var(--vgd-surface);b
 .theme-toggle{margin-left:0;display:flex;align-items:center;justify-content:center;gap:7px;min-width:36px;min-height:32px;padding:5px 9px;border:1px solid var(--vgd-border);border-radius:4px;background:var(--vgd-surface);font-size:10px}.theme-toggle svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;color:var(--vgd-accent-strong)}
 .ui-icon{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}.nav .ui-icon{color:var(--vgd-muted)}.nav.active .ui-icon{color:var(--vgd-accent-strong)}.main-heading button,.pagination button{display:inline-flex;align-items:center;gap:6px}.search .ui-icon{margin-left:10px;color:var(--vgd-muted)}.empty-icon{width:46px;height:46px}.pagination .ui-icon{width:14px;height:14px}.tool-card h2{color:var(--vgd-text)}.audit-result{background:var(--vgd-tile)}
 input[type=checkbox],input[type=range]{accent-color:var(--vgd-accent)}
+
+/* Responsive navigation: retain the inline SVG icons and expose labels on hover/focus. */
+@media(max-width:900px){
+  .workspace{grid-template-columns:76px minmax(210px,1fr) 230px}
+  .sidebar{padding-left:7px;padding-right:7px}
+  .sidebar>.eyebrow,.sidebar .nav>small,.sidebar-bottom,.divider,.section-label p{display:none}
+  .nav{justify-content:center;gap:0;padding:6px;font-size:0;min-height:40px}
+  .nav .ui-icon{width:19px;height:19px}
+  .section-label{justify-content:center;margin:10px 0}
+  .sidebar>.subtle{font-size:0;padding:4px;min-height:32px;justify-content:center}
+  .sidebar>.subtle::before{font-size:17px;line-height:1}
+  #connectDrive::before{content:"▣"}
+  #openDrive::before{content:"↗"}
+  #addOnline::before{content:"+"}
+  #importCatalog::before{content:"↓"}
+  .sidebar>[data-action="save_model"]::before{content:"▤"}
+  .sidebar>[data-action="check_updates"]::before{content:"↻"}
+  #folders{min-height:36px}
+  .folder-row{gap:0}
+  .folder-row>button:first-child{font-size:0;justify-content:center;text-align:center;padding:4px}
+  .folder-row>button:first-child::before{content:"▰";font-size:14px}
+  .folder-row .remove{padding:2px 3px}
+}
+@media(max-width:760px){
+  .workspace{grid-template-columns:64px minmax(180px,1fr) 220px}
+  .inspector{padding:18px 10px}
+  header{gap:12px;padding:0 12px}
+  .theme-toggle{padding:5px;min-width:32px}
+  #themeLabel{display:none}
+  .brand{gap:6px}
+  .brand-sub{letter-spacing:1px}
+  h1{font-size:20px}
+}
