@@ -9,7 +9,7 @@
       color-scheme: dark;
       --bg:#121212; --surface:#1e1e1e; --elevated:#2b2b2b; --tile:#242220;
       --border:#3a3a3a; --text:#e2e8f0; --muted:#a7b0bd;
-      --accent:#b48963; --accent-strong:#c8a98a; --tint:#372c24;
+      --accent:#b48963; --accent-strong:#c8a98a; --donate-accent:#a67c58; --tint:#372c24;
       --danger:#e79c91; --success:#a8c69d; --on-accent:#121212;
       --logo-face:#1e1e1e; --logo-outline:#c8a98a;
       --success-soft:rgba(168,198,157,.14); --success-border:rgba(168,198,157,.5);
@@ -28,7 +28,7 @@
       --shadow:0 18px 48px rgba(37,31,25,.11);
     }
     *{box-sizing:border-box}
-    body{margin:0;min-width:700px;min-height:100vh;background:var(--bg);color:var(--text);font:13px/1.45 "Segoe UI",Arial,sans-serif}
+    body{margin:0;min-width:360px;min-height:100vh;background:var(--bg);color:var(--text);font:13px/1.45 "Segoe UI",Arial,sans-serif}
     button{font:inherit;color:inherit}
     button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent-strong);outline-offset:2px}
     .app{min-height:100vh;display:grid;grid-template-rows:68px minmax(0,1fr) 34px;background:var(--bg)}
@@ -54,6 +54,17 @@
     .nav .count{display:grid;min-width:19px;height:19px;place-items:center;margin-left:auto;padding:0 5px;border-radius:10px;background:var(--elevated);color:var(--muted);font-size:10px;font-variant-numeric:tabular-nums}
     .nav button[aria-current="page"] .count{background:var(--accent);color:var(--on-accent)}
     .sidebar-spacer{flex:1}
+    .donate-card{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:5px;background:var(--elevated);text-align:center}
+    .donate-title{display:flex;align-items:center;gap:5px;color:var(--donate-accent);font-size:10px;font-weight:700;letter-spacing:.01em}
+    .donate-title svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .donate-qr-button{display:block;padding:0;border:0;border-radius:4px;background:transparent;cursor:zoom-in}
+    .donate-qr{display:block;width:122px;height:122px;border:1px solid var(--donate-accent);border-radius:4px;background:#fff}
+    .donate-lightbox{position:fixed;inset:0;z-index:30;display:none;place-items:center;padding:22px;background:rgba(0,0,0,.72)}
+    .donate-lightbox.open{display:grid}
+    .donate-lightbox-panel{position:relative;width:min(430px,90vw);padding:12px;border:1px solid var(--donate-accent);border-radius:10px;background:var(--surface);box-shadow:var(--shadow)}
+    .donate-lightbox-image{display:block;width:100%;height:auto;border-radius:6px}
+    .donate-lightbox-close{position:absolute;top:18px;right:18px;display:grid;width:32px;height:32px;place-items:center;border:1px solid var(--donate-accent);border-radius:50%;background:var(--surface);color:var(--text);font-size:20px;line-height:1;cursor:pointer}
+    .donate-account{max-width:100%;color:var(--muted);font-size:8px;line-height:1.2;overflow-wrap:anywhere}
     .sketchup-foot{display:flex;align-items:center;gap:7px;padding:0 4px;color:var(--muted);font-size:10px}
     .sketchup-foot svg{width:15px;height:15px;fill:none;stroke:var(--accent-strong);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
     main{min-width:0;min-height:0;overflow:auto;padding:20px 22px 24px}
@@ -175,8 +186,9 @@
     .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
     .dialog-actions[hidden]{display:none}
     @media(max-width:920px){.shell{grid-template-columns:166px minmax(0,1fr)}main{padding:16px}.welcome-grid{grid-template-columns:1fr}.health-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.plugin-row{grid-template-columns:40px minmax(130px,1fr) minmax(145px,1fr) auto}}
-    @media(max-width:740px){.app{grid-template-rows:60px minmax(0,1fr) 32px}.topbar{padding:0 12px}.shell{grid-template-columns:54px minmax(0,1fr)}.sidebar{align-items:center;padding:12px 6px}.nav-caption,.nav span,.sketchup-foot{display:none}.nav{width:100%}.nav button{justify-content:center;padding:0}.nav svg{width:19px;height:19px}.nav .count{position:absolute;transform:translate(15px,-11px);min-width:15px;height:15px;padding:0 3px;font-size:8px}.sidebar-spacer{display:none}.plugin-row{grid-template-columns:38px minmax(0,1fr)}.version-line{grid-column:2/-1}.plugin-row>.plugin-actions{grid-column:2/-1;grid-row:auto;justify-content:flex-start}.catalog-grid,.settings-grid{grid-template-columns:1fr}.search{min-width:150px}.page-head{align-items:center}.page-intro{max-width:400px}}
-    @media(max-width:520px){body{min-width:360px}main{padding:13px}.page-head{align-items:flex-start;flex-direction:column}.health-metrics{gap:5px}.health-metric{padding:7px}.metrics{gap:7px}.metric{padding:9px}.metric-copy span{font-size:9px}.section-head{align-items:flex-start;flex-direction:column}.section-tools{width:100%;justify-content:space-between}.plugin-row{padding:9px}.footer-right{display:none}}
+    @media(max-width:740px){.app{grid-template-rows:60px minmax(0,1fr) 32px}.topbar{padding:0 12px}.shell{grid-template-columns:54px minmax(0,1fr)}.sidebar{align-items:center;padding:12px 6px}.nav-caption,.nav span,.sketchup-foot,.donate-card{display:none}.nav{width:100%}.nav button{justify-content:center;padding:0}.nav svg{width:19px;height:19px}.nav .count{position:absolute;transform:translate(15px,-11px);min-width:15px;height:15px;padding:0 3px;font-size:8px}.sidebar-spacer{display:none}.plugin-row{grid-template-columns:38px minmax(0,1fr)}.version-line{grid-column:2/-1}.plugin-row>.plugin-actions{grid-column:2/-1;grid-row:auto;justify-content:flex-start}.catalog-grid,.settings-grid{grid-template-columns:1fr}.page-head{align-items:center}.page-intro{max-width:400px}.page[data-view="catalog"] .page-head{align-items:stretch}.page[data-view="catalog"] .button-row,.page[data-view="catalog"] .search{width:100%;min-width:0}}
+    @media(max-width:520px){main{padding:13px}.page-head{align-items:flex-start;flex-direction:column}.health-metrics{gap:5px}.health-metric{padding:7px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.metric{padding:9px}.metric-copy span{font-size:9px}.section-head{align-items:flex-start;flex-direction:column}.section-tools{width:100%;justify-content:space-between}.plugin-row{padding:9px}.footer-right{display:none}}
+    @media(max-height:650px){.donate-card{display:none}}
   </style>
 </head>
 <body>
@@ -223,6 +235,11 @@
           <button data-page="settings"><svg><use href="#i-settings"/></svg><span>Cài đặt</span></button>
         </nav>
         <div class="sidebar-spacer"></div>
+        <section class="donate-card" aria-label="Ủng hộ VGD">
+          <div class="donate-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.7c0 5.2-8.8 10.1-8.8 10.1S3.2 13.9 3.2 8.7a4.4 4.4 0 0 1 8.8-.3 4.4 4.4 0 0 1 8.8.3Z"/></svg><span>Ủng hộ VGD</span></div>
+          <button class="donate-qr-button" id="donateQrButton" type="button" aria-label="Phóng lớn mã QR ủng hộ"><img class="donate-qr" src="assets/donate_qr.svg" alt="Mã QR VietinBank nhận ủng hộ cho LE QUOC VUONG"></button>
+          <div class="donate-account">VietinBank · LE QUOC VUONG</div>
+        </section>
         <div class="sketchup-foot"><svg viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/></svg><span id="hostLabel">SketchUp</span></div>
       </aside>
       <main>
@@ -284,6 +301,9 @@
         </section>
       </main>
     </div>
+    <div class="donate-lightbox" id="donateLightbox" role="dialog" aria-modal="true" aria-label="Mã QR ủng hộ VGD">
+      <div class="donate-lightbox-panel"><button class="donate-lightbox-close" id="donateLightboxClose" type="button" aria-label="Đóng">×</button><img class="donate-lightbox-image" src="assets/donate_qr.svg" alt="Mã QR VietinBank nhận ủng hộ cho LE QUOC VUONG"></div>
+    </div>
     <footer class="footer"><div class="footer-left"><i class="status-dot"></i><span id="footerStatus">Đang nạp danh mục phiên bản mới nhất…</span></div><span class="footer-right">SketchUp extension · VGD Center</span></footer>
   </div>
 
@@ -312,6 +332,7 @@
       let activeLanguage = 'vi';
       const originalTextNodes = new WeakMap();
       const englishText = {
+        'Ủng hộ VGD':'Support VGD',
         'Trung tâm plugin SketchUp':'SketchUp Plugin Center','Tổng quan':'Overview','Kho plugin':'Plugin catalog','Cài đặt':'Settings',
         'Quản lý plugin VGD và cập nhật ngay trong SketchUp.':'Manage VGD plugins and updates in SketchUp.',
         'VGD · PLUGIN CENTER':'VGD · PLUGIN CENTER','Chào mừng đến với VGD Center':'Welcome to VGD Center',
@@ -340,13 +361,14 @@
         'Đã mới nhất':'Up to date','Đã mới hơn':'Newer version installed','Thử lại':'Retry','Chưa kiểm tra được VGD Center':'Could not check VGD Center',
         'Bản phát hành':'Latest release','Có bản VGD Center mới':'VGD Center update available','VGD Center đã mới nhất':'VGD Center is up to date',
         'VGD Center đang dùng bản mới hơn':'Installed VGD Center is newer','Đã cài plugin':'Plugin installed','Đã cập nhật VGD Center':'VGD Center updated',
-        'Không có plugin tương thích trong danh mục.':'No compatible plugins in the catalog.','Không phát hiện plugin VGD nào đã cài trong SketchUp này.':'No VGD plugins detected.',
+        'Không có plugin tương thích trong danh mục.':'No compatible plugins in the catalog.','Không tìm thấy plugin phù hợp.':'No matching plugins found.','Không phát hiện plugin VGD nào đã cài trong SketchUp này.':'No VGD plugins detected.',
         'Mở trong SketchUp':'Open in SketchUp','VGD Center cần chạy trong SketchUp để đọc trạng thái và cài plugin.':'VGD Center must run in SketchUp to read status and install plugins.',
         'Beta':'Beta','Alpha':'Alpha','Stable':'Stable'
       };
 
       const escapeHtml = value => String(value == null ? '' : value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
       const icon = id => `<svg aria-hidden="true"><use href="#${iconIds[id] || 'i-box'}"></use></svg>`;
+      const normalizeSearch = value => String(value == null ? '' : value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
       const tr = (vi, en) => activeLanguage === 'en' ? en : vi;
       const resolveLanguage = preference => preference === 'en' || (preference === 'auto' && /^en/i.test(navigator.language || '')) ? 'en' : 'vi';
       const releaseLabel = channel => channel === 'beta' ? 'Beta' : channel === 'alpha' ? 'Alpha' : 'Stable';
@@ -387,14 +409,22 @@
         const settings = currentState.settings || {language:'vi',auto_update:true};
         activeLanguage = resolveLanguage(settings.language || 'vi');
         const updateItems = updates();
-        const compatibleItems = products.filter(product => product.compatible);
-        document.getElementById('catalogGrid').innerHTML = compatibleItems.length ? compatibleItems.map(product => {
+        document.getElementById('catalogGrid').innerHTML = products.length ? products.map(product => {
           const description = productDescription(product);
-          const haystack = `${product.name} ${description} ${product.id}`.toLowerCase();
-          const iconId = iconIds[product.icon] ? product.icon : product.id;
           const channel = releaseLabel(product.release_channel);
-          return `<article class="card catalog-card" data-search="${escapeHtml(haystack)}"><div class="plugin-icon">${icon(iconId)}</div><div><div class="plugin-name"><strong>${escapeHtml(product.name)}</strong><span>${escapeHtml(product.version)}</span></div><p class="desc">${escapeHtml(description)}</p><div class="catalog-meta"><span class="badge ${channel.toLowerCase()}">${channel}</span><span class="badge">SketchUp ${escapeHtml(product.minimum_sketchup)}+</span></div></div>${actionButton(product)}</article>`;
-        }).join('') : emptyMarkup('Chưa có plugin tương thích trong danh mục.');
+          const haystack = normalizeSearch(`${product.name} ${description} ${product.id} ${product.version} ${channel} hướng dẫn guide ${product.installed ? 'đã cài installed gỡ cài đặt uninstall' : 'chưa cài not installed cài đặt install'} ${product.action === 'update' ? 'cập nhật update' : ''}`);
+          const iconId = iconIds[product.icon] ? product.icon : product.id;
+          const compatibility = product.compatible ? '' : `<span class="badge">${escapeHtml(statusText(product))}</span>`;
+          return `<article class="card catalog-card" data-search="${escapeHtml(haystack)}"><div class="plugin-icon">${icon(iconId)}</div><div><div class="plugin-name"><strong>${escapeHtml(product.name)}</strong><span>${escapeHtml(product.version)}</span></div><p class="desc">${escapeHtml(description)}</p><div class="catalog-meta"><span class="badge ${channel.toLowerCase()}">${channel}</span><span class="badge">SketchUp ${escapeHtml(product.minimum_sketchup)}+</span>${compatibility}</div></div>${actionButton(product)}</article>`;
+        }).join('') : emptyMarkup(currentState.message || 'Chưa có plugin tương thích trong danh mục.');
+        if (!document.getElementById('catalogNoResults')) {
+          const noResults = document.createElement('div');
+          noResults.className = 'card empty-state';
+          noResults.id = 'catalogNoResults';
+          noResults.hidden = true;
+          noResults.innerHTML = '<strong>Không tìm thấy plugin phù hợp.</strong>';
+          document.getElementById('catalogGrid').appendChild(noResults);
+        }
         document.getElementById('overviewUpdates').innerHTML = updateItems.length ? updateItems.map(rowMarkup).join('') : emptyMarkup('Không có bản cập nhật mới. Mở Kho plugin để xem các plugin có thể cài.');
         const count = products.length;
         setCount('catalogCount', count);
@@ -423,6 +453,12 @@
 
       function applyLanguage() {
         document.documentElement.lang = activeLanguage;
+        const donateCard = document.querySelector('.donate-card');
+        donateCard.setAttribute('aria-label', tr('Ủng hộ VGD', 'Support VGD'));
+        donateCard.querySelector('.donate-qr').setAttribute('alt', tr('Mã QR VietinBank nhận ủng hộ cho LE QUOC VUONG', 'VietinBank donation QR for LE QUOC VUONG'));
+        document.getElementById('donateQrButton').setAttribute('aria-label', tr('Phóng lớn mã QR ủng hộ', 'Enlarge donation QR'));
+        document.getElementById('donateLightbox').setAttribute('aria-label', tr('Mã QR ủng hộ VGD', 'VGD donation QR'));
+        document.getElementById('donateLightboxClose').setAttribute('aria-label', tr('Đóng', 'Close'));
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
         let node;
         while ((node = walker.nextNode())) {
@@ -483,8 +519,19 @@
       }
 
       function filterCatalog() {
-        const query = document.getElementById('searchInput').value.trim().toLowerCase();
-        document.querySelectorAll('#catalogGrid .catalog-card').forEach(card => { card.hidden = !card.dataset.search.includes(query); });
+        const query = normalizeSearch(document.getElementById('searchInput').value).trim().split(/\s+/).filter(Boolean);
+        const cards = document.querySelectorAll('#catalogGrid .catalog-card');
+        let visible = 0;
+        cards.forEach(card => {
+          const searchable = normalizeSearch(card.dataset.search || '');
+          const matches = query.every(term => searchable.includes(term));
+          card.hidden = !matches;
+          if (matches) visible++;
+        });
+        const noResults = document.getElementById('catalogNoResults');
+        if (noResults) noResults.hidden = query.length === 0 || visible > 0;
+        const emptyCatalog = document.querySelector('#catalogGrid > .empty-state:not(#catalogNoResults)');
+        if (emptyCatalog) emptyCatalog.hidden = query.length > 0;
       }
 
       function openPage(name) {
@@ -519,6 +566,12 @@
       document.querySelectorAll('.nav [data-page]').forEach(button => button.addEventListener('click', () => openPage(button.dataset.page)));
       document.querySelectorAll('[data-page]:not(.nav button)').forEach(button => button.addEventListener('click', () => openPage(button.dataset.page)));
       document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+      const donateLightbox = document.getElementById('donateLightbox');
+      const closeDonateQr = () => donateLightbox.classList.remove('open');
+      document.getElementById('donateQrButton').addEventListener('click', () => donateLightbox.classList.add('open'));
+      document.getElementById('donateLightboxClose').addEventListener('click', closeDonateQr);
+      donateLightbox.addEventListener('click', event => { if (event.target === donateLightbox) closeDonateQr(); });
+      document.addEventListener('keydown', event => { if (event.key === 'Escape') closeDonateQr(); });
       document.getElementById('syncBtn').addEventListener('click', () => requestNative('refresh_catalog'));
       document.getElementById('autoUpdateToggle').addEventListener('click', () => {
         const currentlyEnabled = !document.getElementById('autoUpdateToggle').classList.contains('on');

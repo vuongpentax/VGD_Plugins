@@ -6,16 +6,16 @@
       "id": "dim",
       "name": "VGD Dim",
       "extension_name": "VGD Dim",
-      "version": "3.3.0-beta.6",
+      "version": "3.3.0-beta.5",
       "release_channel": "beta",
-      "description": "Đo Dim thủ công và Smart Dim trong Boundary, có vùng chi tiết riêng.",
+      "description": "Đo kích thước, chỉnh kiểu Dim/Text và tạo Smart Dim.",
       "icon": "dim",
       "minimum_sketchup": "22.0.0",
       "download": {
-        "filename": "VGD_Dim_v3.3.0-beta.6.rbz",
-        "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/VGD_Dim_v3.3.0-beta.6.rbz",
-        "size": 52453,
-        "sha256": "aae338e85f02b65b2ff9d464b927bb1035b5f522c24c77486effe3ef9065ba5d"
+        "filename": "VGD_Dim_v3.3.0-beta.5.rbz",
+        "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/VGD_Dim_v3.3.0-beta.5.rbz",
+        "size": 46299,
+        "sha256": "c9f3242d1045a91392128adf299bf2aa07cfb5a51271f60f50675d6d7c16f605"
       },
       "allowed_paths": [
         "vgd_dim.rb",

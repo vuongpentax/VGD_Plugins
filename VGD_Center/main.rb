@@ -8,7 +8,7 @@ require 'securerandom'
 
 module VGD
   module Center
-    VERSION = '1.0.9'.freeze
+    VERSION = '1.0.10'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
@@ -37,13 +37,13 @@ module VGD
         @center_release ||= read_bundled_center_release
         @dialog = UI::HtmlDialog.new(
           dialog_title: 'VGD Center',
-          preferences_key: 'com.vgd.center.dialog.v1',
+          preferences_key: 'com.vgd.center.dialog.v2',
           scrollable: true,
           resizable: true,
-          width: 1180,
-          height: 760,
-          min_width: 700,
-          min_height: 560,
+          width: 960,
+          height: 720,
+          min_width: 420,
+          min_height: 480,
           style: UI::HtmlDialog::STYLE_WINDOW
         )
         register_callbacks(@dialog)
@@ -349,7 +349,8 @@ module VGD
       def read_bundled_catalog
         path = File.join(__dir__, 'catalog.json')
         validate_catalog(JSON.parse(File.read(path, encoding: 'UTF-8')))
-      rescue StandardError
+      rescue StandardError => error
+        @catalog_warning = "Không đọc được danh mục đi kèm: #{error.message}"
         { 'schema_version' => 1, 'channel' => 'latest', 'products' => [] }
       end
 
@@ -365,68 +366,86 @@ module VGD
         raise 'thiếu danh sách plugin' unless products.is_a?(Array)
 
         ids = []
-        normalized = products.map do |product|
-          raise 'mục plugin không hợp lệ' unless product.is_a?(Hash)
-          id = product['id'].to_s
-          raise "plugin không được phép: #{id}" unless ALLOWED_IDS.include?(id)
-          raise "trùng plugin: #{id}" if ids.include?(id)
-          ids << id
-          expected_name, expected_paths = PLUGIN_LAYOUTS.fetch(id)
-          raise "tên extension không hợp lệ: #{id}" unless product['extension_name'] == expected_name
+        warnings = []
+        normalized = products.each_with_object([]) do |product, valid_products|
+          id = product.is_a?(Hash) ? product['id'].to_s : ''
+          begin
+            raise 'mục plugin không hợp lệ' unless product.is_a?(Hash)
+            unless ALLOWED_IDS.include?(id)
+              warnings << "Bỏ qua plugin chưa được Center hỗ trợ: #{id.empty? ? '(không có ID)' : id}"
+              next
+            end
+            raise "trùng plugin: #{id}" if ids.include?(id)
+            ids << id
+            expected_name, expected_paths = PLUGIN_LAYOUTS.fetch(id)
+            raise "tên extension không hợp lệ: #{id}" unless product['extension_name'] == expected_name
 
-          version = product['version'].to_s
-          version_match = version.match(/\A(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta)(?:\.(\d+))?)?\z/)
-          raise "phiên bản không hợp lệ: #{id}" unless version_match
-          release_channel = product['release_channel'].to_s
-          expected_channel = version_match[4] || 'stable'
-          raise "kênh phát hành không khớp phiên bản: #{id}" unless release_channel == expected_channel
-          download = product['download']
-          raise "thiếu gói tải: #{id}" unless download.is_a?(Hash)
-          filename = download['filename'].to_s
-          raise "tên gói không hợp lệ: #{id}" unless filename.match?(/\A[A-Za-z0-9_.-]+\.rbz\z/i)
-          raise "tên gói không khớp phiên bản: #{id}" unless filename.include?(version)
-          url = download['url'].to_s
-          allowed_url = url.start_with?('https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/') ||
-                        url.start_with?('https://github.com/vuongpentax/VGD_Plugins/releases/download/')
-          unless allowed_url && url.end_with?("/#{filename}")
-            raise "nguồn tải không được phép: #{id}"
+            version = product['version'].to_s
+            version_match = version.match(/\A(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta)(?:\.(\d+))?)?\z/)
+            raise "phiên bản không hợp lệ: #{id}" unless version_match
+            release_channel = product['release_channel'].to_s
+            expected_channel = version_match[4] || 'stable'
+            raise "kênh phát hành không khớp phiên bản: #{id}" unless release_channel == expected_channel
+            download = product['download']
+            raise "thiếu gói tải: #{id}" unless download.is_a?(Hash)
+            filename = download['filename'].to_s
+            raise "tên gói không hợp lệ: #{id}" unless filename.match?(/\A[A-Za-z0-9_.-]+\.rbz\z/i)
+            raise "tên gói không khớp phiên bản: #{id}" unless filename.include?(version)
+            url = download['url'].to_s
+            allowed_url = url.start_with?('https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/') ||
+                          url.start_with?('https://github.com/vuongpentax/VGD_Plugins/releases/download/')
+            unless allowed_url && url.end_with?("/#{filename}")
+              raise "nguồn tải không được phép: #{id}"
+            end
+            size = Integer(download['size'])
+            raise "dung lượng gói không hợp lệ: #{id}" unless size.positive? && size <= MAX_PACKAGE_BYTES
+            sha = download['sha256'].to_s.downcase
+            raise "SHA-256 không hợp lệ: #{id}" unless sha.match?(/\A[0-9a-f]{64}\z/)
+            paths = product['allowed_paths']
+            raise "thiếu đường dẫn gói được phép: #{id}" unless paths.is_a?(Array) && !paths.empty?
+            raise "cấu trúc gói không hợp lệ: #{id}" unless paths == expected_paths
+
+            valid_products << product
+          rescue StandardError => error
+            warnings << "Bỏ qua mục #{id.empty? ? 'plugin' : id}: #{error.message}"
           end
-          size = Integer(download['size'])
-          raise "dung lượng gói không hợp lệ: #{id}" unless size.positive? && size <= MAX_PACKAGE_BYTES
-          sha = download['sha256'].to_s.downcase
-          raise "SHA-256 không hợp lệ: #{id}" unless sha.match?(/\A[0-9a-f]{64}\z/)
-          paths = product['allowed_paths']
-          raise "thiếu đường dẫn gói được phép: #{id}" unless paths.is_a?(Array) && !paths.empty?
-          raise "cấu trúc gói không hợp lệ: #{id}" unless paths == expected_paths
-
-          product
         end
+        @catalog_warning = warnings.empty? ? nil : warnings.first(3).join(' · ')
         catalog.merge('products' => normalized)
       end
 
       def current_products
         catalog = @catalog || read_bundled_catalog
         sketchup_version = Sketchup.version.to_s
-        catalog['products'].map do |product|
-          extension = find_installed_extension(product)
-          installed_version = installed_version_for(product['id']) || (extension && extension.version.to_s)
-          installed = !installed_version.to_s.empty?
-          min_ok = compare_versions(sketchup_version, product['minimum_sketchup'].to_s) >= 0
-          action = if !min_ok
-                     nil
-                   elsif !installed
-                     'install'
-                   elsif compare_versions(installed_version, product['version']) < 0
-                     'update'
-                   end
-          {
-            id: product['id'], name: product['name'], description: product['description'],
-            version: product['version'], release_channel: product['release_channel'], icon: product['icon'], minimum_sketchup: product['minimum_sketchup'],
-            installed: installed, installed_version: installed_version, action: action,
-            compatible: min_ok, filename: product.dig('download', 'filename')
-          }
+        errors = []
+        current = catalog['products'].each_with_object([]) do |product, result|
+          begin
+            extension = find_installed_extension(product)
+            installed_version = installed_version_for(product['id']) || (extension && extension.version.to_s)
+            installed = !installed_version.to_s.empty?
+            min_ok = compare_versions(sketchup_version, product['minimum_sketchup'].to_s) >= 0
+            action = if !min_ok
+                       nil
+                     elsif !installed
+                       'install'
+                     elsif compare_versions(installed_version, product['version']) < 0
+                       'update'
+                     end
+            result << {
+              id: product['id'], name: product['name'], description: product['description'],
+              version: product['version'], release_channel: product['release_channel'], icon: product['icon'], minimum_sketchup: product['minimum_sketchup'],
+              installed: installed, installed_version: installed_version, action: action,
+              compatible: min_ok, filename: product.dig('download', 'filename')
+            }
+          rescue StandardError => error
+            errors << "#{product['id']}: #{error.message}"
+          end
         end
+        @product_errors = errors
+        set_status("Một số plugin không đọc được: #{errors.first(2).join(' · ')}") unless errors.empty?
+        current
       rescue StandardError => error
+        @product_errors = [error.message]
         set_status("Không đọc được danh sách extension: #{error.message}")
         []
       end
@@ -464,13 +483,15 @@ module VGD
 
       def send_state
         return unless @dialog
+        products = current_products
+        product_warning = @product_errors && !@product_errors.empty? ? "Không đọc được plugin: #{@product_errors.first(2).join(' · ')}" : nil
         payload = {
           version: active_center_version,
           sketchup: Sketchup.version.to_s,
-          products: current_products,
+          products: products,
           center_update: center_update_state,
           settings: settings_state,
-          message: @catalog_error
+          message: [@catalog_error, @catalog_warning, product_warning].compact.uniq.join(' · ')
         }
         script = "window.VGD && window.VGD.receiveState(#{JSON.generate(payload).gsub('</', '<\\/')});"
         @dialog.execute_script(script)
@@ -813,3 +834,4 @@ module VGD
     end
   end
 end
+
