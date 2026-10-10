@@ -45,7 +45,7 @@ manifest.update({
     'filename': rbz.name,
     'bytes': rbz.stat().st_size,
     'sha256': hashlib.sha256(rbz.read_bytes()).hexdigest(),
-    'download_url': f"https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v{version}/{rbz.name}"
+    'download_url': f"https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/{rbz.name}"
 })
 manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 dev_files = [
@@ -57,7 +57,7 @@ dev_files = [
 doc_files = [
     'README.md', 'AGENTS.md', 'ANNOTATION_REQUIREMENTS.md', 'SELECTION_REQUIREMENTS.md',
     'FEATURE_STATUS.md', 'UI_DESIGN.md', 'DEVELOPMENT_NOTES.md', 'VGD_UPDATE_MANIFEST.json',
-    'HOW_TO_RELEASE.md'
+    'HOW_TO_RELEASE.md', f'RELEASE_NOTES_v{version}.md'
 ]
 with zipfile.ZipFile(source_zip, 'w', zipfile.ZIP_DEFLATED) as archive:
     for name in runtime_files:

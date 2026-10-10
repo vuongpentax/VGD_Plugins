@@ -1,6 +1,6 @@
 # VGD Dim · rà soát và tiếp tục phát triển
 
-Ngày 07/10/2026, nguồn nhập: VGD_Dim_6.rbz (loader ghi 3.2.0). Bản 3.3.0-beta.3 bổ sung pilot updater online; beta.4 sửa tùy chọn process group để khởi chạy helper trên Windows. Snapshot/SHA256: dev/claude_v6_reference/IMPORT.json; dữ liệu gốc chỉ tham khảo, không chạy runtime.
+Ngày 07/10/2026, nguồn nhập: VGD_Dim_6.rbz (loader ghi 3.2.0). Bản 3.3.0-beta.3 bổ sung pilot updater online; beta.4 sửa tùy chọn process group để khởi chạy helper trên Windows; beta.6 thêm Dim thủ công và giới hạn vùng đo. Snapshot/SHA256: dev/claude_v6_reference/IMPORT.json; dữ liệu gốc chỉ tham khảo, không chạy runtime.
 
 ## Các điểm đã sửa
 
