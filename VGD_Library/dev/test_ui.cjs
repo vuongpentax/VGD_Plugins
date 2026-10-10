@@ -9,6 +9,12 @@ function assert(ok, message) { if (!ok) throw Error(message); }
     const errors = []; page.on('pageerror', error => errors.push(error.message));
     await page.addInitScript(() => { window.calls = []; window.sketchup = { vgd: (action, data) => calls.push({ action, args: JSON.parse(data) }) }; });
     await page.goto(pathToFileURL(path.resolve(__dirname,'../runtime/vgd_library/dialog.html')).href);
+    assert(await page.locator('body').evaluate(el => el.classList.contains('dark')), 'New library session did not default to dark theme');
+    assert(await page.locator('.brand-mark').count() === 1, 'Primary VGD logo missing');
+    await page.click('#themeToggle');
+    assert(!await page.locator('body').evaluate(el => el.classList.contains('dark')) && await page.evaluate(() => localStorage.getItem('VGD.Library.Theme')) === 'light', 'Light theme did not apply and persist');
+    await page.click('#themeToggle');
+    assert(await page.locator('body').evaluate(el => el.classList.contains('dark')) && await page.evaluate(() => localStorage.getItem('VGD.Library.Theme')) === 'dark', 'Dark theme did not restore and persist');
     assert((await page.evaluate(() => calls[0])).action === 'ready', 'Initial handshake');
     assert(await page.locator('#apply').isDisabled(), 'Empty selection can apply');
     const svg = color => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200"><rect width="200" height="200" fill="${color}"/></svg>`);
@@ -97,6 +103,11 @@ function assert(ok, message) { if (!ok) throw Error(message); }
     const seam=await browser.newPage({viewport:{width:980,height:700}}); seam.on('pageerror',error=>errors.push(error.message));
     await seam.addInitScript(() => { window.calls=[];window.sketchup={seam:(action,data)=>calls.push({action,args:JSON.parse(data)})}; });
     await seam.goto(pathToFileURL(path.resolve(__dirname,'../runtime/vgd_library/seamless.html')).href);
+    assert(await seam.locator('body').evaluate(el => el.classList.contains('dark')), 'Seamless dialog did not inherit dark default');
+    await seam.click('#themeToggle');
+    assert(!await seam.locator('body').evaluate(el => el.classList.contains('dark')) && await seam.evaluate(() => localStorage.getItem('VGD.Library.Theme')) === 'light', 'Seamless light theme did not apply and persist');
+    await seam.click('#themeToggle');
+    assert(await seam.locator('body').evaluate(el => el.classList.contains('dark')), 'Seamless dark theme did not restore');
     await seam.evaluate(() => VGDSeam.start(['Sồi','Đá']));
     assert((await seam.evaluate(() => calls.at(-1))).action==='preview','Seamless preview handshake');
     await seam.evaluate(data => VGDSeam.preview(data),{index:0,before:svg('#af9572'),after:svg('#baa27e'),before_error:22,after_error:0,width:512,height:512});

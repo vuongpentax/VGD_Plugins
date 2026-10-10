@@ -1,0 +1,28 @@
+{
+  "version": "1.0.0-beta.6",
+  "minimum_sketchup_major": 23,
+  "sketchup_2022_supported": false,
+  "runtime_files": 31,
+  "source_files": 55,
+  "artifacts": [
+    {
+      "filename": "VGD_Reference_v1.0.0-beta.6.rbz",
+      "bytes": 29727,
+      "sha256": "1b1ebb9c03ed67aff5aee5f86c66c07490e64ee38315076d17ff95a96d4aa6ab"
+    },
+    {
+      "filename": "VGD_Reference_v1.0.0-beta.6_source.zip",
+      "bytes": 68576,
+      "sha256": "3f39192db5dc121031fc6d8d77a00dd8c634b8b0d0eb3bf147c095a3e9809038"
+    }
+  ],
+  "verification": {
+    "archive_bytes_match_source": true,
+    "svg_themes_and_sizes": "Edge headless",
+    "manager_themes_and_callbacks": "Edge headless",
+    "ruby_fixtures": "Ruby 3.2 WASM",
+    "native_su2022": "not run",
+    "native_beta6_icons": "not run",
+    "native_image_rendering": "user confirmed SU24 beta.5 UV fix"
+  }
+}

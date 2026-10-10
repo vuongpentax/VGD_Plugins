@@ -16,7 +16,7 @@ require_relative 'library_store'
 require_relative 'update_notice'
 module VGD_Cabinet
   remove_const(:VERSION) if const_defined?(:VERSION, false)
-  VERSION = '4.5.0-beta.2'
+  VERSION = '4.5.0-beta.3'
   class CabinetSelectionObserver < Sketchup::SelectionObserver
     def onSelectionBulkChange(_s); VGD_Cabinet.sync_current_selection; end
     def onSelectionAdded(_s,_e); VGD_Cabinet.sync_current_selection; end
@@ -389,7 +389,7 @@ module VGD_Cabinet
       command=UI::Command.new('VGD Cabinet — Dựng hình') { show_dialog }
       UI.menu('Extensions').add_item(command)
     end
-    icon=File.join(__dir__,'logo.svg')
+    icon=File.join(__dir__,'cabinet.svg')
     command.small_icon=icon; command.large_icon=icon
     command.tooltip="VGD Cabinet #{VERSION} — Dựng hình kỹ thuật"
     explode_command=existing_commands.find { |item| item.menu_text.include?('VGD_EXPLODE') }

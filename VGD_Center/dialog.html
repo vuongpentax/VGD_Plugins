@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VGD Center · Bản xem trước</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg:#121212; --surface:#1e1e1e; --elevated:#2b2b2b; --tile:#242220;
+      --border:#3a3a3a; --text:#e2e8f0; --muted:#a7b0bd;
+      --accent:#b48963; --accent-strong:#c8a98a; --donate-accent:#a67c58; --tint:#372c24;
+      --danger:#e79c91; --success:#a8c69d; --on-accent:#121212;
+      --logo-face:#1e1e1e; --logo-outline:#c8a98a;
+      --success-soft:rgba(168,198,157,.14); --success-border:rgba(168,198,157,.5);
+      --accent-line:rgba(180,137,99,.35); --accent-glow:rgba(180,137,99,.05); --accent-glow-soft:rgba(180,137,99,.04);
+      --shadow:0 18px 48px rgba(0,0,0,.28);
+    }
+    html[data-theme="light"] {
+      color-scheme:light;
+      --bg:#f7f7f5; --surface:#fff; --elevated:#f0eee9; --tile:#f0ede8;
+      --border:#dedad4; --text:#222; --muted:#6f6f6f;
+      --accent:#b48963; --accent-strong:#8e6b4c; --tint:#f3ece5;
+      --danger:#a73d36; --success:#507247; --on-accent:#fff;
+      --logo-face:#f7f7f5; --logo-outline:#a47d5c;
+      --success-soft:rgba(80,114,71,.13); --success-border:rgba(80,114,71,.5);
+      --accent-line:rgba(142,107,76,.3); --accent-glow:rgba(142,107,76,.055); --accent-glow-soft:rgba(142,107,76,.04);
+      --shadow:0 18px 48px rgba(37,31,25,.11);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;min-width:360px;min-height:100vh;background:var(--bg);color:var(--text);font:13px/1.45 "Segoe UI",Arial,sans-serif}
+    button{font:inherit;color:inherit}
+    button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent-strong);outline-offset:2px}
+    .app{min-height:100vh;display:grid;grid-template-rows:68px minmax(0,1fr) 34px;background:var(--bg)}
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 20px;background:var(--elevated);border-bottom:1px solid var(--border)}
+    .brand{display:flex;align-items:center;gap:11px;min-width:0}
+    .brand-mark{width:40px;height:40px;flex:none}
+    .brand-copy{display:flex;flex-direction:column;line-height:1.1}
+    .brand-title{font-size:16px;font-weight:750;letter-spacing:.01em}
+    .brand-subtitle{margin-top:5px;color:var(--muted);font-size:10px;letter-spacing:.09em;text-transform:uppercase}
+    .top-actions{display:flex;align-items:center;gap:10px}
+    .status-dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 0 3px var(--success-soft)}
+    .icon-button{display:grid;width:34px;height:34px;place-items:center;border:1px solid var(--border);border-radius:4px;background:var(--surface);cursor:pointer}
+    .icon-button:hover{border-color:var(--accent);color:var(--accent-strong)}
+    .icon-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .shell{min-height:0;display:grid;grid-template-columns:196px minmax(0,1fr)}
+    .sidebar{display:flex;flex-direction:column;gap:16px;padding:16px 10px 12px;background:var(--surface);border-right:1px solid var(--border)}
+    .nav-caption{padding:0 10px;color:var(--muted);font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase}
+    .nav{display:grid;gap:4px}
+    .nav button{display:flex;align-items:center;gap:11px;width:100%;min-height:38px;padding:0 10px;border:1px solid transparent;border-radius:4px;background:transparent;color:var(--muted);text-align:left;cursor:pointer}
+    .nav button:hover{background:var(--elevated);color:var(--text)}
+    .nav button[aria-current="page"]{border-color:var(--accent);background:var(--tint);color:var(--accent-strong)}
+    .nav svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .nav .count{display:grid;min-width:19px;height:19px;place-items:center;margin-left:auto;padding:0 5px;border-radius:10px;background:var(--elevated);color:var(--muted);font-size:10px;font-variant-numeric:tabular-nums}
+    .nav button[aria-current="page"] .count{background:var(--accent);color:var(--on-accent)}
+    .sidebar-spacer{flex:1}
+    .donate-card{display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:5px;background:var(--elevated);text-align:center}
+    .donate-title{display:flex;align-items:center;gap:5px;color:var(--donate-accent);font-size:10px;font-weight:700;letter-spacing:.01em}
+    .donate-title svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .donate-qr-button{display:block;padding:0;border:0;border-radius:4px;background:transparent;cursor:zoom-in}
+    .donate-qr{display:block;width:122px;height:122px;border:1px solid var(--donate-accent);border-radius:4px;background:#fff}
+    .donate-lightbox{position:fixed;inset:0;z-index:30;display:none;place-items:center;padding:22px;background:rgba(0,0,0,.72)}
+    .donate-lightbox.open{display:grid}
+    .donate-lightbox-panel{position:relative;width:min(430px,90vw);padding:12px;border:1px solid var(--donate-accent);border-radius:10px;background:var(--surface);box-shadow:var(--shadow)}
+    .donate-lightbox-image{display:block;width:100%;height:auto;border-radius:6px}
+    .donate-lightbox-close{position:absolute;top:18px;right:18px;display:grid;width:32px;height:32px;place-items:center;border:1px solid var(--donate-accent);border-radius:50%;background:var(--surface);color:var(--text);font-size:20px;line-height:1;cursor:pointer}
+    .donate-account{max-width:100%;color:var(--muted);font-size:8px;line-height:1.2;overflow-wrap:anywhere}
+    .sketchup-foot{display:flex;align-items:center;gap:7px;padding:0 4px;color:var(--muted);font-size:10px}
+    .sketchup-foot svg{width:15px;height:15px;fill:none;stroke:var(--accent-strong);stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+    main{min-width:0;min-height:0;overflow:auto;padding:20px 22px 24px}
+    .page{display:none;max-width:1120px;margin:0 auto}
+    .page.active{display:block}
+    .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:17px}
+    .eyebrow{margin:0 0 4px;color:var(--accent-strong);font-size:9px;font-weight:750;letter-spacing:.15em;text-transform:uppercase}
+    h1{margin:0;font-size:22px;line-height:1.2;letter-spacing:-.02em}
+    .page-intro{margin:6px 0 0;color:var(--muted);font-size:12px}
+    .button-row{display:flex;align-items:center;gap:8px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:0 12px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);font-weight:650;white-space:nowrap;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
+    .btn:hover{border-color:var(--accent);background:var(--tint)}
+    .btn:active{transform:translateY(1px)}
+    .btn.primary{border-color:var(--accent);background:var(--accent);color:var(--on-accent)}
+    .btn.primary:hover{background:var(--accent-strong);border-color:var(--accent-strong)}
+    .btn.small{min-height:30px;padding:0 10px;font-size:11px}
+    .btn svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .demo-strip{display:flex;align-items:flex-start;gap:9px;margin:0 0 14px;padding:9px 11px;border:1px solid var(--border);border-left:2px solid var(--accent);border-radius:4px;background:var(--surface);color:var(--muted);font-size:10px}
+    .demo-strip svg{width:15px;height:15px;flex:none;color:var(--accent-strong);fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .welcome-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(270px,.85fr);gap:12px}
+    .card{min-width:0;border:1px solid var(--border);border-radius:6px;background:var(--surface)}
+    .welcome{position:relative;overflow:hidden;min-height:148px;padding:19px 20px}
+    .welcome:after{content:"";position:absolute;right:16px;bottom:-56px;width:170px;height:170px;border:1px solid var(--accent-line);border-radius:50%;box-shadow:0 0 0 18px var(--accent-glow),0 0 0 38px var(--accent-glow-soft);pointer-events:none}
+    .welcome h2{position:relative;z-index:1;margin:0;font-size:18px;line-height:1.3}
+    .welcome p{position:relative;z-index:1;max-width:550px;margin:7px 0 14px;color:var(--muted);font-size:12px}
+    .pills{position:relative;z-index:1;display:flex;flex-wrap:wrap;gap:6px}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--border);border-radius:20px;background:var(--bg);color:var(--muted);font-size:10px}
+    .pill.accent{border-color:var(--accent);background:var(--tint);color:var(--accent-strong)}
+    .health{padding:15px 16px}
+    .health-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .health-title{display:flex;align-items:center;gap:8px;font-weight:700}
+    .health-title .status-dot{flex:none}
+    .health-head small{color:var(--muted);font-size:10px}
+    .health-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:13px}
+    .health-metric{min-height:57px;padding:8px 9px;border:1px solid var(--border);border-radius:4px;background:var(--bg)}
+    .health-metric span{display:block;color:var(--muted);font-size:9px}
+    .health-metric strong{display:block;margin-top:4px;font-size:11px;font-weight:650}
+    .center-update-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:9px;padding-top:10px;border-top:1px solid var(--border)}
+    .center-update-row>div{min-width:0}
+    .center-update-row strong{display:block;font-size:11px}
+    .center-update-row span{display:block;margin-top:3px;color:var(--muted);font-size:9px;overflow-wrap:anywhere}
+    .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0 18px}
+    .metric{display:flex;align-items:center;gap:10px;padding:12px 13px}
+    .metric-icon{display:grid;width:34px;height:34px;flex:none;place-items:center;border:1px solid var(--border);border-radius:5px;background:var(--elevated);color:var(--muted)}
+    .metric-icon.accent{border-color:var(--accent);background:var(--tint);color:var(--accent-strong)}
+    .metric-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .metric-copy{min-width:0}
+    .metric-copy b{display:block;font-size:17px;line-height:1.1;font-variant-numeric:tabular-nums}
+    .metric-copy span{display:block;margin-top:4px;color:var(--muted);font-size:10px;white-space:nowrap}
+    .section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 9px}
+    .section-head h2{margin:0;font-size:14px}
+    .section-head p{margin:3px 0 0;color:var(--muted);font-size:10px}
+    .section-tools{display:flex;align-items:center;gap:8px}
+    .plugin-list{display:grid;gap:8px}
+    .plugin-row{display:grid;grid-template-columns:40px minmax(145px,1.1fr) minmax(160px,1fr) auto;align-items:center;gap:11px;padding:10px 12px}
+    .plugin-icon{display:grid;width:38px;height:38px;place-items:center;border:1px solid var(--border);border-radius:5px;background:var(--elevated);color:var(--text)}
+    .plugin-icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .plugin-name{min-width:0}
+    .plugin-name strong{display:block;font-size:12px}
+    .plugin-name span{display:block;margin-top:3px;color:var(--muted);font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .version-line{min-width:0;color:var(--muted);font-size:10px;font-variant-numeric:tabular-nums}
+    .version-line strong{color:var(--text);font-weight:600}
+    .version-line .arrow{padding:0 5px;color:var(--accent-strong)}
+    .plugin-state{display:flex;align-items:center;gap:6px;margin-top:4px;color:var(--muted);font-size:9px}
+    .state-dot{width:6px;height:6px;border-radius:50%;background:var(--success)}
+    .state-dot.update{background:var(--accent)}
+    .state-dot.uninstalled{background:var(--muted)}
+    .empty-state{padding:24px 14px;text-align:center;color:var(--muted);font-size:12px}
+    .empty-state strong{display:block;margin-bottom:5px;color:var(--text);font-size:13px}
+    .bottom-note{display:flex;align-items:center;gap:8px;margin-top:14px;padding:10px 12px;border:1px solid var(--border);border-radius:5px;background:var(--elevated);color:var(--muted);font-size:10px}
+    .bottom-note svg{width:16px;height:16px;flex:none;color:var(--accent-strong);fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .catalog-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .catalog-card{display:grid;grid-template-columns:40px minmax(0,1fr) auto;align-items:start;gap:11px;padding:13px}
+    .catalog-card .desc{margin:5px 0 8px;color:var(--muted);font-size:10px}
+    .plugin-actions{display:flex;flex-direction:row;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px}
+    .catalog-card .plugin-actions{grid-column:1/-1;flex-direction:row;justify-content:flex-end}
+    .catalog-meta{display:flex;flex-wrap:wrap;gap:6px}
+    .empty-state{grid-column:1/-1;padding:24px;color:var(--muted);text-align:center}
+    .badge{display:inline-flex;align-items:center;padding:3px 7px;border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:9px}
+    .badge.stable{border-color:var(--success-border);color:var(--success)}
+    .badge.beta,.badge.alpha{border-color:var(--accent-line);background:var(--tint);color:var(--accent-strong)}
+    .search{display:flex;align-items:center;gap:8px;min-width:220px;height:34px;padding:0 10px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--muted)}
+    .search svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+    .search input{width:100%;border:0;outline:0;background:transparent;color:var(--text);font:inherit;font-size:11px}
+    .settings-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+    .settings-card{padding:16px}
+    .settings-card h2{margin:0 0 12px;font-size:13px}
+    .settings-version{margin:0 0 6px;color:var(--muted);font-size:11px;font-weight:700}
+    .language-options{display:inline-flex;overflow:hidden;border:1px solid var(--border);border-radius:5px;background:var(--bg)}
+    .language-options button{min-width:86px;padding:8px 12px;border:0;background:transparent;color:var(--muted);font-size:10px;font-weight:650;cursor:pointer}
+    .language-options button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+    .settings-update-row{margin-top:0;padding-top:12px}
+    .settings-update-row small{display:block;margin-top:6px;color:var(--muted);font-size:9px}
+    .setting-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid var(--border)}
+    .setting-row:first-of-type{border-top:0}
+    .setting-row strong{display:block;font-size:11px}
+    .setting-row span{display:block;margin-top:3px;color:var(--muted);font-size:10px}
+    .setting-value{color:var(--accent-strong);font-size:10px;font-weight:650;text-align:right}
+    .toggle{position:relative;width:34px;height:19px;flex:none;border:1px solid var(--accent);border-radius:10px;background:var(--tint);cursor:pointer}
+    .toggle:after{content:"";position:absolute;top:2px;right:2px;width:13px;height:13px;border-radius:50%;background:var(--accent-strong)}
+    .switch{position:relative;display:inline-flex;width:34px;height:19px;flex:none;border:1px solid var(--border);border-radius:10px;background:var(--elevated);cursor:pointer}
+    .switch:after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:var(--muted);transition:transform .16s,background .16s}
+    .switch.on{border-color:var(--accent);background:var(--tint)}
+    .switch.on:after{transform:translateX(15px);background:var(--accent-strong)}
+    .footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 14px;border-top:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:10px}
+    .footer-left{display:flex;align-items:center;gap:8px;min-width:0}
+    .footer-left .status-dot{width:6px;height:6px}
+    .footer-right{white-space:nowrap}
+    .overlay{position:fixed;inset:0;z-index:5;display:none;place-items:center;padding:20px;background:rgba(0,0,0,.52)}
+    .overlay.open{display:grid}
+    .dialog{width:min(430px,100%);padding:19px;border:1px solid var(--border);border-radius:7px;background:var(--surface);box-shadow:var(--shadow)}
+    .dialog-icon{display:grid;width:42px;height:42px;place-items:center;margin-bottom:13px;border:1px solid var(--accent);border-radius:6px;background:var(--tint);color:var(--accent-strong)}
+    .dialog-icon svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+    .dialog h2{margin:0;font-size:16px}
+    .dialog p{margin:7px 0 14px;color:var(--muted);font-size:11px}
+    .progress{height:5px;overflow:hidden;margin:13px 0;border-radius:5px;background:var(--elevated)}
+    .progress span{display:block;width:0;height:100%;border-radius:5px;background:var(--accent);transition:width .7s ease}
+    .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+    .dialog-actions[hidden]{display:none}
+    @media(max-width:920px){.shell{grid-template-columns:166px minmax(0,1fr)}main{padding:16px}.welcome-grid{grid-template-columns:1fr}.health-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.plugin-row{grid-template-columns:40px minmax(130px,1fr) minmax(145px,1fr) auto}}
+    @media(max-width:740px){.app{grid-template-rows:60px minmax(0,1fr) 32px}.topbar{padding:0 12px}.shell{grid-template-columns:54px minmax(0,1fr)}.sidebar{align-items:center;padding:12px 6px}.nav-caption,.nav span,.sketchup-foot,.donate-card{display:none}.nav{width:100%}.nav button{justify-content:center;padding:0}.nav svg{width:19px;height:19px}.nav .count{position:absolute;transform:translate(15px,-11px);min-width:15px;height:15px;padding:0 3px;font-size:8px}.sidebar-spacer{display:none}.plugin-row{grid-template-columns:38px minmax(0,1fr)}.version-line{grid-column:2/-1}.plugin-row>.plugin-actions{grid-column:2/-1;grid-row:auto;justify-content:flex-start}.catalog-grid,.settings-grid{grid-template-columns:1fr}.page-head{align-items:center}.page-intro{max-width:400px}.page[data-view="catalog"] .page-head{align-items:stretch}.page[data-view="catalog"] .button-row,.page[data-view="catalog"] .search{width:100%;min-width:0}}
+    @media(max-width:520px){main{padding:13px}.page-head{align-items:flex-start;flex-direction:column}.health-metrics{gap:5px}.health-metric{padding:7px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.metric{padding:9px}.metric-copy span{font-size:9px}.section-head{align-items:flex-start;flex-direction:column}.section-tools{width:100%;justify-content:space-between}.plugin-row{padding:9px}.footer-right{display:none}}
+    @media(max-height:650px){.donate-card{display:none}}
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden">
+    <symbol id="brand-logo" viewBox="0 0 180 180"><path d="M90 18 153 54 90 89Z" fill="var(--accent-strong)"/><path d="M53 131 90 152V162L53 141Z" fill="var(--accent-strong)"/><path d="M90 18 27 54V126L90 162C126 149 153 129 153 101V54Z" fill="none" stroke="var(--logo-outline)" stroke-width="7.5" stroke-linejoin="round" stroke-linecap="round"/><path d="M90 18V89L153 54M27 54 90 89V162M53 99V141L90 162M53 99 90 120V152" fill="none" stroke="var(--logo-outline)" stroke-width="7.5" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10H3zM9 20v-6h6v6"/></symbol>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.6 8-4.6M12 12v9"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 11.2V12a8 8 0 1 1-4.75-7.33"/><path d="m8.5 11.5 3 3L21 5"/></symbol>
+    <symbol id="i-update" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 9A7 7 0 0 1 18 6.5L20 12M4 12l2 5.5A7 7 0 0 0 18 15"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></symbol>
+    <symbol id="vgd-dim" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 6v12M19 6v12"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 6h14"/><circle fill="var(--accent-strong)" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" cx="5" cy="6" r="1.1"/><circle fill="var(--accent-strong)" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" cx="19" cy="6" r="1.1"</symbol>
+    <symbol id="vgd-cabinet" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 3.5h14v17H5zM12 3.5v17"/><path fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M10 10.5v3m4-3v3"/></symbol>
+    <symbol id="vgd-import" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 4.5h17v15h-17zM5.5 16.8l4-4.1 3.1 2.8 2.3-2.1 3.1 3.4"/><path fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M16.5 6.5v3.6m-1.8-1.8h3.6"/></symbol>
+    <symbol id="vgd-scenes" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 8.5h4l1.5-2h6l1.5 2h4v10h-17z"/><circle fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" cx="12" cy="13.5" r="3.1"/></symbol>
+    <symbol id="vgd-bim" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 10 12 4l8.5 6v10h-17z"/><path fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8 12h8m-8 3h8m-8 3h8"/></symbol>
+    <symbol id="vgd-library" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8 3.5h12v13M4 7h13v14H4z"/><path fill="var(--accent-strong)" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" d="M6 9h9v9H6z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M7.5 12c2-2 3 1 6-1m-6 4c2-2 3 1 6-1"/></symbol>
+      <symbol id="vgd-reference" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M7 6.5H4.7a1.2 1.2 0 0 0-1.2 1.2v11.6a1.2 1.2 0 0 0 1.2 1.2h14.6a1.2 1.2 0 0 0 1.2-1.2V7.7a1.2 1.2 0 0 0-1.2-1.2H17M6 17l3.5-3.5 4 3.5 2.5-2.5 2 2.5"/><path fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M10 3.5h4v3l1.5 2h-7l1.5-2zM12 8.5v3"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M5 4.5h10.5A3.5 3.5 0 0 1 19 8v11.5H8A3 3 0 0 1 5 16.5z"/><path d="M5 16.5a3 3 0 0 1 3-3h11M9 8h6M9 10.5h5"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6z"/><path d="m8.5 12 2.3 2.3 4.8-5"/></symbol>
+    <symbol id="i-restart" viewBox="0 0 24 24"><path d="M4 7v5h5M20 17v-5h-5"/><path d="M6.1 12a6 6 0 0 1 10.3-4.2L20 12M4 12l3.6 4.2A6 6 0 0 0 17.9 12"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 24 24"><path d="M7 18H6a4 4 0 1 1 .8-7.9A6 6 0 0 1 18 9a4.5 4.5 0 0 1 0 9h-2"/><path d="M12 21v-8m-3 3 3-3 3 3"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></symbol>
+    <symbol id="i-sync" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0 1 18 6l2 6M4 12l2 6a7 7 0 0 0 12.4-3"/></symbol>
+  </svg>
+
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <svg class="brand-mark" role="img" aria-label="Logo VGD"><use href="#brand-logo"/></svg>
+        <div class="brand-copy"><strong class="brand-title">VGD Center</strong><span class="brand-subtitle">Trung tâm plugin SketchUp</span></div>
+      </div>
+      <div class="top-actions">
+        <button class="icon-button" id="themeBtn" aria-label="Chuyển giao diện sáng/tối" title="Chuyển giao diện sáng/tối"><svg viewBox="0 0 24 24"><path d="M20 15.3A8.5 8.5 0 0 1 8.7 4 8.5 8.5 0 1 0 20 15.3Z"/></svg></button>
+      </div>
+    </header>
+    <div class="shell">
+      <aside class="sidebar">
+        <div class="nav-caption">VGD PLUGINS</div>
+        <nav class="nav" aria-label="Điều hướng chính">
+          <button data-page="overview" aria-current="page"><svg><use href="#i-home"/></svg><span>Tổng quan</span></button>
+          <button data-page="catalog"><svg><use href="#i-box"/></svg><span>Kho plugin</span><i class="count" id="catalogCount">0</i></button>
+          <button data-page="settings"><svg><use href="#i-settings"/></svg><span>Cài đặt</span></button>
+        </nav>
+        <div class="sidebar-spacer"></div>
+        <section class="donate-card" aria-label="Ủng hộ VGD">
+          <div class="donate-title"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 8.7c0 5.2-8.8 10.1-8.8 10.1S3.2 13.9 3.2 8.7a4.4 4.4 0 0 1 8.8-.3 4.4 4.4 0 0 1 8.8.3Z"/></svg><span>Ủng hộ VGD</span></div>
+          <button class="donate-qr-button" id="donateQrButton" type="button" aria-label="Phóng lớn mã QR ủng hộ"><img class="donate-qr" src="assets/donate_qr.svg" alt="Mã QR VietinBank nhận ủng hộ cho LE QUOC VUONG"></button>
+          <div class="donate-account">VietinBank · LE QUOC VUONG</div>
+        </section>
+        <div class="sketchup-foot"><svg viewBox="0 0 24 24"><path d="m4 7 8-4 8 4-8 4zM4 7v10l8 4 8-4V7M12 11v10"/></svg><span id="hostLabel">SketchUp</span></div>
+      </aside>
+      <main>
+        <section class="page active" id="page-overview" data-view="overview">
+          <div class="page-head">
+            <div><p class="eyebrow">WORKSPACE · VGD</p><h1>Tổng quan</h1><p class="page-intro">Cài plugin còn thiếu, quản lý bản đã cài và cập nhật ngay trong SketchUp.</p></div>
+            <div class="button-row"><button class="btn primary" id="installAllBtn" data-action="install_all_plugins"><svg><use href="#i-box"/></svg><span>Cài tất cả</span></button><button class="btn" id="syncBtn"><svg><use href="#i-sync"/></svg><span>Kiểm tra cập nhật</span></button></div>
+          </div>
+          <div class="welcome-grid">
+            <section class="card welcome">
+              <p class="eyebrow">VGD · PLUGIN CENTER</p>
+              <h2>Chào mừng đến với VGD Center</h2>
+              <p>Cài đặt và cập nhật plugin VGD trực tiếp trong SketchUp. Chọn thao tác; VGD Center sẽ tải gói, xác minh và cài đặt giúp bạn.</p>
+              <div class="pills"><span class="pill accent"><i class="dot"></i>Có stable · beta · alpha</span><span class="pill">Cài đặt có xác minh</span><span class="pill">Nhắc khởi động lại</span></div>
+            </section>
+            <section class="card health">
+              <div class="health-head"><div class="health-title"><i class="status-dot"></i>VGD Center hoạt động bình thường</div></div>
+              <div class="health-metrics"><div class="health-metric"><span>SketchUp</span><strong id="hostVersion">—</strong></div><div class="health-metric"><span>VGD Center</span><strong id="centerVersion">—</strong></div><div class="health-metric"><span>Plugin trong kho</span><strong id="healthPluginCount">6</strong></div></div>
+            </section>
+          </div>
+          <div class="metrics">
+            <article class="card metric"><div class="metric-icon"><svg><use href="#i-box"/></svg></div><div class="metric-copy"><b id="pluginCount">0</b><span>Plugin trong kho</span></div></article>
+            <article class="card metric"><div class="metric-icon"><svg><use href="#i-check"/></svg></div><div class="metric-copy"><b id="installedMetric">0</b><span>Đã cài trên máy</span></div></article>
+            <article class="card metric"><div class="metric-icon accent"><svg><use href="#i-update"/></svg></div><div class="metric-copy"><b id="updatesMetric">0</b><span>Có bản cập nhật</span></div></article>
+            <article class="card metric"><div class="metric-icon"><svg><use href="#i-shield"/></svg></div><div class="metric-copy"><b>SHA-256</b><span>Xác minh trước khi cài</span></div></article>
+          </div>
+          <div class="section-head"><div><h2>Cập nhật dành cho bạn</h2><p>Phiên bản mới nhất của từng plugin, gồm cả beta và alpha.</p></div><div class="section-tools"><span class="pill accent" id="updatesPill">0 cập nhật</span><button class="btn primary small" data-action="install_updates"><svg><use href="#i-update"/></svg>Cập nhật tất cả</button></div></div>
+          <div class="plugin-list" id="overviewUpdates"></div>
+          <div class="bottom-note"><svg><use href="#i-restart"/></svg><span>Sau khi cài đặt hoặc cập nhật xong, VGD Center báo hoàn tất và nhắc bạn khởi động lại SketchUp để nạp phiên bản mới.</span></div>
+        </section>
+
+        <section class="page" id="page-catalog" data-view="catalog">
+          <div class="page-head"><div><p class="eyebrow">BỘ CÔNG CỤ VGD</p><h1>Kho plugin</h1><p class="page-intro">Phiên bản mới nhất tương thích với SketchUp trên máy này.</p></div><div class="button-row"><label class="search"><svg><use href="#i-search"/></svg><input id="searchInput" type="search" placeholder="Tìm plugin…" aria-label="Tìm plugin"></label></div></div>
+          <div class="catalog-grid" id="catalogGrid"></div>
+          <div class="bottom-note"><svg><use href="#i-shield"/></svg><span>Thẻ Beta và Alpha là bản thử nghiệm, có thể còn lỗi hoặc thay đổi. Kiểm tra nhãn phiên bản trước khi cài.</span></div>
+        </section>
+
+        <section class="page" id="page-settings" data-view="settings">
+          <div class="page-head"><div><p class="eyebrow">VGD CENTER</p><h1>Cài đặt</h1></div></div>
+          <section class="card settings-card">
+            <p class="settings-version">VGD Center <strong id="centerVersionSetting">—</strong></p>
+            <div class="setting-row language-row">
+              <div><strong>Ngôn ngữ</strong><span>Chọn ngôn ngữ giao diện</span></div>
+              <div class="language-options" role="group" aria-label="Ngôn ngữ">
+                <button type="button" data-language="auto">Tự động</button>
+                <button type="button" data-language="vi">Tiếng Việt</button>
+                <button type="button" data-language="en">English</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <div><strong>Tự động cập nhật VGD Center</strong><span>Tự kiểm tra và cài bản VGD Center stable mới khi mở SketchUp.</span></div>
+              <button type="button" class="switch" id="autoUpdateToggle" role="switch" aria-checked="true" aria-label="Tự động cập nhật VGD Center"></button>
+            </div>
+            <div class="center-update-row settings-update-row">
+              <div><strong id="centerUpdateTitle">Cập nhật VGD Center</strong><span id="centerUpdateStatus">Đang kiểm tra phiên bản mới…</span><small id="centerLastCheck">Lần kiểm tra cập nhật Center gần nhất: Chưa kiểm tra</small></div>
+              <button class="btn primary small" id="centerUpdateBtn" data-action="refresh_center_update" disabled>Đang kiểm tra…</button>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+    <div class="donate-lightbox" id="donateLightbox" role="dialog" aria-modal="true" aria-label="Mã QR ủng hộ VGD">
+      <div class="donate-lightbox-panel"><button class="donate-lightbox-close" id="donateLightboxClose" type="button" aria-label="Đóng">×</button><img class="donate-lightbox-image" src="assets/donate_qr.svg" alt="Mã QR VietinBank nhận ủng hộ cho LE QUOC VUONG"></div>
+    </div>
+    <footer class="footer"><div class="footer-left"><i class="status-dot"></i><span id="footerStatus">Đang nạp danh mục phiên bản mới nhất…</span></div><span class="footer-right">SketchUp extension · VGD Center</span></footer>
+  </div>
+
+  <div class="overlay" id="overlay" role="presentation">
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle" aria-describedby="dialogText">
+      <div class="dialog-icon"><svg><use id="dialogIcon" href="#i-cloud"/></svg></div>
+      <h2 id="dialogTitle">Đang chuẩn bị</h2>
+      <p id="dialogText">Đang tải và xác minh gói cài đặt.</p>
+      <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+      <div class="dialog-actions" id="dialogActions" hidden><button class="btn primary" id="doneBtn">Đã hiểu</button></div>
+    </section>
+  </div>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const overlay = document.getElementById('overlay');
+      const dialogTitle = document.getElementById('dialogTitle');
+      const dialogText = document.getElementById('dialogText');
+      const dialogIcon = document.getElementById('dialogIcon');
+      const dialogActions = document.getElementById('dialogActions');
+      const progressBar = document.getElementById('progressBar');
+      const iconIds = {dim:'vgd-dim', scenes:'vgd-scenes', cabinet:'vgd-cabinet', library:'vgd-library', image_importer:'vgd-import', bim_lite:'vgd-bim',reference:'vgd-reference'};
+      let currentState = {products:[]};
+      let activePluginId = null;
+      let activeLanguage = 'vi';
+      const originalTextNodes = new WeakMap();
+      const englishText = {
+        'Ủng hộ VGD':'Support VGD',
+        'Trung tâm plugin SketchUp':'SketchUp Plugin Center','Tổng quan':'Overview','Kho plugin':'Plugin catalog','Cài đặt':'Settings',
+        'Quản lý plugin VGD và cập nhật ngay trong SketchUp.':'Manage VGD plugins and updates in SketchUp.',
+        'VGD · PLUGIN CENTER':'VGD · PLUGIN CENTER','Chào mừng đến với VGD Center':'Welcome to VGD Center',
+        'Cài đặt và cập nhật plugin VGD trực tiếp trong SketchUp. Chọn thao tác; VGD Center sẽ tải gói, xác minh và cài đặt giúp bạn.':'Install and update VGD plugins in SketchUp. VGD Center downloads, verifies, and installs each package.',
+        'Có stable · beta · alpha':'Stable · beta · alpha','Cài đặt có xác minh':'Verified installation','Nhắc khởi động lại':'Restart reminder',
+        'VGD Center hoạt động bình thường':'VGD Center is running','SketchUp':'SketchUp','Plugin trong kho':'Plugins in catalog',
+        'Đã cài trên máy':'Installed','Có bản cập nhật':'Updates available','Xác minh trước khi cài':'Verified before install',
+        'Cập nhật dành cho bạn':'Updates for you','Phiên bản mới nhất của từng plugin, gồm cả beta và alpha.':'Latest versions, including beta and alpha.',
+        'Cập nhật tất cả':'Update all','Không có bản cập nhật mới. Mở Kho plugin để xem các plugin có thể cài.':'No plugin updates. Open the catalog to install plugins.',
+        'Sau khi cài đặt hoặc cập nhật xong, VGD Center báo hoàn tất và nhắc bạn khởi động lại SketchUp để nạp phiên bản mới.':'After installation or update, save your model and restart SketchUp to load the new version.',
+        'BỘ CÔNG CỤ VGD':'VGD TOOLKIT','Cài plugin còn thiếu, quản lý bản đã cài và cập nhật ngay trong SketchUp.':'Install missing plugins, manage installed versions, and update in SketchUp.',
+        'Phiên bản mới nhất tương thích với SketchUp trên máy này.':'Latest versions compatible with this SketchUp installation.',
+        'Tìm plugin…':'Search plugins…','Thẻ Beta và Alpha là bản thử nghiệm, có thể còn lỗi hoặc thay đổi. Kiểm tra nhãn phiên bản trước khi cài.':'Beta and Alpha releases are experimental and may change. Check the release label before installing.',
+        'VGD CENTER':'VGD CENTER','Ngôn ngữ':'Language','Chọn ngôn ngữ giao diện':'Choose the interface language','Tự động':'Automatic',
+        'Tiếng Việt':'Vietnamese','Tự động cập nhật VGD Center':'Automatically update VGD Center',
+        'Tự kiểm tra và cài bản VGD Center stable mới khi mở SketchUp.':'Check for and install stable VGD Center updates when SketchUp starts.',
+        'Cập nhật VGD Center':'Update VGD Center','Đang kiểm tra phiên bản mới…':'Checking for updates…',
+        'Lần kiểm tra cập nhật Center gần nhất: Chưa kiểm tra':'Last Center update check: Never',
+        'Đang nạp danh mục phiên bản mới nhất…':'Loading the latest plugin catalog…','SketchUp extension · VGD Center':'SketchUp extension · VGD Center',
+        'Đang chuẩn bị':'Preparing','Đang tải và xác minh gói cài đặt.':'Downloading and verifying the package.','Đã hiểu':'OK',
+        'Kiểm tra cập nhật':'Check for updates','Đã làm mới danh sách phiên bản':'Plugin list refreshed','Cần SketchUp ':'Requires SketchUp ',
+        ' trở lên':' or later','Có bản ':'Update available: ',' mới':'','Chưa cài':'Not installed','Đã ở phiên bản mới nhất':'Up to date',
+        'Cập nhật':'Update','Đã cài':'Installed','Không tương thích':'Incompatible','Gỡ cài đặt':'Uninstall',
+        'Đang dùng':'Installed','Phiên bản':'Version','Đang dùng ':'Installed ','Không có bản cập nhật mới.':'No plugin updates available.',
+        'Đã cài đủ':'All installed','Kiểm tra lại':'Check again','Cập nhật ngay':'Update now','Tải và cài đặt':'Download and install',
+        'Đã mới nhất':'Up to date','Đã mới hơn':'Newer version installed','Thử lại':'Retry','Chưa kiểm tra được VGD Center':'Could not check VGD Center',
+        'Bản phát hành':'Latest release','Có bản VGD Center mới':'VGD Center update available','VGD Center đã mới nhất':'VGD Center is up to date',
+        'VGD Center đang dùng bản mới hơn':'Installed VGD Center is newer','Đã cài plugin':'Plugin installed','Đã cập nhật VGD Center':'VGD Center updated',
+        'Không có plugin tương thích trong danh mục.':'No compatible plugins in the catalog.','Không tìm thấy plugin phù hợp.':'No matching plugins found.','Không phát hiện plugin VGD nào đã cài trong SketchUp này.':'No VGD plugins detected.',
+        'Mở trong SketchUp':'Open in SketchUp','VGD Center cần chạy trong SketchUp để đọc trạng thái và cài plugin.':'VGD Center must run in SketchUp to read status and install plugins.',
+        'Beta':'Beta','Alpha':'Alpha','Stable':'Stable'
+      };
+
+      const escapeHtml = value => String(value == null ? '' : value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+      const icon = id => `<svg aria-hidden="true"><use href="#${iconIds[id] || 'i-box'}"></use></svg>`;
+      const normalizeSearch = value => String(value == null ? '' : value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+      const tr = (vi, en) => activeLanguage === 'en' ? en : vi;
+      const resolveLanguage = preference => preference === 'en' || (preference === 'auto' && /^en/i.test(navigator.language || '')) ? 'en' : 'vi';
+      const releaseLabel = channel => channel === 'beta' ? 'Beta' : channel === 'alpha' ? 'Alpha' : 'Stable';
+      const statusText = product => {
+        if (!product.compatible) return tr('Cần SketchUp ', 'Requires SketchUp ') + product.minimum_sketchup + tr(' trở lên', ' or later');
+        if (product.action === 'update') return tr('Có bản ', 'Update available: ') + releaseLabel(product.release_channel) + tr(' mới', '');
+        if (product.action === 'install') return tr('Chưa cài', 'Not installed');
+        return tr('Đã ở phiên bản mới nhất', 'Up to date');
+      };
+      const centerUpdate = () => currentState.center_update || {state:'checking'};
+      const notInstalled = () => currentState.products.filter(product => product.compatible && product.action === 'install');
+      const productDescription = product => {
+        if (activeLanguage !== 'en') return product.description;
+        const descriptions = {dim:'Measure dimensions and style labels, or create smart dimensions.',cabinet:'Design cabinets, compartments, doors, and drawers.',library:'Browse and manage VGD materials and models.',image_importer:'Import images as components, planes, or materials.',scenes:'Manage views, section cuts, and exports.',bim_lite:'Review and audit SketchUp model data.',reference:'Pin and edit reference images over the SketchUp viewport.'};
+        return descriptions[product.id] || product.description;
+      };
+      const actionButton = product => {
+        const disabled = !product.compatible || !product.action;
+        const label = product.action === 'update' ? tr('Cập nhật', 'Update') : product.action === 'install' ? tr('Cài đặt', 'Install') : product.installed ? tr('Đã cài', 'Installed') : tr('Không tương thích', 'Incompatible');
+        const primary = product.action === 'update' || product.action === 'install';
+        const uninstall = product.installed ? `<button class="btn small" data-action="uninstall_plugin" data-id="${escapeHtml(product.id)}">${tr('Gỡ cài đặt', 'Uninstall')}</button>` : '';
+        const guide = `<button class="btn small" data-action="open_guide" data-id="${escapeHtml(product.id)}"><svg><use href="#i-book"/></svg>${tr('Hướng dẫn', 'Guide')}</button>`;
+        return `<div class="plugin-actions">${guide}<button class="btn ${primary ? 'primary ' : ''}small" data-action="install_plugin" data-id="${escapeHtml(product.id)}" ${disabled ? 'disabled' : ''}>${label}</button>${uninstall}</div>`;
+      };
+      const rowMarkup = product => {
+        const iconId = iconIds[product.icon] ? product.icon : product.id;
+        const oldVersion = product.installed_version ? `<strong>${tr('Đang dùng ', 'Installed ')}${escapeHtml(product.installed_version)}</strong><span class="arrow">→</span>` : `<strong>${tr('Chưa cài', 'Not installed')}</strong><span class="arrow">→</span>`;
+        const stateClass = product.action === 'update' ? 'update' : product.installed ? '' : 'uninstalled';
+        return `<article class="card plugin-row"><div class="plugin-icon">${icon(iconId)}</div><div class="plugin-name"><strong>${escapeHtml(product.name)}</strong><span>${escapeHtml(productDescription(product))}</span></div><div class="version-line">${oldVersion}<strong>${escapeHtml(product.version)}</strong><div class="plugin-state"><i class="state-dot ${stateClass}"></i>${escapeHtml(statusText(product))}</div></div>${actionButton(product)}</article>`;
+      };
+      const emptyMarkup = message => `<div class="card empty-state"><strong>${escapeHtml(activeLanguage === 'en' ? (englishText[message] || message) : message)}</strong></div>`;
+      const setCount = (id, value) => { const node = document.getElementById(id); if (node) node.textContent = String(value); };
+      const updates = () => currentState.products.filter(product => product.action === 'update');
+      const installed = () => currentState.products.filter(product => product.installed);
+
+      function render() {
+        const products = currentState.products || [];
+        const settings = currentState.settings || {language:'vi',auto_update:true};
+        activeLanguage = resolveLanguage(settings.language || 'vi');
+        const updateItems = updates();
+        document.getElementById('catalogGrid').innerHTML = products.length ? products.map(product => {
+          const description = productDescription(product);
+          const channel = releaseLabel(product.release_channel);
+          const haystack = normalizeSearch(`${product.name} ${description} ${product.id} ${product.version} ${channel} hướng dẫn guide ${product.installed ? 'đã cài installed gỡ cài đặt uninstall' : 'chưa cài not installed cài đặt install'} ${product.action === 'update' ? 'cập nhật update' : ''}`);
+          const iconId = iconIds[product.icon] ? product.icon : product.id;
+          const compatibility = product.compatible ? '' : `<span class="badge">${escapeHtml(statusText(product))}</span>`;
+          return `<article class="card catalog-card" data-search="${escapeHtml(haystack)}"><div class="plugin-icon">${icon(iconId)}</div><div><div class="plugin-name"><strong>${escapeHtml(product.name)}</strong><span>${escapeHtml(product.version)}</span></div><p class="desc">${escapeHtml(description)}</p><div class="catalog-meta"><span class="badge ${channel.toLowerCase()}">${channel}</span><span class="badge">SketchUp ${escapeHtml(product.minimum_sketchup)}+</span>${compatibility}</div></div>${actionButton(product)}</article>`;
+        }).join('') : emptyMarkup(currentState.message || 'Chưa có plugin tương thích trong danh mục.');
+        if (!document.getElementById('catalogNoResults')) {
+          const noResults = document.createElement('div');
+          noResults.className = 'card empty-state';
+          noResults.id = 'catalogNoResults';
+          noResults.hidden = true;
+          noResults.innerHTML = '<strong>Không tìm thấy plugin phù hợp.</strong>';
+          document.getElementById('catalogGrid').appendChild(noResults);
+        }
+        document.getElementById('overviewUpdates').innerHTML = updateItems.length ? updateItems.map(rowMarkup).join('') : emptyMarkup('Không có bản cập nhật mới. Mở Kho plugin để xem các plugin có thể cài.');
+        const count = products.length;
+        setCount('catalogCount', count);
+        setCount('pluginCount', count);
+        setCount('installedMetric', installed().length);
+        setCount('updatesMetric', updateItems.length);
+        setCount('updatesPill', activeLanguage === 'en' ? `${updateItems.length} updates` : `${updateItems.length} cập nhật`);
+        document.getElementById('hostVersion').textContent = currentState.sketchup || '—';
+        document.getElementById('hostLabel').textContent = 'SketchUp ' + (currentState.sketchup || '');
+        document.getElementById('centerVersion').textContent = currentState.version || '—';
+        document.getElementById('healthPluginCount').textContent = String(count);
+        const pendingInstalls = notInstalled().length;
+        const installAllButton = document.getElementById('installAllBtn');
+        installAllButton.disabled = pendingInstalls === 0;
+        installAllButton.querySelector('span').textContent = pendingInstalls ? tr(`Cài tất cả (${pendingInstalls})`, `Install all (${pendingInstalls})`) : tr('Đã cài đủ', 'All installed');
+        document.getElementById('centerVersionSetting').textContent = currentState.version || '—';
+        document.getElementById('autoUpdateToggle').classList.toggle('on', settings.auto_update !== false);
+        document.getElementById('autoUpdateToggle').setAttribute('aria-checked', settings.auto_update !== false ? 'true' : 'false');
+        document.querySelectorAll('[data-language]').forEach(button => button.setAttribute('aria-pressed', button.dataset.language === (settings.language || 'vi') ? 'true' : 'false'));
+        renderCenterUpdate();
+        const updateButtons = document.querySelectorAll('[data-action="install_updates"]');
+        updateButtons.forEach(button => { button.disabled = !updateItems.length; });
+        filterCatalog();
+        applyLanguage();
+      }
+
+      function applyLanguage() {
+        document.documentElement.lang = activeLanguage;
+        const donateCard = document.querySelector('.donate-card');
+        donateCard.setAttribute('aria-label', tr('Ủng hộ VGD', 'Support VGD'));
+        donateCard.querySelector('.donate-qr').setAttribute('alt', tr('Mã QR VietinBank nhận ủng hộ cho LE QUOC VUONG', 'VietinBank donation QR for LE QUOC VUONG'));
+        document.getElementById('donateQrButton').setAttribute('aria-label', tr('Phóng lớn mã QR ủng hộ', 'Enlarge donation QR'));
+        document.getElementById('donateLightbox').setAttribute('aria-label', tr('Mã QR ủng hộ VGD', 'VGD donation QR'));
+        document.getElementById('donateLightboxClose').setAttribute('aria-label', tr('Đóng', 'Close'));
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+          if (node.parentElement && node.parentElement.closest('#catalogGrid, #overviewUpdates, #installAllBtn, #updatesPill, #centerUpdateTitle, #centerUpdateStatus, #centerUpdateBtn, #centerLastCheck, #centerVersion, #centerVersionSetting, #hostVersion, #healthPluginCount')) continue;
+          if (!originalTextNodes.has(node)) originalTextNodes.set(node, node.nodeValue);
+          const original = originalTextNodes.get(node);
+          const leading = (original.match(/^\s*/) || [''])[0];
+          const trailing = (original.match(/\s*$/) || [''])[0];
+          const phrase = original.trim();
+          node.nodeValue = leading + (activeLanguage === 'en' ? (englishText[phrase] || phrase) : phrase) + trailing;
+        }
+        const search = document.getElementById('searchInput');
+        search.placeholder = tr('Tìm plugin…', 'Search plugins…');
+        search.setAttribute('aria-label', search.placeholder);
+        document.getElementById('autoUpdateToggle').setAttribute('aria-label', tr('Tự động cập nhật VGD Center', 'Automatically update VGD Center'));
+        document.querySelector('.language-options').setAttribute('aria-label', tr('Ngôn ngữ', 'Language'));
+      }
+
+      function renderCenterUpdate() {
+        const info = centerUpdate();
+        const button = document.getElementById('centerUpdateBtn');
+        const status = document.getElementById('centerUpdateStatus');
+        const title = document.getElementById('centerUpdateTitle');
+        const latest = info.latest_version ? `VGD Center ${info.latest_version}` : 'VGD Center';
+        if (info.state === 'update') {
+          title.textContent = tr('Có bản VGD Center mới', 'VGD Center update available');
+          status.textContent = tr(`Đang dùng ${info.current_version || currentState.version || '—'} · ${latest} đã sẵn sàng`, `Using ${info.current_version || currentState.version || '—'} · ${latest} is available`);
+          button.textContent = tr('Tải và cài đặt', 'Download and install');
+          button.disabled = false;
+          button.dataset.action = 'update_center';
+        } else if (info.state === 'latest') {
+          title.textContent = tr('VGD Center đã mới nhất', 'VGD Center is up to date');
+          status.textContent = `${tr('Phiên bản', 'Version')} ${info.current_version || currentState.version || '—'}`;
+          button.textContent = tr('Kiểm tra cập nhật', 'Check for updates');
+          button.disabled = false;
+          button.dataset.action = 'refresh_center_update';
+        } else if (info.state === 'ahead') {
+          title.textContent = tr('VGD Center đang dùng bản mới hơn', 'Installed VGD Center is newer');
+          status.textContent = tr(`Đang dùng ${info.current_version || currentState.version || '—'} · Bản phát hành ${latest}`, `Using ${info.current_version || currentState.version || '—'} · Latest release ${latest}`);
+          button.textContent = tr('Kiểm tra cập nhật', 'Check for updates');
+          button.disabled = false;
+          button.dataset.action = 'refresh_center_update';
+        } else if (info.state === 'error') {
+          title.textContent = tr('Chưa kiểm tra được VGD Center', 'Could not check VGD Center');
+          status.textContent = activeLanguage === 'en' ? 'Check your connection and try again.' : (info.error || 'Kiểm tra lại kết nối để tìm bản mới.');
+          button.textContent = tr('Thử lại', 'Retry');
+          button.disabled = false;
+          button.dataset.action = 'refresh_center_update';
+        } else {
+          title.textContent = tr('Cập nhật VGD Center', 'Update VGD Center');
+          status.textContent = tr('Đang kiểm tra phiên bản mới…', 'Checking for updates…');
+          button.textContent = tr('Đang kiểm tra…', 'Checking…');
+          button.disabled = true;
+          button.dataset.action = 'refresh_center_update';
+        }
+        const checked = info.last_checked || '';
+        document.getElementById('centerLastCheck').textContent = checked ? `${tr('Lần kiểm tra cập nhật Center gần nhất:', 'Last Center update check:')} ${checked}` : tr('Lần kiểm tra cập nhật Center gần nhất: Chưa kiểm tra', 'Last Center update check: Never');
+      }
+
+      function filterCatalog() {
+        const query = normalizeSearch(document.getElementById('searchInput').value).trim().split(/\s+/).filter(Boolean);
+        const cards = document.querySelectorAll('#catalogGrid .catalog-card');
+        let visible = 0;
+        cards.forEach(card => {
+          const searchable = normalizeSearch(card.dataset.search || '');
+          const matches = query.every(term => searchable.includes(term));
+          card.hidden = !matches;
+          if (matches) visible++;
+        });
+        const noResults = document.getElementById('catalogNoResults');
+        if (noResults) noResults.hidden = query.length === 0 || visible > 0;
+        const emptyCatalog = document.querySelector('#catalogGrid > .empty-state:not(#catalogNoResults)');
+        if (emptyCatalog) emptyCatalog.hidden = query.length > 0;
+      }
+
+      function openPage(name) {
+        document.querySelectorAll('.page').forEach(page => page.classList.toggle('active', page.dataset.view === name));
+        document.querySelectorAll('.nav [data-page]').forEach(button => button.setAttribute('aria-current', button.dataset.page === name ? 'page' : 'false'));
+        document.querySelector('main').scrollTop = 0;
+      }
+
+      function setStatus(message) {
+        const translated = activeLanguage === 'en' ? (englishText[message] || message) : message;
+        document.getElementById('footerStatus').textContent = translated;
+      }
+
+      function showOverlay(title, message, iconHref, finished) {
+        dialogTitle.textContent = title;
+        dialogText.textContent = message;
+        dialogIcon.setAttribute('href', iconHref || '#i-cloud');
+        dialogActions.hidden = !finished;
+        overlay.classList.add('open');
+        if (finished) document.getElementById('doneBtn').focus();
+      }
+
+      function requestNative(name, value) {
+        if (!window.sketchup || typeof window.sketchup[name] !== 'function') {
+          showOverlay(tr('Mở trong SketchUp', 'Open in SketchUp'), tr('VGD Center cần chạy trong SketchUp để đọc trạng thái và cài plugin.', 'VGD Center must run in SketchUp to read status and install plugins.'), '#i-info', true);
+          return;
+        }
+        if (value === undefined) window.sketchup[name]();
+        else window.sketchup[name](value);
+      }
+
+      document.querySelectorAll('.nav [data-page]').forEach(button => button.addEventListener('click', () => openPage(button.dataset.page)));
+      document.querySelectorAll('[data-page]:not(.nav button)').forEach(button => button.addEventListener('click', () => openPage(button.dataset.page)));
+      document.getElementById('themeBtn').addEventListener('click', toggleTheme);
+      const donateLightbox = document.getElementById('donateLightbox');
+      const closeDonateQr = () => donateLightbox.classList.remove('open');
+      document.getElementById('donateQrButton').addEventListener('click', () => donateLightbox.classList.add('open'));
+      document.getElementById('donateLightboxClose').addEventListener('click', closeDonateQr);
+      donateLightbox.addEventListener('click', event => { if (event.target === donateLightbox) closeDonateQr(); });
+      document.addEventListener('keydown', event => { if (event.key === 'Escape') closeDonateQr(); });
+      document.getElementById('syncBtn').addEventListener('click', () => requestNative('refresh_catalog'));
+      document.getElementById('autoUpdateToggle').addEventListener('click', () => {
+        const currentlyEnabled = !document.getElementById('autoUpdateToggle').classList.contains('on');
+        requestNative('set_auto_update', currentlyEnabled);
+      });
+      document.querySelectorAll('[data-language]').forEach(button => button.addEventListener('click', () => requestNative('set_language', button.dataset.language)));
+      document.getElementById('searchInput').addEventListener('input', filterCatalog);
+      document.addEventListener('click', event => {
+        const button = event.target.closest('[data-action]');
+        if (!button || button.disabled) return;
+        if (button.dataset.action === 'install_plugin') requestNative('install_plugin', button.dataset.id);
+        if (button.dataset.action === 'uninstall_plugin') requestNative('uninstall_plugin', button.dataset.id);
+        if (button.dataset.action === 'open_guide') {
+          if (window.sketchup && typeof window.sketchup.open_guide === 'function') requestNative('open_guide', button.dataset.id);
+          else window.open(`guides/${encodeURIComponent(button.dataset.id)}.html`, '_blank', 'noopener');
+        }
+        if (button.dataset.action === 'install_all_plugins') requestNative('install_all_plugins');
+        if (button.dataset.action === 'install_updates') requestNative('install_updates');
+        if (button.dataset.action === 'update_center') requestNative('update_center');
+        if (button.dataset.action === 'refresh_center_update') requestNative('refresh_center_update');
+      });
+      document.getElementById('doneBtn').addEventListener('click', () => overlay.classList.remove('open'));
+      overlay.addEventListener('click', event => { if (event.target === overlay && !dialogActions.hidden) overlay.classList.remove('open'); });
+      document.addEventListener('keydown', event => { if (event.key === 'Escape' && overlay.classList.contains('open') && !dialogActions.hidden) overlay.classList.remove('open'); });
+
+      function toggleTheme() {
+        const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+        root.dataset.theme = next;
+        try { localStorage.setItem('vgd-center-theme', next); } catch (_error) {}
+      }
+      let savedTheme = null;
+      try { savedTheme = localStorage.getItem('vgd-center-theme'); } catch (_error) {}
+      if (savedTheme === 'light' || savedTheme === 'dark') root.dataset.theme = savedTheme;
+
+      window.VGD = {
+        receiveState(state) { currentState = state || {products:[]}; render(); },
+        setStatus,
+        progress(data) {
+          activePluginId = data.id;
+          const product = currentState.products.find(item => item.id === data.id);
+          const name = data.id === 'center' ? 'VGD Center' : product ? product.name : 'plugin';
+          const total = Number(data.total);
+          const current = Number(data.current);
+          const percent = total > 0 ? Math.max(4, Math.min(100, Math.round(current * 100 / total))) : 12;
+          progressBar.style.width = percent + '%';
+          showOverlay(data.phase || 'Đang xử lý', `VGD Center đang xử lý ${name}. Vui lòng đợi đến khi thao tác hoàn tất.`, '#i-cloud', false);
+          setStatus((data.phase || 'Đang xử lý') + ' · ' + name);
+        },
+        notify(kind, title, message) {
+          progressBar.style.width = '100%';
+          const href = kind === 'success' ? '#i-restart' : kind === 'error' ? '#i-info' : '#i-shield';
+          showOverlay(title, message, href, true);
+          setStatus(kind === 'success' ? 'Hoàn tất · Cần khởi động lại SketchUp' : title);
+          if (kind === 'success') { render(); activePluginId = null; }
+        }
+      };
+
+      if (window.sketchup && typeof window.sketchup.center_ready === 'function') window.sketchup.center_ready();
+      else if (new URLSearchParams(window.location.search).has('preview') || (window.location.protocol === 'file:' && !window.sketchup)) {
+        const versions = {dim:'3.3.0-beta.5',cabinet:'4.5.0-beta.4',library:'1.1.2-beta.4',image_importer:'1.1.0-beta.5',scenes:'1.5.3-beta.3',bim_lite:'0.1.4-alpha',reference:'1.0.0-beta.6'};
+        const descriptions = {dim:'Đo kích thước, chỉnh kiểu Dim/Text và tạo Smart Dim.',cabinet:'Dựng tủ, chia khoang, cánh và ngăn kéo trong SketchUp.',library:'Tìm kiếm và quản lý thư viện vật liệu, model VGD.',image_importer:'Nhập ảnh vào SketchUp dưới dạng component, mặt phẳng hoặc vật liệu.',scenes:'Quản lý góc nhìn, mặt cắt và xuất hồ sơ.',bim_lite:'Đọc thông tin và rà soát dữ liệu model SketchUp.',reference:'Ghim và chỉnh sửa ảnh tham chiếu ngay trên khung nhìn SketchUp.'};
+        const names = {dim:'VGD Dim',cabinet:'VGD Cabinet',library:'VGD Library',image_importer:'VGD Image Importer',scenes:'VGD Scenes',bim_lite:'VGD BIM Lite',reference:'VGD Reference'};
+        const channels = {dim:'beta',cabinet:'beta',library:'beta',image_importer:'beta',scenes:'beta',bim_lite:'alpha',reference:'beta'};
+        const installedIds = ['dim','cabinet','library','image_importer','scenes'];
+        const updateIds = ['dim','scenes'];
+        window.VGD.receiveState({version:'1.0.7',sketchup:'22.0.316',settings:{language:'vi',auto_update:true},center_update:{state:'latest',current_version:'1.0.7',latest_version:'1.0.7'},products:Object.keys(versions).map(id=>({id,name:names[id],version:versions[id],release_channel:channels[id],description:descriptions[id],icon:id,minimum_sketchup:'22.0.0',compatible:true,installed:installedIds.includes(id),installed_version:installedIds.includes(id)?(updateIds.includes(id)?'bản cũ':'đang dùng'):null,action:!installedIds.includes(id)?'install':updateIds.includes(id)?'update':null}))});
+        setStatus('Bản xem thử · Nút cài đặt không thao tác thật');
+      } else setStatus('VGD Center cần chạy bên trong SketchUp');
+    })();
+  </script>
+</body>
+</html>

@@ -11,7 +11,7 @@ require_relative 'camera'
 require_relative 'update_notice'
 module VGD
   module Scenes
-    VERSION = '1.5.3-beta.1'.freeze unless const_defined?(:VERSION, false)
+    VERSION = '1.5.3-beta.2'.freeze unless const_defined?(:VERSION, false)
     class << self
       def state
         model = Sketchup.active_model
@@ -307,16 +307,20 @@ module VGD
         quick_command.large_icon = File.join(__dir__, 'quick_views.svg')
         capture_command.small_icon = File.join(__dir__, 'update_view.svg')
         capture_command.large_icon = File.join(__dir__, 'update_view.svg')
-        open_command.tooltip = 'VGD Scenes · Tạo scene, mặt cắt, quản lý và xuất ảnh/PDF'
-        quick_command.tooltip = 'VGD · 4 view nhanh: ISO, TOP, FRONT, RIGHT từ đối tượng chọn'
-        capture_command.tooltip = 'VGD · Lưu view hiện tại vào scene đang chọn'
+        open_command.tooltip = 'VGD Scenes · Bảng điều khiển'
+        quick_command.tooltip = 'VGD · Tạo/cập nhật 4 view nhanh'
+        capture_command.tooltip = 'VGD · Lưu view'
+        open_command.status_bar_text = 'Mở bảng điều khiển VGD Scenes để tạo, quản lý và xuất các góc nhìn.'
+        quick_command.status_bar_text = 'Tạo hoặc cập nhật nhanh 4 góc nhìn cho đối tượng đang chọn.'
         capture_command.status_bar_text = 'Lưu view, hiển thị, mặt cắt và khung hiện tại vào scene đang chọn.'
         [[copy_command, 'copy_scene.svg'], [paste_command, 'paste_scene.svg']].each do |command, icon|
           command.small_icon = File.join(__dir__, icon)
           command.large_icon = File.join(__dir__, icon)
         end
-        copy_command.tooltip = 'VGD · Copy camera và khung đang xem'
-        paste_command.tooltip = 'VGD · Paste vào view hiện tại; không tạo hoặc cập nhật scene'
+        copy_command.tooltip = 'VGD · Copy camera và khung'
+        paste_command.tooltip = 'VGD · Paste camera và khung'
+        copy_command.status_bar_text = 'Sao chép camera và khung hiện tại để dán vào view khác.'
+        paste_command.status_bar_text = 'Dán camera và khung vào view đang hoạt động.'
         menu.add_item(open_command); menu.add_item(quick_command); menu.add_item(capture_command)
         @toolbar = ::UI::Toolbar.new('VGD Scenes')
         @toolbar.add_item(open_command); @toolbar.add_item(quick_command); @toolbar.add_item(capture_command)

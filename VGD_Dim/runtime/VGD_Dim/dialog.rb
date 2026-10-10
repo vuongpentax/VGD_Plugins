@@ -33,6 +33,25 @@ module VGD
           send_js('onResult',Core.run(p.fetch('kinds'),p.fetch('settings'),p.fetch('opts')))
         end
         callback('rebuild') { |json| send_js('onRebuild',Core.rebuild_dims(JSON.parse(json).fetch('opts'))) }
+        callback('set_boundary') do
+          Regions.begin_pick('boundary')
+          send_js('onToolStart',{'message'=>'Chọn hai góc đối diện của Boundary trong model.'})
+        end
+        callback('set_detail') do |json|
+          Regions.begin_pick('detail',JSON.parse(json).fetch('name'))
+          send_js('onToolStart',{'message'=>'Chọn hai góc đối diện của Detail Region trong Boundary.'})
+        end
+        callback('set_region') do |json|
+          p=JSON.parse(json)
+          send_js('onRegions',Regions.set_active(Sketchup.active_model,p.fetch('id')))
+        end
+        callback('delete_region') do |id|
+          send_js('onRegions',Regions.delete_detail(Sketchup.active_model,id))
+        end
+        callback('manual_dim') do |json|
+          ManualDim.start(JSON.parse(json).fetch('settings'))
+          send_js('onToolStart',{'message'=>'Chọn điểm đầu, điểm cuối, rồi chọn phía đặt Dim.'})
+        end
         callback('smart_dim') do |json|
           p=JSON.parse(json)
           result=SmartDim.execute(p.fetch('opts'),p.fetch('settings'))
@@ -75,7 +94,7 @@ module VGD
       def push_state(select=nil)
         send_js('onState',{'version'=>VGD::Dim::VERSION,'presets'=>Presets.all,'builtin'=>Presets::BUILTIN.keys,'select'=>select,
           'auto'=>AutoStyle.load,'smart'=>SmartDim.saved['opts'],'smart_style'=>SmartDim.saved['settings'],
-          'units'=>Core.read_units(Sketchup.active_model),'anim'=>Animation.read(Sketchup.active_model)})
+          'units'=>Core.read_units(Sketchup.active_model),'anim'=>Animation.read(Sketchup.active_model),'regions'=>Regions.public_state(Sketchup.active_model)})
       end
       def send_js(fn,data)
         @dlg.execute_script("VGD.#{fn}(#{JSON.generate(data)})") if @dlg

@@ -1,16 +1,19 @@
 const fs=require('fs'),path=require('path');
-const deps=path.resolve(__dirname,'../../TPlus_Cabinet_Codex_Handoff_2026-10-01/cabinet_dev/node_modules');
+const deps=process.env.VGD_NODE_MODULES||process.env.VGD_RUBY_WASM_NODE_MODULES||path.resolve(__dirname,'../../VGD_Scenes/dev/node_modules');
 const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js'));
 (async()=>{
   const wasm=await WebAssembly.compile(fs.readFileSync(require.resolve(path.join(deps,'@ruby/3.2-wasm-wasi/dist/ruby+stdlib.wasm'))));
   const {vm}=await DefaultRubyVM(wasm),root=path.resolve(__dirname,'../runtime');
-  const names=['version','defaults','engine','native_style','store','managed','core','presets','autostyle','animation','smartdim','probe','dialog','update_core/manifest','update_core/bootstrap','update_core/client','update_core/installer','update_core/updater','main','reload'];
+  const names=['version','defaults','engine','native_style','store','managed','core','presets','autostyle','animation','smartdim','regions','manual_dim','probe','dialog','update_core/manifest','update_core/bootstrap','update_core/client','update_core/installer','update_core/updater','main','reload'];
+  const installerSource=fs.readFileSync(path.join(root,'VGD_Dim/update_core/installer.rb'),'utf8');
+  if(!installerSource.includes(':new_pgroup => true')||installerSource.includes(':pgroup => true'))throw Error('Windows updater must use :new_pgroup, not POSIX :pgroup');
   const literal=value=>JSON.stringify(Buffer.from(value,'utf8').toString('base64'))+'.unpack1("m0")';
   for(const file of ['vgd_dim.rb',...names.map(n=>'VGD_Dim/'+n+'.rb')]){
     vm.eval('RubyVM::InstructionSequence.compile('+literal(fs.readFileSync(path.join(root,file),'utf8'))+')');
     console.log('Syntax OK:',file);
   }
   vm.eval('RubyVM::InstructionSequence.compile('+literal(fs.readFileSync(path.join(__dirname,'native_smoke.rb'),'utf8'))+')');
+  vm.eval("require 'securerandom'");
   vm.eval(fs.readFileSync(path.join(__dirname,'test_fixture.rb'),'utf8'));
   for(const name of names.filter(n=>!['main','reload','update_core/installer'].includes(n)))vm.eval(fs.readFileSync(path.join(root,'VGD_Dim',name+'.rb'),'utf8'));
 
@@ -30,7 +33,9 @@ const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js')
     }
     console.log(`PASS: ${count} actual SU2022 VGD Dim fields decoded read-only; native preferences unchanged and values not logged.`);
   }
-  vm.eval(`check(VGD::Dim::UpdateCore::Updater.newer?('3.3.0-beta.2','3.3.0-beta.1'),'Beta version comparison failed'); check(VGD::Dim::UpdateCore::Updater.newer?('3.3.1','3.3.0'),'Stable version comparison failed'); info=VGD::Dim::UpdateCore::Manifest.parse(JSON.generate({'product_id'=>'vgd_dim','version'=>'3.3.0-beta.2','channel'=>'beta','min_sketchup_year'=>'2022','filename'=>'VGD_Dim_v3.3.0-beta.2.rbz','bytes'=>10,'sha256'=>'a'*64,'download_url'=>'https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0-beta.2/VGD_Dim_v3.3.0-beta.2.rbz','changelog'=>'pilot'})); check(info['version']=='3.3.0-beta.2','Manifest parse failed'); VGD::Dim::UpdateCore::Bootstrap.validate_expected!({'main.rb'=>'a'*64}); safe=VGD::Dim::UpdateCore::Bootstrap.sibling_path!('/tmp/VGD_Dim.backup_'+('a'*32),'/tmp',/\\AVGD_Dim\\.backup_[0-9a-f]{32}\\z/i); check(File.basename(safe).start_with?('VGD_Dim.backup_'),'Backup sibling validation failed'); unsafe=false; begin; VGD::Dim::UpdateCore::Bootstrap.sibling_path!('/tmp/../outside','/tmp',/\\AVGD_Dim\\.backup_[0-9a-f]{32}\\z/i); rescue StandardError; unsafe=true; end; check(unsafe,'Outside backup path was accepted');`);
+  vm.eval(`check(VGD::Dim::UpdateCore::Updater.newer?('3.3.0-beta.3','3.3.0-beta.1'),'Beta version comparison failed'); check(VGD::Dim::UpdateCore::Updater.newer?('3.3.1','3.3.0'),'Stable version comparison failed'); info=VGD::Dim::UpdateCore::Manifest.parse(JSON.generate({'product_id'=>'vgd_dim','version'=>'3.3.0-beta.3','channel'=>'beta','min_sketchup_year'=>'2022','filename'=>'VGD_Dim_v3.3.0-beta.3.rbz','bytes'=>10,'sha256'=>'a'*64,'download_url'=>'https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0-beta.3/VGD_Dim_v3.3.0-beta.3.rbz','changelog'=>'pilot'})); check(info['version']=='3.3.0-beta.3','Manifest parse failed'); VGD::Dim::UpdateCore::Bootstrap.validate_expected!({'main.rb'=>'a'*64}); safe=VGD::Dim::UpdateCore::Bootstrap.sibling_path!('/tmp/VGD_Dim.backup_'+('a'*32),'/tmp',/\\AVGD_Dim\\.backup_[0-9a-f]{32}\\z/i); check(File.basename(safe).start_with?('VGD_Dim.backup_'),'Backup sibling validation failed'); unsafe=false; begin; VGD::Dim::UpdateCore::Bootstrap.sibling_path!('/tmp/../outside','/tmp',/\\AVGD_Dim\\.backup_[0-9a-f]{32}\\z/i); rescue StandardError; unsafe=true; end; check(unsafe,'Outside backup path was accepted');`);
+  const actualManifest=fs.readFileSync(path.resolve(root,'../VGD_UPDATE_MANIFEST.json'),'utf8');
+  vm.eval('actual_info=VGD::Dim::UpdateCore::Manifest.parse('+literal(actualManifest)+'); check(actual_info["version"]==VGD::Dim::VERSION && actual_info["download_url"].include?("/shared/vgd-center/packages/"),"Published manifest URL/version rejected")');
   vm.eval(`
     module Sketchup
       module Http
@@ -53,7 +58,7 @@ const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js')
     response=[]
     payload='fixture'
     digest=Digest::SHA256.hexdigest(payload)
-    info={'download_url'=>'https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0-beta.2/VGD_Dim_v3.3.0-beta.2.rbz','bytes'=>payload.bytesize,'sha256'=>digest}
+    info={'download_url'=>'https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0-beta.3/VGD_Dim_v3.3.0-beta.3.rbz','bytes'=>payload.bytesize,'sha256'=>digest}
     updater_client=VGD::Dim::UpdateCore::Client.new
     updater_client.download(info){|status,value| response << [status,value]}
     check(response.empty?,'Download callback fired before response')
@@ -72,7 +77,7 @@ const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js')
     check(UI.toolbars.length==1 && UI.toolbars.first.events==[:add,:add],'Toolbar duplicated')
     VGD::Dim.show_dialog
     dialog=VGD::Dim::Dialog.instance_variable_get(:@dlg)
-    expected=%w[ready scan run rebuild smart_dim save_preset delete_preset set_auto anim_set dim_info text_info native_apply units_apply]
+    expected=%w[ready scan run rebuild smart_dim save_preset delete_preset set_auto anim_set dim_info text_info native_apply units_apply set_boundary set_detail set_region delete_region manual_dim]
     check(dialog.callbacks.keys.sort==expected.sort,'Missing callback')
     VGD::Dim.show_dialog
     check(VGD::Dim::Dialog.instance_variable_get(:@dlg).equal?(dialog) && dialog.fronts==1,'Dialog duplicated')

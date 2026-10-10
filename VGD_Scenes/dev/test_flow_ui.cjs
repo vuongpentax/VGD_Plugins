@@ -39,7 +39,7 @@ const assert=(ok,message)=>{if(!ok)throw Error(message);};
   const out=path.resolve(__dirname,'../outputs');fs.mkdirSync(out,{recursive:true});
   for(const dark of [false,true]){
    await page.evaluate(dark=>document.body.classList.toggle('dark',dark),dark);
-   const palette=await page.evaluate(()=>({accent:getComputedStyle(document.body).getPropertyValue('--accent').trim(),bg:getComputedStyle(document.body).getPropertyValue('--bg').trim()}));assert(palette.accent==='#b48963'&&palette.bg===(dark?'#121212':'#f7f7f5'),'Existing theme changed');
+   const palette=await page.evaluate(()=>({accent:getComputedStyle(document.body).getPropertyValue('--accent').trim(),bg:getComputedStyle(document.body).getPropertyValue('--bg').trim()}));assert(palette.accent===(dark?'#b48963':'#8e6b4c')&&palette.bg===(dark?'#121212':'#f7f7f5'),'VGD theme tokens changed');
    for(const viewport of [{width:640,height:780},{width:460,height:540}]){
     await page.setViewportSize(viewport);
     for(const step of ['views','sections','scenes','compose','export']){

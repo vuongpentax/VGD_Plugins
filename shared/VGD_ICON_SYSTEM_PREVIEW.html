@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VGD · Bộ icon đồng bộ · Preview</title>
+<style>
+:root{color-scheme:dark;--page:#191a1b;--panel:#222426;--line:#393b3d;--text:#f1ede8;--muted:#b4ada6;--deep:#292B2D;--light:#A67C58;--icon-outline:#F1EDE6;--icon-accent:#A67C58;--center-top:#292b2d;--center-accent:#A67C58;--center-left:#222426;--center-right:#343638;--center-inner:#191a1b;--toolbar:#292b2d;--toolbar-edge:#45474a;--toolbar-divider:#45474a;--shadow:0 14px 40px #0005}
+html[data-theme="light"]{color-scheme:light;--page:#f3f1ed;--panel:#fff;--line:#ded9d2;--text:#282522;--muted:#726c65;--deep:#292B2D;--light:#A67C58;--icon-outline:#292B2D;--icon-accent:#A67C58;--center-top:#F3F1ED;--center-accent:#A67C58;--center-left:#242220;--center-right:#3A3835;--center-inner:#191817;--toolbar:#d8d7d4;--toolbar-edge:#aaa8a3;--toolbar-divider:#bbb9b3;--shadow:0 12px 34px #4d40301a}
+*{box-sizing:border-box}body{margin:0;background:var(--page);color:var(--text);font:14px/1.45 "Segoe UI",Arial,sans-serif}.wrap{max-width:1320px;margin:auto;padding:30px 34px 48px}.hero{display:flex;align-items:center;gap:18px;padding:4px 0 25px;border-bottom:1px solid var(--line)}.wordmark{font-size:26px;font-weight:800;letter-spacing:.08em;color:var(--light)}.eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--light);font-weight:700}.hero h1{font-size:25px;margin:3px 0 5px}.hero p{margin:0;color:var(--muted);max-width:800px}.theme{margin-left:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--text);padding:9px 13px;cursor:pointer}.specs{display:flex;flex-wrap:wrap;gap:9px;margin:20px 0 25px}.specs span{border:1px solid var(--line);border-radius:99px;padding:6px 11px;color:var(--muted);font-size:12px}.specs b{color:var(--light)}h2{font-size:15px;letter-spacing:.11em;margin:30px 0 12px;text-transform:uppercase}.sub{color:var(--muted);font-size:12px;margin:-5px 0 13px}.toolbar{display:flex;align-items:center;gap:4px;min-height:54px;padding:8px 12px;background:var(--toolbar);border:1px solid var(--toolbar-edge);border-radius:5px;overflow-x:auto;box-shadow:var(--shadow)}.toolbar .tool{display:grid;place-items:center;width:38px;height:36px;flex:0 0 auto;border-right:1px solid var(--toolbar-divider)}.toolbar svg{width:27px;height:27px}.scale-row{display:flex;gap:25px;align-items:end;margin:18px 0 28px}.scale{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:11px}.scale svg{width:var(--sz);height:var(--sz)}.section{margin:30px 0}.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}.item{min-height:76px;border:1px solid var(--line);border-radius:9px;background:var(--panel);display:flex;align-items:center;gap:13px;padding:11px 13px}.glyph{display:grid;place-items:center;width:44px;height:44px;flex:0 0 44px}.glyph svg{width:38px;height:38px}.name{font-weight:650}.group{font-size:10px;color:var(--light);letter-spacing:.08em;text-transform:uppercase;margin-top:3px}.foot{margin-top:28px;border-top:1px solid var(--line);padding-top:14px;color:var(--muted);font-size:12px}.outline{stroke:var(--icon-outline);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;fill:none}.accent{stroke:var(--icon-accent);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;fill:none}.fill-accent{fill:var(--icon-accent);stroke:var(--icon-outline);stroke-width:1.5;stroke-linejoin:round}.fill-deep{fill:var(--icon-outline);stroke:var(--icon-outline);stroke-width:1.5;stroke-linejoin:round}.toolbar svg{width:27px;height:27px}@media(max-width:700px){.wrap{padding:20px 16px}.hero{align-items:flex-start}.theme{font-size:0}.grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}}
+</style></head>
+<body><main class="wrap">
+<header class="hero"><div class="wordmark">VGD</div><div><div class="eyebrow">Hệ công cụ SketchUp</div><h1>Bộ icon đồng bộ · Bản xem trước</h1><p>Một ngôn ngữ nét cho toàn bộ plugin: viền và điểm nhấn tự đổi sắc độ theo nền sáng / tối. Glyph để nền trong suốt; chỉ giữ hình vật thể hoặc dấu hiệu cần thiết để nhận diện.</p></div><button class="theme" id="theme">Chuyển nền trang</button></header>
+<div class="specs"><span><b>Nét chính</b> · #292B2D / #F1EDE6</span><span><b>Điểm nhấn</b> · #A67C58</span><span><b>Glyph</b> · nền trong suốt</span><span><b>Nền glyph</b> · trong suốt</span><span><b>Kích thước thử</b> · 16 / 24 / 32 px</span></div>
+<h2>Dải toolbar SketchUp</h2><p class="sub">Toàn bộ icon dùng cùng màu nét trên nền toolbar xám sáng, như môi trường thực tế trong ảnh bạn gửi.</p><div class="toolbar" id="toolbar"></div>
+<div class="scale-row"><div class="scale"><span>16 px</span><svg data-icon="dim" viewBox="0 0 24 24"></svg></div><div class="scale"><span>24 px</span><svg data-icon="dim" viewBox="0 0 24 24"></svg></div><div class="scale"><span>32 px</span><svg data-icon="dim" viewBox="0 0 24 24"></svg></div><span class="sub">Kiểm tra đọc được ở biểu tượng nhỏ</span></div>
+<div id="catalog"></div><footer class="foot">Preview độc lập để duyệt hướng thiết kế. Chưa thay đổi SVG hoặc mã trong plugin. Khi bạn chốt, bộ glyph này sẽ được xuất thành SVG riêng cho từng lệnh.</footer>
+</main>
+<script>
+const paths={
+dim:`<path class="outline" d="M5 6v12M19 6v12"/><path class="outline" d="M5 6h14"/><circle class="fill-accent" cx="5" cy="6" r="1.1"/><circle class="fill-accent" cx="19" cy="6" r="1.1"`,
+smart:`<path class="outline" d="M3.5 5h10v14h-10zM8.5 5v14"/><path class="accent" d="m17 5-3 5h3l-2 5 5-7h-3l2-3z"/>`,
+cabinet:`<path class="outline" d="M5 3.5h14v17H5zM12 3.5v17"/><path class="accent" d="M10 10.5v3m4-3v3"/>`,
+explode:`<path class="outline" d="M10 4h4v16h-4zM3 6h3.5v12H3zM17.5 6H21v12h-3.5z"/><path class="accent" d="M9 12H7m0 0 1-1m-1 1 1 1m7-1h2m0 0-1-1m1 1-1 1"/>`,
+untag:`<path class="outline" d="M4 7.5 8 3.5h12v12l-4.5 4.5H4z"/><circle class="outline" cx="8.2" cy="7.8" r="1.35"/><path class="accent" d="M11.5 10.5a3.2 3.2 0 1 1-.2 4.5m.2-4.5v2.4h2.4"/>`,
+library:`<path class="outline" d="M8 3.5h12v13M4 7h13v14H4z"/><path class="fill-accent" d="M6 9h9v9H6z"/><path class="outline" d="M7.5 12c2-2 3 1 6-1m-6 4c2-2 3 1 6-1"/>`,
+models:`<path class="outline" d="M7 3.5 14 6.5v5.7l-7-3.1zM4 12l8-3.6 8 3.6-8 3.7zM5.5 13.2v5.6m5.5-2.4v4m6.9-7.2v5.6"/><path class="accent" d="m4 12 8 3.7 8-3.7">`,
+reapply:`<path class="outline" d="M3.5 15h8v5h-8zM16 5l3 3-5.5 5.5-3-3z"/><path class="accent" d="M11.5 13.5h2m1.5 0h1.5"/>`,
+rotate:`<path class="outline" d="M4 8h9v9H4zM6.5 10v5m3-5v5"/><path class="accent" d="M18.5 9a5.2 5.2 0 1 1-3.1-4.8m3.1 0v3h-3"/>`,
+rotateface:`<path class="outline" d="m12 3 8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.7 8-4.7M12 12.2V21"/><path class="accent" d="m5 8.5 5.5 3.2v6.5"/>`,
+random:`<path class="outline" d="M4 7h4l8 10h4m-4-3 4 3-4 3M4 17h4l3-4m3-4 2-2h4m-4-3 4 3-4 3"/><path class="accent" d="M11 12h2"/>`,
+shuffle:`<path class="outline" d="M4 7h4l8 10h4m-4-3 4 3-4 3M4 17h4l2-2m4-5 2-3h4m-4-3 4 3-4 3"/><path class="accent" d="m9 11 2 2"/>`,
+swap:`<path class="outline" d="M3.5 6h5v5h-5zM15.5 13h5v5h-5z"/><path class="accent" d="M9.5 8.5h8m-2-2 2 2-2 2m-7 5h8m-2-2 2 2-2 2"/>`,
+replace:`<path class="outline" d="M3.5 7h5v10h-5zM15.5 7h5v10h-5z"/><path class="accent" d="M9.5 12h5m-2-2 2 2-2 2"/>`,
+clear:`<path class="outline" d="m5 15 9-10 6 5-9 10H6zM9 11l6 5M4 21h16"/><path class="accent" d="m14 5 6 5"/>`,
+autoscale:`<path class="outline" d="M9 4H4v5m11-5h5v5m0 6v5h-5m-6 0H4v-5M9 9h6v6H9z"/><path class="accent" d="m9 9 2 2m4-2-2 2m0 4 2-2m-6 2 2-2"/>`,
+restore:`<path class="outline" d="M5 10a8 8 0 1 1 1 8M5 4v6h6M12 8v5l3 2"/><path class="accent" d="M5 10 2 10"/>`,
+audit:`<path class="outline" d="M3.5 4.5h10.5v15H3.5zM6.5 8h4.5m-4.5 3h4.5m-4.5 3h2.5"/><circle class="accent" cx="18" cy="16" r="2.4"/><path class="accent" d="m19.8 17.8 1.7 1.7"/>`,
+flow:`<path class="outline" d="M4 19c4-10 12-10 16 0M4 14c4-8 12-8 16 0"/><path class="accent" d="M12 4v7m-3-3 3 3 3-3"/>`,
+trace:`<path class="outline" d="M5 19 12 5l7 14zM8 15h8"/><path class="accent" d="m9 13 3-5 3 5"/>`,
+seamless:`<path class="outline" d="M5 5h14v14H5zM10 5v14m4-14v14M5 10h14m-14 4h14"/><path class="accent" d="M10 3v2m4 14v2M3 10h2m14 4h2"/>`,
+aux:`<path class="outline" d="M8 4h12v14H8zM5 7v13h12"/><path class="accent" d="M10.5 8h7m-7 3h7m-7 3h5"/>`,
+refresh:`<path class="outline" d="M19 8a7 7 0 0 0-12-2L5 8m0-4v4h4M5 16a7 7 0 0 0 12 2l2-2m0 4v-4h-4"/><path class="accent" d="M7 6h1m9 12h-1"/>`,
+import:`<path class="outline" d="M3.5 4.5h17v15h-17zM5.5 16.8l4-4.1 3.1 2.8 2.3-2.1 3.1 3.4"/><path class="accent" d="M16.5 6.5v3.6m-1.8-1.8h3.6"/>`,
+camera:`<path class="outline" d="M3.5 8.5h4l1.5-2h6l1.5 2h4v10h-17z"/><circle class="accent" cx="12" cy="13.5" r="3.1"/>`,
+views:`<path class="outline" d="M5 5h5v5H5zM14 5h5v5h-5zM5 14h5v5H5zM14 14h5v5h-5z"/><path class="accent" d="M7 3v2m10-2v2M7 19v2m10-2v2"/>`,
+updateview:`<path class="outline" d="M3.5 8.5h4l1.5-2h6l1.5 2h4v10h-17z"/><circle class="outline" cx="12" cy="13.5" r="3.1"/><path class="accent" d="M18.5 4.5a3.5 3.5 0 1 1-1.2 6.8m1.2-6.8v2.5H16"/>`,
+copy:`<path class="outline" d="M8 4h12v13H8zM4 7v13h13"/><path class="accent" d="M11 8h6m-6 3h6m-6 3h4"/>`,
+paste:`<path class="outline" d="M6 7h12v13H6zM9 4h6v4H9z"/><path class="accent" d="M12 11v5m-2-2 2 2 2-2"/>`,
+bim:`<path class="outline" d="M3.5 10 12 4l8.5 6v10h-17z"/><path class="accent" d="M8 12h8m-8 3h8m-8 3h8"/>`,
+scan:`<path class="outline" d="M3.5 4.5h11v15h-11zM6.5 8h5m-5 3h5m-5 3h3"/><circle class="accent" cx="18.2" cy="16.4" r="2.5"/><path class="accent" d="m20 18.2 1.7 1.7"/>`,
+center:`<g transform="scale(.133333)" stroke-linejoin="round" stroke-linecap="round"><path d="M90 18 153 54 90 89Z" fill="var(--center-accent)"/><path d="M53 131 90 152V162L53 141Z" fill="var(--center-accent)"/><path d="M90 18 27 54V126L90 162C126 149 153 129 153 101V54Z" fill="none" stroke="var(--icon-outline)" stroke-width="7.5"/><path d="M90 18V89L153 54M27 54 90 89V162M53 99V141L90 162M53 99 90 120V152" fill="none" stroke="var(--icon-outline)" stroke-width="7.5"/></g>`,
+};
+const data=[
+['VGD DIM',[['dim','Bảng Dim'],['smart','Smart Dim']]],
+['VGD CABINET',[['cabinet','Dựng tủ'],['explode','Rã nhóm tủ'],['untag','Dọn tag con']]],
+['VGD LIBRARY',[['library','Thư viện vật liệu'],['models','Thư viện model'],['reapply','Tô lại vật liệu'],['rotate','Xoay map 90°'],['rotateface','Xoay map từng mặt'],['random','Xoay ngẫu nhiên'],['shuffle','Dịch vân ngẫu nhiên'],['swap','Thay nhanh vật liệu'],['replace','Thay nhanh đối tượng'],['clear','Xóa vật liệu'],['autoscale','Auto Scale'],['restore','Phục hồi map'],['audit','Kiểm tra map lồng'],['flow','Flowmap'],['trace','Convert line'],['seamless','Map seamless'],['aux','Xuất ảnh phụ'],['refresh','Cập nhật danh mục']]],
+['VGD IMAGE IMPORTER',[['import','Nhập ảnh / texture']]],
+['VGD SCENES',[['camera','Mở VGD Scenes'],['views','Tạo 4 góc nhìn'],['updateview','Lưu / cập nhật view'],['copy','Copy camera'],['paste','Paste camera']]],
+['VGD BIM LITE',[['bim','Thông tin mô hình'],['scan','Quét / kiểm tra']]],
+['VGD CENTER',[['center','Mở VGD Center']]]
+];
+const svg=(id)=>`<svg viewBox="0 0 24 24" aria-hidden="true">${paths[id]}</svg>`;
+const mainVisuals=[["VGD Dim","dim"],["VGD Cabinet","cabinet"],["VGD Image Importer","import"],["VGD Scenes","camera"],["VGD BIM Lite","bim"],["VGD Library","library"],["VGD Center · Logo cũ","center"]];
+const mainGallery=document.createElement("section");mainGallery.className="section";mainGallery.innerHTML=`<h2>Biểu tượng plugin chính · hình đã chốt</h2><p class="sub">Sáu biểu tượng plugin đã chốt và logo VGD Center cũ; các công cụ phía dưới kế thừa hình tượng riêng của từng plugin.</p><div class="grid">${mainVisuals.map(([name,id])=>`<article class="item"><div class="glyph">${svg(id)}</div><div><div class="name">${name}</div><div class="group">Biểu tượng chính</div></div></article>`).join("")}</div>`;
+document.getElementById("catalog").prepend(mainGallery);
+const toolbar=document.querySelector('#toolbar');data.forEach(([g,items])=>items.forEach(([id])=>{toolbar.insertAdjacentHTML('beforeend',`<div class="tool" title="${id}">${svg(id)}</div>`)}));
+const catalog=document.querySelector('#catalog');data.forEach(([group,items])=>{const section=document.createElement('section');section.className='section';section.innerHTML=`<h2>${group}</h2><div class="grid">${items.map(([id,name])=>`<article class="item"><div class="glyph">${svg(id)}</div><div><div class="name">${name}</div><div class="group">${group.replace('VGD ','')}</div></div></article>`).join('')}</div>`;catalog.append(section)});
+document.querySelectorAll('[data-icon="dim"]').forEach((el,i)=>{el.innerHTML=paths.dim;el.style.width=el.style.height=[16,24,32][i]+'px'});
+document.querySelector('#theme').onclick=()=>document.documentElement.dataset.theme=document.documentElement.dataset.theme==='dark'?'light':'dark';
+</script></body></html>

@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "plugin": "VGD Reference",
+  "version": "1.0.0-beta.6",
+  "rules": "shared/VGD_ICON_SYSTEM_RULES.md",
+  "reference": "shared/VGD_ICON_SYSTEM_PREVIEW.html",
+  "view_box": "0 0 24 24",
+  "stroke_width": 1.8,
+  "linecap": "round",
+  "linejoin": "round",
+  "transparent": true,
+  "preview_sizes": [
+    16,
+    24,
+    32
+  ],
+  "colors": {
+    "light": {
+      "outline": "#292B2D",
+      "accent": "#A67C58",
+      "toolbar": "#D8D7D4"
+    },
+    "dark": {
+      "outline": "#F1EDE6",
+      "accent": "#A67C58",
+      "toolbar": "#292B2D"
+    }
+  },
+  "icons": {
+    "reference": {
+      "meaning": "Ảnh tham chiếu được ghim trên khung nhìn",
+      "files": {
+        "light": "vgd_reference.svg",
+        "dark": "vgd_reference_dark.svg"
+      }
+    }
+  },
+  "theme_policy": {
+    "manager": "prefers-color-scheme",
+    "native_toolbar": {
+      "default": "light",
+      "preferences_section": "VGD.Reference",
+      "preferences_key": "ToolbarTheme",
+      "values": [
+        "light",
+        "dark"
+      ],
+      "setting": "Chọn màu icon thanh công cụ → Icon thanh công cụ SketchUp",
+      "apply": "on change and extension startup"
+    }
+  }
+}

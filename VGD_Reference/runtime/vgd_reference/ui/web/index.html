@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VGD Reference</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="brand"><picture class="brand-mark"><source media="(prefers-color-scheme: dark)" srcset="../../assets/toolbar/vgd_reference_dark.svg"><img src="../../assets/toolbar/vgd_reference.svg" width="27" height="27" alt=""></picture><span><b>VGD</b><small>ẢNH THAM CHIẾU</small></span></div>
+    <div class="header-tools">
+      <button class="icon-button" id="appearanceSettings" title="Chọn màu icon thanh công cụ" aria-label="Chọn màu icon thanh công cụ" aria-expanded="false" aria-controls="appearancePanel"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h3m4 0h9M4 17h9m4 0h3"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="17" r="2"/></svg></button>
+      <button class="icon-button" id="editSelected" title="Chỉnh sửa ảnh đang chọn" aria-label="Chỉnh sửa ảnh đang chọn"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h12v12M20 4 5 19M4 10v10h10"/></svg></button>
+    </div>
+  </header>
+  <section id="appearancePanel" class="appearance-panel hidden" aria-label="Màu icon thanh công cụ">
+    <label for="toolbarTheme">Icon thanh công cụ SketchUp</label>
+    <select id="toolbarTheme"><option value="light">Nền sáng · nét than</option><option value="dark">Nền tối · nét trắng ngà</option></select>
+    <p>Lựa chọn được lưu cho lần mở sau. Bảng quản lý tự theo giao diện hệ thống.</p>
+  </section>
+  <nav class="actions">
+    <button class="primary" id="add"><svg class="ui-icon add-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg> Thêm</button>
+    <button id="paste">Dán</button>
+    <button id="hideAll">Ẩn tất cả</button>
+  </nav>
+  <main id="items" aria-live="polite"></main>
+  <footer>
+    <div id="selectedControls" class="selected-controls hidden">
+      <div class="control-heading"><span id="selectedName">Ảnh tham chiếu đã chọn</span><button id="crop">Cắt ảnh</button></div>
+      <label for="opacity">Mức hiển thị <output id="opacityValue">100%</output></label>
+      <input id="opacity" type="range" min="10" max="100" value="100">
+    </div>
+    <div id="emptyHint">Thả ảnh JPG hoặc PNG vào đây</div>
+    <div id="message" role="status" class="message hidden"></div>
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>

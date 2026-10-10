@@ -10,7 +10,7 @@ $preserveStage=$false
 $owned=@(
  'vgd_dim.rb','VGD_Dim/main.rb','VGD_Dim/defaults.rb','VGD_Dim/reload.rb','VGD_Dim/engine.rb',
  'VGD_Dim/native_style.rb','VGD_Dim/store.rb','VGD_Dim/managed.rb','VGD_Dim/core.rb','VGD_Dim/presets.rb',
- 'VGD_Dim/autostyle.rb','VGD_Dim/animation.rb','VGD_Dim/smartdim.rb','VGD_Dim/probe.rb','VGD_Dim/dialog.rb',
+ 'VGD_Dim/autostyle.rb','VGD_Dim/animation.rb','VGD_Dim/smartdim.rb','VGD_Dim/regions.rb','VGD_Dim/manual_dim.rb','VGD_Dim/probe.rb','VGD_Dim/dialog.rb',
  'VGD_Dim/dialog.html','VGD_Dim/dialog.css','VGD_Dim/dialog.js','VGD_Dim/dim.svg','VGD_Dim/smart_dim.svg',
  'VGD_Dim/version.rb','VGD_Dim/update_core/manifest.rb','VGD_Dim/update_core/bootstrap.rb',
  'VGD_Dim/update_core/client.rb','VGD_Dim/update_core/installer.rb','VGD_Dim/update_core/updater.rb',

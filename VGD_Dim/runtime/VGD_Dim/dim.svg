@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect x="2" y="2" width="60" height="60" rx="14" fill="#2B2B2B" stroke="#333333" stroke-width="1.5"/>
-  <g fill="none" stroke="#B48963" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M16 18v29M48 18v29M16 39h32M12 43l8-8M44 43l8-8"/>
-    <path d="M25 19h14M32 19v11"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="VGD Dim · Bảng Dim"><path fill="none" stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 6v12M19 6v12"/><path fill="none" stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 6h14"/><circle fill="#A67C58" stroke="#292B2D" stroke-width="1.5" stroke-linejoin="round" cx="5" cy="6" r="1.1"/><circle fill="#A67C58" stroke="#292B2D" stroke-width="1.5" stroke-linejoin="round" cx="19" cy="6" r="1.1"/></svg>

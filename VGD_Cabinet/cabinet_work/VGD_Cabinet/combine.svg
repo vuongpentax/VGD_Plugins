@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect x="2" y="2" width="60" height="60" rx="14" fill="#2B2B2B" stroke="#333333" stroke-width="1.5"/>
-  <path d="M 32,14 L 46,22 L 32,30 L 18,22 Z" fill="none" stroke="#B48963" stroke-width="2.5" stroke-linejoin="round"/>
-  <path d="M 18,22 V 38 L 32,46 V 30 Z" fill="none" stroke="#B48963" stroke-width="2.5" stroke-linejoin="round"/>
-  <path d="M 46,22 V 38 L 32,46 V 30 Z" fill="none" stroke="#B48963" stroke-width="2.5" stroke-linejoin="round"/>
-  <circle cx="32" cy="30" r="3" fill="#2B2B2B" stroke="#B48963" stroke-width="1.5"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="VGD Cabinet · Rã nhóm tủ"><path fill="none" stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M10 4h4v16h-4zM3 6h3.5v12H3zM17.5 6H21v12h-3.5z"/><path fill="none" stroke="#A67C58" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M9 12H7m0 0 1-1m-1 1 1 1m7-1h2m0 0-1-1m1 1-1 1"/></svg>

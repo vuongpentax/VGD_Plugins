@@ -15,7 +15,7 @@ const { chromium } = require(resolve('playwright'));
     assert((await last()).action==='ready','Missing ready handshake');
     assert(await page.locator('#import').isDisabled(),'Empty queue enabled import');
     assert(await page.locator('.mode-copy').first().isVisible(),'Wide mode navigation labels are hidden');
-    await receive('settings',{theme:'light',importType:'comp_2d',version:'1.1.0-beta.3'});
+    await receive('settings',{theme:'light',importType:'comp_2d',version:'1.1.0-beta.5'});
     await page.check('#recursive'); await page.click('#chooseFolder');
     assert.deepStrictEqual((await last()).data,{kind:'folder',recursive:true},'Recursive folder callback wrong');
     await page.click('#chooseFiles'); assert((await last()).data.kind==='files','File picker callback wrong');

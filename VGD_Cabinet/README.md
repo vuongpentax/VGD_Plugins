@@ -1,4 +1,4 @@
-# VGD_Cabinet · 4.5.0-beta.2
+# VGD_Cabinet · 4.5.0-beta.3
 
 Prerelease: tự kiểm tra cập nhật mỗi 24 giờ, có lệnh kiểm tra thủ công. SketchUp hỏi trước khi mở trang tải RBZ; cài qua Extension Manager rồi khởi động lại.
 
@@ -37,7 +37,7 @@ Chiều rộng/sâu/cao giữ nguyên cho tủ cơ bản; không tự trừ ph�
 
 ## Cài máy nhà
 
-Gói mới nằm trong outputs/vgd_cabinet_modeling. Chạy cabinet_dev/sync_sketchup_2022.ps1 để cài đúng 23 file, sao lưu và tắt loader T+ cũ; không sửa plugin khác. Dữ liệu preset không bị bộ cài ghi đè.
+Gói mới nằm trong outputs/vgd_cabinet_modeling. Chạy cabinet_dev/sync_sketchup_2022.ps1 để cài đúng 24 file, sao lưu và tắt loader T+ cũ; không sửa plugin khác. Dữ liệu preset không bị bộ cài ghi đè.
 
 **Khởi động lại SketchUp 2022 sau khi đổi thương hiệu**, vì module/menu/bộ nạp khác tên. Sau đó dùng Extensions → VGD Cabinet — Tiện ích → VGD — Nạp lại mã cho các lần sửa tiếp. Không tự đóng model đang làm.
 

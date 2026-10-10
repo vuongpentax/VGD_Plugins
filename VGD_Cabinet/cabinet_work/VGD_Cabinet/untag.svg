@@ -1,6 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <rect x="2" y="2" width="60" height="60" rx="14" fill="#2B2B2B" stroke="#333333" stroke-width="1.5"/>
-  <path d="M 18,18 H 34 L 46,30 L 32,44 L 18,30 Z" fill="none" stroke="#B48963" stroke-width="2.5" stroke-linejoin="round"/>
-  <circle cx="24" cy="24" r="2" fill="#B48963"/>
-  <line x1="16" y1="46" x2="48" y2="14" stroke="#B48963" stroke-width="2.5" stroke-linecap="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="VGD Cabinet · Dọn tag con"><path fill="none" stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M4 7.5 8 3.5h12v12l-4.5 4.5H4z"/><circle fill="none" stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" cx="8.2" cy="7.8" r="1.35"/><path fill="none" stroke="#A67C58" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M11.5 10.5a3.2 3.2 0 1 1-.2 4.5m.2-4.5v2.4h2.4"/></svg>
