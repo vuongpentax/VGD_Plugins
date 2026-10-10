@@ -3,7 +3,7 @@
   "version": "1.0.10",
   "download": {
     "filename": "VGD_Center_v1.0.10.rbz",
-    "url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/VGD_Center_v1.0.10.rbz",
+    "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-center-v1.0.10/VGD_Center_v1.0.10.rbz",
     "size": 284295,
     "sha256": "31d93242857cbfc473498171cdc57b5dfbf2a87427aea94887f77570fdc31cee"
   }
