@@ -1,4 +1,4 @@
-VGD_Cabinet 4.5.0-beta.3
+VGD_Cabinet 4.5.0-beta.5
 
 NÂNG CẤP 4.5 BETA 1
 - Đặt/vẽ 3 điểm: preview trong suốt màu VGD, cấu kiện và ký hiệu mở thật theo thông số.

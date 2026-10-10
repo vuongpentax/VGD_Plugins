@@ -4,6 +4,7 @@ const {chromium}=require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/playwr
 const defaults=JSON.parse(fs.readFileSync('cabinet_dev/defaults.json'));
 const presets=JSON.parse(fs.readFileSync('cabinet_dev/presets.json'));
 let html=fs.readFileSync('cabinet_work/VGD_Cabinet/VGD_Cabinet_UI.html','utf8');
+if(!html.includes('<title>VGD Cabinet 4.5.0-beta.5</title>')||!html.includes('class=\"brand-version\">4.5.0 · Beta 5</small>'))throw Error('Cabinet UI version labels must match beta.5');
 for(const [key,data] of [['presets_json',presets],['default_json',defaults],['initial_json',defaults]])html=html.replace('#{'+key+'}',()=>JSON.stringify(JSON.stringify(data)).replace(/</g,'\\u003c'));
 fs.writeFileSync('cabinet_dev/preview.html',html);
 const browser=await chromium.launch({headless:true,...(process.env.VGD_BROWSER_PATH ? {executablePath:process.env.VGD_BROWSER_PATH} : {channel:'msedge'})});

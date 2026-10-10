@@ -1,7 +1,7 @@
 {
-  "date": "2026-10-08",
+  "date": "2026-10-11",
   "plugin": "VGD_Cabinet",
-  "version": "4.5.0-beta.4",
+  "version": "4.5.0-beta.5",
   "description_import": "PASS Ruby WASM + JSDOM: 10 valid geometry fixtures/full-parameter round-trip including exact user JSON, strict schema/units/WDH/type/enum/unknown/duplicate/oversize rejection. Partial mode requires boolean true plus exact omission-list acknowledgment; missing/reordered/stale approval rejected, invalid geometry and unknown keys still blocked. Keeps width 2200, discloses h_top 560 -> 580. Preview/import do not mutate model; draft selection/update isolation remains. Edge headless verifies confirm/cancel dialogs, callback payloads, persistent draft notice, placement, footer/overflow, screenshots inspected. No native SketchUp/image measurement acceptance claimed.",
   "ruby": "PASS: runtime/loader syntax, existing cabinet/glass/drawer/back/modules/tier geometry, utilities and reload guards",
   "presets": "PASS: actual Windows host filesystem IO through WASI, T+ migration, create/update/rename/delete, case-folded collision rejection, large library >20KB, new Ruby VM reopening same files, atomic write failure preserves original, backup recovery, malformed legacy raw backup",
@@ -11,8 +11,8 @@
   "pano": "PASS fixture dimensions: 5 door inset/overlay modes, straight groove cross-sections, separate panels, capture minus per-edge clearance, multiple panels, custom depth, modules and tiers, invalid/tiny geometry rejected",
   "ui": "PASS: JSDOM and Edge headless; responsive icon-only navigation with tooltips at 560px and icon/name/description navigation at 720px; existing Cabinet UI workflows, previews and description flow pass.",
   "payload": "PASS: existing modeling control IDs and values match beta.1 for complete defaults and 7 built-in presets; additive new fields",
-  "deployment": "UNVERIFIED beta4: isolated deployment test did not complete in this Windows sandbox. Previous beta3 isolated/native deployment results remain historical; no beta4 install or native SketchUp run is claimed.",
-  "deployment_live": "PASS 2026-10-08: 23/23 owned files synchronized to SketchUp 2022 Plugins and SHA256 verified; previous changed files backed up at outputs/install_20261008_014627_130/INSTALL_REPORT.json. Legacy T+ loader absent. Running SketchUp has not been reloaded by the agent; use own-plugin Reload or reopen SketchUp after saving model.",
+  "deployment": "UNVERIFIED beta5: package prepared and archive integrity/source equality checked; beta5 was not installed into native SketchUp in this task.",
+  "deployment_live": "Historical beta4 deployment: 23/23 owned files were copied and SHA256-checked on 2026-10-08; a later UI review found the brand header still displayed Beta 2. Beta5 corrects all registered/runtime/title/header version fields. Native SketchUp reload/run for beta5 remains unverified.",
   "native": "UNVERIFIED: native helper screenshot capture FrameArrived timed out; clicking observed menu failed coordinate input geometry unavailable. Native test script prepared but not executed. No solid/manifold, Undo, actual SketchUp restart/file locking, native preview or SKP save/load acceptance claimed.",
   "references": [
     "https://www.cmtorangetools.com/downloads/5790/326/324_the_abc_s_of_panel_door_construction_usa.pdf",
@@ -28,5 +28,6 @@
   "preview": "PASS fixture: actual builder memory sink without model mutation, stored mesh round-trip, production View draw contract, front/orbit projection, CCW/edge-on guard, copper alpha/guides/style cleanup; offline Canvas screenshot inspected. Native Tool drawing unverified",
   "library": "PASS real host file IO via WASI: geometry/thumbnail exports are fixtures, Unicode casefold collision protection, rename/update/delete, failed export cleanup, safe ID paths, unique temporary placement copies/cleanup and reopening in a new Ruby VM. Native SKP/PNG export/load unverified",
   "ui_upgrade": "PASS Edge headless: Shaker/division settings; library save/replace/rename/delete/place payloads, PID/model guards, search, text safety, stale thumbnail ignore, selected/empty states and no library typing/Enter live modeling",
-  "packaging": "PASS: 24-file RBZ runtime whitelist, exact source equality, ZIP CRC and SHA256 checked by package_menu.py; source ZIP includes tests/docs and no user preset/library/install backups."
+  "packaging": "PASS: 24-file RBZ runtime whitelist, exact source equality, ZIP CRC and SHA256 checked by package_menu.py; version alignment assertions passed. Source ZIP includes tests/docs and no user preset/library/install backups.",
+  "version_alignment": "PASS: beta5 version matches in SketchUp extension registration, runtime VERSION, dialog HTML title and visible brand header. package_menu.py asserts these fields before creating archives."
 }
