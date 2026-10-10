@@ -26,7 +26,11 @@
     const selected=state.items&&state.items.find(item=>item.id===state.selected_id);
     byId('selectedControls').classList.toggle('hidden',!selected);
     byId('emptyHint').classList.toggle('hidden',!!(state.items&&state.items.length));
-    byId('hideAll').textContent=state.hidden_all?'Hiện tất cả':'Ẩn tất cả';
+    const hideLabel=state.hidden_all?'Hiện tất cả':'Ẩn tất cả';
+    byId('hideAllLabel').textContent=hideLabel;
+    byId('hideAllDescription').textContent=state.hidden_all?'Hiện lại trên khung nhìn':'Tạm ẩn trên khung nhìn';
+    byId('hideAll').title=hideLabel+' ảnh tham chiếu';byId('hideAll').setAttribute('aria-label',hideLabel+' ảnh tham chiếu');byId('hideAll').setAttribute('aria-pressed',String(state.hidden_all));
+    byId('hideAllGlyph').setAttribute('d',state.hidden_all?'M4 10c2 4 4 6 8 6s6-2 8-6M6.5 14.5 5 16.5M12 16v2M17.5 14.5l1.5 2':'M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6ZM12 9.5a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5');
     byId('toolbarTheme').value=state.toolbar_theme==='dark'?'dark':'light';
     if(selected){byId('selectedName').textContent=selected.name;byId('opacity').value=selected.opacity;byId('opacityValue').textContent=selected.opacity+'%';}
   }
@@ -48,24 +52,7 @@
   byId('opacity').addEventListener('change',event=>{
     const selected=state.items&&state.items.find(item=>item.id===state.selected_id);if(selected)call('commitOpacity',selected.id,Number(event.target.value));
   });
-  const root=document.body;
-  root.addEventListener('dragover',event=>{event.preventDefault();event.dataTransfer.dropEffect='copy';});
-  root.addEventListener('drop',async event=>{
-    event.preventDefault();const files=Array.from(event.dataTransfer.files||[]).filter(file=>/\.(jpe?g|png)$/i.test(file.name));
-    for(const file of files)await sendDroppedFile(file);
-  });
-  async function sendDroppedFile(file){
-    if(file.size<=0||file.size>20*1024*1024){message('Ảnh phải có dung lượng không quá 20 MiB.');return;}
-    const token='drop-'+Date.now()+'-'+Math.random().toString(16).slice(2);const chunkSize=192*1024;const chunks=Math.ceil(file.size/chunkSize);
-    call('dropStart',token,file.name,file.size,chunks);
-    const buffer=await file.arrayBuffer();const bytes=new Uint8Array(buffer);
-    for(let index=0;index<chunks;index++){
-      const part=bytes.subarray(index*chunkSize,Math.min((index+1)*chunkSize,bytes.length));let binary='';
-      for(let i=0;i<part.length;i+=0x8000)binary+=String.fromCharCode.apply(null,part.subarray(i,Math.min(i+0x8000,part.length)));
-      call('dropChunk',token,index,btoa(binary));
-    }
-    call('dropFinish',token);
-  }
-  window.VGDReference={render,message};
+  window.VGDReference={render,message,ack:VGDReferenceImport.ack,decodeImage:VGDReferenceImport.decodeImage,importStatus:VGDReferenceImport.importStatus};
+  VGDReferenceImport.init(message);
   call('ready');
 })();

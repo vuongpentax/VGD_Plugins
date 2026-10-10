@@ -10,20 +10,19 @@ module VGD
 
       def load(path, allow_bitmap: false)
         source = File.expand_path(path.to_s)
-        raise ArgumentError, 'Unable to load reference image.' unless File.file?(source)
-        raise ArgumentError, 'Only JPG and PNG images are supported.' unless supported_path?(source, allow_bitmap)
-
+        raise ArgumentError, 'Không thể tải ảnh tham chiếu.' unless File.file?(source)
         image = Sketchup::ImageRep.new
         image.load_file(source)
         unless image.width.to_i.positive? && image.height.to_i.positive?
-          raise ArgumentError, 'Unable to load reference image.'
+          raise ArgumentError, 'Không thể tải ảnh tham chiếu.'
         end
+        raise ArgumentError, 'Ảnh vượt giới hạn 32 triệu pixel.' if image.width.to_i * image.height.to_i > MAX_IMAGE_PIXELS
         [image, image.width.to_i, image.height.to_i]
       rescue ArgumentError
         raise
       rescue StandardError => error
         log_error('Image load failed', error)
-        raise ArgumentError, 'Unable to load reference image.'
+        raise ArgumentError, 'Không thể tải ảnh tham chiếu.'
       end
 
       def log_error(message, error)

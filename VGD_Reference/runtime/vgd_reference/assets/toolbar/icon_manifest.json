@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "plugin": "VGD Reference",
-  "version": "1.0.0-beta.6",
+  "version": "1.0.0-beta.7",
   "rules": "shared/VGD_ICON_SYSTEM_RULES.md",
   "reference": "shared/VGD_ICON_SYSTEM_PREVIEW.html",
   "view_box": "0 0 24 24",
