@@ -6,6 +6,9 @@ const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js')
   const {vm}=await DefaultRubyVM(wasm),root=path.resolve(__dirname,'../runtime');
   const names=['version','defaults','engine','native_style','store','managed','core','presets','autostyle','animation','smartdim','regions','manual_dim','probe','dialog','update_core/manifest','update_core/bootstrap','update_core/client','update_core/installer','update_core/updater','main','reload'];
   const installerSource=fs.readFileSync(path.join(root,'VGD_Dim/update_core/installer.rb'),'utf8');
+  const reloadSource=fs.readFileSync(path.join(root,'VGD_Dim/reload.rb'),'utf8');
+  const reloadFiles=reloadSource.match(/files = %w\[([^\]]+)\]/)?.[1].split(/\s+/)||[];
+  if(!reloadFiles.includes('regions')||!reloadFiles.includes('manual_dim'))throw Error('Hot-reload is missing Boundary or manual Dimension modules');
   if(!installerSource.includes(':new_pgroup => true')||installerSource.includes(':pgroup => true'))throw Error('Windows updater must use :new_pgroup, not POSIX :pgroup');
   const literal=value=>JSON.stringify(Buffer.from(value,'utf8').toString('base64'))+'.unpack1("m0")';
   for(const file of ['vgd_dim.rb',...names.map(n=>'VGD_Dim/'+n+'.rb')]){

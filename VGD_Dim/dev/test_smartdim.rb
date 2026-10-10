@@ -17,6 +17,21 @@ def managed_groups(model)
   model.active_entities.grep(Sketchup::Group).select { |g| g.valid? && VGD::Dim::Managed.owned?(g) }
 end
 def run_smartdim_tests
+  dialog_module=VGD::Dim::Dialog
+  prior_dialog=dialog_module.instance_variable_get(:@dlg)
+  scripts=[]
+  fake_dialog=Object.new
+  fake_dialog.define_singleton_method(:execute_script) { |script| scripts << script }
+  dialog_module.instance_variable_set(:@dlg,fake_dialog)
+  cancel_model=Sketchup::FakeModel.new; Sketchup.active_model=cancel_model
+  cancel_model.define_singleton_method(:select_tool) { |tool| @last_selected_tool=tool }
+  tool=VGD::Dim::ManualDim::Tool.allocate
+  tool.instance_variable_set(:@placed,0); tool.instance_variable_set(:@failed,false); tool.instance_variable_set(:@finished,false)
+  tool.onKeyDown(27,0,0,nil)
+  check(cancel_model.instance_variable_get(:@last_selected_tool).nil? && scripts.any? { |s| s.start_with?('VGD.onManualStatus(') },'Escape did not unlock manual Dim UI')
+  script_count=scripts.length; tool.onCancel(0,nil)
+  check(scripts.length==script_count,'Escape and onCancel duplicated the completion callback')
+  dialog_module.instance_variable_set(:@dlg,prior_dialog)
   smart=VGD::Dim::SmartDim; managed=VGD::Dim::Managed
   regions=VGD::Dim::Regions
   box=regions.record_bounds(Geom::Point3d.new(10.mm,20.mm,30.mm),Geom::Point3d.new(0,0,0))

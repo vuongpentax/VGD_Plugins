@@ -22,6 +22,7 @@ module VGD
           @first = @last_end = @offset = nil
           @placed = 0
           @failed = false
+          @finished = false
         end
 
         def activate
@@ -81,6 +82,7 @@ module VGD
         def onKeyDown(key, _repeat, _flags, view)
           if key == 27
             Sketchup.active_model.select_tool(nil)
+            finish
           elsif key == 8
             @phase = :start
             @first = @last_end = @offset = nil
@@ -91,6 +93,12 @@ module VGD
         end
 
         def onCancel(_reason, _view)
+          finish
+        end
+
+        def finish
+          return if @finished
+          @finished = true
           Dialog.send_js('onManualStatus', {'message'=>@placed > 0 ? 'Đã tạo Dim thủ công.' : 'Đã hủy Dim thủ công.'}) unless @failed
           Sketchup.status_text = ''
         end
