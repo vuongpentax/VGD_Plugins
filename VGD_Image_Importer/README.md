@@ -1,6 +1,6 @@
 # VGD Image Importer
 
-Thành viên bộ plugin VGD cho SketchUp 2022+ trên Windows, nâng cấp từ folder `vgd_image_importer` trên máy. Phiên bản `1.1.0-beta.4` giữ namespace và đường dẫn extension cũ để cập nhật tại chỗ. Prerelease có thông báo cập nhật; cài RBZ thủ công qua Extension Manager.
+Thành viên bộ plugin VGD cho SketchUp 2022+ trên Windows, nâng cấp từ folder `vgd_image_importer` trên máy. Phiên bản `1.1.0-beta.5` giữ namespace và đường dẫn extension cũ để cập nhật tại chỗ. Prerelease có thông báo cập nhật; cài RBZ thủ công qua Extension Manager.
 
 ## Chức năng
 
@@ -12,10 +12,11 @@ Thành viên bộ plugin VGD cho SketchUp 2022+ trên Windows, nâng cấp từ 
 - Bố trí theo hàng tại gốc tọa độ của `active_entities`; khoảng hở cho phép bằng 0. Với ảnh dựng đứng, khoảng cách hàng theo chiều cao ảnh là quy tắc bố trí kế thừa bản cũ.
 - Vật liệu mới không ghi đè vật liệu sẵn có; SketchUp tự tạo tên riêng khi trùng. Lỗi một ảnh không chặn các ảnh còn lại; thông báo số thành công và từng ảnh lỗi. Undo một lần cho cả lượt nhập thành công.
 - Theme sáng/tối, header VGD, màu nâu đồng và kiểu control theo VGD Scenes. Lưu theme, thông số và thư mục gần nhất trên máy. Danh sách ảnh giữ khi đóng/mở dialog trong cùng phiên SketchUp, không lưu qua lần khởi động.
+- Ba chế độ nhập có icon VGD rõ ràng; trong cửa sổ hẹp, chỉ icon được hiển thị để tiết kiệm chỗ, vẫn có tooltip và nhãn trợ năng.
 
 ## Cài đặt
 
-Trong SketchUp: **Extension Manager → Install Extension**, chọn `VGD_Image_Importer_v1.1.0-beta.4.rbz`. Thoát và mở lại SketchUp để bản mới được nạp đầy đủ; không nạp chồng main.rb lên bản cũ trong Ruby Console vì bản cũ không có chặn đăng ký toolbar lặp.
+Trong SketchUp: **Extension Manager → Install Extension**, chọn `VGD_Image_Importer_v1.1.0-beta.5.rbz`. Thoát và mở lại SketchUp để bản mới được nạp đầy đủ; không nạp chồng main.rb lên bản cũ trong Ruby Console vì bản cũ không có chặn đăng ký toolbar lặp.
 
 Mở bằng **Extensions → VGD Tools → VGD Image Importer** hoặc toolbar **VGD Image Importer**. Nếu toolbar chưa hiện, bật ở **View → Toolbars**.
 
@@ -26,7 +27,7 @@ powershell -ExecutionPolicy Bypass -File VGD_Image_Importer/dev/deploy.ps1 -Veri
 powershell -ExecutionPolicy Bypass -File VGD_Image_Importer/dev/deploy.ps1
 ```
 
-Mặc định cài vào SketchUp 2022; dùng `-PluginRoot` để chỉ định bản khác. Chỉ ghi 11 file của Image Importer, có kiểm tra quyền sở hữu loader, sao lưu trước khi ghi và kiểm tra SHA256. Bản sao lưu và báo cáo nằm ở `outputs/install_<timestamp>/`. Muốn khôi phục, đóng SketchUp, chép các file đã sao lưu về đúng đường dẫn, bỏ các file mới được đánh dấu `false` trong `existed_before`, rồi mở lại SketchUp.
+Mặc định cài vào SketchUp 2022; dùng `-PluginRoot` để chỉ định bản khác. Chỉ ghi 13 file của Image Importer, có kiểm tra quyền sở hữu loader, sao lưu trước khi ghi và kiểm tra SHA256. Bản sao lưu và báo cáo nằm ở `outputs/install_<timestamp>/`. Muốn khôi phục, đóng SketchUp, chép các file đã sao lưu về đúng đường dẫn, bỏ các file mới được đánh dấu `false` trong `existed_before`, rồi mở lại SketchUp.
 
 ## Phát triển và kiểm tra
 

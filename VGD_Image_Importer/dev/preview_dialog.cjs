@@ -10,7 +10,7 @@ const { chromium } = require(resolve('playwright'));
     page.on('pageerror', error => { throw error; });
     await page.addInitScript(() => { window.sketchup = { vgd_importer: () => {} }; });
     await page.goto(pathToFileURL(path.join(root, 'runtime', 'vgd_image_importer', 'dialog.html')).href);
-    await page.evaluate(() => VGDImporter.receive('settings', { theme: 'dark', importType: 'comp_2d', version: '1.1.0-beta.4' }));
+    await page.evaluate(() => VGDImporter.receive('settings', { theme: 'dark', importType: 'comp_2d', version: '1.1.0-beta.5' }));
     const imagePath = path.join(root, 'runtime', 'vgd_image_importer', 'vgd_icon.png');
     const files = [
       { id: 0, name: 'Cây bóng mát.webp', path: imagePath },
