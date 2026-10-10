@@ -40,10 +40,10 @@ module VGD
           preferences_key: 'com.vgd.center.dialog.v2',
           scrollable: true,
           resizable: true,
-          width: 960,
-          height: 720,
-          min_width: 420,
-          min_height: 480,
+          width: 560,
+          height: 700,
+          min_width: 380,
+          min_height: 520,
           style: UI::HtmlDialog::STYLE_WINDOW
         )
         register_callbacks(@dialog)
