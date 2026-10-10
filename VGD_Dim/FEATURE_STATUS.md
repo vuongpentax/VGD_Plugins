@@ -1,9 +1,9 @@
-# VGD Dim · 3.3.0-beta.6
+# VGD Dim · 3.3.0-beta.8
 
 | Chức năng | Trạng thái |
 |---|---|
 | Nguồn V6 Claude 3.2.0 | Đã rà soát/tích hợp Smart/mặt cắt; snapshot 15 file có SHA256 |
-| Sidebar / scope / theme | 6 bảng, scope chung Font/Style, sáng/tối; Edge/keyboard/callbacks/760–360px PASS |
+| Sidebar / scope / theme | 6 bảng, scope chung Font/Style, sáng/tối; icon+tên+mô tả khi rộng, icon+tooltip khi hẹp; Edge/keyboard/callbacks/760–360px PASS |
 | Smart Dim | 8 mặt lựa chọn; mô phỏng chain/tổng/yaw 0/30/45/90/123°, mirror/scale PASS; tilt/shear/khác trục bị chặn |
 | Mặt cắt | Tag riêng, plane/normals và lọc bbox; chỉ một mặt cắt bật, song song trục tủ; mô phỏng PASS |
 | Chống Group trùng | Owned metadata/source/face/Scene; dựng xong mới xóa bộ cũ; foreign/manual/lock/failure guards PASS |

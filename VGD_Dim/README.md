@@ -1,4 +1,4 @@
-# VGD Dim · 3.3.0-beta.6
+# VGD Dim · 3.3.0-beta.8
 
 Tiếp tục từ **VGD_Dim_6.rbz (Claude 3.2.0)** theo yêu cầu 07/10/2026. Sidebar 6 mục và scope chung; giữ palette T+ / VGD, có theme sáng/tối. Đọc [UI_DESIGN.md](UI_DESIGN.md) cho cấu trúc bảng và [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md) cho rà soát/giới hạn/checklist native.
 
@@ -35,7 +35,11 @@ load File.join(Sketchup.find_support_file('Plugins'), 'VGD_Dim', 'reload.rb')
 
 ## Kiểm tra
 
-check_ruby.cjs: cú pháp; scopes/filters/dedup; style/Units tách riêng; rebuild/metadata/failure; Smart yaw/mirror/scale/section/normals, ownership/replacement/Scene rollback, one-touch/persistence; preset/auto/animation và native bridge mô phỏng. test_store.rb: cấu hình SU2022/Unicode/kiểu JSON, khởi động khi dữ liệu hỏng. test_ui.cjs: 6 bảng, callback vùng và Dim thủ công, payload, keyboard, scope chung, busy, theme lưu lại, toàn bộ bảng ở 760/540/360px. test_deploy.py: whitelist 29 file/backup/cài lặp/guard/Cabinet; test_update_installer.ps1: cập nhật trong fixture, giữ file ngoài whitelist và bản sao cũ.
+check_ruby.cjs: cú pháp; scopes/filters/dedup; style/Units tách riêng; rebuild/metadata/failure; Smart yaw/mirror/scale/section/normals, ownership/replacement/Scene rollback, one-touch/persistence; preset/auto/animation và native bridge mô phỏng. test_store.rb: cấu hình SU2022/Unicode/kiểu JSON, khởi động khi dữ liệu hỏng. test_ui.cjs: 6 bảng, callback vùng và Dim thủ công, payload, keyboard, scope chung, busy, theme lưu lại, toàn bộ bảng ở 760/740/540/360px. test_deploy.py: whitelist 29 file/backup/cài lặp/guard/Cabinet; test_update_installer.ps1: cập nhật trong fixture, giữ file ngoài whitelist và bản sao cũ.
+
+## Thay đổi 3.3.0-beta.8
+
+Thanh điều hướng hiển thị icon, tên và mô tả khi panel rộng; ở 740 px trở xuống chỉ hiện icon và giữ tooltip. Phạm vi áp dụng chuyển vào vùng nội dung ở chế độ hẹp. Nhấn Esc hoặc hủy Dim thủ công luôn mở khóa lại giao diện; hot-reload nạp cả module Boundary và Dim thủ công.
 
 ## Cập nhật online pilot
 

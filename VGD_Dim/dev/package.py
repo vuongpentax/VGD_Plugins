@@ -47,7 +47,7 @@ manifest.update({
     'sha256': hashlib.sha256(rbz.read_bytes()).hexdigest(),
     'download_url': f"https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/{rbz.name}"
 })
-manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8', newline='\n')
 dev_files = [
     'check_ruby.cjs', 'test_fixture.rb', 'test_engine.rb', 'test_native_style.rb',
     'test_core.rb', 'test_smartdim.rb', 'test_ui.cjs', 'import_claude_ui.py',
@@ -83,6 +83,6 @@ with zipfile.ZipFile(source_zip) as archive:
     if archive.testzip() is not None or json.loads(archive.read('VGD_UPDATE_MANIFEST.json')) != manifest:
         raise SystemExit('Source ZIP validation failed.')
 hashes = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in [rbz, source_zip]}
-(output / 'PACKAGES_SHA256.json').write_text(json.dumps(hashes, indent=2) + '\n', encoding='utf-8')
+(output / 'PACKAGES_SHA256.json').write_text(json.dumps(hashes, indent=2) + '\n', encoding='utf-8', newline='\n')
 print(json.dumps({'version': version, 'runtime_files': len(runtime_files), 'rbz_bytes': rbz.stat().st_size,
                   'sha256': hashes[rbz.name], 'source_zip': source_zip.name}, indent=2))

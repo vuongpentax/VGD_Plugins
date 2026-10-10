@@ -218,7 +218,7 @@ var VGD={
   ['font','style'].forEach(function(k){VGD.el('badge-'+k).textContent=labels[scope]});
   this.el('badge-smart').textContent='Group/Component đang chọn';this.el('badge-units').textContent='Toàn model';this.el('badge-animation').textContent='Toàn model';this.el('badge-presets').textContent='Lưu trên máy';
  },
- mountScope:function(){var target=this.el(innerWidth<=620?'mobile-scope':'desktop-scope');if(this.el('shared-scope').parentElement!==target)target.appendChild(this.el('shared-scope'))},
+ mountScope:function(){var target=this.el(innerWidth<=740?'mobile-scope':'desktop-scope');if(this.el('shared-scope').parentElement!==target)target.appendChild(this.el('shared-scope'))},
  toggleTheme:function(){this.setTheme(document.body.dataset.theme==='dark'?'light':'dark')},
  setTheme:function(theme){document.documentElement.dataset.theme=theme;document.body.dataset.theme=theme;this.el('theme').setAttribute('aria-pressed',theme==='dark'?'true':'false');try{localStorage.setItem('vgd.dim.theme',theme)}catch(e){}}
 };

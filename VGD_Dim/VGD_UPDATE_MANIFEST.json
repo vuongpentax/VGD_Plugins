@@ -1,11 +1,11 @@
 {
   "product_id": "vgd_dim",
-  "version": "3.3.0-beta.7",
+  "version": "3.3.0-beta.8",
   "channel": "beta",
   "min_sketchup_year": "2022",
-  "filename": "VGD_Dim_v3.3.0-beta.7.rbz",
-  "bytes": 52452,
-  "sha256": "c59c7c686d40cadc6b08540244075fe4f6dc0a3b29a0cdea299a6fc08fa7ce6a",
-  "download_url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/VGD_Dim_v3.3.0-beta.7.rbz",
-  "changelog": "VGD Dim 3.3.0-beta.7: sửa SVG icon Bảng Dim bị lỗi khiến toolbar trống trên SketchUp 2024."
+  "filename": "VGD_Dim_v3.3.0-beta.8.rbz",
+  "bytes": 52708,
+  "sha256": "131189b4b105de245f13ef2eb88ddf39560f1ef129ac07f8e80926578e401478",
+  "download_url": "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/VGD_Dim_v3.3.0-beta.8.rbz",
+  "changelog": "VGD Dim 3.3.0-beta.8: điều hướng co giãn icon/tooltip; sửa mở khóa giao diện khi hủy Dim thủ công."
 }

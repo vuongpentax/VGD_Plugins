@@ -16,6 +16,7 @@ const assert=(v,m)=>{if(!v)throw Error(m)};
   assert((await last()).action==='ready','Ready missing');
   await page.evaluate(()=>VGD.onState({version:'3.3.0-beta.1',presets:{'VGD Standard':{dim:{color:'#000000'},text:{color:'#000000'},label:{color:'#000000'}}},builtin:['VGD Standard'],auto:{enabled:false},smart:{off1:125,scene_only:true},units:{unit:'2',precision:'0',show_unit:false},anim:{enabled:true,transition:1,delay:2,loop:false}}));
   assert(await page.locator('[role=tab]').count()===6 && await page.locator('.function-panel:visible').count()===1,'Navigation/panels wrong');
+  assert(await page.locator('#tab-smart .nav-copy small').innerText()==='Boundary, Detail & tự động đo','Navigation description missing');
   assert(await page.locator('#shared-scope').isHidden(),'Smart scope misleading');
   assert(await page.locator('[id="sd.off1"]').inputValue()==='125','Saved Smart opts not restored');
   assert(await page.locator('[id="region.active"]').count()===1 && await page.getByRole('button',{name:'Đặt / cập nhật Boundary'}).count()===1,'Boundary controls missing');
@@ -78,8 +79,10 @@ const assert=(v,m)=>{if(!v)throw Error(m)};
   await page.reload();assert(await page.locator('body').getAttribute('data-theme')==='light','Light theme preference not persisted');
   await page.locator('#tab-smart').focus();await page.keyboard.press('ArrowDown');assert(await page.locator('#tab-font').getAttribute('aria-selected')==='true','Keyboard tabs missing');
   const out=path.resolve(__dirname,'../outputs');fs.mkdirSync(out,{recursive:true});
-  for(const theme of ['light','dark']) for(const [width,height] of [[760,760],[540,700],[360,600]]){
-   await page.setViewportSize({width,height});await page.evaluate(t=>VGD.setTheme(t),theme);
+  for(const theme of ['light','dark']) for(const [width,height] of [[760,760],[740,740],[540,700],[360,600]]){
+   await page.setViewportSize({width,height});await page.evaluate(t=>{VGD.setTheme(t);VGD.mountScope()},theme);
+   if(width>740){assert(await page.locator('#tab-smart .nav-copy').isVisible()&&await page.locator('#tab-smart .nav-copy small').isVisible(),'Expanded navigation title/description hidden');assert(await page.locator('#shared-scope').evaluate(element=>element.parentElement.id)==='desktop-scope','Wide scope card moved unexpectedly: '+await page.evaluate(()=>innerWidth)+' '+await page.locator('#shared-scope').evaluate(element=>element.parentElement.id))}
+   else{assert(await page.locator('#tab-smart .nav-copy').isHidden(),'Compact navigation still shows labels');assert((await page.locator('#tab-smart').getAttribute('title')).includes('Boundary'),'Compact navigation tooltip missing');assert(await page.locator('#shared-scope').evaluate(element=>element.parentElement.id)==='mobile-scope','Compact scope card did not move into content')}
    for(const tab of ['smart','font','style','presets','animation','units']){
     await nav(tab);
     const layout=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth,footer:document.querySelector('footer').getBoundingClientRect().bottom<=innerHeight,main:document.querySelector('main').clientHeight>100,scroll:document.querySelector('main').scrollHeight>=document.querySelector('main').clientHeight}));
@@ -90,6 +93,6 @@ const assert=(v,m)=>{if(!v)throw Error(m)};
   assert(await page.locator('#shared-scope').count()===1,'Responsive duplicate scope');
   await page.evaluate(()=>VGD.onError({message:'Test error'}));assert((await page.locator('#log').innerText()).includes('Test error'),'Inline error missing');
   assert(await page.evaluate(()=>alerts.length)===0 && errors.length===0,errors.join(';'));
-  console.log('PASS: 6 sidebar panels, shared responsive scope, real clicks/keyboard, saved Smart settings, busy guards, separate Units, presets/auto/animation, persistent light/dark, all panels at 760/540/360px, no popups');
+  console.log('PASS: 6 sidebar panels, expanded labels/descriptions and compact icon tooltips, shared responsive scope, real clicks/keyboard, saved Smart settings, busy guards, separate Units, presets/auto/animation, persistent light/dark, all panels at 760/740/540/360px, no popups');
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
