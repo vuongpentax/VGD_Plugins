@@ -12,6 +12,16 @@ function selectSubpage(group,name) {
   document.querySelectorAll('[data-subgroup="'+group+'"]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.subtab===name));});
   document.getElementById('settings_content').scrollTop=0;
 }
+function setThemeButton(theme) {
+  var button=document.getElementById('btn_theme'),icon=document.getElementById('theme_icon');
+  if(!button||!icon)return;
+  var target=theme==='dark'?'light':'dark';
+  button.title='Chuyển sang giao diện '+(target==='light'?'sáng':'tối');
+  button.setAttribute('aria-label',button.title);
+  icon.innerHTML=theme==='dark'
+    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>'
+    : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.1A8.4 8.4 0 0 1 8.9 3.8 8.5 8.5 0 1 0 20.2 15.1Z"/></svg>';
+}
 function refreshContextUI() {
   var byId=function(id){return document.getElementById(id);};
   var showRow=function(id,yes){var e=byId(id);if(e)e.closest('.form-group').hidden=!yes;};
@@ -40,6 +50,7 @@ function refreshContextUI() {
   if(!framed&&!byId('sub_doors_division').hidden)selectSubpage('doors','front');
   showRow('frame_sections',['Ngang','Dọc'].includes(byId('frame_division').value));
   showRow('frame_bar_width',byId('frame_division').value!=='Không chia');
+  document.querySelectorAll('.frame-patterns button').forEach(function(button){button.setAttribute('aria-pressed',String(button.getAttribute('aria-label')===byId('frame_division').value));});
   if(byId('btn_library_save'))byId('btn_library_save').disabled=!selectedPid;
   if(byId('btn_library_replace'))byId('btn_library_replace').disabled=!selectedPid||!selectedLibrary;
   showRow('max_door_w',byId('auto_door_count').checked);

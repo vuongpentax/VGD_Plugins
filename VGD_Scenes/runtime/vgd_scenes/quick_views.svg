@@ -1,11 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <rect x="1" y="1" width="30" height="30" rx="5" fill="#2b2b2b"/>
-  <g fill="none" stroke="#b48963" stroke-width="1.5">
-    <rect x="5" y="5" width="9" height="9" rx="1"/><rect x="18" y="5" width="9" height="9" rx="1"/>
-    <rect x="5" y="18" width="9" height="9" rx="1"/><rect x="18" y="18" width="9" height="9" rx="1"/>
-  </g>
-  <g fill="none" stroke="#fff" stroke-width="1.1" stroke-linejoin="round">
-    <path d="m7 8 2.5-1.5L12 8v3l-2.5 1.5L7 11z m0 0 2.5 1.5L12 8m-2.5 1.5v3"/>
-    <path d="M20 7h5v5h-5zM7 20h5v5H7zM20 20h3v5h-3z"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="VGD Scenes · Tạo 4 góc nhìn"><path fill="none" stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 5h5v5H5zM14 5h5v5h-5zM5 14h5v5H5zM14 14h5v5h-5z"/><path fill="none" stroke="#A67C58" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M7 3v2m10-2v2M7 19v2m10-2v2"/></svg>

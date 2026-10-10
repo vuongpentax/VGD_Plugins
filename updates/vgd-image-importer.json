@@ -1,11 +1,11 @@
 {
   "product_id": "vgd-image-importer",
-  "version": "1.1.0-beta.3",
+  "version": "1.1.0-beta.4",
   "channel": "beta",
   "min_sketchup_year": 2022,
-  "filename": "VGD_Image_Importer_v1.1.0-beta.3.rbz",
-  "bytes": 62474,
-  "sha256": "e363ab26321578ec49bc9a10d40a3b6cfd0ac3132c8280e20e201b0599cf3544",
-  "download_url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-image-importer-v1.1.0-beta.3/VGD_Image_Importer_v1.1.0-beta.3.rbz",
-  "changelog": "Thêm thông báo cập nhật prerelease; giữ hành vi nhập ảnh và đường dẫn nâng cấp tại chỗ."
+  "filename": "VGD_Image_Importer_v1.1.0-beta.4.rbz",
+  "bytes": 64792,
+  "sha256": "db1e63dc3dae54b92f9c63cbb92378ed72cf624377777a575f60b2b016a85c7c",
+  "download_url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-image-importer-v1.1.0-beta.4/VGD_Image_Importer_v1.1.0-beta.4.rbz",
+  "changelog": "Đồng bộ dialog và biểu tượng VGD; chuẩn hóa trải nghiệm giao diện sáng/tối."
 }

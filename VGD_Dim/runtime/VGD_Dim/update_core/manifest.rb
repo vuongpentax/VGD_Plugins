@@ -25,8 +25,9 @@ module VGD
           sha = data['sha256'].to_s.downcase
           raise 'SHA-256 không hợp lệ.' unless SHA_PATTERN.match?(sha)
           uri = URI.parse(data['download_url'])
-          expected = "https://github.com/#{REPOSITORY}/releases/download/vgd-dim-v#{version}/#{data['filename']}"
-          raise 'URL tải không thuộc GitHub Release đã định.' unless uri.to_s == expected
+          expected_release = "https://github.com/#{REPOSITORY}/releases/download/vgd-dim-v#{version}/#{data['filename']}"
+          expected_package = "https://raw.githubusercontent.com/#{REPOSITORY}/main/shared/vgd-center/packages/#{data['filename']}"
+          raise 'URL tải không thuộc kho package VGD đã định.' unless [expected_release, expected_package].include?(uri.to_s)
           { 'version' => version, 'channel' => channel, 'min_sketchup_year' => year,
             'filename' => data['filename'], 'bytes' => bytes, 'sha256' => sha,
             'download_url' => uri.to_s, 'changelog' => data['changelog'].to_s }

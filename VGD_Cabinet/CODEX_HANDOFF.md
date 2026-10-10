@@ -1,6 +1,6 @@
 # VGD_Cabinet · bàn giao 2026-10-08
 
-Phiên bản 4.5.0-beta.2. Active source: cabinet_work/vgd_cabinet.rb, cabinet_work/VGD_Cabinet/main43.rb. Generator: cabinet_dev/redesign_ui.cjs từ ui_beta1/menu.css/menu.js. Bản T+ trong TPlus_Cabinet_Codex_Handoff_2026-10-01 giữ làm tham chiếu, không deploy nữa.
+Phiên bản 4.5.0-beta.3. Active source: cabinet_work/vgd_cabinet.rb, cabinet_work/VGD_Cabinet/main43.rb. Generator: cabinet_dev/redesign_ui.cjs từ ui_beta1/menu.css/menu.js. Bản T+ trong TPlus_Cabinet_Codex_Handoff_2026-10-01 giữ làm tham chiếu, không deploy nữa.
 
 4.5 beta 1: component_sharing.rb chia sẻ theo role + local geometry/material digest trong mỗi lần dựng, tách trái/phải/kích thước; không thêm DC formula ngoài animation sẵn có. frame_divisions.rb clip các thanh/ngăn X không chồng; pano.rb giữ rãnh cũ, thêm vertical stiles và applied X/Shaker recess. rail_joinery.rb nối các xà đồng hàng, khấu tiết diện YZ hồi thẳng; hồi bo dựng boundary giữa các footprint XY theo cao, giữ arc gốc, không có mặt nội bộ giữa band; __independent_module được engine skip. geometry_engine sửa overlay 2 cột hộc theo tim divider, giữ box/ray/gap.
 
@@ -32,6 +32,6 @@ node cabinet_dev/test_description.cjs
 python cabinet_dev/test_deploy.py
 python cabinet_dev/package_menu.py
 
-check_ruby tạo thư mục preset_fixture trong outputs, host filesystem qua WASI; flock mô phỏng. UI cần CODEX_PRIMARY_RUNTIME_NODE_MODULES chứa Playwright và Edge. Đóng gói whitelist 23 file. Source ZIP gồm test/generator/docs và validation, không cache/cấu hình người dùng. Installer chỉ SU2022, legacy loader T+ sao lưu rồi tắt, runtime T+ cũ để nguyên cho phục hồi.
+check_ruby tạo thư mục preset_fixture trong outputs, host filesystem qua WASI; flock mô phỏng. UI cần CODEX_PRIMARY_RUNTIME_NODE_MODULES chứa Playwright và Edge. Đóng gói whitelist 24 file. Source ZIP gồm test/generator/docs và validation, không cache/cấu hình người dùng. Installer chỉ SU2022, legacy loader T+ sao lưu rồi tắt, runtime T+ cũ để nguyên cho phục hồi.
 
 Không có native SketchUp test trong phiên này. Đổi namespace phải restart SketchUp; không cố nóng thay module T+ trong model đang làm.

@@ -3,6 +3,11 @@
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
   var state = { importType: 'comp_2d', files: [], busy: false, native: !!window.sketchup };
+  var themeIcons = {
+    dark: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2.5v2M12 19.5v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2.5 12h2m15 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>',
+    light: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.1A8.2 8.2 0 0 1 8.9 3.8 8.2 8.2 0 1 0 20.2 15.1Z"/></svg>'
+  };
+  var themeKey = 'vgd.image_importer.theme';
   function call(action, data) {
     if (window.sketchup && window.sketchup.vgd_importer) window.sketchup.vgd_importer(action, JSON.stringify(data || {}));
     else if (action !== 'ready') status('Mở plugin trong SketchUp để chọn và nhập ảnh.', true);
@@ -13,8 +18,14 @@
   }
   function theme(dark) {
     document.body.classList.toggle('dark', dark);
+    document.body.classList.toggle('light', !dark);
+    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
     $('theme').setAttribute('aria-pressed', String(dark));
-    try { localStorage.setItem('vgd.theme', dark ? 'dark' : 'light'); } catch (_) {}
+    $('theme').innerHTML = themeIcons[dark ? 'dark' : 'light'];
+    var themeLabel = dark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối';
+    $('theme').title = themeLabel;
+    $('theme').setAttribute('aria-label', themeLabel);
+    try { localStorage.setItem(themeKey, dark ? 'dark' : 'light'); } catch (_) {}
   }
   function config() {
     return { importType: state.importType, scaleMethod: $('scaleMethod').value,
@@ -72,7 +83,7 @@
       var name = document.createElement('strong'); name.textContent = file.name; name.title = file.name;
       var path = document.createElement('small'); path.textContent = file.path; path.title = file.path;
       info.appendChild(name); info.appendChild(path); row.appendChild(info);
-      var remove = document.createElement('button'); remove.className = 'remove'; remove.textContent = '×';
+      var remove = document.createElement('button'); remove.className = 'remove'; remove.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>';
       remove.setAttribute('aria-label', 'Bỏ ' + file.name); remove.onclick = function () { call('remove', { id: file.id }); };
       row.appendChild(remove); list.appendChild(row);
     });
@@ -147,6 +158,9 @@
   };
   // Used by the native integration harness; follows exactly the same UI path.
   window.VGDImporter.startImport = function () { $('import').click(); };
-  try { theme(localStorage.getItem('vgd.theme') === 'dark'); } catch (_) {}
+  try {
+    var savedTheme = localStorage.getItem(themeKey);
+    theme(savedTheme ? savedTheme === 'dark' : document.body.classList.contains('dark'));
+  } catch (_) { theme(document.body.classList.contains('dark')); }
   update(); call('ready');
 }());

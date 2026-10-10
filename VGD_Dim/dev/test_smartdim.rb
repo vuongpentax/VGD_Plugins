@@ -18,6 +18,19 @@ def managed_groups(model)
 end
 def run_smartdim_tests
   smart=VGD::Dim::SmartDim; managed=VGD::Dim::Managed
+  regions=VGD::Dim::Regions
+  box=regions.record_bounds(Geom::Point3d.new(10.mm,20.mm,30.mm),Geom::Point3d.new(0,0,0))
+  check(box['min']==[0.0,0.0,0.0] && box['max']==[10.mm,20.mm,30.mm] && regions.contains?(box,Geom::Point3d.new(5.mm,5.mm,5.mm)) && !regions.contains?(box,Geom::Point3d.new(11.mm,5.mm,5.mm)),'Boundary bounds/containment wrong')
+  begin; regions.record_bounds(Geom::Point3d.new(0,0,0),Geom::Point3d.new(0,10.mm,10.mm)); raise 'Zero-width Boundary accepted'; rescue ArgumentError; end
+  region_model=Sketchup::FakeModel.new; Sketchup.active_model=region_model
+  boundary=regions.save(region_model,'boundary','',Geom::Point3d.new(0,0,0),Geom::Point3d.new(100.mm,100.mm,100.mm))
+  detail=regions.save(region_model,'detail','Ngăn kéo',Geom::Point3d.new(10.mm,10.mm,10.mm),Geom::Point3d.new(50.mm,50.mm,50.mm))
+  check(boundary['name']=='Boundary' && detail['name']=='Ngăn kéo' && region_model.entities.grep(Sketchup::Group).all? { |g| g.entities.size==12 && g.entities.all? { |e| e.is_a?(Sketchup::Edge) } } && regions.public_state(region_model)['active_detail']==detail['id'],'Boundary/Detail persistence and outlines wrong')
+  begin; regions.save(region_model,'detail','Ngoài vùng',Geom::Point3d.new(90.mm,90.mm,90.mm),Geom::Point3d.new(110.mm,110.mm,110.mm)); raise 'Out-of-bound detail accepted'; rescue ArgumentError; check(region_model.operations==2,'Rejected Detail Region mutated model'); end
+  regions.set_active(region_model,''); regions.delete_detail(region_model,detail['id'])
+  check(regions.public_state(region_model)['details'].empty? && region_model.entities.grep(Sketchup::Group).size==1,'Detail deletion failed')
+  gap_breaks=VGD::Dim::SmartDim.breaks([0,18.mm,19.mm,781.mm,782.mm,800.mm],5.mm)
+  check(gap_breaks==[0,18.mm,781.mm,800.mm],'1–2 mm gaps were not merged')
   m,root=smart_fixture
   result=smart.execute({'face'=>'-y'},{'dim'=>{'arrow'=>'slash','textorient'=>'aligned','align'=>'above'}})
   group=managed_groups(m).first; dims=group.entities.grep(Sketchup::DimensionLinear)
@@ -34,6 +47,13 @@ def run_smartdim_tests
   VGD::Dim::Core.run(['dim'],{'dim'=>{'arrow'=>'dot'}},{})
   check(replacement.entities.grep(Sketchup::DimensionLinear).all? { |d| d.layer==m.layers[0] && d.arrow_type==2 },'Style destroyed Smart tag isolation')
   check(smart.saved['opts']['off1']==120.0,'Successful Smart options not persisted')
+  m,root=smart_fixture
+  state={'boundary'=>{'id'=>'boundary','name'=>'Boundary','min'=>[-1.mm,-1.mm,-1.mm],'max'=>[801.mm,601.mm,721.mm]},'details'=>[],'active_detail'=>''}
+  m.set_attribute(regions::DICT,'state',JSON.generate(state))
+  check(smart.run({'face'=>'-y'}, {})['parts']==3,'Boundary rejected in-bounds cabinet')
+  state['details']=[{'id'=>'detail-1','name'=>'Detail','min'=>[0,0,0],'max'=>[100.mm,100.mm,100.mm]}];state['active_detail']='detail-1'
+  m.set_attribute(regions::DICT,'state',JSON.generate(state));before=m.operations
+  begin; smart.run({'face'=>'-y'}, {}); raise 'Out-of-region parts were measured'; rescue RuntimeError => e; check(e.message.include?('Không có chi tiết') && m.operations==before,'Detail filter mutated model or returned wrong error'); end
   m.selection.clear; m.selection.add(root)
   m.entities.grep(Sketchup::Group).find { |g| managed.owned?(g) }.entities.add_line(Geom::Point3d.new(0,0,0),Geom::Point3d.new(1,0,0))
   before=m.operations

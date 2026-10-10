@@ -71,6 +71,12 @@ module VGD
         ctx_planes = context_sections(model)
         collect(sel, Geom::Transformation.new, parts, [], planes, basis)
         raise 'Không tìm thấy chi tiết trong tủ đã chọn (bỏ qua đối tượng ẩn, khóa hoặc tag tắt).' if parts.empty?
+        if Regions.active_bounds(model)
+          Regions.root_context!(model)
+          region = Regions.active_bounds(model)
+          parts.select! { |corners| Regions.contains_part?(region, corners) }
+          raise 'Không có chi tiết nào nằm trọn trong Boundary/Detail Region đang chọn.' if parts.empty?
+        end
 
         candidates = ctx_planes.empty? ? planes : ctx_planes
         raise 'Có nhiều mặt cắt đang bật trong phạm vi. Chỉ bật một mặt cắt hoặc bỏ tùy chọn đo mặt cắt.' if o['use_section'] && model.rendering_options['DisplaySectionCuts'] && candidates.size > 1

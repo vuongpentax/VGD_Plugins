@@ -6,11 +6,11 @@ import json
 root = Path(__file__).resolve().parents[1]
 out = root / 'outputs/vgd_cabinet_modeling'
 out.mkdir(parents=True, exist_ok=True)
-version = '4.5.0-beta.2'
+version = '4.5.0-beta.4'
 files = ['vgd_cabinet.rb'] + ['VGD_Cabinet/' + name for name in [
     'main43.rb', 'geometry_engine.rb', 'modeling_rules.rb', 'modeling.rb', 'pano.rb','component_sharing.rb','frame_divisions.rb','rail_joinery.rb','preview_mesh.rb','library_store.rb', 'preset_store.rb', 'description_import.rb',
     'defaults.rb', 'draw_tool.rb', 'ui_renderer.rb', 'VGD_Cabinet_UI.html',
-    'utilities.rb', 'reload.rb', 'update_notice.rb', 'combine.svg', 'untag.svg', 'logo.svg', 'HUONG_DAN.txt']]
+    'utilities.rb', 'reload.rb', 'update_notice.rb', 'cabinet.svg', 'combine.svg', 'untag.svg', 'logo.svg', 'HUONG_DAN.txt']]
 rbz = out / f'VGD_Cabinet_v{version}.rbz'
 source = out / f'VGD_Cabinet_v{version}_source.zip'
 with ZipFile(rbz, 'w', ZIP_DEFLATED) as z:
@@ -55,7 +55,7 @@ tag recursion, failure transactions and menu/toolbar callbacks; not native geome
 Reload fixture evaluates real runtime files to verify dependency/HTML refresh, beta 4
 bootstrap, menu/toolbar idempotence, VGD observer cleanup, foreign-observer preservation,
 syntax preflight and the exact own-file reload list. No native hot-reload is claimed.
-sync_sketchup_2022.ps1 deploys only the 23 listed VGD Cabinet files to the fixed 2022 path,
+sync_sketchup_2022.ps1 deploys only the 24 listed VGD Cabinet files to the fixed 2022 path,
 backing up changed existing files and verifying SHA256. It does not deploy other plugins.
 No native SketchUp run was available. See HUONG_DAN.txt for manual acceptance checks.
 ''')

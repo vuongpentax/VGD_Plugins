@@ -1,7 +1,8 @@
-# VGD Dim · 3.3.0-beta.2
+# VGD Dim · 3.3.0-beta.6
 
 Tiếp tục từ **VGD_Dim_6.rbz (Claude 3.2.0)** theo yêu cầu 07/10/2026. Sidebar 6 mục và scope chung; giữ palette T+ / VGD, có theme sáng/tối. Đọc [UI_DESIGN.md](UI_DESIGN.md) cho cấu trúc bảng và [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md) cho rà soát/giới hạn/checklist native.
 
+- **Dim thủ công và vùng**: tạo Dimension native bằng cách chọn hai điểm rồi chọn phía đặt đường dim. Đặt Boundary bằng hai góc đối diện; Smart Dim chỉ đo chi tiết nằm hoàn toàn trong vùng đang hoạt động. Tạo Detail Region có tên bên trong Boundary để giới hạn đo vào chi tiết nhỏ. Vùng được lưu trong model và có thể chọn/xóa từ giao diện.
 - **Smart Dim**: chọn Group/Component tủ; đo ±X/±Y/±Z theo trục riêng của tủ, camera hoặc gần gốc; ngang/đứng, nối tiếp/tổng, offset và lọc theo mm. Hỗ trợ xoay Z tùy góc, mirror X/Y, scale theo trục. Chặn tủ nghiêng/shear/khối khác hệ trục. Dim native gom trong Group có metadata; chạy lại cùng tủ/mặt/Scene thay bộ cũ sau khi dựng thành công. Không xóa Group chỉ vì trùng tên; bộ V6 cũ không có metadata cần xóa thủ công một lần.
 - **Mặt cắt / Scene**: ưu tiên một mặt cắt đang bật, song song trục tủ; Group/Tag `000_DIM_SECTION…` riêng. Dim bên trong Untagged; Group giữ Tag. Tùy chọn gắn Scene hiện tại cô lập riêng Tag này ở các Scene có lưu Tags, không ghi camera/style. Scene hiện tại chưa lưu Tags sẽ báo lỗi; bỏ tùy chọn để dùng Tag chung. Không có Scene thì bộ chưa gắn Scene.
 - **Một chạm**: nút Smart Dim riêng trên toolbar/menu dùng options và style của lần đo thành công cuối. Cấu hình lưu JSON Base64 an toàn trên máy; không lưu khi validation hoặc tạo Dim thất bại.
@@ -24,7 +25,7 @@ Lịch sử files.zip 3.0: 5 file, thiếu 6 module đã được bổ sung; sna
 
 Gói tạo theo version trong runtime/VGD_Dim/version.rb; source ZIP cùng phiên bản. Extension/toolbar tên **VGD Dim**, loader vgd_dim.rb và namespace VGD::Dim tiếp tục dùng để tránh tạo plugin thứ hai. Cài bằng Extension Manager → Install Extension, rồi khởi động lại SketchUp để nhận toolbar mới.
 
-dev/deploy.ps1 chỉ cài whitelist 27 file vào SU2022, sao lưu và kiểm tra SHA256. Trong app đang mở có thể dùng Extensions → Nạp lại VGD Dim/Text (menu cũ) hoặc Nạp lại VGD Dim (menu mới). Khởi động lại SketchUp để tên extension/toolbar cập nhật hoàn toàn.
+dev/deploy.ps1 chỉ cài whitelist 29 file vào SU2022, sao lưu và kiểm tra SHA256. Trong app đang mở có thể dùng Extensions → Nạp lại VGD Dim/Text (menu cũ) hoặc Nạp lại VGD Dim (menu mới). Khởi động lại SketchUp để tên extension/toolbar cập nhật hoàn toàn.
 
 Ruby Console:
 
@@ -34,11 +35,11 @@ load File.join(Sketchup.find_support_file('Plugins'), 'VGD_Dim', 'reload.rb')
 
 ## Kiểm tra
 
-check_ruby.cjs: cú pháp; scopes/filters/dedup; style/Units tách riêng; rebuild/metadata/failure; Smart yaw/mirror/scale/section/normals, ownership/replacement/Scene rollback, one-touch/persistence; preset/auto/animation và native bridge mô phỏng. test_store.rb: cấu hình SU2022/Unicode/kiểu JSON, khởi động khi dữ liệu hỏng. test_ui.cjs: 6 bảng, payload, keyboard, scope chung, busy, theme lưu lại, toàn bộ bảng ở 760/540/360px. test_deploy.py: whitelist 27 file/backup/cài lặp/guard/Cabinet; test_update_installer.ps1: cập nhật trong fixture, giữ file ngoài whitelist và bản sao cũ.
+check_ruby.cjs: cú pháp; scopes/filters/dedup; style/Units tách riêng; rebuild/metadata/failure; Smart yaw/mirror/scale/section/normals, ownership/replacement/Scene rollback, one-touch/persistence; preset/auto/animation và native bridge mô phỏng. test_store.rb: cấu hình SU2022/Unicode/kiểu JSON, khởi động khi dữ liệu hỏng. test_ui.cjs: 6 bảng, callback vùng và Dim thủ công, payload, keyboard, scope chung, busy, theme lưu lại, toàn bộ bảng ở 760/540/360px. test_deploy.py: whitelist 29 file/backup/cài lặp/guard/Cabinet; test_update_installer.ps1: cập nhật trong fixture, giữ file ngoài whitelist và bản sao cũ.
 
 ## Cập nhật online pilot
 
-Bản 3.3.0-beta.2 bổ sung kiểm tra manifest GitHub cho riêng VGD Dim. Có thể kiểm tra thủ công ở Extensions → Kiểm tra cập nhật VGD Dim; kiểm tra tự động tối đa mỗi 24 giờ. Gói tải về được kiểm tra kích thước và SHA-256. Nếu người dùng đồng ý, helper chờ SketchUp đóng rồi thay file whitelist, lưu bản sao thư mục cũ và giữ file ngoài whitelist. Hệ thống chỉ thực sự phân phối bản mới sau khi RBZ được đăng ở GitHub Release và manifest được cập nhật trên nhánh main. Xem [HOW_TO_RELEASE.md](HOW_TO_RELEASE.md).
+Bản beta.6 thêm Dim thủ công và quản lý vùng đo. Người dùng beta.5 cài beta.6 một lần qua VGD Center hoặc Extension Manager; các bản sau có thể tải từ package của Center bằng updater. Updater xác minh kích thước và SHA-256; nếu người dùng đồng ý, helper chờ SketchUp đóng rồi thay file whitelist, lưu bản sao thư mục cũ và giữ file ngoài whitelist. Xem [HOW_TO_RELEASE.md](HOW_TO_RELEASE.md).
 
 ## Sửa lỗi khởi động 3.0.1-beta.1 — 05/10/2026
 

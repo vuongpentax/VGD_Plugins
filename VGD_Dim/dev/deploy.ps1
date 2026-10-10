@@ -18,6 +18,8 @@ $ownedFiles = @(
     'VGD_Dim\autostyle.rb',
     'VGD_Dim\animation.rb',
     'VGD_Dim\smartdim.rb',
+    'VGD_Dim\regions.rb',
+    'VGD_Dim\manual_dim.rb',
     'VGD_Dim\probe.rb',
     'VGD_Dim\dialog.rb',
     'VGD_Dim\dialog.html',

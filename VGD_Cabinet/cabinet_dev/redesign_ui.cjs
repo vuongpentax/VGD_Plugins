@@ -11,7 +11,11 @@ const field=id=>get(id).closest('.form-group,.checkbox-row');
 const section=(title)=>el('section',{class:'settings-section'},'<h3>'+title+'</h3>');
 const details=(title,id)=>el('details',{class:'advanced',...(id?{id}:{})},'<summary>'+title+'</summary>');
 const scripts=[...d.querySelectorAll('script')];
-const header=q('.header');header.querySelector('.header-left').innerHTML='<span>VGD_CABINET <small>4.5 · beta 1</small></span>';
+d.body.classList.add('dark');d.documentElement.style.colorScheme='dark';
+const header=q('.header');
+const brandMark='<svg class="brand-mark" viewBox="0 0 180 180" aria-hidden="true"><rect x="3" y="3" width="174" height="174" rx="25" fill="var(--vgd-brand-tile)" stroke="var(--vgd-border)" stroke-width="1.5"/><path d="M90 18 27 54 90 89Z" fill="var(--vgd-brand-right)"/><path d="M90 18 153 54 90 89Z" fill="var(--vgd-brand-roof)"/><path d="M27 54 90 89V162L27 126Z" fill="var(--vgd-brand-left)"/><path d="M90 89 153 54V101C153 129 126 149 90 162Z" fill="var(--vgd-brand-right)"/><path d="M53 99 90 120V162L53 141Z" fill="var(--vgd-brand-shadow)"/><path d="M53 131 90 152V162L53 141Z" fill="var(--vgd-brand-roof)"/><path d="M90 18 27 54V126L90 162C126 149 153 129 153 101V54Z" fill="none" stroke="var(--vgd-brand-outline)" stroke-width="1.5" stroke-linejoin="round"/><path d="M90 18V89L153 54M27 54 90 89V162M53 99V141L90 162M53 99 90 120V152" fill="none" stroke="var(--vgd-brand-accent)" stroke-width="1.5" stroke-linejoin="round"/><path d="M27 54 90 18 153 54 90 89Z" fill="none" stroke="var(--vgd-brand-accent)" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+header.querySelector('.header-left').innerHTML=brandMark+'<span class="brand-copy"><strong class="brand-wordmark">VGD</strong><span class="brand-product">CABINET</span><small class="brand-version">4.5.0 · Beta 2</small></span>';
+const themeButton=q('#btn_theme');themeButton.title='Chuyển sang giao diện sáng';themeButton.setAttribute('aria-label',themeButton.title);themeButton.innerHTML='<span id="theme_icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg></span>';
 const preset=q('.preset-section');const save=details('Lưu / xóa mẫu tủ');save.querySelector('summary').textContent='Lưu / xóa mẫu tủ';save.append(q('.preset-row'));preset.append(save);
 save.querySelector('summary').textContent='Lưu / đổi tên / xóa mẫu tủ';
 get('preset_name').placeholder='Tên mẫu mới / tên mới';
@@ -32,13 +36,14 @@ d.body.append(el('div',{id:'description_draft_notice',hidden:'',role:'status'}))
 const workspace=el('div',{class:'workspace'}),nav=el('nav',{class:'side-menu','aria-label':'Nhóm thông số'}),content=el('main',{id:'settings_content'});
 workspace.append(nav,content);d.body.append(workspace);
 const panels={};
-const paths=['M3 5h18v14H3z M9 5v14 M15 5v14','M4 3h16v18H4z M4 7h16 M4 17h16','M3 3h18v18H3z M11 3v18 M11 10h10 M3 15h8','M4 3h16v18H4z M12 3v18 M9 11v3 M15 11v3','M3 3h18v18H3z M3 9h18 M3 15h18 M10 6h4 M10 12h4 M10 18h4'];
+const paths={general:'M4 6h16M4 12h16M4 18h16M8 4v4m8 0V4m-8 10v4m8-4v4',frame:'M5 3.5h14v17H5zM5 8h14M5 16h14',compartments:'M5 3.5h14v17H5zM12 3.5v17',doors:'M5 3.5h14v17H5zM12 3.5v17M9 11v2m6-2v2',drawers:'M5 3.5h14v17H5zM5 9h14M5 14.5h14M9 6v1m6-1v1m-6 5.5v1m6-1v1m-6 5.5v1m6-1v1',description:'M7 3.5h8l4 4v13H5v-17h2m7 0v4h4M8 12h8M8 16h5',library:'M3.5 6h6l2 2h9v11h-17zM3.5 10h17'};
+const navIcon=name=>'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+paths[name]+'"/></svg>';
 [['general','Tổng thể'],['frame','Thùng tủ'],['compartments','Chia khoang'],['doors','Cánh tủ'],['drawers','Ngăn kéo']].forEach(([id,title],i)=>{
- const b=el('button',{type:'button',class:'menu-button','data-page':id,'aria-controls':'page_'+id,onclick:"selectPage('"+id+"')"},'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="'+paths[i]+'"/></svg><span>'+title+'</span>');nav.append(b);
+ const b=el('button',{type:'button',class:'menu-button','data-page':id,'aria-controls':'page_'+id,onclick:"selectPage('"+id+"')"},navIcon(id)+'<span>'+title+'</span>');nav.append(b);
  const p=el('section',{id:'page_'+id,class:'menu-page',hidden:''},'<h2>'+title+'</h2>');panels[id]=p;content.append(p);
 });
 nav.append(el('div',{class:'menu-note'},'DỰNG HÌNH<br><span>Đơn vị: mm</span>'));
-nav.insertBefore(el('button',{type:'button',class:'menu-button','data-page':'description','aria-controls':'page_description',onclick:"selectPage('description')"},'<span>Dựng từ mô tả</span>'),nav.lastChild);
+nav.insertBefore(el('button',{type:'button',class:'menu-button','data-page':'description','aria-controls':'page_description',onclick:"selectPage('description')"},navIcon('description')+'<span>Dựng từ mô tả</span>'),nav.lastChild);
 const description=el('section',{id:'page_description',class:'menu-page',hidden:''},`<h2>Dựng từ mô tả</h2>
 <p>Gửi ảnh và rộng × sâu × cao mong muốn cho ChatGPT cùng hướng dẫn bên dưới. Dán khối JSON trả về, không dán phần giải thích. Không cần API key.</p>
 <p>Beta 2 dùng cấu tạo hiện có. Các module dùng chung thiết lập cánh, đợt và hộc; chưa hỗ trợ mỗi module một cấu tạo khác nhau.</p>
@@ -50,7 +55,7 @@ const description=el('section',{id:'page_description',class:'menu-page',hidden:'
 <button type="button" id="btn_description_leave" class="btn-secondary" onclick="returnToSelectedCabinet()" hidden>Trở lại tủ đang chọn</button>
 <p>Nhập chỉ đổi bản nháp. Không tự dựng, không cập nhật tủ đang chọn, không tự lưu mẫu. Kiểm tra các giá trị ước lượng trước khi bấm Đặt tủ mới.</p>`);
 content.append(description);
-nav.insertBefore(el('button',{type:'button',class:'menu-button','data-page':'library','aria-controls':'page_library',onclick:"selectPage('library')"},'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h7v16H3z M14 4h7v16h-7z M3 8h7 M14 8h7"/></svg><span>Thư viện</span>'),nav.lastChild);
+nav.insertBefore(el('button',{type:'button',class:'menu-button','data-page':'library','aria-controls':'page_library',onclick:"selectPage('library')"},navIcon('library')+'<span>Thư viện</span>'),nav.lastChild);
 content.append(el('section',{id:'page_library',class:'menu-page',hidden:''},`<h2>Thư viện tủ</h2>
 <p>Lưu tủ đang chọn, gồm cả các chi tiết đã sửa thủ công. Mẫu được giữ trên máy để chọn và đặt lại sau.</p>
 <section class="settings-section"><h3>Lưu tủ đang chọn</h3>
@@ -137,7 +142,7 @@ for(const [id,value]of Object.entries(values)){
   html=html.replace(new RegExp("(getNumValue\\('"+id+"',\\s*)[0-9.]+(\\))",'g'),'$1'+value+'$2');
   html=html.replace(new RegExp('(id="'+id+'"[^>]*value=")[0-9.]+','g'),'$1'+value);
 }
-html=html.replace('VGD_Cabinet UI v4.3.0 beta','VGD Cabinet 4.5.0-beta.2');
+html=html.replace('VGD_Cabinet UI v4.3.0 beta','VGD Cabinet 4.5.0-beta.3');
 html=html.replace("document.getElementById('btn_update').disabled = !selectedPid;","document.getElementById('btn_update').disabled = !selectedPid;\n      document.getElementById('selection_mode').textContent = selectedPid ? 'Đang sửa tủ đã chọn' : 'Tạo tủ mới';\n      refreshContextUI();");
 html=html.replace('        renderDrawerGapUI();\n      } finally', '        renderDrawerGapUI();\n        refreshContextUI();\n      } finally');
 html=html.replace("      initTheme();", "      initMenu();\n      initTheme();");
@@ -157,7 +162,6 @@ html=html.replace('        back_mode:', `        door_style: document.getElement
         metal_finish: document.getElementById('metal_finish').value,
         glass_finish: document.getElementById('glass_finish').value,
         back_mode:`);
-html=html.replaceAll('🌙','Tối').replaceAll('☀️','Sáng');
 html=html.replace('        back_mode:', `        back_groove_auto: document.getElementById('back_groove_auto').checked,
         back_groove_depth: getNumValue('back_groove_depth',8.75),
         drawer_columns: getNumValue('drawer_columns',1),
@@ -202,5 +206,38 @@ getFormData=function(){
   return data;
 };
 </script>`);
+function replaceFunction(name,source){
+  const pattern=new RegExp('function '+name+'\\([^)]*\\) \\{[\\s\\S]*?\\n    \\}');
+  const next=html.replace(pattern,()=>source);
+  if(next===html)throw new Error('Could not replace '+name+' in Cabinet UI source');
+  html=next;
+}
+replaceFunction('initTheme',`function initTheme() {
+      var theme='dark';
+      try {
+        var saved=localStorage.getItem('vgd_cabinet_theme');
+        if(saved==='dark'||saved==='light')theme=saved;
+        else {
+          var legacy=localStorage.getItem('vgd_theme');
+          if(legacy==='dark'||legacy==='light') {
+            theme=legacy;
+            localStorage.setItem('vgd_cabinet_theme',theme);
+          }
+        }
+      } catch(e) {}
+      applyTheme(theme);
+    }`);
+replaceFunction('toggleTheme',`function toggleTheme() {
+      var nextTheme=document.body.classList.contains('dark')?'light':'dark';
+      applyTheme(nextTheme);
+      try { localStorage.setItem('vgd_cabinet_theme',nextTheme); } catch(e) {}
+    }`);
+replaceFunction('applyTheme',`function applyTheme(theme) {
+      theme=theme==='light'?'light':'dark';
+      document.body.classList.toggle('dark',theme==='dark');
+      document.documentElement.style.colorScheme=theme;
+      setThemeButton(theme);
+    }`);
+html=html.replace("el.style.color = error ? '#c33434' : '';","el.style.color = error ? 'var(--vgd-danger)' : '';");
 fs.writeFileSync('cabinet_work/VGD_Cabinet/VGD_Cabinet_UI.html',html.replace(/[ \t]+$/gm,''));
 console.log('UI migrated; original control count:',new JSDOM(fs.readFileSync('cabinet_dev/ui_beta1.html','utf8')).window.document.querySelectorAll('input,select').length,'new:',d.querySelectorAll('input,select').length);

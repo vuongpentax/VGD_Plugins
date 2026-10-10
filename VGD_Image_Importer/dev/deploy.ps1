@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $runtime = Join-Path $project 'runtime'
 $pluginRoot = [IO.Path]::GetFullPath($PluginRoot).TrimEnd('\')
-$owned = @('vgd_image_importer.rb','vgd_image_importer\engine.rb','vgd_image_importer\main.rb','vgd_image_importer\file_picker.rb','vgd_image_importer\conversion.rb','vgd_image_importer\convert_image.ps1','vgd_image_importer\dialog.html','vgd_image_importer\dialog.css','vgd_image_importer\dialog.js','vgd_image_importer\icon.svg','vgd_image_importer\vgd_icon.png')
+$owned = @('vgd_image_importer.rb','vgd_image_importer\engine.rb','vgd_image_importer\main.rb','vgd_image_importer\file_picker.rb','vgd_image_importer\conversion.rb','vgd_image_importer\convert_image.ps1','vgd_image_importer\dialog.html','vgd_image_importer\dialog.css','vgd_image_importer\dialog.js','vgd_image_importer\icon.svg','vgd_image_importer\vgd_icon.png','vgd_image_importer\brand_dark.svg','vgd_image_importer\brand_light.svg')
 function Assert-Target([string]$path) {
   $absolute = [IO.Path]::GetFullPath($path)
   if (-not $absolute.StartsWith($pluginRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw "Target outside Plugins: $absolute" }
@@ -54,7 +54,7 @@ try {
     Copy-Item -LiteralPath $source -Destination $target -Force
     if ((Get-FileHash -LiteralPath $target).Hash -ne (Get-FileHash -LiteralPath $source).Hash) { throw "Install mismatch: $relative" }
   }
-  $report = [ordered]@{ plugin_root=$pluginRoot; installed_at=(Get-Date -Format o); version='1.1.0-beta.3'; files=$owned; existed_before=$previous; original_hashes=$originalHashes; backup=$backup; verified=$true }
+  $report = [ordered]@{ plugin_root=$pluginRoot; installed_at=(Get-Date -Format o); version='1.1.0-beta.4'; files=$owned; existed_before=$previous; original_hashes=$originalHashes; backup=$backup; verified=$true }
   $report | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $backup 'install_report.json') -Encoding utf8
   Write-Output ($report | ConvertTo-Json -Depth 5)
 } catch {
