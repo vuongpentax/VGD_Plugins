@@ -1,6 +1,6 @@
 {
   "name": "vgd-scenes-verification",
-  "version": "1.5.3-beta.2",
+  "version": "1.5.3-beta.3",
   "private": true,
   "scripts": {
     "test": "node check_ruby.cjs && node test_ui.cjs && node test_frame_ui.cjs && node test_flow_ui.cjs && node test_refresh_ui.cjs && node test_scene_workflow_ui.cjs && node test_cleanup_ui.cjs",
