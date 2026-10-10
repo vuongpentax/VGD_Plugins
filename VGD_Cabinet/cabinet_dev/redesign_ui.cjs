@@ -14,7 +14,7 @@ const scripts=[...d.querySelectorAll('script')];
 d.body.classList.add('dark');d.documentElement.style.colorScheme='dark';
 const header=q('.header');
 const brandMark='<svg class="brand-mark" viewBox="0 0 180 180" aria-hidden="true"><rect x="3" y="3" width="174" height="174" rx="25" fill="var(--vgd-brand-tile)" stroke="var(--vgd-border)" stroke-width="1.5"/><path d="M90 18 27 54 90 89Z" fill="var(--vgd-brand-right)"/><path d="M90 18 153 54 90 89Z" fill="var(--vgd-brand-roof)"/><path d="M27 54 90 89V162L27 126Z" fill="var(--vgd-brand-left)"/><path d="M90 89 153 54V101C153 129 126 149 90 162Z" fill="var(--vgd-brand-right)"/><path d="M53 99 90 120V162L53 141Z" fill="var(--vgd-brand-shadow)"/><path d="M53 131 90 152V162L53 141Z" fill="var(--vgd-brand-roof)"/><path d="M90 18 27 54V126L90 162C126 149 153 129 153 101V54Z" fill="none" stroke="var(--vgd-brand-outline)" stroke-width="1.5" stroke-linejoin="round"/><path d="M90 18V89L153 54M27 54 90 89V162M53 99V141L90 162M53 99 90 120V152" fill="none" stroke="var(--vgd-brand-accent)" stroke-width="1.5" stroke-linejoin="round"/><path d="M27 54 90 18 153 54 90 89Z" fill="none" stroke="var(--vgd-brand-accent)" stroke-width="1.5" stroke-linejoin="round"/></svg>';
-header.querySelector('.header-left').innerHTML=brandMark+'<span class="brand-copy"><strong class="brand-wordmark">VGD</strong><span class="brand-product">CABINET</span><small class="brand-version">4.5.0 · Beta 2</small></span>';
+header.querySelector('.header-left').innerHTML=brandMark+'<span class="brand-copy"><strong class="brand-wordmark">VGD</strong><span class="brand-product">CABINET</span><small class="brand-version">4.5.0 · Beta 5</small></span>';
 const themeButton=q('#btn_theme');themeButton.title='Chuyển sang giao diện sáng';themeButton.setAttribute('aria-label',themeButton.title);themeButton.innerHTML='<span id="theme_icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg></span>';
 const preset=q('.preset-section');const save=details('Lưu / xóa mẫu tủ');save.querySelector('summary').textContent='Lưu / xóa mẫu tủ';save.append(q('.preset-row'));preset.append(save);
 save.querySelector('summary').textContent='Lưu / đổi tên / xóa mẫu tủ';
@@ -146,7 +146,7 @@ for(const [id,value]of Object.entries(values)){
   html=html.replace(new RegExp("(getNumValue\\('"+id+"',\\s*)[0-9.]+(\\))",'g'),'$1'+value+'$2');
   html=html.replace(new RegExp('(id="'+id+'"[^>]*value=")[0-9.]+','g'),'$1'+value);
 }
-html=html.replace('VGD_Cabinet UI v4.3.0 beta','VGD Cabinet 4.5.0-beta.4');
+html=html.replace('VGD_Cabinet UI v4.3.0 beta','VGD Cabinet 4.5.0-beta.5');
 html=html.replace("document.getElementById('btn_update').disabled = !selectedPid;","document.getElementById('btn_update').disabled = !selectedPid;\n      document.getElementById('selection_mode').textContent = selectedPid ? 'Đang sửa tủ đã chọn' : 'Tạo tủ mới';\n      refreshContextUI();");
 html=html.replace('        renderDrawerGapUI();\n      } finally', '        renderDrawerGapUI();\n        refreshContextUI();\n      } finally');
 html=html.replace("      initTheme();", "      initMenu();\n      initTheme();");
