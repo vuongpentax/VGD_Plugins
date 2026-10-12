@@ -1,0 +1,25 @@
+# Thông tin bí mật và cấu hình cục bộ
+.env
+.env.*
+!.env.example
+
+# Tệp tạm, bộ nhớ đệm và nhật ký
+*.tmp
+*.temp
+*.log
+*~
+.cache/
+
+# Gói được tạo và kết quả kiểm thử
+*.rbz
+coverage/
+test-results/
+
+# Thư viện phụ thuộc tải về
+node_modules/
+vendor/bundle/
+
+# Tệp của hệ điều hành
+Thumbs.db
+Desktop.ini
+.DS_Store
