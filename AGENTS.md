@@ -1,22 +1,22 @@
-# VGD Plugins — Repository Guidelines
+# VGD Plugins — Quy định Repository
 
-## Project Purpose
+## Mục đích dự án
 
-This repository contains the VGD ecosystem of SketchUp tools and plugins.
+Repository này chứa hệ sinh thái công cụ và plugin SketchUp của VGD.
 
-The repository is being rebuilt from a clean workspace. Existing VGD plugins will be migrated into this repository gradually, one module at a time.
+Repository đang được xây dựng lại từ một workspace sạch. Các plugin VGD cũ sẽ được đưa vào repository này dần dần, từng module một.
 
-Primary target:
-- SketchUp 2022 and newer.
-- Windows is the primary development and testing environment.
-- SketchUp Ruby API is the main plugin platform.
-- HTML/CSS/JavaScript may be used for `UI::HtmlDialog` interfaces.
+Nền tảng mục tiêu chính:
+- SketchUp 2022 trở lên.
+- Windows là môi trường phát triển và kiểm thử chính.
+- SketchUp Ruby API là nền tảng chính để phát triển plugin.
+- HTML/CSS/JavaScript có thể được sử dụng cho giao diện `UI::HtmlDialog`.
 
-Do not assume that old project structure, scripts, dependencies, or conventions should be preserved unless they are explicitly migrated into this repository.
+Không được mặc định rằng cấu trúc, script, dependency hoặc quy ước của project cũ phải được giữ lại, trừ khi chúng được chủ động đưa vào repository này.
 
-## Repository Structure
+## Cấu trúc Repository
 
-The intended top-level structure is:
+Cấu trúc cấp cao dự kiến:
 
 ```text
 VGD_Plugins/
@@ -30,168 +30,172 @@ VGD_Plugins/
 └── archive/
 ```
 
-All production SketchUp plugins belong under `plugins/`.
+Tất cả plugin SketchUp dùng thực tế phải nằm trong thư mục `plugins/`.
 
-Each plugin must remain reasonably self-contained.
+Mỗi plugin nên được tổ chức tương đối độc lập.
 
-Examples of future modules may include:
+Ví dụ các module có thể được đưa vào sau này:
 - VGD_Cabinet
 - VGD_Dim
 - VGD_Scenes
 - VGD_BIM
 - VGD_Library
 
-Do not create these modules until they are actually being migrated or developed.
+Không tự tạo các module này nếu chúng chưa thực sự được chuyển vào hoặc bắt đầu phát triển.
 
-## Working Rules
+## Quy tắc làm việc
 
-Before making a significant change:
+Trước khi thực hiện một thay đổi lớn:
 
-1. Read the relevant existing files.
-2. Understand the current behavior.
-3. State the intended change.
-4. Make the smallest reasonable change.
-5. Validate the result.
-6. Report what changed and what could not be validated.
+1. Đọc các file liên quan hiện có.
+2. Hiểu hành vi hiện tại.
+3. Xác định rõ thay đổi dự định thực hiện.
+4. Thực hiện thay đổi nhỏ nhất hợp lý.
+5. Kiểm tra kết quả.
+6. Báo cáo rõ đã thay đổi gì và phần nào chưa thể kiểm chứng.
 
-Do not rewrite working modules unnecessarily.
+Không viết lại các module đang hoạt động tốt nếu không cần thiết.
 
-Do not introduce frameworks, dependencies, build systems, or architectural layers unless they solve a concrete requirement.
+Không tự thêm framework, dependency, build system hoặc lớp kiến trúc mới nếu chúng không giải quyết một yêu cầu cụ thể.
 
-Do not create speculative features.
+Không tự phát triển các tính năng chưa được yêu cầu.
 
-Do not silently change public behavior, naming, file formats, settings, or compatibility requirements.
+Không âm thầm thay đổi hành vi đang có, tên gọi, định dạng file, setting hoặc yêu cầu tương thích.
 
-## SketchUp Compatibility
+## Tương thích SketchUp
 
-Unless a module explicitly documents otherwise:
+Nếu một module không quy định khác thì mặc định:
 
-- Minimum supported version: SketchUp 2022.
-- Prefer APIs available in SketchUp 2022 when practical.
-- Do not use newer SketchUp APIs without checking compatibility.
-- Keep SketchUp Ruby API calls separate from generic business logic where practical.
-- Avoid relying on undocumented SketchUp behavior.
+- Phiên bản tối thiểu hỗ trợ: SketchUp 2022.
+- Ưu tiên dùng API có sẵn từ SketchUp 2022 nếu có thể.
+- Không dùng API chỉ có ở SketchUp mới hơn nếu chưa kiểm tra tương thích.
+- Khi hợp lý, tách phần gọi SketchUp Ruby API khỏi logic xử lý chung.
+- Không phụ thuộc vào hành vi không được SketchUp công bố chính thức.
 
-When compatibility is uncertain, identify the uncertainty instead of guessing.
+Nếu chưa chắc về khả năng tương thích, phải nêu rõ điểm chưa chắc thay vì tự đoán.
 
-## Coding Principles
+## Nguyên tắc viết code
 
-Prefer:
-- simple code;
-- explicit behavior;
-- small focused methods;
-- descriptive names;
-- clear separation between UI, SketchUp interaction, and core logic;
-- backward-compatible changes where practical.
+Ưu tiên:
+- code đơn giản;
+- hành vi rõ ràng;
+- method nhỏ, tập trung vào một nhiệm vụ;
+- tên biến, class, method dễ hiểu;
+- tách rõ UI, phần tương tác với SketchUp và logic lõi;
+- giữ tương thích ngược khi hợp lý.
 
-Avoid:
-- unnecessary abstractions;
-- duplicated logic;
-- hidden global state;
-- unexplained constants;
-- large unrelated refactors during bug fixes.
+Hạn chế:
+- abstraction không cần thiết;
+- logic bị lặp lại;
+- global state khó kiểm soát;
+- hằng số không có giải thích;
+- refactor lớn không liên quan trong lúc sửa bug.
 
-Follow the style already established inside an existing module unless there is a clear reason to change it.
+Nếu module hiện tại đã có style riêng thì ưu tiên tuân theo style đó, trừ khi có lý do rõ ràng để thay đổi.
 
-## UI Guidelines
+## Quy tắc giao diện
 
-VGD plugins may use `UI::HtmlDialog`.
+Các plugin VGD có thể sử dụng `UI::HtmlDialog`.
 
-When modifying UI:
-- preserve existing behavior unless the task explicitly changes it;
-- keep interfaces compact and practical;
-- do not redesign unrelated UI;
-- keep Ruby ↔ JavaScript communication explicit;
-- validate user input before applying changes to the SketchUp model.
+Khi chỉnh giao diện:
+- giữ nguyên hành vi cũ nếu yêu cầu không nói phải thay đổi;
+- giao diện nên gọn và thực dụng;
+- không tự thiết kế lại những phần UI không liên quan;
+- giao tiếp Ruby ↔ JavaScript phải rõ ràng;
+- phải kiểm tra dữ liệu người dùng trước khi áp dụng thay đổi lên model SketchUp.
 
-## Testing & Validation
+## Kiểm thử và xác minh
 
-No single repository-wide automated test framework is assumed yet.
+Hiện tại chưa mặc định có một framework test chung cho toàn repository.
 
-For every change, use the strongest validation available for that module.
+Với mỗi thay đổi, dùng phương pháp kiểm tra mạnh nhất có thể cho module đó.
 
-This may include:
-- Ruby syntax checks;
-- automated unit tests;
-- static checks;
-- focused test scripts;
-- manual SketchUp verification.
+Có thể bao gồm:
+- kiểm tra cú pháp Ruby;
+- unit test tự động;
+- static check;
+- script test riêng;
+- kiểm tra thủ công trực tiếp trong SketchUp.
 
-Never claim a change was tested in SketchUp unless it was actually tested in SketchUp.
+Không được nói rằng thay đổi đã được test trên SketchUp nếu thực tế chưa test trong SketchUp.
 
-Clearly distinguish:
-- verified automatically;
-- verified manually;
-- not yet verified.
+Luôn phân biệt rõ:
+- đã xác minh tự động;
+- đã xác minh thủ công;
+- chưa xác minh.
 
-Bug fixes should include a regression check when practical.
+Khi sửa bug, nên có kiểm tra hồi quy nếu khả thi.
 
-## Documentation
+## Tài liệu
 
-Keep documentation synchronized with actual behavior.
+Tài liệu phải phản ánh đúng hành vi thực tế.
 
-Important architectural decisions belong under `docs/`.
+Các quyết định kiến trúc quan trọng nên được lưu trong `docs/`.
 
-Do not create documentation merely to increase file count. Prefer a small number of useful documents over many overlapping notes.
+Không tạo tài liệu chỉ để tăng số lượng file. Ưu tiên ít tài liệu nhưng có giá trị, tránh nhiều file trùng lặp nội dung.
 
-## Git Rules
+## Quy tắc Git
 
-Keep commits focused.
+Mỗi commit nên tập trung vào một thay đổi rõ ràng.
 
-Use concise commit messages describing the actual change.
+Commit message phải ngắn gọn và mô tả đúng thay đổi.
 
-Do not commit:
-- credentials;
-- temporary files;
-- generated packages unless intentionally tracked;
-- local caches;
-- test output;
-- downloaded dependencies.
+Không commit:
+- mật khẩu hoặc thông tin đăng nhập;
+- file tạm;
+- package sinh tự động nếu không có lý do rõ ràng;
+- cache cục bộ;
+- output từ test;
+- dependency tải về từ bên ngoài.
 
-Do not commit or push automatically unless explicitly requested.
+Không tự commit hoặc push nếu chưa được yêu cầu rõ ràng.
 
-Do not rewrite Git history unless explicitly requested.
+Không rewrite lịch sử Git nếu chưa được yêu cầu rõ ràng.
 
-## Safety Rules
+## Quy tắc an toàn
 
-Before destructive or broad operations, stop and inspect first.
+Trước các thao tác có tính phá huỷ hoặc phạm vi lớn, phải dừng lại và kiểm tra trước.
 
-Do not:
-- delete large groups of files without justification;
-- overwrite migrated source code blindly;
-- mass-rename files during unrelated work;
-- modify multiple plugins unnecessarily;
-- discard existing changes that were not created by the current task.
+Không được:
+- xóa hàng loạt file khi chưa có lý do rõ ràng;
+- ghi đè code cũ đã migrate một cách mù quáng;
+- đổi tên hàng loạt file trong lúc làm một việc không liên quan;
+- chỉnh nhiều plugin không cần thiết;
+- xoá hoặc bỏ các thay đổi hiện có mà không phải do task hiện tại tạo ra.
 
-If existing changes are discovered, preserve them unless explicitly instructed otherwise.
+Nếu phát hiện đang có thay đổi chưa commit, phải bảo toàn chúng trừ khi được yêu cầu rõ ràng.
 
-## Migration Strategy
+## Chiến lược migrate code cũ
 
-Existing VGD projects must be migrated one plugin at a time.
+Các project VGD cũ phải được đưa vào repository từng plugin một.
 
-For each migrated plugin:
+Với mỗi plugin:
 
-1. Import the source.
-2. Audit its structure.
-3. Identify dependencies.
-4. Establish a baseline.
-5. Test existing behavior where possible.
-6. Clean up only what is necessary.
-7. Commit the stable baseline.
-8. Continue development from that baseline.
+1. Đưa source code vào.
+2. Audit cấu trúc hiện tại.
+3. Xác định dependency.
+4. Thiết lập baseline.
+5. Kiểm tra hành vi hiện tại nếu có thể.
+6. Chỉ dọn dẹp những gì thực sự cần thiết.
+7. Commit một baseline ổn định.
+8. Sau đó mới tiếp tục phát triển.
 
-Do not migrate all legacy VGD code at once.
+Không đưa toàn bộ code VGD cũ vào một lần.
 
-## Agent Behavior
+## Hành vi của Agent
 
-When a request is ambiguous, inspect the repository and use existing project context before making assumptions.
+Khi yêu cầu chưa rõ, phải kiểm tra repository và dùng context hiện có của project trước khi tự suy đoán.
 
-For large tasks, prefer:
+Với task lớn, ưu tiên quy trình:
 
 ```text
-READ → PLAN → MODIFY → TEST → REVIEW
+ĐỌC → LẬP KẾ HOẠCH → CHỈNH SỬA → KIỂM TRA → REVIEW
 ```
 
-For small, well-defined fixes, avoid unnecessary planning overhead.
+Với lỗi nhỏ, rõ ràng thì không cần tạo quy trình quá phức tạp.
 
-Always prioritize preserving working behavior and maintaining a clean, understandable repository.
+Luôn ưu tiên:
+- bảo toàn hành vi đang hoạt động;
+- giữ repository sạch;
+- giữ cấu trúc dễ hiểu;
+- tránh thay đổi ngoài phạm vi yêu cầu.
