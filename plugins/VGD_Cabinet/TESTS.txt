@@ -1,27 +1,38 @@
-VGD Cabinet 4.5.2 — source and verification
+VGD_Cabinet 4.5.2 — lệnh kiểm tra và trạng thái xác minh
 
-Runtime used: Node 24, Ruby 3.2 WebAssembly, JSDOM, Playwright + local Edge.
-Tests run from the extracted root folder.
-Task dependencies: pnpm install --dir cabinet_dev --frozen-lockfile
-Playwright is resolved from CODEX_PRIMARY_RUNTIME_NODE_MODULES.
-Set that environment variable to the directory containing the Playwright package.
-test_ui.cjs uses installed Edge; VGD_BROWSER_PATH can specify another executable.
+Chạy lệnh từ thư mục plugins/VGD_Cabinet. Danh sách này mô tả cách chạy; không có test nào được chạy trong lượt đồng bộ tài liệu. Kết quả lịch sử nằm trong VALIDATION.json.
+
+Môi trường theo hồ sơ: Node 24, Ruby 3.2 WebAssembly, JSDOM, Playwright + Edge cục bộ, Python 3 và PowerShell. Cài dependency của cabinet_dev bằng:
+
+pnpm install --dir cabinet_dev --frozen-lockfile
+
+Playwright được tìm qua CODEX_PRIMARY_RUNTIME_NODE_MODULES; test_ui.cjs dùng Edge cài trên máy, hoặc đường dẫn VGD_BROWSER_PATH.
+
+## Kiểm tra ngoài SketchUp
+
+Chạy theo thứ tự sau để tạo trước fixture mà các bước UI/preview cần:
+
 node cabinet_dev/check_ruby.cjs
-node cabinet_dev/redesign_ui.cjs
 node cabinet_dev/test_dom.cjs
 node cabinet_dev/test_payload.cjs
 node cabinet_dev/test_ui.cjs
 node cabinet_dev/test_upgrade_ui.cjs
 node cabinet_dev/test_preview.cjs
 node cabinet_dev/test_description.cjs
-python3 cabinet_dev/package_menu.py
+python cabinet_dev/test_deploy.py
 
-redesign_ui.cjs rebuilds the current static HTML from ui_beta1.html plus menu.css/menu.js.
-The Ruby API stub verifies dimensions and parameter logic, not the native SketchUp kernel.
-Command fixture verifies only the Cabinet toolbar/menu entries remain and Reload is available.
-Reload fixture evaluates real runtime files to verify dependency/HTML refresh, beta 4
-bootstrap, menu/toolbar idempotence, VGD observer cleanup, foreign-observer preservation,
-syntax preflight and the exact own-file reload list. No native hot-reload is claimed.
-sync_sketchup_2022.ps1 deploys only the 23 listed VGD Cabinet files to the fixed 2022 path,
-backing up changed existing files and verifying SHA256. It does not deploy other plugins.
-User-run native SketchUp 2022.0.316 / Ruby 2.7.2 upgrade checks passed; working-model Undo and close/reopen remain unverified. See HUONG_DAN.txt for manual acceptance checks.
+check_ruby.cjs chạy Ruby WASM và SketchUp stubs, gồm test_geometry.rb, test_vgd_features.rb, test_upgrade.rb, test_library.rb, test_description.rb, test_presets.rb, test_commands.rb và test_reload.rb. Filesystem IO đi qua WASI; flock trong WASI bị mô phỏng. test_dom.cjs và test_payload.cjs kiểm tra DOM/payload; các test UI dùng Edge headless; test_preview.cjs kiểm tra canvas offline. test_deploy.py kiểm tra bộ cài với fixture và PowerShell, không cần SketchUp. Hồ sơ hiện tại nói fixture deploy bị chặn trong môi trường hạn chế nên không ghi nhận PASS cho lần đó.
+
+Các lệnh trên có thể tạo hoặc ghi đè file: check_ruby.cjs tạo dữ liệu dưới outputs/ và cập nhật cabinet_dev/defaults.json, presets.json; test UI lưu ảnh vào cabinet_dev/; test_preview.cjs tạo fixture trong outputs/; test_deploy.py tạo báo cáo/output cục bộ. Chỉ chạy khi đã kiểm tra diff và chấp nhận các file sinh ra.
+
+redesign_ui.cjs là generator, không phải test: nó sinh lại cabinet_work/VGD_Cabinet/VGD_Cabinet_UI.html từ ui_beta1.html, menu.css và menu.js. package_menu.py tạo RBZ/source ZIP tại outputs/vgd_cabinet_modeling/ và kiểm tra whitelist, CRC, SHA256/source equality. Không chạy generator hoặc package như một phần của chỉ đọc.
+
+Lưu ý: package_menu.py hiện ghi TESTS.txt trong source ZIP từ một chuỗi nhúng riêng, không lấy file TESTS.txt này. Nội dung hướng dẫn trong gói tạo ra sẽ chưa đồng bộ cho đến khi generator được cập nhật trong một task được phép sửa generator.
+
+## Kiểm tra native SketchUp
+
+cabinet_dev/native_upgrade.rb là script opt-in chạy trong Ruby Console của SketchUp; không chạy ngoài SketchUp. Theo RELEASE_NOTES_v4.5.2.md và VALIDATION.json, các kiểm tra native trên SketchUp 2022.0.316 / Ruby 2.7.2 được kế thừa từ runtime model 4.5.1: geometry/manifold được liệt kê, shared component và sửa tay, Box → Cabinet theo trục cục bộ, drawer overlay, preview và không sửa model, library SKP/persistence/locking, cùng batch settings giữ kích thước/module width.
+
+4.5.2 có hồ sơ triển khai trực tiếp ngày 2026-10-12 với 23/23 file khớp SHA256. SketchUp chưa được khởi động lại/chạy native với gói 4.5.2 sạch. Do đó native_upgrade.rb chưa được chạy trên gói đó. Native Undo trên model đang làm, đóng/mở lại model, UI batch mới và scaling cửa sổ cũng chưa được xác minh.
+
+VALIDATION.json có trường date 2026-10-11 trong khi deployment_live ghi sự kiện ngày 2026-10-12. Trường ui_upgrade cũng nêu lần chạy Edge mới nhất chưa kiểm tra thao tác batch mới do EPERM; không diễn giải các kết quả UI trước đó thành xác minh cho thao tác này.
