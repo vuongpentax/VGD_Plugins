@@ -1,0 +1,234 @@
+// Menu navigation never sends modeling callbacks or changes parameter values.
+function selectPage(name) {
+  var page=document.getElementById('page_'+name);if(!page)return;
+  document.querySelectorAll('.menu-page').forEach(function(p){p.hidden=p!==page;});
+  document.querySelectorAll('[data-page]').forEach(function(b){if(b.dataset.page===name)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+  document.getElementById('settings_content').scrollTop=0;
+  try{localStorage.setItem('vgd_menu_page',name);}catch(e){}
+}
+function selectSubpage(group,name) {
+  var page=document.getElementById('sub_'+group+'_'+name);if(!page)return;
+  document.querySelectorAll('[data-subpanel="'+group+'"]').forEach(function(p){p.hidden=p!==page;});
+  document.querySelectorAll('[data-subgroup="'+group+'"]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.subtab===name));});
+  document.getElementById('settings_content').scrollTop=0;
+}
+function setThemeButton(theme) {
+  var button=document.getElementById('btn_theme'),icon=document.getElementById('theme_icon');
+  if(!button||!icon)return;
+  var target=theme==='dark'?'light':'dark';
+  button.title='Chuyển sang giao diện '+(target==='light'?'sáng':'tối');
+  button.setAttribute('aria-label',button.title);
+  icon.innerHTML=theme==='dark'
+    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>'
+    : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.1A8.4 8.4 0 0 1 8.9 3.8 8.5 8.5 0 1 0 20.2 15.1Z"/></svg>';
+}
+function refreshContextUI() {
+  var byId=function(id){return document.getElementById(id);};
+  var showRow=function(id,yes){var e=byId(id);if(e)e.closest('.form-group').hidden=!yes;};
+  var mode=byId('back_mode').value;
+  showRow('t_back',mode!=='Không');showRow('back_recess',mode==='Âm');
+  byId('back_groove_auto').closest('.checkbox-row').hidden=mode!=='Âm';
+  showRow('back_groove_depth',mode==='Âm'&&!byId('back_groove_auto').checked);
+  var independent=byId('module_mode').value==='Độc lập';
+  showRow('module_widths',independent);showRow('module_target_w',independent&&byId('module_widths').value.trim()==='');
+  byId('module_hint').hidden=!independent;
+  showRow('curve_w',byId('opt_left_side').value==='Bo Cong'||byId('opt_right_side').value==='Bo Cong');
+  showRow('bevel_lip',byId('front_bevel').checked);showRow('door_stop_rail_h',byId('door_stop_rail').checked);
+  showRow('drawer_bevel_lip',byId('drawer_bevel').checked);
+  byId('door_fields').hidden=byId('opt_door').value==='Không Cánh';
+  var glass=byId('door_style').value==='Kính khung kim loại'&&byId('opt_door').value!=='Không Cánh';
+  document.querySelector('[data-subgroup="doors"][data-subtab="glass"]').hidden=!glass;
+  if(!glass&&!byId('sub_doors_glass').hidden)selectSubpage('doors','front');
+  var pano=['Pano khung gỗ','Shaker'].includes(byId('door_style').value)&&byId('opt_door').value!=='Không Cánh';
+  document.querySelector('[data-subgroup="doors"][data-subtab="pano"]').hidden=!pano;
+  if(!pano&&!byId('sub_doors_pano').hidden)selectSubpage('doors','front');
+  var special=['Cánh soi','Cánh soi vát 4 cạnh','Cánh kính bo góc'].includes(byId('door_style').value)&&byId('opt_door').value!=='Không Cánh';
+  document.querySelector('[data-subgroup="doors"][data-subtab="special"]').hidden=!special;
+  if(!special&&!byId('sub_doors_special').hidden)selectSubpage('doors','front');
+  document.querySelectorAll('[data-profile]').forEach(function(row){var key=row.getAttribute('data-profile');row.hidden=!(special&&((key==='carved'&&byId('door_style').value==='Cánh soi')||(key==='bevel'&&byId('door_style').value==='Cánh soi vát 4 cạnh')||(key==='glass'&&byId('door_style').value==='Cánh kính bo góc')));});
+  byId('wood_glass_type').closest('.form-group').hidden=!(special&&byId('door_style').value==='Cánh kính bo góc');
+  showRow('pano_mid_rail',Number(byId('pano_panel_count').value)>1);
+  showRow('pano_panel_count',pano);
+  showRow('shaker_recess',byId('door_style').value==='Shaker');
+  var woodGlass=special&&byId('door_style').value==='Cánh kính bo góc';
+  var framed=glass||pano||woodGlass;
+  document.querySelector('[data-subgroup="doors"][data-subtab="division"]').hidden=!framed;
+  if(!framed&&!byId('sub_doors_division').hidden)selectSubpage('doors','front');
+  showRow('frame_joint',framed);
+  var glassPanels=glass||woodGlass;
+  showRow('frame_division',glassPanels);
+  showRow('frame_sections',glassPanels&&['Ngang','Dọc'].includes(byId('frame_division').value));
+  showRow('frame_bar_width',glassPanels&&byId('frame_division').value!=='Không chia');
+  if(byId('btn_library_save'))byId('btn_library_save').disabled=!selectedPid;
+  if(byId('btn_library_replace'))byId('btn_library_replace').disabled=!selectedPid||!selectedLibrary;
+  showRow('max_door_w',byId('auto_door_count').checked);
+  byId('drawer_fields').hidden=byId('opt_drawer').value==='Không';
+  var frame=byId('opt_drawer').value==='Âm';
+  document.querySelector('[data-subgroup="drawers"][data-subtab="frame"]').hidden=!frame;
+  if(!frame&&!byId('sub_drawers_frame').hidden)selectSubpage('drawers','layout');
+  showRow('drawer_frame_stop_rail_h',byId('drawer_frame_stop_rail').checked);
+  showRow('drawer_frame_stop_rail_drop',byId('drawer_frame_stop_rail').checked);
+  showRow('drawer_bottom_offset',byId('drawer_bottom_mode').value!=='Phủ dưới');
+  showRow('shelf_type',Number(byId('shelf_count').value)>0);
+  showRow('shelf_side_clearance',Number(byId('shelf_count').value)>0);
+  showRow('shelf_front_setback',Number(byId('shelf_count').value)>0);
+  byId('size_summary').textContent=['w','d','h'].map(function(id){return byId(id).value||'—';}).join(' × ')+' mm';
+}
+function initMenu() {
+  var saved='general';try{saved=localStorage.getItem('vgd_menu_page')||saved;}catch(e){}
+  selectPage(document.getElementById('page_'+saved)?saved:'general');
+  selectSubpage('frame','sides');selectSubpage('compartments','dividers');selectSubpage('doors','front');selectSubpage('drawers','layout');
+  document.addEventListener('input',refreshContextUI);document.addEventListener('change',refreshContextUI);
+  refreshContextUI();
+}
+function chooseFrameDivision(name){
+  var field=document.getElementById('frame_division');field.value=name;document.getElementById('pano_panel_count').value=1;
+  field.dispatchEvent(new Event('change',{bubbles:true}));refreshContextUI();
+}
+var libraryItems=[],selectedLibrary=null;
+function receiveLibrary(items){libraryItems=Array.isArray(items)?items:[];if(!libraryItems.some(function(item){return item.name===selectedLibrary;}))selectedLibrary=null;renderLibrary();}
+function renderLibrary(){
+  var list=document.getElementById('library_list');list.replaceChildren();
+  var search=document.getElementById('library_search').value.toLocaleLowerCase();
+  var filtered=libraryItems.filter(function(item){return item.name.toLocaleLowerCase().includes(search);});
+  filtered.forEach(function(item){
+    var button=document.createElement('button');button.type='button';button.className='library-item';button.setAttribute('aria-pressed',String(item.name===selectedLibrary));
+    var name=document.createElement('strong');name.textContent=item.name;button.appendChild(name);
+    var size=document.createElement('span');size.textContent=(item.dimensions||[]).join(' × ')+' mm';button.appendChild(size);
+    button.onclick=function(){selectLibrary(item.name);};list.appendChild(button);
+  });
+  var empty=document.getElementById('library_empty');empty.hidden=filtered.length>0;
+  empty.textContent=libraryItems.length?'Không tìm thấy mẫu phù hợp.':'Chưa có mẫu. Chọn một tủ trong model rồi lưu mẫu mới.';
+  var item=libraryItems.find(function(value){return value.name===selectedLibrary;});
+  document.getElementById('library_detail').hidden=!item;
+  if(item){document.getElementById('library_title').textContent=item.name;document.getElementById('library_dimensions').textContent=item.dimensions.join(' × ')+' mm · VGD '+item.version;}
+  refreshContextUI();
+}
+function selectLibrary(name){
+  if(!libraryItems.some(function(item){return item.name===name;}))return;
+  selectedLibrary=name;document.getElementById('library_name').value=name;
+  document.getElementById('library_thumbnail').hidden=true;renderLibrary();
+  if(window.sketchup)window.sketchup.library_preview(name);
+}
+function receiveLibraryPreview(name,image){if(name!==selectedLibrary)return;var e=document.getElementById('library_thumbnail');e.hidden=!image;if(image)e.src=image;}
+function saveLibrary(replace){
+  var name=replace?selectedLibrary:document.getElementById('library_name').value.trim();
+  if(!selectedPid||!name){showModelStatus('Chọn tủ đã vẽ và nhập tên mẫu.',true);return;}
+  if(updateTimer){clearTimeout(updateTimer);updateTimer=null;}
+  if(window.sketchup)window.sketchup.save_library({name:name,replace:replace===true,__target_pid:selectedPid,__model_guid:selectedModel});
+}
+function placeLibrary(){if(selectedLibrary&&window.sketchup){if(updateTimer){clearTimeout(updateTimer);updateTimer=null;}window.sketchup.place_library(selectedLibrary);}}
+function renameLibrary(){var name=document.getElementById('library_name').value.trim();if(selectedLibrary&&name&&window.sketchup)window.sketchup.rename_library({name:name,source_name:selectedLibrary});}
+function deleteLibrary(){if(selectedLibrary&&window.sketchup)window.sketchup.delete_library(selectedLibrary);}
+function refreshLibrary(){if(window.sketchup)window.sketchup.refresh_library();}
+function boxToCabinet(){if(updateTimer){clearTimeout(updateTimer);updateTimer=null;}if(window.sketchup)window.sketchup.box_to_cabinet(getFormData());}
+function batchFrontSettings(){
+  if(updateTimer){clearTimeout(updateTimer);updateTimer=null;}
+  if(window.sketchup){window.sketchup.batch_front_settings(getFormData());showModelStatus('Đang xem trước cấu hình cánh / hộc cho các tủ đã chọn. Enter áp dụng cả lô; Esc hủy.',false);}
+}
+function presetGroupAction(action){
+  var group=document.getElementById('preset_group_select').value;
+  var name=document.getElementById('preset_group_name').value.trim();
+  var preset=document.getElementById('preset_select').value;
+  if(action==='delete'){
+    name=group;
+    if(!name||name==='Chưa phân nhóm'){showModelStatus('Không thể xóa nhóm Chưa phân nhóm.',true);return;}
+    if(!window.confirm('Xóa nhóm "'+name+'"? Các preset sẽ chuyển về Chưa phân nhóm.'))return;
+  }else if(action==='rename'&&!group){showModelStatus('Chọn nhóm cần đổi tên.',true);return;}
+  else if(!name){showModelStatus('Nhập tên nhóm.',true);return;}
+  if(window.sketchup)window.sketchup.preset_group({action:action,name:name,source_name:action==='rename'?group:null,group:name,preset_name:preset||null});
+}
+function assignPresetGroup(){
+  var preset=document.getElementById('preset_select').value,group=document.getElementById('preset_group_select').value;
+  if(!preset||!group){showModelStatus('Chọn mẫu và nhóm trước khi chuyển.',true);return;}
+  if(window.sketchup)window.sketchup.preset_group({action:'assign',preset_name:preset,group:group,name:group});
+}
+
+var descriptionContract=null, descriptionRequestId=0, descriptionPreview=null, descriptionDraftParams=null;
+function receiveDescriptionContract(contract) { descriptionContract=contract; }
+function invalidateDescriptionPreview() {
+  descriptionRequestId++;descriptionPreview=null;
+  document.getElementById('btn_description_apply').disabled=true;
+  document.getElementById('btn_description_partial').disabled=true;
+  document.getElementById('btn_description_partial').hidden=true;
+  document.getElementById('description_review').textContent='Chưa kiểm tra / nội dung đã thay đổi.';
+}
+function insertDescriptionExample() {
+  if(!descriptionContract){showModelStatus('Đợi plugin nạp hướng dẫn.',true);return;}
+  document.getElementById('description_text').value=JSON.stringify(descriptionContract.example,null,2);
+  invalidateDescriptionPreview();
+}
+function showDescriptionPrompt() {
+  if(!descriptionContract){showModelStatus('Đợi plugin nạp hướng dẫn.',true);return;}
+  var text='Phân tích ảnh tủ để dựng bằng VGD_Cabinet 4.5 beta 1. Hỏi tôi rộng/sâu/cao mong muốn nếu chưa có; không đo kích thước thật từ ảnh không có tỷ lệ. Chỉ xuất một khối JSON theo mẫu bên dưới, đơn vị mm. parameters chỉ dùng các tên trong danh sách mặc định; giữ đúng kiểu dữ liệu và giá trị lựa chọn. Không xuất mã Ruby/JavaScript. Các thông số không xác định có thể bỏ để plugin dùng mặc định, trừ w,d,h bắt buộc. Ghi giả định vào assumptions; tên thông số ước lượng có trong parameters vào estimated_fields. Cấu tạo chưa hỗ trợ ghi vào unsupported_features, không âm thầm lược bỏ. Các module chỉ khác rộng, dùng chung cấu hình cánh/đợt/hộc; không có modules dạng cây hay cấu hình riêng từng khoang. door_count là số cánh của từng module, drawer_count là số tầng mỗi cụm; không phải tổng cả tủ. Với số cánh/vách hoặc tầng đã chỉ định, không bật tự động tương ứng. Móc tay cánh front_bevel và móc tay hộc drawer_bevel độc lập. Kích thước phủ bì gồm cánh/hậu, cao gồm chân/nẹp.\n\nMẪU:\n'+JSON.stringify(descriptionContract.example,null,2)+'\n\nTHÔNG SỐ MẶC ĐỊNH (không phải số đo từ ảnh):\n'+JSON.stringify(descriptionContract.defaults,null,2)+'\n\nGIÁ TRỊ LỰA CHỌN HỢP LỆ:\n'+JSON.stringify(descriptionContract.enums,null,2);
+  var box=document.getElementById('description_prompt_box'),area=document.getElementById('description_prompt');
+  area.value=text;box.open=true;area.focus();area.select();
+}
+function checkDescription() {
+  invalidateDescriptionPreview();
+  document.getElementById('description_review').textContent='Đang kiểm tra…';
+  if(window.sketchup)window.sketchup.preview_description({text:document.getElementById('description_text').value,request_id:descriptionRequestId});
+}
+function receiveDescriptionPreview(id,result) {
+  if(id!==descriptionRequestId)return; // Ignore late replies after edits/new requests.
+  descriptionPreview=result;
+  var review=document.getElementById('description_review');review.replaceChildren();
+  function line(text){var p=document.createElement('p');p.textContent=text;review.appendChild(p);}
+  if(result.error){line(result.error);return;}
+  line(result.summary);
+  (result.module_summary||[]).forEach(function(s,i){line('Module '+(i+1)+': '+s);});
+  line('Ước lượng: '+(result.estimated_fields.join(', ')||'không khai báo'));
+  result.assumptions.forEach(function(s){line('Giả định: '+s);});
+  (result.adjustments||[]).forEach(function(s){line('Quy tắc bộ dựng: '+s);});
+  result.unsupported_features.forEach(function(s){line('Chưa hỗ trợ — sẽ bỏ qua nếu dựng cơ bản: '+s);});
+  if(result.can_apply_partial)line('Có thể dựng phần cơ bản sau khi xác nhận bỏ qua. Kích thước w/d/h dùng nguyên cho tủ cơ bản, không tự trừ kệ bên hoặc chừa phần chưa hỗ trợ.');
+  var details=document.createElement('details'),summary=document.createElement('summary');
+  summary.textContent='Thông số không khai báo · mặc định/quy tắc ('+result.defaulted_fields.length+')';details.appendChild(summary);
+  var pre=document.createElement('pre');pre.textContent=result.defaulted_fields.map(function(k){return k+': '+result.parameters[k];}).join('\n');details.appendChild(pre);review.appendChild(details);
+  var all=document.createElement('details'),title=document.createElement('summary'),values=document.createElement('pre');
+  title.textContent='Toàn bộ cấu hình đã kiểm tra';values.textContent=JSON.stringify(result.parameters,null,2);
+  all.appendChild(title);all.appendChild(values);review.appendChild(all);
+  document.getElementById('btn_description_apply').disabled=!result.can_apply;
+  document.getElementById('btn_description_partial').hidden=!result.can_apply_partial;
+  document.getElementById('btn_description_partial').disabled=!result.can_apply_partial;
+}
+function applyDescription(partial) {
+  if(!descriptionPreview)return;
+  var data={text:document.getElementById('description_text').value,request_id:descriptionRequestId};
+  if(partial===true){
+    if(!descriptionPreview.can_apply_partial)return;
+    var message='DỰNG PHẦN CƠ BẢN, KHÔNG DỰNG ĐẦY ĐỦ MẪU ẢNH\n\n'+descriptionPreview.summary+'\n'+descriptionPreview.module_summary.join('\n')+'\n\nBỎ QUA:\n'+descriptionPreview.unsupported_features.map(function(s,i){return (i+1)+'. '+s;}).join('\n')+'\n\nDùng nguyên kích thước đã nhập cho tủ cơ bản. KHÔNG tự trừ chiều rộng kệ bên hoặc chừa phần chưa hỗ trợ. Kiểm tra/sửa kích thước trong bảng trước khi Đặt tủ mới.\n\nĐồng ý bỏ qua các mục trên và nạp bản nháp?';
+    if(!window.confirm(message))return;
+    data.allow_partial=true;data.acknowledged_features=descriptionPreview.unsupported_features.slice();
+  }else if(!descriptionPreview.can_apply)return;
+  document.getElementById('btn_description_apply').disabled=true;
+  document.getElementById('btn_description_partial').disabled=true;
+  if(window.sketchup)window.sketchup.apply_description(data);
+}
+function applyDescriptionDraft(params,omittedFeatures) {
+  if(updateTimer){clearTimeout(updateTimer);updateTimer=null;}
+  descriptionDraftParams=params;setSelectedCabinet(null);selectedModel=null;
+  updateFormFromRuby(params);
+  // Legacy auto-door UI calculates against total width, not each independent module.
+  // Keep the validated values; geometry resolves automatic rules per module at placement.
+  Object.keys(params).forEach(function(k){var e=document.getElementById(k);if(e){if(e.type==='checkbox')e.checked=params[k];else e.value=params[k];}});
+  refreshContextUI();
+  document.getElementById('preset_select').value='';
+  document.getElementById('live_update').checked=false;
+  var partial=Array.isArray(omittedFeatures)&&omittedFeatures.length>0;
+  document.getElementById('selection_mode').textContent=partial?'Tủ cơ bản từ mô tả':'Tủ mới từ mô tả';
+  var notice=document.getElementById('description_draft_notice');notice.hidden=!partial;
+  notice.textContent=partial?'Dựng cơ bản · bỏ qua '+omittedFeatures.length+' chi tiết. Kích thước dùng nguyên, không tự chừa kệ bên. Xem danh sách trong Dựng từ mô tả; kiểm tra thông số trước khi đặt.':'';
+  document.getElementById('btn_description_leave').hidden=false;
+  showModelStatus('Đã nạp bản nháp. Kiểm tra thông số rồi bấm Đặt tủ mới; chưa thay đổi model.',false);
+  selectPage('general');
+}
+function leaveDescriptionDraft() {
+  descriptionDraftParams=null;
+  document.getElementById('description_draft_notice').hidden=true;
+  document.getElementById('btn_description_leave').hidden=true;
+}
+function returnToSelectedCabinet() {
+  if(updateTimer){clearTimeout(updateTimer);updateTimer=null;}
+  if(window.sketchup)window.sketchup.leave_description_draft(null);
+}

@@ -1,0 +1,1442 @@
+<!DOCTYPE html><html style="color-scheme: dark;"><head>
+  <meta charset="utf-8">
+  <title>VGD Cabinet 4.5.2</title>
+  <style>
+    :root {
+      --bg-main: #FFFFFF;
+      --bg-soft: #F7F7F5;
+      --bg-dark: #2B2B2B;
+      --primary: #B48963;
+      --primary-light: #C8A98A;
+      --primary-dark: #8E6B4C;
+      --text-main: #222222;
+      --text-secondary: #6F6F6F;
+      --text-light: #999999;
+      --border: #E5E5E5;
+      --radius: 3px;
+    }
+    body.dark {
+      --bg-main: #1E1E1E;
+      --bg-soft: #121212;
+      --bg-dark: #2B2B2B;
+      --primary: #B48963;
+      --primary-light: #C8A98A;
+      --primary-dark: #8E6B4C;
+      --text-main: #E2E8F0;
+      --text-secondary: #94A3B8;
+      --text-light: #64748B;
+      --border: #3A3A3A;
+    }
+    * { box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background: var(--bg-soft); margin: 0; padding: 12px; color: var(--text-main); user-select: none; font-size: 11px; transition: background-color 0.2s, color 0.2s; }
+
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; margin-bottom: 12px; background: var(--bg-dark); color: #fff; border-radius: var(--radius); font-weight: 700; font-size: 12px; letter-spacing: 0.5px; border-top: 3px solid var(--primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+    .header-left { display: flex; align-items: center; gap: 8px; }
+
+    button { cursor: pointer; border: none; border-radius: var(--radius); font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 4px; transition: all 0.15s; padding: 6px 10px; height: 28px; }
+    button:active { transform: translateY(1px); }
+    .btn-icon { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; padding: 0 6px; height: 22px; font-size: 10px; }
+    .btn-icon:hover { background: rgba(255,255,255,0.2); }
+
+    .btn-update { background: var(--primary); color: #FFF; font-size: 12px; font-weight: 700; flex: 2; height: 34px; box-shadow: 0 2px 4px rgba(180,137,99,0.3); }
+    .btn-update:hover { background: var(--primary-dark); }
+    .btn-tool { background: var(--bg-dark); color: #FFF; flex: 1; height: 34px; border: 1px solid var(--border); }
+    .btn-tool:hover { opacity: 0.9; }
+
+    .btn-secondary { background: var(--bg-soft); color: var(--text-main); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: var(--border); }
+    .btn-danger { background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; }
+    .btn-danger:hover { background: #fecaca; }
+    body.dark .btn-danger { background: #451a1a; border-color: #7f1d1d; color: #fca5a5; }
+
+    .preset-section { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .preset-row { display: flex; gap: 6px; }
+
+    .action-bar { display: flex; gap: 8px; margin-bottom: 12px; }
+
+    .card { background: var(--bg-main); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; overflow: hidden; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; cursor: pointer; background: var(--bg-main); transition: background 0.15s; font-weight: 700; font-size: 11px; text-transform: uppercase; color: var(--text-main); letter-spacing: 0.3px; border-bottom: 1px solid transparent; }
+    .card-header:hover { background: var(--bg-soft); }
+    .card.expanded .card-header { border-bottom-color: var(--border); }
+    .card-body { padding: 10px; display: none; }
+    .card.expanded .card-body { display: block; }
+    .chevron { transition: transform 0.2s; font-size: 10px; color: var(--text-secondary); }
+    .card.expanded .chevron { transform: rotate(90deg); }
+
+    .subsection { margin-bottom: 12px; }
+    .subsection:last-child { margin-bottom: 0; }
+    .sub-title { font-size: 10px; font-weight: 700; color: var(--text-light); text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px dashed var(--border); padding-bottom: 2px; }
+
+    .form-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; min-height: 24px; gap: 8px; }
+    .form-group:last-child { margin-bottom: 0; }
+    label { font-size: 11px; color: var(--text-main); font-weight: 500; flex: 1; }
+
+    input[type="number"], input[type="text"], select { width: 100px; padding: 4px 6px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 11px; font-weight: 600; color: var(--text-main); background: var(--bg-soft); height: 24px; outline: none; transition: all 0.15s; text-align: right; }
+    select { text-align-last: right; padding-right: 2px; }
+    input[type="number"]:focus, input[type="text"]:focus, select:focus { border-color: var(--primary); background: var(--bg-main); }
+    input[type="text"] { text-align: left; }
+
+    input[type="checkbox"] { width: 14px; height: 14px; margin: 0; accent-color: var(--primary); cursor: pointer; }
+    .checkbox-row { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .checkbox-row label { cursor: pointer; flex: none; font-weight: 600; }
+
+    .highlight-box { background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; margin-top: 8px; }
+    .highlight-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .highlight-title { font-weight: 700; font-size: 10.5px; color: var(--text-main); }
+
+    .master-switch-container { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-secondary); margin-bottom: 12px; justify-content: flex-end; }
+    .card-switch { position: relative; display: inline-block; width: 24px; height: 12px; margin: 0; flex: none; vertical-align: middle; }
+    .card-switch input { opacity: 0; width: 0; height: 0; }
+    .card-switch .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #A0A0A0; transition: .2s; border-radius: 12px; }
+    .card-switch .slider:before { position: absolute; content: ""; height: 8px; width: 8px; left: 2px; bottom: 2px; background-color: #ffffff; transition: .2s; border-radius: 50%; }
+    .card-switch input:checked + .slider { background-color: var(--primary); }
+    .card-switch input:checked + .slider:before { transform: translateX(12px); }
+  </style>
+<style>/* Compact menu shell. Only the settings pane scrolls. */
+:root{
+  color-scheme:dark;
+  --vgd-bg:#121212;--vgd-surface:#1E1E1E;--vgd-elevated:#2B2B2B;--vgd-border:#3A3A3A;
+  --vgd-text:#E2E8F0;--vgd-muted:#A7B0BD;--vgd-accent:#B48963;--vgd-accent-strong:#C8A98A;
+  --vgd-tint:#372C24;--vgd-danger:#E79C91;--vgd-danger-bg:#3B2423;--vgd-success:#A8C69D;
+  --vgd-brand-tile:#242220;--vgd-brand-outline:#C8A98A;--vgd-brand-left:#242220;
+  --vgd-brand-right:#1E1E1E;--vgd-brand-roof:#B48963;--vgd-brand-shadow:#121212;--vgd-brand-accent:#C8A98A;
+  --bg-main:var(--vgd-surface);--bg-soft:var(--vgd-bg);--bg-dark:var(--vgd-elevated);--bg-card:var(--vgd-surface);
+  --primary:var(--vgd-accent);--primary-light:var(--vgd-accent-strong);--primary-dark:var(--vgd-accent-strong);
+  --text-main:var(--vgd-text);--text-secondary:var(--vgd-muted);--text-light:var(--vgd-muted);--border:var(--vgd-border);--radius:4px;
+}
+body:not(.dark){
+  color-scheme:light;
+  --vgd-bg:#F7F7F5;--vgd-surface:#FFFFFF;--vgd-elevated:#F0EEE9;--vgd-border:#E5E5E5;
+  --vgd-text:#222222;--vgd-muted:#6F6F6F;--vgd-accent:#B48963;--vgd-accent-strong:#8E6B4C;
+  --vgd-tint:#F3ECE5;--vgd-danger:#A73D36;--vgd-danger-bg:#F8EAE8;--vgd-success:#507247;
+  --vgd-brand-tile:#F0EDE8;--vgd-brand-outline:#A47D5C;--vgd-brand-left:#F0EDE8;
+  --vgd-brand-right:#F7F7F5;--vgd-brand-roof:#8E6B4C;--vgd-brand-shadow:#F7F7F5;--vgd-brand-accent:#A47D5C;
+  --bg-main:var(--vgd-surface);--bg-soft:var(--vgd-bg);--bg-dark:var(--vgd-elevated);--bg-card:var(--vgd-surface);
+  --primary:var(--vgd-accent);--primary-light:var(--vgd-accent-strong);--primary-dark:var(--vgd-accent-strong);
+  --text-main:var(--vgd-text);--text-secondary:var(--vgd-muted);--text-light:var(--vgd-muted);--border:var(--vgd-border);
+}
+html,body{height:100%;overflow:hidden}
+body{padding:0;display:flex;flex-direction:column;font-size:12px}
+[hidden]{display:none!important}
+.header{margin:0;border-radius:0;padding:10px 14px;min-height:45px;flex-shrink:0}
+.header small{font-size:10px;font-weight:400;color:#cfb89f;margin-left:8px}
+.context-bar{display:flex;gap:8px;justify-content:space-between;align-items:center;padding:9px 14px;background:var(--bg-main);border-bottom:1px solid var(--border);flex-shrink:0}
+#selection_mode{font-weight:650;color:var(--primary-dark)}
+body.dark #selection_mode{color:var(--primary-light)}
+#size_summary{font-size:11px;color:var(--text-secondary);white-space:nowrap}
+.workspace{display:flex;flex:1;min-height:0;overflow:hidden}
+.side-menu{width:130px;flex-shrink:0;background:var(--bg-main);border-right:1px solid var(--border);padding:12px 7px;display:flex;flex-direction:column;gap:5px;overflow-y:auto}
+.menu-button span{white-space:nowrap}
+.menu-button{width:100%;justify-content:flex-start;gap:8px;padding:10px 8px;height:42px;flex-shrink:0;background:transparent;color:var(--text-secondary);font-size:12px;font-weight:500;border-left:3px solid transparent;border-radius:4px}
+.menu-button svg{width:18px;height:18px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linejoin:round}
+.menu-button:hover{background:var(--bg-soft);color:var(--text-main)}
+.menu-button[aria-current="page"]{border-left-color:var(--primary);color:var(--primary-dark);background:#f3ece5;font-weight:700}
+body.dark .menu-button[aria-current="page"]{background:#372c24;color:var(--primary-light)}
+.menu-note{margin-top:auto;padding:20px 10px 0;font-size:9px;line-height:1.8;letter-spacing:.5px;color:var(--text-light)}
+.menu-note span{letter-spacing:0;font-size:10px}
+#settings_content{flex:1;min-width:0;overflow:auto;padding:15px 16px 18px;scrollbar-gutter:stable}
+h2{font-size:17px;font-weight:650;margin:0 0 14px;letter-spacing:-.3px}
+h3{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-secondary);margin:0 0 10px}
+.settings-section{margin:16px 0}
+.form-group{min-height:28px;margin-bottom:8px;gap:8px}
+label{font-size:12px;line-height:1.4}
+input[type="number"],input[type="text"],select{height:28px;font-size:12px;width:112px;max-width:100%}
+select{max-width:160px}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.checkbox-row{margin:9px 0;align-items:flex-start;line-height:1.5}
+.checkbox-row input{margin-top:2px;flex-shrink:0}
+.checkbox-row label{flex:1;font-weight:500}
+.preset-section{margin-bottom:16px;gap:4px}
+#preset_select{max-width:none}
+.preset-row{padding-top:8px;min-width:0;flex-wrap:wrap}.preset-row input{min-width:100%;flex:1 1 100%!important}.preset-row button{width:auto!important;height:auto!important;min-height:28px;font-size:11px}
+.advanced{margin:12px 0;border-top:1px solid var(--border);padding-top:10px}
+.advanced summary{cursor:pointer;font-weight:600;color:var(--text-secondary);font-size:11px;padding:2px 0 8px}
+.advanced[open] summary{color:var(--primary-dark);margin-bottom:4px}
+.preset-section .advanced{margin:0;padding-top:2px;border:0}
+.preset-section summary{font-size:10px;padding-bottom:0}
+.hint,p{font-size:11px!important;line-height:1.5!important;color:var(--text-secondary);margin:10px 0}
+.subnav{display:flex;gap:4px;margin:0 0 18px;padding-bottom:10px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.subnav button{color:var(--text-secondary);background:var(--bg-main);border:1px solid var(--border);font-weight:500;padding:5px 9px}
+.subnav button[aria-pressed="true"]{background:var(--bg-dark);color:#fff;border-color:var(--bg-dark)}
+.fixed-actions{flex-shrink:0;padding:8px 12px 12px;background:var(--bg-main);border-top:1px solid var(--border)}
+#model_status{line-height:1.45;font-size:11px;max-height:48px;overflow:auto;user-select:text}
+.fixed-actions .checkbox-row{margin:7px 0 9px}.fixed-actions label{font-size:11px;color:var(--text-secondary)}
+.action-bar{margin:0;gap:7px}.action-bar button{flex:1;min-width:0;height:35px;font-size:12px}
+button:disabled{opacity:.38;cursor:not-allowed;box-shadow:none}
+.link-button{font-size:11px;max-width:100%;margin-top:8px}
+.description-actions{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}
+.description-actions button{min-height:30px;font-size:11px}
+#page_description textarea{display:block;box-sizing:border-box;width:100%;min-height:155px;margin:8px 0;padding:9px;resize:vertical;font:11px/1.5 monospace;background:var(--bg-main);color:var(--text-main);border:1px solid var(--border);border-radius:4px}
+#page_description textarea:focus-visible{outline:2px solid var(--primary)}
+#description_review{overflow-wrap:anywhere;user-select:text}
+#description_review pre{white-space:pre-wrap;font-size:10px}
+#description_draft_notice{flex-shrink:0;padding:7px 12px;background:var(--bg-main);border-bottom:1px solid var(--border);color:var(--text-secondary);font-size:11px;line-height:1.4;max-height:62px;overflow:auto}
+#btn_description_partial{margin:10px 0;max-width:100%;font-size:11px;min-height:30px}
+.highlight-box{margin-top:12px;padding:10px}
+.frame-patterns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0}
+.frame-patterns button{display:flex;align-items:center;gap:8px;text-align:left;min-width:0;padding:7px}
+.frame-patterns svg{width:32px;height:32px;flex-shrink:0;fill:none;stroke:var(--primary);stroke-width:1.4}
+#page_library input{box-sizing:border-box;width:100%;margin:7px 0;max-width:100%}
+.library-list{display:grid;gap:7px;margin:12px 0;max-height:240px;overflow:auto}
+.library-item{display:flex;flex-direction:column;gap:4px;padding:10px;text-align:left;background:var(--bg-card);border:1px solid var(--border);color:var(--text-main);overflow-wrap:anywhere}
+.library-item[aria-pressed="true"]{border-color:var(--primary);box-shadow:inset 3px 0 var(--primary)}
+.library-item span{font-size:11px;font-weight:400;color:var(--text-secondary)}
+#library_thumbnail{display:block;max-width:100%;max-height:220px;object-fit:contain;margin:10px auto;background:#eee;border-radius:4px}
+#library_thumbnail[hidden]{display:none}
+#page_library button{max-width:100%;white-space:normal}
+@media(max-width:500px){.side-menu{width:115px}.menu-button{padding-left:4px;padding-right:4px;gap:5px;font-size:11px}.menu-button svg{width:16px;height:16px}#settings_content{padding:12px}label{font-size:11px}.context-bar{padding:8px 12px}}
+
+/* VGD shared component finish. The Cabinet information architecture stays plugin-specific. */
+body{background:var(--vgd-bg);color:var(--vgd-text)}
+.header{background:var(--vgd-elevated);color:var(--vgd-text);border-radius:0;border-top-color:var(--vgd-accent);box-shadow:none}
+.header-left{gap:10px;letter-spacing:0}
+.brand-mark{width:32px;height:32px;flex:0 0 32px;display:block}
+.brand-copy{display:flex;align-items:baseline;gap:8px;letter-spacing:0}
+.brand-wordmark{font-size:15px;font-weight:750;letter-spacing:.2px;color:var(--vgd-text)}
+.brand-product{font-size:11px;font-weight:650;letter-spacing:.8px;color:var(--vgd-text)}
+.brand-version{font-size:9px;font-weight:450;color:var(--vgd-muted);letter-spacing:0}
+.header small{color:var(--vgd-muted);margin-left:0}
+.btn-icon{width:32px;height:32px;padding:0;background:transparent;border:1px solid var(--vgd-border);color:var(--vgd-text);border-radius:4px}
+.btn-icon:hover{background:var(--vgd-tint);border-color:var(--vgd-accent)}
+.btn-icon svg{width:18px;height:18px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.btn-update{background:var(--vgd-accent);color:#fff;box-shadow:none;border:1px solid var(--vgd-accent)}
+.btn-update:hover{background:var(--vgd-accent-strong);border-color:var(--vgd-accent-strong)}
+.btn-tool{background:var(--vgd-elevated);color:var(--vgd-text);border:1px solid var(--vgd-border)}
+.btn-tool:hover{background:var(--vgd-tint);border-color:var(--vgd-accent);opacity:1}
+.btn-secondary{background:var(--vgd-surface);color:var(--vgd-text);border:1px solid var(--vgd-border)}
+.btn-secondary:hover{background:var(--vgd-elevated);border-color:var(--vgd-accent)}
+.btn-danger{background:var(--vgd-danger-bg);color:var(--vgd-danger);border:1px solid var(--vgd-danger)}
+.btn-danger:hover{background:var(--vgd-danger);color:var(--vgd-bg)}
+.menu-button svg{stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.menu-button[aria-current="page"]{background:var(--vgd-tint);color:var(--vgd-accent-strong);border-left-color:var(--vgd-accent)}
+.menu-button:hover{background:var(--vgd-elevated);color:var(--vgd-text)}
+.menu-button:focus-visible,.subnav button:focus-visible,.frame-patterns button:focus-visible{outline:2px solid var(--vgd-accent-strong);outline-offset:2px}
+.subnav button{background:var(--vgd-surface);color:var(--vgd-muted);border-color:var(--vgd-border);border-radius:4px}
+.subnav button[aria-pressed="true"]{background:var(--vgd-tint);color:var(--vgd-accent-strong);border-color:var(--vgd-accent)}
+.frame-patterns button{color:var(--vgd-muted);background:var(--vgd-surface);border:1px solid var(--vgd-border)}
+.frame-patterns button[aria-pressed="true"]{color:var(--vgd-accent-strong);background:var(--vgd-tint);border-color:var(--vgd-accent)}
+.frame-patterns svg{stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.fixed-actions{background:var(--vgd-surface)}
+.context-bar,#description_draft_notice{background:var(--vgd-surface)}
+.advanced[open] summary{color:var(--vgd-accent-strong)}
+input,select,textarea{color-scheme:inherit}
+input:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline-color:var(--vgd-accent-strong)}
+button:disabled{opacity:.55}
+#library_thumbnail{background:var(--vgd-elevated)}
+
+/* Match VGD Dim: narrow dialogs keep icon-only navigation; tooltips retain each action's name. */
+@media(min-width:721px){
+  .side-menu{width:196px;padding:12px 8px}
+  .menu-button{height:auto;min-height:54px;align-items:center;gap:10px;padding:8px 9px;text-align:left}
+  .menu-button span{white-space:normal}
+  .menu-button .menu-copy{display:flex;min-width:0;flex:1;flex-direction:column;gap:2px}
+  .menu-button .menu-label{white-space:nowrap;font-size:12px;line-height:1.25}
+  .menu-button .menu-description{display:block;white-space:normal;color:var(--vgd-muted);font-size:10px;line-height:1.3;font-weight:400}
+}
+@media(max-width:720px){
+  .side-menu{width:58px;padding:8px 5px;gap:5px}
+  .menu-button{height:42px;min-height:42px;justify-content:center;gap:0;padding:0;border-left-width:3px}
+  .menu-button .menu-copy,.menu-note{display:none!important}
+  .menu-button svg{width:20px;height:20px}
+}
+</style></head>
+<body class="dark"><div class="header">
+    <div class="header-left"><svg class="brand-mark" viewBox="0 0 180 180" aria-hidden="true"><rect x="3" y="3" width="174" height="174" rx="25" fill="var(--vgd-brand-tile)" stroke="var(--vgd-border)" stroke-width="1.5"></rect><path d="M90 18 27 54 90 89Z" fill="var(--vgd-brand-right)"></path><path d="M90 18 153 54 90 89Z" fill="var(--vgd-brand-roof)"></path><path d="M27 54 90 89V162L27 126Z" fill="var(--vgd-brand-left)"></path><path d="M90 89 153 54V101C153 129 126 149 90 162Z" fill="var(--vgd-brand-right)"></path><path d="M53 99 90 120V162L53 141Z" fill="var(--vgd-brand-shadow)"></path><path d="M53 131 90 152V162L53 141Z" fill="var(--vgd-brand-roof)"></path><path d="M90 18 27 54V126L90 162C126 149 153 129 153 101V54Z" fill="none" stroke="var(--vgd-brand-outline)" stroke-width="1.5" stroke-linejoin="round"></path><path d="M90 18V89L153 54M27 54 90 89V162M53 99V141L90 162M53 99 90 120V152" fill="none" stroke="var(--vgd-brand-accent)" stroke-width="1.5" stroke-linejoin="round"></path><path d="M27 54 90 18 153 54 90 89Z" fill="none" stroke="var(--vgd-brand-accent)" stroke-width="1.5" stroke-linejoin="round"></path></svg><span class="brand-copy"><strong class="brand-wordmark">VGD</strong><span class="brand-product">CABINET</span><small class="brand-version">4.5.2</small></span></div>
+    <button id="btn_theme" onclick="toggleTheme()" class="btn-icon" title="Chuyển sang giao diện sáng" aria-label="Chuyển sang giao diện sáng"><span id="theme_icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg></span></button>
+  </div><div class="context-bar"><span id="selection_mode">Tạo tủ mới</span><span id="size_summary"></span></div><div id="description_draft_notice" hidden="" role="status"></div><div class="workspace"><nav class="side-menu" aria-label="Nhóm thông số"><button type="button" class="menu-button" data-page="general" aria-controls="page_general" aria-label="Tổng thể — Kích thước, preset và ghép module" title="Tổng thể — Kích thước, preset và ghép module" onclick="selectPage('general')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M8 4v4m8 0V4m-8 10v4m8-4v4"></path></svg><span class="menu-copy"><span class="menu-label">Tổng thể</span><small class="menu-description">Kích thước, preset và ghép module</small></span></button><button type="button" class="menu-button" data-page="frame" aria-controls="page_frame" aria-label="Thùng tủ — Hông, nóc, đáy, hậu và chân" title="Thùng tủ — Hông, nóc, đáy, hậu và chân" onclick="selectPage('frame')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h14v17H5zM5 8h14M5 16h14"></path></svg><span class="menu-copy"><span class="menu-label">Thùng tủ</span><small class="menu-description">Hông, nóc, đáy, hậu và chân</small></span></button><button type="button" class="menu-button" data-page="compartments" aria-controls="page_compartments" aria-label="Chia khoang — Vách, đợt và chia tầng" title="Chia khoang — Vách, đợt và chia tầng" onclick="selectPage('compartments')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h14v17H5zM12 3.5v17"></path></svg><span class="menu-copy"><span class="menu-label">Chia khoang</span><small class="menu-description">Vách, đợt và chia tầng</small></span></button><button type="button" class="menu-button" data-page="doors" aria-controls="page_doors" aria-label="Cánh tủ — Cánh, kính, pano và móc tay" title="Cánh tủ — Cánh, kính, pano và móc tay" onclick="selectPage('doors')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h14v17H5zM12 3.5v17M9 11v2m6-2v2"></path></svg><span class="menu-copy"><span class="menu-label">Cánh tủ</span><small class="menu-description">Cánh, kính, pano và móc tay</small></span></button><button type="button" class="menu-button" data-page="drawers" aria-controls="page_drawers" aria-label="Ngăn kéo — Bố trí, khung và mặt hộc" title="Ngăn kéo — Bố trí, khung và mặt hộc" onclick="selectPage('drawers')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h14v17H5zM5 9h14M5 14.5h14M9 6v1m6-1v1m-6 5.5v1m6-1v1m-6 5.5v1m6-1v1"></path></svg><span class="menu-copy"><span class="menu-label">Ngăn kéo</span><small class="menu-description">Bố trí, khung và mặt hộc</small></span></button><button type="button" class="menu-button" data-page="description" aria-controls="page_description" aria-label="Dựng từ mô tả — Tạo tủ từ cấu hình JSON" title="Dựng từ mô tả — Tạo tủ từ cấu hình JSON" onclick="selectPage('description')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h8l4 4v13H5v-17h2m7 0v4h4M8 12h8M8 16h5"></path></svg><span class="menu-copy"><span class="menu-label">Dựng từ mô tả</span><small class="menu-description">Tạo tủ từ cấu hình JSON</small></span></button><button type="button" class="menu-button" data-page="library" aria-controls="page_library" aria-label="Thư viện — Lưu và đặt lại mẫu tủ" title="Thư viện — Lưu và đặt lại mẫu tủ" onclick="selectPage('library')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6h6l2 2h9v11h-17zM3.5 10h17"></path></svg><span class="menu-copy"><span class="menu-label">Thư viện</span><small class="menu-description">Lưu và đặt lại mẫu tủ</small></span></button><div class="menu-note">DỰNG HÌNH<br><span>Đơn vị: mm</span></div></nav><main id="settings_content"><section id="page_general" class="menu-page" hidden=""><h2>Tổng thể</h2><div class="preset-section">
+    <select id="preset_select" onchange="loadPreset()" style="width: 100%; text-align-last: left; text-align: left; height: 28px;">
+      <option value="">-- Chọn mẫu tủ --</option>
+    </select>
+
+  <details class="advanced"><summary>Lưu / đổi tên / xóa mẫu tủ</summary><div class="preset-row">
+      <input type="text" id="preset_name" placeholder="Tên mẫu mới / tên mới" style="flex: 1; height: 28px;">
+      <button class="btn-secondary" style="width: 60px; height: 28px;" onclick="savePreset()">Tạo mới</button>
+      <button type="button" class="btn-secondary" onclick="savePreset('update')">Cập nhật mẫu đã chọn</button><button type="button" class="btn-secondary" onclick="savePreset('rename')">Đổi tên mẫu</button><button class="btn-danger" style="width: 60px; height: 28px;" onclick="deletePreset()">XÓA</button>
+    </div></details><details class="advanced" id="preset_group_manager"><summary>Quản lý nhóm preset</summary><div class="form-group"><label for="preset_group_select">Nhóm preset</label><select id="preset_group_select"></select></div><div class="form-group"><label for="preset_group_name">Tên nhóm mới / tên đổi</label><input id="preset_group_name" type="text" maxlength="80" placeholder="Ví dụ: Tủ bếp"></div><div class="preset-row"><button type="button" class="btn-secondary" onclick="presetGroupAction('create')">Tạo nhóm</button><button type="button" class="btn-secondary" onclick="presetGroupAction('rename')">Đổi tên nhóm</button><button type="button" class="btn-danger" onclick="presetGroupAction('delete')">Xóa nhóm</button></div><button type="button" class="btn-secondary" onclick="assignPresetGroup()">Chuyển mẫu đang chọn vào nhóm</button></details></div><section class="settings-section"><h3>Kích thước phủ bì</h3><div class="">
+
+      <div class="form-group"><label for="w">Chiều rộng (W)</label><input type="number" id="w" value="800" oninput="onDoorParamChange()"></div>
+      <div class="form-group"><label for="d">Chiều sâu (D)</label><input type="number" id="d" value="600"></div>
+      <div class="form-group"><label for="h">Chiều cao (H)</label><input type="number" id="h" value="2400" oninput="checkAutoOverheight()"></div>
+      <div class="form-group"><label for="t">Độ dày ván (t)</label><input type="number" step="0.5" id="t" value="17.5" oninput="onDoorParamChange()"></div>
+    </div></section><section class="settings-section"><h3>Ghép module</h3><div class="form-group"><label for="module_mode">Kiểu ghép</label><select id="module_mode"><option>Chung vách</option><option>Độc lập</option></select></div><div class="form-group"><label for="module_widths">Rộng từng module</label><input id="module_widths" type="text" placeholder="800;800;800"></div><div class="form-group"><label for="module_target_w">Rộng mục tiêu</label><input id="module_target_w" type="number" value="800"></div><p style="font-size:11px;line-height:1.5" id="module_hint">Module độc lập có hai hồi riêng. Để trống danh sách để chia đều theo rộng mục tiêu. Cánh, đợt và hộc được áp dụng cho từng module.</p></section><details class="advanced"><summary>Nâng cao · bước bắt khi vẽ</summary><div class="form-group"><label for="snap_step">Bước bắt khi vẽ</label><input type="number" id="snap_step" value="50" min="1" max="100"></div></details><p class="hint">W/D/H gồm cánh và hậu; chiều cao gồm chân và nẹp.</p></section><section id="page_frame" class="menu-page" hidden=""><h2>Thùng tủ</h2><div class="subnav" aria-label="Mục frame"><button type="button" data-subgroup="frame" data-subtab="sides" onclick="selectSubpage('frame','sides')" aria-controls="sub_frame_sides">Hông</button><button type="button" data-subgroup="frame" data-subtab="caps" onclick="selectSubpage('frame','caps')" aria-controls="sub_frame_caps">Nóc–đáy</button><button type="button" data-subgroup="frame" data-subtab="back" onclick="selectSubpage('frame','back')" aria-controls="sub_frame_back">Hậu</button><button type="button" data-subgroup="frame" data-subtab="base" onclick="selectSubpage('frame','base')" aria-controls="sub_frame_base">Chân</button></div><div id="sub_frame_sides" data-subpanel="frame" hidden=""><div class="subsection">
+
+        <div class="form-group">
+          <label for="opt_left_side">Hồi trái</label>
+          <select id="opt_left_side">
+            <option value="Vuông">Vuông</option>
+            <option value="Bo Cong">Bo Cong</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="opt_right_side">Hồi phải</label>
+          <select id="opt_right_side">
+            <option value="Vuông">Vuông</option>
+            <option value="Bo Cong">Bo Cong</option>
+          </select>
+        </div>
+        <div class="form-group"><label for="curve_w">Kích thước bo</label><input type="number" id="curve_w" value="100"></div>
+      </div></div><div id="sub_frame_caps" data-subpanel="frame" hidden=""><div class="subsection">
+
+        <div class="form-group">
+          <label for="opt_top">Đỉnh</label>
+          <select id="opt_top" onchange="onTopChange()">
+            <option value="Đỉnh Lọt Hồi">Lọt Hồi</option>
+            <option value="Đỉnh Phủ Hồi">Phủ Hồi</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="opt_bottom">Đáy</label>
+          <select id="opt_bottom">
+            <option value="Đáy Lọt Hồi">Lọt Hồi</option>
+            <option value="Đáy Phủ Hồi">Phủ Hồi</option>
+          </select>
+        </div>
+      </div></div><div id="sub_frame_back" data-subpanel="frame" hidden=""><div class="subsection">
+
+        <div class="form-group"><label for="back_mode">Kiểu hậu</label><select id="back_mode"><option>Âm</option><option>Phủ</option><option>Không</option></select></div>
+        <div class="form-group"><label for="t_back">Dày hậu (mm)</label><input type="number" id="t_back" value="6"></div>
+        <div class="form-group"><label for="back_recess">Lùi hậu (mm)</label><input type="number" id="back_recess" value="20"></div>
+      </div><div class="checkbox-row"><input type="checkbox" id="back_groove_auto" checked=""><label for="back_groove_auto">Ngậm hậu = ½ dày hồi</label></div><div class="form-group"><label for="back_groove_depth">Ngậm hậu mỗi bên (mm)</label><input type="number" id="back_groove_depth" value="8.75" min="0" step="0.5"></div></div><div id="sub_frame_base" data-subpanel="frame" hidden=""><div class="subsection">
+
+        <div class="form-group"><label for="plinth_h">Cao chân (mm)</label><input type="number" id="plinth_h" value="40"></div>
+        <div class="form-group"><label for="shadow_gap_h">Nẹp tách trần (mm)</label><input type="number" id="shadow_gap_h" value="20"></div>
+      </div></div></section><section id="page_compartments" class="menu-page" hidden=""><h2>Chia khoang</h2><div class="subnav" aria-label="Mục compartments"><button type="button" data-subgroup="compartments" data-subtab="dividers" onclick="selectSubpage('compartments','dividers')" aria-controls="sub_compartments_dividers">Vách đứng</button><button type="button" data-subgroup="compartments" data-subtab="shelves" onclick="selectSubpage('compartments','shelves')" aria-controls="sub_compartments_shelves">Đợt ngang</button><button type="button" data-subgroup="compartments" data-subtab="tiers" onclick="selectSubpage('compartments','tiers')" aria-controls="sub_compartments_tiers">Chia tầng</button></div><div id="sub_compartments_dividers" data-subpanel="compartments" hidden=""><div class="form-group"><label for="div_count">Hồi giữa</label><input type="number" id="div_count" value="0" oninput="onManualDoorChange()"></div><div class="form-group">
+          <label for="div_pos">Vị trí</label>
+          <select id="div_pos">
+            <option value="Chia Đều">Chia Đều</option>
+            <option value="Bên Trái">Bên Trái (1/3)</option>
+            <option value="Bên Phải">Bên Phải (2/3)</option>
+          </select>
+        </div><div class="checkbox-row">
+          <input type="checkbox" id="auto_divider_wide" checked="" onchange="onAutoDividerChange()">
+          <label for="auto_divider_wide">Tự thêm hồi giữa khi tủ rộng</label>
+        </div><div class="form-group" id="group_max_compartment_w"><label for="max_compartment_w">Ngưỡng rộng (mm)</label><input type="number" min="1" id="max_compartment_w" value="1200"></div><p class="hint">Vách và đợt áp dụng trong từng module.</p></div><div id="sub_compartments_shelves" data-subpanel="compartments" hidden=""><div class="form-group"><label for="shelf_count">Đợt ngang</label><input type="number" id="shelf_count" value="0" min="0"></div><div class="form-group"><label for="shelf_type">Loại đợt</label><select id="shelf_type" onchange="onShelfTypeChange()"><option value="Cố Định" selected="">Cố Định</option><option value="Di Động">Di Động</option></select></div><div class="form-group" id="group_shelf_side_clearance" style="display:none;"><label for="shelf_side_clearance">Hở hông/1 bên</label><input type="number" step="0.1" min="0" id="shelf_side_clearance" value="1.6"></div><div class="form-group" id="group_shelf_front_setback" style="display:none;"><label for="shelf_front_setback">Lùi mép trước (mm)</label><input type="number" step="0.5" min="0" id="shelf_front_setback" value="25"></div></div><div id="sub_compartments_tiers" data-subpanel="compartments" hidden=""><div class="">
+      <div class="checkbox-row">
+        <input type="checkbox" id="auto_overheight" checked="" onchange="onAutoOverheightChange()">
+        <label for="auto_overheight">Tự chia theo chiều cao tấm</label>
+      </div>
+      <div class="form-group" id="group_max_panel_h"><label for="max_panel_h">Cao tấm tối đa (mm)</label><input type="number" min="1" id="max_panel_h" value="2400" oninput="checkAutoOverheight()"></div>
+      <div class="checkbox-row" style="margin-bottom: 8px;">
+        <input type="checkbox" id="is_overheight" onchange="toggleOverheight()">
+        <label for="is_overheight">Dựng thành tủ 2 tầng</label>
+      </div>
+      <div id="overheight_fields" style="display: none;">
+        <div class="form-group"><label for="h_bottom">Cao tủ dưới</label><input type="number" id="h_bottom" value="2100" oninput="syncHeightFromBot()"></div>
+        <div class="form-group"><label for="h_top">Cao tủ trên</label><input type="number" id="h_top" value="275" oninput="syncHeightFromTop()"></div>
+        <div class="form-group"><label for="shelf_count_top">Đợt tủ trên</label><input type="number" id="shelf_count_top" value="0"></div>
+        <div class="form-group">
+          <label for="overheight_join">Kiểu kết nối</label>
+          <select id="overheight_join">
+            <option value="Đấu Cục Đỉnh">Đấu Cục Đỉnh</option>
+            <option value="Xà Trên">Xà Trên</option>
+            <option value="Xà Dưới" selected="">Xà Dưới</option>
+          </select>
+        </div>
+        <div class="form-group"><label for="mid_door_gap">Khe hở trên/dưới</label><input type="number" step="0.5" id="mid_door_gap" value="25.0"></div>
+        <div class="form-group"><label for="beam_h">Kích thước xà</label><input type="number" step="1" id="beam_h" value="50.0"></div>
+      </div>
+    </div></div></section><section id="page_doors" class="menu-page" hidden=""><h2>Cánh tủ</h2><div class="subnav" aria-label="Mục doors"><button type="button" data-subgroup="doors" data-subtab="front" onclick="selectSubpage('doors','front')" aria-controls="sub_doors_front">Cấu tạo cánh</button><button type="button" data-subgroup="doors" data-subtab="glass" onclick="selectSubpage('doors','glass')" aria-controls="sub_doors_glass">Khung/kính</button><button type="button" data-subgroup="doors" data-subtab="pano" onclick="selectSubpage('doors','pano')" aria-controls="sub_doors_pano">Pano / Shaker</button><button type="button" data-subgroup="doors" data-subtab="special" onclick="selectSubpage('doors','special')" aria-controls="sub_doors_special">Cánh soi / kính gỗ</button><button type="button" data-subgroup="doors" data-subtab="division" onclick="selectSubpage('doors','division')" aria-controls="sub_doors_division">Ghép / chia kính</button><button type="button" data-subgroup="doors" data-subtab="handle" onclick="selectSubpage('doors','handle')" aria-controls="sub_doors_handle">Móc tay / xà chặn</button></div><div id="sub_doors_front" data-subpanel="doors" hidden=""><section class="settings-section"><h3>Áp dụng cho nhiều tủ</h3><p class="hint">Chọn từ hai tủ VGD, thiết lập cánh/hộc ở đây, rồi xem trước trước khi áp dụng. Kích thước và chia module riêng của từng tủ được giữ lại.</p><button type="button" id="btn_batch_front" class="btn-secondary" onclick="batchFrontSettings()">Xem trước cấu hình cánh / hộc cho vùng chọn</button></section><div class="">
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label for="opt_door">Loại cánh</label>
+        <select id="opt_door" onchange="onDoorParamChange()" style="width: 140px;">
+          <option value="Cánh Phủ toàn bộ">Phủ Toàn Bộ</option>
+          <option value="Cánh Phủ Hồi Trái">Phủ Hồi Trái</option>
+          <option value="Cánh Phủ Hồi Phải">Phủ Hồi Phải</option>
+          <option value="Cánh Lọt Hồi" selected="">Lọt Hồi</option>
+          <option value="Cánh Lọt Lòng">Lọt Lòng</option>
+          <option value="Không Cánh">Không Cánh</option>
+        </select>
+      </div>
+
+
+
+
+
+
+
+    <div id="door_fields"><div class="form-group"><label for="door_style">Kiểu dựng</label><select id="door_style" onchange="refreshContextUI();if(this.value==='Kính khung kim loại')selectSubpage('doors','glass');if(this.value==='Pano khung gỗ'||this.value==='Shaker')selectSubpage('doors','pano');if(['Cánh soi','Cánh soi vát 4 cạnh','Cánh kính bo góc'].includes(this.value))selectSubpage('doors','special')"><option>Ván phẳng</option><option>Kính khung kim loại</option><option>Pano khung gỗ</option><option>Shaker</option><option>Cánh soi</option><option>Cánh soi vát 4 cạnh</option><option>Cánh kính bo góc</option></select></div><div class="checkbox-row" style="margin-bottom: 8px;">
+        <input type="checkbox" id="auto_door_count" checked="" onchange="toggleAutoDoor()">
+        <label for="auto_door_count">TỰ ĐỘNG CHIA CÁNH</label>
+      </div><div class="form-group"><label for="max_door_w">Rộng cánh tối đa</label><input type="number" id="max_door_w" value="450" oninput="onDoorParamChange()"></div><div class="form-group"><label for="door_count">Số cánh</label><input type="number" id="door_count" value="2" oninput="onManualDoorChange()"></div><div class="highlight-box">
+        <div class="highlight-header">
+          <span class="highlight-title">KHE HỞ</span>
+          <button type="button" id="btn_toggle_door_adv" class="btn-secondary" style="height: 20px; font-size: 9px; padding: 0 6px;" onclick="toggleDoorGapAdv()">⚙ CHI TIẾT</button>
+        </div>
+        <input type="checkbox" id="door_gap_advanced" style="display: none;" onchange="renderDoorGapUI()">
+        <div id="door_gap_simple_ui">
+          <div class="form-group"><label for="door_gap_outer">Hở biên ngoài</label><input type="number" step="0.5" id="door_gap_outer" value="0" oninput="syncDoorOuter(this.value)"></div>
+          <div class="form-group"><label for="door_gap_between">Hở giữa các cánh</label><input type="number" step="0.5" id="door_gap_between" value="0" oninput="syncDoorBetween(this.value)"></div>
+        <div class="form-group" id="simple_top_gap"><label for="door_top_gap">Khe trên / móc tay</label><input type="number" id="door_top_gap" value="0" step="0.5" oninput="document.getElementById('door_gap_top').value=this.value"></div></div>
+        <div id="door_gap_adv_ui" style="display: none;">
+          <div class="form-group"><label for="door_gap_left">Hở trái</label><input type="number" step="0.5" id="door_gap_left" value="0"></div>
+          <div class="form-group"><label for="door_gap_right">Hở phải</label><input type="number" step="0.5" id="door_gap_right" value="0"></div>
+          <div class="form-group"><label for="door_gap_top">Hở trên (Nóc)</label><input type="number" step="0.5" id="door_gap_top" value="0" oninput="document.getElementById('door_top_gap').value=this.value;"></div>
+          <div class="form-group"><label for="door_gap_bottom">Hở dưới (Đáy)</label><input type="number" step="0.5" id="door_gap_bottom" value="0"></div>
+        </div>
+        <input type="hidden" id="door_gap" value="0">
+
+      </div></div></div></div><div id="sub_doors_glass" data-subpanel="doors" hidden=""><p class="hint">Cánh kính khung kim loại. Khung 4 cạnh và kính giữa chiều dày; dùng chung khe cánh.</p><div class="form-group"><label for="metal_frame_width">Bản khung (mm)</label><input type="number" id="metal_frame_width" value="20" min="1" step="0.5"></div><div class="form-group"><label for="metal_frame_depth">Dày khung (mm)</label><input type="number" id="metal_frame_depth" value="20" min="1" step="0.5"></div><div class="form-group"><label for="glass_thickness">Dày kính (mm)</label><input type="number" id="glass_thickness" value="5" min="1" step="0.5"></div><div class="preset-row"><button type="button" class="btn-secondary" onclick="document.getElementById('metal_frame_width').value=20;debouncedUpdateCabinet()">Bản 20</button><button type="button" class="btn-secondary" onclick="document.getElementById('metal_frame_width').value=30;debouncedUpdateCabinet()">Bản 30</button><button type="button" class="btn-secondary" onclick="document.getElementById('metal_frame_width').value=40;debouncedUpdateCabinet()">Bản 40</button></div><div class="form-group"><label for="metal_finish">Màu khung</label><select id="metal_finish"><option>Đen</option><option>Champagne</option><option>Inox</option></select></div><div class="form-group"><label for="glass_finish">Màu kính</label><select id="glass_finish"><option>Trong</option><option>Trà</option><option>Xám</option></select></div><p class="hint">Áp dụng cho các cánh mở của tủ đang chỉnh. Màu khung và kính là hai material riêng trong SketchUp.</p></div><div id="sub_doors_pano" data-subpanel="doors" hidden=""><div class="form-group"><label for="pano_stile_width">Bản đố đứng (mm)</label><input id="pano_stile_width" type="number" value="60" min="0" step="0.5"></div><div class="form-group"><label for="pano_rail_width">Bản thanh trên/dưới (mm)</label><input id="pano_rail_width" type="number" value="60" min="0" step="0.5"></div><div class="form-group"><label for="pano_depth">Dày khung cánh (mm)</label><input id="pano_depth" type="number" value="20" min="0" step="0.5"></div><div class="form-group"><label for="pano_panel_thickness">Dày tấm pano (mm)</label><input id="pano_panel_thickness" type="number" value="6" min="0" step="0.5"></div><div class="form-group"><label for="pano_groove_depth">Sâu rãnh ngậm (mm)</label><input id="pano_groove_depth" type="number" value="8" min="0" step="0.5"></div><div class="form-group"><label for="pano_clearance">Khe co giãn mỗi cạnh (mm)</label><input id="pano_clearance" type="number" value="1" min="0" step="0.5"></div><div class="form-group"><label for="pano_mid_rail">Bản thanh chia giữa (mm)</label><input id="pano_mid_rail" type="number" value="60" min="0" step="0.5"></div><div class="form-group"><label for="pano_panel_count">Số ô pano theo chiều cao</label><input id="pano_panel_count" type="number" value="1" min="1" max="6" step="1"></div><div class="form-group"><label for="shaker_recess">Độ lõm mặt tấm Shaker (mm)</label><input id="shaker_recess" type="number" value="6" min="1" step="0.5"></div><p class="hint">Khung gỗ và pano phẳng riêng; tấm giữa ngậm rãnh và chừa khe co giãn. Mặc định khung 60 × 20, pano 6, ngậm 8, khe 1 mm/cạnh. Chỉnh theo vật liệu; chưa dựng mộng góc hoặc profile soi trang trí.</p></div><div id="sub_doors_special" data-subpanel="doors" hidden=""><div class="form-group" data-profile="carved"><label for="wood_carved_thickness">Độ dày cánh soi (mm)</label><input id="wood_carved_thickness" type="number" value="17" min="0" step="0.5"></div><div class="form-group" data-profile="carved"><label for="wood_carved_rail">Bản huỳnh (mm)</label><input id="wood_carved_rail" type="number" value="60" min="0" step="0.5"></div><div class="form-group" data-profile="carved"><label for="wood_carved_radius">Bán kính R (mm)</label><input id="wood_carved_radius" type="number" value="60" min="0" step="0.5"></div><div class="form-group" data-profile="carved"><label for="wood_carved_recess">Độ âm (mm)</label><input id="wood_carved_recess" type="number" value="7" min="0" step="0.5"></div><div class="form-group" data-profile="bevel"><label for="wood_bevel_thickness">Độ dày cánh soi vát (mm)</label><input id="wood_bevel_thickness" type="number" value="20" min="0" step="0.5"></div><div class="form-group" data-profile="bevel"><label for="wood_bevel_flat">Mép phẳng (mm)</label><input id="wood_bevel_flat" type="number" value="2" min="0" step="0.5"></div><div class="form-group" data-profile="bevel"><label for="wood_bevel_width">Bề rộng vát (mm)</label><input id="wood_bevel_width" type="number" value="15" min="0" step="0.5"></div><div class="form-group" data-profile="bevel"><label for="wood_bevel_recess">Độ âm (mm)</label><input id="wood_bevel_recess" type="number" value="10" min="0" step="0.5"></div><div class="form-group" data-profile="glass"><label for="wood_glass_frame_thickness">Độ dày khung gỗ (mm)</label><input id="wood_glass_frame_thickness" type="number" value="20" min="0" step="0.5"></div><div class="form-group" data-profile="glass"><label for="wood_glass_rail">Bản huỳnh (mm)</label><input id="wood_glass_rail" type="number" value="60" min="0" step="0.5"></div><div class="form-group" data-profile="glass"><label for="wood_glass_radius">Bán kính R (mm)</label><input id="wood_glass_radius" type="number" value="60" min="0" step="0.5"></div><div class="form-group" data-profile="glass"><label for="wood_glass_depth">Chiều sâu kính (mm)</label><input id="wood_glass_depth" type="number" value="8" min="0" step="0.5"></div><div class="form-group" data-profile="glass"><label for="wood_glass_inset">Lùi mặt kính (mm)</label><input id="wood_glass_inset" type="number" value="12" min="0" step="0.5"></div><div class="form-group"><label for="wood_glass_type">Kiểu kính cánh khung gỗ</label><select id="wood_glass_type"><option>Kính phẳng</option></select></div><p class="hint">Thông số cánh gỗ công nghiệp. Cánh soi tạo rãnh bo góc; soi vát tạo mặt vát bốn cạnh; kính bo góc dùng khung gỗ và kính phẳng.</p></div><div id="sub_doors_division" data-subpanel="doors" hidden=""><div class="form-group"><label for="frame_joint">Kiểu ghép khung</label><select id="frame_joint" onchange="refreshContextUI()"><option>Dọc</option><option>Ngang</option><option>Chéo</option></select></div><div class="form-group"><label for="frame_division">Chia panel kính</label><select id="frame_division" onchange="refreshContextUI()"><option>Không chia</option><option>Ngang</option><option>Dọc</option></select></div><div class="form-group"><label for="frame_sections">Số panel</label><input type="number" id="frame_sections" min="2" max="6" step="1" value="2"></div><div class="form-group"><label for="frame_bar_width">Bản thanh chia (0 = theo khung)</label><input type="number" id="frame_bar_width" min="0" step="0.5" value="0"></div><p class="hint">Ngang, Dọc và Chéo mô tả cách nối bốn thanh khung. Chia panel chỉ áp dụng cho cánh có kính; hình xem trước hiển thị trong model SketchUp.</p></div><div id="sub_doors_handle" data-subpanel="doors" hidden=""><div class="">
+      <div class="checkbox-row"><input id="front_bevel" type="checkbox"><label for="front_bevel">Móc tay cánh · vát 45° mép trên</label></div>
+      <div class="form-group"><label for="bevel_lip">Mép giữ lại cánh (mm)</label><input id="bevel_lip" type="number" value="2" step="0.5"></div>
+      <div class="checkbox-row"><input id="door_stop_rail" type="checkbox"><label for="door_stop_rail">Xà chặn phía sau khe trên cánh</label></div>
+      <div class="form-group"><label for="door_stop_rail_h">Cao xà chặn (mm)</label><input id="door_stop_rail_h" type="number" value="60"></div>
+      <p style="font-size:11px">Móc tay cánh tủ độc lập với mặt ngăn kéo.</p>
+    </div><p class="hint">Vát mép chỉ dùng cho cánh ván và mặt ngăn kéo; không áp dụng cho cánh kính khung kim loại.</p><div class="form-group"><label for="door_stop_rail_joinery">Liên kết xà chặn cánh</label><select id="door_stop_rail_joinery"><option value="Hồi giữa">Chỉ chặn hồi giữa</option><option value="Khấu hông">Khấu hông</option></select></div><p class="hint">Móc tay và xà chặn ở đây chỉ áp cho cánh tủ. Ngăn kéo có thông số độc lập trong Mặt hộc.</p></div></section><section id="page_drawers" class="menu-page" hidden=""><h2>Ngăn kéo</h2><div class="">
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label for="opt_drawer">Kiểu ngăn kéo</label>
+        <select id="opt_drawer" onchange="onDrawerChange()" style="width: 140px;">
+          <option value="Không" selected="">Không Ngăn Kéo</option>
+          <option value="Lộ">Ngăn Kéo Lộ</option>
+          <option value="Âm">Ngăn Kéo Âm</option>
+        </select>
+      </div>
+
+      <div class="checkbox-row" id="group_is_full_drawer" style="margin-bottom: 8px;">
+        <input type="checkbox" id="is_full_drawer" onchange="onDrawerChange()">
+        <label for="is_full_drawer">Tủ Full Ngăn Kéo</label>
+      </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="drawer_fields"><div class="subnav" aria-label="Mục drawers"><button type="button" data-subgroup="drawers" data-subtab="layout" onclick="selectSubpage('drawers','layout')" aria-controls="sub_drawers_layout">Bố trí</button><button type="button" data-subgroup="drawers" data-subtab="frame" onclick="selectSubpage('drawers','frame')" aria-controls="sub_drawers_frame">Khung két</button><button type="button" data-subgroup="drawers" data-subtab="front" onclick="selectSubpage('drawers','front')" aria-controls="sub_drawers_front">Mặt hộc</button><button type="button" data-subgroup="drawers" data-subtab="box" onclick="selectSubpage('drawers','box')" aria-controls="sub_drawers_box">Thùng hộc</button></div><div id="sub_drawers_layout" data-subpanel="drawers" hidden=""><div class="form-group"><label for="drawer_columns">Cụm trong mỗi khoang</label><select id="drawer_columns"><option value="1">1 cụm</option><option value="2">2 cụm cạnh nhau</option></select></div><div class="form-group" id="group_drawer_comp_pos" style="display: none;">
+        <label for="drawer_comp_pos">Vị trí khoang lắp</label>
+        <select id="drawer_comp_pos">
+          <option value="Tất Cả">Tất Cả</option>
+          <option value="Trái">Khoang Trái</option>
+          <option value="Giữa">Khoang Giữa</option>
+          <option value="Phải">Khoang Phải</option>
+        </select>
+      </div><div class="form-group" id="group_drawer_h" style="display: none;">
+        <label for="drawer_h">Chiều cao khoang</label>
+        <input type="number" id="drawer_h" value="600">
+      </div><div class="form-group" id="group_drawer_count" style="display: none;">
+        <label for="drawer_count">Số tầng mỗi cụm</label>
+        <input type="number" id="drawer_count" value="2" min="1" max="10">
+      </div></div><div id="sub_drawers_frame" data-subpanel="drawers" hidden=""><div class="form-group" id="group_drawer_inner_offset" style="display: none;">
+        <label for="drawer_inner_offset">Độ lùi mặt (mm)</label>
+        <input type="number" id="drawer_inner_offset" value="50">
+      </div><div class="form-group" id="group_drawer_hinge_sp" style="display: none;">
+        <label for="drawer_hinge_sp">Rộng diềm khung ngăn kéo âm (mm)</label>
+        <input type="number" id="drawer_hinge_sp" value="50" min="0" step="0.5">
+      </div><div id="drawer_hinge_sp_hint" style="display:none; font-size:9px; color:var(--text-secondary); margin:-2px 0 6px 0; line-height:1.35;">
+        Diềm là bản rộng 50mm phủ lên hông dày theo ván; ví dụ diềm 50, ván 20 → hông nằm cách hồi 30mm. Diềm vẫn chỉ dày bằng ván.
+      </div><div class="form-group"><label for="drawer_frame_depth">Sâu két phủ bì (0 = tự động)</label><input type="number" id="drawer_frame_depth" value="0" min="0" step="0.5"></div><div class="form-group"><label for="drawer_frame_rail_width">Bản xà đáy trước/sau</label><input type="number" id="drawer_frame_rail_width" value="50" min="0" step="0.5"></div><div class="checkbox-row"><input type="checkbox" id="drawer_frame_stop_rail" checked=""><label for="drawer_frame_stop_rail">Xà đón mặt hộc</label></div><div class="form-group"><label for="drawer_frame_stop_rail_h">Cao xà đón</label><input type="number" id="drawer_frame_stop_rail_h" value="50" min="0" step="0.5"></div><div class="form-group"><label for="drawer_frame_stop_rail_drop">Hạ xà so với dưới nóc</label><input type="number" id="drawer_frame_stop_rail_drop" value="0" min="0" step="0.5"></div></div><div id="sub_drawers_front" data-subpanel="drawers" hidden=""><div id="group_drawer_gap" style="display: none;" class="highlight-box">
+        <div class="highlight-header">
+          <span class="highlight-title">KHE HỞ</span>
+          <button type="button" id="btn_toggle_drawer_adv" class="btn-secondary" style="height: 20px; font-size: 9px; padding: 0 6px;" onclick="toggleDrawerGapAdv()">⚙ CHI TIẾT</button>
+        </div>
+        <input type="checkbox" id="drawer_gap_advanced" style="display: none;" onchange="renderDrawerGapUI()">
+        <div id="drawer_gap_simple_ui">
+          <div class="form-group"><label for="drawer_gap_outer">Hở biên ngoài</label><input type="number" step="0.5" id="drawer_gap_outer" value="0" oninput="syncDrawerOuter(this.value)"></div>
+          <div class="form-group"><label for="drawer_gap_between">Hở giữa các tầng</label><input type="number" step="0.5" id="drawer_gap_between" value="25" oninput="syncDrawerBetween(this.value)"></div>
+        </div>
+        <div id="drawer_gap_adv_ui" style="display: none;">
+          <div class="form-group"><label for="drawer_gap_left">Hở trái</label><input type="number" step="0.5" id="drawer_gap_left" value="0"></div>
+          <div class="form-group"><label for="drawer_gap_right">Hở phải</label><input type="number" step="0.5" id="drawer_gap_right" value="0"></div>
+          <div class="form-group"><label for="drawer_gap_top">Hở trên</label><input type="number" step="0.5" id="drawer_gap_top" value="0"></div>
+          <div class="form-group"><label for="drawer_gap_bottom">Hở dưới</label><input type="number" step="0.5" id="drawer_gap_bottom" value="0"></div>
+        </div>
+        <input type="hidden" id="drawer_gap" value="25">
+      </div><details class="advanced" id="drawer_rail_details"><summary>Xà chặn / che khe mặt hộc</summary><div class="checkbox-row" id="group_drawer_backing_rail" style="display: none; margin: 6px 0;">
+        <input type="checkbox" id="drawer_backing_rail" onchange="onDrawerBackingRailChange()">
+        <label for="drawer_backing_rail">Xà che/chặn khe mặt ngăn kéo</label>
+      </div><div class="form-group" id="group_drawer_backing_rail_h" style="display: none;">
+        <label for="drawer_backing_rail_h">Cao xà che (mm)</label>
+        <input type="number" step="1" min="1" id="drawer_backing_rail_h" value="60">
+      </div><div id="drawer_backing_hint" style="display:none; font-size:9px; color:var(--text-secondary); margin:-2px 0 8px 0; line-height:1.35;">
+        Tay móc âm/vát 45°: thường đặt khe giữa 20–25 mm; xà sẽ tự căn tâm phía sau đúng khe thực tế.
+      </div></details><div class="form-group"><label for="drawer_backing_rail_joinery">Liên kết xà chặn ngăn kéo</label><select id="drawer_backing_rail_joinery"><option value="Hồi giữa">Chỉ chặn hồi giữa</option><option value="Khấu hông">Khấu hông</option></select></div><div class="checkbox-row"><input type="checkbox" id="drawer_bevel"><label for="drawer_bevel">Móc tay mặt hộc · vát 45°</label></div><div class="form-group"><label for="drawer_bevel_lip">Mép giữ lại mặt hộc (mm)</label><input type="number" id="drawer_bevel_lip" value="2" min="0.5" step="0.5"></div></div><div id="sub_drawers_box" data-subpanel="drawers" hidden=""><div class="form-group"><label for="drawer_bottom_mode">Kiểu đáy hộc</label><select id="drawer_bottom_mode"><option>Âm hai bên</option><option>Âm bốn phía</option><option>Phủ dưới</option></select></div><section class="settings-section"><h3>Kết cấu và khoảng hở</h3><div class="form-group" id="group_drawer_ray_space" style="display: none; margin-top: 8px;">
+        <label for="drawer_ray_space">Hở ray mỗi bên (mm)</label>
+        <input type="number" step="0.1" min="0" id="drawer_ray_space" value="13">
+      </div><div class="form-group" id="group_drawer_back_clearance" style="display: none;">
+        <label for="drawer_back_clearance">Hở sau thùng NK (mm)</label>
+        <input type="number" step="1" min="0" id="drawer_back_clearance" value="20">
+      </div><div class="form-group" id="group_drawer_box_bottom_lift" style="display: none;">
+        <label for="drawer_box_bottom_lift">Hở thùng phía dưới (mm)</label>
+        <input type="number" step="1" min="0" id="drawer_box_bottom_lift" value="10">
+      </div><div class="form-group" id="group_drawer_box_top_clearance" style="display: none;">
+        <label for="drawer_box_top_clearance">Hở thùng phía trên (mm)</label>
+        <input type="number" step="1" min="0" id="drawer_box_top_clearance" value="13">
+      </div><div class="form-group" id="group_drawer_bottom_offset" style="display: none;">
+        <label for="drawer_bottom_offset">Âm đáy thùng NK (mm)</label>
+        <input type="number" step="1" min="0" id="drawer_bottom_offset" value="10">
+      </div><div class="form-group" id="group_drawer_box_t" style="display: none;">
+        <label for="drawer_box_t">Dày vách NK (0 = theo tủ)</label>
+        <input type="number" step="0.5" min="0" id="drawer_box_t" value="0">
+      </div><div class="form-group" id="group_drawer_bottom_t" style="display: none;">
+        <label for="drawer_bottom_t">Dày đáy NK (mm)</label>
+        <input type="number" step="0.5" min="1" id="drawer_bottom_t" value="6">
+      </div></section></div></div></div></section><section id="page_description" class="menu-page" hidden=""><h2>Dựng từ mô tả</h2>
+<p>Gửi ảnh và rộng × sâu × cao mong muốn cho ChatGPT cùng hướng dẫn bên dưới. Dán khối JSON trả về, không dán phần giải thích. Không cần API key.</p>
+<p>Beta 2 dùng cấu tạo hiện có. Các module dùng chung thiết lập cánh, đợt và hộc; chưa hỗ trợ mỗi module một cấu tạo khác nhau.</p>
+<div class="description-actions"><button type="button" class="btn-secondary" onclick="showDescriptionPrompt()">Hướng dẫn cho ChatGPT</button><button type="button" class="btn-secondary" onclick="insertDescriptionExample()">Nạp ví dụ</button></div>
+<details id="description_prompt_box" class="advanced"><summary>Hướng dẫn · chọn toàn bộ và copy</summary><textarea id="description_prompt" readonly="" aria-label="Hướng dẫn cho ChatGPT"></textarea></details>
+<label for="description_text">Khối cấu hình JSON</label><textarea id="description_text" spellcheck="false" placeholder="Dán khối VGD_CABINET_DESCRIPTION…" oninput="invalidateDescriptionPreview()"></textarea>
+<div class="description-actions"><button type="button" id="btn_description_check" onclick="checkDescription()">Kiểm tra</button><button type="button" id="btn_description_apply" onclick="applyDescription()" disabled="">Áp dụng cho tủ mới</button><button type="button" id="btn_description_partial" onclick="applyDescription(true)" hidden="" disabled="">Dựng phần được hỗ trợ</button></div>
+<div id="description_review" role="status" aria-live="polite"></div>
+<button type="button" id="btn_description_leave" class="btn-secondary" onclick="returnToSelectedCabinet()" hidden="">Trở lại tủ đang chọn</button>
+<p>Nhập chỉ đổi bản nháp. Không tự dựng, không cập nhật tủ đang chọn, không tự lưu mẫu. Kiểm tra các giá trị ước lượng trước khi bấm Đặt tủ mới.</p></section><section id="page_library" class="menu-page" hidden=""><h2>Thư viện tủ</h2>
+<p>Lưu tủ đang chọn, gồm cả các chi tiết đã sửa thủ công. Mẫu được giữ trên máy để chọn và đặt lại sau.</p>
+<section class="settings-section"><h3>Lưu tủ đang chọn</h3>
+<label for="library_name">Tên mẫu tủ</label><input type="text" id="library_name" data-library-control="" maxlength="80" placeholder="Ví dụ: Tủ áo phòng ngủ">
+<div class="description-actions"><button type="button" id="btn_library_save" onclick="saveLibrary(false)" disabled="">Lưu mẫu mới</button><button type="button" id="btn_library_replace" class="btn-secondary" onclick="saveLibrary(true)" disabled="">Cập nhật mẫu đã chọn</button></div></section>
+<label for="library_search">Tìm mẫu</label><input type="search" id="library_search" data-library-control="" placeholder="Nhập tên mẫu" oninput="renderLibrary()">
+<div id="library_list" class="library-list" aria-label="Các mẫu tủ"></div><p id="library_empty" role="status">Chưa có mẫu. Chọn một tủ trong model rồi lưu mẫu mới.</p>
+<section id="library_detail" class="settings-section" hidden=""><h3 id="library_title"></h3><img id="library_thumbnail" alt="Hình mẫu tủ đã lưu" hidden=""><p id="library_dimensions"></p>
+<button type="button" onclick="placeLibrary()">Đặt tủ từ Thư viện</button>
+<div class="description-actions"><button type="button" class="btn-secondary" onclick="renameLibrary()">Đổi tên theo ô nhập</button><button type="button" class="btn-secondary" onclick="deleteLibrary()">Xóa khỏi danh sách</button></div></section>
+<button type="button" class="btn-secondary" onclick="refreshLibrary()">Nạp lại danh sách</button></section></main></div><footer class="fixed-actions"><div id="model_status" role="status">Chọn mẫu hoặc nhập kích thước rồi đặt tủ mới.</div><div class="checkbox-row"><input id="live_update" type="checkbox"><label for="live_update">Tự xem trước khi đổi thông số</label></div><div class="action-bar"><button class="btn-tool" onclick="placeCabinet()" id="btn_place">Đặt tủ mới</button><button class="btn-tool" onclick="drawToolCabinet()">Vẽ 3 điểm</button><button class="btn-tool" onclick="boxToCabinet()">Hộp → Tủ</button><button class="btn-update" id="btn_update" onclick="updateCabinet(true)" disabled="">Xem trước cập nhật</button></div></footer><script>// Menu navigation never sends modeling callbacks or changes parameter values.
+function selectPage(name) {
+  var page=document.getElementById('page_'+name);if(!page)return;
+  document.querySelectorAll('.menu-page').forEach(function(p){p.hidden=p!==page;});
+  document.querySelectorAll('[data-page]').forEach(function(b){if(b.dataset.page===name)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
+  document.getElementById('settings_content').scrollTop=0;
+  try{localStorage.setItem('vgd_menu_page',name);}catch(e){}
+}
+function selectSubpage(group,name) {
+  var page=document.getElementById('sub_'+group+'_'+name);if(!page)return;
+  document.querySelectorAll('[data-subpanel="'+group+'"]').forEach(function(p){p.hidden=p!==page;});
+  document.querySelectorAll('[data-subgroup="'+group+'"]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.subtab===name));});
+  document.getElementById('settings_content').scrollTop=0;
+}
+function setThemeButton(theme) {
+  var button=document.getElementById('btn_theme'),icon=document.getElementById('theme_icon');
+  if(!button||!icon)return;
+  var target=theme==='dark'?'light':'dark';
+  button.title='Chuyển sang giao diện '+(target==='light'?'sáng':'tối');
+  button.setAttribute('aria-label',button.title);
+  icon.innerHTML=theme==='dark'
+    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>'
+    : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.1A8.4 8.4 0 0 1 8.9 3.8 8.5 8.5 0 1 0 20.2 15.1Z"/></svg>';
+}
+function refreshContextUI() {
+  var byId=function(id){return document.getElementById(id);};
+  var showRow=function(id,yes){var e=byId(id);if(e)e.closest('.form-group').hidden=!yes;};
+  var mode=byId('back_mode').value;
+  showRow('t_back',mode!=='Không');showRow('back_recess',mode==='Âm');
+  byId('back_groove_auto').closest('.checkbox-row').hidden=mode!=='Âm';
+  showRow('back_groove_depth',mode==='Âm'&&!byId('back_groove_auto').checked);
+  var independent=byId('module_mode').value==='Độc lập';
+  showRow('module_widths',independent);showRow('module_target_w',independent&&byId('module_widths').value.trim()==='');
+  byId('module_hint').hidden=!independent;
+  showRow('curve_w',byId('opt_left_side').value==='Bo Cong'||byId('opt_right_side').value==='Bo Cong');
+  showRow('bevel_lip',byId('front_bevel').checked);showRow('door_stop_rail_h',byId('door_stop_rail').checked);
+  showRow('drawer_bevel_lip',byId('drawer_bevel').checked);
+  byId('door_fields').hidden=byId('opt_door').value==='Không Cánh';
+  var glass=byId('door_style').value==='Kính khung kim loại'&&byId('opt_door').value!=='Không Cánh';
+  document.querySelector('[data-subgroup="doors"][data-subtab="glass"]').hidden=!glass;
+  if(!glass&&!byId('sub_doors_glass').hidden)selectSubpage('doors','front');
+  var pano=['Pano khung gỗ','Shaker'].includes(byId('door_style').value)&&byId('opt_door').value!=='Không Cánh';
+  document.querySelector('[data-subgroup="doors"][data-subtab="pano"]').hidden=!pano;
+  if(!pano&&!byId('sub_doors_pano').hidden)selectSubpage('doors','front');
+  var special=['Cánh soi','Cánh soi vát 4 cạnh','Cánh kính bo góc'].includes(byId('door_style').value)&&byId('opt_door').value!=='Không Cánh';
+  document.querySelector('[data-subgroup="doors"][data-subtab="special"]').hidden=!special;
+  if(!special&&!byId('sub_doors_special').hidden)selectSubpage('doors','front');
+  document.querySelectorAll('[data-profile]').forEach(function(row){var key=row.getAttribute('data-profile');row.hidden=!(special&&((key==='carved'&&byId('door_style').value==='Cánh soi')||(key==='bevel'&&byId('door_style').value==='Cánh soi vát 4 cạnh')||(key==='glass'&&byId('door_style').value==='Cánh kính bo góc')));});
+  byId('wood_glass_type').closest('.form-group').hidden=!(special&&byId('door_style').value==='Cánh kính bo góc');
+  showRow('pano_mid_rail',Number(byId('pano_panel_count').value)>1);
+  showRow('pano_panel_count',pano);
+  showRow('shaker_recess',byId('door_style').value==='Shaker');
+  var woodGlass=special&&byId('door_style').value==='Cánh kính bo góc';
+  var framed=glass||pano||woodGlass;
+  document.querySelector('[data-subgroup="doors"][data-subtab="division"]').hidden=!framed;
+  if(!framed&&!byId('sub_doors_division').hidden)selectSubpage('doors','front');
+  showRow('frame_joint',framed);
+  var glassPanels=glass||woodGlass;
+  showRow('frame_division',glassPanels);
+  showRow('frame_sections',glassPanels&&['Ngang','Dọc'].includes(byId('frame_division').value));
+  showRow('frame_bar_width',glassPanels&&byId('frame_division').value!=='Không chia');
+  if(byId('btn_library_save'))byId('btn_library_save').disabled=!selectedPid;
+  if(byId('btn_library_replace'))byId('btn_library_replace').disabled=!selectedPid||!selectedLibrary;
+  showRow('max_door_w',byId('auto_door_count').checked);
+  byId('drawer_fields').hidden=byId('opt_drawer').value==='Không';
+  var frame=byId('opt_drawer').value==='Âm';
+  document.querySelector('[data-subgroup="drawers"][data-subtab="frame"]').hidden=!frame;
+  if(!frame&&!byId('sub_drawers_frame').hidden)selectSubpage('drawers','layout');
+  showRow('drawer_frame_stop_rail_h',byId('drawer_frame_stop_rail').checked);
+  showRow('drawer_frame_stop_rail_drop',byId('drawer_frame_stop_rail').checked);
+  showRow('drawer_bottom_offset',byId('drawer_bottom_mode').value!=='Phủ dưới');
+  showRow('shelf_type',Number(byId('shelf_count').value)>0);
+  showRow('shelf_side_clearance',Number(byId('shelf_count').value)>0);
+  showRow('shelf_front_setback',Number(byId('shelf_count').value)>0);
+  byId('size_summary').textContent=['w','d','h'].map(function(id){return byId(id).value||'—';}).join(' × ')+' mm';
+}
+function initMenu() {
+  var saved='general';try{saved=localStorage.getItem('vgd_menu_page')||saved;}catch(e){}
+  selectPage(document.getElementById('page_'+saved)?saved:'general');
+  selectSubpage('frame','sides');selectSubpage('compartments','dividers');selectSubpage('doors','front');selectSubpage('drawers','layout');
+  document.addEventListener('input',refreshContextUI);document.addEventListener('change',refreshContextUI);
+  refreshContextUI();
+}
+function chooseFrameDivision(name){
+  var field=document.getElementById('frame_division');field.value=name;document.getElementById('pano_panel_count').value=1;
+  field.dispatchEvent(new Event('change',{bubbles:true}));refreshContextUI();
+}
+var libraryItems=[],selectedLibrary=null;
+function receiveLibrary(items){libraryItems=Array.isArray(items)?items:[];if(!libraryItems.some(function(item){return item.name===selectedLibrary;}))selectedLibrary=null;renderLibrary();}
+function renderLibrary(){
+  var list=document.getElementById('library_list');list.replaceChildren();
+  var search=document.getElementById('library_search').value.toLocaleLowerCase();
+  var filtered=libraryItems.filter(function(item){return item.name.toLocaleLowerCase().includes(search);});
+  filtered.forEach(function(item){
+    var button=document.createElement('button');button.type='button';button.className='library-item';button.setAttribute('aria-pressed',String(item.name===selectedLibrary));
+    var name=document.createElement('strong');name.textContent=item.name;button.appendChild(name);
+    var size=document.createElement('span');size.textContent=(item.dimensions||[]).join(' × ')+' mm';button.appendChild(size);
+    button.onclick=function(){selectLibrary(item.name);};list.appendChild(button);
+  });
+  var empty=document.getElementById('library_empty');empty.hidden=filtered.length>0;
+  empty.textContent=libraryItems.length?'Không tìm thấy mẫu phù hợp.':'Chưa có mẫu. Chọn một tủ trong model rồi lưu mẫu mới.';
+  var item=libraryItems.find(function(value){return value.name===selectedLibrary;});
+  document.getElementById('library_detail').hidden=!item;
+  if(item){document.getElementById('library_title').textContent=item.name;document.getElementById('library_dimensions').textContent=item.dimensions.join(' × ')+' mm · VGD '+item.version;}
+  refreshContextUI();
+}
+function selectLibrary(name){
+  if(!libraryItems.some(function(item){return item.name===name;}))return;
+  selectedLibrary=name;document.getElementById('library_name').value=name;
+  document.getElementById('library_thumbnail').hidden=true;renderLibrary();
+  if(window.sketchup)window.sketchup.library_preview(name);
+}
+function receiveLibraryPreview(name,image){if(name!==selectedLibrary)return;var e=document.getElementById('library_thumbnail');e.hidden=!image;if(image)e.src=image;}
+function saveLibrary(replace){
+  var name=replace?selectedLibrary:document.getElementById('library_name').value.trim();
+  if(!selectedPid||!name){showModelStatus('Chọn tủ đã vẽ và nhập tên mẫu.',true);return;}
+  if(updateTimer){clearTimeout(updateTimer);updateTimer=null;}
+  if(window.sketchup)window.sketchup.save_library({name:name,replace:replace===true,__target_pid:selectedPid,__model_guid:selectedModel});
+}
+function placeLibrary(){if(selectedLibrary&&window.sketchup){if(updateTimer){clearTimeout(updateTimer);updateTimer=null;}window.sketchup.place_library(selectedLibrary);}}
+function renameLibrary(){var name=document.getElementById('library_name').value.trim();if(selectedLibrary&&name&&window.sketchup)window.sketchup.rename_library({name:name,source_name:selectedLibrary});}
+function deleteLibrary(){if(selectedLibrary&&window.sketchup)window.sketchup.delete_library(selectedLibrary);}
+function refreshLibrary(){if(window.sketchup)window.sketchup.refresh_library();}
+function boxToCabinet(){if(updateTimer){clearTimeout(updateTimer);updateTimer=null;}if(window.sketchup)window.sketchup.box_to_cabinet(getFormData());}
+function batchFrontSettings(){if(updateTimer){clearTimeout(updateTimer);updateTimer=null;}if(window.sketchup){window.sketchup.batch_front_settings(getFormData());showModelStatus('Đang xem trước cấu hình cánh / hộc cho các tủ đã chọn. Enter áp dụng cả lô; Esc hủy.',false);}}
+function presetGroupAction(action){
+  var group=document.getElementById('preset_group_select').value;
+  var name=document.getElementById('preset_group_name').value.trim();
+  var preset=document.getElementById('preset_select').value;
+  if(action==='delete'){
+    name=group;
+    if(!name||name==='Chưa phân nhóm'){showModelStatus('Không thể xóa nhóm Chưa phân nhóm.',true);return;}
+    if(!window.confirm('Xóa nhóm "'+name+'"? Các preset sẽ chuyển về Chưa phân nhóm.'))return;
+  }else if(action==='rename'&&!group){showModelStatus('Chọn nhóm cần đổi tên.',true);return;}
+  else if(!name){showModelStatus('Nhập tên nhóm.',true);return;}
+  if(window.sketchup)window.sketchup.preset_group({action:action,name:name,source_name:action==='rename'?group:null,group:name,preset_name:preset||null});
+}
+function assignPresetGroup(){
+  var preset=document.getElementById('preset_select').value,group=document.getElementById('preset_group_select').value;
+  if(!preset||!group){showModelStatus('Chọn mẫu và nhóm trước khi chuyển.',true);return;}
+  if(window.sketchup)window.sketchup.preset_group({action:'assign',preset_name:preset,group:group,name:group});
+}
+
+var descriptionContract=null, descriptionRequestId=0, descriptionPreview=null, descriptionDraftParams=null;
+function receiveDescriptionContract(contract) { descriptionContract=contract; }
+function invalidateDescriptionPreview() {
+  descriptionRequestId++;descriptionPreview=null;
+  document.getElementById('btn_description_apply').disabled=true;
+  document.getElementById('btn_description_partial').disabled=true;
+  document.getElementById('btn_description_partial').hidden=true;
+  document.getElementById('description_review').textContent='Chưa kiểm tra / nội dung đã thay đổi.';
+}
+function insertDescriptionExample() {
+  if(!descriptionContract){showModelStatus('Đợi plugin nạp hướng dẫn.',true);return;}
+  document.getElementById('description_text').value=JSON.stringify(descriptionContract.example,null,2);
+  invalidateDescriptionPreview();
+}
+function showDescriptionPrompt() {
+  if(!descriptionContract){showModelStatus('Đợi plugin nạp hướng dẫn.',true);return;}
+  var text='Phân tích ảnh tủ để dựng bằng VGD_Cabinet 4.5 beta 1. Hỏi tôi rộng/sâu/cao mong muốn nếu chưa có; không đo kích thước thật từ ảnh không có tỷ lệ. Chỉ xuất một khối JSON theo mẫu bên dưới, đơn vị mm. parameters chỉ dùng các tên trong danh sách mặc định; giữ đúng kiểu dữ liệu và giá trị lựa chọn. Không xuất mã Ruby/JavaScript. Các thông số không xác định có thể bỏ để plugin dùng mặc định, trừ w,d,h bắt buộc. Ghi giả định vào assumptions; tên thông số ước lượng có trong parameters vào estimated_fields. Cấu tạo chưa hỗ trợ ghi vào unsupported_features, không âm thầm lược bỏ. Các module chỉ khác rộng, dùng chung cấu hình cánh/đợt/hộc; không có modules dạng cây hay cấu hình riêng từng khoang. door_count là số cánh của từng module, drawer_count là số tầng mỗi cụm; không phải tổng cả tủ. Với số cánh/vách hoặc tầng đã chỉ định, không bật tự động tương ứng. Móc tay cánh front_bevel và móc tay hộc drawer_bevel độc lập. Kích thước phủ bì gồm cánh/hậu, cao gồm chân/nẹp.\n\nMẪU:\n'+JSON.stringify(descriptionContract.example,null,2)+'\n\nTHÔNG SỐ MẶC ĐỊNH (không phải số đo từ ảnh):\n'+JSON.stringify(descriptionContract.defaults,null,2)+'\n\nGIÁ TRỊ LỰA CHỌN HỢP LỆ:\n'+JSON.stringify(descriptionContract.enums,null,2);
+  var box=document.getElementById('description_prompt_box'),area=document.getElementById('description_prompt');
+  area.value=text;box.open=true;area.focus();area.select();
+}
+function checkDescription() {
+  invalidateDescriptionPreview();
+  document.getElementById('description_review').textContent='Đang kiểm tra…';
+  if(window.sketchup)window.sketchup.preview_description({text:document.getElementById('description_text').value,request_id:descriptionRequestId});
+}
+function receiveDescriptionPreview(id,result) {
+  if(id!==descriptionRequestId)return; // Ignore late replies after edits/new requests.
+  descriptionPreview=result;
+  var review=document.getElementById('description_review');review.replaceChildren();
+  function line(text){var p=document.createElement('p');p.textContent=text;review.appendChild(p);}
+  if(result.error){line(result.error);return;}
+  line(result.summary);
+  (result.module_summary||[]).forEach(function(s,i){line('Module '+(i+1)+': '+s);});
+  line('Ước lượng: '+(result.estimated_fields.join(', ')||'không khai báo'));
+  result.assumptions.forEach(function(s){line('Giả định: '+s);});
+  (result.adjustments||[]).forEach(function(s){line('Quy tắc bộ dựng: '+s);});
+  result.unsupported_features.forEach(function(s){line('Chưa hỗ trợ — sẽ bỏ qua nếu dựng cơ bản: '+s);});
+  if(result.can_apply_partial)line('Có thể dựng phần cơ bản sau khi xác nhận bỏ qua. Kích thước w/d/h dùng nguyên cho tủ cơ bản, không tự trừ kệ bên hoặc chừa phần chưa hỗ trợ.');
+  var details=document.createElement('details'),summary=document.createElement('summary');
+  summary.textContent='Thông số không khai báo · mặc định/quy tắc ('+result.defaulted_fields.length+')';details.appendChild(summary);
+  var pre=document.createElement('pre');pre.textContent=result.defaulted_fields.map(function(k){return k+': '+result.parameters[k];}).join('\n');details.appendChild(pre);review.appendChild(details);
+  var all=document.createElement('details'),title=document.createElement('summary'),values=document.createElement('pre');
+  title.textContent='Toàn bộ cấu hình đã kiểm tra';values.textContent=JSON.stringify(result.parameters,null,2);
+  all.appendChild(title);all.appendChild(values);review.appendChild(all);
+  document.getElementById('btn_description_apply').disabled=!result.can_apply;
+  document.getElementById('btn_description_partial').hidden=!result.can_apply_partial;
+  document.getElementById('btn_description_partial').disabled=!result.can_apply_partial;
+}
+function applyDescription(partial) {
+  if(!descriptionPreview)return;
+  var data={text:document.getElementById('description_text').value,request_id:descriptionRequestId};
+  if(partial===true){
+    if(!descriptionPreview.can_apply_partial)return;
+    var message='DỰNG PHẦN CƠ BẢN, KHÔNG DỰNG ĐẦY ĐỦ MẪU ẢNH\n\n'+descriptionPreview.summary+'\n'+descriptionPreview.module_summary.join('\n')+'\n\nBỎ QUA:\n'+descriptionPreview.unsupported_features.map(function(s,i){return (i+1)+'. '+s;}).join('\n')+'\n\nDùng nguyên kích thước đã nhập cho tủ cơ bản. KHÔNG tự trừ chiều rộng kệ bên hoặc chừa phần chưa hỗ trợ. Kiểm tra/sửa kích thước trong bảng trước khi Đặt tủ mới.\n\nĐồng ý bỏ qua các mục trên và nạp bản nháp?';
+    if(!window.confirm(message))return;
+    data.allow_partial=true;data.acknowledged_features=descriptionPreview.unsupported_features.slice();
+  }else if(!descriptionPreview.can_apply)return;
+  document.getElementById('btn_description_apply').disabled=true;
+  document.getElementById('btn_description_partial').disabled=true;
+  if(window.sketchup)window.sketchup.apply_description(data);
+}
+function applyDescriptionDraft(params,omittedFeatures) {
+  if(updateTimer){clearTimeout(updateTimer);updateTimer=null;}
+  descriptionDraftParams=params;setSelectedCabinet(null);selectedModel=null;
+  updateFormFromRuby(params);
+  // Legacy auto-door UI calculates against total width, not each independent module.
+  // Keep the validated values; geometry resolves automatic rules per module at placement.
+  Object.keys(params).forEach(function(k){var e=document.getElementById(k);if(e){if(e.type==='checkbox')e.checked=params[k];else e.value=params[k];}});
+  refreshContextUI();
+  document.getElementById('preset_select').value='';
+  document.getElementById('live_update').checked=false;
+  var partial=Array.isArray(omittedFeatures)&&omittedFeatures.length>0;
+  document.getElementById('selection_mode').textContent=partial?'Tủ cơ bản từ mô tả':'Tủ mới từ mô tả';
+  var notice=document.getElementById('description_draft_notice');notice.hidden=!partial;
+  notice.textContent=partial?'Dựng cơ bản · bỏ qua '+omittedFeatures.length+' chi tiết. Kích thước dùng nguyên, không tự chừa kệ bên. Xem danh sách trong Dựng từ mô tả; kiểm tra thông số trước khi đặt.':'';
+  document.getElementById('btn_description_leave').hidden=false;
+  showModelStatus('Đã nạp bản nháp. Kiểm tra thông số rồi bấm Đặt tủ mới; chưa thay đổi model.',false);
+  selectPage('general');
+}
+function leaveDescriptionDraft() {
+  descriptionDraftParams=null;
+  document.getElementById('description_draft_notice').hidden=true;
+  document.getElementById('btn_description_leave').hidden=true;
+}
+function returnToSelectedCabinet() {
+  if(updateTimer){clearTimeout(updateTimer);updateTimer=null;}
+  if(window.sketchup)window.sketchup.leave_description_draft(null);
+}
+    var currentPresets = JSON.parse(#{presets_json});
+    var currentPresetGroups=['Chưa phân nhóm'];
+    var currentPresetGroupMap={};
+    var initialParams = JSON.parse(#{initial_json});
+    var isUpdatingFromRuby = false;
+    var lastRubySyncTime = 0;
+    var updateTimer = null;
+    var selectedPid = null;
+    var selectedModel = null;
+    function showModelStatus(text, error) {
+      var el = document.getElementById('model_status');
+      el.textContent = text; el.style.color = error ? 'var(--vgd-danger)' : '';
+    }
+    function setSelectedCabinet(pid) {
+      selectedPid = pid || null;
+      if (updateTimer) { clearTimeout(updateTimer); updateTimer = null; }
+      document.getElementById('btn_update').disabled = !selectedPid;
+      document.getElementById('selection_mode').textContent = selectedPid ? 'Đang sửa tủ đã chọn' : 'Tạo tủ mới';
+      refreshContextUI();
+      showModelStatus(selectedPid ? 'Đã chọn tủ VGD. Nhập thông số rồi bấm CẬP NHẬT TỦ.' : 'Chưa chọn tủ. Dùng ĐẶT TỦ MỚI hoặc VẼ 3 ĐIỂM.', false);
+    }
+    function placeCabinet() {
+      if (updateTimer) clearTimeout(updateTimer);
+      if (window.sketchup) window.sketchup.create_cabinet(getFormData());
+    }
+    var defaultParams = JSON.parse(#{default_json});
+    defaultParams.t = 17.5;
+    defaultParams.auto_door_count = true;
+    defaultParams.drawer_h = 600;
+    defaultParams.drawer_count = 2;
+    defaultParams.door_gap = 0;
+    defaultParams.drawer_gap = 25;
+    defaultParams.door_gap_outer = 0;
+    defaultParams.door_gap_left = 0;
+    defaultParams.door_gap_right = 0;
+    defaultParams.door_gap_top = 0;
+    defaultParams.door_gap_bottom = 0;
+    defaultParams.door_gap_between = 0;
+    defaultParams.drawer_gap_outer = 0;
+    defaultParams.drawer_gap_left = 0;
+    defaultParams.drawer_gap_right = 0;
+    defaultParams.drawer_gap_top = 0;
+    defaultParams.drawer_gap_bottom = 0;
+    defaultParams.drawer_gap_between = 25;
+    defaultParams.door_gap_advanced = false;
+    defaultParams.drawer_gap_advanced = false;
+    defaultParams.auto_divider_wide = (defaultParams.auto_divider_wide !== false);
+    defaultParams.max_compartment_w = defaultParams.max_compartment_w || 1200;
+    defaultParams.auto_overheight = (defaultParams.auto_overheight !== false);
+    defaultParams.max_panel_h = defaultParams.max_panel_h || 2400;
+    defaultParams.shelf_type = defaultParams.shelf_type || 'Cố Định';
+    defaultParams.shelf_side_clearance = 1.6;
+    defaultParams.shelf_front_setback = (defaultParams.shelf_front_setback !== undefined) ? defaultParams.shelf_front_setback : 25;
+    defaultParams.drawer_back_clearance = 20;
+    defaultParams.drawer_inner_offset = (defaultParams.drawer_inner_offset !== undefined) ? defaultParams.drawer_inner_offset : 50;
+    defaultParams.drawer_hinge_sp = (defaultParams.drawer_hinge_sp !== undefined) ? defaultParams.drawer_hinge_sp : 50;
+    defaultParams.drawer_backing_rail = (defaultParams.drawer_backing_rail === true);
+    defaultParams.drawer_backing_rail_h = defaultParams.drawer_backing_rail_h || 60;
+    defaultParams.drawer_bottom_offset = 10;
+    defaultParams.drawer_box_t = 0;
+    defaultParams.drawer_bottom_t = 6;
+
+    function toggleDoorGapAdv() {
+      var check = document.getElementById('door_gap_advanced');
+      if (check) {
+        check.checked = !check.checked;
+        renderDoorGapUI();
+        debouncedUpdateCabinet();
+      }
+    }
+
+    function renderDoorGapUI() {
+      var check = document.getElementById('door_gap_advanced');
+      var isAdv = check ? check.checked : false;
+      if (document.getElementById('door_gap_simple_ui')) document.getElementById('door_gap_simple_ui').style.display = isAdv ? 'none' : 'block';
+      if (document.getElementById('door_gap_adv_ui')) document.getElementById('door_gap_adv_ui').style.display = isAdv ? 'block' : 'none';
+      var btn = document.getElementById('btn_toggle_door_adv');
+      if (btn) btn.textContent = isAdv ? '⚡ RÚT GỌN' : '⚙ CHI TIẾT';
+    }
+
+    function syncDoorOuter(val) {
+      var v = parseFloat(val) || 0;
+      if (document.getElementById('door_gap_left')) document.getElementById('door_gap_left').value = v;
+      if (document.getElementById('door_gap_right')) document.getElementById('door_gap_right').value = v;
+      if (document.getElementById('door_gap_bottom')) document.getElementById('door_gap_bottom').value = v;
+    }
+
+    function syncDoorBetween(val) {
+      var v = parseFloat(val) || 0;
+      if (document.getElementById('door_gap')) document.getElementById('door_gap').value = v;
+    }
+
+    function onShelfTypeChange() {
+      var typeEl = document.getElementById('shelf_type');
+      var adjustable = typeEl && typeEl.value === 'Di Động';
+      var sideEl = document.getElementById('group_shelf_side_clearance');
+      var depthEl = document.getElementById('group_shelf_front_setback');
+      if (sideEl) sideEl.style.display = adjustable ? 'flex' : 'none';
+      if (depthEl) depthEl.style.display = adjustable ? 'flex' : 'none';
+      debouncedUpdateCabinet();
+    }
+
+    function toggleDrawerGapAdv() {
+      var check = document.getElementById('drawer_gap_advanced');
+      if (check) {
+        check.checked = !check.checked;
+        renderDrawerGapUI();
+        debouncedUpdateCabinet();
+      }
+    }
+
+    function renderDrawerGapUI() {
+      var check = document.getElementById('drawer_gap_advanced');
+      var isAdv = check ? check.checked : false;
+      if (document.getElementById('drawer_gap_simple_ui')) document.getElementById('drawer_gap_simple_ui').style.display = isAdv ? 'none' : 'block';
+      if (document.getElementById('drawer_gap_adv_ui')) document.getElementById('drawer_gap_adv_ui').style.display = isAdv ? 'block' : 'none';
+      var btn = document.getElementById('btn_toggle_drawer_adv');
+      if (btn) btn.textContent = isAdv ? '⚡ RÚT GỌN' : '⚙ CHI TIẾT';
+    }
+
+    function syncDrawerOuter(val) {
+      var v = parseFloat(val) || 0;
+      if (document.getElementById('drawer_gap_left')) document.getElementById('drawer_gap_left').value = v;
+      if (document.getElementById('drawer_gap_right')) document.getElementById('drawer_gap_right').value = v;
+      if (document.getElementById('drawer_gap_bottom')) document.getElementById('drawer_gap_bottom').value = v;
+    }
+
+    function syncDrawerBetween(val) {
+      var v = parseFloat(val) || 0;
+      if (document.getElementById('drawer_gap')) document.getElementById('drawer_gap').value = v;
+    }
+
+    function onDrawerBackingRailChange() {
+      var check = document.getElementById('drawer_backing_rail');
+      var show = !!(check && check.checked);
+      var hGroup = document.getElementById('group_drawer_backing_rail_h');
+      var hint = document.getElementById('drawer_backing_hint');
+      if (hGroup) hGroup.style.display = show ? 'flex' : 'none';
+      if (hint) hint.style.display = show ? 'block' : 'none';
+      debouncedUpdateCabinet();
+    }
+
+    document.addEventListener("focus", function(e) {
+      if (e.target && e.target.tagName === "INPUT" && typeof e.target.select === "function") {
+        e.target.select();
+      }
+    }, true);
+
+    function debouncedUpdateCabinet() {
+      if (!selectedPid || !document.getElementById('live_update').checked) return;
+      if (isUpdatingFromRuby || (Date.now() - lastRubySyncTime < 1000)) return;
+      if (updateTimer) clearTimeout(updateTimer);
+      updateTimer = setTimeout(function() { updateCabinet(false); }, 500);
+    }
+
+    function onDrawerChange() {
+      var optEl = document.getElementById('opt_drawer');
+      var fullEl = document.getElementById('is_full_drawer');
+      var isFull = fullEl ? fullEl.checked : false;
+
+      if (isFull && optEl && optEl.value === 'Không') {
+        optEl.value = 'Lộ';
+      }
+
+      var opt = optEl ? optEl.value : 'Không';
+      var show = (opt === 'Lộ' || opt === 'Âm') || isFull;
+      var showAm = (opt === 'Âm');
+
+      if (document.getElementById('group_is_full_drawer')) document.getElementById('group_is_full_drawer').style.display = 'flex';
+      if (document.getElementById('group_drawer_comp_pos')) document.getElementById('group_drawer_comp_pos').style.display = show ? 'flex' : 'none';
+      if (document.getElementById('group_drawer_h')) document.getElementById('group_drawer_h').style.display = (show && !isFull) ? 'flex' : 'none';
+      if (document.getElementById('group_drawer_count')) document.getElementById('group_drawer_count').style.display = show ? 'flex' : 'none';
+      if (document.getElementById('group_drawer_gap')) document.getElementById('group_drawer_gap').style.display = show ? 'block' : 'none';
+      if (document.getElementById('group_drawer_ray_space')) document.getElementById('group_drawer_ray_space').style.display = show ? 'flex' : 'none';
+      if (document.getElementById('group_drawer_back_clearance')) document.getElementById('group_drawer_back_clearance').style.display = show ? 'flex' : 'none';
+      if (document.getElementById('group_drawer_box_bottom_lift')) document.getElementById('group_drawer_box_bottom_lift').style.display = show ? 'flex' : 'none';
+      if (document.getElementById('group_drawer_box_top_clearance')) document.getElementById('group_drawer_box_top_clearance').style.display = show ? 'flex' : 'none';
+      if (document.getElementById('group_drawer_bottom_offset')) document.getElementById('group_drawer_bottom_offset').style.display = show ? 'flex' : 'none';
+      if (document.getElementById('group_drawer_box_t')) document.getElementById('group_drawer_box_t').style.display = show ? 'flex' : 'none';
+      if (document.getElementById('group_drawer_bottom_t')) document.getElementById('group_drawer_bottom_t').style.display = show ? 'flex' : 'none';
+      if (document.getElementById('group_drawer_inner_offset')) document.getElementById('group_drawer_inner_offset').style.display = showAm ? 'flex' : 'none';
+      if (document.getElementById('group_drawer_hinge_sp')) document.getElementById('group_drawer_hinge_sp').style.display = showAm ? 'flex' : 'none';
+      if (document.getElementById('drawer_hinge_sp_hint')) document.getElementById('drawer_hinge_sp_hint').style.display = showAm ? 'block' : 'none';
+      if (document.getElementById('group_drawer_backing_rail')) document.getElementById('group_drawer_backing_rail').style.display = show ? 'flex' : 'none';
+      onDrawerBackingRailChange();
+      debouncedUpdateCabinet();
+    }
+
+    function toggleOverheight() {
+      var isOver = document.getElementById('is_overheight').checked;
+      document.getElementById('overheight_fields').style.display = isOver ? 'block' : 'none';
+      if (isOver) syncHeightFromBot();
+      debouncedUpdateCabinet();
+    }
+
+    function getNumValue(id, defVal) {
+      var el = document.getElementById(id);
+      if (!el) return defVal;
+      var val = parseFloat(el.value);
+      return isNaN(val) ? defVal : val;
+    }
+
+    function getIntValue(id, defVal) {
+      var el = document.getElementById(id);
+      if (!el) return defVal;
+      var val = parseInt(el.value, 10);
+      return isNaN(val) ? defVal : val;
+    }
+
+    function onAutoDividerChange() {
+      var auto = document.getElementById('auto_divider_wide');
+      var group = document.getElementById('group_max_compartment_w');
+      if (group) group.style.display = (auto && auto.checked) ? 'flex' : 'none';
+      onDoorParamChange();
+      debouncedUpdateCabinet();
+    }
+
+    function onAutoOverheightChange() {
+      var auto = document.getElementById('auto_overheight');
+      var group = document.getElementById('group_max_panel_h');
+      if (group) group.style.display = (auto && auto.checked) ? 'flex' : 'none';
+      checkAutoOverheight();
+      debouncedUpdateCabinet();
+    }
+
+    function getEffectiveShadowGap() {
+      var topEl = document.getElementById('opt_top');
+      return (topEl && topEl.value === 'Đỉnh Lọt Hồi') ? Math.max(0, getNumValue('shadow_gap_h', 20)) : 0;
+    }
+
+    function resolveOverheightRuleJS() {
+      var hTot = Math.max(10, getNumValue('h', 2400));
+      var t = Math.max(1, getNumValue('t', 17.5));
+      var maxH = getNumValue('max_panel_h', 2400);
+      if (maxH <= 0) maxH = 2400;
+      var auto = document.getElementById('auto_overheight');
+      var requested = document.getElementById('is_overheight');
+      var isOver = !!(requested && requested.checked) || !!(auto && auto.checked && hTot > maxH);
+      if (!isOver) return { isOver: false, hBottom: null };
+
+      var topEl = document.getElementById('opt_top');
+      var botEl = document.getElementById('opt_bottom');
+      var topIsLot = !!(topEl && topEl.value === 'Đỉnh Lọt Hồi');
+      var botIsLot = !!(botEl && botEl.value === 'Đáy Lọt Hồi');
+      var shadow = topIsLot ? Math.max(0, getNumValue('shadow_gap_h', 20)) : 0;
+      var plinth = Math.max(0, getNumValue('plinth_h', 0));
+      var joinEl = document.getElementById('overheight_join');
+      var joinType = joinEl ? joinEl.value : 'Xà Dưới';
+      var zTop = Math.max(0, hTot - shadow);
+      var hBottom = getNumValue('h_bottom', Math.min(2100, maxH));
+      if (hBottom <= 0) hBottom = Math.min(2100, maxH);
+      var minModule = Math.max(100, t * 2 + 20);
+
+      if (zTop > minModule * 2) {
+        var lowerMin = minModule;
+        var lowerMax = zTop - minModule;
+        if (auto && auto.checked) {
+          var lowerHasTop = joinType !== 'Xà Dưới';
+          var upperHasBottom = joinType !== 'Xà Trên';
+          var lowerSideStart = botIsLot ? 0 : (plinth + t);
+          var lowerEndAdjust = (lowerHasTop && !topIsLot) ? t : 0;
+          var upperStartAdjust = (upperHasBottom && !botIsLot) ? t : 0;
+          var upperSideEnd = topIsLot ? hTot : (zTop - t);
+          var sheetLowerMin = upperSideEnd - upperStartAdjust - maxH;
+          var sheetLowerMax = maxH + lowerSideStart + lowerEndAdjust;
+          var candidateMin = Math.max(lowerMin, sheetLowerMin);
+          var candidateMax = Math.min(lowerMax, sheetLowerMax);
+          if (candidateMax >= candidateMin) { lowerMin = candidateMin; lowerMax = candidateMax; }
+        }
+        if (lowerMax >= lowerMin) hBottom = Math.min(lowerMax, Math.max(lowerMin, hBottom));
+      } else {
+        hBottom = zTop / 2;
+      }
+      return { isOver: true, hBottom: hBottom };
+    }
+
+    function checkAutoOverheight() {
+      var auto = document.getElementById('auto_overheight');
+      var overCheck = document.getElementById('is_overheight');
+      if (overCheck && auto && auto.checked) {
+        var rule = resolveOverheightRuleJS();
+        var shouldSplit = getNumValue('h', 2400) > Math.max(1, getNumValue('max_panel_h', 2400));
+        overCheck.checked = shouldSplit;
+        document.getElementById('overheight_fields').style.display = shouldSplit ? 'block' : 'none';
+        if (shouldSplit && rule.hBottom !== null) {
+          var botField = document.getElementById('h_bottom');
+          if (botField && botField !== document.activeElement) botField.value = Math.round(rule.hBottom * 10) / 10;
+        }
+      }
+      syncHeightFromBot();
+    }
+
+    function syncHeightFromBot() {
+      var hTot = getNumValue('h', 2400);
+      var shadow = getEffectiveShadowGap();
+      var hBot = getNumValue('h_bottom', 2100);
+      var hTop = Math.max(0, hTot - shadow - hBot);
+      var topField = document.getElementById('h_top');
+      if (topField && topField !== document.activeElement) topField.value = Math.round(hTop * 10) / 10;
+    }
+
+    function syncHeightFromTop() {
+      var hTot = getNumValue('h', 2400);
+      var shadow = getEffectiveShadowGap();
+      var hTop = getNumValue('h_top', 275);
+      var hBot = Math.max(0, hTot - shadow - hTop);
+      var botField = document.getElementById('h_bottom');
+      if (botField && botField !== document.activeElement) botField.value = Math.round(hBot * 10) / 10;
+    }
+
+    function toggleAutoDoor() {
+      var autoCheck = document.getElementById('auto_door_count');
+      if (autoCheck && autoCheck.checked) {
+        calcAutoDoor();
+      }
+    }
+
+    function calcRequiredStructuralDividers(w, t, leftW, rightW, maxCompW) {
+      var innerW = Math.max(1, w - leftW - rightW);
+      var n = 0;
+      while (n < 20) {
+        var clearW = (innerW - n * t) / (n + 1);
+        if (clearW <= maxCompW) break;
+        n++;
+      }
+      return n;
+    }
+
+    function calcAutoDoor() {
+      var w = getNumValue('w', 800);
+      var t = getNumValue('t', 17.5);
+      var curveW = getNumValue('curve_w', 100);
+      var maxW = getNumValue('max_door_w', 450);
+      var opt_door = document.getElementById('opt_door').value;
+      if (opt_door === 'Không Cánh') return;
+      var leftCurved = document.getElementById('opt_left_side') && document.getElementById('opt_left_side').value === 'Bo Cong';
+      var rightCurved = document.getElementById('opt_right_side') && document.getElementById('opt_right_side').value === 'Bo Cong';
+      var leftW = leftCurved ? curveW : t;
+      var rightW = rightCurved ? curveW : t;
+      var avail_w = w;
+      if (opt_door === 'Cánh Lọt Hồi' || opt_door === 'Cánh Lọt Lòng') {
+        avail_w = Math.max(1, w - leftW - rightW);
+      } else if (opt_door === 'Cánh Phủ Hồi Trái') {
+        avail_w = Math.max(1, w - rightW);
+      } else if (opt_door === 'Cánh Phủ Hồi Phải') {
+        avail_w = Math.max(1, w - leftW);
+      } else if (opt_door === 'Cánh Phủ toàn bộ') {
+        avail_w = Math.max(1, w - (leftCurved ? curveW : 0) - (rightCurved ? curveW : 0));
+      }
+      var autoCount = Math.max(1, Math.ceil(avail_w / maxW));
+      var autoDiv = autoCount <= 2 ? 0 : Math.floor((autoCount - 1) / 2);
+
+      var doorCountEl = document.getElementById('door_count');
+      if (doorCountEl && doorCountEl !== document.activeElement) doorCountEl.value = autoCount;
+      var divCountEl = document.getElementById('div_count');
+      if (divCountEl && divCountEl !== document.activeElement) {
+        var autoStructural = document.getElementById('auto_divider_wide');
+        var maxCompW = getNumValue('max_compartment_w', 1200);
+        var structuralDiv = (autoStructural && autoStructural.checked) ? calcRequiredStructuralDividers(w, t, leftW, rightW, maxCompW) : 0;
+        divCountEl.value = Math.max(autoDiv, structuralDiv);
+      }
+
+      var autoCheck = document.getElementById('auto_door_count');
+      if (autoCheck) autoCheck.checked = true;
+      debouncedUpdateCabinet();
+    }
+
+    function onTopChange() {
+      var topVal = document.getElementById('opt_top') ? document.getElementById('opt_top').value : '';
+      if (topVal === 'Đỉnh Phủ Hồi') {
+        var shadowEl = document.getElementById('shadow_gap_h');
+        if (shadowEl) shadowEl.value = 0;
+      }
+      onDoorParamChange();
+    }
+
+    function onDoorParamChange() {
+      var w = getNumValue('w', 800);
+      var t = getNumValue('t', 17.5);
+      var curveW = Math.max(t, getNumValue('curve_w', 100));
+      var leftCurved = document.getElementById('opt_left_side') && document.getElementById('opt_left_side').value === 'Bo Cong';
+      var rightCurved = document.getElementById('opt_right_side') && document.getElementById('opt_right_side').value === 'Bo Cong';
+      var leftW = leftCurved ? curveW : t;
+      var rightW = rightCurved ? curveW : t;
+      // div_count là số hồi giữa thủ công. Rule tự động được GeometryEngine tính khi preview/dựng,
+      // tránh việc tủ đã thu nhỏ vẫn giữ lại số hồi giữa do auto-rule cũ ghi vào form.
+      var autoCheck = document.getElementById('auto_door_count');
+      if (autoCheck && autoCheck.checked) calcAutoDoor();
+    }
+
+    function onManualDoorChange() {
+      var autoCheck = document.getElementById('auto_door_count');
+      if (autoCheck) autoCheck.checked = false;
+      debouncedUpdateCabinet();
+    }
+
+    function getFormData() {
+      var data = {
+        __target_pid: selectedPid,
+        __model_guid: selectedModel,
+        door_style: document.getElementById('door_style').value,
+        handle_split_v1: true,
+        drawer_bevel: document.getElementById('drawer_bevel').checked,
+        drawer_bevel_lip: getNumValue('drawer_bevel_lip',2),
+        frame_division: document.getElementById('frame_division').value,
+        frame_joint: document.getElementById('frame_joint').value,
+        frame_sections: getNumValue('frame_sections',2),
+        frame_bar_width: getNumValue('frame_bar_width',0),
+        shaker_recess: getNumValue('shaker_recess',6),
+        pano_stile_width: getNumValue('pano_stile_width',60),
+        pano_rail_width: getNumValue('pano_rail_width',60),
+        pano_depth: getNumValue('pano_depth',20),
+        pano_panel_thickness: getNumValue('pano_panel_thickness',6),
+        pano_groove_depth: getNumValue('pano_groove_depth',8),
+        pano_clearance: getNumValue('pano_clearance',1),
+        pano_panel_count: getNumValue('pano_panel_count',1),
+        pano_mid_rail: getNumValue('pano_mid_rail',60),
+        wood_carved_thickness: getNumValue('wood_carved_thickness',17),
+        wood_carved_rail: getNumValue('wood_carved_rail',60),
+        wood_carved_radius: getNumValue('wood_carved_radius',60),
+        wood_carved_recess: getNumValue('wood_carved_recess',7),
+        wood_bevel_thickness: getNumValue('wood_bevel_thickness',20),
+        wood_bevel_flat: getNumValue('wood_bevel_flat',2),
+        wood_bevel_width: getNumValue('wood_bevel_width',15),
+        wood_bevel_recess: getNumValue('wood_bevel_recess',10),
+        wood_glass_frame_thickness: getNumValue('wood_glass_frame_thickness',20),
+        wood_glass_rail: getNumValue('wood_glass_rail',60),
+        wood_glass_radius: getNumValue('wood_glass_radius',60),
+        wood_glass_depth: getNumValue('wood_glass_depth',8),
+        wood_glass_inset: getNumValue('wood_glass_inset',12),
+        wood_glass_type: document.getElementById('wood_glass_type').value,
+        metal_frame_width: getNumValue('metal_frame_width',20),
+        metal_frame_depth: getNumValue('metal_frame_depth',20),
+        glass_thickness: getNumValue('glass_thickness',5),
+        metal_finish: document.getElementById('metal_finish').value,
+        glass_finish: document.getElementById('glass_finish').value,
+        back_groove_auto: document.getElementById('back_groove_auto').checked,
+        back_groove_depth: getNumValue('back_groove_depth',8.75),
+        drawer_columns: getNumValue('drawer_columns',1),
+        drawer_frame_depth: getNumValue('drawer_frame_depth',0),
+        drawer_frame_rail_width: getNumValue('drawer_frame_rail_width',50),
+        drawer_frame_stop_rail: document.getElementById('drawer_frame_stop_rail').checked,
+        drawer_frame_stop_rail_h: getNumValue('drawer_frame_stop_rail_h',50),
+        drawer_frame_stop_rail_drop: getNumValue('drawer_frame_stop_rail_drop',0),
+        drawer_bottom_mode: document.getElementById('drawer_bottom_mode').value,
+        back_mode: document.getElementById('back_mode').value,
+        module_mode: document.getElementById('module_mode').value,
+        module_widths: document.getElementById('module_widths').value,
+        module_target_w: getNumValue('module_target_w',800),
+        front_bevel: document.getElementById('front_bevel').checked,
+        door_stop_rail: document.getElementById('door_stop_rail').checked,
+        door_stop_rail_h: getNumValue('door_stop_rail_h',60),
+        door_stop_rail_joinery: document.getElementById('door_stop_rail_joinery').value,
+        bevel_lip: getNumValue('bevel_lip',2),
+        snap_step: getNumValue('snap_step',50),
+        w: getNumValue('w', 800),
+        d: getNumValue('d', 600),
+        h: getNumValue('h', 2400),
+        t: getNumValue('t', 17.5),
+        opt_left_side: document.getElementById('opt_left_side').value,
+        opt_right_side: document.getElementById('opt_right_side').value,
+        curve_w: getNumValue('curve_w', 100),
+        t_back: getNumValue('t_back', 6),
+        back_recess: getNumValue('back_recess', 20),
+        opt_top: document.getElementById('opt_top').value,
+        opt_bottom: document.getElementById('opt_bottom').value,
+        shadow_gap_h: (document.getElementById('opt_top') && document.getElementById('opt_top').value === 'Đỉnh Phủ Hồi') ? 0 : getNumValue('shadow_gap_h', 20),
+        plinth_h: getNumValue('plinth_h', 40),
+        div_count: getIntValue('div_count', 0),
+        div_pos: document.getElementById('div_pos').value,
+        auto_divider_wide: document.getElementById('auto_divider_wide') ? document.getElementById('auto_divider_wide').checked : true,
+        max_compartment_w: getNumValue('max_compartment_w', 1200),
+        shelf_count: getIntValue('shelf_count', 0),
+        shelf_type: document.getElementById('shelf_type') ? document.getElementById('shelf_type').value : 'Cố Định',
+        shelf_side_clearance: getNumValue('shelf_side_clearance', 1.6),
+        shelf_front_setback: getNumValue('shelf_front_setback', 25),
+        opt_door: document.getElementById('opt_door').value,
+        auto_door_count: document.getElementById('auto_door_count').checked,
+        max_door_w: getNumValue('max_door_w', 450),
+        door_count: getIntValue('door_count', 2),
+        door_gap: getNumValue('door_gap', 0),
+        door_top_gap: getNumValue('door_top_gap', 0),
+        door_gap_advanced: document.getElementById('door_gap_advanced') ? document.getElementById('door_gap_advanced').checked : false,
+        door_gap_outer: getNumValue('door_gap_outer', 0),
+        door_gap_left: getNumValue('door_gap_left', 0),
+        door_gap_right: getNumValue('door_gap_right', 0),
+        door_gap_top: getNumValue('door_gap_top', 0),
+        door_gap_bottom: getNumValue('door_gap_bottom', 0),
+        door_gap_between: getNumValue('door_gap_between', 0),
+        opt_drawer: document.getElementById('opt_drawer') ? document.getElementById('opt_drawer').value : 'Không',
+        drawer_comp_pos: document.getElementById('drawer_comp_pos') ? document.getElementById('drawer_comp_pos').value : 'Tất Cả',
+        drawer_h: getNumValue('drawer_h', 600),
+        drawer_count: getIntValue('drawer_count', 2),
+        drawer_inner_offset: getNumValue('drawer_inner_offset', 50),
+        drawer_hinge_sp: getNumValue('drawer_hinge_sp', 50),
+        drawer_gap: getNumValue('drawer_gap', 25),
+        drawer_gap_advanced: document.getElementById('drawer_gap_advanced') ? document.getElementById('drawer_gap_advanced').checked : false,
+        drawer_gap_outer: getNumValue('drawer_gap_outer', 0),
+        drawer_gap_left: getNumValue('drawer_gap_left', 0),
+        drawer_gap_right: getNumValue('drawer_gap_right', 0),
+        drawer_gap_top: getNumValue('drawer_gap_top', 0),
+        drawer_gap_bottom: getNumValue('drawer_gap_bottom', 0),
+        drawer_gap_between: getNumValue('drawer_gap_between', 25),
+        drawer_ray_space: getNumValue('drawer_ray_space', 13),
+        drawer_back_clearance: getNumValue('drawer_back_clearance', 20),
+        drawer_box_bottom_lift: getNumValue('drawer_box_bottom_lift', 10),
+        drawer_box_top_clearance: getNumValue('drawer_box_top_clearance', 13),
+        drawer_bottom_offset: getNumValue('drawer_bottom_offset', 10),
+        drawer_box_t: getNumValue('drawer_box_t', 0),
+        drawer_bottom_t: getNumValue('drawer_bottom_t', 6),
+        drawer_backing_rail: document.getElementById('drawer_backing_rail') ? document.getElementById('drawer_backing_rail').checked : false,
+        drawer_backing_rail_h: getNumValue('drawer_backing_rail_h', 60),
+        drawer_backing_rail_joinery: document.getElementById('drawer_backing_rail_joinery').value,
+        is_full_drawer: document.getElementById('is_full_drawer') ? document.getElementById('is_full_drawer').checked : false,
+        is_overheight: document.getElementById('is_overheight').checked,
+        auto_overheight: document.getElementById('auto_overheight') ? document.getElementById('auto_overheight').checked : true,
+        max_panel_h: getNumValue('max_panel_h', 2400),
+        h_bottom: getNumValue('h_bottom', 2100),
+        h_top: getNumValue('h_top', 275),
+        shelf_count_top: getIntValue('shelf_count_top', 0),
+        overheight_join: document.getElementById('overheight_join').value,
+        mid_door_gap: getNumValue('mid_door_gap', 25.0),
+        beam_h: getNumValue('beam_h', 50.0)
+      };
+      document.querySelectorAll('input[type="number"]').forEach(function(el) {
+        if (Object.prototype.hasOwnProperty.call(data,el.id)) {
+          if (!el.value.trim()) data[el.id] = null;
+          else if (['div_count','shelf_count','shelf_count_top','door_count','drawer_count'].indexOf(el.id) >= 0) data[el.id] = Number(el.value);
+        }
+      });
+      return data;
+    }
+
+    function updateFormFromRuby(params) {
+      if (!params) return;
+      if (descriptionDraftParams && params.__target_pid != null) return;
+      if (!params.handle_split_v1) {
+        params=Object.assign({},params,{handle_split_v1:true,drawer_bevel:params.front_bevel||false,drawer_bevel_lip:params.bevel_lip===undefined?2:params.bevel_lip});
+      }
+      if (params.__target_pid !== undefined) setSelectedCabinet(params.__target_pid);
+      if (params.__model_guid !== undefined) selectedModel = params.__model_guid;
+      if (updateTimer) { clearTimeout(updateTimer); updateTimer = null; }
+      isUpdatingFromRuby = true;
+      lastRubySyncTime = Date.now();
+      try {
+        var keys = Object.keys(defaultParams);
+        for (var i = 0; i < keys.length; i++) {
+          var k = keys[i];
+          var el = document.getElementById(k);
+          if (el) {
+            var val = params[k] !== undefined ? params[k] : defaultParams[k];
+            if (el.type === 'checkbox') {
+              el.checked = val;
+            } else {
+              el.value = val;
+            }
+          }
+        }
+        toggleOverheight();
+        onAutoDividerChange();
+        onAutoOverheightChange();
+        onDrawerChange();
+        onDrawerBackingRailChange();
+        onShelfTypeChange();
+        renderDoorGapUI();
+        renderDrawerGapUI();
+        refreshContextUI();
+      } finally {
+        setTimeout(function() { isUpdatingFromRuby = false; }, 500);
+        if (updateTimer) { clearTimeout(updateTimer); updateTimer = null; }
+      }
+    }
+
+    function drawToolCabinet() {
+      if (isUpdatingFromRuby) return;
+      if (window.sketchup) window.sketchup.draw_cabinet_tool(getFormData());
+    }
+
+    function updateCabinet(isUserManualAction) {
+      if (!selectedPid) { if (isUserManualAction) showModelStatus('Chọn một tủ VGD để xem trước cập nhật.',true); return; }
+      if (!isUserManualAction && (isUpdatingFromRuby || (Date.now() - lastRubySyncTime < 1000))) return;
+      if (updateTimer) { clearTimeout(updateTimer); updateTimer = null; }
+      if (window.sketchup) {
+        var data = getFormData();
+        data.__manual_update = !!isUserManualAction;
+        window.sketchup.update_cabinet(data);
+        showModelStatus('Preview hình học dựng lại. Nhấn Enter để áp dụng hoặc Esc để hủy; chỉnh tay có thể bị thay thế.',false);
+      }
+    }
+
+    function savePreset(action) {
+      action=action||'create';
+      var source=document.getElementById('preset_select').value;
+      var name=action==='update'?source:document.getElementById('preset_name').value.trim();
+      if(!name || (action!=='create'&&!source)){showModelStatus('Nhập tên hoặc chọn mẫu cần sửa.',true);return;}
+      if(window.sketchup) window.sketchup.save_preset({action:action,name:name,source_name:source||null,params:getFormData(),group:document.getElementById('preset_group_select').value});
+    }
+
+    function deletePreset() {
+      var name = document.getElementById('preset_select').value;
+      if (!name) return;
+      if (confirm('Xóa mẫu: "' + name + '"?')) if (window.sketchup) window.sketchup.delete_preset(name);
+    }
+
+    function loadPreset() {
+      var name = document.getElementById('preset_select').value;
+      if (name && Object.prototype.hasOwnProperty.call(currentPresets,name)) updateFormFromRuby(currentPresets[name]);
+      showModelStatus('Đã nạp mẫu. Bấm ĐẶT TỦ MỚI hoặc CẬP NHẬT TỦ.',false);
+    }
+
+    function updatePresetList(presets, selectedName, groups, presetGroups, selectedGroup) {
+      if(typeof presets==='string'){try{presets=JSON.parse(presets);}catch(e){}}
+      if(typeof groups==='string'){try{groups=JSON.parse(groups);}catch(e){}}
+      if(typeof presetGroups==='string'){try{presetGroups=JSON.parse(presetGroups);}catch(e){}}
+      currentPresets=(typeof presets==='object'&&presets!==null&&!Array.isArray(presets))?presets:{};
+      currentPresetGroups=Array.isArray(groups)&&groups.length?groups:['Chưa phân nhóm'];
+      currentPresetGroupMap=(typeof presetGroups==='object'&&presetGroups!==null)?presetGroups:{};
+      var select=document.getElementById('preset_select');if(!select)return;
+      select.innerHTML='<option value="">-- Chọn mẫu tủ --</option>';
+      currentPresetGroups.forEach(function(group){
+        var names=Object.keys(currentPresets).filter(function(name){return (currentPresetGroupMap[name]||'Chưa phân nhóm')===group;});
+        if(!names.length)return;
+        var groupElement=document.createElement('optgroup');groupElement.label=group;
+        names.forEach(function(name){var opt=document.createElement('option');opt.value=name;opt.textContent=name;if(name===selectedName)opt.selected=true;groupElement.appendChild(opt);});
+        select.appendChild(groupElement);
+      });
+      var groupSelect=document.getElementById('preset_group_select');
+      if(groupSelect){var previous=selectedGroup||groupSelect.value;groupSelect.innerHTML='';currentPresetGroups.forEach(function(group){var option=document.createElement('option');option.value=group;option.textContent=group;groupSelect.appendChild(option);});if(currentPresetGroups.indexOf(previous)>=0)groupSelect.value=previous;else groupSelect.value=currentPresetGroups[0];if(selectedName&&currentPresetGroupMap[selectedName])groupSelect.value=currentPresetGroupMap[selectedName];}
+    }
+
+    document.addEventListener('input', function(e) {
+      var t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT') && t.id !== 'preset_name' && t.id !== 'preset_select' && !t.closest('#page_library') && !t.closest('#preset_group_manager')) {
+        debouncedUpdateCabinet();
+      }
+    });
+
+    document.addEventListener('change', function(e) {
+      var t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT') && t.id !== 'preset_name' && t.id !== 'preset_select' && !t.closest('#page_library') && !t.closest('#preset_group_manager')) {
+        debouncedUpdateCabinet();
+      }
+    });
+
+    function initTheme() {
+      var theme='dark';
+      try {
+        var saved=localStorage.getItem('vgd_cabinet_theme');
+        if(saved==='dark'||saved==='light')theme=saved;
+        else {
+          var legacy=localStorage.getItem('vgd_theme');
+          if(legacy==='dark'||legacy==='light') {
+            theme=legacy;
+            localStorage.setItem('vgd_cabinet_theme',theme);
+          }
+        }
+      } catch(e) {}
+      applyTheme(theme);
+    }
+
+    function toggleTheme() {
+      var nextTheme=document.body.classList.contains('dark')?'light':'dark';
+      applyTheme(nextTheme);
+      try { localStorage.setItem('vgd_cabinet_theme',nextTheme); } catch(e) {}
+    }
+
+    function applyTheme(theme) {
+      theme=theme==='light'?'light':'dark';
+      document.body.classList.toggle('dark',theme==='dark');
+      document.documentElement.style.colorScheme=theme;
+      setThemeButton(theme);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      initMenu();
+      initTheme();
+      setSelectedCabinet(null);
+      if (typeof currentPresets !== 'undefined' && currentPresets !== null) {
+        updatePresetList(currentPresets, '');
+      }
+      // Nạp ngay thông số của tủ đang chọn khi mở panel.
+      updateFormFromRuby((initialParams && Object.keys(initialParams).length) ? initialParams : defaultParams);
+      if (window.sketchup) window.sketchup.ready();
+    });
+
+    window.addEventListener('keydown', function(e) {
+      if (e.key === 'F5') { e.preventDefault(); updateFormFromRuby(defaultParams); }
+      if (e.key === 'Enter') {
+        var t = e.target;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT') && t.id !== 'preset_name' && !t.closest('#page_library')) {
+          e.preventDefault();
+          if (updateTimer) clearTimeout(updateTimer);
+          updateCabinet(true);
+        }
+      }
+    });
+
+var baseGetFormData=getFormData;
+getFormData=function(){
+  var data=baseGetFormData();
+  if(descriptionDraftParams)Object.keys(descriptionDraftParams).forEach(function(k){
+    if(!document.getElementById(k))data[k]=descriptionDraftParams[k];
+  });
+  return data;
+};
+</script></body></html>
