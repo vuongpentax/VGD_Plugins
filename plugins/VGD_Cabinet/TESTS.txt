@@ -6,7 +6,7 @@ Môi trường theo hồ sơ: Node 24, Ruby 3.2 WebAssembly, JSDOM, Playwright +
 
 pnpm install --dir cabinet_dev --frozen-lockfile
 
-Playwright được tìm qua CODEX_PRIMARY_RUNTIME_NODE_MODULES; test_ui.cjs dùng Edge cài trên máy, hoặc đường dẫn VGD_BROWSER_PATH.
+Playwright được khai báo và cài local trong `cabinet_dev` qua `package.json` và `pnpm-lock.yaml`. Nhóm UI test dùng Microsoft Edge đã cài trên Windows, không cần tải browser bundle của Playwright. Riêng `test_ui.cjs` có thể dùng đường dẫn browser khác qua `VGD_BROWSER_PATH`.
 
 ## Kiểm tra ngoài SketchUp
 

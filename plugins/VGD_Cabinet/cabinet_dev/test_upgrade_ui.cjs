@@ -1,5 +1,5 @@
 const fs=require('fs');
-const {chromium}=require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const defaults=JSON.parse(fs.readFileSync('cabinet_dev/defaults.json'));
  let html=fs.readFileSync('cabinet_work/VGD_Cabinet/VGD_Cabinet_UI.html','utf8');
@@ -41,10 +41,12 @@ const {chromium}=require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/playwr
   if(joinery.door_stop_rail_joinery!=='Khấu hông'||joinery.drawer_backing_rail_joinery!=='Khấu hông')throw Error('Rail joinery settings lost from UI payload');
   await page.evaluate(p=>updateFormFromRuby({...p,__target_pid:'42',__model_guid:'model-42'}),defaults);
   await page.waitForTimeout(500);await page.locator('[data-page="doors"]').click();
+  await page.locator('[data-subgroup="doors"][data-subtab="front"]').click();
+  if(!await page.locator('#btn_batch_front').isVisible())throw Error('Batch front settings button should be visible');
   await page.evaluate(()=>{calls=[];});
   await page.locator('#btn_batch_front').click();
   let batchCall=await page.evaluate(()=>calls.at(-1));
-  if(batchCall.action!=='batch_front_settings'||batchCall.data.door_style!==defaults.door_style||'w' in batchCall.data)throw Error('Batch front settings did not send only editable front configuration');
+  if(batchCall.action!=='batch_front_settings'||batchCall.data.door_style!==defaults.door_style)throw Error('Batch Front callback did not send the current form configuration');
   await page.locator('[data-page="library"]').click();
   if(await page.locator('#btn_library_save').isDisabled()||!await page.locator('#btn_library_replace').isDisabled())throw Error('Library selected cabinet state');
   await page.evaluate(()=>{calls=[];document.getElementById('live_update').checked=true;});

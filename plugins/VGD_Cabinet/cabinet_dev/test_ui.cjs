@@ -1,5 +1,5 @@
 const fs=require('fs');
-const {chromium}=require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/playwright');
+const {chromium}=require('playwright');
 (async()=>{
 const defaults=JSON.parse(fs.readFileSync('cabinet_dev/defaults.json'));
 const presets=JSON.parse(fs.readFileSync('cabinet_dev/presets.json'));
@@ -100,7 +100,9 @@ let handles=await page.evaluate(()=>getFormData());
 if(!handles.drawer_bevel||handles.front_bevel||handles.drawer_bevel_lip!==3)throw Error('Handles not separated');
 await page.screenshot({path:'cabinet_dev/ui_drawer_handles.png'});
 await page.locator('[data-page="general"]').click();
-await page.locator('.preset-section details').evaluate(e=>e.open=true);
+await page.locator('#preset_name').evaluate(e=>{
+ e.closest('details').open=true;
+});
 await page.locator('#preset_name').fill('VGD thử');
 await page.getByRole('button',{name:'Tạo mới',exact:true}).click();
 call=await page.evaluate(()=>calls.at(-1));

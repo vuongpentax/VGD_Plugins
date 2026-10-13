@@ -1,7 +1,7 @@
 // Inspect the production draw commands recorded by test_upgrade.rb. Canvas
 // is an offline visual fixture; it does not certify SketchUp's renderer.
 const fs=require('fs');
-const {chromium}=require(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES+'/playwright');
+const {chromium}=require('playwright');
 (async()=>{
  const commands=JSON.parse(fs.readFileSync('outputs/preview_draw.json'));
  const html=`<!doctype html><meta charset="utf-8"><style>body{margin:0;background:#e7e4df}canvas{display:block}</style><canvas width="640" height="660"></canvas><script>
