@@ -60,11 +60,19 @@ VGD_Cabinet.instance_variable_set(:@dialog, old_dialog)
 VGD_Cabinet.instance_variable_set(:@observed_model, old_model)
 VGD_Cabinet.instance_variable_set(:@observer, old_observer)
 Kernel.load('/vgd/reload.rb')
-assert(VGD_Cabinet.reload_extension, 'Beta 6 bootstrap reload failed')
+assert(VGD_Cabinet.reload_extension, 'VGD Cabinet 4.5.2 bootstrap reload failed')
 assert(VGD_Cabinet::VERSION == '4.5.2', 'Version did not update')
-assert(UI.toolbars.size == 1 && old_toolbar.items.size == 3, 'Beta 6 toolbar duplicated or utilities missing')
-assert(old_toolbar.items.first.equal?(old_main_command), 'Beta 6 draw command reused')
-assert(UI.menus.fetch('Extensions').items.size == 2, 'Beta 6 draw menu duplicated')
+assert(UI.toolbars.size == 1 && old_toolbar.items.size == 1,
+       'VGD Cabinet 4.5.2 should have one toolbar with one modeling command')
+assert(old_toolbar.items.first.equal?(old_main_command) && old_main_command.name.include?('Dựng hình'),
+       'VGD Cabinet 4.5.2 did not reuse its modeling command')
+extensions = UI.menus.fetch('Extensions')
+assert(extensions.items.size == 2 && extensions.items.first.equal?(old_main_command),
+       'VGD Cabinet 4.5.2 duplicated or lost the draw menu command')
+menu = extensions.items.last
+assert(menu.name == 'VGD Cabinet' && menu.items.size == 1 && menu.items.first.name.include?('Reload'),
+       'VGD Cabinet 4.5.2 submenu should contain only Reload')
+reload_command = menu.items.first
 assert(!old_dialog.visible? && VGD_Cabinet.dialog_visible?, 'Dialog was not closed/reopened')
 assert(!old_model.selection.observers.include?(old_observer), 'Old VGD observer leaked')
 assert(old_model.selection.observers.include?(foreign_observer), 'Other plugin observer removed')
@@ -73,19 +81,24 @@ assert(UI.context_handlers.empty?, 'Context handler duplicated during beta 4 mig
 new_dialog = VGD_Cabinet.dialog
 old_dialog.closed_callback.call
 assert(VGD_Cabinet.dialog.equal?(new_dialog), 'Late old close callback cleared the new dialog')
-puts 'PASS reload bootstrap: beta 4 toolbar reused, utilities/reload added, dialog recreated, old VGD observer detached, foreign observer retained'
+puts 'PASS reload bootstrap: 4.5.2 draw toolbar reused, Reload submenu added, dialog recreated, old VGD observer detached, foreign observer retained'
 
 # Change code and HTML on disk, invoke the actual menu callback, and reload twice.
 defaults_original = $fixture_sources.fetch('/vgd/defaults.rb')
 $fixture_sources['/vgd/defaults.rb'] = defaults_original.sub('"w" => 800.0', '"w" => 901.0')
 $fixture_sources['/vgd/VGD_Cabinet_UI.html'] += '<!-- reload fixture sentinel -->'
-menu = UI.menus.fetch('Extensions').items.last
 2.times do
   $fixture_loads.clear
   assert(menu.items.last.call, 'Reload menu failed')
   assert(VGD_Cabinet.default_params['w'] == 901.0, 'Updated dependency was cached')
   assert(VGD_Cabinet.dialog.html.include?('reload fixture sentinel'), 'Updated HTML was cached')
-  assert(UI.toolbars.size == 1 && old_toolbar.items.size == 3 && menu.items.size == 3, 'Reload duplicated UI')
+  assert(UI.toolbars.size == 1 && old_toolbar.items.size == 1 &&
+         old_toolbar.items.first.equal?(old_main_command),
+         'Repeated reload duplicated the Cabinet toolbar or draw command')
+  assert(extensions.items.size == 2 && extensions.items.first.equal?(old_main_command) &&
+         extensions.items.last.equal?(menu) && menu.items.size == 1 &&
+         menu.items.first.equal?(reload_command),
+         'Repeated reload duplicated the Cabinet menu or Reload command')
   assert(old_model.selection.observers.size == 2, 'Reload leaked or removed observers')
   expected = ['/vgd/reload.rb'] + VGD_Cabinet::Development.ruby_files.map { |name| '/vgd/' + name }
   assert($fixture_loads == expected, 'Reload did not load exactly the owned whitelist in dependency order')
