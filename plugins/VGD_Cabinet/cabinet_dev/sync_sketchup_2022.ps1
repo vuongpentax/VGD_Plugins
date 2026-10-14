@@ -5,7 +5,6 @@ $taskRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $sourceRoot = Join-Path $taskRoot 'cabinet_work'
 $pluginRoot = Join-Path $env:APPDATA 'SketchUp\SketchUp 2022\SketchUp\Plugins'
 $ownedFiles = @('vgd_cabinet.rb','VGD_Cabinet\main43.rb','VGD_Cabinet\geometry_engine.rb','VGD_Cabinet\modeling_rules.rb','VGD_Cabinet\modeling.rb','VGD_Cabinet\pano.rb','VGD_Cabinet\component_sharing.rb','VGD_Cabinet\frame_divisions.rb','VGD_Cabinet\rail_joinery.rb','VGD_Cabinet\preview_mesh.rb','VGD_Cabinet\library_store.rb','VGD_Cabinet\model_data.rb','VGD_Cabinet\box_conversion.rb','VGD_Cabinet\preset_store.rb','VGD_Cabinet\description_import.rb','VGD_Cabinet\defaults.rb','VGD_Cabinet\draw_tool.rb','VGD_Cabinet\ui_renderer.rb','VGD_Cabinet\VGD_Cabinet_UI.html','VGD_Cabinet\reload.rb','VGD_Cabinet\update_notice.rb','VGD_Cabinet\cabinet.svg','VGD_Cabinet\HUONG_DAN.txt')
-$retiredFiles = @('VGD_Cabinet\utilities.rb','VGD_Cabinet\combine.svg','VGD_Cabinet\untag.svg','VGD_Cabinet\logo.svg')
 function Assert-TaskPath([string]$Path,[string]$Root) {
     $full = [IO.Path]::GetFullPath($Path)
     $allowed = [IO.Path]::GetFullPath($Root).TrimEnd('\')
@@ -44,16 +43,8 @@ $plan = @(foreach ($relative in $ownedFiles) {
     $before = if ($exists) { (Get-FileHash -LiteralPath $dst -Algorithm SHA256).Hash } else { $null }
     [PSCustomObject]@{File=$relative;Source=$src;Destination=$dst;SourceSHA256=$hash;BeforeSHA256=$before;Existed=$exists;Changed=$before -ne $hash}
 })
-$retired = @(foreach ($relative in $retiredFiles) {
-    $dst = Join-Path $pluginRoot $relative
-    Assert-TaskPath $dst $pluginRoot
-    $exists = Test-Path -LiteralPath $dst -PathType Leaf
-    $before = if ($exists) { (Get-FileHash -LiteralPath $dst -Algorithm SHA256).Hash } else { $null }
-    [PSCustomObject]@{File=$relative;Destination=$dst;BeforeSHA256=$before;Existed=$exists}
-})
 if ($VerifyOnly) {
     $plan | Select-Object File,Existed,Changed | Format-Table -AutoSize
-    $retired | Where-Object Existed | Select-Object File,Existed | Format-Table -AutoSize
     Write-Output ("T+ Cabinet loader còn bật: " + [bool]$legacyHash)
     return
 }
@@ -69,13 +60,6 @@ foreach ($entry in $plan | Where-Object Changed) {
         if ((Get-FileHash -LiteralPath $backup -Algorithm SHA256).Hash -ne $entry.BeforeSHA256) { throw 'Sao lưu không khớp.' }
     }
 }
-foreach ($entry in $retired | Where-Object Existed) {
-    $backup = Join-Path $backupRoot ('retired\' + $entry.File)
-    Assert-TaskPath $backup $backupRoot
-    New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($backup)) -Force | Out-Null
-    Copy-Item -LiteralPath $entry.Destination -Destination $backup
-    if ((Get-FileHash -LiteralPath $backup -Algorithm SHA256).Hash -ne $entry.BeforeSHA256) { throw 'Sao lưu file Cabinet đã bỏ không khớp.' }
-}
 $legacyBackup = Join-Path $backupRoot 'legacy\tplus_cabinet.rb'
 Assert-TaskPath $legacyBackup $backupRoot
 if ($legacyHash) {
@@ -84,7 +68,6 @@ if ($legacyHash) {
     if ((Get-FileHash -LiteralPath $legacyBackup -Algorithm SHA256).Hash -ne $legacyHash) { throw 'Sao lưu bộ nạp cũ không khớp.' }
 }
 $written = @()
-$removed = @()
 $legacyDisabled = $false
 try {
     foreach ($entry in $plan | Where-Object Changed) {
@@ -95,28 +78,16 @@ try {
     foreach ($entry in $plan) {
         if ((Get-FileHash -LiteralPath $entry.Destination -Algorithm SHA256).Hash -ne $entry.SourceSHA256) { throw "Sai SHA256: $($entry.File)" }
     }
-    foreach ($entry in $retired | Where-Object Existed) {
-        if ((Get-FileHash -LiteralPath $entry.Destination -Algorithm SHA256).Hash -ne $entry.BeforeSHA256) { throw "File cũ đã đổi trong lúc cài: $($entry.File)" }
-        Assert-TaskPath $entry.Destination $pluginRoot
-        Remove-Item -LiteralPath $entry.Destination
-        $removed += $entry
-    }
     if ($legacyHash) {
         if ((Get-FileHash -LiteralPath $legacy -Algorithm SHA256).Hash -ne $legacyHash) { throw 'Bộ nạp T+ Cabinet đã đổi trong lúc cài.' }
         Assert-TaskPath $legacy $pluginRoot
         Remove-Item -LiteralPath $legacy
         $legacyDisabled = $true
     }
-    [PSCustomObject]@{Target=$pluginRoot;Status='VERIFIED';LegacyLoaderDisabled=$legacyDisabled;LegacyBackup=$legacyBackup;Files=$plan;RetiredFiles=@($retired | Where-Object Existed)} |
+    [PSCustomObject]@{Target=$pluginRoot;Status='VERIFIED';LegacyLoaderDisabled=$legacyDisabled;LegacyBackup=$legacyBackup;Files=$plan} |
         ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $backupRoot 'INSTALL_REPORT.json') -Encoding UTF8
 } catch {
     if ($legacyDisabled) { Copy-Item -LiteralPath $legacyBackup -Destination $legacy }
-    foreach ($entry in $removed) {
-        $backup = Join-Path $backupRoot ('retired\' + $entry.File)
-        Assert-TaskPath $entry.Destination $pluginRoot
-        New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($entry.Destination)) -Force | Out-Null
-        Copy-Item -LiteralPath $backup -Destination $entry.Destination -Force
-    }
     foreach ($entry in $written) {
         Assert-TaskPath $entry.Destination $pluginRoot
         if ($entry.Existed) {

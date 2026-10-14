@@ -39,34 +39,7 @@ with ZipFile(source, 'w', ZIP_DEFLATED) as z:
     z.write(root / 'AGENTS.md', 'AGENTS.md')
     for file in ['README.md','PANO_RESEARCH.md','UPGRADE_RESEARCH.md','VALIDATION.json','RELEASE_NOTES_v4.5.2.md']:
         z.write(root/file,file)
-    z.writestr('TESTS.txt', '''VGD Cabinet 4.5.2 — source and verification
-
-Runtime used: Node 24, Ruby 3.2 WebAssembly, JSDOM, Playwright + local Edge.
-Tests run from the extracted root folder.
-Task dependencies: pnpm install --dir cabinet_dev --frozen-lockfile
-Playwright is resolved from CODEX_PRIMARY_RUNTIME_NODE_MODULES.
-Set that environment variable to the directory containing the Playwright package.
-test_ui.cjs uses installed Edge; VGD_BROWSER_PATH can specify another executable.
-node cabinet_dev/check_ruby.cjs
-node cabinet_dev/redesign_ui.cjs
-node cabinet_dev/test_dom.cjs
-node cabinet_dev/test_payload.cjs
-node cabinet_dev/test_ui.cjs
-node cabinet_dev/test_upgrade_ui.cjs
-node cabinet_dev/test_preview.cjs
-node cabinet_dev/test_description.cjs
-python3 cabinet_dev/package_menu.py
-
-redesign_ui.cjs rebuilds the current static HTML from ui_beta1.html plus menu.css/menu.js.
-The Ruby API stub verifies dimensions and parameter logic, not the native SketchUp kernel.
-Command fixture verifies only the Cabinet toolbar/menu entries remain and Reload is available.
-Reload fixture evaluates real runtime files to verify dependency/HTML refresh, beta 4
-bootstrap, menu/toolbar idempotence, VGD observer cleanup, foreign-observer preservation,
-syntax preflight and the exact own-file reload list. No native hot-reload is claimed.
-sync_sketchup_2022.ps1 deploys only the 23 listed VGD Cabinet files to the fixed 2022 path,
-backing up changed existing files and verifying SHA256. It does not deploy other plugins.
-User-run native SketchUp 2022.0.316 / Ruby 2.7.2 upgrade checks passed; working-model Undo and close/reopen remain unverified. See HUONG_DAN.txt for manual acceptance checks.
-''')
+    z.write(root / 'TESTS.txt', 'TESTS.txt')
 for path in [rbz, source]:
     with ZipFile(path) as z:
         assert z.testzip() is None

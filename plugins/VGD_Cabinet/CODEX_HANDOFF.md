@@ -36,6 +36,6 @@ Hồ sơ ghi nhận ngày 2026-10-12 đã triển khai đủ 23 file vào Sketch
 
 Chưa có UI chỉnh hướng/open-pose cho metadata cánh/hộc; chưa có editor viewport cho bố cục đợt/vách, từng opening, đặt tay nắm hay cut/notch. Không mô tả chúng như tính năng đã có.
 
-Có xung đột cần giải quyết trước lần deploy tiếp: `AGENTS.md` của plugin giới hạn retire ở `tplus_cabinet.rb`, còn script deploy và hồ sơ 4.5.2 ghi nhận sao lưu/gỡ thêm bốn file tiện ích Cabinet cũ. Handoff này ghi lại chênh lệch, không mở rộng quyền triển khai. Chỉ deploy sau khi quy tắc và script được đối chiếu.
+Chênh lệch phạm vi deploy đã được xử lý: script chỉ backup/retire `tplus_cabinet.rb`. Nếu có sẵn, `utilities.rb`, `combine.svg`, `untag.svg` và `logo.svg` được giữ nguyên; `test_deploy.py` kiểm tra nội dung fixture của chúng sau deploy. `VALIDATION.json` vẫn giữ ghi nhận lịch sử về lần cài trực tiếp trước đây đã gỡ bốn file tiện ích; đó không phải hành vi của script hiện tại.
 
 Xem `README.md` để dùng plugin, `TESTS.txt` để biết lệnh kiểm tra, và `VALIDATION.json` để đọc chi tiết từng hồ sơ PASS/chưa chạy.
