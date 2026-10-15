@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VGD Reference</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="brand"><picture class="brand-mark"><source media="(prefers-color-scheme: dark)" srcset="../../assets/toolbar/vgd_reference_dark.svg"><img src="../../assets/toolbar/vgd_reference.svg" width="27" height="27" alt=""></picture><span><b>VGD</b><small>ẢNH THAM CHIẾU</small></span></div>
+    <div class="header-tools">
+      <button class="icon-button" id="appearanceSettings" title="Đổi giao diện sáng/tối" aria-label="Đổi giao diện sáng/tối"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17a8.5 8.5 0 0 0 0-17Z"/></svg></button>
+      <button class="icon-button" id="editSelected" title="Chỉnh sửa ảnh đang chọn" aria-label="Chỉnh sửa ảnh đang chọn"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h12v12M20 4 5 19M4 10v10h10"/></svg></button>
+    </div>
+  </header>
+  <nav class="actions">
+    <button class="primary" id="add" title="Thêm ảnh từ máy" aria-label="Thêm ảnh từ máy"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="action-copy"><b>Thêm</b><small>Mở file ảnh từ máy</small></span></button>
+    <button id="paste" title="Dán ảnh từ bộ nhớ tạm" aria-label="Dán ảnh từ bộ nhớ tạm"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12v13H6zM9 4h6v4H9zM12 11v5m-2-2 2 2 2-2"/></svg><span class="action-copy"><b>Dán</b><small>Ảnh từ bộ nhớ tạm</small></span></button>
+    <button id="hideAll" title="Ẩn tất cả ảnh tham chiếu" aria-label="Ẩn tất cả ảnh tham chiếu"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path id="hideAllGlyph" d="M3 12s3-6 9-6 9 6 9 6-3 6-9 6-9-6-9-6Z"/></svg><span class="action-copy"><b id="hideAllLabel">Ẩn tất cả</b><small id="hideAllDescription">Tạm ẩn trên khung nhìn</small></span></button>
+    <button id="clearAll" class="danger-action hidden" title="Xóa tất cả ảnh tham chiếu" aria-label="Xóa tất cả ảnh tham chiếu"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 6.5h15M9 6.5v-3h6v3M6.5 9.5l.8 10h9.4l.8-10M10 10.5V17M14 10.5V17"/></svg><span class="action-copy"><b>Xóa tất cả</b><small>Xóa nhanh danh sách ảnh</small></span></button>
+  </nav>
+  <main id="items" aria-live="polite"></main>
+  <div id="clearAllDialog" class="confirm-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="clearAllTitle">
+    <section class="confirm-card"><b id="clearAllTitle">Xóa tất cả ảnh tham chiếu?</b><p>Thao tác này sẽ gỡ toàn bộ ảnh khỏi khung nhìn và danh sách hiện tại.</p><div><button id="cancelClearAll">Giữ lại</button><button id="confirmClearAll" class="danger-confirm">Xóa tất cả</button></div></section>
+  </div>
+  <footer>
+    <div id="selectedControls" class="selected-controls hidden">
+      <div class="control-heading"><span id="selectedName">Ảnh tham chiếu đã chọn</span><button id="crop">Cắt ảnh</button></div>
+      <label for="opacity">Mức hiển thị <output id="opacityValue">100%</output></label>
+      <input id="opacity" type="range" min="10" max="100" value="100">
+      <div class="interaction-hint">Kéo chấm tròn để xoay · giữ Shift bắt góc 90° · chuột phải để di chuyển</div>
+    </div>
+    <div id="emptyHint">Thả file ảnh hoặc kéo ảnh từ Pinterest / web vào đây</div>
+    <div id="importStatus" role="status" class="import-status hidden"></div>
+    <div id="message" role="status" class="message hidden"></div>
+  </footer>
+  <script src="import.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
