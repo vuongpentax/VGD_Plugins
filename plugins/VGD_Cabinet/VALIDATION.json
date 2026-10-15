@@ -1,0 +1,464 @@
+{
+  "date": "2026-10-11",
+  "plugin": "VGD_Cabinet",
+  "version": "4.5.2",
+  "description_import": "PASS Ruby WASM + JSDOM: 10 valid geometry fixtures/full-parameter round-trip including exact user JSON, strict schema/units/WDH/type/enum/unknown/duplicate/oversize rejection. Partial mode requires boolean true plus exact omission-list acknowledgment; missing/reordered/stale approval rejected, invalid geometry and unknown keys still blocked. Keeps width 2200, discloses h_top 560 -> 580. Preview/import do not mutate model; draft selection/update isolation remains. Edge headless verifies confirm/cancel dialogs, callback payloads, persistent draft notice, placement, footer/overflow, screenshots inspected. No native SketchUp/image measurement acceptance claimed.",
+  "ruby": "PASS: runtime/loader syntax, existing cabinet/glass/drawer/back/modules/tier geometry and reload guards",
+  "presets": "PASS: actual Windows host filesystem IO through WASI, T+ migration, create/update/rename/delete, case-folded collision rejection, large library >20KB, new Ruby VM reopening same files, atomic write failure preserves original, backup recovery, malformed legacy raw backup",
+  "locking": "PASS native SketchUp 2022.0.316/Ruby 2.7.2 library file-locking test; WASI flock remains simulated",
+  "defaults": "PASS Ruby and DOM: ceiling strip 20, door gaps 0, drawer-front perimeter gaps 0, drawer/cabinet tier gaps 25",
+  "independent_controls": "PASS: door vs drawer bevel and lip, legacy shared-bevel migration, door stop vs drawer backing rails",
+  "pano": "PASS fixture dimensions: 5 door inset/overlay modes, straight groove cross-sections, separate panels, capture minus per-edge clearance, multiple panels, custom depth, modules and tiers, invalid/tiny geometry rejected",
+  "ui": "PASS: JSDOM and Edge headless; responsive icon-only navigation with tooltips at 660px and icon/name/description navigation at 760px; existing Cabinet UI workflows, previews and description flow pass.",
+  "payload": "PASS: existing modeling control IDs and values match beta.1 for complete defaults and 7 built-in presets; additive new fields",
+  "deployment": "PASS: 4.5.2 23-file RBZ runtime whitelist, exact source equality, ZIP CRC and SHA256 verified by package_menu.py.",
+  "deployment_live": "PASS actual SketchUp 2022 install on 2026-10-12: 23/23 Cabinet files SHA256-verified; four retired VGD utility files were backed up then removed. T+ loader was not present. SketchUp restart/native run of the clean package is pending.",
+  "deployment_fixture": {
+    "date": "2026-10-14",
+    "test": "cabinet_dev/test_deploy.py",
+    "status": "PASS",
+    "exit_code": 0,
+    "scope": "Chạy PowerShell sync script với APPDATA trong fixture tạm; xác minh 23 file runtime, backup/retire tplus_cabinet.rb, giữ nguyên byte-by-byte utilities.rb, combine.svg, untag.svg và logo.svg, deploy lặp lại, chặn foreign loader, giữ nguyên plugin khác cùng dữ liệu preset/library.",
+    "native_validation": "Không xác minh SketchUp thật; UI native và save/reopen model vẫn chưa được xác minh."
+  },
+  "native": "PASS user-run native_upgrade.rb on SketchUp 2022.0.316/Ruby 2.7.2 for the 4.5.1 model runtime: batch settings preserve per-cabinet dimensions/module layout; shared components/manual edits; rotated Box → Cabinet local axes and dimensions; 2-column drawer overlays; all listed solid parts manifold; preview mesh without model mutation; library locking/manual geometry reload/persistence/rename/collision/update/delete; model_roots_preserved=true. Native Tool preview returned one draw call. The 4.5.2 clean package only removes unrelated utility commands/assets; rerun after installing that package. Native UI interaction, working-model Undo and close/reopen remain unverified.",
+  "references": [
+    "https://www.cmtorangetools.com/downloads/5790/326/324_the_abc_s_of_panel_door_construction_usa.pdf",
+    "https://www.woodmagazine.com/woodworking-how-to/wood-preparation/dealing-with-wood-movement",
+    "https://www.rockler.com/shaker-5-piece-flat-panel-door-custom-sizes-and-materials",
+    "https://ruby.sketchup.com/Geom.html#tesselate-class_method",
+    "https://ruby.sketchup.com/Sketchup/DefinitionList.html#load-instance_method"
+  ],
+  "shared_components": "PASS Ruby fixture: 2 left + 2 right hinged doors share separate definitions, manual edits propagate, differing sizes separated, equal board components shared across modules",
+  "frame_divisions": "PASS fixture: glass/Pano/Shaker horizontal and vertical 3-section layout, clipped physical X bars without overlap, glass 4 panes, invalid recess/count/groove/breadth rejected",
+  "drawer_fronts": "PASS fixture: concealed/exposed 2-column fronts cover middle divider; exposed outer overlays and explicit edge gaps preserved",
+  "rails": "PASS Ruby WASM fixture: tier rails through shared sides; door and drawer stop joinery defaults to between sides and explicitly extends/rebates side panels when selected, including independent modules; curved arc retention and notch boundaries",
+  "preview": "PASS fixture: actual builder memory sink without model mutation, stored mesh round-trip, production View draw contract, front/orbit projection, CCW/edge-on guard, copper alpha/guides/style cleanup; offline Canvas screenshot inspected. Native SketchUp 2022.0.316 preview mesh/model-mutation check passed and VGD_NATIVE_PREVIEW reported one draw call.",
+  "library": "PASS real host file IO via WASI: geometry/thumbnail exports are fixtures, Unicode casefold collision protection, rename/update/delete, failed export cleanup, safe ID paths, unique temporary placement copies/cleanup and reopening in a new Ruby VM. Native SketchUp 2022.0.316 test passed SKP/thumbnail/library locking, manual geometry reload, persistence, rename, collision, update and delete. Actual working-model close/reopen remains unverified.",
+  "ui_upgrade": "Previous Edge headless run passed conditional door controls, frame joint/division, rail controls, library operations and selection guards. Latest added batch-settings UI action was not run: Playwright Edge launch returned EPERM in the current sandbox.",
+  "batch_edit": "Native SketchUp 2022.0.316 confirms the batch settings whitelist preserves each cabinet's dimensions and independent module widths. Workflow copies selected door/drawer settings, previews all targets together, Enter applies one model operation, and Esc cancels. Batch UI interaction and native Undo remain unverified.",
+  "opening_metadata": "Native SketchUp 2022.0.316 confirms additive VGD_CabinetV2 attributes for left/right hinged doors and drawer fronts during identity stamping. No UI opening-direction editor or open-pose operation yet.",
+  "dialog": "PASS source check: 500x560 default, 440x420 minimum, new preferences key resets previously stored dialog dimensions; native window scaling not visually checked",
+  "part_naming": "PASS geometry fixture: each module generates Hông Trái and Hông Phải; two independent modules generate four outer sides. Overheight halves retain level suffixes.",
+  "packaging": "PASS 4.5.2 package version alignment, 23-file RBZ whitelist, source inclusion, archive CRC and source equality verified by package_menu.py.",
+  "legacy_cleanup": "Removes VGD_EXPLODE/VGD_UNTAG source/runtime/menu/toolbar and three unused utility icons. Historical live SU2022 deployment verified all four old files were present, backed up, and then removed; 23/23 remaining Cabinet files matched SHA256. T+ loader was absent. The 2026-10-14 deployment fixture passed with exit code 0 and confirms the current sync script backs up/retires only tplus_cabinet.rb while preserving the four existing utility files. Native UI and save/reopen remain unverified.",
+  "version_alignment": "PASS: 4.5.2 matches SketchUp extension registration, runtime VERSION, dialog HTML title and visible brand header.",
+  "native_validation_runs": [
+    {
+      "date": "2026-10-14",
+      "timestamp_utc": "2026-10-13T21:58:53.488277+00:00",
+      "version": "4.5.2",
+      "status": "CHƯA KIỂM CHỨNG NATIVE",
+      "mode": "preflight_and_manual_checklist",
+      "rbz": {
+        "path": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\vgd_cabinet_modeling\\VGD_Cabinet_v4.5.2.rbz",
+        "sha256": "ace78fde256190c382c215d4bdbb5b569cc5bf8ec11e7069a97e689f702c9300",
+        "result": "PASS kiểm tra SHA-256 file; không phải kiểm thử native"
+      },
+      "environment": {
+        "sketchup_executable": "C:\\Program Files\\SketchUp\\SketchUp 2022\\SketchUp.exe",
+        "file_version": "22.0.316",
+        "sketchup_version_in_ruby": "CHƯA XÁC MINH",
+        "ruby_version": "CHƯA XÁC MINH",
+        "profile_candidate": "C:\\Users\\TUNG\\AppData\\Roaming\\SketchUp\\SketchUp 2022\\SketchUp\\Plugins",
+        "profile_confirmed_by_sketchup_api": false,
+        "profile_evidence": "Windows APPDATA của TUNG và thư mục Plugins hiện có; cần xác nhận bằng Sketchup.find_support_file('Plugins')",
+        "capture_attempts": [
+          {
+            "window": "Welcome to SketchUp",
+            "error": "FrameArrived timed out: timed out waiting on channel"
+          },
+          {
+            "window": "Untitled - SketchUp Pro 2022",
+            "error": "window capture timed out: timed out waiting on channel"
+          }
+        ]
+      },
+      "backup": {
+        "manifest": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\upgrade_fixture_20261013_215852_native452_c91d380e\\BACKUP_MANIFEST.json",
+        "plugin_files": 23,
+        "userdata_files": 46,
+        "userdata_path": "C:\\Users\\TUNG\\AppData\\Roaming\\VGD\\SketchUp\\VGD_Cabinet",
+        "result": "PASS sao chép và đối chiếu SHA-256 với bản gốc; nguồn không bị thay đổi trong lúc backup"
+      },
+      "installed_files_comparison": {
+        "result": "22/23 file trên đĩa khớp byte với RBZ; chỉ HUONG_DAN.txt khác. Không xác minh runtime đang được SketchUp nạp.",
+        "different_files": [
+          "VGD_Cabinet/HUONG_DAN.txt"
+        ]
+      },
+      "installation_performed": false,
+      "native_upgrade_executed": false,
+      "checks": {
+        "load_version_menu_toolbar_reload": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "create_update_dimensions_geometry": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "preset_create_update_rename_delete": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "description_full_missing_confirm_cancel": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "batch_front_selection_dimensions_outside_selection": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "library_crud": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "undo_redo": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "save_reopen_test_model": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "ruby_console_errors": "CHƯA QUAN SÁT; không kết luận không có lỗi",
+        "visual_preview": "CHƯA QUAN SÁT"
+      },
+      "checklist": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\upgrade_fixture_20261013_215852_native452_c91d380e\\NATIVE_CHECKLIST.md",
+      "limitations": "Công cụ Windows nhận diện được SketchUp 2022 và tên cửa sổ, nhưng hai lần capture đều timeout. Đã mở SketchUp, chưa cài RBZ, chưa nhập Ruby, chưa tạo/sửa/lưu/đóng model. Không ghi thêm PASS native; giữ nguyên kết quả native 4.5.1 và lịch sử cũ."
+    },
+    {
+      "date": "2026-10-14",
+      "timestamp_utc": "2026-10-13T22:05:49.434364+00:00",
+      "version": "4.5.2",
+      "status": "CHƯA KIỂM CHỨNG NATIVE",
+      "mode": "computer_use_capture_retry",
+      "retry_of": "2026-10-13T21:58:53.488277+00:00",
+      "rbz": {
+        "path": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\vgd_cabinet_modeling\\VGD_Cabinet_v4.5.2.rbz",
+        "sha256": "ace78fde256190c382c215d4bdbb5b569cc5bf8ec11e7069a97e689f702c9300",
+        "result": "PASS kiểm tra SHA-256 file; không phải kiểm thử native"
+      },
+      "environment": {
+        "session_reset": true,
+        "sky_reimported": true,
+        "selected_window": {
+          "app": "process:C:\\Program Files\\SketchUp\\SketchUp 2022\\SketchUp.exe",
+          "id": 526828,
+          "title": "Untitled - SketchUp Pro 2022"
+        },
+        "profile_confirmed_by_sketchup_api": false,
+        "capture_attempts": [
+          {
+            "method": "Reset node_repl; import @oai/sky; list_windows; get_window; activate_window; get_window_state",
+            "include_screenshot": true,
+            "include_text": true,
+            "error": "FrameArrived timed out: timed out waiting on channel"
+          },
+          {
+            "method": "Refresh list_windows; get_window again; get_window_state screenshot only",
+            "include_screenshot": true,
+            "include_text": false,
+            "error": "window capture timed out: timed out waiting on channel"
+          }
+        ]
+      },
+      "backup": {
+        "manifest": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\upgrade_fixture_20261013_215852_native452_c91d380e\\BACKUP_MANIFEST.json",
+        "files_verified": 69,
+        "result": "PASS kiểm tra đủ 69 file backup và SHA-256; không thiếu/sai hash; nguồn vẫn khớp snapshot",
+        "source_changed_since_backup": []
+      },
+      "installation_performed": false,
+      "native_upgrade_executed": false,
+      "application_closed": false,
+      "model_closed": false,
+      "model_modified_by_agent": false,
+      "ruby_console_input_performed": false,
+      "checks": {
+        "load_version_menu_toolbar_reload": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "create_update_dimensions_geometry": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "preset_create_update_rename_delete": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "description_full_missing_confirm_cancel": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "batch_front_selection_dimensions_outside_selection": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "library_crud": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "undo_redo": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "save_reopen_test_model": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "ruby_console_errors": "CHƯA QUAN SÁT; không kết luận không có lỗi",
+        "visual_preview": "CHƯA QUAN SÁT"
+      },
+      "limitations": "Phiên computer-use mới chọn được cửa sổ SketchUp 2022 đang mở; cả capture kết hợp accessibility và capture chỉ ảnh đều timeout. Chỉ activate cửa sổ, chưa xác nhận profile bằng Ruby, chưa cài RBZ hoặc thực hiện chức năng native. Không suy ra regression runtime từ lỗi capture; không ghi thêm PASS native."
+    },
+    {
+      "date": "2026-10-14",
+      "timestamp_utc": "2026-10-13T22:09:44.498540+00:00",
+      "version": "4.5.2",
+      "status": "CHƯA KIỂM CHỨNG NATIVE",
+      "mode": "computer_use_capture_retry",
+      "retry_of": "2026-10-13T22:05:49.434364+00:00",
+      "environment": {
+        "session_reset": true,
+        "sky_reimported": true,
+        "sketchup_initially_running": false,
+        "sketchup_launched": true,
+        "selected_window": {
+          "app": "process:C:/Program Files/SketchUp/SketchUp 2022/SketchUp.exe",
+          "id": 2492478,
+          "title": "Welcome to SketchUp"
+        },
+        "profile_confirmed_by_sketchup_api": false,
+        "capture_attempts": [
+          {
+            "method": "Reset node_repl; import @oai/sky; list_windows/list_apps; launch SU2022; get_window; activate_window; capture image and text",
+            "include_screenshot": true,
+            "include_text": true,
+            "error": "FrameArrived timed out: timed out waiting on channel"
+          },
+          {
+            "method": "Refresh list_windows and get_window; capture screenshot only",
+            "include_screenshot": true,
+            "include_text": false,
+            "error": "window capture timed out: timed out waiting on channel"
+          }
+        ],
+        "accessibility_observation": "Đọc được tree/document_text của Welcome khi include_screenshot=false; không quan sát được viewport hoặc Ruby Console.",
+        "template_click_attempt": {
+          "target": "Architectural Millimeters",
+          "error": "coordinate input geometry is unavailable"
+        },
+        "keyboard_attempt": "Tab với focus document Welcome; focus đọc lại vẫn là document Welcome. Không xác nhận điều hướng thành công."
+      },
+      "installation_performed": false,
+      "native_upgrade_executed": false,
+      "application_closed": false,
+      "model_closed": false,
+      "test_model_opened": false,
+      "model_modification_performed": false,
+      "ruby_console_input_performed": false,
+      "checks": {
+        "load_version_menu_toolbar_reload": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "create_update_dimensions_geometry": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "preset_create_update_rename_delete": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "description_full_missing_confirm_cancel": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "batch_front_selection_dimensions_outside_selection": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "library_crud": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "undo_redo": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "save_reopen_test_model": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "ruby_console_errors": "CHƯA QUAN SÁT; không kết luận không có lỗi",
+        "visual_preview": "CHƯA QUAN SÁT"
+      },
+      "limitations": "Chỉ đọc được accessibility của Welcome. Hai capture ảnh timeout, click template lỗi geometry và Tab không cho thấy focus đổi; không có bằng chứng UI/hình học native. Không cài RBZ hoặc reload source, không thêm PASS native; giữ lịch sử và backup trước."
+    },
+    {
+      "date": "2026-10-14",
+      "timestamp_utc": "2026-10-13T22:14:42.835102+00:00",
+      "version": "4.5.2",
+      "status": "CHƯA KIỂM CHỨNG NATIVE",
+      "mode": "bounded_relaunch_welcome_keyboard_recovery",
+      "retry_of": "2026-10-13T22:09:44.498540+00:00",
+      "environment": {
+        "session_reset": true,
+        "sky_reimported": true,
+        "sketchup_initially_running": false,
+        "launch_method": "sky.launch_app with returned SketchUp Pro 2022 app id",
+        "sketchup_launched": true,
+        "selected_window": {
+          "app": "process:C:/Program Files/SketchUp/SketchUp 2022/SketchUp.exe",
+          "id": 462894,
+          "title": "Welcome to SketchUp"
+        },
+        "profile_confirmed_by_sketchup_api": false,
+        "accessibility_observation": "Đọc được Welcome và danh sách template; focus là document Welcome.",
+        "keyboard_attempts": [
+          {
+            "key": "Control_L+n",
+            "observation": "Sau thao tác vẫn là Welcome; chưa quan sát được cửa sổ model."
+          },
+          {
+            "key": "Tab",
+            "observation": "Focus đọc lại vẫn là document Welcome; chưa chọn được template/model thử."
+          }
+        ],
+        "capture_attempts": [
+          {
+            "method": "Capture screenshot only after keyboard observations",
+            "include_screenshot": true,
+            "include_text": false,
+            "error": "FrameArrived timed out: timed out waiting on channel"
+          },
+          {
+            "method": "Final recovery: list_windows; get_window; activate_window; capture image and text",
+            "include_screenshot": true,
+            "include_text": true,
+            "error": "window capture timed out: timed out waiting on channel"
+          }
+        ]
+      },
+      "blocked_step": "Welcome -> mở và quan sát model thử mới; capture chưa hoạt động.",
+      "recovery_stopped_after_final_attempt": true,
+      "installation_performed": false,
+      "native_upgrade_executed": false,
+      "application_closed": false,
+      "model_closed": false,
+      "test_model_opened": false,
+      "model_modification_performed": false,
+      "ruby_console_input_performed": false,
+      "checks": {
+        "load_version_menu_toolbar_reload": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "create_update_dimensions_geometry": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "preset_create_update_rename_delete": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "description_full_missing_confirm_cancel": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "batch_front_selection_dimensions_outside_selection": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "library_crud": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "undo_redo": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "save_reopen_test_model": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "ruby_console_errors": "CHƯA QUAN SÁT; không kết luận không có lỗi",
+        "visual_preview": "CHƯA QUAN SÁT"
+      },
+      "limitations": "Lượt phục hồi có giới hạn theo yêu cầu người dùng: mở lại SketchUp 2022, chọn window mới, đọc accessibility, thử Ctrl+N và Tab với quan sát sau mỗi thao tác, rồi thử capture và phục hồi một lần. Welcome còn là window duy nhất, capture vẫn timeout; đã dừng. Không xác nhận profile hoặc cài RBZ, không kiểm thử chức năng, không dùng native_upgrade.rb, không thêm PASS native."
+    },
+    {
+      "date": "2026-10-14",
+      "timestamp_utc": "2026-10-13T22:25:24.746581+00:00",
+      "version": "4.5.2",
+      "status": "ĐÃ XÁC MINH PREFLIGHT NATIVE; CHỨC NĂNG CHƯA KIỂM CHỨNG",
+      "mode": "user_run_native_read_only_console",
+      "performed_by": "user",
+      "evidence_source": "Lệnh và kết quả Ruby Console do người dùng gửi trong chat; không phải API do agent tự chạy.",
+      "evidence": {
+        "plugins": "C:/Users/TUNG/AppData/Roaming/SketchUp/SketchUp 2022/SketchUp/Plugins",
+        "sketchup": "22.0.316",
+        "ruby": "2.7.2",
+        "cabinet": "4.5.2",
+        "show_dialog_source_location": [
+          "C:/Users/TUNG/AppData/Roaming/SketchUp/SketchUp 2022/SketchUp/Plugins/VGD_Cabinet/main43.rb",
+          539
+        ]
+      },
+      "profile_confirmed_by_sketchup_api": true,
+      "rbz": {
+        "path": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\vgd_cabinet_modeling\\VGD_Cabinet_v4.5.2.rbz",
+        "sha256": "ace78fde256190c382c215d4bdbb5b569cc5bf8ec11e7069a97e689f702c9300",
+        "result": "PASS kiểm tra file tự động; không phải hành vi native"
+      },
+      "backup": {
+        "manifest": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\upgrade_fixture_20261013_215852_native452_c91d380e\\BACKUP_MANIFEST.json",
+        "files_verified": 69,
+        "source_changed_since_backup": [],
+        "result": "PASS đầy đủ 69 file, đúng SHA-256; nguồn vẫn khớp snapshot"
+      },
+      "installed_files_comparison": {
+        "different_files": [
+          "VGD_Cabinet/HUONG_DAN.txt"
+        ],
+        "result": "22/23 file trên đĩa khớp RBZ; chỉ HUONG_DAN.txt khác. Đường dẫn show_dialog trong bộ nhớ đã được người dùng kiểm tra từ Plugins."
+      },
+      "installation_performed": false,
+      "native_upgrade_executed": false,
+      "model_modification_performed": false,
+      "limitations": "Chỉ xác minh profile, phiên bản và source_location của show_dialog qua lệnh chỉ đọc trong SketchUp. Chưa kiểm tra create/update/CRUD/description/batch/Undo/save-reopen; không có PASS UI hoặc preview từ kết quả API.",
+      "checks": {
+        "profile_sketchup_ruby_cabinet_version_runtime_location": "PASS native chỉ đọc do người dùng thực hiện",
+        "load_version_menu_toolbar_reload": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "create_update_dimensions_geometry": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "preset_create_update_rename_delete": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "description_full_missing_confirm_cancel": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "batch_front_selection_dimensions_outside_selection": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "library_crud": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "undo_redo": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "save_reopen_test_model": "CHƯA THỰC HIỆN/QUAN SÁT",
+        "ruby_console_errors": "CHƯA QUAN SÁT; không kết luận không có lỗi",
+        "visual_preview": "CHƯA QUAN SÁT"
+      }
+    },
+    {
+      "date": "2026-10-14",
+      "timestamp_utc": "2026-10-14T14:40:26Z",
+      "version": "4.5.2",
+      "status": "ĐÃ XÁC MINH PREFLIGHT ĐỌC-CHỈ; CÁC LUỒNG CHỨC NĂNG CÒN THIẾU CHƯA KIỂM CHỨNG",
+      "mode": "read_only_runtime_rbz_audit_and_bounded_ui_recovery",
+      "branch": {
+        "name": "stabilize/vgd-cabinet-4.5.2",
+        "head": "261131573a1fe2c0adcde812fe6e8380658ae292",
+        "origin_matches": true,
+        "main": "63e28a5fbc7455b436d5d89e40737521c7e0ead6",
+        "commits_ahead_of_main": 5
+      },
+      "evidence_source": "SketchUp MCP execute_ruby/model_status chỉ đọc; Computer Use đã chọn đúng cửa sổ nhưng không capture ổn định; đối chiếu Git và RBZ tự động.",
+      "rbz": {
+        "path": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\vgd_cabinet_modeling\\VGD_Cabinet_v4.5.2.rbz",
+        "sha256": "ace78fde256190c382c215d4bdbb5b569cc5bf8ec11e7069a97e689f702c9300",
+        "runtime_entries": 23,
+        "duplicate_entries": 0,
+        "crc": "PASS",
+        "runtime_whitelist_match": true,
+        "runtime_bytes_match_cabinet_work": true,
+        "SHA256_manifest_matches": true,
+        "rebuilt_this_run": false
+      },
+      "environment": {
+        "plugins": "C:/Users/TUNG/AppData/Roaming/SketchUp/SketchUp 2022/SketchUp/Plugins",
+        "sketchup": "22.0.316",
+        "ruby": "2.7.2",
+        "cabinet": "4.5.2",
+        "runtime_source_location": [
+          "C:/Users/TUNG/AppData/Roaming/SketchUp/SketchUp 2022/SketchUp/Plugins/VGD_Cabinet/main43.rb",
+          539
+        ],
+        "profile_confirmed_by_sketchup_api": true,
+        "evidence": "execute_ruby chỉ đọc; stdout/stderr rỗng; undo_step=none."
+      },
+      "current_model_read_only_snapshot": {
+        "title": "Untitled",
+        "path": null,
+        "modified": true,
+        "root_entities": 3,
+        "faces": 367,
+        "selection": 0,
+        "objects": [
+          "Niraj",
+          "Tủ VGD",
+          "VGD Native Batch Test B"
+        ],
+        "status_changed": "none",
+        "model_write_calls_by_agent": false
+      },
+      "reported_by_user": {
+        "source": "Người dùng báo Chat Work đã kiểm tra API tạo/cập nhật cabinet, batch front settings, parser, preset và library trên runtime 4.5.2.",
+        "verified_by_agent_this_run": false,
+        "checks": [
+          "create/update cabinet API",
+          "batch front settings API",
+          "description parser",
+          "preset CRUD",
+          "library CRUD"
+        ]
+      },
+      "checks": {
+        "profile_sketchup_ruby_cabinet_version_runtime_location": "PASS native chỉ đọc; phiên bản và source_location được SketchUp trả về trực tiếp.",
+        "load_version_menu_toolbar_reload": "CHƯA XÁC MINH ĐẦY ĐỦ; accessibility trước đó chỉ hiển thị nút VGD Cabinet — Dựng hình, chưa kiểm tra menu/reload hoặc uniqueness.",
+        "create_update_dimensions_geometry": "NGƯỜI DÙNG BÁO ĐÃ KIỂM TRA API; chưa xác minh độc lập trong lượt này.",
+        "preset_create_update_rename_delete": "NGƯỜI DÙNG BÁO ĐÃ KIỂM TRA API; chưa xác minh độc lập trong lượt này.",
+        "description_full_missing_confirm_cancel": "NGƯỜI DÙNG BÁO đã kiểm tra parser; các thao tác UI/import/confirm/cancel chưa xác minh.",
+        "batch_front_selection_dimensions_outside_selection": "NGƯỜI DÙNG BÁO đã kiểm tra API batch; chọn qua UI, kích thước và đối tượng ngoài selection chưa xác minh trong lượt này.",
+        "library_crud": "NGƯỜI DÙNG BÁO ĐÃ KIỂM TRA API; chưa xác minh độc lập trong lượt này.",
+        "undo_redo": "CHƯA THỰC HIỆN/QUAN SÁT.",
+        "save_reopen_test_model": "CHƯA THỰC HIỆN/QUAN SÁT.",
+        "ruby_console_errors": "CHƯA QUAN SÁT; không kết luận không có lỗi.",
+        "visual_preview": "CHƯA QUAN SÁT BẰNG UI."
+      },
+      "computer_use": {
+        "selected_window": {
+          "id": 722762,
+          "title": "Untitled - SketchUp Pro 2022"
+        },
+        "prior_accessibility_observation": "Tree từng hiển thị toolbar/pane VGD Cabinet và nút Dựng hình; không chứng minh trạng thái menu, không trùng lặp, hoặc hoạt động reload.",
+        "capture_errors": [
+          {
+            "step": "click Accessibility Extensions",
+            "error": "coordinate input geometry is unavailable"
+          },
+          {
+            "step": "capture after activation",
+            "error": "user input was detected in this window; call get_window_state before continuing"
+          },
+          {
+            "step": "read state",
+            "error": "window is minimized; call activate_window, refresh with get_window, then retry get_window_state"
+          },
+          {
+            "step": "reselect, activate and capture",
+            "error": "user input was detected in this window; call get_window_state before continuing"
+          },
+          {
+            "step": "final capture",
+            "error": "FrameArrived timed out: timed out waiting on channel"
+          }
+        ],
+        "model_ui_action_performed": false,
+        "stopped_after_bounded_recovery": true
+      },
+      "installation_performed_this_run": false,
+      "native_upgrade_executed": false,
+      "model_closed_or_saved_by_agent": false,
+      "limitations": "Model Untitled hiện modified=true và chứa 3 entity top-level; không mở/tạo/chuyển/lưu/đóng model qua MCP vì thao tác đó có thể ảnh hưởng tài liệu chưa lưu. Computer Use không cung cấp capture sau một lượt phục hồi, vì vậy không thể thao tác an toàn trên model thử riêng hoặc xác minh UI/save-reopen. Không ghi PASS cho các mục này."
+    }
+  ]
+}

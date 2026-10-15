@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="vi" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="dialog.css">
+  <title>VGD_Package</title>
+</head>
+<body>
+  <header>
+    <div class="brand"><div class="eyebrow">BỘ CÔNG CỤ VGD</div><h1>VGD_Package</h1><p id="version">Đang đọc phiên bản SketchUp…</p></div>
+    <div class="capabilities" id="capabilities"></div>
+    <button class="theme-button" id="themeButton" type="button" title="Đổi giao diện sáng/tối" aria-label="Đổi giao diện sáng/tối">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 15.3A8.5 8.5 0 0 1 8.7 4 8.5 8.5 0 1 0 20 15.3Z"/></svg>
+    </button>
+  </header>
+  <main>
+    <section class="actions" aria-label="Công cụ dự án">
+      <button class="action-button primary" onclick="sketchup.scan()" title="Quét texture trong model">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 4.2 4.2M8.2 10.8h5.2M10.8 8.2V13.4"/></svg>
+        <span><strong>Quét dự án</strong><small>Kiểm tra texture của SketchUp và PBR</small></span>
+      </button>
+      <button class="action-button" onclick="sketchup.inspectEnscape()" title="Kiểm tra dữ liệu Enscape chỉ đọc">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.2-6 9-6 9 6 9 6-3.2 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2.5"/><path d="M5 4 19 20"/></svg>
+        <span><strong>Kiểm tra Enscape</strong><small>Đọc thuộc tính và xuất báo cáo</small></span>
+      </button>
+    </section>
+    <p class="notice">Giai đoạn hiện tại chỉ đọc dữ liệu. Chức năng đóng gói và liên kết lại sẽ được bổ sung sau khi kiểm chứng.</p>
+    <div id="message" role="status"></div>
+    <section id="summary" class="summary"></section>
+    <section class="table-wrap">
+      <table><thead><tr><th>Vật liệu</th><th>Kênh</th><th>Nguồn</th><th>Trạng thái</th><th>Đường dẫn hiện tại</th></tr></thead><tbody id="assets"></tbody></table>
+    </section>
+  </main>
+  <script src="dialog.js"></script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+const fs=require('fs'),path=require('path'),{pathToFileURL}=require('url');
+const deps=process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES;
+if(!deps)throw Error('Set CODEX_PRIMARY_RUNTIME_NODE_MODULES');
+const {chromium}=require(path.join(deps,'playwright'));
+const assert=(v,m)=>{if(!v)throw Error(m)};
+(async()=>{
+ const browser=await chromium.launch({headless:true,channel:'msedge'});
+ try{
+  const page=await browser.newPage({viewport:{width:760,height:760}}),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.addInitScript(()=>{window.calls=[];window.alerts=[];window.alert=m=>alerts.push(m);window.sketchup=new Proxy({},{get:(_,action)=>payload=>calls.push({action,payload})});});
+  await page.goto(pathToFileURL(path.resolve(__dirname,'../runtime/VGD_Dim/dialog.html')).href);
+  const last=async()=>page.evaluate(()=>calls.at(-1));
+  const idle=async()=>page.evaluate(()=>VGD.onBusy(false));
+  const nav=async name=>page.click('#tab-'+name);
+  assert((await last()).action==='ready','Ready missing');
+  await page.evaluate(()=>VGD.onState({version:'3.3.0-beta.1',presets:{'VGD Standard':{dim:{color:'#000000'},text:{color:'#000000'},label:{color:'#000000'}}},builtin:['VGD Standard'],auto:{enabled:false},smart:{off1:125,scene_only:true},units:{unit:'2',precision:'0',show_unit:false},anim:{enabled:true,transition:1,delay:2,loop:false}}));
+  assert(await page.locator('[role=tab]').count()===6 && await page.locator('.function-panel:visible').count()===1,'Navigation/panels wrong');
+  assert(await page.locator('#tab-smart .nav-copy small').innerText()==='Boundary, Detail & tự động đo','Navigation description missing');
+  assert(await page.locator('#shared-scope').isHidden(),'Smart scope misleading');
+  assert(await page.locator('[id="sd.off1"]').inputValue()==='125','Saved Smart opts not restored');
+  assert(await page.locator('[id="region.active"]').count()===1 && await page.getByRole('button',{name:'Đặt / cập nhật Boundary'}).count()===1,'Boundary controls missing');
+  await page.getByRole('button',{name:'Đặt / cập nhật Boundary'}).click();assert((await last()).action==='set_boundary','Boundary callback missing');
+  await page.evaluate(()=>VGD.onToolStart({message:'Chọn hai góc'}));assert(await page.getByRole('button',{name:'Đặt / cập nhật Boundary'}).isDisabled(),'Boundary did not lock controls');
+  await page.evaluate(()=>VGD.onRegionCancelled());assert(await page.getByRole('button',{name:'Đặt / cập nhật Boundary'}).isEnabled(),'Cancel did not release controls');
+  await page.locator('[id="region.name"]').fill('Hộc kéo');await page.getByRole('button',{name:'Tạo vùng'}).click();
+  assert((await last()).action==='set_detail' && JSON.parse((await last()).payload).name==='Hộc kéo','Detail Region payload wrong');
+  await page.evaluate(()=>VGD.onRegionSaved({name:'Hộc kéo',state:{boundary:'Boundary',details:[{id:'detail-1',name:'Hộc kéo'}],active_detail:'detail-1'}}));
+  assert(await page.locator('[id="region.active"]').inputValue()==='detail-1' && await page.locator('[id="region.delete"]').isEnabled(),'Saved region state not restored');
+  await page.locator('[id="region.active"]').selectOption('');assert((await last()).action==='set_region' && JSON.parse((await last()).payload).id==='','Boundary selection callback wrong');
+  await page.locator('[id="region.active"]').selectOption('detail-1');await page.locator('[id="region.delete"]').click();assert((await last()).action==='delete_region','Delete region callback missing');
+  await page.getByRole('button',{name:'Bắt đầu Dim thủ công'}).click();assert((await last()).action==='manual_dim','Manual Dim callback missing');
+  await page.evaluate(()=>VGD.onManualStatus({message:'Đã hủy Dim thủ công.'}));
+  await page.locator('[id="sd.face"]').selectOption('-y');
+  await page.getByRole('button',{name:'Smart Dim cho tủ đang chọn',exact:true}).click();
+  let c=await last(),data=JSON.parse(c.payload);
+  assert(c.action==='smart_dim' && data.opts.scene_only && data.opts.use_section && data.opts.off1==='125','Smart options wrong');
+  assert(await page.getByRole('button',{name:'Smart Dim cho tủ đang chọn',exact:true}).isDisabled(),'Double submit enabled');
+  await page.evaluate(()=>VGD.onSmart({total:5,replaced:1,section:true,face:'-y',tag:'000_DIM_SECTION_Y_S1',parts:3,h:[18,764,18],v:[720],warnings:[]}));
+  assert((await page.locator('#log').innerText()).includes('Đã cập nhật'),'Smart status wrong');
+  await nav('style');
+  assert(await page.locator('#shared-scope').isVisible(),'Shared scope missing');
+  await page.getByRole('button',{name:'Quét',exact:true}).click();
+  data=JSON.parse((await last()).payload);
+  assert(data.opts.scope==='selected' && data.opts.nested && !data.opts.hidden && !data.opts.locked,'Default scope unsafe');
+  await page.evaluate(()=>VGD.onScan({dim:2,text:3,label:4,nested:1}));
+  await page.locator('[id="dim.color"]').fill('#112233');
+  await page.selectOption('[id="dim.arrow"]','dot');
+  await page.selectOption('[id="dim.textorient"]','aligned');
+  await page.selectOption('[id="dim.align"]','above');
+  await page.locator('[id="kind.text"]').uncheck();
+  await page.getByRole('button',{name:'Áp style theo phạm vi',exact:true}).click();
+  data=JSON.parse((await last()).payload);
+  assert(data.kinds.join(',')==='dim,label' && !('units' in data.settings) && data.settings.dim.color==='#112233','Style/unit separation wrong');
+  await idle();
+  await page.locator('input[name=scope][value=model]').check();
+  await nav('font');
+  assert(await page.locator('input[name=scope][value=model]').isChecked() && await page.locator('#badge-font').innerText()==='Toàn model','Scope not shared');
+  await page.getByRole('button',{name:'Làm mới Dimension theo phạm vi',exact:true}).click();
+  assert((await last()).action==='rebuild' && JSON.parse((await last()).payload).opts.scope==='model','Rebuild missing scope');
+  await idle();await page.click('#dim-info');assert((await last()).action==='dim_info','Dim info missing');
+  await page.click('#text-info');assert((await last()).action==='text_info','Text info missing');
+  await page.click('#native-apply');assert((await last()).action==='native_apply','Native apply missing');await idle();
+  await nav('units');
+  assert(await page.locator('#shared-scope').isHidden(),'Units misleading scope');
+  await page.locator('[id="units.unit"]').selectOption('3');
+  await page.locator('[id="units.reset_text"]').check();
+  await page.getByRole('button',{name:'Áp đơn vị cho toàn model',exact:true}).click();
+  c=await last();data=JSON.parse(c.payload);
+  assert(c.action==='units_apply' && data.settings.unit==='3' && data.settings.reset_text && !data.opts,'Global Units callback wrong');
+  await page.evaluate(()=>VGD.onUnits({unit:'3',precision:'1',show_unit:true,reset:2}));
+  await nav('presets');assert(await page.locator('#del').isDisabled(),'Builtin deletion enabled');
+  await page.locator('#pname').fill('My style');await page.getByRole('button',{name:'Lưu',exact:true}).click();
+  assert((await last()).action==='save_preset','Preset callback missing');
+  await nav('animation');await page.getByRole('button',{name:'Tắt animation',exact:true}).click();assert((await last()).action==='anim_set','Animation callback missing');
+  await nav('style');await page.locator('[id="auto.enabled"]').check();assert((await last()).action==='set_auto','Auto callback missing');
+  assert(await page.locator('body').getAttribute('data-theme')==='dark','Dark theme should be the first-launch default');
+  await page.click('#theme');assert(await page.locator('body').getAttribute('data-theme')==='light','Light theme toggle missing');
+  await page.reload();assert(await page.locator('body').getAttribute('data-theme')==='light','Light theme preference not persisted');
+  await page.locator('#tab-smart').focus();await page.keyboard.press('ArrowDown');assert(await page.locator('#tab-font').getAttribute('aria-selected')==='true','Keyboard tabs missing');
+  const out=path.resolve(__dirname,'../outputs');fs.mkdirSync(out,{recursive:true});
+  for(const theme of ['light','dark']) for(const [width,height] of [[760,760],[740,740],[540,700],[360,600]]){
+   await page.setViewportSize({width,height});await page.evaluate(t=>{VGD.setTheme(t);VGD.mountScope()},theme);
+   if(width>740){assert(await page.locator('#tab-smart .nav-copy').isVisible()&&await page.locator('#tab-smart .nav-copy small').isVisible(),'Expanded navigation title/description hidden');assert(await page.locator('#shared-scope').evaluate(element=>element.parentElement.id)==='desktop-scope','Wide scope card moved unexpectedly: '+await page.evaluate(()=>innerWidth)+' '+await page.locator('#shared-scope').evaluate(element=>element.parentElement.id))}
+   else{assert(await page.locator('#tab-smart .nav-copy').isHidden(),'Compact navigation still shows labels');assert((await page.locator('#tab-smart').getAttribute('title')).includes('Boundary'),'Compact navigation tooltip missing');assert(await page.locator('#shared-scope').evaluate(element=>element.parentElement.id)==='mobile-scope','Compact scope card did not move into content')}
+   for(const tab of ['smart','font','style','presets','animation','units']){
+    await nav(tab);
+    const layout=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth,footer:document.querySelector('footer').getBoundingClientRect().bottom<=innerHeight,main:document.querySelector('main').clientHeight>100,scroll:document.querySelector('main').scrollHeight>=document.querySelector('main').clientHeight}));
+    assert(!layout.overflow && layout.footer && layout.main && layout.scroll,'Clipped UI '+theme+' '+width+' '+tab);
+    if(tab==='smart'||(tab==='style'&&width===760))await page.screenshot({path:path.join(out,'vgd_dim_sidebar_'+tab+'_'+theme+'_'+width+'.png')});
+   }
+  }
+  assert(await page.locator('#shared-scope').count()===1,'Responsive duplicate scope');
+  await page.evaluate(()=>VGD.onError({message:'Test error'}));assert((await page.locator('#log').innerText()).includes('Test error'),'Inline error missing');
+  assert(await page.evaluate(()=>alerts.length)===0 && errors.length===0,errors.join(';'));
+  console.log('PASS: 6 sidebar panels, expanded labels/descriptions and compact icon tooltips, shared responsive scope, real clicks/keyboard, saved Smart settings, busy guards, separate Units, presets/auto/animation, persistent light/dark, all panels at 760/740/540/360px, no popups');
+ }finally{await browser.close()}
+})().catch(e=>{console.error(e);process.exitCode=1});

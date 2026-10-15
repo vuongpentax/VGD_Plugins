@@ -1,0 +1,179 @@
+# Bàn giao VGD Scenes
+
+Baseline source 1.5.3-beta.4: 20 file runtime khớp RBZ local trong repo nguồn. dev/deploy.ps1 hiện chỉ có whitelist 19 file, thiếu vgd_scenes/update_notice.rb; chưa dùng script này để triển khai baseline đầy đủ. Không kèm RBZ/ZIP. Đợt chuyển repository chỉ đối chiếu source/checksum; chưa chạy lại test tự động hoặc kiểm thử native SketchUp. Các kết quả PASS bên dưới thuộc lịch sử workspace nguồn.
+
+Các mục phiên bản cũ bên dưới là lịch sử trước baseline beta.4.
+
+## 1.5.2 · Hợp nhất bản cài 1.5.1, dọn CSS/DOM và preview
+
+Đã cài SU22 ngày 05/10/2026 lúc 16:05 +07; 17 file khớp nguồn, 8.162 file plugin khác không đổi SHA256. Backup 1.5.1: `outputs/install_20261005_160427_302/`. Không reload SketchUp hoặc sửa model đang mở; lưu công việc rồi khởi động lại để nạp 1.5.2.
+
+Nguồn 1.5.1 đã được sao lưu ở `outputs/review_installed_151_20261005_153046/runtime/` trước khi sửa. Giữ fix theme, summary SU22 và aria-expanded của size-chip; chỉ đổi nhãn người dùng thành Lưu view, không đổi ID/callback. CSS được gộp theo cascade, bỏ selector không còn DOM; 21.322 → 16.895 byte. Computed styles của 30 trạng thái không khác baseline 1.5.1. Bỏ badge/nav-step cũ, observer theo từng nút và timer 700 ms; view count, tên xem trước, tooltip và format cập nhật từ sự kiện/state. Một observer progress và refresh 2s vẫn cần thiết.
+
+SectionPreview tạo một plane gốc model, không gọi unique_section_target hoặc make_unique. ViewState shallow + danh sách root hidden thực sự đổi thay thế quét sâu definition. Isolate vẫn ẩn root không được chọn; giữ/restores tags/folders, active cut trước đó, camera và selection hiện tại. Chỉ trục/flip mới refit; slider dùng lại plane. Cleanup giữ session đến khi thành công để retry khi lỗi. Tạo scene cut thật không đổi, vẫn Make Unique khi cần. Không xóa definition/attribute/scene cũ hoặc mặt cắt thuộc plugin khác.
+
+Preview dùng operation thường để có thể abort mà không kéo theo operation người dùng; không dùng transparent operation. Vì mỗi thao tác là một mục Undo, native Undo/Redo trong khi preview cần kiểm tra riêng trên model mẫu; fixture chưa mô phỏng undo stack. Ctrl+S/Save trong lúc preview chưa có observer chặn: tắt preview trước khi lưu SKP. Không được khẳng định đã loại bỏ mọi crash hoặc kiểm chứng native SU22/SU2026.
+
+PASS: mọi bộ Ruby WASM 3.2 và Ruby 2.7.2 DLL; sáu UI suites Edge. Test_preview_lifecycle kiểm tra shared definition identity, single plane, không deep traversal, original root cut, hidden roots, setter/create failure, retry cleanup và model switch. Test_cleanup_ui kiểm tra 50 scene/20 refresh: tài nguyên không tăng theo số hàng, feedback không polling, nhãn/DOM/CSS mới và theme fix. Loader/main/package/RBZ/deploy 1.5.2, npm test gồm cleanup suite. Chỉ triển khai 17 file VGD; T+ bị vô hiệu hóa giữ nguyên làm tham khảo LayOut.
+
+## 1.5.0 · Sidebar, preview mặt cắt, thao tác nhiều scene
+
+Giao diện có năm tab bên trái, vùng cấu hình và nút chính bên phải. Góc nhìn chỉ có tên. Scene dùng click/đúp, Shift/Ctrl, kéo nhóm, nút lưu/xóa trực tiếp và đổi tên hàng loạt có xem trước. Đã bỏ UI cập nhật nguồn, vector mặt cắt tùy chỉnh và dịch thêm; engine vẫn đọc thông số cũ để tương thích scene đã tạo.
+
+`SectionPreview` nằm trong scenes.rb, tạo mặt cắt tạm ở context của từng đối tượng, Make Unique instance dùng chung. Slider debounce 100ms, các bước dịch gộp bằng transparent operation; đổi % không tự căn lại camera. X/Y/Z hoặc đảo phía mới canh hướng camera. Dọn mặt cắt và trả view khi tắt/rời tab/tạo/đóng dialog. Copy/paste toolbar dùng `SceneTransfer.copy_view/paste_view` và `view_clipboard_v1.json`, khác clipboard scene. Paste chỉ thay live camera + working frame; `@live_frame` giữ kích thước cho dialog và capture thủ công.
+
+Thứ tự bảng vẫn lưu bằng ID. `reorder` nhận một ID hoặc mảng IDs, giữ thứ tự nội bộ cụm. `sync_order` gọi Pages#reorder trên SU2025+, không tạo lại scene, có preflight và rollback. SU2022 chưa có API này: nút không áp dụng được, có chú thích rõ trong dialog. Đổi tên hàng loạt giữ identity, dùng tên tạm khi đổi chéo và kiểm tra tên trùng trước khi ghi.
+
+`npm test` PASS với Ruby WASM và Edge headless; bổ sung test_scene_workflow.rb/cjs cho preview/cleanup, camera memory, nhóm 10/50 scene, Shift/kéo chuột thật/tự cuộn, batch names và native-order capability guard. Chưa kiểm chứng native HtmlDialog/cắt trong SU2022 sau thay đổi này. Chỉ triển khai VGD Scenes; không đổi plugin khác.
+
+## Thay đổi 1.4.0 · làm mới giao diện dialog
+
+### Kiểm tra bản Claude ngày 04/10/2026
+
+Đã nhập bản trong `Downloads/files.zip` và chạy toàn bộ `npm test` bằng Ruby WASM + Edge headless: PASS. Điều chỉnh test mở menu ⋯ trước khi capture vì menu mới tự đóng. Thêm `test_refresh_ui.cjs` cho compact rows, PNG/JPG/PDF thực tế, theme hệ thống, progress và trạng thái camera.
+
+Đã sửa huy hiệu camera: dùng `camera.saved_sig` đọc camera của scene và `camera.sig` đọc camera đang xem; không dùng timer để đoán đã lưu. Hỗ trợ mở dialog sau Orbit, chuyển scene từ SU/toolbar, lưu thất bại, chuyển scene chậm và model khác. Signature bao gồm kiểu chiếu và trục FOV, bỏ aspect ratio để thay khung không bị đánh dấu là đổi góc. Sửa theme lần đầu theo hệ thống, reset ô khung mở khi đổi model và giữ tooltip gốc qua polling. Các điểm chưa kiểm chứng: HtmlDialog SU2022 thật và nền RGBA trong Chromium 88; CSS fallback đã được đọc kiểm tra, nâng cấp color-mix nằm trong @supports.
+
+Thay đổi chính ở `dialog.css/html/js` và `camera.rb` (các trường chỉ đọc `sig`, `saved_sig`). Callback/ID giữ nguyên. Hàng scene: `decorateRows` (MutationObserver trên `#sceneList`) chèn `.size-chip`, các ô `.row-frame` ẩn trừ khi `.row.open`; trạng thái mở lưu trong `openFrames` qua polling. `#format` vẫn là select (ẩn bằng `.sr-only`) và đồng bộ với nút `[data-fmt]`. Huy hiệu `#unsavedBadge` so `camera.sig` với `camera.saved_sig`. `test_frame_ui.cjs` mở dòng 2 (`.size-chip`) trước khi dùng locator `[data-frame-key]`.
+
+SU2022 dùng libcef Chromium 88: không dùng `color-mix()` ngoài `@supports`. Đã chạy `npm test` bằng Edge headless sau sửa; chưa chụp native SU2022.
+
+## Thay đổi 1.3.1 · tổ chức lại flow, giữ theme
+
+Đã cài SU22 ngày 04/10/2026; backup `outputs/install_20261004_015555_095/`. 17 file runtime khớp nguồn, 19.881 file plugin khác không đổi SHA256, không đổi loader khác. Khởi động lại SU22 để nạp bản mới.
+
+Nav bốn bước `views → scenes → compose → export`. `sections` là nhánh tạo ở bước 1, chọn bằng `data-create`, không phải tab chính. Tạo thành công có IDs sẽ đi bước 2; chọn sẵn IDs trả về. Mỗi bước một primary action ở footer + đường quay lại/tiếp. `goCompose` mở current scene nếu đã thuộc bộ đánh dấu, nếu không mở scene đầu được đánh dấu. Chọn nhóm vẫn không visit.
+
+Khung/preset/camera/cao độ được chuyển khỏi export sang compose; dropdown `composeScene` mở scene theo ID. Export chỉ còn summary kích thước sau scale, định dạng/scale/date folder và mục chuẩn bị SKP. Native details thu gọn source, nhóm tên, batch, transfer, quản lý, camera, cao độ, preset, lưới. Row rename/capture vào menu ⋯, trạng thái mở giữ qua polling. Theme variables/font giữ nguyên.
+
+Backend không đổi ngoài version 1.3.1. Kiểm tra `test_flow_ui.cjs` chạy luồng thật không helper (auto-next, scene chooser, summary scale, one primary, light/dark 640×780 & 460×540). `ui_navigation.cjs` giúp hai bộ UI cũ tìm đúng tab/details sau di chuyển control; không dùng helper trong flow test. Cả ba UI suites đã qua Edge headless. RBZ/deploy vẫn chỉ 17 file Scenes.
+
+## Thay đổi 1.3.0 · khung tự lưu, camera chỉ Update
+
+Đã cài SU22 ngày 04/10/2026; backup `outputs/install_20261004_010855_294/`. Cả 17 runtime files khớp nguồn và 19.882 file plugin khác giữ nguyên SHA256. Cần khởi động lại SketchUp để nhận bản mới; không sửa model đang mở.
+
+- Scene list hiển thị rộng/cao/tỷ lệ/lề riêng; Enter/blur mới commit. Poll không xóa số đang gõ. Chọn cùng tên gốc hoặc chuỗi chỉ đánh dấu, không visit. Nguồn VGD lấy tên đối tượng; scene thường bỏ hậu tố view chuẩn.
+- `SceneFrame.apply` preflight tất cả ID/kích thước rồi đổi trực tiếp aspect và lưu frame attribute. Giữ eye/target/up/projection/FOV API đã lưu; không `page.update`, không capture LIVE Orbit/FOV/fit. LIVE được giữ góc thử, chỉ đổi aspect. Rollback camera/attributes/working frame khi lỗi; giới hạn Undo SU22–25 như bên dưới.
+- Batch tùy chọn giữ tỷ lệ từng scene: cạnh dài = max(rộng,cao) đã nhập; cạnh còn lại làm tròn pixel. Bỏ tick dùng cùng rộng/cao. Preset có tên lưu trong model attribute `frame_presets`; chọn ở Xuất & Khung tự lưu current frame, ở batch chỉ điền thông số chờ Apply.
+- FOV nhập độ 1–120 đúng `Camera#fov`, UI ghi chiều đo `fov_is_height?`. Parallel nhập `Camera#height` đổi mm→inch. Preview chỉ LIVE, Update view mới lưu. Không có Overscan.
+- `CameraControl.preview`: +/− X/Y/Z là hướng từ eye đến target theo world/local. Giữ target, khoảng cách, projection/lens; AUTO tìm signed axis gần nhất theo dot, không refit. Local lấy selection đầu hoặc source path của current VGD page; chặn shear/degenerate/edit/two-point.
+- `dev/test_frame_camera.rb`: old-camera/new-frame export trước Update, batch preserve ratio/rollback/preflight, presets, FOV/parallel, six axes và rotated/mirrored local/AUTO. `dev/test_frame_ui.cjs`: Enter/blur/no-input-save, retry lỗi, stale-model editor, group no visit, preset/batch, FOV/axis/Update. Đã qua Ruby2.7.2 DLL fixture, WASM3.2 và Edge headless; chưa test kernel/CEF SketchUp thực tế.
+- Runtime/RBZ 1.3.0, deploy allowlist vẫn 17 file riêng Scenes. Không sửa Cabinet/Dim/BIM hoặc plugin khác.
+
+## Thay đổi 1.2.2
+
+Đã cài SU22 lúc 19:49 +07 ngày 03/10/2026; backup `outputs/install_20261003_194856_747/`, 17 file khớp runtime, 8.011 file plugin khác hash không đổi. Không reload process hoặc sửa model đang mở; khởi động lại SketchUp để nhận bản mới.
+
+Sửa báo “FOV quy đổi ngoài giới hạn” khi xuất JSON toàn bộ. `SceneTransfer.validate_camera` chỉ kiểm tra dữ liệu, tách khỏi dựng Camera; xuất/read/write không chuyển trục hoặc sửa camera nguồn. Chấp nhận physical FOV hữu hạn 0<FOV<180, vẫn kiểm tra aspect/pose/frame. Import preflight tất cả camera trước writes, thêm tên scene khi lỗi. `Scenes.convert_fov`, `set_camera_fov`, `copy_camera_lens` dùng chung transfer/camera_copy/cao độ và rollback; góc tương đương ngoài setter 1–120 dùng sensor width tạm + focal_length=35mm, ensure phục hồi image_width, xác minh getter với dung sai. Không clamp. Rollback aspect=0 dùng tỷ lệ view nếu đổi trục.
+
+`dev/test_transfer_fov.rb` chạy fixture Ruby 2.7.2 DLL và WASM3.2: >120/<1, JSON roundtrip, new/update, copy/cao độ, source giữ nguyên, native setter giả lập từ chối/clamp/fail, tên scene/preflight. Chưa chạy kernel SketchUp thật; không được coi fixture là bằng chứng setter native góc cực trị đã hoạt động. Runtime/RBZ 1.2.2, allowlist vẫn 17 file.
+
+## Thay đổi 1.2.1
+
+Đã cài SU22 lúc 18:32 +07 ngày 03/10/2026; backup `outputs/install_20261003_183241_486/`, 17 file khớp runtime, 7.994 file plugin khác hash không đổi. Chưa reload process SketchUp đang mở.
+
+Lệnh `removeAllFrames`/`restoreAllFrames`, nút trong Xuất & Khung → Gửi file SketchUp và menu riêng không cần bảng. Remove xác nhận toàn model (cả scene native), không theo filter/checkbox. Chỉ đặt aspect_ratio=0 trên Page#camera gốc, không page.update/recreate/visit scene. Live camera giữ instance đầy đủ để bảo toàn two-point/MatchPhoto. Frame size attribute giữ nguyên; own grid tool tắt sau remove. Backup tỷ lệ vào model `VGD.Scenes.v1/unlocked_camera_frames` có version/pages/view_ratio/active_id. Restore bỏ qua deleted/scene đã có ratio khác 0, không bật lưới. Rollback từng ratio/live/backup rõ ràng cho SU22–25; model operation cho SU2026. Không hứa native Undo camera ở SU22.
+
+`test_clear_frames.rb` chạy trong Ruby2.7.2 và WASM3.2 đã qua: mixed/native/two-point/unused camera, identity/lens/flags/render/cut/frame sizes, no-op/repeat, restore/new manual frames/deleted pages, export không re-lock saved pages, partial failure sau setter write rollback, edit/busy/model/menu cancel. Chromium qua confirmation scope/cancel/restore/disabled states và layout. Không có kernel test thực tế cho lệnh mới; không tự sửa model người dùng đang mở. Runtime/RBZ 1.2.1, allowlist vẫn 17 file.
+
+## Thay đổi 1.2.0
+
+Người dùng đã đổi yêu cầu: chỉ sắp xếp bảng VGD để xuất; **chưa sắp xếp thanh scene SketchUp**. Không dùng Pages#reorder, không xóa/tạo lại scene; không thêm shortcut SU. SceneStore.ordered đọc model attribute `VGD.Scenes.v1/scene_order` chứa persistent IDs. Reorder có expected-order/model/edit/busy guards, operation và rollback attribute. Main export và transfer.bundle dùng cùng thứ tự; scene mới append, scene xóa bỏ qua, rename giữ ID, JSON order hỏng fallback native.
+
+Grip cuối dòng dùng HTML drag/drop, danh sách đang lọc neo vào thứ tự đầy đủ. Poll tạm dừng khi drag; đổi model/order/busy/edit hủy drag. ↑/↓ chỉ trong list, giữ focus và theo filter; input/checkbox/modal không bị bắt phím. Native scene switch cập nhật navigation ID.
+
+`camera.rb`: Z thế giới tuyệt đối hoặc floor+eye-height mm; giữ hướng nhìn (dịch eye/target Z) hoặc giữ target. Giữ projection, aspect, FOV (quy đổi ngang/dọc khi cần) hoặc ortho height; chặn two-point/MatchPhoto/edit/invalid/busy. Đây là preview, không page.update hoặc lưu frame; dùng capture toolbar khi cần lưu.
+
+Ruby 2.7.2 DLL và WASM3.2 fixture + Chromium tests qua, bao gồm PNG/PDF/JSON private order, ID/link/native order không đổi, thêm/xóa/rename/fallback, camera projection/FOV/preview/capture/guards, pointer drag thật và filter, arrow/focus/native switch, cao độ/draft/model switch. Xem `test_order_camera.rb`. **Chưa xác nhận engine mới trong kernel SketchUp.**
+
+Cài SU22: `outputs/install_20261003_171852_481/`, 17 file riêng, 7.939 file plugin khác không đổi. Không bật toolbar, không reload process đang làm của người dùng.
+
+Clipping chưa tích hợp: `dev/CLIPPING_RESEARCH.md`, `dev/clipping_lab.rb` là mẫu riêng không thuộc RBZ. Computer Use đã khởi tạo và thử mở process mới nhưng helper báo lỗi; lần kiểm tra tiếp bị người dùng dừng bằng Esc. Không tiếp tục điều khiển UI trong lượt đó. Không khẳng định model mẫu đã dựng hoặc Near/Force đã hoạt động. Tiếp tục chỉ trên process/model rỗng riêng, bảo vệ bản vẽ thật.
+
+## Yêu cầu người dùng
+
+Thương hiệu chính **VGD**; giao diện theo theme T+ (nâu/trắng/than, sáng/tối). Ưu tiên tạo scene đối tượng nhanh theo view cơ bản; mặt cắt tùy chỉnh; quản lý/đặt tên/xóa/update/chọn scene xuất; PNG/JPG theo scene vào folder hoặc một PDF nhiều trang; PNG nền trong suốt; frame/grid hỗ trợ camera. Mục tiêu SketchUp 2022. Nghiêm cấm ảnh hưởng plugin khác.
+
+## Baseline lịch sử 1.2.2
+
+Runtime 1.2.2 độc lập `VGD::Scenes`, loader `vgd_scenes.rb`, thư mục `vgd_scenes/`. Mục tiêu Windows SU2022–2026.2. Không dùng namespace TPlus, không monkey patch, không observers, không tự hiện toolbar, không phụ thuộc Node/Python hoặc Internet.
+
+- `utils.rb`: kiểm tra thông số, operation/Undo, filename, ViewState để phục hồi view.
+- `geometry.rb`: persistent paths, transform tích lũy/local axes, fit camera, vị trí/vector mặt cắt.
+- `scenes.rb`: ID scene, metadata riêng, update không trùng, override cô lập theo scene, section lưu trước page.update; rename/capture/delete.
+- `frame.rb`: Tool draw2d cho SU22, khung tỷ lệ/lưới; tạm ẩn khi xuất.
+- `export.rb`: timer theo scene, write_image, PDF bằng Layout::Document + Layout::Image, kiểm tra kết quả, hủy và phục hồi view.
+- `main.rb`: menu/toolbar/HtmlDialog/callback; `dialog.html/css/js`: giao diện, textContent và ID scene.
+
+PDF là raster một ảnh mỗi trang, không phải viewport/vector có tỷ lệ kỹ thuật. PNG trong suốt bỏ nền SketchUp, không xóa hình học sàn/tường. Lệnh update từ nguồn refit lại camera; capture lưu bố cục thủ công. Khi xóa scene mặt cắt, giữ mặt phẳng VGD để không làm hỏng scene khác dùng chung. Không dimension tự động hoặc xuất hồ sơ LayOut kỹ thuật.
+
+## Kiểm tra và việc cần tiếp tục
+
+9 file runtime Ruby đã kiểm tra cú pháp/fixture bằng Ruby WASM 3.2 và DLL Ruby 2.7.2 của SU22 (console process riêng); giao diện Chromium 640×780 và 460×540. Xem `dev/test_engine.rb`, `dev/test_transfer.rb`, `dev/test_ui.cjs`. `npm install` trong `dev` rồi `npm test`; Node20+/Chrome. Có SU22/Python: `python VGD_Scenes/dev/check_ruby27.py` từ root repo. Không xem fixture hoặc chạy DLL là bằng chứng kernel SketchUp native hoạt động.
+
+**Ưu tiên tiếp theo: kiểm thử thực tế SU22/Ruby 2.7.2 và LayOut API.** Lần thử riêng ghi nhận SU 22.0.316/Ruby 2.7.2 nhưng guard model không rỗng đã dừng trước khi thay đổi; người dùng dừng điều khiển máy bằng Esc. Chưa có bằng chứng native tạo scene/export thành công. `dev/native_smoke.rb` chỉ được chạy ở phiên thử với model rỗng; guard từ chối model có geometry/pages hoặc path, không được bỏ guard để chạy trong bản vẽ đang làm. Có thể template SketchUp có người mẫu nên không rỗng; chuẩn bị model thử sạch bằng thao tác được phép trước khi chạy.
+
+Kiểm tra camera theo đối tượng xoay/lồng/mirror, section đang active khi lưu, PNG alpha, PDF số trang và nội dung thực, restore sau hủy/lỗi, thao tác scene ngoài VGD chỉ khi được chọn. SketchUp 2022 không có Overlay API; dùng Tool. Không dùng SectionPlane.deactivate hoặc Entities.bounds. Cẩn thận Styles.selected_style= đối với active_style trên SU trước 2025.
+
+## Cài và phạm vi bảo vệ
+
+`dev/deploy.ps1` mặc định dùng APPDATA/SU22 và allowlist 17 file; bản khác dùng `-PluginRoot` hoặc RBZ. Có backup/rollback file VGD, hash trước/sau file khác. `-RetireLegacy` chỉ tắt đúng loader Scenes T+ có hash review, không sửa `tplus/`. Lượt đầu 1.0.0: 11 file/7.713 file khác không đổi. Lượt 1.0.5: 13 file/7.914 file khác không đổi. Báo cáo cài mới ở outputs/install_*/install_report.json; bỏ qua Git.
+
+RBZ là ZIP của **nội dung runtime/** (loader và thư mục ngang hàng), không bọc thêm thư mục runtime. Khi runtime thay đổi, tạo lại RBZ; RBZ 1.2.2 tương ứng runtime hiện tại; các bản cũ giữ để tham khảo.
+
+## Thay đổi 1.0.1
+
+- Mặt cắt ở từng leaf Group/Component; world plane được chuyển về local bằng inverse point và transpose normal, đúng với xoay/lồng/mirror/nonuniform scale. Cụm nhiều đối tượng có plane riêng trong từng leaf.
+- Make Unique leaf dùng chung trước khi thêm plane. Từ chối đối tượng khóa hoặc nằm trong cha dùng chung; yêu cầu Make Unique cha để không ảnh hưởng bản khác. Không tự Make Unique cha vì có thể đổi persistent IDs của nguồn lồng.
+- Plane root của 1.0.0 được giữ để không phá scene cũ; cập nhật scene mặt cắt sẽ tạo plane bên trong và lưu root inactive cho scene đó. Không xóa plane ngoại lai. Snapshot sâu phục hồi active sections của mọi context.
+- Camera direction cùng chiều world normal sau flip để nhìn từ phía bỏ vào phần giữ.
+- Source update tạo lại tên theo mẫu lưu. Tạo/cập nhật view đổi tên tất cả scene cùng exact paths, gồm SECTION; name_index được lưu cho scene mới. Scene cũ dùng thứ tự trang khi chưa có name_index.
+- UI giải thích vector XYZ và source update. Các tên sửa tay bị thay khi source/view update.
+- Kiểm thử WASM/fixture gồm plane local, camera hai hướng, shared instance, cụm, rename scene và export restore. Chưa xác minh trên SketchUp native với bản 1.0.1.
+
+## Thay đổi 1.0.2
+
+- Ô nhập tỷ lệ rộng:cao, preset 3:4 và nút ⇄ giữa ô rộng/cao; swap áp dụng ngay vào view hiện tại.
+- Geometry.fit_current giữ hướng nhìn, roll và chế độ parallel/perspective. Căn bounding corners theo camera hiện tại và lề; perspective dùng fov_is_height? để xét hai trục; không chuyển về ISO.
+- SceneFrame lưu width/height/margin trong attribute frame của từng page. Áp dụng khung/căn lề cập nhật chỉ PAGE_USE_CAMERA và frame ở selected_page trong Undo operation; không capture visibility/section. Lưu view và source update giữ frame riêng.
+- Scene cũ chưa có frame: suy từ page.camera.aspect_ratio và kích thước nguồn/batch. Dialog nạp khung khi chuyển scene; không ghi đè draft khi poll cùng scene.
+- Export dùng kích thước riêng từng scene và camera đã lưu. PDF đặt mỗi ảnh theo tỷ lệ riêng trên khổ giấy batch; không phải tỷ lệ in kỹ thuật cố định.
+- Bỏ VGD_export_report.json vì chỉ thông báo kết quả. Progress/errors vẫn hiển thị trong dialog; thông số frame lưu trong model, không cần sidecar JSON.
+- WASM và browser tests qua với current-view fit/perspective, mixed PNG/JPG/PDF frames, swap/input/scene-switch và không xuất JSON. Chưa xác minh native SU22/LayOut với 1.0.2.
+
+## Thay đổi 1.0.3
+
+- Căn lề/fit và swap tỷ lệ là preview; không page.update, không scene frame attribute, không model working_frame write hoặc Undo operation. Chỉ Áp dụng khung lưu camera/frame (Lưu view vẫn là thao tác lưu chủ động).
+- toggle_frame chỉ đặt camera.aspect_ratio=0 để trả view native, hoặc preview lại ratio; không sửa page camera/frame. grid chỉ toggle FrameTool, không áp khung, không lưu scene. FrameTool chỉ vẽ lưới, không vẽ viền khung; grid vẫn chạy trên viewport khi frame off. Esc tắt lưới, giữ trạng thái camera/frame.
+- UI/state tách frame_active (live camera aspect > 0) và grid_active. Export tiếp tục dùng camera/frame của scene đã lưu, không preview hiện tại.
+- quick_views chỉ ISO/TOP/FRONT/RIGHT. quick_views.svg khác icon bảng điều khiển, được thêm vào allowlist deploy (12 file riêng VGD).
+- Bản 1.0.3 kiểm thử fixture và browser; chưa kiểm chứng native SU22.
+
+## Thay đổi 1.0.4
+
+- UI ratio_locked: nút khóa tỷ lệ; giữ lockedAspect gốc, cập nhật chiều kia khi nhập kích thước, không tạo scene/preview tự động.
+- export_scale chỉ là hệ số batch; không lưu vào SceneFrame width/height. ExportJob preflight kích thước từng page trong initializer trước khi thay camera; mọi kích thước được nhân, làm tròn, giới hạn 1–12000 mỗi chiều/64MP. PDF ảnh sắc nét hơn theo scale nhưng khổ giấy/layout giữ nguyên.
+- Main preflight trước hộp chọn nơi lưu. output_directory(root, opts, date=Time.now) tạo root/[YYYY.MM.DD]/PNG|JPG|PDF. PDF giữ savepanel để đặt tên; chuyển file vào thư mục loại và đánh số chống ghi đè.
+- date_folder dùng ngày địa phương tại lúc chuẩn bị đường dẫn, không thay đổi giữa các scene. Không có JSON sidecar.
+- Các bản cài và WASM/browser tests nằm trong outputs, không đưa lên GitHub. Runtime 1.0.4 gồm 12 file, chưa kiểm chứng native SU22/LayOut.
+
+## Thay đổi 1.0.5
+
+- Thêm nút thứ ba trên toolbar và menu: **Cập nhật view hiện tại**, icon `update_view.svg` (máy ảnh/mũi tên vòng). `capture_current_view` gọi SceneStore.capture theo persistent ID của selected_page trong active_model; không mở bảng. Giữ tên và source metadata, lưu camera/hiển thị/mặt cắt/khung, có Undo. Áp dụng scene VGD hoặc scene native người dùng chủ động chọn.
+- Chặn trước operation khi chưa có selected_page hợp lệ, đang edit Group/Component hoặc có export job; lỗi báo messagebox, thành công báo status bar. Không có popup xác nhận cho lượt lưu thành công.
+- Allowlist cài tăng lên 13 file; chỉ thêm update_view.svg trong thư mục VGD riêng. Bộ test gọi chính UI::Command.proc: camera phối cảnh/bố cục, chỉ scene được chọn, giữ tên/source, không mở bảng, scene ngoài VGD, missing/invalid/edit/busy/failure guards và abort.
+- Kiểm tra cú pháp/fixture WASM đã qua; chưa kiểm thử icon/callback trong SU22 native. Để nạp toolbar mới, khởi động lại SketchUp; không tự đóng model hay tạo lại toolbar trong phiên đang làm.
+
+## Thay đổi 1.1.0 và tương thích SU22–2026.2
+
+- `transfer.rb`: schema JSON VGD.Scenes.Transfer v1, tối đa 1.000 scene/8 MB; vector/finite/FOV/frame/name/ID validation trước mọi thay đổi. Chỉ camera/khung, không export owner/source paths/entity PID/cut geometry/style/Tags. Tọa độ inch/world, A/B cần cùng gốc/hướng; chưa relative-anchor hoặc two-point/Match Photo (center_2d/scale_2d không có setters).
+- Scene nguồn có transfer_id ổn định qua rename/Save As; gán lần đầu trong operation, cần lưu SKP để giữ qua reopen. Scene nhập mới có transfer_id riêng và transfer_origin nguồn, nên nhập Tạo mới nhiều lần vẫn xuất được. Match origin/ID trước rồi exact-name; ambiguity và hai nguồn khớp một đích bị từ chối. Update giữ tên/order/source/visibility/cuts đích, đánh camera_custom cho scene owned. Imported badge được tính từ transfer_origin; imported mới không được coi là source-owned.
+- Clipboard private APPDATA/VGD/Scenes/scene_clipboard_v1.json để SU22 và nhiều process/bản dùng chung; không dùng UI.get/set_clipboard_data (chỉ có SU2023.1+). File JSON có schema check, atomic replace clipboard; xuất riêng exclusive-create/no overwrite.
+- Main có copy/paste/save/load/apply/cancelTransfer; Ruby giữ payload + model object + token + preview target IDs. Model/token đổi hoặc target match khác preview sẽ từ chối; @job/edit guards. Preview cache và index ID/name tránh quét native attributes toàn bộ cho mỗi scene ở mỗi poll.
+- Toolbar 5 nút: panel/4-view/update-view/copy-current/paste. Copy-current không mở panel; Paste/Load mở panel và preview. Trong Scene: copy selected (fallback current), xuất selected/all, nhập checklist new/update/skip (default new). JS dùng textContent/ID/token, giữ chọn khi refresh, hủy/Esc, chặn double-submit và model switch.
+- New page được tạo với PAGE_USE_CAMERA; update sửa trực tiếp Page#camera để giữ các thiết lập khác. API hỗ trợ SU22. Operation là bắt buộc cho scene edits SU2026; SU22–25 camera scene không có native Undo tương đương, nên transfer tự backup và rollback camera/attrs + erase created pages nếu lỗi. Không hứa Undo toàn bộ scene cho SU cũ.
+- Target current xác minh release notes SU2026.2 ngày 2026-10-03. Ruby2.7-compatible syntax; actual SU22 Ruby2.7.2 DLL chạy trong console process với fixture đã qua; Ruby3.2 WASM/Chromium đã qua. `check_ruby27.py` không launch SketchUp/kernel, không đụng model đang làm; ghi test data chỉ trong outputs. SU2025 vpwidth/vpheight và draw2d đổi đồng thời sang logical pixels nên grid không scale tay thêm. **Chưa xác minh native các phiên bản SU2022–2026.2.**
+- Allowlist deploy 16 file, thêm transfer.rb/copy_scene.svg/paste_scene.svg. Chỉ cài SU22 theo yêu cầu hiện tại; không tự copy vào bản khác hoặc thay plugin khác. Dev native_smoke sửa kiểm tra scoped section vốn còn API plane_for cũ.
+- Đã cài 1.1.0 SU22 lúc 2026-10-03 11:17 +07:00, backup outputs/install_20261003_111743_242; 16 file khớp nguồn, 7.914 file khác hash không đổi; legacy_loader_retired=false (đã tắt từ trước). Toolbar mới cần restart SU; không thay đổi phiên model đang mở.
+
+Cài SU2022 ngày 04/10/2026 lúc 18:19 (Asia/Bangkok): 17 runtime file khớp SHA256; 19.867 file plugin khác không đổi. Backup: outputs/install_20261004_181828_694/. Gói: VGD_Scenes_v1.5.0.rbz. Đóng/mở lại SU2022 để nạp 1.5.0.

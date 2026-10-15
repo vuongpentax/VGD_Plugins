@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180" role="img" aria-labelledby="title desc">
+  <title id="title">VGD · Logo chính · Dark</title>
+  <desc id="desc">Square VGD primary mark in VGD charcoal and bronze. The isometric planes, open threshold, and curved side evoke architecture and interior space.</desc>
+  <rect x="3" y="3" width="174" height="174" rx="25" fill="#242220" stroke="#3A3A3A" stroke-width="1.5"/>
+  <path d="M90 18 27 54 90 89Z" fill="#1E1E1E"/>
+  <path d="M90 18 153 54 90 89Z" fill="#B48963"/>
+  <path d="M27 54 90 89V162L27 126Z" fill="#242220"/>
+  <path d="M90 89 153 54V101C153 129 126 149 90 162Z" fill="#1E1E1E"/>
+  <path d="M53 99 90 120V162L53 141Z" fill="#121212"/>
+  <path d="M53 131 90 152V162L53 141Z" fill="#C8A98A"/>
+  <path d="M90 18 27 54V126L90 162C126 149 153 129 153 101V54Z" fill="none" stroke="#C8A98A" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M90 18V89L153 54M27 54 90 89V162M53 99V141L90 162M53 99 90 120V152" fill="none" stroke="#C8A98A" stroke-width="1.5" stroke-linejoin="round"/>
+  <path d="M27 54 90 18 153 54 90 89Z" fill="none" stroke="#C8A98A" stroke-width="1.5" stroke-linejoin="round"/>
+</svg>

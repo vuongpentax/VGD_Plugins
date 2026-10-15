@@ -1,0 +1,40 @@
+VGD_Cabinet 4.5.2
+
+CÀI ĐẶT
+Cài file RBZ bằng Extension Manager trong SketchUp 2022 rồi khởi động lại SketchUp. Sau khi cài, lệnh dựng tủ nằm trong Extensions > VGD Cabinet — Dựng hình; lệnh nạp lại mã nằm trong Extensions > VGD Cabinet > VGD — Nạp lại mã. Toolbar có lệnh dựng hình. Khi có bản mới, plugin hỏi trước khi mở trang tải; cài RBZ rồi khởi động lại.
+
+DỰNG VÀ SỬA TỦ
+Dùng lệnh VGD Cabinet — Dựng hình để mở bảng. Chỉnh kích thước và cấu hình trong các trang, sau đó tạo cabinet hoặc chọn một cabinet VGD để nạp thông số và preview cập nhật. Công cụ dựng 3 điểm đặt hướng mặt ở điểm đầu; nhập kích thước theo đơn vị hiển thị. Esc hủy thao tác đang preview.
+
+Cấu hình hiện có gồm thùng, đợt/vách, cánh gỗ/kính/Pano/Shaker, ngăn kéo và joinery. Khi áp dụng cài đặt cánh/hộc cho nhiều cabinet, plugin preview cả vùng chọn; mỗi cabinet giữ kích thước và bố cục module riêng. Việc cập nhật dựng lại hình học theo thông số, nên hãy lưu bản sửa tay vào Thư viện trước nếu muốn giữ riêng bản đó.
+
+Chuyển Hộp → Tủ cho group/component: chọn đối tượng, bắt đầu lệnh trong bảng, bấm mặt trước theo trục cục bộ của từng hộp, xem preview rồi Enter để áp dụng; Esc hủy.
+
+DỰNG TỪ MÔ TẢ
+Mở Dựng từ mô tả > Hướng dẫn cho ChatGPT, gửi hướng dẫn cùng ảnh và kích thước mong muốn. Plugin chỉ nhận JSON cấu hình, không tự phân tích ảnh/văn xuôi. JSON phải dùng mm, có rộng/sâu/cao, đúng tên và kiểu dữ liệu. Kiểm tra preview, giả định và các cấu tạo không hỗ trợ trước khi nạp bản nháp. Chế độ dựng phần được hỗ trợ yêu cầu xác nhận rõ danh sách phần bị bỏ qua. Bản nháp chưa sửa model hay lưu preset; đặt tủ thành công mới áp dụng.
+
+PRESET VÀ THƯ VIỆN
+Preset lưu thông số tại:
+%APPDATA%/VGD/SketchUp/VGD_Cabinet/presets_v1.json
+
+Tạo mới, cập nhật mẫu đã chọn và đổi tên là các lệnh riêng. Tên trùng, kể cả chỉ khác hoa/thường, bị chặn. Lần đầu chưa có kho mới, plugin có thể đọc preset T+ cũ từ Preferences; không ghi ngược Preferences cũ.
+
+Thư viện lưu cabinet đã dựng, gồm SKP, preview và index tại:
+%APPDATA%/VGD/SketchUp/VGD_Cabinet/library/
+
+Lưu mẫu bằng cách chọn đúng một cabinet rồi đặt tên. Để chuyển thư viện sang máy khác, sao chép cả thư mục library, gồm index và assets. Thư viện lưu hình học thực tế, kể cả chỉnh sửa thủ công; preset chỉ lưu thông số.
+
+TƯƠNG THÍCH MODEL CŨ
+Plugin nhận cabinet T+ qua dictionary cũ để đọc và cập nhật. Cabinet mới/cập nhật dùng dictionary VGD; không tự chuyển đổi đối tượng model không liên quan. Tag mới gồm VGD_CABINET, VGD_CANH và VGD_KY HIEU.
+
+VGD_EXPLODE và VGD_UNTAG đã bị loại khỏi runtime, menu và gói VGD_Cabinet 4.5.2; tiện ích này không được cung cấp bởi Cabinet.
+
+PANO KHUNG GỖ
+Thông số mặc định là bản khung 60 mm, dày 20 mm, panel phẳng 6 mm, rãnh ngậm 8 mm, khe co giãn 1 mm mỗi cạnh và một ô. Rãnh thẳng được dựng thành hình học; panel tách khỏi khung. Kích thước panel gồm phần ngậm rãnh trừ khe co giãn. Chỉnh khe theo vật liệu và độ ẩm; mặc định không phải tiêu chuẩn cho mọi loại gỗ. Chưa có mộng góc, profile trang trí, CNC hoặc BOM.
+
+TRẠNG THÁI XÁC MINH
+VALIDATION.json ghi nhận các kiểm tra tự động Ruby WASM/fixture, JSDOM, Edge và đóng gói; xem file đó để biết phạm vi từng kết quả. UI batch mới chưa được xác minh qua Edge trong lần gần nhất vì lỗi EPERM.
+
+Một số kiểm tra native SketchUp 2022.0.316 / Ruby 2.7.2 được kế thừa từ runtime 4.5.1. Gói 4.5.2 đã được triển khai và đối chiếu 23/23 SHA256 vào ngày 2026-10-12, nhưng chưa khởi động lại SketchUp hoặc chạy native với gói sạch. Native Undo, đóng/mở lại model, UI batch mới và scaling cửa sổ chưa được xác minh. Không xem việc đối chiếu checksum là kiểm thử chức năng trong SketchUp.
+
+Khi nghiệm thu native, dùng bản sao model; kiểm tra dựng/sửa, Pano, thư viện, chuyển hộp, batch, Undo/Redo và lưu/mở lại SKP. Chỉ ghi kết quả sau khi thực sự chạy trên SketchUp.
