@@ -26,3 +26,6 @@ Desktop.ini
 
 # Cache của Python
 __pycache__/
+
+# Thư mục đầu ra khi đóng gói
+outputs/
