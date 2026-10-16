@@ -23,3 +23,6 @@ vendor/bundle/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Cache của Python
+__pycache__/
