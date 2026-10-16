@@ -368,6 +368,8 @@ module VGD
         ids = []
         warnings = []
         normalized = products.each_with_object([]) do |product, valid_products|
+          # Products without a release are listed on the website only; skip them silently.
+          next if product.is_a?(Hash) && product['lifecycle'] == 'in_development'
           id = product.is_a?(Hash) ? product['id'].to_s : ''
           begin
             raise 'mục plugin không hợp lệ' unless product.is_a?(Hash)

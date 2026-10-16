@@ -141,6 +141,20 @@
         "vgd_reference.rb",
         "vgd_reference/"
       ]
+    },
+    {
+      "id": "cabinet_draw",
+      "name": "VGD Cabinet Draw",
+      "kind": "plugin",
+      "lifecycle": "in_development",
+      "visibility": "public"
+    },
+    {
+      "id": "package",
+      "name": "VGD Package",
+      "kind": "plugin",
+      "lifecycle": "in_development",
+      "visibility": "public"
     }
   ]
 }
