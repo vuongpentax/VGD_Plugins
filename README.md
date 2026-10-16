@@ -4,7 +4,9 @@ Kho mã các công cụ và plugin SketchUp thuộc hệ sinh thái VGD, hướn
 
 ## Trạng thái hiện tại
 
-Kho mã mới có bộ khung thư mục và tài liệu. Chưa có mã plugin, công cụ, kiểm thử, thư viện phụ thuộc hay hệ thống xây dựng. Các plugin hiện có sẽ được chuyển vào lần lượt, từng module một.
+Kho mã hiện chứa mã nguồn của 10 plugin trong `plugins/`, được chuyển từ workspace cũ. Mỗi plugin có README, ghi chú phát hành và bộ kiểm tra riêng; xem README của từng plugin để biết cách chạy và trạng thái xác minh.
+
+File `.rbz` (gói cài đặt) không được lưu trong git. Build lại bằng script của từng plugin hoặc lấy từ nơi phát hành.
 
 ## Cấu trúc
 
