@@ -8,7 +8,7 @@ module VGD
         extend self
         ID = 'vgd_dim'.freeze
         REPOSITORY = 'vuongpentax/VGD_Plugins'.freeze
-        MANIFEST_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/VGD_Dim/VGD_UPDATE_MANIFEST.json'.freeze
+        MANIFEST_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/plugins/VGD_Dim/VGD_UPDATE_MANIFEST.json'.freeze
         SHA_PATTERN = /\A[0-9a-f]{64}\z/i
         def parse(body)
           data = JSON.parse(body)
