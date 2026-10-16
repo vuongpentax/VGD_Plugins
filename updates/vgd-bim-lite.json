@@ -4,8 +4,8 @@
   "channel": "alpha",
   "min_sketchup_year": 2022,
   "filename": "VGD_BIM_Lite_v0.1.4-alpha.rbz",
-  "bytes": 36056,
-  "sha256": "78775c2614dcb0a7a2b525bc3b41fc74e507f168e182076a240b288560f73c7c",
+  "bytes": 35353,
+  "sha256": "0bb869104efe8a493ba2e61ab0faeec5d590c90c3ae9d2b3fb621898db7ce8f7",
   "download_url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-bim-lite-v0.1.4-alpha/VGD_BIM_Lite_v0.1.4-alpha.rbz",
-  "changelog": "Giao diện đồng bộ VGD, điều hướng responsive và lựa chọn sáng/tối được lưu."
+  "changelog": "VGD vgd-bim-lite 0.1.4-alpha: xem ghi chú phát hành trên GitHub."
 }

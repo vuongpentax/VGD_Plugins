@@ -15,7 +15,7 @@
         "filename": "VGD_Dim_v3.3.0-beta.8.rbz",
         "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0-beta.8/VGD_Dim_v3.3.0-beta.8.rbz",
         "size": 52708,
-        "sha256": "131189b4b105de245f13ef2eb88ddf39560f1ef129ac07f8e80926578e401478"
+        "sha256": "df8dc87f72895ca866961479c09076c026bc57d18c91be4b9c07f50c343a0072"
       },
       "allowed_paths": [
         "vgd_dim.rb",
@@ -26,16 +26,16 @@
       "id": "cabinet",
       "name": "VGD Cabinet",
       "extension_name": "VGD Cabinet",
-      "version": "4.5.1",
+      "version": "4.5.2",
       "release_channel": "stable",
       "description": "Dựng tủ, chia khoang, cánh và ngăn kéo trong SketchUp.",
       "icon": "cabinet",
       "minimum_sketchup": "22.0.0",
       "download": {
-        "filename": "VGD_Cabinet_v4.5.1.rbz",
-        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-cabinet-v4.5.1/VGD_Cabinet_v4.5.1.rbz",
-        "size": 95333,
-        "sha256": "b6bcaee7eb8372f496db5e21a07e12f3a6c18e47efcb25b230320d47ff566d99"
+        "filename": "VGD_Cabinet_v4.5.2.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-cabinet-v4.5.2/VGD_Cabinet_v4.5.2.rbz",
+        "size": 97342,
+        "sha256": "ea7e6fcdce0fdf10b23aa6054b181a3bda21dd7dd63e2e756e90b92bc574dc16"
       },
       "allowed_paths": [
         "vgd_cabinet.rb",
@@ -54,8 +54,8 @@
       "download": {
         "filename": "VGD_Library_v1.1.2-beta.6.rbz",
         "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-library-v1.1.2-beta.6/VGD_Library_v1.1.2-beta.6.rbz",
-        "size": 62529,
-        "sha256": "a3fa8c332b7f467b28de6c7b2970883d4e7d631c7dc4ed51ca2b64eda6408997"
+        "size": 62528,
+        "sha256": "0c3cb20b4de7a4f9b8bc66dcc8e08c4de870af329f495d2c46ae6f04ff1aa843"
       },
       "allowed_paths": [
         "vgd_library.rb",
@@ -74,8 +74,8 @@
       "download": {
         "filename": "VGD_Image_Importer_v1.1.0-beta.5.rbz",
         "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-image-importer-v1.1.0-beta.5/VGD_Image_Importer_v1.1.0-beta.5.rbz",
-        "size": 65130,
-        "sha256": "e286b3de0c8ea9f90baaf703e9264cd13007b0f53b603f37283d4950c56bba85"
+        "size": 65149,
+        "sha256": "dbac56b1402fd4107f3f33b5c7f0407dee623331649dc5c3e9617412969e2201"
       },
       "allowed_paths": [
         "vgd_image_importer.rb",
@@ -95,7 +95,7 @@
         "filename": "VGD_Scenes_v1.5.3-beta.4.rbz",
         "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-scenes-v1.5.3-beta.4/VGD_Scenes_v1.5.3-beta.4.rbz",
         "size": 64567,
-        "sha256": "1cdf59c98359b27feb3b1b28ddc989fee4ccd14bd6b2d3b0fe29db70b91551ec"
+        "sha256": "f6ea2c315ce1a5e1bdb011d54265b0566718572bffe3a6e7312a48d1a4b6201f"
       },
       "allowed_paths": [
         "vgd_scenes.rb",
@@ -114,8 +114,8 @@
       "download": {
         "filename": "VGD_BIM_Lite_v0.1.4-alpha.rbz",
         "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-bim-lite-v0.1.4-alpha/VGD_BIM_Lite_v0.1.4-alpha.rbz",
-        "size": 36056,
-        "sha256": "78775c2614dcb0a7a2b525bc3b41fc74e507f168e182076a240b288560f73c7c"
+        "size": 35353,
+        "sha256": "0bb869104efe8a493ba2e61ab0faeec5d590c90c3ae9d2b3fb621898db7ce8f7"
       },
       "allowed_paths": [
         "vgd_bim_lite.rb",
@@ -126,16 +126,16 @@
       "id": "reference",
       "name": "VGD Reference",
       "extension_name": "VGD Reference",
-      "version": "1.0.0-beta.7",
-      "release_channel": "beta",
+      "version": "1.0.1",
+      "release_channel": "stable",
       "description": "Ghim và chỉnh sửa ảnh tham chiếu ngay trên khung nhìn SketchUp.",
       "icon": "reference",
       "minimum_sketchup": "23.0.0",
       "download": {
-        "filename": "VGD_Reference_v1.0.0-beta.7.rbz",
-        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-reference-v1.0.0-beta.7/VGD_Reference_v1.0.0-beta.7.rbz",
-        "size": 42097,
-        "sha256": "b8530216dd7a04d9719b7d2bd3c5f740b6a076fcaa9832eac950e4acab87fa1f"
+        "filename": "VGD_Reference_v1.0.1.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-reference-v1.0.1/VGD_Reference_v1.0.1.rbz",
+        "size": 43702,
+        "sha256": "76b9c73cec17152003364f22e7f3309a3f0e839ccb2fc5f5e739f28378e705fb"
       },
       "allowed_paths": [
         "vgd_reference.rb",
