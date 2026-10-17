@@ -1,3 +1,8 @@
+# Start from an empty scratch folder so a previous run's files cannot break this one.
+require 'fileutils'
+FileUtils.rm_rf('/tmp/scaled-exports')
+FileUtils.rm_rf('/tmp/vgd-tests')
+FileUtils.rm_rf('/tmp/mixed-frames')
 def assert(value,message);raise message unless value;end
 def near(a,b);(a-b).abs<0.00001;end
 def rejects(label)

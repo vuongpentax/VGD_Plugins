@@ -189,7 +189,11 @@ module Sketchup
     def initialize;set(Geom::Point3d.new(0,0,0),Geom::Vector3d.new(1,0,0),Geom::Vector3d.new(0,1,0),Geom::Vector3d.new(0,0,1));end
     def set(o,x,y,z);@origin=o;@xaxis=x;@yaxis=y;@zaxis=z;end
   end
+  # Observer base classes and no-op registration so the save guard can attach in tests.
+  class ModelObserver; end
   class Model < Entity
+    def add_observer(_observer); true; end
+    def remove_observer(_observer); true; end
     attr_reader :entities,:selection,:pages,:layers,:rendering_options,:shadow_info,:styles,:axes,:active_view,:options,:events
     attr_accessor :active_path
     def initialize

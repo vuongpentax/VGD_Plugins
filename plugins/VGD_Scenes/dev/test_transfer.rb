@@ -1,3 +1,6 @@
+# Start from an empty scratch folder so a previous run's files cannot break this one.
+require 'fileutils'
+FileUtils.rm_rf('/tmp/scene-bundles')
 # Cross-model behavior without a SketchUp kernel. No simulated version label
 # is counted as a native SketchUp compatibility test.
 s = VGD::Scenes; transfer = s::SceneTransfer

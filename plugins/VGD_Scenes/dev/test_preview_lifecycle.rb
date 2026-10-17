@@ -60,3 +60,15 @@ assert(other_model.events == events && other_model.entities.empty?, 'Preview cle
 assert(!sibling.hidden? && group.definition.equal?(original_definition),'Model switch left isolated/shared object')
 Sketchup.active_model = previous_model
 puts 'PASS: shallow root preview preserves definitions/scenes/original cuts, single slider plane, hidden roots, create/setter failure cleanup, retry and model-switch isolation'
+
+# Save (Ctrl+S) must not write the temporary preview into the model.
+save_model = Sketchup::Model.new; Sketchup.active_model = save_model
+save_group = product(save_model)
+save_model.selection.add(save_group)
+preview.update(save_model, s.options('section_axis'=>'Y','section_percent'=>25))
+temporary = save_model.entities.active_section_plane
+assert(temporary && temporary.valid? && preview.instance_variable_get(:@session), 'Save guard setup: preview did not start')
+preview.before_save(Sketchup::Model.new)
+assert(temporary.valid? && preview.instance_variable_get(:@session), 'Saving another model cleared this preview')
+preview.before_save(save_model)
+assert(!temporary.valid? && preview.instance_variable_get(:@session).nil?, 'Save left the temporary preview in the model')

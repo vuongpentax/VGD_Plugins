@@ -12,6 +12,14 @@ require_relative 'update_notice'
 module VGD
   module Scenes
     VERSION = '1.5.3-beta.4'.freeze unless const_defined?(:VERSION, false)
+    # Clears the section preview before SketchUp saves, so Ctrl+S never writes it.
+    class SaveGuard < Sketchup::ModelObserver
+      def onPreSaveModel(model)
+        SectionPreview.before_save(model)
+      rescue StandardError => error
+        Sketchup.status_text = "VGD Scenes: chưa tắt được xem trước mặt cắt trước khi lưu: #{error.message}"
+      end
+    end
     class << self
       def state
         model = Sketchup.active_model
@@ -240,7 +248,15 @@ module VGD
             send_event('result', { success: false, message: "Dữ liệu không hợp lệ: #{e.message}" })
           end
         end
-        @dialog.set_on_closed { SectionPreview.clear; @dialog = nil; @transfer_pending = nil; @job.cancel if @job }
+        @save_guard ||= SaveGuard.new
+        @guarded_model = Sketchup.active_model
+        @guarded_model.add_observer(@save_guard)
+        @dialog.set_on_closed do
+          SectionPreview.clear
+          @guarded_model.remove_observer(@save_guard) if @guarded_model && @guarded_model.valid?
+          @guarded_model = nil
+          @dialog = nil; @transfer_pending = nil; @job.cancel if @job
+        end
         @dialog.show
       end
 

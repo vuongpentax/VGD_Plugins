@@ -402,6 +402,13 @@ module VGD
         end
       end
 
+      # Runs before SketchUp writes the .skp (Save / Ctrl+S). The temporary cut and the
+      # hidden-root changes must not reach the file, so the preview is removed first.
+      def self.before_save(model)
+        return unless @session && @session[:model].equal?(model)
+        clear
+      end
+
       def self.clear
         session = @session
         return unless session
