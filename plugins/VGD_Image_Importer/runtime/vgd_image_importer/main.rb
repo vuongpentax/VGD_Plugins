@@ -4,6 +4,7 @@ require 'json'
 require 'base64'
 require 'tmpdir'
 require 'securerandom'
+require 'uri'
 require_relative 'engine'
 require_relative 'file_picker'
 require_relative 'conversion'
@@ -75,18 +76,133 @@ module VGD_ImageImporter
       raise ArgumentError, 'Không nhận đủ dữ liệu ảnh được kéo vào.'
     end
 
+    store_dropped(entry[:name], entry[:data])
+  rescue StandardError => error
+    send_ui('status', { 'error' => true, 'message' => error.message })
+    false
+  end
+
+  # Writes a dropped image to a temp file and adds it to the list.
+  def self.store_dropped(name, data)
     base = Sketchup.respond_to?(:temp_dir) ? Sketchup.temp_dir : Dir.tmpdir
     directory = (@drop_directory ||= Dir.mktmpdir('vgd-image-importer-', base))
-    safe_name = entry[:name].gsub(/[^\p{Alnum}._-]+/u, '_')
-    safe_name = "image#{File.extname(entry[:name])}" if safe_name.empty?
+    safe_name = name.to_s.gsub(/[^\p{Alnum}._-]+/u, '_')
+    safe_name = "image#{File.extname(name.to_s)}" if safe_name.empty?
     path = File.join(directory, "#{SecureRandom.hex(12)}-#{safe_name}")
-    File.binwrite(path, entry[:data])
+    File.binwrite(path, data)
     @drop_paths ||= {}
     path = File.expand_path(path).tr('\\', '/')
     @drop_paths[path] = true
     @files = normalize_files(Array(@files) + [path])
     publish_files
     send_ui('status', { 'message' => "Đã thêm ảnh kéo vào. Danh sách hiện có #{@files.length} ảnh." })
+    true
+  end
+
+  WEB_IMAGE_MAX_BYTES = 20 * 1024 * 1024 unless const_defined?(:WEB_IMAGE_MAX_BYTES)
+  WEB_IMAGE_MAX_REDIRECTS = 3 unless const_defined?(:WEB_IMAGE_MAX_REDIRECTS)
+  WEB_IMAGE_TIMEOUT = 20 unless const_defined?(:WEB_IMAGE_TIMEOUT)
+  WEB_IMAGE_TYPES = {
+    'image/jpeg' => '.jpg', 'image/pjpeg' => '.jpg', 'image/png' => '.png', 'image/apng' => '.apng',
+    'image/gif' => '.gif', 'image/webp' => '.webp', 'image/bmp' => '.bmp', 'image/x-ms-bmp' => '.bmp',
+    'image/tiff' => '.tif', 'image/avif' => '.avif', 'image/heic' => '.heic', 'image/heif' => '.heif',
+    'image/svg+xml' => '.svg', 'image/x-icon' => '.ico', 'image/vnd.microsoft.icon' => '.ico'
+  }.freeze unless const_defined?(:WEB_IMAGE_TYPES)
+
+  # Identify the image format from its first bytes; the server's content type and URL are not trusted.
+  def self.sniff_image_extension(data)
+    head = data.byteslice(0, 16).to_s.b
+    return '.png' if head.start_with?("\x89PNG\r\n\x1a\n".b)
+    return '.jpg' if head.start_with?("\xFF\xD8\xFF".b)
+    return '.gif' if head.start_with?('GIF87a'.b) || head.start_with?('GIF89a'.b)
+    return '.webp' if head[0, 4] == 'RIFF'.b && head[8, 4] == 'WEBP'.b
+    return '.bmp' if head.start_with?('BM'.b)
+    return '.tif' if head.start_with?("II*\x00".b) || head.start_with?("MM\x00*".b)
+    return '.ico' if head.start_with?("\x00\x00\x01\x00".b)
+    if head[4, 4] == 'ftyp'.b
+      brand = head[8, 4].to_s
+      return '.avif' if brand.start_with?('avif'.b) || brand.start_with?('avis'.b)
+      return '.heic' if %w[heic heix mif1 msf1].any? { |b| brand.start_with?(b.b) }
+    end
+    return '.svg' if data.byteslice(0, 1024).to_s.downcase.include?('<svg')
+    nil
+  end
+
+  # Returns [extension, nil] for a supported image, or [nil, message].
+  # The file content decides the format. The server's Content-Type is not trusted:
+  # a page can claim to be an image, and formats without a signature are not accepted.
+  def self.web_image_extension(data, _content_type, _uri)
+    extension = sniff_image_extension(data)
+    return [nil, 'Liên kết không trỏ đến ảnh được hỗ trợ.'] unless extension && SUPPORTED.include?(extension)
+    [extension, nil]
+  end
+
+  # Downloads one image URL through SketchUp's HTTP client (not the browser, so CORS does not block it).
+  # Calls done.call(data, content_type, final_uri) on success, or done.call(nil, message, nil) on failure.
+  # done runs exactly once, even when the timeout and the response race.
+  def self.fetch_web_image(url, redirects = 0, &done)
+    uri = URI.parse(url.to_s)
+    raise ArgumentError, 'Chỉ nhận liên kết http hoặc https.' unless %w[http https].include?(uri.scheme.to_s.downcase)
+    finished = false
+    timer = nil
+    finish = lambda do |data, info, final_uri|
+      next if finished
+      finished = true
+      UI.stop_timer(timer) if timer
+      done.call(data, info, final_uri)
+    end
+    timer = UI.start_timer(WEB_IMAGE_TIMEOUT, false) { finish.call(nil, 'Quá thời gian tải ảnh từ liên kết kéo vào.', nil) }
+    request = Sketchup::Http::Request.new(uri.to_s, Sketchup::Http::GET)
+    request.headers = { 'User-Agent' => "VGD-ImageImporter/#{VGD_ImageImporter::VERSION}" }
+    request.start do |_request, response|
+      begin
+        status = response.status_code.to_i
+        location = response.headers['Location'] || response.headers['location']
+        if [301, 302, 303, 307, 308].include?(status) && location && redirects < WEB_IMAGE_MAX_REDIRECTS
+          fetch_web_image(URI.join(uri.to_s, location.to_s).to_s, redirects + 1) { |data, info, final_uri| finish.call(data, info, final_uri) }
+        elsif status != 200
+          finish.call(nil, "Trang web trả về lỗi HTTP #{status} khi tải ảnh.", nil)
+        else
+          body = response.body.to_s.b
+          raise ArgumentError, 'Ảnh tải về rỗng.' if body.empty?
+          raise ArgumentError, 'Ảnh web vượt quá giới hạn 20 MiB.' if body.bytesize > WEB_IMAGE_MAX_BYTES
+          finish.call(body, response.headers['Content-Type'] || response.headers['content-type'], uri)
+        end
+      rescue StandardError => error
+        finish.call(nil, error.message, nil)
+      end
+    end
+  rescue StandardError => error
+    done.call(nil, error.message, nil)
+  end
+
+  # Tries candidate URLs in order (direct image links before page links) and stores the first image that works.
+  def self.try_web_candidates(queue, last_error = nil)
+    if queue.empty?
+      send_ui('status', { 'error' => true, 'message' => last_error || 'Không tải được ảnh từ liên kết kéo vào.' })
+      return
+    end
+    url = queue.shift
+    fetch_web_image(url) do |data, info, uri|
+      if data.nil?
+        try_web_candidates(queue, info)
+      else
+        extension, problem = web_image_extension(data, info, uri)
+        if problem
+          try_web_candidates(queue, problem)
+        else
+          base = File.basename(uri.path.to_s, '.*').gsub(/[^\p{Alnum}_-]+/u, '_')
+          base = 'web-image' if base.empty?
+          store_dropped("#{base}#{extension}", data)
+        end
+      end
+    end
+  end
+
+  def self.drop_url(urls)
+    candidates = Array(urls).map(&:to_s).select { |url| url.match?(%r{\Ahttps?://}i) }.uniq.first(5)
+    raise ArgumentError, 'Không có liên kết ảnh hợp lệ được kéo vào.' if candidates.empty?
+    try_web_candidates(candidates)
     true
   rescue StandardError => error
     send_ui('status', { 'error' => true, 'message' => error.message })
@@ -176,6 +292,8 @@ module VGD_ImageImporter
           drop_chunk(data['token'], data['index'], data['base64'])
         when 'drop_finish'
           drop_finish(data['token'])
+        when 'drop_url'
+          drop_url(data['urls'])
         end
       rescue StandardError => error
         send_ui('status', { 'error' => true, 'message' => error.message })
