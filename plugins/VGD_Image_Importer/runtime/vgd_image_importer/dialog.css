@@ -148,7 +148,7 @@ main {
   min-height: 0;
   overflow: hidden;
 }
-.source-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 24px 22px; }
+.source-pane { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; padding: 24px 22px; }
 .settings-pane { min-width: 0; padding: 24px 18px; overflow: auto; border-left: 1px solid var(--vgd-border); background: var(--vgd-bg); }
 .eyebrow { margin: 0 0 8px; color: var(--vgd-active); font-size: 9px; font-weight: 650; letter-spacing: 1.5px; }
 h1 { margin: 0; font-size: 22px; font-weight: 550; letter-spacing: -.4px; }
@@ -251,3 +251,5 @@ dialog::backdrop { background: #0008; }
   .hint { font-size: 9px; }
   .heading { margin-bottom: 12px; }
 }
+
+body.drag-over::after { content: "Thả ảnh để thêm vào danh sách"; position: fixed; z-index: 10; inset: 12px; display: grid; place-items: center; border: 2px dashed var(--vgd-accent); border-radius: 10px; background: rgba(18, 18, 18, .94); color: var(--vgd-active); font-size: 20px; font-weight: 650; pointer-events: none; }

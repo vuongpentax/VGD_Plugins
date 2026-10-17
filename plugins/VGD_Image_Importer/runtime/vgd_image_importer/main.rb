@@ -1,6 +1,9 @@
 # encoding: UTF-8
 require 'sketchup.rb'
 require 'json'
+require 'base64'
+require 'tmpdir'
+require 'securerandom'
 require_relative 'engine'
 require_relative 'file_picker'
 require_relative 'conversion'
@@ -23,12 +26,98 @@ module VGD_ImageImporter
     send_ui('files', Array(@files).each_with_index.map { |path, index| { 'id' => index, 'name' => File.basename(path), 'path' => path } })
   end
 
+  # Browser File objects cross the HtmlDialog bridge as bounded base64 chunks.
+  def self.drop_start(token, name, size, chunks)
+    token = token.to_s
+    raise ArgumentError, 'Mã ảnh kéo vào không hợp lệ.' unless token.match?(/\A[a-zA-Z0-9_-]{1,100}\z/)
+    ext = File.extname(name.to_s).downcase
+    raise ArgumentError, 'Định dạng ảnh kéo vào chưa được hỗ trợ.' unless SUPPORTED.include?(ext)
+    total = Integer(size)
+    count = Integer(chunks)
+    expected_chunks = (total.to_f / (192 * 1024)).ceil
+    raise ArgumentError, 'Ảnh phải có dung lượng từ 1 byte đến 20 MiB.' unless total.between?(1, 20 * 1024 * 1024)
+    raise ArgumentError, 'Dữ liệu ảnh kéo vào không hợp lệ.' unless count == expected_chunks
+
+    @drop_buffers ||= {}
+    @drop_buffers[token] = { name: File.basename(name.to_s), size: total, chunks: count, next_chunk: 0, data: ''.b }
+    UI.start_timer(60, false) { @drop_buffers.delete(token) if @drop_buffers }
+    true
+  rescue StandardError => error
+    send_ui('status', { 'error' => true, 'message' => error.message })
+    false
+  end
+
+  def self.drop_chunk(token, index, encoded)
+    entry = @drop_buffers && @drop_buffers[token.to_s]
+    chunk_index = Integer(index)
+    return false unless entry && chunk_index == entry[:next_chunk] && chunk_index < entry[:chunks]
+
+    bytes = Base64.strict_decode64(encoded.to_s)
+    expected_bytes = [192 * 1024, entry[:size] - entry[:data].bytesize].min
+    raise ArgumentError, 'Kích thước khối ảnh kéo vào không hợp lệ.' unless bytes.bytesize == expected_bytes
+    entry[:data] << bytes
+    if entry[:data].bytesize > entry[:size]
+      @drop_buffers.delete(token.to_s)
+      raise ArgumentError, 'Dữ liệu ảnh kéo vào vượt quá dung lượng khai báo.'
+    end
+    entry[:next_chunk] += 1
+    true
+  rescue StandardError => error
+    @drop_buffers.delete(token.to_s) if @drop_buffers
+    send_ui('status', { 'error' => true, 'message' => error.message })
+    false
+  end
+
+  def self.drop_finish(token)
+    token = token.to_s
+    entry = @drop_buffers && @drop_buffers.delete(token)
+    unless entry && entry[:next_chunk] == entry[:chunks] && entry[:data].bytesize == entry[:size]
+      raise ArgumentError, 'Không nhận đủ dữ liệu ảnh được kéo vào.'
+    end
+
+    base = Sketchup.respond_to?(:temp_dir) ? Sketchup.temp_dir : Dir.tmpdir
+    directory = (@drop_directory ||= Dir.mktmpdir('vgd-image-importer-', base))
+    safe_name = entry[:name].gsub(/[^\p{Alnum}._-]+/u, '_')
+    safe_name = "image#{File.extname(entry[:name])}" if safe_name.empty?
+    path = File.join(directory, "#{SecureRandom.hex(12)}-#{safe_name}")
+    File.binwrite(path, entry[:data])
+    @drop_paths ||= {}
+    path = File.expand_path(path).tr('\\', '/')
+    @drop_paths[path] = true
+    @files = normalize_files(Array(@files) + [path])
+    publish_files
+    send_ui('status', { 'message' => "Đã thêm ảnh kéo vào. Danh sách hiện có #{@files.length} ảnh." })
+    true
+  rescue StandardError => error
+    send_ui('status', { 'error' => true, 'message' => error.message })
+    false
+  end
+
+  def self.release_dropped_file(path)
+    return unless @drop_paths && @drop_paths.delete(path)
+    File.delete(path) if File.file?(path)
+  rescue StandardError
+    nil
+  end
+
+  def self.cleanup_dropped_files
+    paths = @drop_paths ? @drop_paths.keys : []
+    paths.each { |path| release_dropped_file(path) }
+    @files = Array(@files).reject { |path| paths.include?(path) }
+    @drop_buffers = {}
+    directory = @drop_directory
+    Dir.rmdir(directory) if directory && File.directory?(directory) && Dir.empty?(directory)
+    @drop_directory = nil
+  rescue StandardError
+    nil
+  end
   def self.choose_source(kind, recursive)
     if kind == 'folder'
       directory = UI.select_directory(title: 'VGD · Chọn thư mục ảnh', directory: @last_dir)
       return unless directory
       chosen = folder_files(directory, recursive == true)
       @last_dir = directory
+      Array(@files).each { |path| release_dropped_file(path) }
       @files = chosen
     else
       chosen = FilePicker.choose(@last_dir, SUPPORTED)
@@ -66,9 +155,11 @@ module VGD_ImageImporter
           choose_source(data['kind'], data['recursive'])
         when 'remove'
           index = Integer(data['id'])
-          @files.delete_at(index) if index >= 0
+          removed = @files.delete_at(index) if index >= 0
+          release_dropped_file(removed) if removed
           publish_files
         when 'clear'
+          Array(@files).each { |path| release_dropped_file(path) }
           @files.clear
           publish_files
         when 'save'
@@ -79,12 +170,22 @@ module VGD_ImageImporter
           begin_import(cfg)
         when 'converted'
           accept_conversion(data)
+        when 'drop_start'
+          drop_start(data['token'], data['name'], data['size'], data['chunks'])
+        when 'drop_chunk'
+          drop_chunk(data['token'], data['index'], data['base64'])
+        when 'drop_finish'
+          drop_finish(data['token'])
         end
       rescue StandardError => error
         send_ui('status', { 'error' => true, 'message' => error.message })
       end
     end
-    @dialog.set_on_closed { clear_import; @dialog = nil }
+    @dialog.set_on_closed do
+      clear_import
+      cleanup_dropped_files
+      @dialog = nil
+    end
     @dialog.show
   end
 

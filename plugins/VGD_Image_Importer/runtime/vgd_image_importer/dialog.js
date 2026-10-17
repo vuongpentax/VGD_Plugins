@@ -117,6 +117,102 @@
     image.onerror = function () { done({ error: 'Không giải mã được ảnh: file hỏng hoặc định dạng không được hỗ trợ.' }); };
     image.src = 'data:' + data.mime + ';base64,' + data.base64;
   }
+  var dropMimeExtensions = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/apng': '.apng', 'image/bmp': '.bmp', 'image/x-ms-bmp': '.bmp',
+    'image/tiff': '.tiff', 'image/x-tga': '.tga', 'image/webp': '.webp', 'image/gif': '.gif', 'image/avif': '.avif',
+    'image/x-icon': '.ico', 'image/vnd.microsoft.icon': '.ico', 'image/svg+xml': '.svg', 'image/heic': '.heic', 'image/heif': '.heif' };
+  var acceptedDropExtensions = { '.jpg':1,'.jpeg':1,'.jfif':1,'.jpe':1,'.png':1,'.apng':1,'.bmp':1,'.dib':1,'.tif':1,'.tiff':1,'.tga':1,'.webp':1,'.gif':1,'.avif':1,'.ico':1,'.svg':1,'.heic':1,'.heif':1 };
+  function droppedFile(file) {
+    if (!file) return null;
+    var name = file.name || 'image', ext = (name.match(/\.[^.\\/]+$/) || [''])[0].toLowerCase();
+    if (!ext && dropMimeExtensions[file.type]) { ext = dropMimeExtensions[file.type]; name += ext; }
+    return ext && acceptedDropExtensions[ext] ? { file: file, name: name } : null;
+  }
+  function webImageUrl(dataTransfer) {
+    var urls = (dataTransfer.getData('text/uri-list') || '').split(/\r?\n/).filter(function (value) { return value && value.charAt(0) !== '#'; });
+    if (urls.length) return urls[0];
+    var html = dataTransfer.getData('text/html');
+    if (!html) return '';
+    var documentFromDrop = new DOMParser().parseFromString(html, 'text/html');
+    var image = documentFromDrop.querySelector('img[src]');
+    return image ? image.src : '';
+  }
+  async function imageFromWebDrop(dataTransfer) {
+    var url = webImageUrl(dataTransfer);
+    if (!/^https?:\/\//i.test(url)) return null;
+    var controller = window.AbortController ? new AbortController() : null;
+    var timer = controller ? setTimeout(function () { controller.abort(); }, 15000) : null;
+    try {
+      var response = await fetch(url, controller ? { signal: controller.signal } : {});
+      if (!response.ok) throw new Error('Trang web không cho tải ảnh này.');
+      var declaredSize = Number(response.headers.get('content-length') || 0);
+      if (declaredSize > 20 * 1024 * 1024) throw new Error('Ảnh web vượt quá giới hạn 20 MiB.');
+      var chunks = [], received = 0, blob;
+      if (response.body && response.body.getReader) {
+        var reader = response.body.getReader();
+        while (true) {
+          var result = await reader.read();
+          if (result.done) break;
+          received += result.value.byteLength;
+          if (received > 20 * 1024 * 1024) { reader.cancel(); throw new Error('Ảnh web vượt quá giới hạn 20 MiB.'); }
+          chunks.push(result.value);
+        }
+        blob = new Blob(chunks, { type: response.headers.get('content-type') || '' });
+      } else {
+        blob = await response.blob();
+        if (blob.size > 20 * 1024 * 1024) throw new Error('Ảnh web vượt quá giới hạn 20 MiB.');
+      }
+      var type = (blob.type || '').toLowerCase();
+      var extension = dropMimeExtensions[type] || (url.match(/\.[a-z0-9]+(?=$|[?#])/i) || [''])[0].replace(/[?#].*$/, '').toLowerCase();
+      if (!extension || !acceptedDropExtensions[extension]) throw new Error('Liên kết kéo vào không trỏ đến định dạng ảnh được hỗ trợ.');
+      if (!type) type = Object.keys(dropMimeExtensions).filter(function (mime) { return dropMimeExtensions[mime] === extension; })[0] || 'application/octet-stream';
+      var name = 'web-image' + extension;
+      return { file: new File([blob], name, { type: type }), name: name };
+    } finally { if (timer) clearTimeout(timer); }
+  }
+  async function sendDroppedFile(fileInfo) {
+    var file = fileInfo.file, name = fileInfo.name || file.name;
+    if (!file.size || file.size > 20 * 1024 * 1024) throw new Error(name + ': dung lượng ảnh tối đa 20 MiB.');
+    var token = 'drop-' + Date.now() + '-' + Math.random().toString(16).slice(2);
+    var chunkSize = 192 * 1024, chunks = Math.ceil(file.size / chunkSize);
+    call('drop_start', { token: token, name: name, size: file.size, chunks: chunks });
+    var bytes = new Uint8Array(await file.arrayBuffer());
+    for (var index = 0; index < chunks; index++) {
+      var part = bytes.subarray(index * chunkSize, Math.min((index + 1) * chunkSize, bytes.length)), binary = '';
+      for (var offset = 0; offset < part.length; offset += 0x8000)
+        binary += String.fromCharCode.apply(null, part.subarray(offset, Math.min(offset + 0x8000, part.length)));
+      call('drop_chunk', { token: token, index: index, base64: btoa(binary) });
+    }
+    call('drop_finish', { token: token });
+  }
+  var dropDepth = 0;
+  document.addEventListener('dragenter', function (event) {
+    if (event.dataTransfer) { event.preventDefault(); dropDepth++; document.body.classList.add('drag-over'); }
+  });
+  document.addEventListener('dragover', function (event) {
+    if (event.dataTransfer) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; }
+  });
+  document.addEventListener('dragleave', function (event) {
+    if (event.dataTransfer) { dropDepth = Math.max(0, dropDepth - 1); if (!dropDepth) document.body.classList.remove('drag-over'); }
+  });
+  document.addEventListener('drop', async function (event) {
+    event.preventDefault(); dropDepth = 0; document.body.classList.remove('drag-over');
+    var transfer = event.dataTransfer, files = Array.from(transfer.files || []).map(droppedFile).filter(Boolean);
+    if (!files.length) {
+      var items = Array.from(transfer.items || []);
+      files = items.filter(function (item) { return item.kind === 'file'; }).map(function (item) { return droppedFile(item.getAsFile()); }).filter(Boolean);
+    }
+    if (!files.length && webImageUrl(transfer)) {
+      try { var remote = await imageFromWebDrop(transfer); if (remote) files.push(remote); }
+      catch (error) { status(error.message + ' Nếu trang chặn CORS, hãy kéo ảnh sao cho trình duyệt cung cấp file ảnh.', true); return; }
+    }
+    if (!files.length) { status('Hãy kéo file ảnh hoặc ảnh từ trang web vào cửa sổ.', true); return; }
+    state.busy = true; update();
+    try {
+      for (var index = 0; index < files.length; index++) await sendDroppedFile(files[index]);
+      status('Đã thêm ' + files.length + ' ảnh vào danh sách.');
+    } catch (error) { status(error.message || 'Không thể đọc ảnh kéo vào.', true); }
+    finally { state.busy = false; update(); }
+  });
   window.VGDImporter = { receive: function (event, data) {
     if (event === 'settings') {
       Object.keys(data).forEach(function (key) {
