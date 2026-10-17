@@ -3,8 +3,6 @@ module VGD
   module Dim
     module UpdateCore
       class Updater
-        PREF_KEY = 'update_last_check_at'.freeze
-        CHECK_INTERVAL = 24 * 60 * 60
         def initialize
           @client = Client.new
           @last_manifest = nil
@@ -68,13 +66,6 @@ module VGD
         def newer?(remote, current)
           self.class.newer?(remote, current)
         end
-        def self.due?
-          last = Sketchup.read_default('VGDDimUpdater', PREF_KEY, 0).to_i
-          Time.now.to_i - last >= CHECK_INTERVAL
-        end
-        def self.mark_checked
-          Sketchup.write_default('VGDDimUpdater', PREF_KEY, Time.now.to_i)
-        end
       end
       module UIHooks
         extend self
@@ -86,16 +77,9 @@ module VGD
             UI.menu('Extensions').add_item('Kiểm tra cập nhật VGD Dim') { check(true) }
             @menu_added = true
           end
-          @timer = UI.start_timer(15.0, false) do
-            if Updater.due?
-              Updater.mark_checked
-              check(false)
-            end
-          end
+          # No automatic check at startup: VGD Center reports updates when the user opens it.
         end
         def shutdown
-          UI.stop_timer(@timer) if @timer
-          @timer = nil
           @started = false
         end
         def check(manual)
