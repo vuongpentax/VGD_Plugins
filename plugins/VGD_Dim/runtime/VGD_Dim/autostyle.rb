@@ -29,8 +29,17 @@ module VGD
       def watch(entities)
         @watched ||= []
         return if @watched.include?(entities)
+        prune_watched
         entities.add_observer(@entity_observer)
         @watched << entities
+      end
+      # Forget collections whose owning group was erased; their observers go with them.
+      # Without this the list grows with every group ever added in the session.
+      def prune_watched
+        @watched.reject! do |known|
+          owner = (known.parent rescue nil)
+          owner.respond_to?(:valid?) && !owner.valid?
+        end
       end
       def bind(model)
         detach

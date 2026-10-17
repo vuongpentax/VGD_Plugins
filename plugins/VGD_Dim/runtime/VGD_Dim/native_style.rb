@@ -13,7 +13,7 @@ module VGD
         raise ArgumentError, 'APPLY đang chạy.' if @job
         config = Engine.validate(settings)
         targets = Engine.selected(model)
-        raise ArgumentError, 'Hãy chọn trực tiếp Dim hoặc Text/Label trước khi APPLY.' if targets.empty?
+        raise ArgumentError, Engine.no_target_message(model) if targets.empty?
         Engine.check_context(model)
         api = adapter
         api.check_platform!

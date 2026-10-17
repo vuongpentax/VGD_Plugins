@@ -34,5 +34,25 @@ def run_regression_tests
   as.bind(fresh)
   check.call(as.instance_variable_get(:@model).equal?(fresh),
              'Auto-Style did not bind to the new model after the previous model was closed')
+  # R3: changing a colour reuses one material instead of adding "#1" copies.
+  m = Sketchup::FakeModel.new; Sketchup.active_model = m
+  first = VGD::Dim::Engine.get_material(m, 'VGD_DIM_COLOR', '#112233')
+  again = VGD::Dim::Engine.get_material(m, 'VGD_DIM_COLOR', '#112233')
+  check.call(first.equal?(again) && m.materials.items.length == 1, 'same colour created a second material')
+  other = VGD::Dim::Engine.get_material(m, 'VGD_DIM_COLOR', '#445566')
+  check.call(!other.equal?(first) && m.materials.items.length == 2, 'new colour did not create its own material')
+  # A material whose colour was edited by hand is corrected, not duplicated.
+  first.color = Sketchup::Color.new(1, 2, 3)
+  fixed = VGD::Dim::Engine.get_material(m, 'VGD_DIM_COLOR', '#112233')
+  check.call(fixed.equal?(first) && m.materials.items.length == 2 && first.color.red == 0x11, 'edited material duplicated instead of corrected')
+
+  # R4: a selected group explains why Model Info has no target.
+  m = Sketchup::FakeModel.new; Sketchup.active_model = m
+  group = Sketchup::Group.new(Sketchup::Definition.new(m))
+  m.entities << group; m.selection.add(group)
+  check.call(VGD::Dim::Engine.no_target_message(m).include?('group'), 'group selection gave no hint')
+  m.selection.clear
+  check.call(VGD::Dim::Engine.no_target_message(m).include?('trực tiếp'), 'empty selection message changed')
+
   puts 'PASS: regression — region errors do not abort unstarted operations; Auto-Style binds after a closed model'
 end
