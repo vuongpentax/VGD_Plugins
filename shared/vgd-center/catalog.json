@@ -66,16 +66,16 @@
       "id": "image_importer",
       "name": "VGD Image Importer",
       "extension_name": "VGD Image Importer",
-      "version": "1.1.0-beta.5",
-      "release_channel": "beta",
+      "version": "1.1.0",
+      "release_channel": "stable",
       "description": "Nhập ảnh vào SketchUp dưới dạng component, mặt phẳng hoặc vật liệu.",
       "icon": "image_importer",
       "minimum_sketchup": "22.0.0",
       "download": {
-        "filename": "VGD_Image_Importer_v1.1.0-beta.5.rbz",
-        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-image-importer-v1.1.0-beta.5/VGD_Image_Importer_v1.1.0-beta.5.rbz",
-        "size": 65149,
-        "sha256": "dbac56b1402fd4107f3f33b5c7f0407dee623331649dc5c3e9617412969e2201"
+        "filename": "VGD_Image_Importer_v1.1.0.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-image-importer-v1.1.0/VGD_Image_Importer_v1.1.0.rbz",
+        "size": 70258,
+        "sha256": "6b59118f21907928ad4ba0dc246a9ed36279e0ad5d408d06bd739ec0e4f3c616"
       },
       "allowed_paths": [
         "vgd_image_importer.rb",
@@ -141,6 +141,20 @@
         "vgd_reference.rb",
         "vgd_reference/"
       ]
+    },
+    {
+      "id": "cabinet_draw",
+      "name": "VGD Cabinet Draw",
+      "kind": "plugin",
+      "lifecycle": "in_development",
+      "visibility": "public"
+    },
+    {
+      "id": "package",
+      "name": "VGD Package",
+      "kind": "plugin",
+      "lifecycle": "in_development",
+      "visibility": "public"
     }
   ]
 }

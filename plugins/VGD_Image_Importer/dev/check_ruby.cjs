@@ -18,5 +18,7 @@ const { RubyVM } = require(path.join(resolve('@ruby/wasm-wasi'), 'dist/cjs/vm.js
   for (const file of files) vm.eval(fs.readFileSync(path.join(root, 'runtime', file), 'utf8').replace(/^require(?:_relative)? [^\n]*\n/gm, ''));
   vm.eval("raise 'Prerelease numeric comparison failed' unless VGD::UpdateNotice.newer?('1.1.0-beta.10','1.1.0-beta.2'); raise 'Stable release comparison failed' unless VGD::UpdateNotice.newer?('1.1.0','1.1.0-beta.3'); raise 'Same version comparison failed' if VGD::UpdateNotice.newer?('1.1.0-beta.2','1.1.0-beta.2'); puts 'PASS: updater version ordering for beta numbers and stable releases.'");
   vm.eval(fs.readFileSync(path.join(__dirname, 'test_engine.rb'), 'utf8'));
+  vm.eval(fs.readFileSync(path.join(__dirname, 'test_drop.rb'), 'utf8'));
+  vm.eval('run_drop_tests');
   vm.eval('$stdout.flush');
 })().catch(error => { console.error(error); process.exitCode = 1; });
