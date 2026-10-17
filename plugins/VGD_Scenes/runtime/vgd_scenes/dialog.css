@@ -223,3 +223,10 @@ header,.context{padding-left:12px;padding-right:12px}
 .fields{gap:8px}
 .inline{gap:5px}
 }
+/* Section set rows */
+.cut-rows { display: grid; gap: 6px; margin: 8px 0; }
+.cut-row { display: grid; grid-template-columns: minmax(0, 1fr) 64px 66px auto 28px; gap: 6px; align-items: center; }
+.cut-row input[type=number], .cut-row select { width: 100%; min-width: 0; }
+.cut-row select { padding-left: 6px; padding-right: 2px; }
+.cut-row .check { margin: 0; white-space: nowrap; }
+.cut-row .cut-remove { padding: 2px 0; }

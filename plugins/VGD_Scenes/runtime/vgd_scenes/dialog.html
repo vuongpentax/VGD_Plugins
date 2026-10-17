@@ -31,6 +31,19 @@
 </section>
 <section id="sections" class="tab" hidden>
 <h1>Mặt cắt</h1><p>Chọn đối tượng rồi kéo thanh trượt để xem trực tiếp. Bấm Tạo scene khi đã chọn vị trí.</p>
+<div class="card" id="setCard"><h2>Bộ mặt cắt tự động</h2>
+<p class="hint">Chọn tủ, đặt các mặt cắt rồi bấm một lần: góc nhìn và mặt cắt được tạo với tỷ lệ chuẩn vừa khổ giấy.</p>
+<label>Mẫu bộ<select id="setPreset"><option value="">Tự đặt</option></select></label>
+<div class="view-grid" id="setViews">
+<button data-setview="FRONT" aria-pressed="true">FRONT</button><button data-setview="RIGHT" aria-pressed="true">RIGHT</button><button data-setview="TOP" aria-pressed="true">TOP</button><button data-setview="ISO" aria-pressed="true">ISO</button><button data-setview="BACK" aria-pressed="false">BACK</button><button data-setview="LEFT" aria-pressed="false">LEFT</button><button data-setview="BOTTOM" aria-pressed="false">BOTTOM</button>
+</div>
+<div id="setRows" class="cut-rows"></div>
+<div class="inline wrap"><button id="setAddRow">+ Thêm mặt cắt</button></div>
+<div class="fields"><label>Khổ giấy<select id="setPaper"><option value="A4_L">A4 ngang</option><option value="A4_P">A4 đứng</option><option value="A3_L" selected>A3 ngang</option><option value="A3_P">A3 đứng</option></select></label>
+<label>Tỷ lệ<select id="setScaleMode"><option value="auto" selected>Tự chọn tỷ lệ chuẩn</option><option value="fixed">Cố định</option><option value="free">Vừa khung (không chuẩn)</option></select></label></div>
+<label id="setDenominatorField" hidden>Mẫu số tỷ lệ 1:<input id="setDenominator" type="number" min="1" max="1000" value="20"></label>
+<p class="hint">Mặt cắt cắt theo trục của tủ: X rộng, Y sâu, Z cao. Chỉ góc nhìn song song có tỷ lệ; ISO luôn vừa khung.</p>
+<button id="setApply" class="primary wide" data-needs-selection>Tạo bộ scene</button></div>
 <div class="card"><label>Tên mặt cắt<input id="section_name" value="A-A" maxlength="80"></label>
 <label>Trục cắt<select id="section_axis"><option value="X">X · chiều rộng</option><option value="Y" selected>Y · chiều sâu</option><option value="Z">Z · chiều cao</option></select></label>
 <label>Vị trí <span class="suffix"><input id="section_percent" type="number" min="0" max="100" value="50"><span>%</span></span></label>

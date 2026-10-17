@@ -95,10 +95,27 @@ module VGD
         aspect = options['width'].to_f / options['height']
         target_point = center.offset(v[:right], (ranges[0][0] + ranges[0][1]) / 2.0).offset(v[:up], (ranges[1][0] + ranges[1][1]) / 2.0)
         camera = Sketchup::Camera.new(target_point.offset(v[:direction].reverse, [depth * 2.0, 100.0].max), target_point, v[:up], false)
-        camera.height = [height, width / aspect].max * (1.0 + options['margin'] / 100.0)
-        camera.aspect_ratio = aspect
+        plan = ScalePlan.for(width, height, kind, options)
+        if plan
+          # Exact standard scale: the frame is the printable paper area at 1:denominator.
+          camera.height = plan['camera_height']
+          camera.aspect_ratio = plan['aspect']
+        else
+          camera.height = [height, width / aspect].max * (1.0 + options['margin'] / 100.0)
+          camera.aspect_ratio = aspect
+        end
         model.active_view.camera = camera
         camera
+      end
+
+      # The scale fit would use for this target, or nil (free mode, ISO view).
+      def self.scale_info(target, kind, options, normal = nil)
+        v = view_vectors(target, kind, normal)
+        center = target[:center]
+        projections = target[:points].map { |point| d = point - center; [d.dot(v[:right]), d.dot(v[:up])] }
+        width = [projections.map(&:first).minmax.inject { |a, b| b - a }, 0.01].max
+        height = [projections.map(&:last).minmax.inject { |a, b| b - a }, 0.01].max
+        ScalePlan.for(width, height, kind, options)
       end
 
       def self.section(target, options)

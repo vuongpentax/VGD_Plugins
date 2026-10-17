@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function send(action, extra = {}, lock = true) {
     if (!context || (busy && !['cancel','refresh'].includes(action))) return;
     if (!window.sketchup) { status('Bản xem trước: thao tác thực hiện trong SketchUp.'); return; }
-    if (action==='generate' || action==='section') pendingCreate=true;
+    if (action==='generate' || action==='section' || action==='sectionSet') pendingCreate=true;
     if (lock) { busy = true; enable(); }
     window.sketchup.action(JSON.stringify({ action, model: context.model, ...extra }));
   }
@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.activeElement!==$('cameraFov') && data.camera.fov != null) $('cameraFov').value=Math.round(data.camera.fov*1000000)/1000000;
         if (document.activeElement!==$('parallelHeight') && data.camera.height_mm != null) $('parallelHeight').value=Math.round(data.camera.height_mm*1000)/1000;
       }
-      renderPresets();
+      renderPresets(); renderSetPresets(data.section_sets);
       const sceneSignature=JSON.stringify([data.model,data.scenes.map(scene=>[scene.id,scene.name]),currentId(data)]);
       if(sceneSignature!==composeSignature){composeSignature=sceneSignature;$('composeScene').replaceChildren(new Option('Chọn scene để canh…',''));data.scenes.forEach(scene=>$('composeScene').add(new Option(scene.name,scene.id)));$('composeScene').value=currentId(data)||'';}
       const composing=data.scenes.find(scene=>scene.selected);
@@ -308,7 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!(data && data.success)) { savedFrameSignature=null; frameFailureEpoch++; }
       if (!(data && data.success)) navigationId = context && (context.scenes.find(scene=>scene.selected) || {}).id || null;
       if (data && data.ids) selected = new Set(data.ids);
-      if(pendingCreate && data && data.success && data.ids){pendingCreate=false;tab('scenes');}
+      if(pendingCreate && data && data.success && data.ids){pendingCreate=false;if(currentTab!=='sections')tab('scenes');}
       if(!(data && data.success)) pendingCreate=false;
       enable();
     } else if (event === 'started') {
@@ -487,6 +487,88 @@ document.addEventListener('DOMContentLoaded', () => {
   $('restoreAllFrames').addEventListener('click', () => send('restoreAllFrames'));
   $('theme').addEventListener('click', () => { document.body.classList.toggle('dark'); try { localStorage.setItem('VGD.Scenes.Theme',document.body.classList.contains('dark')?'dark':'light'); } catch (_) {} });
   enable(); showFormat(); cameraMode();
+  // ---- Bộ mặt cắt tự động ----
+  const SET_STORE = 'VGD.Scenes.SectionSet';
+  let setPresetSignature = null, setLoaded = false;
+  function addCutRow(cut) {
+    const row = document.createElement('div'); row.className = 'cut-row';
+    const name = document.createElement('input'); name.className = 'cut-name'; name.maxLength = 40; name.placeholder = 'Tên'; name.value = cut.name;
+    const axis = document.createElement('select'); axis.className = 'cut-axis';
+    ['X', 'Y', 'Z'].forEach(value => axis.add(new Option(value, value))); axis.value = cut.axis;
+    const percent = document.createElement('input'); percent.className = 'cut-percent'; percent.type = 'number'; percent.min = '0'; percent.max = '100'; percent.value = String(cut.percent);
+    const label = document.createElement('label'); label.className = 'check';
+    const flip = document.createElement('input'); flip.type = 'checkbox'; flip.className = 'cut-flip'; flip.checked = !!cut.flip;
+    label.append(flip, document.createTextNode('Đảo'));
+    const remove = document.createElement('button'); remove.className = 'cut-remove'; remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', 'Xóa mặt cắt');
+    remove.addEventListener('click', () => row.remove());
+    row.append(name, axis, percent, label, remove);
+    $('setRows').append(row);
+  }
+  function setCuts(cuts) { $('setRows').replaceChildren(); cuts.forEach(addCutRow); }
+  function setViews(views) { document.querySelectorAll('[data-setview]').forEach(button => button.setAttribute('aria-pressed', String(views.includes(button.dataset.setview)))); }
+  function applySetPreset(id) {
+    const preset = ((context && context.section_sets) || {})[id];
+    if (!preset) return;
+    setViews(preset.views); setCuts(preset.sections);
+  }
+  function renderSetPresets(presets) {
+    if (!presets) return;
+    const signature = Object.keys(presets).join('|');
+    if (signature === setPresetSignature) return;
+    setPresetSignature = signature;
+    const current = $('setPreset').value;
+    $('setPreset').replaceChildren(new Option('Tự đặt', ''));
+    Object.keys(presets).forEach(id => $('setPreset').add(new Option(presets[id].label, id)));
+    $('setPreset').value = presets[current] ? current : '';
+    if (!setLoaded) { setLoaded = true; if (!loadSavedSet() && presets.wardrobe) { $('setPreset').value = 'wardrobe'; applySetPreset('wardrobe'); } }
+  }
+  function readSet() {
+    const views = [...document.querySelectorAll('[data-setview][aria-pressed=true]')].map(button => button.dataset.setview);
+    const names = new Set();
+    const sections = [...document.querySelectorAll('#setRows .cut-row')].map(row => {
+      const name = row.querySelector('.cut-name').value.trim();
+      const percentText = row.querySelector('.cut-percent').value.trim();
+      const percent = Number(percentText);
+      if (!name) throw Error('Điền tên cho mọi mặt cắt.');
+      if (names.has(name.toLowerCase())) throw Error('Tên mặt cắt không được trùng: ' + name + '.');
+      names.add(name.toLowerCase());
+      if (percentText === '' || !Number.isFinite(percent) || percent < 0 || percent > 100) throw Error('Vị trí cắt của ' + name + ' cần nằm trong 0–100%.');
+      return { name: name, axis: row.querySelector('.cut-axis').value, percent: percent, flip: row.querySelector('.cut-flip').checked };
+    });
+    if (!views.length && !sections.length) throw Error('Chọn ít nhất một góc nhìn hoặc thêm một mặt cắt.');
+    const mode = $('setScaleMode').value;
+    const denominator = Number($('setDenominator').value);
+    if (mode === 'fixed' && !(denominator > 0 && denominator <= 1000)) throw Error('Mẫu số tỷ lệ cần nằm trong 1–1000.');
+    const options = { paper: $('setPaper').value, scale_mode: mode, scale_denominator: mode === 'fixed' ? denominator : 0,
+      project: $('project').value, template: $('template').value, axis_mode: $('axis_mode').value, isolate: $('isolate').checked };
+    return { preset: $('setPreset').value, views: views, sections: sections, options: options };
+  }
+  function saveSet() {
+    try { localStorage.setItem(SET_STORE, JSON.stringify({ set: readSet(), preset: $('setPreset').value })); } catch (_) {}
+  }
+  function loadSavedSet() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(SET_STORE) || 'null');
+      if (!saved || !saved.set || !Array.isArray(saved.set.sections)) return false;
+      setViews(saved.set.views || []); setCuts(saved.set.sections);
+      const options = saved.set.options || {};
+      if (options.paper) $('setPaper').value = options.paper;
+      if (options.scale_mode) $('setScaleMode').value = options.scale_mode;
+      if (options.scale_denominator > 0) $('setDenominator').value = options.scale_denominator;
+      $('setPreset').value = saved.preset || '';
+      showSetDenominator();
+      return true;
+    } catch (_) { return false; }
+  }
+  function showSetDenominator() { $('setDenominatorField').hidden = $('setScaleMode').value !== 'fixed'; }
+  document.querySelectorAll('[data-setview]').forEach(button => button.addEventListener('click', () => button.setAttribute('aria-pressed', String(button.getAttribute('aria-pressed') !== 'true'))));
+  $('setPreset').addEventListener('change', () => applySetPreset($('setPreset').value));
+  $('setAddRow').addEventListener('click', () => addCutRow({ name: 'Mặt cắt ' + ($('setRows').children.length + 1), axis: 'Y', percent: 50, flip: false }));
+  $('setScaleMode').addEventListener('change', showSetDenominator);
+  $('setApply').addEventListener('click', () => {
+    try { const payload = readSet(); saveSet(); send('sectionSet', { settings: payload }); }
+    catch (error) { status(error.message, true); }
+  });
   if (window.sketchup) window.sketchup.ready();
   setInterval(() => { if (context && !busy && !dragging && $('modal').hidden && window.sketchup) send('refresh',{},false); },2000);
 

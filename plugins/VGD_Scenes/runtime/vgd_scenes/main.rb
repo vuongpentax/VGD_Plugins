@@ -2,6 +2,7 @@
 require 'sketchup.rb'
 require 'uri'
 require_relative 'utils'
+require_relative 'section_set'
 require_relative 'geometry'
 require_relative 'scenes'
 require_relative 'frame'
@@ -27,7 +28,7 @@ module VGD
         { model: model.object_id.to_s, title: model.title.empty? ? 'Model chưa lưu' : model.title,
           selection: model.selection.count { |e| Geometry.instance?(e) }, editing: !model.active_path.nil?,
           scenes: SceneStore.list(model), native_order_supported: model.pages.respond_to?(:reorder), native_order_dirty: SceneStore.ordered(model) != model.pages.to_a,
-          presets: SceneFrame.presets(model), settings: settings(model), camera: CameraControl.state(model), frame_cleanup: SceneFrame.cleanup_state(model),
+          section_sets: SectionSet.presets, presets: SceneFrame.presets(model), settings: settings(model), camera: CameraControl.state(model), frame_cleanup: SceneFrame.cleanup_state(model),
           current_frame: live_frame(model) || (model.pages.selected_page ? SceneFrame.read(model.pages.selected_page, settings(model)) : SceneFrame.from_camera(model.active_view.camera, settings(model))),
           frame_active: model.active_view.camera.aspect_ratio > 0, grid_active: FrameTool.active?, busy: !@job.nil?,
           transfer: @transfer_pending && @transfer_pending[:model].equal?(model) ? @transfer_pending[:preview] : nil }
@@ -79,6 +80,7 @@ module VGD
                  when 'reorder' then SceneStore.reorder(model, data['ids'] || data['id'], data['before'], data['order'])
                  when 'syncOrder' then SceneStore.sync_order(model, data['order'])
                  when 'renameMany' then SceneStore.rename_many(model, data)
+                 when 'sectionSet' then SectionSet.apply(model, data.fetch('settings'))
                  when 'sectionPreview' then SectionPreview.update(model, data.fetch('settings'))
                  when 'sectionCancel' then { success: true, message: 'Đã tắt xem trước mặt cắt.' }
                  when 'copyView' then SceneTransfer.copy_view(model)
@@ -127,7 +129,7 @@ module VGD
                    nil
                  else raise ArgumentError, 'Lệnh không được hỗ trợ.'
                  end
-        @live_frame = nil if %w[visit generate section capture saveFrames update delete removeAllFrames restoreAllFrames].include?(action)
+        @live_frame = nil if %w[visit generate section sectionSet capture saveFrames update delete removeAllFrames restoreAllFrames].include?(action)
         send_event(%w[sectionPreview sectionCancel].include?(action) ? 'preview' : 'result', result) if result
         send_event('state', state) unless %w[sectionPreview sectionCancel].include?(action)
         result

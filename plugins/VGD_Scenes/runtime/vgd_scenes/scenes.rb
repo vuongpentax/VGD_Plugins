@@ -257,6 +257,7 @@ module VGD
         model.rendering_options['DisplaySectionCuts'] = !planes.empty?
         model.rendering_options['DisplaySectionPlanes'] = false
         Geometry.fit(model, target, kind, opts, normal)
+        page.set_attribute(DICT, 'scale', (Geometry.scale_info(target, kind, opts, normal) || {}).to_json)
         prepare_page(page)
         raise 'SketchUp không lưu được trạng thái scene.' unless page.update(flags)
         isolate(page, model, target) if opts['isolate']

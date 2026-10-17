@@ -205,6 +205,9 @@ module Sketchup
     def start_operation(label,*_);@events << [:start,label];end
     def commit_operation;@events << [:commit];end
     def abort_operation;@events << [:abort];end
+    def operations;@events.count { |e| e[0] == :start };end
+    def commits;@events.count { |e| e[0] == :commit };end
+    def aborts;@events.count { |e| e[0] == :abort };end
     def select_tool(tool);@tool.deactivate(active_view) if @tool;@tool=tool;tool.activate if tool;end
   end
 end
