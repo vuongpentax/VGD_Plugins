@@ -20,7 +20,7 @@ const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js')
   vm.eval(fs.readFileSync(path.join(__dirname,'test_fixture.rb'),'utf8'));
   for(const name of names.filter(n=>!['main','reload','update_core/installer'].includes(n)))vm.eval(fs.readFileSync(path.join(root,'VGD_Dim',name+'.rb'),'utf8'));
 
-  for(const [file,run] of [['test_engine.rb','run_engine_tests'],['test_native_style.rb','run_native_style_tests'],['test_core.rb','run_core_tests; run_service_tests'],['test_smartdim.rb','run_smartdim_tests'],['test_store.rb','run_store_tests']]){
+  for(const [file,run] of [['test_engine.rb','run_engine_tests'],['test_native_style.rb','run_native_style_tests'],['test_core.rb','run_core_tests; run_service_tests'],['test_smartdim.rb','run_smartdim_tests'],['test_store.rb','run_store_tests'],['test_regression.rb','run_regression_tests']]){
     vm.eval(fs.readFileSync(path.join(__dirname,file),'utf8'));vm.eval(run+'; $stdout.flush');
   }
   if(process.env.VGD_VERIFY_LOCAL_PREFERENCES){
