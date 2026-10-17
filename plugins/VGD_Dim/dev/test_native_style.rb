@@ -101,5 +101,16 @@ def run_native_style_tests
   rescue RuntimeError => e
     raise unless e.message.include?('Có nhiều nút')
   end
-  puts 'PASS: Model Info bridge preflight/subsets/selection restore, timeout/cancel/model change/partial failure, duplicate apply guard, Win32 target filtering (simulation)'
+  # Regression: a click must only be queued. Synchronous sends/activation ran SketchUp's
+  # own command inside the Ruby callback, which is the suspected crash path.
+  raw = native::WindowsAPI.allocate
+  calls = []
+  raw.instance_variable_set(:@functions, {
+    post_message: ->(*args) { calls << [:post, *args]; 1 },
+    send_message: ->(*args) { calls << [:send, *args]; 0 },
+    activate: ->(*args) { calls << [:activate, *args]; 0 }
+  })
+  raw.click(1, 3)
+  raise 'Click must only post BM_CLICK' unless calls == [[:post, 3, 0x00F5, 0, 0]]
+  puts 'PASS: Model Info bridge preflight/subsets/selection restore, timeout/cancel/model change/partial failure, duplicate apply guard, Win32 target filtering, click only queued (simulation)'
 end
