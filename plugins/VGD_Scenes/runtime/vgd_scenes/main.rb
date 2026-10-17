@@ -4,6 +4,9 @@ require 'uri'
 require_relative 'utils'
 require_relative 'dim_bridge'
 require_relative 'section_set'
+require_relative 'sheet_layout'
+require_relative 'title_block'
+require_relative 'sheet_builder'
 require_relative 'geometry'
 require_relative 'scenes'
 require_relative 'frame'
@@ -82,6 +85,10 @@ module VGD
                  when 'syncOrder' then SceneStore.sync_order(model, data['order'])
                  when 'renameMany' then SceneStore.rename_many(model, data)
                  when 'sectionSet' then SectionSet.apply(model, data.fetch('settings'))
+                 when 'sheetTitleBlock' then sheet_title_block
+                 when 'sheetPlan' then sheet_plan(model, data)
+                 when 'sheetExport' then sheet_export(model, data)
+                 when 'sheetOpen' then sheet_open(data['what'])
                  when 'sectionPreview' then SectionPreview.update(model, data.fetch('settings'))
                  when 'sectionCancel' then { success: true, message: 'Đã tắt xem trước mặt cắt.' }
                  when 'copyView' then SceneTransfer.copy_view(model)
@@ -179,6 +186,50 @@ module VGD
         end)
         send_event('started', { total: pages.length })
         @job.start
+      end
+
+      def sheet_title_block
+        path = ::UI.openpanel('VGD · Chọn PDF khung tên', '', 'PDF|*.pdf||')
+        return { success: false, cancelled: true, message: 'Đã hủy chọn khung tên.' } unless path
+        @title_block = TitleBlock.import(path)
+        info = @title_block.slice('width_mm', 'height_mm', 'paper').merge('name' => File.basename(path))
+        paper = info['paper'] ? "khổ #{info['paper']}" : "kích thước #{info['width_mm']}×#{info['height_mm']} mm (không phải A4–A1)"
+        { success: true, title_block: info, message: "Đã nhập khung tên #{info['name']} · #{paper}." }
+      end
+
+      def sheet_plan(model, data)
+        ids = Array(data['ids']).map(&:to_s).uniq
+        opts = options(data.fetch('settings'))
+        paper = @title_block && @title_block['paper']
+        opts = opts.merge('paper' => paper) if paper && data['use_title_block']
+        items = SheetLayout.items(model, ids)
+        reserve = data['reserve_bottom_mm'].to_f
+        plan = SheetLayout.plan(items, opts.merge('reserve_bottom_mm' => reserve))
+        { success: true, plan: plan, message: plan['warnings'].empty? ? "Đã dàn #{items.length} view lên #{plan['sheets'].length} trang, tỷ lệ 1:#{SheetLayout.format_scale(plan['denominator'])}." : plan['warnings'].join(' ') }
+      end
+
+      def sheet_export(model, data)
+        raise ArgumentError, 'Đóng chế độ edit Group/Component trước khi xuất.' if model.active_path
+        raise 'SketchUp này không có LayOut API (cần SketchUp Pro).' unless SheetBuilder.available?
+        plan = SheetLayout.sanitize(model, data['plan'])
+        folder = ::UI.select_directory(title: 'VGD · Chọn thư mục lưu bản vẽ')
+        return { success: false, cancelled: true, message: 'Đã hủy chọn nơi lưu.' } unless folder
+        raise ArgumentError, 'Thư mục đích không tồn tại.' unless File.directory?(folder)
+        name = clean_filename(data['name'].to_s.strip.empty? ? (model.title.empty? ? 'VGD_Sheets' : model.title) : data['name'].to_s)
+        folder = output_directory(folder, DEFAULTS.merge('date_folder' => false))
+        built = SheetBuilder.build(model, plan, folder, 'name' => name, 'title_block' => data['use_title_block'] ? @title_block : nil, 'pdf' => data['pdf'] != false)
+        @sheet_result = built
+        @output_folder = folder
+        detail = built['warnings'].empty? ? '' : " Lưu ý: #{built['warnings'].join(' ')}"
+        { success: true, sheet: built.slice('layout', 'pdf', 'sheets'), message: "Đã xuất #{built['sheets']} trang: #{built['pdf'] || built['layout']}.#{detail}" }
+      end
+
+      def sheet_open(what)
+        raise 'Chưa có bản vẽ nào vừa xuất.' unless @sheet_result
+        path = what == 'layout' ? @sheet_result['layout'] : (@sheet_result['pdf'] || @sheet_result['layout'])
+        raise 'Không thấy file đã xuất.' unless path && File.file?(path)
+        ::UI.openURL('file:///' + URI::DEFAULT_PARSER.escape(path.tr('\\', '/')))
+        nil
       end
 
       def transfer_export(model, data, clipboard)
