@@ -43,6 +43,8 @@
 <label>Tỷ lệ<select id="setScaleMode"><option value="auto" selected>Tự chọn tỷ lệ chuẩn</option><option value="fixed">Cố định</option><option value="free">Vừa khung (không chuẩn)</option></select></label></div>
 <label id="setDenominatorField" hidden>Mẫu số tỷ lệ 1:<input id="setDenominator" type="number" min="1" max="1000" value="20"></label>
 <p class="hint">Mặt cắt cắt theo trục của tủ: X rộng, Y sâu, Z cao. Chỉ góc nhìn song song có tỷ lệ; ISO luôn vừa khung.</p>
+<label class="check"><input id="setDimension" type="checkbox" checked>Tự ghi kích thước bằng VGD Dim</label>
+<p class="hint" id="setDimensionHint" hidden>Chưa cài VGD Dim (hoặc bản quá cũ) nên chưa ghi kích thước tự động.</p>
 <button id="setApply" class="primary wide" data-needs-selection>Tạo bộ scene</button></div>
 <div class="card"><label>Tên mặt cắt<input id="section_name" value="A-A" maxlength="80"></label>
 <label>Trục cắt<select id="section_axis"><option value="X">X · chiều rộng</option><option value="Y" selected>Y · chiều sâu</option><option value="Z">Z · chiều cao</option></select></label>

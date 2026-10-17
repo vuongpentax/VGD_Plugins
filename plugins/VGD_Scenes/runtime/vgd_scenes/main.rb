@@ -2,6 +2,7 @@
 require 'sketchup.rb'
 require 'uri'
 require_relative 'utils'
+require_relative 'dim_bridge'
 require_relative 'section_set'
 require_relative 'geometry'
 require_relative 'scenes'
@@ -28,7 +29,7 @@ module VGD
         { model: model.object_id.to_s, title: model.title.empty? ? 'Model chưa lưu' : model.title,
           selection: model.selection.count { |e| Geometry.instance?(e) }, editing: !model.active_path.nil?,
           scenes: SceneStore.list(model), native_order_supported: model.pages.respond_to?(:reorder), native_order_dirty: SceneStore.ordered(model) != model.pages.to_a,
-          section_sets: SectionSet.presets, presets: SceneFrame.presets(model), settings: settings(model), camera: CameraControl.state(model), frame_cleanup: SceneFrame.cleanup_state(model),
+          section_sets: SectionSet.presets, dim_available: DimBridge.available?, presets: SceneFrame.presets(model), settings: settings(model), camera: CameraControl.state(model), frame_cleanup: SceneFrame.cleanup_state(model),
           current_frame: live_frame(model) || (model.pages.selected_page ? SceneFrame.read(model.pages.selected_page, settings(model)) : SceneFrame.from_camera(model.active_view.camera, settings(model))),
           frame_active: model.active_view.camera.aspect_ratio > 0, grid_active: FrameTool.active?, busy: !@job.nil?,
           transfer: @transfer_pending && @transfer_pending[:model].equal?(model) ? @transfer_pending[:preview] : nil }

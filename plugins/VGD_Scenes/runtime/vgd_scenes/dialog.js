@@ -290,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.activeElement!==$('cameraFov') && data.camera.fov != null) $('cameraFov').value=Math.round(data.camera.fov*1000000)/1000000;
         if (document.activeElement!==$('parallelHeight') && data.camera.height_mm != null) $('parallelHeight').value=Math.round(data.camera.height_mm*1000)/1000;
       }
-      renderPresets(); renderSetPresets(data.section_sets);
+      renderPresets(); renderSetPresets(data.section_sets); renderDimAvailability(!!data.dim_available);
       const sceneSignature=JSON.stringify([data.model,data.scenes.map(scene=>[scene.id,scene.name]),currentId(data)]);
       if(sceneSignature!==composeSignature){composeSignature=sceneSignature;$('composeScene').replaceChildren(new Option('Chọn scene để canh…',''));data.scenes.forEach(scene=>$('composeScene').add(new Option(scene.name,scene.id)));$('composeScene').value=currentId(data)||'';}
       const composing=data.scenes.find(scene=>scene.selected);
@@ -541,7 +541,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (mode === 'fixed' && !(denominator > 0 && denominator <= 1000)) throw Error('Mẫu số tỷ lệ cần nằm trong 1–1000.');
     const options = { paper: $('setPaper').value, scale_mode: mode, scale_denominator: mode === 'fixed' ? denominator : 0,
       project: $('project').value, template: $('template').value, axis_mode: $('axis_mode').value, isolate: $('isolate').checked };
-    return { preset: $('setPreset').value, views: views, sections: sections, options: options };
+    return { preset: $('setPreset').value, views: views, sections: sections, options: options, dimension: $('setDimension').checked && !$('setDimension').disabled };
   }
   function saveSet() {
     try { localStorage.setItem(SET_STORE, JSON.stringify({ set: readSet(), preset: $('setPreset').value })); } catch (_) {}
@@ -556,10 +556,12 @@ document.addEventListener('DOMContentLoaded', () => {
       if (options.scale_mode) $('setScaleMode').value = options.scale_mode;
       if (options.scale_denominator > 0) $('setDenominator').value = options.scale_denominator;
       $('setPreset').value = saved.preset || '';
+      if (typeof saved.set.dimension === 'boolean') $('setDimension').checked = saved.set.dimension;
       showSetDenominator();
       return true;
     } catch (_) { return false; }
   }
+  function renderDimAvailability(available) { $('setDimension').disabled = !available; $('setDimensionHint').hidden = available; }
   function showSetDenominator() { $('setDenominatorField').hidden = $('setScaleMode').value !== 'fixed'; }
   document.querySelectorAll('[data-setview]').forEach(button => button.addEventListener('click', () => button.setAttribute('aria-pressed', String(button.getAttribute('aria-pressed') !== 'true'))));
   $('setPreset').addEventListener('change', () => applySetPreset($('setPreset').value));

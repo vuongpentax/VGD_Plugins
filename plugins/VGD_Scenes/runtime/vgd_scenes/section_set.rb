@@ -79,7 +79,8 @@ module VGD
         names = sections.map { |item| item['name'].downcase }
         raise ArgumentError, 'Tên mặt cắt không được trùng nhau.' if names.uniq.length != names.length
         raise ArgumentError, 'Chọn ít nhất một góc nhìn hoặc một mặt cắt.' if views.empty? && sections.empty?
-        { 'id' => raw['preset'].to_s, 'views' => views, 'sections' => sections, 'options' => build_options(raw['options']) }
+        { 'id' => raw['preset'].to_s, 'views' => views, 'sections' => sections, 'options' => build_options(raw['options']),
+          'dimension' => raw['dimension'] == true }
       end
 
       def self.normalize_section(item)
@@ -117,8 +118,10 @@ module VGD
           end
           entries.each_with_index { |entry, index| tag_sheet(model, set, entry, index + 1) }
         end
+        # Dimensions are added after the scenes exist, each with its own Undo step in Dim.
+        dimensions = set['dimension'] ? DimBridge.apply(model, entries) : nil
         model.pages.selected_page = SceneStore.find(model, entries.first['id']) unless model.active_path
-        report(model, entries)
+        report(model, entries, dimensions)
       end
 
       # Data other VGD plugins read: which set, role, order, and the scale used.
@@ -131,7 +134,7 @@ module VGD
         JSON.parse(page.get_attribute(DICT, SHEET_KEY, '{}')) rescue {}
       end
 
-      def self.report(model, entries)
+      def self.report(model, entries, dimensions = nil)
         warnings = []
         scenes = entries.map do |entry|
           page = SceneStore.find(model, entry['id'])
@@ -142,7 +145,11 @@ module VGD
         end
         views = entries.count { |entry| entry['role'] == 'VIEW' }
         summary = "Đã tạo/cập nhật #{entries.length} scene (#{views} góc nhìn, #{entries.length - views} mặt cắt)."
-        { success: true, ids: entries.map { |entry| entry['id'] }, scenes: scenes, warnings: warnings,
+        if dimensions
+          summary += " Đã ghi kích thước cho #{dimensions['measured']} scene."
+          warnings.concat(dimensions['warnings'])
+        end
+        { success: true, ids: entries.map { |entry| entry['id'] }, scenes: scenes, warnings: warnings, dimensions: dimensions,
           message: warnings.empty? ? summary : ([summary] + warnings).join("\n") }
       end
     end
