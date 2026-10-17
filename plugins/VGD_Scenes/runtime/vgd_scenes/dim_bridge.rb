@@ -16,9 +16,9 @@ module VGD
       # Views measure the object's face; sections measure along the cut that scene shows.
       def self.options_for(entry, saved_options)
         if entry['role'] == 'SECTION'
-          saved_options.merge('face' => 'camera', 'use_section' => true, 'scene_only' => true)
+          saved_options.merge('face' => 'camera', 'use_section' => true, 'scene_only' => true, 'label' => "SEC_#{entry['name']}")
         else
-          saved_options.merge('face' => FACES.fetch(entry['name']), 'use_section' => false, 'scene_only' => true)
+          saved_options.merge('face' => FACES.fetch(entry['name']), 'use_section' => false, 'scene_only' => true, 'label' => entry['name'])
         end
       end
 

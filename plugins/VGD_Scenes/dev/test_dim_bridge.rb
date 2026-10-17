@@ -51,6 +51,7 @@ assert(calls.length == 6, "Expected 6 measured scenes, got #{calls.length}")
 assert(calls.map { |call| call[:page][/FRONT|RIGHT|TOP|ISO|SEC_[A-Z]-[A-Z]/] } == %w[FRONT RIGHT TOP SEC_A-A SEC_B-B SEC_C-C], 'Scenes must be measured in set order, ISO skipped')
 faces = calls.first(3).map { |call| [call[:opts]['face'], call[:opts]['use_section']] }
 assert(faces == [['-y', false], ['+x', false], ['+z', false]], "Views must measure their own face: #{faces}")
+assert(calls.map { |call| call[:opts]['label'] } == %w[FRONT RIGHT TOP SEC_A-A SEC_B-B SEC_C-C], "Dim tags must be named after the view or section: #{calls.map { |c| c[:opts]['label'] }}")
 assert(calls.last(3).all? { |call| call[:opts]['use_section'] && call[:opts]['face'] == 'camera' }, 'Sections must measure along their cut')
 assert(calls.all? { |call| call[:opts]['scene_only'] && call[:opts]['off1'] == 150.0 && call[:opts]['min_part'] == 300.0 && call[:style] == { 'dim' => { 'arrow' => 'dot' } } },
        "Saved Dim options must be kept and Scene-only turned on: #{calls.first}")

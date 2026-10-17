@@ -4,8 +4,8 @@ module VGD
   module Scenes
     # Chooses a standard drawing scale so a parallel view fits the paper.
     module ScalePlan
-      PAPERS = { 'A4_L' => [297.0, 210.0], 'A4_P' => [210.0, 297.0],
-                 'A3_L' => [420.0, 297.0], 'A3_P' => [297.0, 420.0] }.freeze
+      PAPERS = { 'A4_L' => [297.0, 210.0], 'A4_P' => [210.0, 297.0], 'A3_L' => [420.0, 297.0], 'A3_P' => [297.0, 420.0],
+                 'A2_L' => [594.0, 420.0], 'A2_P' => [420.0, 594.0], 'A1_L' => [841.0, 594.0], 'A1_P' => [594.0, 841.0] }.freeze
       STANDARD = [1, 2, 5, 10, 15, 20, 25, 30, 40, 50, 75, 100, 150, 200].freeze
       MM_PER_INCH = 25.4
       # Pixels per millimetre of drawing area when a paper frame is stored.

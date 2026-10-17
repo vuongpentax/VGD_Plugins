@@ -3,7 +3,8 @@ module VGD
   module Scenes
     class ExportJob
       attr_reader :model
-      PAPER = { 'A4_L' => [297, 210], 'A4_P' => [210, 297], 'A3_L' => [420, 297], 'A3_P' => [297, 420] }.freeze
+      PAPER = { 'A4_L' => [297, 210], 'A4_P' => [210, 297], 'A3_L' => [420, 297], 'A3_P' => [297, 420],
+                'A2_L' => [594, 420], 'A2_P' => [420, 594], 'A1_L' => [841, 594], 'A1_P' => [594, 841] }.freeze
       def initialize(model, pages, opts, destination, callback)
         @model = model; @pages = pages; @opts = opts; @destination = destination; @callback = callback
         @frames = pages.map do |page|

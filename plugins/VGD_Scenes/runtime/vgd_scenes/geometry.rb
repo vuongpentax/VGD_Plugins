@@ -108,13 +108,18 @@ module VGD
         camera
       end
 
-      # The scale fit would use for this target, or nil (free mode, ISO view).
-      def self.scale_info(target, kind, options, normal = nil)
+      # Width and height of the object in the view plane, in inches.
+      def self.view_extents(target, kind, normal = nil)
         v = view_vectors(target, kind, normal)
         center = target[:center]
         projections = target[:points].map { |point| d = point - center; [d.dot(v[:right]), d.dot(v[:up])] }
-        width = [projections.map(&:first).minmax.inject { |a, b| b - a }, 0.01].max
-        height = [projections.map(&:last).minmax.inject { |a, b| b - a }, 0.01].max
+        [[projections.map(&:first).minmax.inject { |a, b| b - a }, 0.01].max,
+         [projections.map(&:last).minmax.inject { |a, b| b - a }, 0.01].max]
+      end
+
+      # The scale fit would use for this target, or nil (free mode, ISO view).
+      def self.scale_info(target, kind, options, normal = nil)
+        width, height = view_extents(target, kind, normal)
         ScalePlan.for(width, height, kind, options)
       end
 

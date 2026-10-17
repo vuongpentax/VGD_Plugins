@@ -48,7 +48,7 @@ module VGD
       raise ArgumentError, 'Trục không hợp lệ' unless %w[local world].include?(o['axis_mode'])
       raise ArgumentError, 'Chế độ đối tượng không hợp lệ' unless %w[combined individual].include?(o['grouping'])
       raise ArgumentError, 'Định dạng không hợp lệ' unless %w[png jpg pdf].include?(o['format'])
-      raise ArgumentError, 'Khổ giấy không hợp lệ' unless %w[A4_L A4_P A3_L A3_P].include?(o['paper'])
+      raise ArgumentError, 'Khổ giấy không hợp lệ' unless %w[A4_L A4_P A3_L A3_P A2_L A2_P A1_L A1_P].include?(o['paper'])
       raise ArgumentError, 'Trục mặt cắt không hợp lệ' unless %w[X Y Z CUSTOM].include?(o['section_axis'])
       raise ArgumentError, 'Chế độ tỷ lệ không hợp lệ' unless %w[free auto fixed].include?(o['scale_mode'])
       o['scale_denominator'] = number(o['scale_denominator'], 0, 1000, 'Mẫu số tỷ lệ')

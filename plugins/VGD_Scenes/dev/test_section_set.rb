@@ -57,7 +57,10 @@ front_page = pages[0]
 front_scale = JSON.parse(front_page.get_attribute(s::DICT, 'scale'))
 assert(front_scale['denominator'] == 5 && front_page.camera.height > 0 && !front_page.camera.perspective?, 'FRONT must be a parallel 1:5 view')
 assert(near(front_page.camera.height, 267.0 * 5 / 25.4) && near(front_page.camera.aspect_ratio, 390.0 / 267.0), 'FRONT camera is not the exact 1:5 paper area')
-assert(JSON.parse(pages[3].get_attribute(s::DICT, 'scale')).empty?, 'ISO view must have no scale')
+iso_scale = JSON.parse(pages[3].get_attribute(s::DICT, 'scale'))
+assert(!iso_scale.key?('denominator') && iso_scale['extent_mm'].length == 2, 'ISO view must have no scale but must record its size')
+front_extent = front_scale['extent_mm']
+assert((front_extent[0] - 1000.0).abs < 0.2 && (front_extent[1] - 800.0).abs < 0.2, "FRONT extent should be the cabinet width x height: #{front_extent}")
 assert(result[:scenes].find { |scene| scene[:name].include?('A-A') }[:scale] =~ /\A1:\d+\z/, 'Section scene lacks a scale label')
 assert(result[:warnings].empty?, "Unexpected warnings: #{result[:warnings]}")
 
