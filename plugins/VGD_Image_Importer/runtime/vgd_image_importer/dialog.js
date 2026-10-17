@@ -127,47 +127,25 @@
     if (!ext && dropMimeExtensions[file.type]) { ext = dropMimeExtensions[file.type]; name += ext; }
     return ext && acceptedDropExtensions[ext] ? { file: file, name: name } : null;
   }
-  function webImageUrl(dataTransfer) {
-    var urls = (dataTransfer.getData('text/uri-list') || '').split(/\r?\n/).filter(function (value) { return value && value.charAt(0) !== '#'; });
-    if (urls.length) return urls[0];
+  // Candidate web image URLs in priority order: direct image links, then <img> in the HTML, then page links.
+  // Ruby downloads them (the browser fetch is blocked by CORS on most sites) and keeps the first valid image.
+  function webImageCandidates(dataTransfer) {
+    var direct = [], pages = [], fromHtml = [];
+    (dataTransfer.getData('text/uri-list') || '').split(/\r?\n/).forEach(function (value) {
+      if (!value || value.charAt(0) === '#') return;
+      (/\.(jpe?g|jfif|png|apng|gif|webp|bmp|dib|tiff?|tga|avif|ico|svg|heic|heif)(?=$|[?#])/i.test(value) ? direct : pages).push(value);
+    });
     var html = dataTransfer.getData('text/html');
-    if (!html) return '';
-    var documentFromDrop = new DOMParser().parseFromString(html, 'text/html');
-    var image = documentFromDrop.querySelector('img[src]');
-    return image ? image.src : '';
-  }
-  async function imageFromWebDrop(dataTransfer) {
-    var url = webImageUrl(dataTransfer);
-    if (!/^https?:\/\//i.test(url)) return null;
-    var controller = window.AbortController ? new AbortController() : null;
-    var timer = controller ? setTimeout(function () { controller.abort(); }, 15000) : null;
-    try {
-      var response = await fetch(url, controller ? { signal: controller.signal } : {});
-      if (!response.ok) throw new Error('Trang web không cho tải ảnh này.');
-      var declaredSize = Number(response.headers.get('content-length') || 0);
-      if (declaredSize > 20 * 1024 * 1024) throw new Error('Ảnh web vượt quá giới hạn 20 MiB.');
-      var chunks = [], received = 0, blob;
-      if (response.body && response.body.getReader) {
-        var reader = response.body.getReader();
-        while (true) {
-          var result = await reader.read();
-          if (result.done) break;
-          received += result.value.byteLength;
-          if (received > 20 * 1024 * 1024) { reader.cancel(); throw new Error('Ảnh web vượt quá giới hạn 20 MiB.'); }
-          chunks.push(result.value);
-        }
-        blob = new Blob(chunks, { type: response.headers.get('content-type') || '' });
-      } else {
-        blob = await response.blob();
-        if (blob.size > 20 * 1024 * 1024) throw new Error('Ảnh web vượt quá giới hạn 20 MiB.');
-      }
-      var type = (blob.type || '').toLowerCase();
-      var extension = dropMimeExtensions[type] || (url.match(/\.[a-z0-9]+(?=$|[?#])/i) || [''])[0].replace(/[?#].*$/, '').toLowerCase();
-      if (!extension || !acceptedDropExtensions[extension]) throw new Error('Liên kết kéo vào không trỏ đến định dạng ảnh được hỗ trợ.');
-      if (!type) type = Object.keys(dropMimeExtensions).filter(function (mime) { return dropMimeExtensions[mime] === extension; })[0] || 'application/octet-stream';
-      var name = 'web-image' + extension;
-      return { file: new File([blob], name, { type: type }), name: name };
-    } finally { if (timer) clearTimeout(timer); }
+    if (html) {
+      var parsed = new DOMParser().parseFromString(html, 'text/html');
+      Array.prototype.forEach.call(parsed.querySelectorAll('img[src]'), function (img) { fromHtml.push(img.getAttribute('src')); });
+    }
+    var seen = {};
+    return direct.concat(fromHtml, pages).filter(function (url) {
+      if (!/^https?:\/\//i.test(url) || seen[url]) return false;
+      seen[url] = true;
+      return true;
+    });
   }
   async function sendDroppedFile(fileInfo) {
     var file = fileInfo.file, name = fileInfo.name || file.name;
@@ -201,9 +179,13 @@
       var items = Array.from(transfer.items || []);
       files = items.filter(function (item) { return item.kind === 'file'; }).map(function (item) { return droppedFile(item.getAsFile()); }).filter(Boolean);
     }
-    if (!files.length && webImageUrl(transfer)) {
-      try { var remote = await imageFromWebDrop(transfer); if (remote) files.push(remote); }
-      catch (error) { status(error.message + ' Nếu trang chặn CORS, hãy kéo ảnh sao cho trình duyệt cung cấp file ảnh.', true); return; }
+    if (!files.length) {
+      var candidates = webImageCandidates(transfer);
+      if (candidates.length) {
+        state.busy = true; update(); status('Đang tải ảnh từ liên kết kéo vào…');
+        call('drop_url', { urls: candidates });
+        return;
+      }
     }
     if (!files.length) { status('Hãy kéo file ảnh hoặc ảnh từ trang web vào cửa sổ.', true); return; }
     state.busy = true; update();
