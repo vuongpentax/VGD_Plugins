@@ -145,15 +145,19 @@ module VGD_ImageImporter
     raise ArgumentError, 'Chỉ nhận liên kết http hoặc https.' unless %w[http https].include?(uri.scheme.to_s.downcase)
     finished = false
     timer = nil
+    request = nil
     finish = lambda do |data, info, final_uri|
       next if finished
       finished = true
       UI.stop_timer(timer) if timer
+      (@web_requests ||= {}).delete(request.object_id) if request
       done.call(data, info, final_uri)
     end
     timer = UI.start_timer(WEB_IMAGE_TIMEOUT, false) { finish.call(nil, 'Quá thời gian tải ảnh từ liên kết kéo vào.', nil) }
     request = Sketchup::Http::Request.new(uri.to_s, Sketchup::Http::GET)
     request.headers = { 'User-Agent' => "VGD-ImageImporter/#{VGD_ImageImporter::VERSION}" }
+    # Keep the request referenced until it finishes; otherwise it can be collected before the response arrives.
+    (@web_requests ||= {})[request.object_id] = request
     request.start do |_request, response|
       begin
         status = response.status_code.to_i
