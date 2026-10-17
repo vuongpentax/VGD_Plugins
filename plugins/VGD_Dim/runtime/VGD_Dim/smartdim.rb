@@ -4,7 +4,8 @@ module VGD
     # Smart Dim: chọn tủ (Group/Component) → tạo 2 cấp dim trên một mặt:
     #   cấp 1 = dim nối tiếp (hồi, cánh, đợt...), cấp 2 = dim tổng.
     # Mặt có thể là X/Y (mặt đứng), Z (mặt bằng) hoặc mặt cắt đang bật.
-    # Dim được gom vào một Group tên 000_DIM_X / 000_DIM_Y / 000_DIM_Z (đồng thời là Tag).
+    # Dim được gom vào một Group (đồng thời là Tag) tên 000_DIM_<nhãn>: nhãn là tên view (TOP, FRONT...)
+    # hoặc SEC_<tên mặt cắt> (SEC_A-A). Nhãn lấy từ tùy chọn 'label', từ scene của VGD Scenes, hoặc từ mặt đo.
     module SmartDim
       X = Geom::Vector3d.new(1, 0, 0) unless const_defined?(:X, false)
       Y = Geom::Vector3d.new(0, 1, 0) unless const_defined?(:Y, false)
@@ -16,8 +17,11 @@ module VGD
         'face' => 'camera', 'use_section' => true, 'scene_only' => true, 'do_h' => true, 'do_v' => true,
         'h_side' => 'top', 'v_side' => 'left',
         'off1' => 150, 'off2' => 300,
-        'min_seg' => 5, 'min_part' => 300, 'depth' => 100
+        'min_seg' => 5, 'min_part' => 300, 'depth' => 100, 'label' => ''
       }.freeze unless const_defined?(:DEFAULTS, false)
+      FACE_NAMES = { '-y' => 'FRONT', '+y' => 'BACK', '+x' => 'RIGHT', '-x' => 'LEFT', '+z' => 'TOP', '-z' => 'BOTTOM' }.freeze unless const_defined?(:FACE_NAMES, false)
+      # Quá nhiều chi tiết làm phép lọc che khuất chậm; tủ phức tạp vẫn đo được trong giới hạn này.
+      MAX_PARTS = 2000 unless const_defined?(:MAX_PARTS, false)
 
       def self.saved
         data = Store.read('smartlast', nil)
@@ -51,6 +55,8 @@ module VGD
           o[key] = value
         end
         raise ArgumentError, 'Cấp 1 phải > 0; cấp 2 phải lớn hơn cấp 1; chiều sâu phải > 0.' unless o['off1'] > 0 && o['off2'] > o['off1'] && o['depth'] > 0
+        o['label'] = o['label'].to_s.strip
+        raise ArgumentError, 'Nhãn Dim tối đa 40 ký tự, chỉ gồm chữ, số, dấu gạch ngang/dưới, chấm và khoảng trắng.' unless o['label'].length <= 40 && o['label'].match?(/\A[[:alnum:]_\-. ]*\z/)
         o
       end
 
@@ -69,7 +75,8 @@ module VGD
         parts = []
         planes = []
         ctx_planes = context_sections(model)
-        collect(sel, Geom::Transformation.new, parts, [], planes, basis)
+        stats = { misaligned: 0 }
+        collect(sel, Geom::Transformation.new, parts, [], planes, basis, [], stats)
         raise 'Không tìm thấy chi tiết trong tủ đã chọn (bỏ qua đối tượng ẩn, khóa hoặc tag tắt).' if parts.empty?
         if Regions.active_bounds(model)
           Regions.root_context!(model)
@@ -127,9 +134,7 @@ module VGD
         raise 'Không có đoạn đo khác 0 trên mặt này.' if count <= 0
         raise 'Quá nhiều đoạn đo (>2000); hãy tăng ngưỡng lọc hoặc chọn ít tủ hơn.' if count > 2000
 
-        axis = face[1].upcase
-        name = section ? "000_DIM_SECTION_#{axis}_#{section[:id]}" : "000_DIM_#{axis}_#{face[0] == '+' ? 'PLUS' : 'MINUS'}"
-        name += "_S#{page.persistent_id}" if page
+        name = "000_DIM_#{tag_label(o['label'], page, face, section)}"
         key = Managed.key(sel, page, section ? face[1] : face, section)
         previous = Managed.matches(model.active_entities, key)
         raise 'Bộ Dim cũ đang khóa; mở khóa Group trước khi cập nhật.' if previous.any?(&:locked?)
@@ -148,6 +153,7 @@ module VGD
             group.set_attribute(Managed::DICT, 'sources', sel.map(&:persistent_id))
             group.set_attribute(Managed::DICT, 'section', section ? section[:id] : '')
             tag = Managed.tag(model, name, page)
+            group.name = tag.name
             group.layer = tag
             ents = group.entities
             if o['do_h']
@@ -185,8 +191,32 @@ module VGD
 
         { 'face' => face, 'section' => !section.nil?, 'group' => group.name, 'tag' => tag.name, 'total' => created.size,
           'replaced' => previous.size, 'scenes' => scene_count, 'scene' => page && page.name,
-          'axis_mode' => 'cabinet', 'warnings' => (page ? [] : ['Bộ Dim chưa gắn Scene; Tag hiển thị dùng chung.']),
+          'axis_mode' => 'cabinet', 'warnings' => (page ? [] : ['Bộ Dim chưa gắn Scene; Tag hiển thị dùng chung.']) + misaligned_warning(stats),
           'h' => o['do_h'] ? seg_mm(hb) : [], 'v' => o['do_v'] ? seg_mm(vb) : [], 'parts' => use.size }
+      end
+
+      # Nhãn tên Tag/Group: tùy chọn 'label' > nhãn scene của VGD Scenes > tên mặt đo.
+      def self.tag_label(requested, page, face, section)
+        label = requested.to_s.strip
+        label = scenes_label(page) if label.empty?
+        label = section ? "SEC_#{face[1].upcase}" : FACE_NAMES.fetch(face) if label.empty?
+        label.gsub(/\s+/, '_')
+      end
+
+      # Chỉ đọc dữ liệu VGD Scenes đã ghi trên scene (không gọi code của Scenes).
+      def self.scenes_label(page)
+        return '' unless page
+        sheet = JSON.parse(page.get_attribute('VGD.Scenes.v1', 'sheet', '{}'))
+        name = sheet['name'].to_s.strip
+        return '' if name.empty?
+        sheet['role'] == 'SECTION' ? "SEC_#{name}" : name
+      rescue JSON::ParserError, TypeError
+        ''
+      end
+
+      def self.misaligned_warning(stats)
+        count = stats[:misaligned]
+        count > 0 ? ["#{count} chi tiết xoay lệch trục tủ nên không được đo (ví dụ tay nắm xoay nghiêng)."] : []
       end
 
       # ---- hình học ----
@@ -214,6 +244,13 @@ module VGD
         unless axes.all? { |a| basis.any? { |b| a.dot(b).abs > 1.0 - 1e-6 } }
           raise 'Các khối không cùng hệ trục tủ. Đo từng tủ/hướng riêng; không dùng kích thước hình chiếu.'
         end
+      end
+
+      def self.aligned?(tr, basis)
+        check_axes(tr, basis)
+        true
+      rescue RuntimeError
+        false
       end
 
       # Chi tiết p có bị các chi tiết nằm phía trước che kín (theo hình chiếu trên mặt) không?
@@ -347,7 +384,7 @@ module VGD
         true
       end
 
-      def self.collect(list, tr, parts, path, planes, basis, ids=[])
+      def self.collect(list, tr, parts, path, planes, basis, ids=[], stats=nil)
         raise 'Tủ lồng quá sâu; hãy chọn một nhóm con.' if path.size > 64
         list.each do |e|
           next unless e.valid?
@@ -358,7 +395,11 @@ module VGD
             t = tr * e.transformation
             defn = e.definition
             raise 'Component lồng vòng; không thể đo.' if path.include?(defn)
-            check_axes(t, basis)
+            # Chi tiết xoay lệch (tay nắm nghiêng, góc vát...) bị bỏ qua, không làm hỏng cả tủ.
+            unless aligned?(t, basis)
+              stats[:misaligned] += 1 if stats
+              next
+            end
             plane = section_plane_of(defn.entities, t, ids + [e.persistent_id])
             planes << plane if plane
             kids = defn.entities.select { |c| c.is_a?(Sketchup::Group) || c.is_a?(Sketchup::ComponentInstance) }
@@ -375,8 +416,8 @@ module VGD
                 parts << corners(bb, t)
               end
             end
-            raise 'Quá nhiều chi tiết (>500); chọn từng tủ để đo.' if parts.size > 500
-            collect(kids, t, parts, path + [defn], planes, basis, ids + [e.persistent_id])
+            raise "Quá nhiều chi tiết (>#{MAX_PARTS}); chọn từng tủ để đo." if parts.size > MAX_PARTS
+            collect(kids, t, parts, path + [defn], planes, basis, ids + [e.persistent_id], stats)
           when Sketchup::Face
             parts << corners(e.bounds, tr)
           end

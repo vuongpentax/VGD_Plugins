@@ -50,11 +50,11 @@ def run_smartdim_tests
   result=smart.execute({'face'=>'-y'},{'dim'=>{'arrow'=>'slash','textorient'=>'aligned','align'=>'above'}})
   group=managed_groups(m).first; dims=group.entities.grep(Sketchup::DimensionLinear)
   check(dims.size==5 && result['h']==[18.0,764.0,18.0] && result['v']==[720.0],'Segments/total wrong')
-  check(group.layer.name=='000_DIM_Y_MINUS' && dims.all? { |d| d.layer==m.layers[0] && d.arrow_type==1 && d.has_aligned_text? && d.aligned_text_position==0 },'Group tag/style wrong')
+  check(group.layer.name=='000_DIM_FRONT' && dims.all? { |d| d.layer==m.layers[0] && d.arrow_type==1 && d.has_aligned_text? && d.aligned_text_position==0 },'Group tag/style wrong')
   check(m.operations==1 && m.commits==1 && m.selection.to_a==[root],'Operation/selection wrong')
   check(dims.all? { |d| (d.end_point-d.start_point).cross(d.offset_vector).dot(Geom::Vector3d.new(0,-1,0))>=0 },'Unreadable normal')
   group.name='Renamed by user'
-  foreign=m.entities.add_group; foreign.name='000_DIM_Y_MINUS'
+  foreign=m.entities.add_group; foreign.name='000_DIM_FRONT'
   result=smart.execute({'face'=>'-y','off1'=>120},{})
   check(result['replaced']==1 && !group.valid? && managed_groups(m).size==1 && foreign.valid?,'Repeat/metadata/foreign ownership wrong')
   replacement=managed_groups(m).first
@@ -103,11 +103,13 @@ def run_smartdim_tests
   end
   m,root=smart_fixture
   root.entities.grep(Sketchup::Group).last.transformation=yaw(15)
-  begin; smart.run({},{}); raise 'Oblique child measured'; rescue RuntimeError; check(m.operations==0,'Oblique child mutated'); end
+  # A part turned off the cabinet axes is skipped with a warning; it no longer blocks the whole cabinet.
+  r=smart.run({},{})
+  check(r['warnings'].any? { |w| w.include?('1 chi tiết xoay lệch') } && m.operations==1,'Misaligned part must be skipped and reported')
   m,root=smart_fixture
   section=Sketchup::SectionPlane.new([0,1,0,-300.mm]); m.entities << section; m.entities.active_section_plane=section
   r=smart.run({'face'=>'+z'}, {})
-  check(r['section'] && r['group'].start_with?('000_DIM_SECTION_Y') && r['h'].sum==800.0,'Section namespace/face wrong')
+  check(r['section'] && r['group']=='000_DIM_SEC_Y' && r['h'].sum==800.0,'Section namespace/face wrong')
   dims=managed_groups(m).first.entities.grep(Sketchup::DimensionLinear)
   check(dims.all? { |d| (d.start_point.y-300.mm).abs<1e-8 && (d.end_point.y-300.mm).abs<1e-8 },'Section Dim plane wrong')
   section.plane=[0,1,0,-250.mm]
@@ -147,5 +149,24 @@ def run_smartdim_tests
     group
   end
   begin; smart.execute({},{}); raise 'Failure swallowed'; rescue RuntimeError => e; check(e.message=='Creation failed' && old.valid? && m.aborts==1 && managed_groups(m)==[old],'Replacement failure destroyed old set'); end
+  # Tag and group names follow the view or the section, not geometry codes.
+  m,root=smart_fixture
+  r=smart.run({'face'=>'+z','label'=>'TOP'},{})
+  check(r['group']=='000_DIM_TOP' && r['tag']=='000_DIM_TOP' && managed_groups(m).first.name=='000_DIM_TOP','Explicit label ignored')
+  begin; smart.validate('label'=>'bad/name'); raise 'Bad label accepted'; rescue ArgumentError; end
+  begin; smart.validate('label'=>'x'*41); raise 'Long label accepted'; rescue ArgumentError; end
+  m,root=smart_fixture
+  a=Sketchup::Page.new('Tu_RIGHT'); b=Sketchup::Page.new('Tu_SEC'); c=Sketchup::Page.new('Other_RIGHT'); m.pages.concat([a,b,c])
+  a.set_attribute('VGD.Scenes.v1','sheet','{"role":"VIEW","name":"RIGHT"}')
+  b.set_attribute('VGD.Scenes.v1','sheet','{"role":"SECTION","name":"A-A"}')
+  c.set_attribute('VGD.Scenes.v1','sheet','{"role":"VIEW","name":"RIGHT"}')
+  m.pages.selected_page=a; ra=smart.run({'face'=>'+x'},{})
+  m.pages.selected_page=b; rb=smart.run({'face'=>'-y'},{})
+  m.pages.selected_page=c; rc=smart.run({'face'=>'+x'},{})
+  check(ra['tag']=='000_DIM_RIGHT' && rb['tag']=='000_DIM_SEC_A-A','Scenes view/section names not used for tags')
+  check(rc['tag']=='000_DIM_RIGHT_2' && ra['tag']=='000_DIM_RIGHT','Same-named scenes must keep separate tags')
+  m.pages.selected_page=a; check(smart.run({'face'=>'+x'},{})['tag']=='000_DIM_RIGHT','Repeat run must reuse its scene tag')
+  m,root=smart_fixture
+  r=smart.run({'face'=>'-x'},{}); check(r['tag']=='000_DIM_LEFT','Without scene or label the face name is used')
   puts 'PASS: Smart local-axis yaw/mirror/scale, tilt/shear guards, sections/normals, owned replacement/failure, Untagged inner dims, Scene tags and successful persistence'
 end
