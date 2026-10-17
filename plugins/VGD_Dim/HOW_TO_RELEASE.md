@@ -20,7 +20,7 @@ dev/package.py cập nhật manifest ở local khi build. Chỉ commit manifest/
 
 ## Trải nghiệm người dùng và giới hạn beta
 
-- VGD Dim kiểm tra tự động tối đa một lần mỗi 24 giờ và có mục Extensions → Kiểm tra cập nhật VGD Dim.
+- VGD Dim không tự kiểm tra cập nhật khi khởi động; VGD Center báo bản mới. Vẫn có mục Extensions → Kiểm tra cập nhật VGD Dim để kiểm tra thủ công.
 - Gói tải về phải khớp dung lượng và SHA-256 trong manifest. Manifest chỉ chấp nhận ID vgd_dim, tên gói, cùng URL GitHub Release hoặc đường dẫn package raw đã định trong repository.
 - Người dùng chọn cập nhật; helper chờ SketchUp đóng tối đa 8 giờ, không buộc đóng chương trình. Sau đó helper giữ file ngoài whitelist, thay file được quản lý, kiểm tra hash và lưu bản sao thư mục cũ cạnh Plugins.
 - Cần khởi động lại SketchUp sau cài đặt. Pilot không cài/reload trong phiên đang chạy, không cập nhật plugin khác và không tự xóa bản sao lưu.
