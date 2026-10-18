@@ -18,7 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const primaryActions = {views:$('generate'),sections:$('section'),scenes:$('goCompose'),compose:$('updateCurrentView'),export:$('exportButton'),sheet:$('sheetExport')};
   Object.values(primaryActions).forEach(button => $('primarySlot').append(button));
   Object.entries(primaryActions).forEach(([name,button]) => {button.hidden=name!=='views';});
+  document.addEventListener('vgdtheme', e => document.body.classList.toggle('dark', e.detail.theme === 'dark'));
   VGDTheme.start({ key: 'VGD.Scenes.Theme', button: $('theme') });
+  document.body.classList.toggle('dark', VGDTheme.current() === 'dark');
   function status(message, error = false) { $('status').textContent = message || 'Thao tác không thành công.'; $('status').classList.toggle('error', error); }
   function settings() {
     applyRatioInput();

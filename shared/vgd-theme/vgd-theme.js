@@ -37,7 +37,6 @@
       var label = dark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối';
       button.title = label;
       button.setAttribute('aria-label', label);
-      button.setAttribute('aria-pressed', String(dark));
     }
     return dark ? 'dark' : 'light';
   }
