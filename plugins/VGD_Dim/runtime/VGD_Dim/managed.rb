@@ -20,23 +20,27 @@ module VGD
       def self.matches(entities, key)
         entities.grep(Sketchup::Group).select { |g| g.valid? && owned?(g) && g.get_attribute(DICT, 'key') == key }
       end
+      # One owned Tag per (name, scene). A second scene asking for the same name gets name_2, name_3...
+      # so showing a set in its own scene never hides the same-named set of another scene.
       def self.tag(model, name, page)
-        base = name; index = 2
+        scene = page ? page.persistent_id : 0
         list = model.layers.respond_to?(:values) ? model.layers.values : model.layers.to_a
-        layer = list.find { |t| owned?(t) && t.get_attribute(DICT, 'slot') == base }
+        layer = list.find { |t| owned?(t) && t.get_attribute(DICT, 'slot') == name && t.get_attribute(DICT, 'scene') == scene }
         unless layer
-          while (layer = model.layers[name]) && !owned?(layer)
-            name = "#{base}_VGD#{index}"; index += 1
+          candidate = name
+          index = 2
+          while model.layers[candidate]
+            candidate = "#{name}_#{index}"
+            index += 1
           end
+          layer = model.layers.add(candidate)
+          # New scenes hide scene-bound annotation tags by default.
+          layer.page_behavior = 0x0020 if page && layer.respond_to?(:page_behavior=)
         end
-        created = layer.nil?
-        layer ||= model.layers.add(name)
         layer.set_attribute(DICT, 'owner', 'VGD Dim')
-        layer.set_attribute(DICT, 'scene', page ? page.persistent_id : 0)
-        layer.set_attribute(DICT, 'slot', base)
+        layer.set_attribute(DICT, 'scene', scene)
+        layer.set_attribute(DICT, 'slot', name)
         layer.visible = true
-        # New scenes hide scene-bound annotation tags by default.
-        layer.page_behavior = 0x0020 if created && page && layer.respond_to?(:page_behavior=)
         layer
       end
       def self.visibility_snapshot(model, tag)

@@ -1,34 +1,18 @@
 <!doctype html>
-<html lang="vi" data-theme="dark">
+<html lang="vi">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VGD Center · Bản xem trước</title>
+  <link rel="stylesheet" href="vgd-theme/vgd-theme.css">
   <style>
-    :root {
-      color-scheme: dark;
-      --bg:#121212; --surface:#1e1e1e; --elevated:#2b2b2b; --tile:#242220;
-      --border:#3a3a3a; --text:#e2e8f0; --muted:#a7b0bd;
-      --accent:#b48963; --accent-strong:#c8a98a; --donate-accent:#a67c58; --tint:#372c24;
-      --danger:#e79c91; --success:#a8c69d; --on-accent:#121212;
-      --logo-face:#1e1e1e; --logo-outline:#c8a98a;
-      --success-soft:rgba(168,198,157,.14); --success-border:rgba(168,198,157,.5);
-      --accent-line:rgba(180,137,99,.35); --accent-glow:rgba(180,137,99,.05); --accent-glow-soft:rgba(180,137,99,.04);
-      --shadow:0 18px 48px rgba(0,0,0,.28);
-    }
-    html[data-theme="light"] {
-      color-scheme:light;
-      --bg:#f7f7f5; --surface:#fff; --elevated:#f0eee9; --tile:#f0ede8;
-      --border:#dedad4; --text:#222; --muted:#6f6f6f;
-      --accent:#b48963; --accent-strong:#8e6b4c; --tint:#f3ece5;
-      --danger:#a73d36; --success:#507247; --on-accent:#fff;
-      --logo-face:#f7f7f5; --logo-outline:#a47d5c;
-      --success-soft:rgba(80,114,71,.13); --success-border:rgba(80,114,71,.5);
-      --accent-line:rgba(142,107,76,.3); --accent-glow:rgba(142,107,76,.055); --accent-glow-soft:rgba(142,107,76,.04);
-      --shadow:0 18px 48px rgba(37,31,25,.11);
-    }
+    /* Colours and fonts come from vgd-theme/vgd-theme.css; only Center-specific tokens are listed here. */
+    :root { --bg:var(--vgd-bg);--surface:var(--vgd-surface);--elevated:var(--vgd-elevated);--border:var(--vgd-border);--text:var(--vgd-text);--muted:var(--vgd-muted);--accent:var(--vgd-accent);--accent-strong:var(--vgd-accent-strong);--tint:var(--vgd-tint);--danger:var(--vgd-danger);--success:var(--vgd-success);--on-accent:var(--vgd-on-accent);}
+    :root, :root[data-theme="light"] { --tile:#f0ede8;--donate-accent:#a67c58;--logo-face:#f7f7f5;--logo-outline:#a47d5c;--success-soft:rgba(80,114,71,.13);--success-border:rgba(80,114,71,.5);--accent-line:rgba(142,107,76,.3);--accent-glow:rgba(142,107,76,.055);--accent-glow-soft:rgba(142,107,76,.04);--shadow:0 18px 48px rgba(37,31,25,.11);}
+    :root[data-theme="dark"] { --tile:#242220;--donate-accent:#a67c58;--logo-face:#1e1e1e;--logo-outline:#c8a98a;--success-soft:rgba(168,198,157,.14);--success-border:rgba(168,198,157,.5);--accent-line:rgba(180,137,99,.35);--accent-glow:rgba(180,137,99,.05);--accent-glow-soft:rgba(180,137,99,.04);--shadow:0 18px 48px rgba(0,0,0,.28);}
+    @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --tile:#242220;--donate-accent:#a67c58;--logo-face:#1e1e1e;--logo-outline:#c8a98a;--success-soft:rgba(168,198,157,.14);--success-border:rgba(168,198,157,.5);--accent-line:rgba(180,137,99,.35);--accent-glow:rgba(180,137,99,.05);--accent-glow-soft:rgba(180,137,99,.04);--shadow:0 18px 48px rgba(0,0,0,.28);} }
     *{box-sizing:border-box}
-    body{margin:0;min-width:360px;min-height:100vh;background:var(--bg);color:var(--text);font:13px/1.45 "Segoe UI",Arial,sans-serif}
+    body{margin:0;min-width:360px;min-height:100vh;background:var(--bg);color:var(--text);font:13px/1.45 "Manrope VGD",Manrope,"Segoe UI",Arial,sans-serif}
     button{font:inherit;color:inherit}
     button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent-strong);outline-offset:2px}
     .app{min-height:100vh;display:grid;grid-template-rows:68px minmax(0,1fr) 34px;background:var(--bg)}
@@ -223,7 +207,7 @@
         <div class="brand-copy"><strong class="brand-title">VGD Center</strong><span class="brand-subtitle">Trung tâm plugin SketchUp</span></div>
       </div>
       <div class="top-actions">
-        <button class="icon-button" id="themeBtn" aria-label="Chuyển giao diện sáng/tối" title="Chuyển giao diện sáng/tối"><svg viewBox="0 0 24 24"><path d="M20 15.3A8.5 8.5 0 0 1 8.7 4 8.5 8.5 0 1 0 20 15.3Z"/></svg></button>
+        <button class="icon-button vgd-theme-btn" id="themeBtn" type="button" aria-pressed="false"></button>
       </div>
     </header>
     <div class="shell">
@@ -317,6 +301,7 @@
     </section>
   </div>
 
+  <script src="vgd-theme/vgd-theme.js"></script>
   <script>
     (() => {
       const root = document.documentElement;
@@ -565,7 +550,6 @@
 
       document.querySelectorAll('.nav [data-page]').forEach(button => button.addEventListener('click', () => openPage(button.dataset.page)));
       document.querySelectorAll('[data-page]:not(.nav button)').forEach(button => button.addEventListener('click', () => openPage(button.dataset.page)));
-      document.getElementById('themeBtn').addEventListener('click', toggleTheme);
       const donateLightbox = document.getElementById('donateLightbox');
       const closeDonateQr = () => donateLightbox.classList.remove('open');
       document.getElementById('donateQrButton').addEventListener('click', () => donateLightbox.classList.add('open'));
@@ -597,14 +581,7 @@
       overlay.addEventListener('click', event => { if (event.target === overlay && !dialogActions.hidden) overlay.classList.remove('open'); });
       document.addEventListener('keydown', event => { if (event.key === 'Escape' && overlay.classList.contains('open') && !dialogActions.hidden) overlay.classList.remove('open'); });
 
-      function toggleTheme() {
-        const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
-        root.dataset.theme = next;
-        try { localStorage.setItem('vgd-center-theme', next); } catch (_error) {}
-      }
-      let savedTheme = null;
-      try { savedTheme = localStorage.getItem('vgd-center-theme'); } catch (_error) {}
-      if (savedTheme === 'light' || savedTheme === 'dark') root.dataset.theme = savedTheme;
+      VGDTheme.start({ key: 'vgd-center-theme', button: document.getElementById('themeBtn') });
 
       window.VGD = {
         receiveState(state) { currentState = state || {products:[]}; render(); },

@@ -29,8 +29,17 @@ module VGD
       def watch(entities)
         @watched ||= []
         return if @watched.include?(entities)
+        prune_watched
         entities.add_observer(@entity_observer)
         @watched << entities
+      end
+      # Forget collections whose owning group was erased; their observers go with them.
+      # Without this the list grows with every group ever added in the session.
+      def prune_watched
+        @watched.reject! do |known|
+          owner = (known.parent rescue nil)
+          owner.respond_to?(:valid?) && !owner.valid?
+        end
       end
       def bind(model)
         detach
@@ -41,12 +50,21 @@ module VGD
         model.add_observer(@model_observer)
         model.definitions.add_observer(@definition_observer)
       end
+      # A closed or erased model/entity cannot be unobserved; that must not stop
+      # the caller (bind) from attaching to the next model.
       def detach
         clear_queue
-        Array(@watched).each { |entities| entities.remove_observer(@entity_observer) rescue nil }
-        @model.remove_observer(@model_observer) if @model && @model_observer
-        @model.definitions.remove_observer(@definition_observer) if @model && @definition_observer
+        Array(@watched).each { |entities| detach_quietly { entities.remove_observer(@entity_observer) } }
+        if @model
+          detach_quietly { @model.remove_observer(@model_observer) } if @model_observer
+          detach_quietly { @model.definitions.remove_observer(@definition_observer) } if @definition_observer
+        end
         @watched=[]; @model=nil
+      end
+      def detach_quietly
+        yield
+      rescue StandardError
+        nil
       end
       def start
         @config=load

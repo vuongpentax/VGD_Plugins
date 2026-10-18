@@ -74,13 +74,14 @@ const assert=(v,m)=>{if(!v)throw Error(m)};
   assert((await last()).action==='save_preset','Preset callback missing');
   await nav('animation');await page.getByRole('button',{name:'Tắt animation',exact:true}).click();assert((await last()).action==='anim_set','Animation callback missing');
   await nav('style');await page.locator('[id="auto.enabled"]').check();assert((await last()).action==='set_auto','Auto callback missing');
-  assert(await page.locator('body').getAttribute('data-theme')==='dark','Dark theme should be the first-launch default');
-  await page.click('#theme');assert(await page.locator('body').getAttribute('data-theme')==='light','Light theme toggle missing');
-  await page.reload();assert(await page.locator('body').getAttribute('data-theme')==='light','Light theme preference not persisted');
+  assert(await page.evaluate(()=>!document.documentElement.hasAttribute('data-theme')),'First launch should follow the system theme (no saved choice)');
+  const systemDark=await page.evaluate(()=>matchMedia('(prefers-color-scheme: dark)').matches);
+  await page.click('#theme');const chosen=systemDark?'light':'dark';assert(await page.evaluate(()=>document.documentElement.getAttribute('data-theme'))===chosen,'Theme toggle missing');
+  await page.reload();assert(await page.evaluate(()=>document.documentElement.getAttribute('data-theme'))===chosen,'Theme choice not remembered');
   await page.locator('#tab-smart').focus();await page.keyboard.press('ArrowDown');assert(await page.locator('#tab-font').getAttribute('aria-selected')==='true','Keyboard tabs missing');
   const out=path.resolve(__dirname,'../outputs');fs.mkdirSync(out,{recursive:true});
   for(const theme of ['light','dark']) for(const [width,height] of [[760,760],[740,740],[540,700],[360,600]]){
-   await page.setViewportSize({width,height});await page.evaluate(t=>{VGD.setTheme(t);VGD.mountScope()},theme);
+   await page.setViewportSize({width,height});await page.evaluate(t=>{VGDTheme.apply(t);VGD.mountScope()},theme);
    if(width>740){assert(await page.locator('#tab-smart .nav-copy').isVisible()&&await page.locator('#tab-smart .nav-copy small').isVisible(),'Expanded navigation title/description hidden');assert(await page.locator('#shared-scope').evaluate(element=>element.parentElement.id)==='desktop-scope','Wide scope card moved unexpectedly: '+await page.evaluate(()=>innerWidth)+' '+await page.locator('#shared-scope').evaluate(element=>element.parentElement.id))}
    else{assert(await page.locator('#tab-smart .nav-copy').isHidden(),'Compact navigation still shows labels');assert((await page.locator('#tab-smart').getAttribute('title')).includes('Boundary'),'Compact navigation tooltip missing');assert(await page.locator('#shared-scope').evaluate(element=>element.parentElement.id)==='mobile-scope','Compact scope card did not move into content')}
    for(const tab of ['smart','font','style','presets','animation','units']){

@@ -1,51 +1,21 @@
-/* VGD shared tokens. The importer keeps its two-pane image workflow. */
+/* Colours and fonts come from vgd-theme/vgd-theme.css. The importer keeps its two-pane workflow. */
 :root {
-  color-scheme: dark;
-  --vgd-bg: #121212;
-  --vgd-surface: #1e1e1e;
-  --vgd-elevated: #2b2b2b;
-  --vgd-tile: #242220;
-  --vgd-border: #3a3a3a;
-  --vgd-text: #e2e8f0;
-  --vgd-muted: #a7b0bd;
-  --vgd-accent: #b48963;
-  --vgd-active: #c8a98a;
-  --vgd-tint: #372c24;
-  --vgd-danger: #e79c91;
-  --vgd-success: #a8c69d;
-  --vgd-on-accent: #121212;
+  --vgd-tile: var(--vgd-elevated);
+  --vgd-active: var(--vgd-accent-strong);
   --bg: var(--vgd-bg);
   --card: var(--vgd-surface);
   --text: var(--vgd-text);
   --muted: var(--vgd-muted);
   --line: var(--vgd-border);
   --accent: var(--vgd-accent);
-  --accent-dark: var(--vgd-active);
+  --accent-dark: var(--vgd-accent-strong);
   --tint: var(--vgd-tint);
   --danger: var(--vgd-danger);
   --success: var(--vgd-success);
-  --btn: var(--vgd-accent);
-  --btn-hover: var(--vgd-active);
+  --btn: var(--vgd-accent-strong);
+  --btn-hover: var(--vgd-accent);
 }
 
-body.light {
-  color-scheme: light;
-  --vgd-bg: #f7f7f5;
-  --vgd-surface: #fff;
-  --vgd-elevated: #f0ede8;
-  --vgd-tile: #f0ede8;
-  --vgd-border: #dedad4;
-  --vgd-text: #222;
-  --vgd-muted: #6f6f6f;
-  --vgd-accent: #8e6b4c;
-  --vgd-active: #a47d5c;
-  --vgd-tint: #f3ece5;
-  --vgd-danger: #a73d36;
-  --vgd-success: #507247;
-  --vgd-on-accent: #fff;
-  --btn: var(--vgd-accent);
-  --btn-hover: var(--vgd-active);
-}
 
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
@@ -54,7 +24,7 @@ body {
   flex-direction: column;
   background: var(--vgd-bg);
   color: var(--vgd-text);
-  font: 12px/1.5 "Segoe UI", Arial, sans-serif;
+  font: 13px/1.5 "Manrope VGD", Manrope, "Segoe UI", Arial, sans-serif;
 }
 button, input, select { font: inherit; color: inherit; }
 button {

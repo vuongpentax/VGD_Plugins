@@ -50,13 +50,17 @@ def run_core_tests
   dim.text_position=1; dim.set_attribute('User','id',123)
   attachment=[Object.new,Geom::Point3d.new(4,5,6)]; dim.start_attached_to=attachment
   old_points=[dim.start_point,dim.end_point,dim.offset_vector.to_a]
+  # Regression: assigning *_attached_to= crashes SketchUp 2022 natively, so rebuild must never call it.
+  original_setter=Sketchup::DimensionLinear.instance_method(:start_attached_to=)
+  Sketchup::DimensionLinear.send(:define_method,:start_attached_to=) { |_value| raise 'start_attached_to= crashes SketchUp 2022' }
   check(core.endpoint(dim,:start).equal?(dim.start_point),'Attached path used as creation coordinate')
   result=core.rebuild_dims({'hidden'=>true})
   replacement=m.selection.first
   check(result=={'rebuilt'=>1,'custom'=>1,'skipped'=>0,'failed'=>0},'Rebuild count wrong')
   check(!dim.valid? && replacement.is_a?(Sketchup::DimensionLinear),'Rebuild selection wrong')
   check(replacement.text=='CUSTOM' && replacement.material==:original && replacement.layer=='Original' && replacement.hidden?,'Rebuild changed style/text')
-  check(old_points==[replacement.start_point,replacement.end_point,replacement.offset_vector.to_a] && replacement.start_attached_to==attachment,'Geometry/attachment changed')
+  check(old_points==[replacement.start_point,replacement.end_point,replacement.offset_vector.to_a] && replacement.start_attached_to.nil?,'Geometry changed or an attachment was assigned')
+  Sketchup::DimensionLinear.send(:define_method,:start_attached_to=,original_setter)
   check(replacement.get_attribute('User','id')==123 && replacement.text_position==1,'Metadata lost')
   radial=Sketchup::DimensionRadial.new; m.entities << radial; m.selection.clear; m.selection.add(radial)
   check(core.rebuild_dims({})['skipped']==1 && radial.valid?,'Radial not skipped')

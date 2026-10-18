@@ -148,22 +148,27 @@ module VGD
         old.each(&:erase!)
       end
 
+      # Only abort an operation this method actually started; validation errors
+      # raised before start_operation must surface unchanged.
       def set_active(model, id)
+        started = false
         value = state(model)
         id = id.to_s
         unless id.empty?
           raise ArgumentError, 'Detail Region không tồn tại.' unless Array(value['details']).any? { |r| r['id'].to_s == id }
         end
         model.start_operation('VGD Dim — Chọn Detail Region', true)
+        started = true
         model.set_attribute(DICT, 'state', JSON.generate(value.merge('active_detail'=>id)))
         model.commit_operation
         public_state(model)
       rescue StandardError
-        model.abort_operation if model
+        model.abort_operation if started
         raise
       end
 
       def delete_detail(model, id)
+        started = false
         value = state(model)
         details = Array(value['details'])
         record = details.find { |r| r['id'].to_s == id.to_s }
@@ -175,6 +180,7 @@ module VGD
           raise ArgumentError, 'Đường viền có đối tượng chỉnh sửa thêm; hãy xử lý thủ công.' unless group.entities.size == 12 && group.entities.all? { |e| e.is_a?(Sketchup::Edge) }
         end
         model.start_operation('VGD Dim — Xóa Detail Region', true)
+        started = true
         groups.each(&:erase!)
         value['details'] = details.reject { |r| r['id'].to_s == id.to_s }
         value['active_detail'] = '' if value['active_detail'].to_s == id.to_s
@@ -182,7 +188,7 @@ module VGD
         model.commit_operation
         public_state(model)
       rescue StandardError
-        model.abort_operation if model
+        model.abort_operation if started
         raise
       end
 

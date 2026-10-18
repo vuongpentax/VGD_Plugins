@@ -1,4 +1,4 @@
-/* VGD Scenes: shared theme and controls; sidebar; scenes; frame; export/dialogs. */
+/* VGD Scenes: sidebar; scenes; frame; export/dialogs. Colours and fonts come from vgd-theme/vgd-theme.css. */
 .ratio-fields{margin-bottom:12px}
 .ratio-fields select{width:100%;margin-top:5px}
 .ratio-fields label{margin-bottom:0px}
@@ -38,10 +38,6 @@ body:not(.dark) .logo-dark{display:none}
 body:not(.dark) .logo-light{display:block}
 .brand-copy{display:flex;flex-direction:column;gap:2px}
 .brand-copy>span{font-size:13px;font-weight:700;letter-spacing:1.2px}
-.theme-icon{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.theme-to-light{display:none}
-body.dark .theme-to-light{display:block}
-body.dark .theme-to-dark{display:none}
 .context strong{font-size:12px;color:var(--accent-dark)}
 nav span{font-size:10px;margin-left:3px}
 label{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0px 0px 10px;line-height:1.5}
@@ -101,8 +97,7 @@ button[aria-pressed="true"]#toggleFrame{background:var(--tint);border-color:var(
 .scene-list:focus{outline:1px solid var(--accent);outline-offset:2px}
 .camera-current{margin:0px 0px 12px;color:var(--accent-dark);font-size:11px}
 button.scene-name:focus-visible{outline:1px solid var(--accent)}
-:root{color-scheme:light;--bg:#F7F7F5;--surface:#FFFFFF;--card:var(--surface);--tile:#F0EDE8;--elevated:#F0EDE8;--text:#222222;--muted:#6F6F6F;--line:#DEDAD4;--accent:#8E6B4C;--accent-dark:#A47D5C;--accent-strong:#A47D5C;--tint:#F3ECE5;--danger:#A73D36;--btn:#8E6B4C;--btn-hover:#A47D5C;--primary-text:#FFFFFF}
-body.dark{color-scheme:dark;--bg:#121212;--surface:#1E1E1E;--card:var(--surface);--tile:#242220;--elevated:#2B2B2B;--text:#E2E8F0;--muted:#A7B0BD;--line:#3A3A3A;--accent:#B48963;--accent-dark:#C8A98A;--accent-strong:#C8A98A;--tint:#372C24;--danger:#E79C91;--btn:#B48963;--btn-hover:#C8A98A;--primary-text:#121212}
+:root{--bg:var(--vgd-bg);--surface:var(--vgd-surface);--card:var(--surface);--tile:var(--vgd-elevated);--elevated:var(--vgd-elevated);--text:var(--vgd-text);--muted:var(--vgd-muted);--line:var(--vgd-border);--accent:var(--vgd-accent-strong);--accent-dark:var(--vgd-accent-strong);--accent-strong:var(--vgd-accent-strong);--tint:var(--vgd-tint);--danger:var(--vgd-danger);--btn:var(--vgd-accent-strong);--btn-hover:var(--vgd-accent);--primary-text:var(--vgd-on-accent)}
 .hint{margin:10px 0px 0px;font-size:11px}
 h2{letter-spacing:0.7px;text-transform:uppercase;color:var(--muted);margin:0px 0px 12px;font-size:11px}
 .presets button{padding:4px 8px;min-height:25px;font-size:11px}
@@ -133,7 +128,6 @@ progress{flex:1 1 0%;min-width:60px;accent-color:var(--accent);height:12px;borde
 .flow-nav button{padding:4px 8px;color:var(--muted);font-size:11px;border:0px;background:transparent;text-decoration:underline;text-underline-offset:3px;min-height:24px}
 #status{font-size:11px;color:var(--muted);line-height:1.5;max-height:64px;overflow:auto;white-space:pre-wrap;user-select:text;border-radius:5px;padding:2px 0px}
 #status.error{background-color:rgba(167, 61, 54, 0.12);border-left:3px solid var(--danger);padding:6px 9px;color:var(--danger);font-weight:600}
-body.dark #status.error{background-color:rgba(231, 156, 145, 0.14)}
 .modal-card{width:100%;max-width:440px;background:var(--card);border:1px solid var(--line);padding:20px;box-shadow:rgba(0, 0, 0, 0.267) 0px 12px 60px;border-radius:6px}
 .sr-only{width:1px;height:1px;overflow:hidden;clip:rect(0px, 0px, 0px, 0px);white-space:nowrap;position:absolute !important;margin:0px !important}
 .seg{display:grid;grid-template-columns:repeat(3, 1fr);gap:7px;margin-bottom:12px}
@@ -143,7 +137,7 @@ body.dark #status.error{background-color:rgba(231, 156, 145, 0.14)}
 .unsaved{display:inline-block;vertical-align:middle;margin-left:8px;font-size:11px;font-weight:600;letter-spacing:0px;color:rgb(255, 255, 255);background:rgb(183, 121, 31);padding:3px 8px;border-radius:10px}
 .progress-text{font-size:11px;font-weight:700;min-width:34px;text-align:right;color:var(--accent-dark)}
 #outPath{color:var(--accent-dark)}
-body{height:100%;margin:0px;font:12px "Segoe UI", Roboto, sans-serif;color:var(--text);background:var(--bg);flex-direction:column;overflow:hidden;font-size:13px;display:grid;grid-template-columns:132px minmax(0px, 1fr);grid-template-rows:auto auto minmax(0px, 1fr) auto}
+body{height:100%;margin:0px;font:13px "Manrope VGD", Manrope, "Segoe UI", Arial, sans-serif;color:var(--text);background:var(--bg);flex-direction:column;overflow:hidden;font-size:13px;display:grid;grid-template-columns:132px minmax(0px, 1fr);grid-template-rows:auto auto minmax(0px, 1fr) auto}
 header{background:var(--elevated);color:var(--text);border-top:3px solid var(--accent);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;flex-shrink:0;grid-column:1 / -1}
 .context{background:var(--card);border-bottom:1px solid var(--line);padding:9px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:56px;flex-shrink:0;grid-column:1 / -1}
 nav{grid-template-columns:repeat(4, 1fr);background:var(--card);flex-shrink:0;grid-area:3 / 1 / 5;display:flex;flex-direction:column;align-items:stretch;padding:10px 8px;gap:5px;border-top:0px;border-bottom:0px;border-left:0px;border-image:none;border-right:1px solid var(--line);overflow:auto}
@@ -196,7 +190,7 @@ summary::marker{content:""}
 .size-chip[aria-expanded="true"]{border-color:var(--accent);color:var(--accent-dark);background:var(--tint)}
 
 @supports (background-color:color-mix(in srgb,red,white)){
-#status.error,body.dark #status.error{background-color:color-mix(in srgb,var(--danger) 12%,var(--card))}
+#status.error{background-color:color-mix(in srgb,var(--danger) 12%,var(--card))}
 }
 
 @media (max-width: 740px){

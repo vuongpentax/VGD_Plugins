@@ -3,10 +3,6 @@
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
   var state = { importType: 'comp_2d', files: [], busy: false, native: !!window.sketchup };
-  var themeIcons = {
-    dark: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2.5v2M12 19.5v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2.5 12h2m15 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>',
-    light: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.1A8.2 8.2 0 0 1 8.9 3.8 8.2 8.2 0 1 0 20.2 15.1Z"/></svg>'
-  };
   var themeKey = 'vgd.image_importer.theme';
   function call(action, data) {
     if (window.sketchup && window.sketchup.vgd_importer) window.sketchup.vgd_importer(action, JSON.stringify(data || {}));
@@ -16,23 +12,18 @@
     $('status').textContent = message;
     $('status').className = error ? 'error' : success ? 'success' : '';
   }
-  function theme(dark) {
-    document.body.classList.toggle('dark', dark);
-    document.body.classList.toggle('light', !dark);
-    document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
-    $('theme').setAttribute('aria-pressed', String(dark));
-    $('theme').innerHTML = themeIcons[dark ? 'dark' : 'light'];
-    var themeLabel = dark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối';
-    $('theme').title = themeLabel;
-    $('theme').setAttribute('aria-label', themeLabel);
-    try { localStorage.setItem(themeKey, dark ? 'dark' : 'light'); } catch (_) {}
+  // Body classes drive the logo swap in CSS; VGDTheme owns the saved choice and the button.
+  function syncBodyClass(theme) {
+    document.body.classList.toggle('dark', theme === 'dark');
+    document.body.classList.toggle('light', theme !== 'dark');
   }
+  document.addEventListener('vgdtheme', function (event) { syncBodyClass(event.detail.theme); });
   function config() {
     return { importType: state.importType, scaleMethod: $('scaleMethod').value,
       mmPerPixel: Number($('mmPerPixel').value), targetHeight: Number($('targetHeight').value),
       targetWidth: Number($('targetWidth').value), spacing: Number($('spacing').value),
       itemsPerRow: Number($('itemsPerRow').value), alwaysFaceCamera: $('alwaysFaceCamera').checked,
-      recursive: $('recursive').checked, theme: document.body.classList.contains('dark') ? 'dark' : 'light' };
+      recursive: $('recursive').checked, theme: VGDTheme.current() };
   }
   function valid(show) {
     var cfg = config();
@@ -222,7 +213,8 @@
   $('config').addEventListener('submit', function (event) { event.preventDefault(); });
   $('config').addEventListener('change', function () { update(); if (valid(false)) call('save', config()); });
   $('recursive').onchange = function () { if (valid(false)) call('save', config()); };
-  $('theme').onclick = function () { theme(!document.body.classList.contains('dark')); if (valid(false)) call('save', config()); };
+  // Runs after VGDTheme has switched the theme, so the saved config carries the new value.
+  $('theme').addEventListener('click', function () { setTimeout(function () { if (valid(false)) call('save', config()); }, 0); });
   $('chooseFolder').onclick = function () { call('choose', { kind: 'folder', recursive: $('recursive').checked }); };
   $('chooseFiles').onclick = function () { call('choose', { kind: 'files' }); };
   $('clear').onclick = function () { call('clear'); };
@@ -236,9 +228,7 @@
   };
   // Used by the native integration harness; follows exactly the same UI path.
   window.VGDImporter.startImport = function () { $('import').click(); };
-  try {
-    var savedTheme = localStorage.getItem(themeKey);
-    theme(savedTheme ? savedTheme === 'dark' : document.body.classList.contains('dark'));
-  } catch (_) { theme(document.body.classList.contains('dark')); }
+  VGDTheme.start({ key: themeKey, button: $('theme') });
+  syncBodyClass(VGDTheme.current());
   update(); call('ready');
 }());

@@ -4,13 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>VGD Reference</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="vgd-theme/vgd-theme.css"><link rel="stylesheet" href="style.css">
 </head>
 <body>
   <header>
-    <div class="brand"><picture class="brand-mark"><source media="(prefers-color-scheme: dark)" srcset="../../assets/toolbar/vgd_reference_dark.svg"><img src="../../assets/toolbar/vgd_reference.svg" width="27" height="27" alt=""></picture><span><b>VGD</b><small>ẢNH THAM CHIẾU</small></span></div>
+    <div class="brand"><img class="brand-mark" id="brandMark" src="../../assets/toolbar/vgd_reference.svg" width="27" height="27" alt=""><span><b>VGD</b><small>ẢNH THAM CHIẾU</small></span></div>
     <div class="header-tools">
-      <button class="icon-button" id="appearanceSettings" title="Đổi giao diện sáng/tối" aria-label="Đổi giao diện sáng/tối"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17a8.5 8.5 0 0 0 0-17Z"/></svg></button>
+      <button class="icon-button vgd-theme-btn" id="appearanceSettings" type="button" aria-pressed="false"></button>
       <button class="icon-button" id="editSelected" title="Chỉnh sửa ảnh đang chọn" aria-label="Chỉnh sửa ảnh đang chọn"><svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 4h12v12M20 4 5 19M4 10v10h10"/></svg></button>
     </div>
   </header>
@@ -35,7 +35,7 @@
     <div id="importStatus" role="status" class="import-status hidden"></div>
     <div id="message" role="status" class="message hidden"></div>
   </footer>
-  <script src="import.js"></script>
+  <script src="vgd-theme/vgd-theme.js"></script><script src="import.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

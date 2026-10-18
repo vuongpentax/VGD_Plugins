@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param([switch]$VerifyOnly)
 $ErrorActionPreference = 'Stop'
 $taskRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
@@ -25,6 +25,11 @@ $ownedFiles = @(
     'VGD_Dim\dialog.html',
     'VGD_Dim\dialog.css',
     'VGD_Dim\dialog.js',
+    'VGD_Dim\vgd-theme\vgd-theme.css',
+    'VGD_Dim\vgd-theme\vgd-theme.js',
+    'VGD_Dim\vgd-theme\fonts\manrope-latin-wght-normal.woff2',
+    'VGD_Dim\vgd-theme\fonts\manrope-vietnamese-wght-normal.woff2',
+    'VGD_Dim\vgd-theme\fonts\LICENSE',
     'VGD_Dim\dim.svg',
     'VGD_Dim\smart_dim.svg',
     'VGD_Dim\version.rb',
