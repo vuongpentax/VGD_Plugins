@@ -8,12 +8,7 @@
   const statusNames = { OK: 'OK · Có', EMBEDDED: 'EMBEDDED · Trong SKP', MISSING: 'MISSING · Thiếu', UNKNOWN: 'UNKNOWN · Chưa rõ' };
   const summaryNames = { OK: 'Có', EMBEDDED: 'Trong SKP', MISSING: 'Thiếu', UNKNOWN: 'Chưa rõ' };
   const root = document.documentElement;
-  const savedTheme = (() => { try { return localStorage.getItem('vgd-package-theme'); } catch (_error) { return null; } })();
-  if (savedTheme === 'light' || savedTheme === 'dark') root.dataset.theme = savedTheme;
-  el('themeButton').addEventListener('click', () => {
-    root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
-    try { localStorage.setItem('vgd-package-theme', root.dataset.theme); } catch (_error) {}
-  });
+  VGDTheme.start({ key: 'vgd-package-theme', button: el('themeButton') });
   window.VGDPack = {
     showScan(data) {
       const caps = data.capabilities || {};

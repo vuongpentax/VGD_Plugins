@@ -17,9 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const primaryActions = {views:$('generate'),sections:$('section'),scenes:$('goCompose'),compose:$('updateCurrentView'),export:$('exportButton')};
   Object.values(primaryActions).forEach(button => $('primarySlot').append(button));
   Object.entries(primaryActions).forEach(([name,button]) => {button.hidden=name!=='views';});
-  let theme = 'dark';
-  try { theme = localStorage.getItem('VGD.Scenes.Theme') || theme; } catch (_) {}
-  document.body.classList.toggle('dark', theme === 'dark');
+  VGDTheme.start({ key: 'VGD.Scenes.Theme', button: $('theme') });
   function status(message, error = false) { $('status').textContent = message || 'Thao tác không thành công.'; $('status').classList.toggle('error', error); }
   function settings() {
     applyRatioInput();
@@ -485,7 +483,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   $('removeAllFrames').addEventListener('click', () => modal('Bỏ khung xám để gửi SKP','Bỏ khung xám của tất cả ' + context.frame_cleanup.count + ' scene có khung trong model và view hiện tại, kể cả scene ngoài VGD. Giữ kích thước xuất VGD đã lưu; khung nhìn theo cửa sổ SketchUp. Sau đó lưu SKP để gửi. Có thể dùng Khôi phục khung nếu cần.',()=>send('removeAllFrames')));
   $('restoreAllFrames').addEventListener('click', () => send('restoreAllFrames'));
-  $('theme').addEventListener('click', () => { document.body.classList.toggle('dark'); try { localStorage.setItem('VGD.Scenes.Theme',document.body.classList.contains('dark')?'dark':'light'); } catch (_) {} });
   enable(); showFormat(); cameraMode();
   if (window.sketchup) window.sketchup.ready();
   setInterval(() => { if (context && !busy && !dragging && $('modal').hidden && window.sketchup) send('refresh',{},false); },2000);

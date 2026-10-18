@@ -4,7 +4,7 @@ This document defines the shared visual language for the VGD SketchUp plugins: V
 
 ## Design direction
 
-- Use a dark graphite interface by default on first launch.
+- Follow the Windows light/dark setting on first launch. Once the user picks a theme with the button, keep that choice.
 - Keep a visible light/dark control wherever a plugin has a dialog. Save the user's choice per plugin and respect it on later launches.
 - Use the existing VGD warm bronze palette as the brand accent. Reserve accent fills for primary actions, selected navigation, and clear focus states.
 - Keep each plugin's information architecture and workflow. Share visual patterns and tokens without forcing identical page layouts.
@@ -80,10 +80,19 @@ Use `color-scheme: dark` or `color-scheme: light` with the active theme so nativ
 
 ## First-launch and preference behavior
 
-- A new user sees dark mode on the first launch.
-- A previously saved explicit light preference remains light; a saved dark preference remains dark.
+- A new user with no saved choice sees the Windows light or dark theme (`prefers-color-scheme`).
+- A saved light or dark choice is kept on later launches; it is not reset when Windows changes.
 - Toggling the theme updates the whole dialog immediately and persists the choice.
 - Theme keys are plugin-specific so changing one dialog does not unexpectedly change another.
+
+## Shared theme kit
+
+- Source of truth: `shared/vgd-theme/` (`vgd-theme.css`, `vgd-theme.js`, `fonts/`). Each plugin keeps a copy in its own dialog folder, because a plugin must run without the rest of the repository.
+- Run `python tools/sync_vgd_theme.py` after editing the kit, and `python tools/sync_vgd_theme.py --check` before a release. The check fails when a copy is out of date.
+- Usage: `VGDTheme.start({ key: 'vgd.<plugin>.theme', button: buttonElement })`. The script writes `data-theme` only for a saved choice, and fires a `vgdtheme` event on each change.
+- Button: one symbol, no text. `☾` when the dialog is light (click for dark), `☀` when it is dark (click for light).
+- Font: Manrope (SIL Open Font License 1.1), the same font as VGD Web. The two woff2 files are bundled in `fonts/`, so no network is needed.
+- Type scale: 13px body, 18px dialog title (`h1`), 15px section title (`h2`).
 
 ## Rollout and review
 
