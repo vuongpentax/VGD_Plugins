@@ -1,47 +1,21 @@
-:root{
-  color-scheme:dark;
-  --vgd-bg:#121212;
-  --vgd-surface:#1E1E1E;
-  --vgd-elevated:#2B2B2B;
-  --vgd-tile:#242220;
-  --vgd-border:#3A3A3A;
-  --vgd-text:#E2E8F0;
-  --vgd-muted:#A7B0BD;
-  --vgd-accent:#B48963;
-  --vgd-accent-strong:#C8A98A;
-  --vgd-tint:#372C24;
-  --vgd-danger:#E79C91;
-  --vgd-success:#A8C69D;
-  --vgd-input:#181818;
-  --vgd-on-accent:#121212;
-  --vgd-logo-face:#1E1E1E;
-  --vgd-logo-outline:#C8A98A;
+/* Shared colours and fonts come from vgd-theme/vgd-theme.css. Only Dim-specific tokens are defined here. */
+:root,:root[data-theme="light"]{
+  --vgd-tile:#F0EDE8;--vgd-input:#FFFFFF;--vgd-on-accent:#FFFFFF;--vgd-logo-face:#F7F7F5;--vgd-logo-outline:#A47D5C;
 }
-:root[data-theme="light"]{
-  color-scheme:light;
-  --vgd-bg:#F7F7F5;
-  --vgd-surface:#FFFFFF;
-  --vgd-elevated:#F0EDE8;
-  --vgd-tile:#F0EDE8;
-  --vgd-border:#DEDAD4;
-  --vgd-text:#222222;
-  --vgd-muted:#6F6F6F;
-  --vgd-accent:#8E6B4C;
-  --vgd-accent-strong:#A47D5C;
-  --vgd-tint:#F3ECE5;
-  --vgd-danger:#A73D36;
-  --vgd-success:#507247;
-  --vgd-input:#FFFFFF;
-  --vgd-on-accent:#FFFFFF;
-  --vgd-logo-face:#F7F7F5;
-  --vgd-logo-outline:#A47D5C;
+:root[data-theme="dark"]{
+  --vgd-tile:#242220;--vgd-input:#181818;--vgd-on-accent:#121212;--vgd-logo-face:#1E1E1E;--vgd-logo-outline:#C8A98A;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --vgd-tile:#242220;--vgd-input:#181818;--vgd-on-accent:#121212;--vgd-logo-face:#1E1E1E;--vgd-logo-outline:#C8A98A;
+  }
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{
   display:flex;flex-direction:column;overflow:hidden;
   background:var(--vgd-bg);color:var(--vgd-text);
-  font:12px/1.45 "Segoe UI Variable","Segoe UI",system-ui,sans-serif;
+  font:13px/1.45 "Manrope VGD",Manrope,"Segoe UI",Arial,sans-serif;
 }
 header{
   display:flex;flex:none;align-items:center;justify-content:space-between;gap:16px;
@@ -54,14 +28,7 @@ header{
 .brand-wordmark{color:var(--vgd-accent-strong);font-size:11px;font-weight:750;letter-spacing:.12em}
 .brand b{font-size:16px;line-height:20px}
 .brand small{color:var(--vgd-muted);font-size:10px;font-weight:400}
-.theme-button{
-  display:grid;place-items:center;width:36px;height:36px;padding:0;flex:none;
-  color:var(--vgd-muted);background:var(--vgd-elevated);border:1px solid var(--vgd-border);
-}
-.theme-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-:root[data-theme="dark"] .theme-button .sun{display:none}
-:root[data-theme="light"] .theme-button .moon{display:none}
-.theme-button:hover{color:var(--vgd-accent-strong);border-color:var(--vgd-accent)}
+.vgd-theme-btn:hover{color:var(--vgd-accent-strong);border-color:var(--vgd-accent)}
 .presets{display:flex;flex-wrap:wrap;gap:8px}
 .presets select{flex:1 1 130px}
 .presets input{flex:1 1 110px}
