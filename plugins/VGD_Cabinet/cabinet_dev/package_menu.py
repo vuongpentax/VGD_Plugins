@@ -11,8 +11,7 @@ files = ['vgd_cabinet.rb'] + ['VGD_Cabinet/' + name for name in [
     'main43.rb', 'geometry_engine.rb', 'modeling_rules.rb', 'modeling.rb', 'pano.rb','component_sharing.rb','frame_divisions.rb','rail_joinery.rb','preview_mesh.rb','library_store.rb', 'model_data.rb', 'box_conversion.rb', 'preset_store.rb', 'description_import.rb',
     'defaults.rb', 'draw_tool.rb', 'ui_renderer.rb', 'VGD_Cabinet_UI.html',
     'reload.rb', 'update_notice.rb', 'cabinet.svg', 'HUONG_DAN.txt']]
-files += ['VGD_Cabinet/' + name for name in ['vgd-theme/vgd-theme.css', 'vgd-theme/vgd-theme.js', 'vgd-theme/fonts/manrope-latin-wght-normal.woff2', 'vgd-theme/fonts/manrope-vietnamese-wght-normal.woff2', 'vgd-theme/fonts/LICENSE']]
-assert len(files) == 28
+assert len(files) == 23
 runtime = (root / 'cabinet_work/VGD_Cabinet/main43.rb').read_text(encoding='utf-8')
 bootstrap = (root / 'cabinet_work/vgd_cabinet.rb').read_text(encoding='utf-8')
 ui = (root / 'cabinet_work/VGD_Cabinet/VGD_Cabinet_UI.html').read_text(encoding='utf-8')

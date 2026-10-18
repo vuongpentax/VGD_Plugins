@@ -13,7 +13,6 @@ ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / 'shared' / 'vgd-theme'
 TARGETS = [
     'plugins/VGD_BIM/runtime/vgd_bim_lite/html',
-    'plugins/VGD_Cabinet/cabinet_work/VGD_Cabinet',
     'plugins/VGD_Cabinet_Draw/runtime/VGD_Cabinet_Draw',
     'plugins/VGD_Center/VGD_Center',
     'plugins/VGD_Dim/runtime/VGD_Dim',
