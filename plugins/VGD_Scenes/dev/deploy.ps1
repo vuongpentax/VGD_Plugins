@@ -61,6 +61,7 @@ try {
   foreach ($relative in $owned) {
     $source = Join-Path $runtime $relative
     $destination = Assert-Target (Join-Path $pluginRoot $relative)
+    $null = New-Item -ItemType Directory -Path (Split-Path $destination) -Force
     Copy-Item -LiteralPath $source -Destination $destination -Force
     if ((Get-FileHash -LiteralPath $source).Hash -ne (Get-FileHash -LiteralPath $destination).Hash) { throw "Copy mismatch: $relative" }
   }
