@@ -211,8 +211,7 @@ module VGD
         entity, point = dim.public_send(side)
         getter="#{side}_attached_to"
         attached=dim.public_send(getter) if dim.respond_to?(getter)
-        # Restore complete instance paths after creation; their point coordinate
-        # convention differs from add_dimension_linear's reference arguments.
+        # An InstancePath attachment is not a valid add_dimension_linear reference: use the point.
         return point if attached && attached[0]
         return entity if entity && entity.respond_to?(:position) # Vertex / ConstructionPoint
         entity ? [entity,point] : point
@@ -234,13 +233,10 @@ module VGD
               end
               new_dim=nil
               begin
-                # Create with current Model Info font defaults; preserve native links.
+                # Create with current Model Info font defaults. Vertex links travel through endpoint().
+                # Never assign start_attached_to=/end_attached_to=: with an InstancePath (what a Dim inside a
+                # group reports) SketchUp 2022 crashes outright, verified natively.
                 new_dim=entry[:entities].add_dimension_linear(endpoint(old,:start), endpoint(old,:end), old.offset_vector)
-                %i[start end].each do |side|
-                  getter="#{side}_attached_to"
-                  attached=old.public_send(getter) if old.respond_to?(getter)
-                  new_dim.public_send("#{getter}=",attached) if attached && attached[0]
-                end
                 custom_text=old.text
                 # A native measured string matching the fresh Dim must stay automatic.
                 preserve_text = !custom_text.to_s.empty? && custom_text != new_dim.text

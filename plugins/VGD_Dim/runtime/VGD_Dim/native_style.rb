@@ -13,7 +13,7 @@ module VGD
         raise ArgumentError, 'APPLY đang chạy.' if @job
         config = Engine.validate(settings)
         targets = Engine.selected(model)
-        raise ArgumentError, 'Hãy chọn trực tiếp Dim hoặc Text/Label trước khi APPLY.' if targets.empty?
+        raise ArgumentError, Engine.no_target_message(model) if targets.empty?
         Engine.check_context(model)
         api = adapter
         api.check_platform!
@@ -44,8 +44,7 @@ module VGD
             valid: function('IsWindow', [p], i),
             visible: function('IsWindowVisible', [p], i),
             enabled: function('IsWindowEnabled', [p], i),
-            activate: function('SetActiveWindow', [p], p),
-            send_message: function('SendMessageW', [p,i,n,n], n)
+            post_message: function('PostMessageW', [p,i,n,n], i)
           }
         end
         def function(name, args, result)
@@ -84,9 +83,12 @@ module VGD
             enabled: @functions[:enabled].call(handle) != 0
           }
         end
-        def click(dialog, button)
-          @functions[:activate].call(dialog)
-          @functions[:send_message].call(button, 0x00F5, 0, 0) # BM_CLICK
+        # Only queue BM_CLICK. SendMessage (and SetActiveWindow, which sends
+        # WM_ACTIVATE synchronously) ran SketchUp's own command inside this Ruby
+        # callback, re-entering SketchUp's UI; PostMessage lets SketchUp process
+        # the click from its normal message loop after this callback returns.
+        def click(_dialog, button)
+          @functions[:post_message].call(button, 0x00F5, 0, 0) # BM_CLICK
         end
       end
 
@@ -200,8 +202,17 @@ module VGD
                 @api.click(page)
                 @updated << page
               end
-              # Let SketchUp finish processing its native command before the next stage.
-              defer { prepare(index + 1, preflight) }
+              # The posted click is handled by SketchUp's message loop; leave it time
+              # to finish before the next Model Info stage is opened.
+              @timer = UI.start_timer(0.25, false) do
+                @timer = nil
+                begin
+                  check_state!
+                  prepare(index + 1, preflight)
+                rescue StandardError => error
+                  finish(error)
+                end
+              end
             elsif attempts < 9
               wait_button(index,preflight,attempts + 1)
             else

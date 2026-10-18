@@ -58,7 +58,8 @@ module VGD
         def self.version_key(value)
           core, suffix = value.split('-', 2)
           numbers = core.split('.').map(&:to_i)
-          numbers + (suffix ? [0, suffix] : [1, ''])
+          # Pad digit runs so "beta.10" sorts after "beta.8" as text.
+          numbers + (suffix ? [0, suffix.gsub(/\d+/) { |digits| digits.rjust(8, '0') }] : [1, ''])
         end
         def self.newer?(remote, current)
           (version_key(remote) <=> version_key(current)) > 0

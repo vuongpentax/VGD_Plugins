@@ -43,13 +43,13 @@
   <label class="chk"><input type="checkbox" id="sd.scene_only" checked> Gắn bộ Dim vào Scene hiện tại</label>
   <p class="note">Scene cần bật lưu Tags. Tag bộ này hiển thị trong Scene hiện tại và ẩn ở các Scene khác có lưu Tags.</p>
   <button class="solid wide" onclick="VGD.smart()">Smart Dim cho tủ đang chọn</button>
-  <p class="note">Đo theo trục riêng của tủ, gồm tủ xoay quanh Z. Tủ nghiêng, shear hoặc các khối khác hệ trục sẽ được báo lỗi. Chạy lại cùng tủ/mặt/Scene sẽ thay bộ Dim cũ. Bộ mặt cắt dùng Tag riêng <b>000_DIM_SECTION…</b>.</p>
+  <p class="note">Đo theo trục riêng của tủ, gồm tủ xoay quanh Z. Tủ nghiêng hoặc shear sẽ được báo lỗi; chi tiết con xoay lệch (ví dụ tay nắm nghiêng) được bỏ qua và báo trong kết quả. Chạy lại cùng tủ/mặt/Scene sẽ thay bộ Dim cũ. Tag đặt theo tên view hoặc mặt cắt: <b>000_DIM_TOP</b>, <b>000_DIM_SEC_A-A</b>.</p>
  </section></div><div id="panel-font" class="function-panel" role="tabpanel" aria-labelledby="tab-font" hidden><div class="panel-heading"><h1>Font & cỡ chữ</h1><p>Mẫu chữ Model Info · đổi cỡ chữ và font</p><span class="scope-badge" id="badge-font"></span></div><section>
   <h2>Font &amp; size chữ</h2>
   <p class="note">Chỉnh font, cỡ chữ theo pt hoặc Height trong Model Info, rồi áp mẫu cho các đối tượng cần đổi.</p>
   <div class="bar"><button id="dim-info" onclick="sketchup.dim_info()">Model Info › Dimensions</button><button id="text-info" onclick="sketchup.text_info()">Model Info › Text</button></div>
   <button class="solid wide" id="rebuild" onclick="VGD.rebuild()">Làm mới Dimension theo phạm vi</button>
-  <p class="note">Tạo lại Dim tuyến tính với font/size của Model Info, vào được Group lồng. Giữ điểm đo, liên kết, chữ ghi đè, màu, mũi tên, Tag. Dim bán kính bị bỏ qua.</p>
+  <p class="note">Tạo lại Dim tuyến tính với font/size của Model Info, vào được Group lồng. Giữ điểm đo, liên kết với đỉnh, chữ ghi đè, màu, mũi tên, Tag (liên kết theo đường dẫn Group không được giữ, vì SketchUp 2022 sẽ văng). Dim bán kính bị bỏ qua.</p>
   <button class="wide" id="native-apply" onclick="VGD.nativeApply()">Áp mẫu cho Dim/Text/Label đang chọn</button>
   <p class="note">Dùng nút Update selected của Model Info, nên chỉ áp cho đối tượng chọn trực tiếp (không quét trong Group), Windows giao diện English. Text/Label chỉ đổi size được bằng cách này.</p>
  </section></div><div id="panel-style" class="function-panel" role="tabpanel" aria-labelledby="tab-style" hidden><div class="panel-heading"><h1>Kiểu dáng</h1><p>Màu, endpoint, hướng chữ và leader</p><span class="scope-badge" id="badge-style"></span></div><section>

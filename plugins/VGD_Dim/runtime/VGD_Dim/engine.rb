@@ -26,6 +26,16 @@ module VGD
           entity.valid? && (entity.is_a?(Sketchup::Dimension) || entity.is_a?(Sketchup::Text))
         end
       end
+      # Model Info only updates Dim/Text that are selected directly. A selected group or
+      # component usually hides them, so say so instead of failing silently.
+      def no_target_message(model)
+        containers = model.selection.to_a.any? { |entity| entity.is_a?(Sketchup::Group) || entity.is_a?(Sketchup::ComponentInstance) }
+        if containers
+          'Dim/Text nằm trong group hoặc component. Hãy double-click để mở group, chọn trực tiếp Dim/Text rồi APPLY.'
+        else
+          'Hãy chọn trực tiếp Dim hoặc Text/Label trước khi APPLY.'
+        end
+      end
       def check_context(model)
         Array(model.active_path).each do |instance|
           raise ArgumentError, 'Nhóm đang khóa; hãy mở khóa trước khi chỉnh.' if instance.locked?
@@ -37,12 +47,12 @@ module VGD
       def get_material(model, name, hex)
         rgb = hex.delete('#').scan(/../).map { |part| part.to_i(16) }
         name = "#{name}_#{hex.delete('#').upcase}"
-        material = model.materials[name]
-        if material && [material.color.red, material.color.green, material.color.blue] == rgb
-          return material
+        # The name already carries the hex value, so an existing material only differs
+        # if its colour was edited. Correct it in place instead of adding a "#1" copy.
+        material = model.materials[name] || model.materials.add(name)
+        unless [material.color.red, material.color.green, material.color.blue] == rgb
+          material.color = Sketchup::Color.new(*rgb)
         end
-        material = model.materials.add(name)
-        material.color = Sketchup::Color.new(*rgb)
         material
       end
       def set_endpoint(entity, style)
@@ -94,7 +104,7 @@ module VGD
       def apply(model, settings)
         config = validate(settings)
         targets = selected(model)
-        raise ArgumentError, 'Hãy chọn trực tiếp Dim hoặc Text/Label trước khi APPLY.' if targets.empty?
+        raise ArgumentError, no_target_message(model) if targets.empty?
         check_context(model)
         model.start_operation('VGD Dim — Vùng chọn', true)
         begin
