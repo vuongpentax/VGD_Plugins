@@ -1,4 +1,4 @@
-<!DOCTYPE html><html style="color-scheme: dark;"><head>
+<!DOCTYPE html><html><head>
   <meta charset="utf-8">
   <title>VGD Cabinet 4.5.2</title>
   <style>
@@ -27,7 +27,7 @@
       --text-light: #64748B;
       --border: #3A3A3A;
     }
-    * { box-sizing: border-box; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    * { box-sizing: border-box; font-family: "Manrope VGD", Manrope, "Segoe UI", Arial, sans-serif; }
     body { background: var(--bg-soft); margin: 0; padding: 12px; color: var(--text-main); user-select: none; font-size: 11px; transition: background-color 0.2s, color 0.2s; }
 
     .header { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; margin-bottom: 12px; background: var(--bg-dark); color: #fff; border-radius: var(--radius); font-weight: 700; font-size: 12px; letter-spacing: 0.5px; border-top: 3px solid var(--primary); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
@@ -92,12 +92,10 @@
     .card-switch input:checked + .slider { background-color: var(--primary); }
     .card-switch input:checked + .slider:before { transform: translateX(12px); }
   </style>
+<link rel="stylesheet" href="vgd-theme/vgd-theme.css">
 <style>/* Compact menu shell. Only the settings pane scrolls. */
 :root{
-  color-scheme:dark;
-  --vgd-bg:#121212;--vgd-surface:#1E1E1E;--vgd-elevated:#2B2B2B;--vgd-border:#3A3A3A;
-  --vgd-text:#E2E8F0;--vgd-muted:#A7B0BD;--vgd-accent:#B48963;--vgd-accent-strong:#C8A98A;
-  --vgd-tint:#372C24;--vgd-danger:#E79C91;--vgd-danger-bg:#3B2423;--vgd-success:#A8C69D;
+  --vgd-danger-bg:#3B2423;
   --vgd-brand-tile:#242220;--vgd-brand-outline:#C8A98A;--vgd-brand-left:#242220;
   --vgd-brand-right:#1E1E1E;--vgd-brand-roof:#B48963;--vgd-brand-shadow:#121212;--vgd-brand-accent:#C8A98A;
   --bg-main:var(--vgd-surface);--bg-soft:var(--vgd-bg);--bg-dark:var(--vgd-elevated);--bg-card:var(--vgd-surface);
@@ -105,10 +103,7 @@
   --text-main:var(--vgd-text);--text-secondary:var(--vgd-muted);--text-light:var(--vgd-muted);--border:var(--vgd-border);--radius:4px;
 }
 body:not(.dark){
-  color-scheme:light;
-  --vgd-bg:#F7F7F5;--vgd-surface:#FFFFFF;--vgd-elevated:#F0EEE9;--vgd-border:#E5E5E5;
-  --vgd-text:#222222;--vgd-muted:#6F6F6F;--vgd-accent:#B48963;--vgd-accent-strong:#8E6B4C;
-  --vgd-tint:#F3ECE5;--vgd-danger:#A73D36;--vgd-danger-bg:#F8EAE8;--vgd-success:#507247;
+  --vgd-danger-bg:#F8EAE8;
   --vgd-brand-tile:#F0EDE8;--vgd-brand-outline:#A47D5C;--vgd-brand-left:#F0EDE8;
   --vgd-brand-right:#F7F7F5;--vgd-brand-roof:#8E6B4C;--vgd-brand-shadow:#F7F7F5;--vgd-brand-accent:#A47D5C;
   --bg-main:var(--vgd-surface);--bg-soft:var(--vgd-bg);--bg-dark:var(--vgd-elevated);--bg-card:var(--vgd-surface);
@@ -242,7 +237,7 @@ button:disabled{opacity:.55}
 </style></head>
 <body class="dark"><div class="header">
     <div class="header-left"><svg class="brand-mark" viewBox="0 0 180 180" aria-hidden="true"><rect x="3" y="3" width="174" height="174" rx="25" fill="var(--vgd-brand-tile)" stroke="var(--vgd-border)" stroke-width="1.5"></rect><path d="M90 18 27 54 90 89Z" fill="var(--vgd-brand-right)"></path><path d="M90 18 153 54 90 89Z" fill="var(--vgd-brand-roof)"></path><path d="M27 54 90 89V162L27 126Z" fill="var(--vgd-brand-left)"></path><path d="M90 89 153 54V101C153 129 126 149 90 162Z" fill="var(--vgd-brand-right)"></path><path d="M53 99 90 120V162L53 141Z" fill="var(--vgd-brand-shadow)"></path><path d="M53 131 90 152V162L53 141Z" fill="var(--vgd-brand-roof)"></path><path d="M90 18 27 54V126L90 162C126 149 153 129 153 101V54Z" fill="none" stroke="var(--vgd-brand-outline)" stroke-width="1.5" stroke-linejoin="round"></path><path d="M90 18V89L153 54M27 54 90 89V162M53 99V141L90 162M53 99 90 120V152" fill="none" stroke="var(--vgd-brand-accent)" stroke-width="1.5" stroke-linejoin="round"></path><path d="M27 54 90 18 153 54 90 89Z" fill="none" stroke="var(--vgd-brand-accent)" stroke-width="1.5" stroke-linejoin="round"></path></svg><span class="brand-copy"><strong class="brand-wordmark">VGD</strong><span class="brand-product">CABINET</span><small class="brand-version">4.5.2</small></span></div>
-    <button id="btn_theme" onclick="toggleTheme()" class="btn-icon" title="Chuyển sang giao diện sáng" aria-label="Chuyển sang giao diện sáng"><span id="theme_icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg></span></button>
+    <button id="btn_theme" class="btn-icon vgd-theme-btn" type="button" aria-pressed="false"></button>
   </div><div class="context-bar"><span id="selection_mode">Tạo tủ mới</span><span id="size_summary"></span></div><div id="description_draft_notice" hidden="" role="status"></div><div class="workspace"><nav class="side-menu" aria-label="Nhóm thông số"><button type="button" class="menu-button" data-page="general" aria-controls="page_general" aria-label="Tổng thể — Kích thước, preset và ghép module" title="Tổng thể — Kích thước, preset và ghép module" onclick="selectPage('general')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M8 4v4m8 0V4m-8 10v4m8-4v4"></path></svg><span class="menu-copy"><span class="menu-label">Tổng thể</span><small class="menu-description">Kích thước, preset và ghép module</small></span></button><button type="button" class="menu-button" data-page="frame" aria-controls="page_frame" aria-label="Thùng tủ — Hông, nóc, đáy, hậu và chân" title="Thùng tủ — Hông, nóc, đáy, hậu và chân" onclick="selectPage('frame')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h14v17H5zM5 8h14M5 16h14"></path></svg><span class="menu-copy"><span class="menu-label">Thùng tủ</span><small class="menu-description">Hông, nóc, đáy, hậu và chân</small></span></button><button type="button" class="menu-button" data-page="compartments" aria-controls="page_compartments" aria-label="Chia khoang — Vách, đợt và chia tầng" title="Chia khoang — Vách, đợt và chia tầng" onclick="selectPage('compartments')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h14v17H5zM12 3.5v17"></path></svg><span class="menu-copy"><span class="menu-label">Chia khoang</span><small class="menu-description">Vách, đợt và chia tầng</small></span></button><button type="button" class="menu-button" data-page="doors" aria-controls="page_doors" aria-label="Cánh tủ — Cánh, kính, pano và móc tay" title="Cánh tủ — Cánh, kính, pano và móc tay" onclick="selectPage('doors')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h14v17H5zM12 3.5v17M9 11v2m6-2v2"></path></svg><span class="menu-copy"><span class="menu-label">Cánh tủ</span><small class="menu-description">Cánh, kính, pano và móc tay</small></span></button><button type="button" class="menu-button" data-page="drawers" aria-controls="page_drawers" aria-label="Ngăn kéo — Bố trí, khung và mặt hộc" title="Ngăn kéo — Bố trí, khung và mặt hộc" onclick="selectPage('drawers')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3.5h14v17H5zM5 9h14M5 14.5h14M9 6v1m6-1v1m-6 5.5v1m6-1v1m-6 5.5v1m6-1v1"></path></svg><span class="menu-copy"><span class="menu-label">Ngăn kéo</span><small class="menu-description">Bố trí, khung và mặt hộc</small></span></button><button type="button" class="menu-button" data-page="description" aria-controls="page_description" aria-label="Dựng từ mô tả — Tạo tủ từ cấu hình JSON" title="Dựng từ mô tả — Tạo tủ từ cấu hình JSON" onclick="selectPage('description')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h8l4 4v13H5v-17h2m7 0v4h4M8 12h8M8 16h5"></path></svg><span class="menu-copy"><span class="menu-label">Dựng từ mô tả</span><small class="menu-description">Tạo tủ từ cấu hình JSON</small></span></button><button type="button" class="menu-button" data-page="library" aria-controls="page_library" aria-label="Thư viện — Lưu và đặt lại mẫu tủ" title="Thư viện — Lưu và đặt lại mẫu tủ" onclick="selectPage('library')"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6h6l2 2h9v11h-17zM3.5 10h17"></path></svg><span class="menu-copy"><span class="menu-label">Thư viện</span><small class="menu-description">Lưu và đặt lại mẫu tủ</small></span></button><div class="menu-note">DỰNG HÌNH<br><span>Đơn vị: mm</span></div></nav><main id="settings_content"><section id="page_general" class="menu-page" hidden=""><h2>Tổng thể</h2><div class="preset-section">
     <select id="preset_select" onchange="loadPreset()" style="width: 100%; text-align-last: left; text-align: left; height: 28px;">
       <option value="">-- Chọn mẫu tủ --</option>
@@ -503,7 +498,7 @@ button:disabled{opacity:.55}
 <section id="library_detail" class="settings-section" hidden=""><h3 id="library_title"></h3><img id="library_thumbnail" alt="Hình mẫu tủ đã lưu" hidden=""><p id="library_dimensions"></p>
 <button type="button" onclick="placeLibrary()">Đặt tủ từ Thư viện</button>
 <div class="description-actions"><button type="button" class="btn-secondary" onclick="renameLibrary()">Đổi tên theo ô nhập</button><button type="button" class="btn-secondary" onclick="deleteLibrary()">Xóa khỏi danh sách</button></div></section>
-<button type="button" class="btn-secondary" onclick="refreshLibrary()">Nạp lại danh sách</button></section></main></div><footer class="fixed-actions"><div id="model_status" role="status">Chọn mẫu hoặc nhập kích thước rồi đặt tủ mới.</div><div class="checkbox-row"><input id="live_update" type="checkbox"><label for="live_update">Tự xem trước khi đổi thông số</label></div><div class="action-bar"><button class="btn-tool" onclick="placeCabinet()" id="btn_place">Đặt tủ mới</button><button class="btn-tool" onclick="drawToolCabinet()">Vẽ 3 điểm</button><button class="btn-tool" onclick="boxToCabinet()">Hộp → Tủ</button><button class="btn-update" id="btn_update" onclick="updateCabinet(true)" disabled="">Xem trước cập nhật</button></div></footer><script>// Menu navigation never sends modeling callbacks or changes parameter values.
+<button type="button" class="btn-secondary" onclick="refreshLibrary()">Nạp lại danh sách</button></section></main></div><footer class="fixed-actions"><div id="model_status" role="status">Chọn mẫu hoặc nhập kích thước rồi đặt tủ mới.</div><div class="checkbox-row"><input id="live_update" type="checkbox"><label for="live_update">Tự xem trước khi đổi thông số</label></div><div class="action-bar"><button class="btn-tool" onclick="placeCabinet()" id="btn_place">Đặt tủ mới</button><button class="btn-tool" onclick="drawToolCabinet()">Vẽ 3 điểm</button><button class="btn-tool" onclick="boxToCabinet()">Hộp → Tủ</button><button class="btn-update" id="btn_update" onclick="updateCabinet(true)" disabled="">Xem trước cập nhật</button></div></footer><script src="vgd-theme/vgd-theme.js"></script><script>// Menu navigation never sends modeling callbacks or changes parameter values.
 function selectPage(name) {
   var page=document.getElementById('page_'+name);if(!page)return;
   document.querySelectorAll('.menu-page').forEach(function(p){p.hidden=p!==page;});
@@ -516,16 +511,6 @@ function selectSubpage(group,name) {
   document.querySelectorAll('[data-subpanel="'+group+'"]').forEach(function(p){p.hidden=p!==page;});
   document.querySelectorAll('[data-subgroup="'+group+'"]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.subtab===name));});
   document.getElementById('settings_content').scrollTop=0;
-}
-function setThemeButton(theme) {
-  var button=document.getElementById('btn_theme'),icon=document.getElementById('theme_icon');
-  if(!button||!icon)return;
-  var target=theme==='dark'?'light':'dark';
-  button.title='Chuyển sang giao diện '+(target==='light'?'sáng':'tối');
-  button.setAttribute('aria-label',button.title);
-  icon.innerHTML=theme==='dark'
-    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>'
-    : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.1A8.4 8.4 0 0 1 8.9 3.8 8.5 8.5 0 1 0 20.2 15.1Z"/></svg>';
 }
 function refreshContextUI() {
   var byId=function(id){return document.getElementById(id);};
@@ -1378,33 +1363,22 @@ function returnToSelectedCabinet() {
       }
     });
 
+    // Theme follows Windows until the user picks one; the choice is kept under the same key as before.
+    // A choice saved by the older "vgd_theme" key is carried over once.
     function initTheme() {
-      var theme='dark';
       try {
-        var saved=localStorage.getItem('vgd_cabinet_theme');
-        if(saved==='dark'||saved==='light')theme=saved;
-        else {
-          var legacy=localStorage.getItem('vgd_theme');
-          if(legacy==='dark'||legacy==='light') {
-            theme=legacy;
-            localStorage.setItem('vgd_cabinet_theme',theme);
-          }
+        if (!localStorage.getItem('vgd_cabinet_theme')) {
+          var legacy = localStorage.getItem('vgd_theme');
+          if (legacy === 'dark' || legacy === 'light') localStorage.setItem('vgd_cabinet_theme', legacy);
         }
-      } catch(e) {}
-      applyTheme(theme);
-    }
-
-    function toggleTheme() {
-      var nextTheme=document.body.classList.contains('dark')?'light':'dark';
-      applyTheme(nextTheme);
-      try { localStorage.setItem('vgd_cabinet_theme',nextTheme); } catch(e) {}
-    }
-
-    function applyTheme(theme) {
-      theme=theme==='light'?'light':'dark';
-      document.body.classList.toggle('dark',theme==='dark');
-      document.documentElement.style.colorScheme=theme;
-      setThemeButton(theme);
+      } catch (e) {}
+      document.addEventListener('vgdtheme', function (event) {
+        var dark = event.detail.theme === 'dark';
+        document.body.classList.toggle('dark', dark);
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+      });
+      VGDTheme.start({ key: 'vgd_cabinet_theme', button: document.getElementById('btn_theme') });
+      document.body.classList.toggle('dark', VGDTheme.current() === 'dark');
     }
 
     document.addEventListener('DOMContentLoaded', function() {
