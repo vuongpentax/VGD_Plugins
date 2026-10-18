@@ -1,38 +1,22 @@
+/* Colours and fonts come from vgd-theme/vgd-theme.css. Names below are aliases; the extras differ per theme. */
 :root {
-  color-scheme: light;
-  --bg: #F3F1ED;
-  --panel: #FFFFFF;
-  --ink: #292B2D;
-  --muted: #726C65;
-  --line: #DED9D2;
-  --icon-outline: #292B2D;
-  --accent: #A67C58;
-  --accent-soft: #F2E7DD;
-  --hover: #F8F5F0;
-  --selected: #FFF9F2;
-  --thumb: #EBE6DF;
-  --danger: #A64D43;
-  --danger-soft: #F8E7E4;
-  --shadow: #33210F0D;
+  --bg: var(--vgd-bg); --panel: var(--vgd-surface); --ink: var(--vgd-text); --muted: var(--vgd-muted);
+  --line: var(--vgd-border); --icon-outline: var(--vgd-text); --accent: var(--vgd-accent-strong);
+  --accent-soft: var(--vgd-tint); --danger: var(--vgd-danger);
+}
+:root, :root[data-theme="light"] {
+  --hover: #F8F5F0; --selected: #FFF9F2; --thumb: #EBE6DF; --danger-soft: #F8E7E4; --shadow: #33210F0D;
 }
 :root[data-theme="dark"] {
-  color-scheme: dark;
-  --bg: #191A1B;
-  --panel: #222426;
-  --ink: #F1EDE6;
-  --muted: #B4ADA6;
-  --line: #393B3D;
-  --icon-outline: #F1EDE6;
-  --accent-soft: #3C3027;
-  --hover: #2C2E30;
-  --selected: #302B26;
-  --thumb: #303235;
-  --danger: #F0A49B;
-  --danger-soft: #4A2C2A;
-  --shadow: #00000030;
+  --hover: #2C2E30; --selected: #302B26; --thumb: #303235; --danger-soft: #4A2C2A; --shadow: #00000030;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --hover: #2C2E30; --selected: #302B26; --thumb: #303235; --danger-soft: #4A2C2A; --shadow: #00000030;
+  }
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font: 13px "Segoe UI", Arial, sans-serif; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font: 13px "Manrope VGD", Manrope, "Segoe UI", Arial, sans-serif; }
 body { display: flex; flex-direction: column; }
 button { border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; border-radius: 7px; padding: 7px 9px; cursor: pointer; }
 button:hover { border-color: var(--accent); background: var(--hover); }

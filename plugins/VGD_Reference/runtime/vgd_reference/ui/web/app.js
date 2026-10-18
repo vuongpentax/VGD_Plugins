@@ -12,7 +12,6 @@
   function button(icon,title,action,extra){const el=document.createElement('button');el.type='button';el.innerHTML='<svg class="ui-icon" viewBox="0 0 24 24" aria-hidden="true">'+icons[icon]+'</svg>';el.title=title;el.setAttribute('aria-label',title);if(extra)el.className=extra;el.addEventListener('click',event=>{event.stopPropagation();action();});return el;}
   function render(data){
     Object.assign(state,data||{});const list=byId('items');list.replaceChildren();
-    applyTheme(state.manager_theme);
     if(!state.items||!state.items.length){const empty=document.createElement('div');empty.className='empty';empty.textContent='Chưa có ảnh tham chiếu nào';list.appendChild(empty);}
     else state.items.forEach(item=>{
       const row=document.createElement('section');row.className='item'+(item.selected?' selected':'');row.addEventListener('click',()=>call('selectReference',item.id));
@@ -38,16 +37,9 @@
   function message(text){const el=byId('message');el.textContent=text||'';el.classList.toggle('hidden',!text);if(text)setTimeout(()=>el.classList.add('hidden'),4500);}
   byId('add').addEventListener('click',()=>call('addImage'));
   byId('paste').addEventListener('click',()=>call('pasteImage'));
-  function applyTheme(theme){
-    const value=theme==='dark'?'dark':'light';
-    document.documentElement.dataset.theme=value;
-    byId('appearanceSettings').title='Chuyển sang giao diện '+(value==='dark'?'sáng':'tối');
-    byId('appearanceSettings').setAttribute('aria-label',byId('appearanceSettings').title);
-  }
-  byId('appearanceSettings').addEventListener('click',()=>{
-    const theme=document.documentElement.dataset.theme==='dark'?'light':'dark';
-    applyTheme(theme);call('setManagerTheme',theme);
-  });
+  // Theme follows Windows until the user picks one; the choice is remembered by VGDTheme (key below).
+  document.addEventListener('vgdtheme',e=>{const dark=e.detail.theme==='dark';byId('brandMark').src=dark?'../../assets/toolbar/vgd_reference_dark.svg':'../../assets/toolbar/vgd_reference.svg';call('setManagerTheme',e.detail.theme);});
+  VGDTheme.start({key:'vgd.reference.theme',button:byId('appearanceSettings')});
   function closeClearAll(){byId('clearAllDialog').classList.add('hidden');}
   byId('clearAll').addEventListener('click',()=>{byId('clearAllDialog').classList.remove('hidden');byId('cancelClearAll').focus();});
   byId('cancelClearAll').addEventListener('click',closeClearAll);

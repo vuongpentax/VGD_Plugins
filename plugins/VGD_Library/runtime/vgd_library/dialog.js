@@ -9,21 +9,10 @@
     button.setAttribute("title", label);
   });
   let renderTimer;
-  function setTheme(theme) {
-    const dark = theme === 'dark';
-    document.body.classList.toggle('dark', dark);
-    $('themeToggle').setAttribute('aria-pressed', String(dark));
-    $('themeLabel').textContent = dark ? 'Giao diện sáng' : 'Giao diện tối';
-    $('themeToggle').title = dark ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối';
-    $('themeIcon').innerHTML = dark
-      ? '<circle cx="12" cy="12" r="3.5"/><path d="M12 2.5v2m0 15v2M4.3 4.3l1.4 1.4m12.6 12.6 1.4 1.4M2.5 12h2m15 0h2M4.3 19.7l1.4-1.4M18.3 5.7l1.4-1.4"/>'
-      : '<path d="M20 14.4A8 8 0 0 1 9.6 4 8 8 0 1 0 20 14.4Z"/>';
-    try { localStorage.setItem('VGD.Library.Theme', dark ? 'dark' : 'light'); } catch (_) {}
-  }
-  let savedTheme = 'dark';
-  try { savedTheme = localStorage.getItem('VGD.Library.Theme') || savedTheme; } catch (_) {}
-  setTheme(savedTheme);
-  $('themeToggle').addEventListener('click', () => setTheme(document.body.classList.contains('dark') ? 'light' : 'dark'));
+  // The shared theme script owns the button and the saved choice (key kept from earlier versions).
+  document.addEventListener('vgdtheme', event => document.body.classList.toggle('dark', event.detail.theme === 'dark'));
+  VGDTheme.start({ key: 'VGD.Library.Theme', button: $('themeToggle') });
+  document.body.classList.toggle('dark', VGDTheme.current() === 'dark');
   function send(action, args = {}) {
     if (['apply','apply_model','export','rotate','random_rotate','shuffle','fit','auto_scale','restore','reset_uv','clear','reapply','resize','swap','rotate_face','paint','swap_pick','replace_pick','seamless','audit','aux','save_model','flow','fix_nesting','trace','insert'].includes(action)) {
       if (!state.modelId) { feedback('Đợi model sẵn sàng hoặc bấm Làm mới.', true); return; }
