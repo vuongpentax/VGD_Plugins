@@ -1,3 +1,6 @@
+# Start from an empty scratch folder so a previous run's files cannot break this one.
+require 'fileutils'
+FileUtils.rm_rf('/tmp/private-order')
 # frozen_string_literal: true
 previous_model = Sketchup.active_model
 s = VGD::Scenes; store = s::SceneStore; camera = s::CameraControl

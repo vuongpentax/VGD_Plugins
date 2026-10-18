@@ -11,10 +11,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let savedFrameSignature = null, presetSignature = null;
   let frameFailureEpoch = 0;
   let currentTab = 'views', pendingCreate = false, composeSignature = null;
+  let sheetPlan = null, sheetPage = 0, sheetTitle = null, sheetChain = null, sheetActive = null, sheetExported = false;
   const openFrames = new Set();
   let camBase = null, camNow = null;
   let selectionAnchor = null, lastSceneClick = 0, rowRenderTimer = null, sectionTimer = null;
-  const primaryActions = {views:$('generate'),sections:$('section'),scenes:$('goCompose'),compose:$('updateCurrentView'),export:$('exportButton')};
+  const primaryActions = {views:$('generate'),sections:$('section'),scenes:$('goCompose'),compose:$('updateCurrentView'),export:$('exportButton'),sheet:$('sheetExport')};
   Object.values(primaryActions).forEach(button => $('primarySlot').append(button));
   Object.entries(primaryActions).forEach(([name,button]) => {button.hidden=name!=='views';});
   VGDTheme.start({ key: 'VGD.Scenes.Theme', button: $('theme') });
@@ -60,13 +61,14 @@ document.addEventListener('DOMContentLoaded', () => {
     $('composeScene').disabled = !context || busy || context.editing || !context.scenes.length;
     $('flowNext').disabled = !context || busy || (['scenes','compose'].includes(currentTab) ? !selected.size : !context.scenes.length);
     renderExportSummary();
+    sheetEnable();
     renderRenamePreview();
     document.querySelectorAll('[data-needs-selection],[data-needs-scenes]').forEach(explain);
   }
   function send(action, extra = {}, lock = true) {
     if (!context || (busy && !['cancel','refresh'].includes(action))) return;
     if (!window.sketchup) { status('Bản xem trước: thao tác thực hiện trong SketchUp.'); return; }
-    if (action==='generate' || action==='section') pendingCreate=true;
+    if (action==='generate' || action==='section' || action==='sectionSet') pendingCreate=true;
     if (lock) { busy = true; enable(); }
     window.sketchup.action(JSON.stringify({ action, model: context.model, ...extra }));
   }
@@ -78,12 +80,13 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-tab]').forEach(button => button.setAttribute('aria-selected', String(button.dataset.tab === name)));
     document.querySelector('main').scrollTop = 0;
     Object.entries(primaryActions).forEach(([key,button]) => {button.hidden=key!==name;});
-    $('flowBack').hidden=['views','sections'].includes(name);
-    $('flowNext').hidden=name==='export';
+    $('flowBack').hidden=['views','sections','sheet'].includes(name);
+    $('flowNext').hidden=['export','sheet'].includes(name);
     $('flowNext').textContent=name==='compose'?'Tiếp: Xuất file →':name==='scenes'?'Bỏ qua canh view → Xuất':'Tiếp: Chọn scene →';
     $('flowBack').textContent=name==='export'?'← Canh view':name==='compose'?'← Chọn scene':'← Tạo view';
     enable();
     showUnsaved();
+    if (name === 'sheet') sheetRender();
   }
   function renderExportSummary() {
     const list=$('exportSummary');list.replaceChildren();
@@ -288,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (document.activeElement!==$('cameraFov') && data.camera.fov != null) $('cameraFov').value=Math.round(data.camera.fov*1000000)/1000000;
         if (document.activeElement!==$('parallelHeight') && data.camera.height_mm != null) $('parallelHeight').value=Math.round(data.camera.height_mm*1000)/1000;
       }
-      renderPresets();
+      renderPresets(); renderSetPresets(data.section_sets); renderDimAvailability(!!data.dim_available);
       const sceneSignature=JSON.stringify([data.model,data.scenes.map(scene=>[scene.id,scene.name]),currentId(data)]);
       if(sceneSignature!==composeSignature){composeSignature=sceneSignature;$('composeScene').replaceChildren(new Option('Chọn scene để canh…',''));data.scenes.forEach(scene=>$('composeScene').add(new Option(scene.name,scene.id)));$('composeScene').value=currentId(data)||'';}
       const composing=data.scenes.find(scene=>scene.selected);
@@ -306,8 +309,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!(data && data.success)) { savedFrameSignature=null; frameFailureEpoch++; }
       if (!(data && data.success)) navigationId = context && (context.scenes.find(scene=>scene.selected) || {}).id || null;
       if (data && data.ids) selected = new Set(data.ids);
-      if(pendingCreate && data && data.success && data.ids){pendingCreate=false;tab('scenes');}
+      if(pendingCreate && data && data.success && data.ids){pendingCreate=false;if(currentTab!=='sections'&&!sheetChain)tab('scenes');}
       if(!(data && data.success)) pendingCreate=false;
+      sheetResult(data);
       enable();
     } else if (event === 'started') {
       busy = true; lastPath = null; $('progress').hidden = false; $('progress').value = 0; $('progress').max = data.total; status('Đang xuất ' + data.total + ' scene…'); enable();
@@ -484,6 +488,203 @@ document.addEventListener('DOMContentLoaded', () => {
   $('removeAllFrames').addEventListener('click', () => modal('Bỏ khung xám để gửi SKP','Bỏ khung xám của tất cả ' + context.frame_cleanup.count + ' scene có khung trong model và view hiện tại, kể cả scene ngoài VGD. Giữ kích thước xuất VGD đã lưu; khung nhìn theo cửa sổ SketchUp. Sau đó lưu SKP để gửi. Có thể dùng Khôi phục khung nếu cần.',()=>send('removeAllFrames')));
   $('restoreAllFrames').addEventListener('click', () => send('restoreAllFrames'));
   enable(); showFormat(); cameraMode();
+  // ---- Bộ mặt cắt tự động ----
+  const SET_STORE = 'VGD.Scenes.SectionSet';
+  let setPresetSignature = null, setLoaded = false;
+  function addCutRow(cut) {
+    const row = document.createElement('div'); row.className = 'cut-row';
+    const name = document.createElement('input'); name.className = 'cut-name'; name.maxLength = 40; name.placeholder = 'Tên'; name.value = cut.name;
+    const axis = document.createElement('select'); axis.className = 'cut-axis';
+    ['X', 'Y', 'Z'].forEach(value => axis.add(new Option(value, value))); axis.value = cut.axis;
+    const percent = document.createElement('input'); percent.className = 'cut-percent'; percent.type = 'number'; percent.min = '0'; percent.max = '100'; percent.value = String(cut.percent);
+    const label = document.createElement('label'); label.className = 'check';
+    const flip = document.createElement('input'); flip.type = 'checkbox'; flip.className = 'cut-flip'; flip.checked = !!cut.flip;
+    label.append(flip, document.createTextNode('Đảo'));
+    const remove = document.createElement('button'); remove.className = 'cut-remove'; remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', 'Xóa mặt cắt');
+    remove.addEventListener('click', () => row.remove());
+    row.append(name, axis, percent, label, remove);
+    $('setRows').append(row);
+  }
+  function setCuts(cuts) { $('setRows').replaceChildren(); cuts.forEach(addCutRow); }
+  function setViews(views) { document.querySelectorAll('[data-setview]').forEach(button => button.setAttribute('aria-pressed', String(views.includes(button.dataset.setview)))); }
+  function applySetPreset(id) {
+    const preset = ((context && context.section_sets) || {})[id];
+    if (!preset) return;
+    setViews(preset.views); setCuts(preset.sections);
+  }
+  function renderSetPresets(presets) {
+    if (!presets) return;
+    const signature = Object.keys(presets).join('|');
+    if (signature === setPresetSignature) return;
+    setPresetSignature = signature;
+    const current = $('setPreset').value;
+    $('setPreset').replaceChildren(new Option('Tự đặt', ''));
+    Object.keys(presets).forEach(id => $('setPreset').add(new Option(presets[id].label, id)));
+    $('setPreset').value = presets[current] ? current : '';
+    if (!setLoaded) { setLoaded = true; if (!loadSavedSet() && presets.wardrobe) { $('setPreset').value = 'wardrobe'; applySetPreset('wardrobe'); } }
+  }
+  function readSet() {
+    const views = [...document.querySelectorAll('[data-setview][aria-pressed=true]')].map(button => button.dataset.setview);
+    const names = new Set();
+    const sections = [...document.querySelectorAll('#setRows .cut-row')].map(row => {
+      const name = row.querySelector('.cut-name').value.trim();
+      const percentText = row.querySelector('.cut-percent').value.trim();
+      const percent = Number(percentText);
+      if (!name) throw Error('Điền tên cho mọi mặt cắt.');
+      if (names.has(name.toLowerCase())) throw Error('Tên mặt cắt không được trùng: ' + name + '.');
+      names.add(name.toLowerCase());
+      if (percentText === '' || !Number.isFinite(percent) || percent < 0 || percent > 100) throw Error('Vị trí cắt của ' + name + ' cần nằm trong 0–100%.');
+      return { name: name, axis: row.querySelector('.cut-axis').value, percent: percent, flip: row.querySelector('.cut-flip').checked };
+    });
+    if (!views.length && !sections.length) throw Error('Chọn ít nhất một góc nhìn hoặc thêm một mặt cắt.');
+    const mode = $('setScaleMode').value;
+    const denominator = Number($('setDenominator').value);
+    if (mode === 'fixed' && !(denominator > 0 && denominator <= 1000)) throw Error('Mẫu số tỷ lệ cần nằm trong 1–1000.');
+    const options = { paper: $('setPaper').value, scale_mode: mode, scale_denominator: mode === 'fixed' ? denominator : 0,
+      project: $('project').value, template: $('template').value, axis_mode: $('axis_mode').value, isolate: $('isolate').checked };
+    return { preset: $('setPreset').value, views: views, sections: sections, options: options, dimension: $('setDimension').checked && !$('setDimension').disabled };
+  }
+  function saveSet() {
+    try { localStorage.setItem(SET_STORE, JSON.stringify({ set: readSet(), preset: $('setPreset').value })); } catch (_) {}
+  }
+  function loadSavedSet() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(SET_STORE) || 'null');
+      if (!saved || !saved.set || !Array.isArray(saved.set.sections)) return false;
+      setViews(saved.set.views || []); setCuts(saved.set.sections);
+      const options = saved.set.options || {};
+      if (options.paper) $('setPaper').value = options.paper;
+      if (options.scale_mode) $('setScaleMode').value = options.scale_mode;
+      if (options.scale_denominator > 0) $('setDenominator').value = options.scale_denominator;
+      $('setPreset').value = saved.preset || '';
+      if (typeof saved.set.dimension === 'boolean') $('setDimension').checked = saved.set.dimension;
+      showSetDenominator();
+      return true;
+    } catch (_) { return false; }
+  }
+  function renderDimAvailability(available) { $('setDimension').disabled = !available; $('setDimensionHint').hidden = available; }
+  function showSetDenominator() { $('setDenominatorField').hidden = $('setScaleMode').value !== 'fixed'; }
+  document.querySelectorAll('[data-setview]').forEach(button => button.addEventListener('click', () => button.setAttribute('aria-pressed', String(button.getAttribute('aria-pressed') !== 'true'))));
+  $('setPreset').addEventListener('change', () => applySetPreset($('setPreset').value));
+  $('setAddRow').addEventListener('click', () => addCutRow({ name: 'Mặt cắt ' + ($('setRows').children.length + 1), axis: 'Y', percent: 50, flip: false }));
+  $('setScaleMode').addEventListener('change', showSetDenominator);
+  $('setApply').addEventListener('click', () => {
+    try { const payload = readSet(); saveSet(); send('sectionSet', { settings: payload }); }
+    catch (error) { status(error.message, true); }
+  });
+
+  // ---- Dàn trang: sheet plan, title block, LayOut/PDF export.
+  const SHEET_PAPER = { A4_L:[297,210], A4_P:[210,297], A3_L:[420,297], A3_P:[297,420], A2_L:[594,420], A2_P:[420,594], A1_L:[841,594], A1_P:[594,841] };
+  const SHEET_SCALES = [1,2,5,10,15,20,25,30,40,50,75,100,150,200];
+  function sheetSelectedIds() { return context ? context.scenes.filter(scene => selected.has(scene.id)).map(scene => scene.id) : []; }
+  function sheetPlanPayload(ids) {
+    const set = readSet();
+    return { ids: ids, settings: set.options, reserve_bottom_mm: Number($('sheetReserve').value) || 0, use_title_block: !!sheetTitle };
+  }
+  function sheetExportPayload() {
+    return { plan: sheetPlan, name: $('sheetName').value, pdf: $('sheetPdf').checked, use_title_block: !!sheetTitle };
+  }
+  function sheetEnable() {
+    $('sheetTitleClear').disabled = !context || busy || !sheetTitle;
+    $('sheetExport').disabled = !context || busy || !sheetPlan;
+    $('sheetOpenPdf').hidden = !sheetExported; $('sheetOpenLayout').hidden = !sheetExported;
+  }
+  function sheetResult(data) {
+    if (data && data.title_block) {
+      sheetTitle = data.title_block;
+      $('sheetTitleInfo').textContent = 'Khung tên: ' + sheetTitle.name + (sheetTitle.paper ? ' · ' + sheetTitle.paper : ' · khổ ' + sheetTitle.width_mm + '×' + sheetTitle.height_mm + ' mm');
+    }
+    if (data && data.plan) sheetShow(data.plan);
+    if (data && data.sheet) sheetExported = true;
+    if (sheetChain) {
+      if (data && data.success && sheetChain === 'plan' && data.ids) { sheetChain = 'export'; send('sheetPlan', sheetPlanPayload(data.ids)); }
+      else if (data && data.success && sheetChain === 'export' && data.plan) { sheetChain = null; send('sheetExport', sheetExportPayload()); }
+      else sheetChain = null;
+    }
+  }
+  function sheetShow(plan) {
+    sheetPlan = plan; sheetPage = 0; sheetExported = false; sheetActive = null;
+    $('sheetPage').replaceChildren(...plan.sheets.map((_, index) => new Option('Trang ' + (index + 1) + '/' + plan.sheets.length, String(index))));
+    sheetRender(); sheetEnable();
+  }
+  function sheetRender() {
+    const stage = $('sheetStage'), rows = $('sheetRows');
+    stage.replaceChildren(); rows.replaceChildren();
+    if (!sheetPlan) return;
+    const paper = SHEET_PAPER[sheetPlan.paper] || [420, 297];
+    const k = stage.clientWidth / paper[0];
+    stage.style.height = Math.round(paper[1] * k) + 'px';
+    if (sheetPlan.reserve_bottom_mm > 0) {
+      const band = document.createElement('div'); band.className = 'reserve';
+      band.style.height = Math.round(sheetPlan.reserve_bottom_mm * k) + 'px'; stage.append(band);
+    }
+    const entries = sheetPlan.sheets[sheetPage] || [];
+    const head = document.createElement('div'); head.className = 'sheet-row head';
+    ['View', 'X (mm)', 'Y (mm)', 'Tỷ lệ 1:'].forEach(text => { const cell = document.createElement('span'); cell.textContent = text; head.append(cell); });
+    rows.append(head);
+    entries.forEach(entry => {
+      const box = document.createElement('div'); box.className = 'sheet-box' + (sheetActive === entry.id ? ' active' : '');
+      box.textContent = entry.label + ' 1:' + entry.scale;
+      sheetPlace(box, entry, k); stage.append(box);
+      box.addEventListener('pointerdown', event => sheetDrag(event, entry, box, k));
+      const row = document.createElement('div'); row.className = 'sheet-row'; row.dataset.id = entry.id;
+      const name = document.createElement('span'); name.textContent = entry.label;
+      const x = document.createElement('input'), y = document.createElement('input'), scale = document.createElement('select');
+      [x, y].forEach(input => { input.type = 'number'; input.step = '1'; });
+      x.value = entry.x; y.value = entry.y;
+      const options = SHEET_SCALES.includes(entry.scale) ? SHEET_SCALES : [...SHEET_SCALES, entry.scale].sort((a, b) => a - b);
+      options.forEach(value => scale.add(new Option(String(value), String(value))));
+      scale.value = String(entry.scale);
+      x.addEventListener('change', () => { entry.x = Number(x.value) || 0; sheetClamp(entry, paper); sheetRender(); });
+      y.addEventListener('change', () => { entry.y = Number(y.value) || 0; sheetClamp(entry, paper); sheetRender(); });
+      scale.addEventListener('change', () => sheetRescale(entry, Number(scale.value), paper));
+      row.append(name, x, y, scale); rows.append(row);
+    });
+  }
+  function sheetPlace(box, entry, k) {
+    box.style.left = entry.x * k + 'px'; box.style.top = entry.y * k + 'px';
+    box.style.width = entry.w * k + 'px'; box.style.height = entry.h * k + 'px';
+  }
+  function sheetClamp(entry, paper) {
+    entry.x = Math.round(Math.min(Math.max(0, entry.x), Math.max(0, paper[0] - entry.w)) * 10) / 10;
+    entry.y = Math.round(Math.min(Math.max(0, entry.y), Math.max(0, paper[1] - entry.h)) * 10) / 10;
+  }
+  function sheetRescale(entry, denominator, paper) {
+    const pad = sheetPlan.pad_model_mm || 450;
+    entry.scale = denominator;
+    entry.w = Math.round((entry.extent_mm[0] + 2 * pad) / denominator * 100) / 100;
+    entry.h = Math.round((entry.extent_mm[1] + 2 * pad) / denominator * 100) / 100;
+    if (entry.w > paper[0] || entry.h > paper[1]) status(entry.label + ': ở 1:' + denominator + ' không vừa khổ giấy.', true);
+    sheetClamp(entry, paper); sheetRender();
+  }
+  function sheetDrag(event, entry, box, k) {
+    event.preventDefault();
+    const paper = SHEET_PAPER[sheetPlan.paper] || [420, 297];
+    const startX = event.clientX, startY = event.clientY, baseX = entry.x, baseY = entry.y;
+    sheetActive = entry.id;
+    document.querySelectorAll('.sheet-box').forEach(item => item.classList.toggle('active', item === box));
+    box.setPointerCapture(event.pointerId);
+    const move = e => {
+      entry.x = baseX + (e.clientX - startX) / k; entry.y = baseY + (e.clientY - startY) / k;
+      sheetClamp(entry, paper); sheetPlace(box, entry, k);
+      const row = $('sheetRows').querySelector('[data-id="' + entry.id + '"]');
+      if (row) { row.children[1].value = entry.x; row.children[2].value = entry.y; }
+    };
+    const up = () => { box.removeEventListener('pointermove', move); box.removeEventListener('pointerup', up); box.removeEventListener('pointercancel', up); };
+    box.addEventListener('pointermove', move); box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
+  }
+  $('sheetPage').addEventListener('change', () => { sheetPage = Number($('sheetPage').value) || 0; sheetRender(); });
+  $('sheetTitleBlock').addEventListener('click', () => send('sheetTitleBlock'));
+  $('sheetTitleClear').addEventListener('click', () => { sheetTitle = null; $('sheetTitleInfo').textContent = 'Chưa có khung tên. Bản vẽ sẽ có giấy trắng.'; sheetEnable(); });
+  $('sheetPlan').addEventListener('click', () => { try { send('sheetPlan', sheetPlanPayload(sheetSelectedIds())); } catch (error) { status(error.message, true); } });
+  $('sheetExport').addEventListener('click', () => { if (sheetPlan) send('sheetExport', sheetExportPayload()); });
+  $('sheetOpenPdf').addEventListener('click', () => send('sheetOpen', { what: 'pdf' }, false));
+  $('sheetOpenLayout').addEventListener('click', () => send('sheetOpen', { what: 'layout' }, false));
+  $('sheetOneClick').addEventListener('click', () => {
+    try { const payload = readSet(); saveSet(); sheetChain = 'plan'; send('sectionSet', { settings: payload }); }
+    catch (error) { sheetChain = null; status(error.message, true); }
+  });
+  window.addEventListener('resize', () => { if (currentTab === 'sheet') sheetRender(); });
   if (window.sketchup) window.sketchup.ready();
   setInterval(() => { if (context && !busy && !dragging && $('modal').hidden && window.sketchup) send('refresh',{},false); },2000);
 

@@ -13,7 +13,10 @@ module VGD
       'ratio_locked' => false, 'export_scale' => 1.0, 'date_folder' => false,
       'paper' => 'A4_L', 'section_axis' => 'Y', 'section_percent' => 50.0,
       'section_offset' => 0.0, 'section_flip' => false, 'section_name' => 'A-A',
-      'normal_x' => 0.0, 'normal_y' => 1.0, 'normal_z' => 0.0
+      'normal_x' => 0.0, 'normal_y' => 1.0, 'normal_z' => 0.0,
+      # scale_mode: free = fit the object; auto = largest standard scale that fits the paper;
+      # fixed = use scale_denominator. Scale applies to parallel views only, never ISO.
+      'scale_mode' => 'free', 'scale_denominator' => 0.0, 'paper_margin' => 15.0
     }.freeze
     VIEWS = %w[ISO TOP FRONT RIGHT BACK LEFT BOTTOM].freeze
 
@@ -45,8 +48,12 @@ module VGD
       raise ArgumentError, 'Trục không hợp lệ' unless %w[local world].include?(o['axis_mode'])
       raise ArgumentError, 'Chế độ đối tượng không hợp lệ' unless %w[combined individual].include?(o['grouping'])
       raise ArgumentError, 'Định dạng không hợp lệ' unless %w[png jpg pdf].include?(o['format'])
-      raise ArgumentError, 'Khổ giấy không hợp lệ' unless %w[A4_L A4_P A3_L A3_P].include?(o['paper'])
+      raise ArgumentError, 'Khổ giấy không hợp lệ' unless %w[A4_L A4_P A3_L A3_P A2_L A2_P A1_L A1_P].include?(o['paper'])
       raise ArgumentError, 'Trục mặt cắt không hợp lệ' unless %w[X Y Z CUSTOM].include?(o['section_axis'])
+      raise ArgumentError, 'Chế độ tỷ lệ không hợp lệ' unless %w[free auto fixed].include?(o['scale_mode'])
+      o['scale_denominator'] = number(o['scale_denominator'], 0, 1000, 'Mẫu số tỷ lệ')
+      raise ArgumentError, 'Tỷ lệ cố định cần mẫu số lớn hơn 0.' if o['scale_mode'] == 'fixed' && o['scale_denominator'] <= 0
+      o['paper_margin'] = number(o['paper_margin'], 0, 60, 'Lề giấy (mm)')
       raise ArgumentError, 'Loại lưới không hợp lệ' unless %w[none thirds center golden grid4].include?(o['grid'])
       o['views'] = Array(o['views']).uniq
       raise ArgumentError, 'Góc nhìn không hợp lệ' unless (o['views'] - VIEWS).empty?
@@ -74,8 +81,12 @@ module VGD
       destination
     end
 
+    # Nested calls join the outer operation, so a multi-step command is one Undo
+    # and one failure rolls back everything it did.
     def self.operation(model, label)
+      return yield if @operation_depth.to_i > 0
       model.start_operation("VGD · #{label}", true)
+      @operation_depth = 1
       begin
         result = yield
         model.commit_operation
@@ -83,6 +94,8 @@ module VGD
       rescue Exception
         model.abort_operation
         raise
+      ensure
+        @operation_depth = 0
       end
     end
 

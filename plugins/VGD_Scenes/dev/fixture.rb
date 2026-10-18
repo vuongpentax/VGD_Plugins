@@ -189,7 +189,11 @@ module Sketchup
     def initialize;set(Geom::Point3d.new(0,0,0),Geom::Vector3d.new(1,0,0),Geom::Vector3d.new(0,1,0),Geom::Vector3d.new(0,0,1));end
     def set(o,x,y,z);@origin=o;@xaxis=x;@yaxis=y;@zaxis=z;end
   end
+  # Observer base classes and no-op registration so the save guard can attach in tests.
+  class ModelObserver; end
   class Model < Entity
+    def add_observer(_observer); true; end
+    def remove_observer(_observer); true; end
     attr_reader :entities,:selection,:pages,:layers,:rendering_options,:shadow_info,:styles,:axes,:active_view,:options,:events
     attr_accessor :active_path
     def initialize
@@ -201,6 +205,9 @@ module Sketchup
     def start_operation(label,*_);@events << [:start,label];end
     def commit_operation;@events << [:commit];end
     def abort_operation;@events << [:abort];end
+    def operations;@events.count { |e| e[0] == :start };end
+    def commits;@events.count { |e| e[0] == :commit };end
+    def aborts;@events.count { |e| e[0] == :abort };end
     def select_tool(tool);@tool.deactivate(active_view) if @tool;@tool=tool;tool.activate if tool;end
   end
 end

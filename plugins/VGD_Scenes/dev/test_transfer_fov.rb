@@ -1,3 +1,6 @@
+# Start from an empty scratch folder so a previous run's files cannot break this one.
+require 'fileutils'
+FileUtils.rm_rf('/tmp/fov-transfer')
 # Regression: physical FOVs can cross 1..120 when measured on the other axis.
 s = VGD::Scenes; transfer = s::SceneTransfer
 previous_model = Sketchup.active_model

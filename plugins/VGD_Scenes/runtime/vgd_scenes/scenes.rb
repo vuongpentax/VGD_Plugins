@@ -257,6 +257,10 @@ module VGD
         model.rendering_options['DisplaySectionCuts'] = !planes.empty?
         model.rendering_options['DisplaySectionPlanes'] = false
         Geometry.fit(model, target, kind, opts, normal)
+        # Scale (when the view has one) plus the object's size in the view plane, which sheet layout needs.
+        width, height = Geometry.view_extents(target, kind, normal)
+        scale = (Geometry.scale_info(target, kind, opts, normal) || {}).merge('extent_mm' => [(width * 25.4).round(1), (height * 25.4).round(1)])
+        page.set_attribute(DICT, 'scale', scale.to_json)
         prepare_page(page)
         raise 'SketchUp không lưu được trạng thái scene.' unless page.update(flags)
         isolate(page, model, target) if opts['isolate']
@@ -400,6 +404,13 @@ module VGD
         session[:hidden].each do |entity, hidden|
           entity.hidden = hidden if entity.valid? && entity.hidden? != hidden
         end
+      end
+
+      # Runs before SketchUp writes the .skp (Save / Ctrl+S). The temporary cut and the
+      # hidden-root changes must not reach the file, so the preview is removed first.
+      def self.before_save(model)
+        return unless @session && @session[:model].equal?(model)
+        clear
       end
 
       def self.clear

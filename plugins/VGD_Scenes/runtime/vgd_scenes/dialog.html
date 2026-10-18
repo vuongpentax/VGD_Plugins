@@ -16,6 +16,9 @@
   <button data-tab="compose" aria-selected="false" title="Canh view · Chỉnh khung và camera" aria-label="Canh view · Chỉnh khung và camera">
     <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6zM10 7h4m-7 3v4m10-4v4m-3 3h3"/></svg><span class="nav-copy"><strong>Canh view</strong><small>Chỉnh khung và camera</small></span>
   </button>
+  <button data-tab="sheet" aria-selected="false" title="Dàn trang · Sắp xếp view lên khổ giấy" aria-label="Dàn trang · Sắp xếp view lên khổ giấy">
+    <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18H5z M8 7h8v5H8z M8 15h3v3H8z M13 15h3v3h-3z"/></svg><span class="nav-copy"><strong>Dàn trang</strong><small>Khung tên và xuất PDF</small></span>
+  </button>
   <button data-tab="export" aria-selected="false" title="Xuất file · Xuất ảnh và hồ sơ" aria-label="Xuất file · Xuất ảnh và hồ sơ">
     <svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 17v4h14v-4"/></svg><span class="nav-copy"><strong>Xuất file</strong><small>Xuất ảnh và hồ sơ</small></span>
   </button>
@@ -31,6 +34,21 @@
 </section>
 <section id="sections" class="tab" hidden>
 <h1>Mặt cắt</h1><p>Chọn đối tượng rồi kéo thanh trượt để xem trực tiếp. Bấm Tạo scene khi đã chọn vị trí.</p>
+<div class="card" id="setCard"><h2>Bộ mặt cắt tự động</h2>
+<p class="hint">Chọn tủ, đặt các mặt cắt rồi bấm một lần: góc nhìn và mặt cắt được tạo với tỷ lệ chuẩn vừa khổ giấy.</p>
+<label>Mẫu bộ<select id="setPreset"><option value="">Tự đặt</option></select></label>
+<div class="view-grid" id="setViews">
+<button data-setview="FRONT" aria-pressed="true">FRONT</button><button data-setview="RIGHT" aria-pressed="true">RIGHT</button><button data-setview="TOP" aria-pressed="true">TOP</button><button data-setview="ISO" aria-pressed="true">ISO</button><button data-setview="BACK" aria-pressed="false">BACK</button><button data-setview="LEFT" aria-pressed="false">LEFT</button><button data-setview="BOTTOM" aria-pressed="false">BOTTOM</button>
+</div>
+<div id="setRows" class="cut-rows"></div>
+<div class="inline wrap"><button id="setAddRow">+ Thêm mặt cắt</button></div>
+<div class="fields"><label>Khổ giấy<select id="setPaper"><option value="A4_L">A4 ngang</option><option value="A4_P">A4 đứng</option><option value="A3_L" selected>A3 ngang</option><option value="A3_P">A3 đứng</option></select></label>
+<label>Tỷ lệ<select id="setScaleMode"><option value="auto" selected>Tự chọn tỷ lệ chuẩn</option><option value="fixed">Cố định</option><option value="free">Vừa khung (không chuẩn)</option></select></label></div>
+<label id="setDenominatorField" hidden>Mẫu số tỷ lệ 1:<input id="setDenominator" type="number" min="1" max="1000" value="20"></label>
+<p class="hint">Mặt cắt cắt theo trục của tủ: X rộng, Y sâu, Z cao. Chỉ góc nhìn song song có tỷ lệ; ISO luôn vừa khung.</p>
+<label class="check"><input id="setDimension" type="checkbox" checked>Tự ghi kích thước bằng VGD Dim</label>
+<p class="hint" id="setDimensionHint" hidden>Chưa cài VGD Dim (hoặc bản quá cũ) nên chưa ghi kích thước tự động.</p>
+<button id="setApply" class="primary wide" data-needs-selection>Tạo bộ scene</button></div>
 <div class="card"><label>Tên mặt cắt<input id="section_name" value="A-A" maxlength="80"></label>
 <label>Trục cắt<select id="section_axis"><option value="X">X · chiều rộng</option><option value="Y" selected>Y · chiều sâu</option><option value="Z">Z · chiều cao</option></select></label>
 <label>Vị trí <span class="suffix"><input id="section_percent" type="number" min="0" max="100" value="50"><span>%</span></span></label>
@@ -64,7 +82,29 @@
     <label class="check"><input id="cameraKeep" type="checkbox" checked="">Giữ hướng nhìn · nâng/hạ cả mắt và điểm nhìn</label>
     <button id="cameraApply">Xem trước cao độ</button>
     <p class="hint">Dùng trục Z thế giới. Ví dụ sàn +3200, Eye Height 1500 → mắt +4700 mm. Bỏ Giữ hướng nhìn để giữ nguyên điểm nhìn. Xem trước chưa lưu scene; bấm Lưu view trên toolbar hoặc Lưu view ở mục Scene để lưu.</p>
-  </div></details><details class="card disclosure" id="presetOptions"><summary>Lưu / quản lý preset khung</summary><div class="disclosure-body"><label>Tên preset<input id="presetName" maxlength="80" placeholder="Ví dụ: Hồ sơ tủ bếp"></label><div class="inline wrap"><button id="savePreset">Lưu thành preset</button><button id="deletePreset">Xóa preset đã chọn</button></div><p class="hint">Chọn preset tự lưu khung vào scene đang mở. Camera đang Orbit chỉ được lưu khi bấm Lưu view.</p></div></details><button id="updateCurrentView" class="primary wide">Lưu view</button></section><section id="export" class="tab" hidden="">
+  </div></details><details class="card disclosure" id="presetOptions"><summary>Lưu / quản lý preset khung</summary><div class="disclosure-body"><label>Tên preset<input id="presetName" maxlength="80" placeholder="Ví dụ: Hồ sơ tủ bếp"></label><div class="inline wrap"><button id="savePreset">Lưu thành preset</button><button id="deletePreset">Xóa preset đã chọn</button></div><p class="hint">Chọn preset tự lưu khung vào scene đang mở. Camera đang Orbit chỉ được lưu khi bấm Lưu view.</p></div></details><button id="updateCurrentView" class="primary wide">Lưu view</button></section><section id="sheet" class="tab" hidden>
+<h1>Dàn trang &amp; xuất PDF</h1><p>Đặt các view của bộ scene lên khổ giấy, kéo để sắp xếp tự do, rồi xuất PDF hoặc mở trong LayOut.</p>
+<div class="card"><h2>Xuất nhanh</h2>
+<p class="hint">Dùng bộ đã đặt ở mục Mặt cắt: tạo scene, ghi kích thước bằng VGD Dim, dàn trang và xuất PDF một lần.</p>
+<button id="sheetOneClick" class="primary wide" data-needs-selection>Tạo bộ + kích thước + xuất PDF</button></div>
+<div class="card"><h2>Khung tên</h2>
+<div class="inline wrap"><button id="sheetTitleBlock">Chọn PDF khung tên…</button><button id="sheetTitleClear" disabled>Bỏ khung tên</button></div>
+<small id="sheetTitleInfo">Chưa có khung tên. Bản vẽ sẽ có giấy trắng.</small>
+<label>Chừa dải phía dưới cho khung tên (mm)<input id="sheetReserve" type="number" min="0" max="300" value="0"></label>
+<p class="hint">Khung tên nên là PDF khổ A4–A1 cùng khổ với bản vẽ. Khổ giấy và tỷ lệ lấy từ mục Mặt cắt.</p></div>
+<div class="card"><h2>Sắp xếp</h2>
+<button id="sheetPlan" data-needs-scenes>Dàn tự động các scene đã chọn</button>
+<label>Trang<select id="sheetPage"></select></label>
+<div id="sheetStage" class="sheet-stage" aria-label="Khổ giấy xem trước"></div>
+<div id="sheetRows" class="sheet-rows"></div>
+<p class="hint">Kéo khung để di chuyển. Đổi tỷ lệ riêng cho từng view ở bảng dưới; các view khác giữ nguyên.</p></div>
+<div class="card"><h2>Xuất</h2>
+<label>Tên file<input id="sheetName" maxlength="80" placeholder="Để trống: lấy theo tên model"></label>
+<label class="check"><input id="sheetPdf" type="checkbox" checked>Xuất kèm PDF</label>
+<div class="inline wrap"><button id="sheetOpenPdf" hidden>Mở PDF</button><button id="sheetOpenLayout" hidden>Mở trong LayOut</button></div></div>
+<button id="sheetExport" class="primary wide" disabled>Xuất bản vẽ</button>
+</section>
+<section id="export" class="tab" hidden="">
   <h1>Xuất file</h1><p id="exportSelection">Chưa chọn scene. Đánh dấu trong mục Scene.</p><div id="exportSummary" class="card export-summary"></div>
 
 
