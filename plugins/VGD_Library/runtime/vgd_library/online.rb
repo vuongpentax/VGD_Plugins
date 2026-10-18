@@ -116,10 +116,8 @@ module VGD
             info = data['extension']
             raise 'Danh mục chưa có mục extension.version / extension.url cho cập nhật VGD.' unless info.is_a?(Hash) && info['version'].is_a?(String) && info['url']
             download = https(info['url'])
-            current_numbers = Library::VERSION.split(/[.-]/).first(3).map(&:to_i)
-            latest_numbers = info['version'].split(/[.-]/).first(3).map(&:to_i)
-            comparison = latest_numbers <=> current_numbers
-            newer = comparison > 0 || (comparison == 0 && Library::VERSION.include?('beta') && !info['version'].include?('beta'))
+            # Full comparison including beta numbers (e.g. beta.7 > beta.6).
+            newer = VGD::UpdateNotice.newer?(info['version'], Library::VERSION)
             if newer
               answer = UI.messagebox("VGD_Library hiện tại: #{Library::VERSION}\nBản mới: #{info['version']}\n\nMở đường tải RBZ?", MB_YESNO)
               UI.openURL(download) if answer == IDYES
