@@ -194,7 +194,6 @@
           if ($(key).type === 'checkbox') $(key).checked = data[key]; else $(key).value = data[key];
         }
       });
-      theme(data.theme === 'dark');
       $('version').textContent = 'VGD TOOLS · v' + data.version;
       update();
     } else if (event === 'files') renderFiles(data);
