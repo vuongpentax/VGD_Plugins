@@ -3,7 +3,7 @@ module VGD
     module Icons
       module_function
 
-      ASSET_ROOT = File.expand_path('../assets/toolbar', __dir__).freeze
+      ASSET_ROOT = File.expand_path('../assets/toolbar', __dir__.dup.force_encoding(Encoding::UTF_8)).freeze
 
       def bind(command)
         @command = command

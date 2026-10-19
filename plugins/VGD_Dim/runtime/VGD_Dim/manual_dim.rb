@@ -14,6 +14,12 @@ module VGD
       end
 
       class Tool
+        def suspend(view)
+          view.invalidate
+        end
+        def deactivate(view)
+          view.invalidate
+        end
         def initialize(config)
           @config = config
           @phase = :start

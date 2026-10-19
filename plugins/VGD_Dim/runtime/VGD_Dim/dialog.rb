@@ -25,7 +25,7 @@ module VGD
         end
         @dlg=UI::HtmlDialog.new(dialog_title:'VGD Dim',preferences_key:'VGDDim',
           width:760,height:760,min_width:360,min_height:520,resizable:true,style:UI::HtmlDialog::STYLE_DIALOG)
-        @dlg.set_file(File.join(__dir__,'dialog.html'))
+        @dlg.set_file(File.join(__dir__.dup.force_encoding(Encoding::UTF_8),'dialog.html'))
         callback('ready') { push_state }
         callback('scan') { |json| send_js('onScan',Core.summary(Core.scan(Sketchup.active_model,JSON.parse(json).fetch('opts')))) }
         callback('run') do |json|

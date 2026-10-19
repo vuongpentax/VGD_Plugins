@@ -186,6 +186,9 @@ module VGD
     end
 
     class FrameTool
+      def suspend(view)
+        view.invalidate
+      end
       @active = nil
       @suspended = false
       class << self

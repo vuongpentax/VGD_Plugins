@@ -231,7 +231,7 @@ module VGD
       def convert_windows(source, destination)
         executable = File.join(ENV.fetch('SystemRoot', 'C:/Windows'), 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
         args = [executable, '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-STA', '-ExecutionPolicy', 'Bypass',
-                '-File', File.join(__dir__, 'convert_image.ps1'), '-Source', source, '-Destination', destination]
+                '-File', File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'convert_image.ps1'), '-Source', source, '-Destination', destination]
         Open3.popen3(*args) do |input, output, errors, waiter|
           input.close
           readers = [Thread.new { output.read }, Thread.new { errors.read }]

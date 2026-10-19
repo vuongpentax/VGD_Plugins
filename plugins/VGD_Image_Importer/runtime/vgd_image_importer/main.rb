@@ -260,7 +260,7 @@ module VGD_ImageImporter
     @dialog = UI::HtmlDialog.new(dialog_title: 'VGD Image Importer', preferences_key: 'com.vgd.image_importer',
       scrollable: false, resizable: true, width: 860, height: 720, min_width: 540, min_height: 500,
       style: UI::HtmlDialog::STYLE_DIALOG)
-    @dialog.set_file(File.join(__dir__, 'dialog.html'))
+    @dialog.set_file(File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'dialog.html'))
     @dialog.add_action_callback('vgd_importer') do |_context, action, payload|
       begin
         data = JSON.parse(payload)
@@ -315,7 +315,7 @@ module VGD_ImageImporter
     command = UI::Command.new('VGD Image Importer') { show_dialog }
     command.tooltip = 'VGD Image Importer'
     command.status_bar_text = 'Nhập ảnh 2D, sắp xếp ảnh hoặc thêm vật liệu vào model.'
-    command.small_icon = command.large_icon = File.join(__dir__, 'icon.svg')
+    command.small_icon = command.large_icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'icon.svg')
     UI.menu('Plugins').add_submenu('VGD Tools').add_item(command)
     @toolbar = UI::Toolbar.new('VGD Image Importer')
     @toolbar.add_item(command)

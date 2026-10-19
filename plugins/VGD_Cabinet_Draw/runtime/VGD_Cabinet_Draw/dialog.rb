@@ -8,7 +8,7 @@ module VGD_Cabinet_Draw
         scrollable: true, resizable: true, width: 390, height: 720, min_width: 340, min_height: 480,
         style: UI::HtmlDialog::STYLE_DIALOG
       )
-      @window.set_file(File.join(__dir__, 'dialog.html'))
+      @window.set_file(File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'dialog.html'))
       @window.add_action_callback('ready') { |_ctx, _| load_presets }
       @window.add_action_callback('tool') do |_ctx, payload|
         data = JSON.parse(payload)

@@ -28,6 +28,12 @@ module VGD
       end
 
       class PlacementTool
+        def suspend(view)
+          view.invalidate
+        end
+        def deactivate(view)
+          view.invalidate
+        end
         def initialize(model, definition)
           @model, @definition = model, definition
           @input = Sketchup::InputPoint.new

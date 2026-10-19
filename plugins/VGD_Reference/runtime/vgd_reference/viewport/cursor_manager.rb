@@ -15,7 +15,7 @@ module VGD
         return nil unless definition && Sketchup.platform == :platform_win
         cursors[name.to_sym] ||= begin
           filename, hot_x, hot_y = definition
-          path = File.join(__dir__, '..', 'assets', 'cursors', filename)
+          path = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), '..', 'assets', 'cursors', filename)
           UI.create_cursor(File.expand_path(path), hot_x, hot_y)
         end
       rescue StandardError => error

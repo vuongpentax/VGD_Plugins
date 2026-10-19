@@ -5,6 +5,9 @@
 require_relative 'preview_mesh'
 module VGD_Cabinet
   class CabinetDrawTool
+    def suspend(view)
+      view.invalidate
+    end
     def initialize(params)
       @params = params.dup
       @state = 0

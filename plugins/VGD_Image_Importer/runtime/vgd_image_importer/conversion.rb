@@ -81,7 +81,7 @@ module VGD_ImageImporter
     raise 'HEIC/HEIF cần Windows và codec HEIF trên máy.' unless Sketchup.platform == :platform_win
     executable = File.join(ENV.fetch('SystemRoot', 'C:/Windows'), 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
     _, _, result = Open3.capture3(executable, '-NoProfile', '-NonInteractive', '-STA', '-ExecutionPolicy', 'Bypass',
-      '-File', File.join(__dir__, 'convert_image.ps1'), '-Source', source, '-Destination', destination)
+      '-File', File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'convert_image.ps1'), '-Source', source, '-Destination', destination)
     raise 'Không đọc được HEIC/HEIF. Cần codec HEIF của Windows hoặc chuyển ảnh sang PNG/WebP.' unless result.success? && File.file?(destination)
     destination
   end

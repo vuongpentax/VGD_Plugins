@@ -16,7 +16,7 @@ require_relative 'update_notice'
 
 module VGD
   module Library
-    ROOT = File.dirname(__FILE__).freeze
+    ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze
     ACTIONS = %w[rotate random_rotate shuffle fit auto_scale restore reset_uv clear reapply resize swap flow fix_nesting trace].freeze
     TOOL_ACTIONS = %w[rotate_face paint swap_pick replace_pick seamless audit aux save_model].freeze
     COMMANDS = [

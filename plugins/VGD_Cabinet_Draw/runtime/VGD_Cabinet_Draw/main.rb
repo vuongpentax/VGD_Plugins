@@ -21,7 +21,7 @@ module VGD_Cabinet_Draw
     command.tooltip = 'VGD Cabinet Draw — Dựng tủ bán tự động'
     command.status_bar_text = 'Chuyển box thành thùng tủ và dựng chi tiết trực tiếp trong model.'
     command.menu_text = 'VGD Cabinet Draw'
-    icon_path = File.expand_path('../../icon.svg', __dir__)
+    icon_path = File.expand_path('../../icon.svg', __dir__.dup.force_encoding(Encoding::UTF_8))
     command.small_icon = icon_path if File.file?(icon_path)
     command.large_icon = icon_path if File.file?(icon_path)
     UI.menu('Extensions').add_item(command)

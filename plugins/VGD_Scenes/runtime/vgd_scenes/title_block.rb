@@ -9,7 +9,7 @@ module VGD
   module Scenes
     # Turns a title-block PDF into a PNG LayOut can place (Windows PDF engine, no extra software).
     module TitleBlock
-      SCRIPT = File.join(__dir__, 'pdf_to_png.ps1').freeze
+      SCRIPT = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'pdf_to_png.ps1').freeze
       PAPERS = { 'A4' => [297.0, 210.0], 'A3' => [420.0, 297.0], 'A2' => [594.0, 420.0], 'A1' => [841.0, 594.0] }.freeze
       TOLERANCE_MM = 3.0
       DPI = 200

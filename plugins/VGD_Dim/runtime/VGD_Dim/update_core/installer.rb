@@ -14,7 +14,7 @@ module VGD
           Dir.mkdir(work)
           archive = File.join(work, info['filename'])
           File.binwrite(archive, rbz)
-          helper = File.join(__dir__, 'update_installer.ps1')
+          helper = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'update_installer.ps1')
           raise 'Thiếu helper cài đặt updater.' unless File.file?(helper)
           args = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', helper,
                   '-Archive', archive, '-Plugins', plugins, '-ExpectedSha256', info['sha256'],

@@ -1,6 +1,9 @@
 module VGD
   module Reference
     class InteractionTool
+      def suspend(view)
+        view.invalidate
+      end
       MODE_IDLE = :idle
       MODE_MOVE = :move
       MODE_RESIZE = :resize
@@ -36,6 +39,7 @@ module VGD
       end
 
       def deactivate(view)
+        view.invalidate
         @cropper.cancel if @cropper && @mode == MODE_CROP
         @cropper = nil
         @mode = MODE_IDLE

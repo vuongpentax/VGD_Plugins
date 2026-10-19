@@ -9,7 +9,7 @@ module VGD_Cabinet
       end
 
       def runtime_root
-        File.realpath(__dir__)
+        File.realpath(__dir__.dup.force_encoding(Encoding::UTF_8))
       end
 
       def checked_path(root, name)

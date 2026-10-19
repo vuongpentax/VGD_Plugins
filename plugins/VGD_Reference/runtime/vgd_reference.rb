@@ -7,7 +7,7 @@ module VGDReference
   unless file_loaded?(__FILE__)
     extension = SketchupExtension.new(
       'VGD Reference',
-      File.join(__dir__, 'vgd_reference', 'main')
+      File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'vgd_reference', 'main')
     )
     extension.creator = 'VGD'
     extension.description = 'Hiển thị và chỉnh sửa ảnh tham chiếu ngay trên khung nhìn SketchUp.'

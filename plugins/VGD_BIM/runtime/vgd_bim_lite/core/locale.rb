@@ -3,7 +3,7 @@ module VGD
   module BIM
     module Locale
       def self.dictionary
-        @dictionary ||= JSON.parse(File.read(File.expand_path('../config/vi.json', __dir__), encoding: 'UTF-8'))
+        @dictionary ||= JSON.parse(File.read(File.expand_path('../config/vi.json', __dir__.dup.force_encoding(Encoding::UTF_8)), encoding: 'UTF-8'))
       end
       def self.label(group, value)
         dictionary.fetch(group.to_s, {}).fetch(value.to_s, value.to_s)

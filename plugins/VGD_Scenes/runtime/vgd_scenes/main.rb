@@ -292,7 +292,7 @@ module VGD
         @dialog = ::UI::HtmlDialog.new(dialog_title: "VGD Scenes · #{VERSION}", preferences_key: 'VGD.Scenes.Dialog.v1',
           scrollable: false, resizable: true, width: 800, height: 760, min_width: 620, min_height: 540,
           style: ::UI::HtmlDialog::STYLE_DIALOG)
-        @dialog.set_file(File.join(__dir__, 'dialog.html'))
+        @dialog.set_file(File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'dialog.html'))
         @dialog.add_action_callback('ready') { |_context, _payload| send_event('state', state) }
         @dialog.add_action_callback('action') do |_context, payload|
           begin
@@ -370,13 +370,13 @@ module VGD
         copy_command = ::UI::Command.new('VGD · Copy camera và khung') { transfer_command('copyView') }
         paste_command = ::UI::Command.new('VGD · Paste camera và khung') { transfer_command('pasteView') }
         [open_command, quick_command].each do |command|
-          command.small_icon = File.join(__dir__, 'icon.svg')
-          command.large_icon = File.join(__dir__, 'icon.svg')
+          command.small_icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'icon.svg')
+          command.large_icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'icon.svg')
         end
-        quick_command.small_icon = File.join(__dir__, 'quick_views.svg')
-        quick_command.large_icon = File.join(__dir__, 'quick_views.svg')
-        capture_command.small_icon = File.join(__dir__, 'update_view.svg')
-        capture_command.large_icon = File.join(__dir__, 'update_view.svg')
+        quick_command.small_icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'quick_views.svg')
+        quick_command.large_icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'quick_views.svg')
+        capture_command.small_icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'update_view.svg')
+        capture_command.large_icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'update_view.svg')
         open_command.tooltip = 'VGD Scenes · Bảng điều khiển'
         quick_command.tooltip = 'VGD · Tạo/cập nhật 4 view nhanh'
         capture_command.tooltip = 'VGD · Lưu view'
@@ -384,8 +384,8 @@ module VGD
         quick_command.status_bar_text = 'Tạo hoặc cập nhật nhanh 4 góc nhìn cho đối tượng đang chọn.'
         capture_command.status_bar_text = 'Lưu view, hiển thị, mặt cắt và khung hiện tại vào scene đang chọn.'
         [[copy_command, 'copy_scene.svg'], [paste_command, 'paste_scene.svg']].each do |command, icon|
-          command.small_icon = File.join(__dir__, icon)
-          command.large_icon = File.join(__dir__, icon)
+          command.small_icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), icon)
+          command.large_icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), icon)
         end
         copy_command.tooltip = 'VGD · Copy camera và khung'
         paste_command.tooltip = 'VGD · Paste camera và khung'

@@ -3,7 +3,7 @@ require 'json'
 require_relative 'update_notice'
 module VGD
   module BIM
-    ROOT = File.dirname(__FILE__).freeze
+    ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze
     @log_counts = Hash.new(0)
     def self.log(message)
       return if @log_counts.values.inject(0, :+) >= 100

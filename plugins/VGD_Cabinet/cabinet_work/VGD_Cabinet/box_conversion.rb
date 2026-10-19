@@ -7,6 +7,9 @@ module VGD_Cabinet
   # Turns selected block groups into production cabinets only after the user
   # marks each front face and confirms the complete batch with Enter.
   class BoxToCabinetTool
+    def suspend(view)
+      view.invalidate
+    end
     remove_const(:Record) if const_defined?(:Record, false)
     Record = Struct.new(:source, :bounds, :front_normal, :params, :mesh, :transform)
 

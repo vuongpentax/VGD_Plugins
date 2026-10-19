@@ -47,7 +47,7 @@ module VGD
           style: UI::HtmlDialog::STYLE_WINDOW
         )
         register_callbacks(@dialog)
-        @dialog.set_file(File.join(__dir__, 'dialog.html'))
+        @dialog.set_file(File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'dialog.html'))
         @dialog.set_can_close do
           if @busy
             UI.messagebox('VGD Center đang cài plugin. Hãy đợi thao tác hiện tại hoàn tất rồi đóng cửa sổ.')
@@ -112,7 +112,7 @@ module VGD
           return
         end
 
-        path = File.join(__dir__, 'guides', "#{id}.html")
+        path = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'guides', "#{id}.html")
         return UI.messagebox('Tài liệu hướng dẫn chưa có trong bản VGD Center này.') unless File.file?(path)
 
         title = case id
@@ -178,7 +178,7 @@ module VGD
       end
 
       def read_bundled_center_release
-        path = File.join(__dir__, 'center-update.json')
+        path = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'center-update.json')
         validate_center_release(JSON.parse(File.read(path, encoding: 'UTF-8')))
       rescue StandardError
         nil
@@ -347,7 +347,7 @@ module VGD
       end
 
       def read_bundled_catalog
-        path = File.join(__dir__, 'catalog.json')
+        path = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'catalog.json')
         validate_catalog(JSON.parse(File.read(path, encoding: 'UTF-8')))
       rescue StandardError => error
         @catalog_warning = "Không đọc được danh mục đi kèm: #{error.message}"
@@ -823,7 +823,7 @@ module VGD
         command = UI::Command.new('VGD Center') { VGD::Center.show_dialog }
         command.tooltip = 'VGD Center'
         command.status_bar_text = 'Mở trung tâm cài đặt và cập nhật plugin VGD'
-        icon = File.join(__dir__, 'icon.svg')
+        icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'icon.svg')
         command.small_icon = icon
         command.large_icon = icon
         UI.menu('Extensions').add_item(command)

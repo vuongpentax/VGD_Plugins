@@ -193,6 +193,12 @@ module VGD
       end
 
       class PickTool
+        def suspend(view)
+          view.invalidate
+        end
+        def deactivate(view)
+          view.invalidate
+        end
         def initialize(type, name)
           @type, @name = type, name
           @input = Sketchup::InputPoint.new

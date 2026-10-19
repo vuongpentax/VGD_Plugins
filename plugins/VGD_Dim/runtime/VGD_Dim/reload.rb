@@ -1,7 +1,7 @@
 # encoding: UTF-8
 require 'sketchup.rb'
 files = %w[version defaults engine native_style store managed core presets autostyle animation smartdim regions manual_dim probe dialog update_core/manifest update_core/client update_core/installer update_core/updater main].map do |name|
-  File.join(__dir__, name + '.rb')
+  File.join(__dir__.dup.force_encoding(Encoding::UTF_8), name + '.rb')
 end
 files.each { |path| RubyVM::InstructionSequence.compile_file(path) }
 if defined?(VGD::Dim)

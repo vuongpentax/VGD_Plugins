@@ -103,7 +103,7 @@ module VGD
           min_width: 280, min_height: 340, resizable: true
         }
         dialog = UI::HtmlDialog.new(options)
-        dialog.set_file(File.join(__dir__, 'web', 'index.html'))
+        dialog.set_file(File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'web', 'index.html'))
         dialog.set_on_closed do
           if @dialog.equal?(dialog)
             ImageImport.cancel_all

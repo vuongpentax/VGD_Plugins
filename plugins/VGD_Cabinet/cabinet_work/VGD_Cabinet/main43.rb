@@ -42,6 +42,12 @@ module VGD_Cabinet
     def onSelectionCleared(_s); VGD_Cabinet.sync_current_selection; end
   end
   class PlacementTool
+    def suspend(view)
+      view.invalidate
+    end
+    def deactivate(view)
+      view.invalidate
+    end
     def initialize(p, library_name=nil)
       @p=p; @library_name=library_name; @model=Sketchup.active_model; @ip=Sketchup::InputPoint.new
       @entry=library_name ? VGD_Cabinet.library_store.entry(library_name) : nil
@@ -80,6 +86,12 @@ module VGD_Cabinet
     def onCancel(_reason,_view); Sketchup.active_model.select_tool(nil); end
   end
   class UpdatePreviewTool
+    def suspend(view)
+      view.invalidate
+    end
+    def deactivate(view)
+      view.invalidate
+    end
     def initialize(target_pid,model_guid,input,mesh)
       @target_pid=target_pid.to_i; @model_guid=model_guid.to_s
       @input=input.dup; @mesh=mesh
@@ -133,6 +145,12 @@ module VGD_Cabinet
   # Batch edits reuse the ordinary VGD generator, but preview every target
   # before a single undoable operation replaces any of their geometry.
   class BatchUpdatePreviewTool
+    def suspend(view)
+      view.invalidate
+    end
+    def deactivate(view)
+      view.invalidate
+    end
     def initialize(records, model_guid)
       @records = records
       @model_guid = model_guid.to_s
@@ -661,7 +679,7 @@ module VGD_Cabinet
       command=UI::Command.new('VGD Cabinet — Dựng hình') { show_dialog }
       UI.menu('Extensions').add_item(command)
     end
-    icon=File.join(__dir__,'cabinet.svg')
+    icon=File.join(__dir__.dup.force_encoding(Encoding::UTF_8),'cabinet.svg')
     command.small_icon=icon; command.large_icon=icon
     command.tooltip="VGD Cabinet #{VERSION} — Dựng hình kỹ thuật"
     reload_command=UI::Command.new('VGD — Nạp lại mã (Reload)') { reload_extension }

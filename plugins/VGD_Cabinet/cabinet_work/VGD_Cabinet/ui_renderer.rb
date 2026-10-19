@@ -3,7 +3,7 @@
 module VGD_Cabinet
   module UIRenderer
     remove_const(:TEMPLATE_PATH) if const_defined?(:TEMPLATE_PATH, false)
-    TEMPLATE_PATH = File.join(__dir__, 'VGD_Cabinet_UI.html').freeze
+    TEMPLATE_PATH = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'VGD_Cabinet_UI.html').freeze
 
     class << self
       def render(data, presets, defaults)

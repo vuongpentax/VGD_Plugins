@@ -34,7 +34,7 @@ module VGD
     rescue StandardError => error
       show_error(error.message)
     end
-    def reload_extension; load File.join(__dir__,'reload.rb'); end
+    def reload_extension; load File.join(__dir__.dup.force_encoding(Encoding::UTF_8),'reload.rb'); end
     def quick_smart
       saved = SmartDim.saved
       result = SmartDim.execute(saved['opts'],saved['settings'])
@@ -47,7 +47,7 @@ module VGD
     end
     unless @command
       @command=UI::Command.new('VGD Dim') { show_dialog }
-      @command.small_icon=@command.large_icon=File.join(__dir__,'dim.svg')
+      @command.small_icon=@command.large_icon=File.join(__dir__.dup.force_encoding(Encoding::UTF_8),'dim.svg')
       UI.menu('Extensions').add_item(@command) unless file_loaded?(__FILE__)
       @toolbar ||= UI::Toolbar.new('VGD Dim')
       @toolbar.add_item(@command)
@@ -59,7 +59,7 @@ module VGD
     @command.status_bar_text='Smart Dim, Dim/Text/Label, Model Info, preset và Animation.'
     unless @smart_command
       @smart_command = UI::Command.new('Smart Dim một chạm') { quick_smart }
-      @smart_command.small_icon = @smart_command.large_icon = File.join(__dir__,'smart_dim.svg')
+      @smart_command.small_icon = @smart_command.large_icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8),'smart_dim.svg')
       @smart_command.tooltip = 'Smart Dim — dùng thiết lập đã lưu'
       @smart_command.status_bar_text = 'Chọn tủ rồi đo ngay; cập nhật bộ Dim cùng tủ/mặt/Scene.'
       @toolbar.add_item(@smart_command)

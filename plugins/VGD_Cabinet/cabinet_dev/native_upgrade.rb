@@ -6,7 +6,7 @@ require_relative '../cabinet_work/VGD_Cabinet/main43'
 # The native fixture can be rerun from the Ruby Console without restarting SketchUp.
 # `require_relative` caches an already-loaded feature, so refresh the source under test.
 %w[modeling_rules.rb frame_divisions.rb pano.rb rail_joinery.rb modeling.rb defaults.rb preview_mesh.rb model_data.rb box_conversion.rb main43.rb].each do |file|
-  load File.expand_path('../cabinet_work/VGD_Cabinet/'+file,__dir__)
+  load File.expand_path('../cabinet_work/VGD_Cabinet/'+file,__dir__.dup.force_encoding(Encoding::UTF_8))
 end
 module VGDCabinetNativeUpgrade
   module_function
@@ -36,7 +36,7 @@ module VGDCabinetNativeUpgrade
   def run
     model=Sketchup.active_model; saved_selection=model.selection.to_a; active_layer=model.active_layer
     original_roots=model.entities.to_a; was_busy=VGD_Cabinet.instance_variable_get(:@busy)
-    root=File.expand_path('../outputs/upgrade_fixture_'+Time.now.strftime('%Y%m%d_%H%M%S'),__dir__)
+    root=File.expand_path('../outputs/upgrade_fixture_'+Time.now.strftime('%Y%m%d_%H%M%S'),__dir__.dup.force_encoding(Encoding::UTF_8))
     FileUtils.mkdir_p(root)
     report={'version'=>VGD_Cabinet::VERSION,'sketchup'=>Sketchup.version,'ruby'=>RUBY_VERSION,'results'=>[]}
     VGD_Cabinet.instance_variable_set(:@busy,true)

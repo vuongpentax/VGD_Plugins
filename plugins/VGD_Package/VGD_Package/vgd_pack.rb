@@ -9,7 +9,7 @@ require 'time'
 module VGD
   module Pack
     PLUGIN_VERSION = '0.1.3'.freeze unless const_defined?(:PLUGIN_VERSION)
-    ROOT = File.dirname(__FILE__).freeze unless const_defined?(:ROOT)
+    ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze unless const_defined?(:ROOT)
 
     require File.join(ROOT, 'compatibility')
     require File.join(ROOT, 'asset')
