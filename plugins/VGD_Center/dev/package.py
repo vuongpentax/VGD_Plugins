@@ -47,6 +47,9 @@ def check_catalog():
     if catalog.get('schema_version') != 1 or catalog.get('channel') != 'latest':
         fail('catalog.json không đúng schema latest.')
     for product in catalog['products']:
+        # Sản phẩm đang phát triển chưa có bản phát hành; VGD Center cũng bỏ qua chúng.
+        if product.get('lifecycle') == 'in_development':
+            continue
         version = product['version']
         if not re.fullmatch(r'\d+\.\d+\.\d+(?:-(?:alpha|beta)(?:\.\d+)?)?', version):
             fail(f"Phiên bản không hợp lệ: {product['id']} {version}")

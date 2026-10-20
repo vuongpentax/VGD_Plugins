@@ -20,6 +20,15 @@
       "allowed_paths": [
         "vgd_dim.rb",
         "VGD_Dim/"
+      ],
+      "releases": [
+        {
+          "version": "3.3.0-beta.8",
+          "release_channel": "beta",
+          "published_at": "2026-10-16",
+          "tag": "vgd-dim-v3.3.0-beta.8",
+          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-dim-v3.3.0-beta.8"
+        }
       ]
     },
     {
@@ -40,6 +49,15 @@
       "allowed_paths": [
         "vgd_cabinet.rb",
         "VGD_Cabinet/"
+      ],
+      "releases": [
+        {
+          "version": "4.5.2",
+          "release_channel": "stable",
+          "published_at": "2026-10-16",
+          "tag": "vgd-cabinet-v4.5.2",
+          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-cabinet-v4.5.2"
+        }
       ]
     },
     {
@@ -60,26 +78,51 @@
       "allowed_paths": [
         "vgd_library.rb",
         "vgd_library/"
+      ],
+      "releases": [
+        {
+          "version": "1.1.2-beta.6",
+          "release_channel": "beta",
+          "published_at": "2026-10-16",
+          "tag": "vgd-library-v1.1.2-beta.6",
+          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-library-v1.1.2-beta.6"
+        }
       ]
     },
     {
       "id": "image_importer",
       "name": "VGD Image Importer",
       "extension_name": "VGD Image Importer",
-      "version": "1.1.0-beta.5",
-      "release_channel": "beta",
+      "version": "1.1.0",
+      "release_channel": "stable",
       "description": "Nhập ảnh vào SketchUp dưới dạng component, mặt phẳng hoặc vật liệu.",
       "icon": "image_importer",
       "minimum_sketchup": "22.0.0",
       "download": {
-        "filename": "VGD_Image_Importer_v1.1.0-beta.5.rbz",
-        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-image-importer-v1.1.0-beta.5/VGD_Image_Importer_v1.1.0-beta.5.rbz",
-        "size": 65149,
-        "sha256": "dbac56b1402fd4107f3f33b5c7f0407dee623331649dc5c3e9617412969e2201"
+        "filename": "VGD_Image_Importer_v1.1.0.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-image-importer-v1.1.0/VGD_Image_Importer_v1.1.0.rbz",
+        "size": 70258,
+        "sha256": "6b59118f21907928ad4ba0dc246a9ed36279e0ad5d408d06bd739ec0e4f3c616"
       },
       "allowed_paths": [
         "vgd_image_importer.rb",
         "vgd_image_importer/"
+      ],
+      "releases": [
+        {
+          "version": "1.1.0",
+          "release_channel": "stable",
+          "published_at": "2026-10-17",
+          "tag": "vgd-image-importer-v1.1.0",
+          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-image-importer-v1.1.0"
+        },
+        {
+          "version": "1.1.0-beta.5",
+          "release_channel": "beta",
+          "published_at": "2026-10-16",
+          "tag": "vgd-image-importer-v1.1.0-beta.5",
+          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-image-importer-v1.1.0-beta.5"
+        }
       ]
     },
     {
@@ -100,6 +143,15 @@
       "allowed_paths": [
         "vgd_scenes.rb",
         "vgd_scenes/"
+      ],
+      "releases": [
+        {
+          "version": "1.5.3-beta.4",
+          "release_channel": "beta",
+          "published_at": "2026-10-16",
+          "tag": "vgd-scenes-v1.5.3-beta.4",
+          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-scenes-v1.5.3-beta.4"
+        }
       ]
     },
     {
@@ -120,6 +172,15 @@
       "allowed_paths": [
         "vgd_bim_lite.rb",
         "vgd_bim_lite/"
+      ],
+      "releases": [
+        {
+          "version": "0.1.4-alpha",
+          "release_channel": "alpha",
+          "published_at": "2026-10-16",
+          "tag": "vgd-bim-lite-v0.1.4-alpha",
+          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-bim-lite-v0.1.4-alpha"
+        }
       ]
     },
     {
@@ -140,7 +201,30 @@
       "allowed_paths": [
         "vgd_reference.rb",
         "vgd_reference/"
+      ],
+      "releases": [
+        {
+          "version": "1.0.1",
+          "release_channel": "stable",
+          "published_at": "2026-10-16",
+          "tag": "vgd-reference-v1.0.1",
+          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-reference-v1.0.1"
+        }
       ]
+    },
+    {
+      "id": "cabinet_draw",
+      "name": "VGD Cabinet Draw",
+      "kind": "plugin",
+      "lifecycle": "in_development",
+      "visibility": "public"
+    },
+    {
+      "id": "package",
+      "name": "VGD Package",
+      "kind": "plugin",
+      "lifecycle": "in_development",
+      "visibility": "public"
     }
   ]
 }
