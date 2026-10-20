@@ -13,7 +13,7 @@ const assert=(ok,message)=>{if(!ok)throw Error(message);};
   const receive=async(data)=>page.evaluate(value=>VGDScenes.receive('result',value),data);
   const mutations=()=>page.evaluate(()=>calls.filter(call=>call.action!=='refresh'));
   const current=()=>page.locator('.tab:not([hidden])').getAttribute('id');
-  await sync();assert(await page.locator('nav button').count()===5,'Navigation must have five left tabs');
+  await sync();assert(await page.locator('nav button').count()===6,'Navigation must have six left tabs');
   assert(await current()==='views'&&await page.locator('#flowNext').isDisabled(),'Empty model starts in wrong step');
   assert(!await page.locator('#sourceOptions').evaluate(el=>el.open),'Advanced source settings start expanded');
   await page.click('[data-tab="sections"]');assert(await current()==='sections'&&await page.locator('nav [data-tab="sections"]').getAttribute('aria-selected')==='true','Sections must have its own left tab');
@@ -38,8 +38,8 @@ const assert=(ok,message)=>{if(!ok)throw Error(message);};
   await receive({success:true,message:'Đã xuất'});await sync();await page.click('#flowBack');assert(await current()==='compose','Back path wrong');await page.click('#flowBack');assert(await current()==='scenes','Back to selection wrong');
   const out=path.resolve(__dirname,'../outputs');fs.mkdirSync(out,{recursive:true});
   for(const dark of [false,true]){
-   await page.evaluate(dark=>document.body.classList.toggle('dark',dark),dark);
-   const palette=await page.evaluate(()=>({accent:getComputedStyle(document.body).getPropertyValue('--accent').trim(),bg:getComputedStyle(document.body).getPropertyValue('--bg').trim()}));assert(palette.accent===(dark?'#b48963':'#8e6b4c')&&palette.bg===(dark?'#121212':'#f7f7f5'),'VGD theme tokens changed');
+   await page.evaluate(dark=>{document.body.classList.toggle('dark',dark);document.documentElement.setAttribute('data-theme',dark?'dark':'light');},dark);
+   const palette=await page.evaluate(()=>({accent:getComputedStyle(document.body).getPropertyValue('--accent').trim().toLowerCase(),bg:getComputedStyle(document.body).getPropertyValue('--bg').trim().toLowerCase()}));assert(palette.accent===(dark?'#c8a98a':'#8e6b4c')&&palette.bg===(dark?'#121212':'#f7f7f5'),'VGD theme tokens changed');
    for(const viewport of [{width:640,height:780},{width:460,height:540}]){
     await page.setViewportSize(viewport);
     for(const step of ['views','sections','scenes','compose','export']){
