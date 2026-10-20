@@ -3,7 +3,7 @@ require 'extensions.rb'
 require_relative 'vgd_reference/core/constants'
 require_relative 'vgd_reference/core/compatibility'
 
-module VGDReference
+module VGD
   unless file_loaded?(__FILE__)
     extension = SketchupExtension.new(
       'VGD Reference',
