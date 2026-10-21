@@ -6,7 +6,7 @@ $ErrorActionPreference = 'Stop'
 $project = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $runtime = Join-Path $project 'runtime'
 $pluginRoot = [IO.Path]::GetFullPath($PluginRoot).TrimEnd('\')
-$owned = @('vgd_image_importer.rb','vgd_image_importer\engine.rb','vgd_image_importer\main.rb','vgd_image_importer\file_picker.rb','vgd_image_importer\conversion.rb','vgd_image_importer\convert_image.ps1','vgd_image_importer\dialog.html','vgd_image_importer\dialog.css','vgd_image_importer\dialog.js','vgd_image_importer\icon.svg','vgd_image_importer\vgd_icon.png','vgd_image_importer\brand_dark.svg','vgd_image_importer\brand_light.svg')
+$owned = @('vgd_image_importer.rb','vgd_image_importer\engine.rb','vgd_image_importer\main.rb','vgd_image_importer\file_picker.rb','vgd_image_importer\conversion.rb','vgd_image_importer\convert_image.ps1','vgd_image_importer\dialog.html','vgd_image_importer\dialog.css','vgd_image_importer\dialog.js','vgd_image_importer\icon.svg','vgd_image_importer\vgd_icon.png','vgd_image_importer\brand_dark.svg','vgd_image_importer\brand_light.svg','vgd_image_importer\update_notice.rb','vgd_image_importer\vgd-theme\vgd-theme.css','vgd_image_importer\vgd-theme\vgd-theme.js','vgd_image_importer\vgd-theme\fonts\LICENSE','vgd_image_importer\vgd-theme\fonts\manrope-latin-wght-normal.woff2','vgd_image_importer\vgd-theme\fonts\manrope-vietnamese-wght-normal.woff2')
 function Assert-Target([string]$path) {
   $absolute = [IO.Path]::GetFullPath($path)
   if (-not $absolute.StartsWith($pluginRoot + '\', [StringComparison]::OrdinalIgnoreCase)) { throw "Target outside Plugins: $absolute" }
@@ -51,6 +51,7 @@ try {
   foreach ($relative in $owned) {
     $source = Join-Path $runtime $relative
     $target = Assert-Target (Join-Path $pluginRoot $relative)
+    $null = New-Item -ItemType Directory -Path (Split-Path $target) -Force
     Copy-Item -LiteralPath $source -Destination $target -Force
     if ((Get-FileHash -LiteralPath $target).Hash -ne (Get-FileHash -LiteralPath $source).Hash) { throw "Install mismatch: $relative" }
   }
