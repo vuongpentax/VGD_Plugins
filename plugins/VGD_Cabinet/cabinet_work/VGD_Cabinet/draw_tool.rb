@@ -320,10 +320,6 @@ module VGD_Cabinet
         v_x = Geom::Vector3d.new(1, 0, 0)
         v_y = Geom::Vector3d.new(0, 1, 0)
         v_z = Geom::Vector3d.new(0, 0, 1)
-        door_p1 = Geom::Point3d.new(min_x, min_y, min_z)
-        door_p2 = Geom::Point3d.new(max_x, min_y, min_z)
-        door_p3 = Geom::Point3d.new(max_x, min_y, max_z)
-        door_p4 = Geom::Point3d.new(min_x, min_y, max_z)
       when :pos_y # Cánh tủ hướng +Y
         w_mm = dx
         d_mm = dy
@@ -331,10 +327,6 @@ module VGD_Cabinet
         v_x = Geom::Vector3d.new(-1, 0, 0)
         v_y = Geom::Vector3d.new(0, -1, 0)
         v_z = Geom::Vector3d.new(0, 0, 1)
-        door_p1 = Geom::Point3d.new(max_x, max_y, min_z)
-        door_p2 = Geom::Point3d.new(min_x, max_y, min_z)
-        door_p3 = Geom::Point3d.new(min_x, max_y, max_z)
-        door_p4 = Geom::Point3d.new(max_x, max_y, max_z)
       when :neg_x # Cánh tủ hướng -X
         w_mm = dy
         d_mm = dx
@@ -342,10 +334,6 @@ module VGD_Cabinet
         v_x = Geom::Vector3d.new(0, -1, 0)
         v_y = Geom::Vector3d.new(1, 0, 0)
         v_z = Geom::Vector3d.new(0, 0, 1)
-        door_p1 = Geom::Point3d.new(min_x, max_y, min_z)
-        door_p2 = Geom::Point3d.new(min_x, min_y, min_z)
-        door_p3 = Geom::Point3d.new(min_x, min_y, max_z)
-        door_p4 = Geom::Point3d.new(min_x, max_y, max_z)
       when :pos_x # Cánh tủ hướng +X
         w_mm = dy
         d_mm = dx
@@ -353,10 +341,6 @@ module VGD_Cabinet
         v_x = Geom::Vector3d.new(0, 1, 0)
         v_y = Geom::Vector3d.new(-1, 0, 0)
         v_z = Geom::Vector3d.new(0, 0, 1)
-        door_p1 = Geom::Point3d.new(max_x, min_y, min_z)
-        door_p2 = Geom::Point3d.new(max_x, max_y, min_z)
-        door_p3 = Geom::Point3d.new(max_x, max_y, max_z)
-        door_p4 = Geom::Point3d.new(max_x, min_y, max_z)
       end
 
       w_mm = 800.0 if w_mm < 10.0
@@ -365,17 +349,7 @@ module VGD_Cabinet
 
       tr = Geom::Transformation.axes(origin, v_x, v_y, v_z)
 
-      {
-        :w_mm => w_mm,
-        :d_mm => d_mm,
-        :h_mm => h_mm,
-        :tr => tr,
-        :origin => origin,
-        :v_x => v_x,
-        :v_y => v_y,
-        :v_z => v_z,
-        :door_pts => [door_p1, door_p2, door_p3, door_p4]
-      }
+      { :w_mm => w_mm, :d_mm => d_mm, :h_mm => h_mm, :tr => tr }
     end
 
     def reset_tool(view = nil)

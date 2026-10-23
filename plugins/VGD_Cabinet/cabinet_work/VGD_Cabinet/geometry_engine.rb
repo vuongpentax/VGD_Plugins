@@ -297,8 +297,6 @@ module VGD_Cabinet
           end
           door_count = [1, (avail_w / max_door_w).ceil].max
           div_count = door_count <= 2 ? 0 : ((door_count - 1) / 2.0).floor
-        elsif opt_door == "Không Cánh"
-          door_count = 0
         else
           door_count = p['door_count'].to_i
           door_count = 2 if door_count <= 0
@@ -340,15 +338,12 @@ module VGD_Cabinet
         # Quy tắc chiều cao được giải bằng cùng một helper với Draw Tool để preview và geometry không lệch nhau.
         overheight_rule = resolve_overheight_mm(p, h.to_f * 25.4)
         is_overheight = overheight_rule[:is_overheight]
-        auto_overheight = truthy_param?(p, 'auto_overheight', true)
-        max_panel_h = [(p['max_panel_h'] || 2400.0).to_f.mm, 1.mm].max
 
         required_dividers = required_divider_count_mm(p, w.to_f * 25.4)
         div_count = [div_count, required_dividers].max
 
         join_type = p['overheight_join'] || 'Xà Dưới'
         mid_door_gap = (p['mid_door_gap'] || 25.0).to_f.mm
-        door_top_gap = (p['door_top_gap'] || p['mid_door_gap'] || 25.0).to_f.mm
         beam_h = p['beam_h'] ? p['beam_h'].to_f.mm : (mid_door_gap + 25.0.mm)
 
         if door_count == 3 && div_count == 0
@@ -702,7 +697,6 @@ module VGD_Cabinet
         if is_overheight
           h_bot_val = overheight_rule[:h_bottom].to_f.mm
           z_top_cabinet = h - shadow_gap_h
-          h_bottom = h_bot_val
           z_junction = h_bot_val
           z_bot = plinth_h
           z_top = z_top_cabinet - t

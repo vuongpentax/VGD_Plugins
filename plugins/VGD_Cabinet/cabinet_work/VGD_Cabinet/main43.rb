@@ -206,13 +206,19 @@ module VGD_Cabinet
     rescue JSON::ParserError
       nil
     end
-    def set_cabinet_params(e,p)
-      cabinet_id=ModelData.cabinet_id(e) || SecureRandom.uuid
+    def set_cabinet_params(e,p,cabinet_id=nil)
+      cabinet_id ||= ModelData.cabinet_id(e) || SecureRandom.uuid
       e.set_attribute('VGD_Cabinet','is_cabinet',true)
       e.set_attribute('VGD_Cabinet','params_json',JSON.generate(p))
       e.set_attribute('VGD_Cabinet','version',VERSION)
       ModelData.assign_root(e,cabinet_id)
       cabinet_id
+    end
+    # Gán id gốc, id từng cấu kiện và thông số cho tủ vừa dựng (cả definition lẫn instance).
+    def stamp_cabinet(instance,p,cabinet_id)
+      ModelData.stamp(instance,cabinet_id)
+      set_cabinet_params(instance.definition,p,cabinet_id)
+      set_cabinet_params(instance,p,cabinet_id)
     end
     def report_error(e)
       text=e.is_a?(ModelingRules::Invalid) ? e.message : "Không dựng được tủ: #{e.message}"
@@ -236,12 +242,10 @@ module VGD_Cabinet
         definition=model.definitions.add('VGD_CABINET')
         draw_geometry(definition.entities,p)
         cabinet_id=SecureRandom.uuid
-        ModelData.assign_parts(definition.entities,cabinet_id)
-        set_cabinet_params(definition,p); ModelData.assign_root(definition,cabinet_id)
         tr=transform.is_a?(Geom::Transformation) ? transform : Geom::Transformation.new(transform)
         inst=model.active_entities.add_instance(definition,tr); inst.name='Tủ VGD'
         inst.layer=model.layers['VGD_CABINET'] || model.layers.add('VGD_CABINET')
-        set_cabinet_params(inst,p); ModelData.assign_root(inst,cabinet_id)
+        stamp_cabinet(inst,p,cabinet_id)
         model.selection.clear; model.selection.add(inst)
         model.commit_operation; started=false
       rescue => e
@@ -284,9 +288,7 @@ module VGD_Cabinet
         definition.entities.clear!; draw_geometry(definition.entities,p)
         definition.delete_attribute('VGD_Cabinet','stamp_angle')
         definition.delete_attribute('TPlus_Cabinet','stamp_angle')
-        ModelData.assign_parts(definition.entities,cabinet_id)
-        set_cabinet_params(definition,p); set_cabinet_params(inst,p)
-        ModelData.assign_root(definition,cabinet_id); ModelData.assign_root(inst,cabinet_id)
+        stamp_cabinet(inst,p,cabinet_id)
         inst.layer=model.layers['VGD_CABINET'] || model.layers.add('VGD_CABINET')
         model.commit_operation; started=false
       rescue => e
@@ -368,9 +370,7 @@ module VGD_Cabinet
           definition.entities.clear!
           draw_geometry(definition.entities, params)
           definition.delete_attribute('VGD_Cabinet','stamp_angle'); definition.delete_attribute('TPlus_Cabinet','stamp_angle')
-          ModelData.assign_parts(definition.entities,cabinet_id)
-          set_cabinet_params(definition,params); set_cabinet_params(instance,params)
-          ModelData.assign_root(definition,cabinet_id); ModelData.assign_root(instance,cabinet_id)
+          stamp_cabinet(instance,params,cabinet_id)
           instance.layer = model.layers['VGD_CABINET'] || model.layers.add('VGD_CABINET')
         end
         model.commit_operation; started = false
@@ -410,11 +410,9 @@ module VGD_Cabinet
           definition=model.definitions.add('VGD_CABINET')
           draw_geometry(definition.entities,record.params)
           cabinet_id=SecureRandom.uuid
-          ModelData.assign_parts(definition.entities,cabinet_id)
-          set_cabinet_params(definition,record.params); ModelData.assign_root(definition,cabinet_id)
           inst=model.active_entities.add_instance(definition,record.transform)
           inst.name='Tủ VGD'; inst.layer=model.layers['VGD_CABINET'] || model.layers.add('VGD_CABINET')
-          set_cabinet_params(inst,record.params); ModelData.assign_root(inst,cabinet_id)
+          stamp_cabinet(inst,record.params,cabinet_id)
           cabinets << inst
           record.source.erase!
         end
@@ -539,7 +537,7 @@ module VGD_Cabinet
         inst.make_unique
         inst.name=name; inst.layer=model.layers['VGD_CABINET'] || model.layers.add('VGD_CABINET')
         cabinet_id=SecureRandom.uuid
-        set_cabinet_params(inst,entry.fetch('params')); ModelData.assign_root(inst,cabinet_id)
+        set_cabinet_params(inst,entry.fetch('params'),cabinet_id)
         ModelData.assign_parts(definition.entities,cabinet_id)
         model.selection.clear; model.selection.add(inst)
         model.commit_operation; started=false
