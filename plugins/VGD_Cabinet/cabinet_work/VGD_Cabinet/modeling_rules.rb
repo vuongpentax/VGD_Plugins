@@ -120,6 +120,13 @@ module VGD_Cabinet
       values
     end
 
+    # Trả về :zero_scale hoặc :skewed nếu phép biến đổi không cho dựng lại tủ theo trục cục bộ; nil nếu hợp lệ.
+    def axes_problem(transformation)
+      axes=[transformation.xaxis,transformation.yaxis,transformation.zaxis]
+      return :zero_scale if axes.any? { |axis| axis.length < 1e-8 }
+      :skewed if axes.map(&:normalize).combination(2).any? { |a,b| a.dot(b).abs > 1e-6 }
+    end
+
     def validate_single(p)
       t = p['t']; w = p['w']; h = p['h']; d = p['d']
       left = p['opt_left_side'] == 'Bo Cong' ? [p['curve_w'], t].max : t

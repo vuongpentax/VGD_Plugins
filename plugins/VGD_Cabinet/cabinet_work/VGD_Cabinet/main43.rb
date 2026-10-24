@@ -220,6 +220,40 @@ module VGD_Cabinet
       set_cabinet_params(instance.definition,p,cabinet_id)
       set_cabinet_params(instance,p,cabinet_id)
     end
+    def cabinet_layer(model)
+      model.layers['VGD_CABINET'] || model.layers.add('VGD_CABINET')
+    end
+    # Hệ trục chuẩn hóa của tủ tại vị trí hiện tại, xoay thêm stamp_angle của tủ T+/VGD cũ nếu có.
+    def cabinet_frame_transformation(instance)
+      transform=instance.transformation
+      axes=[transform.xaxis,transform.yaxis,transform.zaxis].map(&:normalize)
+      definition=instance.definition
+      stamp=(definition.get_attribute('VGD_Cabinet','stamp_angle',nil) || definition.get_attribute('TPlus_Cabinet','stamp_angle','0')).to_f
+      frame=Geom::Transformation.axes(transform.origin,*axes)
+      stamp.abs > 1e-8 ? frame * Geom::Transformation.rotation(ORIGIN,Z_AXIS,stamp) : frame
+    end
+    # Dựng definition và instance tủ mới từ thông số đã chuẩn hóa. Gọi bên trong operation của SketchUp.
+    def build_cabinet_instance(model,p,transform)
+      definition=model.definitions.add('VGD_CABINET')
+      draw_geometry(definition.entities,p)
+      cabinet_id=SecureRandom.uuid
+      inst=model.active_entities.add_instance(definition,transform)
+      inst.name='Tủ VGD'
+      inst.layer=cabinet_layer(model)
+      stamp_cabinet(inst,p,cabinet_id)
+      inst
+    end
+    # Dựng lại hình học của tủ đã có (giữ trục và vị trí) rồi gán lại id, thông số. Gọi bên trong operation.
+    def rebuild_cabinet(model,instance,p,cabinet_id)
+      instance.make_unique if instance.definition.instances.size > 1
+      definition=instance.definition
+      instance.transformation=cabinet_frame_transformation(instance)
+      definition.entities.clear!; draw_geometry(definition.entities,p)
+      definition.delete_attribute('VGD_Cabinet','stamp_angle')
+      definition.delete_attribute('TPlus_Cabinet','stamp_angle')
+      stamp_cabinet(instance,p,cabinet_id)
+      instance.layer=cabinet_layer(model)
+    end
     def report_error(e)
       text=e.is_a?(ModelingRules::Invalid) ? e.message : "Không dựng được tủ: #{e.message}"
       puts "VGD Cabinet #{e.class}: #{e.message}\n#{Array(e.backtrace).first(5).join("\n")}" unless e.is_a?(ModelingRules::Invalid)
@@ -239,13 +273,8 @@ module VGD_Cabinet
       begin
         model.start_operation('VGD Dựng tủ',true); started=true
         model.active_layer=model.layers[0]
-        definition=model.definitions.add('VGD_CABINET')
-        draw_geometry(definition.entities,p)
-        cabinet_id=SecureRandom.uuid
         tr=transform.is_a?(Geom::Transformation) ? transform : Geom::Transformation.new(transform)
-        inst=model.active_entities.add_instance(definition,tr); inst.name='Tủ VGD'
-        inst.layer=model.layers['VGD_CABINET'] || model.layers.add('VGD_CABINET')
-        stamp_cabinet(inst,p,cabinet_id)
+        inst=build_cabinet_instance(model,p,tr)
         model.selection.clear; model.selection.add(inst)
         model.commit_operation; started=false
       rescue => e
@@ -269,27 +298,15 @@ module VGD_Cabinet
       raise ModelingRules::Invalid,'Đã đổi file SketchUp. Mở lại bảng VGD để đọc tủ của file hiện tại.' unless input['__model_guid'].to_s == model.guid.to_s
       raise ModelingRules::Invalid,'Đối tượng chọn đã thay đổi. Hãy sửa lại thông số của tủ đang chọn.' unless input['__target_pid'].to_s == inst.persistent_id.to_s
       p=normalize(input)
-      tr=inst.transformation; axes=[tr.xaxis,tr.yaxis,tr.zaxis]
-      raise ModelingRules::Invalid,'Tủ có tỷ lệ bằng 0; khôi phục Scale trước khi sửa.' if axes.any? { |a| a.length < 1e-8 }
-      normalized=axes.map(&:normalize)
-      raise ModelingRules::Invalid,'Tủ bị xiên (skew); khôi phục phép biến đổi trước khi sửa.' if normalized.combination(2).any? { |a,b| a.dot(b).abs > 1e-6 }
+      problem=ModelingRules.axes_problem(inst.transformation)
+      raise ModelingRules::Invalid,'Tủ có tỷ lệ bằng 0; khôi phục Scale trước khi sửa.' if problem==:zero_scale
+      raise ModelingRules::Invalid,'Tủ bị xiên (skew); khôi phục phép biến đổi trước khi sửa.' if problem==:skewed
       cabinet_id=ModelData.cabinet_id(inst) || SecureRandom.uuid
       @busy=true; active_tag=model.active_layer; started=false
       begin
         model.start_operation('VGD Cập nhật tủ',true); started=true
         model.active_layer=model.layers[0]
-        inst.make_unique if inst.definition.instances.size > 1
-        definition=inst.definition
-        stamp=definition.get_attribute('VGD_Cabinet','stamp_angle',nil) || definition.get_attribute('TPlus_Cabinet','stamp_angle','0')
-        stamp=stamp.to_f
-        local_tr=Geom::Transformation.axes(tr.origin,*normalized)
-        local_tr=local_tr * Geom::Transformation.rotation(ORIGIN,Z_AXIS,stamp) if stamp.abs > 1e-8
-        inst.transformation=local_tr
-        definition.entities.clear!; draw_geometry(definition.entities,p)
-        definition.delete_attribute('VGD_Cabinet','stamp_angle')
-        definition.delete_attribute('TPlus_Cabinet','stamp_angle')
-        stamp_cabinet(inst,p,cabinet_id)
-        inst.layer=model.layers['VGD_CABINET'] || model.layers.add('VGD_CABINET')
+        rebuild_cabinet(model,inst,p,cabinet_id)
         model.commit_operation; started=false
       rescue => e
         model.abort_operation if started
@@ -335,14 +352,10 @@ module VGD_Cabinet
         current = get_cabinet_params(instance)
         raise ModelingRules::Invalid, 'Có tủ được chọn không có thông số VGD; bỏ tủ đó khỏi vùng chọn.' unless current
         transform = instance.transformation
-        axes = [transform.xaxis, transform.yaxis, transform.zaxis]
-        raise ModelingRules::Invalid, 'Có tủ bị scale bằng 0 hoặc xiên; khôi phục trục trước khi cập nhật.' if axes.any? { |axis| axis.length < 1e-8 } || axes.map(&:normalize).combination(2).any? { |a,b| a.dot(b).abs > 1e-6 }
-        scale = axes.map(&:length)
+        raise ModelingRules::Invalid, 'Có tủ bị scale bằng 0 hoặc xiên; khôi phục trục trước khi cập nhật.' if ModelingRules.axes_problem(transform)
+        scale = [transform.xaxis, transform.yaxis, transform.zaxis].map(&:length)
         params = batch_params_for(current,input,scale)
-        preview_transform = Geom::Transformation.axes(transform.origin,*axes.map(&:normalize))
-        stamp = instance.definition.get_attribute('VGD_Cabinet','stamp_angle',nil) || instance.definition.get_attribute('TPlus_Cabinet','stamp_angle','0')
-        preview_transform = preview_transform * Geom::Transformation.rotation(ORIGIN,Z_AXIS,stamp.to_f) if stamp.to_f.abs > 1e-8
-        { instance: instance, params: params, mesh: PreviewMesh.new(params), transform: preview_transform }
+        { instance: instance, params: params, mesh: PreviewMesh.new(params), transform: cabinet_frame_transformation(instance) }
       end
       model.select_tool(BatchUpdatePreviewTool.new(records, model.guid))
     rescue => error
@@ -358,20 +371,8 @@ module VGD_Cabinet
         model.active_layer = model.layers[0]
         items.each do |pid, params|
           instance = model.find_entity_by_persistent_id(pid.to_i)
-          transform = instance.transformation
-          axes = [transform.xaxis, transform.yaxis, transform.zaxis].map(&:normalize)
           cabinet_id = ModelData.cabinet_id(instance) || SecureRandom.uuid
-          instance.make_unique if instance.definition.instances.size > 1
-          definition = instance.definition
-          stamp = definition.get_attribute('VGD_Cabinet','stamp_angle',nil) || definition.get_attribute('TPlus_Cabinet','stamp_angle','0')
-          local_transform = Geom::Transformation.axes(transform.origin,*axes)
-          local_transform = local_transform * Geom::Transformation.rotation(ORIGIN,Z_AXIS,stamp.to_f) if stamp.to_f.abs > 1e-8
-          instance.transformation = local_transform
-          definition.entities.clear!
-          draw_geometry(definition.entities, params)
-          definition.delete_attribute('VGD_Cabinet','stamp_angle'); definition.delete_attribute('TPlus_Cabinet','stamp_angle')
-          stamp_cabinet(instance,params,cabinet_id)
-          instance.layer = model.layers['VGD_CABINET'] || model.layers.add('VGD_CABINET')
+          rebuild_cabinet(model, instance, params, cabinet_id)
         end
         model.commit_operation; started = false
       rescue => error
@@ -407,12 +408,7 @@ module VGD_Cabinet
         model.active_layer=model.layers[0]
         cabinets=[]
         records.each do |record|
-          definition=model.definitions.add('VGD_CABINET')
-          draw_geometry(definition.entities,record.params)
-          cabinet_id=SecureRandom.uuid
-          inst=model.active_entities.add_instance(definition,record.transform)
-          inst.name='Tủ VGD'; inst.layer=model.layers['VGD_CABINET'] || model.layers.add('VGD_CABINET')
-          stamp_cabinet(inst,record.params,cabinet_id)
+          inst=build_cabinet_instance(model,record.params,record.transform)
           cabinets << inst
           record.source.erase!
         end
@@ -502,8 +498,8 @@ module VGD_Cabinet
     end
     def send_presets(selected=nil,selected_group=nil)
       return unless dialog_visible?
-      store=preset_store
-      @dialog.execute_script("updatePresetList(#{store.load.to_json},#{selected.to_json},#{store.groups.to_json},#{store.preset_groups.to_json},#{selected_group.to_json});")
+      values,groups,preset_groups=preset_store.snapshot
+      @dialog.execute_script("updatePresetList(#{values.to_json},#{selected.to_json},#{groups.to_json},#{preset_groups.to_json},#{selected_group.to_json});")
     end
     def library_store
       root=File.join(ENV['APPDATA'] || File.join(Dir.home,'Library','Application Support'),'VGD','SketchUp','VGD_Cabinet','library')
@@ -518,7 +514,7 @@ module VGD_Cabinet
       raise ModelingRules::Invalid,'Tủ đang chọn đã đổi; chọn lại trước khi lưu.' unless data['__model_guid'].to_s==model.guid.to_s && data['__target_pid'].to_s==inst.persistent_id.to_s
       p=normalize(get_cabinet_params(inst))
       axes=[inst.transformation.xaxis,inst.transformation.yaxis,inst.transformation.zaxis]
-      raise ModelingRules::Invalid,'Tủ có Scale bằng 0 hoặc bị xiên; khôi phục trước khi lưu.' if axes.any? { |axis| axis.length<1e-8 } || axes.map(&:normalize).combination(2).any? { |a,b| a.dot(b).abs>1e-6 }
+      raise ModelingRules::Invalid,'Tủ có Scale bằng 0 hoặc bị xiên; khôi phục trước khi lưu.' if ModelingRules.axes_problem(inst.transformation)
       scale=axes.map(&:length); scale[0]*=-1 if axes[0].cross(axes[1]).dot(axes[2])<0
       library_store.save(data['name'],inst.definition,p,scale,VERSION,data['replace']==true)
       send_library
@@ -535,7 +531,7 @@ module VGD_Cabinet
         scale=Geom::Transformation.scaling(*entry.fetch('scale',[1,1,1]))
         inst=model.active_entities.add_instance(definition,transform*scale)
         inst.make_unique
-        inst.name=name; inst.layer=model.layers['VGD_CABINET'] || model.layers.add('VGD_CABINET')
+        inst.name=name; inst.layer=cabinet_layer(model)
         cabinet_id=SecureRandom.uuid
         set_cabinet_params(inst,entry.fetch('params'),cabinet_id)
         ModelData.assign_parts(definition.entities,cabinet_id)

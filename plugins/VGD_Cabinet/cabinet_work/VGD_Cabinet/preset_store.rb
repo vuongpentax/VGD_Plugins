@@ -41,19 +41,18 @@ module VGD_Cabinet
     def same_json_value?(left,right)
       JSON.generate(left)==JSON.generate(right)
     end
-    def read_current
-      doc=document(File.read(@path,encoding:'UTF-8'))
+    # Nhận một tài liệu đã kiểm tra làm trạng thái hiện tại và trả về danh sách mẫu.
+    def adopt(doc)
       @groups=doc['groups'].dup
       @preset_groups=doc['preset_groups'].dup
       @source_schema=doc['schema']
       doc['presets']
+    end
+    def read_current
+      adopt(document(File.read(@path,encoding:'UTF-8')))
     rescue StandardError => error
       raise "Không đọc được mẫu: #{error.message}. Giữ nguyên file tại #{@path}." unless File.file?(@path+'.bak')
-      backup=document(File.read(@path+'.bak',encoding:'UTF-8'))
-      @groups=backup['groups'].dup
-      @preset_groups=backup['preset_groups'].dup
-      @source_schema=backup['schema']
-      values=backup['presets']
+      values=adopt(document(File.read(@path+'.bak',encoding:'UTF-8')))
       puts "VGD_Cabinet: khôi phục mẫu từ backup; file chính lỗi: #{error.message}"
       values
     end
@@ -74,11 +73,7 @@ module VGD_Cabinet
       if File.file?(@path)
         read_current
       elsif File.file?(@path+'.bak')
-        backup=document(File.read(@path+'.bak',encoding:'UTF-8'))
-        @groups=backup['groups'].dup
-        @preset_groups=backup['preset_groups'].dup
-        @source_schema=backup['schema']
-        backup['presets']
+        adopt(document(File.read(@path+'.bak',encoding:'UTF-8')))
       else
         initial_values
       end
@@ -131,17 +126,18 @@ module VGD_Cabinet
         end
         # Recover a deleted main file before considering first-time migration.
         if File.file?(@path+'.bak')
-          backup=document(File.read(@path+'.bak',encoding:'UTF-8'))
-          @groups=backup['groups'].dup
-          @preset_groups=backup['preset_groups'].dup
-          @source_schema=backup['schema']
-          values=backup['presets']
+          values=adopt(document(File.read(@path+'.bak',encoding:'UTF-8')))
         else
           values=initial_values
         end
         persist(values)
         values
       end
+    end
+    # Một lần đọc (có khóa) cho danh sách mẫu, nhóm và gán nhóm, thay cho ba lần gọi load.
+    def snapshot
+      values=load
+      [values,@groups.dup,@preset_groups.dup]
     end
     def groups; load; @groups.dup; end
     def preset_groups; load; @preset_groups.dup; end
