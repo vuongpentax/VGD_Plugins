@@ -149,8 +149,7 @@ module VGD_Cabinet
       def compute_div_x_positions(div_count, div_pos, door_count, opt_door, inner_w, start_inner_x, w, t, dg_left, dg_right, dg_between, opt_left_side, opt_right_side, curve_w)
         div_x_positions = []
         if opt_door != "Không Cánh" && door_count > 0
-          left_door_inset = ["Cánh Phủ toàn bộ", "Cánh Phủ Hồi Trái"].include?(opt_door) ? ((opt_left_side == "Bo Cong") ? curve_w : 0.mm) : start_inner_x
-          right_door_inset = ["Cánh Phủ toàn bộ", "Cánh Phủ Hồi Phải"].include?(opt_door) ? ((opt_right_side == "Bo Cong") ? curve_w : 0.mm) : (w - inner_w - start_inner_x)
+          left_door_inset, right_door_inset = door_insets(opt_door, opt_left_side, opt_right_side, curve_w, start_inner_x, w, inner_w)
           door_w_total = w - left_door_inset - right_door_inset
           start_door_x = left_door_inset + dg_left
           single_door_w = (door_w_total - dg_left - dg_right - (dg_between * (door_count - 1))) / door_count.to_f
@@ -214,6 +213,28 @@ module VGD_Cabinet
           c_idx > 0 && c_idx < total_comps - 1
         else
           true
+        end
+      end
+
+      # Khoảng lùi hai bên (tính từ mép tủ) của vùng đặt cánh, tùy kiểu cánh phủ/lọt và hông bo.
+      def door_insets(opt_door, opt_left_side, opt_right_side, curve_w, start_inner_x, w, inner_w)
+        left = ["Cánh Phủ toàn bộ", "Cánh Phủ Hồi Trái"].include?(opt_door) ? ((opt_left_side == "Bo Cong") ? curve_w : 0.mm) : start_inner_x
+        right = ["Cánh Phủ toàn bộ", "Cánh Phủ Hồi Phải"].include?(opt_door) ? ((opt_right_side == "Bo Cong") ? curve_w : 0.mm) : (w - inner_w - start_inner_x)
+        [left, right]
+      end
+
+      # Gán công thức mở cánh Dynamic Component (cánh trái xoay -85°, cánh phải xoay 85°) cho definition và instance.
+      def apply_door_animation(door_inst, door_name)
+        return unless door_inst
+        formula = if door_name.include?("Trái")
+                    'ANIMATE("RotZ", 0, -45, -85)'
+                  elsif door_name.include?("Phải")
+                    'ANIMATE("RotZ", 0, 45, 85)'
+                  end
+        return unless formula
+        %w[onclick onClick _onclick_formula].each do |key|
+          door_inst.definition.set_attribute('dynamic_attributes', key, formula)
+          door_inst.set_attribute('dynamic_attributes', key, formula)
         end
       end
 
@@ -694,6 +715,47 @@ module VGD_Cabinet
 
         div_x_positions = compute_div_x_positions(div_count, div_pos, door_count, opt_door, inner_w, start_inner_x, w, t, dg_left, dg_right, dg_between, opt_left_side, opt_right_side, curve_w)
 
+        # Khoang tủ (vị trí bắt đầu và bề rộng) giữa hồi và các hồi giữa.
+        compartment_bounds = -> {
+          bounds_x = [start_inner_x] + div_x_positions + [start_inner_x + inner_w]
+          (0...(bounds_x.length - 1)).filter_map do |c|
+            x_l = bounds_x[c] + (c > 0 ? t : 0.mm)
+            x_r = bounds_x[c + 1]
+            { startX: x_l, width: x_r - x_l } if (x_r - x_l) > 0.001.inch
+          end
+        }
+
+        # Cánh tại d_x có nằm trước khoang đã chọn để đặt ngăn kéo lộ hay không.
+        drawer_overlaps_door = ->(comp_bounds, d_x, door_w) {
+          return false unless opt_drawer == 'Lộ' && comp_bounds.length > 0
+          door_center_x = d_x + door_w / 2.0
+          c_idx = comp_bounds.find_index { |cb| door_center_x >= cb[:startX] && door_center_x <= cb[:startX] + cb[:width] }
+          c_idx && is_comp_selected_for_drawer(c_idx, comp_bounds.length, drawer_comp_pos) ? true : false
+        }
+
+        # Dựng các đợt ngang trong từng khoang. region.call(c, comp_count) trả [chiều cao khả dụng, z bắt đầu] của khoang c.
+        create_shelves = ->(count, adjustable_name, fixed_name, region) {
+          bounds_x = [start_inner_x] + div_x_positions + [start_inner_x + inner_w]
+          comp_count = bounds_x.length - 1
+          (0...comp_count).each do |c|
+            x_left = bounds_x[c] + (c > 0 ? t : 0.mm); x_right = bounds_x[c + 1]
+            comp_width = x_right - x_left
+            next if comp_width <= 0
+            avail_h, start_z = region.call(c, comp_count)
+            gap_shelf = (avail_h - (count * t)) / (count + 1).to_f
+            next unless gap_shelf > 0
+            (1..count).each do |s|
+              sh_clear_x = shelf_adjustable ? shelf_side_clearance : 0.mm
+              sh_front_setback = shelf_adjustable ? shelf_front_setback : 0.mm
+              sh_w = [1.mm, comp_width - sh_clear_x * 2].max
+              sh_y = shelf_adjustable ? [y_inner, sh_front_setback].max : y_inner
+              sh_d = [1.mm, (y_inner + d_inner) - sh_y].max
+              sh_name = shelf_adjustable ? adjustable_name : fixed_name
+              create_board.call(sh_name, sh_w, sh_d, t, x_left + sh_clear_x, sh_y, start_z + (gap_shelf * s) + (t * (s - 1)))
+            end
+          end
+        }
+
         if is_overheight
           h_bot_val = overheight_rule[:h_bottom].to_f.mm
           z_top_cabinet = h - shadow_gap_h
@@ -755,28 +817,11 @@ module VGD_Cabinet
 
           dr_h_inner_calc = (opt_drawer != "Không") ? [drawer_h_param, h_inner_bot].min : h_inner_bot
           if shelf_count > 0
-            bounds_x = [start_inner_x] + div_x_positions + [start_inner_x + inner_w]
-            comp_count = bounds_x.length - 1
-            (0...comp_count).each do |c|
-              x_left = bounds_x[c] + (c > 0 ? t : 0.mm); x_right = bounds_x[c + 1]
-              comp_width = x_right - x_left
-              next if comp_width <= 0
+            create_shelves.call(shelf_count, "Đợt Di Động Dưới", "Đợt Ngang Dưới", ->(c, comp_count) {
               has_drawer_here = opt_drawer != "Không" && is_comp_selected_for_drawer(c, comp_count, drawer_comp_pos)
-              avail_h_bot = has_drawer_here ? [0.mm, h_inner_bot - dr_h_inner_calc].max : h_inner_bot
-              start_z_bot = has_drawer_here ? (z_bot_inner + dr_h_inner_calc) : z_bot_inner
-              gap_shelf = (avail_h_bot - (shelf_count * t)) / (shelf_count + 1).to_f
-              if gap_shelf > 0
-                (1..shelf_count).each { |s| begin
-                    sh_clear_x = shelf_adjustable ? shelf_side_clearance : 0.mm
-                    sh_front_setback = shelf_adjustable ? shelf_front_setback : 0.mm
-                    sh_w = [1.mm, comp_width - sh_clear_x * 2].max
-                    sh_y = shelf_adjustable ? [y_inner, sh_front_setback].max : y_inner
-                    sh_d = [1.mm, (y_inner + d_inner) - sh_y].max
-                    sh_name = shelf_adjustable ? "Đợt Di Động Dưới" : "Đợt Ngang Dưới"
-                    create_board.call(sh_name, sh_w, sh_d, t, x_left + sh_clear_x, sh_y, start_z_bot + (gap_shelf * s) + (t * (s - 1)))
-                  end }
-              end
-            end
+              [has_drawer_here ? [0.mm, h_inner_bot - dr_h_inner_calc].max : h_inner_bot,
+               has_drawer_here ? (z_bot_inner + dr_h_inner_calc) : z_bot_inner]
+            })
           end
 
           upper_has_bottom = (join_type != 'Xà Trên')
@@ -818,29 +863,11 @@ module VGD_Cabinet
           end
 
           if shelf_count_top > 0
-            bounds_x = [start_inner_x] + div_x_positions + [start_inner_x + inner_w]
-            (0...(bounds_x.length - 1)).each do |c|
-              x_left = bounds_x[c] + (c > 0 ? t : 0.mm); x_right = bounds_x[c + 1]
-              comp_width = x_right - x_left
-              next if comp_width <= 0
-              gap_shelf_top = (h_inner_top - (shelf_count_top * t)) / (shelf_count_top + 1).to_f
-              if gap_shelf_top > 0
-                (1..shelf_count_top).each { |s| begin
-                    sh_clear_x = shelf_adjustable ? shelf_side_clearance : 0.mm
-                    sh_front_setback = shelf_adjustable ? shelf_front_setback : 0.mm
-                    sh_w = [1.mm, comp_width - sh_clear_x * 2].max
-                    sh_y = shelf_adjustable ? [y_inner, sh_front_setback].max : y_inner
-                    sh_d = [1.mm, (y_inner + d_inner) - sh_y].max
-                    sh_name = shelf_adjustable ? "Đợt Di Động Trên" : "Đợt Ngang Trên"
-                    create_board.call(sh_name, sh_w, sh_d, t, x_left + sh_clear_x, sh_y, z_bot_inner_top + (gap_shelf_top * s) + (t * (s - 1)))
-                  end }
-              end
-            end
+            create_shelves.call(shelf_count_top, "Đợt Di Động Trên", "Đợt Ngang Trên", ->(_c, _comp_count) { [h_inner_top, z_bot_inner_top] })
           end
 
           if opt_door != "Không Cánh" && !is_full_drawer && door_count > 0
-            left_door_inset = ["Cánh Phủ toàn bộ", "Cánh Phủ Hồi Trái"].include?(opt_door) ? ((opt_left_side == "Bo Cong") ? curve_w : 0.mm) : start_inner_x
-            right_door_inset = ["Cánh Phủ toàn bộ", "Cánh Phủ Hồi Phải"].include?(opt_door) ? ((opt_right_side == "Bo Cong") ? curve_w : 0.mm) : (w - inner_w - start_inner_x)
+            left_door_inset, right_door_inset = door_insets(opt_door, opt_left_side, opt_right_side, curve_w, start_inner_x, w, inner_w)
             door_w_total = w - left_door_inset - right_door_inset
             start_door_x = left_door_inset + dg_left
             door_y = ["Cánh Phủ toàn bộ", "Cánh Phủ Hồi Trái", "Cánh Phủ Hồi Phải"].include?(opt_door) ? -door_t : 0.mm
@@ -866,13 +893,7 @@ module VGD_Cabinet
               end
               door_top_h = [0.001.inch, door_top_max_z - door_top_z].max
 
-              comp_bounds = []
-              bounds_x = [start_inner_x] + div_x_positions + [start_inner_x + inner_w]
-              (0...(bounds_x.length - 1)).each do |c|
-                x_l = bounds_x[c] + (c > 0 ? t : 0.mm)
-                x_r = bounds_x[c + 1]
-                comp_bounds << { startX: x_l, width: x_r - x_l } if (x_r - x_l) > 0.001.inch
-              end
+              comp_bounds = compartment_bounds.call
 
               (0...door_count).each do |i|
                 d_x = start_door_x + i * (single_door_w + dg_between)
@@ -882,15 +903,11 @@ module VGD_Cabinet
                 current_bot_z = door_bot_z
                 current_bot_h = door_bot_h
 
-                if opt_drawer == 'Lộ' && comp_bounds.length > 0
-                  door_center_x = d_x + single_door_w / 2.0
-                  c_idx = comp_bounds.find_index { |cb| door_center_x >= cb[:startX] && door_center_x <= cb[:startX] + cb[:width] }
-                  if c_idx && is_comp_selected_for_drawer(c_idx, comp_bounds.length, drawer_comp_pos)
-                    new_bot_z = z_bot + dr_h_inner_calc - t
-                    door_bot_top = current_bot_z + current_bot_h
-                    current_bot_h = door_bot_top - new_bot_z
-                    current_bot_z = new_bot_z
-                  end
+                if drawer_overlaps_door.call(comp_bounds, d_x, single_door_w)
+                  new_bot_z = z_bot + dr_h_inner_calc - t
+                  door_bot_top = current_bot_z + current_bot_h
+                  current_bot_h = door_bot_top - new_bot_z
+                  current_bot_z = new_bot_z
                 end
 
                 if current_bot_h > 0
@@ -898,28 +915,8 @@ module VGD_Cabinet
                 end
                 d_inst_top = create_board.call("#{d_name} Trên", single_door_w, door_t, door_top_h, d_x, door_y, door_top_z, d_align, true)
 
-                if d_inst_bot && d_name.include?("Trái")
-                  anim_l = 'ANIMATE("RotZ", 0, -45, -85)'
-                  d_inst_bot.definition.set_attribute('dynamic_attributes', 'onclick', anim_l); d_inst_bot.set_attribute('dynamic_attributes', 'onclick', anim_l)
-                  d_inst_bot.definition.set_attribute('dynamic_attributes', 'onClick', anim_l); d_inst_bot.set_attribute('dynamic_attributes', 'onClick', anim_l)
-                  d_inst_bot.definition.set_attribute('dynamic_attributes', '_onclick_formula', anim_l); d_inst_bot.set_attribute('dynamic_attributes', '_onclick_formula', anim_l)
-                elsif d_inst_bot && d_name.include?("Phải")
-                  anim_r = 'ANIMATE("RotZ", 0, 45, 85)'
-                  d_inst_bot.definition.set_attribute('dynamic_attributes', 'onclick', anim_r); d_inst_bot.set_attribute('dynamic_attributes', 'onclick', anim_r)
-                  d_inst_bot.definition.set_attribute('dynamic_attributes', 'onClick', anim_r); d_inst_bot.set_attribute('dynamic_attributes', 'onClick', anim_r)
-                  d_inst_bot.definition.set_attribute('dynamic_attributes', '_onclick_formula', anim_r); d_inst_bot.set_attribute('dynamic_attributes', '_onclick_formula', anim_r)
-                end
-                if d_inst_top && d_name.include?("Trái")
-                  anim_l = 'ANIMATE("RotZ", 0, -45, -85)'
-                  d_inst_top.definition.set_attribute('dynamic_attributes', 'onclick', anim_l); d_inst_top.set_attribute('dynamic_attributes', 'onclick', anim_l)
-                  d_inst_top.definition.set_attribute('dynamic_attributes', 'onClick', anim_l); d_inst_top.set_attribute('dynamic_attributes', 'onClick', anim_l)
-                  d_inst_top.definition.set_attribute('dynamic_attributes', '_onclick_formula', anim_l); d_inst_top.set_attribute('dynamic_attributes', '_onclick_formula', anim_l)
-                elsif d_inst_top && d_name.include?("Phải")
-                  anim_r = 'ANIMATE("RotZ", 0, 45, 85)'
-                  d_inst_top.definition.set_attribute('dynamic_attributes', 'onclick', anim_r); d_inst_top.set_attribute('dynamic_attributes', 'onclick', anim_r)
-                  d_inst_top.definition.set_attribute('dynamic_attributes', 'onClick', anim_r); d_inst_top.set_attribute('dynamic_attributes', 'onClick', anim_r)
-                  d_inst_top.definition.set_attribute('dynamic_attributes', '_onclick_formula', anim_r); d_inst_top.set_attribute('dynamic_attributes', '_onclick_formula', anim_r)
-                end
+                apply_door_animation(d_inst_bot, d_name)
+                apply_door_animation(d_inst_top, d_name)
               end
             end
           end
@@ -953,32 +950,15 @@ module VGD_Cabinet
           full_inner_h = [0.001.inch, z_top - (z_bot + t)].max
           dr_h_inner_calc = (opt_drawer != "Không") ? [drawer_h_param, full_inner_h].min : full_inner_h
           if shelf_count > 0
-            bounds_x = [start_inner_x] + div_x_positions + [start_inner_x + inner_w]
-            comp_count = bounds_x.length - 1
-            (0...comp_count).each do |c|
-              x_left = bounds_x[c] + (c > 0 ? t : 0.mm); x_right = bounds_x[c + 1]; comp_width = x_right - x_left
-              next if comp_width <= 0
+            create_shelves.call(shelf_count, "Đợt Di Động", "Đợt Ngang", ->(c, comp_count) {
               has_drawer_here = opt_drawer != "Không" && is_comp_selected_for_drawer(c, comp_count, drawer_comp_pos)
-              avail_shelf_h = has_drawer_here ? [0.mm, full_inner_h - dr_h_inner_calc].max : full_inner_h
-              start_shelf_z = has_drawer_here ? (z_bot + t + dr_h_inner_calc) : (z_bot + t)
-              gap_shelf = (avail_shelf_h - (shelf_count * t)) / (shelf_count + 1).to_f
-              if gap_shelf > 0
-                (1..shelf_count).each { |s| begin
-                    sh_clear_x = shelf_adjustable ? shelf_side_clearance : 0.mm
-                    sh_front_setback = shelf_adjustable ? shelf_front_setback : 0.mm
-                    sh_w = [1.mm, comp_width - sh_clear_x * 2].max
-                    sh_y = shelf_adjustable ? [y_inner, sh_front_setback].max : y_inner
-                    sh_d = [1.mm, (y_inner + d_inner) - sh_y].max
-                    sh_name = shelf_adjustable ? "Đợt Di Động" : "Đợt Ngang"
-                    create_board.call(sh_name, sh_w, sh_d, t, x_left + sh_clear_x, sh_y, start_shelf_z + (gap_shelf * s) + (t * (s - 1)))
-                  end }
-              end
-            end
+              [has_drawer_here ? [0.mm, full_inner_h - dr_h_inner_calc].max : full_inner_h,
+               has_drawer_here ? (z_bot + t + dr_h_inner_calc) : (z_bot + t)]
+            })
           end
 
           if opt_door != "Không Cánh" && !is_full_drawer && door_count > 0
-            left_door_inset = ["Cánh Phủ toàn bộ", "Cánh Phủ Hồi Trái"].include?(opt_door) ? ((opt_left_side == "Bo Cong") ? curve_w : 0.mm) : start_inner_x
-            right_door_inset = ["Cánh Phủ toàn bộ", "Cánh Phủ Hồi Phải"].include?(opt_door) ? ((opt_right_side == "Bo Cong") ? curve_w : 0.mm) : (w - inner_w - start_inner_x)
+            left_door_inset, right_door_inset = door_insets(opt_door, opt_left_side, opt_right_side, curve_w, start_inner_x, w, inner_w)
             door_w_total = w - left_door_inset - right_door_inset
             start_door_x = left_door_inset + dg_left
             case opt_door
@@ -1001,13 +981,7 @@ module VGD_Cabinet
             single_door_w = (door_w_total - dg_left - dg_right - (dg_between * (door_count - 1))) / door_count.to_f
             if single_door_w > 0 && door_h > 0
 
-              comp_bounds = []
-              bounds_x = [start_inner_x] + div_x_positions + [start_inner_x + inner_w]
-              (0...(bounds_x.length - 1)).each do |c|
-                x_l = bounds_x[c] + (c > 0 ? t : 0.mm)
-                x_r = bounds_x[c + 1]
-                comp_bounds << { startX: x_l, width: x_r - x_l } if (x_r - x_l) > 0.001.inch
-              end
+              comp_bounds = compartment_bounds.call
 
               (0...door_count).each do |i|
                 d_x = start_door_x + i * (single_door_w + dg_between)
@@ -1017,31 +991,17 @@ module VGD_Cabinet
                 current_door_z = door_z
                 current_door_h = door_h
 
-                if opt_drawer == 'Lộ' && comp_bounds.length > 0
-                  door_center_x = d_x + single_door_w / 2.0
-                  c_idx = comp_bounds.find_index { |cb| door_center_x >= cb[:startX] && door_center_x <= cb[:startX] + cb[:width] }
-                  if c_idx && is_comp_selected_for_drawer(c_idx, comp_bounds.length, drawer_comp_pos)
-                    new_door_z = z_bot + dr_h_inner_calc - t
-                    door_top = current_door_z + current_door_h
-                    current_door_h = door_top - new_door_z
-                    current_door_z = new_door_z
-                  end
+                if drawer_overlaps_door.call(comp_bounds, d_x, single_door_w)
+                  new_door_z = z_bot + dr_h_inner_calc - t
+                  door_top = current_door_z + current_door_h
+                  current_door_h = door_top - new_door_z
+                  current_door_z = new_door_z
                 end
 
                 if current_door_h > 0
                   door_inst = create_board.call(door_name, single_door_w, door_t, current_door_h, d_x, door_y, current_door_z, door_align, true)
 
-                  if door_inst && door_name.include?("Trái")
-                    anim_l = 'ANIMATE("RotZ", 0, -45, -85)'
-                    door_inst.definition.set_attribute('dynamic_attributes', 'onclick', anim_l); door_inst.set_attribute('dynamic_attributes', 'onclick', anim_l)
-                    door_inst.definition.set_attribute('dynamic_attributes', 'onClick', anim_l); door_inst.set_attribute('dynamic_attributes', 'onClick', anim_l)
-                    door_inst.definition.set_attribute('dynamic_attributes', '_onclick_formula', anim_l); door_inst.set_attribute('dynamic_attributes', '_onclick_formula', anim_l)
-                  elsif door_inst && door_name.include?("Phải")
-                    anim_r = 'ANIMATE("RotZ", 0, 45, 85)'
-                    door_inst.definition.set_attribute('dynamic_attributes', 'onclick', anim_r); door_inst.set_attribute('dynamic_attributes', 'onclick', anim_r)
-                    door_inst.definition.set_attribute('dynamic_attributes', 'onClick', anim_r); door_inst.set_attribute('dynamic_attributes', 'onClick', anim_r)
-                    door_inst.definition.set_attribute('dynamic_attributes', '_onclick_formula', anim_r); door_inst.set_attribute('dynamic_attributes', '_onclick_formula', anim_r)
-                  end
+                  apply_door_animation(door_inst, door_name)
                 end
               end
             end
@@ -1056,13 +1016,7 @@ module VGD_Cabinet
           dr_h_inner = [drawer_h_param, max_h_avail].min
           dr_z_bot = (effective_opt_drawer == "Lộ") ? z_bot : (z_bot + t)
 
-          comp_bounds = []
-          bounds_x = [start_inner_x] + div_x_positions + [start_inner_x + inner_w]
-          (0...(bounds_x.length - 1)).each do |c|
-            x_l = bounds_x[c] + (c > 0 ? t : 0.mm)
-            x_r = bounds_x[c + 1]
-            comp_bounds << { startX: x_l, width: x_r - x_l } if (x_r - x_l) > 0.001.inch
-          end
+          comp_bounds = compartment_bounds.call
 
           total_comps = comp_bounds.length
           comp_bounds.each_with_index do |cb, c_idx|

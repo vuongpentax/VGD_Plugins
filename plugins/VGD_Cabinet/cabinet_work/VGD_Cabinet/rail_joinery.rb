@@ -13,6 +13,30 @@ module VGD_Cabinet
       end
       inside
     end
+    # Nối các cạnh có hướng thành vòng khép kín (tại mỗi điểm rẽ chọn góc lớn nhất) và bỏ các điểm thẳng hàng.
+    def trace_loops(edges, message)
+      loops=[]
+      until edges.empty?
+        first=edges.keys.first; edges.delete(first); loop=[first[0],first[1]]
+        until loop.last==loop.first
+          candidates=edges.keys.select { |edge| edge[0]==loop.last }
+          raise ModelingRules::Invalid,message if candidates.empty?
+          previous=loop[-2]; current=loop[-1]
+          edge=candidates.max_by do |_,following|
+            a=[current[0]-previous[0],current[1]-previous[1]]; b=[following[0]-current[0],following[1]-current[1]]
+            Math.atan2(a[0]*b[1]-a[1]*b[0],a[0]*b[0]+a[1]*b[1])
+          end
+          edges.delete(edge); loop << edge[1]
+        end
+        loop.pop
+        cleaned=loop.each_index.filter_map do |i|
+          a=loop[i-1]; b=loop[i]; c=loop[(i+1)%loop.size]
+          b if ((b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0])).abs>EPS
+        end
+        loops << cleaned
+      end
+      loops
+    end
     def cut_loops(polygon, cuts)
       xs=(polygon.map(&:first)+cuts.flat_map { |r| [r[0],r[2]] }).uniq.sort
       ys=(polygon.map(&:last)+cuts.flat_map { |r| [r[1],r[3]] }).uniq.sort
@@ -31,27 +55,7 @@ module VGD_Cabinet
           end
         end
       end
-      loops=[]
-      until edges.empty?
-        first=edges.keys.first; edges.delete(first); loop=[first[0],first[1]]
-        until loop.last==loop.first
-          candidates=edges.keys.select { |edge| edge[0]==loop.last }
-          raise ModelingRules::Invalid,'Không khép kín tiết diện khấu hồi.' if candidates.empty?
-          previous=loop[-2]; current=loop[-1]
-          edge=candidates.max_by do |_,following|
-            a=[current[0]-previous[0],current[1]-previous[1]]; b=[following[0]-current[0],following[1]-current[1]]
-            Math.atan2(a[0]*b[1]-a[1]*b[0],a[0]*b[0]+a[1]*b[1])
-          end
-          edges.delete(edge); loop << edge[1]
-        end
-        loop.pop
-        loop=loop.each_index.filter_map do |i|
-          a=loop[i-1]; b=loop[i]; c=loop[(i+1)%loop.size]
-          b if ((b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0])).abs>EPS
-        end
-        loops << loop if loop.size>=3
-      end
-      loops
+      trace_loops(edges,'Không khép kín tiết diện khấu hồi.').select { |loop| loop.size>=3 }
     end
     def points(group)
       group.entities.grep(Sketchup::Face).flat_map(&:vertices).map { |v| v.position.transform(group.transformation) }
@@ -130,27 +134,7 @@ module VGD_Cabinet
           end
         end
       end
-      loops=[]
-      until edges.empty?
-        first=edges.keys.first; edges.delete(first); loop=[first[0],first[1]]
-        until loop.last==loop.first
-          candidates=edges.keys.select { |edge| edge[0]==loop.last }
-          raise ModelingRules::Invalid,'Không khép kín đường biên hông bo sau khi khấu xà.' if candidates.empty?
-          previous=loop[-2]; current=loop[-1]
-          edge=candidates.max_by do |_,following|
-            a=[current[0]-previous[0],current[1]-previous[1]]; b=[following[0]-current[0],following[1]-current[1]]
-            Math.atan2(a[0]*b[1]-a[1]*b[0],a[0]*b[0]+a[1]*b[1])
-          end
-          edges.delete(edge); loop << edge[1]
-        end
-        loop.pop
-        loop=loop.each_index.filter_map do |i|
-          a=loop[i-1]; b=loop[i]; c=loop[(i+1)%loop.size]
-          b if ((b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0])).abs>EPS
-        end
-        loops << loop if loop.size>=3 && FrameDivisions.area(loop).abs>EPS
-      end
-      loops
+      trace_loops(edges,'Không khép kín đường biên hông bo sau khi khấu xà.').select { |loop| loop.size>=3 && FrameDivisions.area(loop).abs>EPS }
     end
     def polygon_difference(polygons, cutters)
       pieces=polygons
