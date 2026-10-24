@@ -28,7 +28,7 @@ with ZipFile(rbz, 'w', ZIP_DEFLATED) as z:
 with ZipFile(source, 'w', ZIP_DEFLATED) as z:
     for file in files:
         z.write(root / 'cabinet_work' / file, 'cabinet_work/' + file)
-    for file in ['check_ruby.cjs', 'dependencies.cjs', 'sketchup_stub.rb', 'test_geometry.rb','test_upgrade.rb','test_library.rb','test_upgrade_ui.cjs','test_preview.cjs','native_upgrade.rb', 'test_vgd_features.rb', 'test_presets.rb', 'test_deploy.py',
+    for file in ['check_ruby.cjs', 'dependencies.cjs', 'sketchup_stub.rb', 'test_geometry.rb','test_upgrade.rb','test_library.rb','test_upgrade_ui.cjs','test_preview.cjs','native_upgrade.rb', 'test_vgd_features.rb', 'test_presets.rb', 'test_deploy.py', 'test_manifest.py',
                  'test_dom.cjs', 'test_payload.cjs', 'test_ui.cjs', 'test_description.rb', 'test_description.cjs', 'description_partial_fixture.json',
                  'defaults.json', 'presets.json', 'redesign_ui.cjs',
                  'ui_beta1.html', 'menu.css', 'menu.js', 'package_menu.py',

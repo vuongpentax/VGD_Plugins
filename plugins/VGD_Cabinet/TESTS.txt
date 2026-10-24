@@ -20,6 +20,7 @@ node cabinet_dev/test_upgrade_ui.cjs
 node cabinet_dev/test_preview.cjs
 node cabinet_dev/test_description.cjs
 python cabinet_dev/test_deploy.py
+python cabinet_dev/test_manifest.py
 
 check_ruby.cjs chạy Ruby WASM và SketchUp stubs, gồm test_geometry.rb, test_vgd_features.rb, test_upgrade.rb, test_library.rb, test_description.rb, test_presets.rb, test_commands.rb và test_reload.rb. Filesystem IO đi qua WASI; flock trong WASI bị mô phỏng. test_dom.cjs và test_payload.cjs kiểm tra DOM/payload; các test UI dùng Edge headless; test_preview.cjs kiểm tra canvas offline. test_deploy.py kiểm tra bộ cài với fixture và PowerShell, không cần SketchUp. Hồ sơ hiện tại nói fixture deploy bị chặn trong môi trường hạn chế nên không ghi nhận PASS cho lần đó.
 
