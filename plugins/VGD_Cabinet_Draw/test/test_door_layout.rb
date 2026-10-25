@@ -1,0 +1,167 @@
+# Test lõi bố cục cánh theo vùng (Ruby thuần, không cần SketchUp).
+# Chạy: ruby test_door_layout.rb [thư mục runtime]
+$stdout.sync = true
+RT = File.expand_path(ARGV[0] || '../runtime/VGD_Cabinet_Draw', __dir__)
+module VGD_Cabinet_Draw; end
+load File.join(RT, 'door_layout.rb')
+L = VGD_Cabinet_Draw::DoorLayout
+$pass = 0
+$fail = []
+def check(name, cond, extra = nil)
+  if cond then $pass += 1 else $fail << name; puts "FAIL: #{name} #{extra}" end
+end
+def raises?
+  yield
+  false
+rescue ArgumentError => e
+  e.message
+end
+def area(layout)
+  layout.regions.sum { |r| (r['u1'] - r['u0']) * (r['v1'] - r['v0']) }
+end
+def tiled?(layout)
+  return false unless (area(layout) - 1.0).abs < 1e-9
+  layout.regions.combination(2).none? do |a, b|
+    [a['u1'], b['u1']].min - [a['u0'], b['u0']].max > 1e-9 && [a['v1'], b['v1']].min - [a['v0'], b['v0']].max > 1e-9
+  end
+end
+
+puts '== 1. Mặc định và chia =='
+l = L::Layout.new(1200, 1940)
+check 'mặc định 1 vùng', l.regions.length == 1 && l.regions.first.values_at('u0', 'u1', 'v0', 'v1') == [0.0, 1.0, 0.0, 1.0]
+a, b = l.split(1, 'vertical', 0.25)
+check 'chia dọc thành 2', l.regions.length == 2 && a['u1'] == 0.25 && b['u0'] == 0.25
+check 'vùng cũ bị thay bằng id mới', l.find(1).nil? && a['id'] != b['id']
+check 'còn ghép đúng hình vuông', tiled?(l)
+c, d = l.split(b['id'], 'horizontal', 0.5)
+check 'chia ngang trong vùng phải: chỉ vùng đó bị chia', l.regions.length == 3 && c['u0'] == 0.25 && d['u0'] == 0.25 && l.find(a['id'])['v1'] == 1.0
+check 'dọc + ngang cùng lúc vẫn ghép đúng', tiled?(l)
+check 'chia sát mép bị từ chối', raises? { l.split(a['id'], 'vertical', 0.005) }
+check 'chia ngoài vùng bị từ chối', raises? { l.split(a['id'], 'vertical', 0.5) }
+check 'vùng không tồn tại', raises? { l.split(999, 'vertical', 0.5) }
+
+puts '== 2. Chia đều, /n =='
+l = L::Layout.new(1200, 1940)
+made = l.split_even(1, 'vertical', 3)
+check '/3 ra 3 vùng đều', made.length == 3 && made.map { |r| (r['u1'] - r['u0']).round(6) }.uniq == [(1.0 / 3).round(6)] && tiled?(l)
+mid = l.sorted[1]
+sub = l.split_even(mid['id'], 'horizontal', 2)
+check 'chia đều ngang trong ô giữa', sub.length == 2 && l.regions.length == 4 && tiled?(l)
+check 'ô trái/phải không đổi', l.sorted.first['v1'] == 1.0 && l.sorted.last['v1'] == 1.0
+check 'chia quá nhiều bị từ chối', raises? { l.split_even(l.sorted.first['id'], 'vertical', 40) }
+check 'n<2 bị từ chối', raises? { l.split_even(l.sorted.first['id'], 'vertical', 1) }
+l.reset_even('horizontal', 4)
+check 'reset_even ngang 4 vùng', l.regions.length == 4 && l.regions.all? { |r| r['u0'] == 0.0 && r['u1'] == 1.0 } && tiled?(l)
+check 'reset_even hoàn tác được', l.undo && l.regions.length == 4 && l.regions.any? { |r| r['u1'] < 1.0 }
+
+puts '== 3. Chia theo mm =='
+l = L::Layout.new(1200, 1940)
+a, b = l.split_mm(1, 'vertical', 300, :low)
+check 'chia 300 mm từ mép trái', (a['u1'] * 1200).round(6) == 300.0
+l = L::Layout.new(1200, 1940)
+a, b = l.split_mm(1, 'vertical', 300, :high)
+check 'chia 300 mm từ mép phải', ((1 - b['u0']) * 1200).round(6) == 300.0
+check 'khoảng cách 0 bị từ chối', raises? { l.split_mm(a['id'], 'vertical', 0) }
+
+puts '== 4. Gộp =='
+l = L::Layout.new(1200, 1940)
+l.split_even(1, 'vertical', 3)
+r = l.sorted
+m = l.merge([r[0]['id'], r[1]['id']])
+check 'gộp 2 vùng kề nhau', l.regions.length == 2 && m['u0'] == 0.0 && (m['u1'] - 2.0 / 3).abs < 1e-6 && tiled?(l)
+l = L::Layout.new(1200, 1940)
+l.split_even(1, 'vertical', 3)
+r = l.sorted
+check 'gộp 2 vùng không kề nhau bị từ chối', raises? { l.merge([r[0]['id'], r[2]['id']]) }
+check 'gộp 1 vùng bị từ chối', raises? { l.merge([r[0]['id']]) }
+# chữ L: không gộp được
+l = L::Layout.new(1200, 1940)
+l.split_even(1, 'vertical', 2)
+right = l.sorted.last
+top, bottom = l.split_even(right['id'], 'horizontal', 2).sort_by { |x| -x['v0'] }
+left = l.sorted.first
+check 'gộp hình chữ L bị từ chối', raises? { l.merge([left['id'], top['id']]) } && raises? { l.merge([left['id'], top['id'], bottom['id']]) } == false
+check 'gộp trái + phải trên + phải dưới ra 1 vùng', l.regions.length == 1 && tiled?(l)
+# gộp rồi chia lại
+l = L::Layout.new(1200, 1940)
+l.split_even(1, 'vertical', 4)
+ids = l.sorted.map { |x| x['id'] }
+l.merge(ids[1..2])
+merged = l.regions.find { |x| (x['u1'] - x['u0'] - 0.5).abs < 1e-6 }
+check 'gộp 2 ô giữa của 4', merged && l.regions.length == 3
+l.split_even(merged['id'], 'vertical', 2)
+check 'chia lại sau khi gộp', l.regions.length == 4 && tiled?(l)
+
+puts '== 5. Hoàn tác và batch =='
+l = L::Layout.new(1200, 1940)
+l.split(1, 'vertical', 0.5)
+l.split(l.sorted.first['id'], 'horizontal', 0.5)
+check 'undo lần 1', l.undo && l.regions.length == 2
+check 'undo lần 2', l.undo && l.regions.length == 1
+check 'hết undo', !l.undo && !l.can_undo?
+l.batch { l.split(1, 'vertical', 0.5); l.split(l.sorted.first['id'], 'horizontal', 0.5) }
+check 'batch = 1 bước hoàn tác', l.regions.length == 3 && l.undo && l.regions.length == 1 && !l.can_undo?
+l.split(1, 'vertical', 0.5)
+copy = l.dup
+copy.split(copy.sorted.first['id'], 'horizontal', 0.5)
+check 'dup không ảnh hưởng bản gốc', l.regions.length == 2 && copy.regions.length == 3
+
+puts '== 6. Gợi ý vị trí chia (propose) =='
+l = L::Layout.new(1200, 1940)
+l.split(1, 'vertical', 0.5)
+rgn = l.sorted.first
+check 'làm tròn 1 mm', (l.propose(rgn['id'], 'horizontal', 0.5003) * 1940).round(6) == (0.5003 * 1940).round.to_f
+check 'sát mép vùng bị từ chối', l.propose(rgn['id'], 'vertical', 0.001).nil?
+# hút vào đường chia sẵn có (ở trục ngang của ô khác)
+l2 = L::Layout.new(1200, 1940)
+l2.split(1, 'vertical', 0.5)
+rgt = l2.sorted.last
+l2.split(rgt['id'], 'horizontal', 0.4)
+lft = l2.sorted.first
+check 'hút vào đường chia ở ô bên cạnh', l2.propose(lft['id'], 'horizontal', 0.4 + 3.0 / 1940) == 0.4
+check 'xa thì không hút', l2.propose(lft['id'], 'horizontal', 0.4 + 30.0 / 1940) != 0.4
+check 'region_at', l2.region_at(0.2, 0.9)['id'] == lft['id'] && l2.region_at(0.8, 0.1)['u0'] == 0.5
+
+puts '== 7. Khe (rects) =='
+l = L::Layout.new(1200, 1940)
+l.split(1, 'vertical', 0.5)
+rc = l.rects(1200.0, 1940.0, 4.0)
+check 'mép ngoài sát mặt tủ', rc.first[:x0] == 0.0 && rc.last[:x1] == 1200.0 && rc.first[:z0] == 0.0 && rc.first[:z1] == 1940.0
+check 'khe chỉ nằm giữa 2 cánh', (rc[1][:x0] - rc[0][:x1]).round(9) == 4.0
+l = L::Layout.new(1200, 1940)
+l.split(1, 'vertical', 0.5)
+l.split(l.sorted.last['id'], 'horizontal', 0.5)
+rc = l.rects(1200.0, 1940.0, 6.0)
+check '3 ô', rc.length == 3
+tops = rc.select { |x| x[:x0] > 600 }
+check 'khe ngang giữa 2 ô chồng nhau', tops.length == 2 && (tops.max_by { |x| x[:z0] }[:z0] - tops.min_by { |x| x[:z0] }[:z1]).round(9) == 6.0
+check 'số cánh trái->phải rồi dưới->trên', rc.map { |x| x[:index] } == [0, 1, 2] && rc[0][:x0] == 0.0
+check 'khe quá lớn làm vùng biến mất, không lỗi', L::Layout.new(100, 100).rects(100.0, 100.0, 500.0).length == 1
+
+puts '== 8. Lưu / đọc =='
+l = L::Layout.new(1200, 1940)
+l.split_even(1, 'vertical', 3)
+l.set_opening(l.sorted[0]['id'], 'left')
+l.set_opening(l.sorted[2]['id'], 'right')
+require 'json'
+data = JSON.parse(JSON.generate(l.to_h))
+back = L::Layout.from_h(data, 1200, 1940)
+check 'đọc lại giữ vùng và loại mở', back.sorted.map { |x| x['opening_type'] } == %w[left none right] && tiled?(back)
+check 'id được giữ', back.ids.sort == l.ids.sort
+check 'next_id không đụng id cũ', (back.split(back.sorted[1]['id'], 'horizontal', 0.5).map { |x| x['id'] } & l.ids).empty?
+check 'loại mở sai về none', L::Layout.from_h({ 'schema' => 2, 'regions' => [{ 'id' => 1, 'u0' => 0, 'u1' => 1, 'v0' => 0, 'v1' => 1, 'opening_type' => 'xyz' }] }).regions.first['opening_type'] == 'none'
+# Schema 1 (bản cũ)
+old_v = { 'schema' => 1, 'regions' => [{ 'index' => 0, 'u0' => 0.0, 'u1' => 0.25, 'axis' => 'vertical' }, { 'index' => 1, 'u0' => 0.25, 'u1' => 1.0, 'axis' => 'vertical' }] }
+lv = L::Layout.from_h(old_v, 1200, 1940)
+check 'schema 1 dọc -> 2 vùng', lv.regions.length == 2 && lv.sorted.first['u1'] == 0.25 && lv.sorted.first['v1'] == 1.0 && tiled?(lv)
+old_h = { 'schema' => 1, 'regions' => [{ 'index' => 0, 'u0' => 0.0, 'u1' => 0.5, 'axis' => 'horizontal' }, { 'index' => 1, 'u0' => 0.5, 'u1' => 1.0, 'axis' => 'horizontal' }] }
+lh = L::Layout.from_h(old_h, 1200, 1940)
+check 'schema 1 ngang -> 2 vùng xếp chồng', lh.regions.length == 2 && lh.regions.all? { |x| x['u0'] == 0.0 && x['u1'] == 1.0 } && tiled?(lh)
+# Dữ liệu hỏng
+bad = { 'schema' => 2, 'regions' => [{ 'id' => 1, 'u0' => 0, 'u1' => 0.6, 'v0' => 0, 'v1' => 1 }, { 'id' => 2, 'u0' => 0.4, 'u1' => 1, 'v0' => 0, 'v1' => 1 }] }
+check 'vùng chồng nhau -> về bố cục đơn', L::Layout.from_h(bad).regions.length == 1
+check 'dữ liệu rỗng / sai kiểu -> bố cục đơn', L::Layout.from_h(nil).regions.length == 1 && L::Layout.from_h({}).regions.length == 1 && L::Layout.from_h('x').regions.length == 1
+check 'vùng thiếu một khoảng -> về bố cục đơn', L::Layout.from_h({ 'schema' => 2, 'regions' => [{ 'id' => 1, 'u0' => 0, 'u1' => 0.5, 'v0' => 0, 'v1' => 1 }] }).regions.length == 1
+
+puts "\nĐạt: #{$pass}   Không đạt: #{$fail.length}"
+exit($fail.empty? ? 0 : 1)

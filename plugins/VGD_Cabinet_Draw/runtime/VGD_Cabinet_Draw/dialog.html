@@ -5,50 +5,288 @@
 <title>VGD Cabinet Draw</title>
 <style>
 :root{--bg:var(--vgd-bg);--panel:var(--vgd-surface);--line:var(--vgd-border);--text:var(--vgd-text);--muted:var(--vgd-muted);--accent:var(--vgd-accent);--warm:var(--vgd-accent-strong)}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:13px "Manrope VGD",Manrope,"Segoe UI",Arial,sans-serif}header{position:sticky;top:0;z-index:2;background:var(--vgd-elevated);border-bottom:1px solid var(--line);padding:14px 16px;display:flex;align-items:center;gap:10px}header b{font-size:16px;letter-spacing:.3px}header small{margin-left:auto;color:var(--muted)}.brand{width:28px;height:28px;border:1px solid var(--vgd-muted);border-radius:7px;display:grid;place-items:center;color:var(--accent);font-weight:700}.wrap{padding:14px;max-width:620px;margin:auto}.intro{color:var(--muted);line-height:1.55;margin:3px 2px 14px}.section{margin:12px 0 16px}.section h2{font-size:13px;margin:0 0 8px;color:var(--accent);font-weight:650}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tool{background:var(--panel);border:1px solid var(--line);border-radius:9px;color:var(--text);padding:10px;text-align:left;min-height:55px;cursor:pointer}.tool:hover{border-color:var(--accent);background:var(--vgd-elevated)}.tool strong{display:block;font-size:13px}.tool span{display:block;color:var(--muted);font-size:11px;margin-top:4px}.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:12px;margin:8px 0}.fields{display:grid;grid-template-columns:1fr 1fr;gap:9px}.field label{display:block;color:var(--muted);font-size:11px;margin:0 0 4px}.field input,.field select,.preset input{width:100%;background:var(--vgd-bg);color:var(--text);border:1px solid var(--vgd-border);border-radius:6px;padding:8px;font:inherit}.actions{display:flex;gap:8px;margin-top:10px}.button{border:1px solid var(--line);background:var(--vgd-elevated);color:var(--text);border-radius:6px;padding:8px 11px;cursor:pointer}.button.primary{background:var(--vgd-tint);border-color:var(--vgd-accent-strong)}.preset-row{display:flex;gap:7px}.preset-row input{flex:1;min-width:0}.preset-list{display:grid;gap:6px;margin-top:10px}.preset-item{display:flex;align-items:center;gap:7px;background:var(--vgd-bg);border:1px solid var(--line);border-radius:6px;padding:7px}.preset-item span{flex:1;overflow:hidden;text-overflow:ellipsis}.preset-item button{padding:5px 7px}.status{position:sticky;bottom:0;background:var(--vgd-surface);border-top:1px solid var(--line);padding:10px 14px;color:var(--vgd-text);min-height:38px;font-size:12px}details summary{cursor:pointer;color:var(--muted);padding:6px 0}.note{font-size:11px;color:var(--muted);line-height:1.5}.switch{display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--muted)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:13px "Manrope VGD",Manrope,"Segoe UI",Arial,sans-serif}header{position:sticky;top:0;z-index:2;background:var(--vgd-elevated);border-bottom:1px solid var(--line);padding:14px 16px;display:flex;align-items:center;gap:10px}header b{font-size:16px;letter-spacing:.3px}header small{margin-left:auto;color:var(--muted)}.brand{width:28px;height:28px;border:1px solid var(--vgd-muted);border-radius:7px;display:grid;place-items:center;color:var(--accent);font-weight:700}.wrap{padding:14px;max-width:620px;margin:auto}.intro{color:var(--muted);line-height:1.55;margin:3px 2px 14px}.section{margin:12px 0 16px}.section h2{font-size:13px;margin:0 0 8px;color:var(--accent);font-weight:650}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tool{background:var(--panel);border:1px solid var(--line);border-radius:9px;color:var(--text);padding:10px;text-align:left;min-height:55px;cursor:pointer}.tool:hover{border-color:var(--accent);background:var(--vgd-elevated)}.tool strong{display:block;font-size:13px}.tool span{display:block;color:var(--muted);font-size:11px;margin-top:4px}.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:12px;margin:8px 0}.fields{display:grid;grid-template-columns:1fr 1fr;gap:9px}.field label{display:block;color:var(--muted);font-size:11px;margin:0 0 4px}.field input,.field select,.preset input{width:100%;background:var(--vgd-bg);color:var(--text);border:1px solid var(--vgd-border);border-radius:6px;padding:8px;font:inherit}.actions{display:flex;gap:8px;margin-top:10px}.button{border:1px solid var(--line);background:var(--vgd-elevated);color:var(--text);border-radius:6px;padding:8px 11px;cursor:pointer}.button.primary{background:var(--vgd-tint);border-color:var(--vgd-accent-strong)}.preset-row{display:flex;gap:7px}.preset-row input{flex:1;min-width:0}.preset-list{display:grid;gap:6px;margin-top:10px}.preset-item{display:flex;align-items:center;gap:7px;background:var(--vgd-bg);border:1px solid var(--line);border-radius:6px;padding:7px}.preset-item span{flex:1;overflow:hidden;text-overflow:ellipsis}.preset-item button{padding:5px 7px}.status{position:sticky;bottom:0;background:var(--vgd-surface);border-top:1px solid var(--line);padding:10px 14px;color:var(--vgd-text);min-height:38px;font-size:12px}.status-row{display:flex;gap:8px;align-items:center}.status-row #status{flex:1}details summary{cursor:pointer;color:var(--muted);padding:6px 0}.note{font-size:11px;color:var(--muted);line-height:1.5}.switch{display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--muted)}
+.panels{display:grid;grid-template-columns:1.25fr .7fr .85fr;gap:6px 8px;align-items:end}.panels .head{color:var(--muted);font-size:11px}.panels .name{display:flex;gap:6px;align-items:center}.panels input[type=number]{width:100%;background:var(--vgd-bg);color:var(--text);border:1px solid var(--vgd-border);border-radius:6px;padding:6px;font:inherit}.cover{grid-column:1 / -1;display:flex;gap:14px;color:var(--muted);font-size:11px;margin:-2px 0 4px 22px}.cover label{display:flex;gap:5px;align-items:center}
+.tabs{display:flex;gap:4px;padding:8px 12px 0;background:var(--vgd-elevated);border-bottom:1px solid var(--line);overflow-x:auto}.tabs button{background:transparent;border:1px solid transparent;border-bottom:none;color:var(--muted);padding:8px 10px;border-radius:7px 7px 0 0;cursor:pointer;white-space:nowrap;font:inherit}.tabs button.on{background:var(--bg);color:var(--accent);border-color:var(--line);font-weight:650}.tab{display:none}.tab.on{display:block}.presetbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px}.presetbar select{flex:1 1 150px;min-width:0;background:var(--vgd-bg);color:var(--text);border:1px solid var(--vgd-border);border-radius:6px;padding:8px;font:inherit}.presetbar .button{padding:6px 8px}.mrow{display:flex;gap:6px;align-items:center;background:var(--vgd-bg);border:1px solid var(--line);border-radius:6px;padding:6px 7px;margin-top:5px}.mrow span{flex:1;overflow:hidden;text-overflow:ellipsis}.mrow .button{padding:4px 7px}.sub{margin:12px 0 4px;color:var(--accent);font-weight:650}.warn{color:#b45309;font-size:11px;line-height:1.5;margin:6px 0}
 </style>
 <link rel="stylesheet" href="vgd-theme/vgd-theme.css"></head>
 <body>
-<header><div class="brand">V</div><b>VGD Cabinet Draw</b><small>1.0.0-beta.1</small><button id="themeBtn" class="vgd-theme-btn" type="button" aria-pressed="false" style="margin-left:auto"></button></header>
+<header><div class="brand">V</div><b>VGD Cabinet Draw</b><small>1.0.0-beta.33</small><button id="themeBtn" class="vgd-theme-btn" type="button" aria-pressed="false" style="margin-left:auto"></button></header>
+<nav class="tabs" id="tabs">
+<button data-tab="box" class="on">1 · Box → Board</button><button data-tab="panel">2 · Đợt / vách</button><button data-tab="door">3 · Cánh tủ</button><button data-tab="drawer">4 · Ngăn kéo</button><button data-tab="settings">5 · Setting chung</button></nav>
 <main class="wrap">
-<p class="intro">Dựng tủ theo từng bước trong model. Chọn khối, xác nhận hướng, thêm cấu kiện bằng thao tác viewport; nhấn Enter để áp dụng thành một lần Undo.</p>
-<section class="section"><h2>01 · THÙNG TỦ</h2><div class="card"><div class="fields">
-<div class="field"><label>Dày ván (mm)</label><input data-key="board_thickness" type="number" min="3" value="17.5"></div>
-<div class="field"><label>Dày hậu (mm)</label><input data-key="back_thickness" type="number" min="3" value="6"></div>
-<div class="field"><label>Kiểu hậu</label><select data-key="back_mode"><option value="groove">Hậu ngậm rãnh</option><option value="overlay">Hậu phủ</option><option value="none">Không hậu</option></select></div>
-<div class="field"><label>Độ ngậm hậu (mm)</label><input data-key="back_groove_depth" type="number" min="0" value="8.75"></div>
-</div><label class="switch"><input data-key="keep_source" type="checkbox"> Giữ lại box gốc</label></div>
-<div class="grid"><button class="tool" data-tool="box"><strong>Box → Cabinet</strong><span>Chọn box và mặt trước trong model</span></button><button class="tool" data-tool="panel"><strong>Đợt / vách</strong><span>Đặt tấm theo cao độ, hỗ trợ /n</span></button></div></section>
-<section class="section"><h2>02 · MẶT TRƯỚC</h2><div class="grid">
-<button class="tool" data-tool="door"><strong>Chia cánh</strong><span>Chia vùng trên mặt tủ</span></button><button class="tool" data-tool="opening"><strong>Mở / đóng cánh</strong><span>Xem trước rồi đảo trạng thái cánh</span></button>
-<button class="tool" data-tool="handle"><strong>Tay nắm</strong><span>Thư viện mẫu và vị trí đặt</span></button><button class="tool" data-tool="drawer"><strong>Ngăn kéo</strong><span>Tạo mặt và thùng kéo</span></button></div></section>
-<section class="section"><h2>03 · KHOANG VÀ CẤU KIỆN</h2><div class="grid">
-<button class="tool" data-tool="wardrobe"><strong>Hộc tủ áo</strong><span>Tạo khoang theo vùng chọn</span></button><button class="tool" data-tool="blocker"><strong>Xà chặn</strong><span>Profile I / L / C</span></button>
-<button class="tool" data-tool="cut"><strong>Cắt ván</strong><span>Cắt theo mặt phẳng tương tác</span></button><button class="tool" data-tool="round"><strong>Bo góc</strong><span>Chọn cạnh và bán kính</span></button><button class="tool" data-tool="notch"><strong>Khấu ván</strong><span>Chọn dao cắt rồi chọn tấm đích</span></button></div></section>
-<details><summary>Preset Manager theo nhóm</summary><div class="card preset"><div class="preset-row"><input id="presetName" placeholder="Tên preset"><button class="button primary" id="savePreset">Lưu cấu hình</button></div><div class="field" style="margin-top:8px"><label>Nhóm</label><div class="preset-row"><input id="presetGroup" value="Chưa phân nhóm"><button class="button" id="addGroup">Tạo nhóm</button></div></div><div class="preset-list" id="presets"></div></div></details>
-<details><summary>Thông số nâng cao</summary><div class="card"><div class="fields">
-<div class="field"><label>Khe cánh (mm)</label><input data-key="door_gap" type="number" value="0"></div><div class="field"><label>Khe mặt hộc (mm)</label><input data-key="drawer_gap" type="number" value="0"></div>
-<div class="field"><label>Khe giữa tầng hộc (mm)</label><input data-key="drawer_tier_gap" type="number" value="25"></div><div class="field"><label>Chiều cao xà chặn (mm)</label><input data-key="blocker_height" type="number" value="60"></div><div class="field"><label>Dạng xà chặn</label><select data-key="blocker_profile"><option value="C">C — chặn trước/sau/nối</option><option value="I">I — chặn trước/sau</option><option value="L">L — chặn trước và ngang</option></select></div>
-<div class="field"><label>Cao mặt hộc (mm)</label><input data-key="drawer_front_height" type="number" value="180"></div><div class="field"><label>Cao khoang áo (mm)</label><input data-key="compartment_height" type="number" value="400"></div>
-<div class="field"><label>Số hộc chia đều</label><input data-key="drawer_count" type="number" min="1" max="20" value="2"></div><div class="field"><label>Profile tay nắm</label><select data-key="handle_profile"><option value="bar">Thanh ngang</option><option value="knob">Núm</option><option value="edge">Tay âm cạnh</option></select></div>
-<div class="field"><label>Dạng cánh</label><select data-key="door_style"><option value="flat">Phẳng</option><option value="shaker">Shaker</option><option value="recessed">Panel âm</option><option value="glass">Khung kính</option></select></div><div class="field"><label>Ghép khung</label><select data-key="frame_joint"><option value="vertical">Dọc</option><option value="horizontal">Ngang</option><option value="miter">Mòi 45°</option></select></div>
-<div class="field"><label>Bản khung (mm)</label><input data-key="frame_width" type="number" value="60"></div><div class="field"><label>Bản thanh ngang (mm)</label><input data-key="rail_width" type="number" value="60"></div>
-<div class="field"><label>Số hàng kính</label><input data-key="glass_rows" type="number" min="1" max="8" value="1"></div><div class="field"><label>Số cột kính</label><input data-key="glass_columns" type="number" min="1" max="8" value="1"></div>
-<div class="field"><label>Bán kính bo (mm)</label><input data-key="round_radius" type="number" value="3"></div><div class="field"><label>Độ lõm panel (mm)</label><input data-key="panel_recess" type="number" value="8"></div>
-</div></div></details>
-<p class="note">Preview dùng nét/màu trong viewport, không tạo entity tạm. Esc hủy thao tác; Enter áp dụng. Lệnh chỉnh model tạo một operation để Undo.</p>
-</main><div class="status" id="status">Sẵn sàng. Chọn công cụ để bắt đầu.</div>
+
+<section class="tab on" id="tab-box" data-pgroup="box">
+<p class="intro"><b>Sửa tủ đã tạo:</b> chọn tủ (chỉ chọn tủ) rồi bấm Box → Board — HUD hiện thông số và Rộng/Sâu/Cao của tủ, sửa rồi Enter để dựng lại; đợt, vách, ngăn kéo, cánh, tay nắm được giữ theo cách đã tạo. Kéo Scale tủ rồi làm như trên để dựng lại đúng độ dày ván. Box → thùng tủ: chọn box, click mặt trước, nhấn Enter (hoặc nút Áp dụng). Box bị scale vẫn dựng được, tủ có kích thước thật như box. Face → ván: chọn các face rồi chạy công cụ, hộp thoại hỏi độ dày. Dày ván và dày hậu đặt ở tab 5.</p>
+<div class="presetbar" data-bar="box"></div>
+<div class="card" data-group="box"><div class="fields">
+<div class="field"><label>Loại tủ</label><select data-key="cabinet_type"><option value="standard">Tủ thường (tủ áo, tủ kệ…)</option><option value="base">Tủ bếp dưới</option><option value="wall">Tủ bếp trên</option><option value="fridge">Thùng tủ lạnh</option></select></div>
+<div class="field"><label>Kiểu hậu</label><select data-key="back_mode"><option value="groove">Hậu ngậm rãnh kín</option><option value="overlay">Hậu phủ</option><option value="none">Không hậu</option></select></div>
+<div class="field"><label>Độ ngậm rãnh (mm)</label><input data-key="back_groove_depth" type="number" step="any" min="0" value="8.75"></div>
+<div class="field"><label>Lớp ván che sau rãnh (mm)</label><input data-key="back_lip" type="number" step="any" min="0" value="10"></div>
+</div>
+<label class="switch"><input data-key="sync_front" type="checkbox" checked> Đồng bộ mặt trước cho tất cả box đã chọn</label>
+<label class="switch"><input data-key="keep_source" type="checkbox"> Giữ lại box gốc</label></div>
+<h2 class="sub">Tủ bếp và thùng tủ lạnh</h2>
+<div class="card" data-group="box"><div class="fields">
+<div class="field"><label>Nóc tủ bếp dưới</label><select data-key="top_mode"><option value="auto">Tự theo loại tủ (bếp dưới = 2 thanh giằng)</option><option value="rails">2 thanh giằng (trước nằm, sau đứng)</option><option value="full">Nóc nguyên tấm</option></select></div>
+<div class="field"><label>Bản giằng nóc (mm)</label><input data-key="top_rail_width" type="number" step="any" min="30" value="100"></div>
+<div class="field"><label>Bản xà treo tủ bếp trên (mm)</label><input data-key="hang_rail_height" type="number" step="any" min="30" value="100"></div>
+<div class="field"><label>Rộng tủ lạnh (mm)</label><input data-key="fridge_width" type="number" step="any" min="300" value="700"></div>
+<div class="field"><label>Cao tủ lạnh (mm)</label><input data-key="fridge_height" type="number" step="any" min="400" value="1800"></div>
+<div class="field"><label>Sâu tủ lạnh (mm)</label><input data-key="fridge_depth" type="number" step="any" min="300" value="650"></div>
+<div class="field"><label>Khe hở 2 bên tủ lạnh (mm)</label><input data-key="fridge_side_gap" type="number" step="any" min="0" value="20"></div>
+<div class="field"><label>Khe hở trên tủ lạnh (mm)</label><input data-key="fridge_top_gap" type="number" step="any" min="0" value="80"></div>
+<div class="field"><label>Khe hở sau tủ lạnh (mm)</label><input data-key="fridge_back_gap" type="number" step="any" min="0" value="50"></div>
+</div>
+<label class="switch"><input data-key="hang_rail" type="checkbox" checked> Tủ bếp trên có xà treo (áp hậu, dưới nóc, để bắt ke/vít treo tường)</label>
+<label class="switch"><input data-key="toe_kick_back" type="checkbox" checked> Có ván chân sau (đỡ phía sau thân tủ)</label>
+<p class="note">Đổi Loại tủ sẽ đặt lại chân, phào, hông chạm đất theo loại đó (sửa lại được). Tủ bếp dưới: vẽ box cao tới mặt dưới mặt đá (thường 820–860 mm gồm mặt đá ⇒ box ≈ 800–830), sâu 550–620; chân 100, len chân lùi 50. Tủ bếp trên: sâu 300–350, cao 700–800, đáy cách mặt bếp 450–600. Thùng tủ lạnh: vẽ box là cả thùng; lòng thùng phải ≥ rộng tủ lạnh + 2 khe, sâu ≥ tủ lạnh + khe sau, đáy hộc trên đặt ở cao tủ lạnh + khe trên. Phần tủ lạnh không có đáy và hậu (thông gió), có khối "Tủ lạnh (tham chiếu)" ở tag VGD_CD_REFERENCE để kiểm tra.</p></div>
+<h2 class="sub">Chân cao và phào trần</h2>
+<div class="card" data-group="box"><div class="fields">
+<div class="field"><label>Chân cao (mm) — 0 là không có chân</label><input data-key="leg_height" type="number" step="any" min="0" value="40"></div>
+<div class="field"><label>Khe tách trần / cao phào (mm) — 0 là không có</label><input data-key="ceiling_strip_height" type="number" step="any" min="0" value="20"></div>
+</div>
+<label class="switch"><input data-key="sides_to_floor" type="checkbox"> Hông chạm đất (hông kéo xuống sàn, đáy giữ ở độ cao chân, ván chân nằm giữa hai hông)</label>
+<label class="switch"><input data-key="sides_to_ceiling" type="checkbox"> Hông đụng trần (hông kéo lên đỉnh box, phào nằm giữa hai hông)</label>
+<label class="switch"><input data-key="toe_kick_enabled" type="checkbox" checked> Tạo ván che chân (ốp chân)</label>
+<label class="switch"><input data-key="cornice_enabled" type="checkbox" checked> Tạo phào trần che khe tách trần</label>
+<details><summary>Ván chân và phào: dày, lùi mặt trước</summary><div class="fields" style="margin-top:8px">
+<div class="field"><label>Dày ván chân (mm)</label><input data-key="toe_kick_thickness" type="number" step="any" min="3" placeholder="= dày ván"></div>
+<div class="field"><label>Lùi ván chân (mm)</label><input data-key="toe_kick_setback" type="number" step="any" min="0" value="50"></div>
+<div class="field"><label>Dày phào trần (mm)</label><input data-key="cornice_thickness" type="number" step="any" min="3" placeholder="= dày ván"></div>
+<div class="field"><label>Lùi phào trần (mm)</label><input data-key="cornice_setback" type="number" step="any" min="0" value="0"></div>
+</div></details>
+<p class="note">Box bạn vẽ là tổng chiều cao gồm cả chân và khe trần. Thân tủ nằm giữa: cao = box − chân − khe trần. Ván chân và phào nằm trong nhóm riêng "Chân &amp; phào" bên trong tủ.</p></div>
+<h2 class="sub">Face → ván</h2>
+<div class="card" data-group="box"><div class="fields">
+<div class="field"><label>Độ dày ván từ face (mm)</label><input data-key="board_face_thickness" type="number" step="any" min="0.5" placeholder="= dày ván chung"></div>
+<div class="field"><label>Phía dựng ván</label><select data-key="board_face_side"><option value="normal">Theo pháp tuyến (mặt phải)</option><option value="reverse">Ngược pháp tuyến (mặt trái)</option><option value="center">Chia đều hai phía</option></select></div>
+</div><p class="note">Chọn face rồi chạy công cụ: hộp thoại hiện ra để xác nhận độ dày và phía. Trong lúc xem trước, Tab đổi phía dựng. Face gốc được giữ nguyên.</p></div>
+<details><summary>Tấm ván: bật/tắt, dày riêng, lùi mặt trước, trùm hông</summary><div class="card" data-group="box">
+<div class="panels">
+<div class="head">Tấm</div><div class="head">Dày (mm)</div><div class="head">Lùi trước (mm)</div>
+<div class="name"><input data-key="panels.side_left.enabled" type="checkbox" checked> Hông trái</div><input data-key="panels.side_left.thickness" type="number" step="any" min="3" placeholder="mặc định"><input data-key="panels.side_left.front_offset" type="number" step="any" min="0" value="0">
+<div class="name"><input data-key="panels.side_right.enabled" type="checkbox" checked> Hông phải</div><input data-key="panels.side_right.thickness" type="number" step="any" min="3" placeholder="mặc định"><input data-key="panels.side_right.front_offset" type="number" step="any" min="0" value="0">
+<div class="name"><input data-key="panels.top.enabled" type="checkbox" checked> Nóc</div><input data-key="panels.top.thickness" type="number" step="any" min="3" placeholder="mặc định"><input data-key="panels.top.front_offset" type="number" step="any" min="0" value="0">
+<div class="cover"><label><input data-key="panels.top.cover_left" type="checkbox"> Nóc trùm hông trái</label><label><input data-key="panels.top.cover_right" type="checkbox"> Nóc trùm hông phải</label></div>
+<div class="name"><input data-key="panels.bottom.enabled" type="checkbox" checked> Đáy</div><input data-key="panels.bottom.thickness" type="number" step="any" min="3" placeholder="mặc định"><input data-key="panels.bottom.front_offset" type="number" step="any" min="0" value="0">
+<div class="cover"><label><input data-key="panels.bottom.cover_left" type="checkbox"> Đáy trùm hông trái</label><label><input data-key="panels.bottom.cover_right" type="checkbox"> Đáy trùm hông phải</label></div>
+<div class="name"><input data-key="panels.back.enabled" type="checkbox" checked> Hậu</div><input data-key="panels.back.thickness" type="number" step="any" min="1" placeholder="mặc định"><span></span>
+</div>
+<p class="note">Để trống ô dày thì dùng dày ván chung (hậu dùng dày hậu chung). Rãnh hậu chỉ là kích thước hậu (hậu ngậm vào hông/nóc/đáy), ván vẫn là khối sạch không khoét. Nóc hoặc đáy đã trùm hông thì hậu không ngậm vào tấm đó.</p>
+</div></details>
+<div class="actions"><button class="tool" data-tool="box"><strong>Chạy: Box → Cabinet</strong><span>Chọn box, click mặt trước, Enter</span></button></div>
+</section>
+
+<section class="tab" id="tab-panel" data-pgroup="panel">
+<p class="intro">Chia đợt (ngang) hoặc vách (đứng) trong thùng tủ. Rê chuột xem trước, click đặt, gõ /n để chia đều.</p>
+<div class="presetbar" data-bar="panel"></div>
+<div class="card" data-group="panel"><div class="fields">
+<div class="field"><label>Kiểu chia đều (/n)</label><select data-key="panel_kind"><option value="thong_thuy">Thông thủy — các ô trống bằng nhau</option><option value="lot_long">Lọt lòng — chia lòng tủ, vách ở ranh giới</option><option value="phu_bi">Phủ bì — chia đều theo tim vách</option></select></div>
+<div class="field"><label>Hướng khi chưa trỏ chuột</label><select data-key="panel_axis"><option value="horizontal">Đợt ngang</option><option value="vertical">Vách đứng</option></select></div>
+<div class="field"><label>Đợt lùi so với mép trước (mm)</label><input data-key="shelf_front_setback" type="number" step="any" min="0" value="20"></div>
+<div class="field"><label>Cánh của tủ (để tính độ lùi đợt)</label><select data-key="panel_door_fit"><option value="auto">Tự đọc từ tủ (chưa có cánh = phủ)</option><option value="phu">Cánh phủ</option><option value="lot">Cánh lọt (đợt lùi thêm dày cánh)</option></select></div></div>
+<label class="switch"><input data-key="panel_limit" type="checkbox" checked> Giới hạn trong ô (đợt/vách chỉ chạy trong ô đang trỏ, không đè vách/đợt có sẵn)</label>
+<p class="note">Đợt và vách dừng sát mặt trước tấm hậu. Vách bằng mặt trước thùng tủ; đợt lùi theo ô trên (cộng dày cánh nếu cánh lọt). Gõ số mm để đặt tấm cách mép dưới/trái của ô. Trong lúc dùng: trỏ chuột vào hông thì chia vách, trỏ vào nóc hoặc đáy thì chia đợt. Phím Tab đổi giữa thông thủy, lọt lòng, phủ bì. Gõ /n để chia thành n ô bằng nhau. Đã đặt tấm đầu tiên thì hướng bị khóa; Backspace bỏ hết để mở khóa.</p></div>
+<div class="actions"><button class="tool" data-tool="panel"><strong>Chạy: Đợt / vách</strong><span>Rê chuột xem trước, click đặt</span></button></div>
+</section>
+
+<section class="tab" id="tab-door" data-pgroup="door">
+<p class="intro">Chia mặt tủ thành các vùng: click chia, Shift-click chọn vùng rồi G để gộp, /n chia đều, gõ số mm. Sau đó mở/đóng cánh (trái, phải, trên, dưới) và đánh dấu hướng mở.</p>
+<div class="presetbar" data-bar="door"></div>
+<div class="card" data-group="door"><div class="fields">
+<div class="field"><label>Hướng chia</label><select data-key="split_axis"><option value="vertical">Dọc (cánh xếp cạnh nhau)</option><option value="horizontal">Ngang (cánh xếp chồng)</option></select></div>
+<div class="field"><label>Chế độ cánh</label><select data-key="door_fit"><option value="phu">Cánh phủ (trùm ngoài mặt tủ)</option><option value="lot">Cánh lọt (nằm trong lòng tủ, chừa khe mép)</option><option value="thong_thuy">Thông thủy (vừa khít lòng tủ)</option></select></div>
+<div class="field"><label>Khe giữa các cánh (mm)</label><input data-key="door_gap" type="number" step="any" value="0"></div>
+<div class="field"><label>Khe mép cánh phủ (mm)</label><input data-key="door_edge_gap" type="number" step="any" min="0" value="0"></div>
+<div class="field"><label>Khe mép cánh lọt (mm) — khe với hông/nóc/đáy</label><input data-key="door_inset_gap" type="number" step="any" min="0" value="2"></div>
+<div class="field"><label>Dạng cánh</label><select data-key="door_style"><option value="flat">Phẳng</option><option value="shaker">Shaker</option><option value="recessed">Panel âm</option><option value="glass">Khung kính</option></select></div>
+<div class="field"><label>Ghép khung</label><select data-key="frame_joint"><option value="vertical">Dọc</option><option value="horizontal">Ngang</option><option value="miter">Mòi 45°</option></select></div>
+<div class="field"><label>Bản khung (mm)</label><input data-key="frame_width" type="number" step="any" value="60"></div>
+<div class="field"><label>Bản thanh ngang (mm)</label><input data-key="rail_width" type="number" step="any" value="60"></div>
+<div class="field"><label>Số hàng kính</label><input data-key="glass_rows" type="number" min="1" max="8" value="1"></div>
+<div class="field"><label>Số cột kính</label><input data-key="glass_columns" type="number" min="1" max="8" value="1"></div>
+<div class="field"><label>Độ lõm panel (mm)</label><input data-key="panel_recess" type="number" step="any" value="8"></div>
+</div>
+<label class="switch"><input data-key="show_dims" type="checkbox"> Hiện kích thước từng cánh khi xem trước</label></div>
+<p class="note">Mở / đóng cánh: click từng cánh, rê chuột trái/phải chọn góc, click chốt rồi click cánh khác (mỗi cánh một góc riêng). Chọn sẵn nhiều cánh thì lần lượt từng cánh. Ctrl+click để gom nhiều cánh dùng chung một góc. Esc bỏ cánh đang chỉnh, Enter kết thúc.</p>
+<div class="grid"><button class="tool" data-tool="door"><strong>Chạy: Chia cánh</strong><span>Chia vùng trên mặt tủ</span></button><button class="tool" data-tool="opening"><strong>Chạy: Mở / đóng cánh</strong><span>Rê chuột chọn góc, click chốt</span></button></div>
+</section>
+
+<section class="tab" id="tab-drawer" data-pgroup="drawer">
+<p class="intro">Rê chuột vào ô của tủ (giữa hông, đợt, vách) để xem trước, click chọn ô (chọn được nhiều ô), gõ /n để đổi số hộc, Enter tạo. Mặt hộc theo kiểu cánh của tủ (phủ/lọt/thông thủy), dùng chung dạng cánh. Thùng hộc tính theo ray: ray bi chừa 13 mm mỗi bên; ray âm lòng thùng = lòng ô − 42 mm; sâu thùng tự lấy theo chiều dài ray chuẩn (250–600 mm).</p>
+<div class="presetbar" data-bar="drawer"></div>
+<div class="card" data-group="drawer"><div class="fields">
+<div class="field"><label>Số hộc</label><input data-key="drawer_count" type="number" min="1" max="20" value="2"></div>
+<div class="field"><label>Cao mặt hộc (mm) — 0 là chia đều ô</label><input data-key="drawer_front_height" type="number" step="any" min="0" value="0"></div>
+<div class="field"><label>Khe giữa các mặt hộc (mm)</label><input data-key="drawer_gap" type="number" step="any" value="0"></div>
+<div class="field"><label>Kiểu mặt hộc</label><select data-key="drawer_fit"><option value="auto">Theo cánh của tủ (chưa có cánh = phủ)</option><option value="phu">Phủ</option><option value="lot">Lọt</option><option value="thong_thuy">Thông thủy</option></select></div>
+<div class="field"><label>Ray</label><select data-key="drawer_slide"><option value="side">Ray bi lắp bên (chừa 13 mm mỗi bên)</option><option value="under">Ray âm (lòng thùng = lòng ô − 42 mm)</option></select></div>
+<div class="field"><label>Sâu thùng (mm) — 0 là tự theo ray chuẩn</label><input data-key="drawer_depth" type="number" step="any" min="0" value="0"></div>
+<div class="field"><label>Dày ván thùng (mm)</label><input data-key="drawer_box_thickness" type="number" step="any" min="3" placeholder="= dày ván"></div>
+<div class="field"><label>Dày đáy thùng (mm)</label><input data-key="drawer_bottom_thickness" type="number" step="any" min="3" value="8"></div>
+<div class="field"><label>Chế độ ngăn kéo</label><select data-key="drawer_mode"><option value="full">Mặt hộc + thùng kéo</option><option value="front_only">Chỉ mặt hộc</option><option value="box_only">Chỉ thùng kéo</option></select></div>
+</div>
+<label class="switch"><input data-key="drawer_show_dims" type="checkbox"> Hiện kích thước mặt hộc khi xem trước</label></div>
+<div class="actions"><button class="tool" data-tool="drawer"><strong>Chạy: Ngăn kéo</strong><span>Tạo mặt và thùng kéo</span></button></div>
+</section>
+
+<section class="tab" id="tab-settings">
+<p class="intro">Thông số dùng chung cho cả bốn công cụ, và quản lý danh sách setting đã lưu của từng công cụ.</p>
+<h2 class="sub">Thông số gốc dùng chung</h2>
+<div class="card" data-group="base"><div class="fields">
+<div class="field"><label>Dày ván (mm)</label><input data-key="board_thickness" type="number" step="any" min="3" value="17.5"></div>
+<div class="field"><label>Dày hậu (mm)</label><input data-key="back_thickness" type="number" step="any" min="1" value="6"></div>
+</div>
+<div class="actions"><button class="button primary" id="saveBase">Lưu thông số gốc</button></div>
+<p class="note">Lưu xong, thông số này áp cho mọi lần chạy công cụ và không nằm trong từng setting riêng. Chỉ cần sửa ở đây một lần.</p></div>
+<h2 class="sub">Setting đã lưu theo công cụ</h2>
+<div id="manage"></div>
+<div class="actions"><button class="button" id="exportBtn">Xuất file setting</button><button class="button" id="importBtn">Nhập file setting</button></div>
+<p class="warn">Nhập file chỉ gộp thêm, không ghi đè setting hiện có. Nên xuất file sao lưu trước khi cài đè bản mới.</p>
+<details><summary>Công cụ khác (chưa có setting riêng)</summary><div class="card" data-group="extra"><div class="fields">
+<div class="field"><label>Chiều cao xà chặn (mm)</label><input data-key="blocker_height" type="number" step="any" value="60"></div><div class="field"><label>Dạng xà chặn</label><select data-key="blocker_profile"><option value="C">C — chặn trước/sau/nối</option><option value="I">I — chặn trước/sau</option><option value="L">L — chặn trước và ngang</option></select></div>
+<div class="field"><label>Cao khoang áo (mm)</label><input data-key="compartment_height" type="number" step="any" value="400"></div><div class="field"><label>Profile tay nắm</label><select data-key="handle_profile"><option value="bar">Thanh ngang</option><option value="knob">Núm</option></select></div><div class="field"><label>Dài tay nắm (mm)</label><input data-key="handle_width" type="number" step="any" min="20" value="128"></div><div class="field"><label>Vị trí tay nắm</label><select data-key="handle_position"><option value="auto">Tự đặt theo hướng mở</option><option value="custom">Tại điểm click</option></select></div><div class="field"><label>Cách mép cánh (mm)</label><input data-key="handle_edge_offset" type="number" step="any" min="0" value="50"></div>
+<div class="field"><label>Bán kính bo (mm)</label><input data-key="round_radius" type="number" step="any" value="3"></div>
+</div></div>
+<div class="grid">
+<button class="tool" data-tool="handle"><strong>Tay nắm</strong><span>Thư viện mẫu và vị trí đặt</span></button><button class="tool" data-tool="bay"><strong>Khoang ngăn kéo</strong><span>Dựng khoang và ngăn kéo trong ô</span></button>
+<button class="tool" data-tool="blocker"><strong>Xà chặn</strong><span>Profile I / L / C</span></button><button class="tool" data-tool="cut"><strong>Cắt ván</strong><span>Cắt theo mặt phẳng</span></button>
+<button class="tool" data-tool="round"><strong>Bo góc</strong><span>Chọn cạnh và bán kính</span></button><button class="tool" data-tool="notch"><strong>Khấu ván</strong><span>Chọn dao cắt rồi tấm đích</span></button></div></details>
+</section>
+
+<p class="note">Preview dùng nét/màu trong viewport, không tạo entity tạm. Esc hủy; Enter áp dụng (hoặc nút Áp dụng / Hủy bên dưới). Mỗi lệnh chỉnh model là một lần Undo. Trong viewport có 3 phần: Mẫu (góc trái, click để dùng), Chế độ (giữa trên) và Thông số (góc phải, click để sửa: số thì gõ vào ô VCB rồi Enter). Hướng dẫn ngắn nằm ở thanh trạng thái dưới cùng của SketchUp.</p>
+</main><div class="status"><div class="status-row"><div id="status">Sẵn sàng. Chọn tab và chạy công cụ.</div><button class="button primary" id="applyBtn" type="button">Áp dụng</button><button class="button" id="cancelBtn" type="button">Hủy</button></div></div>
 <script src="vgd-theme/vgd-theme.js"></script>
 <script>
 VGDTheme.start({ key: "vgd.cabinet_draw.theme", button: document.getElementById("themeBtn") });
-const VGD={};
-VGD.settings=()=>Object.fromEntries([...document.querySelectorAll('[data-key]')].map(e=>[e.dataset.key,e.type==='checkbox'?e.checked:e.type==='number'?Number(e.value):e.value]));
-VGD.loadSettings=p=>document.querySelectorAll('[data-key]').forEach(e=>{if(p[e.dataset.key]!==undefined){if(e.type==='checkbox')e.checked=!!p[e.dataset.key];else e.value=p[e.dataset.key]}});
+const VGD={sel:{},data:null,firstState:true};
+const GROUPS=['box','panel','door','drawer'];
+const GROUP_NAMES={box:'Thùng tủ',panel:'Đợt / vách',door:'Cánh tủ',drawer:'Ngăn kéo'};
+const fields=()=>[...document.querySelectorAll('[data-key]')];
+const groupOf=e=>{const w=e.closest('[data-group]');return w?w.dataset.group:'extra'};
+const fieldsOf=g=>g?fields().filter(e=>groupOf(e)===g):fields();
+function readField(e){
+  if(e.type==='checkbox')return e.checked;
+  if(e.type==='number')return e.value===''?null:Number(e.value);
+  return e.value;
+}
+function setNested(obj,path,value){
+  const parts=path.split('.');let o=obj;
+  for(let i=0;i<parts.length-1;i++){o=o[parts[i]]=o[parts[i]]||{}}
+  o[parts[parts.length-1]]=value;
+}
+function flatten(obj,prefix,out){
+  for(const [k,v] of Object.entries(obj||{})){
+    const key=prefix?prefix+'.'+k:k;
+    if(v&&typeof v==='object'&&!Array.isArray(v))flatten(v,key,out);else out[key]=v;
+  }
+  return out;
+}
+// Thông số hiện tại; truyền group thì chỉ lấy các ô của công cụ đó.
+VGD.settings=g=>{const out={};fieldsOf(g).forEach(e=>setNested(out,e.dataset.key,readField(e)));return out};
+// Nạp thông số vào các ô (trong phạm vi group nếu có). Khóa vắng mặt trong bộ nạp quay về mặc định ban đầu.
+VGD.loadSettings=(p,notify,group)=>{
+  const flat=flatten(p,'',{});
+  fieldsOf(group).forEach(e=>{
+    const key=e.dataset.key;
+    const v=(key in flat)?flat[key]:VGD.initialFlat[key];
+    if(e.type==='checkbox')e.checked=!!v;else e.value=(v===null||v===undefined)?'':v;
+  });
+  if(notify)sketchup.settings(JSON.stringify(VGD.settings()));
+};
 VGD.status=s=>document.getElementById('status').textContent=s;
-VGD.presets=d=>{const list=document.getElementById('presets');list.replaceChildren();d.presets.forEach(p=>{const row=document.createElement('div');row.className='preset-item';const name=document.createElement('span');name.textContent=p.group+' / '+p.name;const load=document.createElement('button');load.className='button';load.textContent='Nạp';load.onclick=()=>sketchup.preset_load(p.id);const update=document.createElement('button');update.className='button';update.textContent='Cập nhật';update.onclick=()=>sketchup.preset_update(JSON.stringify({id:p.id,settings:VGD.settings()}));const rename=document.createElement('button');rename.className='button';rename.textContent='Tên';rename.onclick=()=>{const n=prompt('Tên preset mới',p.name);if(n)sketchup.preset_rename(JSON.stringify({id:p.id,name:n}))};const del=document.createElement('button');del.className='button';del.textContent='Xóa';del.onclick=()=>sketchup.preset_delete(p.id);row.append(name,load,update,rename,del);list.append(row)})};
-document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>sketchup.tool(JSON.stringify({name:b.dataset.tool,settings:VGD.settings()})));
-document.getElementById('savePreset').onclick=()=>sketchup.preset_save(JSON.stringify({name:document.getElementById('presetName').value,group:document.getElementById('presetGroup').value,settings:VGD.settings()}));
-document.getElementById('addGroup').onclick=()=>sketchup.group_add(JSON.stringify({name:document.getElementById('presetGroup').value}));
-document.querySelectorAll('[data-key]').forEach(e=>e.addEventListener('change',()=>sketchup.settings(JSON.stringify(VGD.settings()))));
-window.addEventListener('DOMContentLoaded',()=>sketchup.ready(''));
+const toolData=g=>VGD.data&&VGD.data.tools[g]||{presets:[],default_id:null};
+const send=(fn,obj)=>sketchup[fn](JSON.stringify(obj));
+VGD.pickPreset=(g,id)=>{VGD.sel[g]=id;renderBars()};
+
+function renderBars(){
+  GROUPS.forEach(g=>{
+    const bar=document.querySelector('[data-bar="'+g+'"]');
+    if(!bar)return;
+    const td=toolData(g);
+    if(VGD.sel[g]&&!td.presets.some(p=>p.id===VGD.sel[g]))VGD.sel[g]=null;
+    bar.replaceChildren();
+    const sel=document.createElement('select');
+    const none=document.createElement('option');none.value='';none.textContent=td.presets.length?'— Chọn setting đã lưu —':'(Chưa có setting nào)';sel.append(none);
+    td.presets.forEach((p,i)=>{const o=document.createElement('option');o.value=p.id;o.textContent=(i<9?(i+1)+'. ':'')+p.name+(p.id===td.default_id?'  ★':'');sel.append(o)});
+    sel.value=VGD.sel[g]||'';
+    sel.onchange=()=>{VGD.sel[g]=sel.value||null;if(sel.value)send('ts_load',{group:g,id:sel.value})};
+    const btn=(label,title,fn)=>{const b=document.createElement('button');b.className='button';b.textContent=label;b.title=title;b.onclick=fn;return b};
+    const need=()=>{if(!VGD.sel[g]){VGD.status('Hãy chọn một setting trong danh sách trước.');return false}return true};
+    const cur=()=>td.presets.find(p=>p.id===VGD.sel[g]);
+    bar.append(sel,
+      btn('Lưu mới','Lưu các ô hiện tại thành setting mới',()=>{const n=prompt('Tên setting mới ('+GROUP_NAMES[g]+')','');if(n)send('ts_save',{group:g,name:n,settings:VGD.settings(g)})}),
+      btn('Cập nhật','Ghi đè setting đang chọn bằng giá trị trong các ô',()=>{if(need()&&confirm('Ghi đè setting "'+cur().name+'" bằng giá trị hiện tại?'))send('ts_update',{group:g,id:VGD.sel[g],settings:VGD.settings(g)})}),
+      btn('Tên','Đổi tên',()=>{if(need()){const n=prompt('Tên mới',cur().name);if(n)send('ts_rename',{group:g,id:VGD.sel[g],name:n})}}),
+      btn('★','Đặt / bỏ làm mặc định',()=>{if(need())send('ts_default',{group:g,id:VGD.sel[g]===td.default_id?null:VGD.sel[g]})}),
+      btn('Xóa','Xóa setting',()=>{if(need()&&confirm('Xóa setting "'+cur().name+'"?'))send('ts_delete',{group:g,id:VGD.sel[g]})}));
+  });
+}
+function renderManage(){
+  const box=document.getElementById('manage');box.replaceChildren();
+  GROUPS.forEach(g=>{
+    const td=toolData(g);
+    const h=document.createElement('div');h.className='note';h.style.marginTop='10px';h.textContent=GROUP_NAMES[g]+' ('+td.presets.length+')';box.append(h);
+    if(!td.presets.length){const e=document.createElement('div');e.className='note';e.textContent='Chưa có setting. Lưu ở tab của công cụ.';box.append(e)}
+    td.presets.forEach(p=>{
+      const row=document.createElement('div');row.className='mrow';
+      const name=document.createElement('span');name.textContent=p.name+(p.id===td.default_id?'  ★ mặc định':'');
+      const b=(label,fn)=>{const x=document.createElement('button');x.className='button';x.textContent=label;x.onclick=fn;return x};
+      row.append(name,
+        b('★',()=>send('ts_default',{group:g,id:p.id===td.default_id?null:p.id})),
+        b('Tên',()=>{const n=prompt('Tên mới',p.name);if(n)send('ts_rename',{group:g,id:p.id,name:n})}),
+        b('Xóa',()=>{if(confirm('Xóa setting "'+p.name+'"?'))send('ts_delete',{group:g,id:p.id})}));
+      box.append(row);
+    });
+  });
+}
+// Ruby đẩy toàn bộ trạng thái kho setting. Lần đầu: nạp thông số gốc và setting mặc định vào các ô.
+VGD.state=d=>{
+  VGD.data=d;
+  if(VGD.firstState){
+    VGD.firstState=false;
+    VGD.loadSettings(d.base||{},false,'base');
+    GROUPS.forEach(g=>{
+      const td=toolData(g);
+      const def=td.presets.find(p=>p.id===td.default_id);
+      if(def){VGD.sel[g]=def.id;VGD.loadSettings(def.params,false,g)}
+    });
+  }
+  renderBars();renderManage();
+};
+
+document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{
+  const g=b.closest('[data-pgroup]');const pg=g?g.dataset.pgroup:null;
+  sketchup.tool(JSON.stringify({name:b.dataset.tool,settings:VGD.settings(),preset_id:pg?(VGD.sel[pg]||null):null}));
+});
+document.querySelectorAll('#tabs [data-tab]').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+function showTab(name){
+  document.querySelectorAll('#tabs [data-tab]').forEach(x=>x.classList.toggle('on',x.dataset.tab===name));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('on',x.id==='tab-'+name));
+  try{localStorage.setItem('vgd.cabinet_draw.tab',name)}catch(e){}
+}
+document.getElementById('saveBase').onclick=()=>send('ts_base_save',{settings:VGD.settings('base')});
+document.getElementById('exportBtn').onclick=()=>sketchup.ts_export('');
+document.getElementById('importBtn').onclick=()=>sketchup.ts_import('');
+document.getElementById('applyBtn').onclick=()=>sketchup.apply('');
+document.getElementById('cancelBtn').onclick=()=>sketchup.cancel('');
+// Đổi Loại tủ: đặt lại chân, phào, hông theo loại (giống Schema::TYPE_PRESETS bên Ruby).
+const TYPE_PRESETS={
+  standard:{leg_height:40,ceiling_strip_height:20,toe_kick_enabled:true,toe_kick_setback:50,cornice_enabled:true,sides_to_floor:false,sides_to_ceiling:false,top_mode:'auto'},
+  base:{leg_height:100,ceiling_strip_height:0,toe_kick_enabled:true,toe_kick_setback:50,toe_kick_back:true,cornice_enabled:false,sides_to_floor:false,sides_to_ceiling:false,top_mode:'auto'},
+  wall:{leg_height:0,ceiling_strip_height:0,toe_kick_enabled:false,cornice_enabled:false,sides_to_floor:false,sides_to_ceiling:false,top_mode:'auto',hang_rail:true},
+  fridge:{leg_height:0,toe_kick_enabled:false,sides_to_floor:true,top_mode:'auto'}
+};
+document.querySelectorAll('[data-key="cabinet_type"]').forEach(sel=>sel.addEventListener('change',()=>{
+  const p=TYPE_PRESETS[sel.value]||{};
+  Object.keys(p).forEach(k=>document.querySelectorAll('[data-group="box"] [data-key="'+k+'"]').forEach(e=>{if(e.type==='checkbox')e.checked=!!p[k];else e.value=p[k]}));
+}));
+fields().forEach(e=>e.addEventListener('change',()=>sketchup.settings(JSON.stringify(VGD.settings()))));
+window.addEventListener('DOMContentLoaded',()=>{
+  VGD.initialFlat=flatten(VGD.settings(),'',{});
+  try{const t=localStorage.getItem('vgd.cabinet_draw.tab');if(t&&document.getElementById('tab-'+t))showTab(t)}catch(e){}
+  sketchup.ready('');
+});
 </script></body></html>
