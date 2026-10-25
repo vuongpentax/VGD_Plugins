@@ -185,6 +185,7 @@
     <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></symbol>
     <symbol id="vgd-dim" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 6v12M19 6v12"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 6h14"/><circle fill="var(--accent-strong)" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" cx="5" cy="6" r="1.1"/><circle fill="var(--accent-strong)" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" cx="19" cy="6" r="1.1"</symbol>
     <symbol id="vgd-cabinet" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 3.5h14v17H5zM12 3.5v17"/><path fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M10 10.5v3m4-3v3"/></symbol>
+    <symbol id="vgd-cabinet-draw" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M2.5 3.5h10v17h-10zM7.5 3.5v17"/><path fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5.3 10.5v3M9.7 10.5v3"/><path fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M13.5 17.5 14.6 14.6 19.6 9.6 21.4 11.4 16.4 16.4z"/></symbol>
     <symbol id="vgd-import" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 4.5h17v15h-17zM5.5 16.8l4-4.1 3.1 2.8 2.3-2.1 3.1 3.4"/><path fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M16.5 6.5v3.6m-1.8-1.8h3.6"/></symbol>
     <symbol id="vgd-scenes" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 8.5h4l1.5-2h6l1.5 2h4v10h-17z"/><circle fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" cx="12" cy="13.5" r="3.1"/></symbol>
     <symbol id="vgd-bim" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 10 12 4l8.5 6v10h-17z"/><path fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8 12h8m-8 3h8m-8 3h8"/></symbol>
@@ -311,7 +312,7 @@
       const dialogIcon = document.getElementById('dialogIcon');
       const dialogActions = document.getElementById('dialogActions');
       const progressBar = document.getElementById('progressBar');
-      const iconIds = {dim:'vgd-dim', scenes:'vgd-scenes', cabinet:'vgd-cabinet', library:'vgd-library', image_importer:'vgd-import', bim_lite:'vgd-bim',reference:'vgd-reference'};
+      const iconIds = {dim:'vgd-dim', scenes:'vgd-scenes', cabinet:'vgd-cabinet', library:'vgd-library', image_importer:'vgd-import', bim_lite:'vgd-bim',reference:'vgd-reference',cabinet_draw:'vgd-cabinet-draw'};
       let currentState = {products:[]};
       let activePluginId = null;
       let activeLanguage = 'vi';
