@@ -17,6 +17,7 @@ html[data-theme="light"]{color-scheme:light;--page:#f3f1ed;--panel:#fff;--line:#
 </main>
 <script>
 const paths={
+cabinetdraw:`<path class="outline" d="M2.5 3.5h10v17h-10zM7.5 3.5v17"/><path class="accent" d="M5.3 10.5v3M9.7 10.5v3"/><path class="accent" d="M13.5 17.5 14.6 14.6 19.6 9.6 21.4 11.4 16.4 16.4z"/>`,
 dim:`<path class="outline" d="M5 6v12M19 6v12"/><path class="outline" d="M5 6h14"/><circle class="fill-accent" cx="5" cy="6" r="1.1"/><circle class="fill-accent" cx="19" cy="6" r="1.1"`,
 smart:`<path class="outline" d="M3.5 5h10v14h-10zM8.5 5v14"/><path class="accent" d="m17 5-3 5h3l-2 5 5-7h-3l2-3z"/>`,
 cabinet:`<path class="outline" d="M5 3.5h14v17H5zM12 3.5v17"/><path class="accent" d="M10 10.5v3m4-3v3"/>`,
@@ -60,7 +61,7 @@ const data=[
 ['VGD CENTER',[['center','Mở VGD Center']]]
 ];
 const svg=(id)=>`<svg viewBox="0 0 24 24" aria-hidden="true">${paths[id]}</svg>`;
-const mainVisuals=[["VGD Dim","dim"],["VGD Cabinet","cabinet"],["VGD Image Importer","import"],["VGD Scenes","camera"],["VGD BIM Lite","bim"],["VGD Library","library"],["VGD Center · Logo cũ","center"]];
+const mainVisuals=[["VGD Dim","dim"],["VGD Cabinet","cabinet"],["VGD Image Importer","import"],["VGD Scenes","camera"],["VGD BIM Lite","bim"],["VGD Library","library"],["VGD Cabinet Draw · chờ duyệt","cabinetdraw"],["VGD Center · Logo cũ","center"]];
 const mainGallery=document.createElement("section");mainGallery.className="section";mainGallery.innerHTML=`<h2>Biểu tượng plugin chính · hình đã chốt</h2><p class="sub">Sáu biểu tượng plugin đã chốt và logo VGD Center cũ; các công cụ phía dưới kế thừa hình tượng riêng của từng plugin.</p><div class="grid">${mainVisuals.map(([name,id])=>`<article class="item"><div class="glyph">${svg(id)}</div><div><div class="name">${name}</div><div class="group">Biểu tượng chính</div></div></article>`).join("")}</div>`;
 document.getElementById("catalog").prepend(mainGallery);
 const toolbar=document.querySelector('#toolbar');data.forEach(([g,items])=>items.forEach(([id])=>{toolbar.insertAdjacentHTML('beforeend',`<div class="tool" title="${id}">${svg(id)}</div>`)}));
