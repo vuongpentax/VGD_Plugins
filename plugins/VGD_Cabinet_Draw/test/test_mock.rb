@@ -481,12 +481,12 @@ fshell = V::Geometry.shell_for(froot)
 fh = ->(name) { fshell.definition.entities.to_a.find { |e| e.name == name } }
 check 'hông chạm đất: hông trái bắt đầu ở sàn', fh.call('Hông Trái').definition.bounds.min.z.to_mm.abs < 1e-6
 check 'hông đụng trần: hông trái cao tới đỉnh box', (fh.call('Hông Trái').definition.bounds.max.z.to_mm - 2000).abs < 1e-6
-check 'đáy vẫn ở độ cao chân', (fh.call('Đáy').definition.bounds.min.z.to_mm - 40).abs < 1e-6
-check 'nóc thấp hơn đỉnh một khoảng phào', (fh.call('Nóc').definition.bounds.max.z.to_mm - 1980).abs < 1e-6
+check 'đáy vẫn ở độ cao chân', (fh.call('Đáy').bounds.min.z.to_mm - 40).abs < 1e-6
+check 'nóc thấp hơn đỉnh một khoảng phào', (fh.call('Nóc').bounds.max.z.to_mm - 1980).abs < 1e-6
 ftrim = froot.definition.entities.to_a.find { |e| e.respond_to?(:name) && e.name == 'Chân & phào' }
 kick = ftrim.definition.entities.to_a.find { |e| e.name == 'Ván chân' }
 corn = ftrim.definition.entities.to_a.find { |e| e.name == 'Phào trần' }
-check 'ván chân nằm giữa hai hông (rộng 565)', (kick.definition.bounds.width.to_mm - 565).abs < 1e-6 && (kick.definition.bounds.min.x.to_mm - 17.5).abs < 1e-6, kick.definition.bounds.width.to_mm
+check 'ván chân nằm giữa hai hông (rộng 565)', (kick.bounds.width.to_mm - 565).abs < 1e-6 && (kick.bounds.min.x.to_mm - 17.5).abs < 1e-6, kick.bounds.width.to_mm
 check 'phào nằm giữa hai hông (rộng 565)', (corn.definition.bounds.width.to_mm - 565).abs < 1e-6, corn.definition.bounds.width.to_mm
 fb = V::Geometry.body_bounds(fshell)
 check 'body_bounds: thân tủ z 40..1980 dù hông dài hơn', (fb.min.z.to_mm - 40).abs < 1e-6 && (fb.max.z.to_mm - 1980).abs < 1e-6 && (fb.height.to_mm - 1940).abs < 1e-6, [fb.min.z.to_mm, fb.max.z.to_mm].inspect

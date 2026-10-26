@@ -264,6 +264,8 @@ module VGD_Cabinet_Draw
       face.reverse! if face.normal.dot(axis_vector(part.axis)) < 0
       face.pushpull(part.distance.mm)
       stamp_part(group, part.role, { 'thickness_mm' => part.thickness, 'grooved' => part.grooved }.merge(extra))
+      # Gốc trục của mỗi ván nằm ở góc của chính ván (không ở gốc của box); trục song song với trục của tủ.
+      normalize_group(group)
       stamp_signature(group)
       group
     end
@@ -366,6 +368,7 @@ module VGD_Cabinet_Draw
         group = box_entity.parent.entities.add_group
         group.name = Split::GROUP_NAME
         group.layer = tag(Schema::DEFAULTS['cabinet_tag'])
+        ModelData.stamp(group, 'split_group', { 'joint' => settings['split_joint'] })
         origin = frame.origin
         roots = pieces.each_with_index.map do |piece, index|
           root = build_cabinet(group.entities, frame, origin, piece.height, plan_settings[index], results[index],
@@ -378,6 +381,23 @@ module VGD_Cabinet_Draw
       end
       box_entity.erase! if options['remove_source'] == true
       roots
+    end
+
+    # Group 'Tủ quá khổ' bị kéo Scale ở cấp group: đưa phép biến đổi xuống từng tủ con rồi đặt group về nguyên,
+    # để mỗi tủ con tự co giãn như tủ đơn. Vị trí và kích thước tổng vẫn giữ.
+    # Độ dài ba cột đầu của phép biến đổi (16 số theo cột): khác 1 nghĩa là có scale.
+    def split_scaled?(group)
+      columns = group.transformation.to_a.each_slice(4).first(3)
+      columns.any? { |c| (Math.sqrt(c[0, 3].sum { |v| v * v }) - 1.0).abs > 1e-6 }
+    end
+
+    def push_split_scale(group)
+      placement = group.transformation
+      group.entities.to_a.each do |child|
+        next unless child.is_a?(Sketchup::Group) || child.is_a?(Sketchup::ComponentInstance)
+        child.transformation = placement * child.transformation if ModelData.cabinet?(child)
+      end
+      group.transformation = Geom::Transformation.new
     end
 
     # Giữ tên cũ cho chỗ gọi một tủ: trả về tủ đầu tiên.

@@ -12,7 +12,8 @@ module VGD_Cabinet_Draw
       'bottom' => 'Đáy', 'top' => 'Nóc', 'back' => 'Hậu',
       'toe_kick' => 'Ván chân', 'toe_kick_back' => 'Ván chân sau', 'cornice' => 'Phào trần',
       'rail_front' => 'Giằng trước', 'rail_back' => 'Giằng sau', 'hang_rail' => 'Xà treo',
-      'rail_front_bottom' => 'Giằng trước (đáy)', 'rail_back_bottom' => 'Giằng sau (đáy)'
+      'rail_front_bottom' => 'Giằng trước (đáy)', 'rail_back_bottom' => 'Giằng sau (đáy)',
+      'rail_front_2' => 'Giằng trước (kép)', 'rail_front_bottom_2' => 'Giằng trước (đáy, kép)'
     }.freeze
     # Loại tủ: thường / bếp dưới (2 thanh giằng thay nóc, mặt đá đặt lên) / bếp trên (xà treo sau nóc) /
     # thùng tủ lạnh (hông chạm đất, không đáy + không hậu phần tủ lạnh, hộc trên có đáy/nóc/hậu).
@@ -391,12 +392,21 @@ module VGD_Cabinet_Draw
       edge = where == :top ? geo[:h] : geo[:zb0]
       span = ->(size) { where == :top ? [edge - size, edge] : [edge, edge + size] }
       out = []
+      # Xà trước kép = hai tấm rời, ghép sát nhau (chồng theo chiều cao với xà nằm, xếp theo chiều sâu với xà đứng).
+      boards = c[:rail_front_double] ? 2 : 1
+      role_of = ->(index) { "rail_front#{suffix}#{index.zero? ? '' : '_2'}" }
       if flat_front
-        z = span.call(front_t).first
-        out << finish("rail_front#{suffix}", [[rx0, front, z], [rx1, front, z], [rx1, front + fw, z], [rx0, front + fw, z]], :z, front_t, rt, false)
+        lo = span.call(rt).first
+        boards.times do |index|
+          z = where == :top ? lo - index * rt : lo + index * rt
+          out << finish(role_of.call(index), [[rx0, front, z], [rx1, front, z], [rx1, front + fw, z], [rx0, front + fw, z]], :z, rt, rt, false)
+        end
       else
         z0, z1 = span.call(fw)
-        out << finish("rail_front#{suffix}", [[rx0, front, z0], [rx1, front, z0], [rx1, front, z1], [rx0, front, z1]], :y, front_t, rt, false)
+        boards.times do |index|
+          y = front + index * rt
+          out << finish(role_of.call(index), [[rx0, y, z0], [rx1, y, z0], [rx1, y, z1], [rx0, y, z1]], :y, rt, rt, false)
+        end
       end
       if flat_back
         z = span.call(rt).first

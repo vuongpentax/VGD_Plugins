@@ -99,5 +99,21 @@ Sketchup.reset_model!
 check('quá khổ không tạo group khi lỗi', raises_msg(/khổ ván/) { V::Geometry.cabinets_from_box(mk_box(800, 560, 5000), settings) } && split_group.nil?)
 check('dựng nhanh bằng cabinet_from_box vẫn trả về một tủ', V::Geometry.cabinet_from_box(mk_box(800, 560, 2000), settings).is_a?(Sketchup::Group))
 
+puts '== 5. Group quá khổ: chọn, sửa, scale cả nhóm =='
+Sketchup.reset_model!
+roots = V::Geometry.cabinets_from_box(mk_box(800, 560, 2600), settings('split_joint' => 'dau_dinh'))
+group = split_group
+check('chọn group quá khổ = chọn hai tủ con', V::ModelData.cabinets_in([group]).length == 2)
+sel = Sketchup.active_model.selection; sel.clear; sel.add(group)
+check('lệnh Sửa tủ nhận group quá khổ', V::Tools::EditCabinetTool.cabinets_only?(sel))
+group.transformation = Geom::Transformation.scaling(1.0, 1.0, 1.1) * group.transformation
+UI.msgs.clear
+V::AutoStretch.after_commit(Sketchup.active_model)
+check('scale nhóm: group trở về không scale', !V::Geometry.split_scaled?(group))
+kids = V::ModelData.cabinets_in([group])
+check('scale nhóm: tủ dưới cao 2310 (2100 × 1.1)', kids.any? { |k| near(V::ModelData.params(k)['height_mm'], 2310.0, 0.05) })
+check('scale nhóm: tủ trên cao 550 (500 × 1.1)', kids.any? { |k| near(V::ModelData.params(k)['height_mm'], 550.0, 0.05) })
+check('scale nhóm: không có hộp thoại lỗi', UI.msgs.none? { |m| m.include?('Tự cập nhật') }, UI.msgs.inspect)
+
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.size}"
 exit($fail.empty? ? 0 : 1)

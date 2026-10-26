@@ -532,7 +532,7 @@ module VGD_Cabinet_Draw
       def self.cabinets_only?(selection)
         items = selection.to_a
         groups = items.select { |e| e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance) }
-        groups.any? && groups.all? { |e| ModelData.cabinet?(e) }
+        groups.any? && groups.all? { |e| ModelData.cabinet?(e) || ModelData.split_group?(e) }
       end
 
       attr_reader :roots
@@ -569,7 +569,7 @@ module VGD_Cabinet_Draw
 
       # Đọc lại các tủ đang chọn (thông số gốc, kích thước) và bỏ mọi thay đổi chưa áp dụng.
       def reload_roots
-        @roots = Sketchup.active_model.selection.select { |e| ModelData.cabinet?(e) && e.valid? }
+        @roots = ModelData.cabinets_in(Sketchup.active_model.selection)
         @originals = {}
         @dims = {}
         @errors = {}
@@ -1076,7 +1076,7 @@ module VGD_Cabinet_Draw
 
       def activate
         super
-        cabinet = Sketchup.active_model.selection.find { |entity| ModelData.cabinet?(entity) }
+        cabinet = ModelData.cabinets_in(Sketchup.active_model.selection).first
         use_cabinet(cabinet) if cabinet
         rebuild_preview
       end
@@ -1728,7 +1728,7 @@ module VGD_Cabinet_Draw
       def activate
         @interactive = true
         super
-        cabinet = Sketchup.active_model.selection.find { |entity| ModelData.cabinet?(entity) }
+        cabinet = ModelData.cabinets_in(Sketchup.active_model.selection).first
         load_cabinet(cabinet) if cabinet
         rebuild_preview
       end

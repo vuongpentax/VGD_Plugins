@@ -509,3 +509,32 @@ module Sketchup
     end
   end
 end
+
+# Vân vật liệu (beta.40): kích thước thật (inch) và pixel ảnh. Dùng để kiểm tra việc đặt lại vân sau khi co giãn.
+module Sketchup
+  class Texture
+    attr_reader :width, :height, :image_width, :image_height
+    def initialize(width = 24.0, height = 12.0, image_width = 512, image_height = 256)
+      @width = width; @height = height; @image_width = image_width; @image_height = image_height
+    end
+  end
+  class Material
+    def texture; @texture; end
+    def texture=(value); @texture = value; end
+  end
+  class Face
+    # SketchUp đòi số điểm chẵn (cặp điểm trên mặt, điểm trên ảnh). Mô phỏng lỗi đúng như SketchUp báo.
+    alias_method :position_material_unchecked, :position_material
+    def position_material(material, points, front)
+      raise ArgumentError, 'Wrong number of points: must be an even number' if points.length.odd?
+      position_material_unchecked(material, points, front)
+    end
+  end
+end
+
+module Geom
+  class Transformation
+    # SketchUp: 16 số theo cột (giống Transformation#to_a).
+    def to_a; (0..2).flat_map { |i| m[i].map(&:to_f) + [0.0] } + m[3].map(&:to_f) + [1.0]; end
+  end
+end

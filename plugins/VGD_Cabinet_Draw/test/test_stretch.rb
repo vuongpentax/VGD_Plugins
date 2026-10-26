@@ -49,7 +49,7 @@ mat.class.send(:attr_accessor, :texture)
 mat.texture = Struct.new(:width, :height).new(12.0, 24.0)
 nong.material = mat
 zt = nong.bounds.max.z
-notch = nong.entities.add_face([[500.mm, 100.mm, zt], [550.mm, 100.mm, zt], [550.mm, 150.mm, zt], [500.mm, 150.mm, zt]])
+notch = nong.entities.add_face([[500.mm, 100.mm, zt], [550.mm, 100.mm, zt], [550.mm, 150.mm, zt], [500.mm, 150.mm, zt]].map { |pt| Geom::Point3d.new(*pt).transform(nong.transformation.inverse) })
 before = nong.bounds
 scale_root(c, 1.25)
 auto_run(c)
@@ -57,11 +57,12 @@ nong2 = part(c, 'Nóc')
 after = nong2.bounds
 f = (after.max.x - after.min.x) / (before.max.x - before.min.x)
 expect_x0 = after.min.x + (500.mm - before.min.x) * f
-check 'vết khấu co theo tỷ lệ của ván', notch.valid? && near(notch.pts.map(&:x).min, expect_x0, 0.01), [notch.pts.map(&:x).min.to_mm, expect_x0.to_mm].inspect
+world_x = notch.pts.map { |pt| pt.transform(nong2.transformation).x }.min
+check 'vết khấu co theo tỷ lệ của ván', notch.valid? && near(world_x, expect_x0, 0.01), [world_x.to_mm, expect_x0.to_mm].inspect
 check 'ván khấu vẫn là cùng đối tượng', nong2.equal?(nong) && nong2.valid?
 check 'vật liệu của ván còn', nong2.material.equal?(mat)
 check 'texture được đặt lại cho mặt có vật liệu', !notch.positioned.empty?
-check 'texture: một ô vân rộng 12 và cao 24 inch (kích thước thật)', notch.positioned.all? { |_, pts, _| near((pts[1] - pts[0]).length, 12.0) && near((pts[2] - pts[0]).length, 24.0) }, notch.positioned.map { |_, pts, _| [(pts[1] - pts[0]).length, (pts[2] - pts[0]).length] }.inspect
+check 'texture: cặp điểm (mặt, ảnh) và một ô vân rộng 12, cao 24 inch', notch.positioned.all? { |_, pts, _| pts.length == 6 && near((pts[2] - pts[0]).length, 12.0) && near((pts[4] - pts[0]).length, 24.0) }, notch.positioned.map { |_, pts, _| pts.length }.inspect
 
 puts '== 4. Đợt đã dời bằng tay: giữ độ lệch so với công thức =='
 c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)

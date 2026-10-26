@@ -58,6 +58,26 @@ module VGD_Cabinet_Draw
       entity && entity.get_attribute(Schema::DICTIONARY, 'kind') == 'cabinet'
     end
 
+    # Group 'Tủ quá khổ': chứa hai tủ (dưới và trên). Không phải tủ nên không có thông số riêng.
+    def split_group?(entity)
+      entity && entity.valid? && entity.get_attribute(Schema::DICTIONARY, 'kind') == 'split_group' ? true : false
+    end
+
+    # Các tủ trong một danh sách chọn. Group 'Tủ quá khổ' được thay bằng hai tủ con, để chọn một trong hai
+    # hoặc cả nhóm đều sửa được cả hai tủ.
+    def cabinets_in(entities)
+      entities.to_a.flat_map do |entity|
+        next [] unless entity && entity.valid?
+        if split_group?(entity)
+          entity.entities.to_a.select { |child| child.valid? && cabinet?(child) }
+        elsif cabinet?(entity)
+          [entity]
+        else
+          []
+        end
+      end
+    end
+
     def params(entity)
       JSON.parse(entity.get_attribute(Schema::DICTIONARY, 'params_json', '{}'))
     rescue JSON::ParserError

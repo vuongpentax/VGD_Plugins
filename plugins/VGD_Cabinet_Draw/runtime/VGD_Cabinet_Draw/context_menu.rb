@@ -31,8 +31,8 @@ module VGD_Cabinet_Draw
       doors = []
       selection.each do |entity|
         next unless (entity.is_a?(Sketchup::Group) || entity.is_a?(Sketchup::ComponentInstance)) && entity.valid?
-        if ModelData.cabinet?(entity)
-          roots << entity
+        if ModelData.cabinet?(entity) || ModelData.split_group?(entity)
+          roots.concat(ModelData.cabinets_in([entity]))
         elsif Operations.door?(entity) || entity.get_attribute(Schema::DICTIONARY, 'kind') == 'drawer_front'
           doors << entity
         end

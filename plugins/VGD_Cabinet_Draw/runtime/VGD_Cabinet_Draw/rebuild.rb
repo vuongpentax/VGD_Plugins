@@ -339,6 +339,8 @@ module VGD_Cabinet_Draw
       drawer_handles = capture_drawer_handles(root, kept_keys)
       warnings << 'Ngăn kéo đang mở được đóng lại khi dựng lại tủ.' if DrawerSlide.any_open?(root)
       unscale!(root)
+      # Vật liệu và vân của các ván vỏ tủ sẽ dựng lại được nhớ lại trước khi xóa, rồi gán lại cho ván mới.
+      looks = carcass_looks(shell, kept_roles)
       keep = Interior.containers(shell).select do |entity|
         role = Interior.role_of(entity)
         params = ModelData.params(entity)
@@ -377,6 +379,7 @@ module VGD_Cabinet_Draw
         end
       end
       Geometry.build_carcass(root, shell, result, settings, dims[0], dims[1], dims[2], {}, kept_roles)
+      apply_carcass_looks(shell, looks)
       failures = []
       list.sort_by { |op| op['op'].to_i }.each do |op|
         next if op['type'] != 'panel' && kept_keys.any? { |key| key.length > 1 && key[1] == op['op'] }
@@ -585,6 +588,36 @@ module VGD_Cabinet_Draw
       end
     end
 
+    # Vật liệu của từng ván vỏ tủ: vật liệu nhóm + vật liệu từng mặt (khớp theo hướng pháp tuyến của mặt).
+    def carcass_looks(shell, kept_roles)
+      Interior.containers(shell).each_with_object({}) do |entity, out|
+        role = Interior.role_of(entity)
+        next unless Interior::CARCASS_ROLES.include?(role) && !kept_roles.include?(role)
+        faces = contents_of(entity).grep(Sketchup::Face).map { |face| [normal_key(face), face.material, face.back_material] }
+        out[role] = { material: entity.material, faces: faces }
+      end
+    end
+
+    def apply_carcass_looks(shell, looks)
+      Interior.containers(shell).each do |entity|
+        look = looks[Interior.role_of(entity)]
+        next unless look
+        entity.material = look[:material] if look[:material]
+        pending = look[:faces].group_by(&:first)
+        contents_of(entity).grep(Sketchup::Face).each do |face|
+          match = pending[normal_key(face)]&.shift
+          next unless match
+          face.material = match[1] if match[1]
+          face.back_material = match[2] if match[2]
+        end
+        reset_textures(entity)
+      end
+    end
+
+    def normal_key(face)
+      face.normal.to_a.map { |v| v.round(4) }
+    end
+
     # Co giãn một tấm vỏ tủ / đợt / vách tại chỗ: đưa hộp cũ về hộp mới, giữ nguyên các chi tiết bên trong.
     def stretch_part!(entity, old_box, new_box)
       placement = entity.transformation
@@ -618,13 +651,29 @@ module VGD_Cabinet_Draw
       end
     end
 
+    # position_material nhận các CẶP (điểm trên mặt, điểm tương ứng trên ảnh). Ảnh đặt theo kích thước thật
+    # (texture.width/height, inch) và tọa độ ảnh tính bằng pixel.
     def reset_face_texture(face, material, front)
       texture = material.texture
       return if texture.width <= 0 || texture.height <= 0
       origin = face.vertices[0].position
       u = (face.vertices[1].position - origin).normalize
       v = face.normal.cross(u).normalize
-      face.position_material(material, [origin, origin.offset(u, texture.width), origin.offset(v, texture.height)], front)
+      pixel_w, pixel_h = texture_pixels(texture)
+      face.position_material(material, [
+        origin, Geom::Point3d.new(0, 0, 0),
+        origin.offset(u, texture.width), Geom::Point3d.new(pixel_w, 0, 0),
+        origin.offset(v, texture.height), Geom::Point3d.new(0, pixel_h, 0)
+      ], front)
+    end
+
+    # Kích thước ảnh theo pixel. Nếu API không có thì dùng kích thước thật (inch) làm tỷ lệ.
+    def texture_pixels(texture)
+      if texture.respond_to?(:image_width) && texture.respond_to?(:image_height) && texture.image_width.to_i > 0
+        [texture.image_width.to_f, texture.image_height.to_f]
+      else
+        [texture.width.to_f, texture.height.to_f]
+      end
     end
 
     # Xóa bản thử và cả định nghĩa riêng của nó (không thì còn một component mồ côi trong danh sách Components).

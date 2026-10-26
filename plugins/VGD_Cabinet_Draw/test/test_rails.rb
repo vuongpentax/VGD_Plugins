@@ -61,9 +61,14 @@ r = base
 check('xà sau luôn có (một bản, không kép)') { !part(r, 'rail_back').nil? }
 check('xà trước mặc định đơn: bản dày rt (17.5)') { close?(bounds_of(r, 'rail_front')[5] - bounds_of(r, 'rail_front')[2], 17.5) }
 r = base('rail_front_double' => true)
-check('xà trước kép nằm: bản dày 2 × 17.5 = 35, sát mép trên') { same_box?(bounds_of(r, 'rail_front'), [17.5, 0, 785, 582.5, 100, 820]) }
+check('xà trước kép nằm: hai tấm rời, tấm trên 802.5..820, tấm dưới 785..802.5') do
+  same_box?(bounds_of(r, 'rail_front'), [17.5, 0, 802.5, 582.5, 100, 820]) && same_box?(bounds_of(r, 'rail_front_2'), [17.5, 0, 785, 582.5, 100, 802.5])
+end
 r = base('rail_front_double' => true, 'rail_front_orient' => 'upright')
-check('xà trước kép đứng: hai bản ghép sâu 35 mm ở mép trước') { same_box?(bounds_of(r, 'rail_front'), [17.5, 0, 720, 582.5, 35, 820]) }
+check('xà trước kép đứng: hai tấm rời ghép sát, mỗi tấm dày 17.5 theo chiều sâu') do
+  same_box?(bounds_of(r, 'rail_front'), [17.5, 0, 720, 582.5, 17.5, 820]) && same_box?(bounds_of(r, 'rail_front_2'), [17.5, 17.5, 720, 582.5, 35, 820])
+end
+check('xà trước đơn: không có tấm thứ hai') { part(base, 'rail_front_2').nil? }
 
 puts '== 3. Đổi hướng =='
 r = base('rail_front_orient' => 'upright')
