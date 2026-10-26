@@ -199,5 +199,62 @@ check 'xà chặn: một cái, cùng đối tượng', blk1.length == 1 && blk1.
 check 'xà chặn: không báo lỗi dựng lại', UI.msgs.drop(msgs_before).none? { |m| m.include?('không khớp') }, UI.msgs.drop(msgs_before).inspect
 check 'xà chặn: rộng theo lòng tủ mới', blk1.any? && (bb(blk1.first)[3] - bb(blk1.first)[0]) > bw0 * 1.2, blk1.any? ? bb(blk1.first).inspect : 'none'
 
+puts '== 13. Liên kết: gờ khung giữ mm, tay nắm cách mép đúng mm, độ dày thùng/hông khoang giữ nguyên =='
+def sz(g); b = bb(g); [b[3] - b[0], b[4] - b[1], b[5] - b[2]]; end # mm (bb đã đổi sang mm)
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+reselect(c)
+dt = V::Tools::DoorTool.new({ 'door_style' => 'frame', 'frame_width' => 50.0 }); dt.activate
+dt.layout.split(dt.layout.regions.first['id'], 'vertical', 0.5); dt.commit(v)
+dk = doors_of_test(c)
+d0 = dk[1]
+V::Operations.apply_opening_metadata(d0, 'right')
+V::Operations.save_opening_to_layout(d0, 'right')
+V::Operations.handles([d0], V::Schema.merge_settings({}), [])
+mat = Sketchup.active_model.materials.add('Gỗ sồi (gờ)')
+rail = groups(d0.definition.entities).find { |g| g.name == 'Khung Hông Phải' || g.name == 'Khung Hông Trái' }
+rail.material = mat
+frame_w_before = sz(rail)[0]
+rail_name = rail.name
+hdl = V::Operations.handle_groups(d0).first
+hdl_gap_before = (bb(hdl)[0] - V::Operations.door_bounds(d0)[0].to_mm).round(2)
+msgs_before = UI.msgs.length
+scale_root(c, 1.25)
+auto_run(c)
+dk2 = doors_of_test(c)
+d1 = dk2[1]
+rail2 = groups(d1.definition.entities).find { |g| g.name == rail_name }
+check 'cánh khung: gờ giữ đúng 50 mm sau khi rộng đổi', rail2 && near(sz(rail2)[0], 50.0, 0.05), (rail2 ? sz(rail2)[0] : nil).inspect
+check 'cánh khung: gờ trước = sau (50 mm)', near(frame_w_before, 50.0, 0.05)
+check 'cánh khung: vật liệu sơn trên gờ còn', rail2 && rail2.material.equal?(mat)
+hdl2 = V::Operations.handle_groups(d1).first
+hdl_gap_after = (bb(hdl2)[0] - V::Operations.door_bounds(d1)[0].to_mm).round(2)
+check 'tay nắm: cách mép cánh vẫn đúng mm', hdl2 && near(hdl_gap_after, hdl_gap_before, 0.05), [hdl_gap_before, hdl_gap_after].inspect
+check 'cánh khung: không báo lỗi dựng lại', UI.msgs.drop(msgs_before).none? { |m| m.include?('không khớp') }, UI.msgs.drop(msgs_before).inspect
+check 'liên kết: mọi bản lề còn bắt được vào thân tủ', V::Links.problems(shell(c), dk2) == [], V::Links.problems(shell(c), dk2).inspect
+
+fake = Struct.new(:type) do
+  def get_attribute(_dict, key, default = nil)
+    key == 'opening_type' && type ? type : default
+  end
+end
+order = V::Links.ordered([fake.new('left'), fake.new('top'), fake.new('right'), fake.new('bottom')]).map { |f| f.type }
+check 'liên kết: cánh mở lên/xuống xử lý trước', order == %w[top bottom left right], order.inspect
+
+c = cab
+V::DrawerBay.run([c], V::Schema.merge_settings({ 'drawer_count' => 2 }), [])
+hong = nil
+hongs = groups(bay_of(c).definition.entities).select { |g| g.name == 'Hông Khoang Trái' }
+hong = hongs.first
+t_before = sz(hong)[0].round(2)
+bthick0 = boxes_of(c).map { |b| groups(b.definition.entities).map { |g| sz(g).min.round(2) }.sort }
+scale_root(c, 1.25)
+auto_run(c)
+hong2 = groups(bay_of(c).definition.entities).find { |g| g.name == 'Hông Khoang Trái' }
+check 'khoang: hông khoang giữ đúng dày 17.5 mm', near(t_before, 17.5, 0.05) && near(sz(hong2)[0], 17.5, 0.05), [t_before, sz(hong2)[0]].inspect
+boxes_now = boxes_of(c)
+bthick = boxes_now.map { |b| groups(b.definition.entities).map { |g| sz(g).min.round(2) }.sort }
+bthick_before = bthick0
+check 'ngăn kéo: độ dày các tấm thùng giữ nguyên', bthick == bthick_before, [bthick_before, bthick].inspect
+
 puts "\n== Kết quả test_stretch: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
 $fail.each { |x| puts "  - #{x}" }

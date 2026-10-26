@@ -491,3 +491,21 @@ module Sketchup
     def remove_observer(o); (@model_observers ||= []).delete(o); end
   end
 end
+
+# ---- Tháo nhóm thành các phần tử (explode) cho bản thử co giãn ----
+module Sketchup
+  class ComponentInstance
+    def explode
+      target = @pe
+      @definition.entities.to_a.each do |e|
+        c = e.respond_to?(:copy_into) ? e.copy_into(target) : e
+        if c.is_a?(Face) then c.apply_transform!(@transformation)
+        elsif c.is_a?(Group) || c.is_a?(ComponentInstance) then c.transformation = @transformation * c.transformation
+        end
+        target.push(c)
+      end
+      @erased = true
+      true
+    end
+  end
+end

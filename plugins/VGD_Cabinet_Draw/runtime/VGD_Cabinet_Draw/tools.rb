@@ -3184,30 +3184,47 @@ module VGD_Cabinet_Draw
         return spec.merge('position' => 'custom', 'u' => ((local.x - b[0]) / width).clamp(0.0, 1.0), 'v' => ((local.z - b[2]) / height).clamp(0.0, 1.0))
       end
       half = (orientation == 'vertical' ? [length, height].min : [length, width].min) / 2.0
-      case type
-      when 'right' then cx = b[0] + edge
-      when 'left', 'none' then cx = b[3] - edge
-      else cx = (b[0] + b[3]) / 2.0
-      end
-      cz = case type
-           when 'top' then b[2] + edge
-           when 'bottom' then b[5] - edge
-           when 'drawer' then (b[2] + b[5]) / 2.0
-           else vertical_handle_z(door, b, edge, half)
-           end
-      spec.merge('position' => 'auto', 'u' => (cx - b[0]) / width, 'v' => (cz - b[2]) / height)
+      # Neo: tay nắm cách mép đã chọn một khoảng mm cố định, nên cánh đổi kích thước thì tay nắm vẫn ở đúng chỗ.
+      ax, dx = case type
+               when 'right' then ['left', edge]
+               when 'left', 'none' then ['right', edge]
+               else ['center', 0.0]
+               end
+      az, dz = case type
+               when 'top' then ['bottom', edge]
+               when 'bottom' then ['top', edge]
+               when 'drawer' then ['center', 0.0]
+               else vertical_handle_anchor(door, b, edge, half)
+               end
+      anchored = spec.merge('position' => 'auto', 'ax' => ax, 'dx_mm' => dx.to_mm, 'az' => az, 'dz_mm' => dz.to_mm)
+      # u/v (tỷ lệ) vẫn lưu để các đoạn mã cũ đọc được tay nắm; vị trí thật lấy theo neo.
+      anchored.merge('u' => (handle_center(anchored, 'x', b[0], b[3]) - b[0]) / width,
+                     'v' => (handle_center(anchored, 'z', b[2], b[5]) - b[2]) / height)
     end
 
-    def vertical_handle_z(door, b, edge, half)
+    # Neo theo chiều đứng cho tay nắm đặt tự động: [mép, khoảng cách tới mép] (inch).
+    def vertical_handle_anchor(door, b, edge, half)
       world = door_world(door)
       wz0 = Geom::Point3d.new(b[0], b[1], b[2]).transform(world).z
       wz1 = Geom::Point3d.new(b[0], b[1], b[5]).transform(world).z
       low = b[2] + edge + half
       high = b[5] - edge - half
-      return (b[2] + b[5]) / 2.0 if low > high
-      if [wz0, wz1].min > 1200.mm then low
-      elsif (wz1 - wz0).abs > 1200.mm then (b[2] + (1000.mm - [wz0, wz1].min)).clamp(low, high)
-      else high
+      return ['center', 0.0] if low > high
+      if [wz0, wz1].min > 1200.mm then ['bottom', low - b[2]]
+      elsif (wz1 - wz0).abs > 1200.mm then ['bottom', (b[2] + (1000.mm - [wz0, wz1].min)).clamp(low, high) - b[2]]
+      else ['top', b[5] - high]
+      end
+    end
+
+    # Vị trí tâm tay nắm theo neo (mm cách mép đã chọn). Spec cũ chỉ có u/v (tỷ lệ) thì dùng tỷ lệ.
+    def handle_center(spec, axis, low, high)
+      anchor = spec["a#{axis}"]
+      return low + spec[axis == 'x' ? 'u' : 'v'].to_f * (high - low) if anchor.nil?
+      offset = spec["d#{axis}_mm"].to_f.mm
+      case anchor
+      when 'left', 'bottom' then low + offset
+      when 'right', 'top' then high - offset
+      else (low + high) / 2.0
       end
     end
 
@@ -3215,8 +3232,8 @@ module VGD_Cabinet_Draw
     def add_handle(door, spec)
       b = door_bounds(door)
       return nil unless b
-      cx = b[0] + spec['u'].to_f * (b[3] - b[0])
-      cz = b[2] + spec['v'].to_f * (b[5] - b[2])
+      cx = handle_center(spec, 'x', b[0], b[3])
+      cz = handle_center(spec, 'z', b[2], b[5])
       face = b[1]
       out = [spec['projection_mm'].to_f, 12.0].max.mm
       group = door.definition.entities.add_group

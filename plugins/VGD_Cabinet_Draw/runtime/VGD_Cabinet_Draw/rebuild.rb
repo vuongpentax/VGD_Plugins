@@ -396,11 +396,17 @@ module VGD_Cabinet_Draw
     end
 
     # ---------- Co giãn tại chỗ (tự cập nhật khi kéo Scale) ----------
-    # Kiểu Dynamic Component: cấu kiện đã có KHÔNG bị xóa rồi tạo lại. Mỗi cấu kiện được co giãn đúng từ hộp cũ sang
-    # hộp mới, nên khấu, cắt, bo, vật liệu, tên, tay nắm và góc mở đều còn nguyên.
-    # Hộp cũ/mới lấy từ công thức: dựng thử một BẢN SAO của tủ rồi xóa bản sao. Tủ không khớp công thức thì dựng lại như cũ.
-    # Phạm vi: vỏ tủ, đợt/vách, mặt và thùng ngăn kéo, khoang ngăn kéo, xà chặn, hộc tủ áo, cánh.
-    # Cánh được đóng về 0 trước khi co giãn rồi mở lại đúng góc cũ quanh bản lề mới.
+    # Hai cách, tùy loại cấu kiện (xem Links cho quan hệ giữa các cấu kiện):
+    #   - Vỏ tủ, đợt/vách: CO GIÃN tại chỗ theo hộp cũ → hộp mới. Độ dày giữ nguyên, đối tượng giữ nguyên.
+    #   - Cánh, mặt và thùng ngăn kéo, khoang, xà chặn, hộc tủ áo: THAY NỘI DUNG bằng bản dựng lại ở kích thước mới,
+    #     nên khung, gờ, khe, đế giữ đúng mm (không co theo tỷ lệ). Đối tượng ngoài giữ nguyên, vật liệu đặt lại theo tên.
+    # Nội dung mới lấy từ BẢN THỬ (bản sao của tủ dựng ở kích thước mới), xóa bản thử khi xong.
+    # Tủ không khớp công thức thì dựng lại như cũ (rebuild_as_before).
+    REGENERATED_KINDS = %w[door front box bay blocker wardrobe_compartment].freeze
+
+    def regenerated?(key)
+      REGENERATED_KINDS.include?(key.first)
+    end
 
     # Khóa nhận diện một cấu kiện co giãn được. nil nếu không nhận ra (tủ cũ hoặc chi tiết thiếu bước tạo).
     def stretch_key(entity)
@@ -428,15 +434,6 @@ module VGD_Cabinet_Draw
       region && ['door', region.to_s]
     end
 
-    # Cánh co giãn trong hệ riêng của cánh (hộp đo theo hình lúc đóng). Các cấu kiện còn lại đo trong hệ của nhóm chứa.
-    def own_frame?(entity)
-      Operations.door?(entity)
-    end
-
-    def item_box(entity)
-      own_frame?(entity) ? Operations.door_bounds(entity) : Interior.box_of(entity)
-    end
-
     def legacy_member?(entity)
       Interior.role_of(entity).nil? && entity.name.to_s =~ /\A(Đợt|Vách) \d+\z/
     end
@@ -461,14 +458,20 @@ module VGD_Cabinet_Draw
       items
     end
 
-    # Công thức của các cấu kiện ứng với kích thước dims: { khóa => { box:, params: } }. nil nếu thiếu dữ liệu.
-    def recipe_items(root, settings, dims)
+    # Hộp và thông số của từng cấu kiện: { khóa => { box:, params: } }. Cánh đo hộp trong hệ của cánh, phần còn lại
+    # đo trong hệ của nhóm chứa (hai hệ này trùng với hệ thùng tủ).
+    def recipe_of(items)
+      items.transform_values do |entity|
+        box = Operations.door?(entity) ? Operations.door_bounds(entity) : Interior.box_of(entity)
+        { box: box, params: entity.get_attribute(DICT, 'params_json') }
+      end
+    end
+
+    # Dựng thử tủ ở kích thước dims rồi giao bản thử và các cấu kiện của nó cho khối lệnh. Bản thử bị xóa khi xong.
+    def with_probe(root, settings, dims)
       probe = probe_copy(root)
       run(probe, settings, dims, [], share: false)
-      items = stretch_items(probe, Geometry.shell_for(probe))
-      return nil unless items
-      recipe = items.transform_values { |entity| { box: item_box(entity), params: entity.get_attribute(DICT, 'params_json') } }
-      recipe.values.all? { |item| item[:box] } ? recipe : nil
+      yield probe, stretch_items(probe, Geometry.shell_for(probe))
     ensure
       discard_probe(probe) if probe&.valid?
     end
@@ -485,12 +488,27 @@ module VGD_Cabinet_Draw
       shell = Geometry.shell_for(root)
       raise 'Không tìm thấy thùng tủ.' unless shell
       parts = stretch_items(root, shell)
-      from = parts && recipe_items(root, settings, old_dims)
-      to = parts && recipe_items(root, settings, dims)
-      return rebuild_as_before(root, settings, dims) unless from && to && same_keys?(from, parts) && same_keys?(to, parts)
+      return rebuild_as_before(root, settings, dims) unless parts
+      with_probe(root, settings, old_dims) do |_old_probe, old_items|
+        with_probe(root, settings, dims) do |new_probe, new_items|
+          from = recipe_of(old_items)
+          to = recipe_of(new_items)
+          unless same_keys?(from, parts) && same_keys?(to, parts) && from.values.all? { |item| item[:box] } && to.values.all? { |item| item[:box] }
+            return rebuild_as_before(root, settings, dims)
+          end
+          # Bản lề phải còn bắt được vào tấm vỏ tủ ở kích thước mới; nếu không thì ném lỗi, operation hoàn tác.
+          Links.check!(Geometry.shell_for(new_probe), Operations.doors_of(new_probe))
+          stretch_all!(root, settings, dims, parts, from, to, new_items)
+        end
+      end
+    end
+
+    def stretch_all!(root, settings, dims, parts, from, to, new_items)
       unscale!(root)
-      # Cánh đang mở: nhớ góc và hướng mở, đóng về 0 để co giãn, rồi mở lại sau.
-      door_states = Operations.doors_of(root).map { |door| [door, Operations.door_angle(door), door.get_attribute(DICT, 'opening_side', 'left'), Operations.opening_type_of(door)] }
+      # Cánh đang mở: nhớ góc, hướng mở và loại mở hiện tại, đóng về 0 để thay nội dung, rồi mở lại sau.
+      door_states = Links.ordered(Operations.doors_of(root)).map do |door|
+        [door, Operations.door_angle(door), door.get_attribute(DICT, 'opening_side', 'left'), Operations.opening_type_of(door)]
+      end
       DrawerSlide.close_all(root)
       door_states.each { |door, angle, side, _type| Operations.set_door_angle(door, side, 0) if angle > 0.5 }
       # Tách bản riêng trước khi sửa (tránh đổi lây sang bản copy dùng chung), rồi nhớ và gỡ tay nắm (dựng lại sau).
@@ -498,10 +516,11 @@ module VGD_Cabinet_Draw
       handles = parts.values.to_h { |entity| [entity, Operations.handle_specs(entity)] }
       parts.each_value { |entity| Operations.handle_groups(entity).each(&:erase!) }
       parts.each do |key, entity|
-        next if same_box?(from[key][:box], to[key][:box])
-        stretch_part!(entity, from[key][:box], to[key][:box])
-      end
-      parts.each do |key, entity|
+        if regenerated?(key)
+          replace_contents(entity, new_items.fetch(key))
+        elsif !same_box?(from[key][:box], to[key][:box])
+          stretch_part!(entity, from[key][:box], to[key][:box])
+        end
         entity.set_attribute(DICT, 'params_json', to[key][:params]) if to[key][:params]
       end
       handles.each { |entity, specs| specs.each { |spec| Operations.add_handle(entity, spec) } }
@@ -523,13 +542,44 @@ module VGD_Cabinet_Draw
       a.zip(b).all? { |x, y| (x - y).abs < Interior::EPS }
     end
 
-    # Co giãn một cấu kiện tại chỗ: đưa hộp cũ về hộp mới, giữ nguyên các chi tiết bên trong, rồi đặt lại vân vật liệu.
-    def stretch_part!(entity, old_box, new_box)
-      transform = stretch_transform(old_box, new_box)
-      unless own_frame?(entity)
-        placement = entity.transformation
-        transform = placement.inverse * transform * placement
+    # Thay toàn bộ nội dung của một cấu kiện bằng nội dung đã dựng trong bản thử (đúng mm, không co theo tỷ lệ).
+    # Giữ đối tượng cấu kiện và thuộc tính của nó; vật liệu đã sơn được đặt lại theo đường dẫn tên.
+    def replace_contents(target, source)
+      materials = material_paths(contents_of(target))
+      Operations.handle_groups(source).each(&:erase!)
+      contents_of(source).to_a.each { |e| e.erase! if e.valid? && e.respond_to?(:name) && e.name == Operations::MARKER_NAME }
+      contents_of(target).to_a.each { |e| e.erase! if e.valid? }
+      contents_of(target).add_instance(source.definition, Geom::Transformation.new).explode
+      restore_material_paths(contents_of(target), materials)
+    end
+
+    # Vật liệu của các nhóm con, theo đường dẫn tên (tên + số thứ tự trong nhóm cha), để đặt lại sau khi thay nội dung.
+    def material_paths(entities, prefix = '')
+      counts = Hash.new(0)
+      entities.to_a.each_with_object({}) do |e, out|
+        next unless e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)
+        counts[e.name] += 1
+        path = "#{prefix}#{e.name}##{counts[e.name]}/"
+        out[path] = e.material if e.material
+        out.merge!(material_paths(contents_of(e), path))
       end
+    end
+
+    def restore_material_paths(entities, paths, prefix = '')
+      counts = Hash.new(0)
+      entities.to_a.each do |e|
+        next unless e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)
+        counts[e.name] += 1
+        path = "#{prefix}#{e.name}##{counts[e.name]}/"
+        e.material = paths[path] if paths[path]
+        restore_material_paths(contents_of(e), paths, path)
+      end
+    end
+
+    # Co giãn một tấm vỏ tủ / đợt / vách tại chỗ: đưa hộp cũ về hộp mới, giữ nguyên các chi tiết bên trong.
+    def stretch_part!(entity, old_box, new_box)
+      placement = entity.transformation
+      transform = placement.inverse * stretch_transform(old_box, new_box) * placement
       contents = contents_of(entity)
       contents.transform_entities(transform, contents.to_a)
       reset_textures(entity)

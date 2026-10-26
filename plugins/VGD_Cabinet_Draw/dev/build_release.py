@@ -5,7 +5,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'outputs'
-VERSION = '1.0.0-beta.35'
+VERSION = '1.0.0-beta.36'
 RUNTIME_DIR = ROOT / 'runtime' / 'VGD_Cabinet_Draw'
 LOADER_FILES = [
     ('VGD_Cabinet_Draw.rb', 'VGD_Cabinet_Draw.rb'),
