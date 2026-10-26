@@ -69,5 +69,17 @@ c = cab
   check "#{label}: trục không xoay so với tủ", [t[0], t[1], t[2], t[4], t[5], t[6], t[8], t[9], t[10]] == [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0]
 end
 
+puts '== 5. Sau scale: gốc ván vẫn ở góc ván, hộp định nghĩa đúng, không bị coi là chỉnh tay =='
+c = cab
+scale_root(c, 1.25)
+auto_run(c)
+hong = part(c, 'Hông Phải')
+t = hong.transformation.to_a
+hb = bb(hong)
+check 'scale: gốc ván trùng góc hộp thế giới của ván', near(t[12].to_mm, hb[0], 0.01) && near(t[13].to_mm, hb[1], 0.01) && near(t[14].to_mm, hb[2], 0.01), [t[12].to_mm, hb[0]].inspect
+check 'scale: hộp định nghĩa vẫn bắt đầu từ 0', hong.definition.bounds.min.to_a.all? { |v| v.to_mm.abs < 0.01 }
+check 'scale: ván không bị coi là chỉnh tay', V::Geometry.hand_edited?(hong) != true
+check 'scale: hông phải dời tới 1000 mm', near(hb[3], 1000.0, 0.01), hb.inspect
+
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.size}"
 exit($fail.empty? ? 0 : 1)
