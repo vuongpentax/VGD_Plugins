@@ -290,7 +290,7 @@ module VGD_Cabinet_Draw
 
     # Hộp tham chiếu tủ lạnh (khung dây + mặt mờ, tag riêng để ẩn/hiện). Không phải tấm ván, không vào bóc khối lượng.
     def add_reference(root, shell, box)
-      group = root.entities.add_group
+      group = root.definition.entities.add_group
       group.name = 'Tủ lạnh (tham chiếu)'
       group.transformation = shell.transformation
       x0, y0, z0, x1, y1, z1 = box.map { |v| v.mm }
@@ -319,7 +319,7 @@ module VGD_Cabinet_Draw
                                         'cabinet_type' => result.resolved['cabinet_type'] })
       add_reference(root, shell, result.reference) if result.reference
       unless result.trim.empty?
-        trim = root.entities.add_group
+        trim = root.definition.entities.add_group
         trim.name = 'Chân & phào'
         trim.transformation = shell.transformation
         result.trim.each { |part| build_part(trim.entities, part) }
