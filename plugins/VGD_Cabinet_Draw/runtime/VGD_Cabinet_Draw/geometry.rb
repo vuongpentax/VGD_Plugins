@@ -255,17 +255,20 @@ module VGD_Cabinet_Draw
     end
 
     # Dựng một tấm từ mô tả của PanelModel: một group riêng, đa giác phẳng rồi đẩy khối.
+    # Gốc trục của ván nằm ở góc của chính ván (hộp bao mm), trục song song với trục của tủ.
+    # Hình học được vẽ theo tọa độ tương đối ngay từ đầu. Không dời nội dung sau khi tạo: dời nội dung làm hộp
+    # định nghĩa của group bị cũ, nên ván bị khuất khi zoom gần và không chọn được bằng chuột.
     def build_part(entities, part, extra = {})
       group = entities.add_group
       group.name = part.name
-      points = part.points.map { |x, y, z| Geom::Point3d.new(x.mm, y.mm, z.mm) }
+      ox, oy, oz = part.bounds[0, 3]
+      group.transformation = Geom::Transformation.translation([ox.mm, oy.mm, oz.mm])
+      points = part.points.map { |x, y, z| Geom::Point3d.new((x - ox).mm, (y - oy).mm, (z - oz).mm) }
       face = group.entities.add_face(points)
       raise "Không dựng được tấm #{part.name}." unless face
       face.reverse! if face.normal.dot(axis_vector(part.axis)) < 0
       face.pushpull(part.distance.mm)
       stamp_part(group, part.role, { 'thickness_mm' => part.thickness, 'grooved' => part.grooved }.merge(extra))
-      # Gốc trục của mỗi ván nằm ở góc của chính ván (không ở gốc của box); trục song song với trục của tủ.
-      normalize_group(group)
       stamp_signature(group)
       group
     end
