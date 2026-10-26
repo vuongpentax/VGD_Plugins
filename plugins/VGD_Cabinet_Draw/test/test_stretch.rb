@@ -121,7 +121,7 @@ msgs_before = UI.msgs.length
 scale_root(c, -1.0, 1.0, 1.0)
 auto_run(c)
 check 'lật gương: kích thước không đổi', dims(c) == [800.0, 560.0, 2000.0], dims(c).inspect
-check 'lật gương: có báo hướng dẫn', UI.msgs.drop(msgs_before).any? { |m| m.include?('lật gương') }, UI.msgs.drop(msgs_before).inspect
+check 'lật gương: không bật hộp thoại (chỉ ghi thanh trạng thái)', UI.msgs.drop(msgs_before).none?, UI.msgs.drop(msgs_before).inspect
 
 puts '== 10. Ngăn kéo, cánh (đang mở 45°), tay nắm: co giãn tại chỗ, không tạo lại =='
 def fronts_of(c); groups(container(c, 'Ngăn kéo').definition.entities).select { |g| g.name == 'Mặt Ngăn Kéo' }; end

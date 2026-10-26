@@ -118,12 +118,12 @@ module VGD_Cabinet_Draw
     model.start_operation('VGD Cabinet Draw — Đóng tất cả cánh', true)
     begin
       roots.each { |root| count += Operations.close_doors(root) }
-      model.commit_operation
     rescue StandardError => e
       model.abort_operation
       UI.messagebox("Không đóng được cánh: #{e.message}")
       return 0
     end
+    model.commit_operation
     UI.messagebox(count.zero? ? 'Các cánh của tủ đang chọn đều đang đóng.' : "Đã đóng #{count} cánh.")
     count
   end

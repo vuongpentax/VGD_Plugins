@@ -11,10 +11,11 @@ Trạng thái: beta.35 mở rộng tự cập nhật tủ khi kéo Scale sang ng
 - Mọi cấu kiện đã có được co giãn tại chỗ, không xóa tạo lại: vỏ tủ, đợt/vách, mặt và thùng ngăn kéo, khoang, xà chặn, hộc tủ áo, cánh. Khấu, cắt, bo, vật liệu, tên và tay nắm được giữ.
 - Vân vật liệu được đặt lại theo kích thước thật, không bị kéo theo tấm.
 - Cánh đang mở được đóng về 0 trước khi co giãn, rồi mở lại đúng góc cũ quanh bản lề mới. Ngăn kéo đang kéo ra được đóng lại.
-- Tay nắm được dựng lại theo tỷ lệ vị trí đã lưu.
+- Tay nắm cách mép đã chọn một khoảng mm cố định (xem phần Liên kết bên dưới).
 - Liên kết (module `links.rb`): cánh mở trái/phải bắt bản lề vào hông trái/phải, mở lên vào nóc, mở xuống vào đáy. Cánh mở lên/xuống được xử lý trước. Nếu bản lề không còn bắt được vào tấm vỏ tủ thì tủ giữ nguyên và báo lỗi.
 - Kích thước cố định theo mm: khung, gờ và khe cánh, thùng và đáy ngăn kéo, hông khoang giữ nguyên độ dày. Cánh, mặt hộc, khoang, xà chặn và hộc tủ áo được dựng lại nội dung ở kích thước mới.
 - Tay nắm cách mép đã chọn một khoảng mm cố định.
+- Quan hệ giữa công cụ và cấu kiện: xem `docs/QUAN_HE_CONG_CU.md`.
 - Chưa làm: lỗ khấu, cắt, bo trên vỏ tủ vẫn co theo tỷ lệ; cam, chốt, lề chưa làm.
 - Tắt/bật ở tab 5 · Setting chung. Mặc định bật.
 - Một lần kéo Scale tạo hai bước Undo: bước Scale và bước tự cập nhật.

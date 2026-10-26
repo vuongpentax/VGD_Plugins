@@ -482,6 +482,8 @@ module VGD_Cabinet_Draw
 
     # Co giãn tủ đang bị kéo Scale về kích thước thật. Chạy trong một operation do người gọi mở. Trả về danh sách cảnh báo.
     def stretch(root)
+      # Tách các nhóm dùng chung định nghĩa (tủ copy) trước khi đọc hay sửa, để không đổi lây sang bản copy khác.
+      make_unique_tree(root)
       dims = dimensions_of(root)
       settings = settings_of(root)
       old_dims = ModelData.params(root).values_at('width_mm', 'depth_mm', 'height_mm').map(&:to_f)
@@ -491,6 +493,7 @@ module VGD_Cabinet_Draw
       return rebuild_as_before(root, settings, dims) unless parts
       with_probe(root, settings, old_dims) do |_old_probe, old_items|
         with_probe(root, settings, dims) do |new_probe, new_items|
+          return rebuild_as_before(root, settings, dims) unless old_items && new_items
           from = recipe_of(old_items)
           to = recipe_of(new_items)
           unless same_keys?(from, parts) && same_keys?(to, parts) && from.values.all? { |item| item[:box] } && to.values.all? { |item| item[:box] }
@@ -515,12 +518,15 @@ module VGD_Cabinet_Draw
       parts.each_value { |entity| entity.make_unique if entity.is_a?(Sketchup::ComponentInstance) }
       handles = parts.values.to_h { |entity| [entity, Operations.handle_specs(entity)] }
       parts.each_value { |entity| Operations.handle_groups(entity).each(&:erase!) }
+      # Tấm đang chỉnh tay (lệch chữ ký) giữ chữ ký cũ để vẫn được nhận là chỉnh tay sau khi co giãn.
+      edited_before = parts.transform_values { |entity| Geometry.hand_edited?(entity) }
       parts.each do |key, entity|
         if regenerated?(key)
           replace_contents(entity, new_items.fetch(key))
         elsif !same_box?(from[key][:box], to[key][:box])
           stretch_part!(entity, from[key][:box], to[key][:box])
         end
+        Geometry.stamp_signature(entity) if !regenerated?(key) && !edited_before[key]
         entity.set_attribute(DICT, 'params_json', to[key][:params]) if to[key][:params]
       end
       handles.each { |entity, specs| specs.each { |spec| Operations.add_handle(entity, spec) } }
@@ -583,7 +589,6 @@ module VGD_Cabinet_Draw
       contents = contents_of(entity)
       contents.transform_entities(transform, contents.to_a)
       reset_textures(entity)
-      Geometry.stamp_signature(entity)
     end
 
     # Phép biến đổi đưa hộp cũ về hộp mới: co theo từng trục (trục có kích thước 0 giữ nguyên), rồi dời tới vị trí mới.

@@ -68,25 +68,29 @@ module VGD_Cabinet_Draw
     def scaled?(root)
       Rebuild.scale_of(root) ? true : false
     rescue ArgumentError => e
-      UI.messagebox("Không tự cập nhật được tủ: #{e.message}")
+      Dialog.set_status("Không tự cập nhật được tủ: #{e.message}")
       false
     end
 
+    # Một thao tác: co giãn rồi commit. Lỗi khi co giãn thì hủy thao tác; lỗi do plugin khác lúc commit chỉ báo, không hủy.
     def stretch_one(model, root)
-      warnings = []
       @busy = true
       model.start_operation(OPERATION_NAME, true)
-      begin
-        warnings = Rebuild.stretch(root)
-        model.commit_operation
+      warnings = begin
+        Rebuild.stretch(root)
       rescue StandardError => e
         model.abort_operation
         UI.messagebox("Không tự cập nhật được tủ, tủ giữ nguyên trạng thái đã kéo Scale:\n#{e.message}")
         return
-      ensure
-        @busy = false
+      end
+      begin
+        model.commit_operation
+      rescue StandardError => e
+        UI.messagebox("Tủ đã cập nhật nhưng SketchUp báo lỗi khi ghi thao tác: #{e.message}")
       end
       report(warnings)
+    ensure
+      @busy = false
     end
 
     def report(warnings)

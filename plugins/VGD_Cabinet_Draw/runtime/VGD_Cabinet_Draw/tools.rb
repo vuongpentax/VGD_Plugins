@@ -1470,7 +1470,8 @@ module VGD_Cabinet_Draw
             entity.erase!
           end
           Rebuild.save_ops(@root, ops[0...-1])
-          Rebuild.run(@root, Rebuild.settings_of(@root), Rebuild.dimensions_of(@root))
+          keep = Rebuild.hand_edited(@root).map { |item| item[:entity] }
+          Rebuild.run(@root, Rebuild.settings_of(@root), Rebuild.dimensions_of(@root), keep)
         end
         @created.delete(last['op'])
         @shell = Geometry.shell_for(@root)
