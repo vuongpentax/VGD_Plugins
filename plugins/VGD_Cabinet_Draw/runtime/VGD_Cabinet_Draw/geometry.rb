@@ -338,11 +338,13 @@ module VGD_Cabinet_Draw
     end
 
     # Dựng một thùng tủ cao height (mm) tại origin (điểm góc dưới-trước-trái). Đã có kết quả PanelModel.
-    def build_cabinet(entities, frame, origin, height, settings, result, extra_data = {})
+    # rigid: phép biến đổi của chính tủ trong hệ chứa nó (tủ đơn: khung của box; tủ con của tủ quá khổ: đơn vị,
+    # vì group cha đã mang khung đó).
+    def build_cabinet(entities, frame, origin, height, settings, result, extra_data = {}, rigid: frame.rigid)
       # Tạo tủ cùng cấp với box (kể cả box nằm trong group cha chưa mở), không dùng active_entities.
       root = entities.add_group
       root.name = 'VGD Cabinet Draw · Cabinet'
-      root.transformation = frame.rigid
+      root.transformation = rigid
       shell = root.entities.add_group
       shell.name = 'Thùng tủ'
       shell.transformation = Geom::Transformation.axes(origin, frame.width_axis, frame.depth_axis, frame.up)
@@ -365,14 +367,17 @@ module VGD_Cabinet_Draw
         # Tính đủ hai tủ trước; nếu một tủ không dựng được thì không tạo gì cả.
         plan_settings = pieces.map { |piece| settings.merge(piece.overrides) }
         results = pieces.each_with_index.map { |piece, index| PanelModel.compute(frame.width, frame.depth, piece.height, plan_settings[index]) }
+        # Group cha mang khung của tủ (gốc và hướng của box); hai tủ con nằm trong hệ đó, không có phép biến đổi riêng.
         group = box_entity.parent.entities.add_group
         group.name = Split::GROUP_NAME
         group.layer = tag(Schema::DEFAULTS['cabinet_tag'])
+        group.transformation = frame.rigid
         ModelData.stamp(group, 'split_group', { 'joint' => settings['split_joint'] })
         origin = frame.origin
         roots = pieces.each_with_index.map do |piece, index|
           root = build_cabinet(group.entities, frame, origin, piece.height, plan_settings[index], results[index],
-                               'split_part' => piece.name, 'split_joint' => settings['split_joint'])
+                               { 'split_part' => piece.name, 'split_joint' => settings['split_joint'] },
+                               rigid: Geom::Transformation.new)
           # Tủ trên đặt ngay trên mép trên tủ dưới (theo trục đứng của tủ).
           distance = piece.height.mm
           origin = Geom::Point3d.new(origin.x + frame.up.x * distance, origin.y + frame.up.y * distance, origin.z + frame.up.z * distance)
@@ -383,21 +388,27 @@ module VGD_Cabinet_Draw
       roots
     end
 
-    # Group 'Tủ quá khổ' bị kéo Scale ở cấp group: đưa phép biến đổi xuống từng tủ con rồi đặt group về nguyên,
-    # để mỗi tủ con tự co giãn như tủ đơn. Vị trí và kích thước tổng vẫn giữ.
     # Độ dài ba cột đầu của phép biến đổi (16 số theo cột): khác 1 nghĩa là có scale.
     def split_scaled?(group)
       columns = group.transformation.to_a.each_slice(4).first(3)
       columns.any? { |c| (Math.sqrt(c[0, 3].sum { |v| v * v }) - 1.0).abs > 1e-6 }
     end
 
+    # Group 'Tủ quá khổ' bị kéo Scale: tách group thành (vị trí + hướng, không scale) và (scale theo trục của group).
+    # Scale đưa xuống từng tủ con, còn group giữ vị trí và hướng của tủ. Mỗi tủ con sau đó tự co giãn như tủ đơn.
     def push_split_scale(group)
-      placement = group.transformation
+      to_a = group.transformation.to_a
+      columns = (0..2).map { |i| to_a[i * 4, 3] }
+      scale = columns.map { |c| Math.sqrt(c.sum { |v| v * v }) }
+      origin = Geom::Point3d.new(*to_a[12, 3])
+      axes = columns.map { |c| Geom::Vector3d.new(*c).normalize }
+      rigid = Geom::Transformation.axes(origin, *axes)
+      stretch = Geom::Transformation.scaling(*scale)
       group.entities.to_a.each do |child|
-        next unless child.is_a?(Sketchup::Group) || child.is_a?(Sketchup::ComponentInstance)
-        child.transformation = placement * child.transformation if ModelData.cabinet?(child)
+        next unless ModelData.cabinet?(child)
+        child.transformation = stretch * child.transformation
       end
-      group.transformation = Geom::Transformation.new
+      group.transformation = rigid
     end
 
     # Giữ tên cũ cho chỗ gọi một tủ: trả về tủ đầu tiên.

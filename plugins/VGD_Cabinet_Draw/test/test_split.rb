@@ -115,5 +115,21 @@ check('scale nhóm: tủ dưới cao 2310 (2100 × 1.1)', kids.any? { |k| near(V
 check('scale nhóm: tủ trên cao 550 (500 × 1.1)', kids.any? { |k| near(V::ModelData.params(k)['height_mm'], 550.0, 0.05) })
 check('scale nhóm: không có hộp thoại lỗi', UI.msgs.none? { |m| m.include?('Tự cập nhật') }, UI.msgs.inspect)
 
+puts '== 6. Group cha mang khung của box; tủ con không có phép biến đổi riêng =='
+Sketchup.reset_model!
+moved = mk_box(800, 560, 2600)
+moved.transformation = Geom::Transformation.translation([1000.mm, 500.mm, 0.0])
+roots = V::Geometry.cabinets_from_box(moved, settings('split_joint' => 'dau_dinh'))
+group = split_group
+origin = group.transformation.to_a[12, 3].map(&:to_mm)
+check('gốc group cha trùng gốc của box (1000, 500, 0)', near(origin[0], 1000.0, 0.01) && near(origin[1], 500.0, 0.01) && near(origin[2], 0.0, 0.01), origin.inspect)
+identity = Geom::Transformation.new.to_a
+check('tủ con không có phép biến đổi riêng', roots.all? { |r| r.transformation.to_a == identity }, roots.map { |r| r.transformation.to_a[12, 3] }.inspect)
+group.transformation = Geom::Transformation.scaling(1.0, 1.0, 1.1) * group.transformation
+V::Geometry.push_split_scale(group)
+check('sau push: group không còn scale', !V::Geometry.split_scaled?(group))
+check('sau push: group giữ gốc (1000, 500, 0)', near(group.transformation.to_a[12].to_mm, 1000.0, 0.01) && near(group.transformation.to_a[14].to_mm, 0.0, 0.01))
+check('sau push: tủ con mang scale chiều cao 1.1', roots.all? { |r| near(r.transformation.to_a[10], 1.1, 1e-6) })
+
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.size}"
 exit($fail.empty? ? 0 : 1)
