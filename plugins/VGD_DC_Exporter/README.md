@@ -1,10 +1,10 @@
-# VGD DC Exporter 1.0.0
+# VGD DC Exporter 1.0.1
 
 Công cụ chỉ đọc: xuất thuộc tính, công thức DC và cấu trúc component đang chọn thành file JSON để gửi cho VGD đối chiếu.
 Viết lại từ tplus_dc_exporter để sửa lỗi đệ quy dictionary, tách tham số DC thành nhóm riêng và giữ giá trị mặc định/giá trị instance tách bạch.
 
 ## Cài và dùng
-1. Extensions > Extension Manager > Install Extension: chọn `VGD_DC_Exporter_1.0.0.rbz`.
+1. Extensions > Extension Manager > Install Extension: chọn `VGD_DC_Exporter_1.0.1.rbz`.
 2. Chọn component hoặc group tủ (có thể nhiều mẫu cùng lúc).
 3. Extensions > VGD DC Exporter — Xuất JSON đối tượng đang chọn. Chọn nơi lưu file.
 4. Gửi file JSON lại trong cuộc trò chuyện, kèm ảnh tổng thể tủ nếu có.

@@ -2,7 +2,7 @@ require 'json'
 require 'time'
 
 module VGD_DC_Exporter
-  VERSION = '1.0.0'.freeze unless const_defined?(:VERSION)
+  VERSION = '1.0.1'.freeze unless const_defined?(:VERSION)
 
   # Đọc đối tượng SketchUp thành dữ liệu JSON. Chỉ đọc: không sửa thuộc tính, không đổi mô hình.
   # Định nghĩa dùng chung chỉ xuất một lần (theo persistent_id); mỗi instance giữ tham số và vị trí riêng.

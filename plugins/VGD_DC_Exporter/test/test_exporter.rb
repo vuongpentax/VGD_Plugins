@@ -20,15 +20,15 @@ end
 include VGD_DC_Exporter
 
 puts '== 1. Tách tham số, công thức, nhãn, đơn vị =='
-s = Params.split('lenx' => 1500.0, 'lenx_formula' => 'Width*2', 'lenx_label' => 'Rộng', 'lenx_units' => 'MILLIMETERS',
-                 '_name' => 'Tủ', 'lenx_access' => 'NONE')
+s = Params.split('lenx' => 1500.0, '_lenx_formula' => 'Width*2', '_lenx_label' => 'Rộng', '_lenx_units' => 'MILLIMETERS',
+                 '_name' => 'Tủ', '_lenx_access' => 'NONE')
 check 'lenx là tham số có giá trị', s['parameters']['lenx']['value'] == 1500.0
 check 'công thức gắn đúng tham số', s['parameters']['lenx']['formula'] == 'Width*2'
-check 'khóa _name vào phần khác', s['other']['_name'] == 'Tủ'
+check 'khóa _name vào phần khác', s['other']['_name'] == 'Tủ' && !s['parameters'].key?('name')
 check 'nhãn và đơn vị được giữ', s['parameters']['lenx']['label'] == 'Rộng' && s['parameters']['lenx']['units'] == 'MILLIMETERS'
 
 puts '== 2. Ghép mặc định với giá trị instance =='
-d = Params.split('lenx' => 600.0, 'lenx_units' => 'INCHES', 'lenx_formula' => 'W', 'mat' => 'gỗ', 'mat_access' => 'LIST')
+d = Params.split('lenx' => 600.0, '_lenx_units' => 'INCHES', '_lenx_formula' => 'W', 'mat' => 'gỗ', '_mat_access' => 'LIST')
 i = Params.split('lenx' => 900.0)
 c = Params.combine(d, i)
 check 'instance ghi đè mặc định', c['lenx']['value'] == 900.0 && c['lenx']['definition_value'] == 600.0 && c['lenx']['instance_value'] == 900.0
@@ -36,6 +36,11 @@ check 'tham số chỉ có mặc định vẫn có mặt', c['mat']['value'] == 
 check 'đổi mm chỉ khi đơn vị là độ dài', (c['lenx']['value_mm'] - 900.0 * 25.4).abs < 1e-9
 check 'chuỗi không đổi mm', !c['mat'].key?('value_mm')
 check 'công thức đi cùng kết quả', Params.formulas(c) == [{ 'parameter' => 'lenx', 'formula' => 'W' }]
+
+puts '== 2b. Giải mã tùy chọn DC =='
+opt = Params.options('&%u0110%u1EC1u%20khoang=1&C%E1nh%20Ph%u1EE7=0&Ko%20X%E0=3')
+check 'tùy chọn giải mã đúng tiếng Việt', opt == [{ 'label' => 'Đều khoang', 'value' => '1' }, { 'label' => 'Cánh Phủ', 'value' => '0' }, { 'label' => 'Ko Xà', 'value' => '3' }], opt.inspect
+check 'chuỗi tùy chọn rỗng', Params.options(nil) == []
 
 puts '== 3. Đọc đối tượng: định nghĩa dùng chung chỉ xuất một lần =='
 class Dict
@@ -80,7 +85,7 @@ shared = Obj.new(persistent_id: 7, name: 'Hông', description: '', typename: 'Co
                  bounds: Box.new(Pt.new(0, 0, 0), Pt.new(0.7, 17.5 / 25.4, 2.0)),
                  entities_list: [], layer: Struct.new(:name).new('0'))
 shared.define_singleton_method(:entities) { Ents.new([]) }
-dict_def = { 'lenx' => 600.0, 'lenx_formula' => 'W', 'lenx_units' => 'MILLIMETERS' }
+dict_def = { 'lenx' => 600.0, '_lenx_formula' => 'W', '_lenx_units' => 'MILLIMETERS' }
 defn = Obj.new(persistent_id: 1, name: 'Tủ', description: 'tủ bếp', typename: 'ComponentDefinition',
                bounds: Box.new(Pt.new(0, 0, 0), Pt.new(1, 1, 1)), layer: Struct.new(:name).new('0'))
 defn.instance_variable_set(:@dicts, { 'dynamic_attributes' => dict_def })

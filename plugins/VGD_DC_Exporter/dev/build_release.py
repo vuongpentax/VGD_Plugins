@@ -4,7 +4,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'outputs'
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 FILES = [
     'VGD_DC_Exporter.rb',
     'VGD_DC_Exporter/main.rb',
