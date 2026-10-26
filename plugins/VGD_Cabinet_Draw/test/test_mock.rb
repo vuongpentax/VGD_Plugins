@@ -127,7 +127,7 @@ check 'sync fronts → preview', t.state == :preview, t.state
 click(t, b1, [0,0,1])   # top face rejected
 check 'top click keeps state', t.state == :preview
 hud = t.hud_lines
-check 'hud lines', hud.any? { |l| l.include?('2/2') } && hud.any? { |l| l.include?('ngậm rãnh kín') }, hud.inspect
+check 'hud lines', hud.any? { |l| l.include?('2/2') } && hud.any? { |l| l.include?('âm 4 cạnh') }, hud.inspect
 v = Sketchup.active_model.active_view
 check 'tab reverses all', (t.onKeyDown(9, 0, 0, v); true)
 t.onKeyDown(9, 0, 0, v) # back

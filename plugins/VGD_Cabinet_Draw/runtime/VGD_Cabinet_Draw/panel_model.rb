@@ -17,7 +17,24 @@ module VGD_Cabinet_Draw
     # thùng tủ lạnh (hông chạm đất, không đáy + không hậu phần tủ lạnh, hộc trên có đáy/nóc/hậu).
     CABINET_TYPES = %w[standard base wall fridge].freeze
     TYPE_NAMES = { 'standard' => 'Tủ thường', 'base' => 'Tủ bếp dưới', 'wall' => 'Tủ bếp trên', 'fridge' => 'Thùng tủ lạnh' }.freeze
-    BACK_MODES = %w[groove overlay none].freeze
+    # Kiểu hậu, tên theo DC: none = không hậu; groove = âm 4 cạnh; groove_sides = âm 2 hông;
+    # lua_top = lùa trên; lua_bottom = lùa đáy; overlay = phủ.
+    BACK_MODES = %w[none groove groove_sides lua_top lua_bottom overlay].freeze
+    # Các thành khoét rãnh để hậu chạy vào (hông, nóc, đáy).
+    BACK_GROOVES = {
+      'groove' => %w[side_left side_right bottom top],
+      'groove_sides' => %w[side_left side_right],
+      'lua_top' => %w[side_left side_right bottom],
+      'lua_bottom' => %w[side_left side_right top]
+    }.freeze
+    # Các thành lùi vào theo dày hậu: mép sau nằm sát mặt trước hậu, không khoét rãnh.
+    BACK_RECESSED = {
+      'groove_sides' => %w[top bottom],
+      'lua_top' => %w[top],
+      'lua_bottom' => %w[bottom]
+    }.freeze
+    # Kiểu có đáy lùi thì ván chân sau cũng lùi vào trước hậu.
+    BACK_TOE_RECESSED = %w[groove_sides lua_bottom].freeze
     MAX_DIMENSION = 10_000.0
     MIN_OPENING = 10.0 # khoang trống tối thiểu (mm)
     MIN_WALL = 3.0     # phần ván còn lại tối thiểu sau khi khoét rãnh (mm)
@@ -152,26 +169,32 @@ module VGD_Cabinet_Draw
       back_on = c[:mode] != 'none' && bk[:enabled]
       bt = bk[:t]
       overlay = back_on && c[:mode] == 'overlay'
-      groove_on = back_on && c[:mode] == 'groove'
+      groove_on = back_on && BACK_GROOVES.key?(c[:mode])
       g = c[:groove]
       yr = overlay ? d - bt : d   # mép sau của các tấm khác
       yg1 = d - c[:lip]           # thành sau của rãnh
       yg0 = yg1 - bt              # thành trước của rãnh
+      # Tấm lùi vào: mép sau nằm sát mặt trước hậu. Các tấm khác dùng mép sau yr.
+      recessed = back_on ? BACK_RECESSED.fetch(c[:mode], []) : []
+      rear = ->(role) { recessed.include?(role) ? yg0 : yr }
+      toe_recessed = back_on && BACK_TOE_RECESSED.include?(c[:mode])
 
-      fronts = %w[side_left side_right bottom top].select { |r| p[r][:enabled] }.map { |r| p[r][:front] }
-      max_front = fronts.max || 0.0
-      raise ArgumentError, 'Chiều sâu thùng tủ quá nhỏ so với phần lùi mặt trước và dày hậu.' if yr - max_front < MIN_OPENING
+      enabled_roles = %w[side_left side_right bottom top].select { |r| p[r][:enabled] }
+      max_front = enabled_roles.map { |r| p[r][:front] }.max || 0.0
+      room = enabled_roles.map { |r| rear.call(r) - p[r][:front] }.min || yr
+      raise ArgumentError, 'Chiều sâu thùng tủ quá nhỏ so với phần lùi mặt trước và dày hậu.' if room < MIN_OPENING
       if groove_on && yg0 - max_front < MIN_WALL
         raise ArgumentError, 'Rãnh hậu nằm quá sát mặt trước: giảm lớp che sau rãnh hoặc tăng chiều sâu.'
       end
 
       grooved = { 'side_left' => false, 'side_right' => false, 'bottom' => false, 'top' => false }
       if groove_on && g > 0
-        grooved['side_left'] = sl[:enabled]
-        grooved['side_right'] = sr[:enabled]
+        cut = BACK_GROOVES[c[:mode]]
+        grooved['side_left'] = sl[:enabled] && cut.include?('side_left')
+        grooved['side_right'] = sr[:enabled] && cut.include?('side_right')
         # Nóc/đáy trùm hông thì rãnh chạy suốt sẽ lộ ra đầu tấm, nên không khoét rãnh cho tấm đó.
-        grooved['bottom'] = bo[:enabled] && !bo[:cover_l] && !bo[:cover_r]
-        grooved['top'] = top_on && !tp[:cover_l] && !tp[:cover_r]
+        grooved['bottom'] = bo[:enabled] && !bo[:cover_l] && !bo[:cover_r] && cut.include?('bottom')
+        grooved['top'] = top_on && !tp[:cover_l] && !tp[:cover_r] && cut.include?('top')
         grooved.each do |role, on|
           next unless on
           if g > p[role][:t] - MIN_WALL
@@ -203,12 +226,12 @@ module VGD_Cabinet_Draw
       end
       if bo[:enabled]
         xl, xr = horizontal_x(bo, sl, sr, tl, tr, w)
-        pts = bottom_profile(zb0, zb0 + tb, bo[:front], yr, nil)
+        pts = bottom_profile(zb0, zb0 + tb, bo[:front], rear.call('bottom'), nil)
         parts << finish('bottom', pts.map { |y, z| [xl, y, z] }, :x, xr - xl, tb, grooved['bottom'])
       end
       if top_on
         xl, xr = horizontal_x(tp, sl, sr, tl, tr, w)
-        pts = top_profile(h - tt, h, tp[:front], yr, nil)
+        pts = top_profile(h - tt, h, tp[:front], rear.call('top'), nil)
         parts << finish('top', pts.map { |y, z| [xl, y, z] }, :x, xr - xl, tt, grooved['top'])
       end
       if back_on
@@ -221,8 +244,9 @@ module VGD_Cabinet_Draw
         else
           x0b = ix0 - (grooved['side_left'] ? g : 0.0)
           x1b = ix1 + (grooved['side_right'] ? g : 0.0)
-          z0b = iz0 - (grooved['bottom'] ? g : 0.0)
-          z1b = iz1 + (grooved['top'] ? g : 0.0)
+          # Tấm lùi vào thì hậu chạy tới mép ngoài của tấm đó; tấm có rãnh thì hậu chạy vào rãnh.
+          z0b = recessed.include?('bottom') ? zb0 : iz0 - (grooved['bottom'] ? g : 0.0)
+          z1b = recessed.include?('top') ? h : iz1 + (grooved['top'] ? g : 0.0)
           yb = yg0
         end
         pts = [[x0b, yb, z0b], [x1b, yb, z0b], [x1b, yb, z1b], [x0b, yb, z1b]]
@@ -268,8 +292,8 @@ module VGD_Cabinet_Draw
         pts = [[x0, y, 0.0], [x1, y, 0.0], [x1, y, leg], [x0, y, leg]]
         trim << finish('toe_kick', pts, :y, c[:toe_t], c[:toe_t], false)
         # Ván chân sau: đỡ phía sau thân tủ (bệ chân 2 thanh trước/sau), sát mặt sau tủ.
-        if c[:toe_back] && d - c[:toe_t] > y + c[:toe_t] + MIN_WALL
-          yb = d - c[:toe_t]
+        yb = toe_recessed ? yg0 - c[:toe_t] : d - c[:toe_t]
+        if c[:toe_back] && yb > y + c[:toe_t] + MIN_WALL
           pts = [[x0, yb, 0.0], [x1, yb, 0.0], [x1, yb, leg], [x0, yb, leg]]
           trim << finish('toe_kick_back', pts, :y, c[:toe_t], c[:toe_t], false)
         end

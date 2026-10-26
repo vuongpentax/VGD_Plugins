@@ -476,7 +476,7 @@ module VGD_Cabinet_Draw
 
       def hud_lines
         done = @boxes.count { |box| @fronts[box.persistent_id] }
-        back_names = { 'groove' => 'ngậm rãnh kín', 'overlay' => 'phủ', 'none' => 'không hậu' }
+        back_names = { 'groove' => 'âm 4 cạnh', 'groove_sides' => 'âm 2 hông', 'lua_top' => 'lùa trên', 'lua_bottom' => 'lùa đáy', 'overlay' => 'phủ', 'none' => 'không hậu' }
         back_name = back_names.fetch(@settings['back_mode'], @settings['back_mode'].to_s)
         lines = [
           "Box: #{@boxes.length}   Đã có mặt trước: #{done}/#{@boxes.length}",

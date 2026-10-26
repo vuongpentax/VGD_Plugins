@@ -156,8 +156,8 @@ Sketchup.reset_model!
 bx = mk_box(600, 560, 720)
 Sketchup.active_model.selection.clear; Sketchup.active_model.selection.add(bx)
 bt = V::Tools::BoxTool.new({}); bt.activate; bt.draw(v)
-press(bt, :param, 'back_mode'); press(bt, :param, 'back_mode')
-check 'hàng Kiểu hậu đổi vòng tới Không hậu', bt.settings['back_mode'] == 'none'
+5.times { press(bt, :param, 'back_mode') }
+check 'hàng Kiểu hậu đổi vòng tới Không hậu (sau 5 lần: âm 4 cạnh → âm 2 hông → lùa trên → lùa đáy → phủ → không hậu)', bt.settings['back_mode'] == 'none'
 press(bt, :mode, 'base')
 check 'nút Bếp dưới: áp chân 100, tắt phào', bt.settings['cabinet_type'] == 'base' && bt.settings['leg_height'] == 100.0 && bt.settings['cornice_enabled'] == false
 check 'Bếp dưới: hiện hàng Bản giằng, ẩn hàng tủ lạnh', bt.hud_params.any? { |p| p[:key] == 'top_rail_width' } && bt.hud_params.none? { |p| p[:key] == 'fridge_width' }

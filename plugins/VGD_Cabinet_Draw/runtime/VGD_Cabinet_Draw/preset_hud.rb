@@ -34,7 +34,7 @@ module VGD_Cabinet_Draw
                                               ['fridge', 'Tủ lạnh', 'Thùng tủ lạnh: hông chạm đất, phần tủ lạnh không đáy/không hậu, hộc trên đặt ở cao tủ lạnh + khe']] },
         params: [
           BOARD,
-          { key: 'back_mode', label: 'Kiểu hậu', type: :enum, options: [['groove', 'Ngậm rãnh'], ['overlay', 'Hậu phủ'], ['none', 'Không hậu']] },
+          { key: 'back_mode', label: 'Kiểu hậu', type: :enum, options: [['groove', 'Âm 4 cạnh'], ['groove_sides', 'Âm 2 hông'], ['lua_top', 'Lùa trên'], ['lua_bottom', 'Lùa đáy'], ['overlay', 'Phủ'], ['none', 'Không hậu']] },
           { key: 'back_thickness', label: 'Dày hậu', type: :mm, min: 1, max: 30 },
           { key: 'fridge_width', label: 'Rộng tủ lạnh', type: :mm, min: 300, max: 2000, only: { 'cabinet_type' => %w[fridge] } },
           { key: 'fridge_height', label: 'Cao tủ lạnh', type: :mm, min: 400, max: 2600, only: { 'cabinet_type' => %w[fridge] } },
