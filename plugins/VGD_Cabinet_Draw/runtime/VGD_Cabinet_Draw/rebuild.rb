@@ -652,28 +652,19 @@ module VGD_Cabinet_Draw
     end
 
     # position_material nhận các CẶP (điểm trên mặt, điểm tương ứng trên ảnh). Ảnh đặt theo kích thước thật
-    # (texture.width/height, inch) và tọa độ ảnh tính bằng pixel.
+    # (texture.width/height, inch). Tọa độ ảnh dùng ảnh ĐÃ CHUẨN HÓA: (1, 0) là cạnh rộng của cả ảnh, (0, 1) là cạnh
+    # cao. Dùng pixel ở đây làm vân lặp dày gấp hàng trăm lần (vân nhỏ li ti trên mặt).
     def reset_face_texture(face, material, front)
       texture = material.texture
       return if texture.width <= 0 || texture.height <= 0
       origin = face.vertices[0].position
       u = (face.vertices[1].position - origin).normalize
       v = face.normal.cross(u).normalize
-      pixel_w, pixel_h = texture_pixels(texture)
       face.position_material(material, [
         origin, Geom::Point3d.new(0, 0, 0),
-        origin.offset(u, texture.width), Geom::Point3d.new(pixel_w, 0, 0),
-        origin.offset(v, texture.height), Geom::Point3d.new(0, pixel_h, 0)
+        origin.offset(u, texture.width), Geom::Point3d.new(1, 0, 0),
+        origin.offset(v, texture.height), Geom::Point3d.new(0, 1, 0)
       ], front)
-    end
-
-    # Kích thước ảnh theo pixel. Nếu API không có thì dùng kích thước thật (inch) làm tỷ lệ.
-    def texture_pixels(texture)
-      if texture.respond_to?(:image_width) && texture.respond_to?(:image_height) && texture.image_width.to_i > 0
-        [texture.image_width.to_f, texture.image_height.to_f]
-      else
-        [texture.width.to_f, texture.height.to_f]
-      end
     end
 
     # Xóa bản thử và cả định nghĩa riêng của nó (không thì còn một component mồ côi trong danh sách Components).
