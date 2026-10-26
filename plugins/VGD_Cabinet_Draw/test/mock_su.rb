@@ -395,3 +395,99 @@ module Sketchup
     def pixels_to_model(px, _pt); px * 2.0; end
   end
 end
+
+# ---- Hỗ trợ co giãn tại chỗ (test_stretch.rb): biến đổi hình học, sao chép, texture, observer, mặc định ----
+module Geom
+  class Transformation
+    def self.scaling(x, y, z)
+      new([[x.to_f, 0.0, 0.0], [0.0, y.to_f, 0.0], [0.0, 0.0, z.to_f], [0.0, 0.0, 0.0]])
+    end
+  end
+end
+module Sketchup
+  class ModelObserver; end
+  class AppObserver; end
+  @defaults = {}
+  class << self
+    def add_observer(o); (@app_observers ||= []) << o; end
+    def read_default(section, key, default = nil); @defaults.fetch([section, key], default); end
+    def write_default(section, key, value); @defaults[[section, key]] = value; end
+  end
+  class Entity
+    def dup_dicts; @dicts && @dicts.transform_values(&:dup); end
+    def placed_bounds(box, t); Bounds.new([box.min, box.max].map { |p| p.transform(t) }); end
+  end
+  class Face
+    attr_accessor :back_material
+    def apply_transform!(t)
+      n = normal
+      @ext = @ext * Math.sqrt(t.apply_vec(n.to_a).sum { |c| c * c }) if pushed?
+      @pts = @pts.map { |p| p.transform(t) }
+      self
+    end
+    def position_material(material, points, front)
+      (@positioned ||= []) << [material, points, front]
+      true
+    end
+    def positioned; @positioned || []; end
+    def copy_into(entities)
+      f = Face.new(@pts.map { |p| Geom::Point3d.new(p.x, p.y, p.z) })
+      f.instance_variable_set(:@flip, @flip)
+      f.instance_variable_set(:@ext, @ext)
+      f.instance_variable_set(:@pushed, @pushed)
+      f.material = material
+      f.back_material = back_material
+      f.parent_entities = entities
+      f.instance_variable_set(:@dicts, dup_dicts)
+      f
+    end
+  end
+  class Entities
+    def transform_entities(t, ents = nil)
+      (ents.nil? ? to_a : Array(ents)).each do |e|
+        if e.is_a?(Face) then e.apply_transform!(t)
+        elsif e.is_a?(Group) || e.is_a?(ComponentInstance) then e.transformation = t * e.transformation
+        end
+      end
+      true
+    end
+  end
+  class Definition
+    def deep_copy
+      copy = Definition.new
+      copy.name = name
+      entities.to_a.each { |e| copy.entities.push(e.copy_into(copy.entities)) }
+      copy
+    end
+  end
+  class Group
+    def bounds; placed_bounds(definition.bounds, transformation); end
+    def make_unique; self; end
+    def copy_into(entities)
+      g = Group.new(entities)
+      g.transformation = transformation
+      g.name = name
+      g.layer = layer
+      g.material = material
+      g.instance_variable_set(:@definition, definition.deep_copy)
+      g.instance_variable_set(:@dicts, dup_dicts)
+      g
+    end
+  end
+  class ComponentInstance
+    def bounds; placed_bounds(definition.bounds, transformation); end
+    def make_unique; @definition = @definition.deep_copy; self; end
+    def copy_into(entities)
+      i = ComponentInstance.new(entities, definition, transformation)
+      i.name = name
+      i.layer = layer
+      i.material = material
+      i.instance_variable_set(:@dicts, dup_dicts)
+      i
+    end
+  end
+  class Model
+    def add_observer(o); (@model_observers ||= []) << o; end
+    def remove_observer(o); (@model_observers ||= []).delete(o); end
+  end
+end

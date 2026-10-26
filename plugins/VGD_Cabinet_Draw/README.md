@@ -1,9 +1,18 @@
-# VGD_Cabinet Draw 1.0.0-beta.33
+# VGD_Cabinet Draw 1.0.0-beta.34
 
-Trạng thái: mã nguồn beta.33 từ bộ bàn giao đã được đưa vào repository, thay cho baseline beta.1 (lịch sử beta.1 vẫn còn trong git).
+Trạng thái: beta.34 bổ sung tự cập nhật tủ khi kéo Scale (co giãn tại chỗ, giữ ván và chi tiết đã làm). Nền tảng từ beta.33 đã đưa vào repository, thay cho baseline beta.1 (lịch sử beta.1 vẫn còn trong git).
 
-- Đã xác minh tự động: 15 bộ test giả lập (`test/`), chạy trên Ruby 3.3, hai lượt đều đạt.
+- Đã xác minh tự động: bộ test giả lập (`test/`), gồm `test_stretch.rb` cho tự cập nhật khi Scale.
 - Chưa xác minh: chưa mở trong SketchUp thật; chưa kiểm tra tương thích Ruby 2.7 đầy đủ (chỉ kiểm cú pháp bằng `ruby -c`).
+
+## Tự cập nhật khi kéo Scale (beta.34)
+
+- Kéo Scale tủ xong (thả chuột) thì tủ tự dựng lại theo kích thước mới. Không cần mở Box → Board.
+- Vỏ tủ và đợt/vách được co giãn tại chỗ, không xóa tạo lại: khấu, cắt, bo, vật liệu và tên được giữ.
+- Vân vật liệu được đặt lại theo kích thước thật, không bị kéo theo tấm.
+- Ngăn kéo, cánh, tay nắm, xà chặn và hộc tủ áo vẫn dựng lại từ công thức.
+- Tắt/bật ở tab 5 · Setting chung. Mặc định bật.
+- Một lần kéo Scale tạo hai bước Undo: bước Scale và bước tự cập nhật.
 
 VGD_Cabinet Draw is a standalone SketchUp extension for a semi-automatic cabinet workflow. It keeps the user in control of face orientation, panel positions, door splits, openings, handles, drawers and finishing operations. Preview lives in the viewport; a tool commits model geometry only when the user presses Enter.
 

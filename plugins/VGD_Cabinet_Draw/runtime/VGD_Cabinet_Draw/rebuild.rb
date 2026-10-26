@@ -307,7 +307,7 @@ module VGD_Cabinet_Draw
 
     # Dựng lại một tủ với thông số và kích thước mới (mm). keep: các entity chỉnh tay cần giữ nguyên.
     # Chạy trong một operation do công cụ mở. Trả về danh sách cảnh báo.
-    def run(root, settings, dims, keep = [])
+    def run(root, settings, dims, keep = [], share: true)
       warnings = []
       result = PanelModel.compute(dims[0], dims[1], dims[2], settings) # kiểm tra trước khi xóa gì
       # Tấm giữ nguyên được nhận theo vai trò / (bước, chỉ số), không theo đối tượng: make_unique (tủ là bản copy)
@@ -384,8 +384,145 @@ module VGD_Cabinet_Draw
       # Có bước không dựng lại được thì HỦY TOÀN BỘ (operation sẽ hoàn tác), để không mất chi tiết của người dùng.
       raise "Không sửa được tủ vì: #{failures.join('; ')}. Tủ giữ nguyên như cũ — hãy chỉnh lại thông số." unless failures.empty?
       restore_drawer_handles(root, drawer_handles)
-      Geometry.share_components(root)
+      Geometry.share_components(root) if share
       warnings
+    end
+
+    # ---------- Co giãn tại chỗ (tự cập nhật khi kéo Scale) ----------
+    # Kiểu Dynamic Component: vỏ tủ và đợt/vách KHÔNG bị xóa rồi tạo lại. Mỗi tấm được co giãn đúng từ hộp cũ sang
+    # hộp mới, nên khấu, cắt, bo, vật liệu, tên và chữ ký hình học đều còn nguyên.
+    # Hộp cũ/mới lấy từ công thức: dựng thử một BẢN SAO của tủ rồi xóa bản sao. Tủ không khớp công thức thì dựng lại như cũ.
+    # Ngăn kéo, cánh, tay nắm, xà chặn, hộc tủ áo vẫn dựng lại từ công thức (chưa co giãn tại chỗ).
+
+    # Co giãn tủ đang bị kéo Scale về kích thước thật. Chạy trong một operation do người gọi mở. Trả về danh sách cảnh báo.
+    def stretch(root)
+      dims = dimensions_of(root)
+      settings = settings_of(root)
+      old_dims = ModelData.params(root).values_at('width_mm', 'depth_mm', 'height_mm').map(&:to_f)
+      unscale!(root)
+      shell = Geometry.shell_for(root)
+      raise 'Không tìm thấy thùng tủ.' unless shell
+      parts = stretch_parts_of(shell)
+      return rebuild_as_before(root, settings, dims) unless parts
+      from = recipe_boxes(root, settings, old_dims)
+      to = recipe_boxes(root, settings, dims)
+      return rebuild_as_before(root, settings, dims) unless from.keys.sort == parts.keys.sort && to.keys.sort == parts.keys.sort
+      parts.each do |key, entity|
+        next if same_box?(from[key], to[key])
+        stretch_part!(entity, from[key], to[key])
+      end
+      run(root, settings, dims, parts.values, share: false)
+    end
+
+    # Tủ không khớp công thức (thường là tủ tạo bằng bản cũ): dựng lại như trước, giữ tấm chỉnh tay, và báo lại.
+    def rebuild_as_before(root, settings, dims)
+      keep = hand_edited(root).map { |item| item[:entity] }
+      warnings = run(root, settings, dims, keep)
+      warnings << 'Tủ không khớp công thức (có thể tạo bằng bản cũ): đã dựng lại như trước, hãy kiểm tra ván.'
+    end
+
+    # Khóa nhận diện một tấm: vỏ tủ theo vai trò; đợt/vách theo (vai trò, bước, chỉ số). nil nếu không nhận ra.
+    def stretch_key(entity)
+      role = Interior.role_of(entity)
+      return [role] if Interior::CARCASS_ROLES.include?(role)
+      return nil unless MEMBER_ROLES.include?(role)
+      params = ModelData.params(entity)
+      return nil unless params['op']
+      [role, params['op'], params['index'].to_i]
+    end
+
+    # Các tấm cần co giãn: { khóa => entity }. nil nếu có tấm không nhận ra (tủ cũ) hoặc hai tấm trùng khóa.
+    def stretch_parts_of(shell)
+      containers = Interior.containers(shell)
+      return nil if containers.any? { |e| Interior.role_of(e).nil? && e.name.to_s =~ /\A(Đợt|Vách) \d+\z/ }
+      parts = {}
+      containers.each do |entity|
+        role = Interior.role_of(entity)
+        next unless Interior::CARCASS_ROLES.include?(role) || MEMBER_ROLES.include?(role)
+        key = stretch_key(entity)
+        return nil if key.nil? || parts.key?(key)
+        parts[key] = entity
+      end
+      parts
+    end
+
+    # Hộp [x0,y0,z0,x1,y1,z1] (đơn vị SketchUp) của từng tấm theo công thức ứng với kích thước dims: { khóa => hộp }.
+    def recipe_boxes(root, settings, dims)
+      probe = probe_copy(root)
+      run(probe, settings, dims, [], share: false)
+      Interior.containers(Geometry.shell_for(probe)).each_with_object({}) do |entity, out|
+        key = stretch_key(entity)
+        out[key] = Interior.box_of(entity) if key
+      end
+    ensure
+      discard_probe(probe) if probe&.valid?
+    end
+
+    # Xóa bản thử và cả định nghĩa riêng của nó (không thì còn một component mồ côi trong danh sách Components).
+    # Chỉ gọi xóa định nghĩa khi API DefinitionList#remove có sẵn và định nghĩa không còn bản thể nào.
+    def discard_probe(probe)
+      definition = probe.definition
+      probe.erase!
+      definitions = Sketchup.active_model.respond_to?(:definitions) ? Sketchup.active_model.definitions : nil
+      definitions.remove(definition) if definitions && definitions.respond_to?(:remove) && definition.count_instances.zero?
+    end
+
+    # Bản sao thử của tủ (cùng vị trí, cùng thuộc tính, định nghĩa riêng) để dựng công thức mà không đụng tủ thật.
+    def probe_copy(root)
+      host = root.parent
+      raise 'Không tạo được bản thử của tủ.' unless host.respond_to?(:entities)
+      probe = host.entities.add_instance(root.definition, root.transformation)
+      probe.make_unique
+      ModelData.restore(probe, ModelData.snapshot(root))
+      probe.name = root.name
+      probe
+    end
+
+    def same_box?(a, b)
+      a.zip(b).all? { |x, y| (x - y).abs < Interior::EPS }
+    end
+
+    # Co giãn một tấm tại chỗ: đưa hộp cũ về hộp mới, giữ nguyên các chi tiết bên trong, rồi đặt lại vân vật liệu.
+    def stretch_part!(entity, old_box, new_box)
+      entity.make_unique if entity.is_a?(Sketchup::ComponentInstance)
+      placement = entity.transformation
+      contents = contents_of(entity)
+      contents.transform_entities(placement.inverse * stretch_transform(old_box, new_box) * placement, contents.to_a)
+      reset_textures(entity)
+      Geometry.stamp_signature(entity)
+    end
+
+    # Phép biến đổi đưa hộp cũ về hộp mới: co theo từng trục (trục có kích thước 0 giữ nguyên), rồi dời tới vị trí mới.
+    def stretch_transform(old_box, new_box)
+      factors = (0..2).map do |i|
+        old_size = old_box[i + 3] - old_box[i]
+        old_size > Interior::EPS ? (new_box[i + 3] - new_box[i]) / old_size : 1.0
+      end
+      Geom::Transformation.translation(new_box[0, 3]) * Geom::Transformation.scaling(*factors) *
+        Geom::Transformation.translation(old_box[0, 3].map(&:-@))
+    end
+
+    def contents_of(entity)
+      entity.is_a?(Sketchup::Group) ? entity.entities : entity.definition.entities
+    end
+
+    # Sau khi co giãn, đặt lại vân để mỗi viên vân giữ đúng kích thước thật (không bị kéo theo tấm).
+    def reset_textures(entity)
+      contents_of(entity).grep(Sketchup::Face).each do |face|
+        front = face.material || entity.material
+        reset_face_texture(face, front, true) if front && front.texture
+        back = face.back_material
+        reset_face_texture(face, back, false) if back && back.texture
+      end
+    end
+
+    def reset_face_texture(face, material, front)
+      texture = material.texture
+      return if texture.width <= 0 || texture.height <= 0
+      origin = face.vertices[0].position
+      u = (face.vertices[1].position - origin).normalize
+      v = face.normal.cross(u).normalize
+      face.position_material(material, [origin, origin.offset(u, texture.width), origin.offset(v, texture.height)], front)
     end
 
     # Tủ copy bằng Ctrl+Move dùng chung định nghĩa với bản gốc: tách riêng tủ và các nhóm con trực tiếp

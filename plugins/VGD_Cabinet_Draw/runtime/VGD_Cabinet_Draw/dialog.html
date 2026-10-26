@@ -11,13 +11,13 @@
 </style>
 <link rel="stylesheet" href="vgd-theme/vgd-theme.css"></head>
 <body>
-<header><div class="brand">V</div><b>VGD Cabinet Draw</b><small>1.0.0-beta.33</small><button id="themeBtn" class="vgd-theme-btn" type="button" aria-pressed="false" style="margin-left:auto"></button></header>
+<header><div class="brand">V</div><b>VGD Cabinet Draw</b><small>1.0.0-beta.34</small><button id="themeBtn" class="vgd-theme-btn" type="button" aria-pressed="false" style="margin-left:auto"></button></header>
 <nav class="tabs" id="tabs">
 <button data-tab="box" class="on">1 · Box → Board</button><button data-tab="panel">2 · Đợt / vách</button><button data-tab="door">3 · Cánh tủ</button><button data-tab="drawer">4 · Ngăn kéo</button><button data-tab="settings">5 · Setting chung</button></nav>
 <main class="wrap">
 
 <section class="tab on" id="tab-box" data-pgroup="box">
-<p class="intro"><b>Sửa tủ đã tạo:</b> chọn tủ (chỉ chọn tủ) rồi bấm Box → Board — HUD hiện thông số và Rộng/Sâu/Cao của tủ, sửa rồi Enter để dựng lại; đợt, vách, ngăn kéo, cánh, tay nắm được giữ theo cách đã tạo. Kéo Scale tủ rồi làm như trên để dựng lại đúng độ dày ván. Box → thùng tủ: chọn box, click mặt trước, nhấn Enter (hoặc nút Áp dụng). Box bị scale vẫn dựng được, tủ có kích thước thật như box. Face → ván: chọn các face rồi chạy công cụ, hộp thoại hỏi độ dày. Dày ván và dày hậu đặt ở tab 5.</p>
+<p class="intro"><b>Sửa tủ đã tạo:</b> chọn tủ (chỉ chọn tủ) rồi bấm Box → Board — HUD hiện thông số và Rộng/Sâu/Cao của tủ, sửa rồi Enter để dựng lại; đợt, vách, ngăn kéo, cánh, tay nắm được giữ theo cách đã tạo. Kéo Scale xong thì tủ tự cập nhật theo kích thước mới, giữ ván và chi tiết đã làm (tắt ở tab 5 · Setting chung). Box → thùng tủ: chọn box, click mặt trước, nhấn Enter (hoặc nút Áp dụng). Box bị scale vẫn dựng được, tủ có kích thước thật như box. Face → ván: chọn các face rồi chạy công cụ, hộp thoại hỏi độ dày. Dày ván và dày hậu đặt ở tab 5.</p>
 <div class="presetbar" data-bar="box"></div>
 <div class="card" data-group="box"><div class="fields">
 <div class="field"><label>Loại tủ</label><select data-key="cabinet_type"><option value="standard">Tủ thường (tủ áo, tủ kệ…)</option><option value="base">Tủ bếp dưới</option><option value="wall">Tủ bếp trên</option><option value="fridge">Thùng tủ lạnh</option></select></div>
@@ -134,6 +134,9 @@
 
 <section class="tab" id="tab-settings">
 <p class="intro">Thông số dùng chung cho cả bốn công cụ, và quản lý danh sách setting đã lưu của từng công cụ.</p>
+<h2 class="sub">Tự cập nhật tủ</h2>
+<div class="card"><label class="switch"><input id="autoStretch" type="checkbox" checked> Kéo Scale xong thì tủ tự cập nhật theo kích thước mới</label>
+<p class="note">Ván, khấu, cắt, bo, vật liệu và texture được giữ nguyên, chỉ co giãn theo kích thước mới. Tắt đi thì sau khi Scale, mở Box → Board, chọn tủ rồi bấm Enter để cập nhật.</p></div>
 <h2 class="sub">Thông số gốc dùng chung</h2>
 <div class="card" data-group="base"><div class="fields">
 <div class="field"><label>Dày ván (mm)</label><input data-key="board_thickness" type="number" step="any" min="3" value="17.5"></div>
@@ -197,6 +200,7 @@ VGD.loadSettings=(p,notify,group)=>{
   if(notify)sketchup.settings(JSON.stringify(VGD.settings()));
 };
 VGD.status=s=>document.getElementById('status').textContent=s;
+VGD.setAutoStretch=v=>{const box=document.getElementById('autoStretch');if(box)box.checked=!!v;};
 const toolData=g=>VGD.data&&VGD.data.tools[g]||{presets:[],default_id:null};
 const send=(fn,obj)=>sketchup[fn](JSON.stringify(obj));
 VGD.pickPreset=(g,id)=>{VGD.sel[g]=id;renderBars()};
@@ -268,6 +272,7 @@ function showTab(name){
   try{localStorage.setItem('vgd.cabinet_draw.tab',name)}catch(e){}
 }
 document.getElementById('saveBase').onclick=()=>send('ts_base_save',{settings:VGD.settings('base')});
+document.getElementById('autoStretch').onchange=e=>sketchup.auto_stretch(JSON.stringify({enabled:e.target.checked}));
 document.getElementById('exportBtn').onclick=()=>sketchup.ts_export('');
 document.getElementById('importBtn').onclick=()=>sketchup.ts_import('');
 document.getElementById('applyBtn').onclick=()=>sketchup.apply('');
