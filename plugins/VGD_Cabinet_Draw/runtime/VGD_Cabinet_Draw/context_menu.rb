@@ -49,6 +49,8 @@ module VGD_Cabinet_Draw
 
     # Danh sách mục cho vùng chọn hiện tại (rỗng nếu không phải tủ/cánh của VGD).
     def items_for(selection)
+      members = selection.select { |entity| Rebuild::MEMBER_ROLES.include?(Interior.role_of(entity)) }
+      return member_items(members) unless members.empty?
       roots, doors = classify(selection)
       return cabinet_items(roots) unless roots.empty?
       return door_items(doors) unless doors.empty?
@@ -140,8 +142,39 @@ module VGD_Cabinet_Draw
         item('Đóng ngăn kéo', -> { close_drawers(drawer_group(fronts)) }),
         { separator: true },
         item('Đặt tay nắm', -> { put_handles(fronts) }),
-        item('Xóa tay nắm', -> { remove_handles(fronts) })
+        item('Xóa tay nắm', -> { remove_handles(fronts) }),
+        item('Xóa ngăn kéo này', -> { remove_drawer_steps(fronts) })
       ]
+    end
+
+    def member_items(members)
+      [item('Xóa tấm này', -> { remove_member_items(members) })]
+    end
+
+    # Xóa đợt/vách: nhóm theo tủ rồi xóa trong một thao tác.
+    def remove_member_items(members)
+      members.group_by { |member| Removal.cabinet_of(member) }.each do |root, list|
+        next unless root
+        in_operation('VGD Cabinet Draw — Xóa tấm') { Removal.remove_members(root, list) }
+      end
+    end
+
+    # Xóa cánh: vùng thành trống, không gộp vào cánh bên cạnh.
+    def remove_door_items(doors)
+      doors.group_by { |door| Removal.cabinet_of(door) }.each do |root, list|
+        next unless root
+        in_operation('VGD Cabinet Draw — Xóa cánh') { Removal.remove_doors(root, list) }
+      end
+    end
+
+    # Xóa ngăn kéo (mặt + thùng), khoang, xà chặn, hộc tủ áo theo bước tạo của chúng.
+    def remove_drawer_steps(items)
+      items.group_by { |item| Removal.cabinet_of(item) }.each do |root, list|
+        next unless root
+        steps = list.map { |item| Removal.step_of(item) }.compact.uniq
+        next if steps.empty?
+        in_operation('VGD Cabinet Draw — Xóa ngăn kéo') { Removal.remove_steps(root, steps) }
+      end
     end
 
     # Cả mặt hộc lẫn thùng của các hộc được chọn.
@@ -163,7 +196,8 @@ module VGD_Cabinet_Draw
         { label: 'Bản lề', items: hinges.map { |name, type| item(name, -> { set_hinge(doors, type) }, checked: current == [type]) } },
         { separator: true },
         item('Đặt tay nắm', -> { put_handles(doors) }),
-        item('Xóa tay nắm', -> { remove_handles(doors) })
+        item('Xóa tay nắm', -> { remove_handles(doors) }),
+        item('Xóa cánh này', -> { remove_door_items(doors) })
       ]
     end
 
@@ -178,6 +212,14 @@ module VGD_Cabinet_Draw
         list << item('Bỏ chọn vùng', -> { tool_clear_selection(tool) })
       when 'OpeningTool'
         list << item('Đóng tất cả cánh của tủ đang chọn', -> { VGD_Cabinet_Draw.close_selected_doors })
+      when 'PanelTool'
+        count = (tool.instance_variable_get(:@marked) || []).length
+        list << item("Xóa #{count} tấm đã đánh dấu", -> { tool.send(:remove_marked) }) if count.positive?
+        list << item('Bỏ đánh dấu tấm', -> { tool.send(:clear_marked) }) if count.positive?
+      when 'DoorTool'
+        view = Sketchup.active_model.active_view
+        list << item('Gộp vùng đã chọn (Alt+G)', -> { tool.send(:merge_selected, view) })
+        list << item('Xóa cánh của vùng đã chọn', -> { tool.send(:empty_selected, view) })
       end
       list << { separator: true } unless list.empty?
       list << item('Mở bảng Setting', -> { Dialog.show })

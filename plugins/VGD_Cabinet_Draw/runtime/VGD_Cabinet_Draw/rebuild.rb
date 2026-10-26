@@ -131,10 +131,13 @@ module VGD_Cabinet_Draw
       vertical = op['axis'] == 'vertical'
       t = op['thickness_mm'].to_f.mm
       low, high = vertical ? [cell.x0, cell.x1] : [cell.z0, cell.z1]
+      # 'omit': chỉ số các tấm đã xóa (xem Removal). Tấm còn lại giữ nguyên vị trí.
+      omit = Array(op['omit']).map(&:to_i)
       if op['mode'] == 'divide'
-        divide_positions(cell, op['count'].to_i, op['kind'].to_s, t, vertical)
+        positions = divide_positions(cell, op['count'].to_i, op['kind'].to_s, t, vertical)
+        positions.each_with_index.reject { |_, i| omit.include?(i) }.map(&:first)
       else
-        (op['offsets'] || []).map { |mm| [[low + mm.to_f.mm, low].max, high - t].min }
+        (op['offsets'] || []).each_with_index.reject { |_, i| omit.include?(i) }.map { |mm, _| [[low + mm.to_f.mm, low].max, high - t].min }
       end
     end
 

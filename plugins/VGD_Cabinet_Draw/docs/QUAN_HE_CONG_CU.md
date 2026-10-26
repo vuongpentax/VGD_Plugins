@@ -64,6 +64,7 @@ Muốn một cấu kiện mới co giãn đúng: thêm khóa trong `stretch_key`
 | Co giãn khi Scale | `auto_stretch.rb`, `rebuild.rb` | Xem mục 3 |
 | Liên kết | `links.rb` | Xem mục 4 |
 | Menu chuột phải, HUD | `context_menu.rb`, `preset_hud.rb`, `mini_bar.rb` | Gọi các công cụ trên |
+| Xóa tấm, cánh, ngăn kéo | `removal.rb` | Ghi vào bước tạo (`omit`, vùng `empty`, gỡ bước) để không hiện lại |
 
 ## 6. Việc còn lại đã biết
 

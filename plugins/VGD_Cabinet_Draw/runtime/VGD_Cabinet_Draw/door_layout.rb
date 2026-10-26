@@ -43,8 +43,11 @@ module VGD_Cabinet_Draw
         list = data['regions']
         if data['schema'].to_i >= 2
           regions = list.map do |item|
-            { 'id' => item['id'].to_i, 'u0' => item['u0'].to_f, 'u1' => item['u1'].to_f, 'v0' => item['v0'].to_f, 'v1' => item['v1'].to_f,
-              'opening_type' => DoorLayout.opening_type(item['opening_type']) }
+            region = { 'id' => item['id'].to_i, 'u0' => item['u0'].to_f, 'u1' => item['u1'].to_f, 'v0' => item['v0'].to_f, 'v1' => item['v1'].to_f,
+                       'opening_type' => DoorLayout.opening_type(item['opening_type']) }
+            # Vùng trống: vẫn là một ô của bố cục nhưng không có cánh (đã xóa cánh, không gộp vào cánh bên cạnh).
+            region['empty'] = true if item['empty']
+            region
           end
         else
           regions = list.each_with_index.map do |item, index|
@@ -258,6 +261,7 @@ module VGD_Cabinet_Draw
         half = gap.to_f / 2
         out = []
         sorted.each_with_index do |r, index|
+          next if r['empty']
           x0 = r['u0'] * width + (r['u0'] > EPS ? half : 0.0)
           x1 = r['u1'] * width - (r['u1'] < 1 - EPS ? half : 0.0)
           z0 = r['v0'] * height + (r['v0'] > EPS ? half : 0.0)

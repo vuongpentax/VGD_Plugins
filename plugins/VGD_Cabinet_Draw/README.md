@@ -1,4 +1,4 @@
-# VGD_Cabinet Draw 1.0.0-beta.36
+# VGD_Cabinet Draw 1.0.0-beta.37
 
 Trạng thái: beta.35 mở rộng tự cập nhật tủ khi kéo Scale sang ngăn kéo, khoang, xà chặn, hộc tủ áo và cánh (giai đoạn 2). beta.34 là giai đoạn 1 (vỏ tủ và đợt/vách). Nền tảng từ beta.33 đã đưa vào repository, thay cho baseline beta.1 (lịch sử beta.1 vẫn còn trong git).
 
@@ -15,6 +15,7 @@ Trạng thái: beta.35 mở rộng tự cập nhật tủ khi kéo Scale sang ng
 - Liên kết (module `links.rb`): cánh mở trái/phải bắt bản lề vào hông trái/phải, mở lên vào nóc, mở xuống vào đáy. Cánh mở lên/xuống được xử lý trước. Nếu bản lề không còn bắt được vào tấm vỏ tủ thì tủ giữ nguyên và báo lỗi.
 - Kích thước cố định theo mm: khung, gờ và khe cánh, thùng và đáy ngăn kéo, hông khoang giữ nguyên độ dày. Cánh, mặt hộc, khoang, xà chặn và hộc tủ áo được dựng lại nội dung ở kích thước mới.
 - Tay nắm cách mép đã chọn một khoảng mm cố định.
+- Xóa (beta.37): Alt-click trong công cụ Đợt/vách xóa một tấm; Shift-click đánh dấu nhiều tấm rồi xóa qua chuột phải. Chuột phải lên đợt/vách, cánh, ngăn kéo cũng có mục xóa. Cánh: chuột phải → xóa cánh (vùng thành trống, không gộp vào cánh bên cạnh); Alt+G (hoặc G) gộp vùng cánh đã chọn. Xóa đợt làm các đợt còn lại đổi sang vị trí tuyệt đối trước, nên không dời theo.
 - Quan hệ giữa công cụ và cấu kiện: xem `docs/QUAN_HE_CONG_CU.md`.
 - Chưa làm: lỗ khấu, cắt, bo trên vỏ tủ vẫn co theo tỷ lệ; cam, chốt, lề chưa làm.
 - Tắt/bật ở tab 5 · Setting chung. Mặc định bật.

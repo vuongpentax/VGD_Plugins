@@ -1046,7 +1046,7 @@ module VGD_Cabinet_Draw
         return 'Rê chuột vào tủ rồi click chọn tủ · Esc: thoát' unless @root
         return 'Tab đổi thông thủy / lọt / phủ · click hoặc Enter tạo · Esc: bỏ' if @divide_count
         return 'Kéo ra xem trước · Tab đổi điểm bắt · gõ mm · click hoặc Enter tạo tấm · Esc: bỏ mặt' if @ref
-        'Rê vào hông / nóc / đáy / tấm đã có · click chọn mặt · Tab: lọt ô ↔ xuyên · /n chia cả ô · Backspace: hoàn tác · Esc: thoát'
+        'Rê vào hông / nóc / đáy / tấm đã có · click chọn mặt · Tab: lọt ô ↔ xuyên · /n chia cả ô · Alt-click: xóa tấm · Shift-click: đánh dấu xóa · Backspace: hoàn tác · Esc: thoát'
       end
 
       def hint
@@ -1193,7 +1193,70 @@ module VGD_Cabinet_Draw
         view.invalidate
       end
 
-      def onLButtonDown(_flags, x, y, view)
+      # Đợt/vách trong công cụ: Alt-click xóa ngay tấm dưới con trỏ; Shift-click đánh dấu để xóa cùng lúc (thanh nút chuột phải).
+      def picked_member(view, x, y)
+        picked_path(view, x, y).reverse.find { |entity| Rebuild::MEMBER_ROLES.include?(Interior.role_of(entity)) }
+      end
+
+      def mark_or_remove_member(member, flags, view)
+        if Keys.alt?(flags)
+          @marked = []
+          safely do
+            operation('Xóa tấm') { Removal.remove_members(@root, [member]) }
+            refresh_after_removal
+          end
+        else
+          @marked ||= []
+          @marked.include?(member) ? @marked.delete(member) : @marked << member
+          Dialog.set_status("Đã đánh dấu #{@marked.length} tấm. Chuột phải → Xóa các tấm đã đánh dấu · Alt-click xóa ngay.")
+        end
+        view.invalidate
+      end
+
+      def remove_marked
+        members = (@marked || []).select(&:valid?)
+        return Dialog.set_status('Chưa đánh dấu tấm nào. Shift-click tấm cần xóa.') if members.empty?
+        safely do
+          operation('Xóa các tấm đã đánh dấu') { Removal.remove_members(@root, members) }
+          refresh_after_removal
+        end
+        @marked = []
+      end
+
+      def clear_marked
+        @marked = []
+        Dialog.set_status('Đã bỏ đánh dấu tấm.')
+        Sketchup.active_model.active_view.invalidate
+      end
+
+      def refresh_after_removal
+        @shell = Geometry.shell_for(@root)
+        rebuild_preview
+        Sketchup.active_model.active_view.invalidate
+      end
+
+      def draw(view)
+        super if defined?(super)
+        (@marked || []).select(&:valid?).each { |member| draw_marked_box(view, member) }
+      end
+
+      def draw_marked_box(view, entity)
+        b = entity.bounds
+        corners = [[b.min.x, b.min.y, b.min.z], [b.max.x, b.min.y, b.min.z], [b.max.x, b.max.y, b.min.z], [b.min.x, b.max.y, b.min.z],
+                   [b.min.x, b.min.y, b.max.z], [b.max.x, b.min.y, b.max.z], [b.max.x, b.max.y, b.max.z], [b.min.x, b.max.y, b.max.z]]
+        world = Operations.world_transform(@root, Geometry.shell_for(@root))
+        pts = corners.map { |c| Geom::Point3d.new(*c).transform(world) }
+        edges = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]
+        view.line_width = 3 if view.respond_to?(:line_width=)
+        view.drawing_color = 'red' if view.respond_to?(:drawing_color=)
+        view.draw_lines(edges.flat_map { |a, c| [pts[a], pts[c]] })
+      end
+
+      def onLButtonDown(flags, x, y, view)
+        if @root && (Keys.alt?(flags) || Keys.shift?(flags))
+          member = picked_member(view, x, y)
+          return mark_or_remove_member(member, flags, view) if member
+        end
         if @root.nil?
           use_cabinet(picked_cabinet(view, x, y))
         elsif @divide_count || @ref
@@ -1584,7 +1647,7 @@ module VGD_Cabinet_Draw
 
       def hint
         if @root
-          'Click: chia vùng · Shift-click: chọn vùng · G: gộp · /n chia đều · gõ mm: chia theo khoảng · Ctrl: dọc/ngang · Tab: cánh lọt/phủ · Backspace: hoàn tác · Enter: tạo'
+          'Click: chia vùng · Shift-click: chọn vùng · Alt+G (hoặc G): gộp · /n chia đều · gõ mm: chia theo khoảng · Ctrl: dọc/ngang · Tab: cánh lọt/phủ · Backspace: hoàn tác · Enter: tạo · Alt+G gộp · xóa cánh: chuột phải'
         else
           'Rê chuột vào tủ (vàng) rồi click để chọn · hoặc chọn tủ trước khi mở công cụ'
         end
@@ -1813,6 +1876,21 @@ module VGD_Cabinet_Draw
         view.invalidate if view
       rescue ArgumentError => e
         Dialog.set_status(e.message)
+      end
+
+      # Xóa cánh của vùng đã chọn: vùng thành trống (không gộp vào cánh bên cạnh). Enter để áp dụng.
+      def empty_selected(view)
+        ids = target_ids
+        return Dialog.set_status('Chọn vùng cần xóa cánh (Shift-click) rồi chọn lại lệnh.') if ids.empty?
+        ids.each do |id|
+          region = @layout.find(id)
+          region['empty'] = true if region
+        end
+        @selected = []
+        reset_hover
+        Dialog.set_status("Đã đánh dấu #{ids.length} vùng trống (không cánh). Enter để áp dụng.")
+        rebuild_preview
+        view.invalidate if view
       end
 
       # Vùng cần chia khi gõ /n hoặc số: các vùng đang chọn, hoặc vùng đang trỏ, hoặc vùng duy nhất.
