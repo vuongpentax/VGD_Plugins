@@ -84,7 +84,7 @@ Sketchup.active_model.selection.clear
 m, shown = menu_for_selection
 check 'không chọn gì: không thêm menu', !shown && m.entries.empty?
 
-# --- 3. Tủ thường ---
+# --- 3. Tủ tùy biến (loại standard) ---
 cab = new_cabinet('standard')
 m, shown = menu_for_selection
 check 'tủ thường: có menu VGD Cabinet', shown && m.labels == ['VGD Cabinet']
@@ -96,7 +96,7 @@ end
 check 'tủ thường: Hông chạm đất / đụng trần / khoang ngăn kéo', %w[Hông\ chạm\ đất Hông\ đụng\ trần Thêm\ khoang\ ngăn\ kéo…].all? { |l| labels.include?(l) }
 check 'tủ thường: không có mục của bếp/tủ lạnh', (labels & ['Nóc', 'Chân cao', 'Chia nhanh', 'Xà treo', 'Hiện khối tham chiếu']).empty?
 check 'Đổi loại tủ có 4 loại', root_menu.dig('Đổi loại tủ').labels.length == 4
-check 'loại hiện tại được tick', root_menu.dig('Đổi loại tủ').find('Tủ thường')[:validation].call == 8
+check 'loại hiện tại được tick', root_menu.dig('Đổi loại tủ').find('Tủ tùy biến')[:validation].call == 8
 check 'mục không tick trả 0 (bỏ tick)', (root_menu.dig('Đổi loại tủ').find('Tủ bếp dưới')[:validation].call & 8) == 0
 
 # --- 4. Đổi loại tủ: dựng lại, một bước Undo, dữ liệu đổi ---

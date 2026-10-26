@@ -483,7 +483,7 @@ module VGD_Cabinet_Draw
           "Đồng bộ mặt trước: #{@settings['sync_front'] ? 'BẬT' : 'tắt'}",
           "Cấu hình riêng: #{@overrides.length} box#{@override_pid ? ' (đang sửa)' : ''}",
           "Hậu: #{back_name}",
-          "Loại: #{PanelModel::TYPE_NAMES.fetch(@settings['cabinet_type'].to_s, 'Tủ thường')}"
+          "Loại: #{PanelModel::TYPE_NAMES.fetch(@settings['cabinet_type'].to_s, 'Tủ tùy biến')}"
         ]
         lines << "Lỗi: #{@errors.values.first}" unless @errors.empty?
         lines
@@ -625,7 +625,7 @@ module VGD_Cabinet_Draw
       CARCASS_KEYS = %w[board_thickness back_thickness back_mode back_groove_depth back_lip panels leg_height ceiling_strip_height
                         sides_to_floor sides_to_ceiling toe_kick_enabled toe_kick_thickness toe_kick_setback toe_kick_back
                         cornice_enabled cornice_thickness cornice_setback cabinet_type top_mode top_rail_width hang_rail
-                        rail_front_orient rail_back_orient rail_back_width rail_double hang_rail_height fridge_width fridge_height fridge_depth fridge_side_gap fridge_top_gap fridge_back_gap].freeze
+                        rail_front_orient rail_back_orient rail_back_width rail_front_double hang_rail_height fridge_width fridge_height fridge_depth fridge_side_gap fridge_top_gap fridge_back_gap].freeze
 
       # Bảng điều khiển / chọn mẫu gửi sang: chỉ ghi nhận khóa thùng tủ có giá trị khác thông số hiện tại của tủ.
       def update_settings(settings)

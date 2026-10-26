@@ -5,8 +5,8 @@ module VGD_Cabinet_Draw
     extend self
 
     GROUP_NAME = 'Tủ quá khổ'.freeze
-    # Chỉ tủ thường và tủ bếp dưới được tách. Tủ bếp trên và thùng tủ lạnh giữ nguyên.
-    SPLIT_TYPES = %w[standard base].freeze
+    # Tủ tùy biến, tủ bếp dưới và thùng tủ lạnh được tách. Tủ bếp trên giữ nguyên.
+    SPLIT_TYPES = %w[standard base fridge].freeze
     JOINTS = %w[dau_dinh xa_duoi xa_tren].freeze
     JOINT_NAMES = { 'dau_dinh' => 'Đấu đình', 'xa_duoi' => 'Xà dưới', 'xa_tren' => 'Xà trên' }.freeze
     MAX_CABINET_HEIGHT = 2440.0 # khổ ván: mỗi tủ không cao quá 2440 mm
@@ -28,7 +28,7 @@ module VGD_Cabinet_Draw
       if upper > MAX_CABINET_HEIGHT
         raise ArgumentError, format('Tủ quá khổ: cao %.0f mm, tủ trên %.0f mm vượt khổ ván %.0f mm. Hãy tăng cao tủ dưới hoặc giảm cao tổng.', total, upper, MAX_CABINET_HEIGHT)
       end
-      [Piece.new('lower', lower, lower_overrides(joint)), Piece.new('upper', upper, upper_overrides(joint))]
+      [Piece.new('lower', lower, lower_overrides(joint)), Piece.new('upper', upper, upper_overrides(joint, settings['cabinet_type'].to_s))]
     end
 
     # Tủ dưới: có nóc nguyên tấm (đấu đình, xà trên) hoặc thay nóc bằng xà (xà dưới). Không có phào trần.
@@ -37,8 +37,11 @@ module VGD_Cabinet_Draw
     end
 
     # Tủ trên: có đáy nguyên tấm (đấu đình, xà dưới) hoặc thay đáy bằng xà (xà trên). Không có chân, không chạm sàn.
-    def upper_overrides(joint)
-      { 'bottom_mode' => joint == 'xa_tren' ? 'rails' : 'full', 'leg_height' => 0.0, 'sides_to_floor' => false, 'toe_kick_enabled' => false }
+    # Thùng tủ lạnh: phần tủ lạnh nằm ở tủ dưới, tủ trên thành tủ tùy biến (không còn tủ lạnh).
+    def upper_overrides(joint, type)
+      out = { 'bottom_mode' => joint == 'xa_tren' ? 'rails' : 'full', 'leg_height' => 0.0, 'sides_to_floor' => false, 'toe_kick_enabled' => false }
+      out['cabinet_type'] = 'standard' if type == 'fridge'
+      out
     end
   end
 end

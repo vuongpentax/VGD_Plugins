@@ -40,7 +40,9 @@ check('standard 2401 tách thành 2100 + 301', begin
   p && near(p[0].height, 2100.0) && near(p[1].height, 301.0)
 end)
 check('tủ bếp trên không tách', V::Split.plan(2600.0, S.merge_settings(settings('cabinet_type' => 'wall'))).nil?)
-check('thùng tủ lạnh không tách', V::Split.plan(2600.0, S.merge_settings(settings('cabinet_type' => 'fridge'))).nil?)
+check('thùng tủ lạnh cao 2600 cũng tách', !V::Split.plan(2600.0, S.merge_settings(settings('cabinet_type' => 'fridge'))).nil?)
+check('tủ trên của thùng tủ lạnh thành tủ tùy biến', V::Split.plan(2600.0, S.merge_settings(settings('cabinet_type' => 'fridge')))[1].overrides['cabinet_type'] == 'standard')
+check('tủ bếp trên không tách', V::Split.plan(2600.0, S.merge_settings(settings('cabinet_type' => 'wall'))).nil?)
 check('ngưỡng cài 3000 vẫn tách khi quá khổ ván (2700 > 2440)', !V::Split.plan(2700.0, S.merge_settings(settings('split_height' => 3000))).nil?)
 check('ngưỡng cài 3000 và cao 2430 (dưới khổ ván): không tách', V::Split.plan(2430.0, S.merge_settings(settings('split_height' => 3000))).nil?)
 check('tủ trên vượt 2440 báo lỗi khổ ván', raises_msg(/khổ ván/) { V::Split.plan(5000.0, std) })
@@ -81,6 +83,13 @@ lower = V::Interior.carcass(V::Geometry.shell_for(roots[0]))
 upper = V::Interior.carcass(V::Geometry.shell_for(roots[1]))
 check('xà dưới: tủ dưới có xà nóc, không có nóc', lower.key?('rail_front') && !lower.key?('top'), lower.keys.inspect)
 check('xà dưới: tủ trên có đáy', upper.key?('bottom'), upper.keys.inspect)
+
+puts '== 3b. Thùng tủ lạnh cao 2600 =='
+Sketchup.reset_model!
+fridge_roots = V::Geometry.cabinets_from_box(mk_box(900, 800, 2600), settings('cabinet_type' => 'fridge', 'split_joint' => 'dau_dinh'))
+check('thùng tủ lạnh tạo hai tủ', fridge_roots.length == 2, fridge_roots.length)
+check('tủ dưới giữ là thùng tủ lạnh, tủ trên là tủ tùy biến',
+      V::ModelData.params(fridge_roots[0])['cabinet_type'] == 'fridge' && V::ModelData.params(fridge_roots[1])['cabinet_type'] == 'standard')
 
 puts '== 4. Không tách và không ghi gì khi lỗi =='
 Sketchup.reset_model!

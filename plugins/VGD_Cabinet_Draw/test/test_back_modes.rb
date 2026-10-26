@@ -116,6 +116,15 @@ check('lùa trên: ván chân sau giữ nguyên vị trí cũ (y 542.5..560)') d
   close?(b[1], 542.5) && close?(b[4], 560.0)
 end
 
+check('phủ: ván chân sau lùi vào trước hậu phủ (y 536.5..554), không đè lên hậu') do
+  b = bounds_of(build('overlay', { 'leg_height' => 100 }, 820), 'toe_kick_back')
+  close?(b[1], 536.5) && close?(b[4], 554.0)
+end
+check('không hậu: ván chân sau giữ nguyên vị trí cũ (y 542.5..560)') do
+  b = bounds_of(build('none', { 'leg_height' => 100 }, 820), 'toe_kick_back')
+  close?(b[1], 542.5) && close?(b[4], 560.0)
+end
+
 puts '== 8. Kiểm tra chiều sâu theo tấm lùi vào =='
 check('lùa đáy: đáy lùa tới 540 mm thì quá sát, báo lỗi chiều sâu') do
   raises_msg(/Chiều sâu/) { build('lua_bottom', 'panels' => { 'bottom' => { 'front_offset' => 540 } }) }

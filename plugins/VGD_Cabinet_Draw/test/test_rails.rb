@@ -56,9 +56,14 @@ check('xà trước nằm: x giữa hai hông, y 0..100, z 802.5..820 (sát mép
 check('xà sau đứng: y 526.5..544, z 720..820') { same_box?(bounds_of(r, 'rail_back'), [17.5, 526.5, 720, 582.5, 544, 820]) }
 check('tủ bếp dưới: không có nóc, vẫn có đáy') { part(r, 'top').nil? && !part(r, 'bottom').nil? }
 
-puts '== 2. Xà đơn (không xà sau) =='
-r = base('rail_double' => false)
-check('xà kép tắt: không có xà sau') { part(r, 'rail_back').nil? && !part(r, 'rail_front').nil? }
+puts '== 2. Xà trước đơn/kép, xà sau luôn một bản =='
+r = base
+check('xà sau luôn có (một bản, không kép)') { !part(r, 'rail_back').nil? }
+check('xà trước mặc định đơn: bản dày rt (17.5)') { close?(bounds_of(r, 'rail_front')[5] - bounds_of(r, 'rail_front')[2], 17.5) }
+r = base('rail_front_double' => true)
+check('xà trước kép nằm: bản dày 2 × 17.5 = 35, sát mép trên') { same_box?(bounds_of(r, 'rail_front'), [17.5, 0, 785, 582.5, 100, 820]) }
+r = base('rail_front_double' => true, 'rail_front_orient' => 'upright')
+check('xà trước kép đứng: hai bản ghép sâu 35 mm ở mép trước') { same_box?(bounds_of(r, 'rail_front'), [17.5, 0, 720, 582.5, 35, 820]) }
 
 puts '== 3. Đổi hướng =='
 r = base('rail_front_orient' => 'upright')
@@ -89,11 +94,11 @@ puts '== 7. Thông số được lưu để dựng lại =='
 resolved = base('bottom_mode' => 'rails', 'rail_back_orient' => 'flat', 'rail_back_width' => 80).resolved
 check('lưu đủ khóa xà') do
   resolved['bottom_mode'] == 'rails' && resolved['rail_back_orient'] == 'flat' && resolved['rail_back_width'] == 80.0 &&
-    resolved['rail_front_orient'] == 'flat' && resolved['rail_double'] == true
+    resolved['rail_front_orient'] == 'flat' && resolved['rail_front_double'] == false
 end
-check('mặc định cũ (không khai báo) vẫn ra xà trước nằm, xà sau đứng, kép') do
+check('mặc định (không khai báo): xà trước nằm đơn, xà sau đứng, không xà đáy') do
   rs = base.resolved
-  rs['rail_front_orient'] == 'flat' && rs['rail_back_orient'] == 'upright' && rs['rail_double'] == true && rs['bottom_mode'] == 'full'
+  rs['rail_front_orient'] == 'flat' && rs['rail_back_orient'] == 'upright' && rs['rail_front_double'] == false && rs['bottom_mode'] == 'full'
 end
 
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.size}"

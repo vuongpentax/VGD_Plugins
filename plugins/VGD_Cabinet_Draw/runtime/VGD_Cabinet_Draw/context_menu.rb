@@ -11,7 +11,7 @@ module VGD_Cabinet_Draw
     extend self
 
     MENU_TITLE = 'VGD Cabinet'.freeze
-    TYPE_LABELS = { 'standard' => 'Tủ thường', 'base' => 'Tủ bếp dưới', 'wall' => 'Tủ bếp trên', 'fridge' => 'Thùng tủ lạnh' }.freeze
+    TYPE_LABELS = { 'standard' => 'Tủ tùy biến', 'base' => 'Tủ bếp dưới', 'wall' => 'Tủ bếp trên', 'fridge' => 'Thùng tủ lạnh' }.freeze
     BASE_LEGS = [100, 120, 150].freeze
     WALL_HEIGHTS = [700, 800, 900].freeze
     # Cỡ tủ lạnh [tên, rộng, cao, sâu] — chỉ THAM KHẢO, người dùng sửa theo model thật trong Sửa tủ.

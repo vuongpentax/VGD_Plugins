@@ -1,6 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.39
+# VGD_Cabinet Draw 1.0.0-beta.40
 
-Trạng thái: beta.39 thêm tủ quá khổ (tự tách tủ cao trên 2400 mm thành tủ dưới và tủ trên, ba kiểu liên kết) và cài đặt xà (nằm/đứng, kép/đơn). beta.38 thêm sáu kiểu hậu theo DC (âm 4 cạnh, âm 2 hông, lùa trên, lùa đáy, phủ, không hậu). beta.35 mở rộng tự cập nhật tủ khi kéo Scale sang ngăn kéo, khoang, xà chặn, hộc tủ áo và cánh (giai đoạn 2). beta.34 là giai đoạn 1 (vỏ tủ và đợt/vách). Nền tảng từ beta.33 đã đưa vào repository, thay cho baseline beta.1 (lịch sử beta.1 vẫn còn trong git).
+Trạng thái: beta.40 đổi tên "Tủ thường" thành "Tủ tùy biến", thùng tủ lạnh cũng tách khi cao trên 2400 mm, xà trước kép/đơn, xà sau một bản, và ván chân sau lùi vào khi hậu phủ. beta.39 thêm tủ quá khổ (tự tách tủ cao trên 2400 mm thành tủ dưới và tủ trên, ba kiểu liên kết) và cài đặt xà (nằm/đứng, kép/đơn). beta.38 thêm sáu kiểu hậu theo DC (âm 4 cạnh, âm 2 hông, lùa trên, lùa đáy, phủ, không hậu). beta.35 mở rộng tự cập nhật tủ khi kéo Scale sang ngăn kéo, khoang, xà chặn, hộc tủ áo và cánh (giai đoạn 2). beta.34 là giai đoạn 1 (vỏ tủ và đợt/vách). Nền tảng từ beta.33 đã đưa vào repository, thay cho baseline beta.1 (lịch sử beta.1 vẫn còn trong git).
 
 - Đã xác minh tự động: bộ test giả lập (`test/`), gồm `test_stretch.rb` cho tự cập nhật khi Scale.
 - Chưa xác minh: chưa mở trong SketchUp thật; chưa kiểm tra tương thích Ruby 2.7 đầy đủ (chỉ kiểm cú pháp bằng `ruby -c`).
@@ -23,9 +23,10 @@ Trạng thái: beta.39 thêm tủ quá khổ (tự tách tủ cao trên 2400 mm 
 
 ## Tủ quá khổ và xà (beta.39)
 
-- Tủ thường và tủ bếp dưới cao hơn "Ngưỡng tách tủ" (mặc định 2400 mm) được tách tự động thành tủ dưới (cao "Cao tủ dưới khi tách", mặc định 2100 mm) và tủ trên (phần còn lại). Hai tủ nằm trong group "Tủ quá khổ". Tủ cao trên 2440 mm (khổ ván) luôn được tách; nếu tủ trên vẫn vượt 2440 mm thì báo lỗi và không tạo gì.
+- Tủ tùy biến, tủ bếp dưới và thùng tủ lạnh cao hơn "Ngưỡng tách tủ" (mặc định 2400 mm) được tách tự động khi dựng từ box thành tủ dưới (cao "Cao tủ dưới khi tách", mặc định 2100 mm) và tủ trên (phần còn lại). Hai tủ nằm trong group "Tủ quá khổ". Tủ trên của thùng tủ lạnh là tủ tùy biến. Tủ cao trên 2440 mm (khổ ván) luôn được tách; nếu tủ trên vẫn vượt 2440 mm thì báo lỗi và không tạo gì.
+- Chưa làm: tự tách khi kéo Scale một tủ đã dựng (cần quyết định cách xử lý cánh, ngăn kéo, đợt nằm trên phần sẽ tách).
 - Liên kết khi tách: **Đấu đình** (nóc tủ dưới và đáy tủ trên gặp nhau, không xà); **Xà dưới** (tủ dưới thay nóc bằng xà); **Xà trên** (tủ trên thay đáy bằng xà). Tủ trên không có chân.
-- Xà: "Xà trước" và "Xà sau" chọn nằm hoặc đứng, có bề rộng riêng. "Xà kép" = có cả xà sau; tắt thì chỉ có xà trước. Mặc định giữ như cũ: trước nằm, sau đứng, kép.
+- Xà trước: nằm hoặc đứng; đơn (một bản) hoặc kép (hai bản cùng hướng ghép lại, dày gấp đôi). Xà sau: nằm hoặc đứng, luôn một bản, có bề rộng riêng. Mặc định giữ như cũ: xà trước nằm đơn, xà sau đứng.
 - Chưa làm: chọn cả group "Tủ quá khổ" để sửa hoặc kéo Scale cả nhóm chưa tự cập nhật; sửa liên kết phải làm trên từng tủ.
 
 VGD_Cabinet Draw is a standalone SketchUp extension for a semi-automatic cabinet workflow. It keeps the user in control of face orientation, panel positions, door splits, openings, handles, drawers and finishing operations. Preview lives in the viewport; a tool commits model geometry only when the user presses Enter.

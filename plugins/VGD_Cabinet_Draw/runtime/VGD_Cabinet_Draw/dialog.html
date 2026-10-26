@@ -11,7 +11,7 @@
 </style>
 <link rel="stylesheet" href="vgd-theme/vgd-theme.css"></head>
 <body>
-<header><div class="brand">V</div><b>VGD Cabinet Draw</b><small>1.0.0-beta.39</small><button id="themeBtn" class="vgd-theme-btn" type="button" aria-pressed="false" style="margin-left:auto"></button></header>
+<header><div class="brand">V</div><b>VGD Cabinet Draw</b><small>1.0.0-beta.40</small><button id="themeBtn" class="vgd-theme-btn" type="button" aria-pressed="false" style="margin-left:auto"></button></header>
 <nav class="tabs" id="tabs">
 <button data-tab="box" class="on">1 · Box → Board</button><button data-tab="panel">2 · Đợt / vách</button><button data-tab="door">3 · Cánh tủ</button><button data-tab="drawer">4 · Ngăn kéo</button><button data-tab="settings">5 · Setting chung</button></nav>
 <main class="wrap">
@@ -20,7 +20,7 @@
 <p class="intro"><b>Sửa tủ đã tạo:</b> chọn tủ (chỉ chọn tủ) rồi bấm Box → Board — HUD hiện thông số và Rộng/Sâu/Cao của tủ, sửa rồi Enter để dựng lại; đợt, vách, ngăn kéo, cánh, tay nắm được giữ theo cách đã tạo. Kéo Scale xong thì tủ tự cập nhật theo kích thước mới, giữ ván và chi tiết đã làm (tắt ở tab 5 · Setting chung). Box → thùng tủ: chọn box, click mặt trước, nhấn Enter (hoặc nút Áp dụng). Box bị scale vẫn dựng được, tủ có kích thước thật như box. Face → ván: chọn các face rồi chạy công cụ, hộp thoại hỏi độ dày. Dày ván và dày hậu đặt ở tab 5.</p>
 <div class="presetbar" data-bar="box"></div>
 <div class="card" data-group="box"><div class="fields">
-<div class="field"><label>Loại tủ</label><select data-key="cabinet_type"><option value="standard">Tủ thường (tủ áo, tủ kệ…)</option><option value="base">Tủ bếp dưới</option><option value="wall">Tủ bếp trên</option><option value="fridge">Thùng tủ lạnh</option></select></div>
+<div class="field"><label>Loại tủ</label><select data-key="cabinet_type"><option value="standard">Tủ tùy biến (khung, tủ áo, tủ kệ…)</option><option value="base">Tủ bếp dưới</option><option value="wall">Tủ bếp trên</option><option value="fridge">Thùng tủ lạnh</option></select></div>
 <div class="field"><label>Kiểu hậu</label><select data-key="back_mode"><option value="groove">Âm 4 cạnh</option><option value="groove_sides">Âm 2 hông</option><option value="lua_top">Lùa trên</option><option value="lua_bottom">Lùa đáy</option><option value="overlay">Phủ</option><option value="none">Không hậu</option></select></div>
 <div class="field"><label>Độ ngậm rãnh (mm)</label><input data-key="back_groove_depth" type="number" step="any" min="0" value="8.75"></div>
 <div class="field"><label>Lớp ván che sau rãnh (mm)</label><input data-key="back_lip" type="number" step="any" min="0" value="10"></div>
@@ -32,7 +32,7 @@
 <div class="field"><label>Nóc tủ bếp dưới</label><select data-key="top_mode"><option value="auto">Tự theo loại tủ (bếp dưới = 2 thanh giằng)</option><option value="rails">2 thanh giằng (trước nằm, sau đứng)</option><option value="full">Nóc nguyên tấm</option></select></div>
 <div class="field"><label>Bản xà trước (mm)</label><input data-key="top_rail_width" type="number" step="any" min="30" value="100"></div>
 <div class="field"><label>Xà trước</label><select data-key="rail_front_orient"><option value="flat">Nằm</option><option value="upright">Đứng</option></select></div>
-<label class="switch"><input data-key="rail_double" type="checkbox" checked> Xà kép (có xà sau)</label>
+<label class="switch"><input data-key="rail_front_double" type="checkbox"> Xà trước kép (2 bản)</label>
 <div class="field"><label>Xà sau</label><select data-key="rail_back_orient"><option value="flat">Nằm</option><option value="upright">Đứng</option></select></div>
 <div class="field"><label>Bản xà sau (mm)</label><input data-key="rail_back_width" type="number" step="any" min="30" value="100"></div>
 <div class="field"><label>Ngưỡng tách tủ (mm)</label><input data-key="split_height" type="number" step="any" min="1000" value="2400"></div>
