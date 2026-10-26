@@ -5,9 +5,9 @@ module VGD_Cabinet_Draw
   module Interior
     extend self
 
-    CARCASS_ROLES = %w[side_left side_right top bottom back rail_front rail_back hang_rail].freeze
+    CARCASS_ROLES = %w[side_left side_right top bottom back rail_front rail_back rail_front_bottom rail_back_bottom hang_rail].freeze
     # Tấm đứng sát hậu (giằng sau tủ dưới, xà treo tủ trên): ô nào trùm chiều cao của chúng thì sâu tới mặt trước tấm đó.
-    DEPTH_LIMITERS = %w[rail_back hang_rail].freeze
+    DEPTH_LIMITERS = %w[rail_back rail_back_bottom hang_rail].freeze
     EPS = 0.01 / 25.4 # 0.01 mm
 
     # kind: :outer (tấm vỏ tủ: hông/nóc/đáy), :inner (đợt/vách bên trong), :open (không có tấm)
@@ -66,7 +66,7 @@ module VGD_Cabinet_Draw
       parts = carcass(shell)
       sl = parts['side_left']
       sr = parts['side_right']
-      bo = parts['bottom']
+      bo = parts['bottom'] || parts['rail_front_bottom'] # tủ trên tủ quá khổ (xà trên): giằng trước thay đáy
       tp = parts['top'] || parts['rail_front'] # tủ bếp dưới: giằng trước thay nóc
       bk = parts['back']
       left = sl ? Side.new(:outer, sl[3] - sl[0]) : Side.new(:open, 0.0)

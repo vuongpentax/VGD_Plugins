@@ -11,7 +11,8 @@ module VGD_Cabinet_Draw
       'side_left' => 'Hông Trái', 'side_right' => 'Hông Phải',
       'bottom' => 'Đáy', 'top' => 'Nóc', 'back' => 'Hậu',
       'toe_kick' => 'Ván chân', 'toe_kick_back' => 'Ván chân sau', 'cornice' => 'Phào trần',
-      'rail_front' => 'Giằng trước', 'rail_back' => 'Giằng sau', 'hang_rail' => 'Xà treo'
+      'rail_front' => 'Giằng trước', 'rail_back' => 'Giằng sau', 'hang_rail' => 'Xà treo',
+      'rail_front_bottom' => 'Giằng trước (đáy)', 'rail_back_bottom' => 'Giằng sau (đáy)'
     }.freeze
     # Loại tủ: thường / bếp dưới (2 thanh giằng thay nóc, mặt đá đặt lên) / bếp trên (xà treo sau nóc) /
     # thùng tủ lạnh (hông chạm đất, không đáy + không hậu phần tủ lạnh, hộc trên có đáy/nóc/hậu).
@@ -35,6 +36,8 @@ module VGD_Cabinet_Draw
     }.freeze
     # Kiểu có đáy lùi thì ván chân sau cũng lùi vào trước hậu.
     BACK_TOE_RECESSED = %w[groove_sides lua_bottom].freeze
+    # Hướng xà: flat = xà nằm (bản phẳng ngang); upright = xà đứng (bản thẳng đứng).
+    RAIL_ORIENTS = %w[flat upright].freeze
     MAX_DIMENSION = 10_000.0
     MIN_OPENING = 10.0 # khoang trống tối thiểu (mm)
     MIN_WALL = 3.0     # phần ván còn lại tối thiểu sau khi khoét rãnh (mm)
@@ -96,6 +99,12 @@ module VGD_Cabinet_Draw
       raise ArgumentError, "Loại tủ không hợp lệ: #{type}." unless CABINET_TYPES.include?(type)
       top_mode = (s['top_mode'] || 'auto').to_s
       top_mode = type == 'base' ? 'rails' : 'full' unless %w[full rails].include?(top_mode)
+      # Đáy thay bằng xà: chỉ dùng cho tủ trên của tủ quá khổ (xà trên).
+      bottom_mode = (s['bottom_mode'] || 'full').to_s
+      bottom_mode = 'full' unless %w[full rails].include?(bottom_mode)
+      rail_front_orient = rail_orient(s['rail_front_orient'], 'flat', 'Hướng xà trước')
+      rail_back_orient = rail_orient(s['rail_back_orient'], 'upright', 'Hướng xà sau')
+      rail_double = s['rail_double'].nil? ? true : truthy(s['rail_double'])
       fridge = nil
       if type == 'fridge'
         fridge = {
@@ -107,8 +116,10 @@ module VGD_Cabinet_Draw
           back: number(s['fridge_back_gap'], 50.0, 'Khe hở phía sau tủ lạnh', 0.0, 300.0)
         }
       end
-      { board: board, type: type, top_mode: top_mode, fridge: fridge,
-        rail_w: number(s['top_rail_width'], 100.0, 'Bản giằng nóc', 30.0, 500.0),
+      { board: board, type: type, top_mode: top_mode, bottom_mode: bottom_mode, fridge: fridge,
+        rail_w: number(s['top_rail_width'], 100.0, 'Bản xà trước', 30.0, 500.0),
+        rail_back_w: number(s['rail_back_width'], 100.0, 'Bản xà sau', 30.0, 500.0),
+        rail_front_orient: rail_front_orient, rail_back_orient: rail_back_orient, rail_double: rail_double,
         hang: type == 'wall' && (s['hang_rail'].nil? ? true : truthy(s['hang_rail'])),
         hang_h: number(s['hang_rail_height'], 100.0, 'Bản xà treo', 30.0, 500.0), back_t: back_t, mode: mode, groove: groove, lip: lip, panels: panels,
         floor: truthy(s['sides_to_floor']), ceil: truthy(s['sides_to_ceiling']),
@@ -142,6 +153,10 @@ module VGD_Cabinet_Draw
       bo = p['bottom']
       tp = p['top']
       bk = p['back']
+      # Đáy thay bằng xà (tủ trên của tủ quá khổ): không dựng đáy, dựng xà ở đáy.
+      bottom_rails = c[:bottom_mode] == 'rails' && bo[:enabled]
+      bo = bo.merge(enabled: false) if bottom_rails
+      p = p.merge('bottom' => bo)
 
       rails = c[:top_mode] == 'rails' && tp[:enabled]
       top_on = tp[:enabled] && !rails
@@ -256,16 +271,10 @@ module VGD_Cabinet_Draw
       back_face = back_on ? (overlay ? d - bt : yg0) : d
       rx0 = sl[:enabled] ? tl : 0.0
       rx1 = sr[:enabled] ? w - tr : w
-      if rails
-        # Tủ bếp dưới: giằng trước nằm ngang sát mặt trước, giằng sau đứng áp hậu (bắt vít vào tường).
-        rt = tp[:t]
-        rw = c[:rail_w]
-        raise ArgumentError, 'Bản giằng nóc quá lớn so với chiều sâu tủ.' if rw * 2 > back_face - tp[:front]
-        pts = [[rx0, tp[:front], h - rt], [rx1, tp[:front], h - rt], [rx1, tp[:front] + rw, h - rt], [rx0, tp[:front] + rw, h - rt]]
-        parts << finish('rail_front', pts, :z, rt, rt, false)
-        pts = [[rx0, back_face - rt, h - rw], [rx1, back_face - rt, h - rw], [rx1, back_face - rt, h], [rx0, back_face - rt, h]]
-        parts << finish('rail_back', pts, :y, rt, rt, false)
-      end
+      # Xà thay nóc (tủ bếp dưới, tủ dưới của tủ quá khổ khi xà dưới) hoặc thay đáy (tủ trên khi xà trên).
+      rail_geo = { rx0: rx0, rx1: rx1, h: h, zb0: zb0, back: back_face }
+      parts.concat(rail_parts(:top, c, rail_geo.merge(rt: tp[:t], front: tp[:front]))) if rails
+      parts.concat(rail_parts(:bottom, c, rail_geo.merge(rt: bo[:t], front: bo[:front]))) if bottom_rails
       if c[:hang]
         # Tủ bếp trên: xà treo đứng dưới nóc, áp mặt trước hậu (bắt ke/vít treo tường).
         ht = c[:board]
@@ -353,11 +362,51 @@ module VGD_Cabinet_Draw
         'cornice_enabled' => c[:cor_on], 'cornice_thickness' => c[:cor_t], 'cornice_setback' => c[:cor_set],
         'cabinet_type' => c[:type], 'top_mode' => c[:top_mode], 'top_rail_width' => c[:rail_w],
         'hang_rail' => c[:hang], 'hang_rail_height' => c[:hang_h],
+        'bottom_mode' => c[:bottom_mode], 'rail_front_orient' => c[:rail_front_orient], 'rail_back_orient' => c[:rail_back_orient],
+        'rail_back_width' => c[:rail_back_w], 'rail_double' => c[:rail_double],
         'fridge' => c[:fridge] && c[:fridge].map { |k, v| [k.to_s, v] }.to_h
       }
     end
 
     # ---- Hàm phụ ----
+
+    # Xà trước và xà sau. where: :top = thay nóc; :bottom = thay đáy. Xà nằm = bản phẳng ngang (rộng theo chiều sâu,
+    # dày rt); xà đứng = bản thẳng đứng (cao theo bề rộng bản, dày rt). Xà sau áp vào mặt trước hậu.
+    def rail_parts(where, c, geo)
+      rt = geo[:rt]
+      rx0 = geo[:rx0]
+      rx1 = geo[:rx1]
+      front = geo[:front]
+      back = geo[:back]
+      fw = c[:rail_w]
+      bw = c[:rail_back_w]
+      flat_front = c[:rail_front_orient] == 'flat'
+      flat_back = c[:rail_double] && c[:rail_back_orient] == 'flat'
+      used = (flat_front ? fw : 0.0) + (flat_back ? bw : 0.0)
+      raise ArgumentError, 'Bản xà quá lớn so với chiều sâu tủ.' if used > back - front
+      suffix = where == :top ? '' : '_bottom'
+      # Mép ngoài của tủ theo chiều cao: nóc là đỉnh tủ, đáy là sàn thân tủ. Bản đi vào từ mép đó.
+      edge = where == :top ? geo[:h] : geo[:zb0]
+      span = ->(size) { where == :top ? [edge - size, edge] : [edge, edge + size] }
+      out = []
+      if flat_front
+        z = span.call(rt).first
+        out << finish("rail_front#{suffix}", [[rx0, front, z], [rx1, front, z], [rx1, front + fw, z], [rx0, front + fw, z]], :z, rt, rt, false)
+      else
+        z0, z1 = span.call(fw)
+        out << finish("rail_front#{suffix}", [[rx0, front, z0], [rx1, front, z0], [rx1, front, z1], [rx0, front, z1]], :y, rt, rt, false)
+      end
+      return out unless c[:rail_double]
+      if flat_back
+        z = span.call(rt).first
+        out << finish("rail_back#{suffix}", [[rx0, back - bw, z], [rx1, back - bw, z], [rx1, back, z], [rx0, back, z]], :z, rt, rt, false)
+      else
+        z0, z1 = span.call(bw)
+        y = back - rt
+        out << finish("rail_back#{suffix}", [[rx0, y, z0], [rx1, y, z0], [rx1, y, z1], [rx0, y, z1]], :y, rt, rt, false)
+      end
+      out
+    end
 
     def side_z(panels, cover_key, h)
       bo = panels['bottom']
@@ -470,6 +519,12 @@ module VGD_Cabinet_Draw
       end
       raise ArgumentError, "#{label} phải nằm trong khoảng #{low} đến #{high} mm." unless n.finite? && n >= low && n <= high
       n
+    end
+
+    def rail_orient(value, default, label)
+      return default if value.nil? || value.to_s.strip.empty?
+      raise ArgumentError, "#{label} phải là nằm (flat) hoặc đứng (upright)." unless RAIL_ORIENTS.include?(value.to_s)
+      value.to_s
     end
 
     def truthy(value)

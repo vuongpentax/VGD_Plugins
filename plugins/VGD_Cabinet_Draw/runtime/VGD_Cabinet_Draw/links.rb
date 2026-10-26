@@ -32,7 +32,7 @@ module VGD_Cabinet_Draw
         role = hinge_role(door)
         next unless role
         label = HINGE_LABEL.fetch(Operations.opening_type_of(door))
-        part = carcass[role] || (role == 'top' ? carcass['rail_front'] : nil)
+        part = carcass[role] || (role == 'top' ? carcass['rail_front'] : nil) || (role == 'bottom' ? carcass['rail_front_bottom'] : nil)
         name = "Cánh #{door.get_attribute(Schema::DICTIONARY, 'region_id')}"
         unless part
           out << "#{name} mở về phía #{label} nhưng không có #{label} để bắt bản lề."

@@ -35,6 +35,8 @@ module VGD_Cabinet_Draw
       'split_axis' => 'vertical', 'panel_axis' => 'horizontal', 'panel_kind' => 'thong_thuy',
       'shelf_edge_clearance' => 1.6, 'front_offset' => 0.0,
       'cabinet_type' => 'standard', 'top_mode' => 'auto', 'top_rail_width' => 100.0, 'hang_rail' => true, 'hang_rail_height' => 100.0,
+      'bottom_mode' => 'full', 'rail_front_orient' => 'flat', 'rail_back_orient' => 'upright', 'rail_back_width' => 100.0, 'rail_double' => true,
+      'split_height' => 2400.0, 'split_lower_height' => 2100.0, 'split_joint' => 'dau_dinh',
       'fridge_width' => 700.0, 'fridge_height' => 1800.0, 'fridge_depth' => 650.0,
       'fridge_side_gap' => 20.0, 'fridge_top_gap' => 80.0, 'fridge_back_gap' => 50.0,
       'shelf_front_setback' => 20.0, 'panel_limit' => true, 'panel_span' => 'cell', 'panel_door_fit' => 'auto',

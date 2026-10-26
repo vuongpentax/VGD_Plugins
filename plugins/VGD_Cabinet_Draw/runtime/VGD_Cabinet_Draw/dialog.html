@@ -11,7 +11,7 @@
 </style>
 <link rel="stylesheet" href="vgd-theme/vgd-theme.css"></head>
 <body>
-<header><div class="brand">V</div><b>VGD Cabinet Draw</b><small>1.0.0-beta.38</small><button id="themeBtn" class="vgd-theme-btn" type="button" aria-pressed="false" style="margin-left:auto"></button></header>
+<header><div class="brand">V</div><b>VGD Cabinet Draw</b><small>1.0.0-beta.39</small><button id="themeBtn" class="vgd-theme-btn" type="button" aria-pressed="false" style="margin-left:auto"></button></header>
 <nav class="tabs" id="tabs">
 <button data-tab="box" class="on">1 · Box → Board</button><button data-tab="panel">2 · Đợt / vách</button><button data-tab="door">3 · Cánh tủ</button><button data-tab="drawer">4 · Ngăn kéo</button><button data-tab="settings">5 · Setting chung</button></nav>
 <main class="wrap">
@@ -30,7 +30,14 @@
 <h2 class="sub">Tủ bếp và thùng tủ lạnh</h2>
 <div class="card" data-group="box"><div class="fields">
 <div class="field"><label>Nóc tủ bếp dưới</label><select data-key="top_mode"><option value="auto">Tự theo loại tủ (bếp dưới = 2 thanh giằng)</option><option value="rails">2 thanh giằng (trước nằm, sau đứng)</option><option value="full">Nóc nguyên tấm</option></select></div>
-<div class="field"><label>Bản giằng nóc (mm)</label><input data-key="top_rail_width" type="number" step="any" min="30" value="100"></div>
+<div class="field"><label>Bản xà trước (mm)</label><input data-key="top_rail_width" type="number" step="any" min="30" value="100"></div>
+<div class="field"><label>Xà trước</label><select data-key="rail_front_orient"><option value="flat">Nằm</option><option value="upright">Đứng</option></select></div>
+<label class="switch"><input data-key="rail_double" type="checkbox" checked> Xà kép (có xà sau)</label>
+<div class="field"><label>Xà sau</label><select data-key="rail_back_orient"><option value="flat">Nằm</option><option value="upright">Đứng</option></select></div>
+<div class="field"><label>Bản xà sau (mm)</label><input data-key="rail_back_width" type="number" step="any" min="30" value="100"></div>
+<div class="field"><label>Ngưỡng tách tủ (mm)</label><input data-key="split_height" type="number" step="any" min="1000" value="2400"></div>
+<div class="field"><label>Cao tủ dưới khi tách (mm)</label><input data-key="split_lower_height" type="number" step="any" min="300" value="2100"></div>
+<div class="field"><label>Liên kết khi tách</label><select data-key="split_joint"><option value="dau_dinh">Đấu đình</option><option value="xa_duoi">Xà dưới</option><option value="xa_tren">Xà trên</option></select></div>
 <div class="field"><label>Bản xà treo tủ bếp trên (mm)</label><input data-key="hang_rail_height" type="number" step="any" min="30" value="100"></div>
 <div class="field"><label>Rộng tủ lạnh (mm)</label><input data-key="fridge_width" type="number" step="any" min="300" value="700"></div>
 <div class="field"><label>Cao tủ lạnh (mm)</label><input data-key="fridge_height" type="number" step="any" min="400" value="1800"></div>

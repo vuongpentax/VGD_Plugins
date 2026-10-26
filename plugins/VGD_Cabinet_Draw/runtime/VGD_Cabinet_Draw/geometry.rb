@@ -335,24 +335,54 @@ module VGD_Cabinet_Draw
       root
     end
 
-    # Chuyển một box thành thùng tủ. Mọi kiểm tra đầu vào chạy TRƯỚC khi chạm vào model.
-    def cabinet_from_box(box_entity, options = {})
-      settings = Schema.merge_settings(options)
-      frame = cabinet_frame(box_entity, options['front_normal'] || [0, -1, 0])
-      result = PanelModel.compute(frame.width, frame.depth, frame.height, settings)
-
+    # Dựng một thùng tủ cao height (mm) tại origin (điểm góc dưới-trước-trái). Đã có kết quả PanelModel.
+    def build_cabinet(entities, frame, origin, height, settings, result, extra_data = {})
       # Tạo tủ cùng cấp với box (kể cả box nằm trong group cha chưa mở), không dùng active_entities.
-      root = box_entity.parent.entities.add_group
+      root = entities.add_group
       root.name = 'VGD Cabinet Draw · Cabinet'
       root.transformation = frame.rigid
       shell = root.entities.add_group
       shell.name = 'Thùng tủ'
-      shell.transformation = Geom::Transformation.axes(frame.origin, frame.width_axis, frame.depth_axis, frame.up)
-      build_carcass(root, shell, result, settings, frame.width, frame.depth, frame.height,
-                    'front_normal' => frame.front.to_a,
-                    'local_axes' => { 'width' => frame.width_axis.to_a, 'depth' => frame.depth_axis.to_a, 'up' => frame.up.to_a })
-      box_entity.erase! if options['remove_source'] == true
+      shell.transformation = Geom::Transformation.axes(origin, frame.width_axis, frame.depth_axis, frame.up)
+      build_carcass(root, shell, result, settings, frame.width, frame.depth, height,
+                    extra_data.merge('front_normal' => frame.front.to_a,
+                                     'local_axes' => { 'width' => frame.width_axis.to_a, 'depth' => frame.depth_axis.to_a, 'up' => frame.up.to_a }))
       root
+    end
+
+    # Chuyển một box thành các thùng tủ: một tủ, hoặc hai tủ trong group 'Tủ quá khổ' khi box cao hơn ngưỡng.
+    # Trả về mảng các tủ. Mọi kiểm tra đầu vào chạy TRƯỚC khi chạm vào model.
+    def cabinets_from_box(box_entity, options = {})
+      settings = Schema.merge_settings(options)
+      frame = cabinet_frame(box_entity, options['front_normal'] || [0, -1, 0])
+      pieces = Split.plan(frame.height, settings)
+      if pieces.nil?
+        result = PanelModel.compute(frame.width, frame.depth, frame.height, settings)
+        roots = [build_cabinet(box_entity.parent.entities, frame, frame.origin, frame.height, settings, result)]
+      else
+        # Tính đủ hai tủ trước; nếu một tủ không dựng được thì không tạo gì cả.
+        plan_settings = pieces.map { |piece| settings.merge(piece.overrides) }
+        results = pieces.each_with_index.map { |piece, index| PanelModel.compute(frame.width, frame.depth, piece.height, plan_settings[index]) }
+        group = box_entity.parent.entities.add_group
+        group.name = Split::GROUP_NAME
+        group.layer = tag(Schema::DEFAULTS['cabinet_tag'])
+        origin = frame.origin
+        roots = pieces.each_with_index.map do |piece, index|
+          root = build_cabinet(group.entities, frame, origin, piece.height, plan_settings[index], results[index],
+                               'split_part' => piece.name, 'split_joint' => settings['split_joint'])
+          # Tủ trên đặt ngay trên mép trên tủ dưới (theo trục đứng của tủ).
+          distance = piece.height.mm
+          origin = Geom::Point3d.new(origin.x + frame.up.x * distance, origin.y + frame.up.y * distance, origin.z + frame.up.z * distance)
+          root
+        end
+      end
+      box_entity.erase! if options['remove_source'] == true
+      roots
+    end
+
+    # Giữ tên cũ cho chỗ gọi một tủ: trả về tủ đầu tiên.
+    def cabinet_from_box(box_entity, options = {})
+      cabinets_from_box(box_entity, options).first
     end
   end
 end

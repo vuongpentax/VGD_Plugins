@@ -503,9 +503,9 @@ module VGD_Cabinet_Draw
             pid = box.persistent_id
             params = @overrides[pid] || @settings
             options = params.merge('front_normal' => @fronts[pid].to_a, 'remove_source' => params['keep_source'] != true)
-            root = Geometry.cabinet_from_box(box, options)
-            Geometry.share_components(root)
-            roots << root
+            created = Geometry.cabinets_from_box(box, options)
+            created.each { |root| Geometry.share_components(root) }
+            roots.concat(created)
           end
         end
         model = view.model
@@ -625,7 +625,7 @@ module VGD_Cabinet_Draw
       CARCASS_KEYS = %w[board_thickness back_thickness back_mode back_groove_depth back_lip panels leg_height ceiling_strip_height
                         sides_to_floor sides_to_ceiling toe_kick_enabled toe_kick_thickness toe_kick_setback toe_kick_back
                         cornice_enabled cornice_thickness cornice_setback cabinet_type top_mode top_rail_width hang_rail
-                        hang_rail_height fridge_width fridge_height fridge_depth fridge_side_gap fridge_top_gap fridge_back_gap].freeze
+                        rail_front_orient rail_back_orient rail_back_width rail_double hang_rail_height fridge_width fridge_height fridge_depth fridge_side_gap fridge_top_gap fridge_back_gap].freeze
 
       # Bảng điều khiển / chọn mẫu gửi sang: chỉ ghi nhận khóa thùng tủ có giá trị khác thông số hiện tại của tủ.
       def update_settings(settings)
