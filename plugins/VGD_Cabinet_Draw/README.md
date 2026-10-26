@@ -1,16 +1,18 @@
-# VGD_Cabinet Draw 1.0.0-beta.34
+# VGD_Cabinet Draw 1.0.0-beta.35
 
-Trạng thái: beta.34 bổ sung tự cập nhật tủ khi kéo Scale (co giãn tại chỗ, giữ ván và chi tiết đã làm). Nền tảng từ beta.33 đã đưa vào repository, thay cho baseline beta.1 (lịch sử beta.1 vẫn còn trong git).
+Trạng thái: beta.35 mở rộng tự cập nhật tủ khi kéo Scale sang ngăn kéo, khoang, xà chặn, hộc tủ áo và cánh (giai đoạn 2). beta.34 là giai đoạn 1 (vỏ tủ và đợt/vách). Nền tảng từ beta.33 đã đưa vào repository, thay cho baseline beta.1 (lịch sử beta.1 vẫn còn trong git).
 
 - Đã xác minh tự động: bộ test giả lập (`test/`), gồm `test_stretch.rb` cho tự cập nhật khi Scale.
 - Chưa xác minh: chưa mở trong SketchUp thật; chưa kiểm tra tương thích Ruby 2.7 đầy đủ (chỉ kiểm cú pháp bằng `ruby -c`).
 
-## Tự cập nhật khi kéo Scale (beta.34)
+## Tự cập nhật khi kéo Scale (beta.34 giai đoạn 1, beta.35 giai đoạn 2)
 
 - Kéo Scale tủ xong (thả chuột) thì tủ tự dựng lại theo kích thước mới. Không cần mở Box → Board.
-- Vỏ tủ và đợt/vách được co giãn tại chỗ, không xóa tạo lại: khấu, cắt, bo, vật liệu và tên được giữ.
+- Mọi cấu kiện đã có được co giãn tại chỗ, không xóa tạo lại: vỏ tủ, đợt/vách, mặt và thùng ngăn kéo, khoang, xà chặn, hộc tủ áo, cánh. Khấu, cắt, bo, vật liệu, tên và tay nắm được giữ.
 - Vân vật liệu được đặt lại theo kích thước thật, không bị kéo theo tấm.
-- Ngăn kéo, cánh, tay nắm, xà chặn và hộc tủ áo vẫn dựng lại từ công thức.
+- Cánh đang mở được đóng về 0 trước khi co giãn, rồi mở lại đúng góc cũ quanh bản lề mới. Ngăn kéo đang kéo ra được đóng lại.
+- Tay nắm được dựng lại theo tỷ lệ vị trí đã lưu.
+- Chưa làm: liên kết giữa các cấu kiện (ví dụ cánh gắn theo hông/hồi). Sẽ làm ở giai đoạn sau.
 - Tắt/bật ở tab 5 · Setting chung. Mặc định bật.
 - Một lần kéo Scale tạo hai bước Undo: bước Scale và bước tự cập nhật.
 

@@ -324,11 +324,16 @@ module VGD_Cabinet_Draw
           kept_roles << role
         end
       end
+      # Cấu kiện giữ tại chỗ (co giãn tủ): không dựng lại, không xóa, không chép lại tay nắm.
+      kept_keys = keep.select(&:valid?).map { |entity| stretch_key(entity) }.compact
+      kept_item = ->(entity) { kept_keys.include?(stretch_key(entity)) }
       make_unique_tree(root)
       shell = Geometry.shell_for(root)
       raise 'Không tìm thấy thùng tủ.' unless shell
       list = adopt_legacy(root, shell)
-      drawer_handles = capture_drawer_handles(root)
+      doors = Operations.doors_of(root)
+      doors_kept = !doors.empty? && doors.all? { |door| kept_keys.include?(stretch_key(door)) }
+      drawer_handles = capture_drawer_handles(root, kept_keys)
       warnings << 'Ngăn kéo đang mở được đóng lại khi dựng lại tủ.' if DrawerSlide.any_open?(root)
       unscale!(root)
       keep = Interior.containers(shell).select do |entity|
@@ -343,7 +348,7 @@ module VGD_Cabinet_Draw
       end
       # Xóa phần sẽ dựng lại (giữ tấm chỉnh tay được chọn giữ). Chi tiết chưa có bước tạo (bản cũ) thì giữ + báo.
       Interior.containers(shell).each do |entity|
-        next if keep.include?(entity)
+        next if keep.include?(entity) || kept_item.call(entity)
         role = Interior.role_of(entity)
         kind = entity.get_attribute(DICT, 'kind')
         if Interior::CARCASS_ROLES.include?(role) || MEMBER_ROLES.include?(role)
@@ -364,12 +369,14 @@ module VGD_Cabinet_Draw
         next unless name == Operations::DRAWER_CONTAINER
         entity.definition.entities.to_a.each do |child|
           next unless child.valid?
+          next if kept_item.call(child)
           known.include?(child.get_attribute(DICT, 'op')) ? child.erase! : old_note.call('Ngăn kéo')
         end
       end
       Geometry.build_carcass(root, shell, result, settings, dims[0], dims[1], dims[2], {}, kept_roles)
       failures = []
       list.sort_by { |op| op['op'].to_i }.each do |op|
+        next if op['type'] != 'panel' && kept_keys.any? { |key| key.length > 1 && key[1] == op['op'] }
         begin
           replay(root, shell, op, kept_members[op['op']])
         rescue StandardError => e
@@ -377,7 +384,7 @@ module VGD_Cabinet_Draw
         end
       end
       begin
-        rebuild_doors(root)
+        rebuild_doors(root) unless doors_kept
       rescue StandardError => e
         failures << "Cánh: #{e.message.sub(/\.\z/, '')}"
       end
@@ -389,27 +396,118 @@ module VGD_Cabinet_Draw
     end
 
     # ---------- Co giãn tại chỗ (tự cập nhật khi kéo Scale) ----------
-    # Kiểu Dynamic Component: vỏ tủ và đợt/vách KHÔNG bị xóa rồi tạo lại. Mỗi tấm được co giãn đúng từ hộp cũ sang
-    # hộp mới, nên khấu, cắt, bo, vật liệu, tên và chữ ký hình học đều còn nguyên.
+    # Kiểu Dynamic Component: cấu kiện đã có KHÔNG bị xóa rồi tạo lại. Mỗi cấu kiện được co giãn đúng từ hộp cũ sang
+    # hộp mới, nên khấu, cắt, bo, vật liệu, tên, tay nắm và góc mở đều còn nguyên.
     # Hộp cũ/mới lấy từ công thức: dựng thử một BẢN SAO của tủ rồi xóa bản sao. Tủ không khớp công thức thì dựng lại như cũ.
-    # Ngăn kéo, cánh, tay nắm, xà chặn, hộc tủ áo vẫn dựng lại từ công thức (chưa co giãn tại chỗ).
+    # Phạm vi: vỏ tủ, đợt/vách, mặt và thùng ngăn kéo, khoang ngăn kéo, xà chặn, hộc tủ áo, cánh.
+    # Cánh được đóng về 0 trước khi co giãn rồi mở lại đúng góc cũ quanh bản lề mới.
+
+    # Khóa nhận diện một cấu kiện co giãn được. nil nếu không nhận ra (tủ cũ hoặc chi tiết thiếu bước tạo).
+    def stretch_key(entity)
+      return nil unless entity.valid?
+      role = Interior.role_of(entity)
+      return [role] if Interior::CARCASS_ROLES.include?(role)
+      if MEMBER_ROLES.include?(role)
+        op = ModelData.params(entity)['op']
+        return op && [role, op, ModelData.params(entity)['index'].to_i]
+      end
+      return door_key(entity) if Operations.door?(entity)
+      kind = entity.get_attribute(DICT, 'kind')
+      case kind
+      when 'drawer_front', 'drawer_box'
+        op = entity.get_attribute(DICT, 'op')
+        op && [kind == 'drawer_front' ? 'front' : 'box', op, entity.get_attribute(DICT, 'op_index').to_i]
+      when *EXTRA_KINDS
+        op = ModelData.params(entity)['op']
+        op && [kind, op]
+      end
+    end
+
+    def door_key(door)
+      region = door.get_attribute(DICT, 'region_id')
+      region && ['door', region.to_s]
+    end
+
+    # Cánh co giãn trong hệ riêng của cánh (hộp đo theo hình lúc đóng). Các cấu kiện còn lại đo trong hệ của nhóm chứa.
+    def own_frame?(entity)
+      Operations.door?(entity)
+    end
+
+    def item_box(entity)
+      own_frame?(entity) ? Operations.door_bounds(entity) : Interior.box_of(entity)
+    end
+
+    def legacy_member?(entity)
+      Interior.role_of(entity).nil? && entity.name.to_s =~ /\A(Đợt|Vách) \d+\z/
+    end
+
+    # Các cấu kiện co giãn được của tủ: { khóa => entity }. nil nếu có chi tiết không nhận ra (tủ cũ hoặc thiếu bước).
+    def stretch_items(root, shell)
+      containers = Interior.containers(shell)
+      return nil if containers.any? { |e| legacy_member?(e) }
+      candidates = containers.select do |e|
+        role = Interior.role_of(e)
+        Interior::CARCASS_ROLES.include?(role) || MEMBER_ROLES.include?(role) || EXTRA_KINDS.include?(e.get_attribute(DICT, 'kind'))
+      end
+      container = root.definition.entities.to_a.find { |e| e.is_a?(Sketchup::Group) && e.valid? && e.name == Operations::DRAWER_CONTAINER }
+      candidates += container.definition.entities.to_a.select { |e| e.valid? && (DrawerSlide.front?(e) || DrawerSlide.box?(e)) } if container
+      candidates += Operations.doors_of(root)
+      items = {}
+      candidates.each do |entity|
+        key = stretch_key(entity)
+        return nil if key.nil? || items.key?(key)
+        items[key] = entity
+      end
+      items
+    end
+
+    # Công thức của các cấu kiện ứng với kích thước dims: { khóa => { box:, params: } }. nil nếu thiếu dữ liệu.
+    def recipe_items(root, settings, dims)
+      probe = probe_copy(root)
+      run(probe, settings, dims, [], share: false)
+      items = stretch_items(probe, Geometry.shell_for(probe))
+      return nil unless items
+      recipe = items.transform_values { |entity| { box: item_box(entity), params: entity.get_attribute(DICT, 'params_json') } }
+      recipe.values.all? { |item| item[:box] } ? recipe : nil
+    ensure
+      discard_probe(probe) if probe&.valid?
+    end
+
+    def same_keys?(recipe, items)
+      recipe.keys.map(&:inspect).sort == items.keys.map(&:inspect).sort
+    end
 
     # Co giãn tủ đang bị kéo Scale về kích thước thật. Chạy trong một operation do người gọi mở. Trả về danh sách cảnh báo.
     def stretch(root)
       dims = dimensions_of(root)
       settings = settings_of(root)
       old_dims = ModelData.params(root).values_at('width_mm', 'depth_mm', 'height_mm').map(&:to_f)
-      unscale!(root)
       shell = Geometry.shell_for(root)
       raise 'Không tìm thấy thùng tủ.' unless shell
-      parts = stretch_parts_of(shell)
-      return rebuild_as_before(root, settings, dims) unless parts
-      from = recipe_boxes(root, settings, old_dims)
-      to = recipe_boxes(root, settings, dims)
-      return rebuild_as_before(root, settings, dims) unless from.keys.sort == parts.keys.sort && to.keys.sort == parts.keys.sort
+      parts = stretch_items(root, shell)
+      from = parts && recipe_items(root, settings, old_dims)
+      to = parts && recipe_items(root, settings, dims)
+      return rebuild_as_before(root, settings, dims) unless from && to && same_keys?(from, parts) && same_keys?(to, parts)
+      unscale!(root)
+      # Cánh đang mở: nhớ góc và hướng mở, đóng về 0 để co giãn, rồi mở lại sau.
+      door_states = Operations.doors_of(root).map { |door| [door, Operations.door_angle(door), door.get_attribute(DICT, 'opening_side', 'left'), Operations.opening_type_of(door)] }
+      DrawerSlide.close_all(root)
+      door_states.each { |door, angle, side, _type| Operations.set_door_angle(door, side, 0) if angle > 0.5 }
+      # Tách bản riêng trước khi sửa (tránh đổi lây sang bản copy dùng chung), rồi nhớ và gỡ tay nắm (dựng lại sau).
+      parts.each_value { |entity| entity.make_unique if entity.is_a?(Sketchup::ComponentInstance) }
+      handles = parts.values.to_h { |entity| [entity, Operations.handle_specs(entity)] }
+      parts.each_value { |entity| Operations.handle_groups(entity).each(&:erase!) }
       parts.each do |key, entity|
-        next if same_box?(from[key], to[key])
-        stretch_part!(entity, from[key], to[key])
+        next if same_box?(from[key][:box], to[key][:box])
+        stretch_part!(entity, from[key][:box], to[key][:box])
+      end
+      parts.each do |key, entity|
+        entity.set_attribute(DICT, 'params_json', to[key][:params]) if to[key][:params]
+      end
+      handles.each { |entity, specs| specs.each { |spec| Operations.add_handle(entity, spec) } }
+      door_states.each do |door, angle, side, type|
+        Operations.apply_opening_metadata(door, type)
+        Operations.set_door_angle(door, side, angle) if angle > 0.5
       end
       run(root, settings, dims, parts.values, share: false)
     end
@@ -421,73 +519,19 @@ module VGD_Cabinet_Draw
       warnings << 'Tủ không khớp công thức (có thể tạo bằng bản cũ): đã dựng lại như trước, hãy kiểm tra ván.'
     end
 
-    # Khóa nhận diện một tấm: vỏ tủ theo vai trò; đợt/vách theo (vai trò, bước, chỉ số). nil nếu không nhận ra.
-    def stretch_key(entity)
-      role = Interior.role_of(entity)
-      return [role] if Interior::CARCASS_ROLES.include?(role)
-      return nil unless MEMBER_ROLES.include?(role)
-      params = ModelData.params(entity)
-      return nil unless params['op']
-      [role, params['op'], params['index'].to_i]
-    end
-
-    # Các tấm cần co giãn: { khóa => entity }. nil nếu có tấm không nhận ra (tủ cũ) hoặc hai tấm trùng khóa.
-    def stretch_parts_of(shell)
-      containers = Interior.containers(shell)
-      return nil if containers.any? { |e| Interior.role_of(e).nil? && e.name.to_s =~ /\A(Đợt|Vách) \d+\z/ }
-      parts = {}
-      containers.each do |entity|
-        role = Interior.role_of(entity)
-        next unless Interior::CARCASS_ROLES.include?(role) || MEMBER_ROLES.include?(role)
-        key = stretch_key(entity)
-        return nil if key.nil? || parts.key?(key)
-        parts[key] = entity
-      end
-      parts
-    end
-
-    # Hộp [x0,y0,z0,x1,y1,z1] (đơn vị SketchUp) của từng tấm theo công thức ứng với kích thước dims: { khóa => hộp }.
-    def recipe_boxes(root, settings, dims)
-      probe = probe_copy(root)
-      run(probe, settings, dims, [], share: false)
-      Interior.containers(Geometry.shell_for(probe)).each_with_object({}) do |entity, out|
-        key = stretch_key(entity)
-        out[key] = Interior.box_of(entity) if key
-      end
-    ensure
-      discard_probe(probe) if probe&.valid?
-    end
-
-    # Xóa bản thử và cả định nghĩa riêng của nó (không thì còn một component mồ côi trong danh sách Components).
-    # Chỉ gọi xóa định nghĩa khi API DefinitionList#remove có sẵn và định nghĩa không còn bản thể nào.
-    def discard_probe(probe)
-      definition = probe.definition
-      probe.erase!
-      definitions = Sketchup.active_model.respond_to?(:definitions) ? Sketchup.active_model.definitions : nil
-      definitions.remove(definition) if definitions && definitions.respond_to?(:remove) && definition.count_instances.zero?
-    end
-
-    # Bản sao thử của tủ (cùng vị trí, cùng thuộc tính, định nghĩa riêng) để dựng công thức mà không đụng tủ thật.
-    def probe_copy(root)
-      host = root.parent
-      raise 'Không tạo được bản thử của tủ.' unless host.respond_to?(:entities)
-      probe = host.entities.add_instance(root.definition, root.transformation)
-      probe.make_unique
-      ModelData.restore(probe, ModelData.snapshot(root))
-      probe.name = root.name
-      probe
-    end
-
     def same_box?(a, b)
       a.zip(b).all? { |x, y| (x - y).abs < Interior::EPS }
     end
 
-    # Co giãn một tấm tại chỗ: đưa hộp cũ về hộp mới, giữ nguyên các chi tiết bên trong, rồi đặt lại vân vật liệu.
+    # Co giãn một cấu kiện tại chỗ: đưa hộp cũ về hộp mới, giữ nguyên các chi tiết bên trong, rồi đặt lại vân vật liệu.
     def stretch_part!(entity, old_box, new_box)
-      entity.make_unique if entity.is_a?(Sketchup::ComponentInstance)
-      placement = entity.transformation
+      transform = stretch_transform(old_box, new_box)
+      unless own_frame?(entity)
+        placement = entity.transformation
+        transform = placement.inverse * transform * placement
+      end
       contents = contents_of(entity)
-      contents.transform_entities(placement.inverse * stretch_transform(old_box, new_box) * placement, contents.to_a)
+      contents.transform_entities(transform, contents.to_a)
       reset_textures(entity)
       Geometry.stamp_signature(entity)
     end
@@ -523,6 +567,26 @@ module VGD_Cabinet_Draw
       u = (face.vertices[1].position - origin).normalize
       v = face.normal.cross(u).normalize
       face.position_material(material, [origin, origin.offset(u, texture.width), origin.offset(v, texture.height)], front)
+    end
+
+    # Xóa bản thử và cả định nghĩa riêng của nó (không thì còn một component mồ côi trong danh sách Components).
+    # Chỉ gọi xóa định nghĩa khi API DefinitionList#remove có sẵn và định nghĩa không còn bản thể nào.
+    def discard_probe(probe)
+      definition = probe.definition
+      probe.erase!
+      definitions = Sketchup.active_model.respond_to?(:definitions) ? Sketchup.active_model.definitions : nil
+      definitions.remove(definition) if definitions && definitions.respond_to?(:remove) && definition.count_instances.zero?
+    end
+
+    # Bản sao thử của tủ (cùng vị trí, cùng thuộc tính, định nghĩa riêng) để dựng công thức mà không đụng tủ thật.
+    def probe_copy(root)
+      host = root.parent
+      raise 'Không tạo được bản thử của tủ.' unless host.respond_to?(:entities)
+      probe = host.entities.add_instance(root.definition, root.transformation)
+      probe.make_unique
+      ModelData.restore(probe, ModelData.snapshot(root))
+      probe.name = root.name
+      probe
     end
 
     # Tủ copy bằng Ctrl+Move dùng chung định nghĩa với bản gốc: tách riêng tủ và các nhóm con trực tiếp
@@ -566,11 +630,12 @@ module VGD_Cabinet_Draw
       tool.build_doors
     end
 
-    def capture_drawer_handles(root)
+    def capture_drawer_handles(root, kept_keys = [])
       box = root.definition.entities.to_a.find { |e| e.is_a?(Sketchup::Group) && e.name == Operations::DRAWER_CONTAINER }
       return {} unless box
       box.definition.entities.to_a.each_with_object({}) do |front, out|
         next unless front.respond_to?(:name) && front.name == 'Mặt Ngăn Kéo'
+        next if kept_keys.include?(stretch_key(front))
         op = front.get_attribute(DICT, 'op')
         next unless op
         specs = Operations.handle_specs(front)

@@ -123,5 +123,81 @@ auto_run(c)
 check 'lật gương: kích thước không đổi', dims(c) == [800.0, 560.0, 2000.0], dims(c).inspect
 check 'lật gương: có báo hướng dẫn', UI.msgs.drop(msgs_before).any? { |m| m.include?('lật gương') }, UI.msgs.drop(msgs_before).inspect
 
+puts '== 10. Ngăn kéo, cánh (đang mở 45°), tay nắm: co giãn tại chỗ, không tạo lại =='
+def fronts_of(c); groups(container(c, 'Ngăn kéo').definition.entities).select { |g| g.name == 'Mặt Ngăn Kéo' }; end
+def boxes_of(c); groups(container(c, 'Ngăn kéo').definition.entities).select { |g| g.name == 'Thùng Ngăn Kéo' }; end
+def doors_of_test(c); V::Operations.doors_of(c).sort_by { |d| V::Operations.door_bounds(d)[0] }; end
+def door_width(d); b = V::Operations.door_bounds(d); b[3] - b[0]; end
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+reselect(c)
+dk = V::Tools.build('drawer', { 'drawer_count' => 2 }); dk.activate
+vv = Sketchup.active_model.active_view; vv.fake_path = [c]; vv.fake_point = at(200, 150)
+dk.onMouseMove(0, 5, 5, vv); dk.onLButtonDown(0, 5, 5, vv); dk.commit(vv)
+reselect(c)
+dt = V::Tools::DoorTool.new({}); dt.activate
+dt.layout.split(dt.layout.regions.first['id'], 'vertical', 0.5); dt.commit(v)
+doors0 = doors_of_test(c)
+V::Operations.apply_opening_metadata(doors0[1], 'right')
+V::Operations.save_opening_to_layout(doors0[1], 'right')
+V::Operations.handles([doors0[1]], V::Schema.merge_settings({}), [])
+V::Operations.set_door_angle(doors0[1], 'right', 45)
+fronts_before = fronts_of(c); boxes_before = boxes_of(c)
+ids_before = (fronts_before + boxes_before + doors0).map(&:persistent_id).sort
+door_w_before = doors0.sum { |d| door_width(d) }
+front_w_before = fronts_before.sum { |g| V::Operations.door_bounds(g)[3] - V::Operations.door_bounds(g)[0] }
+handles_before = doors0.map { |d| V::Operations.handle_groups(d).length }
+msgs_before = UI.msgs.length
+check 'trước khi scale: có ngăn kéo, cánh và tay nắm', fronts_before.length == 2 && boxes_before.length == 2 && doors0.length == 2 && handles_before.sum >= 1, [fronts_before.length, boxes_before.length, doors0.length, handles_before].inspect
+scale_root(c, 1.25)
+auto_run(c)
+fronts = fronts_of(c); boxes = boxes_of(c); doors = doors_of_test(c)
+check 'không báo lỗi dựng lại (đi đường co giãn)', UI.msgs.drop(msgs_before).none? { |m| m.include?('không khớp') }, UI.msgs.drop(msgs_before).inspect
+check 'mặt hộc / thùng / cánh giữ nguyên đối tượng', (fronts + boxes + doors).map(&:persistent_id).sort == ids_before, (fronts + boxes + doors).map(&:persistent_id).sort.inspect
+check 'không nhân đôi: số mặt, thùng, cánh không đổi', fronts.length == 2 && boxes.length == 2 && doors.length == 2
+check 'kích thước lưu theo rộng mới', dims(c) == [1000.0, 560.0, 2000.0], dims(c).inspect
+door_ratio = doors.sum { |d| door_width(d) } / door_w_before
+check 'cánh co theo lòng tủ mới (tổng rộng x1.25)', near(door_ratio, 1.25, 0.03), door_ratio.inspect
+front_ratio = fronts.sum { |g| V::Operations.door_bounds(g)[3] - V::Operations.door_bounds(g)[0] } / front_w_before
+check 'mặt hộc co theo rộng mới', near(front_ratio, 1.25, 0.03), front_ratio.inspect
+check 'cánh đang mở giữ đúng góc 45°', V::Operations.door_angle(doors[1]) == 45.0, V::Operations.door_angle(doors[1]).inspect
+check 'tay nắm còn đủ, không nhân đôi', doors.map { |d| V::Operations.handle_groups(d).length } == handles_before, doors.map { |d| V::Operations.handle_groups(d).length }.inspect
+check 'không còn cánh lẻ ngoài nhóm Cánh', groups(c.definition.entities).none? { |g| g.name.to_s.start_with?('Cánh Draw') }
+check 'ngăn kéo vẫn đóng (không mở khi co giãn)', fronts.all? { |g| V::DrawerSlide.open_mm(g).zero? }
+
+puts '== 11. Khoang ngăn kéo (có 3 hộc): co giãn tại chỗ =='
+def bay_of(c); groups(shell(c).definition.entities).find { |g| g.name == 'Khoang Ngăn Kéo' }; end
+def bay_bottom_w(c); b = bb(groups(bay_of(c).definition.entities).find { |g| g.name == 'Đáy Khoang' }); b[3] - b[0]; end
+c = cab
+V::DrawerBay.run([c], V::Schema.merge_settings({ 'drawer_count' => 3 }), [])
+bay0 = bay_of(c)
+fronts0 = fronts_of(c); boxes0 = boxes_of(c)
+ids0 = ([bay0] + fronts0 + boxes0).map(&:persistent_id).sort
+bw0 = bay_bottom_w(c)
+msgs_before = UI.msgs.length
+scale_root(c, 1.25)
+auto_run(c)
+bay1 = bay_of(c)
+check 'khoang: không nhân đôi, cùng đối tượng', groups(shell(c).definition.entities).count { |g| g.name == 'Khoang Ngăn Kéo' } == 1 && bay1.equal?(bay0) && bay1.valid?
+check 'khoang và các hộc giữ đúng đối tượng', ([bay1] + fronts_of(c) + boxes_of(c)).map(&:persistent_id).sort == ids0
+check 'không báo lỗi dựng lại', UI.msgs.drop(msgs_before).none? { |m| m.include?('không khớp') }, UI.msgs.drop(msgs_before).inspect
+bw1 = bay_bottom_w(c)
+check 'đáy khoang rộng theo lòng tủ mới', bw1 > bw0 * 1.2 && bw1 < bw0 * 1.3, [bw0.to_mm, bw1.to_mm].inspect
+check 'số hộc không đổi (3)', fronts_of(c).length == 3 && boxes_of(c).length == 3
+
+puts '== 12. Xà chặn (blocker) và hộc tủ áo: co giãn tại chỗ =='
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+V::Operations.blockers([c], V::Schema.merge_settings({}), [[c, at(400, 1200)]])
+blk0 = groups(shell(c).definition.entities).find { |g| g.get_attribute(V::Schema::DICTIONARY, 'kind') == 'blocker' }
+check 'có xà chặn trước khi scale', !blk0.nil?
+blk_id = blk0 && blk0.persistent_id
+bw0 = blk0 && (bb(blk0)[3] - bb(blk0)[0])
+msgs_before = UI.msgs.length
+scale_root(c, 1.25)
+auto_run(c)
+blk1 = groups(shell(c).definition.entities).select { |g| g.get_attribute(V::Schema::DICTIONARY, 'kind') == 'blocker' }
+check 'xà chặn: một cái, cùng đối tượng', blk1.length == 1 && blk1.first.persistent_id == blk_id, blk1.map(&:persistent_id).inspect
+check 'xà chặn: không báo lỗi dựng lại', UI.msgs.drop(msgs_before).none? { |m| m.include?('không khớp') }, UI.msgs.drop(msgs_before).inspect
+check 'xà chặn: rộng theo lòng tủ mới', blk1.any? && (bb(blk1.first)[3] - bb(blk1.first)[0]) > bw0 * 1.2, blk1.any? ? bb(blk1.first).inspect : 'none'
+
 puts "\n== Kết quả test_stretch: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
 $fail.each { |x| puts "  - #{x}" }

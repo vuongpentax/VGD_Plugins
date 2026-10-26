@@ -456,7 +456,7 @@ module Sketchup
     def deep_copy
       copy = Definition.new
       copy.name = name
-      entities.to_a.each { |e| copy.entities.push(e.copy_into(copy.entities)) }
+      entities.to_a.each { |e| copy.entities.push(e.respond_to?(:copy_into) ? e.copy_into(copy.entities) : e) }
       copy
     end
   end
