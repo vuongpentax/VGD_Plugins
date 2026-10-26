@@ -619,10 +619,11 @@ module VGD_Cabinet_Draw
     end
 
     # Co giãn một tấm vỏ tủ / đợt / vách tại chỗ: đưa hộp cũ về hộp mới, giữ nguyên các chi tiết bên trong.
-    # Co giãn bằng phép biến đổi của CHÍNH group, không dời nội dung: hình học bên trong giữ nguyên, hộp định nghĩa
-    # luôn đúng, gốc ván vẫn ở góc ván, và chữ ký hình học không bị coi là chỉnh tay.
     def stretch_part!(entity, old_box, new_box)
-      entity.transformation = stretch_transform(old_box, new_box) * entity.transformation
+      placement = entity.transformation
+      transform = placement.inverse * stretch_transform(old_box, new_box) * placement
+      contents = contents_of(entity)
+      contents.transform_entities(transform, contents.to_a)
       reset_textures(entity)
     end
 
@@ -642,40 +643,28 @@ module VGD_Cabinet_Draw
 
     # Sau khi co giãn, đặt lại vân để mỗi viên vân giữ đúng kích thước thật (không bị kéo theo tấm).
     def reset_textures(entity)
-      placement = entity.transformation
       contents_of(entity).grep(Sketchup::Face).each do |face|
         front = face.material || entity.material
-        reset_face_texture(face, front, true, placement) if front && front.texture
+        reset_face_texture(face, front, true) if front && front.texture
         back = face.back_material
-        reset_face_texture(face, back, false, placement) if back && back.texture
+        reset_face_texture(face, back, false) if back && back.texture
       end
     end
 
     # position_material nhận các CẶP (điểm trên mặt, điểm tương ứng trên ảnh). Ảnh đặt theo kích thước thật
     # (texture.width/height, inch) và tọa độ ảnh tính bằng pixel.
-    # placement: phép biến đổi của group chứa mặt. Nếu ván đang bị scale, vân được đổi sang chiều dài trong hệ của
-    # ván để sau khi scale vân vẫn đúng kích thước thật (không bị kéo giãn theo tấm).
-    def reset_face_texture(face, material, front, placement = nil)
+    def reset_face_texture(face, material, front)
       texture = material.texture
       return if texture.width <= 0 || texture.height <= 0
       origin = face.vertices[0].position
       u = (face.vertices[1].position - origin).normalize
       v = face.normal.cross(u).normalize
       pixel_w, pixel_h = texture_pixels(texture)
-      u_len = texture.width / world_per_local(placement, u)
-      v_len = texture.height / world_per_local(placement, v)
       face.position_material(material, [
         origin, Geom::Point3d.new(0, 0, 0),
-        origin.offset(u, u_len), Geom::Point3d.new(pixel_w, 0, 0),
-        origin.offset(v, v_len), Geom::Point3d.new(0, pixel_h, 0)
+        origin.offset(u, texture.width), Geom::Point3d.new(pixel_w, 0, 0),
+        origin.offset(v, texture.height), Geom::Point3d.new(0, pixel_h, 0)
       ], front)
-    end
-
-    # Hệ số phóng đại của một hướng (trong hệ của ván) khi đưa ra thế giới. 1.0 nếu không scale.
-    def world_per_local(placement, direction)
-      return 1.0 unless placement
-      length = direction.transform(placement).length
-      length > 1e-9 ? length : 1.0
     end
 
     # Kích thước ảnh theo pixel. Nếu API không có thì dùng kích thước thật (inch) làm tỷ lệ.

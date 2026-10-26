@@ -62,8 +62,7 @@ check 'vết khấu co theo tỷ lệ của ván', notch.valid? && near(world_x,
 check 'ván khấu vẫn là cùng đối tượng', nong2.equal?(nong) && nong2.valid?
 check 'vật liệu của ván còn', nong2.material.equal?(mat)
 check 'texture được đặt lại cho mặt có vật liệu', !notch.positioned.empty?
-# Vân đo trong thế giới: ván đã scale nên độ dài trong hệ của ván khác, nhưng kích thước thật vẫn 12 × 24 inch.
-check 'texture: cặp điểm (mặt, ảnh) và một ô vân rộng 12, cao 24 inch (đo trong thế giới)', notch.positioned.all? { |_, pts, _| pts.length == 6 && near((pts[2].transform(nong2.transformation) - pts[0].transform(nong2.transformation)).length, 12.0) && near((pts[4].transform(nong2.transformation) - pts[0].transform(nong2.transformation)).length, 24.0) }, notch.positioned.map { |_, pts, _| pts.length }.inspect
+check 'texture: cặp điểm (mặt, ảnh) và một ô vân rộng 12, cao 24 inch', notch.positioned.all? { |_, pts, _| pts.length == 6 && near((pts[2] - pts[0]).length, 12.0) && near((pts[4] - pts[0]).length, 24.0) }, notch.positioned.map { |_, pts, _| pts.length }.inspect
 
 puts '== 4. Đợt đã dời bằng tay: giữ độ lệch so với công thức =='
 c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
