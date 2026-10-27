@@ -425,5 +425,24 @@ pt.instance_variable_set(:@shell, sh)
   check "#{label}: xem trước khớp tấm tạo ra", made && (0..5).all? { |i| (prev_box[i] - bb(made)[i]).abs < 0.05 }, [prev_box.map { |v| v.round(2) }, made && bb(made)].inspect
 end
 
+puts '== 20. Tủ không có nóc: vách cao tới mép xà, xà trước khấu vách =='
+c = cab('top_mode' => 'rails')
+sh = shell(c)
+prof = V::Rebuild.vertical_profile(sh, V::Interior.inner(sh), 0.0, [300.mm, 317.5.mm]).map { |y, z| [y.to_mm.round(2), z.to_mm.round(2)] }
+check 'xà trên phẳng: vách cao tới mép trên xà (1980)', prof.map { |_y, z| z }.max && near(prof.map { |_y, z| z }.max, 1980.0), prof.inspect
+check 'xà trên phẳng: góc xà trước (100, 1962.5) có trong biên', prof.any? { |y, z| near(y, 100.0) && near(z, 1962.5) }, prof.inspect
+check 'xà trên phẳng: vách không chồng cạnh', !overlapping_edges?(prof), prof.inspect
+
+c = cab('top_mode' => 'rails', 'rail_front_orient' => 'upright')
+sh = shell(c)
+prof = V::Rebuild.vertical_profile(sh, V::Interior.inner(sh), 0.0, [300.mm, 317.5.mm]).map { |y, z| [y.to_mm.round(2), z.to_mm.round(2)] }
+check 'xà đứng: vách cao tới 1980, khấu góc (17.5, 1880)', near(prof.map { |_y, z| z }.max, 1980.0) && prof.any? { |y, z| near(y, 17.5) && near(z, 1880.0) }, prof.inspect
+check 'xà đứng: vách không chồng cạnh', !overlapping_edges?(prof), prof.inspect
+
+c = cab({})
+sh = shell(c)
+prof = V::Rebuild.vertical_profile(sh, V::Interior.inner(sh), 0.0, [300.mm, 317.5.mm]).map { |y, z| [y.to_mm.round(2), z.to_mm.round(2)] }
+check 'tủ có nóc: vách không vượt nóc (1962.5)', near(prof.map { |_y, z| z }.max, 1962.5), prof.inspect
+
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.length}"
 exit($fail.empty? ? 0 : 1)

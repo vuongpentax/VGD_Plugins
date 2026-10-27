@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.49
+# VGD_Cabinet Draw 1.0.0-beta.50
+
+beta.50: tủ không có nóc (xà thay nóc/đáy) thì vách kéo tới mép xà và bị xà trước/sau khấu, thay vì dừng ở mép dưới xà. Tủ có nóc/đáy giữ nguyên. Đợt ngang chưa đổi. Chưa xác minh trong SketchUp thật.
 
 beta.49: xem trước đợt và vách lấy đúng hình sẽ tạo (cùng một hàm dựng). Hàm dựng biên có khấu theo xà trước đang chắn, nhưng với các cấu hình tủ hiện tại xà trước nằm ngay mép ô nên chưa cắt tấm nào. Chưa xác minh trong SketchUp thật.
 

@@ -94,6 +94,7 @@ module VGD_Cabinet_Draw
 
     # Xà trước (giằng trước) đang có trong tủ: tấm đợt và vách phải khấu quanh các thanh này.
     FRONT_RAILS = %w[rail_front rail_front_2 rail_front_bottom rail_front_bottom_2].freeze
+    RAIL_ROLES = (FRONT_RAILS + %w[rail_back rail_back_bottom]).freeze
 
     def front_rail_boxes(shell)
       Interior.containers(shell).select { |e| FRONT_RAILS.include?(Interior.role_of(e)) }.map { |e| Interior.box_of(e) }
@@ -166,11 +167,35 @@ module VGD_Cabinet_Draw
     def vertical_profile(shell, cell, setback, x_range = nil)
       yb = Interior.full_depth(shell)
       yf = [cell.y0 + setback, yb - 10.mm].min
-      blockers = Interior.back_notches(shell, cell.z0, cell.z1).map { |ny, za, zb| [ny, za, yb, zb] }
+      z0, z1 = partition_z_range(shell, cell)
+      blockers = Interior.back_notches(shell, z0, z1).map { |ny, za, zb| [ny, za, yb, zb] }
       rails = front_rail_boxes(shell)
       rails = rails.select { |r| overlap?(r[0], r[3], *x_range) } if x_range
       blockers += rails.map { |r| [r[1], r[2], r[4], r[5]] }
-      board_outline([yf, cell.z0, yb, cell.z1], blockers) || raise('Vách không dựng được: xà chắn làm tấm bị tách hoặc hết chỗ.')
+      board_outline([yf, z0, yb, z1], blockers) || raise('Vách không dựng được: xà chắn làm tấm bị tách hoặc hết chỗ.')
+    end
+
+    # Vách cao tới mép xà khi tủ không có nóc (hoặc đáy): xà thay nóc/đáy nằm ngoài ô, nên vách kéo tới mép của xà
+    # rồi bị xà khấu. Tủ có nóc/đáy thì giữ nguyên ô.
+    def partition_z_range(shell, cell)
+      parts = Interior.carcass(shell)
+      z0 = cell.z0
+      z1 = cell.z1
+      rails = rail_boxes(shell)
+      unless parts['bottom']
+        below = rails.select { |b| b[2] < cell.z0 - Interior::EPS }
+        z0 = below.map { |b| b[2] }.min if below.any?
+      end
+      unless parts['top']
+        above = rails.select { |b| b[5] > cell.z1 + Interior::EPS }
+        z1 = above.map { |b| b[5] }.max if above.any?
+      end
+      [z0, z1]
+    end
+
+    # Hộp của mọi xà (trước và sau, trên và dưới) đang có trong tủ.
+    def rail_boxes(shell)
+      Interior.containers(shell).select { |e| RAIL_ROLES.include?(Interior.role_of(e)) }.map { |e| Interior.box_of(e) }
     end
 
     # Các mặt (để vẽ xem trước) của một đường biên đùn từ lo tới hi. place ghép (a, b, k) thành điểm 3D.
