@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.51
+# VGD_Cabinet Draw 1.0.0-beta.52
+
+beta.52: xóa vách không làm đợt nở cả tủ; đợt chỉ nở tới vách/hông còn lại gần nhất (vị trí tuyệt đối, giới hạn theo ô giữ nguyên). Chưa xác minh trong SketchUp thật.
 
 beta.51: scale dọc tủ không còn hở phần khấu. Đợt và vách chưa chỉnh tay được dựng lại theo quy tắc khi scale; vách đã chỉnh tay vẫn co tại chỗ (có thể còn hở). Khung tô sáng vách theo chiều cao thật. Chưa xác minh trong SketchUp thật.
 

@@ -39,8 +39,10 @@ module VGD_Cabinet_Draw
         low = vertical ? inner.x0 : inner.z0
         positions = mine.map { |m| box = Interior.box_of(m); vertical ? box[0] : box[2] }.sort
         op['mode'] = 'free'
+        # Vị trí tuyệt đối (đo từ lòng tủ) để xóa một tấm không làm các tấm khác dời theo ô mới;
+        # giới hạn theo ô (limit) giữ nguyên, nên đợt nở tới tấm còn lại gần nhất.
+        op['absolute'] = true
         op['offsets'] = positions.map { |p| (p - low).to_mm }
-        op['limit'] = false
         op.delete('count')
         op.delete('omit')
       end

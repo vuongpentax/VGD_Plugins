@@ -86,5 +86,25 @@ pl = V::Tools::PanelTool.new({}); reselect(c); pl.activate; pl.settings['panel_a
 hover_panel(pl, c, 200, 1000); pl.onUserText('350', v); pl.commit(v)
 check 'cabinet_of tìm đúng tủ từ một đợt', V::Removal.cabinet_of(shelves(c).first).equal?(c)
 
+puts '== 3. Xóa vách: đợt chỉ nở tới vách gần nhất còn lại, không nở cả tủ =='
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+sh = shell(c)
+inner = V::Interior.inner(sh)
+vop = { 'type' => 'panel', 'axis' => 'vertical', 'kind' => 'thong_thuy', 'thickness_mm' => 17.5, 'limit' => true, 'setback_mm' => 0.0,
+        'door_fit' => 'phu', 'mode' => 'free', 'anchor' => V::Rebuild.anchor_of(sh, 450.mm, (inner.z0 + inner.z1) / 2), 'offsets' => [282.5, 582.5] }
+vop['op'] = V::Rebuild.record(c, vop)
+V::Rebuild.place_panels(c, sh, vop)
+sop = { 'type' => 'panel', 'axis' => 'horizontal', 'kind' => 'thong_thuy', 'thickness_mm' => 17.5, 'limit' => true, 'setback_mm' => 0.0,
+        'door_fit' => 'phu', 'mode' => 'free', 'anchor' => V::Rebuild.anchor_of(sh, 700.mm, 1000.mm), 'offsets' => [942.5] }
+sop['op'] = V::Rebuild.record(c, sop)
+V::Rebuild.place_panels(c, sh, sop)
+shelf = parts_named(c, 'Đợt').first
+check 'trước khi xóa: đợt nằm trong ô phải (617.5..782.5)', near(bb(shelf)[0], 617.5) && near(bb(shelf)[3], 782.5), bb(shelf).inspect
+part_b = parts_named(c, 'Vách').max_by { |p| bb(p)[0] }
+Sketchup.active_model.start_operation('t', true)
+V::Removal.remove_members(c, [part_b]); Sketchup.active_model.commit_operation
+shelf = parts_named(c, 'Đợt').first
+check 'xóa vách bên phải: đợt nở tới vách còn lại (317.5..782.5), không nở tới hông trái', shelf && near(bb(shelf)[0], 317.5) && near(bb(shelf)[3], 782.5), shelf && bb(shelf).inspect
+
 puts "\n== Kết quả test_removal: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
 $fail.each { |x| puts "  - #{x}" }

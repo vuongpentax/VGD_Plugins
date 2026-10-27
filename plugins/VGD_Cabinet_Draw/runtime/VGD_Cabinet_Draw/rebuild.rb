@@ -219,7 +219,9 @@ module VGD_Cabinet_Draw
     def panel_positions(shell, cell, op)
       vertical = op['axis'] == 'vertical'
       t = op['thickness_mm'].to_f.mm
-      low, high = vertical ? [cell.x0, cell.x1] : [cell.z0, cell.z1]
+      # 'absolute': vị trí đo từ lòng tủ (xem Removal.freeze_panel_steps); còn lại đo từ mép ô.
+      base = op['absolute'] ? Interior.inner(shell) : cell
+      low, high = vertical ? [base.x0, base.x1] : [base.z0, base.z1]
       # 'omit': chỉ số các tấm đã xóa (xem Removal). Tấm còn lại giữ nguyên vị trí.
       omit = Array(op['omit']).map(&:to_i)
       if op['mode'] == 'divide'
