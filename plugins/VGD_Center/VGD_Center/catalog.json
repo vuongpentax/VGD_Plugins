@@ -6,16 +6,16 @@
       "id": "dim",
       "name": "VGD Dim",
       "extension_name": "VGD Dim",
-      "version": "3.3.0",
+      "version": "4.0.0",
       "release_channel": "stable",
       "description": "Đo Dim thủ công và Smart Dim trong Boundary, có vùng chi tiết riêng.",
       "icon": "dim",
       "minimum_sketchup": "22.0.0",
       "download": {
-        "filename": "VGD_Dim_v3.3.0.rbz",
-        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0/VGD_Dim_v3.3.0.rbz",
-        "size": 53865,
-        "sha256": "59937555abbc7fb7922160297393fc44f844ae7ead0c2815b77dad882e53846a"
+        "filename": "VGD_Dim_v4.0.0.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v4.0.0/VGD_Dim_v4.0.0.rbz",
+        "size": 53862,
+        "sha256": "2324032ff05afe4d37737dbf87e72679d49b69bbf70addce78e8608e2dc66564"
       },
       "allowed_paths": [
         "vgd_dim.rb",
@@ -23,11 +23,11 @@
       ],
       "releases": [
         {
-          "version": "3.3.0",
+          "version": "4.0.0",
           "release_channel": "stable",
           "published_at": "2026-10-27",
-          "tag": "vgd-dim-v3.3.0",
-          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-dim-v3.3.0"
+          "tag": "vgd-dim-v4.0.0",
+          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-dim-v4.0.0"
         },
         {
           "version": "3.3.0-beta.8",
