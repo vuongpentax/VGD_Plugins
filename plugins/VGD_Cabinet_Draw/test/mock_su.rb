@@ -88,11 +88,14 @@ module Sketchup
     def area; 1.0; end
     def vertices; (0...(pts.length + far.length)).map{|i| Vertex.new(vertex_point(i), self, i)}; end
     class Loop
-      def initialize(pts, outer); @pts=pts; @outer=outer; end
-      def vertices; @pts.map{|p| Vertex.new(p)}; end
+      def initialize(pts, outer, owner = nil); @pts=pts; @outer=outer; @owner=owner; end
+      def vertices
+        return @pts.map{|p| Vertex.new(p)} unless @owner
+        @owner.pts.each_index.map{|i| Vertex.new(@owner.pts[i], @owner, i)}
+      end
       def outer?; @outer; end
     end
-    def outer_loop; @outer_loop ||= Loop.new(pts, true); end
+    def outer_loop; @outer_loop ||= Loop.new(pts, true, self); end
     def loops; [outer_loop] + (@holes||[]).map{|h| Loop.new(h, false)}; end
     def holes=(h); @holes=h; end
     def parent_entities=(e); @pe=e; end
@@ -518,6 +521,20 @@ end
 
 # ---- Tháo nhóm thành các phần tử (explode) cho bản thử co giãn ----
 module Sketchup
+  class Group
+    def explode
+      target = @parent_entities
+      @definition.entities.to_a.each do |e|
+        c = e.respond_to?(:copy_into) ? e.copy_into(target) : e
+        if c.is_a?(Face) then c.apply_transform!(@transformation)
+        elsif c.is_a?(Group) || c.is_a?(ComponentInstance) then c.transformation = @transformation * c.transformation
+        end
+        target.push(c)
+      end
+      @erased = true
+      true
+    end
+  end
   class ComponentInstance
     def explode
       target = @pe

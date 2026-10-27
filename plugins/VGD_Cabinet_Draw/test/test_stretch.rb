@@ -425,5 +425,22 @@ new_box = old_box.dup
 new_box[3] += 100.mm
 check 'không lệch: không báo lỗi', stretch_error(nong, old_box, new_box).nil?
 
+puts '== 14. SketchUp chỉnh lệch khi dời đỉnh: dựng lại tấm từ vị trí kế hoạch =='
+c = cab
+g = shell(c).definition.entities.add_group
+g.name = 'Tấm thử'
+g.entities.add_face([[0, 0, 0], [0, 300.mm, 0], [0, 300.mm, 300.mm], [0, 0, 300.mm]])
+old_box = [0, 0, 0, 0, 300.mm, 300.mm]
+new_box = [0, 0, 0, 0, 300.mm, 500.mm]
+ents = g.entities
+orig = ents.method(:transform_by_vectors)
+ents.define_singleton_method(:transform_by_vectors) do |es, vs|
+  orig.call(es, vs.each_with_index.map { |vec, k| k.zero? ? Geom::Vector3d.new(vec.x, vec.y + 1000.mm, vec.z) : vec })
+end
+err = stretch_error(g, old_box, new_box)
+faces = g.entities.grep(Sketchup::Face)
+pts = faces.flat_map { |f| f.vertices.map { |vx| [vx.position.y.to_mm.round(1), vx.position.z.to_mm.round(1)] } }.uniq.sort
+check 'lệch khi dời đỉnh: dựng lại từ kế hoạch, không báo lỗi', err.nil? && faces.length == 1 && pts == [[0.0, 0.0], [0.0, 500.0], [300.0, 0.0], [300.0, 500.0]], [err, pts].inspect
+
 puts "\n== Kết quả test_stretch: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
 $fail.each { |x| puts "  - #{x}" }

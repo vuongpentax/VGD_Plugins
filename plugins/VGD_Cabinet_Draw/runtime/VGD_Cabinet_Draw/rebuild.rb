@@ -742,6 +742,7 @@ module VGD_Cabinet_Draw
         knots = stretch_knots(coords, lo, hi, new_lo, new_hi)
         ->(v) { knot_shift(knots, lo, hi, new_lo, new_hi, v) }
       end
+      snapshot = geometry_snapshot(contents)
       vertices = []
       vectors = []
       targets = []
@@ -759,6 +760,14 @@ module VGD_Cabinet_Draw
       end
       move_vertices(contents, vertices, vectors)
       after_vertices = stretch_deviation(targets, origin)
+      rebuilt = false
+      unless after_vertices.empty?
+        # SketchUp tự chỉnh thêm khi dời đỉnh (kéo đỉnh hình cung ra xa): dựng lại tấm từ vị trí kế hoạch đã lưu.
+        puts "[VGD Cabinet Draw] #{entity.name}: SketchUp chỉnh lệch #{after_vertices.length} đỉnh khi dời, dựng lại tấm từ vị trí kế hoạch."
+        rebuild_geometry!(contents, snapshot, targets, origin)
+        rebuilt = true
+        report_deviation!(entity, after_vertices, after_vertices) unless rebuilt_matches?(contents, targets, origin)
+      end
       if move_nested?
         nested.each do |inst|
           b = inst.bounds
@@ -766,7 +775,7 @@ module VGD_Cabinet_Draw
           contents.transform_entities(Geom::Transformation.translation(d), [inst]) unless d.all? { |x| x.abs < 1e-9 }
         end
       end
-      final = stretch_deviation(targets, origin)
+      final = rebuilt ? [] : stretch_deviation(targets, origin)
       report_deviation!(entity, after_vertices, final) unless final.empty?
       reset_textures(entity)
     end
@@ -781,6 +790,89 @@ module VGD_Cabinet_Draw
 
     # Hình học của thân tấm sau khi dời phải đúng kế hoạch (hộp bao đã tính trước). Lệch nghĩa là SketchUp hoặc tool khác
     # đã chỉnh thêm (đỉnh bị kéo ra xa): báo lỗi để hoàn tác thao tác, không để hỏng tấm.
+    def vertex_key(vertex)
+      return vertex.entityID if vertex.respond_to?(:entityID)
+      return [vertex.owner.object_id, vertex.idx] if vertex.respond_to?(:owner) && vertex.owner
+      vertex.position.to_a.map { |x| x.round(6) }
+    end
+
+    # Hình học của tấm (mặt với các vòng đỉnh, cạnh, vật liệu, thuộc tính) để dựng lại khi SketchUp dời đỉnh sai.
+    def geometry_snapshot(contents)
+      faces = contents.grep(Sketchup::Face).map do |face|
+        outer = face.outer_loop
+        loops = [outer] + (face.loops - [outer])
+        { loops: loops.map { |loop| loop.vertices.map { |v| vertex_key(v) } }, normal: face.normal.to_a,
+          material: face.material, back_material: face.back_material, attrs: attribute_snapshot(face) }
+      end
+      edges = contents.grep(Sketchup::Edge).map do |edge|
+        { a: vertex_key(edge.start), b: vertex_key(edge.end), soft: edge.soft?, smooth: edge.smooth?, hidden: edge.hidden?,
+          loose: edge.faces.empty?, attrs: attribute_snapshot(edge) }
+      end
+      { faces: faces, edges: edges }
+    end
+
+    def attribute_snapshot(entity)
+      dictionaries = entity.respond_to?(:attribute_dictionaries) ? entity.attribute_dictionaries : nil
+      (dictionaries || []).map do |dictionary|
+        values = {}
+        dictionary.each_pair { |key, value| values[key] = value }
+        [dictionary.name, values]
+      end
+    end
+
+    def restore_attributes(snapshot, entity)
+      snapshot.each { |name, values| values.each { |key, value| entity.set_attribute(name, key, value) } }
+    end
+
+    # Dựng lại hình học của tấm từ vị trí kế hoạch: tạo mặt mới trong nhóm tạm, xóa hình cũ rồi tháo nhóm tạm.
+    def rebuild_geometry!(contents, snapshot, targets, origin)
+      target_of = targets.each_with_object({}) { |(v, t), h| h[vertex_key(v)] = t }
+      point = lambda do |key|
+        t = target_of.fetch(key)
+        Geom::Point3d.new(*(0..2).map { |i| t[i] - origin[i] })
+      end
+      temp = contents.add_group
+      snapshot[:faces].each do |snap|
+        loops = snap[:loops].map { |keys| keys.map { |k| point.call(k) } }
+        face = temp.entities.add_face(loops.first)
+        raise 'Không dựng lại được một mặt của tấm.' unless face
+        loops.drop(1).each do |hole|
+          inner = temp.entities.add_face(hole)
+          inner.erase! if inner && inner.valid?
+        end
+        face.reverse! if face.normal.dot(Geom::Vector3d.new(*snap[:normal])) < 0
+        face.material = snap[:material] if snap[:material]
+        face.back_material = snap[:back_material] if snap[:back_material]
+        restore_attributes(snap[:attrs], face)
+      end
+      (contents.grep(Sketchup::Face) + contents.grep(Sketchup::Edge)).each { |e| e.erase! if e.valid? }
+      temp.explode
+      index = contents.grep(Sketchup::Edge).each_with_object({}) { |e, h| h[edge_key(e.start.position, e.end.position)] = e }
+      snapshot[:edges].each do |snap|
+        a = point.call(snap[:a])
+        b = point.call(snap[:b])
+        edge = index[edge_key(a, b)] || (snap[:loose] ? contents.add_line(a, b) : nil)
+        next unless edge
+        edge.soft = snap[:soft]
+        edge.smooth = snap[:smooth]
+        edge.hidden = snap[:hidden]
+        restore_attributes(snap[:attrs], edge)
+      end
+    end
+
+    def edge_key(a, b)
+      [a, b].map { |p| p.to_a.map { |x| (x.to_mm * 100).round } }.sort
+    end
+
+    # Hình học sau khi dựng lại có đúng các đỉnh kế hoạch không (làm tròn 0.01 mm).
+    def rebuilt_matches?(contents, targets, origin)
+      rounded = ->(p) { p.map { |x| (x.to_mm * 100).round } }
+      planned = targets.map { |_, t| rounded.call(t) }.uniq.sort
+      vertices = contents.grep(Sketchup::Face).flat_map(&:vertices) + contents.grep(Sketchup::Edge).flat_map(&:vertices)
+      actual = vertices.map { |v| rounded.call(v.position.to_a.each_with_index.map { |x, i| x + origin[i] }) }.uniq.sort
+      planned == actual
+    end
+
     def stretch_deviation(targets, origin)
       bad = []
       targets.each do |v, target|

@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.57
+# VGD_Cabinet Draw 1.0.0-beta.58
+
+beta.58: khi SketchUp tự chỉnh lệch đỉnh lúc dời (hình cung của mộng bị kéo ra xa), tấm được dựng lại từ vị trí kế hoạch đã lưu (mặt, lỗ, cạnh, vật liệu, thuộc tính được giữ; đường cong cung thành đa giác, đối tượng dựng điểm/đường dựng hình không được dựng lại). Không dựng lại được thì hoàn tác và báo lỗi. Chưa xác minh trong SketchUp thật.
 
 beta.57: kiểm tra từng đỉnh so với vị trí kế hoạch sau khi dời đỉnh và sau khi dời nhóm con; thông báo lỗi nói rõ lệch xảy ra ở bước nào (SketchUp chỉnh thêm hay chỉ sau khi dời nhóm con) và in ví dụ đỉnh lệch ra Ruby Console. Chưa xác minh trong SketchUp thật.
 
