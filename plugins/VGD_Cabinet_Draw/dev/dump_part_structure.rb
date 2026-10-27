@@ -10,14 +10,27 @@ module VGD_Dump_Part
 
   module_function
 
+  # Chọn cả tủ hoặc một tấm: tìm mọi tấm VGD bên trong (kind = part); không có thì in chính vật đang chọn.
   def run
-    parts = Sketchup.active_model.selection.to_a.select { |e| container?(e) }
-    if parts.empty?
-      puts 'Hãy chọn một tấm (group) rồi chạy lại.'
+    selected = Sketchup.active_model.selection.to_a.select { |e| container?(e) }
+    if selected.empty?
+      puts 'Hãy chọn một tấm hoặc cả tủ rồi chạy lại.'
       return
     end
+    parts = selected.flat_map { |e| parts_in(e) }
+    parts = selected if parts.empty?
+    puts "== #{parts.length} tấm =="
     parts.each { |part| puts dump(part) }
     nil
+  end
+
+  def parts_in(entity, out = [])
+    if entity.get_attribute(DICT, 'kind') == 'part'
+      out << entity
+    else
+      contents_of(entity).each { |child| parts_in(child, out) if container?(child) }
+    end
+    out
   end
 
   def container?(entity)
@@ -49,10 +62,14 @@ module VGD_Dump_Part
     lines << "== #{part.name.inspect} | #{part.class.name.split('::').last} | kind=#{part.get_attribute(DICT, 'kind').inspect} | geo_local=#{!part.get_attribute(DICT, 'geo_local').nil?} | geo_sig=#{!part.get_attribute(DICT, 'geo_sig').nil?}"
     lines << "   placement (mm cho tịnh tiến) = #{matrix(part.transformation).inspect}"
     lines << "   cạnh=#{edges.length} mặt=#{faces.length} nhóm con=#{nested.length} thể tích=#{part.respond_to?(:volume) ? part.volume : '?'} solid=#{part.respond_to?(:manifold?) ? part.manifold? : '?'}"
-    components(edges).each_with_index do |vertices, i|
+    comps = components(edges)
+    # Tấm đơn giản (hộp chữ nhật, không nhóm con) chỉ cần dòng tóm tắt; tấm phức tạp in chi tiết đỉnh.
+    complex = edges.length > 12 || nested.any? || comps.length > 1
+    lines << '   (tấm đơn giản: không in chi tiết)' unless complex
+    comps.each_with_index do |vertices, i|
       points = vertices.map { |v| v.position.to_a.map { |x| mm(x) } }
       lines << "   khối #{i}: #{vertices.length} đỉnh, hộp(mm)=#{box(points).inspect}"
-      lines << "      đỉnh(mm)=#{points.sort.first(MAX_VERTICES).inspect}" if vertices.length <= MAX_VERTICES * 2
+      lines << "      đỉnh(mm)=#{points.sort.first(MAX_VERTICES).inspect}" if complex && vertices.length <= MAX_VERTICES * 2
     end
     nested.each do |child|
       bounds = child.bounds
