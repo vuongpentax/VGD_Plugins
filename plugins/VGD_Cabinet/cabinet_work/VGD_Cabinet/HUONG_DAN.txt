@@ -1,4 +1,4 @@
-VGD_Cabinet 4.5.2
+VGD_Cabinet 4.5.3
 
 CÀI ĐẶT
 Cài file RBZ bằng Extension Manager trong SketchUp 2022 rồi khởi động lại SketchUp. Sau khi cài, lệnh dựng tủ nằm trong Extensions > VGD Cabinet — Dựng hình; lệnh nạp lại mã nằm trong Extensions > VGD Cabinet > VGD — Nạp lại mã. Toolbar có lệnh dựng hình. Khi có bản mới, plugin hỏi trước khi mở trang tải; cài RBZ rồi khởi động lại.
