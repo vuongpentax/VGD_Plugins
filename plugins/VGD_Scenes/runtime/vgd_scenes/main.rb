@@ -16,7 +16,7 @@ require_relative 'camera'
 require_relative 'update_notice'
 module VGD
   module Scenes
-    VERSION = '1.5.3-beta.4'.freeze unless const_defined?(:VERSION, false)
+    VERSION = '1.6.0'.freeze unless const_defined?(:VERSION, false)
     # Clears the section preview before SketchUp saves, so Ctrl+S never writes it.
     class SaveGuard < Sketchup::ModelObserver
       def onPreSaveModel(model)
