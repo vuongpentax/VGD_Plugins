@@ -126,7 +126,7 @@ check 'kích thước thật 1000, ván vẫn dày 17.5', dims(c)[0] == 1000.0 &
 puts '== 6. Tấm chỉnh tay =='
 c = cab
 side = part(c, 'Hông Trái')
-side.set_attribute('VGD_Cabinet_Draw', 'geo_sig', 'đã sửa tay')
+side.set_attribute('VGD_Cabinet_Draw', 'geo_local', 'đã sửa tay')
 check 'phát hiện hông trái chỉnh tay', V::Rebuild.hand_edited(c).map { |i| i[:entity] } == [side]
 t = edit_tool(c, :cancel); t.hud_set_value('_width', 900.0, v); t.commit(v)
 check 'Hủy: không đổi gì', dims(c)[0] == 800.0 && side.valid?
@@ -215,6 +215,23 @@ check 'click ngoài HUD: không lỗi', !(begin; t.onLButtonDown(0, 500, 500, v)
 t.update_settings(t.settings.merge('door_gap' => 7.0, 'drawer_count' => 9, 'leg_height' => 60.0))
 dirty = t.instance_variable_get(:@dirty)
 check 'chỉ nhận thông số thùng tủ từ bảng (bỏ door_gap, drawer_count)', dirty.keys == ['leg_height'], dirty.keys.inspect
+
+puts '== 14. Hộp bao cũ (SketchUp chưa cập nhật sau transform_entities) không bị báo chỉnh tay; dời tấm vẫn báo =='
+c = cab
+side = part(c, 'Hông Trái')
+stale = Sketchup::Bounds.new([Geom::Point3d.new(0, 0, 0), Geom::Point3d.new(1, 1, 1)])
+side.define_singleton_method(:bounds) { stale }
+edited = V::Rebuild.hand_edited(c).map { |i| i[:label] }
+check 'hộp bao cũ: không tấm nào bị coi là chỉnh tay', edited.empty?, edited.inspect
+c = cab
+side = part(c, 'Hông Trái')
+side.transformation = side.transformation * Geom::Transformation.translation([0, 0, 50.mm])
+check 'dời hông trái bằng Move: bị nhận là chỉnh tay', V::Rebuild.hand_edited(c).map { |i| i[:entity] } == [side]
+c = cab
+side = part(c, 'Hông Trái')
+side.set_attribute('VGD_Cabinet_Draw', 'geo_local', nil)
+side.set_attribute('VGD_Cabinet_Draw', 'geo_sig', V::Geometry.legacy_signature(side))
+check 'tủ cũ (chữ ký kiểu cũ), chưa đổi: không báo chỉnh tay', V::Rebuild.hand_edited(c).empty?
 
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.length}"
 exit($fail.empty? ? 0 : 1)

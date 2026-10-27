@@ -273,9 +273,25 @@ module VGD_Cabinet_Draw
       group
     end
 
-    # Chữ ký hình học của một tấm (hộp bao 0.1 mm + số mặt). Lưu lúc plugin dựng; lúc sửa tủ so lại để biết
-    # tấm có bị chỉnh tay (kéo, khoét, sửa hình) hay không.
+    # Chữ ký hình học của một tấm: hộp bao tính từ đỉnh của các mặt trong tấm (hệ tọa độ của tấm), số mặt,
+    # và vị trí của tấm trong tủ. Không dùng group.bounds: hộp bao đó có thể cũ sau khi co giãn, và đổi khi
+    # scale cả tủ, nên bị báo nhầm là chỉnh tay. Lưu lúc plugin dựng; lúc sửa tủ so lại để biết tấm có bị
+    # chỉnh tay (kéo, khoét, sửa hình, dời) hay không.
     def signature(group)
+      points = group.definition.entities.grep(Sketchup::Face).flat_map { |face| face.vertices.map(&:position) }
+      box = points.empty? ? [0.0] * 6 : local_box(points)
+      faces = group.definition.entities.to_a.count { |e| e.is_a?(Sketchup::Face) }
+      placement = group.transformation.to_a.map { |v| (v * 1000).round }
+      (box.map { |v| (v.to_mm * 10).round } + [faces] + placement).join(',')
+    end
+
+    def local_box(points)
+      xs, ys, zs = points.map { |p| [p.x, p.y, p.z] }.transpose
+      [xs.min, ys.min, zs.min, xs.max, ys.max, zs.max]
+    end
+
+    # Chữ ký kiểu cũ (hộp bao thế giới, dựng bằng bản trước). Chỉ để nhận tủ cũ; tấm dựng lại sẽ có chữ ký mới.
+    def legacy_signature(group)
       b = group.bounds
       box = [b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z].map { |v| (v.to_mm * 10).round }
       faces = group.definition.entities.to_a.count { |e| e.is_a?(Sketchup::Face) }
@@ -283,14 +299,21 @@ module VGD_Cabinet_Draw
     end
 
     def stamp_signature(group)
-      group.set_attribute(Schema::DICTIONARY, 'geo_sig', signature(group))
+      group.set_attribute(Schema::DICTIONARY, 'geo_local', signature(group))
       group
     end
 
+    # Tấm đã có chữ ký (kiểu mới hoặc cũ).
+    def signed?(group)
+      !group.get_attribute(Schema::DICTIONARY, 'geo_local').nil? || !group.get_attribute(Schema::DICTIONARY, 'geo_sig').nil?
+    end
+
     def hand_edited?(group)
-      saved = group.get_attribute(Schema::DICTIONARY, 'geo_sig')
       return true if group.get_attribute(Schema::DICTIONARY, 'notched')
-      saved ? saved != signature(group) : nil
+      saved = group.get_attribute(Schema::DICTIONARY, 'geo_local')
+      return saved != signature(group) if saved
+      legacy = group.get_attribute(Schema::DICTIONARY, 'geo_sig')
+      legacy ? legacy != legacy_signature(group) : nil
     end
 
     # Hộp tham chiếu tủ lạnh (khung dây + mặt mờ, tag riêng để ẩn/hiện). Không phải tấm ván, không vào bóc khối lượng.

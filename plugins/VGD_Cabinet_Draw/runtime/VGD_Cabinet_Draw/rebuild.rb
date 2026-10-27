@@ -188,7 +188,7 @@ module VGD_Cabinet_Draw
           b = Interior.box_of(entity).map(&:to_mm)
           edited = b.zip(expected[role]).any? { |a, e| (a - e).abs > 0.5 }
         end
-        out << { entity: entity, label: entity.name.to_s, role: role, signed: !entity.get_attribute(DICT, 'geo_sig').nil? } if edited
+        out << { entity: entity, label: entity.name.to_s, role: role, signed: Geometry.signed?(entity) } if edited
       end
       # Tủ tạo bằng bản rất cũ (chưa có chữ ký): nếu MỌI tấm vỏ tủ đều lệch so với tính toán hiện tại thì đó là do
       # đổi phiên bản, không phải chỉnh tay — không hỏi.
