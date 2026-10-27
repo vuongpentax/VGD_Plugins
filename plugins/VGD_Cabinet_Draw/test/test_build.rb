@@ -350,5 +350,40 @@ check 'tủ dưới: khấu theo giằng sau', prof.any? { |y, z| near(y, gs[1])
 err = (begin; kcab(800, 700, 1950, fopts); nil; rescue ArgumentError => e; e.message; end)
 check 'thùng thấp không đủ hộc trên: báo lỗi', err.to_s.include?('hộc trên'), err
 
+puts '== 18. Vách khấu sát mép trên/dưới: biên dạng không đi chồng lên chính nó =='
+# Hai đoạn thẳng cùng nằm trên một đường và chồng lên nhau (ví dụ mép trên đi qua hai lần) làm khối không kín.
+def overlap_1d?(a, b, c, d)
+  lo = [[a, b].min, [c, d].min].max
+  hi = [[a, b].max, [c, d].max].min
+  hi - lo > 0.01
+end
+
+def collinear_overlap?(a1, a2, b1, b2)
+  if (a1[1] - a2[1]).abs < 0.01 && (b1[1] - b2[1]).abs < 0.01 && (a1[1] - b1[1]).abs < 0.01
+    overlap_1d?(a1[0], a2[0], b1[0], b2[0])
+  elsif (a1[0] - a2[0]).abs < 0.01 && (b1[0] - b2[0]).abs < 0.01 && (a1[0] - b1[0]).abs < 0.01
+    overlap_1d?(a1[1], a2[1], b1[1], b2[1])
+  else
+    false
+  end
+end
+
+def overlapping_edges?(pts)
+  edges = pts.each_index.map { |i| [pts[i], pts[(i + 1) % pts.length]] }
+  edges.each_index.any? do |i|
+    edges.each_index.any? do |j|
+      # Cạnh liền kề chỉ chung một đỉnh; nếu chồng nhau thì là cạnh gấp ngược (lỗi), nên vẫn kiểm.
+      next false if i == j
+      collinear_overlap?(*edges[i], *edges[j])
+    end
+  end
+end
+
+c = cab('top_mode' => 'rails')
+sh = shell(c)
+prof = V::Rebuild.vertical_profile(sh, V::Interior.inner(sh), 0.0).map { |y, z| [y.to_mm.round(2), z.to_mm.round(2)] }
+check 'xà trên sát nóc: biên dạng không có cạnh chồng lên cạnh khác', !overlapping_edges?(prof), prof.inspect
+check 'xà trên sát nóc: vẫn có khấu góc sau-trên', prof.any? { |y, z| z > 1900 && y < bb(sh)[4] - 1 }, prof.inspect
+
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.length}"
 exit($fail.empty? ? 0 : 1)

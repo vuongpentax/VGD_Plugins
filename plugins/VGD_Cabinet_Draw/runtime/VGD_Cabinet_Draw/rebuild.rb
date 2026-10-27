@@ -98,11 +98,19 @@ module VGD_Cabinet_Draw
     def vertical_profile(shell, cell, setback)
       yb = Interior.full_depth(shell)
       yf = [cell.y0 + setback, yb - 10.mm].min
-      pts = [[yf, cell.z0], [yb, cell.z0]]
-      Interior.back_notches(shell, cell.z0, cell.z1).each do |ny, za, zb|
-        pts += [[yb, za], [ny, za], [ny, zb], [yb, zb]]
+      notches = Interior.back_notches(shell, cell.z0, cell.z1)
+      # Khấu chạm mép dưới/trên thì không đi qua góc sau của mép đó: nếu không, biên dạng đi chồng lên chính nó (khối không kín).
+      bottom_cut = notches.any? { |_ny, za, _zb| za <= cell.z0 + Interior::EPS }
+      top_cut = notches.any? { |_ny, _za, zb| zb >= cell.z1 - Interior::EPS }
+      pts = [[yf, cell.z0]]
+      pts << [yb, cell.z0] unless bottom_cut
+      notches.each do |ny, za, zb|
+        pts << [yb, za] if za > cell.z0 + Interior::EPS && pts.last != [yb, za]
+        pts += [[ny, za], [ny, zb]]
+        pts << [yb, zb] if zb < cell.z1 - Interior::EPS
       end
-      pts += [[yb, cell.z1], [yf, cell.z1]]
+      pts << [yb, cell.z1] unless top_cut
+      pts << [yf, cell.z1]
       pts.each_with_object([]) do |p, out|
         last = out.last
         out << p unless last && (last[0] - p[0]).abs < Interior::EPS && (last[1] - p[1]).abs < Interior::EPS

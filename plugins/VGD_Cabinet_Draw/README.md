@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.47
+# VGD_Cabinet Draw 1.0.0-beta.48
+
+beta.48: vách khấu sát mép trên/dưới (ví dụ có xà trên sát nóc) không còn đi chồng lên chính nó, nên khối kín và công cụ khối (Outer Shell, khấu) dùng được. Chưa xác minh trong SketchUp thật.
 
 beta.47: nhận tấm chỉnh tay bằng chữ ký tính trong hệ tọa độ của tấm (không dùng hộp bao thế giới), nên scale cả tủ không còn bị báo "chỉnh tay". Tủ dựng bằng bản trước giữ cách kiểm tra cũ cho đến khi tấm được dựng lại. Chưa xác minh trong SketchUp thật.
 
