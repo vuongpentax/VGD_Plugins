@@ -619,11 +619,14 @@ module VGD_Cabinet_Draw
       # Tấm đang chỉnh tay (lệch chữ ký) giữ chữ ký cũ để vẫn được nhận là chỉnh tay sau khi co giãn.
       edited_before = parts.transform_values { |entity| Geometry.hand_edited?(entity) }
       parts.each do |key, entity|
-        # Đợt/vách không chỉnh tay được dựng lại theo quy tắc (khấu theo xà phải khớp khi scale dọc); tấm đã chỉnh tay co tại chỗ.
-        if regenerated?(key) || (MEMBER_ROLES.include?(key.first) && !edited_before[key])
+        if regenerated?(key)
           replace_contents(entity, new_items.fetch(key))
         elsif !same_box?(from[key][:box], to[key][:box])
-          stretch_part!(entity, from[key][:box], to[key][:box])
+          if MEMBER_ROLES.include?(key.first)
+            anchored_stretch!(entity, from[key][:box], to[key][:box])
+          else
+            stretch_part!(entity, from[key][:box], to[key][:box])
+          end
         end
         Geometry.stamp_signature(entity) if Interior.role_of(entity) && !edited_before[key]
         entity.set_attribute(DICT, 'params_json', to[key][:params]) if to[key][:params]
@@ -718,6 +721,29 @@ module VGD_Cabinet_Draw
       contents = contents_of(entity)
       contents.transform_entities(transform, contents.to_a)
       reset_textures(entity)
+    end
+
+    # Co giãn đợt/vách tại chỗ, giữ đối tượng, khấu và texture: mỗi đỉnh giữ khoảng cách tới mép gần nhất của hộp
+    # (mép trước/sau/trên/dưới), nên khấu theo xà vẫn khớp khi tủ scale dọc.
+    def anchored_stretch!(entity, old_box, new_box)
+      placement = entity.transformation
+      contents = contents_of(entity)
+      moves = Hash.new { |h, k| h[k] = [] }
+      contents.grep(Sketchup::Face).each do |face|
+        face.vertices.each do |vertex|
+          p = vertex.position.transform(placement).to_a
+          d = (0..2).map { |i| anchored_target(p[i], old_box[i], old_box[i + 3], new_box[i], new_box[i + 3]) - p[i] }
+          moves[d.map { |x| x.round(6) }] << vertex unless d.all? { |x| x.abs < 1e-9 }
+        end
+      end
+      moves.each do |d, vertices|
+        contents.transform_entities(Geom::Transformation.translation(d), vertices.uniq)
+      end
+      reset_textures(entity)
+    end
+
+    def anchored_target(v, lo_old, hi_old, lo_new, hi_new)
+      v - lo_old <= hi_old - v ? lo_new + (v - lo_old) : hi_new - (hi_old - v)
     end
 
     # Phép biến đổi đưa hộp cũ về hộp mới: co theo từng trục (trục có kích thước 0 giữ nguyên), rồi dời tới vị trí mới.

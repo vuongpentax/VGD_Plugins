@@ -450,6 +450,7 @@ pt = V::Tools::PanelTool.new({})
 pt.instance_variable_set(:@shell, sh)
 hl = pt.send(:reference_face, { axis: 'vertical', cell: V::Interior.inner(sh), plane: 300.mm, dir: 1 })
 check 'khung tô sáng vách lên tới mép xà (1980)', near(hl.map { |p| p[2].to_mm }.max, 1980.0), hl.map { |p| p[2].to_mm.round(1) }.inspect
+check 'khung tô sáng vách có khấu xà trước (góc (100, 1962.5))', hl.any? { |p| near(p[1].to_mm, 100.0) && near(p[2].to_mm, 1962.5) }, hl.map { |p| [p[1].to_mm.round(1), p[2].to_mm.round(1)] }.inspect
 
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.length}"
 exit($fail.empty? ? 0 : 1)

@@ -72,7 +72,11 @@ module Sketchup
     def initialize(n,h); @name=n; @h=h; end
     def each_pair(&b); @h.each_pair(&b); end
   end
-  class Vertex; attr_reader :position; def initialize(p); @position=p; end; end
+  class Vertex
+    attr_reader :owner, :idx
+    def initialize(p, owner = nil, idx = nil); @p = p; @owner = owner; @idx = idx; end
+    def position; @owner ? @owner.pts[@idx] : @p; end
+  end
   class Face < Entity
     attr_reader :pts, :ext
     def initialize(pts); @pts=pts; @flip=false; @ext=0; end
@@ -82,7 +86,7 @@ module Sketchup
     end
     def reverse!; @flip=!@flip; self; end
     def area; 1.0; end
-    def vertices; pts.map{|p| Vertex.new(p)}; end
+    def vertices; pts.each_index.map{|i| Vertex.new(pts[i], self, i)}; end
     class Loop
       def initialize(pts, outer); @pts=pts; @outer=outer; end
       def vertices; @pts.map{|p| Vertex.new(p)}; end
@@ -445,7 +449,8 @@ module Sketchup
   class Entities
     def transform_entities(t, ents = nil)
       (ents.nil? ? to_a : Array(ents)).each do |e|
-        if e.is_a?(Face) then e.apply_transform!(t)
+        if e.is_a?(Vertex) then e.owner.pts[e.idx] = Geom::Point3d.new(*t.apply_pt(e.position.to_a))
+        elsif e.is_a?(Face) then e.apply_transform!(t)
         elsif e.is_a?(Group) || e.is_a?(ComponentInstance) then e.transformation = t * e.transformation
         end
       end

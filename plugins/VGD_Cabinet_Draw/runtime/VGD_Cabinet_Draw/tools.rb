@@ -1353,17 +1353,17 @@ module VGD_Cabinet_Draw
         @divide_count ? @divide_ref : @ref
       end
 
-      # Mặt tham chiếu tô sáng: nếu lọt ô thì theo ô, xuyên thì theo cả lòng tủ.
+      # Mặt tham chiếu tô sáng: đúng hình tấm sẽ dựng (đã trừ xà chắn), không phải cả ô. nil nếu không dựng được.
       def reference_face(ref)
         e = span == 'full' ? Interior.inner(@shell) : ref[:cell]
         p = ref[:plane]
         if ref[:axis] == 'vertical'
-          # Khung theo đúng vùng vách sẽ dựng (có thể cao tới mép xà khi tủ không có nóc).
-          z0, z1 = Rebuild.partition_z_range(@shell, e)
-          [[p, e.y0, z0], [p, e.y1, z0], [p, e.y1, z1], [p, e.y0, z1]]
+          Rebuild.vertical_profile(@shell, e, partition_setback, [p, p + thickness]).map { |y, z| [p, y, z] }
         else
-          [[e.x0, e.y0, p], [e.x1, e.y0, p], [e.x1, e.y1, p], [e.x0, e.y1, p]]
+          Rebuild.shelf_outline(@shell, e, p, thickness, shelf_setback).map { |x, y| [x, y, p] }
         end
+      rescue StandardError
+        nil
       end
 
       # Các mặt xem trước của một tấm (đợt: hộp; vách: biên dạng có khấu xà).
@@ -1421,7 +1421,8 @@ module VGD_Cabinet_Draw
         return unless @root
         @error = nil
         highlight = @divide_count ? nil : (@ref || @hover)
-        add_face(reference_face(highlight), transform, :front) if highlight
+        face = highlight && reference_face(highlight)
+        add_face(face, transform, :front) if face
         return unless @divide_count || @ref
         begin
           ref = planned_ref

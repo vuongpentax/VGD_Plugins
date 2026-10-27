@@ -270,10 +270,14 @@ op = { 'type' => 'panel', 'axis' => 'vertical', 'kind' => 'thong_thuy', 'thickne
        'setback_mm' => 0.0, 'door_fit' => 'phu', 'mode' => 'free', 'offsets' => [282.5] }
 op['op'] = V::Rebuild.record(c, op)
 V::Rebuild.place_panels(c, sh, op)
+pv0 = parts_named(c, 'Vách').first
+mat = Sketchup.active_model.materials.add('Gỗ vách')
+pv0.material = mat
 scale_root(c, 1.0, 1.0, 1.1)
 auto_run(c)
 sh = shell(c)
 pv = parts_named(c, 'Vách').first
+check 'vách giữ nguyên đối tượng và vật liệu sau scale dọc', pv0.equal?(pv) && pv.valid? && pv.material == mat, [pv0.equal?(pv), pv.material.equal?(mat)].inspect
 x0 = bb(pv)[0].mm
 want = V::Rebuild.vertical_profile(sh, V::Interior.inner(sh), 0.0, [x0, x0 + 17.5.mm]).map { |y, z| [y.to_mm.round(1), z.to_mm.round(1)] }.uniq.sort
 check 'vách sau scale dọc khớp biên mới (khấu theo xà mới)', pv && outline_mm(pv) == want, [outline_mm(pv), want].inspect
