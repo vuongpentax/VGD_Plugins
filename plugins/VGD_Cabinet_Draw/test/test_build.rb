@@ -444,5 +444,12 @@ sh = shell(c)
 prof = V::Rebuild.vertical_profile(sh, V::Interior.inner(sh), 0.0, [300.mm, 317.5.mm]).map { |y, z| [y.to_mm.round(2), z.to_mm.round(2)] }
 check 'tủ có nóc: vách không vượt nóc (1962.5)', near(prof.map { |_y, z| z }.max, 1962.5), prof.inspect
 
+c = cab('top_mode' => 'rails')
+sh = shell(c)
+pt = V::Tools::PanelTool.new({})
+pt.instance_variable_set(:@shell, sh)
+hl = pt.send(:reference_face, { axis: 'vertical', cell: V::Interior.inner(sh), plane: 300.mm, dir: 1 })
+check 'khung tô sáng vách lên tới mép xà (1980)', near(hl.map { |p| p[2].to_mm }.max, 1980.0), hl.map { |p| p[2].to_mm.round(1) }.inspect
+
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.length}"
 exit($fail.empty? ? 0 : 1)

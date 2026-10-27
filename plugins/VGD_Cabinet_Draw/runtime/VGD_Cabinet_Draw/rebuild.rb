@@ -617,12 +617,13 @@ module VGD_Cabinet_Draw
       # Tấm đang chỉnh tay (lệch chữ ký) giữ chữ ký cũ để vẫn được nhận là chỉnh tay sau khi co giãn.
       edited_before = parts.transform_values { |entity| Geometry.hand_edited?(entity) }
       parts.each do |key, entity|
-        if regenerated?(key)
+        # Đợt/vách không chỉnh tay được dựng lại theo quy tắc (khấu theo xà phải khớp khi scale dọc); tấm đã chỉnh tay co tại chỗ.
+        if regenerated?(key) || (MEMBER_ROLES.include?(key.first) && !edited_before[key])
           replace_contents(entity, new_items.fetch(key))
         elsif !same_box?(from[key][:box], to[key][:box])
           stretch_part!(entity, from[key][:box], to[key][:box])
         end
-        Geometry.stamp_signature(entity) if !regenerated?(key) && !edited_before[key]
+        Geometry.stamp_signature(entity) if Interior.role_of(entity) && !edited_before[key]
         entity.set_attribute(DICT, 'params_json', to[key][:params]) if to[key][:params]
       end
       handles.each { |entity, specs| specs.each { |spec| Operations.add_handle(entity, spec) } }

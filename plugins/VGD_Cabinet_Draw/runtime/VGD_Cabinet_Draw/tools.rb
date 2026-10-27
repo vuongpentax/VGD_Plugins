@@ -1358,7 +1358,9 @@ module VGD_Cabinet_Draw
         e = span == 'full' ? Interior.inner(@shell) : ref[:cell]
         p = ref[:plane]
         if ref[:axis] == 'vertical'
-          [[p, e.y0, e.z0], [p, e.y1, e.z0], [p, e.y1, e.z1], [p, e.y0, e.z1]]
+          # Khung theo đúng vùng vách sẽ dựng (có thể cao tới mép xà khi tủ không có nóc).
+          z0, z1 = Rebuild.partition_z_range(@shell, e)
+          [[p, e.y0, z0], [p, e.y1, z0], [p, e.y1, z1], [p, e.y0, z1]]
         else
           [[e.x0, e.y0, p], [e.x1, e.y0, p], [e.x1, e.y1, p], [e.x0, e.y1, p]]
         end

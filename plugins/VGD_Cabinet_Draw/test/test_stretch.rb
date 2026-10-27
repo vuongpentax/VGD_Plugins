@@ -257,5 +257,26 @@ bthick = boxes_now.map { |b| groups(b.definition.entities).map { |g| sz(g).min.r
 bthick_before = bthick0
 check 'ngăn kéo: độ dày các tấm thùng giữ nguyên', bthick == bthick_before, [bthick_before, bthick].inspect
 
+puts '== 9. Scale dọc tủ không có nóc: vách khớp biên mới (khấu xà không hở) =='
+def outline_mm(g)
+  pts = g.entities.grep(Sketchup::Face).flat_map { |f| f.vertices.map { |vx| vx.position.transform(g.transformation) } }
+  pts.map { |p| [p.y.to_mm.round(1), p.z.to_mm.round(1)] }.uniq.sort
+end
+c = cab('top_mode' => 'rails')
+sh = shell(c)
+inner = V::Interior.inner(sh)
+op = { 'type' => 'panel', 'axis' => 'vertical', 'kind' => 'thong_thuy', 'thickness_mm' => 17.5, 'limit' => false,
+       'anchor' => V::Rebuild.anchor_of(sh, (inner.x0 + inner.x1) / 2, (inner.z0 + inner.z1) / 2),
+       'setback_mm' => 0.0, 'door_fit' => 'phu', 'mode' => 'free', 'offsets' => [282.5] }
+op['op'] = V::Rebuild.record(c, op)
+V::Rebuild.place_panels(c, sh, op)
+scale_root(c, 1.0, 1.0, 1.1)
+auto_run(c)
+sh = shell(c)
+pv = parts_named(c, 'Vách').first
+x0 = bb(pv)[0].mm
+want = V::Rebuild.vertical_profile(sh, V::Interior.inner(sh), 0.0, [x0, x0 + 17.5.mm]).map { |y, z| [y.to_mm.round(1), z.to_mm.round(1)] }.uniq.sort
+check 'vách sau scale dọc khớp biên mới (khấu theo xà mới)', pv && outline_mm(pv) == want, [outline_mm(pv), want].inspect
+
 puts "\n== Kết quả test_stretch: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
 $fail.each { |x| puts "  - #{x}" }

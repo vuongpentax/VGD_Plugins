@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.50
+# VGD_Cabinet Draw 1.0.0-beta.51
+
+beta.51: scale dọc tủ không còn hở phần khấu. Đợt và vách chưa chỉnh tay được dựng lại theo quy tắc khi scale; vách đã chỉnh tay vẫn co tại chỗ (có thể còn hở). Khung tô sáng vách theo chiều cao thật. Chưa xác minh trong SketchUp thật.
 
 beta.50: tủ không có nóc (xà thay nóc/đáy) thì vách kéo tới mép xà và bị xà trước/sau khấu, thay vì dừng ở mép dưới xà. Tủ có nóc/đáy giữ nguyên. Đợt ngang chưa đổi. Chưa xác minh trong SketchUp thật.
 
