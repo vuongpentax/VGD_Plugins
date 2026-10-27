@@ -1,11 +1,11 @@
 {
   "product_id": "vgd_dim",
-  "version": "3.3.0-beta.8",
-  "channel": "beta",
+  "version": "3.3.0",
+  "channel": "stable",
   "min_sketchup_year": "2022",
-  "filename": "VGD_Dim_v3.3.0-beta.8.rbz",
-  "bytes": 52708,
-  "sha256": "df8dc87f72895ca866961479c09076c026bc57d18c91be4b9c07f50c343a0072",
-  "download_url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0-beta.8/VGD_Dim_v3.3.0-beta.8.rbz",
-  "changelog": "VGD Dim 3.3.0-beta.8: điều hướng co giãn icon/tooltip; sửa mở khóa giao diện khi hủy Dim thủ công."
+  "filename": "VGD_Dim_v3.3.0.rbz",
+  "bytes": 53865,
+  "sha256": "59937555abbc7fb7922160297393fc44f844ae7ead0c2815b77dad882e53846a",
+  "download_url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0/VGD_Dim_v3.3.0.rbz",
+  "changelog": "VGD Dim 3.3.0: giao diện dùng theme chung; sửa lỗi crash khi rebuild Dim; Auto-Style nhẹ hơn, không tạo vật liệu trùng; không hiện popup cập nhật khi khởi động (VGD Center báo bản mới)."
 }
