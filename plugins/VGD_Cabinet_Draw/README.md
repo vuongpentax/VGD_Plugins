@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.54
+# VGD_Cabinet Draw 1.0.0-beta.55
+
+beta.55: dời đỉnh của tấm trong một lần (transform_by_vectors) thay vì từng nhóm đỉnh, để tránh các đỉnh hình cung của mộng bị kéo ra xa khi scale. Chưa xác minh trong SketchUp thật. Mặt tiết diện CNC (group ABF_MA) có thể còn lệch so với vách sau khi scale.
 
 beta.54: mọi tấm (nóc, đáy, hông, hậu, xà, đợt, vách) co giãn tại chỗ mà giữ nguyên kích thước chi tiết (mộng, lỗ, khấu, bản lề, dấu tiết diện, khối lẻ). Chỉ nhịp trống từ 150 mm giữa các chi tiết giãn; chi tiết nhỏ và khối rời giữ nguyên mm, khối rời dời theo vị trí tâm. Thêm dev/check_feature_sizes.rb để đối chiếu kích thước chi tiết trước/sau scale. Chưa xác minh trong SketchUp thật (gom khối rời theo cạnh, dời đỉnh).\n\nbeta.53: đợt/vách không dựng lại khi scale (giữ đối tượng, vật liệu, texture); mỗi đỉnh giữ khoảng cách tới mép gần nhất, nên khấu theo xà khớp khi scale dọc, kể cả tấm đã chỉnh tay. Khung tô sáng hover là hình thật của tấm (có khấu xà). Dời đỉnh dùng transform_entities trên đỉnh: chưa xác minh trong SketchUp thật.
 

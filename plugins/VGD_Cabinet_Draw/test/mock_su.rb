@@ -120,7 +120,19 @@ module Sketchup
   class Entities
     include Enumerable
     attr_reader :owner
-    def initialize(owner); @owner=owner; @list=[]; end
+    attr_reader :vector_calls
+    def initialize(owner); @owner=owner; @list=[]; @vector_calls=0; end
+    # Dời mỗi đỉnh theo vectơ riêng trong một lần (như Entities#transform_by_vectors của SketchUp).
+    def transform_by_vectors(entities, vectors)
+      @vector_calls += 1
+      entities.each_with_index do |e, i|
+        v = vectors[i]
+        next unless e.is_a?(Vertex)
+        pt = e.position
+        e.owner.set_vertex_point(e.idx, Geom::Point3d.new(pt.x + v.x, pt.y + v.y, pt.z + v.z))
+      end
+      true
+    end
     def each(&b); @list.reject(&:erased?).each(&b); end
     def to_a; @list.reject(&:erased?); end
     def length; to_a.length; end

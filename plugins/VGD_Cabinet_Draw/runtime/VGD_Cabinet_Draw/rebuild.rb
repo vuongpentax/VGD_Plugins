@@ -742,26 +742,37 @@ module VGD_Cabinet_Draw
         knots = stretch_knots(coords, lo, hi, new_lo, new_hi)
         ->(v) { knot_shift(knots, lo, hi, new_lo, new_hi, v) }
       end
-      moves = Hash.new { |h, k| h[k] = [] }
+      vertices = []
+      vectors = []
       comps.each do |vs|
         rigid = !vs.equal?(main)
         centers = rigid ? (0..2).map { |i| axis_center(vs.map { |v| v.position.to_a[i] + origin[i] }) } : nil
         vs.each do |v|
           pos = v.position.to_a
           d = (0..2).map { |i| shift[i].call(rigid ? centers[i] : pos[i] + origin[i]) }
-          moves[d.map { |x| x.round(6) }] << v unless d.all? { |x| x.abs < 1e-9 }
+          next if d.all? { |x| x.abs < 1e-9 }
+          vertices << v
+          vectors << Geom::Vector3d.new(*d)
         end
       end
+      move_vertices(contents, vertices, vectors)
       nested.each do |inst|
         b = inst.bounds
         d = (0..2).map { |i| shift[i].call((b.min.to_a[i] + b.max.to_a[i]) / 2.0 + origin[i]) }
-        moves[d.map { |x| x.round(6) }] << inst unless d.all? { |x| x.abs < 1e-9 }
-      end
-      moves.each do |d, items|
-        live = items.select { |item| !item.respond_to?(:valid?) || item.valid? }
-        contents.transform_entities(Geom::Transformation.translation(d), live) unless live.empty?
+        contents.transform_entities(Geom::Transformation.translation(d), [inst]) unless d.all? { |x| x.abs < 1e-9 }
       end
       reset_textures(entity)
+    end
+
+    # Dời mọi đỉnh một lần, mỗi đỉnh một vectơ. Dời lần lượt từng nhóm đỉnh làm mặt tạm thời không phẳng giữa các
+    # bước, và SketchUp tự chỉnh các đỉnh khác (đã làm hình cung nhiều đỉnh bị kéo ra xa hàng chục mét).
+    def move_vertices(contents, vertices, vectors)
+      return if vertices.empty?
+      if contents.respond_to?(:transform_by_vectors)
+        contents.transform_by_vectors(vertices, vectors)
+      else
+        vertices.zip(vectors).each { |v, d| contents.transform_entities(Geom::Transformation.translation(d), [v]) }
+      end
     end
 
     def pure_translation?(transformation)

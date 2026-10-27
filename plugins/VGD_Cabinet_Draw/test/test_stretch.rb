@@ -324,5 +324,20 @@ xs = loose.vertices.map { |vx| vx.position.x.to_mm }
 check 'khối lẻ trong nóc giữ nguyên rộng 100 mm khi scale ngang', near(xs.max - xs.min, 100.0, 0.05), xs.inspect
 check 'nóc vẫn theo rộng mới 1000', near(bb(part(c, 'Nóc'))[3], 982.5), bb(part(c, 'Nóc')).inspect
 
+puts '== 11. Dời đỉnh một lần cho cả tấm (tránh bước trung gian làm mặt không phẳng) =='
+c = cab('top_mode' => 'rails')
+sh = shell(c)
+inner = V::Interior.inner(sh)
+op = { 'type' => 'panel', 'axis' => 'vertical', 'kind' => 'thong_thuy', 'thickness_mm' => 17.5, 'limit' => false,
+       'anchor' => V::Rebuild.anchor_of(sh, (inner.x0 + inner.x1) / 2, (inner.z0 + inner.z1) / 2),
+       'setback_mm' => 0.0, 'door_fit' => 'phu', 'mode' => 'free', 'offsets' => [282.5] }
+op['op'] = V::Rebuild.record(c, op)
+V::Rebuild.place_panels(c, sh, op)
+pv = parts_named(c, 'Vách').first
+before_calls = pv.entities.vector_calls
+scale_root(c, 1.0, 1.0, 1.1)
+auto_run(c)
+check 'vách: mọi đỉnh dời trong đúng một lần transform_by_vectors', pv.entities.vector_calls - before_calls == 1, (pv.entities.vector_calls - before_calls).to_s
+
 puts "\n== Kết quả test_stretch: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
 $fail.each { |x| puts "  - #{x}" }
