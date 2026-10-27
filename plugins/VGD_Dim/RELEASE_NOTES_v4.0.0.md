@@ -1,4 +1,4 @@
-# VGD Dim 3.3.0
+# VGD Dim 4.0.0
 
 - Giao diện dùng theme sáng/tối chung và font Manrope.
 - Tag mặt cắt được đặt tên theo view hoặc section; xử lý được tủ phức tạp.
