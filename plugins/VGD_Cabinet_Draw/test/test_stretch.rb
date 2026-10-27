@@ -55,10 +55,12 @@ scale_root(c, 1.25)
 auto_run(c)
 nong2 = part(c, 'Nóc')
 after = nong2.bounds
-f = (after.max.x - after.min.x) / (before.max.x - before.min.x)
-expect_x0 = after.min.x + (500.mm - before.min.x) * f
-world_x = notch.pts.map { |pt| pt.transform(nong2.transformation).x }.min
-check 'vết khấu co theo tỷ lệ của ván', notch.valid? && near(world_x, expect_x0, 0.01), [world_x.to_mm, expect_x0.to_mm].inspect
+# Chi tiết trong ván giữ nguyên kích thước (mm); chỉ vị trí dời theo tâm của nó (nội suy theo nhịp trống của ván).
+grow = (after.max.x - after.min.x) - (before.max.x - before.min.x)
+expect_x0 = 500.mm + grow * (525.mm - before.min.x) / (before.max.x - before.min.x)
+notch_xs = notch.pts.map { |pt| pt.transform(nong2.transformation).x }
+world_x = notch_xs.min
+check 'vết khấu giữ nguyên rộng 50 mm và dời theo tâm', notch.valid? && near(world_x, expect_x0, 0.01) && near((notch_xs.max - notch_xs.min).to_mm, 50.0, 0.05), [world_x.to_mm, expect_x0.to_mm, (notch_xs.max - notch_xs.min).to_mm].inspect
 check 'ván khấu vẫn là cùng đối tượng', nong2.equal?(nong) && nong2.valid?
 check 'vật liệu của ván còn', nong2.material.equal?(mat)
 check 'texture được đặt lại cho mặt có vật liệu', !notch.positioned.empty?
@@ -281,6 +283,46 @@ check 'vách giữ nguyên đối tượng và vật liệu sau scale dọc', pv
 x0 = bb(pv)[0].mm
 want = V::Rebuild.vertical_profile(sh, V::Interior.inner(sh), 0.0, [x0, x0 + 17.5.mm]).map { |y, z| [y.to_mm.round(1), z.to_mm.round(1)] }.uniq.sort
 check 'vách sau scale dọc khớp biên mới (khấu theo xà mới)', pv && outline_mm(pv) == want, [outline_mm(pv), want].inspect
+
+puts '== 10. Chi tiết trong tấm giữ nguyên kích thước (mm) khi scale: mộng, lỗ, khối lẻ =='
+# Bảng độ dời theo trục: chỉ nhịp trống lớn giãn, chi tiết nhỏ (mộng 35 mm, khấu xà 82.5 / 17.5 mm) giữ nguyên.
+mm_list = ->(list) { list.map(&:mm) }
+knots = V::Rebuild.stretch_knots(mm_list.call([57.5, 900, 935, 1880, 1962.5, 1980]), 57.5.mm, 1980.mm, 57.5.mm, 2180.mm)
+shift = ->(c) { V::Rebuild.knot_shift(knots, 57.5.mm, 1980.mm, 57.5.mm, 2180.mm, c.mm).to_mm }
+check 'mép dưới không dời, mép trên dời đúng 200 mm', near(shift.call(57.5), 0.0, 0.05) && near(shift.call(1980), 200.0, 0.05), [shift.call(57.5), shift.call(1980)].inspect
+check 'mộng 35 mm giữ nguyên (cùng độ dời ở hai mép mộng)', near(shift.call(935) - shift.call(900), 0.0, 0.05), [shift.call(900), shift.call(935)].inspect
+check 'khấu 82.5 mm giữ nguyên', near(shift.call(1962.5) - shift.call(1880), 0.0, 0.05), [shift.call(1880), shift.call(1962.5)].inspect
+check 'hai nhịp lớn chia phần tăng theo chiều dài (94.3 mm trước mộng)', near(shift.call(900), 200.0 * 842.5 / 1787.5, 0.05), shift.call(900).to_s
+
+# Khối lẻ nằm giữa vách (qua điểm giữa) di chuyển nguyên khối, không bị kéo giãn.
+c = cab('top_mode' => 'rails')
+sh = shell(c)
+inner = V::Interior.inner(sh)
+op = { 'type' => 'panel', 'axis' => 'vertical', 'kind' => 'thong_thuy', 'thickness_mm' => 17.5, 'limit' => false,
+       'anchor' => V::Rebuild.anchor_of(sh, (inner.x0 + inner.x1) / 2, (inner.z0 + inner.z1) / 2),
+       'setback_mm' => 0.0, 'door_fit' => 'phu', 'mode' => 'free', 'offsets' => [282.5] }
+op['op'] = V::Rebuild.record(c, op)
+V::Rebuild.place_panels(c, sh, op)
+pv = parts_named(c, 'Vách').first
+px = bb(pv)[0].mm
+loose = pv.entities.add_face([[px, 200.mm, 900.mm], [px, 300.mm, 900.mm], [px, 300.mm, 1200.mm], [px, 200.mm, 1200.mm]])
+scale_root(c, 1.0, 1.0, 1.1)
+auto_run(c)
+zs = loose.vertices.map { |vx| vx.position.z.to_mm }
+ys = loose.vertices.map { |vx| vx.position.y.to_mm }
+check 'khối lẻ giữa vách giữ nguyên cao 300 mm khi scale dọc', near(zs.max - zs.min, 300.0, 0.05), zs.inspect
+check 'khối lẻ giữa vách giữ nguyên rộng 100 mm', near(ys.max - ys.min, 100.0, 0.05), ys.inspect
+check 'khối lẻ dời theo vách (không đứng yên): đáy khối dời lên', zs.min > 900.0 + 1.0, zs.inspect
+
+# Khối lẻ trong nóc: scale ngang không làm khối lẻ giãn theo nóc.
+c = cab
+nong = part(c, 'Nóc')
+loose = nong.entities.add_face([[100.mm, 100.mm, 0], [200.mm, 100.mm, 0], [200.mm, 200.mm, 0], [100.mm, 200.mm, 0]])
+scale_root(c, 1.25)
+auto_run(c)
+xs = loose.vertices.map { |vx| vx.position.x.to_mm }
+check 'khối lẻ trong nóc giữ nguyên rộng 100 mm khi scale ngang', near(xs.max - xs.min, 100.0, 0.05), xs.inspect
+check 'nóc vẫn theo rộng mới 1000', near(bb(part(c, 'Nóc'))[3], 982.5), bb(part(c, 'Nóc')).inspect
 
 puts "\n== Kết quả test_stretch: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
 $fail.each { |x| puts "  - #{x}" }

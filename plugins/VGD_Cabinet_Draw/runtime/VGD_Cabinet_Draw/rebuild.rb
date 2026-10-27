@@ -622,11 +622,7 @@ module VGD_Cabinet_Draw
         if regenerated?(key)
           replace_contents(entity, new_items.fetch(key))
         elsif !same_box?(from[key][:box], to[key][:box])
-          if MEMBER_ROLES.include?(key.first)
-            anchored_stretch!(entity, from[key][:box], to[key][:box])
-          else
-            stretch_part!(entity, from[key][:box], to[key][:box])
-          end
+          stretch_features!(entity, from[key][:box], to[key][:box])
         end
         Geometry.stamp_signature(entity) if Interior.role_of(entity) && !edited_before[key]
         entity.set_attribute(DICT, 'params_json', to[key][:params]) if to[key][:params]
@@ -723,27 +719,117 @@ module VGD_Cabinet_Draw
       reset_textures(entity)
     end
 
-    # Co giãn đợt/vách tại chỗ, giữ đối tượng, khấu và texture: mỗi đỉnh giữ khoảng cách tới mép gần nhất của hộp
-    # (mép trước/sau/trên/dưới), nên khấu theo xà vẫn khớp khi tủ scale dọc.
-    def anchored_stretch!(entity, old_box, new_box)
+    # Nhịp trống tối thiểu để một đoạn của tấm được giãn khi tủ đổi cỡ. Mộng, lỗ, khấu, dấu tiết diện nhỏ hơn mức này
+    # giữ nguyên kích thước (mm); chỉ các nhịp trống lớn giữa chúng giãn ra.
+    STRETCH_GAP_MIN = 150.mm
+    KNOT_EPS = 0.01.mm
+
+    # Co giãn một cấu kiện tại chỗ mà giữ nguyên hình dạng chi tiết (mộng xương chó, lỗ, khấu, bản lề, dấu tiết diện,
+    # khối lẻ), kể cả texture. Thân tấm (khối lớn nhất) chỉ giãn ở các nhịp trống lớn; các khối rời chuyển nguyên khối
+    # theo vị trí tâm của chúng. Hộp cũ/mới là hộp quy tắc (bản thử), nên không phụ thuộc hình người dùng vẽ thêm.
+    def stretch_features!(entity, old_box, new_box)
       placement = entity.transformation
+      return stretch_part!(entity, old_box, new_box) unless pure_translation?(placement)
       contents = contents_of(entity)
+      origin = placement.origin.to_a
+      comps = vertex_components(contents)
+      nested = contents.to_a.select { |e| e.valid? && (e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)) }
+      return if comps.empty? && nested.empty?
+      main = comps.max_by { |vs| component_diagonal(vs, origin) }
+      shift = (0..2).map do |i|
+        coords = main ? main.map { |v| v.position.to_a[i] + origin[i] } : []
+        lo, hi, new_lo, new_hi = old_box[i], old_box[i + 3], new_box[i], new_box[i + 3]
+        knots = stretch_knots(coords, lo, hi, new_lo, new_hi)
+        ->(v) { knot_shift(knots, lo, hi, new_lo, new_hi, v) }
+      end
       moves = Hash.new { |h, k| h[k] = [] }
-      contents.grep(Sketchup::Face).each do |face|
-        face.vertices.each do |vertex|
-          p = vertex.position.transform(placement).to_a
-          d = (0..2).map { |i| anchored_target(p[i], old_box[i], old_box[i + 3], new_box[i], new_box[i + 3]) - p[i] }
-          moves[d.map { |x| x.round(6) }] << vertex unless d.all? { |x| x.abs < 1e-9 }
+      comps.each do |vs|
+        rigid = !vs.equal?(main)
+        centers = rigid ? (0..2).map { |i| axis_center(vs.map { |v| v.position.to_a[i] + origin[i] }) } : nil
+        vs.each do |v|
+          pos = v.position.to_a
+          d = (0..2).map { |i| shift[i].call(rigid ? centers[i] : pos[i] + origin[i]) }
+          moves[d.map { |x| x.round(6) }] << v unless d.all? { |x| x.abs < 1e-9 }
         end
       end
-      moves.each do |d, vertices|
-        contents.transform_entities(Geom::Transformation.translation(d), vertices.uniq)
+      nested.each do |inst|
+        b = inst.bounds
+        d = (0..2).map { |i| shift[i].call((b.min.to_a[i] + b.max.to_a[i]) / 2.0 + origin[i]) }
+        moves[d.map { |x| x.round(6) }] << inst unless d.all? { |x| x.abs < 1e-9 }
+      end
+      moves.each do |d, items|
+        live = items.select { |item| !item.respond_to?(:valid?) || item.valid? }
+        contents.transform_entities(Geom::Transformation.translation(d), live) unless live.empty?
       end
       reset_textures(entity)
     end
 
-    def anchored_target(v, lo_old, hi_old, lo_new, hi_new)
-      v - lo_old <= hi_old - v ? lo_new + (v - lo_old) : hi_new - (hi_old - v)
+    def pure_translation?(transformation)
+      a = transformation.to_a
+      [[0, 1.0], [1, 0.0], [2, 0.0], [4, 0.0], [5, 1.0], [6, 0.0], [8, 0.0], [9, 0.0], [10, 1.0]].all? { |i, v| (a[i] - v).abs < 1e-6 }
+    end
+
+    # Các khối rời (nhóm đỉnh nối với nhau bằng cạnh) trong một cấu kiện. Không có cạnh (bản giả lập) thì mỗi mặt là một khối.
+    def vertex_components(contents)
+      edges = contents.grep(Sketchup::Edge)
+      return contents.grep(Sketchup::Face).map(&:vertices) if edges.empty?
+      parent = {}
+      vertices = {}
+      find = lambda do |k|
+        parent[k] = find.call(parent[k]) unless parent[k] == k
+        parent[k]
+      end
+      edges.each do |edge|
+        keys = edge.vertices.map do |v|
+          vertices[v.entityID] = v
+          parent[v.entityID] ||= v.entityID
+        end
+        parent[find.call(keys[0])] = find.call(keys[1])
+      end
+      vertices.keys.group_by { |k| find.call(k) }.values.map { |ks| ks.map { |k| vertices[k] } }
+    end
+
+    def component_diagonal(vertices, origin)
+      sizes = (0..2).map do |i|
+        values = vertices.map { |v| v.position.to_a[i] + origin[i] }
+        values.max - values.min
+      end
+      Math.sqrt(sizes.sum { |x| x * x })
+    end
+
+    def axis_center(values)
+      (values.min + values.max) / 2.0
+    end
+
+    # Bảng độ dời theo một trục: [[tọa độ, độ dời]] tại các nút (tọa độ đỉnh của thân tấm trong [lo, hi]). Chỉ nhịp trống
+    # lớn (từ STRETCH_GAP_MIN; nếu không có thì nhịp lớn nhất) nhận phần tăng, chia theo chiều dài; nhịp nhỏ giữ nguyên.
+    def stretch_knots(coords, lo, hi, new_lo, new_hi)
+      knots = ([lo, hi] + coords.select { |c| c > lo + KNOT_EPS && c < hi - KNOT_EPS }).sort.each_with_object([]) do |c, out|
+        out << c unless out.last && (c - out.last).abs < KNOT_EPS
+      end
+      return [[lo, new_lo - lo]] if knots.length < 2
+      gaps = knots.each_cons(2).map { |a, b| b - a }
+      big = gaps.each_index.select { |k| gaps[k] >= STRETCH_GAP_MIN }
+      big = [gaps.each_index.max_by { |k| gaps[k] }] if big.empty?
+      total = big.sum { |k| gaps[k] }
+      growth = (new_hi - new_lo) - (hi - lo)
+      shift = new_lo - lo
+      knots.each_with_index.map do |c, k|
+        entry = [c, shift]
+        shift += growth * gaps[k] / total if big.include?(k)
+        entry
+      end
+    end
+
+    # Độ dời của một tọa độ v theo bảng nút (nội suy giữa hai nút; ngoài [lo, hi] dời theo mép gần).
+    def knot_shift(knots, lo, hi, new_lo, new_hi, v)
+      return new_lo - lo if v <= lo
+      return new_hi - hi if v >= hi
+      k = knots.rindex { |c, _| c <= v } || 0
+      c0, s0 = knots[k]
+      return s0 if k == knots.length - 1
+      c1, s1 = knots[k + 1]
+      s0 + (s1 - s0) * (v - c0) / (c1 - c0)
     end
 
     # Phép biến đổi đưa hộp cũ về hộp mới: co theo từng trục (trục có kích thước 0 giữ nguyên), rồi dời tới vị trí mới.

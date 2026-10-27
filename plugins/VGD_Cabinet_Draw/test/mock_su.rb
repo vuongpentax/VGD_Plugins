@@ -75,18 +75,18 @@ module Sketchup
   class Vertex
     attr_reader :owner, :idx
     def initialize(p, owner = nil, idx = nil); @p = p; @owner = owner; @idx = idx; end
-    def position; @owner ? @owner.pts[@idx] : @p; end
+    def position; @owner ? @owner.vertex_point(@idx) : @p; end
   end
   class Face < Entity
     attr_reader :pts, :ext
-    def initialize(pts); @pts=pts; @flip=false; @ext=0; end
+    def initialize(pts); @pts=pts; @flip=false; @ext=0; @far=nil; end
     def normal
       a=pts[0]; b=pts[1]; c=pts[2]
       n=(b-a).cross(c-b).normalize; @flip ? n.reverse : n
     end
     def reverse!; @flip=!@flip; self; end
     def area; 1.0; end
-    def vertices; pts.each_index.map{|i| Vertex.new(pts[i], self, i)}; end
+    def vertices; (0...(pts.length + far.length)).map{|i| Vertex.new(vertex_point(i), self, i)}; end
     class Loop
       def initialize(pts, outer); @pts=pts; @outer=outer; end
       def vertices; @pts.map{|p| Vertex.new(p)}; end
@@ -98,7 +98,15 @@ module Sketchup
     def parent_entities=(e); @pe=e; end
     def parent; @pe.owner; end
     def erase!; @erased=true; end
-    def pushpull(d); @ext=d; @pushed = true; end
+    def pushpull(d)
+      @ext=d; @pushed = true
+      n = normal
+      @far = pts.map { |p| Geom::Point3d.new(p.x + n.x * d, p.y + n.y * d, p.z + n.z * d) }
+    end
+    # Điểm đối diện của mặt đùn (pushpull): SketchUp thật có đỉnh thật ở đó.
+    def far; @far || []; end
+    def vertex_point(i); i < pts.length ? pts[i] : @far[i - pts.length]; end
+    def set_vertex_point(i, p); if i < pts.length then pts[i] = p else @far[i - pts.length] = p end; end
     def pushed?; !!@pushed; end
   end
   class Bounds
@@ -137,10 +145,7 @@ module Sketchup
         case e
         when Face
           e.pts.each{|p| pts<<p.transform(tr)}
-          if e.pushed?
-            nrm=e.normal; v=Geom::Vector3d.new(nrm.x*e.ext,nrm.y*e.ext,nrm.z*e.ext)
-            e.pts.each{|p| pts<<Geom::Point3d.new(p.x+v.x,p.y+v.y,p.z+v.z).transform(tr)}
-          end
+          e.far.each{|p| pts<<p.transform(tr)}
         when Group, ComponentInstance
           collect(e.definition.entities, tr*e.transformation, pts)
         end
@@ -350,7 +355,7 @@ module Sketchup
       e = Edge.new(pt.(p), pt.(q)); @list << e; e
     end
   end
-  class Face; def bounds; Definition.new.tap { |d| }.then { Bounds.new(pts + (pushed? ? pts.map { |p| n = normal; Geom::Point3d.new(p.x + n.x * ext, p.y + n.y * ext, p.z + n.z * ext) } : [])) }; end; end
+  class Face; def bounds; Definition.new.tap { |d| }.then { Bounds.new(pts + far) }; end; end
   class Group; def bounds; definition.bounds; end; end
   class ComponentInstance; def bounds; definition.bounds; end; end
   def self.vcb_label=(v); @vcb_label = v; end
@@ -427,6 +432,7 @@ module Sketchup
       n = normal
       @ext = @ext * Math.sqrt(t.apply_vec(n.to_a).sum { |c| c * c }) if pushed?
       @pts = @pts.map { |p| p.transform(t) }
+      @far = @far.map { |p| p.transform(t) } if @far
       self
     end
     def position_material(material, points, front)
@@ -439,6 +445,7 @@ module Sketchup
       f.instance_variable_set(:@flip, @flip)
       f.instance_variable_set(:@ext, @ext)
       f.instance_variable_set(:@pushed, @pushed)
+      f.instance_variable_set(:@far, @far && @far.map { |p| Geom::Point3d.new(p.x, p.y, p.z) })
       f.material = material
       f.back_material = back_material
       f.parent_entities = entities
@@ -449,7 +456,7 @@ module Sketchup
   class Entities
     def transform_entities(t, ents = nil)
       (ents.nil? ? to_a : Array(ents)).each do |e|
-        if e.is_a?(Vertex) then e.owner.pts[e.idx] = Geom::Point3d.new(*t.apply_pt(e.position.to_a))
+        if e.is_a?(Vertex) then e.owner.set_vertex_point(e.idx, Geom::Point3d.new(*t.apply_pt(e.position.to_a)))
         elsif e.is_a?(Face) then e.apply_transform!(t)
         elsif e.is_a?(Group) || e.is_a?(ComponentInstance) then e.transformation = t * e.transformation
         end

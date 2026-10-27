@@ -1,6 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.53
+# VGD_Cabinet Draw 1.0.0-beta.54
 
-beta.53: đợt/vách không dựng lại khi scale (giữ đối tượng, vật liệu, texture); mỗi đỉnh giữ khoảng cách tới mép gần nhất, nên khấu theo xà khớp khi scale dọc, kể cả tấm đã chỉnh tay. Khung tô sáng hover là hình thật của tấm (có khấu xà). Dời đỉnh dùng transform_entities trên đỉnh: chưa xác minh trong SketchUp thật.
+beta.54: mọi tấm (nóc, đáy, hông, hậu, xà, đợt, vách) co giãn tại chỗ mà giữ nguyên kích thước chi tiết (mộng, lỗ, khấu, bản lề, dấu tiết diện, khối lẻ). Chỉ nhịp trống từ 150 mm giữa các chi tiết giãn; chi tiết nhỏ và khối rời giữ nguyên mm, khối rời dời theo vị trí tâm. Thêm dev/check_feature_sizes.rb để đối chiếu kích thước chi tiết trước/sau scale. Chưa xác minh trong SketchUp thật (gom khối rời theo cạnh, dời đỉnh).\n\nbeta.53: đợt/vách không dựng lại khi scale (giữ đối tượng, vật liệu, texture); mỗi đỉnh giữ khoảng cách tới mép gần nhất, nên khấu theo xà khớp khi scale dọc, kể cả tấm đã chỉnh tay. Khung tô sáng hover là hình thật của tấm (có khấu xà). Dời đỉnh dùng transform_entities trên đỉnh: chưa xác minh trong SketchUp thật.
 
 beta.52: xóa vách không làm đợt nở cả tủ; đợt chỉ nở tới vách/hông còn lại gần nhất (vị trí tuyệt đối, giới hạn theo ô giữ nguyên). Chưa xác minh trong SketchUp thật.
 
