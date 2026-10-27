@@ -1367,10 +1367,13 @@ module VGD_Cabinet_Draw
       # Các mặt xem trước của một tấm (đợt: hộp; vách: biên dạng có khấu xà).
       def board_faces_for(pos, ref)
         span_cell = span == 'full' ? Interior.inner(@shell) : ref[:cell]
+        # Cùng hàm dựng với lúc tạo tấm (Rebuild.place_panels), nên xem trước đúng hình sẽ tạo.
         if ref[:axis] == 'vertical'
-          Rebuild.profile_faces(Rebuild.vertical_profile(@shell, span_cell, partition_setback), pos, pos + thickness)
+          profile = Rebuild.vertical_profile(@shell, span_cell, partition_setback, [pos, pos + thickness])
+          Rebuild.prism_faces(profile, pos, pos + thickness, ->(y, z, x) { [x, y, z] })
         else
-          PanelModel.box_faces(Rebuild.board_box(@shell, span_cell, pos, thickness, shelf_setback))
+          outline = Rebuild.shelf_outline(@shell, span_cell, pos, thickness, shelf_setback)
+          Rebuild.prism_faces(outline, pos, pos + thickness, ->(x, y, z) { [x, y, z] })
         end
       end
 

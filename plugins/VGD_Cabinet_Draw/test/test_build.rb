@@ -385,5 +385,45 @@ prof = V::Rebuild.vertical_profile(sh, V::Interior.inner(sh), 0.0).map { |y, z| 
 check 'xà trên sát nóc: biên dạng không có cạnh chồng lên cạnh khác', !overlapping_edges?(prof), prof.inspect
 check 'xà trên sát nóc: vẫn có khấu góc sau-trên', prof.any? { |y, z| z > 1900 && y < bb(sh)[4] - 1 }, prof.inspect
 
+puts '== 19. Biên tấm sau khi trừ xà chắn; xem trước = tấm tạo ra =='
+def boxes_overlap?(a, b)
+  (0..2).all? { |i| [a[i + 3], b[i + 3]].min - [a[i], b[i]].max > 0.01 }
+end
+
+def panel_op(sh, c, axis, offset_mm, setback_mm)
+  inner = V::Interior.inner(sh)
+  op = { 'type' => 'panel', 'axis' => axis, 'kind' => 'thong_thuy', 'thickness_mm' => 17.5, 'limit' => false,
+         'anchor' => V::Rebuild.anchor_of(sh, (inner.x0 + inner.x1) / 2, (inner.z0 + inner.z1) / 2),
+         'setback_mm' => setback_mm, 'door_fit' => 'phu', 'mode' => 'free', 'offsets' => [offset_mm] }
+  op['op'] = V::Rebuild.record(c, op)
+  V::Rebuild.place_panels(c, sh, op)
+end
+
+# Hình chữ nhật [0,0]-[100,50] có xà chắn góc dưới-trái [0,0]-[30,20]: biên phải khấu góc, không còn góc (0,0).
+notched = V::Rebuild.board_outline([0.0, 0.0, 100.0, 50.0], [[0.0, 0.0, 30.0, 20.0]])
+check 'khấu góc: biên có điểm khấu (30,0), (30,20), (0,20)', notched && [[30.0, 0.0], [30.0, 20.0], [0.0, 20.0]].all? { |p| notched.any? { |q| near(q[0], p[0]) && near(q[1], p[1]) } } && notched.none? { |q| near(q[0], 0.0) && near(q[1], 0.0) }, notched.inspect
+check 'khấu góc: 6 đỉnh, không chồng cạnh', notched && notched.length == 6 && !overlapping_edges?(notched.map { |a, b| [a, b] }), notched.inspect
+hole = V::Rebuild.board_outline([0.0, 0.0, 100.0, 50.0], [[40.0, 20.0, 60.0, 30.0]])
+check 'xà chắn giữa tấm (tạo lỗ): không dựng được, trả nil', hole.nil?, hole.inspect
+
+c = cab('top_mode' => 'rails', 'rail_front_double' => true)
+sh = shell(c)
+inner = V::Interior.inner(sh)
+pt = V::Tools::PanelTool.new('shelf_front_setback' => 0.0, 'panel_door_fit' => 'phu', 'panel_span' => 'cell',
+                             'board_thickness' => 17.5)
+pt.instance_variable_set(:@root, c)
+pt.instance_variable_set(:@shell, sh)
+[['đợt', 'horizontal', 1900.0, 'Đợt'], ['vách', 'vertical', 300.0, 'Vách']].each do |label, axis, pos_mm, prefix|
+  pos = pos_mm.mm
+  ref = { axis: axis, cell: inner, role: 'top', plane: pos, dir: 1 }
+  preview = pt.send(:board_faces_for, pos, ref).flatten(1)
+  offset = axis == 'horizontal' ? pos_mm - inner.z0.to_mm : pos_mm - inner.x0.to_mm
+  panel_op(sh, c, axis, offset, 0.0)
+  made = parts_named(c, prefix).last
+  axes = [0, 1, 2].map { |i| preview.map { |p| p[i].to_mm } }
+  prev_box = axes.map(&:min) + axes.map(&:max)
+  check "#{label}: xem trước khớp tấm tạo ra", made && (0..5).all? { |i| (prev_box[i] - bb(made)[i]).abs < 0.05 }, [prev_box.map { |v| v.round(2) }, made && bb(made)].inspect
+end
+
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.length}"
 exit($fail.empty? ? 0 : 1)

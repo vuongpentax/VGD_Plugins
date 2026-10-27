@@ -86,45 +86,101 @@ module VGD_Cabinet_Draw
       (Interior.door_thickness_mm(root) || board_mm).to_f.mm
     end
 
-    # Hộp [x0,y0,z0,x1,y1,z1] của một đợt tại độ cao pos trong ô (đợt ngang).
+    # Hộp [x0,y0,z0,x1,y1,z1] của một đợt tại độ cao pos trong ô (đợt ngang), trước khi trừ xà trước.
     def board_box(shell, cell, pos, t, setback)
       y1 = Interior.back_limit(shell, pos, pos + t)
       [cell.x0, [cell.y0 + setback, y1 - 10.mm].min, pos, cell.x1, y1, pos + t]
     end
 
-    # Biên dạng [y, z] của vách (tấm đứng) tại ô: đi hết chiều sâu tới mặt sau trong cùng,
-    # chỉ khấu góc sau-trên đúng ở dải cao của xà treo / giằng sau. Phần dưới xà không bị cắt ngắn.
-    # Vách cũng lùi mặt trước như đợt (cánh lọt nằm giữa hai hông, vách không được đâm vào mặt tủ).
-    def vertical_profile(shell, cell, setback)
-      yb = Interior.full_depth(shell)
-      yf = [cell.y0 + setback, yb - 10.mm].min
-      notches = Interior.back_notches(shell, cell.z0, cell.z1)
-      # Khấu chạm mép dưới/trên thì không đi qua góc sau của mép đó: nếu không, biên dạng đi chồng lên chính nó (khối không kín).
-      bottom_cut = notches.any? { |_ny, za, _zb| za <= cell.z0 + Interior::EPS }
-      top_cut = notches.any? { |_ny, _za, zb| zb >= cell.z1 - Interior::EPS }
-      pts = [[yf, cell.z0]]
-      pts << [yb, cell.z0] unless bottom_cut
-      notches.each do |ny, za, zb|
-        pts << [yb, za] if za > cell.z0 + Interior::EPS && pts.last != [yb, za]
-        pts += [[ny, za], [ny, zb]]
-        pts << [yb, zb] if zb < cell.z1 - Interior::EPS
-      end
-      pts << [yb, cell.z1] unless top_cut
-      pts << [yf, cell.z1]
-      pts.each_with_object([]) do |p, out|
-        last = out.last
-        out << p unless last && (last[0] - p[0]).abs < Interior::EPS && (last[1] - p[1]).abs < Interior::EPS
-      end
+    # Xà trước (giằng trước) đang có trong tủ: tấm đợt và vách phải khấu quanh các thanh này.
+    FRONT_RAILS = %w[rail_front rail_front_2 rail_front_bottom rail_front_bottom_2].freeze
+
+    def front_rail_boxes(shell)
+      Interior.containers(shell).select { |e| FRONT_RAILS.include?(Interior.role_of(e)) }.map { |e| Interior.box_of(e) }
     end
 
-    # Các mặt (để vẽ xem trước) của biên dạng vách đã đùn theo x từ x0 tới x1.
-    def profile_faces(profile, x0, x1)
-      front = profile.map { |y, z| [x0, y, z] }
-      back = profile.map { |y, z| [x1, y, z] }
-      sides = profile.each_index.map do |i|
-        y, z = profile[i]
-        ny, nz = profile[(i + 1) % profile.size]
-        [[x0, y, z], [x0, ny, nz], [x1, ny, nz], [x1, y, z]]
+    def overlap?(a0, a1, b0, b1)
+      [a1, b1].min - [a0, b0].max > Interior::EPS
+    end
+
+    # Đường biên (2D) của vùng còn lại của một tấm: hình chữ nhật base = [u0, v0, u1, v1] trừ các hình chữ nhật chắn.
+    # Trả về các đỉnh theo vòng, hoặc nil nếu vùng bị tách thành nhiều mảnh, có lỗ, hoặc không còn gì.
+    def board_outline(base, blockers)
+      us = grid_values(base[0], base[2], blockers.flat_map { |b| [b[0], b[2]] })
+      vs = grid_values(base[1], base[3], blockers.flat_map { |b| [b[1], b[3]] })
+      inside = lambda do |i, j|
+        next false if i.negative? || j.negative? || i >= us.length - 1 || j >= vs.length - 1
+        cu = (us[i] + us[i + 1]) / 2.0
+        cv = (vs[j] + vs[j + 1]) / 2.0
+        blockers.none? { |b| cu > b[0] && cu < b[2] && cv > b[1] && cv < b[3] }
+      end
+      # Cạnh có hướng ngược chiều kim đồng hồ, chỉ ở mép ô đầy mà ô bên cạnh trống.
+      next_at = {}
+      (0...us.length - 1).each do |i|
+        (0...vs.length - 1).each do |j|
+          next unless inside.call(i, j)
+          a, b, c, d = [i, j], [i + 1, j], [i + 1, j + 1], [i, j + 1]
+          edges = []
+          edges << [a, b] unless inside.call(i, j - 1)
+          edges << [b, c] unless inside.call(i + 1, j)
+          edges << [c, d] unless inside.call(i, j + 1)
+          edges << [d, a] unless inside.call(i - 1, j)
+          edges.each do |from, to|
+            return nil if next_at.key?(from)
+            next_at[from] = to
+          end
+        end
+      end
+      start = next_at.keys.first
+      return nil unless start
+      ring = [start]
+      key = next_at[start]
+      until key == start
+        return nil if key.nil? || ring.length > next_at.length
+        ring << key
+        key = next_at[key]
+      end
+      return nil unless ring.length == next_at.length
+      pts = ring.map { |i, j| [us[i], vs[j]] }
+      pts.each_index.reject do |k|
+        prev, cur, nxt = pts[k - 1], pts[k], pts[(k + 1) % pts.length]
+        ((cur[0] - prev[0]) * (nxt[1] - cur[1]) - (cur[1] - prev[1]) * (nxt[0] - cur[0])).abs < 1e-9
+      end.map { |k| pts[k] }
+    end
+
+    # Các giá trị lưới trong [lo, hi] gồm hai mép và các mép của hình chắn (đã bỏ trùng).
+    def grid_values(lo, hi, extra)
+      values = [lo, hi] + extra.select { |v| v > lo + Interior::EPS && v < hi - Interior::EPS }
+      values.sort.each_with_object([]) { |v, out| out << v unless out.last && (v - out.last).abs < Interior::EPS }
+    end
+
+    # Biên đợt ngang (x, y) tại độ cao pos: trừ các xà trước có độ cao chắn đợt.
+    def shelf_outline(shell, cell, pos, t, setback)
+      b = board_box(shell, cell, pos, t, setback)
+      blockers = front_rail_boxes(shell).select { |r| overlap?(r[2], r[5], pos, pos + t) }.map { |r| [r[0], r[1], r[3], r[4]] }
+      board_outline([b[0], b[1], b[3], b[4]], blockers) || raise('Đợt không dựng được: xà chắn làm tấm bị tách hoặc hết chỗ.')
+    end
+
+    # Biên vách (y, z) tại vách có độ dày x_range = [x0, x1]: đi hết chiều sâu tới mặt sau, trừ khấu xà sau
+    # và xà trước đang chắn. x_range = nil: coi mọi xà trước đều chắn.
+    def vertical_profile(shell, cell, setback, x_range = nil)
+      yb = Interior.full_depth(shell)
+      yf = [cell.y0 + setback, yb - 10.mm].min
+      blockers = Interior.back_notches(shell, cell.z0, cell.z1).map { |ny, za, zb| [ny, za, yb, zb] }
+      rails = front_rail_boxes(shell)
+      rails = rails.select { |r| overlap?(r[0], r[3], *x_range) } if x_range
+      blockers += rails.map { |r| [r[1], r[2], r[4], r[5]] }
+      board_outline([yf, cell.z0, yb, cell.z1], blockers) || raise('Vách không dựng được: xà chắn làm tấm bị tách hoặc hết chỗ.')
+    end
+
+    # Các mặt (để vẽ xem trước) của một đường biên đùn từ lo tới hi. place ghép (a, b, k) thành điểm 3D.
+    def prism_faces(outline, lo, hi, place)
+      front = outline.map { |a, b| place.call(a, b, lo) }
+      back = outline.map { |a, b| place.call(a, b, hi) }
+      sides = outline.each_index.map do |i|
+        a, b = outline[i]
+        c, d = outline[(i + 1) % outline.size]
+        [place.call(a, b, lo), place.call(c, d, lo), place.call(c, d, hi), place.call(a, b, hi)]
       end
       [front, back] + sides
     end
@@ -163,16 +219,17 @@ module VGD_Cabinet_Draw
       positions.each_with_index do |pos, index|
         next if skip.include?(index)
         if vertical
-          profile = vertical_profile(shell, span_cell, setback)
+          profile = vertical_profile(shell, span_cell, setback, [pos, pos + t])
           points = profile.map { |y, z| [pos, y, z] }
           board = Geometry.rectangular_board(shell.definition.entities, "Vách #{existing + boards.length + 1}", points, t, X_AXIS)
           Geometry.stamp_part(board, 'partition', { 'thickness_mm' => t.to_mm, 'divide_kind' => op['kind'], 'op' => op['op'], 'index' => index })
         else
-          b = board_box(shell, span_cell, pos, t, setback)
-          points = [[b[0], b[1], b[2]], [b[3], b[1], b[2]], [b[3], b[4], b[2]], [b[0], b[4], b[2]]]
+          outline = shelf_outline(shell, span_cell, pos, t, setback)
+          points = outline.map { |x, y| [x, y, pos] }
           board = Geometry.rectangular_board(shell.definition.entities, "Đợt #{existing + boards.length + 1}", points, t, Z_AXIS)
+          front_setback = board_box(shell, span_cell, pos, t, setback)[1] - cell.y0
           Geometry.stamp_part(board, 'shelf', { 'thickness_mm' => t.to_mm, 'divide_kind' => op['kind'], 'op' => op['op'], 'index' => index,
-                                                'front_setback_mm' => (b[1] - cell.y0).to_mm })
+                                                'front_setback_mm' => front_setback.to_mm })
         end
         Geometry.stamp_signature(board)
         boards << board

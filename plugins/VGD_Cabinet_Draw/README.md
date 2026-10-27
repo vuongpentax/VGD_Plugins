@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.48
+# VGD_Cabinet Draw 1.0.0-beta.49
+
+beta.49: xem trước đợt và vách lấy đúng hình sẽ tạo (cùng một hàm dựng). Hàm dựng biên có khấu theo xà trước đang chắn, nhưng với các cấu hình tủ hiện tại xà trước nằm ngay mép ô nên chưa cắt tấm nào. Chưa xác minh trong SketchUp thật.
 
 beta.48: vách khấu sát mép trên/dưới (ví dụ có xà trên sát nóc) không còn đi chồng lên chính nó, nên khối kín và công cụ khối (Outer Shell, khấu) dùng được. Chưa xác minh trong SketchUp thật.
 
