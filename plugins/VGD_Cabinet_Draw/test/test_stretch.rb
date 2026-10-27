@@ -339,5 +339,45 @@ scale_root(c, 1.0, 1.0, 1.1)
 auto_run(c)
 check 'vách: mọi đỉnh dời trong đúng một lần transform_by_vectors', pv.entities.vector_calls - before_calls == 1, (pv.entities.vector_calls - before_calls).to_s
 
+puts '== 12. Kiểm tra an toàn sau co giãn; công tắc di chuyển nhóm con =='
+# Nếu hình học sau khi dời lệch kế hoạch (SketchUp hoặc tool khác chỉnh thêm), báo lỗi để hoàn tác thay vì để hỏng tấm.
+c = cab
+nong = part(c, 'Nóc')
+old_box = V::Interior.box_of(nong)
+new_box = old_box.dup
+new_box[3] += 100.mm
+ents = nong.entities
+orig = ents.method(:transform_by_vectors)
+ents.define_singleton_method(:transform_by_vectors) do |es, vs|
+  bad = vs.each_with_index.map { |vec, k| k.zero? ? Geom::Vector3d.new(vec.x, vec.y + 1000.mm, vec.z) : vec }
+  orig.call(es, bad)
+end
+err = begin
+  V::Rebuild.stretch_features!(nong, old_box, new_box)
+  nil
+rescue StandardError => e
+  e.message
+end
+check 'hình học lệch kế hoạch: báo lỗi (để hoàn tác), không im lặng', err.to_s.include?('méo'), err.inspect
+
+# Công tắc: tắt thì nhóm con (ví dụ mặt tiết diện CNC) đứng yên, bật thì dời theo tâm.
+def nested_after_scale(move)
+  V::Rebuild.move_nested = move
+  c = cab
+  nong = part(c, 'Nóc')
+  inner = nong.entities.add_group
+  inner.entities.add_face([[100.mm, 100.mm, 0], [200.mm, 100.mm, 0], [200.mm, 200.mm, 0], [100.mm, 200.mm, 0]])
+  before = inner.transformation.to_a
+  scale_root(c, 1.25)
+  auto_run(c)
+  [before, inner.transformation.to_a]
+ensure
+  V::Rebuild.move_nested = true
+end
+before, after = nested_after_scale(false)
+check 'tắt di chuyển nhóm con: nhóm con đứng yên', before == after, after.inspect
+before, after = nested_after_scale(true)
+check 'bật (mặc định): nhóm con dời theo tâm', before != after, after.inspect
+
 puts "\n== Kết quả test_stretch: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
 $fail.each { |x| puts "  - #{x}" }

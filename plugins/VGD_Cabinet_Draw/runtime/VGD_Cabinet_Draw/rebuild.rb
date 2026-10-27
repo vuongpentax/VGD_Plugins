@@ -744,24 +744,51 @@ module VGD_Cabinet_Draw
       end
       vertices = []
       vectors = []
+      planned = [[Float::INFINITY] * 3, [-Float::INFINITY] * 3]
       comps.each do |vs|
         rigid = !vs.equal?(main)
         centers = rigid ? (0..2).map { |i| axis_center(vs.map { |v| v.position.to_a[i] + origin[i] }) } : nil
         vs.each do |v|
           pos = v.position.to_a
           d = (0..2).map { |i| shift[i].call(rigid ? centers[i] : pos[i] + origin[i]) }
+          (0..2).each { |i| planned[0][i] = [planned[0][i], pos[i] + origin[i] + d[i]].min; planned[1][i] = [planned[1][i], pos[i] + origin[i] + d[i]].max } unless rigid
           next if d.all? { |x| x.abs < 1e-9 }
           vertices << v
           vectors << Geom::Vector3d.new(*d)
         end
       end
       move_vertices(contents, vertices, vectors)
-      nested.each do |inst|
-        b = inst.bounds
-        d = (0..2).map { |i| shift[i].call((b.min.to_a[i] + b.max.to_a[i]) / 2.0 + origin[i]) }
-        contents.transform_entities(Geom::Transformation.translation(d), [inst]) unless d.all? { |x| x.abs < 1e-9 }
+      if move_nested?
+        nested.each do |inst|
+          b = inst.bounds
+          d = (0..2).map { |i| shift[i].call((b.min.to_a[i] + b.max.to_a[i]) / 2.0 + origin[i]) }
+          contents.transform_entities(Geom::Transformation.translation(d), [inst]) unless d.all? { |x| x.abs < 1e-9 }
+        end
       end
+      verify_stretch!(entity, main, origin, planned) if main
       reset_textures(entity)
+    end
+
+    # Có dời nhóm con (ví dụ mặt tiết diện CNC của tool khác) cùng tấm hay không. Mặc định có. Tắt bằng
+    # VGD_Cabinet_Draw::Rebuild.move_nested = false để thử khi tool khác phản ứng với việc dời nhóm con.
+    def move_nested?
+      @move_nested.nil? ? true : @move_nested
+    end
+
+    attr_writer :move_nested
+
+    # Hình học của thân tấm sau khi dời phải đúng kế hoạch (hộp bao đã tính trước). Lệch nghĩa là SketchUp hoặc tool khác
+    # đã chỉnh thêm (đỉnh bị kéo ra xa): báo lỗi để hoàn tác thao tác, không để hỏng tấm.
+    def verify_stretch!(entity, main, origin, planned)
+      live = main.select { |v| !v.respond_to?(:valid?) || v.valid? }
+      return if live.empty?
+      tolerance = 0.5.mm
+      bad = (0..2).any? do |i|
+        values = live.map { |v| v.position.to_a[i] + origin[i] }
+        (values.min - planned[0][i]).abs > tolerance || (values.max - planned[1][i]).abs > tolerance
+      end
+      return unless bad
+      raise "Tấm #{entity.name} bị méo khi co giãn (hình học lệch kế hoạch, có thể do tool khác can thiệp). Đã hoàn tác thao tác này."
     end
 
     # Dời mọi đỉnh một lần, mỗi đỉnh một vectơ. Dời lần lượt từng nhóm đỉnh làm mặt tạm thời không phẳng giữa các

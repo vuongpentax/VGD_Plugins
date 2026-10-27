@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.55
+# VGD_Cabinet Draw 1.0.0-beta.56
+
+beta.56: sau khi co giãn tấm, kiểm tra hộp bao của thân tấm có đúng kế hoạch không; lệch (đỉnh bị kéo ra xa) thì báo lỗi và hoàn tác. Thêm công tắc VGD_Cabinet_Draw::Rebuild.move_nested = false để tắt việc dời nhóm con (ví dụ mặt tiết diện CNC) khi thử lỗi với tool khác. Chưa xác minh trong SketchUp thật.
 
 beta.55: dời đỉnh của tấm trong một lần (transform_by_vectors) thay vì từng nhóm đỉnh, để tránh các đỉnh hình cung của mộng bị kéo ra xa khi scale. Chưa xác minh trong SketchUp thật. Mặt tiết diện CNC (group ABF_MA) có thể còn lệch so với vách sau khi scale.
 
