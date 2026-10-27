@@ -379,5 +379,51 @@ check 'tắt di chuyển nhóm con: nhóm con đứng yên', before == after, af
 before, after = nested_after_scale(true)
 check 'bật (mặc định): nhóm con dời theo tâm', before != after, after.inspect
 
+puts '== 13. Báo rõ lệch xảy ra ở bước nào: dời đỉnh hay dời nhóm con =='
+def stretch_error(part, old_box, new_box)
+  V::Rebuild.stretch_features!(part, old_box, new_box)
+  nil
+rescue StandardError => e
+  e.message
+end
+# Lệch ngay khi dời đỉnh (SketchUp chỉnh thêm).
+c = cab
+nong = part(c, 'Nóc')
+old_box = V::Interior.box_of(nong)
+new_box = old_box.dup
+new_box[3] += 100.mm
+ents = nong.entities
+orig = ents.method(:transform_by_vectors)
+ents.define_singleton_method(:transform_by_vectors) do |es, vs|
+  orig.call(es, vs.each_with_index.map { |vec, k| k.zero? ? Geom::Vector3d.new(vec.x, vec.y + 1000.mm, vec.z) : vec })
+end
+err = stretch_error(nong, old_box, new_box)
+check 'lệch ngay khi dời đỉnh: thông báo nói rõ bước dời đỉnh', err.to_s.include?('dời đỉnh') && !err.to_s.include?('nhóm con'), err.inspect
+
+# Chỉ lệch sau khi dời nhóm con (tool khác phản ứng với việc dời nhóm con).
+c = cab
+nong = part(c, 'Nóc')
+nong.entities.add_group.entities.add_face([[100.mm, 100.mm, 0], [200.mm, 100.mm, 0], [200.mm, 200.mm, 0], [100.mm, 200.mm, 0]])
+old_box = V::Interior.box_of(nong)
+new_box = old_box.dup
+new_box[3] += 100.mm
+ents = nong.entities
+body_vertex = ents.grep(Sketchup::Face).first.vertices.first
+ents.define_singleton_method(:transform_entities) do |t, list = nil|
+  result = super(t, list)
+  transform_by_vectors([body_vertex], [Geom::Vector3d.new(0, 1000.mm, 0)]) if Array(list).any? { |e| e.is_a?(Sketchup::Group) }
+  result
+end
+err = stretch_error(nong, old_box, new_box)
+check 'lệch sau khi dời nhóm con: thông báo nói rõ bước dời nhóm con', err.to_s.include?('nhóm con'), err.inspect
+
+# Không lệch: không báo lỗi.
+c = cab
+nong = part(c, 'Nóc')
+old_box = V::Interior.box_of(nong)
+new_box = old_box.dup
+new_box[3] += 100.mm
+check 'không lệch: không báo lỗi', stretch_error(nong, old_box, new_box).nil?
+
 puts "\n== Kết quả test_stretch: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
 $fail.each { |x| puts "  - #{x}" }

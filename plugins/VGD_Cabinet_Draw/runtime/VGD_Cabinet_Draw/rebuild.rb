@@ -744,20 +744,21 @@ module VGD_Cabinet_Draw
       end
       vertices = []
       vectors = []
-      planned = [[Float::INFINITY] * 3, [-Float::INFINITY] * 3]
+      targets = []
       comps.each do |vs|
         rigid = !vs.equal?(main)
         centers = rigid ? (0..2).map { |i| axis_center(vs.map { |v| v.position.to_a[i] + origin[i] }) } : nil
         vs.each do |v|
           pos = v.position.to_a
           d = (0..2).map { |i| shift[i].call(rigid ? centers[i] : pos[i] + origin[i]) }
-          (0..2).each { |i| planned[0][i] = [planned[0][i], pos[i] + origin[i] + d[i]].min; planned[1][i] = [planned[1][i], pos[i] + origin[i] + d[i]].max } unless rigid
+          targets << [v, (0..2).map { |i| pos[i] + origin[i] + d[i] }]
           next if d.all? { |x| x.abs < 1e-9 }
           vertices << v
           vectors << Geom::Vector3d.new(*d)
         end
       end
       move_vertices(contents, vertices, vectors)
+      after_vertices = stretch_deviation(targets, origin)
       if move_nested?
         nested.each do |inst|
           b = inst.bounds
@@ -765,7 +766,8 @@ module VGD_Cabinet_Draw
           contents.transform_entities(Geom::Transformation.translation(d), [inst]) unless d.all? { |x| x.abs < 1e-9 }
         end
       end
-      verify_stretch!(entity, main, origin, planned) if main
+      final = stretch_deviation(targets, origin)
+      report_deviation!(entity, after_vertices, final) unless final.empty?
       reset_textures(entity)
     end
 
@@ -779,16 +781,25 @@ module VGD_Cabinet_Draw
 
     # Hình học của thân tấm sau khi dời phải đúng kế hoạch (hộp bao đã tính trước). Lệch nghĩa là SketchUp hoặc tool khác
     # đã chỉnh thêm (đỉnh bị kéo ra xa): báo lỗi để hoàn tác thao tác, không để hỏng tấm.
-    def verify_stretch!(entity, main, origin, planned)
-      live = main.select { |v| !v.respond_to?(:valid?) || v.valid? }
-      return if live.empty?
-      tolerance = 0.5.mm
-      bad = (0..2).any? do |i|
-        values = live.map { |v| v.position.to_a[i] + origin[i] }
-        (values.min - planned[0][i]).abs > tolerance || (values.max - planned[1][i]).abs > tolerance
+    def stretch_deviation(targets, origin)
+      bad = []
+      targets.each do |v, target|
+        next if v.respond_to?(:valid?) && !v.valid?
+        actual = v.position.to_a.each_with_index.map { |x, i| x + origin[i] }
+        error = (0..2).map { |i| (actual[i] - target[i]).abs }.max
+        bad << [error, target, actual] if error > 0.5.mm
       end
-      return unless bad
-      raise "Tấm #{entity.name} bị méo khi co giãn (hình học lệch kế hoạch, có thể do tool khác can thiệp). Đã hoàn tác thao tác này."
+      bad.sort_by { |item| -item[0] }
+    end
+
+    # Đỉnh lệch khỏi vị trí kế hoạch nghĩa là SketchUp hoặc tool khác đã chỉnh thêm (đỉnh bị kéo ra xa). Báo lỗi để hoàn tác
+    # thao tác thay vì để hỏng tấm, và nói rõ lệch xảy ra ngay khi dời đỉnh hay chỉ sau khi dời nhóm con.
+    def report_deviation!(entity, after_vertices, final)
+      puts "[VGD Cabinet Draw] #{entity.name}: #{final.length} đỉnh lệch kế hoạch (ngay sau khi dời đỉnh: #{after_vertices.length}). " \
+           'Ví dụ (mm, kế hoạch -> thực tế):'
+      final.first(5).each { |_error, t, a| puts "  #{t.map { |x| x.to_mm.round(1) }.inspect} -> #{a.map { |x| x.to_mm.round(1) }.inspect}" }
+      phase = after_vertices.empty? ? 'chỉ lệch sau khi dời nhóm con (có thể tool khác phản ứng)' : 'lệch ngay khi dời đỉnh (SketchUp chỉnh thêm)'
+      raise "Tấm #{entity.name} bị méo khi co giãn: #{phase}. Chi tiết ở Ruby Console. Đã hoàn tác thao tác này."
     end
 
     # Dời mọi đỉnh một lần, mỗi đỉnh một vectơ. Dời lần lượt từng nhóm đỉnh làm mặt tạm thời không phẳng giữa các

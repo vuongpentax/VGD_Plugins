@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.56
+# VGD_Cabinet Draw 1.0.0-beta.57
+
+beta.57: kiểm tra từng đỉnh so với vị trí kế hoạch sau khi dời đỉnh và sau khi dời nhóm con; thông báo lỗi nói rõ lệch xảy ra ở bước nào (SketchUp chỉnh thêm hay chỉ sau khi dời nhóm con) và in ví dụ đỉnh lệch ra Ruby Console. Chưa xác minh trong SketchUp thật.
 
 beta.56: sau khi co giãn tấm, kiểm tra hộp bao của thân tấm có đúng kế hoạch không; lệch (đỉnh bị kéo ra xa) thì báo lỗi và hoàn tác. Thêm công tắc VGD_Cabinet_Draw::Rebuild.move_nested = false để tắt việc dời nhóm con (ví dụ mặt tiết diện CNC) khi thử lỗi với tool khác. Chưa xác minh trong SketchUp thật.
 
