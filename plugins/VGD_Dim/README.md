@@ -27,7 +27,7 @@ Lịch sử files.zip 3.0 và các snapshot runtime V6 được giữ ở repo n
 
 Gói tạo theo version trong runtime/VGD_Dim/version.rb; source ZIP cùng phiên bản. Extension/toolbar tên **VGD Dim**, loader vgd_dim.rb và namespace VGD::Dim tiếp tục dùng để tránh tạo plugin thứ hai. Cài bằng Extension Manager → Install Extension, rồi khởi động lại SketchUp để nhận toolbar mới.
 
-dev/deploy.ps1 chỉ cài whitelist 29 file vào SU2022, sao lưu và kiểm tra SHA256. Trong app đang mở có thể dùng Extensions → Nạp lại VGD Dim/Text (menu cũ) hoặc Nạp lại VGD Dim (menu mới). Khởi động lại SketchUp để tên extension/toolbar cập nhật hoàn toàn.
+dev/deploy.ps1 chỉ cài whitelist 34 file vào SU2022, sao lưu và kiểm tra SHA256. Trong app đang mở có thể dùng Extensions → Nạp lại VGD Dim/Text (menu cũ) hoặc Nạp lại VGD Dim (menu mới). Khởi động lại SketchUp để tên extension/toolbar cập nhật hoàn toàn.
 
 Ruby Console:
 
@@ -37,7 +37,7 @@ load File.join(Sketchup.find_support_file('Plugins'), 'VGD_Dim', 'reload.rb')
 
 ## Kiểm tra
 
-check_ruby.cjs: cú pháp; scopes/filters/dedup; style/Units tách riêng; rebuild/metadata/failure; Smart yaw/mirror/scale/section/normals, ownership/replacement/Scene rollback, one-touch/persistence; preset/auto/animation và native bridge mô phỏng. test_store.rb: cấu hình SU2022/Unicode/kiểu JSON, khởi động khi dữ liệu hỏng. test_ui.cjs: 6 bảng, callback vùng và Dim thủ công, payload, keyboard, scope chung, busy, theme lưu lại, toàn bộ bảng ở 760/740/540/360px. test_deploy.py: whitelist 29 file/backup/cài lặp/guard/Cabinet; test_update_installer.ps1: cập nhật trong fixture, giữ file ngoài whitelist và bản sao cũ.
+check_ruby.cjs: cú pháp; scopes/filters/dedup; style/Units tách riêng; rebuild/metadata/failure; Smart yaw/mirror/scale/section/normals, ownership/replacement/Scene rollback, one-touch/persistence; preset/auto/animation và native bridge mô phỏng. test_store.rb: cấu hình SU2022/Unicode/kiểu JSON, khởi động khi dữ liệu hỏng. test_ui.cjs: 6 bảng, callback vùng và Dim thủ công, payload, keyboard, scope chung, busy, theme lưu lại, toàn bộ bảng ở 760/740/540/360px. test_deploy.py: whitelist 34 file/backup/cài lặp/guard/Cabinet; test_update_installer.ps1: cập nhật trong fixture, giữ file ngoài whitelist và bản sao cũ.
 
 ## Thay đổi 3.3.0-beta.8
 

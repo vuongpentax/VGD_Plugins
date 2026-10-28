@@ -19,7 +19,12 @@ runtime_files = ['vgd_dim.rb'] + ['VGD_Dim/' + name for name in [
     'probe.rb', 'dialog.rb', 'dialog.html', 'dialog.css', 'dialog.js', 'dim.svg',
     'smart_dim.svg', 'version.rb', 'update_core/manifest.rb', 'update_core/bootstrap.rb',
     'update_core/client.rb', 'update_core/installer.rb', 'update_core/updater.rb',
-    'update_core/update_installer.ps1'
+    'update_core/update_installer.ps1',
+    'vgd-theme/vgd-theme.css',
+    'vgd-theme/vgd-theme.js',
+    'vgd-theme/fonts/manrope-latin-wght-normal.woff2',
+    'vgd-theme/fonts/manrope-vietnamese-wght-normal.woff2',
+    'vgd-theme/fonts/LICENSE'
 ]]
 for name in runtime_files:
     if not (runtime / name).is_file():

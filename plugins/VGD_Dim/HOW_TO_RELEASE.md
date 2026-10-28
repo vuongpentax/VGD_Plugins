@@ -6,7 +6,7 @@ Quy trình này dành cho pilot updater online của VGD Dim. Hiện updater đ�
 
 1. Cập nhật version trong runtime/VGD_Dim/version.rb và changelog trong VGD_UPDATE_MANIFEST.json.
 2. Chạy python dev/package.py.
-3. Kiểm tra RBZ, source ZIP, outputs/PACKAGES_SHA256.json và manifest vừa sinh. Script xác minh đủ 29 mục RBZ, CRC, và byte khớp source runtime.
+3. Kiểm tra RBZ, source ZIP, outputs/PACKAGES_SHA256.json và manifest vừa sinh. Script xác minh đủ 34 mục RBZ, CRC, và byte khớp source runtime.
 4. Chạy các fixture local. Trước khi phát hành, kiểm thử thủ công trong SketchUp/Windows bằng bản cài riêng.
 
 ## Đưa lên GitHub theo thứ tự an toàn

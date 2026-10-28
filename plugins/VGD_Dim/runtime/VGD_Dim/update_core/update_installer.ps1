@@ -14,7 +14,8 @@ $owned=@(
  'VGD_Dim/dialog.html','VGD_Dim/dialog.css','VGD_Dim/dialog.js','VGD_Dim/dim.svg','VGD_Dim/smart_dim.svg',
  'VGD_Dim/version.rb','VGD_Dim/update_core/manifest.rb','VGD_Dim/update_core/bootstrap.rb',
  'VGD_Dim/update_core/client.rb','VGD_Dim/update_core/installer.rb','VGD_Dim/update_core/updater.rb',
- 'VGD_Dim/update_core/update_installer.ps1'
+ 'VGD_Dim/update_core/update_installer.ps1',
+ 'VGD_Dim/vgd-theme/vgd-theme.css','VGD_Dim/vgd-theme/vgd-theme.js','VGD_Dim/vgd-theme/fonts/manrope-latin-wght-normal.woff2','VGD_Dim/vgd-theme/fonts/manrope-vietnamese-wght-normal.woff2','VGD_Dim/vgd-theme/fonts/LICENSE'
 )
 $root=[IO.Path]::GetFullPath($Plugins)
 $plugin=Join-Path $root 'VGD_Dim'
@@ -109,5 +110,13 @@ try {
  throw
 } finally {
  if (Test-Path -LiteralPath $work) { Remove-Item -LiteralPath $work -Recurse -Force }
+ # The downloaded RBZ sits in the temp folder created by installer.rb (vgd_dim_update_<hex>); remove it too.
+ try {
+   $downloadDir=[IO.Path]::GetFullPath((Split-Path -Parent $Archive))
+   $tempRoot=[IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd('\')
+   if ((Split-Path -Parent $downloadDir).TrimEnd('\') -eq $tempRoot -and (Split-Path -Leaf $downloadDir) -like 'vgd_dim_update_*' -and (Test-Path -LiteralPath $downloadDir -PathType Container)) {
+     Remove-Item -LiteralPath $downloadDir -Recurse -Force
+   }
+ } catch { }
  if (-not $preserveStage -and (Test-Path -LiteralPath $stage)) { Remove-Item -LiteralPath $stage -Recurse -Force }
 }
