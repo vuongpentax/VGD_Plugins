@@ -198,6 +198,7 @@ module VGD
         end
         def deactivate(view)
           view.invalidate
+          report_cancel # Another tool replaced this one; re-enable the dialog.
         end
         def initialize(type, name)
           @type, @name = type, name
@@ -250,10 +251,16 @@ module VGD
           view.draw(GL_LINES, lines)
         end
         def onCancel(_reason, _view)
-          unless @finished || @failed
-            Dialog.send_js('onRegionCancelled', {})
-            Sketchup.status_text = 'VGD Dim: Đã hủy đặt vùng.'
-          end
+          report_cancel
+        end
+
+        private
+
+        def report_cancel
+          return if @finished || @failed || @cancel_reported
+          @cancel_reported = true
+          Dialog.send_js('onRegionCancelled', {})
+          Sketchup.status_text = 'VGD Dim: Đã hủy đặt vùng.'
         end
       end
     end

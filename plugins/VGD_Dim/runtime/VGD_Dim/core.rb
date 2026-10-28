@@ -257,9 +257,10 @@ module VGD
                 replacements[old]=new_dim
                 result['rebuilt']+=1
                 result['custom']+=1 if preserve_text
-              rescue StandardError
+              rescue StandardError => error
                 new_dim.erase! if new_dim && new_dim.valid?
                 result['failed']+=1
+                result['reason']||=error.message # First failure only; shown so the cause is not lost.
               end
             end
             model.selection.clear

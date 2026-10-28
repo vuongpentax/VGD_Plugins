@@ -17,7 +17,7 @@ module VGD
             if status == 200
               begin
                 info = Manifest.parse(body)
-                year = 2000 + (Sketchup.version_number.to_i / 100_000_000)
+                year = 2000 + Sketchup.version.to_i # "22.0.354" -> 2022, same as Store.legacy_raw.
                 raise 'Bản cập nhật yêu cầu SketchUp mới hơn.' if year < info['min_sketchup_year'].to_i
                 if newer?(info['version'], VGD::Dim::VERSION)
                   @last_manifest = info

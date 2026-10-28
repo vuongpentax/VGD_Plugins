@@ -133,7 +133,7 @@ var VGD={
  onRebuild:function(r){
   this.onBusy(false);
   var t='Đã làm mới '+r.rebuilt+' Dimension'+(r.custom?' ('+r.custom+' cái giữ chữ ghi đè)':'')+'. Ctrl+Z để hoàn tác.',bad=false;
-  if(r.failed){t+='\nKhông làm mới được '+r.failed+' Dimension (giữ nguyên bản cũ).';bad=true}
+  if(r.failed){t+='\nKhông làm mới được '+r.failed+' Dimension (giữ nguyên bản cũ).'+(r.reason?' Lý do đầu tiên: '+r.reason:'');bad=true}
   if(r.skipped)t+='\nBỏ qua '+r.skipped+' Dimension bán kính.';
   this.log(t,bad);
  },

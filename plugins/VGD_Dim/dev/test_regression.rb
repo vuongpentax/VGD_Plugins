@@ -91,6 +91,84 @@ def run_regression_tests
   check.call(!watched.include?(dead) && watched.include?(live), 'Erased watched collection was not pruned')
   as.save(false, {})
 
+  # R9: another tool replacing Manual Dim or the region picker must re-enable the dialog, once.
+  sent = []
+  dialog = VGD::Dim::Dialog
+  dialog.define_singleton_method(:send_js) { |name, _data| sent << name }
+  view = Object.new; def view.invalidate; end
+  Sketchup.const_set(:InputPoint, Class.new) unless Sketchup.const_defined?(:InputPoint)
+  manual = VGD::Dim::ManualDim::Tool.new(VGD::Dim::Core.validate_settings({}))
+  manual.deactivate(view); manual.deactivate(view)
+  check.call(sent == ['onManualStatus'], 'Manual Dim did not notify the dialog exactly once when replaced')
+  sent.clear
+  picker = VGD::Dim::Regions::PickTool.new('boundary', 'b')
+  picker.deactivate(view); picker.deactivate(view)
+  check.call(sent == ['onRegionCancelled'], 'Region picker did not notify the dialog exactly once when replaced')
+  sent.clear
+  cancelled = VGD::Dim::Regions::PickTool.new('detail', 'd')
+  cancelled.onCancel(nil, view); cancelled.deactivate(view)
+  check.call(sent == ['onRegionCancelled'], 'Region picker reported Esc and replacement twice')
+  sent.clear
+  saved = VGD::Dim::Regions::PickTool.new('boundary', 'b'); saved.instance_variable_set(:@finished, true)
+  saved.deactivate(view)
+  check.call(sent.empty?, 'Region picker reported a cancel after it saved the region')
+  dialog.singleton_class.send(:remove_method, :send_js)
+
+  # R10: the manual Dim is styled with the manual settings; Auto-Style must be suspended while it is created.
+  m = Sketchup::FakeModel.new; Sketchup.active_model = m
+  depths = []
+  m.entities.define_singleton_method(:add_dimension_linear) do |*args|
+    depths << VGD::Dim::AutoStyle.instance_variable_get(:@depth)
+    super(*args)
+  end
+  manual.send(:create_dimension, Geom::Point3d.new(0, 0, 0), Geom::Point3d.new(100.mm, 0, 0), Geom::Vector3d.new(0, 50.mm, 0))
+  check.call(depths == [1] && VGD::Dim::AutoStyle.instance_variable_get(:@depth) == 0, 'Manual Dim ran without suspending Auto-Style')
+
+  # R11: the SketchUp year comes from Sketchup.version ("22.0.354"), not from version_number.
+  info = {'product_id' => 'vgd_dim', 'filename' => 'VGD_Dim_v9.9.9.rbz', 'version' => '9.9.9', 'channel' => 'stable',
+          'min_sketchup_year' => '2022', 'bytes' => 10, 'sha256' => 'a' * 64,
+          'download_url' => 'https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v9.9.9/VGD_Dim_v9.9.9.rbz'}
+  fake_client = Object.new
+  fake_client.define_singleton_method(:check) { |&callback| callback.call(200, JSON.generate(info)) }
+  results = {}
+  Sketchup.define_singleton_method(:platform) { :platform_win }
+  ['22.0.354', '21.1.332'].each do |version|
+    Sketchup.define_singleton_method(:version) { version }
+    updater = VGD::Dim::UpdateCore::Updater.new
+    updater.instance_variable_set(:@client, fake_client)
+    updater.check { |status, _value| results[version] = status }
+  end
+  Sketchup.define_singleton_method(:platform) { :platform_other }
+  check.call(results['22.0.354'] == :available, 'SketchUp 2022 was rejected by the minimum-year check')
+  check.call(results['21.1.332'] == :error, 'SketchUp 2021 passed the minimum-year check')
+
+  # R12: a refused second download must not free the running one, and a network error keeps its message.
+  Sketchup.const_set(:Http, Module.new) unless Sketchup.const_defined?(:Http)
+  Sketchup::Http.const_set(:GET, 'GET') unless Sketchup::Http.const_defined?(:GET)
+  pending_requests = []
+  http_request = Class.new do
+    attr_accessor :headers
+    define_method(:initialize) { |_url, _method| }
+    define_method(:start) { |&block| pending_requests << block }
+    define_method(:cancel) { }
+  end
+  Sketchup::Http.send(:remove_const, :Request) if Sketchup::Http.const_defined?(:Request, false)
+  Sketchup::Http.const_set(:Request, http_request)
+  client = VGD::Dim::UpdateCore::Client.new
+  body = 'x' * 10
+  package = {'download_url' => 'https://github.com/x/y', 'bytes' => 10, 'sha256' => Digest::SHA256.hexdigest(body)}
+  outcomes = []
+  client.download(package) { |status, value| outcomes << [status, value] }
+  client.download(package) { |status, value| outcomes << [status, value] }
+  check.call(outcomes == [[:error, 'Đang có yêu cầu cập nhật khác.']] && client.instance_variable_get(:@busy), 'Refused download cleared the busy flag')
+  response = Struct.new(:status_code, :body, :headers).new(200, body, {})
+  pending_requests.shift.call(nil, response)
+  check.call(outcomes.last == [:ok, body] && !client.instance_variable_get(:@busy), 'Download did not complete')
+  outcomes.clear
+  client.download(package) { |status, value| outcomes << [status, value] }
+  UI.drain
+  check.call(outcomes == [[:error, 'Hết thời gian chờ kết nối.']] && !client.instance_variable_get(:@busy), 'Timeout message was lost')
+
   # R3: changing a colour reuses one material instead of adding "#1" copies.
   m = Sketchup::FakeModel.new; Sketchup.active_model = m
   first = VGD::Dim::Engine.get_material(m, 'VGD_DIM_COLOR', '#112233')
@@ -111,5 +189,5 @@ def run_regression_tests
   m.selection.clear
   check.call(VGD::Dim::Engine.no_target_message(m).include?('trực tiếp'), 'empty selection message changed')
 
-  puts 'PASS: regression — region errors do not abort unstarted operations; Auto-Style binds after a closed model, ignores erased entities, does not rebind needlessly and can always be turned off'
+  puts 'PASS: regression — region errors do not abort unstarted operations; Auto-Style binds after a closed model, ignores erased entities, does not rebind needlessly and can always be turned off; tools re-enable the dialog, manual Dim suspends Auto-Style, updater year/busy/timeout'
 end
