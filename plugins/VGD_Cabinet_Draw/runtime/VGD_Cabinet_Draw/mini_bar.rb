@@ -13,7 +13,7 @@ module VGD_Cabinet_Draw
     GAP = 62           # khoảng cách giữa các vòng
     SHORT = {
       'Sửa tủ…' => 'Sửa', 'Chia cánh…' => 'Cánh', 'Thêm đợt / vách…' => 'Đợt', 'Thêm ngăn kéo…' => 'Kéo',
-      'Mở tất cả cánh…' => 'Mở', 'Đóng tất cả cánh' => 'Đóng', 'Đặt tay nắm tự động' => 'Nắm', 'Tìm tấm bị trùng' => 'Trùng',
+      'Cánh tự động theo hồi' => 'Tự chia', 'Mở tất cả cánh…' => 'Mở', 'Đóng tất cả cánh' => 'Đóng', 'Đặt tay nắm tự động' => 'Nắm', 'Tìm tấm bị trùng' => 'Trùng',
       'Chuẩn hóa tên ván' => 'Tên', 'Đổi loại tủ' => 'Loại', 'Nóc' => 'Nóc', 'Chân cao' => 'Chân', 'Chia nhanh' => 'Chia',
       'Tủ chậu rửa (bỏ hậu)' => 'Chậu', 'Xà treo' => 'Xà', 'Hông chạm đất' => 'Đất', 'Hông đụng trần' => 'Trần',
       'Thêm khoang ngăn kéo…' => 'Khoang', 'Mở cánh…' => 'Mở', 'Đóng cánh' => 'Đóng', 'Bản lề' => 'Lề', 'Đặt tay nắm' => 'Nắm',

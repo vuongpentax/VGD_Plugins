@@ -17,6 +17,24 @@ module VGD_Cabinet_Draw
       OPENING_TYPES.include?(value.to_s) ? value.to_s : 'none'
     end
 
+    # Vị trí chia cánh theo các vách (hồi) giữa. spans = [[x0, x1], ...] là bề rộng mặt trước của từng vách, cùng đơn vị với
+    # lo, hi (hai mép vùng cánh), gap_tolerance và min_cell. Mỗi vách chia cánh ở TIM mặt trước của nó. Các vách liền kề nhau
+    # (khe giữa không quá gap_tolerance) gộp thành một cụm và cánh chia ở GIỮA cả cụm. Bỏ vị trí quá sát mép hoặc quá sát nhau.
+    def self.partition_splits(spans, lo, hi, gap_tolerance = 2.0, min_cell = MIN_CELL_MM)
+      clusters = []
+      spans.map { |a, b| [a.to_f, b.to_f] }.sort.each do |a, b|
+        last = clusters.last
+        if last && a - last[1] <= gap_tolerance
+          last[1] = [last[1], b].max
+        else
+          clusters << [a, b]
+        end
+      end
+      splits = clusters.map { |a, b| ((a + b) / 2.0).round(6) }
+      splits = splits.select { |x| x - lo >= min_cell - 1e-6 && hi - x >= min_cell - 1e-6 }
+      splits.each_with_object([]) { |x, kept| kept << x if kept.empty? || x - kept.last >= min_cell - 1e-6 }
+    end
+
     class Layout
       attr_reader :regions, :width_mm, :height_mm
 
@@ -120,13 +138,16 @@ module VGD_Cabinet_Draw
 
       # Vị trí chia gợi ý trong vùng id theo trục axis từ toạ độ con trỏ (0..1 trên toàn mặt tủ).
       # Hút vào đường chia sẵn có nếu gần, ngược lại làm tròn tới 1 mm. nil nếu mỗi bên < MIN_CELL_MM.
-      def propose(id, axis, coordinate)
+      # marks: các vị trí hút phụ (0..1), ví dụ tim vách giữa; hút khi cách con trỏ không quá mark_snap_mm (ưu tiên hơn đường chia).
+      def propose(id, axis, coordinate, marks = [], mark_snap_mm = SNAP_MM)
         region = find(id)
         return nil unless region
         low, high = range_of(region, axis)
         span = span_mm(axis)
         mm = coordinate * span
-        near = edges(axis).select { |e| e > low + EPS && e < high - EPS && (e * span - mm).abs <= SNAP_MM }.min_by { |e| (e * span - mm).abs }
+        inside = ->(e) { e > low + EPS && e < high - EPS }
+        near = marks.map { |m| m.round(9) }.select { |e| inside.call(e) && (e * span - mm).abs <= mark_snap_mm }.min_by { |e| (e * span - mm).abs }
+        near ||= edges(axis).select { |e| inside.call(e) && (e * span - mm).abs <= SNAP_MM }.min_by { |e| (e * span - mm).abs }
         mm = near ? near * span : mm.round.to_f
         c = mm / span
         return nil unless (c - low) * span >= MIN_CELL_MM - 1e-6 && (high - c) * span >= MIN_CELL_MM - 1e-6
@@ -197,6 +218,21 @@ module VGD_Cabinet_Draw
         end
         @regions.concat(made)
         made
+      end
+
+      # Bỏ hết bố cục, chia toàn mặt tủ tại các vị trí cuts (0..1) theo trục axis. Vị trí sát mép hoặc sát nhau quá
+      # MIN_CELL_MM bị bỏ. Trả về các vùng mới.
+      def reset_at(axis, cuts)
+        span = span_mm(axis)
+        kept = []
+        cuts.map { |c| c.to_f.round(9) }.select { |c| c > EPS && c < 1 - EPS }.sort.each do |c|
+          kept << c if (c - (kept.last || 0.0)) * span >= MIN_CELL_MM - 1e-6 && (1.0 - c) * span >= MIN_CELL_MM - 1e-6
+        end
+        remember
+        edges = [0.0] + kept + [1.0]
+        @regions = edges.each_cons(2).map do |a, b|
+          axis.to_s == 'horizontal' ? new_region(0.0, 1.0, a, b) : new_region(a, b, 0.0, 1.0)
+        end
       end
 
       # Bỏ hết bố cục, chia đều toàn mặt tủ thành n vùng (n >= 1).

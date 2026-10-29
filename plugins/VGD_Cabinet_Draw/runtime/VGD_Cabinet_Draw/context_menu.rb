@@ -62,6 +62,7 @@ module VGD_Cabinet_Draw
       list = []
       list << item('Sửa tủ…', -> { launch('box') })
       list << item('Chia cánh…', -> { launch('door') })
+      list << item('Cánh tự động theo hồi', -> { auto_doors(roots) })
       list << item('Thêm đợt / vách…', -> { launch('panel') })
       list << item('Thêm ngăn kéo…', -> { launch('drawer') })
       list << { separator: true }
@@ -513,6 +514,31 @@ module VGD_Cabinet_Draw
       tool.save_layout!
       tool.apply_recess!
       tool.build_doors
+    end
+
+    # Tạo cánh tự động theo vách (hồi) giữa của từng tủ: cánh chia ở tim mặt trước vách, hai vách liền kề thì chia ở giữa.
+    # Một bước Undo; thay bố cục cánh hiện có của tủ.
+    def auto_doors(roots)
+      roots = roots.select(&:valid?)
+      return false if roots.empty?
+      in_operation('VGD Cabinet Draw — Cánh tự động theo hồi') do
+        roots.each do |root|
+          root.make_unique if root.respond_to?(:make_unique)
+          tool = Tools::DoorTool.new({})
+          raise 'Không dựng được cánh cho tủ này.' unless tool.load_cabinet(root)
+          tool.instance_variable_get(:@settings).merge!(Rebuild.settings_of(root).select { |key, _| %w[door_fit door_gap door_edge_gap door_inset_gap].include?(key) })
+          tool.auto_split_by_partitions
+          tool.save_layout!
+          tool.apply_recess!
+          tool.build_doors
+        end
+      end
+      reselect(roots)
+      Dialog.set_status('Đã tạo cánh tự động theo vách (hồi) giữa.')
+      true
+    rescue StandardError => e
+      UI.messagebox("Không tạo được cánh tự động:\n#{e.message}")
+      false
     end
 
     def split_two_doors(root)

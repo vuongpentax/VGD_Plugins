@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.60
+# VGD_Cabinet Draw 1.0.0-beta.61
+
+beta.61: tự chia cánh theo vách (hồi) giữa (phím A, gõ a, hoặc menu "Cánh tự động theo hồi"): cánh chia ở tim mặt trước vách, hai vách liền kề thì chia ở giữa hai vách, chỉ tính vách cao suốt lòng tủ, vẫn chia tay được. Khi chia tay, vạch chia hút vào tim vách (ngưỡng theo pixel màn hình) và có đường mảnh báo điểm hút. Số "rộng x cao" trong từng vùng cánh hiện như chia tấm (mặc định bật, tùy chọn door_show_dims). Alt rồi gõ số (hoặc gõ k5) = khe giữa hai cánh. Chưa xác minh trong SketchUp thật.
 
 beta.60: "Mở cánh…" trong mini bar/menu dùng công cụ rê chuột (như trong bảng Setting); cánh bản lề trái mở khi rê chuột sang trái (bản lề phải sang phải); cánh phủ thì ván chân lùi bằng hông (thẳng mặt trước hông); xóa hết cánh rồi tạo lại được (vùng chia mới luôn có cánh, mở công cụ khi mọi vùng trống thì bắt đầu bố cục mới, chọn 1 vùng trống rồi G để tạo lại cánh). Chưa xác minh trong SketchUp thật.
 

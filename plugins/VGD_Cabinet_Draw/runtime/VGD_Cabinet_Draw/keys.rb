@@ -61,6 +61,12 @@ module VGD_Cabinet_Draw
       key == code
     end
 
+    # Phím Alt (Command trên Mac) được nhấn: mã phím trong onKeyDown/onKeyUp.
+    def alt_key?(key)
+      code = defined?(ALT_MODIFIER_KEY) ? ALT_MODIFIER_KEY : (windows? ? 18 : 55)
+      key == code
+    end
+
     # Alt trên Windows, Command trên Mac (ALT_MODIFIER_MASK).
     def alt?(flags)
       defined?(ALT_MODIFIER_MASK) ? (flags.to_i & ALT_MODIFIER_MASK) != 0 : false

@@ -93,7 +93,7 @@ module VGD_Cabinet_Draw
           { key: 'door_inset_gap', label: 'Khe mép (cánh lọt)', type: :mm, min: 0, max: 30 },
           { key: 'door_style', label: 'Kiểu cánh', type: :enum, options: [['flat', 'Phẳng'], ['shaker', 'Shaker'], ['recessed', 'Panel âm'], ['glass', 'Khung kính']] },
           BOARD.merge(label: 'Dày cánh / ván'),
-          { key: 'show_dims', label: 'Hiện kích thước', type: :bool }
+          { key: 'door_show_dims', label: 'Hiện kích thước', type: :bool }
         ]
       },
       'opening' => {

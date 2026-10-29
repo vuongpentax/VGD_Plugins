@@ -322,5 +322,20 @@ m = FakeMenu.new; V::ContextMenu.populate_tool(m, bt)
 check 'công cụ Đợt/vách chỉ có mục Setting', m.dig('VGD Cabinet').labels == ['Mở bảng Setting'], m.dig('VGD Cabinet').labels.inspect
 V.instance_variable_set(:@active_tool, nil)
 
+puts '== 12. Cánh tự động theo hồi (menu) =='
+cab = new_cabinet('standard', 1200, 500, 2000)
+sh = V::Geometry.shell_for(cab)
+inner = V::Interior.inner(sh)
+op = { 'type' => 'panel', 'axis' => 'vertical', 'kind' => 'thong_thuy', 'thickness_mm' => 17.5, 'limit' => false,
+       'anchor' => V::Rebuild.anchor_of(sh, (inner.x0 + inner.x1) / 2, (inner.z0 + inner.z1) / 2),
+       'setback_mm' => 0.0, 'door_fit' => 'phu', 'mode' => 'free', 'offsets' => [382.5] }
+op['op'] = V::Rebuild.record(cab, op)
+V::Rebuild.place_panels(cab, sh, op)
+Sketchup.active_model.selection.clear; Sketchup.active_model.selection.add(cab)
+m, _ = menu_for_selection
+check 'menu tủ có Cánh tự động theo hồi', m.dig('VGD Cabinet').labels.include?('Cánh tự động theo hồi'), m.dig('VGD Cabinet').labels.inspect
+m.dig('VGD Cabinet').find('Cánh tự động theo hồi')[:block].call
+check 'Cánh tự động theo hồi: 2 cánh theo 1 vách', V::Operations.doors_of(cab).length == 2, V::Operations.doors_of(cab).length.to_s
+
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.size}"
 exit($fail.empty? ? 0 : 1)

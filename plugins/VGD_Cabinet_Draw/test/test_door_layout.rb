@@ -163,5 +163,39 @@ check 'vùng chồng nhau -> về bố cục đơn', L::Layout.from_h(bad).regio
 check 'dữ liệu rỗng / sai kiểu -> bố cục đơn', L::Layout.from_h(nil).regions.length == 1 && L::Layout.from_h({}).regions.length == 1 && L::Layout.from_h('x').regions.length == 1
 check 'vùng thiếu một khoảng -> về bố cục đơn', L::Layout.from_h({ 'schema' => 2, 'regions' => [{ 'id' => 1, 'u0' => 0, 'u1' => 0.5, 'v0' => 0, 'v1' => 1 }] }).regions.length == 1
 
+puts '== 12. Tự chia theo vách giữa: cánh chia tại tim mặt trước vách =='
+check 'một vách: chia ở tim vách', L.partition_splits([[300.0, 320.0]], 0.0, 1000.0) == [310.0], L.partition_splits([[300.0, 320.0]], 0.0, 1000.0).inspect
+check 'hai vách liền kề: chia ở giữa hai vách', L.partition_splits([[300.0, 320.0], [320.0, 340.0]], 0.0, 1000.0) == [320.0], L.partition_splits([[300.0, 320.0], [320.0, 340.0]], 0.0, 1000.0).inspect
+check 'hai vách cách xa: mỗi vách một chỗ chia (sắp tăng dần)', L.partition_splits([[600.0, 620.0], [200.0, 220.0]], 0.0, 1000.0) == [210.0, 610.0]
+check 'vách sát mép (dưới 20 mm) bị bỏ', L.partition_splits([[5.0, 25.0]], 0.0, 1000.0).empty?
+check 'khe 1 mm giữa hai vách vẫn tính liền kề', L.partition_splits([[300.0, 320.0], [321.0, 341.0]], 0.0, 1000.0, 2.0) == [320.5]
+check 'không có vách: không chia', L.partition_splits([], 0.0, 1000.0).empty?
+l = L::Layout.new(1000, 2000)
+regions = l.reset_at('vertical', [0.31, 0.61])
+check 'reset_at: 3 vùng ghép đúng', regions.length == 3 && tiled?(l), regions.length.to_s
+check 'reset_at: bỏ điểm chia sát nhau (dưới 20 mm)', l.reset_at('vertical', [0.5, 0.505]).length == 2
+check 'reset_at: không có điểm chia thì một vùng', l.reset_at('vertical', []).length == 1
+check 'reset_at: bước hoàn tác được', (l.reset_at('vertical', [0.25]); l.undo; l.regions.length == 1)
+l = L::Layout.new(1000, 2000)
+id = l.regions.first['id']
+check 'propose hút vào điểm phụ (tim vách) khi đủ gần', l.propose(id, 'vertical', 0.3125, [0.31], 10.0) == 0.31, l.propose(id, 'vertical', 0.3125, [0.31], 10.0).inspect
+check 'propose không hút khi xa hơn ngưỡng', l.propose(id, 'vertical', 0.33, [0.31], 10.0) == 0.33, l.propose(id, 'vertical', 0.33, [0.31], 10.0).inspect
+check 'propose ngưỡng hút theo tham số (xa hơn 6 mm vẫn hút)', l.propose(id, 'vertical', 0.318, [0.31], 10.0) == 0.31
+
+puts '== 13. Xóa cánh rồi tạo lại: vùng mới có cánh, gộp 1 vùng trống để tạo lại =='
+l = L::Layout.new(1000, 2000)
+rid = l.regions.first['id']
+l.regions.first['empty'] = true
+check 'tất cả vùng trống', l.all_empty?
+a, b = l.split(rid, 'vertical', 0.5)
+check 'chia vùng trống: hai vùng mới đều có cánh', !a['empty'] && !b['empty'] && !l.all_empty?
+l = L::Layout.new(1000, 2000)
+l.split_even(l.regions.first['id'], 'vertical', 2)
+l.regions.first['empty'] = true
+empty_id = l.regions.first['id']
+l.merge([empty_id])
+check 'merge một vùng trống: tạo lại cánh', !l.find(empty_id)['empty']
+check 'merge một vùng có cánh: vẫn báo lỗi', raises? { l.merge([l.regions.last['id']]) }.to_s.include?('ít nhất 2')
+
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.length}"
 exit($fail.empty? ? 0 : 1)

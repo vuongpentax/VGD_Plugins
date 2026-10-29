@@ -137,10 +137,12 @@ check 'Esc khi đang chờ gõ: KHÔNG thoát công cụ', Sketchup.active_model
 dt.onCancel(0, v)
 check 'Esc lần hai mới thoát công cụ', Sketchup.active_model.tool.nil?
 Sketchup.active_model.select_tool(dt)
-press(dt, :param, 'show_dims')
-check 'bấm hàng bật/tắt đảo giá trị', dt.settings['show_dims'] == true
-labels = dt.instance_variable_get(:@preview).instance_variable_get(:@labels)
-check 'bật hiện kích thước thì có nhãn', labels.length >= 1 && labels.first[1] =~ /1200 × 2000/, labels.inspect
+check 'mặc định hiện kích thước từng cánh', dt.settings['door_show_dims'] == true
+boxes = dt.instance_variable_get(:@preview).text_boxes
+check 'có khung chữ rộng x cao trong vùng cánh (như chia tấm)', boxes.length >= 1 && boxes.first[:text] =~ /1200 x 2000/, boxes.map { |b| b[:text] }.inspect
+press(dt, :param, 'door_show_dims')
+check 'bấm hàng bật/tắt đảo giá trị', dt.settings['door_show_dims'] == false
+check 'tắt hiện kích thước thì không có khung chữ', dt.instance_variable_get(:@preview).text_boxes.empty?
 press(dt, :param, 'split_axis')
 check 'bấm hàng danh sách đổi vòng', dt.settings['split_axis'] == 'horizontal'
 press(dt, :param, 'door_style')
