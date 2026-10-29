@@ -582,6 +582,7 @@ module VGD_Cabinet_Draw
     def stretch(root)
       # Tách các nhóm dùng chung định nghĩa (tủ copy) trước khi đọc hay sửa, để không đổi lây sang bản copy khác.
       make_unique_tree(root)
+      ensure_unshared!(root)
       dims = dimensions_of(root)
       settings = settings_of(root)
       old_dims = ModelData.params(root).values_at('width_mm', 'depth_mm', 'height_mm').map(&:to_f)
@@ -1033,14 +1034,51 @@ module VGD_Cabinet_Draw
       probe
     end
 
-    # Tủ copy bằng Ctrl+Move dùng chung định nghĩa với bản gốc: tách riêng tủ và các nhóm con trực tiếp
-    # (thùng tủ, Cánh, Ngăn kéo, Chân & phào) trước khi sửa, để không sửa lây sang các bản copy khác.
+    # Tủ copy bằng Ctrl+Move dùng chung định nghĩa với bản gốc ở MỌI tầng (tủ, thùng tủ, các tấm, nhóm con trong tấm).
+    # Sửa tại chỗ (co giãn tủ) đổi hình của tấm, nên phải tách riêng tất cả trước khi sửa, để không làm hỏng tủ copy khác.
     def make_unique_tree(root)
-      root.make_unique if root.respond_to?(:make_unique)
-      root.definition.entities.to_a.each do |child|
-        next unless child.is_a?(Sketchup::Group) && child.valid?
-        child.make_unique if child.respond_to?(:make_unique)
+      make_unique_entity(root)
+      make_unique_children(root)
+    end
+
+    def make_unique_children(parent)
+      containers = parent.definition.entities.to_a.select { |e| e.valid? && (e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)) }
+      containers.each { |child| make_unique_entity(child) }
+      # Tách xong mới đọc lại danh sách con (make_unique có thể đổi đối tượng) rồi đi xuống tầng dưới.
+      parent.definition.entities.to_a.each do |child|
+        make_unique_children(child) if child.valid? && (child.is_a?(Sketchup::Group) || child.is_a?(Sketchup::ComponentInstance))
       end
+    end
+
+    def make_unique_entity(entity)
+      entity.make_unique if entity.respond_to?(:make_unique)
+    end
+
+    # Sau khi tách, không còn group/component nào dùng chung định nghĩa với đối tượng NGOÀI tủ này (dùng chung giữa các
+    # group trong cùng tủ thì không sao). Nếu SketchUp không tách được thì dừng, vì sửa tại chỗ sẽ làm hỏng cả tủ copy kia.
+    def ensure_unshared!(root)
+      inside = Hash.new(0)
+      entries = []
+      walk = lambda do |entity|
+        definition = entity.definition
+        inside[definition_key(definition)] += 1
+        entries << entity
+        definition.entities.to_a.each do |child|
+          walk.call(child) if child.valid? && (child.is_a?(Sketchup::Group) || child.is_a?(Sketchup::ComponentInstance))
+        end
+      end
+      walk.call(root)
+      shared = entries.select do |entity|
+        definition = entity.definition
+        definition.respond_to?(:count_instances) && definition.count_instances > inside[definition_key(definition)]
+      end
+      return if shared.empty?
+      raise "Tủ này là bản copy dùng chung dữ liệu với tủ khác và chưa tách riêng được (#{shared.map { |e| e.name.to_s }.first(3).join(', ')}). " \
+            'Hãy chọn tủ, bấm chuột phải → Make Unique rồi thử lại.'
+    end
+
+    def definition_key(definition)
+      definition.respond_to?(:entityID) ? definition.entityID : definition.object_id
     end
 
     def replay(root, shell, op, skip)

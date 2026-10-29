@@ -442,5 +442,39 @@ faces = g.entities.grep(Sketchup::Face)
 pts = faces.flat_map { |f| f.vertices.map { |vx| [vx.position.y.to_mm.round(1), vx.position.z.to_mm.round(1)] } }.uniq.sort
 check 'lệch khi dời đỉnh: dựng lại từ kế hoạch, không báo lỗi', err.nil? && faces.length == 1 && pts == [[0.0, 0.0], [0.0, 500.0], [300.0, 0.0], [300.0, 500.0]], [err, pts].inspect
 
+puts '== 15. Tủ copy dùng chung dữ liệu: tách riêng mọi tầng trước khi sửa tại chỗ =='
+c = cab
+part(c, 'Nóc').entities.add_group
+all_groups = [c]
+collect = lambda do |group|
+  group.entities.to_a.each do |child|
+    next unless child.is_a?(Sketchup::Group)
+    all_groups << child
+    collect.call(child)
+  end
+end
+collect.call(c)
+made_unique = []
+all_groups.each { |g| g.define_singleton_method(:make_unique) { made_unique << self; self } }
+V::Rebuild.make_unique_tree(c)
+missing = all_groups.reject { |g| made_unique.include?(g) }.map(&:name)
+check 'make_unique_tree tách riêng mọi tầng (tủ, thùng tủ, các tấm, nhóm con trong tấm)', missing.empty?, missing.inspect
+
+# Nếu sau khi tách vẫn còn dùng chung với tủ khác thì dừng, không sửa đè tủ kia.
+c = cab
+nong = part(c, 'Nóc')
+nong.define_singleton_method(:definition) do
+  d = super()
+  d.define_singleton_method(:count_instances) { 2 }
+  d
+end
+err = begin
+  V::Rebuild.ensure_unshared!(c)
+  nil
+rescue StandardError => e
+  e.message
+end
+check 'còn dùng chung với tủ khác: báo lỗi rõ, không sửa', err.to_s.include?('dùng chung'), err.inspect
+
 puts "\n== Kết quả test_stretch: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
 $fail.each { |x| puts "  - #{x}" }

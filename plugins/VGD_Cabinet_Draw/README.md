@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.58
+# VGD_Cabinet Draw 1.0.0-beta.59
+
+beta.59: tủ copy không còn bị hỏng khi scale tủ gốc: tách riêng mọi tầng (tủ, thùng tủ, các tấm, nhóm con trong tấm) trước khi sửa tại chỗ. Nếu sau khi tách vẫn còn dùng chung với tủ khác thì dừng và báo (Make Unique), không sửa đè. Chưa xác minh trong SketchUp thật.
 
 beta.58: khi SketchUp tự chỉnh lệch đỉnh lúc dời (hình cung của mộng bị kéo ra xa), tấm được dựng lại từ vị trí kế hoạch đã lưu (mặt, lỗ, cạnh, vật liệu, thuộc tính được giữ; đường cong cung thành đa giác, đối tượng dựng điểm/đường dựng hình không được dựng lại). Không dựng lại được thì hoàn tác và báo lỗi. Chưa xác minh trong SketchUp thật.
 
