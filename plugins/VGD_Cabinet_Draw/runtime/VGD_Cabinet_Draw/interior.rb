@@ -206,6 +206,8 @@ module VGD_Cabinet_Draw
       else
         out['side_left'] = t if cover_left
         out['side_right'] = t if cover_right
+        # Cánh phủ hông thì hông lùi t; ván chân lùi bằng hông để mặt trước hai bên thẳng hàng.
+        out['toe'] = t if cover_left || cover_right
       end
       out
     end

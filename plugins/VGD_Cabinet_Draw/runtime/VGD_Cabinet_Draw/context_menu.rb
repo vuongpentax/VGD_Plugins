@@ -190,7 +190,7 @@ module VGD_Cabinet_Draw
       current = doors.map { |door| Operations.opening_type_of(door) }.uniq
       hinges = [['Bản lề trái', 'left'], ['Bản lề phải', 'right'], ['Lật lên (bản lề trên)', 'top'], ['Lật xuống (bản lề dưới)', 'bottom']]
       [
-        item('Mở cánh…', -> { open_doors_prompt(doors) }),
+        item('Mở cánh…', -> { start_open_tool(doors) }),
         item('Đóng cánh', -> { close_doors(doors) }),
         { separator: true },
         { label: 'Bản lề', items: hinges.map { |name, type| item(name, -> { set_hinge(doors, type) }, checked: current == [type]) } },
@@ -579,6 +579,16 @@ module VGD_Cabinet_Draw
       return unless angle
       doors = roots.flat_map { |root| Operations.doors_of(root) }
       open_doors(doors, angle, 'Mở tất cả cánh')
+    end
+
+    # Mở cánh bằng công cụ rê chuột (như trong bảng Setting): chọn các cánh rồi bật công cụ, mỗi cánh một góc.
+    def start_open_tool(doors)
+      doors = doors.select(&:valid?)
+      return Dialog.set_status('Không có cánh nào để mở.') if doors.empty?
+      selection = Sketchup.active_model.selection
+      selection.clear
+      doors.each { |door| selection.add(door) }
+      VGD_Cabinet_Draw.launch_tool('opening')
     end
 
     def open_doors_prompt(doors)

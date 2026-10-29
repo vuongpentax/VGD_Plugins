@@ -1751,6 +1751,8 @@ module VGD_Cabinet_Draw
         @settings.merge!(saved['settings']) if saved['settings'].is_a?(Hash)
         a = area(bounds)
         @layout = DoorLayout::Layout.from_h(saved, (a[:x1] - a[:x0]).to_mm, (a[:z1] - a[:z0]).to_mm)
+        # Mở công cụ khi đã xóa hết cánh (mọi vùng trống): bắt đầu bố cục mới để tạo lại cánh được. Dựng lại tủ từ dữ liệu đã lưu thì giữ vùng trống.
+        @layout = DoorLayout::Layout.new((a[:x1] - a[:x0]).to_mm, (a[:z1] - a[:z0]).to_mm) if @interactive && @layout.all_empty?
         @selected = []
         reset_hover
         note_cabinet
@@ -2254,6 +2256,7 @@ module VGD_Cabinet_Draw
       def hud_write(key, value)
         if key == 'hinge_side'
           @hinge_side = value
+          @ref_x = nil
         else
           @settings[key] = value
         end
@@ -2337,14 +2340,22 @@ module VGD_Cabinet_Draw
         @parent_transforms[entity] = found[1] if found
         @hover_door = entity
         unless @targets.empty?
-          @ref_x ||= x - @angle * PIXELS_PER_DEGREE
-          angle = (x - @ref_x) / PIXELS_PER_DEGREE
+          direction = drag_direction
+          @ref_x ||= x - direction * @angle * PIXELS_PER_DEGREE
+          angle = direction * (x - @ref_x) / PIXELS_PER_DEGREE
           angle = (angle / 15.0).round * 15.0 if Keys.shift?(flags)
           @angle = [[angle, 0.0].max, MAX_ANGLE].min
           show_angle
         end
         rebuild_preview
         view.invalidate
+      end
+
+      # Hướng rê chuột để mở: bản lề trái mở khi rê sang trái (con trỏ đi theo mép tự do của cánh, vì nhìn từ trước mép đó chạy
+      # sang trái khi cánh mở ra); các bản lề còn lại mở khi rê sang phải.
+      def drag_direction
+        first = @targets.find(&:valid?)
+        (first ? side_for(first) : hinge_side) == 'left' ? -1.0 : 1.0
       end
 
       def show_angle
@@ -2425,6 +2436,7 @@ module VGD_Cabinet_Draw
       def onKeyDown(key, repeat, flags, view)
         if Keys.tab?(key)
           @hinge_side = SIDE_ORDER[(SIDE_ORDER.index(hinge_side).to_i + 1) % SIDE_ORDER.length]
+          @ref_x = nil
           Dialog.set_status("Bản lề: #{SIDE_NAMES[hinge_side]} (chỉ áp dụng cho cánh đang đóng).")
           rebuild_preview
           view.invalidate

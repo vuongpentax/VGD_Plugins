@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.59
+# VGD_Cabinet Draw 1.0.0-beta.60
+
+beta.60: "Mở cánh…" trong mini bar/menu dùng công cụ rê chuột (như trong bảng Setting); cánh bản lề trái mở khi rê chuột sang trái (bản lề phải sang phải); cánh phủ thì ván chân lùi bằng hông (thẳng mặt trước hông); xóa hết cánh rồi tạo lại được (vùng chia mới luôn có cánh, mở công cụ khi mọi vùng trống thì bắt đầu bố cục mới, chọn 1 vùng trống rồi G để tạo lại cánh). Chưa xác minh trong SketchUp thật.
 
 beta.59: tủ copy không còn bị hỏng khi scale tủ gốc: tách riêng mọi tầng (tủ, thùng tủ, các tấm, nhóm con trong tấm) trước khi sửa tại chỗ. Nếu sau khi tách vẫn còn dùng chung với tủ khác thì dừng và báo (Make Unique), không sửa đè. Chưa xác minh trong SketchUp thật.
 

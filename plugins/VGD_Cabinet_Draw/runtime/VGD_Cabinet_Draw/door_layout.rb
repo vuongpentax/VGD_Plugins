@@ -89,6 +89,11 @@ module VGD_Cabinet_Draw
         @regions.map { |r| r['id'] }
       end
 
+      # Mọi vùng đều đã xóa cánh (không còn cánh nào).
+      def all_empty?
+        @regions.all? { |r| r['empty'] }
+      end
+
       def find(id)
         @regions.find { |r| r['id'] == id }
       end
@@ -144,6 +149,9 @@ module VGD_Cabinet_Draw
         b['id'] = take_id
         a['opening_type'] = 'none'
         b['opening_type'] = 'none'
+        # Vùng mới do người dùng chia ra luôn có cánh, kể cả khi vùng gốc đã xóa cánh (trống).
+        a.delete('empty')
+        b.delete('empty')
         if axis.to_s == 'horizontal'
           a['v1'] = c
           b['v0'] = c
@@ -181,6 +189,7 @@ module VGD_Cabinet_Draw
           r = region.dup
           r['id'] = take_id
           r['opening_type'] = 'none'
+          r.delete('empty')
           a = (low + (high - low) * i / n).round(9)
           b = i == n - 1 ? high : (low + (high - low) * (i + 1) / n).round(9)
           axis.to_s == 'horizontal' ? r.merge!('v0' => a, 'v1' => b) : r.merge!('u0' => a, 'u1' => b)
@@ -208,7 +217,14 @@ module VGD_Cabinet_Draw
       # Gộp các vùng thành một. Các vùng phải ghép thành hình chữ nhật. Trả về vùng mới.
       def merge(list)
         list = list.uniq
-        raise ArgumentError, 'Chọn ít nhất 2 vùng để gộp.' if list.length < 2
+        # Một vùng trống được chọn riêng: "gộp" nghĩa là tạo lại cánh cho vùng đó.
+        only = list.length == 1 ? find(list.first) : nil
+        if only && only['empty']
+          remember
+          only.delete('empty')
+          return only
+        end
+        raise ArgumentError, 'Chọn ít nhất 2 vùng để gộp (hoặc 1 vùng trống để tạo lại cánh).' if list.length < 2
         chosen = list.map { |id| find(id) or raise ArgumentError, 'Có vùng đã chọn không còn tồn tại.' }
         u0 = chosen.map { |r| r['u0'] }.min
         u1 = chosen.map { |r| r['u1'] }.max

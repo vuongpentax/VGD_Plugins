@@ -106,5 +106,27 @@ V::Removal.remove_members(c, [part_b]); Sketchup.active_model.commit_operation
 shelf = parts_named(c, 'Đợt').first
 check 'xóa vách bên phải: đợt nở tới vách còn lại (317.5..782.5), không nở tới hông trái', shelf && near(bb(shelf)[0], 317.5) && near(bb(shelf)[3], 782.5), shelf && bb(shelf).inspect
 
+puts '== 4b. Xóa hết cánh rồi tạo lại cánh bằng công cụ Cánh =='
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+reselect(c)
+dt = V::Tools::DoorTool.new({}); dt.activate
+dt.commit(v)
+check 'trước: 1 cánh', doors_sorted(c).length == 1, doors_sorted(c).length.to_s
+Sketchup.active_model.start_operation('t', true)
+V::Removal.remove_doors(c, doors_sorted(c)); Sketchup.active_model.commit_operation
+check 'xóa hết: không còn cánh', doors_sorted(c).empty?
+reselect(c)
+dt2 = V::Tools::DoorTool.new({}); dt2.activate
+dt2.layout.split(dt2.layout.regions.first['id'], 'vertical', 0.5)
+dt2.commit(v)
+check 'tạo lại sau khi xóa hết: có 2 cánh', doors_sorted(c).length == 2, doors_sorted(c).length.to_s
+# Mở công cụ khi mọi vùng đang trống: bắt đầu bố cục mới, Enter tạo lại cánh.
+Sketchup.active_model.start_operation('t', true)
+V::Removal.remove_doors(c, doors_sorted(c)); Sketchup.active_model.commit_operation
+reselect(c)
+dt3 = V::Tools::DoorTool.new({}); dt3.activate
+dt3.commit(v)
+check 'mọi vùng trống: mở công cụ rồi Enter tạo lại được cánh', doors_sorted(c).length >= 1, doors_sorted(c).length.to_s
+
 puts "\n== Kết quả test_removal: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
 $fail.each { |x| puts "  - #{x}" }

@@ -244,8 +244,11 @@ check 'chọn cánh: có menu', shown
 dl = m.dig('VGD Cabinet').labels
 check 'menu cánh: mở/đóng/bản lề/tay nắm', ['Mở cánh…', 'Đóng cánh', 'Bản lề', 'Đặt tay nắm', 'Xóa tay nắm'].all? { |l| dl.include?(l) }, dl.inspect
 check 'menu cánh: không có lệnh của tủ', !dl.include?('Đổi loại tủ')
-cm.angle_answer = 90.0
 m.dig('VGD Cabinet').find('Mở cánh…')[:block].call
+open_tool = Sketchup.active_model.instance_variable_get(:@tool)
+check 'Mở cánh…: bật công cụ mở cánh rê chuột với cánh đang chọn', open_tool.is_a?(V::Tools::OpeningTool) && open_tool.instance_variable_get(:@targets).include?(doors.first), open_tool.class.to_s
+Sketchup.active_model.select_tool(nil)
+cm.open_doors(doors, 90.0, 'Mở cánh')
 check 'mở cánh 90°', V::Operations.door_angle(doors.first) == 90.0, V::Operations.door_angle(doors.first)
 m.dig('VGD Cabinet').find('Đóng cánh')[:block].call
 check 'đóng cánh', V::Operations.door_angle(doors.first) == 0.0
