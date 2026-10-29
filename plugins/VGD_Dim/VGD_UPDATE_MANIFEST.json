@@ -1,11 +1,11 @@
 {
   "product_id": "vgd_dim",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "channel": "stable",
   "min_sketchup_year": "2022",
-  "filename": "VGD_Dim_v4.0.0.rbz",
-  "bytes": 53862,
-  "sha256": "2324032ff05afe4d37737dbf87e72679d49b69bbf70addce78e8608e2dc66564",
-  "download_url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v4.0.0/VGD_Dim_v4.0.0.rbz",
-  "changelog": "VGD Dim 4.0.0: giao diện dùng theme chung; sửa lỗi crash khi rebuild Dim; Auto-Style nhẹ hơn, không tạo vật liệu trùng; không hiện popup cập nhật khi khởi động (VGD Center báo bản mới)."
+  "filename": "VGD_Dim_v4.0.1.rbz",
+  "bytes": 93502,
+  "sha256": "58d360563f94960d3f0fb453dc04bae3cdfe8d0ddbd31f577ad8eb5efc7e84ba",
+  "download_url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v4.0.1/VGD_Dim_v4.0.1.rbz",
+  "changelog": "VGD Dim 4.0.1: sửa gói cài thiếu thư mục giao diện; Auto-Style không còn lỗi \"deleted\" và đỡ lag khi dùng cùng lệnh Offset; Dim thủ công không bị ghi đè style; dialog không bị khóa khi đổi công cụ; sửa trình cập nhật."
 }

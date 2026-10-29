@@ -3,6 +3,7 @@ module VGD
   module Dim
     module AutoStyle
       extend self
+      PRUNE_MIN = 256 # Watched collections tolerated before the first prune; keeps small models free of API calls.
       def load
         data=Store.read('auto',{})
         return {'enabled'=>false,'settings'=>Core.validate_settings({})} unless data.is_a?(Hash)
@@ -12,9 +13,24 @@ module VGD
       end
       def save(enabled,settings)
         raise ArgumentError, 'Auto-Style phải là bật/tắt.' unless [true,false].include?(enabled)
-        Store.write('auto',{'enabled'=>enabled,'settings'=>Core.validate_settings(settings)})
+        Store.write('auto',{'enabled'=>enabled,'settings'=>settings_to_save(enabled,settings)})
         @config=load
-        enabled ? bind(Sketchup.active_model) : detach
+        if enabled
+          # Editing the form saves again; rebinding walks every definition, so only bind when needed.
+          bind(Sketchup.active_model) unless bound_to?(Sketchup.active_model)
+        else
+          detach
+        end
+      end
+      # Turning Auto-Style off must work even when the form holds a value that no longer validates.
+      def settings_to_save(enabled,settings)
+        Core.validate_settings(settings)
+      rescue ArgumentError
+        raise if enabled
+        load['settings']
+      end
+      def bound_to?(model)
+        !@model.nil? && !@entity_observer.nil? && model.equal?(@model)
       end
       def suspend
         @depth=(@depth || 0)+1
@@ -27,26 +43,37 @@ module VGD
         @timer=nil; @queue=[]
       end
       def watch(entities)
+        return unless @model && @entity_observer
         @watched ||= []
         return if @watched.include?(entities)
-        prune_watched
+        prune_watched if @watched.length >= (@prune_at || PRUNE_MIN)
+        attach(entities)
+      end
+      def attach(entities)
         entities.add_observer(@entity_observer)
         @watched << entities
       end
       # Forget collections whose owning group was erased; their observers go with them.
       # Without this the list grows with every group ever added in the session.
+      # Pruning calls the API once per collection, so it only runs when the list has doubled.
       def prune_watched
-        @watched.reject! do |known|
-          owner = (known.parent rescue nil)
-          owner.respond_to?(:valid?) && !owner.valid?
-        end
+        @watched.select! { |known| owner_alive?(known) }
+        @prune_at = [@watched.length * 2, PRUNE_MIN].max
+      end
+      # An erased group or component makes `parent` raise TypeError.
+      def owner_alive?(entities)
+        owner = entities.parent
+        !owner.respond_to?(:valid?) || owner.valid?
+      rescue TypeError
+        false
       end
       def bind(model)
         detach
         return unless model && @config && @config['enabled']
         @model=model; @entity_observer=EntityWatch.new; @model_observer=ModelWatch.new; @definition_observer=DefinitionWatch.new
-        watch(model.entities)
-        model.definitions.each { |definition| watch(definition.entities) }
+        @watched=[]; @prune_at=nil
+        attach(model.entities)
+        model.definitions.each { |definition| attach(definition.entities) }
         model.add_observer(@model_observer)
         model.definitions.add_observer(@definition_observer)
       end
@@ -59,7 +86,7 @@ module VGD
           detach_quietly { @model.remove_observer(@model_observer) } if @model_observer
           detach_quietly { @model.definitions.remove_observer(@definition_observer) } if @definition_observer
         end
-        @watched=[]; @model=nil
+        @watched=[]; @prune_at=nil; @model=nil
       end
       def detach_quietly
         yield
@@ -80,12 +107,19 @@ module VGD
         @app_registered=false
       end
       def added(entity)
+        # SketchUp reports additions after the operation commits, so an entity that another
+        # command added and erased inside it (for example a temporary group) is already deleted.
+        return unless entity.valid?
         if entity.is_a?(Sketchup::Group) || entity.is_a?(Sketchup::ComponentInstance)
           watch(entity.definition.entities)
         end
         return if (@depth || 0)>0 || !@config || !@config['enabled'] || !Core.kind(entity)
         @queue ||= []; @queue << entity unless @queue.include?(entity)
         @timer ||= UI.start_timer(0,false) { @timer=nil; flush }
+      end
+      def watch_definition(definition)
+        return unless definition.valid? # Erased inside the same operation that created it.
+        watch(definition.entities)
       end
       def flush
         targets=@queue || []; @queue=[]
@@ -112,7 +146,7 @@ module VGD
         def onElementAdded(_entities,entity); AutoStyle.added(entity); end
       end
       class DefinitionWatch < Sketchup::DefinitionsObserver
-        def onComponentAdded(_definitions,definition); AutoStyle.watch(definition.entities); end
+        def onComponentAdded(_definitions,definition); AutoStyle.watch_definition(definition); end
       end
       class ModelWatch < Sketchup::ModelObserver
         def onTransactionUndo(_model); AutoStyle.clear_queue; end

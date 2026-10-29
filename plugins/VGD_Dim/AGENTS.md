@@ -13,6 +13,6 @@ Yêu cầu mới ngày 2026-10-07: tiếp tục VGD_Dim_6.rbz, sidebar, mặt c�
 - Preset và Auto-Style lưu cục bộ. Auto mặc định tắt, observers phải trì hoãn setters, suspend khi thao tác manual, tắt/reload dọn observers/timers, không cản Undo.
 - Units tách hoàn toàn khỏi STYLE/Core.run/preset, chỉ apply_units_model từ nút riêng. Mở numeric text mặc định tắt. Animation không có Undo; không hứa Undo Scene/Options nếu chưa kiểm chứng native.
 - Không popup hoàn tất; lỗi/kết quả inline. Không nạp dev/claude_reference vào runtime.
-- Kiểm thử có ý nghĩa geometry/scopes/rebuild/error/services/UI. Deploy whitelist 29 file, backup/hash, không tác động plugin khác.
+- Kiểm thử có ý nghĩa geometry/scopes/rebuild/error/services/UI. Deploy whitelist 34 file, backup/hash, không tác động plugin khác.
 
 - Updater pilot beta.2 chỉ áp dụng cho VGD Dim; kiểm tra manifest và RBZ qua HTTPS, cài sau khi SketchUp đóng. Pilot chỉ hỗ trợ Windows; native acceptance vẫn cần kiểm tra riêng.
