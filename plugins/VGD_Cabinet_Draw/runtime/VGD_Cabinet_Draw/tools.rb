@@ -110,7 +110,7 @@ module VGD_Cabinet_Draw
       def draw_hud(view)
         lines = ["VGD CABINET DRAW · #{Tools.label(@tool_name)}", hint]
         lines.each_with_index do |text, index|
-          view.draw_text([18, 28 + index * 20], text, color: Sketchup::Color.new(33, 77, 90), size: 11, bold: index.zero?)
+          Theme.draw_text(view, [18, 28 + index * 20], text, color: Theme.color(:text), size: 11, bold: index.zero?)
         end
         draw_side_panel(view, hud_lines) if respond_to?(:hud_lines)
       end
@@ -122,12 +122,12 @@ module VGD_Cabinet_Draw
         left = [view.vpwidth - width - 12, 10].max
         top = 12
         height = 14 + lines.length * 19
-        view.drawing_color = Sketchup::Color.new(255, 255, 255, 200)
+        view.drawing_color = Theme.color(:surface, 215)
         view.draw2d(GL_QUADS, [[left, top, 0], [left + width, top, 0], [left + width, top + height, 0], [left, top + height, 0]])
         lines.each_with_index do |text, index|
           error = text.start_with?('Lỗi:')
-          color = error ? Sketchup::Color.new(167, 61, 54) : Sketchup::Color.new(33, 77, 90)
-          view.draw_text([left + 10, top + 8 + index * 19], text, color: color, size: 10)
+          color = error ? Theme.color(:danger) : Theme.color(:text)
+          Theme.draw_text(view, [left + 10, top + 8 + index * 19], text, color: color, size: 10)
         end
       end
 

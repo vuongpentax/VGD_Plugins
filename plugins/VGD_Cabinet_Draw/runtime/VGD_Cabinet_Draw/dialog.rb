@@ -11,6 +11,11 @@ module VGD_Cabinet_Draw
       )
       @window.set_file(File.join(__dir__, 'dialog.html'))
       @window.add_action_callback('ready') { |_ctx, _| load_state }
+      # Dialog báo chế độ sáng/tối để HUD và preview trong viewport đổi theo.
+      @window.add_action_callback('theme') do |_ctx, payload|
+        Theme.mode = payload
+        Sketchup.active_model.active_view.invalidate
+      end
       @window.add_action_callback('tool') do |_ctx, payload|
         data = JSON.parse(payload)
         VGD_Cabinet_Draw.launch_tool(data['name'], data['settings'] || {}, data['preset_id'])

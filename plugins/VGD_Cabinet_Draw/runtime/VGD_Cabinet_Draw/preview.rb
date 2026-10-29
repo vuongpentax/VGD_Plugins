@@ -6,19 +6,20 @@ module VGD_Cabinet_Draw
   class Preview
     # Màu nhạt kiểu X-ray: nhìn xuyên được, không che hình tủ phía sau. hover luôn là màu vàng nét đứt.
     COLORS = {
-      body: Sketchup::Color.new(40, 160, 190, 45),
-      front: Sketchup::Color.new(235, 130, 55, 55),
-      override: Sketchup::Color.new(70, 180, 70, 55),
-      target: Sketchup::Color.new(40, 175, 125, 55),
-      cutter: Sketchup::Color.new(225, 70, 90, 70),
-      door: Sketchup::Color.new(60, 120, 225, 50),
-      glass: Sketchup::Color.new(120, 205, 235, 40),
-      drawer: Sketchup::Color.new(150, 95, 205, 55),
-      hover: Sketchup::Color.new(250, 195, 40, 85)
+      body: Sketchup::Color.new(180, 137, 99, 55),      # đồng VGD #B48963
+      front: Sketchup::Color.new(204, 122, 72, 60),
+      override: Sketchup::Color.new(80, 114, 71, 60),   # success #507247
+      target: Sketchup::Color.new(70, 140, 120, 60),
+      cutter: Sketchup::Color.new(167, 61, 54, 75),     # danger #A73D36
+      door: Sketchup::Color.new(96, 128, 168, 55),
+      glass: Sketchup::Color.new(140, 190, 208, 45),
+      drawer: Sketchup::Color.new(138, 108, 168, 60),
+      hover: Sketchup::Color.new(220, 175, 90, 95)
     }.freeze
-    GUIDE = Sketchup::Color.new(235, 120, 0, 255)
-    EDGE = Sketchup::Color.new(15, 55, 85, 150)
-    EDGE_HOVER = Sketchup::Color.new(200, 120, 0, 230)
+    # Nét hướng dẫn và khung chữ dùng đồng đậm #8E6B4C: thấy rõ trên nền trắng lẫn vân gỗ.
+    GUIDE = Sketchup::Color.new(142, 107, 76, 255)
+    EDGE = Sketchup::Color.new(41, 43, 45, 150)         # nét than #292B2D của bộ icon
+    EDGE_HOVER = Sketchup::Color.new(180, 137, 99, 235)
 
     # Chữ nét (stroke font) vẽ trong không gian 3D để chữ nằm song song mặt tủ và xoay theo góc nhìn.
     # Lưới 2 x 4 đơn vị (rộng x cao); mỗi ký tự là danh sách các đường gấp khúc.
@@ -159,16 +160,17 @@ module VGD_Cabinet_Draw
       @labels.each do |point, text|
         next if (point - eye).dot(direction) <= 0
         spot = view.screen_coords(point)
-        view.draw_text([spot.x + 6, spot.y - 16], text, color: Sketchup::Color.new(150, 70, 0), size: 10, bold: true)
+        Theme.draw_text(view, [spot.x + 6, spot.y - 16], text, color: Theme.color(:accent_strong), size: 10, bold: true)
       end
     ensure
       view.line_width = 1
       view.line_stipple = ''
     end
 
-    TEXT_BG = Sketchup::Color.new(255, 255, 255, 225)
-    TEXT_INK = Sketchup::Color.new(20, 60, 90, 255)
-    TEXT_FRAME = Sketchup::Color.new(232, 131, 36, 255)
+    # Hộp chữ kích thước theo chế độ sáng/tối của dialog.
+    def text_background; Theme.color(:surface, 225); end
+    def text_ink; Theme.color(:text); end
+    def text_frame; Theme.color(:accent); end
 
     # Vẽ các hộp chữ: nền trắng + khung cam + chữ nét, tất cả nằm trong mặt phẳng của mặt tủ (không xoay theo màn hình).
     def draw_texts(view, eye)
@@ -189,14 +191,14 @@ module VGD_Cabinet_Draw
         half = width / 2.0 + pad
         frame = [[-half, -2.0 - pad], [half, -2.0 - pad], [half, 2.0 + pad], [-half, 2.0 + pad]].map { |u, v| view.screen_coords(point.call(u, v)) }
         flat = frame.map { |p| Geom::Point3d.new(p.x, p.y, 0) }
-        view.drawing_color = TEXT_BG
+        view.drawing_color = text_background
         view.draw2d(GL_QUADS, flat)
         view.line_width = 1
         view.line_stipple = ''
-        view.drawing_color = TEXT_FRAME
+        view.drawing_color = text_frame
         view.draw2d(GL_LINE_LOOP, flat)
         view.line_width = 1
-        view.drawing_color = TEXT_INK
+        view.drawing_color = text_ink
         strokes.each do |line|
           pts = line.map { |u, v| p = view.screen_coords(point.call(u, v)); Geom::Point3d.new(p.x, p.y, 0) }
           view.draw2d(GL_LINE_STRIP, pts)

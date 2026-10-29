@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.61
+# VGD_Cabinet Draw 1.0.0-beta.62
+
+beta.62: đồng bộ theme VGD (VGD_UI_DESIGN_SYSTEM.md). Dialog: bỏ màu cứng còn sót, báo chế độ sáng/tối cho Ruby mỗi lần đổi. Viewport: HUD, thanh mini, khung chữ kích thước và nhãn lấy màu theo token VGD (sáng/tối theo nút ☾/☀ của dialog, chưa mở dialog thì dùng chế độ sáng hoặc lần lưu gần nhất); màu xem trước giữ phân biệt theo loại nhưng chỉnh hài hòa với đồng #B48963; chữ vẽ bằng font Manrope nếu đã cài, không thì Segoe UI (nếu bản SketchUp không nhận tuỳ chọn font thì tự dùng font mặc định). Icon thanh công cụ vẽ lại nét 1.8 than + đồng, 24 px (small) và 32 px (large). Chưa xác minh trong SketchUp thật.
 
 beta.61: tự chia cánh theo vách (hồi) giữa (phím A, gõ a, hoặc menu "Cánh tự động theo hồi"): cánh chia ở tim mặt trước vách, hai vách liền kề thì chia ở giữa hai vách, chỉ tính vách cao suốt lòng tủ, vẫn chia tay được. Khi chia tay, vạch chia hút vào tim vách (ngưỡng theo pixel màn hình) và có đường mảnh báo điểm hút. Số "rộng x cao" trong từng vùng cánh hiện như chia tấm (mặc định bật, tùy chọn door_show_dims). Alt rồi gõ số (hoặc gõ k5) = khe giữa hai cánh. Chưa xác minh trong SketchUp thật.
 

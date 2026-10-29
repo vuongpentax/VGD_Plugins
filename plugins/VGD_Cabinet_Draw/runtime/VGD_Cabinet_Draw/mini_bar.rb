@@ -143,22 +143,22 @@ module VGD_Cabinet_Draw
       # ----- Vẽ -----
       def draw(view)
         fit_to(view.vpwidth, view.vpheight) if view.respond_to?(:vpwidth)
-        circle(view, @cx, @cy, 22, Sketchup::Color.new(33, 77, 90, 235), Sketchup::Color.new(255, 255, 255, 255))
-        text(view, @cx, @cy, MiniBar.short_label(hover_label.to_s), 9, Sketchup::Color.new(255, 255, 255))
+        circle(view, @cx, @cy, 22, Theme.color(:accent, 240), Theme.color(:on_accent))
+        text(view, @cx, @cy, MiniBar.short_label(hover_label.to_s), 9, Theme.color(:on_accent))
         @buttons.each do |b|
           item = b[:item]
           hovered = @hover_button && @hover_button.equal?(b)
           open = b[:level] == 0 && @expanded == b[:index]
-          fill = if item[:enabled] == false then Sketchup::Color.new(210, 214, 216, 220)
-                 elsif hovered then Sketchup::Color.new(33, 77, 90, 245)
-                 elsif item[:checked] then Sketchup::Color.new(206, 232, 240, 245)
-                 else Sketchup::Color.new(244, 248, 250, 240) end
-          edge = open ? Sketchup::Color.new(232, 131, 36) : (item[:items] ? Sketchup::Color.new(46, 120, 150) : Sketchup::Color.new(120, 150, 160))
+          fill = if item[:enabled] == false then Theme.color(:elevated, 200)
+                 elsif hovered then Theme.color(:accent, 245)
+                 elsif item[:checked] then Theme.color(:tint, 245)
+                 else Theme.color(:surface, 240) end
+          edge = open ? Theme.color(:accent_strong) : (item[:items] ? Theme.color(:accent) : Theme.color(:border))
           circle(view, b[:x], b[:y], b[:r], fill, edge)
           label = MiniBar.short_label(item[:label])
-          text(view, b[:x], b[:y], (item[:checked] ? '✓' : '') + label + (item[:items] ? '▸' : ''), 9, hovered ? Sketchup::Color.new(255, 255, 255) : Sketchup::Color.new(33, 77, 90))
+          text(view, b[:x], b[:y], (item[:checked] ? '✓' : '') + label + (item[:items] ? '▸' : ''), 9, hovered ? Theme.color(:on_accent) : Theme.color(:text))
         end
-        text(view, @cx, @cy - BASE - RADIUS - 14, hover_label.to_s, 11, Sketchup::Color.new(33, 77, 90)) if @hover_button
+        text(view, @cx, @cy - BASE - RADIUS - 14, hover_label.to_s, 11, Theme.color(:text)) if @hover_button
       end
 
       def circle(view, x, y, r, fill, edge)
@@ -176,7 +176,7 @@ module VGD_Cabinet_Draw
         rescue StandardError
           string.length * size * 0.62
         end
-        view.draw_text([x - width / 2.0, y - size * 0.7, 0], string, color: color, size: size)
+        Theme.draw_text(view, [x - width / 2.0, y - size * 0.7, 0], string, color: color, size: size)
       end
     end
 
@@ -434,7 +434,7 @@ module VGD_Cabinet_Draw
         x0, y0 = @down
         x1, y1 = @xy
         pts = [[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]]
-        view.drawing_color = Sketchup::Color.new(33, 77, 90)
+        view.drawing_color = Theme.color(:accent_strong)
         view.line_stipple = x1 >= x0 ? '' : '-' if view.respond_to?(:line_stipple=)
         view.draw2d(GL_LINE_LOOP, pts)
       end

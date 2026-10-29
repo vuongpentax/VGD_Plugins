@@ -215,11 +215,11 @@ module VGD_Cabinet_Draw
     end
 
     def hud_ink
-      Sketchup::Color.new(33, 77, 90)
+      Theme.color(:text)
     end
 
     def hud_muted
-      Sketchup::Color.new(120, 120, 120)
+      Theme.color(:muted)
     end
 
     def hud_clip(text, limit)
@@ -240,24 +240,24 @@ module VGD_Cabinet_Draw
       left = MARGIN
       top = MARGIN
       height = HEAD_HEIGHT + (rows + extra) * ROW_HEIGHT + 6
-      hud_fill(view, left, top, left + LEFT_WIDTH, top + height, Sketchup::Color.new(255, 255, 255, 215))
-      view.draw_text([left + 10, top + 6], "MẪU · #{hud_clip(hud_spec[:title], 18)}", color: hud_ink, size: 10, bold: true)
+      hud_fill(view, left, top, left + LEFT_WIDTH, top + height, Theme.color(:surface, 225))
+      Theme.draw_text(view, [left + 10, top + 6], "MẪU · #{hud_clip(hud_spec[:title], 18)}", color: hud_ink, size: 10, bold: true)
       if shown.empty?
-        view.draw_text([left + 10, top + HEAD_HEIGHT + 2], 'Chưa có mẫu. Lưu trong bảng.', color: hud_muted, size: 10)
+        Theme.draw_text(view, [left + 10, top + HEAD_HEIGHT + 2], 'Chưa có mẫu. Lưu trong bảng.', color: hud_muted, size: 10)
         return
       end
       shown.each_with_index do |preset, index|
         y = top + HEAD_HEIGHT + index * ROW_HEIGHT
         active = preset['id'] == @active_preset_id
-        hud_fill(view, left + 4, y - 1, left + LEFT_WIDTH - 4, y + ROW_HEIGHT - 3, Sketchup::Color.new(40, 160, 190, 80)) if active
-        hud_fill(view, left + 4, y - 1, left + LEFT_WIDTH - 4, y + ROW_HEIGHT - 3, Sketchup::Color.new(40, 160, 190, 35)) if !active && hud_hovered?(:preset, index)
+        hud_fill(view, left + 4, y - 1, left + LEFT_WIDTH - 4, y + ROW_HEIGHT - 3, Theme.color(:accent, 110)) if active
+        hud_fill(view, left + 4, y - 1, left + LEFT_WIDTH - 4, y + ROW_HEIGHT - 3, Theme.color(:accent, 55)) if !active && hud_hovered?(:preset, index)
         mark = preset['id'] == @hud_default_id ? '★ ' : ''
-        view.draw_text([left + 10, y + 1], hud_clip("#{mark}#{preset['name']}", 25), color: hud_ink, size: 10, bold: active)
+        Theme.draw_text(view, [left + 10, y + 1], hud_clip("#{mark}#{preset['name']}", 25), color: hud_ink, size: 10, bold: active)
         @hud_rects << [left, y - 1, left + LEFT_WIDTH, y + ROW_HEIGHT - 3, :preset, index]
       end
       return unless extra == 1
       y = top + HEAD_HEIGHT + shown.length * ROW_HEIGHT
-      view.draw_text([left + 10, y + 1], "... còn #{list.length - MAX_ROWS} mẫu nữa (xem trong bảng)", color: hud_muted, size: 10)
+      Theme.draw_text(view, [left + 10, y + 1], "... còn #{list.length - MAX_ROWS} mẫu nữa (xem trong bảng)", color: hud_muted, size: 10)
     end
 
     # 2. CHẾ ĐỘ
@@ -274,15 +274,15 @@ module VGD_Cabinet_Draw
         width = widths[index]
         active = item[0] == current
         fill = if active
-                 Sketchup::Color.new(30, 140, 170, 235)
+                 Theme.color(:accent, 240)
                elsif hud_hovered?(:mode, index)
-                 Sketchup::Color.new(220, 240, 246, 235)
+                 Theme.color(:tint, 240)
                else
-                 Sketchup::Color.new(255, 255, 255, 215)
+                 Theme.color(:surface, 225)
                end
         hud_fill(view, x, top, x + width, top + BUTTON_HEIGHT, fill)
-        color = active ? Sketchup::Color.new(255, 255, 255) : hud_ink
-        view.draw_text([x + 13, top + 6], item[1], color: color, size: 10, bold: active)
+        color = active ? Theme.color(:on_accent) : hud_ink
+        Theme.draw_text(view, [x + 13, top + 6], item[1], color: color, size: 10, bold: active)
         @hud_rects << [x, top, x + width, top + BUTTON_HEIGHT, :mode, index]
         x += width + 6
       end
@@ -295,19 +295,19 @@ module VGD_Cabinet_Draw
       top = MARGIN
       return top if params.empty?
       height = HEAD_HEIGHT + params.length * ROW_HEIGHT + 6
-      hud_fill(view, left, top, left + RIGHT_WIDTH, top + height, Sketchup::Color.new(255, 255, 255, 215))
-      view.draw_text([left + 10, top + 6], 'THÔNG SỐ  (click để sửa)', color: hud_ink, size: 10, bold: true)
+      hud_fill(view, left, top, left + RIGHT_WIDTH, top + height, Theme.color(:surface, 225))
+      Theme.draw_text(view, [left + 10, top + 6], 'THÔNG SỐ  (click để sửa)', color: hud_ink, size: 10, bold: true)
       params.each_with_index do |param, index|
         y = top + HEAD_HEIGHT + index * ROW_HEIGHT
         armed = @armed && @armed[:key] == param[:key]
         if armed
-          hud_fill(view, left + 4, y - 1, left + RIGHT_WIDTH - 4, y + ROW_HEIGHT - 3, Sketchup::Color.new(255, 190, 60, 150))
+          hud_fill(view, left + 4, y - 1, left + RIGHT_WIDTH - 4, y + ROW_HEIGHT - 3, Theme.color(:accent, 170))
         elsif hud_hovered?(:param, index)
-          hud_fill(view, left + 4, y - 1, left + RIGHT_WIDTH - 4, y + ROW_HEIGHT - 3, Sketchup::Color.new(40, 160, 190, 45))
+          hud_fill(view, left + 4, y - 1, left + RIGHT_WIDTH - 4, y + ROW_HEIGHT - 3, Theme.color(:accent, 70))
         end
-        view.draw_text([left + 10, y + 1], hud_clip(param[:label], 20), color: hud_ink, size: 10)
+        Theme.draw_text(view, [left + 10, y + 1], hud_clip(param[:label], 20), color: hud_ink, size: 10)
         text = armed ? 'gõ số + Enter…' : hud_value_text(param)
-        view.draw_text([left + VALUE_X, y + 1], text, color: hud_ink, size: 10, bold: true)
+        Theme.draw_text(view, [left + VALUE_X, y + 1], text, color: hud_ink, size: 10, bold: true)
         @hud_rects << [left, y - 1, left + RIGHT_WIDTH, y + ROW_HEIGHT - 3, :param, index]
       end
       top + height
@@ -324,10 +324,10 @@ module VGD_Cabinet_Draw
       left = [view.vpwidth - width - MARGIN, MARGIN].max
       top += 6
       height = 12 + lines.length * 18
-      hud_fill(view, left, top, left + width, top + height, Sketchup::Color.new(255, 255, 255, 190))
+      hud_fill(view, left, top, left + width, top + height, Theme.color(:surface, 210))
       lines.each_with_index do |text, index|
-        color = text.start_with?('Lỗi:') ? Sketchup::Color.new(167, 61, 54) : hud_ink
-        view.draw_text([left + 10, top + 6 + index * 18], hud_clip(text, 40), color: color, size: 10)
+        color = text.start_with?('Lỗi:') ? Theme.color(:danger) : hud_ink
+        Theme.draw_text(view, [left + 10, top + 6 + index * 18], hud_clip(text, 40), color: color, size: 10)
       end
     end
 
