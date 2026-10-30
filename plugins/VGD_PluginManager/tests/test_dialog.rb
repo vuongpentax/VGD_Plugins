@@ -47,5 +47,8 @@ check 'sau khi đóng, bấm mở tạo hộp thoại mới', UI::HtmlDialog.mad
 UI::HtmlDialog.made[0].close
 check 'đóng cửa sổ cũ không làm mất dấu cửa sổ mới', PM.dialog_open?
 
+loader = File.read(File.join(build, 'VGD_PluginManager.rb'), encoding: 'UTF-8')[/ex\.version\s*=\s*'([^']+)'/, 1]
+check "phiên bản trong loader (#{loader}) khớp VERSION (#{PM::VERSION})", loader == PM::VERSION
+
 puts($fail ? 'CÓ LỖI' : 'TẤT CẢ ĐẠT')
 exit($fail ? 1 : 0)
