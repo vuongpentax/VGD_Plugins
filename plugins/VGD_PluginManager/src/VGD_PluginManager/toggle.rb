@@ -86,7 +86,7 @@ module VGD
         end
         sets = load_sets.map do |k, v|
           { 'name' => k, 'names' => v, 'count' => v.size,
-            'missing' => v.count { |x| !names.include?(x) } }
+            'missing' => v.count { |x| !names.include?(x) }, 'layout' => Layout.info(k) }
         end
         { 'year' => year, 'plugins' => plugins,
           'sets' => sets.sort_by { |s| s['name'].downcase },
@@ -177,6 +177,7 @@ module VGD
         sets = load_sets
         return 'Không tìm thấy bộ này.' unless sets.delete(name.to_s)
         save_sets(sets)
+        Layout.delete(name.to_s)
         "Đã xóa bộ \"#{name}\" (các plugin không bị ảnh hưởng)."
       rescue => e
         PM.report_error('Không xóa được bộ', e)
@@ -189,15 +190,23 @@ module VGD
         sets = load_sets
         return 'Chưa có bộ plugin nào để xuất.' if sets.empty?
         path = "#{path}.json" unless path =~ /\.json\z/i
-        data = { 'format' => SETS_FORMAT, 'version' => 1,
-                 'tool_version' => PM::VERSION, 'sets' => sets }
+        layouts = {}
+        sets.each_key do |n|
+          blob = Layout.export_blob(n)
+          layouts[n] = blob if blob
+        end
+        data = { 'format' => SETS_FORMAT, 'version' => 2,
+                 'tool_version' => PM::VERSION, 'sets' => sets, 'layouts' => layouts }
         File.write(path, JSON.pretty_generate(data), encoding: 'UTF-8')
-        "Đã xuất #{sets.size} bộ plugin ra: #{path}"
+        msg = "Đã xuất #{sets.size} bộ plugin ra: #{path}"
+        msg += " (kèm layout/phím tắt của #{layouts.size} bộ)" unless layouts.empty?
+        msg
       rescue => e
         PM.report_error('Không xuất được bộ plugin', e)
       end
 
-      # Đọc file bộ plugin. Trả về [bộ_đã_làm_sạch, lỗi]; chỉ nhận chuỗi, bỏ mục sai kiểu.
+      # Đọc file bộ plugin. Trả về [bộ_đã_làm_sạch, lỗi, layout]; chỉ nhận chuỗi, bỏ mục sai kiểu.
+      # layout: { tên_bộ => dữ liệu layout }, chỉ giữ tên có trong bộ hợp lệ (có thể rỗng).
       def self.read_sets_file(path)
         data = JSON.parse(File.read(path, encoding: 'UTF-8'))
         raw = data.is_a?(Hash) && data['format'] == SETS_FORMAT ? data['sets'] : nil
@@ -210,15 +219,17 @@ module VGD
           clean[name] = names unless names.empty?
         end
         return [nil, 'File không có bộ plugin hợp lệ nào.'] if clean.empty?
-        [clean, nil]
+        layouts = data['layouts'].is_a?(Hash) ? data['layouts'].select { |n, _| clean.key?(n.to_s.strip[0, 40]) } : {}
+        layouts = layouts.map { |n, b| [n.to_s.strip[0, 40], b] }.to_h
+        [clean, nil, layouts]
       rescue => e
         [nil, PM.report_error('Không đọc được file bộ plugin', e)]
       end
 
       # Gộp bộ nhập vào bộ hiện có. Trùng tên: overwrite=true thì ghi đè, false thì bỏ qua.
-      def self.import_sets(incoming, overwrite)
+      def self.import_sets(incoming, overwrite, layouts = {})
         sets = load_sets
-        added = skipped = replaced = 0
+        added = skipped = replaced = imported_layouts = 0
         incoming.each do |name, names|
           if sets.key?(name)
             if overwrite
@@ -231,10 +242,12 @@ module VGD
             added += 1
           end
           sets[name] = names
+          imported_layouts += 1 if layouts[name] && Layout.import_blob(name, layouts[name])
         end
         save_sets(sets) if added + replaced > 0
         msg = "Đã nhập: #{added} bộ mới, #{replaced} bộ ghi đè."
         msg += " Bỏ qua #{skipped} bộ trùng tên." if skipped > 0
+        msg += " Đã nhập layout/phím tắt của #{imported_layouts} bộ (áp dụng bằng nút \"Áp layout\")." if imported_layouts > 0
         msg
       rescue => e
         PM.report_error('Không nhập được bộ plugin', e)

@@ -28,10 +28,11 @@ puts "plugins: #{M.list_plugins('2022').map { |p| p[:name] }.inspect}"
 
 out = File.join(Dir.tmpdir, 'test_bundle.rbz')
 FileUtils.rm_f(out)
-r = M.build_bundle('2022', %w[cool_tool single], true, true, out)
+r = M.build_bundle('2022', %w[cool_tool single], out)
 puts "result: #{r.inspect}"
 ui_ok = %w[dialog.html dialog.css vgd-theme/vgd-theme.css vgd-theme/vgd-theme.js].all? { |f| File.exist?(File.join(M::UI_DIR, f)) }
+helper_ok = File.exist?(VGD::PluginManager::Layout::HELPER)
 icons_ok = %w[plugin_manager.svg].all? { |f| File.exist?(File.join(M::ICON_DIR, f)) }
-puts "ui files ok: #{ui_ok}, icons ok: #{icons_ok}"
+puts "ui files ok: #{ui_ok}, icons ok: #{icons_ok}, helper ok: #{helper_ok}"
 puts "OUT=#{out}"
 puts "FAKE=#{fake}"

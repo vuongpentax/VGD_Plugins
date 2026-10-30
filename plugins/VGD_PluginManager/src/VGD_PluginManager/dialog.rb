@@ -38,7 +38,7 @@ module VGD
       end
 
       dlg.add_action_callback('ready') do |_c|
-        push_toggle.call(legacy_msg)
+        push_toggle.call([legacy_msg, Layout.take_result].compact.join("\n"))
         js.call('initMigrate', installed_versions)
       end
 
@@ -97,7 +97,7 @@ module VGD
         guard.call('Lỗi khi nhập bộ', push_toggle) do
           path = UI.openpanel('Chọn file bộ plugin (.json)', Toggle.desktop_dir, 'JSON|*.json||')
           next unless path
-          incoming, err = Toggle.read_sets_file(path)
+          incoming, err, layouts = Toggle.read_sets_file(path)
           if err
             push_toggle.call(err)
             next
@@ -109,7 +109,35 @@ module VGD
                                 'Chọn Yes để ghi đè, No để giữ bộ hiện có (chỉ nhập bộ mới).', MB_YESNO)
             overwrite = (ask == IDYES)
           end
-          push_toggle.call(Toggle.import_sets(incoming, overwrite))
+          push_toggle.call(Toggle.import_sets(incoming, overwrite, layouts || {}))
+        end
+      end
+
+      # ---- Layout và phím tắt của bộ (thực hiện sau khi SketchUp đóng) ----
+      dlg.add_action_callback('pm_layout_save') do |_c, json|
+        guard.call('Lỗi khi lưu layout', push_toggle) do
+          o = JSON.parse(json)
+          name = o['name'].to_s
+          next push_toggle.call('Không tìm thấy bộ này.') unless Toggle.load_sets.key?(name)
+          ask = "Lưu layout#{o['shortcuts'] ? ' và phím tắt' : ''} của SketchUp #{Layout.year} vào bộ \"#{name}\"?\n\n" \
+                "Việc này chạy khi bạn đóng SketchUp (File > Exit), dữ liệu lưu là trạng thái lúc thoát. " \
+                "Bản lưu cũ của bộ này (nếu có) sẽ bị thay."
+          next unless UI.messagebox(ask, MB_YESNO) == IDYES
+          parts = ['layout'] + (o['shortcuts'] ? ['shortcuts'] : [])
+          push_toggle.call(Layout.schedule_capture(name, parts))
+        end
+      end
+
+      dlg.add_action_callback('pm_layout_apply') do |_c, json|
+        guard.call('Lỗi khi áp layout', push_toggle) do
+          o = JSON.parse(json)
+          name = o['name'].to_s
+          parts = ['layout'] + (o['shortcuts'] ? ['shortcuts'] : [])
+          ask = "Áp layout#{o['shortcuts'] ? ' và phím tắt' : ''} đã lưu của bộ \"#{name}\" vào SketchUp #{Layout.year}?\n\n" \
+                "Việc này chạy khi bạn đóng SketchUp, ghi đè layout hiện tại. " \
+                "Plugin tự sao lưu file cài đặt trước khi ghi và mở lại SketchUp sau đó."
+          next unless UI.messagebox(ask, MB_YESNO) == IDYES
+          push_toggle.call(Layout.schedule_apply(name, parts))
         end
       end
 
@@ -140,9 +168,8 @@ module VGD
             msg << "Sao lưu thư mục đích: #{r[:backup]}" if r[:backup]
             msg << "Cảnh báo tương thích: #{warns.join(' | ')}" if warns.any?
           end
-          msg << migrate_registry(:shortcuts, src_ver, dst_ver) if opts['shortcuts']
-          msg << migrate_registry(:toolbars,  src_ver, dst_ver) if opts['toolbars']
-          msg << "Hãy đóng SketchUp và mở lại bản #{dst_ver} để áp dụng."
+          msg << Layout.schedule_shortcuts_transfer(src_ver, dst_ver) if opts['shortcuts']
+          msg << "Hãy đóng SketchUp và mở lại bản #{dst_ver} để áp dụng." unless opts['shortcuts']
           push_result.call(msg.join("\n"))
         end
       end
@@ -157,7 +184,7 @@ module VGD
           next push_result.call('Hãy tick ít nhất một plugin để xuất gói.') if chosen.empty?
           path = UI.savepanel('Lưu gói .rbz tổng', Toggle.desktop_dir, "VGD_Plugin_Bundle_#{src_ver}.rbz")
           next unless path
-          r = build_bundle(src_ver, chosen, opts['shortcuts'], opts['toolbars'], path)
+          r = build_bundle(src_ver, chosen, path)
           if r[:error]
             push_result.call(r[:error])
           else
@@ -165,8 +192,8 @@ module VGD
             msg.concat(r[:notes])
             warns = scan_compat(src_ver, chosen)
             msg << "Cảnh báo tương thích: #{warns.join(' | ')}" if warns.any?
-            msg << 'Trên máy mới: cài file .rbz bằng Extension Manager, khởi động lại SketchUp, ' \
-                   'rồi vào Plugins > "VGD: Nhập phím tắt/giao diện từ gói" nếu gói có kèm phím tắt.'
+            msg << 'Trên máy mới: cài file .rbz bằng Extension Manager rồi khởi động lại SketchUp. ' \
+                   'Gói chỉ chứa plugin; muốn mang cả layout và phím tắt, dùng "Xuất các bộ ra file" ở tab Bật/tắt.'
             push_result.call(msg.join("\n"))
           end
         end

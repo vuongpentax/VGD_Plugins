@@ -18,6 +18,8 @@
     <button onclick="selAll(false)">Bỏ chọn hết</button></div>
   <div class="list" id="list"></div>
   <h2>Bộ plugin</h2>
+  <div class="note">Mỗi bộ có thể lưu kèm layout thanh công cụ và phím tắt. "Lưu layout" và "Áp layout" chỉ chạy khi bạn đóng SketchUp (File &gt; Exit); plugin tự thực hiện rồi mở lại SketchUp. Layout chỉ áp được cho cùng phiên bản SketchUp đã lưu.</div>
+  <label class="opt"><input type="checkbox" id="withShortcuts" checked> Kèm phím tắt khi lưu/áp layout</label>
   <div class="bar"><input type="text" id="setname" placeholder="Tên bộ, ví dụ: Render">
     <button onclick="saveSet()">Lưu mục đã chọn thành bộ</button></div>
   <div id="sets"></div>
@@ -38,8 +40,7 @@
   </div>
   <div class="opts">
     <label><input type="checkbox" id="overwrite"> Ghi đè nếu plugin đã tồn tại ở bản đích</label>
-    <label><input type="checkbox" id="shortcuts" checked> Phím tắt (khi chuyển hoặc kèm trong gói)</label>
-    <label><input type="checkbox" id="toolbars"> Giao diện thanh công cụ (khi chuyển hoặc kèm trong gói)</label>
+    <label><input type="checkbox" id="shortcuts"> Chuyển cả phím tắt (áp khi bạn đóng SketchUp, ghi đè phím tắt của bản đích)</label>
   </div>
   <div class="bar">
     <button class="primary" id="goBtn" onclick="go()">Chuyển plugin</button>
@@ -89,12 +90,27 @@ function drawToggle() {
   S.sets.forEach(function (s) {
     var r = el('div', 'set');
     r.appendChild(el('span', 'nm', s.name + ' (' + s.count + ' plugin' + (s.missing ? ', ' + s.missing + ' không còn' : '') + ')'));
+    if (s.layout) {
+      var parts = [];
+      if (s.layout.layout) parts.push('layout');
+      if (s.layout.shortcuts) parts.push('phím tắt');
+      var tag = el('span', 'badge on', 'Đã lưu ' + parts.join(' + ') + ' (SketchUp ' + s.layout.year + ')');
+      tag.title = 'Lưu lúc ' + s.layout.saved_at;
+      r.appendChild(tag);
+    }
     var a = el('button', 'sm danger', 'Tắt bộ'); a.onclick = function () { send('pm_apply_set', { name: s.name, action: 'disable' }); };
     var b = el('button', 'sm primary', 'Bật bộ'); b.onclick = function () { send('pm_apply_set', { name: s.name, action: 'enable' }); };
     var c = el('button', 'sm', 'Xóa bộ'); c.onclick = function () { send('pm_delete_set', { name: s.name }); };
-    r.appendChild(a); r.appendChild(b); r.appendChild(c); T.appendChild(r);
+    var d = el('button', 'sm', 'Lưu layout'); d.onclick = function () { send('pm_layout_save', { name: s.name, shortcuts: withShortcuts() }); };
+    r.appendChild(a); r.appendChild(b); r.appendChild(c); r.appendChild(d);
+    if (s.layout) {
+      var e = el('button', 'sm', 'Áp layout'); e.onclick = function () { send('pm_layout_apply', { name: s.name, shortcuts: withShortcuts() }); };
+      r.appendChild(e);
+    }
+    T.appendChild(r);
   });
 }
+function withShortcuts() { return document.getElementById('withShortcuts').checked; }
 function picked() { return Object.keys(checked).filter(function (k) { return checked[k]; }); }
 function selAll(v) {
   var q = document.getElementById('q').value.toLowerCase();
@@ -145,7 +161,7 @@ function collect() {
   var p = [].slice.call(document.querySelectorAll('.pl')).filter(function (c) { return c.checked; }).map(function (c) { return c.value; });
   return { src: document.getElementById('src').value, dst: document.getElementById('dst').value, plugins: p,
            overwrite: document.getElementById('overwrite').checked,
-           shortcuts: document.getElementById('shortcuts').checked, toolbars: document.getElementById('toolbars').checked };
+           shortcuts: document.getElementById('shortcuts').checked };
 }
 function go() { send('migrate', collect()); }
 function exportBundle() { send('export_bundle', collect()); }

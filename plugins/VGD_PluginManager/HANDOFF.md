@@ -1,6 +1,6 @@
 # HANDOFF: VGD Plugin Manager (SketchUp, Ruby)
 
-Phiên bản hiện tại: **1.0.0-beta.4** (xem mục 8 cho phần thêm so với beta.2). Ngày bàn giao: 2026-10-30.
+Phiên bản hiện tại: **1.0.0-beta.5** (xem mục 8 cho phần thêm so với beta.2). Ngày bàn giao: 2026-10-30.
 Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 
 ## 1. Mục tiêu và bối cảnh
@@ -21,10 +21,11 @@ Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 
 1. `HANDOFF.md`: file này.
 2. `src/`: mã nguồn plugin (đúng cấu trúc bên trong .rbz).
-   1. `src/VGD_PluginManager.rb`: file loader, đăng ký SketchupExtension (version `1.0.0-beta.4`).
+   1. `src/VGD_PluginManager.rb`: file loader, đăng ký SketchupExtension (version `1.0.0-beta.5`).
    2. `src/VGD_PluginManager/main.rb`: chuyển plugin, phím tắt, thanh công cụ; xuất gói tổng; giao diện HtmlDialog chính.
    3. `src/VGD_PluginManager/zip_writer.rb`: ghi file zip/.rbz thuần Ruby bằng Zlib (không cần thư viện ngoài).
-   4. `src/VGD_PluginManager/bundle_import.rb`: mẫu file được đóng vào gói tổng (đổi tên thành `vgd_bundle_import.rb`), tạo menu nhập phím tắt/thanh công cụ trên máy mới.
+   4. (đã bỏ ở beta.5) `bundle_import.rb`: mẫu nhập phím tắt/thanh công cụ từ gói tổng, dùng khóa registry sai.
+   4b. `src/VGD_PluginManager/layout.rb`: lưu/áp layout và phím tắt theo từng bộ plugin (lập job, snapshot, xuất/nhập), và `src/VGD_PluginManager/helper/apply_layout.ps1`: script PowerShell chạy nền, chờ SketchUp đóng rồi chụp/áp layout và phím tắt (sao lưu trước, hoàn tác nếu lỗi, mở lại SketchUp). Chi tiết nơi SketchUp lưu dữ liệu: `docs/NOI_LUU_CAI_DAT_SKETCHUP.md`.
    5. `src/VGD_PluginManager/toggle.rb`: bật/tắt plugin và bộ plugin (module `Toggle`), xuất/nhập bộ ra file `.json`, chuyển dữ liệu từ vị trí cũ.
    7. `src/VGD_PluginManager/dialog.rb`: một hộp thoại hai tab (Bật/tắt plugin, Chuyển plugin); mọi callback và kiểm tra phiên bản nguồn/đích (`check_versions`).
    8. `src/VGD_PluginManager/ui/`: `dialog.html`, `dialog.css` và bản sao `vgd-theme/` (đồng bộ bằng `python tools/sync_vgd_theme.py`). Nạp bằng `set_file`; dữ liệu đẩy vào qua callback `ready`.
@@ -47,6 +48,8 @@ Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 
 ### 3.2. Phím tắt và thanh công cụ (registry Windows)
 
+> **Đã lỗi thời (beta.5):** các khóa registry mô tả dưới đây là giả định sai. Xem `docs/NOI_LUU_CAI_DAT_SKETCHUP.md` và mục 8, bản beta.5.
+
 1. Dùng lệnh `reg query/export/import` trên khóa:
    1. `HKCU\Software\SketchUp\SketchUp <ver>\Shortcuts`
    2. `HKCU\Software\SketchUp\SketchUp <ver>\Toolbars`
@@ -56,8 +59,8 @@ Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 ### 3.3. Xuất gói .rbz tổng
 
 1. Nút "Xuất gói .rbz tổng" trong hộp thoại chính, chọn nơi lưu bằng `UI.savepanel`.
-2. Gói chứa: file của các plugin đã tick (đường dẫn tương đối từ thư mục Plugins), `vgd_bundle_import.rb`, thư mục `vgd_bundle_import/` có `manifest.json` và (nếu có) `shortcuts.reg`, `toolbars.reg`.
-3. Trên máy mới: cài .rbz bằng Extension Manager, khởi động lại, rồi vào menu "VGD: Nhập phím tắt/giao diện từ gói" để nhập registry (có hỏi xác nhận và sao lưu).
+2. Gói chứa: file của các plugin đã tick (đường dẫn tương đối từ thư mục Plugins) và `vgd_bundle_manifest.json`. Từ beta.5 gói **không** kèm phím tắt/thanh công cụ (xem mục 8, bản beta.5).
+3. Trên máy mới: cài .rbz bằng Extension Manager rồi khởi động lại SketchUp. (Menu nhập phím tắt từ gói đã bỏ ở beta.5.)
 4. Zip viết thuần Ruby (deflate, tên file UTF-8, dùng `/`), đã kiểm chứng bằng Python `zipfile` và `unzip -t`.
 5. Người dùng đã đồng ý cách này: file .rbz không tự áp dụng được registry nên cần bước nhập riêng.
 
@@ -93,12 +96,12 @@ Chi tiết cài đặt:
 
 1. Chưa chạy trong SketchUp 2022 và 2024 thật (HtmlDialog, `UI.savepanel`, `UI.inputbox`, menu).
 2. **Phần registry chưa được kiểm chứng**: đường dẫn khóa Shortcuts và Toolbars ở mục 3.2 là giả định, chưa xác nhận bằng regedit. Máy test là Linux nên `reg` không chạy được; trên Linux code chỉ đi nhánh "không tìm thấy dữ liệu".
-3. Chưa thử cài gói tổng bằng Extension Manager trên máy khác (gói chỉ có `vgd_bundle_import.rb`, không đăng ký SketchupExtension; cần xác nhận Extension Manager chấp nhận).
+3. Chưa thử cài gói tổng bằng Extension Manager trên máy khác (gói chỉ có file plugin, không đăng ký SketchupExtension; cần xác nhận Extension Manager chấp nhận).
 4. Chưa thử tắt plugin đang có file bị khóa (dll/so đang nạp).
 
 ## 5. Rủi ro đã biết và việc nên làm tiếp
 
-1. **Xác minh khóa registry** của Shortcuts/Toolbars trên SketchUp 2022 và 2024 (regedit hoặc `reg query HKCU\Software\SketchUp /s`). Sửa hằng `REG_SHORTCUTS`, `REG_TOOLBARS` trong `main.rb` và `KEYS` trong `bundle_import.rb` nếu khác.
+1. **Khóa registry đã khảo sát** (2026-10-30): xem `docs/NOI_LUU_CAI_DAT_SKETCHUP.md`. Khóa `Shortcuts`/`Toolbars` giả định ban đầu không tồn tại; code liên quan đã thay ở beta.5.
 2. SketchUp có thể **ghi đè phím tắt/thanh công cụ khi thoát**, làm bản import không giữ. Cần kiểm tra thực tế; nếu đúng thì đổi quy trình (ví dụ nhập khi SketchUp đóng, qua công cụ ngoài hoặc file .reg).
 3. Plugin có bản quyền hoặc mã hóa gắn phiên bản vẫn phải cài/kích hoạt lại ở bản mới hoặc máy mới (không vượt qua được).
 4. Tắt plugin mà plugin khác phụ thuộc có thể gây lỗi khi mở lại. Có thể cân nhắc cảnh báo phụ thuộc.
@@ -131,7 +134,7 @@ cd src
 python3 -c "
 import zipfile
 z=zipfile.ZipFile('../dist/VGD_PluginManager_1.0.0-beta.4.rbz','w',zipfile.ZIP_DEFLATED)
-for n in ['VGD_PluginManager.rb','VGD_PluginManager/main.rb','VGD_PluginManager/zip_writer.rb','VGD_PluginManager/bundle_import.rb','VGD_PluginManager/toggle.rb','VGD_PluginManager/logger.rb','VGD_PluginManager/dialog.rb','VGD_PluginManager/ui/dialog.html','VGD_PluginManager/ui/dialog.css','VGD_PluginManager/icons/plugin_manager.svg']:
+for n in ['VGD_PluginManager.rb','VGD_PluginManager/main.rb','VGD_PluginManager/zip_writer.rb','VGD_PluginManager/toggle.rb','VGD_PluginManager/logger.rb','VGD_PluginManager/dialog.rb','VGD_PluginManager/ui/dialog.html','VGD_PluginManager/ui/dialog.css','VGD_PluginManager/icons/plugin_manager.svg','VGD_PluginManager/layout.rb','VGD_PluginManager/helper/apply_layout.ps1']:
     z.write(n,n)
 z.close()
 "
@@ -149,3 +152,9 @@ Khi thêm file mới vào `src/VGD_PluginManager/` nhớ thêm vào danh sách t
 5. `1.0.0-beta.4`: đổi tên plugin thành **VGD_PluginManager** (loader `VGD_PluginManager.rb`, module `VGD::PluginManager`, module bật/tắt đổi tên thành `Toggle`); gộp hai tính năng vào **một hộp thoại hai tab** (bỏ `UI.inputbox`, chọn phiên bản bằng ô chọn trong tab Chuyển plugin); bật/tắt bằng **nút gạt** (gạt là chuyển file ngay, có hiệu lực sau khi khởi động lại; bỏ hai nút "Tắt/Bật mục đã chọn", ô tick chỉ còn để lưu bộ); một nút thanh công cụ và một mục menu; dữ liệu plugin đã tắt và `sets.json` chuyển vào `Plugins\VGD_PluginManager\data`.
    1. **Cập nhật từ beta.3:** gỡ bản cũ (file `vgd_plugin_migrator.rb` và thư mục `vgd_plugin_migrator` trong Plugins) trước khi cài, nếu không hai bản cùng nạp và có hai thanh công cụ. Bản mới bỏ qua cả hai tên khi quét plugin.
    2. **Rủi ro:** thư mục `data` nằm trong thư mục plugin nên **gỡ plugin bằng Extension Manager sẽ xóa luôn các plugin đã tắt**. Bật lại các plugin cần giữ trước khi gỡ. Chưa xác nhận SketchUp có nạp `.rb` nằm sâu trong `Plugins\VGD_PluginManager\data\disabled\` hay không (dự đoán là không, cần thử trên SketchUp thật).
+6. `1.0.0-beta.5`: **layout và phím tắt theo bộ plugin**, áp dụng khi SketchUp đóng.
+   1. Mỗi bộ có nút "Lưu layout" và "Áp layout"; ô "Kèm phím tắt". Bấm xong, plugin lập job và chạy script PowerShell ẩn; **người dùng phải đóng SketchUp bình thường (File > Exit)**, script chờ SketchUp thoát rồi chụp/áp dữ liệu và mở lại SketchUp. Kết quả hiện ở lần mở hộp thoại kế tiếp.
+   2. Dữ liệu đụng tới: `HKCU\Software\SketchUp\SketchUp <năm>\Workspace` và `RubyWorkspace` (chỉ 2022), `PrivatePreferences.json` mục "This Computer Only" (các khóa layout), `SharedPreferences.json` mục "/Windows Only/Settings" (`Num_Shortcuts`, `Shortcut_N`). Chỉ các khóa này được đọc/ghi; sao lưu vào `Plugins\VGD_PluginManager\data\backups\<năm>-<thời gian>`.
+   3. Layout chỉ áp cho **cùng phiên bản SketchUp** đã lưu (2022 dùng registry và JSON, 2024 chỉ JSON, định dạng khác nhau). Phím tắt dùng chung được giữa hai bản.
+   4. Tab "Chuyển plugin": mục "Chuyển cả phím tắt" nay chạy theo cách này (mặc định tắt). **Đã bỏ** "Giao diện thanh công cụ" và phần phím tắt/thanh công cụ trong gói .rbz tổng cùng `bundle_import.rb`, vì code cũ dùng khóa registry không tồn tại. Muốn mang layout/phím tắt sang máy khác: "Xuất các bộ ra file" (file `.json` version 2 có kèm layout) và "Nhập bộ từ file".
+   5. **Chưa kiểm tra trong SketchUp thật.** Script PowerShell không chạy thử được ngoài Windows; chỉ đã kiểm tra phần Ruby tự động (`tests/test_layout.rb`). Rủi ro còn lại: ID thanh công cụ Ruby có thể phụ thuộc thứ tự nạp plugin (chưa kiểm chứng); `SharedPreferences.json` có khóa `timestamp` chưa rõ tác dụng; JavaScriptSerializer có thể đổi số thực `1.0` thành `1` khi ghi lại file JSON.

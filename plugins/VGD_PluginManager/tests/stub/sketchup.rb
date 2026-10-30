@@ -4,6 +4,8 @@ def file_loaded(_f) end
 
 module Sketchup
   def self.version; '24.0.553'; end
+  def self.platform; @platform || :platform_win; end
+  def self.platform=(p); @platform = p; end
 end
 
 module UI

@@ -9,14 +9,11 @@ require File.join(File.dirname(__FILE__), 'logger')
 module VGD
   module PluginManager
 
-    VERSION         = '1.0.0-beta.4'
-    IMPORT_TEMPLATE = File.join(File.dirname(__FILE__), 'bundle_import.rb')
+    VERSION         = '1.0.0-beta.5'
     UI_DIR          = File.join(File.dirname(__FILE__), 'ui')
     ICON_DIR        = File.join(File.dirname(__FILE__), 'icons')
 
     APPDATA_SUBPATH = 'SketchUp/SketchUp %s/SketchUp/Plugins'
-    REG_SHORTCUTS   = 'Software\SketchUp\SketchUp %s\Shortcuts'
-    REG_TOOLBARS    = 'Software\SketchUp\SketchUp %s\Toolbars'
 
     # Không chuyển/không tắt chính plugin này (gồm tên cũ của bản beta.3 trở về trước)
     SELF_NAMES = ['VGD_PluginManager', 'VGD_PluginManager.rb', 'vgd_plugin_migrator', 'vgd_plugin_migrator.rb']
@@ -125,66 +122,6 @@ module VGD
       warns.uniq
     end
 
-    # ---- Phím tắt và thanh công cụ (registry Windows) ----
-    def self.temp_dir
-      (ENV['TEMP'] || ENV['TMP']).to_s.tr('\\', '/')
-    end
-
-    def self.reg_key_exists?(key)
-      system('reg', 'query', "HKCU\\#{key}", out: File::NULL, err: File::NULL) ? true : false
-    end
-
-    def self.reg_export(key, file)
-      system('reg', 'export', "HKCU\\#{key}", file.tr('/', '\\'), '/y', out: File::NULL, err: File::NULL)
-    end
-
-    # Trả về nội dung file .reg dạng nhị phân (UTF-16LE có BOM)
-    def self.reg_export_raw(key)
-      tmp = File.join(temp_dir, "vgd_mig_#{rand(1_000_000)}.reg")
-      return nil unless reg_export(key, tmp) && File.exist?(tmp)
-      raw = File.binread(tmp)
-      File.delete(tmp)
-      raw
-    end
-
-    def self.reg_export_text(key)
-      raw = reg_export_raw(key)
-      return nil if raw.nil?
-      raw.force_encoding('UTF-16LE').encode('UTF-8', invalid: :replace, undef: :replace)
-    end
-
-    def self.reg_import_text(text)
-      tmp = File.join(temp_dir, "vgd_mig_in_#{rand(1_000_000)}.reg")
-      File.binwrite(tmp, "﻿".encode('UTF-16LE') + text.sub(/\A﻿/, '').encode('UTF-16LE'))
-      ok = system('reg', 'import', tmp.tr('/', '\\'), out: File::NULL, err: File::NULL)
-      File.delete(tmp) if File.exist?(tmp)
-      ok
-    end
-
-    def self.migrate_registry(kind, src_ver, dst_ver)
-      label   = (kind == :shortcuts) ? 'phím tắt' : 'giao diện thanh công cụ'
-      key_tpl = (kind == :shortcuts) ? REG_SHORTCUTS : REG_TOOLBARS
-      src_key = key_tpl % src_ver
-      dst_key = key_tpl % dst_ver
-      return "Không tìm thấy dữ liệu #{label} của bản #{src_ver}." unless reg_key_exists?(src_key)
-
-      if reg_key_exists?(dst_key)
-        bk = File.join(ENV['USERPROFILE'].to_s.tr('\\', '/'), 'Documents',
-                       "SU_#{kind}_#{dst_ver}_backup_#{Time.now.strftime('%Y%m%d_%H%M%S')}.reg")
-        reg_export(dst_key, bk)
-      end
-
-      text = reg_export_text(src_key)
-      return "Không đọc được dữ liệu #{label}." if text.nil?
-      text = text.gsub("SketchUp #{src_ver}", "SketchUp #{dst_ver}")
-      if reg_import_text(text)
-        "Đã chuyển #{label} từ #{src_ver} sang #{dst_ver}."
-      else
-        Log.write("reg import thất bại (#{label}, #{src_ver} -> #{dst_ver})")
-        "Lỗi khi ghi #{label} vào bản #{dst_ver}. #{Log.hint}"
-      end
-    end
-
     # ---- Xuất gói .rbz tổng ----
     # Gom file của các plugin đã chọn: [[đường_dẫn_tương_đối, dữ_liệu, thời_gian_sửa]]
     def self.collect_files(src_ver, chosen)
@@ -209,41 +146,24 @@ module VGD
     end
 
     # Trả về { count:, path:, notes: } hoặc { error: }
-    def self.build_bundle(src_ver, chosen, with_shortcuts, with_toolbars, out_path)
+    def self.build_bundle(src_ver, chosen, out_path)
       entries = collect_files(src_ver, chosen)
       return { error: 'Không có file nào để đóng gói.' } if entries.empty?
       plugin_files = entries.size
-      now   = Time.now
-      notes = []
+      now = Time.now
       manifest = {
         'tool'           => 'VGD Plugin Manager',
         'tool_version'   => VERSION,
         'source_version' => src_ver,
         'exported_at'    => now.strftime('%Y-%m-%d %H:%M:%S'),
-        'plugins'        => chosen,
-        'shortcuts'      => false,
-        'toolbars'       => false
+        'plugins'        => chosen
       }
 
-      [[:shortcuts, with_shortcuts, REG_SHORTCUTS, 'phím tắt'],
-       [:toolbars,  with_toolbars,  REG_TOOLBARS,  'thanh công cụ']].each do |kind, wanted, tpl, label|
-        next unless wanted
-        key = tpl % src_ver
-        raw = reg_key_exists?(key) ? reg_export_raw(key) : nil
-        if raw
-          entries << ["vgd_bundle_import/#{kind}.reg", raw, now]
-          manifest[kind.to_s] = true
-        else
-          notes << "Không tìm thấy dữ liệu #{label} của bản #{src_ver}, gói sẽ không kèm mục này."
-        end
-      end
-
-      entries << ['vgd_bundle_import/manifest.json', JSON.pretty_generate(manifest).b, now]
-      entries << ['vgd_bundle_import.rb', File.binread(IMPORT_TEMPLATE), now]
+      entries << ['vgd_bundle_manifest.json', JSON.pretty_generate(manifest).b, now]
 
       out_path = "#{out_path}.rbz" unless out_path =~ /\.rbz\z/i
       ZipWriter.write(out_path, entries)
-      { count: plugin_files, path: out_path, notes: notes }
+      { count: plugin_files, path: out_path, notes: [] }
     rescue => e
       { error: report_error('Không tạo được gói', e) }
     end
@@ -272,4 +192,5 @@ end
 
 # Nạp sau khi module PluginManager đã được định nghĩa
 require File.join(File.dirname(__FILE__), 'toggle')
+require File.join(File.dirname(__FILE__), 'layout')
 require File.join(File.dirname(__FILE__), 'dialog')

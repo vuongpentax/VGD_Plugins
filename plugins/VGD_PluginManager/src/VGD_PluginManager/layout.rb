@@ -1,0 +1,244 @@
+# encoding: UTF-8
+require 'sketchup.rb'
+require 'fileutils'
+require 'json'
+require 'digest'
+require 'base64'
+require 'securerandom'
+
+module VGD
+  module PluginManager
+    # Lưu và áp dụng layout (thanh công cụ, dock) và phím tắt cho từng bộ plugin.
+    #
+    # SketchUp ghi đè các file này khi thoát, nên việc đọc/ghi thật được giao cho một script
+    # PowerShell chạy nền (helper/apply_layout.ps1): nó chờ SketchUp đóng, thực hiện các bước
+    # trong file job rồi mở lại SketchUp. Phần Ruby chỉ lập job, lưu/đọc snapshot và xuất/nhập.
+    # Xem docs/NOI_LUU_CAI_DAT_SKETCHUP.md.
+    module Layout
+      PM = VGD::PluginManager
+
+      HELPER         = File.join(File.dirname(__FILE__), 'helper', 'apply_layout.ps1')
+      REG_FILES      = %w[Workspace RubyWorkspace].freeze
+      MAX_BLOB_BYTES = 8 * 1024 * 1024   # chặn file nhập quá lớn
+      PARTS          = %w[layout shortcuts].freeze
+      # Chỉ những khóa này mới được lưu/áp (phải khớp với helper/apply_layout.ps1)
+      MAIN_WINDOW_KEYS = %w[DockWidgetState ToolBarState].freeze
+
+      class << self
+        # Thay thế được trong test để không chạy PowerShell thật
+        attr_writer :spawner
+      end
+
+      def self.windows?
+        Sketchup.platform == :platform_win
+      end
+
+      def self.year
+        (2000 + Sketchup.version.to_i).to_s
+      end
+
+      # ---- Vị trí dữ liệu (nằm cạnh sets.json) ----
+      def self.layouts_dir
+        File.join(Toggle.root_dir, 'layouts')
+      end
+
+      def self.jobs_dir
+        File.join(Toggle.root_dir, 'jobs')
+      end
+
+      def self.job_file
+        File.join(jobs_dir, 'job.json')
+      end
+
+      def self.result_file
+        File.join(jobs_dir, 'result.txt')
+      end
+
+      def self.backup_dir
+        File.join(Toggle.root_dir, 'backups')
+      end
+
+      # Tên thư mục an toàn cho tên bộ (kèm mã băm để hai tên gần giống không đè nhau)
+      def self.preset_dir(name)
+        safe = name.to_s.gsub(/[^\p{L}\p{N}_-]/, '_')[0, 30]
+        File.join(layouts_dir, "#{safe}-#{Digest::SHA1.hexdigest(name.to_s)[0, 8]}")
+      end
+
+      def self.read_snapshot(dir)
+        file = File.join(dir, 'layout.json')
+        return nil unless File.exist?(file)
+        data = JSON.parse(File.read(file, encoding: 'UTF-8'))
+        return nil unless data.is_a?(Hash) && data['year'].to_s =~ /\A\d{4}\z/
+        data
+      rescue StandardError
+        nil
+      end
+
+      def self.nonempty_hash?(h)
+        h.is_a?(Hash) && !h.empty?
+      end
+
+      # Thông tin snapshot của một bộ, hoặc nil nếu chưa lưu
+      def self.info(name)
+        dir = preset_dir(name)
+        data = read_snapshot(dir) or return nil
+        has_reg = REG_FILES.any? { |n| File.exist?(File.join(dir, "#{n}.reg")) }
+        { 'year' => data['year'], 'saved_at' => data['saved_at'].to_s,
+          'layout' => (nonempty_hash?(data['prefs']) || has_reg),
+          'shortcuts' => nonempty_hash?(data['shortcuts']) }
+      end
+
+      def self.delete(name)
+        FileUtils.rm_rf(preset_dir(name))
+      end
+
+      # ---- Lập job cho helper ----
+      def self.clean_parts(parts)
+        Array(parts).map(&:to_s) & PARTS
+      end
+
+      def self.build_job(steps, restart)
+        { 'id' => SecureRandom.hex(8), 'sketchup_pid' => Process.pid, 'restart' => restart ? true : false,
+          'log' => Log.path, 'result' => result_file, 'job_file' => job_file,
+          'backup_dir' => backup_dir, 'steps' => steps }
+      end
+
+      def self.capture_step(year, dir, parts)
+        { 'op' => 'capture', 'year' => year.to_s, 'dir' => dir, 'parts' => clean_parts(parts) }
+      end
+
+      def self.apply_step(year, dir, parts)
+        { 'op' => 'apply', 'year' => year.to_s, 'dir' => dir, 'parts' => clean_parts(parts) }
+      end
+
+      def self.spawn_helper(job_path)
+        args = ['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+                '-WindowStyle', 'Hidden', '-File', HELPER.tr('/', '\\'), '-Job', job_path.tr('/', '\\')]
+        return @spawner.call(args) if @spawner
+        Process.detach(Process.spawn(*args, new_pgroup: true, out: File::NULL, err: File::NULL))
+      end
+
+      WAIT_NOTE = 'Hãy lưu model rồi đóng SketchUp bình thường (File > Exit). ' \
+                  'Sau khi SketchUp đóng, plugin sẽ tự thực hiện và mở lại SketchUp.'
+
+      # Ghi job và chạy helper chờ nền. Job mới thay job cũ (helper cũ tự thoát). Trả về thông báo.
+      def self.schedule(steps, restart = true)
+        return 'Tính năng này chỉ hỗ trợ Windows.' unless windows?
+        return 'Không tìm thấy script helper của plugin, hãy cài lại gói.' unless File.exist?(HELPER)
+        FileUtils.mkdir_p(jobs_dir)
+        File.write(job_file, JSON.pretty_generate(build_job(steps, restart)), encoding: 'UTF-8')
+        spawn_helper(job_file)
+        WAIT_NOTE
+      rescue => e
+        PM.report_error('Không lập được việc cho SketchUp', e)
+      end
+
+      def self.schedule_capture(name, parts)
+        return 'Hãy chọn ít nhất một mục để lưu.' if clean_parts(parts).empty?
+        schedule([capture_step(year, preset_dir(name), parts)])
+      end
+
+      # Chỉ áp những phần mà snapshot có, và layout chỉ áp khi cùng phiên bản SketchUp
+      def self.schedule_apply(name, parts)
+        i = info(name)
+        return 'Bộ này chưa lưu layout.' unless i
+        want = clean_parts(parts)
+        use = []
+        use << 'layout' if want.include?('layout') && i['layout'] && i['year'] == year
+        use << 'shortcuts' if want.include?('shortcuts') && i['shortcuts']
+        if use.empty?
+          return "Layout của bộ này lưu từ SketchUp #{i['year']}, không áp được cho bản #{year} " \
+                 '(chỉ phím tắt dùng chung giữa các bản).' if want.include?('layout') && i['layout'] && i['year'] != year
+          return 'Không có mục nào để áp (bộ này không lưu mục đã chọn).'
+        end
+        schedule([apply_step(year, preset_dir(name), use)])
+      end
+
+      # Chuyển phím tắt từ bản src sang bản dst: chụp từ src rồi áp vào dst (cả hai sau khi SketchUp đóng)
+      def self.schedule_shortcuts_transfer(src_ver, dst_ver)
+        tmp = File.join(jobs_dir, "shortcuts_#{src_ver}")
+        schedule([capture_step(src_ver, tmp, ['shortcuts']), apply_step(dst_ver, tmp, ['shortcuts'])])
+      end
+
+      # Kết quả helper ghi lại, đọc một lần rồi xóa. nil nếu chưa có.
+      def self.take_result
+        return nil unless File.exist?(result_file)
+        text = File.read(result_file, encoding: 'UTF-8').strip
+        File.delete(result_file)
+        text.empty? ? nil : text
+      rescue StandardError
+        nil
+      end
+
+      # ---- Lọc dữ liệu: chỉ giữ đúng các khóa layout và phím tắt ----
+      def self.layout_section?(key)
+        key =~ /\A(Qt)?RubyWorkspace\\/ || key =~ /\AWorkspace\\/ || key == 'ToolbarSettings' ? true : false
+      end
+
+      def self.shortcut_key?(key)
+        key =~ /\A(Num_Shortcuts|Shortcut_\d+)\z/ ? true : false
+      end
+
+      def self.clean_prefs(prefs)
+        return {} unless prefs.is_a?(Hash)
+        out = {}
+        prefs.each do |k, v|
+          if k == 'MainWindow' && v.is_a?(Hash)
+            kept = v.select { |mk, _| MAIN_WINDOW_KEYS.include?(mk) }
+            out[k] = kept unless kept.empty?
+          elsif layout_section?(k)
+            out[k] = v
+          end
+        end
+        out
+      end
+
+      def self.clean_shortcuts(shortcuts)
+        return {} unless shortcuts.is_a?(Hash)
+        shortcuts.select { |k, v| shortcut_key?(k) && (v.is_a?(String) || v.is_a?(Integer)) }
+      end
+
+      # ---- Xuất/nhập cùng bộ plugin ----
+      def self.valid_registry_raw?(raw)
+        raw.is_a?(String) && raw.bytesize <= MAX_BLOB_BYTES
+      end
+
+      # Dữ liệu layout của một bộ để đưa vào file xuất; nil nếu chưa lưu
+      def self.export_blob(name)
+        dir = preset_dir(name)
+        data = read_snapshot(dir) or return nil
+        registry = {}
+        REG_FILES.each do |n|
+          f = File.join(dir, "#{n}.reg")
+          registry[n] = Base64.strict_encode64(File.binread(f)) if File.exist?(f)
+        end
+        { 'layout' => data, 'registry' => registry }
+      end
+
+      # Lưu dữ liệu nhập vào thư mục của bộ. Chỉ nhận cấu trúc đúng, trả về true/false.
+      def self.import_blob(name, blob)
+        return false unless blob.is_a?(Hash) && blob['layout'].is_a?(Hash)
+        data = blob['layout']
+        return false unless data['year'].to_s =~ /\A\d{4}\z/
+        snapshot = { 'year' => data['year'].to_s, 'saved_at' => data['saved_at'].to_s,
+                     'prefs' => clean_prefs(data['prefs']), 'shortcuts' => clean_shortcuts(data['shortcuts']) }
+        regs = {}
+        (blob['registry'].is_a?(Hash) ? blob['registry'] : {}).each do |n, b64|
+          next unless REG_FILES.include?(n) && b64.is_a?(String)
+          raw = Base64.strict_decode64(b64)
+          return false unless valid_registry_raw?(raw)
+          regs[n] = raw
+        end
+        dir = preset_dir(name)
+        FileUtils.rm_rf(dir)
+        FileUtils.mkdir_p(dir)
+        regs.each { |n, raw| File.binwrite(File.join(dir, "#{n}.reg"), raw) }
+        File.write(File.join(dir, 'layout.json'), JSON.pretty_generate(snapshot), encoding: 'UTF-8')
+        true
+      rescue StandardError => e
+        Log.write("Không nhập được layout của bộ #{name}", e)
+        false
+      end
+    end
+  end
+end

@@ -4,19 +4,9 @@ Dành cho máy Windows có SketchUp 2022 và 2024. Mọi mục dưới đây **c
 
 Chuẩn bị: cài `VGD_PluginManager_1.0.0-beta.4.rbz` bằng Extension Manager ở cả hai bản, khởi động lại. Nên thử trên máy/tài khoản có dữ liệu có thể mất được, hoặc sao lưu thư mục `%APPDATA%\SketchUp` trước.
 
-## 0. Xác minh khóa registry (làm trước tiên)
+## 0. Nơi SketchUp lưu dữ liệu (đã khảo sát)
 
-Mở Command Prompt, chạy lần lượt (thay 2024 cho đúng bản đang có):
-
-```
-reg query "HKCU\Software\SketchUp\SketchUp 2024\Shortcuts"
-reg query "HKCU\Software\SketchUp\SketchUp 2024\Toolbars"
-reg query "HKCU\Software\SketchUp" /s /f Shortcut
-```
-
-1. Nếu hai lệnh đầu in ra dữ liệu: khóa đúng, không cần sửa.
-2. Nếu báo "không tìm thấy": dùng lệnh thứ ba hoặc regedit để tìm khóa thật, rồi sửa `REG_SHORTCUTS`, `REG_TOOLBARS` trong `src/VGD_PluginManager/main.rb` và `KEYS` trong `src/VGD_PluginManager/bundle_import.rb`.
-3. Chú ý: phím tắt chỉ được ghi vào registry sau khi SketchUp thoát; hãy đóng SketchUp rồi mới chạy lệnh.
+Khóa registry `...\Shortcuts` và `...\Toolbars` mà các bản trước dùng **không tồn tại**. Phím tắt nằm trong `SharedPreferences.json`, layout nằm trong registry `Workspace`/`RubyWorkspace` (2022) và `PrivatePreferences.json` (2022 và 2024). Chi tiết và phần còn chưa xác nhận: `docs/NOI_LUU_CAI_DAT_SKETCHUP.md`.
 
 ## 1. Mở plugin
 
@@ -33,18 +23,24 @@ Gỡ bản beta.3 (nếu có) trước khi cài beta.4.
 3. Chuyển lần hai không tick "Ghi đè": mục đã có được bỏ qua.
 4. Plugin dùng cú pháp Ruby cũ (ví dụ `File.exists?`) có hiện cảnh báo tương thích.
 
-## 3. Phím tắt và thanh công cụ
+## 3. Layout và phím tắt theo bộ plugin (mới ở beta.5)
 
-1. Đặt một phím tắt riêng ở bản nguồn, đóng SketchUp, mở lại để chắc đã lưu.
-2. Chuyển phím tắt sang bản đích; có file `Documents\SU_shortcuts_<ver>_backup_*.reg` nếu đích đã có dữ liệu.
-3. Mở bản đích: phím tắt có xuất hiện không? Thoát bản đích rồi mở lại: có còn không? (kiểm tra rủi ro SketchUp ghi đè khi thoát.)
-4. Lặp lại với thanh công cụ.
+Nên sao lưu trước: đóng SketchUp, chạy `reg export "HKCU\Software\SketchUp" "%USERPROFILE%\Desktop\SketchUp_registry_backup.reg" /y` và chép hai file `PrivatePreferences.json` (trong `%LOCALAPPDATA%\SketchUp\SketchUp <năm>\SketchUp`) và `SharedPreferences.json` (trong `%APPDATA%\SketchUp\SketchUp <năm>\SketchUp`). Plugin cũng tự sao lưu vào `...\Plugins\VGD_PluginManager\data\backups\` trước khi ghi.
+
+1. Tạo một bộ plugin (tab Bật/tắt), chỉnh vị trí vài thanh công cụ, gán thử một phím tắt.
+2. Bấm "Lưu layout" của bộ, xác nhận. Đóng SketchUp bằng File > Exit. Chờ vài giây: SketchUp tự mở lại. Mở hộp thoại: có thông báo kết quả và bộ hiện nhãn "Đã lưu layout + phím tắt (SketchUp <năm>)". Nếu không mở lại, xem `%APPDATA%\SketchUp\VGD_PluginManager\migrator.log`.
+3. Tắt một plugin bằng nút gạt, kéo vài thanh công cụ sang chỗ khác, thoát và mở lại: ghi nhận layout lộn xộn (nếu có) để so sánh.
+4. Bấm "Áp layout" của bộ, xác nhận, đóng SketchUp bằng File > Exit. SketchUp mở lại: **thanh công cụ có về đúng vị trí đã lưu không? Phím tắt có về đúng không?** Đây là điểm kiểm tra chính.
+5. Kiểm tra các điểm rủi ro: (a) toàn bộ plugin và thiết lập khác (kích thước cửa sổ plugin, tùy chọn) còn nguyên; (b) khi tắt một plugin rồi áp layout, thanh công cụ của các plugin còn lại có đúng chỗ không (ID thanh công cụ có bị lệch không); (c) không có file `.vgdtmp` nào còn sót cạnh hai file JSON.
+6. Thử hủy: bấm "Lưu layout" rồi bấm "Áp layout" khác bộ trước khi đóng SketchUp: chỉ job sau cùng được thực hiện.
+7. Chuyển phím tắt giữa hai bản: tab Chuyển plugin, tick "Chuyển cả phím tắt", chuyển 2022 sang 2024 (hoặc ngược lại); đóng cả hai bản; mở bản đích: phím tắt đã thay chưa?
+8. Hoàn tác thử: chép lại hai file JSON và import file `.reg` từ thư mục sao lưu khi SketchUp đóng, xác nhận layout cũ trở lại.
+9. Xuất/nhập sang máy khác: "Xuất các bộ ra file" (file `.json` có kèm layout), nhập ở máy kia bằng "Nhập bộ từ file", rồi "Áp layout". Ghi lại nếu màn hình khác độ phân giải làm thanh công cụ lệch.
 
 ## 4. Xuất gói .rbz tổng
 
-1. Xuất gói với vài plugin; mở file .rbz bằng phần mềm giải nén, thấy plugin, `vgd_bundle_import.rb`, `vgd_bundle_import/manifest.json`.
+1. Xuất gói với vài plugin; mở file .rbz bằng phần mềm giải nén, thấy plugin và `vgd_bundle_manifest.json` (gói chỉ chứa plugin, không kèm phím tắt hay layout).
 2. Trên máy khác (hoặc bản khác), cài gói bằng Extension Manager: có chấp nhận không (gói không đăng ký SketchupExtension)?
-3. Khởi động lại, vào "VGD: Nhập phím tắt/giao diện từ gói", xác nhận; kiểm tra phím tắt sau khi thoát và mở lại.
 
 ## 5. Bật/tắt plugin và bộ plugin
 
