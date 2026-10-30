@@ -683,10 +683,10 @@ hts.delete('box', a1['id']); t2 = V::Tools::BoxTool.new({}); t2.active_preset_id
 check 'deleted preset id is dropped from tool', t2.active_preset_id.nil?
 # --- 8b. Thanh công cụ và chạy nhanh ---
 tb = V.instance_variable_get(:@toolbar)
-check 'toolbar có 7 nút', tb.commands.length == 7, tb.commands.length
-check 'toolbar thứ tự', tb.commands.map(&:title) == ['Box → Board', 'Chia đợt / vách', 'Cánh tủ', 'Ngăn kéo', 'Scale VGD', 'VGD Chọn', 'Setting']
+check 'toolbar có 8 nút', tb.commands.length == 8, tb.commands.length
+check 'toolbar thứ tự', tb.commands.map(&:title) == ['Box → Board', 'Chia đợt / vách', 'Cánh tủ', 'Ngăn kéo', 'Scale VGD', 'Quét & dời tấm', 'VGD Chọn', 'Setting']
 check 'mọi nút có icon tồn tại', tb.commands.all? { |c| File.file?(c.small_icon.to_s) && File.file?(c.large_icon.to_s) }, tb.commands.map(&:small_icon).inspect
-check 'submenu Extensions có đủ nút', UI.menu('Extensions').subs['VGD Cabinet Draw'].items.length == 11
+check 'submenu Extensions có đủ nút', UI.menu('Extensions').subs['VGD Cabinet Draw'].items.length == 12
 sd = V::ToolSettings.new
 sd.save_base({'board_thickness' => 18})
 d1 = sd.save('door', 'Khe 3', {'door_gap' => 3}); sd.set_default('door', d1['id'])

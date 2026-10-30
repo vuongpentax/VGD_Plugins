@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.67
+# VGD_Cabinet Draw 1.0.0-beta.68
+
+beta.68: nút mới "Quét & dời tấm" (thanh công cụ và menu Extensions). Chọn một tủ (hoặc click vào tủ), rồi quét chọn nhiều group/component của tủ: kéo khung trái→phải chọn tấm nằm TRỌN trong khung, phải→trái chọn mọi tấm CHẠM khung; Tab đổi sang quét cọ (rê qua các tấm); Shift cộng thêm / bớt; click chọn một tấm; F đổi bộ lọc (tất cả / hồi và đợt / chỉ hồi / chỉ đợt). Dời: gõ số mm + Enter (âm = ngược lại) hoặc Enter rồi di chuột và click. Hồi (vách) dời ngang, đợt dời đứng, mỗi tấm theo hướng riêng cùng một khoảng; vị trí mới được ghi vào bước tạo tấm nên Scale / dựng lại tủ vẫn giữ, và cánh tự động đi theo hồi đã dời. Tấm khác (hông, đáy, nóc, hậu, cánh, ngăn kéo, vật tự vẽ) chỉ dời khi đã khóa trục bằng phím mũi tên (→ trái–phải, ← trước–sau, ↑/↓ lên–xuống, bấm lại để bỏ khóa) và bị đánh dấu chỉnh tay. Hai tấm cùng bước chồng nhau thì báo lỗi, không đổi gì; vách/đợt bị chặn ở mép lòng tủ. Một bước Undo. Chưa xác minh trong SketchUp thật.
 
 beta.67: Scale VGD đo kích thước theo tia chuột như Scale gốc: giao tia chuột với mặt phẳng chứa trục và vuông góc hướng nhìn rồi chiếu lên trục, nên ở góc nhìn 45° hay nhìn cao hơn tủ, kéo mặt trước / kéo lên trên đều bám sát chuột (trước đây dùng điểm suy luận nên lệch). Làm tròn 1 mm. Chỉ khi nhìn gần song song với trục (không đo được theo tia) mới dùng điểm suy luận. Bỏ chữ "VGD · SCALE" và dòng hướng dẫn ở góc trên bên trái viewport (hướng dẫn nằm ở thanh trạng thái). Chưa xác minh trong SketchUp thật.
 

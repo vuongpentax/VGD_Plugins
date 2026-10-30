@@ -131,10 +131,45 @@ module VGD_Cabinet_Draw
       end
     end
 
-    # Dựng lại tủ, giữ các tấm đang chỉnh tay (chúng không bị mất khi xóa tấm khác).
-    def rebuild(root)
-      keep = Rebuild.hand_edited(root).map { |item| item[:entity] }
+    # Dựng lại tủ, giữ các tấm đang chỉnh tay (chúng không bị mất khi xóa tấm khác). except: tấm cần dựng lại dù đang chỉnh tay.
+    def rebuild(root, except: [])
+      keep = Rebuild.hand_edited(root).map { |item| item[:entity] }.reject { |entity| except.include?(entity) }
       Rebuild.run(root, Rebuild.settings_of(root), Rebuild.dimensions_of(root), keep)
+    end
+
+    # Dời các đợt/vách: moves = [[tấm, mm]], mỗi tấm dời mm theo hướng riêng của nó (vách ngang, đợt đứng; mm âm = ngược lại).
+    # Vị trí mới được GHI vào bước tạo tấm (đổi sang vị trí tuyệt đối như khi xóa tấm) nên Scale / dựng lại vẫn giữ.
+    # Tấm bị chặn ở mép lòng tủ. Hai tấm cùng bước chồng nhau thì báo lỗi, không đổi gì. Không mở operation.
+    # Trả về { warnings: [...], offsets: { mã bước => [vị trí mới (mm từ lòng tủ) của các tấm đã dời] } }.
+    def move_members(root, moves)
+      shell = Geometry.shell_for(root)
+      raise 'Không tìm thấy thùng tủ.' unless shell
+      freeze_panel_steps(root)
+      list = Rebuild.ops(root)
+      inner = Interior.inner(shell)
+      members = Interior.containers(shell).select { |e| Rebuild::MEMBER_ROLES.include?(Interior.role_of(e)) }
+      placed = Hash.new { |h, k| h[k] = [] }
+      moves.group_by { |member, _| ModelData.params(member)['op'] }.each do |op_id, group|
+        op = list.find { |item| item['op'] == op_id && item['type'] == 'panel' }
+        raise 'Tấm này thuộc bước tạo cũ, không dời riêng được. Hãy dùng Sửa tủ.' unless op
+        vertical = op['axis'] == 'vertical'
+        pos = ->(entity) { box = Interior.box_of(entity); vertical ? box[0] : box[2] }
+        mine = members.select { |m| ModelData.params(m)['op'] == op_id }.sort_by(&pos)
+        thickness = op['thickness_mm'].to_f
+        span = (vertical ? inner.width : inner.height).to_mm - thickness
+        offsets = op['offsets'].map(&:to_f)
+        group.each do |member, mm|
+          rank = mine.index(member) or raise 'Không xác định được tấm cần dời.'
+          offsets[rank] = [[offsets[rank] + mm, 0.0].max, span].min
+          placed[op_id] << offsets[rank]
+        end
+        if offsets.sort.each_cons(2).any? { |a, b| b - a < thickness - 0.01 }
+          raise 'Các tấm cùng bước sẽ chồng nhau sau khi dời. Hãy dời ít hơn hoặc chọn thêm các tấm bên cạnh.'
+        end
+        op['offsets'] = offsets
+      end
+      Rebuild.save_ops(root, list)
+      { warnings: rebuild(root, except: moves.map(&:first)), offsets: placed }
     end
   end
 end

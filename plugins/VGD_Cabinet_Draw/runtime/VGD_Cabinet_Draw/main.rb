@@ -5,10 +5,10 @@ require 'securerandom'
 module VGD_Cabinet_Draw
   # Nạp lại (reload!) phải lấy danh sách file và phiên bản MỚI, nên xóa hằng cũ trước khi khai báo.
   %i[VERSION RUNTIME_FILES RUNTIME_CONSTANTS].each { |name| remove_const(name) if const_defined?(name, false) }
-  VERSION = '1.0.0-beta.67'
+  VERSION = '1.0.0-beta.68'
   # Thứ tự nạp quan trọng: panel_model trước schema (schema dùng bộ tấm mặc định).
-  RUNTIME_FILES = %w[keys theme panel_model split door_layout schema model_data geometry interior door_geometry preview drawer_parts drawer_slide tools rebuild auto_stretch resize scale_tool links removal drawer_bay panel_tools context_menu preset_hud mini_bar preset_store tool_settings dialog].freeze
-  RUNTIME_CONSTANTS = %i[Keys Theme PanelModel Split DoorLayout Schema ModelData Geometry Interior DoorFit DoorGeometry Preview DrawerParts DrawerSlide Tools Operations Rebuild AutoStretch Resize Links Removal DrawerBay PanelTools ContextMenu PresetHud MiniBar PresetStore ToolSettings Dialog].freeze
+  RUNTIME_FILES = %w[keys theme panel_model split door_layout schema model_data geometry interior door_geometry preview drawer_parts drawer_slide tools rebuild auto_stretch resize scale_tool screen_pick sweep_tool links removal drawer_bay panel_tools context_menu preset_hud mini_bar preset_store tool_settings dialog].freeze
+  RUNTIME_CONSTANTS = %i[Keys Theme PanelModel Split DoorLayout Schema ModelData Geometry Interior DoorFit DoorGeometry Preview DrawerParts DrawerSlide Tools Operations Rebuild AutoStretch Resize ScreenPick Links Removal DrawerBay PanelTools ContextMenu PresetHud MiniBar PresetStore ToolSettings Dialog].freeze
   extend self
 
   # Nạp (hoặc nạp lại) toàn bộ file runtime từ đĩa bằng load, không dùng require,
@@ -32,6 +32,7 @@ module VGD_Cabinet_Draw
     ['door', 'Cánh tủ', 'Chia cánh trên mặt tủ', 'Chia vùng trên mặt tủ. Dùng setting mặc định của công cụ Cánh tủ.'],
     ['drawer', 'Ngăn kéo', 'Tạo ngăn kéo', 'Tạo mặt và thùng kéo. Dùng setting mặc định của công cụ Ngăn kéo.'],
     ['resize', 'Scale VGD', 'Co giãn tủ theo điểm neo (kéo hoặc gõ số mm)', 'Chọn một tủ, bấm điểm neo (mặt đứng yên), kéo hoặc gõ kích thước mới rồi Enter; mộng và dấu tiết diện giữ nguyên, cánh và ngăn kéo đi theo hông và hồi giữa.'],
+    ['sweep', 'Quét & dời tấm', 'Quét chọn nhiều tấm rồi dời cùng một khoảng', 'Kéo khung (hoặc quét cọ, Tab) để chọn hồi, đợt và các tấm khác; gõ số mm + Enter để dời. Hồi dời ngang, đợt dời đứng; tấm khác cần khóa trục bằng phím mũi tên.'],
     ['pick', 'VGD Chọn', 'Chuột phải lên tủ / cánh để hiện thanh nút', 'Bật công cụ rồi chuột phải lên tủ, cánh hoặc mặt hộc: thanh nút tròn hiện ngay tại con trỏ.'],
     ['settings', 'Setting', 'Mở bảng setting', 'Mở bảng điều khiển để chỉnh và lưu setting.']
   ].freeze unless const_defined?(:TOOLBAR_BUTTONS, false)
@@ -45,7 +46,7 @@ module VGD_Cabinet_Draw
   end
 
   def build_command(key, title, tip, status)
-    command = UI::Command.new(title) { key == 'settings' ? Dialog.show : (key == 'resize' ? VGD_Cabinet_Draw.launch_scale : (key == 'pick' ? VGD_Cabinet_Draw.toggle_pick : VGD_Cabinet_Draw.launch_default(key))) }
+    command = UI::Command.new(title) { VGD_Cabinet_Draw.run_command(key) }
     command.tooltip = tip
     # Nút VGD Chọn là nút bật/tắt: sáng khi đang chạy, bấm lần nữa để tắt.
     command.set_validation_proc { VGD_Cabinet_Draw.pick_active? ? (defined?(MF_CHECKED) ? MF_CHECKED : 8) : (defined?(MF_UNCHECKED) ? MF_UNCHECKED : 0) } if key == 'pick' && command.respond_to?(:set_validation_proc)
@@ -252,6 +253,26 @@ module VGD_Cabinet_Draw
     Sketchup.active_model.select_tool(tool)
   rescue StandardError => e
     UI.messagebox("Không thể mở VGD Chọn: #{e.message}")
+  end
+
+  # Việc của một nút trên thanh công cụ / menu.
+  def run_command(key)
+    case key
+    when 'settings' then Dialog.show
+    when 'resize' then launch_scale
+    when 'sweep' then launch_sweep
+    when 'pick' then toggle_pick
+    else launch_default(key)
+    end
+  end
+
+  # Lệnh Quét & dời tấm: không có setting nên không đi qua kho setting.
+  def launch_sweep
+    tool = Tools::SweepTool.new
+    @active_tool = tool
+    Sketchup.active_model.select_tool(tool)
+  rescue StandardError => e
+    UI.messagebox("Không thể mở Quét & dời tấm: #{e.message}")
   end
 
   # Lệnh Scale VGD (điểm neo): không có setting nên không đi qua kho setting.
