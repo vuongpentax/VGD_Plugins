@@ -614,8 +614,17 @@ function Invoke-Apply($step, [string]$backupRoot) {
 }
 
 # ---- chinh ----
-$job = Read-Json $Job
-$script:logPath = [string]$job['log']
+# Nhat ky du phong: neu khong doc duoc job thi van ghi duoc vi sao helper chet
+$script:logPath = Join-Path $env:APPDATA 'SketchUp\VGD_PluginManager\migrator.log'
+Write-Log ('bat dau: PowerShell ' + $PSVersionTable.PSVersion + ', job=' + $Job)
+try {
+    $job = Read-Json $Job
+} catch {
+    Write-Log ('LOI doc file job: ' + $_.Exception.Message)
+    exit 1
+}
+if ($job['log']) { $script:logPath = [string]$job['log'] }
+Write-Log ('da doc job: id=' + $job['id'] + ', cho SketchUp pid=' + $job['sketchup_pid'] + ', so buoc=' + @($job['steps']).Count + ', mo lai=' + $job['restart'])
 $id = [string]$job['id']
 $hostPid = [int]$job['sketchup_pid']
 $resultPath = [string]$job['result']
@@ -630,13 +639,17 @@ foreach ($s in @($job['steps'])) { $years += [string]$s['year'] }
 $years = @($years | Select-Object -Unique)
 
 # Cho SketchUp (tien trinh goc va cac ban lien quan) thoat hoan toan
+$waited = 0
 while ($true) {
     if (-not (Test-JobCurrent ([string]$job['job_file']) $id)) { exit 0 }
     $busy = [bool](Get-Process -Id $hostPid -ErrorAction SilentlyContinue)
     foreach ($y in $years) { if (Test-Running $y) { $busy = $true } }
     if (-not $busy) { break }
+    $waited++
+    if ($waited -eq 1 -or $waited % 60 -eq 0) { Write-Log ('dang cho SketchUp dong (' + $waited + ' giay)') }
     Start-Sleep -Seconds 1
 }
+Write-Log 'SketchUp da dong, bat dau thuc hien'
 Start-Sleep -Seconds 2
 
 foreach ($step in @($job['steps'])) {
@@ -659,5 +672,8 @@ try {
 } catch { }
 
 if ($restart -and $exe) {
-    try { Start-Process -FilePath $exe } catch { Write-Log ('Khong mo lai duoc SketchUp: ' + $_.Exception.Message) }
+    try { Start-Process -FilePath $exe; Write-Log ('da mo lai SketchUp: ' + $exe) } catch { Write-Log ('Khong mo lai duoc SketchUp: ' + $_.Exception.Message) }
+} else {
+    Write-Log ('khong mo lai SketchUp (restart=' + $restart + ', exe=' + $exe + ')')
 }
+Write-Log 'helper ket thuc'

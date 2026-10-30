@@ -115,7 +115,9 @@ module VGD
         args = ['powershell.exe', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
                 '-WindowStyle', 'Hidden', '-File', HELPER.tr('/', '\\'), '-Job', job_path.tr('/', '\\')]
         return @spawner.call(args) if @spawner
-        Process.detach(Process.spawn(*args, new_pgroup: true, out: File::NULL, err: File::NULL))
+        pid = Process.spawn(*args, new_pgroup: true, out: File::NULL, err: File::NULL)
+        Log.write("Đã chạy helper nền (pid #{pid}): #{args.join(' ')}")
+        Process.detach(pid)
       end
 
       WAIT_NOTE = 'Hãy lưu model rồi đóng SketchUp bình thường (File > Exit). ' \
