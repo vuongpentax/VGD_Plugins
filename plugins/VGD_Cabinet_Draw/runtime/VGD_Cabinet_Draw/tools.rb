@@ -1889,6 +1889,8 @@ module VGD_Cabinet_Draw
         sync_size
         @layout.reset_at('vertical', auto_cuts_u, keep: true)
         @layout.mark_auto!
+        # Khoang vượt/không vượt ngưỡng sau khi scale làm đổi số cánh: cánh có bản lề ở giữa khoang đổi sang mép sát hông/hồi.
+        @layout.fix_hinges([0.0, 1.0] + partition_splits_u(true))
         @layout.clear_history
       rescue StandardError
         nil # không tính lại được thì giữ bố cục đã lưu

@@ -5,10 +5,10 @@ require 'securerandom'
 module VGD_Cabinet_Draw
   # Nạp lại (reload!) phải lấy danh sách file và phiên bản MỚI, nên xóa hằng cũ trước khi khai báo.
   %i[VERSION RUNTIME_FILES RUNTIME_CONSTANTS].each { |name| remove_const(name) if const_defined?(name, false) }
-  VERSION = '1.0.0-beta.63'
+  VERSION = '1.0.0-beta.64'
   # Thứ tự nạp quan trọng: panel_model trước schema (schema dùng bộ tấm mặc định).
-  RUNTIME_FILES = %w[keys theme panel_model split door_layout schema model_data geometry interior door_geometry preview drawer_parts drawer_slide tools rebuild auto_stretch links removal drawer_bay panel_tools context_menu preset_hud mini_bar preset_store tool_settings dialog].freeze
-  RUNTIME_CONSTANTS = %i[Keys Theme PanelModel Split DoorLayout Schema ModelData Geometry Interior DoorFit DoorGeometry Preview DrawerParts DrawerSlide Tools Operations Rebuild AutoStretch Links Removal DrawerBay PanelTools ContextMenu PresetHud MiniBar PresetStore ToolSettings Dialog].freeze
+  RUNTIME_FILES = %w[keys theme panel_model split door_layout schema model_data geometry interior door_geometry preview drawer_parts drawer_slide tools rebuild auto_stretch resize links removal drawer_bay panel_tools context_menu preset_hud mini_bar preset_store tool_settings dialog].freeze
+  RUNTIME_CONSTANTS = %i[Keys Theme PanelModel Split DoorLayout Schema ModelData Geometry Interior DoorFit DoorGeometry Preview DrawerParts DrawerSlide Tools Operations Rebuild AutoStretch Resize Links Removal DrawerBay PanelTools ContextMenu PresetHud MiniBar PresetStore ToolSettings Dialog].freeze
   extend self
 
   # Nạp (hoặc nạp lại) toàn bộ file runtime từ đĩa bằng load, không dùng require,
@@ -31,6 +31,7 @@ module VGD_Cabinet_Draw
     ['panel', 'Chia đợt / vách', 'Chia đợt (nóc/đáy) hoặc vách (hông)', 'Rê chuột xem trước, click đặt. Dùng setting mặc định của công cụ Đợt / vách.'],
     ['door', 'Cánh tủ', 'Chia cánh trên mặt tủ', 'Chia vùng trên mặt tủ. Dùng setting mặc định của công cụ Cánh tủ.'],
     ['drawer', 'Ngăn kéo', 'Tạo ngăn kéo', 'Tạo mặt và thùng kéo. Dùng setting mặc định của công cụ Ngăn kéo.'],
+    ['resize', 'Scale VGD', 'Nhập Rộng / Sâu / Cao của tủ rồi co giãn', 'Chọn một tủ, nhập kích thước mới (mm); tủ co giãn tại chỗ, cánh và ngăn kéo đi theo hông và hồi giữa.'],
     ['pick', 'VGD Chọn', 'Chuột phải lên tủ / cánh để hiện thanh nút', 'Bật công cụ rồi chuột phải lên tủ, cánh hoặc mặt hộc: thanh nút tròn hiện ngay tại con trỏ.'],
     ['settings', 'Setting', 'Mở bảng setting', 'Mở bảng điều khiển để chỉnh và lưu setting.']
   ].freeze unless const_defined?(:TOOLBAR_BUTTONS, false)
@@ -44,7 +45,7 @@ module VGD_Cabinet_Draw
   end
 
   def build_command(key, title, tip, status)
-    command = UI::Command.new(title) { key == 'settings' ? Dialog.show : (key == 'pick' ? VGD_Cabinet_Draw.toggle_pick : VGD_Cabinet_Draw.launch_default(key)) }
+    command = UI::Command.new(title) { key == 'settings' ? Dialog.show : (key == 'resize' ? Resize.run : (key == 'pick' ? VGD_Cabinet_Draw.toggle_pick : VGD_Cabinet_Draw.launch_default(key))) }
     command.tooltip = tip
     # Nút VGD Chọn là nút bật/tắt: sáng khi đang chạy, bấm lần nữa để tắt.
     command.set_validation_proc { VGD_Cabinet_Draw.pick_active? ? (defined?(MF_CHECKED) ? MF_CHECKED : 8) : (defined?(MF_UNCHECKED) ? MF_UNCHECKED : 0) } if key == 'pick' && command.respond_to?(:set_validation_proc)

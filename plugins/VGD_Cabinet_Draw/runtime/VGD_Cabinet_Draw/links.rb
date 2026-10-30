@@ -32,15 +32,23 @@ module VGD_Cabinet_Draw
         role = hinge_role(door)
         next unless role
         label = HINGE_LABEL.fetch(Operations.opening_type_of(door))
-        part = carcass[role] || (role == 'top' ? carcass['rail_front'] : nil) || (role == 'bottom' ? carcass['rail_front_bottom'] : nil)
+        parts = hinge_parts(shell, carcass, role)
         name = "Cánh #{door.get_attribute(Schema::DICTIONARY, 'region_id')}"
-        unless part
+        if parts.empty?
           out << "#{name} mở về phía #{label} nhưng không có #{label} để bắt bản lề."
           next
         end
-        gap = edge_gap(door, part, role)
-        out << "#{name} không còn sát #{label} để bắt bản lề (lệch #{gap.to_mm.round(1)} mm)." if gap > HINGE_REACH
+        gap = parts.map { |part| edge_gap(door, part, role) }.min
+        out << "#{name} không còn sát #{label} hoặc tấm đứng/đợt gần nhất để bắt bản lề (lệch #{gap.to_mm.round(1)} mm)." if gap > HINGE_REACH
       end
+    end
+
+    # Các tấm có thể giữ bản lề của một hướng mở: tấm vỏ tủ, cộng hồi giữa (cánh mở trái/phải) hoặc đợt giữa (cánh lật lên/xuống).
+    def hinge_parts(shell, carcass, role)
+      base = carcass[role] || (role == 'top' ? carcass['rail_front'] : nil) || (role == 'bottom' ? carcass['rail_front_bottom'] : nil)
+      members = Interior.members(shell)
+      extra = %w[side_left side_right].include?(role) ? members[:partitions] : members[:shelves]
+      [base, *extra].compact
     end
 
     # Ném lỗi nếu có bản lề không còn bắt được (dùng trước khi sửa model).

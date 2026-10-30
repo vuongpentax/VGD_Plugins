@@ -336,6 +336,23 @@ module VGD_Cabinet_Draw
         region
       end
 
+      # Cánh bản lề trái/phải phải có mép bản lề (mép trái hoặc mép phải) nằm ở một tấm đứng: mép tủ (0, 1) hoặc tim hồi giữa.
+      # panel_us: các vị trí u (0..1) đó. Cánh có mép bản lề không nằm ở tấm nào mà mép còn lại thì có thì đổi sang mép còn lại.
+      # Trả về số cánh đã đổi.
+      def fix_hinges(panel_us, eps = 1e-6)
+        at_panel = ->(u) { panel_us.any? { |p| (p - u).abs <= eps } }
+        changed = 0
+        @regions.each do |r|
+          type = r['opening_type']
+          next unless %w[left right].include?(type)
+          hinge_u, other_u, other = type == 'left' ? [r['u0'], r['u1'], 'right'] : [r['u1'], r['u0'], 'left']
+          next if at_panel.call(hinge_u) || !at_panel.call(other_u)
+          r['opening_type'] = other
+          changed += 1
+        end
+        changed
+      end
+
       # Gom nhiều thao tác thành một bước hoàn tác.
       def batch
         remember

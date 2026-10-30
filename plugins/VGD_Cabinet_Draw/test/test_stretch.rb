@@ -543,5 +543,85 @@ auto_run(c)
 check 'hướng mở của cánh được giữ sau khi tính lại', V::Operations.opening_type_of(doors_of_test(c).first) == 'left', V::Operations.opening_type_of(doors_of_test(c).first).inspect
 
 
+puts '== 16. Bản lề bắt vào hông HOẶC hồi giữa gần nhất khi scale =='
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+add_auto_partition(c, 282.5)
+build_auto_doors(c)
+ds = doors_of_test(c)
+%w[left left right].each_with_index do |type, i|
+  V::Operations.apply_opening_metadata(ds[i], type)
+  V::Operations.save_opening_to_layout(ds[i], type)
+end
+check 'cánh khoang giữa có bản lề: liên kết vào hồi giữa nên không báo lỗi', V::Links.problems(shell(c), doors_of_test(c)).empty?, V::Links.problems(shell(c), doors_of_test(c)).inspect
+UI.msgs.clear
+scale_root(c, 1.25)
+auto_run(c)
+check 'scale tủ có cánh bản lề ở khoang giữa: không báo lỗi', msgs_with('Không tự cập nhật được').empty? && V::Rebuild.scale_of(c).nil?, UI.msgs.last.inspect
+check 'tủ đã được cập nhật theo rộng mới 1000', dims(c) == [1000.0, 560.0, 2000.0], dims(c).inspect
+check 'hướng mở của ba cánh được giữ', doors_of_test(c).map { |d| V::Operations.opening_type_of(d) } == %w[left left right], doors_of_test(c).map { |d| V::Operations.opening_type_of(d) }.inspect
+
+# Số cánh tự động đổi khi scale: cánh có bản lề phải còn bản lề hợp lệ (mép bản lề sát một tấm đứng)
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+build_auto_doors(c)
+ds = doors_of_test(c)
+%w[left right].each_with_index { |type, i| V::Operations.apply_opening_metadata(ds[i], type); V::Operations.save_opening_to_layout(ds[i], type) }
+UI.msgs.clear
+scale_root(c, 0.5)
+auto_run(c)
+check 'thu còn 1 cánh: bản lề hợp lệ, scale không bị chặn', doors_of_test(c).length == 1 && msgs_with('Không tự cập nhật được').empty?, UI.msgs.inspect
+scale_root(c, 2.0)
+auto_run(c)
+types = doors_of_test(c).map { |d| V::Operations.opening_type_of(d) }
+check 'phóng lại 2 cánh: không bị chặn bởi bản lề, cánh trái chuyển bản lề sang mép sát hông', doors_of_test(c).length == 2 && msgs_with('Không tự cập nhật được').empty? && types.first != 'right', [types, UI.msgs.last].inspect
+check 'mọi bản lề còn bắt được vào tấm', V::Links.problems(shell(c), doors_of_test(c)).empty?, V::Links.problems(shell(c), doors_of_test(c)).inspect
+
+# Cánh bản lề phải mà mép xa mọi tấm đứng (không phải hông, không phải hồi) vẫn báo lỗi
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+reselect(c)
+dt = V::Tools::DoorTool.new({}); dt.activate
+dt.layout.split(dt.layout.regions.first['id'], 'vertical', 0.5); dt.commit(v)
+d0 = doors_of_test(c).first
+V::Operations.apply_opening_metadata(d0, 'right')
+check 'bản lề phải cách hông và mọi hồi xa (400 mm): vẫn báo lỗi', V::Links.problems(shell(c), [d0]).length == 1, V::Links.problems(shell(c), [d0]).inspect
+
+puts '== 17. Nút Scale VGD: nhập Rộng/Sâu/Cao rồi áp dụng =='
+check 'có Resize.run', V.const_defined?(:Resize)
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+reselect(c)
+UI.next_input = ['1000', '560', '2000']
+UI.inputbox_calls.clear
+UI.msgs.clear
+V::Resize.run
+check 'hộp nhập hiện kích thước hiện tại 800 x 560 x 2000', UI.inputbox_calls.last && UI.inputbox_calls.last[1] == ['800.0', '560.0', '2000.0'], UI.inputbox_calls.last.inspect
+check 'tủ co giãn đúng 1000 x 560 x 2000', dims(c) == [1000.0, 560.0, 2000.0], dims(c).inspect
+check 'tủ hết trạng thái Scale, hông phải dời tới 1000', V::Rebuild.scale_of(c).nil? && near(bb(part(c, 'Hông Phải'))[3], 1000)
+check 'không có hộp thoại lỗi', msgs_with('không').empty? && UI.msgs.empty?, UI.msgs.inspect
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+reselect(c)
+UI.next_input = ['800', '560', '2300']
+V::Resize.run
+check 'đổi riêng chiều cao: 800 x 560 x 2300', dims(c) == [800.0, 560.0, 2300.0], dims(c).inspect
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+reselect(c)
+before = dims(c)
+UI.next_input = false
+V::Resize.run
+check 'bấm Hủy: không đổi gì', dims(c) == before && V::Rebuild.scale_of(c).nil?
+UI.next_input = ['abc', '560', '2000']
+UI.msgs.clear
+V::Resize.run
+check 'nhập chữ: báo lỗi, không đổi', dims(c) == before && UI.msgs.any? { |m| m.include?('số') }, UI.msgs.inspect
+UI.next_input = ['800', '-5', '2000']
+UI.msgs.clear
+V::Resize.run
+check 'số âm: báo lỗi, không đổi', dims(c) == before && !UI.msgs.empty?, UI.msgs.inspect
+Sketchup.active_model.selection.clear
+UI.msgs.clear
+V::Resize.run
+check 'không chọn tủ: nhắc chọn tủ', UI.msgs.last.to_s.include?('chọn'), UI.msgs.inspect
+check 'nút Scale VGD có trên thanh công cụ', V.instance_variable_get(:@toolbar).nil? || V::TOOLBAR_BUTTONS.any? { |b| b[0] == 'resize' }
+check 'icon nút Scale VGD tồn tại (24 và 32 px)', V.icon_file('resize', 24) && V.icon_file('resize', 32)
+
+
 puts "\n== Kết quả test_stretch: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
 $fail.each { |x| puts "  - #{x}" }
