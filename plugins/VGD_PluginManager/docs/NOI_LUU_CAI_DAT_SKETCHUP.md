@@ -13,6 +13,20 @@ Khảo sát ngày 2026-10-30 trên một máy Windows 10 có SketchUp 2022 và 2
 4. Hai bản dùng cùng định dạng, nhưng nội dung độc lập (cùng số lượng 24 nhưng khác lệnh ở `Shortcut_24`).
 5. File có khóa `timestamp` (Int64) ở cấp cao nhất và mục tên "Shared for All Computers". Chưa biết SketchUp có đồng bộ qua tài khoản hay dùng `timestamp` để quyết định ghi đè hay không.
 
+### 1b. File `.dat` do nút Export phím tắt của SketchUp xuất ra (đã xác nhận trên một file 2022)
+
+1. Mã hóa UTF-16 little-endian có BOM, xuống dòng CRLF. Có hai mục: `[Accelerator]` và `[File Locations]`.
+2. `[Accelerator]`: dòng `Count=<n>` rồi n dòng, **mỗi dòng đúng định dạng của `Shortcut_N`** trong `SharedPreferences.json`: `"<ctrl> <alt> <shift> <phím> <lệnh>"`. Mẫu cho thấy cờ thứ nhất là Ctrl (ví dụ `1 0 1 S File/Save Incremental`, `1 1 0 S File/Save As...`), cờ thứ hai là Alt, cờ thứ ba là Shift. Tên phím gồm chữ, số, `F2`..., `Space`, và ký tự như `` ` ``, `,`, `.`, `;`, `'`, `/`.
+3. Lệnh là tên hàm (`selectLineTool:`) hoặc **đường dẫn menu**, kể cả lệnh của plugin (`Extensions/d95design.com/Super Paint`, `Tools/Curic/Mirror/Mirror Tool`). Lệnh có thể chứa ký tự tiếng Việt (`Tools/One Click Tools/Ẩn`), nên khi ghi phải dùng UTF-8.
+4. `[File Locations]` chứa đường dẫn riêng của máy (thư mục model, component, vật liệu...). Nhập nguyên file bằng nút Import của SketchUp có thể ghi đè các đường dẫn này bằng đường dẫn của máy khác.
+5. File mẫu (xuất từ một tài khoản Windows khác trên SketchUp 2022) có 85 phím tắt, trong đó khoảng 20 trỏ vào menu của plugin, trong khi `SharedPreferences.json` của máy khảo sát chỉ có 24 phím tắt mặc định (không có phím của plugin). Suy đoán, chưa xác nhận: SketchUp xóa phím tắt của plugin không được nạp lúc thoát, giống cách nó xóa vị trí thanh công cụ. Phím tắt lưu theo đường dẫn menu nên **không bị ảnh hưởng bởi thứ tự nạp plugin** (khác với ID thanh công cụ).
+
+### 1c. Rủi ro khi ghi lại `SharedPreferences.json`
+
+1. File chứa nhiều số thực dạng `24.0`, `150.0`, `1.0` (9 giá trị ở mỗi file mẫu). Đọc cả file rồi ghi lại bằng `JavaScriptSerializer` sẽ đổi chúng thành `24`, `150`, `1`. Nên chỉnh theo dòng: chỉ thay các dòng `Num_Shortcuts` và `Shortcut_N` (mỗi mục một dòng, thụt lề 12 khoảng trắng, khóa xếp theo thứ tự chữ), giữ nguyên mọi byte còn lại.
+2. Khóa `timestamp` ở cấp cao nhất là thời điểm lưu cuối (mili giây từ 1970), do SketchUp ghi mỗi lần thoát. Chưa rõ có dùng để đồng bộ hay không.
+3. Không sao chép cả mục `Windows Only`: `UserLibrariesComponentBrowser1` chứa đường dẫn riêng của từng bản. Chỉ chép các khóa phím tắt.
+
 ## 2. Layout SketchUp 2022
 
 1. Registry `HKCU\Software\SketchUp\SketchUp 2022\`:
