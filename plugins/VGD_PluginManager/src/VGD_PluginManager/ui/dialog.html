@@ -100,8 +100,19 @@ function drawToggle() {
     var r = el('div', 'row' + (p.status === 'off' ? ' off' : '')), cb = document.createElement('input');
     cb.type = 'checkbox'; cb.checked = !!checked[p.name]; cb.title = 'Chọn để lưu vào bộ';
     cb.onchange = function () { checked[p.name] = cb.checked; };
-    r.appendChild(cb); r.appendChild(el('span', 'nm', p.name));
-    if (p.status === 'conflict') r.appendChild(el('span', 'badge conflict', label(p.status)));
+    var nm = el('span', 'nm', p.name);
+    if (p.members && p.members.length > 1) {
+      var others = p.members.filter(function (m) { return m !== p.name; });
+      var note = el('small', '', ' gồm cả: ' + others.join(', '));
+      nm.title = 'Gồm ' + p.members.length + ' mục: ' + p.members.join(', ');
+      nm.appendChild(note);
+    }
+    r.appendChild(cb); r.appendChild(nm);
+    if (p.status === 'conflict') {
+      var badge = el('span', 'badge conflict', label(p.status));
+      badge.title = 'Plugin này có ở cả thư mục Plugins (đang chạy) và thư mục đã tắt. Xóa hoặc dời bản không cần để gạt được.';
+      r.appendChild(badge);
+    }
     var sw = el('button', 'switch'); sw.type = 'button';
     sw.setAttribute('role', 'switch');
     sw.setAttribute('aria-checked', p.status === 'on' ? 'true' : 'false');

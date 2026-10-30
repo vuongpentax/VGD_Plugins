@@ -1,6 +1,6 @@
 # HANDOFF: VGD Plugin Manager (SketchUp, Ruby)
 
-Phiên bản hiện tại: **1.0.0-beta.9** (xem mục 8 cho phần thêm so với beta.2). Ngày bàn giao: 2026-10-30.
+Phiên bản hiện tại: **1.0.0-beta.10** (xem mục 8 cho phần thêm so với beta.2). Ngày bàn giao: 2026-10-30.
 Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 
 ## 1. Mục tiêu và bối cảnh
@@ -21,7 +21,7 @@ Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 
 1. `HANDOFF.md`: file này.
 2. `src/`: mã nguồn plugin (đúng cấu trúc bên trong .rbz).
-   1. `src/VGD_PluginManager.rb`: file loader, đăng ký SketchupExtension (version `1.0.0-beta.9`).
+   1. `src/VGD_PluginManager.rb`: file loader, đăng ký SketchupExtension (version `1.0.0-beta.10`).
    2. `src/VGD_PluginManager/main.rb`: chuyển plugin, phím tắt, thanh công cụ; xuất gói tổng; giao diện HtmlDialog chính.
    3. `src/VGD_PluginManager/zip_writer.rb`: ghi file zip/.rbz thuần Ruby bằng Zlib (không cần thư viện ngoài).
    4. (đã bỏ ở beta.5) `bundle_import.rb`: mẫu nhập phím tắt/thanh công cụ từ gói tổng, dùng khóa registry sai.
@@ -123,6 +123,7 @@ ruby tests/test_layout.rb src
 ruby tests/test_dialog.rb src
 ruby tests/test_splice.rb
 ruby tests/test_private_splice.rb
+ruby tests/test_linker.rb src
 ruby tests/run_test.rb src
 ```
 
@@ -138,7 +139,7 @@ cd src
 python3 -c "
 import zipfile
 z=zipfile.ZipFile('../dist/VGD_PluginManager_1.0.0-beta.4.rbz','w',zipfile.ZIP_DEFLATED)
-for n in ['VGD_PluginManager.rb','VGD_PluginManager/main.rb','VGD_PluginManager/zip_writer.rb','VGD_PluginManager/toggle.rb','VGD_PluginManager/logger.rb','VGD_PluginManager/dialog.rb','VGD_PluginManager/ui/dialog.html','VGD_PluginManager/ui/dialog.css','VGD_PluginManager/icons/plugin_manager.svg','VGD_PluginManager/layout.rb','VGD_PluginManager/helper/apply_layout.ps1']:
+for n in ['VGD_PluginManager.rb','VGD_PluginManager/main.rb','VGD_PluginManager/zip_writer.rb','VGD_PluginManager/toggle.rb','VGD_PluginManager/logger.rb','VGD_PluginManager/dialog.rb','VGD_PluginManager/ui/dialog.html','VGD_PluginManager/ui/dialog.css','VGD_PluginManager/icons/plugin_manager.svg','VGD_PluginManager/layout.rb','VGD_PluginManager/linker.rb','VGD_PluginManager/helper/apply_layout.ps1']:
     z.write(n,n)
 z.close()
 "
@@ -172,3 +173,8 @@ Khi thêm file mới vào `src/VGD_PluginManager/` nhớ thêm vào danh sách t
    1. Snapshot đổi sang **format 2**: mỗi khối layout được lưu **nguyên văn** (các dòng của file) trong `blocks` (khóa là văn bản thô, hai dấu gạch chéo), và `main_window` lưu dòng `"DockWidgetState": "..."`, `"ToolBarState": "..."`. Snapshot cũ có `prefs` (beta.5 đến beta.8) không còn được nhận (chưa từng được kiểm chứng).
    2. Helper (`Get-PrivateLayout`, `Set-PrivateLayout`, `Save-PrivateChecked`) chỉ thay các khối layout trong `"This Computer Only"` và hai khóa của `MainWindow`; mọi byte khác giữ nguyên (số `X.0`, tiếng Việt, thụt lề). Trước khi thay file kiểm tra: JSON đọc lại được, số khóa cấp cao nhất không đổi, **mọi mục ngoài layout giống hệt trước (so sánh từng mục)**, đủ mục layout mới, `MainWindow` có giá trị mới. Bản tham chiếu Ruby và 36 test: `tests/support/splice_reference.rb` (`PrivateSplice`), `tests/test_private_splice.rb`, dựng theo cấu trúc thật. Bộ kiểm tra khối ở phía Ruby (`Layout.valid_block?`, `clean_blocks`, `clean_main_window`) chặn file nhập cố chèn mục hay khóa ngoài layout.
    3. **Bản PowerShell vẫn chưa chạy thử được** (không có PowerShell ngoài Windows). Mục layout không phẳng (có đối tượng lồng) bị bỏ qua khi chụp và được báo số lượng.
+11. `1.0.0-beta.10`: **gộp loader với thư mục/file đi kèm khác tên** (`linker.rb`).
+   1. Trước đây nhóm plugin chỉ theo tên bỏ đuôi, nên loader và thư mục khác tên (ví dụ `_jhs01_powerbar.rb` và `JHS`, `fixSolid_loader.rb` và `fixSolid.rbe`) thành hai mục riêng; tắt một mục để lại nửa còn lại (SketchUp tự nạp mọi `.rb/.rbe/.rbs` ở gốc Plugins nên nửa còn lại vẫn chạy, hoặc loader báo lỗi thiếu file), gây hiện tượng "tắt rồi vẫn chạy" và có thể dẫn tới "Trùng tên".
+   2. Nay đọc nội dung các loader `.rb` (tối đa 100 KB mỗi file) và gộp mục được nhắc tên (trong chuỗi trích dẫn, tách theo `/` và `\`, không phân biệt hoa thường). Chỉ gộp khi mục đích **không có loader `.rb` đọc được của riêng nó**, **tên không chứa "lib"** (thư viện nền luôn đứng riêng) và **đúng một loader nhắc tới** (thư viện dùng chung luôn đứng riêng). Loader mã hóa (`.rbe`, `.rbs`) không đọc được nên chỉ nhóm theo tên. Dùng chung cho bật/tắt, Tắt tất cả, Chuyển plugin và xuất gói `.rbz`.
+   3. Giao diện ghi "gồm cả: ..." dưới tên plugin gộp (rê chuột xem đủ danh sách); nhãn "Trùng tên" có lời giải thích khi rê chuột.
+   4. Giới hạn: heuristic dựa trên chuỗi trong loader, có thể sót (loader dựng đường dẫn bằng biến) hoặc gộp nhầm hiếm gặp. Chưa thử trên danh sách plugin thật của người dùng. Trạng thái dở dang từ bản cũ (chỉ loader nằm trong thư mục cất, thư mục còn ở Plugins) vẫn hiện là hai mục riêng để người dùng tự xử lý.

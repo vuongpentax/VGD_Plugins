@@ -5,11 +5,12 @@ require 'json'
 require 'cgi'
 require File.join(File.dirname(__FILE__), 'zip_writer')
 require File.join(File.dirname(__FILE__), 'logger')
+require File.join(File.dirname(__FILE__), 'linker')
 
 module VGD
   module PluginManager
 
-    VERSION         = '1.0.0-beta.9'
+    VERSION         = '1.0.0-beta.10'
     UI_DIR          = File.join(File.dirname(__FILE__), 'ui')
     ICON_DIR        = File.join(File.dirname(__FILE__), 'icons')
 
@@ -42,16 +43,11 @@ module VGD
     end
 
     # Gom plugin: file .rb ở gốc Plugins + thư mục cùng tên (nếu có)
+    # Plugin trong Plugins của một phiên bản: loader và thư mục đi kèm được gộp (xem linker.rb)
     def self.list_plugins(version)
-      dir = plugins_dir(version)
-      return [] unless File.directory?(dir)
-      entries = Dir.children(dir) - SKIP_NAMES - SELF_NAMES
-      groups = {}
-      entries.each do |e|
-        key = e.sub(/\.(rb|rbe|rbs)\z/i, '')
-        (groups[key] ||= []) << e
-      end
-      groups.map { |k, v| { name: k, items: v.sort } }.sort_by { |h| h[:name].downcase }
+      Linker.group(plugins_dir(version), SKIP_NAMES + SELF_NAMES)
+            .map { |k, g| { name: k, items: g[:items], members: g[:members] } }
+            .sort_by { |h| h[:name].downcase }
     end
 
     def self.backup(dir)

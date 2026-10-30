@@ -47,17 +47,14 @@ module VGD
         File.join(root_dir, 'sets.json')
       end
 
-      # Gom theo tên plugin: { 'ten' => ['ten.rb', 'ten'] }
+      # Các plugin trong một thư mục: { 'ten' => { items: [...], members: [...] } } (xem linker.rb)
+      def self.group_dir(dir)
+        PM::Linker.group(dir, PM::SKIP_NAMES + PM::SELF_NAMES)
+      end
+
+      # { 'ten' => ['ten.rb', 'ten'] }
       def self.list_dir(dir)
-        return {} unless File.directory?(dir)
-        groups = {}
-        entries = Dir.children(dir) - PM::SKIP_NAMES - PM::SELF_NAMES
-        entries.reject { |e| e.start_with?('.') }.each do |e|
-          key = e.sub(/\.(rb|rbe|rbs)\z/i, '')
-          (groups[key] ||= []) << e
-        end
-        groups.each_value(&:sort!)
-        groups
+        group_dir(dir).transform_values { |g| g[:items] }
       end
 
       def self.load_sets
@@ -74,15 +71,17 @@ module VGD
       end
 
       def self.state
-        on  = list_dir(PM.plugins_dir(year))
-        off = list_dir(disabled_dir)
+        on_g  = group_dir(PM.plugins_dir(year))
+        off_g = group_dir(disabled_dir)
+        on  = on_g.transform_values { |g| g[:items] }
+        off = off_g.transform_values { |g| g[:items] }
         names = (on.keys + off.keys).uniq.sort_by(&:downcase)
         plugins = names.map do |n|
           st = if on.key?(n) && off.key?(n) then 'conflict'
                elsif on.key?(n) then 'on'
                else 'off'
                end
-          { 'name' => n, 'status' => st, 'items' => (on[n] || off[n]).size }
+          { 'name' => n, 'status' => st, 'items' => (on[n] || off[n]).size, 'members' => (on_g[n] || off_g[n])[:members] }
         end
         sets = load_sets.map do |k, v|
           { 'name' => k, 'names' => v, 'count' => v.size,
