@@ -4,11 +4,12 @@ require 'fileutils'
 require 'json'
 require 'cgi'
 require File.join(File.dirname(__FILE__), 'zip_writer')
+require File.join(File.dirname(__FILE__), 'logger')
 
 module VGD
   module PluginMigrator
 
-    VERSION         = '1.0.0-beta.2'
+    VERSION         = '1.0.0-beta.3'
     IMPORT_TEMPLATE = File.join(File.dirname(__FILE__), 'bundle_import.rb')
 
     APPDATA_SUBPATH = 'SketchUp/SketchUp %s/SketchUp/Plugins'
@@ -23,6 +24,12 @@ module VGD
 
     def self.appdata
       ENV['APPDATA'].to_s.tr('\\', '/')
+    end
+
+    # Ghi lỗi vào nhật ký và trả về câu thông báo cho người dùng
+    def self.report_error(context, exc)
+      Log.write(context, exc)
+      "#{context}: #{exc.message}\n#{Log.hint}"
     end
 
     def self.plugins_dir(version)
@@ -75,6 +82,7 @@ module VGD
             FileUtils.cp_r(from, to)
             done << item
           rescue => e
+            Log.write("Lỗi chép #{item} từ #{src_ver} sang #{dst_ver}", e)
             failed << "#{item}: #{e.message}"
           end
         end
@@ -170,7 +178,8 @@ module VGD
       if reg_import_text(text)
         "Đã chuyển #{label} từ #{src_ver} sang #{dst_ver}."
       else
-        "Lỗi khi ghi #{label} vào bản #{dst_ver}."
+        Log.write("reg import thất bại (#{label}, #{src_ver} -> #{dst_ver})")
+        "Lỗi khi ghi #{label} vào bản #{dst_ver}. #{Log.hint}"
       end
     end
 
@@ -234,7 +243,7 @@ module VGD
       ZipWriter.write(out_path, entries)
       { count: plugin_files, path: out_path, notes: notes }
     rescue => e
-      { error: "Không tạo được gói: #{e.message}" }
+      { error: report_error('Không tạo được gói', e) }
     end
 
     # ---- Giao diện ----
@@ -284,6 +293,8 @@ module VGD
         msg << migrate_registry(:toolbars,  src_ver, dst_ver) if opts['toolbars']
         msg << "Hãy đóng SketchUp và mở lại bản #{dst_ver} để áp dụng."
         dlg.execute_script("showResult(#{msg.join("\n").to_json})")
+      rescue => e
+        dlg.execute_script("showResult(#{report_error('Lỗi khi chuyển', e).to_json})")
       end
 
       dlg.add_action_callback('export_bundle') do |_ctx, json|
@@ -308,6 +319,8 @@ module VGD
                  'rồi vào Plugins > "VGD: Nhập phím tắt/giao diện từ gói" nếu gói có kèm phím tắt.'
           dlg.execute_script("showResult(#{msg.join("\n").to_json})")
         end
+      rescue => e
+        dlg.execute_script("showResult(#{report_error('Lỗi khi xuất gói', e).to_json})")
       end
 
       dlg.show

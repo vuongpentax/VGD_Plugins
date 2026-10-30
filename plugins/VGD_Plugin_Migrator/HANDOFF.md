@@ -1,6 +1,6 @@
 # HANDOFF: VGD Plugin Migrator (SketchUp, Ruby)
 
-Phiên bản hiện tại: **1.0.0-beta.2**. Ngày bàn giao: 2026-10-30.
+Phiên bản hiện tại: **1.0.0-beta.3** (xem mục 8 cho phần thêm so với beta.2). Ngày bàn giao: 2026-10-30.
 Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 
 ## 1. Mục tiêu và bối cảnh
@@ -25,9 +25,11 @@ Bàn giao từ chat Claude sang Claude Code để làm tiếp.
    2. `src/vgd_plugin_migrator/main.rb`: chuyển plugin, phím tắt, thanh công cụ; xuất gói tổng; giao diện HtmlDialog chính.
    3. `src/vgd_plugin_migrator/zip_writer.rb`: ghi file zip/.rbz thuần Ruby bằng Zlib (không cần thư viện ngoài).
    4. `src/vgd_plugin_migrator/bundle_import.rb`: mẫu file được đóng vào gói tổng (đổi tên thành `vgd_bundle_import.rb`), tạo menu nhập phím tắt/thanh công cụ trên máy mới.
-   5. `src/vgd_plugin_migrator/plugin_manager.rb`: quản lý bật/tắt plugin và bộ plugin.
+   5. `src/vgd_plugin_migrator/plugin_manager.rb`: quản lý bật/tắt plugin và bộ plugin, xuất/nhập bộ ra file `.json`.
+   6. `src/vgd_plugin_migrator/logger.rb`: ghi nhật ký lỗi vào `%APPDATA%\SketchUp\VGD_PluginMigrator\migrator.log`.
 3. `tests/`: bộ test chạy ngoài SketchUp bằng stub (xem mục 6).
-4. `dist/VGD_Plugin_Migrator_1.0.0-beta.2.rbz`: bản đã đóng gói gửi cho người dùng.
+4. `docs/KIEM_THU_THU_CONG.md`: hướng dẫn kiểm thử thủ công trong SketchUp thật.
+5. File `.rbz` đóng gói không lưu trong repo (`.gitignore` loại `*.rbz`); tạo bằng mục 7.
 
 ## 3. Tính năng và hành vi đã chốt
 
@@ -125,8 +127,8 @@ File .rbz là zip có đường dẫn dùng dấu `/`, các file ở gốc của
 cd src
 python3 -c "
 import zipfile
-z=zipfile.ZipFile('../dist/VGD_Plugin_Migrator_1.0.0-beta.2.rbz','w',zipfile.ZIP_DEFLATED)
-for n in ['vgd_plugin_migrator.rb','vgd_plugin_migrator/main.rb','vgd_plugin_migrator/zip_writer.rb','vgd_plugin_migrator/bundle_import.rb','vgd_plugin_migrator/plugin_manager.rb']:
+z=zipfile.ZipFile('../dist/VGD_Plugin_Migrator_1.0.0-beta.3.rbz','w',zipfile.ZIP_DEFLATED)
+for n in ['vgd_plugin_migrator.rb','vgd_plugin_migrator/main.rb','vgd_plugin_migrator/zip_writer.rb','vgd_plugin_migrator/bundle_import.rb','vgd_plugin_migrator/plugin_manager.rb','vgd_plugin_migrator/logger.rb']:
     z.write(n,n)
 z.close()
 "
@@ -139,3 +141,4 @@ Khi thêm file mới vào `src/vgd_plugin_migrator/` nhớ thêm vào danh sách
 1. `1.0.0`: chuyển plugin, phím tắt, thanh công cụ.
 2. `1.0.0-beta`: thêm xuất gói .rbz tổng.
 3. `1.0.0-beta.2`: thêm quản lý bật/tắt plugin và bộ plugin.
+4. `1.0.0-beta.3`: thêm xuất/nhập bộ plugin ra file `.json` (có hỏi ghi đè khi trùng tên, lọc dữ liệu sai kiểu), ghi nhật ký lỗi ra file, hướng dẫn test thủ công. Đã kiểm tra tự động ngoài SketchUp; **chưa kiểm tra trong SketchUp thật** (hộp thoại mở/lưu file `UI.openpanel`/`UI.savepanel`, `UI.messagebox` hỏi ghi đè).

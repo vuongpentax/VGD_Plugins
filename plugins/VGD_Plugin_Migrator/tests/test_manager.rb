@@ -71,6 +71,37 @@ check 'bật cả bộ', r[:changed].sort == %w[alpha gamma]
 check 'xóa bộ', M.delete_set('Render').include?('Đã xóa') && M.load_sets.empty?
 check 'xóa bộ không tồn tại', M.delete_set('zzz').include?('Không tìm thấy')
 
+# Xuất/nhập bộ plugin
+M.save_set('Render', %w[alpha gamma])
+M.save_set('Vẽ', %w[alpha])
+out = File.join(Dir.tmpdir, "sets_#{$$}")
+msg = M.export_sets(out)
+check 'xuất bộ ra file .json', msg.include?('2 bộ') && File.exist?("#{out}.json")
+sets, err = M.read_sets_file("#{out}.json")
+check 'đọc lại đúng nội dung (có tiếng Việt)', err.nil? && sets == { 'Render' => %w[alpha gamma], 'Vẽ' => %w[alpha] }
+M.delete_set('Render')
+check 'nhập bộ mới, giữ bộ trùng', M.import_sets(sets, false).include?('1 bộ mới') && M.load_sets['Vẽ'] == %w[alpha]
+M.save_set('Vẽ', %w[gamma])
+check 'trùng tên + không ghi đè thì bỏ qua', M.import_sets(sets, false).include?('Bỏ qua 2') && M.load_sets['Vẽ'] == %w[gamma]
+check 'trùng tên + ghi đè', M.import_sets(sets, true).include?('2 bộ ghi đè') && M.load_sets['Vẽ'] == %w[alpha]
+bad = File.join(Dir.tmpdir, "bad_#{$$}.json")
+File.write(bad, '{"hello":1}')
+check 'file sai định dạng bị từ chối', M.read_sets_file(bad)[1].include?('không đúng định dạng')
+File.write(bad, '{"format":"vgd_plugin_sets","sets":{"ok":["a",5,null,""],"x":"str","  ":["a"],"y":[1]}}')
+check 'dữ liệu sai kiểu bị lọc', M.read_sets_file(bad)[0] == { 'ok' => ['a'] }
+File.write(bad, 'không phải json')
+check 'file hỏng không làm crash, có ghi log', M.read_sets_file(bad)[1].include?('migrator.log') && File.read(VGD::PluginMigrator::Log.path, encoding: 'UTF-8').include?('Không đọc được file bộ plugin')
+M.delete_set('Render'); M.delete_set('Vẽ'); M.delete_set('ok')
+check 'xuất khi chưa có bộ', M.export_sets(out).include?('Chưa có')
+
+# Nhật ký
+log = VGD::PluginMigrator::Log
+File.write(log.path, 'x' * (log::MAX_BYTES + 1))
+log.write('thử xoay vòng')
+check 'log xoay vòng khi quá lớn', File.exist?("#{log.path}.1") && File.size(log.path) < 1000
+ENV['APPDATA'] = '/proc/khong_ghi_duoc'
+check 'log không ném lỗi khi không ghi được', log.write('x') == false
+
 puts M.summary({ changed: ['a'], skipped: [], errors: [] }, 'disable')
 puts($fail ? 'CÓ LỖI' : 'TẤT CẢ ĐẠT')
 exit($fail ? 1 : 0)
