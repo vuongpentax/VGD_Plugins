@@ -1,19 +1,21 @@
 module VGD_Cabinet_Draw
   module Tools
-    # Lệnh Scale VGD: 6 điểm neo ở tâm các mặt của hộp tủ. Bấm một điểm = chọn mặt đứng yên (điểm neo), kéo chuột (hoặc gõ số) theo
-    # trục đó: mặt đối diện dời tới con trỏ, số hiện là kích thước MỚI theo trục. Click (hoặc gõ số rồi Enter) để áp dụng.
+    # Lệnh Scale VGD (giống Scale gốc của SketchUp): 6 điểm ở tâm các mặt của hộp tủ. Bấm một điểm = chọn mặt sẽ DỜI; mặt đối diện
+    # đứng yên (điểm neo). Kéo chuột (hoặc gõ số) theo trục đó: mặt đã bấm dời tới con trỏ, số hiện là kích thước MỚI theo trục.
+    # Click (hoặc gõ số rồi Enter) để áp dụng.
     # Co giãn kiểu stretch bằng Resize.apply_axis (không làm méo mộng và dấu tiết diện). Chỉ dùng cho tủ VGD.
     class ScaleTool
       PICK_PIXELS = 14
       GRIP_RADIUS = 5
       HOVER_RADIUS = 8
 
-      attr_reader :phase, :anchor, :hover, :size_mm
+      attr_reader :phase, :anchor, :handle, :hover, :size_mm
 
       def initialize
         @root = nil
         @phase = :pick     # :pick = chọn điểm neo, :drag = đang chọn kích thước mới
-        @anchor = nil      # điểm neo đã chọn (mặt đứng yên)
+        @handle = nil      # điểm đã bấm (mặt sẽ dời)
+        @anchor = nil      # điểm đối diện (mặt đứng yên)
         @hover = nil
         @size_mm = nil
         @ip = Sketchup::InputPoint.new
@@ -70,10 +72,11 @@ module VGD_Cabinet_Draw
 
       def select_grip(grip, view)
         return unless grip
-        @anchor = grip
+        @handle = grip
+        @anchor = grips.find { |g| g[:axis] == grip[:axis] && g[:side] != grip[:side] }
         @phase = :drag
         @size_mm = Rebuild.dimensions_of(@root)[grip[:axis]]
-        status("Neo mặt #{side_label(grip)}. Kéo tới kích thước mới (hoặc gõ số mm rồi Enter), click để áp dụng · Esc: chọn điểm neo khác.")
+        status("Kéo mặt #{side_label(grip)} (mặt #{side_label(@anchor)} đứng yên) tới kích thước mới, hoặc gõ số mm rồi Enter · click: áp dụng · Esc: chọn điểm khác.")
         show_vcb
         view.invalidate if view
       end
@@ -108,7 +111,7 @@ module VGD_Cabinet_Draw
 
       def onUserText(text, view)
         unless @phase == :drag
-          status('Hãy bấm một điểm neo trước, rồi gõ kích thước mới (mm).')
+          status('Hãy bấm một điểm trên tủ trước (mặt sẽ dời), rồi gõ kích thước mới (mm).')
           return
         end
         apply_size(Resize.parse_size(text), view)
@@ -124,7 +127,7 @@ module VGD_Cabinet_Draw
       def onCancel(reason, view)
         if reason == 0 && @phase == :drag
           reset_phase
-          status('Đã bỏ điểm neo. Chọn điểm neo khác hoặc Esc để thoát.')
+          status('Đã bỏ chọn. Chọn điểm khác hoặc Esc để thoát.')
           view.invalidate if view
         elsif reason == 0
           cancel_tool(view)
@@ -146,6 +149,7 @@ module VGD_Cabinet_Draw
 
       def reset_phase
         @phase = :pick
+        @handle = nil
         @anchor = nil
         @hover = nil
         @size_mm = nil
@@ -169,12 +173,12 @@ module VGD_Cabinet_Draw
       def load_root(root)
         @root = nil
         if root.nil?
-          status('Hãy chọn một tủ VGD (hoặc click vào tủ) rồi chọn điểm neo.')
+          status('Hãy chọn một tủ VGD (hoặc click vào tủ) rồi bấm một điểm trên tủ.')
         elsif Rebuild.scale_of(root)
           status('Tủ đang bị Scale chưa cập nhật. Hãy đợi tự cập nhật hoặc Undo rồi chạy lại Scale VGD.')
         else
           @root = root
-          status('Rê chuột vào một điểm neo (mặt đứng yên) rồi click. Esc: thoát.')
+          status('Rê chuột vào điểm ở tâm mặt muốn dời rồi click (mặt đối diện đứng yên). Esc: thoát.')
         end
       rescue ArgumentError => e
         status(e.message)
@@ -192,7 +196,7 @@ module VGD_Cabinet_Draw
       end
 
       def side_label(grip)
-        face = { [0, :min] => 'trái', [0, :max] => 'phải', [1, :min] => 'trước/sau (min)', [1, :max] => 'sau/trước (max)', [2, :min] => 'đáy', [2, :max] => 'nóc' }
+        face = { [0, :min] => 'trái', [0, :max] => 'phải', [1, :min] => 'trước', [1, :max] => 'sau', [2, :min] => 'đáy', [2, :max] => 'nóc' }
         face.fetch([grip[:axis], grip[:side]])
       end
 
@@ -234,7 +238,7 @@ module VGD_Cabinet_Draw
       # ----- Vẽ -----
       def draw_title(view)
         Theme.draw_text(view, [18, 28], 'VGD · SCALE', color: Theme.color(:text), size: 11, bold: true)
-        hint = @phase == :drag ? 'Kéo / gõ số + Enter · Click: áp dụng · Esc: chọn điểm neo khác' : 'Rê vào điểm neo (mặt đứng yên) rồi click · Esc: thoát'
+        hint = @phase == :drag ? 'Kéo / gõ số + Enter · Click: áp dụng · Esc: chọn điểm khác' : 'Rê vào điểm ở tâm mặt muốn dời rồi click (mặt đối diện đứng yên) · Esc: thoát'
         Theme.draw_text(view, [18, 48], hint, color: Theme.color(:muted), size: 10)
       end
 
@@ -245,10 +249,11 @@ module VGD_Cabinet_Draw
 
       def draw_grips(view)
         grips.each do |g|
-          active = @anchor && @anchor[:axis] == g[:axis] && @anchor[:side] == g[:side]
+          active = @handle && @handle[:axis] == g[:axis] && @handle[:side] == g[:side]
+          fixed = @anchor && @anchor[:axis] == g[:axis] && @anchor[:side] == g[:side]
           hovered = @hover && @hover[:axis] == g[:axis] && @hover[:side] == g[:side]
           pts = screen_polygon(view, g[:point], hovered || active ? HOVER_RADIUS : GRIP_RADIUS)
-          view.drawing_color = active ? Theme.color(:accent) : Theme.color(:surface)
+          view.drawing_color = active ? Theme.color(:accent) : (fixed ? Theme.color(:tint) : Theme.color(:surface))
           view.draw2d(GL_POLYGON, pts)
           view.drawing_color = Theme.accent_line
           view.line_width = 2 if view.respond_to?(:line_width=)

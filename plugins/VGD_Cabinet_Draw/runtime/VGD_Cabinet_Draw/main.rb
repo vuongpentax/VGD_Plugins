@@ -5,7 +5,7 @@ require 'securerandom'
 module VGD_Cabinet_Draw
   # Nạp lại (reload!) phải lấy danh sách file và phiên bản MỚI, nên xóa hằng cũ trước khi khai báo.
   %i[VERSION RUNTIME_FILES RUNTIME_CONSTANTS].each { |name| remove_const(name) if const_defined?(name, false) }
-  VERSION = '1.0.0-beta.65'
+  VERSION = '1.0.0-beta.66'
   # Thứ tự nạp quan trọng: panel_model trước schema (schema dùng bộ tấm mặc định).
   RUNTIME_FILES = %w[keys theme panel_model split door_layout schema model_data geometry interior door_geometry preview drawer_parts drawer_slide tools rebuild auto_stretch resize scale_tool links removal drawer_bay panel_tools context_menu preset_hud mini_bar preset_store tool_settings dialog].freeze
   RUNTIME_CONSTANTS = %i[Keys Theme PanelModel Split DoorLayout Schema ModelData Geometry Interior DoorFit DoorGeometry Preview DrawerParts DrawerSlide Tools Operations Rebuild AutoStretch Resize Links Removal DrawerBay PanelTools ContextMenu PresetHud MiniBar PresetStore ToolSettings Dialog].freeze
@@ -51,8 +51,8 @@ module VGD_Cabinet_Draw
     command.set_validation_proc { VGD_Cabinet_Draw.pick_active? ? (defined?(MF_CHECKED) ? MF_CHECKED : 8) : (defined?(MF_UNCHECKED) ? MF_UNCHECKED : 0) } if key == 'pick' && command.respond_to?(:set_validation_proc)
     command.status_bar_text = status
     command.menu_text = title
-    small = icon_file(key, 24) # SketchUp: small_icon 24 px, large_icon 32 px (VGD_UI_DESIGN_SYSTEM.md)
-    large = icon_file(key, 32)
+    small = icon_file(key, 16) # PNG 16 và 24 px: cặp kích thước đã chạy ổn trên SketchUp 2024 (bản 24/32 làm mất icon)
+    large = icon_file(key, 24)
     command.small_icon = small if small
     command.large_icon = large if large
     command

@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.65
+# VGD_Cabinet Draw 1.0.0-beta.66
+
+beta.66: (1) Scale VGD đổi chiều thao tác giống Scale gốc của SketchUp: điểm bạn bấm là mặt sẽ DỜI, mặt đối diện đứng yên (điểm đối diện tô nhạt). Gõ số vẫn là kích thước mới theo trục đó. (2) Icon thanh công cụ trở lại PNG 16 px (small) và 24 px (large) như các bản chạy ổn trước đó, vẽ theo kiểu mới (nét 1.8, than + đồng); bản 24/32 px bị mất icon trên SketchUp 2024. Chưa xác minh trong SketchUp thật.
 
 beta.65: lệnh Scale VGD có điểm neo (thay hộp nhập số của beta.64). Chọn một tủ (hoặc click vào tủ), 6 điểm neo hiện ở tâm các mặt của hộp tủ; bấm một điểm = mặt đứng yên, kéo chuột theo trục đó (bắt điểm suy luận như thường) hoặc gõ số mm + Enter: mặt đối diện dời, số hiện là kích thước MỚI theo trục, có khung xem trước và mặt đang dời vẽ nét chấm; click để áp dụng. Esc khi đang kéo: bỏ điểm neo; Esc ở bước chọn: thoát lệnh. Chỉ đổi một trục mỗi lần, một bước Undo, lỗi thì tủ giữ nguyên. Co giãn kiểu stretch: trong từng tấm, dải 100 mm sát mỗi mép giữ nguyên (mộng, dấu tiết diện dời nguyên khối theo mép), phần giữa giãn; tấm quá ngắn (phần giữa dưới 150 mm) vẫn giãn như cũ. Quy tắc 100 mm này cũng áp dụng khi kéo Scale thường để tự cập nhật. Chưa xác minh trong SketchUp thật.
 

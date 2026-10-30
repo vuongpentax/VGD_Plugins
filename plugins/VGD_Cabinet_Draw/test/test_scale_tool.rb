@@ -36,16 +36,16 @@ check 'vị trí 6 điểm neo đúng tâm 6 mặt (mm)', ok, g.map { |x| [x[:ax
 check 'chưa chọn điểm neo: đang ở bước chọn', t.phase == :pick && t.anchor.nil?
 
 puts '== 2. Rê chuột vào điểm neo thì sáng, chọn điểm neo rồi kéo ra =='
-right = g.find { |x| x[:axis] == 0 && x[:side] == :max }
-sx, sy = screen_of(right[:point])
-move_to(t, right[:point], sx + 3, sy + 2)
-check 'rê gần điểm neo hông phải: điểm neo đó sáng', t.hover && t.hover[:axis] == 0 && t.hover[:side] == :max, t.hover.inspect
+left = g.find { |x| x[:axis] == 0 && x[:side] == :min }
+sx, sy = screen_of(left[:point])
+move_to(t, left[:point], sx, sy)
+check 'rê gần điểm hông trái: điểm đó sáng', t.hover && t.hover[:axis] == 0 && t.hover[:side] == :min, t.hover.inspect
 move_to(t, mmpt(400, 280, 1000), 50, 50)
 check 'rê ra xa: không còn sáng', t.hover.nil?
-move_to(t, right[:point], sx, sy)
+move_to(t, left[:point], sx, sy)
 vv = Sketchup.active_model.active_view
 t.onLButtonDown(0, sx, sy, vv)
-check 'bấm vào điểm neo: vào bước kéo, điểm neo là mặt phải', t.phase == :drag && t.anchor[:axis] == 0 && t.anchor[:side] == :max, t.anchor.inspect
+check 'bấm điểm hông trái: mặt trái là mặt DỜI, mặt phải đứng yên (điểm neo)', t.phase == :drag && t.handle[:side] == :min && t.anchor[:axis] == 0 && t.anchor[:side] == :max, [t.handle, t.anchor].inspect
 move_to(t, mmpt(-200, 280, 1000))
 check 'kéo tới x = -200 (cách điểm neo 1000): kích thước mới 1000', near(t.size_mm, 1000.0, 0.01), t.size_mm.inspect
 check 'VCB hiện kích thước mới', Sketchup.vcb_value.to_s.include?('1000'), Sketchup.vcb_value.inspect
@@ -54,19 +54,19 @@ check 'đang kéo: tủ chưa đổi (chỉ preview)', before_ops == [800.0, 560
 t.onLButtonDown(0, 5, 5, vv)
 check 'click: tủ rộng 1000 và vẫn là cùng tủ', dims(c) == [1000.0, 560.0, 2000.0] && c.valid?, dims(c).inspect
 ox = c.transformation.origin.x.to_mm # bb() đo trong hệ của tủ: đổi sang toạ độ thế giới bằng gốc của tủ
-check 'điểm neo (hông phải) đứng yên tại x = 800', near(ox + bb(part(c, 'Hông Phải'))[3], 800.0, 0.05), [ox, bb(part(c, 'Hông Phải'))].inspect
-check 'hông trái dời tới x = -200', near(ox + bb(part(c, 'Hông Trái'))[0], -200.0, 0.05), [ox, bb(part(c, 'Hông Trái'))].inspect
+check 'mặt đối diện (hông phải) đứng yên tại x = 800', near(ox + bb(part(c, 'Hông Phải'))[3], 800.0, 0.05), [ox, bb(part(c, 'Hông Phải'))].inspect
+check 'mặt bấm (hông trái) dời tới x = -200', near(ox + bb(part(c, 'Hông Trái'))[0], -200.0, 0.05), [ox, bb(part(c, 'Hông Trái'))].inspect
 check 'tủ hết trạng thái Scale, ván giữ độ dày 17.5', V::Rebuild.scale_of(c).nil? && near(bb(part(c, 'Hông Phải'))[3] - bb(part(c, 'Hông Phải'))[0], 17.5, 0.01)
 check 'xong thì quay về bước chọn điểm neo', t.phase == :pick && t.anchor.nil?
 
-puts '== 3. Neo mặt trái: mặt phải dời; gõ số + Enter cho kích thước chuẩn =='
+puts '== 3. Bấm mặt phải: mặt phải dời, mặt trái đứng yên; gõ số + Enter cho kích thước chuẩn =='
 c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
 t = new_tool(c)
-left = t.grips.find { |x| x[:axis] == 0 && x[:side] == :min }
-sx, sy = screen_of(left[:point])
-move_to(t, left[:point], sx, sy)
+rg = t.grips.find { |x| x[:axis] == 0 && x[:side] == :max }
+sx, sy = screen_of(rg[:point])
+move_to(t, rg[:point], sx, sy)
 t.onLButtonDown(0, sx, sy, vv)
-check 'neo mặt trái', t.phase == :drag && t.anchor[:side] == :min
+check 'bấm mặt phải: mặt trái là điểm neo', t.phase == :drag && t.anchor[:side] == :min && t.handle[:side] == :max
 t.onUserText('1200', vv)
 check 'gõ 1200 + Enter: rộng đúng 1200', dims(c) == [1200.0, 560.0, 2000.0], dims(c).inspect
 check 'mặt trái đứng yên tại 0, hông phải tới 1200', near(bb(part(c, 'Hông Trái'))[0], 0.0, 0.05) && near(bb(part(c, 'Hông Phải'))[3], 1200.0, 0.05), [bb(part(c, 'Hông Trái')), bb(part(c, 'Hông Phải'))].inspect
@@ -74,21 +74,21 @@ check 'mặt trái đứng yên tại 0, hông phải tới 1200', near(bb(part(
 puts '== 4. Chiều sâu và chiều cao (chọn điểm neo bằng hàm), số gõ là kích thước mới =='
 c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
 t = new_tool(c)
-t.select_grip(t.grips.find { |x| x[:axis] == 2 && x[:side] == :min }, vv)
+t.select_grip(t.grips.find { |x| x[:axis] == 2 && x[:side] == :max }, vv)
 t.onUserText('2300', vv)
-check 'neo đáy, gõ 2300: cao 2300', dims(c) == [800.0, 560.0, 2300.0], dims(c).inspect
+check 'bấm mặt nóc (đáy đứng yên), gõ 2300: cao 2300', dims(c) == [800.0, 560.0, 2300.0], dims(c).inspect
 check 'đáy đứng yên z = 0, nóc lên cao', near(bb(part(c, 'Đáy'))[2], 0.0, 0.05) && near(bb(part(c, 'Nóc'))[5], 2300.0, 0.05), [bb(part(c, 'Đáy')), bb(part(c, 'Nóc'))].inspect
-t.select_grip(t.grips.find { |x| x[:axis] == 1 && x[:side] == :min }, vv)
+t.select_grip(t.grips.find { |x| x[:axis] == 1 && x[:side] == :max }, vv)
 t.onUserText('600', vv)
 check 'neo một mặt sâu, gõ 600: sâu 600, rộng và cao giữ nguyên', dims(c) == [800.0, 600.0, 2300.0], dims(c).inspect
 
-# Neo mặt sâu phía max (y = 560): mặt min dời ra, gốc tủ dịch theo
+# Bấm mặt sâu phía min: mặt max (y = 560) đứng yên, mặt min dời ra, gốc tủ dịch theo
 c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
 t = new_tool(c)
-t.select_grip(t.grips.find { |x| x[:axis] == 1 && x[:side] == :max }, vv)
+t.select_grip(t.grips.find { |x| x[:axis] == 1 && x[:side] == :min }, vv)
 t.onUserText('700', vv)
 oy = c.transformation.origin.y.to_mm
-check 'neo mặt sâu phía max, gõ 700: sâu 700, rộng và cao giữ nguyên', dims(c) == [800.0, 700.0, 2000.0], dims(c).inspect
+check 'bấm mặt sâu phía min (mặt max đứng yên), gõ 700: sâu 700, rộng và cao giữ nguyên', dims(c) == [800.0, 700.0, 2000.0], dims(c).inspect
 check 'gốc tủ dịch -140 theo trục sâu', near(oy, -140.0, 0.05), oy.inspect
 
 puts '== 5. Hủy, số sai, Esc =='
@@ -130,6 +130,8 @@ check 'vẽ bước kéo không lỗi và có vẽ khung preview', (t.draw(vv); 
 cmd = V.instance_variable_get(:@toolbar).commands.find { |x| x.title == 'Scale VGD' }
 Sketchup.active_model.selection.clear
 cmd.run
+tbc = V.instance_variable_get(:@toolbar).commands
+check 'mọi nút dùng PNG 16 (small) và 24 (large) px, tồn tại và đúng kích thước', tbc.all? { |x| x.small_icon.to_s.end_with?('_16.png') && x.large_icon.to_s.end_with?('_24.png') && File.file?(x.small_icon) && File.file?(x.large_icon) && File.binread(x.small_icon, 8, 16).unpack('NN') == [16, 16] && File.binread(x.large_icon, 8, 16).unpack('NN') == [24, 24] }, tbc.map { |x| [x.small_icon, x.large_icon] }.inspect
 check 'nút Scale VGD mở lệnh Scale', Sketchup.active_model.instance_variable_get(:@tool).is_a?(V::Tools::ScaleTool), Sketchup.active_model.instance_variable_get(:@tool).class.inspect
 
 puts "\n== Kết quả test_scale_tool: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
