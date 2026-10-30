@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.69
+# VGD_Cabinet Draw 1.0.0-beta.70
+
+beta.70: chia cánh thủ công bắt điểm đúng ở góc nhìn nghiêng. Trước đây chuột được đo trên mặt ngoài của cánh, còn mép hồi/hông nhìn thấy nằm lùi vào sau đúng bằng dày cánh, nên ở góc 45° vạch chia và điểm hút lệch khỏi chỗ trỏ (xấp xỉ dày cánh × tan góc nhìn). Nay chuột được đo trên mặt trước thùng tủ (nơi mép hồi nhìn thấy), vạch chia và vạch báo điểm hút vẽ trên mặt đó; vị trí cánh thật không đổi (chỉ dùng toạ độ ngang/đứng). Nhìn thẳng trực diện không đổi. Chưa xác minh trong SketchUp thật.
 
 beta.69: (1) Preview chỉ hiện số: nhãn khi kéo Scale VGD chỉ còn kích thước mới (không "mm", không "Rộng"), nhãn khi kéo Quét & dời tấm chỉ còn khoảng dời (không "mm", không tên trục), nhãn mặt hộc chỉ còn "rộng × cao". Góc mở cánh giữ dấu độ (°). (2) Quét & dời tấm: chọn xong thì click tiếp theo là bắt đầu kéo đi luôn (không cần Enter), di chuột rồi click để đặt; muốn chọn lại thì kéo khung mới hoặc Esc; Shift+click vẫn cộng/bớt. Enter và gõ số mm + Enter vẫn dùng được. Tấm khác chưa khóa trục thì click sẽ nhắc khóa trục bằng phím mũi tên. Chưa xác minh trong SketchUp thật.
 

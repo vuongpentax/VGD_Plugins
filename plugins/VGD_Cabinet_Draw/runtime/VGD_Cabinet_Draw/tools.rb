@@ -1905,12 +1905,18 @@ module VGD_Cabinet_Draw
         Dialog.set_status(e.message)
       end
 
-      # Điểm con trỏ trên MẶT PHẲNG MẶT NGOÀI CỦA CÁNH (giao tia nhìn với mặt phẳng đó), không dùng điểm suy luận
+      # Mặt phẳng để đo chuột và vẽ vạch chia: MẶT TRƯỚC THÙNG TỦ (nơi mép hồi, hông, đợt nhìn thấy được), không phải mặt
+      # ngoài của cánh (cách mặt này đúng bằng dày cánh). Đo trên mặt cánh thì ở góc nhìn nghiêng vạch lệch khỏi mép hồi đang trỏ.
+      # Vị trí cánh thật không đổi: chỉ dùng toạ độ ngang/đứng (u, v) của điểm trên mặt phẳng này.
+      def pick_plane_y
+        Geometry.body_bounds(@shell).min.y
+      end
+
+      # Điểm con trỏ trên mặt phẳng đó (giao tia nhìn với mặt phẳng), không dùng điểm suy luận
       # (có thể rơi vào hông/hậu/đợt phía sau nên lệch khi xoay góc nhìn).
       def cursor_point(view, x, y)
         transform = Operations.world_transform(@root, @shell)
-        a = area(Geometry.body_bounds(@shell))
-        origin = Geom::Point3d.new(0, a[:y] - @settings['board_thickness'].to_f.mm, 0).transform(transform)
+        origin = Geom::Point3d.new(0, pick_plane_y, 0).transform(transform)
         normal = Geom::Vector3d.new(0, 1, 0).transform(transform)
         point = Geom.intersect_line_plane(view.pickray(x, y), [origin, normal])
         return point if point
@@ -2297,7 +2303,7 @@ module VGD_Cabinet_Draw
         return if marks.empty?
         a = area(bounds)
         aw = a[:x1] - a[:x0]
-        y = a[:y] - @settings['board_thickness'].to_f.mm - 1.mm
+        y = pick_plane_y
         marks.each do |u|
           x = a[:x0] + u * aw
           polygon = [[x - 0.5.mm, a[:z0]], [x + 0.5.mm, a[:z0]], [x + 0.5.mm, a[:z1]], [x - 0.5.mm, a[:z1]]]
@@ -2326,7 +2332,7 @@ module VGD_Cabinet_Draw
         a = area(bounds)
         aw = a[:x1] - a[:x0]
         ah = a[:z1] - a[:z0]
-        y = a[:y] - @settings['board_thickness'].to_f.mm
+        y = pick_plane_y
         x0 = a[:x0] + region['u0'] * aw
         x1 = a[:x0] + region['u1'] * aw
         z0 = a[:z0] + region['v0'] * ah
@@ -2338,7 +2344,7 @@ module VGD_Cabinet_Draw
           v = a[:x0] + @hover_split * aw
           polygon = [[v - w, z0], [v + w, z0], [v + w, z1], [v - w, z1]]
         end
-        @preview.add_prism_y(polygon, y + 2.mm, 2.mm, transform, :hover)
+        @preview.add_prism_y(polygon, y, 2.mm, transform, :hover)
       end
 
       # Viền mặt trước của tủ khi rê chuột chọn tủ.

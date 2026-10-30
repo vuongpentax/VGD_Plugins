@@ -469,5 +469,42 @@ check 'số rộng x cao trong vùng vẫn còn (2 vùng sẽ tạo ra)', pv.tex
 check 'bảng thông số có khe trên–dưới và ngưỡng chia 2 cánh', %w[door_gap_rows door_auto_width].all? { |k| V::PresetHud::SPECS['door'][:params].any? { |p| p[:key] == k } }
 
 
+puts '== 20. Chia thủ công ở góc nhìn nghiêng: vạch chia bám mặt trước thùng tủ (nơi thấy mép hồi) =='
+c = fresh_cabinet
+add_partitions(c, [382.5]) # vách 400..417.5, tim 408.75
+dt = V::Tools::DoorTool.new({}); dt.activate
+dt.layout.split(dt.layout.regions.first['id'], 'vertical', 0.5)
+dt.commit(Sketchup.active_model.active_view) # dựng cánh: thùng tủ lùi vào theo dày cánh
+shell = V::Geometry.shell_for(c)
+front_y = V::Geometry.body_bounds(shell).min.y
+check 'sau khi dựng cánh, thùng tủ lùi vào sau mặt cánh', front_y > 10.mm, front_y.to_mm.inspect
+eye = Geom::Point3d.new(-3000.mm, -3000.mm, 1500.mm)
+def oblique_ray(eye, target)
+  dir = target - eye
+  dir.normalize!
+  [eye, dir]
+end
+dt2 = V::Tools::DoorTool.new({}); dt2.activate
+vw = Sketchup.active_model.active_view
+dt2.load_cabinet(c)
+# Người dùng chỉ vào tim mép trước vách nhìn thấy: (408.75, mặt trước thùng tủ, 1000)
+vw.fake_ray = oblique_ray(eye, Geom::Point3d.new(408.75.mm, front_y, 1000.mm))
+vw.fake_path = [c]
+dt2.onMouseMove(0, 5, 5, vw)
+u = dt2.instance_variable_get(:@hover_uv)[0]
+width = dt2.layout.width_mm
+check 'chỉ đúng mép trước vách ở góc 45°: toạ độ trên mặt cánh đúng 408.75', near_mm = (u * width - 408.75).abs < 0.6, (u * width).round(2).inspect
+vw.fake_ray = oblique_ray(eye, Geom::Point3d.new(700.mm, front_y, 1000.mm))
+dt2.onMouseMove(0, 5, 5, vw)
+x700 = dt2.instance_variable_get(:@hover_uv)[0] * width
+check 'chỉ vào điểm bất kỳ (700 mm) trên mặt trước thùng tủ: đúng 700', (x700 - 700.0).abs < 0.6, x700.round(2).inspect
+split = dt2.instance_variable_get(:@hover_split)
+check 'vạch chia đề xuất bám đúng vị trí trỏ (700) chứ không lệch 17.5 mm', split && (split * width - 700.0).abs < 1.5, (split && (split * width).round(2)).inspect
+pv = dt2.instance_variable_get(:@preview)
+hover_ys = pv.instance_variable_get(:@polygons).select { |_, kind| kind == :hover }.flat_map { |pts, _| pts.map { |pt| pt.y } }
+check 'vạch chia vẽ trên mặt trước thùng tủ (không vẽ ở mặt cánh)', !hover_ys.empty? && hover_ys.all? { |y| y <= front_y + 0.01.mm && y >= front_y - 2.5.mm }, hover_ys.map { |y| y.to_mm.round(2) }.uniq.inspect
+vw.fake_ray = nil
+
+
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.length}"
 exit($fail.empty? ? 0 : 1)
