@@ -4,7 +4,8 @@ module VGD_Cabinet_Draw
     #   - Quét khung: kéo trái→phải chọn tấm nằm TRỌN trong khung; phải→trái chọn mọi tấm CHẠM khung.
     #   - Quét cọ (Tab): giữ chuột rê qua các tấm, tấm nào nét đi qua thì được chọn. Shift: cộng thêm. Click: chọn một tấm.
     #   - F đổi bộ lọc (tất cả / hồi và đợt / chỉ hồi / chỉ đợt).
-    #   - Dời: gõ số mm rồi Enter (số âm = ngược lại), hoặc Enter rồi di chuột và click. Esc: lùi một bước.
+    #   - Dời: chọn xong click một lần nữa để kéo đi (di chuột rồi click đặt), hoặc gõ số mm rồi Enter (số âm = ngược lại), hoặc Enter
+    #     để bắt đầu kéo. Esc: lùi một bước. Preview chỉ hiện số (không đơn vị, không chữ).
     #   - Hồi (vách) dời ngang và đợt dời đứng theo bước tạo tấm (lưu lại, Scale/dựng lại tủ vẫn giữ; cánh tự động đi theo).
     #     Tấm khác (hông, đáy, hậu, cánh, ngăn kéo, vật tự vẽ) chỉ dời khi đã khóa trục bằng phím mũi tên
     #     (→ trái–phải, ← trước–sau, ↑/↓ lên–xuống; bấm lại để bỏ khóa) và bị đánh dấu chỉnh tay.
@@ -123,6 +124,10 @@ module VGD_Cabinet_Draw
         if @drag
           @path << [x, y]
           finish_sweep(down, [x, y], view)
+        elsif !@shift && !selected.empty?
+          # Đã có vùng chọn: click tiếp theo là điểm bắt đầu kéo đi (không cần Enter). Muốn chọn lại: kéo khung mới hoặc Esc.
+          @cursor = [x, y]
+          start_move(view)
         else
           click_select(x, y, view)
         end
@@ -232,7 +237,7 @@ module VGD_Cabinet_Draw
       end
 
       def select_hint
-        "Kéo khung để chọn tấm (Tab: quét cọ · F: bộ lọc · Shift: cộng thêm), gõ số mm + Enter để dời. Hồi dời ngang, đợt dời đứng; tấm khác cần khóa trục bằng phím mũi tên."
+        "Kéo khung để chọn tấm (Tab: quét cọ · F: bộ lọc · Shift: cộng thêm); chọn xong click một lần nữa để kéo đi, hoặc gõ số mm + Enter. Hồi dời ngang, đợt dời đứng; tấm khác cần khóa trục bằng phím mũi tên."
       end
 
       def status(message)
@@ -338,7 +343,7 @@ module VGD_Cabinet_Draw
           status(select_hint)
         else
           members = list.count { |e| !member_axis(e).nil? }
-          status("Đã chọn #{list.length} tấm (#{members} hồi/đợt, #{list.length - members} tấm khác). Gõ số mm + Enter để dời, hoặc Enter rồi di chuột. #{lock_hint}")
+          status("Đã chọn #{list.length} tấm (#{members} hồi/đợt, #{list.length - members} tấm khác). Click để kéo đi (hoặc gõ số mm + Enter). Kéo khung mới hoặc Esc để chọn lại. #{lock_hint}")
         end
       end
 
@@ -364,7 +369,7 @@ module VGD_Cabinet_Draw
         list = selected
         return status('Chưa chọn tấm nào. Kéo khung để chọn trước.') if list.empty?
         axis = primary_axis
-        return status('Hãy khóa trục bằng phím mũi tên (→ trái–phải, ← trước–sau, ↑ lên–xuống) rồi Enter để dời tấm này.') if axis.nil?
+        return status('Hãy khóa trục bằng phím mũi tên (→ trái–phải, ← trước–sau, ↑ lên–xuống) rồi click để kéo tấm này.') if axis.nil?
         x, y = @cursor || [0, 0]
         param = axis_param(view, x, y)
         return status('Không đo được khoảng dời từ góc nhìn này: hãy xoay nhìn nghiêng hơn, hoặc gõ số mm.') unless param
@@ -548,8 +553,7 @@ module VGD_Cabinet_Draw
           draw_box(view, entity, Theme.accent_line, 2, '.', [axis_vector(axis), @distance_mm.mm])
         end
         return unless @cursor
-        axis = primary_axis
-        text = "Dời #{format('%g', @distance_mm)} mm (#{AXIS_LABELS[axis]})"
+        text = format('%g', @distance_mm) # preview chỉ hiện số
         left = @cursor[0] + 14
         top = @cursor[1] - 30
         view.drawing_color = Theme.color(:surface, 235)

@@ -329,7 +329,7 @@ module VGD_Cabinet_Draw
         return unless grip
         far = grip[:point].offset(direction, [@size_mm, 1.0].max.mm)
         s = view.screen_coords(far)
-        text = "#{Resize::AXIS_NAMES[@anchor[:axis]]} #{format('%g', @size_mm)} mm"
+        text = format('%g', @size_mm) # preview chỉ hiện số
         left = s.x + 14
         top = s.y - 30
         view.drawing_color = Theme.color(:surface, 235)

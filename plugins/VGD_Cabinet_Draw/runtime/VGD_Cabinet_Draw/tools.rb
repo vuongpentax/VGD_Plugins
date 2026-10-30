@@ -2923,7 +2923,7 @@ module VGD_Cabinet_Draw
               @preview.add_polygon(pts,:front)
               if @settings['drawer_show_dims']
                 mid = [(pts[0].x + pts[2].x) / 2, (pts[0].y + pts[2].y) / 2, (pts[0].z + pts[2].z) / 2]
-                @preview.add_label(Geom::Point3d.new(*mid), format('Mặt hộc %.0f × %.0f mm', ((b.max.x - b.min.x) - 2 * t).to_mm, height.to_mm))
+                @preview.add_label(Geom::Point3d.new(*mid), format('%.0f × %.0f', ((b.max.x - b.min.x) - 2 * t).to_mm, height.to_mm))
               end
             end
           elsif @tool_name=='blocker'

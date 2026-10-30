@@ -88,6 +88,8 @@ t.onKeyDown(TAB, 0, 0, Sketchup.active_model.active_view)
 check 'Tab lần nữa: về chế độ khung', t.mode == :rect
 
 puts '== 5. Click chọn một tấm, Shift thêm/bớt, bộ lọc F =='
+t.onCancel(0, Sketchup.active_model.active_view)
+check 'Esc bỏ vùng chọn cũ', t.selected.empty? && t.active?
 click(t, sx(308), sy(1500))
 check 'click trúng vách 1: chọn đúng một vách', names(t).length == 1 && names(t)[0].start_with?('Vách')
 click(t, sx(608), sy(1500), CONSTRAIN_MODIFIER_MASK)
@@ -95,7 +97,10 @@ check 'Shift+click thêm vách 2', names(t).length == 2
 click(t, sx(308), sy(1500), CONSTRAIN_MODIFIER_MASK)
 check 'Shift+click vào tấm đã chọn: bỏ chọn tấm đó', names(t).length == 1
 click(t, sx(400), sy(1000) - 130)
-check 'click chỗ trống: bỏ chọn hết (hậu không bị bắt khi ngoài vùng tấm)', t.selected.map(&:name).none? { |n| n.start_with?('Vách') }
+check 'đã có vùng chọn: click tiếp theo bắt đầu kéo đi (không cần Enter), không chọn lại', t.phase == :move && names(t).length == 1, [t.phase, names(t)].inspect
+t.onCancel(0, Sketchup.active_model.active_view)
+t.onCancel(0, Sketchup.active_model.active_view)
+check 'Esc hai lần: bỏ kéo rồi bỏ chọn', t.phase == :select && t.selected.empty?
 t.onKeyDown(70, 0, 0, Sketchup.active_model.active_view) # F: chỉ hồi/đợt
 drag(t, sx(790), sy(1000) - 1, sx(10), sy(1000) + 1)
 check 'bộ lọc chỉ hồi/đợt: quét cắt ngang chỉ chọn 2 vách', names(t).length == 2 && names(t).all? { |n| n.start_with?('Vách') }, names(t).inspect
@@ -197,27 +202,51 @@ click(t, sx(308), sy(1500))
 t.onUserText('100', Sketchup.active_model.active_view)
 check 'sau khi dời vách +100: cánh chia ở tim mới 408.75', near(edges_of(c)[0][1], 408.75, 0.05) && near(edges_of(c)[1][0], 408.75, 0.05), edges_of(c).inspect
 
-puts '== 12. Dời bằng chuột: Enter bắt đầu, di chuột, click đặt; Esc =='
+puts '== 12. Chọn xong click tiếp theo là kéo đi; di chuột, click đặt; Esc =='
 c = new_cab(282.5)
 vv = ortho!
 t = new_tool(c)
 click(t, sx(308), sy(1500))
-t.onMouseMove(0, sx(308), sy(1500), vv)
-t.onReturn(vv)
-check 'Enter: vào bước dời', t.phase == :move, t.phase.inspect
+check 'click đầu: chọn vách', names(t).length == 1 && t.phase == :select
+click(t, sx(308), sy(1500))
+check 'click tiếp theo: vào bước kéo ngay, không cần Enter', t.phase == :move, t.phase.inspect
 t.onMouseMove(0, sx(308) + 40, sy(1500), vv)
 check 'chuột sang phải 40 px (= 80 mm): khoảng dời 80', near(t.distance_mm, 80.0, 0.6), t.distance_mm.inspect
 t.onLButtonDown(0, sx(308) + 40, sy(1500), vv)
 check 'click: vách dời 80 mm', near(vach_x(c)[0], 380.0, 0.6), vach_x(c).inspect
-check 'xong thì về bước chọn', t.phase == :select
+check 'xong thì về bước chọn, vẫn giữ vùng chọn để kéo tiếp', t.phase == :select && t.selected.length == 1
 click(t, sx(388), sy(1500))
-t.onReturn(vv)
+check 'click kéo tiếp lần hai', t.phase == :move
 t.onCancel(0, vv)
-check 'Esc khi đang dời: về bước chọn, vẫn giữ vùng chọn', t.phase == :select && t.selected.length == 1
+check 'Esc khi đang kéo: về bước chọn, vẫn giữ vùng chọn', t.phase == :select && t.selected.length == 1
+t.onReturn(vv)
+check 'Enter vẫn bắt đầu kéo như cũ', t.phase == :move
+t.onCancel(0, vv)
 t.onCancel(0, vv)
 check 'Esc khi đang có vùng chọn: bỏ chọn', t.selected.empty? && t.active?
 t.onCancel(0, vv)
 check 'Esc lần nữa: thoát lệnh', Sketchup.active_model.instance_variable_get(:@tool).nil?
+c = new_cab
+vv = ortho!
+t = new_tool(c)
+click(t, sx(791), sy(1000))
+click(t, sx(791), sy(1000))
+check 'chọn tấm khác (hông) chưa khóa trục: click tiếp theo chưa kéo, nhắc khóa trục', t.phase == :select && Sketchup.status_text.to_s.include?('khóa trục'), Sketchup.status_text.inspect
+t.onKeyDown(RIGHT, 0, 0, vv)
+click(t, sx(791), sy(1000))
+check 'đã khóa trục: click tiếp theo kéo được', t.phase == :move
+
+puts '== 12b. Preview chỉ hiện số =='
+c = new_cab(282.5)
+vv = ortho!
+t = new_tool(c)
+click(t, sx(308), sy(1500))
+click(t, sx(308), sy(1500))
+t.onMouseMove(0, sx(308) + 25, sy(1500), vv)
+vv.drawn = []
+t.draw(vv)
+texts = vv.drawn.select { |e| e[0] == :text }.map { |e| e[1][1] }
+check 'nhãn khi kéo chỉ là số, không mm, không chữ', texts.length == 1 && texts.first.match?(/\A-?\d+(\.\d+)?\z/), texts.inspect
 
 puts '== 13. Vẽ, không có chữ góc trên trái, nút thanh công cụ =='
 c = new_cab(282.5)

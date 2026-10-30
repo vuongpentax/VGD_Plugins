@@ -169,6 +169,19 @@ t.onLButtonDown(0, 5, 5, Sketchup.active_model.active_view)
 check 'click: tủ cao 1500, đáy đứng yên', dims(c)[2] == 1500.0 && near(c.transformation.origin.z.to_mm, 0.0, 0.01), [dims(c), c.transformation.origin.z.to_mm].inspect
 Sketchup.active_model.active_view.instance_variable_set(:@fake_ray, nil)
 
+puts '== 8b. Nhãn kích thước chỉ hiện số =='
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+ortho_view = Sketchup.active_model.active_view
+t = new_tool(c)
+t.select_grip(t.grips.find { |x| x[:axis] == 0 && x[:side] == :max }, ortho_view)
+t.onUserText('abc', ortho_view)
+ortho_view.fake_point = mmpt(1200, 280, 1000)
+t.onMouseMove(0, 5, 5, ortho_view)
+ortho_view.drawn = []
+t.draw(ortho_view)
+texts = ortho_view.drawn.select { |e| e[0] == :text }.map { |e| e[1][1] }
+check 'nhãn khi kéo chỉ là số (không mm, không chữ Rộng)', texts.length == 1 && texts.first.match?(/\A\d+(\.\d+)?\z/), texts.inspect
+
 puts '== 9. Không còn chữ ở góc trên trái viewport =='
 c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
 t = new_tool(c)
