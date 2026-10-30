@@ -17,7 +17,10 @@ module UI
     def self.made; @@made; end
     def initialize(**_o); @@made << self; @visible = false; @fronted = 0; end
     def set_file(_f); end
-    def add_action_callback(_n, &_b); end
+    def add_action_callback(n, &b); (@cbs ||= {})[n] = b; end
+    def cb(n); @cbs[n]; end
+    def execute_script(s); (@scripts ||= []) << s; end
+    def scripts; @scripts ||= []; end
     def set_on_closed(&b); @closed = b; end
     def show; @visible = true; end
     def visible?; @visible; end
@@ -25,6 +28,14 @@ module UI
     def close; @visible = false; @closed.call if @closed; end
   end
 end
+
+module UI
+  @answer = 6
+  def self.answer=(a); @answer = a; end
+  def self.messagebox(*_a); @@asked = (@@asked rescue 0) + 1; @answer; end
+  def self.asked; @@asked rescue 0; end
+end
+IDNO = 7
 
 require File.join(build, 'VGD_PluginManager/main')
 PM = VGD::PluginManager
@@ -46,6 +57,27 @@ PM.run
 check 'sau khi đóng, bấm mở tạo hộp thoại mới', UI::HtmlDialog.made.size == 2 && PM.dialog_open?
 UI::HtmlDialog.made[0].close
 check 'đóng cửa sổ cũ không làm mất dấu cửa sổ mới', PM.dialog_open?
+
+# --- Tắt/bật tất cả qua callback ---
+plug = File.join(fake, 'SketchUp/SketchUp 2024/SketchUp/Plugins')
+%w[p1 p2 TT_Lib2].each { |n| File.write(File.join(plug, "#{n}.rb"), "x\n") }
+dlg = UI::HtmlDialog.made.last
+dlg.cb('ready').call(nil)
+status = -> { PM::Toggle.state['plugins'].map { |x| [x['name'], x['status']] }.to_h }
+UI.answer = IDNO
+dlg.cb('pm_bulk').call(nil, { action: 'disable', names: %w[p1 p2 TT_Lib2 khong_co] }.to_json)
+check 'chọn Không ở hộp xác nhận thì không đổi gì', status.call.values.uniq == ['on'] && UI.asked == 1
+UI.answer = IDYES
+dlg.cb('pm_bulk').call(nil, { action: 'disable', names: %w[p1 p2 khong_co ../x] }.to_json)
+check 'chọn Có thì chỉ tắt đúng các mục hợp lệ được gửi lên', status.call == { 'p1' => 'off', 'p2' => 'off', 'TT_Lib2' => 'on' }
+check 'giao diện nhận thông báo đã tắt', dlg.scripts.last.include?('Đã tắt: 2 plugin')
+asked = UI.asked
+dlg.cb('pm_bulk').call(nil, { action: 'disable', names: %w[p1 p2] }.to_json)
+check 'không còn mục nào để tắt thì không hỏi xác nhận', UI.asked == asked && dlg.scripts.last.include?('Không có plugin nào đang bật')
+dlg.cb('pm_bulk').call(nil, { action: 'enable', names: %w[p1 p2] }.to_json)
+check 'bật tất cả khôi phục', status.call.values.uniq == ['on']
+dlg.cb('pm_bulk').call(nil, 'không phải json')
+check 'JSON hỏng không làm crash', dlg.scripts.last.include?('Lỗi khi tắt/bật hàng loạt')
 
 loader = File.read(File.join(build, 'VGD_PluginManager.rb'), encoding: 'UTF-8')[/ex\.version\s*=\s*'([^']+)'/, 1]
 check "phiên bản trong loader (#{loader}) khớp VERSION (#{PM::VERSION})", loader == PM::VERSION

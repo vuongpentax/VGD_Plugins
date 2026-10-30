@@ -47,6 +47,8 @@ Nên sao lưu trước: đóng SketchUp, chạy `reg export "HKCU\Software\Sketc
 
 1. Gạt nút tắt một plugin (không cần bấm thêm gì): nút chuyển sang trạng thái tắt, có thông báo cần khởi động lại; file nằm trong `...\SketchUp\Plugins\VGD_PluginManager\data\disabled\`.
 2. Khởi động lại: plugin không nạp, và **không có plugin nào trong `data\disabled` bị SketchUp nạp** (kiểm tra Ruby Console). Gạt bật lại, khởi động lại: plugin nạp bình thường.
+3a. Nút "Tắt tất cả (N)": hộp xác nhận nêu đúng số lượng và, nếu có, cảnh báo thư viện nền; chọn Không thì không đổi gì; chọn Có thì mọi plugin đang bật chuyển sang tắt (nút gạt đều tắt). Khởi động lại: các plugin đó không nạp. "Bật tất cả" đưa về như cũ.
+3b. Gõ chữ vào ô tìm kiếm (ví dụ `curic`): nhãn nút đổi thành "Tắt tất cả đang hiện (N)" và chỉ tắt nhóm đó.
 3. Danh sách không hiện `VGD_PluginManager`, `vgd_plugin_migrator` hay thư mục `data`.
 4. Nếu còn dữ liệu bật/tắt cũ ở `...\SketchUp\VGD_PluginManager` (beta.3), mở hộp thoại: dữ liệu được chuyển vào vị trí mới và có thông báo.
 5. Lưu một bộ (tick ô vuông bên trái các plugin rồi bấm lưu), tắt bộ, bật bộ, xóa bộ.

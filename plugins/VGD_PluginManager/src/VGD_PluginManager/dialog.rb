@@ -69,6 +69,20 @@ module VGD
         end
       end
 
+      # Tắt/bật tất cả các mục JS gửi lên (đã lọc theo ô tìm kiếm); Ruby kiểm tra lại và hỏi xác nhận
+      dlg.add_action_callback('pm_bulk') do |_c, json|
+        guard.call('Lỗi khi tắt/bật hàng loạt', push_toggle) do
+          o = JSON.parse(json)
+          action = o['action'] == 'enable' ? 'enable' : 'disable'
+          targets = Toggle.bulk_targets(o['names'], action)
+          if targets.empty?
+            next push_toggle.call(action == 'enable' ? 'Không có plugin nào đang tắt để bật.' : 'Không có plugin nào đang bật để tắt.')
+          end
+          next unless UI.messagebox(Toggle.bulk_confirm_text(targets, action), MB_YESNO) == IDYES
+          push_toggle.call(Toggle.summary(Toggle.change(targets, action), action))
+        end
+      end
+
       dlg.add_action_callback('pm_save_set') do |_c, json|
         guard.call('Lỗi khi lưu bộ', push_toggle) do
           o = JSON.parse(json)

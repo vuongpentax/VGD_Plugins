@@ -133,6 +133,24 @@ check 'phiên bản hợp lệ', PMgr.check_versions('2022', '2024').nil?
 check 'trùng nhau bị từ chối', PMgr.check_versions('2024', '2024').include?('khác nhau')
 check 'phiên bản lạ/path traversal bị từ chối', PMgr.check_versions('../x', '2024').include?('chọn')
 
+# Tắt/bật hàng loạt
+%w[bulk_a bulk_b TT_Lib2 Fredo6_!LibFredo6 5d_library VGD_Dim].each { |n| File.write(File.join(plug, "#{n}.rb"), "x\n") }
+all_on = M.state['plugins'].select { |x| x['status'] == 'on' }.map { |x| x['name'] }
+check 'bulk_targets tắt: chỉ lấy mục đang bật, bỏ tên lạ và trùng', M.bulk_targets(all_on + %w[nonexist ../x bulk_a], 'disable').sort == all_on.sort
+check 'bulk_targets bật: không có gì khi chưa tắt', M.bulk_targets(all_on, 'enable').empty?
+check 'nhận ra thư viện nền theo tên', M.library_like(%w[bulk_a TT_Lib2 Fredo6_!LibFredo6 5d_library VGD_Dim]) == %w[TT_Lib2 Fredo6_!LibFredo6 5d_library]
+txt = M.bulk_confirm_text(%w[bulk_a TT_Lib2 5d_library], 'disable')
+check 'hộp xác nhận tắt nêu số lượng, thư viện nền và cách bật lại', txt.include?('Tắt 3 plugin') && txt.include?('TT_Lib2') && txt.include?('5d_library') && txt.include?('Bật tất cả')
+many = (1..9).map { |i| "lib#{i}" }
+check 'nhiều thư viện nền thì rút gọn', M.bulk_confirm_text(many, 'disable').include?('và 3 mục khác')
+check 'không có thư viện nền thì không cảnh báo thư viện', !M.bulk_confirm_text(%w[bulk_a], 'disable').include?('thư viện nền')
+check 'hộp xác nhận bật', M.bulk_confirm_text(%w[bulk_a bulk_b], 'enable').include?('Bật 2 plugin')
+r = M.change(M.bulk_targets(all_on, 'disable'), 'disable')
+check 'tắt tất cả: mọi mục đang bật đã tắt, không lỗi', r[:errors].empty? && r[:changed].sort == all_on.sort && M.state['plugins'].none? { |x| x['status'] == 'on' }
+check 'sau khi tắt: bulk_targets bật lấy đủ mục', M.bulk_targets(all_on, 'enable').sort == all_on.sort
+r = M.change(M.bulk_targets(all_on, 'enable'), 'enable')
+check 'bật tất cả: khôi phục đủ, không lỗi', r[:errors].empty? && M.state['plugins'].all? { |x| x['status'] == 'on' }
+
 puts M.summary({ changed: ['a'], skipped: [], errors: [] }, 'disable')
 puts($fail ? 'CÓ LỖI' : 'TẤT CẢ ĐẠT')
 exit($fail ? 1 : 0)

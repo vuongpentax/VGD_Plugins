@@ -150,6 +150,35 @@ module VGD
         res
       end
 
+      # Tên có chứa "lib" thường là thư viện nền (TT_Lib2, Fredo6_!LibFredo6, 5d_library...). Chỉ để cảnh báo.
+      LIBRARY_PATTERN = /lib/i
+
+      def self.library_like(names)
+        Array(names).select { |n| n =~ LIBRARY_PATTERN }
+      end
+
+      # Tên thật sự đổi được khi tắt/bật hàng loạt: đúng trạng thái nguồn, không trùng tên, có trong danh sách thật
+      def self.bulk_targets(names, action)
+        want = action == 'enable' ? 'off' : 'on'
+        valid = state['plugins'].select { |p| p['status'] == want }.map { |p| p['name'] }
+        Array(names).map(&:to_s).uniq & valid
+      end
+
+      # Nội dung hộp xác nhận cho tắt/bật hàng loạt
+      def self.bulk_confirm_text(targets, action)
+        if action == 'enable'
+          return "Bật #{targets.size} plugin?\n\nThay đổi có hiệu lực sau khi khởi động lại SketchUp."
+        end
+        text = "Tắt #{targets.size} plugin (gồm cả plugin VGD nếu có)?\n\n"
+        libs = library_like(targets)
+        unless libs.empty?
+          shown = libs.first(6).join(', ')
+          shown += " và #{libs.size - 6} mục khác" if libs.size > 6
+          text += "Có thể có thư viện nền mà plugin khác cần: #{shown}. Tắt chúng có thể làm plugin khác lỗi khi mở lại.\n\n"
+        end
+        text + "Thay đổi có hiệu lực sau khi khởi động lại SketchUp. Có thể bật lại bằng nút \"Bật tất cả\"."
+      end
+
       def self.summary(res, action)
         verb = action == 'disable' ? 'Đã tắt' : 'Đã bật'
         msg = ["#{verb}: #{res[:changed].size} plugin."]

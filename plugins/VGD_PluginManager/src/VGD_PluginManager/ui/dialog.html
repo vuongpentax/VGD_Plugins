@@ -16,6 +16,11 @@
   <div class="bar"><input type="text" id="q" placeholder="Tìm plugin..." oninput="drawToggle()">
     <button onclick="selAll(true)">Chọn hết đang hiện</button>
     <button onclick="selAll(false)">Bỏ chọn hết</button></div>
+  <div class="bar">
+    <button class="danger" id="bulkOff" onclick="bulk('disable')">Tắt tất cả</button>
+    <button class="primary" id="bulkOn" onclick="bulk('enable')">Bật tất cả</button>
+    <small>Khi ô tìm kiếm có chữ, chỉ áp cho các mục đang hiện.</small>
+  </div>
   <div class="list" id="list"></div>
   <h2>Bộ plugin</h2>
   <div class="note">Mỗi bộ có thể lưu kèm layout thanh công cụ và phím tắt. "Lưu layout" và "Áp layout" chỉ chạy khi bạn đóng SketchUp (File &gt; Exit); plugin tự thực hiện rồi mở lại SketchUp. Layout chỉ áp được cho cùng phiên bản SketchUp đã lưu.</div>
@@ -66,7 +71,25 @@ function showTab(name) {
 
 /* ---- Tab Bật/tắt ---- */
 function label(st) { return st === 'on' ? 'Đang bật' : (st === 'off' ? 'Đã tắt' : 'Trùng tên'); }
+function visiblePlugins() {
+  var q = document.getElementById('q').value.toLowerCase();
+  return S.plugins.filter(function (p) { return !q || p.name.toLowerCase().indexOf(q) >= 0; });
+}
+function bulkNames(action) {
+  var want = action === 'disable' ? 'on' : 'off';
+  return visiblePlugins().filter(function (p) { return p.status === want; }).map(function (p) { return p.name; });
+}
+function bulk(action) { send('pm_bulk', { action: action, names: bulkNames(action) }); }
+function updateBulk() {
+  var filtered = !!document.getElementById('q').value;
+  [['bulkOff', 'disable', 'Tắt tất cả'], ['bulkOn', 'enable', 'Bật tất cả']].forEach(function (b) {
+    var n = bulkNames(b[1]).length, e = document.getElementById(b[0]);
+    e.textContent = filtered ? b[2] + ' đang hiện (' + n + ')' : b[2] + ' (' + n + ')';
+    e.disabled = n === 0;
+  });
+}
 function drawToggle() {
+  updateBulk();
   var q = document.getElementById('q').value.toLowerCase(), L = document.getElementById('list');
   L.innerHTML = '';
   S.plugins.forEach(function (p) {

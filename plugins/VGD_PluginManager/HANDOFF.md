@@ -1,6 +1,6 @@
 # HANDOFF: VGD Plugin Manager (SketchUp, Ruby)
 
-Phiên bản hiện tại: **1.0.0-beta.6** (xem mục 8 cho phần thêm so với beta.2). Ngày bàn giao: 2026-10-30.
+Phiên bản hiện tại: **1.0.0-beta.7** (xem mục 8 cho phần thêm so với beta.2). Ngày bàn giao: 2026-10-30.
 Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 
 ## 1. Mục tiêu và bối cảnh
@@ -21,7 +21,7 @@ Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 
 1. `HANDOFF.md`: file này.
 2. `src/`: mã nguồn plugin (đúng cấu trúc bên trong .rbz).
-   1. `src/VGD_PluginManager.rb`: file loader, đăng ký SketchupExtension (version `1.0.0-beta.6`).
+   1. `src/VGD_PluginManager.rb`: file loader, đăng ký SketchupExtension (version `1.0.0-beta.7`).
    2. `src/VGD_PluginManager/main.rb`: chuyển plugin, phím tắt, thanh công cụ; xuất gói tổng; giao diện HtmlDialog chính.
    3. `src/VGD_PluginManager/zip_writer.rb`: ghi file zip/.rbz thuần Ruby bằng Zlib (không cần thư viện ngoài).
    4. (đã bỏ ở beta.5) `bundle_import.rb`: mẫu nhập phím tắt/thanh công cụ từ gói tổng, dùng khóa registry sai.
@@ -159,3 +159,4 @@ Khi thêm file mới vào `src/VGD_PluginManager/` nhớ thêm vào danh sách t
    4. Tab "Chuyển plugin": mục "Chuyển cả phím tắt" nay chạy theo cách này (mặc định tắt). **Đã bỏ** "Giao diện thanh công cụ" và phần phím tắt/thanh công cụ trong gói .rbz tổng cùng `bundle_import.rb`, vì code cũ dùng khóa registry không tồn tại. Muốn mang layout/phím tắt sang máy khác: "Xuất các bộ ra file" (file `.json` version 2 có kèm layout) và "Nhập bộ từ file".
    5. **Chưa kiểm tra trong SketchUp thật.** Script PowerShell không chạy thử được ngoài Windows; chỉ đã kiểm tra phần Ruby tự động (`tests/test_layout.rb`). Rủi ro còn lại: ID thanh công cụ Ruby có thể phụ thuộc thứ tự nạp plugin (chưa kiểm chứng); `SharedPreferences.json` có khóa `timestamp` chưa rõ tác dụng; JavaScriptSerializer có thể đổi số thực `1.0` thành `1` khi ghi lại file JSON.
 7. `1.0.0-beta.6`: sửa lỗi bấm nút/menu nhiều lần mở nhiều hộp thoại. Nay chỉ có một hộp thoại (`dialog_open?`, `bring_to_front`); bấm lại thì đưa cửa sổ đang mở lên trước, đóng rồi bấm thì mở mới. Test: `tests/test_dialog.rb`. Nếu vẫn thấy nhiều hộp thoại, kiểm tra xem còn cài bản cũ (`vgd_plugin_migrator`) song song không. Thư mục/file `vgd_bundle_import` trong Plugins là phần còn sót của gói tổng cũ (beta.2 trở về trước), có thể xóa.
+8. `1.0.0-beta.7`: nút **Tắt tất cả** và **Bật tất cả** ở tab Bật/tắt. Áp cho các mục đang hiện (ô tìm kiếm có chữ thì chỉ áp cho mục khớp); nhãn nút hiện số mục sẽ đổi. Luôn hỏi xác nhận; khi tắt, cảnh báo nếu có tên chứa "lib" (nghi là thư viện nền như TT_Lib2, Fredo6_!LibFredo6, 5d_library) nhưng không tự loại trừ. Plugin VGD_ cũng bị tắt như mọi plugin. Ruby kiểm tra lại danh sách tên JS gửi lên (`Toggle.bulk_targets`), dùng lại `Toggle.change` (hoàn tác từng mục nếu lỗi). Chưa có nút hoàn tác riêng: muốn khôi phục đúng trạng thái trước khi tắt tất cả, hãy lưu các mục đang bật thành một bộ trước (rồi dùng "Bật bộ").
