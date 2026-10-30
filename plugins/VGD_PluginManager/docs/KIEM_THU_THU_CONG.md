@@ -14,7 +14,8 @@ Gỡ bản beta.3 (nếu có) trước khi cài beta.4.
 
 1. Menu Plugins có một mục "VGD Plugin Manager"; thanh công cụ "VGD Plugin Manager" có một nút, icon rõ ở cỡ nhỏ, có tooltip.
 2. Ruby Console không có lỗi đỏ khi khởi động.
-3. Hộp thoại có hai tab "Bật/tắt plugin" và "Chuyển plugin", font Manrope, nút ☾/☀ ở góc phải đổi sáng/tối, đóng mở lại vẫn giữ lựa chọn.
+3. Bấm nút thanh công cụ hoặc menu nhiều lần: chỉ có **một** hộp thoại, lần bấm sau đưa cửa sổ đang mở lên trước; đóng hộp thoại rồi bấm lại thì mở mới. Menu Plugins chỉ có một mục "VGD Plugin Manager" (nếu thấy thêm mục "VGD Plugin Migrator" hoặc "VGD: Nhập phím tắt..." là còn bản cũ chưa gỡ).
+4. Hộp thoại có hai tab "Bật/tắt plugin" và "Chuyển plugin", font Manrope, nút ☾/☀ ở góc phải đổi sáng/tối, đóng mở lại vẫn giữ lựa chọn.
 
 ## 2. Chuyển plugin (2022 sang 2024), tab "Chuyển plugin"
 

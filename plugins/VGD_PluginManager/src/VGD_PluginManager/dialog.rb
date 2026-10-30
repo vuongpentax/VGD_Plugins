@@ -12,13 +12,27 @@ module VGD
       nil
     end
 
-    # Một hộp thoại hai tab: Bật/tắt plugin và Chuyển plugin
+    # Hộp thoại đang mở (nil nếu chưa mở hoặc đã đóng)
+    def self.dialog_open?
+      @dialog && @dialog.visible? ? true : false
+    rescue StandardError
+      false
+    end
+
+    # Một hộp thoại hai tab: Bật/tắt plugin và Chuyển plugin.
+    # Chỉ mở một cửa sổ: bấm lại thì đưa cửa sổ đang mở lên trước.
     def self.run
+      if dialog_open?
+        @dialog.bring_to_front
+        return
+      end
       legacy_msg = Toggle.migrate_legacy
       dlg = UI::HtmlDialog.new(dialog_title: "VGD Plugin Manager #{VERSION}",
                                width: 640, height: 780,
                                style: UI::HtmlDialog::STYLE_DIALOG)
       dlg.set_file(File.join(UI_DIR, 'dialog.html'))
+      @dialog = dlg
+      dlg.set_on_closed { @dialog = nil if @dialog.equal?(dlg) }
 
       js = lambda { |fn, *args| dlg.execute_script("#{fn}(#{args.map(&:to_json).join(', ')})") }
       push_toggle = lambda { |msg| js.call('renderToggle', Toggle.state.merge('version' => VERSION), msg.to_s) }
