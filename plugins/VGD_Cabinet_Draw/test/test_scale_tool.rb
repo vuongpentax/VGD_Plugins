@@ -134,6 +134,50 @@ tbc = V.instance_variable_get(:@toolbar).commands
 check 'mọi nút dùng PNG 16 (small) và 24 (large) px, tồn tại và đúng kích thước', tbc.all? { |x| x.small_icon.to_s.end_with?('_16.png') && x.large_icon.to_s.end_with?('_24.png') && File.file?(x.small_icon) && File.file?(x.large_icon) && File.binread(x.small_icon, 8, 16).unpack('NN') == [16, 16] && File.binread(x.large_icon, 8, 16).unpack('NN') == [24, 24] }, tbc.map { |x| [x.small_icon, x.large_icon] }.inspect
 check 'nút Scale VGD mở lệnh Scale', Sketchup.active_model.instance_variable_get(:@tool).is_a?(V::Tools::ScaleTool), Sketchup.active_model.instance_variable_get(:@tool).class.inspect
 
+# cab() tạo model mới nên view cũng mới: luôn lấy view hiện tại.
+puts '== 8. Kéo theo tia chuột từ góc nhìn 45° (mặt trước / hướng lên), không phụ thuộc điểm suy luận =='
+# Camera giả lập nhìn theo (1,1,-1) từ (-5000,-5000,5000) mm: tia chuột đi từ mắt qua điểm cần tới.
+def eye_ray(target)
+  eye = Geom::Point3d.new(-5000.mm, -5000.mm, 5000.mm)
+  dir = target - eye
+  dir.normalize!
+  [eye, dir]
+end
+def move_ray(t, target)
+  vv = Sketchup.active_model.active_view
+  vv.instance_variable_set(:@fake_ray, eye_ray(target))
+  vv.fake_point = Geom::Point3d.new(0, 0, 0) # điểm suy luận sai hẳn: lệnh không được dựa vào nó
+  t.onMouseMove(0, 5, 5, vv)
+end
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+t = new_tool(c)
+front = t.grips.find { |x| x[:axis] == 1 && x[:side] == :min } # mặt trước (y = 0), mặt sau đứng yên
+t.select_grip(front, Sketchup.active_model.active_view)
+move_ray(t, mmpt(400, -240, 1000))
+check 'kéo mặt trước ra 240 mm bằng tia chuột: sâu mới 800', near(t.size_mm, 800.0, 1.0), t.size_mm.inspect
+t.onLButtonDown(0, 5, 5, Sketchup.active_model.active_view)
+check 'click: sâu tủ đổi theo tia chuột', dims(c)[1] > 700.0 && dims(c)[1] < 1500.0 && dims(c)[0] == 800.0, dims(c).inspect
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+t = new_tool(c)
+top = t.grips.find { |x| x[:axis] == 2 && x[:side] == :max }
+t.select_grip(top, Sketchup.active_model.active_view)
+move_ray(t, mmpt(400, 280, 2500))
+check 'kéo nóc lên 2500 từ góc nhìn nghiêng: cao mới 2500', near(t.size_mm, 2500.0, 1.0), t.size_mm.inspect
+move_ray(t, mmpt(400, 280, 1500))
+check 'kéo xuống 1500: cao 1500 (thu nhỏ)', near(t.size_mm, 1500.0, 1.0), t.size_mm.inspect
+t.onLButtonDown(0, 5, 5, Sketchup.active_model.active_view)
+check 'click: tủ cao 1500, đáy đứng yên', dims(c)[2] == 1500.0 && near(c.transformation.origin.z.to_mm, 0.0, 0.01), [dims(c), c.transformation.origin.z.to_mm].inspect
+Sketchup.active_model.active_view.instance_variable_set(:@fake_ray, nil)
+
+puts '== 9. Không còn chữ ở góc trên trái viewport =='
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+t = new_tool(c)
+av = Sketchup.active_model.active_view
+av.drawn = []
+t.draw(av)
+check 'bước chọn: không vẽ chữ nào (hướng dẫn nằm ở thanh trạng thái)', av.drawn.none? { |e| e[0] == :text }, av.drawn.select { |e| e[0] == :text }.inspect
+check 'thanh trạng thái vẫn có hướng dẫn', Sketchup.status_text.to_s.include?('click')
+
 puts "\n== Kết quả test_scale_tool: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
 $fail.each { |x| puts "  - #{x}" }
 exit($fail.empty? ? 0 : 1)

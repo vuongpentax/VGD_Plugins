@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.66
+# VGD_Cabinet Draw 1.0.0-beta.67
+
+beta.67: Scale VGD đo kích thước theo tia chuột như Scale gốc: giao tia chuột với mặt phẳng chứa trục và vuông góc hướng nhìn rồi chiếu lên trục, nên ở góc nhìn 45° hay nhìn cao hơn tủ, kéo mặt trước / kéo lên trên đều bám sát chuột (trước đây dùng điểm suy luận nên lệch). Làm tròn 1 mm. Chỉ khi nhìn gần song song với trục (không đo được theo tia) mới dùng điểm suy luận. Bỏ chữ "VGD · SCALE" và dòng hướng dẫn ở góc trên bên trái viewport (hướng dẫn nằm ở thanh trạng thái). Chưa xác minh trong SketchUp thật.
 
 beta.66: (1) Scale VGD đổi chiều thao tác giống Scale gốc của SketchUp: điểm bạn bấm là mặt sẽ DỜI, mặt đối diện đứng yên (điểm đối diện tô nhạt). Gõ số vẫn là kích thước mới theo trục đó. (2) Icon thanh công cụ trở lại PNG 16 px (small) và 24 px (large) như các bản chạy ổn trước đó, vẽ theo kiểu mới (nét 1.8, than + đồng); bản 24/32 px bị mất icon trên SketchUp 2024. Chưa xác minh trong SketchUp thật.
 

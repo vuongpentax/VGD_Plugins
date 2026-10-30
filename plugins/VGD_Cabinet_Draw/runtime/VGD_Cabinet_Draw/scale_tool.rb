@@ -85,8 +85,7 @@ module VGD_Cabinet_Draw
         if @phase == :pick
           @hover = grip_near(view, x, y)
         else
-          @ip.pick(view, x, y)
-          @size_mm = size_from(@ip.position) if @ip.valid? && @anchor
+          track_cursor(view, x, y)
           show_vcb
         end
         view.invalidate
@@ -103,8 +102,7 @@ module VGD_Cabinet_Draw
         elsif @phase == :pick
           select_grip(grip_near(view, x, y), view)
         else
-          @ip.pick(view, x, y)
-          @size_mm = size_from(@ip.position) if @ip.valid? && @anchor
+          track_cursor(view, x, y)
           commit(view)
         end
       end
@@ -138,7 +136,6 @@ module VGD_Cabinet_Draw
       end
 
       def draw(view)
-        draw_title(view)
         return unless usable_root?
         draw_preview_box(view) if @phase == :drag && @anchor
         draw_grips(view)
@@ -216,8 +213,32 @@ module VGD_Cabinet_Draw
         @anchor[:side] == :min ? axis : axis.reverse
       end
 
+      # Kích thước mới theo con trỏ. Chính: giao tia chuột với mặt phẳng chứa trục và vuông góc hướng nhìn, rồi chiếu lên trục
+      # (đúng như Scale gốc, ở góc nhìn 45° hay nhìn cao đều theo sát chuột). Nhìn gần song song với trục (không đo được):
+      # dùng điểm suy luận chiếu lên trục. Làm tròn 1 mm.
+      def track_cursor(view, x, y)
+        return unless @anchor
+        size = size_from_ray(view, x, y)
+        unless size
+          @ip.pick(view, x, y)
+          size = size_from(@ip.position) if @ip.valid?
+        end
+        @size_mm = size.round if size
+      end
+
+      def size_from_ray(view, x, y)
+        d = direction
+        cam = view.camera.direction
+        k = cam.dot(d)
+        normal = Geom::Vector3d.new(cam.x - d.x * k, cam.y - d.y * k, cam.z - d.z * k)
+        return nil if normal.length < 0.25 # nhìn gần song song với trục
+        normal.normalize!
+        point = Geom.intersect_line_plane(view.pickray(x, y), [@anchor[:point], normal])
+        point ? (point - @anchor[:point]).dot(d).to_mm : nil
+      end
+
       def size_from(position)
-        ((position - @anchor[:point]).dot(direction)).to_mm.round(1)
+        (position - @anchor[:point]).dot(direction).to_mm
       end
 
       def apply_size(size, view)
@@ -236,12 +257,6 @@ module VGD_Cabinet_Draw
       end
 
       # ----- Vẽ -----
-      def draw_title(view)
-        Theme.draw_text(view, [18, 28], 'VGD · SCALE', color: Theme.color(:text), size: 11, bold: true)
-        hint = @phase == :drag ? 'Kéo / gõ số + Enter · Click: áp dụng · Esc: chọn điểm khác' : 'Rê vào điểm ở tâm mặt muốn dời rồi click (mặt đối diện đứng yên) · Esc: thoát'
-        Theme.draw_text(view, [18, 48], hint, color: Theme.color(:muted), size: 10)
-      end
-
       def screen_polygon(view, point, radius)
         s = view.screen_coords(point)
         (0...20).map { |i| a = 2 * Math::PI * i / 20; [s.x + radius * Math.cos(a), s.y + radius * Math.sin(a), 0] }
