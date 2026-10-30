@@ -18,10 +18,11 @@ Màu áp dụng cho icon trong preview, không thay thế toàn bộ token giao 
 | Vai trò | Nền sáng | Nền tối |
 |---|---|---|
 | Nét chính | `#292B2D` | `#F1EDE6` |
-| Điểm nhấn | **Nâu đồng VGD** `#A67C58` | **Nâu đồng VGD** `#A67C58` |
+| Điểm nhấn | **Nâu đồng VGD** `#B48963` | **Nâu đồng VGD** `#B48963` |
 | Nền toolbar xem trước | Xám sáng `#D8D7D4` | Xám than `#292B2D` |
 
-- Điểm nhấn giữ nguyên `#A67C58` ở cả hai theme.
+- Điểm nhấn giữ nguyên `#B48963` ở cả hai theme.
+- Icon đã có trong plugin vẫn dùng `#A67C58`. Đồng bộ các icon này là việc riêng, làm từng plugin sau khi duyệt.
 - Nét chính đổi từ than `#292B2D` sang trắng ngà `#F1EDE6` khi chuyển từ sáng sang tối.
 - Các mảng của logo Center cũng đổi màu theo theme để giữ tương phản.
 
