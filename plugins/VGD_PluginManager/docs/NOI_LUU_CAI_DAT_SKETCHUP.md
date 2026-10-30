@@ -45,6 +45,19 @@ Khảo sát ngày 2026-10-30 trên một máy Windows 10 có SketchUp 2022 và 2
    3. `QtRubyWorkspace\RubyToolBar-<ID>/Tray`, `Workspace\Trays\Tray-N\Pane-M/PaneId`, `ToolbarSettings` (`LargeIcons`, `ToolTipEnabled`).
 3. Phần "This Computer Only" cho thấy SketchUp chủ ý lưu layout riêng cho từng máy.
 
+## 3b. Cấu trúc `PrivatePreferences.json` (đã khảo sát bằng bộ xương, 2022 và 2024)
+
+1. Định dạng: UTF-8 không BOM, xuống dòng LF, không Tab, **thụt lề đều 4 khoảng trắng**, không có dòng trống cuối file. Một khóa cấp cao nhất `"This Computer Only"` (thụt lề 4); các mục ở thụt lề 8; thuộc tính ở thụt lề 12 (bản 2024 có vài dòng thụt lề 16, ở mục không phải layout). Mỗi mục kết thúc bằng dòng `        },` (hoặc `        }` nếu là mục cuối).
+2. Chỉ có **1 giá trị dạng `X.0`** trong mỗi file (so với 9 giá trị ở `SharedPreferences.json`). Không có số dạng mũ.
+3. Các mục layout là khối phẳng (chỉ thuộc tính vô hướng):
+   1. `RubyWorkspace\\RubyToolBar-<ID>` (2022; 410 mục trong file mẫu): `Columns`, `DockBarId`, `Visible`. Vị trí nằm ở registry.
+   2. `QtRubyWorkspace\\RubyToolBar-<ID>` (2024; 148 mục): `Floating`, `Height`, `Tray`, `Visible`, `Width`, `X`, `Y`. **Vị trí nằm ngay trong JSON.**
+   3. `Workspace\\Trays...` (23 đến 29 mục): `Count`, `Expand`, `height`, `Splitter`... Khóa trong file là văn bản thô có **hai dấu gạch chéo** (`RubyWorkspace\\\\RubyToolBar-59648`).
+   4. `ToolbarSettings` (2024): `LargeIcons`, `ToolbarState` (chuỗi hex 4 KB), `ToolTipEnabled`.
+   5. `MainWindow` (2024): `DockWidgetState` (chuỗi hex 18 KB), `Geometry` (chuỗi 132 ký tự, hình học cửa sổ riêng của máy), `ToolBarState` (2,5 KB). Chỉ `DockWidgetState` và `ToolBarState` được chép; `Geometry` giữ nguyên của máy đích.
+4. Bản 2022 và 2024 **không xóa** mục layout của plugin không được nạp trong file JSON (410 và 148 mục), khác với registry của 2022 (96 xuống 3 mục).
+5. Dòng dài nhất khoảng 18 KB (chuỗi `DockWidgetState`).
+
 ## 4. Vì sao layout bị lộn xộn khi bật/tắt plugin
 
 1. **Quan sát (đã xác nhận trên 2022):** trước khi xóa plugin, `RubyWorkspace` có 96 mục `Pane` và 96 `BasePane`; sau khi mở và thoát SketchUp mà không có plugin, còn 3 mục mỗi loại. SketchUp xóa vị trí của thanh công cụ plugin không được nạp lúc thoát.

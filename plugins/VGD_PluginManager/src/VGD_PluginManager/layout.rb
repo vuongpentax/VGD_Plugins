@@ -84,14 +84,8 @@ module VGD
         data = read_snapshot(dir) or return nil
         has_reg = REG_FILES.any? { |n| File.exist?(File.join(dir, "#{n}.reg")) }
         { 'year' => data['year'], 'saved_at' => data['saved_at'].to_s,
-          'layout' => (nonempty_hash?(data['prefs']) || has_reg),
+          'layout' => (nonempty_hash?(data['blocks']) || nonempty_hash?(data['main_window']) || has_reg),
           'shortcuts' => nonempty_hash?(data['shortcuts']) }
-      end
-
-      # Phần layout nằm trong PrivatePreferences.json chưa ghi lại an toàn được (helper tạm bỏ qua),
-      # nên hiện chỉ áp layout qua registry (SketchUp 2022). Bộ lưu từ 2024 chỉ áp được phím tắt.
-      def self.registry_layout?(name)
-        REG_FILES.any? { |n| File.exist?(File.join(preset_dir(name), "#{n}.reg")) }
       end
 
       def self.delete(name)
@@ -150,13 +144,9 @@ module VGD
         return 'Bộ này chưa lưu layout.' unless i
         want = clean_parts(parts)
         use = []
-        use << 'layout' if want.include?('layout') && i['layout'] && i['year'] == year && registry_layout?(name)
+        use << 'layout' if want.include?('layout') && i['layout'] && i['year'] == year
         use << 'shortcuts' if want.include?('shortcuts') && i['shortcuts']
         if use.empty?
-          if want.include?('layout') && i['layout'] && i['year'] == year
-            return "Layout của bộ này (SketchUp #{year}) lưu trong file cài đặt; việc áp dụng chưa được hỗ trợ an toàn nên tạm không áp." \
-                   "#{i['shortcuts'] ? ' Hãy bật "Kèm phím tắt" để áp phím tắt.' : ''}" unless want.include?('shortcuts') && i['shortcuts']
-          end
           return "Layout của bộ này lưu từ SketchUp #{i['year']}, không áp được cho bản #{year} " \
                  '(chỉ phím tắt dùng chung giữa các bản).' if want.include?('layout') && i['layout'] && i['year'] != year
           return 'Không có mục nào để áp (bộ này không lưu mục đã chọn).'
@@ -181,26 +171,45 @@ module VGD
       end
 
       # ---- Lọc dữ liệu: chỉ giữ đúng các khóa layout và phím tắt ----
+      # Khóa layout là văn bản thô giữa hai dấu nháy trong file (RubyWorkspace\\RubyToolBar-59648, hai dấu gạch chéo).
+      # Phải khớp với Test-LayoutSection trong helper/apply_layout.ps1.
       def self.layout_section?(key)
-        key =~ /\A(Qt)?RubyWorkspace\\/ || key =~ /\AWorkspace\\/ || key == 'ToolbarSettings' ? true : false
+        key =~ /\A(Qt)?RubyWorkspace\\\\/ || key =~ /\AWorkspace\\\\/ || key == 'ToolbarSettings' ? true : false
       end
 
       def self.shortcut_key?(key)
         key =~ /\A(Num_Shortcuts|Shortcut_\d+)\z/ ? true : false
       end
 
-      def self.clean_prefs(prefs)
-        return {} unless prefs.is_a?(Hash)
-        out = {}
-        prefs.each do |k, v|
-          if k == 'MainWindow' && v.is_a?(Hash)
-            kept = v.select { |mk, _| MAIN_WINDOW_KEYS.include?(mk) }
-            out[k] = kept unless kept.empty?
-          elsif layout_section?(k)
-            out[k] = v
-          end
+      # Một khối layout được lưu nguyên văn (các dòng của file, thụt lề 8 và 12, thuộc tính không có dấu phẩy).
+      # Chỉ nhận khối phẳng đúng cấu trúc: không thể chèn thêm mục hay khóa nào khác ngoài đúng khối đó.
+      BLOCK_KEY    = '"((?:[^"\\\\]|\\\\.)*)"'
+      BLOCK_OPEN   = /\A {8}#{BLOCK_KEY}\s*:\s*\{\z/
+      BLOCK_INNER  = /\A {12}"(?:[^"\\]|\\.)*"\s*:\s*(?:true|false|null|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|"(?:[^"\\]|\\.)*")\z/
+      BLOCK_CLOSE  = /\A {8}\}\z/
+      MW_LINE      = /\A"(DockWidgetState|ToolBarState)"\s*:\s*"(?:[^"\\]|\\.)*"\z/
+      MAX_BLOCKS      = 2000
+      MAX_BLOCK_LINES = 400
+      MAX_LINE_CHARS  = 200_000
+
+      def self.valid_block?(key, lines)
+        return false unless layout_section?(key) && lines.is_a?(Array) && lines.size.between?(2, MAX_BLOCK_LINES)
+        return false unless lines.all? { |l| l.is_a?(String) && l.size <= MAX_LINE_CHARS }
+        m = BLOCK_OPEN.match(lines.first)
+        m && m[1] == key && lines.last =~ BLOCK_CLOSE && lines[1..-2].all? { |l| l =~ BLOCK_INNER } ? true : false
+      end
+
+      def self.clean_blocks(blocks)
+        return {} unless blocks.is_a?(Hash) && blocks.size <= MAX_BLOCKS
+        blocks.select { |k, v| k.is_a?(String) && valid_block?(k, v) }
+      end
+
+      def self.clean_main_window(mw)
+        return {} unless mw.is_a?(Hash)
+        mw.select do |k, v|
+          m = v.is_a?(String) && v.size <= MAX_LINE_CHARS ? MW_LINE.match(v) : nil
+          MAIN_WINDOW_KEYS.include?(k) && m && m[1] == k
         end
-        out
       end
 
       def self.clean_shortcuts(shortcuts)
@@ -269,7 +278,7 @@ module VGD
         FileUtils.rm_rf(dir)
         FileUtils.mkdir_p(dir)
         snapshot = { 'year' => year, 'saved_at' => Time.now.strftime('%Y-%m-%d %H:%M:%S'),
-                     'prefs' => {}, 'shortcuts' => clean_shortcuts(shortcuts) }
+                     'format' => 2, 'blocks' => {}, 'main_window' => {}, 'shortcuts' => clean_shortcuts(shortcuts) }
         File.write(File.join(dir, 'layout.json'), JSON.pretty_generate(snapshot), encoding: 'UTF-8')
         schedule([apply_step(year, dir, ['shortcuts'])])
       end
@@ -297,7 +306,8 @@ module VGD
         data = blob['layout']
         return false unless data['year'].to_s =~ /\A\d{4}\z/
         snapshot = { 'year' => data['year'].to_s, 'saved_at' => data['saved_at'].to_s,
-                     'prefs' => clean_prefs(data['prefs']), 'shortcuts' => clean_shortcuts(data['shortcuts']) }
+                     'format' => 2, 'blocks' => clean_blocks(data['blocks']), 'main_window' => clean_main_window(data['main_window']),
+                     'shortcuts' => clean_shortcuts(data['shortcuts']) }
         regs = {}
         (blob['registry'].is_a?(Hash) ? blob['registry'] : {}).each do |n, b64|
           next unless REG_FILES.include?(n) && b64.is_a?(String)

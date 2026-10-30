@@ -1,6 +1,6 @@
 # HANDOFF: VGD Plugin Manager (SketchUp, Ruby)
 
-Phiên bản hiện tại: **1.0.0-beta.8** (xem mục 8 cho phần thêm so với beta.2). Ngày bàn giao: 2026-10-30.
+Phiên bản hiện tại: **1.0.0-beta.9** (xem mục 8 cho phần thêm so với beta.2). Ngày bàn giao: 2026-10-30.
 Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 
 ## 1. Mục tiêu và bối cảnh
@@ -21,7 +21,7 @@ Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 
 1. `HANDOFF.md`: file này.
 2. `src/`: mã nguồn plugin (đúng cấu trúc bên trong .rbz).
-   1. `src/VGD_PluginManager.rb`: file loader, đăng ký SketchupExtension (version `1.0.0-beta.8`).
+   1. `src/VGD_PluginManager.rb`: file loader, đăng ký SketchupExtension (version `1.0.0-beta.9`).
    2. `src/VGD_PluginManager/main.rb`: chuyển plugin, phím tắt, thanh công cụ; xuất gói tổng; giao diện HtmlDialog chính.
    3. `src/VGD_PluginManager/zip_writer.rb`: ghi file zip/.rbz thuần Ruby bằng Zlib (không cần thư viện ngoài).
    4. (đã bỏ ở beta.5) `bundle_import.rb`: mẫu nhập phím tắt/thanh công cụ từ gói tổng, dùng khóa registry sai.
@@ -122,6 +122,7 @@ ruby tests/test_toggle.rb src
 ruby tests/test_layout.rb src
 ruby tests/test_dialog.rb src
 ruby tests/test_splice.rb
+ruby tests/test_private_splice.rb
 ruby tests/run_test.rb src
 ```
 
@@ -167,3 +168,7 @@ Khi thêm file mới vào `src/VGD_PluginManager/` nhớ thêm vào danh sách t
    1. Helper không còn đọc-ghi lại cả `SharedPreferences.json` bằng `JavaScriptSerializer` (làm `24.0` thành `24`). Phím tắt nay được thay bằng cách **chỉnh đúng các dòng `Num_Shortcuts`/`Shortcut_N`** trong khối `Windows Only > Settings`, mọi byte khác giữ nguyên (`Set-ShortcutLines` trong `helper/apply_layout.ps1`, bản tham chiếu Ruby và test: `tests/support/splice_reference.rb`, `tests/test_splice.rb`). Thuật toán đã kiểm chứng trên hai file `SharedPreferences.json` thật (2022, 2024) và file `.dat` thật: phần còn lại của file giống hệt từng dòng, chín số thực `X.0` giữ nguyên, tiếng Việt giữ đúng. Sau khi ghi còn kiểm tra đọc lại JSON và số phím tắt trước khi thay file. **Bản PowerShell chưa chạy thử được** (không có PowerShell ngoài Windows).
    2. **Layout nằm trong `PrivatePreferences.json` tạm không được ghi** (cờ `$allowPrivatePrefsWrite = $false` trong helper; phía Ruby `Layout.registry_layout?`). Vẫn *lưu* (đọc) được. Hệ quả: "Áp layout" chỉ áp được layout qua registry (SketchUp 2022); bộ lưu từ 2024 chỉ áp được phím tắt. Cần cách chỉnh theo dòng cho file này (cần biết cấu trúc thật, chưa có mẫu).
    3. Tab "Chuyển plugin" có mục "Phím tắt" với nút **Nhập phím tắt từ file .dat**: đọc mục `[Accelerator]` của file xuất từ Window > Preferences > Shortcuts > Export (UTF-16, bỏ qua `[File Locations]`), xác nhận, rồi **thay toàn bộ** phím tắt khi SketchUp đóng. Đọc file: `Layout.parse_dat`; lập việc: `Layout.schedule_import`.
+10. `1.0.0-beta.9`: **ghi lại `PrivatePreferences.json` theo dòng** (bật lại việc áp layout 2024; thay mục 9.2).
+   1. Snapshot đổi sang **format 2**: mỗi khối layout được lưu **nguyên văn** (các dòng của file) trong `blocks` (khóa là văn bản thô, hai dấu gạch chéo), và `main_window` lưu dòng `"DockWidgetState": "..."`, `"ToolBarState": "..."`. Snapshot cũ có `prefs` (beta.5 đến beta.8) không còn được nhận (chưa từng được kiểm chứng).
+   2. Helper (`Get-PrivateLayout`, `Set-PrivateLayout`, `Save-PrivateChecked`) chỉ thay các khối layout trong `"This Computer Only"` và hai khóa của `MainWindow`; mọi byte khác giữ nguyên (số `X.0`, tiếng Việt, thụt lề). Trước khi thay file kiểm tra: JSON đọc lại được, số khóa cấp cao nhất không đổi, **mọi mục ngoài layout giống hệt trước (so sánh từng mục)**, đủ mục layout mới, `MainWindow` có giá trị mới. Bản tham chiếu Ruby và 36 test: `tests/support/splice_reference.rb` (`PrivateSplice`), `tests/test_private_splice.rb`, dựng theo cấu trúc thật. Bộ kiểm tra khối ở phía Ruby (`Layout.valid_block?`, `clean_blocks`, `clean_main_window`) chặn file nhập cố chèn mục hay khóa ngoài layout.
+   3. **Bản PowerShell vẫn chưa chạy thử được** (không có PowerShell ngoài Windows). Mục layout không phẳng (có đối tượng lồng) bị bỏ qua khi chụp và được báo số lượng.

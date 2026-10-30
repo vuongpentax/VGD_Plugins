@@ -9,7 +9,7 @@ require File.join(File.dirname(__FILE__), 'logger')
 module VGD
   module PluginManager
 
-    VERSION         = '1.0.0-beta.8'
+    VERSION         = '1.0.0-beta.9'
     UI_DIR          = File.join(File.dirname(__FILE__), 'ui')
     ICON_DIR        = File.join(File.dirname(__FILE__), 'icons')
 

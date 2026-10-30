@@ -57,17 +57,23 @@ Sketchup.platform = :platform_win
 # --- Snapshot: nhập, đọc thông tin, áp ---
 check 'chưa có snapshot thì info nil', L.info('Render').nil?
 check 'áp khi chưa lưu bị từ chối', L.schedule_apply('Render', ['layout']).include?('chưa lưu')
+TB_KEY = 'QtRubyWorkspace\\\\RubyToolBar-59648'   # khóa thô trong file: hai dấu gạch chéo
+good_tb = ["        \"#{TB_KEY}\": {", '            "Floating": false', '            "Height": 30', '            "Tray": 1', '        }']
 snap = { 'year' => '2024', 'saved_at' => '2026-10-30 12:00:00',
-         'prefs' => { 'ToolbarSettings' => { 'LargeIcons' => 1 }, 'QtRubyWorkspace\\RubyToolBar-59648' => { 'Tray' => 1 },
-                      'MainWindow' => { 'DockWidgetState' => 'abcd', 'ToolBarState' => '0011', 'Geometry' => 'khong-duoc-nhan' },
-                      'Evil' => { 'x' => 1 }, 'DangerousSetting' => 'x' },
+         'blocks' => { 'ToolbarSettings' => ['        "ToolbarSettings": {', '            "LargeIcons": false', '            "ToolbarState": "ff0001"', '        }'],
+                       TB_KEY => good_tb,
+                       'Evil' => ['        "Evil": {', '            "x": 1', '        }'],
+                       'Workspace\\\\Trays' => ['        "Workspace\\\\Trays": {', '            "Count": 2', '        },', '        "Evil2": {', '            "x": 1', '        }'] },
+         'main_window' => { 'DockWidgetState' => '"DockWidgetState": "7b0a20"', 'ToolBarState' => '"ToolBarState": "0011"',
+                            'Geometry' => '"Geometry": "khong-duoc-nhan"', 'Evil' => '"Evil": "x"' },
          'shortcuts' => { 'Num_Shortcuts' => 2, 'Shortcut_1' => '0 0 0 H selectDollyTool:', 'Shortcut_2' => '0 1 1 9 Camera/Next',
                           'NotShortcut' => 'x', 'Shortcut_3' => { 'a' => 1 } } }
 blob = { 'layout' => snap, 'registry' => { 'Workspace' => Base64.strict_encode64("REG\xFF\xFE".b), 'Other' => Base64.strict_encode64('x') } }
 check 'nhập snapshot hợp lệ', L.import_blob('Render', blob) == true
 saved = JSON.parse(File.read(File.join(L.preset_dir('Render'), 'layout.json')))
-check 'chỉ giữ các khóa layout cho phép', saved['prefs'].keys.sort == ['MainWindow', 'QtRubyWorkspace\\RubyToolBar-59648', 'ToolbarSettings'] &&
-  saved['prefs']['MainWindow'].keys.sort == %w[DockWidgetState ToolBarState]
+check 'chỉ giữ các khối layout đúng cấu trúc (bỏ khóa lạ và khối có mục thừa chèn kèm)', saved['blocks'].keys.sort == ['ToolbarSettings', TB_KEY].sort && saved['blocks'][TB_KEY] == good_tb
+check 'MainWindow chỉ giữ DockWidgetState và ToolBarState (bỏ Geometry và khóa lạ)', saved['main_window'].keys.sort == %w[DockWidgetState ToolBarState]
+check 'snapshot cũ (format 1, có prefs) không còn được nhận', !saved.key?('prefs') && saved['format'] == 2
 check 'chỉ giữ phím tắt hợp lệ (khóa đúng và giá trị chuỗi/số)', saved['shortcuts'].keys.sort == %w[Num_Shortcuts Shortcut_1 Shortcut_2]
 check 'chỉ nhận file .reg Workspace/RubyWorkspace, nội dung nhị phân giữ nguyên',
   File.binread(File.join(L.preset_dir('Render'), 'Workspace.reg')) == "REG\xFF\xFE".b && !File.exist?(File.join(L.preset_dir('Render'), 'Other.reg'))
@@ -80,6 +86,21 @@ check 'base64 hỏng không làm crash', L.import_blob('X', { 'layout' => { 'yea
 big = Base64.strict_encode64('a' * (L::MAX_BLOB_BYTES + 1))
 check 'file registry quá lớn bị từ chối', L.import_blob('X', { 'layout' => { 'year' => '2024' }, 'registry' => { 'Workspace' => big } }) == false
 check 'nhập hỏng không để lại thư mục dở dang', L.info('X').nil?
+
+# --- Bộ kiểm tra khối layout ---
+check 'khối hợp lệ được nhận', L.valid_block?(TB_KEY, good_tb)
+check 'khóa không thuộc nhóm layout bị từ chối', !L.valid_block?('Evil', ['        "Evil": {', '            "x": 1', '        }'])
+check 'dòng đầu không khớp khóa bị từ chối', !L.valid_block?(TB_KEY, ['        "Other": {', '            "x": 1', '        }'])
+check 'khối có mục thừa chèn kèm bị từ chối', !L.valid_block?('ToolbarSettings', ['        "ToolbarSettings": {', '            "x": 1', '        },', '        "Evil": {', '            "y": 2', '        }'])
+check 'khối có giá trị lồng nhau hoặc mảng bị từ chối', !L.valid_block?('ToolbarSettings', ['        "ToolbarSettings": {', '            "x": {"a": 1}', '        }']) &&
+  !L.valid_block?('ToolbarSettings', ['        "ToolbarSettings": {', '            "x": [1, 2]', '        }'])
+check 'thụt lề sai hoặc có dấu phẩy thừa bị từ chối', !L.valid_block?('ToolbarSettings', ['    "ToolbarSettings": {', '        "x": 1', '    }']) &&
+  !L.valid_block?('ToolbarSettings', ['        "ToolbarSettings": {', '            "x": 1,', '        }'])
+check 'khối quá dài hoặc quá nhiều khối bị từ chối', !L.valid_block?('ToolbarSettings', ['        "ToolbarSettings": {', *(['            "x": 1'] * (L::MAX_BLOCK_LINES + 1)), '        }']) &&
+  L.clean_blocks((1..(L::MAX_BLOCKS + 1)).map { |i| ["Workspace\\\\T#{i}", ["        \"Workspace\\\\T#{i}\": {", '            "a": 1', '        }']] }.to_h).empty?
+check 'MainWindow chỉ nhận chuỗi đúng khóa', L.clean_main_window('DockWidgetState' => '"DockWidgetState": "ab"').size == 1 &&
+  L.clean_main_window('DockWidgetState' => '"ToolBarState": "ab"').empty? && L.clean_main_window('DockWidgetState' => '"DockWidgetState": {"a": 1}').empty? &&
+  L.clean_main_window('Geometry' => '"Geometry": "ab"').empty?
 
 # --- Áp dụng ---
 spawned.clear
@@ -96,10 +117,14 @@ check 'khác năm: chỉ áp phím tắt', JSON.parse(File.read(L.job_file))['st
 no_reg = { 'layout' => snap.merge('year' => '2024'), 'registry' => {} }
 L.import_blob('KhongReg', no_reg)
 spawned.clear
-msg = L.schedule_apply('KhongReg', ['layout'])
-check 'layout 2024 chỉ có trong file cài đặt: tạm không áp, không lập việc', msg.include?('chưa được hỗ trợ') && spawned.empty?
-L.schedule_apply('KhongReg', %w[layout shortcuts])
-check 'nhưng phím tắt của bộ đó vẫn áp được', JSON.parse(File.read(L.job_file))['steps'][0]['parts'] == ['shortcuts']
+L.schedule_apply('KhongReg', ['layout'])
+check 'layout 2024 chỉ có trong file cài đặt (không có registry) vẫn áp được', JSON.parse(File.read(L.job_file))['steps'][0]['parts'] == ['layout']
+only_sc = { 'layout' => { 'year' => '2024', 'shortcuts' => { 'Num_Shortcuts' => 1, 'Shortcut_1' => '0 0 0 H selectDollyTool:' } } }
+L.import_blob('ChiPhim', only_sc)
+msg = L.schedule_apply('ChiPhim', ['layout'])
+check 'bộ chỉ có phím tắt mà đòi áp layout thì báo không có gì để áp', msg.include?('Không có mục nào') || msg.include?('chưa lưu')
+L.schedule_apply('ChiPhim', %w[layout shortcuts])
+check 'bộ chỉ có phím tắt: chỉ áp phím tắt', JSON.parse(File.read(L.job_file))['steps'][0]['parts'] == ['shortcuts']
 spawned.clear
 
 # --- Chuyển phím tắt giữa hai bản ---
@@ -183,7 +208,7 @@ j = JSON.parse(File.read(L.job_file))
 snap_in = JSON.parse(File.read(File.join(L.jobs_dir, 'shortcuts_dat', 'layout.json')))
 check 'nhập .dat lập một bước apply phím tắt cho năm hiện tại', msg.include?('File > Exit') && spawned.size == 1 && j['steps'].size == 1 &&
   j['steps'][0] == { 'op' => 'apply', 'year' => '2024', 'dir' => File.join(L.jobs_dir, 'shortcuts_dat'), 'parts' => ['shortcuts'] }
-check 'snapshot tạm có đúng phím tắt, không có layout', snap_in['shortcuts'] == sc && snap_in['prefs'] == {} && snap_in['year'] == '2024'
+check 'snapshot tạm có đúng phím tắt, không có layout', snap_in['shortcuts'] == sc && snap_in['blocks'] == {} && snap_in['main_window'] == {} && snap_in['year'] == '2024'
 
 puts($fail ? 'CÓ LỖI' : 'TẤT CẢ ĐẠT')
 exit($fail ? 1 : 0)

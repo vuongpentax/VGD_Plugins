@@ -51,16 +51,20 @@ function Get-SharedPrefsPath([string]$year) {
 }
 
 # Phai khop voi Layout.layout_section? / shortcut_key? / MAIN_WINDOW_KEYS trong layout.rb
+# $name la khoa THO (hai dau gach cheo): regex '\\\\' khop hai dau gach cheo lien nhau.
 function Test-LayoutSection([string]$name) {
+    return ($name -match '^(Qt)?RubyWorkspace\\\\') -or ($name -match '^Workspace\\\\') -or ($name -eq 'ToolbarSettings')
+}
+# Cung y nghia nhung cho khoa DA GIAI MA (mot dau gach cheo), dung khi doc lai qua JavaScriptSerializer
+function Test-LayoutSectionDecoded([string]$name) {
     return ($name -match '^(Qt)?RubyWorkspace\\') -or ($name -match '^Workspace\\') -or ($name -eq 'ToolbarSettings')
 }
 function Test-ShortcutKey([string]$name) {
     return ($name -match '^(Num_Shortcuts|Shortcut_\d+)$')
 }
 $mainWindowKeys = @('DockWidgetState', 'ToolBarState')
-# PrivatePreferences.json chua nhieu thiet lap khac va so thuc dang 24.0; doc-ghi lai ca file se doi 24.0 thanh 24.
-# Tam thoi KHONG ghi file nay (layout 2024 chua ap duoc) cho den khi co cach chinh theo dong an toan.
-$allowPrivatePrefsWrite = $false
+# PrivatePreferences.json duoc chinh THEO DONG (khong doc-ghi lai ca file) de giu nguyen moi byte ngoai muc layout.
+# Khoa muc la van ban tho giua hai dau nhay trong file (vi du RubyWorkspace\\RubyToolBar-59648, hai dau gach cheo).
 $regNames = @('Workspace', 'RubyWorkspace')
 
 function Invoke-Reg([string[]]$argv) {
@@ -105,6 +109,263 @@ function Get-Section($doc, [string]$name) {
     return $sec
 }
 
+# ---- PrivatePreferences.json: chup/ap layout theo dong (mirror cua PrivateSplice trong tests/support/splice_reference.rb) ----
+$scalarRe = '(?:true|false|null|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|"(?:[^"\\]|\\.)*")'
+
+# Khoi "This Computer Only": chi so dong mo, dong dong, thut le
+function Find-ComputerBlock($lines) {
+    $start = -1
+    $indent = 0
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match '^(\s*)"This Computer Only"\s*:\s*\{\s*$') { $start = $i; $indent = $Matches[1].Length; break }
+    }
+    if ($start -lt 0) { throw 'Khong thay muc "This Computer Only".' }
+    $pat = '^' + (' ' * $indent) + '\},?\s*$'
+    $end = -1
+    for ($i = $start + 1; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match $pat) { $end = $i; break }
+    }
+    if ($end -lt 0) { throw 'Khong thay cuoi muc "This Computer Only".' }
+    return @{ Start = $start; End = $end; Indent = $indent }
+}
+
+# Tach cac muc o thut le $entryIndent trong khoang dong from..to. Dong cuoi moi muc da bo dau phay.
+function Split-Entries($lines, [int]$from, [int]$to, [int]$entryIndent) {
+    $sp = ' ' * $entryIndent
+    $keyPat = '^' + $sp + '("(?:[^"\\]|\\.)*")\s*:\s*(.*?)(,?)\s*$'
+    $closePat = '^' + $sp + '[\}\]],?\s*$'
+    $entries = New-Object 'System.Collections.Generic.List[object]'
+    $i = $from
+    while ($i -le $to) {
+        $l = $lines[$i]
+        if ($l.Trim().Length -eq 0) { $i++; continue }
+        if (-not ($l -match $keyPat)) { throw ('Khong hieu dong (thut le ' + $entryIndent + ') tai dong ' + ($i + 1)) }
+        $keyRaw = $Matches[1]
+        $val = $Matches[2]
+        $key = $keyRaw.Substring(1, $keyRaw.Length - 2)
+        $isBlock = $false
+        $end = $i
+        if ($val -eq '{' -or $val -eq '[') {
+            $isBlock = $true
+            $end = -1
+            for ($j = $i + 1; $j -le $to; $j++) {
+                if ($lines[$j] -match $closePat) { $end = $j; break }
+            }
+            if ($end -lt 0) { throw ('Muc ' + $key + ' khong co dong dong.') }
+        }
+        $ent = New-Object 'System.Collections.Generic.List[string]'
+        for ($k = $i; $k -le $end; $k++) { $ent.Add($lines[$k]) }
+        $lastText = $ent[$ent.Count - 1].TrimEnd()
+        if ($lastText.EndsWith(',', [StringComparison]::Ordinal)) { $lastText = $lastText.Substring(0, $lastText.Length - 1) }
+        $ent[$ent.Count - 1] = $lastText
+        $entries.Add((New-Object PSObject -Property @{ Key = $key; IsBlock = $isBlock; Lines = $ent }))
+        $i = $end + 1
+    }
+    return ,$entries
+}
+
+# Khoi phang (chi thuoc tinh vo huong o thut le +4): tra ve cac dong da bo dau phay, hoac $null
+function ConvertTo-FlatBlock($lines, [int]$indent) {
+    $in1 = ' ' * ($indent + 4)
+    $in2 = ' ' * ($indent + 8)
+    if ($lines.Count -lt 2) { return $null }
+    if (-not ($lines[0] -match ('^' + $in1 + '"(?:[^"\\]|\\.)*"\s*:\s*\{$'))) { return $null }
+    if ($lines[$lines.Count - 1] -ne ($in1 + '}')) { return $null }
+    $out = New-Object 'System.Collections.Generic.List[string]'
+    $out.Add($lines[0])
+    $innerPat = '^' + $in2 + '"(?:[^"\\]|\\.)*"\s*:\s*' + $scalarRe + '$'
+    for ($i = 1; $i -lt $lines.Count - 1; $i++) {
+        $l = $lines[$i]
+        if ($l.EndsWith(',', [StringComparison]::Ordinal)) { $l = $l.Substring(0, $l.Length - 1) }
+        if (-not ($l -match $innerPat)) { return $null }
+        $out.Add($l)
+    }
+    $out.Add($lines[$lines.Count - 1])
+    return ,$out
+}
+
+function Get-PrivateLayout([string]$text) {
+    $lines = $text -split "`r?`n"
+    $cb = Find-ComputerBlock $lines
+    $blocks = New-Dict
+    $mw = New-Dict
+    $skipped = 0
+    foreach ($e in (Split-Entries $lines ($cb.Start + 1) ($cb.End - 1) ($cb.Indent + 4))) {
+        if (-not $e.IsBlock) { continue }
+        if (Test-LayoutSection $e.Key) {
+            $flat = ConvertTo-FlatBlock $e.Lines $cb.Indent
+            if ($null -eq $flat) { $skipped++ } else { $blocks[$e.Key] = [string[]]$flat.ToArray() }
+        } elseif ($e.Key -eq 'MainWindow') {
+            foreach ($ie in (Split-Entries $e.Lines 1 ($e.Lines.Count - 2) ($cb.Indent + 8))) {
+                if ((-not $ie.IsBlock) -and ($mainWindowKeys -contains $ie.Key)) { $mw[$ie.Key] = $ie.Lines[0].Trim() }
+            }
+        }
+    }
+    return @{ Blocks = $blocks; MainWindow = $mw; Skipped = $skipped }
+}
+
+# Danh sach cac muc (moi muc la List[string]) -> cac dong, them dau phay vao dong cuoi cua moi muc tru muc cuoi
+function Join-EntryLines($entryLines) {
+    $out = New-Object 'System.Collections.Generic.List[string]'
+    for ($i = 0; $i -lt $entryLines.Count; $i++) {
+        $ls = $entryLines[$i]
+        for ($k = 0; $k -lt $ls.Count; $k++) {
+            if ($k -eq $ls.Count - 1 -and $i -lt $entryLines.Count - 1) { $out.Add($ls[$k] + ',') } else { $out.Add($ls[$k]) }
+        }
+    }
+    return ,$out
+}
+
+# Khoi layout moi: dong dau, thuoc tinh (them dau phay tru dong cuoi), dong dong
+function Format-BlockLines($blockLines) {
+    $out = New-Object 'System.Collections.Generic.List[string]'
+    $out.Add($blockLines[0])
+    $n = $blockLines.Count - 2
+    for ($i = 1; $i -le $n; $i++) {
+        if ($i -lt $n) { $out.Add($blockLines[$i] + ',') } else { $out.Add($blockLines[$i]) }
+    }
+    $out.Add($blockLines[$blockLines.Count - 1])
+    return ,$out
+}
+
+function New-EntryObject([string]$key, $lines) {
+    return (New-Object PSObject -Property @{ Key = $key; IsBlock = $true; Lines = $lines })
+}
+
+# Thay Dock/ToolBarState trong muc MainWindow, giu nguyen cac khoa khac (vi du Geometry cua may nay)
+function Set-MainWindowEntry($entry, $mw, [int]$entryIndent) {
+    $pad = ' ' * ($entryIndent + 4)
+    $items = New-Object 'System.Collections.Generic.List[object]'
+    $done = @{}
+    foreach ($ie in (Split-Entries $entry.Lines 1 ($entry.Lines.Count - 2) ($entryIndent + 4))) {
+        if ((-not $ie.IsBlock) -and $mw.ContainsKey($ie.Key)) {
+            $one = New-Object 'System.Collections.Generic.List[string]'
+            $one.Add($pad + $mw[$ie.Key])
+            $items.Add($one)
+            $done[$ie.Key] = $true
+        } else {
+            $items.Add($ie.Lines)
+        }
+    }
+    $mk = New-Object 'System.Collections.Generic.List[string]'
+    foreach ($k in @($mw.Keys)) { $mk.Add($k) }
+    $mkArr = $mk.ToArray()
+    [Array]::Sort($mkArr, [StringComparer]::Ordinal)
+    foreach ($k in $mkArr) {
+        if (-not $done.ContainsKey($k)) {
+            $one = New-Object 'System.Collections.Generic.List[string]'
+            $one.Add($pad + $mw[$k])
+            $items.Add($one)
+        }
+    }
+    $lines = New-Object 'System.Collections.Generic.List[string]'
+    $lines.Add($entry.Lines[0])
+    $lines.AddRange((Join-EntryLines $items))
+    $lines.Add($entry.Lines[$entry.Lines.Count - 1])
+    return (New-EntryObject 'MainWindow' $lines)
+}
+
+function Set-PrivateLayout([string]$text, $blocks, $mw) {
+    if ($null -eq $blocks) { $blocks = New-Dict }
+    if ($null -eq $mw) { $mw = New-Dict }
+    $eol = "`n"
+    if ($text.Contains("`r`n")) { $eol = "`r`n" }
+    $lines = New-Object 'System.Collections.Generic.List[string]'
+    $lines.AddRange([string[]]($text -split "`r?`n"))
+    $cb = Find-ComputerBlock $lines
+    $entryIndent = $cb.Indent + 4
+
+    $keyList = New-Object 'System.Collections.Generic.List[string]'
+    foreach ($k in @($blocks.Keys)) {
+        if (-not (Test-LayoutSection $k)) { continue }
+        $flat = ConvertTo-FlatBlock @($blocks[$k]) $cb.Indent
+        if ($null -eq $flat) { throw ('Snapshot co muc layout khong hop le: ' + $k) }
+        if (-not ($flat[0].TrimStart().StartsWith('"' + $k + '"', [StringComparison]::Ordinal))) { throw ('Dong dau cua muc layout khong khop khoa: ' + $k) }
+        $keyList.Add($k)
+    }
+    $keys = $keyList.ToArray()
+    [Array]::Sort($keys, [StringComparer]::Ordinal)
+
+    $newEntries = New-Object 'System.Collections.Generic.List[object]'
+    $insertAt = -1
+    $mwDone = $false
+    foreach ($e in (Split-Entries $lines ($cb.Start + 1) ($cb.End - 1) $entryIndent)) {
+        if ($e.IsBlock -and (Test-LayoutSection $e.Key)) {
+            if ($insertAt -lt 0) { $insertAt = $newEntries.Count }
+            continue
+        }
+        if ($e.IsBlock -and $e.Key -eq 'MainWindow' -and $mw.Count -gt 0) {
+            $newEntries.Add((Set-MainWindowEntry $e $mw $entryIndent))
+            $mwDone = $true
+            continue
+        }
+        $newEntries.Add($e)
+    }
+    if ($insertAt -lt 0) { $insertAt = $newEntries.Count }
+    $ins = New-Object 'System.Collections.Generic.List[object]'
+    foreach ($k in $keys) { $ins.Add((New-EntryObject $k (Format-BlockLines @($blocks[$k])))) }
+    $newEntries.InsertRange($insertAt, $ins)
+    if ((-not $mwDone) -and $mw.Count -gt 0) {
+        $pad = ' ' * ($entryIndent + 4)
+        $mk = New-Object 'System.Collections.Generic.List[string]'
+        foreach ($k in @($mw.Keys)) { $mk.Add($k) }
+        $mkArr = $mk.ToArray()
+        [Array]::Sort($mkArr, [StringComparer]::Ordinal)
+        $items = New-Object 'System.Collections.Generic.List[object]'
+        foreach ($k in $mkArr) {
+            $one = New-Object 'System.Collections.Generic.List[string]'
+            $one.Add($pad + $mw[$k])
+            $items.Add($one)
+        }
+        $ml = New-Object 'System.Collections.Generic.List[string]'
+        $ml.Add((' ' * $entryIndent) + '"MainWindow": {')
+        $ml.AddRange((Join-EntryLines $items))
+        $ml.Add((' ' * $entryIndent) + '}')
+        $newEntries.Add((New-EntryObject 'MainWindow' $ml))
+    }
+    $all = New-Object 'System.Collections.Generic.List[object]'
+    foreach ($e in $newEntries) { $all.Add($e.Lines) }
+    $joined = Join-EntryLines $all
+    $lines.RemoveRange($cb.Start + 1, $cb.End - $cb.Start - 1)
+    $lines.InsertRange($cb.Start + 1, $joined)
+    return ($lines -join $eol)
+}
+
+# Kiem tra truoc khi thay file: JSON doc lai duoc, so khoa cap cao nhat khong doi, moi muc ngoai layout va ngoai
+# MainWindow giong het truoc, cac muc layout moi co mat dung, MainWindow co gia tri moi. Chi sau do moi ghi.
+function Save-PrivateChecked([string]$path, [string]$oldText, [string]$newText, $blocks, $mw) {
+    $o = $ser.DeserializeObject($oldText)
+    $n = $ser.DeserializeObject($newText)
+    if ($n.Count -ne $o.Count) { throw 'Kiem tra loi: so khoa cap cao nhat thay doi.' }
+    $os = Get-Child $o 'This Computer Only'
+    $ns = Get-Child $n 'This Computer Only'
+    foreach ($k in @($os.Keys)) {
+        if ((Test-LayoutSectionDecoded $k) -or $k -eq 'MainWindow') { continue }
+        if (-not $ns.ContainsKey($k)) { throw ('Kiem tra loi: mat muc ' + $k) }
+        if ($ser.Serialize($os[$k]) -ne $ser.Serialize($ns[$k])) { throw ('Kiem tra loi: muc ' + $k + ' bi thay doi.') }
+    }
+    $want = 0
+    foreach ($k in @($blocks.Keys)) {
+        if (-not (Test-LayoutSection $k)) { continue }
+        $dec = $ser.DeserializeObject('"' + $k + '"')
+        if (-not $ns.ContainsKey($dec)) { throw ('Kiem tra loi: thieu muc layout ' + $dec) }
+        $want++
+    }
+    $have = 0
+    foreach ($k in @($ns.Keys)) { if (Test-LayoutSectionDecoded $k) { $have++ } }
+    if ($have -ne $want) { throw ('Kiem tra loi: so muc layout ' + $have + ' khac ' + $want) }
+    if ($mw.Count -gt 0) {
+        $nmw = Get-Child $ns 'MainWindow'
+        foreach ($k in @($mw.Keys)) {
+            $expect = (Get-Child ($ser.DeserializeObject('{' + $mw[$k] + '}')) $k)
+            if ([string](Get-Child $nmw $k) -ne [string]$expect) { throw ('Kiem tra loi: MainWindow ' + $k + ' khong khop.') }
+        }
+    }
+    $tmp = "$path.vgdtmp"
+    [System.IO.File]::WriteAllText($tmp, $newText, $utf8)
+    Move-Item -LiteralPath $tmp -Destination $path -Force
+}
+
 # ---- capture ----
 function Invoke-Capture($step) {
     $year = [string]$step['year']
@@ -113,26 +374,18 @@ function Invoke-Capture($step) {
     New-Item -ItemType Directory -Force -Path $dir | Out-Null
     foreach ($f in @(Get-ChildItem -LiteralPath $dir -Filter '*.reg' -ErrorAction SilentlyContinue)) { Remove-Item -LiteralPath $f.FullName -Force }
 
-    $prefs = New-Dict
+    $blocks = New-Dict
+    $mwOut = New-Dict
     $shortcuts = New-Dict
     $gotLayout = $false
 
     if ($parts -contains 'layout') {
         $priv = Get-PrivatePrefsPath $year
         if (Test-Path -LiteralPath $priv) {
-            $doc = Read-Json $priv
-            $sec = Get-Child $doc 'This Computer Only'
-            if ($null -ne $sec) {
-                foreach ($k in @($sec.Keys)) {
-                    if (Test-LayoutSection $k) { $prefs[$k] = $sec[$k] }
-                }
-                $mw = Get-Child $sec 'MainWindow'
-                if ($null -ne $mw) {
-                    $keep = New-Dict
-                    foreach ($mk in $mainWindowKeys) { if ($mw.ContainsKey($mk)) { $keep[$mk] = $mw[$mk] } }
-                    if ($keep.Count -gt 0) { $prefs['MainWindow'] = $keep }
-                }
-            }
+            $pl = Get-PrivateLayout ([System.IO.File]::ReadAllText($priv, $utf8))
+            $blocks = $pl.Blocks
+            $mwOut = $pl.MainWindow
+            if ($pl.Skipped -gt 0) { Add-Result ('Bo qua ' + $pl.Skipped + ' muc layout khong dung dinh dang phang.') }
         }
         foreach ($n in $regNames) {
             $key = "HKCU\Software\SketchUp\SketchUp $year\$n"
@@ -140,7 +393,7 @@ function Invoke-Capture($step) {
                 if ((Invoke-Reg @('export', $key, (Join-Path $dir "$n.reg"), '/y')) -eq 0) { $gotLayout = $true }
             }
         }
-        if ($prefs.Count -gt 0) { $gotLayout = $true }
+        if ($blocks.Count -gt 0 -or $mwOut.Count -gt 0) { $gotLayout = $true }
         if (-not $gotLayout) { Add-Result "Khong tim thay du lieu layout cua SketchUp $year." }
     }
 
@@ -161,22 +414,15 @@ function Invoke-Capture($step) {
     $snap = New-Dict
     $snap['year'] = $year
     $snap['saved_at'] = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss')
-    $snap['prefs'] = $prefs
+    $snap['format'] = 2
+    $snap['blocks'] = $blocks
+    $snap['main_window'] = $mwOut
     $snap['shortcuts'] = $shortcuts
     Write-Json (Join-Path $dir 'layout.json') $snap
     $what = @()
     if ($gotLayout) { $what += 'layout' }
     if ($shortcuts.Count -gt 0) { $what += ('phim tat (' + $shortcuts.Count + ' muc)') }
     Add-Result ("Da luu tu SketchUp $year : " + ($(if ($what.Count -gt 0) { $what -join ', ' } else { 'khong co gi' })))
-}
-
-# Ghi file JSON qua file tam, kiem tra doc lai duoc roi moi thay the
-function Save-JsonChecked([string]$path, $doc, [int]$expectTop) {
-    $tmp = "$path.vgdtmp"
-    Write-Json $tmp $doc
-    $check = Read-Json $tmp
-    if ($check.Count -ne $expectTop) { throw "Kiem tra loi: so khoa cap cao nhat thay doi ($($check.Count) khac $expectTop)" }
-    Move-Item -LiteralPath $tmp -Destination $path -Force
 }
 
 # Chuoi JSON: thoat dau nhay kep, gach cheo nguoc va ky tu dieu khien; giu nguyen ky tu Unicode (tieng Viet)
@@ -244,7 +490,7 @@ function Set-ShortcutLines([string]$text, $shortcuts) {
             continue
         }
         $orig = $l.TrimEnd()
-        if ($orig.EndsWith(',')) { $orig = $orig.Substring(0, $orig.Length - 1) }
+        if ($orig.EndsWith(',', [StringComparison]::Ordinal)) { $orig = $orig.Substring(0, $orig.Length - 1) }
         $keep.Add($orig)
     }
     if ($null -eq $indent) { $indent = ' ' * ($setIndent + 4) }
@@ -325,27 +571,16 @@ function Invoke-Apply($step, [string]$backupRoot) {
         if ($snapYear -ne $year) {
             Add-Result ("Bo qua layout: snapshot tu SketchUp " + $snapYear + ", khong ap duoc cho " + $year + '.')
         } else {
-            $prefs = Get-Child $snap 'prefs'
-            if ($null -ne $prefs -and $prefs.Count -gt 0 -and -not $allowPrivatePrefsWrite) {
-                Add-Result 'Bo qua phan layout nam trong PrivatePreferences.json (chua ho tro ghi an toan).'
-            }
-            if ($allowPrivatePrefsWrite -and $null -ne $prefs -and $prefs.Count -gt 0 -and (Test-Path -LiteralPath $priv)) {
-                $doc = Read-Json $priv
-                $top = $doc.Count
-                $sec = Get-Section $doc 'This Computer Only'
-                foreach ($k in @($sec.Keys)) { if (Test-LayoutSection $k) { [void]$sec.Remove($k) } }
-                foreach ($k in @($prefs.Keys)) {
-                    if ($k -eq 'MainWindow') {
-                        $mw = Get-Section $sec 'MainWindow'
-                        $srcMw = Get-Child $prefs 'MainWindow'
-                        foreach ($mk in @($srcMw.Keys)) {
-                            if ($mainWindowKeys -contains $mk) { $mw[$mk] = $srcMw[$mk] }
-                        }
-                    } elseif (Test-LayoutSection $k) {
-                        $sec[$k] = $prefs[$k]
-                    }
-                }
-                Save-JsonChecked $priv $doc $top
+            $blocks = Get-Child $snap 'blocks'
+            $mwSnap = Get-Child $snap 'main_window'
+            $hasBlocks = ($null -ne $blocks -and $blocks.Count -gt 0)
+            $hasMw = ($null -ne $mwSnap -and $mwSnap.Count -gt 0)
+            if (($hasBlocks -or $hasMw) -and (Test-Path -LiteralPath $priv)) {
+                if ($null -eq $blocks) { $blocks = New-Dict }
+                if ($null -eq $mwSnap) { $mwSnap = New-Dict }
+                $oldText = [System.IO.File]::ReadAllText($priv, $utf8)
+                $newText = Set-PrivateLayout $oldText $blocks $mwSnap
+                Save-PrivateChecked $priv $oldText $newText $blocks $mwSnap
                 $applied += 'layout (file cai dat)'
             }
             foreach ($n in $regNames) {
