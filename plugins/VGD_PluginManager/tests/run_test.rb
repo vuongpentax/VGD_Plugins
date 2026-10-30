@@ -20,9 +20,9 @@ File.write(File.join(plug, 'single.rb'), "puts 1\n")
 File.write(File.join(plug, 'su_sandbox.rb'), "skip\n")
 FileUtils.mkdir_p(File.join(fake, 'SketchUp/SketchUp 2024/SketchUp/Plugins'))
 
-require File.join(build, 'vgd_plugin_migrator/main')
+require File.join(build, 'VGD_PluginManager/main')
 
-M = VGD::PluginMigrator
+M = VGD::PluginManager
 puts "versions: #{M.installed_versions.inspect}"
 puts "plugins: #{M.list_plugins('2022').map { |p| p[:name] }.inspect}"
 
@@ -30,8 +30,8 @@ out = File.join(Dir.tmpdir, 'test_bundle.rbz')
 FileUtils.rm_f(out)
 r = M.build_bundle('2022', %w[cool_tool single], true, true, out)
 puts "result: #{r.inspect}"
-ui_ok = %w[migrator.html manager.html dialog.css vgd-theme/vgd-theme.css vgd-theme/vgd-theme.js].all? { |f| File.exist?(File.join(M::UI_DIR, f)) }
-icons_ok = %w[migrator.svg manager.svg].all? { |f| File.exist?(File.join(M::ICON_DIR, f)) }
+ui_ok = %w[dialog.html dialog.css vgd-theme/vgd-theme.css vgd-theme/vgd-theme.js].all? { |f| File.exist?(File.join(M::UI_DIR, f)) }
+icons_ok = %w[plugin_manager.svg].all? { |f| File.exist?(File.join(M::ICON_DIR, f)) }
 puts "ui files ok: #{ui_ok}, icons ok: #{icons_ok}"
 puts "OUT=#{out}"
 puts "FAKE=#{fake}"

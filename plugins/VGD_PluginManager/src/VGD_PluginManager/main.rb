@@ -7,9 +7,9 @@ require File.join(File.dirname(__FILE__), 'zip_writer')
 require File.join(File.dirname(__FILE__), 'logger')
 
 module VGD
-  module PluginMigrator
+  module PluginManager
 
-    VERSION         = '1.0.0-beta.3'
+    VERSION         = '1.0.0-beta.4'
     IMPORT_TEMPLATE = File.join(File.dirname(__FILE__), 'bundle_import.rb')
     UI_DIR          = File.join(File.dirname(__FILE__), 'ui')
     ICON_DIR        = File.join(File.dirname(__FILE__), 'icons')
@@ -18,8 +18,8 @@ module VGD
     REG_SHORTCUTS   = 'Software\SketchUp\SketchUp %s\Shortcuts'
     REG_TOOLBARS    = 'Software\SketchUp\SketchUp %s\Toolbars'
 
-    # Không chuyển chính plugin này
-    SELF_NAMES = ['vgd_plugin_migrator', 'vgd_plugin_migrator.rb']
+    # Không chuyển/không tắt chính plugin này (gồm tên cũ của bản beta.3 trở về trước)
+    SELF_NAMES = ['VGD_PluginManager', 'VGD_PluginManager.rb', 'vgd_plugin_migrator', 'vgd_plugin_migrator.rb']
     # Các mục hệ thống của SketchUp, bỏ qua
     SKIP_NAMES = ['.', '..', 'su_dynamiccomponents', 'su_dynamiccomponents.rb',
                   'su_sandbox', 'su_sandbox.rb', 'su_solidtools', 'su_solidtools.rb']
@@ -216,7 +216,7 @@ module VGD
       now   = Time.now
       notes = []
       manifest = {
-        'tool'           => 'VGD Plugin Migrator',
+        'tool'           => 'VGD Plugin Manager',
         'tool_version'   => VERSION,
         'source_version' => src_ver,
         'exported_at'    => now.strftime('%Y-%m-%d %H:%M:%S'),
@@ -248,92 +248,7 @@ module VGD
       { error: report_error('Không tạo được gói', e) }
     end
 
-    # ---- Giao diện ----
-    def self.run
-      versions = installed_versions
-      if versions.size < 2
-        UI.messagebox("Chỉ tìm thấy #{versions.size} phiên bản SketchUp trong AppData. Cần ít nhất 2 phiên bản.")
-        return
-      end
-
-      res = UI.inputbox(['Từ phiên bản:', 'Sang phiên bản:'],
-                        [versions.first, versions.last],
-                        [versions.join('|'), versions.join('|')],
-                        'VGD Plugin Migrator - Chọn phiên bản')
-      return unless res
-      src_ver, dst_ver = res
-      if src_ver == dst_ver
-        UI.messagebox('Phiên bản nguồn và đích phải khác nhau.')
-        return
-      end
-
-      plugins = list_plugins(src_ver)
-      if plugins.empty?
-        UI.messagebox("Không tìm thấy plugin nào trong bản #{src_ver}.")
-        return
-      end
-
-      dlg = UI::HtmlDialog.new(dialog_title: "VGD Plugin Migrator #{VERSION}",
-                               width: 560, height: 720,
-                               style: UI::HtmlDialog::STYLE_DIALOG)
-      dlg.set_file(File.join(UI_DIR, 'migrator.html'))
-
-      dlg.add_action_callback('mg_ready') do |_ctx|
-        data = { src: src_ver, dst: dst_ver, version: VERSION, plugins: plugins.map { |pl| pl[:name] } }
-        dlg.execute_script("init(#{data.to_json})")
-      end
-
-      dlg.add_action_callback('migrate') do |_ctx, json|
-        opts   = JSON.parse(json)
-        chosen = opts['plugins'] || []
-        msg    = []
-        if chosen.any?
-          warns = scan_compat(src_ver, chosen)
-          r = copy_plugins(src_ver, dst_ver, chosen, opts['overwrite'])
-          msg << "Đã chép: #{r[:done].size} mục."
-          msg << "Bỏ qua (đã tồn tại): #{r[:skipped].size} mục." if r[:skipped].any?
-          msg << "Lỗi: #{r[:failed].join('; ')}" if r[:failed].any?
-          msg << "Sao lưu thư mục đích: #{r[:backup]}" if r[:backup]
-          msg << "Cảnh báo tương thích: #{warns.join(' | ')}" if warns.any?
-        end
-        msg << migrate_registry(:shortcuts, src_ver, dst_ver) if opts['shortcuts']
-        msg << migrate_registry(:toolbars,  src_ver, dst_ver) if opts['toolbars']
-        msg << "Hãy đóng SketchUp và mở lại bản #{dst_ver} để áp dụng."
-        dlg.execute_script("showResult(#{msg.join("\n").to_json})")
-      rescue => e
-        dlg.execute_script("showResult(#{report_error('Lỗi khi chuyển', e).to_json})")
-      end
-
-      dlg.add_action_callback('export_bundle') do |_ctx, json|
-        opts   = JSON.parse(json)
-        chosen = opts['plugins'] || []
-        if chosen.empty?
-          dlg.execute_script("showResult(#{'Hãy tick ít nhất một plugin để xuất gói.'.to_json})")
-          next
-        end
-        default_dir = File.join(ENV['USERPROFILE'].to_s.tr('\\', '/'), 'Desktop')
-        path = UI.savepanel('Lưu gói .rbz tổng', default_dir, "VGD_Plugin_Bundle_#{src_ver}.rbz")
-        next unless path
-        r = build_bundle(src_ver, chosen, opts['shortcuts'], opts['toolbars'], path)
-        if r[:error]
-          dlg.execute_script("showResult(#{r[:error].to_json})")
-        else
-          msg = ["Đã xuất gói: #{r[:path]}", "Số file plugin trong gói: #{r[:count]}"]
-          msg.concat(r[:notes])
-          warns = scan_compat(src_ver, chosen)
-          msg << "Cảnh báo tương thích: #{warns.join(' | ')}" if warns.any?
-          msg << 'Trên máy mới: cài file .rbz bằng Extension Manager, khởi động lại SketchUp, ' \
-                 'rồi vào Plugins > "VGD: Nhập phím tắt/giao diện từ gói" nếu gói có kèm phím tắt.'
-          dlg.execute_script("showResult(#{msg.join("\n").to_json})")
-        end
-      rescue => e
-        dlg.execute_script("showResult(#{report_error('Lỗi khi xuất gói', e).to_json})")
-      end
-
-      dlg.show
-    end
-
-    # Lệnh dùng chung cho menu và thanh công cụ (mỗi lệnh trên thanh công cụ cũng có trong menu)
+    # Lệnh duy nhất cho menu và thanh công cụ (nút trên thanh công cụ cũng có trong menu)
     def self.make_command(title, tip, icon, &action)
       cmd = UI::Command.new(title, &action)
       cmd.tooltip = title
@@ -343,16 +258,11 @@ module VGD
     end
 
     unless file_loaded?(__FILE__)
-      migrate_cmd = make_command('VGD Plugin Migrator', 'Chuyển plugin, phím tắt và thanh công cụ giữa các phiên bản SketchUp',
-                                 'migrator.svg') { run }
-      manage_cmd  = make_command('VGD: Quản lý bật/tắt plugin', 'Bật hoặc tắt plugin, lưu thành bộ plugin',
-                                 'manager.svg') { Manager.run }
-      menu = UI.menu('Plugins')
-      menu.add_item(migrate_cmd)
-      menu.add_item(manage_cmd)
-      toolbar = UI::Toolbar.new('VGD Plugin Migrator')
-      toolbar.add_item(migrate_cmd)
-      toolbar.add_item(manage_cmd)
+      cmd = make_command('VGD Plugin Manager', 'Bật/tắt plugin và chuyển plugin, phím tắt, thanh công cụ giữa các phiên bản SketchUp',
+                         'plugin_manager.svg') { run }
+      UI.menu('Plugins').add_item(cmd)
+      toolbar = UI::Toolbar.new('VGD Plugin Manager')
+      toolbar.add_item(cmd)
       toolbar.restore
       file_loaded(__FILE__)
     end
@@ -360,5 +270,6 @@ module VGD
   end
 end
 
-# Nạp sau khi module PluginMigrator đã được định nghĩa
-require File.join(File.dirname(__FILE__), 'plugin_manager')
+# Nạp sau khi module PluginManager đã được định nghĩa
+require File.join(File.dirname(__FILE__), 'toggle')
+require File.join(File.dirname(__FILE__), 'dialog')

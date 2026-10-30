@@ -4,19 +4,39 @@ require 'fileutils'
 require 'json'
 
 module VGD
-  module PluginMigrator
+  module PluginManager
     # Quản lý bật/tắt plugin: plugin bị tắt được chuyển sang thư mục riêng
     # (không xóa), bật lại thì chuyển về Plugins. Có hiệu lực sau khi khởi động lại SketchUp.
-    module Manager
-      PM  = VGD::PluginMigrator
+    module Toggle
+      PM  = VGD::PluginManager
       Log = PM::Log
 
       def self.year
         (2000 + Sketchup.version.to_i).to_s
       end
 
+      # Dữ liệu nằm ngay trong thư mục của plugin (trong Plugins). Thư mục VGD_PluginManager bị
+      # bỏ qua khi quét plugin nên các mục đã tắt không hiện lại trong danh sách.
       def self.root_dir
+        File.join(PM.plugins_dir(year), 'VGD_PluginManager', 'data')
+      end
+
+      # Vị trí cũ (beta.3 trở về trước): ngoài thư mục Plugins
+      def self.legacy_root_dir
         File.join(File.dirname(PM.plugins_dir(year)), 'VGD_PluginManager')
+      end
+
+      # Chuyển dữ liệu từ vị trí cũ sang vị trí mới, một lần. Không ghi đè nếu vị trí mới đã có.
+      # Trả về thông báo hoặc nil.
+      def self.migrate_legacy
+        old = legacy_root_dir
+        return nil unless File.directory?(old)
+        return nil if File.exist?(root_dir)
+        FileUtils.mkdir_p(File.dirname(root_dir))
+        FileUtils.mv(old, root_dir)
+        "Đã chuyển dữ liệu bật/tắt cũ vào #{root_dir}."
+      rescue => e
+        PM.report_error('Không chuyển được dữ liệu bật/tắt cũ', e)
       end
 
       def self.disabled_dir
@@ -218,100 +238,6 @@ module VGD
         msg
       rescue => e
         PM.report_error('Không nhập được bộ plugin', e)
-      end
-
-      def self.run
-        dlg = UI::HtmlDialog.new(dialog_title: "VGD - Quản lý bật/tắt plugin #{PM::VERSION}",
-                                 width: 640, height: 780,
-                                 style: UI::HtmlDialog::STYLE_DIALOG)
-        dlg.set_file(File.join(PM::UI_DIR, 'manager.html'))
-
-        push = lambda do |msg|
-          dlg.execute_script("render(#{state.merge('version' => PM::VERSION).to_json}, #{msg.to_s.to_json})")
-        end
-
-        # Bọc callback: lỗi bất ngờ được ghi log và hiện trong hộp thoại thay vì im lặng
-        guard = lambda do |ctx, &blk|
-          begin
-            blk.call
-          rescue => e
-            push.call(PM.report_error(ctx, e))
-          end
-        end
-
-        dlg.add_action_callback('pm_ready') { |_c| push.call('') }
-
-        dlg.add_action_callback('pm_change') do |_c, json|
-          guard.call('Lỗi khi bật/tắt plugin') do
-            o = JSON.parse(json)
-            action = o['action'] == 'enable' ? 'enable' : 'disable'
-            if Array(o['names']).empty?
-              push.call('Hãy tick ít nhất một plugin.')
-            else
-              push.call(summary(change(o['names'], action), action))
-            end
-          end
-        end
-
-        dlg.add_action_callback('pm_save_set') do |_c, json|
-          guard.call('Lỗi khi lưu bộ') do
-            o = JSON.parse(json)
-            push.call(save_set(o['name'], o['names']))
-          end
-        end
-
-        dlg.add_action_callback('pm_apply_set') do |_c, json|
-          guard.call('Lỗi khi áp dụng bộ') do
-            o = JSON.parse(json)
-            action = o['action'] == 'enable' ? 'enable' : 'disable'
-            names = load_sets[o['name'].to_s]
-            if names.nil?
-              push.call('Không tìm thấy bộ này.')
-            else
-              push.call(summary(change(names, action), action))
-            end
-          end
-        end
-
-        dlg.add_action_callback('pm_delete_set') do |_c, json|
-          guard.call('Lỗi khi xóa bộ') do
-            o = JSON.parse(json)
-            push.call(delete_set(o['name']))
-          end
-        end
-
-        dlg.add_action_callback('pm_export_sets') do |_c|
-          guard.call('Lỗi khi xuất bộ') do
-            if load_sets.empty?
-              push.call('Chưa có bộ plugin nào để xuất.')
-            else
-              path = UI.savepanel('Lưu các bộ plugin', desktop_dir, 'VGD_Plugin_Sets.json')
-              push.call(export_sets(path)) if path
-            end
-          end
-        end
-
-        dlg.add_action_callback('pm_import_sets') do |_c|
-          guard.call('Lỗi khi nhập bộ') do
-            path = UI.openpanel('Chọn file bộ plugin (.json)', desktop_dir, 'JSON|*.json||')
-            next unless path
-            incoming, err = read_sets_file(path)
-            if err
-              push.call(err)
-              next
-            end
-            clash = incoming.keys & load_sets.keys
-            overwrite = false
-            if clash.any?
-              ask = UI.messagebox("Có #{clash.size} bộ trùng tên: #{clash.join(', ')}.\n" \
-                                  "Chọn Yes để ghi đè, No để giữ bộ hiện có (chỉ nhập bộ mới).", MB_YESNO)
-              overwrite = (ask == IDYES)
-            end
-            push.call(import_sets(incoming, overwrite))
-          end
-        end
-
-        dlg.show
       end
 
       def self.desktop_dir

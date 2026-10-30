@@ -14,11 +14,11 @@ File.write(File.join(plug, 'alpha/lib/x.rb'), "x\n")
 File.write(File.join(plug, 'beta.rbe'), "b\n")
 File.write(File.join(plug, 'gamma.rb'), "g\n")
 File.write(File.join(plug, 'su_sandbox.rb'), "skip\n")
-File.write(File.join(plug, 'vgd_plugin_migrator.rb'), "self\n")
+File.write(File.join(plug, 'VGD_PluginManager.rb'), "self\n")
 File.write(File.join(plug, '.hidden'), "h\n")
 
-require File.join(build, 'vgd_plugin_migrator/main')
-M = VGD::PluginMigrator::Manager
+require File.join(build, 'VGD_PluginManager/main')
+M = VGD::PluginManager::Toggle
 
 def check(label, cond)
   puts "#{cond ? 'OK  ' : 'FAIL'} #{label}"
@@ -90,17 +90,48 @@ check 'file sai định dạng bị từ chối', M.read_sets_file(bad)[1].inclu
 File.write(bad, '{"format":"vgd_plugin_sets","sets":{"ok":["a",5,null,""],"x":"str","  ":["a"],"y":[1]}}')
 check 'dữ liệu sai kiểu bị lọc', M.read_sets_file(bad)[0] == { 'ok' => ['a'] }
 File.write(bad, 'không phải json')
-check 'file hỏng không làm crash, có ghi log', M.read_sets_file(bad)[1].include?('migrator.log') && File.read(VGD::PluginMigrator::Log.path, encoding: 'UTF-8').include?('Không đọc được file bộ plugin')
+check 'file hỏng không làm crash, có ghi log', M.read_sets_file(bad)[1].include?('migrator.log') && File.read(VGD::PluginManager::Log.path, encoding: 'UTF-8').include?('Không đọc được file bộ plugin')
 M.delete_set('Render'); M.delete_set('Vẽ'); M.delete_set('ok')
 check 'xuất khi chưa có bộ', M.export_sets(out).include?('Chưa có')
 
 # Nhật ký
-log = VGD::PluginMigrator::Log
+log = VGD::PluginManager::Log
 File.write(log.path, 'x' * (log::MAX_BYTES + 1))
 log.write('thử xoay vòng')
 check 'log xoay vòng khi quá lớn', File.exist?("#{log.path}.1") && File.size(log.path) < 1000
 ENV['APPDATA'] = '/proc/khong_ghi_duoc'
 check 'log không ném lỗi khi không ghi được', log.write('x') == false
+
+ENV['APPDATA'] = fake
+# Vị trí lưu trữ mới nằm trong thư mục Plugins
+check 'dữ liệu nằm trong Plugins/VGD_PluginManager/data', M.root_dir == File.join(plug, 'VGD_PluginManager', 'data')
+check 'thư mục plugin tắt nằm trong data', M.disabled_dir.start_with?(File.join(plug, 'VGD_PluginManager'))
+FileUtils.mkdir_p(File.join(plug, 'VGD_PluginManager/data/disabled'))
+File.write(File.join(plug, 'VGD_PluginManager.rb'), "loader\n")
+File.write(File.join(plug, 'vgd_plugin_migrator.rb'), "old loader\n")
+FileUtils.mkdir_p(File.join(plug, 'vgd_plugin_migrator'))
+check 'plugin này (tên mới và tên cũ) không hiện trong danh sách', (names.(M.state).keys & %w[VGD_PluginManager vgd_plugin_migrator]).empty?
+
+# Chuyển dữ liệu từ vị trí cũ (ngoài Plugins) sang vị trí mới
+FileUtils.rm_rf(M.root_dir)
+FileUtils.mkdir_p(File.join(M.legacy_root_dir, 'disabled'))
+File.write(File.join(M.legacy_root_dir, 'disabled', 'old.rb'), "old\n")
+File.write(File.join(M.legacy_root_dir, 'sets.json'), '{"Cu":["old"]}')
+check 'chuyển dữ liệu cũ vào vị trí mới', M.migrate_legacy.to_s.include?('Đã chuyển') &&
+  File.exist?(File.join(M.disabled_dir, 'old.rb')) && M.load_sets == { 'Cu' => ['old'] } && !File.exist?(M.legacy_root_dir)
+check 'chạy lại không làm gì', M.migrate_legacy.nil?
+FileUtils.mkdir_p(File.join(M.legacy_root_dir, 'disabled'))
+check 'không ghi đè khi vị trí mới đã có dữ liệu', M.migrate_legacy.nil? && File.directory?(M.legacy_root_dir)
+FileUtils.rm_rf(M.legacy_root_dir)
+FileUtils.rm_rf(M.disabled_dir); FileUtils.mkdir_p(M.disabled_dir)
+M.delete_set('Cu')
+
+# Kiểm tra phiên bản do giao diện gửi lên (chống tên thư mục lạ)
+PMgr = VGD::PluginManager
+FileUtils.mkdir_p(File.join(fake, 'SketchUp/SketchUp 2022/SketchUp/Plugins'))
+check 'phiên bản hợp lệ', PMgr.check_versions('2022', '2024').nil?
+check 'trùng nhau bị từ chối', PMgr.check_versions('2024', '2024').include?('khác nhau')
+check 'phiên bản lạ/path traversal bị từ chối', PMgr.check_versions('../x', '2024').include?('chọn')
 
 puts M.summary({ changed: ['a'], skipped: [], errors: [] }, 'disable')
 puts($fail ? 'CÓ LỖI' : 'TẤT CẢ ĐẠT')

@@ -1,4 +1,4 @@
-/* Giao diện chung cho hai hộp thoại của VGD Plugin Migrator. Màu và font lấy từ vgd-theme/vgd-theme.css. */
+/* Giao diện chung cho hộp thoại VGD Plugin Manager. Màu và font lấy từ vgd-theme/vgd-theme.css. */
 * { box-sizing: border-box; }
 body.vgd-ui { margin: 0; padding: 16px; }
 header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
@@ -31,3 +31,21 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--vgd-accent)
 .set .nm { flex: 1; }
 #out { white-space: pre-wrap; margin-top: 12px; padding: 8px 12px; background: var(--vgd-elevated); border: 1px solid var(--vgd-border); border-radius: 6px; display: none; }
 small { color: var(--vgd-muted); }
+
+/* Tab */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--vgd-border); margin-bottom: 12px; }
+.tab { height: 34px; border: 0; border-bottom: 2px solid transparent; border-radius: 4px 4px 0 0; background: transparent; color: var(--vgd-muted); font-size: 13px; }
+.tab:hover { color: var(--vgd-text); border-color: transparent; border-bottom-color: var(--vgd-border); }
+.tab[aria-selected="true"] { color: var(--vgd-accent-strong); border-bottom-color: var(--vgd-accent); }
+.panel[hidden] { display: none; }
+
+/* Nút gạt bật/tắt */
+.switch { position: relative; width: 40px; height: 22px; min-width: 40px; padding: 0; border-radius: 11px; border: 1px solid var(--vgd-border); background: var(--vgd-elevated); }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--vgd-muted); transition: left .12s, background .12s; }
+.switch[aria-checked="true"] { background: var(--vgd-accent); border-color: var(--vgd-accent); }
+.switch[aria-checked="true"]::after { left: 20px; background: var(--vgd-on-accent); }
+.switch:disabled { opacity: .45; cursor: not-allowed; }
+.row.off .nm { color: var(--vgd-muted); }
+select { height: 32px; padding: 0 8px; border: 1px solid var(--vgd-border); border-radius: 4px; background: var(--vgd-surface); color: var(--vgd-text); font-family: inherit; }
+select:focus-visible { outline: 2px solid var(--vgd-accent); outline-offset: 2px; }
+.ver-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }

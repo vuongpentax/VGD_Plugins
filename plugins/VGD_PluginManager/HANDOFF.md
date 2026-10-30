@@ -1,6 +1,6 @@
-# HANDOFF: VGD Plugin Migrator (SketchUp, Ruby)
+# HANDOFF: VGD Plugin Manager (SketchUp, Ruby)
 
-Phiên bản hiện tại: **1.0.0-beta.3** (xem mục 8 cho phần thêm so với beta.2). Ngày bàn giao: 2026-10-30.
+Phiên bản hiện tại: **1.0.0-beta.4** (xem mục 8 cho phần thêm so với beta.2). Ngày bàn giao: 2026-10-30.
 Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 
 ## 1. Mục tiêu và bối cảnh
@@ -21,21 +21,22 @@ Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 
 1. `HANDOFF.md`: file này.
 2. `src/`: mã nguồn plugin (đúng cấu trúc bên trong .rbz).
-   1. `src/vgd_plugin_migrator.rb`: file loader, đăng ký SketchupExtension (version `1.0.0-beta.2`).
-   2. `src/vgd_plugin_migrator/main.rb`: chuyển plugin, phím tắt, thanh công cụ; xuất gói tổng; giao diện HtmlDialog chính.
-   3. `src/vgd_plugin_migrator/zip_writer.rb`: ghi file zip/.rbz thuần Ruby bằng Zlib (không cần thư viện ngoài).
-   4. `src/vgd_plugin_migrator/bundle_import.rb`: mẫu file được đóng vào gói tổng (đổi tên thành `vgd_bundle_import.rb`), tạo menu nhập phím tắt/thanh công cụ trên máy mới.
-   5. `src/vgd_plugin_migrator/plugin_manager.rb`: quản lý bật/tắt plugin và bộ plugin, xuất/nhập bộ ra file `.json`.
-   7. `src/vgd_plugin_migrator/ui/`: giao diện hai hộp thoại (`migrator.html`, `manager.html`, `dialog.css`) và bản sao `vgd-theme/` (đồng bộ bằng `python tools/sync_vgd_theme.py`). Dialog nạp bằng `set_file`; dữ liệu đẩy vào qua callback `mg_ready` và `pm_ready`.
-   8. `src/vgd_plugin_migrator/icons/`: `migrator.svg`, `manager.svg` (24x24, nét 1.8, nâu đồng `#A67C58` + than `#292B2D`) dùng cho thanh công cụ "VGD Plugin Migrator".
-   6. `src/vgd_plugin_migrator/logger.rb`: ghi nhật ký lỗi vào `%APPDATA%\SketchUp\VGD_PluginMigrator\migrator.log`.
+   1. `src/VGD_PluginManager.rb`: file loader, đăng ký SketchupExtension (version `1.0.0-beta.4`).
+   2. `src/VGD_PluginManager/main.rb`: chuyển plugin, phím tắt, thanh công cụ; xuất gói tổng; giao diện HtmlDialog chính.
+   3. `src/VGD_PluginManager/zip_writer.rb`: ghi file zip/.rbz thuần Ruby bằng Zlib (không cần thư viện ngoài).
+   4. `src/VGD_PluginManager/bundle_import.rb`: mẫu file được đóng vào gói tổng (đổi tên thành `vgd_bundle_import.rb`), tạo menu nhập phím tắt/thanh công cụ trên máy mới.
+   5. `src/VGD_PluginManager/toggle.rb`: bật/tắt plugin và bộ plugin (module `Toggle`), xuất/nhập bộ ra file `.json`, chuyển dữ liệu từ vị trí cũ.
+   7. `src/VGD_PluginManager/dialog.rb`: một hộp thoại hai tab (Bật/tắt plugin, Chuyển plugin); mọi callback và kiểm tra phiên bản nguồn/đích (`check_versions`).
+   8. `src/VGD_PluginManager/ui/`: `dialog.html`, `dialog.css` và bản sao `vgd-theme/` (đồng bộ bằng `python tools/sync_vgd_theme.py`). Nạp bằng `set_file`; dữ liệu đẩy vào qua callback `ready`.
+   9. `src/VGD_PluginManager/icons/plugin_manager.svg`: icon duy nhất cho thanh công cụ và menu (24x24, nét 1.8, nâu đồng `#A67C58` + than `#292B2D`).
+   6. `src/VGD_PluginManager/logger.rb`: ghi nhật ký lỗi vào `%APPDATA%\SketchUp\VGD_PluginManager\migrator.log`.
 3. `tests/`: bộ test chạy ngoài SketchUp bằng stub (xem mục 6).
 4. `docs/KIEM_THU_THU_CONG.md`: hướng dẫn kiểm thử thủ công trong SketchUp thật.
 5. File `.rbz` đóng gói không lưu trong repo (`.gitignore` loại `*.rbz`); tạo bằng mục 7.
 
 ## 3. Tính năng và hành vi đã chốt
 
-### 3.1. Chuyển plugin (menu Plugins > VGD Plugin Migrator)
+### 3.1. Chuyển plugin (menu Plugins > VGD Plugin Manager)
 
 1. Quét phiên bản có trong `%APPDATA%\SketchUp\SketchUp <năm>`, cho chọn nguồn và đích bằng `UI.inputbox`.
 2. Plugin = file `.rb/.rbe/.rbs` ở gốc `...\SketchUp\Plugins` cộng thư mục cùng tên (nhóm theo tên bỏ đuôi).
@@ -70,7 +71,7 @@ Các lựa chọn người dùng đã chốt:
 
 Chi tiết cài đặt:
 
-1. Thư mục gốc: `%APPDATA%\SketchUp\SketchUp <năm hiện tại>\SketchUp\VGD_PluginManager\` (nằm ngoài `Plugins`).
+1. Thư mục gốc: `%APPDATA%\SketchUp\SketchUp <năm hiện tại>\SketchUp\Plugins\VGD_PluginManager\data\` (từ beta.4, nằm trong thư mục Plugins; trước đó nằm ngoài Plugins và được tự chuyển vào một lần) (nằm ngoài `Plugins`).
    1. `disabled\`: nơi cất plugin đã tắt.
    2. `sets.json`: các bộ plugin `{ "tên bộ": ["plugin1", ...] }`.
 2. Năm hiện tại lấy từ `2000 + Sketchup.version.to_i`.
@@ -129,14 +130,14 @@ File .rbz là zip có đường dẫn dùng dấu `/`, các file ở gốc của
 cd src
 python3 -c "
 import zipfile
-z=zipfile.ZipFile('../dist/VGD_Plugin_Migrator_1.0.0-beta.3.rbz','w',zipfile.ZIP_DEFLATED)
-for n in ['vgd_plugin_migrator.rb','vgd_plugin_migrator/main.rb','vgd_plugin_migrator/zip_writer.rb','vgd_plugin_migrator/bundle_import.rb','vgd_plugin_migrator/plugin_manager.rb','vgd_plugin_migrator/logger.rb']:
+z=zipfile.ZipFile('../dist/VGD_PluginManager_1.0.0-beta.4.rbz','w',zipfile.ZIP_DEFLATED)
+for n in ['VGD_PluginManager.rb','VGD_PluginManager/main.rb','VGD_PluginManager/zip_writer.rb','VGD_PluginManager/bundle_import.rb','VGD_PluginManager/toggle.rb','VGD_PluginManager/logger.rb','VGD_PluginManager/dialog.rb','VGD_PluginManager/ui/dialog.html','VGD_PluginManager/ui/dialog.css','VGD_PluginManager/icons/plugin_manager.svg']:
     z.write(n,n)
 z.close()
 "
 ```
 
-Khi thêm file mới vào `src/vgd_plugin_migrator/` nhớ thêm vào danh sách trên. Khi đổi phiên bản, sửa cả `VERSION` trong `main.rb` và `ex.version` trong `vgd_plugin_migrator.rb`.
+Khi thêm file mới vào `src/VGD_PluginManager/` nhớ thêm vào danh sách trên. Khi đổi phiên bản, sửa cả `VERSION` trong `main.rb` và `ex.version` trong `VGD_PluginManager.rb`.
 
 ## 8. Ghi chú về các phiên bản
 
@@ -145,3 +146,6 @@ Khi thêm file mới vào `src/vgd_plugin_migrator/` nhớ thêm vào danh sách
 3. `1.0.0-beta.2`: thêm quản lý bật/tắt plugin và bộ plugin.
 4. `1.0.0-beta.3`: thêm xuất/nhập bộ plugin ra file `.json` (có hỏi ghi đè khi trùng tên, lọc dữ liệu sai kiểu), ghi nhật ký lỗi ra file, hướng dẫn test thủ công. Đã kiểm tra tự động ngoài SketchUp; **chưa kiểm tra trong SketchUp thật** (hộp thoại mở/lưu file `UI.openpanel`/`UI.savepanel`, `UI.messagebox` hỏi ghi đè).
    Giao diện: hai hộp thoại đổi sang theme VGD dùng chung (sáng/tối, nút đổi theme, font Manrope), giữ nguyên bố cục và hành vi. Thêm thanh công cụ 2 nút (mỗi nút cũng có trong menu Plugins). Danh sách plugin ở hộp thoại chuyển plugin giờ do JavaScript dựng (bằng `textContent`) thay vì Ruby. Plugin không có API đặt icon cho Extension Manager nên chưa làm icon đó. **Chưa kiểm tra trong SketchUp thật**: `set_file` với font/CSS tương đối, icon SVG trên thanh công cụ, nút đổi theme. Đã chụp ảnh thử bằng trình duyệt ở cả hai theme.
+5. `1.0.0-beta.4`: đổi tên plugin thành **VGD_PluginManager** (loader `VGD_PluginManager.rb`, module `VGD::PluginManager`, module bật/tắt đổi tên thành `Toggle`); gộp hai tính năng vào **một hộp thoại hai tab** (bỏ `UI.inputbox`, chọn phiên bản bằng ô chọn trong tab Chuyển plugin); bật/tắt bằng **nút gạt** (gạt là chuyển file ngay, có hiệu lực sau khi khởi động lại; bỏ hai nút "Tắt/Bật mục đã chọn", ô tick chỉ còn để lưu bộ); một nút thanh công cụ và một mục menu; dữ liệu plugin đã tắt và `sets.json` chuyển vào `Plugins\VGD_PluginManager\data`.
+   1. **Cập nhật từ beta.3:** gỡ bản cũ (file `vgd_plugin_migrator.rb` và thư mục `vgd_plugin_migrator` trong Plugins) trước khi cài, nếu không hai bản cùng nạp và có hai thanh công cụ. Bản mới bỏ qua cả hai tên khi quét plugin.
+   2. **Rủi ro:** thư mục `data` nằm trong thư mục plugin nên **gỡ plugin bằng Extension Manager sẽ xóa luôn các plugin đã tắt**. Bật lại các plugin cần giữ trước khi gỡ. Chưa xác nhận SketchUp có nạp `.rb` nằm sâu trong `Plugins\VGD_PluginManager\data\disabled\` hay không (dự đoán là không, cần thử trên SketchUp thật).

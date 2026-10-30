@@ -2,7 +2,7 @@
 require 'zlib'
 
 module VGD
-  module PluginMigrator
+  module PluginManager
     # Ghi file zip (.rbz) thuần Ruby, không cần thư viện ngoài.
     module ZipWriter
       def self.dos_datetime(t)

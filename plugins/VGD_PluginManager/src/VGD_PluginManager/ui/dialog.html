@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="vgd-theme/vgd-theme.css"><link rel="stylesheet" href="dialog.css">
+</head><body class="vgd-ui">
+<header>
+  <div class="brand"><div class="wordmark">VGD</div><h1>Plugin Manager</h1><div class="ver" id="ver"></div></div>
+  <button class="vgd-theme-btn" id="themeButton" type="button"></button>
+</header>
+<div class="tabs" role="tablist">
+  <button class="tab" role="tab" id="tab-toggle" aria-selected="true" onclick="showTab('toggle')">Bật/tắt plugin</button>
+  <button class="tab" role="tab" id="tab-migrate" aria-selected="false" onclick="showTab('migrate')">Chuyển plugin</button>
+</div>
+
+<section class="panel" id="panel-toggle">
+  <div class="note">Gạt nút để bật/tắt, thay đổi chỉ có hiệu lực sau khi khởi động lại SketchUp. Plugin bị tắt được cất vào thư mục riêng, không bị xóa. Cẩn thận: tắt plugin mà plugin khác cần có thể gây lỗi khi mở lại.</div>
+  <div class="bar"><input type="text" id="q" placeholder="Tìm plugin..." oninput="drawToggle()">
+    <button onclick="selAll(true)">Chọn hết đang hiện</button>
+    <button onclick="selAll(false)">Bỏ chọn hết</button></div>
+  <div class="list" id="list"></div>
+  <h2>Bộ plugin</h2>
+  <div class="bar"><input type="text" id="setname" placeholder="Tên bộ, ví dụ: Render">
+    <button onclick="saveSet()">Lưu mục đã chọn thành bộ</button></div>
+  <div id="sets"></div>
+  <div class="bar"><button onclick="sketchup.pm_export_sets()">Xuất các bộ ra file</button>
+    <button onclick="sketchup.pm_import_sets()">Nhập bộ từ file</button></div>
+  <small id="dir"></small>
+</section>
+
+<section class="panel" id="panel-migrate" hidden>
+  <div class="ver-row">
+    <label>Từ bản <select id="src" onchange="onVersion()"></select></label>
+    <label>Sang bản <select id="dst" onchange="onVersion()"></select></label>
+  </div>
+  <div class="box" id="mlist"></div>
+  <div class="bar">
+    <button onclick="setAll(true)">Chọn hết</button>
+    <button onclick="setAll(false)">Bỏ chọn hết</button>
+  </div>
+  <div class="opts">
+    <label><input type="checkbox" id="overwrite"> Ghi đè nếu plugin đã tồn tại ở bản đích</label>
+    <label><input type="checkbox" id="shortcuts" checked> Phím tắt (khi chuyển hoặc kèm trong gói)</label>
+    <label><input type="checkbox" id="toolbars"> Giao diện thanh công cụ (khi chuyển hoặc kèm trong gói)</label>
+  </div>
+  <div class="bar">
+    <button class="primary" id="goBtn" onclick="go()">Chuyển plugin</button>
+    <button onclick="exportBundle()">Xuất gói .rbz tổng</button>
+  </div>
+</section>
+
+<div id="out"></div>
+<script src="vgd-theme/vgd-theme.js"></script>
+<script>
+var S = { plugins: [], sets: [] }, checked = {};
+function el(t, c, x) { var e = document.createElement(t); if (c) e.className = c; if (x !== undefined) e.textContent = x; return e; }
+function send(cb, obj) { sketchup[cb](JSON.stringify(obj)); }
+function say(msg) { var o = document.getElementById('out'); if (msg) { o.style.display = 'block'; o.textContent = msg; } else { o.style.display = 'none'; } }
+
+function showTab(name) {
+  ['toggle', 'migrate'].forEach(function (n) {
+    document.getElementById('panel-' + n).hidden = n !== name;
+    document.getElementById('tab-' + n).setAttribute('aria-selected', n === name ? 'true' : 'false');
+  });
+  say('');
+}
+
+/* ---- Tab Bật/tắt ---- */
+function label(st) { return st === 'on' ? 'Đang bật' : (st === 'off' ? 'Đã tắt' : 'Trùng tên'); }
+function drawToggle() {
+  var q = document.getElementById('q').value.toLowerCase(), L = document.getElementById('list');
+  L.innerHTML = '';
+  S.plugins.forEach(function (p) {
+    if (q && p.name.toLowerCase().indexOf(q) < 0) return;
+    var r = el('div', 'row' + (p.status === 'off' ? ' off' : '')), cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = !!checked[p.name]; cb.title = 'Chọn để lưu vào bộ';
+    cb.onchange = function () { checked[p.name] = cb.checked; };
+    r.appendChild(cb); r.appendChild(el('span', 'nm', p.name));
+    if (p.status === 'conflict') r.appendChild(el('span', 'badge conflict', label(p.status)));
+    var sw = el('button', 'switch'); sw.type = 'button';
+    sw.setAttribute('role', 'switch');
+    sw.setAttribute('aria-checked', p.status === 'on' ? 'true' : 'false');
+    sw.setAttribute('aria-label', p.name + ': ' + label(p.status));
+    sw.title = p.status === 'conflict' ? 'Trùng tên, cần xử lý thủ công' : (p.status === 'on' ? 'Bấm để tắt' : 'Bấm để bật');
+    if (p.status === 'conflict') sw.disabled = true;
+    sw.onclick = function () { send('pm_change', { names: [p.name], action: p.status === 'on' ? 'disable' : 'enable' }); };
+    r.appendChild(sw);
+    L.appendChild(r);
+  });
+  var T = document.getElementById('sets'); T.innerHTML = '';
+  S.sets.forEach(function (s) {
+    var r = el('div', 'set');
+    r.appendChild(el('span', 'nm', s.name + ' (' + s.count + ' plugin' + (s.missing ? ', ' + s.missing + ' không còn' : '') + ')'));
+    var a = el('button', 'sm danger', 'Tắt bộ'); a.onclick = function () { send('pm_apply_set', { name: s.name, action: 'disable' }); };
+    var b = el('button', 'sm primary', 'Bật bộ'); b.onclick = function () { send('pm_apply_set', { name: s.name, action: 'enable' }); };
+    var c = el('button', 'sm', 'Xóa bộ'); c.onclick = function () { send('pm_delete_set', { name: s.name }); };
+    r.appendChild(a); r.appendChild(b); r.appendChild(c); T.appendChild(r);
+  });
+}
+function picked() { return Object.keys(checked).filter(function (k) { return checked[k]; }); }
+function selAll(v) {
+  var q = document.getElementById('q').value.toLowerCase();
+  S.plugins.forEach(function (p) { if (!q || p.name.toLowerCase().indexOf(q) >= 0) checked[p.name] = v; });
+  drawToggle();
+}
+function saveSet() { send('pm_save_set', { name: document.getElementById('setname').value, names: picked() }); }
+function renderToggle(s, msg) {
+  S = s;
+  document.getElementById('ver').textContent = 'SketchUp ' + s.year + ' · phiên bản ' + s.version;
+  document.getElementById('dir').textContent = 'Thư mục chứa plugin đã tắt: ' + s.disabled_dir;
+  drawToggle();
+  say(msg);
+}
+
+/* ---- Tab Chuyển plugin ---- */
+function initMigrate(versions) {
+  var s = document.getElementById('src'), d = document.getElementById('dst');
+  [s, d].forEach(function (sel) {
+    sel.innerHTML = '';
+    versions.forEach(function (v) { var o = document.createElement('option'); o.value = o.textContent = v; sel.appendChild(o); });
+  });
+  if (versions.length < 2) {
+    document.getElementById('mlist').textContent = 'Chỉ tìm thấy ' + versions.length + ' phiên bản SketchUp trong AppData. Cần ít nhất 2 phiên bản để chuyển plugin.';
+    document.getElementById('goBtn').disabled = true;
+    return;
+  }
+  s.value = versions[0]; d.value = versions[versions.length - 1];
+  onVersion();
+}
+function onVersion() {
+  var s = document.getElementById('src').value, d = document.getElementById('dst').value;
+  document.getElementById('goBtn').textContent = 'Chuyển sang bản ' + d;
+  if (s === d) { document.getElementById('mlist').textContent = 'Phiên bản nguồn và đích phải khác nhau.'; return; }
+  send('mg_list', { src: s, dst: d });
+}
+function renderMigrate(d) {
+  var L = document.getElementById('mlist'); L.innerHTML = '';
+  if (!d.plugins.length) { L.textContent = 'Không tìm thấy plugin nào trong bản ' + d.src + '.'; return; }
+  d.plugins.forEach(function (name, i) {
+    var r = el('label', 'row'), cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.className = 'pl'; cb.value = name; cb.checked = true;
+    r.appendChild(cb); r.appendChild(el('span', '', (i + 1) + '. ' + name)); L.appendChild(r);
+  });
+}
+function setAll(v) { document.querySelectorAll('.pl').forEach(function (c) { c.checked = v; }); }
+function collect() {
+  var p = [].slice.call(document.querySelectorAll('.pl')).filter(function (c) { return c.checked; }).map(function (c) { return c.value; });
+  return { src: document.getElementById('src').value, dst: document.getElementById('dst').value, plugins: p,
+           overwrite: document.getElementById('overwrite').checked,
+           shortcuts: document.getElementById('shortcuts').checked, toolbars: document.getElementById('toolbars').checked };
+}
+function go() { send('migrate', collect()); }
+function exportBundle() { send('export_bundle', collect()); }
+function showResult(t) { say(t); }
+
+VGDTheme.start({ key: 'vgd.plugin_manager.theme', button: document.getElementById('themeButton') });
+window.onload = function () { sketchup.ready(); };
+</script></body></html>

@@ -2,13 +2,13 @@
 require 'fileutils'
 
 module VGD
-  module PluginMigrator
+  module PluginManager
     # Ghi nhật ký lỗi ra file để dễ gửi cho người hỗ trợ. Không bao giờ làm plugin lỗi theo.
     module Log
       MAX_BYTES = 512 * 1024   # quá cỡ này thì đổi tên thành .1 và ghi file mới
 
       def self.dir
-        File.join(ENV['APPDATA'].to_s.tr('\\', '/'), 'SketchUp', 'VGD_PluginMigrator')
+        File.join(ENV['APPDATA'].to_s.tr('\\', '/'), 'SketchUp', 'VGD_PluginManager')
       end
 
       def self.path
