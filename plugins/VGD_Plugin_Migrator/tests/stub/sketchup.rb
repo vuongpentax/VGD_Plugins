@@ -11,6 +11,16 @@ module UI
     def add_item(_name, &_blk); end
   end
   def self.menu(_n); Menu.new; end
+  class Command
+    attr_accessor :tooltip, :status_bar_text, :small_icon, :large_icon
+    attr_reader :title
+    def initialize(title, &_blk); @title = title; end
+  end
+  class Toolbar
+    def initialize(_n); end
+    def add_item(_c); end
+    def restore; end
+  end
   MB_YESNO = 4
   IDYES = 6
 end

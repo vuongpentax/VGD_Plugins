@@ -23,6 +23,9 @@ reg query "HKCU\Software\SketchUp" /s /f Shortcut
 1. Menu Plugins có "VGD Plugin Migrator" và "VGD: Quản lý bật/tắt plugin".
 2. Ruby Console không có lỗi đỏ khi khởi động.
 
+3. Có thanh công cụ "VGD Plugin Migrator" với 2 nút; icon hiện rõ ở cỡ nhỏ, di chuột hiện tooltip, bấm mở đúng hộp thoại.
+4. Hai hộp thoại hiển thị font Manrope, có nút ☾/☀ ở góc phải; bấm đổi sáng/tối, đóng mở lại vẫn giữ lựa chọn; chưa chọn thì theo Windows.
+
 ## 2. Chuyển plugin (2022 sang 2024)
 
 1. Chọn phiên bản nguồn/đích, danh sách plugin hiện đúng, không có `vgd_plugin_migrator`.

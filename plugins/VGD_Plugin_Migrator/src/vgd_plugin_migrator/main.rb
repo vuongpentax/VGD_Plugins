@@ -11,6 +11,8 @@ module VGD
 
     VERSION         = '1.0.0-beta.3'
     IMPORT_TEMPLATE = File.join(File.dirname(__FILE__), 'bundle_import.rb')
+    UI_DIR          = File.join(File.dirname(__FILE__), 'ui')
+    ICON_DIR        = File.join(File.dirname(__FILE__), 'icons')
 
     APPDATA_SUBPATH = 'SketchUp/SketchUp %s/SketchUp/Plugins'
     REG_SHORTCUTS   = 'Software\SketchUp\SketchUp %s\Shortcuts'
@@ -274,7 +276,12 @@ module VGD
       dlg = UI::HtmlDialog.new(dialog_title: "VGD Plugin Migrator #{VERSION}",
                                width: 560, height: 720,
                                style: UI::HtmlDialog::STYLE_DIALOG)
-      dlg.set_html(build_dialog_html(plugins, src_ver, dst_ver))
+      dlg.set_file(File.join(UI_DIR, 'migrator.html'))
+
+      dlg.add_action_callback('mg_ready') do |_ctx|
+        data = { src: src_ver, dst: dst_ver, version: VERSION, plugins: plugins.map { |pl| pl[:name] } }
+        dlg.execute_script("init(#{data.to_json})")
+      end
 
       dlg.add_action_callback('migrate') do |_ctx, json|
         opts   = JSON.parse(json)
@@ -326,55 +333,27 @@ module VGD
       dlg.show
     end
 
-    def self.build_dialog_html(plugins, src_ver, dst_ver)
-      rows = plugins.each_with_index.map do |pl, i|
-        name = CGI.escapeHTML(pl[:name])
-        "<label class='row'><input type='checkbox' class='pl' value=\"#{name}\" checked> " \
-        "<span>#{i + 1}. #{name}</span></label>"
-      end.join("\n")
-      <<-HTML
-<!DOCTYPE html><html><head><meta charset="UTF-8">
-<style>
-body{font-family:Segoe UI,Arial,sans-serif;font-size:13px;margin:14px;color:#222}
-h3{margin:0 0 8px}
-.box{border:1px solid #ccc;border-radius:6px;padding:8px;max-height:300px;overflow:auto;margin-bottom:10px}
-.row{display:block;padding:3px 0}
-.opts label{display:block;padding:2px 0}
-button{padding:8px 14px;margin:0 6px 6px 0;border:0;border-radius:5px;background:#2a6fdb;color:#fff;cursor:pointer}
-button.alt{background:#777}
-button.exp{background:#2e8b57}
-#out{white-space:pre-wrap;margin-top:12px;padding:8px;background:#f3f3f3;border-radius:6px;display:none}
-</style></head><body>
-<h3>Chuyển từ SketchUp #{src_ver} sang #{dst_ver}</h3>
-<div class="box">#{rows}</div>
-<button class="alt" onclick="setAll(true)">Chọn hết</button>
-<button class="alt" onclick="setAll(false)">Bỏ chọn hết</button>
-<div class="opts" style="margin-top:10px">
-<label><input type="checkbox" id="overwrite"> Ghi đè nếu plugin đã tồn tại ở bản đích</label>
-<label><input type="checkbox" id="shortcuts" checked> Phím tắt (khi chuyển hoặc kèm trong gói)</label>
-<label><input type="checkbox" id="toolbars"> Giao diện thanh công cụ (khi chuyển hoặc kèm trong gói)</label>
-</div>
-<p>
-<button onclick="go()">Chuyển sang bản #{dst_ver}</button>
-<button class="exp" onclick="exportBundle()">Xuất gói .rbz tổng</button>
-</p>
-<div id="out"></div>
-<script>
-function setAll(v){document.querySelectorAll('.pl').forEach(function(c){c.checked=v})}
-function collect(){
- var p=[].slice.call(document.querySelectorAll('.pl')).filter(function(c){return c.checked}).map(function(c){return c.value});
- return {plugins:p,overwrite:document.getElementById('overwrite').checked,
-  shortcuts:document.getElementById('shortcuts').checked,toolbars:document.getElementById('toolbars').checked};
-}
-function go(){sketchup.migrate(JSON.stringify(collect()))}
-function exportBundle(){sketchup.export_bundle(JSON.stringify(collect()))}
-function showResult(t){var e=document.getElementById('out');e.style.display='block';e.textContent=t}
-</script></body></html>
-      HTML
+    # Lệnh dùng chung cho menu và thanh công cụ (mỗi lệnh trên thanh công cụ cũng có trong menu)
+    def self.make_command(title, tip, icon, &action)
+      cmd = UI::Command.new(title, &action)
+      cmd.tooltip = title
+      cmd.status_bar_text = tip
+      cmd.small_icon = cmd.large_icon = File.join(ICON_DIR, icon)
+      cmd
     end
 
     unless file_loaded?(__FILE__)
-      UI.menu('Plugins').add_item('VGD Plugin Migrator') { run }
+      migrate_cmd = make_command('VGD Plugin Migrator', 'Chuyển plugin, phím tắt và thanh công cụ giữa các phiên bản SketchUp',
+                                 'migrator.svg') { run }
+      manage_cmd  = make_command('VGD: Quản lý bật/tắt plugin', 'Bật hoặc tắt plugin, lưu thành bộ plugin',
+                                 'manager.svg') { Manager.run }
+      menu = UI.menu('Plugins')
+      menu.add_item(migrate_cmd)
+      menu.add_item(manage_cmd)
+      toolbar = UI::Toolbar.new('VGD Plugin Migrator')
+      toolbar.add_item(migrate_cmd)
+      toolbar.add_item(manage_cmd)
+      toolbar.restore
       file_loaded(__FILE__)
     end
 

@@ -30,6 +30,8 @@ out = File.join(Dir.tmpdir, 'test_bundle.rbz')
 FileUtils.rm_f(out)
 r = M.build_bundle('2022', %w[cool_tool single], true, true, out)
 puts "result: #{r.inspect}"
-puts "html ok: #{M.build_dialog_html(M.list_plugins('2022'), '2022', '2024').include?('exportBundle')}"
+ui_ok = %w[migrator.html manager.html dialog.css vgd-theme/vgd-theme.css vgd-theme/vgd-theme.js].all? { |f| File.exist?(File.join(M::UI_DIR, f)) }
+icons_ok = %w[migrator.svg manager.svg].all? { |f| File.exist?(File.join(M::ICON_DIR, f)) }
+puts "ui files ok: #{ui_ok}, icons ok: #{icons_ok}"
 puts "OUT=#{out}"
 puts "FAKE=#{fake}"

@@ -18,6 +18,7 @@ TARGETS = [
     'plugins/VGD_Dim/runtime/VGD_Dim',
     'plugins/VGD_Image_Importer/runtime/vgd_image_importer',
     'plugins/VGD_Library/runtime/vgd_library',
+    'plugins/VGD_Plugin_Migrator/src/vgd_plugin_migrator/ui',
     'plugins/VGD_Package/VGD_Package/ui',
     'plugins/VGD_Reference/runtime/vgd_reference/ui/web',
     'plugins/VGD_Scenes/runtime/vgd_scenes',

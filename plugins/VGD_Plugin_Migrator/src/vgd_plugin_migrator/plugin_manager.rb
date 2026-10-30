@@ -224,10 +224,10 @@ module VGD
         dlg = UI::HtmlDialog.new(dialog_title: "VGD - Quản lý bật/tắt plugin #{PM::VERSION}",
                                  width: 640, height: 780,
                                  style: UI::HtmlDialog::STYLE_DIALOG)
-        dlg.set_html(dialog_html)
+        dlg.set_file(File.join(PM::UI_DIR, 'manager.html'))
 
         push = lambda do |msg|
-          dlg.execute_script("render(#{state.to_json}, #{msg.to_s.to_json})")
+          dlg.execute_script("render(#{state.merge('version' => PM::VERSION).to_json}, #{msg.to_s.to_json})")
         end
 
         # Bọc callback: lỗi bất ngờ được ghi log và hiện trong hộp thoại thay vì im lặng
@@ -318,99 +318,6 @@ module VGD
         File.join(ENV['USERPROFILE'].to_s.tr('\\', '/'), 'Desktop')
       end
 
-      def self.dialog_html
-        <<-'HTML'
-<!DOCTYPE html><html><head><meta charset="UTF-8">
-<style>
-body{font-family:Segoe UI,Arial,sans-serif;font-size:13px;margin:14px;color:#222}
-h3{margin:0 0 8px} h4{margin:14px 0 6px}
-.warn{background:#fff6e0;border:1px solid #e8c36a;border-radius:6px;padding:8px;margin-bottom:10px}
-.bar{margin:8px 0}
-input[type=text]{padding:6px;border:1px solid #bbb;border-radius:5px;width:220px}
-.list{border:1px solid #ccc;border-radius:6px;max-height:300px;overflow:auto}
-.row{display:flex;align-items:center;padding:4px 8px;border-bottom:1px solid #eee}
-.row .nm{flex:1;margin-left:6px;word-break:break-all}
-.badge{font-size:11px;padding:2px 8px;border-radius:10px;margin-right:8px;color:#fff}
-.badge.on{background:#2e8b57}.badge.off{background:#888}.badge.conflict{background:#c0392b}
-button{padding:6px 12px;margin:0 6px 4px 0;border:0;border-radius:5px;background:#2a6fdb;color:#fff;cursor:pointer}
-button.alt{background:#777}button.offb{background:#c0762b}button.onb{background:#2e8b57}button.del{background:#b03a3a}
-.set{display:flex;align-items:center;padding:4px 0;border-bottom:1px solid #eee}
-.set .nm{flex:1}
-#out{white-space:pre-wrap;margin-top:12px;padding:8px;background:#f3f3f3;border-radius:6px;display:none}
-small{color:#666}
-</style></head><body>
-<h3 id="title">Quản lý bật/tắt plugin</h3>
-<div class="warn">Thay đổi chỉ có hiệu lực sau khi khởi động lại SketchUp. Plugin bị tắt được cất vào một thư mục riêng, không bị xóa. Cẩn thận: tắt plugin mà plugin khác cần có thể gây lỗi khi mở lại.</div>
-<div class="bar"><input type="text" id="q" placeholder="Tìm plugin..." oninput="draw()">
-<button class="alt" onclick="selAll(true)">Chọn hết đang hiện</button>
-<button class="alt" onclick="selAll(false)">Bỏ chọn hết</button></div>
-<div class="list" id="list"></div>
-<div class="bar"><button class="offb" onclick="act('disable')">Tắt mục đã chọn</button>
-<button class="onb" onclick="act('enable')">Bật mục đã chọn</button></div>
-<h4>Bộ plugin</h4>
-<div class="bar"><input type="text" id="setname" placeholder="Tên bộ, ví dụ: Render">
-<button onclick="saveSet()">Lưu mục đã chọn thành bộ</button></div>
-<div id="sets"></div>
-<div class="bar"><button class="alt" onclick="sketchup.pm_export_sets()">Xuất các bộ ra file</button>
-<button class="alt" onclick="sketchup.pm_import_sets()">Nhập bộ từ file</button></div>
-<small id="dir"></small>
-<div id="out"></div>
-<script>
-var S={plugins:[],sets:[]}, checked={};
-function el(t,c,x){var e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
-function label(st){return st==='on'?'Đang bật':(st==='off'?'Đã tắt':'Trùng tên')}
-function draw(){
-  var q=document.getElementById('q').value.toLowerCase(), L=document.getElementById('list');
-  L.innerHTML='';
-  S.plugins.forEach(function(p){
-    if(q && p.name.toLowerCase().indexOf(q)<0) return;
-    var r=el('div','row'), cb=document.createElement('input');
-    cb.type='checkbox'; cb.checked=!!checked[p.name];
-    cb.onchange=function(){checked[p.name]=cb.checked};
-    r.appendChild(cb); r.appendChild(el('span','nm',p.name));
-    r.appendChild(el('span','badge '+p.status,label(p.status)));
-    if(p.status!=='conflict'){
-      var b=el('button',p.status==='on'?'offb':'onb',p.status==='on'?'Tắt':'Bật');
-      b.onclick=function(){send('pm_change',{names:[p.name],action:p.status==='on'?'disable':'enable'})};
-      r.appendChild(b);
-    }
-    L.appendChild(r);
-  });
-  var T=document.getElementById('sets'); T.innerHTML='';
-  S.sets.forEach(function(s){
-    var r=el('div','set');
-    r.appendChild(el('span','nm',s.name+' ('+s.count+' plugin'+(s.missing?', '+s.missing+' không còn':'')+')'));
-    var a=el('button','offb','Tắt bộ'); a.onclick=function(){send('pm_apply_set',{name:s.name,action:'disable'})};
-    var b=el('button','onb','Bật bộ'); b.onclick=function(){send('pm_apply_set',{name:s.name,action:'enable'})};
-    var c=el('button','del','Xóa bộ'); c.onclick=function(){send('pm_delete_set',{name:s.name})};
-    r.appendChild(a); r.appendChild(b); r.appendChild(c); T.appendChild(r);
-  });
-}
-function picked(){return Object.keys(checked).filter(function(k){return checked[k]})}
-function selAll(v){
-  var q=document.getElementById('q').value.toLowerCase();
-  S.plugins.forEach(function(p){ if(!q||p.name.toLowerCase().indexOf(q)>=0) checked[p.name]=v });
-  draw();
-}
-function send(cb,obj){sketchup[cb](JSON.stringify(obj))}
-function act(a){send('pm_change',{names:picked(),action:a})}
-function saveSet(){send('pm_save_set',{name:document.getElementById('setname').value,names:picked()})}
-function render(s,msg){
-  S=s; document.getElementById('title').textContent='Quản lý bật/tắt plugin - SketchUp '+s.year;
-  document.getElementById('dir').textContent='Thư mục chứa plugin đã tắt: '+s.disabled_dir;
-  draw();
-  var o=document.getElementById('out');
-  if(msg){o.style.display='block';o.textContent=msg}else{o.style.display='none'}
-}
-window.onload=function(){sketchup.pm_ready()};
-</script></body></html>
-        HTML
-      end
-
-      unless file_loaded?(__FILE__)
-        UI.menu('Plugins').add_item('VGD: Quản lý bật/tắt plugin') { run }
-        file_loaded(__FILE__)
-      end
     end
   end
 end

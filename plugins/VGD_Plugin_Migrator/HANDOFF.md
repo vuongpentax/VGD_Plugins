@@ -26,6 +26,8 @@ Bàn giao từ chat Claude sang Claude Code để làm tiếp.
    3. `src/vgd_plugin_migrator/zip_writer.rb`: ghi file zip/.rbz thuần Ruby bằng Zlib (không cần thư viện ngoài).
    4. `src/vgd_plugin_migrator/bundle_import.rb`: mẫu file được đóng vào gói tổng (đổi tên thành `vgd_bundle_import.rb`), tạo menu nhập phím tắt/thanh công cụ trên máy mới.
    5. `src/vgd_plugin_migrator/plugin_manager.rb`: quản lý bật/tắt plugin và bộ plugin, xuất/nhập bộ ra file `.json`.
+   7. `src/vgd_plugin_migrator/ui/`: giao diện hai hộp thoại (`migrator.html`, `manager.html`, `dialog.css`) và bản sao `vgd-theme/` (đồng bộ bằng `python tools/sync_vgd_theme.py`). Dialog nạp bằng `set_file`; dữ liệu đẩy vào qua callback `mg_ready` và `pm_ready`.
+   8. `src/vgd_plugin_migrator/icons/`: `migrator.svg`, `manager.svg` (24x24, nét 1.8, nâu đồng `#A67C58` + than `#292B2D`) dùng cho thanh công cụ "VGD Plugin Migrator".
    6. `src/vgd_plugin_migrator/logger.rb`: ghi nhật ký lỗi vào `%APPDATA%\SketchUp\VGD_PluginMigrator\migrator.log`.
 3. `tests/`: bộ test chạy ngoài SketchUp bằng stub (xem mục 6).
 4. `docs/KIEM_THU_THU_CONG.md`: hướng dẫn kiểm thử thủ công trong SketchUp thật.
@@ -142,3 +144,4 @@ Khi thêm file mới vào `src/vgd_plugin_migrator/` nhớ thêm vào danh sách
 2. `1.0.0-beta`: thêm xuất gói .rbz tổng.
 3. `1.0.0-beta.2`: thêm quản lý bật/tắt plugin và bộ plugin.
 4. `1.0.0-beta.3`: thêm xuất/nhập bộ plugin ra file `.json` (có hỏi ghi đè khi trùng tên, lọc dữ liệu sai kiểu), ghi nhật ký lỗi ra file, hướng dẫn test thủ công. Đã kiểm tra tự động ngoài SketchUp; **chưa kiểm tra trong SketchUp thật** (hộp thoại mở/lưu file `UI.openpanel`/`UI.savepanel`, `UI.messagebox` hỏi ghi đè).
+   Giao diện: hai hộp thoại đổi sang theme VGD dùng chung (sáng/tối, nút đổi theme, font Manrope), giữ nguyên bố cục và hành vi. Thêm thanh công cụ 2 nút (mỗi nút cũng có trong menu Plugins). Danh sách plugin ở hộp thoại chuyển plugin giờ do JavaScript dựng (bằng `textContent`) thay vì Ruby. Plugin không có API đặt icon cho Extension Manager nên chưa làm icon đó. **Chưa kiểm tra trong SketchUp thật**: `set_file` với font/CSS tương đối, icon SVG trên thanh công cụ, nút đổi theme. Đã chụp ảnh thử bằng trình duyệt ở cả hai theme.
