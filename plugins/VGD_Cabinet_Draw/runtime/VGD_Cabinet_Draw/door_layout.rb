@@ -21,6 +21,12 @@ module VGD_Cabinet_Draw
     # lo, hi (hai mép vùng cánh), gap_tolerance và min_cell. Mỗi vách chia cánh ở TIM mặt trước của nó. Các vách liền kề nhau
     # (khe giữa không quá gap_tolerance) gộp thành một cụm và cánh chia ở GIỮA cả cụm. Bỏ vị trí quá sát mép hoặc quá sát nhau.
     def self.partition_splits(spans, lo, hi, gap_tolerance = 2.0, min_cell = MIN_CELL_MM)
+      splits = partition_clusters(spans, gap_tolerance).map { |a, b| ((a + b) / 2.0).round(6) }
+      keep_cuts(splits, lo, hi, min_cell)
+    end
+
+    # Cụm vách: các vách liền kề (khe giữa không quá gap_tolerance) gộp thành một cụm [x0, x1].
+    def self.partition_clusters(spans, gap_tolerance)
       clusters = []
       spans.map { |a, b| [a.to_f, b.to_f] }.sort.each do |a, b|
         last = clusters.last
@@ -30,9 +36,33 @@ module VGD_Cabinet_Draw
           clusters << [a, b]
         end
       end
-      splits = clusters.map { |a, b| ((a + b) / 2.0).round(6) }
-      splits = splits.select { |x| x - lo >= min_cell - 1e-6 && hi - x >= min_cell - 1e-6 }
-      splits.each_with_object([]) { |x, kept| kept << x if kept.empty? || x - kept.last >= min_cell - 1e-6 }
+      clusters
+    end
+
+    # Bỏ vị trí quá sát mép (lo, hi) hoặc quá sát nhau.
+    def self.keep_cuts(cuts, lo, hi, min_cell)
+      cuts = cuts.select { |x| x - lo >= min_cell - 1e-6 && hi - x >= min_cell - 1e-6 }.sort
+      cuts.each_with_object([]) { |x, kept| kept << x if kept.empty? || x - kept.last >= min_cell - 1e-6 }
+    end
+
+    # Vị trí chia cánh tự động theo khoang. Cánh luôn chia ở tim mặt trước các vách (như partition_splits); ngoài ra
+    # khoang trống (giữa hai vách liền kề hoặc giữa hông và vách, đo giữa hai mặt ván) rộng HƠN threshold thì chia đôi
+    # ở giữa khoang, không hơn thì giữ một cánh. threshold <= 0: không chia đôi khoang.
+    # inner_lo, inner_hi: hai mặt trong của hai hông; lo, hi: hai mép vùng cánh (cùng đơn vị với spans).
+    def self.bay_splits(spans, inner_lo, inner_hi, lo, hi, threshold, gap_tolerance = 2.0, min_cell = MIN_CELL_MM)
+      clusters = partition_clusters(spans, gap_tolerance)
+      cuts = clusters.map { |a, b| ((a + b) / 2.0).round(6) }
+      if threshold.to_f > 0
+        edge = inner_lo.to_f
+        bays = clusters.map do |a, b|
+          bay = [edge, a]
+          edge = b
+          bay
+        end
+        bays << [edge, inner_hi.to_f]
+        bays.each { |a, b| cuts << ((a + b) / 2.0).round(6) if b - a > threshold.to_f + 1e-6 }
+      end
+      keep_cuts(cuts, lo, hi, min_cell)
     end
 
     class Layout
@@ -45,6 +75,7 @@ module VGD_Cabinet_Draw
         @regions = [new_region(0.0, 1.0, 0.0, 1.0)]
         @history = []
         @batch = false
+        @auto = false
       end
 
       def initialize_copy(source)
@@ -79,6 +110,7 @@ module VGD_Cabinet_Draw
           end
         end
         layout.replace!(regions)
+        layout.mark_auto! if data['auto']
         layout
       end
 
@@ -94,7 +126,18 @@ module VGD_Cabinet_Draw
       end
 
       def to_h
-        { 'schema' => SCHEMA, 'regions' => sorted.map(&:dup) }
+        data = { 'schema' => SCHEMA, 'regions' => sorted.map(&:dup) }
+        data['auto'] = true if @auto
+        data
+      end
+
+      # Bố cục do chức năng cánh tự động tạo ra: tủ đổi kích thước thì được tính lại theo vách. Chia/gộp tay sẽ bỏ cờ này.
+      def auto?
+        @auto ? true : false
+      end
+
+      def mark_auto!
+        @auto = true
       end
 
       def set_size(width_mm, height_mm)
@@ -108,6 +151,10 @@ module VGD_Cabinet_Draw
       end
 
       # Mọi vùng đều đã xóa cánh (không còn cánh nào).
+      def clear_history
+        @history = []
+      end
+
       def all_empty?
         @regions.all? { |r| r['empty'] }
       end
@@ -222,17 +269,21 @@ module VGD_Cabinet_Draw
 
       # Bỏ hết bố cục, chia toàn mặt tủ tại các vị trí cuts (0..1) theo trục axis. Vị trí sát mép hoặc sát nhau quá
       # MIN_CELL_MM bị bỏ. Trả về các vùng mới.
-      def reset_at(axis, cuts)
+      # keep: true (tính lại bố cục tự động sau khi tủ đổi kích thước) giữ id, hướng mở và vùng trống của vùng cũ chồng lên nhiều nhất.
+      def reset_at(axis, cuts, keep: false)
         span = span_mm(axis)
         kept = []
         cuts.map { |c| c.to_f.round(9) }.select { |c| c > EPS && c < 1 - EPS }.sort.each do |c|
           kept << c if (c - (kept.last || 0.0)) * span >= MIN_CELL_MM - 1e-6 && (1.0 - c) * span >= MIN_CELL_MM - 1e-6
         end
         remember
+        old = @regions
         edges = [0.0] + kept + [1.0]
         @regions = edges.each_cons(2).map do |a, b|
           axis.to_s == 'horizontal' ? new_region(0.0, 1.0, a, b) : new_region(a, b, 0.0, 1.0)
         end
+        inherit_from(old, axis) if keep
+        @regions
       end
 
       # Bỏ hết bố cục, chia đều toàn mặt tủ thành n vùng (n >= 1).
@@ -256,7 +307,7 @@ module VGD_Cabinet_Draw
         # Một vùng trống được chọn riêng: "gộp" nghĩa là tạo lại cánh cho vùng đó.
         only = list.length == 1 ? find(list.first) : nil
         if only && only['empty']
-          remember
+          remember(false)
           only.delete('empty')
           return only
         end
@@ -280,7 +331,7 @@ module VGD_Cabinet_Draw
 
       def set_opening(id, type)
         region = find(id) or raise ArgumentError, 'Không tìm thấy vùng.'
-        remember
+        remember(false)
         region['opening_type'] = DoorLayout.opening_type(type)
         region
       end
@@ -299,6 +350,7 @@ module VGD_Cabinet_Draw
         return false unless snap
         @regions = snap[:regions]
         @next_id = snap[:next_id]
+        @auto = snap[:auto] ? true : false
         true
       end
 
@@ -309,15 +361,17 @@ module VGD_Cabinet_Draw
       # Các ô chữ nhật theo đơn vị bất kỳ (truyền width, height cùng đơn vị với gap).
       # Khe gap chỉ nằm GIỮA hai vùng liền kề (mỗi bên gap/2); mép ngoài sát mặt tủ.
       # Trả về [{ id:, index:, region:, x0:, x1:, z0:, z1: }] với toạ độ tính từ góc dưới-trái.
-      def rects(width, height, gap = 0.0)
+      # gap: khe trái–phải (giữa các vùng xếp cạnh nhau); gap_z: khe trên–dưới (mặc định bằng gap).
+      def rects(width, height, gap = 0.0, gap_z = nil)
         half = gap.to_f / 2
+        half_z = (gap_z.nil? ? gap : gap_z).to_f / 2
         out = []
         sorted.each_with_index do |r, index|
           next if r['empty']
           x0 = r['u0'] * width + (r['u0'] > EPS ? half : 0.0)
           x1 = r['u1'] * width - (r['u1'] < 1 - EPS ? half : 0.0)
-          z0 = r['v0'] * height + (r['v0'] > EPS ? half : 0.0)
-          z1 = r['v1'] * height - (r['v1'] < 1 - EPS ? half : 0.0)
+          z0 = r['v0'] * height + (r['v0'] > EPS ? half_z : 0.0)
+          z1 = r['v1'] * height - (r['v1'] < 1 - EPS ? half_z : 0.0)
           next if x1 <= x0 || z1 <= z0
           out << { id: r['id'], index: index, region: r, x0: x0, x1: x1, z0: z0, z1: z1 }
         end
@@ -336,14 +390,39 @@ module VGD_Cabinet_Draw
         id
       end
 
+      # Vùng mới nhận id, hướng mở và trạng thái trống của vùng cũ chồng lên nó nhiều nhất (mỗi vùng cũ chỉ cho một vùng mới).
+      def inherit_from(old, axis)
+        key = axis.to_s == 'horizontal' ? %w[v0 v1] : %w[u0 u1]
+        used = []
+        @regions.each do |region|
+          best = old.reject { |o| used.include?(o['id']) }.max_by { |o| [region[key[1]], o[key[1]]].min - [region[key[0]], o[key[0]]].max }
+          next unless best && [region[key[1]], best[key[1]]].min - [region[key[0]], best[key[0]]].max > EPS
+          used << best['id']
+          region['id'] = best['id']
+          region['opening_type'] = best['opening_type']
+          region['empty'] = true if best['empty']
+        end
+        ids = @regions.map { |r| r['id'] }
+        # Vùng không thừa kế được id cũ (vùng thêm mới) lấy id mới không trùng.
+        seen = []
+        @regions.each do |region|
+          region['id'] = (@next_id += 1) - 1 if seen.include?(region['id'])
+          seen << region['id']
+        end
+        @next_id = [@next_id, ids.max.to_i + 1, *@regions.map { |r| r['id'] + 1 }].max
+      end
+
       def range_of(region, axis)
         axis.to_s == 'horizontal' ? [region['v0'], region['v1']] : [region['u0'], region['u1']]
       end
 
-      def remember
-        return if @batch
-        @history << { regions: @regions.map(&:dup), next_id: @next_id }
-        @history.shift if @history.length > 100
+      # Ghi bước hoàn tác. structural: thay đổi cấu trúc vùng (chia, gộp...) thì bố cục không còn là tự động.
+      def remember(structural = true)
+        unless @batch
+          @history << { regions: @regions.map(&:dup), next_id: @next_id, auto: @auto }
+          @history.shift if @history.length > 100
+        end
+        @auto = false if structural
       end
 
       # Các vùng phải nằm trong hình vuông đơn vị, không chồng nhau, tổng diện tích bằng 1.

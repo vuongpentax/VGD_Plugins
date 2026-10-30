@@ -86,7 +86,9 @@ module VGD_Cabinet_Draw
         mode: { key: 'door_fit', items: [['phu', 'Cánh phủ', 'Cánh phủ nóc, đáy và hông (chọn hông trái/phải bên dưới). Bấm Tab để đổi.'], ['lot', 'Cánh lọt', 'Cánh nằm giữa hai hông, cao phủ nóc và đáy; nóc, đáy, phào, chân lùi vào bằng dày cánh. Bấm Tab để đổi.']] },
         params: [
           { key: 'split_axis', label: 'Hướng chia', type: :enum, options: [['vertical', 'Dọc (cạnh nhau)'], ['horizontal', 'Ngang (chồng lên)']] },
-          { key: 'door_gap', label: 'Khe giữa cánh', type: :mm, min: 0, max: 30 },
+          { key: 'door_gap', label: 'Khe trái–phải', type: :mm, min: 0, max: 30 },
+          { key: 'door_gap_rows', label: 'Khe trên–dưới', type: :mm, min: 0, max: 30 },
+          { key: 'door_auto_width', label: 'Ngưỡng chia 2 cánh', type: :mm, min: 0, max: 2000 },
           { key: 'door_cover_left', label: 'Phủ hông trái', type: :bool, only: { 'door_fit' => %w[phu] } },
           { key: 'door_cover_right', label: 'Phủ hông phải', type: :bool, only: { 'door_fit' => %w[phu] } },
           { key: 'door_edge_gap', label: 'Khe mép (cánh phủ)', type: :mm, min: 0, max: 30 },

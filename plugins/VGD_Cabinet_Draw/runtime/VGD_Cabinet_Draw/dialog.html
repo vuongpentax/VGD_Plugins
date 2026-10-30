@@ -11,7 +11,7 @@
 </style>
 <link rel="stylesheet" href="vgd-theme/vgd-theme.css"></head>
 <body>
-<header><div class="brand">V</div><b>VGD Cabinet Draw</b><small>1.0.0-beta.62</small><button id="themeBtn" class="vgd-theme-btn" type="button" aria-pressed="false" style="margin-left:auto"></button></header>
+<header><div class="brand">V</div><b>VGD Cabinet Draw</b><small>1.0.0-beta.63</small><button id="themeBtn" class="vgd-theme-btn" type="button" aria-pressed="false" style="margin-left:auto"></button></header>
 <nav class="tabs" id="tabs">
 <button data-tab="box" class="on">1 · Box → Board</button><button data-tab="panel">2 · Đợt / vách</button><button data-tab="door">3 · Cánh tủ</button><button data-tab="drawer">4 · Ngăn kéo</button><button data-tab="settings">5 · Setting chung</button></nav>
 <main class="wrap">
@@ -105,7 +105,9 @@
 <div class="card" data-group="door"><div class="fields">
 <div class="field"><label>Hướng chia</label><select data-key="split_axis"><option value="vertical">Dọc (cánh xếp cạnh nhau)</option><option value="horizontal">Ngang (cánh xếp chồng)</option></select></div>
 <div class="field"><label>Chế độ cánh</label><select data-key="door_fit"><option value="phu">Cánh phủ (trùm ngoài mặt tủ)</option><option value="lot">Cánh lọt (nằm trong lòng tủ, chừa khe mép)</option><option value="thong_thuy">Thông thủy (vừa khít lòng tủ)</option></select></div>
-<div class="field"><label>Khe giữa các cánh (mm)</label><input data-key="door_gap" type="number" step="any" value="0"></div>
+<div class="field"><label>Khe trái–phải giữa các cánh (mm)</label><input data-key="door_gap" type="number" step="any" value="0"></div>
+<div class="field"><label>Khe trên–dưới giữa các cánh (mm)</label><input data-key="door_gap_rows" type="number" step="any" min="0" value="0"></div>
+<div class="field"><label>Ngưỡng chia 2 cánh khi tự chia (mm) — khoang rộng hơn thì chia đôi, 0 = tắt</label><input data-key="door_auto_width" type="number" step="any" min="0" value="450"></div>
 <div class="field"><label>Khe mép cánh phủ (mm)</label><input data-key="door_edge_gap" type="number" step="any" min="0" value="0"></div>
 <div class="field"><label>Khe mép cánh lọt (mm) — khe với hông/nóc/đáy</label><input data-key="door_inset_gap" type="number" step="any" min="0" value="2"></div>
 <div class="field"><label>Dạng cánh</label><select data-key="door_style"><option value="flat">Phẳng</option><option value="shaker">Shaker</option><option value="recessed">Panel âm</option><option value="glass">Khung kính</option></select></div>

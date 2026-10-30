@@ -81,6 +81,31 @@ check('hết teal cũ (33,77,90)', old.empty?, old.map { |f| File.basename(f) }.
 old2 = src.select { |f| File.read(f, encoding: "UTF-8").match?(/Color\.new\(\s*(40, 160, 190|30, 140, 170|232, 131, 36|235, 120, 0)/) }
 check('hết xanh/cam cũ của HUD và preview', old2.empty?, old2.map { |f| File.basename(f) }.inspect)
 
+# 7. Màu xem trước (preview) theo token, đổi theo sáng/tối
+P = V::Preview
+T.mode = :light
+check 'hết bảng màu xanh/tím/cam cũ COLORS', !P.const_defined?(:COLORS, false)
+check 'light: dao cắt = danger', rgb(P.fill_color(:cutter)) == [0xA7, 0x3D, 0x36]
+check 'light: thân = đồng #B48963', rgb(P.fill_color(:body)) == [0xB4, 0x89, 0x63]
+check 'light: hover = đồng đậm', rgb(P.fill_color(:hover)) == [0x8E, 0x6B, 0x4C]
+T.mode = :dark
+check 'dark: dao cắt = danger dark', rgb(P.fill_color(:cutter)) == [0xE7, 0x9C, 0x91]
+check 'dark: hover = đồng sáng', rgb(P.fill_color(:hover)) == [0xC8, 0xA9, 0x8A]
+check 'mọi loại đều có màu có độ trong suốt', %i[body front override target cutter door glass drawer hover].all? { |k| (1..254).cover?(P.fill_color(k).a.last) }
+check 'loại lạ dùng màu thân', P.fill_color(:khong_biet).a == P.fill_color(:body).a
+check 'dark: nét viền dùng đồng (nhìn rõ trên nền trắng lẫn tối)', rgb(P.edge_color) == [0xB4, 0x89, 0x63]
+T.mode = :light
+check 'light: nét viền là chữ tối', rgb(P.edge_color) == [0x22, 0x22, 0x22]
+check 'light: nét hướng dẫn = đồng đậm', rgb(P.guide_color) == [0x8E, 0x6B, 0x4C]
+T.mode = :dark
+check 'dark: nét hướng dẫn = đồng', rgb(P.guide_color) == [0xB4, 0x89, 0x63]
+check 'hết hằng EDGE/GUIDE màu cố định', !P.const_defined?(:EDGE, false) && !P.const_defined?(:GUIDE, false) && !P.const_defined?(:EDGE_HOVER, false)
+pv = P.new
+pv.add_polygon([[0, 0, 0], [10, 0, 0], [10, 0, 10]].map { |a| Geom::Point3d.new(*a) }, :cutter)
+view = Sketchup.active_model.active_view
+view.drawn = []
+check 'vẽ preview không lỗi ở cả hai theme', (pv.draw(view); T.mode = :light; pv.draw(view); true)
+
 # 6. Dialog: không còn màu cứng, báo theme cho Ruby, dialog.rb nhận callback
 html = File.read(File.join(RT, 'dialog.html'), encoding: "UTF-8")
 check('dialog hết #b45309', !html.match?(/#b45309/i))

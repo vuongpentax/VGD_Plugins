@@ -173,7 +173,7 @@ check 'json hỏng -> 1 vùng, không lỗi', dt4.layout.regions.length == 1
 
 puts '== 11. Khe cánh trên bố cục vùng =='
 sel.clear; sel.add(cab)
-gt = V::Tools::DoorTool.new({}); gt.activate; gt.settings['door_gap'] = 4
+gt = V::Tools::DoorTool.new({}); gt.activate; gt.settings['door_gap'] = 4; gt.settings['door_gap_rows'] = 4
 cs = gt.cells(V::Geometry.body_bounds(V::Geometry.shell_for(cab)))
 check 'khe 4 mm: mép ngoài sát tủ', cs.map { |c| c[:x0] }.min == 0.0 && (cs.map { |c| c[:x1] }.max - 1200.mm).abs < 1e-9
 right = cs.select { |c| c[:x0] > 1.mm }.sort_by { |c| c[:z0] }
@@ -323,7 +323,7 @@ puts '== 14. Tự chia cánh theo vách (hồi) giữa =='
 c = fresh_cabinet
 add_partitions(c, [382.5]) # vách x 400..417.5, tim 408.75
 v = Sketchup.active_model.active_view
-dt = V::Tools::DoorTool.new({}); dt.activate
+dt = V::Tools::DoorTool.new('door_auto_width' => 0.0); dt.activate
 count = dt.auto_split_by_partitions
 dt.commit(v)
 edges = door_edges(c)
@@ -332,7 +332,7 @@ check 'cánh chia đúng tim mặt trước vách (408.75)', close_to(edges[0][1
 
 c = fresh_cabinet
 add_partitions(c, [382.5, 400.0]) # hai vách liền kề: 400..417.5 và 417.5..435
-dt = V::Tools::DoorTool.new({}); dt.activate
+dt = V::Tools::DoorTool.new('door_auto_width' => 0.0); dt.activate
 count = dt.auto_split_by_partitions
 dt.commit(v)
 edges = door_edges(c)
@@ -341,7 +341,7 @@ check 'hai vách liền kề: cánh chia ở giữa hai vách (417.5)', close_to
 
 c = fresh_cabinet
 add_partitions(c, [382.5, 782.5])
-dt = V::Tools::DoorTool.new({}); dt.activate
+dt = V::Tools::DoorTool.new('door_auto_width' => 0.0); dt.activate
 count = dt.auto_split_by_partitions
 dt.commit(v)
 edges = door_edges(c)
@@ -350,21 +350,16 @@ check 'ba cánh chia đúng tim hai vách (408.75 và 808.75)', close_to(edges[0
 
 c = fresh_cabinet
 add_partitions(c, [382.5])
-dt = V::Tools::DoorTool.new('door_gap' => 4.0); dt.activate
+dt = V::Tools::DoorTool.new('door_gap' => 4.0, 'door_auto_width' => 0.0); dt.activate
 dt.auto_split_by_partitions
 dt.commit(v)
 edges = door_edges(c)
 check 'khe 4 mm: mỗi cánh cách tim vách 2 mm', close_to(edges[0][1], 408.75 - 2.0) && close_to(edges[1][0], 408.75 + 2.0), edges.inspect
 
 c = fresh_cabinet
-dt = V::Tools::DoorTool.new({}); dt.activate
-err = begin
-  dt.auto_split_by_partitions
-  nil
-rescue StandardError => e
-  e.message
-end
-check 'tủ chưa có vách: báo rõ, không đổi bố cục', err.to_s.include?('vách') && dt.layout.regions.length == 1, err.inspect
+dt = V::Tools::DoorTool.new('door_auto_width' => 0.0); dt.activate
+count = dt.auto_split_by_partitions
+check 'tủ chưa có vách, ngưỡng tắt: 1 cánh, bố cục hợp lệ', count == 1 && dt.layout.regions.length == 1, count.inspect
 
 puts '== 15. Nhập khe giữa hai cánh bằng Alt + số; số hiển thị như chia tấm =='
 c = fresh_cabinet
@@ -398,6 +393,81 @@ check 'gần tim vách (lệch 6.25 mm): chia hút đúng tim', (dt.instance_var
 hover(dt, 700, 1000)
 check 'xa tim vách: chia theo vị trí con trỏ (làm tròn mm)', (dt.instance_variable_get(:@hover_split) - 700.0 / 1200.0).abs < 1e-6, dt.instance_variable_get(:@hover_split).inspect
 check 'có đường mảnh báo điểm hút tại tim vách', dt.snap_marks.length == 1 && (dt.snap_marks.first - u_mark).abs < 1e-6, dt.snap_marks.inspect
+
+puts '== 17. Cánh tự động theo khoang: ngưỡng chia 2 cánh (mặc định 450 mm) =='
+c = fresh_cabinet # rộng 1200, hông 17.5: lòng 17.5..1182.5
+add_partitions(c, [382.5]) # vách 400..417.5: khoang trái 382.5 mm, khoang phải 765 mm
+dt = V::Tools::DoorTool.new({}); dt.activate
+check 'ngưỡng mặc định 450', dt.instance_variable_get(:@settings)['door_auto_width'].to_f == 450.0, dt.instance_variable_get(:@settings)['door_auto_width'].inspect
+count = dt.auto_split_by_partitions
+dt.commit(v)
+edges = door_edges(c)
+check 'khoang trái ≤ 450: 1 cánh; khoang phải > 450: 2 cánh (tổng 3)', count == 3 && edges.length == 3, [count, edges].inspect
+check 'khoang phải chia đôi ở giữa khoang (800)', close_to(edges[1][1], 800.0) && close_to(edges[2][0], 800.0) && close_to(edges[0][1], 408.75), edges.inspect
+check 'bố cục lưu cờ tự động', JSON.parse(c.get_attribute(DICT, 'door_layout_json'))['auto'] == true
+
+c = fresh_cabinet
+add_partitions(c, [382.5])
+dt = V::Tools::DoorTool.new('door_auto_width' => 800.0); dt.activate
+check 'ngưỡng 800: cả hai khoang không vượt: chỉ chia ở vách (2 cánh)', dt.auto_split_by_partitions == 2
+
+c = fresh_cabinet(400)
+dt = V::Tools::DoorTool.new({}); dt.activate
+check 'tủ hẹp 400, không vách: 1 cánh', dt.auto_split_by_partitions == 1
+c = fresh_cabinet(1200)
+dt = V::Tools::DoorTool.new({}); dt.activate
+check 'tủ rộng 1200, không vách: 2 cánh', dt.auto_split_by_partitions == 2
+dt.commit(v)
+check 'tủ rộng không vách: dựng 2 cánh', door_edges(c).length == 2, door_edges(c).inspect
+
+c = fresh_cabinet
+dt = V::Tools::DoorTool.new({}); dt.activate
+dt.auto_split_by_partitions
+dt.layout.split(dt.layout.regions.first['id'], 'horizontal', 0.5)
+check 'chia tay sau khi tự chia: bố cục không còn là tự động', !dt.layout.auto?
+
+puts '== 18. Alt: khe trên–dưới (chia ngang) tách riêng khe trái–phải (chia dọc) =='
+c = fresh_cabinet
+dt = V::Tools::DoorTool.new({}); dt.activate
+dt.layout.split(dt.layout.regions.first['id'], 'vertical', 0.5)
+dt.layout.split(dt.layout.regions.first['id'], 'horizontal', 0.5)
+S = ->(t) { t.instance_variable_get(:@settings) }
+dt.onKeyDown(18, 0, 0, v); dt.onUserText('3', v)
+check 'chia dọc: Alt+3 đặt khe trái–phải, khe trên–dưới giữ nguyên', S.(dt)['door_gap'].to_f == 3.0 && S.(dt)['door_gap_rows'].to_f == 0.0, S.(dt).values_at('door_gap', 'door_gap_rows').inspect
+S.(dt)['split_axis'] = 'horizontal'
+dt.onKeyDown(18, 0, 0, v); dt.onUserText('25', v)
+check 'chia ngang: Alt+25 đặt khe trên–dưới, khe trái–phải giữ 3', S.(dt)['door_gap'].to_f == 3.0 && S.(dt)['door_gap_rows'].to_f == 25.0, S.(dt).values_at('door_gap', 'door_gap_rows').inspect
+bounds = V::Geometry.body_bounds(V::Geometry.shell_for(c))
+cells = dt.cells(bounds)
+left = cells.select { |ce| ce[:x0] < 100.mm }.sort_by { |ce| ce[:z0] }
+right = cells.find { |ce| ce[:x0] > 100.mm }
+check 'hai cánh trên–dưới cách nhau đúng 25 mm', left.length == 2 && close_to((left[1][:z0] - left[0][:z1]).to_mm, 25.0), left.map { |ce| [ce[:z0].to_mm, ce[:z1].to_mm] }.inspect
+check 'cánh trái–phải vẫn cách 3 mm (không bị 25 mm lây sang)', close_to((right[:x0] - left[0][:x1]).to_mm, 3.0), [left[0][:x1].to_mm, right[:x0].to_mm].inspect
+dt.onUserText('k7', v)
+check 'gõ k7 theo hướng chia hiện tại (ngang) đặt khe trên–dưới', S.(dt)['door_gap_rows'].to_f == 7.0 && S.(dt)['door_gap'].to_f == 3.0
+dt.commit(v)
+saved = JSON.parse(c.get_attribute(DICT, 'door_layout_json'))
+check 'bố cục lưu cả hai khe', saved['settings']['door_gap'].to_f == 3.0 && saved['settings']['door_gap_rows'].to_f == 7.0, saved['settings'].inspect
+dt2 = V::Tools::DoorTool.new({}); dt2.load_cabinet(c)
+check 'mở lại tủ: nhớ cả hai khe', S.(dt2)['door_gap'].to_f == 3.0 && S.(dt2)['door_gap_rows'].to_f == 7.0
+
+# Tủ lưu bằng bản cũ (chỉ có door_gap): khe trên–dưới lấy theo door_gap để không đổi hình cánh cũ
+old_layout = { 'schema' => 2, 'regions' => [{ 'id' => 1, 'u0' => 0.0, 'u1' => 1.0, 'v0' => 0.0, 'v1' => 0.5, 'opening_type' => 'none' }, { 'id' => 2, 'u0' => 0.0, 'u1' => 1.0, 'v0' => 0.5, 'v1' => 1.0, 'opening_type' => 'none' }],
+               'gap_mm' => 4.0, 'settings' => { 'door_gap' => 4.0 } }
+c.set_attribute(DICT, 'door_layout_json', JSON.generate(old_layout))
+dt3 = V::Tools::DoorTool.new({}); dt3.load_cabinet(c)
+check 'tủ cũ: khe trên–dưới = door_gap cũ (4)', S.(dt3)['door_gap_rows'].to_f == 4.0, S.(dt3).values_at('door_gap', 'door_gap_rows').inspect
+
+puts '== 19. Chỉ còn một kiểu chữ kích thước (bỏ nhãn cam khi rê chia) =='
+c = fresh_cabinet
+dt = V::Tools::DoorTool.new({}); dt.activate
+hover(dt, 500, 1000)
+dt.rebuild_preview
+pv = dt.instance_variable_get(:@preview)
+check 'rê chuột chia: có vạch chia nhưng không còn nhãn "xxx | yyy mm"', !dt.instance_variable_get(:@hover_split).nil? && pv.instance_variable_get(:@labels).empty?, pv.instance_variable_get(:@labels).inspect
+check 'số rộng x cao trong vùng vẫn còn (2 vùng sẽ tạo ra)', pv.text_count == 2, pv.text_count.to_s
+check 'bảng thông số có khe trên–dưới và ngưỡng chia 2 cánh', %w[door_gap_rows door_auto_width].all? { |k| V::PresetHud::SPECS['door'][:params].any? { |p| p[:key] == k } }
+
 
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.length}"
 exit($fail.empty? ? 0 : 1)

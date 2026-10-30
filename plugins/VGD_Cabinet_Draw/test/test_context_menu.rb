@@ -335,7 +335,7 @@ Sketchup.active_model.selection.clear; Sketchup.active_model.selection.add(cab)
 m, _ = menu_for_selection
 check 'menu tủ có Cánh tự động theo hồi', m.dig('VGD Cabinet').labels.include?('Cánh tự động theo hồi'), m.dig('VGD Cabinet').labels.inspect
 m.dig('VGD Cabinet').find('Cánh tự động theo hồi')[:block].call
-check 'Cánh tự động theo hồi: 2 cánh theo 1 vách', V::Operations.doors_of(cab).length == 2, V::Operations.doors_of(cab).length.to_s
+check 'Cánh tự động theo hồi: 1 vách chia 3 cánh (khoang phải 765 > ngưỡng 450 chia đôi)', V::Operations.doors_of(cab).length == 3, V::Operations.doors_of(cab).length.to_s
 
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.size}"
 exit($fail.empty? ? 0 : 1)

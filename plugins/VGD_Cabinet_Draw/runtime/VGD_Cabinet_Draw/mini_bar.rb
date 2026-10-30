@@ -434,7 +434,7 @@ module VGD_Cabinet_Draw
         x0, y0 = @down
         x1, y1 = @xy
         pts = [[x0, y0, 0], [x1, y0, 0], [x1, y1, 0], [x0, y1, 0]]
-        view.drawing_color = Theme.color(:accent_strong)
+        view.drawing_color = Theme.accent_line
         view.line_stipple = x1 >= x0 ? '' : '-' if view.respond_to?(:line_stipple=)
         view.draw2d(GL_LINE_LOOP, pts)
       end

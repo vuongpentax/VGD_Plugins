@@ -60,7 +60,7 @@ cab = new_cabinet
 dt = V::Tools::DoorTool.new({}); dt.activate; dt.draw(v)
 rects = dt.instance_variable_get(:@hud_rects)
 check 'có 2 nút chế độ (phủ / lọt)', rects.count { |r| r[4] == :mode } == 2
-check 'có 9 hàng thông số (gồm 2 ô phủ hông trái/phải)', rects.count { |r| r[4] == :param } == 9, rects.count { |r| r[4] == :param }
+check 'có 11 hàng thông số (gồm 2 ô phủ hông, khe trên–dưới, ngưỡng chia 2 cánh)', rects.count { |r| r[4] == :param } == 11, rects.count { |r| r[4] == :param }
 check 'thanh trạng thái có hướng dẫn ngắn', Sketchup.status_text.to_s.start_with?('VGD ·') && Sketchup.status_text.length < 150, Sketchup.status_text
 check 'hướng dẫn không dùng Ctrl+số', !Sketchup.status_text.to_s.include?('Ctrl+1')
 check 'chế độ mặc định là phủ', dt.fit == 'phu'
@@ -118,7 +118,7 @@ cab = new_cabinet
 dt = V::Tools::DoorTool.new({}); dt.activate
 press(dt, :param, 'door_gap')
 check 'bấm hàng số thì chờ gõ', dt.instance_variable_get(:@armed)[:key] == 'door_gap'
-check 'thanh trạng thái nhắc gõ số', Sketchup.status_text.to_s.include?('Khe giữa cánh'), Sketchup.status_text
+check 'thanh trạng thái nhắc gõ số', Sketchup.status_text.to_s.include?('Khe trái–phải'), Sketchup.status_text
 dt.onUserText('5', v)
 check 'gõ 5 + Enter đặt khe giữa 5', dt.settings['door_gap'] == 5.0, dt.settings['door_gap']
 check 'xong thì hết chờ gõ', dt.instance_variable_get(:@armed).nil?

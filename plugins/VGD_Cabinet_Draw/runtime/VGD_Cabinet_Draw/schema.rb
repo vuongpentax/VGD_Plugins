@@ -21,7 +21,7 @@ module VGD_Cabinet_Draw
       'back_mode' => 'groove', 'back_groove_depth' => 8.75, 'back_lip' => 10.0,
       'panels' => PanelModel.default_panels,
       'sync_front' => true,
-      'ceiling_strip_height' => 20.0, 'door_gap' => 0.0, 'door_fit' => 'phu', 'door_edge_gap' => 0.0, 'door_inset_gap' => 2.0, 'door_cover_left' => true, 'door_cover_right' => true, 'door_show_dims' => true,
+      'ceiling_strip_height' => 20.0, 'door_gap' => 0.0, 'door_gap_rows' => 0.0, 'door_auto_width' => 450.0, 'door_fit' => 'phu', 'door_edge_gap' => 0.0, 'door_inset_gap' => 2.0, 'door_cover_left' => true, 'door_cover_right' => true, 'door_show_dims' => true,
       'leg_height' => 40.0, 'sides_to_floor' => false, 'sides_to_ceiling' => false,
       'board_face_thickness' => nil, 'board_face_side' => 'normal', 'toe_kick_enabled' => true, 'toe_kick_back' => true, 'toe_kick_thickness' => nil, 'toe_kick_setback' => 50.0,
       'cornice_enabled' => true, 'cornice_thickness' => nil, 'cornice_setback' => 0.0,

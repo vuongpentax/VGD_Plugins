@@ -595,12 +595,23 @@ module VGD_Cabinet_Draw
           return rebuild_as_before(root, settings, dims) unless old_items && new_items
           from = recipe_of(old_items)
           to = recipe_of(new_items)
-          unless same_keys?(from, parts) && same_keys?(to, parts) && from.values.all? { |item| item[:box] } && to.values.all? { |item| item[:box] }
+          unless from.values.all? { |item| item[:box] } && to.values.all? { |item| item[:box] }
             return rebuild_as_before(root, settings, dims)
+          end
+          unless same_keys?(from, parts) && same_keys?(to, parts)
+            # Chỉ số cánh đổi (cánh tự động: khoang vượt/không vượt ngưỡng sau khi scale): co giãn các tấm còn lại, cánh dựng lại theo vách/hông.
+            return rebuild_as_before(root, settings, dims) unless auto_door_layout?(root) && same_keys?(without_doors(from), without_doors(parts)) && same_keys?(without_doors(to), without_doors(parts))
+            parts = without_doors(parts)
+            from = without_doors(from)
+            to = without_doors(to)
           end
           # Bản lề phải còn bắt được vào tấm vỏ tủ ở kích thước mới; nếu không thì ném lỗi, operation hoàn tác.
           Links.check!(Geometry.shell_for(new_probe), Operations.doors_of(new_probe))
-          stretch_all!(root, settings, dims, parts, from, to, new_items)
+          layout_json = new_probe.get_attribute(DICT, 'door_layout_json')
+          warnings = stretch_all!(root, settings, dims, parts, from, to, new_items)
+          # Cánh tự động đã được tính lại trong bản thử: bố cục lưu của tủ lấy theo đó.
+          root.set_attribute(DICT, 'door_layout_json', layout_json) if layout_json && auto_door_layout?(root) && Operations.doors_of(root).length == JSON.parse(layout_json)['regions'].count { |r| !r['empty'] }
+          warnings
         end
       end
     end
@@ -608,7 +619,7 @@ module VGD_Cabinet_Draw
     def stretch_all!(root, settings, dims, parts, from, to, new_items)
       unscale!(root)
       # Cánh đang mở: nhớ góc, hướng mở và loại mở hiện tại, đóng về 0 để thay nội dung, rồi mở lại sau.
-      door_states = Links.ordered(Operations.doors_of(root)).map do |door|
+      door_states = Links.ordered(Operations.doors_of(root).select { |door| parts.value?(door) }).map do |door|
         [door, Operations.door_angle(door), door.get_attribute(DICT, 'opening_side', 'left'), Operations.opening_type_of(door)]
       end
       DrawerSlide.close_all(root)
@@ -1109,7 +1120,19 @@ module VGD_Cabinet_Draw
       return if Operations.doors_of(root).empty?
       tool = Tools::DoorTool.new({})
       tool.load_cabinet(root)
+      # Bố cục cánh tự động đã được tính lại theo vách/hông hiện tại (load_cabinet): lưu lại để tủ và bố cục khớp nhau.
+      tool.save_layout! if tool.layout.auto?
       tool.build_doors
+    end
+
+    def auto_door_layout?(root)
+      JSON.parse(root.get_attribute(DICT, 'door_layout_json', '{}'))['auto'] == true
+    rescue JSON::ParserError
+      false
+    end
+
+    def without_doors(hash)
+      hash.reject { |key, _| key.first == 'door' }
     end
 
     def capture_drawer_handles(root, kept_keys = [])

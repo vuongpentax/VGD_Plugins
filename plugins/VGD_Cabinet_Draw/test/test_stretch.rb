@@ -476,5 +476,72 @@ rescue StandardError => e
 end
 check 'còn dùng chung với tủ khác: báo lỗi rõ, không sửa', err.to_s.include?('dùng chung'), err.inspect
 
+puts '== 15. Cánh tự động bám hồi/hông khi scale tủ =='
+def door_xs(c); doors_of_test(c).map { |d| b = V::Operations.door_bounds(d); [b[0].to_mm.round(2), b[3].to_mm.round(2)] }; end
+def add_auto_partition(c, offset_mm)
+  sh = shell(c)
+  inner = V::Interior.inner(sh)
+  op = { 'type' => 'panel', 'axis' => 'vertical', 'kind' => 'thong_thuy', 'thickness_mm' => 17.5, 'limit' => false,
+         'anchor' => V::Rebuild.anchor_of(sh, (inner.x0 + inner.x1) / 2, (inner.z0 + inner.z1) / 2),
+         'setback_mm' => 0.0, 'door_fit' => 'phu', 'mode' => 'free', 'offsets' => [offset_mm] }
+  op['op'] = V::Rebuild.record(c, op)
+  V::Rebuild.place_panels(c, sh, op)
+end
+def build_auto_doors(c, settings = {})
+  reselect(c)
+  dt = V::Tools::DoorTool.new(settings); dt.activate
+  dt.auto_split_by_partitions
+  dt.commit(Sketchup.active_model.active_view)
+end
+def partition_centre(c); b = bb(parts_named(c, 'Vách').first); (b[0] + b[3]) / 2.0; end
+
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+add_auto_partition(c, 282.5)
+build_auto_doors(c)
+check 'trước scale: 3 cánh (khoang trái ≤ 450, khoang phải > 450 chia đôi)', door_xs(c).length == 3, door_xs(c).inspect
+scale_root(c, 1.25)
+auto_run(c)
+xs = door_xs(c)
+check 'sau scale rộng: vẫn 3 cánh', xs.length == 3, xs.inspect
+check 'cánh đầu kết thúc đúng tim hồi giữa mới', near(xs[0][1], partition_centre(c), 0.1) && near(xs[1][0], partition_centre(c), 0.1), [xs, partition_centre(c)].inspect
+check 'cánh cuối phủ đến hông phải mới (1000)', near(xs.last[1], 1000, 0.1), xs.inspect
+check 'cánh ở khoang phải chia đôi giữa khoang mới', near(xs[1][1], xs[2][0], 0.1) && near(xs[1][1], (partition_centre(c) + 8.75 + 982.5) / 2.0, 0.6), xs.inspect
+dt = V::Tools::DoorTool.new({}); dt.load_cabinet(c)
+check 'bố cục lưu được cập nhật theo tủ mới (tự động)', dt.layout.auto? && near(dt.layout.sorted.first['u1'] * 1000.0, partition_centre(c), 0.2), dt.layout.sorted.map { |r| r['u1'] }.inspect
+
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+build_auto_doors(c)
+check 'không vách, tủ 800 > 450: 2 cánh', door_xs(c).length == 2, door_xs(c).inspect
+UI.msgs.clear
+scale_root(c, 0.5)
+auto_run(c)
+xs = door_xs(c)
+check 'thu nhỏ còn 400 (≤ 450): chỉ còn 1 cánh phủ cả tủ', xs.length == 1 && near(xs[0][0], 0.0, 0.1) && near(xs[0][1], 400.0, 0.1), xs.inspect
+check 'không báo "không khớp công thức" và tủ vẫn đủ ván', msgs_with('không khớp công thức').empty? && parts_named(c, 'Hông Phải').length == 1, UI.msgs.last.inspect
+scale_root(c, 2.0)
+auto_run(c)
+xs = door_xs(c)
+check 'phóng lại 800: trở lại 2 cánh, mỗi cánh nửa tủ', xs.length == 2 && near(xs[0][1], xs[1][0], 0.1) && near(xs[1][1], 800.0, 0.1), xs.inspect
+
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+reselect(c)
+dt = V::Tools::DoorTool.new({}); dt.activate
+dt.layout.split(dt.layout.regions.first['id'], 'vertical', 0.25); dt.commit(v)
+scale_root(c, 1.25)
+auto_run(c)
+xs = door_xs(c)
+check 'cánh chia tay (không tự động) giữ tỷ lệ vùng 25%', xs.length == 2 && near(xs[0][1], 250.0, 0.5), xs.inspect
+
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+add_auto_partition(c, 282.5)
+build_auto_doors(c)
+doors = doors_of_test(c)
+V::Operations.apply_opening_metadata(doors[0], 'left')
+V::Operations.save_opening_to_layout(doors[0], 'left')
+scale_root(c, 1.25)
+auto_run(c)
+check 'hướng mở của cánh được giữ sau khi tính lại', V::Operations.opening_type_of(doors_of_test(c).first) == 'left', V::Operations.opening_type_of(doors_of_test(c).first).inspect
+
+
 puts "\n== Kết quả test_stretch: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
 $fail.each { |x| puts "  - #{x}" }

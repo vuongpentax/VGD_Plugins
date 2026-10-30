@@ -506,7 +506,7 @@ module VGD_Cabinet_Draw
     def build_door_layout(root)
       tool = Tools::DoorTool.new({})
       raise 'Không dựng được cánh cho tủ này.' unless tool.load_cabinet(root)
-      tool.instance_variable_get(:@settings).merge!(Rebuild.settings_of(root).select { |key, _| %w[door_fit door_gap door_edge_gap door_inset_gap].include?(key) })
+      tool.instance_variable_get(:@settings).merge!(Rebuild.settings_of(root).select { |key, _| %w[door_fit door_gap door_gap_rows door_edge_gap door_inset_gap].include?(key) })
       layout = tool.instance_variable_get(:@layout)
       layout.reset_even('vertical', 1)
       yield layout
@@ -526,7 +526,9 @@ module VGD_Cabinet_Draw
           root.make_unique if root.respond_to?(:make_unique)
           tool = Tools::DoorTool.new({})
           raise 'Không dựng được cánh cho tủ này.' unless tool.load_cabinet(root)
-          tool.instance_variable_get(:@settings).merge!(Rebuild.settings_of(root).select { |key, _| %w[door_fit door_gap door_edge_gap door_inset_gap].include?(key) })
+          tool.instance_variable_get(:@settings).merge!(Rebuild.settings_of(root).select { |key, _| %w[door_fit door_gap door_gap_rows door_edge_gap door_inset_gap].include?(key) })
+          # Ngưỡng chia 2 cánh lấy theo setting mặc định của công cụ Cánh tủ (bảng Setting / HUD).
+          tool.instance_variable_get(:@settings)['door_auto_width'] = ToolSettings.new.effective(Schema::TOOL_GROUP['door'])['door_auto_width']
           tool.auto_split_by_partitions
           tool.save_layout!
           tool.apply_recess!

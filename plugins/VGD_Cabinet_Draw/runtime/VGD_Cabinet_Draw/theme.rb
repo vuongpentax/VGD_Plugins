@@ -42,6 +42,11 @@ module VGD_Cabinet_Draw
       Sketchup.write_default(SECTION, KEY, 'light')
     end
 
+    # Nét/chữ vẽ thẳng lên viewport (không có nền bảng): đồng đậm ở chế độ sáng, đồng chuẩn ở chế độ tối để nhìn rõ trên cả hai nền.
+    def accent_line(alpha = 255)
+      color(mode == :dark ? :accent : :accent_strong, alpha)
+    end
+
     def color(role, alpha = 255)
       hex = TOKENS[mode].fetch(role)
       Sketchup::Color.new(hex[1, 2].to_i(16), hex[3, 2].to_i(16), hex[5, 2].to_i(16), alpha)
