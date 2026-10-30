@@ -93,6 +93,15 @@ check 'layout khác năm không áp được', msg.include?('2022') && msg.inclu
 L.schedule_apply('Cu2022', %w[layout shortcuts])
 check 'khác năm: chỉ áp phím tắt', JSON.parse(File.read(L.job_file))['steps'][0]['parts'] == ['shortcuts']
 
+no_reg = { 'layout' => snap.merge('year' => '2024'), 'registry' => {} }
+L.import_blob('KhongReg', no_reg)
+spawned.clear
+msg = L.schedule_apply('KhongReg', ['layout'])
+check 'layout 2024 chỉ có trong file cài đặt: tạm không áp, không lập việc', msg.include?('chưa được hỗ trợ') && spawned.empty?
+L.schedule_apply('KhongReg', %w[layout shortcuts])
+check 'nhưng phím tắt của bộ đó vẫn áp được', JSON.parse(File.read(L.job_file))['steps'][0]['parts'] == ['shortcuts']
+spawned.clear
+
 # --- Chuyển phím tắt giữa hai bản ---
 L.schedule_shortcuts_transfer('2022', '2024')
 steps = JSON.parse(File.read(L.job_file))['steps']
@@ -133,6 +142,48 @@ old_v1 = { 'format' => 'vgd_plugin_sets', 'version' => 1, 'sets' => { 'Cu' => ['
 File.write(out, JSON.generate(old_v1))
 s3, e3, l3 = T.read_sets_file(out)
 check 'file định dạng cũ (version 1) vẫn đọc được', e3.nil? && s3 == { 'Cu' => ['alpha'] } && l3 == {}
+
+# --- Nhập phím tắt từ file .dat ---
+def write_dat(path, text)
+  File.binwrite(path, "\xFF\xFE".b + text.encode('UTF-16LE').b)
+end
+dat = File.join(Dir.tmpdir, "sc_#{$$}.dat")
+body = "[Accelerator]\r\nCount=7\r\n0 0 0 I selectImageIglooTool:\r\n1 0 1 S File/Save Incremental\r\n" \
+       "0 0 1 H Tools/One Click Tools/Ẩn\r\n0 1 0 ` Extensions/PTL Tools/Thông tin đối tượng\r\n0 0 0 , Edit/Item/Rotate 90/Around Blue\r\n" \
+       "hong 0 0 X khong hop le\r\n0 0 0 I selectOrbitTool:\r\n[File Locations]\r\nModels=C:\\Users\\PC\\Documents\\\r\nEvil=1 2 3 4 abc\r\n"
+write_dat(dat, body)
+data, err = L.parse_dat(dat)
+check 'đọc .dat UTF-16 có BOM, không lỗi', err.nil? && data
+sc = data[:shortcuts]
+check 'đếm đúng: trùng tổ hợp phím thì dòng sau thay, dòng sai định dạng bị bỏ qua', sc['Num_Shortcuts'] == 5 && data[:skipped] == 1 && data[:declared] == 7
+check 'đánh số Shortcut_1..N liên tục và giữ nguyên dòng gốc (tiếng Việt, ký tự đặc biệt)',
+  sc.keys.grep(/\AShortcut_/).size == 5 && sc['Shortcut_1'] == '0 0 0 I selectOrbitTool:' && sc.values.include?('0 0 1 H Tools/One Click Tools/Ẩn') &&
+  sc.values.include?('0 1 0 ` Extensions/PTL Tools/Thông tin đối tượng') && sc.values.include?('0 0 0 , Edit/Item/Rotate 90/Around Blue')
+check 'mục [File Locations] bị bỏ qua hoàn toàn', sc.reject { |k, _| k == 'Num_Shortcuts' }.values.none? { |v| v.include?('Models') || v.include?('Evil') || v.include?('C:') }
+check 'dữ liệu đọc ra qua được bộ lọc phím tắt', L.clean_shortcuts(sc) == sc
+
+File.binwrite(dat, "\xEF\xBB\xBF[Accelerator]\nCount=1\n0 0 0 H selectDollyTool:\n".b)
+d2, e2 = L.parse_dat(dat)
+check 'cũng đọc được UTF-8 có BOM và xuống dòng LF', e2.nil? && d2[:shortcuts] == { 'Num_Shortcuts' => 1, 'Shortcut_1' => '0 0 0 H selectDollyTool:' }
+File.binwrite(dat, "[File Locations]\nModels=C:\\x\n")
+check 'file không có [Accelerator] bị từ chối', L.parse_dat(dat)[1].include?('[Accelerator]')
+File.binwrite(dat, "[Accelerator]\nCount=0\n")
+check 'không có phím nào hợp lệ bị từ chối', L.parse_dat(dat)[1].include?('không có phím tắt hợp lệ')
+File.binwrite(dat, "\xFF\xFE\x41".b)
+check 'UTF-16 lẻ byte không làm crash', L.parse_dat(dat)[1].include?('mã hóa')
+File.binwrite(dat, "\xFF\xFEx".b + 'a' * (L::DAT_MAX_BYTES + 1))
+check 'file quá lớn bị từ chối', L.parse_dat(dat)[1].include?('quá lớn')
+check 'file không tồn tại', L.parse_dat(File.join(Dir.tmpdir, 'khong_co_file.dat'))[1].include?('Không tìm thấy')
+File.binwrite(dat, "[Accelerator]\n" + (1..(L::DAT_MAX_ENTRIES + 1)).map { |i| "0 0 0 K#{i} selectLineTool:" }.join("\n"))
+check 'quá nhiều phím tắt bị từ chối', L.parse_dat(dat)[1].include?('quá nhiều')
+
+spawned.clear
+msg = L.schedule_import(sc)
+j = JSON.parse(File.read(L.job_file))
+snap_in = JSON.parse(File.read(File.join(L.jobs_dir, 'shortcuts_dat', 'layout.json')))
+check 'nhập .dat lập một bước apply phím tắt cho năm hiện tại', msg.include?('File > Exit') && spawned.size == 1 && j['steps'].size == 1 &&
+  j['steps'][0] == { 'op' => 'apply', 'year' => '2024', 'dir' => File.join(L.jobs_dir, 'shortcuts_dat'), 'parts' => ['shortcuts'] }
+check 'snapshot tạm có đúng phím tắt, không có layout', snap_in['shortcuts'] == sc && snap_in['prefs'] == {} && snap_in['year'] == '2024'
 
 puts($fail ? 'CÓ LỖI' : 'TẤT CẢ ĐẠT')
 exit($fail ? 1 : 0)

@@ -1,6 +1,6 @@
 # HANDOFF: VGD Plugin Manager (SketchUp, Ruby)
 
-Phiên bản hiện tại: **1.0.0-beta.7** (xem mục 8 cho phần thêm so với beta.2). Ngày bàn giao: 2026-10-30.
+Phiên bản hiện tại: **1.0.0-beta.8** (xem mục 8 cho phần thêm so với beta.2). Ngày bàn giao: 2026-10-30.
 Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 
 ## 1. Mục tiêu và bối cảnh
@@ -21,7 +21,7 @@ Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 
 1. `HANDOFF.md`: file này.
 2. `src/`: mã nguồn plugin (đúng cấu trúc bên trong .rbz).
-   1. `src/VGD_PluginManager.rb`: file loader, đăng ký SketchupExtension (version `1.0.0-beta.7`).
+   1. `src/VGD_PluginManager.rb`: file loader, đăng ký SketchupExtension (version `1.0.0-beta.8`).
    2. `src/VGD_PluginManager/main.rb`: chuyển plugin, phím tắt, thanh công cụ; xuất gói tổng; giao diện HtmlDialog chính.
    3. `src/VGD_PluginManager/zip_writer.rb`: ghi file zip/.rbz thuần Ruby bằng Zlib (không cần thư viện ngoài).
    4. (đã bỏ ở beta.5) `bundle_import.rb`: mẫu nhập phím tắt/thanh công cụ từ gói tổng, dùng khóa registry sai.
@@ -118,7 +118,10 @@ Chi tiết cài đặt:
 Cần Ruby (đã dùng ở môi trường Linux). Dùng **đường dẫn tuyệt đối** hoặc chạy đúng như dưới đây từ thư mục gốc gói:
 
 ```
-ruby tests/test_manager.rb src
+ruby tests/test_toggle.rb src
+ruby tests/test_layout.rb src
+ruby tests/test_dialog.rb src
+ruby tests/test_splice.rb
 ruby tests/run_test.rb src
 ```
 
@@ -160,3 +163,7 @@ Khi thêm file mới vào `src/VGD_PluginManager/` nhớ thêm vào danh sách t
    5. **Chưa kiểm tra trong SketchUp thật.** Script PowerShell không chạy thử được ngoài Windows; chỉ đã kiểm tra phần Ruby tự động (`tests/test_layout.rb`). Rủi ro còn lại: ID thanh công cụ Ruby có thể phụ thuộc thứ tự nạp plugin (chưa kiểm chứng); `SharedPreferences.json` có khóa `timestamp` chưa rõ tác dụng; JavaScriptSerializer có thể đổi số thực `1.0` thành `1` khi ghi lại file JSON.
 7. `1.0.0-beta.6`: sửa lỗi bấm nút/menu nhiều lần mở nhiều hộp thoại. Nay chỉ có một hộp thoại (`dialog_open?`, `bring_to_front`); bấm lại thì đưa cửa sổ đang mở lên trước, đóng rồi bấm thì mở mới. Test: `tests/test_dialog.rb`. Nếu vẫn thấy nhiều hộp thoại, kiểm tra xem còn cài bản cũ (`vgd_plugin_migrator`) song song không. Thư mục/file `vgd_bundle_import` trong Plugins là phần còn sót của gói tổng cũ (beta.2 trở về trước), có thể xóa.
 8. `1.0.0-beta.7`: nút **Tắt tất cả** và **Bật tất cả** ở tab Bật/tắt. Áp cho các mục đang hiện (ô tìm kiếm có chữ thì chỉ áp cho mục khớp); nhãn nút hiện số mục sẽ đổi. Luôn hỏi xác nhận; khi tắt, cảnh báo nếu có tên chứa "lib" (nghi là thư viện nền như TT_Lib2, Fredo6_!LibFredo6, 5d_library) nhưng không tự loại trừ. Plugin VGD_ cũng bị tắt như mọi plugin. Ruby kiểm tra lại danh sách tên JS gửi lên (`Toggle.bulk_targets`), dùng lại `Toggle.change` (hoàn tác từng mục nếu lỗi). Chưa có nút hoàn tác riêng: muốn khôi phục đúng trạng thái trước khi tắt tất cả, hãy lưu các mục đang bật thành một bộ trước (rồi dùng "Bật bộ").
+9. `1.0.0-beta.8`: **sửa rủi ro ghi lại file cài đặt** và **nhập phím tắt từ file `.dat`**.
+   1. Helper không còn đọc-ghi lại cả `SharedPreferences.json` bằng `JavaScriptSerializer` (làm `24.0` thành `24`). Phím tắt nay được thay bằng cách **chỉnh đúng các dòng `Num_Shortcuts`/`Shortcut_N`** trong khối `Windows Only > Settings`, mọi byte khác giữ nguyên (`Set-ShortcutLines` trong `helper/apply_layout.ps1`, bản tham chiếu Ruby và test: `tests/support/splice_reference.rb`, `tests/test_splice.rb`). Thuật toán đã kiểm chứng trên hai file `SharedPreferences.json` thật (2022, 2024) và file `.dat` thật: phần còn lại của file giống hệt từng dòng, chín số thực `X.0` giữ nguyên, tiếng Việt giữ đúng. Sau khi ghi còn kiểm tra đọc lại JSON và số phím tắt trước khi thay file. **Bản PowerShell chưa chạy thử được** (không có PowerShell ngoài Windows).
+   2. **Layout nằm trong `PrivatePreferences.json` tạm không được ghi** (cờ `$allowPrivatePrefsWrite = $false` trong helper; phía Ruby `Layout.registry_layout?`). Vẫn *lưu* (đọc) được. Hệ quả: "Áp layout" chỉ áp được layout qua registry (SketchUp 2022); bộ lưu từ 2024 chỉ áp được phím tắt. Cần cách chỉnh theo dòng cho file này (cần biết cấu trúc thật, chưa có mẫu).
+   3. Tab "Chuyển plugin" có mục "Phím tắt" với nút **Nhập phím tắt từ file .dat**: đọc mục `[Accelerator]` của file xuất từ Window > Preferences > Shortcuts > Export (UTF-16, bỏ qua `[File Locations]`), xác nhận, rồi **thay toàn bộ** phím tắt khi SketchUp đóng. Đọc file: `Layout.parse_dat`; lập việc: `Layout.schedule_import`.

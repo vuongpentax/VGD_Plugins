@@ -58,6 +58,9 @@ function Test-ShortcutKey([string]$name) {
     return ($name -match '^(Num_Shortcuts|Shortcut_\d+)$')
 }
 $mainWindowKeys = @('DockWidgetState', 'ToolBarState')
+# PrivatePreferences.json chua nhieu thiet lap khac va so thuc dang 24.0; doc-ghi lai ca file se doi 24.0 thanh 24.
+# Tam thoi KHONG ghi file nay (layout 2024 chua ap duoc) cho den khi co cach chinh theo dong an toan.
+$allowPrivatePrefsWrite = $false
 $regNames = @('Workspace', 'RubyWorkspace')
 
 function Invoke-Reg([string[]]$argv) {
@@ -176,6 +179,125 @@ function Save-JsonChecked([string]$path, $doc, [int]$expectTop) {
     Move-Item -LiteralPath $tmp -Destination $path -Force
 }
 
+# Chuoi JSON: thoat dau nhay kep, gach cheo nguoc va ky tu dieu khien; giu nguyen ky tu Unicode (tieng Viet)
+function ConvertTo-JsonString([string]$s) {
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.Append('"')
+    foreach ($ch in $s.ToCharArray()) {
+        $code = [int]$ch
+        if ($code -eq 34) { [void]$sb.Append('\"') }
+        elseif ($code -eq 92) { [void]$sb.Append('\\') }
+        elseif ($code -lt 32) { [void]$sb.Append(('\u{0:x4}' -f $code)) }
+        else { [void]$sb.Append($ch) }
+    }
+    [void]$sb.Append('"')
+    return $sb.ToString()
+}
+
+# Thay cac dong Num_Shortcuts / Shortcut_N trong khoi "Windows Only" > "Settings" bang cac dong moi,
+# giu nguyen moi byte khac cua file (khong doc-ghi lai JSON nen so 24.0 khong bi doi thanh 24).
+# Khoi Settings phai gom cac dong phang dang  "khoa": gia_tri  ; neu khong thi bao loi va khong sua.
+# Phai khop voi Splice.apply trong tests/support/splice_reference.rb.
+function Set-ShortcutLines([string]$text, $shortcuts) {
+    $eol = "`n"
+    if ($text.Contains("`r`n")) { $eol = "`r`n" }
+    $lines = New-Object 'System.Collections.Generic.List[string]'
+    $lines.AddRange([string[]]($text -split "`r?`n"))
+
+    $winIdx = -1
+    $winIndent = 0
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match '^(\s*)"Windows Only"\s*:\s*\{\s*$') { $winIdx = $i; $winIndent = $Matches[1].Length; break }
+    }
+    if ($winIdx -lt 0) { throw 'Khong thay muc "Windows Only" trong SharedPreferences.json.' }
+
+    $setIdx = -1
+    $setIndent = 0
+    for ($i = $winIdx + 1; $i -lt $lines.Count; $i++) {
+        $l = $lines[$i]
+        if ($l -match '^(\s*)"Settings"\s*:\s*\{\s*$') { $setIdx = $i; $setIndent = $Matches[1].Length; break }
+        if ($l -match '^(\s*)\S') { if ($Matches[1].Length -le $winIndent) { break } }
+    }
+    if ($setIdx -lt 0) { throw 'Khong thay muc "Settings" trong "Windows Only".' }
+
+    $endIdx = -1
+    for ($i = $setIdx + 1; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match '^(\s*)\}\s*,?\s*$') { if ($Matches[1].Length -eq $setIndent) { $endIdx = $i; break } }
+    }
+    if ($endIdx -lt 0) { throw 'Khong thay cuoi khoi "Settings".' }
+
+    $keep = New-Object 'System.Collections.Generic.List[string]'
+    $insertAt = -1
+    $indent = $null
+    for ($i = $setIdx + 1; $i -lt $endIdx; $i++) {
+        $l = $lines[$i]
+        if ($l.Trim().Length -eq 0) { continue }
+        if (-not ($l -match '^(\s+)("(?:[^"\\]|\\.)*")\s*:\s*(.*?)(,?)\s*$')) { throw ('Khong hieu dong trong Settings: ' + $l) }
+        $ind = $Matches[1]
+        $keyRaw = $Matches[2]
+        $val = $Matches[3]
+        if ($val -match '^[\{\[]') { throw 'Settings co muc long nhau, khong chinh theo dong duoc.' }
+        if ($null -eq $indent) { $indent = $ind }
+        $name = $keyRaw.Substring(1, $keyRaw.Length - 2)
+        if (Test-ShortcutKey $name) {
+            if ($insertAt -lt 0) { $insertAt = $keep.Count }
+            continue
+        }
+        $orig = $l.TrimEnd()
+        if ($orig.EndsWith(',')) { $orig = $orig.Substring(0, $orig.Length - 1) }
+        $keep.Add($orig)
+    }
+    if ($null -eq $indent) { $indent = ' ' * ($setIndent + 4) }
+    if ($insertAt -lt 0) { $insertAt = $keep.Count }
+
+    $names = New-Object 'System.Collections.Generic.List[string]'
+    $count = 0
+    foreach ($k in @($shortcuts.Keys)) {
+        if (-not (Test-ShortcutKey $k)) { continue }
+        $names.Add($k)
+        if ($k -ne 'Num_Shortcuts') { $count++ }
+    }
+    $arr = $names.ToArray()
+    [Array]::Sort($arr, [StringComparer]::Ordinal)
+    $newLines = New-Object 'System.Collections.Generic.List[string]'
+    foreach ($k in $arr) {
+        $v = $shortcuts[$k]
+        if ($k -eq 'Num_Shortcuts') { $valText = $count.ToString([System.Globalization.CultureInfo]::InvariantCulture) }
+        elseif ($v -is [string]) { $valText = ConvertTo-JsonString $v }
+        else { $valText = ([long]$v).ToString([System.Globalization.CultureInfo]::InvariantCulture) }
+        $newLines.Add($indent + (ConvertTo-JsonString $k) + ': ' + $valText)
+    }
+    $keep.InsertRange($insertAt, $newLines)
+
+    $outLines = New-Object 'System.Collections.Generic.List[string]'
+    for ($i = 0; $i -lt $keep.Count; $i++) {
+        if ($i -lt $keep.Count - 1) { $outLines.Add($keep[$i] + ',') } else { $outLines.Add($keep[$i]) }
+    }
+    $lines.RemoveRange($setIdx + 1, $endIdx - $setIdx - 1)
+    $lines.InsertRange($setIdx + 1, $outLines)
+    return ($lines -join $eol)
+}
+
+# Ghi file van ban qua file tam sau khi kiem tra: phim tat doc lai dung nhu mong muon, so khoa cap cao nhat khong doi
+function Save-ShortcutsChecked([string]$path, [string]$oldText, [string]$newText, $shortcuts) {
+    $oldDoc = $ser.DeserializeObject($oldText)
+    $newDoc = $ser.DeserializeObject($newText)
+    if ($newDoc.Count -ne $oldDoc.Count) { throw 'Kiem tra loi: so khoa cap cao nhat thay doi.' }
+    $set = Get-Child (Get-Child $newDoc 'Windows Only') 'Settings'
+    $got = 0
+    foreach ($k in @($shortcuts.Keys)) {
+        if (-not (Test-ShortcutKey $k)) { continue }
+        if ($k -eq 'Num_Shortcuts') { continue }
+        $got++
+        if ([string](Get-Child $set $k) -ne [string]$shortcuts[$k]) { throw ('Kiem tra loi: phim tat ' + $k + ' khong khop.') }
+    }
+    $num = Get-Child $set 'Num_Shortcuts'
+    if ([int]$num -ne $got) { throw 'Kiem tra loi: Num_Shortcuts khong khop so phim tat.' }
+    $tmp = "$path.vgdtmp"
+    [System.IO.File]::WriteAllText($tmp, $newText, $utf8)
+    Move-Item -LiteralPath $tmp -Destination $path -Force
+}
+
 # ---- apply ----
 function Invoke-Apply($step, [string]$backupRoot) {
     $year = [string]$step['year']
@@ -204,7 +326,10 @@ function Invoke-Apply($step, [string]$backupRoot) {
             Add-Result ("Bo qua layout: snapshot tu SketchUp " + $snapYear + ", khong ap duoc cho " + $year + '.')
         } else {
             $prefs = Get-Child $snap 'prefs'
-            if ($null -ne $prefs -and $prefs.Count -gt 0 -and (Test-Path -LiteralPath $priv)) {
+            if ($null -ne $prefs -and $prefs.Count -gt 0 -and -not $allowPrivatePrefsWrite) {
+                Add-Result 'Bo qua phan layout nam trong PrivatePreferences.json (chua ho tro ghi an toan).'
+            }
+            if ($allowPrivatePrefsWrite -and $null -ne $prefs -and $prefs.Count -gt 0 -and (Test-Path -LiteralPath $priv)) {
                 $doc = Read-Json $priv
                 $top = $doc.Count
                 $sec = Get-Section $doc 'This Computer Only'
@@ -241,14 +366,10 @@ function Invoke-Apply($step, [string]$backupRoot) {
     if ($parts -contains 'shortcuts') {
         $sc = Get-Child $snap 'shortcuts'
         if ($null -ne $sc -and $sc.Count -gt 0 -and (Test-Path -LiteralPath $shared)) {
-            $doc = Read-Json $shared
-            $top = $doc.Count
-            $win = Get-Section $doc 'Windows Only'
-            $set = Get-Section $win 'Settings'
-            foreach ($k in @($set.Keys)) { if (Test-ShortcutKey $k) { [void]$set.Remove($k) } }
-            foreach ($k in @($sc.Keys)) { if (Test-ShortcutKey $k) { $set[$k] = $sc[$k] } }
-            Save-JsonChecked $shared $doc $top
-            $applied += ('phim tat (' + $sc.Count + ' muc)')
+            $oldText = [System.IO.File]::ReadAllText($shared, $utf8)
+            $newText = Set-ShortcutLines $oldText $sc
+            Save-ShortcutsChecked $shared $oldText $newText $sc
+            $applied += ('phim tat (' + (@($sc.Keys | Where-Object { $_ -ne 'Num_Shortcuts' }).Count) + ' muc)')
         } else {
             Add-Result 'Bo qua phim tat: snapshot khong co phim tat hoac khong tim thay file cai dat dich.'
         }

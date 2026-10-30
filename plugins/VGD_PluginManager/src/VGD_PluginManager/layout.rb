@@ -88,6 +88,12 @@ module VGD
           'shortcuts' => nonempty_hash?(data['shortcuts']) }
       end
 
+      # Phần layout nằm trong PrivatePreferences.json chưa ghi lại an toàn được (helper tạm bỏ qua),
+      # nên hiện chỉ áp layout qua registry (SketchUp 2022). Bộ lưu từ 2024 chỉ áp được phím tắt.
+      def self.registry_layout?(name)
+        REG_FILES.any? { |n| File.exist?(File.join(preset_dir(name), "#{n}.reg")) }
+      end
+
       def self.delete(name)
         FileUtils.rm_rf(preset_dir(name))
       end
@@ -144,9 +150,13 @@ module VGD
         return 'Bộ này chưa lưu layout.' unless i
         want = clean_parts(parts)
         use = []
-        use << 'layout' if want.include?('layout') && i['layout'] && i['year'] == year
+        use << 'layout' if want.include?('layout') && i['layout'] && i['year'] == year && registry_layout?(name)
         use << 'shortcuts' if want.include?('shortcuts') && i['shortcuts']
         if use.empty?
+          if want.include?('layout') && i['layout'] && i['year'] == year
+            return "Layout của bộ này (SketchUp #{year}) lưu trong file cài đặt; việc áp dụng chưa được hỗ trợ an toàn nên tạm không áp." \
+                   "#{i['shortcuts'] ? ' Hãy bật "Kèm phím tắt" để áp phím tắt.' : ''}" unless want.include?('shortcuts') && i['shortcuts']
+          end
           return "Layout của bộ này lưu từ SketchUp #{i['year']}, không áp được cho bản #{year} " \
                  '(chỉ phím tắt dùng chung giữa các bản).' if want.include?('layout') && i['layout'] && i['year'] != year
           return 'Không có mục nào để áp (bộ này không lưu mục đã chọn).'
@@ -196,6 +206,72 @@ module VGD
       def self.clean_shortcuts(shortcuts)
         return {} unless shortcuts.is_a?(Hash)
         shortcuts.select { |k, v| shortcut_key?(k) && (v.is_a?(String) || v.is_a?(Integer)) }
+      end
+
+      # ---- Nhập phím tắt từ file .dat (nút Export phím tắt của SketchUp) ----
+      DAT_MAX_BYTES   = 1024 * 1024
+      DAT_MAX_ENTRIES = 1000
+      DAT_LINE        = /\A([01]) ([01]) ([01]) (\S+) (\S.*)\z/
+
+      # Mã hóa file .dat theo BOM (SketchUp ghi UTF-16 little-endian có BOM). Trả về chuỗi UTF-8 hoặc nil.
+      def self.decode_dat(raw)
+        raw = raw.dup.force_encoding('BINARY')
+        text = if raw.start_with?("\xFF\xFE".b)
+                 raw[2..-1].force_encoding('UTF-16LE').encode('UTF-8')
+               elsif raw.start_with?("\xFE\xFF".b)
+                 raw[2..-1].force_encoding('UTF-16BE').encode('UTF-8')
+               else
+                 raw.sub(/\A\xEF\xBB\xBF/n, '').force_encoding('UTF-8')
+               end
+        text.valid_encoding? ? text : nil
+      rescue StandardError
+        nil
+      end
+
+      # Chỉ đọc mục [Accelerator]; bỏ qua [File Locations] (đường dẫn riêng của máy khác).
+      # Trả về [{ shortcuts:, skipped:, declared: }, lỗi]. shortcuts có dạng của SharedPreferences.json.
+      def self.parse_dat(path)
+        return [nil, 'Không tìm thấy file.'] unless File.file?(path)
+        return [nil, 'File quá lớn, không phải file phím tắt của SketchUp.'] if File.size(path) > DAT_MAX_BYTES
+        text = decode_dat(File.binread(path))
+        return [nil, 'Không đọc được file (mã hóa lạ).'] unless text
+        section = nil
+        declared = nil
+        entries = {}
+        skipped = 0
+        text.split(/\r?\n/).each do |line|
+          if line =~ /\A\[(.+)\]\s*\z/
+            section = $1
+          elsif section == 'Accelerator'
+            if line =~ /\ACount=(\d+)\s*\z/
+              declared = $1.to_i
+            elsif !line.strip.empty?
+              m = DAT_LINE.match(line.rstrip)
+              if m
+                entries[m[1, 4].join(' ')] = line.rstrip   # trùng tổ hợp phím thì dòng sau thay dòng trước
+              else
+                skipped += 1
+              end
+            end
+          end
+        end
+        return [nil, 'File không có mục [Accelerator], không phải file phím tắt của SketchUp.'] if declared.nil? && entries.empty?
+        return [nil, 'File không có phím tắt hợp lệ nào.'] if entries.empty?
+        return [nil, "File có quá nhiều phím tắt (hơn #{DAT_MAX_ENTRIES})."] if entries.size > DAT_MAX_ENTRIES
+        shortcuts = { 'Num_Shortcuts' => entries.size }
+        entries.values.each_with_index { |line, i| shortcuts["Shortcut_#{i + 1}"] = line }
+        [{ shortcuts: shortcuts, skipped: skipped, declared: declared }, nil]
+      end
+
+      # Lập việc: thay toàn bộ phím tắt của SketchUp đang chạy bằng danh sách này khi SketchUp đóng
+      def self.schedule_import(shortcuts)
+        dir = File.join(jobs_dir, 'shortcuts_dat')
+        FileUtils.rm_rf(dir)
+        FileUtils.mkdir_p(dir)
+        snapshot = { 'year' => year, 'saved_at' => Time.now.strftime('%Y-%m-%d %H:%M:%S'),
+                     'prefs' => {}, 'shortcuts' => clean_shortcuts(shortcuts) }
+        File.write(File.join(dir, 'layout.json'), JSON.pretty_generate(snapshot), encoding: 'UTF-8')
+        schedule([apply_step(year, dir, ['shortcuts'])])
       end
 
       # ---- Xuất/nhập cùng bộ plugin ----

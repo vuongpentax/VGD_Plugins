@@ -202,6 +202,21 @@ module VGD
         end
       end
 
+      dlg.add_action_callback('import_dat') do |_c|
+        guard.call('Lỗi khi nhập phím tắt', push_result) do
+          path = UI.openpanel('Chọn file phím tắt của SketchUp (.dat)', Toggle.desktop_dir, 'DAT|*.dat||')
+          next unless path
+          data, err = Layout.parse_dat(path)
+          next push_result.call(err) if err
+          note = data[:skipped] > 0 ? "\n(#{data[:skipped]} dòng không hiểu được đã bị bỏ qua.)" : ''
+          ask = "Nhập #{data[:shortcuts]['Num_Shortcuts']} phím tắt từ file này vào SketchUp #{Layout.year}?#{note}\n\n" \
+                "Toàn bộ phím tắt hiện có sẽ bị thay bằng danh sách trong file (sao lưu trước khi ghi). " \
+                "Mục [File Locations] trong file được bỏ qua. Việc này chạy khi bạn đóng SketchUp."
+          next unless UI.messagebox(ask, MB_YESNO) == IDYES
+          push_result.call(Layout.schedule_import(data[:shortcuts]))
+        end
+      end
+
       dlg.add_action_callback('export_bundle') do |_c, json|
         guard.call('Lỗi khi xuất gói', push_result) do
           opts = JSON.parse(json)

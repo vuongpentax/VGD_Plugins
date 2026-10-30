@@ -38,6 +38,18 @@ Nên sao lưu trước: đóng SketchUp, chạy `reg export "HKCU\Software\Sketc
 8. Hoàn tác thử: chép lại hai file JSON và import file `.reg` từ thư mục sao lưu khi SketchUp đóng, xác nhận layout cũ trở lại.
 9. Xuất/nhập sang máy khác: "Xuất các bộ ra file" (file `.json` có kèm layout), nhập ở máy kia bằng "Nhập bộ từ file", rồi "Áp layout". Ghi lại nếu màn hình khác độ phân giải làm thanh công cụ lệch.
 
+## 3b. Nhập phím tắt từ file .dat (mới ở beta.8)
+
+Sao lưu trước như mục 3. Chuẩn bị: xuất một file `.dat` từ Window > Preferences > Shortcuts > Export (ở máy khác hoặc bản khác).
+
+1. Tab Chuyển plugin, mục Phím tắt, bấm "Nhập phím tắt từ file .dat", chọn file. Hộp xác nhận nêu đúng số phím tắt; chọn Không thì không có gì xảy ra.
+2. Chọn Có, đóng SketchUp bằng File > Exit. SketchUp tự mở lại. Vào Window > Preferences > Shortcuts: **danh sách phím tắt đúng bằng file** (kể cả phím của plugin và tên có tiếng Việt)? Mở hộp thoại: có thông báo kết quả.
+3. Thư mục `...\Plugins\VGD_PluginManager\data\backups\` có bản sao lưu `SharedPreferences.json` trước khi ghi.
+4. Kiểm tra file `SharedPreferences.json` sau khi ghi: các giá trị dạng `24.0`, `150.0`, `1.0` (ví dụ `AviExportFPS`, `PixelsPerInch`) **vẫn giữ dạng `.0`**, không thành `24`, `150`; không có file `.vgdtmp` sót lại.
+5. Thư mục thư viện (Models, Components, Materials...) trong Preferences > Files **không bị đổi** (mục `[File Locations]` của file `.dat` phải được bỏ qua).
+6. Thử với file không phải `.dat` phím tắt: có báo lỗi, không đổi gì.
+7. Layout 2024 hiện chưa áp được (xem HANDOFF, bản beta.8): bấm "Áp layout" cho bộ lưu từ 2024 phải báo "chưa được hỗ trợ"; chỉ phím tắt được áp.
+
 ## 4. Xuất gói .rbz tổng
 
 1. Xuất gói với vài plugin; mở file .rbz bằng phần mềm giải nén, thấy plugin và `vgd_bundle_manifest.json` (gói chỉ chứa plugin, không kèm phím tắt hay layout).
