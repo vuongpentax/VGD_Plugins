@@ -734,6 +734,7 @@ module VGD_Cabinet_Draw
     # Nhịp trống tối thiểu để một đoạn của tấm được giãn khi tủ đổi cỡ. Mộng, lỗ, khấu, dấu tiết diện nhỏ hơn mức này
     # giữ nguyên kích thước (mm); chỉ các nhịp trống lớn giữa chúng giãn ra.
     STRETCH_GAP_MIN = 150.mm
+    STRETCH_EDGE_ZONE = 100.mm # dải sát mép tấm giữ nguyên khi co giãn
     KNOT_EPS = 0.01.mm
 
     # Co giãn một cấu kiện tại chỗ mà giữ nguyên hình dạng chi tiết (mộng xương chó, lỗ, khấu, bản lề, dấu tiết diện,
@@ -954,16 +955,25 @@ module VGD_Cabinet_Draw
       (values.min + values.max) / 2.0
     end
 
-    # Bảng độ dời theo một trục: [[tọa độ, độ dời]] tại các nút (tọa độ đỉnh của thân tấm trong [lo, hi]). Chỉ nhịp trống
-    # lớn (từ STRETCH_GAP_MIN; nếu không có thì nhịp lớn nhất) nhận phần tăng, chia theo chiều dài; nhịp nhỏ giữ nguyên.
-    def stretch_knots(coords, lo, hi, new_lo, new_hi)
-      knots = ([lo, hi] + coords.select { |c| c > lo + KNOT_EPS && c < hi - KNOT_EPS }).sort.each_with_object([]) do |c, out|
+    # Bảng độ dời theo một trục: [[tọa độ, độ dời]] tại các nút (tọa độ đỉnh của thân tấm trong [lo, hi]).
+    # Dải EDGE_ZONE (100 mm) sát mỗi mép tấm giữ nguyên (mộng và dấu tiết diện thường nằm ở đó, dời nguyên khối theo mép).
+    # Phần tăng chỉ chia cho các nhịp trống lớn (từ STRETCH_GAP_MIN; nếu không có thì nhịp lớn nhất) nằm giữa hai dải đó,
+    # theo chiều dài; nhịp nhỏ giữ nguyên. Tấm quá ngắn (phần giữa dưới STRETCH_GAP_MIN) thì bỏ dải sát mép để vẫn nhận đủ phần tăng.
+    def stretch_knots(coords, lo, hi, new_lo, new_hi, edge_zone = STRETCH_EDGE_ZONE)
+      zone_lo = lo + edge_zone
+      zone_hi = hi - edge_zone
+      zone = zone_hi - zone_lo >= STRETCH_GAP_MIN
+      zone_lo, zone_hi = lo, hi unless zone
+      extra = zone ? [zone_lo, zone_hi] : []
+      knots = ([lo, hi] + extra + coords.select { |c| c > lo + KNOT_EPS && c < hi - KNOT_EPS }).sort.each_with_object([]) do |c, out|
         out << c unless out.last && (c - out.last).abs < KNOT_EPS
       end
       return [[lo, new_lo - lo]] if knots.length < 2
       gaps = knots.each_cons(2).map { |a, b| b - a }
-      big = gaps.each_index.select { |k| gaps[k] >= STRETCH_GAP_MIN }
-      big = [gaps.each_index.max_by { |k| gaps[k] }] if big.empty?
+      inside = ->(k) { knots[k] >= zone_lo - KNOT_EPS && knots[k + 1] <= zone_hi + KNOT_EPS }
+      candidates = gaps.each_index.select { |k| inside.call(k) }
+      big = candidates.select { |k| gaps[k] >= STRETCH_GAP_MIN }
+      big = [candidates.max_by { |k| gaps[k] }] if big.empty?
       total = big.sum { |k| gaps[k] }
       growth = (new_hi - new_lo) - (hi - lo)
       shift = new_lo - lo

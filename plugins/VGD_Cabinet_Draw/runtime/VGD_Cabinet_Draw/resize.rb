@@ -1,49 +1,45 @@
 module VGD_Cabinet_Draw
-  # Nút Scale VGD: nhập Rộng / Sâu / Cao (mm) của tủ rồi áp dụng bằng đúng cơ chế co giãn tại chỗ như khi kéo Scale
-  # (Rebuild.stretch): đặt phép scale lên tủ rồi co giãn các tấm, cánh, ngăn kéo về kích thước thật. Một bước Undo.
-  # Lỗi (ví dụ không co giãn được) thì hủy cả thao tác, tủ giữ nguyên. Scale quanh gốc của tủ: tủ nở ra phải, ra sau và lên trên.
+  # Đổi kích thước tủ theo MỘT trục, giữ yên mặt có điểm neo (dùng cho lệnh Scale VGD, xem Tools::ScaleTool).
+  # Đặt phép scale lên tủ rồi co giãn tại chỗ bằng đúng cơ chế như khi kéo Scale (Rebuild.stretch): ván giữ độ dày, dải 100 mm sát
+  # mép mỗi tấm giữ nguyên (mộng, dấu tiết diện), cánh và ngăn kéo đi theo hông và hồi giữa. Một bước Undo; lỗi thì hủy cả thao tác.
   module Resize
     extend self
 
     OPERATION_NAME = 'VGD Cabinet Draw — Scale VGD'.freeze
     MIN_MM = 50.0     # nhỏ hơn thì không còn dựng được thùng tủ và các tấm
     MAX_MM = 10_000.0 # chặn gõ nhầm thừa số 0
-    LABELS = ['Rộng (mm)', 'Sâu (mm)', 'Cao (mm)'].freeze
+    AXIS_NAMES = %w[Rộng Sâu Cao].freeze
 
-    def run
-      roots = ModelData.cabinets_in(Sketchup.active_model.selection.to_a.select(&:valid?))
-      return UI.messagebox('Hãy chọn một tủ VGD rồi bấm Scale VGD.') if roots.empty?
-      return UI.messagebox('Hãy chọn đúng một tủ để Scale VGD.') if roots.length > 1
-      root = roots.first
-      answer = UI.inputbox(LABELS, Rebuild.dimensions_of(root).map { |value| value.round(1).to_s }, 'Scale VGD — kích thước tủ')
-      return unless answer
-      apply(root, parse(answer))
-    rescue ArgumentError => e
-      UI.messagebox(e.message)
+    # Chuỗi nhập (mm, có thể kèm "mm") → số. Báo ArgumentError nếu không phải số hoặc ngoài khoảng cho phép.
+    def parse_size(text)
+      value = Float(text.to_s.strip.sub(/\s*mm\z/i, '').tr(',', '.'))
+      check_size!(value)
+      value
+    rescue ArgumentError, TypeError => e
+      raise ArgumentError, 'Kích thước phải là số mm, ví dụ 1200.' unless e.message.include?('từ')
+      raise
     end
 
-    # Chuỗi nhập → [rộng, sâu, cao] mm. Báo lỗi nếu không phải số hoặc ngoài khoảng cho phép.
-    def parse(answer)
-      values = answer.map do |text|
-        Float(text.to_s.strip.tr(',', '.'))
-      rescue ArgumentError, TypeError
-        raise ArgumentError, 'Rộng, Sâu, Cao phải là số mm, ví dụ 800.'
-      end
-      raise ArgumentError, "Mỗi kích thước phải từ #{MIN_MM.to_i} đến #{MAX_MM.to_i} mm." unless values.all? { |value| value >= MIN_MM && value <= MAX_MM }
-      values
+    def check_size!(value)
+      raise ArgumentError, "Kích thước phải từ #{MIN_MM.to_i} đến #{MAX_MM.to_i} mm." unless value >= MIN_MM && value <= MAX_MM
     end
 
-    # Co giãn tủ về kích thước mới (mm). Trả về true nếu đã đổi.
-    def apply(root, dims)
-      old = Rebuild.dimensions_of(root)
-      if old.zip(dims).all? { |before, after| (before - after).abs < 0.01 }
-        Dialog.set_status('Kích thước không đổi.')
-        return false
-      end
+    # Đổi kích thước theo trục axis (0 rộng, 1 sâu, 2 cao) thành new_mm, giữ yên mặt side (:min hoặc :max) của trục đó.
+    # Trả về true nếu đã đổi. Lỗi co giãn: hủy thao tác, báo bằng hộp thoại và trả về false.
+    def apply_axis(root, axis, new_mm, side)
+      check_size!(new_mm)
+      raise ArgumentError, 'Tủ đang bị Scale chưa cập nhật. Hãy đợi tự cập nhật hoặc Undo rồi thử lại.' if Rebuild.scale_of(root)
+      dims = Rebuild.dimensions_of(root)
+      return false if (dims[axis] - new_mm).abs < 0.01
+      factors = [1.0, 1.0, 1.0]
+      factors[axis] = new_mm / dims[axis]
+      anchor = [0.0, 0.0, 0.0]
+      anchor[axis] = dims[axis].mm if side == :max
       model = Sketchup.active_model
       model.start_operation(OPERATION_NAME, true)
       begin
-        root.transformation = root.transformation * Geom::Transformation.scaling(*dims.zip(old).map { |after, before| after / before })
+        root.transformation = root.transformation * Geom::Transformation.translation(anchor) *
+                              Geom::Transformation.scaling(*factors) * Geom::Transformation.translation(anchor.map(&:-@))
         warnings = Rebuild.stretch(root)
       rescue StandardError => e
         model.abort_operation
@@ -52,7 +48,6 @@ module VGD_Cabinet_Draw
       end
       model.commit_operation
       UI.messagebox("Scale VGD:\n• #{warnings.uniq.join("\n• ")}") unless warnings.empty?
-      Dialog.set_status("Đã đổi tủ thành #{dims.map { |value| value.round(1) }.join(' x ')} mm.")
       true
     end
   end

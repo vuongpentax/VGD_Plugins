@@ -1,4 +1,6 @@
-# VGD_Cabinet Draw 1.0.0-beta.64
+# VGD_Cabinet Draw 1.0.0-beta.65
+
+beta.65: lệnh Scale VGD có điểm neo (thay hộp nhập số của beta.64). Chọn một tủ (hoặc click vào tủ), 6 điểm neo hiện ở tâm các mặt của hộp tủ; bấm một điểm = mặt đứng yên, kéo chuột theo trục đó (bắt điểm suy luận như thường) hoặc gõ số mm + Enter: mặt đối diện dời, số hiện là kích thước MỚI theo trục, có khung xem trước và mặt đang dời vẽ nét chấm; click để áp dụng. Esc khi đang kéo: bỏ điểm neo; Esc ở bước chọn: thoát lệnh. Chỉ đổi một trục mỗi lần, một bước Undo, lỗi thì tủ giữ nguyên. Co giãn kiểu stretch: trong từng tấm, dải 100 mm sát mỗi mép giữ nguyên (mộng, dấu tiết diện dời nguyên khối theo mép), phần giữa giãn; tấm quá ngắn (phần giữa dưới 150 mm) vẫn giãn như cũ. Quy tắc 100 mm này cũng áp dụng khi kéo Scale thường để tự cập nhật. Chưa xác minh trong SketchUp thật.
 
 beta.64: (1) Sửa lỗi scale báo "Cánh N không còn sát hông phải/trái để bắt bản lề": kiểm tra bản lề nay cho bản lề bắt vào hông HOẶC hồi giữa gần nhất (cánh lật lên/xuống: nóc/đáy hoặc đợt giữa). Khi cánh tự động đổi số cánh sau scale, cánh có bản lề ở giữa khoang tự đổi sang mép sát hông/hồi. (2) Nút mới "Scale VGD" (thanh công cụ và menu Extensions): chọn một tủ, nhập Rộng/Sâu/Cao (mm), tủ co giãn tại chỗ bằng cùng cơ chế với kéo Scale (một bước Undo, lỗi thì tủ giữ nguyên). Scale quanh gốc của tủ nên tủ nở ra phải/sau/lên. Chưa xác minh trong SketchUp thật.
 

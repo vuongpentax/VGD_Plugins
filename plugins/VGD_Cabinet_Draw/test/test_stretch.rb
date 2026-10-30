@@ -55,9 +55,10 @@ scale_root(c, 1.25)
 auto_run(c)
 nong2 = part(c, 'Nóc')
 after = nong2.bounds
-# Chi tiết trong ván giữ nguyên kích thước (mm); chỉ vị trí dời theo tâm của nó (nội suy theo nhịp trống của ván).
+# Chi tiết trong ván giữ nguyên kích thước (mm); chỉ vị trí dời theo tâm của nó (nội suy theo đoạn giữa của ván).
 grow = (after.max.x - after.min.x) - (before.max.x - before.min.x)
-expect_x0 = 500.mm + grow * (525.mm - before.min.x) / (before.max.x - before.min.x)
+# Dải 100 mm sát mỗi mép giữ nguyên: phần tăng chỉ chia cho đoạn giữa [min + 100, max - 100].
+expect_x0 = 500.mm + grow * (525.mm - (before.min.x + 100.mm)) / ((before.max.x - before.min.x) - 200.mm)
 notch_xs = notch.pts.map { |pt| pt.transform(nong2.transformation).x }
 world_x = notch_xs.min
 check 'vết khấu giữ nguyên rộng 50 mm và dời theo tâm', notch.valid? && near(world_x, expect_x0, 0.01) && near((notch_xs.max - notch_xs.min).to_mm, 50.0, 0.05), [world_x.to_mm, expect_x0.to_mm, (notch_xs.max - notch_xs.min).to_mm].inspect
@@ -292,7 +293,18 @@ shift = ->(c) { V::Rebuild.knot_shift(knots, 57.5.mm, 1980.mm, 57.5.mm, 2180.mm,
 check 'mép dưới không dời, mép trên dời đúng 200 mm', near(shift.call(57.5), 0.0, 0.05) && near(shift.call(1980), 200.0, 0.05), [shift.call(57.5), shift.call(1980)].inspect
 check 'mộng 35 mm giữ nguyên (cùng độ dời ở hai mép mộng)', near(shift.call(935) - shift.call(900), 0.0, 0.05), [shift.call(900), shift.call(935)].inspect
 check 'khấu 82.5 mm giữ nguyên', near(shift.call(1962.5) - shift.call(1880), 0.0, 0.05), [shift.call(1880), shift.call(1962.5)].inspect
-check 'hai nhịp lớn chia phần tăng theo chiều dài (94.3 mm trước mộng)', near(shift.call(900), 200.0 * 842.5 / 1787.5, 0.05), shift.call(900).to_s
+check 'dải 100 mm sát mép tấm giữ nguyên: nhịp lớn chỉ tính từ 157.5 đến 1880 (88 mm trước mộng)', near(shift.call(900), 200.0 * 742.5 / 1687.5, 0.05), shift.call(900).to_s
+check 'trong dải 100 mm sát mép dưới: không dời so với mép', near(shift.call(100), 0.0, 0.05) && near(shift.call(157.5), 0.0, 0.05), [shift.call(100), shift.call(157.5)].inspect
+check 'trong dải 100 mm sát mép trên: dời nguyên khối theo mép trên (200)', near(shift.call(1900), 200.0, 0.05) && near(shift.call(1962.5), 200.0, 0.05), [shift.call(1900), shift.call(1962.5)].inspect
+k = V::Rebuild.stretch_knots([], 0.mm, 1000.mm, 0.mm, 1200.mm)
+sh2 = ->(c) { V::Rebuild.knot_shift(k, 0.mm, 1000.mm, 0.mm, 1200.mm, c.mm).to_mm }
+check 'tấm trơn 1000 -> 1200: 100 mm hai đầu giữ nguyên, phần giữa giãn đều', near(sh2.call(100), 0.0, 0.05) && near(sh2.call(500), 100.0, 0.05) && near(sh2.call(900), 200.0, 0.05), [sh2.call(100), sh2.call(500), sh2.call(900)].inspect
+k = V::Rebuild.stretch_knots([50.mm, 950.mm], 0.mm, 1000.mm, 0.mm, 1200.mm)
+sh3 = ->(c) { V::Rebuild.knot_shift(k, 0.mm, 1000.mm, 0.mm, 1200.mm, c.mm).to_mm }
+check 'chi tiết ở 50 mm và 950 mm (trong dải 100 mm) dời nguyên khối theo mép', near(sh3.call(50), 0.0, 0.05) && near(sh3.call(950), 200.0, 0.05), [sh3.call(50), sh3.call(950)].inspect
+k = V::Rebuild.stretch_knots([], 0.mm, 300.mm, 0.mm, 400.mm)
+sh4 = ->(c) { V::Rebuild.knot_shift(k, 0.mm, 300.mm, 0.mm, 400.mm, c.mm).to_mm }
+check 'tấm quá ngắn (còn dưới 150 mm ở giữa): bỏ dải 100 mm, vẫn nhận đủ phần tăng', near(sh4.call(300), 100.0, 0.05) && near(sh4.call(150), 50.0, 0.05), [sh4.call(150), sh4.call(300)].inspect
 
 # Khối lẻ nằm giữa vách (qua điểm giữa) di chuyển nguyên khối, không bị kéo giãn.
 c = cab('top_mode' => 'rails')
@@ -583,45 +595,6 @@ dt.layout.split(dt.layout.regions.first['id'], 'vertical', 0.5); dt.commit(v)
 d0 = doors_of_test(c).first
 V::Operations.apply_opening_metadata(d0, 'right')
 check 'bản lề phải cách hông và mọi hồi xa (400 mm): vẫn báo lỗi', V::Links.problems(shell(c), [d0]).length == 1, V::Links.problems(shell(c), [d0]).inspect
-
-puts '== 17. Nút Scale VGD: nhập Rộng/Sâu/Cao rồi áp dụng =='
-check 'có Resize.run', V.const_defined?(:Resize)
-c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
-reselect(c)
-UI.next_input = ['1000', '560', '2000']
-UI.inputbox_calls.clear
-UI.msgs.clear
-V::Resize.run
-check 'hộp nhập hiện kích thước hiện tại 800 x 560 x 2000', UI.inputbox_calls.last && UI.inputbox_calls.last[1] == ['800.0', '560.0', '2000.0'], UI.inputbox_calls.last.inspect
-check 'tủ co giãn đúng 1000 x 560 x 2000', dims(c) == [1000.0, 560.0, 2000.0], dims(c).inspect
-check 'tủ hết trạng thái Scale, hông phải dời tới 1000', V::Rebuild.scale_of(c).nil? && near(bb(part(c, 'Hông Phải'))[3], 1000)
-check 'không có hộp thoại lỗi', msgs_with('không').empty? && UI.msgs.empty?, UI.msgs.inspect
-c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
-reselect(c)
-UI.next_input = ['800', '560', '2300']
-V::Resize.run
-check 'đổi riêng chiều cao: 800 x 560 x 2300', dims(c) == [800.0, 560.0, 2300.0], dims(c).inspect
-c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
-reselect(c)
-before = dims(c)
-UI.next_input = false
-V::Resize.run
-check 'bấm Hủy: không đổi gì', dims(c) == before && V::Rebuild.scale_of(c).nil?
-UI.next_input = ['abc', '560', '2000']
-UI.msgs.clear
-V::Resize.run
-check 'nhập chữ: báo lỗi, không đổi', dims(c) == before && UI.msgs.any? { |m| m.include?('số') }, UI.msgs.inspect
-UI.next_input = ['800', '-5', '2000']
-UI.msgs.clear
-V::Resize.run
-check 'số âm: báo lỗi, không đổi', dims(c) == before && !UI.msgs.empty?, UI.msgs.inspect
-Sketchup.active_model.selection.clear
-UI.msgs.clear
-V::Resize.run
-check 'không chọn tủ: nhắc chọn tủ', UI.msgs.last.to_s.include?('chọn'), UI.msgs.inspect
-check 'nút Scale VGD có trên thanh công cụ', V.instance_variable_get(:@toolbar).nil? || V::TOOLBAR_BUTTONS.any? { |b| b[0] == 'resize' }
-check 'icon nút Scale VGD tồn tại (24 và 32 px)', V.icon_file('resize', 24) && V.icon_file('resize', 32)
-
 
 puts "\n== Kết quả test_stretch: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
 $fail.each { |x| puts "  - #{x}" }
