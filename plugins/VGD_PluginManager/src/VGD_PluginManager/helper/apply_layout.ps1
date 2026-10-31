@@ -618,30 +618,34 @@ function Invoke-Apply($step, [string]$backupRoot) {
 $script:logPath = Join-Path $env:APPDATA 'SketchUp\VGD_PluginManager\migrator.log'
 Write-Log ('bat dau: PowerShell ' + $PSVersionTable.PSVersion + ', job=' + $Job)
 try {
-    $job = Read-Json $Job
+    $jobData = Read-Json $Job
 } catch {
     Write-Log ('LOI doc file job: ' + $_.Exception.Message)
     exit 1
 }
-if ($job['log']) { $script:logPath = [string]$job['log'] }
-Write-Log ('da doc job: id=' + $job['id'] + ', cho SketchUp pid=' + $job['sketchup_pid'] + ', so buoc=' + @($job['steps']).Count + ', mo lai=' + $job['restart'])
-$id = [string]$job['id']
-$hostPid = [int]$job['sketchup_pid']
-$resultPath = [string]$job['result']
-$backupRoot = [string]$job['backup_dir']
-$restart = [bool]$job['restart']
+if ($jobData['log']) { $script:logPath = [string]$jobData['log'] }
+Write-Log ('da doc job: id=' + $jobData['id'] + ', cho SketchUp pid=' + $jobData['sketchup_pid'] + ', so buoc=' + @($jobData['steps']).Count + ', mo lai=' + $jobData['restart'])
+$id = [string]$jobData['id']
+$hostPid = [int]$jobData['sketchup_pid']
+$resultPath = [string]$jobData['result']
+$backupRoot = [string]$jobData['backup_dir']
+$restart = [bool]$jobData['restart']
+if ($hostPid -le 0 -or -not $id) {
+    Write-Log 'LOI: file job thieu id hoac pid cua SketchUp, dung lai.'
+    exit 1
+}
 
 $exe = $null
 try { $exe = (Get-Process -Id $hostPid -ErrorAction Stop).Path } catch { }
 
 $years = @()
-foreach ($s in @($job['steps'])) { $years += [string]$s['year'] }
+foreach ($s in @($jobData['steps'])) { $years += [string]$s['year'] }
 $years = @($years | Select-Object -Unique)
 
 # Cho SketchUp (tien trinh goc va cac ban lien quan) thoat hoan toan
 $waited = 0
 while ($true) {
-    if (-not (Test-JobCurrent ([string]$job['job_file']) $id)) { exit 0 }
+    if (-not (Test-JobCurrent ([string]$jobData['job_file']) $id)) { exit 0 }
     $busy = [bool](Get-Process -Id $hostPid -ErrorAction SilentlyContinue)
     foreach ($y in $years) { if (Test-Running $y) { $busy = $true } }
     if (-not $busy) { break }
@@ -652,7 +656,7 @@ while ($true) {
 Write-Log 'SketchUp da dong, bat dau thuc hien'
 Start-Sleep -Seconds 2
 
-foreach ($step in @($job['steps'])) {
+foreach ($step in @($jobData['steps'])) {
     try {
         switch ([string]$step['op']) {
             'capture' { Invoke-Capture $step }
@@ -664,7 +668,7 @@ foreach ($step in @($job['steps'])) {
     }
 }
 
-try { Remove-Item -LiteralPath ([string]$job['job_file']) -Force -ErrorAction SilentlyContinue } catch { }
+try { Remove-Item -LiteralPath ([string]$jobData['job_file']) -Force -ErrorAction SilentlyContinue } catch { }
 try {
     $dirOfResult = Split-Path -Parent $resultPath
     New-Item -ItemType Directory -Force -Path $dirOfResult | Out-Null
