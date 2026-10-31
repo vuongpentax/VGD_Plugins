@@ -1,5 +1,7 @@
 # Nơi SketchUp lưu phím tắt và layout
 
+> **Tình trạng (beta.16):** đây là tư liệu khảo sát. VGD_PluginManager **không còn dùng** các thông tin này: tính năng ghi phím tắt/layout đã bị gỡ vì làm SketchUp 2024 văng khi khởi động (nguyên nhân chưa rõ, xem `HANDOFF.md` mục 6). Mọi suy đoán trong tài liệu vẫn chưa được kiểm chứng trừ chỗ ghi "đã xác nhận".
+
 Khảo sát ngày 2026-10-30 trên một máy Windows 10 có SketchUp 2022 và 2024, bằng `reg query`, `reg export` và liệt kê tên khóa trong file JSON. Chỉ ghi kết quả quan sát được; phần suy đoán được đánh dấu rõ. Chưa kiểm tra trên máy khác hay phiên bản SketchUp khác.
 
 ## 1. Phím tắt (đã xác nhận, cả 2022 và 2024)
@@ -64,7 +66,7 @@ Khảo sát ngày 2026-10-30 trên một máy Windows 10 có SketchUp 2022 và 2
 2. **Suy đoán (chưa xác nhận):** ID thanh công cụ Ruby được cấp theo thứ tự tạo, bắt đầu từ 59648 (trong JSON hiện tại 12 thanh công cụ có ID liên tiếp 59648 đến 59659 ở cả hai bản). Nếu đúng, tắt một plugin làm dịch ID của các plugin nạp sau nó, và vị trí gắn nhầm thanh công cụ.
 3. Cách kiểm chứng: so sánh ID của cùng một thanh công cụ ở hai lần chạy với bộ plugin khác nhau.
 
-## 5. Hệ quả cho plugin VGD_PluginManager
+## 5. Hệ quả cho plugin VGD_PluginManager (lịch sử, đã gỡ)
 
 1. Code chuyển phím tắt và thanh công cụ ở bản beta.4 trở về trước dùng khóa registry sai, nên không có tác dụng. Cần làm lại theo mục 1 (phím tắt) và mục 2, 3 (layout).
 2. SketchUp ghi đè các file này khi thoát, nên chỉ ghi được khi SketchUp đã đóng.

@@ -2,15 +2,11 @@
 
 Dành cho máy Windows có SketchUp 2022 và 2024. Mọi mục dưới đây **chưa được kiểm chứng** trong SketchUp thật; tick từng mục khi đã làm và ghi kết quả.
 
-Chuẩn bị: cài `VGD_PluginManager_1.0.0-beta.4.rbz` bằng Extension Manager ở cả hai bản, khởi động lại. Nên thử trên máy/tài khoản có dữ liệu có thể mất được, hoặc sao lưu thư mục `%APPDATA%\SketchUp` trước.
-
-## 0. Nơi SketchUp lưu dữ liệu (đã khảo sát)
-
-Khóa registry `...\Shortcuts` và `...\Toolbars` mà các bản trước dùng **không tồn tại**. Phím tắt nằm trong `SharedPreferences.json`, layout nằm trong registry `Workspace`/`RubyWorkspace` (2022) và `PrivatePreferences.json` (2022 và 2024). Chi tiết và phần còn chưa xác nhận: `docs/NOI_LUU_CAI_DAT_SKETCHUP.md`.
+Chuẩn bị: cài `VGD_PluginManager_1.0.0-beta.16.rbz` (hoặc bản mới nhất) bằng Extension Manager ở cả hai bản, khởi động lại. Nên thử trên máy/tài khoản có dữ liệu có thể mất được, hoặc sao lưu thư mục `%APPDATA%\SketchUp` trước.
 
 ## 1. Mở plugin
 
-Gỡ bản beta.3 (nếu có) trước khi cài beta.4.
+Gỡ bản cũ (file `vgd_plugin_migrator.rb` và thư mục `vgd_plugin_migrator` trong Plugins, nếu có) trước khi cài.
 
 1. Menu Plugins có một mục "VGD Plugin Manager"; thanh công cụ "VGD Plugin Manager" có một nút, icon rõ ở cỡ nhỏ, có tooltip.
 2. Ruby Console không có lỗi đỏ khi khởi động.
@@ -24,14 +20,14 @@ Gỡ bản beta.3 (nếu có) trước khi cài beta.4.
 3. Chuyển lần hai không tick "Ghi đè": mục đã có được bỏ qua.
 4. Plugin dùng cú pháp Ruby cũ (ví dụ `File.exists?`) có hiện cảnh báo tương thích.
 
-## 4. Xuất gói .rbz tổng
+## 3. Xuất gói .rbz tổng
 
 1. Xuất gói với vài plugin; mở file .rbz bằng phần mềm giải nén, thấy plugin và `vgd_bundle_manifest.json` (gói chỉ chứa plugin, không kèm phím tắt hay layout).
 2. Trên máy khác (hoặc bản khác), cài gói bằng Extension Manager: có chấp nhận không (gói không đăng ký SketchupExtension)?
 
-## 5. Bật/tắt plugin và bộ plugin
+## 4. Bật/tắt plugin và bộ plugin
 
-0. Nút "Mở thư mục Plugins" mở Explorer đúng thư mục Plugins của bản SketchUp đang chạy; nút "Mở thư mục đã tắt" mở `Plugins\VGD_PluginManager\data\disabled` (tạo nếu chưa có).
+1. Nút "Mở thư mục Plugins" mở Explorer đúng thư mục Plugins của bản SketchUp đang chạy; nút "Mở thư mục đã tắt" mở `Plugins\VGD_PluginManager\data\disabled` (tạo nếu chưa có).
 
 1. Gạt nút tắt một plugin (không cần bấm thêm gì): nút chuyển sang trạng thái tắt, có thông báo cần khởi động lại; file nằm trong `...\SketchUp\Plugins\VGD_PluginManager\data\disabled\`.
 2. Khởi động lại: plugin không nạp, và **không có plugin nào trong `data\disabled` bị SketchUp nạp** (kiểm tra Ruby Console). Gạt bật lại, khởi động lại: plugin nạp bình thường.
@@ -45,14 +41,14 @@ Gỡ bản beta.3 (nếu có) trước khi cài beta.4.
 7. Tên plugin có ký tự đặc biệt (`<`, `&`) hiển thị đúng.
 8. Gỡ plugin bằng Extension Manager sẽ xóa luôn thư mục `data` (các plugin đã tắt): xác nhận hành vi này trên máy thử.
 
-## 6. Xuất/nhập bộ plugin ra file (mới ở beta.3)
+## 5. Xuất/nhập bộ plugin ra file
 
 1. Lưu ít nhất 2 bộ, bấm "Xuất các bộ ra file", chọn nơi lưu: file `.json` được tạo.
 2. Xóa một bộ, bấm "Nhập bộ từ file": bộ đã xóa quay lại.
 3. Nhập lại lần nữa khi bộ trùng tên: hộp thoại hỏi Yes (ghi đè) / No (giữ bộ hiện có) và kết quả đúng.
 4. Chọn một file `.json` bất kỳ không phải file bộ plugin: có báo "không đúng định dạng", không crash.
 
-## 7. Nhật ký lỗi (mới ở beta.3)
+## 6. Nhật ký lỗi
 
 Nhật ký ghi tại `%APPDATA%\SketchUp\VGD_PluginManager\migrator.log` (quá 512 KB thì đổi tên thành `.log.1`).
 
