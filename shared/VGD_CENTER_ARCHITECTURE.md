@@ -7,7 +7,7 @@ VGD Center 1.0.1 được đóng gói dưới dạng RBZ, dùng danh mục phiê
 - VGD Center là SketchUp extension có logo VGD trên toolbar và mục mở ở Extensions.
 - Catalog chính đặt tại `shared/vgd-center/catalog.json` trên nhánh `main`. RBZ đi kèm trong gói Center làm bản dự phòng khi GitHub không truy cập được.
 - Catalog `latest` hiển thị phiên bản mới nhất đã chọn cho mỗi plugin. Các bản beta và alpha được chấp nhận và phải ghi nhãn rõ trên giao diện.
-- Mỗi mục catalog dùng URL GitHub đã cho phép, dung lượng, SHA-256, tên extension và các thư mục cài đặt cố định theo ID plugin.
+- Mỗi mục catalog dùng URL GitHub đã cho phép, dung lượng, SHA-256, tên extension và đúng hai đường dẫn cài đặt (loader và thư mục). Plugin có sẵn dùng danh sách cố định `PLUGIN_LAYOUTS` trong `main.rb`; plugin mới khai báo trong catalog và được nhận nếu đạt quy tắc ở mục "Plugin mới".
 - VGD Center tải RBZ bằng SketchUp HTTP API, so dung lượng và SHA-256, kiểm tra danh sách đường dẫn ZIP, sao lưu file sẽ bị thay, rồi gọi `Sketchup.install_from_archive`.
 - Nếu SketchUp báo lỗi khi cài, Center khôi phục những file đã sao lưu. Khi cài xong, Center báo người dùng lưu model và khởi động lại SketchUp.
 - Center không tự cài lại chính nó. Người dùng cài RBZ Center qua Extension Manager.
@@ -24,6 +24,19 @@ Các URL hiện trỏ tới asset của từng GitHub Release đã chọn. Gói 
 2. Đưa asset vào GitHub Release hoặc commit gói trong repo.
 3. Cập nhật `shared/vgd-center/catalog.json` bằng URL tải, phiên bản, kênh, dung lượng và SHA-256 đã xác minh.
 4. Đưa catalog lên `main`; sau đó Center mới nhận thấy phiên bản.
+
+## Plugin mới
+
+Từ VGD Center 1.2.0, plugin có `id` mới không cần cập nhật Center nếu mục catalog đạt các quy tắc sau (xem `validate_plugin_layout`):
+
+- `id` dạng `[a-z][a-z0-9_]` (2–40 ký tự), khác `center`.
+- `extension_name` bắt đầu bằng `VGD ` và không trùng tên plugin khác.
+- `allowed_paths` gồm đúng hai đường dẫn: loader `VGD_*.rb` hoặc `vgd_*.rb` và thư mục cùng tên (không phân biệt hoa thường), không trùng đường dẫn của plugin khác hoặc của Center.
+- Các kiểm tra khác (phiên bản và kênh, URL, dung lượng, SHA-256) giống plugin có sẵn.
+
+Ý nghĩa bảo mật: một mục catalog chỉ ghi được vào đúng loader và thư mục của chính nó, không ghi đè plugin khác. Catalog vẫn là nguồn tin cậy: ai sửa được catalog có thể đưa một plugin `VGD_*` mới lên máy người dùng, nên `main` phải được bảo vệ như nguồn phát hành.
+
+Đổi lại, plugin mới dùng icon hộp mặc định, không có nút Hướng dẫn và không có cảnh báo gỡ riêng (trừ `uninstall_note` tùy chọn trong catalog). Muốn có các thứ đó thì cần cập nhật Center.
 
 ## Tệp chính
 

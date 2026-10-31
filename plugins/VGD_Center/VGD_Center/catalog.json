@@ -6,22 +6,29 @@
       "id": "dim",
       "name": "VGD Dim",
       "extension_name": "VGD Dim",
-      "version": "4.0.0",
+      "version": "4.0.1",
       "release_channel": "stable",
       "description": "Đo Dim thủ công và Smart Dim trong Boundary, có vùng chi tiết riêng.",
       "icon": "dim",
       "minimum_sketchup": "22.0.0",
       "download": {
-        "filename": "VGD_Dim_v4.0.0.rbz",
-        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v4.0.0/VGD_Dim_v4.0.0.rbz",
-        "size": 53862,
-        "sha256": "2324032ff05afe4d37737dbf87e72679d49b69bbf70addce78e8608e2dc66564"
+        "filename": "VGD_Dim_v4.0.1.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v4.0.1/VGD_Dim_v4.0.1.rbz",
+        "size": 93502,
+        "sha256": "58d360563f94960d3f0fb453dc04bae3cdfe8d0ddbd31f577ad8eb5efc7e84ba"
       },
       "allowed_paths": [
         "vgd_dim.rb",
         "VGD_Dim/"
       ],
       "releases": [
+        {
+          "version": "4.0.1",
+          "release_channel": "stable",
+          "published_at": "2026-10-28",
+          "tag": "vgd-dim-v4.0.1",
+          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-dim-v4.0.1"
+        },
         {
           "version": "4.0.0",
           "release_channel": "stable",
@@ -258,6 +265,35 @@
           "published_at": "2026-10-16",
           "tag": "vgd-reference-v1.0.1",
           "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-reference-v1.0.1"
+        }
+      ]
+    },
+    {
+      "id": "plugin_manager",
+      "name": "VGD Plugin Manager",
+      "extension_name": "VGD Plugin Manager",
+      "version": "1.0.0-beta.17",
+      "release_channel": "beta",
+      "description": "Bật/tắt plugin theo bộ, chuyển plugin giữa các phiên bản SketchUp, xuất gói .rbz tổng.",
+      "icon": "plugin_manager",
+      "minimum_sketchup": "22.0.0",
+      "download": {
+        "filename": "VGD_PluginManager_1.0.0-beta.17.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-plugin-manager-v1.0.0-beta.17/VGD_PluginManager_1.0.0-beta.17.rbz",
+        "size": 57741,
+        "sha256": "3603bef7f20d92fd048f89d1c775d27a20c78b4294baa669dac75b7446336d6a"
+      },
+      "allowed_paths": [
+        "VGD_PluginManager.rb",
+        "VGD_PluginManager/"
+      ],
+      "releases": [
+        {
+          "version": "1.0.0-beta.17",
+          "release_channel": "beta",
+          "published_at": "2026-10-31",
+          "tag": "vgd-plugin-manager-v1.0.0-beta.17",
+          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-plugin-manager-v1.0.0-beta.17"
         }
       ]
     },

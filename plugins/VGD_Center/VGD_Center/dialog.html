@@ -377,7 +377,7 @@
         const label = product.action === 'update' ? tr('Cập nhật', 'Update') : product.action === 'install' ? tr('Cài đặt', 'Install') : product.installed ? tr('Đã cài', 'Installed') : tr('Không tương thích', 'Incompatible');
         const primary = product.action === 'update' || product.action === 'install';
         const uninstall = product.installed ? `<button class="btn small" data-action="uninstall_plugin" data-id="${escapeHtml(product.id)}">${tr('Gỡ cài đặt', 'Uninstall')}</button>` : '';
-        const guide = `<button class="btn small" data-action="open_guide" data-id="${escapeHtml(product.id)}"><svg><use href="#i-book"/></svg>${tr('Hướng dẫn', 'Guide')}</button>`;
+        const guide = product.guide === false ? '' : `<button class="btn small" data-action="open_guide" data-id="${escapeHtml(product.id)}"><svg><use href="#i-book"/></svg>${tr('Hướng dẫn', 'Guide')}</button>`;
         return `<div class="plugin-actions">${guide}<button class="btn ${primary ? 'primary ' : ''}small" data-action="install_plugin" data-id="${escapeHtml(product.id)}" ${disabled ? 'disabled' : ''}>${label}</button>${uninstall}</div>`;
       };
       const rowMarkup = product => {

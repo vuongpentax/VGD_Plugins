@@ -1,13 +1,13 @@
-# VGD Center 1.0.10
+# VGD Center 1.2.0
 
-VGD Center quản lý các plugin VGD trong SketchUp. Danh mục hiển thị phiên bản mới nhất đã được chọn, bao gồm cả beta và alpha. Cài gói phát hành VGD Center 1.0.10 qua Extension Manager; RBZ không được lưu trong thư mục source này. Mở VGD Center bằng nút trên toolbar hoặc menu Extensions.
+VGD Center quản lý các plugin VGD trong SketchUp. Danh mục hiển thị phiên bản mới nhất đã được chọn, bao gồm cả beta và alpha. Cài gói phát hành VGD Center 1.2.0 qua Extension Manager; RBZ không được lưu trong thư mục source này. Mở VGD Center bằng nút trên toolbar hoặc menu Extensions.
 
 ## Tính năng
 
 - Kho plugin có nhãn stable, beta hoặc alpha cho từng plugin.
 - Đọc phiên bản extension đang cài trong SketchUp.
 - Tải RBZ, xác minh dung lượng và SHA-256 trước khi cài.
-- Chỉ ghi các đường dẫn plugin VGD đã được cho phép trong mã nguồn.
+- Chỉ ghi đúng hai đường dẫn của từng plugin VGD (loader và thư mục cùng tên). Plugin có sẵn dùng danh sách trong mã nguồn; plugin mới theo quy tắc ở mục "Thêm plugin mới vào kho".
 - Sao lưu file bị thay và khôi phục nếu SketchUp cài gói thất bại.
 - Nhắc lưu model và khởi động lại SketchUp sau khi cài hoặc cập nhật.
 - Cài nhanh tất cả plugin VGD còn thiếu từ mục Tổng quan.
@@ -33,4 +33,8 @@ Catalog hiển thị các phiên bản VGD hiện hành; bản beta và alpha đ
 
 ## Mã nguồn và phát hành
 
-Thư mục này chứa mã nguồn và tài nguyên VGD Center 1.0.10, không kèm RBZ hoặc source ZIP tạo sẵn. Ghi chú phát hành từ 1.0.0 đến 1.0.10 được giữ trong các file RELEASE_NOTES_v*.md. Script đóng gói cũ phụ thuộc shared/vgd-center và các package của repo nguồn nên không được chuyển trong đợt này.
+Thư mục này chứa mã nguồn và tài nguyên VGD Center 1.2.0, không kèm RBZ hoặc source ZIP tạo sẵn. Ghi chú phát hành được giữ trong các file RELEASE_NOTES_v*.md. Đóng gói bằng `python plugins/VGD_Center/dev/package.py` (từ thư mục gốc repo). Test: `ruby dev/test_center.rb` (chạy từ thư mục `plugins/VGD_Center`), dùng stub SketchUp trong `dev/stub`.
+
+## Thêm plugin mới vào kho
+
+Từ 1.2.0, plugin mới không cần cập nhật Center. Cần: (1) GitHub Release có file `.rbz`; (2) một mục trong `shared/vgd-center/catalog.json` với `id` dạng `ten_plugin`, `extension_name` bắt đầu bằng `VGD `, `allowed_paths` gồm đúng hai đường dẫn `["VGD_Ten.rb", "VGD_Ten/"]` (hoặc `vgd_ten.rb`), cùng URL, dung lượng và SHA-256 của file. Đường dẫn không được trùng plugin khác. Mục tùy chọn `uninstall_note` hiện ghi chú khi gỡ. Plugin mới dùng icon hộp mặc định và không có nút Hướng dẫn; muốn icon riêng hoặc trang hướng dẫn thì cần cập nhật Center.

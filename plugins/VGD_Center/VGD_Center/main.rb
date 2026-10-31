@@ -8,7 +8,7 @@ require 'securerandom'
 
 module VGD
   module Center
-    VERSION = '1.1.0'.freeze
+    VERSION = '1.2.0'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
@@ -24,6 +24,11 @@ module VGD
       'plugin_manager' => ['VGD Plugin Manager', ['VGD_PluginManager.rb', 'VGD_PluginManager/']],
       'center' => ['VGD Center', ['VGD_Center.rb', 'VGD_Center/']]
     }.freeze
+    # Plugin chưa có trong PLUGIN_LAYOUTS vẫn được nhận nếu catalog khai báo cấu trúc hợp lệ (xem validate_plugin_layout).
+    PLUGIN_ID_PATTERN = /\A[a-z][a-z0-9_]{1,39}\z/
+    EXTENSION_NAME_PATTERN = /\AVGD [A-Za-z0-9][A-Za-z0-9 ._-]{0,59}\z/
+    LOADER_PATTERN = /\A(?:VGD_|vgd_)[A-Za-z0-9_]{1,60}\.rb\z/
+    MAX_UNINSTALL_NOTE = 400
     MAX_PACKAGE_BYTES = 100 * 1024 * 1024
     MAX_ARCHIVE_FILES = 5000
 
@@ -105,7 +110,7 @@ module VGD
 
       def open_guide(plugin_id)
         id = plugin_id.to_s
-        return UI.messagebox('Không tìm thấy hướng dẫn cho plugin này.') unless ALLOWED_IDS.include?(id)
+        return UI.messagebox('Không tìm thấy hướng dẫn cho plugin này.') unless id.match?(PLUGIN_ID_PATTERN)
 
         @guide_dialogs ||= {}
         if @guide_dialogs[id] && @guide_dialogs[id].visible?
@@ -113,13 +118,14 @@ module VGD
           return
         end
 
-        path = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'guides', "#{id}.html")
-        return UI.messagebox('Tài liệu hướng dẫn chưa có trong bản VGD Center này.') unless File.file?(path)
+        path = guide_path(id)
+        return UI.messagebox('Tài liệu hướng dẫn chưa có trong bản VGD Center này.') unless path && File.file?(path)
 
-        title = case id
-                when 'bim_lite' then 'VGD BIM Lite'
-                when 'image_importer' then 'VGD Image Importer'
-                else "VGD #{id.split('_').map(&:capitalize).join(' ')}"
+        product = (@catalog || read_bundled_catalog)['products'].find { |item| item['id'] == id }
+        title = if product
+                  product['name']
+                else
+                  "VGD #{id.split('_').map(&:capitalize).join(' ')}"
                 end
         guide = UI::HtmlDialog.new(
           dialog_title: "Hướng dẫn · #{title}",
@@ -139,6 +145,12 @@ module VGD
         guide.show
       rescue StandardError => error
         UI.messagebox("Không thể mở hướng dẫn.\n#{error.message}")
+      end
+
+      # Trang hướng dẫn chỉ có cho plugin đã được đóng sẵn trong Center; plugin mới chỉ có trong catalog thì không có.
+      def guide_path(id)
+        return nil unless id.to_s.match?(PLUGIN_ID_PATTERN)
+        File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'guides', "#{id}.html")
       end
 
       def refresh_catalog
@@ -253,17 +265,18 @@ module VGD
         return notify('error', 'Đang có thao tác', 'Hãy đợi thao tác hiện tại hoàn tất.') if @busy
         id = plugin_id.to_s
         product = (@catalog || read_bundled_catalog)['products'].find { |item| item['id'] == id }
-        return notify('error', 'Plugin không hợp lệ', 'Không tìm thấy plugin trong danh mục VGD.') unless product && ALLOWED_IDS.include?(id)
+        return notify('error', 'Plugin không hợp lệ', 'Không tìm thấy plugin trong danh mục VGD.') unless product
         return notify('info', 'Plugin chưa được cài', "#{product['name']} hiện không có trên máy này.") unless find_installed_extension(product) || installed_version_for(id)
 
         plugin_root = File.expand_path(Sketchup.find_support_file('Plugins'))
-        answer = UI.messagebox("Gỡ #{product['name']} khỏi SketchUp?\n\nCác tệp của plugin sẽ bị xóa. Hãy khởi động lại SketchUp sau khi gỡ.#{uninstall_warning(id, plugin_root)}", MB_YESNO)
+        answer = UI.messagebox("Gỡ #{product['name']} khỏi SketchUp?\n\nCác tệp của plugin sẽ bị xóa. Hãy khởi động lại SketchUp sau khi gỡ.#{uninstall_warning(id, plugin_root, product)}", MB_YESNO)
         return unless answer == IDYES
 
         backup_dir = Dir.mktmpdir('vgd-center-uninstall-')
         moved = []
         begin
-          PLUGIN_LAYOUTS.fetch(id)[1].each do |listed_path|
+          # allowed_paths đã được validate_catalog kiểm tra (khớp danh sách có sẵn, hoặc theo quy tắc plugin mới).
+          product['allowed_paths'].each do |listed_path|
             relative = listed_path.sub(%r{/\z}, '')
             target = safe_target(plugin_root, relative)
             next unless File.exist?(target) || File.symlink?(target)
@@ -298,13 +311,22 @@ module VGD
         end
       end
 
-      # VGD Plugin Manager cất plugin đã tắt trong VGD_PluginManager/data/disabled, nên gỡ nó sẽ xóa luôn các plugin đó
-      def uninstall_warning(id, plugin_root)
-        return '' unless id == 'plugin_manager'
-        disabled = File.join(plugin_root, 'VGD_PluginManager', 'data', 'disabled')
-        return '' unless File.directory?(disabled) && !Dir.children(disabled).empty?
+      # Thêm cảnh báo riêng của plugin vào hộp thoại gỡ: cảnh báo kiểm tra thật cho Plugin Manager, và ghi chú
+      # uninstall_note (nếu catalog có) cho mọi plugin.
+      def uninstall_warning(id, plugin_root, product = nil)
+        parts = []
+        parts << disabled_plugins_warning(plugin_root) if id == 'plugin_manager'
+        note = product && product['uninstall_note']
+        parts << note if note
+        parts.compact.map { |part| "\n\n#{part}" }.join
+      end
 
-        "\n\nCẢNH BÁO: đang có plugin được tắt và cất trong #{disabled}. Gỡ plugin này sẽ xóa luôn các plugin đó. " \
+      # VGD Plugin Manager cất plugin đã tắt trong VGD_PluginManager/data/disabled, nên gỡ nó sẽ xóa luôn các plugin đó
+      def disabled_plugins_warning(plugin_root)
+        disabled = File.join(plugin_root, 'VGD_PluginManager', 'data', 'disabled')
+        return nil unless File.directory?(disabled) && !Dir.children(disabled).empty?
+
+        "CẢNH BÁO: đang có plugin được tắt và cất trong #{disabled}. Gỡ plugin này sẽ xóa luôn các plugin đó. " \
           'Hãy bật lại chúng bằng VGD Plugin Manager trước khi gỡ.'
       end
 
@@ -378,20 +400,28 @@ module VGD
 
         ids = []
         warnings = []
+        # Đường dẫn và tên extension đã bị plugin có sẵn chiếm; plugin mới không được trùng.
+        claimed = {
+          paths: PLUGIN_LAYOUTS.values.flat_map { |layout| layout[1].map(&:downcase) },
+          names: PLUGIN_LAYOUTS.values.map { |layout| layout[0].downcase }
+        }
         normalized = products.each_with_object([]) do |product, valid_products|
           # Products without a release are listed on the website only; skip them silently.
           next if product.is_a?(Hash) && product['lifecycle'] == 'in_development'
           id = product.is_a?(Hash) ? product['id'].to_s : ''
           begin
             raise 'mục plugin không hợp lệ' unless product.is_a?(Hash)
-            unless ALLOWED_IDS.include?(id)
-              warnings << "Bỏ qua plugin chưa được Center hỗ trợ: #{id.empty? ? '(không có ID)' : id}"
+            known = ALLOWED_IDS.include?(id)
+            unless known || (id.match?(PLUGIN_ID_PATTERN) && id != 'center')
+              warnings << "Bỏ qua plugin có ID không hợp lệ: #{id.empty? ? '(không có ID)' : id}"
               next
             end
             raise "trùng plugin: #{id}" if ids.include?(id)
             ids << id
-            expected_name, expected_paths = PLUGIN_LAYOUTS.fetch(id)
-            raise "tên extension không hợp lệ: #{id}" unless product['extension_name'] == expected_name
+            if known
+              expected_name, expected_paths = PLUGIN_LAYOUTS.fetch(id)
+              raise "tên extension không hợp lệ: #{id}" unless product['extension_name'] == expected_name
+            end
 
             version = product['version'].to_s
             version_match = version.match(/\A(\d+)\.(\d+)\.(\d+)(?:-(alpha|beta)(?:\.(\d+))?)?\z/)
@@ -416,7 +446,13 @@ module VGD
             raise "SHA-256 không hợp lệ: #{id}" unless sha.match?(/\A[0-9a-f]{64}\z/)
             paths = product['allowed_paths']
             raise "thiếu đường dẫn gói được phép: #{id}" unless paths.is_a?(Array) && !paths.empty?
-            raise "cấu trúc gói không hợp lệ: #{id}" unless paths == expected_paths
+            if known
+              raise "cấu trúc gói không hợp lệ: #{id}" unless paths == expected_paths
+            else
+              validate_plugin_layout(product, claimed)
+            end
+            note = clean_uninstall_note(product['uninstall_note'])
+            note ? product['uninstall_note'] = note : product.delete('uninstall_note')
 
             valid_products << product
           rescue StandardError => error
@@ -425,6 +461,38 @@ module VGD
         end
         @catalog_warning = warnings.empty? ? nil : warnings.first(3).join(' · ')
         catalog.merge('products' => normalized)
+      end
+
+      # Plugin mới chỉ được ghi đúng hai đường dẫn: loader VGD_*.rb / vgd_*.rb và thư mục cùng tên (không phân biệt hoa thường).
+      # Không được trùng đường dẫn hay tên extension của plugin khác, nên một mục catalog không thể ghi đè plugin có sẵn.
+      def validate_plugin_layout(product, claimed)
+        id = product['id'].to_s
+        name = product['extension_name'].to_s
+        raise "tên extension không hợp lệ: #{id}" unless name.match?(EXTENSION_NAME_PATTERN)
+
+        paths = product['allowed_paths']
+        unless paths.length == 2 && paths.all? { |path| path.is_a?(String) && safe_relative_path?(path.chomp('/')) }
+          raise "cấu trúc gói không hợp lệ: #{id}"
+        end
+        loader, folder = paths
+        raise "loader không hợp lệ: #{id}" unless loader.match?(LOADER_PATTERN)
+        unless folder.end_with?('/') && folder.chomp('/').downcase == File.basename(loader, '.rb').downcase
+          raise "thư mục plugin không khớp loader: #{id}"
+        end
+
+        keys = [loader.downcase, folder.downcase]
+        raise "đường dẫn trùng plugin khác: #{id}" if keys.any? { |key| claimed[:paths].include?(key) }
+        raise "tên extension trùng plugin khác: #{id}" if claimed[:names].include?(name.downcase)
+
+        claimed[:paths].concat(keys)
+        claimed[:names] << name.downcase
+      end
+
+      # Ghi chú hiện trong hộp thoại gỡ cài đặt. Bỏ ký tự điều khiển; ghi chú quá dài hoặc rỗng thì bỏ qua.
+      def clean_uninstall_note(note)
+        return nil unless note.is_a?(String)
+        text = note.gsub(/[\x00-\x09\x0B-\x1F\x7F]/, '').strip
+        text.empty? || text.length > MAX_UNINSTALL_NOTE ? nil : text
       end
 
       def current_products
@@ -448,7 +516,8 @@ module VGD
               id: product['id'], name: product['name'], description: product['description'],
               version: product['version'], release_channel: product['release_channel'], icon: product['icon'], minimum_sketchup: product['minimum_sketchup'],
               installed: installed, installed_version: installed_version, action: action,
-              compatible: min_ok, filename: product.dig('download', 'filename')
+              compatible: min_ok, filename: product.dig('download', 'filename'),
+              guide: File.file?(guide_path(product['id']).to_s)
             }
           rescue StandardError => error
             errors << "#{product['id']}: #{error.message}"
