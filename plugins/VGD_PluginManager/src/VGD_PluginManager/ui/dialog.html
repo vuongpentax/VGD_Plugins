@@ -15,7 +15,8 @@
   <div class="note">Gạt nút để bật/tắt, thay đổi chỉ có hiệu lực sau khi khởi động lại SketchUp. Plugin bị tắt được cất vào thư mục riêng, không bị xóa. Cẩn thận: tắt plugin mà plugin khác cần có thể gây lỗi khi mở lại.</div>
   <div class="bar"><input type="text" id="q" placeholder="Tìm plugin..." oninput="drawToggle()">
     <button onclick="selAll(true)">Chọn hết đang hiện</button>
-    <button onclick="selAll(false)">Bỏ chọn hết</button></div>
+    <button onclick="selAll(false)">Bỏ chọn hết</button>
+    <button onclick="sketchup.pm_open_disabled()" title="Mở thư mục chứa các plugin đã tắt">Mở thư mục đã tắt</button></div>
   <div class="bar">
     <button class="danger" id="bulkOff" onclick="bulk('disable')">Tắt tất cả</button>
     <button class="primary" id="bulkOn" onclick="bulk('enable')">Bật tất cả</button>

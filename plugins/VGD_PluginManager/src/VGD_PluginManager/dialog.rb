@@ -110,6 +110,18 @@ module VGD
         end
       end
 
+      dlg.add_action_callback('pm_open_disabled') do |_c|
+        guard.call('Không mở được thư mục plugin đã tắt', push_toggle) do
+          dir = Toggle.disabled_dir
+          FileUtils.mkdir_p(dir)
+          if Sketchup.platform == :platform_win
+            Process.detach(Process.spawn('explorer.exe', dir.tr('/', '\\')))
+          else
+            UI.openURL("file://#{dir}")
+          end
+        end
+      end
+
       dlg.add_action_callback('pm_export_sets') do |_c|
         guard.call('Lỗi khi xuất bộ', push_toggle) do
           if Toggle.load_sets.empty?
