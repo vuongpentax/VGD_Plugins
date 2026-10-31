@@ -1,6 +1,6 @@
 # HANDOFF: VGD Plugin Manager (SketchUp, Ruby)
 
-Phiên bản hiện tại: **1.0.0-beta.16** (cập nhật 2026-10-31). Nhánh làm việc: `claude/plugin-migrator-beta3`.
+Phiên bản hiện tại: **1.0.0-beta.17** (cập nhật 2026-10-31). Nhánh làm việc: `claude/plugin-migrator-beta3`.
 Plugin chưa từng được kiểm chứng đầy đủ trong SketchUp thật (xem mục 4).
 
 ## 1. Mục tiêu và bối cảnh
@@ -128,3 +128,4 @@ ruby tests/run_test.rb src
 8. `beta.10`: gộp loader với thư mục khác tên (`linker.rb`).
 9. `beta.11` đến `beta.14`: chẩn đoán và sửa helper PowerShell, bỏ tự mở lại SketchUp, khóa việc ghi sau sự cố SketchUp văng.
 10. `beta.15`/`beta.16`: nút Mở thư mục Plugins và Mở thư mục đã tắt; gỡ hẳn layout và phím tắt.
+11. `beta.17`: **sửa lỗi beta.16 làm danh sách ở tab Chuyển plugin luôn trống**: lúc gỡ layout đã xóa nhầm callback `mg_list` (nằm xen giữa các callback layout). Đã khôi phục và thêm test hồi quy (`mg_list` trả danh sách; mọi lệnh `sketchup.*`/`send(...)` trong `dialog.html` đều có callback tương ứng). Bài học: sau khi xóa hàng loạt, đối chiếu tập callback trước/sau.

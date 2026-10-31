@@ -81,6 +81,20 @@ check 'bật tất cả khôi phục', status.call.values.uniq == ['on']
 dlg.cb('pm_bulk').call(nil, 'không phải json')
 check 'JSON hỏng không làm crash', dlg.scripts.last.include?('Lỗi khi tắt/bật hàng loạt')
 
+# --- Tab Chuyển plugin: danh sách phải hiện (hồi quy beta.16: callback mg_list từng bị xóa nhầm) ---
+p22 = File.join(fake, 'SketchUp/SketchUp 2022/SketchUp/Plugins')
+FileUtils.mkdir_p(File.join(p22, 'beta_tool'))
+File.write(File.join(p22, 'alpha_tool.rb'), "puts 1\n")
+File.write(File.join(p22, 'beta_tool.rb'), "puts 2\n")
+dlg.cb('mg_list').call(nil, { src: '2022', dst: '2024' }.to_json)
+check 'mg_list trả danh sách plugin của bản nguồn', dlg.scripts.last.include?('renderMigrate') && dlg.scripts.last.include?('alpha_tool') && dlg.scripts.last.include?('beta_tool')
+dlg.cb('mg_list').call(nil, { src: '2022', dst: '2022' }.to_json)
+check 'mg_list báo lỗi khi nguồn trùng đích', !dlg.scripts.last.include?('renderMigrate')
+html = File.read(File.join(build, 'VGD_PluginManager/ui/dialog.html'), encoding: 'UTF-8')
+called = html.scan(/sketchup\.([a-z_]+)\(/).flatten | html.scan(/send\('([a-z_]+)'/).flatten
+missing = called.reject { |c| dlg.cb(c) }
+check "mọi lệnh giao diện gọi đều có callback (thiếu: #{missing.join(', ')})", missing.empty?
+
 # --- Mở thư mục ---
 opened = []
 PM.define_singleton_method(:open_folder) { |dir| opened << dir }

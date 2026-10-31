@@ -165,6 +165,15 @@ module VGD
         end
       end
 
+      # ---- Tab Chuyển plugin ----
+      dlg.add_action_callback('mg_list') do |_c, json|
+        guard.call('Lỗi khi đọc danh sách plugin', push_result) do
+          o = JSON.parse(json)
+          err = check_versions(o['src'], o['dst'])
+          err ? push_result.call(err) : push_list.call(o['src'], o['dst'])
+        end
+      end
+
       dlg.add_action_callback('migrate') do |_c, json|
         guard.call('Lỗi khi chuyển', push_result) do
           opts = JSON.parse(json)
