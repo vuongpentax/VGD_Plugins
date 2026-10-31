@@ -84,6 +84,7 @@ check 'JSON hỏng không làm crash', dlg.scripts.last.include?('Lỗi khi tắ
 # --- Nhập phím tắt từ .dat qua callback ---
 spawned = []
 VGD::PluginManager::Layout.spawner = ->(args) { spawned << args }
+VGD::PluginManager::Layout.writes_enabled = true   # thử luồng lập việc dù mặc định đang khóa
 dat = File.join(Dir.tmpdir, "dlg_#{$$}.dat")
 File.binwrite(dat, "\xFF\xFE".b + "[Accelerator]\r\nCount=2\r\n0 0 0 H selectDollyTool:\r\n0 1 1 9 Camera/Next\r\n[File Locations]\r\nModels=C:\\x\r\n".encode('UTF-16LE').b)
 UI.open_path = nil
