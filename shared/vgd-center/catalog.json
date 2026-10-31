@@ -269,6 +269,35 @@
       ]
     },
     {
+      "id": "plugin_manager",
+      "name": "VGD Plugin Manager",
+      "extension_name": "VGD Plugin Manager",
+      "version": "1.0.0-beta.17",
+      "release_channel": "beta",
+      "description": "Bật/tắt plugin theo bộ, chuyển plugin giữa các phiên bản SketchUp, xuất gói .rbz tổng.",
+      "icon": "plugin_manager",
+      "minimum_sketchup": "22.0.0",
+      "download": {
+        "filename": "VGD_PluginManager_1.0.0-beta.17.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-plugin-manager-v1.0.0-beta.17/VGD_PluginManager_1.0.0-beta.17.rbz",
+        "size": 57741,
+        "sha256": "3603bef7f20d92fd048f89d1c775d27a20c78b4294baa669dac75b7446336d6a"
+      },
+      "allowed_paths": [
+        "VGD_PluginManager.rb",
+        "VGD_PluginManager/"
+      ],
+      "releases": [
+        {
+          "version": "1.0.0-beta.17",
+          "release_channel": "beta",
+          "published_at": "2026-10-31",
+          "tag": "vgd-plugin-manager-v1.0.0-beta.17",
+          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-plugin-manager-v1.0.0-beta.17"
+        }
+      ]
+    },
+    {
       "id": "cabinet_draw",
       "name": "VGD Cabinet Draw",
       "kind": "plugin",
