@@ -121,10 +121,10 @@ module VGD
       end
 
       WAIT_NOTE = 'Hãy lưu model rồi đóng SketchUp bình thường (File > Exit). ' \
-                  'Sau khi SketchUp đóng, plugin sẽ tự thực hiện và mở lại SketchUp.'
+                  'Sau khi SketchUp đóng, plugin tự thực hiện trong vài giây. Đợi khoảng 10 giây rồi tự mở lại SketchUp.'
 
       # Ghi job và chạy helper chờ nền. Job mới thay job cũ (helper cũ tự thoát). Trả về thông báo.
-      def self.schedule(steps, restart = true)
+      def self.schedule(steps, restart = false)
         return 'Tính năng này chỉ hỗ trợ Windows.' unless windows?
         return 'Không tìm thấy script helper của plugin, hãy cài lại gói.' unless File.exist?(HELPER)
         FileUtils.mkdir_p(jobs_dir)

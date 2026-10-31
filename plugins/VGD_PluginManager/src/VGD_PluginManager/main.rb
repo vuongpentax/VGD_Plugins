@@ -10,7 +10,7 @@ require File.join(File.dirname(__FILE__), 'linker')
 module VGD
   module PluginManager
 
-    VERSION         = '1.0.0-beta.12'
+    VERSION         = '1.0.0-beta.13'
     UI_DIR          = File.join(File.dirname(__FILE__), 'ui')
     ICON_DIR        = File.join(File.dirname(__FILE__), 'icons')
 

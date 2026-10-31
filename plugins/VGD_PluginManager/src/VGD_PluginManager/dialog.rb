@@ -163,7 +163,7 @@ module VGD
           parts = ['layout'] + (o['shortcuts'] ? ['shortcuts'] : [])
           ask = "Áp layout#{o['shortcuts'] ? ' và phím tắt' : ''} đã lưu của bộ \"#{name}\" vào SketchUp #{Layout.year}?\n\n" \
                 "Việc này chạy khi bạn đóng SketchUp, ghi đè layout hiện tại. " \
-                "Plugin tự sao lưu file cài đặt trước khi ghi và mở lại SketchUp sau đó."
+                "Plugin tự sao lưu file cài đặt trước khi ghi rồi bạn tự mở lại SketchUp sau vài giây."
           next unless UI.messagebox(ask, MB_YESNO) == IDYES
           push_toggle.call(Layout.schedule_apply(name, parts))
         end

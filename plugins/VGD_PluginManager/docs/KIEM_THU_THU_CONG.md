@@ -29,7 +29,7 @@ Gỡ bản beta.3 (nếu có) trước khi cài beta.4.
 Nên sao lưu trước: đóng SketchUp, chạy `reg export "HKCU\Software\SketchUp" "%USERPROFILE%\Desktop\SketchUp_registry_backup.reg" /y` và chép hai file `PrivatePreferences.json` (trong `%LOCALAPPDATA%\SketchUp\SketchUp <năm>\SketchUp`) và `SharedPreferences.json` (trong `%APPDATA%\SketchUp\SketchUp <năm>\SketchUp`). Plugin cũng tự sao lưu vào `...\Plugins\VGD_PluginManager\data\backups\` trước khi ghi.
 
 1. Tạo một bộ plugin (tab Bật/tắt), chỉnh vị trí vài thanh công cụ, gán thử một phím tắt.
-2. Bấm "Lưu layout" của bộ, xác nhận. Đóng SketchUp bằng File > Exit. Chờ vài giây: SketchUp tự mở lại. Mở hộp thoại: có thông báo kết quả và bộ hiện nhãn "Đã lưu layout + phím tắt (SketchUp <năm>)". Nếu không mở lại, xem `%APPDATA%\SketchUp\VGD_PluginManager\migrator.log`.
+2. Bấm "Lưu layout" của bộ, xác nhận. Đóng SketchUp bằng File > Exit. Chờ khoảng 10 giây rồi tự mở lại SketchUp. Mở hộp thoại: có thông báo kết quả và bộ hiện nhãn "Đã lưu layout + phím tắt (SketchUp <năm>)". Nếu không mở lại, xem `%APPDATA%\SketchUp\VGD_PluginManager\migrator.log`.
 3. Tắt một plugin bằng nút gạt, kéo vài thanh công cụ sang chỗ khác, thoát và mở lại: ghi nhận layout lộn xộn (nếu có) để so sánh.
 4. Bấm "Áp layout" của bộ, xác nhận, đóng SketchUp bằng File > Exit. SketchUp mở lại: **thanh công cụ có về đúng vị trí đã lưu không? Phím tắt có về đúng không?** Đây là điểm kiểm tra chính.
 4b. **Bản 2024:** làm các bước 1 đến 4 trên SketchUp 2024. Sau khi áp, so sánh `PrivatePreferences.json` trước và sau (dùng bản sao lưu trong `data\backups`, ví dụ bằng `fc` hoặc một công cụ so sánh): **chỉ các mục `QtRubyWorkspace\\...`, `Workspace\\...`, `ToolbarSettings` và hai khóa `DockWidgetState`, `ToolBarState` trong `MainWindow` được đổi**; mọi dòng khác giống hệt, kể cả `Geometry` và số dạng `X.0`.
@@ -44,7 +44,7 @@ Nên sao lưu trước: đóng SketchUp, chạy `reg export "HKCU\Software\Sketc
 Sao lưu trước như mục 3. Chuẩn bị: xuất một file `.dat` từ Window > Preferences > Shortcuts > Export (ở máy khác hoặc bản khác).
 
 1. Tab Chuyển plugin, mục Phím tắt, bấm "Nhập phím tắt từ file .dat", chọn file. Hộp xác nhận nêu đúng số phím tắt; chọn Không thì không có gì xảy ra.
-2. Chọn Có, đóng SketchUp bằng File > Exit. SketchUp tự mở lại. Vào Window > Preferences > Shortcuts: **danh sách phím tắt đúng bằng file** (kể cả phím của plugin và tên có tiếng Việt)? Mở hộp thoại: có thông báo kết quả.
+2. Chọn Có, đóng SketchUp bằng File > Exit. Chờ khoảng 10 giây rồi tự mở lại SketchUp. Vào Window > Preferences > Shortcuts: **danh sách phím tắt đúng bằng file** (kể cả phím của plugin và tên có tiếng Việt)? Mở hộp thoại: có thông báo kết quả.
 3. Thư mục `...\Plugins\VGD_PluginManager\data\backups\` có bản sao lưu `SharedPreferences.json` trước khi ghi.
 4. Kiểm tra file `SharedPreferences.json` sau khi ghi: các giá trị dạng `24.0`, `150.0`, `1.0` (ví dụ `AviExportFPS`, `PixelsPerInch`) **vẫn giữ dạng `.0`**, không thành `24`, `150`; không có file `.vgdtmp` sót lại.
 5. Thư mục thư viện (Models, Components, Materials...) trong Preferences > Files **không bị đổi** (mục `[File Locations]` của file `.dat` phải được bỏ qua).

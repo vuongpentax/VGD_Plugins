@@ -44,7 +44,7 @@ check 'helper được chạy một lần với PowerShell, Bypass, -File và -J
   spawned[0][0] == 'powershell.exe' && spawned[0].include?('Bypass') && spawned[0].include?('-File') && spawned[0].include?('-Job') &&
   spawned[0].last.end_with?('job.json'.tr('/', '\\')) 
 check 'job có pid, id, log, kết quả, sao lưu', job['sketchup_pid'] == Process.pid && job['id'].to_s.size == 16 &&
-  job['log'] == VGD::PluginManager::Log.path && job['result'] == L.result_file && job['backup_dir'] == L.backup_dir && job['restart'] == true
+  job['log'] == VGD::PluginManager::Log.path && job['result'] == L.result_file && job['backup_dir'] == L.backup_dir && job['restart'] == false
 step = job['steps'][0]
 check 'bước capture đúng năm, thư mục, và bỏ phần lạ', step == { 'op' => 'capture', 'year' => '2024', 'dir' => L.preset_dir('Render'), 'parts' => %w[layout shortcuts] }
 L.schedule_capture('Render', ['layout'])
