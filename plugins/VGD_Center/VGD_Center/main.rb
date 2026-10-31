@@ -12,7 +12,7 @@ module VGD
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
-    ALLOWED_IDS = %w[dim cabinet library image_importer scenes bim_lite reference].freeze
+    ALLOWED_IDS = %w[dim cabinet library image_importer scenes bim_lite reference plugin_manager].freeze
     PLUGIN_LAYOUTS = {
       'dim' => ['VGD Dim', ['vgd_dim.rb', 'VGD_Dim/']],
       'cabinet' => ['VGD Cabinet', ['vgd_cabinet.rb', 'VGD_Cabinet/']],
@@ -21,6 +21,7 @@ module VGD
       'scenes' => ['VGD Scenes', ['vgd_scenes.rb', 'vgd_scenes/']],
       'bim_lite' => ['VGD BIM Lite', ['vgd_bim_lite.rb', 'vgd_bim_lite/']],
       'reference' => ['VGD Reference', ['vgd_reference.rb', 'vgd_reference/']],
+      'plugin_manager' => ['VGD Plugin Manager', ['VGD_PluginManager.rb', 'VGD_PluginManager/']],
       'center' => ['VGD Center', ['VGD_Center.rb', 'VGD_Center/']]
     }.freeze
     MAX_PACKAGE_BYTES = 100 * 1024 * 1024
@@ -255,10 +256,10 @@ module VGD
         return notify('error', 'Plugin không hợp lệ', 'Không tìm thấy plugin trong danh mục VGD.') unless product && ALLOWED_IDS.include?(id)
         return notify('info', 'Plugin chưa được cài', "#{product['name']} hiện không có trên máy này.") unless find_installed_extension(product) || installed_version_for(id)
 
-        answer = UI.messagebox("Gỡ #{product['name']} khỏi SketchUp?\n\nCác tệp của plugin sẽ bị xóa. Hãy khởi động lại SketchUp sau khi gỡ.", MB_YESNO)
+        plugin_root = File.expand_path(Sketchup.find_support_file('Plugins'))
+        answer = UI.messagebox("Gỡ #{product['name']} khỏi SketchUp?\n\nCác tệp của plugin sẽ bị xóa. Hãy khởi động lại SketchUp sau khi gỡ.#{uninstall_warning(id, plugin_root)}", MB_YESNO)
         return unless answer == IDYES
 
-        plugin_root = File.expand_path(Sketchup.find_support_file('Plugins'))
         backup_dir = Dir.mktmpdir('vgd-center-uninstall-')
         moved = []
         begin
@@ -295,6 +296,16 @@ module VGD
         ensure
           FileUtils.remove_entry(backup_dir) if backup_dir && File.directory?(backup_dir)
         end
+      end
+
+      # VGD Plugin Manager cất plugin đã tắt trong VGD_PluginManager/data/disabled, nên gỡ nó sẽ xóa luôn các plugin đó
+      def uninstall_warning(id, plugin_root)
+        return '' unless id == 'plugin_manager'
+        disabled = File.join(plugin_root, 'VGD_PluginManager', 'data', 'disabled')
+        return '' unless File.directory?(disabled) && !Dir.children(disabled).empty?
+
+        "\n\nCẢNH BÁO: đang có plugin được tắt và cất trong #{disabled}. Gỡ plugin này sẽ xóa luôn các plugin đó. " \
+          'Hãy bật lại chúng bằng VGD Plugin Manager trước khi gỡ.'
       end
 
       def validate_center_release(release)
