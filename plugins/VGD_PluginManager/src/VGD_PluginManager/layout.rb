@@ -124,7 +124,17 @@ module VGD
                   'Sau khi SketchUp đóng, plugin tự thực hiện trong vài giây. Đợi khoảng 10 giây rồi tự mở lại SketchUp.'
 
       # Ghi job và chạy helper chờ nền. Job mới thay job cũ (helper cũ tự thoát). Trả về thông báo.
+      # Tạm khóa mọi thao tác GHI file cài đặt SketchUp: lần ghi phím tắt thật đầu tiên (beta.12) làm SketchUp 2024
+      # văng khi khởi động và chưa rõ nguyên nhân. Bật lại (true) chỉ sau khi tìm ra lỗi và thử có kiểm soát.
+      @writes_enabled = false
+      class << self
+        attr_accessor :writes_enabled   # test đặt true để thử luồng lập job
+      end
+      LOCKED_NOTE = 'Tính năng ghi phím tắt/layout đang tạm khóa (đã làm SketchUp bị văng ở lần thử trước). ' \
+                    'Dùng nút Import/Export có sẵn của SketchUp: Window > Preferences > Shortcuts.'
+
       def self.schedule(steps, restart = false)
+        return LOCKED_NOTE unless writes_enabled
         return 'Tính năng này chỉ hỗ trợ Windows.' unless windows?
         return 'Không tìm thấy script helper của plugin, hãy cài lại gói.' unless File.exist?(HELPER)
         FileUtils.mkdir_p(jobs_dir)

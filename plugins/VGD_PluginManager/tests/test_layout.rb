@@ -25,6 +25,8 @@ def check(label, cond)
   $fail = true unless cond
 end
 
+check('mặc định khóa ghi: schedule không lập job', L.schedule([]) == L::LOCKED_NOTE)
+L.writes_enabled = true
 spawned = []
 L.spawner = ->(args) { spawned << args }
 

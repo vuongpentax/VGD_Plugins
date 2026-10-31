@@ -23,7 +23,7 @@
   </div>
   <div class="list" id="list"></div>
   <h2>Bộ plugin</h2>
-  <div class="note">Mỗi bộ có thể lưu kèm layout thanh công cụ và phím tắt. "Lưu layout" và "Áp layout" chỉ chạy khi bạn đóng SketchUp (File &gt; Exit); plugin tự thực hiện trong vài giây, sau đó bạn tự mở lại SketchUp. Layout chỉ áp được cho cùng phiên bản SketchUp đã lưu; phím tắt áp được cho cả hai bản.</div>
+  <div class="note">Mỗi bộ có thể lưu kèm layout thanh công cụ và phím tắt. <b>Lưu/Áp layout và nhập phím tắt đang tạm khóa</b> (lần ghi thử đã làm SketchUp bị văng). Phím tắt: dùng Import/Export của SketchUp (Window &gt; Preferences &gt; Shortcuts). Layout chỉ áp được cho cùng phiên bản SketchUp đã lưu; phím tắt áp được cho cả hai bản.</div>
   <label class="opt"><input type="checkbox" id="withShortcuts" checked> Kèm phím tắt khi lưu/áp layout</label>
   <div class="bar"><input type="text" id="setname" placeholder="Tên bộ, ví dụ: Render">
     <button onclick="saveSet()">Lưu mục đã chọn thành bộ</button></div>
@@ -45,7 +45,7 @@
   </div>
   <div class="opts">
     <label><input type="checkbox" id="overwrite"> Ghi đè nếu plugin đã tồn tại ở bản đích</label>
-    <label><input type="checkbox" id="shortcuts"> Chuyển cả phím tắt (áp khi bạn đóng SketchUp, ghi đè phím tắt của bản đích)</label>
+    <label><input type="checkbox" id="shortcuts" disabled> Chuyển cả phím tắt (tạm khóa)</label>
   </div>
   <div class="bar">
     <button class="primary" id="goBtn" onclick="go()">Chuyển plugin</button>
@@ -53,7 +53,7 @@
   </div>
   <h2>Phím tắt</h2>
   <div class="note">Xuất phím tắt bằng Window &gt; Preferences &gt; Shortcuts &gt; Export, rồi nhập vào đây ở máy hoặc bản SketchUp khác. Toàn bộ phím tắt hiện có sẽ bị thay; chỉ đọc mục phím tắt trong file, đường dẫn thư mục của máy khác bị bỏ qua. Áp dụng khi bạn đóng SketchUp.</div>
-  <div class="bar"><button onclick="sketchup.import_dat()">Nhập phím tắt từ file .dat</button></div>
+  <div class="bar"><button disabled title="Tạm khóa: dùng Import trong Window > Preferences > Shortcuts của SketchUp" onclick="sketchup.import_dat()">Nhập phím tắt từ file .dat (tạm khóa)</button></div>
 </section>
 
 <div id="out"></div>
@@ -138,10 +138,10 @@ function drawToggle() {
     var a = el('button', 'sm danger', 'Tắt bộ'); a.onclick = function () { send('pm_apply_set', { name: s.name, action: 'disable' }); };
     var b = el('button', 'sm primary', 'Bật bộ'); b.onclick = function () { send('pm_apply_set', { name: s.name, action: 'enable' }); };
     var c = el('button', 'sm', 'Xóa bộ'); c.onclick = function () { send('pm_delete_set', { name: s.name }); };
-    var d = el('button', 'sm', 'Lưu layout'); d.onclick = function () { send('pm_layout_save', { name: s.name, shortcuts: withShortcuts() }); };
+    var d = el('button', 'sm', 'Lưu layout'); d.disabled = true; d.title = 'Tạm khóa'; d.onclick = function () { send('pm_layout_save', { name: s.name, shortcuts: withShortcuts() }); };
     r.appendChild(a); r.appendChild(b); r.appendChild(c); r.appendChild(d);
     if (s.layout) {
-      var e = el('button', 'sm', 'Áp layout'); e.onclick = function () { send('pm_layout_apply', { name: s.name, shortcuts: withShortcuts() }); };
+      var e = el('button', 'sm', 'Áp layout'); e.disabled = true; e.title = 'Tạm khóa'; e.onclick = function () { send('pm_layout_apply', { name: s.name, shortcuts: withShortcuts() }); };
       r.appendChild(e);
     }
     T.appendChild(r);
