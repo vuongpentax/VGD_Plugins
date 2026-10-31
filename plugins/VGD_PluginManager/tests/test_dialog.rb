@@ -81,26 +81,14 @@ check 'bật tất cả khôi phục', status.call.values.uniq == ['on']
 dlg.cb('pm_bulk').call(nil, 'không phải json')
 check 'JSON hỏng không làm crash', dlg.scripts.last.include?('Lỗi khi tắt/bật hàng loạt')
 
-# --- Nhập phím tắt từ .dat qua callback ---
-spawned = []
-VGD::PluginManager::Layout.spawner = ->(args) { spawned << args }
-VGD::PluginManager::Layout.writes_enabled = true   # thử luồng lập việc dù mặc định đang khóa
-dat = File.join(Dir.tmpdir, "dlg_#{$$}.dat")
-File.binwrite(dat, "\xFF\xFE".b + "[Accelerator]\r\nCount=2\r\n0 0 0 H selectDollyTool:\r\n0 1 1 9 Camera/Next\r\n[File Locations]\r\nModels=C:\\x\r\n".encode('UTF-16LE').b)
-UI.open_path = nil
-dlg.cb('import_dat').call(nil)
-check 'không chọn file thì không làm gì', spawned.empty?
-UI.open_path = dat
-UI.answer = IDNO
-dlg.cb('import_dat').call(nil)
-check 'chọn Không ở hộp xác nhận thì không lập việc', spawned.empty? && !File.exist?(PM::Layout.job_file)
-UI.answer = IDYES
-dlg.cb('import_dat').call(nil)
-check 'chọn Có thì lập việc và báo cần đóng SketchUp', spawned.size == 1 && dlg.scripts.last.include?('File > Exit') &&
-  JSON.parse(File.read(PM::Layout.job_file))['steps'][0]['op'] == 'apply'
-File.binwrite(dat, 'khong phai file phim tat')
-dlg.cb('import_dat').call(nil)
-check 'file sai được báo lỗi, không lập việc mới', spawned.size == 1 && dlg.scripts.last.include?('Accelerator')
+# --- Mở thư mục ---
+opened = []
+PM.define_singleton_method(:open_folder) { |dir| opened << dir }
+dlg.cb('pm_open_disabled').call(nil)
+check 'mở thư mục đã tắt: tạo nếu chưa có và mở đúng thư mục', opened.last == VGD::PluginManager::Toggle.disabled_dir && File.directory?(opened.last)
+FileUtils.mkdir_p(PM.plugins_dir(VGD::PluginManager::Toggle.year))
+dlg.cb('pm_open_plugins').call(nil)
+check 'mở thư mục Plugins của bản đang chạy', opened.last == PM.plugins_dir(VGD::PluginManager::Toggle.year)
 
 loader = File.read(File.join(build, 'VGD_PluginManager.rb'), encoding: 'UTF-8')[/ex\.version\s*=\s*'([^']+)'/, 1]
 check "phiên bản trong loader (#{loader}) khớp VERSION (#{PM::VERSION})", loader == PM::VERSION

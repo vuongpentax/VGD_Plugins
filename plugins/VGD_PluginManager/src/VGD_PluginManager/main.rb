@@ -10,7 +10,7 @@ require File.join(File.dirname(__FILE__), 'linker')
 module VGD
   module PluginManager
 
-    VERSION         = '1.0.0-beta.15'
+    VERSION         = '1.0.0-beta.16'
     UI_DIR          = File.join(File.dirname(__FILE__), 'ui')
     ICON_DIR        = File.join(File.dirname(__FILE__), 'icons')
 
@@ -174,7 +174,7 @@ module VGD
     end
 
     unless file_loaded?(__FILE__)
-      cmd = make_command('VGD Plugin Manager', 'Bật/tắt plugin và chuyển plugin, phím tắt, thanh công cụ giữa các phiên bản SketchUp',
+      cmd = make_command('VGD Plugin Manager', 'Bật/tắt plugin và chuyển plugin giữa các phiên bản SketchUp',
                          'plugin_manager.svg') { run }
       UI.menu('Plugins').add_item(cmd)
       toolbar = UI::Toolbar.new('VGD Plugin Manager')
@@ -188,5 +188,4 @@ end
 
 # Nạp sau khi module PluginManager đã được định nghĩa
 require File.join(File.dirname(__FILE__), 'toggle')
-require File.join(File.dirname(__FILE__), 'layout')
 require File.join(File.dirname(__FILE__), 'dialog')

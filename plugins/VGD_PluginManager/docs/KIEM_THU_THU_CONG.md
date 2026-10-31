@@ -24,38 +24,14 @@ Gỡ bản beta.3 (nếu có) trước khi cài beta.4.
 3. Chuyển lần hai không tick "Ghi đè": mục đã có được bỏ qua.
 4. Plugin dùng cú pháp Ruby cũ (ví dụ `File.exists?`) có hiện cảnh báo tương thích.
 
-## 3. Layout và phím tắt theo bộ plugin (mới ở beta.5)
-
-Nên sao lưu trước: đóng SketchUp, chạy `reg export "HKCU\Software\SketchUp" "%USERPROFILE%\Desktop\SketchUp_registry_backup.reg" /y` và chép hai file `PrivatePreferences.json` (trong `%LOCALAPPDATA%\SketchUp\SketchUp <năm>\SketchUp`) và `SharedPreferences.json` (trong `%APPDATA%\SketchUp\SketchUp <năm>\SketchUp`). Plugin cũng tự sao lưu vào `...\Plugins\VGD_PluginManager\data\backups\` trước khi ghi.
-
-1. Tạo một bộ plugin (tab Bật/tắt), chỉnh vị trí vài thanh công cụ, gán thử một phím tắt.
-2. Bấm "Lưu layout" của bộ, xác nhận. Đóng SketchUp bằng File > Exit. Chờ khoảng 10 giây rồi tự mở lại SketchUp. Mở hộp thoại: có thông báo kết quả và bộ hiện nhãn "Đã lưu layout + phím tắt (SketchUp <năm>)". Nếu không mở lại, xem `%APPDATA%\SketchUp\VGD_PluginManager\migrator.log`.
-3. Tắt một plugin bằng nút gạt, kéo vài thanh công cụ sang chỗ khác, thoát và mở lại: ghi nhận layout lộn xộn (nếu có) để so sánh.
-4. Bấm "Áp layout" của bộ, xác nhận, đóng SketchUp bằng File > Exit. SketchUp mở lại: **thanh công cụ có về đúng vị trí đã lưu không? Phím tắt có về đúng không?** Đây là điểm kiểm tra chính.
-4b. **Bản 2024:** làm các bước 1 đến 4 trên SketchUp 2024. Sau khi áp, so sánh `PrivatePreferences.json` trước và sau (dùng bản sao lưu trong `data\backups`, ví dụ bằng `fc` hoặc một công cụ so sánh): **chỉ các mục `QtRubyWorkspace\\...`, `Workspace\\...`, `ToolbarSettings` và hai khóa `DockWidgetState`, `ToolBarState` trong `MainWindow` được đổi**; mọi dòng khác giống hệt, kể cả `Geometry` và số dạng `X.0`.
-5. Kiểm tra các điểm rủi ro: (a) toàn bộ plugin và thiết lập khác (kích thước cửa sổ plugin, tùy chọn) còn nguyên; (b) khi tắt một plugin rồi áp layout, thanh công cụ của các plugin còn lại có đúng chỗ không (ID thanh công cụ có bị lệch không); (c) không có file `.vgdtmp` nào còn sót cạnh hai file JSON.
-6. Thử hủy: bấm "Lưu layout" rồi bấm "Áp layout" khác bộ trước khi đóng SketchUp: chỉ job sau cùng được thực hiện.
-7. Chuyển phím tắt giữa hai bản: tab Chuyển plugin, tick "Chuyển cả phím tắt", chuyển 2022 sang 2024 (hoặc ngược lại); đóng cả hai bản; mở bản đích: phím tắt đã thay chưa?
-8. Hoàn tác thử: chép lại hai file JSON và import file `.reg` từ thư mục sao lưu khi SketchUp đóng, xác nhận layout cũ trở lại.
-9. Xuất/nhập sang máy khác: "Xuất các bộ ra file" (file `.json` có kèm layout), nhập ở máy kia bằng "Nhập bộ từ file", rồi "Áp layout". Ghi lại nếu màn hình khác độ phân giải làm thanh công cụ lệch.
-
-## 3b. Nhập phím tắt từ file .dat (mới ở beta.8)
-
-Sao lưu trước như mục 3. Chuẩn bị: xuất một file `.dat` từ Window > Preferences > Shortcuts > Export (ở máy khác hoặc bản khác).
-
-1. Tab Chuyển plugin, mục Phím tắt, bấm "Nhập phím tắt từ file .dat", chọn file. Hộp xác nhận nêu đúng số phím tắt; chọn Không thì không có gì xảy ra.
-2. Chọn Có, đóng SketchUp bằng File > Exit. Chờ khoảng 10 giây rồi tự mở lại SketchUp. Vào Window > Preferences > Shortcuts: **danh sách phím tắt đúng bằng file** (kể cả phím của plugin và tên có tiếng Việt)? Mở hộp thoại: có thông báo kết quả.
-3. Thư mục `...\Plugins\VGD_PluginManager\data\backups\` có bản sao lưu `SharedPreferences.json` trước khi ghi.
-4. Kiểm tra file `SharedPreferences.json` sau khi ghi: các giá trị dạng `24.0`, `150.0`, `1.0` (ví dụ `AviExportFPS`, `PixelsPerInch`) **vẫn giữ dạng `.0`**, không thành `24`, `150`; không có file `.vgdtmp` sót lại.
-5. Thư mục thư viện (Models, Components, Materials...) trong Preferences > Files **không bị đổi** (mục `[File Locations]` của file `.dat` phải được bỏ qua).
-6. Thử với file không phải `.dat` phím tắt: có báo lỗi, không đổi gì.
-
 ## 4. Xuất gói .rbz tổng
 
 1. Xuất gói với vài plugin; mở file .rbz bằng phần mềm giải nén, thấy plugin và `vgd_bundle_manifest.json` (gói chỉ chứa plugin, không kèm phím tắt hay layout).
 2. Trên máy khác (hoặc bản khác), cài gói bằng Extension Manager: có chấp nhận không (gói không đăng ký SketchupExtension)?
 
 ## 5. Bật/tắt plugin và bộ plugin
+
+0. Nút "Mở thư mục Plugins" mở Explorer đúng thư mục Plugins của bản SketchUp đang chạy; nút "Mở thư mục đã tắt" mở `Plugins\VGD_PluginManager\data\disabled` (tạo nếu chưa có).
 
 1. Gạt nút tắt một plugin (không cần bấm thêm gì): nút chuyển sang trạng thái tắt, có thông báo cần khởi động lại; file nằm trong `...\SketchUp\Plugins\VGD_PluginManager\data\disabled\`.
 2. Khởi động lại: plugin không nạp, và **không có plugin nào trong `data\disabled` bị SketchUp nạp** (kiểm tra Ruby Console). Gạt bật lại, khởi động lại: plugin nạp bình thường.

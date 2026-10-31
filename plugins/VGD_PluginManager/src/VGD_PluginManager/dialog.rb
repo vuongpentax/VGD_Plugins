@@ -21,6 +21,15 @@ module VGD
 
     # Một hộp thoại hai tab: Bật/tắt plugin và Chuyển plugin.
     # Chỉ mở một cửa sổ: bấm lại thì đưa cửa sổ đang mở lên trước.
+    # Mở thư mục bằng Explorer (Windows) hoặc trình duyệt file của hệ điều hành
+    def self.open_folder(dir)
+      if Sketchup.platform == :platform_win
+        Process.detach(Process.spawn('explorer.exe', dir.tr('/', '\\')))
+      else
+        UI.openURL("file://#{dir}")
+      end
+    end
+
     def self.run
       if dialog_open?
         @dialog.bring_to_front
@@ -52,7 +61,7 @@ module VGD
       end
 
       dlg.add_action_callback('ready') do |_c|
-        push_toggle.call([legacy_msg, Layout.take_result].compact.join("\n"))
+        push_toggle.call(legacy_msg)
         js.call('initMigrate', installed_versions)
       end
 
@@ -112,13 +121,16 @@ module VGD
 
       dlg.add_action_callback('pm_open_disabled') do |_c|
         guard.call('Không mở được thư mục plugin đã tắt', push_toggle) do
-          dir = Toggle.disabled_dir
-          FileUtils.mkdir_p(dir)
-          if Sketchup.platform == :platform_win
-            Process.detach(Process.spawn('explorer.exe', dir.tr('/', '\\')))
-          else
-            UI.openURL("file://#{dir}")
-          end
+          FileUtils.mkdir_p(Toggle.disabled_dir)
+          open_folder(Toggle.disabled_dir)
+        end
+      end
+
+      dlg.add_action_callback('pm_open_plugins') do |_c|
+        guard.call('Không mở được thư mục Plugins', push_toggle) do
+          dir = plugins_dir(Toggle.year)
+          next push_toggle.call("Không thấy thư mục Plugins: #{dir}") unless File.directory?(dir)
+          open_folder(dir)
         end
       end
 
@@ -137,7 +149,7 @@ module VGD
         guard.call('Lỗi khi nhập bộ', push_toggle) do
           path = UI.openpanel('Chọn file bộ plugin (.json)', Toggle.desktop_dir, 'JSON|*.json||')
           next unless path
-          incoming, err, layouts = Toggle.read_sets_file(path)
+          incoming, err = Toggle.read_sets_file(path)
           if err
             push_toggle.call(err)
             next
@@ -149,44 +161,7 @@ module VGD
                                 'Chọn Yes để ghi đè, No để giữ bộ hiện có (chỉ nhập bộ mới).', MB_YESNO)
             overwrite = (ask == IDYES)
           end
-          push_toggle.call(Toggle.import_sets(incoming, overwrite, layouts || {}))
-        end
-      end
-
-      # ---- Layout và phím tắt của bộ (thực hiện sau khi SketchUp đóng) ----
-      dlg.add_action_callback('pm_layout_save') do |_c, json|
-        guard.call('Lỗi khi lưu layout', push_toggle) do
-          o = JSON.parse(json)
-          name = o['name'].to_s
-          next push_toggle.call('Không tìm thấy bộ này.') unless Toggle.load_sets.key?(name)
-          ask = "Lưu layout#{o['shortcuts'] ? ' và phím tắt' : ''} của SketchUp #{Layout.year} vào bộ \"#{name}\"?\n\n" \
-                "Việc này chạy khi bạn đóng SketchUp (File > Exit), dữ liệu lưu là trạng thái lúc thoát. " \
-                "Bản lưu cũ của bộ này (nếu có) sẽ bị thay."
-          next unless UI.messagebox(ask, MB_YESNO) == IDYES
-          parts = ['layout'] + (o['shortcuts'] ? ['shortcuts'] : [])
-          push_toggle.call(Layout.schedule_capture(name, parts))
-        end
-      end
-
-      dlg.add_action_callback('pm_layout_apply') do |_c, json|
-        guard.call('Lỗi khi áp layout', push_toggle) do
-          o = JSON.parse(json)
-          name = o['name'].to_s
-          parts = ['layout'] + (o['shortcuts'] ? ['shortcuts'] : [])
-          ask = "Áp layout#{o['shortcuts'] ? ' và phím tắt' : ''} đã lưu của bộ \"#{name}\" vào SketchUp #{Layout.year}?\n\n" \
-                "Việc này chạy khi bạn đóng SketchUp, ghi đè layout hiện tại. " \
-                "Plugin tự sao lưu file cài đặt trước khi ghi rồi bạn tự mở lại SketchUp sau vài giây."
-          next unless UI.messagebox(ask, MB_YESNO) == IDYES
-          push_toggle.call(Layout.schedule_apply(name, parts))
-        end
-      end
-
-      # ---- Tab Chuyển plugin ----
-      dlg.add_action_callback('mg_list') do |_c, json|
-        guard.call('Lỗi khi đọc danh sách plugin', push_result) do
-          o = JSON.parse(json)
-          err = check_versions(o['src'], o['dst'])
-          err ? push_result.call(err) : push_list.call(o['src'], o['dst'])
+          push_toggle.call(Toggle.import_sets(incoming, overwrite))
         end
       end
 
@@ -208,24 +183,8 @@ module VGD
             msg << "Sao lưu thư mục đích: #{r[:backup]}" if r[:backup]
             msg << "Cảnh báo tương thích: #{warns.join(' | ')}" if warns.any?
           end
-          msg << Layout.schedule_shortcuts_transfer(src_ver, dst_ver) if opts['shortcuts']
-          msg << "Hãy đóng SketchUp và mở lại bản #{dst_ver} để áp dụng." unless opts['shortcuts']
+          msg << "Hãy đóng SketchUp và mở lại bản #{dst_ver} để áp dụng."
           push_result.call(msg.join("\n"))
-        end
-      end
-
-      dlg.add_action_callback('import_dat') do |_c|
-        guard.call('Lỗi khi nhập phím tắt', push_result) do
-          path = UI.openpanel('Chọn file phím tắt của SketchUp (.dat)', Toggle.desktop_dir, 'DAT|*.dat||')
-          next unless path
-          data, err = Layout.parse_dat(path)
-          next push_result.call(err) if err
-          note = data[:skipped] > 0 ? "\n(#{data[:skipped]} dòng không hiểu được đã bị bỏ qua.)" : ''
-          ask = "Nhập #{data[:shortcuts]['Num_Shortcuts']} phím tắt từ file này vào SketchUp #{Layout.year}?#{note}\n\n" \
-                "Toàn bộ phím tắt hiện có sẽ bị thay bằng danh sách trong file (sao lưu trước khi ghi). " \
-                "Mục [File Locations] trong file được bỏ qua. Việc này chạy khi bạn đóng SketchUp."
-          next unless UI.messagebox(ask, MB_YESNO) == IDYES
-          push_result.call(Layout.schedule_import(data[:shortcuts]))
         end
       end
 
@@ -248,7 +207,7 @@ module VGD
             warns = scan_compat(src_ver, chosen)
             msg << "Cảnh báo tương thích: #{warns.join(' | ')}" if warns.any?
             msg << 'Trên máy mới: cài file .rbz bằng Extension Manager rồi khởi động lại SketchUp. ' \
-                   'Gói chỉ chứa plugin; muốn mang cả layout và phím tắt, dùng "Xuất các bộ ra file" ở tab Bật/tắt.'
+                   'Gói chỉ chứa plugin; muốn mang các bộ plugin sang máy khác, dùng "Xuất các bộ ra file" ở tab Bật/tắt.'
             push_result.call(msg.join("\n"))
           end
         end

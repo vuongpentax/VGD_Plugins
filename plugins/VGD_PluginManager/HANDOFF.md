@@ -22,10 +22,10 @@ Bàn giao từ chat Claude sang Claude Code để làm tiếp.
 1. `HANDOFF.md`: file này.
 2. `src/`: mã nguồn plugin (đúng cấu trúc bên trong .rbz).
    1. `src/VGD_PluginManager.rb`: file loader, đăng ký SketchupExtension (version `1.0.0-beta.10`).
-   2. `src/VGD_PluginManager/main.rb`: chuyển plugin, phím tắt, thanh công cụ; xuất gói tổng; giao diện HtmlDialog chính.
+   2. `src/VGD_PluginManager/main.rb`: chuyển plugin; xuất gói tổng; giao diện HtmlDialog chính.
    3. `src/VGD_PluginManager/zip_writer.rb`: ghi file zip/.rbz thuần Ruby bằng Zlib (không cần thư viện ngoài).
    4. (đã bỏ ở beta.5) `bundle_import.rb`: mẫu nhập phím tắt/thanh công cụ từ gói tổng, dùng khóa registry sai.
-   4b. `src/VGD_PluginManager/layout.rb`: lưu/áp layout và phím tắt theo từng bộ plugin (lập job, snapshot, xuất/nhập), và `src/VGD_PluginManager/helper/apply_layout.ps1`: script PowerShell chạy nền, chờ SketchUp đóng rồi chụp/áp layout và phím tắt (sao lưu trước, hoàn tác nếu lỗi, mở lại SketchUp). Chi tiết nơi SketchUp lưu dữ liệu: `docs/NOI_LUU_CAI_DAT_SKETCHUP.md`.
+   4b. (đã bỏ ở beta.16) `layout.rb` và `helper/apply_layout.ps1`: lưu/áp layout và phím tắt. Xem mục 17 và `docs/NOI_LUU_CAI_DAT_SKETCHUP.md`.
    5. `src/VGD_PluginManager/toggle.rb`: bật/tắt plugin và bộ plugin (module `Toggle`), xuất/nhập bộ ra file `.json`, chuyển dữ liệu từ vị trí cũ.
    7. `src/VGD_PluginManager/dialog.rb`: một hộp thoại hai tab (Bật/tắt plugin, Chuyển plugin); mọi callback và kiểm tra phiên bản nguồn/đích (`check_versions`).
    8. `src/VGD_PluginManager/ui/`: `dialog.html`, `dialog.css` và bản sao `vgd-theme/` (đồng bộ bằng `python tools/sync_vgd_theme.py`). Nạp bằng `set_file`; dữ liệu đẩy vào qua callback `ready`.
@@ -119,10 +119,7 @@ Cần Ruby (đã dùng ở môi trường Linux). Dùng **đường dẫn tuyệ
 
 ```
 ruby tests/test_toggle.rb src
-ruby tests/test_layout.rb src
 ruby tests/test_dialog.rb src
-ruby tests/test_splice.rb
-ruby tests/test_private_splice.rb
 ruby tests/test_linker.rb src
 ruby tests/run_test.rb src
 ```
@@ -188,3 +185,5 @@ Khi thêm file mới vào `src/VGD_PluginManager/` nhớ thêm vào danh sách t
 14. `1.0.0-beta.13`: **không tự mở lại SketchUp** (theo yêu cầu người dùng). `Layout.schedule` mặc định `restart = false`; helper vẫn hỗ trợ `restart` trong job. Người dùng chờ khoảng 10 giây sau khi đóng SketchUp rồi tự mở lại; nếu mở quá sớm, helper tiếp tục chờ SketchUp đóng (không ghi khi SketchUp đang chạy).
 15. `1.0.0-beta.14`: **khóa mọi thao tác ghi file cài đặt SketchUp** (`Layout.writes_enabled = false` mặc định). Lý do: sau khi nhập `.dat` bằng beta.12/13 và mở lại SketchUp 2024, SketchUp văng 3 lần liên tiếp; người dùng xóa `SharedPreferences.json` mới mở lại được. Nguyên nhân chưa rõ. Đã dựng lại bằng bản tham chiếu Ruby (`Splice.apply`) với `.dat` 85 phím và `SharedPreferences.json` 2024 thật: kết quả JSON hợp lệ, không trùng tổ hợp phím, nên nghi ngờ (chưa kiểm chứng) là (1) bản PowerShell ghi khác bản tham chiếu, hoặc (2) SketchUp 2024 văng khi phím tắt trỏ vào menu plugin chưa nạp (19/85 phím thuộc loại này). Nút nhập `.dat`, Lưu/Áp layout, ô "Chuyển cả phím tắt" bị vô hiệu hóa; phần bật/tắt plugin, preset plugin, chuyển plugin không đổi. Bật lại chỉ sau khi tìm ra nguyên nhân và thử có kiểm soát (ghi ra file cạnh bên, không đụng file thật).
 16. `1.0.0-beta.15`: nút **Mở thư mục đã tắt** (tab Bật/tắt) mở `Plugins\VGD_PluginManager\data\disabled` bằng Explorer (callback `pm_open_disabled`; tạo thư mục nếu chưa có). Chưa thử trong SketchUp.
+16. `1.0.0-beta.15`/`beta.16`: nút **Mở thư mục Plugins** (bản SketchUp đang chạy) và **Mở thư mục đã tắt** (callback `pm_open_plugins`, `pm_open_disabled`, hàm `PM.open_folder`).
+17. `1.0.0-beta.16`: **gỡ hẳn tính năng layout và phím tắt** (theo yêu cầu người dùng, vì không làm được an toàn). Đã xóa `layout.rb`, `helper/apply_layout.ps1`, `tests/test_layout.rb`, `test_splice.rb`, `test_private_splice.rb`, `tests/support/splice_reference.rb`; bỏ nút Lưu/Áp layout, nhập `.dat`, ô "Chuyển cả phím tắt". File xuất bộ plugin về `version` 1 (chỉ danh sách plugin); file `version` 2 cũ vẫn đọc được, mục `layouts` bị bỏ qua. Lý do: script PowerShell ghi file cài đặt làm SketchUp 2024 văng khi khởi động. Mã cũ vẫn xem được trong lịch sử git (commit `49d1fd7` và trước đó). Kết quả khảo sát nơi SketchUp lưu phím tắt/layout giữ ở `docs/NOI_LUU_CAI_DAT_SKETCHUP.md` phòng khi làm lại. Phím tắt: dùng Import/Export của SketchUp.
