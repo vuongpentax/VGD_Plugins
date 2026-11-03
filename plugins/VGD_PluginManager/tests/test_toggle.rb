@@ -15,6 +15,9 @@ File.write(File.join(plug, 'beta.rbe'), "b\n")
 File.write(File.join(plug, 'gamma.rb'), "g\n")
 File.write(File.join(plug, 'su_sandbox.rb'), "skip\n")
 File.write(File.join(plug, 'VGD_PluginManager.rb'), "self\n")
+File.write(File.join(plug, 'VGD_Center.rb'), "center\n")
+FileUtils.mkdir_p(File.join(plug, 'VGD_Center'))
+File.write(File.join(plug, 'vgd_center.rb'), "center lower\n")
 File.write(File.join(plug, '.hidden'), "h\n")
 
 require File.join(build, 'VGD_PluginManager/main')
@@ -30,6 +33,10 @@ names = ->(s) { s['plugins'].map { |p| [p['name'], p['status']] }.to_h }
 s = M.state
 check 'liệt kê đúng, bỏ qua mục hệ thống/chính nó/ẩn', names.(s) == { 'alpha' => 'on', 'beta' => 'on', 'gamma' => 'on' }
 check 'alpha gồm 2 mục (rb + thư mục)', s['plugins'].first['items'] == 2
+r = M.change(%w[VGD_Center vgd_center VGD_Center.rb], 'disable')
+check 'không tắt được VGD Center (cả tên viết thường)', r[:changed].empty? && r[:skipped].size == 3 &&
+  File.exist?(File.join(plug, 'VGD_Center.rb')) && File.directory?(File.join(plug, 'VGD_Center')) && File.exist?(File.join(plug, 'vgd_center.rb'))
+check 'VGD Center không nằm trong danh sách bật/tắt', (names.(M.state).keys.map(&:downcase) & %w[vgd_center vgd_center.rb]).empty?
 
 r = M.change(%w[alpha beta ../evil nonexist], 'disable')
 check 'tắt alpha, beta', r[:changed].sort == %w[alpha beta]

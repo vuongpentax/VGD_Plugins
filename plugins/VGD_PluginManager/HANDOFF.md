@@ -1,6 +1,6 @@
 # HANDOFF: VGD Plugin Manager (SketchUp, Ruby)
 
-Phiên bản hiện tại: **1.0.0-beta.17** (cập nhật 2026-10-31). Nhánh làm việc: `claude/plugin-migrator-beta3`.
+Phiên bản hiện tại: **1.0.0-beta.18** (cập nhật 2026-11-03). Nhánh làm việc: `claude/plugin-migrator-beta3`.
 Plugin chưa từng được kiểm chứng đầy đủ trong SketchUp thật (xem mục 4).
 
 ## 1. Mục tiêu và bối cảnh
@@ -57,7 +57,7 @@ Plugin chưa từng được kiểm chứng đầy đủ trong SketchUp thật (
 
 1. Nguồn/đích chọn bằng hai ô trong tab "Chuyển plugin". Trước khi chép: sao lưu thư mục Plugins đích thành `Plugins_backup_<thời gian>`. Mặc định bỏ qua mục đã tồn tại, có ô "Ghi đè".
 2. `scan_compat` quét `.rb` tìm cú pháp Ruby 2.7 dễ lỗi trên 3.2 (Fixnum/Bignum, `File.exists?`, `Dir.exists?`, `URI.escape`, taint/untaint). Chỉ cảnh báo.
-3. Bỏ qua chính plugin này (`SELF_NAMES`, gồm tên cũ `vgd_plugin_migrator`) và mục hệ thống (`SKIP_NAMES`).
+3. Bỏ qua chính plugin này và **VGD Center** (`SELF_NAMES`, gồm tên cũ `vgd_plugin_migrator`) và mục hệ thống (`SKIP_NAMES`). So khớp không phân biệt hoa thường. Lý do: tắt nhầm Center làm mất giao diện cài đặt/quản lý plugin VGD (beta.18).
 
 ### 3.4. Xuất gói .rbz tổng
 
@@ -129,3 +129,4 @@ ruby tests/run_test.rb src
 9. `beta.11` đến `beta.14`: chẩn đoán và sửa helper PowerShell, bỏ tự mở lại SketchUp, khóa việc ghi sau sự cố SketchUp văng.
 10. `beta.15`/`beta.16`: nút Mở thư mục Plugins và Mở thư mục đã tắt; gỡ hẳn layout và phím tắt.
 11. `beta.17`: **sửa lỗi beta.16 làm danh sách ở tab Chuyển plugin luôn trống**: lúc gỡ layout đã xóa nhầm callback `mg_list` (nằm xen giữa các callback layout). Đã khôi phục và thêm test hồi quy (`mg_list` trả danh sách; mọi lệnh `sketchup.*`/`send(...)` trong `dialog.html` đều có callback tương ứng). Bài học: sau khi xóa hàng loạt, đối chiếu tập callback trước/sau.
+12. `beta.18`: **không cho tắt/chuyển VGD Center** (thêm `VGD_Center`, `VGD_Center.rb` vào `SELF_NAMES`), so khớp tên bỏ qua không phân biệt hoa thường (`linker.rb`). Có test mới trong `tests/test_toggle.rb`. Ghi chú: từ VGD Center 1.3.0, Center có tab **Quản lý** làm cùng việc bật/tắt, chuyển plugin, xuất gói và dùng chung dữ liệu (`Plugins/VGD_PluginManager/data`) với plugin này. Không gỡ plugin này khi còn plugin đang tắt trong thư mục đó, vì thư mục `data` sẽ bị xóa theo.

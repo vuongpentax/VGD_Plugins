@@ -10,14 +10,16 @@ require File.join(File.dirname(__FILE__), 'linker')
 module VGD
   module PluginManager
 
-    VERSION         = '1.0.0-beta.17'
+    VERSION         = '1.0.0-beta.18'
     UI_DIR          = File.join(File.dirname(__FILE__), 'ui')
     ICON_DIR        = File.join(File.dirname(__FILE__), 'icons')
 
     APPDATA_SUBPATH = 'SketchUp/SketchUp %s/SketchUp/Plugins'
 
-    # Không chuyển/không tắt chính plugin này (gồm tên cũ của bản beta.3 trở về trước)
-    SELF_NAMES = ['VGD_PluginManager', 'VGD_PluginManager.rb', 'vgd_plugin_migrator', 'vgd_plugin_migrator.rb']
+    # Không chuyển/không tắt chính plugin này (gồm tên cũ của bản beta.3 trở về trước) và VGD Center
+    # (tắt nhầm Center sẽ mất giao diện cài đặt/quản lý plugin VGD). So khớp không phân biệt hoa thường.
+    SELF_NAMES = ['VGD_PluginManager', 'VGD_PluginManager.rb', 'vgd_plugin_migrator', 'vgd_plugin_migrator.rb',
+                  'VGD_Center', 'VGD_Center.rb']
     # Các mục hệ thống của SketchUp, bỏ qua
     SKIP_NAMES = ['.', '..', 'su_dynamiccomponents', 'su_dynamiccomponents.rb',
                   'su_sandbox', 'su_sandbox.rb', 'su_solidtools', 'su_solidtools.rb']

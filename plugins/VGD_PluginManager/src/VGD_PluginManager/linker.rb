@@ -50,7 +50,9 @@ module VGD
       # skip: các tên bỏ qua (mục hệ thống, chính plugin này).
       def self.group(dir, skip)
         return {} unless File.directory?(dir)
-        entries = (Dir.children(dir) - skip).reject { |e| e.start_with?('.') }
+        # Không phân biệt hoa thường: Windows coi VGD_Center và vgd_center là một, nên tên được bỏ qua cũng vậy.
+        skip_lower = skip.map(&:downcase)
+        entries = Dir.children(dir).reject { |e| e.start_with?('.') || skip_lower.include?(e.downcase) }
         base = {}
         entries.each { |e| (base[e.sub(LOADABLE, '')] ||= []) << e }
 
