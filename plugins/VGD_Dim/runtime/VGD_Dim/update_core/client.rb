@@ -14,10 +14,11 @@ module VGD
           request(Manifest::MANIFEST_URL, 0, &callback)
         end
         def download(info, &callback)
-          raise 'Đang có yêu cầu cập nhật khác.' if @busy
           request(info['download_url'], 0) do |status, body|
             if status == 200 && body.bytesize == info['bytes'] && Digest::SHA256.hexdigest(body) == info['sha256']
               callback.call(:ok, body)
+            elsif status == 0
+              callback.call(:error, body) # Network error or timeout: request passes the message as body.
             elsif status != 200
               callback.call(:error, "GitHub trả về HTTP #{status}.")
             else
@@ -30,7 +31,8 @@ module VGD
         end
         private
         def request(url, redirects, &callback)
-          raise 'Đang có yêu cầu cập nhật khác.' if @busy
+          # Reject here, before the rescue below, so a refused request never clears the running one's flag.
+          return callback.call(0, 'Đang có yêu cầu cập nhật khác.') if @busy
           @busy = true
           @request_id += 1
           request_id = @request_id

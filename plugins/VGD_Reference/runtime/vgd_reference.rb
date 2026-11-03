@@ -11,7 +11,7 @@ module VGD
     )
     extension.creator = 'VGD'
     extension.description = 'Hiển thị và chỉnh sửa ảnh tham chiếu ngay trên khung nhìn SketchUp.'
-    extension.version = '1.0.1'
+    extension.version = '1.0.2'
     extension.copyright = '2026 VGD'
     Sketchup.register_extension(extension, VGD::Reference::Compatibility.supported?)
     file_loaded(__FILE__)

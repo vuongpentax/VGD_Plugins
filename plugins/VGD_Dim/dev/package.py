@@ -19,7 +19,12 @@ runtime_files = ['vgd_dim.rb'] + ['VGD_Dim/' + name for name in [
     'probe.rb', 'dialog.rb', 'dialog.html', 'dialog.css', 'dialog.js', 'dim.svg',
     'smart_dim.svg', 'version.rb', 'update_core/manifest.rb', 'update_core/bootstrap.rb',
     'update_core/client.rb', 'update_core/installer.rb', 'update_core/updater.rb',
-    'update_core/update_installer.ps1'
+    'update_core/update_installer.ps1',
+    'vgd-theme/vgd-theme.css',
+    'vgd-theme/vgd-theme.js',
+    'vgd-theme/fonts/manrope-latin-wght-normal.woff2',
+    'vgd-theme/fonts/manrope-vietnamese-wght-normal.woff2',
+    'vgd-theme/fonts/LICENSE'
 ]]
 for name in runtime_files:
     if not (runtime / name).is_file():
@@ -45,7 +50,7 @@ manifest.update({
     'filename': rbz.name,
     'bytes': rbz.stat().st_size,
     'sha256': hashlib.sha256(rbz.read_bytes()).hexdigest(),
-    'download_url': f"https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/packages/{rbz.name}"
+    'download_url': f"https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v{version}/{rbz.name}"
 })
 manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8', newline='\n')
 dev_files = [

@@ -35,7 +35,8 @@ with tempfile.TemporaryDirectory(prefix='deploy_fixture_', dir=outputs) as direc
         'core.rb','presets.rb','autostyle.rb','animation.rb','smartdim.rb','regions.rb','manual_dim.rb','probe.rb','dialog.rb',
         'dialog.html','dialog.css','dialog.js','dim.svg','smart_dim.svg','version.rb',
         'update_core/manifest.rb','update_core/bootstrap.rb','update_core/client.rb',
-        'update_core/installer.rb','update_core/updater.rb','update_core/update_installer.ps1'
+        'update_core/installer.rb','update_core/updater.rb','update_core/update_installer.ps1',
+        'vgd-theme/vgd-theme.css','vgd-theme/vgd-theme.js','vgd-theme/fonts/manrope-latin-wght-normal.woff2','vgd-theme/fonts/manrope-vietnamese-wght-normal.woff2','vgd-theme/fonts/LICENSE'
     ]]
     for name in owned:
         assert (plugins / name).read_bytes() == (root / 'runtime' / name).read_bytes(), name
@@ -56,4 +57,4 @@ with tempfile.TemporaryDirectory(prefix='deploy_fixture_', dir=outputs) as direc
     result = deploy()
     assert result.returncode != 0 and (plugins / 'vgd_dim.rb').read_bytes() == b'FOREIGN VGD LOADER'
     assert other.read_bytes() == b'CABINET MUST BE PRESERVED'
-print('PASS: deploy dry-run, T+ loader backup/retirement, exact 29 VGD files, repeated install, foreign-loader guards and Cabinet preservation')
+print('PASS: deploy dry-run, T+ loader backup/retirement, exact 34 VGD files, repeated install, foreign-loader guards and Cabinet preservation')

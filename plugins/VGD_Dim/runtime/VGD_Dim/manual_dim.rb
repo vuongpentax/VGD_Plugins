@@ -17,8 +17,11 @@ module VGD
         def suspend(view)
           view.invalidate
         end
+        # Called when another tool replaces this one (Esc and failures end the tool through finish too);
+        # without it the dialog would stay disabled.
         def deactivate(view)
           view.invalidate
+          finish
         end
         def initialize(config)
           @config = config
@@ -149,16 +152,19 @@ module VGD
           box = Regions.active_bounds(model)
           points = [first, last, first + offset, last + offset]
           raise ArgumentError, 'Dim vượt khỏi Boundary/Detail Region đang chọn.' unless Regions.contains_part?(box, points)
-          model.start_operation('VGD Dim — Dim thủ công', true)
-          begin
-            dimension = model.entities.add_dimension_linear(first, last, offset)
-            Core.style_dim(dimension, @config['dim'], {}, true)
-            model.selection.clear
-            model.selection.add(dimension)
-            model.commit_operation
-          rescue StandardError
-            model.abort_operation
-            raise
+          # Styled here with the manual settings; Auto-Style must not queue and restyle it afterwards.
+          AutoStyle.suspend do
+            model.start_operation('VGD Dim — Dim thủ công', true)
+            begin
+              dimension = model.entities.add_dimension_linear(first, last, offset)
+              Core.style_dim(dimension, @config['dim'], {}, true)
+              model.selection.clear
+              model.selection.add(dimension)
+              model.commit_operation
+            rescue StandardError
+              model.abort_operation
+              raise
+            end
           end
           model.active_view.invalidate
         end

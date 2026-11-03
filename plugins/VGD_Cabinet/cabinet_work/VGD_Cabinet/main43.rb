@@ -17,7 +17,7 @@ require_relative 'box_conversion'
 require_relative 'update_notice'
 module VGD_Cabinet
   remove_const(:VERSION) if const_defined?(:VERSION, false)
-  VERSION = '4.5.2'
+  VERSION = '4.5.3'
   remove_const(:FRONT_SETTING_KEYS) if const_defined?(:FRONT_SETTING_KEYS, false)
   FRONT_SETTING_KEYS = %w[
     opt_door door_style auto_door_count max_door_w door_count

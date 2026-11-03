@@ -418,8 +418,6 @@ module VGD
             end
             raise "Quá nhiều chi tiết (>#{MAX_PARTS}); chọn từng tủ để đo." if parts.size > MAX_PARTS
             collect(kids, t, parts, path + [defn], planes, basis, ids + [e.persistent_id], stats)
-          when Sketchup::Face
-            parts << corners(e.bounds, tr)
           end
         end
       end
