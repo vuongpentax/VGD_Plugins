@@ -125,6 +125,13 @@ check 'plugin mới hiện là "cài đặt"', by_id['demo_tool'][:action] == 'i
 check 'mọi plugin bundle đều có trang hướng dẫn thật',
       (accepted.map { |item| item['id'] } - %w[]).all? { |id| File.file?(File.join(__dir__, '..', 'VGD_Center', 'guides', "#{id}.html")) }
 
+# ---------- 5b. Kiểu cửa sổ ----------
+# STYLE_WINDOW là cửa sổ độc lập, bị chìm xuống sau SketchUp khi bấm ra ngoài (trông như tự đóng). Các plugin VGD dùng STYLE_DIALOG.
+center_source = File.read(File.join(__dir__, '..', 'VGD_Center', 'main.rb'), encoding: 'UTF-8')
+styles = center_source.scan(/UI::HtmlDialog::(STYLE_\w+)/).flatten
+check 'mọi cửa sổ HtmlDialog của Center (chính và hướng dẫn) dùng STYLE_DIALOG', styles.size == 2 && styles.uniq == ['STYLE_DIALOG'], styles.inspect
+check 'mọi HtmlDialog.new đều có một style tương ứng', center_source.scan('UI::HtmlDialog.new(').size == styles.size
+
 # ---------- 6. Hướng dẫn ----------
 $stub_messages.clear
 CENTER.open_guide('demo_tool')

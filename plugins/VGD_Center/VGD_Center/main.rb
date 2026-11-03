@@ -44,14 +44,16 @@ module VGD
         @center_release ||= read_bundled_center_release
         @dialog = UI::HtmlDialog.new(
           dialog_title: 'VGD Center',
-          preferences_key: 'com.vgd.center.dialog.v2',
+          preferences_key: 'com.vgd.center.dialog.v3',
           scrollable: true,
           resizable: true,
           width: 560,
           height: 700,
           min_width: 380,
           min_height: 520,
-          style: UI::HtmlDialog::STYLE_WINDOW
+          # STYLE_DIALOG như các plugin VGD khác: cửa sổ luôn nằm trên cửa sổ SketchUp. Kiểu STYLE_WINDOW (cửa sổ độc lập)
+          # bị chìm xuống sau SketchUp khi bấm ra ngoài hoặc sau mỗi thao tác, trông như tự đóng.
+          style: UI::HtmlDialog::STYLE_DIALOG
         )
         register_callbacks(@dialog)
         @dialog.set_file(File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'dialog.html'))
@@ -143,7 +145,9 @@ module VGD
           height: 760,
           min_width: 620,
           min_height: 500,
-          style: UI::HtmlDialog::STYLE_WINDOW
+          # STYLE_DIALOG như các plugin VGD khác: cửa sổ luôn nằm trên cửa sổ SketchUp. Kiểu STYLE_WINDOW (cửa sổ độc lập)
+          # bị chìm xuống sau SketchUp khi bấm ra ngoài hoặc sau mỗi thao tác, trông như tự đóng.
+          style: UI::HtmlDialog::STYLE_DIALOG
         )
         @guide_dialogs[id] = guide
         guide.set_file(path)

@@ -7,6 +7,7 @@
 - Không đổi file trong Plugins khi VGD Center đang cài hoặc gỡ plugin.
 - **VGD Plugin Manager được thay bằng tab Quản lý** và không còn trong Kho plugin. Bản Plugin Manager đã cài vẫn chạy nhưng Center không còn cập nhật hay gỡ giúp. Hai bên dùng chung dữ liệu (`Plugins/VGD_PluginManager/data`): plugin đã tắt bằng Plugin Manager vẫn hiện ở tab Quản lý.
 - Nếu còn cài Plugin Manager cũ: bật lại mọi plugin đang tắt rồi mới gỡ nó, vì thư mục dữ liệu bị xóa theo. Bản cũ (beta.17) vẫn có thể tắt nhầm VGD Center.
+- Sửa lỗi cửa sổ VGD Center (và cửa sổ hướng dẫn) tự biến mất sau mỗi thao tác hoặc khi bấm ra ngoài: chuyển sang kiểu cửa sổ `STYLE_DIALOG` như các plugin VGD khác, luôn nằm trên cửa sổ SketchUp. Cửa sổ Center không còn thu nhỏ/phóng to riêng như cửa sổ độc lập.
 - Nhật ký lỗi của tab Quản lý: `%APPDATA%\SketchUp\VGD_Center\manager.log`.
 
 Kiểm tra: tự động (6 bộ test trong `dev/`, 241 kiểm tra, trong đó 184 cho tab Quản lý gồm tiếng Anh; cú pháp Ruby và JavaScript; dựng giao diện trong trình duyệt ở hai theme, hai ngôn ngữ). Chưa kiểm thử thủ công trong SketchUp: hộp thoại, hộp chọn file, mở thư mục và việc dời file plugin thật chưa chạy trong SketchUp.
