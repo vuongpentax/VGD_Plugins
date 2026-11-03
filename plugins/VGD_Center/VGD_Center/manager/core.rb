@@ -2,6 +2,7 @@
 require 'sketchup.rb'
 require 'fileutils'
 require 'json'
+require File.join(File.dirname(__FILE__), 'text')
 require File.join(File.dirname(__FILE__), 'zip_writer')
 require File.join(File.dirname(__FILE__), 'logger')
 require File.join(File.dirname(__FILE__), 'linker')
@@ -87,11 +88,11 @@ module VGD
 
       # Cảnh báo tương thích Ruby 2.7 -> 3.2 (chỉ mang tính tham khảo)
       RISKY_PATTERNS = {
-        /\bFixnum\b|\bBignum\b/ => 'dùng Fixnum/Bignum (đã bỏ trong Ruby 3.2)',
-        /\bFile\.exists\?/      => 'dùng File.exists? (đã bỏ, phải dùng File.exist?)',
-        /\bDir\.exists\?/       => 'dùng Dir.exists? (đã bỏ, phải dùng Dir.exist?)',
-        /\bURI\.escape\b/       => 'dùng URI.escape (đã bỏ)',
-        /\.taint\b|\.untaint\b/ => 'dùng taint/untaint (đã bỏ)'
+        /\bFixnum\b|\bBignum\b/ => :risky_fixnum,
+        /\bFile\.exists\?/      => :risky_file_exists,
+        /\bDir\.exists\?/       => :risky_dir_exists,
+        /\bURI\.escape\b/       => :risky_uri_escape,
+        /\.taint\b|\.untaint\b/ => :risky_taint
       }
 
       def self.scan_compat(src_ver, chosen)
@@ -109,8 +110,8 @@ module VGD
               rescue
                 next
               end
-              RISKY_PATTERNS.each do |re, msg|
-                warns << "#{pl[:name]}: #{msg}" if text =~ re
+              RISKY_PATTERNS.each do |re, key|
+                warns << "#{pl[:name]}: #{t(key)}" if text =~ re
               end
             end
           end
@@ -144,7 +145,7 @@ module VGD
       # Trả về { count:, path:, notes: } hoặc { error: }
       def self.build_bundle(src_ver, chosen, out_path)
         entries = collect_files(src_ver, chosen)
-        return { error: 'Không có file nào để đóng gói.' } if entries.empty?
+        return { error: t(:bundle_empty) } if entries.empty?
         plugin_files = entries.size
         now = Time.now
         manifest = {
@@ -161,14 +162,14 @@ module VGD
         ZipWriter.write(out_path, entries)
         { count: plugin_files, path: out_path, notes: [] }
       rescue => e
-        { error: report_error('Không tạo được gói', e) }
+        { error: report_error(t(:err_bundle), e) }
       end
 
       # Kiểm tra cặp phiên bản nguồn/đích do giao diện gửi lên. Trả về thông báo lỗi hoặc nil.
       def self.check_versions(src, dst)
         versions = installed_versions
-        return 'Hãy chọn phiên bản nguồn và đích.' unless versions.include?(src.to_s) && versions.include?(dst.to_s)
-        return 'Phiên bản nguồn và đích phải khác nhau.' if src == dst
+        return t(:ver_pick) unless versions.include?(src.to_s) && versions.include?(dst.to_s)
+        return t(:ver_same) if src == dst
         nil
       end
 

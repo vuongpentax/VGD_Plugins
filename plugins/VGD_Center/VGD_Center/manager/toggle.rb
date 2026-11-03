@@ -36,9 +36,9 @@ module VGD
           return nil if File.exist?(root_dir)
           FileUtils.mkdir_p(File.dirname(root_dir))
           FileUtils.mv(old, root_dir)
-          "Đã chuyển dữ liệu bật/tắt cũ vào #{root_dir}."
+          PM.t(:legacy_moved, dir: root_dir)
         rescue => e
-          PM.report_error('Không chuyển được dữ liệu bật/tắt cũ', e)
+          PM.report_error(PM.t(:err_legacy), e)
         end
 
         def self.disabled_dir
@@ -101,7 +101,7 @@ module VGD
           items.each do |item|
             src = File.join(from_dir, item)
             dst = File.join(to_dir, item)
-            raise "#{item} đã tồn tại ở thư mục đích" if File.exist?(dst)
+            raise PM.t(:dest_exists, item: item) if File.exist?(dst)
             FileUtils.mv(src, dst)
             moved << item
           end
@@ -131,7 +131,7 @@ module VGD
                 next
               end
               if off.key?(n)
-                res[:errors] << "#{n}: đã có bản cùng tên trong thư mục tắt, cần xử lý thủ công"
+                res[:errors] << PM.t(:clash_disabled, name: n)
                 next
               end
               err = move_items(plugins, disabled_dir, on[n])
@@ -141,7 +141,7 @@ module VGD
                 next
               end
               if on.key?(n)
-                res[:errors] << "#{n}: đã có bản cùng tên trong Plugins, cần xử lý thủ công"
+                res[:errors] << PM.t(:clash_plugins, name: n)
                 next
               end
               err = move_items(disabled_dir, plugins, off[n])
@@ -168,48 +168,47 @@ module VGD
         # Nội dung hộp xác nhận cho tắt/bật hàng loạt
         def self.bulk_confirm_text(targets, action)
           if action == 'enable'
-            return "Bật #{targets.size} plugin?\n\nThay đổi có hiệu lực sau khi khởi động lại SketchUp."
+            return PM.t(:confirm_enable, n: targets.size)
           end
-          text = "Tắt #{targets.size} plugin (gồm cả plugin VGD nếu có)?\n\n"
+          text = PM.t(:confirm_disable_head, n: targets.size)
           libs = library_like(targets)
           unless libs.empty?
             shown = libs.first(6).join(', ')
-            shown += " và #{libs.size - 6} mục khác" if libs.size > 6
-            text += "Có thể có thư viện nền mà plugin khác cần: #{shown}. Tắt chúng có thể làm plugin khác lỗi khi mở lại.\n\n"
+            shown += PM.t(:libs_more, n: libs.size - 6) if libs.size > 6
+            text += PM.t(:confirm_libs, shown: shown)
           end
-          text + "Thay đổi có hiệu lực sau khi khởi động lại SketchUp. Có thể bật lại bằng nút \"Bật tất cả\"."
+          text + PM.t(:confirm_disable_tail)
         end
 
         def self.summary(res, action)
-          verb = action == 'disable' ? 'Đã tắt' : 'Đã bật'
-          msg = ["#{verb}: #{res[:changed].size} plugin."]
-          msg << "Bỏ qua (đã ở trạng thái đó hoặc không tìm thấy): #{res[:skipped].size}." if res[:skipped].any?
-          msg << "Lỗi: #{res[:errors].join('; ')}" if res[:errors].any?
-          msg << 'Khởi động lại SketchUp để thay đổi có hiệu lực.' if res[:changed].any?
+          msg = [PM.t(action == 'disable' ? :sum_disabled : :sum_enabled, n: res[:changed].size)]
+          msg << PM.t(:sum_skipped, n: res[:skipped].size) if res[:skipped].any?
+          msg << PM.t(:sum_errors, errors: res[:errors].join('; ')) if res[:errors].any?
+          msg << PM.t(:sum_restart) if res[:changed].any?
           msg.join("\n")
         end
 
         def self.save_set(name, names)
           name = name.to_s.strip[0, 40]
-          return 'Hãy nhập tên cho bộ plugin.' if name.empty?
+          return PM.t(:set_need_name) if name.empty?
           valid = state['plugins'].map { |p| p['name'] }
           picked = Array(names).map(&:to_s).uniq & valid
-          return 'Hãy tick ít nhất một plugin để lưu thành bộ.' if picked.empty?
+          return PM.t(:set_need_pick) if picked.empty?
           sets = load_sets
           sets[name] = picked
           save_sets(sets)
-          "Đã lưu bộ \"#{name}\" gồm #{picked.size} plugin."
+          PM.t(:set_saved, name: name, n: picked.size)
         rescue => e
-          PM.report_error('Không lưu được bộ', e)
+          PM.report_error(PM.t(:err_save_set), e)
         end
 
         def self.delete_set(name)
           sets = load_sets
-          return 'Không tìm thấy bộ này.' unless sets.delete(name.to_s)
+          return PM.t(:set_not_found) unless sets.delete(name.to_s)
           save_sets(sets)
-          "Đã xóa bộ \"#{name}\" (các plugin không bị ảnh hưởng)."
+          PM.t(:set_deleted, name: name)
         rescue => e
-          PM.report_error('Không xóa được bộ', e)
+          PM.report_error(PM.t(:err_delete_set), e)
         end
 
         SETS_FORMAT = 'vgd_plugin_sets'
@@ -217,14 +216,14 @@ module VGD
         # Xuất tất cả bộ plugin ra file .json để mang sang máy khác
         def self.export_sets(path)
           sets = load_sets
-          return 'Chưa có bộ plugin nào để xuất.' if sets.empty?
+          return PM.t(:sets_none) if sets.empty?
           path = "#{path}.json" unless path =~ /\.json\z/i
           data = { 'format' => SETS_FORMAT, 'version' => 1,
                    'tool_version' => VGD::Center::VERSION, 'sets' => sets }
           File.write(path, JSON.pretty_generate(data), encoding: 'UTF-8')
-          "Đã xuất #{sets.size} bộ plugin ra: #{path}"
+          PM.t(:sets_exported, n: sets.size, path: path)
         rescue => e
-          PM.report_error('Không xuất được bộ plugin', e)
+          PM.report_error(PM.t(:err_export_sets), e)
         end
 
         # Đọc file bộ plugin. Trả về [bộ_đã_làm_sạch, lỗi]; chỉ nhận chuỗi, bỏ mục sai kiểu.
@@ -232,7 +231,7 @@ module VGD
         def self.read_sets_file(path)
           data = JSON.parse(File.read(path, encoding: 'UTF-8'))
           raw = data.is_a?(Hash) && data['format'] == SETS_FORMAT ? data['sets'] : nil
-          return [nil, 'File không đúng định dạng bộ plugin của VGD.'] unless raw.is_a?(Hash)
+          return [nil, PM.t(:sets_bad_format)] unless raw.is_a?(Hash)
           clean = {}
           raw.each do |k, v|
             name = k.to_s.strip[0, 40]
@@ -240,10 +239,10 @@ module VGD
             names = v.select { |x| x.is_a?(String) && !x.strip.empty? }.map(&:strip).uniq
             clean[name] = names unless names.empty?
           end
-          return [nil, 'File không có bộ plugin hợp lệ nào.'] if clean.empty?
+          return [nil, PM.t(:sets_none_valid)] if clean.empty?
           [clean, nil]
         rescue => e
-          [nil, PM.report_error('Không đọc được file bộ plugin', e)]
+          [nil, PM.report_error(PM.t(:err_read_sets), e)]
         end
 
         # Gộp bộ nhập vào bộ hiện có. Trùng tên: overwrite=true thì ghi đè, false thì bỏ qua.
@@ -264,11 +263,11 @@ module VGD
             sets[name] = names
           end
           save_sets(sets) if added + replaced > 0
-          msg = "Đã nhập: #{added} bộ mới, #{replaced} bộ ghi đè."
-          msg += " Bỏ qua #{skipped} bộ trùng tên." if skipped > 0
+          msg = PM.t(:sets_imported, added: added, replaced: replaced)
+          msg += PM.t(:sets_import_skipped, n: skipped) if skipped > 0
           msg
         rescue => e
-          PM.report_error('Không nhập được bộ plugin', e)
+          PM.report_error(PM.t(:err_import_sets), e)
         end
 
         def self.desktop_dir

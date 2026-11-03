@@ -1,6 +1,6 @@
-# VGD Center 1.3.0
+# VGD Center 1.2.1
 
-VGD Center quản lý các plugin VGD trong SketchUp. Danh mục hiển thị phiên bản mới nhất đã được chọn, bao gồm cả beta và alpha. Cài gói phát hành VGD Center 1.3.0 qua Extension Manager; RBZ không được lưu trong thư mục source này. Mở VGD Center bằng nút trên toolbar hoặc menu Extensions.
+VGD Center quản lý các plugin VGD trong SketchUp. Danh mục hiển thị phiên bản mới nhất đã được chọn, bao gồm cả beta và alpha. Cài gói phát hành VGD Center 1.2.1 qua Extension Manager; RBZ không được lưu trong thư mục source này. Mở VGD Center bằng nút trên toolbar hoặc menu Extensions.
 
 ## Tính năng
 
@@ -14,7 +14,7 @@ VGD Center quản lý các plugin VGD trong SketchUp. Danh mục hiển thị ph
 - Kiểm tra và tự cập nhật VGD Center từ bản stable đã phát hành; gói được xác minh bằng SHA-256.
 - Gỡ từng plugin đã cài, kèm xác nhận và nhắc khởi động lại SketchUp.
 - Mỗi thẻ plugin có nút **Hướng dẫn**; các trang HTML tiếng Việt, giao diện tối/sáng và nút in PDF được đóng gói cùng Center để tự cập nhật chung với Center.
-- Tab **Quản lý** (từ 1.3.0): bật/tắt plugin, bộ plugin, chuyển plugin giữa SketchUp 2022 và 2024, xuất gói .rbz tổng, cho mọi plugin trong thư mục Plugins. VGD Center và VGD Plugin Manager không bao giờ bị tắt hay chuyển. Mã nằm trong `VGD_Center/manager/`.
+- Tab **Quản lý** (từ 1.2.1, thay VGD Plugin Manager): bật/tắt plugin, bộ plugin, chuyển plugin giữa SketchUp 2022 và 2024, xuất gói .rbz tổng, cho mọi plugin trong thư mục Plugins. Có tiếng Anh đầy đủ. VGD Center không bao giờ bị tắt hay chuyển. Mã nằm trong `VGD_Center/manager/`.
 - Chọn ngôn ngữ giao diện và bật/tắt tự động cập nhật VGD Center khi khởi động SketchUp.
 - Xem thời điểm kiểm tra cập nhật Center gần nhất.
 - Giao diện tối mặc định, có thể chuyển sang sáng.
@@ -34,7 +34,7 @@ Catalog hiển thị các phiên bản VGD hiện hành; bản beta và alpha đ
 
 ## Mã nguồn và phát hành
 
-Thư mục này chứa mã nguồn và tài nguyên VGD Center 1.3.0, không kèm RBZ hoặc source ZIP tạo sẵn. Ghi chú phát hành được giữ trong các file RELEASE_NOTES_v*.md. Đóng gói bằng `python plugins/VGD_Center/dev/package.py` (từ thư mục gốc repo). Test (chạy từ thư mục `plugins/VGD_Center`, dùng stub SketchUp trong `dev/stub`): `ruby dev/test_center.rb` (catalog, cài/gỡ), `ruby dev/test_manager_toggle.rb`, `ruby dev/test_manager_linker.rb`, `ruby dev/test_manager_dialog.rb`, `ruby dev/test_manager_bundle.rb` (tab Quản lý).
+Thư mục này chứa mã nguồn và tài nguyên VGD Center 1.2.1, không kèm RBZ hoặc source ZIP tạo sẵn. Ghi chú phát hành được giữ trong các file RELEASE_NOTES_v*.md. Đóng gói bằng `python plugins/VGD_Center/dev/package.py` (từ thư mục gốc repo). Test (chạy từ thư mục `plugins/VGD_Center`, dùng stub SketchUp trong `dev/stub`): `ruby dev/test_center.rb` (catalog, cài/gỡ), `ruby dev/test_manager_toggle.rb`, `ruby dev/test_manager_linker.rb`, `ruby dev/test_manager_dialog.rb`, `ruby dev/test_manager_bundle.rb`, `ruby dev/test_manager_i18n.rb` (tab Quản lý, gồm tiếng Anh).
 
 ## Thêm plugin mới vào kho
 

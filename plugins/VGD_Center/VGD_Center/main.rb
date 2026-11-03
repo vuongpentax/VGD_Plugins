@@ -10,11 +10,11 @@ require File.join(File.dirname(__FILE__), 'manager', 'core')
 
 module VGD
   module Center
-    VERSION = '1.3.0'.freeze
+    VERSION = '1.2.1'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
-    ALLOWED_IDS = %w[dim cabinet library image_importer scenes bim_lite reference plugin_manager].freeze
+    ALLOWED_IDS = %w[dim cabinet library image_importer scenes bim_lite reference].freeze
     PLUGIN_LAYOUTS = {
       'dim' => ['VGD Dim', ['vgd_dim.rb', 'VGD_Dim/']],
       'cabinet' => ['VGD Cabinet', ['vgd_cabinet.rb', 'VGD_Cabinet/']],
@@ -23,7 +23,6 @@ module VGD
       'scenes' => ['VGD Scenes', ['vgd_scenes.rb', 'vgd_scenes/']],
       'bim_lite' => ['VGD BIM Lite', ['vgd_bim_lite.rb', 'vgd_bim_lite/']],
       'reference' => ['VGD Reference', ['vgd_reference.rb', 'vgd_reference/']],
-      'plugin_manager' => ['VGD Plugin Manager', ['VGD_PluginManager.rb', 'VGD_PluginManager/']],
       'center' => ['VGD Center', ['VGD_Center.rb', 'VGD_Center/']]
     }.freeze
     # Plugin chưa có trong PLUGIN_LAYOUTS vẫn được nhận nếu catalog khai báo cấu trúc hợp lệ (xem validate_plugin_layout).
@@ -277,7 +276,7 @@ module VGD
         return notify('info', 'Plugin chưa được cài', "#{product['name']} hiện không có trên máy này.") unless find_installed_extension(product) || installed_version_for(id)
 
         plugin_root = File.expand_path(Sketchup.find_support_file('Plugins'))
-        answer = UI.messagebox("Gỡ #{product['name']} khỏi SketchUp?\n\nCác tệp của plugin sẽ bị xóa. Hãy khởi động lại SketchUp sau khi gỡ.#{uninstall_warning(id, plugin_root, product)}", MB_YESNO)
+        answer = UI.messagebox("Gỡ #{product['name']} khỏi SketchUp?\n\nCác tệp của plugin sẽ bị xóa. Hãy khởi động lại SketchUp sau khi gỡ.#{uninstall_warning(product)}", MB_YESNO)
         return unless answer == IDYES
 
         backup_dir = Dir.mktmpdir('vgd-center-uninstall-')
@@ -319,23 +318,10 @@ module VGD
         end
       end
 
-      # Thêm cảnh báo riêng của plugin vào hộp thoại gỡ: cảnh báo kiểm tra thật cho Plugin Manager, và ghi chú
-      # uninstall_note (nếu catalog có) cho mọi plugin.
-      def uninstall_warning(id, plugin_root, product = nil)
-        parts = []
-        parts << disabled_plugins_warning(plugin_root) if id == 'plugin_manager'
+      # Ghi chú uninstall_note (nếu catalog có) thêm vào hộp thoại gỡ cài đặt.
+      def uninstall_warning(product)
         note = product && product['uninstall_note']
-        parts << note if note
-        parts.compact.map { |part| "\n\n#{part}" }.join
-      end
-
-      # VGD Plugin Manager cất plugin đã tắt trong VGD_PluginManager/data/disabled, nên gỡ nó sẽ xóa luôn các plugin đó
-      def disabled_plugins_warning(plugin_root)
-        disabled = File.join(plugin_root, 'VGD_PluginManager', 'data', 'disabled')
-        return nil unless File.directory?(disabled) && !Dir.children(disabled).empty?
-
-        "CẢNH BÁO: đang có plugin được tắt và cất trong #{disabled}. Gỡ plugin này sẽ xóa luôn các plugin đó. " \
-          'Hãy bật lại chúng bằng VGD Plugin Manager trước khi gỡ.'
+        note ? "\n\n#{note}" : ''
       end
 
       def validate_center_release(release)
@@ -409,8 +395,11 @@ module VGD
         ids = []
         warnings = []
         # Đường dẫn và tên extension đã bị plugin có sẵn chiếm; plugin mới không được trùng.
+        # Gồm cả các mục tab Quản lý bảo vệ (Manager::SELF_NAMES), đặc biệt thư mục dữ liệu VGD_PluginManager:
+        # không mục catalog nào được khai báo đường dẫn này.
         claimed = {
-          paths: PLUGIN_LAYOUTS.values.flat_map { |layout| layout[1].map(&:downcase) },
+          paths: PLUGIN_LAYOUTS.values.flat_map { |layout| layout[1].map(&:downcase) } +
+                 Manager::SELF_NAMES.flat_map { |name| [name.downcase, "#{name.downcase}/"] },
           names: PLUGIN_LAYOUTS.values.map { |layout| layout[0].downcase }
         }
         normalized = products.each_with_object([]) do |product, valid_products|

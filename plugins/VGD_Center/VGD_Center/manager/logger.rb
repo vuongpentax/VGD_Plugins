@@ -33,7 +33,7 @@ module VGD
 
         # Câu nhắc người dùng biết xem log ở đâu
         def self.hint
-          "Chi tiết lỗi đã ghi vào: #{path}"
+          VGD::Center::Manager.t(:log_hint, path: path)
         end
 
         def self.rotate

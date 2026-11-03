@@ -192,7 +192,6 @@
     <symbol id="vgd-scenes" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 8.5h4l1.5-2h6l1.5 2h4v10h-17z"/><circle fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" cx="12" cy="13.5" r="3.1"/></symbol>
     <symbol id="vgd-bim" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M3.5 10 12 4l8.5 6v10h-17z"/><path fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8 12h8m-8 3h8m-8 3h8"/></symbol>
     <symbol id="vgd-library" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M8 3.5h12v13M4 7h13v14H4z"/><path fill="var(--accent-strong)" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" d="M6 9h9v9H6z"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M7.5 12c2-2 3 1 6-1m-6 4c2-2 3 1 6-1"/></symbol>
-      <symbol id="vgd-plugin-manager" viewBox="0 0 24 24"><rect x="2.5" y="6.5" width="19" height="11" rx="5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="12" r="2.75" fill="none" style="stroke:var(--accent)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="vgd-reference" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M7 6.5H4.7a1.2 1.2 0 0 0-1.2 1.2v11.6a1.2 1.2 0 0 0 1.2 1.2h14.6a1.2 1.2 0 0 0 1.2-1.2V7.7a1.2 1.2 0 0 0-1.2-1.2H17M6 17l3.5-3.5 4 3.5 2.5-2.5 2 2.5"/><path fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M10 3.5h4v3l1.5 2h-7l1.5-2zM12 8.5v3"/></symbol>
       <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></symbol>
     <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
@@ -234,15 +233,15 @@
       <main>
         <section class="page active" id="page-overview" data-view="overview">
           <div class="page-head">
-            <div><p class="eyebrow">WORKSPACE · VGD</p><h1>Tổng quan</h1><p class="page-intro">Cài plugin còn thiếu, quản lý bản đã cài và cập nhật ngay trong SketchUp.</p></div>
-            <div class="button-row"><button class="btn primary" id="installAllBtn" data-action="install_all_plugins"><svg><use href="#i-box"/></svg><span>Cài tất cả</span></button><button class="btn" id="syncBtn"><svg><use href="#i-sync"/></svg><span>Kiểm tra cập nhật</span></button></div>
+            <div><p class="eyebrow">WORKSPACE · VGD</p><h1>Tổng quan</h1><p class="page-intro">Cài plugin VGD còn thiếu, cập nhật bản đã cài và quản lý mọi plugin ngay trong SketchUp.</p></div>
+            <div class="button-row"><button class="btn primary" id="installAllBtn" data-action="install_all_plugins"><svg><use href="#i-box"/></svg><span>Cài tất cả</span></button><button class="btn" data-page="manager"><svg><use href="#i-manage"/></svg><span>Quản lý plugin</span></button><button class="btn" id="syncBtn"><svg><use href="#i-sync"/></svg><span>Kiểm tra cập nhật</span></button></div>
           </div>
           <div class="welcome-grid">
             <section class="card welcome">
               <p class="eyebrow">VGD · PLUGIN CENTER</p>
               <h2>Chào mừng đến với VGD Center</h2>
-              <p>Cài đặt và cập nhật plugin VGD trực tiếp trong SketchUp. Chọn thao tác; VGD Center sẽ tải gói, xác minh và cài đặt giúp bạn.</p>
-              <div class="pills"><span class="pill accent"><i class="dot"></i>Có stable · beta · alpha</span><span class="pill">Cài đặt có xác minh</span><span class="pill">Nhắc khởi động lại</span></div>
+              <p>Cài đặt và cập nhật plugin VGD, đồng thời bật/tắt, chuyển và đóng gói mọi plugin trong SketchUp. VGD Center tải gói, xác minh và cài đặt giúp bạn.</p>
+              <div class="pills"><span class="pill accent"><i class="dot"></i>Có stable · beta · alpha</span><span class="pill">Cài đặt có xác minh</span><span class="pill">Nhắc khởi động lại</span><span class="pill">Quản lý mọi plugin</span></div>
             </section>
             <section class="card health">
               <div class="health-head"><div class="health-title"><i class="status-dot"></i>VGD Center hoạt động bình thường</div></div>
@@ -267,50 +266,67 @@
         </section>
 
         <section class="page" id="page-manager" data-view="manager">
-          <div class="page-head"><div><p class="eyebrow">MỌI PLUGIN TRONG SKETCHUP</p><h1>Quản lý</h1><p class="page-intro">Bật/tắt plugin, chuyển plugin giữa các bản SketchUp và xuất gói .rbz. Áp dụng cho mọi plugin trong thư mục Plugins, không chỉ plugin VGD. <span id="mgrVer"></span></p></div></div>
+          <div class="page-head">
+            <div><p class="eyebrow">MỌI PLUGIN TRONG SKETCHUP</p><h1>Quản lý</h1><p class="page-intro">Bật/tắt plugin, chuyển plugin giữa các bản SketchUp và xuất gói .rbz. Áp dụng cho mọi plugin trong thư mục Plugins, không chỉ plugin VGD.</p></div>
+            <div class="button-row">
+              <button type="button" class="btn" id="mgrOpenPlugins"><span>Mở thư mục Plugins</span></button>
+              <button type="button" class="btn" id="mgrOpenDisabled"><span>Mở thư mục đã tắt</span></button>
+            </div>
+          </div>
+          <div class="metrics">
+            <article class="card metric"><div class="metric-icon"><svg><use href="#i-check"/></svg></div><div class="metric-copy"><b id="mgrCountOn" data-no-translate>0</b><span>Đang bật</span></div></article>
+            <article class="card metric"><div class="metric-icon"><svg><use href="#i-manage"/></svg></div><div class="metric-copy"><b id="mgrCountOff" data-no-translate>0</b><span>Đã tắt</span></div></article>
+            <article class="card metric"><div class="metric-icon"><svg><use href="#i-box"/></svg></div><div class="metric-copy"><b id="mgrCountSets" data-no-translate>0</b><span>Bộ plugin</span></div></article>
+            <article class="card metric"><div class="metric-icon accent"><svg><use href="#i-shield"/></svg></div><div class="metric-copy"><b id="mgrYear" data-no-translate>—</b><span>Thư mục Plugins đang quản lý</span></div></article>
+          </div>
           <div class="mgr-tabs" role="tablist">
-            <button type="button" class="mgr-tab" role="tab" id="mgr-tab-toggle" aria-selected="true">Bật/tắt plugin</button>
+            <button type="button" class="mgr-tab" role="tab" id="mgr-tab-toggle" aria-selected="true">Bật/tắt</button>
             <button type="button" class="mgr-tab" role="tab" id="mgr-tab-migrate" aria-selected="false">Chuyển plugin</button>
           </div>
           <section id="mgr-panel-toggle">
-            <div class="mgr-note">Gạt nút để bật/tắt, thay đổi chỉ có hiệu lực sau khi khởi động lại SketchUp. Plugin bị tắt được cất vào thư mục riêng, không bị xóa. Cẩn thận: tắt plugin mà plugin khác cần có thể gây lỗi khi mở lại. VGD Center không bao giờ tự tắt chính nó.</div>
-            <div class="mgr-bar"><input type="text" id="mgrQ" placeholder="Tìm plugin...">
+            <div class="bottom-note mgr-note"><svg><use href="#i-restart"/></svg><span>Gạt nút để bật/tắt, thay đổi chỉ có hiệu lực sau khi khởi động lại SketchUp. Plugin bị tắt được cất vào thư mục riêng, không bị xóa. Cẩn thận: tắt plugin mà plugin khác cần có thể gây lỗi khi mở lại. VGD Center không bao giờ tự tắt chính nó.</span></div>
+            <div class="section-head">
+              <div><h2>Danh sách plugin</h2></div>
+              <div class="section-tools">
+                <button type="button" class="btn small danger" id="mgrBulkOff" data-no-translate>Tắt tất cả</button>
+                <button type="button" class="btn small primary" id="mgrBulkOn" data-no-translate>Bật tất cả</button>
+              </div>
+            </div>
+            <div class="mgr-bar"><input type="text" id="mgrQ">
               <button type="button" class="btn small" id="mgrSelAll">Chọn hết đang hiện</button>
               <button type="button" class="btn small" id="mgrSelNone">Bỏ chọn hết</button>
-              <button type="button" class="btn small" id="mgrOpenPlugins" title="Mở thư mục Plugins của SketchUp đang chạy">Mở thư mục Plugins</button>
-              <button type="button" class="btn small" id="mgrOpenDisabled" title="Mở thư mục chứa các plugin đã tắt">Mở thư mục đã tắt</button></div>
-            <div class="mgr-bar">
-              <button type="button" class="btn small danger" id="mgrBulkOff">Tắt tất cả</button>
-              <button type="button" class="btn small primary" id="mgrBulkOn">Bật tất cả</button>
-              <small>Khi ô tìm kiếm có chữ, chỉ áp cho các mục đang hiện.</small>
+              <small>Khi ô tìm kiếm có chữ, chỉ áp cho các mục đang hiện.</small></div>
+            <div class="card mgr-list" id="mgrList" data-no-translate></div>
+            <div class="section-head"><div><h2>Bộ plugin</h2><p>Bộ plugin là một danh sách plugin để bật/tắt cùng lúc.</p></div></div>
+            <div class="card mgr-card">
+              <div class="mgr-bar"><input type="text" id="mgrSetName">
+                <button type="button" class="btn small" id="mgrSaveSet">Lưu mục đã chọn thành bộ</button></div>
+              <div id="mgrSets" data-no-translate></div>
+              <div class="mgr-bar"><button type="button" class="btn small" id="mgrExportSets">Xuất các bộ ra file</button>
+                <button type="button" class="btn small" id="mgrImportSets">Nhập bộ từ file</button></div>
             </div>
-            <div class="mgr-list" id="mgrList"></div>
-            <h2>Bộ plugin</h2>
-            <div class="mgr-note">Bộ plugin là một danh sách plugin để bật/tắt cùng lúc.</div>
-            <div class="mgr-bar"><input type="text" id="mgrSetName" placeholder="Tên bộ, ví dụ: Render">
-              <button type="button" class="btn small" id="mgrSaveSet">Lưu mục đã chọn thành bộ</button></div>
-            <div id="mgrSets"></div>
-            <div class="mgr-bar"><button type="button" class="btn small" id="mgrExportSets">Xuất các bộ ra file</button>
-              <button type="button" class="btn small" id="mgrImportSets">Nhập bộ từ file</button></div>
-            <small id="mgrDir"></small>
+            <small id="mgrDir" data-no-translate></small>
           </section>
           <section id="mgr-panel-migrate" hidden>
-            <div class="mgr-ver-row">
-              <label>Từ bản <select id="mgrSrc"></select></label>
-              <label>Sang bản <select id="mgrDst"></select></label>
-            </div>
-            <div class="mgr-box" id="mgrMlist"></div>
-            <div class="mgr-bar">
-              <button type="button" class="btn small" id="mgrSetAll">Chọn hết</button>
-              <button type="button" class="btn small" id="mgrSetNone">Bỏ chọn hết</button>
-            </div>
-            <label class="mgr-opt"><input type="checkbox" id="mgrOverwrite"> Ghi đè nếu plugin đã tồn tại ở bản đích</label>
-            <div class="mgr-bar">
-              <button type="button" class="btn primary" id="mgrGo">Chuyển plugin</button>
-              <button type="button" class="btn" id="mgrExportBundle">Xuất gói .rbz tổng</button>
+            <div class="section-head"><div><h2>Chuyển plugin giữa các bản SketchUp</h2><p>Chọn bản nguồn và bản đích, rồi chọn plugin cần chuyển. Thư mục đích được sao lưu trước khi chép.</p></div></div>
+            <div class="card mgr-card">
+              <div class="mgr-ver-row">
+                <label><span>Từ bản</span> <select id="mgrSrc"></select></label>
+                <label><span>Sang bản</span> <select id="mgrDst"></select></label>
+              </div>
+              <div class="mgr-box" id="mgrMlist" data-no-translate></div>
+              <div class="mgr-bar">
+                <button type="button" class="btn small" id="mgrSetAll">Chọn hết</button>
+                <button type="button" class="btn small" id="mgrSetNone">Bỏ chọn hết</button>
+              </div>
+              <label class="mgr-opt"><input type="checkbox" id="mgrOverwrite"> <span>Ghi đè nếu plugin đã tồn tại ở bản đích</span></label>
+              <div class="mgr-bar">
+                <button type="button" class="btn primary" id="mgrGo" data-no-translate>Chuyển plugin</button>
+                <button type="button" class="btn" id="mgrExportBundle">Xuất gói .rbz tổng</button>
+              </div>
             </div>
           </section>
-          <div class="mgr-out" id="mgrOut"></div>
+          <div class="mgr-out" id="mgrOut" data-no-translate></div>
         </section>
 
         <section class="page" id="page-settings" data-view="settings">
@@ -364,7 +380,7 @@
       const dialogIcon = document.getElementById('dialogIcon');
       const dialogActions = document.getElementById('dialogActions');
       const progressBar = document.getElementById('progressBar');
-      const iconIds = {dim:'vgd-dim', scenes:'vgd-scenes', cabinet:'vgd-cabinet', library:'vgd-library', image_importer:'vgd-import', bim_lite:'vgd-bim',reference:'vgd-reference',plugin_manager:'vgd-plugin-manager',cabinet_draw:'vgd-cabinet-draw'};
+      const iconIds = {dim:'vgd-dim', scenes:'vgd-scenes', cabinet:'vgd-cabinet', library:'vgd-library', image_importer:'vgd-import', bim_lite:'vgd-bim',reference:'vgd-reference',cabinet_draw:'vgd-cabinet-draw'};
       let currentState = {products:[]};
       let activePluginId = null;
       let activeLanguage = 'vi';
@@ -372,16 +388,17 @@
       const englishText = {
         'Ủng hộ VGD':'Support VGD',
         'Trung tâm plugin SketchUp':'SketchUp Plugin Center','Tổng quan':'Overview','Kho plugin':'Plugin catalog','Quản lý':'Manage','Cài đặt':'Settings',
+        'Quản lý mọi plugin':'Manage every plugin','Quản lý plugin':'Manage plugins','MỌI PLUGIN TRONG SKETCHUP':'ALL SKETCHUP PLUGINS','Bật/tắt plugin, chuyển plugin giữa các bản SketchUp và xuất gói .rbz. Áp dụng cho mọi plugin trong thư mục Plugins, không chỉ plugin VGD.':'Enable or disable plugins, migrate them between SketchUp versions, and export a .rbz bundle. Applies to every plugin in the Plugins folder, not just VGD plugins.','Mở thư mục Plugins':'Open Plugins folder','Mở thư mục đã tắt':'Open disabled folder','Đang bật':'Enabled','Đã tắt':'Disabled','Bộ plugin':'Plugin sets','Thư mục Plugins đang quản lý':'Managed Plugins folder','Bật/tắt':'Enable/disable','Chuyển plugin':'Migrate','Gạt nút để bật/tắt, thay đổi chỉ có hiệu lực sau khi khởi động lại SketchUp. Plugin bị tắt được cất vào thư mục riêng, không bị xóa. Cẩn thận: tắt plugin mà plugin khác cần có thể gây lỗi khi mở lại. VGD Center không bao giờ tự tắt chính nó.':'Use the switch to enable or disable a plugin; the change only takes effect after you restart SketchUp. Disabled plugins are moved to their own folder, not deleted. Careful: disabling a plugin that others need may cause errors when you reopen SketchUp. VGD Center never disables itself.','Danh sách plugin':'Plugin list','Chọn hết đang hiện':'Select all shown','Bỏ chọn hết':'Clear selection','Khi ô tìm kiếm có chữ, chỉ áp cho các mục đang hiện.':'When the search box has text, bulk actions apply only to the items shown.','Bộ plugin là một danh sách plugin để bật/tắt cùng lúc.':'A plugin set is a list of plugins you can enable or disable together.','Lưu mục đã chọn thành bộ':'Save selection as a set','Xuất các bộ ra file':'Export sets to file','Nhập bộ từ file':'Import sets from file','Chuyển plugin giữa các bản SketchUp':'Migrate plugins between SketchUp versions','Chọn bản nguồn và bản đích, rồi chọn plugin cần chuyển. Thư mục đích được sao lưu trước khi chép.':'Choose the source and destination versions, then pick the plugins to move. The destination folder is backed up before copying.','Từ bản':'From version','Sang bản':'To version','Chọn hết':'Select all','Ghi đè nếu plugin đã tồn tại ở bản đích':'Overwrite if the plugin already exists in the destination version','Xuất gói .rbz tổng':'Export bundle .rbz',
         'Quản lý plugin VGD và cập nhật ngay trong SketchUp.':'Manage VGD plugins and updates in SketchUp.',
         'VGD · PLUGIN CENTER':'VGD · PLUGIN CENTER','Chào mừng đến với VGD Center':'Welcome to VGD Center',
-        'Cài đặt và cập nhật plugin VGD trực tiếp trong SketchUp. Chọn thao tác; VGD Center sẽ tải gói, xác minh và cài đặt giúp bạn.':'Install and update VGD plugins in SketchUp. VGD Center downloads, verifies, and installs each package.',
+        'Cài đặt và cập nhật plugin VGD, đồng thời bật/tắt, chuyển và đóng gói mọi plugin trong SketchUp. VGD Center tải gói, xác minh và cài đặt giúp bạn.':'Install and update VGD plugins, and also enable, disable, migrate, and bundle every plugin in SketchUp. VGD Center downloads, verifies, and installs packages for you.',
         'Có stable · beta · alpha':'Stable · beta · alpha','Cài đặt có xác minh':'Verified installation','Nhắc khởi động lại':'Restart reminder',
         'VGD Center hoạt động bình thường':'VGD Center is running','SketchUp':'SketchUp','Plugin trong kho':'Plugins in catalog',
         'Đã cài trên máy':'Installed','Có bản cập nhật':'Updates available','Xác minh trước khi cài':'Verified before install',
         'Cập nhật dành cho bạn':'Updates for you','Phiên bản mới nhất của từng plugin, gồm cả beta và alpha.':'Latest versions, including beta and alpha.',
         'Cập nhật tất cả':'Update all','Không có bản cập nhật mới. Mở Kho plugin để xem các plugin có thể cài.':'No plugin updates. Open the catalog to install plugins.',
         'Sau khi cài đặt hoặc cập nhật xong, VGD Center báo hoàn tất và nhắc bạn khởi động lại SketchUp để nạp phiên bản mới.':'After installation or update, save your model and restart SketchUp to load the new version.',
-        'BỘ CÔNG CỤ VGD':'VGD TOOLKIT','Cài plugin còn thiếu, quản lý bản đã cài và cập nhật ngay trong SketchUp.':'Install missing plugins, manage installed versions, and update in SketchUp.',
+        'BỘ CÔNG CỤ VGD':'VGD TOOLKIT','Cài plugin VGD còn thiếu, cập nhật bản đã cài và quản lý mọi plugin ngay trong SketchUp.':'Install missing VGD plugins, update installed ones, and manage every plugin right inside SketchUp.',
         'Phiên bản mới nhất tương thích với SketchUp trên máy này.':'Latest versions compatible with this SketchUp installation.',
         'Tìm plugin…':'Search plugins…','Thẻ Beta và Alpha là bản thử nghiệm, có thể còn lỗi hoặc thay đổi. Kiểm tra nhãn phiên bản trước khi cài.':'Beta and Alpha releases are experimental and may change. Check the release label before installing.',
         'VGD CENTER':'VGD CENTER','Ngôn ngữ':'Language','Chọn ngôn ngữ giao diện':'Choose the interface language','Tự động':'Automatic',
@@ -420,7 +437,7 @@
       const notInstalled = () => currentState.products.filter(product => product.compatible && product.action === 'install');
       const productDescription = product => {
         if (activeLanguage !== 'en') return product.description;
-        const descriptions = {dim:'Measure dimensions and style labels, or create smart dimensions.',cabinet:'Design cabinets, compartments, doors, and drawers.',library:'Browse and manage VGD materials and models.',image_importer:'Import images as components, planes, or materials.',scenes:'Manage views, section cuts, and exports.',bim_lite:'Review and audit SketchUp model data.',reference:'Pin and edit reference images over the SketchUp viewport.',plugin_manager:'Turn plugins on and off, move them between SketchUp versions, and export a bundle.'};
+        const descriptions = {dim:'Measure dimensions and style labels, or create smart dimensions.',cabinet:'Design cabinets, compartments, doors, and drawers.',library:'Browse and manage VGD materials and models.',image_importer:'Import images as components, planes, or materials.',scenes:'Manage views, section cuts, and exports.',bim_lite:'Review and audit SketchUp model data.',reference:'Pin and edit reference images over the SketchUp viewport.'};
         return descriptions[product.id] || product.description;
       };
       const actionButton = product => {
@@ -500,7 +517,7 @@
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
         let node;
         while ((node = walker.nextNode())) {
-          if (node.parentElement && node.parentElement.closest('#catalogGrid, #overviewUpdates, #installAllBtn, #updatesPill, #centerUpdateTitle, #centerUpdateStatus, #centerUpdateBtn, #centerLastCheck, #centerVersion, #centerVersionSetting, #hostVersion, #healthPluginCount')) continue;
+          if (node.parentElement && node.parentElement.closest('[data-no-translate], #catalogGrid, #overviewUpdates, #installAllBtn, #updatesPill, #centerUpdateTitle, #centerUpdateStatus, #centerUpdateBtn, #centerLastCheck, #centerVersion, #centerVersionSetting, #hostVersion, #healthPluginCount')) continue;
           if (!originalTextNodes.has(node)) originalTextNodes.set(node, node.nodeValue);
           const original = originalTextNodes.get(node);
           const leading = (original.match(/^\s*/) || [''])[0];
@@ -513,6 +530,7 @@
         search.setAttribute('aria-label', search.placeholder);
         document.getElementById('autoUpdateToggle').setAttribute('aria-label', tr('Tự động cập nhật VGD Center', 'Automatically update VGD Center'));
         document.querySelector('.language-options').setAttribute('aria-label', tr('Ngôn ngữ', 'Language'));
+        if (window.VGDManager) window.VGDManager.setLanguage(activeLanguage);
       }
 
       function renderCenterUpdate() {
@@ -662,10 +680,10 @@
 
       if (window.sketchup && typeof window.sketchup.center_ready === 'function') window.sketchup.center_ready();
       else if (new URLSearchParams(window.location.search).has('preview') || (window.location.protocol === 'file:' && !window.sketchup)) {
-        const versions = {dim:'3.3.0-beta.5',cabinet:'4.5.0-beta.4',library:'1.1.2-beta.4',image_importer:'1.1.0-beta.5',scenes:'1.5.3-beta.3',bim_lite:'0.1.4-alpha',reference:'1.0.0-beta.6',plugin_manager:'1.0.0-beta.17'};
-        const descriptions = {dim:'Đo kích thước, chỉnh kiểu Dim/Text và tạo Smart Dim.',cabinet:'Dựng tủ, chia khoang, cánh và ngăn kéo trong SketchUp.',library:'Tìm kiếm và quản lý thư viện vật liệu, model VGD.',image_importer:'Nhập ảnh vào SketchUp dưới dạng component, mặt phẳng hoặc vật liệu.',scenes:'Quản lý góc nhìn, mặt cắt và xuất hồ sơ.',bim_lite:'Đọc thông tin và rà soát dữ liệu model SketchUp.',reference:'Ghim và chỉnh sửa ảnh tham chiếu ngay trên khung nhìn SketchUp.',plugin_manager:'Bật/tắt plugin, chuyển plugin giữa các bản SketchUp và xuất gói cài đặt.'};
-        const names = {dim:'VGD Dim',cabinet:'VGD Cabinet',library:'VGD Library',image_importer:'VGD Image Importer',scenes:'VGD Scenes',bim_lite:'VGD BIM Lite',reference:'VGD Reference',plugin_manager:'VGD Plugin Manager'};
-        const channels = {dim:'beta',cabinet:'beta',library:'beta',image_importer:'beta',scenes:'beta',bim_lite:'alpha',reference:'beta',plugin_manager:'beta'};
+        const versions = {dim:'3.3.0-beta.5',cabinet:'4.5.0-beta.4',library:'1.1.2-beta.4',image_importer:'1.1.0-beta.5',scenes:'1.5.3-beta.3',bim_lite:'0.1.4-alpha',reference:'1.0.0-beta.6'};
+        const descriptions = {dim:'Đo kích thước, chỉnh kiểu Dim/Text và tạo Smart Dim.',cabinet:'Dựng tủ, chia khoang, cánh và ngăn kéo trong SketchUp.',library:'Tìm kiếm và quản lý thư viện vật liệu, model VGD.',image_importer:'Nhập ảnh vào SketchUp dưới dạng component, mặt phẳng hoặc vật liệu.',scenes:'Quản lý góc nhìn, mặt cắt và xuất hồ sơ.',bim_lite:'Đọc thông tin và rà soát dữ liệu model SketchUp.',reference:'Ghim và chỉnh sửa ảnh tham chiếu ngay trên khung nhìn SketchUp.'};
+        const names = {dim:'VGD Dim',cabinet:'VGD Cabinet',library:'VGD Library',image_importer:'VGD Image Importer',scenes:'VGD Scenes',bim_lite:'VGD BIM Lite',reference:'VGD Reference'};
+        const channels = {dim:'beta',cabinet:'beta',library:'beta',image_importer:'beta',scenes:'beta',bim_lite:'alpha',reference:'beta'};
         const installedIds = ['dim','cabinet','library','image_importer','scenes'];
         const updateIds = ['dim','scenes'];
         window.VGD.receiveState({version:'1.0.7',sketchup:'22.0.316',settings:{language:'vi',auto_update:true},center_update:{state:'latest',current_version:'1.0.7',latest_version:'1.0.7'},products:Object.keys(versions).map(id=>({id,name:names[id],version:versions[id],release_channel:channels[id],description:descriptions[id],icon:id,minimum_sketchup:'22.0.0',compatible:true,installed:installedIds.includes(id),installed_version:installedIds.includes(id)?(updateIds.includes(id)?'bản cũ':'đang dùng'):null,action:!installedIds.includes(id)?'install':updateIds.includes(id)?'update':null}))});
