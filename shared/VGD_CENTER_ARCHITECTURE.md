@@ -38,6 +38,17 @@ Từ VGD Center 1.2.0, plugin có `id` mới không cần cập nhật Center n�
 
 Đổi lại, plugin mới dùng icon hộp mặc định, không có nút Hướng dẫn và không có cảnh báo gỡ riêng (trừ `uninstall_note` tùy chọn trong catalog). Muốn có các thứ đó thì cần cập nhật Center.
 
+## Tab Quản lý (từ 1.3.0)
+
+Tab Quản lý chuyển từ VGD Plugin Manager 1.0.0-beta.17 vào Center (`VGD_Center/manager/`, module `VGD::Center::Manager`; giao diện trong `manager/manager.js`, `manager.css` và trang `page-manager` của `dialog.html`). Khác với phần cài đặt, tab này **dời file của mọi plugin** trong thư mục Plugins, nên rủi ro cao hơn:
+
+- **Mục được bảo vệ** (`SELF_NAMES`): `VGD_Center`, `VGD_PluginManager` và tên cũ `vgd_plugin_migrator`. Không bao giờ hiện trong danh sách, không tắt hay chuyển được; so khớp không phân biệt hoa thường. Thư mục `VGD_PluginManager` chứa dữ liệu plugin đã tắt, nếu dời nó sẽ mất dữ liệu.
+- **Dữ liệu dùng chung với Plugin Manager cũ**: `Plugins/VGD_PluginManager/data` (`disabled/`, `sets.json`). Plugin tắt bằng bên nào thì bên kia cũng thấy. Gỡ Plugin Manager sẽ xóa thư mục này; hộp thoại gỡ của Center cảnh báo khi còn plugin đang tắt.
+- **Khóa khi Center bận**: bật/tắt, bộ plugin và chuyển plugin bị từ chối khi Center đang tải/cài/gỡ (`VGD::Center.busy?`), để không dời file trong Plugins cùng lúc.
+- Lỗi bất ngờ được ghi vào `%APPDATA%\SketchUp\VGD_Center\manager.log` và hiện trong tab.
+- Lệnh Ruby của tab đều bắt đầu bằng `mgr_`; Ruby gọi giao diện qua `window.VGDManager.<hàm>`.
+- Chưa kiểm thử trong SketchUp thật (xem `RELEASE_NOTES` của bản tương ứng và `plugins/VGD_PluginManager/HANDOFF.md`, mục rủi ro).
+
 ## Tệp chính
 
 - `VGD_Center.rb`: đăng ký extension.

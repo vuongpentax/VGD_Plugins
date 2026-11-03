@@ -174,6 +174,7 @@
     @media(max-width:520px){main{padding:13px}.page-head{align-items:flex-start;flex-direction:column}.health-metrics{gap:5px}.health-metric{padding:7px}.metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}.metric{padding:9px}.metric-copy span{font-size:9px}.section-head{align-items:flex-start;flex-direction:column}.section-tools{width:100%;justify-content:space-between}.plugin-row{padding:9px}.footer-right{display:none}}
     @media(max-height:650px){.donate-card{display:none}}
   </style>
+  <link rel="stylesheet" href="manager/manager.css">
 </head>
 <body>
   <svg aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden">
@@ -182,6 +183,7 @@
     <symbol id="i-box" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.6 8-4.6M12 12v9"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 11.2V12a8 8 0 1 1-4.75-7.33"/><path d="m8.5 11.5 3 3L21 5"/></symbol>
     <symbol id="i-update" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 9A7 7 0 0 1 18 6.5L20 12M4 12l2 5.5A7 7 0 0 0 18 15"/></symbol>
+    <symbol id="i-manage" viewBox="0 0 24 24"><rect x="2.5" y="6.5" width="19" height="11" rx="5.5"/><circle cx="16" cy="12" r="2.6"/></symbol>
     <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></symbol>
     <symbol id="vgd-dim" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 6v12M19 6v12"/><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 6h14"/><circle fill="var(--accent-strong)" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" cx="5" cy="6" r="1.1"/><circle fill="var(--accent-strong)" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" cx="19" cy="6" r="1.1"</symbol>
     <symbol id="vgd-cabinet" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M5 3.5h14v17H5zM12 3.5v17"/><path fill="none" stroke="var(--accent-strong)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="M10 10.5v3m4-3v3"/></symbol>
@@ -218,6 +220,7 @@
         <nav class="nav" aria-label="Điều hướng chính">
           <button data-page="overview" aria-current="page"><svg><use href="#i-home"/></svg><span>Tổng quan</span></button>
           <button data-page="catalog"><svg><use href="#i-box"/></svg><span>Kho plugin</span><i class="count" id="catalogCount">0</i></button>
+          <button data-page="manager"><svg><use href="#i-manage"/></svg><span>Quản lý</span></button>
           <button data-page="settings"><svg><use href="#i-settings"/></svg><span>Cài đặt</span></button>
         </nav>
         <div class="sidebar-spacer"></div>
@@ -263,6 +266,53 @@
           <div class="bottom-note"><svg><use href="#i-shield"/></svg><span>Thẻ Beta và Alpha là bản thử nghiệm, có thể còn lỗi hoặc thay đổi. Kiểm tra nhãn phiên bản trước khi cài.</span></div>
         </section>
 
+        <section class="page" id="page-manager" data-view="manager">
+          <div class="page-head"><div><p class="eyebrow">MỌI PLUGIN TRONG SKETCHUP</p><h1>Quản lý</h1><p class="page-intro">Bật/tắt plugin, chuyển plugin giữa các bản SketchUp và xuất gói .rbz. Áp dụng cho mọi plugin trong thư mục Plugins, không chỉ plugin VGD. <span id="mgrVer"></span></p></div></div>
+          <div class="mgr-tabs" role="tablist">
+            <button type="button" class="mgr-tab" role="tab" id="mgr-tab-toggle" aria-selected="true">Bật/tắt plugin</button>
+            <button type="button" class="mgr-tab" role="tab" id="mgr-tab-migrate" aria-selected="false">Chuyển plugin</button>
+          </div>
+          <section id="mgr-panel-toggle">
+            <div class="mgr-note">Gạt nút để bật/tắt, thay đổi chỉ có hiệu lực sau khi khởi động lại SketchUp. Plugin bị tắt được cất vào thư mục riêng, không bị xóa. Cẩn thận: tắt plugin mà plugin khác cần có thể gây lỗi khi mở lại. VGD Center không bao giờ tự tắt chính nó.</div>
+            <div class="mgr-bar"><input type="text" id="mgrQ" placeholder="Tìm plugin...">
+              <button type="button" class="btn small" id="mgrSelAll">Chọn hết đang hiện</button>
+              <button type="button" class="btn small" id="mgrSelNone">Bỏ chọn hết</button>
+              <button type="button" class="btn small" id="mgrOpenPlugins" title="Mở thư mục Plugins của SketchUp đang chạy">Mở thư mục Plugins</button>
+              <button type="button" class="btn small" id="mgrOpenDisabled" title="Mở thư mục chứa các plugin đã tắt">Mở thư mục đã tắt</button></div>
+            <div class="mgr-bar">
+              <button type="button" class="btn small danger" id="mgrBulkOff">Tắt tất cả</button>
+              <button type="button" class="btn small primary" id="mgrBulkOn">Bật tất cả</button>
+              <small>Khi ô tìm kiếm có chữ, chỉ áp cho các mục đang hiện.</small>
+            </div>
+            <div class="mgr-list" id="mgrList"></div>
+            <h2>Bộ plugin</h2>
+            <div class="mgr-note">Bộ plugin là một danh sách plugin để bật/tắt cùng lúc.</div>
+            <div class="mgr-bar"><input type="text" id="mgrSetName" placeholder="Tên bộ, ví dụ: Render">
+              <button type="button" class="btn small" id="mgrSaveSet">Lưu mục đã chọn thành bộ</button></div>
+            <div id="mgrSets"></div>
+            <div class="mgr-bar"><button type="button" class="btn small" id="mgrExportSets">Xuất các bộ ra file</button>
+              <button type="button" class="btn small" id="mgrImportSets">Nhập bộ từ file</button></div>
+            <small id="mgrDir"></small>
+          </section>
+          <section id="mgr-panel-migrate" hidden>
+            <div class="mgr-ver-row">
+              <label>Từ bản <select id="mgrSrc"></select></label>
+              <label>Sang bản <select id="mgrDst"></select></label>
+            </div>
+            <div class="mgr-box" id="mgrMlist"></div>
+            <div class="mgr-bar">
+              <button type="button" class="btn small" id="mgrSetAll">Chọn hết</button>
+              <button type="button" class="btn small" id="mgrSetNone">Bỏ chọn hết</button>
+            </div>
+            <label class="mgr-opt"><input type="checkbox" id="mgrOverwrite"> Ghi đè nếu plugin đã tồn tại ở bản đích</label>
+            <div class="mgr-bar">
+              <button type="button" class="btn primary" id="mgrGo">Chuyển plugin</button>
+              <button type="button" class="btn" id="mgrExportBundle">Xuất gói .rbz tổng</button>
+            </div>
+          </section>
+          <div class="mgr-out" id="mgrOut"></div>
+        </section>
+
         <section class="page" id="page-settings" data-view="settings">
           <div class="page-head"><div><p class="eyebrow">VGD CENTER</p><h1>Cài đặt</h1></div></div>
           <section class="card settings-card">
@@ -304,6 +354,7 @@
   </div>
 
   <script src="vgd-theme/vgd-theme.js"></script>
+  <script src="manager/manager.js"></script>
   <script>
     (() => {
       const root = document.documentElement;
@@ -320,7 +371,7 @@
       const originalTextNodes = new WeakMap();
       const englishText = {
         'Ủng hộ VGD':'Support VGD',
-        'Trung tâm plugin SketchUp':'SketchUp Plugin Center','Tổng quan':'Overview','Kho plugin':'Plugin catalog','Cài đặt':'Settings',
+        'Trung tâm plugin SketchUp':'SketchUp Plugin Center','Tổng quan':'Overview','Kho plugin':'Plugin catalog','Quản lý':'Manage','Cài đặt':'Settings',
         'Quản lý plugin VGD và cập nhật ngay trong SketchUp.':'Manage VGD plugins and updates in SketchUp.',
         'VGD · PLUGIN CENTER':'VGD · PLUGIN CENTER','Chào mừng đến với VGD Center':'Welcome to VGD Center',
         'Cài đặt và cập nhật plugin VGD trực tiếp trong SketchUp. Chọn thao tác; VGD Center sẽ tải gói, xác minh và cài đặt giúp bạn.':'Install and update VGD plugins in SketchUp. VGD Center downloads, verifies, and installs each package.',
@@ -525,6 +576,7 @@
         document.querySelectorAll('.page').forEach(page => page.classList.toggle('active', page.dataset.view === name));
         document.querySelectorAll('.nav [data-page]').forEach(button => button.setAttribute('aria-current', button.dataset.page === name ? 'page' : 'false'));
         document.querySelector('main').scrollTop = 0;
+        if (name === 'manager' && window.VGDManager) window.VGDManager.open();
       }
 
       function setStatus(message) {

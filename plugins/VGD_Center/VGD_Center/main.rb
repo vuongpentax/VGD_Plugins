@@ -5,10 +5,12 @@ require 'digest'
 require 'fileutils'
 require 'tmpdir'
 require 'securerandom'
+# Tab "Quản lý" (bật/tắt plugin, chuyển plugin giữa các bản SketchUp, xuất gói .rbz tổng)
+require File.join(File.dirname(__FILE__), 'manager', 'core')
 
 module VGD
   module Center
-    VERSION = '1.2.0'.freeze
+    VERSION = '1.3.0'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
@@ -76,7 +78,13 @@ module VGD
         UI.messagebox("Không thể mở VGD Center.\n#{error.message}")
       end
 
+      # Đang cài/gỡ plugin hoặc cập nhật Center. Tab Quản lý dùng để không đổi file trong Plugins cùng lúc.
+      def busy?
+        @busy ? true : false
+      end
+
       def register_callbacks(dialog)
+        Manager.register_callbacks(dialog)
         dialog.add_action_callback('center_ready') { |_context| send_state }
         dialog.add_action_callback('refresh_catalog') { |_context| refresh_catalog }
         dialog.add_action_callback('install_plugin') do |_context, plugin_id|

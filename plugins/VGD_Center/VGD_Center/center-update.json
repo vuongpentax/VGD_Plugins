@@ -1,13 +1,20 @@
 {
   "schema_version": 1,
-  "version": "1.1.0",
+  "version": "1.2.0",
   "download": {
-    "filename": "VGD_Center_v1.1.0.rbz",
-    "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-center-v1.1.0/VGD_Center_v1.1.0.rbz",
-    "size": 324563,
-    "sha256": "072774c50b29867885dbba10abe0621e25faaac8f67f8a397617061e1595ec80"
+    "filename": "VGD_Center_v1.2.0.rbz",
+    "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-center-v1.2.0/VGD_Center_v1.2.0.rbz",
+    "size": 328296,
+    "sha256": "061e8f09d7b16c8cb0ecebae47c993aa996527d5736cca36db4270104cc9cfc9"
   },
   "releases": [
+    {
+      "version": "1.2.0",
+      "release_channel": "stable",
+      "published_at": "2026-10-31",
+      "tag": "vgd-center-v1.2.0",
+      "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-center-v1.2.0"
+    },
     {
       "version": "1.1.0",
       "release_channel": "stable",
