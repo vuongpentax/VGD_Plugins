@@ -60,7 +60,7 @@ dev_files = [
     'test_store.rb', 'test_update_installer.ps1', 'package.py'
 ]
 doc_files = [
-    'README.md', 'AGENTS.md', 'ANNOTATION_REQUIREMENTS.md', 'SELECTION_REQUIREMENTS.md',
+    'README.md', 'CLAUDE.md', 'ANNOTATION_REQUIREMENTS.md', 'SELECTION_REQUIREMENTS.md',
     'FEATURE_STATUS.md', 'UI_DESIGN.md', 'DEVELOPMENT_NOTES.md', 'VGD_UPDATE_MANIFEST.json',
     'HOW_TO_RELEASE.md', f'RELEASE_NOTES_v{version}.md'
 ]
