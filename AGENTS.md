@@ -62,6 +62,20 @@ Không tự phát triển các tính năng chưa được yêu cầu.
 
 Không âm thầm thay đổi hành vi đang có, tên gọi, định dạng file, setting hoặc yêu cầu tương thích.
 
+### Suy nghĩ trước khi viết code
+
+- Nêu rõ các giả định trước khi làm. Không giấu chỗ chưa rõ.
+- Nếu yêu cầu có nhiều cách hiểu, trình bày các cách hiểu và hỏi; không tự chọn một cách âm thầm. Với việc nhỏ, rõ ràng, dễ hoàn tác thì được làm theo cách hiểu hợp lý nhất, nhưng phải nói rõ cách hiểu đó trong báo cáo.
+- Nếu có cách đơn giản hơn yêu cầu, hãy nói ra. Được phép phản biện khi có lý do.
+- Nếu sau khi đã kiểm tra repository vẫn chưa rõ, dừng lại, nêu rõ điều gì chưa rõ rồi hỏi.
+
+### Thay đổi có phạm vi hẹp
+
+- Không "tiện tay" cải thiện code, comment hoặc định dạng xung quanh chỗ cần sửa.
+- Gặp code chết hoặc vấn đề không liên quan: chỉ báo lại, không tự xóa hoặc sửa.
+- Dọn những thứ thừa do chính thay đổi của mình tạo ra (import, biến, hàm không còn dùng). Không dọn thứ có sẵn từ trước.
+- Mỗi dòng thay đổi phải lần ra được yêu cầu của người dùng.
+
 ## Tương thích SketchUp
 
 Nếu một module không quy định khác thì mặc định:
@@ -89,9 +103,13 @@ Hạn chế:
 - logic bị lặp lại;
 - global state khó kiểm soát;
 - hằng số không có giải thích;
-- refactor lớn không liên quan trong lúc sửa bug.
+- refactor lớn không liên quan trong lúc sửa bug;
+- tính năng, tuỳ chọn hoặc cấu hình "mềm dẻo" chưa ai yêu cầu;
+- xử lý lỗi cho tình huống không thể xảy ra bên trong code. Vẫn phải kiểm tra tại ranh giới: dữ liệu người dùng, trạng thái model SketchUp, kết quả API, file, mạng.
 
-Nếu module hiện tại đã có style riêng thì ưu tiên tuân theo style đó, trừ khi có lý do rõ ràng để thay đổi.
+Nếu module hiện tại đã có style riêng thì tuân theo style đó, kể cả khi bạn sẽ làm khác, trừ khi có lý do rõ ràng và nêu lý do đó.
+
+Viết xong mà thấy có thể ngắn gọn hơn nhiều thì viết lại phần vừa viết. Quy tắc này không áp dụng cho code đang hoạt động có sẵn.
 
 ## Quy tắc giao diện
 
@@ -124,7 +142,16 @@ Luôn phân biệt rõ:
 - đã xác minh thủ công;
 - chưa xác minh.
 
-Khi sửa bug, nên có kiểm tra hồi quy nếu khả thi.
+### Tiêu chí thành công
+
+Trước khi làm, xác định thế nào là xong và cách kiểm tra:
+
+- Thêm validation: viết kiểm tra với dữ liệu sai trước, rồi làm cho đạt.
+- Sửa bug: viết kiểm tra tái hiện lỗi trước, rồi sửa cho đạt. Nếu không khả thi (ví dụ chỉ tái hiện được trong SketchUp thật), nói rõ.
+- Refactor: kiểm tra phải đạt cả trước và sau khi sửa.
+- Kiểm tra là script hoặc test riêng của module, không thêm framework chung (xem "Quy tắc làm việc").
+- Với việc nhiều bước, nêu kế hoạch ngắn, mỗi bước kèm cách kiểm tra: `1. [Bước] → kiểm tra: [cách]`. Lặp cho đến khi đạt.
+- Phần chỉ kiểm được trong SketchUp thật thì ghi "chưa xác minh", không coi là đạt.
 
 ## Tài liệu
 
@@ -184,7 +211,7 @@ Không đưa toàn bộ code VGD cũ vào một lần.
 
 ## Hành vi của Agent
 
-Khi yêu cầu chưa rõ, phải kiểm tra repository và dùng context hiện có của project trước khi tự suy đoán.
+Khi yêu cầu chưa rõ, phải kiểm tra repository và dùng context hiện có của project trước khi tự suy đoán. Nếu vẫn chưa rõ thì hỏi (xem "Suy nghĩ trước khi viết code").
 
 Với task lớn, ưu tiên quy trình:
 
