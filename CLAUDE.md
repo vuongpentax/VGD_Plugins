@@ -4,7 +4,7 @@
 
 Repository này chứa hệ sinh thái công cụ và plugin SketchUp của VGD.
 
-Repository đang được xây dựng lại từ một workspace sạch. Các plugin VGD cũ sẽ được đưa vào repository này dần dần, từng module một.
+Mã nguồn các plugin VGD đã được chuyển vào repository này từ workspace cũ. Plugin còn lại (nếu có) được đưa vào dần dần, từng module một (xem "Chiến lược migrate code cũ").
 
 Nền tảng mục tiêu chính:
 - SketchUp 2022 trở lên.
@@ -20,11 +20,12 @@ Cấu trúc cấp cao dự kiến:
 
 ```text
 VGD_Plugins/
-├── AGENTS.md
+├── CLAUDE.md
 ├── README.md
 ├── .gitignore
 ├── docs/
 ├── plugins/
+├── shared/
 ├── tools/
 ├── tests/
 └── archive/
@@ -32,16 +33,13 @@ VGD_Plugins/
 
 Tất cả plugin SketchUp dùng thực tế phải nằm trong thư mục `plugins/`.
 
-Mỗi plugin nên được tổ chức tương đối độc lập.
+`shared/` chứa tài nguyên dùng chung giữa các plugin (theme giao diện, catalog và tài liệu của VGD Center, quy tắc icon).
 
-Ví dụ các module có thể được đưa vào sau này:
-- VGD_Cabinet
-- VGD_Dim
-- VGD_Scenes
-- VGD_BIM
-- VGD_Library
+Mỗi plugin nên được tổ chức tương đối độc lập. Danh sách plugin hiện có xem trực tiếp trong `plugins/`.
 
-Không tự tạo các module này nếu chúng chưa thực sự được chuyển vào hoặc bắt đầu phát triển.
+Mỗi plugin tự giữ test và script hỗ trợ trong thư mục riêng của nó (thường là `dev/`); `tests/` ở gốc dành cho kiểm thử dùng chung toàn repo và hiện chưa có bộ nào.
+
+Không tự tạo plugin mới nếu chưa được yêu cầu hoặc chưa thực sự được chuyển vào.
 
 ## Quy tắc làm việc
 
@@ -175,9 +173,11 @@ Không commit:
 - output từ test;
 - dependency tải về từ bên ngoài.
 
-Không tự commit hoặc push nếu chưa được yêu cầu rõ ràng.
+Sau khi hoàn thành một thay đổi và đã kiểm tra, tự commit và push lên nhánh làm việc được chỉ định. Không cần chờ yêu cầu riêng. Không push sang nhánh khác.
 
-Không rewrite lịch sử Git nếu chưa được yêu cầu rõ ràng.
+Chỉ tạo pull request khi được yêu cầu.
+
+Không tự merge vào nhánh chính, phát hành (release), xóa nhánh hoặc rewrite lịch sử Git nếu chưa được yêu cầu rõ ràng.
 
 ## Quy tắc an toàn
 
