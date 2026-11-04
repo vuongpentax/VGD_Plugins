@@ -1,5 +1,35 @@
 # VGD_Cabinet
 
+Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi phần riêng của plugin, và chỉ ghi điều kiểm chứng được từ mã hoặc tài liệu của plugin. Số phiên bản không ghi ở đây vì dễ lỗi thời: xem nơi giữ phiên bản ở mục "Thông tin plugin".
+
+## Thông tin plugin
+
+- Tên extension: VGD_Cabinet (bản đang phát hành trong catalog của VGD Center, khác VGD_Cabinet Draw). Namespace: `VGD_Cabinet`.
+- Loader: `cabinet_work/vgd_cabinet.rb`.
+- Phiên bản: `VERSION` trong `cabinet_work/VGD_Cabinet/main43.rb`.
+- SketchUp tối thiểu: 2022. Chỉ deploy vào SketchUp 2022.
+
+## Cấu trúc
+
+- `cabinet_work/`: mã nguồn hiện hành (`vgd_cabinet.rb` và thư mục `VGD_Cabinet/`).
+- `cabinet_dev/`: test, bộ sinh giao diện (`redesign_ui.cjs`), `package_menu.py`, `sync_sketchup_2022.ps1`, `package.json`.
+
+## Kiểm thử
+
+- Lệnh kiểm tra và trạng thái xác minh: `TESTS.txt` (chạy từ `plugins/VGD_Cabinet`; cài dependency bằng `pnpm install --dir cabinet_dev --frozen-lockfile`).
+- Phân biệt kết quả giả lập WASM/stub với kiểm tra trong SketchUp thật.
+
+## Đóng gói
+
+- `python cabinet_dev/package_menu.py` tạo RBZ và source ZIP trong `outputs/vgd_cabinet_modeling/` (git bỏ qua).
+- Đổi giao diện qua `cabinet_dev/redesign_ui.cjs`, `menu.js`, `menu.css`, rồi sinh lại HTML trước khi đóng gói.
+
+## Tài liệu đọc trước khi sửa
+
+- `CODEX_HANDOFF.md` (đọc trước khi sửa), `README.md`, `TESTS.txt`, `VALIDATION.json`, `PANO_RESEARCH.md`, `UPGRADE_RESEARCH.md`.
+
+## Quy tắc riêng
+
 Read CODEX_HANDOFF.md before editing. Current source is cabinet_work; tests/generator/package/deploy are cabinet_dev.
 - Communicate in Vietnamese. Keep the extension name VGD_Cabinet, namespace VGD_Cabinet, loader vgd_cabinet.rb.
 - Preserve construction rules inherited from T+ Cabinet; the old handoff is an archive, not active runtime.

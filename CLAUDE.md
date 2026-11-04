@@ -41,6 +41,14 @@ Mỗi plugin tự giữ test và script hỗ trợ trong thư mục riêng của
 
 Không tự tạo plugin mới nếu chưa được yêu cầu hoặc chưa thực sự được chuyển vào.
 
+### CLAUDE.md của từng plugin
+
+Mỗi plugin có `CLAUDE.md` riêng ở thư mục gốc của plugin, cùng một mẫu: Thông tin plugin, Cấu trúc, Kiểm thử, Đóng gói, Tài liệu đọc trước khi sửa, Quy tắc riêng. File này chỉ ghi phần riêng của plugin và điều kiểm chứng được từ mã hoặc tài liệu của plugin; không lặp lại quy tắc chung và không ghi số phiên bản (chỉ ghi nơi giữ phiên bản).
+
+Khi một thay đổi làm đổi thông tin đó (loader, namespace, lệnh test, cách đóng gói), cập nhật `CLAUDE.md` của plugin trong cùng commit.
+
+Chỉ dùng tên `CLAUDE.md`. Không tạo `AGENTS.md`.
+
 ## Quy tắc làm việc
 
 Trước khi thực hiện một thay đổi lớn:

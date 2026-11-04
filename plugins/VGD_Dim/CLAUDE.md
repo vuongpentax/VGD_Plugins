@@ -1,5 +1,35 @@
 # VGD Dim
 
+Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi phần riêng của plugin, và chỉ ghi điều kiểm chứng được từ mã hoặc tài liệu của plugin. Số phiên bản không ghi ở đây vì dễ lỗi thời: xem nơi giữ phiên bản ở mục "Thông tin plugin".
+
+## Thông tin plugin
+
+- Tên extension: VGD Dim. Namespace: `VGD::Dim`.
+- Loader: `runtime/vgd_dim.rb`; thư mục mã `runtime/VGD_Dim/`.
+- Phiên bản: `runtime/VGD_Dim/version.rb`. Khi đổi phiên bản, cập nhật cả changelog trong `VGD_UPDATE_MANIFEST.json`.
+- SketchUp tối thiểu: 2022.
+
+## Cấu trúc
+
+- `runtime/`: mã chạy.
+- `dev/`: `package.py`, `deploy.ps1`, `native_smoke.rb`, `build_ui.py`, các file `test_*` và `check_ruby.cjs`.
+
+## Kiểm thử
+
+- Test nằm trong `dev/`: `test_core.rb`, `test_engine.rb`, `test_smartdim.rb`, `test_store.rb`, `test_regression.rb`, `test_fixture.rb`, `test_native_style.rb`, `test_ui.cjs`, `test_deploy.py`, `test_update_installer.ps1`, `check_ruby.cjs`. Tài liệu không ghi lệnh chạy riêng từng file; xem đầu mỗi file.
+- Trạng thái chức năng và phần chưa xác minh native: `FEATURE_STATUS.md`, `DEVELOPMENT_NOTES.md`.
+
+## Đóng gói
+
+- `python dev/package.py` tạo RBZ, source ZIP, `outputs/PACKAGES_SHA256.json` và manifest.
+- Quy trình ở `HOW_TO_RELEASE.md` còn nói đưa RBZ vào `shared/vgd-center/packages`, trong khi catalog hiện trỏ GitHub Release. Đối chiếu với `shared/VGD_CENTER_ARCHITECTURE.md` trước khi làm theo.
+
+## Tài liệu đọc trước khi sửa
+
+- `README.md`, `DEVELOPMENT_NOTES.md`, `FEATURE_STATUS.md`, `HOW_TO_RELEASE.md`, `ANNOTATION_REQUIREMENTS.md`, `SELECTION_REQUIREMENTS.md`.
+
+## Quy tắc riêng
+
 Yêu cầu mới ngày 2026-10-07: tiếp tục VGD_Dim_6.rbz, sidebar, mặt cắt/Scene/Tag, thay bộ Dim trùng, one-touch, giới hạn xoay và tách Units. Chỉ phát triển Dim; không sửa Cabinet/Scenes/Importer/Library.
 
 - Tên VGD Dim; loader vgd_dim.rb, namespace VGD::Dim, thư mục VGD_Dim. Style T+ sáng/nâu đồng.
