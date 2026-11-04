@@ -6,7 +6,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 - Tên extension: VGD BIM Lite. Namespace: `VGD::BIM`.
 - Loader: `runtime/vgd_bim_lite.rb` (nạp `vgd_bim_lite/loader`).
-- Phiên bản: hằng `VERSION` trong `runtime/vgd_bim_lite.rb`. Tiêu đề README có thể ghi số cũ hơn; lấy số trong loader.
+- Phiên bản: hằng `VERSION` trong `runtime/vgd_bim_lite.rb`. Tiêu đề và tên file cài trong README phải khớp số này.
 - SketchUp tối thiểu: 2022. Windows là môi trường chính.
 - Dữ liệu trong model: dictionary `VGD_BIM` (Group/ComponentInstance) và `VGD_BIM_RULES` (quy tắc, lưu JSON).
 

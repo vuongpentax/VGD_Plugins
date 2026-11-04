@@ -22,11 +22,10 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 ## Đóng gói
 
 - `python dev/package.py` tạo RBZ, source ZIP, `outputs/PACKAGES_SHA256.json` và manifest.
-- Quy trình ở `HOW_TO_RELEASE.md` còn nói đưa RBZ vào `shared/vgd-center/packages`, trong khi catalog hiện trỏ GitHub Release. Đối chiếu với `shared/VGD_CENTER_ARCHITECTURE.md` trước khi làm theo.
 
 ## Tài liệu đọc trước khi sửa
 
-- `README.md`, `DEVELOPMENT_NOTES.md`, `FEATURE_STATUS.md`, `HOW_TO_RELEASE.md`, `ANNOTATION_REQUIREMENTS.md`, `SELECTION_REQUIREMENTS.md`.
+- `README.md`, `DEVELOPMENT_NOTES.md`, `FEATURE_STATUS.md`, `ANNOTATION_REQUIREMENTS.md`, `SELECTION_REQUIREMENTS.md`.
 
 ## Quy tắc riêng
 

@@ -47,7 +47,7 @@ Mỗi plugin có `CLAUDE.md` riêng ở thư mục gốc của plugin, cùng m�
 
 Khi một thay đổi làm đổi thông tin đó (loader, namespace, lệnh test, cách đóng gói), cập nhật `CLAUDE.md` của plugin trong cùng commit.
 
-Chỉ dùng tên `CLAUDE.md`. Không tạo `AGENTS.md`.
+Chỉ dùng tên `CLAUDE.md`. Không tạo `AGENTS.md`. Repo chỉ dùng Claude: không đặt tên file, biến môi trường hay đường dẫn theo công cụ AI khác ngoài Claude.
 
 ## Quy tắc làm việc
 
@@ -166,6 +166,12 @@ Tài liệu phải phản ánh đúng hành vi thực tế.
 Các quyết định kiến trúc quan trọng nên được lưu trong `docs/`.
 
 Không tạo tài liệu chỉ để tăng số lượng file. Ưu tiên ít tài liệu nhưng có giá trị, tránh nhiều file trùng lặp nội dung.
+
+### Phiên bản, README và phát hành
+
+- Mỗi lần gửi RBZ mới cho người dùng phải tăng phiên bản so với RBZ đã gửi trước đó, ví dụ 1.0.0 → 1.0.1; bản beta thì tăng số beta (beta.33 → beta.34). Không gửi hai RBZ khác nội dung mà cùng số phiên bản. Sửa số phiên bản ở mọi chỗ plugin ghi nó (xem mục "Thông tin plugin" trong `CLAUDE.md` của plugin).
+- Mỗi lần đổi phiên bản phải cập nhật `README.md` của plugin cho khớp (số phiên bản, tính năng, tên file cài, trạng thái kiểm thử) trong cùng commit.
+- Người dùng tự phát hành trên GitHub. Không tạo file hướng dẫn phát hành (kiểu `HOW_TO_RELEASE.md`) trong plugin.
 
 ## Quy tắc Git
 

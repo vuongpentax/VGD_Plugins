@@ -167,7 +167,7 @@ git clone https://github.com/vuongpentax/VGD_Plugins.git
 cd VGD_Plugins
 ```
 
-Kho công khai; cần quyền ghi khi push. Mở repository trong Codex và yêu cầu tiếp tục `VGD_Scenes`, đọc `CODEX_HANDOFF.md` trước. Nếu đã clone, chạy `git pull --ff-only` khi không có thay đổi chưa lưu.
+Kho công khai; cần quyền ghi khi push. Mở repository trong Claude Code và yêu cầu tiếp tục `VGD_Scenes`, đọc `HANDOFF.md` trước. Nếu đã clone, chạy `git pull --ff-only` khi không có thay đổi chưa lưu.
 
 Để cài trên máy mới, cần gói phát hành beta.4 đã xác minh riêng; repo migration không chứa RBZ. Chưa dùng script deploy hiện hành vì thiếu update_notice.rb.
 

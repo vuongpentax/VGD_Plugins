@@ -22,7 +22,7 @@ Chưa xác minh artifact beta.6; chỉ cài sau khi có gói phát hành đượ
 
 RAR/ZIP/7Z được báo là chưa giải nén và không xuất hiện thành mẫu để tô. Bạn tự giải nén/sắp xếp sau, rồi bấm **Làm mới**; nhóm tự lấy theo thư mục con. Nếu đổi vị trí gốc, bỏ nguồn cũ và thêm nguồn mới. Yêu thích gắn với đường dẫn, nên tệp đổi đường dẫn có thể cần đánh dấu lại. Bỏ nguồn chỉ bỏ khỏi plugin.
 
-Plugin không đổi chia sẻ, giải nén hay sắp xếp kho Drive. Tài khoản Drive của Codex không chuyển sang SketchUp; kho riêng tư được đọc qua Drive for desktop. RBZ chứa cấu hình đường dẫn dự kiến, không chứa kho vật liệu của bạn.
+Plugin không đổi chia sẻ, giải nén hay sắp xếp kho Drive. Tài khoản Drive dùng trong công cụ phát triển không chuyển sang SketchUp; kho riêng tư được đọc qua Drive for desktop. RBZ chứa cấu hình đường dẫn dự kiến, không chứa kho vật liệu của bạn.
 
 ## Thư viện
 
@@ -74,7 +74,7 @@ Cache thumbnail/download/seamless: `%LOCALAPPDATA%\VGD_Library` hoặc `~/Librar
 
 Ruby: syntax 14 files; mô phỏng UV chữ nhật/fit/restore, kế thừa/isolation/locks/rollback/stale model, catalog Unicode/dedupe/RAR/favorites, Drive sync/cancel, Flowmap góc 90°, thay đối tượng/DC, audit/fix/swap, BGR/padding, seam boundary, Normal/AO phẳng, contours/logo có lỗ, schema online, SKM ZIP stored/deflate/CRC. Catalog WASI dùng cây tệp mô phỏng do giới hạn directory API Windows.
 
-UI Playwright/Edge: library/model/online, pagination/search/HTML safety/favorites/actions/settings/Drive, 1120/720px, seamless preview/apply/preset. QA ảnh `outputs/` dùng dữ liệu mô phỏng. Kho thật được kiểm kê metadata bằng Node, chưa tô toàn bộ trong SketchUp. Checklist native: [CODEX_HANDOFF.md](CODEX_HANDOFF.md).
+UI Playwright/Edge: library/model/online, pagination/search/HTML safety/favorites/actions/settings/Drive, 1120/720px, seamless preview/apply/preset. QA ảnh `outputs/` dùng dữ liệu mô phỏng. Kho thật được kiểm kê metadata bằng Node, chưa tô toàn bộ trong SketchUp. Checklist native: [HANDOFF.md](HANDOFF.md).
 
 ```powershell
 node plugins/VGD_Library/dev/check_ruby.cjs
@@ -82,7 +82,7 @@ node plugins/VGD_Library/dev/test_ui.cjs
 node plugins/VGD_Library/dev/package.cjs
 ```
 
-Dependency từ `dev/node_modules`, VGD_Scenes/Cabinet, runtime Codex hoặc biến `VGD_NODE_MODULES`. Nếu thiếu, cài theo `dev/package.json`; RBZ không cần Node. `VGD_BROWSER_EXECUTABLE` chọn Chromium khác. Không tự cài/commit/push hoặc sửa dự án VGD khác.
+Dependency từ `dev/node_modules`, `VGD_Scenes/dev/node_modules` hoặc biến `VGD_NODE_MODULES`. Nếu thiếu, cài theo `dev/package.json`; RBZ không cần Node. `VGD_BROWSER_EXECUTABLE` chọn Chromium khác. Không tự cài/commit/push hoặc sửa dự án VGD khác.
 
 API chính thức đã đối chiếu: [Face/UV](https://ruby.sketchup.com/Sketchup/Face.html), [ImageRep/pixel và UV sampling](https://ruby.sketchup.com/Sketchup/ImageRep.html), [ComponentDefinition/save_copy](https://ruby.sketchup.com/Sketchup/ComponentDefinition.html), [HTTP](https://ruby.sketchup.com/Sketchup/Http/Request.html).
 

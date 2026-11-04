@@ -9,7 +9,7 @@ Cập nhật ngày 05/10/2026, bản 1.1.2-beta.3. Người dùng chọn VGD đ�
 - `runtime/vgd_library.rb`: loader/version, `VGD::Library`, SU2022+.
 - `main.rb`: 18 toolbar command/menu/context menu, HtmlDialog bridge, scan timer/generation, transaction/model guards.
 - `catalog.rb`: Enumerator, roots/dedupe/Unicode/favorites/archive warnings.
-- `drive.rb`/`drive_source.json`: nối folder Drive qua sync đã xác minh hoặc directory picker; mở link web, không OAuth/token Codex native.
+- `drive.rb`/`drive_source.json`: nối folder Drive qua sync đã xác minh hoặc directory picker; mở link web, không dùng OAuth/token.
 - `online.rb`: HTTPS/JSON local, async HTTP/cache/SHA-256/size limits, nguồn update VGD riêng.
 - `materials.rb`/`geometry.rb`: image/SKM/reuse/mm/paint/reapply/resize, isolate definitions, UV/fit/restore/clear.
 - `storage.rb`: cache/safe names, SKM ZIP central directory+CRC, SKP thumbnail.

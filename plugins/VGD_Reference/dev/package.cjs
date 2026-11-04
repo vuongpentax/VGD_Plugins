@@ -28,7 +28,7 @@ async function add(zip,directory,prefix=''){
   fs.writeFileSync(path.join(root,filename+'.sha256'),crypto.createHash('sha256').update(bytes).digest('hex')+'  '+filename+'\n');
   const source=new JSZip();
   await add(source,runtime,'runtime/');await add(source,path.join(root,'dev'),'dev/');
-  for(const doc of ['README.md','CODEX_HANDOFF.md',`RELEASE_NOTES_v${version}.md`])source.file(doc,fs.readFileSync(path.join(root,doc)),{date:archiveDate});
+  for(const doc of ['README.md','HANDOFF.md',`RELEASE_NOTES_v${version}.md`])source.file(doc,fs.readFileSync(path.join(root,doc)),{date:archiveDate});
   const sourceFilename=`VGD_Reference_v${version}_source.zip`,sourceBytes=await source.generateAsync({type:'nodebuffer',compression:'DEFLATE'});
   const sourceArchive=await JSZip.loadAsync(sourceBytes),sourceNames=Object.keys(sourceArchive.files).filter(name=>!sourceArchive.files[name].dir);
   for(const name of sourceNames){const actual=await sourceArchive.file(name).async('nodebuffer');if(!actual.equals(fs.readFileSync(path.join(root,name))))throw Error('Source byte mismatch: '+name);}

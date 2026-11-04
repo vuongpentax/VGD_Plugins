@@ -35,7 +35,7 @@ with ZipFile(source, 'w', ZIP_DEFLATED) as z:
                  'sketchup_ui_stub.rb', 'test_commands.rb',
                  'package.json', 'pnpm-lock.yaml', 'test_reload.rb', 'sync_sketchup_2022.ps1']:
         z.write(root / 'cabinet_dev' / file, 'cabinet_dev/' + file)
-    z.write(root / 'CODEX_HANDOFF.md', 'CODEX_HANDOFF.md')
+    z.write(root / 'HANDOFF.md', 'HANDOFF.md')
     z.write(root / 'CLAUDE.md', 'CLAUDE.md')
     for file in ['README.md','PANO_RESEARCH.md','UPGRADE_RESEARCH.md','VALIDATION.json','RELEASE_NOTES_v4.5.3.md']:
         z.write(root/file,file)

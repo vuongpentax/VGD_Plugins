@@ -18,7 +18,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 ## Kiểm thử
 
 - Test trong `dev/`: `check_ruby.cjs`, `test_manager.cjs`, `test_icons.cjs` và các `*_fixture.rb`. README không ghi lệnh chạy từng file; xem đầu mỗi file.
-- Kiểm tra thủ công trong SketchUp: `dev/MANUAL_VERIFICATION.md`. Phần chưa xác minh trong SketchUp thật: xem `CODEX_HANDOFF.md` mục "Current limitations".
+- Kiểm tra thủ công trong SketchUp: `dev/MANUAL_VERIFICATION.md`. Phần chưa xác minh trong SketchUp thật: xem `HANDOFF.md` mục "Current limitations".
 
 ## Đóng gói
 
@@ -26,7 +26,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Tài liệu đọc trước khi sửa
 
-- `README.md`, `CODEX_HANDOFF.md` (kiến trúc, giới hạn hiện tại), `dev/MANUAL_VERIFICATION.md`.
+- `README.md`, `HANDOFF.md` (kiến trúc, giới hạn hiện tại), `dev/MANUAL_VERIFICATION.md`.
 
 ## Quy tắc riêng
 

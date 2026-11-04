@@ -9,7 +9,7 @@ VGD_Plugins/
 ├── CLAUDE.md, README.md, .gitignore
 ├── docs/, tools/, tests/, archive/
 └── plugins/VGD_Cabinet/
-    ├── CLAUDE.md, CODEX_HANDOFF.md, README.md
+    ├── CLAUDE.md, HANDOFF.md, README.md
     ├── cabinet_work/  # loader và runtime được đóng gói
     └── cabinet_dev/   # test, fixture, nguồn UI, generator và công cụ
 ```
@@ -31,6 +31,6 @@ Cabinet T+ cũ được nhận diện qua dictionary `TPlus_Cabinet`; cabinet m�
 
 Không có thư mục build được lưu sẵn trong repository. Từ thư mục `plugins/VGD_Cabinet`, `python cabinet_dev/package_menu.py` tạo RBZ và source ZIP trong `outputs/vgd_cabinet_modeling/`. Các test và điều kiện chạy được ghi trong [TESTS.txt](TESTS.txt); kết quả đã ghi nhận nằm trong [VALIDATION.json](VALIDATION.json).
 
-Hồ sơ native hiện kế thừa các kiểm tra trên runtime 4.5.1. Gói 4.5.2 đã được ghi nhận triển khai đủ file và xác minh checksum tại SketchUp 2022, nhưng chưa khởi động lại/chạy native với gói sạch. Undo trên model, đóng/mở lại model và UI batch mới còn chờ xác minh. Xem [CODEX_HANDOFF.md](CODEX_HANDOFF.md) để biết rõ phạm vi và chênh lệch deploy cần xử lý.
+Hồ sơ native hiện kế thừa các kiểm tra trên runtime 4.5.1. Gói 4.5.2 đã được ghi nhận triển khai đủ file và xác minh checksum tại SketchUp 2022, nhưng chưa khởi động lại/chạy native với gói sạch. Undo trên model, đóng/mở lại model và UI batch mới còn chờ xác minh. Xem [HANDOFF.md](HANDOFF.md) để biết rõ phạm vi và chênh lệch deploy cần xử lý.
 
 Trước khi đóng góp, đọc `CLAUDE.md` trong plugin và hướng dẫn repository ở root.

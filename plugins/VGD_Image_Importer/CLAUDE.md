@@ -19,7 +19,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 - Từ `plugins/VGD_Image_Importer/dev`: `npm test` (chạy `node check_ruby.cjs && node test_ui.cjs`).
 - Test khác trong `dev/`: `test_engine.rb`, `test_drop.rb`, `check_native_codec.py`.
 - Không thay model hay selection để kiểm tra tự động trên file của người dùng.
-- Chưa xác minh: codec HEIC; xem `CODEX_HANDOFF.md` mục "Giới hạn đã biết".
+- Chưa xác minh: codec HEIC; xem `HANDOFF.md` mục "Giới hạn đã biết".
 
 ## Đóng gói
 
@@ -28,7 +28,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Tài liệu đọc trước khi sửa
 
-- `README.md`, `CODEX_HANDOFF.md` (cấu trúc, quy tắc tiếp tục, giới hạn đã biết).
+- `README.md`, `HANDOFF.md` (cấu trúc, quy tắc tiếp tục, giới hạn đã biết).
 
 ## Quy tắc riêng
 

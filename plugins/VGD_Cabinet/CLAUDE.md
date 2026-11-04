@@ -26,11 +26,11 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Tài liệu đọc trước khi sửa
 
-- `CODEX_HANDOFF.md` (đọc trước khi sửa), `README.md`, `TESTS.txt`, `VALIDATION.json`, `PANO_RESEARCH.md`, `UPGRADE_RESEARCH.md`.
+- `HANDOFF.md` (đọc trước khi sửa), `README.md`, `TESTS.txt`, `VALIDATION.json`, `PANO_RESEARCH.md`, `UPGRADE_RESEARCH.md`.
 
 ## Quy tắc riêng
 
-Read CODEX_HANDOFF.md before editing. Current source is cabinet_work; tests/generator/package/deploy are cabinet_dev.
+Read HANDOFF.md before editing. Current source is cabinet_work; tests/generator/package/deploy are cabinet_dev.
 - Communicate in Vietnamese. Keep the extension name VGD_Cabinet, namespace VGD_Cabinet, loader vgd_cabinet.rb.
 - Preserve construction rules inherited from T+ Cabinet; the old handoff is an archive, not active runtime.
 - Only deploy this Cabinet into SketchUp 2022. Explicit own-file whitelist; back up/retire only tplus_cabinet.rb. Do not modify other plugins, their data, or other SketchUp versions.

@@ -51,7 +51,7 @@
       "status": "CHƯA KIỂM CHỨNG NATIVE",
       "mode": "preflight_and_manual_checklist",
       "rbz": {
-        "path": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\vgd_cabinet_modeling\\VGD_Cabinet_v4.5.2.rbz",
+        "path": "<repo>\\plugins\\VGD_Cabinet\\outputs\\vgd_cabinet_modeling\\VGD_Cabinet_v4.5.2.rbz",
         "sha256": "ace78fde256190c382c215d4bdbb5b569cc5bf8ec11e7069a97e689f702c9300",
         "result": "PASS kiểm tra SHA-256 file; không phải kiểm thử native"
       },
@@ -75,7 +75,7 @@
         ]
       },
       "backup": {
-        "manifest": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\upgrade_fixture_20261013_215852_native452_c91d380e\\BACKUP_MANIFEST.json",
+        "manifest": "<repo>\\plugins\\VGD_Cabinet\\outputs\\upgrade_fixture_20261013_215852_native452_c91d380e\\BACKUP_MANIFEST.json",
         "plugin_files": 23,
         "userdata_files": 46,
         "userdata_path": "C:\\Users\\TUNG\\AppData\\Roaming\\VGD\\SketchUp\\VGD_Cabinet",
@@ -101,7 +101,7 @@
         "ruby_console_errors": "CHƯA QUAN SÁT; không kết luận không có lỗi",
         "visual_preview": "CHƯA QUAN SÁT"
       },
-      "checklist": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\upgrade_fixture_20261013_215852_native452_c91d380e\\NATIVE_CHECKLIST.md",
+      "checklist": "<repo>\\plugins\\VGD_Cabinet\\outputs\\upgrade_fixture_20261013_215852_native452_c91d380e\\NATIVE_CHECKLIST.md",
       "limitations": "Công cụ Windows nhận diện được SketchUp 2022 và tên cửa sổ, nhưng hai lần capture đều timeout. Đã mở SketchUp, chưa cài RBZ, chưa nhập Ruby, chưa tạo/sửa/lưu/đóng model. Không ghi thêm PASS native; giữ nguyên kết quả native 4.5.1 và lịch sử cũ."
     },
     {
@@ -112,7 +112,7 @@
       "mode": "computer_use_capture_retry",
       "retry_of": "2026-10-13T21:58:53.488277+00:00",
       "rbz": {
-        "path": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\vgd_cabinet_modeling\\VGD_Cabinet_v4.5.2.rbz",
+        "path": "<repo>\\plugins\\VGD_Cabinet\\outputs\\vgd_cabinet_modeling\\VGD_Cabinet_v4.5.2.rbz",
         "sha256": "ace78fde256190c382c215d4bdbb5b569cc5bf8ec11e7069a97e689f702c9300",
         "result": "PASS kiểm tra SHA-256 file; không phải kiểm thử native"
       },
@@ -141,7 +141,7 @@
         ]
       },
       "backup": {
-        "manifest": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\upgrade_fixture_20261013_215852_native452_c91d380e\\BACKUP_MANIFEST.json",
+        "manifest": "<repo>\\plugins\\VGD_Cabinet\\outputs\\upgrade_fixture_20261013_215852_native452_c91d380e\\BACKUP_MANIFEST.json",
         "files_verified": 69,
         "result": "PASS kiểm tra đủ 69 file backup và SHA-256; không thiếu/sai hash; nguồn vẫn khớp snapshot",
         "source_changed_since_backup": []
@@ -314,12 +314,12 @@
       },
       "profile_confirmed_by_sketchup_api": true,
       "rbz": {
-        "path": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\vgd_cabinet_modeling\\VGD_Cabinet_v4.5.2.rbz",
+        "path": "<repo>\\plugins\\VGD_Cabinet\\outputs\\vgd_cabinet_modeling\\VGD_Cabinet_v4.5.2.rbz",
         "sha256": "ace78fde256190c382c215d4bdbb5b569cc5bf8ec11e7069a97e689f702c9300",
         "result": "PASS kiểm tra file tự động; không phải hành vi native"
       },
       "backup": {
-        "manifest": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\upgrade_fixture_20261013_215852_native452_c91d380e\\BACKUP_MANIFEST.json",
+        "manifest": "<repo>\\plugins\\VGD_Cabinet\\outputs\\upgrade_fixture_20261013_215852_native452_c91d380e\\BACKUP_MANIFEST.json",
         "files_verified": 69,
         "source_changed_since_backup": [],
         "result": "PASS đầy đủ 69 file, đúng SHA-256; nguồn vẫn khớp snapshot"
@@ -363,7 +363,7 @@
       },
       "evidence_source": "SketchUp MCP execute_ruby/model_status chỉ đọc; Computer Use đã chọn đúng cửa sổ nhưng không capture ổn định; đối chiếu Git và RBZ tự động.",
       "rbz": {
-        "path": "D:\\Codex\\VGD_Plugins\\plugins\\VGD_Cabinet\\outputs\\vgd_cabinet_modeling\\VGD_Cabinet_v4.5.2.rbz",
+        "path": "<repo>\\plugins\\VGD_Cabinet\\outputs\\vgd_cabinet_modeling\\VGD_Cabinet_v4.5.2.rbz",
         "sha256": "ace78fde256190c382c215d4bdbb5b569cc5bf8ec11e7069a97e689f702c9300",
         "runtime_entries": 23,
         "duplicate_entries": 0,

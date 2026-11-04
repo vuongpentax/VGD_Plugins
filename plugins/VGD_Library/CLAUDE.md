@@ -11,7 +11,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Cấu trúc
 
-- `runtime/`: loader và thư mục `vgd_library/`. Vai trò từng file Ruby (catalog, drive, online, materials, geometry, storage, models, tools, advanced, pixels, seamless, shell_sync) xem `CODEX_HANDOFF.md` mục "Cấu trúc".
+- `runtime/`: loader và thư mục `vgd_library/`. Vai trò từng file Ruby (catalog, drive, online, materials, geometry, storage, models, tools, advanced, pixels, seamless, shell_sync) xem `HANDOFF.md` mục "Cấu trúc".
 - `dev/`: test, `package.cjs`, `package.json`.
 - `reference/` (nếu có): tư liệu nghiên cứu cục bộ, chỉ đọc.
 
@@ -19,7 +19,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 - Từ `plugins/VGD_Library/dev`: `npm test` (chạy `node check_ruby.cjs && node test_ui.cjs`).
 - Test khác trong `dev/`: `test_engine.rb`, `test_advanced.rb`, `test_online_errors.rb`, `test_preferences_timers.rb`.
-- Việc còn cần kiểm tra trong SketchUp thật: xem `CODEX_HANDOFF.md` mục "Native checklist còn cần".
+- Việc còn cần kiểm tra trong SketchUp thật: xem `HANDOFF.md` mục "Native checklist còn cần".
 
 ## Đóng gói
 
@@ -28,7 +28,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Tài liệu đọc trước khi sửa
 
-- `README.md`, `CODEX_HANDOFF.md`, `FEATURE_PARITY.md` (khác biệt hành vi so với sản phẩm tham chiếu).
+- `README.md`, `HANDOFF.md`, `FEATURE_PARITY.md` (khác biệt hành vi so với sản phẩm tham chiếu).
 
 ## Quy tắc riêng
 

@@ -62,7 +62,7 @@ dev_files = [
 doc_files = [
     'README.md', 'CLAUDE.md', 'ANNOTATION_REQUIREMENTS.md', 'SELECTION_REQUIREMENTS.md',
     'FEATURE_STATUS.md', 'UI_DESIGN.md', 'DEVELOPMENT_NOTES.md', 'VGD_UPDATE_MANIFEST.json',
-    'HOW_TO_RELEASE.md', f'RELEASE_NOTES_v{version}.md'
+    f'RELEASE_NOTES_v{version}.md'
 ]
 with zipfile.ZipFile(source_zip, 'w', zipfile.ZIP_DEFLATED) as archive:
     for name in runtime_files:

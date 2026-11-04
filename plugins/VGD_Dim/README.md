@@ -45,7 +45,7 @@ Thanh điều hướng hiển thị icon, tên và mô tả khi panel rộng; �
 
 ## Cập nhật online pilot
 
-Bản beta.6 thêm Dim thủ công và quản lý vùng đo. Người dùng beta.5 cài beta.6 một lần qua VGD Center hoặc Extension Manager; các bản sau có thể tải từ package của Center bằng updater. Updater xác minh kích thước và SHA-256; nếu người dùng đồng ý, helper chờ SketchUp đóng rồi thay file whitelist, lưu bản sao thư mục cũ và giữ file ngoài whitelist. Xem [HOW_TO_RELEASE.md](HOW_TO_RELEASE.md).
+Bản beta.6 thêm Dim thủ công và quản lý vùng đo. Người dùng beta.5 cài beta.6 một lần qua VGD Center hoặc Extension Manager; các bản sau có thể tải từ package của Center bằng updater. Updater xác minh kích thước và SHA-256; nếu người dùng đồng ý, helper chờ SketchUp đóng rồi thay file whitelist, lưu bản sao thư mục cũ và giữ file ngoài whitelist.
 
 ## Sửa lỗi khởi động 3.0.1-beta.1 — 05/10/2026
 
