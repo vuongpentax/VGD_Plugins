@@ -64,7 +64,7 @@ check 'lệnh của Center vẫn còn (không bị tab Quản lý ghi đè)', %w
 %w[p1 p2 TT_Lib2 VGD_Center].each { |n| File.write(File.join(plug24, "#{n}.rb"), "x\n") }
 dlg.callback('mgr_ready').call(nil)
 check 'mở tab: gửi danh sách plugin và các bản SketchUp', dlg.scripts.any? { |s| s.include?('renderToggle') && s.include?('"p1"') } && dlg.scripts.any? { |s| s.include?('initMigrate') && s.include?('2022') }
-check 'danh sách gửi sang giao diện không có VGD Center', dlg.scripts.select { |s| s.include?('renderToggle') }.none? { |s| s.include?('VGD_Center') }
+check 'danh sách gửi sang giao diện không có VGD Center', dlg.scripts.select { |s| s.include?('renderToggle') }.none? { |s| s.include?('"name":"VGD_Center"') }
 check 'số phiên bản Center có trong dữ liệu', dlg.scripts.any? { |s| s.include?(CENTER::VERSION) }
 
 # ---- Tắt/bật tất cả qua callback ----
@@ -147,9 +147,31 @@ $stub_open_path = File.join(fake, 'sets_out.json')
 dlg.callback('mgr_import_sets').call(nil)
 check 'nhập bộ từ file', MGR::Toggle.load_sets['Render'] == %w[p1 p2]
 
-# ---- Dữ liệu dùng chung với Plugin Manager cũ ----
-check 'dữ liệu nằm ở Plugins/VGD_PluginManager/data (cùng chỗ với Plugin Manager cũ)', MGR::Toggle.root_dir == File.join(plug24, 'VGD_PluginManager', 'data')
-check 'tệp bộ plugin dùng chung định dạng với Plugin Manager cũ', JSON.parse(File.read(File.join(fake, 'sets_out.json')))['format'] == 'vgd_plugin_sets'
+# ---- Dữ liệu nằm trong VGD_Center/data; dữ liệu cũ được chuyển về ----
+check 'dữ liệu nằm ở Plugins/VGD_Center/data', MGR::Toggle.root_dir == File.join(plug24, 'VGD_Center', 'data')
+check 'tệp bộ plugin giữ định dạng cũ (Plugin Manager cũ đọc được)', JSON.parse(File.read(File.join(fake, 'sets_out.json')))['format'] == 'vgd_plugin_sets'
+old_dir = MGR::Toggle.old_roots[0]
+toggle_msg = -> { dlg.scripts.reverse.find { |s| s.include?('renderToggle') }.to_s }  # tin trạng thái mới nhất (sau đó Ruby còn gửi initMigrate)
+FileUtils.mkdir_p(File.join(old_dir, 'disabled'))
+File.write(File.join(old_dir, 'disabled', 'mig.rb'), "m\n")
+MGR.migrate_on_start
+check 'lúc khởi động: chuyển dữ liệu cũ ngay, chưa cần mở tab', File.exist?(File.join(MGR::Toggle.disabled_dir, 'mig.rb')) && !File.exist?(old_dir)
+dlg.callback('mgr_ready').call(nil, { lang: 'en' }.to_json)
+check 'mở tab lần đầu: báo đã chuyển lúc khởi động, đúng ngôn ngữ', toggle_msg.call.include?('Moved the old enable/disable data (1 item(s))') && toggle_msg.call.include?('VGD_Center')
+check 'plugin đã chuyển hiện trong danh sách đã tắt', toggle_msg.call.include?('"name":"mig"') && toggle_msg.call.include?('"status":"off"')
+dlg.callback('mgr_ready').call(nil, {}.to_json)
+check 'thông báo chuyển dữ liệu chỉ hiện một lần', !toggle_msg.call.include?('Đã chuyển') && !toggle_msg.call.include?('Moved the old')
+FileUtils.mkdir_p(File.join(old_dir, 'disabled'))
+File.write(File.join(old_dir, 'disabled', 'late.rb'), "l\n")
+dlg.callback('mgr_ready').call(nil, { lang: 'vi' }.to_json)
+check 'dữ liệu cũ xuất hiện sau đó: mở tab cũng chuyển và báo bằng tiếng Việt', File.exist?(File.join(MGR::Toggle.disabled_dir, 'late.rb')) && toggle_msg.call.include?('Đã chuyển dữ liệu bật/tắt cũ (1 mục)')
+FileUtils.mkdir_p(File.join(old_dir, 'disabled'))
+FileUtils.mkdir_p(File.join(MGR::Toggle.disabled_dir))
+File.write(File.join(old_dir, 'disabled', 'late.rb'), "OTHER\n")
+dlg.callback('mgr_ready').call(nil, { lang: 'en' }.to_json)
+check 'trùng tên: báo mục chưa chuyển, không ghi đè', toggle_msg.call.include?('could not be moved') && File.read(File.join(MGR::Toggle.disabled_dir, 'late.rb')) == "l\n"
+MGR.migrate_on_start
+check 'migrate_on_start không ném lỗi và giữ báo cáo cho lần mở tab', MGR.take_startup_report.is_a?(Hash) && MGR.take_startup_report.nil?
 
 puts($fail ? 'CÓ LỖI' : 'TẤT CẢ ĐẠT')
 exit($fail ? 1 : 0)

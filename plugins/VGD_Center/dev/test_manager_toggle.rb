@@ -112,28 +112,94 @@ ENV['APPDATA'] = '/proc/khong_ghi_duoc'
 check 'log không ném lỗi khi không ghi được', log.write('x') == false
 
 ENV['APPDATA'] = fake
-# Vị trí lưu trữ mới nằm trong thư mục Plugins
-check 'dữ liệu nằm trong Plugins/VGD_PluginManager/data', M.root_dir == File.join(plug, 'VGD_PluginManager', 'data')
-check 'thư mục plugin tắt nằm trong data', M.disabled_dir.start_with?(File.join(plug, 'VGD_PluginManager'))
-FileUtils.mkdir_p(File.join(plug, 'VGD_PluginManager/data/disabled'))
+# Vị trí lưu trữ nằm trong thư mục của Center
+check 'dữ liệu nằm trong Plugins/VGD_Center/data', M.root_dir == File.join(plug, 'VGD_Center', 'data')
+check 'thư mục plugin tắt nằm trong data của Center', M.disabled_dir == File.join(plug, 'VGD_Center', 'data', 'disabled')
 File.write(File.join(plug, 'VGD_PluginManager.rb'), "loader\n")
 File.write(File.join(plug, 'vgd_plugin_migrator.rb'), "old loader\n")
 FileUtils.mkdir_p(File.join(plug, 'vgd_plugin_migrator'))
-check 'plugin này (tên mới và tên cũ) không hiện trong danh sách', (names.(M.state).keys & %w[VGD_PluginManager vgd_plugin_migrator]).empty?
+check 'Plugin Manager cũ (tên mới và tên cũ) không hiện trong danh sách', (names.(M.state).keys & %w[VGD_PluginManager vgd_plugin_migrator]).empty?
+check 'không có dữ liệu cũ thì không làm gì', M.migrate_old_data.nil? && M.migration_message(nil).nil?
 
-# Chuyển dữ liệu từ vị trí cũ (ngoài Plugins) sang vị trí mới
-FileUtils.rm_rf(M.root_dir)
-FileUtils.mkdir_p(File.join(M.legacy_root_dir, 'disabled'))
-File.write(File.join(M.legacy_root_dir, 'disabled', 'old.rb'), "old\n")
-File.write(File.join(M.legacy_root_dir, 'sets.json'), '{"Cu":["old"]}')
-check 'chuyển dữ liệu cũ vào vị trí mới', M.migrate_legacy.to_s.include?('Đã chuyển') &&
-  File.exist?(File.join(M.disabled_dir, 'old.rb')) && M.load_sets == { 'Cu' => ['old'] } && !File.exist?(M.legacy_root_dir)
-check 'chạy lại không làm gì', M.migrate_legacy.nil?
-FileUtils.mkdir_p(File.join(M.legacy_root_dir, 'disabled'))
-check 'không ghi đè khi vị trí mới đã có dữ liệu', M.migrate_legacy.nil? && File.directory?(M.legacy_root_dir)
-FileUtils.rm_rf(M.legacy_root_dir)
-FileUtils.rm_rf(M.disabled_dir); FileUtils.mkdir_p(M.disabled_dir)
+# --- Chuyển dữ liệu từ Plugin Manager cũ (Plugins/VGD_PluginManager/data) vào VGD_Center/data ---
+reset = -> { FileUtils.rm_rf(M.root_dir); FileUtils.rm_rf(File.join(plug, 'VGD_PluginManager')); FileUtils.rm_rf(M.old_roots[1]) }
+reset.call
+old_pm = M.old_roots[0]
+FileUtils.mkdir_p(File.join(old_pm, 'disabled/oldtool/lib'))
+File.write(File.join(old_pm, 'disabled/oldtool.rb'), "old\n")
+File.write(File.join(old_pm, 'disabled/oldtool/lib/x.rb'), "x\n")
+File.write(File.join(old_pm, 'sets.json'), '{"Cu":["oldtool"]}')
+File.write(File.join(plug, 'VGD_PluginManager.rb'), "loader\n")
+File.write(File.join(plug, 'VGD_PluginManager', 'main.rb'), "plugin code\n")
+report = M.migrate_old_data
+check 'chuyển dữ liệu từ Plugin Manager cũ: đủ mục, không giữ lại mục nào', report && report[:moved].sort == %w[oldtool oldtool.rb sets.json] && report[:kept].empty?
+check 'dữ liệu đã nằm ở VGD_Center/data, nội dung nguyên vẹn', File.read(File.join(M.disabled_dir, 'oldtool.rb')) == "old\n" && File.read(File.join(M.disabled_dir, 'oldtool/lib/x.rb')) == "x\n" && M.load_sets == { 'Cu' => ['oldtool'] }
+check 'thư mục dữ liệu cũ đã được dọn', !File.exist?(old_pm)
+check 'mã của Plugin Manager cũ (còn cài) không bị đụng', File.read(File.join(plug, 'VGD_PluginManager', 'main.rb')) == "plugin code\n" && File.exist?(File.join(plug, 'VGD_PluginManager.rb'))
+check 'plugin đã chuyển hiện là đã tắt trong danh sách', names.(M.state)['oldtool'] == 'off'
+check 'báo cáo biết Plugin Manager cũ còn cài', report[:old_pm]
+msg = M.migration_message(report)
+check 'thông báo nêu số mục, nơi mới và nhắc gỡ Plugin Manager cũ', msg.include?('Đã chuyển dữ liệu bật/tắt cũ (3 mục)') && msg.include?(M.root_dir) && msg.include?('cũ vẫn đang cài')
+check 'chạy lại không làm gì', M.migrate_old_data.nil?
+check 'bật lại plugin đã chuyển hoạt động bình thường', M.change(['oldtool'], 'enable')[:changed] == ['oldtool'] && File.exist?(File.join(plug, 'oldtool/lib/x.rb'))
+FileUtils.rm_rf(File.join(plug, 'oldtool')); FileUtils.rm_f(File.join(plug, 'oldtool.rb'))
+
+# Thư mục Plugin Manager chỉ còn dữ liệu (đã gỡ plugin): dọn luôn cả thư mục rỗng
+reset.call
+FileUtils.mkdir_p(File.join(old_pm, 'disabled'))
+File.write(File.join(old_pm, 'disabled/solo.rb'), "solo\n")
+FileUtils.rm_f(File.join(plug, 'VGD_PluginManager.rb'))
+report = M.migrate_old_data
+check 'Plugin Manager đã gỡ: dữ liệu chuyển hết và thư mục rỗng được dọn', report[:moved] == ['solo.rb'] && !report[:old_pm] && !File.exist?(File.join(plug, 'VGD_PluginManager')) && File.exist?(File.join(M.disabled_dir, 'solo.rb'))
+check 'không nhắc gỡ Plugin Manager khi nó đã gỡ', !M.migration_message(report).include?('cũ vẫn đang cài')
+
+# Trùng tên: không ghi đè, mục trùng ở lại chỗ cũ, các mục khác vẫn chuyển
+reset.call
+FileUtils.mkdir_p(File.join(old_pm, 'disabled'))
+FileUtils.mkdir_p(M.disabled_dir)
+File.write(File.join(old_pm, 'disabled/same.rb'), "OLD same\n")
+File.write(File.join(old_pm, 'disabled/other.rb'), "other\n")
+File.write(File.join(M.disabled_dir, 'same.rb'), "NEW same\n")
+report = M.migrate_old_data
+check 'trùng tên: chuyển mục khác, giữ lại mục trùng', report[:moved] == ['other.rb'] && report[:kept] == [File.join(old_pm, 'disabled/same.rb')]
+check 'trùng tên: không ghi đè bản mới, bản cũ còn nguyên chỗ cũ', File.read(File.join(M.disabled_dir, 'same.rb')) == "NEW same\n" && File.read(File.join(old_pm, 'disabled/same.rb')) == "OLD same\n"
+check 'trùng tên: thông báo nêu mục chưa chuyển', M.migration_message(report).include?('chưa chuyển được') && M.migration_message(report).include?('same.rb')
+check 'trùng tên: lần chạy sau vẫn báo mục còn lại, không mất gì', M.migrate_old_data[:kept].size == 1
+
+# Bộ plugin: gộp, bộ cùng tên ở chỗ mới được ưu tiên
+reset.call
+FileUtils.mkdir_p(old_pm)
+File.write(File.join(old_pm, 'sets.json'), '{"Cu":["old"],"B":["b"]}')
+FileUtils.mkdir_p(M.root_dir)
+File.write(M.sets_file, '{"A":["a"],"Cu":["new"]}')
+report = M.migrate_old_data
+check 'gộp bộ plugin: bộ ở chỗ mới được ưu tiên, bộ mới của file cũ được thêm', report[:moved] == ['sets.json'] && M.load_sets == { 'A' => ['a'], 'B' => ['b'], 'Cu' => ['new'] } && !File.exist?(File.join(old_pm, 'sets.json'))
+reset.call
+FileUtils.mkdir_p(old_pm)
+File.write(File.join(old_pm, 'sets.json'), 'không phải json')
+report = M.migrate_old_data
+check 'file bộ plugin cũ bị hỏng: giữ nguyên chỗ cũ, không mất', report[:kept].size == 1 && File.read(File.join(old_pm, 'sets.json'), encoding: 'UTF-8') == 'không phải json' && report[:moved].empty?
+
+# Vị trí cũ của beta.3 (ngoài thư mục Plugins)
+reset.call
+legacy = M.old_roots[1]
+FileUtils.mkdir_p(File.join(legacy, 'disabled'))
+File.write(File.join(legacy, 'disabled', 'leg.rb'), "leg\n")
+File.write(File.join(legacy, 'sets.json'), '{"Cu":["leg"]}')
+report = M.migrate_old_data
+check 'chuyển dữ liệu từ vị trí beta.3 (ngoài Plugins)', report[:moved].sort == %w[leg.rb sets.json] && File.exist?(File.join(M.disabled_dir, 'leg.rb')) && M.load_sets == { 'Cu' => ['leg'] } && !File.exist?(legacy)
+reset.call
+FileUtils.mkdir_p(M.disabled_dir)
 M.delete_set('Cu')
+
+# Cảnh báo đường dẫn không ghi được
+FileUtils.mkdir_p(old_pm)
+File.write(File.join(old_pm, 'sets.json'), '{"X":["x"]}')
+ENV['APPDATA'] = '/proc/khong_ghi_duoc'
+check 'mở tab khi không đọc được thư mục: không ném lỗi ra ngoài (migrate_on_start chỉ ghi log)', M.migration_message(nil).nil?
+ENV['APPDATA'] = fake
+reset.call
+FileUtils.mkdir_p(M.disabled_dir)
 
 # Kiểm tra phiên bản do giao diện gửi lên (chống tên thư mục lạ)
 PMgr = VGD::Center::Manager

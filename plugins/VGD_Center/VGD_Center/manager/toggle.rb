@@ -16,29 +16,93 @@ module VGD
           (2000 + Sketchup.version.to_i).to_s
         end
 
-        # Dữ liệu (plugin đã tắt, bộ plugin) dùng chung với VGD Plugin Manager cũ: cùng thư mục
-        # Plugins/VGD_PluginManager/data, để plugin đã tắt bằng Plugin Manager vẫn hiện ở đây và ngược lại.
-        # Thư mục VGD_PluginManager bị bỏ qua khi quét plugin (SELF_NAMES) nên các mục đã tắt không hiện lại trong danh sách.
+        # Dữ liệu (plugin đã tắt, bộ plugin) nằm trong thư mục của Center: Plugins/VGD_Center/data.
+        # VGD_Center bị bỏ qua khi quét plugin (SELF_NAMES) nên các mục đã tắt không hiện lại trong danh sách.
         def self.root_dir
-          File.join(PM.plugins_dir(year), 'VGD_PluginManager', 'data')
+          File.join(PM.plugins_dir(year), 'VGD_Center', 'data')
         end
 
-        # Vị trí cũ (beta.3 trở về trước): ngoài thư mục Plugins
-        def self.legacy_root_dir
-          File.join(File.dirname(PM.plugins_dir(year)), 'VGD_PluginManager')
+        # Các vị trí cũ, theo thứ tự chuyển: VGD Plugin Manager beta.4 trở đi (trong Plugins), rồi beta.3 (ngoài Plugins).
+        def self.old_roots
+          plugins = PM.plugins_dir(year)
+          [File.join(plugins, 'VGD_PluginManager', 'data'), File.join(File.dirname(plugins), 'VGD_PluginManager')]
         end
 
-        # Chuyển dữ liệu từ vị trí cũ sang vị trí mới, một lần. Không ghi đè nếu vị trí mới đã có.
-        # Trả về thông báo hoặc nil.
-        def self.migrate_legacy
-          old = legacy_root_dir
-          return nil unless File.directory?(old)
-          return nil if File.exist?(root_dir)
-          FileUtils.mkdir_p(File.dirname(root_dir))
-          FileUtils.mv(old, root_dir)
-          PM.t(:legacy_moved, dir: root_dir)
-        rescue => e
-          PM.report_error(PM.t(:err_legacy), e)
+        # Chuyển dữ liệu từ các vị trí cũ vào vị trí mới. Trả về báo cáo { moved:, kept:, old_pm: } hoặc nil nếu không có gì.
+        # An toàn với dữ liệu: chỉ đổi chỗ từng mục (mv), không bao giờ xóa đệ quy; mục trùng tên ở chỗ mới thì giữ nguyên
+        # ở chỗ cũ (kept); lỗi giữa chừng để các mục còn lại nằm yên chỗ cũ. Lỗi được ném ra cho nơi gọi xử lý.
+        def self.migrate_old_data
+          moved = []
+          kept = []
+          old_roots.each do |old|
+            next unless File.directory?(old)
+            m, k = merge_old_root(old)
+            moved.concat(m)
+            kept.concat(k.map { |name| File.join(old, name) })
+            prune_empty(old)
+          end
+          prune_empty(File.join(PM.plugins_dir(year), 'VGD_PluginManager'))
+          return nil if moved.empty? && kept.empty?
+          # Plugin Manager cũ còn cài thì nó không thấy dữ liệu đã chuyển
+          { moved: moved, kept: kept, old_pm: File.exist?(File.join(PM.plugins_dir(year), 'VGD_PluginManager.rb')) }
+        end
+
+        # Thông báo cho một hoặc nhiều báo cáo chuyển dữ liệu, theo ngôn ngữ hiện tại. nil nếu không có gì.
+        def self.migration_message(*reports)
+          reports = reports.compact
+          return nil if reports.empty?
+          moved = reports.flat_map { |r| r[:moved] }
+          kept = reports.flat_map { |r| r[:kept] }
+          lines = []
+          lines << PM.t(:data_moved, n: moved.size, dir: root_dir) unless moved.empty?
+          lines << PM.t(:data_kept, n: kept.size, names: kept.join(', ')) unless kept.empty?
+          lines << PM.t(:old_pm_present) if !moved.empty? && reports.any? { |r| r[:old_pm] }
+          lines.empty? ? nil : lines.join("\n")
+        end
+
+        # Gộp một thư mục dữ liệu cũ vào thư mục mới. Trả về [các mục đã chuyển, các mục giữ lại].
+        def self.merge_old_root(old)
+          moved = []
+          kept = []
+          FileUtils.mkdir_p(disabled_dir)
+          old_disabled = File.join(old, 'disabled')
+          if File.directory?(old_disabled)
+            Dir.children(old_disabled).each do |entry|
+              dst = File.join(disabled_dir, entry)
+              if File.exist?(dst)
+                kept << File.join('disabled', entry)
+              else
+                FileUtils.mv(File.join(old_disabled, entry), dst)
+                moved << entry
+              end
+            end
+          end
+          old_sets = File.join(old, 'sets.json')
+          if File.file?(old_sets)
+            merge_sets_file(old_sets) ? moved << 'sets.json' : kept << 'sets.json'
+          end
+          [moved, kept]
+        end
+
+        # Gộp bộ plugin của file cũ vào file mới (bộ cùng tên ở chỗ mới được ưu tiên) rồi xóa file cũ.
+        # File cũ hỏng hoặc sai kiểu thì giữ nguyên và trả về false.
+        def self.merge_sets_file(old_sets)
+          old = JSON.parse(File.read(old_sets, encoding: 'UTF-8'))
+          return false unless old.is_a?(Hash)
+          save_sets(old.select { |_k, v| v.is_a?(Array) }.merge(load_sets))
+          File.delete(old_sets)
+          true
+        rescue StandardError
+          false
+        end
+
+        # Xóa thư mục nếu rỗng (và thư mục disabled rỗng bên trong). Không bao giờ xóa thư mục còn nội dung.
+        def self.prune_empty(dir)
+          disabled = File.join(dir, 'disabled')
+          Dir.rmdir(disabled) if File.directory?(disabled) && Dir.empty?(disabled)
+          Dir.rmdir(dir) if File.directory?(dir) && Dir.empty?(dir)
+        rescue StandardError
+          nil
         end
 
         def self.disabled_dir

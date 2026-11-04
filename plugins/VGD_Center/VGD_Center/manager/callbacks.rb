@@ -46,8 +46,8 @@ module VGD
         dlg.add_action_callback('mgr_ready') do |_c, json|
           guard.call(:ctx_open_tab, push_toggle) do
             parse.call(json)
-            legacy_msg = Toggle.migrate_legacy
-            push_toggle.call(legacy_msg)
+            # Chuyển dữ liệu cũ (nếu còn) về Plugins/VGD_Center/data, rồi báo cả phần đã chuyển lúc khởi động
+            push_toggle.call(Toggle.migration_message(take_startup_report, Toggle.migrate_old_data))
             js.call('initMigrate', installed_versions)
           end
         end

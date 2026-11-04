@@ -913,6 +913,7 @@ module VGD
         toolbar.restore
         file_loaded(__FILE__)
         UI.start_timer(6.0, false) { VGD::Center.auto_check_center_update }
+        UI.start_timer(8.0, false) { VGD::Center::Manager.migrate_on_start }
       end
     end
   end

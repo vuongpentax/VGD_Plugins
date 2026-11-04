@@ -42,7 +42,6 @@ module VGD
           ctx_list: { vi: 'Lỗi khi đọc danh sách plugin', en: 'Error reading the plugin list' },
           ctx_migrate: { vi: 'Lỗi khi chuyển', en: 'Error migrating plugins' },
           ctx_bundle: { vi: 'Lỗi khi xuất gói', en: 'Error exporting the package' },
-          err_legacy: { vi: 'Không chuyển được dữ liệu bật/tắt cũ', en: 'Could not move the old enable/disable data' },
           err_save_set: { vi: 'Không lưu được bộ', en: 'Could not save the set' },
           err_delete_set: { vi: 'Không xóa được bộ', en: 'Could not delete the set' },
           err_export_sets: { vi: 'Không xuất được bộ plugin', en: 'Could not export the plugin sets' },
@@ -51,9 +50,17 @@ module VGD
           err_bundle: { vi: 'Không tạo được gói', en: 'Could not create the package' },
 
           # ---- Bật/tắt ----
-          legacy_moved: {
-            vi: 'Đã chuyển dữ liệu bật/tắt cũ vào %{dir}.',
-            en: 'Moved the old enable/disable data to %{dir}.'
+          data_moved: {
+            vi: 'Đã chuyển dữ liệu bật/tắt cũ (%{n} mục) vào %{dir}.',
+            en: 'Moved the old enable/disable data (%{n} item(s)) to %{dir}.'
+          },
+          data_kept: {
+            vi: '%{n} mục chưa chuyển được vì đã có mục cùng tên ở chỗ mới, vẫn nằm ở chỗ cũ: %{names}',
+            en: '%{n} item(s) could not be moved because an item with the same name already exists in the new place; they stay in the old place: %{names}'
+          },
+          old_pm_present: {
+            vi: 'VGD Plugin Manager cũ vẫn đang cài và không còn thấy các plugin đã tắt. Nên gỡ nó trong Extension Manager.',
+            en: 'The old VGD Plugin Manager is still installed and no longer sees the disabled plugins. Uninstall it in Extension Manager.'
           },
           dest_exists: {
             vi: '%{item} đã tồn tại ở thư mục đích',

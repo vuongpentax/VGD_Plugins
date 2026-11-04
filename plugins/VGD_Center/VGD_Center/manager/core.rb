@@ -15,8 +15,9 @@ module VGD
       APPDATA_SUBPATH = 'SketchUp/SketchUp %s/SketchUp/Plugins'
 
       # Không bao giờ tắt hay chuyển các mục này:
-      # - VGD Center: tắt nhầm sẽ mất chính giao diện quản lý.
-      # - VGD Plugin Manager (và tên cũ vgd_plugin_migrator): thư mục của nó chứa dữ liệu các plugin đã tắt.
+      # - VGD Center: tắt nhầm sẽ mất chính giao diện quản lý; thư mục VGD_Center/data chứa plugin đã tắt.
+      # - VGD Plugin Manager (và tên cũ vgd_plugin_migrator): plugin đã gộp vào Center, nhưng máy cũ có thể còn cài,
+      #   và thư mục VGD_PluginManager/data là nơi dữ liệu cũ nằm cho tới khi được chuyển sang VGD_Center/data.
       # So khớp không phân biệt hoa thường (xem Linker.group).
       SELF_NAMES = ['VGD_Center', 'VGD_Center.rb',
                     'VGD_PluginManager', 'VGD_PluginManager.rb', 'vgd_plugin_migrator', 'vgd_plugin_migrator.rb']
@@ -163,6 +164,23 @@ module VGD
         { count: plugin_files, path: out_path, notes: [] }
       rescue => e
         { error: report_error(t(:err_bundle), e) }
+      end
+
+      # Gọi một lần sau khi SketchUp khởi động: chuyển dữ liệu cũ về Plugins/VGD_Center/data ngay, không đợi người dùng
+      # mở tab. Nhờ vậy plugin đang tắt không bị xóa theo nếu người dùng gỡ Plugin Manager cũ trước khi mở tab.
+      # Báo cáo được giữ lại để tab hiện thông báo (đúng ngôn ngữ) lần mở đầu tiên; lỗi chỉ ghi nhật ký.
+      def self.migrate_on_start
+        report = Toggle.migrate_old_data
+        @startup_report = report if report
+      rescue StandardError => e
+        Log.write('Lỗi chuyển dữ liệu bật/tắt cũ lúc khởi động', e)
+      end
+
+      # Lấy (một lần) báo cáo chuyển dữ liệu lúc khởi động.
+      def self.take_startup_report
+        report = @startup_report
+        @startup_report = nil
+        report
       end
 
       # Kiểm tra cặp phiên bản nguồn/đích do giao diện gửi lên. Trả về thông báo lỗi hoặc nil.

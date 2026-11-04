@@ -32,7 +32,7 @@ Từ VGD Center 1.2.0, plugin có `id` mới không cần cập nhật Center n�
 - `id` dạng `[a-z][a-z0-9_]` (2–40 ký tự), khác `center`.
 - `extension_name` bắt đầu bằng `VGD ` và không trùng tên plugin khác.
 - `allowed_paths` gồm đúng hai đường dẫn: loader `VGD_*.rb` hoặc `vgd_*.rb` và thư mục cùng tên (không phân biệt hoa thường), không trùng đường dẫn của plugin khác hoặc của Center.
-- Không trùng đường dẫn mà tab Quản lý bảo vệ (`Manager::SELF_NAMES`), đặc biệt `VGD_PluginManager` (thư mục dữ liệu).
+- Không trùng đường dẫn mà tab Quản lý bảo vệ (`Manager::SELF_NAMES`), đặc biệt `VGD_PluginManager` (nơi Plugin Manager cũ để dữ liệu).
 - Các kiểm tra khác (phiên bản và kênh, URL, dung lượng, SHA-256) giống plugin có sẵn.
 
 Ý nghĩa bảo mật: một mục catalog chỉ ghi được vào đúng loader và thư mục của chính nó, không ghi đè plugin khác. Catalog vẫn là nguồn tin cậy: ai sửa được catalog có thể đưa một plugin `VGD_*` mới lên máy người dùng, nên `main` phải được bảo vệ như nguồn phát hành.
@@ -43,8 +43,9 @@ Từ VGD Center 1.2.0, plugin có `id` mới không cần cập nhật Center n�
 
 Tab Quản lý có nguồn gốc từ VGD Plugin Manager 1.0.0-beta.17. Plugin đó đã được gỡ khỏi repo và khỏi catalog; mã nằm trong Center (`VGD_Center/manager/`, module `VGD::Center::Manager`). Giao diện: trang `page-manager` trong `dialog.html`, cùng `manager/manager.js` và `manager/manager.css` (tên lớp có tiền tố `mgr-`). Khác với phần cài đặt, tab này **dời file của mọi plugin** trong thư mục Plugins, nên rủi ro cao hơn:
 
-- **Mục được bảo vệ** (`Manager::SELF_NAMES`): `VGD_Center`, `VGD_PluginManager` và tên cũ `vgd_plugin_migrator`. Không bao giờ hiện trong danh sách, không tắt hay chuyển được; so khớp không phân biệt hoa thường. `VGD_PluginManager` được giữ vì đó là thư mục dữ liệu (bên dưới): dời nó sẽ mất các plugin đã tắt.
-- **Thư mục dữ liệu** `Plugins/VGD_PluginManager/data` (`disabled/`, `sets.json`) là vị trí cũ của Plugin Manager, giữ nguyên để người đã tắt plugin bằng Plugin Manager không mất gì. Tên này được giữ chỗ: không mục catalog nào được khai báo đường dẫn `VGD_PluginManager` (xem quy tắc "Plugin mới"). Nếu người dùng còn cài Plugin Manager cũ và gỡ nó bằng Extension Manager, thư mục `data` bị xóa theo; cần bật lại mọi plugin đang tắt trước.
+- **Mục được bảo vệ** (`Manager::SELF_NAMES`): `VGD_Center`, `VGD_PluginManager` và tên cũ `vgd_plugin_migrator`. Không bao giờ hiện trong danh sách, không tắt hay chuyển được; so khớp không phân biệt hoa thường. `VGD_Center` chứa thư mục dữ liệu; `VGD_PluginManager` được giữ vì máy cũ có thể còn cài Plugin Manager hoặc còn dữ liệu cũ chưa chuyển.
+- **Thư mục dữ liệu** `Plugins/VGD_Center/data` (`disabled/` chứa plugin đã tắt, `sets.json` chứa bộ plugin). Không phải trong `VGD_PluginManager` như Plugin Manager cũ.
+- **Chuyển dữ liệu cũ** (`Toggle.migrate_old_data`): dữ liệu ở `Plugins/VGD_PluginManager/data` (Plugin Manager beta.4 trở đi) và ở thư mục beta.3 (ngoài Plugins) được chuyển vào `VGD_Center/data`, vì gỡ Plugin Manager bằng Extension Manager có thể xóa thư mục của nó. Chạy ngay lúc khởi động SketchUp (hẹn giờ 8 giây sau khi nạp, `Manager.migrate_on_start`) và mỗi lần mở tab Quản lý. Chỉ dùng thao tác đổi chỗ từng mục, không bao giờ xóa đệ quy, không ghi đè: mục trùng tên ở chỗ mới ở lại chỗ cũ và được báo; file bộ plugin được gộp (bộ cùng tên ở chỗ mới thắng), file hỏng giữ nguyên. Thư mục cũ chỉ bị xóa khi đã rỗng. Plugin Manager cũ còn cài sẽ không thấy dữ liệu đã chuyển; tab báo để người dùng gỡ nó. Gỡ Extension Manager của chính Center sẽ xóa luôn `VGD_Center/data`; Center không tự gỡ mình.
 - **Khóa khi Center bận**: bật/tắt, bộ plugin và chuyển plugin bị từ chối khi Center đang tải/cài/gỡ (`VGD::Center.busy?`), để không dời file trong Plugins cùng lúc.
 - Lỗi bất ngờ được ghi vào `%APPDATA%\SketchUp\VGD_Center\manager.log` (luôn tiếng Việt, dành cho người hỗ trợ) và hiện trong tab.
 - Lệnh Ruby của tab đều bắt đầu bằng `mgr_`; Ruby gọi giao diện qua `window.VGDManager.<hàm>`.
