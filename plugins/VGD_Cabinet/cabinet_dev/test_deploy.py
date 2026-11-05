@@ -2,7 +2,7 @@ from pathlib import Path
 import json,os,subprocess,tempfile
 root=Path(__file__).resolve().parents[1]
 outputs=root/'outputs'; outputs.mkdir(exist_ok=True)
-shell=Path(os.environ.get('VGD_POWERSHELL_PATH',r'C:/Users/TUNG/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe'))
+shell=Path(os.environ.get('VGD_POWERSHELL_PATH','pwsh.exe'))
 with tempfile.TemporaryDirectory(prefix='deploy_fixture_') as directory:
     fixture=Path(directory).resolve()
     assert fixture.is_relative_to(Path(tempfile.gettempdir()).resolve())

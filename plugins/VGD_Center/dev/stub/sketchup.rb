@@ -9,9 +9,12 @@ $stub_messages = []
 $stub_answer = IDYES
 $stub_installs = []
 $stub_plugins_dir = nil
+$stub_save_path = nil
+$stub_open_path = nil
 
 module Sketchup
   def self.version; '24.0.553'; end
+  def self.platform; :platform_osx; end
   def self.read_default(_section, _key, default = nil); default; end
   def self.write_default(*_args); end
   def self.extensions; {}; end
@@ -35,4 +38,7 @@ module UI
   def self.menu(_name); Menu.new; end
   def self.start_timer(_seconds, _repeat); end
   def self.messagebox(message, _type = 0); $stub_messages << message; $stub_answer; end
+  def self.openURL(_url); end
+  def self.savepanel(*_args); $stub_save_path; end
+  def self.openpanel(*_args); $stub_open_path; end
 end

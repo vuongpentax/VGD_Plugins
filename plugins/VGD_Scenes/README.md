@@ -1,10 +1,10 @@
-# VGD Scenes 1.5.3-beta.4 — SketchUp 2022–2026.2
+# VGD Scenes 1.6.0 — SketchUp 2022–2026.2
 
-Baseline source 1.5.3-beta.4: 20 file runtime khớp RBZ local trong repo nguồn. dev/deploy.ps1 hiện chỉ có whitelist 19 file, thiếu vgd_scenes/update_notice.rb; chưa dùng script này để triển khai baseline đầy đủ. Không kèm RBZ/ZIP. Đợt chuyển repository chỉ đối chiếu source/checksum; chưa chạy lại test tự động hoặc kiểm thử native SketchUp. Các kết quả PASS bên dưới thuộc lịch sử workspace nguồn.
+Phiên bản hiện tại 1.6.0, chi tiết ở [RELEASE_NOTES_v1.6.0.md](RELEASE_NOTES_v1.6.0.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
-Prerelease có thông báo cập nhật mỗi 24 giờ và lệnh kiểm tra thủ công. SketchUp hỏi trước khi mở trang tải RBZ; người dùng cài qua Extension Manager rồi khởi động lại.
+Plugin không hiện popup cập nhật khi khởi động: VGD Center báo bản mới. Cài bản mới qua Extension Manager rồi khởi động lại.
 
-Plugin tạo view đối tượng, mặt cắt tùy chỉnh, quản lý scene và xuất ảnh/PDF. Thương hiệu VGD, giao diện sáng/tối dùng bảng màu nâu, trắng và than theo theme T+.
+Plugin tạo view đối tượng, mặt cắt tùy chỉnh, quản lý scene và xuất ảnh/PDF. Từ 1.6.0 có thêm bố cục trang (khung tên PDF, xuất PDF, đưa sang LayOut), kích thước khung nhìn lưu theo từng Scene, khổ giấy A2/A1, bộ mặt cắt theo tỉ lệ bản vẽ chuẩn và đo từng Scene của một bộ qua VGD Dim. Thương hiệu VGD, giao diện sáng/tối dùng bảng màu nâu, trắng và than theo theme T+.
 
 ### Dọn gọn và an toàn preview (1.5.2)
 
@@ -15,7 +15,7 @@ Plugin tạo view đối tượng, mặt cắt tùy chỉnh, quản lý scene v�
 - Preview mặt cắt tạo một plane tạm ở gốc model, không Make Unique, không ghi vào definition dùng chung và không snapshot sâu toàn bộ hình học. Chế độ chỉ hiện đối tượng ghi lại những root instance đổi trạng thái ẩn rồi phục hồi khi dọn. Mặt cắt scene thật vẫn tạo bên trong đối tượng như trước.
 - Preview dùng operation thường, tránh abort operation transparent kéo theo thao tác trước của người dùng. Thao tác preview hiện có mục Undo riêng; fixture không chứng minh hành vi Undo/Redo của kernel SketchUp. Sau khi xem thử nên tắt preview trước khi lưu SKP; không sửa/purge definition hoặc mặt cắt cũ của model.
 - Ruby WASM 3.2, Ruby 2.7.2 DLL với API mô phỏng và sáu bộ kiểm tra Edge headless đều PASS, gồm lỗi tạo/di chuyển/dọn preview, bản sao dùng chung, 50 scene và 20 lần refresh. Chưa chạy thử kernel/HtmlDialog SU22 thật; không bảo đảm mọi nguyên nhân crash đã được loại bỏ.
-- Runtime hiện hành có 20 file; whitelist deploy còn 19 và thiếu update_notice.rb, cần xử lý riêng trước khi triển khai.
+- Runtime hiện hành có 31 file; whitelist trong `dev/deploy.ps1` khớp đủ 31 file này.
 
 ### Giao diện gọn và thao tác scene (1.5.0)
 
@@ -70,7 +70,7 @@ Kiểm thử hồi quy mới đã qua Ruby 2.7.2 DLL (API giả lập), WASM 3.2
 - Loader: `%APPDATA%/SketchUp/SketchUp 2022/SketchUp/Plugins/vgd_scenes.rb`
 - Thư mục riêng: `.../Plugins/vgd_scenes/`
 - Loader scene T+ cũ được sao lưu và đổi thành `tplus_scenes_to_layout.rb.vgd-disabled`; chỉ có hiệu lực tắt ở lần khởi động SketchUp kế tiếp.
-- Whitelist deploy hiện có 19 file, chưa đủ 20 file runtime; các báo cáo 17 file bên dưới là lịch sử của phiên bản cũ.
+- Whitelist deploy hiện hành đã đủ file runtime của bản 1.6.0; các báo cáo 17 file bên dưới là lịch sử của phiên bản cũ.
 - Lượt cài 1.1.0 ngày 03/10/2026: 16 file khớp runtime; **7.914 file plugin khác không đổi**. Backup: `outputs/install_20261003_111743_242/`.
 - Lượt cài 1.2.0 ngày 03/10/2026: 17 file khớp runtime; **7.939 file plugin khác không đổi**. Backup: `outputs/install_20261003_171852_481/`.
 - Lượt cài 1.2.1 ngày 03/10/2026: 17 file khớp runtime; **7.994 file plugin khác không đổi**. Backup: `outputs/install_20261003_183241_486/`.
@@ -149,13 +149,13 @@ Mục tiêu Windows: SketchUp Desktop **2022, 2023, 2024, 2025 và 2026 đến 2
 - Khi xuất, đóng chế độ edit Group/Component và giữ model ổn định. Plugin phục hồi camera, trạng thái hiển thị và mặt cắt sau tác vụ.
 - Scene ngoài VGD được liệt kê và có thể xuất. Đổi tên/xóa/lưu view chỉ thực hiện với scene bạn chủ động chọn; cập nhật theo đối tượng chỉ áp dụng scene VGD.
 - Khi xóa scene mặt cắt, mặt phẳng cắt VGD được giữ lại để tránh làm hỏng scene khác có thể dùng chung nó. Không xóa mặt cắt của plugin khác.
-- Không có chức năng dimension tự động hoặc chuyển viewport sang LayOut; phạm vi bản này tập trung vào scene và xuất hình theo yêu cầu.
+- Chức năng đo (VGD Dim) và đưa sang LayOut chỉ có từ 1.6.0; các mục mô tả bên dưới viết trước bản đó có thể chưa nhắc tới chúng. Xem RELEASE_NOTES_v1.6.0.md.
 
 ## Kiểm tra đã thực hiện
 
 - Kiểm tra cú pháp 9 file runtime Ruby, engine fixture trên Ruby 2.7.2 của SU22 và WASM 3.2: tính năng trước, chuyển giữa model, camera/khung, rename/ID/tên trùng, tạo/cập nhật/bỏ qua, rollback khi lỗi, FOV ngang, JSON lỗi/quá lớn và clipboard qua file.
 - Giao diện Chromium: Unicode/HTML, ID, scope xuất/nhập, xác nhận/hủy/lỗi, đổi model, token preview, sáng/tối, 640×780 và 460×540.
-- Whitelist deploy hiện có 19 file và còn thiếu update_notice.rb so với 20 file runtime. Các báo cáo cài đặt trước đây ở outputs của repo nguồn không được chuyển vào migration.
+- `dev/deploy.ps1` có whitelist đủ file runtime của bản 1.6.0, gồm `update_notice.rb` và bộ theme. Các báo cáo cài đặt trước đây ở outputs của repo nguồn không được chuyển vào repo này.
 - **Chưa hoàn tất kiểm tra engine trong SketchUp 2022 thật.** Script thử đã chạy trên SU22 22.0.316 / Ruby 2.7.2 nhưng dừng ở điều kiện bảo vệ model không rỗng, trước khi tạo hình/scene. Điều khiển máy sau đó được người dùng dừng bằng Esc. Kiểm tra WASM và Chromium không thay thế kiểm thử Ruby 2.7/CEF/LayOut thực tế trong SU22.
 
 Mã nguồn runtime nằm trong `runtime/`; kiểm tra và script cài giới hạn phạm vi nằm trong `dev/`. RBZ chỉ đóng gói runtime, không chứa bộ test hoặc thư viện ngoài.
@@ -167,16 +167,9 @@ git clone https://github.com/vuongpentax/VGD_Plugins.git
 cd VGD_Plugins
 ```
 
-Kho công khai; cần quyền ghi khi push. Mở repository trong Codex và yêu cầu tiếp tục `VGD_Scenes`, đọc `CODEX_HANDOFF.md` trước. Nếu đã clone, chạy `git pull --ff-only` khi không có thay đổi chưa lưu.
+Kho công khai; cần quyền ghi khi push. Mở repository trong Claude Code và yêu cầu tiếp tục `VGD_Scenes`, đọc `HANDOFF.md` trước. Nếu đã clone, chạy `git pull --ff-only` khi không có thay đổi chưa lưu.
 
-Để cài trên máy mới, cần gói phát hành beta.4 đã xác minh riêng; repo migration không chứa RBZ. Chưa dùng script deploy hiện hành vì thiếu update_notice.rb.
-
-```powershell
-# Chưa chạy deploy: whitelist cần đồng bộ đủ 20 file runtime.
-# Chưa chạy deploy: whitelist cần đồng bộ đủ 20 file runtime.
-```
-
-Script mặc định nhắm APPDATA/SU22 nhưng whitelist còn thiếu file; các cơ chế backup/retire cần được rà riêng trước khi triển khai.
+Để cài trên máy mới, dùng RBZ của bản phát hành qua Extension Manager. Repo không chứa RBZ; `dev/package.py` tạo gói từ `runtime/`.
 
 Kiểm tra mã/giao diện với Node.js 20 trở lên và Google Chrome:
 

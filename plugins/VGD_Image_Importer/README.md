@@ -1,8 +1,8 @@
-# VGD Image Importer
+# VGD Image Importer 1.1.1
 
-Baseline source 1.1.0-beta.5 từ worktree cabinet-v2, gồm giao diện mode icon responsive. RBZ beta.5 tìm thấy ở repo nguồn khớp source gốc cũ hơn; chưa có artifact local khớp toàn bộ UI source này, nên chưa xác minh source mới đã phát hành. Đợt chuyển repository chỉ đối chiếu source/checksum; chưa chạy lại test tự động hoặc kiểm thử native SketchUp. Các kết quả PASS bên dưới thuộc lịch sử workspace nguồn.
+Phiên bản hiện tại 1.1.1, chi tiết ở [RELEASE_NOTES_v1.1.1.md](RELEASE_NOTES_v1.1.1.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
-Thành viên bộ plugin VGD cho SketchUp 2022+ trên Windows, nâng cấp từ folder `vgd_image_importer` trên máy. Phiên bản `1.1.0-beta.5` giữ namespace và đường dẫn extension cũ để cập nhật tại chỗ. Prerelease có thông báo cập nhật; cài RBZ thủ công qua Extension Manager.
+Thành viên bộ plugin VGD cho SketchUp 2022+ trên Windows, nâng cấp từ folder `vgd_image_importer` trên máy. Phiên bản `1.1.1` giữ namespace và đường dẫn extension cũ để cập nhật tại chỗ. Plugin không hiện popup cập nhật khi khởi động: VGD Center báo bản mới; cài RBZ qua Extension Manager.
 
 ## Chức năng
 
@@ -18,7 +18,7 @@ Thành viên bộ plugin VGD cho SketchUp 2022+ trên Windows, nâng cấp từ 
 
 ## Cài đặt
 
-Trong SketchUp: **Extension Manager → Install Extension**, chọn `VGD_Image_Importer_v1.1.0-beta.5.rbz`. Thoát và mở lại SketchUp để bản mới được nạp đầy đủ; không nạp chồng main.rb lên bản cũ trong Ruby Console vì bản cũ không có chặn đăng ký toolbar lặp.
+Trong SketchUp: **Extension Manager → Install Extension**, chọn `VGD_Image_Importer_v1.1.1.rbz`. Thoát và mở lại SketchUp để bản mới được nạp đầy đủ; không nạp chồng main.rb lên bản cũ trong Ruby Console vì bản cũ không có chặn đăng ký toolbar lặp.
 
 Mở bằng **Extensions → VGD Tools → VGD Image Importer** hoặc toolbar **VGD Image Importer**. Nếu toolbar chưa hiện, bật ở **View → Toolbars**.
 
@@ -29,11 +29,11 @@ powershell -ExecutionPolicy Bypass -File VGD_Image_Importer/dev/deploy.ps1 -Veri
 powershell -ExecutionPolicy Bypass -File VGD_Image_Importer/dev/deploy.ps1
 ```
 
-Mặc định cài vào SketchUp 2022; dùng `-PluginRoot` để chỉ định bản khác. Chỉ ghi 13 file của Image Importer, có kiểm tra quyền sở hữu loader, sao lưu trước khi ghi và kiểm tra SHA256. Bản sao lưu và báo cáo nằm ở `outputs/install_<timestamp>/`. Muốn khôi phục, đóng SketchUp, chép các file đã sao lưu về đúng đường dẫn, bỏ các file mới được đánh dấu `false` trong `existed_before`, rồi mở lại SketchUp.
+Mặc định cài vào SketchUp 2022; dùng `-PluginRoot` để chỉ định bản khác. Chỉ ghi 19 file runtime của Image Importer, có kiểm tra quyền sở hữu loader, sao lưu trước khi ghi và kiểm tra SHA256. Bản sao lưu và báo cáo nằm ở `outputs/install_<timestamp>/`. Muốn khôi phục, đóng SketchUp, chép các file đã sao lưu về đúng đường dẫn, bỏ các file mới được đánh dấu `false` trong `existed_before`, rồi mở lại SketchUp.
 
 ## Phát triển và kiểm tra
 
-`runtime/` là mã để đóng gói; `reference/` giữ nguyên loader, main.rb và icon bản 1.0.0 đã lấy từ Plugins. Không đóng gói reference vào RBZ. `dev/dependencies.cjs` ưu tiên dependency cài tại chỗ, có thể dùng dependency đang có của VGD Scenes/Cabinet.
+`runtime/` là mã để đóng gói; `dev/` chứa test và script hỗ trợ, không vào RBZ. `dev/dependencies.cjs` ưu tiên dependency cài tại chỗ, có thể dùng dependency đang có của VGD Scenes.
 
 ```powershell
 cd plugins/VGD_Image_Importer/dev

@@ -28,7 +28,7 @@ Runtime kế thừa trực tiếp `Sketchup::Overlay`, đăng ký `model.overlay
 `dev/su2022_tool_probe.rb` độc lập với plugin runtime. Nạp script chỉ định nghĩa probe. Trên model trống trong SU2022, chạy:
 
 ```ruby
-load('C:/Users/TUNG/Documents/Codex/VGD_Plugins/VGD_Reference/dev/su2022_tool_probe.rb')
+load('<thư mục repo>/plugins/VGD_Reference/dev/su2022_tool_probe.rb')
 VGDReferenceSU2022Probe.run
 ```
 

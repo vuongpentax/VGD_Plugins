@@ -51,7 +51,9 @@ accepted = CENTER.validate_catalog(real)['products']
 released = real['products'].reject { |item| item['lifecycle'] == 'in_development' }
 check 'catalog thật: mọi plugin đã phát hành đều được nhận', ids_of(accepted) == ids_of(released), "nhận #{ids_of(accepted)}"
 check 'catalog thật: không có cảnh báo', warning.nil?, warning
-check 'catalog thật: có VGD Plugin Manager', ids_of(accepted).include?('plugin_manager')
+check 'catalog thật: VGD Plugin Manager đã bị bỏ khỏi kho', !ids_of(real['products']).include?('plugin_manager')
+check 'catalog thật: không mục nào dùng tên thư mục dữ liệu VGD_PluginManager',
+      real['products'].none? { |item| Array(item['allowed_paths']).any? { |path| path.downcase.start_with?('vgd_pluginmanager') } }
 
 # ---------- 2. Plugin mới theo quy tắc chung ----------
 result = validate(product('demo_tool'))
@@ -61,6 +63,7 @@ check 'loader viết thường vgd_*.rb được nhận (như plugin cũ)',
       ids_of(validate(product('demo_tool', 'allowed_paths' => ['vgd_demo.rb', 'VGD_Demo/']))) == ['demo_tool'], warning
 
 # ---------- 3. Các trường hợp bị từ chối ----------
+# Thư mục VGD_PluginManager chứa dữ liệu plugin đã tắt của tab Quản lý: không mục catalog nào được chiếm
 def rejected(name, item)
   result = validate(item)
   check "từ chối: #{name}", result.empty? && !warning.nil?, "kết quả #{ids_of(result)} / #{warning.inspect}"
@@ -75,6 +78,9 @@ rejected 'đường dẫn trùng plugin có sẵn', product('demo_tool', 'allowe
 rejected 'đường dẫn trùng plugin có sẵn khác hoa thường', product('demo_tool', 'allowed_paths' => ['VGD_DIM.rb', 'vgd_dim/'])
 rejected 'trùng đường dẫn của Center', product('demo_tool', 'allowed_paths' => ['VGD_Center.rb', 'VGD_Center/'])
 rejected 'thư mục không khớp loader', product('demo_tool', 'allowed_paths' => ['VGD_A.rb', 'VGD_B/'])
+rejected 'chiếm thư mục dữ liệu VGD_PluginManager', product('demo_tool', 'extension_name' => 'VGD Plugin Manager', 'allowed_paths' => ['VGD_PluginManager.rb', 'VGD_PluginManager/'])
+rejected 'chiếm thư mục dữ liệu VGD_PluginManager (viết thường)', product('demo_tool', 'allowed_paths' => ['vgd_pluginmanager.rb', 'vgd_pluginmanager/'])
+rejected 'trùng đường dẫn của VGD Center viết thường', product('demo_tool', 'allowed_paths' => ['vgd_center.rb', 'vgd_center/'])
 rejected 'loader không bắt đầu bằng VGD_/vgd_', product('demo_tool', 'allowed_paths' => ['evil.rb', 'evil/'])
 rejected 'ba đường dẫn', product('demo_tool', 'allowed_paths' => ['VGD_DemoTool.rb', 'VGD_DemoTool/', 'Other/'])
 rejected 'một đường dẫn', product('demo_tool', 'allowed_paths' => ['VGD_DemoTool.rb'])
@@ -118,6 +124,13 @@ check 'plugin mới không có trang hướng dẫn (nút sẽ ẩn)', by_id['de
 check 'plugin mới hiện là "cài đặt"', by_id['demo_tool'][:action] == 'install' && by_id['demo_tool'][:installed] == false
 check 'mọi plugin bundle đều có trang hướng dẫn thật',
       (accepted.map { |item| item['id'] } - %w[]).all? { |id| File.file?(File.join(__dir__, '..', 'VGD_Center', 'guides', "#{id}.html")) }
+
+# ---------- 5b. Kiểu cửa sổ ----------
+# STYLE_WINDOW là cửa sổ độc lập, bị chìm xuống sau SketchUp khi bấm ra ngoài (trông như tự đóng). Các plugin VGD dùng STYLE_DIALOG.
+center_source = File.read(File.join(__dir__, '..', 'VGD_Center', 'main.rb'), encoding: 'UTF-8')
+styles = center_source.scan(/UI::HtmlDialog::(STYLE_\w+)/).flatten
+check 'mọi cửa sổ HtmlDialog của Center (chính và hướng dẫn) dùng STYLE_DIALOG', styles.size == 2 && styles.uniq == ['STYLE_DIALOG'], styles.inspect
+check 'mọi HtmlDialog.new đều có một style tương ứng', center_source.scan('UI::HtmlDialog.new(').size == styles.size
 
 # ---------- 6. Hướng dẫn ----------
 $stub_messages.clear
@@ -191,13 +204,9 @@ Dir.mktmpdir('vgd-center-test-') do |tmp|
   check 'gỡ plugin mới: không đụng plugin khác',
         File.file?(File.join(plugins, 'vgd_dim.rb')) && File.file?(File.join(plugins, 'VGD_Dim', 'main.rb'))
 
-  # Plugin Manager: cảnh báo plugin đang tắt vẫn giữ nguyên
-  disabled = File.join(plugins, 'VGD_PluginManager', 'data', 'disabled')
-  FileUtils.mkdir_p(disabled)
-  check 'Plugin Manager: thư mục disabled rỗng thì không cảnh báo', CENTER.uninstall_warning('plugin_manager', plugins).empty?
-  FileUtils.mkdir_p(File.join(disabled, 'PluginA'))
-  check 'Plugin Manager: có plugin đang tắt thì cảnh báo', CENTER.uninstall_warning('plugin_manager', plugins).include?('CẢNH BÁO')
-  check 'plugin khác không bị cảnh báo của Plugin Manager', CENTER.uninstall_warning('dim', plugins).empty?
+  # Cảnh báo gỡ chỉ còn là uninstall_note của catalog
+  check 'uninstall_warning: không có ghi chú thì rỗng', CENTER.uninstall_warning(validate(product('demo_tool'))[0]).empty? && CENTER.uninstall_warning(nil).empty?
+  check 'uninstall_warning: có ghi chú thì nối vào hộp thoại', CENTER.uninstall_warning(with_note) == "\n\nSao lưu dữ liệu trước khi gỡ."
 end
 
 total = PASSED.length + FAILED.length

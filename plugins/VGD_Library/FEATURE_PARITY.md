@@ -28,4 +28,4 @@ Nhóm chức năng được xác định từ registry command, core dispatch, b
 | Cập nhật extension | Manifest HTTPS VGD riêng, mở link tải | Chưa có endpoint VGD; không auto-install |
 | Account/mã máy/license | Không yêu cầu theo lựa chọn bản độc lập | Không tái tạo/can thiệp tài khoản/bản quyền N-TEXTURE |
 
-Toolbar có 18 lệnh: account gốc bỏ theo lựa chọn độc lập, model tách thành lệnh riêng. Các nhóm có code nhưng native QA vẫn cần trước khi coi là bản ổn định. Chi tiết ở README.md; checklist ở CODEX_HANDOFF.md.
+Toolbar có 18 lệnh: account gốc bỏ theo lựa chọn độc lập, model tách thành lệnh riêng. Các nhóm có code nhưng native QA vẫn cần trước khi coi là bản ổn định. Chi tiết ở README.md; checklist ở HANDOFF.md.

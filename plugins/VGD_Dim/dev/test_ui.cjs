@@ -1,6 +1,6 @@
 const fs=require('fs'),path=require('path'),{pathToFileURL}=require('url');
-const deps=process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES;
-if(!deps)throw Error('Set CODEX_PRIMARY_RUNTIME_NODE_MODULES');
+const deps=process.env.VGD_NODE_MODULES;
+if(!deps)throw Error('Set VGD_NODE_MODULES');
 const {chromium}=require(path.join(deps,'playwright'));
 const assert=(v,m)=>{if(!v)throw Error(m)};
 (async()=>{

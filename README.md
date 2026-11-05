@@ -16,4 +16,4 @@ File `.rbz` (gói cài đặt) không được lưu trong git. Build lại bằn
 - `tests/`: kiểm thử và tài nguyên phục vụ xác minh.
 - `archive/`: tài liệu và mã cũ được lưu trữ.
 
-Đọc [AGENTS.md](AGENTS.md) trước khi đóng góp. Chỉ bổ sung module và công cụ khi có nhu cầu cụ thể.
+Đọc [CLAUDE.md](CLAUDE.md) trước khi đóng góp. Chỉ bổ sung module và công cụ khi có nhu cầu cụ thể.
