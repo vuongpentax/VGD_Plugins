@@ -29,11 +29,11 @@ powershell -ExecutionPolicy Bypass -File VGD_Image_Importer/dev/deploy.ps1 -Veri
 powershell -ExecutionPolicy Bypass -File VGD_Image_Importer/dev/deploy.ps1
 ```
 
-Mặc định cài vào SketchUp 2022; dùng `-PluginRoot` để chỉ định bản khác. Chỉ ghi 13 file của Image Importer, có kiểm tra quyền sở hữu loader, sao lưu trước khi ghi và kiểm tra SHA256. Bản sao lưu và báo cáo nằm ở `outputs/install_<timestamp>/`. Muốn khôi phục, đóng SketchUp, chép các file đã sao lưu về đúng đường dẫn, bỏ các file mới được đánh dấu `false` trong `existed_before`, rồi mở lại SketchUp.
+Mặc định cài vào SketchUp 2022; dùng `-PluginRoot` để chỉ định bản khác. Chỉ ghi 19 file runtime của Image Importer, có kiểm tra quyền sở hữu loader, sao lưu trước khi ghi và kiểm tra SHA256. Bản sao lưu và báo cáo nằm ở `outputs/install_<timestamp>/`. Muốn khôi phục, đóng SketchUp, chép các file đã sao lưu về đúng đường dẫn, bỏ các file mới được đánh dấu `false` trong `existed_before`, rồi mở lại SketchUp.
 
 ## Phát triển và kiểm tra
 
-`runtime/` là mã để đóng gói; `reference/` giữ nguyên loader, main.rb và icon bản 1.0.0 đã lấy từ Plugins. Không đóng gói reference vào RBZ. `dev/dependencies.cjs` ưu tiên dependency cài tại chỗ, có thể dùng dependency đang có của VGD Scenes.
+`runtime/` là mã để đóng gói; `dev/` chứa test và script hỗ trợ, không vào RBZ. `dev/dependencies.cjs` ưu tiên dependency cài tại chỗ, có thể dùng dependency đang có của VGD Scenes.
 
 ```powershell
 cd plugins/VGD_Image_Importer/dev

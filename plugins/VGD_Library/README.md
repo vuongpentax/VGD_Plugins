@@ -72,7 +72,7 @@ Cache thumbnail/download/seamless: `%LOCALAPPDATA%\VGD_Library` hoặc `~/Librar
 
 Đã đối chiếu các nhóm tìm thấy trong N-TEXTURE-2.0.19. **Mã VGD mới độc lập**; lõi Texture/Seamless/DLL không đủ trong RBZ nên không xác nhận hành vi giống 100%. Xem [FEATURE_PARITY.md](FEATURE_PARITY.md). Không gọi server, sao chép account/license, tải/eval code hoặc kèm DLL/icon/giao diện N-TEXTURE.
 
-Ruby: syntax 14 files; mô phỏng UV chữ nhật/fit/restore, kế thừa/isolation/locks/rollback/stale model, catalog Unicode/dedupe/RAR/favorites, Drive sync/cancel, Flowmap góc 90°, thay đối tượng/DC, audit/fix/swap, BGR/padding, seam boundary, Normal/AO phẳng, contours/logo có lỗ, schema online, SKM ZIP stored/deflate/CRC. Catalog WASI dùng cây tệp mô phỏng do giới hạn directory API Windows.
+Ruby: cú pháp toàn bộ file Ruby trong runtime (`dev/check_ruby.cjs` tự quét); mô phỏng UV chữ nhật/fit/restore, kế thừa/isolation/locks/rollback/stale model, catalog Unicode/dedupe/RAR/favorites, Drive sync/cancel, Flowmap góc 90°, thay đối tượng/DC, audit/fix/swap, BGR/padding, seam boundary, Normal/AO phẳng, contours/logo có lỗ, schema online, SKM ZIP stored/deflate/CRC. Catalog WASI dùng cây tệp mô phỏng do giới hạn directory API Windows.
 
 UI Playwright/Edge: library/model/online, pagination/search/HTML safety/favorites/actions/settings/Drive, 1120/720px, seamless preview/apply/preset. QA ảnh `outputs/` dùng dữ liệu mô phỏng. Kho thật được kiểm kê metadata bằng Node, chưa tô toàn bộ trong SketchUp. Checklist native: [HANDOFF.md](HANDOFF.md).
 
