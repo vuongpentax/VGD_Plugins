@@ -1,14 +1,14 @@
-# VGD_Library 1.1.2-beta.6
+# VGD_Library 1.2.0
 
-Baseline source 1.1.2-beta.6 từ worktree cabinet-v2. Artifact local mới nhất tìm thấy là beta.5; catalog quảng bá beta.6 nhưng chưa tìm được RBZ/source ZIP tương ứng để xác minh. Không coi source beta.6 này là bản phát hành đã kiểm chứng. Đợt chuyển repository chỉ đối chiếu source/checksum; chưa chạy lại test tự động hoặc kiểm thử native SketchUp. Các kết quả PASS bên dưới thuộc lịch sử workspace nguồn.
+Phiên bản hiện tại 1.2.0, chi tiết ở [RELEASE_NOTES_v1.2.0.md](RELEASE_NOTES_v1.2.0.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
-Prerelease: tự kiểm tra cập nhật mỗi 24 giờ và có lệnh thủ công. SketchUp hỏi trước khi mở trang tải RBZ; cài qua Extension Manager rồi khởi động lại. Nguồn JSON cập nhật tự cấu hình vẫn độc lập.
+Plugin không hiện popup cập nhật khi khởi động: VGD Center báo bản mới. Cài bản mới qua Extension Manager rồi khởi động lại. Nguồn JSON cập nhật tự cấu hình vẫn độc lập.
 
-Plugin SketchUp độc lập của VGD: thư viện vật liệu **ảnh/SKM**, thư viện model **SKP**, kho Drive đồng bộ và bộ công cụ map. Yêu cầu **SketchUp 2022 trở lên**. Đây là bản beta: phép tính và giao diện đã kiểm tra tự động, **chưa kiểm chứng trong SketchUp thực tế hoặc trên macOS**.
+Plugin SketchUp độc lập của VGD: thư viện vật liệu **ảnh/SKM**, thư viện model **SKP**, kho Drive đồng bộ và bộ công cụ map. Yêu cầu **SketchUp 2022 trở lên**. Phép tính và giao diện đã kiểm tra tự động, **chưa kiểm chứng trong SketchUp thực tế hoặc trên macOS**.
 
 ## Cài đặt và nối kho của bạn
 
-Chưa xác minh artifact beta.6; chỉ cài sau khi có gói phát hành được đối chiếu đầy đủ. Thư mục migration này không chứa RBZ.
+1. Cài `VGD_Library_v1.2.0.rbz` bằng **Extensions → Extension Manager → Install Extension**.
 2. Nếu đã cài bản cũ, lưu bản vẽ, đóng tất cả cửa sổ SketchUp và mở lại sau khi cập nhật.
 3. Mở **Extensions → VGD_Library → Thư viện vật liệu**; bật toolbar VGD_Library trong View → Toolbars nếu cần.
 4. Bấm **+ Kho vật liệu Drive 03 MTL**. Plugin dùng đường dẫn đồng bộ đã xác minh trên máy hiện tại:

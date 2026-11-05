@@ -36,7 +36,7 @@ File CSV dùng UTF-8, dấu chấm phẩy tách cột và dấu phẩy thập ph
 
 Các mục trên thanh chức năng và menu SketchUp đều chuyển nội dung trong cùng một cửa sổ. Khi đóng rồi mở lại, plugin tạo lại cửa sổ và kết nối thao tác. Nút **Sáng / Tối** lưu lựa chọn giao diện trên máy.
 
-Trước khi dùng bản 0.1.1, lưu file đang làm và khởi động lại SketchUp để đóng các cửa sổ cũ của bản trước.
+Sau khi cập nhật plugin, lưu file đang làm và khởi động lại SketchUp để đóng các cửa sổ cũ của bản trước.
 
 ## Quy tắc phân loại
 
