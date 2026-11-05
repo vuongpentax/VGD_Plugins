@@ -81,6 +81,22 @@ module VGD
           end
         end
 
+        # Nạp ngay plugin đang bật mà chưa chạy trong phiên này. JS gửi danh sách (đã lọc theo ô tìm kiếm); Ruby kiểm tra lại.
+        # Hộp xác nhận chỉ hiện lần đầu trong phiên SketchUp.
+        dlg.add_action_callback('mgr_load') do |_c, json|
+          guard.call(:ctx_load, push_toggle) do
+            o = parse.call(json)
+            next if busy.call(push_toggle)
+            targets = Toggle.load_targets(o['names'])
+            next push_toggle.call(t(:load_none)) if targets.empty?
+            unless Toggle.warned_load?
+              next unless UI.messagebox(Toggle.load_confirm_text(targets), MB_YESNO) == IDYES
+              Toggle.warned_load!
+            end
+            push_toggle.call(Toggle.load_summary(Toggle.load_now(targets)))
+          end
+        end
+
         dlg.add_action_callback('mgr_save_set') do |_c, json|
           guard.call(:ctx_save_set, push_toggle) do
             o = parse.call(json)

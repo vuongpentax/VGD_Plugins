@@ -912,6 +912,7 @@ module VGD
         toolbar.add_item(command)
         toolbar.restore
         file_loaded(__FILE__)
+        VGD::Center::Manager::Toggle.remember_startup
         UI.start_timer(6.0, false) { VGD::Center.auto_check_center_update }
         UI.start_timer(8.0, false) { VGD::Center::Manager.migrate_on_start }
       end

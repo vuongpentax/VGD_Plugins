@@ -14,7 +14,7 @@ VGD Center quản lý các plugin VGD trong SketchUp. Danh mục hiển thị ph
 - Kiểm tra và tự cập nhật VGD Center từ bản stable đã phát hành; gói được xác minh bằng SHA-256.
 - Gỡ từng plugin đã cài, kèm xác nhận và nhắc khởi động lại SketchUp.
 - Mỗi thẻ plugin có nút **Hướng dẫn**; các trang HTML tiếng Việt, giao diện tối/sáng và nút in PDF được đóng gói cùng Center để tự cập nhật chung với Center.
-- Tab **Quản lý** (từ 1.2.1, thay VGD Plugin Manager): bật/tắt plugin, bộ plugin, chuyển plugin giữa SketchUp 2022 và 2024, xuất gói .rbz tổng, cho mọi plugin trong thư mục Plugins. Có tiếng Anh đầy đủ. VGD Center không bao giờ bị tắt hay chuyển. Plugin đã tắt và bộ plugin nằm trong `Plugins/VGD_Center/data`; dữ liệu cũ của Plugin Manager được tự chuyển sang đây. Mã nằm trong `VGD_Center/manager/`.
+- Tab **Quản lý** (từ 1.2.1, thay VGD Plugin Manager): bật/tắt plugin (có hiệu lực sau khi khởi động lại SketchUp; plugin vừa bật có nút **Nạp ngay** để dùng luôn mà không cần khởi động lại), bộ plugin, chuyển plugin giữa SketchUp 2022 và 2024, xuất gói .rbz tổng, cho mọi plugin trong thư mục Plugins. Có tiếng Anh đầy đủ. VGD Center không bao giờ bị tắt hay chuyển. Plugin đã tắt và bộ plugin nằm trong `Plugins/VGD_Center/data`; dữ liệu cũ của Plugin Manager được tự chuyển sang đây. Mã nằm trong `VGD_Center/manager/`.
 - Chọn ngôn ngữ giao diện và bật/tắt tự động cập nhật VGD Center khi khởi động SketchUp.
 - Xem thời điểm kiểm tra cập nhật Center gần nhất.
 - Giao diện tối mặc định, có thể chuyển sang sáng.

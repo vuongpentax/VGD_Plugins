@@ -8,7 +8,10 @@
 
   var I18N = {
     vi: {
-      state_on: 'Đang bật', state_off: 'Đã tắt', state_conflict: 'Trùng tên',
+      state_on: 'Đang bật', state_off: 'Đã tắt', state_conflict: 'Trùng tên', state_pending: 'Chờ nạp',
+      btn_load: 'Nạp ngay', tt_load: 'Nạp plugin này vào SketchUp đang chạy, không cần khởi động lại',
+      tt_pending: 'Đã bật nhưng chưa chạy trong phiên này. Bấm Nạp ngay hoặc khởi động lại SketchUp.',
+      bulk_load: 'Nạp tất cả chờ nạp ({n})', bulk_load_shown: 'Nạp tất cả đang hiện chờ nạp ({n})',
       pick_title: 'Chọn để lưu vào bộ',
       members_title: 'Gồm {n} mục: {list}', members_note: ' gồm cả: {list}',
       conflict_title: 'Plugin này có ở cả thư mục Plugins (đang chạy) và thư mục đã tắt. Xóa hoặc dời bản không cần để gạt được.',
@@ -25,7 +28,10 @@
       tt_open_plugins: 'Mở thư mục Plugins của SketchUp đang chạy', tt_open_disabled: 'Mở thư mục chứa các plugin đã tắt'
     },
     en: {
-      state_on: 'Enabled', state_off: 'Disabled', state_conflict: 'Name clash',
+      state_on: 'Enabled', state_off: 'Disabled', state_conflict: 'Name clash', state_pending: 'Waiting to load',
+      btn_load: 'Load now', tt_load: 'Load this plugin into the running SketchUp, no restart needed',
+      tt_pending: 'Enabled but not running in this session. Click Load now or restart SketchUp.',
+      bulk_load: 'Load all waiting ({n})', bulk_load_shown: 'Load all shown waiting ({n})',
       pick_title: 'Select to save into a set',
       members_title: 'Includes {n} items: {list}', members_note: ' also includes: {list}',
       conflict_title: 'This plugin exists in both the Plugins folder (running) and the disabled folder. Delete or move the copy you do not need to use the switch.',
@@ -93,6 +99,10 @@
     return visiblePlugins().filter(function (p) { return p.status === want; }).map(function (p) { return p.name; });
   }
   function bulk(action) { call('mgr_bulk', { action: action, names: bulkNames(action) }); }
+  // Plugin đang bật nhưng chưa chạy trong phiên này (Ruby tính, xem Toggle.state)
+  function pendingNames() {
+    return visiblePlugins().filter(function (p) { return p.pending; }).map(function (p) { return p.name; });
+  }
   function updateBulk() {
     var filtered = !!byId('mgrQ').value;
     [['mgrBulkOff', 'disable', 'bulk_off'], ['mgrBulkOn', 'enable', 'bulk_on']].forEach(function (b) {
@@ -100,6 +110,9 @@
       e.textContent = t(filtered ? b[2] + '_shown' : b[2], { n: n });
       e.disabled = n === 0;
     });
+    var nl = pendingNames().length, bl = byId('mgrBulkLoad');
+    bl.textContent = t(filtered ? 'bulk_load_shown' : 'bulk_load', { n: nl });
+    bl.disabled = nl === 0;
   }
   function updateMetrics() {
     var on = 0, off = 0;
@@ -124,6 +137,15 @@
       var badge = el('span', 'mgr-badge conflict', label(p.status));
       badge.title = t('conflict_title');
       r.appendChild(badge);
+    }
+    if (p.pending) {
+      var wait = el('span', 'mgr-badge pending', t('state_pending'));
+      wait.title = t('tt_pending');
+      r.appendChild(wait);
+      var ld = el('button', 'btn small primary', t('btn_load')); ld.type = 'button';
+      ld.title = t('tt_load');
+      ld.addEventListener('click', function () { call('mgr_load', { names: [p.name] }); });
+      r.appendChild(ld);
     }
     var sw = el('button', 'mgr-switch'); sw.type = 'button';
     sw.setAttribute('role', 'switch');
@@ -245,6 +267,7 @@
     bind('mgrOpenDisabled', function () { call('mgr_open_disabled'); });
     bind('mgrBulkOff', function () { bulk('disable'); });
     bind('mgrBulkOn', function () { bulk('enable'); });
+    bind('mgrBulkLoad', function () { call('mgr_load', { names: pendingNames() }); });
     bind('mgrSaveSet', function () { call('mgr_save_set', { name: byId('mgrSetName').value, names: picked() }); });
     bind('mgrExportSets', function () { call('mgr_export_sets'); });
     bind('mgrImportSets', function () { call('mgr_import_sets'); });
