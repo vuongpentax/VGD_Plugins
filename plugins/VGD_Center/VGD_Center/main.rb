@@ -10,7 +10,7 @@ require File.join(File.dirname(__FILE__), 'manager', 'core')
 
 module VGD
   module Center
-    VERSION = '1.2.3'.freeze
+    VERSION = '1.2.4-beta.1'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
@@ -717,6 +717,8 @@ module VGD
             name.match?(/\AVGD_Cabinet(?:\s|\z)/i)
           when 'library'
             name.casecmp('VGD_Library').zero?
+          when 'bim_lite'
+            name.casecmp('VGD_BIM').zero?
           else
             false
           end
