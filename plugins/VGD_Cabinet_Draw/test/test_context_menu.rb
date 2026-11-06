@@ -84,7 +84,7 @@ Sketchup.active_model.selection.clear
 m, shown = menu_for_selection
 check 'không chọn gì: không thêm menu', !shown && m.entries.empty?
 
-# --- 3. Tủ thường ---
+# --- 3. Tủ tùy biến (loại standard) ---
 cab = new_cabinet('standard')
 m, shown = menu_for_selection
 check 'tủ thường: có menu VGD Cabinet', shown && m.labels == ['VGD Cabinet']
@@ -96,7 +96,7 @@ end
 check 'tủ thường: Hông chạm đất / đụng trần / khoang ngăn kéo', %w[Hông\ chạm\ đất Hông\ đụng\ trần Thêm\ khoang\ ngăn\ kéo…].all? { |l| labels.include?(l) }
 check 'tủ thường: không có mục của bếp/tủ lạnh', (labels & ['Nóc', 'Chân cao', 'Chia nhanh', 'Xà treo', 'Hiện khối tham chiếu']).empty?
 check 'Đổi loại tủ có 4 loại', root_menu.dig('Đổi loại tủ').labels.length == 4
-check 'loại hiện tại được tick', root_menu.dig('Đổi loại tủ').find('Tủ thường')[:validation].call == 8
+check 'loại hiện tại được tick', root_menu.dig('Đổi loại tủ').find('Tủ tùy biến')[:validation].call == 8
 check 'mục không tick trả 0 (bỏ tick)', (root_menu.dig('Đổi loại tủ').find('Tủ bếp dưới')[:validation].call & 8) == 0
 
 # --- 4. Đổi loại tủ: dựng lại, một bước Undo, dữ liệu đổi ---
@@ -244,8 +244,11 @@ check 'chọn cánh: có menu', shown
 dl = m.dig('VGD Cabinet').labels
 check 'menu cánh: mở/đóng/bản lề/tay nắm', ['Mở cánh…', 'Đóng cánh', 'Bản lề', 'Đặt tay nắm', 'Xóa tay nắm'].all? { |l| dl.include?(l) }, dl.inspect
 check 'menu cánh: không có lệnh của tủ', !dl.include?('Đổi loại tủ')
-cm.angle_answer = 90.0
 m.dig('VGD Cabinet').find('Mở cánh…')[:block].call
+open_tool = Sketchup.active_model.instance_variable_get(:@tool)
+check 'Mở cánh…: bật công cụ mở cánh rê chuột với cánh đang chọn', open_tool.is_a?(V::Tools::OpeningTool) && open_tool.instance_variable_get(:@targets).include?(doors.first), open_tool.class.to_s
+Sketchup.active_model.select_tool(nil)
+cm.open_doors(doors, 90.0, 'Mở cánh')
 check 'mở cánh 90°', V::Operations.door_angle(doors.first) == 90.0, V::Operations.door_angle(doors.first)
 m.dig('VGD Cabinet').find('Đóng cánh')[:block].call
 check 'đóng cánh', V::Operations.door_angle(doors.first) == 0.0
@@ -318,6 +321,21 @@ bt = V::Tools.build('panel', {}); bt.activate
 m = FakeMenu.new; V::ContextMenu.populate_tool(m, bt)
 check 'công cụ Đợt/vách chỉ có mục Setting', m.dig('VGD Cabinet').labels == ['Mở bảng Setting'], m.dig('VGD Cabinet').labels.inspect
 V.instance_variable_set(:@active_tool, nil)
+
+puts '== 12. Cánh tự động theo hồi (menu) =='
+cab = new_cabinet('standard', 1200, 500, 2000)
+sh = V::Geometry.shell_for(cab)
+inner = V::Interior.inner(sh)
+op = { 'type' => 'panel', 'axis' => 'vertical', 'kind' => 'thong_thuy', 'thickness_mm' => 17.5, 'limit' => false,
+       'anchor' => V::Rebuild.anchor_of(sh, (inner.x0 + inner.x1) / 2, (inner.z0 + inner.z1) / 2),
+       'setback_mm' => 0.0, 'door_fit' => 'phu', 'mode' => 'free', 'offsets' => [382.5] }
+op['op'] = V::Rebuild.record(cab, op)
+V::Rebuild.place_panels(cab, sh, op)
+Sketchup.active_model.selection.clear; Sketchup.active_model.selection.add(cab)
+m, _ = menu_for_selection
+check 'menu tủ có Cánh tự động theo hồi', m.dig('VGD Cabinet').labels.include?('Cánh tự động theo hồi'), m.dig('VGD Cabinet').labels.inspect
+m.dig('VGD Cabinet').find('Cánh tự động theo hồi')[:block].call
+check 'Cánh tự động theo hồi: 1 vách chia 3 cánh (khoang phải 765 > ngưỡng 450 chia đôi)', V::Operations.doors_of(cab).length == 3, V::Operations.doors_of(cab).length.to_s
 
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.size}"
 exit($fail.empty? ? 0 : 1)

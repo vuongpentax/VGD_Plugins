@@ -255,10 +255,15 @@ module VGD_Cabinet_Draw
     end
 
     # Dựng một tấm từ mô tả của PanelModel: một group riêng, đa giác phẳng rồi đẩy khối.
+    # Gốc trục của ván nằm ở góc của chính ván (hộp bao mm), trục song song với trục của tủ.
+    # Hình học được vẽ theo tọa độ tương đối ngay từ đầu. Không dời nội dung sau khi tạo: dời nội dung làm hộp
+    # định nghĩa của group bị cũ, nên ván bị khuất khi zoom gần và không chọn được bằng chuột.
     def build_part(entities, part, extra = {})
       group = entities.add_group
       group.name = part.name
-      points = part.points.map { |x, y, z| Geom::Point3d.new(x.mm, y.mm, z.mm) }
+      ox, oy, oz = part.bounds[0, 3]
+      group.transformation = Geom::Transformation.translation([ox.mm, oy.mm, oz.mm])
+      points = part.points.map { |x, y, z| Geom::Point3d.new((x - ox).mm, (y - oy).mm, (z - oz).mm) }
       face = group.entities.add_face(points)
       raise "Không dựng được tấm #{part.name}." unless face
       face.reverse! if face.normal.dot(axis_vector(part.axis)) < 0
@@ -268,9 +273,25 @@ module VGD_Cabinet_Draw
       group
     end
 
-    # Chữ ký hình học của một tấm (hộp bao 0.1 mm + số mặt). Lưu lúc plugin dựng; lúc sửa tủ so lại để biết
-    # tấm có bị chỉnh tay (kéo, khoét, sửa hình) hay không.
+    # Chữ ký hình học của một tấm: hộp bao tính từ đỉnh của các mặt trong tấm (hệ tọa độ của tấm), số mặt,
+    # và vị trí của tấm trong tủ. Không dùng group.bounds: hộp bao đó có thể cũ sau khi co giãn, và đổi khi
+    # scale cả tủ, nên bị báo nhầm là chỉnh tay. Lưu lúc plugin dựng; lúc sửa tủ so lại để biết tấm có bị
+    # chỉnh tay (kéo, khoét, sửa hình, dời) hay không.
     def signature(group)
+      points = group.definition.entities.grep(Sketchup::Face).flat_map { |face| face.vertices.map(&:position) }
+      box = points.empty? ? [0.0] * 6 : local_box(points)
+      faces = group.definition.entities.to_a.count { |e| e.is_a?(Sketchup::Face) }
+      placement = group.transformation.to_a.map { |v| (v * 1000).round }
+      (box.map { |v| (v.to_mm * 10).round } + [faces] + placement).join(',')
+    end
+
+    def local_box(points)
+      xs, ys, zs = points.map { |p| [p.x, p.y, p.z] }.transpose
+      [xs.min, ys.min, zs.min, xs.max, ys.max, zs.max]
+    end
+
+    # Chữ ký kiểu cũ (hộp bao thế giới, dựng bằng bản trước). Chỉ để nhận tủ cũ; tấm dựng lại sẽ có chữ ký mới.
+    def legacy_signature(group)
       b = group.bounds
       box = [b.min.x, b.min.y, b.min.z, b.max.x, b.max.y, b.max.z].map { |v| (v.to_mm * 10).round }
       faces = group.definition.entities.to_a.count { |e| e.is_a?(Sketchup::Face) }
@@ -278,19 +299,26 @@ module VGD_Cabinet_Draw
     end
 
     def stamp_signature(group)
-      group.set_attribute(Schema::DICTIONARY, 'geo_sig', signature(group))
+      group.set_attribute(Schema::DICTIONARY, 'geo_local', signature(group))
       group
     end
 
+    # Tấm đã có chữ ký (kiểu mới hoặc cũ).
+    def signed?(group)
+      !group.get_attribute(Schema::DICTIONARY, 'geo_local').nil? || !group.get_attribute(Schema::DICTIONARY, 'geo_sig').nil?
+    end
+
     def hand_edited?(group)
-      saved = group.get_attribute(Schema::DICTIONARY, 'geo_sig')
       return true if group.get_attribute(Schema::DICTIONARY, 'notched')
-      saved ? saved != signature(group) : nil
+      saved = group.get_attribute(Schema::DICTIONARY, 'geo_local')
+      return saved != signature(group) if saved
+      legacy = group.get_attribute(Schema::DICTIONARY, 'geo_sig')
+      legacy ? legacy != legacy_signature(group) : nil
     end
 
     # Hộp tham chiếu tủ lạnh (khung dây + mặt mờ, tag riêng để ẩn/hiện). Không phải tấm ván, không vào bóc khối lượng.
     def add_reference(root, shell, box)
-      group = root.entities.add_group
+      group = root.definition.entities.add_group
       group.name = 'Tủ lạnh (tham chiếu)'
       group.transformation = shell.transformation
       x0, y0, z0, x1, y1, z1 = box.map { |v| v.mm }
@@ -319,7 +347,7 @@ module VGD_Cabinet_Draw
                                         'cabinet_type' => result.resolved['cabinet_type'] })
       add_reference(root, shell, result.reference) if result.reference
       unless result.trim.empty?
-        trim = root.entities.add_group
+        trim = root.definition.entities.add_group
         trim.name = 'Chân & phào'
         trim.transformation = shell.transformation
         result.trim.each { |part| build_part(trim.entities, part) }
@@ -335,24 +363,83 @@ module VGD_Cabinet_Draw
       root
     end
 
-    # Chuyển một box thành thùng tủ. Mọi kiểm tra đầu vào chạy TRƯỚC khi chạm vào model.
-    def cabinet_from_box(box_entity, options = {})
-      settings = Schema.merge_settings(options)
-      frame = cabinet_frame(box_entity, options['front_normal'] || [0, -1, 0])
-      result = PanelModel.compute(frame.width, frame.depth, frame.height, settings)
-
+    # Dựng một thùng tủ cao height (mm) tại origin (điểm góc dưới-trước-trái). Đã có kết quả PanelModel.
+    # rigid: phép biến đổi của chính tủ trong hệ chứa nó (tủ đơn: khung của box; tủ con của tủ quá khổ: đơn vị,
+    # vì group cha đã mang khung đó).
+    def build_cabinet(entities, frame, origin, height, settings, result, extra_data = {}, rigid: frame.rigid)
       # Tạo tủ cùng cấp với box (kể cả box nằm trong group cha chưa mở), không dùng active_entities.
-      root = box_entity.parent.entities.add_group
+      root = entities.add_group
       root.name = 'VGD Cabinet Draw · Cabinet'
-      root.transformation = frame.rigid
+      root.transformation = rigid
       shell = root.entities.add_group
       shell.name = 'Thùng tủ'
-      shell.transformation = Geom::Transformation.axes(frame.origin, frame.width_axis, frame.depth_axis, frame.up)
-      build_carcass(root, shell, result, settings, frame.width, frame.depth, frame.height,
-                    'front_normal' => frame.front.to_a,
-                    'local_axes' => { 'width' => frame.width_axis.to_a, 'depth' => frame.depth_axis.to_a, 'up' => frame.up.to_a })
-      box_entity.erase! if options['remove_source'] == true
+      shell.transformation = Geom::Transformation.axes(origin, frame.width_axis, frame.depth_axis, frame.up)
+      build_carcass(root, shell, result, settings, frame.width, frame.depth, height,
+                    extra_data.merge('front_normal' => frame.front.to_a,
+                                     'local_axes' => { 'width' => frame.width_axis.to_a, 'depth' => frame.depth_axis.to_a, 'up' => frame.up.to_a }))
       root
+    end
+
+    # Chuyển một box thành các thùng tủ: một tủ, hoặc hai tủ trong group 'Tủ quá khổ' khi box cao hơn ngưỡng.
+    # Trả về mảng các tủ. Mọi kiểm tra đầu vào chạy TRƯỚC khi chạm vào model.
+    def cabinets_from_box(box_entity, options = {})
+      settings = Schema.merge_settings(options)
+      frame = cabinet_frame(box_entity, options['front_normal'] || [0, -1, 0])
+      pieces = Split.plan(frame.height, settings)
+      if pieces.nil?
+        result = PanelModel.compute(frame.width, frame.depth, frame.height, settings)
+        roots = [build_cabinet(box_entity.parent.entities, frame, frame.origin, frame.height, settings, result)]
+      else
+        # Tính đủ hai tủ trước; nếu một tủ không dựng được thì không tạo gì cả.
+        plan_settings = pieces.map { |piece| settings.merge(piece.overrides) }
+        results = pieces.each_with_index.map { |piece, index| PanelModel.compute(frame.width, frame.depth, piece.height, plan_settings[index]) }
+        # Group cha mang khung của tủ (gốc và hướng của box); hai tủ con nằm trong hệ đó, không có phép biến đổi riêng.
+        group = box_entity.parent.entities.add_group
+        group.name = Split::GROUP_NAME
+        group.layer = tag(Schema::DEFAULTS['cabinet_tag'])
+        group.transformation = frame.rigid
+        ModelData.stamp(group, 'split_group', { 'joint' => settings['split_joint'] })
+        origin = frame.origin
+        roots = pieces.each_with_index.map do |piece, index|
+          root = build_cabinet(group.entities, frame, origin, piece.height, plan_settings[index], results[index],
+                               { 'split_part' => piece.name, 'split_joint' => settings['split_joint'] },
+                               rigid: Geom::Transformation.new)
+          # Tủ trên đặt ngay trên mép trên tủ dưới (theo trục đứng của tủ).
+          distance = piece.height.mm
+          origin = Geom::Point3d.new(origin.x + frame.up.x * distance, origin.y + frame.up.y * distance, origin.z + frame.up.z * distance)
+          root
+        end
+      end
+      box_entity.erase! if options['remove_source'] == true
+      roots
+    end
+
+    # Độ dài ba cột đầu của phép biến đổi (16 số theo cột): khác 1 nghĩa là có scale.
+    def split_scaled?(group)
+      columns = group.transformation.to_a.each_slice(4).first(3)
+      columns.any? { |c| (Math.sqrt(c[0, 3].sum { |v| v * v }) - 1.0).abs > 1e-6 }
+    end
+
+    # Group 'Tủ quá khổ' bị kéo Scale: tách group thành (vị trí + hướng, không scale) và (scale theo trục của group).
+    # Scale đưa xuống từng tủ con, còn group giữ vị trí và hướng của tủ. Mỗi tủ con sau đó tự co giãn như tủ đơn.
+    def push_split_scale(group)
+      to_a = group.transformation.to_a
+      columns = (0..2).map { |i| to_a[i * 4, 3] }
+      scale = columns.map { |c| Math.sqrt(c.sum { |v| v * v }) }
+      origin = Geom::Point3d.new(*to_a[12, 3])
+      axes = columns.map { |c| Geom::Vector3d.new(*c).normalize }
+      rigid = Geom::Transformation.axes(origin, *axes)
+      stretch = Geom::Transformation.scaling(*scale)
+      group.entities.to_a.each do |child|
+        next unless ModelData.cabinet?(child)
+        child.transformation = stretch * child.transformation
+      end
+      group.transformation = rigid
+    end
+
+    # Giữ tên cũ cho chỗ gọi một tủ: trả về tủ đầu tiên.
+    def cabinet_from_box(box_entity, options = {})
+      cabinets_from_box(box_entity, options).first
     end
   end
 end

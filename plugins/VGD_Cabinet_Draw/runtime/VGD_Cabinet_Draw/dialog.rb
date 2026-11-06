@@ -11,6 +11,11 @@ module VGD_Cabinet_Draw
       )
       @window.set_file(File.join(__dir__, 'dialog.html'))
       @window.add_action_callback('ready') { |_ctx, _| load_state }
+      # Dialog báo chế độ sáng/tối để HUD và preview trong viewport đổi theo.
+      @window.add_action_callback('theme') do |_ctx, payload|
+        Theme.mode = payload
+        Sketchup.active_model.active_view.invalidate
+      end
       @window.add_action_callback('tool') do |_ctx, payload|
         data = JSON.parse(payload)
         VGD_Cabinet_Draw.launch_tool(data['name'], data['settings'] || {}, data['preset_id'])
@@ -65,6 +70,13 @@ module VGD_Cabinet_Draw
       rescue StandardError => e
         set_status(e.message)
       end
+      # Công tắc chung (tab Setting chung): kéo Scale xong thì tủ tự cập nhật. Lưu theo người dùng trên máy.
+      @window.add_action_callback('auto_stretch') do |_ctx, payload|
+        AutoStretch.enabled = JSON.parse(payload)['enabled'] == true
+        set_status(AutoStretch.enabled? ? 'Đã bật: kéo Scale xong tủ tự cập nhật.' : 'Đã tắt: kéo Scale xong, bấm Box → Board rồi Enter để cập nhật.')
+      rescue StandardError => e
+        set_status(e.message)
+      end
       @window.set_on_closed { @window = nil }
       @window.show
     end
@@ -114,6 +126,7 @@ module VGD_Cabinet_Draw
 
     def load_state
       return unless @window && @window.visible?
+      @window.execute_script("VGD.setAutoStretch(#{AutoStretch.enabled? ? 'true' : 'false'})")
       @window.execute_script("VGD.state(#{JSON.generate(ToolSettings.new.all)})")
     rescue StandardError => e
       set_status(e.message)

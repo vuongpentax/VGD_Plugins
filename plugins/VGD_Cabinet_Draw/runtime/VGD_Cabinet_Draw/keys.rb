@@ -45,6 +45,19 @@ module VGD_Cabinet_Draw
       windows? && key == char.to_s.upcase.ord
     end
 
+    ARROWS_WINDOWS = { left: 37, up: 38, right: 39, down: 40 }.freeze
+    ARROWS_MAC = { left: 123, up: 126, right: 124, down: 125 }.freeze # Mã trên Mac chưa kiểm chứng
+
+    # Phím mũi tên trong onKeyDown: :left, :up, :right, :down hoặc nil. Dùng hằng VK_* của SketchUp nếu có.
+    def arrow(key)
+      names = { left: :VK_LEFT, up: :VK_UP, right: :VK_RIGHT, down: :VK_DOWN }
+      names.each do |dir, const|
+        code = Object.const_defined?(const) ? Object.const_get(const) : (windows? ? ARROWS_WINDOWS : ARROWS_MAC)[dir]
+        return dir if key == code
+      end
+      nil
+    end
+
     # Shift (CONSTRAIN_MODIFIER_MASK) trong cờ của onLButtonDown / onKeyDown.
     def shift?(flags)
       defined?(CONSTRAIN_MODIFIER_MASK) ? (flags.to_i & CONSTRAIN_MODIFIER_MASK) != 0 : false
@@ -58,6 +71,12 @@ module VGD_Cabinet_Draw
     # Phím Ctrl (Option trên Mac) được nhấn: mã phím trong onKeyDown/onKeyUp.
     def ctrl_key?(key)
       code = defined?(COPY_MODIFIER_KEY) ? COPY_MODIFIER_KEY : (windows? ? 17 : 58)
+      key == code
+    end
+
+    # Phím Alt (Command trên Mac) được nhấn: mã phím trong onKeyDown/onKeyUp.
+    def alt_key?(key)
+      code = defined?(ALT_MODIFIER_KEY) ? ALT_MODIFIER_KEY : (windows? ? 18 : 55)
       key == code
     end
 

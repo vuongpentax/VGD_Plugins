@@ -48,7 +48,7 @@ check 'nóc lùi 17.5', near(bb(part(c, 'Nóc'))[1], T), bb(part(c, 'Nóc')).ins
 check 'đáy lùi 17.5', near(bb(part(c, 'Đáy'))[1], T)
 check 'hông trái lùi 17.5 (được phủ)', near(bb(part(c, 'Hông Trái'))[1], T)
 check 'hông phải lùi 17.5 (được phủ)', near(bb(part(c, 'Hông Phải'))[1], T)
-check 'ván chân KHÔNG lùi thêm khi phủ (50)', near(bb(trim_part(c, 'Ván chân'))[1], 50.0), bb(trim_part(c, 'Ván chân')).inspect
+check 'ván chân lùi thêm bằng hông khi phủ (50 + 17.5)', near(bb(trim_part(c, 'Ván chân'))[1], 50.0 + T), bb(trim_part(c, 'Ván chân')).inspect
 doors = V::Operations.doors_of(c)
 check 'có 2 cánh', doors.length == 2
 db = V::Operations.door_bounds(doors.first)
@@ -149,6 +149,13 @@ check 'ván chân lùi thêm 10', near(toe.bounds[1], 50.0 + 10.0), toe.bounds.i
 check 'không có door_recess thì như cũ', V::PanelModel.compute(800, 560, 2000, 'leg_height' => 40.0).parts.find { |p| p.role == 'top' }.bounds[1] == 0.0
 check 'DoorFit phủ trái', V::DoorFit.recess_for('phu', true, false, 17.5).values_at('side_left', 'side_right') == [17.5, 0.0]
 check 'DoorFit lọt', V::DoorFit.recess_for('lot', true, true, 17.5).values_at('side_left', 'toe', 'cornice') == [0.0, 17.5, 17.5]
+check 'DoorFit phủ cả hai hông: ván chân lùi bằng hông', V::DoorFit.recess_for('phu', true, true, 17.5)['toe'] == 17.5
+check 'DoorFit phủ không phủ hông nào: ván chân không lùi', V::DoorFit.recess_for('phu', false, false, 17.5)['toe'] == 0.0
+rr = V::DoorFit.recess_for('phu', true, true, 17.5)
+r_phu = V::PanelModel.compute(800, 560, 2000, 'leg_height' => 40.0, 'door_recess' => rr)
+side_phu = r_phu.parts.find { |p| p.role == 'side_left' }
+toe_phu = r_phu.trim.find { |p| p.role == 'toe_kick' }
+check 'cánh phủ: mặt trước ván chân thẳng mặt trước hông', near(toe_phu.bounds[1], side_phu.bounds[1]), [toe_phu.bounds[1], side_phu.bounds[1]].inspect
 
 puts '== 9. Tủ cũ (chưa có door_recess): dựng lại cánh vẫn như cũ =='
 c = cab

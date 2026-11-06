@@ -127,7 +127,7 @@ check 'sync fronts → preview', t.state == :preview, t.state
 click(t, b1, [0,0,1])   # top face rejected
 check 'top click keeps state', t.state == :preview
 hud = t.hud_lines
-check 'hud lines', hud.any? { |l| l.include?('2/2') } && hud.any? { |l| l.include?('ngậm rãnh kín') }, hud.inspect
+check 'hud lines', hud.any? { |l| l.include?('2/2') } && hud.any? { |l| l.include?('âm 4 cạnh') }, hud.inspect
 v = Sketchup.active_model.active_view
 check 'tab reverses all', (t.onKeyDown(9, 0, 0, v); true)
 t.onKeyDown(9, 0, 0, v) # back
@@ -249,12 +249,12 @@ pt_before = V::Operations.hinge_pivot(d0, 'left')
 db_before = V::Operations.door_bounds(d0)
 v.fake_path = [cab, cont, d0]
 ot.onMouseMove(0, 100, 5, v)
-ot.onMouseMove(0, 100 + 90 * 3, 5, v)
-check 'mouse x → 90°', (ot.instance_variable_get(:@angle) - 90).abs < 1e-6, ot.instance_variable_get(:@angle)
-ot.onMouseMove(CONSTRAIN_MODIFIER_MASK, 100 + 37 * 3, 5, v)
+ot.onMouseMove(0, 100 - 90 * 3, 5, v)
+check 'bản lề trái: rê chuột sang TRÁI → 90°', (ot.instance_variable_get(:@angle) - 90).abs < 1e-6, ot.instance_variable_get(:@angle)
+ot.onMouseMove(CONSTRAIN_MODIFIER_MASK, 100 - 37 * 3, 5, v)
 check 'shift snaps 15°', ot.instance_variable_get(:@angle) == 30.0, ot.instance_variable_get(:@angle)
 check 'preview has arc + faces', ot.instance_variable_get(:@preview).polygon_count == 12 && !ot.instance_variable_get(:@preview).empty?
-ot.onMouseMove(0, 100 + 90 * 3, 5, v)
+ot.onMouseMove(0, 100 - 90 * 3, 5, v)
 ot.draw(v); check 'opening draw ok', true
 ot.onLButtonDown(0, 5, 5, v)
 check 'click applies 90°', V::Operations.door_angle(d0) == 90.0, V::Operations.door_angle(d0)
@@ -290,6 +290,16 @@ check 'parent transform from pick', ot2.instance_variable_get(:@parent_transform
 # parent_transform tìm từ model
 pf = V::Operations.parent_transform(d0)
 check 'parent_transform lookup', pf && (0..2).all? { |i| (pf.m[3][i] - (cab.transformation * cont.transformation).m[3][i]).abs < 1e-6 }, pf.inspect
+# Bản lề phải: rê chuột sang PHẢI để mở (ngược với bản lề trái).
+dr = doors.last
+V::Operations.set_door_angle(dr, 'right', 0)
+orr = V::Tools::OpeningTool.new({}); orr.activate
+v.fake_path = [cab, cont, dr]; orr.onLButtonDown(0, 5, 5, v)
+orr.onMouseMove(0, 100, 5, v); orr.onMouseMove(0, 100 + 50 * 3, 5, v)
+check 'bản lề phải: rê sang phải → 50°', (orr.instance_variable_get(:@angle) - 50).abs < 1e-6, orr.instance_variable_get(:@angle)
+orr.onMouseMove(0, 100 - 50 * 3, 5, v)
+check 'bản lề phải: rê sang trái không mở (kẹp 0°)', orr.instance_variable_get(:@angle) == 0.0, orr.instance_variable_get(:@angle)
+orr.cancel_tool(v)
 # --- Mở cánh: mỗi cánh một góc ---
 d1 = doors.last
 check 'có hai cánh để thử', doors.length == 2 && d0 != d1
@@ -300,7 +310,7 @@ check 'hàng chờ: cánh đầu đang chỉnh, cánh sau chờ', oq.instance_va
 check 'preview có cánh chờ (xanh lá)', oq.instance_variable_get(:@preview).polygon_count >= 12 + 6
 check 'hud báo còn chờ', oq.hud_lines.first.include?('Còn chờ: 1')
 v.fake_path = [cab, cont, d0]
-oq.onMouseMove(0, 100, 5, v); oq.onMouseMove(0, 100 + 60 * 3, 5, v)
+oq.onMouseMove(0, 100, 5, v); oq.onMouseMove(0, 100 - 60 * 3, 5, v)
 oq.onLButtonDown(0, 5, 5, v)
 check 'cánh 1 mở 60°, cánh 2 chưa đổi', V::Operations.door_angle(d0) == 60.0 && V::Operations.door_angle(d1) == 0.0
 check 'tự chuyển sang cánh 2', oq.instance_variable_get(:@targets) == [d1] && oq.instance_variable_get(:@queue).empty?
@@ -318,7 +328,7 @@ og = V::Tools::OpeningTool.new({}); og.activate
 v.fake_path = [cab, cont, d0]; og.onLButtonDown(COPY_MODIFIER_MASK, 5, 5, v)
 v.fake_path = [cab, cont, d1]; og.onLButtonDown(COPY_MODIFIER_MASK, 5, 5, v)
 check 'Ctrl+click gom 2 cánh', og.instance_variable_get(:@targets) == [d0, d1]
-og.onMouseMove(0, 100, 5, v); og.onMouseMove(0, 100 + 45 * 3, 5, v)
+og.onMouseMove(0, 100, 5, v); og.onMouseMove(0, 100 - 45 * 3, 5, v)
 v.fake_path = [cab, cont, d0]; og.onLButtonDown(0, 5, 5, v)
 check 'nhóm dùng chung một góc 45°', V::Operations.door_angle(d0) == 45.0 && V::Operations.door_angle(d1) == 45.0
 v.fake_path = [cab, cont, d1]; og.onLButtonDown(COPY_MODIFIER_MASK, 5, 5, v); og.onLButtonDown(COPY_MODIFIER_MASK, 5, 5, v)
@@ -327,7 +337,7 @@ check 'Ctrl+click lần hai bỏ cánh khỏi nhóm', og.instance_variable_get(:
 V::Operations.set_door_angle(d0, 'left', 0); V::Operations.set_door_angle(d1, 'right', 0)
 oc = V::Tools::OpeningTool.new({}); oc.activate
 v.fake_path = [cab, cont, d0]; oc.onLButtonDown(0, 5, 5, v)
-oc.onMouseMove(0, 100, 5, v); oc.onMouseMove(0, 100 + 20 * 3, 5, v)
+oc.onMouseMove(0, 100, 5, v); oc.onMouseMove(0, 100 - 20 * 3, 5, v)
 v.fake_path = [cab, cont, d1]; oc.onLButtonDown(0, 5, 5, v)
 check 'click cánh khác: chốt cánh cũ', V::Operations.door_angle(d0) == 20.0
 check 'click cánh khác: chọn cánh mới', oc.instance_variable_get(:@targets) == [d1]
@@ -344,7 +354,7 @@ ox = V::Tools::OpeningTool.new({}); ox.activate; v.fake_path = []
 ox.onLButtonDown(0, 5, 5, v); check 'click trống khi chưa chọn: không chọn gì', ox.instance_variable_get(:@targets).empty?
 # Click vào chỗ trống khi đang chỉnh: chốt cánh đang chỉnh
 v.fake_path = [cab, cont, d0]; ox.onLButtonDown(0, 5, 5, v)
-ox.onMouseMove(0, 100, 5, v); ox.onMouseMove(0, 100 + 10 * 3, 5, v)
+ox.onMouseMove(0, 100, 5, v); ox.onMouseMove(0, 100 - 10 * 3, 5, v)
 v.fake_path = []; ox.onLButtonDown(0, 5, 5, v)
 check 'click trống khi đang chỉnh: chốt góc', V::Operations.door_angle(d0) == 10.0 && ox.instance_variable_get(:@targets).empty?
 # --- PanelTool (beta.28): rê → khóa mặt → kéo → Tab điểm bắt → gõ mm → click tạo; /n chia cả ô ---
@@ -481,12 +491,12 @@ fshell = V::Geometry.shell_for(froot)
 fh = ->(name) { fshell.definition.entities.to_a.find { |e| e.name == name } }
 check 'hông chạm đất: hông trái bắt đầu ở sàn', fh.call('Hông Trái').definition.bounds.min.z.to_mm.abs < 1e-6
 check 'hông đụng trần: hông trái cao tới đỉnh box', (fh.call('Hông Trái').definition.bounds.max.z.to_mm - 2000).abs < 1e-6
-check 'đáy vẫn ở độ cao chân', (fh.call('Đáy').definition.bounds.min.z.to_mm - 40).abs < 1e-6
-check 'nóc thấp hơn đỉnh một khoảng phào', (fh.call('Nóc').definition.bounds.max.z.to_mm - 1980).abs < 1e-6
+check 'đáy vẫn ở độ cao chân', (fh.call('Đáy').bounds.min.z.to_mm - 40).abs < 1e-6
+check 'nóc thấp hơn đỉnh một khoảng phào', (fh.call('Nóc').bounds.max.z.to_mm - 1980).abs < 1e-6
 ftrim = froot.definition.entities.to_a.find { |e| e.respond_to?(:name) && e.name == 'Chân & phào' }
 kick = ftrim.definition.entities.to_a.find { |e| e.name == 'Ván chân' }
 corn = ftrim.definition.entities.to_a.find { |e| e.name == 'Phào trần' }
-check 'ván chân nằm giữa hai hông (rộng 565)', (kick.definition.bounds.width.to_mm - 565).abs < 1e-6 && (kick.definition.bounds.min.x.to_mm - 17.5).abs < 1e-6, kick.definition.bounds.width.to_mm
+check 'ván chân nằm giữa hai hông (rộng 565)', (kick.bounds.width.to_mm - 565).abs < 1e-6 && (kick.bounds.min.x.to_mm - 17.5).abs < 1e-6, kick.bounds.width.to_mm
 check 'phào nằm giữa hai hông (rộng 565)', (corn.definition.bounds.width.to_mm - 565).abs < 1e-6, corn.definition.bounds.width.to_mm
 fb = V::Geometry.body_bounds(fshell)
 check 'body_bounds: thân tủ z 40..1980 dù hông dài hơn', (fb.min.z.to_mm - 40).abs < 1e-6 && (fb.max.z.to_mm - 1980).abs < 1e-6 && (fb.height.to_mm - 1940).abs < 1e-6, [fb.min.z.to_mm, fb.max.z.to_mm].inspect
@@ -673,10 +683,10 @@ hts.delete('box', a1['id']); t2 = V::Tools::BoxTool.new({}); t2.active_preset_id
 check 'deleted preset id is dropped from tool', t2.active_preset_id.nil?
 # --- 8b. Thanh công cụ và chạy nhanh ---
 tb = V.instance_variable_get(:@toolbar)
-check 'toolbar có 6 nút', tb.commands.length == 6, tb.commands.length
-check 'toolbar thứ tự', tb.commands.map(&:title) == ['Box → Board', 'Chia đợt / vách', 'Cánh tủ', 'Ngăn kéo', 'VGD Chọn', 'Setting']
+check 'toolbar có 8 nút', tb.commands.length == 8, tb.commands.length
+check 'toolbar thứ tự', tb.commands.map(&:title) == ['Box → Board', 'Chia đợt / vách', 'Cánh tủ', 'Ngăn kéo', 'Scale VGD', 'Quét & dời tấm', 'VGD Chọn', 'Setting']
 check 'mọi nút có icon tồn tại', tb.commands.all? { |c| File.file?(c.small_icon.to_s) && File.file?(c.large_icon.to_s) }, tb.commands.map(&:small_icon).inspect
-check 'submenu Extensions có đủ nút', UI.menu('Extensions').subs['VGD Cabinet Draw'].items.length == 10
+check 'submenu Extensions có đủ nút', UI.menu('Extensions').subs['VGD Cabinet Draw'].items.length == 12
 sd = V::ToolSettings.new
 sd.save_base({'board_thickness' => 18})
 d1 = sd.save('door', 'Khe 3', {'door_gap' => 3}); sd.set_default('door', d1['id'])

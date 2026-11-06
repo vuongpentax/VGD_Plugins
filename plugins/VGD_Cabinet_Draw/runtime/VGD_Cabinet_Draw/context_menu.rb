@@ -11,7 +11,7 @@ module VGD_Cabinet_Draw
     extend self
 
     MENU_TITLE = 'VGD Cabinet'.freeze
-    TYPE_LABELS = { 'standard' => 'Tủ thường', 'base' => 'Tủ bếp dưới', 'wall' => 'Tủ bếp trên', 'fridge' => 'Thùng tủ lạnh' }.freeze
+    TYPE_LABELS = { 'standard' => 'Tủ tùy biến', 'base' => 'Tủ bếp dưới', 'wall' => 'Tủ bếp trên', 'fridge' => 'Thùng tủ lạnh' }.freeze
     BASE_LEGS = [100, 120, 150].freeze
     WALL_HEIGHTS = [700, 800, 900].freeze
     # Cỡ tủ lạnh [tên, rộng, cao, sâu] — chỉ THAM KHẢO, người dùng sửa theo model thật trong Sửa tủ.
@@ -31,8 +31,8 @@ module VGD_Cabinet_Draw
       doors = []
       selection.each do |entity|
         next unless (entity.is_a?(Sketchup::Group) || entity.is_a?(Sketchup::ComponentInstance)) && entity.valid?
-        if ModelData.cabinet?(entity)
-          roots << entity
+        if ModelData.cabinet?(entity) || ModelData.split_group?(entity)
+          roots.concat(ModelData.cabinets_in([entity]))
         elsif Operations.door?(entity) || entity.get_attribute(Schema::DICTIONARY, 'kind') == 'drawer_front'
           doors << entity
         end
@@ -49,6 +49,8 @@ module VGD_Cabinet_Draw
 
     # Danh sách mục cho vùng chọn hiện tại (rỗng nếu không phải tủ/cánh của VGD).
     def items_for(selection)
+      members = selection.select { |entity| Rebuild::MEMBER_ROLES.include?(Interior.role_of(entity)) }
+      return member_items(members) unless members.empty?
       roots, doors = classify(selection)
       return cabinet_items(roots) unless roots.empty?
       return door_items(doors) unless doors.empty?
@@ -60,6 +62,7 @@ module VGD_Cabinet_Draw
       list = []
       list << item('Sửa tủ…', -> { launch('box') })
       list << item('Chia cánh…', -> { launch('door') })
+      list << item('Cánh tự động theo hồi', -> { auto_doors(roots) })
       list << item('Thêm đợt / vách…', -> { launch('panel') })
       list << item('Thêm ngăn kéo…', -> { launch('drawer') })
       list << { separator: true }
@@ -140,8 +143,39 @@ module VGD_Cabinet_Draw
         item('Đóng ngăn kéo', -> { close_drawers(drawer_group(fronts)) }),
         { separator: true },
         item('Đặt tay nắm', -> { put_handles(fronts) }),
-        item('Xóa tay nắm', -> { remove_handles(fronts) })
+        item('Xóa tay nắm', -> { remove_handles(fronts) }),
+        item('Xóa ngăn kéo này', -> { remove_drawer_steps(fronts) })
       ]
+    end
+
+    def member_items(members)
+      [item('Xóa tấm này', -> { remove_member_items(members) })]
+    end
+
+    # Xóa đợt/vách: nhóm theo tủ rồi xóa trong một thao tác.
+    def remove_member_items(members)
+      members.group_by { |member| Removal.cabinet_of(member) }.each do |root, list|
+        next unless root
+        in_operation('VGD Cabinet Draw — Xóa tấm') { Removal.remove_members(root, list) }
+      end
+    end
+
+    # Xóa cánh: vùng thành trống, không gộp vào cánh bên cạnh.
+    def remove_door_items(doors)
+      doors.group_by { |door| Removal.cabinet_of(door) }.each do |root, list|
+        next unless root
+        in_operation('VGD Cabinet Draw — Xóa cánh') { Removal.remove_doors(root, list) }
+      end
+    end
+
+    # Xóa ngăn kéo (mặt + thùng), khoang, xà chặn, hộc tủ áo theo bước tạo của chúng.
+    def remove_drawer_steps(items)
+      items.group_by { |item| Removal.cabinet_of(item) }.each do |root, list|
+        next unless root
+        steps = list.map { |item| Removal.step_of(item) }.compact.uniq
+        next if steps.empty?
+        in_operation('VGD Cabinet Draw — Xóa ngăn kéo') { Removal.remove_steps(root, steps) }
+      end
     end
 
     # Cả mặt hộc lẫn thùng của các hộc được chọn.
@@ -157,13 +191,14 @@ module VGD_Cabinet_Draw
       current = doors.map { |door| Operations.opening_type_of(door) }.uniq
       hinges = [['Bản lề trái', 'left'], ['Bản lề phải', 'right'], ['Lật lên (bản lề trên)', 'top'], ['Lật xuống (bản lề dưới)', 'bottom']]
       [
-        item('Mở cánh…', -> { open_doors_prompt(doors) }),
+        item('Mở cánh…', -> { start_open_tool(doors) }),
         item('Đóng cánh', -> { close_doors(doors) }),
         { separator: true },
         { label: 'Bản lề', items: hinges.map { |name, type| item(name, -> { set_hinge(doors, type) }, checked: current == [type]) } },
         { separator: true },
         item('Đặt tay nắm', -> { put_handles(doors) }),
-        item('Xóa tay nắm', -> { remove_handles(doors) })
+        item('Xóa tay nắm', -> { remove_handles(doors) }),
+        item('Xóa cánh này', -> { remove_door_items(doors) })
       ]
     end
 
@@ -178,6 +213,14 @@ module VGD_Cabinet_Draw
         list << item('Bỏ chọn vùng', -> { tool_clear_selection(tool) })
       when 'OpeningTool'
         list << item('Đóng tất cả cánh của tủ đang chọn', -> { VGD_Cabinet_Draw.close_selected_doors })
+      when 'PanelTool'
+        count = (tool.instance_variable_get(:@marked) || []).length
+        list << item("Xóa #{count} tấm đã đánh dấu", -> { tool.send(:remove_marked) }) if count.positive?
+        list << item('Bỏ đánh dấu tấm', -> { tool.send(:clear_marked) }) if count.positive?
+      when 'DoorTool'
+        view = Sketchup.active_model.active_view
+        list << item('Gộp vùng đã chọn (Alt+G)', -> { tool.send(:merge_selected, view) })
+        list << item('Xóa cánh của vùng đã chọn', -> { tool.send(:empty_selected, view) })
       end
       list << { separator: true } unless list.empty?
       list << item('Mở bảng Setting', -> { Dialog.show })
@@ -463,7 +506,7 @@ module VGD_Cabinet_Draw
     def build_door_layout(root)
       tool = Tools::DoorTool.new({})
       raise 'Không dựng được cánh cho tủ này.' unless tool.load_cabinet(root)
-      tool.instance_variable_get(:@settings).merge!(Rebuild.settings_of(root).select { |key, _| %w[door_fit door_gap door_edge_gap door_inset_gap].include?(key) })
+      tool.instance_variable_get(:@settings).merge!(Rebuild.settings_of(root).select { |key, _| %w[door_fit door_gap door_gap_rows door_edge_gap door_inset_gap].include?(key) })
       layout = tool.instance_variable_get(:@layout)
       layout.reset_even('vertical', 1)
       yield layout
@@ -471,6 +514,33 @@ module VGD_Cabinet_Draw
       tool.save_layout!
       tool.apply_recess!
       tool.build_doors
+    end
+
+    # Tạo cánh tự động theo vách (hồi) giữa của từng tủ: cánh chia ở tim mặt trước vách, hai vách liền kề thì chia ở giữa.
+    # Một bước Undo; thay bố cục cánh hiện có của tủ.
+    def auto_doors(roots)
+      roots = roots.select(&:valid?)
+      return false if roots.empty?
+      in_operation('VGD Cabinet Draw — Cánh tự động theo hồi') do
+        roots.each do |root|
+          root.make_unique if root.respond_to?(:make_unique)
+          tool = Tools::DoorTool.new({})
+          raise 'Không dựng được cánh cho tủ này.' unless tool.load_cabinet(root)
+          tool.instance_variable_get(:@settings).merge!(Rebuild.settings_of(root).select { |key, _| %w[door_fit door_gap door_gap_rows door_edge_gap door_inset_gap].include?(key) })
+          # Ngưỡng chia 2 cánh lấy theo setting mặc định của công cụ Cánh tủ (bảng Setting / HUD).
+          tool.instance_variable_get(:@settings)['door_auto_width'] = ToolSettings.new.effective(Schema::TOOL_GROUP['door'])['door_auto_width']
+          tool.auto_split_by_partitions
+          tool.save_layout!
+          tool.apply_recess!
+          tool.build_doors
+        end
+      end
+      reselect(roots)
+      Dialog.set_status('Đã tạo cánh tự động theo vách (hồi) giữa.')
+      true
+    rescue StandardError => e
+      UI.messagebox("Không tạo được cánh tự động:\n#{e.message}")
+      false
     end
 
     def split_two_doors(root)
@@ -537,6 +607,16 @@ module VGD_Cabinet_Draw
       return unless angle
       doors = roots.flat_map { |root| Operations.doors_of(root) }
       open_doors(doors, angle, 'Mở tất cả cánh')
+    end
+
+    # Mở cánh bằng công cụ rê chuột (như trong bảng Setting): chọn các cánh rồi bật công cụ, mỗi cánh một góc.
+    def start_open_tool(doors)
+      doors = doors.select(&:valid?)
+      return Dialog.set_status('Không có cánh nào để mở.') if doors.empty?
+      selection = Sketchup.active_model.selection
+      selection.clear
+      doors.each { |door| selection.add(door) }
+      VGD_Cabinet_Draw.launch_tool('opening')
     end
 
     def open_doors_prompt(doors)

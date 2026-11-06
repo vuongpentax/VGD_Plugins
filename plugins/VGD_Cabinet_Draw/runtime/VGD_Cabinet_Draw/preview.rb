@@ -4,21 +4,32 @@ module VGD_Cabinet_Draw
   #   override = đối tượng đang có cấu hình riêng (xanh lá), target = đích đang chọn (xanh lá lục),
   #   cutter = dao cắt (hồng đỏ).
   class Preview
-    # Màu nhạt kiểu X-ray: nhìn xuyên được, không che hình tủ phía sau. hover luôn là màu vàng nét đứt.
-    COLORS = {
-      body: Sketchup::Color.new(40, 160, 190, 45),
-      front: Sketchup::Color.new(235, 130, 55, 55),
-      override: Sketchup::Color.new(70, 180, 70, 55),
-      target: Sketchup::Color.new(40, 175, 125, 55),
-      cutter: Sketchup::Color.new(225, 70, 90, 70),
-      door: Sketchup::Color.new(60, 120, 225, 50),
-      glass: Sketchup::Color.new(120, 205, 235, 40),
-      drawer: Sketchup::Color.new(150, 95, 205, 55),
-      hover: Sketchup::Color.new(250, 195, 40, 85)
+    # Màu nhạt kiểu X-ray: nhìn xuyên được, không che hình tủ phía sau. Mỗi loại là [token màu VGD, độ đặc 0..255];
+    # màu thật tính lúc vẽ theo chế độ sáng/tối của dialog (Theme). Chủ đạo là đồng; loại được tách bằng độ đậm:
+    #   body = xem trước, front = mặt trước đang xử lý (xám), override = đã chọn / có cấu hình riêng, target = đích đang chọn,
+    #   cutter = dao cắt / lỗi (danger), door = cánh, glass = kính, drawer = ngăn kéo, hover = đang trỏ.
+    FILL = {
+      body: [:accent, 55], front: [:muted, 55], override: [:accent_strong, 110], target: [:accent_strong, 80],
+      cutter: [:danger, 85], door: [:accent, 80], glass: [:muted, 45], drawer: [:accent_strong, 65], hover: [:accent_strong, 130]
     }.freeze
-    GUIDE = Sketchup::Color.new(235, 120, 0, 255)
-    EDGE = Sketchup::Color.new(15, 55, 85, 150)
-    EDGE_HOVER = Sketchup::Color.new(200, 120, 0, 230)
+
+    def self.fill_color(kind)
+      role, alpha = FILL.fetch(kind, FILL[:body])
+      Theme.color(role, alpha)
+    end
+
+    # Nét viền, nét hướng dẫn và chữ vẽ thẳng lên viewport (không có nền bảng) dùng sắc đồng/tối nhìn rõ trên nền trắng lẫn nền tối.
+    def self.edge_color
+      Theme.mode == :dark ? Theme.color(:accent, 230) : Theme.color(:text, 150)
+    end
+
+    def self.edge_hover_color
+      Theme.accent_line(240)
+    end
+
+    def self.guide_color
+      Theme.accent_line
+    end
 
     # Chữ nét (stroke font) vẽ trong không gian 3D để chữ nằm song song mặt tủ và xoay theo góc nhìn.
     # Lưới 2 x 4 đơn vị (rộng x cao); mỗi ký tự là danh sách các đường gấp khúc.
@@ -128,16 +139,16 @@ module VGD_Cabinet_Draw
         [points.sum { |p| p.distance(eye) } / points.length, screen, kind]
       end.sort_by { |entry| -entry[0] }
       visible.each do |_, points, kind|
-        view.drawing_color = COLORS.fetch(kind, COLORS[:body])
+        view.drawing_color = self.class.fill_color(kind)
         triangles = Geom.tesselate(points)
         view.draw2d(GL_TRIANGLES, triangles) unless triangles.empty?
       end
       view.line_width = 1
       view.line_stipple = ''
-      view.drawing_color = EDGE
+      view.drawing_color = self.class.edge_color
       visible.each { |_, points, kind| view.draw2d(GL_LINE_LOOP, points) unless kind == :hover }
       view.line_stipple = '-'
-      view.drawing_color = EDGE_HOVER
+      view.drawing_color = self.class.edge_hover_color
       visible.each { |_, points, kind| view.draw2d(GL_LINE_LOOP, points) if kind == :hover }
       view.line_stipple = ''
       @lines.each do |points, kind|
@@ -146,11 +157,11 @@ module VGD_Cabinet_Draw
         if kind == :guide
           view.line_width = 2
           view.line_stipple = '-'
-          view.drawing_color = GUIDE
+          view.drawing_color = self.class.guide_color
         else
           view.line_width = 1
           view.line_stipple = ''
-          view.drawing_color = kind == :cutter ? COLORS[:cutter] : EDGE
+          view.drawing_color = kind == :cutter ? self.class.fill_color(:cutter) : self.class.edge_color
         end
         view.draw2d(GL_LINES, screen)
       end
@@ -159,16 +170,17 @@ module VGD_Cabinet_Draw
       @labels.each do |point, text|
         next if (point - eye).dot(direction) <= 0
         spot = view.screen_coords(point)
-        view.draw_text([spot.x + 6, spot.y - 16], text, color: Sketchup::Color.new(150, 70, 0), size: 10, bold: true)
+        Theme.draw_text(view, [spot.x + 6, spot.y - 16], text, color: Theme.accent_line, size: 10, bold: true)
       end
     ensure
       view.line_width = 1
       view.line_stipple = ''
     end
 
-    TEXT_BG = Sketchup::Color.new(255, 255, 255, 225)
-    TEXT_INK = Sketchup::Color.new(20, 60, 90, 255)
-    TEXT_FRAME = Sketchup::Color.new(232, 131, 36, 255)
+    # Hộp chữ kích thước theo chế độ sáng/tối của dialog.
+    def text_background; Theme.color(:surface, 225); end
+    def text_ink; Theme.color(:text); end
+    def text_frame; Theme.color(:accent); end
 
     # Vẽ các hộp chữ: nền trắng + khung cam + chữ nét, tất cả nằm trong mặt phẳng của mặt tủ (không xoay theo màn hình).
     def draw_texts(view, eye)
@@ -189,14 +201,14 @@ module VGD_Cabinet_Draw
         half = width / 2.0 + pad
         frame = [[-half, -2.0 - pad], [half, -2.0 - pad], [half, 2.0 + pad], [-half, 2.0 + pad]].map { |u, v| view.screen_coords(point.call(u, v)) }
         flat = frame.map { |p| Geom::Point3d.new(p.x, p.y, 0) }
-        view.drawing_color = TEXT_BG
+        view.drawing_color = text_background
         view.draw2d(GL_QUADS, flat)
         view.line_width = 1
         view.line_stipple = ''
-        view.drawing_color = TEXT_FRAME
+        view.drawing_color = text_frame
         view.draw2d(GL_LINE_LOOP, flat)
         view.line_width = 1
-        view.drawing_color = TEXT_INK
+        view.drawing_color = text_ink
         strokes.each do |line|
           pts = line.map { |u, v| p = view.screen_coords(point.call(u, v)); Geom::Point3d.new(p.x, p.y, 0) }
           view.draw2d(GL_LINE_STRIP, pts)

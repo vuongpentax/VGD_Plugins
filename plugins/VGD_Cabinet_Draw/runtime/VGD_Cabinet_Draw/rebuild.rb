@@ -86,37 +86,126 @@ module VGD_Cabinet_Draw
       (Interior.door_thickness_mm(root) || board_mm).to_f.mm
     end
 
-    # Hộp [x0,y0,z0,x1,y1,z1] của một đợt tại độ cao pos trong ô (đợt ngang).
+    # Hộp [x0,y0,z0,x1,y1,z1] của một đợt tại độ cao pos trong ô (đợt ngang), trước khi trừ xà trước.
     def board_box(shell, cell, pos, t, setback)
       y1 = Interior.back_limit(shell, pos, pos + t)
       [cell.x0, [cell.y0 + setback, y1 - 10.mm].min, pos, cell.x1, y1, pos + t]
     end
 
-    # Biên dạng [y, z] của vách (tấm đứng) tại ô: đi hết chiều sâu tới mặt sau trong cùng,
-    # chỉ khấu góc sau-trên đúng ở dải cao của xà treo / giằng sau. Phần dưới xà không bị cắt ngắn.
-    # Vách cũng lùi mặt trước như đợt (cánh lọt nằm giữa hai hông, vách không được đâm vào mặt tủ).
-    def vertical_profile(shell, cell, setback)
-      yb = Interior.full_depth(shell)
-      yf = [cell.y0 + setback, yb - 10.mm].min
-      pts = [[yf, cell.z0], [yb, cell.z0]]
-      Interior.back_notches(shell, cell.z0, cell.z1).each do |ny, za, zb|
-        pts += [[yb, za], [ny, za], [ny, zb], [yb, zb]]
-      end
-      pts += [[yb, cell.z1], [yf, cell.z1]]
-      pts.each_with_object([]) do |p, out|
-        last = out.last
-        out << p unless last && (last[0] - p[0]).abs < Interior::EPS && (last[1] - p[1]).abs < Interior::EPS
-      end
+    # Xà trước (giằng trước) đang có trong tủ: tấm đợt và vách phải khấu quanh các thanh này.
+    FRONT_RAILS = %w[rail_front rail_front_2 rail_front_bottom rail_front_bottom_2].freeze
+    RAIL_ROLES = (FRONT_RAILS + %w[rail_back rail_back_bottom]).freeze
+
+    def front_rail_boxes(shell)
+      Interior.containers(shell).select { |e| FRONT_RAILS.include?(Interior.role_of(e)) }.map { |e| Interior.box_of(e) }
     end
 
-    # Các mặt (để vẽ xem trước) của biên dạng vách đã đùn theo x từ x0 tới x1.
-    def profile_faces(profile, x0, x1)
-      front = profile.map { |y, z| [x0, y, z] }
-      back = profile.map { |y, z| [x1, y, z] }
-      sides = profile.each_index.map do |i|
-        y, z = profile[i]
-        ny, nz = profile[(i + 1) % profile.size]
-        [[x0, y, z], [x0, ny, nz], [x1, ny, nz], [x1, y, z]]
+    def overlap?(a0, a1, b0, b1)
+      [a1, b1].min - [a0, b0].max > Interior::EPS
+    end
+
+    # Đường biên (2D) của vùng còn lại của một tấm: hình chữ nhật base = [u0, v0, u1, v1] trừ các hình chữ nhật chắn.
+    # Trả về các đỉnh theo vòng, hoặc nil nếu vùng bị tách thành nhiều mảnh, có lỗ, hoặc không còn gì.
+    def board_outline(base, blockers)
+      us = grid_values(base[0], base[2], blockers.flat_map { |b| [b[0], b[2]] })
+      vs = grid_values(base[1], base[3], blockers.flat_map { |b| [b[1], b[3]] })
+      inside = lambda do |i, j|
+        next false if i.negative? || j.negative? || i >= us.length - 1 || j >= vs.length - 1
+        cu = (us[i] + us[i + 1]) / 2.0
+        cv = (vs[j] + vs[j + 1]) / 2.0
+        blockers.none? { |b| cu > b[0] && cu < b[2] && cv > b[1] && cv < b[3] }
+      end
+      # Cạnh có hướng ngược chiều kim đồng hồ, chỉ ở mép ô đầy mà ô bên cạnh trống.
+      next_at = {}
+      (0...us.length - 1).each do |i|
+        (0...vs.length - 1).each do |j|
+          next unless inside.call(i, j)
+          a, b, c, d = [i, j], [i + 1, j], [i + 1, j + 1], [i, j + 1]
+          edges = []
+          edges << [a, b] unless inside.call(i, j - 1)
+          edges << [b, c] unless inside.call(i + 1, j)
+          edges << [c, d] unless inside.call(i, j + 1)
+          edges << [d, a] unless inside.call(i - 1, j)
+          edges.each do |from, to|
+            return nil if next_at.key?(from)
+            next_at[from] = to
+          end
+        end
+      end
+      start = next_at.keys.first
+      return nil unless start
+      ring = [start]
+      key = next_at[start]
+      until key == start
+        return nil if key.nil? || ring.length > next_at.length
+        ring << key
+        key = next_at[key]
+      end
+      return nil unless ring.length == next_at.length
+      pts = ring.map { |i, j| [us[i], vs[j]] }
+      pts.each_index.reject do |k|
+        prev, cur, nxt = pts[k - 1], pts[k], pts[(k + 1) % pts.length]
+        ((cur[0] - prev[0]) * (nxt[1] - cur[1]) - (cur[1] - prev[1]) * (nxt[0] - cur[0])).abs < 1e-9
+      end.map { |k| pts[k] }
+    end
+
+    # Các giá trị lưới trong [lo, hi] gồm hai mép và các mép của hình chắn (đã bỏ trùng).
+    def grid_values(lo, hi, extra)
+      values = [lo, hi] + extra.select { |v| v > lo + Interior::EPS && v < hi - Interior::EPS }
+      values.sort.each_with_object([]) { |v, out| out << v unless out.last && (v - out.last).abs < Interior::EPS }
+    end
+
+    # Biên đợt ngang (x, y) tại độ cao pos: trừ các xà trước có độ cao chắn đợt.
+    def shelf_outline(shell, cell, pos, t, setback)
+      b = board_box(shell, cell, pos, t, setback)
+      blockers = front_rail_boxes(shell).select { |r| overlap?(r[2], r[5], pos, pos + t) }.map { |r| [r[0], r[1], r[3], r[4]] }
+      board_outline([b[0], b[1], b[3], b[4]], blockers) || raise('Đợt không dựng được: xà chắn làm tấm bị tách hoặc hết chỗ.')
+    end
+
+    # Biên vách (y, z) tại vách có độ dày x_range = [x0, x1]: đi hết chiều sâu tới mặt sau, trừ khấu xà sau
+    # và xà trước đang chắn. x_range = nil: coi mọi xà trước đều chắn.
+    def vertical_profile(shell, cell, setback, x_range = nil)
+      yb = Interior.full_depth(shell)
+      yf = [cell.y0 + setback, yb - 10.mm].min
+      z0, z1 = partition_z_range(shell, cell)
+      blockers = Interior.back_notches(shell, z0, z1).map { |ny, za, zb| [ny, za, yb, zb] }
+      rails = front_rail_boxes(shell)
+      rails = rails.select { |r| overlap?(r[0], r[3], *x_range) } if x_range
+      blockers += rails.map { |r| [r[1], r[2], r[4], r[5]] }
+      board_outline([yf, z0, yb, z1], blockers) || raise('Vách không dựng được: xà chắn làm tấm bị tách hoặc hết chỗ.')
+    end
+
+    # Vách cao tới mép xà khi tủ không có nóc (hoặc đáy): xà thay nóc/đáy nằm ngoài ô, nên vách kéo tới mép của xà
+    # rồi bị xà khấu. Tủ có nóc/đáy thì giữ nguyên ô.
+    def partition_z_range(shell, cell)
+      parts = Interior.carcass(shell)
+      z0 = cell.z0
+      z1 = cell.z1
+      rails = rail_boxes(shell)
+      unless parts['bottom']
+        below = rails.select { |b| b[2] < cell.z0 - Interior::EPS }
+        z0 = below.map { |b| b[2] }.min if below.any?
+      end
+      unless parts['top']
+        above = rails.select { |b| b[5] > cell.z1 + Interior::EPS }
+        z1 = above.map { |b| b[5] }.max if above.any?
+      end
+      [z0, z1]
+    end
+
+    # Hộp của mọi xà (trước và sau, trên và dưới) đang có trong tủ.
+    def rail_boxes(shell)
+      Interior.containers(shell).select { |e| RAIL_ROLES.include?(Interior.role_of(e)) }.map { |e| Interior.box_of(e) }
+    end
+
+    # Các mặt (để vẽ xem trước) của một đường biên đùn từ lo tới hi. place ghép (a, b, k) thành điểm 3D.
+    def prism_faces(outline, lo, hi, place)
+      front = outline.map { |a, b| place.call(a, b, lo) }
+      back = outline.map { |a, b| place.call(a, b, hi) }
+      sides = outline.each_index.map do |i|
+        a, b = outline[i]
+        c, d = outline[(i + 1) % outline.size]
+        [place.call(a, b, lo), place.call(c, d, lo), place.call(c, d, hi), place.call(a, b, hi)]
       end
       [front, back] + sides
     end
@@ -130,11 +219,16 @@ module VGD_Cabinet_Draw
     def panel_positions(shell, cell, op)
       vertical = op['axis'] == 'vertical'
       t = op['thickness_mm'].to_f.mm
-      low, high = vertical ? [cell.x0, cell.x1] : [cell.z0, cell.z1]
+      # 'absolute': vị trí đo từ lòng tủ (xem Removal.freeze_panel_steps); còn lại đo từ mép ô.
+      base = op['absolute'] ? Interior.inner(shell) : cell
+      low, high = vertical ? [base.x0, base.x1] : [base.z0, base.z1]
+      # 'omit': chỉ số các tấm đã xóa (xem Removal). Tấm còn lại giữ nguyên vị trí.
+      omit = Array(op['omit']).map(&:to_i)
       if op['mode'] == 'divide'
-        divide_positions(cell, op['count'].to_i, op['kind'].to_s, t, vertical)
+        positions = divide_positions(cell, op['count'].to_i, op['kind'].to_s, t, vertical)
+        positions.each_with_index.reject { |_, i| omit.include?(i) }.map(&:first)
       else
-        (op['offsets'] || []).map { |mm| [[low + mm.to_f.mm, low].max, high - t].min }
+        (op['offsets'] || []).each_with_index.reject { |_, i| omit.include?(i) }.map { |mm, _| [[low + mm.to_f.mm, low].max, high - t].min }
       end
     end
 
@@ -152,16 +246,17 @@ module VGD_Cabinet_Draw
       positions.each_with_index do |pos, index|
         next if skip.include?(index)
         if vertical
-          profile = vertical_profile(shell, span_cell, setback)
+          profile = vertical_profile(shell, span_cell, setback, [pos, pos + t])
           points = profile.map { |y, z| [pos, y, z] }
           board = Geometry.rectangular_board(shell.definition.entities, "Vách #{existing + boards.length + 1}", points, t, X_AXIS)
           Geometry.stamp_part(board, 'partition', { 'thickness_mm' => t.to_mm, 'divide_kind' => op['kind'], 'op' => op['op'], 'index' => index })
         else
-          b = board_box(shell, span_cell, pos, t, setback)
-          points = [[b[0], b[1], b[2]], [b[3], b[1], b[2]], [b[3], b[4], b[2]], [b[0], b[4], b[2]]]
+          outline = shelf_outline(shell, span_cell, pos, t, setback)
+          points = outline.map { |x, y| [x, y, pos] }
           board = Geometry.rectangular_board(shell.definition.entities, "Đợt #{existing + boards.length + 1}", points, t, Z_AXIS)
+          front_setback = board_box(shell, span_cell, pos, t, setback)[1] - cell.y0
           Geometry.stamp_part(board, 'shelf', { 'thickness_mm' => t.to_mm, 'divide_kind' => op['kind'], 'op' => op['op'], 'index' => index,
-                                                'front_setback_mm' => (b[1] - cell.y0).to_mm })
+                                                'front_setback_mm' => front_setback.to_mm })
         end
         Geometry.stamp_signature(board)
         boards << board
@@ -185,7 +280,7 @@ module VGD_Cabinet_Draw
           b = Interior.box_of(entity).map(&:to_mm)
           edited = b.zip(expected[role]).any? { |a, e| (a - e).abs > 0.5 }
         end
-        out << { entity: entity, label: entity.name.to_s, role: role, signed: !entity.get_attribute(DICT, 'geo_sig').nil? } if edited
+        out << { entity: entity, label: entity.name.to_s, role: role, signed: Geometry.signed?(entity) } if edited
       end
       # Tủ tạo bằng bản rất cũ (chưa có chữ ký): nếu MỌI tấm vỏ tủ đều lệch so với tính toán hiện tại thì đó là do
       # đổi phiên bản, không phải chỉnh tay — không hỏi.
@@ -307,7 +402,7 @@ module VGD_Cabinet_Draw
 
     # Dựng lại một tủ với thông số và kích thước mới (mm). keep: các entity chỉnh tay cần giữ nguyên.
     # Chạy trong một operation do công cụ mở. Trả về danh sách cảnh báo.
-    def run(root, settings, dims, keep = [])
+    def run(root, settings, dims, keep = [], share: true)
       warnings = []
       result = PanelModel.compute(dims[0], dims[1], dims[2], settings) # kiểm tra trước khi xóa gì
       # Tấm giữ nguyên được nhận theo vai trò / (bước, chỉ số), không theo đối tượng: make_unique (tủ là bản copy)
@@ -324,13 +419,20 @@ module VGD_Cabinet_Draw
           kept_roles << role
         end
       end
+      # Cấu kiện giữ tại chỗ (co giãn tủ): không dựng lại, không xóa, không chép lại tay nắm.
+      kept_keys = keep.select(&:valid?).map { |entity| stretch_key(entity) }.compact
+      kept_item = ->(entity) { kept_keys.include?(stretch_key(entity)) }
       make_unique_tree(root)
       shell = Geometry.shell_for(root)
       raise 'Không tìm thấy thùng tủ.' unless shell
       list = adopt_legacy(root, shell)
-      drawer_handles = capture_drawer_handles(root)
+      doors = Operations.doors_of(root)
+      doors_kept = !doors.empty? && doors.all? { |door| kept_keys.include?(stretch_key(door)) }
+      drawer_handles = capture_drawer_handles(root, kept_keys)
       warnings << 'Ngăn kéo đang mở được đóng lại khi dựng lại tủ.' if DrawerSlide.any_open?(root)
       unscale!(root)
+      # Vật liệu và vân của các ván vỏ tủ sẽ dựng lại được nhớ lại trước khi xóa, rồi gán lại cho ván mới.
+      looks = carcass_looks(shell, kept_roles)
       keep = Interior.containers(shell).select do |entity|
         role = Interior.role_of(entity)
         params = ModelData.params(entity)
@@ -343,7 +445,7 @@ module VGD_Cabinet_Draw
       end
       # Xóa phần sẽ dựng lại (giữ tấm chỉnh tay được chọn giữ). Chi tiết chưa có bước tạo (bản cũ) thì giữ + báo.
       Interior.containers(shell).each do |entity|
-        next if keep.include?(entity)
+        next if keep.include?(entity) || kept_item.call(entity)
         role = Interior.role_of(entity)
         kind = entity.get_attribute(DICT, 'kind')
         if Interior::CARCASS_ROLES.include?(role) || MEMBER_ROLES.include?(role)
@@ -364,12 +466,15 @@ module VGD_Cabinet_Draw
         next unless name == Operations::DRAWER_CONTAINER
         entity.definition.entities.to_a.each do |child|
           next unless child.valid?
+          next if kept_item.call(child)
           known.include?(child.get_attribute(DICT, 'op')) ? child.erase! : old_note.call('Ngăn kéo')
         end
       end
       Geometry.build_carcass(root, shell, result, settings, dims[0], dims[1], dims[2], {}, kept_roles)
+      apply_carcass_looks(shell, looks)
       failures = []
       list.sort_by { |op| op['op'].to_i }.each do |op|
+        next if op['type'] != 'panel' && kept_keys.any? { |key| key.length > 1 && key[1] == op['op'] }
         begin
           replay(root, shell, op, kept_members[op['op']])
         rescue StandardError => e
@@ -377,25 +482,624 @@ module VGD_Cabinet_Draw
         end
       end
       begin
-        rebuild_doors(root)
+        rebuild_doors(root) unless doors_kept
       rescue StandardError => e
         failures << "Cánh: #{e.message.sub(/\.\z/, '')}"
       end
       # Có bước không dựng lại được thì HỦY TOÀN BỘ (operation sẽ hoàn tác), để không mất chi tiết của người dùng.
       raise "Không sửa được tủ vì: #{failures.join('; ')}. Tủ giữ nguyên như cũ — hãy chỉnh lại thông số." unless failures.empty?
       restore_drawer_handles(root, drawer_handles)
-      Geometry.share_components(root)
+      Geometry.share_components(root) if share
       warnings
     end
 
-    # Tủ copy bằng Ctrl+Move dùng chung định nghĩa với bản gốc: tách riêng tủ và các nhóm con trực tiếp
-    # (thùng tủ, Cánh, Ngăn kéo, Chân & phào) trước khi sửa, để không sửa lây sang các bản copy khác.
-    def make_unique_tree(root)
-      root.make_unique if root.respond_to?(:make_unique)
-      root.definition.entities.to_a.each do |child|
-        next unless child.is_a?(Sketchup::Group) && child.valid?
-        child.make_unique if child.respond_to?(:make_unique)
+    # ---------- Co giãn tại chỗ (tự cập nhật khi kéo Scale) ----------
+    # Hai cách, tùy loại cấu kiện (xem Links cho quan hệ giữa các cấu kiện):
+    #   - Vỏ tủ, đợt/vách: CO GIÃN tại chỗ theo hộp cũ → hộp mới. Độ dày giữ nguyên, đối tượng giữ nguyên.
+    #   - Cánh, mặt và thùng ngăn kéo, khoang, xà chặn, hộc tủ áo: THAY NỘI DUNG bằng bản dựng lại ở kích thước mới,
+    #     nên khung, gờ, khe, đế giữ đúng mm (không co theo tỷ lệ). Đối tượng ngoài giữ nguyên, vật liệu đặt lại theo tên.
+    # Nội dung mới lấy từ BẢN THỬ (bản sao của tủ dựng ở kích thước mới), xóa bản thử khi xong.
+    # Tủ không khớp công thức thì dựng lại như cũ (rebuild_as_before).
+    REGENERATED_KINDS = %w[door front box bay blocker wardrobe_compartment].freeze
+
+    def regenerated?(key)
+      REGENERATED_KINDS.include?(key.first)
+    end
+
+    # Khóa nhận diện một cấu kiện co giãn được. nil nếu không nhận ra (tủ cũ hoặc chi tiết thiếu bước tạo).
+    def stretch_key(entity)
+      return nil unless entity.valid?
+      role = Interior.role_of(entity)
+      return [role] if Interior::CARCASS_ROLES.include?(role)
+      if MEMBER_ROLES.include?(role)
+        op = ModelData.params(entity)['op']
+        return op && [role, op, ModelData.params(entity)['index'].to_i]
       end
+      return door_key(entity) if Operations.door?(entity)
+      kind = entity.get_attribute(DICT, 'kind')
+      case kind
+      when 'drawer_front', 'drawer_box'
+        op = entity.get_attribute(DICT, 'op')
+        op && [kind == 'drawer_front' ? 'front' : 'box', op, entity.get_attribute(DICT, 'op_index').to_i]
+      when *EXTRA_KINDS
+        op = ModelData.params(entity)['op']
+        op && [kind, op]
+      end
+    end
+
+    def door_key(door)
+      region = door.get_attribute(DICT, 'region_id')
+      region && ['door', region.to_s]
+    end
+
+    def legacy_member?(entity)
+      Interior.role_of(entity).nil? && entity.name.to_s =~ /\A(Đợt|Vách) \d+\z/
+    end
+
+    # Các cấu kiện co giãn được của tủ: { khóa => entity }. nil nếu có chi tiết không nhận ra (tủ cũ hoặc thiếu bước).
+    def stretch_items(root, shell)
+      containers = Interior.containers(shell)
+      return nil if containers.any? { |e| legacy_member?(e) }
+      candidates = containers.select do |e|
+        role = Interior.role_of(e)
+        Interior::CARCASS_ROLES.include?(role) || MEMBER_ROLES.include?(role) || EXTRA_KINDS.include?(e.get_attribute(DICT, 'kind'))
+      end
+      container = root.definition.entities.to_a.find { |e| e.is_a?(Sketchup::Group) && e.valid? && e.name == Operations::DRAWER_CONTAINER }
+      candidates += container.definition.entities.to_a.select { |e| e.valid? && (DrawerSlide.front?(e) || DrawerSlide.box?(e)) } if container
+      candidates += Operations.doors_of(root)
+      items = {}
+      candidates.each do |entity|
+        key = stretch_key(entity)
+        return nil if key.nil? || items.key?(key)
+        items[key] = entity
+      end
+      items
+    end
+
+    # Hộp và thông số của từng cấu kiện: { khóa => { box:, params: } }. Cánh đo hộp trong hệ của cánh, phần còn lại
+    # đo trong hệ của nhóm chứa (hai hệ này trùng với hệ thùng tủ).
+    def recipe_of(items)
+      items.transform_values do |entity|
+        box = Operations.door?(entity) ? Operations.door_bounds(entity) : Interior.box_of(entity)
+        { box: box, params: entity.get_attribute(DICT, 'params_json') }
+      end
+    end
+
+    # Dựng thử tủ ở kích thước dims rồi giao bản thử và các cấu kiện của nó cho khối lệnh. Bản thử bị xóa khi xong.
+    def with_probe(root, settings, dims)
+      probe = probe_copy(root)
+      run(probe, settings, dims, [], share: false)
+      yield probe, stretch_items(probe, Geometry.shell_for(probe))
+    ensure
+      discard_probe(probe) if probe&.valid?
+    end
+
+    def same_keys?(recipe, items)
+      recipe.keys.map(&:inspect).sort == items.keys.map(&:inspect).sort
+    end
+
+    # Co giãn tủ đang bị kéo Scale về kích thước thật. Chạy trong một operation do người gọi mở. Trả về danh sách cảnh báo.
+    def stretch(root)
+      # Tách các nhóm dùng chung định nghĩa (tủ copy) trước khi đọc hay sửa, để không đổi lây sang bản copy khác.
+      make_unique_tree(root)
+      ensure_unshared!(root)
+      dims = dimensions_of(root)
+      settings = settings_of(root)
+      old_dims = ModelData.params(root).values_at('width_mm', 'depth_mm', 'height_mm').map(&:to_f)
+      shell = Geometry.shell_for(root)
+      raise 'Không tìm thấy thùng tủ.' unless shell
+      parts = stretch_items(root, shell)
+      return rebuild_as_before(root, settings, dims) unless parts
+      with_probe(root, settings, old_dims) do |_old_probe, old_items|
+        with_probe(root, settings, dims) do |new_probe, new_items|
+          return rebuild_as_before(root, settings, dims) unless old_items && new_items
+          from = recipe_of(old_items)
+          to = recipe_of(new_items)
+          unless from.values.all? { |item| item[:box] } && to.values.all? { |item| item[:box] }
+            return rebuild_as_before(root, settings, dims)
+          end
+          unless same_keys?(from, parts) && same_keys?(to, parts)
+            # Chỉ số cánh đổi (cánh tự động: khoang vượt/không vượt ngưỡng sau khi scale): co giãn các tấm còn lại, cánh dựng lại theo vách/hông.
+            return rebuild_as_before(root, settings, dims) unless auto_door_layout?(root) && same_keys?(without_doors(from), without_doors(parts)) && same_keys?(without_doors(to), without_doors(parts))
+            parts = without_doors(parts)
+            from = without_doors(from)
+            to = without_doors(to)
+          end
+          # Bản lề phải còn bắt được vào tấm vỏ tủ ở kích thước mới; nếu không thì ném lỗi, operation hoàn tác.
+          Links.check!(Geometry.shell_for(new_probe), Operations.doors_of(new_probe))
+          layout_json = new_probe.get_attribute(DICT, 'door_layout_json')
+          warnings = stretch_all!(root, settings, dims, parts, from, to, new_items)
+          # Cánh tự động đã được tính lại trong bản thử: bố cục lưu của tủ lấy theo đó.
+          root.set_attribute(DICT, 'door_layout_json', layout_json) if layout_json && auto_door_layout?(root) && Operations.doors_of(root).length == JSON.parse(layout_json)['regions'].count { |r| !r['empty'] }
+          warnings
+        end
+      end
+    end
+
+    def stretch_all!(root, settings, dims, parts, from, to, new_items)
+      unscale!(root)
+      # Cánh đang mở: nhớ góc, hướng mở và loại mở hiện tại, đóng về 0 để thay nội dung, rồi mở lại sau.
+      door_states = Links.ordered(Operations.doors_of(root).select { |door| parts.value?(door) }).map do |door|
+        [door, Operations.door_angle(door), door.get_attribute(DICT, 'opening_side', 'left'), Operations.opening_type_of(door)]
+      end
+      DrawerSlide.close_all(root)
+      door_states.each { |door, angle, side, _type| Operations.set_door_angle(door, side, 0) if angle > 0.5 }
+      # Tách bản riêng trước khi sửa (tránh đổi lây sang bản copy dùng chung), rồi nhớ và gỡ tay nắm (dựng lại sau).
+      parts.each_value { |entity| entity.make_unique if entity.is_a?(Sketchup::ComponentInstance) }
+      handles = parts.values.to_h { |entity| [entity, Operations.handle_specs(entity)] }
+      parts.each_value { |entity| Operations.handle_groups(entity).each(&:erase!) }
+      # Tấm đang chỉnh tay (lệch chữ ký) giữ chữ ký cũ để vẫn được nhận là chỉnh tay sau khi co giãn.
+      edited_before = parts.transform_values { |entity| Geometry.hand_edited?(entity) }
+      parts.each do |key, entity|
+        if regenerated?(key)
+          replace_contents(entity, new_items.fetch(key))
+        elsif !same_box?(from[key][:box], to[key][:box])
+          stretch_features!(entity, from[key][:box], to[key][:box])
+        end
+        Geometry.stamp_signature(entity) if Interior.role_of(entity) && !edited_before[key]
+        entity.set_attribute(DICT, 'params_json', to[key][:params]) if to[key][:params]
+      end
+      handles.each { |entity, specs| specs.each { |spec| Operations.add_handle(entity, spec) } }
+      door_states.each do |door, angle, side, type|
+        Operations.apply_opening_metadata(door, type)
+        Operations.set_door_angle(door, side, angle) if angle > 0.5
+      end
+      run(root, settings, dims, parts.values, share: false)
+    end
+
+    # Tủ không khớp công thức (thường là tủ tạo bằng bản cũ): dựng lại như trước, giữ tấm chỉnh tay, và báo lại.
+    def rebuild_as_before(root, settings, dims)
+      keep = hand_edited(root).map { |item| item[:entity] }
+      warnings = run(root, settings, dims, keep)
+      warnings << 'Tủ không khớp công thức (có thể tạo bằng bản cũ): đã dựng lại như trước, hãy kiểm tra ván.'
+    end
+
+    def same_box?(a, b)
+      a.zip(b).all? { |x, y| (x - y).abs < Interior::EPS }
+    end
+
+    # Thay toàn bộ nội dung của một cấu kiện bằng nội dung đã dựng trong bản thử (đúng mm, không co theo tỷ lệ).
+    # Giữ đối tượng cấu kiện và thuộc tính của nó; vật liệu đã sơn được đặt lại theo đường dẫn tên.
+    def replace_contents(target, source)
+      materials = material_paths(contents_of(target))
+      Operations.handle_groups(source).each(&:erase!)
+      contents_of(source).to_a.each { |e| e.erase! if e.valid? && e.respond_to?(:name) && e.name == Operations::MARKER_NAME }
+      contents_of(target).to_a.each { |e| e.erase! if e.valid? }
+      contents_of(target).add_instance(source.definition, Geom::Transformation.new).explode
+      restore_material_paths(contents_of(target), materials)
+    end
+
+    # Vật liệu của các nhóm con, theo đường dẫn tên (tên + số thứ tự trong nhóm cha), để đặt lại sau khi thay nội dung.
+    def material_paths(entities, prefix = '')
+      counts = Hash.new(0)
+      entities.to_a.each_with_object({}) do |e, out|
+        next unless e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)
+        counts[e.name] += 1
+        path = "#{prefix}#{e.name}##{counts[e.name]}/"
+        out[path] = e.material if e.material
+        out.merge!(material_paths(contents_of(e), path))
+      end
+    end
+
+    def restore_material_paths(entities, paths, prefix = '')
+      counts = Hash.new(0)
+      entities.to_a.each do |e|
+        next unless e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)
+        counts[e.name] += 1
+        path = "#{prefix}#{e.name}##{counts[e.name]}/"
+        e.material = paths[path] if paths[path]
+        restore_material_paths(contents_of(e), paths, path)
+      end
+    end
+
+    # Vật liệu của từng ván vỏ tủ: vật liệu nhóm + vật liệu từng mặt (khớp theo hướng pháp tuyến của mặt).
+    def carcass_looks(shell, kept_roles)
+      Interior.containers(shell).each_with_object({}) do |entity, out|
+        role = Interior.role_of(entity)
+        next unless Interior::CARCASS_ROLES.include?(role) && !kept_roles.include?(role)
+        faces = contents_of(entity).grep(Sketchup::Face).map { |face| [normal_key(face), face.material, face.back_material] }
+        out[role] = { material: entity.material, faces: faces }
+      end
+    end
+
+    def apply_carcass_looks(shell, looks)
+      Interior.containers(shell).each do |entity|
+        look = looks[Interior.role_of(entity)]
+        next unless look
+        entity.material = look[:material] if look[:material]
+        pending = look[:faces].group_by(&:first)
+        contents_of(entity).grep(Sketchup::Face).each do |face|
+          match = pending[normal_key(face)]&.shift
+          next unless match
+          face.material = match[1] if match[1]
+          face.back_material = match[2] if match[2]
+        end
+        reset_textures(entity)
+      end
+    end
+
+    def normal_key(face)
+      face.normal.to_a.map { |v| v.round(4) }
+    end
+
+    # Co giãn một tấm vỏ tủ / đợt / vách tại chỗ: đưa hộp cũ về hộp mới, giữ nguyên các chi tiết bên trong.
+    def stretch_part!(entity, old_box, new_box)
+      placement = entity.transformation
+      transform = placement.inverse * stretch_transform(old_box, new_box) * placement
+      contents = contents_of(entity)
+      contents.transform_entities(transform, contents.to_a)
+      reset_textures(entity)
+    end
+
+    # Nhịp trống tối thiểu để một đoạn của tấm được giãn khi tủ đổi cỡ. Mộng, lỗ, khấu, dấu tiết diện nhỏ hơn mức này
+    # giữ nguyên kích thước (mm); chỉ các nhịp trống lớn giữa chúng giãn ra.
+    STRETCH_GAP_MIN = 150.mm
+    STRETCH_EDGE_ZONE = 100.mm # dải sát mép tấm giữ nguyên khi co giãn
+    KNOT_EPS = 0.01.mm
+
+    # Co giãn một cấu kiện tại chỗ mà giữ nguyên hình dạng chi tiết (mộng xương chó, lỗ, khấu, bản lề, dấu tiết diện,
+    # khối lẻ), kể cả texture. Thân tấm (khối lớn nhất) chỉ giãn ở các nhịp trống lớn; các khối rời chuyển nguyên khối
+    # theo vị trí tâm của chúng. Hộp cũ/mới là hộp quy tắc (bản thử), nên không phụ thuộc hình người dùng vẽ thêm.
+    def stretch_features!(entity, old_box, new_box)
+      placement = entity.transformation
+      return stretch_part!(entity, old_box, new_box) unless pure_translation?(placement)
+      contents = contents_of(entity)
+      origin = placement.origin.to_a
+      comps = vertex_components(contents)
+      nested = contents.to_a.select { |e| e.valid? && (e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)) }
+      return if comps.empty? && nested.empty?
+      main = comps.max_by { |vs| component_diagonal(vs, origin) }
+      shift = (0..2).map do |i|
+        coords = main ? main.map { |v| v.position.to_a[i] + origin[i] } : []
+        lo, hi, new_lo, new_hi = old_box[i], old_box[i + 3], new_box[i], new_box[i + 3]
+        knots = stretch_knots(coords, lo, hi, new_lo, new_hi)
+        ->(v) { knot_shift(knots, lo, hi, new_lo, new_hi, v) }
+      end
+      snapshot = geometry_snapshot(contents)
+      vertices = []
+      vectors = []
+      targets = []
+      comps.each do |vs|
+        rigid = !vs.equal?(main)
+        centers = rigid ? (0..2).map { |i| axis_center(vs.map { |v| v.position.to_a[i] + origin[i] }) } : nil
+        vs.each do |v|
+          pos = v.position.to_a
+          d = (0..2).map { |i| shift[i].call(rigid ? centers[i] : pos[i] + origin[i]) }
+          targets << [v, (0..2).map { |i| pos[i] + origin[i] + d[i] }]
+          next if d.all? { |x| x.abs < 1e-9 }
+          vertices << v
+          vectors << Geom::Vector3d.new(*d)
+        end
+      end
+      move_vertices(contents, vertices, vectors)
+      after_vertices = stretch_deviation(targets, origin)
+      rebuilt = false
+      unless after_vertices.empty?
+        # SketchUp tự chỉnh thêm khi dời đỉnh (kéo đỉnh hình cung ra xa): dựng lại tấm từ vị trí kế hoạch đã lưu.
+        puts "[VGD Cabinet Draw] #{entity.name}: SketchUp chỉnh lệch #{after_vertices.length} đỉnh khi dời, dựng lại tấm từ vị trí kế hoạch."
+        rebuild_geometry!(contents, snapshot, targets, origin)
+        rebuilt = true
+        report_deviation!(entity, after_vertices, after_vertices) unless rebuilt_matches?(contents, targets, origin)
+      end
+      if move_nested?
+        nested.each do |inst|
+          b = inst.bounds
+          d = (0..2).map { |i| shift[i].call((b.min.to_a[i] + b.max.to_a[i]) / 2.0 + origin[i]) }
+          contents.transform_entities(Geom::Transformation.translation(d), [inst]) unless d.all? { |x| x.abs < 1e-9 }
+        end
+      end
+      final = rebuilt ? [] : stretch_deviation(targets, origin)
+      report_deviation!(entity, after_vertices, final) unless final.empty?
+      reset_textures(entity)
+    end
+
+    # Có dời nhóm con (ví dụ mặt tiết diện CNC của tool khác) cùng tấm hay không. Mặc định có. Tắt bằng
+    # VGD_Cabinet_Draw::Rebuild.move_nested = false để thử khi tool khác phản ứng với việc dời nhóm con.
+    def move_nested?
+      @move_nested.nil? ? true : @move_nested
+    end
+
+    attr_writer :move_nested
+
+    # Hình học của thân tấm sau khi dời phải đúng kế hoạch (hộp bao đã tính trước). Lệch nghĩa là SketchUp hoặc tool khác
+    # đã chỉnh thêm (đỉnh bị kéo ra xa): báo lỗi để hoàn tác thao tác, không để hỏng tấm.
+    def vertex_key(vertex)
+      return vertex.entityID if vertex.respond_to?(:entityID)
+      return [vertex.owner.object_id, vertex.idx] if vertex.respond_to?(:owner) && vertex.owner
+      vertex.position.to_a.map { |x| x.round(6) }
+    end
+
+    # Hình học của tấm (mặt với các vòng đỉnh, cạnh, vật liệu, thuộc tính) để dựng lại khi SketchUp dời đỉnh sai.
+    def geometry_snapshot(contents)
+      faces = contents.grep(Sketchup::Face).map do |face|
+        outer = face.outer_loop
+        loops = [outer] + (face.loops - [outer])
+        { loops: loops.map { |loop| loop.vertices.map { |v| vertex_key(v) } }, normal: face.normal.to_a,
+          material: face.material, back_material: face.back_material, attrs: attribute_snapshot(face) }
+      end
+      edges = contents.grep(Sketchup::Edge).map do |edge|
+        { a: vertex_key(edge.start), b: vertex_key(edge.end), soft: edge.soft?, smooth: edge.smooth?, hidden: edge.hidden?,
+          loose: edge.faces.empty?, attrs: attribute_snapshot(edge) }
+      end
+      { faces: faces, edges: edges }
+    end
+
+    def attribute_snapshot(entity)
+      dictionaries = entity.respond_to?(:attribute_dictionaries) ? entity.attribute_dictionaries : nil
+      (dictionaries || []).map do |dictionary|
+        values = {}
+        dictionary.each_pair { |key, value| values[key] = value }
+        [dictionary.name, values]
+      end
+    end
+
+    def restore_attributes(snapshot, entity)
+      snapshot.each { |name, values| values.each { |key, value| entity.set_attribute(name, key, value) } }
+    end
+
+    # Dựng lại hình học của tấm từ vị trí kế hoạch: tạo mặt mới trong nhóm tạm, xóa hình cũ rồi tháo nhóm tạm.
+    def rebuild_geometry!(contents, snapshot, targets, origin)
+      target_of = targets.each_with_object({}) { |(v, t), h| h[vertex_key(v)] = t }
+      point = lambda do |key|
+        t = target_of.fetch(key)
+        Geom::Point3d.new(*(0..2).map { |i| t[i] - origin[i] })
+      end
+      temp = contents.add_group
+      snapshot[:faces].each do |snap|
+        loops = snap[:loops].map { |keys| keys.map { |k| point.call(k) } }
+        face = temp.entities.add_face(loops.first)
+        raise 'Không dựng lại được một mặt của tấm.' unless face
+        loops.drop(1).each do |hole|
+          inner = temp.entities.add_face(hole)
+          inner.erase! if inner && inner.valid?
+        end
+        face.reverse! if face.normal.dot(Geom::Vector3d.new(*snap[:normal])) < 0
+        face.material = snap[:material] if snap[:material]
+        face.back_material = snap[:back_material] if snap[:back_material]
+        restore_attributes(snap[:attrs], face)
+      end
+      (contents.grep(Sketchup::Face) + contents.grep(Sketchup::Edge)).each { |e| e.erase! if e.valid? }
+      temp.explode
+      index = contents.grep(Sketchup::Edge).each_with_object({}) { |e, h| h[edge_key(e.start.position, e.end.position)] = e }
+      snapshot[:edges].each do |snap|
+        a = point.call(snap[:a])
+        b = point.call(snap[:b])
+        edge = index[edge_key(a, b)] || (snap[:loose] ? contents.add_line(a, b) : nil)
+        next unless edge
+        edge.soft = snap[:soft]
+        edge.smooth = snap[:smooth]
+        edge.hidden = snap[:hidden]
+        restore_attributes(snap[:attrs], edge)
+      end
+    end
+
+    def edge_key(a, b)
+      [a, b].map { |p| p.to_a.map { |x| (x.to_mm * 100).round } }.sort
+    end
+
+    # Hình học sau khi dựng lại có đúng các đỉnh kế hoạch không (làm tròn 0.01 mm).
+    def rebuilt_matches?(contents, targets, origin)
+      rounded = ->(p) { p.map { |x| (x.to_mm * 100).round } }
+      planned = targets.map { |_, t| rounded.call(t) }.uniq.sort
+      vertices = contents.grep(Sketchup::Face).flat_map(&:vertices) + contents.grep(Sketchup::Edge).flat_map(&:vertices)
+      actual = vertices.map { |v| rounded.call(v.position.to_a.each_with_index.map { |x, i| x + origin[i] }) }.uniq.sort
+      planned == actual
+    end
+
+    def stretch_deviation(targets, origin)
+      bad = []
+      targets.each do |v, target|
+        next if v.respond_to?(:valid?) && !v.valid?
+        actual = v.position.to_a.each_with_index.map { |x, i| x + origin[i] }
+        error = (0..2).map { |i| (actual[i] - target[i]).abs }.max
+        bad << [error, target, actual] if error > 0.5.mm
+      end
+      bad.sort_by { |item| -item[0] }
+    end
+
+    # Đỉnh lệch khỏi vị trí kế hoạch nghĩa là SketchUp hoặc tool khác đã chỉnh thêm (đỉnh bị kéo ra xa). Báo lỗi để hoàn tác
+    # thao tác thay vì để hỏng tấm, và nói rõ lệch xảy ra ngay khi dời đỉnh hay chỉ sau khi dời nhóm con.
+    def report_deviation!(entity, after_vertices, final)
+      puts "[VGD Cabinet Draw] #{entity.name}: #{final.length} đỉnh lệch kế hoạch (ngay sau khi dời đỉnh: #{after_vertices.length}). " \
+           'Ví dụ (mm, kế hoạch -> thực tế):'
+      final.first(5).each { |_error, t, a| puts "  #{t.map { |x| x.to_mm.round(1) }.inspect} -> #{a.map { |x| x.to_mm.round(1) }.inspect}" }
+      phase = after_vertices.empty? ? 'chỉ lệch sau khi dời nhóm con (có thể tool khác phản ứng)' : 'lệch ngay khi dời đỉnh (SketchUp chỉnh thêm)'
+      raise "Tấm #{entity.name} bị méo khi co giãn: #{phase}. Chi tiết ở Ruby Console. Đã hoàn tác thao tác này."
+    end
+
+    # Dời mọi đỉnh một lần, mỗi đỉnh một vectơ. Dời lần lượt từng nhóm đỉnh làm mặt tạm thời không phẳng giữa các
+    # bước, và SketchUp tự chỉnh các đỉnh khác (đã làm hình cung nhiều đỉnh bị kéo ra xa hàng chục mét).
+    def move_vertices(contents, vertices, vectors)
+      return if vertices.empty?
+      if contents.respond_to?(:transform_by_vectors)
+        contents.transform_by_vectors(vertices, vectors)
+      else
+        vertices.zip(vectors).each { |v, d| contents.transform_entities(Geom::Transformation.translation(d), [v]) }
+      end
+    end
+
+    def pure_translation?(transformation)
+      a = transformation.to_a
+      [[0, 1.0], [1, 0.0], [2, 0.0], [4, 0.0], [5, 1.0], [6, 0.0], [8, 0.0], [9, 0.0], [10, 1.0]].all? { |i, v| (a[i] - v).abs < 1e-6 }
+    end
+
+    # Các khối rời (nhóm đỉnh nối với nhau bằng cạnh) trong một cấu kiện. Không có cạnh (bản giả lập) thì mỗi mặt là một khối.
+    def vertex_components(contents)
+      edges = contents.grep(Sketchup::Edge)
+      return contents.grep(Sketchup::Face).map(&:vertices) if edges.empty?
+      parent = {}
+      vertices = {}
+      find = lambda do |k|
+        parent[k] = find.call(parent[k]) unless parent[k] == k
+        parent[k]
+      end
+      edges.each do |edge|
+        keys = edge.vertices.map do |v|
+          vertices[v.entityID] = v
+          parent[v.entityID] ||= v.entityID
+        end
+        parent[find.call(keys[0])] = find.call(keys[1])
+      end
+      vertices.keys.group_by { |k| find.call(k) }.values.map { |ks| ks.map { |k| vertices[k] } }
+    end
+
+    def component_diagonal(vertices, origin)
+      sizes = (0..2).map do |i|
+        values = vertices.map { |v| v.position.to_a[i] + origin[i] }
+        values.max - values.min
+      end
+      Math.sqrt(sizes.sum { |x| x * x })
+    end
+
+    def axis_center(values)
+      (values.min + values.max) / 2.0
+    end
+
+    # Bảng độ dời theo một trục: [[tọa độ, độ dời]] tại các nút (tọa độ đỉnh của thân tấm trong [lo, hi]).
+    # Dải EDGE_ZONE (100 mm) sát mỗi mép tấm giữ nguyên (mộng và dấu tiết diện thường nằm ở đó, dời nguyên khối theo mép).
+    # Phần tăng chỉ chia cho các nhịp trống lớn (từ STRETCH_GAP_MIN; nếu không có thì nhịp lớn nhất) nằm giữa hai dải đó,
+    # theo chiều dài; nhịp nhỏ giữ nguyên. Tấm quá ngắn (phần giữa dưới STRETCH_GAP_MIN) thì bỏ dải sát mép để vẫn nhận đủ phần tăng.
+    def stretch_knots(coords, lo, hi, new_lo, new_hi, edge_zone = STRETCH_EDGE_ZONE)
+      zone_lo = lo + edge_zone
+      zone_hi = hi - edge_zone
+      zone = zone_hi - zone_lo >= STRETCH_GAP_MIN
+      zone_lo, zone_hi = lo, hi unless zone
+      extra = zone ? [zone_lo, zone_hi] : []
+      knots = ([lo, hi] + extra + coords.select { |c| c > lo + KNOT_EPS && c < hi - KNOT_EPS }).sort.each_with_object([]) do |c, out|
+        out << c unless out.last && (c - out.last).abs < KNOT_EPS
+      end
+      return [[lo, new_lo - lo]] if knots.length < 2
+      gaps = knots.each_cons(2).map { |a, b| b - a }
+      inside = ->(k) { knots[k] >= zone_lo - KNOT_EPS && knots[k + 1] <= zone_hi + KNOT_EPS }
+      candidates = gaps.each_index.select { |k| inside.call(k) }
+      big = candidates.select { |k| gaps[k] >= STRETCH_GAP_MIN }
+      big = [candidates.max_by { |k| gaps[k] }] if big.empty?
+      total = big.sum { |k| gaps[k] }
+      growth = (new_hi - new_lo) - (hi - lo)
+      shift = new_lo - lo
+      knots.each_with_index.map do |c, k|
+        entry = [c, shift]
+        shift += growth * gaps[k] / total if big.include?(k)
+        entry
+      end
+    end
+
+    # Độ dời của một tọa độ v theo bảng nút (nội suy giữa hai nút; ngoài [lo, hi] dời theo mép gần).
+    def knot_shift(knots, lo, hi, new_lo, new_hi, v)
+      return new_lo - lo if v <= lo
+      return new_hi - hi if v >= hi
+      k = knots.rindex { |c, _| c <= v } || 0
+      c0, s0 = knots[k]
+      return s0 if k == knots.length - 1
+      c1, s1 = knots[k + 1]
+      s0 + (s1 - s0) * (v - c0) / (c1 - c0)
+    end
+
+    # Phép biến đổi đưa hộp cũ về hộp mới: co theo từng trục (trục có kích thước 0 giữ nguyên), rồi dời tới vị trí mới.
+    def stretch_transform(old_box, new_box)
+      factors = (0..2).map do |i|
+        old_size = old_box[i + 3] - old_box[i]
+        old_size > Interior::EPS ? (new_box[i + 3] - new_box[i]) / old_size : 1.0
+      end
+      Geom::Transformation.translation(new_box[0, 3]) * Geom::Transformation.scaling(*factors) *
+        Geom::Transformation.translation(old_box[0, 3].map(&:-@))
+    end
+
+    def contents_of(entity)
+      entity.is_a?(Sketchup::Group) ? entity.entities : entity.definition.entities
+    end
+
+    # Sau khi co giãn, đặt lại vân để mỗi viên vân giữ đúng kích thước thật (không bị kéo theo tấm).
+    def reset_textures(entity)
+      contents_of(entity).grep(Sketchup::Face).each do |face|
+        front = face.material || entity.material
+        reset_face_texture(face, front, true) if front && front.texture
+        back = face.back_material
+        reset_face_texture(face, back, false) if back && back.texture
+      end
+    end
+
+    # position_material nhận các CẶP (điểm trên mặt, điểm tương ứng trên ảnh). Ảnh đặt theo kích thước thật
+    # (texture.width/height, inch). Tọa độ ảnh dùng ảnh ĐÃ CHUẨN HÓA: (1, 0) là cạnh rộng của cả ảnh, (0, 1) là cạnh
+    # cao. Dùng pixel ở đây làm vân lặp dày gấp hàng trăm lần (vân nhỏ li ti trên mặt).
+    def reset_face_texture(face, material, front)
+      texture = material.texture
+      return if texture.width <= 0 || texture.height <= 0
+      origin = face.vertices[0].position
+      u = (face.vertices[1].position - origin).normalize
+      v = face.normal.cross(u).normalize
+      face.position_material(material, [
+        origin, Geom::Point3d.new(0, 0, 0),
+        origin.offset(u, texture.width), Geom::Point3d.new(1, 0, 0),
+        origin.offset(v, texture.height), Geom::Point3d.new(0, 1, 0)
+      ], front)
+    end
+
+    # Xóa bản thử và cả định nghĩa riêng của nó (không thì còn một component mồ côi trong danh sách Components).
+    # Chỉ gọi xóa định nghĩa khi API DefinitionList#remove có sẵn và định nghĩa không còn bản thể nào.
+    def discard_probe(probe)
+      definition = probe.definition
+      probe.erase!
+      definitions = Sketchup.active_model.respond_to?(:definitions) ? Sketchup.active_model.definitions : nil
+      definitions.remove(definition) if definitions && definitions.respond_to?(:remove) && definition.count_instances.zero?
+    end
+
+    # Bản sao thử của tủ (cùng vị trí, cùng thuộc tính, định nghĩa riêng) để dựng công thức mà không đụng tủ thật.
+    def probe_copy(root)
+      host = root.parent
+      raise 'Không tạo được bản thử của tủ.' unless host.respond_to?(:entities)
+      probe = host.entities.add_instance(root.definition, root.transformation)
+      probe.make_unique
+      ModelData.restore(probe, ModelData.snapshot(root))
+      probe.name = root.name
+      probe
+    end
+
+    # Tủ copy bằng Ctrl+Move dùng chung định nghĩa với bản gốc ở MỌI tầng (tủ, thùng tủ, các tấm, nhóm con trong tấm).
+    # Sửa tại chỗ (co giãn tủ) đổi hình của tấm, nên phải tách riêng tất cả trước khi sửa, để không làm hỏng tủ copy khác.
+    def make_unique_tree(root)
+      make_unique_entity(root)
+      make_unique_children(root)
+    end
+
+    def make_unique_children(parent)
+      containers = parent.definition.entities.to_a.select { |e| e.valid? && (e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance)) }
+      containers.each { |child| make_unique_entity(child) }
+      # Tách xong mới đọc lại danh sách con (make_unique có thể đổi đối tượng) rồi đi xuống tầng dưới.
+      parent.definition.entities.to_a.each do |child|
+        make_unique_children(child) if child.valid? && (child.is_a?(Sketchup::Group) || child.is_a?(Sketchup::ComponentInstance))
+      end
+    end
+
+    def make_unique_entity(entity)
+      entity.make_unique if entity.respond_to?(:make_unique)
+    end
+
+    # Sau khi tách, không còn group/component nào dùng chung định nghĩa với đối tượng NGOÀI tủ này (dùng chung giữa các
+    # group trong cùng tủ thì không sao). Nếu SketchUp không tách được thì dừng, vì sửa tại chỗ sẽ làm hỏng cả tủ copy kia.
+    def ensure_unshared!(root)
+      inside = Hash.new(0)
+      entries = []
+      walk = lambda do |entity|
+        definition = entity.definition
+        inside[definition_key(definition)] += 1
+        entries << entity
+        definition.entities.to_a.each do |child|
+          walk.call(child) if child.valid? && (child.is_a?(Sketchup::Group) || child.is_a?(Sketchup::ComponentInstance))
+        end
+      end
+      walk.call(root)
+      shared = entries.select do |entity|
+        definition = entity.definition
+        definition.respond_to?(:count_instances) && definition.count_instances > inside[definition_key(definition)]
+      end
+      return if shared.empty?
+      raise "Tủ này là bản copy dùng chung dữ liệu với tủ khác và chưa tách riêng được (#{shared.map { |e| e.name.to_s }.first(3).join(', ')}). " \
+            'Hãy chọn tủ, bấm chuột phải → Make Unique rồi thử lại.'
+    end
+
+    def definition_key(definition)
+      definition.respond_to?(:entityID) ? definition.entityID : definition.object_id
     end
 
     def replay(root, shell, op, skip)
@@ -426,14 +1130,27 @@ module VGD_Cabinet_Draw
       return if Operations.doors_of(root).empty?
       tool = Tools::DoorTool.new({})
       tool.load_cabinet(root)
+      # Bố cục cánh tự động đã được tính lại theo vách/hông hiện tại (load_cabinet): lưu lại để tủ và bố cục khớp nhau.
+      tool.save_layout! if tool.layout.auto?
       tool.build_doors
     end
 
-    def capture_drawer_handles(root)
+    def auto_door_layout?(root)
+      JSON.parse(root.get_attribute(DICT, 'door_layout_json', '{}'))['auto'] == true
+    rescue JSON::ParserError
+      false
+    end
+
+    def without_doors(hash)
+      hash.reject { |key, _| key.first == 'door' }
+    end
+
+    def capture_drawer_handles(root, kept_keys = [])
       box = root.definition.entities.to_a.find { |e| e.is_a?(Sketchup::Group) && e.name == Operations::DRAWER_CONTAINER }
       return {} unless box
       box.definition.entities.to_a.each_with_object({}) do |front, out|
         next unless front.respond_to?(:name) && front.name == 'Mặt Ngăn Kéo'
+        next if kept_keys.include?(stretch_key(front))
         op = front.get_attribute(DICT, 'op')
         next unless op
         specs = Operations.handle_specs(front)

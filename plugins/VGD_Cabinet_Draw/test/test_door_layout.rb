@@ -163,5 +163,101 @@ check 'vùng chồng nhau -> về bố cục đơn', L::Layout.from_h(bad).regio
 check 'dữ liệu rỗng / sai kiểu -> bố cục đơn', L::Layout.from_h(nil).regions.length == 1 && L::Layout.from_h({}).regions.length == 1 && L::Layout.from_h('x').regions.length == 1
 check 'vùng thiếu một khoảng -> về bố cục đơn', L::Layout.from_h({ 'schema' => 2, 'regions' => [{ 'id' => 1, 'u0' => 0, 'u1' => 0.5, 'v0' => 0, 'v1' => 1 }] }).regions.length == 1
 
+puts '== 12. Tự chia theo vách giữa: cánh chia tại tim mặt trước vách =='
+check 'một vách: chia ở tim vách', L.partition_splits([[300.0, 320.0]], 0.0, 1000.0) == [310.0], L.partition_splits([[300.0, 320.0]], 0.0, 1000.0).inspect
+check 'hai vách liền kề: chia ở giữa hai vách', L.partition_splits([[300.0, 320.0], [320.0, 340.0]], 0.0, 1000.0) == [320.0], L.partition_splits([[300.0, 320.0], [320.0, 340.0]], 0.0, 1000.0).inspect
+check 'hai vách cách xa: mỗi vách một chỗ chia (sắp tăng dần)', L.partition_splits([[600.0, 620.0], [200.0, 220.0]], 0.0, 1000.0) == [210.0, 610.0]
+check 'vách sát mép (dưới 20 mm) bị bỏ', L.partition_splits([[5.0, 25.0]], 0.0, 1000.0).empty?
+check 'khe 1 mm giữa hai vách vẫn tính liền kề', L.partition_splits([[300.0, 320.0], [321.0, 341.0]], 0.0, 1000.0, 2.0) == [320.5]
+check 'không có vách: không chia', L.partition_splits([], 0.0, 1000.0).empty?
+l = L::Layout.new(1000, 2000)
+regions = l.reset_at('vertical', [0.31, 0.61])
+check 'reset_at: 3 vùng ghép đúng', regions.length == 3 && tiled?(l), regions.length.to_s
+check 'reset_at: bỏ điểm chia sát nhau (dưới 20 mm)', l.reset_at('vertical', [0.5, 0.505]).length == 2
+check 'reset_at: không có điểm chia thì một vùng', l.reset_at('vertical', []).length == 1
+check 'reset_at: bước hoàn tác được', (l.reset_at('vertical', [0.25]); l.undo; l.regions.length == 1)
+l = L::Layout.new(1000, 2000)
+id = l.regions.first['id']
+check 'propose hút vào điểm phụ (tim vách) khi đủ gần', l.propose(id, 'vertical', 0.3125, [0.31], 10.0) == 0.31, l.propose(id, 'vertical', 0.3125, [0.31], 10.0).inspect
+check 'propose không hút khi xa hơn ngưỡng', l.propose(id, 'vertical', 0.33, [0.31], 10.0) == 0.33, l.propose(id, 'vertical', 0.33, [0.31], 10.0).inspect
+check 'propose ngưỡng hút theo tham số (xa hơn 6 mm vẫn hút)', l.propose(id, 'vertical', 0.318, [0.31], 10.0) == 0.31
+
+puts '== 13. Xóa cánh rồi tạo lại: vùng mới có cánh, gộp 1 vùng trống để tạo lại =='
+l = L::Layout.new(1000, 2000)
+rid = l.regions.first['id']
+l.regions.first['empty'] = true
+check 'tất cả vùng trống', l.all_empty?
+a, b = l.split(rid, 'vertical', 0.5)
+check 'chia vùng trống: hai vùng mới đều có cánh', !a['empty'] && !b['empty'] && !l.all_empty?
+l = L::Layout.new(1000, 2000)
+l.split_even(l.regions.first['id'], 'vertical', 2)
+l.regions.first['empty'] = true
+empty_id = l.regions.first['id']
+l.merge([empty_id])
+check 'merge một vùng trống: tạo lại cánh', !l.find(empty_id)['empty']
+check 'merge một vùng có cánh: vẫn báo lỗi', raises? { l.merge([l.regions.last['id']]) }.to_s.include?('ít nhất 2')
+
+puts '== 14. Chia khoang theo ngưỡng (bay_splits), khe ngang/dọc riêng, cờ tự động =='
+# vách 400..417.5 trong lòng tủ 17.5..1182.5 (cửa 0..1200); khoang trái 382.5, khoang phải 765
+cuts = L.bay_splits([[400.0, 417.5]], 17.5, 1182.5, 0.0, 1200.0, 450.0)
+check 'bay_splits: vách + khoang phải rộng hơn ngưỡng chia đôi', cuts == [408.75, 800.0], cuts.inspect
+cuts = L.bay_splits([[400.0, 417.5]], 17.5, 1182.5, 0.0, 1200.0, 0.0)
+check 'bay_splits: ngưỡng 0 = tắt chia đôi khoang, chỉ chia ở vách', cuts == [408.75], cuts.inspect
+cuts = L.bay_splits([], 17.5, 1182.5, 0.0, 1200.0, 450.0)
+check 'bay_splits: không vách, tủ rộng hơn ngưỡng: 2 cánh', cuts == [600.0], cuts.inspect
+cuts = L.bay_splits([], 17.5, 417.5, 0.0, 435.0, 450.0)
+check 'bay_splits: khoang không quá ngưỡng: 1 cánh', cuts.empty?, cuts.inspect
+cuts = L.bay_splits([], 0.0, 450.0, 0.0, 450.0, 450.0)
+check 'bay_splits: đúng bằng ngưỡng vẫn 1 cánh (chỉ lớn hơn mới chia)', cuts.empty?
+cuts = L.bay_splits([[400.0, 417.5], [417.5, 435.0]], 17.5, 1182.5, 0.0, 1200.0, 450.0)
+check 'bay_splits: hai vách liền kề tính một cụm (chia ở giữa cụm)', cuts == [417.5, 808.75], cuts.inspect
+cuts = L.bay_splits([[300.0, 317.5], [650.0, 667.5]], 17.5, 982.5, 0.0, 1000.0, 450.0)
+check 'bay_splits: ba khoang đều dưới ngưỡng: chỉ chia ở vách', cuts == [308.75, 658.75], cuts.inspect
+cuts = L.bay_splits([[0.0, 17.5]], 17.5, 1182.5, 0.0, 1200.0, 450.0)
+check 'bay_splits: vách sát mép bị bỏ, khoang lớn vẫn chia đôi', cuts.include?(600.0) && !cuts.include?(8.75), cuts.inspect
+
+l = L::Layout.new(1000, 2000)
+l.split(l.regions.first['id'], 'vertical', 0.5)
+l.split(l.regions.first['id'], 'horizontal', 0.5)
+cell = ->(rects, z0) { rects.find { |r| (r[:z0] - z0).abs < 1e-6 } }
+r = l.rects(1000.0, 2000.0, 4.0, 25.0)
+check 'rects: khe trái–phải 4, trên–dưới 25 độc lập', r.any? { |x| (x[:x1] - 498.0).abs < 1e-6 } && r.any? { |x| (x[:z1] - 987.5).abs < 1e-6 }, r.map { |x| x.values_at(:x0, :x1, :z0, :z1) }.inspect
+r2 = l.rects(1000.0, 2000.0, 4.0)
+check 'rects: không truyền khe dọc thì dùng chung một khe (như cũ)', r2.any? { |x| (x[:z1] - 998.0).abs < 1e-6 }, r2.map { |x| x[:z1] }.inspect
+
+l = L::Layout.new(1000, 2000)
+check 'layout mới không phải tự động', !l.auto? && !l.to_h.key?('auto')
+l.reset_at('vertical', [0.5]); l.mark_auto!
+check 'đánh dấu tự động và lưu vào to_h', l.auto? && l.to_h['auto'] == true
+check 'from_h giữ cờ tự động', L::Layout.from_h(l.to_h, 1000, 2000).auto?
+l.set_opening(l.regions.first['id'], 'left')
+check 'đổi hướng mở không bỏ cờ tự động', l.auto?
+l.regions.last['empty'] = true
+check 'xóa cánh (vùng trống) không bỏ cờ tự động', l.auto?
+l.split(l.regions.first['id'], 'horizontal', 0.5)
+check 'chia tay bỏ cờ tự động', !l.auto?
+l.undo
+check 'hoàn tác khôi phục cờ tự động', l.auto?
+l.merge([l.regions.first['id'], l.regions.last['id']]) rescue nil
+l = L::Layout.new(1000, 2000); l.reset_at('vertical', [0.5]); l.mark_auto!
+l.reset_even('vertical', 3)
+check 'chia đều lại bỏ cờ tự động', !l.auto?
+
+# reset_at(keep: true): giữ id, hướng mở, vùng trống theo vùng cũ chồng nhiều nhất
+l = L::Layout.new(1000, 2000)
+l.reset_at('vertical', [0.4, 0.7]); l.mark_auto!
+a, b, c = l.sorted.map { |x| x['id'] }
+l.set_opening(a, 'left'); l.set_opening(c, 'right'); l.find(b)['empty'] = true
+l.reset_at('vertical', [0.45, 0.75], keep: true); l.mark_auto!
+n = l.sorted
+check 'retarget: vẫn 3 vùng, giữ id', n.map { |x| x['id'] } == [a, b, c], n.map { |x| x['id'] }.inspect
+check 'retarget: giữ hướng mở và vùng trống', n[0]['opening_type'] == 'left' && n[2]['opening_type'] == 'right' && n[1]['empty'], n.inspect
+check 'retarget: vị trí chia mới', (n[0]['u1'] - 0.45).abs < 1e-9 && (n[1]['u1'] - 0.75).abs < 1e-9
+l.reset_at('vertical', [0.3, 0.45, 0.75], keep: true)
+n = l.sorted
+check 'retarget: thêm vùng, vùng cũ giữ id không trùng', n.map { |x| x['id'] }.uniq.length == 4 && tiled?(l), n.map { |x| x['id'] }.inspect
+l.reset_at('vertical', [], keep: true)
+check 'retarget: gộp còn một vùng vẫn hợp lệ', l.regions.length == 1 && tiled?(l)
+
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.length}"
 exit($fail.empty? ? 0 : 1)

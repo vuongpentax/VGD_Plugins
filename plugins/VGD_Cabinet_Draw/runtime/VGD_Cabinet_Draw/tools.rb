@@ -110,7 +110,7 @@ module VGD_Cabinet_Draw
       def draw_hud(view)
         lines = ["VGD CABINET DRAW · #{Tools.label(@tool_name)}", hint]
         lines.each_with_index do |text, index|
-          view.draw_text([18, 28 + index * 20], text, color: Sketchup::Color.new(33, 77, 90), size: 11, bold: index.zero?)
+          Theme.draw_text(view, [18, 28 + index * 20], text, color: Theme.color(:text), size: 11, bold: index.zero?)
         end
         draw_side_panel(view, hud_lines) if respond_to?(:hud_lines)
       end
@@ -122,12 +122,12 @@ module VGD_Cabinet_Draw
         left = [view.vpwidth - width - 12, 10].max
         top = 12
         height = 14 + lines.length * 19
-        view.drawing_color = Sketchup::Color.new(255, 255, 255, 200)
+        view.drawing_color = Theme.color(:surface, 215)
         view.draw2d(GL_QUADS, [[left, top, 0], [left + width, top, 0], [left + width, top + height, 0], [left, top + height, 0]])
         lines.each_with_index do |text, index|
           error = text.start_with?('Lỗi:')
-          color = error ? Sketchup::Color.new(167, 61, 54) : Sketchup::Color.new(33, 77, 90)
-          view.draw_text([left + 10, top + 8 + index * 19], text, color: color, size: 10)
+          color = error ? Theme.color(:danger) : Theme.color(:text)
+          Theme.draw_text(view, [left + 10, top + 8 + index * 19], text, color: color, size: 10)
         end
       end
 
@@ -476,14 +476,14 @@ module VGD_Cabinet_Draw
 
       def hud_lines
         done = @boxes.count { |box| @fronts[box.persistent_id] }
-        back_names = { 'groove' => 'ngậm rãnh kín', 'overlay' => 'phủ', 'none' => 'không hậu' }
+        back_names = { 'groove' => 'âm 4 cạnh', 'groove_sides' => 'âm 2 hông', 'lua_top' => 'lùa trên', 'lua_bottom' => 'lùa đáy', 'overlay' => 'phủ', 'none' => 'không hậu' }
         back_name = back_names.fetch(@settings['back_mode'], @settings['back_mode'].to_s)
         lines = [
           "Box: #{@boxes.length}   Đã có mặt trước: #{done}/#{@boxes.length}",
           "Đồng bộ mặt trước: #{@settings['sync_front'] ? 'BẬT' : 'tắt'}",
           "Cấu hình riêng: #{@overrides.length} box#{@override_pid ? ' (đang sửa)' : ''}",
           "Hậu: #{back_name}",
-          "Loại: #{PanelModel::TYPE_NAMES.fetch(@settings['cabinet_type'].to_s, 'Tủ thường')}"
+          "Loại: #{PanelModel::TYPE_NAMES.fetch(@settings['cabinet_type'].to_s, 'Tủ tùy biến')}"
         ]
         lines << "Lỗi: #{@errors.values.first}" unless @errors.empty?
         lines
@@ -503,9 +503,9 @@ module VGD_Cabinet_Draw
             pid = box.persistent_id
             params = @overrides[pid] || @settings
             options = params.merge('front_normal' => @fronts[pid].to_a, 'remove_source' => params['keep_source'] != true)
-            root = Geometry.cabinet_from_box(box, options)
-            Geometry.share_components(root)
-            roots << root
+            created = Geometry.cabinets_from_box(box, options)
+            created.each { |root| Geometry.share_components(root) }
+            roots.concat(created)
           end
         end
         model = view.model
@@ -532,7 +532,7 @@ module VGD_Cabinet_Draw
       def self.cabinets_only?(selection)
         items = selection.to_a
         groups = items.select { |e| e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance) }
-        groups.any? && groups.all? { |e| ModelData.cabinet?(e) }
+        groups.any? && groups.all? { |e| ModelData.cabinet?(e) || ModelData.split_group?(e) }
       end
 
       attr_reader :roots
@@ -569,7 +569,7 @@ module VGD_Cabinet_Draw
 
       # Đọc lại các tủ đang chọn (thông số gốc, kích thước) và bỏ mọi thay đổi chưa áp dụng.
       def reload_roots
-        @roots = Sketchup.active_model.selection.select { |e| ModelData.cabinet?(e) && e.valid? }
+        @roots = ModelData.cabinets_in(Sketchup.active_model.selection)
         @originals = {}
         @dims = {}
         @errors = {}
@@ -625,7 +625,7 @@ module VGD_Cabinet_Draw
       CARCASS_KEYS = %w[board_thickness back_thickness back_mode back_groove_depth back_lip panels leg_height ceiling_strip_height
                         sides_to_floor sides_to_ceiling toe_kick_enabled toe_kick_thickness toe_kick_setback toe_kick_back
                         cornice_enabled cornice_thickness cornice_setback cabinet_type top_mode top_rail_width hang_rail
-                        hang_rail_height fridge_width fridge_height fridge_depth fridge_side_gap fridge_top_gap fridge_back_gap].freeze
+                        rail_front_orient rail_back_orient rail_back_width rail_front_double hang_rail_height fridge_width fridge_height fridge_depth fridge_side_gap fridge_top_gap fridge_back_gap].freeze
 
       # Bảng điều khiển / chọn mẫu gửi sang: chỉ ghi nhận khóa thùng tủ có giá trị khác thông số hiện tại của tủ.
       def update_settings(settings)
@@ -1046,7 +1046,7 @@ module VGD_Cabinet_Draw
         return 'Rê chuột vào tủ rồi click chọn tủ · Esc: thoát' unless @root
         return 'Tab đổi thông thủy / lọt / phủ · click hoặc Enter tạo · Esc: bỏ' if @divide_count
         return 'Kéo ra xem trước · Tab đổi điểm bắt · gõ mm · click hoặc Enter tạo tấm · Esc: bỏ mặt' if @ref
-        'Rê vào hông / nóc / đáy / tấm đã có · click chọn mặt · Tab: lọt ô ↔ xuyên · /n chia cả ô · Backspace: hoàn tác · Esc: thoát'
+        'Rê vào hông / nóc / đáy / tấm đã có · click chọn mặt · Tab: lọt ô ↔ xuyên · /n chia cả ô · Alt-click: xóa tấm · Shift-click: đánh dấu xóa · Backspace: hoàn tác · Esc: thoát'
       end
 
       def hint
@@ -1076,7 +1076,7 @@ module VGD_Cabinet_Draw
 
       def activate
         super
-        cabinet = Sketchup.active_model.selection.find { |entity| ModelData.cabinet?(entity) }
+        cabinet = ModelData.cabinets_in(Sketchup.active_model.selection).first
         use_cabinet(cabinet) if cabinet
         rebuild_preview
       end
@@ -1193,7 +1193,70 @@ module VGD_Cabinet_Draw
         view.invalidate
       end
 
-      def onLButtonDown(_flags, x, y, view)
+      # Đợt/vách trong công cụ: Alt-click xóa ngay tấm dưới con trỏ; Shift-click đánh dấu để xóa cùng lúc (thanh nút chuột phải).
+      def picked_member(view, x, y)
+        picked_path(view, x, y).reverse.find { |entity| Rebuild::MEMBER_ROLES.include?(Interior.role_of(entity)) }
+      end
+
+      def mark_or_remove_member(member, flags, view)
+        if Keys.alt?(flags)
+          @marked = []
+          safely do
+            operation('Xóa tấm') { Removal.remove_members(@root, [member]) }
+            refresh_after_removal
+          end
+        else
+          @marked ||= []
+          @marked.include?(member) ? @marked.delete(member) : @marked << member
+          Dialog.set_status("Đã đánh dấu #{@marked.length} tấm. Chuột phải → Xóa các tấm đã đánh dấu · Alt-click xóa ngay.")
+        end
+        view.invalidate
+      end
+
+      def remove_marked
+        members = (@marked || []).select(&:valid?)
+        return Dialog.set_status('Chưa đánh dấu tấm nào. Shift-click tấm cần xóa.') if members.empty?
+        safely do
+          operation('Xóa các tấm đã đánh dấu') { Removal.remove_members(@root, members) }
+          refresh_after_removal
+        end
+        @marked = []
+      end
+
+      def clear_marked
+        @marked = []
+        Dialog.set_status('Đã bỏ đánh dấu tấm.')
+        Sketchup.active_model.active_view.invalidate
+      end
+
+      def refresh_after_removal
+        @shell = Geometry.shell_for(@root)
+        rebuild_preview
+        Sketchup.active_model.active_view.invalidate
+      end
+
+      def draw(view)
+        super if defined?(super)
+        (@marked || []).select(&:valid?).each { |member| draw_marked_box(view, member) }
+      end
+
+      def draw_marked_box(view, entity)
+        b = entity.bounds
+        corners = [[b.min.x, b.min.y, b.min.z], [b.max.x, b.min.y, b.min.z], [b.max.x, b.max.y, b.min.z], [b.min.x, b.max.y, b.min.z],
+                   [b.min.x, b.min.y, b.max.z], [b.max.x, b.min.y, b.max.z], [b.max.x, b.max.y, b.max.z], [b.min.x, b.max.y, b.max.z]]
+        world = Operations.world_transform(@root, Geometry.shell_for(@root))
+        pts = corners.map { |c| Geom::Point3d.new(*c).transform(world) }
+        edges = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]]
+        view.line_width = 3 if view.respond_to?(:line_width=)
+        view.drawing_color = Theme.color(:danger) if view.respond_to?(:drawing_color=)
+        view.draw_lines(edges.flat_map { |a, c| [pts[a], pts[c]] })
+      end
+
+      def onLButtonDown(flags, x, y, view)
+        if @root && (Keys.alt?(flags) || Keys.shift?(flags))
+          member = picked_member(view, x, y)
+          return mark_or_remove_member(member, flags, view) if member
+        end
         if @root.nil?
           use_cabinet(picked_cabinet(view, x, y))
         elsif @divide_count || @ref
@@ -1290,24 +1353,29 @@ module VGD_Cabinet_Draw
         @divide_count ? @divide_ref : @ref
       end
 
-      # Mặt tham chiếu tô sáng: nếu lọt ô thì theo ô, xuyên thì theo cả lòng tủ.
+      # Mặt tham chiếu tô sáng: đúng hình tấm sẽ dựng (đã trừ xà chắn), không phải cả ô. nil nếu không dựng được.
       def reference_face(ref)
         e = span == 'full' ? Interior.inner(@shell) : ref[:cell]
         p = ref[:plane]
         if ref[:axis] == 'vertical'
-          [[p, e.y0, e.z0], [p, e.y1, e.z0], [p, e.y1, e.z1], [p, e.y0, e.z1]]
+          Rebuild.vertical_profile(@shell, e, partition_setback, [p, p + thickness]).map { |y, z| [p, y, z] }
         else
-          [[e.x0, e.y0, p], [e.x1, e.y0, p], [e.x1, e.y1, p], [e.x0, e.y1, p]]
+          Rebuild.shelf_outline(@shell, e, p, thickness, shelf_setback).map { |x, y| [x, y, p] }
         end
+      rescue StandardError
+        nil
       end
 
       # Các mặt xem trước của một tấm (đợt: hộp; vách: biên dạng có khấu xà).
       def board_faces_for(pos, ref)
         span_cell = span == 'full' ? Interior.inner(@shell) : ref[:cell]
+        # Cùng hàm dựng với lúc tạo tấm (Rebuild.place_panels), nên xem trước đúng hình sẽ tạo.
         if ref[:axis] == 'vertical'
-          Rebuild.profile_faces(Rebuild.vertical_profile(@shell, span_cell, partition_setback), pos, pos + thickness)
+          profile = Rebuild.vertical_profile(@shell, span_cell, partition_setback, [pos, pos + thickness])
+          Rebuild.prism_faces(profile, pos, pos + thickness, ->(y, z, x) { [x, y, z] })
         else
-          PanelModel.box_faces(Rebuild.board_box(@shell, span_cell, pos, thickness, shelf_setback))
+          outline = Rebuild.shelf_outline(@shell, span_cell, pos, thickness, shelf_setback)
+          Rebuild.prism_faces(outline, pos, pos + thickness, ->(x, y, z) { [x, y, z] })
         end
       end
 
@@ -1353,7 +1421,8 @@ module VGD_Cabinet_Draw
         return unless @root
         @error = nil
         highlight = @divide_count ? nil : (@ref || @hover)
-        add_face(reference_face(highlight), transform, :front) if highlight
+        face = highlight && reference_face(highlight)
+        add_face(face, transform, :front) if face
         return unless @divide_count || @ref
         begin
           ref = planned_ref
@@ -1470,7 +1539,8 @@ module VGD_Cabinet_Draw
             entity.erase!
           end
           Rebuild.save_ops(@root, ops[0...-1])
-          Rebuild.run(@root, Rebuild.settings_of(@root), Rebuild.dimensions_of(@root))
+          keep = Rebuild.hand_edited(@root).map { |item| item[:entity] }
+          Rebuild.run(@root, Rebuild.settings_of(@root), Rebuild.dimensions_of(@root), keep)
         end
         @created.delete(last['op'])
         @shell = Geometry.shell_for(@root)
@@ -1562,7 +1632,7 @@ module VGD_Cabinet_Draw
     # Chia cánh theo VÙNG (DoorLayout): mặt tủ là các hình chữ nhật ghép kín; click trong một vùng để chia vùng đó
     # (dọc hoặc ngang tùy Tab), Shift-click chọn vùng rồi G (hoặc gõ g) để gộp. Chỉ khi Enter mới dựng cánh thật.
     class DoorTool < Base
-      SAVED_KEYS = %w[door_gap door_fit door_cover_left door_cover_right door_edge_gap door_inset_gap board_thickness show_dims door_style frame_joint frame_width rail_width panel_recess glass_rows glass_columns glass_bar_width glass_thickness].freeze
+      SAVED_KEYS = %w[door_gap door_gap_rows door_auto_width door_fit door_cover_left door_cover_right door_edge_gap door_inset_gap board_thickness door_show_dims door_style frame_joint frame_width rail_width panel_recess glass_rows glass_columns glass_bar_width glass_thickness].freeze
 
       def initialize(settings = {})
         super
@@ -1577,13 +1647,16 @@ module VGD_Cabinet_Draw
         @hover_uv = nil
         @hover_shift = false
         @error = nil
+        @gap_mode = false    # đã nhấn Alt: số gõ tiếp theo là khe giữa hai cánh (mm); chia dọc → khe trái–phải, chia ngang → khe trên–dưới
+        @marks = nil         # điểm hút (tim vách giữa), tính lại khi đổi tủ / kiểu cánh
+        @snap_mm = nil
       end
 
       attr_reader :layout, :selected
 
       def hint
         if @root
-          'Click: chia vùng · Shift-click: chọn vùng · G: gộp · /n chia đều · gõ mm: chia theo khoảng · Ctrl: dọc/ngang · Tab: cánh lọt/phủ · Backspace: hoàn tác · Enter: tạo'
+          'Click: chia vùng · A: tự chia theo vách · Alt rồi gõ số: khe giữa hai cánh (theo hướng chia) · Shift-click: chọn vùng · Alt+G (hoặc G): gộp · /n chia đều · gõ mm: chia theo khoảng · Ctrl: dọc/ngang · Tab: cánh lọt/phủ · Backspace: hoàn tác · Enter: tạo · Alt+G gộp · xóa cánh: chuột phải'
         else
           'Rê chuột vào tủ (vàng) rồi click để chọn · hoặc chọn tủ trước khi mở công cụ'
         end
@@ -1591,7 +1664,7 @@ module VGD_Cabinet_Draw
 
       def status_hint
         return 'Click chọn tủ cần chia cánh · Esc: thoát' unless @root
-        'Click: chia vùng · Shift+Click: chọn · G: gộp · /n: chia đều · gõ mm: chia theo khoảng · Ctrl: dọc/ngang · Tab: lọt/phủ · Enter: tạo'
+        'Click: chia · A: tự chia theo vách · Alt+số: khe cánh · Shift+Click: chọn · G: gộp · /n: chia đều · Tab: lọt/phủ · Enter: tạo'
       end
 
       def split_axis
@@ -1624,6 +1697,7 @@ module VGD_Cabinet_Draw
       # Đổi chế độ/khe mép thì vùng chia cánh đổi kích thước: cập nhật lại bố cục cho khớp.
       def hud_after_set(_key)
         sync_size if @root && @root.valid? && @shell && @shell.valid?
+        @marks = nil
         reset_hover
       end
 
@@ -1664,7 +1738,7 @@ module VGD_Cabinet_Draw
       def activate
         @interactive = true
         super
-        cabinet = Sketchup.active_model.selection.find { |entity| ModelData.cabinet?(entity) }
+        cabinet = ModelData.cabinets_in(Sketchup.active_model.selection).first
         load_cabinet(cabinet) if cabinet
         rebuild_preview
       end
@@ -1679,9 +1753,15 @@ module VGD_Cabinet_Draw
         bounds = Geometry.body_bounds(@shell)
         saved = (JSON.parse(@root.get_attribute(Schema::DICTIONARY, 'door_layout_json', '{}')) rescue {})
         @settings.merge!(saved['settings']) if saved['settings'].is_a?(Hash)
+        # Tủ lưu bằng bản cũ chỉ có một khe chung: khe trên–dưới lấy theo khe đó để cánh không đổi hình.
+        @settings['door_gap_rows'] = @settings['door_gap'] if saved['settings'].is_a?(Hash) && !saved['settings'].key?('door_gap_rows')
         a = area(bounds)
         @layout = DoorLayout::Layout.from_h(saved, (a[:x1] - a[:x0]).to_mm, (a[:z1] - a[:z0]).to_mm)
+        refresh_auto_layout! if @layout.auto?
+        # Mở công cụ khi đã xóa hết cánh (mọi vùng trống): bắt đầu bố cục mới để tạo lại cánh được. Dựng lại tủ từ dữ liệu đã lưu thì giữ vùng trống.
+        @layout = DoorLayout::Layout.new((a[:x1] - a[:x0]).to_mm, (a[:z1] - a[:z0]).to_mm) if @interactive && @layout.all_empty?
         @selected = []
+        @marks = nil
         reset_hover
         note_cabinet
         true
@@ -1726,7 +1806,7 @@ module VGD_Cabinet_Draw
         region = @layout.region_at(u, v)
         id = region && region['id']
         split = nil
-        split = @layout.propose(id, split_axis, split_axis == 'horizontal' ? v : u) if id && !shift
+        split = @layout.propose(id, split_axis, split_axis == 'horizontal' ? v : u, snap_marks, mark_snap_mm) if id && !shift
         changed = id != @hover_region || split != @hover_split || shift != @hover_shift
         @hover_region = id
         @hover_split = split
@@ -1745,17 +1825,98 @@ module VGD_Cabinet_Draw
           end
         elsif @shell && @shell.valid?
           point = cursor_point(view, x, y)
+          @snap_mm = pixel_snap_mm(view, point) if point
           rebuild_preview if point && update_hover(point, Keys.shift?(flags))
         end
         view.invalidate
       end
 
-      # Điểm con trỏ trên MẶT PHẲNG MẶT NGOÀI CỦA CÁNH (giao tia nhìn với mặt phẳng đó), không dùng điểm suy luận
+      # Ngưỡng hút vào tim vách (mm): khoảng 10 pixel trên màn hình, kẹp trong 6..40 mm để zoom xa vẫn hút dính.
+      def pixel_snap_mm(view, point)
+        return DoorLayout::SNAP_MM unless view.respond_to?(:pixels_to_model)
+        [[view.pixels_to_model(10, point).to_mm, DoorLayout::SNAP_MM].max, 40.0].min
+      rescue StandardError
+        DoorLayout::SNAP_MM
+      end
+
+      def mark_snap_mm
+        @snap_mm || DoorLayout::SNAP_MM
+      end
+
+      # Điểm hút khi chia theo chiều dọc: tim mặt trước của các vách giữa (cụm vách liền kề thì ở giữa cụm), 0..1 trên mặt cánh.
+      def snap_marks
+        return [] unless split_axis == 'vertical' && @shell && @shell.valid?
+        @marks ||= partition_splits_u(false)
+      end
+
+      # Tim vách tính ra toạ độ u (0..1) trên vùng cánh. full_only: chỉ vách cao suốt lòng tủ (dùng để tự chia cánh).
+      def partition_splits_u(full_only)
+        inner = Interior.inner(@shell)
+        slack = 1.mm
+        boxes = Interior.members(@shell)[:partitions]
+        boxes = boxes.select { |b| b[2] <= inner.z0 + slack && b[5] >= inner.z1 - slack } if full_only
+        a = area(Geometry.body_bounds(@shell))
+        width = a[:x1] - a[:x0]
+        DoorLayout.partition_splits(boxes.map { |b| [b[0], b[3]] }, a[:x0], a[:x1], 2.mm, MIN_AREA).map { |x| ((x - a[:x0]) / width).round(9) }
+      end
+
+      # Vị trí chia cánh tự động (0..1 trên vùng cánh): tim mặt trước các vách cao suốt lòng tủ (hai vách liền kề thì ở giữa
+      # hai vách), cộng chia đôi các khoang trống rộng hơn 'door_auto_width' (mm; 0 = không chia đôi khoang).
+      def auto_cuts_u
+        inner = Interior.inner(@shell)
+        slack = 1.mm
+        boxes = Interior.members(@shell)[:partitions].select { |b| b[2] <= inner.z0 + slack && b[5] >= inner.z1 - slack }
+        a = area(Geometry.body_bounds(@shell))
+        width = a[:x1] - a[:x0]
+        threshold = @settings['door_auto_width'].to_f.mm
+        DoorLayout.bay_splits(boxes.map { |b| [b[0], b[3]] }, inner.x0, inner.x1, a[:x0], a[:x1], threshold, 2.mm, MIN_AREA).map { |x| ((x - a[:x0]) / width).round(9) }
+      end
+
+      # Tự chia cánh theo khoang giữa các vách/hông (xem auto_cuts_u). Đổi bố cục hiện tại (hoàn tác được) và đánh dấu bố cục
+      # là tự động: tủ đổi kích thước thì cánh được tính lại. Chia tay vẫn dùng bình thường sau đó (và bỏ dấu tự động). Trả về số cánh.
+      def auto_split_by_partitions
+        raise 'Chọn tủ trước.' unless @root && @root.valid? && @shell && @shell.valid?
+        sync_size
+        @layout.reset_at('vertical', auto_cuts_u)
+        @layout.mark_auto!
+        @selected = []
+        reset_hover
+        @layout.regions.length
+      end
+
+      # Tính lại bố cục tự động theo vách/hông hiện tại (sau khi scale hoặc dời vách), giữ id, hướng mở và vùng trống.
+      def refresh_auto_layout!
+        sync_size
+        @layout.reset_at('vertical', auto_cuts_u, keep: true)
+        @layout.mark_auto!
+        # Khoang vượt/không vượt ngưỡng sau khi scale làm đổi số cánh: cánh có bản lề ở giữa khoang đổi sang mép sát hông/hồi.
+        @layout.fix_hinges([0.0, 1.0] + partition_splits_u(true))
+        @layout.clear_history
+      rescue StandardError
+        nil # không tính lại được thì giữ bố cục đã lưu
+      end
+
+      def auto_split!(view)
+        count = auto_split_by_partitions
+        Dialog.set_status("Đã chia cánh tự động: #{count} cánh (chia ở tim mặt trước vách; khoang rộng hơn #{@settings['door_auto_width'].to_f.round(1)} mm chia đôi). Enter để tạo cánh.")
+        rebuild_preview
+        view.invalidate if view
+      rescue StandardError => e
+        Dialog.set_status(e.message)
+      end
+
+      # Mặt phẳng để đo chuột và vẽ vạch chia: MẶT TRƯỚC THÙNG TỦ (nơi mép hồi, hông, đợt nhìn thấy được), không phải mặt
+      # ngoài của cánh (cách mặt này đúng bằng dày cánh). Đo trên mặt cánh thì ở góc nhìn nghiêng vạch lệch khỏi mép hồi đang trỏ.
+      # Vị trí cánh thật không đổi: chỉ dùng toạ độ ngang/đứng (u, v) của điểm trên mặt phẳng này.
+      def pick_plane_y
+        Geometry.body_bounds(@shell).min.y
+      end
+
+      # Điểm con trỏ trên mặt phẳng đó (giao tia nhìn với mặt phẳng), không dùng điểm suy luận
       # (có thể rơi vào hông/hậu/đợt phía sau nên lệch khi xoay góc nhìn).
       def cursor_point(view, x, y)
         transform = Operations.world_transform(@root, @shell)
-        a = area(Geometry.body_bounds(@shell))
-        origin = Geom::Point3d.new(0, a[:y] - @settings['board_thickness'].to_f.mm, 0).transform(transform)
+        origin = Geom::Point3d.new(0, pick_plane_y, 0).transform(transform)
         normal = Geom::Vector3d.new(0, 1, 0).transform(transform)
         point = Geom.intersect_line_plane(view.pickray(x, y), [origin, normal])
         return point if point
@@ -1773,6 +1934,7 @@ module VGD_Cabinet_Draw
         end
         return if click_finish?(view, x, y)
         return unless @shell && @shell.valid?
+        @gap_mode = false
         point = cursor_point(view, x, y)
         return unless point
         update_hover(point, Keys.shift?(flags))
@@ -1814,6 +1976,21 @@ module VGD_Cabinet_Draw
         Dialog.set_status(e.message)
       end
 
+      # Xóa cánh của vùng đã chọn: vùng thành trống (không gộp vào cánh bên cạnh). Enter để áp dụng.
+      def empty_selected(view)
+        ids = target_ids
+        return Dialog.set_status('Chọn vùng cần xóa cánh (Shift-click) rồi chọn lại lệnh.') if ids.empty?
+        ids.each do |id|
+          region = @layout.find(id)
+          region['empty'] = true if region
+        end
+        @selected = []
+        reset_hover
+        Dialog.set_status("Đã đánh dấu #{ids.length} vùng trống (không cánh). Enter để áp dụng.")
+        rebuild_preview
+        view.invalidate if view
+      end
+
       # Vùng cần chia khi gõ /n hoặc số: các vùng đang chọn, hoặc vùng đang trỏ, hoặc vùng duy nhất.
       def target_ids
         return @selected.dup unless @selected.empty?
@@ -1824,6 +2001,15 @@ module VGD_Cabinet_Draw
       def onUserText(text, view)
         raw = text.to_s.strip
         sync_size
+        gap_text = raw.match(/\A(?:gap|k)\s*(\d+(?:[.,]\d+)?)\z/i)
+        if @gap_mode || gap_text
+          set_door_gap(gap_text ? gap_text[1] : raw, view)
+          return
+        end
+        if raw.match?(/\A(?:a|auto)\z/i)
+          auto_split!(view)
+          return
+        end
         if raw.match?(/\Ag\z/i)
           merge_selected(view)
           return
@@ -1841,6 +2027,27 @@ module VGD_Cabinet_Draw
         view.invalidate
       rescue ArgumentError, RuntimeError => e
         Dialog.set_status(e.message)
+      end
+
+      # Khe đang chỉnh theo hướng chia: chia dọc (cánh cạnh nhau) → khe trái–phải; chia ngang (cánh chồng lên nhau) → khe trên–dưới.
+      def gap_key
+        split_axis == 'horizontal' ? 'door_gap_rows' : 'door_gap'
+      end
+
+      def gap_label
+        split_axis == 'horizontal' ? 'trên–dưới' : 'trái–phải'
+      end
+
+      # Khe giữa hai cánh liền kề (mm), nhập sau khi nhấn Alt (hoặc gõ k5, gap5), theo hướng chia hiện tại.
+      def set_door_gap(text, view)
+        @gap_mode = false
+        value = text.to_s.tr(',', '.')
+        raise 'Khe giữa hai cánh phải là một số mm từ 0 đến 100, ví dụ 3.' unless value.match?(/\A\d+(\.\d+)?\z/) && value.to_f <= 100.0
+        @settings[gap_key] = value.to_f
+        hud_after_set(gap_key)
+        Dialog.set_status("Khe #{gap_label} giữa hai cánh: #{value.to_f.round(2)} mm.")
+        rebuild_preview
+        view.invalidate if view
       end
 
       def divide_even(count)
@@ -1882,8 +2089,17 @@ module VGD_Cabinet_Draw
           rebuild_preview
           view.invalidate
           true
+        elsif Keys.alt_key?(key)
+          @gap_mode = true
+          current = gap_key == 'door_gap_rows' ? gap_rows_mm : @settings['door_gap'].to_f
+          Dialog.set_status("Nhập khe #{gap_label} giữa hai cánh (mm) rồi Enter. Hiện tại: #{current.round(2)} mm. (Ctrl đổi hướng chia dọc/ngang để chỉnh khe còn lại.)")
+          true
         elsif Keys.letter?(key, 'g')
+          @gap_mode = false
           merge_selected(view)
+          true
+        elsif Keys.letter?(key, 'a')
+          auto_split!(view)
           true
         elsif Keys.ctrl_key?(key)
           # Ctrl đổi dọc/ngang; giữ phím không đổi liên tục (chỉ đổi ở lần nhấn đầu).
@@ -1946,11 +2162,15 @@ module VGD_Cabinet_Draw
       # Khe hở (door_gap) chỉ nằm GIỮA hai cánh liền kề, mép ngoài của cánh luôn sát mép mặt tủ.
       def cells(bounds, layout = @layout)
         a = area(bounds)
-        gap = @settings['door_gap'].to_f.mm
-        layout.rects(a[:x1] - a[:x0], a[:z1] - a[:z0], gap).map do |r|
+        layout.rects(a[:x1] - a[:x0], a[:z1] - a[:z0], @settings['door_gap'].to_f.mm, gap_rows_mm.mm).map do |r|
           { x0: a[:x0] + r[:x0], x1: a[:x0] + r[:x1], z0: a[:z0] + r[:z0], z1: a[:z0] + r[:z1],
             y: a[:y], index: r[:index], id: r[:id], region: r[:region] }
         end
+      end
+
+      # Khe trên–dưới (giữa các cánh xếp chồng, mm). Chưa đặt riêng thì bằng khe trái–phải như bản cũ.
+      def gap_rows_mm
+        (@settings['door_gap_rows'].nil? ? @settings['door_gap'] : @settings['door_gap_rows']).to_f
       end
 
       def ready?
@@ -1990,7 +2210,7 @@ module VGD_Cabinet_Draw
       # dùng trong lệnh Chia cánh và khi Sửa tủ dựng lại.
       # Ghi bố cục + kiểu cánh TRƯỚC khi dựng lại đợt/vách: đợt và vách đọc kiểu cánh (lọt/phủ) từ đây để lùi đúng.
       def save_layout!
-        data = @layout.to_h.merge('gap_mm' => @settings['door_gap'].to_f, 'settings' => @settings.slice(*SAVED_KEYS))
+        data = @layout.to_h.merge('gap_mm' => @settings['door_gap'].to_f, 'gap_rows_mm' => gap_rows_mm, 'settings' => @settings.slice(*SAVED_KEYS))
         @root.set_attribute(Schema::DICTIONARY, 'door_layout_json', JSON.generate(data))
       end
 
@@ -2015,7 +2235,7 @@ module VGD_Cabinet_Draw
           front = DoorGeometry.build(container.entities, cell, 'Cánh Draw', @settings)
           front.set_attribute(Schema::DICTIONARY, 'part_index', cell[:index] + 1)
           front.set_attribute(Schema::DICTIONARY, 'region_id', region['id'])
-          ModelData.stamp(front, 'door', region.merge('gap_mm' => @settings['door_gap'].to_f, 'fit' => fit))
+          ModelData.stamp(front, 'door', region.merge('gap_mm' => @settings['door_gap'].to_f, 'gap_rows_mm' => gap_rows_mm, 'fit' => fit))
           front.set_attribute(Schema::DICTIONARY, 'style', @settings.fetch('door_style', 'flat'))
           Operations.apply_opening_metadata(front, region['opening_type'])
           old = keep[region['id'].to_i]
@@ -2057,17 +2277,37 @@ module VGD_Cabinet_Draw
         rescue StandardError => e
           @error = e.message
         end
-        add_dimension_labels(bounds, transform) if @settings['show_dims'] && @error.nil?
+        add_cell_labels(bounds, transform) if @settings['door_show_dims'] != false && @error.nil?
+        add_mark_guides(bounds, transform)
         highlight_regions(bounds, transform)
         add_split_marker(bounds, transform) if @hover_region && @hover_split && !@hover_shift
       end
 
-      # Nhãn kích thước từng cánh (rộng × cao, mm) ở mặt trước cánh.
-      def add_dimension_labels(bounds, transform)
+      # Số "rộng x cao" (mm) trong từng vùng cánh, đúng kiểu khung chữ của công cụ chia tấm.
+      def add_cell_labels(bounds, transform)
+        xaxis = Geom::Vector3d.new(1, 0, 0).transform(transform)
+        zaxis = Geom::Vector3d.new(0, 0, 1).transform(transform)
         depth = @settings['board_thickness'].to_f.mm
         cells(bounds, preview_layout).each do |cell|
-          spot = Geom::Point3d.new((cell[:x0] + cell[:x1]) / 2, cell[:y] - depth - 1.mm, (cell[:z0] + cell[:z1]) / 2).transform(transform)
-          @preview.add_label(spot, format('%.0f × %.0f', (cell[:x1] - cell[:x0]).to_mm, (cell[:z1] - cell[:z0]).to_mm))
+          w = cell[:x1] - cell[:x0]
+          h = cell[:z1] - cell[:z0]
+          center = Geom::Point3d.new((cell[:x0] + cell[:x1]) / 2, cell[:y] - depth - 1.mm, (cell[:z0] + cell[:z1]) / 2).transform(transform)
+          text = "#{format('%g', w.to_mm.round(1))} x #{format('%g', h.to_mm.round(1))}"
+          @preview.add_text_box(center, text, xaxis, zaxis, pixels: 14, max_height: [w, h].min * 0.45)
+        end
+      end
+
+      # Đường mảnh tại tim các vách giữa để thấy điểm sẽ hút khi chia dọc.
+      def add_mark_guides(bounds, transform)
+        marks = snap_marks
+        return if marks.empty?
+        a = area(bounds)
+        aw = a[:x1] - a[:x0]
+        y = pick_plane_y
+        marks.each do |u|
+          x = a[:x0] + u * aw
+          polygon = [[x - 0.5.mm, a[:z0]], [x + 0.5.mm, a[:z0]], [x + 0.5.mm, a[:z1]], [x - 0.5.mm, a[:z1]]]
+          @preview.add_prism_y(polygon, y, 1.mm, transform, :target)
         end
       end
 
@@ -2083,7 +2323,7 @@ module VGD_Cabinet_Draw
         end
       end
 
-      # Đường chia đang rê chuột, chỉ chạy trong phạm vi vùng đang trỏ, kèm số đo hai bên.
+      # Đường chia đang rê chuột, chỉ chạy trong phạm vi vùng đang trỏ. Số đo hai bên do khung "rộng x cao" trong từng vùng hiện.
       def add_split_marker(bounds, transform)
         region = @layout.find(@hover_region)
         return unless region
@@ -2092,7 +2332,7 @@ module VGD_Cabinet_Draw
         a = area(bounds)
         aw = a[:x1] - a[:x0]
         ah = a[:z1] - a[:z0]
-        y = a[:y] - @settings['board_thickness'].to_f.mm
+        y = pick_plane_y
         x0 = a[:x0] + region['u0'] * aw
         x1 = a[:x0] + region['u1'] * aw
         z0 = a[:z0] + region['v0'] * ah
@@ -2100,19 +2340,11 @@ module VGD_Cabinet_Draw
         if horizontal
           v = a[:z0] + @hover_split * ah
           polygon = [[x0, v - w], [x1, v - w], [x1, v + w], [x0, v + w]]
-          label_at = [(x0 + x1) / 2, v]
-          low_mm = (v - z0).to_mm
-          high_mm = (z1 - v).to_mm
         else
           v = a[:x0] + @hover_split * aw
           polygon = [[v - w, z0], [v + w, z0], [v + w, z1], [v - w, z1]]
-          label_at = [v, (z0 + z1) / 2]
-          low_mm = (v - x0).to_mm
-          high_mm = (x1 - v).to_mm
         end
-        @preview.add_prism_y(polygon, y + 2.mm, 2.mm, transform, :hover)
-        spot = Geom::Point3d.new(label_at[0], y, label_at[1]).transform(transform)
-        @preview.add_label(spot, format('%.0f | %.0f mm', low_mm, high_mm))
+        @preview.add_prism_y(polygon, y, 2.mm, transform, :hover)
       end
 
       # Viền mặt trước của tủ khi rê chuột chọn tủ.
@@ -2169,6 +2401,7 @@ module VGD_Cabinet_Draw
       def hud_write(key, value)
         if key == 'hinge_side'
           @hinge_side = value
+          @ref_x = nil
         else
           @settings[key] = value
         end
@@ -2252,14 +2485,22 @@ module VGD_Cabinet_Draw
         @parent_transforms[entity] = found[1] if found
         @hover_door = entity
         unless @targets.empty?
-          @ref_x ||= x - @angle * PIXELS_PER_DEGREE
-          angle = (x - @ref_x) / PIXELS_PER_DEGREE
+          direction = drag_direction
+          @ref_x ||= x - direction * @angle * PIXELS_PER_DEGREE
+          angle = direction * (x - @ref_x) / PIXELS_PER_DEGREE
           angle = (angle / 15.0).round * 15.0 if Keys.shift?(flags)
           @angle = [[angle, 0.0].max, MAX_ANGLE].min
           show_angle
         end
         rebuild_preview
         view.invalidate
+      end
+
+      # Hướng rê chuột để mở: bản lề trái mở khi rê sang trái (con trỏ đi theo mép tự do của cánh, vì nhìn từ trước mép đó chạy
+      # sang trái khi cánh mở ra); các bản lề còn lại mở khi rê sang phải.
+      def drag_direction
+        first = @targets.find(&:valid?)
+        (first ? side_for(first) : hinge_side) == 'left' ? -1.0 : 1.0
       end
 
       def show_angle
@@ -2340,6 +2581,7 @@ module VGD_Cabinet_Draw
       def onKeyDown(key, repeat, flags, view)
         if Keys.tab?(key)
           @hinge_side = SIDE_ORDER[(SIDE_ORDER.index(hinge_side).to_i + 1) % SIDE_ORDER.length]
+          @ref_x = nil
           Dialog.set_status("Bản lề: #{SIDE_NAMES[hinge_side]} (chỉ áp dụng cho cánh đang đóng).")
           rebuild_preview
           view.invalidate
@@ -2687,7 +2929,7 @@ module VGD_Cabinet_Draw
               @preview.add_polygon(pts,:front)
               if @settings['drawer_show_dims']
                 mid = [(pts[0].x + pts[2].x) / 2, (pts[0].y + pts[2].y) / 2, (pts[0].z + pts[2].z) / 2]
-                @preview.add_label(Geom::Point3d.new(*mid), format('Mặt hộc %.0f × %.0f mm', ((b.max.x - b.min.x) - 2 * t).to_mm, height.to_mm))
+                @preview.add_label(Geom::Point3d.new(*mid), format('%.0f × %.0f', ((b.max.x - b.min.x) - 2 * t).to_mm, height.to_mm))
               end
             end
           elsif @tool_name=='blocker'
@@ -3184,30 +3426,47 @@ module VGD_Cabinet_Draw
         return spec.merge('position' => 'custom', 'u' => ((local.x - b[0]) / width).clamp(0.0, 1.0), 'v' => ((local.z - b[2]) / height).clamp(0.0, 1.0))
       end
       half = (orientation == 'vertical' ? [length, height].min : [length, width].min) / 2.0
-      case type
-      when 'right' then cx = b[0] + edge
-      when 'left', 'none' then cx = b[3] - edge
-      else cx = (b[0] + b[3]) / 2.0
-      end
-      cz = case type
-           when 'top' then b[2] + edge
-           when 'bottom' then b[5] - edge
-           when 'drawer' then (b[2] + b[5]) / 2.0
-           else vertical_handle_z(door, b, edge, half)
-           end
-      spec.merge('position' => 'auto', 'u' => (cx - b[0]) / width, 'v' => (cz - b[2]) / height)
+      # Neo: tay nắm cách mép đã chọn một khoảng mm cố định, nên cánh đổi kích thước thì tay nắm vẫn ở đúng chỗ.
+      ax, dx = case type
+               when 'right' then ['left', edge]
+               when 'left', 'none' then ['right', edge]
+               else ['center', 0.0]
+               end
+      az, dz = case type
+               when 'top' then ['bottom', edge]
+               when 'bottom' then ['top', edge]
+               when 'drawer' then ['center', 0.0]
+               else vertical_handle_anchor(door, b, edge, half)
+               end
+      anchored = spec.merge('position' => 'auto', 'ax' => ax, 'dx_mm' => dx.to_mm, 'az' => az, 'dz_mm' => dz.to_mm)
+      # u/v (tỷ lệ) vẫn lưu để các đoạn mã cũ đọc được tay nắm; vị trí thật lấy theo neo.
+      anchored.merge('u' => (handle_center(anchored, 'x', b[0], b[3]) - b[0]) / width,
+                     'v' => (handle_center(anchored, 'z', b[2], b[5]) - b[2]) / height)
     end
 
-    def vertical_handle_z(door, b, edge, half)
+    # Neo theo chiều đứng cho tay nắm đặt tự động: [mép, khoảng cách tới mép] (inch).
+    def vertical_handle_anchor(door, b, edge, half)
       world = door_world(door)
       wz0 = Geom::Point3d.new(b[0], b[1], b[2]).transform(world).z
       wz1 = Geom::Point3d.new(b[0], b[1], b[5]).transform(world).z
       low = b[2] + edge + half
       high = b[5] - edge - half
-      return (b[2] + b[5]) / 2.0 if low > high
-      if [wz0, wz1].min > 1200.mm then low
-      elsif (wz1 - wz0).abs > 1200.mm then (b[2] + (1000.mm - [wz0, wz1].min)).clamp(low, high)
-      else high
+      return ['center', 0.0] if low > high
+      if [wz0, wz1].min > 1200.mm then ['bottom', low - b[2]]
+      elsif (wz1 - wz0).abs > 1200.mm then ['bottom', (b[2] + (1000.mm - [wz0, wz1].min)).clamp(low, high) - b[2]]
+      else ['top', b[5] - high]
+      end
+    end
+
+    # Vị trí tâm tay nắm theo neo (mm cách mép đã chọn). Spec cũ chỉ có u/v (tỷ lệ) thì dùng tỷ lệ.
+    def handle_center(spec, axis, low, high)
+      anchor = spec["a#{axis}"]
+      return low + spec[axis == 'x' ? 'u' : 'v'].to_f * (high - low) if anchor.nil?
+      offset = spec["d#{axis}_mm"].to_f.mm
+      case anchor
+      when 'left', 'bottom' then low + offset
+      when 'right', 'top' then high - offset
+      else (low + high) / 2.0
       end
     end
 
@@ -3215,8 +3474,8 @@ module VGD_Cabinet_Draw
     def add_handle(door, spec)
       b = door_bounds(door)
       return nil unless b
-      cx = b[0] + spec['u'].to_f * (b[3] - b[0])
-      cz = b[2] + spec['v'].to_f * (b[5] - b[2])
+      cx = handle_center(spec, 'x', b[0], b[3])
+      cz = handle_center(spec, 'z', b[2], b[5])
       face = b[1]
       out = [spec['projection_mm'].to_f, 12.0].max.mm
       group = door.definition.entities.add_group

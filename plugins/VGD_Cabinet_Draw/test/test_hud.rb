@@ -60,7 +60,7 @@ cab = new_cabinet
 dt = V::Tools::DoorTool.new({}); dt.activate; dt.draw(v)
 rects = dt.instance_variable_get(:@hud_rects)
 check 'có 2 nút chế độ (phủ / lọt)', rects.count { |r| r[4] == :mode } == 2
-check 'có 9 hàng thông số (gồm 2 ô phủ hông trái/phải)', rects.count { |r| r[4] == :param } == 9, rects.count { |r| r[4] == :param }
+check 'có 11 hàng thông số (gồm 2 ô phủ hông, khe trên–dưới, ngưỡng chia 2 cánh)', rects.count { |r| r[4] == :param } == 11, rects.count { |r| r[4] == :param }
 check 'thanh trạng thái có hướng dẫn ngắn', Sketchup.status_text.to_s.start_with?('VGD ·') && Sketchup.status_text.length < 150, Sketchup.status_text
 check 'hướng dẫn không dùng Ctrl+số', !Sketchup.status_text.to_s.include?('Ctrl+1')
 check 'chế độ mặc định là phủ', dt.fit == 'phu'
@@ -118,7 +118,7 @@ cab = new_cabinet
 dt = V::Tools::DoorTool.new({}); dt.activate
 press(dt, :param, 'door_gap')
 check 'bấm hàng số thì chờ gõ', dt.instance_variable_get(:@armed)[:key] == 'door_gap'
-check 'thanh trạng thái nhắc gõ số', Sketchup.status_text.to_s.include?('Khe giữa cánh'), Sketchup.status_text
+check 'thanh trạng thái nhắc gõ số', Sketchup.status_text.to_s.include?('Khe trái–phải'), Sketchup.status_text
 dt.onUserText('5', v)
 check 'gõ 5 + Enter đặt khe giữa 5', dt.settings['door_gap'] == 5.0, dt.settings['door_gap']
 check 'xong thì hết chờ gõ', dt.instance_variable_get(:@armed).nil?
@@ -137,10 +137,12 @@ check 'Esc khi đang chờ gõ: KHÔNG thoát công cụ', Sketchup.active_model
 dt.onCancel(0, v)
 check 'Esc lần hai mới thoát công cụ', Sketchup.active_model.tool.nil?
 Sketchup.active_model.select_tool(dt)
-press(dt, :param, 'show_dims')
-check 'bấm hàng bật/tắt đảo giá trị', dt.settings['show_dims'] == true
-labels = dt.instance_variable_get(:@preview).instance_variable_get(:@labels)
-check 'bật hiện kích thước thì có nhãn', labels.length >= 1 && labels.first[1] =~ /1200 × 2000/, labels.inspect
+check 'mặc định hiện kích thước từng cánh', dt.settings['door_show_dims'] == true
+boxes = dt.instance_variable_get(:@preview).text_boxes
+check 'có khung chữ rộng x cao trong vùng cánh (như chia tấm)', boxes.length >= 1 && boxes.first[:text] =~ /1200 x 2000/, boxes.map { |b| b[:text] }.inspect
+press(dt, :param, 'door_show_dims')
+check 'bấm hàng bật/tắt đảo giá trị', dt.settings['door_show_dims'] == false
+check 'tắt hiện kích thước thì không có khung chữ', dt.instance_variable_get(:@preview).text_boxes.empty?
 press(dt, :param, 'split_axis')
 check 'bấm hàng danh sách đổi vòng', dt.settings['split_axis'] == 'horizontal'
 press(dt, :param, 'door_style')
@@ -156,8 +158,8 @@ Sketchup.reset_model!
 bx = mk_box(600, 560, 720)
 Sketchup.active_model.selection.clear; Sketchup.active_model.selection.add(bx)
 bt = V::Tools::BoxTool.new({}); bt.activate; bt.draw(v)
-press(bt, :param, 'back_mode'); press(bt, :param, 'back_mode')
-check 'hàng Kiểu hậu đổi vòng tới Không hậu', bt.settings['back_mode'] == 'none'
+5.times { press(bt, :param, 'back_mode') }
+check 'hàng Kiểu hậu đổi vòng tới Không hậu (sau 5 lần: âm 4 cạnh → âm 2 hông → lùa trên → lùa đáy → phủ → không hậu)', bt.settings['back_mode'] == 'none'
 press(bt, :mode, 'base')
 check 'nút Bếp dưới: áp chân 100, tắt phào', bt.settings['cabinet_type'] == 'base' && bt.settings['leg_height'] == 100.0 && bt.settings['cornice_enabled'] == false
 check 'Bếp dưới: hiện hàng Bản giằng, ẩn hàng tủ lạnh', bt.hud_params.any? { |p| p[:key] == 'top_rail_width' } && bt.hud_params.none? { |p| p[:key] == 'fridge_width' }

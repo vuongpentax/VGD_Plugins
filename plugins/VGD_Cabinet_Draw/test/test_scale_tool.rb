@@ -1,0 +1,196 @@
+# Test lệnh Scale VGD: 6 điểm neo ở tâm các mặt, chọn điểm neo rồi kéo/gõ số để co giãn kiểu stretch (giả lập SketchUp).
+# Chạy: ruby test_scale_tool.rb [thư mục runtime]
+$stdout.sync = true
+src = File.read(File.join(__dir__, 'test_build.rb'), encoding: 'UTF-8')
+eval(src.split("puts '== 1.").first, binding, File.join(__dir__, 'test_build.rb'))
+v = Sketchup.active_model.active_view
+def dims(c); d = V::ModelData.params(c); [d['width_mm'], d['depth_mm'], d['height_mm']]; end
+def mmpt(x, y, z); Geom::Point3d.new(x.mm, y.mm, z.mm); end
+def new_tool(c)
+  reselect(c)
+  t = V::Tools::ScaleTool.new
+  t.activate
+  t
+end
+def move_to(t, point, x = 5, y = 5)
+  vv = Sketchup.active_model.active_view
+  vv.fake_point = point
+  t.onMouseMove(0, x, y, vv)
+end
+def screen_of(point)
+  s = Sketchup.active_model.active_view.screen_coords(point)
+  [s.x, s.y]
+end
+
+puts '== 1. Điểm neo: 6 điểm ở tâm các mặt của hộp tủ =='
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0) # 800 x 560 x 2000
+t = new_tool(c)
+g = t.grips
+check 'có 6 điểm neo', g.length == 6, g.length.to_s
+want = { [0, :min] => [0, 280, 1000], [0, :max] => [800, 280, 1000], [1, :min] => [400, 0, 1000], [1, :max] => [400, 560, 1000], [2, :min] => [400, 280, 0], [2, :max] => [400, 280, 2000] }
+ok = want.all? do |(axis, side), mm|
+  grip = g.find { |x| x[:axis] == axis && x[:side] == side }
+  grip && grip[:point].to_a.map { |q| q.to_mm.round(1) } == mm.map(&:to_f)
+end
+check 'vị trí 6 điểm neo đúng tâm 6 mặt (mm)', ok, g.map { |x| [x[:axis], x[:side], x[:point].to_a.map { |q| q.to_mm.round(1) }] }.inspect
+check 'chưa chọn điểm neo: đang ở bước chọn', t.phase == :pick && t.anchor.nil?
+
+puts '== 2. Rê chuột vào điểm neo thì sáng, chọn điểm neo rồi kéo ra =='
+left = g.find { |x| x[:axis] == 0 && x[:side] == :min }
+sx, sy = screen_of(left[:point])
+move_to(t, left[:point], sx, sy)
+check 'rê gần điểm hông trái: điểm đó sáng', t.hover && t.hover[:axis] == 0 && t.hover[:side] == :min, t.hover.inspect
+move_to(t, mmpt(400, 280, 1000), 50, 50)
+check 'rê ra xa: không còn sáng', t.hover.nil?
+move_to(t, left[:point], sx, sy)
+vv = Sketchup.active_model.active_view
+t.onLButtonDown(0, sx, sy, vv)
+check 'bấm điểm hông trái: mặt trái là mặt DỜI, mặt phải đứng yên (điểm neo)', t.phase == :drag && t.handle[:side] == :min && t.anchor[:axis] == 0 && t.anchor[:side] == :max, [t.handle, t.anchor].inspect
+move_to(t, mmpt(-200, 280, 1000))
+check 'kéo tới x = -200 (cách điểm neo 1000): kích thước mới 1000', near(t.size_mm, 1000.0, 0.01), t.size_mm.inspect
+check 'VCB hiện kích thước mới', Sketchup.vcb_value.to_s.include?('1000'), Sketchup.vcb_value.inspect
+before_ops = dims(c)
+check 'đang kéo: tủ chưa đổi (chỉ preview)', before_ops == [800.0, 560.0, 2000.0]
+t.onLButtonDown(0, 5, 5, vv)
+check 'click: tủ rộng 1000 và vẫn là cùng tủ', dims(c) == [1000.0, 560.0, 2000.0] && c.valid?, dims(c).inspect
+ox = c.transformation.origin.x.to_mm # bb() đo trong hệ của tủ: đổi sang toạ độ thế giới bằng gốc của tủ
+check 'mặt đối diện (hông phải) đứng yên tại x = 800', near(ox + bb(part(c, 'Hông Phải'))[3], 800.0, 0.05), [ox, bb(part(c, 'Hông Phải'))].inspect
+check 'mặt bấm (hông trái) dời tới x = -200', near(ox + bb(part(c, 'Hông Trái'))[0], -200.0, 0.05), [ox, bb(part(c, 'Hông Trái'))].inspect
+check 'tủ hết trạng thái Scale, ván giữ độ dày 17.5', V::Rebuild.scale_of(c).nil? && near(bb(part(c, 'Hông Phải'))[3] - bb(part(c, 'Hông Phải'))[0], 17.5, 0.01)
+check 'xong thì quay về bước chọn điểm neo', t.phase == :pick && t.anchor.nil?
+
+puts '== 3. Bấm mặt phải: mặt phải dời, mặt trái đứng yên; gõ số + Enter cho kích thước chuẩn =='
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+t = new_tool(c)
+rg = t.grips.find { |x| x[:axis] == 0 && x[:side] == :max }
+sx, sy = screen_of(rg[:point])
+move_to(t, rg[:point], sx, sy)
+t.onLButtonDown(0, sx, sy, vv)
+check 'bấm mặt phải: mặt trái là điểm neo', t.phase == :drag && t.anchor[:side] == :min && t.handle[:side] == :max
+t.onUserText('1200', vv)
+check 'gõ 1200 + Enter: rộng đúng 1200', dims(c) == [1200.0, 560.0, 2000.0], dims(c).inspect
+check 'mặt trái đứng yên tại 0, hông phải tới 1200', near(bb(part(c, 'Hông Trái'))[0], 0.0, 0.05) && near(bb(part(c, 'Hông Phải'))[3], 1200.0, 0.05), [bb(part(c, 'Hông Trái')), bb(part(c, 'Hông Phải'))].inspect
+
+puts '== 4. Chiều sâu và chiều cao (chọn điểm neo bằng hàm), số gõ là kích thước mới =='
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+t = new_tool(c)
+t.select_grip(t.grips.find { |x| x[:axis] == 2 && x[:side] == :max }, vv)
+t.onUserText('2300', vv)
+check 'bấm mặt nóc (đáy đứng yên), gõ 2300: cao 2300', dims(c) == [800.0, 560.0, 2300.0], dims(c).inspect
+check 'đáy đứng yên z = 0, nóc lên cao', near(bb(part(c, 'Đáy'))[2], 0.0, 0.05) && near(bb(part(c, 'Nóc'))[5], 2300.0, 0.05), [bb(part(c, 'Đáy')), bb(part(c, 'Nóc'))].inspect
+t.select_grip(t.grips.find { |x| x[:axis] == 1 && x[:side] == :max }, vv)
+t.onUserText('600', vv)
+check 'neo một mặt sâu, gõ 600: sâu 600, rộng và cao giữ nguyên', dims(c) == [800.0, 600.0, 2300.0], dims(c).inspect
+
+# Bấm mặt sâu phía min: mặt max (y = 560) đứng yên, mặt min dời ra, gốc tủ dịch theo
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+t = new_tool(c)
+t.select_grip(t.grips.find { |x| x[:axis] == 1 && x[:side] == :min }, vv)
+t.onUserText('700', vv)
+oy = c.transformation.origin.y.to_mm
+check 'bấm mặt sâu phía min (mặt max đứng yên), gõ 700: sâu 700, rộng và cao giữ nguyên', dims(c) == [800.0, 700.0, 2000.0], dims(c).inspect
+check 'gốc tủ dịch -140 theo trục sâu', near(oy, -140.0, 0.05), oy.inspect
+
+puts '== 5. Hủy, số sai, Esc =='
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+t = new_tool(c)
+t.select_grip(t.grips.first, vv)
+UI.msgs.clear
+t.onUserText('abc', vv)
+check 'gõ chữ: báo lỗi, tủ không đổi, vẫn ở bước kéo', dims(c) == [800.0, 560.0, 2000.0] && t.phase == :drag && !Sketchup.status_text.to_s.empty?
+t.onUserText('10', vv)
+check 'quá nhỏ (dưới 50 mm): không áp dụng', dims(c) == [800.0, 560.0, 2000.0] && t.phase == :drag
+t.onCancel(0, vv)
+check 'Esc khi đang kéo: về bước chọn điểm neo, không thoát lệnh', t.phase == :pick && t.anchor.nil? && t.active?
+t.onUserText('1000', vv)
+check 'chưa chọn điểm neo mà gõ số: bỏ qua', dims(c) == [800.0, 560.0, 2000.0]
+t.onCancel(0, vv)
+check 'Esc ở bước chọn: thoát lệnh', Sketchup.active_model.instance_variable_get(:@tool).nil?, Sketchup.active_model.instance_variable_get(:@tool).inspect
+
+puts '== 6. Không chọn tủ / chọn nhiều tủ / tủ đang bị Scale dở =='
+Sketchup.active_model.selection.clear
+t = V::Tools::ScaleTool.new; t.activate
+check 'không chọn tủ: nhắc chọn tủ, chưa có điểm neo', t.grips.empty? && Sketchup.status_text.to_s.include?('chọn'), Sketchup.status_text.inspect
+vv.fake_path = [c]
+t.onLButtonDown(0, 5, 5, vv)
+check 'click vào tủ khi chưa chọn: chọn tủ đó và hiện điểm neo', t.grips.length == 6, t.grips.length.to_s
+c2 = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+c.transformation = Geom::Transformation.scaling(1.5, 1, 1) * c.transformation
+t = new_tool(c)
+check 'tủ đang bị Scale chưa cập nhật: không hiện điểm neo, báo rõ', t.grips.empty? && Sketchup.status_text.to_s.include?('Scale'), Sketchup.status_text.inspect
+
+puts '== 7. Vẽ và nút trên thanh công cụ =='
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+t = new_tool(c)
+vv.drawn = []
+check 'vẽ bước chọn không lỗi', (t.draw(vv); true)
+t.select_grip(t.grips.first, vv)
+move_to(t, mmpt(500, 280, 1000))
+check 'vẽ bước kéo không lỗi và có vẽ khung preview', (t.draw(vv); true) && !vv.drawn.nil?
+cmd = V.instance_variable_get(:@toolbar).commands.find { |x| x.title == 'Scale VGD' }
+Sketchup.active_model.selection.clear
+cmd.run
+tbc = V.instance_variable_get(:@toolbar).commands
+check 'mọi nút dùng PNG 16 (small) và 24 (large) px, tồn tại và đúng kích thước', tbc.all? { |x| x.small_icon.to_s.end_with?('_16.png') && x.large_icon.to_s.end_with?('_24.png') && File.file?(x.small_icon) && File.file?(x.large_icon) && File.binread(x.small_icon, 8, 16).unpack('NN') == [16, 16] && File.binread(x.large_icon, 8, 16).unpack('NN') == [24, 24] }, tbc.map { |x| [x.small_icon, x.large_icon] }.inspect
+check 'nút Scale VGD mở lệnh Scale', Sketchup.active_model.instance_variable_get(:@tool).is_a?(V::Tools::ScaleTool), Sketchup.active_model.instance_variable_get(:@tool).class.inspect
+
+# cab() tạo model mới nên view cũng mới: luôn lấy view hiện tại.
+puts '== 8. Kéo theo tia chuột từ góc nhìn 45° (mặt trước / hướng lên), không phụ thuộc điểm suy luận =='
+# Camera giả lập nhìn theo (1,1,-1) từ (-5000,-5000,5000) mm: tia chuột đi từ mắt qua điểm cần tới.
+def eye_ray(target)
+  eye = Geom::Point3d.new(-5000.mm, -5000.mm, 5000.mm)
+  dir = target - eye
+  dir.normalize!
+  [eye, dir]
+end
+def move_ray(t, target)
+  vv = Sketchup.active_model.active_view
+  vv.instance_variable_set(:@fake_ray, eye_ray(target))
+  vv.fake_point = Geom::Point3d.new(0, 0, 0) # điểm suy luận sai hẳn: lệnh không được dựa vào nó
+  t.onMouseMove(0, 5, 5, vv)
+end
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+t = new_tool(c)
+front = t.grips.find { |x| x[:axis] == 1 && x[:side] == :min } # mặt trước (y = 0), mặt sau đứng yên
+t.select_grip(front, Sketchup.active_model.active_view)
+move_ray(t, mmpt(400, -240, 1000))
+check 'kéo mặt trước ra 240 mm bằng tia chuột: sâu mới 800', near(t.size_mm, 800.0, 1.0), t.size_mm.inspect
+t.onLButtonDown(0, 5, 5, Sketchup.active_model.active_view)
+check 'click: sâu tủ đổi theo tia chuột', dims(c)[1] > 700.0 && dims(c)[1] < 1500.0 && dims(c)[0] == 800.0, dims(c).inspect
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+t = new_tool(c)
+top = t.grips.find { |x| x[:axis] == 2 && x[:side] == :max }
+t.select_grip(top, Sketchup.active_model.active_view)
+move_ray(t, mmpt(400, 280, 2500))
+check 'kéo nóc lên 2500 từ góc nhìn nghiêng: cao mới 2500', near(t.size_mm, 2500.0, 1.0), t.size_mm.inspect
+move_ray(t, mmpt(400, 280, 1500))
+check 'kéo xuống 1500: cao 1500 (thu nhỏ)', near(t.size_mm, 1500.0, 1.0), t.size_mm.inspect
+t.onLButtonDown(0, 5, 5, Sketchup.active_model.active_view)
+check 'click: tủ cao 1500, đáy đứng yên', dims(c)[2] == 1500.0 && near(c.transformation.origin.z.to_mm, 0.0, 0.01), [dims(c), c.transformation.origin.z.to_mm].inspect
+Sketchup.active_model.active_view.instance_variable_set(:@fake_ray, nil)
+
+puts '== 8b. Nhãn kích thước chỉ hiện số =='
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+ortho_view = Sketchup.active_model.active_view
+t = new_tool(c)
+t.select_grip(t.grips.find { |x| x[:axis] == 0 && x[:side] == :max }, ortho_view)
+t.onUserText('abc', ortho_view)
+ortho_view.fake_point = mmpt(1200, 280, 1000)
+t.onMouseMove(0, 5, 5, ortho_view)
+ortho_view.drawn = []
+t.draw(ortho_view)
+texts = ortho_view.drawn.select { |e| e[0] == :text }.map { |e| e[1][1] }
+check 'nhãn khi kéo chỉ là số (không mm, không chữ Rộng)', texts.length == 1 && texts.first.match?(/\A\d+(\.\d+)?\z/), texts.inspect
+
+puts '== 9. Không còn chữ ở góc trên trái viewport =='
+c = cab('leg_height' => 0, 'ceiling_strip_height' => 0)
+t = new_tool(c)
+av = Sketchup.active_model.active_view
+av.drawn = []
+t.draw(av)
+check 'bước chọn: không vẽ chữ nào (hướng dẫn nằm ở thanh trạng thái)', av.drawn.none? { |e| e[0] == :text }, av.drawn.select { |e| e[0] == :text }.inspect
+check 'thanh trạng thái vẫn có hướng dẫn', Sketchup.status_text.to_s.include?('click')
+
+puts "\n== Kết quả test_scale_tool: Đạt: #{$pass}   Không đạt: #{$fail.length} =="
+$fail.each { |x| puts "  - #{x}" }
+exit($fail.empty? ? 0 : 1)

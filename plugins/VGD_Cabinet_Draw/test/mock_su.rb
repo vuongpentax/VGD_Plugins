@@ -72,29 +72,44 @@ module Sketchup
     def initialize(n,h); @name=n; @h=h; end
     def each_pair(&b); @h.each_pair(&b); end
   end
-  class Vertex; attr_reader :position; def initialize(p); @position=p; end; end
+  class Vertex
+    attr_reader :owner, :idx
+    def initialize(p, owner = nil, idx = nil); @p = p; @owner = owner; @idx = idx; end
+    def position; @owner ? @owner.vertex_point(@idx) : @p; end
+  end
   class Face < Entity
     attr_reader :pts, :ext
-    def initialize(pts); @pts=pts; @flip=false; @ext=0; end
+    def initialize(pts); @pts=pts; @flip=false; @ext=0; @far=nil; end
     def normal
       a=pts[0]; b=pts[1]; c=pts[2]
       n=(b-a).cross(c-b).normalize; @flip ? n.reverse : n
     end
     def reverse!; @flip=!@flip; self; end
     def area; 1.0; end
-    def vertices; pts.map{|p| Vertex.new(p)}; end
+    def vertices; (0...(pts.length + far.length)).map{|i| Vertex.new(vertex_point(i), self, i)}; end
     class Loop
-      def initialize(pts, outer); @pts=pts; @outer=outer; end
-      def vertices; @pts.map{|p| Vertex.new(p)}; end
+      def initialize(pts, outer, owner = nil); @pts=pts; @outer=outer; @owner=owner; end
+      def vertices
+        return @pts.map{|p| Vertex.new(p)} unless @owner
+        @owner.pts.each_index.map{|i| Vertex.new(@owner.pts[i], @owner, i)}
+      end
       def outer?; @outer; end
     end
-    def outer_loop; @outer_loop ||= Loop.new(pts, true); end
+    def outer_loop; @outer_loop ||= Loop.new(pts, true, self); end
     def loops; [outer_loop] + (@holes||[]).map{|h| Loop.new(h, false)}; end
     def holes=(h); @holes=h; end
     def parent_entities=(e); @pe=e; end
     def parent; @pe.owner; end
     def erase!; @erased=true; end
-    def pushpull(d); @ext=d; @pushed = true; end
+    def pushpull(d)
+      @ext=d; @pushed = true
+      n = normal
+      @far = pts.map { |p| Geom::Point3d.new(p.x + n.x * d, p.y + n.y * d, p.z + n.z * d) }
+    end
+    # Điểm đối diện của mặt đùn (pushpull): SketchUp thật có đỉnh thật ở đó.
+    def far; @far || []; end
+    def vertex_point(i); i < pts.length ? pts[i] : @far[i - pts.length]; end
+    def set_vertex_point(i, p); if i < pts.length then pts[i] = p else @far[i - pts.length] = p end; end
     def pushed?; !!@pushed; end
   end
   class Bounds
@@ -108,7 +123,19 @@ module Sketchup
   class Entities
     include Enumerable
     attr_reader :owner
-    def initialize(owner); @owner=owner; @list=[]; end
+    attr_reader :vector_calls
+    def initialize(owner); @owner=owner; @list=[]; @vector_calls=0; end
+    # Dời mỗi đỉnh theo vectơ riêng trong một lần (như Entities#transform_by_vectors của SketchUp).
+    def transform_by_vectors(entities, vectors)
+      @vector_calls += 1
+      entities.each_with_index do |e, i|
+        v = vectors[i]
+        next unless e.is_a?(Vertex)
+        pt = e.position
+        e.owner.set_vertex_point(e.idx, Geom::Point3d.new(pt.x + v.x, pt.y + v.y, pt.z + v.z))
+      end
+      true
+    end
     def each(&b); @list.reject(&:erased?).each(&b); end
     def to_a; @list.reject(&:erased?); end
     def length; to_a.length; end
@@ -133,10 +160,7 @@ module Sketchup
         case e
         when Face
           e.pts.each{|p| pts<<p.transform(tr)}
-          if e.pushed?
-            nrm=e.normal; v=Geom::Vector3d.new(nrm.x*e.ext,nrm.y*e.ext,nrm.z*e.ext)
-            e.pts.each{|p| pts<<Geom::Point3d.new(p.x+v.x,p.y+v.y,p.z+v.z).transform(tr)}
-          end
+          e.far.each{|p| pts<<p.transform(tr)}
         when Group, ComponentInstance
           collect(e.definition.entities, tr*e.transformation, pts)
         end
@@ -346,7 +370,7 @@ module Sketchup
       e = Edge.new(pt.(p), pt.(q)); @list << e; e
     end
   end
-  class Face; def bounds; Definition.new.tap { |d| }.then { Bounds.new(pts + (pushed? ? pts.map { |p| n = normal; Geom::Point3d.new(p.x + n.x * ext, p.y + n.y * ext, p.z + n.z * ext) } : [])) }; end; end
+  class Face; def bounds; Definition.new.tap { |d| }.then { Bounds.new(pts + far) }; end; end
   class Group; def bounds; definition.bounds; end; end
   class ComponentInstance; def bounds; definition.bounds; end; end
   def self.vcb_label=(v); @vcb_label = v; end
@@ -393,5 +417,165 @@ module Sketchup
       [Geom::Point3d.new(p.x, p.y - 10000, p.z), Geom::Vector3d.new(0, 1, 0)]
     end
     def pixels_to_model(px, _pt); px * 2.0; end
+  end
+end
+
+# ---- Hỗ trợ co giãn tại chỗ (test_stretch.rb): biến đổi hình học, sao chép, texture, observer, mặc định ----
+module Geom
+  class Transformation
+    def self.scaling(x, y, z)
+      new([[x.to_f, 0.0, 0.0], [0.0, y.to_f, 0.0], [0.0, 0.0, z.to_f], [0.0, 0.0, 0.0]])
+    end
+  end
+end
+module Sketchup
+  class ModelObserver; end
+  class AppObserver; end
+  @defaults = {}
+  class << self
+    def add_observer(o); (@app_observers ||= []) << o; end
+    def read_default(section, key, default = nil); @defaults.fetch([section, key], default); end
+    def write_default(section, key, value); @defaults[[section, key]] = value; end
+  end
+  class Entity
+    def dup_dicts; @dicts && @dicts.transform_values(&:dup); end
+    def placed_bounds(box, t); Bounds.new([box.min, box.max].map { |p| p.transform(t) }); end
+  end
+  class Face
+    attr_accessor :back_material
+    def apply_transform!(t)
+      n = normal
+      @ext = @ext * Math.sqrt(t.apply_vec(n.to_a).sum { |c| c * c }) if pushed?
+      @pts = @pts.map { |p| p.transform(t) }
+      @far = @far.map { |p| p.transform(t) } if @far
+      self
+    end
+    def position_material(material, points, front)
+      (@positioned ||= []) << [material, points, front]
+      true
+    end
+    def positioned; @positioned || []; end
+    def copy_into(entities)
+      f = Face.new(@pts.map { |p| Geom::Point3d.new(p.x, p.y, p.z) })
+      f.instance_variable_set(:@flip, @flip)
+      f.instance_variable_set(:@ext, @ext)
+      f.instance_variable_set(:@pushed, @pushed)
+      f.instance_variable_set(:@far, @far && @far.map { |p| Geom::Point3d.new(p.x, p.y, p.z) })
+      f.material = material
+      f.back_material = back_material
+      f.parent_entities = entities
+      f.instance_variable_set(:@dicts, dup_dicts)
+      f
+    end
+  end
+  class Entities
+    def transform_entities(t, ents = nil)
+      (ents.nil? ? to_a : Array(ents)).each do |e|
+        if e.is_a?(Vertex) then e.owner.set_vertex_point(e.idx, Geom::Point3d.new(*t.apply_pt(e.position.to_a)))
+        elsif e.is_a?(Face) then e.apply_transform!(t)
+        elsif e.is_a?(Group) || e.is_a?(ComponentInstance) then e.transformation = t * e.transformation
+        end
+      end
+      true
+    end
+  end
+  class Definition
+    def deep_copy
+      copy = Definition.new
+      copy.name = name
+      entities.to_a.each { |e| copy.entities.push(e.respond_to?(:copy_into) ? e.copy_into(copy.entities) : e) }
+      copy
+    end
+  end
+  class Group
+    def bounds; placed_bounds(definition.bounds, transformation); end
+    def make_unique; self; end
+    def copy_into(entities)
+      g = Group.new(entities)
+      g.transformation = transformation
+      g.name = name
+      g.layer = layer
+      g.material = material
+      g.instance_variable_set(:@definition, definition.deep_copy)
+      g.instance_variable_set(:@dicts, dup_dicts)
+      g
+    end
+  end
+  class ComponentInstance
+    def bounds; placed_bounds(definition.bounds, transformation); end
+    def make_unique; @definition = @definition.deep_copy; self; end
+    def copy_into(entities)
+      i = ComponentInstance.new(entities, definition, transformation)
+      i.name = name
+      i.layer = layer
+      i.material = material
+      i.instance_variable_set(:@dicts, dup_dicts)
+      i
+    end
+  end
+  class Model
+    def add_observer(o); (@model_observers ||= []) << o; end
+    def remove_observer(o); (@model_observers ||= []).delete(o); end
+  end
+end
+
+# ---- Tháo nhóm thành các phần tử (explode) cho bản thử co giãn ----
+module Sketchup
+  class Group
+    def explode
+      target = @parent_entities
+      @definition.entities.to_a.each do |e|
+        c = e.respond_to?(:copy_into) ? e.copy_into(target) : e
+        if c.is_a?(Face) then c.apply_transform!(@transformation)
+        elsif c.is_a?(Group) || c.is_a?(ComponentInstance) then c.transformation = @transformation * c.transformation
+        end
+        target.push(c)
+      end
+      @erased = true
+      true
+    end
+  end
+  class ComponentInstance
+    def explode
+      target = @pe
+      @definition.entities.to_a.each do |e|
+        c = e.respond_to?(:copy_into) ? e.copy_into(target) : e
+        if c.is_a?(Face) then c.apply_transform!(@transformation)
+        elsif c.is_a?(Group) || c.is_a?(ComponentInstance) then c.transformation = @transformation * c.transformation
+        end
+        target.push(c)
+      end
+      @erased = true
+      true
+    end
+  end
+end
+
+# Vân vật liệu (beta.40): kích thước thật (inch) và pixel ảnh. Dùng để kiểm tra việc đặt lại vân sau khi co giãn.
+module Sketchup
+  class Texture
+    attr_reader :width, :height, :image_width, :image_height
+    def initialize(width = 24.0, height = 12.0, image_width = 512, image_height = 256)
+      @width = width; @height = height; @image_width = image_width; @image_height = image_height
+    end
+  end
+  class Material
+    def texture; @texture; end
+    def texture=(value); @texture = value; end
+  end
+  class Face
+    # SketchUp đòi số điểm chẵn (cặp điểm trên mặt, điểm trên ảnh). Mô phỏng lỗi đúng như SketchUp báo.
+    alias_method :position_material_unchecked, :position_material
+    def position_material(material, points, front)
+      raise ArgumentError, 'Wrong number of points: must be an even number' if points.length.odd?
+      position_material_unchecked(material, points, front)
+    end
+  end
+end
+
+module Geom
+  class Transformation
+    # SketchUp: 16 số theo cột (giống Transformation#to_a).
+    def to_a; (0..2).flat_map { |i| m[i].map(&:to_f) + [0.0] } + m[3].map(&:to_f) + [1.0]; end
   end
 end

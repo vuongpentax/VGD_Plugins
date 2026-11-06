@@ -173,7 +173,7 @@ check 'json hỏng -> 1 vùng, không lỗi', dt4.layout.regions.length == 1
 
 puts '== 11. Khe cánh trên bố cục vùng =='
 sel.clear; sel.add(cab)
-gt = V::Tools::DoorTool.new({}); gt.activate; gt.settings['door_gap'] = 4
+gt = V::Tools::DoorTool.new({}); gt.activate; gt.settings['door_gap'] = 4; gt.settings['door_gap_rows'] = 4
 cs = gt.cells(V::Geometry.body_bounds(V::Geometry.shell_for(cab)))
 check 'khe 4 mm: mép ngoài sát tủ', cs.map { |c| c[:x0] }.min == 0.0 && (cs.map { |c| c[:x1] }.max - 1200.mm).abs < 1e-9
 right = cs.select { |c| c[:x0] > 1.mm }.sort_by { |c| c[:z0] }
@@ -297,6 +297,214 @@ check 'cánh trở về đúng vị trí đóng (không lệch)', rot_ok
 sel.clear
 UI.msgs.clear
 check 'không chọn tủ: báo nhẹ nhàng, không lỗi', V.close_selected_doors == 0 && UI.msgs.last.to_s.include?('chọn')
+
+
+def close_to(a, b, tol = 0.02); (a - b).abs <= tol; end
+def fresh_cabinet(w = 1200)
+  Sketchup.reset_model!
+  c = V::Geometry.cabinet_from_box(mk_box(w, 500, 2000), { 'front_normal' => [0, -1, 0], 'leg_height' => 0, 'ceiling_strip_height' => 0 })
+  s = Sketchup.active_model.selection; s.clear; s.add(c)
+  c
+end
+def add_partitions(c, offsets_mm)
+  sh = V::Geometry.shell_for(c)
+  inner = V::Interior.inner(sh)
+  op = { 'type' => 'panel', 'axis' => 'vertical', 'kind' => 'thong_thuy', 'thickness_mm' => 17.5, 'limit' => false,
+         'anchor' => V::Rebuild.anchor_of(sh, (inner.x0 + inner.x1) / 2, (inner.z0 + inner.z1) / 2),
+         'setback_mm' => 0.0, 'door_fit' => 'phu', 'mode' => 'free', 'offsets' => offsets_mm }
+  op['op'] = V::Rebuild.record(c, op)
+  V::Rebuild.place_panels(c, sh, op)
+end
+def door_edges(c)
+  V::Operations.doors_of(c).map { |d| b = V::Operations.door_bounds(d); [b[0].to_mm.round(2), b[3].to_mm.round(2)] }.sort
+end
+
+puts '== 14. Tự chia cánh theo vách (hồi) giữa =='
+c = fresh_cabinet
+add_partitions(c, [382.5]) # vách x 400..417.5, tim 408.75
+v = Sketchup.active_model.active_view
+dt = V::Tools::DoorTool.new('door_auto_width' => 0.0); dt.activate
+count = dt.auto_split_by_partitions
+dt.commit(v)
+edges = door_edges(c)
+check 'một vách: tự chia 2 cánh', count == 2 && edges.length == 2, [count, edges].inspect
+check 'cánh chia đúng tim mặt trước vách (408.75)', close_to(edges[0][1], 408.75) && close_to(edges[1][0], 408.75), edges.inspect
+
+c = fresh_cabinet
+add_partitions(c, [382.5, 400.0]) # hai vách liền kề: 400..417.5 và 417.5..435
+dt = V::Tools::DoorTool.new('door_auto_width' => 0.0); dt.activate
+count = dt.auto_split_by_partitions
+dt.commit(v)
+edges = door_edges(c)
+check 'hai vách liền kề: chỉ chia một chỗ (2 cánh)', count == 2 && edges.length == 2, [count, edges].inspect
+check 'hai vách liền kề: cánh chia ở giữa hai vách (417.5)', close_to(edges[0][1], 417.5) && close_to(edges[1][0], 417.5), edges.inspect
+
+c = fresh_cabinet
+add_partitions(c, [382.5, 782.5])
+dt = V::Tools::DoorTool.new('door_auto_width' => 0.0); dt.activate
+count = dt.auto_split_by_partitions
+dt.commit(v)
+edges = door_edges(c)
+check 'hai vách cách xa: 3 cánh', count == 3 && edges.length == 3, [count, edges].inspect
+check 'ba cánh chia đúng tim hai vách (408.75 và 808.75)', close_to(edges[0][1], 408.75) && close_to(edges[1][0], 408.75) && close_to(edges[1][1], 808.75) && close_to(edges[2][0], 808.75), edges.inspect
+
+c = fresh_cabinet
+add_partitions(c, [382.5])
+dt = V::Tools::DoorTool.new('door_gap' => 4.0, 'door_auto_width' => 0.0); dt.activate
+dt.auto_split_by_partitions
+dt.commit(v)
+edges = door_edges(c)
+check 'khe 4 mm: mỗi cánh cách tim vách 2 mm', close_to(edges[0][1], 408.75 - 2.0) && close_to(edges[1][0], 408.75 + 2.0), edges.inspect
+
+c = fresh_cabinet
+dt = V::Tools::DoorTool.new('door_auto_width' => 0.0); dt.activate
+count = dt.auto_split_by_partitions
+check 'tủ chưa có vách, ngưỡng tắt: 1 cánh, bố cục hợp lệ', count == 1 && dt.layout.regions.length == 1, count.inspect
+
+puts '== 15. Nhập khe giữa hai cánh bằng Alt + số; số hiển thị như chia tấm =='
+c = fresh_cabinet
+dt = V::Tools::DoorTool.new({}); dt.activate
+dt.layout.split(dt.layout.regions.first['id'], 'vertical', 0.5)
+check 'ban đầu khe 0', dt.instance_variable_get(:@settings)['door_gap'].to_f == 0.0
+dt.onKeyDown(18, 0, 0, v)
+dt.onUserText('5', v)
+check 'Alt rồi gõ số: đặt khe giữa hai cánh 5 mm', dt.instance_variable_get(:@settings)['door_gap'].to_f == 5.0, dt.instance_variable_get(:@settings)['door_gap'].inspect
+bounds = V::Geometry.body_bounds(V::Geometry.shell_for(c))
+cells = dt.cells(bounds)
+check 'khe 5 mm hiện đúng giữa hai cánh', cells.length == 2 && close_to((cells[1][:x0] - cells[0][:x1]).to_mm, 5.0), cells.map { |ce| [ce[:x0].to_mm, ce[:x1].to_mm] }.inspect
+dt.onUserText('k2.5', v)
+check 'gõ k2.5 cũng đặt khe 2.5 mm', dt.instance_variable_get(:@settings)['door_gap'].to_f == 2.5, dt.instance_variable_get(:@settings)['door_gap'].inspect
+dt.onUserText('/2', v)
+check 'sau khi đặt khe, gõ số thường vẫn là chia', dt.instance_variable_get(:@settings)['door_gap'].to_f == 2.5 && dt.layout.regions.length >= 2
+dt.onKeyDown(18, 0, 0, v)
+dt.onUserText('abc', v)
+check 'Alt rồi gõ chữ: báo lỗi, không đổi khe', dt.instance_variable_get(:@settings)['door_gap'].to_f == 2.5
+dt.rebuild_preview
+pv = dt.instance_variable_get(:@preview)
+check 'số hiển thị trong từng vùng cánh (khung chữ rộng x cao như chia tấm)', pv.text_count == dt.layout.regions.length && pv.text_boxes.all? { |t| t[:text].match?(/\A[\d.]+ x [\d.]+\z/) }, pv.text_boxes.map { |t| t[:text] }.inspect
+
+puts '== 16. Rê chuột gần tim vách thì hút dính vào tim =='
+c = fresh_cabinet
+add_partitions(c, [382.5]) # tim 408.75 mm
+dt = V::Tools::DoorTool.new({}); dt.activate
+hover(dt, 415, 1000) # lệch 6.25 mm so với tim
+u_mark = 408.75 / 1200.0
+check 'gần tim vách (lệch 6.25 mm): chia hút đúng tim', (dt.instance_variable_get(:@hover_split) - u_mark).abs < 1e-6, dt.instance_variable_get(:@hover_split).inspect
+hover(dt, 700, 1000)
+check 'xa tim vách: chia theo vị trí con trỏ (làm tròn mm)', (dt.instance_variable_get(:@hover_split) - 700.0 / 1200.0).abs < 1e-6, dt.instance_variable_get(:@hover_split).inspect
+check 'có đường mảnh báo điểm hút tại tim vách', dt.snap_marks.length == 1 && (dt.snap_marks.first - u_mark).abs < 1e-6, dt.snap_marks.inspect
+
+puts '== 17. Cánh tự động theo khoang: ngưỡng chia 2 cánh (mặc định 450 mm) =='
+c = fresh_cabinet # rộng 1200, hông 17.5: lòng 17.5..1182.5
+add_partitions(c, [382.5]) # vách 400..417.5: khoang trái 382.5 mm, khoang phải 765 mm
+dt = V::Tools::DoorTool.new({}); dt.activate
+check 'ngưỡng mặc định 450', dt.instance_variable_get(:@settings)['door_auto_width'].to_f == 450.0, dt.instance_variable_get(:@settings)['door_auto_width'].inspect
+count = dt.auto_split_by_partitions
+dt.commit(v)
+edges = door_edges(c)
+check 'khoang trái ≤ 450: 1 cánh; khoang phải > 450: 2 cánh (tổng 3)', count == 3 && edges.length == 3, [count, edges].inspect
+check 'khoang phải chia đôi ở giữa khoang (800)', close_to(edges[1][1], 800.0) && close_to(edges[2][0], 800.0) && close_to(edges[0][1], 408.75), edges.inspect
+check 'bố cục lưu cờ tự động', JSON.parse(c.get_attribute(DICT, 'door_layout_json'))['auto'] == true
+
+c = fresh_cabinet
+add_partitions(c, [382.5])
+dt = V::Tools::DoorTool.new('door_auto_width' => 800.0); dt.activate
+check 'ngưỡng 800: cả hai khoang không vượt: chỉ chia ở vách (2 cánh)', dt.auto_split_by_partitions == 2
+
+c = fresh_cabinet(400)
+dt = V::Tools::DoorTool.new({}); dt.activate
+check 'tủ hẹp 400, không vách: 1 cánh', dt.auto_split_by_partitions == 1
+c = fresh_cabinet(1200)
+dt = V::Tools::DoorTool.new({}); dt.activate
+check 'tủ rộng 1200, không vách: 2 cánh', dt.auto_split_by_partitions == 2
+dt.commit(v)
+check 'tủ rộng không vách: dựng 2 cánh', door_edges(c).length == 2, door_edges(c).inspect
+
+c = fresh_cabinet
+dt = V::Tools::DoorTool.new({}); dt.activate
+dt.auto_split_by_partitions
+dt.layout.split(dt.layout.regions.first['id'], 'horizontal', 0.5)
+check 'chia tay sau khi tự chia: bố cục không còn là tự động', !dt.layout.auto?
+
+puts '== 18. Alt: khe trên–dưới (chia ngang) tách riêng khe trái–phải (chia dọc) =='
+c = fresh_cabinet
+dt = V::Tools::DoorTool.new({}); dt.activate
+dt.layout.split(dt.layout.regions.first['id'], 'vertical', 0.5)
+dt.layout.split(dt.layout.regions.first['id'], 'horizontal', 0.5)
+S = ->(t) { t.instance_variable_get(:@settings) }
+dt.onKeyDown(18, 0, 0, v); dt.onUserText('3', v)
+check 'chia dọc: Alt+3 đặt khe trái–phải, khe trên–dưới giữ nguyên', S.(dt)['door_gap'].to_f == 3.0 && S.(dt)['door_gap_rows'].to_f == 0.0, S.(dt).values_at('door_gap', 'door_gap_rows').inspect
+S.(dt)['split_axis'] = 'horizontal'
+dt.onKeyDown(18, 0, 0, v); dt.onUserText('25', v)
+check 'chia ngang: Alt+25 đặt khe trên–dưới, khe trái–phải giữ 3', S.(dt)['door_gap'].to_f == 3.0 && S.(dt)['door_gap_rows'].to_f == 25.0, S.(dt).values_at('door_gap', 'door_gap_rows').inspect
+bounds = V::Geometry.body_bounds(V::Geometry.shell_for(c))
+cells = dt.cells(bounds)
+left = cells.select { |ce| ce[:x0] < 100.mm }.sort_by { |ce| ce[:z0] }
+right = cells.find { |ce| ce[:x0] > 100.mm }
+check 'hai cánh trên–dưới cách nhau đúng 25 mm', left.length == 2 && close_to((left[1][:z0] - left[0][:z1]).to_mm, 25.0), left.map { |ce| [ce[:z0].to_mm, ce[:z1].to_mm] }.inspect
+check 'cánh trái–phải vẫn cách 3 mm (không bị 25 mm lây sang)', close_to((right[:x0] - left[0][:x1]).to_mm, 3.0), [left[0][:x1].to_mm, right[:x0].to_mm].inspect
+dt.onUserText('k7', v)
+check 'gõ k7 theo hướng chia hiện tại (ngang) đặt khe trên–dưới', S.(dt)['door_gap_rows'].to_f == 7.0 && S.(dt)['door_gap'].to_f == 3.0
+dt.commit(v)
+saved = JSON.parse(c.get_attribute(DICT, 'door_layout_json'))
+check 'bố cục lưu cả hai khe', saved['settings']['door_gap'].to_f == 3.0 && saved['settings']['door_gap_rows'].to_f == 7.0, saved['settings'].inspect
+dt2 = V::Tools::DoorTool.new({}); dt2.load_cabinet(c)
+check 'mở lại tủ: nhớ cả hai khe', S.(dt2)['door_gap'].to_f == 3.0 && S.(dt2)['door_gap_rows'].to_f == 7.0
+
+# Tủ lưu bằng bản cũ (chỉ có door_gap): khe trên–dưới lấy theo door_gap để không đổi hình cánh cũ
+old_layout = { 'schema' => 2, 'regions' => [{ 'id' => 1, 'u0' => 0.0, 'u1' => 1.0, 'v0' => 0.0, 'v1' => 0.5, 'opening_type' => 'none' }, { 'id' => 2, 'u0' => 0.0, 'u1' => 1.0, 'v0' => 0.5, 'v1' => 1.0, 'opening_type' => 'none' }],
+               'gap_mm' => 4.0, 'settings' => { 'door_gap' => 4.0 } }
+c.set_attribute(DICT, 'door_layout_json', JSON.generate(old_layout))
+dt3 = V::Tools::DoorTool.new({}); dt3.load_cabinet(c)
+check 'tủ cũ: khe trên–dưới = door_gap cũ (4)', S.(dt3)['door_gap_rows'].to_f == 4.0, S.(dt3).values_at('door_gap', 'door_gap_rows').inspect
+
+puts '== 19. Chỉ còn một kiểu chữ kích thước (bỏ nhãn cam khi rê chia) =='
+c = fresh_cabinet
+dt = V::Tools::DoorTool.new({}); dt.activate
+hover(dt, 500, 1000)
+dt.rebuild_preview
+pv = dt.instance_variable_get(:@preview)
+check 'rê chuột chia: có vạch chia nhưng không còn nhãn "xxx | yyy mm"', !dt.instance_variable_get(:@hover_split).nil? && pv.instance_variable_get(:@labels).empty?, pv.instance_variable_get(:@labels).inspect
+check 'số rộng x cao trong vùng vẫn còn (2 vùng sẽ tạo ra)', pv.text_count == 2, pv.text_count.to_s
+check 'bảng thông số có khe trên–dưới và ngưỡng chia 2 cánh', %w[door_gap_rows door_auto_width].all? { |k| V::PresetHud::SPECS['door'][:params].any? { |p| p[:key] == k } }
+
+
+puts '== 20. Chia thủ công ở góc nhìn nghiêng: vạch chia bám mặt trước thùng tủ (nơi thấy mép hồi) =='
+c = fresh_cabinet
+add_partitions(c, [382.5]) # vách 400..417.5, tim 408.75
+dt = V::Tools::DoorTool.new({}); dt.activate
+dt.layout.split(dt.layout.regions.first['id'], 'vertical', 0.5)
+dt.commit(Sketchup.active_model.active_view) # dựng cánh: thùng tủ lùi vào theo dày cánh
+shell = V::Geometry.shell_for(c)
+front_y = V::Geometry.body_bounds(shell).min.y
+check 'sau khi dựng cánh, thùng tủ lùi vào sau mặt cánh', front_y > 10.mm, front_y.to_mm.inspect
+eye = Geom::Point3d.new(-3000.mm, -3000.mm, 1500.mm)
+def oblique_ray(eye, target)
+  dir = target - eye
+  dir.normalize!
+  [eye, dir]
+end
+dt2 = V::Tools::DoorTool.new({}); dt2.activate
+vw = Sketchup.active_model.active_view
+dt2.load_cabinet(c)
+# Người dùng chỉ vào tim mép trước vách nhìn thấy: (408.75, mặt trước thùng tủ, 1000)
+vw.fake_ray = oblique_ray(eye, Geom::Point3d.new(408.75.mm, front_y, 1000.mm))
+vw.fake_path = [c]
+dt2.onMouseMove(0, 5, 5, vw)
+u = dt2.instance_variable_get(:@hover_uv)[0]
+width = dt2.layout.width_mm
+check 'chỉ đúng mép trước vách ở góc 45°: toạ độ trên mặt cánh đúng 408.75', near_mm = (u * width - 408.75).abs < 0.6, (u * width).round(2).inspect
+vw.fake_ray = oblique_ray(eye, Geom::Point3d.new(700.mm, front_y, 1000.mm))
+dt2.onMouseMove(0, 5, 5, vw)
+x700 = dt2.instance_variable_get(:@hover_uv)[0] * width
+check 'chỉ vào điểm bất kỳ (700 mm) trên mặt trước thùng tủ: đúng 700', (x700 - 700.0).abs < 0.6, x700.round(2).inspect
+split = dt2.instance_variable_get(:@hover_split)
+check 'vạch chia đề xuất bám đúng vị trí trỏ (700) chứ không lệch 17.5 mm', split && (split * width - 700.0).abs < 1.5, (split && (split * width).round(2)).inspect
+pv = dt2.instance_variable_get(:@preview)
+hover_ys = pv.instance_variable_get(:@polygons).select { |_, kind| kind == :hover }.flat_map { |pts, _| pts.map { |pt| pt.y } }
+check 'vạch chia vẽ trên mặt trước thùng tủ (không vẽ ở mặt cánh)', !hover_ys.empty? && hover_ys.all? { |y| y <= front_y + 0.01.mm && y >= front_y - 2.5.mm }, hover_ys.map { |y| y.to_mm.round(2) }.uniq.inspect
+vw.fake_ray = nil
+
 
 puts "\nĐạt: #{$pass}   Không đạt: #{$fail.length}"
 exit($fail.empty? ? 0 : 1)

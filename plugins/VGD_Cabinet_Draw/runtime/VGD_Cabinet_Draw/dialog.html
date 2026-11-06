@@ -7,21 +7,21 @@
 :root{--bg:var(--vgd-bg);--panel:var(--vgd-surface);--line:var(--vgd-border);--text:var(--vgd-text);--muted:var(--vgd-muted);--accent:var(--vgd-accent);--warm:var(--vgd-accent-strong)}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:13px "Manrope VGD",Manrope,"Segoe UI",Arial,sans-serif}header{position:sticky;top:0;z-index:2;background:var(--vgd-elevated);border-bottom:1px solid var(--line);padding:14px 16px;display:flex;align-items:center;gap:10px}header b{font-size:16px;letter-spacing:.3px}header small{margin-left:auto;color:var(--muted)}.brand{width:28px;height:28px;border:1px solid var(--vgd-muted);border-radius:7px;display:grid;place-items:center;color:var(--accent);font-weight:700}.wrap{padding:14px;max-width:620px;margin:auto}.intro{color:var(--muted);line-height:1.55;margin:3px 2px 14px}.section{margin:12px 0 16px}.section h2{font-size:13px;margin:0 0 8px;color:var(--accent);font-weight:650}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tool{background:var(--panel);border:1px solid var(--line);border-radius:9px;color:var(--text);padding:10px;text-align:left;min-height:55px;cursor:pointer}.tool:hover{border-color:var(--accent);background:var(--vgd-elevated)}.tool strong{display:block;font-size:13px}.tool span{display:block;color:var(--muted);font-size:11px;margin-top:4px}.card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:12px;margin:8px 0}.fields{display:grid;grid-template-columns:1fr 1fr;gap:9px}.field label{display:block;color:var(--muted);font-size:11px;margin:0 0 4px}.field input,.field select,.preset input{width:100%;background:var(--vgd-bg);color:var(--text);border:1px solid var(--vgd-border);border-radius:6px;padding:8px;font:inherit}.actions{display:flex;gap:8px;margin-top:10px}.button{border:1px solid var(--line);background:var(--vgd-elevated);color:var(--text);border-radius:6px;padding:8px 11px;cursor:pointer}.button.primary{background:var(--vgd-tint);border-color:var(--vgd-accent-strong)}.preset-row{display:flex;gap:7px}.preset-row input{flex:1;min-width:0}.preset-list{display:grid;gap:6px;margin-top:10px}.preset-item{display:flex;align-items:center;gap:7px;background:var(--vgd-bg);border:1px solid var(--line);border-radius:6px;padding:7px}.preset-item span{flex:1;overflow:hidden;text-overflow:ellipsis}.preset-item button{padding:5px 7px}.status{position:sticky;bottom:0;background:var(--vgd-surface);border-top:1px solid var(--line);padding:10px 14px;color:var(--vgd-text);min-height:38px;font-size:12px}.status-row{display:flex;gap:8px;align-items:center}.status-row #status{flex:1}details summary{cursor:pointer;color:var(--muted);padding:6px 0}.note{font-size:11px;color:var(--muted);line-height:1.5}.switch{display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--muted)}
 .panels{display:grid;grid-template-columns:1.25fr .7fr .85fr;gap:6px 8px;align-items:end}.panels .head{color:var(--muted);font-size:11px}.panels .name{display:flex;gap:6px;align-items:center}.panels input[type=number]{width:100%;background:var(--vgd-bg);color:var(--text);border:1px solid var(--vgd-border);border-radius:6px;padding:6px;font:inherit}.cover{grid-column:1 / -1;display:flex;gap:14px;color:var(--muted);font-size:11px;margin:-2px 0 4px 22px}.cover label{display:flex;gap:5px;align-items:center}
-.tabs{display:flex;gap:4px;padding:8px 12px 0;background:var(--vgd-elevated);border-bottom:1px solid var(--line);overflow-x:auto}.tabs button{background:transparent;border:1px solid transparent;border-bottom:none;color:var(--muted);padding:8px 10px;border-radius:7px 7px 0 0;cursor:pointer;white-space:nowrap;font:inherit}.tabs button.on{background:var(--bg);color:var(--accent);border-color:var(--line);font-weight:650}.tab{display:none}.tab.on{display:block}.presetbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px}.presetbar select{flex:1 1 150px;min-width:0;background:var(--vgd-bg);color:var(--text);border:1px solid var(--vgd-border);border-radius:6px;padding:8px;font:inherit}.presetbar .button{padding:6px 8px}.mrow{display:flex;gap:6px;align-items:center;background:var(--vgd-bg);border:1px solid var(--line);border-radius:6px;padding:6px 7px;margin-top:5px}.mrow span{flex:1;overflow:hidden;text-overflow:ellipsis}.mrow .button{padding:4px 7px}.sub{margin:12px 0 4px;color:var(--accent);font-weight:650}.warn{color:#b45309;font-size:11px;line-height:1.5;margin:6px 0}
+.tabs{display:flex;gap:4px;padding:8px 12px 0;background:var(--vgd-elevated);border-bottom:1px solid var(--line);overflow-x:auto}.tabs button{background:transparent;border:1px solid transparent;border-bottom:none;color:var(--muted);padding:8px 10px;border-radius:7px 7px 0 0;cursor:pointer;white-space:nowrap;font:inherit}.tabs button.on{background:var(--bg);color:var(--accent);border-color:var(--line);font-weight:650}.tab{display:none}.tab.on{display:block}.presetbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:0 0 10px}.presetbar select{flex:1 1 150px;min-width:0;background:var(--vgd-bg);color:var(--text);border:1px solid var(--vgd-border);border-radius:6px;padding:8px;font:inherit}.presetbar .button{padding:6px 8px}.mrow{display:flex;gap:6px;align-items:center;background:var(--vgd-bg);border:1px solid var(--line);border-radius:6px;padding:6px 7px;margin-top:5px}.mrow span{flex:1;overflow:hidden;text-overflow:ellipsis}.mrow .button{padding:4px 7px}.sub{margin:12px 0 4px;color:var(--accent);font-weight:650}.warn{color:var(--vgd-danger);font-size:11px;line-height:1.5;margin:6px 0}
 </style>
 <link rel="stylesheet" href="vgd-theme/vgd-theme.css"></head>
 <body>
-<header><div class="brand">V</div><b>VGD Cabinet Draw</b><small>1.0.0-beta.33</small><button id="themeBtn" class="vgd-theme-btn" type="button" aria-pressed="false" style="margin-left:auto"></button></header>
+<header><div class="brand">V</div><b>VGD Cabinet Draw</b><small>1.0.0-beta.70</small><button id="themeBtn" class="vgd-theme-btn" type="button" aria-pressed="false" style="margin-left:auto"></button></header>
 <nav class="tabs" id="tabs">
 <button data-tab="box" class="on">1 · Box → Board</button><button data-tab="panel">2 · Đợt / vách</button><button data-tab="door">3 · Cánh tủ</button><button data-tab="drawer">4 · Ngăn kéo</button><button data-tab="settings">5 · Setting chung</button></nav>
 <main class="wrap">
 
 <section class="tab on" id="tab-box" data-pgroup="box">
-<p class="intro"><b>Sửa tủ đã tạo:</b> chọn tủ (chỉ chọn tủ) rồi bấm Box → Board — HUD hiện thông số và Rộng/Sâu/Cao của tủ, sửa rồi Enter để dựng lại; đợt, vách, ngăn kéo, cánh, tay nắm được giữ theo cách đã tạo. Kéo Scale tủ rồi làm như trên để dựng lại đúng độ dày ván. Box → thùng tủ: chọn box, click mặt trước, nhấn Enter (hoặc nút Áp dụng). Box bị scale vẫn dựng được, tủ có kích thước thật như box. Face → ván: chọn các face rồi chạy công cụ, hộp thoại hỏi độ dày. Dày ván và dày hậu đặt ở tab 5.</p>
+<p class="intro"><b>Sửa tủ đã tạo:</b> chọn tủ (chỉ chọn tủ) rồi bấm Box → Board — HUD hiện thông số và Rộng/Sâu/Cao của tủ, sửa rồi Enter để dựng lại; đợt, vách, ngăn kéo, cánh, tay nắm được giữ theo cách đã tạo. Kéo Scale xong thì tủ tự cập nhật theo kích thước mới, giữ ván và chi tiết đã làm (tắt ở tab 5 · Setting chung). Box → thùng tủ: chọn box, click mặt trước, nhấn Enter (hoặc nút Áp dụng). Box bị scale vẫn dựng được, tủ có kích thước thật như box. Face → ván: chọn các face rồi chạy công cụ, hộp thoại hỏi độ dày. Dày ván và dày hậu đặt ở tab 5.</p>
 <div class="presetbar" data-bar="box"></div>
 <div class="card" data-group="box"><div class="fields">
-<div class="field"><label>Loại tủ</label><select data-key="cabinet_type"><option value="standard">Tủ thường (tủ áo, tủ kệ…)</option><option value="base">Tủ bếp dưới</option><option value="wall">Tủ bếp trên</option><option value="fridge">Thùng tủ lạnh</option></select></div>
-<div class="field"><label>Kiểu hậu</label><select data-key="back_mode"><option value="groove">Hậu ngậm rãnh kín</option><option value="overlay">Hậu phủ</option><option value="none">Không hậu</option></select></div>
+<div class="field"><label>Loại tủ</label><select data-key="cabinet_type"><option value="standard">Tủ tùy biến (khung, tủ áo, tủ kệ…)</option><option value="base">Tủ bếp dưới</option><option value="wall">Tủ bếp trên</option><option value="fridge">Thùng tủ lạnh</option></select></div>
+<div class="field"><label>Kiểu hậu</label><select data-key="back_mode"><option value="groove">Âm 4 cạnh</option><option value="groove_sides">Âm 2 hông</option><option value="lua_top">Lùa trên</option><option value="lua_bottom">Lùa đáy</option><option value="overlay">Phủ</option><option value="none">Không hậu</option></select></div>
 <div class="field"><label>Độ ngậm rãnh (mm)</label><input data-key="back_groove_depth" type="number" step="any" min="0" value="8.75"></div>
 <div class="field"><label>Lớp ván che sau rãnh (mm)</label><input data-key="back_lip" type="number" step="any" min="0" value="10"></div>
 </div>
@@ -30,7 +30,14 @@
 <h2 class="sub">Tủ bếp và thùng tủ lạnh</h2>
 <div class="card" data-group="box"><div class="fields">
 <div class="field"><label>Nóc tủ bếp dưới</label><select data-key="top_mode"><option value="auto">Tự theo loại tủ (bếp dưới = 2 thanh giằng)</option><option value="rails">2 thanh giằng (trước nằm, sau đứng)</option><option value="full">Nóc nguyên tấm</option></select></div>
-<div class="field"><label>Bản giằng nóc (mm)</label><input data-key="top_rail_width" type="number" step="any" min="30" value="100"></div>
+<div class="field"><label>Bản xà trước (mm)</label><input data-key="top_rail_width" type="number" step="any" min="30" value="100"></div>
+<div class="field"><label>Xà trước</label><select data-key="rail_front_orient"><option value="flat">Nằm</option><option value="upright">Đứng</option></select></div>
+<label class="switch"><input data-key="rail_front_double" type="checkbox"> Xà trước kép (2 bản)</label>
+<div class="field"><label>Xà sau</label><select data-key="rail_back_orient"><option value="flat">Nằm</option><option value="upright">Đứng</option></select></div>
+<div class="field"><label>Bản xà sau (mm)</label><input data-key="rail_back_width" type="number" step="any" min="30" value="100"></div>
+<div class="field"><label>Ngưỡng tách tủ (mm)</label><input data-key="split_height" type="number" step="any" min="1000" value="2400"></div>
+<div class="field"><label>Cao tủ dưới khi tách (mm)</label><input data-key="split_lower_height" type="number" step="any" min="300" value="2100"></div>
+<div class="field"><label>Liên kết khi tách</label><select data-key="split_joint"><option value="dau_dinh">Đấu đình</option><option value="xa_duoi">Xà dưới</option><option value="xa_tren">Xà trên</option></select></div>
 <div class="field"><label>Bản xà treo tủ bếp trên (mm)</label><input data-key="hang_rail_height" type="number" step="any" min="30" value="100"></div>
 <div class="field"><label>Rộng tủ lạnh (mm)</label><input data-key="fridge_width" type="number" step="any" min="300" value="700"></div>
 <div class="field"><label>Cao tủ lạnh (mm)</label><input data-key="fridge_height" type="number" step="any" min="400" value="1800"></div>
@@ -98,7 +105,9 @@
 <div class="card" data-group="door"><div class="fields">
 <div class="field"><label>Hướng chia</label><select data-key="split_axis"><option value="vertical">Dọc (cánh xếp cạnh nhau)</option><option value="horizontal">Ngang (cánh xếp chồng)</option></select></div>
 <div class="field"><label>Chế độ cánh</label><select data-key="door_fit"><option value="phu">Cánh phủ (trùm ngoài mặt tủ)</option><option value="lot">Cánh lọt (nằm trong lòng tủ, chừa khe mép)</option><option value="thong_thuy">Thông thủy (vừa khít lòng tủ)</option></select></div>
-<div class="field"><label>Khe giữa các cánh (mm)</label><input data-key="door_gap" type="number" step="any" value="0"></div>
+<div class="field"><label>Khe trái–phải giữa các cánh (mm)</label><input data-key="door_gap" type="number" step="any" value="0"></div>
+<div class="field"><label>Khe trên–dưới giữa các cánh (mm)</label><input data-key="door_gap_rows" type="number" step="any" min="0" value="0"></div>
+<div class="field"><label>Ngưỡng chia 2 cánh khi tự chia (mm) — khoang rộng hơn thì chia đôi, 0 = tắt</label><input data-key="door_auto_width" type="number" step="any" min="0" value="450"></div>
 <div class="field"><label>Khe mép cánh phủ (mm)</label><input data-key="door_edge_gap" type="number" step="any" min="0" value="0"></div>
 <div class="field"><label>Khe mép cánh lọt (mm) — khe với hông/nóc/đáy</label><input data-key="door_inset_gap" type="number" step="any" min="0" value="2"></div>
 <div class="field"><label>Dạng cánh</label><select data-key="door_style"><option value="flat">Phẳng</option><option value="shaker">Shaker</option><option value="recessed">Panel âm</option><option value="glass">Khung kính</option></select></div>
@@ -109,7 +118,7 @@
 <div class="field"><label>Số cột kính</label><input data-key="glass_columns" type="number" min="1" max="8" value="1"></div>
 <div class="field"><label>Độ lõm panel (mm)</label><input data-key="panel_recess" type="number" step="any" value="8"></div>
 </div>
-<label class="switch"><input data-key="show_dims" type="checkbox"> Hiện kích thước từng cánh khi xem trước</label></div>
+<label class="switch"><input data-key="door_show_dims" type="checkbox"> Hiện kích thước từng cánh khi xem trước</label></div>
 <p class="note">Mở / đóng cánh: click từng cánh, rê chuột trái/phải chọn góc, click chốt rồi click cánh khác (mỗi cánh một góc riêng). Chọn sẵn nhiều cánh thì lần lượt từng cánh. Ctrl+click để gom nhiều cánh dùng chung một góc. Esc bỏ cánh đang chỉnh, Enter kết thúc.</p>
 <div class="grid"><button class="tool" data-tool="door"><strong>Chạy: Chia cánh</strong><span>Chia vùng trên mặt tủ</span></button><button class="tool" data-tool="opening"><strong>Chạy: Mở / đóng cánh</strong><span>Rê chuột chọn góc, click chốt</span></button></div>
 </section>
@@ -134,6 +143,9 @@
 
 <section class="tab" id="tab-settings">
 <p class="intro">Thông số dùng chung cho cả bốn công cụ, và quản lý danh sách setting đã lưu của từng công cụ.</p>
+<h2 class="sub">Tự cập nhật tủ</h2>
+<div class="card"><label class="switch"><input id="autoStretch" type="checkbox" checked> Kéo Scale xong thì tủ tự cập nhật theo kích thước mới</label>
+<p class="note">Ván, khấu, cắt, bo, vật liệu và texture được giữ nguyên, chỉ co giãn theo kích thước mới. Tắt đi thì sau khi Scale, mở Box → Board, chọn tủ rồi bấm Enter để cập nhật.</p></div>
 <h2 class="sub">Thông số gốc dùng chung</h2>
 <div class="card" data-group="base"><div class="fields">
 <div class="field"><label>Dày ván (mm)</label><input data-key="board_thickness" type="number" step="any" min="3" value="17.5"></div>
@@ -160,6 +172,8 @@
 </main><div class="status"><div class="status-row"><div id="status">Sẵn sàng. Chọn tab và chạy công cụ.</div><button class="button primary" id="applyBtn" type="button">Áp dụng</button><button class="button" id="cancelBtn" type="button">Hủy</button></div></div>
 <script src="vgd-theme/vgd-theme.js"></script>
 <script>
+// Báo chế độ sáng/tối cho Ruby (HUD/preview trong viewport) mỗi lần đổi, kể cả lần đầu.
+document.addEventListener('vgdtheme',e=>{try{window.sketchup&&sketchup.theme(e.detail.theme)}catch(_){}});
 VGDTheme.start({ key: "vgd.cabinet_draw.theme", button: document.getElementById("themeBtn") });
 const VGD={sel:{},data:null,firstState:true};
 const GROUPS=['box','panel','door','drawer'];
@@ -197,6 +211,7 @@ VGD.loadSettings=(p,notify,group)=>{
   if(notify)sketchup.settings(JSON.stringify(VGD.settings()));
 };
 VGD.status=s=>document.getElementById('status').textContent=s;
+VGD.setAutoStretch=v=>{const box=document.getElementById('autoStretch');if(box)box.checked=!!v;};
 const toolData=g=>VGD.data&&VGD.data.tools[g]||{presets:[],default_id:null};
 const send=(fn,obj)=>sketchup[fn](JSON.stringify(obj));
 VGD.pickPreset=(g,id)=>{VGD.sel[g]=id;renderBars()};
@@ -268,6 +283,7 @@ function showTab(name){
   try{localStorage.setItem('vgd.cabinet_draw.tab',name)}catch(e){}
 }
 document.getElementById('saveBase').onclick=()=>send('ts_base_save',{settings:VGD.settings('base')});
+document.getElementById('autoStretch').onchange=e=>sketchup.auto_stretch(JSON.stringify({enabled:e.target.checked}));
 document.getElementById('exportBtn').onclick=()=>sketchup.ts_export('');
 document.getElementById('importBtn').onclick=()=>sketchup.ts_import('');
 document.getElementById('applyBtn').onclick=()=>sketchup.apply('');
