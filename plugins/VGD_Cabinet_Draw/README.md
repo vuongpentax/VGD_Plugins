@@ -88,11 +88,13 @@ Theo `TOOLBAR_BUTTONS` và menu trong `runtime/VGD_Cabinet_Draw/main.rb` (menu *
 2. **Chia đợt / vách**: chia đợt (nóc/đáy) hoặc vách (hông); rê chuột xem trước, click để đặt.
 3. **Cánh tủ**: chia vùng cánh trên mặt tủ.
 4. **Ngăn kéo**: tạo mặt và thùng kéo.
-5. **VGD Chọn**: bật công cụ rồi chuột phải lên tủ, cánh hoặc mặt hộc để hiện thanh nút tròn tại con trỏ.
-6. **Setting**: mở bảng điều khiển để chỉnh, lưu, xuất và nhập setting cho từng công cụ.
-7. Chỉ có trong menu: **Đóng tất cả cánh của tủ đang chọn**, **Tìm tấm bị trùng**, **Chuẩn hóa tên ván (vai trò + số)**, **Tải lại VGD Cabinet Draw (nạp code mới)**.
+5. **Scale VGD**: chọn một tủ, bấm điểm ở tâm mặt muốn dời (mặt đối diện đứng yên), kéo hoặc gõ số mm + Enter. Co giãn kiểu stretch: dải 100 mm sát mép mỗi tấm giữ nguyên, cánh và ngăn kéo đi theo hông và hồi giữa.
+6. **Quét & dời tấm**: quét khung hoặc quét cọ (Tab) để chọn nhiều tấm của tủ, rồi click tiếp để kéo đi hoặc gõ số mm + Enter. Hồi dời ngang, đợt dời đứng (lưu vào bước tạo tấm); tấm khác chỉ dời khi khóa trục bằng phím mũi tên.
+7. **VGD Chọn**: bật công cụ rồi chuột phải lên tủ, cánh hoặc mặt hộc để hiện thanh nút tròn tại con trỏ.
+8. **Setting**: mở bảng điều khiển để chỉnh, lưu, xuất và nhập setting cho từng công cụ.
+9. Chỉ có trong menu: **Đóng tất cả cánh của tủ đang chọn**, **Tìm tấm bị trùng**, **Chuẩn hóa tên ván (vai trò + số)**, **Tải lại VGD Cabinet Draw (nạp code mới)**.
 
-Mô tả này lấy từ mã của beta.33; hành vi chi tiết của từng công cụ chưa được kiểm thử thủ công trong SketchUp.
+Danh sách này khớp `TOOLBAR_BUTTONS` của beta.70. Các công cụ từ beta.50 trở lại đây chỉ được kiểm thử bằng giả lập SketchUp (`test/`), chưa kiểm thử thủ công trong SketchUp thật, trừ những mục người dùng đã xác nhận trong các dòng trạng thái ở đầu file.
 
 ## Development and validation
 
