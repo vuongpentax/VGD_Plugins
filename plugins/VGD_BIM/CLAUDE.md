@@ -13,7 +13,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Cấu trúc
 
-- `runtime/`: mã chạy. `vgd_bim_lite/loader.rb` giữ danh sách `FILES` (thứ tự nạp, dùng chung cho lúc mở SketchUp và `VGD::BIM.reload`); thư mục con `core/`, `intake/`, `ui/` (`dialog.rb`, `bounds_preview.rb`), `html/` (giao diện), `config/`.
+- `runtime/`: mã chạy. `vgd_bim_lite/loader.rb` giữ danh sách `FILES` (thứ tự nạp, dùng chung cho lúc mở SketchUp và `VGD::BIM.reload`); thư mục con `core/`, `intake/`, `ui/` (`dialog.rb`, `bounds_preview.rb`: công cụ và lớp phủ), `html/` (giao diện), `config/`.
 - `dev/`: `run_tests.rb`, các `test_*.rb`, `test_ui.cjs`, fixture và `stubs/`, `package.py`, `deploy.ps1`, `native_smoke.rb`, `make_preview.py`.
 - Gốc plugin: README, SPECIFICATION (đặc tả gốc, có ghi chú cập nhật), VALIDATION, HUONG_DAN_SU_DUNG, RELEASE_NOTES_*.
 
@@ -44,7 +44,7 @@ Chạy từ `plugins/VGD_BIM`:
 - Chuyển đổi trong tab Phân loại: mỗi batch chỉ có một bước hoàn tác và không sửa hình học, tên, thẻ hoặc vật liệu.
 - Chọn đối tượng không được quét toàn model: tab Bảng khối lượng chỉ đọc đối tượng đang chọn (quét sâu chỉ khi bật "Chọn sâu bên trong"); chỉ các tab Quét & xuất, Phân loại, Kiểm tra mới quét model.
 - Không dùng `Sketchup.write_default` cho dữ liệu JSON (chuỗi có dấu ngoặc kép hoặc tiếng Việt bị hỏng khi đọc lại); dùng `core/storage.rb`.
-- `Sketchup::Tool` không tồn tại: khung đánh dấu `UI::BoundsPreview` là lớp thường với các hàm `draw` / `onLButtonDown` / `onCancel`. Test không được thêm stub cho lớp không có trong API SketchUp, vì stub có thể che lỗi thật.
+- Khung đánh dấu: từ SketchUp 2023 dùng lớp phủ `UI::BoundsOverlay` (`Sketchup::Overlay`, chỉ vẽ) để không chiếm công cụ Select; SketchUp 2022 và khi lớp phủ lỗi dùng `UI::BoundsPreview`. `Sketchup::Tool` không tồn tại nên `BoundsPreview` là lớp thường với các hàm `draw` / `onLButtonDown` / `onCancel`. Test không được thêm stub cho lớp không có trong API SketchUp, vì stub có thể che lỗi thật (stub `Sketchup::Overlay` trong `dev/test_overlay.rb` chỉ mô phỏng phần API được dùng).
 - Màu giao diện lấy từ theme VGD (`runtime/vgd_bim_lite/html/vgd-theme/`), không tự đặt màu riêng.
 - `update_notice.rb` giữ nguyên để loader cũ vẫn gọi được; plugin không tự báo cập nhật, VGD Center báo bản mới.
 - Đổi tên hoặc đường dẫn extension phải kiểm tra lại `find_installed_extension` và `PLUGIN_LAYOUTS` của VGD Center (`plugins/VGD_Center/VGD_Center/main.rb`).

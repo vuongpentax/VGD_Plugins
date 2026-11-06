@@ -2,7 +2,7 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.0-beta.4: đã kiểm tra tự động
+## Bản 1.1.0-beta.5: đã kiểm tra tự động
 
 Chạy từ `plugins/VGD_BIM`: `ruby dev/run_tests.rb` (cú pháp 20 file Ruby và 9 bộ test) và `dev/test_ui.cjs` (Playwright).
 
@@ -26,7 +26,7 @@ Các điểm sau chỉ kiểm được trong SketchUp thật:
 3. Lưu cài đặt: preset và cột còn sau khi tắt mở SketchUp (`%APPDATA%\VGD\VGD_BIM\`).
 4. Thể tích chỉ tính cho group kín; khung bao theo bounding box chứ không theo cạnh thật.
 5. Chế độ **Cô lập**: ẩn / hiện đối tượng ngoài một bước hoàn tác riêng (`Table.isolate` / `Table.restore` không bọc `start_operation`); chưa biết Ctrl+Z xử lý thế nào, và file lưu khi đang cô lập mang các đối tượng ở trạng thái ẩn.
-6. Khung đánh dấu là công cụ đẩy lên mỗi lần chọn: kiểm tra chọn công cụ khác (Move, Tape) giữa chừng không làm hỏng thao tác của người dùng.
+6. Khung đánh dấu bằng lớp phủ (`Sketchup::Overlay`, SketchUp 2023+): chưa kiểm tra trong SketchUp thật việc đăng ký lớp phủ (`model.overlays.add`, `enabled=`), việc vẽ khung, và việc Shift/Ctrl, kéo chọn, nhấp đúp vào group hoạt động như mặc định; test dùng lớp `Sketchup::Overlay` mô phỏng đúng phần API được dùng (`new(id, name)`). Nếu lớp phủ báo lỗi, plugin quay về công cụ (cách của SketchUp 2022): với cách này chọn công cụ khác (Move, Tape) giữa chừng cần kiểm tra không làm hỏng thao tác của người dùng.
 7. `VGD::BIM.reload` nạp lại `vgd_bim_lite.rb` và `loader.rb` có `file_loaded?`: nếu đường dẫn nạp lại khác lần đầu thì menu và toolbar có thể bị đăng ký hai lần.
 8. Undo thật của sửa bảng và chuyển đổi; chọn dòng kiểm tra tới đúng đối tượng lồng nhau; lưu và mở lại metadata; model thật đang dùng.
 9. `dev/native_smoke.rb` (chạy trong tiến trình SketchUp mới với model trống) chưa chạy cho bản 1.1.0 và chưa bao phủ bảng khối lượng, soạn tag, khung đánh dấu.

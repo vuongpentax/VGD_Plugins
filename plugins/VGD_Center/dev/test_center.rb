@@ -216,7 +216,7 @@ Dir.mktmpdir('vgd-center-test-') do |tmp|
   check 'uninstall_warning: có ghi chú thì nối vào hộp thoại', CENTER.uninstall_warning(with_note) == "\n\nSao lưu dữ liệu trước khi gỡ."
 end
 
-# Nhận ra extension đã cài dưới tên khác với catalog: BIM đăng ký là "VGD_BIM", catalog ghi "VGD BIM Lite"
+# BIM đổi tên extension thành "VGD_BIM"; catalog có thể còn ghi tên cũ "VGD BIM Lite" (đổi khi phát hành BIM 1.1.0)
 FakeExtension = Struct.new(:name, :version)
 class FakeExtensions
   def initialize(list); @list = list; end
@@ -224,6 +224,10 @@ class FakeExtensions
   def to_a; @list; end
 end
 bim_product = { 'id' => 'bim_lite', 'extension_name' => 'VGD BIM Lite' }
+bim_new_product = { 'id' => 'bim_lite', 'extension_name' => 'VGD_BIM' }
+check 'catalog ghi tên mới VGD_BIM cho bim_lite: hợp lệ', validate(product('bim_lite', 'name' => 'VGD_BIM', 'extension_name' => 'VGD_BIM', 'allowed_paths' => ['vgd_bim_lite.rb', 'vgd_bim_lite/'])).size == 1
+check 'catalog còn ghi tên cũ VGD BIM Lite cho bim_lite: vẫn hợp lệ (chuyển tiếp)', validate(product('bim_lite', 'name' => 'VGD_BIM', 'extension_name' => 'VGD BIM Lite', 'allowed_paths' => ['vgd_bim_lite.rb', 'vgd_bim_lite/'])).size == 1
+check 'catalog ghi tên lạ cho bim_lite: bị loại', validate(product('bim_lite', 'name' => 'VGD_BIM', 'extension_name' => 'VGD Other', 'allowed_paths' => ['vgd_bim_lite.rb', 'vgd_bim_lite/'])).empty?
 real_extensions = Sketchup.method(:extensions)
 Sketchup.define_singleton_method(:extensions) { FakeExtensions.new([FakeExtension.new('VGD_BIM', '1.1.0')]) }
 check 'BIM đăng ký tên VGD_BIM vẫn được nhận là đã cài', CENTER.send(:find_installed_extension, bim_product)&.version == '1.1.0'
@@ -231,6 +235,8 @@ Sketchup.define_singleton_method(:extensions) { FakeExtensions.new([FakeExtensio
 check 'BIM bản cũ tên VGD BIM Lite vẫn được nhận là đã cài', CENTER.send(:find_installed_extension, bim_product)&.version == '1.0.0'
 Sketchup.define_singleton_method(:extensions) { FakeExtensions.new([FakeExtension.new('VGD_BIM_Other', '9.9.9')]) }
 check 'tên gần giống VGD_BIM không bị nhận nhầm', CENTER.send(:find_installed_extension, bim_product).nil?
+Sketchup.define_singleton_method(:extensions) { FakeExtensions.new([FakeExtension.new('VGD BIM Lite', '1.0.0')]) }
+check 'catalog ghi tên mới nhưng máy còn BIM 1.0.x tên cũ: vẫn nhận là đã cài', CENTER.send(:find_installed_extension, bim_new_product)&.version == '1.0.0'
 Sketchup.define_singleton_method(:extensions) { real_extensions.call }
 
 # Bấm logo: mở trang web cố định, không nhận địa chỉ từ giao diện

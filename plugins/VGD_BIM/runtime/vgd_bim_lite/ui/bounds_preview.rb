@@ -1,12 +1,8 @@
 module VGD
   module BIM
     module UI
-      # Khung đánh dấu đối tượng đang chọn, theo bộ màu VGD:
-      # - tô nhẹ các mặt, viền nét đứt quanh khung bao, khung tên (nền nâu, chữ trắng) ở giữa đối tượng.
-      # Đây là công cụ vẽ tạm: không thêm gì vào model. Click chuột vẫn chọn đối tượng (xử lý trong công cụ).
-      # Nhấn Esc để tắt khung. Đối tượng bị xóa thì khung tự tắt.
-      # SketchUp không có lớp gốc Sketchup::Tool; chỉ cần một object có các hàm draw / onLButtonDown / onCancel.
-      class BoundsPreview
+      # Phần vẽ khung đánh dấu dùng chung cho công cụ (SketchUp 2022) và lớp phủ (SketchUp 2023+).
+      module OutlineDrawing
         LINE_COLOR = [180, 137, 99].freeze      # #B48963, màu nhấn VGD (viền)
         FILL_COLOR = [180, 137, 99, 70].freeze  # cùng màu, độ trong suốt nhẹ (tô mặt)
         BOX_COLOR = [142, 107, 76].freeze       # #8E6B4C, màu nhấn đậm VGD (nền khung tên)
@@ -15,6 +11,76 @@ module VGD
         LABEL_HEIGHT = 24
         CHAR_WIDTH = 7.5
         PADDING = 10
+
+        def alive?
+          @alive.nil? || @alive.call ? true : false
+        rescue StandardError
+          false
+        end
+
+        # Tô nhẹ các mặt của đối tượng (danh sách tam giác theo tọa độ thế giới).
+        def draw_fills(view)
+          return if @fills.empty?
+          view.drawing_color = Sketchup::Color.new(*FILL_COLOR)
+          view.draw(GL_TRIANGLES, @fills)
+        end
+
+        def draw_outline(view)
+          return if @points.empty?
+          view.line_stipple = '-'
+          view.line_width = 2
+          view.drawing_color = Sketchup::Color.new(*LINE_COLOR)
+          view.draw_lines(@points)
+          view.line_stipple = ''
+        end
+
+        # Khung tên: một ô nền nâu có chữ trắng, đặt ở giữa đối tượng.
+        # draw_text nhận tọa độ màn hình, nên đổi điểm 3D sang tọa độ màn hình trước khi viết chữ.
+        def draw_label(view)
+          return if @label.nil? || @label.empty? || @label_point.nil?
+          screen = view.screen_coords(@label_point)
+          half_width = (@label.length * CHAR_WIDTH + PADDING * 2) / 2.0
+          half_height = LABEL_HEIGHT / 2.0
+          corners = [
+            Geom::Point3d.new(screen.x - half_width, screen.y - half_height, 0),
+            Geom::Point3d.new(screen.x + half_width, screen.y - half_height, 0),
+            Geom::Point3d.new(screen.x + half_width, screen.y + half_height, 0),
+            Geom::Point3d.new(screen.x - half_width, screen.y + half_height, 0)
+          ]
+          view.drawing_color = Sketchup::Color.new(*BOX_COLOR)
+          view.draw2d(GL_QUADS, corners)
+          view.draw_text(text_origin(screen, half_width, half_height), @label, text_options)
+        end
+
+        private
+
+        # Căn giữa chữ trong ô nếu SketchUp hỗ trợ; bản cũ thì canh trái trong ô.
+        def text_origin(screen, half_width, half_height)
+          if defined?(TextAlignCenter) && defined?(TextVerticalAlignCenter)
+            Geom::Point3d.new(screen.x, screen.y, 0)
+          else
+            Geom::Point3d.new(screen.x - half_width + PADDING, screen.y - half_height + 4, 0)
+          end
+        end
+
+        def text_options
+          options = {size: LABEL_SIZE, color: Sketchup::Color.new(*TEXT_COLOR)}
+          if defined?(TextAlignCenter) && defined?(TextVerticalAlignCenter)
+            options[:align] = TextAlignCenter
+            options[:vertical_align] = TextVerticalAlignCenter
+          end
+          options
+        end
+      end
+
+      # Khung đánh dấu đối tượng đang chọn, theo bộ màu VGD:
+      # - tô nhẹ các mặt, viền nét đứt quanh khung bao, khung tên (nền nâu, chữ trắng) ở giữa đối tượng.
+      # Dùng cho SketchUp 2022 (không có Overlay). Đây là công cụ vẽ tạm: không thêm gì vào model.
+      # Click chuột vẫn chọn đối tượng nhưng do công cụ xử lý, nên Shift/Ctrl, kéo chọn, nhấp đúp bị chặn.
+      # Nhấn Esc để tắt khung. Đối tượng bị xóa thì khung tự tắt.
+      # SketchUp không có lớp gốc Sketchup::Tool; chỉ cần một object có các hàm draw / onLButtonDown / onCancel.
+      class BoundsPreview
+        include OutlineDrawing
 
         # alive: hàm kiểm tra đối tượng còn tồn tại; trả về false thì khung tự tắt và gọi on_stale.
         def initialize(points, label: nil, label_point: nil, fills: [], alive: nil, on_stale: nil, &on_done)
@@ -62,46 +128,6 @@ module VGD
           draw_label(view)
         end
 
-        def alive?
-          @alive.nil? || @alive.call ? true : false
-        rescue StandardError
-          false
-        end
-
-        # Tô nhẹ các mặt của đối tượng (danh sách tam giác theo tọa độ thế giới).
-        def draw_fills(view)
-          return if @fills.empty?
-          view.drawing_color = Sketchup::Color.new(*FILL_COLOR)
-          view.draw(GL_TRIANGLES, @fills)
-        end
-
-        def draw_outline(view)
-          return if @points.empty?
-          view.line_stipple = '-'
-          view.line_width = 2
-          view.drawing_color = Sketchup::Color.new(*LINE_COLOR)
-          view.draw_lines(@points)
-          view.line_stipple = ''
-        end
-
-        # Khung tên: một ô nền nâu có chữ trắng, đặt ở giữa đối tượng.
-        # draw_text nhận tọa độ màn hình, nên đổi điểm 3D sang tọa độ màn hình trước khi viết chữ.
-        def draw_label(view)
-          return if @label.nil? || @label.empty? || @label_point.nil?
-          screen = view.screen_coords(@label_point)
-          half_width = (@label.length * CHAR_WIDTH + PADDING * 2) / 2.0
-          half_height = LABEL_HEIGHT / 2.0
-          corners = [
-            Geom::Point3d.new(screen.x - half_width, screen.y - half_height, 0),
-            Geom::Point3d.new(screen.x + half_width, screen.y - half_height, 0),
-            Geom::Point3d.new(screen.x + half_width, screen.y + half_height, 0),
-            Geom::Point3d.new(screen.x - half_width, screen.y + half_height, 0)
-          ]
-          view.drawing_color = Sketchup::Color.new(*BOX_COLOR)
-          view.draw2d(GL_QUADS, corners)
-          view.draw_text(text_origin(screen, half_width, half_height), @label, text_options)
-        end
-
         def onLButtonDown(_flags, x, y, view)
           return if @finished
           pick_at(view, x, y)
@@ -123,24 +149,6 @@ module VGD
         end
 
         private
-
-        # Căn giữa chữ trong ô nếu SketchUp hỗ trợ; bản cũ thì canh trái trong ô.
-        def text_origin(screen, half_width, half_height)
-          if defined?(TextAlignCenter) && defined?(TextVerticalAlignCenter)
-            Geom::Point3d.new(screen.x, screen.y, 0)
-          else
-            Geom::Point3d.new(screen.x - half_width + PADDING, screen.y - half_height + 4, 0)
-          end
-        end
-
-        def text_options
-          options = {size: LABEL_SIZE, color: Sketchup::Color.new(*TEXT_COLOR)}
-          if defined?(TextAlignCenter) && defined?(TextVerticalAlignCenter)
-            options[:align] = TextAlignCenter
-            options[:vertical_align] = TextVerticalAlignCenter
-          end
-          options
-        end
 
         # Không gỡ công cụ ngay trong lúc vẽ; hẹn một nhịp rồi mới gỡ.
         def release_later(view)
@@ -171,6 +179,64 @@ module VGD
           end
           model.selection.clear
           model.selection.add(target) if target && target.valid?
+        end
+      end
+
+      # Khung đánh dấu bằng lớp phủ (Sketchup::Overlay, chỉ có từ SketchUp 2023): chỉ vẽ, không nhận chuột và không chiếm
+      # công cụ đang dùng, nên Shift/Ctrl, kéo chọn và nhấp đúp vào group vẫn là của SketchUp.
+      # SketchUp 2022 không có lớp phủ nên dùng BoundsPreview (công cụ).
+      if defined?(Sketchup::Overlay)
+        class BoundsOverlay < Sketchup::Overlay
+          include OutlineDrawing
+          OVERLAY_ID = 'vgd.bim.outline'.freeze
+
+          def initialize
+            super(OVERLAY_ID, 'VGD_BIM · Khung đánh dấu')
+            @visible = false
+            @points = []
+            @fills = []
+          end
+
+          # alive / on_stale giống BoundsPreview: đối tượng bị xóa thì khung tự ẩn và gọi on_stale một lần.
+          def show_shapes(points, label: nil, label_point: nil, fills: [], alive: nil, on_stale: nil)
+            @points = points
+            @label = label
+            @label_point = label_point
+            @fills = fills
+            @alive = alive
+            @on_stale = on_stale
+            @visible = true
+          end
+
+          def hide_shapes
+            @visible = false
+          end
+
+          def draw(view)
+            return unless @visible
+            unless alive?
+              @visible = false
+              notify_stale
+              return
+            end
+            draw_fills(view)
+            draw_outline(view)
+            draw_label(view)
+          end
+
+          private
+
+          # Không làm việc với model ngay trong lúc vẽ; hẹn một nhịp.
+          def notify_stale
+            callback = @on_stale
+            @on_stale = nil
+            return unless callback
+            if defined?(::UI) && ::UI.respond_to?(:start_timer)
+              ::UI.start_timer(0, false) { callback.call }
+            else
+              callback.call
+            end
+          end
         end
       end
     end

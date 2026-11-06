@@ -6,7 +6,7 @@ require 'rbconfig'
 
 DEV = __dir__
 RUNTIME = File.expand_path('../runtime', DEV)
-TESTS = %w[legacy table build dialog_logic loader_menu load preview tags tags_io].freeze
+TESTS = %w[legacy table build dialog_logic loader_menu load preview overlay tags tags_io].freeze
 failed = []
 
 puts "Ruby #{RUBY_VERSION}"

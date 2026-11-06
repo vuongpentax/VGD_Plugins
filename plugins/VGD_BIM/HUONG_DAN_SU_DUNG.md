@@ -6,7 +6,7 @@ Mở bằng **Extensions → VGD → VGD_BIM**: cửa sổ mở thẳng tab **B�
 
 1. Chọn group hoặc component trong SketchUp. Bảng tự đọc đối tượng đang chọn, không quét cả model.
 2. Chọn **preset cột** (Tất cả, Phần thô, Hoàn thiện, Đồ rời) hoặc tự chọn cột, kéo đổi thứ tự, kéo giãn độ rộng cột. Lưu bộ cột của bạn thành preset riêng; bảng nhớ lại cột và thứ tự khi mở lại SketchUp.
-3. Bấm một ô: đối tượng được đánh dấu trong SketchUp bằng khung nét đứt và khung tên. Bấm ô **Tên** thì khung hiện tên, bấm ô **Mô tả** thì hiện mô tả; bấm cả dòng thì hiện tên, mô tả, tình trạng và phân loại. Nhấn **Esc** để tắt khung. Khi khung đang bật, Shift/Ctrl-chọn nhiều, kéo chọn và nhấp đúp vào group không dùng được; nhấn Esc hoặc chọn công cụ khác rồi thao tác.
+3. Bấm một ô: đối tượng được đánh dấu trong SketchUp bằng khung nét đứt và khung tên. Bấm ô **Tên** thì khung hiện tên, bấm ô **Mô tả** thì hiện mô tả; bấm cả dòng thì hiện tên, mô tả, tình trạng và phân loại. Bỏ chọn thì khung tắt. Trên SketchUp 2023 trở lên, bạn chọn đối tượng bằng công cụ Select như bình thường (Shift/Ctrl chọn nhiều, kéo chọn, nhấp đúp vào group). Trên SketchUp 2022, khi khung đang bật các thao tác chọn nhiều đó không dùng được: nhấn **Esc** hoặc chọn công cụ khác rồi thao tác.
 4. Sửa trực tiếp **Tên**, **Mô tả**, **Tình trạng** (Mới, Hiện hữu, Dùng lại, Tạm thời, Loại bỏ) ngay trong bảng. Đối tượng bị khóa không sửa được.
 5. Tuỳ chọn ở thanh công cụ: **Thu phóng**, **Cô lập đối tượng chọn** (tạm ẩn các đối tượng khác; tắt tuỳ chọn hoặc đóng cửa sổ để hiện lại, và đừng lưu file khi đang cô lập), **Chọn sâu bên trong** (đọc cả group / component nằm bên trong), dòng **Tổng cộng**, **Tổng chỉ cấp cao nhất** (không cộng trùng group lồng nhau).
 

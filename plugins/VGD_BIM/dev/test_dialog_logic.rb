@@ -58,4 +58,46 @@ $model.selection.items = [ent]
 d.table_selection_changed
 ok('chọn lại đối tượng: quét và làm mới bảng', calls.any? { |c| c[0] == :build } && calls.any? { |c| c[0] == :scan })
 
+# Khung đánh dấu bằng lớp phủ (SketchUp 2023+): đăng ký một lần, dùng lại, ẩn khi bỏ chọn, gỡ khi đóng; lỗi thì quay về công cụ cũ
+class FakeOverlay
+  attr_reader :shown, :hidden
+  def initialize; @shown = []; @hidden = 0; end
+  def show_shapes(points, **options); @shown << [points, options]; end
+  def hide_shapes; @hidden += 1; end
+  def enabled=(value); @enabled = value; end
+end
+VGD::BIM::UI.const_set(:BoundsOverlay, FakeOverlay)
+class FakeOverlays
+  attr_reader :added, :removed
+  attr_accessor :fail
+  def initialize; @added = []; @removed = []; end
+  def add(overlay); raise 'không thêm được lớp phủ' if @fail; @added << overlay; overlay; end
+  def remove(overlay); @removed << overlay; end
+end
+class FakeView; attr_reader :invalidated; def initialize; @invalidated = 0; end; def invalidate; @invalidated += 1; end; end
+class FakeModelWithOverlays
+  attr_reader :overlays, :active_view
+  def initialize; @overlays = FakeOverlays.new; @active_view = FakeView.new; end
+end
+om = FakeModelWithOverlays.new
+od = D.allocate
+od.instance_variable_set(:@model, om)
+od.instance_variable_set(:@isolated, [])
+ok('có lớp phủ: dùng lớp phủ thay vì công cụ', od.overlay_available?)
+ok('hiện khung bằng lớp phủ: trả về true', od.show_overlay([[0, 0, 0]], 'Tủ', [0, 0, 0], [], -> { true }, -> {}) == true)
+od.show_overlay([[1, 1, 1]], 'Tủ 2', [1, 1, 1], [], -> { true }, -> {})
+ok('lớp phủ chỉ đăng ký một lần, lần sau dùng lại', om.overlays.added.size == 1 && om.overlays.added[0].shown.size == 2)
+ok('vẽ lại viewport sau khi đặt khung', om.active_view.invalidated >= 2)
+od.release_preview
+ok('bỏ chọn: lớp phủ ẩn đi nhưng vẫn đăng ký', om.overlays.added[0].hidden == 1 && om.overlays.removed.empty?)
+od.cleanup_table_view
+ok('đóng cửa sổ: gỡ lớp phủ khỏi model', om.overlays.removed == om.overlays.added)
+fm = FakeModelWithOverlays.new
+fm.overlays.fail = true
+fd = D.allocate
+fd.instance_variable_set(:@model, fm)
+fd.instance_variable_set(:@isolated, [])
+ok('lớp phủ lỗi: trả về false để dùng công cụ cũ', fd.show_overlay([[0, 0, 0]], 'Tủ', [0, 0, 0], [], -> { true }, -> {}) == false)
+ok('lớp phủ đã lỗi thì không thử lại', !fd.overlay_available?)
+
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

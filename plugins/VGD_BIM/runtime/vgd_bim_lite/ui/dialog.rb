@@ -386,6 +386,7 @@ module VGD
           # Đối tượng bị xóa: khung tự tắt và bảng bỏ dòng đã xóa.
           alive = -> { targets.all? { |r| r[:path].all?(&:valid?) } }
           stale = -> { safely { table_build if @mode == 'table' && @dialog.visible? } }
+          return if show_overlay(points, label, label_point, fills, alive, stale)
           @preview = UI::BoundsPreview.new(points, label: label, label_point: label_point, fills: fills, alive: alive, on_stale: stale) { @preview = nil }
           @model.tools.push_tool(@preview)
           @model.active_view.invalidate
@@ -425,7 +426,52 @@ module VGD
           return '' if value.nil?
           value.is_a?(Float) && value == value.round ? value.round.to_s : value.to_s
         end
+        # SketchUp 2023+: khung vẽ bằng lớp phủ (Overlay) nên công cụ Select của SketchUp giữ nguyên (Shift/Ctrl, kéo chọn,
+        # nhấp đúp). SketchUp 2022 hoặc khi lớp phủ lỗi: dùng BoundsPreview (công cụ), có hạn chế ở click chuột.
+        def overlay_available?
+          defined?(UI::BoundsOverlay) && !@overlay_failed ? true : false
+        end
+        # Trả về true nếu đã hiện khung bằng lớp phủ, false nếu phải dùng công cụ.
+        def show_overlay(points, label, label_point, fills, alive, stale)
+          return false unless overlay_available?
+          outline_overlay.show_shapes(points, label: label, label_point: label_point, fills: fills, alive: alive, on_stale: stale)
+          @model.active_view.invalidate
+          true
+        rescue StandardError => error
+          BIM.log("Lớp phủ lỗi, dùng công cụ vẽ khung: #{error.message}")
+          @overlay_failed = true
+          remove_overlay
+          false
+        end
+        # Mỗi model một lớp phủ, đăng ký một lần rồi dùng lại cho mọi lần chọn.
+        def outline_overlay
+          return @overlay if @overlay && @overlay_model == @model
+          remove_overlay
+          overlay = UI::BoundsOverlay.new
+          @model.overlays.add(overlay)
+          overlay.enabled = true if overlay.respond_to?(:enabled=)
+          @overlay_model = @model
+          @overlay = overlay
+        end
+        def hide_overlay
+          return unless @overlay
+          @overlay.hide_shapes
+          @overlay_model.active_view.invalidate
+        rescue StandardError
+          nil
+        end
+        def remove_overlay
+          return unless @overlay
+          overlay = @overlay
+          model = @overlay_model
+          @overlay = nil
+          @overlay_model = nil
+          model.overlays.remove(overlay) if model
+        rescue StandardError
+          nil
+        end
         def release_preview
+          hide_overlay
           return unless @preview
           tool = @preview
           @preview = nil
@@ -436,7 +482,8 @@ module VGD
           @isolated = []
         end
         def cleanup_table_view
-          release_preview if @preview
+          release_preview
+          remove_overlay
           restore_isolation
         end
         # Đối tượng có thể gán tag: group, component và mặt đang chọn.

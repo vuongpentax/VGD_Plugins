@@ -198,7 +198,7 @@
     },
     {
       "id": "bim_lite",
-      "name": "VGD BIM Lite",
+      "name": "VGD_BIM",
       "extension_name": "VGD BIM Lite",
       "version": "1.0.0",
       "release_channel": "stable",
