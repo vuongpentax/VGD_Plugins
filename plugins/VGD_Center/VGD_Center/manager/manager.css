@@ -8,6 +8,7 @@
 #page-manager .mgr-box { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; max-height: 320px; overflow: auto; margin-bottom: 12px; padding: 8px 12px; }
 #page-manager .mgr-row { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--border); }
 #page-manager .mgr-box .mgr-row { padding: 4px 0; border: 0; }
+#page-manager .mgr-row[hidden] { display: none; }
 #page-manager .mgr-row:last-child { border-bottom: 0; }
 #page-manager .mgr-row .nm { flex: 1; word-break: break-all; }
 #page-manager .mgr-row.off .nm { color: var(--muted); }

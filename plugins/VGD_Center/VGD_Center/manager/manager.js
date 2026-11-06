@@ -23,6 +23,7 @@
       dir_label: 'Thư mục chứa plugin đã tắt: {dir}',
       mig_few: 'Chỉ tìm thấy {n} phiên bản SketchUp trong AppData. Cần ít nhất 2 phiên bản để chuyển plugin.',
       mig_go: 'Chuyển sang bản {ver}', mig_go_default: 'Chuyển plugin',
+      mig_count: 'Đã chọn {n}/{total}', mig_count_shown: 'Đã chọn {n}/{total}, đang hiện {shown}',
       mig_same: 'Phiên bản nguồn và đích phải khác nhau.', mig_none: 'Không tìm thấy plugin nào trong bản {ver}.',
       ph_search: 'Tìm plugin...', ph_setname: 'Tên bộ, ví dụ: Render',
       tt_open_plugins: 'Mở thư mục Plugins của SketchUp đang chạy', tt_open_disabled: 'Mở thư mục chứa các plugin đã tắt'
@@ -43,6 +44,7 @@
       dir_label: 'Folder for disabled plugins: {dir}',
       mig_few: 'Only {n} SketchUp version(s) found in AppData. You need at least 2 to migrate plugins.',
       mig_go: 'Migrate to version {ver}', mig_go_default: 'Migrate plugins',
+      mig_count: 'Selected {n}/{total}', mig_count_shown: 'Selected {n}/{total}, showing {shown}',
       mig_same: 'The source and destination versions must be different.', mig_none: 'No plugins found in version {ver}.',
       ph_search: 'Search plugins...', ph_setname: 'Set name, e.g. Render',
       tt_open_plugins: 'Open the Plugins folder of the running SketchUp', tt_open_disabled: 'Open the folder that holds disabled plugins'
@@ -195,6 +197,7 @@
   function setMlistNote(key, vars) {
     mlistNote = { key: key, vars: vars || {} };
     byId('mgrMlist').textContent = t(key, vars);
+    updateMCount();
   }
   function updateGoLabel() {
     var d = byId('mgrDst').value;
@@ -230,10 +233,31 @@
     d.plugins.forEach(function (name, i) {
       var r = el('label', 'mgr-row'), cb = document.createElement('input');
       cb.type = 'checkbox'; cb.className = 'mgr-pl'; cb.value = name; cb.checked = true;
+      cb.addEventListener('change', updateMCount);
+      r.dataset.name = name;
       r.appendChild(cb); r.appendChild(el('span', '', (i + 1) + '. ' + name)); L.appendChild(r);
     });
+    filterMigrate();
   }
-  function setAll(v) { document.querySelectorAll('#mgr-panel-migrate .mgr-pl').forEach(function (c) { c.checked = v; }); }
+  // Ô tìm kiếm của danh sách chuyển plugin chỉ ẩn/hiện dòng; dấu chọn vẫn giữ, nên có dòng đếm số đã chọn
+  function filterMigrate() {
+    var q = byId('mgrMQ').value.toLowerCase();
+    document.querySelectorAll('#mgrMlist .mgr-row').forEach(function (r) {
+      r.hidden = !!q && (r.dataset.name || '').toLowerCase().indexOf(q) < 0;
+    });
+    updateMCount();
+  }
+  function updateMCount() {
+    var all = document.querySelectorAll('#mgrMlist .mgr-pl'), n = 0, shown = 0;
+    [].forEach.call(all, function (c) { if (c.checked) n++; if (!c.closest('.mgr-row').hidden) shown++; });
+    byId('mgrMCount').textContent = !all.length ? '' :
+      t(byId('mgrMQ').value ? 'mig_count_shown' : 'mig_count', { n: n, total: all.length, shown: shown });
+  }
+  // Chọn hết / Bỏ chọn hết chỉ áp cho các dòng đang hiện (giống tab Bật/tắt)
+  function setAll(v) {
+    document.querySelectorAll('#mgrMlist .mgr-row').forEach(function (r) { if (!r.hidden) r.querySelector('.mgr-pl').checked = v; });
+    updateMCount();
+  }
   function collect() {
     var p = [].slice.call(document.querySelectorAll('#mgr-panel-migrate .mgr-pl')).filter(function (c) { return c.checked; }).map(function (c) { return c.value; });
     return { src: byId('mgrSrc').value, dst: byId('mgrDst').value, plugins: p, overwrite: byId('mgrOverwrite').checked };
@@ -243,6 +267,8 @@
   function applyAttributes() {
     byId('mgrQ').placeholder = t('ph_search');
     byId('mgrQ').setAttribute('aria-label', t('ph_search'));
+    byId('mgrMQ').placeholder = t('ph_search');
+    byId('mgrMQ').setAttribute('aria-label', t('ph_search'));
     byId('mgrSetName').placeholder = t('ph_setname');
     byId('mgrSetName').setAttribute('aria-label', t('ph_setname'));
     byId('mgrOpenPlugins').title = t('tt_open_plugins');
@@ -253,6 +279,7 @@
     applyAttributes();
     drawToggle();
     updateGoLabel();
+    updateMCount();
     if (mlistNote) byId('mgrMlist').textContent = t(mlistNote.key, mlistNote.vars);
   }
 
@@ -261,6 +288,7 @@
     bind('mgr-tab-toggle', function () { showTab('toggle'); });
     bind('mgr-tab-migrate', function () { showTab('migrate'); });
     byId('mgrQ').addEventListener('input', drawToggle);
+    byId('mgrMQ').addEventListener('input', filterMigrate);
     bind('mgrSelAll', function () { selAll(true); });
     bind('mgrSelNone', function () { selAll(false); });
     bind('mgrOpenPlugins', function () { call('mgr_open_plugins'); });
