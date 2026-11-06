@@ -6,6 +6,7 @@ IDYES = 6
 IDNO = 7
 
 $stub_messages = []
+$stub_opened_urls = []
 $stub_answer = IDYES
 $stub_installs = []
 $stub_plugins_dir = nil
@@ -40,7 +41,7 @@ module UI
   def self.menu(_name); Menu.new; end
   def self.start_timer(_seconds, _repeat); end
   def self.messagebox(message, _type = 0); $stub_messages << message; $stub_answer; end
-  def self.openURL(_url); end
+  def self.openURL(url); $stub_opened_urls << url; end
   def self.savepanel(*_args); $stub_save_path; end
   def self.openpanel(*_args); $stub_open_path; end
 end

@@ -16,6 +16,8 @@ module VGD
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
     # Trang hướng dẫn mới nhất nằm trong kho; Center tải khi người dùng bấm Hướng dẫn (xem fetch_guide).
     GUIDE_BASE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/guides/'.freeze
+    # Trang web của VGD: mở khi bấm logo. Địa chỉ cố định trong mã, giao diện không được gửi địa chỉ khác.
+    WEBSITE_URL = 'https://vgdtools.vercel.app/'.freeze
     MAX_GUIDE_BYTES = 300 * 1024
     MIN_GUIDE_BYTES = 200
     GUIDE_TIMEOUT = 5.0
@@ -100,6 +102,7 @@ module VGD
         dialog.add_action_callback('update_center') { |_context| queue_center_update }
         dialog.add_action_callback('refresh_center_update') { |_context| refresh_center_update }
         dialog.add_action_callback('open_guide') { |_context, plugin_id| open_guide(plugin_id) }
+        dialog.add_action_callback('open_website') { |_context| UI.openURL(WEBSITE_URL) }
         dialog.add_action_callback('uninstall_plugin') do |_context, plugin_id|
           uninstall_plugin(plugin_id)
         end

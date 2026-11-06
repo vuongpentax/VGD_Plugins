@@ -17,7 +17,8 @@
     button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent-strong);outline-offset:2px}
     .app{height:100vh;display:grid;grid-template-rows:68px minmax(0,1fr) 34px;background:var(--bg)}
     .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 20px;background:var(--elevated);border-bottom:1px solid var(--border)}
-    .brand{display:flex;align-items:center;gap:11px;min-width:0}
+    .brand{display:flex;align-items:center;gap:11px;min-width:0;padding:0;border:0;background:transparent;color:inherit;font:inherit;text-align:left;cursor:pointer}
+    .brand:hover .brand-title{color:var(--accent-strong)}
     .brand-mark{width:40px;height:40px;flex:none}
     .brand-copy{display:flex;flex-direction:column;line-height:1.1}
     .brand-title{font-size:16px;font-weight:750;letter-spacing:.01em}
@@ -205,10 +206,10 @@
 
   <div class="app">
     <header class="topbar">
-      <div class="brand">
-        <svg class="brand-mark" role="img" aria-label="Logo VGD"><use href="#brand-logo"/></svg>
-        <div class="brand-copy"><strong class="brand-title">VGD Center</strong><span class="brand-subtitle">Trung tâm plugin SketchUp</span></div>
-      </div>
+      <button type="button" class="brand" id="brandLink" title="Mở trang web VGD" aria-label="Mở trang web VGD">
+        <svg class="brand-mark" aria-hidden="true"><use href="#brand-logo"/></svg>
+        <span class="brand-copy"><strong class="brand-title">VGD Center</strong><span class="brand-subtitle">Trung tâm plugin SketchUp</span></span>
+      </button>
       <div class="top-actions">
         <button class="icon-button vgd-theme-btn" id="themeBtn" type="button" aria-pressed="false"></button>
       </div>
@@ -524,6 +525,9 @@
         const search = document.getElementById('searchInput');
         search.placeholder = tr('Tìm plugin…', 'Search plugins…');
         search.setAttribute('aria-label', search.placeholder);
+        const brand = document.getElementById('brandLink');
+        brand.title = tr('Mở trang web VGD', 'Open the VGD website');
+        brand.setAttribute('aria-label', brand.title);
         document.getElementById('autoUpdateToggle').setAttribute('aria-label', tr('Tự động cập nhật VGD Center', 'Automatically update VGD Center'));
         document.querySelector('.language-options').setAttribute('aria-label', tr('Ngôn ngữ', 'Language'));
         if (window.VGDManager) window.VGDManager.setLanguage(activeLanguage);
@@ -674,6 +678,7 @@
         }
       };
 
+      document.getElementById('brandLink').addEventListener('click', () => { if (window.sketchup && typeof window.sketchup.open_website === 'function') window.sketchup.open_website(); else window.open('https://vgdtools.vercel.app/', '_blank', 'noopener'); });
       if (window.sketchup && typeof window.sketchup.center_ready === 'function') window.sketchup.center_ready();
       else if (new URLSearchParams(window.location.search).has('preview') || (window.location.protocol === 'file:' && !window.sketchup)) {
         const versions = {dim:'3.3.0-beta.5',cabinet:'4.5.0-beta.4',library:'1.1.2-beta.4',image_importer:'1.1.0-beta.5',scenes:'1.5.3-beta.3',bim_lite:'0.1.4-alpha',reference:'1.0.0-beta.6'};

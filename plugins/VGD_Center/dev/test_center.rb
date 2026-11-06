@@ -216,6 +216,20 @@ Dir.mktmpdir('vgd-center-test-') do |tmp|
   check 'uninstall_warning: có ghi chú thì nối vào hộp thoại', CENTER.uninstall_warning(with_note) == "\n\nSao lưu dữ liệu trước khi gỡ."
 end
 
+# Bấm logo: mở trang web cố định, không nhận địa chỉ từ giao diện
+web_dlg = Class.new do
+  def initialize; @callbacks = {}; end
+  def add_action_callback(name, &block); @callbacks[name] = block; end
+  def callback(name); @callbacks[name]; end
+end.new
+CENTER.register_callbacks(web_dlg)
+$stub_opened_urls.clear
+web_dlg.callback('open_website').call(nil, 'https://evil.example/')
+check 'logo: mở đúng trang web VGD, bỏ qua địa chỉ do giao diện gửi', $stub_opened_urls == ['https://vgdtools.vercel.app/']
+web_html = File.read(File.join(__dir__, '..', 'VGD_Center', 'dialog.html'), encoding: 'UTF-8')
+check 'logo là nút bấm gọi open_website, có tiếng Anh',
+      web_html.include?('id="brandLink"') && web_html.include?('window.sketchup.open_website()') && web_html.include?('Open the VGD website')
+
 total = PASSED.length + FAILED.length
 puts "\nĐạt: #{PASSED.length}   Không đạt: #{FAILED.length}   (tổng #{total})"
 exit(FAILED.empty? ? 0 : 1)
