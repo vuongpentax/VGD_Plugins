@@ -174,7 +174,7 @@ Không tạo tài liệu chỉ để tăng số lượng file. Ưu tiên ít tà
 - Mỗi lần đổi phiên bản phải cập nhật `README.md` của plugin cho khớp (số phiên bản, tính năng, tên file cài, trạng thái kiểm thử) trong cùng commit.
 - Mỗi lần cập nhật plugin xong (đã đạt kiểm tra) phải đóng gói và gửi RBZ cho người dùng test, kèm SHA-256; không chờ người dùng nhắc.
 - Người dùng tự phát hành trên GitHub. Không tạo file hướng dẫn phát hành (kiểu `HOW_TO_RELEASE.md`) trong plugin.
-- Khi hướng dẫn người dùng tạo Release, phần mô tả đưa **link raw GitHub** tới `RELEASE_NOTES_v<phiên bản>.md` (dạng `https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/plugins/<Plugin>/RELEASE_NOTES_v<phiên bản>.md`, đã kiểm tra mở được) để họ tự copy, không dán nguyên văn nội dung vào chat. Gửi kèm file RBZ với đúng tên file, SHA-256 và link tạo Release.
+- Khi hướng dẫn người dùng tạo Release, đưa **một link tạo Release điền sẵn** để họ chỉ việc mở link, kéo thả file RBZ rồi bấm Publish: `https://github.com/vuongpentax/VGD_Plugins/releases/new?tag=<tag>&target=main&title=<tiêu đề>&body=<nội dung RELEASE_NOTES_v<phiên bản>.md>` (mã hóa URL toàn bộ giá trị, kiểm tra giải mã lại đúng nội dung; ghi chú phải đã nằm trên `main`). GitHub không đính kèm file qua link nên phải nhắc kéo thả đúng tên file RBZ. Gửi kèm file RBZ, SHA-256 và gợi ý bước cuối (báo "xong" để cập nhật `center-update.json`/catalog).
 
 ## Quy tắc Git
 
