@@ -142,12 +142,14 @@ module VGD
           on  = on_g.transform_values { |g| g[:items] }
           off = off_g.transform_values { |g| g[:items] }
           names = (on.keys + off.keys).uniq.sort_by(&:downcase)
+          features = loaded_features
           plugins = names.map do |n|
             st = if on.key?(n) && off.key?(n) then 'conflict'
                  elsif on.key?(n) then 'on'
                  else 'off'
                  end
-            { 'name' => n, 'status' => st, 'items' => (on[n] || off[n]).size, 'members' => (on_g[n] || off_g[n])[:members] }
+            { 'name' => n, 'status' => st, 'items' => (on[n] || off[n]).size, 'members' => (on_g[n] || off_g[n])[:members],
+              'pending' => st == 'on' && pending_load?(n, on[n], features) }
           end
           sets = load_sets.map do |k, v|
             { 'name' => k, 'names' => v, 'count' => v.size,
@@ -249,6 +251,116 @@ module VGD
           msg << PM.t(:sum_skipped, n: res[:skipped].size) if res[:skipped].any?
           msg << PM.t(:sum_errors, errors: res[:errors].join('; ')) if res[:errors].any?
           msg << PM.t(:sum_restart) if res[:changed].any?
+          msg << PM.t(:sum_load_hint) if action == 'enable' && res[:changed].any?
+          msg.join("\n")
+        end
+
+        # ---- Nạp ngay: dùng plugin vừa bật mà không cần khởi động lại SketchUp ----
+        # Chỉ plugin chưa chạy trong phiên này mới nạp được. Plugin có trong Plugins lúc SketchUp khởi động (kể cả
+        # đã tắt sau đó) đang nằm trong bộ nhớ, nạp lại sẽ nhân đôi menu, toolbar và observer nên bị chặn.
+
+        # Ghi lại plugin có trong Plugins lúc SketchUp khởi động. Chỉ ghi một lần cho mỗi phiên.
+        def self.remember_startup
+          @startup ||= loader_names(PM.plugins_dir(year))
+        end
+
+        def self.loader_names(dir)
+          return Set.new unless File.directory?(dir)
+          Dir.children(dir).select { |e| e =~ PM::Linker::LOADABLE }.map { |e| e.sub(PM::Linker::LOADABLE, '').downcase }.to_set
+        end
+
+        def self.loaded_now
+          @loaded_now ||= Set.new
+        end
+
+        # Các file nạp của một plugin: .rb/.rbe/.rbs cùng tên (thư mục và file thành viên do loader tự nạp)
+        def self.loader_files(name, items)
+          items.select { |i| i =~ PM::Linker::LOADABLE && i.sub(PM::Linker::LOADABLE, '') == name }
+        end
+
+        # Đường dẫn (viết thường, không đuôi) mọi file Ruby đã nạp trong phiên; Ruby ghi lại file nạp bằng require
+        def self.loaded_features
+          $LOADED_FEATURES.map { |f| f.to_s.tr('\\', '/').downcase.sub(PM::Linker::LOADABLE, '') }.to_set
+        end
+
+        def self.feature_key(file)
+          File.join(PM.plugins_dir(year), file.sub(PM::Linker::LOADABLE, '')).tr('\\', '/').downcase
+        end
+
+        def self.already_running?(name, files, features)
+          return true if (@startup || Set.new).include?(name.downcase) || loaded_now.include?(name.downcase)
+          files.any? { |f| features.include?(feature_key(f)) }
+        end
+
+        def self.pending_load?(name, items, features)
+          files = loader_files(name, items)
+          !files.empty? && !already_running?(name, files, features)
+        end
+
+        # Tên thật sự nạp được: đang bật, có file nạp, chưa chạy trong phiên này, có trong danh sách thật
+        def self.load_targets(names)
+          valid = state['plugins'].select { |p| p['pending'] }.map { |p| p['name'] }
+          Array(names).map(&:to_s).uniq & valid
+        end
+
+        # Nạp các plugin vào phiên SketchUp đang chạy. Thư viện nền nạp trước để plugin khác dùng được.
+        # Trả về { loaded:, already:, skipped:, errors: }; plugin lỗi không làm dừng các plugin còn lại.
+        def self.load_now(names)
+          plugins = PM.plugins_dir(year)
+          on = list_dir(plugins)
+          features = loaded_features
+          res = { loaded: [], already: [], skipped: [], errors: [] }
+          ordered = Array(names).map(&:to_s).uniq
+          ordered = ordered.select { |n| n =~ LIBRARY_PATTERN } + ordered.reject { |n| n =~ LIBRARY_PATTERN }
+          ordered.each do |n|
+            files = on.key?(n) ? loader_files(n, on[n]) : []
+            if files.empty?
+              res[:skipped] << n
+            elsif already_running?(n, files, features)
+              res[:already] << n
+            elsif (err = require_loaders(plugins, files))
+              res[:errors] << "#{n}: #{err}"
+            else
+              loaded_now << n.downcase
+              res[:loaded] << n
+            end
+          end
+          res
+        end
+
+        # Nạp từng file nạp như SketchUp làm lúc khởi động. Trả về nil nếu ổn, hoặc nội dung lỗi.
+        # SyntaxError/LoadError không phải StandardError nên phải bắt riêng, nếu không sẽ thoát khỏi callback.
+        def self.require_loaders(plugins, files)
+          files.map { |f| f.sub(PM::Linker::LOADABLE, '') }.uniq.each { |base| Sketchup.require(File.join(plugins, base)) }
+          nil
+        rescue StandardError, ScriptError => e
+          Log.write("Lỗi nạp plugin #{files.join(', ')}", e)
+          e.message
+        end
+
+        def self.load_confirm_text(targets)
+          shown = targets.first(8).join(', ')
+          shown += PM.t(:libs_more, n: targets.size - 8) if targets.size > 8
+          libs = library_like(targets)
+          lib_note = libs.empty? ? '' : PM.t(:load_libs_first, shown: libs.first(6).join(', '))
+          PM.t(:confirm_load, n: targets.size, names: shown, libs: lib_note)
+        end
+
+        # Hộp xác nhận chỉ hiện lần đầu trong mỗi phiên SketchUp
+        def self.warned_load?
+          @warned_load ? true : false
+        end
+
+        def self.warned_load!
+          @warned_load = true
+        end
+
+        def self.load_summary(res)
+          msg = [PM.t(:sum_loaded, n: res[:loaded].size)]
+          msg << PM.t(:sum_load_already, n: res[:already].size, names: res[:already].join(', ')) if res[:already].any?
+          msg << PM.t(:sum_load_skipped, n: res[:skipped].size, names: res[:skipped].join(', ')) if res[:skipped].any?
+          msg << PM.t(:sum_errors, errors: res[:errors].join('; ')) if res[:errors].any?
+          msg << PM.t(:sum_load_tip) if res[:loaded].any? || res[:errors].any?
           msg.join("\n")
         end
 

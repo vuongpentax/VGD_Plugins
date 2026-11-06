@@ -173,5 +173,34 @@ check 'trùng tên: báo mục chưa chuyển, không ghi đè', toggle_msg.call
 MGR.migrate_on_start
 check 'migrate_on_start không ném lỗi và giữ báo cáo cho lần mở tab', MGR.take_startup_report.is_a?(Hash) && MGR.take_startup_report.nil?
 
+# ---- Nạp ngay (mgr_load) ----
+$ld_ran = []
+File.write(File.join(plug24, 'ld_one.rb'), "$ld_ran << 'ld_one'\n")
+File.write(File.join(plug24, 'ld_two.rb'), "$ld_ran << 'ld_two'\n")
+File.write(File.join(plug24, 'ld_bad.rb'), "raise 'hỏng'\n")
+dlg.callback('mgr_ready').call(nil, { lang: 'vi' }.to_json)
+check 'trạng thái gửi sang giao diện có cờ pending cho plugin chưa chạy', toggle_msg.call.include?('"name":"ld_one"') && toggle_msg.call =~ /"name":"ld_one"[^}]*"pending":true/
+UI.reply_to_confirm(IDNO)
+asked = UI.asked
+dlg.callback('mgr_load').call(nil, { names: %w[ld_one] }.to_json)
+check 'lần đầu hỏi xác nhận; chọn Không thì không nạp', UI.asked == asked + 1 && $ld_ran.empty? && !MGR::Toggle.warned_load?
+UI.reply_to_confirm(IDYES)
+dlg.callback('mgr_load').call(nil, { names: %w[ld_one khong_co ../x] }.to_json)
+check 'chọn Có thì nạp, báo kết quả, bỏ tên lạ', $ld_ran == %w[ld_one] && toggle_msg.call.include?('Đã nạp: 1 plugin') && MGR::Toggle.warned_load?
+asked = UI.asked
+dlg.callback('mgr_load').call(nil, { names: %w[ld_two], lang: 'en' }.to_json)
+check 'lần sau không hỏi lại; thông báo theo ngôn ngữ', UI.asked == asked && $ld_ran == %w[ld_one ld_two] && toggle_msg.call.include?('Loaded: 1 plugin(s)')
+dlg.callback('mgr_load').call(nil, { names: %w[ld_one ld_two], lang: 'vi' }.to_json)
+check 'không còn gì cần nạp: báo và không chạy lại mã', toggle_msg.call.include?('Không có plugin nào cần nạp') && $ld_ran == %w[ld_one ld_two] && UI.asked == asked
+dlg.callback('mgr_load').call(nil, { names: %w[ld_bad], lang: 'vi' }.to_json)
+check 'plugin lỗi khi nạp: báo lỗi trong giao diện, không ném ngoại lệ', toggle_msg.call.include?('ld_bad: hỏng')
+CENTER.instance_variable_set(:@busy, true)
+File.write(File.join(plug24, 'ld_three.rb'), "$ld_ran << 'ld_three'\n")
+dlg.callback('mgr_load').call(nil, { names: %w[ld_three] }.to_json)
+check 'đang cài/gỡ plugin: không nạp, báo bận', !$ld_ran.include?('ld_three') && toggle_msg.call.include?('đang cài hoặc gỡ plugin')
+CENTER.instance_variable_set(:@busy, false)
+dlg.callback('mgr_load').call(nil, 'không phải json')
+check 'JSON hỏng: báo lỗi thay vì im lặng', last.call.include?('Lỗi khi nạp plugin')
+
 puts($fail ? 'CÓ LỖI' : 'TẤT CẢ ĐẠT')
 exit($fail ? 1 : 0)

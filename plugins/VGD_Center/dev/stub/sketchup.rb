@@ -20,6 +20,8 @@ module Sketchup
   def self.extensions; {}; end
   def self.find_support_file(_name); $stub_plugins_dir; end
   def self.install_from_archive(path, _overwrite); $stub_installs << path; true; end
+  # Như Sketchup.require thật: nạp file (bỏ đuôi cũng được) và ghi vào $LOADED_FEATURES
+  def self.require(path); Kernel.require(path); end
 end
 
 module UI

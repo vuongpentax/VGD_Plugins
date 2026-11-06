@@ -105,6 +105,38 @@ module VGD
             vi: 'Khởi động lại SketchUp để thay đổi có hiệu lực.',
             en: 'Restart SketchUp for the change to take effect.'
           },
+          sum_load_hint: {
+            vi: 'Muốn dùng ngay plugin vừa bật mà chưa khởi động lại, bấm "Nạp ngay" ở dòng của plugin.',
+            en: 'To use a plugin you just enabled without restarting, click "Load now" on its row.'
+          },
+
+          # ---- Nạp ngay ----
+          ctx_load: { vi: 'Lỗi khi nạp plugin', en: 'Error loading plugins' },
+          load_none: {
+            vi: 'Không có plugin nào cần nạp (đã chạy sẵn, đang tắt hoặc không có file nạp).',
+            en: 'There is nothing to load (the plugins are already running, disabled, or have no loader file).'
+          },
+          confirm_load: {
+            vi: "Nạp ngay %{n} plugin vào SketchUp đang chạy?\n\n%{names}\n\n%{libs}Lưu ý:\n- Plugin thiết kế để nạp lúc SketchUp khởi động có thể chạy chưa đúng.\n- Không gỡ được khỏi bộ nhớ: muốn dừng hẳn, hãy tắt plugin rồi khởi động lại SketchUp.\n- Nếu plugin báo lỗi hoặc chạy sai, khởi động lại SketchUp.\n\nHộp này chỉ hiện một lần trong mỗi phiên SketchUp.",
+            en: "Load %{n} plugin(s) into the running SketchUp now?\n\n%{names}\n\n%{libs}Notes:\n- A plugin designed to load when SketchUp starts may not work correctly.\n- It cannot be unloaded from memory: to stop it completely, disable it and restart SketchUp.\n- If a plugin reports an error or misbehaves, restart SketchUp.\n\nThis box appears only once per SketchUp session."
+          },
+          load_libs_first: {
+            vi: "Thư viện nền sẽ được nạp trước: %{shown}.\n\n",
+            en: "Shared libraries are loaded first: %{shown}.\n\n"
+          },
+          sum_loaded: { vi: 'Đã nạp: %{n} plugin.', en: 'Loaded: %{n} plugin(s).' },
+          sum_load_already: {
+            vi: 'Đã chạy sẵn trong phiên này, không nạp lại (%{n}): %{names}',
+            en: 'Already running in this session, not loaded again (%{n}): %{names}'
+          },
+          sum_load_skipped: {
+            vi: 'Bỏ qua (đang tắt, không có file nạp hoặc không tìm thấy) (%{n}): %{names}',
+            en: 'Skipped (disabled, no loader file, or not found) (%{n}): %{names}'
+          },
+          sum_load_tip: {
+            vi: 'Nếu plugin chạy chưa đúng, hãy khởi động lại SketchUp.',
+            en: 'If a plugin does not work correctly, restart SketchUp.'
+          },
 
           # ---- Bộ plugin ----
           set_need_name: { vi: 'Hãy nhập tên cho bộ plugin.', en: 'Enter a name for the plugin set.' },
