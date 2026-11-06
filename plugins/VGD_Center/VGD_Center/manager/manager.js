@@ -20,7 +20,6 @@
       btn_set_off: 'Tắt bộ', btn_set_on: 'Bật bộ', btn_set_del: 'Xóa bộ',
       bulk_off: 'Tắt tất cả ({n})', bulk_on: 'Bật tất cả ({n})',
       bulk_off_shown: 'Tắt tất cả đang hiện ({n})', bulk_on_shown: 'Bật tất cả đang hiện ({n})',
-      dir_label: 'Thư mục chứa plugin đã tắt: {dir}',
       mig_few: 'Chỉ tìm thấy {n} phiên bản SketchUp trong AppData. Cần ít nhất 2 phiên bản để chuyển plugin.',
       mig_go: 'Chuyển sang bản {ver}', mig_go_default: 'Chuyển plugin',
       mig_count: 'Đã chọn {n}/{total}', mig_count_shown: 'Đã chọn {n}/{total}, đang hiện {shown}',
@@ -41,7 +40,6 @@
       btn_set_off: 'Disable set', btn_set_on: 'Enable set', btn_set_del: 'Delete set',
       bulk_off: 'Disable all ({n})', bulk_on: 'Enable all ({n})',
       bulk_off_shown: 'Disable all shown ({n})', bulk_on_shown: 'Enable all shown ({n})',
-      dir_label: 'Folder for disabled plugins: {dir}',
       mig_few: 'Only {n} SketchUp version(s) found in AppData. You need at least 2 to migrate plugins.',
       mig_go: 'Migrate to version {ver}', mig_go_default: 'Migrate plugins',
       mig_count: 'Selected {n}/{total}', mig_count_shown: 'Selected {n}/{total}, showing {shown}',
@@ -180,7 +178,6 @@
     visiblePlugins().forEach(function (p) { L.appendChild(pluginRow(p)); });
     T.innerHTML = '';
     S.sets.forEach(function (s) { T.appendChild(setRow(s)); });
-    if (S.disabled_dir) byId('mgrDir').textContent = t('dir_label', { dir: S.disabled_dir });
   }
   function picked() { return Object.keys(checked).filter(function (k) { return checked[k]; }); }
   function selAll(v) {
@@ -194,9 +191,14 @@
   }
 
   /* ---- Chuyển plugin ---- */
+  // Thông báo thay cho danh sách (chưa đủ phiên bản, trùng bản, không có plugin)
+  function showMlistNote() {
+    var L = byId('mgrMlist'); L.innerHTML = '';
+    L.appendChild(el('div', 'mgr-empty', t(mlistNote.key, mlistNote.vars)));
+  }
   function setMlistNote(key, vars) {
     mlistNote = { key: key, vars: vars || {} };
-    byId('mgrMlist').textContent = t(key, vars);
+    showMlistNote();
     updateMCount();
   }
   function updateGoLabel() {
@@ -230,12 +232,12 @@
     mlistNote = null;
     var L = byId('mgrMlist'); L.innerHTML = '';
     if (!d.plugins.length) { setMlistNote('mig_none', { ver: d.src }); return; }
-    d.plugins.forEach(function (name, i) {
+    d.plugins.forEach(function (name) {
       var r = el('label', 'mgr-row'), cb = document.createElement('input');
       cb.type = 'checkbox'; cb.className = 'mgr-pl'; cb.value = name; cb.checked = true;
       cb.addEventListener('change', updateMCount);
       r.dataset.name = name;
-      r.appendChild(cb); r.appendChild(el('span', '', (i + 1) + '. ' + name)); L.appendChild(r);
+      r.appendChild(cb); r.appendChild(el('span', 'nm', name)); L.appendChild(r);
     });
     filterMigrate();
   }
@@ -280,7 +282,7 @@
     drawToggle();
     updateGoLabel();
     updateMCount();
-    if (mlistNote) byId('mgrMlist').textContent = t(mlistNote.key, mlistNote.vars);
+    if (mlistNote) showMlistNote();
   }
 
   function bind(id, fn) { byId(id).addEventListener('click', fn); }

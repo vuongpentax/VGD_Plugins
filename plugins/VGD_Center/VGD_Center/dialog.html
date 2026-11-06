@@ -15,7 +15,7 @@
     body{margin:0;min-width:360px;min-height:100vh;background:var(--bg);color:var(--text);font:13px/1.45 "Manrope VGD",Manrope,"Segoe UI",Arial,sans-serif}
     button{font:inherit;color:inherit}
     button:focus-visible,a:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent-strong);outline-offset:2px}
-    .app{min-height:100vh;display:grid;grid-template-rows:68px minmax(0,1fr) 34px;background:var(--bg)}
+    .app{height:100vh;display:grid;grid-template-rows:68px minmax(0,1fr) 34px;background:var(--bg)}
     .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 20px;background:var(--elevated);border-bottom:1px solid var(--border)}
     .brand{display:flex;align-items:center;gap:11px;min-width:0}
     .brand-mark{width:40px;height:40px;flex:none}
@@ -267,7 +267,7 @@
 
         <section class="page" id="page-manager" data-view="manager">
           <div class="page-head">
-            <div><p class="eyebrow">MỌI PLUGIN TRONG SKETCHUP</p><h1>Quản lý</h1><p class="page-intro">Bật/tắt plugin, chuyển plugin giữa các bản SketchUp và xuất gói .rbz. Áp dụng cho mọi plugin trong thư mục Plugins, không chỉ plugin VGD.</p></div>
+            <div><p class="eyebrow">MỌI PLUGIN TRONG SKETCHUP</p><h1>Quản lý</h1></div>
             <div class="button-row">
               <button type="button" class="btn" id="mgrOpenPlugins"><span>Mở thư mục Plugins</span></button>
               <button type="button" class="btn" id="mgrOpenDisabled"><span>Mở thư mục đã tắt</span></button>
@@ -284,21 +284,18 @@
             <button type="button" class="mgr-tab" role="tab" id="mgr-tab-migrate" aria-selected="false">Chuyển plugin</button>
           </div>
           <section id="mgr-panel-toggle">
-            <div class="bottom-note mgr-note"><svg><use href="#i-restart"/></svg><span>Gạt nút để bật/tắt, thay đổi chỉ có hiệu lực sau khi khởi động lại SketchUp. Plugin vừa bật có thể bấm Nạp ngay để dùng luôn; tắt thì vẫn cần khởi động lại mới gỡ khỏi bộ nhớ. Plugin bị tắt được cất vào thư mục riêng, không bị xóa. Cẩn thận: tắt plugin mà plugin khác cần có thể gây lỗi khi mở lại. VGD Center không bao giờ tự tắt chính nó.</span></div>
-            <div class="section-head">
-              <div><h2>Danh sách plugin</h2></div>
-              <div class="section-tools">
+            <div class="mgr-toolbar">
+              <input type="text" id="mgrQ">
+              <button type="button" class="btn small" id="mgrSelAll">Chọn hết đang hiện</button>
+              <button type="button" class="btn small" id="mgrSelNone">Bỏ chọn hết</button>
+              <div class="mgr-actions">
                 <button type="button" class="btn small danger" id="mgrBulkOff" data-no-translate>Tắt tất cả</button>
                 <button type="button" class="btn small primary" id="mgrBulkOn" data-no-translate>Bật tất cả</button>
                 <button type="button" class="btn small" id="mgrBulkLoad" data-no-translate>Nạp tất cả chờ nạp</button>
               </div>
             </div>
-            <div class="mgr-bar"><input type="text" id="mgrQ">
-              <button type="button" class="btn small" id="mgrSelAll">Chọn hết đang hiện</button>
-              <button type="button" class="btn small" id="mgrSelNone">Bỏ chọn hết</button>
-              <small>Khi ô tìm kiếm có chữ, chỉ áp cho các mục đang hiện.</small></div>
             <div class="card mgr-list" id="mgrList" data-no-translate></div>
-            <div class="section-head"><div><h2>Bộ plugin</h2><p>Bộ plugin là một danh sách plugin để bật/tắt cùng lúc.</p></div></div>
+            <div class="section-head"><div><h2>Bộ plugin</h2></div></div>
             <div class="card mgr-card">
               <div class="mgr-bar"><input type="text" id="mgrSetName">
                 <button type="button" class="btn small" id="mgrSaveSet">Lưu mục đã chọn thành bộ</button></div>
@@ -306,27 +303,24 @@
               <div class="mgr-bar"><button type="button" class="btn small" id="mgrExportSets">Xuất các bộ ra file</button>
                 <button type="button" class="btn small" id="mgrImportSets">Nhập bộ từ file</button></div>
             </div>
-            <small id="mgrDir" data-no-translate></small>
           </section>
           <section id="mgr-panel-migrate" hidden>
-            <div class="section-head"><div><h2>Chuyển plugin giữa các bản SketchUp</h2><p>Chọn bản nguồn và bản đích, rồi chọn plugin cần chuyển. Thư mục đích được sao lưu trước khi chép.</p></div></div>
-            <div class="card mgr-card">
-              <div class="mgr-ver-row">
-                <label><span>Từ bản</span> <select id="mgrSrc"></select></label>
-                <label><span>Sang bản</span> <select id="mgrDst"></select></label>
-              </div>
-              <div class="mgr-bar"><input type="text" id="mgrMQ"><small id="mgrMCount" data-no-translate></small></div>
-              <div class="mgr-box" id="mgrMlist" data-no-translate></div>
-              <div class="mgr-bar">
-                <button type="button" class="btn small" id="mgrSetAll">Chọn hết</button>
-                <button type="button" class="btn small" id="mgrSetNone">Bỏ chọn hết</button>
-              </div>
+            <div class="mgr-ver-row">
+              <label><span>Từ bản</span> <select id="mgrSrc"></select></label>
+              <label><span>Sang bản</span> <select id="mgrDst"></select></label>
               <label class="mgr-opt"><input type="checkbox" id="mgrOverwrite"> <span>Ghi đè nếu plugin đã tồn tại ở bản đích</span></label>
-              <div class="mgr-bar">
-                <button type="button" class="btn primary" id="mgrGo" data-no-translate>Chuyển plugin</button>
-                <button type="button" class="btn" id="mgrExportBundle">Xuất gói .rbz tổng</button>
+            </div>
+            <div class="mgr-toolbar">
+              <input type="text" id="mgrMQ">
+              <button type="button" class="btn small" id="mgrSetAll">Chọn hết đang hiện</button>
+              <button type="button" class="btn small" id="mgrSetNone">Bỏ chọn hết</button>
+              <small id="mgrMCount" data-no-translate></small>
+              <div class="mgr-actions">
+                <button type="button" class="btn small" id="mgrExportBundle">Xuất gói .rbz tổng</button>
+                <button type="button" class="btn small primary" id="mgrGo" data-no-translate>Chuyển plugin</button>
               </div>
             </div>
+            <div class="card mgr-list" id="mgrMlist" data-no-translate></div>
           </section>
           <div class="mgr-out" id="mgrOut" data-no-translate></div>
         </section>
@@ -390,7 +384,7 @@
       const englishText = {
         'Ủng hộ VGD':'Support VGD',
         'Trung tâm plugin SketchUp':'SketchUp Plugin Center','Tổng quan':'Overview','Kho plugin':'Plugin catalog','Quản lý':'Manage','Cài đặt':'Settings',
-        'Quản lý mọi plugin':'Manage every plugin','Quản lý plugin':'Manage plugins','MỌI PLUGIN TRONG SKETCHUP':'ALL SKETCHUP PLUGINS','Bật/tắt plugin, chuyển plugin giữa các bản SketchUp và xuất gói .rbz. Áp dụng cho mọi plugin trong thư mục Plugins, không chỉ plugin VGD.':'Enable or disable plugins, migrate them between SketchUp versions, and export a .rbz bundle. Applies to every plugin in the Plugins folder, not just VGD plugins.','Mở thư mục Plugins':'Open Plugins folder','Mở thư mục đã tắt':'Open disabled folder','Đang bật':'Enabled','Đã tắt':'Disabled','Bộ plugin':'Plugin sets','Thư mục Plugins đang quản lý':'Managed Plugins folder','Bật/tắt':'Enable/disable','Chuyển plugin':'Migrate','Gạt nút để bật/tắt, thay đổi chỉ có hiệu lực sau khi khởi động lại SketchUp. Plugin vừa bật có thể bấm Nạp ngay để dùng luôn; tắt thì vẫn cần khởi động lại mới gỡ khỏi bộ nhớ. Plugin bị tắt được cất vào thư mục riêng, không bị xóa. Cẩn thận: tắt plugin mà plugin khác cần có thể gây lỗi khi mở lại. VGD Center không bao giờ tự tắt chính nó.':'Use the switch to enable or disable a plugin; the change only takes effect after you restart SketchUp. A plugin you just enabled can be used right away with Load now; disabling it still needs a restart to unload it from memory. Disabled plugins are moved to their own folder, not deleted. Careful: disabling a plugin that others need may cause errors when you reopen SketchUp. VGD Center never disables itself.','Danh sách plugin':'Plugin list','Chọn hết đang hiện':'Select all shown','Bỏ chọn hết':'Clear selection','Khi ô tìm kiếm có chữ, chỉ áp cho các mục đang hiện.':'When the search box has text, bulk actions apply only to the items shown.','Bộ plugin là một danh sách plugin để bật/tắt cùng lúc.':'A plugin set is a list of plugins you can enable or disable together.','Lưu mục đã chọn thành bộ':'Save selection as a set','Xuất các bộ ra file':'Export sets to file','Nhập bộ từ file':'Import sets from file','Chuyển plugin giữa các bản SketchUp':'Migrate plugins between SketchUp versions','Chọn bản nguồn và bản đích, rồi chọn plugin cần chuyển. Thư mục đích được sao lưu trước khi chép.':'Choose the source and destination versions, then pick the plugins to move. The destination folder is backed up before copying.','Từ bản':'From version','Sang bản':'To version','Chọn hết':'Select all','Ghi đè nếu plugin đã tồn tại ở bản đích':'Overwrite if the plugin already exists in the destination version','Xuất gói .rbz tổng':'Export bundle .rbz',
+        'Quản lý mọi plugin':'Manage every plugin','Quản lý plugin':'Manage plugins','MỌI PLUGIN TRONG SKETCHUP':'ALL SKETCHUP PLUGINS','Mở thư mục Plugins':'Open Plugins folder','Mở thư mục đã tắt':'Open disabled folder','Đang bật':'Enabled','Đã tắt':'Disabled','Bộ plugin':'Plugin sets','Thư mục Plugins đang quản lý':'Managed Plugins folder','Bật/tắt':'Enable/disable','Chuyển plugin':'Migrate','Chọn hết đang hiện':'Select all shown','Bỏ chọn hết':'Clear selection','Lưu mục đã chọn thành bộ':'Save selection as a set','Xuất các bộ ra file':'Export sets to file','Nhập bộ từ file':'Import sets from file','Từ bản':'From version','Sang bản':'To version','Ghi đè nếu plugin đã tồn tại ở bản đích':'Overwrite if the plugin already exists in the destination version','Xuất gói .rbz tổng':'Export bundle .rbz',
         'Quản lý plugin VGD và cập nhật ngay trong SketchUp.':'Manage VGD plugins and updates in SketchUp.',
         'VGD · PLUGIN CENTER':'VGD · PLUGIN CENTER','Chào mừng đến với VGD Center':'Welcome to VGD Center',
         'Cài đặt và cập nhật plugin VGD, đồng thời bật/tắt, chuyển và đóng gói mọi plugin trong SketchUp. VGD Center tải gói, xác minh và cài đặt giúp bạn.':'Install and update VGD plugins, and also enable, disable, migrate, and bundle every plugin in SketchUp. VGD Center downloads, verifies, and installs packages for you.',

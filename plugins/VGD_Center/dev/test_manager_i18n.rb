@@ -97,7 +97,7 @@ texts = static.scan(/>([^<>]+)</).flatten.map(&:strip).reject(&:empty?).uniq
 missing = texts.reject { |t| english.key?(t) }
 check "mọi chữ tĩnh của trang Quản lý đều có tiếng Anh (thiếu: #{missing.join(' | ')})", missing.empty? && !texts.empty?
 check 'bản dịch trang Quản lý không còn chữ tiếng Việt', texts.none? { |t| english[t] =~ VIET }
-dynamic_ids = %w[mgrList mgrSets mgrMlist mgrOut mgrDir mgrBulkOff mgrBulkOn mgrGo mgrCountOn mgrCountOff mgrCountSets mgrYear mgrMCount]
+dynamic_ids = %w[mgrList mgrSets mgrMlist mgrOut mgrBulkOff mgrBulkOn mgrGo mgrCountOn mgrCountOff mgrCountSets mgrYear mgrMCount]
 check 'các phần tử do JS ghi chữ đều được loại khỏi bộ dịch chữ tĩnh (data-no-translate)',
       dynamic_ids.all? { |id| page =~ /id="#{id}"[^>]*data-no-translate/ && js.include?("'#{id}'") }
 check 'bộ dịch chữ tĩnh của Center bỏ qua phần tử data-no-translate', html.include?("closest('[data-no-translate],")

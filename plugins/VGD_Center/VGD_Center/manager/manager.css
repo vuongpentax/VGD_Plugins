@@ -3,19 +3,20 @@
 #page-manager .mgr-tab { height: 34px; padding: 0 12px; border: 0; border-bottom: 2px solid transparent; border-radius: 4px 4px 0 0; background: transparent; color: var(--muted); font-size: 13px; font-weight: 650; cursor: pointer; }
 #page-manager .mgr-tab:hover { color: var(--text); border-bottom-color: var(--border); }
 #page-manager .mgr-tab[aria-selected="true"] { color: var(--accent-strong); border-bottom-color: var(--accent); }
-#page-manager .mgr-note { background: var(--tint); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; }
+/* Hàng công cụ dùng chung cho tab Bật/tắt và Chuyển plugin: ô tìm kiếm, chọn hết, nút hành động bên phải */
+#page-manager .mgr-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 10px; }
+#page-manager .mgr-toolbar .mgr-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
+#page-manager .mgr-empty { padding: 12px; color: var(--muted); }
 #page-manager .mgr-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 12px; }
-#page-manager .mgr-box { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; max-height: 320px; overflow: auto; margin-bottom: 12px; padding: 8px 12px; }
 #page-manager .mgr-row { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--border); }
-#page-manager .mgr-box .mgr-row { padding: 4px 0; border: 0; }
 #page-manager .mgr-row[hidden] { display: none; }
 #page-manager .mgr-row:last-child { border-bottom: 0; }
 #page-manager .mgr-row .nm { flex: 1; word-break: break-all; }
 #page-manager .mgr-row.off .nm { color: var(--muted); }
 #page-manager .mgr-set { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
 #page-manager .mgr-set .nm { flex: 1 1 100%; font-weight: 600; }
-#page-manager .mgr-opt { display: block; padding: 2px 0 6px; }
-#page-manager .mgr-ver-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+#page-manager .mgr-opt { display: block; }
+#page-manager .mgr-ver-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
 #page-manager h2 { margin: 16px 0 8px; font-size: 15px; }
 #page-manager small { color: var(--muted); }
 #page-manager input[type=text] { height: 32px; padding: 0 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); width: 220px; font-family: inherit; }
@@ -37,7 +38,6 @@
 #page-manager .mgr-switch:disabled { opacity: .45; cursor: not-allowed; }
 
 /* Bố cục giống các trang khác của Center */
-#page-manager .mgr-note { margin: 0 0 14px; }
 #page-manager .section-head { margin-top: 18px; }
 #page-manager .mgr-card { padding: 12px; margin-bottom: 12px; }
 #page-manager .mgr-list { max-height: 320px; overflow: auto; margin-bottom: 12px; }

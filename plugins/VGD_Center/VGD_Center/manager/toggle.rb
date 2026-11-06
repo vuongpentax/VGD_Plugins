@@ -156,8 +156,7 @@ module VGD
               'missing' => v.count { |x| !names.include?(x) } }
           end
           { 'year' => year, 'plugins' => plugins,
-            'sets' => sets.sort_by { |s| s['name'].downcase },
-            'disabled_dir' => disabled_dir }
+            'sets' => sets.sort_by { |s| s['name'].downcase } }
         end
 
         # Chuyển các mục từ thư mục này sang thư mục kia. Lỗi thì hoàn tác. Trả về nil nếu ổn.
