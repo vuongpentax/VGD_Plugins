@@ -20,7 +20,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Kiểm thử
 
-- Chạy từng file từ `plugins/VGD_Cabinet_Draw/test`, ví dụ `ruby test_build.rb`. Mặc định các test trỏ tới `../runtime/VGD_Cabinet_Draw`. Chạy đủ mọi `test_*.rb` trước khi đóng gói.
+- Chạy từng file từ `plugins/VGD_Cabinet_Draw/test`, ví dụ `ruby test_build.rb`. Mặc định các test trỏ tới `../runtime/VGD_Cabinet_Draw`; riêng `test_back_modes.rb`, `test_panel_model.rb`, `test_rails.rb` bắt buộc truyền đường dẫn: `ruby test_rails.rb ../runtime/VGD_Cabinet_Draw`. Chạy đủ mọi `test_*.rb` trước khi đóng gói.
 - Test dùng giả lập SketchUp, không phải SketchUp thật. Không ghi là đã test trong SketchUp khi chỉ chạy các test này.
 - `dev/native_smoke.rb` có thao tác hình học, chỉ chạy trong SketchUp thật; chưa đối chiếu với bản hiện tại.
 - Phần chưa xác minh: xem `README.md`, mục "Điều chưa kiểm chứng".

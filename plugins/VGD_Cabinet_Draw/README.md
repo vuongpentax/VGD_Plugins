@@ -80,7 +80,7 @@ Menu chuột phải **VGD Cabinet** có thêm các lệnh theo đối tượng (
 
 ## Kiểm thử
 
-- Chạy từ thư mục `test/`, mỗi file một lệnh, ví dụ `ruby test_build.rb`. Có 25 file `test_*.rb` (giả lập SketchUp trong `mock_su.rb`). Mặc định test trỏ tới `../runtime/VGD_Cabinet_Draw`.
+- Chạy từ thư mục `test/`, mỗi file một lệnh, ví dụ `ruby test_build.rb`. Có 25 file `test_*.rb` (giả lập SketchUp trong `mock_su.rb`). Mặc định test trỏ tới `../runtime/VGD_Cabinet_Draw`; riêng `test_back_modes.rb`, `test_panel_model.rb`, `test_rails.rb` bắt buộc truyền đường dẫn: `ruby test_rails.rb ../runtime/VGD_Cabinet_Draw`.
 - Công cụ chẩn đoán chỉ đọc, chạy trong Ruby Console của SketchUp thật: `dev/check_parts_solid.rb` (tấm có là khối kín không), `dev/check_feature_sizes.rb` (chi tiết nhỏ có giữ mm sau Scale), `dev/dump_part_structure.rb` (cấu trúc một tấm).
 - `dev/native_smoke.rb` chỉ chạy trong SketchUp thật; chưa đối chiếu với bản hiện tại.
 
