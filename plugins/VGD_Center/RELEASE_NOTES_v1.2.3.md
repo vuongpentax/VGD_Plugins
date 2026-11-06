@@ -7,4 +7,4 @@
 - **Xuất gói .rbz tổng** không còn thêm file `vgd_bundle_manifest.json` vào gói, nên không còn mục lạ trong thư mục Plugins của máy cài gói.
 - Có tiếng Anh đầy đủ.
 
-Kiểm tra: tự động (các test của Center) và thử giao diện bằng trình duyệt giả lập. Chưa kiểm thử thủ công trong SketchUp (nhất là việc mở trình duyệt khi bấm logo).
+Kiểm tra: tự động (các test của Center). Cài bằng Extension Manager như thường lệ; người đang dùng Center 1.2.0 trở lên sẽ được báo cập nhật trong mục Cài đặt.
