@@ -36,7 +36,8 @@ Quy trình: `AutoStretch.after_commit` → `Rebuild.stretch(root)`:
 1. Dựng thử hai bản sao của tủ (kích thước cũ và mới) để lấy hộp và nội dung đúng công thức (`with_probe`).
 2. Kiểm tra liên kết bản lề trên bản thử (`Links.check!`). Lỗi thì hủy thao tác, tủ giữ nguyên.
 3. Phân loại theo khóa (`stretch_key`):
-   - Vỏ tủ, đợt/vách: co theo hộp cũ → hộp mới (`stretch_part!`), độ dày giữ nguyên.
+   - Vỏ tủ, đợt/vách: co theo hộp cũ → hộp mới (`stretch_features!`), độ dày giữ nguyên. Chi tiết nhỏ trong tấm giữ đúng mm: dải
+     `STRETCH_EDGE_ZONE` (100 mm) sát mỗi mép dời nguyên khối, chỉ nhịp trống từ `STRETCH_GAP_MIN` (150 mm) giãn (`stretch_knots`).
    - Cánh, mặt/thùng hộc, khoang, xà chặn, hộc tủ áo: thay nội dung bằng nội dung bản thử (`replace_contents`),
      để khung, gờ, khe giữ đúng mm. Vật liệu đặt lại theo đường dẫn tên.
 4. Dựng lại phần còn lại (ngăn kéo, tay nắm, phào, chân) bằng `Rebuild.run` với `keep` là các cấu kiện đã co giãn.
@@ -45,9 +46,10 @@ Muốn một cấu kiện mới co giãn đúng: thêm khóa trong `stretch_key`
 
 ## 4. Liên kết (`links.rb`)
 
-- Cánh có bản lề vào tấm vỏ tủ theo hướng mở: trái → hông trái, phải → hông phải, mở lên → nóc, mở xuống → đáy.
+- Cánh có bản lề vào tấm theo hướng mở: trái/phải → hông trái/phải hoặc hồi giữa gần nhất, mở lên → nóc hoặc đợt giữa, mở xuống → đáy hoặc đợt giữa.
 - Cánh mở lên/xuống được xử lý trước (`Links.ordered`).
-- Bản lề không còn bắt được vào tấm vỏ tủ thì `Links.check!` ném lỗi và tủ giữ nguyên.
+- Bản lề không còn bắt được (cách tấm gần nhất hơn `HINGE_REACH` = 40 mm) thì `Links.check!` ném lỗi và tủ giữ nguyên.
+- Bố cục cánh tự động (`auto` trong `door_layout_json`) được tính lại theo vách/hông khi tủ đổi kích thước (`DoorTool#refresh_auto_layout!`); cánh có bản lề ở giữa khoang được đổi sang mép sát hông/hồi (`Layout#fix_hinges`).
 - Mọi quy tắc liên kết mới đặt ở đây, không rải vào công cụ.
 
 ## 5. Các công cụ và nơi chúng nằm
@@ -65,10 +67,15 @@ Muốn một cấu kiện mới co giãn đúng: thêm khóa trong `stretch_key`
 | Liên kết | `links.rb` | Xem mục 4 |
 | Menu chuột phải, HUD | `context_menu.rb`, `preset_hud.rb`, `mini_bar.rb` | Gọi các công cụ trên |
 | Xóa tấm, cánh, ngăn kéo | `removal.rb` | Ghi vào bước tạo (`omit`, vùng `empty`, gỡ bước) để không hiện lại |
+| Dời đợt/vách | `removal.rb` (`move_members`) | Đổi vị trí tuyệt đối trong bước `panel`, rồi dựng lại |
+| Scale VGD | `scale_tool.rb`, `resize.rb` | Đặt phép scale rồi gọi `Rebuild.stretch`; một bước Undo |
+| Quét & dời tấm | `sweep_tool.rb`, `screen_pick.rb`, `removal.rb` | Chọn theo khung/cọ (hình học màn hình thuần Ruby), dời hồi/đợt qua bước tạo, tấm khác theo trục khóa |
+| Màu, font viewport | `theme.rb` | Token VGD sáng/tối; dialog báo chế độ qua callback `theme` |
 
 ## 6. Việc còn lại đã biết
 
 - Khấu, cắt, bo trên vỏ tủ vẫn co theo tỷ lệ (chưa lưu lại thao tác để dựng lại theo mm).
 - Lỗ cam, chốt, cốc, lề: chưa thiết kế.
 - `Chia nhanh` (menu chuột phải) xóa ngăn kéo nhưng còn giữ khoang: cần kiểm tra lại.
+- Cánh chia tay không tự khớp lại với hồi sau khi dời hồi (chỉ cánh tự động đi theo).
 - Click trong công cụ Sửa tủ luôn dựng lại tủ (thiết kế hiện tại), dễ kích hoạt nhầm.

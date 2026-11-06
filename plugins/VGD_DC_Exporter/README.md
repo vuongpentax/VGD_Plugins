@@ -22,4 +22,4 @@ Viết lại từ tplus_dc_exporter để sửa lỗi đệ quy dictionary, tác
 - Đã kiểm tra bằng Ruby (`test/test_exporter.rb`) với đối tượng giả lập. Chưa chạy trong SketchUp.
 
 ## Kiểm thử
-`ruby test/test_exporter.rb` (16 kiểm tra).
+`ruby test/test_exporter.rb` (18 kiểm tra).
