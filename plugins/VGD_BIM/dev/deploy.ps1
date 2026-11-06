@@ -15,7 +15,11 @@ function Assert-Path([string]$path) {
   return $absolute
 }
 $loader = Assert-Path (Join-Path $destination 'vgd_bim_lite.rb')
-if ((Test-Path -LiteralPath $loader) -and -not ([IO.File]::ReadAllText($loader).Contains("SketchupExtension.new('VGD BIM Lite'"))) { throw 'Existing loader is not owned by VGD BIM Lite' }
+# Loader đang cài phải là của plugin này: tên cũ (1.0.x) hoặc tên mới VGD_BIM.
+if (Test-Path -LiteralPath $loader) {
+  $installed = [IO.File]::ReadAllText($loader)
+  if (-not ($installed.Contains("SketchupExtension.new('VGD_BIM'") -or $installed.Contains("SketchupExtension.new('VGD BIM Lite'"))) { throw 'Existing loader is not owned by VGD_BIM' }
+}
 if ($VerifyOnly) {
   foreach ($file in $owned) {
     $relative = $file.FullName.Substring($runtime.Length + 1)

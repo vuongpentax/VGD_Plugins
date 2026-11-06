@@ -1,32 +1,32 @@
-# Kiểm thử — cập nhật 2026-10-04
+# Kiểm thử
 
-Ghi chú: các kết quả dưới đây thuộc bản 0.1.3-alpha. Bản 1.0.0 chỉ được kiểm tra tự động (cú pháp Ruby, JSON, đóng gói RBZ), chưa kiểm thử thủ công trong SketchUp.
+Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 0.1.3-alpha
+## Bản 1.1.0-beta.4: đã kiểm tra tự động
 
-- Kiểm thử Ruby với cửa sổ giả lập: chuyển menu và thanh chức năng giữ đúng một HtmlDialog; chuyển tính năng trước khi HTML sẵn sàng không mất trạng thái; hủy thế hệ scan cũ khi chuyển trang; observer selection được tháo đúng; đóng/mở lại tạo callback mới.
-- Kiểm thử xuất CSV: tiêu đề và hạng mục tiếng Việt, UTF-8 BOM, dấu phẩy thập phân, dấu chấm phẩy phân cột, mô tả nhiều dòng, escape văn bản có thể thành công thức Excel. Không đổi category/item_type trong metadata gốc khi dịch hiển thị.
-- Playwright + Edge: nhãn tiếng Việt, mẫu hạng mục giữ description cũ, chuyển tên loại tiếng Việt về mã schema, sửa quy tắc bằng form, bốn báo cáo CSV, chặn xuất trước khi scan xong, preview/xác nhận, chọn dòng kiểm tra, sáng/tối và cửa sổ nhỏ.
-- Đã xem ảnh giao diện màu nâu đồng bộ VGD.
-- Đã đóng gói RBZ 0.1.1, đối chiếu byte với runtime và cài/xác minh hash 27 file trong Plugins của SketchUp 2022; có bản sao lưu file cũ trong `outputs/install_*`.
+Chạy từ `plugins/VGD_BIM`: `ruby dev/run_tests.rb` (cú pháp 20 file Ruby và 9 bộ test) và `dev/test_ui.cjs` (Playwright).
 
-Các kiểm thử này kiểm chứng logic và giao diện ngoài SketchUp. Kiểm thử native đầy đủ bên dưới vẫn chưa được xác nhận lại cho bản 0.1.1.
+- Cú pháp Ruby của mọi file runtime. Runtime viết theo cú pháp Ruby 2.7 để target SketchUp 2022; phần kiểm tra cú pháp chạy bằng Ruby của máy thử, không phải Ruby 2.7.
+- `test_legacy.rb`: schema/enum/boolean, trường `status`, cập nhật từng phần, xóa, trường bắt buộc, UNCLASSIFIED, ưu tiên nguồn, quy tắc JSON, đóng gói một operation và abort khi lỗi; hình học nested (mirror, xoay, scale không đều), quét bỏ qua cạnh, báo cáo không có dữ liệu cạnh, 2.000 cấp lồng nhau, chống đệ quy; xuất CSV (tiêu đề tiếng Việt, UTF-8 BOM, dấu chấm phẩy, an toàn công thức Excel); cửa sổ (một cửa sổ cho mọi menu, điều hướng trước khi HTML sẵn sàng, hủy thế hệ quét cũ, tháo observer, đóng/mở lại).
+- `test_table.rb`, `test_build.rb`: dựng bảng khối lượng, preset (kể cả tên có ngoặc kép), lưu và đọc lại trạng thái bảng, chế độ chọn nông và chọn sâu.
+- `test_dialog_logic.rb`: bấm vùng trống giữ nguyên bảng, chọn lại thì đọc lại.
+- `test_preview.rb`: khung đánh dấu (vị trí chữ, tự tắt khi đối tượng bị xóa).
+- `test_tags.rb`, `test_tags_io.rb`: bộ tag, xuất / nhập CSV và JSON, gộp tag trùng tên.
+- `test_loader_menu.rb`, `test_load.rb`: menu VGD_BIM và Tải lại code, phiên bản đúng chuẩn, nạp được mọi file.
+- `dev/test_ui.cjs`: nhãn tiếng Việt, sửa nhiều đối tượng chỉ ghi trường được bật, tên đối tượng không chèn HTML, xem trước và xác nhận chuyển đổi, chọn dòng kiểm tra, quy tắc, tùy chọn quét và xuất, bấm ô bảng gửi đúng dòng và cột, sáng/tối, cửa sổ nhỏ không tràn.
+- Kiểm tra đột biến: đổi thử một nhánh của khung đánh dấu thì `run_tests.rb` báo lỗi đúng chỗ.
 
-## Đã pass
+## Chưa được xác nhận trong SketchUp thật
 
-- Compile tất cả Ruby runtime/dev sources bằng Ruby WASM 3.2. Runtime viết theo cú pháp Ruby 2.7 để target SketchUp 2022.
-- Core simulation: schema/enum/boolean, default fields, partial updates, clear, required fields, unit-method mismatch, UNCLASSIFIED, source priority, JSON rules, Vietnamese keywords, native data preservation, entity deduplication, one-operation batch và abort khi write lỗi.
-- Geometry/scanner simulation: nested transform kết hợp mirror/rotation/nonuniform scale, transformed face area/edge length, raw reports đếm physical occurrences, unique entity API, 2.000 cấp lồng nhau và recursive definition guard.
-- Playwright + Microsoft Edge headless: multi-edit chỉ ghi field enabled, preset không đổi description ngoài ý muốn, entity name không inject HTML, preview/cancel/confirm, validation row gửi đúng target index, invalid JSON rules, selection trống, dark/light, compact layout không overflow. Đã kiểm tra ảnh panel light.
-- Deploy vào fixture Plugins: 24 files byte/hash match. Deploy thật vào SketchUp 2022 Plugins: 24 files hash match, có INSTALL_REPORT và backup trong `outputs/install_*`.
-- RBZ archive kiểm tra CRC và đối chiếu từng byte với runtime. SHA256 trong `PACKAGE_SHA256.json`.
+Các điểm sau chỉ kiểm được trong SketchUp thật:
 
-## Chưa được xác nhận trên SketchUp kernel
+1. Nạp extension, menu, toolbar, context menu, HtmlDialog và Tải lại code; đổi tên extension từ "VGD BIM Lite" sang "VGD_BIM" khi cài đè lên 1.0.0.
+2. Khung đánh dấu trong viewport: chữ trong khung tên có rõ và nằm đúng giữa không (chiều rộng khung ước lượng theo số ký tự); tọa độ 2D trên màn hình độ phân giải cao có lệch không; tô mặt có chậm với model lớn không; khung có tắt khi xóa đối tượng không; chọn trong SketchUp có hiện khung ngay không; kéo chọn nhiều và nhấp đúp vào group khi khung đang bật.
+3. Lưu cài đặt: preset và cột còn sau khi tắt mở SketchUp (`%APPDATA%\VGD\VGD_BIM\`).
+4. Thể tích chỉ tính cho group kín; khung bao theo bounding box chứ không theo cạnh thật.
+5. Undo thật của sửa bảng và chuyển đổi; chọn dòng kiểm tra tới đúng đối tượng lồng nhau; lưu và mở lại metadata; model thật đang dùng.
+6. `dev/native_smoke.rb` (chạy trong tiến trình SketchUp mới với model trống) chưa chạy cho bản 1.1.0 và chưa bao phủ bảng khối lượng, soạn tag, khung đánh dấu.
 
-Đã khởi chạy một tiến trình SketchUp 2022 riêng bằng `-RubyStartup dev/native_smoke.rb`, nhưng phiên kiểm tra chưa sinh `native_report.json`. Windows Computer Use helper không đọc được cửa sổ: `foreground window did not report a process id`, sau đó `FrameArrived timed out: timed out waiting on channel`. Vì vậy **không coi native smoke test đã pass**.
+## Lịch sử
 
-Các phần còn cần chạy test thực tế: load extension/menu/toolbar/HtmlDialog; native scaled/nested geometry; Undo thật; click validation chọn nested occurrence; save/reopen metadata; dirty model thật. Cài nguồn đã được xác minh; cần khởi động lại SketchUp để nạp bản mới.
-
-Để kiểm chứng, chạy `dev/native_smoke.rb` trong một SketchUp process mới với model trống. Script sẽ tạo fixture gồm wardrobe, 10 sockets, 6 lights, lavabo cabinet, raw wall, unclassified/empty group, shared nested và scaled component; kiểm tra metadata/Undo/reopen và ghi báo cáo. Không chạy trên file đang làm.
-
-Đây là v0.1-alpha để review kiến trúc/schema và kiểm tra SKP thực tế; chưa xác nhận đạt toàn bộ completion criteria của bản đặc tả.
+Bản 0.1.x từng được cài và xác minh hash trong Plugins của SketchUp 2022 và kiểm tra giao diện bằng Playwright, nhưng lần chạy `native_smoke.rb` thử trong một tiến trình SketchUp riêng không sinh được `native_report.json` do công cụ điều khiển cửa sổ lỗi, nên không coi là đã pass. Bản 1.0.0 chỉ được kiểm tra tự động (cú pháp Ruby, JSON, đóng gói RBZ).

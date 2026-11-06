@@ -1,42 +1,51 @@
-# VGD BIM Lite v1.0.0
+# VGD_BIM 1.1.0-beta.4
 
-Bản ổn định (không còn alpha). Plugin không tự hiện popup cập nhật khi khởi động: VGD Center báo bản mới. Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp.
+Bản thử của 1.1.0 (bản ổn định gần nhất là 1.0.0, tên cũ "VGD BIM Lite"). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
-Plugin dùng **một cửa sổ duy nhất**, giao diện màu nâu đồng bộ VGD Dim/Scenes và nhãn/thông báo tiếng Việt. Có hướng dẫn nhanh trong giao diện, màn hình quy tắc dễ nhập và mục **Xuất báo cáo** với bốn loại CSV mở được trong Excel. Đọc [hướng dẫn sử dụng](HUONG_DAN_SU_DUNG.md) để bắt đầu.
+Plugin **VGD_BIM** cho SketchUp 2022+ / Windows: bóc khối lượng từ group / component, gắn dữ liệu hạng mục, quét và xuất báo cáo CSV mở được trong Excel. Namespace `VGD::BIM`; dữ liệu Group/ComponentInstance lưu trong dictionary `VGD_BIM` của file SKP. Giao diện dùng **một cửa sổ duy nhất**, màu nâu đồng bộ các plugin VGD, nhãn và thông báo tiếng Việt. Đọc [hướng dẫn sử dụng](HUONG_DAN_SU_DUNG.md) để bắt đầu.
 
-CSV là báo cáo dữ liệu/khối lượng gốc, không tính đơn giá/thành tiền. Mã schema vẫn giữ nguyên để các plugin VGD dùng chung; bản dịch áp dụng ở giao diện và báo cáo. Khởi động lại SketchUp sau cập nhật để đóng các cửa sổ cũ.
-
-Plugin **VGD_BIM** cho SketchUp 2022+ / Windows. Phase 1: Core, Intake, Mapping và Validation. Namespace `VGD::BIM`; dữ liệu Group/ComponentInstance lưu trong dictionary `VGD_BIM` của file SKP.
+CSV là báo cáo dữ liệu/khối lượng gốc, không tính đơn giá/thành tiền. Mã schema giữ nguyên để các plugin VGD dùng chung; bản dịch áp dụng ở giao diện và báo cáo.
 
 ## Cài đặt
 
-Trong SketchUp, mở **Extensions → Extension Manager → Install Extension**, chọn `VGD_BIM_Lite_v1.0.0.rbz`. Khởi động lại SketchUp. Menu: **Extensions → VGD → BIM Lite**. Có toolbar hai nút và context menu cho Group/Component.
+Trong SketchUp, mở **Extensions → Extension Manager → Install Extension**, chọn file `VGD_BIM_v<phiên bản>.rbz`. Khởi động lại SketchUp. Menu: **Extensions → VGD → VGD_BIM** mở thẳng Bảng khối lượng; **VGD_BIM · Tải lại code** nạp lại mã sau khi cài đè bản mới (menu và toolbar mới chỉ có tác dụng sau khi mở lại SketchUp). Có toolbar một nút và mục "VGD_BIM · Thông tin đối tượng" trong context menu của Group/Component.
+
+Cài đè lên 1.0.0: tên extension đổi từ "VGD BIM Lite" thành "VGD_BIM", thư mục `vgd_bim_lite` giữ nguyên. Các file lớp bao hộp thoại cũ của 1.0.0 (`ui/information_dialog.rb`, `mapping_dialog.rb`, `scan_dialog.rb`, `validation_dialog.rb`) không còn được nạp; nếu còn nằm trong Plugins thì có thể xóa tay.
 
 Hoặc chạy `dev/deploy.ps1` để cài nguồn runtime vào Plugins của SketchUp 2022. Script chỉ copy file plugin này, sao lưu file cũ và kiểm tra SHA256. `-PluginRoot` chọn bản SketchUp khác; `-VerifyOnly` kiểm tra cài đặt.
 
 ## Sử dụng
 
-1. Chọn nhóm/đối tượng thành phần → **Thông tin**. Chọn mẫu hạng mục hoặc bật ô đánh dấu các trường cần đổi → **Áp dụng thông tin**. Trường không bật giữ nguyên; trường văn bản bật và để trống được xóa. Các đối tượng khóa được bỏ qua. **Xóa dữ liệu VGD** chỉ xóa metadata.
-2. **Quét mô hình** đọc cả model, gồm đối tượng lồng nhau, mặt, cạnh và vật liệu kế thừa. Thống kê thành phần đếm lần xuất hiện thực tế. Rộng/sâu/cao theo trục của đối tượng sau biến đổi, dùng mm.
-3. **Phân loại** gom theo định nghĩa và vật liệu. Gợi ý dựa trên VGD đã có → quy tắc → tên định nghĩa → tên đối tượng → thẻ → vật liệu. Từ khóa chỉ là gợi ý. **Chỉnh thông tin** → **Xem trước chuyển đổi** → **Xác nhận chuyển đổi** mới ghi dữ liệu. Dữ liệu VGD hiện có không bị convert ghi đè.
-4. **Chuyển đổi lựa chọn** áp dụng bước xem trước cho các đối tượng đang chọn. Mỗi batch chỉ có một bước hoàn tác. Không sửa hình học, tên, thẻ hoặc vật liệu.
-5. **Kiểm tra** chọn phạm vi toàn model hoặc đối tượng đang chọn. Kiểm tra schema, trường bắt buộc và đơn vị/cách đo. Bấm kết quả để chọn đúng đối tượng lồng nhau và phóng tới nó. Đối tượng bị xóa sau quét được báo và yêu cầu làm mới.
-6. **Quy tắc** nhập/sửa bằng form và xuất/nhập giữa model. Rules lưu JSON trong dictionary model `VGD_BIM_RULES`, hỗ trợ hoàn tác và tồn tại cùng SKP. Phân loại vật liệu chỉ ghi rule, không gán BIM data vào từng mặt.
-7. **Xuất báo cáo** chọn một trong bốn loại CSV: danh mục đối tượng, thống kê thành phần, diện tích vật liệu gốc hoặc kết quả kiểm tra. Báo cáo dùng tiếng Việt, UTF-8 BOM và dấu chấm phẩy. Tên đối tượng có ký tự công thức được xuất thành văn bản an toàn khi mở trong Excel.
+Cửa sổ có 5 tab:
+
+1. **Bảng khối lượng** (mở đầu tiên): chọn group / component trong SketchUp, bảng tự đọc đối tượng đang chọn (không quét cả model). Có 20 cột; chọn cột, kéo đổi thứ tự, co giãn cột, dòng tổng cộng, preset cột (Tất cả / Phần thô / Hoàn thiện / Đồ rời và preset tự tạo). Bấm một ô để đánh dấu đối tượng trong SketchUp bằng khung nét đứt và khung tên; sửa trực tiếp **Tên**, **Mô tả**, **Tình trạng**. Tuỳ chọn: thu phóng tới đối tượng, cô lập đối tượng chọn, chọn sâu bên trong, chỉ cộng tổng cấp cao nhất. Tình trạng có 5 mức (Mới, Hiện hữu, Dùng lại, Tạm thời, Loại bỏ); ô trống hiểu là Mới.
+2. **Thông tin**: sửa chi tiết dữ liệu VGD của đối tượng đang chọn. Chọn mẫu hạng mục hoặc bật ô đánh dấu các trường cần đổi → **Áp dụng thông tin**. Trường không bật giữ nguyên; trường văn bản bật và để trống được xóa. Các đối tượng khóa được bỏ qua. **Xóa dữ liệu VGD** chỉ xóa metadata.
+3. **Quét & xuất**: quét model (gồm đối tượng lồng nhau, mặt và vật liệu kế thừa; không đọc cạnh), thống kê thành phần đếm lần xuất hiện thực tế, rộng/sâu/cao theo trục của đối tượng sau biến đổi (mm). Phần xuất file chọn một trong bốn loại CSV: danh mục đối tượng, thống kê thành phần, diện tích vật liệu gốc hoặc kết quả kiểm tra. Báo cáo dùng tiếng Việt, UTF-8 BOM và dấu chấm phẩy. Tên đối tượng có ký tự công thức được xuất thành văn bản an toàn khi mở trong Excel.
+4. **Phân loại** có ba tab con:
+   - **Phân loại** gom theo định nghĩa và vật liệu. Gợi ý dựa trên VGD đã có → quy tắc → tên định nghĩa → tên đối tượng → thẻ → vật liệu. Từ khóa chỉ là gợi ý. **Chỉnh thông tin** → **Xem trước chuyển đổi** → **Xác nhận chuyển đổi** mới ghi dữ liệu. Dữ liệu VGD hiện có không bị convert ghi đè. Mỗi batch chỉ có một bước hoàn tác và không sửa hình học, tên, thẻ hoặc vật liệu.
+   - **Quy tắc** nhập/sửa bằng form và xuất/nhập giữa model. Rules lưu JSON trong dictionary model `VGD_BIM_RULES`, hỗ trợ hoàn tác và tồn tại cùng SKP. Phân loại vật liệu chỉ ghi rule, không gán BIM data vào từng mặt.
+   - **Kiểm tra** chọn phạm vi toàn model hoặc đối tượng đang chọn. Kiểm tra schema, trường bắt buộc và đơn vị/cách đo. Bấm kết quả để chọn đúng đối tượng lồng nhau và phóng tới nó. Đối tượng bị xóa sau quét được báo và yêu cầu làm mới.
+5. **Soạn tag**: soạn bộ tag (không có đơn vị) theo nhóm hạng mục, gán tag cho group / component / mặt đang chọn, xuất / nhập bộ tag bằng CSV (mở được trong Excel) hoặc JSON.
+
+## Dữ liệu lưu trên máy
+
+Cài đặt của người dùng lưu thành file JSON trong `%APPDATA%\VGD\VGD_BIM\` (máy không phải Windows: `~/VGD/VGD_BIM`; biến môi trường `VGD_BIM_DATA_DIR` đổi thư mục, dùng khi test): `tag_set.json` (bộ tag), `table_presets.json` (preset cột tự tạo), `table_view.json` (trạng thái bảng). Lần đầu chạy, plugin vẫn thử đọc dữ liệu cũ lưu bằng `Sketchup.read_default`. File JSON thay cho `write_default` vì chuỗi có dấu ngoặc kép hoặc tiếng Việt từng bị hỏng khi đọc lại.
 
 ## Ý nghĩa dữ liệu và giới hạn
 
-- `SOURCE`: `VGD`, `MAPPED`, `RAW`, `MANUAL`. Source lưu trong metadata `_source`, tách khỏi schema nghiệp vụ v1.
-- Raw faces/edges/material area là **RAW QUANTITY / RAW GEOMETRY**, chưa phải BOQ. Front area và back-painted area tách riêng để tránh cộng hai mặt thành một khối lượng. Area là diện tích hình học, chưa trừ phần che khuất/hao hụt.
+- `SOURCE`: `VGD`, `MAPPED`, `RAW`, `MANUAL`. Source lưu trong metadata `_source`, tách khỏi schema nghiệp vụ v1. Trường `status` (tình trạng) nằm trong schema từ 1.1.0.
+- Raw faces/material area là **RAW QUANTITY / RAW GEOMETRY**, chưa phải BOQ. Từ 1.1.0 plugin không đếm cạnh (edge) và chiều dài cạnh. Front area và back-painted area tách riêng để tránh cộng hai mặt thành một khối lượng. Area là diện tích hình học, chưa trừ phần che khuất/hao hụt.
+- Thể tích trong bảng chỉ tính cho group kín. Khung đánh dấu và diện tích X*Z, X*Y theo khung bao (bounding box), không theo cạnh thật của hình.
 - Nested entity trong shared component definition dùng chung metadata giữa các parent occurrences. Preview nói rõ số entity được ghi và số occurrences bị ảnh hưởng. Plugin không make_unique để giữ nguyên geometry. Nếu bất kỳ occurrence của entity có ancestor khóa, convert bỏ qua entity đó.
 - `Scanner.all_entities` / `all_bim_entities` trả về entity duy nhất để đọc/ghi; `scan_model` / `scan_selection` trả occurrence records `{entity, path, transform, material, locked}`. Quantity tương lai phải dùng occurrence records để không thiếu repeated nested instances.
 - `Geometry.dimensions(entity, record[:transform])` đo đúng nested occurrence. Không truyền transform thì dùng transformation của instance trong parent context; vì shared nested entity có nhiều đường dẫn, không tự suy đoán parent occurrence.
 - W/D/H là độ dài bounding box local theo các trục đã transform, không phải world-aligned bounding box khi quay. Đây là kích thước thích hợp để nhận diện đồ nội thất.
-- Scan chạy theo từng đợt qua timer, không scan toàn model khi selection thay đổi. Tổng hợp báo cáo diễn ra sau scan; model rất lớn vẫn có thể cần thời gian ở bước tổng hợp. Refresh hoặc đóng panel hủy scan hiện tại.
+- Chọn đối tượng không quét toàn model; chỉ tab Quét & xuất, Phân loại và Kiểm tra quét model, và chỉ khi mở tab hoặc bấm làm mới. Bảng khối lượng chỉ đọc sâu bên trong khi bật "Chọn sâu bên trong".
+- Khung đánh dấu trong viewport vẽ bằng tọa độ màn hình; chiều rộng khung tên ước lượng theo số ký tự, nên có thể hụt hoặc dư; trên màn hình độ phân giải cao tọa độ 2D có thể lệch. Tô mặt giới hạn 60.000 điểm. Khi khung đang bật, kéo chọn nhiều và nhấp đúp vào group bị chặn; nhấn Esc để tắt khung.
 - Preset mặc định không gán description: người dùng cần nhập mô tả để đạt ready khi include_boq=true. Item type là chuỗi mở rộng.
 - Plugin chưa ký phát hành; tuân theo chính sách loading extensions hiện tại của SketchUp.
 
-Theo yêu cầu bổ sung ngày 04/10/2026, có xuất CSV với tiêu đề tiếng Việt để mở trong Excel. Chưa triển khai Quantity hoàn chỉnh, bảng khối lượng tính giá, workbook Excel, Pricing, IFC, room detection hoặc Cabinet BOM. Không sửa VGD Cabinet.
+Chưa triển khai Quantity hoàn chỉnh, bảng khối lượng tính giá, workbook Excel, Pricing, IFC, room detection hoặc Cabinet BOM. Không sửa VGD Cabinet.
 
 ## API
 
@@ -59,9 +68,12 @@ end
 
 ## Kiểm thử
 
-- `node dev/check_ruby.cjs`: compile Ruby và chạy test Core/affine geometry/scanner bằng Ruby WASM 3.2; simulation không thay thế SketchUp kernel. Dependency lấy từ `plugins/VGD_Scenes/dev/node_modules`; runtime plugin không phụ thuộc thư viện ngoài.
-- `dev/test_ui.cjs`: Playwright + Edge headless; biến `VGD_PLAYWRIGHT_MODULE` trỏ tới Playwright nếu không cài local.
-- `dev/native_smoke.rb`: chạy trong **tiến trình SketchUp mới, model trống** qua `-RubyStartup`, hoặc `load` trong Ruby Console của model trống. Refuse model có geometry/path để bảo vệ file đang làm. Tạo model test theo đặc tả, kiểm tra Undo, geometry, nested selection, save/reopen, ghi `outputs/native_SU22/native_report.json` và SKP test.
-- `dev/package.py`: tạo RBZ, kiểm tra từng byte trong archive và ghi SHA256.
+Chạy từ `plugins/VGD_BIM`:
 
-Bản 1.0.0 mới được kiểm tra tự động (cú pháp Ruby, JSON, đóng gói RBZ), chưa kiểm thử thủ công trong SketchUp. `VALIDATION.md` ghi kết quả kiểm chứng theo bản 0.1.3-alpha; phần nào chưa kiểm trong SketchUp thật xem ở đó.
+- `ruby dev/run_tests.rb`: kiểm tra cú pháp mọi file Ruby và chạy các `dev/test_*.rb` (lõi/schema, hình học, báo cáo, cửa sổ, bảng khối lượng, lưu cài đặt, soạn tag, menu, khung đánh dấu) bằng Ruby thường. Đây là mô phỏng, không thay thế SketchUp.
+- `dev/test_ui.cjs`: Playwright + trình duyệt headless kiểm tra giao diện HTML; biến `VGD_PLAYWRIGHT_MODULE` trỏ tới Playwright nếu không cài local, `VGD_BROWSER_CHANNEL=msedge` để dùng Edge.
+- `dev/native_smoke.rb`: chạy trong **tiến trình SketchUp mới, model trống** qua `-RubyStartup`, hoặc `load` trong Ruby Console của model trống. Refuse model có geometry/path để bảo vệ file đang làm. Ghi `outputs/native_SU22/native_report.json`. Chưa bao phủ bảng khối lượng, soạn tag và khung đánh dấu.
+- `python3 dev/make_preview.py`: tạo trang HTML xem trước giao diện với dữ liệu mẫu (`outputs/VGD_BIM_giao_dien.html`).
+- `python plugins/VGD_BIM/dev/package.py <phiên bản>` (từ gốc repo): tạo RBZ trong `outputs/local_release_<phiên bản>/`, kiểm tra từng byte trong archive và in SHA-256.
+
+Bản 1.1.0-beta.4 được kiểm tra tự động bằng mô phỏng, chưa kiểm thử thủ công trong SketchUp thật. `VALIDATION.md` ghi chi tiết phần đã và chưa kiểm chứng.

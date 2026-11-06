@@ -1,6 +1,13 @@
 # VGD BIM Lite v0.1
 ## Master Technical Specification
 
+> **Ghi chú cập nhật (bản 1.1.0).** Đây là đặc tả gốc của v0.1-alpha, giữ lại để tham chiếu kiến trúc và schema. Hành vi hiện tại của plugin (tên VGD_BIM, 5 tab, Bảng khối lượng, Soạn tag) nằm trong `README.md`. Điểm khác so với đặc tả bên dưới:
+>
+> - Plugin không còn đọc cạnh (Edge): không có `Geometry.edge_length`, `raw_edges`, `edge_length_m`; các mục Edge / Edge Length bên dưới không còn áp dụng.
+> - Schema nghiệp vụ có thêm trường `status` (tình trạng: `new`, `existing`, `reuse`, `temporary`, `removed`; ô trống hiểu là `new`).
+> - Giao diện là một cửa sổ 5 tab (Bảng khối lượng, Thông tin, Quét & xuất, Phân loại gồm Quy tắc và Kiểm tra, Soạn tag). Không còn mục "Chuyển đổi lựa chọn" trong tab Thông tin; chuyển đổi hàng loạt dùng tab Phân loại.
+> - Cài đặt người dùng (bộ tag, preset cột, trạng thái bảng) lưu thành file JSON trong `%APPDATA%\VGD\VGD_BIM\`.
+
 ---
 
 # 1. Mục tiêu

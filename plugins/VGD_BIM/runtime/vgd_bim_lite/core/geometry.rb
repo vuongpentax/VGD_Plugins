@@ -20,9 +20,6 @@ module VGD
       def self.face_area(face, transform = Geom::Transformation.new)
         face.area(transform).to_f * INCH_MM**2 / 1_000_000.0
       end
-      def self.edge_length(edge, transform = Geom::Transformation.new)
-        edge.start.position.transform(transform).distance(edge.end.position.transform(transform)).to_f * INCH_MM / 1000.0
-      end
     end
   end
 end

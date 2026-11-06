@@ -10,19 +10,29 @@ module VGD
         def onSelectionCleared(selection); @panel.selection_changed; end
       end
       class Dialog
-        MODES = %w[information convert_selection scan mapping validate_model validate_selection rules export].freeze
+        # 5 tab: Bảng khối lượng · Thông tin · Quét & xuất · Phân loại (gồm Quy tắc, Kiểm tra) · Soạn tag.
+        MODES = %w[table information scan mapping rules validate_model validate_selection tags].freeze
+        # Tên cũ vẫn mở được, chuyển về tab đã gộp.
+        ALIASES = {'export' => 'scan', 'convert_selection' => 'information'}.freeze
         def initialize(mode)
           @mode = mode
           @records = []
           @rows = []
           @targets = []
           @generation = 0
+          @scan_options = {scope: 'model', faces: nil}
+          @table_rows = []
+          @table_records = []
+          @table_scope = []
+          @table_pick = nil
+          @table_options = {zoom: true, isolate: false, deep: false}
+          @isolated = []
+          @preview = nil
           @ready = false
           @closed = false
-          @dialog = ::UI::HtmlDialog.new(dialog_title: 'VGD BIM Lite · Dữ liệu mô hình', preferences_key: 'VGD_BIM_Workspace', scrollable: true, resizable: true, width: 860, height: 740, style: ::UI::HtmlDialog::STYLE_DIALOG)
+          @dialog = ::UI::HtmlDialog.new(dialog_title: 'VGD_BIM · Dữ liệu mô hình', preferences_key: 'VGD_BIM_Workspace', scrollable: true, resizable: true, width: 860, height: 740, style: ::UI::HtmlDialog::STYLE_DIALOG)
           @dialog.set_file(File.join(BIM::ROOT, 'html', 'index.html'))
           @dialog.add_action_callback('ready') { |_ctx| safely { @ready = true; refresh } }
-          @dialog.add_action_callback('refresh') { |_ctx| safely { refresh } }
           @dialog.add_action_callback('open_panel') { |_ctx, mode| safely { switch_mode(mode) } }
           @dialog.add_action_callback('export_report') { |_ctx, kind| safely { export_report(kind) } }
           @dialog.add_action_callback('save_rule') do |_ctx, payload|
@@ -45,12 +55,25 @@ module VGD
           @dialog.add_action_callback('save_rules') { |_ctx, payload| safely { check_model!; MappingRules.save(JSON.parse(payload)); refresh } }
           @dialog.add_action_callback('export_rules') { |_ctx| safely { check_model!; path = ::UI.savepanel('Xuất quy tắc phân loại', '', 'VGD_Quy_tac_phan_loai.json'); if path; MappingRules.export_file(path); emit('message', {text: "Đã xuất quy tắc: #{path}"}); end } }
           @dialog.add_action_callback('import_rules') { |_ctx| safely { check_model!; path = ::UI.openpanel('Nhập quy tắc phân loại', '', 'JSON|*.json||'); if path; MappingRules.import_file(path); refresh; end } }
-          @dialog.set_on_closed { @closed = true; @ready = false; @generation += 1; detach; ::UI.stop_timer(@selection_timer) if @selection_timer }
+          @dialog.add_action_callback('save_tags') { |_ctx, payload| safely { Tags.save(JSON.parse(payload)); refresh; emit('message', {text: 'Đã lưu bộ tag trên máy này.'}) } }
+          @dialog.add_action_callback('assign_tag') { |_ctx, payload| safely { assign_tag(JSON.parse(payload)) } }
+          @dialog.add_action_callback('scan_options') { |_ctx, payload| safely { set_scan_options(JSON.parse(payload)) } }
+          @dialog.add_action_callback('export_tags') { |_ctx, kind| safely { export_tags(kind) } }
+          @dialog.add_action_callback('import_tags') { |_ctx, kind| safely { import_tags(kind) } }
+          @dialog.add_action_callback('table_select') { |_ctx, payload| safely { table_select(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_edit') { |_ctx, payload| safely { table_edit(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_option') { |_ctx, payload| safely { table_option(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_preset') { |_ctx, payload| safely { table_preset(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_clear') { |_ctx| safely { table_clear } }
+          @dialog.add_action_callback('table_view') { |_ctx, payload| safely { Table.save_view_state(JSON.parse(payload)) } }
+          @dialog.set_on_closed { @closed = true; @ready = false; @generation += 1; cleanup_table_view; detach; ::UI.stop_timer(@selection_timer) if @selection_timer }
         end
         def show; @dialog.visible? ? @dialog.bring_to_front : @dialog.show; end
         def visible?; @dialog.visible?; end
         def closed?; @closed; end
+        def close; @dialog.close; end
         def switch_mode(mode)
+          mode = ALIASES.fetch(mode, mode)
           raise ArgumentError, 'Tính năng không hợp lệ.' unless MODES.include?(mode)
           @mode = mode
           refresh if @ready
@@ -76,11 +99,15 @@ module VGD
         rescue StandardError
           @observer = nil
         end
+        # Gom nhiều sự kiện chọn liên tiếp thành một lần xử lý.
+        # Bảng: đọc đối tượng mới chọn. Soạn tag: chỉ cập nhật số đang chọn (giữ nội dung đang soạn). Thông tin: đọc lại.
         def selection_changed
-          return unless @mode == 'information' || @mode == 'convert_selection'
-          return unless @dialog.visible?
+          handler = {'table' => -> { table_selection_changed },
+                     'tags' => -> { emit('selection', {count: taggable_selection.size}) },
+                     'information' => -> { refresh }}[@mode]
+          return unless handler && @dialog.visible?
           ::UI.stop_timer(@selection_timer) if @selection_timer
-          @selection_timer = ::UI.start_timer(0.05, false) { safely { refresh if @dialog.visible? } }
+          @selection_timer = ::UI.start_timer(0.05, false) { safely { handler.call if @dialog.visible? } }
         end
         def refresh
           @generation += 1
@@ -90,12 +117,15 @@ module VGD
           @validation = []
           @targets = []
           detach
+          cleanup_table_view unless @mode == 'table'
           @model = Sketchup.active_model
-          emit('config', {mode: @mode, version: BIM::VERSION, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.dictionary})
-          case @mode
-          when 'information', 'convert_selection'
+          emit('config', {mode: @mode, version: BIM::VERSION, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.dictionary, scan_options: {scope: @scan_options[:scope], faces: faces?}})
+          if %w[information tags table].include?(@mode)
             @observer = SelectionObserver.new(self)
             @model.selection.add_observer(@observer)
+          end
+          case @mode
+          when 'information'
             @targets = @model.selection.to_a.select { |e| Data.supported?(e) && e.valid? }
             ancestor_locked = (@model.active_path || []).any? { |e| e.locked? }
             @records = @targets.map { |e| {entity: e, path: (@model.active_path || []) + [e], transform: @model.edit_transform * e.transformation, locked: ancestor_locked || e.locked?} }
@@ -105,41 +135,47 @@ module VGD
             end
             objects = @records.map { |r| RawScanner.identity(r[:entity]).merge(dimensions: Geometry.dimensions(r[:entity], r[:transform]), source: Data.source(r[:entity]), status: Validator.validate([r]).first[:status], locked: r[:locked]) }
             emit('information', {count: @targets.size, fields: fields, objects: objects})
+          when 'tags'
+            emit('tags', tag_state)
+          when 'table'
+            table_scan_selection!
+            table_build
           when 'rules'
             emit('rules', MappingRules.read(@model))
           else
-            scan_async
+            scan_now
           end
         end
-        def scan_async
-          token = @generation
+        # Quét một mạch, không dùng bộ hẹn giờ, nên không bị ngắt khi di chuột hoặc thao tác khác.
+        def scan_now
           @records = []
-          selection = @mode == 'validate_selection'
-          enumerator = Enumerator.new do |yielder|
-            Scanner.walk(selection ? @model.selection.to_a : @model.entities,
-                         selection ? @model.edit_transform : Geom::Transformation.new,
-                         selection ? (@model.active_path || []) : []) { |r| yielder << r }
+          selection = scope_selection?
+          roots = selection ? @model.selection.to_a : @model.entities
+          if selection && roots.empty?
+            emit('message', {error: 'Hãy chọn group hoặc đối tượng cần quét trong SketchUp.'})
+            return
           end
-          tick = nil
-          tick = lambda do
-            return unless token == @generation
-            safely do
-              check_model!
-              complete = false
-              begin
-                300.times { @records << enumerator.next }
-              rescue StopIteration
-                complete = true
-              end
-              emit('progress', {count: @records.size})
-              if complete
-                finish_scan
-              else
-                ::UI.start_timer(0.01, false, &tick)
-              end
-            end
+          transform = selection ? @model.edit_transform : Geom::Transformation.new
+          path = selection ? (@model.active_path || []) : []
+          begin
+            Sketchup.status_text = 'VGD BIM · Đang quét mô hình…'
+            Scanner.walk(roots, transform, path, [], nil, false, faces: faces?) { |r| @records << r }
+          ensure
+            Sketchup.status_text = ''
           end
-          ::UI.start_timer(0.01, false, &tick)
+          finish_scan
+        end
+        def scope_selection?
+          @mode == 'validate_selection' || (%w[scan mapping].include?(@mode) && @scan_options[:scope] == 'selection')
+        end
+        def faces?
+          return false unless %w[scan mapping].include?(@mode)
+          @scan_options[:faces].nil? ? true : @scan_options[:faces]
+        end
+        def set_scan_options(payload)
+          @scan_options[:scope] = payload['scope'] == 'selection' ? 'selection' : 'model'
+          @scan_options[:faces] = payload['faces'] ? true : false
+          refresh
         end
         def finish_scan
           @scan_complete = true
@@ -151,13 +187,12 @@ module VGD
             emit('validation', rows)
           else
             report = RawScanner.report(@records, @model)
-            if @mode == 'export'
-              emit('export', {objects: @records.count { |r| Data.supported?(r[:entity]) }, faces: report[:summary][:raw_faces]})
-            elsif @mode == 'mapping'
+            if @mode == 'mapping'
               @rows = Mapping.rows(@records) + Mapping.material_rows(report)
               emit('mapping', @rows.each_with_index.map { |r, index| r.reject { |k, _| k == :occurrences }.merge(index: index) })
             else
-              emit('scan', report)
+              # Quét & xuất: báo cáo quét kèm số liệu cho phần xuất file.
+              emit('scan', report.merge(export: {objects: @records.count { |r| Data.supported?(r[:entity]) }, faces: report[:summary][:raw_faces]}))
             end
           end
         end
@@ -172,6 +207,261 @@ module VGD
           refresh
           emit('message', {text: "Đã cập nhật #{targets.size} đối tượng; bỏ qua #{@targets.size - targets.size} đối tượng bị khóa."})
         end
+        # Xuất / nhập bộ tag. Excel dùng file CSV (mở và lưu được bằng Excel).
+        def export_tags(kind)
+          list = Tags.load
+          json = kind == 'json'
+          path = ::UI.savepanel(json ? 'Xuất bộ tag (JSON)' : 'Xuất bộ tag (Excel / CSV)', '', json ? 'VGD_bo_tag.json' : 'VGD_bo_tag.csv')
+          return unless path
+          ext = json ? '.json' : '.csv'
+          path += ext unless File.extname(path).downcase == ext
+          File.open(path, 'wb') { |file| file.write(json ? Tags.to_json(list) : Tags.to_csv(list)) }
+          emit('message', {text: "Đã xuất #{list.size} tag: #{path}"})
+        end
+        def import_tags(kind)
+          json = kind == 'json'
+          path = ::UI.openpanel(json ? 'Nhập bộ tag (JSON)' : 'Nhập bộ tag (Excel / CSV)', '', json ? 'JSON|*.json||' : 'CSV|*.csv||')
+          return unless path
+          text = File.read(path, encoding: 'bom|utf-8')
+          incoming = json ? Tags.from_json(text) : Tags.from_csv(text)
+          replace = ::UI.messagebox("Thay thế toàn bộ bộ tag hiện tại?\n\nCó: thay thế bằng bộ trong file.\nKhông: gộp vào bộ hiện tại (tag trùng tên sẽ lấy từ file).", MB_YESNO) == IDYES
+          merged = replace ? incoming : Tags.merge(Tags.load, incoming)
+          Tags.save(merged)
+          refresh
+          emit('message', {text: "Đã nhập #{incoming.size} tag. Bộ tag hiện có #{merged.size} tag."})
+        end
+        # Bảng đối tượng kiểu Auto Info. Mỗi dòng là một group / component trong model.
+        # Phạm vi quét = đối tượng đang chọn lúc quét. Chỉ đổi khi người dùng chọn đối tượng khác bên ngoài bảng.
+        def table_scan_selection!
+          @model = Sketchup.active_model
+          @table_scope = @model.selection.to_a.select { |e| Data.supported?(e) && e.valid? }
+          @table_pick = nil
+        end
+        def table_selection_changed
+          @model = Sketchup.active_model
+          current = @model.selection.to_a.select { |e| Data.supported?(e) && e.valid? }
+          if current.empty?
+            # Bấm vùng trống trong SketchUp: giữ nguyên bảng, chỉ bỏ đánh dấu.
+            # Nếu vừa xóa đối tượng thì đọc lại để bỏ các dòng đã xóa.
+            @table_pick = nil
+            @outline_field = nil
+            if Array(@table_records).any? { |r| !r[:path].all?(&:valid?) }
+              table_build
+            else
+              emit('highlight', {index: nil})
+            end
+          elsif @table_pick && current.size == 1 && current.first == @table_pick
+            # Chọn dòng hoặc ô trong bảng: chỉ đánh dấu, không quét lại.
+            highlight_selection
+          else
+            # Chọn đối tượng mới trong SketchUp: quét lại và làm mới bảng.
+            @outline_field = nil
+            table_scan_selection!
+            table_build
+          end
+          show_outline
+        end
+        def table_build
+          @model = Sketchup.active_model
+          scope = @table_scope.select(&:valid?)
+          built = Table.build(@model, scope, @table_options[:deep] ? true : false)
+          @table_rows = built[:rows]
+          @table_records = built[:records]
+          hint = scope.empty? ? 'Chưa chọn đối tượng nào. Chọn group hoặc component trong SketchUp, bảng sẽ tự đọc.' : nil
+          emit('table', {columns: Table::COLUMNS, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
+                         statuses: Table::STATUS_LABELS, options: @table_options.merge(isolating: !@isolated.empty?),
+                         rows: @table_rows, selected: selected_index, hint: hint, view: Table.view_state})
+        end
+        # payload: {'index' => dòng, 'field' => tên cột đã bấm (hoặc rỗng nếu bấm cả dòng)}
+        def table_select(payload)
+          check_model!
+          index = payload.fetch('index').to_i
+          record = @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless record[:path].all?(&:valid?)
+          changed = @table_pick != record[:entity]
+          @table_pick = record[:entity]
+          field = payload['field'].to_s
+          @outline_field = field.empty? ? nil : field
+          parents = record[:path][0...-1]
+          @model.active_path = parents unless (@model.active_path || []) == parents
+          @model.selection.clear
+          @model.selection.add(record[:entity])
+          if changed
+            # Chỉ cô lập / zoom khi chuyển sang đối tượng khác, không làm lại khi bấm ô khác của cùng dòng.
+            apply_isolation(record) if @table_options[:isolate]
+            @model.active_view.zoom([record[:entity]]) if @table_options[:zoom] && record[:entity].valid?
+          end
+          show_outline
+        end
+        def apply_isolation(record)
+          restore_isolation
+          @isolated = Table.isolate(@model, record[:path])
+        end
+        def table_edit(payload)
+          check_model!
+          record = @table_records.fetch(payload.fetch('index').to_i) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }
+          entity = record[:entity]
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless entity.valid?
+          raise 'Đối tượng đang bị khóa nên không sửa được.' if record[:locked] || entity.locked?
+          field = payload.fetch('field')
+          value = payload.fetch('value').to_s.strip
+          Data.transaction(@model, 'VGD BIM · Sửa bảng') do
+            case field
+            when 'name'
+              entity.name = value
+            when 'description', 'status'
+              Data.write(entity, {field.to_sym => value}, Data.source(entity) == 'RAW' ? 'MANUAL' : Data.source(entity))
+            else
+              raise ArgumentError, 'Ô này không sửa được trong bảng.'
+            end
+          end
+          table_build
+          show_outline
+        end
+        def table_option(payload)
+          check_model!
+          @table_options[:zoom] = payload['zoom'] ? true : false if payload.key?('zoom')
+          if payload.key?('deep')
+            # Bật / tắt đọc sâu: đọc lại từ phạm vi đã quét, không đổi lựa chọn hiện tại.
+            @table_options[:deep] = payload['deep'] ? true : false
+            table_build
+          end
+          if payload.key?('isolate')
+            if payload['isolate']
+              @table_options[:isolate] = true
+              index = selected_index
+              apply_isolation(@table_records[index]) if index
+            else
+              @table_options[:isolate] = false
+              restore_isolation
+            end
+          end
+          emit('options', @table_options.merge(isolating: !@isolated.empty?))
+        end
+        def table_preset(payload)
+          case payload['action']
+          when 'save'
+            Table.save_preset(payload['name'], payload['group'], payload['columns'])
+            # Đổi cột của preset tự tạo thì cập nhật ngầm, không báo.
+            emit('message', {text: "Đã lưu preset \"#{payload['name'].to_s.strip}\"."}) unless payload['silent']
+          when 'delete'
+            Table.delete_preset(payload['name'])
+            emit('message', {text: 'Đã xóa preset.'})
+          else
+            raise ArgumentError, 'Thao tác preset không hợp lệ.'
+          end
+          emit('presets', Table.presets)
+        end
+        def table_clear
+          check_model!
+          release_preview
+          @model.selection.clear
+          emit('highlight', {index: nil})
+        end
+        def highlight_selection
+          return unless @model && @model == Sketchup.active_model
+          emit('highlight', {index: selected_index})
+        end
+        def selected_index
+          return nil unless @model
+          selected = @model.selection.to_a
+          return nil unless selected.size == 1
+          @table_records.index { |record| record[:entity] == selected.first }
+        end
+        # Vẽ khung nét đứt + khung tên cho các đối tượng đang được chọn (trong SketchUp hoặc trong bảng).
+        # Khung tên chỉ hiện khi chọn đúng một đối tượng.
+        def show_outline
+          release_preview
+          return unless @model && @model == Sketchup.active_model && @dialog.visible?
+          selected = @model.selection.to_a
+          targets = Array(@table_records).select { |r| r[:path].all?(&:valid?) && selected.include?(r[:entity]) }
+          return if targets.empty?
+          points = targets.flat_map { |r| Table.world_corners(r) }
+          return if points.empty?
+          single = targets.size == 1 ? targets.first : nil
+          label = single ? outline_label(single) : nil
+          box = single ? Table.bounding_box(single) : nil
+          label_point = box && !box.empty? ? box.center : nil
+          fills = targets.flat_map { |r| Table.face_triangles(r) }
+          # Đối tượng bị xóa: khung tự tắt và bảng bỏ dòng đã xóa.
+          alive = -> { targets.all? { |r| r[:path].all?(&:valid?) } }
+          stale = -> { safely { table_build if @mode == 'table' && @dialog.visible? } }
+          @preview = UI::BoundsPreview.new(points, label: label, label_point: label_point, fills: fills, alive: alive, on_stale: stale) { @preview = nil }
+          @model.tools.push_tool(@preview)
+          @model.active_view.invalidate
+        end
+        def outline_label(record)
+          index = @table_records.index { |r| r.equal?(record) }
+          row = index && @table_rows[index]
+          return '' unless row
+          @outline_field.nil? ? summary_label(row) : field_label(row, @outline_field)
+        end
+        # Cả dòng (khi bấm vào dòng hoặc chọn trong SketchUp): tên · mô tả · tình trạng · phân loại.
+        def summary_label(row)
+          name = row[:name].to_s.strip
+          name = row[:definition].to_s.strip if name.empty?
+          [name, row[:description], Table::STATUS_LABELS[row[:status]], row[:tag]].map { |s| s.to_s.strip }.reject(&:empty?).join(' · ')
+        end
+        # Chỉ nội dung của ô vừa bấm, hiển thị giống cách bảng hiện.
+        def field_label(row, key)
+          case key
+          when 'ordinal' then (row[:index] + 1).to_s
+          when 'entity' then row[:entity_type].to_s
+          when 'instance' then row[:name].to_s.strip.empty? ? row[:definition].to_s : row[:name].to_s
+          when 'description' then row[:description].to_s
+          when 'lenX', 'lenY', 'lenZ' then "#{num(row[key.to_sym])} mm"
+          when 'lenXZ' then "#{num(row[:lenX])} x #{num(row[:lenZ])} mm"
+          when 'lenXY' then "#{num(row[:lenX])} x #{num(row[:lenY])} mm"
+          when 'lenXYZ' then "#{num(row[:lenX])} x #{num(row[:lenY])} x #{num(row[:lenZ])} mm"
+          when 'areaXZ', 'areaXY', 'areaFace' then "#{num(row[key.to_sym])} m²"
+          when 'volume' then row[:volume] ? "#{num(row[:volume])} m³" : ''
+          when 'quantity' then "#{num(row[:quantity])} cái"
+          when 'status' then Table::STATUS_LABELS[row[:status]].to_s
+          when 'definition', 'material', 'tag', 'tag_group' then row[key.to_sym].to_s
+          else ''
+          end
+        end
+        def num(value)
+          return '' if value.nil?
+          value.is_a?(Float) && value == value.round ? value.round.to_s : value.to_s
+        end
+        def release_preview
+          return unless @preview
+          tool = @preview
+          @preview = nil
+          tool.finish(@model.active_view)
+        end
+        def restore_isolation
+          Table.restore(@isolated) unless @isolated.empty?
+          @isolated = []
+        end
+        def cleanup_table_view
+          release_preview if @preview
+          restore_isolation
+        end
+        # Đối tượng có thể gán tag: group, component và mặt đang chọn.
+        def taggable_selection
+          @model.selection.to_a.select { |e| (Data.supported?(e) || e.is_a?(Sketchup::Face)) && e.valid? }
+        end
+        def tag_state
+          tags = Tags.load.map do |tag|
+            layer = Tags.find_layer(@model, tag['name'])
+            tag.merge('in_model' => !layer.nil?, 'visible' => layer ? layer.visible? : true)
+          end
+          {tags: tags, groups: Tags::GROUPS, selection: taggable_selection.size}
+        end
+        def assign_tag(payload)
+          check_model!
+          entities = taggable_selection
+          raise 'Hãy chọn đối tượng hoặc mặt trong SketchUp trước khi gán tag.' if entities.empty?
+          name = payload.fetch('name')
+          result = Tags.assign(@model, entities, name)
+          text = "Đã gán tag \"#{name}\" cho #{result[:count]} đối tượng."
+          text += " Bỏ qua #{result[:locked]} đối tượng bị khóa." if result[:locked] > 0
+          text += ' Tag này đang tắt hiển thị nên các đối tượng gán vào sẽ bị ẩn.' if result[:hidden]
+          emit('message', {text: text})
+          emit('selection', {count: taggable_selection.size})
+        end
         def clear
           check_model!
           check_selection!
@@ -185,15 +475,14 @@ module VGD
           current = @model.selection.to_a.select { |e| Data.supported?(e) && e.valid? }
           raise 'Lựa chọn đã thay đổi. Hãy làm mới trước khi áp dụng.' unless current.size == @targets.size && (current - @targets).empty?
         end
+        # Đối tượng ghi được: còn tồn tại, không bị khóa, và không nằm trong group cha bị khóa.
+        # Chỉ xét đường dẫn đang mở, không quét toàn bộ model.
         def writable_selection
-          # Explicit write-time check, never a full scan on selection-change/read.
-          records = Scanner.scan_model(@model).select { |r| @targets.include?(r[:entity]) }
-          blocked = records.select { |r| r[:locked] }.map { |r| r[:entity] }
-          @targets.select { |e| e.valid? && !blocked.include?(e) && !e.locked? }
+          return [] if (@model.active_path || []).any?(&:locked?)
+          @targets.select { |e| e.valid? && !e.locked? }
         end
         def preview_convert(payload)
           check_model!
-          check_selection! if @mode == 'convert_selection'
           row = @mode == 'mapping' ? @rows.fetch(payload.fetch('index').to_i) : nil
           records = row ? row[:occurrences] : @records
           unless row && row[:kind] == 'material'
@@ -238,7 +527,7 @@ module VGD
         end
         def export_report(kind)
           check_model!
-          raise 'Hãy đợi quét xong trước khi xuất báo cáo.' unless @mode == 'export' && @scan_complete
+          raise 'Hãy đợi quét xong trước khi xuất báo cáo.' unless @mode == 'scan' && @scan_complete
           name = ReportExporter::NAMES.fetch(kind) { raise ArgumentError, 'Loại báo cáo không hợp lệ.' }
           path = ::UI.savepanel('Xuất báo cáo để mở trong Excel', '', "VGD_#{name}.csv")
           return unless path

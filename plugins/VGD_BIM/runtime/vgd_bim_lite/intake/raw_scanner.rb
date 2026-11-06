@@ -10,8 +10,6 @@ module VGD
         containers = records.select { |r| Data.supported?(r[:entity]) }
         materials = Hash.new { |h, k| h[k] = {material: k, area: 0.0, back_area: 0.0, faces: 0} }
         faces = 0
-        edges = 0
-        length = 0.0
         records.each do |r|
           begin
           e = r[:entity]
@@ -26,9 +24,6 @@ module VGD
             if e.back_material
               materials[e.back_material.display_name][:back_area] += area
             end
-          elsif e.is_a?(Sketchup::Edge)
-            edges += 1
-            length += Geometry.edge_length(e, r[:transform])
           end
           rescue StandardError => error
             BIM.log("Raw geometry inspection failed: #{error.message}")
@@ -49,7 +44,7 @@ module VGD
                    definitions: grouped.size, materials: model.materials.size, tags: model.layers.size,
                    vgd_objects: bim, unclassified: containers.size - bim,
                    coverage: containers.empty? ? 0 : (100.0 * bim / containers.size).round(1),
-                   raw_faces: faces, raw_edges: edges, edge_length_m: length},
+                   raw_faces: faces},
          components: components, materials: materials.values, label: 'RAW QUANTITY / RAW GEOMETRY',
          area_note: 'Front area includes inherited instance material. Back area is reported separately; no BOQ deductions.'}
       end

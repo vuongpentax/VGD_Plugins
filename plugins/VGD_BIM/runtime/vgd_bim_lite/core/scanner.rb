@@ -3,7 +3,8 @@ module VGD
     module Scanner
       # Each record is an occurrence path, not a global definition visited flag.
       # Shared nested entities are measured once per physical parent occurrence.
-      def self.walk(entities, transform = Geom::Transformation.new, path = [], ancestors = [], material = nil, locked = false, &block)
+      # faces: false bỏ qua mặt để quét nhanh hơn khi chỉ cần group / component.
+      def self.walk(entities, transform = Geom::Transformation.new, path = [], ancestors = [], material = nil, locked = false, faces: true, &block)
         stack = [[entities.to_enum, transform, path, ancestors, material, locked]]
         until stack.empty?
           iterator, transform, path, ancestors, material, locked = stack.last
@@ -15,6 +16,8 @@ module VGD
           end
           begin
             next unless entity.valid?
+            # Chỉ quét group, component và (nếu bật) mặt. Cạnh (edge) luôn bị bỏ.
+            next unless Data.supported?(entity) || (faces && entity.is_a?(Sketchup::Face))
             container = Data.supported?(entity)
             world = container ? transform * entity.transformation : transform
             current_path = path + [entity]
