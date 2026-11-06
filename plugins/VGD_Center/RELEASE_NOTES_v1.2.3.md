@@ -1,4 +1,4 @@
-# VGD Center 1.2.5
+# VGD Center 1.2.3
 
 - **Tab Quản lý gọn và đồng bộ hơn:** hai tab Bật/tắt và Chuyển plugin dùng cùng bố cục (ô tìm kiếm, Chọn hết đang hiện, Bỏ chọn hết, nút hành động bên phải, danh sách cùng kiểu). Bỏ các dòng mô tả và khung ghi chú dài; nội dung chuyển vào mục "Quản lý plugin" trong hướng dẫn của Center.
 - **Chuyển plugin có ô tìm kiếm** theo tên, giống tab Bật/tắt. Dòng đếm "Đã chọn x/y" cho biết cả plugin đã chọn nhưng đang bị lọc ẩn: các plugin này vẫn được chuyển hoặc xuất, hãy xem số này trước khi bấm.

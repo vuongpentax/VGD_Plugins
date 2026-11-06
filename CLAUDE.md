@@ -170,6 +170,7 @@ Không tạo tài liệu chỉ để tăng số lượng file. Ưu tiên ít tà
 ### Phiên bản, README và phát hành
 
 - Mỗi lần gửi RBZ mới cho người dùng phải tăng phiên bản so với RBZ đã gửi trước đó, ví dụ 1.0.0 → 1.0.1; bản beta thì tăng số beta (beta.33 → beta.34). Không gửi hai RBZ khác nội dung mà cùng số phiên bản. Sửa số phiên bản ở mọi chỗ plugin ghi nó (xem mục "Thông tin plugin" trong `CLAUDE.md` của plugin).
+- Plugin đã phát hành bản ổn định: bản gửi test cho thay đổi tiếp theo gắn hậu tố beta trên số phiên bản kế tiếp (1.2.2 → 1.2.3-beta.1, beta.2, …). Chỉ khi người dùng chốt mới bỏ hậu tố để thành bản ổn định (1.2.3), không tăng thêm số. Ghi chú phát hành và README dùng số phiên bản đích.
 - Mỗi lần đổi phiên bản phải cập nhật `README.md` của plugin cho khớp (số phiên bản, tính năng, tên file cài, trạng thái kiểm thử) trong cùng commit.
 - Mỗi lần cập nhật plugin xong (đã đạt kiểm tra) phải đóng gói và gửi RBZ cho người dùng test, kèm SHA-256; không chờ người dùng nhắc.
 - Người dùng tự phát hành trên GitHub. Không tạo file hướng dẫn phát hành (kiểu `HOW_TO_RELEASE.md`) trong plugin.

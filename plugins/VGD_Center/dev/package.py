@@ -30,7 +30,7 @@ def fail(message):
 
 def read_version():
     main = (RUNTIME / 'main.rb').read_text(encoding='utf-8')
-    match = re.search(r"VERSION = '(\d+\.\d+\.\d+)'", main)
+    match = re.search(r"VERSION = '(\d+\.\d+\.\d+(?:-(?:alpha|beta)\.\d+)?)'", main)
     if not match:
         fail('Không tìm thấy VERSION trong main.rb')
     return match.group(1)
@@ -81,7 +81,8 @@ def main():
     version = read_version()
     if len(sys.argv) > 1 and sys.argv[1] != version:
         fail(f'Phiên bản trong main.rb là {version}, không phải {sys.argv[1]}.')
-    notes = PLUGIN / f'RELEASE_NOTES_v{version}.md'
+    # Bản thử (x.y.z-beta.N) dùng chung ghi chú của bản chốt x.y.z
+    notes = PLUGIN / f"RELEASE_NOTES_v{version.split('-')[0]}.md"
     if not notes.exists():
         fail(f'Thiếu {notes.name}')
 

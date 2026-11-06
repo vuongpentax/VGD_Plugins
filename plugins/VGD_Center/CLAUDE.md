@@ -23,7 +23,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Đóng gói
 
-- Từ gốc repo: `python plugins/VGD_Center/dev/package.py <phiên bản>`. Script chép `catalog.json` và `center-update.json` từ `shared/vgd-center/` vào gói rồi kiểm tra.
+- Từ gốc repo: `python plugins/VGD_Center/dev/package.py <phiên bản>` (nhận cả bản thử `x.y.z-beta.N`, dùng chung `RELEASE_NOTES_vx.y.z.md`). Script chép `catalog.json` và `center-update.json` từ `shared/vgd-center/` vào gói rồi kiểm tra.
 - Phát hành là việc riêng, chỉ làm khi được yêu cầu: GitHub Release, rồi cập nhật `shared/vgd-center/center-update.json`. Sửa các file trong `shared/vgd-center/` trên `main` có hiệu lực ngay với người dùng.
 
 ## Tài liệu đọc trước khi sửa
