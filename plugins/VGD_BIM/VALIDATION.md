@@ -15,6 +15,7 @@ Chạy từ `plugins/VGD_BIM`: `ruby dev/run_tests.rb` (cú pháp 20 file Ruby v
 - `test_loader_menu.rb`, `test_load.rb`: menu VGD_BIM và Tải lại code, phiên bản đúng chuẩn, nạp được mọi file.
 - `dev/test_ui.cjs`: nhãn tiếng Việt, sửa nhiều đối tượng chỉ ghi trường được bật, tên đối tượng không chèn HTML, xem trước và xác nhận chuyển đổi, chọn dòng kiểm tra, quy tắc, tùy chọn quét và xuất, bấm ô bảng gửi đúng dòng và cột, sáng/tối, cửa sổ nhỏ không tràn.
 - Kiểm tra đột biến: đổi thử một nhánh của khung đánh dấu thì `run_tests.rb` báo lỗi đúng chỗ.
+- Rà soát mã (bug và tuân thủ CLAUDE.md) trên phần thay đổi: đã sửa lỗi khung đánh dấu pop nhầm công cụ của người dùng khi đổi công cụ (có test `đổi sang công cụ khác`). Các điểm còn lại ở mục dưới.
 
 ## Chưa được xác nhận trong SketchUp thật
 
@@ -24,8 +25,11 @@ Các điểm sau chỉ kiểm được trong SketchUp thật:
 2. Khung đánh dấu trong viewport: chữ trong khung tên có rõ và nằm đúng giữa không (chiều rộng khung ước lượng theo số ký tự); tọa độ 2D trên màn hình độ phân giải cao có lệch không; tô mặt có chậm với model lớn không; khung có tắt khi xóa đối tượng không; chọn trong SketchUp có hiện khung ngay không; kéo chọn nhiều và nhấp đúp vào group khi khung đang bật.
 3. Lưu cài đặt: preset và cột còn sau khi tắt mở SketchUp (`%APPDATA%\VGD\VGD_BIM\`).
 4. Thể tích chỉ tính cho group kín; khung bao theo bounding box chứ không theo cạnh thật.
-5. Undo thật của sửa bảng và chuyển đổi; chọn dòng kiểm tra tới đúng đối tượng lồng nhau; lưu và mở lại metadata; model thật đang dùng.
-6. `dev/native_smoke.rb` (chạy trong tiến trình SketchUp mới với model trống) chưa chạy cho bản 1.1.0 và chưa bao phủ bảng khối lượng, soạn tag, khung đánh dấu.
+5. Chế độ **Cô lập**: ẩn / hiện đối tượng ngoài một bước hoàn tác riêng (`Table.isolate` / `Table.restore` không bọc `start_operation`); chưa biết Ctrl+Z xử lý thế nào, và file lưu khi đang cô lập mang các đối tượng ở trạng thái ẩn.
+6. Khung đánh dấu là công cụ đẩy lên mỗi lần chọn: kiểm tra chọn công cụ khác (Move, Tape) giữa chừng không làm hỏng thao tác của người dùng.
+7. `VGD::BIM.reload` nạp lại `vgd_bim_lite.rb` và `loader.rb` có `file_loaded?`: nếu đường dẫn nạp lại khác lần đầu thì menu và toolbar có thể bị đăng ký hai lần.
+8. Undo thật của sửa bảng và chuyển đổi; chọn dòng kiểm tra tới đúng đối tượng lồng nhau; lưu và mở lại metadata; model thật đang dùng.
+9. `dev/native_smoke.rb` (chạy trong tiến trình SketchUp mới với model trống) chưa chạy cho bản 1.1.0 và chưa bao phủ bảng khối lượng, soạn tag, khung đánh dấu.
 
 ## Lịch sử
 

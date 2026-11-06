@@ -4,7 +4,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Thông tin plugin
 
-- Tên extension: VGD_BIM (trước 1.1.0 là "VGD BIM Lite"; VGD Center nhận cả hai tên qua `find_installed_extension`). Namespace: `VGD::BIM`. Id trong catalog của Center: `bim_lite`.
+- Tên extension: VGD_BIM (tên cũ là "VGD BIM Lite"; VGD Center nhận cả hai tên qua `find_installed_extension`). Namespace: `VGD::BIM`. Id trong catalog của Center: `bim_lite`.
 - Loader: `runtime/vgd_bim_lite.rb` (nạp `vgd_bim_lite/loader`). Thư mục và tên file giữ `vgd_bim_lite` vì Center khai báo đúng hai đường dẫn này.
 - Phiên bản: hằng `VERSION` trong `runtime/vgd_bim_lite.rb` (dạng `x.y.z` hoặc `x.y.z-beta.N`, không có chữ `v`). Tiêu đề README phải khớp số này. Đóng gói cần có `RELEASE_NOTES_v<x.y.z>.md` (bản beta dùng chung ghi chú của bản chốt).
 - SketchUp tối thiểu: 2022. Windows là môi trường chính.
@@ -15,7 +15,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 - `runtime/`: mã chạy. `vgd_bim_lite/loader.rb` giữ danh sách `FILES` (thứ tự nạp, dùng chung cho lúc mở SketchUp và `VGD::BIM.reload`); thư mục con `core/`, `intake/`, `ui/` (`dialog.rb`, `bounds_preview.rb`), `html/` (giao diện), `config/`.
 - `dev/`: `run_tests.rb`, các `test_*.rb`, `test_ui.cjs`, fixture và `stubs/`, `package.py`, `deploy.ps1`, `native_smoke.rb`, `make_preview.py`.
-- Gốc plugin: README, SPECIFICATION (đặc tả gốc v0.1, có ghi chú cập nhật), VALIDATION, HUONG_DAN_SU_DUNG, RELEASE_NOTES_*.
+- Gốc plugin: README, SPECIFICATION (đặc tả gốc, có ghi chú cập nhật), VALIDATION, HUONG_DAN_SU_DUNG, RELEASE_NOTES_*.
 
 ## Kiểm thử
 

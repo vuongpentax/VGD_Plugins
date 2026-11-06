@@ -86,6 +86,16 @@ ok('gỡ hai lần không lặp', done == 1 && model.tools.popped == 1)
 tool.draw(view)
 ok('sau khi gỡ: không vẽ thêm', view.lines.size == 1)
 
+# Người dùng chọn công cụ khác khi khung đang bật: SketchUp gỡ khung (deactivate) nên lần gỡ sau không được pop công cụ của người dùng
+switched_done = 0
+switched = VGD::BIM::UI::BoundsPreview.new([[1, 2, 3], [4, 5, 6]]) { switched_done += 1 }
+popped_before = model.tools.popped
+switched.deactivate(view)
+switched.finish(view)
+ok('đổi sang công cụ khác: không pop nhầm công cụ của người dùng, báo on_done một lần', model.tools.popped == popped_before && switched_done == 1)
+switched.draw(view)
+ok('đổi sang công cụ khác: khung không vẽ nữa', view.lines.size == 1)
+
 plain = VGD::BIM::UI::BoundsPreview.new([[1, 2, 3], [4, 5, 6]]) { }
 v2 = View.new(model, helper)
 plain.draw(v2)

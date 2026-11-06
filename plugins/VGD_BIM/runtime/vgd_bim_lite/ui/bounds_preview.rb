@@ -37,7 +37,13 @@ module VGD
           nil
         end
 
+        # SketchUp gọi khi khung bị gỡ: do finish (pop_tool) hoặc do người dùng chọn công cụ khác.
+        # Trường hợp sau phải đánh dấu đã xong, nếu không lần finish kế tiếp sẽ pop nhầm công cụ của người dùng.
         def deactivate(view)
+          unless @finished
+            @finished = true
+            @on_done.call if @on_done
+          end
           view.invalidate
         end
 
