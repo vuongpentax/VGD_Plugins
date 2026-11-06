@@ -1,15 +1,15 @@
-# VGD_Cabinet Draw 1.0.0-beta.70
+# VGD Cabinet Draw 1.0.0
 
-VGD_Cabinet Draw là extension SketchUp (2022 trở lên) cho quy trình dựng tủ bán tự động: người dùng chủ động chọn mặt trước, vị trí đợt/vách, cách chia cánh, hướng mở, ngăn kéo và tay nắm. Preview hiện trong viewport; mỗi công cụ chỉ ghi hình học vào model khi người dùng click hoặc nhấn Enter.
+VGD Cabinet Draw là extension SketchUp (2022 trở lên) cho quy trình dựng tủ bán tự động: người dùng chủ động chọn mặt trước, vị trí đợt/vách, cách chia cánh, hướng mở, ngăn kéo và tay nắm. Preview hiện trong viewport; mỗi công cụ chỉ ghi hình học vào model khi người dùng click hoặc nhấn Enter.
 
 Extension đăng ký độc lập với VGD_Cabinet (cũ, ở `plugins/VGD_Cabinet`): dùng dictionary model `VGD_Cabinet_Draw` và thư mục dữ liệu `%APPDATA%/VGD/SketchUp/VGD_Cabinet_Draw`, không đọc dictionary hay preset của bản cũ.
 
-**Trạng thái:** beta. Toàn bộ kiểm thử là tự động bằng giả lập SketchUp (`test/`); chưa kiểm thử thủ công trong SketchUp thật, trừ vài mục người dùng đã xác nhận (xem "Điều chưa kiểm chứng").
+**Trạng thái:** bản 1.0.0 (stable), cùng mã với beta.70; khác beta.70 ở tên extension (nay là "VGD Cabinet Draw", xem `RELEASE_NOTES_v1.0.0.md`). Kiểm thử tự động bằng giả lập SketchUp (`test/`); chưa kiểm thử thủ công đầy đủ trong SketchUp thật, chỉ có vài mục người dùng đã xác nhận (xem "Điều chưa kiểm chứng").
 
 ## Cài và đóng gói
 
 - Đóng gói: `python3 dev/build_release.py` (chạy từ thư mục plugin) tạo `outputs/VGD_Cabinet_Draw_<phiên bản>.rbz` và bản source ZIP cùng phiên bản. `outputs/` bị `.gitignore` bỏ qua, không lưu trong git.
-- Cài: Extensions → Extension Manager → Install Extension, chọn file `.rbz` (ví dụ `VGD_Cabinet_Draw_1.0.0-beta.70.rbz`). Gói gồm `VGD_Cabinet_Draw.rb`, `VGD_Cabinet_Draw/main.rb` và toàn bộ `runtime/`.
+- Cài: Extensions → Extension Manager → Install Extension, chọn file `.rbz` (ví dụ `VGD_Cabinet_Draw_1.0.0.rbz`). Gói gồm `VGD_Cabinet_Draw.rb`, `VGD_Cabinet_Draw/main.rb` và toàn bộ `runtime/`.
 - Phiên bản ghi ở ba chỗ phải khớp nhau: `VERSION` trong `runtime/VGD_Cabinet_Draw/main.rb`, `extension.version` trong `VGD_Cabinet_Draw.rb`, số trong `runtime/VGD_Cabinet_Draw/dialog.html`; thêm `VERSION` trong `dev/build_release.py`.
 
 ## Công cụ và menu
@@ -96,6 +96,7 @@ Menu chuột phải **VGD Cabinet** có thêm các lệnh theo đối tượng (
 
 | Bản | Nội dung chính |
 |---|---|
+| 1.0.0 | Phát hành ổn định từ mã beta.70; tên extension đổi từ "VGD_Cabinet Draw" thành "VGD Cabinet Draw" để khớp quy tắc catalog của VGD Center. |
 | beta.70 | Chia cánh thủ công bắt điểm đúng ở góc nhìn nghiêng (đo trên mặt trước thùng tủ). |
 | beta.69 | Preview chỉ hiện số; Quét & dời tấm: chọn xong click tiếp theo là kéo luôn. |
 | beta.68 | Công cụ Quét & dời tấm (quét khung/cọ, dời hồi, đợt và tấm khác). |
