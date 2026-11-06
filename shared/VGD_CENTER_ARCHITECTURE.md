@@ -37,7 +37,15 @@ Từ VGD Center 1.2.0, plugin có `id` mới không cần cập nhật Center n�
 
 Ý nghĩa bảo mật: một mục catalog chỉ ghi được vào đúng loader và thư mục của chính nó, không ghi đè plugin khác. Catalog vẫn là nguồn tin cậy: ai sửa được catalog có thể đưa một plugin `VGD_*` mới lên máy người dùng, nên `main` phải được bảo vệ như nguồn phát hành.
 
-Đổi lại, plugin mới dùng icon hộp mặc định, không có nút Hướng dẫn và không có cảnh báo gỡ riêng (trừ `uninstall_note` tùy chọn trong catalog). Muốn có các thứ đó thì cần cập nhật Center.
+Đổi lại, plugin mới dùng icon hộp mặc định và không có cảnh báo gỡ riêng (trừ `uninstall_note` tùy chọn trong catalog). Muốn có các thứ đó thì cần cập nhật Center. Trang Hướng dẫn thì không cần (xem mục dưới).
+
+## Hướng dẫn (từ 1.2.2)
+
+- Bản gốc của mọi trang hướng dẫn: `shared/vgd-center/guides/<id>.html`. Gói Center mang bản đi kèm ở `VGD_Center/guides/` (`package.py` chép từ shared khi đóng gói; `dev/test_guides.rb` kiểm tra hai nơi giống nhau).
+- Bấm **Hướng dẫn** (`open_guide`): Center tải `https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/guides/<id>.html`, kiểm tra (`valid_guide_html?`), ghi vào `guides/<id>.html` (file tạm rồi đổi tên) rồi mở. Chờ tối đa `GUIDE_TIMEOUT` (5 giây); lỗi mạng, mã khác 200 hoặc trang không hợp lệ thì mở bản đang có (đi kèm gói hoặc tải lần trước). Chưa có bản nào thì báo chưa có.
+- Nút hiện nếu trang đã có trong thư mục guides hoặc mục catalog khai báo `"guide": true` (plugin mới chưa có trang trong gói).
+- Trang chỉ được là tài liệu tĩnh (không script, khung nhúng, form, base, meta refresh, tài nguyên hay liên kết ra ngoài). Ai sửa được `main` có thể đổi nội dung trang, cũng như đã có thể đổi catalog, nên `main` phải được bảo vệ như nguồn phát hành.
+- Chưa kiểm thử trong SketchUp thật: `Sketchup::Http::Request` với raw.githubusercontent.com, ghi file vào thư mục guides trên Windows.
 
 ## Tab Quản lý (từ 1.2.1)
 

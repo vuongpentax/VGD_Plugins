@@ -10,10 +10,15 @@ require File.join(File.dirname(__FILE__), 'manager', 'core')
 
 module VGD
   module Center
-    VERSION = '1.2.1'.freeze
+    VERSION = '1.2.2'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
+    # Trang hướng dẫn mới nhất nằm trong kho; Center tải khi người dùng bấm Hướng dẫn (xem fetch_guide).
+    GUIDE_BASE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/guides/'.freeze
+    MAX_GUIDE_BYTES = 300 * 1024
+    MIN_GUIDE_BYTES = 200
+    GUIDE_TIMEOUT = 5.0
     ALLOWED_IDS = %w[dim cabinet library image_importer scenes bim_lite reference].freeze
     PLUGIN_LAYOUTS = {
       'dim' => ['VGD Dim', ['vgd_dim.rb', 'VGD_Dim/']],
@@ -117,6 +122,8 @@ module VGD
         end
       end
 
+      # Bấm Hướng dẫn: tải trang mới nhất từ kho rồi mở. Mạng chậm (GUIDE_TIMEOUT giây), lỗi hoặc trang không hợp lệ thì
+      # mở bản đang có trong thư mục guides (bản đi kèm gói hoặc bản tải lần trước); chưa có bản nào thì báo.
       def open_guide(plugin_id)
         id = plugin_id.to_s
         return UI.messagebox('Không tìm thấy hướng dẫn cho plugin này.') unless id.match?(PLUGIN_ID_PATTERN)
@@ -126,7 +133,84 @@ module VGD
           @guide_dialogs[id].bring_to_front
           return
         end
+        @guide_requests ||= {}
+        return if @guide_requests[id]
 
+        fetch_guide(id) { show_guide(id) }
+      rescue StandardError => error
+        UI.messagebox("Không thể mở hướng dẫn.\n#{error.message}")
+      end
+
+      # Gọi khối đúng một lần: khi tải xong, khi lỗi, hoặc khi hết giờ chờ.
+      def fetch_guide(id, &done)
+        finished = false
+        finish = lambda do
+          next if finished
+          finished = true
+          @guide_requests.delete(id)
+          done.call
+        end
+        request = Sketchup::Http::Request.new("#{GUIDE_BASE_URL}#{id}.html")
+        @guide_requests[id] = request
+        started = request.start do |_request, response|
+          begin
+            save_guide(id, response.body) if response && response.status_code == 200
+          rescue StandardError => error
+            @catalog_warning = "Không lưu được hướng dẫn #{id}: #{error.message}"
+          end
+          finish.call
+        end
+        return finish.call unless started
+
+        UI.start_timer(GUIDE_TIMEOUT, false) { finish.call }
+      rescue StandardError
+        @guide_requests.delete(id)
+        done.call
+      end
+
+      # Lưu trang đã kiểm tra vào thư mục guides (ghi file tạm rồi đổi tên). Trả về true nếu trang hợp lệ.
+      def save_guide(id, body)
+        return false unless valid_guide_html?(body)
+
+        path = guide_path(id)
+        return false unless path
+
+        FileUtils.mkdir_p(File.dirname(path))
+        data = body.dup.force_encoding(Encoding::BINARY)
+        return true if File.file?(path) && File.binread(path) == data
+
+        temp = "#{path}.tmp"
+        begin
+          File.binwrite(temp, data)
+          File.rename(temp, path)
+        ensure
+          File.delete(temp) if File.file?(temp)
+        end
+        true
+      end
+
+      # Trang hướng dẫn tải từ mạng chỉ được là tài liệu tĩnh: không script, khung nhúng, form, thẻ base, meta refresh,
+      # tài nguyên từ ngoài (src, url(), @import) và liên kết ra ngoài hoặc javascript:. Liên kết chỉ tới trang khác trong
+      # guides hoặc #mục. Nhận chuỗi nhị phân (phản hồi mạng) nếu là UTF-8 hợp lệ.
+      def valid_guide_html?(body)
+        return false unless body.is_a?(String)
+        return false unless body.bytesize.between?(MIN_GUIDE_BYTES, MAX_GUIDE_BYTES)
+
+        text = body.dup.force_encoding(Encoding::UTF_8)
+        return false unless text.valid_encoding?
+        return false unless text.match?(/\A\s*<!doctype html>/i) && text.match?(%r{</html>\s*\z}i)
+        return false if text.match?(/<\s*(?:script|iframe|frame|object|embed|applet|form|base)\b/i)
+        return false if text.match?(/<\s*meta\b[^>]*http-equiv/i)
+        return false if text.match?(/\b(?:src|srcset|action|formaction|poster|data|ping)\s*=\s*["']?\s*(?:[a-z][a-z0-9+.-]*:|\/\/)/i)
+        return false if text.match?(/<\s*link\b[^>]*\bhref\s*=\s*["']?\s*(?:[a-z][a-z0-9+.-]*:|\/\/)/i)
+        return false if text.match?(/\bhref\s*=\s*["']?\s*(?:[a-z][a-z0-9+.-]*:|\/\/)/i)
+        return false if text.match?(/url\(\s*["']?\s*(?:[a-z][a-z0-9+.-]*:|\/\/)/i)
+        return false if text.match?(/@import/i)
+
+        true
+      end
+
+      def show_guide(id)
         path = guide_path(id)
         return UI.messagebox('Tài liệu hướng dẫn chưa có trong bản VGD Center này.') unless path && File.file?(path)
 
@@ -158,7 +242,7 @@ module VGD
         UI.messagebox("Không thể mở hướng dẫn.\n#{error.message}")
       end
 
-      # Trang hướng dẫn chỉ có cho plugin đã được đóng sẵn trong Center; plugin mới chỉ có trong catalog thì không có.
+      # File trang hướng dẫn trong thư mục guides: bản đi kèm gói hoặc bản tải lần trước từ kho.
       def guide_path(id)
         return nil unless id.to_s.match?(PLUGIN_ID_PATTERN)
         File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'guides', "#{id}.html")
@@ -377,6 +461,12 @@ module VGD
         process_next
       end
 
+      # Có nút Hướng dẫn nếu trang đã có trong thư mục guides, hoặc catalog khai báo "guide": true (trang nằm trong kho,
+      # tải khi bấm nút).
+      def guide_listed?(product)
+        File.file?(guide_path(product['id']).to_s) || product['guide'] == true
+      end
+
       def read_bundled_catalog
         path = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'catalog.json')
         validate_catalog(JSON.parse(File.read(path, encoding: 'UTF-8')))
@@ -518,7 +608,7 @@ module VGD
               version: product['version'], release_channel: product['release_channel'], icon: product['icon'], minimum_sketchup: product['minimum_sketchup'],
               installed: installed, installed_version: installed_version, action: action,
               compatible: min_ok, filename: product.dig('download', 'filename'),
-              guide: File.file?(guide_path(product['id']).to_s)
+              guide: guide_listed?(product)
             }
           rescue StandardError => error
             errors << "#{product['id']}: #{error.message}"
