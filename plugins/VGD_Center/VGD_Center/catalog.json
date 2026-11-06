@@ -271,9 +271,32 @@
     {
       "id": "cabinet_draw",
       "name": "VGD Cabinet Draw",
-      "kind": "plugin",
-      "lifecycle": "in_development",
-      "visibility": "public"
+      "extension_name": "VGD Cabinet Draw",
+      "version": "1.0.0",
+      "release_channel": "stable",
+      "description": "Dựng tủ bán tự động bằng thao tác trực tiếp trong viewport.",
+      "guide": true,
+      "icon": "cabinet_draw",
+      "minimum_sketchup": "22.0.0",
+      "download": {
+        "filename": "VGD_Cabinet_Draw_1.0.0.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-cabinet-draw-v1.0.0/VGD_Cabinet_Draw_1.0.0.rbz",
+        "size": 230509,
+        "sha256": "b33daa7b5aefec58590fe4772f07017201ac07cd1ac418df250ed32bb5af9628"
+      },
+      "allowed_paths": [
+        "VGD_Cabinet_Draw.rb",
+        "VGD_Cabinet_Draw/"
+      ],
+      "releases": [
+        {
+          "version": "1.0.0",
+          "release_channel": "stable",
+          "published_at": "2026-11-06",
+          "tag": "vgd-cabinet-draw-v1.0.0",
+          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-cabinet-draw-v1.0.0"
+        }
+      ]
     },
     {
       "id": "package",
