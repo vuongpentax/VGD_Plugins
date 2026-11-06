@@ -1,6 +1,6 @@
-# VGD Center 1.2.3
+# VGD Center 1.2.4
 
-VGD Center quản lý các plugin VGD trong SketchUp. Danh mục hiển thị phiên bản mới nhất đã được chọn, bao gồm cả beta và alpha. Cài gói phát hành VGD Center 1.2.3 qua Extension Manager; RBZ không được lưu trong thư mục source này. Mở VGD Center bằng nút trên toolbar hoặc menu Extensions.
+VGD Center quản lý các plugin VGD trong SketchUp. Danh mục hiển thị phiên bản mới nhất đã được chọn, bao gồm cả beta và alpha. Cài gói phát hành VGD Center 1.2.4 qua Extension Manager; RBZ không được lưu trong thư mục source này. Mở VGD Center bằng nút trên toolbar hoặc menu Extensions.
 
 ## Tính năng
 
@@ -14,7 +14,8 @@ VGD Center quản lý các plugin VGD trong SketchUp. Danh mục hiển thị ph
 - Kiểm tra và tự cập nhật VGD Center từ bản stable đã phát hành; gói được xác minh bằng SHA-256.
 - Gỡ từng plugin đã cài, kèm xác nhận và nhắc khởi động lại SketchUp.
 - Mỗi thẻ plugin có nút **Hướng dẫn**; các trang HTML tiếng Việt, giao diện tối/sáng và nút in PDF. Từ 1.2.2, bấm nút sẽ tải trang mới nhất từ kho (`shared/vgd-center/guides/<id>.html`), kiểm tra rồi mở; không có mạng hoặc trang lỗi thì dùng bản đi kèm gói. Thêm hoặc sửa hướng dẫn không cần phát hành Center mới (xem "Hướng dẫn cho plugin").
-- Tab **Quản lý** (từ 1.2.1, thay VGD Plugin Manager): bật/tắt plugin (có hiệu lực sau khi khởi động lại SketchUp; plugin vừa bật có nút **Nạp ngay** để dùng luôn mà không cần khởi động lại), bộ plugin, chuyển plugin giữa SketchUp 2022 và 2024 (có ô tìm kiếm theo tên từ 1.2.3, giống tab Bật/tắt), xuất gói .rbz tổng, cho mọi plugin trong thư mục Plugins. Có tiếng Anh đầy đủ. VGD Center không bao giờ bị tắt hay chuyển. Plugin đã tắt và bộ plugin nằm trong `Plugins/VGD_Center/data`; dữ liệu cũ của Plugin Manager được tự chuyển sang đây. Mã nằm trong `VGD_Center/manager/`.
+- Tab **Quản lý** (từ 1.2.1, thay VGD Plugin Manager): bật/tắt plugin (có hiệu lực sau khi khởi động lại SketchUp; plugin vừa bật có nút **Nạp ngay** để dùng luôn mà không cần khởi động lại), bộ plugin, chuyển plugin giữa SketchUp 2022 và 2024 (có ô tìm kiếm theo tên từ 1.2.4, giống tab Bật/tắt), xuất gói .rbz tổng, cho mọi plugin trong thư mục Plugins. Có tiếng Anh đầy đủ. VGD Center không bao giờ bị tắt hay chuyển. Plugin đã tắt và bộ plugin nằm trong `Plugins/VGD_Center/data`; dữ liệu cũ của Plugin Manager được tự chuyển sang đây. Mã nằm trong `VGD_Center/manager/`.
+- Bấm logo ở thanh đầu để mở trang web VGD (`WEBSITE_URL` trong `main.rb`).
 - Chọn ngôn ngữ giao diện và bật/tắt tự động cập nhật VGD Center khi khởi động SketchUp.
 - Xem thời điểm kiểm tra cập nhật Center gần nhất.
 - Giao diện tối mặc định, có thể chuyển sang sáng.
@@ -34,7 +35,7 @@ Catalog hiển thị các phiên bản VGD hiện hành; bản beta và alpha đ
 
 ## Mã nguồn và phát hành
 
-Thư mục này chứa mã nguồn và tài nguyên VGD Center 1.2.3, không kèm RBZ hoặc source ZIP tạo sẵn. Ghi chú phát hành được giữ trong các file RELEASE_NOTES_v*.md. Đóng gói bằng `python plugins/VGD_Center/dev/package.py` (từ thư mục gốc repo). Test (chạy từ thư mục `plugins/VGD_Center`, dùng stub SketchUp trong `dev/stub`): `ruby dev/test_center.rb` (catalog, cài/gỡ), `ruby dev/test_manager_toggle.rb`, `ruby dev/test_manager_linker.rb`, `ruby dev/test_manager_dialog.rb`, `ruby dev/test_manager_bundle.rb`, `ruby dev/test_manager_i18n.rb` (tab Quản lý, gồm tiếng Anh), `ruby dev/test_manager_load.rb` (nút Nạp ngay), `ruby dev/test_guides.rb` (tải trang hướng dẫn).
+Thư mục này chứa mã nguồn và tài nguyên VGD Center 1.2.4, không kèm RBZ hoặc source ZIP tạo sẵn. Ghi chú phát hành được giữ trong các file RELEASE_NOTES_v*.md. Đóng gói bằng `python plugins/VGD_Center/dev/package.py` (từ thư mục gốc repo). Test (chạy từ thư mục `plugins/VGD_Center`, dùng stub SketchUp trong `dev/stub`): `ruby dev/test_center.rb` (catalog, cài/gỡ), `ruby dev/test_manager_toggle.rb`, `ruby dev/test_manager_linker.rb`, `ruby dev/test_manager_dialog.rb`, `ruby dev/test_manager_bundle.rb`, `ruby dev/test_manager_i18n.rb` (tab Quản lý, gồm tiếng Anh), `ruby dev/test_manager_load.rb` (nút Nạp ngay), `ruby dev/test_guides.rb` (tải trang hướng dẫn).
 
 ## Thêm plugin mới vào kho
 

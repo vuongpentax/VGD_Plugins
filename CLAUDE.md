@@ -171,6 +171,7 @@ Không tạo tài liệu chỉ để tăng số lượng file. Ưu tiên ít tà
 
 - Mỗi lần gửi RBZ mới cho người dùng phải tăng phiên bản so với RBZ đã gửi trước đó, ví dụ 1.0.0 → 1.0.1; bản beta thì tăng số beta (beta.33 → beta.34). Không gửi hai RBZ khác nội dung mà cùng số phiên bản. Sửa số phiên bản ở mọi chỗ plugin ghi nó (xem mục "Thông tin plugin" trong `CLAUDE.md` của plugin).
 - Mỗi lần đổi phiên bản phải cập nhật `README.md` của plugin cho khớp (số phiên bản, tính năng, tên file cài, trạng thái kiểm thử) trong cùng commit.
+- Mỗi lần cập nhật plugin xong (đã đạt kiểm tra) phải đóng gói và gửi RBZ cho người dùng test, kèm SHA-256; không chờ người dùng nhắc.
 - Người dùng tự phát hành trên GitHub. Không tạo file hướng dẫn phát hành (kiểu `HOW_TO_RELEASE.md`) trong plugin.
 - Khi hướng dẫn người dùng tạo Release, phần mô tả đưa **link raw GitHub** tới `RELEASE_NOTES_v<phiên bản>.md` (dạng `https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/plugins/<Plugin>/RELEASE_NOTES_v<phiên bản>.md`, đã kiểm tra mở được) để họ tự copy, không dán nguyên văn nội dung vào chat. Gửi kèm file RBZ với đúng tên file, SHA-256 và link tạo Release.
 
