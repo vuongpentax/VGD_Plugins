@@ -14,11 +14,11 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 - `VGD_Center/`: `main.rb`, `dialog.html`, `manager/` (tab Quản lý: Ruby, JS, CSS), `guides/`, `assets/`, `vgd-theme/`, bản catalog và `center-update.json` đi kèm gói.
 - `dev/`: `package.py`, các file `test_*.rb`, `stub/` (giả lập SketchUp).
-- Ngoài plugin: `shared/vgd-center/catalog.json` và `center-update.json` là bản Center đọc qua URL raw trên nhánh `main`; `shared/VGD_CENTER_ARCHITECTURE.md` mô tả luồng phát hành và quy tắc.
+- Ngoài plugin: `shared/vgd-center/catalog.json`, `center-update.json` và `guides/` là bản Center đọc qua URL raw trên nhánh `main`; `shared/VGD_CENTER_ARCHITECTURE.md` mô tả luồng phát hành và quy tắc.
 
 ## Kiểm thử
 
-- Chạy từ `plugins/VGD_Center`: `ruby dev/test_center.rb`, `ruby dev/test_manager_toggle.rb`, `ruby dev/test_manager_linker.rb`, `ruby dev/test_manager_dialog.rb`, `ruby dev/test_manager_bundle.rb`, `ruby dev/test_manager_i18n.rb`, `ruby dev/test_manager_load.rb`.
+- Chạy từ `plugins/VGD_Center`: `ruby dev/test_center.rb`, `ruby dev/test_manager_toggle.rb`, `ruby dev/test_manager_linker.rb`, `ruby dev/test_manager_dialog.rb`, `ruby dev/test_manager_bundle.rb`, `ruby dev/test_manager_i18n.rb`, `ruby dev/test_manager_load.rb`, `ruby dev/test_guides.rb`.
 - Test dùng giả lập SketchUp trong `dev/stub`. Dời file plugin thật, hộp thoại và hộp chọn file chưa được xác minh trong SketchUp thật.
 
 ## Đóng gói
@@ -35,5 +35,6 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 - Plugin mới vào kho không cần sửa Center nếu mục catalog đạt quy tắc trong `shared/VGD_CENTER_ARCHITECTURE.md` (id, tên extension bắt đầu bằng `VGD `, đúng hai đường dẫn). Không nới quy tắc này mà không được yêu cầu.
 - Tab Quản lý dời file thật của mọi plugin. `VGD_Center` và `VGD_PluginManager` luôn được bảo vệ (không hiện, không tắt được); tên `VGD_PluginManager` cũng bị giữ chỗ trong catalog. Không làm yếu các bảo vệ này.
 - Nạp ngay chỉ nạp plugin chưa chạy trong phiên (xem `Toggle.already_running?`). Không nạp lại plugin đã chạy: sẽ nhân đôi menu, toolbar, observer. Không thay `Sketchup.require` bằng `load`.
+- Trang hướng dẫn tải từ kho phải qua `valid_guide_html?` trước khi ghi; không nới kiểm tra này (script, khung nhúng, tài nguyên và liên kết ra ngoài). Bản gốc hướng dẫn ở `shared/vgd-center/guides/`, bản trong `VGD_Center/guides/` phải giống hệt (test kiểm tra).
 - Hộp thoại dùng `STYLE_DIALOG` như các plugin VGD khác (kiểu cửa sổ độc lập từng bị chìm sau SketchUp).
 - Chữ giao diện mới phải có cả tiếng Việt và tiếng Anh: bảng `englishText` trong `dialog.html`, bảng `I18N` trong `manager/manager.js`, và `manager/text.rb` cho thông báo từ Ruby. `dev/test_manager_i18n.rb` kiểm tra đủ cặp.

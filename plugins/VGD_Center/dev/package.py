@@ -40,6 +40,13 @@ def sync_shared_metadata():
     # Bản đóng gói phải dùng đúng catalog và center-update từ shared/.
     for name in ('catalog.json', 'center-update.json'):
         shutil.copyfile(SHARED / name, RUNTIME / name)
+    # Trang hướng dẫn: shared/vgd-center/guides là bản gốc, gói Center mang bản đi kèm để dùng khi không có mạng.
+    guides = sorted((SHARED / 'guides').glob('*.html'))
+    if not guides:
+        fail('Thiếu trang hướng dẫn trong shared/vgd-center/guides.')
+    (RUNTIME / 'guides').mkdir(exist_ok=True)
+    for path in guides:
+        shutil.copyfile(path, RUNTIME / 'guides' / path.name)
 
 
 def check_catalog():
