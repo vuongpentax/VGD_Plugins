@@ -1,10 +1,10 @@
-# VGD_Cabinet Draw
+# VGD Cabinet Draw
 
 Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi phần riêng của plugin, và chỉ ghi điều kiểm chứng được từ mã hoặc tài liệu của plugin. Số phiên bản không ghi ở đây vì dễ lỗi thời: xem nơi giữ phiên bản ở mục "Thông tin plugin".
 
 ## Thông tin plugin
 
-- Tên extension: VGD_Cabinet Draw. Namespace: `VGD_Cabinet_Draw` (không có tiền tố `VGD::`).
+- Tên extension: VGD Cabinet Draw (có dấu cách, theo quy tắc catalog của VGD Center; bản beta cũ dùng "VGD_Cabinet Draw"). Namespace: `VGD_Cabinet_Draw` (không có tiền tố `VGD::`).
 - Loader: `VGD_Cabinet_Draw.rb` (nạp `VGD_Cabinet_Draw/main`); `main.rb` gọi `runtime/VGD_Cabinet_Draw/main.rb`.
 - Phiên bản: `VERSION` trong `runtime/VGD_Cabinet_Draw/main.rb`. Phải khớp `extension.version` trong `VGD_Cabinet_Draw.rb` và số phiên bản trong `runtime/VGD_Cabinet_Draw/dialog.html`: đổi phiên bản thì sửa cả ba chỗ.
 - SketchUp tối thiểu: 2022, dùng Ruby 2.7. Code phải chạy được trên Ruby 2.7 dù test chạy ở Ruby 3.x.

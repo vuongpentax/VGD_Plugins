@@ -4,7 +4,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Thông tin plugin
 
-- Tên extension: VGD_Cabinet (bản đang phát hành trong catalog của VGD Center, khác VGD_Cabinet Draw). Namespace: `VGD_Cabinet`.
+- Tên extension: VGD_Cabinet (bản đang phát hành trong catalog của VGD Center, khác VGD Cabinet Draw). Namespace: `VGD_Cabinet`.
 - Loader: `cabinet_work/vgd_cabinet.rb`.
 - Phiên bản: `VERSION` trong `cabinet_work/VGD_Cabinet/main43.rb`.
 - SketchUp tối thiểu: 2022. Chỉ deploy vào SketchUp 2022.
