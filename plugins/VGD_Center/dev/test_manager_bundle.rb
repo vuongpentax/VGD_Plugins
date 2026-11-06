@@ -61,12 +61,10 @@ r = MGR.build_bundle('2022', %w[cool_tool single VGD_Center su_sandbox], out)
 check 'xuất gói thành công, đúng đường dẫn', r[:error].nil? && r[:path] == out && File.exist?(out)
 check 'đếm đúng số file plugin (4), VGD Center và mục hệ thống không vào gói', r[:count] == 4
 files = unzip(out)
-check 'zip hợp lệ: đọc và giải nén được mọi mục, CRC đúng', files.size == 5
-check 'có đủ file plugin và tệp mô tả gói', files.keys.sort == %w[cool_tool.rb cool_tool/data.bin cool_tool/lib/sub/x.rb single.rb vgd_bundle_manifest.json]
+check 'zip hợp lệ: đọc và giải nén được mọi mục, CRC đúng', files.size == 4
+check 'chỉ có file của plugin, không thêm tệp nào khác vào Plugins máy đích', files.keys.sort == %w[cool_tool.rb cool_tool/data.bin cool_tool/lib/sub/x.rb single.rb]
 check 'nội dung tiếng Việt giữ nguyên', files['cool_tool.rb'].force_encoding('UTF-8') == tool_rb
 check 'file nhị phân giữ nguyên từng byte', files['cool_tool/data.bin'] == data_bin
-manifest = JSON.parse(files['vgd_bundle_manifest.json'])
-check 'tệp mô tả ghi đúng công cụ, phiên bản và danh sách plugin', manifest['tool'] == 'VGD Center' && manifest['tool_version'] == VGD::Center::VERSION && manifest['source_version'] == '2022'
 check 'VGD Center tuyệt đối không có trong gói', files.keys.none? { |n| n.downcase.start_with?('vgd_center') }
 check 'Center chấp nhận cấu trúc zip (đọc được bằng read_archive_entries, tên an toàn)', VGD::Center.read_archive_entries(out).map { |e| e[:path] }.sort == files.keys.sort
 

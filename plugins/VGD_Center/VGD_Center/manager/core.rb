@@ -147,21 +147,9 @@ module VGD
       def self.build_bundle(src_ver, chosen, out_path)
         entries = collect_files(src_ver, chosen)
         return { error: t(:bundle_empty) } if entries.empty?
-        plugin_files = entries.size
-        now = Time.now
-        manifest = {
-          'tool'           => 'VGD Center',
-          'tool_version'   => VGD::Center::VERSION,
-          'source_version' => src_ver,
-          'exported_at'    => now.strftime('%Y-%m-%d %H:%M:%S'),
-          'plugins'        => chosen
-        }
-
-        entries << ['vgd_bundle_manifest.json', JSON.pretty_generate(manifest).b, now]
-
         out_path = "#{out_path}.rbz" unless out_path =~ /\.rbz\z/i
         ZipWriter.write(out_path, entries)
-        { count: plugin_files, path: out_path, notes: [] }
+        { count: entries.size, path: out_path, notes: [] }
       rescue => e
         { error: report_error(t(:err_bundle), e) }
       end
