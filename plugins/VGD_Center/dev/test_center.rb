@@ -125,6 +125,13 @@ check 'plugin mới hiện là "cài đặt"', by_id['demo_tool'][:action] == 'i
 check 'mọi plugin bundle đều có trang hướng dẫn thật',
       (accepted.map { |item| item['id'] } - %w[]).all? { |id| File.file?(File.join(__dir__, '..', 'VGD_Center', 'guides', "#{id}.html")) }
 
+guide_dir = File.join(__dir__, '..', 'VGD_Center', 'guides')
+cd_guide = File.read(File.join(guide_dir, 'cabinet_draw.html'), encoding: 'UTF-8')
+check 'cabinet_draw có trang hướng dẫn (Center tìm theo id sản phẩm)', File.file?(CENTER.guide_path('cabinet_draw').to_s)
+check 'trang hướng dẫn Cabinet Draw: liên kết trang khác đều có thật', cd_guide.scan(/href="([^"#]+\.html)"/).flatten.all? { |f| File.file?(File.join(guide_dir, f)) }
+check 'trang hướng dẫn Cabinet Draw: không gọi tài nguyên ngoài (http)', cd_guide !~ /(?:src|href)="https?:/
+check 'trang hướng dẫn Cabinet Draw: có tiêu đề và tên plugin', cd_guide.include?('<title>Hướng dẫn · VGD Cabinet Draw</title>') && cd_guide.include?('<h1>VGD Cabinet Draw</h1>')
+
 # ---------- 5b. Kiểu cửa sổ ----------
 # STYLE_WINDOW là cửa sổ độc lập, bị chìm xuống sau SketchUp khi bấm ra ngoài (trông như tự đóng). Các plugin VGD dùng STYLE_DIALOG.
 center_source = File.read(File.join(__dir__, '..', 'VGD_Center', 'main.rb'), encoding: 'UTF-8')
