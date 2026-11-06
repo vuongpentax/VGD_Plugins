@@ -1,5 +1,7 @@
 # Kiểm thử — cập nhật 2026-10-04
 
+Ghi chú: các kết quả dưới đây thuộc bản 0.1.3-alpha. Bản 1.0.0 chỉ được kiểm tra tự động (cú pháp Ruby, JSON, đóng gói RBZ), chưa kiểm thử thủ công trong SketchUp.
+
 ## Bản 0.1.3-alpha
 
 - Kiểm thử Ruby với cửa sổ giả lập: chuyển menu và thanh chức năng giữ đúng một HtmlDialog; chuyển tính năng trước khi HTML sẵn sàng không mất trạng thái; hủy thế hệ scan cũ khi chuyển trang; observer selection được tháo đúng; đóng/mở lại tạo callback mới.

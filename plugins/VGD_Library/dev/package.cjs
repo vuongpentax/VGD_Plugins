@@ -18,7 +18,7 @@ async function add(zip, directory, prefix = '') {
   const name = `VGD_Library_v${version}.rbz`; fs.writeFileSync(path.join(root, name), content);
   fs.writeFileSync(path.join(root, name + '.sha256'), crypto.createHash('sha256').update(content).digest('hex') + '  ' + name + '\n');
   const source = new JSZip(); await add(source, path.join(root, 'runtime'), 'runtime/'); await add(source, path.join(root, 'dev'), 'dev/');
-  for (const doc of ['README.md', 'CODEX_HANDOFF.md', 'FEATURE_PARITY.md']) source.file(doc, fs.readFileSync(path.join(root, doc)), { date: new Date('2026-10-04T00:00:00Z') });
+  for (const doc of ['README.md', 'HANDOFF.md', 'FEATURE_PARITY.md']) source.file(doc, fs.readFileSync(path.join(root, doc)), { date: new Date('2026-10-04T00:00:00Z') });
   fs.writeFileSync(path.join(root, `VGD_Library_v${version}_source.zip`), await source.generateAsync({ type:'nodebuffer', compression:'DEFLATE' }));
   console.log(name + ': ' + entries.length + ' runtime files, ' + content.length + ' bytes; original code excluded.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

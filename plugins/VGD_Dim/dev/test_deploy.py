@@ -7,7 +7,7 @@ import tempfile
 root = Path(__file__).resolve().parent.parent
 outputs = root / 'outputs'
 outputs.mkdir(exist_ok=True)
-shell = Path(os.environ.get('VGD_POWERSHELL_PATH', r'C:/Users/TUNG/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe'))
+shell = Path(os.environ.get('VGD_POWERSHELL_PATH', 'pwsh.exe'))
 
 with tempfile.TemporaryDirectory(prefix='deploy_fixture_', dir=outputs) as directory:
     fixture = Path(directory).resolve()

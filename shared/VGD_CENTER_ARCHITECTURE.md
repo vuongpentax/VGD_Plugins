@@ -32,11 +32,34 @@ Từ VGD Center 1.2.0, plugin có `id` mới không cần cập nhật Center n�
 - `id` dạng `[a-z][a-z0-9_]` (2–40 ký tự), khác `center`.
 - `extension_name` bắt đầu bằng `VGD ` và không trùng tên plugin khác.
 - `allowed_paths` gồm đúng hai đường dẫn: loader `VGD_*.rb` hoặc `vgd_*.rb` và thư mục cùng tên (không phân biệt hoa thường), không trùng đường dẫn của plugin khác hoặc của Center.
+- Không trùng đường dẫn mà tab Quản lý bảo vệ (`Manager::SELF_NAMES`), đặc biệt `VGD_PluginManager` (nơi Plugin Manager cũ để dữ liệu).
 - Các kiểm tra khác (phiên bản và kênh, URL, dung lượng, SHA-256) giống plugin có sẵn.
 
 Ý nghĩa bảo mật: một mục catalog chỉ ghi được vào đúng loader và thư mục của chính nó, không ghi đè plugin khác. Catalog vẫn là nguồn tin cậy: ai sửa được catalog có thể đưa một plugin `VGD_*` mới lên máy người dùng, nên `main` phải được bảo vệ như nguồn phát hành.
 
 Đổi lại, plugin mới dùng icon hộp mặc định, không có nút Hướng dẫn và không có cảnh báo gỡ riêng (trừ `uninstall_note` tùy chọn trong catalog). Muốn có các thứ đó thì cần cập nhật Center.
+
+## Tab Quản lý (từ 1.2.1)
+
+Tab Quản lý có nguồn gốc từ VGD Plugin Manager 1.0.0-beta.17. Plugin đó đã được gỡ khỏi repo và khỏi catalog; mã nằm trong Center (`VGD_Center/manager/`, module `VGD::Center::Manager`). Giao diện: trang `page-manager` trong `dialog.html`, cùng `manager/manager.js` và `manager/manager.css` (tên lớp có tiền tố `mgr-`). Khác với phần cài đặt, tab này **dời file của mọi plugin** trong thư mục Plugins, nên rủi ro cao hơn:
+
+- **Mục được bảo vệ** (`Manager::SELF_NAMES`): `VGD_Center`, `VGD_PluginManager` và tên cũ `vgd_plugin_migrator`. Không bao giờ hiện trong danh sách, không tắt hay chuyển được; so khớp không phân biệt hoa thường. `VGD_Center` chứa thư mục dữ liệu; `VGD_PluginManager` được giữ vì máy cũ có thể còn cài Plugin Manager hoặc còn dữ liệu cũ chưa chuyển.
+- **Thư mục dữ liệu** `Plugins/VGD_Center/data` (`disabled/` chứa plugin đã tắt, `sets.json` chứa bộ plugin). Không phải trong `VGD_PluginManager` như Plugin Manager cũ.
+- **Chuyển dữ liệu cũ** (`Toggle.migrate_old_data`): dữ liệu ở `Plugins/VGD_PluginManager/data` (Plugin Manager beta.4 trở đi) và ở thư mục beta.3 (ngoài Plugins) được chuyển vào `VGD_Center/data`, vì gỡ Plugin Manager bằng Extension Manager có thể xóa thư mục của nó. Chạy ngay lúc khởi động SketchUp (hẹn giờ 8 giây sau khi nạp, `Manager.migrate_on_start`) và mỗi lần mở tab Quản lý. Chỉ dùng thao tác đổi chỗ từng mục, không bao giờ xóa đệ quy, không ghi đè: mục trùng tên ở chỗ mới ở lại chỗ cũ và được báo; file bộ plugin được gộp (bộ cùng tên ở chỗ mới thắng), file hỏng giữ nguyên. Thư mục cũ chỉ bị xóa khi đã rỗng. Plugin Manager cũ còn cài sẽ không thấy dữ liệu đã chuyển; tab báo để người dùng gỡ nó. Gỡ Extension Manager của chính Center sẽ xóa luôn `VGD_Center/data`; Center không tự gỡ mình.
+- **Nạp ngay** (`Toggle.load_now`, lệnh `mgr_load`): nạp plugin đang bật mà chưa chạy trong phiên bằng `Sketchup.require` trên file nạp (`.rb/.rbe/.rbs` cùng tên plugin), không cần khởi động lại. Plugin "đã chạy" nếu có trong Plugins lúc SketchUp khởi động (`Toggle.remember_startup`, gọi trong `main.rb`), đã được Nạp ngay, hoặc có trong `$LOADED_FEATURES`; những plugin này không bị nạp lại vì sẽ nhân đôi menu, toolbar, observer. Thư viện nền (tên chứa `lib`) nạp trước; lỗi của một plugin không dừng các plugin còn lại (bắt cả `SyntaxError`/`LoadError`) và plugin lỗi vẫn ở trạng thái chờ nạp. Hộp xác nhận chỉ hiện lần đầu mỗi phiên. Tắt plugin không gỡ được khỏi bộ nhớ.
+- **Khóa khi Center bận**: bật/tắt, bộ plugin và chuyển plugin bị từ chối khi Center đang tải/cài/gỡ (`VGD::Center.busy?`), để không dời file trong Plugins cùng lúc.
+- Lỗi bất ngờ được ghi vào `%APPDATA%\SketchUp\VGD_Center\manager.log` (luôn tiếng Việt, dành cho người hỗ trợ) và hiện trong tab.
+- Lệnh Ruby của tab đều bắt đầu bằng `mgr_`; Ruby gọi giao diện qua `window.VGDManager.<hàm>`.
+- **Tiếng Anh**: chữ tĩnh trong `dialog.html` dịch qua bảng `englishText` của Center; phần tử do JS ghi chữ mang thuộc tính `data-no-translate` để bộ dịch bỏ qua. Chữ do `manager.js` sinh ra dùng bảng `I18N` trong file đó. Thông báo, hộp xác nhận và tiêu đề hộp chọn file do Ruby tạo dùng `manager/text.rb`; mỗi lệnh `mgr_*` nhận `lang` từ giao diện, thiếu hoặc lạ thì dùng tiếng Việt. Thêm chữ mới thì phải thêm cả hai ngôn ngữ; `dev/test_manager_i18n.rb` kiểm tra đủ cặp, cùng chỗ điền, và không sót chữ Việt trong bản tiếng Anh.
+- Chưa kiểm thử trong SketchUp thật.
+
+### Bài học từ Plugin Manager (đã gỡ)
+
+Mã, HANDOFF và hướng dẫn kiểm thử thủ công của Plugin Manager xem được trong lịch sử git: `git show e6404f3:plugins/VGD_PluginManager/HANDOFF.md` (cùng thư mục `docs/`). Những điều quan trọng khi bảo trì tab Quản lý:
+
+- SketchUp nạp mọi `.rb/.rbe/.rbs` ở gốc Plugins; thư mục con chỉ chạy khi được `require`. Vì vậy loader và thư mục đi kèm phải bật/tắt/chuyển cùng nhau (`manager/linker.rb` gộp theo tên và theo nội dung loader).
+- **Không ghi vào file cài đặt của SketchUp** (phím tắt `SharedPreferences.json`, layout thanh công cụ). Plugin Manager từng nhập 85 phím tắt rồi SketchUp 2024 văng khi khởi động 3 lần; tính năng đã gỡ. Dùng Import/Export của SketchUp.
+- Chưa xác minh trong SketchUp thật: Nạp ngay (`Sketchup.require` trên plugin thật, việc SketchUp ghi file nạp lúc khởi động vào `$LOADED_FEATURES`), hộp thoại, `UI.savepanel`, mở thư mục bằng `explorer.exe`, luật gộp loader trên danh sách plugin thật, Extension Manager có nhận gói tổng không, tắt plugin có file `.dll` đang bị khóa.
 
 ## Tệp chính
 

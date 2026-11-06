@@ -1,0 +1,44 @@
+/* Tab "Quản lý" của VGD Center. Màu lấy từ biến của Center (--surface, --border, ...), tên lớp có tiền tố mgr- để không đụng phần khác. */
+#page-manager .mgr-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+#page-manager .mgr-tab { height: 34px; padding: 0 12px; border: 0; border-bottom: 2px solid transparent; border-radius: 4px 4px 0 0; background: transparent; color: var(--muted); font-size: 13px; font-weight: 650; cursor: pointer; }
+#page-manager .mgr-tab:hover { color: var(--text); border-bottom-color: var(--border); }
+#page-manager .mgr-tab[aria-selected="true"] { color: var(--accent-strong); border-bottom-color: var(--accent); }
+#page-manager .mgr-note { background: var(--tint); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin-bottom: 12px; }
+#page-manager .mgr-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 12px; }
+#page-manager .mgr-box { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; max-height: 320px; overflow: auto; margin-bottom: 12px; padding: 8px 12px; }
+#page-manager .mgr-row { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid var(--border); }
+#page-manager .mgr-box .mgr-row { padding: 4px 0; border: 0; }
+#page-manager .mgr-row:last-child { border-bottom: 0; }
+#page-manager .mgr-row .nm { flex: 1; word-break: break-all; }
+#page-manager .mgr-row.off .nm { color: var(--muted); }
+#page-manager .mgr-set { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); }
+#page-manager .mgr-set .nm { flex: 1 1 100%; font-weight: 600; }
+#page-manager .mgr-opt { display: block; padding: 2px 0 6px; }
+#page-manager .mgr-ver-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+#page-manager h2 { margin: 16px 0 8px; font-size: 15px; }
+#page-manager small { color: var(--muted); }
+#page-manager input[type=text] { height: 32px; padding: 0 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); width: 220px; font-family: inherit; }
+#page-manager select { height: 32px; padding: 0 8px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text); font-family: inherit; }
+#page-manager input[type=checkbox] { accent-color: var(--accent); }
+#page-manager input:focus-visible, #page-manager select:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+#page-manager .btn.danger { color: var(--danger); border-color: var(--danger); background: transparent; }
+#page-manager .btn.danger:hover { background: var(--tint); }
+#page-manager .mgr-badge { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border); color: var(--muted); }
+#page-manager .mgr-badge.conflict { color: var(--danger); border-color: var(--danger); }
+#page-manager .mgr-badge.pending { color: var(--accent); border-color: var(--accent); }
+#page-manager .mgr-out { display: none; white-space: pre-wrap; margin-top: 12px; padding: 8px 12px; background: var(--elevated); border: 1px solid var(--border); border-radius: 6px; }
+
+/* Nút gạt bật/tắt của từng plugin */
+#page-manager .mgr-switch { position: relative; width: 40px; height: 22px; min-width: 40px; padding: 0; border-radius: 11px; border: 1px solid var(--border); background: var(--elevated); cursor: pointer; }
+#page-manager .mgr-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--muted); transition: left .12s, background .12s; }
+#page-manager .mgr-switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+#page-manager .mgr-switch[aria-checked="true"]::after { left: 20px; background: var(--on-accent); }
+#page-manager .mgr-switch:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Bố cục giống các trang khác của Center */
+#page-manager .mgr-note { margin: 0 0 14px; }
+#page-manager .section-head { margin-top: 18px; }
+#page-manager .mgr-card { padding: 12px; margin-bottom: 12px; }
+#page-manager .mgr-list { max-height: 320px; overflow: auto; margin-bottom: 12px; }
+#page-manager .mgr-tabs { margin-top: 4px; }
+#page-manager .section-tools { display: flex; gap: 8px; }

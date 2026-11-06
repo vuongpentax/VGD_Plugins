@@ -1,14 +1,14 @@
-# VGD_Library 1.1.2-beta.6
+# VGD_Library 1.2.0
 
-Baseline source 1.1.2-beta.6 từ worktree cabinet-v2. Artifact local mới nhất tìm thấy là beta.5; catalog quảng bá beta.6 nhưng chưa tìm được RBZ/source ZIP tương ứng để xác minh. Không coi source beta.6 này là bản phát hành đã kiểm chứng. Đợt chuyển repository chỉ đối chiếu source/checksum; chưa chạy lại test tự động hoặc kiểm thử native SketchUp. Các kết quả PASS bên dưới thuộc lịch sử workspace nguồn.
+Phiên bản hiện tại 1.2.0, chi tiết ở [RELEASE_NOTES_v1.2.0.md](RELEASE_NOTES_v1.2.0.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
-Prerelease: tự kiểm tra cập nhật mỗi 24 giờ và có lệnh thủ công. SketchUp hỏi trước khi mở trang tải RBZ; cài qua Extension Manager rồi khởi động lại. Nguồn JSON cập nhật tự cấu hình vẫn độc lập.
+Plugin không hiện popup cập nhật khi khởi động: VGD Center báo bản mới. Cài bản mới qua Extension Manager rồi khởi động lại. Nguồn JSON cập nhật tự cấu hình vẫn độc lập.
 
-Plugin SketchUp độc lập của VGD: thư viện vật liệu **ảnh/SKM**, thư viện model **SKP**, kho Drive đồng bộ và bộ công cụ map. Yêu cầu **SketchUp 2022 trở lên**. Đây là bản beta: phép tính và giao diện đã kiểm tra tự động, **chưa kiểm chứng trong SketchUp thực tế hoặc trên macOS**.
+Plugin SketchUp độc lập của VGD: thư viện vật liệu **ảnh/SKM**, thư viện model **SKP**, kho Drive đồng bộ và bộ công cụ map. Yêu cầu **SketchUp 2022 trở lên**. Phép tính và giao diện đã kiểm tra tự động, **chưa kiểm chứng trong SketchUp thực tế hoặc trên macOS**.
 
 ## Cài đặt và nối kho của bạn
 
-Chưa xác minh artifact beta.6; chỉ cài sau khi có gói phát hành được đối chiếu đầy đủ. Thư mục migration này không chứa RBZ.
+1. Cài `VGD_Library_v1.2.0.rbz` bằng **Extensions → Extension Manager → Install Extension**.
 2. Nếu đã cài bản cũ, lưu bản vẽ, đóng tất cả cửa sổ SketchUp và mở lại sau khi cập nhật.
 3. Mở **Extensions → VGD_Library → Thư viện vật liệu**; bật toolbar VGD_Library trong View → Toolbars nếu cần.
 4. Bấm **+ Kho vật liệu Drive 03 MTL**. Plugin dùng đường dẫn đồng bộ đã xác minh trên máy hiện tại:
@@ -22,7 +22,7 @@ Chưa xác minh artifact beta.6; chỉ cài sau khi có gói phát hành đượ
 
 RAR/ZIP/7Z được báo là chưa giải nén và không xuất hiện thành mẫu để tô. Bạn tự giải nén/sắp xếp sau, rồi bấm **Làm mới**; nhóm tự lấy theo thư mục con. Nếu đổi vị trí gốc, bỏ nguồn cũ và thêm nguồn mới. Yêu thích gắn với đường dẫn, nên tệp đổi đường dẫn có thể cần đánh dấu lại. Bỏ nguồn chỉ bỏ khỏi plugin.
 
-Plugin không đổi chia sẻ, giải nén hay sắp xếp kho Drive. Tài khoản Drive của Codex không chuyển sang SketchUp; kho riêng tư được đọc qua Drive for desktop. RBZ chứa cấu hình đường dẫn dự kiến, không chứa kho vật liệu của bạn.
+Plugin không đổi chia sẻ, giải nén hay sắp xếp kho Drive. Tài khoản Drive dùng trong công cụ phát triển không chuyển sang SketchUp; kho riêng tư được đọc qua Drive for desktop. RBZ chứa cấu hình đường dẫn dự kiến, không chứa kho vật liệu của bạn.
 
 ## Thư viện
 
@@ -72,9 +72,9 @@ Cache thumbnail/download/seamless: `%LOCALAPPDATA%\VGD_Library` hoặc `~/Librar
 
 Đã đối chiếu các nhóm tìm thấy trong N-TEXTURE-2.0.19. **Mã VGD mới độc lập**; lõi Texture/Seamless/DLL không đủ trong RBZ nên không xác nhận hành vi giống 100%. Xem [FEATURE_PARITY.md](FEATURE_PARITY.md). Không gọi server, sao chép account/license, tải/eval code hoặc kèm DLL/icon/giao diện N-TEXTURE.
 
-Ruby: syntax 14 files; mô phỏng UV chữ nhật/fit/restore, kế thừa/isolation/locks/rollback/stale model, catalog Unicode/dedupe/RAR/favorites, Drive sync/cancel, Flowmap góc 90°, thay đối tượng/DC, audit/fix/swap, BGR/padding, seam boundary, Normal/AO phẳng, contours/logo có lỗ, schema online, SKM ZIP stored/deflate/CRC. Catalog WASI dùng cây tệp mô phỏng do giới hạn directory API Windows.
+Ruby: cú pháp toàn bộ file Ruby trong runtime (`dev/check_ruby.cjs` tự quét); mô phỏng UV chữ nhật/fit/restore, kế thừa/isolation/locks/rollback/stale model, catalog Unicode/dedupe/RAR/favorites, Drive sync/cancel, Flowmap góc 90°, thay đối tượng/DC, audit/fix/swap, BGR/padding, seam boundary, Normal/AO phẳng, contours/logo có lỗ, schema online, SKM ZIP stored/deflate/CRC. Catalog WASI dùng cây tệp mô phỏng do giới hạn directory API Windows.
 
-UI Playwright/Edge: library/model/online, pagination/search/HTML safety/favorites/actions/settings/Drive, 1120/720px, seamless preview/apply/preset. QA ảnh `outputs/` dùng dữ liệu mô phỏng. Kho thật được kiểm kê metadata bằng Node, chưa tô toàn bộ trong SketchUp. Checklist native: [CODEX_HANDOFF.md](CODEX_HANDOFF.md).
+UI Playwright/Edge: library/model/online, pagination/search/HTML safety/favorites/actions/settings/Drive, 1120/720px, seamless preview/apply/preset. QA ảnh `outputs/` dùng dữ liệu mô phỏng. Kho thật được kiểm kê metadata bằng Node, chưa tô toàn bộ trong SketchUp. Checklist native: [HANDOFF.md](HANDOFF.md).
 
 ```powershell
 node plugins/VGD_Library/dev/check_ruby.cjs
@@ -82,7 +82,7 @@ node plugins/VGD_Library/dev/test_ui.cjs
 node plugins/VGD_Library/dev/package.cjs
 ```
 
-Dependency từ `dev/node_modules`, VGD_Scenes/Cabinet, runtime Codex hoặc biến `VGD_NODE_MODULES`. Nếu thiếu, cài theo `dev/package.json`; RBZ không cần Node. `VGD_BROWSER_EXECUTABLE` chọn Chromium khác. Không tự cài/commit/push hoặc sửa dự án VGD khác.
+Dependency từ `dev/node_modules`, `VGD_Scenes/dev/node_modules` hoặc biến `VGD_NODE_MODULES`. Nếu thiếu, cài theo `dev/package.json`; RBZ không cần Node. `VGD_BROWSER_EXECUTABLE` chọn Chromium khác. Không tự cài/commit/push hoặc sửa dự án VGD khác.
 
 API chính thức đã đối chiếu: [Face/UV](https://ruby.sketchup.com/Sketchup/Face.html), [ImageRep/pixel và UV sampling](https://ruby.sketchup.com/Sketchup/ImageRep.html), [ComponentDefinition/save_copy](https://ruby.sketchup.com/Sketchup/ComponentDefinition.html), [HTTP](https://ruby.sketchup.com/Sketchup/Http/Request.html).
 

@@ -1,8 +1,8 @@
-# VGD BIM Lite v0.1.4-alpha
+# VGD BIM Lite v1.0.0
 
-Prerelease: tự kiểm tra cập nhật mỗi 24 giờ, có lệnh kiểm tra thủ công. SketchUp hỏi trước khi mở trang tải RBZ; cài bằng Extension Manager rồi khởi động lại.
+Bản ổn định (không còn alpha). Plugin không tự hiện popup cập nhật khi khởi động: VGD Center báo bản mới. Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp.
 
-Bản 0.1.1 dùng **một cửa sổ duy nhất**, giao diện màu nâu đồng bộ VGD Dim/Scenes và nhãn/thông báo tiếng Việt. Có hướng dẫn nhanh trong giao diện, màn hình quy tắc dễ nhập và mục **Xuất báo cáo** với bốn loại CSV mở được trong Excel. Đọc [hướng dẫn sử dụng](HUONG_DAN_SU_DUNG.md) để bắt đầu.
+Plugin dùng **một cửa sổ duy nhất**, giao diện màu nâu đồng bộ VGD Dim/Scenes và nhãn/thông báo tiếng Việt. Có hướng dẫn nhanh trong giao diện, màn hình quy tắc dễ nhập và mục **Xuất báo cáo** với bốn loại CSV mở được trong Excel. Đọc [hướng dẫn sử dụng](HUONG_DAN_SU_DUNG.md) để bắt đầu.
 
 CSV là báo cáo dữ liệu/khối lượng gốc, không tính đơn giá/thành tiền. Mã schema vẫn giữ nguyên để các plugin VGD dùng chung; bản dịch áp dụng ở giao diện và báo cáo. Khởi động lại SketchUp sau cập nhật để đóng các cửa sổ cũ.
 
@@ -10,7 +10,7 @@ Plugin **VGD_BIM** cho SketchUp 2022+ / Windows. Phase 1: Core, Intake, Mapping 
 
 ## Cài đặt
 
-Trong SketchUp, mở **Extensions → Extension Manager → Install Extension**, chọn `VGD_BIM_Lite_v0.1.4-alpha.rbz`. Khởi động lại SketchUp. Menu: **Extensions → VGD → BIM Lite**. Có toolbar hai nút và context menu cho Group/Component.
+Trong SketchUp, mở **Extensions → Extension Manager → Install Extension**, chọn `VGD_BIM_Lite_v1.0.0.rbz`. Khởi động lại SketchUp. Menu: **Extensions → VGD → BIM Lite**. Có toolbar hai nút và context menu cho Group/Component.
 
 Hoặc chạy `dev/deploy.ps1` để cài nguồn runtime vào Plugins của SketchUp 2022. Script chỉ copy file plugin này, sao lưu file cũ và kiểm tra SHA256. `-PluginRoot` chọn bản SketchUp khác; `-VerifyOnly` kiểm tra cài đặt.
 
@@ -59,9 +59,9 @@ end
 
 ## Kiểm thử
 
-- `node dev/check_ruby.cjs`: compile Ruby và chạy test Core/affine geometry/scanner bằng Ruby WASM 3.2; simulation không thay thế SketchUp kernel. Dependency dùng lại dev toolchain trong repository Cabinet; runtime plugin không phụ thuộc thư viện ngoài.
+- `node dev/check_ruby.cjs`: compile Ruby và chạy test Core/affine geometry/scanner bằng Ruby WASM 3.2; simulation không thay thế SketchUp kernel. Dependency lấy từ `plugins/VGD_Scenes/dev/node_modules`; runtime plugin không phụ thuộc thư viện ngoài.
 - `dev/test_ui.cjs`: Playwright + Edge headless; biến `VGD_PLAYWRIGHT_MODULE` trỏ tới Playwright nếu không cài local.
 - `dev/native_smoke.rb`: chạy trong **tiến trình SketchUp mới, model trống** qua `-RubyStartup`, hoặc `load` trong Ruby Console của model trống. Refuse model có geometry/path để bảo vệ file đang làm. Tạo model test theo đặc tả, kiểm tra Undo, geometry, nested selection, save/reopen, ghi `outputs/native_SU22/native_report.json` và SKP test.
 - `dev/package.py`: tạo RBZ, kiểm tra từng byte trong archive và ghi SHA256.
 
-Đọc `VALIDATION.md` để biết phần nào đã thực sự được kiểm chứng trong bản alpha này.
+Bản 1.0.0 mới được kiểm tra tự động (cú pháp Ruby, JSON, đóng gói RBZ), chưa kiểm thử thủ công trong SketchUp. `VALIDATION.md` ghi kết quả kiểm chứng theo bản 0.1.3-alpha; phần nào chưa kiểm trong SketchUp thật xem ở đó.

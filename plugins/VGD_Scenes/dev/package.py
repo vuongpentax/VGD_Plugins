@@ -19,7 +19,7 @@ with zipfile.ZipFile(source, 'w', zipfile.ZIP_DEFLATED) as archive:
         for path in sorted((root / base).rglob('*')):
             if path.is_file() and not {'node_modules', 'outputs', '__pycache__'}.intersection(path.parts):
                 archive.write(path, path.relative_to(root).as_posix())
-    for name in ['README.md', 'CODEX_HANDOFF.md']:
+    for name in ['README.md', 'HANDOFF.md']:
         archive.write(root / name, name)
 with zipfile.ZipFile(source) as archive:
     assert archive.testzip() is None

@@ -1,6 +1,7 @@
 const fs=require('fs'),path=require('path');
 const localDeps=path.resolve(__dirname,'node_modules');
-const deps=fs.existsSync(path.join(localDeps,'@ruby/wasm-wasi')) ? localDeps : path.resolve(__dirname,'../../TPlus_Cabinet_Codex_Handoff_2026-10-01/cabinet_dev/node_modules');
+const deps=fs.existsSync(path.join(localDeps,'@ruby/wasm-wasi')) ? localDeps : process.env.VGD_NODE_MODULES;
+if(!deps)throw Error('Cần @ruby/wasm-wasi: cài vào dev/node_modules hoặc đặt VGD_NODE_MODULES');
 const {RubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/vm.js'));
 const {WASI}=require('wasi');
 (async()=>{

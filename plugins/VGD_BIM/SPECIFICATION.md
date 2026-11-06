@@ -1,5 +1,5 @@
 # VGD BIM Lite v0.1
-## Master Technical Specification for Codex
+## Master Technical Specification
 
 ---
 
@@ -2493,7 +2493,7 @@ VGD BIM Lite phải phục vụ workflow SketchUp nội thất thực tế.
 
 ---
 
-# 88. Yêu cầu dành cho Codex
+# 88. Yêu cầu dành cho bên triển khai
 
 Implement theo phase.
 

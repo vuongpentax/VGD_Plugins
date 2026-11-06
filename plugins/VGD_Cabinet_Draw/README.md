@@ -78,17 +78,21 @@ hoàn tác cách co giãn ván bằng phép biến đổi của group (gây văn
 
 VGD_Cabinet Draw is a standalone SketchUp extension for a semi-automatic cabinet workflow. It keeps the user in control of face orientation, panel positions, door splits, openings, handles, drawers and finishing operations. Preview lives in the viewport; a tool commits model geometry only when the user presses Enter.
 
-The extension is registered independently from VGD_Cabinet. It uses its own `VGD_Cabinet_Draw` model dictionary and `%APPDATA%/VGD/SketchUp/VGD_Cabinet_Draw` data folder. It does not import old cabinet model dictionaries or preset files. The old extension sources remain untouched beside this project.
+The extension is registered independently from VGD_Cabinet. It uses its own `VGD_Cabinet_Draw` model dictionary and `%APPDATA%/VGD/SketchUp/VGD_Cabinet_Draw` data folder. It does not import old cabinet model dictionaries or preset files. VGD_Cabinet remains a separate plugin in `plugins/VGD_Cabinet`.
 
-## Workflow
+## Công cụ và menu
 
-Mô tả dưới đây viết cho beta.1 và chưa đối chiếu lại với beta.33. Khi kiểm thử thủ công beta.33, cần cập nhật lại.
+Theo `TOOLBAR_BUTTONS` và menu trong `runtime/VGD_Cabinet_Draw/main.rb` (menu **Extensions → VGD Cabinet Draw** và thanh công cụ cùng tên):
 
-1. Select a rough box and use **Box → Cabinet**. Click its front face to confirm local orientation.
-2. Add shelves/partitions with the viewport tool. Enter a distance or `/n` in SketchUp's Measurements box to place or divide evenly.
-3. Draw door splits on the cabinet face, set the opening direction, and place drawer fronts and boxes.
-4. Add handles and blockers, then use cut, round and notch tools for manual finishing.
-5. Save settings to a grouped preset for the next model.
+1. **Box → Board**: chọn box rồi click mặt trước để chuyển thành thùng tủ, hoặc chọn face để tạo ván.
+2. **Chia đợt / vách**: chia đợt (nóc/đáy) hoặc vách (hông); rê chuột xem trước, click để đặt.
+3. **Cánh tủ**: chia vùng cánh trên mặt tủ.
+4. **Ngăn kéo**: tạo mặt và thùng kéo.
+5. **VGD Chọn**: bật công cụ rồi chuột phải lên tủ, cánh hoặc mặt hộc để hiện thanh nút tròn tại con trỏ.
+6. **Setting**: mở bảng điều khiển để chỉnh, lưu, xuất và nhập setting cho từng công cụ.
+7. Chỉ có trong menu: **Đóng tất cả cánh của tủ đang chọn**, **Tìm tấm bị trùng**, **Chuẩn hóa tên ván (vai trò + số)**, **Tải lại VGD Cabinet Draw (nạp code mới)**.
+
+Mô tả này lấy từ mã của beta.33; hành vi chi tiết của từng công cụ chưa được kiểm thử thủ công trong SketchUp.
 
 ## Development and validation
 

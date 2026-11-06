@@ -1,6 +1,6 @@
-# VGD Dim · 3.3.0-beta.8
+# VGD Dim · 4.0.1
 
-Baseline source 3.3.0-beta.8: có RBZ beta.8 trong workspace nguồn, 29 mục runtime đã đối chiếu (version.rb chỉ khác kiểu xuống dòng). Không kèm artifact ở repo đích. Đợt chuyển repository chỉ đối chiếu source/checksum; chưa chạy lại test tự động hoặc kiểm thử native SketchUp. Các kết quả PASS bên dưới thuộc lịch sử workspace nguồn.
+Phiên bản hiện tại 4.0.1 (bản sửa lỗi cho 4.0.0), chi tiết ở [RELEASE_NOTES_v4.0.1.md](RELEASE_NOTES_v4.0.1.md). Kiểm tra: tự động bằng mô phỏng (các test trong `dev/` chạy với SketchUp giả lập); chưa kiểm thử trong SketchUp thật. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
 Tiếp tục từ **VGD_Dim_6.rbz (Claude 3.2.0)** theo yêu cầu 07/10/2026. Sidebar 6 mục và scope chung; giữ palette T+ / VGD, có theme sáng/tối. Đọc [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md) cho rà soát/giới hạn/checklist native.
 
@@ -17,7 +17,7 @@ Tiếp tục từ **VGD_Dim_6.rbz (Claude 3.2.0)** theo yêu cầu 07/10/2026. S
 - **Animation**: ghi ShowTransition/TransitionTime/SlideTime/LoopSlideshow trong model. Không chạy slideshow và không có Undo.
 - **Đơn vị model**: nút riêng “Áp đơn vị cho toàn model”, có readback/rollback; APPLY style và preset không ghi đơn vị. Tùy chọn mở chữ Dim dạng số mặc định tắt, giữ chữ có lời mô tả và bỏ nhóm khóa.
 
-Các lệnh Dim không có popup hoàn tất; kết quả/lỗi của thao tác Dim nằm trong dòng trạng thái dialog. Updater hiển thị xác nhận và trạng thái cập nhật riêng. Thay font trong Model Info rồi lưu SKP để mẫu đi cùng file. APPLY style không tự đổi font; dùng Làm mới size hoặc APPLY mẫu Model Info.
+Các lệnh Dim không có popup hoàn tất; kết quả/lỗi của thao tác Dim nằm trong dòng trạng thái dialog. Updater hiển thị xác nhận và trạng thái cập nhật riêng. VGD Dim không tự kiểm tra cập nhật khi khởi động: VGD Center báo bản mới, và menu Extensions → Kiểm tra cập nhật VGD Dim để kiểm tra thủ công. Thay font trong Model Info rồi lưu SKP để mẫu đi cùng file. APPLY style không tự đổi font; dùng Làm mới size hoặc APPLY mẫu Model Info.
 
 ## Mã nhập
 
@@ -45,7 +45,7 @@ Thanh điều hướng hiển thị icon, tên và mô tả khi panel rộng; �
 
 ## Cập nhật online pilot
 
-Bản beta.6 thêm Dim thủ công và quản lý vùng đo. Người dùng beta.5 cài beta.6 một lần qua VGD Center hoặc Extension Manager; các bản sau có thể tải từ package của Center bằng updater. Updater xác minh kích thước và SHA-256; nếu người dùng đồng ý, helper chờ SketchUp đóng rồi thay file whitelist, lưu bản sao thư mục cũ và giữ file ngoài whitelist. Xem [HOW_TO_RELEASE.md](HOW_TO_RELEASE.md).
+Bản beta.6 thêm Dim thủ công và quản lý vùng đo. Người dùng beta.5 cài beta.6 một lần qua VGD Center hoặc Extension Manager; các bản sau có thể tải từ package của Center bằng updater. Updater xác minh kích thước và SHA-256; nếu người dùng đồng ý, helper chờ SketchUp đóng rồi thay file whitelist, lưu bản sao thư mục cũ và giữ file ngoài whitelist.
 
 ## Sửa lỗi khởi động 3.0.1-beta.1 — 05/10/2026
 
