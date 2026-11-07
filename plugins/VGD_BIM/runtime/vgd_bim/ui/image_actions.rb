@@ -67,7 +67,7 @@ module VGD
           jobs.reject! { |index, _| @table_rows[index][:has_image] } if payload['only_missing']
           raise 'Không có đối tượng nào cần chụp.' if jobs.empty?
           raise "Mỗi lần chỉ chụp tối đa #{MAX_CAPTURE_BATCH} đối tượng. Hãy chọn ít hơn." if jobs.size > MAX_CAPTURE_BATCH
-          @capture = {queue: jobs, total: jobs.size, done: 0, errors: [], updated: [], cancel: false, settings: settings}
+          @capture = {queue: jobs, total: jobs.size, done: 0, errors: [], updated: [], cancel: false, notes: [], settings: settings}
           release_preview # khung đánh dấu không được lọt vào ảnh
           hide_overlay
           emit('images_progress', {done: 0, total: jobs.size})
@@ -89,7 +89,9 @@ module VGD
           end
           _index, record = job[:queue].shift
           begin
-            job[:updated] << Capture.shoot(@model, record, job[:settings])
+            result = Capture.shoot(@model, record, job[:settings])
+            job[:updated] << result
+            job[:notes] << result[:note] if result[:note]
           rescue StandardError => error
             BIM.log("Capture failed: #{error.message}")
             job[:errors] << "#{capture_label(record)}: #{capture_error_text(error)}"
@@ -108,7 +110,7 @@ module VGD
           return unless job
           unless @closed
             emit('images_changed', {items: job[:updated].map { |item| {pid: item[:pid], has: true, stamp: item[:stamp]} }})
-            emit('images_done', {done: job[:done], total: job[:total], ok: job[:updated].size, errors: job[:errors].first(5), cancelled: job[:cancel]})
+            emit('images_done', {done: job[:done], total: job[:total], ok: job[:updated].size, errors: job[:errors].first(5), notes: job[:notes].uniq.first(3), cancelled: job[:cancel]})
             show_outline if @mode == 'table'
           end
         end
@@ -123,7 +125,8 @@ module VGD
 
         def capture_error_text(error)
           return 'không ghi được file ảnh, kiểm tra thư mục lưu ảnh.' if error.is_a?(SystemCallError)
-          error.message.match?(/[À-ỹ]/) ? error.message : 'không chụp được.'
+          return error.message if error.message.match?(/[À-ỹ]/)
+          "lỗi #{error.class}: #{error.message[0, 140]} (chi tiết trong capture.log)"
         end
 
         # ---- Ảnh dán / kéo thả từ giao diện ----

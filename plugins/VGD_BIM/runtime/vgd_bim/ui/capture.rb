@@ -1,4 +1,5 @@
 require 'fileutils'
+require_relative '../core/storage'
 
 module VGD
   module BIM
@@ -19,7 +20,8 @@ module VGD
         COLOR_STYLE = {'RenderMode' => 3, 'DisplayColorByLayer' => false}.freeze # shaded có texture, không tô màu theo tag
         WHITE_BACKGROUND = {'DrawGround' => false, 'DrawHorizon' => false}.freeze # cùng với màu nền trắng
 
-        # record: một phần tử của Table.build (có :entity và :path). settings: thiết lập ảnh của preset. Trả về {pid:, stamp:}.
+        # record: một phần tử của Table.build (có :entity và :path). settings: thiết lập ảnh của preset.
+        # Trả về {pid:, stamp:} và thêm :note khi phải chụp bằng cách thay thế (xem write).
         def self.shoot(model, record, settings)
           settings = Preset.settings!(settings)
           entity = record[:entity]
@@ -28,8 +30,9 @@ module VGD
           view = model.active_view
           isolate = ISOLATING_VIEWS.include?(settings['image_view'])
           saved = {camera: copy_camera(view.camera), selection: model.selection.to_a, options: nil}
-          FileUtils.mkdir_p(Images.dir(model))
+          ensure_writable(Images.dir(model))
           operation = false
+          notes = []
           begin
             model.selection.clear
             if isolate
@@ -44,24 +47,100 @@ module VGD
             end
             view.refresh
             size = [settings['image_width'], settings['image_height']]
-            write(view, Images.temp_path(model, pid, :full), size, settings)
+            notes << write(view, Images.temp_path(model, pid, :full), size, settings)
             write(view, Images.temp_path(model, pid, :thumb), thumb_size(*size), settings)
             Images.commit(model, pid, :full)
             Images.commit(model, pid, :thumb)
+          rescue StandardError => error
+            log("#{error.class}: #{error.message} | đối tượng #{pid} | #{settings.inspect} | #{error.backtrace.to_a.first(4).join(' <- ')}")
+            raise
           ensure
-            model.abort_operation if operation
-            restore_options(model, saved[:options])
-            view.camera = saved[:camera]
-            model.selection.clear
-            model.selection.add(*saved[:selection].select(&:valid?))
-            Images::KINDS.each_key { |kind| FileUtils.rm_f(Images.temp_path(model, pid, kind)) }
+            restore(model, view, saved, operation, pid)
           end
-          Images.info(model, pid).merge(pid: pid).reject { |key, _| key == :has }
+          result = Images.info(model, pid).merge(pid: pid).reject { |key, _| key == :has }
+          note = notes.compact.first
+          note ? result.merge(note: note) : result
         end
 
+        # Mỗi bước khôi phục chạy độc lập: một bước lỗi không được làm hỏng các bước sau, cũng không được biến lần chụp
+        # đã thành công thành thất bại (lỗi khôi phục chỉ ghi vào capture.log).
+        def self.restore(model, view, saved, operation, pid)
+          steps = {
+            'hủy thao tác' => -> { model.abort_operation if operation },
+            'trả tuỳ chọn hiển thị' => -> { restore_options(model, saved[:options]) },
+            'trả camera' => -> { view.camera = saved[:camera] },
+            'trả lựa chọn' => -> { restore_selection(model, saved[:selection]) },
+            'dọn file tạm' => -> { Images::KINDS.each_key { |kind| FileUtils.rm_f(Images.temp_path(model, pid, kind)) } }
+          }
+          steps.each do |name, step|
+            begin
+              step.call
+            rescue StandardError => error
+              log("Khôi phục (#{name}) lỗi: #{error.class}: #{error.message}")
+            end
+          end
+        end
+
+        # SketchUp báo lỗi khi gọi Selection#add mà không có đối tượng nào, nên chỉ thêm khi có.
+        def self.restore_selection(model, entities)
+          model.selection.clear
+          valid = entities.select(&:valid?)
+          model.selection.add(*valid) unless valid.empty?
+        end
+
+        # Thư mục ảnh phải tạo được và ghi được (thử ghi một file rỗng); nếu không thì báo rõ trước khi chụp.
+        def self.ensure_writable(dir)
+          FileUtils.mkdir_p(dir)
+          probe = File.join(dir, '.vgd_probe')
+          File.write(probe, '')
+          File.delete(probe)
+        rescue SystemCallError => error
+          log("Thư mục ảnh không ghi được: #{dir} (#{error.class}: #{error.message})")
+          raise "Không ghi được vào thư mục ảnh #{dir}. Hãy chọn thư mục khác trong bảng Preset."
+        end
+
+        # Các cách gọi write_image, thử lần lượt đến khi được: đúng như xin trước, rồi bỏ nền trong suốt, rồi bỏ cả khử răng cưa.
+        # Trả về ghi chú nếu phải dùng cách thay thế (nil nếu chụp đúng như xin).
         def self.write(view, file, size, settings)
-          ok = view.write_image(filename: file, width: size[0], height: size[1], antialias: true, transparent: settings['image_background'] == 'transparent')
-          raise 'SketchUp không chụp được ảnh. Kiểm tra thư mục lưu ảnh.' unless ok
+          transparent = settings['image_background'] == 'transparent'
+          attempts = []
+          attempts << {transparent: true, antialias: true} if transparent
+          attempts << {transparent: false, antialias: true}
+          attempts << {transparent: false, antialias: false}
+          failures = []
+          attempts.each do |extra|
+            begin
+              ok = view.write_image({filename: native_path(file), width: size[0], height: size[1]}.merge(extra))
+              return fallback_note(transparent, extra) if ok
+              failures << "#{extra.inspect} -> write_image trả false"
+            rescue StandardError => error
+              failures << "#{extra.inspect} -> #{error.class}: #{error.message}"
+            end
+          end
+          log("write_image thất bại: #{file} #{size.inspect} | #{failures.join(' | ')} | SketchUp #{Sketchup.respond_to?(:version) ? Sketchup.version : '?'}")
+          raise "SketchUp không chụp được ảnh (đã thử #{attempts.size} cách). File: #{file}, cỡ #{size[0]} x #{size[1]}. Kiểm tra thư mục lưu ảnh và quyền ghi."
+        end
+
+        def self.fallback_note(transparent, extra)
+          lost = []
+          lost << 'nền trong suốt' if transparent && !extra[:transparent]
+          lost << 'khử răng cưa' unless extra[:antialias]
+          lost.empty? ? nil : "#{lost.join(' và ')} không dùng được trên máy này nên ảnh dùng cách thay thế"
+        end
+
+        # SketchUp trên Windows nhận đường dẫn dùng \ ; File.join trộn / và \ nên đổi về một kiểu.
+        def self.native_path(path)
+          File::ALT_SEPARATOR ? path.tr('/', File::ALT_SEPARATOR) : path
+        end
+
+        # Ghi chẩn đoán vào capture.log trong thư mục dữ liệu của plugin (để người dùng gửi khi chụp lỗi). Không bao giờ gây lỗi.
+        def self.log(text)
+          file = File.join(Storage.dir, 'capture.log')
+          FileUtils.mkdir_p(Storage.dir)
+          File.delete(file) if File.exist?(file) && File.size(file) > 200_000
+          File.open(file, 'a:UTF-8') { |f| f.puts("#{Time.now.strftime('%Y-%m-%d %H:%M:%S')}  #{text}") }
+        rescue StandardError
+          nil
         end
 
         # Ảnh nhỏ giữ tỉ lệ của ảnh đầy đủ, cạnh dài là THUMB_SIZE.

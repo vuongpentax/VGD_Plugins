@@ -46,9 +46,11 @@ module VGD; module BIM; module UI
     def self.shoot(model, record, settings)
       pid = record[:entity].persistent_id
       raise 'SketchUp không chụp được ảnh.' if pid == 902
+      raise NoMethodError, "undefined method `bounds' for nil:NilClass" if pid == 906
+      note = pid == 907 ? 'nền trong suốt không dùng được trên máy này nên ảnh dùng cách thay thế' : nil
       $shot << [pid, settings['image_view']]
       Images.write(model, pid, PNG, PNG)
-      {pid: pid, stamp: Images.info(model, pid)[:stamp]}
+      {pid: pid, stamp: Images.info(model, pid)[:stamp], note: note}.compact
     end
   end
 end; end; end
@@ -95,7 +97,7 @@ ok('bấm chụp: ẩn khung đánh dấu để khỏi lọt vào ảnh', $outli
 ok('bấm chụp: báo tiến độ 0/2', events(d, 'images_progress').first == {'done' => 0, 'total' => 2})
 UI.run_timers
 ok('chụp đúng 2 dòng đã chọn, đúng thứ tự, theo thiết lập ảnh của preset (mặc định: góc iso)', $shot == [[901, 'isometric'], [903, 'isometric']])
-ok('báo xong: 2/2 thành công, không lỗi', events(d, 'images_done').last == {'done' => 2, 'total' => 2, 'ok' => 2, 'errors' => [], 'cancelled' => false})
+ok('báo xong: 2/2 thành công, không lỗi', events(d, 'images_done').last == {'done' => 2, 'total' => 2, 'ok' => 2, 'errors' => [], 'notes' => [], 'cancelled' => false})
 ok('báo ảnh đổi để bảng cập nhật cột Ảnh', events(d, 'images_changed').last['items'].map { |i| i['pid'] } == [901, 903] && events(d, 'images_changed').last['items'].all? { |i| i['has'] })
 ok('chế độ bảng: vẽ lại khung đánh dấu sau khi chụp xong', true) # tab Hình ảnh không có khung; kiểm tra riêng bên dưới
 ok('xong thì được chụp lần nữa', (d.safely { d.images_capture('indexes' => [0]) }; UI.run_timers; $shot.size == 3 && $shot.last[0] == 901))
@@ -115,6 +117,22 @@ UI.run_timers
 done = events(d, 'images_done').last
 ok('không nói indexes: chụp mọi dòng trong bảng', $shot.map(&:first) == [901, 903, 904])
 ok('một đối tượng lỗi: các đối tượng khác vẫn chụp, lỗi được báo kèm tên', done['ok'] == 3 && done['total'] == 4 && done['errors'].size == 1 && done['errors'][0].start_with?('Tủ lỗi:'))
+
+# Lỗi tiếng Anh của SketchUp / Ruby không bị che thành "không chụp được": hiện loại lỗi và nội dung để chẩn đoán
+d = make_dialog(7)
+d.safely { d.images_capture('indexes' => [5, 6]) }
+UI.run_timers
+done = events(d, 'images_done').last
+ok('lỗi tiếng Anh của Ruby: hiện loại lỗi và nội dung, không chỉ "không chụp được"', done['errors'].size == 1 && done['errors'][0].include?('NoMethodError') && done['errors'][0].include?("bounds"))
+d = make_dialog(7)
+d.safely { d.images_capture('indexes' => [6]) }
+UI.run_timers
+done = events(d, 'images_done').last
+ok('chụp bằng cách thay thế: ghi chú được gửi cho giao diện, ảnh vẫn tính là chụp được', done['ok'] == 1 && done['notes'] == ['nền trong suốt không dùng được trên máy này nên ảnh dùng cách thay thế'])
+d = make_dialog
+d.safely { d.images_capture('indexes' => [0]) }
+UI.run_timers
+ok('chụp bình thường: không có ghi chú', events(d, 'images_done').last['notes'] == [])
 
 # Nút Dừng
 d = make_dialog(4)

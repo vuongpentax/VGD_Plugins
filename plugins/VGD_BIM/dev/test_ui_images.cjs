@@ -100,8 +100,8 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await page.locator('#cap-stop').isVisible() && await page.locator('#cap-run').isDisabled() && (await page.locator('#cap-progress').innerText()).includes('1/3'),'đang chụp: hiện tiến độ và nút Dừng, khóa nút Cập nhật ảnh');
   await clear();await page.locator('#cap-stop').click();
   ok((await calls('images_cancel')).length===1,'bấm Dừng: gửi lệnh dừng');
-  await receive('images_done',{done:3,total:3,ok:2,errors:['Cab 1: không chụp được.'],cancelled:false});
-  ok(await page.locator('#cap-run').isEnabled() && (await message()).includes('Đã chụp 2/3') && (await message()).includes('Cab 1: không chụp được.'),'chụp xong: mở lại nút, báo số ảnh và lỗi từng đối tượng');
+  await receive('images_done',{done:3,total:3,ok:2,errors:['Cab 1: không chụp được.'],notes:['nền trong suốt không dùng được trên máy này nên ảnh dùng cách thay thế'],cancelled:false});
+  ok((await message()).includes('Lưu ý: nền trong suốt') && await page.locator('#cap-run').isEnabled() && (await message()).includes('Đã chụp 2/3') && (await message()).includes('Cab 1: không chụp được.'),'chụp xong: mở lại nút, báo số ảnh và lỗi từng đối tượng');
 
   // ---- Kéo thả và dán ----
   await receive('table',table());await clear();
@@ -128,6 +128,32 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.locator('.grid tbody tr').nth(2).locator('td[data-key="instance"]').click({modifiers:['Control']});await clear();
   await paste();await page.waitForTimeout(150);
   ok((await calls('image_set')).length===0,'dán khi chọn nhiều dòng: không đoán, không gửi');
+
+  // ---- Bố cục gọn: không còn hướng dẫn nhanh và nút Bỏ chọn; chỉ cuộn các hàng; chân trang và tiêu đề cột cố định ----
+  ok(await page.locator('#quick-help').count()===0 && await page.getByText('Cách dùng nhanh').count()===0,'đã bỏ mục Cách dùng nhanh');
+  ok(await page.getByRole('button',{name:'Bỏ chọn',exact:true}).count()===0 && await page.locator('#primary-actions').isHidden(),'đã bỏ nút Bỏ chọn, thanh nút dưới cùng ẩn trong chế độ bảng');
+  ok(await page.locator('.table-view > p.hint').count()===0 && await page.getByText('Nhấp đúp vào ô để sửa').count()===0 && await page.locator('.table-view > p.muted').count()===0,'đã bỏ đoạn hướng dẫn và chú thích đơn vị trong bảng (chuyển sang file hướng dẫn)');
+  const many=Array.from({length:60},(_,i)=>({...rows[0],index:i,name:'Hàng '+i,pid:2000+i,has_image:false}));
+  await receive('table',table({rows:many}));
+  const lay=await page.evaluate(()=>{
+    const main=document.querySelector('main'),wrap=document.querySelector('.grid-wrap'),bar=document.querySelector('.bottombar');
+    const before={mainScroll:main.scrollHeight-main.clientHeight,wrapScroll:wrap.scrollHeight-wrap.clientHeight};
+    wrap.scrollTop=400;
+    const wr=wrap.getBoundingClientRect(),th=document.querySelector('.grid thead tr:first-child th').getBoundingClientRect(),th2=document.querySelector('.grid thead tr.unit-row th').getBoundingClientRect(),foot=document.querySelector('.grid tfoot td').getBoundingClientRect(),br=bar.getBoundingClientRect();
+    return {...before,table:document.body.classList.contains('table-mode'),headTop:Math.round(th.top-wr.top),unitTop:Math.round(th2.top-wr.top),unitGap:Math.round(th2.top-th.bottom),footGap:Math.round(wr.bottom-foot.bottom),barInside:br.bottom<=window.innerHeight&&br.top>wr.bottom-2,fillGap:Math.round(br.top-wr.bottom),scrolled:wrap.scrollTop};
+  });
+  ok(lay.table && lay.mainScroll<=1,'bảng chiếm đúng chiều cao cửa sổ: trang chính không cuộn');
+  ok(lay.wrapScroll>0 && lay.scrolled>0,'nhiều dòng: chỉ khung bảng cuộn');
+  ok(Math.abs(lay.headTop)<=1 && Math.abs(lay.unitGap)<=1,'cuộn xuống: tiêu đề cột và hàng đơn vị vẫn dính ở đầu khung bảng');
+  ok(Math.abs(lay.footGap)<=1,'cuộn xuống: dòng tổng cộng vẫn dính ở đáy khung bảng');
+  ok(lay.fillGap<=14,'khung bảng kéo dài tới sát chân trang (không để trống khoảng lớn bên dưới)');
+  ok(lay.barInside,'chân trang (các nút gạt) nằm cố định dưới khung bảng, không bị cuộn mất');
+  const sw=await page.locator('.bottombar .sw').first().evaluate(el=>({w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height}));
+  ok(Math.round(sw.w)===40 && Math.round(sw.h)===22,'nút gạt cùng kích thước với tab Quản lý của Center (40 x 22)');
+  await receive('table',table());
+  await receive('config',config('information'));
+  ok(await page.evaluate(()=>!document.body.classList.contains('table-mode')),'sang tab khác: bỏ chế độ bảng, trang chính cuộn bình thường');
+  await receive('config',config('table'));await receive('table',table());
 
   // ---- Mở lại cửa sổ với cột Diện tích chiếu đang hiện: tự bật công tắc một lần (Ruby mặc định đang tắt) ----
   {
@@ -257,8 +283,8 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
 
   // ---- Chân trang ----
   await clear();
-  ok((await page.locator('.bottombar .toggle').allInnerTexts()).join('|')==='Thu phóng đối tượng|Cô lập đối tượng chọn|Chọn sâu bên trong|Diện tích chiếu|Hiển thị dòng tính tổng|Tổng chỉ cấp cao nhất','chân trang: các công tắc, có thêm Diện tích chiếu');
-  await page.getByRole('button',{name:'Diện tích chiếu',exact:true}).click();
+  ok((await page.locator('.bottombar .sw-label').allInnerTexts()).join('|')==='Thu phóng đối tượng|Cô lập đối tượng chọn|Chọn sâu bên trong|Diện tích chiếu|Hiển thị dòng tính tổng|Tổng chỉ cấp cao nhất' && await page.locator('.bottombar button[role="switch"]').count()===6,'chân trang: 6 nút gạt (role switch), có thêm Diện tích chiếu');
+  await page.getByRole('switch',{name:'Diện tích chiếu',exact:true}).click();
   ok(JSON.stringify(await json('table_option'))==='{"projected":true}','công tắc Diện tích chiếu: gửi tuỳ chọn');
   await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();
   ok((await page.locator('.io-panel button').allInnerTexts()).join('|')==='Xuất bảng ra Excel (CSV)|Nhập preset (JSON)|Xuất preset (JSON)','menu Nhập / Xuất có đủ 3 mục');
@@ -293,7 +319,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await page.locator('.grid tfoot td').allInnerTexts().then(t=>t.some(x=>x==='2.500.000')),'dòng tổng cộng: cộng Thành tiền');
   await usePreset('Tất cả').catch(()=>{});await page.keyboard.press('Escape');
   await receive('table',table({options:{zoom:true,isolate:false,deep:false,projected:true,isolating:false}}));
-  ok(await page.locator('.bottombar .toggle[aria-pressed="true"]',{hasText:'Diện tích chiếu'}).count()===1,'công tắc Diện tích chiếu phản ánh tuỳ chọn Ruby gửi về');
+  ok(await page.locator('.bottombar .sw[aria-checked="true"][aria-label="Diện tích chiếu"]').count()===1,'công tắc Diện tích chiếu phản ánh tuỳ chọn Ruby gửi về');
 
   // ---- Thông tin theo đơn vị của preset ----
   await receive('config',config('table'));await receive('table',table());await usePreset('Phòng & Khu vực');await choose('Chiều dài: đơn vị','cm');await choose('Chiều dài: số lẻ',0);await page.keyboard.press('Escape');

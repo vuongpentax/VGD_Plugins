@@ -132,5 +132,6 @@ function imagesProgress(data){
 function imagesDone(data){
   captureState.busy=false;syncBusy();
   const head=data.cancelled?`Đã dừng: chụp được ${data.ok}/${data.total} ảnh.`:`Đã chụp ${data.ok}/${data.total} ảnh.`;
-  message(data.errors.length?`${head} Lỗi: ${data.errors.join(' | ')}`:head,data.errors.length>0&&data.ok===0);
+  const note=(data.notes&&data.notes.length)?` Lưu ý: ${data.notes.join('; ')}.`:'';
+  message((data.errors.length?`${head} Lỗi: ${data.errors.join(' | ')}`:head)+note,data.errors.length>0&&data.ok===0);
 }

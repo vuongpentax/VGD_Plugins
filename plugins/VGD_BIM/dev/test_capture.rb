@@ -44,7 +44,8 @@ module Sketchup
   end
 end
 class FakeSelection < Array
-  def add(*items); items.flatten.each { |i| self << i }; end
+  # SketchUp thật báo lỗi khi gọi add mà không truyền đối tượng nào.
+  def add(*items); raise ArgumentError, 'wrong number of arguments (given 0, expected 1+)' if items.empty?; items.flatten.each { |i| self << i }; end
 end
 class FakeOptions
   def initialize(values); @values = values; end
@@ -53,11 +54,15 @@ class FakeOptions
   def each_key; @values.keys.each; end
 end
 class FakeView
-  attr_accessor :camera, :zoomed, :writes, :fail_next, :fail_on_call, :states
+  attr_accessor :camera, :zoomed, :writes, :fail_next, :fail_on_call, :states, :reject_transparent, :raise_on_transparent, :attempts, :reject_all_options
   def initialize(model); @model = model; @camera = Sketchup::Camera.new(Geom::Point3d.new(0, 0, 100), Geom::Point3d.new(0, 0, 0), Geom::Vector3d.new(0, 0, 1)); @writes = []; @zoomed = []; @states = []; end
   def refresh; end
   def zoom(entity); @zoomed << entity; end
   def write_image(options)
+    (@attempts ||= []) << options.dup
+    raise ArgumentError, 'Invalid option: transparent' if @raise_on_transparent && options[:transparent]
+    return false if @reject_transparent && options[:transparent]
+    return false if @reject_all_options && options[:antialias]
     return false if @fail_next || (@fail_on_call && @writes.size + 1 == @fail_on_call)
     @writes << options
     @states << {hidden: @model.all.select(&:hidden).map(&:pid), selection: @model.selection.map(&:pid), eye: @camera.eye.to_a, target: @camera.target.to_a, options: @model.rendering_options.instance_variable_get(:@values).dup}
@@ -150,20 +155,70 @@ model, items = world
 view = model.active_view
 I.write(model, 11, PNG_BYTES + 'cu'.b, PNG_BYTES)
 view.fail_next = true
-check 'SketchUp không ghi được ảnh: báo lỗi', raises?('chụp') { C.shoot(model, {entity: items[0], path: [items[0]]}, D.merge('image_background' => 'white')) }
+check 'SketchUp không ghi được ảnh: báo lỗi', raises?('không chụp được') { C.shoot(model, {entity: items[0], path: [items[0]]}, D.merge('image_background' => 'white')) }
 check 'lỗi giữa chừng: hủy thao tác, không còn gì bị ẩn, camera, lựa chọn, tuỳ chọn hiển thị như cũ', model.ops == [:start, :abort] && items.none?(&:hidden) && view.camera.eye.to_a == original_eye && model.selection.map(&:pid) == [11, 12] && model.rendering_options.instance_variable_get(:@values) == ORIGINAL_OPTIONS
 check 'lỗi giữa chừng: ảnh cũ còn nguyên, không còn file tạm', File.binread(I.path(model, 11)).end_with?('cu') && Dir[File.join(I.dir(model), '*')].none? { |f| f.include?('.tmp') }
 model, items = world
 view = model.active_view
 I.write(model, 11, PNG_BYTES + 'cu'.b, PNG_BYTES)
 view.fail_on_call = 2
-check 'ảnh nhỏ lỗi sau khi ảnh đầy đủ đã chụp: báo lỗi', raises?('chụp') { C.shoot(model, {entity: items[0], path: [items[0]]}, D) }
+check 'ảnh nhỏ lỗi sau khi ảnh đầy đủ đã chụp: báo lỗi', raises?('không chụp được') { C.shoot(model, {entity: items[0], path: [items[0]]}, D) }
 check 'ảnh nhỏ lỗi: không còn file tạm, cả hai ảnh cũ còn nguyên (không ghi nửa chừng)', Dir[File.join(I.dir(model), '*')].none? { |f| f.include?('.tmp') } && File.binread(I.path(model, 11)).end_with?('cu') && File.binread(I.path(model, 11, :thumb)) == PNG_BYTES && items.none?(&:hidden)
 model, items = world
 bad = Sketchup::Entity.new(666)
 check 'không cô lập được (thành phần dùng chung): báo lỗi rõ, không chụp, trả lại mọi thứ', raises?('dùng chung') { C.shoot(model, {entity: bad, path: [bad]}, D.merge('image_style' => 'color')) } && model.active_view.writes.empty? && model.ops == [:start, :abort] && model.selection.map(&:pid) == [11, 12] && model.rendering_options.instance_variable_get(:@values) == ORIGINAL_OPTIONS
 model, items = world
 check 'không cô lập được nhưng chọn Hiện tại thì vẫn chụp được', (C.shoot(model, {entity: bad, path: [bad]}, D.merge('image_view' => 'current')); model.active_view.writes.size == 2)
+
+# ---- Lỗi thật gặp trong SketchUp: chọn rỗng, tuỳ chọn ảnh không được hỗ trợ ----
+FileUtils.rm_f(File.join(VGD::BIM::Storage.dir, 'capture.log'))
+model, items = world
+model.selection.clear
+result = nil
+check 'không có đối tượng nào đang chọn: chụp vẫn thành công (SketchUp không nhận Selection#add rỗng)', (result = C.shoot(model, {entity: items[0], path: [items[0]]}, D.merge('image_view' => 'current'))) && result[:pid] == 11 && model.selection.empty?
+check 'chọn rỗng: không có lỗi khôi phục nào bị ghi lại (không gọi Selection#add rỗng)', !File.exist?(File.join(VGD::BIM::Storage.dir, 'capture.log')) || !File.read(File.join(VGD::BIM::Storage.dir, 'capture.log'), encoding: 'UTF-8').include?('Khôi phục')
+model, items = world
+model.selection.clear
+check 'chọn rỗng + cô lập: cũng thành công, không còn gì bị ẩn', (C.shoot(model, {entity: items[0], path: [items[0]]}, D)) && items.none?(&:hidden) && model.selection.empty?
+model, items = world
+view = model.active_view
+view.reject_transparent = true
+result = C.shoot(model, {entity: items[0], path: [items[0]]}, D)
+check 'nền trong suốt bị từ chối (write_image trả false): tự thử lại không trong suốt và vẫn chụp được', view.writes.size == 2 && view.writes.all? { |w| w[:transparent] == false } && File.file?(I.path(model, 11))
+check 'chụp bằng cách thay thế: báo cho người dùng biết (nền không trong suốt)', result[:note].to_s.include?('trong suốt')
+model, items = world
+view = model.active_view
+view.raise_on_transparent = true
+result = C.shoot(model, {entity: items[0], path: [items[0]]}, D)
+check 'tuỳ chọn transparent làm SketchUp báo lỗi: cũng tự thử lại và chụp được', view.writes.size == 2 && result[:pid] == 11 && result[:note].to_s.include?('trong suốt')
+model, items = world
+view = model.active_view
+result = C.shoot(model, {entity: items[0], path: [items[0]]}, D.merge('image_background' => 'white'))
+check 'nền trắng (không xin trong suốt): không có ghi chú và chỉ ghi đúng 2 ảnh', result[:note].nil? && view.attempts.size == 2
+model, items = world
+view = model.active_view
+view.reject_transparent = true
+view.reject_all_options = true
+result = C.shoot(model, {entity: items[0], path: [items[0]]}, D)
+check 'chỉ chụp được khi tắt cả khử răng cưa: vẫn thành công, có ghi chú', view.writes.size == 2 && view.writes.all? { |w| w[:antialias] == false } && result[:note].to_s.include?('khử răng cưa')
+model, items = world
+view = model.active_view
+view.fail_next = true
+message = begin; C.shoot(model, {entity: items[0], path: [items[0]]}, D); nil; rescue RuntimeError => e; e.message; end
+check 'mọi cách chụp đều thất bại: báo lỗi có đường dẫn file, cỡ ảnh và số cách đã thử', message.to_s.include?(I.dir(model)) && message.include?('512') && message.include?('3 cách')
+check 'lỗi chụp được ghi vào capture.log để gửi chẩn đoán', File.exist?(File.join(VGD::BIM::Storage.dir, 'capture.log')) && File.read(File.join(VGD::BIM::Storage.dir, 'capture.log'), encoding: 'UTF-8').include?(I.dir(model))
+model, items = world
+view = model.active_view
+values = model.rendering_options.instance_variable_get(:@values)
+model.rendering_options.define_singleton_method(:[]=) { |key, value| raise 'tuỳ chọn hiển thị lỗi' if ORIGINAL_OPTIONS[key] == value; values[key] = value }
+result = nil
+check 'khôi phục tuỳ chọn hiển thị bị lỗi: không biến lần chụp thành công thành thất bại, camera và lựa chọn vẫn được trả lại', (result = C.shoot(model, {entity: items[0], path: [items[0]]}, D.merge('image_style' => 'color'))) && result[:pid] == 11 && view.camera.eye.to_a == [0.0, 0.0, 100.0] && model.selection.map(&:pid) == [11, 12]
+model, items = world
+dir = I.dir(model)
+FileUtils.rm_rf(dir); FileUtils.mkdir_p(File.dirname(dir))
+File.write(dir, 'đây là file chứ không phải thư mục') # thư mục ảnh bị file chiếm chỗ
+check 'thư mục ảnh không tạo / không ghi được: báo lỗi rõ, không chụp, không đổi model', raises?('thư mục ảnh') { C.shoot(model, {entity: items[0], path: [items[0]]}, D) } && model.ops.empty? && model.active_view.writes.empty?
+FileUtils.rm_f(dir)
 
 # ---- Chặn dữ liệu sai ----
 model, items = world
