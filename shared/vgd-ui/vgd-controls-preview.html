@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VGD UI controls</title>
+<link rel="stylesheet" href="../vgd-theme/vgd-theme.css">
+<link rel="stylesheet" href="vgd-controls.css">
+<style>
+  body { margin: 0; padding: 16px; display: flex; flex-direction: column; gap: 16px; height: 100vh; box-sizing: border-box; }
+  h2 { margin-bottom: 6px; }
+  .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+  .demo-split { flex: none; height: 220px; border: 1px solid var(--vgd-border); border-radius: 6px; padding: 8px; }
+  .demo-main { overflow: auto; border: 1px solid var(--vgd-border); border-radius: 6px; flex: 1; min-height: 0; }
+  .demo-main table { border-collapse: collapse; width: 900px; }
+  .demo-main td, .demo-main th { padding: 6px 8px; border-bottom: 1px solid var(--vgd-border); text-align: left; white-space: nowrap; }
+  .list { overflow: auto; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .vgd-sort-item { display: flex; align-items: center; justify-content: space-between; min-height: 26px; padding: 0 4px 0 6px; border-radius: 4px; flex: none; }
+  .vgd-sort-item label { display: flex; gap: 7px; align-items: center; font-size: 12px; cursor: pointer; }
+  .grip { cursor: grab; color: var(--vgd-muted); }
+  button.plain { padding: 5px 10px; border: 1px solid var(--vgd-border); background: var(--vgd-surface); color: var(--vgd-text); border-radius: 4px; cursor: pointer; }
+</style>
+</head>
+<body class="vgd-ui">
+  <section>
+    <h2>Nút gạt (40 x 22)</h2>
+    <div class="row" id="switches"></div>
+  </section>
+  <section>
+    <h2>Ô tick (15 x 15)</h2>
+    <div class="row">
+      <label class="vgd-switch-item"><input type="checkbox" class="vgd-checkbox" checked><span class="vgd-switch-label">Bật</span></label>
+      <label class="vgd-switch-item"><input type="checkbox" class="vgd-checkbox"><span class="vgd-switch-label">Tắt</span></label>
+    </div>
+  </section>
+  <section style="flex:1;min-height:0;display:flex;flex-direction:column">
+    <h2>Ngăn trượt đẩy bảng, danh sách kéo đổi chỗ, không thanh cuộn dọc</h2>
+    <div class="row" style="margin-bottom:6px"><button class="plain" id="toggle" type="button">Mở / đóng ngăn</button></div>
+    <div class="vgd-split demo-split">
+      <aside class="vgd-drawer" id="drawer"><div class="vgd-drawer-in"><div class="list" id="list"></div></div></aside>
+      <div class="vgd-split-main"><div class="demo-main"><table><thead><tr><th>STT</th><th>Tên</th><th>Mô tả</th><th>Kích thước</th><th>Vật liệu</th><th>Ghi chú</th></tr></thead><tbody id="rows"></tbody></table></div></div>
+    </div>
+  </section>
+<script>
+  // Nút gạt: một phần tử, đổi aria-checked tại chỗ
+  const box = document.getElementById('switches');
+  ['Thu phóng đối tượng', 'Cô lập đối tượng chọn', 'Chọn sâu bên trong'].forEach((text, i) => {
+    const item = document.createElement('div'); item.className = 'vgd-switch-item';
+    const sw = document.createElement('button'); sw.type = 'button'; sw.className = 'vgd-switch'; sw.setAttribute('role', 'switch'); sw.setAttribute('aria-checked', String(i === 0)); sw.setAttribute('aria-label', text);
+    const label = document.createElement('span'); label.className = 'vgd-switch-label'; label.textContent = text;
+    const flip = () => sw.setAttribute('aria-checked', String(sw.getAttribute('aria-checked') !== 'true'));
+    sw.onclick = flip; label.onclick = flip; item.append(sw, label); box.append(item);
+  });
+  document.getElementById('rows').innerHTML = Array.from({ length: 30 }, (_, i) => `<tr><td>${i + 1}</td><td>Tủ ${i + 1}</td><td>Gỗ sồi phủ UV</td><td>1200 x 600 x 800</td><td>Gỗ sồi</td><td>Ghi chú ${i + 1}</td></tr>`).join('');
+  // Ngăn trượt: mở sau hai khung hình, đóng rồi dọn nội dung
+  const drawer = document.getElementById('drawer'), list = document.getElementById('list');
+  const names = ['STT', 'Ảnh', 'Mã hạng mục', 'Loại', 'Mô tả', 'Kích thước', 'Thương hiệu', 'Số lượng', 'Vật liệu', 'Tag', 'Tình trạng', 'Đơn giá'];
+  names.forEach((name, i) => {
+    const item = document.createElement('div'); item.className = 'vgd-sort-item'; item.dataset.key = name; item.draggable = true;
+    item.innerHTML = `<label><input type="checkbox" class="vgd-checkbox" ${i < 7 ? 'checked' : ''}><span>${name}</span></label><span class="grip" aria-hidden="true">⠿</span>`;
+    list.append(item);
+  });
+  // FLIP: ghi vị trí cũ, đổi DOM, cho từng mục trượt từ chỗ cũ về chỗ mới
+  function flip(container, mutate) {
+    const before = new Map([...container.children].map(el => [el, el.getBoundingClientRect().top]));
+    mutate();
+    [...container.children].forEach(el => {
+      const dy = before.get(el) - el.getBoundingClientRect().top;
+      if (!dy) return;
+      el.style.transition = 'none'; el.style.transform = `translateY(${dy}px)`; void el.offsetHeight;
+      el.style.transition = 'transform 150ms ease'; el.style.transform = '';
+    });
+  }
+  let dragging = null;
+  list.addEventListener('dragstart', e => { dragging = e.target.closest('.vgd-sort-item'); dragging.classList.add('dragging'); e.dataTransfer.setData('text/plain', dragging.dataset.key); });
+  list.addEventListener('dragend', () => { dragging.classList.remove('dragging'); dragging = null; });
+  list.addEventListener('dragover', e => {
+    e.preventDefault(); const item = e.target.closest('.vgd-sort-item');
+    if (!dragging || !item || item === dragging) return;
+    const r = item.getBoundingClientRect(), after = e.clientY > r.top + r.height / 2, target = after ? item.nextElementSibling : item;
+    if (target === dragging || dragging.nextElementSibling === target) return;
+    flip(list, () => list.insertBefore(dragging, target));
+  });
+  document.getElementById('toggle').onclick = () => {
+    if (drawer.classList.contains('open')) drawer.classList.remove('open');
+    else requestAnimationFrame(() => requestAnimationFrame(() => drawer.classList.add('open')));
+  };
+</script>
+</body>
+</html>

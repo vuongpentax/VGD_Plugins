@@ -50,5 +50,6 @@ Chạy từ `plugins/VGD_BIM`:
 - Mã đối tượng, đường dẫn và ảnh do giao diện gửi lên phải qua `Images` / `Settings` / `Preset` (chỉ nhận PNG, giới hạn dung lượng, mã phải có trong bảng). Không nối đường dẫn từ chuỗi thô của giao diện.
 - Ngôn ngữ English chỉ đổi giao diện: từ điển và mẫu trong `html/i18n.js`, từ điển dữ liệu `config/en.json`. Chuỗi tiếng Việt mới trong giao diện phải có bản dịch (chạy `dev/test_ui_en.cjs`). Báo cáo CSV, thông báo kiểm tra của Ruby và hộp thoại gốc của SketchUp giữ tiếng Việt. Số liệu gốc luôn là mm; đơn vị chiều dài chỉ đổi khi hiển thị.
 - Màu giao diện lấy từ theme VGD (`runtime/vgd_bim/html/vgd-theme/`), không tự đặt màu riêng.
+- Nút gạt, ô tick, thanh cuộn và ngăn Chọn cột trong `html/style.css` theo chuẩn chung `shared/vgd-ui/vgd-controls.css` (số đo và thời lượng hiệu ứng giống nhau). BIM chưa dùng trực tiếp file chung, nên sửa số đo ở đâu thì sửa cả hai chỗ.
 - `update_notice.rb` giữ nguyên để loader cũ vẫn gọi được; plugin không tự báo cập nhật, VGD Center báo bản mới.
 - Đổi tên hoặc đường dẫn extension phải kiểm tra lại `find_installed_extension` và `PLUGIN_LAYOUTS` của VGD Center (`plugins/VGD_Center/VGD_Center/main.rb`).

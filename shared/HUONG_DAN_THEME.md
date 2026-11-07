@@ -107,3 +107,31 @@ Kiểm tra nhanh: `grep -rlE "#[0-9A-Fa-f]{6}\b" plugins --include=*.css --inclu
 - Icon đã có trong plugin (ví dụ Library, Scenes, Dim, Reference) vẫn dùng `#A67C58`. Đổi các icon này là việc riêng, làm từng plugin.
 - Không nền, không khung trang trí. Nhận ra được ở 16–24 px.
 - Chỉ đưa vào plugin sau khi đã duyệt trong `VGD_ICON_SYSTEM_PREVIEW.html`.
+
+## 9. Chuẩn điều khiển và hiệu ứng (nút gạt, thanh cuộn, ngăn trượt)
+
+Rút ra từ VGD_BIM (bản 1.1.0-beta.19) và tab Quản lý của VGD Center. Mã dùng chung nằm ở `shared/vgd-ui/vgd-controls.css`, xem mẫu chạy được ở `shared/vgd-ui/vgd-controls-preview.html`. Khi sửa hoặc làm mới dialog của một plugin, áp theo chuẩn này; không tự đặt số đo khác.
+
+File CSS này **chưa** nằm trong `shared/vgd-theme/` nên `tools/sync_vgd_theme.py` chưa chép vào các plugin. Plugin nào dùng thì chép `vgd-controls.css` vào thư mục dialog của mình, nạp sau `vgd-theme.css`, và `<body class="vgd-ui">`. Khi từ hai plugin trở lên dùng, nên chuyển file vào `shared/vgd-theme/` để công cụ đồng bộ lo (việc đó chép file vào cả 9 plugin nên cần làm riêng và báo trước).
+
+**Nút gạt** (`.vgd-switch`, `<button role="switch" aria-checked>`):
+- Cỡ cố định **40 x 22 px**, bo 11 px, viền 1 px. Đầu gạt **16 x 16 px**, cách mép 2 px, gạt sang `left: 20px`.
+- Tắt: nền `--vgd-elevated`, đầu gạt `--vgd-muted`. Bật: nền và viền `--vgd-accent`, đầu gạt `--vgd-on-accent`.
+- Chữ nhãn 12 px (gọn: 11 px), màu muted khi tắt, màu chữ chính khi bật; bấm vào chữ cũng gạt. Có `aria-label`, viền focus 2 px.
+- Dùng nút gạt cho tuỳ chọn bật / tắt có hiệu lực ngay. Danh sách chọn nhiều mục dùng **ô tick** (`.vgd-checkbox`, 15 x 15 px).
+
+**Thanh cuộn:**
+- **Không hiện thanh cuộn dọc ở bất kỳ đâu** (khung chính, bảng, danh sách, bảng thả xuống). Người dùng vẫn cuộn bằng con lăn chuột; thanh dọc dễ bị lăn nhầm và làm giao diện rối.
+- Chỉ giữ **thanh cuộn ngang mảnh 10 px** ở bảng nhiều cột, để trượt xem.
+- Làm bằng `::-webkit-scrollbar { width: 0; height: 10px }`. **Không** đặt `scrollbar-width` hoặc `scrollbar-gutter` trên các phần tử đó vì trình duyệt sẽ bỏ qua `::-webkit-scrollbar`.
+- Playwright mặc định chạy với `--hide-scrollbars` nên không đo được thanh cuộn; test phải khởi động với `ignoreDefaultArgs: ['--hide-scrollbars']`.
+
+**Hiệu ứng:**
+- Thời lượng: ô tick và đổi chỗ trong danh sách 150 ms, nút gạt 180 ms (`cubic-bezier(.4,0,.2,1)`), ngăn / bảng trượt 220 ms (`ease`). Biến: `--vgd-dur-check`, `--vgd-dur-switch`, `--vgd-dur-panel`, `--vgd-ease`.
+- Hiệu ứng chỉ chạy khi **đổi trạng thái trên cùng một phần tử**. Nếu đoạn mã dựng lại phần tử (xoá rồi tạo mới) sau mỗi lần bấm thì hiệu ứng bị cắt. Khi trạng thái đến từ Ruby, cập nhật `aria-checked` tại chỗ thay vì vẽ lại cả khối.
+- **Ngăn trượt (drawer)** (`.vgd-split` / `.vgd-drawer`): mở ra thì **đẩy** nội dung sang bên, không đè lên, để cột đầu của bảng không bị che. Mở bằng cách thêm class `open` sau hai `requestAnimationFrame` lồng nhau (để width 0 được vẽ trước); đóng bằng cách bỏ `open`, rồi dọn nội dung sau 220 ms.
+- **Kéo đổi chỗ trong danh sách:** dùng kéo thả HTML5, đổi chỗ trực tiếp khi kéo và làm các mục khác trượt bằng kỹ thuật FLIP (ghi vị trí cũ, đổi DOM, đặt `translateY` chênh lệch rồi cho về 0 bằng `transition: transform 150ms ease`). Chốt thứ tự khi thả (`dragend`). Mẫu đầy đủ trong `vgd-controls-preview.html`.
+- Tôn trọng `prefers-reduced-motion: reduce`: tắt toàn bộ hiệu ứng (đã có trong CSS).
+- Chỉ dùng hiệu ứng để giải thích thay đổi (bật / tắt, đổi chỗ, mở ngăn). Không thêm hiệu ứng trang trí.
+
+**Kiểm tra:** đo hiệu ứng giữa chừng (ví dụ đọc `left` của đầu gạt sau 60 ms phải nằm giữa 2 và 20 px) và thử phá code để chắc test báo lỗi đúng. Phần chưa kiểm trong HtmlDialog thật (độ mượt, kéo thả HTML5 trong SketchUp) phải ghi là chưa xác minh.

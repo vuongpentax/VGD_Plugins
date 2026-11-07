@@ -78,6 +78,15 @@ Use `color-scheme: dark` or `color-scheme: light` with the active theme so nativ
 - [SketchUp UX Guidelines](https://developer.sketchup.com/article-ux-guidelines) — menus, compact toolbars, and consistent but distinguishable icons.
 - [Trimble Modus for SketchUp Extensions](https://developer.sketchup.com/trimble-modus) — SketchUp-aligned UI patterns and locally hosted stylesheet guidance. Treat Modus as a reference; VGD's tokens and bronze brand accent remain the shared VGD system.
 
+## Controls and motion
+
+Reference implementation: `shared/vgd-ui/vgd-controls.css` (preview: `shared/vgd-ui/vgd-controls-preview.html`); full rules in Vietnamese in `shared/HUONG_DAN_THEME.md` section 9. Taken from VGD_BIM 1.1.0-beta.19 and the VGD Center manager tab.
+
+- **Switch:** fixed 40 × 22 px, 11 px radius, 1 px border; 16 × 16 px thumb inset 2 px, travelling to `left: 20px`. Off uses `--vgd-elevated` and a muted thumb; on uses the accent fill and `--vgd-on-accent` thumb. Use `role="switch"` with `aria-checked` and a clickable label. Use switches for immediate on/off options and 15 × 15 px checkboxes for multi-select lists.
+- **Scrollbars:** no vertical scrollbar anywhere (mouse wheel still scrolls); keep a thin 10 px horizontal scrollbar for wide tables. Implement with `::-webkit-scrollbar { width: 0; height: 10px }` and do not set `scrollbar-width` or `scrollbar-gutter`, which make the browser ignore it.
+- **Motion:** 150 ms for checkbox ticks and list reordering, 180 ms (`cubic-bezier(.4,0,.2,1)`) for switches, 220 ms for sliding panels. Animate state changes on the same element; never rebuild a control on toggle because that cancels the transition. Reordering uses FLIP. Honour `prefers-reduced-motion`.
+- **Side panels** push the content aside instead of overlaying it, so the first columns of a table stay visible.
+
 ## First-launch and preference behavior
 
 - A new user with no saved choice sees the Windows light or dark theme (`prefers-color-scheme`).
