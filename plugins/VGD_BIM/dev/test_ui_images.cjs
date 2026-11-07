@@ -367,6 +367,64 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   const info=await page.locator('.card').last().innerText();
   ok(info.includes('Rộng × Sâu × Cao (cm)') && info.includes('120 × 60 × 80'),'tab Thông tin: tiêu đề và kích thước theo đơn vị của preset (cm)');
 
+  // ---- Ngăn Chọn cột: đẩy bảng sang phải, hiệu ứng trượt, kéo đổi chỗ, ô tick, nút gạt ----
+  await receive('config',config('table'));await receive('table',table());await usePreset('Tất cả');await page.keyboard.press('Escape');
+  const gridLeft=()=>page.locator('.grid-wrap').evaluate(el=>Math.round(el.getBoundingClientRect().left));
+  const sideBox=()=>page.locator('#col-side').evaluate(el=>{const r=el.getBoundingClientRect();return {left:Math.round(r.left),right:Math.round(r.right),width:Math.round(r.width)};});
+  const left0=await gridLeft();
+  await page.getByRole('button',{name:'Chọn cột',exact:true}).click();
+  await page.waitForTimeout(70);
+  const mid=await sideBox();
+  ok(mid.width>0 && mid.width<230,'mở Chọn cột: ngăn trượt ra từ từ (đang chạy hiệu ứng, chưa đủ rộng)');
+  await page.waitForTimeout(350);
+  const open=await sideBox(),left1=await gridLeft();
+  ok(open.width===230 && left1>=open.right && left1-left0>=230,'mở xong: bảng bị đẩy sang phải, cột đầu tiên không bị ngăn che (bảng bắt đầu sau ngăn)');
+  ok(await page.locator('.col-side .pop-col').count()===(await page.evaluate(()=>tableState.data.columns.length)) && (await page.locator('#cols-btn').getAttribute('aria-expanded'))==='true','ngăn liệt kê đủ cột; nút Chọn cột báo đang mở');
+  ok(await page.evaluate(()=>{const d=document.querySelector('.col-side .pop-density').getBoundingClientRect(),i=document.querySelector('.col-side-in').getBoundingClientRect();return d.bottom<=i.bottom+0.5&&d.height>=24;}),'ngăn Chọn cột: ô Độ cao hàng ở đáy hiện trọn, không bị cắt');
+  const itemH=await page.locator('.col-side .pop-col').first().evaluate(el=>el.getBoundingClientRect().height);
+  ok(itemH<=28,'danh sách gọn: mỗi cột cao tối đa 28px (đo được '+itemH+'px)');
+  // Ô tick: bật / tắt cột không dựng lại ngăn (cùng phần tử, vị trí cuộn giữ nguyên), bảng cập nhật ngay
+  const keep=await page.evaluate(()=>{const list=document.querySelector('.col-side .pop-cols');window.__list=list;list.scrollTop=40;return list.scrollTop;});
+  const firstBox=page.locator('.col-side .pop-col').nth(2).locator('input');
+  const headBefore=await page.locator('.grid thead tr:first-child th').count();
+  await firstBox.click();
+  const after=await page.evaluate(()=>({same:window.__list===document.querySelector('.col-side .pop-cols'),top:window.__list.scrollTop}));
+  ok(after.same && after.top===keep,'bật / tắt cột: ngăn không bị dựng lại, vị trí cuộn của danh sách giữ nguyên');
+  ok((await page.locator('.grid thead tr:first-child th').count())!==headBefore,'bật / tắt cột: bảng đổi theo ngay');
+  await firstBox.click();
+  await page.getByRole('button',{name:'Bỏ chọn tất cả'}).click().catch(()=>{});
+  // Kéo đổi chỗ: mục kéo chuyển chỗ trực tiếp có hiệu ứng, thả xong thứ tự cột của bảng đổi
+  const keysBefore=await page.evaluate(()=>[...document.querySelectorAll('.col-side .pop-col')].map(e=>e.dataset.key));
+  const dragged=await page.evaluate(()=>{
+    const items=[...document.querySelectorAll('.col-side .pop-col')],a=items[3],b=items[1];
+    const dt=new DataTransfer();
+    a.dispatchEvent(new DragEvent('dragstart',{dataTransfer:dt,bubbles:true}));
+    const box=b.getBoundingClientRect();
+    b.dispatchEvent(new DragEvent('dragover',{dataTransfer:dt,bubbles:true,cancelable:true,clientY:box.top+2}));
+    const moving=[...document.querySelectorAll('.col-side .pop-col')].some(el=>getComputedStyle(el).transform!=='none'); // đang giữa hiệu ứng trượt
+    const keys=[...document.querySelectorAll('.col-side .pop-col')].map(e=>e.dataset.key);
+    a.dispatchEvent(new DragEvent('dragend',{dataTransfer:dt,bubbles:true}));
+    return {moving,keys,order:tableState.order.slice(0,5)};
+  });
+  ok(dragged.moving,'kéo đổi chỗ: các mục trượt sang vị trí mới (có hiệu ứng, không nhảy)');
+  ok(dragged.keys[1]===keysBefore[3] && dragged.keys[2]===keysBefore[1] && dragged.order[1]===keysBefore[3],'thả xong: thứ tự cột của bảng đổi theo danh sách (cột kéo lên vị trí mới)');
+  const headers=await page.locator('.grid thead tr:first-child th').allInnerTexts();
+  ok(headers.length>0,'bảng vẫn vẽ lại sau khi đổi thứ tự');
+  // Đóng: ngăn thu lại, bảng trở về chỗ cũ
+  await page.locator('.cs-close').click();
+  await page.waitForTimeout(400);
+  ok((await sideBox()).width===0 && (await gridLeft())===left0 && (await page.locator('.col-side').evaluate(el=>el.childElementCount))===0,'đóng: ngăn thu lại hết, bảng về chỗ cũ');
+  // Nút gạt chân trang: cùng một nút, trượt từ từ
+  const totalsSwitch=page.locator('.bottombar .sw').nth(4);
+  const swBefore=await totalsSwitch.getAttribute('aria-checked');
+  await page.evaluate(()=>{window.__sw=document.querySelectorAll('.bottombar .sw')[4];});
+  await totalsSwitch.click();
+  await page.waitForTimeout(60);
+  const thumb=await page.evaluate(()=>parseFloat(getComputedStyle(window.__sw,'::after').left));
+  ok((await totalsSwitch.getAttribute('aria-checked'))!==swBefore && thumb>2 && thumb<20 && await page.evaluate(()=>window.__sw===document.querySelectorAll('.bottombar .sw')[4]),'nút gạt: cùng một phần tử, đầu gạt đang trượt (không nhảy), trạng thái đổi');
+  await page.waitForTimeout(250);
+  await totalsSwitch.click();await page.waitForTimeout(250);
+
   // ---- Không hiện thanh cuộn dọc ở mọi nơi; chỉ giữ thanh cuộn ngang của bảng ----
   await page.setViewportSize({width:700,height:520});
   const longRows=Array.from({length:60},(_,i)=>({...rows[i%3],index:i,pid:1000+i,name:'Dòng '+i,has_image:false}));
@@ -379,10 +437,10 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.locator('.grid-wrap').hover();await page.mouse.wheel(0,300);await page.waitForTimeout(150);
   ok(await page.locator('.grid-wrap').evaluate(el=>el.scrollTop)>0,'vẫn cuộn dọc được bằng con lăn chuột');
   await page.getByRole('button',{name:'Chọn cột'}).click();
-  const colPop=await bars('.popover');
+  await page.waitForTimeout(350);const colPop=await bars('.col-side .pop-cols');
   ok(colPop.tall && colPop.v===0,'bảng Chọn cột: không có thanh cuộn dọc');
   await page.mouse.move(100,300);await page.mouse.wheel(0,200);await page.waitForTimeout(100);
-  ok(await page.locator('.popover').first().evaluate(el=>el.scrollTop)>0,'bảng Chọn cột: vẫn cuộn được bằng con lăn chuột');
+  ok(await page.locator('.col-side .pop-cols').evaluate(el=>el.scrollTop)>0,'bảng Chọn cột: vẫn cuộn được bằng con lăn chuột');
   await page.getByRole('button',{name:'Chọn cột'}).click();
   await openPresets();
   const presetPanelBars=await bars('#preset-panel');

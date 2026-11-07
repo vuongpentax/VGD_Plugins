@@ -69,7 +69,7 @@ Nút **Preset** nằm cạnh nút Sáng/Tối. Bấm vào để mở bảng gồ
    - **In PDF**: tạo trang báo cáo rồi mở trong trình duyệt; bấm In (hoặc Ctrl+P) và chọn **Lưu thành PDF**. Trang A4 ngang, tiêu đề cột lặp lại mỗi trang.
    - **Cầu nối dữ liệu**: đã có sẵn chỗ trong menu, sẽ làm sau.
 
-Ảnh món đồ nằm trong cột **Ảnh** của Bảng khối lượng (bật trong **Chọn cột**, preset "Tất cả" đã có sẵn). Ảnh **chỉ được chụp khi bạn bấm**, plugin không tự chụp:
+Ảnh món đồ nằm trong cột **Ảnh** của Bảng khối lượng (bật trong **Chọn cột**: ngăn bên trái đẩy bảng sang phải, tick để hiện / ẩn cột, kéo biểu tượng ⠿ để đổi thứ tự; preset "Tất cả" đã có sẵn). Ảnh **chỉ được chụp khi bạn bấm**, plugin không tự chụp:
 
 1. Bấm **Cập nhật ảnh**: hộp xác nhận cho biết sẽ chụp bao nhiêu đối tượng (đang chọn, hoặc tất cả đang hiện). Tích **Chỉ chụp đối tượng chưa có ảnh** để bỏ qua đối tượng đã có. Chụp nhiều thì có nút **Dừng**; mỗi lần tối đa 200 đối tượng.
 2. Rê chuột vào một ô ảnh để chụp lại riêng dòng đó (↻), chọn file ảnh (⋯) hoặc xóa ảnh (×).

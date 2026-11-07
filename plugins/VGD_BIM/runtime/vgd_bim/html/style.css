@@ -126,7 +126,7 @@ body.table-mode #content{flex:1;min-height:0;display:flex;flex-direction:column}
 .table-view{flex:1;min-height:0;display:flex;flex-direction:column;gap:8px}
 .table-view>.hint{flex:none;margin:0}
 .toolbar-wrap{position:relative;flex:none}
-#grid-host{flex:1;min-height:0;display:flex;flex-direction:column}
+#grid-host{flex:1;min-height:0;min-width:0;display:flex;flex-direction:column}
 body.table-mode .grid-wrap{flex:1 1 auto;min-height:0;max-height:none}
 #grid-host>.empty{flex:none;margin:6px 0 0}
 .grid thead tr:first-child th{top:0;height:30px}
@@ -138,9 +138,9 @@ body.table-mode .grid-wrap{flex:1 1 auto;min-height:0;max-height:none}
 
 /* Nút gạt: cùng kiểu với tab Quản lý của VGD Center */
 .sw-item{display:inline-flex;align-items:center;gap:7px}
-.sw{position:relative;width:40px;height:22px;min-width:40px;min-height:22px;padding:0;border-radius:11px;border:1px solid var(--border);background:var(--tile);cursor:pointer}
+.sw{position:relative;width:40px;height:22px;min-width:40px;min-height:22px;padding:0;border-radius:11px;border:1px solid var(--border);background:var(--tile);cursor:pointer;transition:background .18s ease,border-color .18s ease}
 .sw:hover{border-color:var(--accent)}
-.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:left .12s,background .12s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--muted);transition:left .18s cubic-bezier(.4,0,.2,1),background .18s ease}
 .sw[aria-checked="true"]{background:var(--accent);border-color:var(--accent)}
 .sw[aria-checked="true"]::after{left:20px;background:var(--vgd-on-accent,#fff)}
 .sw-label{font-size:12px;color:var(--muted);cursor:pointer;user-select:none}
@@ -174,3 +174,30 @@ body.light #theme{--theme-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://w
 ::-webkit-scrollbar-track,::-webkit-scrollbar-corner{background:transparent}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:5px}
 ::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+/* Ngăn Chọn cột (kiểu Auto Info, gọn): trượt ra bên trái, bảng bị đẩy sang phải nên cột đầu không bị che */
+.tv-split{flex:1;min-height:0;display:flex}
+.col-side{flex:none;width:0;margin-right:0;overflow:hidden;transition:width .22s ease,margin-right .22s ease}
+.col-side.open{width:230px;margin-right:8px}
+.col-side-in{width:230px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:4px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:6px}
+.col-side-in>*{flex:none}
+.cs-head{display:flex;gap:4px;align-items:center}
+.cs-head .pop-search{flex:1;min-width:0;height:28px;margin:0}
+.cs-close{min-height:0;width:26px;height:28px;padding:0;border-color:transparent;background:transparent;color:var(--muted);font-size:16px;line-height:1}
+.cs-close:hover{color:var(--text);background:var(--soft)}
+.cs-all{display:flex;justify-content:space-between;align-items:center;padding:0 4px 0 6px;min-height:24px}
+.cs-all label,.pop-col label{display:flex;gap:7px;align-items:center;font-size:12px;cursor:pointer;min-width:0}
+.col-side .pop-cols{flex:1 1 auto!important;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:0;border-top:1px solid var(--border);padding-top:2px}
+.col-side .pop-col{min-height:26px;padding:0 4px 0 6px;border-radius:4px;flex:none;position:relative}
+.col-side .pop-col .cs-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.col-side .pop-col .drag{cursor:grab;padding:0 2px;font-size:14px}
+.pop-col.dragging{opacity:.5;background:var(--soft)}
+.col-side .pop-density{margin-top:2px;height:26px;font-size:12px}
+.col-side .badge{font-size:10px}
+/* Ô tick tự vẽ: nền và dấu tick chuyển mượt khi bật / tắt */
+.cb{appearance:none;-webkit-appearance:none;flex:none;width:15px;height:15px;min-height:0;margin:0;padding:0;border:1.5px solid var(--muted);border-radius:4px;background:transparent;display:inline-grid;place-content:center;cursor:pointer;transition:background .15s ease,border-color .15s ease}
+.cb::after{content:"";width:8px;height:4px;margin-top:-2px;border-left:2px solid var(--vgd-on-accent,#fff);border-bottom:2px solid var(--vgd-on-accent,#fff);transform:rotate(-45deg) scale(0);transition:transform .15s ease}
+.cb:checked{background:var(--accent);border-color:var(--accent)}
+.cb:checked::after{transform:rotate(-45deg) scale(1)}
+.cb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+@media (prefers-reduced-motion:reduce){.col-side,.sw,.sw::after,.cb,.cb::after{transition:none}}

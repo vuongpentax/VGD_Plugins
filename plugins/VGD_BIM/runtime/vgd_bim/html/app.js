@@ -611,7 +611,7 @@ function imageIcon(){
 }
 function toolbar(){
   const d=tableState.data;const bar=node('div',undefined,'toolbar');
-  const cols=button('Chọn cột',()=>{tableState.panel=tableState.panel==='columns'?null:'columns';tableView(tableState.data);},'primary');
+  const cols=button('Chọn cột',toggleColumns,'primary');cols.id='cols-btn';
   cols.setAttribute('aria-expanded',String(tableState.panel==='columns'));
   const searchWrap=node('div',undefined,'search-wrap');
   const search=node('input');search.type='text';search.placeholder='Tìm kiếm...';search.value=tableState.search;search.setAttribute('aria-label','Tìm trong bảng');
@@ -660,40 +660,127 @@ function capturePanel(){
   p.append(actions);
   return p;
 }
-function columnPanel(){
-  const d=tableState.data;const total=d.columns.length;
-  const p=node('div',undefined,'popover left');
-  const head=node('div',undefined,'pop-head');
-  const all=node('input');all.type='checkbox';all.checked=tableState.visible.size===total;all.setAttribute('aria-label','Chọn tất cả cột');
-  all.onchange=()=>{tableState.visible=all.checked?new Set(d.columns.map(c=>c.key)):new Set();ensureProjected();tableView(d);syncCustomPreset();};
-  const allLabel=node('label');allLabel.append(all,document.createTextNode(' Bỏ chọn tất cả'));
-  head.append(allLabel,node('span',`${tableState.visible.size} / ${total}`,'badge'));
-  const search=node('input');search.type='search';search.placeholder='Tìm cột...';search.value=tableState.colSearch;search.className='pop-search';
+// ---- Ngăn Chọn cột: trượt ra bên trái và đẩy bảng sang phải (cột đầu không bị che), gọn theo kiểu Auto Info ----
+const SIDE_MS=220;
+// Sau khi đổi cột hiện / thứ tự: vẽ lại bảng (giữ vị trí cuộn), lưu, cập nhật số đếm; không dựng lại cả khung bảng.
+function refreshColumns(){
+  const host=$('grid-host');if(!host||!tableState.data)return;
+  const old=host.querySelector('.grid-wrap');const scroll=old?{top:old.scrollTop,left:old.scrollLeft}:null;
+  renderGrid(host);
+  const wrap=host.querySelector('.grid-wrap');if(scroll&&wrap){wrap.scrollTop=scroll.top;wrap.scrollLeft=scroll.left;}
+  syncCustomPreset();persistView();updateReplaceUi();updateColumnCounts();
+}
+function updateColumnCounts(){
+  const side=$('col-side');if(!side)return;
+  const total=tableState.data.columns.length,n=tableState.visible.size;
+  const badge=side.querySelector('.badge'),all=side.querySelector('.cs-all input'),label=side.querySelector('.cs-all .cs-all-text');
+  if(badge)badge.textContent=`${n} / ${total}`;
+  if(all)all.checked=n===total;
+  if(label)label.textContent=n===total?'Bỏ chọn tất cả':'Chọn tất cả';
+}
+// Hiệu ứng đổi chỗ (FLIP): ghi vị trí cũ, đổi DOM, rồi cho từng mục trượt từ vị trí cũ về vị trí mới.
+function flipList(list,mutate){
+  const before=new Map([...list.children].map(el=>[el,el.getBoundingClientRect().top]));
+  mutate();
+  [...list.children].forEach(el=>{
+    const dy=before.get(el)-el.getBoundingClientRect().top;
+    if(!dy)return;
+    el.style.transition='none';el.style.transform=`translateY(${dy}px)`;
+    void el.offsetHeight;
+    el.style.transition=`transform ${SIDE_MS-70}ms ease`;el.style.transform='';
+    const clean=()=>{el.style.transition='';el.removeEventListener('transitionend',clean);};
+    el.addEventListener('transitionend',clean);
+  });
+}
+// Đặt các khoá đang hiện (đã lọc) theo thứ tự mới vào đúng các vị trí chúng đang chiếm trong thứ tự đầy đủ.
+function applyListOrder(keys){
+  const slots=[];tableState.order.forEach((k,i)=>{if(keys.includes(k))slots.push(i);});
+  const order=[...tableState.order];slots.forEach((slot,n)=>{order[slot]=keys[n];});
+  tableState.order=order;
+}
+function sortableList(list){
+  let dragging=null;
+  list.querySelectorAll('.pop-col').forEach(item=>{
+    item.draggable=true;
+    item.ondragstart=e=>{dragging=item;item.classList.add('dragging');e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',item.dataset.key);};
+    item.ondragend=()=>{
+      item.classList.remove('dragging');dragging=null;
+      const keys=[...list.children].map(el=>el.dataset.key);
+      const before=tableState.order.filter(k=>keys.includes(k));
+      if(keys.some((k,i)=>k!==before[i])){applyListOrder(keys);refreshColumns();}
+    };
+    item.ondragover=e=>{
+      e.preventDefault();if(!dragging||dragging===item)return;
+      const box=item.getBoundingClientRect(),after=e.clientY>box.top+box.height/2;
+      const target=after?item.nextElementSibling:item;
+      if(target===dragging||dragging.nextElementSibling===target)return;
+      flipList(list,()=>list.insertBefore(dragging,target));
+    };
+  });
+}
+function renderColumnList(list){
+  const q=tableState.colSearch.trim().toLocaleLowerCase('vi');
+  list.replaceChildren();
+  tableState.order.forEach(key=>{
+    const col=colByKey(key);if(!col)return;
+    if(q&&!colLabel(col).toLocaleLowerCase('vi').includes(q))return;
+    const item=node('div',undefined,'pop-col');item.dataset.key=key;
+    const box=node('input',undefined,'cb');box.type='checkbox';box.checked=tableState.visible.has(key);
+    box.onchange=()=>{if(box.checked)tableState.visible.add(key);else tableState.visible.delete(key);if(box.checked&&key==='areaProjected')ensureProjected();refreshColumns();};
+    const label=node('label');label.append(box,node('span',colLabel(col),'cs-name'));
+    const grip=node('span','⠿','drag');grip.setAttribute('aria-hidden','true');
+    item.append(label,grip);list.append(item);
+  });
+  sortableList(list);
+}
+function buildColumnPanel(side){
+  const inner=node('div',undefined,'col-side-in');
+  const head=node('div',undefined,'cs-head');
+  const search=node('input');search.type='search';search.placeholder='Tìm cột...';search.value=tableState.colSearch;search.className='pop-search';search.setAttribute('aria-label','Tìm cột');
+  const close=button('×',closeColumns,'cs-close');close.title='Ẩn danh sách cột';close.setAttribute('aria-label','Ẩn danh sách cột');
+  head.append(search,close);
+  const bar=node('div',undefined,'cs-all');
+  const allBox=node('input',undefined,'cb');allBox.type='checkbox';allBox.setAttribute('aria-label','Chọn tất cả cột');
+  allBox.onchange=()=>{
+    tableState.visible=allBox.checked?new Set(tableState.data.columns.map(c=>c.key)):new Set();ensureProjected();
+    side.querySelectorAll('.pop-col input').forEach(b=>{b.checked=allBox.checked;});
+    refreshColumns();
+  };
+  const allLabel=node('label');allLabel.append(allBox,node('span','Bỏ chọn tất cả','cs-all-text'));
+  bar.append(allLabel,node('span',undefined,'badge'));
   const list=node('div',undefined,'pop-cols');
   search.oninput=()=>{tableState.colSearch=search.value;renderColumnList(list);};
   renderColumnList(list);
   const density=node('select');density.setAttribute('aria-label','Độ cao hàng');density.className='pop-density';
   [['','Hàng: Vừa'],['dense','Hàng: Gọn'],['roomy','Hàng: Thoáng']].forEach(([v,t])=>density.append(new Option(t,v)));
   density.value=tableState.density;density.onchange=()=>{tableState.density=density.value;renderGrid($('grid-host'));persistView();};
-  p.append(head,search,list,density);
-  return p;
+  inner.append(head,bar,list,density);
+  side.replaceChildren(inner);
+  updateColumnCounts();
 }
-function renderColumnList(list){
-  const d=tableState.data;const q=tableState.colSearch.trim().toLocaleLowerCase('vi');
-  list.replaceChildren();
-  tableState.order.forEach(key=>{
-    const col=colByKey(key);if(!col)return;
-    if(q&&!colLabel(col).toLocaleLowerCase('vi').includes(q))return;
-    const item=node('div',undefined,'pop-col');item.draggable=true;
-    item.ondragstart=e=>{tableState.dragKey=key;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',key);};
-    item.ondragover=e=>e.preventDefault();
-    item.ondrop=e=>{e.preventDefault();const from=tableState.dragKey;tableState.dragKey=null;if(!from||from===key)return;const order=tableState.order.filter(k=>k!==from);order.splice(order.indexOf(key),0,from);tableState.order=order;tableView(d);syncCustomPreset();};
-    const box=node('input');box.type='checkbox';box.checked=tableState.visible.has(key);
-    box.onchange=()=>{if(box.checked)tableState.visible.add(key);else tableState.visible.delete(key);if(box.checked&&key==='areaProjected')ensureProjected();tableView(d);syncCustomPreset();};
-    const label=node('label');label.append(box,document.createTextNode(' '+colLabel(col)));
-    const grip=node('span','⠿','drag');grip.setAttribute('aria-hidden','true');
-    item.append(label,grip);list.append(item);
-  });
+function openColumns(animate=true){
+  const side=$('col-side');if(!side)return;
+  clearTimeout(side._closing);
+  tableState.panel='columns';
+  buildColumnPanel(side);
+  const btn=$('cols-btn');if(btn)btn.setAttribute('aria-expanded','true');
+  if(!animate){side.classList.add('open');return;}
+  requestAnimationFrame(()=>requestAnimationFrame(()=>side.classList.add('open'))); // hai khung hình để width 0 được vẽ trước khi trượt ra
+}
+function closeColumns(animate=true){
+  const side=$('col-side');
+  if(tableState.panel==='columns')tableState.panel=null;
+  const btn=$('cols-btn');if(btn)btn.setAttribute('aria-expanded','false');
+  if(!side)return;
+  side.classList.remove('open');
+  clearTimeout(side._closing);
+  const empty=()=>side.replaceChildren();
+  if(animate)side._closing=setTimeout(empty,SIDE_MS+60);else empty();
+}
+function toggleColumns(){
+  if(tableState.panel==='columns'){closeColumns();return;}
+  const other=!!tableState.panel; // đang mở bảng khác (Đổi tên, Chụp ảnh...): đóng bảng đó khi mở ngăn này
+  openColumns();if(other)tableView(tableState.data);
 }
 // Nút gạt (công tắc) giống tab Quản lý của VGD Center: bấm vào nút hoặc chữ đều gạt.
 function toggleButton(text,on,handler){
@@ -765,20 +852,29 @@ function ioPanel(){
   return p;
 }
 function bottomBar(){
-  const d=tableState.data;const bar=node('div',undefined,'bottombar');
+  const options=()=>tableState.data.options;
+  const bar=node('div',undefined,'bottombar');
   const switches=node('div',undefined,'switches');
-  switches.append(toggleButton('Thu phóng đối tượng',d.options.zoom,()=>call('table_option',JSON.stringify({zoom:!d.options.zoom}))));
-  switches.append(toggleButton('Cô lập đối tượng chọn',d.options.isolate,()=>call('table_option',JSON.stringify({isolate:!d.options.isolate}))));
-  switches.append(toggleButton('Chọn sâu bên trong',d.options.deep,()=>call('table_option',JSON.stringify({deep:!d.options.deep}))));
-  switches.append(toggleButton('Diện tích chiếu',d.options.projected,()=>call('table_option',JSON.stringify({projected:!d.options.projected}))));
-  switches.append(toggleButton('Hiển thị dòng tính tổng',tableState.showTotals,()=>{tableState.showTotals=!tableState.showTotals;tableView(d);}));
-  switches.append(toggleButton('Tổng chỉ cấp cao nhất',tableState.onlyTop,()=>{tableState.onlyTop=!tableState.onlyTop;tableView(d);}));
+  switches.append(toggleButton('Thu phóng đối tượng',options().zoom,()=>call('table_option',JSON.stringify({zoom:!options().zoom}))));
+  switches.append(toggleButton('Cô lập đối tượng chọn',options().isolate,()=>call('table_option',JSON.stringify({isolate:!options().isolate}))));
+  switches.append(toggleButton('Chọn sâu bên trong',options().deep,()=>call('table_option',JSON.stringify({deep:!options().deep}))));
+  switches.append(toggleButton('Diện tích chiếu',options().projected,()=>call('table_option',JSON.stringify({projected:!options().projected}))));
+  switches.append(toggleButton('Hiển thị dòng tính tổng',tableState.showTotals,()=>{tableState.showTotals=!tableState.showTotals;tableView(tableState.data);}));
+  switches.append(toggleButton('Tổng chỉ cấp cao nhất',tableState.onlyTop,()=>{tableState.onlyTop=!tableState.onlyTop;tableView(tableState.data);}));
   const menu=node('div',undefined,'footer-menu');
   const io=button('Nhập / Xuất ▾',()=>{tableState.panel=tableState.panel==='io'?null:'io';tableView(tableState.data);});
   io.setAttribute('aria-expanded',String(tableState.panel==='io'));
   menu.append(io);if(tableState.panel==='io')menu.append(ioPanel());
   bar.append(switches,menu);
   return bar;
+}
+// Chân trang đã có thì chỉ đổi trạng thái từng công tắc tại chỗ (nút gạt trượt mượt, không bị dựng lại giữa chừng).
+function syncBottomBar(view){
+  const fresh=bottomBar(),old=view.querySelector('.bottombar');
+  if(!old){view.append(fresh);return;}
+  const switches=old.querySelectorAll('.sw');
+  fresh.querySelectorAll('.sw').forEach((sw,i)=>{if(switches[i]&&switches[i].getAttribute('aria-checked')!==sw.getAttribute('aria-checked'))switches[i].setAttribute('aria-checked',sw.getAttribute('aria-checked'));});
+  old.querySelector('.footer-menu').replaceWith(fresh.querySelector('.footer-menu'));
 }
 function tableView(data){
   tableState.data=data;
@@ -787,20 +883,31 @@ function tableView(data){
   if(!restored&&!tableState.order.length)applyPreset(tableState.preset);
   if(!(data.presets||[]).some(p=>p.name===tableState.preset))applyPreset((data.presets||[])[0].name);
   if(!tableState.projectedChecked){tableState.projectedChecked=true;ensureProjected();} // preset đã lưu có cột Diện tích chiếu: bật công tắc một lần khi bảng nạp xong
-  const content=$('content');const old=content.querySelector('.grid-wrap');const scroll=old?{top:old.scrollTop,left:old.scrollLeft}:null;
-  content.replaceChildren();
-  const view=node('div',undefined,'table-view');content.append(view);
-  if(data.hint)view.append(node('p',data.hint,'hint'));
-  const bar=node('div',undefined,'toolbar-wrap');
-  bar.append(toolbar());
-  if(tableState.panel==='columns')bar.append(columnPanel());
+  const content=$('content');
+  let view=content.querySelector('.table-view');
+  const fresh=!view;
+  if(fresh){ // khung bảng dựng một lần; các lần sau chỉ làm mới từng phần để ngăn Chọn cột và công tắc giữ nguyên hiệu ứng
+    content.replaceChildren();
+    view=node('div',undefined,'table-view');content.append(view);
+    const split=node('div',undefined,'tv-split'),side=node('aside',undefined,'col-side');side.id='col-side';
+    const host=node('div');host.id='grid-host';split.append(side,host);
+    view.append(node('div',undefined,'toolbar-wrap'),split);
+  }
+  const hint=view.querySelector(':scope>.hint');
+  if(data.hint){if(hint)hint.textContent=data.hint;else view.prepend(node('p',data.hint,'hint'));}else if(hint)hint.remove();
+  const bar=view.querySelector('.toolbar-wrap');
+  bar.replaceChildren(toolbar());
   if(tableState.panel==='capture')bar.append(capturePanel());
   if(tableState.panel==='rename')bar.append(renamePanel());
-  view.append(bar);
-  const host=node('div');host.id='grid-host';view.append(host);
+  const side=$('col-side'),host=$('grid-host');
+  if(tableState.panel==='columns'){
+    if(fresh||!side.classList.contains('open')&&!side.firstChild)openColumns(!fresh);
+    else{renderColumnList(side.querySelector('.pop-cols'));updateColumnCounts();}
+  }else if(side.classList.contains('open'))closeColumns();
+  const old=host.querySelector('.grid-wrap');const scroll=old?{top:old.scrollTop,left:old.scrollLeft}:null;
   renderGrid(host);
   if(scroll){const wrap=host.querySelector('.grid-wrap');if(wrap){wrap.scrollTop=scroll.top;wrap.scrollLeft=scroll.left;}}
-  view.append(bottomBar());
+  syncBottomBar(view);
   persistView();updatePresetButton();updateReplaceUi();syncBusy();
   $('primary-actions').replaceChildren(); // bỏ chọn bằng cách bấm vùng trống trong SketchUp hoặc nhấn Esc trong bảng
 }
