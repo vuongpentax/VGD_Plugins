@@ -4,7 +4,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Thông tin plugin
 
-- Tên extension: VGD_BIM (tên cũ là "VGD BIM Lite"; VGD Center nhận cả hai tên qua `find_installed_extension`). Namespace: `VGD::BIM`. Id trong catalog của Center: `bim_lite`.
+- Tên extension: VGD_BIM (VGD Center chỉ nhận tên này qua `find_installed_extension`). Namespace: `VGD::BIM`. Id trong catalog của Center: `bim_lite`.
 - Loader: `runtime/vgd_bim_lite.rb` (nạp `vgd_bim_lite/loader`). Thư mục và tên file giữ `vgd_bim_lite` vì Center khai báo đúng hai đường dẫn này.
 - Phiên bản: hằng `VERSION` trong `runtime/vgd_bim_lite.rb` (dạng `x.y.z` hoặc `x.y.z-beta.N`, không có chữ `v`). Tiêu đề README phải khớp số này. Đóng gói cần có `RELEASE_NOTES_v<x.y.z>.md` (bản beta dùng chung ghi chú của bản chốt).
 - SketchUp tối thiểu: 2022. Windows là môi trường chính.
