@@ -196,13 +196,18 @@ module VGD
         nil
       end
 
-      # 12 cạnh của khung bao quanh đối tượng, theo tọa độ thế giới.
-      def self.world_corners(record)
+      # 8 góc của khung bao quanh đối tượng, theo tọa độ thế giới (rỗng nếu đối tượng không có hình).
+      def self.box_corners(record)
         box = Geometry.definition(record[:entity]).bounds
         return [] if box.empty?
-        corners = (0..7).map { |i| box.corner(i).transform(record[:transform]) }
+        (0..7).map { |i| box.corner(i).transform(record[:transform]) }
+      end
+
+      # 12 cạnh của khung bao quanh đối tượng, theo tọa độ thế giới.
+      def self.world_corners(record)
+        corners = box_corners(record)
         points = []
-        (0..7).each do |i|
+        corners.each_index do |i|
           [1, 2, 4].each do |bit|
             next if i & bit != 0
             points << corners[i] << corners[i | bit]
@@ -211,29 +216,14 @@ module VGD
         points
       end
 
-      # Các tam giác của mặt đối tượng (kể cả group lồng bên trong), theo tọa độ thế giới, dùng để tô nhẹ.
-      # Giới hạn số điểm để model lớn không bị chậm.
-      def self.face_triangles(record, max_points = 60_000)
-        triangles = []
-        collect = lambda do |entities, transform|
-          entities.each do |entity|
-            break if triangles.size >= max_points
-            if entity.is_a?(Sketchup::Face)
-              mesh = entity.mesh(0)
-              (1..mesh.count_polygons).each do |i|
-                pts = mesh.polygon_at(i).map { |k| mesh.point_at(k.abs).transform(transform) }
-                (1...pts.size - 1).each { |j| triangles << pts[0] << pts[j] << pts[j + 1] }
-              end
-            elsif entity.is_a?(Sketchup::Group) || entity.is_a?(Sketchup::ComponentInstance)
-              collect.call(Geometry.definition(entity).entities, transform * entity.transformation)
-            end
-          end
-        end
-        collect.call(Geometry.definition(record[:entity]).entities, record[:transform])
-        triangles
-      rescue StandardError => error
-        BIM.log("Face fill skipped: #{error.message}")
-        []
+      # 6 mặt của khung bao (mỗi mặt là 4 góc theo vòng), dùng để tô nhẹ.
+      BOX_FACES = [[0, 2, 6, 4], [1, 3, 7, 5], [0, 1, 5, 4], [2, 3, 7, 6], [0, 1, 3, 2], [4, 5, 7, 6]].freeze
+
+      # 12 tam giác tô nhẹ khung bao. Chỉ dùng 8 góc của hộp, không duyệt mặt của đối tượng nên nhẹ dù chọn rất nhiều đối tượng.
+      def self.box_triangles(record)
+        corners = box_corners(record)
+        return [] if corners.empty?
+        BOX_FACES.flat_map { |a, b, c, d| [corners[a], corners[b], corners[c], corners[a], corners[c], corners[d]] }
       end
 
       def self.bounding_box(record)

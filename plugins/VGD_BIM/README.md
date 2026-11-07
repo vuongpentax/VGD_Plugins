@@ -1,4 +1,4 @@
-# VGD_BIM 1.1.0-beta.9
+# VGD_BIM 1.1.0-beta.10
 
 Bản thử của 1.1.0 (bản ổn định gần nhất là 1.0.0, tên cũ "VGD BIM Lite"). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -42,7 +42,7 @@ Cài đặt của người dùng lưu thành file JSON trong `%APPDATA%\VGD\VGD_
 - `Geometry.dimensions(entity, record[:transform])` đo đúng nested occurrence. Không truyền transform thì dùng transformation của instance trong parent context; vì shared nested entity có nhiều đường dẫn, không tự suy đoán parent occurrence.
 - W/D/H là độ dài bounding box local theo các trục đã transform, không phải world-aligned bounding box khi quay. Đây là kích thước thích hợp để nhận diện đồ nội thất.
 - Chọn đối tượng không quét toàn model; chỉ tab Quét & xuất, Phân loại và Kiểm tra quét model, và chỉ khi mở tab hoặc bấm làm mới. Bảng khối lượng chỉ đọc sâu bên trong khi bật "Chọn sâu bên trong".
-- Khung đánh dấu: từ SketchUp 2023 vẽ bằng lớp phủ (Overlay, hiện trong danh sách Overlays của SketchUp) nên không chiếm công cụ đang dùng: chọn nhiều bằng Shift/Ctrl, kéo chọn và nhấp đúp vào group là của SketchUp như mặc định. SketchUp 2022 không có lớp phủ nên khung là công cụ vẽ tạm: click vẫn chọn được đối tượng nhưng Shift/Ctrl-chọn nhiều, kéo chọn và nhấp đúp vào group bị chặn, chọn công cụ khác thì khung tự gỡ. Nếu lớp phủ báo lỗi, plugin quay về cách công cụ. Khung vẽ bằng tọa độ màn hình; chiều rộng khung tên ước lượng theo số ký tự, nên có thể hụt hoặc dư; trên màn hình độ phân giải cao tọa độ 2D có thể lệch. Tô mặt giới hạn 60.000 điểm. Với cách công cụ (SketchUp 2022), nhấn Esc để tắt khung; với lớp phủ, bỏ chọn là khung tắt.
+- Khung đánh dấu: từ SketchUp 2023 vẽ bằng lớp phủ (Overlay, hiện trong danh sách Overlays của SketchUp) nên không chiếm công cụ đang dùng: chọn nhiều bằng Shift/Ctrl, kéo chọn và nhấp đúp vào group là của SketchUp như mặc định. SketchUp 2022 không có lớp phủ nên khung là công cụ vẽ tạm: click vẫn chọn được đối tượng nhưng Shift/Ctrl-chọn nhiều, kéo chọn và nhấp đúp vào group bị chặn, chọn công cụ khác thì khung tự gỡ. Nếu lớp phủ báo lỗi, plugin quay về cách công cụ. Khung vẽ bằng tọa độ màn hình; chiều rộng khung tên ước lượng theo số ký tự, nên có thể hụt hoặc dư; trên màn hình độ phân giải cao tọa độ 2D có thể lệch. Khung chỉ gồm hộp bao quanh đối tượng (12 cạnh nét đứt và tô nhẹ 6 mặt của hộp, 8 góc), không duyệt từng mặt của đối tượng nên nhẹ dù chọn rất nhiều đối tượng. Khung tên đo chiều rộng chữ thật (`View#text_bounds`) để hộp ôm đúng chữ; tên dài hơn 360 điểm ảnh được rút gọn bằng "…" để chữ không tràn hộp. Với cách công cụ (SketchUp 2022), nhấn Esc để tắt khung; với lớp phủ, bỏ chọn là khung tắt.
 - Preset mặc định không gán description: người dùng cần nhập mô tả để đạt ready khi include_boq=true. Item type là chuỗi mở rộng.
 - Plugin chưa ký phát hành; tuân theo chính sách loading extensions hiện tại của SketchUp.
 
@@ -77,4 +77,4 @@ Chạy từ `plugins/VGD_BIM`:
 - `python3 dev/make_preview.py`: tạo trang HTML xem trước giao diện với dữ liệu mẫu (`outputs/VGD_BIM_giao_dien.html`).
 - `python plugins/VGD_BIM/dev/package.py <phiên bản>` (từ gốc repo): tạo RBZ trong `outputs/local_release_<phiên bản>/`, kiểm tra từng byte trong archive và in SHA-256.
 
-Bản 1.1.0-beta.9 được kiểm tra tự động bằng mô phỏng, chưa kiểm thử thủ công trong SketchUp thật. `VALIDATION.md` ghi chi tiết phần đã và chưa kiểm chứng.
+Bản 1.1.0-beta.10 được kiểm tra tự động bằng mô phỏng, chưa kiểm thử thủ công trong SketchUp thật. `VALIDATION.md` ghi chi tiết phần đã và chưa kiểm chứng.

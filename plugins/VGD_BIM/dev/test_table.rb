@@ -64,4 +64,35 @@ T.delete_preset('Tủ "bếp" trên')
 T.save_view_state('preset' => 'Đồ rời', 'order' => %w[quantity abc lenX], 'visible' => %w[quantity], 'widths' => {'lenX' => 90, 'zzz' => 5}, 'hack' => 1)
 v = T.view_state
 check 'trạng thái bảng lưu và đọc lại, bỏ cột lạ', v['preset'] == 'Đồ rời' && v['order'] == %w[quantity lenX] && v['widths'] == {'lenX' => 90} && !v.key?('hack')
+# Khung bao quanh đối tượng (chỉ 8 góc của hộp, không duyệt mặt của đối tượng nên nhẹ khi chọn nhiều)
+class BoxPoint
+  attr_reader :x, :y, :z
+  def initialize(x, y, z); @x = x; @y = y; @z = z; end
+  def transform(shift); BoxPoint.new(@x + shift[0], @y + shift[1], @z + shift[2]); end
+  def to_a; [@x, @y, @z]; end
+end
+class BoxBounds
+  def initialize(w, d, h); @w = w; @d = d; @h = h; end
+  def empty?; false; end
+  # SketchUp: bit 1 = x, bit 2 = y, bit 4 = z (0 = nhỏ nhất, 1 = lớn nhất)
+  def corner(i); BoxPoint.new((i & 1).zero? ? 0 : @w, (i & 2).zero? ? 0 : @d, (i & 4).zero? ? 0 : @h); end
+end
+module VGD::BIM::Geometry
+  def self.definition(entity); entity; end
+end
+class BoxEntity; def bounds; BoxBounds.new(4.0, 3.0, 2.0); end; end
+record = {entity: BoxEntity.new, transform: [10.0, 20.0, 30.0]}
+edges = T.world_corners(record)
+check 'khung bao: 12 cạnh, mỗi cạnh nối hai góc, tính theo vị trí thế giới', edges.size == 24 && edges.each_slice(2).all? { |a, b| (a.to_a.zip(b.to_a).count { |p, q| p != q }) == 1 } && edges.map(&:to_a).flatten.min >= 10.0
+tris = T.box_triangles(record)
+check 'tô khung: 12 tam giác (36 điểm), không duyệt mặt của đối tượng', tris.size == 36 && !T.respond_to?(:face_triangles)
+area = tris.each_slice(3).sum do |a, b, c|
+  u = [b.x - a.x, b.y - a.y, b.z - a.z]; v = [c.x - a.x, c.y - a.y, c.z - a.z]
+  cross = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]]
+  Math.sqrt(cross.sum { |n| n * n }) / 2.0
+end
+check 'tô khung: tổng diện tích bằng diện tích 6 mặt của hộp (4x3x2 -> 52)', (area - 52.0).abs < 1e-9
+check 'tô khung: mọi điểm là góc của hộp', tris.all? { |pt| [[10.0, 14.0], [20.0, 23.0], [30.0, 32.0]].each_with_index.all? { |pair, i| pair.include?(pt.to_a[i]) } }
+box_empty = Class.new { def bounds; Class.new { def empty?; true; end }.new; end }.new
+check 'đối tượng rỗng: không có khung và không có tam giác', T.world_corners(entity: box_empty, transform: [0, 0, 0]).empty? && T.box_triangles(entity: box_empty, transform: [0, 0, 0]).empty?
 puts 'Done'

@@ -476,7 +476,7 @@ module VGD
           label = single ? outline_label(single) : nil
           box = single ? Table.bounding_box(single) : nil
           label_point = box && !box.empty? ? box.center : nil
-          fills = targets.flat_map { |r| Table.face_triangles(r) }
+          fills = targets.flat_map { |r| Table.box_triangles(r) }
           # Đối tượng bị xóa: khung tự tắt và bảng bỏ dòng đã xóa.
           alive = -> { targets.all? { |r| r[:path].all?(&:valid?) } }
           stale = -> { safely { table_build if @mode == 'table' && @dialog.visible? } }

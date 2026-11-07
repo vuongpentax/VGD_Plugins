@@ -2,7 +2,7 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.0-beta.9: đã kiểm tra tự động
+## Bản 1.1.0-beta.10: đã kiểm tra tự động
 
 Chạy từ `plugins/VGD_BIM`: `ruby dev/run_tests.rb` (cú pháp 20 file Ruby và 9 bộ test) và `dev/test_ui.cjs` (Playwright).
 
@@ -25,7 +25,7 @@ Chạy từ `plugins/VGD_BIM`: `ruby dev/run_tests.rb` (cú pháp 20 file Ruby v
 Các điểm sau chỉ kiểm được trong SketchUp thật:
 
 1. Nạp extension, menu, toolbar, context menu, HtmlDialog và Tải lại code; đổi tên extension từ "VGD BIM Lite" sang "VGD_BIM" khi cài đè lên 1.0.0.
-2. Khung đánh dấu trong viewport: chữ trong khung tên có rõ và nằm đúng giữa không (chiều rộng khung ước lượng theo số ký tự); tọa độ 2D trên màn hình độ phân giải cao có lệch không; tô mặt có chậm với model lớn không; khung có tắt khi xóa đối tượng không; chọn trong SketchUp có hiện khung ngay không; kéo chọn nhiều và nhấp đúp vào group khi khung đang bật.
+2. Khung đánh dấu trong viewport: chữ trong khung tên có rõ, nằm đúng giữa và nằm trọn trong hộp không (hộp đo bằng `View#text_bounds`, có từ SketchUp 2020; nếu không đo được thì ước lượng theo số ký tự); tọa độ 2D trên màn hình độ phân giải cao có lệch không; chọn nhiều đối tượng của model lớn có còn lag không (từ beta.10 khung chỉ là hộp bao, đã bỏ tô từng mặt của đối tượng); khung có tắt khi xóa đối tượng không; chọn trong SketchUp có hiện khung ngay không; kéo chọn nhiều và nhấp đúp vào group khi khung đang bật.
 3. Lưu cài đặt: preset và cột còn sau khi tắt mở SketchUp (`%APPDATA%\VGD\VGD_BIM\`).
 4. Thể tích chỉ tính cho group kín; khung bao theo bounding box chứ không theo cạnh thật.
 5. Chế độ **Cô lập**: ẩn / hiện đối tượng ngoài một bước hoàn tác riêng (`Table.isolate` / `Table.restore` không bọc `start_operation`); chưa biết Ctrl+Z xử lý thế nào, và file lưu khi đang cô lập mang các đối tượng ở trạng thái ẩn.

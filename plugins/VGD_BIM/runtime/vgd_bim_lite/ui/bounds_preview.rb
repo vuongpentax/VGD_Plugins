@@ -11,6 +11,8 @@ module VGD
         LABEL_HEIGHT = 24
         CHAR_WIDTH = 7.5
         PADDING = 10
+        MAX_LABEL_WIDTH = 360 # chiều rộng chữ tối đa (điểm ảnh); tên dài hơn thì rút gọn bằng "…"
+        ELLIPSIS = '…'.freeze
         IDENTITY_MATRIX = [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0].freeze
 
         def alive?
@@ -57,8 +59,9 @@ module VGD
         def draw_label(view)
           return if @label.nil? || @label.empty? || @label_point.nil?
           screen = view.screen_coords(drawing_shapes(view)[2])
-          half_width = (@label.length * CHAR_WIDTH + PADDING * 2) / 2.0
-          half_height = LABEL_HEIGHT / 2.0
+          metrics = label_metrics(view)
+          half_width = (metrics[:width] + PADDING * 2) / 2.0
+          half_height = [LABEL_HEIGHT, metrics[:height] + 8].max / 2.0
           corners = [
             Geom::Point3d.new(screen.x - half_width, screen.y - half_height, 0),
             Geom::Point3d.new(screen.x + half_width, screen.y - half_height, 0),
@@ -67,7 +70,47 @@ module VGD
           ]
           view.drawing_color = Sketchup::Color.new(*BOX_COLOR)
           view.draw2d(GL_QUADS, corners)
-          view.draw_text(text_origin(screen, half_width, half_height), @label, text_options)
+          view.draw_text(text_origin(screen, half_width, half_height), metrics[:text], text_options)
+        end
+
+        # Chữ và kích thước hộp của khung tên: đo chữ thật bằng View#text_bounds (có từ SketchUp 2020), nếu không đo được thì
+        # ước lượng theo số ký tự. Tên dài quá MAX_LABEL_WIDTH thì rút gọn để chữ luôn nằm trong hộp. Nhớ lại cho tới khi đổi tên.
+        def label_metrics(view)
+          return @label_metrics if @label_metrics && @label_metrics[:source] == @label
+          text = @label
+          width, height = measure_text(view, text)
+          if width > MAX_LABEL_WIDTH
+            text = shorten_text(view, text)
+            width, height = measure_text(view, text)
+          end
+          @label_metrics = {source: @label, text: text, width: width, height: height}
+        end
+
+        def measure_text(view, text)
+          if view.respond_to?(:text_bounds)
+            bounds = view.text_bounds(Geom::Point3d.new(0, 0, 0), text, size: LABEL_SIZE)
+            return [bounds.width.to_f, bounds.height.to_f]
+          end
+          [text.length * CHAR_WIDTH, LABEL_SIZE * 1.4]
+        rescue StandardError
+          [text.length * CHAR_WIDTH, LABEL_SIZE * 1.4]
+        end
+
+        # Phần đầu dài nhất của tên mà cộng "…" vẫn vừa MAX_LABEL_WIDTH (tìm nhị phân, đo ít lần).
+        def shorten_text(view, text)
+          low = 1
+          high = text.length - 1
+          best = 1
+          while low <= high
+            mid = (low + high) / 2
+            if measure_text(view, text[0, mid].rstrip + ELLIPSIS)[0] <= MAX_LABEL_WIDTH
+              best = mid
+              low = mid + 1
+            else
+              high = mid - 1
+            end
+          end
+          text[0, best].rstrip + ELLIPSIS
         end
 
         private
@@ -112,6 +155,7 @@ module VGD
           @finished = false
           @stale = false
           @shape_key = nil
+          @label_metrics = nil
         end
 
         # Vẽ lại ngay khi bật / tắt khung, không đợi người dùng xoay màn hình.
@@ -225,6 +269,7 @@ module VGD
             @alive = alive
             @on_stale = on_stale
             @shape_key = nil
+            @label_metrics = nil
             @visible = true
           end
 

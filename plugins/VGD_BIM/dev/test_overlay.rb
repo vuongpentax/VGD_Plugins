@@ -99,4 +99,45 @@ ok('đang mở sửa group / component: điểm đặt khung tên đổi sang t�
 ctx.draw(root_view)
 ok('thoát ra gốc: quay lại điểm thế giới', root_view.lines.last.map(&:tag) == %w[a b])
 
+# Khung tên: hộp ôm đúng chiều rộng chữ (đo bằng View#text_bounds), tên quá dài thì rút gọn bằng "…" để chữ không tràn hộp
+class MeasuringView < View
+  def text_bounds(_point, text, _options); Struct.new(:width, :height).new(text.length * 11.0, 16.0); end
+end
+class BrokenMeasureView < View
+  def text_bounds(*); raise 'không đo được'; end
+end
+module Overlay; end
+LIMIT = VGD::BIM::UI::OutlineDrawing::MAX_LABEL_WIDTH
+PAD = VGD::BIM::UI::OutlineDrawing::PADDING
+quad_width = ->(view) { xs = view.quads[0].map(&:x); xs.max - xs.min }
+label_overlay = lambda do |text|
+  o = VGD::BIM::UI::BoundsOverlay.new
+  o.show_shapes([FakePoint.new('a')], label: text, label_point: FakePoint.new('c'))
+  o
+end
+mv = MeasuringView.new
+label_overlay.call('Tủ bếp · Mới').draw(mv)
+ok('hộp chữ rộng đúng chiều rộng chữ đo được cộng lề', (quad_width.call(mv) - (12 * 11.0 + 2 * PAD)).abs < 1e-6 && mv.texts == ['Tủ bếp · Mới'])
+long_text = 'Tủ bếp dưới bên trái của căn hộ số mười hai tầng ba khu A phần cánh cửa đôi'
+mv2 = MeasuringView.new
+label_overlay.call(long_text).draw(mv2)
+shown = mv2.texts.first
+ok('tên quá dài: rút gọn bằng "…", vẫn là phần đầu của tên', shown.end_with?('…') && long_text.start_with?(shown.chomp('…')) && shown.length < long_text.length)
+ok('tên quá dài: chữ vừa trong hộp, hộp không vượt giới hạn', shown.length * 11.0 <= LIMIT && quad_width.call(mv2) <= LIMIT + 2 * PAD + 1e-6)
+ok('tên quá dài: rút gọn gần hết mức cho phép (không cắt quá tay)', (shown.length + 2) * 11.0 > LIMIT)
+fb = View.new
+label_overlay.call(long_text).draw(fb)
+ok('không có View#text_bounds: vẫn rút gọn tên dài, hộp không vượt giới hạn', fb.texts.first.end_with?('…') && quad_width.call(fb) <= LIMIT + 2 * PAD + 1e-6)
+fb2 = View.new
+label_overlay.call('Cửa').draw(fb2)
+ok('không có View#text_bounds: tên ngắn giữ nguyên', fb2.texts == ['Cửa'])
+bv = BrokenMeasureView.new
+label_overlay.call(long_text).draw(bv)
+ok('đo chữ lỗi: không báo lỗi, dùng ước lượng', bv.texts.first.end_with?('…') && quad_width.call(bv) <= LIMIT + 2 * PAD + 1e-6)
+wide = label_overlay.call('Cửa')
+mv3 = MeasuringView.new
+wide.draw(mv3)
+wide.draw(mv3)
+ok('vẽ lại nhiều lần: kết quả như nhau', mv3.quads[0].map(&:x) == mv3.quads[1].map(&:x))
+
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
