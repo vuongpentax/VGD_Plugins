@@ -34,3 +34,22 @@ main{flex:1;min-height:0;overflow:auto;padding:14px 16px;scrollbar-gutter:stable
 .sel-count{color:var(--muted);font-size:11px;margin-left:4px}
 .rename-scope{margin:0 0 8px;font-size:11px;color:var(--muted)}
 .grid-wrap:focus{outline:none}
+
+/* Sửa bằng nhấp đúp: ô nhập trong ô, bảng chọn có tìm kiếm */
+.grid td.editable{cursor:cell}
+.grid td.editing{padding:0}
+.grid td.editing input{width:100%;height:100%;box-sizing:border-box}
+.cell-menu{position:fixed;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 30px #0005;padding:6px;max-height:min(320px,60vh);display:flex;flex-direction:column}
+.cell-menu input{width:100%;margin-bottom:6px;height:30px;box-sizing:border-box}
+.cell-menu-list{overflow:auto}
+.cell-item{display:flex;justify-content:space-between;gap:12px;padding:6px 8px;border-radius:4px;cursor:pointer}
+.cell-item:hover{background:var(--soft)}
+.cell-item.current{color:var(--accent-strong);font-weight:700}
+.cell-empty{padding:8px;color:var(--muted)}
+/* Nhóm theo */
+.group-row td{background:var(--soft);font-weight:700;cursor:pointer}
+.group-row .chev{background:none;border:0;cursor:pointer;padding:0 4px;color:inherit;font:inherit}
+.group-panel{width:240px}
+.group-panel .pop-list{display:flex;flex-direction:column;gap:2px}
+.group-panel .pop-pick{text-align:left}
+.merge-opt{display:flex;gap:6px;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:11px}

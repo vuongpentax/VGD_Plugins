@@ -30,9 +30,9 @@ module VGD
         {key: 'areaXY', label: 'Diện tích (X*Y) m²', kind: 'sum'},
         {key: 'areaFace', label: 'Diện tích mặt m²', kind: 'sum'},
         {key: 'volume', label: 'Thể tích m³', kind: 'sum'},
-        {key: 'tag', label: 'Phân loại thẻ', kind: 'text'},
+        {key: 'tag', label: 'Phân loại thẻ', kind: 'text', editable: 'tag'},
         {key: 'tag_group', label: 'Nhóm hạng mục', kind: 'text'},
-        {key: 'material', label: 'Vật liệu', kind: 'text'},
+        {key: 'material', label: 'Vật liệu', kind: 'text', editable: 'material'},
         {key: 'status', label: 'Tình trạng', kind: 'status', editable: 'status'},
         {key: 'quantity', label: 'Số lượng', kind: 'sum'}
       ].freeze
@@ -137,8 +137,17 @@ module VGD
         # Đối tượng cha đang có trong bảng: dùng để tránh cộng trùng khi tính tổng.
         records.each_with_index do |record, i|
           rows[i][:parents] = (1...record[:path].size).map { |n| index_of[path_key(record[:path][0...n])] }.compact
+          rows[i][:parent] = parent_label(record)
         end
         {rows: rows, records: records}
+      end
+
+      # Tên của đối tượng cha trực tiếp (để nhóm theo cha); cấp gốc của model thì để trống.
+      def self.parent_label(record)
+        parent = record[:path][-2]
+        return '' unless parent
+        name = parent.name.to_s
+        name.empty? ? Geometry.definition(parent).name.to_s : name
       end
 
       def self.row_for(record, index, groups)

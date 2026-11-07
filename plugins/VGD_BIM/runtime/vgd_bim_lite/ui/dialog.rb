@@ -275,7 +275,7 @@ module VGD
           hint = scope.empty? ? 'Chưa chọn đối tượng nào. Chọn group hoặc component trong SketchUp, bảng sẽ tự đọc.' : nil
           emit('table', {columns: Table::COLUMNS, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
                          statuses: Table::STATUS_LABELS, options: @table_options.merge(isolating: !@isolated.empty?),
-                         rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state})
+                         rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state, choices: table_choices})
         end
         # payload: {'indexes' => [các dòng đã chọn trong bảng], 'field' => tên cột đã bấm (chỉ dùng khi chọn đúng một dòng)}
         # Chọn nhiều dòng kiểu Excel (Shift / Ctrl) ở giao diện; SketchUp chọn theo các đối tượng đó để các tab khác dùng luôn.
@@ -322,26 +322,50 @@ module VGD
           restore_isolation
           @isolated = Table.isolate(@model, record[:path])
         end
+        # Sửa ô bằng nhấp đúp. payload: {'indexes' => [các dòng], 'field' => name|description|status|tag|material, 'value' => giá trị}.
+        # Áp cho mọi dòng gửi lên, bỏ qua đối tượng khóa; cả đợt là một bước hoàn tác. ('index' => một dòng vẫn được nhận.)
+        EDIT_LABELS = {'name' => 'tên', 'description' => 'mô tả', 'status' => 'tình trạng', 'tag' => 'tag', 'material' => 'vật liệu'}.freeze
         def table_edit(payload)
           check_model!
-          record = @table_records.fetch(payload.fetch('index').to_i) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }
-          entity = record[:entity]
-          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless entity.valid?
-          raise 'Đối tượng đang bị khóa nên không sửa được.' if record[:locked] || entity.locked?
           field = payload.fetch('field')
+          raise ArgumentError, 'Ô này không sửa được trong bảng.' unless EDIT_LABELS.key?(field)
           value = payload.fetch('value').to_s.strip
-          Data.transaction(@model, 'VGD BIM · Sửa bảng') do
-            case field
-            when 'name'
-              entity.name = value
-            when 'description', 'status'
-              Data.write(entity, {field.to_sym => value}, Data.source(entity) == 'RAW' ? 'MANUAL' : Data.source(entity))
-            else
-              raise ArgumentError, 'Ô này không sửa được trong bảng.'
-            end
+          indexes = payload.key?('indexes') ? table_indexes(payload) : table_indexes('indexes' => [payload.fetch('index')])
+          records = indexes.map { |index| @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' } }
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |record| record[:path].all?(&:valid?) }
+          editable = records.reject { |record| record[:locked] || record[:entity].locked? }
+          raise 'Đối tượng đang bị khóa nên không sửa được.' if editable.empty?
+          material = field == 'material' && !value.empty? ? find_material(value) : nil
+          Data.transaction(@model, 'VGD_BIM · Sửa bảng') do
+            layer = field == 'tag' ? (value.empty? ? untagged_layer : Tags.layer_for(@model, value)) : nil
+            editable.each { |record| apply_edit(record[:entity], field, value, material, layer) }
           end
           table_build
           show_outline
+          text = "Đã sửa #{EDIT_LABELS[field]} cho #{editable.size} đối tượng."
+          text += " Bỏ qua #{records.size - editable.size} đối tượng bị khóa." if records.size > editable.size
+          emit('message', {text: text})
+        end
+        def apply_edit(entity, field, value, material, layer)
+          case field
+          when 'name' then entity.name = value
+          when 'tag' then entity.layer = layer
+          when 'material' then entity.material = material
+          else Data.write(entity, {field.to_sym => value}, Data.source(entity) == 'RAW' ? 'MANUAL' : Data.source(entity))
+          end
+        end
+        def find_material(name)
+          @model.materials.to_a.find { |material| material.display_name.to_s == name } || raise('Vật liệu này không có trong model.')
+        end
+        def untagged_layer
+          @model.layers.to_a.find { |layer| %w[Untagged Layer0].include?(layer.name.to_s) } || @model.layers[0]
+        end
+        # Danh sách để chọn khi nhấp đúp ô Tag / Vật liệu: tag của model và bộ tag của người dùng, vật liệu của model.
+        def table_choices
+          untagged = ->(name) { %w[Untagged Layer0].include?(name) }
+          tags = @model.layers.to_a.map { |layer| layer.name.to_s }.reject(&untagged) | Tags.load.map { |tag| tag['name'].to_s }
+          materials = @model.materials.to_a.map { |material| material.display_name.to_s }
+          {tags: tags.sort_by { |name| name.downcase }, materials: materials.sort_by { |name| name.downcase }}
         end
         def table_option(payload)
           check_model!

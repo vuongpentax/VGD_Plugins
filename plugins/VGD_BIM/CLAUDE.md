@@ -41,7 +41,7 @@ Chạy từ `plugins/VGD_BIM`:
 - Báo cáo CSV là dữ liệu và khối lượng gốc, không tính đơn giá hay thành tiền.
 - Mã schema giữ nguyên để các plugin VGD dùng chung; bản dịch chỉ áp dụng ở giao diện và báo cáo.
 - Nguồn dữ liệu (`VGD`, `MAPPED`, `RAW`, `MANUAL`) lưu trong metadata `_source`, tách khỏi schema nghiệp vụ v1.
-- Chuyển đổi trong tab Phân loại: mỗi batch chỉ có một bước hoàn tác và không sửa hình học, tên, thẻ hoặc vật liệu.
+- Chuyển đổi trong tab Phân loại: mỗi batch chỉ có một bước hoàn tác và không sửa hình học, tên, thẻ hoặc vật liệu. Riêng bảng khối lượng, người dùng chủ động nhấp đúp để đổi tên, tag, vật liệu của đối tượng (một bước hoàn tác, bỏ qua đối tượng khóa, không đụng vào mặt bên trong).
 - Chọn đối tượng không được quét toàn model: tab Bảng khối lượng chỉ đọc đối tượng đang chọn (quét sâu chỉ khi bật "Chọn sâu bên trong"); chỉ các tab Quét & xuất, Phân loại, Kiểm tra mới quét model.
 - Không dùng `Sketchup.write_default` cho dữ liệu JSON (chuỗi có dấu ngoặc kép hoặc tiếng Việt bị hỏng khi đọc lại); dùng `core/storage.rb`.
 - Khung đánh dấu: từ SketchUp 2023 dùng lớp phủ `UI::BoundsOverlay` (`Sketchup::Overlay`, chỉ vẽ) để không chiếm công cụ Select; SketchUp 2022 và khi lớp phủ lỗi dùng `UI::BoundsPreview`. `Sketchup::Tool` không tồn tại nên `BoundsPreview` là lớp thường với các hàm `draw` / `onLButtonDown` / `onCancel`. Test không được thêm stub cho lớp không có trong API SketchUp, vì stub có thể che lỗi thật (stub `Sketchup::Overlay` trong `dev/test_overlay.rb` chỉ mô phỏng phần API được dùng).

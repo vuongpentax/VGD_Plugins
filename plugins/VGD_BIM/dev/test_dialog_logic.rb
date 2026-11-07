@@ -11,14 +11,29 @@ end
 module VGD; module BIM; def self.log(m); end
   module Data
     def self.supported?(e); e.is_a?(Sketchup::Group); end
+    def self.write(entity, values, source); $writes << [entity, values, source]; end
+    def self.source(_entity); 'VGD'; end
     # Như Data.transaction thật: một bước hoàn tác cho cả khối
     def self.transaction(model, name = nil); $transactions << name; yield; end
   end
   module Scanner; end; module Geometry; INCH_MM = 25.4; end
-  module Tags; GROUPS = ['Phần thô'].freeze; def self.load; []; end; def self.key(n); n.to_s.downcase; end; end
+  module Tags
+    GROUPS = ['Phần thô'].freeze
+    def self.load; [{'name' => 'Trong bộ'}, {'name' => '000 CUA'}]; end
+    def self.key(n); n.to_s.downcase; end
+    # Như Tags.normalize_name / layer_for thật (đã có test riêng trong test_tags.rb)
+    def self.normalize_name(n)
+      t = n.to_s.strip
+      raise ArgumentError, 'Hãy chọn một tag.' if t.empty?
+      raise ArgumentError, 'Tên "Untagged" không dùng để gán.' if t.downcase == 'untagged'
+      t
+    end
+    def self.layer_for(model, name); t = normalize_name(name); model.layers.find { |l| l.name == t } || model.layers.add(t); end
+  end
   module UI; end
 end; end
 $transactions = []
+$writes = []
 require File.join(ROOT, 'core/table')
 require File.join(ROOT, 'core/rename')
 require File.join(ROOT, 'ui/dialog')
@@ -235,5 +250,69 @@ ok('không chọn dòng nào: áp cho mọi dòng trong bảng', rcalls.last[1][
 bad_rename = ->(payload) { begin; rd.rename_preview(payload); nil; rescue StandardError => e; e.message; end }
 ok('đổi tên: chỉ số dòng không có trong bảng bị từ chối', bad_rename.call({'indexes' => [7]}).to_s.match?(/[À-ỹ]/))
 ok('đổi tên: chỉ số không phải số bị từ chối', bad_rename.call({'indexes' => ['a']}).to_s.match?(/[À-ỹ]/))
+
+# Sửa ô bằng nhấp đúp: tên, mô tả, tình trạng, tag, vật liệu; áp cho nhiều dòng một lúc, một bước hoàn tác
+class EditLayer; attr_reader :name; def initialize(name); @name = name; end; end
+class EditLayers < Array
+  def add(name); layer = EditLayer.new(name); push(layer); layer; end
+end
+class EditMat; attr_reader :display_name; def initialize(name); @display_name = name; end; end
+class EditEnt < Sketchup::Group
+  attr_accessor :name, :layer, :material
+  def initialize(name, locked = false); @name = name; @locked = locked; end
+  def valid?; true; end
+  def locked?; @locked; end
+end
+class EditModel
+  attr_reader :layers, :materials
+  def initialize
+    @layers = EditLayers.new([EditLayer.new('Untagged'), EditLayer.new('000 CUA'), EditLayer.new('000 TUONG')])
+    @materials = [EditMat.new('Gỗ sồi'), EditMat.new('Sơn trắng')]
+  end
+end
+em = EditModel.new
+$model = em
+eents = [EditEnt.new('E0'), EditEnt.new('E1', true), EditEnt.new('E2')]
+erecs = eents.map { |e| {entity: e, path: [e], locked: false} }
+erows = eents.each_with_index.map { |e, i| {index: i, name: e.name, definition: 'Họ', tag: '', tag_group: ''} }
+ed = D.allocate
+ed.instance_variable_set(:@model, em)
+ed.instance_variable_set(:@table_rows, erows)
+ed.instance_variable_set(:@table_records, erecs)
+ecalls = []
+ed.define_singleton_method(:emit) { |ev, payload| ecalls << [ev, payload] }
+ed.define_singleton_method(:table_build) { ecalls << [:build] }
+ed.define_singleton_method(:show_outline) { ecalls << [:outline] }
+choices = ed.table_choices
+ok('danh sách chọn tag: tag của model và bộ tag, bỏ Untagged, không trùng, sắp theo tên', choices[:tags] == ['000 CUA', '000 TUONG', 'Trong bộ'])
+ok('danh sách chọn vật liệu: tên vật liệu của model, sắp theo tên', choices[:materials] == ['Gỗ sồi', 'Sơn trắng'])
+$transactions.clear
+ed.table_edit({'indexes' => [0, 1, 2], 'field' => 'name', 'value' => '  Cửa  '})
+ok('sửa tên nhiều dòng: đổi các đối tượng không khóa, bỏ qua đối tượng khóa', eents.map(&:name) == ['Cửa', 'E1', 'Cửa'])
+ok('sửa nhiều dòng: một bước hoàn tác', $transactions == ['VGD_BIM · Sửa bảng'])
+ok('sửa nhiều dòng: bảng đọc lại và báo kết quả có số đối tượng bị khóa', ecalls.any? { |c| c[0] == :build } && ecalls.any? { |c| c[0] == 'message' && c[1][:text].include?('2') && c[1][:text].include?('khóa') })
+ed.table_edit({'indexes' => [0, 2], 'field' => 'tag', 'value' => '000 CUA'})
+ok('đổi tag sang tag có sẵn: dùng đúng tag đó', eents[0].layer.name == '000 CUA' && eents[2].layer.equal?(em.layers[1]))
+ed.table_edit({'indexes' => [0], 'field' => 'tag', 'value' => 'A. DOOR'})
+ok('đổi tag sang tag chưa có: tạo tag mới trong model', eents[0].layer.name == 'A. DOOR' && em.layers.map(&:name).include?('A. DOOR'))
+ed.table_edit({'indexes' => [0], 'field' => 'tag', 'value' => ''})
+ok('xóa tag: về Untagged', eents[0].layer.equal?(em.layers[0]))
+ed.table_edit({'indexes' => [0, 2], 'field' => 'material', 'value' => 'Gỗ sồi'})
+ok('đổi vật liệu: gán đúng vật liệu của model', eents[0].material.equal?(em.materials[0]) && eents[2].material.equal?(em.materials[0]))
+ed.table_edit({'indexes' => [0], 'field' => 'material', 'value' => ''})
+ok('bỏ vật liệu: về không vật liệu', eents[0].material.nil?)
+$writes.clear
+ed.table_edit({'indexes' => [0, 2], 'field' => 'status', 'value' => 'existing'})
+ok('đổi tình trạng: ghi vào dữ liệu VGD của từng đối tượng', $writes.map { |w| [w[0], w[1]] } == [[eents[0], {status: 'existing'}], [eents[2], {status: 'existing'}]])
+$writes.clear
+ed.table_edit({'index' => 0, 'field' => 'description', 'value' => 'Cửa đi'})
+ok('còn nhận gửi một dòng bằng index (cách cũ)', $writes.map { |w| w[1] } == [{description: 'Cửa đi'}])
+bad_edit = ->(payload) { begin; ed.table_edit(payload); nil; rescue StandardError => e; e.message; end }
+ok('vật liệu không có trong model: báo lỗi, không đổi gì', bad_edit.call({'indexes' => [0], 'field' => 'material', 'value' => 'Không có'}).to_s.include?('Vật liệu') && eents[0].material.nil?)
+ok('ô không sửa được: báo lỗi tiếng Việt', bad_edit.call({'indexes' => [0], 'field' => 'lenX', 'value' => '5'}).to_s.match?(/[À-ỹ]/))
+ok('tên tag không hợp lệ: báo lỗi', bad_edit.call({'indexes' => [0], 'field' => 'tag', 'value' => 'untagged'}).to_s.include?('Untagged'))
+ok('chỉ có đối tượng khóa: báo lỗi, không mở bước hoàn tác', (($transactions.clear) && bad_edit.call({'indexes' => [1], 'field' => 'name', 'value' => 'Z'}).to_s.include?('khóa')) && $transactions.empty?)
+ok('không gửi dòng nào: báo lỗi', bad_edit.call({'indexes' => [], 'field' => 'name', 'value' => 'Z'}).to_s.match?(/[À-ỹ]/))
+$model = ORIGINAL_MODEL
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

@@ -146,7 +146,7 @@ function preview(data) {
   const dl=node('dl',undefined,'preview-values');Object.entries(data.data).forEach(([key,value])=>dl.append(node('dt',label(key)),node('dd',displayValue(key,value))));p.append(dl,node('p','Giữ nguyên hình học, tên, thẻ và vật liệu.'));$('confirm-preview').disabled=false;$('preview').showModal();
 }
 // ---- Bảng đối tượng kiểu Auto Info ----
-const tableState={restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',sel:new Set(),anchor:null,displayed:[],panel:null,colSearch:'',dragKey:null};
+const tableState={restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null};
 const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','volume','quantity']);
 const DIGITS={areaXZ:2,areaXY:2,areaFace:2,volume:3,quantity:0};
 const UNIT_TEXT={lenX:'mm',lenY:'mm',lenZ:'mm',areaXZ:'m²',areaXY:'m²',areaFace:'m²',volume:'m³',quantity:'cái'};
@@ -205,8 +205,10 @@ function filteredRows(){
 }
 // Chọn dòng kiểu Excel: bấm = một dòng; Ctrl (hoặc Cmd) = thêm / bớt một dòng; Shift = cả dãy từ dòng gốc; Ctrl+Shift = thêm cả dãy;
 // Ctrl+A = chọn hết các dòng đang hiện; Esc = bỏ chọn. SketchUp chọn theo các đối tượng đó (xem table_select trong dialog.rb).
+// Dòng gộp (Gộp dòng giống nhau) có nhiều đối tượng: chọn dòng gộp là chọn mọi đối tượng của nó.
+const membersOf=row=>row.members||[row.index];
 function paintSelection(){
-  document.querySelectorAll('.grid tbody tr').forEach(tr=>tr.classList.toggle('selected',tableState.sel.has(Number(tr.dataset.index))));
+  document.querySelectorAll('.grid tbody tr[data-members]').forEach(tr=>tr.classList.toggle('selected',tr.dataset.members.split(',').every(i=>tableState.sel.has(Number(i)))));
   const count=document.querySelector('.sel-count');
   if(count&&tableState.data)count.textContent=tableState.sel.size?`Đã chọn ${tableState.sel.size} / ${tableState.data.rows.length} dòng`:'';
   tableState.rename.preview=null; // phạm vi đổi tên đã đổi nên bản xem trước cũ không còn đúng
@@ -217,22 +219,21 @@ function pickRows(indexes,field){
   if(!tableState.sel.size){call('table_clear');return;}
   call('table_select',JSON.stringify({indexes:[...tableState.sel],field:tableState.sel.size===1?(field||''):''}));
 }
-function clickRow(index,field,e){
-  const additive=e.ctrlKey||e.metaKey,order=tableState.displayed;
-  if(e.shiftKey&&tableState.anchor!==null&&order.includes(tableState.anchor)&&order.includes(index)){
-    const from=order.indexOf(tableState.anchor),to=order.indexOf(index);
-    const span=order.slice(Math.min(from,to),Math.max(from,to)+1);
-    pickRows(additive?[...new Set([...tableState.sel,...span])]:span,'');
+function clickRow(row,field,e){
+  const members=membersOf(row),order=tableState.displayed,additive=e.ctrlKey||e.metaKey;
+  const pos=order.findIndex(r=>r.index===row.index),anchorPos=order.findIndex(r=>r.index===tableState.anchor);
+  if(e.shiftKey&&anchorPos>=0&&pos>=0){
+    const span=order.slice(Math.min(anchorPos,pos),Math.max(anchorPos,pos)+1).flatMap(membersOf);
+    pickRows(additive?[...new Set([...tableState.sel,...span])]:[...new Set(span)],'');
     return;
   }
-  tableState.anchor=index;
-  if(additive){const next=new Set(tableState.sel);if(next.has(index))next.delete(index);else next.add(index);pickRows([...next],'');return;}
-  pickRows([index],field);
-}
-// Bấm vào ô sửa của một dòng đã nằm trong vùng chọn nhiều dòng thì giữ nguyên vùng chọn.
-function focusRow(index,field){
-  if(tableState.sel.size>1&&tableState.sel.has(index))return;
-  tableState.anchor=index;pickRows([index],field);
+  tableState.anchor=row.index;
+  if(additive){
+    const next=new Set(tableState.sel),all=members.every(m=>next.has(m));
+    members.forEach(m=>{if(all)next.delete(m);else next.add(m);});
+    pickRows([...next],'');return;
+  }
+  pickRows(members,field);
 }
 function highlightRows(indexes){
   tableState.sel=new Set(indexes||[]);paintSelection();
@@ -241,19 +242,73 @@ function highlightRows(indexes){
   const tr=document.querySelector(`.grid tr[data-index="${first}"]`);
   if(tr)tr.scrollIntoView({block:'nearest'});
 }
-function cellEditor(row,col){
-  if(col.editable==='status'){
-    const select=node('select','cell');select.setAttribute('aria-label','Tình trạng');
-    Object.entries(tableState.data.statuses||{}).forEach(([code,label])=>select.append(new Option(label,code)));
-    select.value=row.status;
-    select.onfocus=()=>focusRow(row.index,col.key);
-    select.onchange=()=>call('table_edit',JSON.stringify({index:row.index,field:'status',value:select.value}));
-    return select;
-  }
-  const input=node('input','cell');input.type='text';input.value=row[col.editable]||'';input.setAttribute('aria-label',col.label);
-  input.onfocus=()=>focusRow(row.index,col.key);
-  input.onchange=()=>call('table_edit',JSON.stringify({index:row.index,field:col.editable,value:input.value}));
-  return input;
+// Sửa bằng nhấp đúp. Tên, mô tả: ô nhập ngay trong ô. Tình trạng, tag, vật liệu: bảng chọn có ô tìm kiếm.
+// Nhấp đúp vào một dòng nằm trong vùng chọn nhiều dòng thì sửa cho cả vùng chọn.
+function editTargets(row){
+  const members=membersOf(row);
+  return tableState.sel.size>members.length&&members.every(m=>tableState.sel.has(m))?[...tableState.sel]:members;
+}
+function commitEdit(row,field,value){call('table_edit',JSON.stringify({indexes:editTargets(row),field,value}));}
+let cellMenu=null;
+function closeMenu(){if(cellMenu){cellMenu.remove();cellMenu=null;document.removeEventListener('mousedown',outsideMenu,true);}}
+function outsideMenu(e){if(cellMenu&&!cellMenu.contains(e.target))closeMenu();}
+function inlineEdit(td,row,col){
+  closeMenu();
+  const field=col.editable,original=String(field==='name'?row.name:row[field]||'');
+  const input=node('input');input.type='text';input.value=original;input.maxLength=200;input.setAttribute('aria-label',col.label);
+  td.classList.add('editing');td.replaceChildren(input);input.focus();input.select();
+  let done=false;
+  const finish=commit=>{if(done)return;done=true;if(commit&&input.value!==original)commitEdit(row,field,input.value);renderGrid($('grid-host'));};
+  input.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();finish(true);}else if(e.key==='Escape'){e.preventDefault();finish(false);}};
+  input.onblur=()=>finish(true);
+}
+function menuItems(field){
+  const d=tableState.data,choices=d.choices||{tags:[],materials:[]};
+  if(field==='status')return Object.entries(d.statuses||{}).map(([value,label])=>({value,label}));
+  if(field==='tag')return [{value:'',label:'(Không có tag)'},...choices.tags.map(name=>({value:name,label:name}))];
+  return [{value:'',label:'(Không vật liệu)'},...choices.materials.map(name=>({value:name,label:name}))];
+}
+function menuEdit(td,row,col){
+  closeMenu();
+  const field=col.editable,current=field==='status'?row.status:(field==='tag'?row.tag:row.material),all=menuItems(field);
+  const menu=node('div',undefined,'cell-menu');menu.setAttribute('role','listbox');
+  const search=node('input');search.type='search';search.placeholder='Tìm...';search.setAttribute('aria-label','Tìm trong danh sách');
+  const list=node('div',undefined,'cell-menu-list');
+  const pick=value=>{closeMenu();commitEdit(row,field,value);};
+  const draw=()=>{
+    const q=search.value.trim().toLocaleLowerCase('vi');
+    const shown=all.filter(item=>!q||item.label.toLocaleLowerCase('vi').includes(q));
+    if(field==='tag'&&q&&!all.some(item=>item.label.toLocaleLowerCase('vi')===q))shown.push({value:search.value.trim(),label:`Tạo tag "${search.value.trim()}"`});
+    list.replaceChildren();
+    shown.forEach(item=>{
+      const line=node('div',undefined,'cell-item'+(item.value===current?' current':''));line.setAttribute('role','option');
+      line.append(node('span',item.label),node('span',item.value===current?'✓':'','tick'));
+      line.onmousedown=e=>{e.preventDefault();pick(item.value);};
+      list.append(line);
+    });
+    if(!shown.length)list.append(node('div','Không có mục nào khớp.','cell-empty'));
+    menu.firstShown=shown[0];
+  };
+  search.oninput=draw;
+  search.onkeydown=e=>{
+    e.stopPropagation();
+    if(e.key==='Escape'){e.preventDefault();closeMenu();}
+    else if(e.key==='Enter'){e.preventDefault();if(menu.firstShown)pick(menu.firstShown.value);}
+  };
+  menu.append(search,list);document.body.append(menu);cellMenu=menu;draw();
+  const rect=td.getBoundingClientRect();
+  menu.style.minWidth=Math.max(rect.width,220)+'px';
+  menu.style.left=Math.min(rect.left,window.innerWidth-menu.offsetWidth-8)+'px';
+  const below=window.innerHeight-rect.bottom,height=menu.offsetHeight;
+  menu.style.top=(below>=Math.min(height,260)||rect.top<height?rect.bottom:rect.top-height)+'px';
+  document.addEventListener('mousedown',outsideMenu,true);
+  search.focus();
+  const currentLine=list.querySelector('.current');if(currentLine)currentLine.scrollIntoView({block:'nearest'});
+}
+function editCell(td,row,col){
+  if(!col.editable)return;
+  if(row.locked&&!row.members)return message('Đối tượng đang bị khóa nên không sửa được.',true);
+  if(col.editable==='name'||col.editable==='description')inlineEdit(td,row,col);else menuEdit(td,row,col);
 }
 function startResize(event,key,host,cols){
   event.preventDefault();event.stopPropagation();
@@ -267,19 +322,65 @@ function startResize(event,key,host,cols){
   const up=()=>{document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);persistView();};
   document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
 }
+// Nhóm theo và gộp dòng giống nhau (chỉ đổi cách hiển thị, không đổi dữ liệu).
+const GROUP_OPTIONS=[['','Không nhóm'],['parent','Cha (Parent)'],['entity','Loại (Entity)'],['definition','Tên họ (Definition)'],['instance','Tên (Instance)'],['material','Vật liệu'],['tag','Tag'],['tag_group','Nhóm hạng mục'],['status','Tình trạng']];
+const SUM_KEYS=['areaXZ','areaXY','areaFace','volume','quantity'];
+function groupLabel(row,key){
+  switch(key){
+    case 'parent':return row.parent||'(Gốc)';
+    case 'entity':return row.entity_type;
+    case 'definition':return row.definition||'(Chưa đặt tên)';
+    case 'instance':return row.name||'(Chưa đặt tên)';
+    case 'material':return row.material||'(Không vật liệu)';
+    case 'tag':return row.tag||'(Untagged)';
+    case 'tag_group':return row.tag_group||'(Chưa phân loại)';
+    case 'status':return (tableState.data.statuses||{})[row.status]||row.status;
+    default:return '';
+  }
+}
+// Gộp các dòng giống hệt nhau (cùng loại, họ, tên, mô tả, kích thước, tag, vật liệu, tình trạng) thành một dòng:
+// Số lượng, diện tích và thể tích là tổng của các dòng gộp; kích thước giữ theo từng đối tượng.
+function mergeRows(rows){
+  const map=new Map();
+  rows.forEach(row=>{
+    const key=JSON.stringify([row.entity_type,row.definition,row.name,row.description,row.lenX,row.lenY,row.lenZ,row.tag,row.material,row.status]);
+    const hit=map.get(key);
+    if(!hit){map.set(key,{...row,members:[row.index]});return;}
+    hit.members.push(row.index);
+    SUM_KEYS.forEach(k=>{if(typeof row[k]==='number')hit[k]=(typeof hit[k]==='number'?hit[k]:0)+row[k];});
+    hit.locked=hit.locked||row.locked;
+  });
+  return [...map.values()];
+}
 function renderGrid(host){
   const data=tableState.data;
   const cols=orderedKeys().map(colByKey).filter(Boolean);
-  const rows=filteredRows();
-  const shown=new Set(rows.map(r=>r.index));
+  const filtered=filteredRows();
+  const shown=new Set(filtered.map(r=>r.index));
+  const rows=tableState.merge?mergeRows(filtered):filtered;
   const ordered=tableState.sort?[...rows].sort((a,b)=>{const va=sortValue(a,tableState.sort.key),vb=sortValue(b,tableState.sort.key);if(va<vb)return -tableState.sort.dir;if(va>vb)return tableState.sort.dir;return a.index-b.index;}):rows;
-  tableState.displayed=ordered.map(row=>row.index); // thứ tự dòng đang hiện, dùng cho chọn dãy bằng Shift
+  // Cộng tổng: mặc định chỉ cộng đối tượng cấp cao nhất để không đếm trùng group lồng nhau.
+  const counted=list=>list.filter(r=>!(tableState.onlyTop&&r.parents.some(p=>shown.has(p))));
+  const sumOf=(list,key)=>counted(list).reduce((s,r)=>s+(typeof r[key]==='number'?r[key]:0),0);
+  const countOf=list=>counted(list).reduce((s,r)=>s+membersOf(r).length,0);
+  // Danh sách theo thứ tự hiển thị: các nhóm (nếu có) rồi các dòng của nhóm chưa thu gọn.
+  let sections=[{label:null,rows:ordered}];
+  if(tableState.groupBy){
+    const map=new Map();
+    ordered.forEach(row=>{const label=groupLabel(row,tableState.groupBy);if(!map.has(label))map.set(label,[]);map.get(label).push(row);});
+    sections=[...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],'vi',{numeric:true})).map(([label,list])=>({label,rows:list}));
+  }
+  const collapsedKey=section=>`${tableState.groupBy}:${section.label}`;
+  const visibleRows=sections.flatMap(section=>section.label!==null&&tableState.collapsed.has(collapsedKey(section))?[]:section.rows);
+  tableState.displayed=visibleRows.map(row=>({index:row.index,members:membersOf(row)})); // thứ tự dòng đang hiện, dùng cho chọn dãy bằng Shift
+  closeMenu();
   host.replaceChildren();
   const wrap=node('div',undefined,'grid-wrap');
   wrap.tabIndex=0;
+  wrap.onscroll=closeMenu;
   wrap.onkeydown=e=>{
     if(e.target.closest('input,select,textarea'))return;
-    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();pickRows(tableState.displayed.slice(),'');}
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();pickRows(tableState.displayed.flatMap(membersOf),'');}
     else if(e.key==='Escape'&&tableState.sel.size){pickRows([],'');}
   };
   const t=node('table',undefined,'grid'+(tableState.density?' '+tableState.density:''));
@@ -301,39 +402,70 @@ function renderGrid(host){
   const unitRow=node('tr',undefined,'unit-row');
   cols.forEach(col=>{const th=node('th');if(UNIT_TEXT[col.key])th.append(node('span',UNIT_TEXT[col.key],'pill'));unitRow.append(th);});
   thead.append(unitRow);t.append(thead);
+  // Nhãn "Tổng cộng" / tên nhóm đặt ở cột rộng nhất có sẵn (Tên, rồi Họ, rồi Loại) để không bị cắt.
+  const labelKey=['instance','definition','entity'].find(k=>cols.some(c=>c.key===k));
+  const labelIndex=Math.max(0,cols.findIndex(col=>col.key===labelKey));
   const tbody=node('tbody');
-  ordered.forEach((row,pos)=>{
-    const tr=node('tr');tr.dataset.index=String(row.index);
-    if(tableState.sel.has(row.index))tr.classList.add('selected');
-    tr.onclick=e=>{
-      const inEditor=e.target.closest('input,select,button');
-      if(inEditor&&!(e.ctrlKey||e.metaKey||e.shiftKey))return;
-      const td=e.target.closest('td');clickRow(row.index,td?td.dataset.key:'',e);
-    };
-    // Ctrl / Shift + bấm vào ô sửa là để chọn dòng, không vào chế độ sửa chữ.
-    tr.addEventListener('mousedown',e=>{if((e.ctrlKey||e.metaKey||e.shiftKey)&&e.target.closest('input,select'))e.preventDefault();});
-    cols.forEach(col=>{
-      const td=node('td');td.dataset.key=col.key;
-      if(col.key==='ordinal')td.textContent=String(pos+1);
-      else if(col.editable)td.append(cellEditor(row,col));
-      else if(NUMERIC.has(col.key)){td.textContent=fmt(row[col.key],digitsFor(col.key));td.className='num';}
-      else td.textContent=cellText(row,col.key);
-      tr.append(td);
+  let pos=0;
+  sections.forEach(section=>{
+    if(section.label!==null){
+      const key=collapsedKey(section),closed=tableState.collapsed.has(key);
+      const head=node('tr',undefined,'group-row');head.dataset.group=section.label;
+      const memberIds=section.rows.flatMap(membersOf);
+      head.title='Bấm để chọn cả nhóm';
+      head.onclick=e=>{if(e.target.closest('.chev'))return;clickRow({index:section.rows[0].index,members:memberIds},'',e);};
+      cols.forEach((col,i)=>{
+        const td=node('td');
+        if(i===labelIndex){
+          const chev=node('button',closed?'▸':'▾','chev');chev.type='button';chev.title=closed?'Mở nhóm':'Thu gọn nhóm';chev.setAttribute('aria-label',chev.title);
+          chev.onclick=e=>{e.stopPropagation();if(closed)tableState.collapsed.delete(key);else tableState.collapsed.add(key);renderGrid(host);};
+          td.append(chev,document.createTextNode(` ${section.label} · ${countOf(section.rows)}`));
+        }else if(col.kind==='sum'){td.textContent=fmt(sumOf(section.rows,col.key),digitsFor(col.key));td.className='num';}
+        head.append(td);
+      });
+      tbody.append(head);
+      if(closed)return;
+    }
+    section.rows.forEach(row=>{
+      pos++;
+      const members=membersOf(row);
+      const tr=node('tr');tr.dataset.index=String(row.index);tr.dataset.members=members.join(',');
+      if(members.every(m=>tableState.sel.has(m)))tr.classList.add('selected');
+      tr.onclick=e=>{
+        if(e.target.closest('input,select,button'))return; // đang gõ trong ô sửa
+        const td=e.target.closest('td');
+        const plain=!(e.ctrlKey||e.metaKey||e.shiftKey);
+        clearTimeout(tableState.clickTimer);
+        // Bấm thường vào dòng đang nằm trong vùng chọn nhiều dòng: đợi một nhịp xem có phải nhấp đúp để sửa cả vùng chọn không.
+        if(plain&&tableState.sel.size>members.length&&members.every(m=>tableState.sel.has(m))){
+          tableState.clickTimer=setTimeout(()=>clickRow(row,td?td.dataset.key:'',e),260);return;
+        }
+        clickRow(row,td?td.dataset.key:'',e);
+      };
+      tr.ondblclick=e=>{
+        clearTimeout(tableState.clickTimer);
+        const td=e.target.closest('td');if(!td)return;
+        const col=cols.find(c=>c.key===td.dataset.key);
+        if(col&&col.editable)editCell(td,row,col);
+      };
+      cols.forEach(col=>{
+        const td=node('td');td.dataset.key=col.key;
+        if(col.editable)td.classList.add('editable');
+        if(col.key==='ordinal')td.textContent=String(pos);
+        else if(NUMERIC.has(col.key)){td.textContent=fmt(row[col.key],digitsFor(col.key));td.className='num';}
+        else td.textContent=cellText(row,col.key);
+        tr.append(td);
+      });
+      tbody.append(tr);
     });
-    tbody.append(tr);
   });
   t.append(tbody);
-  // Tổng cộng: mặc định chỉ cộng đối tượng cấp cao nhất để không đếm trùng group lồng nhau.
   if(tableState.showTotals){
-    const counted=rows.filter(r=>!(tableState.onlyTop&&r.parents.some(p=>shown.has(p))));
-    // Nhãn "Tổng cộng" đặt ở cột rộng nhất có sẵn (Tên, rồi Họ, rồi Loại) để không bị cắt.
-    const labelKey=['instance','definition','entity'].find(k=>cols.some(c=>c.key===k));
-    const labelIndex=Math.max(0,cols.findIndex(col=>col.key===labelKey));
     const foot=node('tr');
     cols.forEach((col,i)=>{
       const td=node('td');
-      if(i===labelIndex)td.textContent=`Tổng cộng · ${counted.length} đối tượng`;
-      else if(col.kind==='sum'){td.textContent=fmt(counted.reduce((s,r)=>s+(typeof r[col.key]==='number'?r[col.key]:0),0),digitsFor(col.key));td.className='num';}
+      if(i===labelIndex)td.textContent=`Tổng cộng · ${countOf(rows)} đối tượng`;
+      else if(col.kind==='sum'){td.textContent=fmt(sumOf(rows,col.key),digitsFor(col.key));td.className='num';}
       foot.append(td);
     });
     const tfoot=node('tfoot');tfoot.append(foot);t.append(tfoot);
@@ -399,6 +531,18 @@ function renamePanel(){
   renamePreview(box);
   return p;
 }
+function groupPanel(){
+  const p=node('div',undefined,'popover left group-panel');
+  p.append(node('div','Nhóm theo','pop-title'));
+  const list=node('div',undefined,'pop-list');
+  GROUP_OPTIONS.forEach(([value,label])=>list.append(button(label,()=>{tableState.groupBy=value;tableState.panel=null;tableView(tableState.data);},'pop-pick'+(value===tableState.groupBy?' primary':''))));
+  const merge=node('label',undefined,'merge-opt');
+  const box=node('input');box.type='checkbox';box.checked=tableState.merge;
+  box.onchange=()=>{tableState.merge=box.checked;renderGrid($('grid-host'));};
+  merge.append(box,document.createTextNode(' Gộp dòng giống nhau'));
+  p.append(list,merge,node('p','Chỉ đổi cách hiển thị. Dòng gộp: Số lượng, diện tích, thể tích là tổng của các dòng gộp.','muted'));
+  return p;
+}
 function toolbar(){
   const d=tableState.data;const bar=node('div',undefined,'toolbar');
   const cols=button('Chọn cột',()=>{tableState.panel=tableState.panel==='columns'?null:'columns';tableView(tableState.data);},'primary');
@@ -412,7 +556,10 @@ function toolbar(){
   const rename=button('Đổi tên',()=>{tableState.panel=tableState.panel==='rename'?null:'rename';tableView(tableState.data);});
   rename.setAttribute('aria-expanded',String(tableState.panel==='rename'));
   const count=node('span',tableState.sel.size?`Đã chọn ${tableState.sel.size} / ${d.rows.length} dòng`:'','sel-count');
-  bar.append(cols,search,group,preset,rename,count);
+  const groupLabelText=(GROUP_OPTIONS.find(o=>o[0]===tableState.groupBy)||GROUP_OPTIONS[0])[1];
+  const grouping=button(`Nhóm theo: ${groupLabelText} ▾`,()=>{tableState.panel=tableState.panel==='group'?null:'group';tableView(tableState.data);});
+  grouping.setAttribute('aria-expanded',String(tableState.panel==='group'));
+  bar.append(cols,search,group,grouping,preset,rename,count);
   return bar;
 }
 function columnPanel(){
@@ -492,11 +639,12 @@ function tableView(data){
   content.replaceChildren();
   const view=node('div',undefined,'table-view');content.append(view);
   if(data.hint)view.append(node('p',data.hint,'hint'));
-  else view.append(node('p','Chọn đối tượng trong SketchUp là bảng tự đọc. Bấm một ô để đánh dấu đối tượng và hiện nội dung ô đó; giữ Shift hoặc Ctrl để chọn nhiều dòng, Ctrl+A chọn hết. Sửa Tên, Mô tả, Tình trạng ngay trong bảng.','hint'));
+  else view.append(node('p','Chọn đối tượng trong SketchUp là bảng tự đọc. Bấm một ô để đánh dấu đối tượng và hiện nội dung ô đó; giữ Shift hoặc Ctrl để chọn nhiều dòng, Ctrl+A chọn hết. Nhấp đúp vào ô để sửa: Tên, Mô tả (gõ), Tình trạng, Tag, Vật liệu (chọn từ danh sách).','hint'));
   const bar=node('div',undefined,'toolbar-wrap');
   bar.append(toolbar());
   if(tableState.panel==='columns')bar.append(columnPanel());
   if(tableState.panel==='presets')bar.append(presetPanel());
+  if(tableState.panel==='group')bar.append(groupPanel());
   if(tableState.panel==='rename')bar.append(renamePanel());
   view.append(bar);
   const host=node('div');host.id='grid-host';view.append(host);

@@ -62,4 +62,17 @@ deep = VGD::BIM::Table.build(m, [top, other], true)[:rows]
 ok('chọn sâu: đọc cả 3 đối tượng (kể cả con lồng)', deep.size == 3)
 ok('chọn sâu: con lồng có cha trong bảng', deep.find { |r| r[:name] == 'Con' }[:parents] == [deep.find { |r| r[:name] == 'Cha' }[:index]])
 
+# Dòng cha (dùng để nhóm theo cha) và các cột sửa được bằng nhấp đúp
+ok('dòng cha: đối tượng ở cấp gốc không có cha', shallow.all? { |r| r[:parent] == '' })
+ok('dòng cha: đối tượng con lồng có tên của cha', deep.find { |r| r[:name] == 'Con' }[:parent] == 'Cha')
+ctx = Sketchup::Group.new('Tủ bếp')
+m2 = Model.new; m2.active_path = [ctx]
+in_ctx = VGD::BIM::Table.build(m2, [Sketchup::Group.new('Cánh')], false)[:rows]
+ok('dòng cha: đang mở sửa một group thì cha là group đó', in_ctx[0][:parent] == 'Tủ bếp')
+unnamed = Sketchup::Group.new('')
+m3 = Model.new; m3.active_path = [unnamed]
+ok('dòng cha: cha chưa đặt tên thì lấy tên định nghĩa (cũng rỗng ở stub này)', VGD::BIM::Table.build(m3, [Sketchup::Group.new('X')], false)[:rows][0][:parent] == '')
+editable = VGD::BIM::Table::COLUMNS.select { |c| c[:editable] }.map { |c| [c[:key], c[:editable]] }
+ok('cột sửa được: tên, mô tả, tình trạng, tag, vật liệu', editable == [%w[instance name], %w[description description], %w[tag tag], %w[material material], %w[status status]])
+
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

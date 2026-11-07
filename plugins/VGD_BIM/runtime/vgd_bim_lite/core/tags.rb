@@ -139,14 +139,26 @@ module VGD
         model.layers.to_a.find { |layer| key(layer.name) == key(name) }
       end
 
-      # Gán tag cho các đối tượng và mặt. Bỏ qua đối tượng bị khóa.
-      def self.assign(model, entities, name)
+      # Tên tag dùng để gán: bỏ khoảng trắng thừa, từ chối tên rỗng và "Untagged".
+      def self.normalize_name(name)
         target = name.to_s.strip.gsub(/\s+/, ' ')
         raise ArgumentError, 'Hãy chọn một tag.' if target.empty?
         raise ArgumentError, 'Tên "Untagged" không dùng để gán.' if key(target) == 'untagged'
+        target
+      end
+
+      # Tag trong model: dùng tag có sẵn (không phân biệt hoa thường) hoặc tạo mới. Gọi trong một operation.
+      def self.layer_for(model, name)
+        target = normalize_name(name)
+        find_layer(model, target) || model.layers.add(target)
+      end
+
+      # Gán tag cho các đối tượng và mặt. Bỏ qua đối tượng bị khóa.
+      def self.assign(model, entities, name)
+        target = normalize_name(name)
         result = {count: 0, locked: 0, hidden: false}
         Data.transaction(model, 'VGD BIM · Gán tag') do
-          layer = find_layer(model, target) || model.layers.add(target)
+          layer = layer_for(model, target)
           result[:hidden] = !layer.visible?
           entities.each do |entity|
             next unless entity.valid?

@@ -1,6 +1,8 @@
 # VGD_BIM 1.1.0
 
 - **Bảng khối lượng** (mở đầu tiên): bảng tự đọc đối tượng đang chọn, 20 cột, chọn cột, kéo đổi thứ tự, co giãn cột, dòng tổng cộng, preset cột (Tất cả / Phần thô / Hoàn thiện / Đồ rời và preset tự tạo), sửa trực tiếp Tên, Mô tả, Tình trạng. Tuỳ chọn thu phóng, cô lập, chọn sâu và tổng cấp cao nhất.
+- **Sửa bằng nhấp đúp:** Tên, Mô tả gõ ngay trong ô; Tình trạng, Tag, Vật liệu chọn từ bảng có ô tìm kiếm (Tag có thể tạo mới). Áp dụng cho cả vùng chọn nhiều dòng, một bước hoàn tác, bỏ qua đối tượng khóa.
+- **Nhóm theo** (Cha, Loại, Tên họ, Tên, Vật liệu, Tag, Nhóm hạng mục, Tình trạng) với dòng tiêu đề từng nhóm, thu gọn / chọn cả nhóm, và **Gộp dòng giống nhau**.
 - **Chọn nhiều dòng trong bảng kiểu Excel:** Ctrl + bấm thêm / bớt dòng, Shift + bấm chọn dãy, Ctrl + Shift thêm dãy, Ctrl+A chọn hết, Esc bỏ chọn. SketchUp chọn theo các đối tượng đã chọn nên các tab khác dùng luôn.
 - **Đổi tên hàng loạt** trong tab Bảng khối lượng (nút Đổi tên), áp dụng cho các dòng đang chọn: mẫu tên ghép từ tên hiện tại, tên định nghĩa, phân loại, nhóm hạng mục và số thứ tự; tìm và thay, tiền tố / hậu tố, kiểu chữ; đánh số theo thứ tự trong bảng, vị trí hoặc tên; xem trước, báo đối tượng khóa và tên trùng; cả đợt một bước hoàn tác. Chỉ đổi tên đối tượng (instance), không đổi tên định nghĩa.
 - **Khung đánh dấu trong SketchUp:** chọn đối tượng thì hiện khung nét đứt theo khung bao, tô mặt và khung tên; tự tắt khi đối tượng bị xóa. Từ SketchUp 2023 khung vẽ bằng lớp phủ (Overlay) nên cách chọn đối tượng giữ nguyên như mặc định (Shift/Ctrl, kéo chọn, nhấp đúp vào group); SketchUp 2022 dùng công cụ vẽ tạm với vài hạn chế khi chọn.
