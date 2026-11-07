@@ -55,24 +55,33 @@ Các báo cáo chưa tính đơn giá/thành tiền. Danh mục có cả đối 
 
 File CSV dùng UTF-8, dấu chấm phẩy tách cột và dấu phẩy thập phân. Nếu Excel mở chưa đúng, chọn **Dữ liệu → Từ văn bản/CSV**, chọn UTF-8 và dấu chấm phẩy.
 
-## Ảnh món đồ (tab Hình ảnh)
+## Preset, đơn vị và ảnh (nút Preset ở thanh đầu)
 
-Ảnh **chỉ được chụp khi bạn bấm**, plugin không tự chụp.
+Nút **Preset** nằm cạnh nút Sáng/Tối. Bấm vào để mở bảng gồm hai phần: bên trái là **Đơn vị** và **Hình ảnh**, bên phải là danh sách preset.
 
-1. Chọn group hoặc component trong SketchUp rồi mở tab **Hình ảnh**. Mỗi đối tượng một thẻ.
-2. Bấm **Cập nhật ảnh** để chụp mọi đối tượng đang hiện (tích **Chỉ chụp đối tượng chưa có ảnh** để bỏ qua đối tượng đã có). Bấm **Chụp ảnh** hoặc **Chụp lại** trên một thẻ để chỉ chụp đối tượng đó. Chụp nhiều thì có nút **Dừng**; mỗi lần tối đa 200 đối tượng.
-3. Cách chụp chọn trong tab **Cài đặt**: **Cô lập món đồ rồi chụp** (tạm ẩn phần còn lại của model, zoom vào món đồ, chụp ảnh vuông, rồi trả model về như cũ, không để lại bước hoàn tác) hoặc **Chụp đúng khung nhìn hiện tại**. Khi chụp, đối tượng đang chọn bị bỏ chọn tạm thời rồi được chọn lại. Nếu món đồ nằm trong thành phần dùng chung nhiều nơi thì không cô lập được, hãy dùng chế độ khung nhìn hiện tại.
-4. Muốn dùng ảnh của bạn: kéo thả file ảnh (PNG, JPG, WebP, BMP) vào thẻ hoặc vào ô **Ảnh** trong bảng; hoặc bấm ô rồi dán ảnh đã copy (**Ctrl+V**); hoặc bấm **Chọn ảnh…**. Ảnh được thu nhỏ về cỡ ảnh trong Cài đặt.
-5. **Xóa ảnh** chỉ xóa file ảnh, không đụng vào model. Ảnh lưu ngoài file SketchUp, theo từng model và mã đối tượng, nên nhớ sao lưu thư mục ảnh cùng file SKP nếu cần.
-6. Trong **Bảng khối lượng**, bật cột **Ảnh** (Chọn cột) để thấy ảnh nhỏ; chọn dòng rồi bấm **Chụp ảnh** để chụp riêng các dòng đó.
+1. **Chọn preset**: bấm tên preset. Bảng đổi cột, tiêu đề cột, đơn vị và cách chụp ảnh theo preset. Nút ↻ cạnh preset có sẵn khôi phục về bản gốc.
+2. **Tạo preset**: sắp xếp bảng như ý (chọn cột, kéo thứ tự, đổi đơn vị, đổi tên cột), gõ tên vào ô **Tạo mới...** rồi bấm **+**. Từ đó, mọi thay đổi trong lúc dùng preset này tự cập nhật vào nó. Nút × xóa preset tự tạo.
+3. **Đổi tên cột**: nhấp đúp vào tiêu đề cột, gõ tên mới rồi Enter (Esc hủy, để trống để về tên gốc). Tên cột lưu theo preset.
+4. **Đơn vị**: chọn đơn vị và số lẻ cho chiều dài, diện tích, thể tích; chọn tiền tệ và dấu thập phân. Chỉ đổi cách hiển thị, báo cáo CSV ở tab Quét & xuất vẫn dùng mm.
+5. **Nhập / Xuất** (menu ở chân trang): nhập hoặc xuất preset bằng file JSON (đọc được file preset của plugin tham khảo), hoặc xuất bảng đang hiện ra CSV để mở bằng Excel.
 
-## Cài đặt
+Ảnh món đồ nằm trong cột **Ảnh** của Bảng khối lượng (bật trong **Chọn cột**, preset "Tất cả" đã có sẵn). Ảnh **chỉ được chụp khi bạn bấm**, plugin không tự chụp:
 
-Tab **Cài đặt** lưu trên máy này, mỗi thay đổi được lưu ngay:
+1. Bấm **Cập nhật ảnh**: hộp xác nhận cho biết sẽ chụp bao nhiêu đối tượng (đang chọn, hoặc tất cả đang hiện). Tích **Chỉ chụp đối tượng chưa có ảnh** để bỏ qua đối tượng đã có. Chụp nhiều thì có nút **Dừng**; mỗi lần tối đa 200 đối tượng.
+2. Rê chuột vào một ô ảnh để chụp lại riêng dòng đó (↻), chọn file ảnh (⋯) hoặc xóa ảnh (×).
+3. Trong bảng Preset, phần **Hình ảnh** chọn cỡ ảnh (rộng, cao), **góc nhìn** (Khung nhìn hiện tại, Phối cảnh iso, Chính diện), kiểu hiển thị (Màu có texture hoặc Kiểu hiện tại), nền (trong suốt hoặc trắng) và thư mục lưu ảnh. Khung nhìn hiện tại chụp đúng những gì đang thấy. Iso và Chính diện cô lập món đồ: tạm ẩn phần còn lại, đặt camera, chụp rồi trả model về như cũ, không để lại bước hoàn tác. Chính diện là nhìn từ phía -Y của model. Món đồ nằm trong thành phần dùng chung nhiều nơi thì không cô lập được; hãy dùng Khung nhìn hiện tại.
+4. Muốn dùng ảnh của bạn: kéo thả file ảnh (PNG, JPG, WebP, BMP) vào ô ảnh, hoặc bấm ô rồi dán ảnh đã copy (**Ctrl+V**), hoặc nút ⋯. Ảnh được thu nhỏ vừa khung rộng x cao của preset.
+5. Ảnh lưu thành file PNG ngoài file SketchUp, theo từng model và mã đối tượng. Chép file SKP sang máy khác thì ảnh không đi theo: hãy sao lưu thư mục ảnh cùng file SKP.
 
-- **Ngôn ngữ**: Tiếng Việt hoặc English. Đổi sẽ tải lại cửa sổ. Báo cáo CSV và hộp thoại gốc của SketchUp vẫn bằng tiếng Việt.
-- **Đơn vị chiều dài**: mm, cm hoặc m cho kích thước hiện trong cửa sổ (bảng, tab Thông tin, nhãn khung đánh dấu). Diện tích luôn là m², thể tích m³; báo cáo CSV giữ nguyên mm.
-- **Thư mục lưu ảnh** (gõ đường dẫn đầy đủ hoặc **Chọn thư mục…**; để trống dùng thư mục mặc định), **Cách chụp**, **Cỡ ảnh** (cạnh dài), **Nền ảnh** (trong suốt hoặc trắng; nền trắng tạm tắt mặt đất và chân trời khi chụp rồi trả lại).
+Nút ⚙ ở thanh đầu chỉ để chọn **ngôn ngữ** (Tiếng Việt / English). Đổi sẽ tải lại cửa sổ. Báo cáo CSV và hộp thoại gốc của SketchUp vẫn bằng tiếng Việt.
+
+## Các cột mới của Bảng khối lượng
+
+**Diện tích chiếu** (hình chiếu xuống mặt phẳng ngang, hợp cho phòng và khu vực; chỉ tính khi bật công tắc **Diện tích chiếu** ở chân trang, hoặc tự bật khi bạn hiện cột này), **Lớp IFC** (đọc phân loại IFC có sẵn), **Hãng**, **Link** (nút ↗ mở bằng trình duyệt; chỉ nhận http hoặc https), **Cỡ**, **Đơn giá** (bạn tự nhập, chỉ số, ví dụ 1250000 hoặc 12,5) và **Thành tiền** (= đơn giá x số lượng, dòng tổng cộng cộng dồn). Nhấp đúp vào ô để nhập. Link, Cỡ, Đơn giá được lưu riêng cho bảng, không đổi dữ liệu dùng chung với các plugin VGD khác.
+
+## Thay thế hàng loạt chữ
+
+Gõ chữ vào ô **Tìm kiếm** thì hiện thêm ô **Thay bằng** và nút **Thay thế (n)** (n là số ô sẽ đổi). Chữ được thay trong các cột Tên, Mô tả, Hãng, Cỡ đang hiện, ở các dòng đang lọc, không phân biệt hoa thường; cả đợt là một bước hoàn tác (Ctrl+Z) và đối tượng bị khóa được bỏ qua.
 
 ## Soạn tag
 

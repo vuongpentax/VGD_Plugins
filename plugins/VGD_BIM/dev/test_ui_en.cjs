@@ -8,9 +8,8 @@ const presets=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../runtime/vgd_
 const VIET=/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
 // Chữ tiếng Việt được phép còn lại: mã mẫu đổi tên (là cú pháp), tên ngôn ngữ, ví dụ tên cột trong thông báo nhập tag.
 const ALLOWED=new Set(['{tên}','{họ}','{phân loại}','{nhóm}','{số}','Tiếng Việt']);
-const settings=lang=>({language:lang,image_dir:'',image_size:512,image_background:'transparent',capture_mode:'isolate',length_unit:'mm'});
-const config=(lang,mode)=>({mode,version:'1.1.0',language:lang,settings:settings(lang),fields:F.fields,categories:F.categories,units:F.units,methods:F.methods,presets,locale:lang==='en'?F.en:F.vi,vi_en:lang==='en'?F.vi_en:null,scan_options:{scope:'model',faces:true}});
-const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',definition:'Cabinet',name:'Cab '+i,description:'Oak',lenX:1200,lenY:600,lenZ:800,areaXZ:0.96,areaXY:0.72,areaFace:2.1,volume:0.5,tag:'Tag'+i,tag_group:F.groups[i%3],material:'Oak',status:['new','existing','reuse'][i],locked:i===2,quantity:1,parents:[],parent:i?'Parent A':'',pid:900+i,has_image:i===0,image_stamp:5}));
+const config=(lang,mode)=>({mode,version:'1.1.0',language:lang,app:{settings:{language:lang,image_dir:''},dir:'C:\\data\\images',dir_exists:false},preset_info:F.preset_info,table:{columns:F.columns,presets:F.presets,view:{}},fields:F.fields,categories:F.categories,units:F.units,methods:F.methods,presets,locale:lang==='en'?F.en:F.vi,vi_en:lang==='en'?F.vi_en:null,scan_options:{scope:'model',faces:true}});
+const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',definition:'Cabinet',name:'Cab '+i,description:'Oak',lenX:1200,lenY:600,lenZ:800,areaXZ:0.96,areaXY:0.72,areaFace:2.1,volume:0.5,tag:'Tag'+i,tag_group:'Phần thô',material:'Oak',status:['new','existing','reuse'][i],locked:i===2,quantity:1,parents:[],parent:i?'Parent A':'',pid:900+i,has_image:i===0,image_stamp:5,areaProjected:1.5,ifc:'IfcWall',owner:'Hafele',url:'https://a.vn',size:'1x2',price:1000,total:1000}));
 (async()=>{
  const browser=await chromium.launch({headless:true,channel:process.env.VGD_BROWSER_CHANNEL||undefined});
  try{
@@ -55,7 +54,7 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await page.getByRole('button',{name:/Thêm quy tắc|Add rule/}).first().click();await scan('Quy tắc (thêm)');
   await receive('config',config(lang,'tags'));
   await receive('tags',{groups:F.groups.slice(0,5),tags:[{name:'A',group:F.groups[0],in_model:true,visible:false},{name:'B',group:F.groups[1],in_model:false},{name:'C',group:F.groups[1],in_model:true,visible:true}],selection:3});await scan('Soạn tag');
-  const table=cfg=>({columns:F.columns,presets:F.presets,groups:F.groups,statuses:F.statuses,options:{zoom:true,isolate:false,deep:false,isolating:false},rows,selected:[],hint:null,view:{},choices:{tags:['Tag0','Tag1'],materials:['Oak']},...cfg});
+  const table=cfg=>({columns:F.columns,presets:F.presets,groups:F.groups,statuses:F.statuses,options:{zoom:true,isolate:false,deep:false,projected:false,isolating:false},rows,selected:[],hint:null,view:{},choices:{tags:['Tag0','Tag1'],materials:['Oak']},...cfg});
   await receive('config',config(lang,'table'));
   await receive('table',table({selected:[0]}));await scan('Bảng');
   await page.evaluate(()=>{for(const p of ['columns','presets','group','rename']){tableState.panel=p;tableView(tableState.data);}});
@@ -67,19 +66,29 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await page.locator('.grid tbody tr').nth(1).locator('td[data-key="tag"]').dblclick();await scan('Bảng (menu tag)');
   await page.keyboard.press('Escape');
   await page.evaluate(()=>{message('x');});
-  await receive('config',config(lang,'images'));
-  await receive('images',{rows:rows.map(r=>({...r})),hint:null,settings:{settings:settings(lang),dir:'C:\\x',dir_exists:false},busy:false});await scan('Hình ảnh');
-  await receive('images_progress',{done:1,total:3});await scan('Hình ảnh (đang chụp)');
-  await receive('images_done',{done:3,total:3,ok:2,errors:['Cab 1: không chụp được.'],cancelled:false});await scan('Hình ảnh (xong)');
-  await receive('images_done',{done:1,total:3,ok:1,errors:[],cancelled:true});await scan('Hình ảnh (dừng)');
-  await receive('images',{rows:[],hint:'Chưa chọn đối tượng nào. Chọn group hoặc component trong SketchUp để xem và chụp ảnh.',settings:{settings:settings(lang),dir:'C:\\x',dir_exists:true},busy:false});await scan('Hình ảnh (trống)');
-  await receive('config',config(lang,'settings'));
-  await receive('settings',{settings:settings(lang),dir:'C:\\x',dir_exists:false});await scan('Cài đặt');
-  await receive('settings',{settings:settings(lang),dir:'C:\\x',dir_exists:true});await scan('Cài đặt (có thư mục)');
+  // Thanh đầu: bảng preset, bánh răng, hộp xác nhận chụp ảnh, menu Nhập / Xuất, Thay thế
+  await receive('config',config(lang,'table'));await receive('table',table());
+  await page.click('#preset-btn');await scan('Bảng preset');
+  await page.locator('#preset-panel .pp-pick').nth(5).click();await scan('Bảng preset (Phòng & Khu vực)');
+  await page.keyboard.press('Escape');await scan('Bảng (preset Phòng & Khu vực)');
+  await page.click('#gear');await scan('Bánh răng');await page.keyboard.press('Escape');
+  await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});await scan('Hộp xác nhận chụp ảnh');
+  await page.evaluate(()=>{tableState.panel='io';tableView(tableState.data);});await scan('Menu Nhập / Xuất');
+  await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
+  await page.fill('.search-wrap input','cab');await scan('Thay thế');
+  await page.fill('.search-wrap input','');
+  await page.evaluate(()=>{captureState.busy=true;captureState.done=1;captureState.total=3;syncBusy();});await scan('Đang chụp');
+  await page.evaluate(()=>{captureState.busy=false;syncBusy();});
+  await receive('images_progress',{done:1,total:3});await scan('Đang chụp (tiến độ)');
+  await receive('images_done',{done:3,total:3,ok:2,errors:['Cab 1: không chụp được.'],cancelled:false});await scan('Chụp xong');
+  await receive('images_done',{done:1,total:3,ok:1,errors:[],cancelled:true});await scan('Chụp dừng');
+  await page.evaluate(()=>{for(const k of tableState.data.columns.map(c=>c.key))tableState.visible.add(k);tableState.order=tableState.data.columns.map(c=>c.key);tableView(tableState.data);});await scan('Bảng (mọi cột mới)');
+  await page.locator('.grid tbody tr').nth(0).locator('td[data-key="price"]').hover();
   await messages([
     'Đã lưu cài đặt.','Đang chụp ảnh. Hãy đợi xong hoặc bấm Dừng.','Không có đối tượng nào cần chụp.','Mỗi lần chỉ chụp tối đa 200 đối tượng. Hãy chọn ít hơn.','Ngôn ngữ không hợp lệ.',
     'Cỡ ảnh phải từ 128 đến 4096 điểm ảnh.','Thư mục ảnh phải là đường dẫn đầy đủ (ví dụ C:\\Anh\\NoiThat).','Ảnh quá lớn (tối đa 8 MB).','Dữ liệu không phải ảnh PNG.','Không đọc được ảnh.',
-    'Đã cập nhật 3 đối tượng; bỏ qua 1 đối tượng bị khóa.','Đã sửa tên cho 2 đối tượng. Bỏ qua 1 đối tượng bị khóa.','Đã đổi tên 5 đối tượng. Bỏ qua 1 đối tượng bị khóa. Có 2 dòng trùng tên.',
+    'Đã thay chữ trong 3 ô của 2 đối tượng. Bỏ qua 1 đối tượng bị khóa.','Chữ cần tìm hoặc chữ thay thế quá dài (tối đa 200 ký tự).','Hãy chọn cột cần thay: chỉ có Tên, Mô tả, Hãng, Cỡ.','Không có ô nào chứa chữ cần tìm.','Hãy nhập chữ cần tìm.','Link phải bắt đầu bằng http:// hoặc https://, không có khoảng trắng, tối đa 500 ký tự.','Cỡ tối đa 100 ký tự.','Đơn giá phải là số không âm, ví dụ 1250000 hoặc 12,5 (không dùng dấu chấm ngăn cách hàng nghìn).','Link không hợp lệ.',
+    'Đã nhập 3 preset.','Đã xuất 2 preset: C:\\a.json','File preset quá lớn.','File không phải JSON hợp lệ.','Thiết lập của preset không hợp lệ.','Đơn vị diện tích không hợp lệ.','Đơn vị thể tích không hợp lệ.','Dấu thập phân không hợp lệ.','Tiền tệ không hợp lệ.','Góc nhìn của ảnh không hợp lệ.','Kiểu hiển thị của ảnh không hợp lệ.','Số chữ số lẻ phải từ 0 đến 4.','Tiêu đề cột không hợp lệ.','Tiêu đề cột phải là chữ.','Tiêu đề cột tối đa 60 ký tự.','Tệp preset không đúng định dạng.','Phiên bản tệp preset chưa được hỗ trợ.','Quá nhiều preset (tối đa 100).','Tệp không có preset hợp lệ nào.','Chưa có preset tự tạo để xuất. Bấm + trong bảng preset để lưu một preset.','Bảng quá lớn để xuất.','Dữ liệu bảng không hợp lệ.','Thiết lập của preset không hợp lệ.','Tên preset quá dài (tối đa 40 ký tự).','Đã cập nhật 3 đối tượng; bỏ qua 1 đối tượng bị khóa.','Đã sửa tên cho 2 đối tượng. Bỏ qua 1 đối tượng bị khóa.','Đã đổi tên 5 đối tượng. Bỏ qua 1 đối tượng bị khóa. Có 2 dòng trùng tên.',
     'Đã gán tag "Door" cho 4 đối tượng. Bỏ qua 1 đối tượng bị khóa. Tag này đang tắt hiển thị nên các đối tượng gán vào sẽ bị ẩn.','Đã lưu preset "Cab".','Đã xuất 5 tag: C:\\a.csv','Đã nhập 4 tag. Bộ tag hiện có 9 tag.',
     'Đã chuyển đổi 7 đối tượng. Đã lưu quy tắc phân loại.','Đã xuất 12 dòng. Mở bằng Excel: C:\\a.csv','Dòng 3: Nhóm không hợp lệ: Zzz','Tên tag quá dài (tối đa 60 ký tự): abc','Tên tag bị trùng: abc',
     'Mô hình đã thay đổi. Hãy làm mới trước khi tiếp tục.','Bảng đã cũ. Hãy làm mới bảng.','Số bắt đầu phải là số nguyên từ 0 đến 99999.','Chỉ số dòng không hợp lệ.','Không ghi được tệp. Kiểm tra vị trí lưu và đóng tệp nếu đang mở trong Excel.',

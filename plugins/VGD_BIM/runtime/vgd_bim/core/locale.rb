@@ -5,7 +5,7 @@ module VGD
       def self.dictionary
         @dictionary ||= JSON.parse(File.read(File.expand_path('../config/vi.json', __dir__.dup.force_encoding(Encoding::UTF_8)), encoding: 'UTF-8'))
       end
-      # Từ điển hiển thị trên giao diện theo ngôn ngữ trong Cài đặt. Báo cáo CSV và thông báo kiểm tra vẫn dùng tiếng Việt (dictionary).
+      # Từ điển hiển thị trên giao diện theo ngôn ngữ đã chọn (nút bánh răng). Báo cáo CSV và thông báo kiểm tra vẫn dùng tiếng Việt (dictionary).
       def self.ui_dictionary(language)
         return dictionary unless language == 'en'
         @english ||= JSON.parse(File.read(File.expand_path('../config/en.json', __dir__.dup.force_encoding(Encoding::UTF_8)), encoding: 'UTF-8'))

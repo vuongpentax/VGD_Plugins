@@ -12,8 +12,8 @@ module VGD
       end
       class Dialog
         include ImageActions
-        # 7 tab: Bảng khối lượng · Thông tin · Quét & xuất · Phân loại (gồm Quy tắc, Kiểm tra) · Soạn tag · Hình ảnh · Cài đặt.
-        MODES = %w[table information scan mapping rules validate_model validate_selection tags images settings].freeze
+        # 5 tab: Bảng khối lượng · Thông tin · Quét & xuất · Phân loại (gồm Quy tắc, Kiểm tra) · Soạn tag. Ảnh nằm trong cột Ảnh của bảng.
+        MODES = %w[table information scan mapping rules validate_model validate_selection tags].freeze
         # Tên cũ vẫn mở được, chuyển về tab đã gộp.
         ALIASES = {'export' => 'scan', 'convert_selection' => 'information'}.freeze
         def initialize(mode)
@@ -28,7 +28,7 @@ module VGD
           @table_scope = []
           @table_picks = nil      # đối tượng bảng đã chọn và SketchUp đang chọn theo
           @picked_entities = []   # mọi đối tượng đã chọn trong bảng (có thể nhiều hơn SketchUp chọn khi khác cấp lồng)
-          @table_options = {zoom: true, isolate: false, deep: false}
+          @table_options = {zoom: true, isolate: false, deep: false, projected: false}
           @isolated = []
           @preview = nil
           @ready = false
@@ -66,6 +66,9 @@ module VGD
           @dialog.add_action_callback('table_select') { |_ctx, payload| safely { table_select(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_edit') { |_ctx, payload| safely { table_edit(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_option') { |_ctx, payload| safely { table_option(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_export') { |_ctx, payload| safely { table_export(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_replace') { |_ctx, payload| safely { table_replace(JSON.parse(payload)) } }
+          @dialog.add_action_callback('open_url') { |_ctx, url| safely { open_url(url) } }
           @dialog.add_action_callback('table_preset') { |_ctx, payload| safely { table_preset(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_clear') { |_ctx| safely { table_clear } }
           @dialog.add_action_callback('rename_preview') { |_ctx, payload| safely { rename_preview(JSON.parse(payload)) } }
@@ -110,8 +113,7 @@ module VGD
         def selection_changed
           handler = {'table' => -> { table_selection_changed },
                      'tags' => -> { emit('selection', {count: taggable_selection.size}) },
-                     'information' => -> { refresh },
-                     'images' => -> { table_scan_selection!; images_build }}[@mode]
+                     'information' => -> { refresh }}[@mode]
           return unless handler && @dialog.visible?
           return if @capture # đang chụp ảnh: chọn / bỏ chọn tạm thời là của việc chụp, không phải của người dùng
           ::UI.stop_timer(@selection_timer) if @selection_timer
@@ -128,8 +130,9 @@ module VGD
           cleanup_table_view unless @mode == 'table'
           @model = Sketchup.active_model
           language = Settings.read['language']
-          emit('config', {mode: @mode, version: BIM::VERSION, language: language, settings: Settings.read, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.ui_dictionary(language), vi_en: (language == 'en' ? Locale.vi_en_names : nil), scan_options: {scope: @scan_options[:scope], faces: faces?}})
-          if %w[information tags table images].include?(@mode)
+          emit('config', {mode: @mode, version: BIM::VERSION, language: language, app: settings_payload, preset_info: {defaults: Preset::DEFAULT_SETTINGS, choices: Preset.choices},
+                         table: {columns: Table::COLUMNS, presets: Table.presets, view: Table.view_state}, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.ui_dictionary(language), vi_en: (language == 'en' ? Locale.vi_en_names : nil), scan_options: {scope: @scan_options[:scope], faces: faces?}})
+          if %w[information tags table].include?(@mode)
             @observer = SelectionObserver.new(self)
             @model.selection.add_observer(@observer)
           end
@@ -149,11 +152,6 @@ module VGD
           when 'table'
             table_scan_selection!
             table_build
-          when 'images'
-            table_scan_selection!
-            images_build
-          when 'settings'
-            emit('settings', settings_payload)
           when 'rules'
             emit('rules', MappingRules.read(@model))
           else
@@ -280,7 +278,7 @@ module VGD
         def table_build
           @model = Sketchup.active_model
           scope = @table_scope.select(&:valid?)
-          built = Table.build(@model, scope, @table_options[:deep] ? true : false)
+          built = Table.build(@model, scope, @table_options[:deep] ? true : false, projected: @table_options[:projected])
           @table_rows = built[:rows]
           @table_records = built[:records]
           hint = scope.empty? ? 'Chưa chọn đối tượng nào. Chọn group hoặc component trong SketchUp, bảng sẽ tự đọc.' : nil
@@ -335,7 +333,8 @@ module VGD
         end
         # Sửa ô bằng nhấp đúp. payload: {'indexes' => [các dòng], 'field' => name|description|status|tag|material, 'value' => giá trị}.
         # Áp cho mọi dòng gửi lên, bỏ qua đối tượng khóa; cả đợt là một bước hoàn tác. ('index' => một dòng vẫn được nhận.)
-        EDIT_LABELS = {'name' => 'tên', 'description' => 'mô tả', 'status' => 'tình trạng', 'tag' => 'tag', 'material' => 'vật liệu'}.freeze
+        EDIT_LABELS = {'name' => 'tên', 'description' => 'mô tả', 'status' => 'tình trạng', 'tag' => 'tag', 'material' => 'vật liệu',
+                       'owner' => 'hãng', 'url' => 'link', 'size' => 'cỡ', 'price' => 'đơn giá'}.freeze
         def table_edit(payload)
           check_model!
           field = payload.fetch('field')
@@ -362,6 +361,8 @@ module VGD
           when 'name' then entity.name = value
           when 'tag' then entity.layer = layer
           when 'material' then entity.material = material
+          when 'url', 'size', 'price' then Table::Extras.write(entity, field, value) # dữ liệu riêng của bảng, không thuộc schema VGD
+          when 'owner' then Data.write(entity, {manufacturer: value}, Data.source(entity) == 'RAW' ? 'MANUAL' : Data.source(entity))
           else Data.write(entity, {field.to_sym => value}, Data.source(entity) == 'RAW' ? 'MANUAL' : Data.source(entity))
           end
         end
@@ -378,9 +379,58 @@ module VGD
           materials = @model.materials.to_a.map { |material| material.display_name.to_s }
           {tags: tags.sort_by { |name| name.downcase }, materials: materials.sort_by { |name| name.downcase }}
         end
+        # Cột chữ cho phép thay hàng loạt, và cách đọc giá trị hiện tại của dòng.
+        REPLACE_FIELDS = {'name' => :name, 'description' => :description, 'owner' => :owner, 'size' => :size}.freeze
+        MAX_FIND = 200
+        # Thay chữ trong Tên / Mô tả / Hãng / Cỡ của các dòng gửi lên (không có 'indexes' thì mọi dòng trong bảng).
+        # Không phân biệt hoa thường; chuỗi thay được hiểu nguyên văn. Bỏ qua đối tượng khóa. Cả đợt là một bước hoàn tác.
+        def table_replace(payload)
+          check_model!
+          find = payload['find'].to_s
+          replacement = payload['replace'].to_s
+          raise 'Hãy nhập chữ cần tìm.' if find.empty?
+          raise "Chữ cần tìm hoặc chữ thay thế quá dài (tối đa #{MAX_FIND} ký tự)." if find.length > MAX_FIND || replacement.length > MAX_FIND
+          fields = Array(payload['fields']).map(&:to_s)
+          raise 'Hãy chọn cột cần thay: chỉ có Tên, Mô tả, Hãng, Cỡ.' if fields.empty? || !(fields - REPLACE_FIELDS.keys).empty?
+          indexes = payload['indexes'].is_a?(Array) ? table_indexes(payload) : @table_rows.map { |row| row[:index] }
+          records = indexes.map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
+          raise 'Có đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |_, record| record[:path].all?(&:valid?) }
+          pattern = Regexp.new(Regexp.escape(find), Regexp::IGNORECASE)
+          changes = []
+          locked = 0
+          records.each do |index, record|
+            if record[:locked] || record[:entity].locked?
+              locked += 1
+              next
+            end
+            fields.each do |field|
+              old = @table_rows[index][REPLACE_FIELDS.fetch(field)].to_s
+              changed = old.gsub(pattern) { replacement }
+              changes << [record[:entity], field, changed] if changed != old
+            end
+          end
+          raise 'Không có ô nào chứa chữ cần tìm.' if changes.empty?
+          Data.transaction(@model, 'VGD_BIM · Thay thế') { changes.each { |entity, field, value| apply_edit(entity, field, value, nil, nil) } }
+          table_build
+          show_outline
+          text = "Đã thay chữ trong #{changes.size} ô của #{changes.map(&:first).uniq.size} đối tượng."
+          text += " Bỏ qua #{locked} đối tượng bị khóa." if locked > 0
+          emit('message', {text: text})
+        end
+        # Mở link của cột Link bằng trình duyệt. Chỉ http / https, không mở gì khác.
+        def open_url(url)
+          text = url.to_s.strip
+          raise 'Link không hợp lệ.' unless text.length <= Table::Extras::MAX_URL && text.match?(Table::Extras::URL_PATTERN)
+          ::UI.openURL(text)
+        end
         def table_option(payload)
           check_model!
           @table_options[:zoom] = payload['zoom'] ? true : false if payload.key?('zoom')
+          if payload.key?('projected')
+            # Diện tích chiếu tính thêm từ pháp tuyến từng mặt nên chỉ tính khi bật; đọc lại bảng để có số liệu.
+            @table_options[:projected] = payload['projected'] ? true : false
+            table_build
+          end
           if payload.key?('deep')
             # Bật / tắt đọc sâu: đọc lại từ phạm vi đã quét, không đổi lựa chọn hiện tại.
             @table_options[:deep] = payload['deep'] ? true : false
@@ -401,16 +451,51 @@ module VGD
         def table_preset(payload)
           case payload['action']
           when 'save'
-            Table.save_preset(payload['name'], payload['group'], payload['columns'])
+            Table.save_preset(payload['name'], payload['group'], payload['columns'], payload['headers'], payload['settings'])
             # Đổi cột của preset tự tạo thì cập nhật ngầm, không báo.
             emit('message', {text: "Đã lưu preset \"#{payload['name'].to_s.strip}\"."}) unless payload['silent']
           when 'delete'
             Table.delete_preset(payload['name'])
             emit('message', {text: 'Đã xóa preset.'})
+          when 'import' then preset_import
+          when 'export' then preset_export
           else
             raise ArgumentError, 'Thao tác preset không hợp lệ.'
           end
           emit('presets', Table.presets)
+        end
+        MAX_PRESET_FILE = 1024 * 1024 # file preset lớn hơn 1 MB là bất thường, không đọc
+        # Nhập preset từ file JSON (định dạng riêng hoặc của plugin tham khảo). Trùng tên preset đã lưu thì ghi đè.
+        def preset_import
+          path = ::UI.openpanel('Nhập preset', '', 'JSON|*.json||')
+          return unless path
+          raise 'File preset quá lớn.' if File.size(path) > MAX_PRESET_FILE
+          obj = begin
+            JSON.parse(File.read(path, encoding: 'bom|utf-8'))
+          rescue JSON::ParserError
+            raise 'File không phải JSON hợp lệ.'
+          end
+          imported = Table.import_presets(obj)
+          emit('presets', Table.presets)
+          emit('message', {text: "Đã nhập #{imported.size} preset."})
+        end
+        # Xuất bảng đang hiện ra CSV (mở bằng Excel). payload: {'headers' => [chữ], 'rows' => [[chữ]]}.
+        def table_export(payload)
+          headers = payload['headers']
+          rows = payload['rows']
+          raise 'Bảng chưa có dòng nào. Hãy chọn group hoặc component trong SketchUp.' unless rows.is_a?(Array) && !rows.empty?
+          path = ::UI.savepanel('Xuất bảng khối lượng để mở trong Excel', '', 'VGD_Bang_khoi_luong.csv')
+          return unless path
+          path += '.csv' unless File.extname(path).downcase == '.csv'
+          count = ReportExporter.write_table(path, headers, rows)
+          emit('message', {text: "Đã xuất #{count} dòng. Mở bằng Excel: #{path}"})
+        end
+        def preset_export
+          data = Table.export_presets
+          path = ::UI.savepanel('Xuất preset', '', 'VGD_BIM_presets.json')
+          return unless path
+          File.write(path, JSON.pretty_generate(data), encoding: 'UTF-8')
+          emit('message', {text: "Đã xuất #{data['presets'].size} preset: #{path}"})
         end
         # Đổi tên hàng loạt cho mọi dòng đang có trong bảng (các đối tượng đã chọn). Chỉ đổi tên của đối tượng (instance),
         # không đổi tên định nghĩa dùng chung, và không sửa hình học hay dữ liệu hạng mục.
@@ -531,12 +616,13 @@ module VGD
           return '' if value.nil?
           value.is_a?(Float) && value == value.round ? value.round.to_s : value.to_s
         end
-        # Kích thước trong nhãn khung đánh dấu theo đơn vị chiều dài trong Cài đặt (số liệu gốc luôn là mm).
-        LENGTH_FACTORS = {'mm' => 1.0, 'cm' => 0.1, 'm' => 0.001}.freeze
-        def length_unit; Settings.read['length_unit']; end
+        # Kích thước trong nhãn khung đánh dấu theo đơn vị và số lẻ của preset đang dùng, như bảng hiện (số liệu gốc luôn là mm).
+        LENGTH_FACTORS = {'mm' => 1.0, 'cm' => 0.1, 'm' => 0.001, 'in' => 1 / 25.4, 'ft' => 1 / 304.8}.freeze
+        def table_settings; Preset.settings(Table.view_state['settings']); end
+        def length_unit; table_settings['length_unit']; end
         def length_num(mm)
           return '' if mm.nil?
-          num((mm * LENGTH_FACTORS.fetch(length_unit)).round(3))
+          num((mm * LENGTH_FACTORS.fetch(length_unit)).round(table_settings['length_digits']))
         end
         # SketchUp 2023+: khung vẽ bằng lớp phủ (Overlay) nên công cụ Select của SketchUp giữ nguyên (Shift/Ctrl, kéo chọn,
         # nhấp đúp). SketchUp 2022 hoặc khi lớp phủ lỗi: dùng BoundsPreview (công cụ), có hạn chế ở click chuột.

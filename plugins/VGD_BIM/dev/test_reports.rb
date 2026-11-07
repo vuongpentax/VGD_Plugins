@@ -31,4 +31,20 @@ begin
   raise 'Unexpected pricing report added'
 rescue ArgumentError
 end
+# Xuất bảng khối lượng đang hiện (giá trị chữ do giao diện gửi lên): BOM, dấu chấm phẩy, trích dẫn, chống công thức, giới hạn kích thước
+Dir.mktmpdir do |dir|
+  path = File.join(dir, 'bang.csv')
+  count = VGD::BIM::ReportExporter.write_table(path, ['Tên', '=SUM(A1)'], [['@cmd', 'Tủ; "A"'], [5, nil]])
+  csv = File.binread(path).force_encoding('UTF-8')
+  parsed = CSV.parse(csv.sub("\uFEFF", ''), col_sep: ';')
+  assert(count == 2 && csv.start_with?("\uFEFF"), 'Table CSV missing BOM or row count wrong')
+  assert(parsed == [['Tên', "'=SUM(A1)"], ["'@cmd", 'Tủ; "A"'], ['5', '']], "Table CSV content wrong: #{parsed.inspect}")
+  [[['a'], 'x'], ['a', []], [['a'], [1]], [Array.new(61, 'a'), []], [['a'], Array.new(50_001) { ['x'] }], [['a'], [Array.new(61, 'x')]]].each do |headers, rows|
+    begin
+      VGD::BIM::ReportExporter.write_table(path, headers, rows)
+      raise "Invalid table accepted: #{headers.inspect[0, 30]}"
+    rescue ArgumentError
+    end
+  end
+end
 puts 'PASS: Vietnamese report headers/values, stored schema unchanged, CSV BOM/decimal/quoting, formula-safe text, validation export'

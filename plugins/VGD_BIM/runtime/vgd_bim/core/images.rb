@@ -79,7 +79,7 @@ module VGD
       # Đổi file tạm do SketchUp chụp (write_image) thành ảnh chính. Không phải PNG hoặc chưa có file thì giữ ảnh cũ.
       def self.commit(model, pid, kind)
         temp = temp_path(model, pid, kind)
-        raise ArgumentError, 'SketchUp không tạo được ảnh. Kiểm tra thư mục lưu ảnh trong Cài đặt.' unless File.file?(temp)
+        raise ArgumentError, 'SketchUp không tạo được ảnh. Kiểm tra thư mục lưu ảnh trong bảng Preset.' unless File.file?(temp)
         begin
           check_png!(File.binread(temp))
         rescue ArgumentError

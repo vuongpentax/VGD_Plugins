@@ -40,13 +40,13 @@ module VGD; module BIM; def self.log(m); end
   module UI; end
 end; end
 ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
-%w[core/storage core/settings core/images].each { |f| require File.join(ROOT, f) }
+%w[core/storage core/settings core/images core/preset].each { |f| require File.join(ROOT, f) }
 module VGD; module BIM; module UI
   module Capture
     def self.shoot(model, record, settings)
       pid = record[:entity].persistent_id
       raise 'SketchUp không chụp được ảnh.' if pid == 902
-      $shot << [pid, settings['capture_mode']]
+      $shot << [pid, settings['image_view']]
       Images.write(model, pid, PNG, PNG)
       {pid: pid, stamp: Images.info(model, pid)[:stamp]}
     end
@@ -94,7 +94,7 @@ ok('bấm chụp: chưa chụp ngay, chỉ hẹn từng nhịp', $shot.empty? &&
 ok('bấm chụp: ẩn khung đánh dấu để khỏi lọt vào ảnh', $outline_hidden == 2)
 ok('bấm chụp: báo tiến độ 0/2', events(d, 'images_progress').first == {'done' => 0, 'total' => 2})
 UI.run_timers
-ok('chụp đúng 2 dòng đã chọn, đúng thứ tự, theo cách chụp trong cài đặt', $shot == [[901, 'isolate'], [903, 'isolate']])
+ok('chụp đúng 2 dòng đã chọn, đúng thứ tự, theo thiết lập ảnh của preset (mặc định: góc iso)', $shot == [[901, 'isometric'], [903, 'isometric']])
 ok('báo xong: 2/2 thành công, không lỗi', events(d, 'images_done').last == {'done' => 2, 'total' => 2, 'ok' => 2, 'errors' => [], 'cancelled' => false})
 ok('báo ảnh đổi để bảng cập nhật cột Ảnh', events(d, 'images_changed').last['items'].map { |i| i['pid'] } == [901, 903] && events(d, 'images_changed').last['items'].all? { |i| i['has'] })
 ok('chế độ bảng: vẽ lại khung đánh dấu sau khi chụp xong', true) # tab Hình ảnh không có khung; kiểm tra riêng bên dưới
@@ -200,21 +200,21 @@ many = make_dialog(D::MAX_THUMB_REQUEST + 5)
 $records.each { |r| I.write($model, r[:entity].persistent_id, PNG, PNG) }
 many.safely { many.image_thumbs($records.map { |r| r[:entity].persistent_id }) }
 ok("mỗi lần chỉ trả tối đa #{D::MAX_THUMB_REQUEST} ảnh nhỏ", events(many, 'thumbs').last['items'].size == D::MAX_THUMB_REQUEST)
-d.safely { d.image_full(901) }
-ok('xin ảnh lớn: trả data URL của đúng đối tượng', events(d, 'image_full').last['url'].start_with?('data:image/png;base64,') && events(d, 'image_full').last['pid'] == 901)
 
-# ---- Cài đặt ----
+# ---- Cài đặt chung (ngôn ngữ, thư mục ảnh) ----
 d = make_dialog
 refreshed = 0
 d.define_singleton_method(:refresh) { refreshed += 1 }
-d.safely { d.settings_save('length_unit' => 'cm', 'image_size' => 1024) }
-ok('lưu cài đặt: ghi vào settings.json và gửi lại cho giao diện', S.read['length_unit'] == 'cm' && S.read['image_size'] == 1024 && events(d, 'settings').last['settings']['length_unit'] == 'cm' && refreshed == 0)
+d.safely { d.settings_save('image_dir' => File.join(Dir.tmpdir, 'anh_moi')) }
+ok('lưu thư mục ảnh: ghi vào settings.json và gửi lại cho giao diện, không vẽ lại cả cửa sổ', S.read['image_dir'] == File.join(Dir.tmpdir, 'anh_moi') && events(d, 'settings').last['settings']['image_dir'] == File.join(Dir.tmpdir, 'anh_moi') && refreshed == 0)
 d.safely { d.settings_save('language' => 'en') }
 ok('đổi ngôn ngữ: vẽ lại toàn bộ cửa sổ (gửi lại từ điển)', refreshed == 1 && S.read['language'] == 'en')
 d.safely { d.settings_save('language' => 'fr') }
 ok('cài đặt sai bị từ chối, giữ nguyên giá trị cũ', error_of(d).to_s.include?('Ngôn ngữ không hợp lệ') && S.read['language'] == 'en')
 d.safely { d.settings_save('language' => 'vi', 'image_dir' => 'khong/tuyet/doi') }
 ok('một mục sai làm cả lần lưu bị từ chối (không lưu nửa chừng)', S.read['language'] == 'en')
+d.safely { d.settings_save('length_unit' => 'cm', 'image_size' => 1024) }
+ok('mục đã chuyển sang preset (đơn vị, cỡ ảnh) không còn lưu ở cài đặt chung', !File.read(File.join(VGD::BIM::Storage.dir, 'settings.json')).include?('length_unit'))
 $picked_dir = File.join(Dir.tmpdir, 'anh_chon')
 d.safely { d.settings_pick_dir }
 ok('chọn thư mục ảnh bằng hộp chọn: lưu và báo lại', S.read['image_dir'] == $picked_dir && events(d, 'settings').last['dir'] == $picked_dir)
@@ -223,6 +223,18 @@ d.safely { d.settings_pick_dir }
 ok('hủy hộp chọn thư mục: giữ nguyên', S.read['image_dir'] == File.join(Dir.tmpdir, 'anh_chon'))
 d.safely { d.images_open_dir }
 ok('mở thư mục ảnh: tạo thư mục nếu chưa có rồi mở', File.directory?(S.image_dir) && UI.opened.last.start_with?('file:///'))
+
+# ---- Thiết lập ảnh của preset đi cùng lệnh chụp ----
+d = make_dialog
+d.safely { d.images_capture('indexes' => [0], 'settings' => {'image_view' => 'front', 'image_width' => 640}) }
+UI.run_timers
+ok('chụp theo thiết lập ảnh của preset gửi kèm (góc chính diện)', $shot == [[901, 'front']])
+d = make_dialog
+d.safely { d.images_capture('indexes' => [0], 'settings' => {'image_view' => 'top'}) }
+ok('thiết lập ảnh sai bị từ chối trước khi chụp: không hẹn giờ, không ẩn khung', error_of(d).to_s.include?('Góc nhìn') && UI.timers.empty? && d.instance_variable_get(:@capture).nil?)
+d = make_dialog
+d.safely { d.images_capture('indexes' => [0], 'settings' => {'image_width' => 5}) }
+ok('cỡ ảnh sai bị từ chối trước khi chụp', error_of(d).to_s.include?('Cỡ ảnh') && UI.timers.empty?)
 
 puts $fails.zero? ? 'Done' : "#{$fails} lỗi"
 exit($fails.zero? ? 0 : 1)

@@ -20,6 +20,12 @@ module VGD
       def self.face_area(face, transform = Geom::Transformation.new)
         face.area(transform).to_f * INCH_MM**2 / 1_000_000.0
       end
+      # Diện tích hình chiếu của mặt xuống mặt phẳng ngang (m²): diện tích mặt nhân |cosin góc giữa pháp tuyến và trục Z|.
+      def self.projected_area(face, transform = Geom::Transformation.new)
+        normal = face.normal.transform(transform)
+        length = normal.length
+        length.zero? ? 0.0 : face_area(face, transform) * (normal.z / length).abs
+      end
     end
   end
 end

@@ -73,6 +73,6 @@ unnamed = Sketchup::Group.new('')
 m3 = Model.new; m3.active_path = [unnamed]
 ok('dòng cha: cha chưa đặt tên thì lấy tên định nghĩa (cũng rỗng ở stub này)', VGD::BIM::Table.build(m3, [Sketchup::Group.new('X')], false)[:rows][0][:parent] == '')
 editable = VGD::BIM::Table::COLUMNS.select { |c| c[:editable] }.map { |c| [c[:key], c[:editable]] }
-ok('cột sửa được: tên, mô tả, tình trạng, tag, vật liệu', editable == [%w[instance name], %w[description description], %w[tag tag], %w[material material], %w[status status]])
+ok('cột sửa được: tên, mô tả, tag, vật liệu, tình trạng, hãng, link, cỡ, đơn giá', editable == [%w[instance name], %w[description description], %w[tag tag], %w[material material], %w[status status], %w[owner owner], %w[url url], %w[size size], %w[price price]])
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

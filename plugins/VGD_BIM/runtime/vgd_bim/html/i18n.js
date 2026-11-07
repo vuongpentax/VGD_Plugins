@@ -13,7 +13,7 @@ const VGD_I18N=(()=>{
     'Bảng khối lượng → chọn group / component trong SketchUp → bảng tự đọc → chọn preset cột → sửa Tên, Mô tả ngay trong bảng.':'Quantity table → select groups / components in SketchUp → the table reads them → pick a column preset → edit Name and Description right in the table.',
     'Model từ đối tác:':'Model from a partner:',
     'Quét & xuất để xem tổng quan → Phân loại → sửa gợi ý → Xem trước → Xác nhận. Kiểm tra nằm trong tab Phân loại.':'Scan & export for an overview → Classify → adjust suggestions → Preview → Confirm. Checks are in the Classify tab.',
-    'Ảnh món đồ:':'Item photos:','Hình ảnh → Cập nhật ảnh (chỉ chụp khi bạn bấm) → hoặc kéo thả / dán ảnh riêng. Thư mục và cách chụp nằm trong Cài đặt.':'Images → Update photos (only shoots when you press it) → or drop / paste your own image. Folder and capture mode are in Settings.',
+    'Ảnh món đồ:':'Item photos:','Bảng khối lượng → bật cột Ảnh → Cập nhật ảnh (chỉ chụp khi bạn bấm), hoặc kéo thả / dán ảnh riêng vào ô ảnh. Cỡ ảnh, góc nhìn và thư mục lưu nằm trong bảng Preset.':'Quantity table → show the Photo column → Update photos (only shoots when you press it), or drop / paste your own image onto a photo cell. Image size, view and folder are in the Preset panel.',
     'Xuất Excel:':'Export to Excel:','Quét & xuất → chọn báo cáo → lưu file CSV. Plugin giữ nguyên hình học của model.':'Scan & export → choose a report → save the CSV file. The plugin leaves the model geometry untouched.',
     'Dữ liệu mô hình · VGD':'Model data · VGD','Hủy':'Cancel','Xác nhận chuyển đổi':'Confirm conversion','Xem trước chuyển đổi':'Preview conversion',
     'Sẵn sàng.':'Ready.','Đang đọc dữ liệu…':'Reading data…',
@@ -75,10 +75,10 @@ const VGD_I18N=(()=>{
     'Nhóm hạng mục':'Item group','Phần thô':'Rough work','Hoàn thiện':'Finishing','Đồ rời':'Loose furniture','Thiết bị':'Equipment','Khác':'Other',
     // --- Bảng khối lượng ---
     'Chọn cột':'Choose columns','Tìm kiếm...':'Search...','Tìm trong bảng':'Search in table','Tất cả nhóm':'All groups','Đổi tên':'Rename','Chụp ảnh':'Take photo',
-    'Chụp ảnh các dòng đang chọn (chỉ chụp khi bạn bấm nút này)':'Take photos of the selected rows (only runs when you press this button)',
+
     'Chọn tất cả cột':'Select all columns','Bỏ chọn tất cả':'Deselect all','Tìm cột...':'Search columns...','Tạo mới...':'Create new...',
-    'Tên preset mới':'New preset name','Hãy nhập tên preset.':'Enter a preset name.','Khôi phục cột gốc của preset':'Restore the preset\'s original columns','Xóa preset':'Delete preset','Preset':'Preset',
-    'Preset lưu cột đang hiển thị, thứ tự cột và nhóm hạng mục, lưu trên máy này. Đang dùng preset tự tạo thì đổi cột sẽ tự cập nhật vào preset đó.':'A preset stores the visible columns, their order and the item group, on this computer. While a custom preset is active, changing columns updates it automatically.',
+    'Tên preset mới':'New preset name','Hãy nhập tên preset.':'Enter a preset name.','Xóa preset':'Delete preset','Preset':'Preset',
+
     'Thu phóng đối tượng':'Zoom to object','Cô lập đối tượng chọn':'Isolate selected object','Chọn sâu bên trong':'Select nested objects','Hiển thị dòng tính tổng':'Show totals row','Tổng chỉ cấp cao nhất':'Total top level only',
     'Độ cao hàng':'Row height','Hàng: Vừa':'Rows: Normal','Hàng: Gọn':'Rows: Compact','Hàng: Thoáng':'Rows: Roomy',
     'Chọn đối tượng trong SketchUp là bảng tự đọc. Bấm một ô để đánh dấu đối tượng và hiện nội dung ô đó; giữ Shift hoặc Ctrl để chọn nhiều dòng, Ctrl+A chọn hết. Nhấp đúp vào ô để sửa: Tên, Mô tả (gõ), Tình trạng, Tag, Vật liệu (chọn từ danh sách).':'Select objects in SketchUp and the table reads them. Click a cell to mark the object and show that cell\'s content; hold Shift or Ctrl to select several rows, Ctrl+A selects all. Double-click a cell to edit: Name and Description (type), Status, Tag and Material (pick from a list).',
@@ -86,7 +86,7 @@ const VGD_I18N=(()=>{
     'Bỏ chọn':'Deselect','(Không có tag)':'(No tag)','(Không vật liệu)':'(No material)','Tìm...':'Search...','Tìm trong danh sách':'Search in list','Không có mục nào khớp.':'No matching items.',
     'Đối tượng đang bị khóa nên không sửa được.':'The object is locked and cannot be edited.','Không nhóm':'No grouping','Cha (Parent)':'Parent','Loại (Entity)':'Type (Entity)',
     'Tên họ (Definition)':'Family name (Definition)','Tên (Instance)':'Name (Instance)','Tag':'Tag','Tình trạng':'Status','(Gốc)':'(Root)','(Chưa đặt tên)':'(Unnamed)','(Chưa phân loại)':'(Unclassified)','(Untagged)':'(Untagged)',
-    'Bấm để sắp xếp':'Click to sort','Tổng cộng':'Total','Bấm để chọn cả nhóm':'Click to select the whole group','Mở nhóm':'Expand group','Thu gọn nhóm':'Collapse group',
+'Tổng cộng':'Total','Bấm để chọn cả nhóm':'Click to select the whole group','Mở nhóm':'Expand group','Thu gọn nhóm':'Collapse group',
     'Không có đối tượng nào khớp bộ lọc.':'No objects match the filter.','Nhóm theo':'Group by','Gộp dòng giống nhau':'Merge identical rows',
     'Chỉ đổi cách hiển thị. Dòng gộp: Số lượng, diện tích, thể tích là tổng của các dòng gộp.':'Display only. On merged rows, quantity, area and volume are the sum of the merged rows.',
     // --- Cột bảng (Ruby gửi) ---
@@ -99,36 +99,35 @@ const VGD_I18N=(()=>{
     'Áp dụng':'Apply','Mẫu tên':'Name template','Tìm':'Find','Thay bằng':'Replace with','Tiền tố':'Prefix','Hậu tố':'Suffix','Số bắt đầu':'Start number','Số chữ số':'Digits','Bước nhảy':'Step',
     'Kiểu chữ':'Letter case','CHỮ HOA':'UPPERCASE','chữ thường':'lowercase','Viết Hoa Chữ Đầu':'Title Case','Đánh số theo':'Number by','Thứ tự trong bảng':'Table order','Vị trí (X, rồi Y, rồi Z)':'Position (X, then Y, then Z)','Tên hiện tại':'Current name',
     // --- Cài đặt ---
-    'Chung':'General','Cài đặt lưu trên máy này và áp dụng cho mọi model. Mỗi thay đổi được lưu ngay.':'Settings are stored on this computer and apply to every model. Each change is saved immediately.',
+
     'Ngôn ngữ':'Language','Tiếng Việt':'Tiếng Việt','Đổi ngôn ngữ sẽ tải lại cửa sổ. Báo cáo CSV luôn xuất bằng tiếng Việt.':'Changing the language reloads the window. CSV reports are always exported in Vietnamese.',
-    'Đơn vị chiều dài':'Length unit','Milimét (mm)':'Millimetre (mm)','Xentimét (cm)':'Centimetre (cm)','Mét (m)':'Metre (m)',
-    'Áp dụng cho kích thước hiện trong cửa sổ. Diện tích luôn là m², thể tích là m³; báo cáo CSV giữ nguyên mm.':'Applies to sizes shown in this window. Area is always m² and volume m³; CSV reports stay in mm.',
-    'Ảnh chỉ được chụp khi bạn bấm nút trong tab Hình ảnh hoặc Bảng khối lượng. Plugin không tự chụp.':'Photos are only taken when you press a button in the Images tab or the Quantity table. The plugin never takes photos on its own.',
-    'Thư mục lưu ảnh':'Image folder','Chọn thư mục…':'Choose folder…','Mở thư mục':'Open folder',
-    'Để trống để dùng thư mục mặc định. Ảnh nằm trong thư mục con theo từng model, không ghi vào file SketchUp.':'Leave empty to use the default folder. Images go in a sub-folder per model and are not written into the SketchUp file.',
+    'Đơn vị chiều dài':'Length unit',
+
+
+    'Thư mục lưu ảnh':'Image folder','Mở thư mục':'Open folder',
+
     '(chưa có, sẽ được tạo khi chụp ảnh đầu tiên)':'(does not exist yet; it will be created with the first photo)',
-    'Cách chụp':'Capture mode','Cô lập món đồ rồi chụp':'Isolate the item, then shoot','Chụp đúng khung nhìn hiện tại':'Shoot the current view as is',
-    'Cô lập: ẩn tạm phần còn lại của model, zoom vào món đồ, chụp ảnh vuông rồi trả model về như cũ. Khung nhìn hiện tại: chụp đúng những gì đang thấy, không đổi gì.':'Isolate: temporarily hides the rest of the model, zooms to the item, takes a square photo and restores the model. Current view: shoots exactly what you see and changes nothing.',
-    'Cỡ ảnh':'Image size','Cạnh dài của ảnh. Ảnh lớn đẹp hơn nhưng chụp lâu hơn và tốn dung lượng.':'Longest side of the image. Larger images look better but take longer and use more space.',
-    'Nền ảnh':'Image background','Trong suốt':'Transparent','Trắng':'White','Nền trắng tạm tắt mặt đất và chân trời khi chụp rồi trả lại.':'A white background temporarily turns off the ground and horizon while shooting, then restores them.',
+
+
+    'Cỡ ảnh':'Image size',
+    'Nền ảnh':'Image background',
     // --- Hình ảnh ---
     'Kéo thả ảnh vào đây hoặc chọn ô rồi dán (Ctrl+V)':'Drop an image here, or select the cell and paste (Ctrl+V)',
     'Hãy dùng file ảnh PNG, JPG, WebP hoặc BMP.':'Use a PNG, JPG, WebP or BMP image file.','Ảnh quá lớn (tối đa 20 MB).':'Image too large (20 MB maximum).','Không đọc được ảnh.':'Could not read the image.',
     'Hãy thả file ảnh PNG, JPG, WebP hoặc BMP.':'Drop a PNG, JPG, WebP or BMP image file.','Hãy chọn đúng một đối tượng (hoặc bấm vào ô ảnh của nó) rồi dán ảnh.':'Select exactly one object (or click its photo cell), then paste.',
-    'Ảnh chỉ được chụp khi bạn bấm "Cập nhật ảnh". Muốn dùng ảnh riêng: kéo thả file ảnh vào ô, bấm ô rồi dán (Ctrl+V), hoặc bấm "Chọn ảnh…".':'Photos are only taken when you press "Update photos". To use your own image: drop an image file onto a cell, click a cell and paste (Ctrl+V), or press "Choose image…".',
+
     'Cập nhật ảnh':'Update photos','Chỉ chụp đối tượng chưa có ảnh':'Only objects without a photo','Dừng':'Stop','Mở thư mục ảnh':'Open image folder',
-    'Chưa có ảnh':'No photo','Kéo thả ảnh vào đây hoặc dán (Ctrl+V)':'Drop an image here or paste (Ctrl+V)','Chụp lại':'Retake','Chọn ảnh…':'Choose image…','Xóa ảnh':'Delete photo','Không đọc được file ảnh':'Could not read the image file',
-    'Chưa chọn đối tượng nào. Chọn group hoặc component trong SketchUp để xem và chụp ảnh.':'Nothing selected. Select a group or component in SketchUp to view and photograph it.',
+'Chụp lại':'Retake','Chọn ảnh…':'Choose image…','Xóa ảnh':'Delete photo',
+
     // --- Thông báo từ Ruby ---
     'Đã lưu cài đặt.':'Settings saved.','Đã đổi thư mục lưu ảnh.':'Image folder changed.','Đã lưu ảnh cho đối tượng.':'Photo saved for the object.','Đã xóa ảnh của đối tượng.':'Photo deleted for the object.',
     'Bản SketchUp này không có hộp chọn thư mục. Hãy gõ đường dẫn thư mục vào ô.':'This SketchUp version has no folder picker. Type the folder path into the box.',
     'Đang chụp ảnh. Hãy đợi xong hoặc bấm Dừng.':'A capture is running. Wait for it to finish or press Stop.','Bảng đã cũ. Hãy làm mới bảng.':'The table is out of date. Refresh the table.',
     'Không có đối tượng nào cần chụp.':'No objects need photographing.','Danh sách ảnh không hợp lệ.':'Invalid image list.','Đối tượng không còn trong bảng. Hãy làm mới bảng.':'The object is no longer in the table. Refresh the table.',
     'không ghi được file ảnh, kiểm tra thư mục lưu ảnh.':'could not write the image file; check the image folder.','không chụp được.':'could not take the photo.',
-    'SketchUp không chụp được ảnh. Kiểm tra thư mục lưu ảnh trong Cài đặt.':'SketchUp could not take the photo. Check the image folder in Settings.',
-    'SketchUp không tạo được ảnh. Kiểm tra thư mục lưu ảnh trong Cài đặt.':'SketchUp could not create the image. Check the image folder in Settings.',
+
     'Đối tượng không còn tồn tại. Hãy làm mới bảng.':'The object no longer exists. Refresh the table.','Mã đối tượng không hợp lệ.':'Invalid object ID.','Dữ liệu không phải ảnh PNG.':'The data is not a PNG image.',
-    'Cài đặt không hợp lệ.':'Invalid settings.','Ngôn ngữ không hợp lệ.':'Invalid language.','Cách chụp không hợp lệ.':'Invalid capture mode.','Nền ảnh không hợp lệ.':'Invalid image background.','Đơn vị chiều dài không hợp lệ.':'Invalid length unit.',
+    'Cài đặt không hợp lệ.':'Invalid settings.','Ngôn ngữ không hợp lệ.':'Invalid language.','Nền ảnh không hợp lệ.':'Invalid image background.','Đơn vị chiều dài không hợp lệ.':'Invalid length unit.',
     'Đường dẫn thư mục ảnh không hợp lệ.':'Invalid image folder path.','Thư mục ảnh phải là đường dẫn đầy đủ (ví dụ C:\\Anh\\NoiThat).':'The image folder must be a full path (for example C:\\Images\\Interior).',
     'Đã lưu quy tắc phân loại.':'Classification rule saved.','Đã lưu bộ tag trên máy này.':'Tag set saved on this computer.','Tính năng không hợp lệ.':'Invalid function.',
     'Không thực hiện được thao tác. Hãy làm mới dữ liệu và thử lại.':'The action could not be completed. Refresh the data and try again.',
@@ -156,7 +155,39 @@ const VGD_I18N=(()=>{
     'Quy tắc phải là một danh sách.':'Rules must be a list.','Loại nguồn phân loại không hợp lệ.':'Invalid classification source type.',
     'Đối tượng không còn tồn tại':'The object no longer exists','Chưa nhập mã hạng mục':'Item code not entered','Chưa gán khu vực / phòng':'Zone / room not assigned','Không đọc được dữ liệu BIM':'Could not read BIM data',
     'Đếm số lượng cần đơn vị cái / bộ / lô':'Counting needs a unit of pcs / set / lot','Thông tin hợp lệ':'Valid information',
-    'Xóa dữ liệu VGD của các đối tượng đang chọn? Hình học vẫn được giữ nguyên.':'Clear VGD data of the selected objects? Geometry stays unchanged.'
+    'Xóa dữ liệu VGD của các đối tượng đang chọn? Hình học vẫn được giữ nguyên.':'Clear VGD data of the selected objects? Geometry stays unchanged.',
+    // --- Thanh đầu, bảng preset, bánh răng ---
+    'Preset: cột, đơn vị và ảnh của bảng':'Preset: columns, units and photos of the table',
+    'Đơn vị':'Units','Hình ảnh':'Images','Chiều dài':'Length','Diện tích':'Area','Thể tích':'Volume','Tiền tệ':'Currency','Dấu thập phân':'Decimal separator',
+    'Chiều dài: số lẻ':'Length: decimals','Chiều dài: đơn vị':'Length: unit','Diện tích: số lẻ':'Area: decimals','Diện tích: đơn vị':'Area: unit','Thể tích: số lẻ':'Volume: decimals','Thể tích: đơn vị':'Volume: unit',
+    'Chiều rộng ảnh':'Image width','Chiều cao ảnh':'Image height','Góc nhìn ảnh':'Image view','Kiểu hiển thị ảnh':'Image style',
+    'Khung nhìn hiện tại':'Current view','Phối cảnh iso':'Isometric view','Chính diện':'Front view','Màu (có texture)':'Color (textured)','Kiểu hiện tại':'Current style','Nền trong suốt':'Transparent background','Nền trắng':'White background',
+    'Thư mục lưu ảnh (dùng chung mọi preset). Để trống để dùng thư mục mặc định.':'Image folder (shared by all presets). Leave empty to use the default folder.',
+    'Chọn thư mục lưu ảnh':'Choose image folder','Tạo preset từ bảng hiện tại':'Create a preset from the current table',
+    'Khôi phục cột, tiêu đề và thiết lập gốc của preset':'Restore the preset\'s original columns, headers and settings',
+    'Preset lưu cột hiển thị, thứ tự, tiêu đề cột, đơn vị và cách chụp ảnh, trên máy này. Đang dùng preset tự tạo thì mọi thay đổi tự cập nhật vào preset đó.':'A preset stores the visible columns, their order, column headers, units and photo settings, on this computer. While a custom preset is active, every change updates it automatically.',
+    'Mặc định':'Default','Phòng & Khu vực':'Rooms & Zones','Cửa & Cửa sổ':'Doors & Windows','Nội thất':'Furniture','Thiết bị & Phụ kiện':'Fixtures & Fittings','Chiếu sáng':'Lighting','Vật liệu':'Material',
+    'Mã phòng':'Room code','Tên phòng':'Room name','Rộng':'Width','Dài':'Length','Diện tích phòng':'Room area','STT':'No.','Ảnh vật liệu':'Material photo','Tên vật liệu':'Material name','Diện tích mặt':'Face area',
+    'Mã hạng mục':'Item code','Loại':'Type','Hoàn thiện & phụ kiện':'Finish & hardware','Rộng x Cao':'Width x Height','Diện tích (R x C)':'Area (W x H)','Kích thước (R x S x C)':'Size (W x D x H)','Thương hiệu':'Brand','Thông số':'Specifications',
+    'Ngôn ngữ':'Language',
+    // --- Thanh công cụ, chân trang, cột mới ---
+    'Thay thế':'Replace','Thay bằng...':'Replace with...','Xóa chữ tìm':'Clear search',
+    'Thay chữ đang tìm trong các cột Tên, Mô tả, Hãng, Cỡ đang hiện (một bước hoàn tác)':'Replaces the searched text in the visible Name, Description, Brand and Size columns (one undo step)',
+    'Hãy hiện ít nhất một cột Tên, Mô tả, Hãng hoặc Cỡ':'Show at least one Name, Description, Brand or Size column',
+    'Chụp ảnh các dòng (chỉ chụp khi bạn bấm nút này)':'Take photos of the rows (only runs when you press this button)',
+    'Nhấp để sắp xếp · nhấp đúp để đổi tên cột':'Click to sort · double-click to rename the column','Tên cột':'Column name',
+    'SketchUp không chụp được ảnh. Kiểm tra thư mục lưu ảnh.':'SketchUp could not take the photo. Check the image folder.','SketchUp không tạo được ảnh. Kiểm tra thư mục lưu ảnh trong bảng Preset.':'SketchUp could not create the image. Check the image folder in the Preset panel.',
+    'Chụp':'Shoot','Chụp ảnh':'Take photo','Chụp lại':'Retake','Xóa ảnh':'Delete photo','Chọn ảnh…':'Choose image…','Mở thư mục ảnh':'Open image folder','Mở link':'Open link','Dừng':'Stop','Cập nhật ảnh':'Update photos',
+    'Chỉ chụp đối tượng chưa có ảnh':'Only objects without a photo','Đổi trong bảng preset.':'Change it in the preset panel.',
+    'Diện tích chiếu':'Projected area','Nhập / Xuất':'Import / Export','Xuất bảng ra Excel (CSV)':'Export table to Excel (CSV)','Nhập preset (JSON)':'Import presets (JSON)','Xuất preset (JSON)':'Export presets (JSON)',
+    'Diện tích chiếu m²':'Projected area m²','Lớp IFC':'IFC class','Hãng':'Brand','Link':'Link','Cỡ':'Size','Đơn giá':'Unit price','Thành tiền':'Total',
+    'Bảng quá lớn để xuất.':'The table is too large to export.','Dữ liệu bảng không hợp lệ.':'Invalid table data.',
+    'Link không hợp lệ.':'Invalid link.','Tệp preset không đúng định dạng.':'The preset file is not in a valid format.','Phiên bản tệp preset chưa được hỗ trợ.':'This preset file version is not supported.','Tệp không có preset hợp lệ nào.':'The file has no valid presets.',
+    'File preset quá lớn.':'The preset file is too large.','File không phải JSON hợp lệ.':'The file is not valid JSON.','Thiết lập của preset không hợp lệ.':'Invalid preset settings.',
+    'Đơn vị diện tích không hợp lệ.':'Invalid area unit.','Đơn vị thể tích không hợp lệ.':'Invalid volume unit.','Dấu thập phân không hợp lệ.':'Invalid decimal separator.','Tiền tệ không hợp lệ.':'Invalid currency.',
+    'Góc nhìn của ảnh không hợp lệ.':'Invalid image view.','Kiểu hiển thị của ảnh không hợp lệ.':'Invalid image style.','Tiêu đề cột không hợp lệ.':'Invalid column header.','Tiêu đề cột phải là chữ.':'The column header must be text.',
+    'Chưa có preset tự tạo để xuất. Bấm + trong bảng preset để lưu một preset.':'There are no custom presets to export. Press + in the preset panel to save one.',
+    'Hãy chọn cột cần thay: chỉ có Tên, Mô tả, Hãng, Cỡ.':'Choose the columns to replace in: only Name, Description, Brand and Size.','Không có ô nào chứa chữ cần tìm.':'No cell contains the searched text.','Hãy nhập chữ cần tìm.':'Enter the text to search for.'
   };
   const MM_UNIT=/ (cm|m)$|\((cm|m)\)$/;
   const patterns=[];
@@ -182,13 +213,26 @@ const VGD_I18N=(()=>{
   rule(/^Đang chọn ([\d.,]+) đối tượng hoặc mặt trong SketchUp\.$/,(m,n)=>`${plural(n,'object or face','objects or faces')} selected in SketchUp.`);
   rule(/\((\d+) biến thể\)/,(m,n)=>`(${n} variants)`);
   rule(/^([\d.,]+) lần xuất hiện · ([\d.,]+) đối tượng có thể ghi · ([\d.,]+) lần xuất hiện được bảo vệ\.$/,(m,a,b,c)=>`${a} occurrences · ${b} writable objects · ${c} protected occurrences.`);
+  rule(/^Chụp ảnh cho tất cả (\d+) đối tượng đang hiện\?$/,(m,n)=>`Take photos of all ${plural(n,'visible object','visible objects')}?`);
+  rule(/^Chụp ảnh cho (\d+) đối tượng đang chọn\?$/,(m,n)=>`Take photos of the ${plural(n,'selected object','selected objects')}?`);
+  rule(/^Cỡ (\d+) x (\d+), (.+)\. Đổi trong bảng preset\.$/,(m,w,h,v)=>`Size ${w} x ${h}, ${T(v)}. Change it in the preset panel.`);
+  rule(/^Thay thế \((\d+)\)$/,(m,n)=>`Replace (${n})`);
+  rule(/^Đã thay chữ trong (\d+) ô của (\d+) đối tượng\.(.*)$/,(m,c,n,rest)=>`Replaced text in ${plural(c,'cell','cells')} of ${plural(n,'object','objects')}.${rest.replace(SKIPPED,' Skipped $1 locked.')}`);
+  rule(/^Đã nhập (\d+) preset\.$/,(m,n)=>`Imported ${plural(n,'preset','presets')}.`);
+  rule(/^Đã xuất (\d+) preset: (.*)$/,(m,n,p)=>`Exported ${plural(n,'preset','presets')}: ${p}`);
+  rule(/^Quá nhiều preset \(tối đa (\d+)\)\.$/,(m,n)=>`Too many presets (${n} maximum).`);
+  rule(/^Tiêu đề cột tối đa (\d+) ký tự\.$/,(m,n)=>`A column header is at most ${n} characters.`);
+  rule(/^Số chữ số lẻ phải từ (\d+) đến (\d+)\.$/,(m,a,b)=>`Decimals must be from ${a} to ${b}.`);
+  rule(/^Cỡ tối đa (\d+) ký tự\.$/,(m,n)=>`Size is at most ${n} characters.`);
+  rule(/^Chữ cần tìm hoặc chữ thay thế quá dài \(tối đa (\d+) ký tự\)\.$/,(m,n)=>`The search or replacement text is too long (${n} characters maximum).`);
+  rule(/^Link phải bắt đầu bằng http:\/\/ hoặc https:\/\/, không có khoảng trắng, tối đa (\d+) ký tự\.$/,(m,n)=>`A link must start with http:// or https://, contain no spaces, and be at most ${n} characters.`);
+  rule(/^Đơn giá phải là số không âm, ví dụ 1250000 hoặc 12,5 \(không dùng dấu chấm ngăn cách hàng nghìn\)\.$/,()=>'The unit price must be a non-negative number, for example 1250000 or 12,5 (no thousands separator).');
   rule(/^Phân loại: (.*)$/,(m,n)=>`Classify: ${T(n)}`);
   rule(/^(.*) \((vật liệu|đối tượng)\)$/,(m,n,k)=>`${T(n)} (${k==='vật liệu'?'material':'object'})`);
   rule(/^Đã chọn (\d+) \/ (\d+) dòng$/,(m,a,b)=>`Selected ${a} / ${b} rows`);
   rule(/^Nhóm theo: (.*) ▾$/,(m,g)=>`Group by: ${T(g)} ▾`);
   rule(/^(.+) ▾$/,(m,g)=>lookup(g)===undefined?m:`${T(g)} ▾`);
   rule(/^Cập nhật (.+)$/,(m,f)=>`Update ${f}`);
-  rule(/^(Khôi phục cột gốc của preset|Xóa preset): (.+)$/,(m,a,n)=>`${T(a)}: ${T(n)}`);
   rule(/^Tổng cộng · (\d+) đối tượng$/,(m,n)=>`Total · ${plural(n,'object','objects')}`);
   rule(/^(.*) · (\d+)$/,(m,label,n)=>lookup(label)===undefined?m:`${T(label)} · ${n}`);
   rule(/^Sẽ đổi (\d+) · giữ nguyên (\d+) · bị khóa (\d+)(.*)$/,(m,a,b,c,rest)=>`Will change ${a} · unchanged ${b} · locked ${c}${rest.replace(/ · tên trống (\d+)/,' · empty name $1').replace(/ · quá dài (\d+)/,' · too long $1').replace(/ · trùng tên (\d+)/,' · duplicate name $1')}`);
@@ -196,8 +240,8 @@ const VGD_I18N=(()=>{
   rule(/^Chỉ hiện 200 dòng đầu trong (\d+) dòng\.$/,(m,n)=>`Showing only the first 200 of ${n} rows.`);
   rule(/^Áp dụng cho (\d+) dòng đang chọn trong bảng(\..*)$/,(m,n,rest)=>`Applies to ${plural(n,'selected row','selected rows')} in the table${T(rest)}`);
   rule(/^Áp dụng cho mọi (\d+) dòng trong bảng \(chưa chọn dòng nào\)(\..*)$/,(m,n,rest)=>`Applies to all ${n} rows in the table (no row selected)${T(rest)}`);
-  rule(/^Đơn vị: (mm|cm|m) \(chiều dài\), m² \(diện tích\), m³ \(thể tích\), cái \(số lượng\)\. Diện tích \(X\*Z\), \(X\*Y\) theo khung bao quanh\. Thể tích chỉ có cho group kín\. Số liệu chưa trừ hao hụt hoặc phần che khuất\.$/,
-    (m,u)=>`Units: ${u} (length), m² (area), m³ (volume), pcs (quantity). Areas (X*Z) and (X*Y) use the bounding box. Volume exists only for closed groups. Figures do not subtract waste or hidden parts.`);
+  rule(/^Đơn vị: (\S+) \(chiều dài\), (\S+) \(diện tích\), (\S+) \(thể tích\), cái \(số lượng\)\. Diện tích \(X\*Z\), \(X\*Y\) theo khung bao quanh\. Thể tích chỉ có cho group kín\. Số liệu chưa trừ hao hụt hoặc phần che khuất\.$/,
+    (m,u,a,v)=>`Units: ${u} (length), ${a} (area), ${v} (volume), pcs (quantity). Areas (X*Z) and (X*Y) use the bounding box. Volume exists only for closed groups. Figures do not subtract waste or hidden parts.`);
   rule(/^Đang quét… ([\d.,]+) đối tượng hình học\.$/,(m,n)=>`Scanning… ${n} geometry objects.`);
   rule(/^Tạo tag "(.*)"$/,(m,n)=>`Create tag "${n}"`);
   rule(/^Đã quét ([\d.,]+) đối tượng và ([\d.,]+) mặt hình học\. Chọn báo cáo, rồi chọn nơi lưu file\. Tiêu đề và hạng mục xuất bằng tiếng Việt\.$/,(m,a,b)=>`Scanned ${a} objects and ${b} geometry faces. Choose a report, then choose where to save the file. Headings and items are exported in Vietnamese.`);
@@ -238,6 +282,8 @@ const VGD_I18N=(()=>{
   rule(/^(.+) không hợp lệ$/,(m,f)=>(names.fields||{})[f]?`${N('fields',f)} is invalid`:m);
   rule(/^(.+) cần đơn vị (.+)$/,(m,method,units)=>(names.quantity_method||{})[method]?`${N('quantity_method',method)} needs unit ${units.split(' / ').map(u=>N('unit',u)).join(' / ')}`:m);
 
+  // Mẫu chung "<chữ có trong từ điển>: <giá trị>" (nhãn trợ năng kèm tên preset...): đặt sau các mẫu cụ thể.
+  rule(/^(.+): (.+)$/,(m,a,b)=>lookup(a)===undefined?m:`${T(a)}: ${T(b)}`);
   rule(/^(.+) \/ (.+)$/,(m,a,b)=>`${translateText(a)} / ${translateText(b)}`);
 
   function translateText(text){

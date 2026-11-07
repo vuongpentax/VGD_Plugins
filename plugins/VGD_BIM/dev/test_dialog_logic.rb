@@ -1,3 +1,5 @@
+require 'tmpdir'
+ENV['VGD_BIM_DATA_DIR'] ||= Dir.mktmpdir('vgd_bim_dialog') # không ghi vào thư mục dữ liệu thật khi chạy riêng
 ROOT = ARGV[0] || File.expand_path('../runtime/vgd_bim', __dir__)
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
@@ -35,6 +37,7 @@ end; end
 $transactions = []
 $writes = []
 require File.join(ROOT, 'core/settings')
+require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/table')
 require File.join(ROOT, 'core/rename')
 require File.join(ROOT, 'ui/dialog')
@@ -52,11 +55,13 @@ ok('ô Tên: chỉ hiện tên', lbl.('instance') == 'Tủ bếp A')
 ok('ô Mô tả: chỉ hiện mô tả', lbl.('description') == 'Gỗ sồi')
 ok('ô Rộng: có đơn vị mm', lbl.('lenX') == '1200 mm')
 ok('ô (X)x(Z): ghép hai cạnh', lbl.('lenXZ') == '1200 x 800 mm')
-VGD::BIM::Settings.update('length_unit' => 'cm')
-ok('đơn vị cm trong Cài đặt: nhãn khung đổi theo (120 x 80 cm)', lbl.('lenXZ') == '120 x 80 cm' && lbl.('lenX') == '120 cm' && lbl.('lenXYZ') == '120 x 60 x 80 cm')
-VGD::BIM::Settings.update('length_unit' => 'm')
-ok('đơn vị m: 1.2 x 0.8 m', lbl.('lenXZ') == '1.2 x 0.8 m')
-VGD::BIM::Settings.update('length_unit' => 'mm')
+VGD::BIM::Table.save_view_state('settings' => {'length_unit' => 'cm', 'length_digits' => 1})
+ok('đơn vị cm trong preset: nhãn khung đổi theo (120 x 80 cm)', lbl.('lenXZ') == '120 x 80 cm' && lbl.('lenX') == '120 cm' && lbl.('lenXYZ') == '120 x 60 x 80 cm')
+VGD::BIM::Table.save_view_state('settings' => {'length_unit' => 'm', 'length_digits' => 2})
+ok('đơn vị m, 2 số lẻ: 1.2 x 0.8 m', lbl.('lenXZ') == '1.2 x 0.8 m')
+VGD::BIM::Table.save_view_state('settings' => {'length_unit' => 'ft', 'length_digits' => 2})
+ok('đơn vị ft: 3.94 x 2.62 ft', lbl.('lenXZ') == '3.94 x 2.62 ft')
+VGD::BIM::Table.save_view_state('preset' => 'x')
 ok('ô thể tích: m³', lbl.('volume') == '0.576 m³')
 ok('ô tình trạng: nhãn tiếng Việt', lbl.('status') == 'Mới')
 ok('không chọn ô: hiện cả dòng', lbl.(nil) == 'Tủ bếp A · Gỗ sồi · Mới · Tủ')
@@ -268,6 +273,9 @@ class EditEnt < Sketchup::Group
   def initialize(name, locked = false); @name = name; @locked = locked; end
   def valid?; true; end
   def locked?; @locked; end
+  def attrs; @attrs ||= {}; end
+  def set_attribute(dict, key, value); (attrs[dict] ||= {})[key] = value; end
+  def delete_attribute(dict, key); (attrs[dict] || {}).delete(key); end
 end
 class EditModel
   attr_reader :layers, :materials
@@ -319,6 +327,104 @@ ok('ô không sửa được: báo lỗi tiếng Việt', bad_edit.call({'indexe
 ok('tên tag không hợp lệ: báo lỗi', bad_edit.call({'indexes' => [0], 'field' => 'tag', 'value' => 'untagged'}).to_s.include?('Untagged'))
 ok('chỉ có đối tượng khóa: báo lỗi, không mở bước hoàn tác', (($transactions.clear) && bad_edit.call({'indexes' => [1], 'field' => 'name', 'value' => 'Z'}).to_s.include?('khóa')) && $transactions.empty?)
 ok('không gửi dòng nào: báo lỗi', bad_edit.call({'indexes' => [], 'field' => 'name', 'value' => 'Z'}).to_s.match?(/[À-ỹ]/))
+# Cột mới sửa được: Hãng ghi vào dữ liệu VGD, Link / Cỡ / Đơn giá ghi vào dictionary riêng của bảng
+$writes.clear
+ed.table_edit({'indexes' => [0, 2], 'field' => 'owner', 'value' => 'Hafele'})
+ok('sửa Hãng: ghi vào trường manufacturer của dữ liệu VGD', $writes.map { |w| w[1] } == [{manufacturer: 'Hafele'}, {manufacturer: 'Hafele'}])
+$writes.clear
+ed.table_edit({'indexes' => [0, 2], 'field' => 'url', 'value' => 'https://vgd.vn/tu'})
+ed.table_edit({'indexes' => [0], 'field' => 'size', 'value' => '1200x600'})
+ed.table_edit({'indexes' => [0, 2], 'field' => 'price', 'value' => '1500000'})
+ok('sửa Link / Cỡ / Đơn giá: ghi vào dictionary riêng, không đụng dữ liệu VGD', $writes.empty? && eents[0].attrs['VGD_BIM_TABLE'] == {'url' => 'https://vgd.vn/tu', 'size' => '1200x600', 'price' => 1_500_000.0} && eents[2].attrs['VGD_BIM_TABLE'] == {'url' => 'https://vgd.vn/tu', 'price' => 1_500_000.0})
+ok('đối tượng khóa không bị ghi Link / Đơn giá', eents[1].attrs.empty?)
+ok('Link sai bị từ chối, đối tượng không đổi', bad_edit.call({'indexes' => [0], 'field' => 'url', 'value' => 'javascript:alert(1)'}).to_s.include?('Link') && eents[0].attrs['VGD_BIM_TABLE']['url'] == 'https://vgd.vn/tu')
+ok('Đơn giá sai bị từ chối, đối tượng không đổi', bad_edit.call({'indexes' => [0], 'field' => 'price', 'value' => '1.500.000'}).to_s.include?('Đơn giá') && eents[0].attrs['VGD_BIM_TABLE']['price'] == 1_500_000.0)
+ed.table_edit({'indexes' => [0], 'field' => 'price', 'value' => ''})
+ok('xóa Đơn giá: bỏ khỏi dictionary', !eents[0].attrs['VGD_BIM_TABLE'].key?('price'))
+
+# Thay thế hàng loạt chữ trong Tên / Mô tả / Hãng / Cỡ
+rrows = eents.each_with_index.map { |e, i| {index: i, name: ['Tủ cũ', 'Tủ cũ', 'Bàn'][i], description: ['Gỗ TỦ', '', 'x'][i], owner: '', size: ['', '', ''][i]} }
+ed.instance_variable_set(:@table_rows, rrows)
+$writes.clear
+$transactions.clear
+eents.each { |e| e.name = rrows[eents.index(e)][:name] }
+ed.table_replace({'find' => 'tủ', 'replace' => 'Cửa', 'fields' => %w[name description]})
+ok('thay thế: không phân biệt hoa thường, đổi tên và mô tả, bỏ qua đối tượng khóa', eents.map(&:name) == ['Cửa cũ', 'Tủ cũ', 'Bàn'] && $writes.map { |w| w[1] } == [{description: 'Gỗ Cửa'}])
+ok('thay thế: cả đợt là một bước hoàn tác', $transactions == ['VGD_BIM · Thay thế'])
+ok('thay thế: báo số ô đã đổi', ecalls.any? { |c| c[0] == 'message' && c[1][:text].include?('Đã thay') && c[1][:text].include?('2') })
+$writes.clear
+eents[0].name = 'Tủ'; eents[2].name = 'Tủ'; rrows[0][:name] = 'Tủ'; rrows[2][:name] = 'Tủ'
+ed.table_replace({'find' => 'Tủ', 'replace' => 'a\\0b$1', 'fields' => %w[name], 'indexes' => [2]})
+ok('thay thế: chuỗi thay được hiểu nguyên văn (không phải mẫu biểu thức), chỉ áp cho dòng gửi lên', eents[2].name == 'a\\0b$1' && eents[0].name == 'Tủ')
+rrows[2][:name] = 'Bàn'
+bad_replace = ->(payload) { begin; ed.table_replace(payload); nil; rescue StandardError => e; e.message; end }
+ok('thay thế: chữ cần tìm rỗng bị từ chối', bad_replace.call({'find' => '', 'replace' => 'x', 'fields' => %w[name]}).to_s.include?('chữ cần tìm'))
+ok('thay thế: chữ cần tìm quá dài bị từ chối', bad_replace.call({'find' => 'a' * 201, 'replace' => 'x', 'fields' => %w[name]}).to_s.include?('quá dài'))
+ok('thay thế: cột không cho phép bị từ chối (chỉ Tên, Mô tả, Hãng, Cỡ)', bad_replace.call({'find' => 'a', 'replace' => 'x', 'fields' => %w[tag]}).to_s.include?('cột'))
+ok('thay thế: không có ô nào khớp thì báo, không mở bước hoàn tác', (($transactions.clear) && bad_replace.call({'find' => 'zzzz', 'replace' => 'x', 'fields' => %w[name]}).to_s.include?('Không có ô nào')) && $transactions.empty?)
+
+# Mở link: chỉ http / https
+opened = []
+Object.const_set(:UI, Module.new) unless defined?(::UI)
+::UI.define_singleton_method(:openURL) { |url| opened << url }
+ok('mở link hợp lệ bằng trình duyệt', (ed.open_url('https://vgd.vn/tu'); opened == ['https://vgd.vn/tu']))
+ok('không mở link lạ (javascript:, file:, rỗng)', ['javascript:alert(1)', 'file:///C:/x', '', 'vgd.vn'].all? { |u| bad = (ed.open_url(u) rescue :error); true } && opened == ['https://vgd.vn/tu'])
+
+# Công tắc Diện tích chiếu: bật thì đọc lại bảng
+ed.instance_variable_set(:@table_options, {zoom: true, isolate: false, deep: false, projected: false})
+ed.instance_variable_set(:@isolated, [])
+ecalls.clear
+ed.table_option({'projected' => true})
+ok('bật Diện tích chiếu: lưu tuỳ chọn và đọc lại bảng', ed.instance_variable_get(:@table_options)[:projected] == true && ecalls.any? { |c| c[0] == :build })
+# Preset: lưu kèm tiêu đề và thiết lập, nhập / xuất file JSON qua hộp chọn file
+Object.const_set(:UI, Module.new) unless defined?(::UI)
+$picked = nil
+::UI.define_singleton_method(:openpanel) { |*_args| $picked }
+::UI.define_singleton_method(:savepanel) { |*_args| $picked }
+ecalls.clear
+ed.table_preset({'action' => 'save', 'name' => 'Của tôi', 'group' => '', 'columns' => %w[ordinal instance price], 'headers' => {'price' => 'Giá'}, 'settings' => {'length_unit' => 'cm'}, 'silent' => true})
+mine = VGD::BIM::Table.custom_presets.find { |p| p['name'] == 'Của tôi' }
+ok('lưu preset: kèm tiêu đề và thiết lập, gửi lại danh sách preset', mine && mine['headers'] == {'price' => 'Giá'} && mine['settings']['length_unit'] == 'cm' && ecalls.any? { |c| c[0] == 'presets' && c[1].any? { |p| p['name'] == 'Của tôi' && p['builtin'] == false } })
+ok('lưu preset thiết lập sai: báo lỗi, không lưu', bad_edit.call(nil) || (begin; ed.table_preset({'action' => 'save', 'name' => 'Hỏng', 'group' => '', 'columns' => %w[instance], 'settings' => {'length_unit' => 'km'}}); false; rescue ArgumentError; true; end) && VGD::BIM::Table.custom_presets.none? { |p| p['name'] == 'Hỏng' })
+export_path = File.join(Dir.mktmpdir('vgd_bim_export'), 'presets.json')
+$picked = export_path
+ed.table_preset({'action' => 'export'})
+exported = JSON.parse(File.read(export_path, encoding: 'UTF-8'))
+ok('xuất preset: ghi file JSON định dạng riêng có preset tự tạo', exported['format'] == 'VGD_BIM_PRESETS' && exported['presets'].any? { |p| p['name'] == 'Của tôi' })
+$picked = nil
+ecalls.clear
+ed.table_preset({'action' => 'export'})
+ok('hủy hộp lưu file: không ghi, không báo lỗi', ecalls.none? { |c| c[0] == 'message' })
+VGD::BIM::Table.delete_preset('Của tôi')
+$picked = export_path
+ed.table_preset({'action' => 'import'})
+ok('nhập preset từ file vừa xuất: có lại preset và gửi danh sách mới', VGD::BIM::Table.custom_presets.any? { |p| p['name'] == 'Của tôi' } && ecalls.any? { |c| c[0] == 'message' && c[1][:text].include?('Đã nhập 1') })
+ref_path = File.join(File.dirname(export_path), 'ref.json')
+File.write(ref_path, JSON.generate('Phong' => {'columns' => {'instance' => true, 'lenX' => true}, 'settings' => {'formatLength' => 1, 'roundLength' => 2}}))
+$picked = ref_path
+ed.table_preset({'action' => 'import'})
+ok('nhập preset định dạng của plugin tham khảo', VGD::BIM::Table.custom_presets.find { |p| p['name'] == 'Phong' }&.dig('settings', 'length_unit') == 'm')
+File.write(ref_path, 'không phải json {')
+bad_import = begin; ed.table_preset({'action' => 'import'}); nil; rescue StandardError => e; e.message; end
+ok('nhập file không phải JSON: báo lỗi tiếng Việt, không đổi preset', bad_import.to_s.include?('JSON') && VGD::BIM::Table.custom_presets.size == 2)
+File.write(ref_path, 'x' * (VGD::BIM::UI::Dialog::MAX_PRESET_FILE + 1))
+big_import = begin; ed.table_preset({'action' => 'import'}); nil; rescue StandardError => e; e.message; end
+ok('nhập file quá lớn: từ chối trước khi đọc', big_import.to_s.include?('quá lớn'))
+VGD::BIM::Table.delete_preset('Phong'); VGD::BIM::Table.delete_preset('Của tôi')
+ok('xuất khi chưa có preset tự tạo: báo lỗi rõ', (begin; ed.table_preset({'action' => 'export'}); false; rescue ArgumentError => e; e.message.include?('Chưa có preset'); end))
+# Xuất bảng đang hiện ra CSV
+VGD::BIM.const_set(:ReportExporter, Module.new) unless VGD::BIM.const_defined?(:ReportExporter)
+exported_table = nil
+VGD::BIM::ReportExporter.define_singleton_method(:write_table) { |path, headers, rows| exported_table = [path, headers, rows]; rows.size }
+tpath = File.join(Dir.mktmpdir('vgd_bim_tbl'), 'b')
+$picked = tpath
+ed.table_export({'headers' => %w[A B], 'rows' => [%w[1 2]]})
+ok('xuất bảng: chọn nơi lưu, thêm đuôi .csv, báo số dòng', exported_table == ["#{tpath}.csv", %w[A B], [%w[1 2]]] && ecalls.any? { |c| c[0] == 'message' && c[1][:text].include?('Đã xuất 1 dòng') })
+exported_table = nil
+$picked = nil
+ed.table_export({'headers' => %w[A], 'rows' => [%w[1]]})
+ok('hủy hộp lưu file: không xuất', exported_table.nil?)
+ok('xuất bảng không có dòng nào: báo lỗi', (begin; ed.table_export({'headers' => %w[A], 'rows' => []}); false; rescue StandardError => e; e.message.include?('chưa có dòng'); end))
 $model = ORIGINAL_MODEL
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

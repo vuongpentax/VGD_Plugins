@@ -2,22 +2,15 @@ require_relative 'storage'
 
 module VGD
   module BIM
-    # Cài đặt của người dùng, lưu trên máy ở settings.json (cùng thư mục với bộ tag và preset).
-    # Mọi giá trị đều được kiểm tra khi ghi (update) và khi đọc (read): file sửa tay sai thì từng mục sai về mặc định.
+    # Cài đặt chung của người dùng (mọi preset dùng chung), lưu trên máy ở settings.json: ngôn ngữ giao diện và thư mục lưu ảnh.
+    # Đơn vị, số lẻ, cỡ ảnh, góc nhìn... nằm trong preset (xem Preset). Mọi giá trị đều được kiểm tra khi ghi (update) và khi đọc
+    # (read): file sửa tay sai thì từng mục sai về mặc định.
     module Settings
       DEFAULTS = {
-        'language' => 'vi',               # vi | en
-        'image_dir' => '',                # trống = thư mục mặc định trong thư mục dữ liệu của plugin
-        'image_size' => 512,              # cạnh dài của ảnh (điểm ảnh)
-        'image_background' => 'transparent', # transparent | white
-        'capture_mode' => 'isolate',      # isolate: cô lập món đồ rồi chụp | current: chụp đúng khung nhìn hiện tại
-        'length_unit' => 'mm'             # mm | cm | m
+        'language' => 'vi', # vi | en
+        'image_dir' => ''   # trống = thư mục mặc định trong thư mục dữ liệu của plugin
       }.freeze
       LANGUAGES = %w[vi en].freeze
-      BACKGROUNDS = %w[transparent white].freeze
-      CAPTURE_MODES = %w[isolate current].freeze
-      LENGTH_UNITS = %w[mm cm m].freeze
-      IMAGE_SIZE_RANGE = (128..4096).freeze
       MAX_DIR_LENGTH = 240 # dưới giới hạn đường dẫn 260 ký tự của Windows, chừa chỗ cho tên file
 
       def self.read
@@ -46,25 +39,11 @@ module VGD
 
       def self.clean(key, value)
         case key
-        when 'language' then one_of(value, LANGUAGES, 'Ngôn ngữ không hợp lệ.')
-        when 'capture_mode' then one_of(value, CAPTURE_MODES, 'Cách chụp không hợp lệ.')
-        when 'image_background' then one_of(value, BACKGROUNDS, 'Nền ảnh không hợp lệ.')
-        when 'length_unit' then one_of(value, LENGTH_UNITS, 'Đơn vị chiều dài không hợp lệ.')
-        when 'image_size' then size(value)
+        when 'language'
+          raise ArgumentError, 'Ngôn ngữ không hợp lệ.' unless LANGUAGES.include?(value.to_s)
+          value.to_s
         when 'image_dir' then directory(value)
         end
-      end
-
-      def self.one_of(value, allowed, message)
-        text = value.to_s
-        raise ArgumentError, message unless allowed.include?(text)
-        text
-      end
-
-      def self.size(value)
-        number = value.is_a?(Integer) ? value : (Integer(value.to_s, 10) rescue nil)
-        raise ArgumentError, "Cỡ ảnh phải từ #{IMAGE_SIZE_RANGE.first} đến #{IMAGE_SIZE_RANGE.last} điểm ảnh." unless number && IMAGE_SIZE_RANGE.cover?(number)
-        number
       end
 
       def self.directory(value)

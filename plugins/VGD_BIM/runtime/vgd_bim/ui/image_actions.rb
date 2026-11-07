@@ -4,8 +4,8 @@ require 'fileutils'
 module VGD
   module BIM
     module UI
-      # Phần của cửa sổ BIM lo cho Cài đặt và Hình ảnh: lưu cài đặt, chụp ảnh khi người dùng bấm, nhận ảnh dán / kéo thả,
-      # trả ảnh về giao diện. Trộn vào UI::Dialog (dùng @model, @dialog, @table_records... của Dialog).
+      # Phần của cửa sổ BIM lo cho cài đặt chung (ngôn ngữ, thư mục ảnh) và ảnh món đồ: chụp ảnh khi người dùng bấm, nhận ảnh dán /
+      # kéo thả, trả ảnh nhỏ về giao diện. Trộn vào UI::Dialog (dùng @model, @dialog, @table_records... của Dialog).
       # Ảnh chỉ được chụp khi người dùng bấm nút; không có chỗ nào tự chụp.
       module ImageActions
         MAX_CAPTURE_BATCH = 200 # số đối tượng tối đa cho một lần bấm chụp
@@ -19,7 +19,6 @@ module VGD
           @dialog.add_action_callback('images_cancel') { |_ctx| safely { @capture[:cancel] = true if @capture } }
           @dialog.add_action_callback('image_set') { |_ctx, payload| safely { image_set(JSON.parse(payload)) } }
           @dialog.add_action_callback('image_delete') { |_ctx, pid| safely { image_delete(pid) } }
-          @dialog.add_action_callback('image_full') { |_ctx, pid| safely { image_full(pid) } }
           @dialog.add_action_callback('image_thumbs') { |_ctx, payload| safely { image_thumbs(JSON.parse(payload)) } }
         end
 
@@ -56,27 +55,19 @@ module VGD
           ::UI.openURL("file:///#{dir.tr('\\', '/')}")
         end
 
-        # ---- Tab Hình ảnh ----
-        def images_build
-          @model = Sketchup.active_model
-          built = Table.build(@model, @table_scope.select(&:valid?), false)
-          @table_rows = built[:rows]
-          @table_records = built[:records]
-          hint = @table_rows.empty? ? 'Chưa chọn đối tượng nào. Chọn group hoặc component trong SketchUp để xem và chụp ảnh.' : nil
-          emit('images', {rows: @table_rows.map { |row| row.slice(:index, :pid, :name, :definition, :description, :entity_type, :lenX, :lenY, :lenZ, :has_image, :image_stamp, :locked) },
-                          hint: hint, settings: settings_payload, busy: @capture ? true : false})
-        end
-
-        # payload: {'indexes' => [dòng cần chụp] (không có = mọi dòng đang hiện), 'only_missing' => chỉ chụp dòng chưa có ảnh}
+        # ---- Chụp ảnh (nút trong Bảng khối lượng) ----
+        # payload: {'indexes' => [dòng cần chụp] (không có = mọi dòng đang hiện), 'only_missing' => chỉ chụp dòng chưa có ảnh,
+        #          'settings' => thiết lập ảnh của preset đang dùng (cỡ, góc nhìn, kiểu, nền); được kiểm tra lại ở đây}
         def images_capture(payload)
           check_model!
           raise 'Đang chụp ảnh. Hãy đợi xong hoặc bấm Dừng.' if @capture
+          settings = Preset.settings!(payload.fetch('settings', {}))
           wanted = payload['indexes'].is_a?(Array) ? table_indexes(payload) : Array(@table_records).each_index.to_a
           jobs = wanted.map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
           jobs.reject! { |index, _| @table_rows[index][:has_image] } if payload['only_missing']
           raise 'Không có đối tượng nào cần chụp.' if jobs.empty?
           raise "Mỗi lần chỉ chụp tối đa #{MAX_CAPTURE_BATCH} đối tượng. Hãy chọn ít hơn." if jobs.size > MAX_CAPTURE_BATCH
-          @capture = {queue: jobs, total: jobs.size, done: 0, errors: [], updated: [], cancel: false, settings: Settings.read}
+          @capture = {queue: jobs, total: jobs.size, done: 0, errors: [], updated: [], cancel: false, settings: settings}
           release_preview # khung đánh dấu không được lọt vào ảnh
           hide_overlay
           emit('images_progress', {done: 0, total: jobs.size})
@@ -151,12 +142,6 @@ module VGD
           Images.delete(@model, pid)
           emit('images_changed', {items: [{pid: pid, has: false, stamp: 0}]})
           emit('message', {text: 'Đã xóa ảnh của đối tượng.'})
-        end
-
-        def image_full(pid)
-          pid = known_pid!(pid)
-          file = Images.path(@model, pid)
-          emit('image_full', {pid: pid, stamp: Images.info(@model, pid)[:stamp], url: Images.data_url(file)})
         end
 
         def image_thumbs(pids)

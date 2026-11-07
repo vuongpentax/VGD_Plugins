@@ -54,29 +54,63 @@ main{flex:1;min-height:0;overflow:auto;padding:14px 16px;scrollbar-gutter:stable
 .group-panel .pop-pick{text-align:left}
 .merge-opt{display:flex;gap:6px;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:11px}
 
-/* Cột Ảnh trong bảng */
+/* Cột Ảnh trong bảng: ảnh nhỏ, nút hiện khi rê chuột, thả ảnh vào ô */
 .grid td.img{padding:2px;text-align:center;cursor:copy}
-.grid td.img.drop,.img-card.drop{outline:2px dashed var(--accent);outline-offset:-2px;background:var(--soft)}
-.thumb{width:44px;height:36px;margin:0 auto;display:flex;align-items:center;justify-content:center;border-radius:4px;background:var(--tile)}
-.thumb-img{max-width:44px;max-height:36px;object-fit:contain;border-radius:3px}
+.grid td.img.drop{outline:2px dashed var(--accent);outline-offset:-2px;background:var(--soft)}
+.thumb{position:relative;width:60px;height:46px;margin:0 auto;display:flex;align-items:center;justify-content:center;border-radius:4px;background:var(--tile);overflow:hidden}
+.thumb-img{max-width:60px;max-height:46px;object-fit:contain;border-radius:3px}
 .thumb-empty{color:var(--muted);font-size:16px;line-height:1}
-.grid.dense .thumb{height:24px}.grid.dense .thumb-img{max-height:24px}
-.grid.roomy .thumb{height:48px}.grid.roomy .thumb-img{max-height:48px}
-/* Tab Hình ảnh */
-.image-bar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;margin-bottom:12px}
-.img-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
-.img-card{background:var(--tile);border:1px solid var(--border);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:8px;min-width:0}
-.img-card.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
-.img-frame{aspect-ratio:1/1;border-radius:6px;background:var(--surface);border:1px dashed var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;padding:6px;overflow:hidden}
-.img-frame img{max-width:100%;max-height:100%;object-fit:contain}
-.img-empty{font-weight:700;color:var(--muted)}
-.img-meta{display:flex;flex-direction:column;gap:2px;min-width:0}.img-meta strong,.img-meta span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.img-actions{display:flex;flex-wrap:wrap;gap:6px}.img-actions button{padding:4px 8px;min-height:26px;font-size:12px}
-/* Tab Cài đặt */
-.setting-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:8px 16px;align-items:center;padding:10px 0;border-top:1px solid var(--border)}
-.setting-row:first-of-type{border-top:0}
-.setting-text{display:flex;flex-direction:column;gap:2px}
-.setting-row select,.setting-row input[type=text]{width:100%;height:32px}
-.dir-box{display:flex;flex-wrap:wrap;gap:6px}.dir-box input{flex:1 1 220px;min-width:0}
-.dir-now{overflow-wrap:anywhere}
-@media(max-width:600px){.setting-row{grid-template-columns:1fr}}
+.thumb-tools{position:absolute;inset:auto 0 0 0;display:none;justify-content:center;gap:2px;padding:2px;background:#000a}
+.thumb:hover .thumb-tools,.thumb:focus-within .thumb-tools{display:flex}
+.thumb-tool{min-height:0;width:18px;height:18px;padding:0;border-radius:3px;font-size:11px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+.grid.dense .thumb{height:26px}.grid.dense .thumb-img{max-height:26px}
+.grid.roomy .thumb{height:64px}.grid.roomy .thumb-img{max-height:64px}
+.cell-url{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;max-width:calc(100% - 22px);vertical-align:middle}
+.cell-open{min-height:0;padding:0 4px;margin-left:4px;font-size:11px;line-height:16px;vertical-align:middle}
+.header-input{width:100%;height:26px;box-sizing:border-box}
+
+/* Thanh công cụ một hàng */
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.toolbar .grow{flex:1 1 8px}
+.search-wrap{position:relative;display:inline-flex;align-items:center}
+.search-wrap input{width:170px;padding-right:24px}
+.search-clear{position:absolute;right:2px;min-height:0;height:22px;width:22px;padding:0;border:0;background:transparent;font-size:15px;line-height:1;color:var(--muted)}
+.replace-box{display:inline-flex;gap:4px;align-items:center}
+.replace-box input{width:140px}
+.capture-panel{width:300px}
+.popover.up{top:auto;bottom:calc(100% + 4px)}
+.io-panel{width:230px;display:flex;flex-direction:column;gap:2px}
+.io-panel .pop-pick{text-align:left}
+
+/* Chân trang: công tắc bên trái, menu Nhập / Xuất bên phải */
+.bottombar{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;justify-content:space-between}
+.bottombar .switches{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.footer-menu{position:relative}
+
+/* Thanh đầu: nút preset cạnh Sáng/Tối, bánh răng ngôn ngữ */
+.header-actions{display:flex;gap:8px;align-items:center}
+.preset-btn{min-height:28px;padding:3px 12px;border-radius:14px;font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.header-panel{position:fixed;top:56px;right:12px;z-index:70;width:min(620px,calc(100vw - 24px));max-height:calc(100vh - 140px);overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 30px #0006;padding:12px}
+#gear-panel{width:min(280px,calc(100vw - 24px))}
+.pp-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px}
+.pp-left h3{margin:0 0 8px;font-size:13px;color:var(--accent-strong)}
+.pp-left h3:not(:first-child){margin-top:14px}
+.pp-row{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.pp-row label{flex:0 0 84px;font-size:11px;color:var(--muted)}
+.pp-row select{flex:1 1 0;min-width:0;height:30px}
+.pp-folder input{flex:1 1 auto;min-width:0;height:30px}
+.pp-folder button{min-height:30px;padding:0 9px}
+.pp-dir{overflow-wrap:anywhere;margin:2px 0 0}
+.pp-right{border-left:1px solid var(--border);padding-left:14px;min-width:0}
+.pp-new{display:flex;gap:6px;margin-bottom:8px}
+.pp-new input{flex:1 1 auto;min-width:0;height:30px}
+.pp-list{display:flex;flex-direction:column;gap:5px;max-height:340px;overflow:auto}
+.pp-line{display:flex;gap:4px}
+.pp-pick{flex:1 1 auto;min-width:0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pp-pick.active{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.pp-tail{flex:0 0 32px;padding:0}
+@media(max-width:640px){.pp-grid{grid-template-columns:1fr}.pp-right{border-left:0;padding-left:0;border-top:1px solid var(--border);padding-top:10px}}
+.bottombar .toggle{padding:4px 9px;min-height:28px;font-size:12px}
+.bottombar select{height:28px;font-size:12px}
+.bottombar>button,.footer-menu>button{min-height:28px;padding:4px 10px;font-size:12px}
+.footer-menu{margin-left:auto}

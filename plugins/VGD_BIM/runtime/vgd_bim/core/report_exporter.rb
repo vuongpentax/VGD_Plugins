@@ -45,6 +45,19 @@ module VGD
         string = "'#{string}" if string.match?(/\A[\s\uFEFF]*[=+@-]/)
         string
       end
+      MAX_TABLE_ROWS = 50_000
+      MAX_TABLE_COLUMNS = 60
+      # Xuất đúng bảng đang hiện trong cửa sổ (chữ đã định dạng theo đơn vị của preset). Chữ bắt đầu bằng = + @ - được chặn thành văn bản.
+      def self.write_table(path, headers, rows)
+        raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless headers.is_a?(Array) && rows.is_a?(Array) && rows.all? { |row| row.is_a?(Array) }
+        raise ArgumentError, 'Bảng quá lớn để xuất.' if headers.size > MAX_TABLE_COLUMNS || rows.size > MAX_TABLE_ROWS || rows.any? { |row| row.size > MAX_TABLE_COLUMNS }
+        contents = CSV.generate(col_sep: ';', row_sep: "\r\n") do |csv|
+          csv << headers.map { |value| cell(value.to_s) }
+          rows.each { |row| csv << row.map { |value| cell(value.to_s) } }
+        end
+        File.open(path, 'wb') { |file| file.write("\xEF\xBB\xBF".b); file.write(contents.encode('UTF-8')) }
+        rows.size
+      end
       def self.write(path, kind, records, model = Sketchup.active_model)
         report = build(kind, records, model)
         contents = CSV.generate(col_sep: ';', row_sep: "\r\n") do |csv|

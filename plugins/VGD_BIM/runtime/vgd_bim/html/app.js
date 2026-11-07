@@ -15,8 +15,7 @@ function card(title) {const c=node('section',undefined,'card');c.append(node('h2
 function badge(value) {return node('span',translated('status',value),'badge '+(value==='ERROR'?'error':value==='WARNING'?'warning':''));}
 function table(parent,headers,rows,render) {const wrap=node('div',undefined,'table-wrap'),t=node('table'),head=node('thead'),tr=node('tr');headers.forEach(h=>tr.append(node('th',h)));head.append(tr);t.append(head);const body=node('tbody');rows.forEach((r,i)=>{const tr=node('tr');render(r,tr,i);body.append(tr)});t.append(body);wrap.append(t);parent.append(wrap);if(!rows.length)parent.append(node('p','Chưa có dữ liệu để hiển thị.','empty'));return body;}
 function cell(tr,value) {const td=node('td');value instanceof Node?td.append(value):td.textContent=value==null?'':String(value);tr.append(td);return td;}
-function number(value,digits=1) {return Number(value).toLocaleString('vi-VN',{maximumFractionDigits:digits});}
-function dimensions(values) {return ['width','depth','height'].map(k=>number(toUnit(values[k] || 0),LENGTH_UNITS[lengthUnit()].show)).join(' × ');}
+function dimensions(values) {return ['width','depth','height'].map(k=>number(toUnit(values[k] || 0),workSettings().length_digits+1)).join(' × ');}
 function metrics(values) {const wrap=node('div',undefined,'metrics');Object.entries(values).forEach(([k,v])=>{const m=node('div',undefined,'metric');m.append(node('b',typeof v==='number'?number(v):v),node('span',translated('metrics',k)));wrap.append(m)});$('content').append(wrap);}
 function scope(options) {const wrap=node('div',undefined,'scope');options.forEach(([text,mode])=>wrap.append(button(text,()=>call('open_panel',mode),mode===config.mode?'active':'')));$('content').append(wrap);}
 function fields(parent,values,enable=false) {
@@ -146,44 +145,46 @@ function preview(data) {
   const dl=node('dl',undefined,'preview-values');Object.entries(data.data).forEach(([key,value])=>dl.append(node('dt',label(key)),node('dd',displayValue(key,value))));p.append(dl,node('p','Giữ nguyên hình học, tên, thẻ và vật liệu.'));$('confirm-preview').disabled=false;$('preview').showModal();
 }
 // ---- Bảng đối tượng kiểu Auto Info ----
-const tableState={restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null};
-const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','volume','quantity']);
-const DIGITS={areaXZ:2,areaXY:2,areaFace:2,volume:3,quantity:0};
-const UNIT_TEXT={lenX:'mm',lenY:'mm',lenZ:'mm',areaXZ:'m²',areaXY:'m²',areaFace:'m²',volume:'m³',quantity:'cái'};
-const WIDTHS={ordinal:44,image:64,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80};
-const digitsFor=key=>key.startsWith('len')?LENGTH_UNITS[lengthUnit()].digits:(DIGITS[key]??2);
-const LEN_KEYS=new Set(['lenX','lenY','lenZ']);
-const unitTextOf=key=>LEN_KEYS.has(key)?lengthUnit():UNIT_TEXT[key];
-const colLabel=col=>withUnit(col.label);
+const tableState={replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null};
+const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total']);
+const WIDTHS={ordinal:44,image:72,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80,areaProjected:110,ifc:120,owner:120,url:170,size:110,price:110,total:120};
+const unitTextOf=key=>LEN_KEYS.has(key)?lengthLabel():AREA_KEYS.has(key)?areaLabel():key==='volume'?volumeLabel():key==='quantity'?'cái':(key==='price'||key==='total')?workSettings().currency:undefined;
+const colLabel=col=>(tableState.headers&&tableState.headers[col.key])||withUnit(col.label);
 const lenText=value=>fmt(toUnit(value),digitsFor('lenX'));
-const fmt=(value,digits)=>value==null||value===''?'':Number(value).toLocaleString('vi-VN',{minimumFractionDigits:digits,maximumFractionDigits:digits});
 const widthOf=key=>tableState.widths[key]||WIDTHS[key]||110;
 const colByKey=key=>tableState.data.columns.find(c=>c.key===key);
-function presetByName(name){const list=tableState.data.presets||[];return list.find(p=>p.name===name)||list[0];}
+function presetByName(name){const list=presetsList();return list.find(p=>p.name===name)||list[0];}
 function applyPreset(name){
   const p=presetByName(name);if(!p)return;
   tableState.preset=p.name;tableState.group=p.group||'';
-  const rest=tableState.data.columns.map(c=>c.key).filter(k=>!p.columns.includes(k));
+  const rest=presetColumns().map(c=>c.key).filter(k=>!p.columns.includes(k));
   tableState.order=[...p.columns,...rest];tableState.visible=new Set(p.columns);
+  tableState.headers={...(p.headers||{})};tableState.settings={...defaultSettings(),...(p.settings||{})};
+  ensureProjected();
 }
+// Cột Diện tích chiếu cần Ruby tính thêm từ pháp tuyến từng mặt, nên chỉ tính khi cột đang hiện: bật công tắc cho người dùng.
+function ensureProjected(){if(tableState.visible.has('areaProjected')&&tableState.data&&tableState.data.options&&!tableState.data.options.projected)call('table_option',JSON.stringify({projected:true}));}
 // Lưu trạng thái bảng (preset, cột, thứ tự, độ rộng, nhóm, ...) để lần mở sau vẫn như cũ.
 let viewTimer=null;
-function viewState(){return {preset:tableState.preset,group:tableState.group,order:tableState.order,visible:[...tableState.visible],widths:tableState.widths,density:tableState.density,showTotals:tableState.showTotals,onlyTop:tableState.onlyTop};}
+function viewState(){return {headers:tableState.headers,settings:workSettings(),preset:tableState.preset,group:tableState.group,order:tableState.order,visible:[...tableState.visible],widths:tableState.widths,density:tableState.density,showTotals:tableState.showTotals,onlyTop:tableState.onlyTop};}
 function persistView(){clearTimeout(viewTimer);viewTimer=setTimeout(()=>{const json=JSON.stringify(viewState());if(json===tableState.savedView)return;tableState.savedView=json;call('table_view',json);},400);}
 function restoreView(data){
   tableState.restored=true;const v=data.view||{};if(!v.preset&&!(v.order||[]).length)return false;
   const keys=data.columns.map(c=>c.key);
-  if((data.presets||[]).some(p=>p.name===v.preset))tableState.preset=v.preset;
+  if((data.presets||presetsList()).some(p=>p.name===v.preset))tableState.preset=v.preset;
   if(typeof v.group==='string')tableState.group=v.group;
   const order=(v.order||[]).filter(k=>keys.includes(k));tableState.order=[...order,...keys.filter(k=>!order.includes(k))];
   tableState.visible=new Set((v.visible||[]).filter(k=>keys.includes(k)));
   if(!tableState.visible.size)return false;
   tableState.widths=v.widths||{};if(typeof v.density==='string')tableState.density=v.density;
   if(typeof v.showTotals==='boolean')tableState.showTotals=v.showTotals;if(typeof v.onlyTop==='boolean')tableState.onlyTop=v.onlyTop;
+  const p=presetByName(tableState.preset);
+  tableState.headers=v.headers&&typeof v.headers==='object'?{...v.headers}:{...((p&&p.headers)||{})};
+  tableState.settings={...defaultSettings(),...(v.settings||(p&&p.settings)||{})};
   tableState.savedView=JSON.stringify(viewState());return true;
 }
 // Đang dùng preset tự tạo: đổi cột thì cập nhật luôn vào preset đó.
-function syncCustomPreset(){const p=(tableState.data.presets||[]).find(x=>x.name===tableState.preset);if(p&&!p.builtin&&orderedKeys().length)call('table_preset',JSON.stringify({action:'save',name:p.name,group:tableState.group,columns:orderedKeys(),silent:true}));}
+function syncCustomPreset(){const p=presetsList().find(x=>x.name===tableState.preset);if(p&&!p.builtin&&orderedKeys().length)call('table_preset',JSON.stringify({action:'save',name:p.name,group:tableState.group,columns:orderedKeys(),headers:tableState.headers,settings:workSettings(),silent:true}));}
 function orderedKeys(){return tableState.order.filter(k=>tableState.visible.has(k));}
 function cellText(row,key){
   const statuses=tableState.data.statuses||{};
@@ -195,6 +196,10 @@ function cellText(row,key){
     case 'lenXZ':return `${lenText(row.lenX)} × ${lenText(row.lenZ)}`;
     case 'lenXY':return `${lenText(row.lenX)} × ${lenText(row.lenY)}`;
     case 'lenXYZ':return `${lenText(row.lenX)} × ${lenText(row.lenY)} × ${lenText(row.lenZ)}`;
+    case 'owner':return row.owner;
+    case 'url':return row.url;
+    case 'size':return row.size;
+    case 'ifc':return row.ifc;
     case 'tag':return row.tag;
     case 'tag_group':return row.tag_group;
     case 'material':return row.material;
@@ -259,7 +264,7 @@ function closeMenu(){if(cellMenu){cellMenu.remove();cellMenu=null;document.remov
 function outsideMenu(e){if(cellMenu&&!cellMenu.contains(e.target))closeMenu();}
 function inlineEdit(td,row,col){
   closeMenu();
-  const field=col.editable,original=String(field==='name'?row.name:row[field]||'');
+  const field=col.editable,original=String(field==='name'?row.name:field==='price'?(row.price==null?'':row.price):row[field]||'');
   const input=node('input');input.type='text';input.value=original;input.maxLength=200;input.setAttribute('aria-label',col.label);
   td.classList.add('editing');td.replaceChildren(input);input.focus();input.select();
   let done=false;
@@ -313,7 +318,21 @@ function menuEdit(td,row,col){
 function editCell(td,row,col){
   if(!col.editable)return;
   if(row.locked&&!row.members)return message('Đối tượng đang bị khóa nên không sửa được.',true);
-  if(col.editable==='name'||col.editable==='description')inlineEdit(td,row,col);else menuEdit(td,row,col);
+  if(['name','description','owner','url','size','price'].includes(col.editable))inlineEdit(td,row,col);else menuEdit(td,row,col);
+}
+// Đổi tên tiêu đề cột (lưu theo preset). Để trống hoặc trùng tên gốc thì dùng lại tên gốc.
+function editHeader(th,col){
+  const input=node('input');input.type='text';input.maxLength=60;input.value=colLabel(col);input.setAttribute('aria-label','Tên cột');input.className='header-input';
+  th.replaceChildren(input);input.focus();input.select();
+  let done=false;
+  const finish=commit=>{
+    if(done)return;done=true;
+    if(commit){const text=input.value.trim();if(!text||text===withUnit(col.label))delete tableState.headers[col.key];else tableState.headers[col.key]=text;syncCustomPreset();persistView();}
+    renderGrid($('grid-host'));
+  };
+  input.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();finish(true);}else if(e.key==='Escape'){e.preventDefault();finish(false);}};
+  input.onclick=e=>e.stopPropagation();
+  input.onblur=()=>finish(true);
 }
 function startResize(event,key,host,cols){
   event.preventDefault();event.stopPropagation();
@@ -329,7 +348,7 @@ function startResize(event,key,host,cols){
 }
 // Nhóm theo và gộp dòng giống nhau (chỉ đổi cách hiển thị, không đổi dữ liệu).
 const GROUP_OPTIONS=[['','Không nhóm'],['parent','Cha (Parent)'],['entity','Loại (Entity)'],['definition','Tên họ (Definition)'],['instance','Tên (Instance)'],['material','Vật liệu'],['tag','Tag'],['tag_group','Nhóm hạng mục'],['status','Tình trạng']];
-const SUM_KEYS=['areaXZ','areaXY','areaFace','volume','quantity'];
+const SUM_KEYS=['areaXZ','areaXY','areaFace','areaProjected','volume','quantity','total'];
 function groupLabel(row,key){
   switch(key){
     case 'parent':return row.parent||'(Gốc)';
@@ -377,6 +396,7 @@ function renderGrid(host){
   }
   const collapsedKey=section=>`${tableState.groupBy}:${section.label}`;
   const visibleRows=sections.flatMap(section=>section.label!==null&&tableState.collapsed.has(collapsedKey(section))?[]:section.rows);
+  tableState.shownRows=visibleRows;
   tableState.displayed=visibleRows.map(row=>({index:row.index,members:membersOf(row)})); // thứ tự dòng đang hiện, dùng cho chọn dãy bằng Shift
   closeMenu();
   host.replaceChildren();
@@ -395,8 +415,10 @@ function renderGrid(host){
   cols.forEach(col=>{
     const active=tableState.sort&&tableState.sort.key===col.key;
     const th=node('th',colLabel(col)+(active?(tableState.sort.dir>0?' ▲':' ▼'):''));
-    th.title='Bấm để sắp xếp';
-    th.onclick=()=>{tableState.sort=active?{key:col.key,dir:-tableState.sort.dir}:{key:col.key,dir:1};renderGrid(host);};
+    th.title='Nhấp để sắp xếp · nhấp đúp để đổi tên cột';
+    // Nhấp đúp = đổi tên cột, nên việc sắp xếp chờ một nhịp xem có phải nhấp đúp không.
+    th.onclick=()=>{clearTimeout(th._sort);th._sort=setTimeout(()=>{tableState.sort=active?{key:col.key,dir:-tableState.sort.dir}:{key:col.key,dir:1};renderGrid(host);},260);};
+    th.ondblclick=e=>{clearTimeout(th._sort);e.stopPropagation();editHeader(th,col);};
     const handle=node('span',undefined,'rz');handle.setAttribute('aria-hidden','true');
     handle.onclick=e=>e.stopPropagation();
     handle.onmousedown=e=>startResize(e,col.key,host,cols);
@@ -425,7 +447,7 @@ function renderGrid(host){
           const chev=node('button',closed?'▸':'▾','chev');chev.type='button';chev.title=closed?'Mở nhóm':'Thu gọn nhóm';chev.setAttribute('aria-label',chev.title);
           chev.onclick=e=>{e.stopPropagation();if(closed)tableState.collapsed.delete(key);else tableState.collapsed.add(key);renderGrid(host);};
           td.append(chev,document.createTextNode(` ${section.label} · ${countOf(section.rows)}`));
-        }else if(col.kind==='sum'){td.textContent=fmt(sumOf(section.rows,col.key),digitsFor(col.key));td.className='num';}
+        }else if(col.kind==='sum'){td.textContent=fmt(scaledValue(col.key,sumOf(section.rows,col.key)),digitsFor(col.key));td.className='num';}
         head.append(td);
       });
       tbody.append(head);
@@ -458,7 +480,11 @@ function renderGrid(host){
         if(col.editable)td.classList.add('editable');
         if(col.key==='ordinal')td.textContent=String(pos);
         else if(col.kind==='image')thumbCell(td,row);
-        else if(NUMERIC.has(col.key)){td.textContent=fmt(LEN_KEYS.has(col.key)?toUnit(row[col.key]):row[col.key],digitsFor(col.key));td.className='num';}
+        else if(NUMERIC.has(col.key)){td.textContent=fmt(scaledValue(col.key,row[col.key]),digitsFor(col.key));td.className='num';}
+        else if(col.key==='url'){
+          td.append(node('span',row.url,'cell-url'));
+          if(row.url){const open=node('button','↗','cell-open');open.type='button';open.title='Mở link';open.setAttribute('aria-label','Mở link');open.onclick=e=>{e.stopPropagation();call('open_url',row.url);};open.ondblclick=e=>e.stopPropagation();td.append(open);}
+        }
         else td.textContent=cellText(row,col.key);
         tr.append(td);
       });
@@ -471,7 +497,7 @@ function renderGrid(host){
     cols.forEach((col,i)=>{
       const td=node('td');
       if(i===labelIndex)td.textContent=`Tổng cộng · ${countOf(rows)} đối tượng`;
-      else if(col.kind==='sum'){td.textContent=fmt(sumOf(rows,col.key),digitsFor(col.key));td.className='num';}
+      else if(col.kind==='sum'){td.textContent=fmt(scaledValue(col.key,sumOf(rows,col.key)),digitsFor(col.key));td.className='num';}
       foot.append(td);
     });
     const tfoot=node('tfoot');tfoot.append(foot);t.append(tfoot);
@@ -550,32 +576,80 @@ function groupPanel(){
   p.append(list,merge,node('p','Chỉ đổi cách hiển thị. Dòng gộp: Số lượng, diện tích, thể tích là tổng của các dòng gộp.','muted'));
   return p;
 }
+// Thay thế hàng loạt: chữ cần tìm là ô Tìm; áp cho các cột Tên, Mô tả, Hãng, Cỡ đang hiện, trong các dòng đang lọc.
+const REPLACE_COLUMNS={instance:'name',description:'description',owner:'owner',size:'size'};
+const replaceFields=()=>orderedKeys().filter(k=>REPLACE_COLUMNS[k]).map(k=>REPLACE_COLUMNS[k]);
+function replaceMatches(){
+  const q=tableState.search.trim().toLocaleLowerCase('vi');if(!q)return 0;
+  const fields=replaceFields();let count=0;
+  filteredRows().forEach(r=>fields.forEach(f=>{if(String(r[f==='name'?'name':f]||'').toLocaleLowerCase('vi').includes(q))count++;}));
+  return count;
+}
+function updateReplaceUi(){
+  const box=$('replace-box'),go=$('replace-go');if(!box||!go)return;
+  const q=tableState.search.trim(),n=replaceMatches();
+  box.hidden=!q;go.textContent=`Thay thế (${n})`;go.disabled=!n;
+  go.title=replaceFields().length?'Thay chữ đang tìm trong các cột Tên, Mô tả, Hãng, Cỡ đang hiện (một bước hoàn tác)':'Hãy hiện ít nhất một cột Tên, Mô tả, Hãng hoặc Cỡ';
+}
+function runReplace(){
+  const find=tableState.search.trim();
+  if(!find)throw Error('Hãy nhập chữ cần tìm.');
+  if(!replaceMatches())throw Error('Không có ô nào chứa chữ cần tìm.');
+  call('table_replace',JSON.stringify({find,replace:tableState.replace,fields:replaceFields(),indexes:filteredRows().map(r=>r.index)}));
+}
 function toolbar(){
   const d=tableState.data;const bar=node('div',undefined,'toolbar');
   const cols=button('Chọn cột',()=>{tableState.panel=tableState.panel==='columns'?null:'columns';tableView(tableState.data);},'primary');
   cols.setAttribute('aria-expanded',String(tableState.panel==='columns'));
-  const search=node('input');search.type='search';search.placeholder='Tìm kiếm...';search.value=tableState.search;search.setAttribute('aria-label','Tìm trong bảng');
-  search.oninput=()=>{tableState.search=search.value;renderGrid($('grid-host'));};
+  const searchWrap=node('div',undefined,'search-wrap');
+  const search=node('input');search.type='text';search.placeholder='Tìm kiếm...';search.value=tableState.search;search.setAttribute('aria-label','Tìm trong bảng');
+  const clear=node('button','×','search-clear');clear.type='button';clear.title='Xóa chữ tìm';clear.setAttribute('aria-label','Xóa chữ tìm');clear.hidden=!tableState.search;
+  clear.onclick=()=>{tableState.search='';search.value='';clear.hidden=true;renderGrid($('grid-host'));updateReplaceUi();};
+  search.oninput=()=>{tableState.search=search.value;clear.hidden=!search.value;renderGrid($('grid-host'));updateReplaceUi();};
+  searchWrap.append(search,clear);
+  const replaceBox=node('div',undefined,'replace-box');replaceBox.id='replace-box';replaceBox.hidden=true;
+  const replace=node('input');replace.type='text';replace.placeholder='Thay bằng...';replace.value=tableState.replace;replace.maxLength=200;replace.setAttribute('aria-label','Thay bằng');
+  const go=button('Thay thế',()=>runReplace());go.id='replace-go';
+  replace.oninput=()=>{tableState.replace=replace.value;};
+  replace.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();go.click();}};
+  replaceBox.append(replace,go);
   const group=node('select');group.setAttribute('aria-label','Nhóm hạng mục');group.append(new Option('Tất cả nhóm',''));(d.groups||[]).forEach(g=>group.append(new Option(g,g)));
-  group.value=tableState.group;group.onchange=()=>{tableState.group=group.value;renderGrid($('grid-host'));persistView();};
-  const preset=button(`${tableState.preset} ▾`,()=>{tableState.panel=tableState.panel==='presets'?null:'presets';tableView(tableState.data);});
-  preset.classList.add('preset-btn');preset.setAttribute('aria-expanded',String(tableState.panel==='presets'));
+  group.value=tableState.group;group.onchange=()=>{tableState.group=group.value;renderGrid($('grid-host'));persistView();updateReplaceUi();};
   const rename=button('Đổi tên',()=>{tableState.panel=tableState.panel==='rename'?null:'rename';tableView(tableState.data);});
   rename.setAttribute('aria-expanded',String(tableState.panel==='rename'));
-  const snap=button('Chụp ảnh',()=>runCapture([...tableState.sel],false));snap.id='tbl-capture';snap.title='Chụp ảnh các dòng đang chọn (chỉ chụp khi bạn bấm nút này)';snap.disabled=captureState.busy||!tableState.sel.size;
+  const snap=button('Cập nhật ảnh',()=>{tableState.panel=tableState.panel==='capture'?null:'capture';tableView(tableState.data);});
+  snap.id='cap-run';snap.title='Chụp ảnh các dòng (chỉ chụp khi bạn bấm nút này)';snap.setAttribute('aria-expanded',String(tableState.panel==='capture'));
+  const stop=button('Dừng',()=>call('images_cancel'));stop.id='cap-stop';stop.hidden=true;
+  const progress=node('span',undefined,'muted');progress.id='cap-progress';
   const count=node('span',tableState.sel.size?`Đã chọn ${tableState.sel.size} / ${d.rows.length} dòng`:'','sel-count');
   const groupLabelText=(GROUP_OPTIONS.find(o=>o[0]===tableState.groupBy)||GROUP_OPTIONS[0])[1];
   const grouping=button(`Nhóm theo: ${groupLabelText} ▾`,()=>{tableState.panel=tableState.panel==='group'?null:'group';tableView(tableState.data);});
   grouping.setAttribute('aria-expanded',String(tableState.panel==='group'));
-  bar.append(cols,search,group,grouping,preset,rename,snap,count);
+  bar.append(cols,searchWrap,replaceBox,group,node('span',undefined,'grow'),rename,snap,stop,progress,grouping,count);
   return bar;
+}
+// Chụp ảnh: hỏi lại trước khi chụp nhiều đối tượng. Chỉ chụp khi bấm nút Chụp.
+function captureTargets(){return tableState.sel.size?[...tableState.sel]:filteredRows().map(r=>r.index);}
+function capturePanel(){
+  const p=node('div',undefined,'popover right capture-panel');
+  const targets=captureTargets(),chosen=tableState.sel.size>0;
+  p.append(node('div','Cập nhật ảnh','pop-title'));
+  p.append(node('p',chosen?`Chụp ảnh cho ${targets.length} đối tượng đang chọn?`:`Chụp ảnh cho tất cả ${targets.length} đối tượng đang hiện?`,'rename-scope'));
+  const only=node('input');only.type='checkbox';only.checked=imagesState.only;only.id='cap-only';only.onchange=()=>{imagesState.only=only.checked;};
+  const onlyLabel=node('label',undefined,'merge-opt');onlyLabel.append(only,document.createTextNode(' Chỉ chụp đối tượng chưa có ảnh'));
+  const s=workSettings();
+  p.append(onlyLabel,node('p',`Cỡ ${s.image_width} x ${s.image_height}, ${VIEW_LABELS[s.image_view]||s.image_view}. Đổi trong bảng preset.`,'muted'));
+  const actions=node('div',undefined,'rename-actions');
+  actions.append(button('Chụp',()=>{tableState.panel=null;runCapture(targets,imagesState.only);tableView(tableState.data);},'primary'),button('Hủy',()=>{tableState.panel=null;tableView(tableState.data);}));
+  p.append(actions);
+  return p;
 }
 function columnPanel(){
   const d=tableState.data;const total=d.columns.length;
   const p=node('div',undefined,'popover left');
   const head=node('div',undefined,'pop-head');
   const all=node('input');all.type='checkbox';all.checked=tableState.visible.size===total;all.setAttribute('aria-label','Chọn tất cả cột');
-  all.onchange=()=>{tableState.visible=all.checked?new Set(d.columns.map(c=>c.key)):new Set();tableView(d);syncCustomPreset();};
+  all.onchange=()=>{tableState.visible=all.checked?new Set(d.columns.map(c=>c.key)):new Set();ensureProjected();tableView(d);syncCustomPreset();};
   const allLabel=node('label');allLabel.append(all,document.createTextNode(' Bỏ chọn tất cả'));
   head.append(allLabel,node('span',`${tableState.visible.size} / ${total}`,'badge'));
   const search=node('input');search.type='search';search.placeholder='Tìm cột...';search.value=tableState.colSearch;search.className='pop-search';
@@ -596,46 +670,43 @@ function renderColumnList(list){
     item.ondragover=e=>e.preventDefault();
     item.ondrop=e=>{e.preventDefault();const from=tableState.dragKey;tableState.dragKey=null;if(!from||from===key)return;const order=tableState.order.filter(k=>k!==from);order.splice(order.indexOf(key),0,from);tableState.order=order;tableView(d);syncCustomPreset();};
     const box=node('input');box.type='checkbox';box.checked=tableState.visible.has(key);
-    box.onchange=()=>{if(box.checked)tableState.visible.add(key);else tableState.visible.delete(key);tableView(d);syncCustomPreset();};
+    box.onchange=()=>{if(box.checked)tableState.visible.add(key);else tableState.visible.delete(key);if(box.checked&&key==='areaProjected')ensureProjected();tableView(d);syncCustomPreset();};
     const label=node('label');label.append(box,document.createTextNode(' '+colLabel(col)));
     const grip=node('span','⠿','drag');grip.setAttribute('aria-hidden','true');
     item.append(label,grip);list.append(item);
   });
 }
-function presetPanel(){
-  const d=tableState.data;
-  const p=node('div',undefined,'popover right');
-  p.append(node('div','Preset','pop-title'));
-  const row=node('div',undefined,'pop-new');
-  const input=node('input');input.type='text';input.placeholder='Tạo mới...';input.maxLength=40;input.setAttribute('aria-label','Tên preset mới');
-  const add=button('+',()=>{const name=input.value.trim();if(!name)throw Error('Hãy nhập tên preset.');tableState.preset=name;call('table_preset',JSON.stringify({action:'save',name,group:tableState.group,columns:orderedKeys()}));},'primary');
-  row.append(input,add);
-  const list=node('div',undefined,'pop-list');
-  (d.presets||[]).forEach(preset=>{
-    const line=node('div',undefined,'pop-line');
-    const pick=button(preset.name,()=>{applyPreset(preset.name);tableView(tableState.data);},preset.name===tableState.preset?'primary pop-pick':'pop-pick');
-    const tail=button(preset.builtin?'↻':'×',()=>{
-      if(preset.builtin){applyPreset(preset.name);tableView(tableState.data);}
-      else call('table_preset',JSON.stringify({action:'delete',name:preset.name}));
-    });
-    tail.title=preset.builtin?'Khôi phục cột gốc của preset':'Xóa preset';tail.setAttribute('aria-label',tail.title+': '+preset.name);
-    line.append(pick,tail);list.append(line);
-  });
-  p.append(row,list,node('p','Preset lưu cột đang hiển thị, thứ tự cột và nhóm hạng mục, lưu trên máy này. Đang dùng preset tự tạo thì đổi cột sẽ tự cập nhật vào preset đó.','muted'));
+function toggleButton(text,on,handler){const b=node('button',text,'toggle');b.setAttribute('aria-pressed',String(!!on));b.onclick=handler;return b;}
+// Xuất đúng bảng đang hiện (đã lọc, sắp xếp, nhóm; chữ theo đơn vị và tiêu đề của preset) ra CSV mở được bằng Excel.
+function exportTable(){
+  const cols=orderedKeys().map(colByKey).filter(Boolean);
+  const rows=tableState.shownRows.map((row,i)=>cols.map(col=>col.key==='ordinal'?String(i+1):col.kind==='image'?'':NUMERIC.has(col.key)?fmt(scaledValue(col.key,row[col.key]),digitsFor(col.key)):String(cellText(row,col.key)||'')));
+  call('table_export',JSON.stringify({headers:cols.map(colLabel),rows}));
+}
+function ioPanel(){
+  const p=node('div',undefined,'popover up io-panel');
+  const item=(text,handler)=>{const b=button(text,()=>{tableState.panel=null;tableView(tableState.data);handler();},'pop-pick');return b;};
+  p.append(item('Xuất bảng ra Excel (CSV)',exportTable),item('Nhập preset (JSON)',()=>call('table_preset',JSON.stringify({action:'import'}))),item('Xuất preset (JSON)',()=>call('table_preset',JSON.stringify({action:'export'}))));
   return p;
 }
-function toggleButton(text,on,handler){const b=node('button',text,'toggle');b.setAttribute('aria-pressed',String(!!on));b.onclick=handler;return b;}
 function bottomBar(){
   const d=tableState.data;const bar=node('div',undefined,'bottombar');
-  bar.append(toggleButton('Thu phóng đối tượng',d.options.zoom,()=>call('table_option',JSON.stringify({zoom:!d.options.zoom}))));
-  bar.append(toggleButton('Cô lập đối tượng chọn',d.options.isolate,()=>call('table_option',JSON.stringify({isolate:!d.options.isolate}))));
-  bar.append(toggleButton('Chọn sâu bên trong',d.options.deep,()=>call('table_option',JSON.stringify({deep:!d.options.deep}))));
-  bar.append(toggleButton('Hiển thị dòng tính tổng',tableState.showTotals,()=>{tableState.showTotals=!tableState.showTotals;tableView(d);}));
-  bar.append(toggleButton('Tổng chỉ cấp cao nhất',tableState.onlyTop,()=>{tableState.onlyTop=!tableState.onlyTop;tableView(d);}));
+  const switches=node('div',undefined,'switches');
+  switches.append(toggleButton('Thu phóng đối tượng',d.options.zoom,()=>call('table_option',JSON.stringify({zoom:!d.options.zoom}))));
+  switches.append(toggleButton('Cô lập đối tượng chọn',d.options.isolate,()=>call('table_option',JSON.stringify({isolate:!d.options.isolate}))));
+  switches.append(toggleButton('Chọn sâu bên trong',d.options.deep,()=>call('table_option',JSON.stringify({deep:!d.options.deep}))));
+  switches.append(toggleButton('Diện tích chiếu',d.options.projected,()=>call('table_option',JSON.stringify({projected:!d.options.projected}))));
+  switches.append(toggleButton('Hiển thị dòng tính tổng',tableState.showTotals,()=>{tableState.showTotals=!tableState.showTotals;tableView(d);}));
+  switches.append(toggleButton('Tổng chỉ cấp cao nhất',tableState.onlyTop,()=>{tableState.onlyTop=!tableState.onlyTop;tableView(d);}));
   const density=node('select');density.setAttribute('aria-label','Độ cao hàng');
   [['','Hàng: Vừa'],['dense','Hàng: Gọn'],['roomy','Hàng: Thoáng']].forEach(([v,t])=>density.append(new Option(t,v)));
   density.value=tableState.density;density.onchange=()=>{tableState.density=density.value;renderGrid($('grid-host'));persistView();};
-  bar.append(density);
+  switches.append(density);
+  const menu=node('div',undefined,'footer-menu');
+  const io=button('Nhập / Xuất ▾',()=>{tableState.panel=tableState.panel==='io'?null:'io';tableView(tableState.data);});
+  io.setAttribute('aria-expanded',String(tableState.panel==='io'));
+  menu.append(io);if(tableState.panel==='io')menu.append(ioPanel());
+  bar.append(switches,menu);
   return bar;
 }
 function tableView(data){
@@ -643,6 +714,7 @@ function tableView(data){
   const restored=!tableState.restored&&restoreView(data);
   if(!restored&&!tableState.order.length)applyPreset(tableState.preset);
   if(!(data.presets||[]).some(p=>p.name===tableState.preset))applyPreset((data.presets||[])[0].name);
+  if(!tableState.projectedChecked){tableState.projectedChecked=true;ensureProjected();} // preset đã lưu có cột Diện tích chiếu: bật công tắc một lần khi bảng nạp xong
   const content=$('content');const old=content.querySelector('.grid-wrap');const scroll=old?{top:old.scrollTop,left:old.scrollLeft}:null;
   content.replaceChildren();
   const view=node('div',undefined,'table-view');content.append(view);
@@ -651,7 +723,7 @@ function tableView(data){
   const bar=node('div',undefined,'toolbar-wrap');
   bar.append(toolbar());
   if(tableState.panel==='columns')bar.append(columnPanel());
-  if(tableState.panel==='presets')bar.append(presetPanel());
+  if(tableState.panel==='capture')bar.append(capturePanel());
   if(tableState.panel==='group')bar.append(groupPanel());
   if(tableState.panel==='rename')bar.append(renamePanel());
   view.append(bar);
@@ -659,25 +731,29 @@ function tableView(data){
   renderGrid(host);
   if(scroll){const wrap=host.querySelector('.grid-wrap');if(wrap){wrap.scrollTop=scroll.top;wrap.scrollLeft=scroll.left;}}
   view.append(bottomBar());
-  persistView();
-  view.append(node('p',`Đơn vị: ${lengthUnit()} (chiều dài), m² (diện tích), m³ (thể tích), cái (số lượng). Diện tích (X*Z), (X*Y) theo khung bao quanh. Thể tích chỉ có cho group kín. Số liệu chưa trừ hao hụt hoặc phần che khuất.`,'muted'));
+  persistView();updatePresetButton();updateReplaceUi();syncBusy();
+  view.append(node('p',`Đơn vị: ${lengthLabel()} (chiều dài), ${areaLabel()} (diện tích), ${volumeLabel()} (thể tích), cái (số lượng). Diện tích (X*Z), (X*Y) theo khung bao quanh. Thể tích chỉ có cho group kín. Số liệu chưa trừ hao hụt hoặc phần che khuất.`,'muted'));
   $('primary-actions').replaceChildren(button('Bỏ chọn',()=>call('table_clear'),'primary'));
 }
 // Phần nằm chung trong một tab.
 const TAB_OF={rules:'mapping',validate_model:'mapping',validate_selection:'mapping',export:'scan',convert_selection:'information'};
 window.VGD={receive(event,data){
-  if(event==='config'){if(appliedLanguage&&data.language&&appliedLanguage!==data.language){location.reload();return;}appliedLanguage=data.language||'vi';VGD_I18N.setLanguage(appliedLanguage,data.vi_en);config=data;locale=data.locale||locale;$('subtitle').textContent=`${data.version} · ${translated('modes',data.mode)}`;document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===(TAB_OF[data.mode]||data.mode);b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});$('preview').close();$('content').replaceChildren();$('primary-actions').replaceChildren();document.querySelector('main').scrollTop=0;message('Đang đọc dữ liệu…');}
+  if(event==='config'){if(appliedLanguage&&data.language&&appliedLanguage!==data.language){location.reload();return;}appliedLanguage=data.language||'vi';VGD_I18N.setLanguage(appliedLanguage,data.vi_en);config=data;if(config.table&&!tableState.restored)restoreView({view:config.table.view,columns:config.table.columns,presets:config.table.presets});updatePresetButton();locale=data.locale||locale;$('subtitle').textContent=`${data.version} · ${translated('modes',data.mode)}`;document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===(TAB_OF[data.mode]||data.mode);b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});$('preview').close();$('content').replaceChildren();$('primary-actions').replaceChildren();document.querySelector('main').scrollTop=0;message('Đang đọc dữ liệu…');}
   if(event==='table'){tableState.rename.preview=null;tableState.sel=new Set(Array.isArray(data.selected)?data.selected:[]);if(!tableState.sel.has(tableState.anchor))tableState.anchor=null;} // bảng đổi thì bản xem trước đổi tên cũ không còn đúng
-  const renderers={information,scan,mapping,validation,rules,tags:tagEditor,table:tableView,images:imagesView,settings:settingsView};if(renderers[event]){renderers[event](data);message('Sẵn sàng.');}
+  const renderers={information,scan,mapping,validation,rules,tags:tagEditor,table:tableView};if(renderers[event]){renderers[event](data);message('Sẵn sàng.');}
   if(event==='highlight')highlightRows(data.indexes);
   if(event==='options'&&tableState.data){tableState.data.options=data;tableView(tableState.data);}
-  if(event==='presets'&&tableState.data){tableState.data.presets=data;tableView(tableState.data);}
+  if(event==='presets'){
+    if(config.table)config.table.presets=data;
+    if(tableState.data){tableState.data.presets=data;if(config.mode==='table')tableView(tableState.data);}
+    updatePresetButton();if(openPanel==='preset-panel')presetPanel($('preset-panel'));
+  }
+  if(event==='settings'){config.app=data;if(openPanel==='preset-panel')presetPanel($('preset-panel'));if(openPanel==='gear-panel')languagePanel($('gear-panel'));}
   if(event==='rename_preview'){tableState.rename.preview=data;if(tableState.panel==='rename'&&tableState.data)tableView(tableState.data);}
   if(event==='images_progress')imagesProgress(data);
   if(event==='images_done')imagesDone(data);
   if(event==='images_changed')imagesChanged(data.items);
   if(event==='thumbs')receiveThumbs(data);
-  if(event==='image_full')receiveFull(data);
   if(event==='progress')message(`Đang quét… ${number(data.count,0)} đối tượng hình học.`);
   if(event==='message')message(data.error||data.text,!!data.error);
   if(event==='preview')preview(data);
