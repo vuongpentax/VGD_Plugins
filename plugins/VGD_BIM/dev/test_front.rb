@@ -102,6 +102,10 @@ F.clear(d)
 ok('xóa sạch mọi khóa', F.read(d)[:dir].nil? && d.get_attribute(F::DICTIONARY, 'front_source').nil?)
 ok('đọc từ đối tượng không có get_attribute: rỗng, không lỗi', F.read(Object.new)[:dir].nil?)
 
+# ---- Số lần quay để đưa mặt trước về -y (sửa trục) ----
+ok('đã là -y thì không cần quay; -x 1 lần, +y 2 lần, +x 3 lần', F.align_turns('-y') == 0 && F.align_turns('-x') == 1 && F.align_turns('+y') == 2 && F.align_turns('+x') == 3)
+ok('quay đúng số lần theo chiều ngược kim đồng hồ thì mặt trước nào cũng về -y', F::DIRECTIONS.all? { |d| x = d; F.align_turns(d).times { x = F.turn(x) }; x == '-y' })
+
 # ---- Hướng camera khi chụp theo mặt trước ----
 def near_vec?(a, b); a.zip(b).all? { |x, y| (x - y).abs < 1e-9 }; end
 ok('camera Iso, mặt trước -y (trùng trục thế giới): (1, -1, 0,8) như bản chụp cũ', near_vec?(F.camera_direction('isometric', [0.0, -1.0]), [1.0, -1.0, 0.8]))

@@ -657,6 +657,28 @@ function frontManualTargets(){
   if(!tableState.sel.size)throw Error('Hãy chọn đối tượng trong bảng trước.');
   return [...tableState.sel];
 }
+// Sửa trục theo mặt trước (đổi hình học): chỉ làm cho các dòng đang chọn, phải Xem trước rồi mới Áp dụng được.
+tableState.alignPlan=null;
+function alignLines(plan){
+  const lines=[];
+  if(!plan.fix)lines.push('Không có món nào cần sửa trục.');
+  else{lines.push(`Sẽ sửa trục ${plan.fix} loại (${plan.instances} bản sao).`);if(plan.names&&plan.names.length)lines.push('Gồm: '+plan.names.join(', ')+(plan.fix>plan.names.length?'…':''));}
+  if(plan.aligned)lines.push(`Đã có mặt trước -Y: ${plan.aligned} loại.`);
+  (plan.reasons||[]).forEach(r=>lines.push(`Bỏ qua ${r.count} loại: ${r.reason}.`));
+  return lines;
+}
+function alignSection(p,row){
+  p.append(node('div','Sửa trục theo mặt trước','pop-title front-sub'));
+  p.append(node('p','Xoay nội dung của món (bội của 90°) để mặt trước thành hướng -Y và bù cho mọi bản sao, nên hình trong model không đổi chỗ. Đây là thay đổi hình học; Ctrl+Z hoàn tác một lần. Chỉ áp dụng cho các dòng đang chọn.','muted'));
+  const key=JSON.stringify([...tableState.sel].sort((a,b)=>a-b));
+  const plan=tableState.alignPlan&&JSON.stringify(tableState.alignPlan.key)===key?tableState.alignPlan:null;
+  if(plan){const box=node('div',undefined,'front-plan');alignLines(plan).forEach(line=>box.append(node('div',line)));p.append(box);}
+  const preview=button('Xem trước sửa trục',()=>call('front_align_preview',JSON.stringify({indexes:frontManualTargets()})));preview.id='front-align-preview';
+  // Sau khi bấm Áp dụng xóa ngay bản xem trước (vẽ lại bảng) để không bấm hai lần.
+  const apply=button('Áp dụng sửa trục',()=>{call('front_align',JSON.stringify({indexes:frontManualTargets()}));tableState.alignPlan=null;tableView(tableState.data);},'primary');apply.id='front-align-apply';
+  apply.disabled=!(plan&&plan.fix>0);
+  p.append(row(preview,apply));
+}
 function frontPanel(){
   const p=node('div',undefined,'popover right front-panel');
   const chosen=tableState.sel.size>0,targets=frontTargets();
@@ -672,7 +694,9 @@ function frontPanel(){
   const turn=button('Xoay 90°',send('turn'));turn.id='front-turn';
   const flip=button('Đảo chiều',send('opposite'));flip.id='front-opposite';
   const clear=button('Xóa mặt trước',()=>call('front_clear',JSON.stringify({indexes:frontManualTargets()})));clear.id='front-clear';
-  p.append(overLabel,row(detect),row(camera),row(turn,flip,clear),node('p','Món tin cậy "Cần duyệt" nên được xem lại: chọn dòng, nhìn mũi tên trong SketchUp, đúng thì giữ, sai thì xoay hoặc đảo.','muted'));
+  p.append(overLabel,row(detect),row(camera),row(turn,flip,clear));
+  alignSection(p,row);
+  p.append(node('p','Món tin cậy "Cần duyệt" nên được xem lại: chọn dòng, nhìn mũi tên trong SketchUp, đúng thì giữ, sai thì xoay hoặc đảo.','muted'));
   return p;
 }
 // Chụp ảnh: hỏi lại trước khi chụp nhiều đối tượng. Chỉ chụp khi bấm nút Chụp.
@@ -958,6 +982,7 @@ window.VGD={receive(event,data){
     updatePresetButton();if(openPanel==='preset-panel')presetPanel($('preset-panel'));
   }
   if(event==='settings'){config.app=data;if(openPanel==='preset-panel')presetPanel($('preset-panel'));if(openPanel==='gear-panel')languagePanel($('gear-panel'));}
+  if(event==='front_align_plan'){tableState.alignPlan=data&&!data.cleared?data:null;if(tableState.panel==='front'&&tableState.data)tableView(tableState.data);return;}
   if(event==='rename_preview'){tableState.rename.preview=data;if(tableState.panel==='rename'&&tableState.data)tableView(tableState.data);}
   if(event==='images_progress')imagesProgress(data);
   if(event==='images_done')imagesDone(data);

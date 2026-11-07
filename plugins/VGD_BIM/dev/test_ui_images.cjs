@@ -402,6 +402,23 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   for(const [id,mode] of [['front-camera','camera'],['front-turn','turn'],['front-opposite','opposite']]){await clear();await page.click('#'+id);ok(JSON.stringify(await json('front_set'))===JSON.stringify({indexes:[0],mode}),'nút '+id+': gửi front_set mode='+mode+' cho dòng đang chọn');}
   await clear();await page.click('#front-clear');
   ok(JSON.stringify(await json('front_clear'))==='{"indexes":[0]}','nút Xóa mặt trước: gửi front_clear cho dòng đang chọn');
+  // Sửa trục: phải xem trước rồi mới áp dụng được; chỉ cho các dòng đang chọn
+  ok(await page.locator('#front-align-apply').isDisabled(),'Sửa trục: nút Áp dụng bị khóa khi chưa xem trước');
+  await clear();await page.click('#front-align-preview');
+  ok(JSON.stringify(await json('front_align_preview'))==='{"indexes":[0]}','Xem trước sửa trục: gửi front_align_preview cho dòng đang chọn');
+  await receive('front_align_plan',{key:[0],fix:2,instances:5,aligned:1,skipped:3,reasons:[{reason:'component động',count:2},{reason:'chưa có mặt trước',count:1}],names:['Tủ A','Tủ B']});
+  const planText=await page.locator('.front-plan').innerText();
+  ok(planText.includes('Sẽ sửa trục 2 loại (5 bản sao).') && planText.includes('Gồm: Tủ A, Tủ B') && planText.includes('Đã có mặt trước -Y: 1 loại.') && planText.includes('Bỏ qua 2 loại: component động.') && planText.includes('Bỏ qua 1 loại: chưa có mặt trước.'),'bản xem trước hiện số loại, bản sao, tên, đã đúng và lý do bỏ qua');
+  ok(await page.locator('#front-align-apply').isEnabled(),'có bản xem trước cho đúng dòng đang chọn: nút Áp dụng bật');
+  await clear();await page.click('#front-align-apply');
+  ok(JSON.stringify(await json('front_align'))==='{"indexes":[0]}' && !(await page.locator('.front-plan').count()),'Áp dụng sửa trục: gửi front_align, bản xem trước cũ bị xóa ngay (phải xem trước lại)');
+  await receive('front_align_plan',{key:[0],fix:0,instances:0,aligned:2,skipped:0,reasons:[],names:[]});
+  ok((await page.locator('.front-plan').innerText()).includes('Không có món nào cần sửa trục.') && await page.locator('#front-align-apply').isDisabled(),'không có gì cần sửa: báo rõ, nút Áp dụng vẫn khóa');
+  await receive('front_align_plan',{key:[0],fix:3,instances:3,aligned:0,skipped:0,reasons:[],names:['A']});
+  await receive('front_align_plan',{cleared:true});
+  ok(!(await page.locator('.front-plan').count()) && await page.locator('#front-align-apply').isDisabled(),'Ruby báo đã áp dụng (cleared): bản xem trước biến mất');
+  await receive('front_align_plan',{key:[1],fix:3,instances:3,aligned:0,skipped:0,reasons:[],names:['A']});
+  ok(!(await page.locator('.front-plan').count()) && await page.locator('#front-align-apply').isDisabled(),'bản xem trước của dòng khác (đã đổi lựa chọn): không hiện, không cho áp dụng');
   await page.click('#front-btn');
   await page.evaluate(()=>{tableState.panel=null;tableState.sel=new Set();tableView(tableState.data);});
 

@@ -96,6 +96,17 @@ Mặt trước giúp chụp ảnh và đo kích thước đồng bộ cho cả c
 5. Chụp ảnh (nút Cập nhật ảnh, góc Iso hoặc Chính diện) sẽ theo mặt trước: Iso chụp từ phía trước-phải-trên, Chính diện nhìn thẳng vào mặt trước. Món chưa có mặt trước vẫn chụp theo trục thế giới và được ghi chú sau khi chụp.
 6. Cột **Rộng / Dài (Sâu) / Cao** của món có mặt trước đo theo mặt trước: Rộng là chiều ngang nhìn từ phía trước, Sâu là chiều theo hướng mặt trước. Nhãn cột vẫn ghi (X), (Y), (Z) nhưng với món có mặt trước thì (X) là ngang, (Y) là sâu.
 
+### Sửa trục theo mặt trước (thay đổi model)
+
+Khi đã duyệt xong mặt trước, bạn có thể đưa trục của các món về một chuẩn: mặt trước hướng **-Y**. Việc này **thay đổi hình học của model** (trục của group / component), nên hãy lưu file trước khi làm.
+
+1. Chọn các dòng cần sửa trong bảng (không có chọn thì plugin không làm gì).
+2. Trong bảng **Mặt trước**, bấm **Xem trước sửa trục**: plugin báo sẽ sửa bao nhiêu loại và bản sao, bao nhiêu loại đã đúng, và loại nào bị bỏ qua cùng lý do (chưa có mặt trước, component động, có bản sao bị khóa hoặc lật gương, là ảnh...).
+3. Đúng ý thì bấm **Áp dụng sửa trục**. Plugin xoay nội dung của từng định nghĩa theo bội 90° quanh gốc tọa độ rồi bù cho **mọi bản sao**, nên hình trong model **không dịch chỗ**, chỉ có trục đổi. Gốc tọa độ giữ nguyên.
+4. Sai ý thì **Ctrl+Z một lần** để hoàn tác cả hình học lẫn dữ liệu.
+
+Lưu ý: component dùng chung một định nghĩa (nhiều bản sao) được sửa một lần cho tất cả bản sao, kể cả bản sao bạn không chọn. Nếu một bản sao bị khóa hoặc bị lật gương thì cả loại đó bị bỏ qua. Component động không được sửa. Nếu bạn dùng plugin khác tham chiếu trục của món (thư viện, bản vẽ tủ), hãy kiểm tra lại sau khi sửa.
+
 Lưu ý: plugin đoán dựa vào tường gần món và độ nhiều chi tiết của từng mặt nên có thể sai với đồ đặt giữa phòng, kệ hở, đồ trang trí. Luôn xem lại các món Cần duyệt. Đồ nằm nghiêng, bị lật gương hoặc là component động không được tin cậy cao. Kết quả lưu trong file SketchUp (dữ liệu của định nghĩa); không đổi hình học. Đổi mặt trước làm số đo và ảnh chụp của món đó đổi theo (chụp lại ảnh nếu cần).
 
 ## Thay thế hàng loạt chữ

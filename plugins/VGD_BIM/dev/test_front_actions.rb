@@ -31,7 +31,13 @@ end
 module VGD; module BIM; def self.log(_m); end
   module Data
     def self.supported?(e); true; end
-    def self.transaction(model, name = nil); model.operations << name; yield; end
+    def self.transaction(model, name = nil)
+      model.operations << name
+      yield
+    rescue StandardError
+      model.operations << :abort
+      raise
+    end
   end
   module Geometry; def self.definition(entity); entity.definition; end; end
   module Scanner; end; module Tags; GROUPS = [].freeze; end
@@ -39,7 +45,7 @@ module VGD; module BIM; def self.log(_m); end
   module UI; end
 end; end
 ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
-%w[core/storage core/settings core/images core/preset core/front core/front_probe].each { |f| require File.join(ROOT, f) }
+%w[core/storage core/settings core/images core/preset core/front core/front_probe core/front_align].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'ui/dialog')
 F = VGD::BIM::Front
 
@@ -214,6 +220,41 @@ d.table_option('label' => false)
 ok('table_option label = false: ghi nhận và vẽ lại khung ngay', d.instance_variable_get(:@table_options)[:label] == false && shows == 1)
 d.table_option('label' => true)
 ok('table_option label = true: bật lại', d.instance_variable_get(:@table_options)[:label] == true && shows == 2)
+
+# ---- Sửa trục: xem trước và áp dụng ----
+$plan = nil
+$applied = []
+VGD::BIM::FrontAlign.define_singleton_method(:plan) { |_records| $plan }
+VGD::BIM::FrontAlign.define_singleton_method(:apply) { |plan| $applied << plan; raise 'lỗi giữa chừng' if $fail_apply; plan[:items].size }
+$fail_apply = false
+item = ->(name, n = 2) { {definition: :d, name: name, dir: '+y', turns: 2, instances: Array.new(n, :i)} }
+d, recs, defs = make(3)
+$plan = {items: [item.call('Tủ A', 3), item.call('Tủ B', 1)], skipped: [{name: 'C', reason: 'component động'}, {name: 'D', reason: 'component động'}, {name: 'E', reason: 'chưa có mặt trước'}], aligned: 4}
+d.safely { d.front_align_preview('indexes' => [2, 0, 1]) }
+summary = events(d, 'front_align_plan').last
+ok('xem trước: gửi tóm tắt (số loại, số bản sao, đã đúng, bỏ qua theo lý do, tên), khóa theo các dòng đã chọn', summary == {'key' => [0, 1, 2], 'fix' => 2, 'instances' => 4, 'aligned' => 4, 'skipped' => 3, 'reasons' => [{'reason' => 'component động', 'count' => 2}, {'reason' => 'chưa có mặt trước', 'count' => 1}], 'names' => ['Tủ A', 'Tủ B']})
+ok('xem trước: không đổi gì trong model (không mở thao tác, không áp dụng)', $model.operations.empty? && $applied.empty?)
+d.safely { d.front_align_preview({}) }
+ok('xem trước không chọn dòng: báo lỗi, không mặc định tất cả', events(d, 'message').last['error'].to_s.include?('chọn các món cần sửa trục'))
+d.safely { d.front_align('indexes' => []) }
+ok('áp dụng không chọn dòng: báo lỗi, không đổi gì', events(d, 'message').last['error'].to_s.include?('chọn các món cần sửa trục') && $applied.empty? && $model.operations.empty?)
+d.safely { d.front_align('indexes' => [0, 1]) }
+ok('áp dụng: đúng một thao tác tên "Sửa trục theo mặt trước", gọi apply một lần với kế hoạch tính lại', $model.operations == ['VGD_BIM · Sửa trục theo mặt trước'] && $applied.size == 1 && $applied[0] == $plan)
+ok('áp dụng: vẽ lại bảng, xóa bản xem trước, báo số loại / bản sao / bỏ qua', $builds >= 1 && events(d, 'front_align_plan').last == {'cleared' => true} && last_text(d)['text'] == 'Đã sửa trục cho 2 loại (4 bản sao): mặt trước giờ là -Y, hình trong model không đổi chỗ. Bỏ qua 3 loại.')
+$applied.clear
+d, recs, defs = make(2)
+$plan = {items: [], skipped: [{name: 'C', reason: 'chưa có mặt trước'}], aligned: 0}
+d.safely { d.front_align('indexes' => [0]) }
+ok('không có gì cần sửa: báo lỗi hướng dẫn xem trước, không mở thao tác', events(d, 'message').last['error'].to_s.include?('Xem trước') && $model.operations.empty? && $applied.empty?)
+d, recs, defs = make(2)
+$plan = {items: [item.call('X')], skipped: [], aligned: 0}
+$fail_apply = true
+d.safely { d.front_align('indexes' => [0]) }
+ok('lỗi giữa chừng khi áp dụng: hủy cả thao tác (abort), báo lỗi, không vẽ lại như đã thành công', $model.operations == ['VGD_BIM · Sửa trục theo mặt trước', :abort] && events(d, 'message').last['error'] && !events(d, 'front_align_plan').any? { |e| e['cleared'] })
+$fail_apply = false
+d, recs, defs = make(VGD::BIM::UI::FrontActions::MAX_FRONT_BATCH + 1)
+d.safely { d.front_align('indexes' => (0..VGD::BIM::UI::FrontActions::MAX_FRONT_BATCH).to_a) }
+ok('quá giới hạn một lần: từ chối trước khi tính kế hoạch', events(d, 'message').last['error'].to_s.include?('tối đa'))
 
 puts $fails.zero? ? 'Done' : "#{$fails} lỗi"
 exit($fails.zero? ? 0 : 1)

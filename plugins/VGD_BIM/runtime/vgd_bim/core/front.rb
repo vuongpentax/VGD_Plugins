@@ -152,6 +152,17 @@ module VGD
         [nil, 'low']
       end
 
+      # Số lần quay 90° ngược chiều kim đồng hồ (nhìn từ trên xuống) để đưa mặt trước về -y. 0 nghĩa là đã đúng.
+      def self.align_turns(dir)
+        turns = 0
+        current = dir
+        until current == '-y'
+          current = TURN.fetch(current)
+          turns += 1
+        end
+        turns
+      end
+
       # Hướng từ tâm món tới camera khi chụp, theo mặt trước (vector ngang đơn vị trong thế giới, hướng ra khỏi món).
       # 'front': nhìn thẳng vào mặt trước. 'isometric': từ phía trước, bên phải (người đứng ngoài nhìn vào mặt trước) và phía trên,
       # cùng tỉ lệ 1 : 1 : 0,8 như khi chụp theo trục thế giới (mặt trước -Y thì ra đúng (1, -1, 0,8)).

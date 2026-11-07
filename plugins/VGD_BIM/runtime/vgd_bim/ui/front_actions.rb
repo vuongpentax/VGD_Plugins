@@ -13,6 +13,8 @@ module VGD
           @dialog.add_action_callback('front_detect') { |_ctx, payload| safely { front_detect(JSON.parse(payload)) } }
           @dialog.add_action_callback('front_set') { |_ctx, payload| safely { front_set(JSON.parse(payload)) } }
           @dialog.add_action_callback('front_clear') { |_ctx, payload| safely { front_clear(JSON.parse(payload)) } }
+          @dialog.add_action_callback('front_align_preview') { |_ctx, payload| safely { front_align_preview(JSON.parse(payload)) } }
+          @dialog.add_action_callback('front_align') { |_ctx, payload| safely { front_align(JSON.parse(payload)) } }
         end
 
         # payload: {'indexes' => [...], 'overwrite' => true / false}. Món đã đặt tay được giữ nguyên trừ khi overwrite.
@@ -120,6 +122,44 @@ module VGD
           table_build
           show_outline
           emit('message', {text: "Đã xóa mặt trước của #{definitions.size} loại."})
+        end
+
+        # ---- Sửa trục theo mặt trước (ĐỔI HÌNH HỌC: xem FrontAlign) ----
+        # Xem trước chỉ tính kế hoạch rồi gửi tóm tắt về giao diện; không đổi gì trong model.
+        def front_align_preview(payload)
+          check_model!
+          plan = FrontAlign.plan(front_align_records(payload))
+          emit('front_align_plan', front_align_summary(payload, plan))
+        end
+
+        # payload: {'indexes' => [...]}. Tính lại kế hoạch ngay lúc áp dụng (không tin bản xem trước cũ), một thao tác duy nhất:
+        # lỗi giữa chừng thì hủy cả thao tác nên model không bị sửa nửa chừng.
+        def front_align(payload)
+          check_model!
+          plan = FrontAlign.plan(front_align_records(payload))
+          raise 'Không có món nào cần sửa trục. Bấm Xem trước để biết lý do.' if plan[:items].empty?
+          count = Data.transaction(@model, 'VGD_BIM · Sửa trục theo mặt trước') { FrontAlign.apply(plan) }
+          table_build
+          show_outline
+          emit('front_align_plan', {cleared: true}) # xóa bản xem trước cũ ở giao diện
+          instances = plan[:items].sum { |item| item[:instances].size }
+          text = "Đã sửa trục cho #{count} loại (#{instances} bản sao): mặt trước giờ là -Y, hình trong model không đổi chỗ."
+          text += " Bỏ qua #{plan[:skipped].size} loại." if plan[:skipped].any?
+          emit('message', {text: text})
+        end
+
+        def front_align_summary(payload, plan)
+          reasons = plan[:skipped].map { |item| item[:reason] }.tally.map { |reason, count| {reason: reason, count: count} }
+          {key: payload['indexes'].map(&:to_i).sort, fix: plan[:items].size, instances: plan[:items].sum { |item| item[:instances].size },
+           aligned: plan[:aligned], skipped: plan[:skipped].size, reasons: reasons, names: plan[:items].first(5).map { |item| item[:name] }}
+        end
+
+        # Sửa trục luôn cần chọn rõ các dòng (không mặc định "tất cả"), tối đa như lúc phát hiện.
+        def front_align_records(payload)
+          raise 'Hãy chọn các món cần sửa trục trong bảng.' unless payload['indexes'].is_a?(Array) && !payload['indexes'].empty?
+          records = front_records(payload)
+          raise "Mỗi lần sửa trục tối đa #{MAX_FRONT_BATCH} đối tượng. Hãy chọn ít hơn." if records.size > MAX_FRONT_BATCH
+          records
         end
 
         # Các dòng bảng theo chỉ số giao diện gửi lên; không nói indexes thì lấy mọi dòng đang có trong bảng.
