@@ -10,7 +10,7 @@ module Sketchup
   def self.write_default(section, key, value); STORE[[section, key]] = value; true; end
 end
 module VGD; module BIM; def self.log(m); end; module Data; end; module Scanner; end; module Geometry; end; end; end
-ROOT = ARGV[0] || File.expand_path('../runtime/vgd_bim_lite', __dir__)
+ROOT = ARGV[0] || File.expand_path('../runtime/vgd_bim', __dir__)
 require File.join(ROOT, 'core/locale')
 require File.join(ROOT, 'core/schema')
 require File.join(ROOT, 'core/tags')

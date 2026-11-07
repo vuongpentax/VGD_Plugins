@@ -1,4 +1,4 @@
-ROOT_UI = ARGV[0] || File.expand_path('../runtime/vgd_bim_lite/ui/bounds_preview.rb', __dir__)
+ROOT_UI = ARGV[0] || File.expand_path('../runtime/vgd_bim/ui/bounds_preview.rb', __dir__)
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 GL_TRIANGLES = 4

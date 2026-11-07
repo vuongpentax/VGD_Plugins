@@ -197,7 +197,7 @@
       ]
     },
     {
-      "id": "bim_lite",
+      "id": "bim",
       "name": "VGD_BIM",
       "kind": "plugin",
       "lifecycle": "in_development",

@@ -1,4 +1,4 @@
-# VGD BIM Lite v0.1
+# VGD_BIM — Đặc tả gốc (v0.1)
 ## Master Technical Specification
 
 > **Ghi chú cập nhật (bản 1.1.0).** Đây là đặc tả gốc của v0.1-alpha, giữ lại để tham chiếu kiến trúc và schema. Hành vi hiện tại của plugin (tên VGD_BIM, 5 tab, Bảng khối lượng, Soạn tag) nằm trong `README.md`. Điểm khác so với đặc tả bên dưới:
@@ -12,11 +12,11 @@
 
 # 1. Mục tiêu
 
-Xây dựng **VGD BIM Lite cho SketchUp**.
+Xây dựng **VGD_BIM cho SketchUp**.
 
 Đây không phải hệ BIM đầy đủ như Revit hoặc Archicad.
 
-Mục tiêu của VGD BIM Lite là tạo một **lớp dữ liệu chuẩn hóa cho SketchUp**, để có thể:
+Mục tiêu của VGD_BIM là tạo một **lớp dữ liệu chuẩn hóa cho SketchUp**, để có thể:
 
 - sử dụng với model được dựng theo chuẩn VGD,
 - sử dụng với file SketchUp của đối tác,
@@ -31,7 +31,7 @@ Pipeline tổng thể:
 ```text
 SKETCHUP MODEL
       ↓
-VGD BIM LITE
+VGD_BIM
       ↓
 VGD DATA
       ↓
@@ -45,7 +45,7 @@ EXCEL / PRICING
 Trong phase hiện tại chỉ làm:
 
 ```text
-VGD BIM Lite Core
+VGD_BIM Core
 +
 VGD Intake
 +
@@ -61,7 +61,7 @@ Chưa làm VGD Quantity hoàn chỉnh.
 Tên chính thức:
 
 ```text
-VGD BIM Lite
+VGD_BIM
 ```
 
 Namespace Ruby:
@@ -87,7 +87,7 @@ trong namespace, UI, plugin mới, schema hoặc attribute dictionary.
 
 # 3. Nguyên tắc kiến trúc
 
-VGD BIM Lite không phải một plugin chỉ dùng cho model VGD.
+VGD_BIM không phải một plugin chỉ dùng cho model VGD.
 
 Nó phải đóng vai trò:
 
@@ -98,7 +98,7 @@ Lớp chuẩn hóa dữ liệu giữa mọi SketchUp model và hệ sinh thái V
 Kiến trúc:
 
 ```text
-VGD BIM Lite
+VGD_BIM
 │
 ├── Core
 │   ├── Schema
@@ -123,7 +123,7 @@ VGD BIM Lite
 
 VGD Intake không phải plugin độc lập.
 
-Nó là module của VGD BIM Lite và dùng chung:
+Nó là module của VGD_BIM và dùng chung:
 
 ```text
 Schema
@@ -137,7 +137,7 @@ UI system
 
 # 4. Ba trạng thái dữ liệu
 
-VGD BIM Lite phải phân biệt rõ 3 loại dữ liệu.
+VGD_BIM phải phân biệt rõ 3 loại dữ liệu.
 
 ## 4.1 VGD Native
 
@@ -1835,7 +1835,7 @@ Sau này Excel có thể biết quantity đến từ đâu.
 
 # 62. Không khóa SketchUp file
 
-File sau khi dùng VGD BIM Lite vẫn là file SketchUp bình thường.
+File sau khi dùng VGD_BIM vẫn là file SketchUp bình thường.
 
 Người không cài VGD vẫn:
 
@@ -1858,7 +1858,7 @@ Menu:
 ```text
 Extensions
 └─ VGD
-   └─ BIM Lite
+   └─ VGD_BIM
       ├─ BIM Information
       ├─ Scan Model
       ├─ Map / Convert Model
@@ -1905,11 +1905,11 @@ Không tạo toolbar quá nhiều icon.
 Đề xuất:
 
 ```text
-VGD_BIM_Lite/
+VGD_BIM/
 
-vgd_bim_lite.rb
+vgd_bim.rb
 
-vgd_bim_lite/
+vgd_bim/
   loader.rb
 
   core/
@@ -2038,7 +2038,7 @@ Không spam Ruby Console vô hạn.
 
 # 71. Không thay đổi Geometry
 
-VGD BIM Lite Core tuyệt đối không tự:
+VGD_BIM Core tuyệt đối không tự:
 
 ```text
 move geometry
@@ -2496,7 +2496,7 @@ Không ưu tiên UI đẹp hơn data architecture.
 
 Không làm BIM quá nặng.
 
-VGD BIM Lite phải phục vụ workflow SketchUp nội thất thực tế.
+VGD_BIM phải phục vụ workflow SketchUp nội thất thực tế.
 
 ---
 
@@ -2507,7 +2507,7 @@ Implement theo phase.
 Phase hiện tại:
 
 ```text
-PHASE 1 — VGD BIM Lite v0.1-alpha
+PHASE 1 — VGD_BIM v0.1-alpha
 ```
 
 Thứ tự:
@@ -2551,7 +2551,7 @@ Trước tiên cần review kiến trúc, schema và test trên file SketchUp th
 
 # 89. Mục tiêu cuối cùng của hệ thống
 
-VGD BIM Lite không chỉ là:
+VGD_BIM không chỉ là:
 
 ```text
 Chuẩn dựng model của VGD.

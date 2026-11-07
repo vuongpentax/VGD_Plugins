@@ -2,10 +2,10 @@
 # Kết quả ở outputs/VGD_BIM_giao_dien.html (outputs/ không đưa vào git). Chỉ để xem giao diện, không thay SketchUp.
 import base64, json, os, re
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-B = os.path.join(ROOT, 'runtime', 'vgd_bim_lite')
+B = os.path.join(ROOT, 'runtime', 'vgd_bim')
 OUT = os.path.join(ROOT, 'outputs', 'VGD_BIM_giao_dien.html')
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
-VERSION = re.search(r"VERSION = '([^']+)'", open(os.path.join(ROOT, 'runtime', 'vgd_bim_lite.rb'), encoding='utf-8').read()).group(1)
+VERSION = re.search(r"VERSION = '([^']+)'", open(os.path.join(ROOT, 'runtime', 'vgd_bim.rb'), encoding='utf-8').read()).group(1)
 def rd(p): return open(os.path.join(B, p), encoding='utf-8').read()
 def data_uri(p, mime): return f"data:{mime};base64," + base64.b64encode(open(os.path.join(B, p), 'rb').read()).decode()
 

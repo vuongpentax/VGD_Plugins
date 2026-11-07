@@ -40,7 +40,7 @@ module VGD
       verbose = $VERBOSE
       $VERBOSE = nil # tránh cảnh báo "hằng số đã khai báo" khi nạp lại
       begin
-        load File.join(File.dirname(ROOT), 'vgd_bim_lite.rb')
+        load File.join(File.dirname(ROOT), 'vgd_bim.rb')
         load File.join(ROOT, 'loader.rb')
         FILES.each { |file| load File.join(ROOT, "#{file}.rb") }
       ensure
@@ -59,7 +59,7 @@ unless file_loaded?(__FILE__)
   vgd_menu = ::UI.menu('Extensions').add_submenu('VGD')
   vgd_menu.add_item('VGD_BIM') { VGD::BIM.open_panel('table') }
   vgd_menu.add_item('VGD_BIM · Tải lại code') { VGD::BIM.reload }
-  VGD::UpdateNotice.start('vgd-bim-lite', 'VGD_BIM', VGD::BIM::VERSION)
+  VGD::UpdateNotice.start('vgd-bim', 'VGD_BIM', VGD::BIM::VERSION)
   ::UI.add_context_menu_handler do |context|
     if Sketchup.active_model.selection.any? { |e| VGD::BIM::Data.supported?(e) }
       context.add_item('VGD_BIM · Thông tin đối tượng') { VGD::BIM.open_panel('information') }

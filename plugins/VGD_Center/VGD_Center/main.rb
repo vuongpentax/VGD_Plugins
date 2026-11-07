@@ -10,7 +10,7 @@ require File.join(File.dirname(__FILE__), 'manager', 'core')
 
 module VGD
   module Center
-    VERSION = '1.2.4-beta.4'.freeze
+    VERSION = '1.2.4-beta.5'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
@@ -21,14 +21,14 @@ module VGD
     MAX_GUIDE_BYTES = 300 * 1024
     MIN_GUIDE_BYTES = 200
     GUIDE_TIMEOUT = 5.0
-    ALLOWED_IDS = %w[dim cabinet library image_importer scenes bim_lite reference].freeze
+    ALLOWED_IDS = %w[dim cabinet library image_importer scenes bim reference].freeze
     PLUGIN_LAYOUTS = {
       'dim' => ['VGD Dim', ['vgd_dim.rb', 'VGD_Dim/']],
       'cabinet' => ['VGD Cabinet', ['vgd_cabinet.rb', 'VGD_Cabinet/']],
       'library' => ['VGD Library', ['vgd_library.rb', 'vgd_library/']],
       'image_importer' => ['VGD Image Importer', ['vgd_image_importer.rb', 'vgd_image_importer/']],
       'scenes' => ['VGD Scenes', ['vgd_scenes.rb', 'vgd_scenes/']],
-      'bim_lite' => ['VGD_BIM', ['vgd_bim_lite.rb', 'vgd_bim_lite/']],
+      'bim' => ['VGD_BIM', ['vgd_bim.rb', 'vgd_bim/']],
       'reference' => ['VGD Reference', ['vgd_reference.rb', 'vgd_reference/']],
       'center' => ['VGD Center', ['VGD_Center.rb', 'VGD_Center/']]
     }.freeze
@@ -717,8 +717,8 @@ module VGD
             name.match?(/\AVGD_Cabinet(?:\s|\z)/i)
           when 'library'
             name.casecmp('VGD_Library').zero?
-          when 'bim_lite'
-            name.casecmp(PLUGIN_LAYOUTS['bim_lite'][0]).zero?
+          when 'bim'
+            name.casecmp(PLUGIN_LAYOUTS['bim'][0]).zero?
           else
             false
           end

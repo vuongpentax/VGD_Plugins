@@ -1,6 +1,6 @@
-# VGD Center 1.2.4-beta.4
+# VGD Center 1.2.4-beta.5
 
-VGD Center quản lý các plugin VGD trong SketchUp. Danh mục hiển thị phiên bản mới nhất đã được chọn, bao gồm cả beta và alpha. Cài gói phát hành VGD Center 1.2.4-beta.4 (bản thử; bản ổn định gần nhất là 1.2.3) qua Extension Manager; RBZ không được lưu trong thư mục source này. Mở VGD Center bằng nút trên toolbar hoặc menu Extensions.
+VGD Center quản lý các plugin VGD trong SketchUp. Danh mục hiển thị phiên bản mới nhất đã được chọn, bao gồm cả beta và alpha. Cài gói phát hành VGD Center 1.2.4-beta.5 (bản thử; bản ổn định gần nhất là 1.2.3) qua Extension Manager; RBZ không được lưu trong thư mục source này. Mở VGD Center bằng nút trên toolbar hoặc menu Extensions.
 
 ## Tính năng
 
@@ -35,7 +35,7 @@ Catalog hiển thị các phiên bản VGD hiện hành; bản beta và alpha đ
 
 ## Mã nguồn và phát hành
 
-Thư mục này chứa mã nguồn và tài nguyên VGD Center 1.2.4-beta.4, không kèm RBZ hoặc source ZIP tạo sẵn. Ghi chú phát hành được giữ trong các file RELEASE_NOTES_v*.md. Đóng gói bằng `python plugins/VGD_Center/dev/package.py <phiên bản>` (từ thư mục gốc repo; nhận cả bản thử `x.y.z-beta.N`). Test (chạy từ thư mục `plugins/VGD_Center`, dùng stub SketchUp trong `dev/stub`): `ruby dev/test_center.rb` (catalog, cài/gỡ), `ruby dev/test_manager_toggle.rb`, `ruby dev/test_manager_linker.rb`, `ruby dev/test_manager_dialog.rb`, `ruby dev/test_manager_bundle.rb`, `ruby dev/test_manager_i18n.rb` (tab Quản lý, gồm tiếng Anh), `ruby dev/test_manager_load.rb` (nút Nạp ngay), `ruby dev/test_guides.rb` (tải trang hướng dẫn).
+Thư mục này chứa mã nguồn và tài nguyên VGD Center 1.2.4-beta.5, không kèm RBZ hoặc source ZIP tạo sẵn. Ghi chú phát hành được giữ trong các file RELEASE_NOTES_v*.md. Đóng gói bằng `python plugins/VGD_Center/dev/package.py <phiên bản>` (từ thư mục gốc repo; nhận cả bản thử `x.y.z-beta.N`). Test (chạy từ thư mục `plugins/VGD_Center`, dùng stub SketchUp trong `dev/stub`): `ruby dev/test_center.rb` (catalog, cài/gỡ), `ruby dev/test_manager_toggle.rb`, `ruby dev/test_manager_linker.rb`, `ruby dev/test_manager_dialog.rb`, `ruby dev/test_manager_bundle.rb`, `ruby dev/test_manager_i18n.rb` (tab Quản lý, gồm tiếng Anh), `ruby dev/test_manager_load.rb` (nút Nạp ngay), `ruby dev/test_guides.rb` (tải trang hướng dẫn).
 
 ## Thêm plugin mới vào kho
 

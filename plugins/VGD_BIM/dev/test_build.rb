@@ -1,5 +1,5 @@
 # Kiểm tra Table.build: chế độ mặc định (chỉ đối tượng đang chọn) và chế độ chọn sâu.
-ROOT = ARGV[0] || File.expand_path('../runtime/vgd_bim_lite', __dir__)
+ROOT = ARGV[0] || File.expand_path('../runtime/vgd_bim', __dir__)
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 

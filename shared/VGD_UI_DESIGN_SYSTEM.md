@@ -1,6 +1,6 @@
 # VGD Plugin UI Design System
 
-This document defines the shared visual language for the VGD SketchUp plugins: VGD Dim, VGD Cabinet, VGD Image Importer, VGD Library, VGD Scenes, and VGD BIM Lite.
+This document defines the shared visual language for the VGD SketchUp plugins: VGD Dim, VGD Cabinet, VGD Image Importer, VGD Library, VGD Scenes, and VGD_BIM.
 
 ## Design direction
 

@@ -136,8 +136,8 @@ check 'không có phản hồi (mất mạng): dùng bản đang có', UI::HtmlD
 
 reset.call
 HTTP.start_result = false
-CENTER.open_guide('bim_lite')
-check 'không bắt đầu được yêu cầu: dùng bản đang có', UI::HtmlDialog.opened == [File.join(work, 'bim_lite.html')]
+CENTER.open_guide('bim')
+check 'không bắt đầu được yêu cầu: dùng bản đang có', UI::HtmlDialog.opened == [File.join(work, 'bim.html')]
 
 reset.call
 HTTP.responses[URL.call('plugin_moi')] = ok.call(GOOD)

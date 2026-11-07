@@ -64,7 +64,7 @@ Kit đã cung cấp sẵn: `color-scheme`, font Manrope (bundle sẵn, không c�
 | VGD Scenes | `runtime/vgd_scenes/dialog.js` | `VGD.Scenes.Theme` | `#theme` |
 | VGD Library | `runtime/vgd_library/dialog.js` và `seamless.js` | `VGD.Library.Theme` | `#themeToggle` |
 | VGD Image Importer | `runtime/vgd_image_importer/dialog.js` | `vgd.image_importer.theme` | `#theme` |
-| VGD_BIM | `runtime/vgd_bim_lite/html/app.js` | `VGD_BIM_theme` | `#theme` |
+| VGD_BIM | `runtime/vgd_bim/html/app.js` | `VGD_BIM_theme` | `#theme` |
 | VGD Reference | `runtime/vgd_reference/ui/web/app.js` | `vgd.reference.theme` | `#appearanceSettings` |
 | VGD Package | `VGD_Package/ui/dialog.js` | `vgd-package-theme` | `#themeButton` |
 

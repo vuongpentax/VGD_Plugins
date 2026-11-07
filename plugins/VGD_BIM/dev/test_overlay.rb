@@ -1,7 +1,7 @@
 # Khung đánh dấu bằng lớp phủ (Sketchup::Overlay, SketchUp 2023+): vẽ như công cụ cũ nhưng không chiếm công cụ đang dùng,
 # nên chọn Shift/Ctrl, kéo chọn và nhấp đúp vào group vẫn là của SketchUp.
 # Sketchup::Overlay dưới đây mô phỏng đúng phần API thật được dùng: new(id, name), overlay_id, name.
-ROOT_UI = ARGV[0] || File.expand_path('../runtime/vgd_bim_lite/ui/bounds_preview.rb', __dir__)
+ROOT_UI = ARGV[0] || File.expand_path('../runtime/vgd_bim/ui/bounds_preview.rb', __dir__)
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 GL_TRIANGLES = 4

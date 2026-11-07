@@ -4,16 +4,16 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Thông tin plugin
 
-- Tên extension: VGD_BIM (VGD Center chỉ nhận tên này qua `find_installed_extension`). Namespace: `VGD::BIM`. Id trong catalog của Center: `bim_lite`.
-- Loader: `runtime/vgd_bim_lite.rb` (nạp `vgd_bim_lite/loader`). Thư mục và tên file giữ `vgd_bim_lite` vì Center khai báo đúng hai đường dẫn này.
-- Phiên bản: hằng `VERSION` trong `runtime/vgd_bim_lite.rb` (dạng `x.y.z` hoặc `x.y.z-beta.N`, không có chữ `v`). Tiêu đề README phải khớp số này. Đóng gói cần có `RELEASE_NOTES_v<x.y.z>.md` (bản beta dùng chung ghi chú của bản chốt).
+- Tên extension: VGD_BIM (VGD Center chỉ nhận tên này qua `find_installed_extension`). Namespace: `VGD::BIM`. Id trong catalog của Center: `bim`.
+- Loader: `runtime/vgd_bim.rb` (nạp `vgd_bim/loader`). Thư mục và tên file giữ `vgd_bim` vì Center khai báo đúng hai đường dẫn này.
+- Phiên bản: hằng `VERSION` trong `runtime/vgd_bim.rb` (dạng `x.y.z` hoặc `x.y.z-beta.N`, không có chữ `v`). Tiêu đề README phải khớp số này. Đóng gói cần có `RELEASE_NOTES_v<x.y.z>.md` (bản beta dùng chung ghi chú của bản chốt).
 - SketchUp tối thiểu: 2022. Windows là môi trường chính.
 - Dữ liệu trong model: dictionary `VGD_BIM` (Group/ComponentInstance) và `VGD_BIM_RULES` (quy tắc, lưu JSON).
 - Dữ liệu trên máy: file JSON trong `%APPDATA%\VGD\VGD_BIM\` (`~/VGD/VGD_BIM` nếu không phải Windows; biến `VGD_BIM_DATA_DIR` đổi thư mục): `tag_set.json`, `table_presets.json`, `table_view.json` (xem `core/storage.rb`).
 
 ## Cấu trúc
 
-- `runtime/`: mã chạy. `vgd_bim_lite/loader.rb` giữ danh sách `FILES` (thứ tự nạp, dùng chung cho lúc mở SketchUp và `VGD::BIM.reload`); thư mục con `core/`, `intake/`, `ui/` (`dialog.rb`, `bounds_preview.rb`: công cụ và lớp phủ), `html/` (giao diện), `config/`.
+- `runtime/`: mã chạy. `vgd_bim/loader.rb` giữ danh sách `FILES` (thứ tự nạp, dùng chung cho lúc mở SketchUp và `VGD::BIM.reload`); thư mục con `core/`, `intake/`, `ui/` (`dialog.rb`, `bounds_preview.rb`: công cụ và lớp phủ), `html/` (giao diện), `config/`.
 - `dev/`: `run_tests.rb`, các `test_*.rb`, `test_ui.cjs`, fixture và `stubs/`, `package.py`, `deploy.ps1`, `native_smoke.rb`, `make_preview.py`.
 - Gốc plugin: README, SPECIFICATION (đặc tả gốc, có ghi chú cập nhật), VALIDATION, HUONG_DAN_SU_DUNG, RELEASE_NOTES_*.
 
@@ -45,6 +45,6 @@ Chạy từ `plugins/VGD_BIM`:
 - Chọn đối tượng không được quét toàn model: tab Bảng khối lượng chỉ đọc đối tượng đang chọn (quét sâu chỉ khi bật "Chọn sâu bên trong"); chỉ các tab Quét & xuất, Phân loại, Kiểm tra mới quét model.
 - Không dùng `Sketchup.write_default` cho dữ liệu JSON (chuỗi có dấu ngoặc kép hoặc tiếng Việt bị hỏng khi đọc lại); dùng `core/storage.rb`.
 - Khung đánh dấu: từ SketchUp 2023 dùng lớp phủ `UI::BoundsOverlay` (`Sketchup::Overlay`, chỉ vẽ) để không chiếm công cụ Select; SketchUp 2022 và khi lớp phủ lỗi dùng `UI::BoundsPreview`. `Sketchup::Tool` không tồn tại nên `BoundsPreview` là lớp thường với các hàm `draw` / `onLButtonDown` / `onCancel`. Test không được thêm stub cho lớp không có trong API SketchUp, vì stub có thể che lỗi thật (stub `Sketchup::Overlay` trong `dev/test_overlay.rb` chỉ mô phỏng phần API được dùng).
-- Màu giao diện lấy từ theme VGD (`runtime/vgd_bim_lite/html/vgd-theme/`), không tự đặt màu riêng.
+- Màu giao diện lấy từ theme VGD (`runtime/vgd_bim/html/vgd-theme/`), không tự đặt màu riêng.
 - `update_notice.rb` giữ nguyên để loader cũ vẫn gọi được; plugin không tự báo cập nhật, VGD Center báo bản mới.
 - Đổi tên hoặc đường dẫn extension phải kiểm tra lại `find_installed_extension` và `PLUGIN_LAYOUTS` của VGD Center (`plugins/VGD_Center/VGD_Center/main.rb`).

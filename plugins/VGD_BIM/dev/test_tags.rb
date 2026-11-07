@@ -1,6 +1,6 @@
 require 'json'
 module VGD; module BIM; def self.log(m); end; module Data; end; end; end
-require ARGV[0] || File.expand_path('../runtime/vgd_bim_lite/core/tags.rb', __dir__)
+require ARGV[0] || File.expand_path('../runtime/vgd_bim/core/tags.rb', __dir__)
 T = VGD::BIM::Tags
 def check(label, cond); puts "#{cond ? 'PASS' : 'FAIL'}  #{label}"; end
 def raises?; yield; false; rescue ArgumentError; true; end
