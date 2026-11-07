@@ -30,7 +30,7 @@ module VGD
           @table_scope = []
           @table_picks = nil      # đối tượng bảng đã chọn và SketchUp đang chọn theo
           @picked_entities = []   # mọi đối tượng đã chọn trong bảng (có thể nhiều hơn SketchUp chọn khi khác cấp lồng)
-          @table_options = {zoom: true, isolate: false, deep: false, projected: false}
+          @table_options = {zoom: true, isolate: false, deep: false, projected: false, label: true}
           @isolated = []
           @preview = nil
           @ready = false
@@ -449,6 +449,11 @@ module VGD
               restore_isolation
             end
           end
+          if payload.key?('label')
+            # Bảng tên (khung tên) vẽ trên model khi chọn một món: bật / tắt, vẽ lại ngay.
+            @table_options[:label] = payload['label'] ? true : false
+            show_outline
+          end
           emit('options', @table_options.merge(isolating: !@isolated.empty?))
         end
         def table_preset(payload)
@@ -588,26 +593,27 @@ module VGD
           return if targets.empty?
           points = targets.flat_map { |r| Table.world_corners(r) }
           return if points.empty?
-          points += front_arrows(targets) # mũi tên chỉ mặt trước của các đối tượng đã có mặt trước
+          arrows = front_arrows(targets) # mũi tên chỉ mặt trước trên mặt trên của các đối tượng đã có mặt trước
           single = targets.size == 1 ? targets.first : nil
-          label = single ? outline_label(single) : nil
+          label = single && @table_options[:label] ? outline_label(single) : nil # công tắc Bảng tên trên model
           box = single ? Table.bounding_box(single) : nil
           label_point = box && !box.empty? ? box.center : nil
           fills = targets.flat_map { |r| Table.box_triangles(r) }
           # Đối tượng bị xóa: khung tự tắt và bảng bỏ dòng đã xóa.
           alive = -> { targets.all? { |r| r[:path].all?(&:valid?) } }
           stale = -> { safely { table_build if @mode == 'table' && @dialog.visible? } }
-          return if show_overlay(points, label, label_point, fills, alive, stale)
-          @preview = UI::BoundsPreview.new(points, label: label, label_point: label_point, fills: fills, alive: alive, on_stale: stale) { @preview = nil }
+          return if show_overlay(points, label, label_point, fills, alive, stale, arrows)
+          @preview = UI::BoundsPreview.new(points, label: label, label_point: label_point, fills: fills, arrows: arrows, alive: alive, on_stale: stale) { @preview = nil }
           @model.tools.push_tool(@preview)
           @model.active_view.invalidate
         end
-        # Các đoạn thẳng của mũi tên mặt trước (cặp điểm, tọa độ thế giới); đối tượng chưa có mặt trước thì không có.
+        # Mũi tên mặt trước của các đối tượng đã có mặt trước: [tam giác tô, đường viền] theo tọa độ thế giới.
         def front_arrows(records)
-          records.flat_map { |record| FrontProbe.arrow_points(record, Front.read(Geometry.definition(record[:entity]))[:dir]) }
+          shapes = records.map { |record| FrontProbe.arrow_shapes(record, Front.read(Geometry.definition(record[:entity]))[:dir]) }
+          [shapes.flat_map(&:first), shapes.flat_map(&:last)]
         rescue StandardError => error
           BIM.log("Front arrow failed: #{error.message}")
-          []
+          [[], []]
         end
         def outline_label(record)
           index = @table_records.index { |r| r.equal?(record) }
@@ -658,9 +664,9 @@ module VGD
           defined?(UI::BoundsOverlay) && !@overlay_failed ? true : false
         end
         # Trả về true nếu đã hiện khung bằng lớp phủ, false nếu phải dùng công cụ.
-        def show_overlay(points, label, label_point, fills, alive, stale)
+        def show_overlay(points, label, label_point, fills, alive, stale, arrows = [[], []])
           return false unless overlay_available?
-          outline_overlay.show_shapes(points, label: label, label_point: label_point, fills: fills, alive: alive, on_stale: stale)
+          outline_overlay.show_shapes(points, label: label, label_point: label_point, fills: fills, arrows: arrows, alive: alive, on_stale: stale)
           @model.active_view.invalidate
           true
         rescue StandardError => error

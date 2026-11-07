@@ -85,14 +85,16 @@ Nút ⚙ ở thanh đầu chỉ để chọn **ngôn ngữ** (Tiếng Việt / E
 
 ## Mặt trước của món (bản thử)
 
-Mặt trước giúp sau này chụp ảnh và đo kích thước đồng bộ cho cả công trình, kể cả model lạ có trục xoay lung tung. Bản này mới **xác định và lưu** mặt trước, chưa đổi ảnh chụp hay model.
+Mặt trước giúp chụp ảnh và đo kích thước đồng bộ cho cả công trình, kể cả model lạ có trục xoay lung tung. Bước này **xác định và lưu** mặt trước, rồi ảnh chụp và số đo dùng nó; plugin chưa đổi trục của model.
 
 1. Chọn các món trong bảng (hoặc không chọn gì để làm cho tất cả món đang hiện), bấm nút **Mặt trước** rồi **Phát hiện tự động**.
 2. Bật cột **Độ tin cậy mặt trước**, hoặc **Nhóm theo → Mặt trước (độ tin cậy)**. Món **Cần duyệt** là món plugin chưa chắc; rê chuột vào ô để xem lý do.
-3. Duyệt: chọn một dòng, nhìn **mũi tên** trong SketchUp (chỉ hướng mặt trước). Đúng thì giữ. Sai thì: xoay camera nhìn thẳng vào mặt trước thật rồi bấm **Theo hướng nhìn hiện tại**, hoặc bấm **Xoay 90°** / **Đảo chiều** cho tới khi mũi tên đúng.
+3. Duyệt: chọn một dòng, nhìn **mũi tên trên mặt trên của món** trong SketchUp (nhìn từ trên xuống rất rõ; mũi tên chỉ hướng mặt trước). Muốn gọn thì tắt công tắc **Bảng tên trên model** ở chân trang (chỉ tắt bảng tên, mũi tên vẫn hiện). Đúng thì giữ. Sai thì: xoay camera nhìn thẳng vào mặt trước thật rồi bấm **Theo hướng nhìn hiện tại**, hoặc bấm **Xoay 90°** / **Đảo chiều** cho tới khi mũi tên đúng.
 4. Món đã đặt tay sẽ không bị phát hiện tự động ghi đè (trừ khi tick **Ghi đè cả món đã đặt tay**).
+5. Chụp ảnh (nút Cập nhật ảnh, góc Iso hoặc Chính diện) sẽ theo mặt trước: Iso chụp từ phía trước-phải-trên, Chính diện nhìn thẳng vào mặt trước. Món chưa có mặt trước vẫn chụp theo trục thế giới và được ghi chú sau khi chụp.
+6. Cột **Rộng / Dài (Sâu) / Cao** của món có mặt trước đo theo mặt trước: Rộng là chiều ngang nhìn từ phía trước, Sâu là chiều theo hướng mặt trước. Nhãn cột vẫn ghi (X), (Y), (Z) nhưng với món có mặt trước thì (X) là ngang, (Y) là sâu.
 
-Lưu ý: plugin đoán dựa vào tường gần món và độ nhiều chi tiết của từng mặt nên có thể sai với đồ đặt giữa phòng, kệ hở, đồ trang trí. Luôn xem lại các món Cần duyệt. Đồ nằm nghiêng, bị lật gương hoặc là component động không được tin cậy cao. Kết quả lưu trong file SketchUp (dữ liệu của định nghĩa); không đổi hình học.
+Lưu ý: plugin đoán dựa vào tường gần món và độ nhiều chi tiết của từng mặt nên có thể sai với đồ đặt giữa phòng, kệ hở, đồ trang trí. Luôn xem lại các món Cần duyệt. Đồ nằm nghiêng, bị lật gương hoặc là component động không được tin cậy cao. Kết quả lưu trong file SketchUp (dữ liệu của định nghĩa); không đổi hình học. Đổi mặt trước làm số đo và ảnh chụp của món đó đổi theo (chụp lại ảnh nếu cần).
 
 ## Thay thế hàng loạt chữ
 

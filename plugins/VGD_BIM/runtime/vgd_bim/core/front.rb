@@ -152,6 +152,24 @@ module VGD
         [nil, 'low']
       end
 
+      # Hướng từ tâm món tới camera khi chụp, theo mặt trước (vector ngang đơn vị trong thế giới, hướng ra khỏi món).
+      # 'front': nhìn thẳng vào mặt trước. 'isometric': từ phía trước, bên phải (người đứng ngoài nhìn vào mặt trước) và phía trên,
+      # cùng tỉ lệ 1 : 1 : 0,8 như khi chụp theo trục thế giới (mặt trước -Y thì ra đúng (1, -1, 0,8)).
+      def self.camera_direction(name, front)
+        fx, fy = front
+        case name
+        when 'front' then [fx, fy, 0.0]
+        when 'isometric' then [fx - fy, fy + fx, 0.8]
+        else raise ArgumentError, 'Góc nhìn không hợp lệ.'
+        end
+      end
+
+      # Rộng (ngang nhìn từ mặt trước) và Sâu (theo hướng mặt trước) từ kích thước theo trục X, Y cục bộ. Mặt trước theo trục X thì hai chiều
+      # đổi chỗ. Chưa có mặt trước thì giữ nguyên (Rộng = X, Sâu = Y).
+      def self.frame_sizes(x_size, y_size, dir)
+        dir && dir.end_with?('x') ? [y_size, x_size] : [x_size, y_size]
+      end
+
       # ---- Lưu / đọc (dictionary của định nghĩa) ----
       def self.read(definition)
         return {dir: nil, source: nil, confidence: nil, note: ''} unless definition.respond_to?(:get_attribute)

@@ -300,8 +300,17 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
 
   // ---- Chân trang ----
   await clear();
-  ok((await page.locator('.bottombar .sw-label').allInnerTexts()).join('|')==='Thu phóng đối tượng|Cô lập đối tượng chọn|Chọn sâu bên trong|Diện tích chiếu|Hiển thị dòng tính tổng|Tổng chỉ cấp cao nhất' && await page.locator('.bottombar button[role="switch"]').count()===6,'chân trang: 6 nút gạt (role switch), có thêm Diện tích chiếu');
-  await page.getByRole('switch',{name:'Diện tích chiếu',exact:true}).click();
+  ok((await page.locator('.bottombar .sw-label').allInnerTexts()).join('|')==='Thu phóng đối tượng|Cô lập đối tượng chọn|Chọn sâu bên trong|Diện tích chiếu|Bảng tên trên model|Hiển thị dòng tính tổng|Tổng chỉ cấp cao nhất' && await page.locator('.bottombar button[role="switch"]').count()===7,'chân trang: 7 nút gạt (role switch), có Diện tích chiếu và Bảng tên trên model');
+
+  await clear();
+  ok((await page.locator('.bottombar .sw').nth(4).getAttribute('aria-checked'))==='true','công tắc Bảng tên trên model: mặc định bật');
+  await page.getByRole('switch',{name:'Bảng tên trên model'}).click();
+  ok(JSON.stringify(await json('table_option'))==='{"label":false}','tắt Bảng tên trên model: gửi label = false cho Ruby');
+  await receive('options',{zoom:true,isolate:false,deep:false,projected:false,label:false,isolating:false});
+  ok((await page.locator('.bottombar .sw').nth(4).getAttribute('aria-checked'))==='false','Ruby báo tắt: công tắc chuyển sang tắt');
+  await clear();await page.getByRole('switch',{name:'Bảng tên trên model'}).click();
+  ok(JSON.stringify(await json('table_option'))==='{"label":true}','bật lại: gửi label = true');
+  await receive('options',{zoom:true,isolate:false,deep:false,projected:false,label:true,isolating:false});  await page.getByRole('switch',{name:'Diện tích chiếu',exact:true}).click();
   ok(JSON.stringify(await json('table_option'))==='{"projected":true}','công tắc Diện tích chiếu: gửi tuỳ chọn');
   await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();
   ok((await page.locator('.io-panel button').allInnerTexts()).map(x=>x.replace(/\s+/g,' ').trim()).join('|')==='Cầu nối dữ liệu Sắp có|Xuất Excel|In PDF|Nhập preset (JSON)|Xuất preset (JSON)','menu Nhập / Xuất: Cầu nối dữ liệu (để sẵn, chưa dùng được), Xuất Excel, In PDF, nhập / xuất preset');
@@ -444,13 +453,13 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.waitForTimeout(400);
   ok((await sideBox()).width===0 && (await gridLeft())===left0 && (await page.locator('.col-side').evaluate(el=>el.childElementCount))===0,'đóng: ngăn thu lại hết, bảng về chỗ cũ');
   // Nút gạt chân trang: cùng một nút, trượt từ từ
-  const totalsSwitch=page.locator('.bottombar .sw').nth(4);
+  const totalsSwitch=page.locator('.bottombar .sw').nth(5); // Hiển thị dòng tính tổng
   const swBefore=await totalsSwitch.getAttribute('aria-checked');
-  await page.evaluate(()=>{window.__sw=document.querySelectorAll('.bottombar .sw')[4];});
+  await page.evaluate(()=>{window.__sw=document.querySelectorAll('.bottombar .sw')[5];});
   await totalsSwitch.click();
   await page.waitForTimeout(60);
   const thumb=await page.evaluate(()=>parseFloat(getComputedStyle(window.__sw,'::after').left));
-  ok((await totalsSwitch.getAttribute('aria-checked'))!==swBefore && thumb>2 && thumb<20 && await page.evaluate(()=>window.__sw===document.querySelectorAll('.bottombar .sw')[4]),'nút gạt: cùng một phần tử, đầu gạt đang trượt (không nhảy), trạng thái đổi');
+  ok((await totalsSwitch.getAttribute('aria-checked'))!==swBefore && thumb>2 && thumb<20 && await page.evaluate(()=>window.__sw===document.querySelectorAll('.bottombar .sw')[5]),'nút gạt: cùng một phần tử, đầu gạt đang trượt (không nhảy), trạng thái đổi');
   await page.waitForTimeout(250);
   await totalsSwitch.click();await page.waitForTimeout(250);
 

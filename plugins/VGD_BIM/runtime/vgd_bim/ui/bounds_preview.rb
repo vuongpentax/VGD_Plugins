@@ -6,6 +6,7 @@ module VGD
         LINE_COLOR = [180, 137, 99].freeze      # #B48963, màu nhấn VGD (viền)
         FILL_COLOR = [180, 137, 99, 70].freeze  # cùng màu, độ trong suốt nhẹ (tô mặt)
         BOX_COLOR = [142, 107, 76].freeze       # #8E6B4C, màu nhấn đậm VGD (nền khung tên)
+        ARROW_FILL = [255, 244, 224].freeze     # mũi tên mặt trước: nền sáng, viền nâu đậm để nổi trên mặt trên của khung
         TEXT_COLOR = [255, 255, 255].freeze     # chữ trắng trên nền nâu
         LABEL_SIZE = 12
         LABEL_HEIGHT = 24
@@ -26,13 +27,15 @@ module VGD
         # vị trí của ngữ cảnh. Kết quả được nhớ lại cho tới khi ngữ cảnh đổi. Trả về [đường viền, tô mặt, điểm khung tên].
         def drawing_shapes(view)
           context = view.model.edit_transform
-          return [@points, @fills, @label_point] if context.to_a == IDENTITY_MATRIX
+          return [@points, @fills, @label_point, @arrow_fills, @arrow_lines] if context.to_a == IDENTITY_MATRIX
           key = context.to_a
           unless @shape_key == key
             inverse = context.inverse
             @shape_cache = [@points.map { |point| point.transform(inverse) },
                             @fills.map { |point| point.transform(inverse) },
-                            @label_point && @label_point.transform(inverse)]
+                            @label_point && @label_point.transform(inverse),
+                            @arrow_fills.map { |point| point.transform(inverse) },
+                            @arrow_lines.map { |point| point.transform(inverse) }]
             @shape_key = key
           end
           @shape_cache
@@ -43,6 +46,18 @@ module VGD
           return if @fills.empty?
           view.drawing_color = Sketchup::Color.new(*FILL_COLOR)
           view.draw(GL_TRIANGLES, drawing_shapes(view)[1])
+        end
+
+        # Mũi tên mặt trước: tô đặc và viền đậm, vẽ trên mặt trên của khung bao.
+        def draw_arrows(view)
+          return if @arrow_fills.nil? || @arrow_fills.empty?
+          shapes = drawing_shapes(view)
+          view.drawing_color = Sketchup::Color.new(*ARROW_FILL)
+          view.draw(GL_TRIANGLES, shapes[3])
+          view.line_stipple = ''
+          view.line_width = 3
+          view.drawing_color = Sketchup::Color.new(*BOX_COLOR)
+          view.draw_lines(shapes[4])
         end
 
         def draw_outline(view)
@@ -144,8 +159,9 @@ module VGD
         include OutlineDrawing
 
         # alive: hàm kiểm tra đối tượng còn tồn tại; trả về false thì khung tự tắt và gọi on_stale.
-        def initialize(points, label: nil, label_point: nil, fills: [], alive: nil, on_stale: nil, &on_done)
+        def initialize(points, label: nil, label_point: nil, fills: [], arrows: [[], []], alive: nil, on_stale: nil, &on_done)
           @points = points
+          @arrow_fills, @arrow_lines = arrows
           @label = label
           @label_point = label_point
           @fills = fills
@@ -188,6 +204,7 @@ module VGD
           end
           draw_fills(view)
           draw_outline(view)
+          draw_arrows(view)
           draw_label(view)
         end
 
@@ -258,11 +275,14 @@ module VGD
             @visible = false
             @points = []
             @fills = []
+            @arrow_fills = []
+            @arrow_lines = []
           end
 
           # alive / on_stale giống BoundsPreview: đối tượng bị xóa thì khung tự ẩn và gọi on_stale một lần.
-          def show_shapes(points, label: nil, label_point: nil, fills: [], alive: nil, on_stale: nil)
+          def show_shapes(points, label: nil, label_point: nil, fills: [], arrows: [[], []], alive: nil, on_stale: nil)
             @points = points
+            @arrow_fills, @arrow_lines = arrows
             @label = label
             @label_point = label_point
             @fills = fills
@@ -286,6 +306,7 @@ module VGD
             end
             draw_fills(view)
             draw_outline(view)
+            draw_arrows(view)
             draw_label(view)
           end
 

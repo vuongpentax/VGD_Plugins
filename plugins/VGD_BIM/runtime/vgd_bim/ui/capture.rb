@@ -15,7 +15,7 @@ module VGD
       module Capture
         THUMB_SIZE = 128 # cạnh dài của ảnh nhỏ hiện trong bảng
         ISOLATING_VIEWS = %w[isometric front].freeze
-        # Hướng từ tâm món đồ tới camera, theo trục thế giới: iso nhìn từ phía trước (-Y), bên phải (+X), phía trên; front nhìn thẳng từ phía -Y.
+        # Hướng từ tâm món đồ tới camera theo trục thế giới, chỉ dùng khi món chưa có mặt trước (có thì xem Front.camera_direction): iso nhìn từ phía trước (-Y), bên phải (+X), phía trên; front nhìn thẳng từ phía -Y.
         DIRECTIONS = {'isometric' => [1, -1, 0.8], 'front' => [0, -1, 0]}.freeze
         COLOR_STYLE = {'RenderMode' => 3, 'DisplayColorByLayer' => false}.freeze # shaded có texture, không tô màu theo tag
         WHITE_BACKGROUND = {'DrawGround' => false, 'DrawHorizon' => false}.freeze # cùng với màu nền trắng
@@ -42,7 +42,7 @@ module VGD
             end
             saved[:options] = tweak_options(model, settings)
             if isolate
-              aim(view, entity, settings['image_view'])
+              notes << aim(view, entity, settings['image_view'], FrontProbe.front_world(record))
               view.zoom(entity)
             end
             view.refresh
@@ -58,8 +58,8 @@ module VGD
             restore(model, view, saved, operation, pid)
           end
           result = Images.info(model, pid).merge(pid: pid).reject { |key, _| key == :has }
-          note = notes.compact.first
-          note ? result.merge(note: note) : result
+          note = notes.compact.uniq.join('; ')
+          note.empty? ? result : result.merge(note: note)
         end
 
         # Mỗi bước khôi phục chạy độc lập: một bước lỗi không được làm hỏng các bước sau, cũng không được biến lần chụp
@@ -150,16 +150,20 @@ module VGD
         end
 
         # Đặt camera nhìn vào tâm món đồ từ góc đã chọn, đủ xa để không nằm trong món đồ; View#zoom sau đó chỉnh cho vừa khung.
-        def self.aim(view, entity, name)
+        # front: hướng mặt trước của món trong thế giới ([x, y] đơn vị, từ FrontProbe.front_world); có thì chụp theo mặt trước,
+        # chưa có thì chụp theo trục thế giới (DIRECTIONS) và trả về ghi chú để người dùng biết ảnh đó chưa đồng bộ.
+        def self.aim(view, entity, name, front = nil)
           box = entity.bounds
           center = box.center
-          direction = Geom::Vector3d.new(*DIRECTIONS.fetch(name)).normalize
+          vector = front ? Front.camera_direction(name, front) : DIRECTIONS.fetch(name)
+          direction = Geom::Vector3d.new(*vector).normalize
           eye = center.offset(direction, [box.diagonal.to_f, 1.0].max * 2.0)
           camera = Sketchup::Camera.new(eye, center, Geom::Vector3d.new(0, 0, 1))
           current = view.camera
           camera.perspective = current.perspective?
           camera.height = current.height unless current.perspective?
           view.camera = camera
+          front ? nil : 'món chưa có mặt trước nên chụp theo trục thế giới'
         end
 
         def self.copy_camera(camera)

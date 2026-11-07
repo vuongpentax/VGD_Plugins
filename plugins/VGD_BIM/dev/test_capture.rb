@@ -35,7 +35,7 @@ module Sketchup
     def perspective?; @perspective; end
   end
   class Entity
-    attr_accessor :hidden, :pid
+    attr_accessor :hidden, :pid, :definition
     def initialize(pid); @pid = pid; @hidden = false; end
     def persistent_id; @pid; end
     def hidden?; @hidden; end
@@ -79,6 +79,7 @@ class FakeModel
   def abort_operation; @snapshot.each { |e, hidden| e.hidden = hidden }; @ops << :abort; end
   def commit_operation; @ops << :commit; end
 end
+module VGD; module BIM; module Geometry; def self.definition(entity); entity.definition; end; end; end; end
 module VGD; module BIM; module Table
   def self.isolate(model, path)
     raise ArgumentError, 'Đối tượng nằm trong thành phần dùng chung nhiều nơi nên không cô lập được.' if path.last.pid == 666
@@ -87,7 +88,7 @@ module VGD; module BIM; module Table
     hidden
   end
 end; end; end
-%w[storage settings images preset].each { |f| require File.expand_path("../runtime/vgd_bim/core/#{f}.rb", __dir__) }
+%w[storage settings images preset front front_probe].each { |f| require File.expand_path("../runtime/vgd_bim/core/#{f}.rb", __dir__) }
 require File.expand_path('../runtime/vgd_bim/ui/capture.rb', __dir__)
 C = VGD::BIM::UI::Capture
 I = VGD::BIM::Images
@@ -195,7 +196,7 @@ check 'tuỳ chọn transparent làm SketchUp báo lỗi: cũng tự thử lại
 model, items = world
 view = model.active_view
 result = C.shoot(model, {entity: items[0], path: [items[0]]}, D.merge('image_background' => 'white'))
-check 'nền trắng (không xin trong suốt): không có ghi chú và chỉ ghi đúng 2 ảnh', result[:note].nil? && view.attempts.size == 2
+check 'nền trắng (không xin trong suốt): không có ghi chú về cách chụp thay thế và chỉ ghi đúng 2 ảnh', !result[:note].to_s.include?('trong suốt') && view.attempts.size == 2
 model, items = world
 view = model.active_view
 view.reject_transparent = true
@@ -226,3 +227,44 @@ model, items = world
 check 'đối tượng đã bị xóa: báo lỗi, không chụp', raises?('không còn') { gone = Sketchup::Entity.new(20); gone.define_singleton_method(:valid?) { false }; C.shoot(model, {entity: gone, path: [gone]}, D) } && model.ops.empty?
 check 'đối tượng chưa có mã bền (persistent_id) bị từ chối', raises? { C.shoot(model, {entity: Sketchup::Entity.new(0), path: []}, D) }
 check 'thiết lập sai (góc nhìn lạ) bị từ chối, không chụp', raises?('góc nhìn') { C.shoot(model, {entity: items[0], path: [items[0]]}, D.merge('image_view' => 'top')) } && model.active_view.writes.empty? && model.ops.empty?
+
+# ---- Chụp theo mặt trước ----
+class FrontDef
+  def initialize(dir); @a = {}; @a['front'] = dir if dir; end
+  def get_attribute(dict, key, default = nil); @a.fetch(key, default); end
+end
+Axes = Struct.new(:x, :y, :z) do
+  def xaxis; Struct.new(:to_a).new(x); end
+  def yaxis; Struct.new(:to_a).new(y); end
+  def zaxis; Struct.new(:to_a).new(z); end
+end
+IDENTITY = Axes.new([1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0])
+ROT90 = Axes.new([0.0, 1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 1.0]) # xoay 90° quanh Z: +y cục bộ thành -x thế giới
+def shoot_front(settings, dir, transform)
+  model, items = world
+  items[0].definition = FrontDef.new(dir)
+  result = C.shoot(model, {entity: items[0], path: [items[0]], transform: transform}, D.merge(settings))
+  [model.active_view, result]
+end
+def eye_dir(view)
+  d = view.states.last[:eye].zip([10.0, 20.0, 30.0]).map { |e, c| e - c }
+  l = Math.sqrt(d.sum { |v| v * v }); d.map { |v| v / l }
+end
+def unit(*v); l = Math.sqrt(v.sum { |x| x * x }); v.map { |x| x / l }; end
+view, result = shoot_front({'image_view' => 'isometric'}, '-y', IDENTITY)
+check 'có mặt trước -y (trùng trục thế giới): Iso ra đúng hướng cũ (1, -1, 0.8), không ghi chú', near?(eye_dir(view), unit(1, -1, 0.8)) && !result.key?(:note)
+view, result = shoot_front({'image_view' => 'isometric'}, '+y', IDENTITY)
+check 'mặt trước +y: Iso từ phía +y, bên phải của người đứng trước mặt (-1, 1, 0.8)', near?(eye_dir(view), unit(-1, 1, 0.8))
+view, _ = shoot_front({'image_view' => 'isometric'}, '+x', IDENTITY)
+check 'mặt trước +x: Iso (1, 1, 0.8)', near?(eye_dir(view), unit(1, 1, 0.8))
+view, _ = shoot_front({'image_view' => 'isometric'}, '+y', ROT90)
+check 'món xoay 90° quanh Z, mặt trước +y cục bộ = -x thế giới: Iso (-1, -1, 0.8)', near?(eye_dir(view), unit(-1, -1, 0.8))
+view, _ = shoot_front({'image_view' => 'front'}, '+y', ROT90)
+check 'Chính diện theo mặt trước: camera nhìn thẳng vào mặt trước (phía -x thế giới), cùng độ cao với tâm', near?(eye_dir(view), unit(-1, 0, 0)) && (view.states.last[:eye][2] - 30.0).abs < 1e-6
+view, _ = shoot_front({'image_view' => 'front'}, '-x', IDENTITY)
+check 'Chính diện, mặt trước -x: camera ở phía -x', near?(eye_dir(view), unit(-1, 0, 0))
+view, result = shoot_front({'image_view' => 'isometric'}, nil, IDENTITY)
+check 'chưa có mặt trước: chụp theo trục thế giới (1, -1, 0.8) và ghi chú để người dùng biết', near?(eye_dir(view), unit(1, -1, 0.8)) && result[:note] == 'món chưa có mặt trước nên chụp theo trục thế giới'
+view, result = shoot_front({'image_view' => 'current'}, '+y', IDENTITY)
+check 'Khung nhìn hiện tại: không đặt camera, không ghi chú dù có hay không có mặt trước', view.states.last[:eye] == [0.0, 0.0, 100.0] && !result.key?(:note)
+check 'Front.camera_direction: góc nhìn lạ bị từ chối', raises?('góc nhìn') { VGD::BIM::Front.camera_direction('top', [0.0, -1.0]) }

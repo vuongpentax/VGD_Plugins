@@ -51,6 +51,7 @@ class FakeBox
   attr_reader :min, :width, :height, :depth
   def initialize(w, h, d); @min = Geom::Point3d.new(0, 0, 0); @width = w.to_f; @height = h.to_f; @depth = d.to_f; end
   def empty?; width.zero? && height.zero? && depth.zero?; end
+  def max; Geom::Point3d.new(width, height, depth); end
   def center; Geom::Point3d.new(width / 2, height / 2, depth / 2); end
 end
 class FakeDef
@@ -136,13 +137,30 @@ ok('món xoay 90° quanh Z: camera ở phía -x thế giới là +y cục bộ',
 above = Struct.new(:camera).new(Struct.new(:eye).new(Geom::Point3d.new(w / 2, d / 2, 500.0)))
 ok('camera ngay trên đỉnh món (không có hướng ngang): nil', P.camera_direction(above, record).nil?)
 
-# Mũi tên
-pts = P.arrow_points(record, '+y')
-ok('mũi tên: 6 điểm (thân + hai cánh), bắt đầu ở mặt +y và hướng ra +y', pts.size == 6 && (pts[0].y - d).abs < 1e-6 && pts[1].y > pts[0].y && (pts[1].x - pts[0].x).abs < 1e-6)
-ok('mũi tên dài tối thiểu 300 mm', (pts[1].y - pts[0].y) * IN >= 299.0)
-pr = P.arrow_points(rotated, '+y')
-ok('món xoay 90°: mũi tên +y cục bộ chỉ ra -x thế giới', pr[1].x < pr[0].x && (pr[1].y - pr[0].y).abs < 1e-6)
-ok('hướng không hợp lệ hoặc món rỗng: không có mũi tên', P.arrow_points(record, nil).empty? && P.arrow_points({entity: FakeInstance.new(FakeDef.new([], FakeBox.new(0, 0, 0))), transform: Geom::Transformation.new}, '+y').empty?)
+# Mũi tên: nằm trên mặt trên của khung bao, tô đặc + viền
+fills, lines = P.arrow_shapes(record, '+y')
+top = h + P::ARROW_LIFT / IN
+ok('mũi tên: 9 điểm tô (thân 2 tam giác + đầu 1 tam giác), viền 7 cạnh = 14 điểm', fills.size == 9 && lines.size == 14)
+ok('mũi tên nằm trên mặt trên của khung bao (cao hơn đỉnh một chút để không nhấp nháy)', (fills + lines).all? { |p| (p.z - top).abs < 1e-6 })
+ok('mũi tên nằm trọn trong mặt trên của khung bao', (fills + lines).all? { |p| p.x >= -1e-6 && p.x <= w + 1e-6 && p.y >= -1e-6 && p.y <= d + 1e-6 })
+tip_y = fills.map(&:y).max
+ok('mũi tên chỉ ra +y: đầu nhọn ở phía +y, ở giữa theo chiều ngang, dài 70% chiều sâu', (tip_y - (d / 2 + d * P::ARROW_LENGTH / 2)).abs < 1e-6 && (fills.max_by(&:y).x - w / 2).abs < 1e-6 && (fills.map(&:y).max - fills.map(&:y).min - d * P::ARROW_LENGTH).abs < 1e-6)
+ok('mũi tên rộng hơn thân: đầu to hơn thân', (fills[6].x - fills[8].x).abs > (fills[0].x - fills[2].x).abs * 2)
+fills_neg, _ = P.arrow_shapes(record, '-y')
+ok('mặt trước -y: đầu nhọn ở phía -y', fills_neg.min_by(&:y).y < d / 2 && (fills_neg.map(&:y).min - (d / 2 - d * P::ARROW_LENGTH / 2)).abs < 1e-6)
+fills_x, _ = P.arrow_shapes(record, '+x')
+ok('mặt trước +x: chiều dài mũi tên theo chiều rộng (X), 70% của 1200 mm', (fills_x.map(&:x).max - fills_x.map(&:x).min - w * P::ARROW_LENGTH).abs < 1e-6)
+fr, _ = P.arrow_shapes(rotated, '+y')
+ok('món xoay 90° quanh Z: +y cục bộ chỉ ra -x thế giới, vẫn nằm trên mặt trên', fr.min_by(&:x).x < fr.map(&:x).max - 1.0 && fr.all? { |p| (p.z - top).abs < 1e-6 })
+ok('hướng không hợp lệ hoặc món rỗng: không có mũi tên', P.arrow_shapes(record, nil) == [[], []] && P.arrow_shapes({entity: FakeInstance.new(FakeDef.new([], FakeBox.new(0, 0, 0))), transform: Geom::Transformation.new}, '+y') == [[], []])
+
+# Hướng mặt trước trong thế giới
+cabinet_def.define_singleton_method(:get_attribute) { |_d, key, default = nil| key == 'front' ? '+y' : default }
+fw = P.front_world(record)
+ok('front_world: món đặt thẳng, mặt trước +y cục bộ -> (0, 1)', fw && (fw[0]).abs < 1e-9 && (fw[1] - 1.0).abs < 1e-9)
+fw = P.front_world(rotated)
+ok('front_world: món xoay 90° quanh Z -> +y cục bộ thành (-1, 0)', fw && (fw[0] + 1.0).abs < 1e-9 && fw[1].abs < 1e-9)
+ok('front_world: chưa có mặt trước hoặc record không có biến đổi thì nil', P.front_world({entity: FakeInstance.new(FakeDef.new([], FakeBox.new(1, 1, 1))), transform: Geom::Transformation.new}).nil? && P.front_world({entity: cabinet}).nil?)
 
 puts $fails.zero? ? 'Done' : "#{$fails} lỗi"
 exit($fails.zero? ? 0 : 1)

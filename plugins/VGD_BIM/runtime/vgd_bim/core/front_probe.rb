@@ -9,7 +9,11 @@ module VGD
       MAX_FACES = 4000        # số mặt tối đa đọc cho một món; nhiều hơn thì dừng và ghi chú "lấy mẫu"
       RAY_COUNT = 3           # số tia cho mỗi mặt, lấy giá trị giữa để một cột / tay nắm nhô ra không làm sai
       RAY_OFFSET_MM = 5.0     # điểm bắt đầu tia cách mặt khung bao ra ngoài mức này để không trúng chính món đồ
-      ARROW_MIN_MM = 300.0    # chiều dài tối thiểu của mũi tên chỉ mặt trước
+      ARROW_LENGTH = 0.7      # chiều dài mũi tên so với kích thước món theo hướng mặt trước
+      ARROW_HEAD = 0.4        # phần đầu tam giác so với chiều dài mũi tên
+      ARROW_WIDTH = 0.3       # nửa bề rộng đầu mũi tên so với kích thước món theo chiều ngang
+      ARROW_SHAFT = 0.38      # nửa bề rộng thân so với nửa bề rộng đầu
+      ARROW_LIFT = 3.0        # độ nhích lên khỏi mặt trên (mm)
 
       # record: một phần tử của Table.build (:entity, :transform). Trả về kết quả của Front.analyze (xem front.rb) hoặc nil nếu món rỗng.
       def self.measure(model, record)
@@ -35,23 +39,45 @@ module VGD
         Front.local_direction([eye.x - center.x, eye.y - center.y, 0.0], axes[0], axes[1])
       end
 
-      # Mũi tên chỉ mặt trước: các đoạn thẳng (cặp điểm) theo tọa độ thế giới, để vẽ cùng khung đánh dấu. Rỗng nếu món rỗng.
-      def self.arrow_points(record, dir)
-        return [] unless Front.valid?(dir)
-        definition = Geometry.definition(record[:entity])
-        box = definition.bounds
-        return [] if box.empty?
-        world = record[:transform]
+      # Hướng mặt trước của món trong thế giới: vector ngang đơn vị [x, y], hoặc nil nếu chưa có mặt trước / không có hướng ngang.
+      def self.front_world(record)
+        return nil unless record[:transform]
+        dir = Front.read(Geometry.definition(record[:entity]))[:dir]
+        return nil unless dir
+        axes = axes_of(record[:transform])
+        x, y, = Front.world_vector(dir, axes[0], axes[1])
+        length = Math.sqrt(x * x + y * y)
+        length < 1e-9 ? nil : [x / length, y / length]
+      end
+
+      # Mũi tên mặt trước nằm trên mặt trên của khung bao, để nhìn rõ trên mặt bằng. Trả về [tam giác tô (mỗi 3 điểm một tam giác),
+      # đường viền (cặp điểm)] theo tọa độ thế giới; rỗng nếu chưa có mặt trước hoặc món rỗng.
+      def self.arrow_shapes(record, dir)
+        return [[], []] unless Front.valid?(dir)
+        box = Geometry.definition(record[:entity]).bounds
+        return [[], []] if box.empty?
         vx, vy = Front::VECTORS.fetch(dir)
+        px = -vy
+        py = vx
+        along = (vx != 0 ? box.width : box.height).to_f   # kích thước theo hướng mũi tên
+        across = (vx != 0 ? box.height : box.width).to_f  # kích thước ngang mũi tên
+        length = along * ARROW_LENGTH
+        head = length * ARROW_HEAD
+        head_half = [across * ARROW_WIDTH, head * 0.7].min
+        shaft_half = head_half * ARROW_SHAFT
         center = box.center
-        reach = (vx != 0 ? box.width : box.height).to_f / 2.0
-        length = [reach, ARROW_MIN_MM / Geometry::INCH_MM].max
-        start = Geom::Point3d.new(center.x + vx * reach, center.y + vy * reach, center.z)
-        tip = Geom::Point3d.new(start.x + vx * length, start.y + vy * length, start.z)
-        head = length * 0.3
-        wings = [[-vy, vx], [vy, -vx]].map { |sx, sy| Geom::Point3d.new(tip.x - vx * head + sx * head * 0.6, tip.y - vy * head + sy * head * 0.6, tip.z) }
-        points = [start, tip, tip, wings[0], tip, wings[1]]
-        points.map { |point| point.transform(world) }
+        z = box.max.z + ARROW_LIFT / Geometry::INCH_MM # nhích lên một chút để không đè lên mặt trên (tránh nhấp nháy)
+        at = ->(forward, side) { Geom::Point3d.new(center.x + vx * forward + px * side, center.y + vy * forward + py * side, z) }
+        base = -length / 2.0
+        neck = length / 2.0 - head
+        tip = length / 2.0
+        corners = {a: at.call(base, shaft_half), b: at.call(neck, shaft_half), c: at.call(neck, head_half), t: at.call(tip, 0.0),
+                   d: at.call(neck, -head_half), e: at.call(neck, -shaft_half), f: at.call(base, -shaft_half)}
+        fills = [corners[:a], corners[:b], corners[:e], corners[:a], corners[:e], corners[:f], corners[:c], corners[:t], corners[:d]]
+        ring = %i[a b c t d e f].map { |key| corners[key] }
+        lines = ring.each_with_index.flat_map { |point, i| [point, ring[(i + 1) % ring.size]] }
+        world = record[:transform]
+        [fills.map { |point| point.transform(world) }, lines.map { |point| point.transform(world) }]
       end
 
       # ---- Chi tiết ----

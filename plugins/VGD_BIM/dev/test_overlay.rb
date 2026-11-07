@@ -65,6 +65,22 @@ overlay.show_shapes([[0, 0, 0], [1, 1, 1]], label: 'Tủ bếp · Mới', label_
 overlay.draw(view)
 ok('có nội dung: vẽ khung nét đứt, tô mặt và khung tên', view.lines.size == 1 && view.triangles.size == 1 && view.quads.size == 1 && view.texts == ['Tủ bếp · Mới'])
 
+# Mũi tên mặt trước: vẽ tô đặc + viền, và đổi sang tọa độ cục bộ khi đang mở sửa một group
+ar = FakePoint.new('t1')
+arrow_overlay = VGD::BIM::UI::BoundsOverlay.new
+arrow_overlay.show_shapes([FakePoint.new('a')], arrows: [[ar, FakePoint.new('t2'), FakePoint.new('t3')], [ar, FakePoint.new('l2')]])
+av = View.new
+arrow_overlay.draw(av)
+ok('lớp phủ có mũi tên: vẽ thêm một lượt tam giác và một lượt đường viền', av.triangles.size == 1 && av.triangles[0].size == 3 && av.lines.size == 2 && av.lines[1].size == 2)
+arrow_overlay.show_shapes([FakePoint.new('a')], arrows: [[ar, FakePoint.new('t2'), FakePoint.new('t3')], [ar, FakePoint.new('l2')]])
+av2 = View.new(FakeEditModel.new(FakeTransform.new(MOVED)))
+arrow_overlay.draw(av2)
+ok('đang mở sửa group: điểm mũi tên được đổi sang tọa độ cục bộ như khung', av2.triangles[0].all? { |pt| pt.tag.end_with?('→cục bộ') } && av2.lines[1].all? { |pt| pt.tag.end_with?('→cục bộ') })
+arrow_overlay.show_shapes([FakePoint.new('a')])
+av3 = View.new
+arrow_overlay.draw(av3)
+ok('show_shapes sau đó không kèm mũi tên: mũi tên cũ bị xóa', av3.triangles.empty? && av3.lines.size == 1)
+
 overlay.hide_shapes
 view2 = View.new
 overlay.draw(view2)

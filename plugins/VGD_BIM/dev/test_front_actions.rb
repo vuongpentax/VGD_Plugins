@@ -182,5 +182,38 @@ v = d.front_verdict([result('+y', 'medium', ['a']), result('+y', 'low', ['a', 'b
 ok('front_verdict: trùng hướng lấy độ tin cậy cao nhất, gộp ghi chú không trùng', v == {dir: '+y', confidence: 'medium', notes: %w[a b]})
 ok('front_verdict: tất cả không có hướng thì không chọn', d.front_verdict([result(nil, 'low', ['x'])]) == {dir: nil, confidence: 'low', notes: ['x']})
 
+# ---- Khung đánh dấu: mũi tên mặt trước và công tắc Bảng tên ----
+d, recs, defs = make(2)
+$model.define_singleton_method(:selection) { Struct.new(:items) { def to_a; items; end }.new(recs.map { |r| r[:entity] }.first(1)) }
+d.singleton_class.send(:remove_method, :show_outline) if d.singleton_methods.include?(:show_outline)
+d.instance_variable_set(:@table_options, {label: true})
+d.define_singleton_method(:release_preview) { nil }
+d.define_singleton_method(:outline_label) { |_r| 'Tủ A' }
+shown = nil
+d.define_singleton_method(:show_overlay) { |points, label, label_point, fills, alive, stale, arrows| shown = {label: label, arrows: arrows}; true }
+VGD::BIM::Table.define_singleton_method(:world_corners) { |_r| [:p1, :p2] }
+VGD::BIM::Table.define_singleton_method(:bounding_box) { |_r| Struct.new(:center) { def empty?; false; end }.new(:c) }
+VGD::BIM::Table.define_singleton_method(:box_triangles) { |_r| [] }
+VGD::BIM::FrontProbe.define_singleton_method(:arrow_shapes) { |_rec, dir| dir ? [[:t1, :t2, :t3], [:l1, :l2]] : [[], []] }
+d.instance_variable_set(:@dialog, Struct.new(:visible?).new(true))
+F.write(defs[1], '+y')
+d.show_outline
+ok('chọn một món có mặt trước: khung có mũi tên (tam giác và viền) và bảng tên', shown && shown[:label] == 'Tủ A' && shown[:arrows] == [[:t1, :t2, :t3], [:l1, :l2]])
+d.instance_variable_set(:@table_options, {label: false})
+d.show_outline
+ok('công tắc Bảng tên tắt: không vẽ bảng tên nhưng vẫn vẽ mũi tên', shown[:label].nil? && shown[:arrows] == [[:t1, :t2, :t3], [:l1, :l2]])
+F.clear(defs[1])
+d.show_outline
+ok('món chưa có mặt trước: không có mũi tên', shown[:arrows] == [[], []])
+d.instance_variable_set(:@table_options, {label: true})
+d.instance_variable_set(:@isolated, [])
+shows = 0
+d.define_singleton_method(:show_outline) { shows += 1 }
+d.define_singleton_method(:emit) { |*_a| nil }
+d.table_option('label' => false)
+ok('table_option label = false: ghi nhận và vẽ lại khung ngay', d.instance_variable_get(:@table_options)[:label] == false && shows == 1)
+d.table_option('label' => true)
+ok('table_option label = true: bật lại', d.instance_variable_get(:@table_options)[:label] == true && shows == 2)
+
 puts $fails.zero? ? 'Done' : "#{$fails} lỗi"
 exit($fails.zero? ? 0 : 1)

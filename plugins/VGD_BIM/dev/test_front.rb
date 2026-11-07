@@ -102,5 +102,37 @@ F.clear(d)
 ok('xóa sạch mọi khóa', F.read(d)[:dir].nil? && d.get_attribute(F::DICTIONARY, 'front_source').nil?)
 ok('đọc từ đối tượng không có get_attribute: rỗng, không lỗi', F.read(Object.new)[:dir].nil?)
 
+# ---- Hướng camera khi chụp theo mặt trước ----
+def near_vec?(a, b); a.zip(b).all? { |x, y| (x - y).abs < 1e-9 }; end
+ok('camera Iso, mặt trước -y (trùng trục thế giới): (1, -1, 0,8) như bản chụp cũ', near_vec?(F.camera_direction('isometric', [0.0, -1.0]), [1.0, -1.0, 0.8]))
+ok('camera Iso quay theo mặt trước: +y -> (-1, 1, 0,8), +x -> (1, 1, 0,8), -x -> (-1, -1, 0,8)', near_vec?(F.camera_direction('isometric', [0.0, 1.0]), [-1.0, 1.0, 0.8]) && near_vec?(F.camera_direction('isometric', [1.0, 0.0]), [1.0, 1.0, 0.8]) && near_vec?(F.camera_direction('isometric', [-1.0, 0.0]), [-1.0, -1.0, 0.8]))
+ok('camera Iso luôn ở phía trước (cùng chiều mặt trước) và bên phải của người đứng trước mặt', [[0.0, -1.0], [0.0, 1.0], [1.0, 0.0], [-1.0, 0.0]].all? do |f|
+  e = F.camera_direction('isometric', f)
+  right = [-f[1], f[0]]
+  e[0] * f[0] + e[1] * f[1] > 0 && e[0] * right[0] + e[1] * right[1] > 0 && e[2] > 0
+end)
+ok('camera Chính diện: thẳng theo mặt trước, không nghiêng lên xuống', near_vec?(F.camera_direction('front', [0.0, 1.0]), [0.0, 1.0, 0.0]) && near_vec?(F.camera_direction('front', [-1.0, 0.0]), [-1.0, 0.0, 0.0]))
+ok('góc nhìn lạ bị từ chối', (begin; F.camera_direction('top', [0.0, -1.0]); false; rescue ArgumentError; true; end))
+ok('chiều Rộng / Sâu theo mặt trước: trục Y giữ nguyên, trục X đổi chỗ, chưa có thì giữ', F.frame_sizes(1200, 600, '+y') == [1200, 600] && F.frame_sizes(1200, 600, '-y') == [1200, 600] && F.frame_sizes(1200, 600, '+x') == [600, 1200] && F.frame_sizes(1200, 600, '-x') == [600, 1200] && F.frame_sizes(1200, 600, nil) == [1200, 600])
+
+# ---- Kích thước Rộng / Sâu / Cao theo mặt trước (Geometry.dimensions thật) ----
+module Sketchup; class Group; end; end
+require File.join(ROOT, 'core/geometry')
+class DimBox; def empty?; false; end; def width; 1200.0 / 25.4; end; def height; 600.0 / 25.4; end; def depth; 2000.0 / 25.4; end; end
+class DimDef < FakeDefinition; def bounds; DimBox.new; end; end
+class DimInstance
+  def initialize(definition, scale = 1.0); @definition = definition; @scale = scale; end
+  attr_reader :definition
+  def transformation; Struct.new(:xaxis, :yaxis, :zaxis).new(*3.times.map { Struct.new(:length).new(@scale) }); end
+end
+dd = DimDef.new
+dim = VGD::BIM::Geometry.dimensions(DimInstance.new(dd))
+ok('chưa có mặt trước: Rộng = X, Sâu = Y, Cao = Z như trước', dim.values.map(&:round) == [1200, 600, 2000])
+F.write(dd, '+y')
+ok('mặt trước theo trục Y: Rộng 1200, Sâu 600 (không đổi)', VGD::BIM::Geometry.dimensions(DimInstance.new(dd)).values.map(&:round) == [1200, 600, 2000])
+F.write(dd, '-x')
+ok('mặt trước theo trục X: Rộng và Sâu đổi chỗ (Rộng 600, Sâu 1200), Cao không đổi', VGD::BIM::Geometry.dimensions(DimInstance.new(dd)).values.map(&:round) == [600, 1200, 2000])
+ok('có phóng to (scale 2) vẫn hoán đổi đúng', VGD::BIM::Geometry.dimensions(DimInstance.new(dd, 2.0)).values.map(&:round) == [1200, 2400, 4000])
+
 puts $fails.zero? ? 'Done' : "#{$fails} lỗi"
 exit($fails.zero? ? 0 : 1)
