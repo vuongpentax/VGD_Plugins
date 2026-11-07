@@ -122,12 +122,12 @@ dlg.callback('mgr_list').call(nil, { src: '2022', dst: '2022' }.to_json)
 check 'mgr_list báo lỗi khi nguồn trùng đích', !last.call.include?('renderMigrate') && last.call.include?('khác nhau')
 dlg.callback('mgr_list').call(nil, { src: '../x', dst: '2024' }.to_json)
 check 'mgr_list từ chối phiên bản lạ (chống tên thư mục lạ)', !last.call.include?('renderMigrate') && last.call.include?('chọn')
+File.delete(MGR::Log.path) if File.exist?(MGR::Log.path)
 dlg.callback('mgr_migrate').call(nil, { src: '2022', dst: '2024', plugins: %w[alpha_tool beta_tool VGD_Center], overwrite: false }.to_json)
 check 'chuyển plugin: chép đúng mục, không chép VGD Center', File.exist?(File.join(plug24, 'alpha_tool.rb')) && File.directory?(File.join(plug24, 'beta_tool')) &&
   File.read(File.join(plug24, 'VGD_Center.rb')) == "x\n"
 check 'chuyển plugin: có sao lưu thư mục đích và nhắc mở lại SketchUp', last.call.include?('Sao lưu') && last.call.include?('mở lại bản 2024')
-log_text = File.exist?(MGR::Log.path) ? File.read(MGR::Log.path, encoding: 'UTF-8') : ''
-check 'chuyển plugin: ghi nhật ký kể cả khi thành công (để gửi cho người hỗ trợ)', log_text.include?('Chuyển plugin 2022 -> 2024') && log_text.include?('alpha_tool.rb') && log_text.include?('ghi đè: không')
+check 'chuyển plugin thành công: không tạo file manager.log', !File.exist?(MGR::Log.path)
 
 # ---- Mở thư mục ----
 opened = []
