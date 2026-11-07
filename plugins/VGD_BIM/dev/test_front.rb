@@ -127,7 +127,7 @@ class DimDef < FakeDefinition; def bounds; DimBox.new; end; end
 class DimInstance
   def initialize(definition, scale = 1.0); @definition = definition; @scale = scale; end
   attr_reader :definition
-  def transformation; Struct.new(:xaxis, :yaxis, :zaxis).new(*3.times.map { Struct.new(:length).new(@scale) }); end
+  def transformation; scale = @scale; Struct.new(:to_a).new([scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, 1.0]); end
 end
 dd = DimDef.new
 dim = VGD::BIM::Geometry.dimensions(DimInstance.new(dd))

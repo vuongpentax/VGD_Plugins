@@ -13,6 +13,7 @@ end
 class Tr
   def *(_o); self; end
   def xaxis; Vec.new; end; def yaxis; Vec.new; end; def zaxis; Vec.new; end
+  def to_a; [1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0]; end
   class Vec; def length; 1.0; end; end
 end
 module VGD; module BIM

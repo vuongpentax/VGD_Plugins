@@ -13,11 +13,19 @@ module VGD
         definition = definition(entity)
         box = definition.bounds
         return {width: 0.0, depth: 0.0, height: 0.0} if box.empty?
-        x_size = box.width.to_f * transform.xaxis.length * INCH_MM
-        y_size = box.height.to_f * transform.yaxis.length * INCH_MM
+        scale_x, scale_y, scale_z = scales(transform)
+        x_size = box.width.to_f * scale_x * INCH_MM
+        y_size = box.height.to_f * scale_y * INCH_MM
         dir = defined?(Front) ? Front.read(definition)[:dir] : nil
         width, depth = defined?(Front) ? Front.frame_sizes(x_size, y_size, dir) : [x_size, y_size]
-        {width: width, depth: depth, height: box.depth.to_f * transform.zaxis.length * INCH_MM}
+        {width: width, depth: depth, height: box.depth.to_f * scale_z * INCH_MM}
+      end
+
+      # Hệ số phóng to theo từng trục X, Y, Z của biến đổi (độ dài ba cột đầu của ma trận 16 số). Không dùng Transformation#xaxis.length:
+      # SketchUp trả về vector đơn vị nên luôn bằng 1 và làm mất phóng to (đối tượng kéo dài 1 m thành 2 m vẫn hiện 1 m).
+      def self.scales(transform)
+        values = transform.to_a
+        [0, 4, 8].map { |i| Math.sqrt(values[i]**2 + values[i + 1]**2 + values[i + 2]**2) }
       end
       def self.width(entity, transform = nil); dimensions(entity, transform)[:width]; end
       def self.depth(entity, transform = nil); dimensions(entity, transform)[:depth]; end

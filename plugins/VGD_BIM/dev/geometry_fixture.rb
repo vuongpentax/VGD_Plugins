@@ -18,9 +18,13 @@ module Geom
     def self.rotation_z(angle); t=new;a=angle*Math::PI/180;t.m[0][0]=Math.cos(a);t.m[1][0]=Math.sin(a);t.m[0][1]=-Math.sin(a);t.m[1][1]=Math.cos(a);t;end
     def *(other); t=self.class.new;4.times { |i| 4.times { |j| t.m[i][j]=4.times.inject(0.0) { |sum,k| sum+m[i][k]*other.m[k][j] } } };t;end
     def point(p); Point3d.new(*3.times.map { |i| m[i][3]+3.times.inject(0.0) { |sum,j| sum+m[i][j]*p.to_a[j] } });end
-    def xaxis; Vector3d.new(m[0][0],m[1][0],m[2][0]);end
-    def yaxis; Vector3d.new(m[0][1],m[1][1],m[2][1]);end
-    def zaxis; Vector3d.new(m[0][2],m[1][2],m[2][2]);end
+    # Như SketchUp thật: xaxis / yaxis / zaxis trả về vector ĐƠN VỊ (độ phóng to nằm ở xscale / to_a, không nằm ở độ dài trục).
+    def unit(v); l=v.length; l.zero? ? v : Vector3d.new(v.x/l,v.y/l,v.z/l); end
+    def xaxis; unit(Vector3d.new(m[0][0],m[1][0],m[2][0]));end
+    def yaxis; unit(Vector3d.new(m[0][1],m[1][1],m[2][1]));end
+    def zaxis; unit(Vector3d.new(m[0][2],m[1][2],m[2][2]));end
+    # 16 số theo cột (đúng thứ tự của Transformation#to_a): 3 số đầu của mỗi cột là một trục (kèm độ phóng to), 3 số cuối là vị trí
+    def to_a; (0...4).flat_map { |c| (0...4).map { |r| m[r][c] } }; end
   end
   Box = Struct.new(:width,:height,:depth) do
     def empty?; width == 0 && height == 0 && depth == 0; end
@@ -51,7 +55,7 @@ module Sketchup
     attr_accessor :material,:back_material
     def initialize; @material=nil;@back_material=nil;end
     def valid?; true; end
-    def area(transform); transform.xaxis.cross(transform.yaxis).length * (1000.0/25.4)*(2000.0/25.4);end
+    def area(transform); a=transform.to_a; sx=Math.sqrt(a[0]**2+a[1]**2+a[2]**2); sy=Math.sqrt(a[4]**2+a[5]**2+a[6]**2); sx*sy * (1000.0/25.4)*(2000.0/25.4);end # diện tích mặt trên XY của biến đổi
   end
   class Edge
     def valid?; true; end

@@ -37,6 +37,7 @@ Chạy từ `plugins/VGD_BIM`:
 
 ## Quy tắc riêng
 
+- Độ phóng to (scale) của một đối tượng lấy từ `Geometry.scales(transform)` (độ dài ba cột của ma trận `to_a`), không dùng `Transformation#xaxis.length`: SketchUp trả về trục đơn vị nên cách đó luôn ra 1 và làm mất scale. Bản giả lập trong `dev/` phải trả trục đơn vị như SketchUp thật.
 - Số liệu hình học thô (faces, diện tích vật liệu) là RAW QUANTITY / RAW GEOMETRY, chưa phải BOQ. Mặt trước và mặt sau tách riêng, không cộng thành một khối lượng. Plugin không đọc cạnh (edge).
 - Xuất bảng khối lượng ra Excel (.xlsx có ảnh) và PDF đi qua `core/table_report.rb` (kiểm tra dữ liệu giao diện gửi lên, lấy ảnh đầy đủ (đúng cỡ đã chụp, không dùng ảnh thu nhỏ) từ file ảnh của plugin, không nhận đường dẫn) rồi `core/xlsx.rb` (Ruby thuần, không thêm thư viện) hoặc trang HTML mở bằng trình duyệt để In > Lưu PDF. Giao diện dựng dữ liệu xuất từ `viewModel()` trong `html/app.js`, cùng nguồn với việc vẽ bảng nên file xuất luôn đúng bảng đang hiện. Báo cáo CSV ở tab Quét & xuất là dữ liệu và khối lượng gốc, không có đơn giá hay thành tiền. Riêng Bảng khối lượng có cột Đơn giá (người dùng tự nhập) và Thành tiền (= đơn giá x số lượng); plugin không tự tra hay tính giá.
 - Mã schema giữ nguyên để các plugin VGD dùng chung; bản dịch chỉ áp dụng ở giao diện và báo cáo.

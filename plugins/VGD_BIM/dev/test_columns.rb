@@ -13,7 +13,7 @@ class Vec3
   def transform(_t); self; end
   def length; Math.sqrt(x * x + y * y + z * z); end
 end
-class Identity; def xaxis; Struct.new(:length).new(1.0); end; alias yaxis xaxis; alias zaxis xaxis; def *(_o); self; end; end
+class Identity; def xaxis; Struct.new(:length).new(1.0); end; alias yaxis xaxis; alias zaxis xaxis; def to_a; [1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0]; end; def *(_o); self; end; end
 module Sketchup
   class Face
     def initialize(area_in2, normal); @area = area_in2; @normal = normal; end

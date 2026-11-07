@@ -303,7 +303,7 @@ module VGD
         return nil unless entity.is_a?(Sketchup::Group)
         raw = entity.volume
         return nil if raw.nil? || raw <= 0
-        scale = transform.xaxis.length * transform.yaxis.length * transform.zaxis.length
+        scale = Geometry.scales(transform).inject(:*)
         (raw * scale * MM3_PER_IN3 / 1.0e9).round(4)
       rescue StandardError
         nil

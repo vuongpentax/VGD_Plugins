@@ -9,7 +9,8 @@ module Sketchup
   def self.read_default(section, key, default = nil); STORE.fetch([section, key], default); end
   def self.write_default(section, key, value); STORE[[section, key]] = value; true; end
 end
-module VGD; module BIM; def self.log(m); end; module Data; end; module Scanner; end; module Geometry; end; end; end
+module VGD; module BIM; def self.log(m); end; module Data; end; module Scanner; end; end; end
+require File.expand_path('../runtime/vgd_bim/core/geometry', __dir__) # dùng Geometry.scales thật
 ROOT = ARGV[0] || File.expand_path('../runtime/vgd_bim', __dir__)
 require File.join(ROOT, 'core/locale')
 require File.join(ROOT, 'core/schema')
@@ -49,9 +50,11 @@ check 'bộ 5 trạng thái đúng thứ tự', S::STATUSES == %w[new existing r
 check 'nhãn 5 trạng thái đều có tiếng Việt', T::STATUS_LABELS.values == ['Mới', 'Hiện hữu', 'Dùng lại', 'Tạm thời', 'Loại bỏ']
 
 # Thể tích: 1 ft³ = 1728 in³ = 0.0283168 m³ (nhân hệ số vị trí 1 nếu không phóng to)
-identity = Struct.new(:xaxis, :yaxis, :zaxis).new(Struct.new(:length).new(1.0), Struct.new(:length).new(1.0), Struct.new(:length).new(1.0))
+identity = Struct.new(:to_a).new([1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0])
+scaled2 = Struct.new(:to_a).new([2.0, 0, 0, 0, 0, 2.0, 0, 0, 0, 0, 2.0, 0, 0, 0, 0, 1.0]) # phóng to 2 lần mọi chiều
 vol = T.solid_volume(Sketchup::Group.new(1728.0), identity)
 check 'thể tích khối 1 ft³ ≈ 0.0283 m³', (vol - 0.0283).abs < 0.0001
+check 'khối phóng to 2 lần mọi chiều: thể tích nhân 8 (0.2265 m³)', (T.solid_volume(Sketchup::Group.new(1728.0), scaled2) - 0.2265).abs < 0.0001
 check 'khối không kín (âm) để trống thể tích', T.solid_volume(Sketchup::Group.new(-5.0), identity).nil?
 check 'component không có thể tích (để trống)', T.solid_volume(Sketchup::ComponentInstance.new, identity).nil?
 puts "Done"

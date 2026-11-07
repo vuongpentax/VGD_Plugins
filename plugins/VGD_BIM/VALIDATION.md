@@ -2,12 +2,13 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.0-beta.23: đã kiểm tra tự động
+## Bản 1.1.0-beta.24: đã kiểm tra tự động
 
 Chạy từ `plugins/VGD_BIM`: `ruby dev/run_tests.rb` (cú pháp 32 file Ruby và 22 bộ test) và ba bộ Playwright `dev/test_ui.cjs`, `dev/test_ui_images.cjs`, `dev/test_ui_en.cjs`.
 
 - Cú pháp Ruby của mọi file runtime. Runtime viết theo cú pháp Ruby 2.7 để target SketchUp 2022; phần kiểm tra cú pháp chạy bằng Ruby của máy thử, không phải Ruby 2.7.
 - `test_bim.rb`: schema/enum/boolean, trường `status`, cập nhật từng phần, xóa, trường bắt buộc, UNCLASSIFIED, ưu tiên nguồn, quy tắc JSON, đóng gói một operation và abort khi lỗi; hình học nested (mirror, xoay, scale không đều), quét bỏ qua cạnh, báo cáo không có dữ liệu cạnh, 2.000 cấp lồng nhau, chống đệ quy; xuất CSV (tiêu đề tiếng Việt, UTF-8 BOM, dấu chấm phẩy, an toàn công thức Excel); cửa sổ (một cửa sổ cho mọi menu, điều hướng trước khi HTML sẵn sàng, hủy thế hệ quét cũ, tháo observer, đóng/mở lại).
+- Số đo theo phóng to (beta.24): bản giả lập `dev/geometry_fixture.rb` nay trả trục **đơn vị** như SketchUp thật (trước đây trả trục mang theo độ phóng to nên che mất lỗi), và `Geometry.scales` đọc phóng to từ ma trận; `test_core` (đối tượng lồng, xoay, lật gương, scale không đều: 480 x 90 x 320 mm) và `test_table.rb` (thể tích khối phóng to 2 lần ra 8 lần) bắt được lỗi cũ. Chưa kiểm trên model thật: hành vi `Transformation#xaxis` (đã giả định trả vector đơn vị theo lỗi người dùng báo), và phóng to của đối tượng lồng nhiều tầng có scale ở nhiều cấp.
 - `test_table.rb`, `test_build.rb`: dựng bảng khối lượng, preset (kể cả tên có ngoặc kép), lưu và đọc lại trạng thái bảng, chế độ chọn nông và chọn sâu.
 - `test_dialog_logic.rb`: bấm vùng trống giữ nguyên bảng, chọn lại thì đọc lại.
 - `test_preview.rb`: khung đánh dấu (vị trí chữ, tự tắt khi đối tượng bị xóa).
