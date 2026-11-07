@@ -2,7 +2,7 @@
    Nguồn: VGD_BIM (đã chạy tốt trong bản 1.1.0-beta.19), giá trị nút gạt khớp tab Quản lý của VGD Center.
    Dùng cùng shared/vgd-theme/vgd-theme.css (token --vgd-*) và thêm class "vgd-ui" vào <body>.
    Quy tắc và cách dùng: shared/HUONG_DAN_THEME.md mục 9, shared/VGD_UI_DESIGN_SYSTEM.md mục "Controls and motion".
-   File này CHƯA nằm trong shared/vgd-theme/ nên chưa được tools/sync_vgd_theme.py chép vào các plugin; plugin nào dùng thì chép vào thư mục dialog của mình. */
+   Nằm trong shared/vgd-theme/ nên tools/sync_vgd_theme.py chép nguyên văn vào vgd-theme/ của từng plugin; không sửa bản copy. Plugin dùng thì thêm <link> sau vgd-theme.css. */
 
 :root {
   --vgd-ease: cubic-bezier(.4, 0, .2, 1);

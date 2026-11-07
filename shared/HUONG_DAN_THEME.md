@@ -110,9 +110,9 @@ Kiểm tra nhanh: `grep -rlE "#[0-9A-Fa-f]{6}\b" plugins --include=*.css --inclu
 
 ## 9. Chuẩn điều khiển và hiệu ứng (nút gạt, thanh cuộn, ngăn trượt)
 
-Rút ra từ VGD_BIM (bản 1.1.0-beta.19) và tab Quản lý của VGD Center. Mã dùng chung nằm ở `shared/vgd-ui/vgd-controls.css`, xem mẫu chạy được ở `shared/vgd-ui/vgd-controls-preview.html`. Khi sửa hoặc làm mới dialog của một plugin, áp theo chuẩn này; không tự đặt số đo khác.
+Rút ra từ VGD_BIM (bản 1.1.0-beta.19) và tab Quản lý của VGD Center. Mã dùng chung là `shared/vgd-theme/vgd-controls.css`, xem mẫu chạy được ở `shared/vgd-ui/vgd-controls-preview.html`. Khi sửa hoặc làm mới dialog của một plugin, áp theo chuẩn này; không tự đặt số đo khác.
 
-File CSS này **chưa** nằm trong `shared/vgd-theme/` nên `tools/sync_vgd_theme.py` chưa chép vào các plugin. Plugin nào dùng thì chép `vgd-controls.css` vào thư mục dialog của mình, nạp sau `vgd-theme.css`, và `<body class="vgd-ui">`. Khi từ hai plugin trở lên dùng, nên chuyển file vào `shared/vgd-theme/` để công cụ đồng bộ lo (việc đó chép file vào cả 9 plugin nên cần làm riêng và báo trước).
+File CSS nằm trong bộ theme nên `python tools/sync_vgd_theme.py` đã chép nó vào `vgd-theme/` của cả 9 plugin (không sửa bản copy). Plugin nào dùng thì thêm sau `vgd-theme.css`: `<link rel="stylesheet" href="vgd-theme/vgd-controls.css">` và để `<body class="vgd-ui">`. Nếu plugin có danh sách file đóng gói riêng (ví dụ VGD Dim `dev/package.py`), thêm `vgd-theme/vgd-controls.css` vào danh sách đó khi bắt đầu dùng. Plugin chưa dùng thì file chỉ nằm trong source, không ảnh hưởng giao diện.
 
 **Nút gạt** (`.vgd-switch`, `<button role="switch" aria-checked>`):
 - Cỡ cố định **40 x 22 px**, bo 11 px, viền 1 px. Đầu gạt **16 x 16 px**, cách mép 2 px, gạt sang `left: 20px`.

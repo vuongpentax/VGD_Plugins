@@ -80,7 +80,7 @@ Use `color-scheme: dark` or `color-scheme: light` with the active theme so nativ
 
 ## Controls and motion
 
-Reference implementation: `shared/vgd-ui/vgd-controls.css` (preview: `shared/vgd-ui/vgd-controls-preview.html`); full rules in Vietnamese in `shared/HUONG_DAN_THEME.md` section 9. Taken from VGD_BIM 1.1.0-beta.19 and the VGD Center manager tab.
+Reference implementation: `shared/vgd-theme/vgd-controls.css`, part of the shared theme kit and copied by the sync tool (preview: `shared/vgd-ui/vgd-controls-preview.html`); full rules in Vietnamese in `shared/HUONG_DAN_THEME.md` section 9. Taken from VGD_BIM 1.1.0-beta.19 and the VGD Center manager tab.
 
 - **Switch:** fixed 40 × 22 px, 11 px radius, 1 px border; 16 × 16 px thumb inset 2 px, travelling to `left: 20px`. Off uses `--vgd-elevated` and a muted thumb; on uses the accent fill and `--vgd-on-accent` thumb. Use `role="switch"` with `aria-checked` and a clickable label. Use switches for immediate on/off options and 15 × 15 px checkboxes for multi-select lists.
 - **Scrollbars:** no vertical scrollbar anywhere (mouse wheel still scrolls); keep a thin 10 px horizontal scrollbar for wide tables. Implement with `::-webkit-scrollbar { width: 0; height: 10px }` and do not set `scrollbar-width` or `scrollbar-gutter`, which make the browser ignore it.

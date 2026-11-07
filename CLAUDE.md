@@ -33,7 +33,7 @@ VGD_Plugins/
 
 Tất cả plugin SketchUp dùng thực tế phải nằm trong thư mục `plugins/`.
 
-`shared/` chứa tài nguyên dùng chung giữa các plugin (theme giao diện, chuẩn điều khiển và hiệu ứng `shared/vgd-ui/`, catalog và tài liệu của VGD Center, quy tắc icon).
+`shared/` chứa tài nguyên dùng chung giữa các plugin (theme giao diện, chuẩn điều khiển và hiệu ứng `shared/vgd-theme/vgd-controls.css` (mẫu xem trong `shared/vgd-ui/`), catalog và tài liệu của VGD Center, quy tắc icon).
 
 Mỗi plugin nên được tổ chức tương đối độc lập. Danh sách plugin hiện có xem trực tiếp trong `plugins/`.
 
@@ -126,7 +126,7 @@ Khi chỉnh giao diện:
 - giao diện nên gọn và thực dụng;
 - không tự thiết kế lại những phần UI không liên quan;
 - giao tiếp Ruby ↔ JavaScript phải rõ ràng;
-- khi làm mới hoặc sửa lớn dialog HTML, theo chuẩn trong `shared/HUONG_DAN_THEME.md` mục 9 và `shared/vgd-ui/vgd-controls.css`: nút gạt 40 × 22 px, không hiện thanh cuộn dọc (chỉ giữ thanh ngang mảnh), hiệu ứng 150 / 180 / 220 ms đổi trên cùng một phần tử, ngăn trượt đẩy nội dung chứ không đè;
+- khi làm mới hoặc sửa lớn dialog HTML, theo chuẩn trong `shared/HUONG_DAN_THEME.md` mục 9 và `shared/vgd-theme/vgd-controls.css`: nút gạt 40 × 22 px, không hiện thanh cuộn dọc (chỉ giữ thanh ngang mảnh), hiệu ứng 150 / 180 / 220 ms đổi trên cùng một phần tử, ngăn trượt đẩy nội dung chứ không đè;
 - phải kiểm tra dữ liệu người dùng trước khi áp dụng thay đổi lên model SketchUp.
 
 ## Kiểm thử và xác minh
