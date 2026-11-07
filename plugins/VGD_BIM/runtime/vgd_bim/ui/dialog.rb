@@ -280,6 +280,7 @@ module VGD
         end
         def table_build
           @model = Sketchup.active_model
+          Images.ensure_model_id(@model) # mã model cố định trong file, để ảnh còn sau khi tắt mở lại (trước mọi thao tác khác)
           scope = @table_scope.select(&:valid?)
           built = Table.build(@model, scope, @table_options[:deep] ? true : false, projected: @table_options[:projected])
           @table_rows = built[:rows]

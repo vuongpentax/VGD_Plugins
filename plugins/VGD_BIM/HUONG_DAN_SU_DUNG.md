@@ -71,6 +71,8 @@ Nút **Preset** nằm cạnh nút Sáng/Tối. Bấm vào để mở bảng gồ
 
 Ảnh món đồ nằm trong cột **Ảnh** của Bảng khối lượng (bật trong **Chọn cột**: ngăn bên trái đẩy bảng sang phải, tick để hiện / ẩn cột, kéo biểu tượng ⠿ để đổi thứ tự; preset "Tất cả" đã có sẵn). Ảnh **chỉ được chụp khi bạn bấm**, plugin không tự chụp:
 
+Ảnh được nhớ theo một mã cố định ghi trong file SketchUp, nên tắt và mở lại file vẫn còn ảnh (không phải chụp lại, không sinh thư mục ảnh mới). **Hãy lưu file SketchUp sau lần đầu dùng BIM** để mã này được giữ. Lưu thành bản khác (Save As) dùng chung thư mục ảnh với bản gốc. Ảnh đã chụp ở các bản trước (thư mục đặt theo mã tạm của SketchUp) không nối lại được; chỉ ảnh chụp trong phiên đang mở lúc cập nhật bản này được chuyển sang thư mục mới.
+
 1. Bấm **Cập nhật ảnh**: hộp xác nhận cho biết sẽ chụp bao nhiêu đối tượng (đang chọn, hoặc tất cả đang hiện). Tích **Chỉ chụp đối tượng chưa có ảnh** để bỏ qua đối tượng đã có. Chụp nhiều thì có nút **Dừng**; mỗi lần tối đa 200 đối tượng.
 2. Rê chuột vào một ô ảnh để chụp lại riêng dòng đó (↻), chọn file ảnh (⋯) hoặc xóa ảnh (×).
 3. Trong bảng Preset, phần **Hình ảnh** chọn cỡ ảnh (rộng, cao), **góc nhìn** (Khung nhìn hiện tại, Phối cảnh iso, Chính diện), kiểu hiển thị (Màu có texture hoặc Kiểu hiện tại), nền (trong suốt hoặc trắng) và thư mục lưu ảnh. Khung nhìn hiện tại chụp đúng những gì đang thấy. Iso và Chính diện cô lập món đồ: tạm ẩn phần còn lại, đặt camera, chụp rồi trả model về như cũ, không để lại bước hoàn tác. Chính diện là nhìn từ phía -Y của model. Món đồ nằm trong thành phần dùng chung nhiều nơi thì không cô lập được; hãy dùng Khung nhìn hiện tại.

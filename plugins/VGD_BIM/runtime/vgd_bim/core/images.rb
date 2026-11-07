@@ -1,4 +1,5 @@
 require 'fileutils'
+require 'securerandom'
 require_relative 'settings'
 
 module VGD
@@ -12,9 +13,57 @@ module VGD
       PNG_SIGNATURE = "\x89PNG\r\n\x1A\n".b.freeze
       KINDS = {full: '.png', thumb: '_t.png'}.freeze
 
+      # Thư mục ảnh của model theo mã cố định lưu trong chính file SketchUp (dictionary VGD_BIM_MODEL). Không dùng model.guid vì SketchUp
+      # cấp guid mới mỗi lần mở file, nên ảnh bị "mất" sau khi tắt mở lại. Chưa có mã (hoặc model không có API thuộc tính) thì dùng guid.
+      MODEL_DICTIONARY = 'VGD_BIM_MODEL'.freeze
+      MODEL_ID_KEY = 'model_id'.freeze
+      MODEL_ID_PATTERN = /\A[A-Za-z0-9-]{8,64}\z/
+
       def self.model_key(model)
+        stored_id(model) || legacy_key(model)
+      end
+
+      def self.legacy_key(model)
         key = model.guid.to_s.gsub(/[^A-Za-z0-9-]/, '')
         key.empty? ? 'model' : key
+      end
+
+      def self.stored_id(model)
+        return nil unless model.respond_to?(:get_attribute)
+        id = model.get_attribute(MODEL_DICTIONARY, MODEL_ID_KEY).to_s
+        id.match?(MODEL_ID_PATTERN) ? id : nil
+      end
+
+      # Tạo mã cố định cho model nếu chưa có (một lần, ghi vào file SketchUp; cần lưu file để mã được giữ) và chuyển ảnh của phiên
+      # hiện tại (thư mục theo guid) sang thư mục theo mã mới. Gọi trước khi chụp / hiện ảnh, ngoài mọi thao tác đang mở. Trả về mã,
+      # hoặc nil nếu không ghi được (khi đó vẫn dùng guid như trước, không báo lỗi).
+      def self.ensure_model_id(model)
+        existing = stored_id(model)
+        return existing if existing
+        return nil unless model.respond_to?(:set_attribute) && model.respond_to?(:start_operation)
+        id = SecureRandom.uuid
+        model.start_operation('VGD_BIM · Mã model', true, false, true) # trong suốt: gộp vào bước hoàn tác trước, không thêm bước mới
+        begin
+          model.set_attribute(MODEL_DICTIONARY, MODEL_ID_KEY, id)
+          model.commit_operation
+        rescue StandardError
+          model.abort_operation
+          raise
+        end
+        adopt_legacy_folder(model, id)
+        id
+      rescue StandardError => error
+        BIM.log("Không ghi được mã model: #{error.message}")
+        nil
+      end
+
+      # Ảnh đã chụp trong phiên này nằm ở thư mục theo guid: đổi tên thành thư mục theo mã mới (không đè nếu đã có).
+      def self.adopt_legacy_folder(model, id)
+        old = File.join(Settings.image_dir, legacy_key(model))
+        new = File.join(Settings.image_dir, id)
+        File.rename(old, new) if File.directory?(old) && !File.exist?(new)
+      rescue SystemCallError => error
+        BIM.log("Không chuyển được thư mục ảnh cũ: #{error.message}")
       end
 
       def self.dir(model)

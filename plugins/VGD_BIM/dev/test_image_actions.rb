@@ -35,7 +35,10 @@ module VGD; module BIM; def self.log(m); end
   module Scanner; end; module Geometry; def self.definition(e); Struct.new(:name).new('Họ'); end; end
   module Tags; GROUPS = [].freeze; end
   module Table
-    def self.build(model, scope, deep); {rows: $rows, records: $records}; end
+    def self.build(model, scope, deep, **_options); {rows: $rows, records: $records}; end
+    COLUMNS = [].freeze; STATUS_LABELS = {}.freeze; UNTAGGED_GROUP = 'Chưa phân loại'.freeze
+    def self.presets; []; end
+    def self.view_state; {}; end
   end
   module UI; end
 end; end
@@ -253,6 +256,18 @@ ok('thiết lập ảnh sai bị từ chối trước khi chụp: không hẹn g
 d = make_dialog
 d.safely { d.images_capture('indexes' => [0], 'settings' => {'image_width' => 5}) }
 ok('cỡ ảnh sai bị từ chối trước khi chụp', error_of(d).to_s.include?('Cỡ ảnh') && UI.timers.empty?)
+
+# ---- Mã model cố định: bảng luôn đảm bảo mã trước khi đọc / chụp ảnh ----
+d = make_dialog
+d.instance_variable_set(:@table_scope, [])
+d.instance_variable_set(:@table_options, {zoom: true, isolate: false, deep: false, projected: false, label: true})
+d.instance_variable_set(:@isolated, [])
+ensured = []
+I.define_singleton_method(:ensure_model_id) { |model| ensured << model; nil }
+d.define_singleton_method(:selected_indexes) { [] }
+d.define_singleton_method(:table_choices) { {} }
+d.table_build
+ok('dựng bảng: gọi ensure_model_id cho model đang mở (trước khi đọc ảnh) để ảnh còn sau khi mở lại file', ensured == [$model])
 
 # ---- Xuất bảng: Excel (.xlsx có ảnh) và PDF (trang báo cáo mở bằng trình duyệt) ----
 require 'zlib'

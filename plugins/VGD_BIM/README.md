@@ -1,4 +1,4 @@
-# VGD_BIM 1.1.0-beta.21
+# VGD_BIM 1.1.0-beta.22
 
 Bản thử của 1.1.0 (chưa có bản ổn định). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -44,7 +44,7 @@ Nút **Preset** (cạnh nút Sáng/Tối) mở bảng gồm **Đơn vị**, **H�
 
 ## Dữ liệu lưu trên máy
 
-Cài đặt của người dùng lưu thành file JSON trong `%APPDATA%\VGD\VGD_BIM\` (máy không phải Windows: `~/VGD/VGD_BIM`; biến môi trường `VGD_BIM_DATA_DIR` đổi thư mục, dùng khi test): `tag_set.json` (bộ tag), `table_presets.json` (preset cột tự tạo), `table_view.json` (trạng thái bảng: preset đang dùng, cột, tiêu đề, thiết lập đơn vị và ảnh), `settings.json` (cài đặt chung: ngôn ngữ và thư mục lưu ảnh). Ảnh món đồ lưu trong thư mục ảnh của Cài đặt (mặc định `images\` cạnh các file trên; đổi trong bảng Preset), thư mục con theo từng model và file `<mã đối tượng>.png` (ảnh lớn) / `<mã đối tượng>_t.png` (ảnh nhỏ); mã đối tượng là `persistent_id` của group / component, không ghi gì vào file SketchUp. Lần đầu chạy, plugin vẫn thử đọc dữ liệu cũ lưu bằng `Sketchup.read_default`. File JSON thay cho `write_default` vì chuỗi có dấu ngoặc kép hoặc tiếng Việt từng bị hỏng khi đọc lại.
+Cài đặt của người dùng lưu thành file JSON trong `%APPDATA%\VGD\VGD_BIM\` (máy không phải Windows: `~/VGD/VGD_BIM`; biến môi trường `VGD_BIM_DATA_DIR` đổi thư mục, dùng khi test): `tag_set.json` (bộ tag), `table_presets.json` (preset cột tự tạo), `table_view.json` (trạng thái bảng: preset đang dùng, cột, tiêu đề, thiết lập đơn vị và ảnh), `settings.json` (cài đặt chung: ngôn ngữ và thư mục lưu ảnh). Ảnh món đồ lưu trong thư mục ảnh của Cài đặt (mặc định `images\` cạnh các file trên; đổi trong bảng Preset), thư mục con theo **mã model cố định** và file `<mã đối tượng>.png` (ảnh lớn) / `<mã đối tượng>_t.png` (ảnh nhỏ); mã đối tượng là `persistent_id` của group / component. Mã model cố định được tạo một lần và ghi vào dictionary `VGD_BIM_MODEL` của file SketchUp (từ 1.1.0-beta.22; trước đó dùng `model.guid`, mà SketchUp cấp guid mới mỗi lần mở file nên ảnh bị "mất"). **Cần lưu file SketchUp** sau lần đầu dùng để mã được giữ; Lưu thành (Save As) cho ra bản sao dùng chung mã và thư mục ảnh với bản gốc. Ngoài mã này plugin không ghi gì vào file SketchUp liên quan đến ảnh. Lần đầu chạy, plugin vẫn thử đọc dữ liệu cũ lưu bằng `Sketchup.read_default`. File JSON thay cho `write_default` vì chuỗi có dấu ngoặc kép hoặc tiếng Việt từng bị hỏng khi đọc lại.
 
 ## Ý nghĩa dữ liệu và giới hạn
 
@@ -91,4 +91,4 @@ Chạy từ `plugins/VGD_BIM`:
 - `python3 dev/make_preview.py`: tạo trang HTML xem trước giao diện với dữ liệu mẫu (`outputs/VGD_BIM_giao_dien.html`).
 - `python plugins/VGD_BIM/dev/package.py <phiên bản>` (từ gốc repo): tạo RBZ trong `outputs/local_release_<phiên bản>/`, kiểm tra từng byte trong archive và in SHA-256.
 
-Bản 1.1.0-beta.21 được kiểm tra tự động bằng mô phỏng, chưa kiểm thử thủ công trong SketchUp thật. `VALIDATION.md` ghi chi tiết phần đã và chưa kiểm chứng.
+Bản 1.1.0-beta.22 được kiểm tra tự động bằng mô phỏng, chưa kiểm thử thủ công trong SketchUp thật. `VALIDATION.md` ghi chi tiết phần đã và chưa kiểm chứng.
