@@ -196,6 +196,7 @@ module VGD
             if chosen.any?
               warns = scan_compat(src_ver, chosen)
               r = copy_plugins(src_ver, dst_ver, chosen, opts['overwrite'])
+              Log.write(migration_log_line(src_ver, dst_ver, opts['overwrite'], r, warns))
               msg << t(:mig_copied, n: r[:done].size)
               msg << t(:mig_skipped, n: r[:skipped].size) if r[:skipped].any?
               msg << t(:sum_errors, errors: r[:failed].join('; ')) if r[:failed].any?

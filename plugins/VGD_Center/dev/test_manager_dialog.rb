@@ -126,6 +126,8 @@ dlg.callback('mgr_migrate').call(nil, { src: '2022', dst: '2024', plugins: %w[al
 check 'chuyển plugin: chép đúng mục, không chép VGD Center', File.exist?(File.join(plug24, 'alpha_tool.rb')) && File.directory?(File.join(plug24, 'beta_tool')) &&
   File.read(File.join(plug24, 'VGD_Center.rb')) == "x\n"
 check 'chuyển plugin: có sao lưu thư mục đích và nhắc mở lại SketchUp', last.call.include?('Sao lưu') && last.call.include?('mở lại bản 2024')
+log_text = File.exist?(MGR::Log.path) ? File.read(MGR::Log.path, encoding: 'UTF-8') : ''
+check 'chuyển plugin: ghi nhật ký kể cả khi thành công (để gửi cho người hỗ trợ)', log_text.include?('Chuyển plugin 2022 -> 2024') && log_text.include?('alpha_tool.rb') && log_text.include?('ghi đè: không')
 
 # ---- Mở thư mục ----
 opened = []

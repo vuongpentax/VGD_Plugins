@@ -67,17 +67,24 @@ module VGD
         done, skipped, failed = [], [], []
         list_plugins(src_ver).each do |pl|
           next unless chosen.include?(pl[:name])
+          # Một plugin gồm loader và thư mục: đã có ở đích mà không ghi đè thì bỏ qua cả plugin,
+          # không chép riêng từng nửa (loader mới đi với thư mục cũ sẽ báo "không tìm thấy file").
+          if !overwrite && pl[:items].any? { |item| File.exist?(File.join(dst, item)) }
+            skipped.concat(pl[:items])
+            next
+          end
           pl[:items].each do |item|
             from = File.join(src, item)
             to   = File.join(dst, item)
-            if File.exist?(to) && !overwrite
-              skipped << item
-              next
-            end
             begin
               FileUtils.rm_rf(to) if File.exist?(to)
               FileUtils.cp_r(from, to)
-              done << item
+              missing = verify_copy(from, to)
+              if missing.empty?
+                done << item
+              else
+                failed << "#{item}: #{t(:copy_incomplete, n: missing.size, sample: missing.first(3).join(', '))}"
+              end
             rescue => e
               Log.write("Lỗi chép #{item} từ #{src_ver} sang #{dst_ver}", e)
               failed << "#{item}: #{e.message}"
@@ -85,6 +92,32 @@ module VGD
           end
         end
         { done: done, skipped: skipped, failed: failed, backup: backup_path }
+      end
+
+      # Một dòng nhật ký cho mỗi lần chuyển plugin (kể cả khi thành công), để người hỗ trợ biết đã chép, bỏ qua, lỗi gì.
+      def self.migration_log_line(src_ver, dst_ver, overwrite, result, warns)
+        parts = ["Chuyển plugin #{src_ver} -> #{dst_ver} (ghi đè: #{overwrite ? 'có' : 'không'})",
+                 "đã chép: #{result[:done].join(', ')}",
+                 "bỏ qua: #{result[:skipped].join(', ')}",
+                 "lỗi: #{result[:failed].join(' | ')}"]
+        parts << "cảnh báo: #{warns.join(' | ')}" if warns.any?
+        parts.join('; ')
+      end
+
+      # Danh sách file (đường dẫn tương đối => dung lượng) của một mục; mục là một file thì khóa rỗng.
+      def self.tree_files(path)
+        return { '' => File.size(path) } unless File.directory?(path)
+        Dir.glob('**/*', File::FNM_DOTMATCH, base: path).each_with_object({}) do |rel, files|
+          full = File.join(path, rel)
+          files[rel] = File.size(full) if File.file?(full)
+        end
+      end
+
+      # Sau khi chép: file nào của nguồn không có ở đích hoặc khác dung lượng (danh sách rỗng là chép đủ).
+      def self.verify_copy(from, to)
+        expected = tree_files(from)
+        actual = File.exist?(to) ? tree_files(to) : {}
+        expected.reject { |rel, size| actual[rel] == size }.keys.map { |rel| rel.empty? ? File.basename(from) : rel }
       end
 
       # Cảnh báo tương thích Ruby 2.7 -> 3.2 (chỉ mang tính tham khảo)
@@ -96,6 +129,20 @@ module VGD
         /\.taint\b|\.untaint\b/ => :risky_taint
       }
 
+      MAX_SCAN_FILES = 5000
+      BINARY_EXT = /\.(so|dll|dylib|bundle)\z/i
+
+      # Plugin gắn với một phiên bản Ruby cụ thể: file mã hóa .rbe, RubyEncoder, thư viện nhị phân.
+      def self.file_risks(item, path)
+        names = [item]
+        names += Dir.glob('**/*', File::FNM_DOTMATCH, base: path).first(MAX_SCAN_FILES) if File.directory?(path)
+        risks = []
+        risks << :risky_encrypted if names.any? { |n| n =~ /\.rbe\z/i }
+        risks << :risky_rubyencoder if names.any? { |n| n =~ /rubyencoder/i }
+        risks << :risky_binary if names.any? { |n| n =~ BINARY_EXT }
+        risks
+      end
+
       def self.scan_compat(src_ver, chosen)
         src = plugins_dir(src_ver)
         warns = []
@@ -103,6 +150,7 @@ module VGD
           next unless chosen.include?(pl[:name])
           pl[:items].each do |item|
             path  = File.join(src, item)
+            file_risks(item, path).each { |key| warns << "#{pl[:name]}: #{t(key)}" }
             files = File.directory?(path) ? Dir.glob(File.join(path, '**', '*.rb')) : [path]
             files.each do |f|
               next unless f =~ /\.rb\z/i

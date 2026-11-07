@@ -199,6 +199,22 @@ module VGD
           },
           risky_uri_escape: { vi: 'dùng URI.escape (đã bỏ)', en: 'uses URI.escape (removed)' },
           risky_taint: { vi: 'dùng taint/untaint (đã bỏ)', en: 'uses taint/untaint (removed)' },
+          risky_encrypted: {
+            vi: 'có file mã hóa (.rbe), thường chỉ chạy đúng bản Ruby mà nó được mã hóa cho; nếu lỗi hãy cài lại bản dành cho SketchUp đích',
+            en: 'has encrypted files (.rbe) that usually run only on the Ruby version they were encrypted for; if it fails, reinstall the version made for the target SketchUp'
+          },
+          risky_rubyencoder: {
+            vi: 'dùng RubyEncoder (mã hóa riêng cho từng bản Ruby); nếu lỗi hãy cài lại bản dành cho SketchUp đích',
+            en: 'uses RubyEncoder (encrypted per Ruby version); if it fails, reinstall the version made for the target SketchUp'
+          },
+          risky_binary: {
+            vi: 'có thư viện nhị phân (.so/.dll/.dylib/.bundle) phải đúng bản Ruby; nếu lỗi hãy cài lại bản dành cho SketchUp đích',
+            en: 'has binary libraries (.so/.dll/.dylib/.bundle) that must match the Ruby version; if it fails, reinstall the version made for the target SketchUp'
+          },
+          copy_incomplete: {
+            vi: 'chép chưa đủ, %{n} file thiếu hoặc sai dung lượng (ví dụ: %{sample})',
+            en: 'copy incomplete, %{n} file(s) missing or of a different size (for example: %{sample})'
+          },
           bundle_empty: { vi: 'Không có file nào để đóng gói.', en: 'There are no files to package.' },
           bundle_pick: {
             vi: 'Hãy tick ít nhất một plugin để xuất gói.',
