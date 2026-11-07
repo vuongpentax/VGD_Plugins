@@ -76,7 +76,7 @@ module VGD
         value.gsub(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/, '') # ký tự điều khiển không in được, XML cũng không cho phép
       end
 
-      # Ảnh nhỏ do plugin ghi: phải là PNG đọc được kích thước. Ảnh hỏng thì bỏ qua (ô để trống), không làm hỏng cả báo cáo.
+      # Ảnh đầy đủ do plugin ghi (không dùng ảnh thu nhỏ của bảng): phải là PNG đọc được kích thước. Ảnh hỏng thì bỏ qua (ô để trống), không làm hỏng cả báo cáo.
       def self.load_image(pid, image_for)
         bytes = image_for.call(pid)
         return nil unless Images.png?(bytes) && bytes.bytesize <= Images::MAX_BYTES
@@ -138,8 +138,8 @@ module VGD
           tr{page-break-inside:avoid}
           td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
           td.ord{text-align:center}
-          td.img{text-align:center;width:22mm;padding:2px}
-          td.img img{max-width:20mm;max-height:16mm;display:block;margin:0 auto}
+          td.img{text-align:center;width:32mm;padding:2px}
+          td.img img{max-width:28mm;max-height:22mm;display:block;margin:0 auto}
           td.link a{color:#0563c1;word-break:break-all}
           tr.group td{background:#f4eee6;font-weight:700}
           tr.total td{background:#e8dccb;font-weight:700;border-top:2px solid #222}

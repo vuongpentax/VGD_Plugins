@@ -267,8 +267,10 @@ export_payload = lambda do |format, pids|
    'columns' => export_columns, 'rows' => pids.each_with_index.map { |pid, i| {'kind' => 'row', 'pid' => pid, 'cells' => [i + 1, nil, "Tủ #{i + 1}"]} }}
 end
 d = make_dialog(3, has_image: [0, 1])
-I.write($model, 901, real_png(128, 96), real_png(128, 96))
-I.write($model, 902, real_png(64, 128), real_png(64, 128))
+FULL = {901 => real_png(512, 384), 902 => real_png(300, 600)}
+THUMB = {901 => real_png(128, 96), 902 => real_png(64, 128)}
+I.write($model, 901, FULL[901], THUMB[901])
+I.write($model, 902, FULL[902], THUMB[902])
 Dir.mktmpdir do |dir|
   $save = File.join(dir, 'ketqua')
   UI.define_singleton_method(:savepanel) { |*_args| $save }
@@ -276,7 +278,7 @@ Dir.mktmpdir do |dir|
   file = "#{$save}.xlsx"
   bytes = File.file?(file) ? File.binread(file) : ''
   ok('xuất Excel: chọn nơi lưu, tự thêm đuôi .xlsx, ghi file zip', bytes.byteslice(0, 2) == 'PK')
-  ok('xuất Excel: nhúng ảnh thu nhỏ của các dòng có ảnh (2 ảnh, dòng thứ 3 không có)', bytes.include?('xl/media/image2.png') && !bytes.include?('xl/media/image3.png'))
+  ok('xuất Excel: nhúng ảnh gốc theo cỡ đã chụp (không phải ảnh thu nhỏ) của các dòng có ảnh; dòng thứ 3 không có', bytes.include?('xl/media/image2.png') && !bytes.include?('xl/media/image3.png') && bytes.include?(FULL[901]) && bytes.include?(FULL[902]) && !bytes.include?(THUMB[901]) && !bytes.include?(THUMB[902]))
   ok('xuất Excel: báo số dòng, số ảnh và đường dẫn', events(d, 'message').last['text'] == "Đã xuất 3 dòng và 2 ảnh ra Excel: #{file}")
   d = make_dialog(3, has_image: [0, 1])
   d.safely { d.table_export(export_payload.call('xlsx', [901, 999, 903])) }
@@ -303,7 +305,7 @@ url = (UI.opened || [])[opened_before]
 html_path = url.to_s.sub(%r{\Afile://}, '').then { |u| u.match?(%r{\A/[A-Za-z]:}) ? u[1..-1] : u }
 ok('in PDF: mở trang báo cáo bằng trình duyệt (địa chỉ file:///)', url.to_s.start_with?('file:///') && url.end_with?('.html'))
 page = File.file?(html_path) ? File.read(html_path, encoding: 'UTF-8') : ''
-ok('in PDF: trang báo cáo có tên model, đủ 3 dòng và 2 ảnh', page.include?('Mô hình: Nhà mẫu') && page.scan('<tr class="row">').size == 3 && page.scan('data:image/png;base64,').size == 2)
+ok('in PDF: trang báo cáo có tên model, đủ 3 dòng và 2 ảnh', page.include?('Mô hình: Nhà mẫu') && page.scan('<tr class="row">').size == 3 && page.scan('data:image/png;base64,').size == 2 && page.include?([FULL[901]].pack('m0')) && !page.include?([THUMB[901]].pack('m0')))
 ok('in PDF: báo đã mở trình duyệt, hướng dẫn Lưu thành PDF', events(d, 'message').last['text'].include?('trình duyệt') && events(d, 'message').last['text'].include?('PDF'))
 File.delete(html_path) if File.file?(html_path)
 

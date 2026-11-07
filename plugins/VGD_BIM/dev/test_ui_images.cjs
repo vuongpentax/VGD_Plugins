@@ -12,7 +12,7 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:'Nhóm',definition:'Cabinet',nam
 const table=(o={})=>({columns:F.columns,presets:F.presets,groups:F.groups,statuses:F.statuses,options:{zoom:true,isolate:false,deep:false,projected:false,isolating:false},rows,selected:[],hint:null,view:{},choices:{tags:[],materials:[]},...o});
 const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 (async()=>{
- const browser=await chromium.launch({headless:true,channel:process.env.VGD_BROWSER_CHANNEL||undefined});
+ const browser=await chromium.launch({headless:true,channel:process.env.VGD_BROWSER_CHANNEL||undefined,ignoreDefaultArgs:['--hide-scrollbars']}); // Playwright mặc định ẩn mọi thanh cuộn; bật lại để kiểm tra thật
  try{
   const page=await browser.newPage({viewport:{width:1100,height:800}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
@@ -157,7 +157,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
     const before={mainScroll:main.scrollHeight-main.clientHeight,wrapScroll:wrap.scrollHeight-wrap.clientHeight};
     wrap.scrollTop=400;
     const wr=wrap.getBoundingClientRect(),th=document.querySelector('.grid thead tr:first-child th').getBoundingClientRect(),th2=document.querySelector('.grid thead tr.unit-row th').getBoundingClientRect(),foot=document.querySelector('.grid tfoot td').getBoundingClientRect(),br=bar.getBoundingClientRect();
-    return {...before,table:document.body.classList.contains('table-mode'),headTop:Math.round(th.top-wr.top),unitTop:Math.round(th2.top-wr.top),unitGap:Math.round(th2.top-th.bottom),footGap:Math.round(wr.bottom-foot.bottom),barInside:br.bottom<=window.innerHeight&&br.top>wr.bottom-2,fillGap:Math.round(br.top-wr.bottom),scrolled:wrap.scrollTop};
+    return {...before,table:document.body.classList.contains('table-mode'),headTop:Math.round(th.top-wr.top),unitTop:Math.round(th2.top-wr.top),unitGap:Math.round(th2.top-th.bottom),footGap:Math.round(wr.bottom-foot.bottom-(wrap.offsetHeight-wrap.clientHeight-2)),barInside:br.bottom<=window.innerHeight&&br.top>wr.bottom-2,fillGap:Math.round(br.top-wr.bottom),scrolled:wrap.scrollTop};
   });
   ok(lay.table && lay.mainScroll<=1,'bảng chiếm đúng chiều cao cửa sổ: trang chính không cuộn');
   ok(lay.wrapScroll>0 && lay.scrolled>0,'nhiều dòng: chỉ khung bảng cuộn');
@@ -366,6 +366,33 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await receive('information',{count:1,fields:{},objects:[{entity_type:'Group',source:'RAW',instance_name:'a',definition_name:'d',tag:'t',material:'',dimensions:{width:1200,depth:600,height:800},locked:false,status:'UNCLASSIFIED'}]});
   const info=await page.locator('.card').last().innerText();
   ok(info.includes('Rộng × Sâu × Cao (cm)') && info.includes('120 × 60 × 80'),'tab Thông tin: tiêu đề và kích thước theo đơn vị của preset (cm)');
+
+  // ---- Không hiện thanh cuộn dọc ở mọi nơi; chỉ giữ thanh cuộn ngang của bảng ----
+  await page.setViewportSize({width:700,height:520});
+  const longRows=Array.from({length:60},(_,i)=>({...rows[i%3],index:i,pid:1000+i,name:'Dòng '+i,has_image:false}));
+  await receive('config',config('table'));await receive('table',table({rows:longRows}));await usePreset('Tất cả');await page.keyboard.press('Escape');
+  await page.evaluate(()=>{for(const c of tableState.data.columns)tableState.visible.add(c.key);tableState.order=tableState.data.columns.map(c=>c.key);tableView(tableState.data);});
+  const bars=sel=>page.locator(sel).first().evaluate(el=>{const cs=getComputedStyle(el),side=(a,b)=>parseFloat(cs[a])+parseFloat(cs[b]);return {v:el.offsetWidth-el.clientWidth-side('borderLeftWidth','borderRightWidth'),h:el.offsetHeight-el.clientHeight-side('borderTopWidth','borderBottomWidth'),tall:el.scrollHeight>el.clientHeight,wide:el.scrollWidth>el.clientWidth};});
+  const grid=await bars('.grid-wrap');
+  ok(grid.tall && grid.v===0,'bảng nhiều dòng: không có thanh cuộn dọc');
+  ok(grid.wide && grid.h>0 && grid.h<=12,'bảng nhiều cột: vẫn có thanh cuộn ngang (mảnh)');
+  await page.locator('.grid-wrap').hover();await page.mouse.wheel(0,300);await page.waitForTimeout(150);
+  ok(await page.locator('.grid-wrap').evaluate(el=>el.scrollTop)>0,'vẫn cuộn dọc được bằng con lăn chuột');
+  await page.getByRole('button',{name:'Chọn cột'}).click();
+  const colPop=await bars('.popover');
+  ok(colPop.tall && colPop.v===0,'bảng Chọn cột: không có thanh cuộn dọc');
+  await page.mouse.move(100,300);await page.mouse.wheel(0,200);await page.waitForTimeout(100);
+  ok(await page.locator('.popover').first().evaluate(el=>el.scrollTop)>0,'bảng Chọn cột: vẫn cuộn được bằng con lăn chuột');
+  await page.getByRole('button',{name:'Chọn cột'}).click();
+  await openPresets();
+  const presetPanelBars=await bars('#preset-panel');
+  ok(presetPanelBars.v===0,'bảng Preset: không có thanh cuộn dọc');
+  await page.keyboard.press('Escape');
+  await page.evaluate(()=>{document.querySelector('main').style.overflow='auto';});
+  await receive('config',config('scan'));
+  const mainBars=await bars('main');
+  ok(mainBars.v===0,'các tab khác (khung chính): không có thanh cuộn dọc');
+  await page.setViewportSize({width:1100,height:800});
 
   // ---- Đổi ngôn ngữ thì tải lại cửa sổ ----
   await receive('config',config('table'));

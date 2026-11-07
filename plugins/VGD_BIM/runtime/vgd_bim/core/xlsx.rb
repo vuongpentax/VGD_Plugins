@@ -9,9 +9,9 @@ module VGD
       PX_TO_EMU = 9525
       TITLE_ROW = 1
       META_ROW = 2
-      IMAGE_COLUMN_CHARS = 14  # độ rộng cột Ảnh (ký tự Excel)
-      IMAGE_ROW_POINTS = 58    # chiều cao hàng có ảnh (point)
-      IMAGE_BOX_PX = [92, 74].freeze # khung chứa ảnh trong ô (rộng, cao), chừa lề nhỏ
+      IMAGE_COLUMN_CHARS = 20  # độ rộng cột Ảnh (ký tự Excel, 145 px)
+      IMAGE_ROW_POINTS = 84    # chiều cao hàng có ảnh (point, 112 px)
+      IMAGE_BOX_PX = [136, 106].freeze # khung chứa ảnh trong ô (rộng, cao), chừa lề nhỏ; ảnh vẫn nhúng nguyên độ phân giải
 
       NS_MAIN = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'.freeze
       NS_REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'.freeze

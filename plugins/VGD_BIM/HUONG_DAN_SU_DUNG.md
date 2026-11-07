@@ -65,7 +65,7 @@ Nút **Preset** nằm cạnh nút Sáng/Tối. Bấm vào để mở bảng gồ
 3. **Đổi tên cột**: nhấp đúp vào tiêu đề cột, gõ tên mới rồi Enter (Esc hủy, để trống để về tên gốc). Tên cột lưu theo preset.
 4. **Đơn vị**: chọn đơn vị và số lẻ cho chiều dài, diện tích, thể tích; chọn tiền tệ và dấu thập phân. Chỉ đổi cách hiển thị, báo cáo CSV ở tab Quét & xuất vẫn dùng mm.
 5. **Nhập / Xuất** (menu ở chân trang): nhập hoặc xuất preset bằng file JSON (đọc được file preset của plugin tham khảo), hoặc xuất bảng đang hiện:
-   - **Xuất Excel**: tạo file .xlsx đúng như bảng đang hiện (cột, thứ tự, tiêu đề, đơn vị, nhóm, dòng tổng), có ảnh món đồ trong ô. Muốn có ảnh, hãy bấm Cập nhật ảnh trước. Ảnh trong Excel là ảnh nhỏ (cạnh dài 128 px) dùng để xem và in, không phải ảnh gốc.
+   - **Xuất Excel**: tạo file .xlsx đúng như bảng đang hiện (cột, thứ tự, tiêu đề, đơn vị, nhóm, dòng tổng), có ảnh món đồ trong ô. Muốn có ảnh, hãy bấm Cập nhật ảnh trước. Ảnh trong Excel và PDF là ảnh đầy đủ theo cỡ đã chụp (đặt trong bảng Preset), chỉ hiển thị thu nhỏ vừa ô; bấm vào ảnh trong Excel để xem rõ. Chụp cỡ lớn thì file xuất nặng hơn.
    - **In PDF**: tạo trang báo cáo rồi mở trong trình duyệt; bấm In (hoặc Ctrl+P) và chọn **Lưu thành PDF**. Trang A4 ngang, tiêu đề cột lặp lại mỗi trang.
    - **Cầu nối dữ liệu**: đã có sẵn chỗ trong menu, sẽ làm sau.
 

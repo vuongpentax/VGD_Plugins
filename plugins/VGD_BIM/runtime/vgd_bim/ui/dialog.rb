@@ -501,10 +501,10 @@ module VGD
           title = @model.title.to_s.strip
           title.empty? ? 'Chưa đặt tên' : title
         end
-        # Ảnh nhỏ của một đối tượng trong bảng (nil nếu mã không thuộc bảng hoặc chưa có ảnh).
+        # Ảnh đầy đủ (đúng cỡ đã chụp theo preset) của một đối tượng trong bảng; nil nếu mã không thuộc bảng hoặc chưa có ảnh.
         def table_image(pid)
           return nil unless known_pid?(pid)
-          file = Images.path(@model, pid, :thumb)
+          file = Images.path(@model, pid, :full)
           File.file?(file) ? File.binread(file) : nil
         end
         def preset_export

@@ -152,9 +152,9 @@ Dir.mktmpdir do |dir|
   anchors = REXML::XPath.match(drawing, '//xdr:oneCellAnchor', 'xdr' => 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing')
   ok('ảnh đặt trong ô cột Ảnh (cột B) ở đúng hai dòng có ảnh', anchors.map { |a| [REXML::XPath.first(a, 'xdr:from/xdr:col', 'xdr' => 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing').text.to_i, REXML::XPath.first(a, 'xdr:from/xdr:row', 'xdr' => 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing').text.to_i] } == [[1, 6], [1, 7]])
   sizes = anchors.map { |a| ext = REXML::XPath.first(a, 'xdr:ext', 'xdr' => 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing'); [ext.attributes['cx'].to_i / 9525, ext.attributes['cy'].to_i / 9525] }
-  ok('ảnh giữ tỉ lệ và nằm trong khung ô (không méo, không tràn)', sizes[0] == [92, 69] && sizes[1] == [37, 74] && sizes.all? { |w, h| w <= 92 && h <= 74 })
+  ok('ảnh giữ tỉ lệ và nằm trong khung ô (không méo, không tràn)', sizes[0] == [128, 96] && sizes[1] == [53, 106] && sizes.all? { |w, h| w <= 136 && h <= 106 })
   rows = REXML::XPath.match(sheet, '//m:row', NS).to_h { |r| [r.attributes['r'].to_i, r.attributes['ht']] }
-  ok('hàng có ảnh cao 58pt, hàng không ảnh (dữ liệu) vẫn cao bằng nhau để bảng đều', rows[7] == '58' && rows[8] == '58' && rows[9] == '58' && rows[4].nil?)
+  ok('hàng có ảnh cao 84pt, hàng không ảnh (dữ liệu) vẫn cao bằng nhau để bảng đều', rows[7] == '84' && rows[8] == '84' && rows[9] == '84' && rows[4].nil?)
   pane = REXML::XPath.first(sheet, '//m:pane', NS)
   ok('cố định hàng tiêu đề và hàng đơn vị khi cuộn', pane.attributes['ySplit'] == '5' && pane.attributes['state'] == 'frozen')
   styles = xml(files['xl/styles.xml'])
@@ -162,6 +162,10 @@ Dir.mktmpdir do |dir|
   ok('định dạng số: nghìn có dấu phân cách, số lẻ theo cột (0 và 2)', formats.sort == ['#,##0', '#,##0.00'])
   workbook = files['xl/workbook.xml'].force_encoding('UTF-8')
   ok('tên sheet theo tiêu đề; hàng tiêu đề lặp lại khi in', workbook.include?('name="Bảng khối lượng"') && workbook.include?('!$4:$5'))
+  big_png = png(512, 512)
+  large = read_zip(VGD::BIM::Xlsx.build(build({}, ->(pid) { pid == 900 ? big_png : nil })))
+  big_ext = REXML::XPath.first(xml(large['xl/drawings/drawing1.xml']), '//xdr:ext', 'xdr' => 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing')
+  ok('ảnh 512 x 512: nhúng đủ độ phân giải gốc, chỉ hiển thị thu nhỏ vừa ô (106 x 106)', large['xl/media/image1.png'] == big_png && [big_ext.attributes['cx'].to_i / 9525, big_ext.attributes['cy'].to_i / 9525] == [106, 106])
   tmp_dup = build('rows' => [ROWS[1], ROWS[1], ROWS[1]])
   dup_files = read_zip(VGD::BIM::Xlsx.build(tmp_dup))
   ok('cùng một ảnh dùng cho nhiều dòng: chỉ nhúng một lần', dup_files.keys.grep(%r{\Axl/media/}).size == 1 && REXML::XPath.match(xml(dup_files['xl/drawings/drawing1.xml']), '//xdr:oneCellAnchor', 'xdr' => 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing').size == 3)
@@ -187,6 +191,7 @@ end
 # ---- Trang báo cáo in PDF ----
 html = TR.html(report)
 ok('HTML: tiêu đề, bảng, ảnh nhúng base64, nút In, tự mở hộp in', html.include?('<h1>Bảng khối lượng</h1>') && html.scan('data:image/png;base64,').size == 2 && html.include?('window.print()') && html.include?('size:A4 landscape'))
+ok('HTML: ảnh hiển thị tối đa 28 x 22 mm nhưng giữ nguyên dữ liệu ảnh', html.include?('max-width:28mm;max-height:22mm') && html.include?([IMAGES[900]].pack('m0')))
 ok('HTML: dòng tiêu đề lặp mỗi trang, dòng không bị cắt đôi', html.include?('thead{display:table-header-group}') && html.include?('page-break-inside:avoid'))
 ok('HTML: số theo dấu thập phân của preset và nhóm hàng nghìn (1.200 | 1,23 | 2.500.000)', html.include?('<td class="num">1.200</td>') && html.include?('<td class="num">1,23</td>') && html.include?('<td class="num">2.500.000</td>'))
 ok('HTML: làm tròn nửa lên như bảng trên màn hình (900,5 thành 901) và không còn ký tự điều khiển', html.include?('<td class="num">901</td>') && !html.match?(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/))
