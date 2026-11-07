@@ -51,7 +51,8 @@ class FakeOptions
   def initialize(values); @values = values; end
   def [](key); @values[key]; end
   def []=(key, value); @values[key] = value; end
-  def each_key; @values.keys.each; end
+  # SketchUp thật: each_key chỉ chạy với khối, gọi không khối báo LocalJumpError (lỗi gặp trong capture.log của người dùng)
+  def each_key(&block); raise LocalJumpError, 'no block given' unless block; @values.keys.each(&block); end
 end
 class FakeView
   attr_accessor :camera, :zoomed, :writes, :fail_next, :fail_on_call, :states, :reject_transparent, :raise_on_transparent, :attempts, :reject_all_options

@@ -176,7 +176,8 @@ module VGD
           changes.merge!(WHITE_BACKGROUND).merge!('BackgroundColor' => Sketchup::Color.new(255, 255, 255)) if settings['image_background'] == 'white'
           return nil if changes.empty?
           options = model.rendering_options
-          known = options.each_key.to_a
+          known = []
+          options.each_key { |key| known << key } # SketchUp chỉ chạy each_key khi có khối
           saved = {}
           changes.each do |key, value|
             next unless known.include?(key)
