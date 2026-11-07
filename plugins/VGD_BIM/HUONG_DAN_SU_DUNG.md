@@ -10,6 +10,14 @@ Mở bằng **Extensions → VGD → VGD_BIM**: cửa sổ mở thẳng tab **B�
 4. Sửa trực tiếp **Tên**, **Mô tả**, **Tình trạng** (Mới, Hiện hữu, Dùng lại, Tạm thời, Loại bỏ) ngay trong bảng. Đối tượng bị khóa không sửa được.
 5. Tuỳ chọn ở thanh công cụ: **Thu phóng**, **Cô lập đối tượng chọn** (tạm ẩn các đối tượng khác; tắt tuỳ chọn hoặc đóng cửa sổ để hiện lại, và đừng lưu file khi đang cô lập), **Chọn sâu bên trong** (đọc cả group / component nằm bên trong), dòng **Tổng cộng**, **Tổng chỉ cấp cao nhất** (không cộng trùng group lồng nhau).
 
+## Đổi tên hàng loạt
+
+1. Trong tab **Bảng khối lượng**, chọn các đối tượng cần đặt tên rồi bấm **Đổi tên**. Panel áp dụng cho mọi dòng đang có trong bảng.
+2. Nhập **Mẫu tên**, ví dụ `Cửa-{số}` hoặc `{phân loại}-{số}`. Bấm các nút `{tên}`, `{họ}`, `{phân loại}`, `{nhóm}`, `{số}` để chèn: tên hiện tại, tên định nghĩa, phân loại, nhóm hạng mục, số thứ tự.
+3. Cần thì **Tìm** / **Thay bằng**, **Tiền tố** / **Hậu tố**, **Kiểu chữ**. Với số thứ tự, chọn **Số bắt đầu**, **Số chữ số** (ví dụ 2 thì ra 01, 02), **Bước nhảy** và **Đánh số theo**: thứ tự trong bảng, vị trí (X rồi Y rồi Z) hoặc tên hiện tại.
+4. Bấm **Xem trước** để xem tên cũ và tên mới. Dòng bị khóa được bỏ qua, tên trùng nhau được đánh dấu. Sửa bất kỳ ô nào thì phải xem trước lại.
+5. Bấm **Áp dụng**. Cả đợt là một bước hoàn tác (Ctrl+Z). Chỉ đổi tên đối tượng, không đổi tên định nghĩa dùng chung nên các bản sao khác không bị ảnh hưởng.
+
 Lưu ý: diện tích (X*Z), (X*Y) tính theo khung bao của đối tượng; thể tích chỉ có cho group kín. Số liệu chưa trừ hao hụt hoặc phần bị che.
 
 ## Gắn dữ liệu hạng mục (Thông tin)

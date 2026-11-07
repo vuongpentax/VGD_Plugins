@@ -65,6 +65,8 @@ module VGD
           @dialog.add_action_callback('table_option') { |_ctx, payload| safely { table_option(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_preset') { |_ctx, payload| safely { table_preset(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_clear') { |_ctx| safely { table_clear } }
+          @dialog.add_action_callback('rename_preview') { |_ctx, payload| safely { rename_preview(JSON.parse(payload)) } }
+          @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { rename_apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_view') { |_ctx, payload| safely { Table.save_view_state(JSON.parse(payload)) } }
           @dialog.set_on_closed { @closed = true; @ready = false; @generation += 1; cleanup_table_view; detach; ::UI.stop_timer(@selection_timer) if @selection_timer }
         end
@@ -351,6 +353,42 @@ module VGD
             raise ArgumentError, 'Thao tác preset không hợp lệ.'
           end
           emit('presets', Table.presets)
+        end
+        # Đổi tên hàng loạt cho mọi dòng đang có trong bảng (các đối tượng đã chọn). Chỉ đổi tên của đối tượng (instance),
+        # không đổi tên định nghĩa dùng chung, và không sửa hình học hay dữ liệu hạng mục.
+        def rename_items
+          @table_rows.map do |row|
+            record = @table_records.fetch(row[:index])
+            box = Table.bounding_box(record)
+            corner = box.empty? ? nil : box.min
+            {index: row[:index], name: row[:name], definition: row[:definition], tag: row[:tag], tag_group: row[:tag_group],
+             locked: record[:locked] || record[:entity].locked? ? true : false,
+             position: corner ? [corner.x, corner.y, corner.z].map { |value| value.to_f * Geometry::INCH_MM } : [0.0, 0.0, 0.0]}
+          end
+        end
+        def rename_plan(payload)
+          check_model!
+          options = Rename.normalize(payload)
+          raise 'Bảng chưa có dòng nào. Hãy chọn group hoặc component trong SketchUp.' if @table_records.empty?
+          raise 'Có đối tượng không còn tồn tại. Hãy làm mới bảng.' unless @table_records.all? { |record| record[:path].all?(&:valid?) }
+          Rename.plan(rename_items, options)
+        end
+        def rename_preview(payload)
+          emit('rename_preview', rename_plan(payload))
+        end
+        def rename_apply(payload)
+          plan = rename_plan(payload)
+          changes = plan[:rows].select { |row| row[:status] == 'ok' }
+          raise 'Không có đối tượng nào cần đổi tên.' if changes.empty?
+          Data.transaction(@model, 'VGD_BIM · Đổi tên hàng loạt') do
+            changes.each { |row| @table_records.fetch(row[:index])[:entity].name = row[:new] }
+          end
+          table_build
+          show_outline
+          text = "Đã đổi tên #{changes.size} đối tượng."
+          text += " Bỏ qua #{plan[:counts][:locked]} đối tượng bị khóa." if plan[:counts][:locked] > 0
+          text += " Có #{plan[:counts][:duplicate]} dòng trùng tên." if plan[:counts][:duplicate] > 0
+          emit('message', {text: text})
         end
         def table_clear
           check_model!

@@ -14,3 +14,17 @@ main{flex:1;min-height:0;overflow:auto;padding:14px 16px;scrollbar-gutter:stable
 .grid th,.grid td{border-right:1px solid var(--border)}.grid th:last-child,.grid td:last-child{border-right:0}
 .grid thead tr:first-child th{border-bottom:1px solid var(--border)}.grid thead tr.unit-row th{border-bottom:2px solid var(--accent)}
 .subtabs{margin-bottom:14px}
+
+/* Panel đổi tên: cố định giữa cửa sổ, cao gần hết cửa sổ, tự cuộn; hàng nút ghim ở đáy nên luôn thấy */
+.popover.rename{position:fixed;top:12px;bottom:12px;left:50%;right:auto;transform:translateX(-50%);width:min(520px,94vw);max-height:none}
+.rename-field{display:flex;flex-direction:column;gap:2px;font-size:11px;margin-bottom:8px}
+.rename-field input,.rename-field select{height:28px}
+.rename-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.chip-row{display:flex;flex-wrap:wrap;gap:4px;margin:-4px 0 8px}
+.chip-row button{padding:2px 8px;font-size:11px}
+.rename-actions{display:flex;gap:8px;position:sticky;bottom:-10px;margin:8px -10px -10px;padding:8px 10px;background:var(--surface);border-top:1px solid var(--border)}
+.rename-summary{font-weight:600;margin:6px 0}
+.rename-table{width:100%;border-collapse:collapse;font-size:11px}
+.rename-table td{padding:3px 4px;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
+.rename-table tr.st-locked,.rename-table tr.st-same{color:var(--muted)}
+.rename-table tr.dup td:last-child{color:var(--accent-strong);font-weight:700}

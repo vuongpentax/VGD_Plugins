@@ -304,6 +304,63 @@ function renderGrid(host){
   wrap.append(t);host.append(wrap);
   if(!rows.length)host.append(node('p','Không có đối tượng nào khớp bộ lọc.','empty'));
 }
+// Đổi tên hàng loạt cho các dòng đang có trong bảng. Giá trị các ô nhập nằm trong tableState.rename để không mất khi bảng vẽ lại.
+const RENAME_TOKENS=['{tên}','{họ}','{phân loại}','{nhóm}','{số}'];
+const RENAME_STATUS={ok:'Sẽ đổi',same:'Giữ nguyên',locked:'Bị khóa',empty:'Tên trống',long:'Quá dài'};
+tableState.rename={template:'{tên}',find:'',replace:'',prefix:'',suffix:'',case:'none',start:1,pad:2,step:1,order:'table',preview:null};
+function renameOptions(){const r=tableState.rename;return {template:r.template,find:r.find,replace:r.replace,prefix:r.prefix,suffix:r.suffix,case:r.case,start:r.start,pad:r.pad,step:r.step,order:r.order};}
+function renamePreview(box){
+  const pv=tableState.rename.preview;if(!pv)return;
+  const c=pv.counts;
+  box.append(node('p',`Sẽ đổi ${c.ok} · giữ nguyên ${c.same} · bị khóa ${c.locked}`+(c.empty?` · tên trống ${c.empty}`:'')+(c.long?` · quá dài ${c.long}`:'')+(c.duplicate?` · trùng tên ${c.duplicate}`:''),'rename-summary'));
+  const table=node('table',undefined,'rename-table');
+  pv.rows.slice(0,200).forEach(row=>{
+    const tr=node('tr');tr.className='st-'+row.status+(row.duplicate?' dup':'');
+    tr.append(node('td',row.old||'(trống)'),node('td','→'),node('td',row.status==='ok'||row.status==='same'?(row.new||'(trống)'):'—'),node('td',RENAME_STATUS[row.status]+(row.duplicate?' · trùng':'')));
+    table.append(tr);
+  });
+  box.append(table);
+  if(pv.rows.length>200)box.append(node('p',`Chỉ hiện 200 dòng đầu trong ${pv.rows.length} dòng.`,'muted'));
+}
+function renamePanel(){
+  const r=tableState.rename;
+  const p=node('div',undefined,'popover right rename');
+  p.append(node('div','Đổi tên hàng loạt','pop-title'));
+  p.append(node('p','Áp dụng cho mọi dòng trong bảng. Chỉ đổi tên đối tượng, không đổi tên định nghĩa, hình học hay dữ liệu hạng mục. Cả đợt là một bước hoàn tác.','muted'));
+  const box=node('div');
+  const apply=button('Áp dụng',()=>{call('rename_apply',JSON.stringify(renameOptions()));r.preview=null;tableState.panel=null;},'primary');
+  apply.disabled=!(r.preview&&r.preview.counts.ok>0);
+  const stale=()=>{r.preview=null;apply.disabled=true;box.replaceChildren();};
+  const field=(label,key,attrs)=>{
+    const wrap=node('label',undefined,'rename-field');wrap.append(node('span',label));
+    const input=node('input');input.type='text';Object.assign(input,attrs||{});input.value=String(r[key]);
+    input.oninput=()=>{r[key]=input.value;stale();};
+    wrap.append(input);return {wrap,input};
+  };
+  const pick=(label,key,options)=>{
+    const wrap=node('label',undefined,'rename-field');wrap.append(node('span',label));
+    const select=node('select');options.forEach(([value,text])=>select.append(new Option(text,value)));select.value=r[key];
+    select.onchange=()=>{r[key]=select.value;stale();};
+    wrap.append(select);return wrap;
+  };
+  const template=field('Mẫu tên','template',{maxLength:400});
+  const chips=node('div',undefined,'chip-row');
+  RENAME_TOKENS.forEach(token=>chips.append(button(token,()=>{
+    const input=template.input;const start=input.selectionStart===null?input.value.length:input.selectionStart;const end=input.selectionEnd===null?start:input.selectionEnd;
+    input.value=input.value.slice(0,start)+token+input.value.slice(end);r.template=input.value;stale();input.focus();
+  })));
+  const findRow=node('div',undefined,'rename-row');findRow.append(field('Tìm','find',{maxLength:400}).wrap,field('Thay bằng','replace',{maxLength:400}).wrap);
+  const fixRow=node('div',undefined,'rename-row');fixRow.append(field('Tiền tố','prefix',{maxLength:400}).wrap,field('Hậu tố','suffix',{maxLength:400}).wrap);
+  const numRow=node('div',undefined,'rename-row');numRow.append(field('Số bắt đầu','start').wrap,field('Số chữ số','pad').wrap,field('Bước nhảy','step').wrap);
+  const styleRow=node('div',undefined,'rename-row');
+  styleRow.append(pick('Kiểu chữ','case',[['none','Giữ nguyên'],['upper','CHỮ HOA'],['lower','chữ thường'],['title','Viết Hoa Chữ Đầu']]),
+    pick('Đánh số theo','order',[['table','Thứ tự trong bảng'],['position','Vị trí (X, rồi Y, rồi Z)'],['name','Tên hiện tại']]));
+  const actions=node('div',undefined,'rename-actions');
+  actions.append(button('Xem trước',()=>call('rename_preview',JSON.stringify(renameOptions())),'primary'),apply,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
+  p.append(template.wrap,chips,findRow,fixRow,numRow,styleRow,box,actions);
+  renamePreview(box);
+  return p;
+}
 function toolbar(){
   const d=tableState.data;const bar=node('div',undefined,'toolbar');
   const cols=button('Chọn cột',()=>{tableState.panel=tableState.panel==='columns'?null:'columns';tableView(tableState.data);},'primary');
@@ -314,7 +371,9 @@ function toolbar(){
   group.value=tableState.group;group.onchange=()=>{tableState.group=group.value;renderGrid($('grid-host'));persistView();};
   const preset=button(`${tableState.preset} ▾`,()=>{tableState.panel=tableState.panel==='presets'?null:'presets';tableView(tableState.data);});
   preset.classList.add('preset-btn');preset.setAttribute('aria-expanded',String(tableState.panel==='presets'));
-  bar.append(cols,search,group,preset);
+  const rename=button('Đổi tên',()=>{tableState.panel=tableState.panel==='rename'?null:'rename';tableView(tableState.data);});
+  rename.setAttribute('aria-expanded',String(tableState.panel==='rename'));
+  bar.append(cols,search,group,preset,rename);
   return bar;
 }
 function columnPanel(){
@@ -399,6 +458,7 @@ function tableView(data){
   bar.append(toolbar());
   if(tableState.panel==='columns')bar.append(columnPanel());
   if(tableState.panel==='presets')bar.append(presetPanel());
+  if(tableState.panel==='rename')bar.append(renamePanel());
   view.append(bar);
   const host=node('div');host.id='grid-host';view.append(host);
   renderGrid(host);
@@ -412,10 +472,12 @@ function tableView(data){
 const TAB_OF={rules:'mapping',validate_model:'mapping',validate_selection:'mapping',export:'scan',convert_selection:'information'};
 window.VGD={receive(event,data){
   if(event==='config'){config=data;locale=data.locale||locale;$('subtitle').textContent=`${data.version} · ${translated('modes',data.mode)}`;document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===(TAB_OF[data.mode]||data.mode);b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});$('preview').close();$('content').replaceChildren();$('primary-actions').replaceChildren();document.querySelector('main').scrollTop=0;message('Đang đọc dữ liệu…');}
+  if(event==='table')tableState.rename.preview=null; // bảng đổi thì bản xem trước đổi tên cũ không còn đúng
   const renderers={information,scan,mapping,validation,rules,tags:tagEditor,table:tableView};if(renderers[event]){renderers[event](data);message('Sẵn sàng.');}
   if(event==='highlight')highlightRow(data.index);
   if(event==='options'&&tableState.data){tableState.data.options=data;tableView(tableState.data);}
   if(event==='presets'&&tableState.data){tableState.data.presets=data;tableView(tableState.data);}
+  if(event==='rename_preview'){tableState.rename.preview=data;if(tableState.panel==='rename'&&tableState.data)tableView(tableState.data);}
   if(event==='progress')message(`Đang quét… ${number(data.count,0)} đối tượng hình học.`);
   if(event==='message')message(data.error||data.text,!!data.error);
   if(event==='preview')preview(data);

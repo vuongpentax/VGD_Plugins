@@ -5,7 +5,7 @@ module VGD
   module BIM
     ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze unless defined?(ROOT)
     # Thứ tự nạp code. Dùng chung cho lúc mở SketchUp và lúc "Tải lại code".
-    FILES = %w[core/locale core/schema core/storage core/data core/tags core/geometry core/scanner core/table core/validator
+    FILES = %w[core/locale core/schema core/storage core/data core/tags core/geometry core/scanner core/table core/rename core/validator
                intake/mapping_rules intake/detector intake/raw_scanner intake/mapping intake/converter core/report_exporter
                ui/bounds_preview ui/dialog].freeze
     @log_counts = Hash.new(0)

@@ -9,12 +9,18 @@ module Sketchup
   def self.active_model; $model; end
 end
 module VGD; module BIM; def self.log(m); end
-  module Data; def self.supported?(e); e.is_a?(Sketchup::Group); end; end
-  module Scanner; end; module Geometry; end
+  module Data
+    def self.supported?(e); e.is_a?(Sketchup::Group); end
+    # Như Data.transaction thật: một bước hoàn tác cho cả khối
+    def self.transaction(model, name = nil); $transactions << name; yield; end
+  end
+  module Scanner; end; module Geometry; INCH_MM = 25.4; end
   module Tags; GROUPS = ['Phần thô'].freeze; def self.load; []; end; def self.key(n); n.to_s.downcase; end; end
   module UI; end
 end; end
+$transactions = []
 require File.join(ROOT, 'core/table')
+require File.join(ROOT, 'core/rename')
 require File.join(ROOT, 'ui/dialog')
 D = VGD::BIM::UI::Dialog
 
@@ -99,5 +105,44 @@ fd.instance_variable_set(:@model, fm)
 fd.instance_variable_set(:@isolated, [])
 ok('lớp phủ lỗi: trả về false để dùng công cụ cũ', fd.show_overlay([[0, 0, 0]], 'Tủ', [0, 0, 0], [], -> { true }, -> {}) == false)
 ok('lớp phủ đã lỗi thì không thử lại', !fd.overlay_available?)
+
+# Đổi tên hàng loạt: xem trước, áp dụng trong một bước hoàn tác, bỏ qua đối tượng khóa, từ chối khi đối tượng không còn
+class RenameEnt
+  attr_accessor :name
+  def initialize(name, locked = false, valid = true); @name = name; @locked = locked; @valid = valid; end
+  def locked?; @locked; end
+  def valid?; @valid; end
+end
+RBox = Struct.new(:min) { def empty?; false; end }
+RPoint = Struct.new(:x, :y, :z)
+VGD::BIM::Table.define_singleton_method(:bounding_box) { |record| record[:box] }
+ents = [RenameEnt.new('Cũ A'), RenameEnt.new('Cũ B', true), RenameEnt.new('Cũ C')]
+recs = ents.each_with_index.map { |e, i| {entity: e, path: [e], locked: false, box: RBox.new(RPoint.new(i * 10.0, 0.0, 0.0))} }
+rows = ents.each_with_index.map { |e, i| {index: i, name: e.name, definition: 'Họ', tag: 'Tủ', tag_group: 'Đồ rời'} }
+rd = D.allocate
+rd.instance_variable_set(:@model, $model)
+rd.instance_variable_set(:@table_rows, rows)
+rd.instance_variable_set(:@table_records, recs)
+rcalls = []
+rd.define_singleton_method(:emit) { |ev, payload| rcalls << [ev, payload] }
+rd.define_singleton_method(:table_build) { rcalls << [:build] }
+rd.define_singleton_method(:show_outline) { rcalls << [:outline] }
+rd.rename_preview({'template' => 'Tủ-{số}', 'pad' => 0})
+plan = rcalls.last[1]
+ok('xem trước: gửi kế hoạch về giao diện', rcalls.last[0] == 'rename_preview' && plan[:rows].map { |r| r[:new] } == ['Tủ-1', 'Cũ B', 'Tủ-2'])
+ok('xem trước: không sửa tên nào', ents.map(&:name) == ['Cũ A', 'Cũ B', 'Cũ C'] && $transactions.empty?)
+ok('xem trước: đối tượng khóa được báo', plan[:rows][1][:status] == 'locked' && plan[:counts][:locked] == 1)
+rcalls.clear
+rd.rename_apply({'template' => 'Tủ-{số}', 'pad' => 0})
+ok('áp dụng: đổi tên các đối tượng không khóa', ents.map(&:name) == ['Tủ-1', 'Cũ B', 'Tủ-2'])
+ok('áp dụng: chỉ một bước hoàn tác cho cả đợt', $transactions == ['VGD_BIM · Đổi tên hàng loạt'])
+ok('áp dụng: bảng đọc lại và báo kết quả', rcalls.any? { |c| c[0] == :build } && rcalls.any? { |c| c[0] == 'message' && c[1][:text].include?('2') })
+rcalls.clear
+$transactions.clear
+bad = ->(payload) { begin; rd.rename_apply(payload); nil; rescue StandardError => e; e.message; end }
+ok('áp dụng khi không có gì để đổi: báo lỗi, không mở bước hoàn tác', bad.call({'template' => '{tên}'}).to_s.match?(/[À-ỹ]/) && $transactions.empty?)
+ents[0].instance_variable_set(:@valid, false)
+ok('áp dụng khi đối tượng không còn: báo lỗi, không đổi gì', bad.call({'template' => 'Mới-{số}'}).to_s.include?('không còn') && $transactions.empty? && ents[2].name == 'Tủ-2')
+ok('áp dụng với dữ liệu sai: báo lỗi tiếng Việt', bad.call({'order' => 'lạ'}).to_s.include?('Thứ tự'))
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
