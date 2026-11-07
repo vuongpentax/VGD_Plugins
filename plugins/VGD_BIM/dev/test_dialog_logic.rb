@@ -47,15 +47,15 @@ d.define_singleton_method(:show_outline) { calls << [:outline] }
 d.define_singleton_method(:table_build) { calls << [:build] }
 d.define_singleton_method(:table_scan_selection!) { calls << [:scan] }
 d.define_singleton_method(:highlight_selection) { calls << [:hl] }
-d.instance_variable_set(:@table_pick, :e)
+d.instance_variable_set(:@table_picks, [:e])
 class FakeSel; attr_accessor :items; def initialize; @items = []; end; def to_a; @items; end; end
 class FakeModel; attr_reader :selection; def initialize; @selection = FakeSel.new; end; end
 $model = FakeModel.new
 d.instance_variable_set(:@model, $model)
 d.table_selection_changed
 ok('bấm vùng trống: không quét lại, không làm mới bảng', calls.none? { |c| c[0] == :build || c[0] == :scan })
-ok('bấm vùng trống: bỏ đánh dấu dòng', calls.include?([:emit, 'highlight'] ) || calls.any? { |c| c[0] == 'highlight' && c[1] == {index: nil} })
-ok('bấm vùng trống: xóa đánh dấu chọn', d.instance_variable_get(:@table_pick).nil?)
+ok('bấm vùng trống: bỏ đánh dấu dòng', calls.include?([:emit, 'highlight'] ) || calls.any? { |c| c[0] == 'highlight' && c[1] == {indexes: []} })
+ok('bấm vùng trống: xóa đánh dấu chọn', d.instance_variable_get(:@table_picks).nil?)
 
 # Chọn lại đối tượng sau đó: phải quét lại và làm mới bảng
 calls.clear
@@ -144,5 +144,96 @@ ok('áp dụng khi không có gì để đổi: báo lỗi, không mở bước 
 ents[0].instance_variable_set(:@valid, false)
 ok('áp dụng khi đối tượng không còn: báo lỗi, không đổi gì', bad.call({'template' => 'Mới-{số}'}).to_s.include?('không còn') && $transactions.empty? && ents[2].name == 'Tủ-2')
 ok('áp dụng với dữ liệu sai: báo lỗi tiếng Việt', bad.call({'order' => 'lạ'}).to_s.include?('Thứ tự'))
+
+# Chọn nhiều dòng trong bảng (Shift / Ctrl như Excel): SketchUp chọn theo, đổi tên chỉ áp cho các dòng đã chọn
+class PickSel
+  attr_reader :items
+  def initialize; @items = []; end
+  def clear; @items.clear; end
+  def add(*entities); @items.concat(entities.flatten); end
+  def to_a; @items.dup; end
+end
+class PickView; attr_reader :zoomed; def zoom(target); @zoomed = target; end; end
+class PickModel
+  attr_reader :selection, :active_view
+  attr_accessor :active_path
+  def initialize; @selection = PickSel.new; @active_view = PickView.new; @active_path = []; end
+end
+# Đối tượng chọn phải là Sketchup::Group để Data.supported? nhận
+class PickEnt < Sketchup::Group
+  attr_accessor :name
+  def initialize(name); @name = name; end
+  def valid?; true; end
+  def locked?; false; end
+end
+ORIGINAL_MODEL = $model
+pm = PickModel.new
+$model = pm
+parent = RenameEnt.new('Cha')
+other_parent = RenameEnt.new('Cha khác')
+pents = [PickEnt.new('P0'), PickEnt.new('P1'), PickEnt.new('P2'), PickEnt.new('P3')]
+precs = [
+  {entity: pents[0], path: [parent, pents[0]], locked: false, box: RBox.new(RPoint.new(0.0, 0.0, 0.0))},
+  {entity: pents[1], path: [parent, pents[1]], locked: false, box: RBox.new(RPoint.new(1.0, 0.0, 0.0))},
+  {entity: pents[2], path: [parent, pents[2]], locked: false, box: RBox.new(RPoint.new(2.0, 0.0, 0.0))},
+  {entity: pents[3], path: [other_parent, pents[3]], locked: false, box: RBox.new(RPoint.new(3.0, 0.0, 0.0))}
+]
+prows = pents.each_with_index.map { |e, i| {index: i, name: e.name, definition: 'Họ', tag: '', tag_group: ''} }
+pd = D.allocate
+pd.instance_variable_set(:@model, pm)
+pd.instance_variable_set(:@table_rows, prows)
+pd.instance_variable_set(:@table_records, precs)
+pd.instance_variable_set(:@table_options, {zoom: true, isolate: false, deep: false})
+pd.instance_variable_set(:@isolated, [])
+pcalls = []
+pd.define_singleton_method(:emit) { |ev, payload| pcalls << [ev, payload] }
+pd.define_singleton_method(:show_outline) { pcalls << [:outline] }
+pd.define_singleton_method(:table_build) { pcalls << [:build] }
+pd.define_singleton_method(:table_scan_selection!) { pcalls << [:scan] }
+pd.table_select({'indexes' => [0, 2], 'field' => 'instance'})
+ok('chọn nhiều dòng cùng cấp: SketchUp chọn đúng các đối tượng đó', pm.selection.to_a == [pents[0], pents[2]] && pm.active_path == [parent])
+ok('chọn nhiều dòng: nhớ các dòng đã chọn trong bảng', pd.instance_variable_get(:@picked_entities) == [pents[0], pents[2]])
+ok('chọn nhiều dòng: bỏ qua ô đã bấm (không có khung tên theo ô)', pd.instance_variable_get(:@outline_field).nil?)
+ok('chọn nhiều dòng: thu phóng tới các đối tượng đã chọn', pm.active_view.zoomed == [pents[0], pents[2]])
+pcalls.clear
+pd.table_selection_changed
+ok('SketchUp báo đã chọn đúng các đối tượng bảng vừa chọn: không quét lại, không đổi bảng, không đổi đánh dấu dòng',
+   pcalls.none? { |c| c[0] == :build || c[0] == :scan || c[0] == 'highlight' } && pcalls.any? { |c| c[0] == :outline })
+pd.table_select({'indexes' => [1, 3]})
+ok('chọn các dòng ở cấp lồng khác nhau: SketchUp chỉ chọn dòng cuối, bảng vẫn nhớ cả hai dòng', pm.selection.to_a == [pents[3]] && pd.instance_variable_get(:@picked_entities) == [pents[1], pents[3]])
+ok('chọn các dòng ở cấp lồng khác nhau: có báo cho người dùng', pcalls.any? { |c| c[0] == 'message' && c[1][:text].to_s.include?('cấp') })
+pm.selection.clear
+pm.selection.add(pents[1])
+pd.instance_variable_set(:@table_picks, [pents[3]])
+pcalls.clear
+pd.table_selection_changed
+ok('chọn đối tượng khác ngoài bảng trong SketchUp: quét lại và làm mới bảng', pcalls.any? { |c| c[0] == :scan } && pcalls.any? { |c| c[0] == :build })
+bad_select = ->(payload) { begin; pd.table_select(payload); nil; rescue StandardError => e; e.message; end }
+ok('chọn dòng không có trong bảng: báo bảng đã cũ', bad_select.call({'indexes' => [9]}).to_s.include?('cũ'))
+ok('không có dòng nào được gửi lên: báo lỗi tiếng Việt', bad_select.call({'indexes' => []}).to_s.match?(/[À-ỹ]/))
+ok('chỉ số không phải số: báo lỗi', bad_select.call({'indexes' => ['x']}).to_s.match?(/[À-ỹ]/))
+
+$model = ORIGINAL_MODEL
+
+# Đổi tên chỉ cho các dòng đã chọn trong bảng
+$transactions.clear
+rd.define_singleton_method(:table_build) { }
+rd.instance_variable_get(:@table_records).each_with_index { |r, i| r[:entity].name = "Cũ #{('A'.ord + i).chr}" }
+rd.instance_variable_set(:@table_rows, rd.instance_variable_get(:@table_records).each_with_index.map { |r, i| {index: i, name: r[:entity].name, definition: 'Họ', tag: 'Tủ', tag_group: 'Đồ rời'} })
+ents[1].instance_variable_set(:@locked, false)
+ents[0].instance_variable_set(:@valid, true)
+rcalls.clear
+rd.rename_preview({'template' => 'Chọn-{số}', 'pad' => 0, 'indexes' => [2, 0]})
+scoped = rcalls.last[1]
+ok('đổi tên theo dòng đã chọn: chỉ các dòng đó vào kế hoạch', scoped[:rows].map { |r| r[:index] } == [0, 2])
+ok('đổi tên theo dòng đã chọn: số thứ tự chỉ tính trong các dòng đã chọn', scoped[:rows].map { |r| r[:new] } == %w[Chọn-1 Chọn-2])
+rd.rename_apply({'template' => 'Chọn-{số}', 'pad' => 0, 'indexes' => [2, 0]})
+ok('đổi tên theo dòng đã chọn: dòng không chọn giữ nguyên tên', ents.map(&:name) == ['Chọn-1', 'Cũ B', 'Chọn-2'])
+rcalls.clear
+rd.rename_preview({'template' => 'Tất-{số}', 'pad' => 0})
+ok('không chọn dòng nào: áp cho mọi dòng trong bảng', rcalls.last[1][:rows].map { |r| r[:index] } == [0, 1, 2])
+bad_rename = ->(payload) { begin; rd.rename_preview(payload); nil; rescue StandardError => e; e.message; end }
+ok('đổi tên: chỉ số dòng không có trong bảng bị từ chối', bad_rename.call({'indexes' => [7]}).to_s.match?(/[À-ỹ]/))
+ok('đổi tên: chỉ số không phải số bị từ chối', bad_rename.call({'indexes' => ['a']}).to_s.match?(/[À-ỹ]/))
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

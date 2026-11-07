@@ -28,3 +28,9 @@ main{flex:1;min-height:0;overflow:auto;padding:14px 16px;scrollbar-gutter:stable
 .rename-table td{padding:3px 4px;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
 .rename-table tr.st-locked,.rename-table tr.st-same{color:var(--muted)}
 .rename-table tr.dup td:last-child{color:var(--accent-strong);font-weight:700}
+
+.grid tbody tr{user-select:none}
+.grid tbody tr input,.grid tbody tr select{user-select:text}
+.sel-count{color:var(--muted);font-size:11px;margin-left:4px}
+.rename-scope{margin:0 0 8px;font-size:11px;color:var(--muted)}
+.grid-wrap:focus{outline:none}

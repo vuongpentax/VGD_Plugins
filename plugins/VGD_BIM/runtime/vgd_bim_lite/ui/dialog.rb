@@ -24,7 +24,8 @@ module VGD
           @table_rows = []
           @table_records = []
           @table_scope = []
-          @table_pick = nil
+          @table_picks = nil      # đối tượng bảng đã chọn và SketchUp đang chọn theo
+          @picked_entities = []   # mọi đối tượng đã chọn trong bảng (có thể nhiều hơn SketchUp chọn khi khác cấp lồng)
           @table_options = {zoom: true, isolate: false, deep: false}
           @isolated = []
           @preview = nil
@@ -237,7 +238,8 @@ module VGD
         def table_scan_selection!
           @model = Sketchup.active_model
           @table_scope = @model.selection.to_a.select { |e| Data.supported?(e) && e.valid? }
-          @table_pick = nil
+          @table_picks = nil
+          @picked_entities = []
         end
         def table_selection_changed
           @model = Sketchup.active_model
@@ -245,16 +247,17 @@ module VGD
           if current.empty?
             # Bấm vùng trống trong SketchUp: giữ nguyên bảng, chỉ bỏ đánh dấu.
             # Nếu vừa xóa đối tượng thì đọc lại để bỏ các dòng đã xóa.
-            @table_pick = nil
+            @table_picks = nil
+            @picked_entities = []
             @outline_field = nil
             if Array(@table_records).any? { |r| !r[:path].all?(&:valid?) }
               table_build
             else
-              emit('highlight', {index: nil})
+              emit('highlight', {indexes: []})
             end
-          elsif @table_pick && current.size == 1 && current.first == @table_pick
-            # Chọn dòng hoặc ô trong bảng: chỉ đánh dấu, không quét lại.
-            highlight_selection
+          elsif same_entities?(current, @table_picks)
+            # Chọn dòng hoặc ô trong bảng (SketchUp chọn theo): bảng đã đánh dấu dòng rồi, chỉ cần vẽ lại khung.
+            nil
           else
             # Chọn đối tượng mới trong SketchUp: quét lại và làm mới bảng.
             @outline_field = nil
@@ -272,28 +275,48 @@ module VGD
           hint = scope.empty? ? 'Chưa chọn đối tượng nào. Chọn group hoặc component trong SketchUp, bảng sẽ tự đọc.' : nil
           emit('table', {columns: Table::COLUMNS, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
                          statuses: Table::STATUS_LABELS, options: @table_options.merge(isolating: !@isolated.empty?),
-                         rows: @table_rows, selected: selected_index, hint: hint, view: Table.view_state})
+                         rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state})
         end
-        # payload: {'index' => dòng, 'field' => tên cột đã bấm (hoặc rỗng nếu bấm cả dòng)}
+        # payload: {'indexes' => [các dòng đã chọn trong bảng], 'field' => tên cột đã bấm (chỉ dùng khi chọn đúng một dòng)}
+        # Chọn nhiều dòng kiểu Excel (Shift / Ctrl) ở giao diện; SketchUp chọn theo các đối tượng đó để các tab khác dùng luôn.
+        # SketchUp chỉ chọn được các đối tượng cùng một cấp lồng; khác cấp thì chỉ chọn dòng cuối (đổi tên vẫn áp cho mọi dòng đã chọn).
         def table_select(payload)
           check_model!
-          index = payload.fetch('index').to_i
-          record = @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }
-          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless record[:path].all?(&:valid?)
-          changed = @table_pick != record[:entity]
-          @table_pick = record[:entity]
+          records = table_indexes(payload).map { |index| @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' } }
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |record| record[:path].all?(&:valid?) }
+          entities = records.map { |record| record[:entity] }
+          changed = @picked_entities != entities
+          @picked_entities = entities
           field = payload['field'].to_s
-          @outline_field = field.empty? ? nil : field
-          parents = record[:path][0...-1]
+          @outline_field = field.empty? || records.size > 1 ? nil : field
+          mirrored = same_parents?(records) ? records : [records.last]
+          @table_picks = mirrored.map { |record| record[:entity] }
+          parents = mirrored.first[:path][0...-1]
           @model.active_path = parents unless (@model.active_path || []) == parents
           @model.selection.clear
-          @model.selection.add(record[:entity])
+          @model.selection.add(*@table_picks)
           if changed
-            # Chỉ cô lập / zoom khi chuyển sang đối tượng khác, không làm lại khi bấm ô khác của cùng dòng.
-            apply_isolation(record) if @table_options[:isolate]
-            @model.active_view.zoom([record[:entity]]) if @table_options[:zoom] && record[:entity].valid?
+            # Chỉ cô lập / zoom khi chọn đối tượng khác, không làm lại khi bấm ô khác của cùng dòng.
+            # Cô lập chỉ có khi chọn đúng một dòng.
+            if records.size == 1 then apply_isolation(records.first) if @table_options[:isolate] else restore_isolation end
+            @model.active_view.zoom(@table_picks) if @table_options[:zoom]
           end
+          emit('message', {text: 'Các dòng nằm ở cấp lồng khác nhau nên SketchUp chỉ chọn dòng cuối. Đổi tên vẫn áp dụng cho mọi dòng đã chọn trong bảng.'}) if mirrored.size < records.size
           show_outline
+        end
+        def table_indexes(payload)
+          list = payload['indexes']
+          raise 'Hãy chọn ít nhất một dòng trong bảng.' unless list.is_a?(Array) && !list.empty?
+          list.map { |value| Integer(value.to_s, 10) }.uniq
+        rescue ArgumentError
+          raise 'Chỉ số dòng không hợp lệ.'
+        end
+        def same_parents?(records)
+          parents = records.first[:path][0...-1]
+          records.all? { |record| record[:path][0...-1] == parents }
+        end
+        def same_entities?(current, picks)
+          !picks.nil? && current.size == picks.size && (current - picks).empty?
         end
         def apply_isolation(record)
           restore_isolation
@@ -331,8 +354,8 @@ module VGD
           if payload.key?('isolate')
             if payload['isolate']
               @table_options[:isolate] = true
-              index = selected_index
-              apply_isolation(@table_records[index]) if index
+              chosen = selected_indexes
+              apply_isolation(@table_records[chosen.first]) if chosen.size == 1
             else
               @table_options[:isolate] = false
               restore_isolation
@@ -371,7 +394,13 @@ module VGD
           options = Rename.normalize(payload)
           raise 'Bảng chưa có dòng nào. Hãy chọn group hoặc component trong SketchUp.' if @table_records.empty?
           raise 'Có đối tượng không còn tồn tại. Hãy làm mới bảng.' unless @table_records.all? { |record| record[:path].all?(&:valid?) }
-          Rename.plan(rename_items, options)
+          items = rename_items
+          unless Array(payload['indexes']).empty?
+            scope = table_indexes(payload)
+            raise 'Bảng đã cũ. Hãy làm mới bảng.' unless scope.all? { |index| items.any? { |item| item[:index] == index } }
+            items = items.select { |item| scope.include?(item[:index]) }
+          end
+          Rename.plan(items, options)
         end
         def rename_preview(payload)
           emit('rename_preview', rename_plan(payload))
@@ -394,17 +423,20 @@ module VGD
           check_model!
           release_preview
           @model.selection.clear
-          emit('highlight', {index: nil})
+          @table_picks = nil
+          @picked_entities = []
+          emit('highlight', {indexes: []})
         end
-        def highlight_selection
-          return unless @model && @model == Sketchup.active_model
-          emit('highlight', {index: selected_index})
-        end
-        def selected_index
-          return nil unless @model
+        # Các dòng đang được đánh dấu: dòng đã chọn trong bảng (khi SketchUp còn chọn theo), hoặc các dòng ứng với đối tượng
+        # SketchUp đang chọn. Chọn hết mọi dòng từ SketchUp thì không đánh dấu dòng nào (cả bảng đều là vùng chọn).
+        def selected_indexes
+          return [] unless @model
           selected = @model.selection.to_a
-          return nil unless selected.size == 1
-          @table_records.index { |record| record[:entity] == selected.first }
+          if same_entities?(selected, @table_picks)
+            return @table_records.each_index.select { |i| @picked_entities.include?(@table_records[i][:entity]) }
+          end
+          indexes = selected.map { |entity| @table_records.index { |record| record[:entity] == entity } }.compact
+          indexes.size == @table_records.size && indexes.size > 1 ? [] : indexes
         end
         # Vẽ khung nét đứt + khung tên cho các đối tượng đang được chọn (trong SketchUp hoặc trong bảng).
         # Khung tên chỉ hiện khi chọn đúng một đối tượng.

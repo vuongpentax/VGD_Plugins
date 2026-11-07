@@ -146,7 +146,7 @@ function preview(data) {
   const dl=node('dl',undefined,'preview-values');Object.entries(data.data).forEach(([key,value])=>dl.append(node('dt',label(key)),node('dd',displayValue(key,value))));p.append(dl,node('p','Giữ nguyên hình học, tên, thẻ và vật liệu.'));$('confirm-preview').disabled=false;$('preview').showModal();
 }
 // ---- Bảng đối tượng kiểu Auto Info ----
-const tableState={restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',selected:null,panel:null,colSearch:'',dragKey:null};
+const tableState={restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',sel:new Set(),anchor:null,displayed:[],panel:null,colSearch:'',dragKey:null};
 const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','volume','quantity']);
 const DIGITS={areaXZ:2,areaXY:2,areaFace:2,volume:3,quantity:0};
 const UNIT_TEXT={lenX:'mm',lenY:'mm',lenZ:'mm',areaXZ:'m²',areaXY:'m²',areaFace:'m²',volume:'m³',quantity:'cái'};
@@ -203,31 +203,55 @@ function filteredRows(){
   const q=tableState.search.trim().toLocaleLowerCase('vi');
   return tableState.data.rows.filter(r=>(!tableState.group||r.tag_group===tableState.group)&&(!q||[r.name,r.definition,r.description,r.tag,r.material].some(v=>String(v||'').toLocaleLowerCase('vi').includes(q))));
 }
-function selectRow(index,field){
-  tableState.selected=index;
-  document.querySelectorAll('.grid tr.selected').forEach(tr=>tr.classList.remove('selected'));
-  const tr=document.querySelector(`.grid tr[data-index="${index}"]`);
-  if(tr)tr.classList.add('selected');
-  call('table_select',JSON.stringify({index,field:field||''}));
+// Chọn dòng kiểu Excel: bấm = một dòng; Ctrl (hoặc Cmd) = thêm / bớt một dòng; Shift = cả dãy từ dòng gốc; Ctrl+Shift = thêm cả dãy;
+// Ctrl+A = chọn hết các dòng đang hiện; Esc = bỏ chọn. SketchUp chọn theo các đối tượng đó (xem table_select trong dialog.rb).
+function paintSelection(){
+  document.querySelectorAll('.grid tbody tr').forEach(tr=>tr.classList.toggle('selected',tableState.sel.has(Number(tr.dataset.index))));
+  const count=document.querySelector('.sel-count');
+  if(count&&tableState.data)count.textContent=tableState.sel.size?`Đã chọn ${tableState.sel.size} / ${tableState.data.rows.length} dòng`:'';
+  tableState.rename.preview=null; // phạm vi đổi tên đã đổi nên bản xem trước cũ không còn đúng
+  if(tableState.panel==='rename'&&tableState.data)tableView(tableState.data);
 }
-function highlightRow(index){
-  tableState.selected=index;
-  document.querySelectorAll('.grid tr.selected').forEach(tr=>tr.classList.remove('selected'));
-  if(index==null)return;
-  const tr=document.querySelector(`.grid tr[data-index="${index}"]`);
-  if(tr){tr.classList.add('selected');tr.scrollIntoView({block:'nearest'});}
+function pickRows(indexes,field){
+  tableState.sel=new Set(indexes);paintSelection();
+  if(!tableState.sel.size){call('table_clear');return;}
+  call('table_select',JSON.stringify({indexes:[...tableState.sel],field:tableState.sel.size===1?(field||''):''}));
+}
+function clickRow(index,field,e){
+  const additive=e.ctrlKey||e.metaKey,order=tableState.displayed;
+  if(e.shiftKey&&tableState.anchor!==null&&order.includes(tableState.anchor)&&order.includes(index)){
+    const from=order.indexOf(tableState.anchor),to=order.indexOf(index);
+    const span=order.slice(Math.min(from,to),Math.max(from,to)+1);
+    pickRows(additive?[...new Set([...tableState.sel,...span])]:span,'');
+    return;
+  }
+  tableState.anchor=index;
+  if(additive){const next=new Set(tableState.sel);if(next.has(index))next.delete(index);else next.add(index);pickRows([...next],'');return;}
+  pickRows([index],field);
+}
+// Bấm vào ô sửa của một dòng đã nằm trong vùng chọn nhiều dòng thì giữ nguyên vùng chọn.
+function focusRow(index,field){
+  if(tableState.sel.size>1&&tableState.sel.has(index))return;
+  tableState.anchor=index;pickRows([index],field);
+}
+function highlightRows(indexes){
+  tableState.sel=new Set(indexes||[]);paintSelection();
+  const first=[...tableState.sel][0];
+  if(first===undefined)return;
+  const tr=document.querySelector(`.grid tr[data-index="${first}"]`);
+  if(tr)tr.scrollIntoView({block:'nearest'});
 }
 function cellEditor(row,col){
   if(col.editable==='status'){
     const select=node('select','cell');select.setAttribute('aria-label','Tình trạng');
     Object.entries(tableState.data.statuses||{}).forEach(([code,label])=>select.append(new Option(label,code)));
     select.value=row.status;
-    select.onfocus=()=>selectRow(row.index,col.key);
+    select.onfocus=()=>focusRow(row.index,col.key);
     select.onchange=()=>call('table_edit',JSON.stringify({index:row.index,field:'status',value:select.value}));
     return select;
   }
   const input=node('input','cell');input.type='text';input.value=row[col.editable]||'';input.setAttribute('aria-label',col.label);
-  input.onfocus=()=>selectRow(row.index,col.key);
+  input.onfocus=()=>focusRow(row.index,col.key);
   input.onchange=()=>call('table_edit',JSON.stringify({index:row.index,field:col.editable,value:input.value}));
   return input;
 }
@@ -249,8 +273,15 @@ function renderGrid(host){
   const rows=filteredRows();
   const shown=new Set(rows.map(r=>r.index));
   const ordered=tableState.sort?[...rows].sort((a,b)=>{const va=sortValue(a,tableState.sort.key),vb=sortValue(b,tableState.sort.key);if(va<vb)return -tableState.sort.dir;if(va>vb)return tableState.sort.dir;return a.index-b.index;}):rows;
+  tableState.displayed=ordered.map(row=>row.index); // thứ tự dòng đang hiện, dùng cho chọn dãy bằng Shift
   host.replaceChildren();
   const wrap=node('div',undefined,'grid-wrap');
+  wrap.tabIndex=0;
+  wrap.onkeydown=e=>{
+    if(e.target.closest('input,select,textarea'))return;
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();pickRows(tableState.displayed.slice(),'');}
+    else if(e.key==='Escape'&&tableState.sel.size){pickRows([],'');}
+  };
   const t=node('table',undefined,'grid'+(tableState.density?' '+tableState.density:''));
   t.style.width=cols.reduce((sum,col)=>sum+widthOf(col.key),0)+'px';
   const colgroup=node('colgroup');cols.forEach(col=>{const cg=node('col');cg.style.width=widthOf(col.key)+'px';colgroup.append(cg);});t.append(colgroup);
@@ -273,8 +304,14 @@ function renderGrid(host){
   const tbody=node('tbody');
   ordered.forEach((row,pos)=>{
     const tr=node('tr');tr.dataset.index=String(row.index);
-    if(row.index===tableState.selected)tr.classList.add('selected');
-    tr.onclick=e=>{if(e.target.closest('input,select,button'))return;const td=e.target.closest('td');selectRow(row.index,td?td.dataset.key:'');};
+    if(tableState.sel.has(row.index))tr.classList.add('selected');
+    tr.onclick=e=>{
+      const inEditor=e.target.closest('input,select,button');
+      if(inEditor&&!(e.ctrlKey||e.metaKey||e.shiftKey))return;
+      const td=e.target.closest('td');clickRow(row.index,td?td.dataset.key:'',e);
+    };
+    // Ctrl / Shift + bấm vào ô sửa là để chọn dòng, không vào chế độ sửa chữ.
+    tr.addEventListener('mousedown',e=>{if((e.ctrlKey||e.metaKey||e.shiftKey)&&e.target.closest('input,select'))e.preventDefault();});
     cols.forEach(col=>{
       const td=node('td');td.dataset.key=col.key;
       if(col.key==='ordinal')td.textContent=String(pos+1);
@@ -308,7 +345,7 @@ function renderGrid(host){
 const RENAME_TOKENS=['{tên}','{họ}','{phân loại}','{nhóm}','{số}'];
 const RENAME_STATUS={ok:'Sẽ đổi',same:'Giữ nguyên',locked:'Bị khóa',empty:'Tên trống',long:'Quá dài'};
 tableState.rename={template:'{tên}',find:'',replace:'',prefix:'',suffix:'',case:'none',start:1,pad:2,step:1,order:'table',preview:null};
-function renameOptions(){const r=tableState.rename;return {template:r.template,find:r.find,replace:r.replace,prefix:r.prefix,suffix:r.suffix,case:r.case,start:r.start,pad:r.pad,step:r.step,order:r.order};}
+function renameOptions(){const r=tableState.rename;return {template:r.template,find:r.find,replace:r.replace,prefix:r.prefix,suffix:r.suffix,case:r.case,start:r.start,pad:r.pad,step:r.step,order:r.order,indexes:[...tableState.sel]};}
 function renamePreview(box){
   const pv=tableState.rename.preview;if(!pv)return;
   const c=pv.counts;
@@ -326,7 +363,8 @@ function renamePanel(){
   const r=tableState.rename;
   const p=node('div',undefined,'popover right rename');
   p.append(node('div','Đổi tên hàng loạt','pop-title'));
-  p.append(node('p','Áp dụng cho mọi dòng trong bảng. Chỉ đổi tên đối tượng, không đổi tên định nghĩa, hình học hay dữ liệu hạng mục. Cả đợt là một bước hoàn tác.','muted'));
+  const total=tableState.data.rows.length,chosen=tableState.sel.size;
+  p.append(node('p',(chosen?`Áp dụng cho ${chosen} dòng đang chọn trong bảng`:`Áp dụng cho mọi ${total} dòng trong bảng (chưa chọn dòng nào)`)+'. Chỉ đổi tên đối tượng, không đổi tên định nghĩa, hình học hay dữ liệu hạng mục. Cả đợt là một bước hoàn tác.','rename-scope'));
   const box=node('div');
   const apply=button('Áp dụng',()=>{call('rename_apply',JSON.stringify(renameOptions()));r.preview=null;tableState.panel=null;},'primary');
   apply.disabled=!(r.preview&&r.preview.counts.ok>0);
@@ -373,7 +411,8 @@ function toolbar(){
   preset.classList.add('preset-btn');preset.setAttribute('aria-expanded',String(tableState.panel==='presets'));
   const rename=button('Đổi tên',()=>{tableState.panel=tableState.panel==='rename'?null:'rename';tableView(tableState.data);});
   rename.setAttribute('aria-expanded',String(tableState.panel==='rename'));
-  bar.append(cols,search,group,preset,rename);
+  const count=node('span',tableState.sel.size?`Đã chọn ${tableState.sel.size} / ${d.rows.length} dòng`:'','sel-count');
+  bar.append(cols,search,group,preset,rename,count);
   return bar;
 }
 function columnPanel(){
@@ -453,7 +492,7 @@ function tableView(data){
   content.replaceChildren();
   const view=node('div',undefined,'table-view');content.append(view);
   if(data.hint)view.append(node('p',data.hint,'hint'));
-  else view.append(node('p','Chọn đối tượng trong SketchUp là bảng tự đọc. Bấm một ô để đánh dấu đối tượng và hiện nội dung ô đó. Sửa Tên, Mô tả, Tình trạng ngay trong bảng.','hint'));
+  else view.append(node('p','Chọn đối tượng trong SketchUp là bảng tự đọc. Bấm một ô để đánh dấu đối tượng và hiện nội dung ô đó; giữ Shift hoặc Ctrl để chọn nhiều dòng, Ctrl+A chọn hết. Sửa Tên, Mô tả, Tình trạng ngay trong bảng.','hint'));
   const bar=node('div',undefined,'toolbar-wrap');
   bar.append(toolbar());
   if(tableState.panel==='columns')bar.append(columnPanel());
@@ -472,9 +511,9 @@ function tableView(data){
 const TAB_OF={rules:'mapping',validate_model:'mapping',validate_selection:'mapping',export:'scan',convert_selection:'information'};
 window.VGD={receive(event,data){
   if(event==='config'){config=data;locale=data.locale||locale;$('subtitle').textContent=`${data.version} · ${translated('modes',data.mode)}`;document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===(TAB_OF[data.mode]||data.mode);b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});$('preview').close();$('content').replaceChildren();$('primary-actions').replaceChildren();document.querySelector('main').scrollTop=0;message('Đang đọc dữ liệu…');}
-  if(event==='table')tableState.rename.preview=null; // bảng đổi thì bản xem trước đổi tên cũ không còn đúng
+  if(event==='table'){tableState.rename.preview=null;tableState.sel=new Set(Array.isArray(data.selected)?data.selected:[]);if(!tableState.sel.has(tableState.anchor))tableState.anchor=null;} // bảng đổi thì bản xem trước đổi tên cũ không còn đúng
   const renderers={information,scan,mapping,validation,rules,tags:tagEditor,table:tableView};if(renderers[event]){renderers[event](data);message('Sẵn sàng.');}
-  if(event==='highlight')highlightRow(data.index);
+  if(event==='highlight')highlightRows(data.indexes);
   if(event==='options'&&tableState.data){tableState.data.options=data;tableView(tableState.data);}
   if(event==='presets'&&tableState.data){tableState.data.presets=data;tableView(tableState.data);}
   if(event==='rename_preview'){tableState.rename.preview=data;if(tableState.panel==='rename'&&tableState.data)tableView(tableState.data);}
