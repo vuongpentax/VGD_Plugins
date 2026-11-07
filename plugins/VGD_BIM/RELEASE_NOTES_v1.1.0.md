@@ -2,6 +2,7 @@
 
 - **Bảng khối lượng** (mở đầu tiên): bảng tự đọc đối tượng đang chọn, 20 cột, chọn cột, kéo đổi thứ tự, co giãn cột, dòng tổng cộng, preset cột (Tất cả / Phần thô / Hoàn thiện / Đồ rời và preset tự tạo), sửa trực tiếp Tên, Mô tả, Tình trạng. Tuỳ chọn thu phóng, cô lập, chọn sâu và tổng cấp cao nhất.
 - **Khung đánh dấu trong SketchUp:** chọn đối tượng thì hiện khung nét đứt theo khung bao, tô mặt và khung tên; tự tắt khi đối tượng bị xóa. Từ SketchUp 2023 khung vẽ bằng lớp phủ (Overlay) nên cách chọn đối tượng giữ nguyên như mặc định (Shift/Ctrl, kéo chọn, nhấp đúp vào group); SketchUp 2022 dùng công cụ vẽ tạm với vài hạn chế khi chọn.
+- Sửa khung đánh dấu bị lệch khỏi đối tượng khi đang mở sửa một group hoặc component.
 - **Tình trạng** (Mới, Hiện hữu, Dùng lại, Tạm thời, Loại bỏ) là trường mới của dữ liệu hạng mục.
 - **Soạn tag:** tab mới để soạn bộ tag theo nhóm hạng mục, gán tag cho đối tượng đang chọn, xuất / nhập CSV và JSON.
 - **Điều hướng gọn còn 5 tab** trong cùng một cửa sổ (trước đây 6 mục): Bảng khối lượng · Thông tin · Quét & xuất · Phân loại (gồm Quy tắc, Kiểm tra) · Soạn tag. Mục "Quản lý Quy tắc", "Kiểm tra" nay nằm trong tab Phân loại; "Xuất báo cáo" nằm trong tab Quét & xuất.

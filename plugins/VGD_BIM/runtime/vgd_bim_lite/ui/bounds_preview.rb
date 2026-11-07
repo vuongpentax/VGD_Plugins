@@ -11,6 +11,7 @@ module VGD
         LABEL_HEIGHT = 24
         CHAR_WIDTH = 7.5
         PADDING = 10
+        IDENTITY_MATRIX = [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0].freeze
 
         def alive?
           @alive.nil? || @alive.call ? true : false
@@ -18,11 +19,28 @@ module VGD
           false
         end
 
+        # Đang mở sửa một group / component thì SketchUp hiểu điểm vẽ (và điểm đổi sang tọa độ màn hình) theo tọa độ cục bộ
+        # của ngữ cảnh đang mở, nên điểm thế giới phải đổi bằng edit_transform.inverse, nếu không khung bị lệch đúng bằng
+        # vị trí của ngữ cảnh. Kết quả được nhớ lại cho tới khi ngữ cảnh đổi. Trả về [đường viền, tô mặt, điểm khung tên].
+        def drawing_shapes(view)
+          context = view.model.edit_transform
+          return [@points, @fills, @label_point] if context.to_a == IDENTITY_MATRIX
+          key = context.to_a
+          unless @shape_key == key
+            inverse = context.inverse
+            @shape_cache = [@points.map { |point| point.transform(inverse) },
+                            @fills.map { |point| point.transform(inverse) },
+                            @label_point && @label_point.transform(inverse)]
+            @shape_key = key
+          end
+          @shape_cache
+        end
+
         # Tô nhẹ các mặt của đối tượng (danh sách tam giác theo tọa độ thế giới).
         def draw_fills(view)
           return if @fills.empty?
           view.drawing_color = Sketchup::Color.new(*FILL_COLOR)
-          view.draw(GL_TRIANGLES, @fills)
+          view.draw(GL_TRIANGLES, drawing_shapes(view)[1])
         end
 
         def draw_outline(view)
@@ -30,7 +48,7 @@ module VGD
           view.line_stipple = '-'
           view.line_width = 2
           view.drawing_color = Sketchup::Color.new(*LINE_COLOR)
-          view.draw_lines(@points)
+          view.draw_lines(drawing_shapes(view)[0])
           view.line_stipple = ''
         end
 
@@ -38,7 +56,7 @@ module VGD
         # draw_text nhận tọa độ màn hình, nên đổi điểm 3D sang tọa độ màn hình trước khi viết chữ.
         def draw_label(view)
           return if @label.nil? || @label.empty? || @label_point.nil?
-          screen = view.screen_coords(@label_point)
+          screen = view.screen_coords(drawing_shapes(view)[2])
           half_width = (@label.length * CHAR_WIDTH + PADDING * 2) / 2.0
           half_height = LABEL_HEIGHT / 2.0
           corners = [
@@ -93,6 +111,7 @@ module VGD
           @on_done = on_done
           @finished = false
           @stale = false
+          @shape_key = nil
         end
 
         # Vẽ lại ngay khi bật / tắt khung, không đợi người dùng xoay màn hình.
@@ -205,6 +224,7 @@ module VGD
             @fills = fills
             @alive = alive
             @on_stale = on_stale
+            @shape_key = nil
             @visible = true
           end
 

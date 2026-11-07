@@ -25,12 +25,14 @@ class Helper
   def count; @paths.size; end
   def path_at(i); @paths[i]; end
 end
+class RootTransform; def to_a; [1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0]; end; end
 class Tools; attr_reader :popped; def initialize; @popped = 0; end; def pop_tool; @popped += 1; end; end
 class Model
   attr_accessor :active_path
   def initialize; @selection = Sel.new; @active_path = []; @tools = Tools.new; end
   def selection; @selection; end
   def tools; @tools; end
+  def edit_transform; RootTransform.new; end
 end
 class View
   attr_reader :lines, :texts, :model, :triangles, :quads, :colors

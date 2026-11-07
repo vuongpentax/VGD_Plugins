@@ -19,16 +19,35 @@ end
 module VGD; module BIM; def self.log(m); puts "LOG #{m}"; end; end; end
 require ROOT_UI
 
+class FakeTransform
+  attr_reader :array, :inverted
+  def initialize(array, inverted = false); @array = array; @inverted = inverted; end
+  def to_a; @array; end
+  def inverse; FakeTransform.new(@array, !@inverted); end
+end
+class FakePoint
+  attr_reader :tag
+  def initialize(tag); @tag = tag; end
+  def transform(transformation); FakePoint.new(transformation.inverted ? "#{@tag}→cục bộ" : "#{@tag}→thế giới"); end
+end
+IDENTITY = [1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0].freeze
+MOVED = [1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0, 0, 5000.0, 0, 0, 1.0].freeze
+
+class FakeEditModel
+  attr_accessor :edit_transform
+  def initialize(transform); @edit_transform = transform; end
+end
 class View
-  attr_reader :lines, :texts, :triangles, :quads
-  def initialize; @lines = []; @texts = []; @triangles = []; @quads = []; end
+  attr_reader :lines, :texts, :triangles, :quads, :screen_points
+  attr_accessor :model
+  def initialize(model = nil); @model = model || FakeEditModel.new(FakeTransform.new(IDENTITY)); @lines = []; @texts = []; @triangles = []; @quads = []; @screen_points = []; end
   def line_stipple=(v); end
   def line_width=(v); end
   def drawing_color=(v); end
   def draw_lines(pts); @lines << pts; end
   def draw(mode, pts); @triangles << pts if mode == GL_TRIANGLES; end
   def draw2d(mode, pts); @quads << pts if mode == GL_QUADS; end
-  def screen_coords(pt); Geom::Point3d.new(100, 50, 0); end
+  def screen_coords(pt); @screen_points << pt; Geom::Point3d.new(100, 50, 0); end
   def draw_text(pt, text, opts); @texts << text; end
 end
 
@@ -61,5 +80,23 @@ ok('đã báo rồi thì không báo lặp', stale == 1)
 
 # Không có phương thức của công cụ: lớp phủ không nhận chuột, nên không chặn chọn đối tượng của SketchUp
 ok('lớp phủ không có xử lý chuột', %i[onLButtonDown onLButtonUp onMouseMove onCancel].none? { |m| overlay.respond_to?(m) })
+
+# Đang mở sửa group / component: SketchUp hiểu điểm vẽ theo tọa độ cục bộ của ngữ cảnh đang mở (tính từ ảnh chụp lỗi
+# khi dùng tọa độ thế giới: khung lệch đúng bằng vị trí của ngữ cảnh). Điểm thế giới phải đổi bằng edit_transform.inverse.
+ctx = VGD::BIM::UI::BoundsOverlay.new
+ctx.show_shapes([FakePoint.new('a'), FakePoint.new('b')], label: 'Door_01', label_point: FakePoint.new('c'), fills: [FakePoint.new('f1'), FakePoint.new('f2'), FakePoint.new('f3')])
+root_view = View.new(FakeEditModel.new(FakeTransform.new(IDENTITY)))
+ctx.draw(root_view)
+ok('không mở ngữ cảnh nào (ma trận đơn vị): giữ nguyên điểm thế giới', root_view.lines[0].map(&:tag) == %w[a b] && root_view.screen_points.map(&:tag) == %w[c])
+
+edit_view = View.new(FakeEditModel.new(FakeTransform.new(MOVED)))
+ctx.draw(edit_view)
+ok('đang mở sửa group / component: đường viền đổi sang tọa độ cục bộ', edit_view.lines[0].map(&:tag) == ['a→cục bộ', 'b→cục bộ'])
+ok('đang mở sửa group / component: tô mặt đổi sang tọa độ cục bộ', edit_view.triangles[0].map(&:tag) == ['f1→cục bộ', 'f2→cục bộ', 'f3→cục bộ'])
+ok('đang mở sửa group / component: điểm đặt khung tên đổi sang tọa độ cục bộ', edit_view.screen_points.map(&:tag) == ['c→cục bộ'])
+
+# Đổi sang ngữ cảnh khác (hoặc thoát ra gốc) thì tính lại từ điểm thế giới gốc, không dồn lỗi
+ctx.draw(root_view)
+ok('thoát ra gốc: quay lại điểm thế giới', root_view.lines.last.map(&:tag) == %w[a b])
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
