@@ -479,16 +479,33 @@ module VGD
           emit('presets', Table.presets)
           emit('message', {text: "Đã nhập #{imported.size} preset."})
         end
-        # Xuất bảng đang hiện ra CSV (mở bằng Excel). payload: {'headers' => [chữ], 'rows' => [[chữ]]}.
+        # Xuất bảng đang hiện, đúng như trên màn hình: payload['format'] là 'xlsx' (file Excel có ảnh) hoặc 'pdf' (trang báo cáo mở bằng
+        # trình duyệt để In > Lưu PDF). Cấu trúc payload xem TableReport.
         def table_export(payload)
-          headers = payload['headers']
-          rows = payload['rows']
-          raise 'Bảng chưa có dòng nào. Hãy chọn group hoặc component trong SketchUp.' unless rows.is_a?(Array) && !rows.empty?
-          path = ::UI.savepanel('Xuất bảng khối lượng để mở trong Excel', '', 'VGD_Bang_khoi_luong.csv')
+          raise 'Dữ liệu bảng không hợp lệ.' unless payload.is_a?(Hash)
+          format = payload['format']
+          raise 'Định dạng xuất không hợp lệ.' unless %w[xlsx pdf].include?(format)
+          report = TableReport.build(payload, model_name, ->(pid) { table_image(pid) })
+          count = report[:rows].count { |row| row[:kind] == 'row' }
+          if format == 'pdf'
+            ::UI.openURL(TableReport.file_url(TableReport.write_html(report)))
+            return emit('message', {text: "Đã tạo trang báo cáo #{count} dòng và mở trong trình duyệt. Bấm In rồi chọn Lưu thành PDF."})
+          end
+          path = ::UI.savepanel('Xuất bảng khối lượng ra Excel', '', 'VGD_Bang_khoi_luong.xlsx')
           return unless path
-          path += '.csv' unless File.extname(path).downcase == '.csv'
-          count = ReportExporter.write_table(path, headers, rows)
-          emit('message', {text: "Đã xuất #{count} dòng. Mở bằng Excel: #{path}"})
+          path += '.xlsx' unless File.extname(path).downcase == '.xlsx'
+          Xlsx.write(path, report)
+          emit('message', {text: "Đã xuất #{count} dòng#{report[:images].empty? ? '' : " và #{report[:images].size} ảnh"} ra Excel: #{path}"})
+        end
+        def model_name
+          title = @model.title.to_s.strip
+          title.empty? ? 'Chưa đặt tên' : title
+        end
+        # Ảnh nhỏ của một đối tượng trong bảng (nil nếu mã không thuộc bảng hoặc chưa có ảnh).
+        def table_image(pid)
+          return nil unless known_pid?(pid)
+          file = Images.path(@model, pid, :thumb)
+          File.file?(file) ? File.binread(file) : nil
         end
         def preset_export
           data = Table.export_presets

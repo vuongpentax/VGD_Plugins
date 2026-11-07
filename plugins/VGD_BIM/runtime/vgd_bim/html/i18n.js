@@ -180,7 +180,7 @@ const VGD_I18N=(()=>{
     'nền trong suốt không dùng được trên máy này nên ảnh dùng cách thay thế':'transparent background is not available on this computer, so the image uses a normal background','khử răng cưa không dùng được trên máy này nên ảnh dùng cách thay thế':'anti-aliasing is not available on this computer, so the image uses a fallback','nền trong suốt và khử răng cưa không dùng được trên máy này nên ảnh dùng cách thay thế':'transparent background and anti-aliasing are not available on this computer, so the image uses a fallback',
     'Chụp':'Shoot','Chụp ảnh':'Take photo','Chụp lại':'Retake','Xóa ảnh':'Delete photo','Chọn ảnh…':'Choose image…','Mở thư mục ảnh':'Open image folder','Mở link':'Open link','Dừng':'Stop','Cập nhật ảnh':'Update photos',
     'Chỉ chụp đối tượng chưa có ảnh':'Only objects without a photo','Đổi trong bảng preset.':'Change it in the preset panel.',
-    'Diện tích chiếu':'Projected area','Nhập / Xuất':'Import / Export','Xuất bảng ra Excel (CSV)':'Export table to Excel (CSV)','Nhập preset (JSON)':'Import presets (JSON)','Xuất preset (JSON)':'Export presets (JSON)',
+    'Diện tích chiếu':'Projected area','Nhập / Xuất':'Import / Export','Cầu nối dữ liệu':'Data bridge','Định dạng xuất không hợp lệ.':'Invalid export format.','Dữ liệu bảng không hợp lệ.':'Invalid table data.','Bảng chưa có dòng nào. Hãy chọn group hoặc component trong SketchUp.':'The table has no rows yet. Select groups or components in SketchUp.','Số lẻ không hợp lệ.':'Invalid number of decimals.','Sắp có':'Coming soon','Xuất Excel':'Export Excel','In PDF':'Print PDF','Mô hình':'Model','Ngày':'Date','In / Lưu PDF':'Print / Save PDF','Nhập preset (JSON)':'Import presets (JSON)','Xuất preset (JSON)':'Export presets (JSON)',
     'Diện tích chiếu m²':'Projected area m²','Lớp IFC':'IFC class','Hãng':'Brand','Link':'Link','Cỡ':'Size','Đơn giá':'Unit price','Thành tiền':'Total',
     'Bảng quá lớn để xuất.':'The table is too large to export.','Dữ liệu bảng không hợp lệ.':'Invalid table data.',
     'Link không hợp lệ.':'Invalid link.','Tệp preset không đúng định dạng.':'The preset file is not in a valid format.','Phiên bản tệp preset chưa được hỗ trợ.':'This preset file version is not supported.','Tệp không có preset hợp lệ nào.':'The file has no valid presets.',
@@ -269,7 +269,8 @@ const VGD_I18N=(()=>{
   rule(/^Đã xuất (\d+) tag: (.*)$/,(m,n,p)=>`Exported ${n} tags: ${p}`);
   rule(/^Đã nhập (\d+) tag\. Bộ tag hiện có (\d+) tag\.$/,(m,a,b)=>`Imported ${a} tags. The tag set now has ${b} tags.`);
   rule(/^Đã chuyển đổi (\d+) đối tượng\.(.*)$/,(m,n,rest)=>`Converted ${plural(n,'object','objects')}.${rest.replace(' Đã lưu quy tắc phân loại.',' Classification rule saved.')}`);
-  rule(/^Đã xuất (\d+) dòng\. Mở bằng Excel: (.*)$/,(m,n,p)=>`Exported ${n} rows. Open in Excel: ${p}`);
+  rule(/^Đã xuất (\d+) dòng(?: và (\d+) ảnh)? ra Excel: (.*)$/,(m,n,i,p)=>`Exported ${plural(n,'row','rows')}${i?` and ${plural(i,'image','images')}`:''} to Excel: ${p}`);
+  rule(/^Đã tạo trang báo cáo (\d+) dòng và mở trong trình duyệt\. Bấm In rồi chọn Lưu thành PDF\.$/,(m,n)=>`Created a report page with ${plural(n,'row','rows')} and opened it in the browser. Click Print, then choose Save as PDF.`);
   rule(/^Đã xuất quy tắc: (.*)$/,(m,p)=>`Exported rules: ${p}`);
   rule(/^Dòng (\d+): (.*)$/,(m,n,rest)=>`Row ${n}: ${translateText(rest)}`);
   rule(/^(.+?): (không ghi được file ảnh, kiểm tra thư mục lưu ảnh\.|không chụp được\.)$/,(m,n,why)=>`${n}: ${T(why)}`);

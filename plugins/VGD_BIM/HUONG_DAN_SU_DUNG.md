@@ -64,7 +64,10 @@ Nút **Preset** nằm cạnh nút Sáng/Tối. Bấm vào để mở bảng gồ
 2. **Tạo preset**: sắp xếp bảng như ý (chọn cột, kéo thứ tự, đổi đơn vị, đổi tên cột), gõ tên vào ô **Tạo mới...** rồi bấm **+**. Từ đó, mọi thay đổi trong lúc dùng preset này tự cập nhật vào nó. Nút × xóa preset tự tạo.
 3. **Đổi tên cột**: nhấp đúp vào tiêu đề cột, gõ tên mới rồi Enter (Esc hủy, để trống để về tên gốc). Tên cột lưu theo preset.
 4. **Đơn vị**: chọn đơn vị và số lẻ cho chiều dài, diện tích, thể tích; chọn tiền tệ và dấu thập phân. Chỉ đổi cách hiển thị, báo cáo CSV ở tab Quét & xuất vẫn dùng mm.
-5. **Nhập / Xuất** (menu ở chân trang): nhập hoặc xuất preset bằng file JSON (đọc được file preset của plugin tham khảo), hoặc xuất bảng đang hiện ra CSV để mở bằng Excel.
+5. **Nhập / Xuất** (menu ở chân trang): nhập hoặc xuất preset bằng file JSON (đọc được file preset của plugin tham khảo), hoặc xuất bảng đang hiện:
+   - **Xuất Excel**: tạo file .xlsx đúng như bảng đang hiện (cột, thứ tự, tiêu đề, đơn vị, nhóm, dòng tổng), có ảnh món đồ trong ô. Muốn có ảnh, hãy bấm Cập nhật ảnh trước. Ảnh trong Excel là ảnh nhỏ (cạnh dài 128 px) dùng để xem và in, không phải ảnh gốc.
+   - **In PDF**: tạo trang báo cáo rồi mở trong trình duyệt; bấm In (hoặc Ctrl+P) và chọn **Lưu thành PDF**. Trang A4 ngang, tiêu đề cột lặp lại mỗi trang.
+   - **Cầu nối dữ liệu**: đã có sẵn chỗ trong menu, sẽ làm sau.
 
 Ảnh món đồ nằm trong cột **Ảnh** của Bảng khối lượng (bật trong **Chọn cột**, preset "Tất cả" đã có sẵn). Ảnh **chỉ được chụp khi bạn bấm**, plugin không tự chụp:
 

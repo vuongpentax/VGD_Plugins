@@ -28,7 +28,7 @@ module UI
     def run_timers; (@timers.shift.call) until @timers.empty?; end
   end
 end
-FakeModel = Struct.new(:guid)
+FakeModel = Struct.new(:guid) { def title; 'Nhà mẫu'; end }
 $model = FakeModel.new('MODEL-A')
 module VGD; module BIM; def self.log(m); end
   module Data; def self.supported?(e); true; end; end
@@ -40,7 +40,7 @@ module VGD; module BIM; def self.log(m); end
   module UI; end
 end; end
 ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
-%w[core/storage core/settings core/images core/preset].each { |f| require File.join(ROOT, f) }
+%w[core/storage core/settings core/images core/preset core/table_report].each { |f| require File.join(ROOT, f) }
 module VGD; module BIM; module UI
   module Capture
     def self.shoot(model, record, settings)
@@ -253,6 +253,59 @@ ok('thiết lập ảnh sai bị từ chối trước khi chụp: không hẹn g
 d = make_dialog
 d.safely { d.images_capture('indexes' => [0], 'settings' => {'image_width' => 5}) }
 ok('cỡ ảnh sai bị từ chối trước khi chụp', error_of(d).to_s.include?('Cỡ ảnh') && UI.timers.empty?)
+
+# ---- Xuất bảng: Excel (.xlsx có ảnh) và PDF (trang báo cáo mở bằng trình duyệt) ----
+require 'zlib'
+def real_png(width, height)
+  chunk = ->(type, data) { [data.bytesize].pack('N') + type + data + [Zlib.crc32(type + data)].pack('N') }
+  raw = (0...height).map { "\x00".b + "\x20\x80\xC0".b * width }.join
+  "\x89PNG\r\n\x1A\n".b + chunk.call('IHDR', [width, height, 8, 2, 0, 0, 0].pack('NNCCCCC')) + chunk.call('IDAT', Zlib::Deflate.deflate(raw)) + chunk.call('IEND', ''.b)
+end
+export_columns = [{'label' => 'STT', 'unit' => '', 'type' => 'ordinal', 'digits' => 0}, {'label' => 'Ảnh', 'unit' => '', 'type' => 'image', 'digits' => 0}, {'label' => 'Tên', 'unit' => '', 'type' => 'text', 'digits' => 0}]
+export_payload = lambda do |format, pids|
+  {'format' => format, 'title' => 'Bảng khối lượng', 'preset' => 'Tất cả', 'decimal_separator' => ',', 'labels' => {'model' => 'Mô hình', 'preset' => 'Preset', 'date' => 'Ngày', 'print' => 'In'},
+   'columns' => export_columns, 'rows' => pids.each_with_index.map { |pid, i| {'kind' => 'row', 'pid' => pid, 'cells' => [i + 1, nil, "Tủ #{i + 1}"]} }}
+end
+d = make_dialog(3, has_image: [0, 1])
+I.write($model, 901, real_png(128, 96), real_png(128, 96))
+I.write($model, 902, real_png(64, 128), real_png(64, 128))
+Dir.mktmpdir do |dir|
+  $save = File.join(dir, 'ketqua')
+  UI.define_singleton_method(:savepanel) { |*_args| $save }
+  d.safely { d.table_export(export_payload.call('xlsx', [901, 902, 903])) }
+  file = "#{$save}.xlsx"
+  bytes = File.file?(file) ? File.binread(file) : ''
+  ok('xuất Excel: chọn nơi lưu, tự thêm đuôi .xlsx, ghi file zip', bytes.byteslice(0, 2) == 'PK')
+  ok('xuất Excel: nhúng ảnh thu nhỏ của các dòng có ảnh (2 ảnh, dòng thứ 3 không có)', bytes.include?('xl/media/image2.png') && !bytes.include?('xl/media/image3.png'))
+  ok('xuất Excel: báo số dòng, số ảnh và đường dẫn', events(d, 'message').last['text'] == "Đã xuất 3 dòng và 2 ảnh ra Excel: #{file}")
+  d = make_dialog(3, has_image: [0, 1])
+  d.safely { d.table_export(export_payload.call('xlsx', [901, 999, 903])) }
+  ok('mã đối tượng không thuộc bảng: không lấy ảnh (chỉ 1 ảnh), không báo lỗi', events(d, 'message').last['text'].include?('và 1 ảnh') && error_of(d).nil?)
+  $save = nil
+  d = make_dialog(3, has_image: [0, 1])
+  before = Dir.children(dir).sort
+  d.safely { d.table_export(export_payload.call('xlsx', [901])) }
+  ok('hủy hộp lưu file: không ghi file, không báo gì', Dir.children(dir).sort == before && events(d, 'message').empty?)
+  $save = File.join(dir, 'a.XLSX')
+  d.safely { d.table_export(export_payload.call('xlsx', [901])) }
+  ok('đuôi .XLSX viết hoa được giữ nguyên, không thêm đuôi nữa', File.file?($save))
+  d.safely { d.table_export(export_payload.call('doc', [901])) }
+  ok('định dạng xuất lạ bị từ chối', error_of(d).to_s.include?('Định dạng'))
+  d.safely { d.table_export('xlsx') }
+  ok('dữ liệu không phải bảng bị từ chối', error_of(d).to_s.include?('không hợp lệ'))
+  d.safely { d.table_export(export_payload.call('xlsx', []).merge('rows' => [])) }
+  ok('bảng không có dòng nào: báo lỗi', error_of(d).to_s.include?('chưa có dòng'))
+end
+opened_before = (UI.opened || []).size
+d = make_dialog(3, has_image: [0, 1])
+d.safely { d.table_export(export_payload.call('pdf', [901, 902, 903])) }
+url = (UI.opened || [])[opened_before]
+html_path = url.to_s.sub(%r{\Afile://}, '').then { |u| u.match?(%r{\A/[A-Za-z]:}) ? u[1..-1] : u }
+ok('in PDF: mở trang báo cáo bằng trình duyệt (địa chỉ file:///)', url.to_s.start_with?('file:///') && url.end_with?('.html'))
+page = File.file?(html_path) ? File.read(html_path, encoding: 'UTF-8') : ''
+ok('in PDF: trang báo cáo có tên model, đủ 3 dòng và 2 ảnh', page.include?('Mô hình: Nhà mẫu') && page.scan('<tr class="row">').size == 3 && page.scan('data:image/png;base64,').size == 2)
+ok('in PDF: báo đã mở trình duyệt, hướng dẫn Lưu thành PDF', events(d, 'message').last['text'].include?('trình duyệt') && events(d, 'message').last['text'].include?('PDF'))
+File.delete(html_path) if File.file?(html_path)
 
 puts $fails.zero? ? 'Done' : "#{$fails} lỗi"
 exit($fails.zero? ? 0 : 1)

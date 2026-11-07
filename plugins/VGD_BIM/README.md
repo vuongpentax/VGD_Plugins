@@ -1,4 +1,4 @@
-# VGD_BIM 1.1.0-beta.16
+# VGD_BIM 1.1.0-beta.17
 
 Bản thử của 1.1.0 (chưa có bản ổn định). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -28,7 +28,7 @@ Cửa sổ có 5 tab (nút **Preset** cạnh nút Sáng/Tối ở thanh đầu d
 
 ### Preset, đơn vị và ảnh
 
-Nút **Preset** (cạnh nút Sáng/Tối) mở bảng gồm **Đơn vị**, **Hình ảnh** và danh sách preset (+ để tạo preset từ bảng hiện tại, nút khôi phục ở preset có sẵn, × ở preset tự tạo). Preset lưu: cột hiện và thứ tự, tiêu đề cột tự đặt, đơn vị và số lẻ của chiều dài / diện tích / thể tích, dấu thập phân, tiền tệ, cỡ ảnh, góc nhìn, kiểu hiển thị và nền ảnh. Preset tự tạo đang dùng thì mọi thay đổi tự cập nhật vào preset đó; preset có sẵn thì chỉ đổi bảng đang xem (nút khôi phục đưa về gốc). Có 11 preset có sẵn: Tất cả, Phần thô, Hoàn thiện, Đồ rời và 7 preset chuyển từ bộ mẫu của plugin tham khảo (Mặc định, Phòng & Khu vực, Cửa & Cửa sổ, Nội thất, Thiết bị & Phụ kiện, Chiếu sáng, Vật liệu). Menu **Nhập / Xuất** ở chân trang nhập / xuất preset bằng file JSON (nhận cả file preset của plugin tham khảo; mục sắp xếp trong file đó không được đọc vì chưa rõ chiều) và xuất bảng đang hiện ra CSV.
+Nút **Preset** (cạnh nút Sáng/Tối) mở bảng gồm **Đơn vị**, **Hình ảnh** và danh sách preset (+ để tạo preset từ bảng hiện tại, nút khôi phục ở preset có sẵn, × ở preset tự tạo). Preset lưu: cột hiện và thứ tự, tiêu đề cột tự đặt, đơn vị và số lẻ của chiều dài / diện tích / thể tích, dấu thập phân, tiền tệ, cỡ ảnh, góc nhìn, kiểu hiển thị và nền ảnh. Preset tự tạo đang dùng thì mọi thay đổi tự cập nhật vào preset đó; preset có sẵn thì chỉ đổi bảng đang xem (nút khôi phục đưa về gốc). Có 11 preset có sẵn: Tất cả, Phần thô, Hoàn thiện, Đồ rời và 7 preset chuyển từ bộ mẫu của plugin tham khảo (Mặc định, Phòng & Khu vực, Cửa & Cửa sổ, Nội thất, Thiết bị & Phụ kiện, Chiếu sáng, Vật liệu). Menu **Nhập / Xuất** ở chân trang nhập / xuất preset bằng file JSON (nhận cả file preset của plugin tham khảo; mục sắp xếp trong file đó không được đọc vì chưa rõ chiều) và xuất **Excel (.xlsx)** hoặc **PDF** đúng như bảng đang hiện. Excel là file .xlsx thật do plugin tự tạo (không cần cài thêm): có tiêu đề cột và hàng đơn vị cố định khi cuộn, số lưu dạng số với số lẻ của cột, dòng nhóm và dòng tổng, link bấm được và **ảnh món đồ nằm trong ô cột Ảnh** (ảnh nhỏ đã chụp). PDF: plugin tạo trang báo cáo A4 ngang (đủ cột, ảnh, tổng; tiêu đề cột lặp mỗi trang) và mở bằng trình duyệt, bấm In rồi chọn Lưu thành PDF. Mục **Cầu nối dữ liệu** đã có chỗ nhưng chưa dùng được.
 
 Đơn vị: chiều dài mm / cm / m / in / ft, diện tích m² / cm² / ft², thể tích m³ / cm³ / ft³, 0 đến 4 số lẻ, dấu thập phân "," hoặc "." (dấu còn lại là dấu nghìn). Chỉ đổi khi hiển thị (bảng, tab Thông tin, nhãn khung đánh dấu); số liệu gốc luôn là mm, m², m³ và báo cáo CSV giữ nguyên mm.
 
@@ -83,4 +83,4 @@ Chạy từ `plugins/VGD_BIM`:
 - `python3 dev/make_preview.py`: tạo trang HTML xem trước giao diện với dữ liệu mẫu (`outputs/VGD_BIM_giao_dien.html`).
 - `python plugins/VGD_BIM/dev/package.py <phiên bản>` (từ gốc repo): tạo RBZ trong `outputs/local_release_<phiên bản>/`, kiểm tra từng byte trong archive và in SHA-256.
 
-Bản 1.1.0-beta.16 được kiểm tra tự động bằng mô phỏng, chưa kiểm thử thủ công trong SketchUp thật. `VALIDATION.md` ghi chi tiết phần đã và chưa kiểm chứng.
+Bản 1.1.0-beta.17 được kiểm tra tự động bằng mô phỏng, chưa kiểm thử thủ công trong SketchUp thật. `VALIDATION.md` ghi chi tiết phần đã và chưa kiểm chứng.

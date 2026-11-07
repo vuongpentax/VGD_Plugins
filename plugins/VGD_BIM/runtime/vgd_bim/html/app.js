@@ -376,8 +376,8 @@ function mergeRows(rows){
   });
   return [...map.values()];
 }
-function renderGrid(host){
-  const data=tableState.data;
+// Dòng, nhóm và tổng đúng như bảng đang hiện (lọc, gộp, sắp xếp, nhóm theo, cộng tổng chỉ cấp cao nhất). Dùng cho vẽ bảng và xuất Excel / PDF.
+function viewModel(){
   const cols=orderedKeys().map(colByKey).filter(Boolean);
   const filtered=filteredRows();
   const shown=new Set(filtered.map(r=>r.index));
@@ -394,6 +394,11 @@ function renderGrid(host){
     ordered.forEach(row=>{const label=groupLabel(row,tableState.groupBy);if(!map.has(label))map.set(label,[]);map.get(label).push(row);});
     sections=[...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],'vi',{numeric:true})).map(([label,list])=>({label,rows:list}));
   }
+  return {cols,rows,sections,sumOf,countOf};
+}
+function renderGrid(host){
+  const data=tableState.data;
+  const {cols,rows,sections,sumOf,countOf}=viewModel();
   const collapsedKey=section=>`${tableState.groupBy}:${section.label}`;
   const visibleRows=sections.flatMap(section=>section.label!==null&&tableState.collapsed.has(collapsedKey(section))?[]:section.rows);
   tableState.shownRows=visibleRows;
@@ -565,7 +570,7 @@ function renamePanel(){
   return p;
 }
 function groupPanel(){
-  const p=node('div',undefined,'popover left group-panel');
+  const p=node('div',undefined,'popover right group-panel');
   p.append(node('div','Nhóm theo','pop-title'));
   const list=node('div',undefined,'pop-list');
   GROUP_OPTIONS.forEach(([value,label])=>list.append(button(label,()=>{tableState.groupBy=value;tableState.panel=null;tableView(tableState.data);},'pop-pick'+(value===tableState.groupBy?' primary':''))));
@@ -634,7 +639,9 @@ function toolbar(){
   const groupLabelText=(GROUP_OPTIONS.find(o=>o[0]===tableState.groupBy)||GROUP_OPTIONS[0])[1];
   const grouping=button(`Nhóm theo: ${groupLabelText} ▾`,()=>{tableState.panel=tableState.panel==='group'?null:'group';tableView(tableState.data);});
   grouping.setAttribute('aria-expanded',String(tableState.panel==='group'));
-  bar.append(cols,searchWrap,replaceBox,group,node('span',undefined,'grow'),rename,snap,stop,progress,grouping,count);
+  const groupAnchor=node('div',undefined,'pop-anchor');groupAnchor.append(grouping);
+  if(tableState.panel==='group')groupAnchor.append(groupPanel());
+  bar.append(cols,searchWrap,replaceBox,group,node('span',undefined,'grow'),rename,snap,stop,progress,groupAnchor,count);
   return bar;
 }
 // Chụp ảnh: hỏi lại trước khi chụp nhiều đối tượng. Chỉ chụp khi bấm nút Chụp.
@@ -696,16 +703,65 @@ function toggleButton(text,on,handler){
   sw.onclick=handler;label.onclick=handler;
   item.append(sw,label);return item;
 }
-// Xuất đúng bảng đang hiện (đã lọc, sắp xếp, nhóm; chữ theo đơn vị và tiêu đề của preset) ra CSV mở được bằng Excel.
-function exportTable(){
-  const cols=orderedKeys().map(colByKey).filter(Boolean);
-  const rows=tableState.shownRows.map((row,i)=>cols.map(col=>col.key==='ordinal'?String(i+1):col.kind==='image'?'':NUMERIC.has(col.key)?fmt(scaledValue(col.key,row[col.key]),digitsFor(col.key)):String(cellText(row,col.key)||'')));
-  call('table_export',JSON.stringify({headers:cols.map(colLabel),rows}));
+// Xuất Excel / PDF: gửi cho Ruby đúng bảng đang hiện (cột, thứ tự, tiêu đề, đơn vị, dòng đã lọc / sắp xếp / nhóm, dòng tổng).
+// Ô số gửi dạng số đã đổi sang đơn vị của preset, chưa làm tròn (Excel tự định dạng theo số lẻ của cột). Chữ dịch theo ngôn ngữ đang dùng.
+const exportText=text=>VGD_I18N.language==='en'?VGD_I18N.translateText(text):text;
+function exportColumn(col){
+  const type=col.key==='ordinal'?'ordinal':col.kind==='image'?'image':NUMERIC.has(col.key)?'number':col.key==='url'?'link':'text';
+  return {label:exportText(colLabel(col)),unit:exportText(unitTextOf(col.key)||''),type,digits:type==='number'?digitsFor(col.key):0};
 }
+function exportCell(row,col,position){
+  if(col.key==='ordinal')return position;
+  if(col.kind==='image')return null;
+  if(NUMERIC.has(col.key)){const value=scaledValue(col.key,row[col.key]);return value==null||value===''?null:Number(value);}
+  return String(cellText(row,col.key)||'');
+}
+function exportRows(model){
+  const {cols,rows,sections,sumOf,countOf}=model;
+  const labelKey=['instance','definition','entity'].find(k=>cols.some(c=>c.key===k));
+  const labelIndex=Math.max(0,cols.findIndex(col=>col.key===labelKey));
+  const summary=(list,text)=>cols.map((col,i)=>i===labelIndex?text:col.kind==='sum'?Number(scaledValue(col.key,sumOf(list,col.key))):null);
+  const out=[];let position=0;
+  sections.forEach(section=>{
+    if(section.label!==null){
+      out.push({kind:'group',cells:summary(section.rows,exportText(`${section.label} · ${countOf(section.rows)}`))});
+      if(tableState.collapsed.has(`${tableState.groupBy}:${section.label}`))return;
+    }
+    section.rows.forEach(row=>{position++;out.push({kind:'row',pid:row.pid||null,cells:cols.map(col=>exportCell(row,col,position))});});
+  });
+  if(tableState.showTotals)out.push({kind:'total',cells:summary(rows,exportText(`Tổng cộng · ${countOf(rows)} đối tượng`))});
+  return out;
+}
+function exportTable(format){
+  const model=viewModel();
+  call('table_export',JSON.stringify({format,title:exportText('Bảng khối lượng'),preset:tableState.preset||'',decimal_separator:workSettings().decimal_separator,
+    labels:{model:exportText('Mô hình'),preset:'Preset',date:exportText('Ngày'),print:exportText('In / Lưu PDF')},columns:model.cols.map(exportColumn),rows:exportRows(model)}));
+}
+// Biểu tượng nhỏ cho menu (SVG, dùng màu chữ hiện tại).
+function menuIcon(shapes){
+  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
+  svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('width','16');svg.setAttribute('height','16');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','2');svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');svg.setAttribute('aria-hidden','true');
+  shapes.forEach(([tag,attrs])=>{const el=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));svg.append(el);});
+  return svg;
+}
+const IO_ICONS={
+  bridge:[['path',{d:'M21 12a9 9 0 0 0-15-6.7L3 8'}],['path',{d:'M3 3v5h5'}],['path',{d:'M3 12a9 9 0 0 0 15 6.7L21 16'}],['path',{d:'M16 16h5v5'}]],
+  excel:[['path',{d:'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'}],['path',{d:'M14 3v6h6'}],['path',{d:'M9 13l4 5M13 13l-4 5'}]],
+  pdf:[['path',{d:'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'}],['path',{d:'M14 3v6h6'}],['path',{d:'M8 13h8M8 17h5'}]],
+  preset:[['path',{d:'M4 6h16M4 12h16M4 18h16'}]]
+};
 function ioPanel(){
-  const p=node('div',undefined,'popover up io-panel');
-  const item=(text,handler)=>{const b=button(text,()=>{tableState.panel=null;tableView(tableState.data);handler();},'pop-pick');return b;};
-  p.append(item('Xuất bảng ra Excel (CSV)',exportTable),item('Nhập preset (JSON)',()=>call('table_preset',JSON.stringify({action:'import'}))),item('Xuất preset (JSON)',()=>call('table_preset',JSON.stringify({action:'export'}))));
+  const p=node('div',undefined,'popover up right io-panel');
+  const item=(icon,text,handler,disabledNote)=>{
+    const b=node('button',undefined,'pop-pick io-item');b.type='button';
+    b.append(menuIcon(IO_ICONS[icon]),node('span',text,'io-text'));
+    if(disabledNote){b.disabled=true;b.append(node('span',disabledNote,'io-note'));}
+    else b.onclick=()=>{tableState.panel=null;tableView(tableState.data);handler();};
+    return b;
+  };
+  p.append(item('bridge','Cầu nối dữ liệu',()=>{},'Sắp có'),item('excel','Xuất Excel',()=>exportTable('xlsx')),item('pdf','In PDF',()=>exportTable('pdf')));
+  p.append(node('div',undefined,'io-sep'));
+  p.append(item('preset','Nhập preset (JSON)',()=>call('table_preset',JSON.stringify({action:'import'}))),item('preset','Xuất preset (JSON)',()=>call('table_preset',JSON.stringify({action:'export'}))));
   return p;
 }
 function bottomBar(){
@@ -739,7 +795,6 @@ function tableView(data){
   bar.append(toolbar());
   if(tableState.panel==='columns')bar.append(columnPanel());
   if(tableState.panel==='capture')bar.append(capturePanel());
-  if(tableState.panel==='group')bar.append(groupPanel());
   if(tableState.panel==='rename')bar.append(renamePanel());
   view.append(bar);
   const host=node('div');host.id='grid-host';view.append(host);

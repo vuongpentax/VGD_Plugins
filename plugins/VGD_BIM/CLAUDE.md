@@ -14,7 +14,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 ## Cấu trúc
 
 - `runtime/`: mã chạy. `vgd_bim/loader.rb` giữ danh sách `FILES` (thứ tự nạp, dùng chung cho lúc mở SketchUp và `VGD::BIM.reload`); thư mục con `core/`, `intake/`, `ui/` (`dialog.rb`; `image_actions.rb`: cài đặt chung và ảnh của cửa sổ; `capture.rb`: chụp ảnh; `bounds_preview.rb`: công cụ và lớp phủ), `html/` (giao diện: `app.js` bảng và các tab, `units.js` đơn vị / số lẻ theo preset, `images.js` cột Ảnh, `presets.js` nút Preset và bảng preset ở thanh đầu, `i18n.js` dịch Anh), `config/` (`vi.json`, `en.json`).
-- `dev/`: `run_tests.rb`, các `test_*.rb`, `test_ui.cjs`, `test_ui_images.cjs`, `test_ui_en.cjs` (Playwright), `ui_fixture.rb` (dữ liệu thật từ Ruby cho test giao diện), fixture và `stubs/`, `package.py`, `deploy.ps1`, `native_smoke.rb`, `make_preview.py`.
+- `dev/`: `run_tests.rb`, các `test_*.rb` (gồm `test_table_report.rb`), `test_ui.cjs`, `test_ui_images.cjs`, `test_ui_en.cjs` (Playwright), `ui_fixture.rb` (dữ liệu thật từ Ruby cho test giao diện), fixture và `stubs/`, `package.py`, `deploy.ps1`, `native_smoke.rb`, `make_preview.py`.
 - Gốc plugin: README, SPECIFICATION (đặc tả gốc, có ghi chú cập nhật), VALIDATION, HUONG_DAN_SU_DUNG, RELEASE_NOTES_*.
 
 ## Kiểm thử
@@ -38,7 +38,7 @@ Chạy từ `plugins/VGD_BIM`:
 ## Quy tắc riêng
 
 - Số liệu hình học thô (faces, diện tích vật liệu) là RAW QUANTITY / RAW GEOMETRY, chưa phải BOQ. Mặt trước và mặt sau tách riêng, không cộng thành một khối lượng. Plugin không đọc cạnh (edge).
-- Báo cáo CSV ở tab Quét & xuất là dữ liệu và khối lượng gốc, không có đơn giá hay thành tiền. Riêng Bảng khối lượng có cột Đơn giá (người dùng tự nhập) và Thành tiền (= đơn giá x số lượng); plugin không tự tra hay tính giá.
+- Xuất bảng khối lượng ra Excel (.xlsx có ảnh) và PDF đi qua `core/table_report.rb` (kiểm tra dữ liệu giao diện gửi lên, lấy ảnh nhỏ từ file ảnh của plugin, không nhận đường dẫn) rồi `core/xlsx.rb` (Ruby thuần, không thêm thư viện) hoặc trang HTML mở bằng trình duyệt để In > Lưu PDF. Giao diện dựng dữ liệu xuất từ `viewModel()` trong `html/app.js`, cùng nguồn với việc vẽ bảng nên file xuất luôn đúng bảng đang hiện. Báo cáo CSV ở tab Quét & xuất là dữ liệu và khối lượng gốc, không có đơn giá hay thành tiền. Riêng Bảng khối lượng có cột Đơn giá (người dùng tự nhập) và Thành tiền (= đơn giá x số lượng); plugin không tự tra hay tính giá.
 - Mã schema giữ nguyên để các plugin VGD dùng chung; bản dịch chỉ áp dụng ở giao diện và báo cáo.
 - Nguồn dữ liệu (`VGD`, `MAPPED`, `RAW`, `MANUAL`) lưu trong metadata `_source`, tách khỏi schema nghiệp vụ v1.
 - Chuyển đổi trong tab Phân loại: mỗi batch chỉ có một bước hoàn tác và không sửa hình học, tên, thẻ hoặc vật liệu. Riêng bảng khối lượng, người dùng chủ động nhấp đúp để đổi tên, tag, vật liệu của đối tượng (một bước hoàn tác, bỏ qua đối tượng khóa, không đụng vào mặt bên trong).

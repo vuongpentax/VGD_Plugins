@@ -412,19 +412,6 @@ big_import = begin; ed.table_preset({'action' => 'import'}); nil; rescue Standar
 ok('nhập file quá lớn: từ chối trước khi đọc', big_import.to_s.include?('quá lớn'))
 VGD::BIM::Table.delete_preset('Phong'); VGD::BIM::Table.delete_preset('Của tôi')
 ok('xuất khi chưa có preset tự tạo: báo lỗi rõ', (begin; ed.table_preset({'action' => 'export'}); false; rescue ArgumentError => e; e.message.include?('Chưa có preset'); end))
-# Xuất bảng đang hiện ra CSV
-VGD::BIM.const_set(:ReportExporter, Module.new) unless VGD::BIM.const_defined?(:ReportExporter)
-exported_table = nil
-VGD::BIM::ReportExporter.define_singleton_method(:write_table) { |path, headers, rows| exported_table = [path, headers, rows]; rows.size }
-tpath = File.join(Dir.mktmpdir('vgd_bim_tbl'), 'b')
-$picked = tpath
-ed.table_export({'headers' => %w[A B], 'rows' => [%w[1 2]]})
-ok('xuất bảng: chọn nơi lưu, thêm đuôi .csv, báo số dòng', exported_table == ["#{tpath}.csv", %w[A B], [%w[1 2]]] && ecalls.any? { |c| c[0] == 'message' && c[1][:text].include?('Đã xuất 1 dòng') })
-exported_table = nil
-$picked = nil
-ed.table_export({'headers' => %w[A], 'rows' => [%w[1]]})
-ok('hủy hộp lưu file: không xuất', exported_table.nil?)
-ok('xuất bảng không có dòng nào: báo lỗi', (begin; ed.table_export({'headers' => %w[A], 'rows' => []}); false; rescue StandardError => e; e.message.include?('chưa có dòng'); end))
 $model = ORIGINAL_MODEL
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

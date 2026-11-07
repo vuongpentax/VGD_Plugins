@@ -81,6 +81,13 @@ main{flex:1;min-height:0;overflow:auto;padding:14px 16px;scrollbar-gutter:stable
 .popover.up{top:auto;bottom:calc(100% + 4px)}
 .io-panel{width:230px;display:flex;flex-direction:column;gap:2px}
 .io-panel .pop-pick{text-align:left}
+.io-item{display:flex;align-items:center;gap:8px}
+.io-item svg{flex:none}
+.io-text{flex:1}
+.io-note{font-size:10px;color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:0 6px}
+.io-item:disabled{opacity:.65;cursor:default}
+.io-sep{border-top:1px solid var(--border);margin:4px 0}
+.pop-anchor{position:relative;display:inline-block}
 
 /* Chân trang: công tắc bên trái, menu Nhập / Xuất bên phải */
 
