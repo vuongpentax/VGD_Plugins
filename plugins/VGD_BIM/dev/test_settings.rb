@@ -11,7 +11,7 @@ def check(label, cond); puts "#{cond ? 'PASS' : 'FAIL'}  #{label}"; end
 def raises?(text = nil); yield; false; rescue ArgumentError => e; text ? e.message.downcase.include?(text) : true; end
 
 check 'chưa có file: dùng giá trị mặc định', S.read == S::DEFAULTS
-check 'mặc định: tiếng Việt, thư mục ảnh để trống', S::DEFAULTS == {'language' => 'vi', 'image_dir' => ''}
+check 'mặc định: tiếng Việt, thư mục ảnh để trống', S::DEFAULTS == {'language' => 'vi', 'image_dir' => '', 'exclude_words' => 'tay nắm, tay nam, handle, knob', 'trim_protrusions' => false}
 check 'thư mục ảnh mặc định nằm trong thư mục dữ liệu của plugin', S.image_dir == File.join(VGD::BIM::Storage.dir, 'images')
 
 saved = S.update('language' => 'en')
@@ -33,7 +33,7 @@ check 'giá trị sai không làm đổi cài đặt đang có', S.read == S.rea
 # File hỏng hoặc có giá trị sai (sửa tay) thì rơi về mặc định từng mục, không báo lỗi
 File.write(File.join(VGD::BIM::Storage.dir, 'settings.json'), JSON.generate('language' => 'xx', 'image_dir' => custom, 'length_unit' => 'cm'))
 read = S.read
-check 'file có giá trị sai: mục sai về mặc định, mục đúng giữ, mục cũ (đã chuyển sang preset) bị bỏ', read == {'language' => 'vi', 'image_dir' => custom}
+check 'file có giá trị sai: mục sai về mặc định, mục đúng giữ, mục cũ (đã chuyển sang preset) bị bỏ', read == {'language' => 'vi', 'image_dir' => custom, 'exclude_words' => S::DEFAULTS['exclude_words'], 'trim_protrusions' => false}
 File.write(File.join(VGD::BIM::Storage.dir, 'settings.json'), '{không phải json')
 check 'file hỏng: dùng mặc định', S.read == S::DEFAULTS
 File.write(File.join(VGD::BIM::Storage.dir, 'settings.json'), '[1,2]')

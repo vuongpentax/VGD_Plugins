@@ -85,6 +85,18 @@ function presetPanel(panel){
   const open=button('↗',()=>call('images_open_dir'));open.title='Mở thư mục ảnh';open.setAttribute('aria-label','Mở thư mục ảnh');
   folder.append(dir,pick,open);left.append(folder);
   if(app.dir)left.append(node('p',`Đang dùng: ${app.dir}`+(app.dir_exists?'':' (chưa có, sẽ được tạo khi chụp ảnh đầu tiên)'),'muted pp-dir'));
+  // ---- Số đo thân: bỏ tay nắm / phần nhô khỏi Rộng, Dài, Cao (dùng chung mọi preset, chỉ cho Bảng khối lượng) ----
+  left.append(node('h3','Số đo thân'));
+  const words=node('input');words.type='text';words.id='exclude-words';words.value=app.settings.exclude_words||'';words.maxLength=200;words.placeholder='tay nam, handle, knob';words.setAttribute('aria-label','Từ khóa loại trừ khỏi số đo');
+  words.title='Group, component hoặc tag có tên chứa một trong các từ này (cách nhau dấu phẩy, không phân biệt hoa thường và dấu) không được tính vào Rộng / Dài / Cao.';
+  const commitWords=()=>{if(words.value.trim()!==(app.settings.exclude_words||''))call('settings_save',JSON.stringify({exclude_words:words.value.trim()}));};
+  words.onchange=commitWords;words.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commitWords();}};
+  const wordsRow=node('div',undefined,'pp-row pp-folder');wordsRow.append(words);left.append(wordsRow);
+  left.append(node('p','Bỏ khỏi Rộng / Dài / Cao các phần có tên hoặc tag chứa từ khóa.','muted pp-note'));
+  const trimRow=node('div',undefined,'pp-row');
+  trimRow.append(toggleButton('Tự cắt phần nhô nhỏ (trục X, Y)',!!app.settings.trim_protrusions,()=>call('settings_save',JSON.stringify({trim_protrusions:!app.settings.trim_protrusions}))));
+  left.append(trimRow);
+  left.append(node('p','Cắt tự động có thể cắt nhầm phần nhô thật (ví dụ phào, chân đế): xem cột Ghi chú số đo.','muted pp-note'));
   // ---- Cột phải: danh sách preset ----
   const right=node('div',undefined,'pp-right');
   const create=node('div',undefined,'pp-new');

@@ -147,7 +147,7 @@ function preview(data) {
 // ---- Bảng đối tượng kiểu Auto Info ----
 const tableState={replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null};
 const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total']);
-const WIDTHS={front:80,front_state:150,ordinal:44,image:72,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80,areaProjected:110,ifc:120,owner:120,url:170,size:110,price:110,total:120};
+const WIDTHS={measure_note:260,front:80,front_state:150,ordinal:44,image:72,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80,areaProjected:110,ifc:120,owner:120,url:170,size:110,price:110,total:120};
 const unitTextOf=key=>LEN_KEYS.has(key)?lengthLabel():AREA_KEYS.has(key)?areaLabel():key==='volume'?volumeLabel():key==='quantity'?'cái':(key==='price'||key==='total')?workSettings().currency:undefined;
 const colLabel=col=>(tableState.headers&&tableState.headers[col.key])||withUnit(col.label);
 const lenText=value=>fmt(toUnit(value),digitsFor('lenX'));
@@ -206,6 +206,7 @@ function cellText(row,key){
     case 'status':return statuses[row.status]||row.status;
     case 'front':return row.front||'';
     case 'front_state':return row.front_state||'';
+    case 'measure_note':return row.measure_note||'';
     default:return '';
   }
 }

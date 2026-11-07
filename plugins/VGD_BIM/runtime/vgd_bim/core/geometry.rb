@@ -8,17 +8,20 @@ module VGD
       # Local axes dimensions after full occurrence transform; rotation preserves W/D/H.
       # Món đã có mặt trước (xem Front): Rộng là chiều ngang nhìn từ mặt trước, Sâu là chiều theo hướng mặt trước, Cao là Z.
       # Chưa có mặt trước thì Rộng = X cục bộ, Sâu = Y cục bộ như trước.
-      def self.dimensions(entity, transform = nil)
+      # measure: MeasureProbe::Context (Bảng khối lượng) để đo thân, bỏ tay nắm và phần nhô; nil thì dùng khung bao của định nghĩa như cũ.
+      def self.dimensions(entity, transform = nil, measure: nil)
         transform ||= entity.transformation
         definition = definition(entity)
         box = definition.bounds
         return {width: 0.0, depth: 0.0, height: 0.0} if box.empty?
+        body = measure && measure.extent(definition)
+        size = body ? body[:size] : [box.width.to_f, box.height.to_f, box.depth.to_f]
         scale_x, scale_y, scale_z = scales(transform)
-        x_size = box.width.to_f * scale_x * INCH_MM
-        y_size = box.height.to_f * scale_y * INCH_MM
+        x_size = size[0] * scale_x * INCH_MM
+        y_size = size[1] * scale_y * INCH_MM
         dir = defined?(Front) ? Front.read(definition)[:dir] : nil
         width, depth = defined?(Front) ? Front.frame_sizes(x_size, y_size, dir) : [x_size, y_size]
-        {width: width, depth: depth, height: box.depth.to_f * scale_z * INCH_MM}
+        {width: width, depth: depth, height: size[2] * scale_z * INCH_MM}
       end
 
       # Hệ số phóng to theo từng trục X, Y, Z của biến đổi (độ dài ba cột đầu của ma trận 16 số). Không dùng Transformation#xaxis.length:

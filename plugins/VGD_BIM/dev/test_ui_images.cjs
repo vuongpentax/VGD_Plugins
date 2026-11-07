@@ -7,7 +7,7 @@ let failed=0;
 const ok=(cond,msg)=>{console.log((cond?'PASS  ':'FAIL  ')+msg);if(!cond){failed++;process.exitCode=1;}};
 const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')],{encoding:'utf8'}));
 const presets=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../runtime/vgd_bim/config/presets.json'),'utf8'));
-const config=(mode,o={})=>({mode,version:'1.1.0',language:'vi',app:{settings:{language:'vi',image_dir:''},dir:'C:\\data\\images',dir_exists:true},preset_info:F.preset_info,table:{columns:F.columns,presets:F.presets,view:{}},fields:F.fields,categories:F.categories,units:F.units,methods:F.methods,presets,locale:F.vi,vi_en:null,scan_options:{scope:'model',faces:true},...o});
+const config=(mode,o={})=>({mode,version:'1.1.0',language:'vi',app:{settings:{language:'vi',image_dir:'',exclude_words:'tay nắm, handle',trim_protrusions:false},dir:'C:\\data\\images',dir_exists:true},preset_info:F.preset_info,table:{columns:F.columns,presets:F.presets,view:{}},fields:F.fields,categories:F.categories,units:F.units,methods:F.methods,presets,locale:F.vi,vi_en:null,scan_options:{scope:'model',faces:true},...o});
 const rows=[0,1,2].map(i=>({index:i,entity_type:'Nhóm',definition:'Cabinet',name:'Cab '+i,description:i===1?'cab nhỏ':'',lenX:1200,lenY:600,lenZ:800,areaXZ:0.96,areaXY:0.72,areaFace:2.1,areaProjected:1.5,volume:0.5,ifc:i?'':'IfcFurniture',tag:'',tag_group:'Phần thô',material:'',status:'new',owner:i?'':'Hafele',url:i?'':'https://vgd.vn/tu',size:'',price:i?null:2500000,total:i?null:2500000,locked:false,quantity:1,parents:[],parent:'',pid:900+i,has_image:i!==1,image_stamp:7}));
 const table=(o={})=>({columns:F.columns,presets:F.presets,groups:F.groups,statuses:F.statuses,options:{zoom:true,isolate:false,deep:false,projected:false,isolating:false},rows,selected:[],hint:null,view:{},choices:{tags:[],materials:[]},...o});
 const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
@@ -191,7 +191,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   // ---- Bảng preset ----
   await receive('table',table());await clear();
   await page.click('#preset-btn');
-  ok(await page.locator('#preset-panel').isVisible() && (await page.locator('#preset-panel h3').allInnerTexts()).join('|')==='Đơn vị|Hình ảnh','bấm nút preset: mở bảng có hai phần Đơn vị và Hình ảnh');
+  ok(await page.locator('#preset-panel').isVisible() && (await page.locator('#preset-panel h3').allInnerTexts()).join('|')==='Đơn vị|Hình ảnh|Số đo thân','bấm nút preset: mở bảng có ba phần Đơn vị, Hình ảnh và Số đo thân');
   ok(await page.locator('#preset-panel .pp-pick').count()===11 && (await page.locator('#preset-panel .pp-pick.active').innerText())==='Tất cả','bảng preset liệt kê 11 preset, preset đang dùng được tô nổi bật');
   ok(await page.locator('#preset-panel select[aria-label="Chiều dài: đơn vị"]').inputValue()==='mm' && await page.locator('#preset-panel select[aria-label="Chiều dài: số lẻ"]').inputValue()==='0','thiết lập đang dùng hiện đúng trong bảng (mm, 0 số lẻ)');
   ok((await page.locator('#preset-panel select[aria-label="Chiều dài: số lẻ"] option').allInnerTexts()).join(',')==='0,0.0,0.00,0.000,0.0000','số lẻ hiện dạng 0, 0.0, 0.00, ...');
@@ -375,6 +375,20 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await receive('information',{count:1,fields:{},objects:[{entity_type:'Group',source:'RAW',instance_name:'a',definition_name:'d',tag:'t',material:'',dimensions:{width:1200,depth:600,height:800},locked:false,status:'UNCLASSIFIED'}]});
   const info=await page.locator('.card').last().innerText();
   ok(info.includes('Rộng × Sâu × Cao (cm)') && info.includes('120 × 60 × 80'),'tab Thông tin: tiêu đề và kích thước theo đơn vị của preset (cm)');
+
+  // ---- Số đo thân: từ khóa loại trừ và công tắc cắt phần nhô nằm trong bảng Preset ----
+  await openPresets();
+  ok(await page.locator('#exclude-words').inputValue()==='tay nắm, handle','bảng Preset: ô từ khóa loại trừ hiện giá trị đang lưu');
+  await clear();await page.locator('#exclude-words').fill('tay nắm, knob');await page.locator('#exclude-words').press('Enter');
+  ok(JSON.stringify(await json('settings_save'))==='{"exclude_words":"tay nắm, knob"}','gõ từ khóa rồi Enter: gửi settings_save với từ khóa mới');
+  await clear();await page.locator('#exclude-words').fill('tay nắm, handle');await page.locator('#exclude-words').press('Enter');
+  ok(!(await last('settings_save')),'từ khóa không đổi: không gửi lệnh lưu');
+  await clear();await page.locator('#preset-panel').getByRole('switch',{name:'Tự cắt phần nhô nhỏ (trục X, Y)'}).click();
+  ok(JSON.stringify(await json('settings_save'))==='{"trim_protrusions":true}','bật Tự cắt phần nhô: gửi settings_save trim_protrusions = true');
+  ok((await page.locator('#preset-panel').innerText()).includes('xem cột Ghi chú số đo'),'bảng Preset cảnh báo cắt tự động có thể cắt nhầm và chỉ cột Ghi chú số đo');
+  await page.keyboard.press('Escape');
+  await page.evaluate(()=>{const r=tableState.data.rows[0];r.measure_note='Bỏ 1 phần theo từ khóa (Tay nam); cắt nhô +Y 32 mm';tableState.visible.add('measure_note');tableState.order=tableState.data.columns.map(c=>c.key);tableView(tableState.data);});
+  ok((await cellText(0,'measure_note')).includes('cắt nhô +Y 32 mm'),'cột Ghi chú số đo: hiện phần đã bỏ và đã cắt');
 
   // ---- Mặt trước: cột, nhóm theo, bảng phát hiện / đặt tay ----
   const frontRows=rows.map((r,i)=>({...r,front:i===0?'+Y':i===1?'-X':'',front_state:i===0?'Tự động · cao':i===1?'Cần duyệt':'',front_note:i===1?'sát tường phía +x; tường chỉ +x nhưng chi tiết hình học chỉ -x: cần duyệt':'',front_conf:i===0?'high':i===1?'low':''}));

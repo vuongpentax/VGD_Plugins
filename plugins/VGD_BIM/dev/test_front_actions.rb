@@ -45,7 +45,7 @@ module VGD; module BIM; def self.log(_m); end
   module UI; end
 end; end
 ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
-%w[core/storage core/settings core/images core/preset core/front core/front_probe core/front_align].each { |f| require File.join(ROOT, f) }
+%w[core/storage core/settings core/images core/preset core/front core/front_probe core/front_align core/measure_probe].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'ui/dialog')
 F = VGD::BIM::Front
 

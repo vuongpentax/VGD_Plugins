@@ -85,6 +85,17 @@ Nút ⚙ ở thanh đầu chỉ để chọn **ngôn ngữ** (Tiếng Việt / E
 
 **Diện tích chiếu** (hình chiếu xuống mặt phẳng ngang, hợp cho phòng và khu vực; chỉ tính khi bật công tắc **Diện tích chiếu** ở chân trang, hoặc tự bật khi bạn hiện cột này), **Lớp IFC** (đọc phân loại IFC có sẵn), **Hãng**, **Link** (nút ↗ mở bằng trình duyệt; chỉ nhận http hoặc https), **Cỡ**, **Đơn giá** (bạn tự nhập, chỉ số, ví dụ 1250000 hoặc 12,5) và **Thành tiền** (= đơn giá x số lượng, dòng tổng cộng cộng dồn). Nhấp đúp vào ô để nhập. Link, Cỡ, Đơn giá được lưu riêng cho bảng, không đổi dữ liệu dùng chung với các plugin VGD khác.
 
+## Số đo thân: bỏ tay nắm khỏi kích thước
+
+Số đo Rộng / Dài / Cao trong Bảng khối lượng tính theo kích thước **đã phóng to (scale)** của đối tượng: khối dài 1 m kéo thành 2 m thì bảng ghi 2 m.
+
+Tay nắm lòi ra làm tủ bị đo to hơn thân thật. Mở bảng **Preset** (nút cạnh nút Sáng/Tối), mục **Số đo thân**:
+1. **Từ khóa loại trừ**: gõ vài từ như `tay nắm, handle, knob` (cách nhau dấu phẩy). Group, component hoặc tag có tên chứa từ đó sẽ không được tính. Không phân biệt hoa thường và dấu. Mặc định đã có `tay nắm, tay nam, handle, knob`.
+2. **Tự cắt phần nhô nhỏ (trục X, Y)**: bật khi tay nắm dính liền vào cánh, không có tên hay tag. Plugin bỏ các phần nhỏ nhô khỏi thân (tối đa 10% kích thước, 150 mm). Có thể cắt nhầm (phào, chân đế), nên mặc định tắt.
+3. Bật cột **Ghi chú số đo** (Chọn cột) để xem plugin đã bỏ hoặc cắt gì cho từng món, ví dụ `cắt nhô +Y 32 mm`.
+
+Chỉ Bảng khối lượng và file xuất từ bảng dùng số đo thân. Nếu thấy một món sai, xem Ghi chú số đo, rồi chỉnh từ khóa hoặc tắt tự cắt.
+
 ## Mặt trước của món (bản thử)
 
 Mặt trước giúp chụp ảnh và đo kích thước đồng bộ cho cả công trình, kể cả model lạ có trục xoay lung tung. Bước này **xác định và lưu** mặt trước, rồi ảnh chụp và số đo dùng nó; plugin chưa đổi trục của model.

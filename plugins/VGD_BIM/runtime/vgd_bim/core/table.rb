@@ -47,7 +47,8 @@ module VGD
         {key: 'quantity', label: 'Số lượng', kind: 'sum'},
         {key: 'total', label: 'Thành tiền', kind: 'sum'},
         {key: 'front', label: 'Mặt trước', kind: 'text'},
-        {key: 'front_state', label: 'Độ tin cậy mặt trước', kind: 'text'}
+        {key: 'front_state', label: 'Độ tin cậy mặt trước', kind: 'text'},
+        {key: 'measure_note', label: 'Ghi chú số đo', kind: 'text'}
       ].freeze
       COLUMN_KEYS = COLUMNS.map { |column| column[:key] }.freeze
 
@@ -138,7 +139,7 @@ module VGD
       # deep = false (mặc định): chỉ đọc đúng các đối tượng đang chọn.
       # deep = true: đọc thêm mọi group / component lồng bên trong.
       # Chỉ group / component, không đọc mặt riêng lẻ, không đọc cả model.
-      def self.build(model, entities, deep = false, projected: false)
+      def self.build(model, entities, deep = false, projected: false, measure: nil)
         records = []
         path = model.active_path || []
         transform = model.edit_transform
@@ -158,7 +159,7 @@ module VGD
         index_of = {}
         records.each_with_index { |record, i| index_of[path_key(record[:path])] = i }
         image_folder = model.respond_to?(:guid) ? Images.dir(model) : nil # một lần cho cả bảng
-        rows = records.each_with_index.map { |record, i| row_for(record, i, groups, projected: projected).merge(image_state(model, record[:entity], image_folder)) }
+        rows = records.each_with_index.map { |record, i| row_for(record, i, groups, projected: projected, measure: measure).merge(image_state(model, record[:entity], image_folder)) }
         # Đối tượng cha đang có trong bảng: dùng để tránh cộng trùng khi tính tổng.
         records.each_with_index do |record, i|
           rows[i][:parents] = (1...record[:path].size).map { |n| index_of[path_key(record[:path][0...n])] }.compact
@@ -183,10 +184,11 @@ module VGD
         name.empty? ? Geometry.definition(parent).name.to_s : name
       end
 
-      def self.row_for(record, index, groups, projected: false)
+      def self.row_for(record, index, groups, projected: false, measure: nil)
         entity = record[:entity]
         transform = record[:transform]
-        dims = Geometry.dimensions(entity, transform)
+        dims = Geometry.dimensions(entity, transform, measure: measure)
+        body = measure && measure.extent(Geometry.definition(entity))
         width = dims[:width].round(1)
         depth = dims[:depth].round(1)
         height = dims[:height].round(1)
@@ -215,7 +217,7 @@ module VGD
           locked: record[:locked] ? true : false,
           quantity: 1,
           parents: []
-        }.merge(extra_columns(entity, data))
+        }.merge(extra_columns(entity, data)).merge(measure_note: body ? body[:note].to_s : '')
       end
 
       # Hãng (trường manufacturer của dữ liệu VGD), Link / Cỡ / Đơn giá (dictionary riêng của bảng), Lớp IFC, Thành tiền.

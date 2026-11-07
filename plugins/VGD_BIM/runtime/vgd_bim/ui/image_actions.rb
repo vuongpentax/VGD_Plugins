@@ -29,13 +29,16 @@ module VGD
         end
 
         def settings_save(payload)
-          language = Settings.read['language']
+          before = Settings.read
+          language = before['language']
           Settings.update(payload)
+          measure_changed = %w[exclude_words trim_protrusions].any? { |key| Settings.read[key] != before[key] }
           if Settings.read['language'] != language
             refresh # đổi ngôn ngữ: gửi lại cấu hình và từ điển, vẽ lại cả cửa sổ
           else
             emit('settings', settings_payload)
           end
+          table_build if measure_changed && @mode == 'table' # đổi cách đo thân: tính lại số đo của bảng ngay
           emit('message', {text: 'Đã lưu cài đặt.'})
         end
 

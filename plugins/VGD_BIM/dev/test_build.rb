@@ -33,7 +33,7 @@ module VGD; module BIM
     end
   end
   module Geometry
-    def self.dimensions(_e, _t); {width: 1000.0, depth: 500.0, height: 2000.0}; end
+    def self.dimensions(_e, _t, measure: nil); {width: 1000.0, depth: 500.0, height: 2000.0}; end
     def self.definition(e); Defn.new(e); end
     def self.face_area(*); 0.0; end
     class Defn; def initialize(e); @e = e; end; def name; @e.name; end; def entities; @e.entities; end; def bounds; Box.new; end; def count_instances; 1; end; end

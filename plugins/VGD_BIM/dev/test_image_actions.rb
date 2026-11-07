@@ -43,7 +43,7 @@ module VGD; module BIM; def self.log(m); end
   module UI; end
 end; end
 ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
-%w[core/storage core/settings core/images core/preset core/table_report].each { |f| require File.join(ROOT, f) }
+%w[core/storage core/settings core/images core/preset core/table_report core/measure_probe].each { |f| require File.join(ROOT, f) }
 module VGD; module BIM; module UI
   module Capture
     def self.shoot(model, record, settings)

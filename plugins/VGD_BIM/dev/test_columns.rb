@@ -52,7 +52,7 @@ module VGD; module BIM
   module Tags; GROUPS = [].freeze; def self.load; []; end; def self.key(n); n.to_s.downcase; end; end
   module Geometry
     INCH_MM = 25.4
-    def self.dimensions(_e, _t); {width: 1000.0, depth: 500.0, height: 2000.0}; end
+    def self.dimensions(_e, _t, measure: nil); {width: 1000.0, depth: 500.0, height: 2000.0}; end
     def self.definition(e); Defn.new(e); end
     class Defn
       def initialize(e); @e = e; end
@@ -145,6 +145,13 @@ ok('có mặt trước tự động tin cậy thấp: hiện +Y, Cần duyệt, 
 VGD::BIM::Front.write(VGD::BIM::Geometry.definition(fronted), '-x')
 ok('đặt tay: hiện -X, Thủ công', T.build(model, [fronted])[:rows].first.values_at(:front, :front_state) == ['-X', 'Thủ công'])
 ok('hai cột Mặt trước nằm trong danh sách cột của bảng, là cột chữ', %w[front front_state].all? { |k| T::COLUMNS.any? { |c| c[:key] == k && c[:kind] == 'text' } })
+
+# Ghi chú số đo (bỏ tay nắm / cắt nhô): lấy từ bộ đo thân của bảng
+fake_measure = Class.new { def extent(_definition); {size: [1.0, 1.0, 1.0], note: 'Bỏ 1 phần theo từ khóa (Tay nam)'}; end }.new
+ok('có đo thân: dòng bảng mang ghi chú số đo', T.build(model, [Sketchup::Group.new('Tủ có tay nắm')], measure: fake_measure)[:rows].first[:measure_note] == 'Bỏ 1 phần theo từ khóa (Tay nam)')
+ok('không đo thân (measure nil): ghi chú số đo rỗng', T.build(model, [Sketchup::Group.new('Tủ thường')])[:rows].first[:measure_note] == '')
+none = Class.new { def extent(_definition); nil; end }.new
+ok('đo thân nhưng không có gì bị bỏ (extent nil): ghi chú rỗng', T.build(model, [Sketchup::Group.new('Tủ sạch')], measure: none)[:rows].first[:measure_note] == '')
 
 puts $fails.zero? ? 'Done' : "#{$fails} lỗi"
 exit($fails.zero? ? 0 : 1)
