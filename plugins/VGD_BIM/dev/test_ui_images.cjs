@@ -49,7 +49,24 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await page.locator('nav button').count()===5,'điều hướng còn 5 tab (đã bỏ tab Hình ảnh và Cài đặt)');
   const order=await page.locator('.header-actions > *').evaluateAll(els=>els.map(e=>e.id));
   ok(JSON.stringify(order)==='["preset-btn","theme","gear"]','thanh đầu: nút preset đứng cạnh nút Sáng/Tối, rồi bánh răng');
-  ok((await page.locator('#preset-btn').innerText()).trim()==='Tất cả ▾','nút preset ghi tên preset đang dùng');
+  ok((await page.locator('#preset-btn').innerText()).trim()==='Tất cả','nút preset ghi tên preset đang dùng');
+
+  // ---- Kích thước nút thanh đầu: đúng số đo trong CSS Modus của Auto Info ----
+  const box=async sel=>page.locator(sel).evaluate(el=>{const r=el.getBoundingClientRect(),cs=getComputedStyle(el);return {w:r.width,h:r.height,pad:cs.padding,bg:cs.backgroundColor,border:cs.borderTopColor,radius:cs.borderTopLeftRadius,font:cs.fontSize,weight:cs.fontWeight};});
+  const th=await box('#theme'),gr=await box('#gear'),pr=await box('#preset-btn');
+  ok(Math.round(th.w)===32 && Math.round(th.h)===32 && Math.round(gr.w)===32 && Math.round(gr.h)===32,'nút Sáng/Tối và bánh răng: hình vuông 2rem x 2rem (32 x 32) như .btn-icon-only của Auto Info, không bị méo');
+  ok(th.pad==='7px 5px' && gr.pad==='7px 5px' && th.radius==='4px' && gr.radius==='4px' && th.bg==='rgba(0, 0, 0, 0)' && gr.bg==='rgba(0, 0, 0, 0)','nút biểu tượng: padding 7px 5px, bo 4px, nền trong suốt (không còn vòng tròn viền)');
+  ok(pr.font==='14px' && Number(pr.weight)>=600 && pr.radius==='4px' && pr.h>=31 && pr.h<=34 && pr.pad==='3px 16px','nút Preset: chữ 14px đậm, padding 3px 16px, bo 4px, cao 32 đến 34px như .btn của Auto Info');
+  const gl=await page.evaluate(()=>({gear:document.querySelector('#gear svg').getBoundingClientRect().width,theme:parseFloat(getComputedStyle(document.querySelector('#theme'),'::before').width),themeBox:document.querySelector('#theme').getBoundingClientRect().width,textHidden:getComputedStyle(document.querySelector('#theme')).fontSize}));
+  ok(gl.theme===18 && gl.gear===20 && gl.gear>gl.theme,'biểu tượng sáng/tối 18px, bánh răng 20px (lớn hơn một chút), đều nhỏ hơn nút 32px');
+  ok(gl.textHidden==='0px','chữ ☀ ☾ do vgd-theme.js đặt bị ẩn, biểu tượng vẽ bằng SVG');
+  const moonMask=await page.evaluate(()=>getComputedStyle(document.querySelector('#theme')).getPropertyValue('--theme-icon'));
+  await page.click('#theme');
+  const sunMask=await page.evaluate(()=>getComputedStyle(document.querySelector('#theme')).getPropertyValue('--theme-icon'));
+  await page.click('#theme');
+  ok(sunMask.includes('circle') && moonMask.includes('M21 12.79') && sunMask!==moonMask,'bấm nút Sáng/Tối: biểu tượng đổi giữa mặt trời và mặt trăng');
+  const gap=await page.evaluate(()=>{const a=document.querySelector('#theme').getBoundingClientRect(),b=document.querySelector('#gear').getBoundingClientRect();return Math.round(b.left-a.right);});
+  ok(gap===4,'khoảng cách giữa hai nút biểu tượng 4px (.mr-1 của Auto Info)');
 
   // ---- Cột Ảnh trong bảng ----
   ok(await page.locator('.grid thead th:has-text("Ảnh")').count()===1,'bảng có cột Ảnh');
@@ -183,7 +200,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.click('#preset-btn');await page.mouse.click(5,300);
   ok(await page.locator('#preset-panel').isHidden(),'bấm ra ngoài: đóng bảng preset');
   await usePreset('Phòng & Khu vực');
-  ok((await page.locator('#preset-btn').innerText()).trim()==='Phòng & Khu vực ▾' && (await page.locator('#preset-panel .pp-pick.active').innerText())==='Phòng & Khu vực','chọn preset: nút preset và danh sách đổi theo');
+  ok((await page.locator('#preset-btn').innerText()).trim()==='Phòng & Khu vực' && (await page.locator('#preset-panel .pp-pick.active').innerText())==='Phòng & Khu vực','chọn preset: nút preset và danh sách đổi theo');
   let head=await headText();
   ok(head.includes('Mã phòng') && head.includes('Tên phòng') && head.includes('Diện tích phòng') && head.includes('Rộng') && head.includes('STT'),'preset đặt sẵn tiêu đề cột riêng (Mã phòng, Tên phòng, Diện tích phòng)');
   ok(await cellText(0,'lenX')==='1,20' && await cellText(0,'lenY')==='0,60' && await cellText(0,'areaProjected')==='1,50','preset Phòng & Khu vực: kích thước theo m với 2 số lẻ, diện tích chiếu 1,50');

@@ -2,7 +2,7 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.0-beta.14: đã kiểm tra tự động
+## Bản 1.1.0-beta.15: đã kiểm tra tự động
 
 Chạy từ `plugins/VGD_BIM`: `ruby dev/run_tests.rb` (cú pháp 26 file Ruby và 17 bộ test) và ba bộ Playwright `dev/test_ui.cjs`, `dev/test_ui_images.cjs`, `dev/test_ui_en.cjs`.
 
@@ -16,6 +16,7 @@ Chạy từ `plugins/VGD_BIM`: `ruby dev/run_tests.rb` (cú pháp 26 file Ruby v
 - `test_rename.rb`, `test_dialog_logic.rb`: tính tên mới (mẫu, số thứ tự, thứ tự đánh số, tìm và thay nguyên văn, kiểu chữ có dấu tiếng Việt, đối tượng khóa, tên trống, quá dài, trùng, kiểm tra dữ liệu sai) và áp dụng đổi tên (một bước hoàn tác, bỏ qua đối tượng khóa, từ chối khi đối tượng không còn).
 - `test_tags.rb`, `test_tags_io.rb`: bộ tag, xuất / nhập CSV và JSON, gộp tag trùng tên.
 - `test_loader_menu.rb`, `test_load.rb`: menu VGD_BIM và Tải lại code, phiên bản đúng chuẩn, nạp được mọi file.
+- `dev/test_ui_images.cjs` còn kiểm tra kích thước nút thanh đầu theo CSS Modus của Auto Info: nút Sáng/Tối và bánh răng 32x32 (padding 7px 5px, bo 4px, nền trong suốt), biểu tượng 18px / 20px không méo, nút Preset chữ 14px đậm, khoảng cách 4px. Chỉ kiểm bằng trình duyệt headless, chưa xem trong hộp thoại SketchUp thật.
 - `dev/test_ui.cjs`: nhãn tiếng Việt, sửa nhiều đối tượng chỉ ghi trường được bật, tên đối tượng không chèn HTML, xem trước và xác nhận chuyển đổi, chọn dòng kiểm tra, quy tắc, tùy chọn quét và xuất, bấm ô bảng gửi đúng dòng và cột, sáng/tối, cửa sổ nhỏ không tràn.
 - `test_settings.rb`: cài đặt chung (ngôn ngữ, thư mục ảnh): mặc định, từ chối giá trị sai và không ghi nửa chừng, file sửa tay hỏng thì về mặc định, bỏ mục cũ đã chuyển sang preset.
 - `test_preset.rb`: thiết lập theo preset (đơn vị, số lẻ, dấu thập phân, tiền tệ, cỡ / góc nhìn / kiểu / nền ảnh; bản chặt từ chối giá trị sai, bản dễ tính về mặc định), tiêu đề cột tự đặt, 11 preset có sẵn hợp lệ, lưu và đọc preset tự tạo, chuyển preset cũ (chỉ có cột), nhập preset định dạng của plugin tham khảo (hệ số đơn vị, thứ tự cột, giá trị không hiểu được về mặc định, bỏ cột lạ, đổi tên trùng preset có sẵn, giới hạn số lượng) và định dạng riêng, xuất rồi nhập lại giống hệt.

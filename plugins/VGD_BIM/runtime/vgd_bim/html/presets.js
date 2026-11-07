@@ -33,7 +33,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&openPanel)closePane
 
 function updatePresetButton(){
   const btn=$('preset-btn');if(!btn)return;
-  btn.textContent=`${tableState.preset||'Preset'} ▾`;btn.title='Preset: cột, đơn vị và ảnh của bảng';
+  btn.textContent=tableState.preset||'Preset';btn.title='Preset: cột, đơn vị và ảnh của bảng';
 }
 // Sau khi đổi preset hoặc thiết lập: lưu trạng thái, cập nhật preset tự tạo, vẽ lại bảng nếu đang mở.
 function afterPresetChange(rebuild=true){
