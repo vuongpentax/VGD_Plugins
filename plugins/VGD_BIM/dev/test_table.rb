@@ -21,7 +21,7 @@ def check(label, cond); puts "#{cond ? 'PASS' : 'FAIL'}  #{label}"; end
 def raises?(msg = nil); yield; false; rescue ArgumentError => e; msg ? e.message.include?(msg) : true; end
 
 keys = T::COLUMN_KEYS
-check 'có đủ cột kiểu Auto Info, cột Ảnh và 7 cột mới (28 cột, không trùng)', keys.size == 28 && keys.uniq.size == keys.size
+check 'có đủ cột kiểu Auto Info, cột Ảnh, 7 cột mới và 2 cột Mặt trước (30 cột, không trùng)', keys.size == 30 && keys.uniq.size == keys.size
 check 'mọi cột của preset có sẵn đều hợp lệ', T::BUILT_IN_PRESETS.all? { |p| p['columns'].all? { |c| keys.include?(c) } }
 check 'preset có sẵn có nhóm hợp lệ', T::BUILT_IN_PRESETS.all? { |p| p['group'].empty? || VGD::BIM::Tags::GROUPS.include?(p['group']) }
 check 'có 11 preset có sẵn, 4 preset BIM đứng đầu', T::BUILT_IN_PRESETS.size == 11 && T::BUILT_IN_PRESETS.first(4).map { |p| p['name'] } == ['Tất cả', 'Phần thô', 'Hoàn thiện', 'Đồ rời']

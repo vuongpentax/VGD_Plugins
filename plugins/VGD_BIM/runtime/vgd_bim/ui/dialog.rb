@@ -1,5 +1,6 @@
 require 'json'
 require_relative 'image_actions'
+require_relative 'front_actions'
 module VGD
   module BIM
     module UI
@@ -12,6 +13,7 @@ module VGD
       end
       class Dialog
         include ImageActions
+        include FrontActions
         # 5 tab: Bảng khối lượng · Thông tin · Quét & xuất · Phân loại (gồm Quy tắc, Kiểm tra) · Soạn tag. Ảnh nằm trong cột Ảnh của bảng.
         MODES = %w[table information scan mapping rules validate_model validate_selection tags].freeze
         # Tên cũ vẫn mở được, chuyển về tab đã gộp.
@@ -75,6 +77,7 @@ module VGD
           @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { rename_apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_view') { |_ctx, payload| safely { Table.save_view_state(JSON.parse(payload)) } }
           register_image_callbacks
+          register_front_callbacks
           @dialog.set_on_closed { @closed = true; @capture[:cancel] = true if @capture; @ready = false; @generation += 1; cleanup_table_view; detach; ::UI.stop_timer(@selection_timer) if @selection_timer }
         end
         def show; @dialog.visible? ? @dialog.bring_to_front : @dialog.show; end
@@ -585,6 +588,7 @@ module VGD
           return if targets.empty?
           points = targets.flat_map { |r| Table.world_corners(r) }
           return if points.empty?
+          points += front_arrows(targets) # mũi tên chỉ mặt trước của các đối tượng đã có mặt trước
           single = targets.size == 1 ? targets.first : nil
           label = single ? outline_label(single) : nil
           box = single ? Table.bounding_box(single) : nil
@@ -597,6 +601,13 @@ module VGD
           @preview = UI::BoundsPreview.new(points, label: label, label_point: label_point, fills: fills, alive: alive, on_stale: stale) { @preview = nil }
           @model.tools.push_tool(@preview)
           @model.active_view.invalidate
+        end
+        # Các đoạn thẳng của mũi tên mặt trước (cặp điểm, tọa độ thế giới); đối tượng chưa có mặt trước thì không có.
+        def front_arrows(records)
+          records.flat_map { |record| FrontProbe.arrow_points(record, Front.read(Geometry.definition(record[:entity]))[:dir]) }
+        rescue StandardError => error
+          BIM.log("Front arrow failed: #{error.message}")
+          []
         end
         def outline_label(record)
           index = @table_records.index { |r| r.equal?(record) }

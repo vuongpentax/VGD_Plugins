@@ -61,6 +61,9 @@ module VGD; module BIM
       def bounds; Box.new; end
       def count_instances; 1; end
       def attribute_dictionary(name); @e.schema && name == 'AppliedSchemaTypes' ? Sketchup::AttrDict.new(@e.schema) : nil; end
+      def get_attribute(d, k, df = nil); @e.get_attribute(d, k, df); end
+      def set_attribute(d, k, v); @e.set_attribute(d, k, v); end
+      def delete_attribute(d, k); @e.delete_attribute(d, k); end
     end
     class Box; def empty?; true; end; end
   end
@@ -131,6 +134,17 @@ tilt = Sketchup::Group.new('Dốc', [Sketchup::Face.new(one_m2, Vec3.new(0, 0.6,
 ok('mặt nghiêng: diện tích nhân cosin góc nghiêng (0,8)', (T.build(model, [tilt], false, projected: true)[:rows].first[:areaProjected] - 0.8).abs < 0.001)
 empty = Sketchup::Group.new('Rỗng', [], false)
 ok('đối tượng không có mặt: diện tích chiếu bằng 0', T.build(model, [empty], false, projected: true)[:rows].first[:areaProjected] == 0.0)
+
+# Mặt trước: đọc từ định nghĩa vào dòng của bảng
+fronted = Sketchup::Group.new('Tủ mặt trước')
+blank_row = T.build(model, [fronted])[:rows].first
+ok('chưa có mặt trước: các cột Mặt trước và Độ tin cậy để trống', blank_row[:front] == '' && blank_row[:front_state] == '' && blank_row[:front_note] == '')
+VGD::BIM::Front.write(VGD::BIM::Geometry.definition(fronted), '+y', source: 'auto', confidence: 'low', note: 'chưa đủ bằng chứng')
+row = T.build(model, [fronted])[:rows].first
+ok('có mặt trước tự động tin cậy thấp: hiện +Y, Cần duyệt, kèm ghi chú và độ tin cậy', row[:front] == '+Y' && row[:front_state] == 'Cần duyệt' && row[:front_note] == 'chưa đủ bằng chứng' && row[:front_conf] == 'low')
+VGD::BIM::Front.write(VGD::BIM::Geometry.definition(fronted), '-x')
+ok('đặt tay: hiện -X, Thủ công', T.build(model, [fronted])[:rows].first.values_at(:front, :front_state) == ['-X', 'Thủ công'])
+ok('hai cột Mặt trước nằm trong danh sách cột của bảng, là cột chữ', %w[front front_state].all? { |k| T::COLUMNS.any? { |c| c[:key] == k && c[:kind] == 'text' } })
 
 puts $fails.zero? ? 'Done' : "#{$fails} lỗi"
 exit($fails.zero? ? 0 : 1)

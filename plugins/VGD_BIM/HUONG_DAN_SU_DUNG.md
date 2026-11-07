@@ -83,6 +83,17 @@ Nút ⚙ ở thanh đầu chỉ để chọn **ngôn ngữ** (Tiếng Việt / E
 
 **Diện tích chiếu** (hình chiếu xuống mặt phẳng ngang, hợp cho phòng và khu vực; chỉ tính khi bật công tắc **Diện tích chiếu** ở chân trang, hoặc tự bật khi bạn hiện cột này), **Lớp IFC** (đọc phân loại IFC có sẵn), **Hãng**, **Link** (nút ↗ mở bằng trình duyệt; chỉ nhận http hoặc https), **Cỡ**, **Đơn giá** (bạn tự nhập, chỉ số, ví dụ 1250000 hoặc 12,5) và **Thành tiền** (= đơn giá x số lượng, dòng tổng cộng cộng dồn). Nhấp đúp vào ô để nhập. Link, Cỡ, Đơn giá được lưu riêng cho bảng, không đổi dữ liệu dùng chung với các plugin VGD khác.
 
+## Mặt trước của món (bản thử)
+
+Mặt trước giúp sau này chụp ảnh và đo kích thước đồng bộ cho cả công trình, kể cả model lạ có trục xoay lung tung. Bản này mới **xác định và lưu** mặt trước, chưa đổi ảnh chụp hay model.
+
+1. Chọn các món trong bảng (hoặc không chọn gì để làm cho tất cả món đang hiện), bấm nút **Mặt trước** rồi **Phát hiện tự động**.
+2. Bật cột **Độ tin cậy mặt trước**, hoặc **Nhóm theo → Mặt trước (độ tin cậy)**. Món **Cần duyệt** là món plugin chưa chắc; rê chuột vào ô để xem lý do.
+3. Duyệt: chọn một dòng, nhìn **mũi tên** trong SketchUp (chỉ hướng mặt trước). Đúng thì giữ. Sai thì: xoay camera nhìn thẳng vào mặt trước thật rồi bấm **Theo hướng nhìn hiện tại**, hoặc bấm **Xoay 90°** / **Đảo chiều** cho tới khi mũi tên đúng.
+4. Món đã đặt tay sẽ không bị phát hiện tự động ghi đè (trừ khi tick **Ghi đè cả món đã đặt tay**).
+
+Lưu ý: plugin đoán dựa vào tường gần món và độ nhiều chi tiết của từng mặt nên có thể sai với đồ đặt giữa phòng, kệ hở, đồ trang trí. Luôn xem lại các món Cần duyệt. Đồ nằm nghiêng, bị lật gương hoặc là component động không được tin cậy cao. Kết quả lưu trong file SketchUp (dữ liệu của định nghĩa); không đổi hình học.
+
 ## Thay thế hàng loạt chữ
 
 Gõ chữ vào ô **Tìm kiếm** thì hiện thêm ô **Thay bằng** và nút **Thay thế (n)** (n là số ô sẽ đổi). Chữ được thay trong các cột Tên, Mô tả, Hãng, Cỡ đang hiện, ở các dòng đang lọc, không phân biệt hoa thường; cả đợt là một bước hoàn tác (Ctrl+Z) và đối tượng bị khóa được bỏ qua.

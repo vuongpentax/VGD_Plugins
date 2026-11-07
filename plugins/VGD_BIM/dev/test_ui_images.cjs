@@ -367,6 +367,35 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   const info=await page.locator('.card').last().innerText();
   ok(info.includes('Rộng × Sâu × Cao (cm)') && info.includes('120 × 60 × 80'),'tab Thông tin: tiêu đề và kích thước theo đơn vị của preset (cm)');
 
+  // ---- Mặt trước: cột, nhóm theo, bảng phát hiện / đặt tay ----
+  const frontRows=rows.map((r,i)=>({...r,front:i===0?'+Y':i===1?'-X':'',front_state:i===0?'Tự động · cao':i===1?'Cần duyệt':'',front_note:i===1?'sát tường phía +x; tường chỉ +x nhưng chi tiết hình học chỉ -x: cần duyệt':'',front_conf:i===0?'high':i===1?'low':''}));
+  await receive('config',config('table'));await receive('table',table({rows:frontRows}));await usePreset('Tất cả');await page.keyboard.press('Escape');
+  await page.evaluate(()=>{tableState.visible.add('front');tableState.visible.add('front_state');tableState.order=tableState.data.columns.map(c=>c.key);tableView(tableState.data);});
+  ok(await cellText(0,'front')==='+Y' && await cellText(0,'front_state')==='Tự động · cao' && await cellText(2,'front')==='','cột Mặt trước và Độ tin cậy: hiện hướng và trạng thái, món chưa có thì để trống');
+  ok((await page.locator('.grid tbody tr').nth(1).locator('td[data-key="front_state"]').getAttribute('title')).includes('cần duyệt') && !(await page.locator('.grid tbody tr').nth(0).locator('td[data-key="front_state"]').getAttribute('title')),'ô Độ tin cậy: rê chuột hiện lý do tự động chọn (chỉ khi có ghi chú)');
+  await page.getByRole('button',{name:'Nhóm theo: Không nhóm ▾'}).click();await page.getByRole('button',{name:'Mặt trước (độ tin cậy)'}).click();
+  const groups=await page.locator('.grid tbody tr.group-row').allInnerTexts();
+  ok(groups.some(g=>g.includes('Cần duyệt')) && groups.some(g=>g.includes('(Chưa có mặt trước)')) && groups.some(g=>g.includes('Tự động · cao')),'nhóm theo Mặt trước (độ tin cậy): có nhóm Cần duyệt, Tự động · cao, Chưa có mặt trước');
+  await page.getByRole('button',{name:/Nhóm theo: Mặt trước/}).click();await page.getByRole('button',{name:'Không nhóm'}).click();
+  await clear();
+  await page.click('#front-btn');
+  ok((await page.locator('.front-panel').innerText()).includes('Chưa chọn dòng nào: phát hiện tự động cho tất cả 3 đối tượng đang hiện.'),'bảng Mặt trước: chưa chọn dòng thì nói rõ phát hiện cho tất cả');
+  await page.click('#front-detect');
+  ok(JSON.stringify(await json('front_detect'))==='{"indexes":[],"overwrite":false}','Phát hiện tự động khi chưa chọn: gửi indexes rỗng (Ruby lấy mọi dòng), không ghi đè');
+  await page.click('#front-camera');
+  ok((await message()).includes('Hãy chọn đối tượng trong bảng trước.') && !(await last('front_set')),'đặt tay khi chưa chọn dòng: báo lỗi, không gửi lệnh');
+  await page.click('#front-btn');
+  await page.locator('.grid tbody tr').nth(0).locator('td[data-key="instance"]').click();
+  await page.click('#front-btn');
+  ok((await page.locator('.front-panel').innerText()).includes('Áp dụng cho 1 đối tượng đang chọn.'),'bảng Mặt trước: đã chọn dòng thì áp cho dòng đang chọn');
+  await page.locator('#front-overwrite').check();await clear();await page.click('#front-detect');
+  ok(JSON.stringify(await json('front_detect'))==='{"indexes":[0],"overwrite":true}','Phát hiện cho dòng đang chọn, tick Ghi đè thì gửi overwrite = true');
+  for(const [id,mode] of [['front-camera','camera'],['front-turn','turn'],['front-opposite','opposite']]){await clear();await page.click('#'+id);ok(JSON.stringify(await json('front_set'))===JSON.stringify({indexes:[0],mode}),'nút '+id+': gửi front_set mode='+mode+' cho dòng đang chọn');}
+  await clear();await page.click('#front-clear');
+  ok(JSON.stringify(await json('front_clear'))==='{"indexes":[0]}','nút Xóa mặt trước: gửi front_clear cho dòng đang chọn');
+  await page.click('#front-btn');
+  await page.evaluate(()=>{tableState.panel=null;tableState.sel=new Set();tableView(tableState.data);});
+
   // ---- Ngăn Chọn cột: đẩy bảng sang phải, hiệu ứng trượt, kéo đổi chỗ, ô tick, nút gạt ----
   await receive('config',config('table'));await receive('table',table());await usePreset('Tất cả');await page.keyboard.press('Escape');
   const gridLeft=()=>page.locator('.grid-wrap').evaluate(el=>Math.round(el.getBoundingClientRect().left));

@@ -2,6 +2,7 @@ require 'json'
 require_relative 'storage'
 require_relative 'images'
 require_relative 'preset'
+require_relative 'front'
 
 module VGD
   module BIM
@@ -44,7 +45,9 @@ module VGD
         {key: 'size', label: 'Cỡ', kind: 'text', editable: 'size'},
         {key: 'price', label: 'Đơn giá', kind: 'number', editable: 'price'},
         {key: 'quantity', label: 'Số lượng', kind: 'sum'},
-        {key: 'total', label: 'Thành tiền', kind: 'sum'}
+        {key: 'total', label: 'Thành tiền', kind: 'sum'},
+        {key: 'front', label: 'Mặt trước', kind: 'text'},
+        {key: 'front_state', label: 'Độ tin cậy mặt trước', kind: 'text'}
       ].freeze
       COLUMN_KEYS = COLUMNS.map { |column| column[:key] }.freeze
 
@@ -219,7 +222,13 @@ module VGD
       def self.extra_columns(entity, data)
         extras = Extras.read(entity)
         {owner: data[:manufacturer].to_s, url: extras[:url], size: extras[:size], price: extras[:price],
-         total: extras[:price], ifc: ifc_class(entity)}
+         total: extras[:price], ifc: ifc_class(entity)}.merge(front_columns(entity))
+      end
+
+      # Mặt trước (lưu ở định nghĩa): hướng cục bộ, nhãn trạng thái, ghi chú lý do.
+      def self.front_columns(entity)
+        info = Front.read(Geometry.definition(entity))
+        {front: Front.label(info[:dir]), front_state: Front.state_label(info), front_note: info[:note].to_s, front_conf: info[:confidence].to_s}
       end
 
       # Phân loại IFC có sẵn trong định nghĩa (dictionary AppliedSchemaTypes: tên bảng phân loại => lớp); lấy mục đầu tiên có giá trị.

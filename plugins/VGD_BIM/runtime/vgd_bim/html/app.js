@@ -147,7 +147,7 @@ function preview(data) {
 // ---- Bảng đối tượng kiểu Auto Info ----
 const tableState={replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null};
 const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total']);
-const WIDTHS={ordinal:44,image:72,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80,areaProjected:110,ifc:120,owner:120,url:170,size:110,price:110,total:120};
+const WIDTHS={front:80,front_state:150,ordinal:44,image:72,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80,areaProjected:110,ifc:120,owner:120,url:170,size:110,price:110,total:120};
 const unitTextOf=key=>LEN_KEYS.has(key)?lengthLabel():AREA_KEYS.has(key)?areaLabel():key==='volume'?volumeLabel():key==='quantity'?'cái':(key==='price'||key==='total')?workSettings().currency:undefined;
 const colLabel=col=>(tableState.headers&&tableState.headers[col.key])||withUnit(col.label);
 const lenText=value=>fmt(toUnit(value),digitsFor('lenX'));
@@ -204,6 +204,8 @@ function cellText(row,key){
     case 'tag_group':return row.tag_group;
     case 'material':return row.material;
     case 'status':return statuses[row.status]||row.status;
+    case 'front':return row.front||'';
+    case 'front_state':return row.front_state||'';
     default:return '';
   }
 }
@@ -347,7 +349,7 @@ function startResize(event,key,host,cols){
   document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
 }
 // Nhóm theo và gộp dòng giống nhau (chỉ đổi cách hiển thị, không đổi dữ liệu).
-const GROUP_OPTIONS=[['','Không nhóm'],['parent','Cha (Parent)'],['entity','Loại (Entity)'],['definition','Tên họ (Definition)'],['instance','Tên (Instance)'],['material','Vật liệu'],['tag','Tag'],['tag_group','Nhóm hạng mục'],['status','Tình trạng']];
+const GROUP_OPTIONS=[['','Không nhóm'],['parent','Cha (Parent)'],['entity','Loại (Entity)'],['definition','Tên họ (Definition)'],['instance','Tên (Instance)'],['material','Vật liệu'],['tag','Tag'],['tag_group','Nhóm hạng mục'],['status','Tình trạng'],['front_state','Mặt trước (độ tin cậy)']];
 const SUM_KEYS=['areaXZ','areaXY','areaFace','areaProjected','volume','quantity','total'];
 function groupLabel(row,key){
   switch(key){
@@ -358,6 +360,7 @@ function groupLabel(row,key){
     case 'material':return row.material||'(Không vật liệu)';
     case 'tag':return row.tag||'(Untagged)';
     case 'tag_group':return row.tag_group||'(Chưa phân loại)';
+    case 'front_state':return row.front_state||'(Chưa có mặt trước)';
     case 'status':return (tableState.data.statuses||{})[row.status]||row.status;
     default:return '';
   }
@@ -491,6 +494,7 @@ function renderGrid(host){
           if(row.url){const open=node('button','↗','cell-open');open.type='button';open.title='Mở link';open.setAttribute('aria-label','Mở link');open.onclick=e=>{e.stopPropagation();call('open_url',row.url);};open.ondblclick=e=>e.stopPropagation();td.append(open);}
         }
         else td.textContent=cellText(row,col.key);
+        if(col.key==='front_state'&&row.front_note)td.title=row.front_note; // lý do tự động chọn mặt trước, để duyệt
         tr.append(td);
       });
       tbody.append(tr);
@@ -631,6 +635,8 @@ function toolbar(){
   group.value=tableState.group;group.onchange=()=>{tableState.group=group.value;renderGrid($('grid-host'));persistView();updateReplaceUi();};
   const rename=button('Đổi tên',()=>{tableState.panel=tableState.panel==='rename'?null:'rename';tableView(tableState.data);});
   rename.setAttribute('aria-expanded',String(tableState.panel==='rename'));
+  const front=button('Mặt trước',()=>{tableState.panel=tableState.panel==='front'?null:'front';tableView(tableState.data);});front.id='front-btn';
+  front.setAttribute('aria-expanded',String(tableState.panel==='front'));
   const snap=button('',()=>{tableState.panel=tableState.panel==='capture'?null:'capture';tableView(tableState.data);},'icon-btn');
   snap.append(imageIcon());snap.id='cap-run';snap.title='Cập nhật ảnh';snap.setAttribute('aria-label','Cập nhật ảnh');snap.setAttribute('aria-expanded',String(tableState.panel==='capture'));
   const stop=button('Dừng',()=>call('images_cancel'));stop.id='cap-stop';stop.hidden=true;
@@ -641,8 +647,33 @@ function toolbar(){
   grouping.setAttribute('aria-expanded',String(tableState.panel==='group'));
   const groupAnchor=node('div',undefined,'pop-anchor');groupAnchor.append(grouping);
   if(tableState.panel==='group')groupAnchor.append(groupPanel());
-  bar.append(cols,searchWrap,replaceBox,group,node('span',undefined,'grow'),rename,snap,stop,progress,groupAnchor,count);
+  bar.append(cols,searchWrap,replaceBox,group,node('span',undefined,'grow'),rename,front,snap,stop,progress,groupAnchor,count);
   return bar;
+}
+// Mặt trước: phát hiện tự động (tường + hình học), đặt tay theo hướng nhìn / xoay / đảo, xóa. Chỉ ghi dữ liệu, không đổi hình học.
+tableState.frontOverwrite=false;
+function frontTargets(){return tableState.sel.size?[...tableState.sel]:filteredRows().map(r=>r.index);}
+function frontManualTargets(){
+  if(!tableState.sel.size)throw Error('Hãy chọn đối tượng trong bảng trước.');
+  return [...tableState.sel];
+}
+function frontPanel(){
+  const p=node('div',undefined,'popover right front-panel');
+  const chosen=tableState.sel.size>0,targets=frontTargets();
+  p.append(node('div','Mặt trước','pop-title'));
+  p.append(node('p','Mặt trước là hướng ra của món theo trục riêng của nó. Khi chọn món, mũi tên trong SketchUp chỉ hướng này.','muted'));
+  p.append(node('p',chosen?`Áp dụng cho ${targets.length} đối tượng đang chọn.`:`Chưa chọn dòng nào: phát hiện tự động cho tất cả ${targets.length} đối tượng đang hiện.`,'rename-scope'));
+  const over=node('input');over.type='checkbox';over.checked=tableState.frontOverwrite;over.id='front-overwrite';over.onchange=()=>{tableState.frontOverwrite=over.checked;};
+  const overLabel=node('label',undefined,'merge-opt');overLabel.append(over,document.createTextNode(' Ghi đè cả món đã đặt tay'));
+  const detect=button('Phát hiện tự động',()=>call('front_detect',JSON.stringify({indexes:chosen?targets:[],overwrite:tableState.frontOverwrite})),'primary');detect.id='front-detect';
+  const row=(...buttons)=>{const r=node('div',undefined,'front-row');r.append(...buttons);return r;};
+  const send=(mode,extra={})=>()=>call('front_set',JSON.stringify({indexes:frontManualTargets(),mode,...extra}));
+  const camera=button('Theo hướng nhìn hiện tại',send('camera'));camera.id='front-camera';camera.title='Xoay camera nhìn thẳng vào mặt trước của món rồi bấm nút này';
+  const turn=button('Xoay 90°',send('turn'));turn.id='front-turn';
+  const flip=button('Đảo chiều',send('opposite'));flip.id='front-opposite';
+  const clear=button('Xóa mặt trước',()=>call('front_clear',JSON.stringify({indexes:frontManualTargets()})));clear.id='front-clear';
+  p.append(overLabel,row(detect),row(camera),row(turn,flip,clear),node('p','Món tin cậy "Cần duyệt" nên được xem lại: chọn dòng, nhìn mũi tên trong SketchUp, đúng thì giữ, sai thì xoay hoặc đảo.','muted'));
+  return p;
 }
 // Chụp ảnh: hỏi lại trước khi chụp nhiều đối tượng. Chỉ chụp khi bấm nút Chụp.
 function captureTargets(){return tableState.sel.size?[...tableState.sel]:filteredRows().map(r=>r.index);}
@@ -898,6 +929,7 @@ function tableView(data){
   const bar=view.querySelector('.toolbar-wrap');
   bar.replaceChildren(toolbar());
   if(tableState.panel==='capture')bar.append(capturePanel());
+  if(tableState.panel==='front')bar.append(frontPanel());
   if(tableState.panel==='rename')bar.append(renamePanel());
   const side=$('col-side'),host=$('grid-host');
   if(tableState.panel==='columns'){

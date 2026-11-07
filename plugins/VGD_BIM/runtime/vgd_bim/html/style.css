@@ -201,3 +201,8 @@ body.light #theme{--theme-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://w
 .cb:checked::after{transform:rotate(-45deg) scale(1)}
 .cb:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 @media (prefers-reduced-motion:reduce){.col-side,.sw,.sw::after,.cb,.cb::after{transition:none}}
+
+/* Bảng Mặt trước */
+.front-panel{width:300px}
+.front-row{display:flex;gap:6px;margin-top:6px}
+.front-row button{flex:1;min-width:0;padding:5px 8px;font-size:12px}
