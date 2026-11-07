@@ -34,6 +34,7 @@ module VGD; module BIM; def self.log(m); end
 end; end
 $transactions = []
 $writes = []
+require File.join(ROOT, 'core/settings')
 require File.join(ROOT, 'core/table')
 require File.join(ROOT, 'core/rename')
 require File.join(ROOT, 'ui/dialog')
@@ -51,6 +52,11 @@ ok('ô Tên: chỉ hiện tên', lbl.('instance') == 'Tủ bếp A')
 ok('ô Mô tả: chỉ hiện mô tả', lbl.('description') == 'Gỗ sồi')
 ok('ô Rộng: có đơn vị mm', lbl.('lenX') == '1200 mm')
 ok('ô (X)x(Z): ghép hai cạnh', lbl.('lenXZ') == '1200 x 800 mm')
+VGD::BIM::Settings.update('length_unit' => 'cm')
+ok('đơn vị cm trong Cài đặt: nhãn khung đổi theo (120 x 80 cm)', lbl.('lenXZ') == '120 x 80 cm' && lbl.('lenX') == '120 cm' && lbl.('lenXYZ') == '120 x 60 x 80 cm')
+VGD::BIM::Settings.update('length_unit' => 'm')
+ok('đơn vị m: 1.2 x 0.8 m', lbl.('lenXZ') == '1.2 x 0.8 m')
+VGD::BIM::Settings.update('length_unit' => 'mm')
 ok('ô thể tích: m³', lbl.('volume') == '0.576 m³')
 ok('ô tình trạng: nhãn tiếng Việt', lbl.('status') == 'Mới')
 ok('không chọn ô: hiện cả dòng', lbl.(nil) == 'Tủ bếp A · Gỗ sồi · Mới · Tủ')

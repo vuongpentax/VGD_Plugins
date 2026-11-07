@@ -1,6 +1,6 @@
 'use strict';
 const $ = id => document.getElementById(id);
-let config = {}, locale = {};
+let config = {}, locale = {}, appliedLanguage = null;
 const fieldKeys = ['category','item_type','code','description','unit','quantity_method','zone','floor','include_boq','finish_code','manufacturer','model_number','note'];
 const advancedKeys = ['finish_code','manufacturer','model_number','note'];
 const label = key => (locale.fields || {})[key] || key;
@@ -16,7 +16,7 @@ function badge(value) {return node('span',translated('status',value),'badge '+(v
 function table(parent,headers,rows,render) {const wrap=node('div',undefined,'table-wrap'),t=node('table'),head=node('thead'),tr=node('tr');headers.forEach(h=>tr.append(node('th',h)));head.append(tr);t.append(head);const body=node('tbody');rows.forEach((r,i)=>{const tr=node('tr');render(r,tr,i);body.append(tr)});t.append(body);wrap.append(t);parent.append(wrap);if(!rows.length)parent.append(node('p','Chưa có dữ liệu để hiển thị.','empty'));return body;}
 function cell(tr,value) {const td=node('td');value instanceof Node?td.append(value):td.textContent=value==null?'':String(value);tr.append(td);return td;}
 function number(value,digits=1) {return Number(value).toLocaleString('vi-VN',{maximumFractionDigits:digits});}
-function dimensions(values) {return ['width','depth','height'].map(k=>number(values[k] || 0)).join(' × ');}
+function dimensions(values) {return ['width','depth','height'].map(k=>number(toUnit(values[k] || 0),LENGTH_UNITS[lengthUnit()].show)).join(' × ');}
 function metrics(values) {const wrap=node('div',undefined,'metrics');Object.entries(values).forEach(([k,v])=>{const m=node('div',undefined,'metric');m.append(node('b',typeof v==='number'?number(v):v),node('span',translated('metrics',k)));wrap.append(m)});$('content').append(wrap);}
 function scope(options) {const wrap=node('div',undefined,'scope');options.forEach(([text,mode])=>wrap.append(button(text,()=>call('open_panel',mode),mode===config.mode?'active':'')));$('content').append(wrap);}
 function fields(parent,values,enable=false) {
@@ -43,7 +43,7 @@ function information(data) {
   c.append(node('p',data.count?`Đang chọn ${data.count} đối tượng trong SketchUp.`:'Hãy chọn nhóm hoặc đồ nội thất trong SketchUp để bắt đầu.','hint'));
   fields(c,data.fields,false);const actions=$('primary-actions');actions.replaceChildren();const apply=button('Áp dụng thông tin',()=>call('apply',JSON.stringify(formData())),'primary');apply.disabled=!data.count;actions.append(apply);
   const clear=button('Xóa dữ liệu VGD',()=>call('clear'));clear.disabled=!data.count;actions.append(clear);
-  const raw=card('Thông tin từ SketchUp · Chỉ xem');table(raw,['Loại / Nguồn','Tên đối tượng / Định nghĩa','Thẻ / Vật liệu','Rộng × Sâu × Cao (mm)','Trạng thái'],data.objects,(r,tr)=>{cell(tr,`${r.entity_type==='Group'?'Nhóm':'Thành phần'} / ${translated('source',r.source)}`);cell(tr,`${r.instance_name||'Chưa đặt tên'} / ${r.definition_name}`);cell(tr,`${r.tag} / ${r.material||'Chưa có vật liệu'}`);cell(tr,dimensions(r.dimensions));cell(tr,badge(r.locked?'LOCKED':r.status));});
+  const raw=card('Thông tin từ SketchUp · Chỉ xem');table(raw,['Loại / Nguồn','Tên đối tượng / Định nghĩa','Thẻ / Vật liệu',withUnit('Rộng × Sâu × Cao (mm)'),'Trạng thái'],data.objects,(r,tr)=>{cell(tr,`${r.entity_type==='Group'?'Nhóm':'Thành phần'} / ${translated('source',r.source)}`);cell(tr,`${r.instance_name||'Chưa đặt tên'} / ${r.definition_name}`);cell(tr,`${r.tag} / ${r.material||'Chưa có vật liệu'}`);cell(tr,dimensions(r.dimensions));cell(tr,badge(r.locked?'LOCKED':r.status));});
 }
 function scanOptionsBar(parent) {
   const opts=config.scan_options||{scope:'model',faces:true};
@@ -150,8 +150,12 @@ const tableState={restored:false,savedView:'',data:null,preset:'Tất cả',grou
 const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','volume','quantity']);
 const DIGITS={areaXZ:2,areaXY:2,areaFace:2,volume:3,quantity:0};
 const UNIT_TEXT={lenX:'mm',lenY:'mm',lenZ:'mm',areaXZ:'m²',areaXY:'m²',areaFace:'m²',volume:'m³',quantity:'cái'};
-const WIDTHS={ordinal:44,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80};
-const digitsFor=key=>key.startsWith('len')?0:(DIGITS[key]??2);
+const WIDTHS={ordinal:44,image:64,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80};
+const digitsFor=key=>key.startsWith('len')?LENGTH_UNITS[lengthUnit()].digits:(DIGITS[key]??2);
+const LEN_KEYS=new Set(['lenX','lenY','lenZ']);
+const unitTextOf=key=>LEN_KEYS.has(key)?lengthUnit():UNIT_TEXT[key];
+const colLabel=col=>withUnit(col.label);
+const lenText=value=>fmt(toUnit(value),digitsFor('lenX'));
 const fmt=(value,digits)=>value==null||value===''?'':Number(value).toLocaleString('vi-VN',{minimumFractionDigits:digits,maximumFractionDigits:digits});
 const widthOf=key=>tableState.widths[key]||WIDTHS[key]||110;
 const colByKey=key=>tableState.data.columns.find(c=>c.key===key);
@@ -188,9 +192,9 @@ function cellText(row,key){
     case 'definition':return row.definition;
     case 'instance':return row.name;
     case 'description':return row.description;
-    case 'lenXZ':return `${fmt(row.lenX,0)} × ${fmt(row.lenZ,0)}`;
-    case 'lenXY':return `${fmt(row.lenX,0)} × ${fmt(row.lenY,0)}`;
-    case 'lenXYZ':return `${fmt(row.lenX,0)} × ${fmt(row.lenY,0)} × ${fmt(row.lenZ,0)}`;
+    case 'lenXZ':return `${lenText(row.lenX)} × ${lenText(row.lenZ)}`;
+    case 'lenXY':return `${lenText(row.lenX)} × ${lenText(row.lenY)}`;
+    case 'lenXYZ':return `${lenText(row.lenX)} × ${lenText(row.lenY)} × ${lenText(row.lenZ)}`;
     case 'tag':return row.tag;
     case 'tag_group':return row.tag_group;
     case 'material':return row.material;
@@ -211,6 +215,7 @@ function paintSelection(){
   document.querySelectorAll('.grid tbody tr[data-members]').forEach(tr=>tr.classList.toggle('selected',tr.dataset.members.split(',').every(i=>tableState.sel.has(Number(i)))));
   const count=document.querySelector('.sel-count');
   if(count&&tableState.data)count.textContent=tableState.sel.size?`Đã chọn ${tableState.sel.size} / ${tableState.data.rows.length} dòng`:'';
+  if(typeof syncBusy==='function')syncBusy();
   tableState.rename.preview=null; // phạm vi đổi tên đã đổi nên bản xem trước cũ không còn đúng
   if(tableState.panel==='rename'&&tableState.data)tableView(tableState.data);
 }
@@ -389,7 +394,7 @@ function renderGrid(host){
   const thead=node('thead'),head=node('tr');
   cols.forEach(col=>{
     const active=tableState.sort&&tableState.sort.key===col.key;
-    const th=node('th',col.label+(active?(tableState.sort.dir>0?' ▲':' ▼'):''));
+    const th=node('th',colLabel(col)+(active?(tableState.sort.dir>0?' ▲':' ▼'):''));
     th.title='Bấm để sắp xếp';
     th.onclick=()=>{tableState.sort=active?{key:col.key,dir:-tableState.sort.dir}:{key:col.key,dir:1};renderGrid(host);};
     const handle=node('span',undefined,'rz');handle.setAttribute('aria-hidden','true');
@@ -400,7 +405,7 @@ function renderGrid(host){
   thead.append(head);
   // Hàng đơn vị dưới tiêu đề, kiểu Auto Info.
   const unitRow=node('tr',undefined,'unit-row');
-  cols.forEach(col=>{const th=node('th');if(UNIT_TEXT[col.key])th.append(node('span',UNIT_TEXT[col.key],'pill'));unitRow.append(th);});
+  cols.forEach(col=>{const th=node('th');if(unitTextOf(col.key))th.append(node('span',unitTextOf(col.key),'pill'));unitRow.append(th);});
   thead.append(unitRow);t.append(thead);
   // Nhãn "Tổng cộng" / tên nhóm đặt ở cột rộng nhất có sẵn (Tên, rồi Họ, rồi Loại) để không bị cắt.
   const labelKey=['instance','definition','entity'].find(k=>cols.some(c=>c.key===k));
@@ -452,7 +457,8 @@ function renderGrid(host){
         const td=node('td');td.dataset.key=col.key;
         if(col.editable)td.classList.add('editable');
         if(col.key==='ordinal')td.textContent=String(pos);
-        else if(NUMERIC.has(col.key)){td.textContent=fmt(row[col.key],digitsFor(col.key));td.className='num';}
+        else if(col.kind==='image')thumbCell(td,row);
+        else if(NUMERIC.has(col.key)){td.textContent=fmt(LEN_KEYS.has(col.key)?toUnit(row[col.key]):row[col.key],digitsFor(col.key));td.className='num';}
         else td.textContent=cellText(row,col.key);
         tr.append(td);
       });
@@ -472,6 +478,7 @@ function renderGrid(host){
   }
   wrap.append(t);host.append(wrap);
   if(!rows.length)host.append(node('p','Không có đối tượng nào khớp bộ lọc.','empty'));
+  fillThumbs();ensureThumbs();
 }
 // Đổi tên hàng loạt cho các dòng đang có trong bảng. Giá trị các ô nhập nằm trong tableState.rename để không mất khi bảng vẽ lại.
 const RENAME_TOKENS=['{tên}','{họ}','{phân loại}','{nhóm}','{số}'];
@@ -555,11 +562,12 @@ function toolbar(){
   preset.classList.add('preset-btn');preset.setAttribute('aria-expanded',String(tableState.panel==='presets'));
   const rename=button('Đổi tên',()=>{tableState.panel=tableState.panel==='rename'?null:'rename';tableView(tableState.data);});
   rename.setAttribute('aria-expanded',String(tableState.panel==='rename'));
+  const snap=button('Chụp ảnh',()=>runCapture([...tableState.sel],false));snap.id='tbl-capture';snap.title='Chụp ảnh các dòng đang chọn (chỉ chụp khi bạn bấm nút này)';snap.disabled=captureState.busy||!tableState.sel.size;
   const count=node('span',tableState.sel.size?`Đã chọn ${tableState.sel.size} / ${d.rows.length} dòng`:'','sel-count');
   const groupLabelText=(GROUP_OPTIONS.find(o=>o[0]===tableState.groupBy)||GROUP_OPTIONS[0])[1];
   const grouping=button(`Nhóm theo: ${groupLabelText} ▾`,()=>{tableState.panel=tableState.panel==='group'?null:'group';tableView(tableState.data);});
   grouping.setAttribute('aria-expanded',String(tableState.panel==='group'));
-  bar.append(cols,search,group,grouping,preset,rename,count);
+  bar.append(cols,search,group,grouping,preset,rename,snap,count);
   return bar;
 }
 function columnPanel(){
@@ -582,14 +590,14 @@ function renderColumnList(list){
   list.replaceChildren();
   tableState.order.forEach(key=>{
     const col=colByKey(key);if(!col)return;
-    if(q&&!col.label.toLocaleLowerCase('vi').includes(q))return;
+    if(q&&!colLabel(col).toLocaleLowerCase('vi').includes(q))return;
     const item=node('div',undefined,'pop-col');item.draggable=true;
     item.ondragstart=e=>{tableState.dragKey=key;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',key);};
     item.ondragover=e=>e.preventDefault();
     item.ondrop=e=>{e.preventDefault();const from=tableState.dragKey;tableState.dragKey=null;if(!from||from===key)return;const order=tableState.order.filter(k=>k!==from);order.splice(order.indexOf(key),0,from);tableState.order=order;tableView(d);syncCustomPreset();};
     const box=node('input');box.type='checkbox';box.checked=tableState.visible.has(key);
     box.onchange=()=>{if(box.checked)tableState.visible.add(key);else tableState.visible.delete(key);tableView(d);syncCustomPreset();};
-    const label=node('label');label.append(box,document.createTextNode(' '+col.label));
+    const label=node('label');label.append(box,document.createTextNode(' '+colLabel(col)));
     const grip=node('span','⠿','drag');grip.setAttribute('aria-hidden','true');
     item.append(label,grip);list.append(item);
   });
@@ -652,19 +660,24 @@ function tableView(data){
   if(scroll){const wrap=host.querySelector('.grid-wrap');if(wrap){wrap.scrollTop=scroll.top;wrap.scrollLeft=scroll.left;}}
   view.append(bottomBar());
   persistView();
-  view.append(node('p','Đơn vị: mm (chiều dài), m² (diện tích), m³ (thể tích), cái (số lượng). Diện tích (X*Z), (X*Y) theo khung bao quanh. Thể tích chỉ có cho group kín. Số liệu chưa trừ hao hụt hoặc phần che khuất.','muted'));
+  view.append(node('p',`Đơn vị: ${lengthUnit()} (chiều dài), m² (diện tích), m³ (thể tích), cái (số lượng). Diện tích (X*Z), (X*Y) theo khung bao quanh. Thể tích chỉ có cho group kín. Số liệu chưa trừ hao hụt hoặc phần che khuất.`,'muted'));
   $('primary-actions').replaceChildren(button('Bỏ chọn',()=>call('table_clear'),'primary'));
 }
 // Phần nằm chung trong một tab.
 const TAB_OF={rules:'mapping',validate_model:'mapping',validate_selection:'mapping',export:'scan',convert_selection:'information'};
 window.VGD={receive(event,data){
-  if(event==='config'){config=data;locale=data.locale||locale;$('subtitle').textContent=`${data.version} · ${translated('modes',data.mode)}`;document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===(TAB_OF[data.mode]||data.mode);b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});$('preview').close();$('content').replaceChildren();$('primary-actions').replaceChildren();document.querySelector('main').scrollTop=0;message('Đang đọc dữ liệu…');}
+  if(event==='config'){if(appliedLanguage&&data.language&&appliedLanguage!==data.language){location.reload();return;}appliedLanguage=data.language||'vi';VGD_I18N.setLanguage(appliedLanguage,data.vi_en);config=data;locale=data.locale||locale;$('subtitle').textContent=`${data.version} · ${translated('modes',data.mode)}`;document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===(TAB_OF[data.mode]||data.mode);b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});$('preview').close();$('content').replaceChildren();$('primary-actions').replaceChildren();document.querySelector('main').scrollTop=0;message('Đang đọc dữ liệu…');}
   if(event==='table'){tableState.rename.preview=null;tableState.sel=new Set(Array.isArray(data.selected)?data.selected:[]);if(!tableState.sel.has(tableState.anchor))tableState.anchor=null;} // bảng đổi thì bản xem trước đổi tên cũ không còn đúng
-  const renderers={information,scan,mapping,validation,rules,tags:tagEditor,table:tableView};if(renderers[event]){renderers[event](data);message('Sẵn sàng.');}
+  const renderers={information,scan,mapping,validation,rules,tags:tagEditor,table:tableView,images:imagesView,settings:settingsView};if(renderers[event]){renderers[event](data);message('Sẵn sàng.');}
   if(event==='highlight')highlightRows(data.indexes);
   if(event==='options'&&tableState.data){tableState.data.options=data;tableView(tableState.data);}
   if(event==='presets'&&tableState.data){tableState.data.presets=data;tableView(tableState.data);}
   if(event==='rename_preview'){tableState.rename.preview=data;if(tableState.panel==='rename'&&tableState.data)tableView(tableState.data);}
+  if(event==='images_progress')imagesProgress(data);
+  if(event==='images_done')imagesDone(data);
+  if(event==='images_changed')imagesChanged(data.items);
+  if(event==='thumbs')receiveThumbs(data);
+  if(event==='image_full')receiveFull(data);
   if(event==='progress')message(`Đang quét… ${number(data.count,0)} đối tượng hình học.`);
   if(event==='message')message(data.error||data.text,!!data.error);
   if(event==='preview')preview(data);

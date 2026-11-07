@@ -9,6 +9,6 @@
   "confidence":{"HIGH":"Cao","MEDIUM":"Trung bình","LOW":"Thấp"},
   "source_type":{"definition_name":"Tên định nghĩa","instance_name":"Tên đối tượng","tag":"Thẻ","material":"Vật liệu"},
   "presets":{"Wardrobe":"Tủ áo","Kitchen Base":"Tủ bếp dưới","Kitchen Upper":"Tủ bếp trên","Socket":"Ổ cắm","Switch":"Công tắc","Light":"Đèn","Wall Paint":"Sơn tường"},
-  "modes":{"information":"Thông tin","scan":"Quét & xuất","mapping":"Phân loại / Chuyển đổi","validate_model":"Kiểm tra toàn bộ mô hình","validate_selection":"Kiểm tra đối tượng đang chọn","rules":"Quy tắc phân loại","tags":"Soạn tag","table":"Bảng khối lượng"},
+  "modes":{"information":"Thông tin","scan":"Quét & xuất","mapping":"Phân loại / Chuyển đổi","validate_model":"Kiểm tra toàn bộ mô hình","validate_selection":"Kiểm tra đối tượng đang chọn","rules":"Quy tắc phân loại","tags":"Soạn tag","table":"Bảng khối lượng","images":"Hình ảnh","settings":"Cài đặt"},
   "metrics":{"groups":"Nhóm đối tượng","components":"Đối tượng thành phần","definitions":"Định nghĩa","materials":"Vật liệu","tags":"Thẻ","vgd_objects":"Đã có dữ liệu VGD","unclassified":"Chưa phân loại","coverage":"Tỷ lệ có dữ liệu (%)","raw_faces":"Mặt hình học"}
 }

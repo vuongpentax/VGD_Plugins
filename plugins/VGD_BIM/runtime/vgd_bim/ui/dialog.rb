@@ -1,4 +1,5 @@
 require 'json'
+require_relative 'image_actions'
 module VGD
   module BIM
     module UI
@@ -10,8 +11,9 @@ module VGD
         def onSelectionCleared(selection); @panel.selection_changed; end
       end
       class Dialog
-        # 5 tab: Bảng khối lượng · Thông tin · Quét & xuất · Phân loại (gồm Quy tắc, Kiểm tra) · Soạn tag.
-        MODES = %w[table information scan mapping rules validate_model validate_selection tags].freeze
+        include ImageActions
+        # 7 tab: Bảng khối lượng · Thông tin · Quét & xuất · Phân loại (gồm Quy tắc, Kiểm tra) · Soạn tag · Hình ảnh · Cài đặt.
+        MODES = %w[table information scan mapping rules validate_model validate_selection tags images settings].freeze
         # Tên cũ vẫn mở được, chuyển về tab đã gộp.
         ALIASES = {'export' => 'scan', 'convert_selection' => 'information'}.freeze
         def initialize(mode)
@@ -69,7 +71,8 @@ module VGD
           @dialog.add_action_callback('rename_preview') { |_ctx, payload| safely { rename_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { rename_apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_view') { |_ctx, payload| safely { Table.save_view_state(JSON.parse(payload)) } }
-          @dialog.set_on_closed { @closed = true; @ready = false; @generation += 1; cleanup_table_view; detach; ::UI.stop_timer(@selection_timer) if @selection_timer }
+          register_image_callbacks
+          @dialog.set_on_closed { @closed = true; @capture[:cancel] = true if @capture; @ready = false; @generation += 1; cleanup_table_view; detach; ::UI.stop_timer(@selection_timer) if @selection_timer }
         end
         def show; @dialog.visible? ? @dialog.bring_to_front : @dialog.show; end
         def visible?; @dialog.visible?; end
@@ -107,8 +110,10 @@ module VGD
         def selection_changed
           handler = {'table' => -> { table_selection_changed },
                      'tags' => -> { emit('selection', {count: taggable_selection.size}) },
-                     'information' => -> { refresh }}[@mode]
+                     'information' => -> { refresh },
+                     'images' => -> { table_scan_selection!; images_build }}[@mode]
           return unless handler && @dialog.visible?
+          return if @capture # đang chụp ảnh: chọn / bỏ chọn tạm thời là của việc chụp, không phải của người dùng
           ::UI.stop_timer(@selection_timer) if @selection_timer
           @selection_timer = ::UI.start_timer(0.05, false) { safely { handler.call if @dialog.visible? } }
         end
@@ -122,8 +127,9 @@ module VGD
           detach
           cleanup_table_view unless @mode == 'table'
           @model = Sketchup.active_model
-          emit('config', {mode: @mode, version: BIM::VERSION, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.dictionary, scan_options: {scope: @scan_options[:scope], faces: faces?}})
-          if %w[information tags table].include?(@mode)
+          language = Settings.read['language']
+          emit('config', {mode: @mode, version: BIM::VERSION, language: language, settings: Settings.read, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.ui_dictionary(language), vi_en: (language == 'en' ? Locale.vi_en_names : nil), scan_options: {scope: @scan_options[:scope], faces: faces?}})
+          if %w[information tags table images].include?(@mode)
             @observer = SelectionObserver.new(self)
             @model.selection.add_observer(@observer)
           end
@@ -143,6 +149,11 @@ module VGD
           when 'table'
             table_scan_selection!
             table_build
+          when 'images'
+            table_scan_selection!
+            images_build
+          when 'settings'
+            emit('settings', settings_payload)
           when 'rules'
             emit('rules', MappingRules.read(@model))
           else
@@ -504,10 +515,10 @@ module VGD
           when 'entity' then row[:entity_type].to_s
           when 'instance' then row[:name].to_s.strip.empty? ? row[:definition].to_s : row[:name].to_s
           when 'description' then row[:description].to_s
-          when 'lenX', 'lenY', 'lenZ' then "#{num(row[key.to_sym])} mm"
-          when 'lenXZ' then "#{num(row[:lenX])} x #{num(row[:lenZ])} mm"
-          when 'lenXY' then "#{num(row[:lenX])} x #{num(row[:lenY])} mm"
-          when 'lenXYZ' then "#{num(row[:lenX])} x #{num(row[:lenY])} x #{num(row[:lenZ])} mm"
+          when 'lenX', 'lenY', 'lenZ' then "#{length_num(row[key.to_sym])} #{length_unit}"
+          when 'lenXZ' then "#{length_num(row[:lenX])} x #{length_num(row[:lenZ])} #{length_unit}"
+          when 'lenXY' then "#{length_num(row[:lenX])} x #{length_num(row[:lenY])} #{length_unit}"
+          when 'lenXYZ' then "#{length_num(row[:lenX])} x #{length_num(row[:lenY])} x #{length_num(row[:lenZ])} #{length_unit}"
           when 'areaXZ', 'areaXY', 'areaFace' then "#{num(row[key.to_sym])} m²"
           when 'volume' then row[:volume] ? "#{num(row[:volume])} m³" : ''
           when 'quantity' then "#{num(row[:quantity])} cái"
@@ -519,6 +530,13 @@ module VGD
         def num(value)
           return '' if value.nil?
           value.is_a?(Float) && value == value.round ? value.round.to_s : value.to_s
+        end
+        # Kích thước trong nhãn khung đánh dấu theo đơn vị chiều dài trong Cài đặt (số liệu gốc luôn là mm).
+        LENGTH_FACTORS = {'mm' => 1.0, 'cm' => 0.1, 'm' => 0.001}.freeze
+        def length_unit; Settings.read['length_unit']; end
+        def length_num(mm)
+          return '' if mm.nil?
+          num((mm * LENGTH_FACTORS.fetch(length_unit)).round(3))
         end
         # SketchUp 2023+: khung vẽ bằng lớp phủ (Overlay) nên công cụ Select của SketchUp giữ nguyên (Shift/Ctrl, kéo chọn,
         # nhấp đúp). SketchUp 2022 hoặc khi lớp phủ lỗi: dùng BoundsPreview (công cụ), có hạn chế ở click chuột.

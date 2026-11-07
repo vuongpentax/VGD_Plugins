@@ -55,6 +55,25 @@ Các báo cáo chưa tính đơn giá/thành tiền. Danh mục có cả đối 
 
 File CSV dùng UTF-8, dấu chấm phẩy tách cột và dấu phẩy thập phân. Nếu Excel mở chưa đúng, chọn **Dữ liệu → Từ văn bản/CSV**, chọn UTF-8 và dấu chấm phẩy.
 
+## Ảnh món đồ (tab Hình ảnh)
+
+Ảnh **chỉ được chụp khi bạn bấm**, plugin không tự chụp.
+
+1. Chọn group hoặc component trong SketchUp rồi mở tab **Hình ảnh**. Mỗi đối tượng một thẻ.
+2. Bấm **Cập nhật ảnh** để chụp mọi đối tượng đang hiện (tích **Chỉ chụp đối tượng chưa có ảnh** để bỏ qua đối tượng đã có). Bấm **Chụp ảnh** hoặc **Chụp lại** trên một thẻ để chỉ chụp đối tượng đó. Chụp nhiều thì có nút **Dừng**; mỗi lần tối đa 200 đối tượng.
+3. Cách chụp chọn trong tab **Cài đặt**: **Cô lập món đồ rồi chụp** (tạm ẩn phần còn lại của model, zoom vào món đồ, chụp ảnh vuông, rồi trả model về như cũ, không để lại bước hoàn tác) hoặc **Chụp đúng khung nhìn hiện tại**. Khi chụp, đối tượng đang chọn bị bỏ chọn tạm thời rồi được chọn lại. Nếu món đồ nằm trong thành phần dùng chung nhiều nơi thì không cô lập được, hãy dùng chế độ khung nhìn hiện tại.
+4. Muốn dùng ảnh của bạn: kéo thả file ảnh (PNG, JPG, WebP, BMP) vào thẻ hoặc vào ô **Ảnh** trong bảng; hoặc bấm ô rồi dán ảnh đã copy (**Ctrl+V**); hoặc bấm **Chọn ảnh…**. Ảnh được thu nhỏ về cỡ ảnh trong Cài đặt.
+5. **Xóa ảnh** chỉ xóa file ảnh, không đụng vào model. Ảnh lưu ngoài file SketchUp, theo từng model và mã đối tượng, nên nhớ sao lưu thư mục ảnh cùng file SKP nếu cần.
+6. Trong **Bảng khối lượng**, bật cột **Ảnh** (Chọn cột) để thấy ảnh nhỏ; chọn dòng rồi bấm **Chụp ảnh** để chụp riêng các dòng đó.
+
+## Cài đặt
+
+Tab **Cài đặt** lưu trên máy này, mỗi thay đổi được lưu ngay:
+
+- **Ngôn ngữ**: Tiếng Việt hoặc English. Đổi sẽ tải lại cửa sổ. Báo cáo CSV và hộp thoại gốc của SketchUp vẫn bằng tiếng Việt.
+- **Đơn vị chiều dài**: mm, cm hoặc m cho kích thước hiện trong cửa sổ (bảng, tab Thông tin, nhãn khung đánh dấu). Diện tích luôn là m², thể tích m³; báo cáo CSV giữ nguyên mm.
+- **Thư mục lưu ảnh** (gõ đường dẫn đầy đủ hoặc **Chọn thư mục…**; để trống dùng thư mục mặc định), **Cách chụp**, **Cỡ ảnh** (cạnh dài), **Nền ảnh** (trong suốt hoặc trắng; nền trắng tạm tắt mặt đất và chân trời khi chụp rồi trả lại).
+
 ## Soạn tag
 
 Tab **Soạn tag** để soạn bộ tag theo nhóm hạng mục (Phần thô, Hoàn thiện, Đồ rời, Thiết bị, Khác), gán tag cho group, component hoặc mặt đang chọn, và xuất / nhập bộ tag bằng CSV (mở được trong Excel) hoặc JSON. Khi nhập, chọn thay thế toàn bộ hoặc gộp vào bộ hiện có. Bộ tag lưu trên máy này.

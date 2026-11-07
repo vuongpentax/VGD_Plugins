@@ -1,5 +1,6 @@
 require 'json'
 require_relative 'storage'
+require_relative 'images'
 
 module VGD
   module BIM
@@ -16,6 +17,7 @@ module VGD
       # editable: name / description / status (sửa trực tiếp trong bảng).
       COLUMNS = [
         {key: 'ordinal', label: '#', kind: 'text'},
+        {key: 'image', label: 'Ảnh', kind: 'image'},
         {key: 'entity', label: 'Loại', kind: 'text'},
         {key: 'definition', label: 'Họ', kind: 'text'},
         {key: 'instance', label: 'Tên', kind: 'text', editable: 'name'},
@@ -42,7 +44,7 @@ module VGD
 
       # Preset có sẵn. Preset do người dùng lưu nằm trong custom_presets.
       BUILT_IN_PRESETS = [
-        {'name' => 'Tất cả', 'group' => '', 'columns' => %w[ordinal entity definition instance description material tag status quantity]},
+        {'name' => 'Tất cả', 'group' => '', 'columns' => %w[ordinal image entity definition instance description material tag status quantity]},
         {'name' => 'Phần thô', 'group' => 'Phần thô', 'columns' => %w[ordinal entity instance lenX lenY lenZ areaFace volume tag material quantity]},
         {'name' => 'Hoàn thiện', 'group' => 'Hoàn thiện', 'columns' => %w[ordinal entity instance description lenX lenY lenZ areaXZ areaXY areaFace tag material status quantity]},
         {'name' => 'Đồ rời', 'group' => 'Đồ rời', 'columns' => %w[ordinal entity definition instance description lenX lenY lenZ tag material status quantity]}
@@ -133,13 +135,22 @@ module VGD
         groups = tag_groups
         index_of = {}
         records.each_with_index { |record, i| index_of[path_key(record[:path])] = i }
-        rows = records.each_with_index.map { |record, i| row_for(record, i, groups) }
+        image_folder = model.respond_to?(:guid) ? Images.dir(model) : nil # một lần cho cả bảng
+        rows = records.each_with_index.map { |record, i| row_for(record, i, groups).merge(image_state(model, record[:entity], image_folder)) }
         # Đối tượng cha đang có trong bảng: dùng để tránh cộng trùng khi tính tổng.
         records.each_with_index do |record, i|
           rows[i][:parents] = (1...record[:path].size).map { |n| index_of[path_key(record[:path][0...n])] }.compact
           rows[i][:parent] = parent_label(record)
         end
         {rows: rows, records: records}
+      end
+
+      # Mã bền (persistent_id) và tình trạng ảnh của đối tượng. Ảnh nằm ngoài file SketchUp (xem Images).
+      def self.image_state(model, entity, folder = nil)
+        pid = entity.respond_to?(:persistent_id) ? entity.persistent_id : nil
+        return {pid: nil, has_image: false, image_stamp: 0} unless pid.is_a?(Integer) && pid > 0 && model.respond_to?(:guid)
+        info = Images.info(model, pid, folder || Images.dir(model))
+        {pid: pid, has_image: info[:has], image_stamp: info[:stamp]}
       end
 
       # Tên của đối tượng cha trực tiếp (để nhóm theo cha); cấp gốc của model thì để trống.

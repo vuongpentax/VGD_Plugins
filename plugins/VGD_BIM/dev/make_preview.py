@@ -127,7 +127,11 @@ out = html
 out = out.replace('<link rel="stylesheet" href="vgd-theme/vgd-theme.css">', '<style>' + theme_css + '</style>')
 out = out.replace('<link rel="stylesheet" href="style.css">', '<style>' + style_css + '</style>')
 out = out.replace('<script src="vgd-theme/vgd-theme.js"></script>', '<script>' + theme_js.replace('</script', '<\\/script') + '</script>')
-out = out.replace('<script src="app.js"></script>', '<script>' + mock + '</script><script>' + app_js.replace('</script', '<\\/script') + '</script>')
+# Các script phụ (dịch Anh, cài đặt, hình ảnh) nạp trước app.js, đúng thứ tự trong index.html.
+extra = ''.join('<script>' + rd('html/' + n).replace('</script', '<\\/script') + '</script>' for n in ('i18n.js', 'settings.js', 'images.js'))
+for n in ('i18n.js', 'settings.js', 'images.js'):
+    out = out.replace(f'<script src="{n}"></script>', '')
+out = out.replace('<script src="app.js"></script>', extra + '<script>' + mock + '</script><script>' + app_js.replace('</script', '<\\/script') + '</script>')
 out = out.replace('<title>VGD_BIM</title>', '<title>VGD_BIM · Bản xem trước giao diện</title>')
 assert '<script src=' not in out and 'href="style.css"' not in out, 'external refs remain'
 open(OUT, 'w', encoding='utf-8').write(out)

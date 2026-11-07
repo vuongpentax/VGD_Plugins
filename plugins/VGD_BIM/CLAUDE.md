@@ -9,19 +9,19 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 - Phiên bản: hằng `VERSION` trong `runtime/vgd_bim.rb` (dạng `x.y.z` hoặc `x.y.z-beta.N`, không có chữ `v`). Tiêu đề README phải khớp số này. Đóng gói cần có `RELEASE_NOTES_v<x.y.z>.md` (bản beta dùng chung ghi chú của bản chốt).
 - SketchUp tối thiểu: 2022. Windows là môi trường chính.
 - Dữ liệu trong model: dictionary `VGD_BIM` (Group/ComponentInstance) và `VGD_BIM_RULES` (quy tắc, lưu JSON).
-- Dữ liệu trên máy: file JSON trong `%APPDATA%\VGD\VGD_BIM\` (`~/VGD/VGD_BIM` nếu không phải Windows; biến `VGD_BIM_DATA_DIR` đổi thư mục): `tag_set.json`, `table_presets.json`, `table_view.json` (xem `core/storage.rb`).
+- Dữ liệu trên máy: file JSON trong `%APPDATA%\VGD\VGD_BIM\` (`~/VGD/VGD_BIM` nếu không phải Windows; biến `VGD_BIM_DATA_DIR` đổi thư mục): `tag_set.json`, `table_presets.json`, `table_view.json`, `settings.json` (xem `core/storage.rb`, `core/settings.rb`). Ảnh món đồ là file PNG trong thư mục ảnh của cài đặt (mặc định `images/` cạnh các file trên), thư mục con theo `model.guid`, tên theo `persistent_id`; không ghi vào file SketchUp (`core/images.rb`).
 
 ## Cấu trúc
 
-- `runtime/`: mã chạy. `vgd_bim/loader.rb` giữ danh sách `FILES` (thứ tự nạp, dùng chung cho lúc mở SketchUp và `VGD::BIM.reload`); thư mục con `core/`, `intake/`, `ui/` (`dialog.rb`, `bounds_preview.rb`: công cụ và lớp phủ), `html/` (giao diện), `config/`.
-- `dev/`: `run_tests.rb`, các `test_*.rb`, `test_ui.cjs`, fixture và `stubs/`, `package.py`, `deploy.ps1`, `native_smoke.rb`, `make_preview.py`.
+- `runtime/`: mã chạy. `vgd_bim/loader.rb` giữ danh sách `FILES` (thứ tự nạp, dùng chung cho lúc mở SketchUp và `VGD::BIM.reload`); thư mục con `core/`, `intake/`, `ui/` (`dialog.rb`; `image_actions.rb`: phần Cài đặt và Hình ảnh của cửa sổ; `capture.rb`: chụp ảnh; `bounds_preview.rb`: công cụ và lớp phủ), `html/` (giao diện: `app.js`, `settings.js`, `images.js`, `i18n.js` dịch Anh), `config/` (`vi.json`, `en.json`).
+- `dev/`: `run_tests.rb`, các `test_*.rb`, `test_ui.cjs`, `test_ui_images.cjs`, `test_ui_en.cjs` (Playwright), `ui_fixture.rb` (dữ liệu thật từ Ruby cho test giao diện), fixture và `stubs/`, `package.py`, `deploy.ps1`, `native_smoke.rb`, `make_preview.py`.
 - Gốc plugin: README, SPECIFICATION (đặc tả gốc, có ghi chú cập nhật), VALIDATION, HUONG_DAN_SU_DUNG, RELEASE_NOTES_*.
 
 ## Kiểm thử
 
 Chạy từ `plugins/VGD_BIM`:
 - `ruby dev/run_tests.rb`: kiểm tra cú pháp mọi file Ruby và chạy các `dev/test_*.rb` bằng Ruby thường (mô phỏng, không thay SketchUp). Mỗi test cũng chạy riêng được, ví dụ `ruby dev/test_table.rb`.
-- `dev/test_ui.cjs`: Playwright + trình duyệt headless; đặt `VGD_PLAYWRIGHT_MODULE` nếu Playwright không cài local, `VGD_BROWSER_CHANNEL=msedge` để dùng Edge.
+- `dev/test_ui.cjs`, `dev/test_ui_images.cjs`, `dev/test_ui_en.cjs`: Playwright + trình duyệt headless (cần `ruby` trong PATH cho hai bộ sau); đặt `VGD_PLAYWRIGHT_MODULE` nếu Playwright không cài local, `VGD_BROWSER_CHANNEL=msedge` để dùng Edge.
 - `dev/native_smoke.rb`: chỉ chạy trong một tiến trình SketchUp mới với model trống. Không chạy trên model của người dùng.
 - Phần chưa xác minh trong SketchUp thật: xem `VALIDATION.md`.
 
@@ -45,6 +45,9 @@ Chạy từ `plugins/VGD_BIM`:
 - Chọn đối tượng không được quét toàn model: tab Bảng khối lượng chỉ đọc đối tượng đang chọn (quét sâu chỉ khi bật "Chọn sâu bên trong"); chỉ các tab Quét & xuất, Phân loại, Kiểm tra mới quét model.
 - Không dùng `Sketchup.write_default` cho dữ liệu JSON (chuỗi có dấu ngoặc kép hoặc tiếng Việt bị hỏng khi đọc lại); dùng `core/storage.rb`.
 - Khung đánh dấu: từ SketchUp 2023 dùng lớp phủ `UI::BoundsOverlay` (`Sketchup::Overlay`, chỉ vẽ) để không chiếm công cụ Select; SketchUp 2022 và khi lớp phủ lỗi dùng `UI::BoundsPreview`. `Sketchup::Tool` không tồn tại nên `BoundsPreview` là lớp thường với các hàm `draw` / `onLButtonDown` / `onCancel`. Test không được thêm stub cho lớp không có trong API SketchUp, vì stub có thể che lỗi thật (stub `Sketchup::Overlay` trong `dev/test_overlay.rb` chỉ mô phỏng phần API được dùng).
+- Ảnh món đồ chỉ được chụp khi người dùng bấm nút (Cập nhật ảnh, Chụp ảnh / Chụp lại, nút Chụp ảnh của bảng). Không chụp tự động khi mở tab, chọn đối tượng hay mở model. Chụp cô lập phải nằm trong `start_operation` rồi `abort_operation` và trả lại camera, lựa chọn, tuỳ chọn hiển thị trong `ensure` (`ui/capture.rb`); không `commit_operation` để khỏi để lại bước hoàn tác.
+- Mã đối tượng, đường dẫn và ảnh do giao diện gửi lên phải qua `Images` / `Settings` (chỉ nhận PNG, giới hạn dung lượng, mã phải có trong bảng). Không nối đường dẫn từ chuỗi thô của giao diện.
+- Ngôn ngữ English chỉ đổi giao diện: từ điển và mẫu trong `html/i18n.js`, từ điển dữ liệu `config/en.json`. Chuỗi tiếng Việt mới trong giao diện phải có bản dịch (chạy `dev/test_ui_en.cjs`). Báo cáo CSV, thông báo kiểm tra của Ruby và hộp thoại gốc của SketchUp giữ tiếng Việt. Số liệu gốc luôn là mm; đơn vị chiều dài chỉ đổi khi hiển thị.
 - Màu giao diện lấy từ theme VGD (`runtime/vgd_bim/html/vgd-theme/`), không tự đặt màu riêng.
 - `update_notice.rb` giữ nguyên để loader cũ vẫn gọi được; plugin không tự báo cập nhật, VGD Center báo bản mới.
 - Đổi tên hoặc đường dẫn extension phải kiểm tra lại `find_installed_extension` và `PLUGIN_LAYOUTS` của VGD Center (`plugins/VGD_Center/VGD_Center/main.rb`).
