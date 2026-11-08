@@ -62,8 +62,9 @@ class FakeBounds
   def empty?; width.zero? && height.zero? && depth.zero?; end
 end
 class FakeEntities
-  def initialize(list); @list = list; end
-  def to_enum; @list.each; end
+  attr_reader :reads # số lần duyệt danh sách (để kiểm tra mỗi định nghĩa chỉ duyệt một lần)
+  def initialize(list); @list = list; @reads = 0; end
+  def to_enum; @reads += 1; @list.each; end
   def to_a; @list.dup; end
 end
 class FakeDef
@@ -137,8 +138,9 @@ ok('không khớp từ khóa nào và không bật cắt: nil (dùng khung bao g
 ok('tất cả đều bị loại: nil (giữ khung bao gốc thay vì ra 0)', P.measure(FakeDef.new('Tay nam', box_faces(10, 10, 10), FakeBounds.new(1, 1, 1)).then { |df| FakeDef.new('Tủ', [FakeInst.new(df, name: 'tay nam')], FakeBounds.new(1, 1, 1)) }, words).nil?)
 ok('định nghĩa rỗng (khung bao rỗng): nil', P.measure(FakeDef.new('Rỗng', [], FakeBounds.new(0, 0, 0)), words).nil?)
 r = P.measure(cabinet.call([handle_inst.call(name: 'Tay nắm')]), words)
-many = FakeDef.new('Nhiều mặt', Array.new(P::MAX_FACES + 1) { Sketchup::Face.new([0, 1, 0], [0, 0, 0], [1, 0, 1]) } + [handle_inst.call(name: 'tay nam')], native)
-ok("quá #{P::MAX_FACES} mặt: không đo thân (giữ khung bao gốc) để bảng không chậm", P.measure(many, words).nil?)
+many = FakeDef.new('Nhiều mặt', Array.new(25_000) { Sketchup::Face.new([0, 1, 0], [0, 0, 0], [1, 0, 1]) } + [handle_inst.call(name: 'tay nam')], native)
+r = P.measure(many, words)
+ok('món rất nhiều mặt (25.000): vẫn loại trừ được, không còn giới hạn số mặt', r && size_mm.call(r) == [25.4, 0.0, 25.4] && r[:note].include?('tay nam'))
 edge_def = FakeDef.new('Có cạnh', box_faces(1200, 600, 2000) + [Sketchup::Edge.new([0, 0, 0], [0, 0, 2100 / IN]), handle_inst.call(name: 'tay nam')], native)
 ok('cạnh rời (không thuộc mặt nào) vẫn được tính vào khung bao khi đo thân (cao 2100)', size_mm.call(P.measure(edge_def, words))[2] == 2100.0)
 
@@ -164,6 +166,31 @@ r = P.measure(both, words, ['da bep'])
 ok('từ khóa tên và tag dùng cùng lúc: cả hai đều bị bỏ, ghi chú đủ hai phần', size_mm.call(r) == [1200.0, 600.0, 2000.0] && r[:note].start_with?('Bỏ 2 phần theo từ khóa hoặc tag (') && r[:note].include?('Mặt đá') && r[:note].include?('Tay nam'))
 ctx_tags = P::Context.new([], ['Đá bếp'])
 ok('Context chỉ có tag (không có từ khóa): hoạt động, tên tag được chuẩn hóa', ctx_tags.active? && ctx_tags.tags == ['da bep'] && size_mm.call(ctx_tags.extent(cab_with_counter)) == [1200.0, 600.0, 2000.0])
+
+# ---- Hệ nhiều cấp: tag nằm sâu trong group cha, món rất nhiều mặt ----
+t = ->(x, y, z) { Geom::Transformation.translation(x / IN, y / IN, z / IN) }
+def_box = ->(name, w, d, h) { FakeDef.new(name, box_faces(w, d, h), FakeBounds.new(w / IN, d / IN, h / IN)) }
+tagged = ->(definition, tag, transform, name) { FakeInst.new(definition, transform, name: name, layer: Layer.new(tag)) }
+door_sys = FakeDef.new('Cánh', box_faces(500, 18, 700) + [tagged.call(def_box.call('Tay', 128, 32, 15), 'Tay nắm', t.call(100, 18, 300), 'Tay nắm 1')], FakeBounds.new(500 / IN, 50 / IN, 700 / IN))
+body_sys = FakeDef.new('Thùng', box_faces(1200, 560, 720) + [tagged.call(door_sys, 'Cánh', t.call(0, 560, 0), 'Cánh trái')], FakeBounds.new(1200 / IN, 610 / IN, 720 / IN))
+device = tagged.call(def_box.call('Thiết bị', 100, 300, 50), 'Thiết bị', t.call(0, 400, 0), 'Cảm biến')
+sink_sys = FakeDef.new('Chậu', box_faces(600, 450, 150) + Array.new(25_000) { Sketchup::Face.new([0, 1, 0], [0, 0, 0], [1, 0, 1]) } + [device], FakeBounds.new(600 / IN, 700 / IN, 150 / IN))
+inner_sys = FakeDef.new('Hệ lavabo', [tagged.call(body_sys, 'Thùng tủ', t.call(0, 0, 0), 'Thùng tủ'), tagged.call(def_box.call('LED', 1000, 10, 10), 'LED', t.call(100, 0, 2090), 'Dải LED'),
+                                     tagged.call(def_box.call('Gương', 800, 5, 1000), 'Gương', t.call(200, 0, 1000), 'Gương'), tagged.call(sink_sys, 'Lavabo', t.call(300, 50, 700), 'Chậu lavabo')],
+                        FakeBounds.new(1200 / IN, 750 / IN, 2100 / IN))
+outer_sys = FakeDef.new('Món to', [FakeInst.new(inner_sys, t.call(0, 0, 0), name: 'Hệ lavabo')], FakeBounds.new(1200 / IN, 750 / IN, 2100 / IN))
+sys_tags = %w[tay\ nam led thiet\ bi]
+r = P.measure(outer_sys, [], sys_tags)
+ok('gộp cả hệ thành một món to (3 cấp, tay nắm trong cánh, LED, thiết bị trong chậu 25.000 mặt): bảng chỉ đo phần còn lại 1200 x 578 x 2000', r && size_mm.call(r) == [1200.0, 578.0, 2000.0])
+ok('ghi chú nêu đủ 3 phần bị loại, kể cả phần nằm sâu', r && r[:note].start_with?('Bỏ 3 phần') && %w[Tay Dải Cảm].all? { |name| r[:note].include?(name) })
+ok('không tick tag nào: nil (số đo gốc như cũ)', P.measure(outer_sys, [], []).nil?)
+ok('chỉ tick "tay nam": LED và thiết bị vẫn tính (cao 2100, sâu 750)', size_mm.call(P.measure(outer_sys, [], ['tay nam'])) == [1200.0, 750.0, 2100.0])
+shared_door = FakeDef.new('Cánh dùng chung', box_faces(500, 18, 700) + [handle_inst.call(name: 'tay nam')], FakeBounds.new(500 / IN, 50 / IN, 700 / IN))
+rack = FakeDef.new('Kệ', Array.new(200) { |i| FakeInst.new(shared_door, t.call(0, 0, i * 10)) }, native)
+rack2 = FakeDef.new('Kệ 2', [FakeInst.new(shared_door, t.call(0, 100, 0))], native)
+shared_ctx = P::Context.new(words)
+r = shared_ctx.extent(rack); shared_ctx.extent(rack2)
+ok('200 bản sao của cùng một component (và một định nghĩa khác dùng chung): định nghĩa đó chỉ duyệt một lần, kết quả vẫn đúng', shared_door.entities.reads == 1 && r && size_mm.call(r)[2] == 700.0 + 199 * 10 && r[:note].start_with?('Bỏ 200 phần'))
 
 # ---- Context: cache và cài đặt ----
 ctx = P::Context.new(words)

@@ -93,6 +93,8 @@ Phần phụ nhô ra (tay nắm...) hoặc thứ không thuộc thân (đá bế
 1. **Loại trừ theo tag** (khuyên dùng): đặt những phần đó lên một tag riêng trong SketchUp, rồi bấm nút **Loại trừ tag** trên thanh công cụ của Bảng khối lượng. Ngăn bên liệt kê các tag của model; tick tag nào thì mọi thứ nằm trên tag đó không còn được tính vào kích thước. Bỏ tick là tính lại. Dùng được cho tay nắm, đá bếp hoặc bất cứ thứ gì có tag riêng.
 2. **Từ khóa tên** (bảng **Preset** → **Số đo thân**): gõ vài từ như `tay nắm, handle, knob` (cách nhau dấu phẩy). Group, component hoặc tag có tên chứa từ đó sẽ không được tính. Không phân biệt hoa thường và dấu. Mặc định đã có `tay nắm, tay nam, handle, knob`.
 
+Tag đã tick còn làm **dòng gắn tag đó biến khỏi bảng** (và các món nằm trong nó nếu bật Chọn sâu): ví dụ chọn cả công trình, tick tag Tường, Cửa, Rèm thì bảng chỉ còn nội thất và tổng cũng chỉ cộng nội thất. Dòng trên đầu bảng cho biết đã ẩn bao nhiêu đối tượng. Bỏ tick là hiện lại.
+
 Bật cột **Ghi chú số đo** (Chọn cột) để xem plugin đã bỏ gì cho từng món, ví dụ `Bỏ 2 phần theo từ khóa hoặc tag (Tay nam trái, Mặt đá)`. Phần dính liền vào hình của cánh (không tách thành group / component hoặc tag riêng) thì không loại được: hãy tách riêng và đặt tag hoặc tên cho nó.
 
 Chỉ Bảng khối lượng và file xuất từ bảng dùng số đo thân. Nếu thấy một món sai, xem Ghi chú số đo rồi chỉnh tag hoặc từ khóa.

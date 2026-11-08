@@ -285,7 +285,11 @@ module VGD
           built = Table.build(@model, scope, @table_options[:deep] ? true : false, projected: @table_options[:projected], measure: MeasureProbe.context)
           @table_rows = built[:rows]
           @table_records = built[:records]
-          hint = scope.empty? ? 'Chưa chọn đối tượng nào. Chọn group hoặc component trong SketchUp, bảng sẽ tự đọc.' : nil
+          hint = if scope.empty?
+                   'Chưa chọn đối tượng nào. Chọn group hoặc component trong SketchUp, bảng sẽ tự đọc.'
+                 elsif built[:hidden].to_i.positive?
+                   "Đã ẩn #{built[:hidden]} đối tượng thuộc tag loại trừ."
+                 end
           emit('table', {columns: Table::COLUMNS, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
                          statuses: Table::STATUS_LABELS, options: @table_options.merge(isolating: !@isolated.empty?),
                          rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state, choices: table_choices})

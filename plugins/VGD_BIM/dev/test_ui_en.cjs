@@ -109,7 +109,7 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
     'Đã chuyển đổi 7 đối tượng. Đã lưu quy tắc phân loại.','Đã xuất 12 dòng và 5 ảnh ra Excel: C:\\a.xlsx','Đã xuất 1 dòng ra Excel: C:\\a.xlsx','Đã tạo trang báo cáo 12 dòng và mở trong trình duyệt. Khi cần in, bấm nút In / Lưu PDF trên trang rồi chọn Lưu thành PDF.','Định dạng xuất không hợp lệ.','Dữ liệu bảng không hợp lệ.','Bảng chưa có dòng nào. Hãy chọn group hoặc component trong SketchUp.','Dòng 3: Nhóm không hợp lệ: Zzz','Tên tag quá dài (tối đa 60 ký tự): abc','Tên tag bị trùng: abc',
     'Mô hình đã thay đổi. Hãy làm mới trước khi tiếp tục.','Bảng đã cũ. Hãy làm mới bảng.','Số bắt đầu phải là số nguyên từ 0 đến 99999.','Chỉ số dòng không hợp lệ.','Không ghi được tệp. Kiểm tra vị trí lưu và đóng tệp nếu đang mở trong Excel.',
     'Các dòng nằm ở cấp lồng khác nhau nên SketchUp chỉ chọn dòng cuối. Đổi tên vẫn áp dụng cho mọi dòng đã chọn trong bảng.','Hãy đánh dấu ít nhất một trường cần cập nhật.','Đối tượng đang bị khóa nên không sửa được.',
-    'Đối tượng nằm trong thành phần dùng chung nhiều nơi nên không cô lập được.','Quy tắc phải là một danh sách.','Mục đưa vào bảng khối lượng phải là Có hoặc Không.']);
+    'Đối tượng nằm trong thành phần dùng chung nhiều nơi nên không cô lập được.','Quy tắc phải là một danh sách.','Mục đưa vào bảng khối lượng phải là Có hoặc Không.','Đã ẩn 4 đối tượng thuộc tag loại trừ.']);
   if(errors.length)fail('Lỗi JavaScript: '+errors.join(' | '));
   if(lang==='en'){
     if(found.size)fail(`Còn ${found.size} chuỗi tiếng Việt chưa dịch:\n`+[...found].map(([t,l])=>`   [${l}] ${t}`).join('\n'));

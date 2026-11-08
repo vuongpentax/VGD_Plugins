@@ -5,8 +5,48 @@ module VGD
   module BIM
     # Phần gọi SketchUp của số đo thân (xem Measure): duyệt hình trong định nghĩa, bỏ các group / component / mặt / cạnh có tên hoặc tag chứa
     # từ khóa loại trừ, tính khung bao còn lại. Chỉ đọc model. Chưa kiểm được trong SketchUp thật.
+    # Mỗi định nghĩa (component / group) chỉ duyệt MỘT lần trong một lần dựng bảng, kết quả dùng lại cho mọi bản sao và mọi cấp lồng,
+    # nên món gộp nhiều cấp, nhiều mặt vẫn đo nhanh và không cần giới hạn số mặt.
     module MeasureProbe
-      MAX_FACES = 20_000 # định nghĩa nhiều mặt hơn thì giữ khung bao gốc (không đo thân) để bảng không chậm
+      # Phần còn lại của một định nghĩa sau khi bỏ các phần loại trừ: mặt và cạnh trực tiếp, các định nghĩa con (kèm biến đổi của bản sao),
+      # và tên các phần đã bỏ (kể cả phần nằm sâu trong định nghĩa con).
+      class Part
+        attr_reader :excluded
+
+        def initialize(faces, edges, children, excluded)
+          @faces = faces
+          @edges = edges
+          @children = children
+          @excluded = excluded
+        end
+
+        # Có phần nào bị bỏ (ở bất kỳ cấp nào) không.
+        def touched?
+          !@excluded.empty?
+        end
+
+        # Khung bao (inch, khung cục bộ của định nghĩa): [nhỏ nhất, lớn nhất], hoặc nil nếu không còn gì. Tính một lần khi cần.
+        # Định nghĩa con được tính bằng khung bao của nó (như SketchUp tính khung bao của component lồng nhau).
+        def box
+          return @box if defined?(@box)
+          lo = [Float::INFINITY] * 3
+          hi = [-Float::INFINITY] * 3
+          grow = lambda do |point|
+            3.times do |axis|
+              lo[axis] = point[axis] if point[axis] < lo[axis]
+              hi[axis] = point[axis] if point[axis] > hi[axis]
+            end
+          end
+          @faces.each { |face| bounds = face.bounds; grow.call(bounds.min.to_a); grow.call(bounds.max.to_a) }
+          @edges.each { |edge| grow.call(edge.start.position.to_a); grow.call(edge.end.position.to_a) }
+          @children.each do |part, transform|
+            child = part.box
+            next unless child
+            child[0].zip(child[1]).then { |xs, ys, zs| xs.product(ys, zs) }.each { |x, y, z| grow.call(Geom::Point3d.new(x, y, z).transform(transform).to_a) }
+          end
+          @box = lo[0] == Float::INFINITY ? nil : [lo, hi]
+        end
+      end
 
       # Cài đặt đo của một lần dựng bảng, nhớ kết quả theo định nghĩa (nhiều bản sao dùng chung một lần đo).
       class Context
@@ -16,6 +56,7 @@ module VGD
           @words = words
           @tags = tags.map { |name| Measure.normalize(name) }.uniq # tên tag đã chuẩn hóa
           @cache = {}
+          @parts = {} # định nghĩa => Part, dùng chung cho mọi định nghĩa cha
         end
 
         def active?
@@ -26,7 +67,7 @@ module VGD
         def extent(definition)
           return nil unless active?
           return @cache[definition] if @cache.key?(definition)
-          @cache[definition] = MeasureProbe.measure(definition, @words, @tags)
+          @cache[definition] = MeasureProbe.measure(definition, @words, @tags, @parts)
         end
       end
 
@@ -45,59 +86,42 @@ module VGD
         Context.new(words, tags)
       end
 
-      def self.measure(definition, words, tags = [])
-        native = definition.bounds
-        return nil if native.empty?
-        excluded = []
-        boxes = []
-        return nil unless collect(definition, words, tags, excluded, boxes)
-        return nil if excluded.empty? || boxes.empty?
-        lo = (0..2).map { |axis| boxes.map { |box| box[0][axis] }.min }
-        hi = (0..2).map { |axis| boxes.map { |box| box[1][axis] }.max }
-        {size: (0..2).map { |axis| (hi[axis] - lo[axis]) / Geometry::INCH_MM }, note: Measure.note(excluded)}
+      # parts: bảng nhớ Part theo định nghĩa (Context truyền vào để dùng chung giữa các định nghĩa cha).
+      def self.measure(definition, words, tags = [], parts = {})
+        return nil if definition.bounds.empty?
+        part = part_of(definition, words, tags, parts)
+        return nil unless part.touched?
+        box = part.box
+        return nil unless box
+        {size: (0..2).map { |axis| box[1][axis] - box[0][axis] }, note: Measure.note(part.excluded)}
       end
 
-      # Duyệt toàn bộ hình trong định nghĩa, gom khung bao (mm, khung cục bộ của định nghĩa) của mặt và cạnh còn lại. Trả về false nếu quá nhiều mặt
-      # (không đo). excluded nhận tên các phần bị loại.
-      def self.collect(definition, words, tags, excluded, boxes)
-        faces = 0
-        stack = [[definition.entities.to_enum, Geom::Transformation.new, [definition]]]
-        until stack.empty?
-          iterator, transform, ancestors = stack.last
-          begin
-            entity = iterator.next
-          rescue StopIteration
-            stack.pop
-            next
-          end
+      # Duyệt các phần tử trực tiếp của định nghĩa (một lần), đệ quy vào định nghĩa con còn lại. Bỏ group / component / mặt / cạnh
+      # có từ khóa hoặc tag loại trừ; phần bị bỏ không được đi vào bên trong.
+      def self.part_of(definition, words, tags, parts)
+        return parts[definition] if parts.key?(definition)
+        parts[definition] = Part.new([], [], [], []) # chặn vòng lặp (SketchUp không cho định nghĩa chứa chính nó, giữ cho chắc)
+        faces = []
+        edges = []
+        children = []
+        excluded = []
+        definition.entities.to_enum.each do |entity|
           next unless entity.respond_to?(:valid?) && entity.valid?
           if Data.supported?(entity)
-            reason = Measure.match(words, entity.name, Geometry.definition(entity).name, layer_name(entity)) || (Measure.tag_excluded?(tags, layer_name(entity)) ? 'tag' : nil)
-            if reason then excluded << label(entity); next end
-            child = Geometry.definition(entity)
-            stack << [child.entities.to_enum, transform * entity.transformation, ancestors + [child]] unless ancestors.include?(child)
-          elsif entity.is_a?(Sketchup::Face)
-            if Measure.match(words, layer_name(entity)) || Measure.tag_excluded?(tags, layer_name(entity)) then excluded << label(entity); next end
-            faces += 1
-            return false if faces > MAX_FACES
-            boxes << face_box(entity, transform)
-          elsif entity.is_a?(Sketchup::Edge)
-            next if Measure.match(words, layer_name(entity)) || Measure.tag_excluded?(tags, layer_name(entity))
-            [entity.start.position, entity.end.position].each do |point|
-              moved = point.transform(transform)
-              mm = [moved.x * Geometry::INCH_MM, moved.y * Geometry::INCH_MM, moved.z * Geometry::INCH_MM]
-              boxes << [mm, mm]
+            if Measure.match(words, entity.name, Geometry.definition(entity).name, layer_name(entity)) || Measure.tag_excluded?(tags, layer_name(entity))
+              excluded << label(entity)
+            else
+              sub = part_of(Geometry.definition(entity), words, tags, parts)
+              excluded.concat(sub.excluded)
+              children << [sub, entity.transformation]
             end
+          elsif entity.is_a?(Sketchup::Face)
+            if Measure.match(words, layer_name(entity)) || Measure.tag_excluded?(tags, layer_name(entity)) then excluded << label(entity) else faces << entity end
+          elsif entity.is_a?(Sketchup::Edge)
+            edges << entity unless Measure.match(words, layer_name(entity)) || Measure.tag_excluded?(tags, layer_name(entity))
           end
         end
-        true
-      end
-
-      # Khung bao của một mặt sau khi đổi sang khung cục bộ của định nghĩa (mm): [nhỏ nhất, lớn nhất].
-      def self.face_box(face, transform)
-        bounds = face.bounds
-        corners = [bounds.min, bounds.max].then { |a, b| [a.x, b.x].product([a.y, b.y], [a.z, b.z]) }.map { |x, y, z| Geom::Point3d.new(x, y, z).transform(transform) }
-        [(0..2).map { |axis| corners.map { |p| p.to_a[axis] }.min * Geometry::INCH_MM }, (0..2).map { |axis| corners.map { |p| p.to_a[axis] }.max * Geometry::INCH_MM }]
+        parts[definition] = Part.new(faces, edges, children, excluded)
       end
 
       def self.layer_name(entity)

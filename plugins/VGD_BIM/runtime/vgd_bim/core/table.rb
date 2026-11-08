@@ -3,6 +3,7 @@ require_relative 'storage'
 require_relative 'images'
 require_relative 'preset'
 require_relative 'front'
+require_relative 'measure'
 
 module VGD
   module BIM
@@ -155,6 +156,7 @@ module VGD
                         locked: context_locked || entity.locked?}
           end
         end
+        records, hidden = drop_excluded_tags(records, path.size, measure ? measure.tags : [])
         groups = tag_groups
         index_of = {}
         records.each_with_index { |record, i| index_of[path_key(record[:path])] = i }
@@ -165,7 +167,17 @@ module VGD
           rows[i][:parents] = (1...record[:path].size).map { |n| index_of[path_key(record[:path][0...n])] }.compact
           rows[i][:parent] = parent_label(record)
         end
-        {rows: rows, records: records}
+        {rows: rows, records: records, hidden: hidden}
+      end
+
+      # Bỏ dòng gắn tag loại trừ (tên tag đã chuẩn hóa) và mọi món nằm trong nó. Chỉ xét các đối tượng được đọc (từ path[skip..]),
+      # không xét group đang mở sửa. Trả về [các dòng còn lại, số dòng bị ẩn].
+      def self.drop_excluded_tags(records, skip, tags)
+        return [records, 0] if tags.empty?
+        kept = records.reject do |record|
+          record[:path][skip..].any? { |entity| Measure.tag_excluded?(tags, entity.layer ? entity.layer.name.to_s : '') }
+        end
+        [kept, records.size - kept.size]
       end
 
       # Mã bền (persistent_id) và tình trạng ảnh của đối tượng. Ảnh nằm ngoài file SketchUp (xem Images).

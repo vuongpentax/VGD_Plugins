@@ -73,6 +73,30 @@ ok('dòng cha: đang mở sửa một group thì cha là group đó', in_ctx[0][
 unnamed = Sketchup::Group.new('')
 m3 = Model.new; m3.active_path = [unnamed]
 ok('dòng cha: cha chưa đặt tên thì lấy tên định nghĩa (cũng rỗng ở stub này)', VGD::BIM::Table.build(m3, [Sketchup::Group.new('X')], false)[:rows][0][:parent] == '')
+# Tag loại trừ: dòng gắn tag bị tick không vào bảng, món con nằm trong nó cũng không
+Lay = Struct.new(:name)
+FakeMeasure = Struct.new(:tags) { def extent(_definition); nil; end }
+wall = Sketchup::Group.new('Tường'); wall.layer = Lay.new('Tường')
+wall_kid = Sketchup::Group.new('Gạch ốp')
+wall.children << wall_kid
+sofa_part = Sketchup::Group.new('Tay vịn'); sofa = Sketchup::Group.new('Sofa', [sofa_part]); sofa.layer = Lay.new('Nội thất')
+plain = Sketchup::Group.new('Không tag')
+ctx_none = FakeMeasure.new([])
+ctx_wall = FakeMeasure.new(['tuong'])
+built = VGD::BIM::Table.build(m, [wall, sofa, plain], false, measure: ctx_wall)
+ok('tag loại trừ: dòng gắn tag bị tick không có trong bảng, hai dòng còn lại giữ nguyên thứ tự', built[:rows].map { |r| r[:name] } == %w[Sofa Không\ tag] && built[:hidden] == 1)
+ok('tag loại trừ: chỉ số dòng và danh sách records khớp nhau sau khi lọc', built[:rows].map { |r| r[:index] } == [0, 1] && built[:records].map { |r| r[:entity] } == [sofa, plain])
+built = VGD::BIM::Table.build(m, [wall, sofa, plain], true, measure: ctx_wall)
+ok('chọn sâu: món con nằm trong nhóm bị loại cũng không vào bảng (Gạch ốp), món con của nhóm khác vẫn còn', built[:rows].map { |r| r[:name] } == %w[Sofa Tay\ vịn Không\ tag] && built[:hidden] == 2)
+ok('chọn sâu: cha-con còn lại vẫn nối đúng sau khi lọc', built[:rows].find { |r| r[:name] == 'Tay vịn' }[:parents] == [built[:rows].find { |r| r[:name] == 'Sofa' }[:index]])
+built = VGD::BIM::Table.build(m, [wall, sofa, plain], false, measure: ctx_none)
+ok('không tick tag nào: không ẩn dòng nào', built[:rows].size == 3 && built[:hidden] == 0)
+ok('không truyền measure (báo cáo khác): không ẩn dòng nào', VGD::BIM::Table.build(m, [wall, sofa, plain], false)[:rows].size == 3 && VGD::BIM::Table.build(m, [wall], false)[:hidden] == 0)
+only_wall = VGD::BIM::Table.build(m, [wall], false, measure: ctx_wall)
+ok('chọn toàn tag loại trừ: bảng rỗng nhưng vẫn báo đã ẩn 1', only_wall[:rows].empty? && only_wall[:hidden] == 1)
+open_wall = Model.new; open_wall.active_path = [wall]
+ok('đang mở sửa một group gắn tag loại trừ: các món bên trong vẫn vào bảng (chỉ xét tag của chính các đối tượng được đọc)', VGD::BIM::Table.build(open_wall, [wall_kid], false, measure: ctx_wall)[:rows].size == 1)
+
 editable = VGD::BIM::Table::COLUMNS.select { |c| c[:editable] }.map { |c| [c[:key], c[:editable]] }
 ok('cột sửa được: tên, mô tả, tag, vật liệu, tình trạng, hãng, link, cỡ, đơn giá', editable == [%w[instance name], %w[description description], %w[tag tag], %w[material material], %w[status status], %w[owner owner], %w[url url], %w[size size], %w[price price]])
 

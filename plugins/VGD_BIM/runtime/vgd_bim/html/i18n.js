@@ -291,6 +291,7 @@ const VGD_I18N=(()=>{
   rule(/^Đã sửa trục cho (\d+) loại \((\d+) bản sao\): mặt trước giờ là -Y, hình trong model không đổi chỗ\.( Bỏ qua (\d+) loại\.)?$/,(m,n,k,x,s)=>`Fixed the axes of ${plural(n,'type','types')} (${plural(k,'copy','copies')}): the front is now -Y and the geometry in the model did not move.${s?` Skipped ${plural(s,'type','types')}.`:''}`);
   rule(/^Mỗi lần sửa trục tối đa (\d+) đối tượng\. Hãy chọn ít hơn\.$/,(m,n)=>`Fix at most ${n} objects at a time. Select fewer.`);
   rule(/^Bỏ (\d+) phần theo từ khóa hoặc tag \((.*)\)$/,(m,n,names)=>`Left out ${plural(n,'part','parts')} by keyword or tag (${names})`);
+  rule(/^Đã ẩn (\d+) đối tượng thuộc tag loại trừ\.$/,(m,n)=>`Hid ${plural(n,'object','objects')} on excluded tags.`);
   rule(/^Loại trừ tag \((\d+)\)$/,(m,n)=>`Exclude tags (${n})`);
   rule(/^(.+) \(không có trong model\)$/,(m,name)=>`${name} (not in this model)`);
   rule(/^sát tường phía ([+-][xy])$/,(m,d)=>`against a wall on the ${d} side`);
