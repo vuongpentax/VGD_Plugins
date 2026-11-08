@@ -39,6 +39,7 @@ $writes = []
 require File.join(ROOT, 'core/settings')
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
+require File.join(ROOT, 'core/view_fit')
 require File.join(ROOT, 'core/table')
 require File.join(ROOT, 'core/rename')
 require File.join(ROOT, 'ui/dialog')
@@ -180,7 +181,26 @@ class PickSel
   def add(*entities); @items.concat(entities.flatten); end
   def to_a; @items.dup; end
 end
-class PickView; attr_reader :zoomed; def zoom(target); @zoomed = target; end; end
+# Camera giả: chỉ có phần API được dùng (direction / up / perspective? / fov / fov_is_height? / set / height=)
+class PickCamera
+  attr_reader :set_args, :height
+  def direction; Geom::Vector3d.new(0, 1, 0); end
+  def up; Geom::Vector3d.new(0, 0, 1); end
+  def perspective?; true; end
+  def fov; 35.0; end
+  def fov_is_height?; false; end
+  def set(eye, target, up); @set_args = [eye.to_a, target.to_a, up.to_a]; end
+  def height=(value); @height = value; end
+end
+class PickView
+  attr_reader :camera, :assigned
+  def initialize; @camera = PickCamera.new; end
+  def vpwidth; 1000; end
+  def vpheight; 500; end
+  def camera=(value); @assigned = value; end
+  def invalidate; end
+  def zoom(*); raise 'View#zoom không được dùng để thu phóng tới món trong bảng'; end
+end
 class PickModel
   attr_reader :selection, :active_view
   attr_accessor :active_path
@@ -188,9 +208,18 @@ class PickModel
 end
 # Hộp bao thế giới để thu phóng (mô phỏng phần API dùng: BoundingBox#add / empty?, Point3d#transform, định nghĩa có bounds.corner(i))
 module Geom
-  class BoundingBox; attr_reader :points; def initialize; @points = []; end; def add(point); @points << point; end; def empty?; @points.empty?; end; end
+  class BoundingBox
+    attr_reader :points
+    def initialize; @points = []; end
+    def add(point); @points << point; end
+    def empty?; @points.empty?; end
+    def min; WPoint.new(*%i[x y z].map { |axis| @points.map(&axis).min }); end
+    def max; WPoint.new(*%i[x y z].map { |axis| @points.map(&axis).max }); end
+  end
+  class Point3d; attr_reader :to_a; def initialize(*xyz); @to_a = xyz.map(&:to_f); end; end
+  class Vector3d < Point3d; end
 end
-WPoint = Struct.new(:x, :y, :z) { def transform(shift); WPoint.new(x + shift[0], y + shift[1], z + shift[2]); end }
+WPoint = Struct.new(:x, :y, :z) { def transform(shift); WPoint.new(x + shift[0], y + shift[1], z + shift[2]); end; def to_a; [x, y, z]; end }
 class WLocalBounds; def empty?; false; end; def corner(i); WPoint.new(i & 1, (i >> 1) & 1, (i >> 2) & 1); end; end
 WDefinition = Struct.new(:bounds)
 WEntities = Struct.new(:parent)
@@ -230,9 +259,26 @@ pd.table_select({'indexes' => [0, 2], 'field' => 'instance'})
 ok('chọn nhiều dòng cùng cấp: SketchUp chọn đúng các đối tượng đó', pm.selection.to_a == [pents[0], pents[2]] && pm.active_path == [parent])
 ok('chọn nhiều dòng: nhớ các dòng đã chọn trong bảng', pd.instance_variable_get(:@picked_entities) == [pents[0], pents[2]])
 ok('chọn nhiều dòng: bỏ qua ô đã bấm (không có khung tên theo ô)', pd.instance_variable_get(:@outline_field).nil?)
-zoomed = pm.active_view.zoomed
-ok('chọn nhiều dòng: thu phóng theo hộp bao trong tọa độ thế giới của các đối tượng đã chọn (16 góc, x từ 500 tới 503), không truyền đối tượng lồng bên trong group',
-   zoomed.is_a?(Geom::BoundingBox) && zoomed.points.size == 16 && zoomed.points.map(&:x).minmax == [500.0, 503.0] && zoomed.points.map(&:y).uniq.sort == [20.0, 21.0])
+cam = pm.active_view.camera
+eye, target, up = cam.set_args
+ok('chọn nhiều dòng: camera nhìn vào tâm hộp bao thế giới của các đối tượng đã chọn (501,5; 20,5; 0,5), không phải tọa độ cục bộ gần gốc',
+   target == [501.5, 20.5, 0.5] && up == [0.0, 0.0, 1.0] && pm.active_view.assigned.equal?(cam))
+ok('chọn nhiều dòng: mắt lùi sau tâm theo hướng nhìn cũ (cùng x, z với tâm, y nhỏ hơn)', eye[0] == 501.5 && eye[2] == 0.5 && eye[1] < 20.5)
+# Ngữ cảnh lúc quét được nhớ: bấm dòng con làm active_path đổi, nhưng dựng lại bảng vẫn dùng ngữ cảnh lúc quét
+pm.define_singleton_method(:edit_transform) { :tf_lúc_quét }
+pm.active_path = [parent]
+D.instance_method(:table_scan_selection!).bind(pd).call # bản thật (pd đã thay bằng bản giả ở trên)
+pm.active_path = [other_parent, parent]
+ctx_saved = pd.scan_context
+ok('quét ghi nhớ ngữ cảnh (group đang mở và biến đổi) tại thời điểm quét', ctx_saved && ctx_saved[:path] == [parent] && ctx_saved[:transform] == :tf_lúc_quét)
+ok('đổi ngữ cảnh đang mở sau đó (mở sâu vào dòng con): dựng bảng vẫn dùng ngữ cảnh đã nhớ', pd.scan_context[:path] == [parent])
+parent.instance_variable_set(:@valid, false)
+ok('group của ngữ cảnh đã nhớ không còn tồn tại: không dùng (để Table.build lấy ngữ cảnh đang mở)', pd.scan_context.nil?)
+parent.instance_variable_set(:@valid, true)
+pm.active_path = [parent]
+pd.instance_variable_set(:@table_picks, [pents[0], pents[2]]) # quét thật đã xóa lựa chọn nhớ; trả lại như trước đoạn này
+pd.instance_variable_set(:@picked_entities, [pents[0], pents[2]])
+
 pcalls.clear
 pd.table_selection_changed
 ok('SketchUp báo đã chọn đúng các đối tượng bảng vừa chọn: không quét lại, không đổi bảng, không đổi đánh dấu dòng',

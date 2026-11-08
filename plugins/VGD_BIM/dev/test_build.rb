@@ -97,6 +97,21 @@ ok('chọn toàn tag loại trừ: bảng rỗng nhưng vẫn báo đã ẩn 1',
 open_wall = Model.new; open_wall.active_path = [wall]
 ok('đang mở sửa một group gắn tag loại trừ: các món bên trong vẫn vào bảng (chỉ xét tag của chính các đối tượng được đọc)', VGD::BIM::Table.build(open_wall, [wall_kid], false, measure: ctx_wall)[:rows].size == 1)
 
+# Ngữ cảnh lúc quét: bấm một dòng con làm SketchUp mở sâu vào group cha (active_path đổi), nhưng phạm vi quét vẫn là đối tượng ở cấp gốc.
+# Dựng lại bảng phải dùng ngữ cảnh lúc quét, không dùng ngữ cảnh đang mở (nếu không đường dẫn và vị trí thế giới của dòng bị sai).
+scan_root = Sketchup::Group.new('Gốc')
+scan_kid = Sketchup::Group.new('Con'); scan_root.children << scan_kid
+deep_ctx = Model.new; deep_ctx.active_path = [Sketchup::Group.new('Đang mở 1'), Sketchup::Group.new('Đang mở 2')]
+root_marker = Tr.new
+rebuilt = VGD::BIM::Table.build(deep_ctx, [scan_root], true, context: {path: [], transform: root_marker})[:records]
+ok('dựng lại với ngữ cảnh lúc quét: đường dẫn bắt đầu từ gốc, không dính group đang mở', rebuilt.map { |r| r[:path].size } == [1, 2] && rebuilt[1][:path] == [scan_root, scan_kid])
+ok('dựng không truyền ngữ cảnh: vẫn lấy ngữ cảnh đang mở như cũ', VGD::BIM::Table.build(deep_ctx, [scan_root], false)[:records][0][:path].size == 3)
+opened_ctx = Sketchup::Group.new('Tủ đang mở')
+in_ctx = VGD::BIM::Table.build(deep_ctx, [scan_kid], false, context: {path: [opened_ctx], transform: root_marker})[:records]
+ok('dựng với ngữ cảnh là một group đang mở lúc quét: đường dẫn nối đúng group đó', in_ctx[0][:path] == [opened_ctx, scan_kid])
+hid = VGD::BIM::Table.build(deep_ctx, [scan_root], false, measure: FakeMeasure.new(['x']), context: {path: [], transform: root_marker})
+ok('lọc tag loại trừ không xét các group trong ngữ cảnh', hid[:hidden] == 0 && hid[:rows].size == 1)
+
 editable = VGD::BIM::Table::COLUMNS.select { |c| c[:editable] }.map { |c| [c[:key], c[:editable]] }
 ok('cột sửa được: tên, mô tả, tag, vật liệu, tình trạng, hãng, link, cỡ, đơn giá', editable == [%w[instance name], %w[description description], %w[tag tag], %w[material material], %w[status status], %w[owner owner], %w[url url], %w[size size], %w[price price]])
 

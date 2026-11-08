@@ -250,6 +250,7 @@ module VGD
         def table_scan_selection!
           @model = Sketchup.active_model
           @table_scope = @model.selection.to_a.select { |e| Data.supported?(e) && e.valid? }
+          @table_context = {path: (@model.active_path || []).dup, transform: @model.edit_transform}
           @table_picks = nil
           @picked_entities = []
         end
@@ -278,11 +279,16 @@ module VGD
           end
           show_outline
         end
+        # Ngữ cảnh lúc quét (xem Table.build); không còn dùng được (group đã bị xóa) thì để Table.build dùng ngữ cảnh đang mở.
+        def scan_context
+          context = @table_context
+          context && context[:path].all?(&:valid?) ? context : nil
+        end
         def table_build
           @model = Sketchup.active_model
           Images.ensure_model_id(@model) # mã model cố định trong file, để ảnh còn sau khi tắt mở lại (trước mọi thao tác khác)
           scope = @table_scope.select(&:valid?)
-          built = Table.build(@model, scope, @table_options[:deep] ? true : false, projected: @table_options[:projected], measure: MeasureProbe.context)
+          built = Table.build(@model, scope, @table_options[:deep] ? true : false, projected: @table_options[:projected], measure: MeasureProbe.context, context: scan_context)
           @table_rows = built[:rows]
           @table_records = built[:records]
           hint = if scope.empty?
@@ -316,10 +322,7 @@ module VGD
             # Chỉ cô lập / zoom khi chọn đối tượng khác, không làm lại khi bấm ô khác của cùng dòng.
             # Cô lập chỉ có khi chọn đúng một dòng.
             if records.size == 1 then apply_isolation(records.first) if @table_options[:isolate] else restore_isolation end
-            if @table_options[:zoom]
-              bounds = Geometry.world_bounds(mirrored)
-              @model.active_view.zoom(bounds) unless bounds.empty?
-            end
+            zoom_to_bounds(Geometry.world_bounds(mirrored)) if @table_options[:zoom]
           end
           emit('message', {text: 'Các dòng nằm ở cấp lồng khác nhau nên SketchUp chỉ chọn dòng cuối. Đổi tên vẫn áp dụng cho mọi dòng đã chọn trong bảng.'}) if mirrored.size < records.size
           show_outline
@@ -801,6 +804,20 @@ module VGD
           refresh
           emit('message', {text: "Đã chuyển đổi #{result[:entities].size} đối tượng.#{pending[:rule] ? ' Đã lưu quy tắc phân loại.' : ''}"})
         end
+        # Thu phóng tới một hộp bao theo tọa độ thế giới bằng cách đặt camera (xem ViewFit). Không dùng View#zoom: nó không nhận hộp bao
+        # và với đối tượng nằm sâu trong group thì tính theo tọa độ cục bộ nên camera nhảy về gần gốc của group cha.
+        def zoom_to_bounds(bounds)
+          return if bounds.empty?
+          view = @model.active_view
+          camera = view.camera
+          aspect = view.vpheight.to_f.positive? ? view.vpwidth.to_f / view.vpheight : 1.0
+          fit = ViewFit.camera(bounds.min.to_a, bounds.max.to_a, direction: camera.direction.to_a, up: camera.up.to_a, perspective: camera.perspective?,
+                                                                 fov: camera.fov, fov_is_height: camera.fov_is_height?, aspect: aspect)
+          camera.set(Geom::Point3d.new(*fit[:eye]), Geom::Point3d.new(*fit[:target]), Geom::Vector3d.new(*fit[:up]))
+          camera.height = fit[:height] if fit[:height]
+          view.camera = camera
+          view.invalidate
+        end
         def select_entity(index)
           check_model!
           record = @validation.fetch(index)
@@ -808,8 +825,7 @@ module VGD
           @model.active_path = record[:path][0...-1]
           @model.selection.clear
           @model.selection.add(record[:entity])
-          bounds = Geometry.world_bounds([record])
-          @model.active_view.zoom(bounds) unless bounds.empty?
+          zoom_to_bounds(Geometry.world_bounds([record]))
         end
         def export_report(kind)
           check_model!

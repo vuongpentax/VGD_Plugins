@@ -140,10 +140,12 @@ module VGD
       # deep = false (mặc định): chỉ đọc đúng các đối tượng đang chọn.
       # deep = true: đọc thêm mọi group / component lồng bên trong.
       # Chỉ group / component, không đọc mặt riêng lẻ, không đọc cả model.
-      def self.build(model, entities, deep = false, projected: false, measure: nil)
+      # context: {path:, transform:} là ngữ cảnh (group đang mở) lúc quét đối tượng. Bấm một dòng con làm SketchUp mở sâu vào group cha,
+      # nhưng phạm vi quét vẫn là đối tượng ở cấp lúc quét, nên dựng lại bảng phải dùng ngữ cảnh lúc quét; không truyền thì dùng ngữ cảnh đang mở.
+      def self.build(model, entities, deep = false, projected: false, measure: nil, context: nil)
         records = []
-        path = model.active_path || []
-        transform = model.edit_transform
+        path = context ? context[:path] : (model.active_path || [])
+        transform = context ? context[:transform] : model.edit_transform
         if deep
           Scanner.walk(entities, transform, path, [], nil, false, faces: false) do |record|
             records << record if Data.supported?(record[:entity]) && record[:entity].valid?

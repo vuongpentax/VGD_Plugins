@@ -219,11 +219,11 @@ function filteredRows(){
 // Ctrl+A = chọn hết các dòng đang hiện; Esc = bỏ chọn. SketchUp chọn theo các đối tượng đó (xem table_select trong dialog.rb).
 // Dòng gộp (Gộp dòng giống nhau) có nhiều đối tượng: chọn dòng gộp là chọn mọi đối tượng của nó.
 const membersOf=row=>row.members||[row.index];
-// Số dòng đã chọn hiện ở chân trang, ngay dưới dòng thông báo; chỉ có ở tab Bảng khối lượng và khi có dòng được chọn.
+// Số dòng đã chọn hiện ở chân trang, bên phải dòng thông báo (chỗ cố định để chân trang không nhảy chiều cao); chỉ có ở tab Bảng khối lượng và khi có dòng được chọn.
 function updateSelInfo(){
   const el=$('sel-info');if(!el)return;
   const text=document.body.classList.contains('table-mode')&&tableState.data&&tableState.sel.size?`Đã chọn ${tableState.sel.size} / ${tableState.data.rows.length} dòng`:'';
-  el.textContent=text;el.hidden=!text;
+  el.textContent=text;
 }
 function paintSelection(){
   document.querySelectorAll('.grid tbody tr[data-members]').forEach(tr=>tr.classList.toggle('selected',tr.dataset.members.split(',').every(i=>tableState.sel.has(Number(i)))));
