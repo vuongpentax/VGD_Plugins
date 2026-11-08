@@ -130,6 +130,7 @@ function tagEditor(data) {
   const go=button('Gán tag',()=>{if(!pick.value)throw Error('Hãy lưu bộ tag trước, rồi chọn tag để gán.');call('assign_tag',JSON.stringify({name:pick.value}));},'primary');
   go.id='tag-assign';go.disabled=!data.selection||!(data.tags||[]).length;
   assign.append(info,pick,go,node('p','Gán tag cho các đối tượng được chọn trực tiếp. Nếu tag đang tắt hiển thị, các đối tượng gán vào sẽ bị ẩn.','muted'));
+  autoTagCard(data);
 }
 function exportCard(data) {
   const c=card('Xuất báo cáo để mở trong Excel');c.append(node('p',`Đã quét ${data.objects} đối tượng và ${data.faces} mặt hình học. Chọn báo cáo, rồi chọn nơi lưu file. Tiêu đề và hạng mục xuất bằng tiếng Việt.`,'hint'));
@@ -1112,6 +1113,8 @@ window.VGD={receive(event,data){
   if(event==='images_done')imagesDone(data);
   if(event==='images_changed')imagesChanged(data.items);
   if(event==='image_data')receiveImageData(data);
+  if(event==='tag_rules')receiveTagRules(data);
+  if(event==='tag_auto_plan')receiveTagAutoPlan(data);
   if(event==='progress')message(`Đang quét… ${number(data.count,0)} đối tượng hình học.`);
   if(event==='message')message(data.error||data.text,!!data.error);
   if(event==='preview')preview(data);

@@ -131,6 +131,15 @@ Gõ chữ vào ô **Tìm kiếm** thì hiện thêm ô **Thay bằng** và nút 
 
 Tab **Soạn tag** để soạn bộ tag theo nhóm hạng mục (Phần thô, Hoàn thiện, Đồ rời, Thiết bị, Khác), gán tag cho group, component hoặc mặt đang chọn, và xuất / nhập bộ tag bằng CSV (mở được trong Excel) hoặc JSON. Khi nhập, chọn thay thế toàn bộ hoặc gộp vào bộ hiện có. Bộ tag lưu trên máy này.
 
+### Gắn tag tự động theo tên
+
+Thẻ **Gắn tag tự động theo tên** ở cuối tab Soạn tag gắn tag cho nhiều group / component một lúc theo từ khóa trong tên:
+1. **Bảng luật**: mỗi dòng là "tên tag ← từ khóa" (nhiều từ khóa cách nhau dấu phẩy, ví dụ `cửa, door`). **Luật nằm trên thắng**: dùng ↑ ↓ để đổi thứ tự (đặt "Cửa sổ" trên "Cửa"). Khớp không phân biệt hoa thường và dấu, từ khóa chỉ cần nằm trong tên (nên "door" cũng khớp "Doorway": hãy xem trước). Tag chưa có trong model sẽ được tạo.
+2. **Dựa theo**: tên bản sao, tên component, hoặc cả hai (mặc định). Group không có tên component riêng nên dùng tên group.
+3. **Phạm vi**: đối tượng đang chọn (mặc định) hoặc cả model. **Gắn cả group / component bên trong** (tắt mặc định): đổi tag của mọi bản sao dùng chung định nghĩa. **Ghi đè tag đã có** (tắt mặc định): chỉ gắn đối tượng chưa có tag.
+4. Bấm **Xem trước** để biết mỗi tag sẽ gắn cho bao nhiêu đối tượng (kèm vài tên mẫu), bao nhiêu đã đúng tag, giữ nguyên, không khớp luật nào, bị khóa. Sửa luật hay tùy chọn thì phải xem lại. Bấm **Áp dụng**: một bước Ctrl+Z hoàn tác cả đợt; đối tượng bị khóa không bao giờ bị đổi. Nếu tag đích đang tắt hiển thị thì đối tượng gắn vào sẽ bị ẩn (có báo).
+5. **Lưu làm mặc định** giữ bộ luật trên máy này (`tag_rules.json`); **Đặt lại** về bộ mẫu (có hỏi); **Xuất / Nhập file luật** (JSON) để chia sẻ giữa các máy; nhập được cả file luật xuất từ 5D Auto Tag (lấy phần "names").
+
 ## Quy tắc phân loại
 
 Trong tab **Phân loại**, mở **Quy tắc → Thêm quy tắc**: chọn loại nguồn, nhập tên nguồn cần khớp, chọn mẫu hoặc nhập thông tin, rồi **Lưu quy tắc**. Xuất / Nhập bộ quy tắc để dùng ở model khác. Mục dữ liệu kỹ thuật được thu gọn, không cần dùng cho thao tác thông thường.

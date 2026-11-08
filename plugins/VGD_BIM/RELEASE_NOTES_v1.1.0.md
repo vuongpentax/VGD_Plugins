@@ -26,6 +26,7 @@
 - **Chọn cột kiểu mới** (theo Auto Info, gọn hơn): ngăn trượt ra bên trái và đẩy bảng sang phải nên cột đầu không bị che; ô tick tự vẽ, kéo thả đổi chỗ cột có hiệu ứng trượt, nút gạt chân trang trượt mượt.
 - **Giao diện không còn thanh cuộn dọc** ở bảng, bảng Chọn cột, Preset và các tab (vẫn cuộn bằng con lăn chuột); chỉ giữ thanh cuộn ngang của bảng khi nhiều cột.
 - **Tiếng Anh** cho toàn bộ giao diện (báo cáo CSV và hộp thoại gốc của SketchUp vẫn tiếng Việt).
+- **Gắn tag tự động theo tên** (beta.34): bảng luật "tên tag ← từ khóa" kiểu 5D Auto Tag, xem trước rồi áp dụng một bước hoàn tác, tùy chọn phạm vi / lồng bên trong / ghi đè, lưu mặc định, đặt lại, nhập / xuất JSON.
 - **Soạn tag:** tab mới để soạn bộ tag theo nhóm hạng mục, gán tag cho đối tượng đang chọn, xuất / nhập CSV và JSON.
 - **Điều hướng gọn còn 5 tab** trong cùng một cửa sổ (trước đây 6 mục rời): Bảng khối lượng · Thông tin · Quét & xuất · Phân loại (gồm Quy tắc, Kiểm tra) · Soạn tag. Mục "Quản lý Quy tắc", "Kiểm tra" nay nằm trong tab Phân loại; "Xuất báo cáo" nằm trong tab Quét & xuất.
 - **Bỏ mục "Chuyển đổi lựa chọn"** trong tab Thông tin. Muốn chuyển đổi hàng loạt, dùng Xem trước chuyển đổi và Xác nhận chuyển đổi trong tab Phân loại.

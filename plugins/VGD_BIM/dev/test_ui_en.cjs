@@ -53,7 +53,9 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await receive('rules',[{source_type:'definition_name',source_value:'X',data:{category:'electrical',item_type:'socket'}}]);await scan('Quy tắc');
   await page.getByRole('button',{name:/Thêm quy tắc|Add rule/}).first().click();await scan('Quy tắc (thêm)');
   await receive('config',config(lang,'tags'));
-  await receive('tags',{groups:F.groups.slice(0,5),tags:[{name:'A',group:F.groups[0],in_model:true,visible:false},{name:'B',group:F.groups[1],in_model:false},{name:'C',group:F.groups[1],in_model:true,visible:true}],selection:3});await scan('Soạn tag');
+  await receive('tags',{groups:F.groups.slice(0,5),tags:[{name:'A',group:F.groups[0],in_model:true,visible:false},{name:'B',group:F.groups[1],in_model:false},{name:'C',group:F.groups[1],in_model:true,visible:true}],selection:3,rules:[{tag:'Tường',keywords:'tường, wall'},{tag:'Cửa',keywords:'cửa, door'}]});await scan('Soạn tag');
+  await receive('tag_auto_plan',{total:5,assign:2,same:1,kept:1,unmatched:1,locked:1,rules:[{tag:'Wall',count:1,samples:['Wall 1']},{tag:'Door',count:4,samples:['Door_900','Door_2','Door_3']}]});await scan('Soạn tag (xem trước gắn tự động)');
+  await receive('tag_auto_plan',{total:5,assign:0,same:5,kept:0,unmatched:0,locked:0,rules:[]});await scan('Soạn tag (không cần gắn)');
   const table=cfg=>({columns:F.columns,presets:F.presets,groups:F.groups,statuses:F.statuses,options:{zoom:true,isolate:false,deep:false,projected:false,isolating:false},rows,selected:[],hint:null,view:{},choices:{tags:['Tag0','Tag1'],materials:['Oak']},...cfg});
   await receive('config',config(lang,'table'));
   await receive('table',table({selected:[0]}));await scan('Bảng');
@@ -109,7 +111,11 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
     'Đã chuyển đổi 7 đối tượng. Đã lưu quy tắc phân loại.','Đã xuất 12 dòng và 5 ảnh ra Excel: C:\\a.xlsx','Đã xuất 1 dòng ra Excel: C:\\a.xlsx','Đã tạo trang báo cáo 12 dòng và mở trong trình duyệt. Khi cần in, bấm nút In / Lưu PDF trên trang rồi chọn Lưu thành PDF.','Định dạng xuất không hợp lệ.','Dữ liệu bảng không hợp lệ.','Bảng chưa có dòng nào. Hãy chọn group hoặc component trong SketchUp.','Dòng 3: Nhóm không hợp lệ: Zzz','Tên tag quá dài (tối đa 60 ký tự): abc','Tên tag bị trùng: abc',
     'Mô hình đã thay đổi. Hãy làm mới trước khi tiếp tục.','Bảng đã cũ. Hãy làm mới bảng.','Số bắt đầu phải là số nguyên từ 0 đến 99999.','Chỉ số dòng không hợp lệ.','Không ghi được tệp. Kiểm tra vị trí lưu và đóng tệp nếu đang mở trong Excel.',
     'Các dòng nằm ở cấp lồng khác nhau nên SketchUp chỉ chọn dòng cuối. Đổi tên vẫn áp dụng cho mọi dòng đã chọn trong bảng.','Hãy đánh dấu ít nhất một trường cần cập nhật.','Đối tượng đang bị khóa nên không sửa được.',
-    'Đối tượng nằm trong thành phần dùng chung nhiều nơi nên không cô lập được.','Quy tắc phải là một danh sách.','Mục đưa vào bảng khối lượng phải là Có hoặc Không.','Đã ẩn 4 đối tượng thuộc tag loại trừ.']);
+    'Đối tượng nằm trong thành phần dùng chung nhiều nơi nên không cô lập được.','Quy tắc phải là một danh sách.','Mục đưa vào bảng khối lượng phải là Có hoặc Không.','Đã ẩn 4 đối tượng thuộc tag loại trừ.',
+    'Đã lưu bộ luật gắn tag tự động làm mặc định.','Đã đặt lại bộ luật về mặc định.','Đã xuất 9 luật: C:\\a.json','Đã nhập 9 luật từ file. Bộ luật chưa lưu làm mặc định.',
+    'Đã gắn tag tự động cho 5 đối tượng (2 tag). Đã đúng tag sẵn: 1. Giữ nguyên 2 đối tượng đã có tag khác. Bỏ qua 3 đối tượng bị khóa. Tag đang tắt hiển thị nên đối tượng gắn vào sẽ bị ẩn: Door.',
+    'Chưa có luật nào. Hãy thêm ít nhất một luật.','Hãy chọn group hoặc component trong SketchUp trước, hoặc bật "Cả model".','Quá nhiều đối tượng (tối đa 20000). Hãy chọn ít hơn.','Không có đối tượng nào cần gắn tag. Bấm Xem trước để biết lý do.',
+    'Tùy chọn "Dựa theo" không hợp lệ.','Tùy chọn "Phạm vi" không hợp lệ.','Danh sách luật phải là một danh sách.','Tối đa 100 luật.','Dòng 2: Mỗi luật phải là một mục hợp lệ.','Dòng 1: Cần ít nhất một từ khóa.','Dòng 3: Từ khóa phải có ít nhất 2 ký tự.','Dòng 1: Mỗi luật tối đa 30 từ khóa, mỗi từ khóa không quá 40 ký tự.','File luật không đúng định dạng.','File không có luật nào.']);
   if(errors.length)fail('Lỗi JavaScript: '+errors.join(' | '));
   if(lang==='en'){
     if(found.size)fail(`Còn ${found.size} chuỗi tiếng Việt chưa dịch:\n`+[...found].map(([t,l])=>`   [${l}] ${t}`).join('\n'));

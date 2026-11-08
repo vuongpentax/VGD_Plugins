@@ -598,6 +598,61 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(mainBars.v===0,'các tab khác (khung chính): không có thanh cuộn dọc');
   await page.setViewportSize({width:1100,height:800});
 
+  // ---- Gắn tag tự động theo tên (tab Soạn tag): bảng luật, tùy chọn, xem trước rồi mới áp dụng ----
+  await receive('config',config('tags'));
+  const AUTO_RULES=[{tag:'Tường',keywords:'tường, wall'},{tag:'Cửa',keywords:'cửa, door'}];
+  await receive('tags',{groups:F.groups.slice(0,5),tags:[],selection:2,rules:AUTO_RULES});
+  await clear();
+  const autoRows=()=>page.locator('#tag-auto-card .auto-rules tbody tr');
+  const autoInputs=()=>page.locator('#tag-auto-card .auto-rules tbody tr').evaluateAll(rows=>rows.map(r=>[...r.querySelectorAll('input')].map(i=>i.value)));
+  ok(await page.locator('#tag-auto-card').count()===1 && await autoRows().count()===2 && JSON.stringify(await autoInputs())===JSON.stringify([['Tường','tường, wall'],['Cửa','cửa, door']]),'tab Soạn tag: có thẻ gắn tag tự động với bộ luật đang lưu (2 luật)');
+  ok(await page.locator('#tag-auto-apply').isDisabled(),'chưa xem trước: nút Áp dụng bị khóa');
+  await page.getByRole('button',{name:'Xem trước'}).click();
+  let pv=await json('tag_auto_preview');
+  ok(JSON.stringify(pv)===JSON.stringify({rules:AUTO_RULES,based_on:'both',scope:'selection',nested:false,overwrite:false}),'Xem trước: gửi bộ luật đang sửa và tùy chọn mặc định (cả hai tên, đang chọn, không lồng, không ghi đè)');
+  await receive('tag_auto_plan',{total:5,assign:2,same:0,kept:1,unmatched:1,locked:1,rules:[{tag:'Tường',count:1,samples:['Tường 1']},{tag:'Cửa',count:1,samples:['Door_900']}]});
+  const autoPlanText=await page.locator('#tag-auto-plan').innerText();
+  ok(autoPlanText.includes('Tường') && autoPlanText.includes('1 đối tượng · Tường 1') && autoPlanText.includes('Door_900') && (await page.locator('#tag-auto-plan .metric').allInnerTexts()).join('|').replace(/\n/g,' ')==='5 Tổng đã xét|2 Sẽ gắn|0 Đã đúng tag sẵn|1 Giữ nguyên (đã có tag khác)|1 Không khớp luật nào|1 Bị khóa','bản xem trước: liệt kê từng tag kèm số đối tượng, tên mẫu và 6 số liệu tổng hợp');
+  ok(await page.locator('#tag-auto-apply').isEnabled(),'có bản xem trước còn mới: Áp dụng mở khóa');
+  await page.locator('#tag-auto-card .auto-rules tbody tr').nth(1).locator('input').nth(1).fill('cửa, door, gate');
+  ok(await page.locator('#tag-auto-apply').isDisabled() && (await page.locator('#tag-auto-plan').innerText()).includes('bấm Xem trước lại'),'sửa luật sau khi xem: bản xem trước hết hiệu lực, Áp dụng bị khóa lại');
+  await clear();await page.getByRole('button',{name:'Xem trước'}).click();
+  await receive('tag_auto_plan',{total:5,assign:2,same:0,kept:1,unmatched:1,locked:1,rules:[{tag:'Tường',count:1,samples:['Tường 1']}]});
+  await page.getByLabel('Ghi đè tag đã có',{exact:false}).check();
+  ok(await page.locator('#tag-auto-apply').isDisabled(),'đổi tùy chọn (ghi đè): bản xem trước hết hiệu lực');
+  await page.getByLabel('Phạm vi').selectOption('model');await page.getByLabel('Dựa theo').selectOption('definition');
+  await page.getByLabel('Gắn cả group',{exact:false}).check();
+  await clear();await page.getByRole('button',{name:'Xem trước'}).click();
+  ok(JSON.stringify(await json('tag_auto_preview'))===JSON.stringify({rules:[AUTO_RULES[0],{tag:'Cửa',keywords:'cửa, door, gate'}],based_on:'definition',scope:'model',nested:true,overwrite:true}),'tùy chọn đã chọn đi kèm lệnh (tên component, cả model, gắn cả bên trong, ghi đè)');
+  await receive('tag_auto_plan',{total:9,assign:4,same:1,kept:0,unmatched:3,locked:1,rules:[{tag:'Tường',count:4,samples:['a','b','c']}]});
+  ok((await page.locator('#tag-auto-plan').innerText()).includes('4 đối tượng · a, b, c…'),'nhiều đối tượng hơn số tên mẫu: có dấu … sau tên mẫu');
+  await clear();await page.getByRole('button',{name:'Áp dụng',exact:true}).click();
+  const ap=await json('tag_auto_apply');
+  ok(ap && ap.overwrite===true && ap.scope==='model' && ap.rules.length===2,'Áp dụng: gửi cùng bộ luật và tùy chọn');
+  await receive('tag_auto_plan',{cleared:true});
+  ok(await page.locator('#tag-auto-apply').isDisabled() && (await page.locator('#tag-auto-plan').innerText()).includes('Bấm Xem trước'),'áp dụng xong: bản xem trước cũ bị xóa');
+  // Sửa bảng luật: thêm, bỏ dòng trống khi gửi, đổi thứ tự, xóa
+  await page.getByRole('button',{name:'Thêm luật'}).click();
+  ok(await autoRows().count()===3,'Thêm luật: có dòng trống mới');
+  await clear();await page.getByRole('button',{name:'Xem trước'}).click();
+  ok((await json('tag_auto_preview')).rules.length===2,'dòng trống hoàn toàn không được gửi đi');
+  await autoRows().nth(0).getByRole('button',{name:'Xuống dưới'}).click();
+  ok(JSON.stringify((await autoInputs()).map(r=>r[0]))===JSON.stringify(['Cửa','Tường','']),'nút ↓: đổi thứ tự luật (độ ưu tiên)');
+  await autoRows().nth(1).getByRole('button',{name:'Lên trên'}).click();
+  await autoRows().nth(2).getByRole('button',{name:'Xóa'}).click();
+  ok(JSON.stringify((await autoInputs()).map(r=>r[0]))===JSON.stringify(['Tường','Cửa']),'nút ↑ và Xóa hoạt động');
+  // Lưu mặc định, đặt lại, nhập, xuất
+  await clear();await page.getByRole('button',{name:'Lưu làm mặc định'}).click();
+  ok(JSON.stringify(await json('tag_rules_save'))===JSON.stringify({rules:[AUTO_RULES[0],{tag:'Cửa',keywords:'cửa, door, gate'}]}),'Lưu làm mặc định: gửi bộ luật đang sửa');
+  await page.getByRole('button',{name:'Xuất file luật'}).click();
+  ok((await json('tag_rules_export')).rules.length===2,'Xuất file luật: gửi bộ luật đang sửa');
+  await page.getByRole('button',{name:'Nhập file luật'}).click();await page.getByRole('button',{name:'Đặt lại'}).click();
+  ok((await calls('tag_rules_import')).length===1 && (await calls('tag_rules_reset')).length===1,'Nhập file luật và Đặt lại: gửi lệnh (Ruby hỏi xác nhận trước khi đặt lại)');
+  await receive('tag_rules',{rules:[{tag:'Nội thất',keywords:'bàn, ghế'}],imported:true});
+  ok(JSON.stringify(await autoInputs())===JSON.stringify([['Nội thất','bàn, ghế']]) && await page.locator('#tag-auto-apply').isDisabled(),'nhận bộ luật mới từ Ruby (nhập file): thay bảng luật và bỏ bản xem trước');
+  await receive('tags',{groups:F.groups.slice(0,5),tags:[],selection:2,rules:AUTO_RULES});
+  ok(JSON.stringify(await autoInputs())===JSON.stringify([['Nội thất','bàn, ghế']]),'vẽ lại tab (ví dụ sau khi áp dụng): giữ bộ luật đang sửa, không quay về bộ đã lưu');
+
   // ---- Đổi ngôn ngữ thì tải lại cửa sổ ----
   await receive('config',config('table'));
   const reloaded=page.waitForEvent('load',{timeout:5000}).then(()=>true,()=>false);
