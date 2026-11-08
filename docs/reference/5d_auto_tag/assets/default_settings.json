@@ -1,0 +1,30 @@
+{
+  "folders": [
+    {"! INFORMATION": ["!"]},
+    {"# BASIC": ["#', 'edge', 'face"]},
+    {"1. CONTEXT": ["1. "]},
+    {"2. SITE": ["2. "]},
+    {"3. BUILDING STORIES": ["3. "]},
+    {"A. ARCHITECTURAL": ["A. "]},
+    {"I. INTERIOR": ["I. "]},
+    {"S. STRUCTURAL": ["S. "]},
+    {"M. MECHANICAL": ["M. "]},
+    {"E. ELECTRICAL": ["E. "]},
+    {"P. PLUMBING": ["P. "]},
+    {"F. FIRE PROTECTION": ["F. "]},
+    {"Q. EQUIPMENT": ["Q. "]},
+    {"L. LANDSCAPE": ["L. "]},
+    {"C. CIVIL": ["C. "]},
+    {"# MATERIALS": ["m_"]},
+    {"@ REFERENCES": ["REFERENCE"]},
+    {"@ STATUS": ["@"]},
+    {"@ SCENES": ["5D+Scene"]}
+  ],
+  "names": [
+    {"A. WALL": ["Wall"]},
+    {"A. DOOR": ["Door"]},
+    {"A. WINDOW": ["Window"]},
+    {"A. RAILING": ["Railing"]},
+    {"A. STAIR": ["Stair"]}
+  ]
+}
