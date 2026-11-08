@@ -32,7 +32,7 @@ module VGD
           before = Settings.read
           language = before['language']
           Settings.update(payload)
-          measure_changed = Settings.read['exclude_words'] != before['exclude_words']
+          measure_changed = %w[exclude_words exclude_tags].any? { |key| Settings.read[key] != before[key] }
           if Settings.read['language'] != language
             refresh # đổi ngôn ngữ: gửi lại cấu hình và từ điển, vẽ lại cả cửa sổ
           else

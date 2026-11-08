@@ -381,7 +381,8 @@ module VGD
           untagged = ->(name) { %w[Untagged Layer0].include?(name) }
           tags = @model.layers.to_a.map { |layer| layer.name.to_s }.reject(&untagged) | Tags.load.map { |tag| tag['name'].to_s }
           materials = @model.materials.to_a.map { |material| material.display_name.to_s }
-          {tags: tags.sort_by { |name| name.downcase }, materials: materials.sort_by { |name| name.downcase }}
+          model_tags = @model.layers.to_a.map { |layer| layer.name.to_s }.reject(&untagged).sort_by { |name| name.downcase } # chỉ tag có trong model (bảng Loại trừ tag)
+          {tags: tags.sort_by { |name| name.downcase }, materials: materials.sort_by { |name| name.downcase }, model_tags: model_tags}
         end
         # Cột chữ cho phép thay hàng loạt, và cách đọc giá trị hiện tại của dòng.
         REPLACE_FIELDS = {'name' => :name, 'description' => :description, 'owner' => :owner, 'size' => :size}.freeze

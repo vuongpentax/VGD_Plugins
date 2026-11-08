@@ -210,3 +210,5 @@ body.light #theme{--theme-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://w
 .front-plan{margin:6px 0;font-size:12px}
 .front-plan div{margin:2px 0}
 .pp-note{overflow-wrap:anywhere;margin:2px 0 6px;font-size:11px}
+.col-side .pp-note{margin:0 4px 2px}
+.col-side .cs-name.muted{font-style:italic}

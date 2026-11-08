@@ -89,12 +89,13 @@ Nút ⚙ ở thanh đầu chỉ để chọn **ngôn ngữ** (Tiếng Việt / E
 
 Số đo Rộng / Dài / Cao trong Bảng khối lượng tính theo kích thước **đã phóng to (scale)** của đối tượng: khối dài 1 m kéo thành 2 m thì bảng ghi 2 m.
 
-Tay nắm lòi ra làm tủ bị đo to hơn thân thật. Mở bảng **Preset** (nút cạnh nút Sáng/Tối), mục **Số đo thân**:
-1. **Từ khóa loại trừ**: gõ vài từ như `tay nắm, handle, knob` (cách nhau dấu phẩy). Group, component hoặc tag có tên chứa từ đó sẽ không được tính. Không phân biệt hoa thường và dấu. Mặc định đã có `tay nắm, tay nam, handle, knob`.
-2. Bật cột **Ghi chú số đo** (Chọn cột) để xem plugin đã bỏ gì cho từng món, ví dụ `Bỏ 2 phần theo từ khóa (Tay nam trái, Tay nam phải)`.
-3. Tay nắm dính liền vào hình của cánh (không tách thành group / component hay tag riêng) thì không loại được: hãy tách riêng và đặt tên hoặc tag cho tay nắm.
+Phần phụ nhô ra (tay nắm...) hoặc thứ không thuộc thân (đá bếp...) làm tủ bị đo to hơn thân thật. Có hai cách loại khỏi Rộng / Dài / Cao:
+1. **Loại trừ theo tag** (khuyên dùng): đặt những phần đó lên một tag riêng trong SketchUp, rồi bấm nút **Loại trừ tag** trên thanh công cụ của Bảng khối lượng. Ngăn bên liệt kê các tag của model; tick tag nào thì mọi thứ nằm trên tag đó không còn được tính vào kích thước. Bỏ tick là tính lại. Dùng được cho tay nắm, đá bếp hoặc bất cứ thứ gì có tag riêng.
+2. **Từ khóa tên** (bảng **Preset** → **Số đo thân**): gõ vài từ như `tay nắm, handle, knob` (cách nhau dấu phẩy). Group, component hoặc tag có tên chứa từ đó sẽ không được tính. Không phân biệt hoa thường và dấu. Mặc định đã có `tay nắm, tay nam, handle, knob`.
 
-Chỉ Bảng khối lượng và file xuất từ bảng dùng số đo thân. Nếu thấy một món sai, xem Ghi chú số đo rồi chỉnh từ khóa.
+Bật cột **Ghi chú số đo** (Chọn cột) để xem plugin đã bỏ gì cho từng món, ví dụ `Bỏ 2 phần theo từ khóa hoặc tag (Tay nam trái, Mặt đá)`. Phần dính liền vào hình của cánh (không tách thành group / component hoặc tag riêng) thì không loại được: hãy tách riêng và đặt tag hoặc tên cho nó.
+
+Chỉ Bảng khối lượng và file xuất từ bảng dùng số đo thân. Nếu thấy một món sai, xem Ghi chú số đo rồi chỉnh tag hoặc từ khóa.
 
 ## Mặt trước của món (bản thử)
 

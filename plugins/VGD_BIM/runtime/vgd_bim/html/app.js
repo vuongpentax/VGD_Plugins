@@ -648,7 +648,10 @@ function toolbar(){
   grouping.setAttribute('aria-expanded',String(tableState.panel==='group'));
   const groupAnchor=node('div',undefined,'pop-anchor');groupAnchor.append(grouping);
   if(tableState.panel==='group')groupAnchor.append(groupPanel());
-  bar.append(cols,searchWrap,replaceBox,group,node('span',undefined,'grow'),rename,front,snap,stop,progress,groupAnchor,count);
+  const excludeCount=excludedTags().size;
+  const exclude=button(excludeCount?`Loại trừ tag (${excludeCount})`:'Loại trừ tag',toggleExclude);exclude.id='exclude-btn';exclude.title='Chọn các tag không tính vào Rộng / Dài / Cao';
+  exclude.setAttribute('aria-expanded',String(tableState.panel==='exclude'));
+  bar.append(cols,exclude,searchWrap,replaceBox,group,node('span',undefined,'grow'),rename,front,snap,stop,progress,groupAnchor,count);
   return bar;
 }
 // Mặt trước: phát hiện tự động (tường + hình học), đặt tay theo hướng nhìn / xoay / đảo, xóa. Chỉ ghi dữ liệu, không đổi hình học.
@@ -814,30 +817,112 @@ function buildColumnPanel(side){
   side.replaceChildren(inner);
   updateColumnCounts();
 }
-function openColumns(animate=true){
+// ---- Ngăn Loại trừ tag: tick các tag không tính vào Rộng / Dài / Cao (cùng ngăn bên với Chọn cột) ----
+tableState.excludeSearch='';tableState.excludeTags=null;tableState.excludePending=false;
+const excludedTags=()=>tableState.excludeTags||new Set((config.app&&config.app.settings&&config.app.settings.exclude_tags)||[]);
+const modelTags=()=>((tableState.data&&tableState.data.choices&&tableState.data.choices.model_tags)||[]);
+let excludeTimer=null;
+// Lưu sau một lúc không tick nữa: mỗi lần lưu là Ruby tính lại số đo cả bảng, nên không gửi sau từng cú tick.
+function saveExcluded(){
+  tableState.excludePending=true;clearTimeout(excludeTimer);
+  excludeTimer=setTimeout(()=>{tableState.excludePending=false;call('settings_save',JSON.stringify({exclude_tags:[...excludedTags()]}));},500);
+  updateExcludeCounts();
+}
+function excludeNames(){
+  const q=tableState.excludeSearch.trim().toLocaleLowerCase('vi');
+  const inModel=modelTags(),missing=[...excludedTags()].filter(name=>!inModel.includes(name)).sort((a,b)=>a.localeCompare(b,'vi'));
+  return [...inModel.map(name=>({name,missing:false})),...missing.map(name=>({name,missing:true}))].filter(item=>!q||item.name.toLocaleLowerCase('vi').includes(q));
+}
+function renderExcludeList(list){
+  list.replaceChildren();
+  const items=excludeNames();
+  if(!items.length)list.append(node('p',modelTags().length?'Không có tag nào khớp.':'Không có tag nào trong model.','muted pp-note'));
+  items.forEach(({name,missing})=>{
+    const item=node('div',undefined,'pop-col');item.dataset.key=name;
+    const box=node('input',undefined,'cb');box.type='checkbox';box.checked=excludedTags().has(name);
+    box.onchange=()=>{const set=new Set(excludedTags());if(box.checked)set.add(name);else set.delete(name);tableState.excludeTags=set;saveExcluded();};
+    const label=node('label');label.append(box,node('span',name+(missing?' (không có trong model)':''),'cs-name'+(missing?' muted':'')));
+    item.append(label);list.append(item);
+  });
+}
+// Nút Loại trừ tag và (nếu đang mở) danh sách tag cập nhật theo cài đặt mới nhất từ Ruby.
+function refreshExcludeUi(){
+  const side=$('col-side');
+  if(side&&side.dataset.kind==='exclude'&&side.querySelector('.pop-cols'))renderExcludeList(side.querySelector('.pop-cols'));
+  updateExcludeCounts();
+  const btn=$('exclude-btn');if(btn){const n=excludedTags().size;btn.textContent=n?`Loại trừ tag (${n})`:'Loại trừ tag';}
+}
+function updateExcludeCounts(){
+  const side=$('col-side');if(!side||side.dataset.kind!=='exclude')return;
+  const names=excludeNames(),set=excludedTags();
+  const badge=side.querySelector('.badge'),all=side.querySelector('.cs-all input'),label=side.querySelector('.cs-all .cs-all-text');
+  const on=names.filter(item=>set.has(item.name)).length;
+  if(badge)badge.textContent=`${set.size} / ${modelTags().length}`;
+  if(all){all.checked=names.length>0&&on===names.length;all.disabled=!names.length;}
+  if(label)label.textContent=names.length&&on===names.length?'Bỏ chọn tất cả':'Chọn tất cả';
+  const btn=$('exclude-btn');if(btn)btn.textContent=set.size?`Loại trừ tag (${set.size})`:'Loại trừ tag';
+}
+function buildExcludePanel(side){
+  const inner=node('div',undefined,'col-side-in');
+  const head=node('div',undefined,'cs-head');
+  const search=node('input');search.type='search';search.placeholder='Tìm tag...';search.value=tableState.excludeSearch;search.className='pop-search';search.setAttribute('aria-label','Tìm tag');
+  const close=button('×',()=>closeColumns(),'cs-close');close.title='Ẩn danh sách tag';close.setAttribute('aria-label','Ẩn danh sách tag');
+  head.append(search,close);
+  const note=node('p','Phần nằm trên tag được tick không tính vào Rộng / Dài / Cao của Bảng khối lượng.','muted pp-note');
+  const bar=node('div',undefined,'cs-all');
+  const allBox=node('input',undefined,'cb');allBox.type='checkbox';allBox.setAttribute('aria-label','Chọn tất cả tag');
+  allBox.onchange=()=>{
+    const set=new Set(excludedTags());
+    excludeNames().filter(item=>!item.missing||allBox.checked===false).forEach(item=>{if(allBox.checked)set.add(item.name);else set.delete(item.name);});
+    tableState.excludeTags=set;renderExcludeList(list);saveExcluded();
+  };
+  const allLabel=node('label');allLabel.append(allBox,node('span','Chọn tất cả','cs-all-text'));
+  bar.append(allLabel,node('span',undefined,'badge'));
+  const list=node('div',undefined,'pop-cols');
+  search.oninput=()=>{tableState.excludeSearch=search.value;renderExcludeList(list);updateExcludeCounts();};
+  renderExcludeList(list);
+  inner.append(head,note,bar,list);
+  side.replaceChildren(inner);side.dataset.kind='exclude';
+  updateExcludeCounts();
+}
+// ---- Ngăn bên: Chọn cột hoặc Loại trừ tag ----
+const sideKind=()=>tableState.panel==='columns'||tableState.panel==='exclude'?tableState.panel:null;
+function markSideButtons(){
+  const cols=$('cols-btn'),excl=$('exclude-btn');
+  if(cols)cols.setAttribute('aria-expanded',String(tableState.panel==='columns'));
+  if(excl)excl.setAttribute('aria-expanded',String(tableState.panel==='exclude'));
+}
+function buildSide(kind,side){if(kind==='exclude')buildExcludePanel(side);else{buildColumnPanel(side);side.dataset.kind='columns';}}
+function openSide(kind,animate=true){
   const side=$('col-side');if(!side)return;
   clearTimeout(side._closing);
-  tableState.panel='columns';
-  buildColumnPanel(side);
-  const btn=$('cols-btn');if(btn)btn.setAttribute('aria-expanded','true');
+  tableState.panel=kind;
+  buildSide(kind,side);
+  markSideButtons();
   if(!animate){side.classList.add('open');return;}
   requestAnimationFrame(()=>requestAnimationFrame(()=>side.classList.add('open'))); // hai khung hình để width 0 được vẽ trước khi trượt ra
 }
+const openColumns=(animate=true)=>openSide('columns',animate);
 function closeColumns(animate=true){
   const side=$('col-side');
-  if(tableState.panel==='columns')tableState.panel=null;
-  const btn=$('cols-btn');if(btn)btn.setAttribute('aria-expanded','false');
+  if(sideKind())tableState.panel=null;
+  markSideButtons();
   if(!side)return;
   side.classList.remove('open');
   clearTimeout(side._closing);
-  const empty=()=>side.replaceChildren();
+  const empty=()=>{side.replaceChildren();delete side.dataset.kind;};
   if(animate)side._closing=setTimeout(empty,SIDE_MS+60);else empty();
 }
-function toggleColumns(){
-  if(tableState.panel==='columns'){closeColumns();return;}
+// Bấm nút của ngăn: đang mở đúng ngăn đó thì đóng; đang mở ngăn kia thì đổi nội dung (không đóng rồi mở lại).
+function toggleSide(kind){
+  if(tableState.panel===kind){closeColumns();return;}
+  const side=$('col-side');
+  if(sideKind()&&side&&side.classList.contains('open')){tableState.panel=kind;buildSide(kind,side);markSideButtons();return;}
   const other=!!tableState.panel; // đang mở bảng khác (Đổi tên, Chụp ảnh...): đóng bảng đó khi mở ngăn này
-  openColumns();if(other)tableView(tableState.data);
+  openSide(kind);if(other)tableView(tableState.data);
 }
+const toggleColumns=()=>toggleSide('columns');
+const toggleExclude=()=>toggleSide('exclude');
 // Nút gạt (công tắc) giống tab Quản lý của VGD Center: bấm vào nút hoặc chữ đều gạt.
 function toggleButton(text,on,handler){
   const item=node('div',undefined,'sw-item');
@@ -958,9 +1043,12 @@ function tableView(data){
   if(tableState.panel==='front')bar.append(frontPanel());
   if(tableState.panel==='rename')bar.append(renamePanel());
   const side=$('col-side'),host=$('grid-host');
-  if(tableState.panel==='columns'){
-    if(fresh||!side.classList.contains('open')&&!side.firstChild)openColumns(!fresh);
-    else{renderColumnList(side.querySelector('.pop-cols'));updateColumnCounts();}
+  const kind=sideKind();
+  if(kind){
+    if(fresh||!side.classList.contains('open')&&!side.firstChild)openSide(kind,!fresh);
+    else if(side.dataset.kind!==kind){buildSide(kind,side);markSideButtons();}
+    else if(kind==='columns'){renderColumnList(side.querySelector('.pop-cols'));updateColumnCounts();}
+    else{renderExcludeList(side.querySelector('.pop-cols'));updateExcludeCounts();}
   }else if(side.classList.contains('open'))closeColumns();
   const old=host.querySelector('.grid-wrap');const scroll=old?{top:old.scrollTop,left:old.scrollLeft}:null;
   renderGrid(host);
@@ -982,7 +1070,7 @@ window.VGD={receive(event,data){
     if(tableState.data){tableState.data.presets=data;if(config.mode==='table')tableView(tableState.data);}
     updatePresetButton();if(openPanel==='preset-panel')presetPanel($('preset-panel'));
   }
-  if(event==='settings'){config.app=data;if(openPanel==='preset-panel')presetPanel($('preset-panel'));if(openPanel==='gear-panel')languagePanel($('gear-panel'));}
+  if(event==='settings'){config.app=data;if(!tableState.excludePending){tableState.excludeTags=null;refreshExcludeUi();}if(openPanel==='preset-panel')presetPanel($('preset-panel'));if(openPanel==='gear-panel')languagePanel($('gear-panel'));}
   if(event==='front_align_plan'){tableState.alignPlan=data&&!data.cleared?data:null;if(tableState.panel==='front'&&tableState.data)tableView(tableState.data);return;}
   if(event==='rename_preview'){tableState.rename.preview=data;if(tableState.panel==='rename'&&tableState.data)tableView(tableState.data);}
   if(event==='images_progress')imagesProgress(data);

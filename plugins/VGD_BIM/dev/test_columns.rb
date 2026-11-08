@@ -147,8 +147,8 @@ ok('đặt tay: hiện -X, Thủ công', T.build(model, [fronted])[:rows].first.
 ok('hai cột Mặt trước nằm trong danh sách cột của bảng, là cột chữ', %w[front front_state].all? { |k| T::COLUMNS.any? { |c| c[:key] == k && c[:kind] == 'text' } })
 
 # Ghi chú số đo (bỏ tay nắm theo từ khóa): lấy từ bộ đo thân của bảng
-fake_measure = Class.new { def extent(_definition); {size: [1.0, 1.0, 1.0], note: 'Bỏ 1 phần theo từ khóa (Tay nam)'}; end }.new
-ok('có đo thân: dòng bảng mang ghi chú số đo', T.build(model, [Sketchup::Group.new('Tủ có tay nắm')], measure: fake_measure)[:rows].first[:measure_note] == 'Bỏ 1 phần theo từ khóa (Tay nam)')
+fake_measure = Class.new { def extent(_definition); {size: [1.0, 1.0, 1.0], note: 'Bỏ 1 phần theo từ khóa hoặc tag (Tay nam)'}; end }.new
+ok('có đo thân: dòng bảng mang ghi chú số đo', T.build(model, [Sketchup::Group.new('Tủ có tay nắm')], measure: fake_measure)[:rows].first[:measure_note] == 'Bỏ 1 phần theo từ khóa hoặc tag (Tay nam)')
 ok('không đo thân (measure nil): ghi chú số đo rỗng', T.build(model, [Sketchup::Group.new('Tủ thường')])[:rows].first[:measure_note] == '')
 none = Class.new { def extent(_definition); nil; end }.new
 ok('đo thân nhưng không có gì bị bỏ (extent nil): ghi chú rỗng', T.build(model, [Sketchup::Group.new('Tủ sạch')], measure: none)[:rows].first[:measure_note] == '')

@@ -11,7 +11,8 @@ module VGD
         'language' => 'vi', # vi | en
         'image_dir' => '',  # trống = thư mục mặc định trong thư mục dữ liệu của plugin
         # Số đo thân của Bảng khối lượng (xem Measure): từ khóa tên / tag của phần không tính vào Rộng / Dài / Cao (như tay nắm).
-        'exclude_words' => 'tay nắm, tay nam, handle, knob'
+        'exclude_words' => 'tay nắm, tay nam, handle, knob',
+        'exclude_tags' => [] # tên các tag loại khỏi số đo (chọn bằng bảng tick trong Bảng khối lượng)
       }.freeze
       LANGUAGES = %w[vi en].freeze
       MAX_DIR_LENGTH = 240 # dưới giới hạn đường dẫn 260 ký tự của Windows, chừa chỗ cho tên file
@@ -46,6 +47,7 @@ module VGD
           raise ArgumentError, 'Ngôn ngữ không hợp lệ.' unless LANGUAGES.include?(value.to_s)
           value.to_s
         when 'image_dir' then directory(value)
+        when 'exclude_tags' then Measure.parse_tags(value)
         when 'exclude_words'
           Measure.parse_words(value) # chỉ để kiểm tra; lưu nguyên chữ người dùng gõ
           value.to_s.strip

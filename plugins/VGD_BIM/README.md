@@ -1,4 +1,4 @@
-# VGD_BIM 1.1.0-beta.26
+# VGD_BIM 1.1.0-beta.27
 
 Bản thử của 1.1.0 (chưa có bản ổn định). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -30,7 +30,8 @@ Cửa sổ có 5 tab (nút **Preset** cạnh nút Sáng/Tối ở thanh đầu d
 
 **Số đo thân** (từ 1.1.0-beta.25): Rộng / Dài / Cao của Bảng khối lượng tính theo **kích thước thực của đối tượng đã phóng to (scale)**, và **bỏ tay nắm lòi ra** để số đo của tủ không bị phình. Cài đặt nằm trong bảng **Preset → Số đo thân** (dùng chung mọi preset, lưu ở `settings.json`):
 - **Từ khóa loại trừ** (mặc định `tay nắm, tay nam, handle, knob`; cách nhau dấu phẩy, tối đa 12 từ, không phân biệt hoa thường và dấu): group, component hoặc tag (tag của group / component hoặc của từng mặt, cạnh) có **tên bản sao, tên định nghĩa hoặc tên tag** chứa từ khóa thì không tính vào khung bao, kể cả khi nằm sâu bên trong component khác (đã cộng dồn các phép xoay / dịch). Danh sách trống thì tắt.
-- Cột **Ghi chú số đo** (ẩn mặc định) ghi rõ đã bỏ gì: ví dụ `Bỏ 2 phần theo từ khóa (Tay nam trái, Tay nam phải)`. Món không bị bỏ gì thì để trống và số đo y như trước.
+- **Loại trừ theo tag** (từ beta.27): nút **Loại trừ tag** trên thanh công cụ của Bảng khối lượng mở một ngăn bên (giống Chọn cột) liệt kê các tag của model kèm ô tick, có ô tìm, Chọn tất cả và đếm. Phần nằm trên tag được tick (group / component, hoặc từng mặt, cạnh) không tính vào Rộng / Dài / Cao: dùng để bỏ tay nắm, đá bếp hoặc bất kỳ thứ gì nằm riêng trên một tag. Khớp **đúng toàn bộ tên tag** (không phân biệt hoa thường và dấu; "Đá" không khớp "Đá bếp"). Danh sách lưu ở `settings.json` (`exclude_tags`, dùng chung mọi model); tag đã lưu mà model đang mở không có vẫn hiện (kèm ghi chú) để bỏ tick. Lưu sau khoảng nửa giây ngừng tick, rồi tính lại số đo cả bảng một lần. Từ khóa tên ở bảng Preset vẫn giữ nguyên như trước.
+- Cột **Ghi chú số đo** (ẩn mặc định) ghi rõ đã bỏ gì: ví dụ `Bỏ 2 phần theo từ khóa hoặc tag (Tay nam trái, Mặt đá)`. Món không bị bỏ gì thì để trống và số đo y như trước.
 - Chỉ áp dụng cho **Bảng khối lượng** (và các file xuất từ bảng). Báo cáo CSV ở tab Quét & xuất, tab Thông tin và khung đánh dấu vẫn dùng khung bao đầy đủ. Đo thân bỏ qua định nghĩa quá 20.000 mặt (giữ khung bao gốc). Kích thước vẫn nhân phóng to và vẫn theo mặt trước.
 - Beta.25 từng có tùy chọn **tự cắt phần nhô theo hình học**; đã bỏ ở beta.26 vì tính lâu gây giật lag. Tay nắm dính liền vào hình của cánh (không tách riêng) không loại được: hãy đặt tên hoặc tag riêng cho tay nắm.
 
@@ -97,4 +98,4 @@ Chạy từ `plugins/VGD_BIM`:
 - `python3 dev/make_preview.py`: tạo trang HTML xem trước giao diện với dữ liệu mẫu (`outputs/VGD_BIM_giao_dien.html`).
 - `python plugins/VGD_BIM/dev/package.py <phiên bản>` (từ gốc repo): tạo RBZ trong `outputs/local_release_<phiên bản>/`, kiểm tra từng byte trong archive và in SHA-256.
 
-Bản 1.1.0-beta.26 được kiểm tra tự động bằng mô phỏng, chưa kiểm thử thủ công trong SketchUp thật. `VALIDATION.md` ghi chi tiết phần đã và chưa kiểm chứng.
+Bản 1.1.0-beta.27 được kiểm tra tự động bằng mô phỏng, chưa kiểm thử thủ công trong SketchUp thật. `VALIDATION.md` ghi chi tiết phần đã và chưa kiểm chứng.

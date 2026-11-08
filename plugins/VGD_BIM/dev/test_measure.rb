@@ -100,7 +100,7 @@ words = M.parse_words('tay nắm, handle')
 ok('khớp không phân biệt hoa thường và dấu, theo tên chứa từ khóa', M.match(words, 'TAY NAM 128') == 'tay nam' && M.match(words, '', 'Handle_01') == 'handle' && M.match(words, 'Cánh tủ', 'Tủ bếp').nil? && M.match([], 'tay nắm').nil?)
 
 # ---- Ghi chú ----
-ok('ghi chú: tên không trùng, tối đa 3 tên, có dấu … khi nhiều hơn', M.note(['Tay nam 1', 'Tay nam 2', 'Tay nam 1']) == 'Bỏ 3 phần theo từ khóa (Tay nam 1, Tay nam 2)' && M.note(%w[a b c d]).end_with?('…)'))
+ok('ghi chú: tên không trùng, tối đa 3 tên, có dấu … khi nhiều hơn', M.note(['Tay nam 1', 'Tay nam 2', 'Tay nam 1']) == 'Bỏ 3 phần theo từ khóa hoặc tag (Tay nam 1, Tay nam 2)' && M.note(%w[a b c d]).end_with?('…)'))
 ok('ghi chú: không bỏ gì thì rỗng', M.note([]) == '')
 
 # ---- Duyệt hình trong định nghĩa (model giả lập) ----
@@ -118,7 +118,7 @@ size_mm = ->(r) { r[:size].map { |v| (v * IN).round(3) } }
 
 d1 = cabinet.call([handle_inst.call(name: 'Tay nam trái')])
 r = P.measure(d1, words)
-ok('group tên chứa "tay nam": bị bỏ, khung bao còn lại là thân 1200 x 600 x 2000', size_mm.call(r) == [1200.0, 600.0, 2000.0] && r[:note] == 'Bỏ 1 phần theo từ khóa (Tay nam trái)')
+ok('group tên chứa "tay nam": bị bỏ, khung bao còn lại là thân 1200 x 600 x 2000', size_mm.call(r) == [1200.0, 600.0, 2000.0] && r[:note] == 'Bỏ 1 phần theo từ khóa hoặc tag (Tay nam trái)')
 d2 = cabinet.call([handle_inst.call])
 ok('bản sao không tên nhưng định nghĩa tên Handle_128: vẫn bị bỏ, ghi chú dùng tên định nghĩa', size_mm.call(P.measure(d2, words)) == [1200.0, 600.0, 2000.0] && P.measure(d2, words)[:note].include?('Handle_128'))
 d3 = cabinet.call([handle_inst.call(layer: Layer.new('Tay nắm'))])
@@ -141,6 +141,29 @@ many = FakeDef.new('Nhiều mặt', Array.new(P::MAX_FACES + 1) { Sketchup::Face
 ok("quá #{P::MAX_FACES} mặt: không đo thân (giữ khung bao gốc) để bảng không chậm", P.measure(many, words).nil?)
 edge_def = FakeDef.new('Có cạnh', box_faces(1200, 600, 2000) + [Sketchup::Edge.new([0, 0, 0], [0, 0, 2100 / IN]), handle_inst.call(name: 'tay nam')], native)
 ok('cạnh rời (không thuộc mặt nào) vẫn được tính vào khung bao khi đo thân (cao 2100)', size_mm.call(P.measure(edge_def, words))[2] == 2100.0)
+
+# ---- Loại trừ theo tag (bảng tick) ----
+ok('parse_tags: bỏ khoảng trắng, rỗng, trùng; nhận danh sách rỗng', M.parse_tags(['  Đá bếp ', '', 'Đá bếp', 'Tay nắm']) == ['Đá bếp', 'Tay nắm'] && M.parse_tags([]) == [])
+ok('parse_tags: không phải mảng chữ, quá 300 tag hoặc tên quá 100 ký tự bị từ chối', raises?('không hợp lệ') { M.parse_tags('Đá bếp') } && raises?('không hợp lệ') { M.parse_tags([1]) } && raises?('tối đa') { M.parse_tags((1..301).map { |i| "t#{i}" }) } && raises?('tối đa') { M.parse_tags(['a' * 101]) })
+tags = %w[da\ bep tay\ nam]
+ok('tag_excluded?: so đúng toàn bộ tên (đã chuẩn hóa: hoa thường, bỏ dấu), không khớp một phần', M.tag_excluded?(tags, 'Đá bếp') && M.tag_excluded?(tags, 'TAY NẮM') && !M.tag_excluded?(tags, 'Tay nắm 2') && !M.tag_excluded?(tags, 'Đá') && !M.tag_excluded?(tags, '') && !M.tag_excluded?([], 'Đá bếp'))
+counter = FakeDef.new('Đá', box_faces(1200, 600, 30, 0, 0, 2000), FakeBounds.new(1200 / IN, 600 / IN, 2030 / IN))
+cab_with_counter = FakeDef.new('Tủ bếp', box_faces(1200, 600, 2000) + [FakeInst.new(counter, Geom::Transformation.translation(0, 0, 0), name: 'Mặt đá', layer: Layer.new('Đá bếp'))], FakeBounds.new(1200 / IN, 600 / IN, 2030 / IN))
+r = P.measure(cab_with_counter, [], ['da bep'])
+ok('nhóm nằm trên tag được tick (tên và định nghĩa không chứa từ khóa): bị bỏ, tủ cao 2000 thay vì 2030', size_mm.call(r) == [1200.0, 600.0, 2000.0] && r[:note] == 'Bỏ 1 phần theo từ khóa hoặc tag (Mặt đá)')
+ok('tag khác không được tick: giữ nguyên (nil, số đo như cũ)', P.measure(cab_with_counter, [], ['tay nam']).nil?)
+ok('tag chỉ trùng một phần với tên tag của nhóm ("Đá" so với "Đá bếp"): không bị bỏ', P.measure(cab_with_counter, [], ['da']).nil?)
+face_tag = Layer.new('Đá bếp')
+faces_on_tag = box_faces(1200, 600, 30, 0, 0, 2000).map { |f| Sketchup::Face.new(f.normal.to_a, f.bounds.min.to_a, f.bounds.max.to_a, layer: face_tag) }
+r = P.measure(FakeDef.new('Tủ', box_faces(1200, 600, 2000) + faces_on_tag, FakeBounds.new(1200 / IN, 600 / IN, 2030 / IN)), [], ['da bep'])
+ok('mặt nằm trên tag được tick: bị bỏ', size_mm.call(r) == [1200.0, 600.0, 2000.0])
+edge_on_tag = Sketchup::Edge.new([0, 0, 0], [0, 0, 2500 / IN], layer: Layer.new('Đá bếp'))
+ok('cạnh nằm trên tag được tick: không kéo khung bao (cao vẫn 2000)', size_mm.call(P.measure(FakeDef.new('Tủ', box_faces(1200, 600, 2000) + [edge_on_tag, handle_inst.call(name: 'tay nam')], native), words, ['da bep']))[2] == 2000.0)
+both = FakeDef.new('Tủ', box_faces(1200, 600, 2000) + [handle_inst.call(name: 'Tay nam'), FakeInst.new(counter, name: 'Mặt đá', layer: Layer.new('Đá bếp'))], FakeBounds.new(1200 / IN, 632 / IN, 2030 / IN))
+r = P.measure(both, words, ['da bep'])
+ok('từ khóa tên và tag dùng cùng lúc: cả hai đều bị bỏ, ghi chú đủ hai phần', size_mm.call(r) == [1200.0, 600.0, 2000.0] && r[:note].start_with?('Bỏ 2 phần theo từ khóa hoặc tag (') && r[:note].include?('Mặt đá') && r[:note].include?('Tay nam'))
+ctx_tags = P::Context.new([], ['Đá bếp'])
+ok('Context chỉ có tag (không có từ khóa): hoạt động, tên tag được chuẩn hóa', ctx_tags.active? && ctx_tags.tags == ['da bep'] && size_mm.call(ctx_tags.extent(cab_with_counter)) == [1200.0, 600.0, 2000.0])
 
 # ---- Context: cache và cài đặt ----
 ctx = P::Context.new(words)
@@ -166,6 +189,16 @@ ok('cài đặt: danh sách trống được giữ (tắt loại trừ), không 
 ok('cài đặt: từ khóa sai bị từ chối, không ghi nửa chừng', (before = S.read['exclude_words']; raises?('tối đa') { S.update('exclude_words' => 'a' * 300) } && S.read['exclude_words'] == before))
 ok('cài đặt cũ có trường trim_protrusions (bản beta.25): bị bỏ qua, không lỗi', (S.update('trim_protrusions' => true); !S.read.key?('trim_protrusions')))
 
+S.update('exclude_tags' => ['Đá bếp', 'Tay nắm'])
+ok('cài đặt: lưu danh sách tag loại trừ', S.read['exclude_tags'] == ['Đá bếp', 'Tay nắm'])
+ok('cài đặt: danh sách tag sai kiểu bị từ chối, không đổi cái cũ', raises?('không hợp lệ') { S.update('exclude_tags' => 'Đá bếp') } && S.read['exclude_tags'] == ['Đá bếp', 'Tay nắm'])
+S.update('exclude_tags' => [])
+ok('cài đặt: danh sách tag trống được giữ', S.read['exclude_tags'] == [])
+S.update('exclude_tags' => ['Đá bếp'], 'exclude_words' => '')
+c = P.context
+ok('P.context đọc cả từ khóa (trống) và tag từ cài đặt', c.words == [] && c.tags == ['da bep'] && c.active?)
+File.write(File.join(ENV['VGD_BIM_DATA_DIR'], 'settings.json'), JSON.generate('exclude_tags' => 'hỏng', 'exclude_words' => 'tay nắm'))
+ok('file cài đặt sửa tay có tag hỏng: bỏ qua danh sách tag (không lỗi), từ khóa vẫn dùng', P.context.tags == [] && P.context.words == ['tay nam'])
 # ---- Geometry.dimensions có đo thân ----
 dd = cabinet.call([handle_inst.call(name: 'tay nam')])
 inst = FakeInst.new(dd, Geom::Transformation.scaling(1, 1, 1))

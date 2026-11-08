@@ -10,38 +10,47 @@ module VGD
 
       # Cài đặt đo của một lần dựng bảng, nhớ kết quả theo định nghĩa (nhiều bản sao dùng chung một lần đo).
       class Context
-        attr_reader :words
+        attr_reader :words, :tags
 
-        def initialize(words)
+        def initialize(words, tags = [])
           @words = words
+          @tags = tags.map { |name| Measure.normalize(name) }.uniq # tên tag đã chuẩn hóa
           @cache = {}
         end
 
         def active?
-          !@words.empty?
+          !@words.empty? || !@tags.empty?
         end
 
         # {size: [rộng X, sâu Y, cao Z] (inch, trước khi nhân phóng to), note: ghi chú} hoặc nil nếu khung bao giữ nguyên.
         def extent(definition)
           return nil unless active?
           return @cache[definition] if @cache.key?(definition)
-          @cache[definition] = MeasureProbe.measure(definition, @words)
+          @cache[definition] = MeasureProbe.measure(definition, @words, @tags)
         end
       end
 
       # Đọc cài đặt chung. Từ khóa hỏng (file sửa tay) thì bỏ qua cả danh sách.
       def self.context(settings = Settings.read)
-        Context.new(Measure.parse_words(settings['exclude_words']))
-      rescue ArgumentError
-        Context.new([])
+        words = begin
+          Measure.parse_words(settings['exclude_words'])
+        rescue ArgumentError
+          []
+        end
+        tags = begin
+          Measure.parse_tags(settings['exclude_tags'] || [])
+        rescue ArgumentError
+          []
+        end
+        Context.new(words, tags)
       end
 
-      def self.measure(definition, words)
+      def self.measure(definition, words, tags = [])
         native = definition.bounds
         return nil if native.empty?
         excluded = []
         boxes = []
-        return nil unless collect(definition, words, excluded, boxes)
+        return nil unless collect(definition, words, tags, excluded, boxes)
         return nil if excluded.empty? || boxes.empty?
         lo = (0..2).map { |axis| boxes.map { |box| box[0][axis] }.min }
         hi = (0..2).map { |axis| boxes.map { |box| box[1][axis] }.max }
@@ -50,7 +59,7 @@ module VGD
 
       # Duyệt toàn bộ hình trong định nghĩa, gom khung bao (mm, khung cục bộ của định nghĩa) của mặt và cạnh còn lại. Trả về false nếu quá nhiều mặt
       # (không đo). excluded nhận tên các phần bị loại.
-      def self.collect(definition, words, excluded, boxes)
+      def self.collect(definition, words, tags, excluded, boxes)
         faces = 0
         stack = [[definition.entities.to_enum, Geom::Transformation.new, [definition]]]
         until stack.empty?
@@ -63,17 +72,17 @@ module VGD
           end
           next unless entity.respond_to?(:valid?) && entity.valid?
           if Data.supported?(entity)
-            reason = Measure.match(words, entity.name, Geometry.definition(entity).name, layer_name(entity))
+            reason = Measure.match(words, entity.name, Geometry.definition(entity).name, layer_name(entity)) || (Measure.tag_excluded?(tags, layer_name(entity)) ? 'tag' : nil)
             if reason then excluded << label(entity); next end
             child = Geometry.definition(entity)
             stack << [child.entities.to_enum, transform * entity.transformation, ancestors + [child]] unless ancestors.include?(child)
           elsif entity.is_a?(Sketchup::Face)
-            if Measure.match(words, layer_name(entity)) then excluded << label(entity); next end
+            if Measure.match(words, layer_name(entity)) || Measure.tag_excluded?(tags, layer_name(entity)) then excluded << label(entity); next end
             faces += 1
             return false if faces > MAX_FACES
             boxes << face_box(entity, transform)
           elsif entity.is_a?(Sketchup::Edge)
-            next if Measure.match(words, layer_name(entity))
+            next if Measure.match(words, layer_name(entity)) || Measure.tag_excluded?(tags, layer_name(entity))
             [entity.start.position, entity.end.position].each do |point|
               moved = point.transform(transform)
               mm = [moved.x * Geometry::INCH_MM, moved.y * Geometry::INCH_MM, moved.z * Geometry::INCH_MM]

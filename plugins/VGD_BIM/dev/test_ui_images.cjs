@@ -376,6 +376,37 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   const info=await page.locator('.card').last().innerText();
   ok(info.includes('Rộng × Sâu × Cao (cm)') && info.includes('120 × 60 × 80'),'tab Thông tin: tiêu đề và kích thước theo đơn vị của preset (cm)');
 
+  // ---- Loại trừ tag: ngăn tick các tag của model, lưu sau khi ngừng tick ----
+  const tagRows=table({choices:{tags:['Đá bếp','Tay nắm','Cánh tủ','Phụ kiện'],materials:[],model_tags:['Cánh tủ','Đá bếp','Phụ kiện','Tay nắm']}});
+  await receive('config',{...config('table'),app:{settings:{language:'vi',image_dir:'',exclude_words:'tay nắm, handle',exclude_tags:['Đá bếp']},dir:'C:\\data\\images',dir_exists:true}});await receive('table',tagRows);
+  await clear();
+  ok((await page.locator('#exclude-btn').innerText())==='Loại trừ tag (1)','nút Loại trừ tag hiện số tag đang được loại trừ');
+  await page.click('#exclude-btn');await page.waitForTimeout(350);
+  ok((await page.locator('.col-side .pop-col').allInnerTexts()).map(x=>x.trim()).join('|')==='Cánh tủ|Đá bếp|Phụ kiện|Tay nắm' && (await page.locator('#col-side').getAttribute('data-kind'))==='exclude','ngăn Loại trừ tag mở ra, liệt kê tag của model theo thứ tự chữ cái');
+  ok(await page.locator('.col-side .pop-col').nth(1).locator('input').isChecked() && !(await page.locator('.col-side .pop-col').nth(0).locator('input').isChecked()),'tag đang loại trừ (Đá bếp) được tick sẵn');
+  ok((await page.locator('.col-side .badge').innerText())==='1 / 4','huy hiệu đếm tag loại trừ / tổng tag của model'.replace('huy hiệu','huy hiệu'));
+  await page.locator('.col-side .pop-col').nth(3).locator('input').click();
+  ok((await page.locator('#exclude-btn').innerText())==='Loại trừ tag (2)' && !(await last('settings_save')),'tick thêm một tag: nút cập nhật số ngay, nhưng chưa gửi lưu (đợi ngừng tick)');
+  await page.waitForTimeout(700);
+  ok(JSON.stringify(await json('settings_save'))==='{"exclude_tags":["Đá bếp","Tay nắm"]}','sau khi ngừng tick: gửi một lần settings_save với danh sách tag mới');
+  await clear();
+  await page.locator('.col-side .pop-col').nth(1).locator('input').click();await page.locator('.col-side .pop-col').nth(3).locator('input').click();await page.waitForTimeout(700);
+  ok(JSON.stringify(await json('settings_save'))==='{"exclude_tags":[]}' && (await calls('settings_save')).length===1,'tick nhiều lần liên tiếp: chỉ gửi lưu một lần (không tính lại số đo sau từng cú tick)');
+  await page.locator('.col-side .pop-search').fill('phụ');
+  ok((await page.locator('.col-side .pop-col').count())===1,'ô tìm tag lọc danh sách');
+  await clear();await page.locator('.col-side .cs-all input').click();await page.waitForTimeout(700);
+  ok(JSON.stringify(await json('settings_save'))==='{"exclude_tags":["Phụ kiện"]}','Chọn tất cả chỉ tác động tag đang lọc (Phụ kiện)');
+  await page.locator('.col-side .pop-search').fill('');
+  await receive('settings',{settings:{language:'vi',image_dir:'',exclude_words:'tay nắm, handle',exclude_tags:['Phụ kiện','Tag cũ']},dir:'C:\\data\\images',dir_exists:true});
+  ok((await page.locator('.col-side .pop-col').last().innerText()).includes('Tag cũ (không có trong model)'),'tag đã lưu nhưng không có trong model này vẫn hiện (kèm ghi chú) để bỏ tick được');
+  await page.click('#cols-btn');await page.waitForTimeout(100);
+  ok((await page.locator('#col-side').getAttribute('data-kind'))==='columns' && (await page.locator('.col-side .pop-col').count())>20 && (await page.locator('#col-side').evaluate(el=>el.classList.contains('open'))),'bấm Chọn cột khi ngăn Loại trừ đang mở: đổi nội dung sang Chọn cột, ngăn vẫn mở');
+  await page.click('#exclude-btn');await page.waitForTimeout(100);
+  ok((await page.locator('#col-side').getAttribute('data-kind'))==='exclude','bấm lại Loại trừ tag: đổi về ngăn Loại trừ');
+  await page.click('#exclude-btn');await page.waitForTimeout(400);
+  ok(!(await page.locator('#col-side').evaluate(el=>el.classList.contains('open'))) && (await page.locator('#exclude-btn').getAttribute('aria-expanded'))==='false','bấm Loại trừ tag khi đang mở: đóng ngăn');
+  await receive('config',config('table'));await receive('table',table());await clear();
+
   // ---- Số đo thân: từ khóa loại trừ và công tắc cắt phần nhô nằm trong bảng Preset ----
   await openPresets();
   ok(await page.locator('#exclude-words').inputValue()==='tay nắm, handle','bảng Preset: ô từ khóa loại trừ hiện giá trị đang lưu');
@@ -385,8 +416,8 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(!(await last('settings_save')),'từ khóa không đổi: không gửi lệnh lưu');
   ok((await page.locator('#preset-panel').innerText()).includes('xem cột Ghi chú số đo') && !(await page.locator('#preset-panel').innerText()).includes('Tự cắt'),'bảng Preset: mục Số đo thân chỉ còn từ khóa (không còn tùy chọn tự cắt phần nhô), chỉ cột Ghi chú số đo');
   await page.keyboard.press('Escape');
-  await page.evaluate(()=>{const r=tableState.data.rows[0];r.measure_note='Bỏ 1 phần theo từ khóa (Tay nam); tay nắm +Y';tableState.visible.add('measure_note');tableState.order=tableState.data.columns.map(c=>c.key);tableView(tableState.data);});
-  ok((await cellText(0,'measure_note')).includes('Bỏ 1 phần theo từ khóa (Tay nam)'),'cột Ghi chú số đo: hiện phần đã bỏ theo từ khóa');
+  await page.evaluate(()=>{const r=tableState.data.rows[0];r.measure_note='Bỏ 1 phần theo từ khóa hoặc tag (Tay nam); tay nắm +Y';tableState.visible.add('measure_note');tableState.order=tableState.data.columns.map(c=>c.key);tableView(tableState.data);});
+  ok((await cellText(0,'measure_note')).includes('Bỏ 1 phần theo từ khóa hoặc tag (Tay nam)'),'cột Ghi chú số đo: hiện phần đã bỏ theo từ khóa');
 
   // ---- Mặt trước: cột, nhóm theo, bảng phát hiện / đặt tay ----
   const frontRows=rows.map((r,i)=>({...r,front:i===0?'+Y':i===1?'-X':'',front_state:i===0?'Tự động · cao':i===1?'Cần duyệt':'',front_note:i===1?'sát tường phía +x; tường chỉ +x nhưng chi tiết hình học chỉ -x: cần duyệt':'',front_conf:i===0?'high':i===1?'low':''}));

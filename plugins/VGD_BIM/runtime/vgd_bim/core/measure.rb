@@ -29,11 +29,26 @@ module VGD
         words.find { |word| texts.any? { |text| text.include?(word) } }
       end
 
-      # Ghi chú cho cột "Ghi chú số đo": các phần đã loại theo từ khóa (tên không trùng, tối đa 3 tên).
+      # Danh sách tag loại trừ (đúng tên tag, không phân biệt hoa thường) -> tập tên đã chuẩn hóa. Ném lỗi nếu quá nhiều hoặc tên quá dài.
+      MAX_TAGS = 300
+      MAX_TAG_LENGTH = 100
+      def self.parse_tags(list)
+        raise ArgumentError, 'Danh sách tag loại trừ không hợp lệ.' unless list.is_a?(Array) && list.all? { |name| name.is_a?(String) }
+        raise ArgumentError, "Tối đa #{MAX_TAGS} tag loại trừ, mỗi tên không quá #{MAX_TAG_LENGTH} ký tự." if list.size > MAX_TAGS || list.any? { |name| name.length > MAX_TAG_LENGTH }
+        list.map(&:strip).reject(&:empty?).uniq
+      end
+
+      # Tag của một phần nằm trong danh sách tag loại trừ (so đúng toàn bộ tên, không phân biệt hoa thường và dấu).
+      def self.tag_excluded?(excluded_tags, tag_name)
+        return false if excluded_tags.empty? || tag_name.to_s.empty?
+        excluded_tags.include?(normalize(tag_name))
+      end
+
+      # Ghi chú cho cột "Ghi chú số đo": các phần đã loại theo từ khóa hoặc tag (tên không trùng, tối đa 3 tên).
       def self.note(excluded_names)
         return '' if excluded_names.empty?
         names = excluded_names.uniq
-        "Bỏ #{excluded_names.size} phần theo từ khóa (#{names.first(3).join(', ')}#{names.size > 3 ? '…' : ''})"
+        "Bỏ #{excluded_names.size} phần theo từ khóa hoặc tag (#{names.first(3).join(', ')}#{names.size > 3 ? '…' : ''})"
       end
     end
   end
