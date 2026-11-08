@@ -34,16 +34,16 @@ module VGD
         {key: 'areaXZ', label: 'Diện tích (X*Z) m²', kind: 'sum'},
         {key: 'areaXY', label: 'Diện tích (X*Y) m²', kind: 'sum'},
         {key: 'areaFace', label: 'Diện tích mặt m²', kind: 'sum'},
-        {key: 'areaProjected', label: 'Diện tích chiếu m²', kind: 'sum'},
+        {key: 'areaProjected', label: 'Diện tích chiếu bằng m²', kind: 'sum'},
         {key: 'volume', label: 'Thể tích m³', kind: 'sum'},
-        {key: 'ifc', label: 'Lớp IFC', kind: 'text'},
+        {key: 'ifc', label: 'Loại IFC', kind: 'text'},
         {key: 'tag', label: 'Phân loại thẻ', kind: 'text', editable: 'tag'},
         {key: 'tag_group', label: 'Nhóm hạng mục', kind: 'text'},
         {key: 'material', label: 'Vật liệu', kind: 'text', editable: 'material'},
         {key: 'status', label: 'Tình trạng', kind: 'status', editable: 'status'},
-        {key: 'owner', label: 'Hãng', kind: 'text', editable: 'owner'},
-        {key: 'url', label: 'Link', kind: 'text', editable: 'url'},
-        {key: 'size', label: 'Cỡ', kind: 'text', editable: 'size'},
+        {key: 'owner', label: 'Xuất xứ', kind: 'text', editable: 'owner'},
+        {key: 'url', label: 'Liên kết', kind: 'text', editable: 'url'},
+        {key: 'size', label: 'Quy cách', kind: 'text', editable: 'size'},
         {key: 'price', label: 'Đơn giá', kind: 'number', editable: 'price'},
         {key: 'quantity', label: 'Số lượng', kind: 'sum'},
         {key: 'total', label: 'Thành tiền', kind: 'sum'},
@@ -232,7 +232,7 @@ module VGD
         }.merge(extra_columns(entity, data)).merge(measure_note: body ? body[:note].to_s : '')
       end
 
-      # Hãng (trường manufacturer của dữ liệu VGD), Link / Cỡ / Đơn giá (dictionary riêng của bảng), Lớp IFC, Thành tiền.
+      # Xuất xứ (trường manufacturer của dữ liệu VGD), Liên kết / Quy cách / Đơn giá (dictionary riêng của bảng), Loại IFC, Thành tiền.
       def self.extra_columns(entity, data)
         extras = Extras.read(entity)
         {owner: data[:manufacturer].to_s, url: extras[:url], size: extras[:size], price: extras[:price],

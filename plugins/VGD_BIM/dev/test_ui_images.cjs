@@ -245,6 +245,11 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.locator('.header-input').fill('Mã riêng');await page.keyboard.press('Enter');
   saved=await json('table_preset');
   ok(saved.headers.definition==='Mã riêng' || Object.values(saved.headers).includes('Mã riêng'),'đổi tên tiêu đề cột: tự cập nhật vào preset tự tạo đang dùng');
+  await page.getByRole('button',{name:'Chọn cột'}).click();
+  const aliased=page.locator('.pop-col',{hasText:'hiện trong bảng: Mã riêng'});
+  const names=await page.locator('.pop-col .cs-name').allInnerTexts();
+  ok(await aliased.count()===1 && (await aliased.locator('.cs-name').innerText())==='Tên' && names.filter(n=>n==='Mã riêng').length===0 && names.length===new Set(names).size,'Chọn cột: luôn ghi tên chuẩn của cột (Tên), tiêu đề riêng chỉ là ghi chú "hiện trong bảng", không có hai mục trùng tên');
+  await page.getByRole('button',{name:'Chọn cột'}).click();
   await clear();await page.click('#preset-btn');
   await page.locator('#preset-panel .pp-line',{hasText:'KL THO'}).locator('.pp-tail').click();
   ok(JSON.stringify(await json('table_preset'))==='{"action":"delete","name":"KL THO"}','nút × bên cạnh preset tự tạo: gửi lệnh xóa');
@@ -350,7 +355,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   // ---- Cột mới ----
   await receive('config',config('table'));await receive('table',table());await usePreset('Tất cả');await page.keyboard.press('Escape');await clear();
   await page.getByRole('button',{name:'Chọn cột'}).click();
-  for(const label of ['Hãng','Link','Cỡ','Đơn giá','Thành tiền','Lớp IFC','Diện tích chiếu m²'])await page.locator('.pop-col',{hasText:new RegExp('^\\s*'+label+'\\s*⠿?$')}).locator('input').check();
+  for(const label of ['Xuất xứ','Liên kết','Quy cách','Đơn giá','Thành tiền','Loại IFC','Diện tích chiếu bằng m²'])await page.locator('.pop-col',{hasText:new RegExp('^\\s*'+label+'\\s*⠿?$')}).locator('input').check();
   ok((await calls('table_option')).some(c=>JSON.parse(c.args[0]).projected===true),'hiện cột Diện tích chiếu: tự bật công tắc cho Ruby tính');
   await page.getByRole('button',{name:'Chọn cột'}).click();
   ok(await cellText(0,'owner')==='Hafele' && await cellText(0,'ifc')==='IfcFurniture' && await cellText(0,'price')==='2.500.000' && await cellText(0,'total')==='2.500.000' && await cellText(1,'price')==='','cột mới hiện đúng: hãng, lớp IFC, đơn giá và thành tiền (VND không số lẻ), dòng chưa nhập để trống');

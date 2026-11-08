@@ -31,7 +31,7 @@ main{flex:1;min-height:0;overflow:auto;padding:14px 16px}.card{background:var(--
 
 .grid tbody tr{user-select:none}
 .grid tbody tr input,.grid tbody tr select{user-select:text}
-.sel-count{color:var(--muted);font-size:11px;margin-left:4px}
+.status-main{flex:1;min-width:0}.sel-info{color:var(--muted);font-size:11px;margin-top:2px}
 .rename-scope{margin:0 0 8px;font-size:11px;color:var(--muted)}
 .grid-wrap:focus{outline:none}
 
@@ -190,6 +190,7 @@ body.light #theme{--theme-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://w
 .col-side .pop-cols{flex:1 1 auto!important;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:0;border-top:1px solid var(--border);padding-top:2px}
 .col-side .pop-col{min-height:26px;padding:0 4px 0 6px;border-radius:4px;flex:none;position:relative}
 .col-side .pop-col .cs-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.col-side .pop-col .cs-alias{color:var(--muted);font-size:10px;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .col-side .pop-col .drag{cursor:grab;padding:0 2px;font-size:14px}
 .pop-col.dragging{opacity:.5;background:var(--soft)}
 .col-side .pop-density{margin-top:2px;height:26px;font-size:12px}

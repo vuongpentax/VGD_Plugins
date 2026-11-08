@@ -18,7 +18,7 @@ module VGD; module BIM; def self.log(m); end
     # Như Data.transaction thật: một bước hoàn tác cho cả khối
     def self.transaction(model, name = nil); $transactions << name; yield; end
   end
-  module Scanner; end; module Geometry; INCH_MM = 25.4; end
+  module Scanner; end
   module Tags
     GROUPS = ['Phần thô'].freeze
     def self.load; [{'name' => 'Trong bộ'}, {'name' => '000 CUA'}]; end
@@ -38,6 +38,7 @@ $transactions = []
 $writes = []
 require File.join(ROOT, 'core/settings')
 require File.join(ROOT, 'core/preset')
+require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/table')
 require File.join(ROOT, 'core/rename')
 require File.join(ROOT, 'ui/dialog')
@@ -185,9 +186,18 @@ class PickModel
   attr_accessor :active_path
   def initialize; @selection = PickSel.new; @active_view = PickView.new; @active_path = []; end
 end
+# Hộp bao thế giới để thu phóng (mô phỏng phần API dùng: BoundingBox#add / empty?, Point3d#transform, định nghĩa có bounds.corner(i))
+module Geom
+  class BoundingBox; attr_reader :points; def initialize; @points = []; end; def add(point); @points << point; end; def empty?; @points.empty?; end; end
+end
+WPoint = Struct.new(:x, :y, :z) { def transform(shift); WPoint.new(x + shift[0], y + shift[1], z + shift[2]); end }
+class WLocalBounds; def empty?; false; end; def corner(i); WPoint.new(i & 1, (i >> 1) & 1, (i >> 2) & 1); end; end
+WDefinition = Struct.new(:bounds)
+WEntities = Struct.new(:parent)
 # Đối tượng chọn phải là Sketchup::Group để Data.supported? nhận
 class PickEnt < Sketchup::Group
   attr_accessor :name
+  def entities; WEntities.new(WDefinition.new(WLocalBounds.new)); end
   def initialize(name); @name = name; end
   def valid?; true; end
   def locked?; false; end
@@ -199,10 +209,10 @@ parent = RenameEnt.new('Cha')
 other_parent = RenameEnt.new('Cha khác')
 pents = [PickEnt.new('P0'), PickEnt.new('P1'), PickEnt.new('P2'), PickEnt.new('P3')]
 precs = [
-  {entity: pents[0], path: [parent, pents[0]], locked: false, box: RBox.new(RPoint.new(0.0, 0.0, 0.0))},
-  {entity: pents[1], path: [parent, pents[1]], locked: false, box: RBox.new(RPoint.new(1.0, 0.0, 0.0))},
-  {entity: pents[2], path: [parent, pents[2]], locked: false, box: RBox.new(RPoint.new(2.0, 0.0, 0.0))},
-  {entity: pents[3], path: [other_parent, pents[3]], locked: false, box: RBox.new(RPoint.new(3.0, 0.0, 0.0))}
+  {entity: pents[0], path: [parent, pents[0]], locked: false, transform: [500.0 + 0, 20.0, 0.0], box: RBox.new(RPoint.new(0.0, 0.0, 0.0))},
+  {entity: pents[1], path: [parent, pents[1]], locked: false, transform: [500.0 + 1, 20.0, 0.0], box: RBox.new(RPoint.new(1.0, 0.0, 0.0))},
+  {entity: pents[2], path: [parent, pents[2]], locked: false, transform: [500.0 + 2, 20.0, 0.0], box: RBox.new(RPoint.new(2.0, 0.0, 0.0))},
+  {entity: pents[3], path: [other_parent, pents[3]], locked: false, transform: [500.0 + 3, 20.0, 0.0], box: RBox.new(RPoint.new(3.0, 0.0, 0.0))}
 ]
 prows = pents.each_with_index.map { |e, i| {index: i, name: e.name, definition: 'Họ', tag: '', tag_group: ''} }
 pd = D.allocate
@@ -220,7 +230,9 @@ pd.table_select({'indexes' => [0, 2], 'field' => 'instance'})
 ok('chọn nhiều dòng cùng cấp: SketchUp chọn đúng các đối tượng đó', pm.selection.to_a == [pents[0], pents[2]] && pm.active_path == [parent])
 ok('chọn nhiều dòng: nhớ các dòng đã chọn trong bảng', pd.instance_variable_get(:@picked_entities) == [pents[0], pents[2]])
 ok('chọn nhiều dòng: bỏ qua ô đã bấm (không có khung tên theo ô)', pd.instance_variable_get(:@outline_field).nil?)
-ok('chọn nhiều dòng: thu phóng tới các đối tượng đã chọn', pm.active_view.zoomed == [pents[0], pents[2]])
+zoomed = pm.active_view.zoomed
+ok('chọn nhiều dòng: thu phóng theo hộp bao trong tọa độ thế giới của các đối tượng đã chọn (16 góc, x từ 500 tới 503), không truyền đối tượng lồng bên trong group',
+   zoomed.is_a?(Geom::BoundingBox) && zoomed.points.size == 16 && zoomed.points.map(&:x).minmax == [500.0, 503.0] && zoomed.points.map(&:y).uniq.sort == [20.0, 21.0])
 pcalls.clear
 pd.table_selection_changed
 ok('SketchUp báo đã chọn đúng các đối tượng bảng vừa chọn: không quét lại, không đổi bảng, không đổi đánh dấu dòng',
@@ -360,7 +372,7 @@ rrows[2][:name] = 'Bàn'
 bad_replace = ->(payload) { begin; ed.table_replace(payload); nil; rescue StandardError => e; e.message; end }
 ok('thay thế: chữ cần tìm rỗng bị từ chối', bad_replace.call({'find' => '', 'replace' => 'x', 'fields' => %w[name]}).to_s.include?('chữ cần tìm'))
 ok('thay thế: chữ cần tìm quá dài bị từ chối', bad_replace.call({'find' => 'a' * 201, 'replace' => 'x', 'fields' => %w[name]}).to_s.include?('quá dài'))
-ok('thay thế: cột không cho phép bị từ chối (chỉ Tên, Mô tả, Hãng, Cỡ)', bad_replace.call({'find' => 'a', 'replace' => 'x', 'fields' => %w[tag]}).to_s.include?('cột'))
+ok('thay thế: cột không cho phép bị từ chối (chỉ Tên, Mô tả, Xuất xứ, Quy cách)', bad_replace.call({'find' => 'a', 'replace' => 'x', 'fields' => %w[tag]}).to_s.include?('cột'))
 ok('thay thế: không có ô nào khớp thì báo, không mở bước hoàn tác', (($transactions.clear) && bad_replace.call({'find' => 'zzzz', 'replace' => 'x', 'fields' => %w[name]}).to_s.include?('Không có ô nào')) && $transactions.empty?)
 
 # Mở link: chỉ http / https

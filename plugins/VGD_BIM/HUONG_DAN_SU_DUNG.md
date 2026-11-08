@@ -11,7 +11,7 @@ Mở bằng **Extensions → VGD → VGD_BIM**: cửa sổ mở thẳng tab **B�
 5. Bấm một ô: đối tượng được đánh dấu trong SketchUp bằng khung nét đứt và khung tên. Bấm ô **Tên** thì khung hiện tên, bấm ô **Mô tả** thì hiện mô tả; bấm cả dòng thì hiện tên, mô tả, tình trạng và phân loại. Bỏ chọn thì khung tắt. Trên SketchUp 2023 trở lên, bạn chọn đối tượng bằng công cụ Select như bình thường (Shift/Ctrl chọn nhiều, kéo chọn, nhấp đúp vào group). Trên SketchUp 2022, khi khung đang bật các thao tác chọn nhiều đó không dùng được: nhấn **Esc** hoặc chọn công cụ khác rồi thao tác.
 6. **Nhấp đúp** vào ô để sửa. **Tên**, **Mô tả**: gõ ngay trong ô, Enter để lưu, Esc để hủy. **Tình trạng** (Mới, Hiện hữu, Dùng lại, Tạm thời, Loại bỏ), **Tag**, **Vật liệu**: hiện bảng chọn có ô tìm kiếm, mục hiện tại có dấu ✓; Enter chọn mục đầu tiên; ở ô Tag gõ tên chưa có sẽ có mục **Tạo tag**. Muốn sửa nhiều đối tượng một lúc, chọn nhiều dòng (Ctrl / Shift) rồi nhấp đúp vào ô của một dòng trong vùng chọn. Đối tượng bị khóa được bỏ qua. Cả đợt là một bước hoàn tác (Ctrl+Z).
 7. **Nhóm theo**: bấm nút **Nhóm theo** rồi chọn Cha, Loại, Tên họ, Tên, Vật liệu, Tag, Nhóm hạng mục hoặc Tình trạng. Mỗi nhóm có dòng tiêu đề (tên nhóm, số đối tượng, tổng); bấm mũi tên để thu gọn, bấm tiêu đề để chọn cả nhóm rồi sửa hoặc đổi tên hàng loạt. Tích **Gộp dòng giống nhau** để gộp các dòng giống hệt nhau thành một dòng (Số lượng, diện tích, thể tích cộng dồn).
-8. Tuỳ chọn ở thanh công cụ: **Thu phóng**, **Cô lập đối tượng chọn** (tạm ẩn các đối tượng khác; tắt tuỳ chọn hoặc đóng cửa sổ để hiện lại, và đừng lưu file khi đang cô lập), **Chọn sâu bên trong** (đọc cả group / component nằm bên trong), dòng **Tổng cộng**, **Tổng chỉ cấp cao nhất** (không cộng trùng group lồng nhau).
+8. Số dòng đang chọn hiện ở chân trang, dưới dòng thông báo. Danh sách **Chọn cột** luôn ghi tên chuẩn của cột; nếu preset đổi tiêu đề thì có ghi chú "hiện trong bảng: ..." bên cạnh. Tuỳ chọn ở thanh công cụ: **Thu phóng**, **Cô lập đối tượng chọn** (tạm ẩn các đối tượng khác; tắt tuỳ chọn hoặc đóng cửa sổ để hiện lại, và đừng lưu file khi đang cô lập), **Chọn sâu bên trong** (đọc cả group / component nằm bên trong), dòng **Tổng cộng**, **Tổng chỉ cấp cao nhất** (không cộng trùng group lồng nhau).
 
 ## Đổi tên hàng loạt
 
@@ -83,7 +83,7 @@ Nút ⚙ ở thanh đầu chỉ để chọn **ngôn ngữ** (Tiếng Việt / E
 
 ## Các cột mới của Bảng khối lượng
 
-**Diện tích chiếu** (hình chiếu xuống mặt phẳng ngang, hợp cho phòng và khu vực; chỉ tính khi bật công tắc **Diện tích chiếu** ở chân trang, hoặc tự bật khi bạn hiện cột này), **Lớp IFC** (đọc phân loại IFC có sẵn), **Hãng**, **Link** (nút ↗ mở bằng trình duyệt; chỉ nhận http hoặc https), **Cỡ**, **Đơn giá** (bạn tự nhập, chỉ số, ví dụ 1250000 hoặc 12,5) và **Thành tiền** (= đơn giá x số lượng, dòng tổng cộng cộng dồn). Nhấp đúp vào ô để nhập. Link, Cỡ, Đơn giá được lưu riêng cho bảng, không đổi dữ liệu dùng chung với các plugin VGD khác.
+**Diện tích chiếu** (hình chiếu xuống mặt phẳng ngang, hợp cho phòng và khu vực; chỉ tính khi bật công tắc **Diện tích chiếu** ở chân trang, hoặc tự bật khi bạn hiện cột này), **Loại IFC** (đọc phân loại IFC có sẵn), **Xuất xứ**, **Liên kết** (nút ↗ mở bằng trình duyệt; chỉ nhận http hoặc https), **Quy cách**, **Đơn giá** (bạn tự nhập, chỉ số, ví dụ 1250000 hoặc 12,5) và **Thành tiền** (= đơn giá x số lượng, dòng tổng cộng cộng dồn). Nhấp đúp vào ô để nhập. Liên kết, Quy cách, Đơn giá được lưu riêng cho bảng, không đổi dữ liệu dùng chung với các plugin VGD khác.
 
 ## Số đo thân: bỏ tay nắm khỏi kích thước
 
@@ -125,7 +125,7 @@ Lưu ý: plugin đoán dựa vào tường gần món và độ nhiều chi ti�
 
 ## Thay thế hàng loạt chữ
 
-Gõ chữ vào ô **Tìm kiếm** thì hiện thêm ô **Thay bằng** và nút **Thay thế (n)** (n là số ô sẽ đổi). Chữ được thay trong các cột Tên, Mô tả, Hãng, Cỡ đang hiện, ở các dòng đang lọc, không phân biệt hoa thường; cả đợt là một bước hoàn tác (Ctrl+Z) và đối tượng bị khóa được bỏ qua.
+Gõ chữ vào ô **Tìm kiếm** thì hiện thêm ô **Thay bằng** và nút **Thay thế (n)** (n là số ô sẽ đổi). Chữ được thay trong các cột Tên, Mô tả, Xuất xứ, Quy cách đang hiện, ở các dòng đang lọc, không phân biệt hoa thường; cả đợt là một bước hoàn tác (Ctrl+Z) và đối tượng bị khóa được bỏ qua.
 
 ## Soạn tag
 

@@ -30,6 +30,17 @@ module VGD
         values = transform.to_a
         [0, 4, 8].map { |i| Math.sqrt(values[i]**2 + values[i + 1]**2 + values[i + 2]**2) }
       end
+      # Hộp bao trong tọa độ thế giới của các dòng bảng (record[:transform] là biến đổi thế giới của đối tượng). View#zoom(đối tượng)
+      # với đối tượng nằm sâu trong group dùng tọa độ cục bộ, nên camera bị kéo về gần gốc của group cha (ví dụ đáy tủ bếp); zoom theo hộp bao thế giới thì đúng.
+      def self.world_bounds(records)
+        bounds = Geom::BoundingBox.new
+        records.each do |record|
+          local = definition(record[:entity]).bounds
+          next if local.empty?
+          8.times { |i| bounds.add(local.corner(i).transform(record[:transform])) }
+        end
+        bounds
+      end
       def self.width(entity, transform = nil); dimensions(entity, transform)[:width]; end
       def self.depth(entity, transform = nil); dimensions(entity, transform)[:depth]; end
       def self.height(entity, transform = nil); dimensions(entity, transform)[:height]; end

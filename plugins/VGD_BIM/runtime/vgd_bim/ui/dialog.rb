@@ -316,7 +316,10 @@ module VGD
             # Chỉ cô lập / zoom khi chọn đối tượng khác, không làm lại khi bấm ô khác của cùng dòng.
             # Cô lập chỉ có khi chọn đúng một dòng.
             if records.size == 1 then apply_isolation(records.first) if @table_options[:isolate] else restore_isolation end
-            @model.active_view.zoom(@table_picks) if @table_options[:zoom]
+            if @table_options[:zoom]
+              bounds = Geometry.world_bounds(mirrored)
+              @model.active_view.zoom(bounds) unless bounds.empty?
+            end
           end
           emit('message', {text: 'Các dòng nằm ở cấp lồng khác nhau nên SketchUp chỉ chọn dòng cuối. Đổi tên vẫn áp dụng cho mọi dòng đã chọn trong bảng.'}) if mirrored.size < records.size
           show_outline
@@ -400,7 +403,7 @@ module VGD
           raise 'Hãy nhập chữ cần tìm.' if find.empty?
           raise "Chữ cần tìm hoặc chữ thay thế quá dài (tối đa #{MAX_FIND} ký tự)." if find.length > MAX_FIND || replacement.length > MAX_FIND
           fields = Array(payload['fields']).map(&:to_s)
-          raise 'Hãy chọn cột cần thay: chỉ có Tên, Mô tả, Hãng, Cỡ.' if fields.empty? || !(fields - REPLACE_FIELDS.keys).empty?
+          raise 'Hãy chọn cột cần thay: chỉ có Tên, Mô tả, Xuất xứ, Quy cách.' if fields.empty? || !(fields - REPLACE_FIELDS.keys).empty?
           indexes = payload['indexes'].is_a?(Array) ? table_indexes(payload) : @table_rows.map { |row| row[:index] }
           records = indexes.map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
           raise 'Có đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |_, record| record[:path].all?(&:valid?) }
@@ -805,9 +808,7 @@ module VGD
           @model.active_path = record[:path][0...-1]
           @model.selection.clear
           @model.selection.add(record[:entity])
-          bounds = Geom::BoundingBox.new
-          local = Geometry.definition(record[:entity]).bounds
-          8.times { |i| bounds.add(local.corner(i).transform(record[:transform])) } unless local.empty?
+          bounds = Geometry.world_bounds([record])
           @model.active_view.zoom(bounds) unless bounds.empty?
         end
         def export_report(kind)
