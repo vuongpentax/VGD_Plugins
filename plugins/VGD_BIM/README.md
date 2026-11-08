@@ -1,4 +1,4 @@
-# VGD_BIM 1.1.0-beta.25
+# VGD_BIM 1.1.0-beta.26
 
 Bản thử của 1.1.0 (chưa có bản ổn định). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -28,11 +28,11 @@ Cửa sổ có 5 tab (nút **Preset** cạnh nút Sáng/Tối ở thanh đầu d
 
 ### Preset, đơn vị và ảnh
 
-**Số đo thân** (từ 1.1.0-beta.25): Rộng / Dài / Cao của Bảng khối lượng tính theo **kích thước thực của đối tượng đã phóng to (scale)**, và có thể **bỏ tay nắm lòi ra** để số đo của tủ không bị phình. Cài đặt nằm trong bảng **Preset → Số đo thân** (dùng chung mọi preset, lưu ở `settings.json`):
+**Số đo thân** (từ 1.1.0-beta.25): Rộng / Dài / Cao của Bảng khối lượng tính theo **kích thước thực của đối tượng đã phóng to (scale)**, và **bỏ tay nắm lòi ra** để số đo của tủ không bị phình. Cài đặt nằm trong bảng **Preset → Số đo thân** (dùng chung mọi preset, lưu ở `settings.json`):
 - **Từ khóa loại trừ** (mặc định `tay nắm, tay nam, handle, knob`; cách nhau dấu phẩy, tối đa 12 từ, không phân biệt hoa thường và dấu): group, component hoặc tag (tag của group / component hoặc của từng mặt, cạnh) có **tên bản sao, tên định nghĩa hoặc tên tag** chứa từ khóa thì không tính vào khung bao, kể cả khi nằm sâu bên trong component khác (đã cộng dồn các phép xoay / dịch). Danh sách trống thì tắt.
-- **Tự cắt phần nhô nhỏ (trục X, Y)** (tắt mặc định): dành cho tay nắm dính liền vào cánh, không có tên hay tag. Ở mỗi trục ngang, các lớp mặt vuông góc với trục có diện tích nhỏ hơn 4% lớp lớn nhất và nằm sát đầu mút, nhô ra không quá 10% kích thước món (tối đa 150 mm), bị coi là phần nhô và bỏ đi. **Không cắt theo trục Z** (chân bàn, chân tủ là một phần của chiều cao). Có thể cắt nhầm phần nhô thật như phào hay chân đế.
-- Cột **Ghi chú số đo** (ẩn mặc định) ghi rõ đã bỏ gì: ví dụ `Bỏ 2 phần theo từ khóa (Tay nam trái, Tay nam phải); cắt nhô +Y 32 mm`. Món không bị bỏ gì thì để trống và số đo y như trước.
+- Cột **Ghi chú số đo** (ẩn mặc định) ghi rõ đã bỏ gì: ví dụ `Bỏ 2 phần theo từ khóa (Tay nam trái, Tay nam phải)`. Món không bị bỏ gì thì để trống và số đo y như trước.
 - Chỉ áp dụng cho **Bảng khối lượng** (và các file xuất từ bảng). Báo cáo CSV ở tab Quét & xuất, tab Thông tin và khung đánh dấu vẫn dùng khung bao đầy đủ. Đo thân bỏ qua định nghĩa quá 20.000 mặt (giữ khung bao gốc). Kích thước vẫn nhân phóng to và vẫn theo mặt trước.
+- Beta.25 từng có tùy chọn **tự cắt phần nhô theo hình học**; đã bỏ ở beta.26 vì tính lâu gây giật lag. Tay nắm dính liền vào hình của cánh (không tách riêng) không loại được: hãy đặt tên hoặc tag riêng cho tay nắm.
 
 **Mặt trước** (từ 1.1.0-beta.20; beta.21 làm tới bước 2 trong 3): nút **Mặt trước** trên thanh công cụ của Bảng khối lượng. Mặt trước là một trong bốn hướng ngang theo trục riêng của món (+X, -X, +Y, -Y; Z là hướng lên), lưu ở **định nghĩa** của group / component (dictionary `VGD_BIM_TABLE`, cùng chỗ với Hãng / Link / Cỡ) nên các bản sao của một component dùng chung một mặt trước. Phần này **không đổi hình học** model. Cách xác định:
 - **Phát hiện tự động**: bắn tia ngang ra bốn phía từ giữa chiều cao món; mặt nào sát tường (≤ 250 mm) và mặt đối diện thoáng hơn ít nhất 400 mm thì mặt đối diện là mặt trước (món ở góc tường thì chỉ xét hai mặt còn lại; món kẹp giữa hai tường thì bỏ bằng chứng tường). Đồng thời đếm số mặt nhỏ ở lớp ngoài cùng của từng phía: mặt trước nhiều chi tiết (khe cánh, tay nắm), mặt sau thường là tấm phẳng. Tường và hình học trùng nhau thì **tin cậy cao**, chỉ một nguồn thì trung bình hoặc thấp, mâu thuẫn thì **Cần duyệt**. Món không đứng thẳng, bị lật gương, component động hoặc lệch góc so với trục chỉ được tin cậy thấp.
@@ -97,4 +97,4 @@ Chạy từ `plugins/VGD_BIM`:
 - `python3 dev/make_preview.py`: tạo trang HTML xem trước giao diện với dữ liệu mẫu (`outputs/VGD_BIM_giao_dien.html`).
 - `python plugins/VGD_BIM/dev/package.py <phiên bản>` (từ gốc repo): tạo RBZ trong `outputs/local_release_<phiên bản>/`, kiểm tra từng byte trong archive và in SHA-256.
 
-Bản 1.1.0-beta.25 được kiểm tra tự động bằng mô phỏng, chưa kiểm thử thủ công trong SketchUp thật. `VALIDATION.md` ghi chi tiết phần đã và chưa kiểm chứng.
+Bản 1.1.0-beta.26 được kiểm tra tự động bằng mô phỏng, chưa kiểm thử thủ công trong SketchUp thật. `VALIDATION.md` ghi chi tiết phần đã và chưa kiểm chứng.

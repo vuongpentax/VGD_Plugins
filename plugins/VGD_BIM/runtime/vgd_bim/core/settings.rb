@@ -3,16 +3,15 @@ require_relative 'measure'
 
 module VGD
   module BIM
-    # Cài đặt chung của người dùng (mọi preset dùng chung), lưu trên máy ở settings.json: ngôn ngữ giao diện, thư mục lưu ảnh và cách đo thân (từ khóa loại trừ, cắt phần nhô).
+    # Cài đặt chung của người dùng (mọi preset dùng chung), lưu trên máy ở settings.json: ngôn ngữ giao diện, thư mục lưu ảnh và từ khóa loại trừ khỏi số đo (tay nắm).
     # Đơn vị, số lẻ, cỡ ảnh, góc nhìn... nằm trong preset (xem Preset). Mọi giá trị đều được kiểm tra khi ghi (update) và khi đọc
     # (read): file sửa tay sai thì từng mục sai về mặc định.
     module Settings
       DEFAULTS = {
         'language' => 'vi', # vi | en
         'image_dir' => '',  # trống = thư mục mặc định trong thư mục dữ liệu của plugin
-        # Số đo thân của Bảng khối lượng (xem Measure): từ khóa tên / tag của phần không tính vào Rộng / Dài / Cao (như tay nắm), và tự cắt phần nhô.
-        'exclude_words' => 'tay nắm, tay nam, handle, knob',
-        'trim_protrusions' => false
+        # Số đo thân của Bảng khối lượng (xem Measure): từ khóa tên / tag của phần không tính vào Rộng / Dài / Cao (như tay nắm).
+        'exclude_words' => 'tay nắm, tay nam, handle, knob'
       }.freeze
       LANGUAGES = %w[vi en].freeze
       MAX_DIR_LENGTH = 240 # dưới giới hạn đường dẫn 260 ký tự của Windows, chừa chỗ cho tên file
@@ -50,9 +49,6 @@ module VGD
         when 'exclude_words'
           Measure.parse_words(value) # chỉ để kiểm tra; lưu nguyên chữ người dùng gõ
           value.to_s.strip
-        when 'trim_protrusions'
-          raise ArgumentError, 'Tùy chọn cắt phần nhô phải là bật hoặc tắt.' unless [true, false].include?(value)
-          value
         end
       end
 

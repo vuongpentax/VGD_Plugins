@@ -4,69 +4,54 @@ require_relative 'settings'
 module VGD
   module BIM
     # Phần gọi SketchUp của số đo thân (xem Measure): duyệt hình trong định nghĩa, bỏ các group / component / mặt / cạnh có tên hoặc tag chứa
-    # từ khóa loại trừ, tính khung bao còn lại (và tùy chọn cắt phần nhô). Chỉ đọc model. Chưa kiểm được trong SketchUp thật.
+    # từ khóa loại trừ, tính khung bao còn lại. Chỉ đọc model. Chưa kiểm được trong SketchUp thật.
     module MeasureProbe
       MAX_FACES = 20_000 # định nghĩa nhiều mặt hơn thì giữ khung bao gốc (không đo thân) để bảng không chậm
 
       # Cài đặt đo của một lần dựng bảng, nhớ kết quả theo định nghĩa (nhiều bản sao dùng chung một lần đo).
       class Context
-        attr_reader :words, :trim
+        attr_reader :words
 
-        def initialize(words, trim)
+        def initialize(words)
           @words = words
-          @trim = trim ? true : false
           @cache = {}
         end
 
         def active?
-          !@words.empty? || @trim
+          !@words.empty?
         end
 
         # {size: [rộng X, sâu Y, cao Z] (inch, trước khi nhân phóng to), note: ghi chú} hoặc nil nếu khung bao giữ nguyên.
         def extent(definition)
           return nil unless active?
           return @cache[definition] if @cache.key?(definition)
-          @cache[definition] = MeasureProbe.measure(definition, @words, @trim)
+          @cache[definition] = MeasureProbe.measure(definition, @words)
         end
       end
 
       # Đọc cài đặt chung. Từ khóa hỏng (file sửa tay) thì bỏ qua cả danh sách.
       def self.context(settings = Settings.read)
-        Context.new(Measure.parse_words(settings['exclude_words']), settings['trim_protrusions'])
+        Context.new(Measure.parse_words(settings['exclude_words']))
       rescue ArgumentError
-        Context.new([], settings['trim_protrusions'])
+        Context.new([])
       end
 
-      def self.measure(definition, words, trim)
+      def self.measure(definition, words)
         native = definition.bounds
         return nil if native.empty?
         excluded = []
-        faces = []
-        points = []
-        complete = collect(definition, words, excluded, faces, points)
-        return nil unless complete
-        return nil if excluded.empty? && !trim
-        return nil if faces.empty? && points.empty?
-        lo, hi = union(faces, points)
-        trimmed = Array.new(3) { [0.0, 0.0] }
-        if trim
-          body = Measure.body_extents(faces)
-          if body
-            Measure::TRIM_AXES.each do |axis|
-              trimmed[axis] = body[:trimmed][axis]
-              lo[axis] += trimmed[axis][0]
-              hi[axis] -= trimmed[axis][1]
-            end
-          end
-        end
-        size = (0..2).map { |axis| (hi[axis] - lo[axis]) / Geometry::INCH_MM }
-        native_size = [native.width.to_f, native.height.to_f, native.depth.to_f]
-        return nil if excluded.empty? && size.zip(native_size).all? { |a, b| (a - b).abs < 1e-6 }
-        {size: size, note: Measure.note(excluded, trimmed)}
+        boxes = []
+        return nil unless collect(definition, words, excluded, boxes)
+        return nil if excluded.empty? || boxes.empty?
+        lo = (0..2).map { |axis| boxes.map { |box| box[0][axis] }.min }
+        hi = (0..2).map { |axis| boxes.map { |box| box[1][axis] }.max }
+        {size: (0..2).map { |axis| (hi[axis] - lo[axis]) / Geometry::INCH_MM }, note: Measure.note(excluded)}
       end
 
-      # Duyệt toàn bộ hình trong định nghĩa. Trả về false nếu quá nhiều mặt (không đo). excluded nhận tên các phần bị loại.
-      def self.collect(definition, words, excluded, faces, points)
+      # Duyệt toàn bộ hình trong định nghĩa, gom khung bao (mm, khung cục bộ của định nghĩa) của mặt và cạnh còn lại. Trả về false nếu quá nhiều mặt
+      # (không đo). excluded nhận tên các phần bị loại.
+      def self.collect(definition, words, excluded, boxes)
+        faces = 0
         stack = [[definition.entities.to_enum, Geom::Transformation.new, [definition]]]
         until stack.empty?
           iterator, transform, ancestors = stack.last
@@ -84,35 +69,26 @@ module VGD
             stack << [child.entities.to_enum, transform * entity.transformation, ancestors + [child]] unless ancestors.include?(child)
           elsif entity.is_a?(Sketchup::Face)
             if Measure.match(words, layer_name(entity)) then excluded << label(entity); next end
-            return false if faces.size >= MAX_FACES
-            faces << face_data(entity, transform)
+            faces += 1
+            return false if faces > MAX_FACES
+            boxes << face_box(entity, transform)
           elsif entity.is_a?(Sketchup::Edge)
             next if Measure.match(words, layer_name(entity))
             [entity.start.position, entity.end.position].each do |point|
               moved = point.transform(transform)
-              points << [moved.x * Geometry::INCH_MM, moved.y * Geometry::INCH_MM, moved.z * Geometry::INCH_MM]
+              mm = [moved.x * Geometry::INCH_MM, moved.y * Geometry::INCH_MM, moved.z * Geometry::INCH_MM]
+              boxes << [mm, mm]
             end
           end
         end
         true
       end
 
-      def self.face_data(face, transform)
+      # Khung bao của một mặt sau khi đổi sang khung cục bộ của định nghĩa (mm): [nhỏ nhất, lớn nhất].
+      def self.face_box(face, transform)
         bounds = face.bounds
         corners = [bounds.min, bounds.max].then { |a, b| [a.x, b.x].product([a.y, b.y], [a.z, b.z]) }.map { |x, y, z| Geom::Point3d.new(x, y, z).transform(transform) }
-        center = bounds.center.transform(transform)
-        normal = face.normal.transform(transform).to_a
-        length = Math.sqrt(normal.sum { |v| v * v })
-        normal = length.zero? ? [0.0, 0.0, 0.0] : normal.map { |v| v / length }
-        mm = ->(values) { values.map { |v| v * Geometry::INCH_MM } }
-        {n: normal, c: mm.call([center.x, center.y, center.z]),
-         a: face.area(transform).to_f * Geometry::INCH_MM**2,
-         lo: mm.call((0..2).map { |axis| corners.map { |p| p.to_a[axis] }.min }), hi: mm.call((0..2).map { |axis| corners.map { |p| p.to_a[axis] }.max })}
-      end
-
-      def self.union(faces, points)
-        boxes = faces.map { |f| [f[:lo], f[:hi]] } + points.map { |p| [p, p] }
-        [(0..2).map { |axis| boxes.map { |lo, _| lo[axis] }.min }, (0..2).map { |axis| boxes.map { |_, hi| hi[axis] }.max }]
+        [(0..2).map { |axis| corners.map { |p| p.to_a[axis] }.min * Geometry::INCH_MM }, (0..2).map { |axis| corners.map { |p| p.to_a[axis] }.max * Geometry::INCH_MM }]
       end
 
       def self.layer_name(entity)

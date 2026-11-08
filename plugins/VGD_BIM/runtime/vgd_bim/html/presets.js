@@ -92,11 +92,7 @@ function presetPanel(panel){
   const commitWords=()=>{if(words.value.trim()!==(app.settings.exclude_words||''))call('settings_save',JSON.stringify({exclude_words:words.value.trim()}));};
   words.onchange=commitWords;words.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commitWords();}};
   const wordsRow=node('div',undefined,'pp-row pp-folder');wordsRow.append(words);left.append(wordsRow);
-  left.append(node('p','Bỏ khỏi Rộng / Dài / Cao các phần có tên hoặc tag chứa từ khóa.','muted pp-note'));
-  const trimRow=node('div',undefined,'pp-row');
-  trimRow.append(toggleButton('Tự cắt phần nhô nhỏ (trục X, Y)',!!app.settings.trim_protrusions,()=>call('settings_save',JSON.stringify({trim_protrusions:!app.settings.trim_protrusions}))));
-  left.append(trimRow);
-  left.append(node('p','Cắt tự động có thể cắt nhầm phần nhô thật (ví dụ phào, chân đế): xem cột Ghi chú số đo.','muted pp-note'));
+  left.append(node('p','Bỏ khỏi Rộng / Dài / Cao các phần có tên hoặc tag chứa từ khóa (xem cột Ghi chú số đo).','muted pp-note'));
   // ---- Cột phải: danh sách preset ----
   const right=node('div',undefined,'pp-right');
   const create=node('div',undefined,'pp-new');

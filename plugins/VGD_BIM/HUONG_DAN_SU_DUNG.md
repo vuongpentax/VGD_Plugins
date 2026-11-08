@@ -91,10 +91,10 @@ Số đo Rộng / Dài / Cao trong Bảng khối lượng tính theo kích thư�
 
 Tay nắm lòi ra làm tủ bị đo to hơn thân thật. Mở bảng **Preset** (nút cạnh nút Sáng/Tối), mục **Số đo thân**:
 1. **Từ khóa loại trừ**: gõ vài từ như `tay nắm, handle, knob` (cách nhau dấu phẩy). Group, component hoặc tag có tên chứa từ đó sẽ không được tính. Không phân biệt hoa thường và dấu. Mặc định đã có `tay nắm, tay nam, handle, knob`.
-2. **Tự cắt phần nhô nhỏ (trục X, Y)**: bật khi tay nắm dính liền vào cánh, không có tên hay tag. Plugin bỏ các phần nhỏ nhô khỏi thân (tối đa 10% kích thước, 150 mm). Có thể cắt nhầm (phào, chân đế), nên mặc định tắt.
-3. Bật cột **Ghi chú số đo** (Chọn cột) để xem plugin đã bỏ hoặc cắt gì cho từng món, ví dụ `cắt nhô +Y 32 mm`.
+2. Bật cột **Ghi chú số đo** (Chọn cột) để xem plugin đã bỏ gì cho từng món, ví dụ `Bỏ 2 phần theo từ khóa (Tay nam trái, Tay nam phải)`.
+3. Tay nắm dính liền vào hình của cánh (không tách thành group / component hay tag riêng) thì không loại được: hãy tách riêng và đặt tên hoặc tag cho tay nắm.
 
-Chỉ Bảng khối lượng và file xuất từ bảng dùng số đo thân. Nếu thấy một món sai, xem Ghi chú số đo, rồi chỉnh từ khóa hoặc tắt tự cắt.
+Chỉ Bảng khối lượng và file xuất từ bảng dùng số đo thân. Nếu thấy một món sai, xem Ghi chú số đo rồi chỉnh từ khóa.
 
 ## Mặt trước của món (bản thử)
 
