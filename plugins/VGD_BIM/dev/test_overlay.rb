@@ -115,6 +115,65 @@ ok('đang mở sửa group / component: điểm đặt khung tên đổi sang t�
 ctx.draw(root_view)
 ok('thoát ra gốc: quay lại điểm thế giới', root_view.lines.last.map(&:tag) == %w[a b])
 
+# Tự đo kiểu tọa độ SketchUp đang dùng khi vẽ: chiếu thử một điểm bằng camera rồi so với View#screen_coords.
+# Có phiên bản / loại vẽ hiểu điểm theo tọa độ cục bộ của group đang mở, có nơi lại hiểu theo tọa độ thế giới (khung lệch đúng bằng vị trí group).
+require File.expand_path('../runtime/vgd_bim/core/view_fit', __dir__)
+class NumPoint
+  attr_reader :x, :y, :z
+  def initialize(x, y, z); @x, @y, @z = x.to_f, y.to_f, z.to_f; end
+  def to_a; [x, y, z]; end
+  def transform(shift); NumPoint.new(x + shift.dx, y + shift.dy, z + shift.dz); end
+end
+class ShiftTransform
+  attr_reader :dx, :dy, :dz
+  def initialize(dx, dy, dz); @dx, @dy, @dz = dx.to_f, dy.to_f, dz.to_f; end
+  def to_a; [1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0, 0, dx, dy, dz, 1.0]; end
+  def inverse; ShiftTransform.new(-dx, -dy, -dz); end
+end
+class NumCamera
+  def eye; NumPoint.new(0, -300, 0); end
+  def direction; NumPoint.new(0, 1, 0); end
+  def up; NumPoint.new(0, 0, 1); end
+  def perspective?; true; end
+  def fov; 60.0; end
+  def fov_is_height?; false; end
+  def height; 0.0; end
+end
+# interpret: :world = điểm vẽ được hiểu là tọa độ thế giới; :local = hiểu là tọa độ cục bộ của group đang mở (thế giới = ngữ cảnh * điểm)
+class SpaceView < View
+  attr_reader :camera, :probes
+  def initialize(model, interpret); super(model); @interpret = interpret; @camera = NumCamera.new; @shift = model.edit_transform; @probes = 0; end
+  def vpwidth; 1000; end
+  def vpheight; 600; end
+  def screen_coords(pt)
+    @probes += 1
+    world = @interpret == :local ? pt.transform(@shift) : pt
+    xy = VGD::BIM::ViewFit.project(world.to_a, eye: camera.eye.to_a, direction: camera.direction.to_a, up: camera.up.to_a, perspective: true, fov: 60.0, fov_is_height: false, width: 1000.0, height: 600.0)
+    Geom::Point3d.new(xy[0], xy[1], 0)
+  end
+end
+shift = ShiftTransform.new(5000, 0, 0) # group đang mở nằm cách gốc 5000 theo X
+world_points = [NumPoint.new(5010, 100, 20), NumPoint.new(5030, 100, 20)]
+space_overlay = ->(interpret) do
+  o = VGD::BIM::UI::BoundsOverlay.new
+  o.show_shapes(world_points, fills: [], label: nil)
+  v = SpaceView.new(FakeEditModel.new(shift), interpret)
+  o.draw(v)
+  v.lines[0].map(&:x)
+end
+ok('SketchUp hiểu điểm vẽ theo tọa độ thế giới (như lớp phủ trong ảnh lỗi): giữ nguyên điểm thế giới, không đổi sang cục bộ', space_overlay.call(:world) == [5010.0, 5030.0])
+ok('SketchUp hiểu điểm vẽ theo tọa độ cục bộ của group đang mở: đổi sang cục bộ (trừ vị trí group)', space_overlay.call(:local) == [10.0, 30.0])
+lazy = VGD::BIM::UI::BoundsOverlay.new
+lazy.show_shapes(world_points, fills: [])
+cache_view = SpaceView.new(FakeEditModel.new(shift), :world)
+lazy.draw(cache_view); lazy.draw(cache_view)
+ok('đã đo xong thì dùng lại cho các lần vẽ sau (không gọi screen_coords lại để đo)', cache_view.probes == 2)
+undecidable = VGD::BIM::UI::BoundsOverlay.new
+undecidable.show_shapes([NumPoint.new(0, -900, 0), NumPoint.new(10, -900, 0)], fills: []) # điểm nằm sau camera: không đo được
+behind_view = SpaceView.new(FakeEditModel.new(shift), :world)
+undecidable.draw(behind_view)
+ok('không đo được (điểm sau camera): dùng cách cũ là tọa độ cục bộ, không báo lỗi', behind_view.lines[0].map(&:x) == [-5000.0, -4990.0])
+
 # Khung tên: hộp ôm đúng chiều rộng chữ (đo bằng View#text_bounds), tên quá dài thì rút gọn bằng "…" để chữ không tràn hộp
 class MeasuringView < View
   def text_bounds(_point, text, _options); Struct.new(:width, :height).new(text.length * 11.0, 16.0); end

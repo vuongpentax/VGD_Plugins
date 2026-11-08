@@ -31,5 +31,17 @@ ok('hộp bao suy biến (một điểm): vẫn có khoảng cách dương, khô
 slanted = V.camera(min, max, direction: [3.0, 4.0, 0.0], up: [0.0, 0.0, 1.0], perspective: true, fov: 35.0, fov_is_height: false, aspect: 1.0)
 back = near(slanted[:target].zip(slanted[:eye]).map { |t, e| t - e }.then { |v| n = Math.sqrt(v.sum { |x| x * x }); v.map { |x| x / n } }, [0.6, 0.8, 0.0])
 ok('hướng nhìn không chuẩn hóa vẫn được chuẩn hóa: từ mắt tới tâm đúng hướng (0,6; 0,8; 0)', back)
+
+# ---- Chiếu một điểm thế giới ra tọa độ màn hình (dùng để biết SketchUp đang vẽ theo tọa độ nào) ----
+cam = {eye: [0.0, -100.0, 0.0], direction: [0.0, 1.0, 0.0], up: [0.0, 0.0, 1.0], perspective: true, fov: 90.0, fov_is_height: false, width: 800.0, height: 400.0}
+center = V.project([0.0, 0.0, 0.0], **cam)
+ok('điểm nằm đúng trên trục nhìn: ra giữa màn hình (400, 200)', near(center, [400.0, 200.0]))
+right = V.project([100.0, 0.0, 0.0], **cam)
+ok('fov ngang 90°: điểm cách trục 100 ở khoảng cách 100 lệch đúng nửa chiều rộng sang phải (800, 200)', near(right, [800.0, 200.0]))
+upper = V.project([0.0, 0.0, 100.0], **cam)
+ok('điểm phía trên trục nhìn: y màn hình nhỏ hơn (lên trên)', near(upper, [400.0, 200.0 - 400.0 / 2.0], 1e-6) || upper[1] < 200.0)
+ok('điểm nằm sau camera: không chiếu được (nil)', V.project([0.0, -200.0, 0.0], **cam).nil?)
+par = V.project([10.0, 55.0, 20.0], **cam.merge(perspective: false), camera_height: 400.0)
+ok('camera song song: tỉ lệ = chiều cao màn hình / chiều cao khung nhìn (1 điểm ảnh mỗi đơn vị), không phụ thuộc độ sâu', near(par, [410.0, 180.0]))
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)

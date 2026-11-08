@@ -22,23 +22,51 @@ module VGD
           false
         end
 
-        # Đang mở sửa một group / component thì SketchUp hiểu điểm vẽ (và điểm đổi sang tọa độ màn hình) theo tọa độ cục bộ
-        # của ngữ cảnh đang mở, nên điểm thế giới phải đổi bằng edit_transform.inverse, nếu không khung bị lệch đúng bằng
-        # vị trí của ngữ cảnh. Kết quả được nhớ lại cho tới khi ngữ cảnh đổi. Trả về [đường viền, tô mặt, điểm khung tên].
+        # Đang mở sửa một group / component thì tùy phiên bản và loại vẽ (công cụ hay lớp phủ), SketchUp hiểu điểm vẽ theo tọa độ cục bộ
+        # của ngữ cảnh đang mở hoặc theo tọa độ thế giới; hiểu sai thì khung lệch đúng bằng vị trí của ngữ cảnh. Không đoán: tự đo
+        # (xem local_drawing?) rồi đổi điểm thế giới bằng edit_transform.inverse nếu cần. Kết quả được nhớ lại cho tới khi ngữ cảnh đổi.
+        # Trả về [đường viền, tô mặt, điểm khung tên, mũi tên tô, mũi tên viền].
         def drawing_shapes(view)
           context = view.model.edit_transform
           return [@points, @fills, @label_point, @arrow_fills, @arrow_lines] if context.to_a == IDENTITY_MATRIX
           key = context.to_a
           unless @shape_key == key
-            inverse = context.inverse
-            @shape_cache = [@points.map { |point| point.transform(inverse) },
-                            @fills.map { |point| point.transform(inverse) },
-                            @label_point && @label_point.transform(inverse),
-                            @arrow_fills.map { |point| point.transform(inverse) },
-                            @arrow_lines.map { |point| point.transform(inverse) }]
-            @shape_key = key
+            space = local_drawing?(view, context)
+            if space == false
+              @shape_cache = [@points, @fills, @label_point, @arrow_fills, @arrow_lines]
+            else # đo được là cục bộ, hoặc chưa đo được: giữ cách cũ (tọa độ cục bộ) và đo lại ở lần vẽ sau
+              inverse = context.inverse
+              @shape_cache = [@points.map { |point| point.transform(inverse) },
+                              @fills.map { |point| point.transform(inverse) },
+                              @label_point && @label_point.transform(inverse),
+                              @arrow_fills.map { |point| point.transform(inverse) },
+                              @arrow_lines.map { |point| point.transform(inverse) }]
+            end
+            @shape_key = key unless space.nil?
           end
           @shape_cache
+        end
+
+        # SketchUp đang hiểu điểm vẽ theo tọa độ cục bộ của ngữ cảnh (true) hay tọa độ thế giới (false)? nil nếu chưa đo được.
+        # Chiếu một điểm thế giới bằng camera (ViewFit.project) rồi so với View#screen_coords của chính điểm đó (hiểu theo thế giới)
+        # và của điểm đã đổi sang cục bộ: cách nào ra gần vị trí thật hơn là cách SketchUp đang dùng.
+        def local_drawing?(view, context)
+          probe = @points.first
+          return nil unless probe
+          camera = view.camera
+          expected = ViewFit.project(probe.to_a, eye: camera.eye.to_a, direction: camera.direction.to_a, up: camera.up.to_a,
+                                                 perspective: camera.perspective?, fov: camera.fov, fov_is_height: camera.fov_is_height?,
+                                                 width: view.vpwidth.to_f, height: view.vpheight.to_f, camera_height: camera.height)
+          return nil unless expected
+          as_world = view.screen_coords(probe)
+          as_local = view.screen_coords(probe.transform(context.inverse))
+          off_world = Math.hypot(as_world.x - expected[0], as_world.y - expected[1])
+          off_local = Math.hypot(as_local.x - expected[0], as_local.y - expected[1])
+          BIM.log("Khung đánh dấu khi mở sửa group: lệch nếu hiểu là thế giới #{off_world.round}px, nếu hiểu là cục bộ #{off_local.round}px")
+          off_local <= off_world
+        rescue StandardError => error
+          BIM.log("Không đo được kiểu tọa độ vẽ: #{error.message}")
+          nil
         end
 
         # Tô nhẹ các mặt của đối tượng (danh sách tam giác theo tọa độ thế giới).
