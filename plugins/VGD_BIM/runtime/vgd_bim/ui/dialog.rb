@@ -524,7 +524,7 @@ module VGD
         # Ảnh đầy đủ (đúng cỡ đã chụp theo preset) của một đối tượng trong bảng; nil nếu mã không thuộc bảng hoặc chưa có ảnh.
         def table_image(pid)
           return nil unless known_pid?(pid)
-          file = Images.path(@model, pid, :full)
+          file = Images.path(@model, pid)
           File.file?(file) ? File.binread(file) : nil
         end
         def preset_export

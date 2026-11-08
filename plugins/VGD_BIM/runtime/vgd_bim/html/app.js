@@ -145,13 +145,38 @@ function preview(data) {
   const dl=node('dl',undefined,'preview-values');Object.entries(data.data).forEach(([key,value])=>dl.append(node('dt',label(key)),node('dd',displayValue(key,value))));p.append(dl,node('p','Giữ nguyên hình học, tên, thẻ và vật liệu.'));$('confirm-preview').disabled=false;$('preview').showModal();
 }
 // ---- Bảng đối tượng kiểu Auto Info ----
-const tableState={replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null};
+const tableState={replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null};
 const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total']);
 const WIDTHS={measure_note:260,front:80,front_state:150,ordinal:44,image:72,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80,areaProjected:110,ifc:120,owner:120,url:170,size:110,price:110,total:120};
 const unitTextOf=key=>LEN_KEYS.has(key)?lengthLabel():AREA_KEYS.has(key)?areaLabel():key==='volume'?volumeLabel():key==='quantity'?'cái':(key==='price'||key==='total')?workSettings().currency:undefined;
 const colLabel=col=>(tableState.headers&&tableState.headers[col.key])||withUnit(col.label);
 const lenText=value=>fmt(toUnit(value),digitsFor('lenX'));
 const widthOf=key=>tableState.widths[key]||WIDTHS[key]||110;
+// ---- Độ cao hàng: giữ Ctrl + lăn chuột giữa trên bảng; mọi hàng dữ liệu cao đều nhau, cột Ảnh rộng theo ----
+const ROW_MIN=28,ROW_MAX=640,ROW_DEFAULT=50; // điểm ảnh (khớp giới hạn phía Ruby); 50 ≈ độ cao hàng có ảnh khi chưa chỉnh
+function rowStyle(t){ // tableState.rowHeight: 0 = theo mật độ hàng; > 0 = độ cao do người dùng chọn
+  const h=tableState.rowHeight;
+  t.classList.toggle('rh',h>0);
+  if(h>0)t.style.setProperty('--row-h',h+'px');else t.style.removeProperty('--row-h');
+}
+function wheelRowHeight(e,t){
+  if(!(e.ctrlKey||e.metaKey))return; // không giữ Ctrl: lăn chuột vẫn là cuộn bảng
+  e.preventDefault();
+  const first=t.querySelector('tbody tr[data-members]');
+  const base=tableState.rowHeight||(first?Math.round(first.getBoundingClientRect().height):ROW_DEFAULT);
+  const step=Math.max(2,Math.round(base*0.1)); // mỗi nấc đổi khoảng 10%
+  const next=Math.min(ROW_MAX,Math.max(ROW_MIN,base+(e.deltaY<0?step:-step)));
+  if(next===tableState.rowHeight)return;
+  tableState.rowHeight=next;
+  tableState.widths.image=Math.max(WIDTHS.image,next+8); // cột Ảnh rộng theo độ cao hàng để ảnh to ra thật sự; vẫn kéo tay đổi được
+  rowStyle(t);
+  const index=[...t.querySelectorAll('thead tr:first-child th')].findIndex(th=>th.dataset.key==='image');
+  if(index>=0){
+    const cols=t.querySelectorAll('col');cols[index].style.width=tableState.widths.image+'px';
+    t.style.width=[...cols].reduce((sum,c)=>sum+(parseFloat(c.style.width)||0),0)+'px';
+  }
+  persistView();
+}
 const colByKey=key=>tableState.data.columns.find(c=>c.key===key);
 function presetByName(name){const list=presetsList();return list.find(p=>p.name===name)||list[0];}
 function applyPreset(name){
@@ -166,7 +191,7 @@ function applyPreset(name){
 function ensureProjected(){if(tableState.visible.has('areaProjected')&&tableState.data&&tableState.data.options&&!tableState.data.options.projected)call('table_option',JSON.stringify({projected:true}));}
 // Lưu trạng thái bảng (preset, cột, thứ tự, độ rộng, nhóm, ...) để lần mở sau vẫn như cũ.
 let viewTimer=null;
-function viewState(){return {headers:tableState.headers,settings:workSettings(),preset:tableState.preset,group:tableState.group,order:tableState.order,visible:[...tableState.visible],widths:tableState.widths,density:tableState.density,showTotals:tableState.showTotals,onlyTop:tableState.onlyTop};}
+function viewState(){return {headers:tableState.headers,settings:workSettings(),preset:tableState.preset,group:tableState.group,order:tableState.order,visible:[...tableState.visible],widths:tableState.widths,density:tableState.density,rowHeight:tableState.rowHeight,showTotals:tableState.showTotals,onlyTop:tableState.onlyTop};}
 function persistView(){clearTimeout(viewTimer);viewTimer=setTimeout(()=>{const json=JSON.stringify(viewState());if(json===tableState.savedView)return;tableState.savedView=json;call('table_view',json);},400);}
 function restoreView(data){
   tableState.restored=true;const v=data.view||{};if(!v.preset&&!(v.order||[]).length)return false;
@@ -176,7 +201,7 @@ function restoreView(data){
   const order=(v.order||[]).filter(k=>keys.includes(k));tableState.order=[...order,...keys.filter(k=>!order.includes(k))];
   tableState.visible=new Set((v.visible||[]).filter(k=>keys.includes(k)));
   if(!tableState.visible.size)return false;
-  tableState.widths=v.widths||{};if(typeof v.density==='string')tableState.density=v.density;
+  tableState.widths=v.widths||{};if(typeof v.density==='string')tableState.density=v.density;tableState.rowHeight=typeof v.rowHeight==='number'?v.rowHeight:0;
   if(typeof v.showTotals==='boolean')tableState.showTotals=v.showTotals;if(typeof v.onlyTop==='boolean')tableState.onlyTop=v.onlyTop;
   const p=presetByName(tableState.preset);
   tableState.headers=v.headers&&typeof v.headers==='object'?{...v.headers}:{...((p&&p.headers)||{})};
@@ -423,13 +448,14 @@ function renderGrid(host){
     else if(e.key==='Escape'&&tableState.sel.size){pickRows([],'');}
   };
   const t=node('table',undefined,'grid'+(tableState.density?' '+tableState.density:''));
-  t.style.width=cols.reduce((sum,col)=>sum+widthOf(col.key),0)+'px';
+  t.style.width=cols.reduce((sum,col)=>sum+widthOf(col.key),0)+'px';rowStyle(t);
+  wrap.addEventListener('wheel',e=>wheelRowHeight(e,t),{passive:false}); // không thụ động: cần chặn phóng to trang của trình duyệt khi giữ Ctrl
   const colgroup=node('colgroup');cols.forEach(col=>{const cg=node('col');cg.style.width=widthOf(col.key)+'px';colgroup.append(cg);});t.append(colgroup);
   const thead=node('thead'),head=node('tr');
   cols.forEach(col=>{
     const active=tableState.sort&&tableState.sort.key===col.key;
     const th=node('th',colLabel(col)+(active?(tableState.sort.dir>0?' ▲':' ▼'):''));
-    th.title='Nhấp để sắp xếp · nhấp đúp để đổi tên cột';
+    th.dataset.key=col.key;th.title='Nhấp để sắp xếp · nhấp đúp để đổi tên cột';
     // Nhấp đúp = đổi tên cột, nên việc sắp xếp chờ một nhịp xem có phải nhấp đúp không.
     th.onclick=()=>{clearTimeout(th._sort);th._sort=setTimeout(()=>{tableState.sort=active?{key:col.key,dir:-tableState.sort.dir}:{key:col.key,dir:1};renderGrid(host);},260);};
     th.ondblclick=e=>{clearTimeout(th._sort);e.stopPropagation();editHeader(th,col);};
@@ -493,7 +519,7 @@ function renderGrid(host){
         const td=node('td');td.dataset.key=col.key;
         if(col.editable)td.classList.add('editable');
         if(col.key==='ordinal')td.textContent=String(pos);
-        else if(col.kind==='image')thumbCell(td,row);
+        else if(col.kind==='image')imageCell(td,row);
         else if(NUMERIC.has(col.key)){td.textContent=fmt(scaledValue(col.key,row[col.key]),digitsFor(col.key));td.className='num';}
         else if(col.key==='url'){
           td.append(node('span',row.url,'cell-url'));
@@ -519,7 +545,7 @@ function renderGrid(host){
   }
   wrap.append(t);host.append(wrap);
   if(!rows.length)host.append(node('p','Không có đối tượng nào khớp bộ lọc.','empty'));
-  fillThumbs();ensureThumbs();
+  fillImages();
 }
 // Đổi tên hàng loạt cho các dòng đang có trong bảng. Giá trị các ô nhập nằm trong tableState.rename để không mất khi bảng vẽ lại.
 const RENAME_TOKENS=['{tên}','{họ}','{phân loại}','{nhóm}','{số}'];
@@ -820,7 +846,8 @@ function buildColumnPanel(side){
   renderColumnList(list);
   const density=node('select');density.setAttribute('aria-label','Độ cao hàng');density.className='pop-density';
   [['','Hàng: Vừa'],['dense','Hàng: Gọn'],['roomy','Hàng: Thoáng']].forEach(([v,t])=>density.append(new Option(t,v)));
-  density.value=tableState.density;density.onchange=()=>{tableState.density=density.value;renderGrid($('grid-host'));persistView();};
+  density.value=tableState.density;density.onchange=()=>{tableState.density=density.value;tableState.rowHeight=0;renderGrid($('grid-host'));persistView();};
+  density.title='Giữ Ctrl và lăn chuột giữa trên bảng để đổi độ cao hàng (ảnh to ra theo).'; // gợi ý, không chiếm chỗ của danh sách cột
   inner.append(head,bar,list,density);
   side.replaceChildren(inner);
   updateColumnCounts();
@@ -1084,7 +1111,7 @@ window.VGD={receive(event,data){
   if(event==='images_progress')imagesProgress(data);
   if(event==='images_done')imagesDone(data);
   if(event==='images_changed')imagesChanged(data.items);
-  if(event==='thumbs')receiveThumbs(data);
+  if(event==='image_data')receiveImageData(data);
   if(event==='progress')message(`Đang quét… ${number(data.count,0)} đối tượng hình học.`);
   if(event==='message')message(data.error||data.text,!!data.error);
   if(event==='preview')preview(data);

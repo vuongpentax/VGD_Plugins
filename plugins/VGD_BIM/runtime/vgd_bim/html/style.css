@@ -54,17 +54,21 @@ main{flex:1;min-height:0;overflow:auto;padding:14px 16px}.card{background:var(--
 .group-panel .pop-pick{text-align:left}
 .merge-opt{display:flex;gap:6px;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:11px}
 
-/* Cột Ảnh trong bảng: ảnh nhỏ, nút hiện khi rê chuột, thả ảnh vào ô */
+/* Cột Ảnh trong bảng: ảnh gốc, nút hiện khi rê chuột, thả ảnh vào ô */
 .grid td.img{padding:2px;text-align:center;cursor:copy}
 .grid td.img.drop{outline:2px dashed var(--accent);outline-offset:-2px;background:var(--soft)}
-.thumb{position:relative;width:60px;height:46px;margin:0 auto;display:flex;align-items:center;justify-content:center;border-radius:4px;background:var(--tile);overflow:hidden}
-.thumb-img{max-width:60px;max-height:46px;object-fit:contain;border-radius:3px}
-.thumb-empty{color:var(--muted);font-size:16px;line-height:1}
-.thumb-tools{position:absolute;inset:auto 0 0 0;display:none;justify-content:center;gap:2px;padding:2px;background:#000a}
-.thumb:hover .thumb-tools,.thumb:focus-within .thumb-tools{display:flex}
-.thumb-tool{min-height:0;width:18px;height:18px;padding:0;border-radius:3px;font-size:11px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
-.grid.dense .thumb{height:26px}.grid.dense .thumb-img{max-height:26px}
-.grid.roomy .thumb{height:64px}.grid.roomy .thumb-img{max-height:64px}
+.cell-pic{position:relative;width:60px;height:46px;margin:0 auto;display:flex;align-items:center;justify-content:center;border-radius:4px;background:var(--tile);overflow:hidden}
+.cell-img{width:100%;height:100%;object-fit:contain;border-radius:3px}
+.cell-empty{color:var(--muted);font-size:16px;line-height:1}
+.cell-tools{position:absolute;inset:auto 0 0 0;display:none;justify-content:center;gap:2px;padding:2px;background:#000a}
+.cell-pic:hover .cell-tools,.cell-pic:focus-within .cell-tools{display:flex}
+.cell-tool{min-height:0;width:18px;height:18px;padding:0;border-radius:3px;font-size:11px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+.grid.dense .cell-pic{height:26px}
+.grid.roomy .cell-pic{height:64px}
+/* Độ cao hàng do người dùng chọn (Ctrl + lăn chuột): mọi hàng dữ liệu cao đều nhau, ảnh vừa khít ô (trừ lề 2 + 2 và viền dưới 1) */
+.grid.rh tbody tr[data-members] td{height:var(--row-h);padding-top:0;padding-bottom:0;vertical-align:middle}
+.grid.rh td.img{padding:2px}
+.grid.rh .cell-pic{width:100%;height:calc(var(--row-h) - 5px)}
 .cell-url{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;max-width:calc(100% - 22px);vertical-align:middle}
 .cell-open{min-height:0;padding:0 4px;margin-left:4px;font-size:11px;line-height:16px;vertical-align:middle}
 .header-input{width:100%;height:26px;box-sizing:border-box}

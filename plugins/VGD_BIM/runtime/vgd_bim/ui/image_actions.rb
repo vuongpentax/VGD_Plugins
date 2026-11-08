@@ -6,11 +6,11 @@ module VGD
   module BIM
     module UI
       # Phần của cửa sổ BIM lo cho cài đặt chung (ngôn ngữ, thư mục ảnh) và ảnh món đồ: chụp ảnh khi người dùng bấm, nhận ảnh dán /
-      # kéo thả, trả ảnh nhỏ về giao diện. Trộn vào UI::Dialog (dùng @model, @dialog, @table_records... của Dialog).
+      # kéo thả, trả ảnh về giao diện khi giao diện không nạp được bằng đường dẫn file. Trộn vào UI::Dialog (dùng @model, @dialog, @table_records... của Dialog).
       # Ảnh chỉ được chụp khi người dùng bấm nút; không có chỗ nào tự chụp.
       module ImageActions
         MAX_CAPTURE_BATCH = 200 # số đối tượng tối đa cho một lần bấm chụp
-        MAX_THUMB_REQUEST = 60  # số ảnh nhỏ giao diện được xin mỗi lần
+        MAX_FULL_REQUEST = 6    # số ảnh gốc giao diện được xin mỗi lần (dự phòng; ảnh gốc nặng nên ít hơn trước)
 
         def register_image_callbacks
           @dialog.add_action_callback('settings_save') { |_ctx, payload| safely { settings_save(JSON.parse(payload)) } }
@@ -20,7 +20,7 @@ module VGD
           @dialog.add_action_callback('images_cancel') { |_ctx| safely { @capture[:cancel] = true if @capture } }
           @dialog.add_action_callback('image_set') { |_ctx, payload| safely { image_set(JSON.parse(payload)) } }
           @dialog.add_action_callback('image_delete') { |_ctx, pid| safely { image_delete(pid) } }
-          @dialog.add_action_callback('image_thumbs') { |_ctx, payload| safely { image_thumbs(JSON.parse(payload)) } }
+          @dialog.add_action_callback('image_full') { |_ctx, payload| safely { image_full(JSON.parse(payload)) } }
         end
 
         # ---- Cài đặt ----
@@ -131,7 +131,7 @@ module VGD
           @capture = nil
           return unless job
           unless @closed
-            emit('images_changed', {items: job[:updated].map { |item| {pid: item[:pid], has: true, stamp: item[:stamp]} }})
+            emit('images_changed', {items: job[:updated].map { |item| image_change(item[:pid], true, item[:stamp]) }})
             emit('images_done', {done: job[:done], total: job[:total], ok: job[:updated].size, errors: job[:errors].first(5), notes: job[:notes].uniq.first(3), cancelled: job[:cancel]})
             show_outline if @mode == 'table'
           end
@@ -152,33 +152,39 @@ module VGD
         end
 
         # ---- Ảnh dán / kéo thả từ giao diện ----
-        # payload: {'pid', 'full' (PNG base64), 'thumb' (PNG base64)}. Chỉ nhận đối tượng đang có trong bảng.
+        # payload: {'pid', 'full' (PNG base64)}. Chỉ nhận đối tượng đang có trong bảng.
         def image_set(payload)
           check_model!
           pid = known_pid!(payload['pid'])
-          Images.write(@model, pid, Images.decode_png(payload['full']), Images.decode_png(payload['thumb']))
-          emit('images_changed', {items: [{pid: pid, has: true, stamp: Images.info(@model, pid)[:stamp]}]})
+          Images.write(@model, pid, Images.decode_png(payload['full']))
+          emit('images_changed', {items: [image_change(pid, true, Images.info(@model, pid)[:stamp])]})
           emit('message', {text: 'Đã lưu ảnh cho đối tượng.'})
+        end
+
+        # Một mục của sự kiện images_changed: url là đường dẫn file ảnh gốc (kèm mốc thời gian để làm mới), nil khi không còn ảnh.
+        def image_change(pid, has, stamp)
+          {pid: pid, has: has, stamp: stamp, url: has ? Images.file_url(@model, pid, stamp) : nil}
         end
 
         def image_delete(pid)
           check_model!
           pid = known_pid!(pid)
           Images.delete(@model, pid)
-          emit('images_changed', {items: [{pid: pid, has: false, stamp: 0}]})
+          emit('images_changed', {items: [image_change(pid, false, 0)]})
           emit('message', {text: 'Đã xóa ảnh của đối tượng.'})
         end
 
-        def image_thumbs(pids)
+        # Ảnh gốc dạng data URL cho các mã giao diện xin (dự phòng của ô ảnh hiện bằng đường dẫn file).
+        def image_full(pids)
           raise 'Danh sách ảnh không hợp lệ.' unless pids.is_a?(Array)
           items = {}
-          pids.first(MAX_THUMB_REQUEST).each do |value|
+          pids.first(MAX_FULL_REQUEST).each do |value|
             pid = Images.id!(value)
             next unless known_pid?(pid) # mã cũ (bảng đã đổi) thì bỏ qua, không báo lỗi
-            url = Images.data_url(Images.path(@model, pid, :thumb))
+            url = Images.data_url(Images.path(@model, pid))
             items[pid.to_s] = url if url
           end
-          emit('thumbs', {items: items})
+          emit('image_data', {items: items})
         end
 
         # Mã đối tượng giao diện gửi lên phải là của một đối tượng đang có trong bảng.

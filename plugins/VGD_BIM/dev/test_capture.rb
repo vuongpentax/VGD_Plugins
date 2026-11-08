@@ -113,21 +113,20 @@ end
 model, items, view, result = shoot('image_view' => 'isometric')
 original_eye = [0.0, 0.0, 100.0]
 check 'trả về mã đối tượng và dấu thời gian của ảnh mới', result[:pid] == 11 && result[:stamp] > 0
-check 'ghi 2 ảnh: ảnh đầy đủ và ảnh nhỏ', view.writes.size == 2
+check 'chỉ ghi 1 ảnh (ảnh đầy đủ, không còn ảnh nhỏ nên chụp nhanh hơn)', view.writes.size == 1
 check 'ảnh đầy đủ đúng cỡ trong preset, nền trong suốt, khử răng cưa', view.writes[0].values_at(:width, :height, :transparent, :antialias) == [512, 512, true, true]
-check 'ảnh nhỏ giữ tỉ lệ ảnh đầy đủ, cạnh dài đúng cỡ thumbnail', view.writes[1].values_at(:width, :height) == [C::THUMB_SIZE, C::THUMB_SIZE]
 check 'Iso: khi chụp camera nhìn vào tâm món đồ từ phía trước-phải-trên (1, -1, 0.8)', view.states.all? { |s| s[:target] == [10.0, 20.0, 30.0] && near?(s[:eye].zip([10.0, 20.0, 30.0]).map { |e, c| e - c }.then { |d| l = Math.sqrt(d.sum { |v| v * v }); d.map { |v| v / l } }, Geom::Vector3d.new(1, -1, 0.8).normalize.to_a) }
 check 'Iso: camera đặt cách tâm đủ xa so với món đồ (không nằm trong món đồ), rồi zoom cho vừa', view.states.all? { |s| Math.sqrt(s[:eye].zip([10, 20, 30]).sum { |e, c| (e - c)**2 }) > 40.0 } && view.zoomed == [items[0]]
 check 'Iso: các món khác bị ẩn, món cần chụp hiện, không còn đối tượng chọn (khỏi lẫn khung chọn vào ảnh)', view.states.all? { |s| s[:hidden].sort == [12, 13] && s[:selection].empty? }
 check 'Iso: model chỉ mở một thao tác và hủy (abort) nên không để lại bước undo, không commit', model.ops == [:start, :abort]
 check 'sau khi chụp: không còn gì bị ẩn, camera như cũ, lựa chọn như cũ', items.none?(&:hidden) && view.camera.eye.to_a == original_eye && model.selection.map(&:pid) == [11, 12]
-check 'file ảnh đầy đủ và ảnh nhỏ nằm đúng chỗ, không còn file tạm', File.binread(I.path(model, 11)) == PNG_BYTES && File.binread(I.path(model, 11, :thumb)) == PNG_BYTES && Dir[File.join(I.dir(model), '*')].none? { |f| f.include?('.tmp') }
+check 'file ảnh đầy đủ nằm đúng chỗ, không có ảnh nhỏ và không còn file tạm', File.binread(I.path(model, 11)) == PNG_BYTES && Dir[File.join(I.dir(model), '*')].map { |f| File.basename(f) } == ['11.png']
 
 # ---- Cỡ ảnh theo preset (rộng x cao riêng) ----
 _, _, view, _ = shoot('image_view' => 'isometric', 'image_width' => 640, 'image_height' => 480)
-check 'cỡ ảnh theo preset: 640 x 480, ảnh nhỏ 128 x 96 (giữ tỉ lệ)', view.writes[0].values_at(:width, :height) == [640, 480] && view.writes[1].values_at(:width, :height) == [128, 96]
+check 'cỡ ảnh theo preset: 640 x 480', view.writes[0].values_at(:width, :height) == [640, 480]
 _, _, view, _ = shoot('image_view' => 'isometric', 'image_width' => 300, 'image_height' => 900)
-check 'ảnh dọc: ảnh nhỏ 43 x 128 (cạnh dài là chiều cao)', view.writes[1].values_at(:width, :height) == [43, 128]
+check 'ảnh dọc theo preset: 300 x 900', view.writes[0].values_at(:width, :height) == [300, 900]
 
 # ---- Góc nhìn chính diện ----
 _, _, view, _ = shoot('image_view' => 'front')
@@ -155,22 +154,22 @@ check 'nền trắng + kiểu Màu: sau khi chụp trả lại đúng toàn bộ
 # ---- Lỗi giữa chừng: trạng thái model phải được trả lại ----
 model, items = world
 view = model.active_view
-I.write(model, 11, PNG_BYTES + 'cu'.b, PNG_BYTES)
+I.write(model, 11, PNG_BYTES + 'cu'.b)
 view.fail_next = true
 check 'SketchUp không ghi được ảnh: báo lỗi', raises?('không chụp được') { C.shoot(model, {entity: items[0], path: [items[0]]}, D.merge('image_background' => 'white')) }
 check 'lỗi giữa chừng: hủy thao tác, không còn gì bị ẩn, camera, lựa chọn, tuỳ chọn hiển thị như cũ', model.ops == [:start, :abort] && items.none?(&:hidden) && view.camera.eye.to_a == original_eye && model.selection.map(&:pid) == [11, 12] && model.rendering_options.instance_variable_get(:@values) == ORIGINAL_OPTIONS
 check 'lỗi giữa chừng: ảnh cũ còn nguyên, không còn file tạm', File.binread(I.path(model, 11)).end_with?('cu') && Dir[File.join(I.dir(model), '*')].none? { |f| f.include?('.tmp') }
 model, items = world
 view = model.active_view
-I.write(model, 11, PNG_BYTES + 'cu'.b, PNG_BYTES)
-view.fail_on_call = 2
-check 'ảnh nhỏ lỗi sau khi ảnh đầy đủ đã chụp: báo lỗi', raises?('không chụp được') { C.shoot(model, {entity: items[0], path: [items[0]]}, D) }
-check 'ảnh nhỏ lỗi: không còn file tạm, cả hai ảnh cũ còn nguyên (không ghi nửa chừng)', Dir[File.join(I.dir(model), '*')].none? { |f| f.include?('.tmp') } && File.binread(I.path(model, 11)).end_with?('cu') && File.binread(I.path(model, 11, :thumb)) == PNG_BYTES && items.none?(&:hidden)
+I.write(model, 11, PNG_BYTES + 'cu'.b)
+view.fail_on_call = 1
+check 'SketchUp không ghi được ảnh: báo lỗi', raises?('không chụp được') { C.shoot(model, {entity: items[0], path: [items[0]]}, D) }
+check 'ảnh lỗi: không còn file tạm, ảnh cũ còn nguyên (không ghi nửa chừng)', Dir[File.join(I.dir(model), '*')].none? { |f| f.include?('.tmp') } && File.binread(I.path(model, 11)).end_with?('cu') && items.none?(&:hidden)
 model, items = world
 bad = Sketchup::Entity.new(666)
 check 'không cô lập được (thành phần dùng chung): báo lỗi rõ, không chụp, trả lại mọi thứ', raises?('dùng chung') { C.shoot(model, {entity: bad, path: [bad]}, D.merge('image_style' => 'color')) } && model.active_view.writes.empty? && model.ops == [:start, :abort] && model.selection.map(&:pid) == [11, 12] && model.rendering_options.instance_variable_get(:@values) == ORIGINAL_OPTIONS
 model, items = world
-check 'không cô lập được nhưng chọn Hiện tại thì vẫn chụp được', (C.shoot(model, {entity: bad, path: [bad]}, D.merge('image_view' => 'current')); model.active_view.writes.size == 2)
+check 'không cô lập được nhưng chọn Hiện tại thì vẫn chụp được', (C.shoot(model, {entity: bad, path: [bad]}, D.merge('image_view' => 'current')); model.active_view.writes.size == 1)
 
 # ---- Lỗi thật gặp trong SketchUp: chọn rỗng, tuỳ chọn ảnh không được hỗ trợ ----
 FileUtils.rm_f(File.join(VGD::BIM::Storage.dir, 'capture.log'))
@@ -186,23 +185,23 @@ model, items = world
 view = model.active_view
 view.reject_transparent = true
 result = C.shoot(model, {entity: items[0], path: [items[0]]}, D)
-check 'nền trong suốt bị từ chối (write_image trả false): tự thử lại không trong suốt và vẫn chụp được', view.writes.size == 2 && view.writes.all? { |w| w[:transparent] == false } && File.file?(I.path(model, 11))
+check 'nền trong suốt bị từ chối (write_image trả false): tự thử lại không trong suốt và vẫn chụp được', view.writes.size == 1 && view.writes.all? { |w| w[:transparent] == false } && File.file?(I.path(model, 11))
 check 'chụp bằng cách thay thế: báo cho người dùng biết (nền không trong suốt)', result[:note].to_s.include?('trong suốt')
 model, items = world
 view = model.active_view
 view.raise_on_transparent = true
 result = C.shoot(model, {entity: items[0], path: [items[0]]}, D)
-check 'tuỳ chọn transparent làm SketchUp báo lỗi: cũng tự thử lại và chụp được', view.writes.size == 2 && result[:pid] == 11 && result[:note].to_s.include?('trong suốt')
+check 'tuỳ chọn transparent làm SketchUp báo lỗi: cũng tự thử lại và chụp được', view.writes.size == 1 && result[:pid] == 11 && result[:note].to_s.include?('trong suốt')
 model, items = world
 view = model.active_view
 result = C.shoot(model, {entity: items[0], path: [items[0]]}, D.merge('image_background' => 'white'))
-check 'nền trắng (không xin trong suốt): không có ghi chú về cách chụp thay thế và chỉ ghi đúng 2 ảnh', !result[:note].to_s.include?('trong suốt') && view.attempts.size == 2
+check 'nền trắng (không xin trong suốt): không có ghi chú về cách chụp thay thế và chỉ ghi đúng 1 ảnh', !result[:note].to_s.include?('trong suốt') && view.attempts.size == 1
 model, items = world
 view = model.active_view
 view.reject_transparent = true
 view.reject_all_options = true
 result = C.shoot(model, {entity: items[0], path: [items[0]]}, D)
-check 'chỉ chụp được khi tắt cả khử răng cưa: vẫn thành công, có ghi chú', view.writes.size == 2 && view.writes.all? { |w| w[:antialias] == false } && result[:note].to_s.include?('khử răng cưa')
+check 'chỉ chụp được khi tắt cả khử răng cưa: vẫn thành công, có ghi chú', view.writes.size == 1 && view.writes.all? { |w| w[:antialias] == false } && result[:note].to_s.include?('khử răng cưa')
 model, items = world
 view = model.active_view
 view.fail_next = true

@@ -13,7 +13,6 @@ module VGD
       # Góc nhìn current: chụp đúng khung nhìn đang thấy, không đổi camera hay model.
       # Cả hai bỏ chọn tạm thời (để khung chọn không lọt vào ảnh) rồi trả lại; camera và tuỳ chọn hiển thị luôn được trả lại.
       module Capture
-        THUMB_SIZE = 128 # cạnh dài của ảnh nhỏ hiện trong bảng
         ISOLATING_VIEWS = %w[isometric front].freeze
         # Hướng từ tâm món đồ tới camera theo trục thế giới, chỉ dùng khi món chưa có mặt trước (có thì xem Front.camera_direction): iso nhìn từ phía trước (-Y), bên phải (+X), phía trên; front nhìn thẳng từ phía -Y.
         DIRECTIONS = {'isometric' => [1, -1, 0.8], 'front' => [0, -1, 0]}.freeze
@@ -47,10 +46,8 @@ module VGD
             end
             view.refresh
             size = [settings['image_width'], settings['image_height']]
-            notes << write(view, Images.temp_path(model, pid, :full), size, settings)
-            write(view, Images.temp_path(model, pid, :thumb), thumb_size(*size), settings)
-            Images.commit(model, pid, :full)
-            Images.commit(model, pid, :thumb)
+            notes << write(view, Images.temp_path(model, pid), size, settings)
+            Images.commit(model, pid)
           rescue StandardError => error
             log("#{error.class}: #{error.message} | đối tượng #{pid} | #{settings.inspect} | #{error.backtrace.to_a.first(4).join(' <- ')}")
             raise
@@ -70,7 +67,7 @@ module VGD
             'trả tuỳ chọn hiển thị' => -> { restore_options(model, saved[:options]) },
             'trả camera' => -> { view.camera = saved[:camera] },
             'trả lựa chọn' => -> { restore_selection(model, saved[:selection]) },
-            'dọn file tạm' => -> { Images::KINDS.each_key { |kind| FileUtils.rm_f(Images.temp_path(model, pid, kind)) } }
+            'dọn file tạm' => -> { FileUtils.rm_f(Images.temp_path(model, pid)) }
           }
           steps.each do |name, step|
             begin
@@ -141,12 +138,6 @@ module VGD
           File.open(file, 'a:UTF-8') { |f| f.puts("#{Time.now.strftime('%Y-%m-%d %H:%M:%S')}  #{text}") }
         rescue StandardError
           nil
-        end
-
-        # Ảnh nhỏ giữ tỉ lệ của ảnh đầy đủ, cạnh dài là THUMB_SIZE.
-        def self.thumb_size(width, height)
-          return [THUMB_SIZE, [(THUMB_SIZE * height.to_f / width).round, 1].max] if width >= height
-          [[(THUMB_SIZE * width.to_f / height).round, 1].max, THUMB_SIZE]
         end
 
         # Đặt camera nhìn vào tâm món đồ từ góc đã chọn, đủ xa để không nằm trong món đồ; View#zoom sau đó chỉnh cho vừa khung.

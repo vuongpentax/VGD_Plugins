@@ -5,13 +5,13 @@ require_relative 'settings'
 module VGD
   module BIM
     # Ảnh của từng món đồ, lưu thành file PNG trong thư mục ảnh của cài đặt:
-    #   <thư mục ảnh>/<mã model>/<mã đối tượng>.png      ảnh đầy đủ
-    #   <thư mục ảnh>/<mã model>/<mã đối tượng>_t.png    ảnh nhỏ để hiện trong bảng
+    #   <thư mục ảnh>/<mã model>/<mã đối tượng>.png      ảnh đầy đủ, cũng là ảnh hiện trong bảng (không còn ảnh nhỏ)
     # Mã đối tượng là persistent_id của group / component. Không ghi gì vào file SketchUp.
     module Images
       MAX_BYTES = 8 * 1024 * 1024 # ảnh dán / kéo thả quá lớn thì từ chối
       PNG_SIGNATURE = "\x89PNG\r\n\x1A\n".b.freeze
-      KINDS = {full: '.png', thumb: '_t.png'}.freeze
+      KINDS = {full: '.png'}.freeze
+      LEGACY_THUMB = '_t.png'.freeze # ảnh nhỏ của các bản beta trước: không còn tạo hay đọc, chỉ dọn khi xóa ảnh
 
       # Thư mục ảnh của model theo mã cố định lưu trong chính file SketchUp (dictionary VGD_BIM_MODEL). Không dùng model.guid vì SketchUp
       # cấp guid mới mỗi lần mở file, nên ảnh bị "mất" sau khi tắt mở lại. Chưa có mã (hoặc model không có API thuộc tính) thì dùng guid.
@@ -70,12 +70,12 @@ module VGD
         File.join(Settings.image_dir, model_key(model))
       end
 
-      def self.path(model, pid, kind = :full)
-        File.join(dir(model), "#{id!(pid)}#{KINDS.fetch(kind)}")
+      def self.path(model, pid)
+        File.join(dir(model), "#{id!(pid)}#{KINDS.fetch(:full)}")
       end
 
-      def self.temp_path(model, pid, kind)
-        File.join(dir(model), "#{id!(pid)}.tmp#{kind == :thumb ? '_t' : ''}.png")
+      def self.temp_path(model, pid)
+        File.join(dir(model), "#{id!(pid)}.tmp.png")
       end
 
       def self.id!(pid)
@@ -113,21 +113,18 @@ module VGD
         raise
       end
 
-      # Ghi cả ảnh chính và ảnh nhỏ. Kiểm tra cả hai trước khi ghi nên không để lại ảnh dở.
-      def self.write(model, pid, full, thumb)
+      # Ghi ảnh (kiểm tra PNG trước khi ghi nên không để lại ảnh dở).
+      def self.write(model, pid, full)
         check_png!(full)
-        check_png!(thumb)
         FileUtils.mkdir_p(dir(model))
-        {full: full, thumb: thumb}.each do |kind, bytes|
-          temp = temp_path(model, pid, kind)
-          File.binwrite(temp, bytes)
-          replace_file(temp, path(model, pid, kind))
-        end
+        temp = temp_path(model, pid)
+        File.binwrite(temp, full)
+        replace_file(temp, path(model, pid))
       end
 
       # Đổi file tạm do SketchUp chụp (write_image) thành ảnh chính. Không phải PNG hoặc chưa có file thì giữ ảnh cũ.
-      def self.commit(model, pid, kind)
-        temp = temp_path(model, pid, kind)
+      def self.commit(model, pid)
+        temp = temp_path(model, pid)
         raise ArgumentError, 'SketchUp không tạo được ảnh. Kiểm tra thư mục lưu ảnh trong bảng Preset.' unless File.file?(temp)
         begin
           check_png!(File.binread(temp))
@@ -135,13 +132,23 @@ module VGD
           File.delete(temp)
           raise
         end
-        replace_file(temp, path(model, pid, kind))
+        replace_file(temp, path(model, pid))
       end
 
       def self.delete(model, pid)
-        KINDS.each_key { |kind| FileUtils.rm_f(path(model, pid, kind)) }
+        FileUtils.rm_f(path(model, pid))
+        FileUtils.rm_f(File.join(dir(model), "#{id!(pid)}#{LEGACY_THUMB}"))
       end
 
+      # Đường dẫn file để giao diện hiện ảnh trực tiếp (<img src>), không phải chuyển cả ảnh qua Ruby. stamp (giờ sửa file) đi kèm
+      # sau dấu ? để ảnh được tải lại khi đổi.
+      # folder: thư mục ảnh của model (bảng lớn truyền sẵn để không tính lại cho từng dòng).
+      def self.file_url(model, pid, stamp, folder = dir(model))
+        encoded = File.join(folder, "#{id!(pid)}#{KINDS.fetch(:full)}").tr('\\', '/').b.gsub(%r{[^A-Za-z0-9/:._~-]}n) { |c| format('%%%02X', c.ord) }
+        "file:///#{encoded.sub(%r{\A/+}, '')}?v=#{Integer(stamp)}"
+      end
+
+      # Dự phòng khi trình duyệt của cửa sổ không nạp được ảnh bằng đường dẫn file.
       def self.data_url(file)
         return nil unless File.file?(file)
         "data:image/png;base64,#{[File.binread(file)].pack('m0')}"

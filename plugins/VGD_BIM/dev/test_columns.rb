@@ -78,6 +78,15 @@ T = VGD::BIM::Table
 X = T::Extras
 class Model; def edit_transform; Identity.new; end; def active_path; []; end; def guid; 'M'; end; end
 model = Model.new
+# Ảnh hiện trực tiếp từ file: dòng bảng mang đường dẫn file ảnh gốc (không còn ảnh nhỏ), kèm mốc thời gian để làm mới
+require File.join(ROOT, 'core/images')
+imaged = Struct.new(:persistent_id).new(4242)
+state = T.image_state(model, imaged)
+ok('chưa có ảnh: không có đường dẫn ảnh', state[:has_image] == false && state[:image_url].nil?)
+VGD::BIM::Images.write(model, 4242, "\x89PNG\r\n\x1A\n".b + 'noi dung'.b)
+state = T.image_state(model, imaged)
+ok('có ảnh: dòng bảng mang đường dẫn file ảnh gốc (file:///.../4242.png?v=mốc thời gian)', state[:has_image] && state[:image_url] == VGD::BIM::Images.file_url(model, 4242, state[:image_stamp]) && state[:image_url].start_with?('file:///') && state[:image_url].include?('/4242.png?v='))
+ok('đối tượng chưa có mã bền: không có ảnh, không có đường dẫn', T.image_state(model, Struct.new(:persistent_id).new(0)) == {pid: nil, has_image: false, image_stamp: 0, image_url: nil})
 UP = Vec3.new(0, 0, 1); DOWN = Vec3.new(0, 0, -1); SIDE = Vec3.new(1, 0, 0)
 
 # ---- Hãng, Link, Cỡ, Đơn giá, Thành tiền ----

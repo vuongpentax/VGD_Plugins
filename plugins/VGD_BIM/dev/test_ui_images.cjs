@@ -8,7 +8,7 @@ const ok=(cond,msg)=>{console.log((cond?'PASS  ':'FAIL  ')+msg);if(!cond){failed
 const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')],{encoding:'utf8'}));
 const presets=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../runtime/vgd_bim/config/presets.json'),'utf8'));
 const config=(mode,o={})=>({mode,version:'1.1.0',language:'vi',app:{settings:{language:'vi',image_dir:'',exclude_words:'tay nắm, handle'},dir:'C:\\data\\images',dir_exists:true},preset_info:F.preset_info,table:{columns:F.columns,presets:F.presets,view:{}},fields:F.fields,categories:F.categories,units:F.units,methods:F.methods,presets,locale:F.vi,vi_en:null,scan_options:{scope:'model',faces:true},...o});
-const rows=[0,1,2].map(i=>({index:i,entity_type:'Nhóm',definition:'Cabinet',name:'Cab '+i,description:i===1?'cab nhỏ':'',lenX:1200,lenY:600,lenZ:800,areaXZ:0.96,areaXY:0.72,areaFace:2.1,areaProjected:1.5,volume:0.5,ifc:i?'':'IfcFurniture',tag:'',tag_group:'Phần thô',material:'',status:'new',owner:i?'':'Hafele',url:i?'':'https://vgd.vn/tu',size:'',price:i?null:2500000,total:i?null:2500000,locked:false,quantity:1,parents:[],parent:'',pid:900+i,has_image:i!==1,image_stamp:7}));
+const rows=[0,1,2].map(i=>({index:i,entity_type:'Nhóm',definition:'Cabinet',name:'Cab '+i,description:i===1?'cab nhỏ':'',lenX:1200,lenY:600,lenZ:800,areaXZ:0.96,areaXY:0.72,areaFace:2.1,areaProjected:1.5,volume:0.5,ifc:i?'':'IfcFurniture',tag:'',tag_group:'Phần thô',material:'',status:'new',owner:i?'':'Hafele',url:i?'':'https://vgd.vn/tu',size:'',price:i?null:2500000,total:i?null:2500000,locked:false,quantity:1,parents:[],parent:'',pid:900+i,has_image:i!==1,image_stamp:7,image_url:i!==1?`file:///C:/khong/co/${900+i}.png?v=7`:null}));
 const table=(o={})=>({columns:F.columns,presets:F.presets,groups:F.groups,statuses:F.statuses,options:{zoom:true,isolate:false,deep:false,projected:false,isolating:false},rows,selected:[],hint:null,view:{},choices:{tags:[],materials:[]},...o});
 const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 (async()=>{
@@ -70,32 +70,74 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
 
   // ---- Cột Ảnh trong bảng ----
   ok(await page.locator('.grid thead th:has-text("Ảnh")').count()===1,'bảng có cột Ảnh');
-  ok(await page.locator('.grid tbody tr').count()===3 && await page.locator('td.img img.thumb-img').count()===2 && await page.locator('td.img .thumb-empty').count()===1,'dòng có ảnh hiện khung ảnh, dòng chưa có ảnh hiện dấu +');
-  const asked=await calls('image_thumbs');
-  ok(asked.length===1 && JSON.stringify(JSON.parse(asked[0].args[0]))==='[900,902]','chỉ xin ảnh nhỏ của các dòng có ảnh, một lần');
-  ok((await calls('images_capture')).length===0,'mở bảng không tự chụp ảnh');
-  await receive('thumbs',{items:{'900':PNG1,'902':PNG1}});
-  ok(await page.locator('td.img img.thumb-img[src^="data:image/png"]').count()===2,'ảnh nhỏ nhận về được hiện trong ô');
+  ok(await page.locator('.grid tbody tr').count()===3 && await page.locator('td.img img.cell-img').count()===2 && await page.locator('td.img .cell-empty').count()===1,'dòng có ảnh hiện khung ảnh, dòng chưa có ảnh hiện dấu +');
+  ok(JSON.stringify(await page.locator('td.img img.cell-img').evaluateAll(list=>list.map(i=>i.getAttribute('src'))))==='["file:///C:/khong/co/900.png?v=7","file:///C:/khong/co/902.png?v=7"]','ô ảnh hiện ảnh gốc trực tiếp bằng đường dẫn file của dòng (không còn ảnh nhỏ)');
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_full'));
+  const asked=await calls('image_full');
+  ok(asked.length===1 && JSON.stringify(JSON.parse(asked[0].args[0]))==='[900,902]','file không nạp được: dự phòng xin ảnh qua Ruby, một lần cho các dòng lỗi');
+  ok((await calls('image_thumbs')).length===0 && (await calls('images_capture')).length===0,'không còn xin ảnh nhỏ; mở bảng không tự chụp ảnh');
+  await receive('image_data',{items:{'900':PNG1,'902':PNG1}});
+  ok(await page.locator('td.img img.cell-img[src^="data:image/png"]').count()===2,'ảnh dự phòng nhận về được hiện trong ô');
   await clear();await receive('table',table());
-  ok((await calls('image_thumbs')).length===0,'bảng vẽ lại: dùng ảnh nhỏ đã có, không xin lại');
-  await receive('images_changed',{items:[{pid:900,has:true,stamp:9}]});
-  ok((await calls('image_thumbs')).some(c=>JSON.stringify(JSON.parse(c.args[0]))==='[900]'),'ảnh đổi: chỉ xin lại ảnh nhỏ của đối tượng đó');
-  await receive('thumbs',{items:{'900':PNG1}});
-  await receive('images_changed',{items:[{pid:901,has:true,stamp:3}]});
-  ok(await page.locator('td.img img.thumb-img').count()===3,'chụp xong dòng chưa có ảnh: ô ảnh xuất hiện ngay, không cần tải lại bảng');
+  ok(await page.locator('td.img img.cell-img[src^="data:image/png"]').count()===2 && (await calls('image_full')).length===0,'bảng vẽ lại: dùng luôn ảnh dự phòng đã có, không thử file và không xin lại');
+  await receive('images_changed',{items:[{pid:900,has:true,stamp:9,url:'file:///C:/khong/co/900.png?v=9'}]});
+  ok((await page.locator('td.img img.cell-img').first().getAttribute('src'))==='file:///C:/khong/co/900.png?v=9','ảnh đổi: thử lại đường dẫn file mới (mốc thời gian mới) của đối tượng đó');
+  await page.waitForFunction(()=>window.calls.filter(c=>c.name==='image_full').length>=1);
+  ok(JSON.stringify(JSON.parse((await calls('image_full')).slice(-1)[0].args[0]))==='[900]','ảnh đổi mà file vẫn không nạp được: chỉ xin lại ảnh của đối tượng đó');
+  await receive('image_data',{items:{'900':PNG1}});
+  await receive('images_changed',{items:[{pid:901,has:true,stamp:3,url:'file:///C:/khong/co/901.png?v=3'}]});
+  ok(await page.locator('td.img img.cell-img').count()===3,'chụp xong dòng chưa có ảnh: ô ảnh xuất hiện ngay, không cần tải lại bảng');
   await receive('table',table());
 
+  // ---- Ctrl + lăn chuột: độ cao hàng đều nhau, cột Ảnh rộng theo, lưu lại ----
+  const heights=()=>page.locator('.grid tbody tr[data-members]').evaluateAll(rows=>rows.map(r=>Math.round(r.getBoundingClientRect().height)));
+  const imgColWidth=()=>page.evaluate(()=>{const i=[...document.querySelectorAll('.grid thead tr:first-child th')].findIndex(th=>th.textContent.startsWith('Ảnh'));return Math.round(document.querySelectorAll('.grid col')[i].getBoundingClientRect().width);});
+  const wheelOver=async(dy,ctrl=true)=>{const box=await page.locator('.grid tbody tr[data-members]').first().boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);if(ctrl)await page.keyboard.down('Control');await page.mouse.wheel(0,dy);if(ctrl)await page.keyboard.up('Control');await page.waitForTimeout(60);};
+  const h0=await heights();
+  await wheelOver(-100,false);
+  ok(JSON.stringify(await heights())===JSON.stringify(h0),'lăn chuột không giữ Ctrl: độ cao hàng không đổi (vẫn là cuộn bảng)');
+  await clear();await wheelOver(-100);
+  const h1=await heights();
+  ok(h1.every(h=>h===h1[0]) && h1[0]>h0[0],'Ctrl + lăn lên: mọi hàng cao lên và cao đều nhau ('+h0[0]+' → '+h1[0]+' px)');
+  const w1=await imgColWidth();
+  ok(w1>=h1[0],'cột Ảnh tự rộng theo độ cao hàng (rộng '+w1+' px, cao '+h1[0]+' px)');
+  const picBox=await page.locator('td.img img.cell-img').first().boundingBox();
+  ok(picBox.height>h0[0]-6 && picBox.height<=h1[0],'ảnh trong ô to ra theo hàng (cao '+Math.round(picBox.height)+' px)');
+  const saved1=await viewJson();
+  ok(saved1 && saved1.rowHeight>=h1[0]-4 && saved1.rowHeight<=h1[0],'độ cao hàng được lưu cùng trạng thái bảng (rowHeight)');
+  await wheelOver(100);
+  const h2=await heights();
+  ok(h2.every(h=>h===h2[0]) && h2[0]<h1[0],'Ctrl + lăn xuống: mọi hàng thấp lại đều nhau');
+  for(let i=0;i<60;i++)await wheelOver(-400);
+  const hMax=await heights();
+  ok(hMax.every(h=>h===hMax[0]) && hMax[0]<=640+2 && hMax[0]>=600,'lăn mãi: dừng ở giới hạn trên (640 px), không vượt');
+  for(let i=0;i<120;i++)await wheelOver(400);
+  const hMin=await heights();
+  ok(hMin.every(h=>h===hMin[0]) && hMin[0]<=34,'lăn ngược mãi: dừng ở giới hạn dưới (không âm, không biến mất)');
+  await wheelOver(-100);await wheelOver(-100);
+  const hKeep=await heights();
+  await receive('table',table());
+  ok(JSON.stringify(await heights())===JSON.stringify(hKeep),'bảng vẽ lại (chọn đối tượng khác): độ cao hàng giữ nguyên');
+  const page2=await browser.newPage({viewport:{width:1100,height:800}});
+  await page2.addInitScript(()=>{window.calls=[];window.sketchup=new Proxy({}, {get:(_,name)=>(...args)=>window.calls.push({name,args})})});
+  await page2.goto(pathToFileURL(path.resolve(__dirname,'../runtime/vgd_bim/html/index.html')).href);
+  const view120={rowHeight:120,preset:'Tất cả',order:F.columns.map(c=>c.key),visible:['ordinal','image','instance','quantity']};
+  await page2.evaluate(([c,t])=>{window.VGD.receive('config',c);window.VGD.receive('table',t);},[config('table',{table:{columns:F.columns,presets:F.presets,view:view120}}),table({view:view120})]);
+  const hRestore=await page2.locator('.grid tbody tr[data-members]').evaluateAll(rows=>rows.map(r=>Math.round(r.getBoundingClientRect().height)));
+  ok(hRestore.length===3 && hRestore.every(h=>Math.abs(h-120)<=1),'mở lại cửa sổ: khôi phục độ cao hàng đã lưu (120 px)');
+  await page2.close();
+
   // ---- Nút nhỏ khi rê chuột vào ảnh ----
-  ok(await page.locator('.grid tbody tr').nth(1).locator('.thumb-tool').count()===2 && await page.locator('.grid tbody tr').nth(0).locator('.thumb-tool').count()===3,'ô ảnh có nút Chụp lại, Chọn ảnh, và Xóa ảnh (chỉ khi đã có ảnh)');
+  ok(await page.locator('.grid tbody tr').nth(1).locator('.cell-tool').count()===2 && await page.locator('.grid tbody tr').nth(0).locator('.cell-tool').count()===3,'ô ảnh có nút Chụp lại, Chọn ảnh, và Xóa ảnh (chỉ khi đã có ảnh)');
   await clear();
   await page.locator('.grid tbody tr').nth(1).locator('td.img').hover();
-  await page.locator('.grid tbody tr').nth(1).locator('.thumb-tool[title="Chụp ảnh"]').click();
+  await page.locator('.grid tbody tr').nth(1).locator('.cell-tool[title="Chụp ảnh"]').click();
   let cap=await json('images_capture');
   ok(cap && cap.indexes.length===1 && cap.indexes[0]===1 && cap.only_missing===false,'bấm nút ↻ trên ô ảnh: chỉ chụp đúng dòng đó');
   ok(cap.settings.image_width===512 && cap.settings.image_height===512 && cap.settings.image_view==='isometric' && cap.settings.image_style==='color' && cap.settings.image_background==='transparent','lệnh chụp mang thiết lập ảnh của preset (512 x 512, iso, màu, nền trong suốt)');
   await page.locator('.grid tbody tr').nth(0).locator('td.img').hover();
   await clear();
-  await page.locator('.grid tbody tr').nth(0).locator('.thumb-tool[title="Xóa ảnh"]').click();
+  await page.locator('.grid tbody tr').nth(0).locator('.cell-tool[title="Xóa ảnh"]').click();
   ok((await calls('image_delete')).some(c=>c.args[0]===900),'nút × trên ô ảnh: gửi lệnh xóa ảnh của dòng đó');
   ok((await calls('images_capture')).length===0 && (await calls('table_select')).length===0 && (await calls('table_clear')).length===0,'bấm nút trong ô ảnh không chọn dòng, không chụp thêm gì');
 
@@ -125,7 +167,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await dropFile('tbody tr:nth-child(2) td.img');
   await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_set'));
   let set=await json('image_set');
-  ok(set.pid===901 && set.full.startsWith('iVBOR') && set.thumb.startsWith('iVBOR'),'thả file ảnh vào ô: gửi mã đối tượng + ảnh PNG đầy đủ + ảnh nhỏ');
+  ok(set.pid===901 && set.full.startsWith('iVBOR') && !('thumb' in set),'thả file ảnh vào ô: gửi mã đối tượng + ảnh PNG đầy đủ, không gửi ảnh nhỏ');
   await clear();
   await dropFile('tbody tr:nth-child(2) td.img',{type:'text/plain',name:'a.txt'});
   await page.waitForTimeout(150);
@@ -222,7 +264,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   view=await viewJson();
   ok(view.settings.length_unit==='mm' && view.settings.area_unit==='m2','mọi thay đổi thiết lập được lưu vào trạng thái bảng');
   await clear();await choose('Góc nhìn ảnh','front');await choose('Kiểu hiển thị ảnh','current');await choose('Chiều rộng ảnh',1024);await choose('Chiều cao ảnh',768);await choose('Nền ảnh','white');
-  await page.keyboard.press('Escape');await page.locator('.grid tbody tr').nth(0).locator('td.img').hover();await page.locator('.grid tbody tr').nth(0).locator('.thumb-tool[title="Chụp lại"]').click();
+  await page.keyboard.press('Escape');await page.locator('.grid tbody tr').nth(0).locator('td.img').hover();await page.locator('.grid tbody tr').nth(0).locator('.cell-tool[title="Chụp lại"]').click();
   cap=await json('images_capture');
   ok(cap.settings.image_view==='front' && cap.settings.image_style==='current' && cap.settings.image_width===1024 && cap.settings.image_height===768 && cap.settings.image_background==='white','thiết lập ảnh đổi trong bảng preset đi cùng lệnh chụp kế tiếp');
   ok((await calls('table_preset')).length===0,'preset có sẵn: đổi thiết lập không ghi đè preset gốc (chỉ preset tự tạo mới tự cập nhật)');

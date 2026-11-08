@@ -52,7 +52,7 @@ module VGD; module BIM; module UI
       raise NoMethodError, "undefined method `bounds' for nil:NilClass" if pid == 906
       note = pid == 907 ? 'nền trong suốt không dùng được trên máy này nên ảnh dùng cách thay thế' : nil
       $shot << [pid, settings['image_view']]
-      Images.write(model, pid, PNG, PNG)
+      Images.write(model, pid, PNG)
       {pid: pid, stamp: Images.info(model, pid)[:stamp], note: note}.compact
     end
   end
@@ -101,7 +101,7 @@ ok('bấm chụp: báo tiến độ 0/2', events(d, 'images_progress').first == 
 UI.run_timers
 ok('chụp đúng 2 dòng đã chọn, đúng thứ tự, theo thiết lập ảnh của preset (mặc định: góc iso)', $shot == [[901, 'isometric'], [903, 'isometric']])
 ok('báo xong: 2/2 thành công, không lỗi', events(d, 'images_done').last == {'done' => 2, 'total' => 2, 'ok' => 2, 'errors' => [], 'notes' => [], 'cancelled' => false})
-ok('báo ảnh đổi để bảng cập nhật cột Ảnh', events(d, 'images_changed').last['items'].map { |i| i['pid'] } == [901, 903] && events(d, 'images_changed').last['items'].all? { |i| i['has'] })
+ok('báo ảnh đổi để bảng cập nhật cột Ảnh', events(d, 'images_changed').last['items'].map { |i| i['pid'] } == [901, 903] && events(d, 'images_changed').last['items'].all? { |i| i['has'] && i['url'].to_s.start_with?('file:///') && i['url'].end_with?("/#{i['pid']}.png?v=#{i['stamp']}") })
 ok('chế độ bảng: vẽ lại khung đánh dấu sau khi chụp xong', true) # tab Hình ảnh không có khung; kiểm tra riêng bên dưới
 ok('xong thì được chụp lần nữa', (d.safely { d.images_capture('indexes' => [0]) }; UI.run_timers; $shot.size == 3 && $shot.last[0] == 901))
 
@@ -194,33 +194,34 @@ UI.run_timers
 # ---- Ảnh dán / kéo thả ----
 d = make_dialog
 png64 = Base64.strict_encode64(PNG)
-d.safely { d.image_set('pid' => 901, 'full' => png64, 'thumb' => png64) }
-ok('dán ảnh cho đối tượng trong bảng: lưu cả ảnh chính và ảnh nhỏ', File.binread(I.path($model, 901)) == PNG && File.binread(I.path($model, 901, :thumb)) == PNG)
-ok('dán ảnh: báo ảnh đổi', events(d, 'images_changed').last['items'] == [{'pid' => 901, 'has' => true, 'stamp' => I.info($model, 901)[:stamp]}])
-d.safely { d.image_set('pid' => 5555, 'full' => png64, 'thumb' => png64) }
+d.safely { d.image_set('pid' => 901, 'full' => png64) }
+ok('dán ảnh cho đối tượng trong bảng: chỉ lưu ảnh gốc (không tạo ảnh nhỏ)', File.binread(I.path($model, 901)) == PNG && Dir[File.join(I.dir($model), '901*')].size == 1)
+ok('dán ảnh: báo ảnh đổi', events(d, 'images_changed').last['items'] == [{'pid' => 901, 'has' => true, 'stamp' => I.info($model, 901)[:stamp], 'url' => I.file_url($model, 901, I.info($model, 901)[:stamp])}])
+d.safely { d.image_set('pid' => 5555, 'full' => png64) }
 ok('dán ảnh cho mã không có trong bảng bị từ chối, không ghi file', error_of(d).to_s.include?('không còn trong bảng') && !File.exist?(I.path($model, 5555)))
-d.safely { d.image_set('pid' => 902, 'full' => Base64.strict_encode64('<script>x</script>'), 'thumb' => png64) }
+d.safely { d.image_set('pid' => 902, 'full' => Base64.strict_encode64('<script>x</script>')) }
 ok('dán dữ liệu không phải PNG bị từ chối, không ghi file', error_of(d).to_s.include?('PNG') && !File.exist?(I.path($model, 902)))
-d.safely { d.image_set('pid' => '901; rm -rf', 'full' => png64, 'thumb' => png64) }
+d.safely { d.image_set('pid' => '901; rm -rf', 'full' => png64) }
 ok('mã đối tượng có ký tự lạ bị từ chối', error_of(d).to_s.include?('Mã đối tượng'))
 d.safely { d.image_delete(901) }
-ok('xóa ảnh: mất file và báo ảnh đổi', !File.exist?(I.path($model, 901)) && events(d, 'images_changed').last['items'] == [{'pid' => 901, 'has' => false, 'stamp' => 0}])
+ok('xóa ảnh: mất file và báo ảnh đổi', !File.exist?(I.path($model, 901)) && events(d, 'images_changed').last['items'] == [{'pid' => 901, 'has' => false, 'stamp' => 0, 'url' => nil}])
 d.safely { d.image_delete(5555) }
 ok('xóa ảnh của mã không có trong bảng bị từ chối', error_of(d).to_s.include?('không còn trong bảng'))
 
-# ---- Ảnh nhỏ / ảnh lớn gửi về giao diện ----
+# ---- Ảnh gốc gửi về giao diện (dự phòng khi cửa sổ không nạp được bằng đường dẫn file) ----
 FileUtils.rm_rf(I.dir($model))
 d = make_dialog
-I.write($model, 901, PNG, PNG)
-d.safely { d.image_thumbs([901, 902, 903]) }
-thumbs = events(d, 'thumbs').last['items']
-ok('xin ảnh nhỏ: chỉ trả đối tượng có ảnh, dạng data URL', thumbs.keys == ['901'] && thumbs['901'].start_with?('data:image/png;base64,'))
-d.safely { d.image_thumbs([901, 7777]) }
-ok('xin ảnh nhỏ của mã không có trong bảng: bỏ qua, không đọc file, không báo lỗi', events(d, 'thumbs').last['items'].keys == ['901'] && error_of(d).nil?)
-many = make_dialog(D::MAX_THUMB_REQUEST + 5)
-$records.each { |r| I.write($model, r[:entity].persistent_id, PNG, PNG) }
-many.safely { many.image_thumbs($records.map { |r| r[:entity].persistent_id }) }
-ok("mỗi lần chỉ trả tối đa #{D::MAX_THUMB_REQUEST} ảnh nhỏ", events(many, 'thumbs').last['items'].size == D::MAX_THUMB_REQUEST)
+I.write($model, 901, PNG)
+d.safely { d.image_full([901, 902, 903]) }
+shown = events(d, 'image_data').last['items']
+ok('xin ảnh gốc: chỉ trả đối tượng có ảnh, dạng data URL', shown.keys == ['901'] && shown['901'].start_with?('data:image/png;base64,'))
+d.safely { d.image_full([901, 7777]) }
+ok('xin ảnh của mã không có trong bảng: bỏ qua, không đọc file, không báo lỗi', events(d, 'image_data').last['items'].keys == ['901'] && error_of(d).nil?)
+many = make_dialog(D::MAX_FULL_REQUEST + 5)
+$records.each { |r| I.write($model, r[:entity].persistent_id, PNG) }
+many.safely { many.image_full($records.map { |r| r[:entity].persistent_id }) }
+ok("mỗi lần chỉ trả tối đa #{D::MAX_FULL_REQUEST} ảnh (ảnh gốc nặng hơn ảnh nhỏ)", events(many, 'image_data').last['items'].size == D::MAX_FULL_REQUEST)
+ok('không còn lệnh xin ảnh nhỏ', !d.respond_to?(:image_thumbs) && !defined?(D::MAX_THUMB_REQUEST))
 
 # ---- Cài đặt chung (ngôn ngữ, thư mục ảnh) ----
 d = make_dialog
@@ -292,9 +293,8 @@ export_payload = lambda do |format, pids|
 end
 d = make_dialog(3, has_image: [0, 1])
 FULL = {901 => real_png(512, 384), 902 => real_png(300, 600)}
-THUMB = {901 => real_png(128, 96), 902 => real_png(64, 128)}
-I.write($model, 901, FULL[901], THUMB[901])
-I.write($model, 902, FULL[902], THUMB[902])
+I.write($model, 901, FULL[901])
+I.write($model, 902, FULL[902])
 Dir.mktmpdir do |dir|
   $save = File.join(dir, 'ketqua')
   UI.define_singleton_method(:savepanel) { |*_args| $save }
@@ -302,7 +302,7 @@ Dir.mktmpdir do |dir|
   file = "#{$save}.xlsx"
   bytes = File.file?(file) ? File.binread(file) : ''
   ok('xuất Excel: chọn nơi lưu, tự thêm đuôi .xlsx, ghi file zip', bytes.byteslice(0, 2) == 'PK')
-  ok('xuất Excel: nhúng ảnh gốc theo cỡ đã chụp (không phải ảnh thu nhỏ) của các dòng có ảnh; dòng thứ 3 không có', bytes.include?('xl/media/image2.png') && !bytes.include?('xl/media/image3.png') && bytes.include?(FULL[901]) && bytes.include?(FULL[902]) && !bytes.include?(THUMB[901]) && !bytes.include?(THUMB[902]))
+  ok('xuất Excel: nhúng ảnh gốc theo cỡ đã chụp của các dòng có ảnh; dòng thứ 3 không có', bytes.include?('xl/media/image2.png') && !bytes.include?('xl/media/image3.png') && bytes.include?(FULL[901]) && bytes.include?(FULL[902]))
   ok('xuất Excel: báo số dòng, số ảnh và đường dẫn', events(d, 'message').last['text'] == "Đã xuất 3 dòng và 2 ảnh ra Excel: #{file}")
   d = make_dialog(3, has_image: [0, 1])
   d.safely { d.table_export(export_payload.call('xlsx', [901, 999, 903])) }
@@ -329,7 +329,7 @@ url = (UI.opened || [])[opened_before]
 html_path = url.to_s.sub(%r{\Afile://}, '').then { |u| u.match?(%r{\A/[A-Za-z]:}) ? u[1..-1] : u }
 ok('in PDF: mở trang báo cáo bằng trình duyệt (địa chỉ file:///)', url.to_s.start_with?('file:///') && url.end_with?('.html'))
 page = File.file?(html_path) ? File.read(html_path, encoding: 'UTF-8') : ''
-ok('in PDF: trang báo cáo có tên model, đủ 3 dòng và 2 ảnh', page.include?('Mô hình: Nhà mẫu') && page.scan('<tr class="row">').size == 3 && page.scan('data:image/png;base64,').size == 2 && page.include?([FULL[901]].pack('m0')) && !page.include?([THUMB[901]].pack('m0')))
+ok('in PDF: trang báo cáo có tên model, đủ 3 dòng và 2 ảnh', page.include?('Mô hình: Nhà mẫu') && page.scan('<tr class="row">').size == 3 && page.scan('data:image/png;base64,').size == 2 && page.include?([FULL[901]].pack('m0')))
 ok('in PDF: báo đã mở trình duyệt, hướng dẫn Lưu thành PDF', events(d, 'message').last['text'].include?('trình duyệt') && events(d, 'message').last['text'].include?('PDF'))
 File.delete(html_path) if File.file?(html_path)
 

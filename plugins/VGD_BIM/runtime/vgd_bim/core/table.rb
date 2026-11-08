@@ -108,11 +108,15 @@ module VGD
       end
 
       # Trạng thái bảng (preset đang dùng, cột, thứ tự, độ rộng, ...) để mở lại vẫn giữ như lần trước.
-      VIEW_KEYS = %w[preset group order visible widths density showTotals onlyTop headers settings].freeze
+      VIEW_KEYS = %w[preset group order visible widths density showTotals onlyTop headers settings rowHeight].freeze
+      ROW_HEIGHT_MIN = 28 # độ cao hàng (điểm ảnh) khi người dùng Ctrl + lăn chuột; 0 = theo mật độ hàng
+      ROW_HEIGHT_MAX = 640
       def self.view_state
         raw = Storage.read('table_view')
         return {} unless raw.is_a?(Hash)
         state = raw.select { |k, _| VIEW_KEYS.include?(k) }
+        state['rowHeight'] = row_height(state['rowHeight']) if state.key?('rowHeight') # file sửa tay: giá trị lạ bị bỏ
+        state.delete('rowHeight') if state['rowHeight'].nil?
         state['headers'] = Preset.headers(state['headers'], COLUMN_KEYS) if state.key?('headers')
         state['settings'] = Preset.settings(state['settings']) if state.key?('settings')
         state
@@ -123,9 +127,18 @@ module VGD
         clean = state.select { |k, _| VIEW_KEYS.include?(k) }
         %w[order visible].each { |k| clean[k] = Array(clean[k]).map(&:to_s).select { |key| COLUMN_KEYS.include?(key) } if clean.key?(k) }
         clean['widths'] = (clean['widths'].is_a?(Hash) ? clean['widths'] : {}).select { |k, v| COLUMN_KEYS.include?(k) && v.is_a?(Numeric) } if clean.key?('widths')
+        clean['rowHeight'] = row_height(clean['rowHeight']) if clean.key?('rowHeight')
+        clean.delete('rowHeight') if clean['rowHeight'].nil?
         clean['headers'] = Preset.headers(clean['headers'], COLUMN_KEYS) if clean.key?('headers')
         clean['settings'] = Preset.settings(clean['settings']) if clean.key?('settings')
         Storage.write('table_view', clean)
+      end
+
+      # 0 (theo mật độ hàng) hoặc số điểm ảnh làm tròn, kẹp trong giới hạn; không phải số thì nil (bỏ).
+      def self.row_height(value)
+        return nil unless value.is_a?(Numeric) && value.finite?
+        return 0 if value <= 0
+        value.round.clamp(ROW_HEIGHT_MIN, ROW_HEIGHT_MAX)
       end
 
       def self.tag_groups
@@ -185,9 +198,11 @@ module VGD
       # Mã bền (persistent_id) và tình trạng ảnh của đối tượng. Ảnh nằm ngoài file SketchUp (xem Images).
       def self.image_state(model, entity, folder = nil)
         pid = entity.respond_to?(:persistent_id) ? entity.persistent_id : nil
-        return {pid: nil, has_image: false, image_stamp: 0} unless pid.is_a?(Integer) && pid > 0 && model.respond_to?(:guid)
-        info = Images.info(model, pid, folder || Images.dir(model))
-        {pid: pid, has_image: info[:has], image_stamp: info[:stamp]}
+        return {pid: nil, has_image: false, image_stamp: 0, image_url: nil} unless pid.is_a?(Integer) && pid > 0 && model.respond_to?(:guid)
+        folder ||= Images.dir(model)
+        info = Images.info(model, pid, folder)
+        # image_url: giao diện hiện ảnh gốc trực tiếp từ file (không chuyển qua Ruby); chưa có ảnh thì nil.
+        {pid: pid, has_image: info[:has], image_stamp: info[:stamp], image_url: info[:has] ? Images.file_url(model, pid, info[:stamp], folder) : nil}
       end
 
       # Tên của đối tượng cha trực tiếp (để nhóm theo cha); cấp gốc của model thì để trống.

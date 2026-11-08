@@ -67,6 +67,17 @@ T.delete_preset('Tủ "bếp" trên')
 T.save_view_state('preset' => 'Đồ rời', 'order' => %w[quantity abc lenX], 'visible' => %w[quantity], 'widths' => {'lenX' => 90, 'zzz' => 5}, 'hack' => 1)
 v = T.view_state
 check 'trạng thái bảng lưu và đọc lại, bỏ cột lạ', v['preset'] == 'Đồ rời' && v['order'] == %w[quantity lenX] && v['widths'] == {'lenX' => 90} && !v.key?('hack')
+# Độ cao hàng (Ctrl + lăn chuột): số điểm ảnh trong giới hạn; giá trị lạ bị bỏ để không làm hỏng bảng
+T.save_view_state('rowHeight' => 120.4)
+check 'độ cao hàng lưu và đọc lại (làm tròn)', T.view_state['rowHeight'] == 120
+T.save_view_state('rowHeight' => 99_999)
+check 'độ cao hàng quá lớn bị kẹp về giới hạn trên', T.view_state['rowHeight'] == T::ROW_HEIGHT_MAX
+T.save_view_state('rowHeight' => 3)
+check 'độ cao hàng quá nhỏ bị kẹp về giới hạn dưới', T.view_state['rowHeight'] == T::ROW_HEIGHT_MIN
+T.save_view_state('rowHeight' => 'cao', 'preset' => 'x')
+check 'độ cao hàng không phải số bị bỏ (về mặc định), không lỗi', !T.view_state.key?('rowHeight') && T.view_state['preset'] == 'x'
+T.save_view_state('rowHeight' => 0)
+check 'độ cao hàng 0 = theo mật độ hàng mặc định (lưu 0)', T.view_state['rowHeight'] == 0
 # Khung bao quanh đối tượng (chỉ 8 góc của hộp, không duyệt mặt của đối tượng nên nhẹ khi chọn nhiều)
 class BoxPoint
   attr_reader :x, :y, :z
