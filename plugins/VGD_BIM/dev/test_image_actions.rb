@@ -243,7 +243,16 @@ $picked_dir = nil
 d.safely { d.settings_pick_dir }
 ok('hủy hộp chọn thư mục: giữ nguyên', S.read['image_dir'] == File.join(Dir.tmpdir, 'anh_chon'))
 d.safely { d.images_open_dir }
-ok('mở thư mục ảnh: tạo thư mục nếu chưa có rồi mở', File.directory?(S.image_dir) && UI.opened.last.start_with?('file:///'))
+ok('mở thư mục ảnh (không phải Windows): tạo thư mục nếu chưa có rồi mở bằng địa chỉ file:///', File.directory?(S.image_dir) && UI.opened.last.start_with?('file:///'))
+launched = []
+d.define_singleton_method(:windows?) { true }
+d.define_singleton_method(:launch_process) { |*args| launched << args }
+opened_before = UI.opened.size
+d.safely { d.images_open_dir }
+ok('Windows: mở bằng explorer.exe với đường dẫn Windows (dấu gạch ngược), không qua UI.openURL (tránh cửa sổ Explorer bị dẹp lép)', launched == [['explorer.exe', File.expand_path(S.image_dir).tr('/', '\\')]] && UI.opened.size == opened_before)
+d.define_singleton_method(:windows?) { false }
+d.safely { d.images_open_dir }
+ok('không phải Windows: vẫn dùng UI.openURL, không chạy explorer', launched.size == 1 && UI.opened.size == opened_before + 1)
 
 # ---- Thiết lập ảnh của preset đi cùng lệnh chụp ----
 d = make_dialog

@@ -66,7 +66,7 @@ Nút **Preset** nằm cạnh nút Sáng/Tối. Bấm vào để mở bảng gồ
 4. **Đơn vị**: chọn đơn vị và số lẻ cho chiều dài, diện tích, thể tích; chọn tiền tệ và dấu thập phân. Chỉ đổi cách hiển thị, báo cáo CSV ở tab Quét & xuất vẫn dùng mm.
 5. **Nhập / Xuất** (menu ở chân trang): nhập hoặc xuất preset bằng file JSON (đọc được file preset của plugin tham khảo), hoặc xuất bảng đang hiện:
    - **Xuất Excel**: tạo file .xlsx đúng như bảng đang hiện (cột, thứ tự, tiêu đề, đơn vị, nhóm, dòng tổng), có ảnh món đồ trong ô. Muốn có ảnh, hãy bấm Cập nhật ảnh trước. Ảnh trong Excel và PDF là ảnh đầy đủ theo cỡ đã chụp (đặt trong bảng Preset), chỉ hiển thị thu nhỏ vừa ô; bấm vào ảnh trong Excel để xem rõ. Chụp cỡ lớn thì file xuất nặng hơn.
-   - **In PDF**: tạo trang báo cáo rồi mở trong trình duyệt; bấm In (hoặc Ctrl+P) và chọn **Lưu thành PDF**. Trang A4 ngang, tiêu đề cột lặp lại mỗi trang.
+   - **In PDF**: tạo trang báo cáo rồi mở trong trình duyệt. Trang **không tự mở hộp in**; khi cần in, bấm nút **In / Lưu PDF** trên trang (hoặc Ctrl+P) và chọn **Lưu thành PDF**. Ô nào quá rộng thì kéo mép tiêu đề cột trên trang để chia lại độ rộng (cột bên cạnh hẹp đi tương ứng); nút **Đặt lại độ rộng cột** đưa về lúc đầu. Độ rộng ban đầu theo độ rộng cột bạn đã chỉnh trong bảng. Trang A4 ngang, tiêu đề cột lặp lại mỗi trang.
    - **Cầu nối dữ liệu**: đã có sẵn chỗ trong menu, sẽ làm sau.
 
 Ảnh món đồ nằm trong cột **Ảnh** của Bảng khối lượng (bật trong **Chọn cột**: ngăn bên trái đẩy bảng sang phải, tick để hiện / ẩn cột, kéo biểu tượng ⠿ để đổi thứ tự; preset "Tất cả" đã có sẵn). Ảnh **chỉ được chụp khi bạn bấm**, plugin không tự chụp:

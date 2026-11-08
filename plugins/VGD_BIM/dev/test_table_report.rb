@@ -190,14 +190,31 @@ end
 
 # ---- Trang báo cáo in PDF ----
 html = TR.html(report)
-ok('HTML: tiêu đề, bảng, ảnh nhúng base64, nút In, tự mở hộp in', html.include?('<h1>Bảng khối lượng</h1>') && html.scan('data:image/png;base64,').size == 2 && html.include?('window.print()') && html.include?('size:A4 landscape'))
-ok('HTML: ảnh hiển thị tối đa 28 x 22 mm nhưng giữ nguyên dữ liệu ảnh', html.include?('max-width:28mm;max-height:22mm') && html.include?([IMAGES[900]].pack('m0')))
+ok('HTML: tiêu đề, bảng, ảnh nhúng base64, nút In, khổ A4 ngang', html.include?('<h1>Bảng khối lượng</h1>') && html.scan('data:image/png;base64,').size == 2 && html.include?('onclick="window.print()"') && html.include?('size:A4 landscape'))
+ok('HTML: KHÔNG tự mở hộp in khi mở trang (người dùng tự bấm nút In)', html.scan('window.print()').size == 1 && !html.include?("addEventListener('load'") && !html.include?('setTimeout'))
+ok('HTML: ảnh vừa chiều rộng ô (cao tối đa 22 mm) nhưng giữ nguyên dữ liệu ảnh', html.include?('max-width:100%;max-height:22mm') && html.include?([IMAGES[900]].pack('m0')))
+# Độ rộng cột: lấy từ bảng trên màn hình, người dùng kéo chỉnh lại được trong trang
+wide = COLUMNS.each_with_index.map { |c, i| c.merge('width' => [44, 72, 200, 100, 100, 150, 120][i]) }
+wide_report = build('columns' => wide)
+ok('độ rộng cột hợp lệ được nhận (số từ 20 đến 2000)', wide_report[:columns].map { |c| c[:width] } == [44, 72, 200, 100, 100, 150, 120] && report[:columns].all? { |c| c[:width].nil? })
+['abc', 10, 2001, Float::NAN, -5, nil].each_with_index do |bad_width, i|
+  next if bad_width.nil?
+  ok("độ rộng cột sai bị từ chối: #{bad_width.inspect}", error_of { build('columns' => COLUMNS.map { |c| c.merge('width' => bad_width) }) })
+end
+whtml = TR.html(wide_report)
+percents = whtml.scan(/<col style="width:([\d.]+)%">/).flatten.map(&:to_f)
+ok('HTML: bảng chia cột theo phần trăm đúng tỉ lệ độ rộng từ màn hình, tổng 100%', percents.size == 7 && (percents.sum - 100).abs < 0.05 && (percents[2] / percents[0] - 200.0 / 44).abs < 0.01)
+ok('HTML: cố định bố cục cột (table-layout) và chữ dài tự xuống dòng thay vì làm cột phình rộng', whtml.include?('table-layout:fixed') && whtml.include?('overflow-wrap:anywhere'))
+ok('HTML: có tay kéo chỉnh độ rộng ở mọi cột trừ cột cuối, và nút đặt lại độ rộng', whtml.scan('class="rz"').size == 6 && whtml.include?('id="reset-cols"'))
+ok('HTML: tay kéo và nút chỉnh độ rộng bị ẩn khi in, không dùng thư viện ngoài', whtml.include?('@media print') && whtml.match?(/@media print\{[^}]*\.bar\{display:none\}/) && whtml.include?('.rz{display:none}') && !whtml.match?(/<script[^>]+src=/))
+default_percents = html.scan(/<col style="width:([\d.]+)%">/).flatten.map(&:to_f)
+ok('không có độ rộng từ giao diện: dùng tỉ lệ mặc định theo loại cột, vẫn tổng 100%', default_percents.size == 7 && (default_percents.sum - 100).abs < 0.05)
 ok('HTML: dòng tiêu đề lặp mỗi trang, dòng không bị cắt đôi', html.include?('thead{display:table-header-group}') && html.include?('page-break-inside:avoid'))
 ok('HTML: số theo dấu thập phân của preset và nhóm hàng nghìn (1.200 | 1,23 | 2.500.000)', html.include?('<td class="num">1.200</td>') && html.include?('<td class="num">1,23</td>') && html.include?('<td class="num">2.500.000</td>'))
 ok('HTML: làm tròn nửa lên như bảng trên màn hình (900,5 thành 901) và không còn ký tự điều khiển', html.include?('<td class="num">901</td>') && !html.match?(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/))
 ok('HTML: dấu chấm thì nghìn là dấu phẩy', TR.html(build('decimal_separator' => '.')).include?('<td class="num">2,500,000</td>') && TR.html(build('decimal_separator' => '.')).include?('<td class="num">1.23</td>'))
 ok('HTML: số thứ tự không nhóm hàng nghìn, căn giữa', TR.html(build('rows' => [ROWS[1].merge('cells' => ROWS[1]['cells'].dup.tap { |c| c[0] = 1234 })])).include?('<td class="ord">1234</td>'))
-ok('HTML: ô số rỗng để trống, đơn vị dưới tiêu đề cột', html.include?('<th>Rộng (X) mm<span class="unit">mm</span></th>') && !html.include?('<td class="num">0</td>'))
+ok('HTML: ô số rỗng để trống, đơn vị dưới tiêu đề cột', html.include?('<th>Rộng (X) mm<span class="unit">mm</span><span class="rz" aria-hidden="true"></span></th>') && !html.include?('<td class="num">0</td>'))
 ok('HTML: chữ bị mã hóa, không chèn được thẻ', html.include?('Tủ &lt;bếp&gt; &amp; &quot;A&quot;') && !html.include?('<bếp>'))
 inject = TR.html(build('title' => '</title><script>alert(1)</script>', 'rows' => [ROWS[1].merge('cells' => ROWS[1]['cells'].dup.tap { |c| c[2] = '<img src=x onerror=alert(1)>' })]))
 ok('HTML: tiêu đề và ô chứa mã HTML đều bị vô hiệu', !inject.include?('<script>alert(1)') && !inject.include?('<img src=x') && inject.include?('&lt;img src=x onerror=alert(1)&gt;'))

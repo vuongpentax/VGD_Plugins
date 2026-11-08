@@ -16,7 +16,10 @@ module VGD
       MAX_TEXT = 2000
       TYPES = %w[text number image link ordinal].freeze
       KINDS = %w[row group total].freeze
-      LABEL_KEYS = %w[model preset date print].freeze
+      LABEL_KEYS = %w[model preset date print reset hint].freeze
+      MIN_WIDTH = 20   # độ rộng cột lấy từ bảng trên màn hình (điểm ảnh)
+      MAX_WIDTH = 2000
+      DEFAULT_WEIGHT = {'ordinal' => 44, 'image' => 72, 'number' => 90, 'link' => 170, 'text' => 140}.freeze # tỉ lệ cột khi giao diện không gửi độ rộng
       PREFIX = 'VGD_BIM_bao_cao_'.freeze
       KEEP_SECONDS = 2 * 24 * 3600
 
@@ -48,7 +51,9 @@ module VGD
           raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless col.is_a?(Hash) && TYPES.include?(col['type'])
           digits = col['digits'].nil? ? 0 : col['digits']
           raise ArgumentError, 'Số lẻ không hợp lệ.' unless digits.is_a?(Integer) && digits.between?(0, 6)
-          {label: text!(col['label'], 200), unit: text!(col['unit'], 20), type: col['type'], digits: digits}
+          width = col['width']
+          raise ArgumentError, "Độ rộng cột phải là số từ #{MIN_WIDTH} đến #{MAX_WIDTH}." unless width.nil? || (width.is_a?(Numeric) && width.finite? && width.between?(MIN_WIDTH, MAX_WIDTH))
+          {label: text!(col['label'], 200), unit: text!(col['unit'], 20), type: col['type'], digits: digits, width: width}
         end
       end
 
@@ -112,9 +117,42 @@ module VGD
         end
       end
 
-      # Trang HTML tự chứa (ảnh nhúng sẵn): mở bằng trình duyệt rồi In > Lưu thành PDF. Khổ A4 ngang, tiêu đề cột lặp lại mỗi trang.
+      # Độ rộng mỗi cột theo phần trăm của bảng (tổng 100): theo độ rộng người dùng đã chỉnh trên màn hình, thiếu thì theo tỉ lệ mặc định.
+      def self.column_percents(columns)
+        weights = columns.map { |col| (col[:width] || DEFAULT_WEIGHT.fetch(col[:type])).to_f }
+        total = weights.sum
+        weights.map { |weight| (weight / total * 100).round(3) }
+      end
+
+      # Kéo mép tiêu đề cột để chia lại độ rộng: cột bên trái rộng thêm bao nhiêu thì cột bên phải hẹp đi bấy nhiêu (tổng giữ 100%).
+      RESIZE_SCRIPT = <<~JS.freeze
+        (function(){
+          var table=document.querySelector('table'),cols=[].slice.call(table.querySelectorAll('col'));
+          var initial=cols.map(function(c){return parseFloat(c.style.width);});
+          [].slice.call(table.querySelectorAll('.rz')).forEach(function(handle,i){
+            handle.addEventListener('mousedown',function(e){
+              e.preventDefault();
+              var startX=e.clientX,total=table.getBoundingClientRect().width,a=parseFloat(cols[i].style.width),b=parseFloat(cols[i+1].style.width),min=3;
+              function move(ev){var d=(ev.clientX-startX)/total*100;d=Math.max(min-a,Math.min(b-min,d));cols[i].style.width=(a+d)+'%';cols[i+1].style.width=(b-d)+'%';}
+              function up(){document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);}
+              document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+            });
+          });
+          var reset=document.getElementById('reset-cols');
+          if(reset)reset.addEventListener('click',function(){cols.forEach(function(c,i){c.style.width=initial[i]+'%';});});
+        })();
+      JS
+
+      # Trang HTML tự chứa (ảnh nhúng sẵn): mở bằng trình duyệt; người dùng tự bấm nút In rồi chọn Lưu thành PDF (trang không tự gọi hộp in).
+      # Khổ A4 ngang, tiêu đề cột lặp lại mỗi trang, độ rộng cột chia lại được bằng cách kéo mép tiêu đề.
       def self.html(report)
-        head = report[:columns].map { |c| "<th>#{CGI.escapeHTML(c[:label])}#{c[:unit].empty? ? '' : %(<span class="unit">#{CGI.escapeHTML(c[:unit])}</span>)}</th>" }.join
+        percents = column_percents(report[:columns])
+        colgroup = percents.map { |percent| %(<col style="width:#{percent}%">) }.join
+        last = report[:columns].size - 1
+        head = report[:columns].each_with_index.map do |c, i|
+          handle = i < last ? '<span class="rz" aria-hidden="true"></span>' : ''
+          "<th>#{CGI.escapeHTML(c[:label])}#{c[:unit].empty? ? '' : %(<span class="unit">#{CGI.escapeHTML(c[:unit])}</span>)}#{handle}</th>"
+        end.join
         body = report[:rows].map do |row|
           cells = report[:columns].each_with_index.map { |col, i| html_cell(report, row, col, i) }.join
           %(<tr class="#{row[:kind]}">#{cells}</tr>)
@@ -130,28 +168,32 @@ module VGD
           .meta{color:#666;font-size:8.5pt;margin:0 0 10px}
           .bar{margin:0 0 10px}
           .bar button{font:inherit;padding:6px 14px;border:1px solid #b48963;background:#b48963;color:#fff;border-radius:4px;cursor:pointer}
-          table{border-collapse:collapse;width:100%}
+          table{border-collapse:collapse;width:100%;table-layout:fixed}
           thead{display:table-header-group}
-          th,td{border:1px solid #c8c8c8;padding:3px 5px;vertical-align:middle;text-align:left}
-          th{background:#e8dccb;font-weight:700;text-align:center}
+          th,td{border:1px solid #c8c8c8;padding:3px 5px;vertical-align:middle;text-align:left;overflow-wrap:anywhere;word-break:break-word}
+          th{background:#e8dccb;font-weight:700;text-align:center;position:relative}
+          .rz{position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:2}
+          .rz:hover{background:rgba(180,137,99,.55)}
           .unit{display:block;font-weight:400;font-style:italic;color:#555;font-size:8pt}
           tr{page-break-inside:avoid}
-          td.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+          td.num{text-align:right;font-variant-numeric:tabular-nums}
           td.ord{text-align:center}
-          td.img{text-align:center;width:32mm;padding:2px}
-          td.img img{max-width:28mm;max-height:22mm;display:block;margin:0 auto}
+          td.img{text-align:center;padding:2px}
+          td.img img{max-width:100%;max-height:22mm;display:block;margin:0 auto}
           td.link a{color:#0563c1;word-break:break-all}
           tr.group td{background:#f4eee6;font-weight:700}
           tr.total td{background:#e8dccb;font-weight:700;border-top:2px solid #222}
-          @media print{.bar{display:none}body{padding:0}}
+          .hint{color:#777;font-size:8.5pt;margin-left:8px}
+          .bar button+button{margin-left:6px;background:#fff;color:#8e6b4c}
+          @media print{.bar{display:none}.rz{display:none}body{padding:0}}
           </style></head><body>
-          <div class="bar"><button type="button" onclick="window.print()">#{CGI.escapeHTML(report[:labels]['print'].empty? ? 'In / Lưu PDF' : report[:labels]['print'])}</button></div>
+          <div class="bar"><button type="button" onclick="window.print()">#{CGI.escapeHTML(report[:labels]['print'].empty? ? 'In / Lưu PDF' : report[:labels]['print'])}</button><button type="button" id="reset-cols">#{CGI.escapeHTML(report[:labels]['reset'].empty? ? 'Đặt lại độ rộng cột' : report[:labels]['reset'])}</button><span class="hint">#{CGI.escapeHTML(report[:labels]['hint'].empty? ? 'Kéo mép tiêu đề cột để chỉnh độ rộng.' : report[:labels]['hint'])}</span></div>
           <h1>#{CGI.escapeHTML(report[:title])}</h1>
           <p class="meta">#{CGI.escapeHTML(report[:meta])}</p>
-          <table><thead><tr>#{head}</tr></thead><tbody>
+          <table><colgroup>#{colgroup}</colgroup><thead><tr>#{head}</tr></thead><tbody>
           #{body}
           </tbody></table>
-          <script>window.addEventListener('load',function(){setTimeout(function(){window.print();},500);});</script>
+          <script>#{RESIZE_SCRIPT}</script>
           </body></html>
         HTML
       end

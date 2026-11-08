@@ -1,5 +1,6 @@
 require 'json'
 require 'fileutils'
+require 'rbconfig'
 
 module VGD
   module BIM
@@ -55,7 +56,25 @@ module VGD
         def images_open_dir
           dir = Settings.image_dir
           FileUtils.mkdir_p(dir)
-          ::UI.openURL("file:///#{dir.tr('\\', '/')}")
+          open_folder(dir)
+        end
+
+        # Windows: mở bằng explorer.exe với đường dẫn Windows. Mở bằng UI.openURL("file:///...") làm cửa sổ Explorer hiện ra bị dẹp lép.
+        # Nơi khác dùng UI.openURL với địa chỉ file đã mã hóa.
+        def open_folder(dir)
+          if windows?
+            launch_process('explorer.exe', File.expand_path(dir).tr('/', '\\'))
+          else
+            ::UI.openURL(TableReport.file_url(dir))
+          end
+        end
+
+        def windows?
+          RbConfig::CONFIG['host_os'].match?(/mswin|mingw|cygwin/i)
+        end
+
+        def launch_process(*args)
+          Process.detach(Process.spawn(*args))
         end
 
         # ---- Chụp ảnh (nút trong Bảng khối lượng) ----

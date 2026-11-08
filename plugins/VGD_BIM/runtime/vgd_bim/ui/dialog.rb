@@ -499,7 +499,7 @@ module VGD
           count = report[:rows].count { |row| row[:kind] == 'row' }
           if format == 'pdf'
             ::UI.openURL(TableReport.file_url(TableReport.write_html(report)))
-            return emit('message', {text: "Đã tạo trang báo cáo #{count} dòng và mở trong trình duyệt. Bấm In rồi chọn Lưu thành PDF."})
+            return emit('message', {text: "Đã tạo trang báo cáo #{count} dòng và mở trong trình duyệt. Khi cần in, bấm nút In / Lưu PDF trên trang rồi chọn Lưu thành PDF."})
           end
           path = ::UI.savepanel('Xuất bảng khối lượng ra Excel', '', 'VGD_Bang_khoi_luong.xlsx')
           return unless path

@@ -936,7 +936,7 @@ function toggleButton(text,on,handler){
 const exportText=text=>VGD_I18N.language==='en'?VGD_I18N.translateText(text):text;
 function exportColumn(col){
   const type=col.key==='ordinal'?'ordinal':col.kind==='image'?'image':NUMERIC.has(col.key)?'number':col.key==='url'?'link':'text';
-  return {label:exportText(colLabel(col)),unit:exportText(unitTextOf(col.key)||''),type,digits:type==='number'?digitsFor(col.key):0};
+  return {label:exportText(colLabel(col)),unit:exportText(unitTextOf(col.key)||''),type,digits:type==='number'?digitsFor(col.key):0,width:Math.min(2000,Math.max(20,Math.round(widthOf(col.key))))}; // độ rộng cột đang chỉnh trên màn hình, dùng làm tỉ lệ ban đầu của trang in
 }
 function exportCell(row,col,position){
   if(col.key==='ordinal')return position;
@@ -963,7 +963,7 @@ function exportRows(model){
 function exportTable(format){
   const model=viewModel();
   call('table_export',JSON.stringify({format,title:exportText('Bảng khối lượng'),preset:tableState.preset||'',decimal_separator:workSettings().decimal_separator,
-    labels:{model:exportText('Mô hình'),preset:'Preset',date:exportText('Ngày'),print:exportText('In / Lưu PDF')},columns:model.cols.map(exportColumn),rows:exportRows(model)}));
+    labels:{model:exportText('Mô hình'),preset:'Preset',date:exportText('Ngày'),print:exportText('In / Lưu PDF'),reset:exportText('Đặt lại độ rộng cột'),hint:exportText('Kéo mép tiêu đề cột để chỉnh độ rộng.')},columns:model.cols.map(exportColumn),rows:exportRows(model)}));
 }
 // Biểu tượng nhỏ cho menu (SVG, dùng màu chữ hiện tại).
 function menuIcon(shapes){

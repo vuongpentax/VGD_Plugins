@@ -329,6 +329,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   const dataRows=exp.rows.filter(r=>r.kind==='row'),totalRow=exp.rows.filter(r=>r.kind==='total');
   ok(dataRows.length===3 && totalRow.length===1 && exp.rows[exp.rows.length-1].kind==='total','xuất Excel: đủ 3 dòng và một dòng tổng ở cuối');
   ok(JSON.stringify(dataRows[0].cells)==='[1,null,"Cabinet","Cab 0","","1.200 × 600 × 800","Hafele",1]' && dataRows[0].pid===900 && dataRows[1].pid===901,'xuất Excel: ô đúng như đang hiện (cột Ảnh gửi kèm mã đối tượng, số quantity là số)');
+  ok(exp.columns.every(c=>Number.isInteger(c.width)&&c.width>=20&&c.width<=2000) && exp.columns[1].width===72 && exp.labels.reset==='Đặt lại độ rộng cột' && exp.labels.hint.includes('Kéo mép'),'xuất: gửi kèm độ rộng từng cột đang chỉnh trên màn hình (cột Ảnh 72) và nhãn nút chỉnh độ rộng')
   ok(totalRow[0].cells[3]==='Tổng cộng · 3 đối tượng' && totalRow[0].cells[7]===3,'xuất Excel: dòng tổng có nhãn và tổng số lượng');
   await usePreset('Tất cả');await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Chọn cột'}).click();
