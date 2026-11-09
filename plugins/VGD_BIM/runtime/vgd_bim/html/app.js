@@ -11,7 +11,7 @@ function node(tag, text, cls) {const el=document.createElement(tag);if(text!==un
 function call(name,...args) {if(window.sketchup && window.sketchup[name])window.sketchup[name](...args);}
 function message(text,error=false) {$('message').textContent=text || 'Sẵn sàng.';$('message').className=error?'error':'';}
 function button(text,handler,cls) {const b=node('button',text,cls);b.type='button';b.onclick=()=>{try{handler()}catch(error){message(error.message,true)}};return b;}
-function card(title) {const c=node('section',undefined,'card');c.append(node('h2',title));$('content').append(c);return c;}
+function card(title,parent) {const c=node('section',undefined,'card');c.append(node('h2',title));(parent||$('content')).append(c);return c;}
 function badge(value) {return node('span',translated('status',value),'badge '+(value==='ERROR'?'error':value==='WARNING'?'warning':''));}
 function table(parent,headers,rows,render) {const wrap=node('div',undefined,'table-wrap'),t=node('table'),head=node('thead'),tr=node('tr');headers.forEach(h=>tr.append(node('th',h)));head.append(tr);t.append(head);const body=node('tbody');rows.forEach((r,i)=>{const tr=node('tr');render(r,tr,i);body.append(tr)});t.append(body);wrap.append(t);parent.append(wrap);if(!rows.length)parent.append(node('p','Chưa có dữ liệu để hiển thị.','empty'));return body;}
 function cell(tr,value) {const td=node('td');value instanceof Node?td.append(value):td.textContent=value==null?'':String(value);tr.append(td);return td;}
@@ -94,45 +94,6 @@ function rules(data) {
   table(c,['Dựa trên','Tên nguồn','Hạng mục','Thao tác'],data,(r,tr,index)=>{cell(tr,translated('source_type',r.source_type));cell(tr,r.source_value);cell(tr,[translated('category',r.data.category),translated('item_type',r.data.item_type)].filter(Boolean).join(' / '));cell(tr,button('Sửa',()=>editRule(r,index)));});
   const actions=node('div',undefined,'actions');actions.append(button('Thêm quy tắc',()=>editRule()),button('Xuất bộ quy tắc',()=>call('export_rules')),button('Nhập bộ quy tắc',()=>call('import_rules')));c.append(actions);
   const advanced=node('details',undefined,'help');advanced.append(node('summary','Nâng cao · Chỉnh dữ liệu kỹ thuật'));const text=node('textarea');text.id='rules-json';text.className='rules';text.value=JSON.stringify(data,null,2);advanced.append(node('p','Tên trường kỹ thuật giữ nguyên để các plugin VGD dùng chung dữ liệu.'),text,button('Lưu dữ liệu kỹ thuật',()=>{let parsed;try{parsed=JSON.parse(text.value)}catch(_){throw Error('Dữ liệu kỹ thuật không đúng định dạng.')}call('save_rules',JSON.stringify(parsed));}));c.append(advanced);
-}
-function tagEditor(data) {
-  $('content').replaceChildren();
-  const c=card('Soạn tag');
-  c.append(node('p','Soạn bộ tag một lần rồi dùng lại cho mọi model. Tên không phân biệt chữ hoa, chữ thường. Bộ tag lưu trên máy này, không nằm trong file model.','hint'));
-  const wrap=node('div',undefined,'table-wrap'),t=node('table'),head=node('thead'),htr=node('tr');
-  ['Tên tag','Nhóm','Trong model','Thao tác'].forEach(h=>htr.append(node('th',h)));head.append(htr);t.append(head);
-  const tbody=node('tbody');t.append(tbody);wrap.append(t);c.append(wrap);
-  const rows=[];
-  const choose=(values,current,text)=>{const select=node('select');values.forEach(v=>select.append(new Option(text?text(v):v,v)));select.value=current;return select;};
-  const addRow=tag=>{
-    const tr=node('tr'),name=node('input');name.type='text';name.value=tag.name||'';name.setAttribute('aria-label','Tên tag');
-    const group=choose(data.groups,tag.group||data.groups[0]);group.setAttribute('aria-label','Nhóm');
-    const status=tag.in_model===undefined?'Mới':tag.in_model?(tag.visible?'Có trong model':'Có trong model · đang ẩn'):'Chưa có trong model';
-    const row={name,group,tr,removed:false};
-    cell(tr,name);cell(tr,group);cell(tr,status);
-    cell(tr,button('Xóa',()=>{row.removed=true;tr.remove();}));
-    rows.push(row);tbody.append(tr);
-  };
-  (data.tags||[]).forEach(addRow);
-  const actions=node('div',undefined,'actions');
-  actions.append(button('Thêm tag',()=>addRow({name:'',group:data.groups[0]})),button('Lưu bộ tag',()=>{
-    const list=rows.filter(r=>!r.removed).map(r=>({name:r.name.value.trim(),group:r.group.value})).filter(r=>r.name!=='');
-    call('save_tags',JSON.stringify(list));
-  },'primary'));
-  c.append(actions);
-  const io=node('div',undefined,'actions');
-  io.append(button('Nhập Excel (CSV)',()=>call('import_tags','csv')),button('Nhập JSON',()=>call('import_tags','json')),button('Xuất Excel (CSV)',()=>call('export_tags','csv')),button('Xuất JSON',()=>call('export_tags','json')));
-  c.append(io,node('p','Xuất / nhập áp dụng cho bộ tag đã lưu. Excel dùng file CSV, mở và lưu được bằng Excel. Nếu Excel báo lỗi, hãy lưu lại file dưới dạng CSV UTF-8.','muted'));
-  const assign=card('Gán tag cho đối tượng đang chọn');
-  const info=node('p',`Đang chọn ${data.selection} đối tượng hoặc mặt trong SketchUp.`,'hint');info.id='tag-selection-text';
-  const pick=node('select');pick.id='tag-pick';pick.setAttribute('aria-label','Chọn tag');
-  (data.tags||[]).forEach(tag=>pick.append(new Option(tag.name,tag.name)));
-  const go=button('Gán tag',()=>{if(!pick.value)throw Error('Hãy lưu bộ tag trước, rồi chọn tag để gán.');call('assign_tag',JSON.stringify({name:pick.value}));},'primary');
-  go.id='tag-assign';go.disabled=!data.selection||!(data.tags||[]).length;
-  assign.append(info,pick,go,node('p','Gán tag cho các đối tượng được chọn trực tiếp. Nếu tag đang tắt hiển thị, các đối tượng gán vào sẽ bị ẩn.','muted'));
-  catalogCard(data);
-  autoTagCard(data);
-  folderRuleCard(data);
 }
 function exportCard(data) {
   const c=card('Xuất báo cáo để mở trong Excel');c.append(node('p',`Đã quét ${data.objects} đối tượng và ${data.faces} mặt hình học. Chọn báo cáo, rồi chọn nơi lưu file. Tiêu đề và hạng mục xuất bằng tiếng Việt.`,'hint'));

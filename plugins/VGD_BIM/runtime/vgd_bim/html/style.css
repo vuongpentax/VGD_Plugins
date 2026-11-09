@@ -227,3 +227,16 @@ body.light #theme{--theme-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://w
 /* Thư viện tag mẫu (tab Soạn tag) */
 .catalog-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:4px 16px;margin:8px 0}.catalog-row{display:flex;gap:8px;align-items:flex-start}.catalog-row summary{cursor:pointer}.catalog-row details p{margin:4px 0 8px;font-size:11px;overflow-wrap:anywhere}
 .catalog-row summary .muted{margin-left:8px}
+
+/* Tab Soạn tag: thanh gán tag cố định, tab nhỏ, bộ tag gom nhóm gập */
+.tag-head{position:sticky;top:-14px;z-index:6;margin:-14px -16px 12px;padding:10px 16px 0;background:var(--bg);border-bottom:1px solid var(--border)}
+.tag-assign{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.tag-assign .tag-selection{flex:1 1 200px;font-size:12px;color:var(--muted)}.tag-assign select{flex:0 1 260px;min-width:0;height:30px}
+.tag-tabs{display:flex;gap:2px}.tag-tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:transparent;color:var(--muted);padding:6px 14px;min-height:0;font-size:12px}.tag-tabs button:hover{background:var(--soft);border-color:transparent;border-bottom-color:var(--border)}.tag-tabs button.active{color:var(--accent-dark);border-bottom-color:var(--accent);background:var(--soft)}
+.tag-pane[hidden]{display:none}
+.tag-toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}.tag-toolbar input[type=search]{flex:1 1 180px;min-width:120px;height:28px}.tag-toolbar select{height:28px;max-width:200px}button.sm{min-height:26px;padding:3px 9px;font-size:12px}.tag-count{margin-left:auto;font-size:11px}
+.tag-scroll{max-height:calc(100vh - 365px);min-height:120px;overflow:auto;border:1px solid var(--border);border-radius:6px;background:var(--surface)}.tag-scroll>p{margin:10px}
+.tag-group>summary{display:flex;gap:8px;align-items:baseline;padding:5px 10px;cursor:pointer;background:var(--tile);border-bottom:1px solid var(--border);font-size:12px;position:sticky;top:0;z-index:1}.tag-group>summary .muted{font-size:11px}
+.tag-group table{width:100%;border-collapse:collapse}.tag-group td{padding:2px 6px;border-bottom:1px solid var(--border);vertical-align:middle}.tag-group td:first-child{width:46%}.tag-group td:nth-child(2){width:24%}.tag-group td input,.tag-group td select{width:100%;height:24px;padding:1px 5px;font-size:12px}.tag-group td:last-child{width:1%;white-space:nowrap}.tag-status{font-size:11px;white-space:nowrap}
+.tag-note{margin:8px 0 0;font-size:11px}
+.rule-fold{margin-bottom:8px}.rule-fold>summary{cursor:pointer;display:flex;gap:8px;align-items:baseline;padding:4px 0}.rule-fold>summary .muted{font-size:11px}
+.tag-group>summary::before,.rule-fold>summary::before{content:'\25B8';display:inline-block;width:12px;color:var(--muted);transition:transform .15s ease}.tag-group[open]>summary::before,.rule-fold[open]>summary::before{transform:rotate(90deg)}.tag-group>summary::-webkit-details-marker,.rule-fold>summary::-webkit-details-marker{display:none}.tag-group>summary,.rule-fold>summary{list-style:none}

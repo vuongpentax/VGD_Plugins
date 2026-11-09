@@ -54,7 +54,11 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await page.getByRole('button',{name:/Thêm quy tắc|Add rule/}).first().click();await scan('Quy tắc (thêm)');
   await receive('config',config(lang,'tags'));
   await receive('tags',{groups:F.groups.slice(0,5),tags:[{name:'A',group:F.groups[0],in_model:true,visible:false},{name:'B',group:F.groups[1],in_model:false},{name:'C',group:F.groups[1],in_model:true,visible:true}],selection:3,rules:[{tag:'Tường',keywords:'tường, wall'},{tag:'Cửa',keywords:'cửa, door'}],catalog:[{group:'A. ARCHITECTURAL',label_vi:'Kiến trúc',count:15,tags:['A. CHIMNEY','A. WALL']},{group:'F. FIRE PROTECTION',label_vi:'Phòng cháy chữa cháy',count:1,tags:['F. FIRE SUPPRESSION']}]});await scan('Soạn tag');
+  await page.locator('.tag-group summary').first().click();await scan('Soạn tag (mở nhóm)');
+  await page.locator('.tag-toolbar input[type=search]').fill('wall');await scan('Soạn tag (tìm)');await page.locator('.tag-toolbar input[type=search]').fill('');
+  await page.click('#tag-tab-lib');await scan('Soạn tag (thư viện)');
   await page.getByLabel('A. ARCHITECTURAL',{exact:true}).check();await scan('Soạn tag (đã tick cụm)');await page.getByLabel('A. ARCHITECTURAL',{exact:true}).uncheck();
+  await page.click('#tag-tab-auto');await scan('Soạn tag (tự động, gập)');await page.locator('.rule-fold>summary').first().click();await page.locator('.rule-fold>summary').nth(1).click();await scan('Soạn tag (tự động, mở bảng luật)');
   await receive('tag_auto_plan',{total:5,assign:2,same:1,kept:1,unmatched:1,locked:1,rules:[{tag:'Wall',count:1,samples:['Wall 1']},{tag:'Door',count:4,samples:['Door_900','Door_2','Door_3']}]});await scan('Soạn tag (xem trước gắn tự động)');
   await receive('tag_auto_plan',{total:5,assign:0,same:5,kept:0,unmatched:0,locked:0,rules:[]});await scan('Soạn tag (không cần gắn)');
   await receive('folder_rules',{rules:[{folder:'A. ARCHITECTURAL',keywords:'A.'},{folder:'# BASIC',keywords:'#, edge'}]});await scan('Soạn tag (thư mục)');

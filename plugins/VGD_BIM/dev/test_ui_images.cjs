@@ -641,6 +641,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await receive('tags',{groups:F.groups.slice(0,5),tags:[],selection:2,rules:AUTO_RULES,catalog:CATALOG});
   await clear();
   // Thư viện tag mẫu: tick cụm rồi Nhập
+  await page.click('#tag-tab-lib');
   const importBtn=page.locator('#tag-catalog-import');
   ok(await page.locator('#tag-catalog-card .catalog-row').count()===2 && (await page.locator('#tag-catalog-card .catalog-row').first().innerText()).includes('A. ARCHITECTURAL') && (await page.locator('#tag-catalog-card .catalog-row').first().innerText()).includes('Kiến trúc · 15 tag'),'thư viện tag mẫu: liệt kê từng cụm kèm nhãn tiếng Việt và số tag');
   ok(await importBtn.isDisabled() && (await importBtn.innerText())==='Nhập','chưa tick cụm nào: nút Nhập bị khóa');
@@ -659,6 +660,11 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await receive('tags',{groups:F.groups.slice(0,5),tags:[],selection:2,rules:AUTO_RULES,catalog:CATALOG});
   ok(await page.locator('#tag-catalog-card input.cb:checked').count()===1 && (await importBtn.innerText())==='Nhập 1 cụm (1 tag)','vẽ lại tab (ví dụ sau khi nhập): các cụm đã tick được giữ');
   await page.getByRole('button',{name:'Bỏ chọn'}).click();
+  // Tab Tự động: hai bảng luật mặc định gập lại, bấm "Bảng luật" mới mở ra
+  await page.click('#tag-tab-auto');
+  ok(!(await page.locator('#tag-auto-card .rule-fold').evaluate(el=>el.open)) && !(await page.locator('#tag-auto-card .auto-rules').isVisible()) && (await page.locator('#tag-auto-card .rule-fold>summary').innerText()).includes('2 luật'),'tab Tự động: bảng luật gập lại mặc định, tiêu đề ghi số luật');
+  ok(await page.locator('#tag-auto-card').getByRole('button',{name:'Xem trước'}).isVisible() && await page.locator('#tag-folder-card').getByRole('button',{name:'Xem trước'}).isVisible(),'tab Tự động: Xem trước / Áp dụng của cả hai bảng luật thấy ngay, không cần mở bảng luật');
+  await page.locator('#tag-auto-card .rule-fold>summary').click();await page.locator('#tag-folder-card .rule-fold>summary').click();
   const tagCard=page.locator('#tag-auto-card');
   const autoRows=()=>page.locator('#tag-auto-card .auto-rules tbody tr');
   const autoInputs=()=>page.locator('#tag-auto-card .auto-rules tbody tr').evaluateAll(rows=>rows.map(r=>[...r.querySelectorAll('input')].map(i=>i.value)));
@@ -757,6 +763,46 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(JSON.stringify(await autoInputs())===JSON.stringify([['Nội thất','bàn, ghế']]),'bộ luật gắn tag không bị ảnh hưởng bởi bộ luật thư mục');
   await receive('tags',{groups:F.groups.slice(0,5),tags:[],selection:2,rules:AUTO_RULES,catalog:CATALOG,folder_rules:FOLDER_RULES});
   ok(JSON.stringify(await folderInputs())===JSON.stringify([['Q. EQUIPMENT','Q.']]),'vẽ lại tab: thẻ thư mục giữ bộ luật đang sửa');
+
+  // ---- Bố cục tab Soạn tag: thanh gán cố định, ba tab nhỏ, bộ tag gom nhóm gập ----
+  const SET_TAGS=Array.from({length:30},(_,i)=>({name:'Tag '+i,group:F.groups[i%3],in_model:i%2===0,visible:true}));
+  await receive('tags',{groups:F.groups,tags:SET_TAGS,selection:2,rules:AUTO_RULES,catalog:CATALOG,folder_rules:FOLDER_RULES});
+  await page.click('#tag-tab-set');
+  ok(await page.locator('#tag-pane-set').isVisible() && !(await page.locator('#tag-pane-auto').isVisible()) && !(await page.locator('#tag-pane-lib').isVisible()),'ba tab nhỏ: chỉ tab Bộ tag đang hiện');
+  for(const tab of ['set','auto','lib']){await page.click('#tag-tab-'+tab);ok(await page.locator('#tag-assign').isVisible() && await page.locator('#tag-pick').isVisible(),'thanh Gán tag luôn thấy ở tab '+tab);}
+  await page.click('#tag-tab-set');
+  const groupsOpen=()=>page.locator('.tag-group[open]').count();
+  const visibleGroups=()=>page.locator('.tag-group:not([hidden])').count();
+  ok(await visibleGroups()===3 && await groupsOpen()===0 && (await page.locator('.tag-group:not([hidden]) summary').allInnerTexts()).map(t=>t.replace(/\s+/g,' ').trim()).join('|')===`${F.groups[0]} 10 tag|${F.groups[1]} 10 tag|${F.groups[2]} 10 tag`,'bộ tag nhiều dòng: gom theo nhóm, chỉ hiện nhóm có tag, mặc định gập kèm số tag');
+  ok((await page.locator('.tag-count').innerText())==='30 / 30 tag','bộ đếm tag ở thanh trên');
+  await page.locator(`.tag-group[data-group="${F.groups[1]}"] summary`).click();
+  ok(await groupsOpen()===1 && await page.locator(`.tag-group[data-group="${F.groups[1]}"] tbody tr:visible`).count()===10,'bấm tiêu đề nhóm: mở nhóm, thấy 10 dòng');
+  const oneRow=await page.locator(`.tag-group[data-group="${F.groups[1]}"] tbody tr`).first().evaluate(el=>Math.round(el.getBoundingClientRect().height));
+  ok(oneRow<=34,'dòng tag thấp (một hàng, không quá 34 px): '+oneRow);
+  await page.getByLabel('Tìm tag').fill('tag 2');
+  ok(await visibleGroups()===3 && await groupsOpen()===3 && (await page.locator('.tag-group tbody tr:visible').count())===11 && (await page.locator('.tag-count').innerText())==='11 / 30 tag','ô tìm: lọc dòng theo tên (không phân biệt hoa thường), tự mở nhóm có kết quả');
+  await page.getByLabel('Tìm tag').fill('khong co tag nay');
+  ok(await visibleGroups()===0 && (await page.locator('.tag-count').innerText())==='0 / 30 tag','tìm không ra: ẩn hết nhóm');
+  await page.getByLabel('Tìm tag').fill('');
+  await page.getByLabel('Lọc theo nhóm').selectOption(F.groups[2]);
+  ok(await visibleGroups()===1 && (await page.locator('.tag-count').innerText())==='10 / 30 tag','lọc theo nhóm: chỉ hiện nhóm đã chọn');
+  await clear();await page.getByRole('button',{name:'Thêm tag'}).click();
+  ok(await page.locator(`.tag-group[data-group="${F.groups[2]}"] tbody tr`).count()===11 && await page.locator(`.tag-group[data-group="${F.groups[2]}"]`).evaluate(el=>el.open) && await page.evaluate(()=>document.activeElement.getAttribute('aria-label'))==='Tên tag','Thêm tag: dòng mới vào nhóm đang lọc, mở nhóm và đặt con trỏ vào ô tên');
+  await page.keyboard.type('Moi 1');
+  await page.getByLabel('Lọc theo nhóm').selectOption('');
+  await page.locator(`.tag-group[data-group="${F.groups[2]}"] tbody tr`).first().getByRole('button',{name:'Xóa'}).click();
+  await page.locator(`.tag-group[data-group="${F.groups[0]}"] summary`).click();
+  await page.locator(`.tag-group[data-group="${F.groups[0]}"] tbody tr`).first().getByLabel('Nhóm').selectOption(F.groups[4]);
+  ok(await visibleGroups()===4 && (await page.locator(`.tag-group[data-group="${F.groups[4]}"] summary`).innerText()).includes('1 tag'),'đổi nhóm của một tag: dòng chuyển sang nhóm mới, nhóm mới hiện ra');
+  await page.getByRole('button',{name:'Lưu bộ tag'}).click();
+  const savedTags=await json('save_tags');
+  ok(savedTags.length===30 && savedTags[0].name==='Tag 0' && savedTags[0].group===F.groups[4] && savedTags[1].name==='Tag 1' && savedTags[29].name==='Moi 1' && savedTags.every(t=>t.name!==''),'Lưu bộ tag: giữ thứ tự gốc, theo nhóm đã sửa, tag đã xóa không còn, tag mới có mặt');
+  await receive('tags',{groups:F.groups,tags:SET_TAGS,selection:2,rules:AUTO_RULES,catalog:CATALOG,folder_rules:FOLDER_RULES});
+  ok(await page.locator('#tag-pane-set').isVisible() && await groupsOpen()>=2,'vẽ lại tab (sau khi lưu hoặc nhập): giữ tab nhỏ đang mở và các nhóm đã mở');
+  await receive('tags',{groups:F.groups,tags:SET_TAGS.slice(0,5),selection:0,rules:AUTO_RULES,catalog:CATALOG,folder_rules:FOLDER_RULES});
+  ok(await groupsOpen()===3 && await page.locator('#tag-assign').isDisabled(),'bộ tag nhỏ (12 tag trở xuống): mở sẵn mọi nhóm; chưa chọn đối tượng thì Gán tag bị khóa');
+  await receive('tags',{groups:F.groups,tags:[],selection:2,rules:AUTO_RULES,catalog:CATALOG,folder_rules:FOLDER_RULES});
+  ok((await page.locator('#tag-pane-set').innerText()).includes('Chưa có tag nào'),'bộ tag trống: có lời nhắc thay vì bảng trống');
 
   // ---- Đổi ngôn ngữ thì tải lại cửa sổ ----
   await receive('config',config('table'));

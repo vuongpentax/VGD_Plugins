@@ -1,14 +1,15 @@
 'use strict';
-// Thư viện tag mẫu (tick cụm rồi Nhập), gắn tag tự động theo từ khóa tên và xếp tag vào thư mục tag (tab Soạn tag). Hai thẻ luật dùng chung một bộ vẽ:
+// Tab Soạn tag: thanh gán tag cố định ở trên, ba tab nhỏ (Bộ tag / Tự động / Thư viện mẫu). Bộ tag gom theo nhóm gập được, có ô tìm và lọc nhóm.
+// Thư viện tag mẫu (tick cụm rồi Nhập), gắn tag tự động theo từ khóa tên và xếp tag vào thư mục tag. Hai thẻ luật dùng chung một bộ vẽ:
 // bảng luật "đích ← từ khóa", tùy chọn, xem trước, áp dụng, lưu mặc định, đặt lại, nhập / xuất file. Dùng các hàm chung của app.js ($, node, button, card, call...).
 // Bộ luật đang sửa nằm ở đây và được gửi kèm mỗi lệnh; phía Ruby kiểm tra lại toàn bộ (TagRules / FolderRules .sanitize), nên giao diện không phải tin được.
 
 // ---- Thư viện tag mẫu (18 cụm của Auto Tag): tick cụm rồi Nhập = thêm vào bộ tag của BIM và tạo sẵn trong model ----
 const catalogState={selected:new Set()};
-function catalogCard(data){
+function catalogCard(data,parent){
   const clusters=data.catalog||[];
   if(!clusters.length)return;
-  const c=card('Thư viện tag mẫu (Auto Tag)');c.id='tag-catalog-card';
+  const c=card('Thư viện tag mẫu (Auto Tag)',parent);c.id='tag-catalog-card';
   c.append(node('p','Tick các cụm cần dùng rồi bấm Nhập: tag của cụm được thêm vào bộ tag của BIM và tạo sẵn trong model đang mở (chỉ tên tag, không đổi đối tượng nào). Bấm vào tên cụm để xem các tag trong cụm.','hint'));
   const list=node('div',undefined,'catalog-list');
   const english=typeof VGD_I18N!=='undefined'&&VGD_I18N.language==='en'; // nhãn tiếng Việt chỉ hiện khi giao diện tiếng Việt
@@ -58,7 +59,7 @@ const RULE_KINDS={
     stats:[['Tổng tag đã xét','total'],['Sẽ xếp','assign'],['Đã đúng thư mục sẵn','same'],['Giữ nguyên (đã ở thư mục khác)','kept'],['Không khớp luật nào','unmatched']]
   }
 };
-const ruleState={tag:{rules:null,plan:null,planKey:'',pendingKey:''},folder:{rules:null,plan:null,planKey:'',pendingKey:''}};
+const ruleState={tag:{rules:null,plan:null,planKey:'',pendingKey:'',open:false},folder:{rules:null,plan:null,planKey:'',pendingKey:'',open:false}};
 for(const kind of Object.keys(RULE_KINDS))Object.assign(ruleState[kind],RULE_KINDS[kind].options);
 
 function rulePayload(kind){
@@ -70,16 +71,20 @@ function rulePayload(kind){
 const ruleKey=kind=>JSON.stringify(rulePayload(kind));
 const copyRules=(kind,list)=>(list||[]).map(r=>({[RULE_KINDS[kind].target]:r[RULE_KINDS[kind].target],keywords:r.keywords}));
 
-function ruleCard(kind,data){
+function ruleCard(kind,data,parent){
   const spec=RULE_KINDS[kind],state=ruleState[kind];
   if(!state.rules)state.rules=copyRules(kind,kind==='tag'?data.rules:data.folder_rules);
-  const c=card(spec.title);c.id=`${spec.id}-card`;
+  const c=card(spec.title,parent);c.id=`${spec.id}-card`;
   renderRuleCard(kind,c);
 }
 
 function renderRuleCard(kind,c){
   const spec=RULE_KINDS[kind],state=ruleState[kind],id=spec.id;
-  c.replaceChildren(node('h2',spec.title),node('p',spec.hint,'hint'));
+  c.replaceChildren(node('h2',spec.title));
+  // Bảng luật gập lại (mặc định): dùng hằng ngày chỉ cần tùy chọn + Xem trước + Áp dụng; bấm "Bảng luật" mới mở ra để sửa.
+  const fold=node('details',undefined,'rule-fold');fold.open=state.open;fold.ontoggle=()=>{state.open=fold.open;};
+  const summary=node('summary');summary.append(node('b','Bảng luật'),node('span',`${state.rules.length} luật`,'muted'));
+  fold.append(summary,node('p',spec.hint,'hint'));c.append(fold);
   const wrap=node('div',undefined,'table-wrap auto-rules'),t=node('table'),head=node('thead'),htr=node('tr');
   ['#',spec.targetHeader,spec.wordsHeader,'Thao tác'].forEach(h=>htr.append(node('th',h)));head.append(htr);t.append(head);
   const tbody=node('tbody');
@@ -95,14 +100,14 @@ function renderRuleCard(kind,c){
     ops.append(move('↑','Lên trên',-1),move('↓','Xuống dưới',1),button('Xóa',()=>{state.rules.splice(index,1);renderRuleCard(kind,c);}));
     cell(ops);tbody.append(tr);
   });
-  t.append(tbody);wrap.append(t);c.append(wrap);
+  t.append(tbody);wrap.append(t);fold.append(wrap);
   const rules=node('div',undefined,'actions');
   rules.append(button('Thêm luật',()=>{state.rules.push({[spec.target]:'',keywords:''});renderRuleCard(kind,c);const inputs=c.querySelectorAll('.auto-rules tbody tr:last-child input');if(inputs[0])inputs[0].focus();}),
     button('Lưu làm mặc định',()=>call(spec.calls.save,JSON.stringify({rules:rulePayload(kind).rules}))),
     button('Đặt lại',()=>call(spec.calls.reset)),
     button('Nhập file luật',()=>call(spec.calls.import)),
     button('Xuất file luật',()=>call(spec.calls.export,JSON.stringify({rules:rulePayload(kind).rules}))));
-  c.append(rules);
+  fold.append(rules);
   // Tùy chọn của lần chạy
   const opts=node('div',undefined,'auto-opts');
   spec.controls.forEach(control=>{
@@ -158,6 +163,112 @@ function receiveRules(kind,data){
   const c=$(`${RULE_KINDS[kind].id}-card`);if(c)renderRuleCard(kind,c);
 }
 
-const autoTagCard=data=>ruleCard('tag',data),folderRuleCard=data=>ruleCard('folder',data);
+const autoTagCard=(data,parent)=>ruleCard('tag',data,parent),folderRuleCard=(data,parent)=>ruleCard('folder',data,parent);
 const receiveTagAutoPlan=data=>receiveRulePlan('tag',data),receiveTagRules=data=>receiveRules('tag',data);
 const receiveFolderAutoPlan=data=>receiveRulePlan('folder',data),receiveFolderRules=data=>receiveRules('folder',data);
+
+// ---- Bố cục tab Soạn tag ----
+const tagTab={active:'set'};               // tab nhỏ đang mở, giữ khi tab vẽ lại (sau khi lưu, nhập, gán...)
+const tagSetState={open:new Set(),query:'',group:''}; // nhóm đang mở, ô tìm và nhóm đang lọc, giữ khi vẽ lại
+const TAG_TABS=[['set','Bộ tag'],['auto','Tự động'],['lib','Thư viện mẫu']];
+const foldText=text=>String(text||'').normalize('NFD').replace(/\p{Mn}/gu,'').replace(/[đĐ]/g,'d').toLowerCase();
+
+function selectTagTab(name){
+  tagTab.active=name;
+  TAG_TABS.forEach(([key])=>{
+    const tab=$(`tag-tab-${key}`),pane=$(`tag-pane-${key}`);
+    if(!tab||!pane)return;
+    const on=key===name;tab.setAttribute('aria-selected',String(on));tab.classList.toggle('active',on);pane.hidden=!on;
+  });
+}
+
+function tagEditor(data){
+  $('content').replaceChildren();
+  const head=node('div',undefined,'tag-head');
+  // Gán tag cho đối tượng đang chọn: luôn thấy ở đầu trang, không phải cuộn tới.
+  const assign=node('div',undefined,'tag-assign');
+  const info=node('span',`Đang chọn ${data.selection} đối tượng hoặc mặt trong SketchUp.`,'tag-selection');info.id='tag-selection-text';
+  const pick=node('select');pick.id='tag-pick';pick.setAttribute('aria-label','Chọn tag');
+  (data.tags||[]).forEach(tag=>pick.append(new Option(tag.name,tag.name)));
+  const go=button('Gán tag',()=>{if(!pick.value)throw Error('Hãy lưu bộ tag trước, rồi chọn tag để gán.');call('assign_tag',JSON.stringify({name:pick.value}));},'primary');
+  go.id='tag-assign';go.disabled=!data.selection||!(data.tags||[]).length;
+  go.title='Nếu tag đang tắt hiển thị, các đối tượng gán vào sẽ bị ẩn.';
+  assign.append(info,pick,go);
+  const tabs=node('div',undefined,'tag-tabs');tabs.setAttribute('role','tablist');
+  TAG_TABS.forEach(([key,text])=>{const b=node('button',text);b.type='button';b.id=`tag-tab-${key}`;b.setAttribute('role','tab');b.onclick=()=>selectTagTab(key);tabs.append(b);});
+  head.append(assign,tabs);
+  const panes={};
+  TAG_TABS.forEach(([key])=>{const pane=node('div',undefined,'tag-pane');pane.id=`tag-pane-${key}`;pane.setAttribute('role','tabpanel');panes[key]=pane;});
+  $('content').append(head,panes.set,panes.auto,panes.lib);
+  tagSetPane(data,panes.set);
+  autoTagCard(data,panes.auto);
+  folderRuleCard(data,panes.auto);
+  catalogCard(data,panes.lib);
+  if(!panes.lib.firstChild)panes.lib.append(node('p','Chưa có thư viện tag mẫu.','muted'));
+  selectTagTab(tagTab.active);
+}
+
+// Bộ tag: gom theo nhóm (gập được), ô tìm, lọc theo nhóm, dòng thấp. Lưu / nhập / xuất ở thanh trên cùng của tab.
+function tagSetPane(data,pane){
+  const groups=data.groups||[],rows=[]; // rows: thứ tự gốc của bộ tag (thứ tự lưu); mỗi phần tử {name, group, tr, removed}
+  const bar=node('div',undefined,'tag-toolbar');
+  const search=node('input');search.type='search';search.placeholder='Tìm tag...';search.value=tagSetState.query;search.setAttribute('aria-label','Tìm tag');
+  const filter=node('select');filter.setAttribute('aria-label','Lọc theo nhóm');filter.append(new Option('Tất cả nhóm',''));
+  groups.forEach(g=>filter.append(new Option(g,g)));filter.value=groups.includes(tagSetState.group)?tagSetState.group:'';
+  const counter=node('span',undefined,'muted tag-count');
+  bar.append(search,filter,counter);
+  const actions=node('div',undefined,'tag-toolbar');
+  actions.append(button('Thêm tag',()=>{
+    const group=filter.value||groups[0];addRow({name:'',group});tagSetState.open.add(group);paint();
+    const last=rows[rows.length-1];last.name.focus();
+  }),button('Lưu bộ tag',()=>{
+    const list=rows.filter(r=>!r.removed).map(r=>({name:r.name.value.trim(),group:r.group.value})).filter(r=>r.name!=='');
+    call('save_tags',JSON.stringify(list));
+  },'primary'),
+  button('Nhập Excel (CSV)',()=>call('import_tags','csv')),button('Nhập JSON',()=>call('import_tags','json')),button('Xuất Excel (CSV)',()=>call('export_tags','csv')),button('Xuất JSON',()=>call('export_tags','json')));
+  actions.querySelectorAll('button').forEach(b=>b.classList.add('sm'));
+  const list=node('div',undefined,'tag-groups');
+  const blocks={};
+  groups.forEach(group=>{
+    const block=node('details',undefined,'tag-group');block.dataset.group=group;
+    const summary=node('summary');summary.append(node('b',group),node('span',undefined,'muted'));
+    const table=node('table'),tbody=node('tbody');table.append(tbody);block.append(summary,table);
+    summary.onclick=()=>{if(block.open)tagSetState.open.delete(group);else tagSetState.open.add(group);}; // chỉ ghi nhớ khi người dùng bấm, không ghi khi tự mở lúc tìm / bộ tag nhỏ
+    blocks[group]={block,tbody,summary:summary.lastChild};list.append(block);
+  });
+  const empty=node('p','Chưa có tag nào. Bấm Thêm tag, nhập file, hoặc nhập cụm tag ở tab Thư viện mẫu.','muted');
+  function addRow(tag){
+    const group=groups.includes(tag.group)?tag.group:groups[0];
+    const tr=node('tr'),name=node('input');name.type='text';name.value=tag.name||'';name.setAttribute('aria-label','Tên tag');
+    const select=node('select');groups.forEach(g=>select.append(new Option(g,g)));select.value=group;select.setAttribute('aria-label','Nhóm');
+    const status=tag.in_model===undefined?'Mới':tag.in_model?(tag.visible?'Có trong model':'Có trong model · đang ẩn'):'Chưa có trong model';
+    const row={name,group:select,tr,removed:false};
+    name.oninput=()=>paint();
+    select.onchange=()=>{blocks[select.value].tbody.append(tr);tagSetState.open.add(select.value);paint();};
+    cell(tr,name);cell(tr,select);cell(tr,node('span',status,'muted tag-status'));
+    cell(tr,button('Xóa',()=>{row.removed=true;tr.remove();paint();},'sm'));
+    blocks[group].tbody.append(tr);rows.push(row);
+  }
+  (data.tags||[]).forEach(addRow);
+  // Hiện / ẩn theo ô tìm và nhóm đang lọc, cập nhật số tag của từng nhóm. Đang tìm thì tự mở nhóm có kết quả; bộ tag nhỏ thì mở sẵn hết.
+  function paint(){
+    tagSetState.query=search.value;tagSetState.group=filter.value;
+    const q=foldText(search.value.trim()),live=rows.filter(r=>!r.removed);
+    let shown=0;
+    groups.forEach(group=>{
+      const entry=blocks[group],mine=live.filter(r=>r.group.value===group);
+      let visible=0;
+      mine.forEach(r=>{const match=(!q||foldText(r.name.value).includes(q))&&(!filter.value||filter.value===group);r.tr.hidden=!match;if(match)visible+=1;});
+      shown+=visible;
+      entry.block.hidden=!visible;
+      entry.summary.textContent=visible===mine.length?`${mine.length} tag`:`${visible} / ${mine.length} tag`;
+      entry.block.open=visible>0&&(!!q||live.length<=12||tagSetState.open.has(group));
+    });
+    empty.hidden=live.length>0;
+    counter.textContent=live.length?`${shown} / ${live.length} tag`:'';
+  }
+  search.oninput=paint;filter.onchange=paint;
+  const scroll=node('div',undefined,'tag-scroll');scroll.append(list,empty);
+  pane.append(bar,actions,scroll,node('p','Bộ tag lưu trên máy này, dùng lại cho mọi model; tên không phân biệt chữ hoa, chữ thường. Excel dùng file CSV; nếu Excel báo lỗi, hãy lưu lại dưới dạng CSV UTF-8.','muted tag-note'));
+  paint();
+}
