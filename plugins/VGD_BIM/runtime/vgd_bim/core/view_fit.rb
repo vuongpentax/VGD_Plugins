@@ -9,18 +9,18 @@ module VGD
 
       # direction / up: hướng nhìn và hướng lên của camera hiện tại. aspect = rộng / cao của khung nhìn.
       # Trả về {eye:, target:, up:, height:}; height chỉ có khi camera song song (Camera#height).
-      def self.camera(min, max, direction:, up:, perspective:, fov:, fov_is_height:, aspect:)
+      def self.camera(min, max, direction:, up:, perspective:, fov:, fov_is_height:, aspect:, margin: MARGIN)
         center = (0..2).map { |axis| (min[axis] + max[axis]) / 2.0 }
         radius = [Math.sqrt((0..2).sum { |axis| ((max[axis] - min[axis]) / 2.0)**2 }), MIN_RADIUS].max
         dir = normalize(direction)
         ratio = aspect.to_f.positive? ? aspect.to_f : 1.0
         if perspective
           half = narrow_half_angle(fov.to_f * Math::PI / 180.0, fov_is_height, ratio)
-          distance = radius / Math.sin(half) * MARGIN
+          distance = radius / Math.sin(half) * margin
           height = nil
         else
           distance = radius * 3.0 # chỉ để không cắt mất hình; kích thước hiển thị do height quyết định
-          height = 2.0 * radius * MARGIN * [1.0, 1.0 / ratio].max
+          height = 2.0 * radius * margin * [1.0, 1.0 / ratio].max
         end
         {eye: (0..2).map { |axis| center[axis] - dir[axis] * distance }, target: center, up: up, height: height}
       end

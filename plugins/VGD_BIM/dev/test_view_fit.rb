@@ -17,6 +17,9 @@ ok('mắt nằm lùi về sau tâm theo hướng nhìn hiện tại, giữ nguy�
 half = Math.atan(Math.tan(35.0 * Math::PI / 360.0) / 2.0) # fov 35° là chiều ngang; cửa sổ rộng gấp đôi cao nên góc dọc nhỏ hơn
 distance = 2020.0 - r[:eye][1]
 ok('phối cảnh: khoảng cách đủ để cả hình cầu bao hộp lọt trong góc nhìn hẹp hơn (có chừa lề)', distance * Math.sin(half) >= radius && distance * Math.sin(half) <= radius * 1.2)
+wider = V.camera(min, max, direction: dir, up: [0.0, 0.0, 1.0], perspective: true, fov: 35.0, fov_is_height: false, aspect: 2.0, margin: 1.5)
+ok('lề tùy chọn (margin 1,5 thay vì 1,1): mắt lùi xa theo đúng tỉ lệ 1,5 / 1,1', near([(2020.0 - wider[:eye][1]) / distance], [1.5 / 1.1], 1e-9))
+ok('lề tùy chọn với camera song song: chiều cao khung nhìn tăng theo lề', (V.camera(min, max, direction: dir, up: [0.0, 0.0, 1.0], perspective: false, fov: 35.0, fov_is_height: false, aspect: 2.0, margin: 2.2)[:height] / V.camera(min, max, direction: dir, up: [0.0, 0.0, 1.0], perspective: false, fov: 35.0, fov_is_height: false, aspect: 2.0)[:height] - 2.0).abs < 1e-9)
 r2 = V.camera(min, max, direction: dir, up: [0.0, 0.0, 1.0], perspective: true, fov: 35.0, fov_is_height: true, aspect: 2.0)
 ok('fov tính theo chiều cao: dùng góc dọc 35° làm góc hẹp hơn (xa hơn trường hợp 35° chiều ngang)', (2020.0 - r2[:eye][1]) < distance + 1e-9 && (2020.0 - r2[:eye][1]) > 0)
 narrow = V.camera(min, max, direction: dir, up: [0.0, 0.0, 1.0], perspective: true, fov: 35.0, fov_is_height: true, aspect: 0.5)

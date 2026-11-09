@@ -33,6 +33,9 @@ module Sketchup
     attr_writer :perspective
     def initialize(eye, target, up); @eye = eye; @target = target; @up = up; @perspective = true; @fov = 35.0; @height = 100.0; end
     def perspective?; @perspective; end
+    def fov_is_height?; false; end
+    def direction; d = target.to_a.zip(eye.to_a).map { |t, e| t - e }; l = Math.sqrt(d.sum { |v| v * v }); Geom::Vector3d.new(*d.map { |v| v / l }); end
+    def set(new_eye, new_target, new_up); @eye = new_eye; @target = new_target; @up = new_up; end
   end
   class Entity
     attr_accessor :hidden, :pid, :definition
@@ -40,7 +43,8 @@ module Sketchup
     def persistent_id; @pid; end
     def hidden?; @hidden; end
     def valid?; true; end
-    def bounds; Struct.new(:center, :diagonal).new(Geom::Point3d.new(10, 20, 30), 40.0); end
+    # Món cao 200 (hộp bao từ (-40, 0, -70) tới (60, 40, 130), tâm (10, 20, 30)); diagonal chỉ dùng để đặt camera thô lúc đầu
+    def bounds; Struct.new(:center, :diagonal, :min, :max) { def empty?; false; end }.new(Geom::Point3d.new(10, 20, 30), 40.0, Geom::Point3d.new(-40, 0, -70), Geom::Point3d.new(60, 40, 130)); end
   end
 end
 class FakeSelection < Array
@@ -55,8 +59,8 @@ class FakeOptions
   def each_key(&block); raise LocalJumpError, 'no block given' unless block; @values.keys.each(&block); end
 end
 class FakeView
-  attr_accessor :camera, :zoomed, :writes, :fail_next, :fail_on_call, :states, :reject_transparent, :raise_on_transparent, :attempts, :reject_all_options
-  def initialize(model); @model = model; @camera = Sketchup::Camera.new(Geom::Point3d.new(0, 0, 100), Geom::Point3d.new(0, 0, 0), Geom::Vector3d.new(0, 0, 1)); @writes = []; @zoomed = []; @states = []; end
+  attr_accessor :vpwidth, :vpheight, :camera, :zoomed, :writes, :fail_next, :fail_on_call, :states, :reject_transparent, :raise_on_transparent, :attempts, :reject_all_options
+  def initialize(model); @model = model; @camera = Sketchup::Camera.new(Geom::Point3d.new(0, 0, 100), Geom::Point3d.new(0, 0, 0), Geom::Vector3d.new(0, 0, 1)); @writes = []; @zoomed = []; @states = []; @vpwidth = 1000; @vpheight = 500; end
   def refresh; end
   def zoom(entity); @zoomed << entity; end
   def write_image(options)
@@ -79,7 +83,10 @@ class FakeModel
   def abort_operation; @snapshot.each { |e, hidden| e.hidden = hidden }; @ops << :abort; end
   def commit_operation; @ops << :commit; end
 end
-module VGD; module BIM; module Geometry; def self.definition(entity); entity.definition; end; end; end; end
+module VGD; module BIM; module Geometry
+  def self.definition(entity); entity.definition; end
+  def self.world_bounds(records); records.first[:entity].bounds; end # giả lập: model ở gốc nên hộp bao thế giới = hộp bao của đối tượng
+end; end; end
 module VGD; module BIM; module Table
   def self.isolate(model, path)
     raise ArgumentError, 'Đối tượng nằm trong thành phần dùng chung nhiều nơi nên không cô lập được.' if path.last.pid == 666
@@ -88,7 +95,7 @@ module VGD; module BIM; module Table
     hidden
   end
 end; end; end
-%w[storage settings images preset front front_probe].each { |f| require File.expand_path("../runtime/vgd_bim/core/#{f}.rb", __dir__) }
+%w[storage settings images preset front front_probe view_fit].each { |f| require File.expand_path("../runtime/vgd_bim/core/#{f}.rb", __dir__) }
 require File.expand_path('../runtime/vgd_bim/ui/capture.rb', __dir__)
 C = VGD::BIM::UI::Capture
 I = VGD::BIM::Images
@@ -116,7 +123,19 @@ check 'trả về mã đối tượng và dấu thời gian của ảnh mới', 
 check 'chỉ ghi 1 ảnh (ảnh đầy đủ, không còn ảnh nhỏ nên chụp nhanh hơn)', view.writes.size == 1
 check 'ảnh đầy đủ đúng cỡ trong preset, nền trong suốt, khử răng cưa', view.writes[0].values_at(:width, :height, :transparent, :antialias) == [512, 512, true, true]
 check 'Iso: khi chụp camera nhìn vào tâm món đồ từ phía trước-phải-trên (1, -1, 0.8)', view.states.all? { |s| s[:target] == [10.0, 20.0, 30.0] && near?(s[:eye].zip([10.0, 20.0, 30.0]).map { |e, c| e - c }.then { |d| l = Math.sqrt(d.sum { |v| v * v }); d.map { |v| v / l } }, Geom::Vector3d.new(1, -1, 0.8).normalize.to_a) }
-check 'Iso: camera đặt cách tâm đủ xa so với món đồ (không nằm trong món đồ), rồi zoom cho vừa', view.states.all? { |s| Math.sqrt(s[:eye].zip([10, 20, 30]).sum { |e, c| (e - c)**2 }) > 40.0 } && view.zoomed == [items[0]]
+check 'Iso: camera đặt cách tâm đủ xa so với món đồ (không nằm trong món đồ)', view.states.all? { |s| Math.sqrt(s[:eye].zip([10, 20, 30]).sum { |e, c| (e - c)**2 }) > 40.0 }
+radius = Math.sqrt(50.0**2 + 20.0**2 + 100.0**2)
+half_narrow = 35.0 * Math::PI / 360.0 # ảnh vuông (512 x 512): góc hẹp hơn là góc ngang 35 độ
+need = radius / Math.sin(half_narrow)
+dist = ->(s) { Math.sqrt(s[:eye].zip(s[:target]).sum { |e, t| (e - t)**2 }) }
+wide_half = Math.atan(Math.tan(half_narrow) / 2.0) # khung nhìn 1000 x 500 (tỉ lệ 2:1) với fov ngang 35 độ: góc dọc hẹp hơn nên phải lùi xa hơn
+need_wide = radius / Math.sin(wide_half)
+check 'Iso: lùi xa thêm một bước (extend) theo hộp bao thật của món cao 200 và tỉ lệ khung nhìn 2:1 (dọc hẹp hơn): cả hình cầu bao món lọt trong góc nhìn có chừa lề 20%, nên không bị cắt', view.states.all? { |s| dist.(s) >= need_wide * 1.15 && dist.(s) <= need_wide * 1.25 } && view.zoomed.empty?
+sq_model, sq_items = world
+sq_model.active_view.vpwidth = 500
+sq_model.active_view.vpheight = 500
+C.shoot(sq_model, {entity: sq_items[0], path: [sq_items[0]]}, D.merge('image_view' => 'isometric'))
+check 'ảnh vuông và khung nhìn vuông: không cần lùi xa như khi khung nhìn dẹt (đúng góc ngang 35 độ)', sq_model.active_view.states.all? { |s| dist.(s) >= need * 1.15 && dist.(s) <= need * 1.25 }
 check 'Iso: các món khác bị ẩn, món cần chụp hiện, không còn đối tượng chọn (khỏi lẫn khung chọn vào ảnh)', view.states.all? { |s| s[:hidden].sort == [12, 13] && s[:selection].empty? }
 check 'Iso: model chỉ mở một thao tác và hủy (abort) nên không để lại bước undo, không commit', model.ops == [:start, :abort]
 check 'sau khi chụp: không còn gì bị ẩn, camera như cũ, lựa chọn như cũ', items.none?(&:hidden) && view.camera.eye.to_a == original_eye && model.selection.map(&:pid) == [11, 12]
@@ -127,6 +146,10 @@ _, _, view, _ = shoot('image_view' => 'isometric', 'image_width' => 640, 'image_
 check 'cỡ ảnh theo preset: 640 x 480', view.writes[0].values_at(:width, :height) == [640, 480]
 _, _, view, _ = shoot('image_view' => 'isometric', 'image_width' => 300, 'image_height' => 900)
 check 'ảnh dọc theo preset: 300 x 900', view.writes[0].values_at(:width, :height) == [300, 900]
+_, _, view_wide, _ = shoot('image_view' => 'isometric', 'image_width' => 800, 'image_height' => 400)
+_, _, view_tall, _ = shoot('image_view' => 'isometric', 'image_width' => 400, 'image_height' => 800)
+check 'ảnh ngang 800 x 400: lùi theo góc dọc hẹp hơn, xa hơn ảnh vuông (món cao không bị cắt trên dưới)', view_wide.states.all? { |st| dist.(st) >= need_wide * 1.15 && dist.(st) <= need_wide * 1.25 } && dist.(view_wide.states[0]) > need * 1.4
+check 'ảnh dọc 400 x 800 mà khung nhìn đang ngang 1000 x 500: lấy khoảng cách an toàn nhất của hai tỉ lệ (ảnh và khung nhìn), nên không ngắn hơn ảnh ngang', (dist.(view_tall.states[0]) - dist.(view_wide.states[0])).abs < 1e-6
 
 # ---- Góc nhìn chính diện ----
 _, _, view, _ = shoot('image_view' => 'front')
