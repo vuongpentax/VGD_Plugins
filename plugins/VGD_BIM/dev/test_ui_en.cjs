@@ -57,6 +57,9 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await page.getByLabel('A. ARCHITECTURAL',{exact:true}).check();await scan('Soạn tag (đã tick cụm)');await page.getByLabel('A. ARCHITECTURAL',{exact:true}).uncheck();
   await receive('tag_auto_plan',{total:5,assign:2,same:1,kept:1,unmatched:1,locked:1,rules:[{tag:'Wall',count:1,samples:['Wall 1']},{tag:'Door',count:4,samples:['Door_900','Door_2','Door_3']}]});await scan('Soạn tag (xem trước gắn tự động)');
   await receive('tag_auto_plan',{total:5,assign:0,same:5,kept:0,unmatched:0,locked:0,rules:[]});await scan('Soạn tag (không cần gắn)');
+  await receive('folder_rules',{rules:[{folder:'A. ARCHITECTURAL',keywords:'A.'},{folder:'# BASIC',keywords:'#, edge'}]});await scan('Soạn tag (thư mục)');
+  await receive('folder_auto_plan',{total:7,assign:3,same:1,kept:2,unmatched:1,rules:[{tag:'A. ARCHITECTURAL',count:3,samples:['A. WALL','A. DOOR']},{tag:'# BASIC',count:1,samples:['Edge']}]});await scan('Soạn tag (xem trước thư mục)');
+  await receive('folder_auto_plan',{total:7,assign:0,same:7,kept:0,unmatched:0,rules:[]});await scan('Soạn tag (không cần xếp thư mục)');
   const table=cfg=>({columns:F.columns,presets:F.presets,groups:F.groups,statuses:F.statuses,options:{zoom:true,isolate:false,deep:false,projected:false,isolating:false},rows,selected:[],hint:null,view:{},choices:{tags:['Tag0','Tag1'],materials:['Oak']},...cfg});
   await receive('config',config(lang,'table'));
   await receive('table',table({selected:[0]}));await scan('Bảng');
@@ -117,6 +120,10 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
     'Đã gắn tag tự động cho 5 đối tượng (2 tag). Đã đúng tag sẵn: 1. Giữ nguyên 2 đối tượng đã có tag khác. Bỏ qua 3 đối tượng bị khóa. Tag đang tắt hiển thị nên đối tượng gắn vào sẽ bị ẩn: Door.',
     'Chưa có luật nào. Hãy thêm ít nhất một luật.','Hãy chọn group hoặc component trong SketchUp trước, hoặc bật "Cả model".','Quá nhiều đối tượng (tối đa 20000). Hãy chọn ít hơn.','Không có đối tượng nào cần gắn tag. Bấm Xem trước để biết lý do.',
     'Tùy chọn "Dựa theo" không hợp lệ.','Tùy chọn "Phạm vi" không hợp lệ.','Danh sách luật phải là một danh sách.','Tối đa 100 luật.','Dòng 2: Mỗi luật phải là một mục hợp lệ.','Dòng 1: Cần ít nhất một từ khóa.','Dòng 3: Từ khóa phải có ít nhất 2 ký tự.','Dòng 1: Mỗi luật tối đa 30 từ khóa, mỗi từ khóa không quá 40 ký tự.','File luật không đúng định dạng.','File không có luật nào.']);
+  await messages(['Đã lưu bộ luật xếp thư mục làm mặc định.','Đã đặt lại bộ luật xếp thư mục về mặc định.','Đã xuất 18 luật: C:\\a.json','Đã nhập 18 luật từ file. Bộ luật chưa lưu làm mặc định.',
+    'Đã xếp 12 tag vào 4 thư mục (3 thư mục mới tạo). Đã đúng thư mục sẵn: 2. Giữ nguyên 5 tag đã nằm trong thư mục khác.','Đã xếp 1 tag vào 1 thư mục (0 thư mục mới tạo).',
+    'Phiên bản SketchUp này chưa có thư mục tag (cần SketchUp 2021 trở lên).','Chưa có tag nào trong model ngoài Untagged. Hãy nhập tag mẫu hoặc gán tag trước.','Không có tag nào cần xếp vào thư mục. Bấm Xem trước để biết lý do.',
+    'Dòng 2: Hãy nhập tên thư mục.','Dòng 3: Tên thư mục không hợp lệ.','Dòng 1: Tên thư mục quá dài (tối đa 60 ký tự): X','Dòng 4: Cần ít nhất một từ khóa.','File JSON không đúng định dạng.']);
   if(errors.length)fail('Lỗi JavaScript: '+errors.join(' | '));
   if(lang==='en'){
     if(found.size)fail(`Còn ${found.size} chuỗi tiếng Việt chưa dịch:\n`+[...found].map(([t,l])=>`   [${l}] ${t}`).join('\n'));

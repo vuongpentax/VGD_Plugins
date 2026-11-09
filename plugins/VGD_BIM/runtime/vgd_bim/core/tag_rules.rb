@@ -33,10 +33,11 @@ module VGD
       end
 
       # Chữ người dùng gõ -> danh sách từ khóa (giữ nguyên cách viết, bỏ rỗng và trùng không phân biệt hoa thường / dấu).
-      def self.keywords(text)
+      # min: số ký tự tối thiểu của một từ khóa (luật gắn tag cần 2; luật thư mục cho phép 1 vì tiền tố Auto Tag như "!", "#", "@").
+      def self.keywords(text, min: MIN_KEYWORD)
         words = text.to_s.split(/[,;\n]/).map(&:strip).reject(&:empty?).uniq { |word| Measure.normalize(word) }
         raise ArgumentError, "Mỗi luật tối đa #{MAX_KEYWORDS} từ khóa, mỗi từ khóa không quá #{MAX_KEYWORD} ký tự." if words.size > MAX_KEYWORDS || words.any? { |word| word.length > MAX_KEYWORD }
-        raise ArgumentError, "Từ khóa phải có ít nhất #{MIN_KEYWORD} ký tự." if words.any? { |word| word.length < MIN_KEYWORD }
+        raise ArgumentError, "Từ khóa phải có ít nhất #{min} ký tự." if words.any? { |word| word.length < min }
         words
       end
 
@@ -59,8 +60,8 @@ module VGD
       end
 
       # Luật đã kiểm tra -> dạng dùng để khớp: [{tag:, words: [từ khóa đã chuẩn hóa]}] (giữ thứ tự = độ ưu tiên).
-      def self.compile(rules)
-        rules.map { |rule| {tag: rule['tag'], words: keywords(rule['keywords']).map { |word| Measure.normalize(word) }} }
+      def self.compile(rules, min: MIN_KEYWORD)
+        rules.map { |rule| {tag: rule['tag'], words: keywords(rule['keywords'], min: min).map { |word| Measure.normalize(word) }} }
       end
 
       # Vị trí của luật đầu tiên có từ khóa nằm trong một trong các tên, hoặc nil.

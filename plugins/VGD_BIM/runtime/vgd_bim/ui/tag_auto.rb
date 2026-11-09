@@ -17,6 +17,12 @@ module VGD
           @dialog.add_action_callback('tag_rules_import') { |_ctx, _payload| safely { tag_rules_import } }
           @dialog.add_action_callback('tag_auto_preview') { |_ctx, payload| safely { tag_auto_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('tag_auto_apply') { |_ctx, payload| safely { tag_auto_apply(JSON.parse(payload)) } }
+          @dialog.add_action_callback('folder_rules_save') { |_ctx, payload| safely { folder_rules_save(JSON.parse(payload)) } }
+          @dialog.add_action_callback('folder_rules_reset') { |_ctx, _payload| safely { folder_rules_reset } }
+          @dialog.add_action_callback('folder_rules_export') { |_ctx, payload| safely { folder_rules_export(JSON.parse(payload)) } }
+          @dialog.add_action_callback('folder_rules_import') { |_ctx, _payload| safely { folder_rules_import } }
+          @dialog.add_action_callback('folder_auto_preview') { |_ctx, payload| safely { folder_auto_preview(JSON.parse(payload)) } }
+          @dialog.add_action_callback('folder_auto_apply') { |_ctx, payload| safely { folder_auto_apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('tag_catalog_import') { |_ctx, payload| safely { tag_catalog_import(JSON.parse(payload)) } }
         end
 
@@ -113,7 +119,86 @@ module VGD
            rules: plan[:rules].map { |rule| rule.slice(:tag, :count, :samples) }}
         end
 
+        # ---- Luật xếp tag vào thư mục tag (xem FolderRules): bộ luật lưu / đặt lại / nhập / xuất giống luật gắn tag ----
+        def folder_rules_save(payload)
+          clean = FolderRules.save(payload['rules'])
+          emit('folder_rules', {rules: clean})
+          emit('message', {text: 'Đã lưu bộ luật xếp thư mục làm mặc định.'})
+        end
+
+        def folder_rules_reset
+          return unless ::UI.messagebox('Đặt lại bộ luật xếp thư mục về mặc định? Bộ luật đã lưu trên máy này sẽ bị xóa.', MB_YESNO) == IDYES
+          emit('folder_rules', {rules: FolderRules.reset})
+          emit('message', {text: 'Đã đặt lại bộ luật xếp thư mục về mặc định.'})
+        end
+
+        def folder_rules_export(payload)
+          clean = FolderRules.sanitize(payload['rules'])
+          path = ::UI.savepanel('Xuất bộ luật xếp thư mục (JSON)', '', 'VGD_luat_thu_muc.json')
+          return unless path
+          path += '.json' unless File.extname(path).downcase == '.json'
+          File.open(path, 'wb') { |file| file.write(FolderRules.to_json(clean)) }
+          emit('message', {text: "Đã xuất #{clean.size} luật: #{path}"})
+        end
+
+        def folder_rules_import
+          path = ::UI.openpanel('Nhập bộ luật xếp thư mục (JSON, kể cả file của 5D Auto Tag)', '', 'JSON|*.json||')
+          return unless path
+          rules = FolderRules.from_json(File.read(path, encoding: 'bom|utf-8'))
+          emit('folder_rules', {rules: rules, imported: true})
+          emit('message', {text: "Đã nhập #{rules.size} luật từ file. Bộ luật chưa lưu làm mặc định."})
+        end
+
+        # payload: {'rules' => [{'folder', 'keywords'}], 'overwrite' => true / false}. Duyệt MỌI tag của model (trừ Untagged); tag không khớp luật nào
+        # giữ nguyên chỗ cũ; tag đã ở một thư mục khác chỉ bị chuyển khi bật ghi đè.
+        def folder_auto_preview(payload)
+          check_model!
+          plan, = folder_auto_plan(payload)
+          emit('folder_auto_plan', {total: plan[:total], assign: plan[:assign].size, same: plan[:same], kept: plan[:kept], unmatched: plan[:unmatched],
+                                    rules: plan[:rules].map { |rule| rule.slice(:tag, :count, :samples) }})
+        end
+
+        # Tính lại kế hoạch ngay lúc áp dụng; một thao tác duy nhất (Ctrl+Z hoàn tác cả đợt). Thư mục chưa có thì tạo; tên so sánh không phân biệt hoa thường.
+        def folder_auto_apply(payload)
+          check_model!
+          plan, compiled = folder_auto_plan(payload)
+          raise 'Không có tag nào cần xếp vào thư mục. Bấm Xem trước để biết lý do.' if plan[:assign].empty?
+          created = 0
+          Data.transaction(@model, 'VGD BIM · Xếp tag vào thư mục') do
+            folders = {}
+            @model.layers.folders.each { |folder| folders[Tags.key(folder.name)] ||= folder }
+            plan[:assign].each do |item, index|
+              name = compiled[index][:tag]
+              folder = folders[Tags.key(name)]
+              unless folder
+                folder = folders[Tags.key(name)] = @model.layers.add_folder(name)
+                created += 1
+              end
+              item[:layer].folder = folder
+            end
+          end
+          emit('folder_auto_plan', {cleared: true})
+          emit('tags', tag_state)
+          text = "Đã xếp #{plan[:assign].size} tag vào #{plan[:rules].size} thư mục (#{created} thư mục mới tạo)."
+          text += " Đã đúng thư mục sẵn: #{plan[:same]}." if plan[:same].positive?
+          text += " Giữ nguyên #{plan[:kept]} tag đã nằm trong thư mục khác." if plan[:kept].positive?
+          emit('message', {text: text})
+        end
+
         private
+
+        def folder_auto_plan(payload)
+          raise 'Phiên bản SketchUp này chưa có thư mục tag (cần SketchUp 2021 trở lên).' unless @model.layers.respond_to?(:add_folder)
+          rules = FolderRules.sanitize(payload['rules'])
+          raise 'Chưa có luật nào. Hãy thêm ít nhất một luật.' if rules.empty?
+          layers = @model.layers.to_a.reject { |layer| UNTAGGED.include?(layer.name.to_s) }
+          raise 'Chưa có tag nào trong model ngoài Untagged. Hãy nhập tag mẫu hoặc gán tag trước.' if layers.empty?
+          items = layers.map do |layer|
+            {layer: layer, label: layer.name.to_s, names: [layer.name.to_s], tag: layer.folder ? layer.folder.name.to_s : '', locked: false}
+          end
+          compiled = FolderRules.compile(rules)
+          [FolderRules.plan(items, compiled, overwrite: payload['overwrite'] == true), compiled]
+        end
 
         # [kế hoạch, luật đã biên dịch]: kiểm tra mọi dữ liệu giao diện gửi lên trước khi đụng vào model.
         def tag_auto_plan(payload)
