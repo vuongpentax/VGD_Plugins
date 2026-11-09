@@ -68,3 +68,32 @@ Hỏi tôi các câu sau, chờ trả lời đầy đủ:
 - Nội dung trong skill sẽ được AI làm theo. Đọc `SKILL.md` trước khi dùng.
 - Với phần mềm nội bộ, không đưa mã nguồn hoặc thông tin nhạy cảm vào nơi công khai.
 - Không đăng video lên mạng khi chưa được bạn xem và duyệt.
+
+---
+
+## Quyết định đã chốt (kết quả Bước 1 và Bước 2)
+
+1. Phần mềm: plugin `VGD_Center` (SketchUp, giao diện `UI::HtmlDialog`).
+2. Đầu ra: file MP4 và bản nhúng trong VGD Center. Mỗi đoạn 15–30 giây.
+3. Hình ảnh: vẽ lại giao diện từ code HTML/CSS và theme VGD (chưa đối chiếu với SketchUp thật). Chỉ có chữ trên màn hình, tiếng Việt, không giọng đọc.
+4. Phong cách: theme tối. Mẫu "làm tối nền, làm nổi vùng cần bấm" là chính; mẫu "phóng to, chữ lớn" dùng cho cảnh cần chú ý kỹ.
+5. Chuyển động: dùng `motion-design-skill`, cài vào `.claude/skills/motion-design/` (không commit, theo quy tắc repo về mã tải từ ngoài). Chưa cài `gsap-skills`.
+6. Cách xuất MP4: quay từng khung hình bằng Chromium/Playwright rồi ghép bằng ffmpeg. Không cài thêm công cụ.
+
+## Kịch bản 7 đoạn (nháp chờ duyệt)
+
+Chữ giao diện và hành vi lấy từ `plugins/VGD_Center/README.md`. Tên nút và vị trí chính xác cần đối chiếu với `dialog.html` khi dựng.
+
+| # | Đoạn | Mục đích | Các bước thao tác | Chữ trên màn hình | Thời lượng |
+|---|---|---|---|---|---|
+| 1 | Cài plugin từ Kho | Cài một plugin VGD | Mở Kho plugin → bấm Cài đặt trên thẻ plugin → Center tải và xác minh SHA-256 → nhắc lưu model, khởi động lại SketchUp | "Chọn plugin trong Kho" / "Bấm Cài đặt" / "Center tự tải và kiểm tra gói" / "Lưu model rồi khởi động lại SketchUp" | 25 giây |
+| 2 | Cập nhật và gỡ plugin | Cập nhật bản mới, gỡ plugin không dùng | Thẻ plugin có nút cập nhật → bấm cập nhật; bấm Gỡ → xác nhận → nhắc khởi động lại | "Có bản mới? Bấm cập nhật" / "Gỡ plugin cần xác nhận" | 25 giây |
+| 3 | Mở Hướng dẫn | Xem hướng dẫn riêng của plugin | Bấm nút Hướng dẫn trên thẻ → trang hướng dẫn mở; có chế độ tối/sáng và in PDF | "Bấm Hướng dẫn trên thẻ plugin" / "Đổi sáng/tối hoặc in PDF" | 15 giây |
+| 4 | Tab Quản lý: bật/tắt | Tắt hoặc bật plugin | Mở tab Quản lý → bật/tắt plugin → khởi động lại SketchUp, hoặc bấm Nạp ngay với plugin vừa bật | "Bật/tắt có hiệu lực sau khi khởi động lại" / "Nạp ngay: dùng luôn, không cần khởi động lại" | 25 giây |
+| 5 | Chuyển plugin 2022 ↔ 2024 | Chuyển plugin giữa hai bản SketchUp | Tab Chuyển plugin → tìm theo tên → chọn plugin → (tick Ghi đè nếu cần) → chuyển → báo kết quả | "Chọn plugin cần chuyển" / "Không tick Ghi đè: bỏ qua nếu đã có" / "Plugin mã hóa (.rbe) cần cài lại bản đúng SketchUp" | 30 giây |
+| 6 | Xuất gói RBZ tổng | Gom plugin thành một file cài | Tab Quản lý → chọn plugin → Xuất gói .rbz → chọn nơi lưu | "Chọn plugin cần gom" / "Xuất .rbz" | 20 giây |
+| 7 | Cài đặt | Đổi ngôn ngữ, bật/tắt tự động cập nhật Center | Mở Cài đặt → chọn ngôn ngữ → bật/tắt tự cập nhật → xem lần kiểm tra gần nhất | "Chọn ngôn ngữ" / "Tự cập nhật Center khi mở SketchUp" | 15 giây |
+
+Thứ tự làm đề xuất: làm thử đoạn 3 (đơn giản nhất) để kiểm tra quy trình xuất, rồi 1, 2, 4, 6, 7, cuối cùng đoạn 5.
+
+Chưa xác minh: hộp thoại chọn file, dời file thật và hành vi trong SketchUp thật (README và test của plugin cũng ghi chưa xác minh trong SketchUp thật).
