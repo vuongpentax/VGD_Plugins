@@ -1,30 +1,5 @@
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Đoạn 3 · Mở Hướng dẫn</title>
-<style>
-@font-face{font-family:M;src:url(../../shared/vgd-theme/fonts/manrope-latin-wght-normal.woff2);font-weight:200 800;unicode-range:U+0000-00FF}
-@font-face{font-family:M;src:url(../../shared/vgd-theme/fonts/manrope-vietnamese-wght-normal.woff2);font-weight:200 800;unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+1EA0-1EF9}
-*{box-sizing:border-box;margin:0}
-.dark{--bg:#121212;--s:#1E1E1E;--e:#2B2B2B;--b:#3A3A3A;--t:#E2E8F0;--m:#A7B0BD;--a:#B48963;--as:#C8A98A;--tint:#372C24;--oa:#121212}
-.light{--bg:#F7F7F5;--s:#fff;--e:#F0EEE9;--b:#DEDAD4;--t:#222;--m:#6F6F6F;--a:#94704F;--as:#755638;--tint:#F3ECE5;--oa:#fff}
-html,body{background:#0b0b0b}
-#stage{position:relative;width:1280px;height:720px;overflow:hidden;font-family:M,sans-serif;background:radial-gradient(ellipse at 30% 20%,#1d1b19,#0b0b0b 70%)}
-#world{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0}
-.win{position:absolute;border:1px solid #444;border-radius:8px;overflow:hidden;background:var(--bg);color:var(--t);box-shadow:0 24px 60px #000a}
-.title{height:30px;background:#202020;color:#c9c9c9;font-size:11px;display:flex;align-items:center;padding:0 12px;justify-content:space-between;border-bottom:1px solid #333}
-#center{left:30px;top:40px;width:600px;height:640px}
-.cbody{display:grid;grid-template-columns:118px 1fr;height:610px}
-.side{background:var(--s);border-right:1px solid var(--b);padding:16px 8px;font-size:12px}
-.side i{display:block;font-style:normal;color:var(--m);font-size:8px;letter-spacing:.16em;margin:0 8px 10px;font-weight:700}
-.side div{padding:8px 10px;border-radius:4px;color:var(--m);margin-bottom:3px;font-weight:600}.side .on{background:var(--tint);color:var(--as)}
-.main{padding:18px 16px}h2{font-size:15px;margin-bottom:3px}.sub{color:var(--m);font-size:11px;margin-bottom:12px}
-.row{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;background:var(--s);border:1px solid var(--b);border-radius:6px;padding:10px;margin-bottom:8px}
-.ic{width:34px;height:34px;border:1px solid var(--b);border-radius:5px;background:var(--e)}
-.nm{font-weight:700;font-size:12.5px}.ds{color:var(--m);font-size:10px;margin-top:2px}
-.bd{font-size:8px;border:1px solid var(--b);border-radius:20px;padding:2px 6px;color:var(--m);margin-left:6px;font-weight:600}
-.acts{display:flex;gap:5px}
-.btn{min-height:28px;padding:0 9px;border:1px solid var(--b);border-radius:4px;background:var(--s);color:var(--t);font-weight:650;font-size:10.5px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-family:inherit}
-.btn.p{background:var(--a);border-color:var(--a);color:var(--oa)}
-.btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-.btn.hov{background:var(--e);border-color:var(--a)}
+<link rel="stylesheet" href="common.css"><style>
 #guide{left:360px;top:40px;width:890px;height:640px;opacity:0}
 .gbar{display:flex;justify-content:space-between;align-items:center;padding:9px 22px;background:var(--e);border-bottom:1px solid var(--b)}
 .brand{display:flex;align-items:center;gap:9px;font-weight:750;letter-spacing:.08em;font-size:12px}
@@ -35,12 +10,7 @@ html,body{background:#0b0b0b}
 .card{margin-top:18px;padding:16px;border:1px solid var(--b);border-radius:8px;background:var(--s)}
 .ln{height:9px;border-radius:5px;background:var(--e);margin:10px 0}
 .call{margin-top:16px;padding:12px 14px;border-left:3px solid var(--a);background:var(--tint)}
-#spot{position:absolute;border-radius:8px;box-shadow:0 0 0 2000px rgba(0,0,0,.66),0 0 0 3px #B48963;opacity:0;pointer-events:none}
-#cur{position:absolute;left:0;top:0;width:27px;height:27px;opacity:0;z-index:20;filter:drop-shadow(0 2px 3px #000a)}
-#rip{position:absolute;left:0;top:0;width:10px;height:10px;border-radius:50%;border:2px solid #fff;opacity:0;z-index:19}
-.cap{position:absolute;left:50%;z-index:15;opacity:0;white-space:nowrap;background:#2B2B2B;color:#E2E8F0;border:1px solid #3A3A3A;border-radius:8px;padding:13px 20px;font-weight:700;font-size:17px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 30px #0008}
-.cap span{background:#B48963;color:#121212;border-radius:20px;padding:3px 11px;font-size:12px}
-.cap.big{font-size:30px;padding:18px 28px;border-color:#B48963;background:#1E1E1E}.cap.big span{font-size:16px}
+
 </style></head><body>
 <div id="stage">
 <div id="world">
@@ -67,57 +37,29 @@ html,body{background:#0b0b0b}
 <svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
 </div>
 <svg width="0" height="0" style="position:absolute"><symbol id="bk" viewBox="0 0 24 24"><path d="M5 4.5h10.5A3.5 3.5 0 0 1 19 8v11.5H8A3 3 0 0 1 5 16.5z"/><path d="M5 16.5a3 3 0 0 1 3-3h11M9 8h6M9 10.5h5"/></symbol></svg>
-<script>
-const $=id=>document.getElementById(id),clamp=x=>Math.max(0,Math.min(1,x)),P=(t,a,b)=>clamp((t-a)/(b-a));
-// easing: cubic-bezier(0.2,0,0,1) (phong cách "Corporate" của motion-design)
-function bez(x1,y1,x2,y2){return x=>{if(x<=0)return 0;if(x>=1)return 1;let lo=0,hi=1,t=x;for(let i=0;i<30;i++){t=(lo+hi)/2;const cx=3*x1*t*(1-t)**2+3*x2*t*t*(1-t)+t**3;cx<x?lo=t:hi=t}return 3*y1*t*(1-t)**2+3*y2*t*t*(1-t)+t**3}}
-const E=bez(.2,0,0,1),lerp=(a,b,k)=>a+(b-a)*k;
-const R=el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height}};
-let rd,rg,rt,rp;
-function measure(){rd=R($('rowDim'));rg=R($('btnGuide'));rt=R($('btnTheme'));rp=R($('btnPrint'))}
-const DUR=15;
+<script src="common.js"></script><script>
+const DUR=15;let T1,T2,T3,M,rd,Z;
 function init(){
- const gl=$('guideL');gl.innerHTML=$('guide').innerHTML;gl.id='guideL';
- measure();
- // điểm đích của con trỏ (đặt lệch xuống phải để không che chữ)
- T1={x:rg.x+rg.w*.72,y:rg.y+rg.h*.72};T2={x:rt.x+rt.w*.78,y:rt.y+rt.h*.72};T3={x:rp.x+rp.w*.78,y:rp.y+rp.h*.72};
+ $('guideL').innerHTML=$('guide').innerHTML;
+ rd=R($('rowDim'));const rg=R($('btnGuide')),rt=R($('btnTheme')),rp=R($('btnPrint'));
+ T1=aim(rg,.72);T2=aim(rt,.78);T3=aim(rp,.78);
  M=[{a:.8,b:2.4,f:{x:1010,y:690},t:T1,arc:-90},{a:4.7,b:5.7,f:T1,t:{x:930,y:430},arc:50},{a:8.5,b:9.8,f:{x:930,y:430},t:T2,arc:40},{a:11.3,b:12.1,f:T2,t:T3,arc:20}];
- // camera ống kính phóng to (đoạn "chú ý kỹ")
- const fx=(rt.x+rp.x+rp.w)/2,fy=rt.y+rt.h/2;ZS=2.3;ZD={x:760-ZS*fx,y:330-ZS*fy};
- render(0)}
-let T1,T2,T3,M,ZS,ZD;
-function cam(t){const k=E(P(t,8.0,8.9))*(1-E(P(t,12.8,13.7)));return{s:lerp(1,ZS,k),x:lerp(0,ZD.x,k),y:lerp(0,ZD.y,k)}}
-function pos(t){let m=null;for(const q of M)if(t>=q.a)m=q;if(!m)return M[0].f;const k=E(P(t,m.a,m.b)),mx=(m.f.x+m.t.x)/2,my=(m.f.y+m.t.y)/2,dx=m.t.x-m.f.x,dy=m.t.y-m.f.y,L=Math.hypot(dx,dy)||1,cx=mx-dy/L*m.arc,cy=my+dx/L*m.arc;
- return{x:(1-k)**2*m.f.x+2*(1-k)*k*cx+k*k*m.t.x,y:(1-k)**2*m.f.y+2*(1-k)*k*cy+k*k*m.t.y}}
-function pulse(t,a,b,show){return clamp(Math.min(P(t,a,a+.35),1-P(t,b-.35,b)))}
-function cap(el,t,a,b,y){const o=E(P(t,a,a+.35))*(1-E(P(t,b,b+.3)));el.style.opacity=o;el.style.transform=`translate(-50%,${y+(1-o)*14}px)`}
+ Z=zoomTo((rt.x+rp.x+rp.w)/2,rt.y+rt.h/2,2.3,760,330);render(0)}
 function render(t){
- const c=cam(t);$('world').style.transform=`translate(${c.x}px,${c.y}px) scale(${c.s})`;
- // nền Center mờ đi khi cửa sổ hướng dẫn lấy focus
+ const c=mix({s:1,x:0,y:0},Z,E(P(t,8.0,8.9))*(1-E(P(t,12.8,13.7))));setWorld(c);
  const open=E(P(t,3.9,4.4));$('center').style.filter=`brightness(${1-.3*open})`;
- // spotlight vào thẻ plugin (mẫu 2): sáng lên rồi tắt khi mở cửa sổ
- const sp=E(P(t,1.2,1.8))*(1-E(P(t,3.7,4.1)));const s=$('spot');
+ // làm tối nền, làm nổi thẻ plugin (mẫu 2); tắt khi cửa sổ mở
+ const sp=E(P(t,1.2,1.8))*(1-E(P(t,3.7,4.1))),s=$('spot');
  s.style.cssText+=`;opacity:${sp};left:${rd.x-4}px;top:${rd.y-4}px;width:${rd.w+8}px;height:${rd.h+8}px`;
- // nút Hướng dẫn: hover → nhấn
- const hv=t>=2.4&&t<4.0,pr=1-.06*pulse(t,3.5,3.85);$('btnGuide').classList.toggle('hov',hv);$('btnGuide').style.transform=`scale(${pr})`;
- // cửa sổ hướng dẫn mở (Modal: 300-400ms)
+ $('btnGuide').classList.toggle('hov',t>=2.4&&t<4.0);$('btnGuide').style.transform=`scale(${1-.06*pulse(t,3.5,3.85)})`;
  const g=$('guide');g.style.opacity=open;g.style.transform=`translateY(${(1-open)*14}px) scale(${.96+.04*open})`;
- const th=E(P(t,10.3,10.7));const gl=$('guideL');gl.style.opacity=open*th;gl.style.transform=g.style.transform;
+ const gl=$('guideL');gl.style.opacity=open*E(P(t,10.3,10.7));gl.style.transform=g.style.transform;
  $('btnTheme').style.transform=`scale(${1-.06*pulse(t,10.2,10.5)})`;
- $('btnTheme').classList.toggle('hov',t>9.8&&t<11.3);
- $('btnPrint').classList.toggle('hov',t>12.1&&t<12.9);
- // con trỏ (nằm ngoài world nên không bị phóng to)
- const p=pos(t),sx=c.x+c.s*p.x,sy=c.y+c.s*p.y,cu=$('cur');
- const press=pulse(t,3.5,3.85)||pulse(t,10.2,10.5);cu.style.opacity=E(P(t,.6,1))*(1-E(P(t,14.6,15)));
- cu.style.transform=`translate(${sx-4.3}px,${sy-2.2}px) scale(${1-.12*press})`;
- // gợn sóng khi bấm
- const rp_=(a)=>P(t,a,a+.45),r=Math.max(rp_(3.5)*(t<5),rp_(10.2)*(t>9&&t<11));
- const rip=$('rip');rip.style.opacity=r>0&&r<1?1-r:0;rip.style.transform=`translate(${sx-5}px,${sy-5}px) scale(${1+r*3})`;
- cap($('c1'),t,.9,3.8,0);rep($('c1'),t);
- cap($('c2'),t,4.7,7.8,0);cap($('c3'),t,8.3,12.8,0);cap($('c4'),t,13.7,14.9,0);
+ $('btnTheme').classList.toggle('hov',t>9.8&&t<11.3);$('btnPrint').classList.toggle('hov',t>12.1&&t<12.9);
+ const rp_=a=>P(t,a,a+.45);
+ drawCursor(c,pos(M,t),t,.6,14.6,pulse(t,3.5,3.85)||pulse(t,10.2,10.5),Math.max(rp_(3.5)*(t<5),rp_(10.2)*(t>9&&t<11)));
+ cap($('c1'),t,.9,3.8,0);cap($('c2'),t,4.7,7.8,0);cap($('c3'),t,8.3,12.8,0);cap($('c4'),t,13.7,14.9,0);
  $('c1').style.top=$('c2').style.top=$('c4').style.top='640px';$('c3').style.top='70px';
  $('stage').style.opacity=1-E(P(t,14.7,15))}
-function rep(){}
-document.fonts.ready.then(init);
-if(location.search.includes('play')){const t0=performance.now();(function f(){render(((performance.now()-t0)/1000)%DUR);requestAnimationFrame(f)})()}
+start();
 </script></body></html>
