@@ -26,6 +26,7 @@
 - **Chọn cột kiểu mới** (theo Auto Info, gọn hơn): ngăn trượt ra bên trái và đẩy bảng sang phải nên cột đầu không bị che; ô tick tự vẽ, kéo thả đổi chỗ cột có hiệu ứng trượt, nút gạt chân trang trượt mượt.
 - **Giao diện không còn thanh cuộn dọc** ở bảng, bảng Chọn cột, Preset và các tab (vẫn cuộn bằng con lăn chuột); chỉ giữ thanh cuộn ngang của bảng khi nhiều cột.
 - **Tiếng Anh** cho toàn bộ giao diện (báo cáo CSV và hộp thoại gốc của SketchUp vẫn tiếng Việt).
+- **Quản lý tag trong model, bước 3a** (beta.41): tab nhỏ Trong model với cây thư mục tag, mắt ẩn / hiện, cô lập tag hoặc thư mục (bấm lại để khôi phục), ô tìm. Màu, nét đứt, ghim, tag gần đây, kéo thả: bước 3b.
 - **Bố cục lại tab Soạn tag** (beta.40): thanh Gán tag cố định ở đầu, ba tab nhỏ Bộ tag / Tự động / Thư viện mẫu, bộ tag gom theo nhóm gập được kèm ô tìm và lọc nhóm, bảng luật tự động gập lại. Không đổi chức năng.
 - **Kéo rộng ngăn bên** (beta.39): ngăn Chọn cột và Loại trừ tag kéo rộng / hẹp bằng mép phải để đọc tên dài; hai ngăn dùng chung độ rộng, mở lại về mặc định.
 - **Xếp tag vào thư mục** (beta.38): bảng luật thứ hai kiểu 5D Auto Tag "tên thư mục ← từ khóa trong tên tag", mặc định 18 luật theo tiền tố các cụm, tạo thư mục tag của SketchUp (cần SketchUp 2021 trở lên), xem trước rồi áp dụng một bước hoàn tác, mặc định chỉ xếp tag chưa nằm trong thư mục (có công tắc ghi đè), lưu mặc định, đặt lại, nhập / xuất JSON.

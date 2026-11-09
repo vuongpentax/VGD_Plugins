@@ -2,6 +2,7 @@ require 'json'
 require_relative 'image_actions'
 require_relative 'front_actions'
 require_relative 'tag_auto'
+require_relative 'tag_manager'
 module VGD
   module BIM
     module UI
@@ -16,6 +17,7 @@ module VGD
         include ImageActions
         include FrontActions
         include TagAuto
+        include TagManager
         # 5 tab: Bảng khối lượng · Thông tin · Quét & xuất · Phân loại (gồm Quy tắc, Kiểm tra) · Soạn tag. Ảnh nằm trong cột Ảnh của bảng.
         MODES = %w[table information scan mapping rules validate_model validate_selection tags].freeze
         # Tên cũ vẫn mở được, chuyển về tab đã gộp.
@@ -81,6 +83,7 @@ module VGD
           register_image_callbacks
           register_front_callbacks
           register_tag_auto_callbacks
+          register_tag_manager_callbacks
           @dialog.set_on_closed { @closed = true; @capture[:cancel] = true if @capture; @ready = false; @generation += 1; cleanup_table_view; detach; ::UI.stop_timer(@selection_timer) if @selection_timer }
         end
         def show; @dialog.visible? ? @dialog.bring_to_front : @dialog.show; end
@@ -742,7 +745,7 @@ module VGD
             layer = Tags.find_layer(@model, tag['name'])
             tag.merge('in_model' => !layer.nil?, 'visible' => layer ? layer.visible? : true)
           end
-          {tags: tags, groups: Tags::GROUPS, selection: taggable_selection.size, rules: TagRules.load, catalog: TagCatalog.summary, folder_rules: FolderRules.load}
+          {tags: tags, groups: Tags::GROUPS, selection: taggable_selection.size, rules: TagRules.load, catalog: TagCatalog.summary, folder_rules: FolderRules.load, tree: tag_tree_state}
         end
         def assign_tag(payload)
           check_model!

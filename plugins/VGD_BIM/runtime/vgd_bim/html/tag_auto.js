@@ -168,13 +168,15 @@ const receiveTagAutoPlan=data=>receiveRulePlan('tag',data),receiveTagRules=data=
 const receiveFolderAutoPlan=data=>receiveRulePlan('folder',data),receiveFolderRules=data=>receiveRules('folder',data);
 
 // ---- Bố cục tab Soạn tag ----
-const tagTab={active:'set'};               // tab nhỏ đang mở, giữ khi tab vẽ lại (sau khi lưu, nhập, gán...)
+const tagTab={active:'model'};               // tab nhỏ đang mở, giữ khi tab vẽ lại (sau khi lưu, nhập, gán...)
 const tagSetState={open:new Set(),query:'',group:''}; // nhóm đang mở, ô tìm và nhóm đang lọc, giữ khi vẽ lại
-const TAG_TABS=[['set','Bộ tag'],['auto','Tự động'],['lib','Thư viện mẫu']];
+const TAG_TABS=[['model','Trong model'],['set','Bộ tag'],['auto','Tự động'],['lib','Thư viện mẫu']];
 const foldText=text=>String(text||'').normalize('NFD').replace(/\p{Mn}/gu,'').replace(/[đĐ]/g,'d').toLowerCase();
 
 function selectTagTab(name){
+  const changed=tagTab.active!==name;
   tagTab.active=name;
+  if(changed&&name==='model')call('tm_refresh'); // danh sách trong model có thể đã đổi trong SketchUp
   TAG_TABS.forEach(([key])=>{
     const tab=$(`tag-tab-${key}`),pane=$(`tag-pane-${key}`);
     if(!tab||!pane)return;
@@ -199,7 +201,9 @@ function tagEditor(data){
   head.append(assign,tabs);
   const panes={};
   TAG_TABS.forEach(([key])=>{const pane=node('div',undefined,'tag-pane');pane.id=`tag-pane-${key}`;pane.setAttribute('role','tabpanel');panes[key]=pane;});
-  $('content').append(head,panes.set,panes.auto,panes.lib);
+  $('content').append(head,panes.model,panes.set,panes.auto,panes.lib);
+  if(data.tree)treeState.data=data.tree;
+  tagTreePane(panes.model);
   tagSetPane(data,panes.set);
   autoTagCard(data,panes.auto);
   folderRuleCard(data,panes.auto);
@@ -272,3 +276,90 @@ function tagSetPane(data,pane){
   pane.append(bar,actions,scroll,node('p','Bộ tag lưu trên máy này, dùng lại cho mọi model; tên không phân biệt chữ hoa, chữ thường. Excel dùng file CSV; nếu Excel báo lỗi, hãy lưu lại dưới dạng CSV UTF-8.','muted tag-note'));
   paint();
 }
+
+// ---- Tab nhỏ "Trong model": cây thư mục tag / tag của model đang mở, mắt ẩn / hiện, cô lập, tìm kiếm ----
+const treeState={data:null,open:new Set(),query:''};
+const TREE_ICONS={
+  eye:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  eyeOff:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7c2.4 0 4.4.8 6 1.8M23 12s-4 7-11 7c-2.4 0-4.4-.8-6-1.8"/><path d="M3 3l18 18"/></svg>',
+  target:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></svg>'
+};
+function treeButton(icon,title,handler,cls){
+  const b=node('button',undefined,'tm-btn'+(cls?' '+cls:''));b.type='button';b.innerHTML=TREE_ICONS[icon]; // chuỗi SVG cố định trong mã, không chứa dữ liệu người dùng
+  b.title=title;b.setAttribute('aria-label',title);b.onclick=()=>{try{handler()}catch(error){message(error.message,true)}};return b;
+}
+const byName=(a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true,sensitivity:'base'});
+
+function tagTreePane(pane){
+  const bar=node('div',undefined,'tag-toolbar');
+  const search=node('input');search.type='search';search.placeholder='Tìm tag hoặc thư mục...';search.value=treeState.query;search.setAttribute('aria-label','Tìm tag hoặc thư mục');
+  search.oninput=()=>{treeState.query=search.value;paintTagTree();};
+  const expand=button('Mở hết',()=>{(treeState.data?treeState.data.folders:[]).forEach(f=>treeState.open.add(f.id));paintTagTree();},'sm');
+  const collapse=button('Gập hết',()=>{treeState.open.clear();paintTagTree();},'sm');
+  const refresh=button('Làm mới',()=>call('tm_refresh'),'sm');
+  bar.append(search,expand,collapse,refresh);
+  const banner=node('div',undefined,'tm-banner');banner.id='tag-tree-banner';banner.hidden=true;
+  const list=node('div',undefined,'tag-scroll tm-list');list.id='tag-tree-list';
+  pane.append(bar,banner,list,node('p','Mắt ẩn / hiện tag hoặc cả thư mục trong model; nút tròn cô lập: chỉ hiện mục đó, ẩn mọi thứ còn lại, bấm lại để trả hiển thị như cũ. Mỗi thao tác là một bước hoàn tác.','muted tag-note'));
+  paintTagTree();
+}
+
+function paintTagTree(){
+  const list=$('tag-tree-list'),banner=$('tag-tree-banner');
+  if(!list)return;
+  const data=treeState.data,scroll=list.scrollTop;
+  list.replaceChildren();banner.replaceChildren();banner.hidden=true;
+  if(!data){list.append(node('p','Model chưa có tag nào.','muted'));return;}
+  if(data.isolated){
+    banner.hidden=false;
+    banner.append(node('span',`Đang cô lập: ${data.isolated.name}`),button('Khôi phục hiển thị',()=>call('tm_isolate',JSON.stringify({restore:true})),'sm'));
+  }
+  if(!data.supported)list.append(node('p','Phiên bản SketchUp này chưa có thư mục tag (cần SketchUp 2021 trở lên). Chỉ hiện danh sách tag.','muted'));
+  const q=foldText(treeState.query.trim());
+  const folderById=new Map(data.folders.map(f=>[f.id,f]));
+  const childFolders=new Map(),childLayers=new Map();
+  data.folders.forEach(f=>{const key=f.parent_id===null||!folderById.has(f.parent_id)?null:f.parent_id;(childFolders.get(key)||childFolders.set(key,[]).get(key)).push(f);});
+  data.layers.forEach(l=>{const key=l.folder_id===null||!folderById.has(l.folder_id)?null:l.folder_id;(childLayers.get(key)||childLayers.set(key,[]).get(key)).push(l);});
+  const countTags=id=>(childLayers.get(id)||[]).length+(childFolders.get(id)||[]).reduce((n,f)=>n+countTags(f.id),0);
+  // Mục nào hiện khi tìm: tag khớp tên, thư mục khớp tên (hiện cả nội dung), hoặc thư mục có mục con khớp.
+  const shows=new Map();
+  const folderShows=(folder,parentMatch)=>{
+    const self=!q||foldText(folder.name).includes(q)||parentMatch;
+    const kids=(childFolders.get(folder.id)||[]).map(f=>folderShows(f,self));
+    const mine=(childLayers.get(folder.id)||[]).filter(l=>self||foldText(l.name).includes(q));
+    const visible=self||kids.some(Boolean)||mine.length>0;
+    shows.set(`f${folder.id}`,visible);mine.forEach(l=>shows.set(`l${l.id}`,true));
+    return visible;
+  };
+  (childFolders.get(null)||[]).forEach(f=>folderShows(f,false));
+  let rows=0;
+  const addRow=(kind,item,depth,hiddenByParent)=>{
+    const isFolder=kind==='folder',id=item.id,opened=!!q||treeState.open.has(id);
+    const row=node('div',undefined,'tm-row'+(hiddenByParent||!item.visible?' dim':'')+(data.isolated&&data.isolated.kind===kind&&data.isolated.id===id?' isolated':''));
+    row.dataset.kind=kind;row.dataset.id=String(id);row.style.paddingLeft=`${8+depth*16}px`;
+    if(isFolder){
+      const caret=node('button',opened?'▾':'▸','tm-caret');caret.type='button';caret.setAttribute('aria-label',opened?'Gập':'Mở');caret.setAttribute('aria-expanded',String(opened));
+      caret.onclick=()=>{if(treeState.open.has(id))treeState.open.delete(id);else treeState.open.add(id);paintTagTree();};
+      row.append(caret);
+    }else row.append(node('span',undefined,'tm-caret'));
+    const noun=isFolder?'thư mục':'tag';
+    row.append(treeButton(item.visible?'eye':'eyeOff',item.visible?`Ẩn ${noun}`:`Hiện ${noun}`,()=>call('tm_visible',JSON.stringify({kind,id,visible:!item.visible})),item.visible?'on':'off'));
+    const name=node('span',item.name,'tm-name'+(isFolder?' folder':''));name.title=item.name;row.append(name);
+    if(isFolder)row.append(node('span',`${countTags(id)} tag`,'muted tm-count'));
+    row.append(treeButton('target',data.isolated&&data.isolated.kind===kind&&data.isolated.id===id?'Bỏ cô lập':`Cô lập ${noun}`,()=>call('tm_isolate',JSON.stringify({kind,id})),'iso'));
+    list.append(row);rows+=1;
+  };
+  const addFolder=(folder,depth,hiddenByParent)=>{
+    if(!shows.get(`f${folder.id}`))return;
+    addRow('folder',folder,depth,hiddenByParent);
+    if(!q&&!treeState.open.has(folder.id))return;
+    const hidden=hiddenByParent||!folder.visible;
+    (childFolders.get(folder.id)||[]).slice().sort(byName).forEach(f=>addFolder(f,depth+1,hidden));
+    (childLayers.get(folder.id)||[]).filter(l=>shows.get(`l${l.id}`)).slice().sort(byName).forEach(l=>addRow('tag',l,depth+1,hidden));
+  };
+  (childFolders.get(null)||[]).slice().sort(byName).forEach(f=>addFolder(f,0,false));
+  (childLayers.get(null)||[]).filter(l=>!q||foldText(l.name).includes(q)).slice().sort(byName).forEach(l=>addRow('tag',l,0,false));
+  if(!rows)list.append(node('p',data.layers.length?'Không có tag hoặc thư mục nào khớp.':'Model chưa có tag nào.','muted'));
+  list.scrollTop=scroll;
+}
+function receiveTagTree(data){treeState.data=data;paintTagTree();}

@@ -779,11 +779,11 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await groupsOpen()===1 && await page.locator(`.tag-group[data-group="${F.groups[1]}"] tbody tr:visible`).count()===10,'bấm tiêu đề nhóm: mở nhóm, thấy 10 dòng');
   const oneRow=await page.locator(`.tag-group[data-group="${F.groups[1]}"] tbody tr`).first().evaluate(el=>Math.round(el.getBoundingClientRect().height));
   ok(oneRow<=34,'dòng tag thấp (một hàng, không quá 34 px): '+oneRow);
-  await page.getByLabel('Tìm tag').fill('tag 2');
+  await page.locator('#tag-pane-set').getByLabel('Tìm tag').fill('tag 2');
   ok(await visibleGroups()===3 && await groupsOpen()===3 && (await page.locator('.tag-group tbody tr:visible').count())===11 && (await page.locator('.tag-count').innerText())==='11 / 30 tag','ô tìm: lọc dòng theo tên (không phân biệt hoa thường), tự mở nhóm có kết quả');
-  await page.getByLabel('Tìm tag').fill('khong co tag nay');
+  await page.locator('#tag-pane-set').getByLabel('Tìm tag').fill('khong co tag nay');
   ok(await visibleGroups()===0 && (await page.locator('.tag-count').innerText())==='0 / 30 tag','tìm không ra: ẩn hết nhóm');
-  await page.getByLabel('Tìm tag').fill('');
+  await page.locator('#tag-pane-set').getByLabel('Tìm tag').fill('');
   await page.getByLabel('Lọc theo nhóm').selectOption(F.groups[2]);
   ok(await visibleGroups()===1 && (await page.locator('.tag-count').innerText())==='10 / 30 tag','lọc theo nhóm: chỉ hiện nhóm đã chọn');
   await clear();await page.getByRole('button',{name:'Thêm tag'}).click();
@@ -803,6 +803,63 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await groupsOpen()===3 && await page.locator('#tag-assign').isDisabled(),'bộ tag nhỏ (12 tag trở xuống): mở sẵn mọi nhóm; chưa chọn đối tượng thì Gán tag bị khóa');
   await receive('tags',{groups:F.groups,tags:[],selection:2,rules:AUTO_RULES,catalog:CATALOG,folder_rules:FOLDER_RULES});
   ok((await page.locator('#tag-pane-set').innerText()).includes('Chưa có tag nào'),'bộ tag trống: có lời nhắc thay vì bảng trống');
+
+  // ---- Tab nhỏ "Trong model": cây tag / thư mục, ẩn / hiện, cô lập, tìm kiếm ----
+  const TREE={supported:true,isolated:null,folders:[{id:1,name:'A. ARCHITECTURAL',visible:true,parent_id:null},{id:2,name:'S. STRUCTURAL',visible:false,parent_id:null},{id:3,name:'Con',visible:true,parent_id:1}],
+    layers:[{id:10,name:'A. WALL',visible:true,folder_id:1},{id:11,name:'A. WINDOW',visible:false,folder_id:1},{id:12,name:'A. DOOR',visible:true,folder_id:3},{id:13,name:'S. BEAM',visible:true,folder_id:2},{id:14,name:'Untagged',visible:true,folder_id:null}]};
+  await receive('tags',{groups:F.groups,tags:[],selection:2,rules:AUTO_RULES,catalog:CATALOG,folder_rules:FOLDER_RULES,tree:TREE});
+  await clear();await page.click('#tag-tab-set');await page.click('#tag-tab-model');
+  ok((await calls('tm_refresh')).length===1,'mở tab Trong model: xin Ruby đọc lại danh sách (có thể đã đổi trong SketchUp)');
+  const treeRows=()=>page.locator('#tag-tree-list .tm-row');
+  const rowOf=(kind,id)=>page.locator(`#tag-tree-list .tm-row[data-kind="${kind}"][data-id="${id}"]`);
+  ok(await page.locator('#tag-pane-model').isVisible() && await treeRows().count()===3,'cây mặc định gập: chỉ hiện thư mục cấp gốc và tag ở gốc (2 thư mục + Untagged)');
+  ok((await rowOf('folder',1).innerText()).includes('3 tag') && (await rowOf('folder',2).innerText()).includes('1 tag'),'mỗi thư mục ghi số tag bên trong (kể cả thư mục con)');
+  await rowOf('folder',1).locator('.tm-caret').click();
+  ok((await treeRows().evaluateAll(rows=>rows.map(r=>r.querySelector('.tm-name').textContent))).join('|')==='A. ARCHITECTURAL|Con|A. WALL|A. WINDOW|S. STRUCTURAL|Untagged','mở thư mục: hiện thư mục con và tag bên trong, theo thứ tự chữ cái')
+  await rowOf('folder',3).locator('.tm-caret').click();
+  ok((await treeRows().evaluateAll(rows=>rows.map(r=>r.querySelector('.tm-name').textContent))).join('|')==='A. ARCHITECTURAL|Con|A. DOOR|A. WALL|A. WINDOW|S. STRUCTURAL|Untagged','thứ tự: thư mục con trước, rồi tag; mỗi cấp xếp theo tên');
+  ok(await rowOf('tag',11).evaluate(el=>el.classList.contains('dim')) && await rowOf('folder',2).evaluate(el=>el.classList.contains('dim')),'tag và thư mục đang ẩn hiện mờ');
+  await rowOf('folder',2).locator('.tm-caret').click();
+  ok(await rowOf('tag',13).evaluate(el=>el.classList.contains('dim')),'tag đang bật nhưng nằm trong thư mục bị ẩn: cũng mờ (không thấy được trong model)');
+  await clear();await rowOf('tag',10).getByRole('button',{name:'Ẩn tag'}).click();
+  ok(JSON.stringify(await json('tm_visible'))==='{"kind":"tag","id":10,"visible":false}','bấm mắt tag đang hiện: gửi lệnh ẩn đúng mã tag');
+  await clear();await rowOf('tag',11).getByRole('button',{name:'Hiện tag'}).click();
+  ok(JSON.stringify(await json('tm_visible'))==='{"kind":"tag","id":11,"visible":true}','bấm mắt tag đang ẩn: gửi lệnh hiện');
+  await clear();await rowOf('folder',2).getByRole('button',{name:'Hiện thư mục'}).click();
+  ok(JSON.stringify(await json('tm_visible'))==='{"kind":"folder","id":2,"visible":true}','bấm mắt thư mục: gửi lệnh với loại thư mục');
+  await clear();await rowOf('tag',12).getByRole('button',{name:'Cô lập tag'}).click();
+  ok(JSON.stringify(await json('tm_isolate'))==='{"kind":"tag","id":12}','nút tròn trên tag: gửi lệnh cô lập');
+  await clear();await rowOf('folder',1).getByRole('button',{name:'Cô lập thư mục'}).click();
+  ok(JSON.stringify(await json('tm_isolate'))==='{"kind":"folder","id":1}','nút tròn trên thư mục: gửi lệnh cô lập thư mục');
+  ok(await page.locator('#tag-tree-banner').isHidden(),'chưa cô lập: không có thanh báo');
+  await receive('tag_tree',{...TREE,isolated:{kind:'tag',id:12,name:'A. DOOR'}});
+  ok(await page.locator('#tag-tree-banner').isVisible() && (await page.locator('#tag-tree-banner').innerText()).includes('Đang cô lập: A. DOOR') && await rowOf('tag',12).evaluate(el=>el.classList.contains('isolated')),'đang cô lập: thanh báo ghi tên và dòng được đánh dấu');
+  ok(await rowOf('tag',12).getByRole('button',{name:'Bỏ cô lập'}).count()===1,'nút tròn của mục đang cô lập đổi thành Bỏ cô lập');
+  await clear();await page.locator('#tag-tree-banner').getByRole('button',{name:'Khôi phục hiển thị'}).click();
+  ok(JSON.stringify(await json('tm_isolate'))==='{"restore":true}','Khôi phục hiển thị: gửi lệnh khôi phục');
+  await receive('tag_tree',{...TREE});
+  ok(await page.locator('#tag-tree-banner').isHidden(),'sau khi khôi phục: thanh báo biến mất');
+  const treeSearch=page.locator('#tag-pane-model input[type=search]');
+  await treeSearch.fill('wall');
+  ok((await treeRows().evaluateAll(rows=>rows.map(r=>r.querySelector('.tm-name').textContent))).join('|')==='A. ARCHITECTURAL|A. WALL','tìm "wall": chỉ hiện tag khớp và thư mục chứa nó (tự mở)');
+  await treeSearch.fill('con');
+  ok((await treeRows().evaluateAll(rows=>rows.map(r=>r.querySelector('.tm-name').textContent))).join('|')==='A. ARCHITECTURAL|Con|A. DOOR','tìm theo tên thư mục: hiện thư mục và mọi tag bên trong, kèm thư mục cha');
+  await treeSearch.fill('khong co');
+  ok(await treeRows().count()===0 && (await page.locator('#tag-tree-list').innerText()).includes('Không có tag hoặc thư mục nào khớp'),'tìm không ra: báo không khớp');
+  await treeSearch.fill('');
+  await page.getByRole('button',{name:'Mở hết'}).click();
+  ok(await treeRows().count()===8,'Mở hết: mở mọi thư mục');
+  await page.getByRole('button',{name:'Gập hết'}).click();
+  ok(await treeRows().count()===3,'Gập hết: về cấp gốc');
+  await clear();await page.getByRole('button',{name:'Làm mới'}).click();
+  ok((await calls('tm_refresh')).length===1,'nút Làm mới: xin Ruby đọc lại danh sách');
+  await receive('tag_tree',{...TREE,layers:[...TREE.layers,{id:15,name:'Moi',visible:true,folder_id:null}]});
+  ok(await rowOf('tag',15).count()===1,'nhận danh sách mới từ Ruby: vẽ lại, giữ ô tìm và các thư mục đã mở');
+  await receive('tag_tree',{supported:false,isolated:null,folders:[],layers:[{id:1,name:'Tag',visible:true,folder_id:null}]});
+  ok((await page.locator('#tag-tree-list').innerText()).includes('cần SketchUp 2021') && await treeRows().count()===1,'SketchUp cũ không có thư mục tag: báo rõ và vẫn liệt kê tag');
+  await receive('tag_tree',{supported:true,isolated:null,folders:[],layers:[]});
+  ok((await page.locator('#tag-tree-list').innerText()).includes('chưa có tag nào'),'model không có tag: báo trống');
+  ok(await page.locator('#tag-assign').isVisible(),'thanh Gán tag vẫn thấy ở tab Trong model');
 
   // ---- Đổi ngôn ngữ thì tải lại cửa sổ ----
   await receive('config',config('table'));

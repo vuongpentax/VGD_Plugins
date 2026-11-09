@@ -207,6 +207,14 @@ const VGD_I18N=(()=>{
     'Không có tag nào cần xếp vào thư mục. Bấm Xem trước để biết lý do.':'No tag needs to be placed into a folder. Click Preview to see why.',
     'Hãy nhập tên thư mục.':'Enter a folder name.','Tên thư mục không hợp lệ.':'The folder name is not valid.',
     'Kéo để đổi độ rộng':'Drag to resize',
+    'Trong model':'In model','Mở hết':'Expand all','Gập hết':'Collapse all','Làm mới':'Refresh','Mở':'Expand','Gập':'Collapse','Khôi phục hiển thị':'Restore visibility','Bỏ cô lập':'Remove isolation',
+    'Tìm tag hoặc thư mục...':'Find tag or folder...','Tìm tag hoặc thư mục':'Find tag or folder','Model chưa có tag nào.':'The model has no tags yet.','Không có tag hoặc thư mục nào khớp.':'No tag or folder matches.',
+    'Ẩn tag':'Hide tag','Hiện tag':'Show tag','Ẩn thư mục':'Hide folder','Hiện thư mục':'Show folder','Cô lập tag':'Isolate tag','Cô lập thư mục':'Isolate folder',
+    'Mắt ẩn / hiện tag hoặc cả thư mục trong model; nút tròn cô lập: chỉ hiện mục đó, ẩn mọi thứ còn lại, bấm lại để trả hiển thị như cũ. Mỗi thao tác là một bước hoàn tác.':'The eye shows or hides a tag or a whole folder in the model; the round button isolates: only that item stays visible, everything else is hidden, and clicking again restores the previous visibility. Each action is one undo step.',
+    'Phiên bản SketchUp này chưa có thư mục tag (cần SketchUp 2021 trở lên). Chỉ hiện danh sách tag.':'This SketchUp version has no tag folders (SketchUp 2021 or newer is required). Only the tag list is shown.',
+    'Đã khôi phục hiển thị tag như trước khi cô lập.':'Restored tag visibility as it was before isolating.','Giá trị hiển thị không hợp lệ.':'The visibility value is not valid.',
+    'Không tìm thấy tag hoặc thư mục này. Hãy làm mới danh sách.':'This tag or folder was not found. Refresh the list.','Không tìm thấy tag này. Hãy làm mới danh sách.':'This tag was not found. Refresh the list.','Không tìm thấy thư mục này. Hãy làm mới danh sách.':'This folder was not found. Refresh the list.',
+    'Chưa cô lập gì để khôi phục.':'Nothing is isolated, so there is nothing to restore.','Mã tag hoặc thư mục không hợp lệ.':'The tag or folder id is not valid.','Loại mục không hợp lệ.':'The item type is not valid.',
     'Bộ tag':'Tag set','Tự động':'Automatic','Thư viện mẫu':'Sample library','Lọc theo nhóm':'Filter by group','Tất cả nhóm':'All groups','Bảng luật':'Rules table','Chưa có thư viện tag mẫu.':'No sample tag library.',
     'Chưa có tag nào. Bấm Thêm tag, nhập file, hoặc nhập cụm tag ở tab Thư viện mẫu.':'There are no tags yet. Click Add tag, import a file, or import tag clusters from the Sample library tab.',
     'Bộ tag lưu trên máy này, dùng lại cho mọi model; tên không phân biệt chữ hoa, chữ thường. Excel dùng file CSV; nếu Excel báo lỗi, hãy lưu lại dưới dạng CSV UTF-8.':'The tag set is saved on this computer and reused for every model; names are not case sensitive. Excel uses CSV files; if Excel reports an error, save the file again as CSV UTF-8.',
@@ -337,6 +345,8 @@ const VGD_I18N=(()=>{
   rule(/^Mỗi luật tối đa (\d+) từ khóa, mỗi từ khóa không quá (\d+) ký tự\.$/,(m,a,b)=>`Each rule allows at most ${a} keywords of ${b} characters.`);
   rule(/^(\d+) đối tượng( · .*)?$/,(m,n,rest)=>`${plural(n,'object','objects')}${rest||''}`);
   rule(/^Nhập (\d+) cụm \((\d+) tag\)$/,(m,a,b)=>`Import ${plural(a,'cluster','clusters')} (${plural(b,'tag','tags')})`);
+  rule(/^Đang cô lập: (.*)$/,(m,name)=>`Isolated: ${name}`);
+  rule(/^Đã cô lập (tag|thư mục) "(.*)" \(ẩn (\d+) tag khác\)\. Bấm lại để khôi phục hiển thị\.$/,(m,kind,name,n)=>`Isolated ${kind==='tag'?'tag':'folder'} "${name}" (${plural(n,'other tag','other tags')} hidden). Click again to restore visibility.`);
   rule(/^(\d+) luật$/,(m,n)=>plural(n,'rule','rules'));
   rule(/^(\d+) \/ (\d+) tag$/,(m,a,b)=>`${a} / ${plural(b,'tag','tags')}`);
   rule(/^(\d+) tag( · .*)?$/,(m,n,rest)=>`${plural(n,'tag','tags')}${rest||''}`);

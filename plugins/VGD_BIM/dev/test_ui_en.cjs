@@ -54,8 +54,14 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await page.getByRole('button',{name:/Thêm quy tắc|Add rule/}).first().click();await scan('Quy tắc (thêm)');
   await receive('config',config(lang,'tags'));
   await receive('tags',{groups:F.groups.slice(0,5),tags:[{name:'A',group:F.groups[0],in_model:true,visible:false},{name:'B',group:F.groups[1],in_model:false},{name:'C',group:F.groups[1],in_model:true,visible:true}],selection:3,rules:[{tag:'Tường',keywords:'tường, wall'},{tag:'Cửa',keywords:'cửa, door'}],catalog:[{group:'A. ARCHITECTURAL',label_vi:'Kiến trúc',count:15,tags:['A. CHIMNEY','A. WALL']},{group:'F. FIRE PROTECTION',label_vi:'Phòng cháy chữa cháy',count:1,tags:['F. FIRE SUPPRESSION']}]});await scan('Soạn tag');
+  await receive('tag_tree',{supported:true,isolated:{kind:'tag',id:12,name:'A. DOOR'},folders:[{id:1,name:'A. ARCHITECTURAL',visible:true,parent_id:null},{id:2,name:'S. STRUCTURAL',visible:false,parent_id:null}],layers:[{id:10,name:'A. WALL',visible:true,folder_id:1},{id:11,name:'A. WINDOW',visible:false,folder_id:1},{id:12,name:'A. DOOR',visible:true,folder_id:null}]});
+  await scan('Soạn tag (trong model)');
+  await page.locator('.tm-row[data-kind=folder]').first().locator('.tm-caret').click();await scan('Soạn tag (trong model, mở thư mục)');
+  await page.locator('#tag-pane-model input[type=search]').fill('wall');await scan('Soạn tag (trong model, tìm)');await page.locator('#tag-pane-model input[type=search]').fill('zzz');await scan('Soạn tag (trong model, không khớp)');
+  await receive('tag_tree',{supported:false,isolated:null,folders:[],layers:[]});await scan('Soạn tag (trong model, SketchUp cũ)');
+  await page.click('#tag-tab-set');
   await page.locator('.tag-group summary').first().click();await scan('Soạn tag (mở nhóm)');
-  await page.locator('.tag-toolbar input[type=search]').fill('wall');await scan('Soạn tag (tìm)');await page.locator('.tag-toolbar input[type=search]').fill('');
+  await page.locator('#tag-pane-set input[type=search]').fill('wall');await scan('Soạn tag (tìm)');await page.locator('#tag-pane-set input[type=search]').fill('');
   await page.click('#tag-tab-lib');await scan('Soạn tag (thư viện)');
   await page.getByLabel('A. ARCHITECTURAL',{exact:true}).check();await scan('Soạn tag (đã tick cụm)');await page.getByLabel('A. ARCHITECTURAL',{exact:true}).uncheck();
   await page.click('#tag-tab-auto');await scan('Soạn tag (tự động, gập)');await page.locator('.rule-fold>summary').first().click();await page.locator('.rule-fold>summary').nth(1).click();await scan('Soạn tag (tự động, mở bảng luật)');
@@ -124,6 +130,7 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
     'Đã gắn tag tự động cho 5 đối tượng (2 tag). Đã đúng tag sẵn: 1. Giữ nguyên 2 đối tượng đã có tag khác. Bỏ qua 3 đối tượng bị khóa. Tag đang tắt hiển thị nên đối tượng gắn vào sẽ bị ẩn: Door.',
     'Chưa có luật nào. Hãy thêm ít nhất một luật.','Hãy chọn group hoặc component trong SketchUp trước, hoặc bật "Cả model".','Quá nhiều đối tượng (tối đa 20000). Hãy chọn ít hơn.','Không có đối tượng nào cần gắn tag. Bấm Xem trước để biết lý do.',
     'Tùy chọn "Dựa theo" không hợp lệ.','Tùy chọn "Phạm vi" không hợp lệ.','Danh sách luật phải là một danh sách.','Tối đa 100 luật.','Dòng 2: Mỗi luật phải là một mục hợp lệ.','Dòng 1: Cần ít nhất một từ khóa.','Dòng 3: Từ khóa phải có ít nhất 2 ký tự.','Dòng 1: Mỗi luật tối đa 30 từ khóa, mỗi từ khóa không quá 40 ký tự.','File luật không đúng định dạng.','File không có luật nào.']);
+  await messages(['Đã cô lập tag "A. WALL" (ẩn 3 tag khác). Bấm lại để khôi phục hiển thị.','Đã cô lập thư mục "A. ARCHITECTURAL" (ẩn 1 tag khác). Bấm lại để khôi phục hiển thị.','Đã khôi phục hiển thị tag như trước khi cô lập.','Giá trị hiển thị không hợp lệ.','Không tìm thấy tag hoặc thư mục này. Hãy làm mới danh sách.','Không tìm thấy tag này. Hãy làm mới danh sách.','Không tìm thấy thư mục này. Hãy làm mới danh sách.','Chưa cô lập gì để khôi phục.','Mã tag hoặc thư mục không hợp lệ.','Loại mục không hợp lệ.']);
   await messages(['Đã lưu bộ luật xếp thư mục làm mặc định.','Đã đặt lại bộ luật xếp thư mục về mặc định.','Đã xuất 18 luật: C:\\a.json','Đã nhập 18 luật từ file. Bộ luật chưa lưu làm mặc định.',
     'Đã xếp 12 tag vào 4 thư mục (3 thư mục mới tạo). Đã đúng thư mục sẵn: 2. Giữ nguyên 5 tag đã nằm trong thư mục khác.','Đã xếp 1 tag vào 1 thư mục (0 thư mục mới tạo).',
     'Phiên bản SketchUp này chưa có thư mục tag (cần SketchUp 2021 trở lên).','Chưa có tag nào trong model ngoài Untagged. Hãy nhập tag mẫu hoặc gán tag trước.','Không có tag nào cần xếp vào thư mục. Bấm Xem trước để biết lý do.',
