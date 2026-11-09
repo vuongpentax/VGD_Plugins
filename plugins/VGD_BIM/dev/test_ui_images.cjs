@@ -617,9 +617,29 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
 
   // ---- Gắn tag tự động theo tên (tab Soạn tag): bảng luật, tùy chọn, xem trước rồi mới áp dụng ----
   await receive('config',config('tags'));
+  const CATALOG=[{group:'A. ARCHITECTURAL',label_vi:'Kiến trúc',count:15,tags:['A. CHIMNEY','A. WALL']},{group:'F. FIRE PROTECTION',label_vi:'Phòng cháy chữa cháy',count:1,tags:['F. FIRE SUPPRESSION']}];
   const AUTO_RULES=[{tag:'Tường',keywords:'tường, wall'},{tag:'Cửa',keywords:'cửa, door'}];
-  await receive('tags',{groups:F.groups.slice(0,5),tags:[],selection:2,rules:AUTO_RULES});
+  await receive('tags',{groups:F.groups.slice(0,5),tags:[],selection:2,rules:AUTO_RULES,catalog:CATALOG});
   await clear();
+  // Thư viện tag mẫu: tick cụm rồi Nhập
+  const importBtn=page.locator('#tag-catalog-import');
+  ok(await page.locator('#tag-catalog-card .catalog-row').count()===2 && (await page.locator('#tag-catalog-card .catalog-row').first().innerText()).includes('A. ARCHITECTURAL') && (await page.locator('#tag-catalog-card .catalog-row').first().innerText()).includes('Kiến trúc · 15 tag'),'thư viện tag mẫu: liệt kê từng cụm kèm nhãn tiếng Việt và số tag');
+  ok(await importBtn.isDisabled() && (await importBtn.innerText())==='Nhập','chưa tick cụm nào: nút Nhập bị khóa');
+  await page.getByLabel('A. ARCHITECTURAL',{exact:true}).check();
+  ok(await importBtn.isEnabled() && (await importBtn.innerText())==='Nhập 1 cụm (15 tag)','tick một cụm: nút Nhập mở khóa và ghi số cụm, số tag');
+  await page.getByLabel('F. FIRE PROTECTION',{exact:true}).check();
+  ok((await importBtn.innerText())==='Nhập 2 cụm (16 tag)','tick hai cụm: cộng đúng số tag (16)');
+  await clear();await importBtn.click();
+  ok(JSON.stringify(await json('tag_catalog_import'))===JSON.stringify({groups:['A. ARCHITECTURAL','F. FIRE PROTECTION']}),'bấm Nhập: gửi đúng các cụm đã tick');
+  await page.getByRole('button',{name:'Bỏ chọn'}).click();
+  ok(await importBtn.isDisabled() && await page.locator('#tag-catalog-card input.cb:checked').count()===0,'Bỏ chọn: bỏ tick tất cả, nút Nhập khóa lại');
+  await page.getByRole('button',{name:'Chọn tất cả'}).click();
+  ok(await page.locator('#tag-catalog-card input.cb:checked').count()===2 && (await importBtn.innerText())==='Nhập 2 cụm (16 tag)','Chọn tất cả: tick mọi cụm');
+  await page.getByRole('button',{name:'Bỏ chọn'}).click();
+  await page.getByLabel('F. FIRE PROTECTION',{exact:true}).check();
+  await receive('tags',{groups:F.groups.slice(0,5),tags:[],selection:2,rules:AUTO_RULES,catalog:CATALOG});
+  ok(await page.locator('#tag-catalog-card input.cb:checked').count()===1 && (await importBtn.innerText())==='Nhập 1 cụm (1 tag)','vẽ lại tab (ví dụ sau khi nhập): các cụm đã tick được giữ');
+  await page.getByRole('button',{name:'Bỏ chọn'}).click();
   const autoRows=()=>page.locator('#tag-auto-card .auto-rules tbody tr');
   const autoInputs=()=>page.locator('#tag-auto-card .auto-rules tbody tr').evaluateAll(rows=>rows.map(r=>[...r.querySelectorAll('input')].map(i=>i.value)));
   ok(await page.locator('#tag-auto-card').count()===1 && await autoRows().count()===2 && JSON.stringify(await autoInputs())===JSON.stringify([['Tường','tường, wall'],['Cửa','cửa, door']]),'tab Soạn tag: có thẻ gắn tag tự động với bộ luật đang lưu (2 luật)');
@@ -667,7 +687,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok((await calls('tag_rules_import')).length===1 && (await calls('tag_rules_reset')).length===1,'Nhập file luật và Đặt lại: gửi lệnh (Ruby hỏi xác nhận trước khi đặt lại)');
   await receive('tag_rules',{rules:[{tag:'Nội thất',keywords:'bàn, ghế'}],imported:true});
   ok(JSON.stringify(await autoInputs())===JSON.stringify([['Nội thất','bàn, ghế']]) && await page.locator('#tag-auto-apply').isDisabled(),'nhận bộ luật mới từ Ruby (nhập file): thay bảng luật và bỏ bản xem trước');
-  await receive('tags',{groups:F.groups.slice(0,5),tags:[],selection:2,rules:AUTO_RULES});
+  await receive('tags',{groups:F.groups.slice(0,5),tags:[],selection:2,rules:AUTO_RULES,catalog:CATALOG});
   ok(JSON.stringify(await autoInputs())===JSON.stringify([['Nội thất','bàn, ghế']]),'vẽ lại tab (ví dụ sau khi áp dụng): giữ bộ luật đang sửa, không quay về bộ đã lưu');
 
   // ---- Đổi ngôn ngữ thì tải lại cửa sổ ----

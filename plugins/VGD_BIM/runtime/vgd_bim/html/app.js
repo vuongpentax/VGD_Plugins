@@ -130,6 +130,7 @@ function tagEditor(data) {
   const go=button('Gán tag',()=>{if(!pick.value)throw Error('Hãy lưu bộ tag trước, rồi chọn tag để gán.');call('assign_tag',JSON.stringify({name:pick.value}));},'primary');
   go.id='tag-assign';go.disabled=!data.selection||!(data.tags||[]).length;
   assign.append(info,pick,go,node('p','Gán tag cho các đối tượng được chọn trực tiếp. Nếu tag đang tắt hiển thị, các đối tượng gán vào sẽ bị ẩn.','muted'));
+  catalogCard(data);
   autoTagCard(data);
 }
 function exportCard(data) {

@@ -1,0 +1,914 @@
+[
+ {
+  "group": "! INFORMATION",
+  "label_vi": "Thông tin",
+  "tags": [
+   {
+    "name": "!annotation",
+    "vi": "Ghi chú"
+   },
+   {
+    "name": "!contour",
+    "vi": "Đường đồng mức"
+   },
+   {
+    "name": "!dimension",
+    "vi": "Kích thước"
+   },
+   {
+    "name": "!grid",
+    "vi": "Lưới trục"
+   },
+   {
+    "name": "!label",
+    "vi": "Tên nhãn"
+   },
+   {
+    "name": "!sign",
+    "vi": "Ký hiệu"
+   },
+   {
+    "name": "!space",
+    "vi": "Không gian"
+   },
+   {
+    "name": "!zone",
+    "vi": "Khu vực"
+   },
+   {
+    "name": "!opening",
+    "vi": "Lỗ mở"
+   }
+  ]
+ },
+ {
+  "group": "# BASIC",
+  "label_vi": "Cơ bản",
+  "tags": [
+   {
+    "name": "#2d_graphic",
+    "vi": "Đồ họa 2 chiều"
+   },
+   {
+    "name": "#3d_object",
+    "vi": "Vật thể 3 chiều"
+   },
+   {
+    "name": "#hidden",
+    "vi": "Vật thể ẩn"
+   },
+   {
+    "name": "#proxy",
+    "vi": "Vật thể đại diện"
+   },
+   {
+    "name": "#text",
+    "vi": "Chữ"
+   },
+   {
+    "name": "#viewport",
+    "vi": "Khung nhìn đồ họa"
+   },
+   {
+    "name": "edge_bold",
+    "vi": "Nét đậm"
+   },
+   {
+    "name": "edge_bold_extra",
+    "vi": "Nét siêu đậm"
+   },
+   {
+    "name": "edge_medium",
+    "vi": "Nét trung bình"
+   },
+   {
+    "name": "edge_thin",
+    "vi": "Nét mảnh"
+   },
+   {
+    "name": "edge_center",
+    "vi": "Nét trung tâm"
+   },
+   {
+    "name": "edge_dash",
+    "vi": "Nét gạch đứt"
+   },
+   {
+    "name": "edge_tiling",
+    "vi": "Nét chia ô"
+   },
+   {
+    "name": "face_color_01",
+    "vi": "Diện màu 1"
+   },
+   {
+    "name": "face_color_02",
+    "vi": "Diện màu 2"
+   },
+   {
+    "name": "face_color_03",
+    "vi": "Diện màu 3"
+   },
+   {
+    "name": "face_color_04",
+    "vi": "Diện màu 4"
+   }
+  ]
+ },
+ {
+  "group": "@ STATUS",
+  "label_vi": "Tình trạng",
+  "tags": [
+   {
+    "name": "@external",
+    "vi": "Bên ngoài"
+   },
+   {
+    "name": "@internal",
+    "vi": "Bên trong"
+   },
+   {
+    "name": "@demolition",
+    "vi": "Phá dỡ"
+   },
+   {
+    "name": "@existing",
+    "vi": "Hiện trạng"
+   },
+   {
+    "name": "@new",
+    "vi": "Mới"
+   },
+   {
+    "name": "@reuse",
+    "vi": "Dùng lại"
+   },
+   {
+    "name": "@temporary",
+    "vi": "Tạm thời"
+   }
+  ]
+ },
+ {
+  "group": "1. CONTEXT",
+  "label_vi": "Bối cảnh",
+  "tags": [
+   {
+    "name": "1. GEOGRAPHIC",
+    "vi": "Cảnh quan địa lý"
+   },
+   {
+    "name": "1. ANIMAL",
+    "vi": "Động vật"
+   },
+   {
+    "name": "1. HUMAN",
+    "vi": "Con người"
+   },
+   {
+    "name": "1. VEGETATION",
+    "vi": "Thực vật"
+   },
+   {
+    "name": "1. VEHICLE",
+    "vi": "Phương tiện"
+   }
+  ]
+ },
+ {
+  "group": "2. SITE",
+  "label_vi": "Công trường",
+  "tags": [
+   {
+    "name": "2. BUILDING",
+    "vi": "Công trình xây dựng"
+   },
+   {
+    "name": "2. PROPERTY",
+    "vi": "Ranh giới đất"
+   },
+   {
+    "name": "2. SETBACK",
+    "vi": "Khoảng lùi"
+   },
+   {
+    "name": "2. SITE ELEMENT",
+    "vi": "Cổng tường rào"
+   }
+  ]
+ },
+ {
+  "group": "3. BUILDING STORIES",
+  "label_vi": "Tầng nhà",
+  "tags": [
+   {
+    "name": "3. LEVEL 1",
+    "vi": "Tầng 1"
+   },
+   {
+    "name": "3. LEVEL 2",
+    "vi": "Tầng 2"
+   },
+   {
+    "name": "3. LEVEL 3",
+    "vi": "Tầng 3"
+   }
+  ]
+ },
+ {
+  "group": "A. ARCHITECTURAL",
+  "label_vi": "Kiến trúc",
+  "tags": [
+   {
+    "name": "A. CHIMNEY",
+    "vi": "Ống khói"
+   },
+   {
+    "name": "A. CURTAIN WALL",
+    "vi": "Tường đứng"
+   },
+   {
+    "name": "A. DOOR",
+    "vi": "Cửa đi"
+   },
+   {
+    "name": "A. FINISHING CEILING",
+    "vi": "Trần hoàn thiện"
+   },
+   {
+    "name": "A. FINISHING FLOOR",
+    "vi": "Sàn hoàn thiện"
+   },
+   {
+    "name": "A. FINISHING WALL",
+    "vi": "Tường hoàn thiện"
+   },
+   {
+    "name": "A. RAILING",
+    "vi": "Lan can"
+   },
+   {
+    "name": "A. RAMP",
+    "vi": "Đường dốc"
+   },
+   {
+    "name": "A. RAMP FLIGHT",
+    "vi": "Phân đoạn đường dốc"
+   },
+   {
+    "name": "A. ROOF",
+    "vi": "Mái công trình"
+   },
+   {
+    "name": "A. SHADING",
+    "vi": "Cấu kiện che nắng"
+   },
+   {
+    "name": "A. STAIR",
+    "vi": "Cầu thang bộ"
+   },
+   {
+    "name": "A. STAIR FLIGHT",
+    "vi": "Phân đoạn thang"
+   },
+   {
+    "name": "A. WALL",
+    "vi": "Tường"
+   },
+   {
+    "name": "A. WINDOW",
+    "vi": "Cửa sổ"
+   }
+  ]
+ },
+ {
+  "group": "I. INTERIOR",
+  "label_vi": "Nội thất",
+  "tags": [
+   {
+    "name": "I. FURNITURE",
+    "vi": "Vật dụng nội thất"
+   },
+   {
+    "name": "I. DECORATION",
+    "vi": "Đồ trang trí nội thất"
+   },
+   {
+    "name": "I. COVERING",
+    "vi": "Hoàn thiện nội thất"
+   },
+   {
+    "name": "I. PARTITION",
+    "vi": "Vách ngăn nội thất"
+   },
+   {
+    "name": "I. EQUIPMENT",
+    "vi": "Thiết bị nội thất"
+   }
+  ]
+ },
+ {
+  "group": "E. ELECTRICAL",
+  "label_vi": "Điện",
+  "tags": [
+   {
+    "name": "E. CABLE CARRIER FITTING",
+    "vi": "Khớp nối thang máng cáp"
+   },
+   {
+    "name": "E. CABLE CARRIER SEGMENT",
+    "vi": "Đoạn thang máng cáp"
+   },
+   {
+    "name": "E. CABLE FITTING",
+    "vi": "Khớp nối cáp"
+   },
+   {
+    "name": "E. CABLE SEGMENT",
+    "vi": "Đoạn cáp"
+   },
+   {
+    "name": "E. ELECTRIC DISTRIBUTION BOARD",
+    "vi": "Bảng điện"
+   },
+   {
+    "name": "E. ELECTRIC FLOW STORAGE",
+    "vi": "Bộ lưu điện"
+   },
+   {
+    "name": "E. ELECTRIC GENERATOR",
+    "vi": "Máy phát điện"
+   },
+   {
+    "name": "E. ELECTRIC MOTOR",
+    "vi": "Mô tơ điện"
+   },
+   {
+    "name": "E. ELECTRIC TIME CONTROL",
+    "vi": "Bộ điều khiển định giờ"
+   },
+   {
+    "name": "E. JUNCTION BOX",
+    "vi": "Hộp nối điện"
+   },
+   {
+    "name": "E. LIGHT FIXTURE",
+    "vi": "Đèn được điều khiển chung"
+   },
+   {
+    "name": "E. PROTECTIVE DEVICE",
+    "vi": "Thiết bị bảo vệ điện"
+   },
+   {
+    "name": "E. TRANSFORMER",
+    "vi": "Máy biến áp"
+   },
+   {
+    "name": "E. TRIPPING UNIT",
+    "vi": "Thiết bị ngắt mạch"
+   }
+  ]
+ },
+ {
+  "group": "F. FIRE PROTECTION",
+  "label_vi": "Phòng cháy chữa cháy",
+  "tags": [
+   {
+    "name": "F. FIRE SUPPRESSION",
+    "vi": "Hệ thống dập lửa"
+   }
+  ]
+ },
+ {
+  "group": "M. MECHANICAL",
+  "label_vi": "Điều hòa không khí & thông gió",
+  "tags": [
+   {
+    "name": "M. ACTUATOR",
+    "vi": "Bộ truyền động"
+   },
+   {
+    "name": "M. AIR TERMINAL",
+    "vi": "Thiết bị điều hòa không khí"
+   },
+   {
+    "name": "M. AIR TERMINAL BOX",
+    "vi": "Hộp chia gió"
+   },
+   {
+    "name": "M. AIR TO AIR HEAT RECOVERY",
+    "vi": "Thiết bị thu hồi nhiệt"
+   },
+   {
+    "name": "M. BOILER",
+    "vi": "Nồi hơi"
+   },
+   {
+    "name": "M. CHILLER",
+    "vi": "Dàn lạnh"
+   },
+   {
+    "name": "M. COIL",
+    "vi": "Bộ gia nhiệt"
+   },
+   {
+    "name": "M. COMPRESSOR",
+    "vi": "Thiết bị nén chất lỏng"
+   },
+   {
+    "name": "M. CONDENSER",
+    "vi": "Thiết bị ngưng tụ"
+   },
+   {
+    "name": "M. COOLED BEAM",
+    "vi": "Thiết bị giải nhiệt"
+   },
+   {
+    "name": "M. COOLING TOWER",
+    "vi": "Tháp giải nhiệt"
+   },
+   {
+    "name": "M. DAMPER",
+    "vi": "Van chỉnh"
+   },
+   {
+    "name": "M. DUCT FITTING",
+    "vi": "Khớp nối ống gió"
+   },
+   {
+    "name": "M. DUCT SEGMENT",
+    "vi": "Đoạn ống gió"
+   },
+   {
+    "name": "M. DUCT SILENCER",
+    "vi": "Tiêu âm ống gió"
+   },
+   {
+    "name": "M. ENGINE",
+    "vi": "Động cơ"
+   },
+   {
+    "name": "M. EVAPORATIVE COOLER",
+    "vi": "Máy làm mát bằng hơi nước"
+   },
+   {
+    "name": "M. EVAPORATOR",
+    "vi": "Thiết bị làm bay hơi"
+   },
+   {
+    "name": "M. FILTER",
+    "vi": "Thiết bị lọc"
+   },
+   {
+    "name": "M. HEAT EXCHANGER",
+    "vi": "Bộ trao đổi nhiệt"
+   },
+   {
+    "name": "M. HUMIDIFIER",
+    "vi": "Thiết bị tạo ẩm"
+   },
+   {
+    "name": "M. MOTOR CONNECTION",
+    "vi": "Kết nối mô tơ"
+   },
+   {
+    "name": "M. TUBE BUNDLE",
+    "vi": "Bộ ống dẫn môi chất lạnh"
+   },
+   {
+    "name": "M. VIBRATION ISOLATOR",
+    "vi": "Bộ giảm chấn"
+   }
+  ]
+ },
+ {
+  "group": "P. PLUMBING",
+  "label_vi": "Nước",
+  "tags": [
+   {
+    "name": "P. DISTRIBUTION CHAMBER",
+    "vi": "Hố ga phân phối"
+   },
+   {
+    "name": "P. FLOW INSTRUMENT",
+    "vi": "Bộ đo lưu lượng dòng chảy"
+   },
+   {
+    "name": "P. FLOW METER",
+    "vi": "Đồng ho đo dòng chảy"
+   },
+   {
+    "name": "P. INTERCEPTOR",
+    "vi": "Thiết bị lọc tách"
+   },
+   {
+    "name": "P. PIPE FITTING",
+    "vi": "Khớp nối ống"
+   },
+   {
+    "name": "P. PIPE SEGMENT",
+    "vi": "Đoạn ống"
+   },
+   {
+    "name": "P. PUMP",
+    "vi": "Bơm"
+   },
+   {
+    "name": "P. VALVE",
+    "vi": "Van"
+   },
+   {
+    "name": "P. WASTE TERMINAL",
+    "vi": "Bể xử lý nước thải"
+   }
+  ]
+ },
+ {
+  "group": "L. LANDSCAPE",
+  "label_vi": "Cảnh quan",
+  "tags": [
+   {
+    "name": "L. HARDSCAPE",
+    "vi": "Cảnh quan nhân tạo"
+   },
+   {
+    "name": "L. SOFTSCAPE",
+    "vi": "Cảnh quan sinh học"
+   },
+   {
+    "name": "L. TOPOGRAPHY",
+    "vi": "Cảnh quan địa hình"
+   },
+   {
+    "name": "L. WATER FEATURE",
+    "vi": "Cảnh quan mặt nước"
+   },
+   {
+    "name": "L. LAWN",
+    "vi": "Thảm cỏ"
+   },
+   {
+    "name": "L. SHRUB",
+    "vi": "Cây bụi"
+   },
+   {
+    "name": "L. TREE",
+    "vi": "Cây xanh"
+   },
+   {
+    "name": "L. WALKWAY",
+    "vi": "Đường dạo bộ"
+   }
+  ]
+ },
+ {
+  "group": "Q. EQUIPMENT",
+  "label_vi": "Thiết bị & vật dụng",
+  "tags": [
+   {
+    "name": "Q. ACCESSORY",
+    "vi": "Phụ kiện thiết bị"
+   },
+   {
+    "name": "Q. ALARM",
+    "vi": "Chuông báo"
+   },
+   {
+    "name": "Q. AUDIO VISUAL APPLIANCE",
+    "vi": "Thiết bị nghe nhìn"
+   },
+   {
+    "name": "Q. BURNER",
+    "vi": "Thiết bị đốt"
+   },
+   {
+    "name": "Q. COMMUNICATIONS APPLIANCE",
+    "vi": "Thiết bị viễn thông"
+   },
+   {
+    "name": "Q. CONTROLLER",
+    "vi": "Thiết bị điều khiển"
+   },
+   {
+    "name": "Q. ELECTRIC APPLIANCE",
+    "vi": "Thiết bị điện gia dụng"
+   },
+   {
+    "name": "Q. FAN",
+    "vi": "Quạt"
+   },
+   {
+    "name": "Q. FASTENER",
+    "vi": "Liên kết"
+   },
+   {
+    "name": "Q. FURNITURE",
+    "vi": "Vật dụng"
+   },
+   {
+    "name": "Q. FURNITURE ELEMENT",
+    "vi": "Thành phần vật dụng"
+   },
+   {
+    "name": "Q. LAMP",
+    "vi": "Bóng đèn"
+   },
+   {
+    "name": "Q. MECHANICAL FASTENER",
+    "vi": "Liên kết cơ khí"
+   },
+   {
+    "name": "Q. MEDICAL DEVICE",
+    "vi": "Thiết bị y tế"
+   },
+   {
+    "name": "Q. OUTLET",
+    "vi": "Ổ cắm"
+   },
+   {
+    "name": "Q. SANITARY",
+    "vi": "Thiết bị vệ sinh"
+   },
+   {
+    "name": "Q. SENSOR",
+    "vi": "Thiết bị cảm biến"
+   },
+   {
+    "name": "Q. SOLAR DEVICE",
+    "vi": "Thiết bị năng lượng mặt trời"
+   },
+   {
+    "name": "Q. SPACE HEATER",
+    "vi": "Thiết bị sưởi"
+   },
+   {
+    "name": "Q. STACK",
+    "vi": "Thiết bị che chắn"
+   },
+   {
+    "name": "Q. SWITCH",
+    "vi": "Công tắc"
+   },
+   {
+    "name": "Q. TANK",
+    "vi": "Bể chứa"
+   },
+   {
+    "name": "Q. TRANSPORT ELEMENT",
+    "vi": "Thiết bị vận chuyển"
+   },
+   {
+    "name": "Q. UNITARY CONTROL ELEMENT",
+    "vi": "Bộ điều khiển"
+   },
+   {
+    "name": "Q. UNITARY EQUIPMENT",
+    "vi": "Bộ thiết bị"
+   }
+  ]
+ },
+ {
+  "group": "S. STRUCTURAL",
+  "label_vi": "Kết cấu",
+  "tags": [
+   {
+    "name": "S. BEAM",
+    "vi": "Dầm"
+   },
+   {
+    "name": "S. COLUMN",
+    "vi": "Cột"
+   },
+   {
+    "name": "S. FOOTING",
+    "vi": "Móng"
+   },
+   {
+    "name": "S. MEMBER",
+    "vi": "Giằng"
+   },
+   {
+    "name": "S. PILE",
+    "vi": "Cọc"
+   },
+   {
+    "name": "S. PLATE",
+    "vi": "Bản thép"
+   },
+   {
+    "name": "S. REINFORCING BAR",
+    "vi": "Thanh thép chịu lực"
+   },
+   {
+    "name": "S. REINFORCING MESH",
+    "vi": "Lưới thép chịu lực"
+   },
+   {
+    "name": "S. SLAB",
+    "vi": "Bản sàn"
+   },
+   {
+    "name": "S. TENDON",
+    "vi": "Cáp"
+   },
+   {
+    "name": "S. TENDON ANCHOR",
+    "vi": "Neo cáp"
+   }
+  ]
+ },
+ {
+  "group": "C. CIVIL",
+  "label_vi": "Hạ tầng dân dụng",
+  "tags": [
+   {
+    "name": "C. BRIDGE",
+    "vi": "Cầu"
+   },
+   {
+    "name": "C. BUILDINGS",
+    "vi": "Công trình"
+   },
+   {
+    "name": "C. DAM",
+    "vi": "Đê đập"
+   },
+   {
+    "name": "C. DRAIN",
+    "vi": "Mương cống thoát nước"
+   },
+   {
+    "name": "C. LANDUSE 1",
+    "vi": "Loại đất 1"
+   },
+   {
+    "name": "C. LANDUSE 2",
+    "vi": "Loại đất 2"
+   },
+   {
+    "name": "C. MOAT",
+    "vi": "Hào nước"
+   },
+   {
+    "name": "C. POWER SUPPLY",
+    "vi": "Hạ tầng cấp điện"
+   },
+   {
+    "name": "C. RAILWAY",
+    "vi": "Đường sắt"
+   },
+   {
+    "name": "C. ROAD",
+    "vi": "Đường bộ"
+   },
+   {
+    "name": "C. SIDEWALK",
+    "vi": "Vỉa hè"
+   },
+   {
+    "name": "C. TELECOMMUNICATION",
+    "vi": "Hạ tầng viễn thông"
+   },
+   {
+    "name": "C. TRAIL",
+    "vi": "Đường mòn"
+   },
+   {
+    "name": "C. TUNNEL",
+    "vi": "Đường hầm"
+   },
+   {
+    "name": "C. WATER SUPPLY",
+    "vi": "Hạ tầng cấp nước"
+   },
+   {
+    "name": "C. WATER WASTE",
+    "vi": "Hạ tầng thoát nước thải"
+   }
+  ]
+ },
+ {
+  "group": "@ REFERENCES",
+  "label_vi": "Tham chiếu",
+  "tags": [
+   {
+    "name": "Reference: Skp",
+    "vi": "SketchUp tham chiếu"
+   },
+   {
+    "name": "Reference: Cad",
+    "vi": "Cad tham chiếu"
+   },
+   {
+    "name": "Reference: Image",
+    "vi": "Ảnh tham chiếu "
+   }
+  ]
+ },
+ {
+  "group": "# MATERIALS",
+  "label_vi": "Vật liệu",
+  "tags": [
+   {
+    "name": "m_brick#1",
+    "vi": "Vật liệu gạch xây #1"
+   },
+   {
+    "name": "m_brick#2",
+    "vi": "Vật liệu gạch xây #2"
+   },
+   {
+    "name": "m_ceiling",
+    "vi": "Vật liệu hoàn thiện trần"
+   },
+   {
+    "name": "m_ceramic",
+    "vi": "Vật liệu gốm"
+   },
+   {
+    "name": "m_cladding",
+    "vi": "Vật liệu ốp tường"
+   },
+   {
+    "name": "m_concrete#1",
+    "vi": "Vật liệu bê tông #1"
+   },
+   {
+    "name": "m_concrete#2",
+    "vi": "Vật liệu bê tông #2"
+   },
+   {
+    "name": "m_earth",
+    "vi": "Vật liệu đất"
+   },
+   {
+    "name": "m_fabric",
+    "vi": "Vật liệu vải"
+   },
+   {
+    "name": "m_fill",
+    "vi": "Vật liệu bồi đắp"
+   },
+   {
+    "name": "m_flooring",
+    "vi": "Vật liệu hoàn thiện sàn"
+   },
+   {
+    "name": "m_frame",
+    "vi": "Vật liệu hệ khung"
+   },
+   {
+    "name": "m_glass",
+    "vi": "Vật liệu kính"
+   },
+   {
+    "name": "m_gypsum",
+    "vi": "Vật liệu thạch cao"
+   },
+   {
+    "name": "m_insulation",
+    "vi": "Vật liệu cách ly"
+   },
+   {
+    "name": "m_metal",
+    "vi": "Vật liệu kim loại"
+   },
+   {
+    "name": "m_others",
+    "vi": "Vật liệu khác"
+   },
+   {
+    "name": "m_plastic",
+    "vi": "Vật liệu nhựa"
+   },
+   {
+    "name": "m_rhs",
+    "vi": "Vật liệu thép hình rỗng"
+   },
+   {
+    "name": "m_roofing",
+    "vi": "Vật liệu hoàn thiện mái"
+   },
+   {
+    "name": "m_sand",
+    "vi": "Vật liệu cát"
+   },
+   {
+    "name": "m_screed",
+    "vi": "Vật liệu vữa"
+   },
+   {
+    "name": "m_stone",
+    "vi": "Vật liệu đá"
+   },
+   {
+    "name": "m_water",
+    "vi": "Vật liệu nước"
+   },
+   {
+    "name": "m_wood",
+    "vi": "Vật liệu gỗ"
+   }
+  ]
+ }
+]

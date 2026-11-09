@@ -129,7 +129,7 @@ Gõ chữ vào ô **Tìm kiếm** thì hiện thêm ô **Thay bằng** và nút 
 
 ## Soạn tag
 
-Tab **Soạn tag** để soạn bộ tag theo nhóm hạng mục (Phần thô, Hoàn thiện, Đồ rời, Thiết bị, Khác), gán tag cho group, component hoặc mặt đang chọn, và xuất / nhập bộ tag bằng CSV (mở được trong Excel) hoặc JSON. Khi nhập, chọn thay thế toàn bộ hoặc gộp vào bộ hiện có. Bộ tag lưu trên máy này.
+Tab **Soạn tag** để soạn bộ tag theo 18 nhóm của 5D Auto Tag (A. ARCHITECTURAL, S. STRUCTURAL, I. INTERIOR, E. ELECTRICAL, ... bấm ô Nhóm để xem đủ), có thẻ **Thư viện tag mẫu (Auto Tag)**: tick các cụm cần dùng (mỗi cụm kèm số tag, bấm tên cụm để xem tag) rồi bấm **Nhập**: tag được thêm vào bộ tag và tạo sẵn trong model (Ctrl+Z hoàn tác một lần), dùng được ngay cho Gán tag và luật gắn tag tự động. Nhóm cũ của các bản trước (Phần thô, Hoàn thiện, Đồ rời, Thiết bị, Khác) tự đổi sang nhóm mới tương ứng. Soạn bộ tag riêng, gán tag cho group, component hoặc mặt đang chọn, và xuất / nhập bộ tag bằng CSV (mở được trong Excel) hoặc JSON. Khi nhập, chọn thay thế toàn bộ hoặc gộp vào bộ hiện có. Bộ tag lưu trên máy này.
 
 ### Gắn tag tự động theo tên
 

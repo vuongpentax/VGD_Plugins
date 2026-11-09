@@ -1,5 +1,5 @@
 'use strict';
-// Gắn tag tự động theo từ khóa tên (tab Soạn tag): bảng luật "tên tag ← từ khóa", tùy chọn, xem trước, áp dụng, lưu mặc định, nhập / xuất file.
+// Thư viện tag mẫu (tick cụm rồi Nhập) và gắn tag tự động theo từ khóa tên (tab Soạn tag): bảng luật "tên tag ← từ khóa", tùy chọn, xem trước, áp dụng, lưu mặc định, nhập / xuất file.
 // Dùng các hàm chung của app.js ($, node, button, card, call...) vào lúc gọi. Bộ luật đang sửa nằm ở đây và được gửi kèm mỗi lệnh;
 // phía Ruby kiểm tra lại toàn bộ (TagRules.sanitize), nên giao diện không phải tin được.
 const autoTag={rules:null,plan:null,planKey:'',pendingKey:'',based:'both',scope:'selection',nested:false,overwrite:false};
@@ -10,6 +10,37 @@ function autoPayload(){
   return {rules:autoTag.rules.filter(r=>r.tag.trim()||r.keywords.trim()).map(r=>({tag:r.tag,keywords:r.keywords})),based_on:autoTag.based,scope:autoTag.scope,nested:autoTag.nested,overwrite:autoTag.overwrite};
 }
 const autoKey=()=>JSON.stringify(autoPayload());
+
+// ---- Thư viện tag mẫu (18 cụm của Auto Tag): tick cụm rồi Nhập = thêm vào bộ tag của BIM và tạo sẵn trong model ----
+const catalogState={selected:new Set()};
+function catalogCard(data){
+  const clusters=data.catalog||[];
+  if(!clusters.length)return;
+  const c=card('Thư viện tag mẫu (Auto Tag)');c.id='tag-catalog-card';
+  c.append(node('p','Tick các cụm cần dùng rồi bấm Nhập: tag của cụm được thêm vào bộ tag của BIM và tạo sẵn trong model đang mở (chỉ tên tag, không đổi đối tượng nào). Bấm vào tên cụm để xem các tag trong cụm.','hint'));
+  const list=node('div',undefined,'catalog-list');
+  const english=typeof VGD_I18N!=='undefined'&&VGD_I18N.language==='en'; // nhãn tiếng Việt chỉ hiện khi giao diện tiếng Việt
+  const importBtn=button('Nhập',()=>{call('tag_catalog_import',JSON.stringify({groups:[...catalogState.selected]}));},'primary');importBtn.id='tag-catalog-import';
+  const paint=()=>{
+    const picked=clusters.filter(x=>catalogState.selected.has(x.group)),tags=picked.reduce((n,x)=>n+x.count,0);
+    importBtn.textContent=picked.length?`Nhập ${picked.length} cụm (${tags} tag)`:'Nhập';importBtn.disabled=!picked.length;
+  };
+  clusters.forEach(cluster=>{
+    const row=node('div',undefined,'catalog-row');
+    const box=node('input',undefined,'cb');box.type='checkbox';box.checked=catalogState.selected.has(cluster.group);box.setAttribute('aria-label',cluster.group);
+    box.onchange=()=>{if(box.checked)catalogState.selected.add(cluster.group);else catalogState.selected.delete(cluster.group);paint();};
+    const details=node('details');const summary=node('summary');
+    summary.append(node('b',cluster.group),node('span',`${english||!cluster.label_vi?'':cluster.label_vi+' · '}${cluster.count} tag`,'muted'));
+    details.append(summary,node('p',cluster.tags.join(', '),'muted'));
+    row.append(box,details);list.append(row);
+  });
+  c.append(list);
+  const actions=node('div',undefined,'actions');
+  actions.append(button('Chọn tất cả',()=>{clusters.forEach(x=>catalogState.selected.add(x.group));list.querySelectorAll('input.cb').forEach(b=>{b.checked=true;});paint();}),
+    button('Bỏ chọn',()=>{catalogState.selected.clear();list.querySelectorAll('input.cb').forEach(b=>{b.checked=false;});paint();}),importBtn);
+  c.append(actions);
+  paint();
+}
 
 function autoTagCard(data){
   if(!autoTag.rules)autoTag.rules=(data.rules||[]).map(r=>({tag:r.tag,keywords:r.keywords}));

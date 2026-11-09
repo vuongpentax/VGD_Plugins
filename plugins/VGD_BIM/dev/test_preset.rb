@@ -49,7 +49,7 @@ check 'Phòng & Khu vực: có diện tích chiếu, mã phòng, tên phòng, m 
 furniture = T::BUILT_IN_PRESETS.find { |p| p['name'] == 'Nội thất' }
 check 'Nội thất: mm, cột kích thước RxSxC, hãng, số lượng; ảnh iso', furniture['columns'] == %w[ordinal image definition instance description lenXYZ owner quantity] && furniture['settings'].values_at('length_unit', 'length_digits', 'image_view') == ['mm', 0, 'isometric']
 check 'Cửa & Cửa sổ: ảnh chính diện, diện tích RxC', T::BUILT_IN_PRESETS.find { |p| p['name'] == 'Cửa & Cửa sổ' }['settings']['image_view'] == 'front'
-check '4 preset BIM cũ giữ nguyên cột và nhóm', T::BUILT_IN_PRESETS[1]['group'] == 'Phần thô' && T::BUILT_IN_PRESETS[0]['columns'] == %w[ordinal image entity definition instance description material tag status quantity]
+check '4 preset BIM cũ giữ nguyên cột và nhóm', T::BUILT_IN_PRESETS[1]['group'] == 'S. STRUCTURAL' && T::BUILT_IN_PRESETS[0]['columns'] == %w[ordinal image entity definition instance description material tag status quantity]
 
 # ---- Cột mới ----
 %w[areaProjected ifc owner url size price total].each { |k| check "có cột #{k}", keys.include?(k) }
@@ -68,7 +68,7 @@ check 'lưu preset với thiết lập sai bị từ chối, không ghi', raises
 check 'lưu preset với tiêu đề sai bị từ chối', raises? { T.save_preset('Hỏng 2', '', %w[instance], {'instance' => 'a' * 99}, {}) }
 File.write(File.join(VGD::BIM::Storage.dir, 'table_presets.json'), JSON.generate([{'name' => 'Cũ', 'group' => 'Phần thô', 'columns' => %w[ordinal instance lenX]}, {'name' => 'Mặc định', 'group' => '', 'columns' => %w[instance]}]))
 old = T.custom_presets
-check 'preset cũ (chỉ có cột) vẫn đọc được, thêm thiết lập mặc định', old.first['name'] == 'Cũ' && old.first['settings'] == d && old.first['headers'] == {}
+check 'preset cũ (chỉ có cột) vẫn đọc được, thêm thiết lập mặc định', old.first['name'] == 'Cũ' && old.first['settings'] == d && old.first['headers'] == {} && old.first['group'] == 'S. STRUCTURAL'
 check 'preset tự tạo trùng tên preset có sẵn thì ẩn đi (không hiện hai preset cùng tên)', old.map { |p| p['name'] } == ['Cũ'] && T.presets.map { |p| p['name'] }.count('Mặc định') == 1
 
 # ---- Trạng thái bảng ----

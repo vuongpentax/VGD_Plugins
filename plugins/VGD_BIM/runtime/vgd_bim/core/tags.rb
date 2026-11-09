@@ -12,22 +12,26 @@ module VGD
       SECTION = 'VGD_BIM'.freeze
       KEY = 'tag_set'.freeze
       MAX_NAME = 60
-      GROUPS = ['Phần thô', 'Hoàn thiện', 'Đồ rời', 'Thiết bị', 'Khác'].freeze
-      # Bộ mẫu ban đầu. Người dùng sửa, thêm, xóa theo quy ước của mình.
+      # 18 nhóm theo cách 5D Auto Tag phân loại (tên thư mục tag của nó; "!" "#" "@" và số dùng để thư mục xếp đúng thứ tự trong SketchUp).
+      GROUPS = ['! INFORMATION', '# BASIC', '@ STATUS', '1. CONTEXT', '2. SITE', '3. BUILDING STORIES', 'A. ARCHITECTURAL', 'I. INTERIOR',
+                'E. ELECTRICAL', 'F. FIRE PROTECTION', 'M. MECHANICAL', 'P. PLUMBING', 'L. LANDSCAPE', 'Q. EQUIPMENT', 'S. STRUCTURAL', 'C. CIVIL',
+                '@ REFERENCES', '# MATERIALS'].freeze
+      DEFAULT_GROUP = '# BASIC'.freeze # nhóm khi file nhập để trống ô nhóm
+      # Dữ liệu cũ (bộ tag, preset, trạng thái bảng, file nhập) dùng 5 nhóm của các bản trước: đọc vào thì đổi sang nhóm mới tương ứng.
+      LEGACY_GROUPS = {'Phần thô' => 'S. STRUCTURAL', 'Hoàn thiện' => 'A. ARCHITECTURAL', 'Đồ rời' => 'I. INTERIOR', 'Thiết bị' => 'Q. EQUIPMENT', 'Khác' => DEFAULT_GROUP}.freeze
+      # Bộ mẫu ban đầu: đúng 5 tag của bộ luật gắn tag tự động mặc định (và của Auto Tag). Thêm tag khác từ thư viện tag mẫu hoặc tự soạn.
       DEFAULT_SET = [
-        {'name' => 'Tường 100', 'group' => 'Phần thô'},
-        {'name' => 'Tường 200', 'group' => 'Phần thô'},
-        {'name' => 'Cột', 'group' => 'Phần thô'},
-        {'name' => 'Dầm', 'group' => 'Phần thô'},
-        {'name' => 'Sàn bê tông', 'group' => 'Phần thô'},
-        {'name' => 'Trần', 'group' => 'Hoàn thiện'},
-        {'name' => 'Sơn 1 lớp', 'group' => 'Hoàn thiện'},
-        {'name' => 'Sơn 2 lớp', 'group' => 'Hoàn thiện'},
-        {'name' => 'Gạch ốp lát', 'group' => 'Hoàn thiện'},
-        {'name' => 'Cửa', 'group' => 'Hoàn thiện'},
-        {'name' => 'Nội thất', 'group' => 'Đồ rời'},
-        {'name' => 'Thiết bị', 'group' => 'Thiết bị'}
+        {'name' => 'A. WALL', 'group' => 'A. ARCHITECTURAL'},
+        {'name' => 'A. WINDOW', 'group' => 'A. ARCHITECTURAL'},
+        {'name' => 'A. DOOR', 'group' => 'A. ARCHITECTURAL'},
+        {'name' => 'A. RAILING', 'group' => 'A. ARCHITECTURAL'},
+        {'name' => 'A. STAIR', 'group' => 'A. ARCHITECTURAL'}
       ].freeze
+
+      # Nhóm cũ -> nhóm mới; nhóm mới hoặc lạ giữ nguyên (nơi gọi tự kiểm tra và báo lỗi).
+      def self.migrate_group(group)
+        LEGACY_GROUPS.fetch(group.to_s, group.to_s)
+      end
 
       # Khóa so sánh: bỏ khoảng trắng thừa, không phân biệt chữ hoa chữ thường.
       def self.key(name)
@@ -58,7 +62,7 @@ module VGD
           raise ArgumentError, 'Tên tag không được để trống.' if name.empty?
           raise ArgumentError, "Tên tag quá dài (tối đa #{MAX_NAME} ký tự): #{name}" if name.length > MAX_NAME
           raise ArgumentError, 'Tên "Untagged" là tên mặc định của SketchUp, hãy chọn tên khác.' if key(name) == 'untagged'
-          group = item['group'].to_s
+          group = migrate_group(item['group'])
           raise ArgumentError, "Nhóm không hợp lệ: #{group}" unless GROUPS.include?(group)
           k = key(name)
           raise ArgumentError, "Tên tag bị trùng: #{name}" if seen[k]
@@ -104,7 +108,7 @@ module VGD
           name = unescape_cell(row[index['name']])
           next if name.empty?
           group = index['group'] ? unescape_cell(row[index['group']]) : ''
-          group = 'Khác' if group.empty?
+          group = DEFAULT_GROUP if group.empty?
           begin
             items.concat(validate([{'name' => name, 'group' => group}]))
           rescue ArgumentError => error

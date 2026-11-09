@@ -26,7 +26,7 @@ check 'có đủ cột kiểu Auto Info, cột Ảnh, 7 cột mới và 2 cột 
 check 'mọi cột của preset có sẵn đều hợp lệ', T::BUILT_IN_PRESETS.all? { |p| p['columns'].all? { |c| keys.include?(c) } }
 check 'preset có sẵn có nhóm hợp lệ', T::BUILT_IN_PRESETS.all? { |p| p['group'].empty? || VGD::BIM::Tags::GROUPS.include?(p['group']) }
 check 'có 11 preset có sẵn, 4 preset BIM đứng đầu', T::BUILT_IN_PRESETS.size == 11 && T::BUILT_IN_PRESETS.first(4).map { |p| p['name'] } == ['Tất cả', 'Phần thô', 'Hoàn thiện', 'Đồ rời']
-check 'Phần thô lọc đúng nhóm Phần thô', T::BUILT_IN_PRESETS[1]['group'] == 'Phần thô'
+check 'Phần thô, Hoàn thiện, Đồ rời lọc đúng nhóm mới S. STRUCTURAL, A. ARCHITECTURAL, I. INTERIOR (nhóm cũ đã bỏ)', T::BUILT_IN_PRESETS[1..3].map { |p| p['group'] } == ['S. STRUCTURAL', 'A. ARCHITECTURAL', 'I. INTERIOR']
 check 'cột giữ đúng thứ tự người dùng sắp xếp khi lưu preset', T.sanitize_preset('name' => 'x', 'group' => '', 'columns' => %w[quantity lenX ordinal])['columns'] == %w[quantity lenX ordinal]
 check 'bỏ cột lạ khi lưu preset', T.sanitize_preset('name' => 'x', 'group' => '', 'columns' => %w[lenX abc])['columns'] == %w[lenX]
 check 'từ chối preset không có cột', raises? { T.sanitize_preset('name' => 'x', 'group' => '', 'columns' => ['abc']) }
@@ -38,7 +38,7 @@ T.save_preset('Vách kính', 'Hoàn thiện', %w[instance areaFace quantity])
 check 'lưu preset riêng rồi đọc lại được', T.custom_presets.map { |p| p['name'] } == ['Vách kính']
 check 'danh sách preset có cả preset có sẵn và preset đã lưu', T.presets.size == 12 && T.presets.last['builtin'] == false
 T.save_preset('Vách kính', 'Đồ rời', %w[instance quantity])
-check 'lưu trùng tên thì ghi đè, không nhân đôi', T.custom_presets.size == 1 && T.custom_presets.first['group'] == 'Đồ rời'
+check 'lưu trùng tên thì ghi đè, không nhân đôi', T.custom_presets.size == 1 && T.custom_presets.first['group'] == 'I. INTERIOR'
 T.delete_preset('Vách kính')
 check 'xóa preset đã lưu', T.custom_presets.empty?
 
@@ -67,6 +67,10 @@ T.delete_preset('Tủ "bếp" trên')
 T.save_view_state('preset' => 'Đồ rời', 'order' => %w[quantity abc lenX], 'visible' => %w[quantity], 'widths' => {'lenX' => 90, 'zzz' => 5}, 'hack' => 1)
 v = T.view_state
 check 'trạng thái bảng lưu và đọc lại, bỏ cột lạ', v['preset'] == 'Đồ rời' && v['order'] == %w[quantity lenX] && v['widths'] == {'lenX' => 90} && !v.key?('hack')
+T.save_view_state('group' => 'Đồ rời')
+check 'trạng thái bảng cũ lưu nhóm cũ: đọc ra nhóm mới (Đồ rời -> I. INTERIOR); nhóm mới giữ nguyên', T.view_state['group'] == 'I. INTERIOR' && (T.save_view_state('group' => 'S. BEAM'); T.view_state['group'] == 'S. BEAM')
+legacy_file = {'format' => 'VGD_BIM_PRESETS', 'version' => 1, 'presets' => [{'name' => 'Bản xuất cũ', 'group' => 'Thiết bị', 'columns' => %w[instance quantity]}]}
+check 'nhập file preset xuất từ bản cũ (nhóm cũ Thiết bị): được nhận và đổi sang Q. EQUIPMENT', T.import_presets(legacy_file).first['group'] == 'Q. EQUIPMENT'
 # Độ cao hàng (Ctrl + lăn chuột): số điểm ảnh trong giới hạn; giá trị lạ bị bỏ để không làm hỏng bảng
 T.save_view_state('rowHeight' => 120.4)
 check 'độ cao hàng lưu và đọc lại (làm tròn)', T.view_state['rowHeight'] == 120

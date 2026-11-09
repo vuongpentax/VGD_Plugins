@@ -74,7 +74,9 @@ module VGD
         []
       end
 
+      # Preset đã lưu / nhập từ bản cũ có thể dùng 5 nhóm cũ: đổi sang nhóm mới tương ứng trước khi kiểm tra.
       def self.sanitize_preset(item)
+        item = item.merge('group' => Tags.migrate_group(item['group'])) if item.is_a?(Hash) && item.key?('group')
         Preset.sanitize(item, COLUMN_KEYS, Tags::GROUPS)
       end
 
@@ -94,6 +96,7 @@ module VGD
 
       # Nhập preset từ file JSON (định dạng riêng hoặc của plugin tham khảo). Trùng tên preset đã lưu thì ghi đè.
       def self.import_presets(obj)
+        obj = obj.merge('presets' => obj['presets'].map { |item| item.is_a?(Hash) && item.key?('group') ? item.merge('group' => Tags.migrate_group(item['group'])) : item }) if obj.is_a?(Hash) && obj['presets'].is_a?(Array)
         incoming = Preset.import(obj, COLUMN_KEYS, Tags::GROUPS, BUILT_IN_NAMES)
         kept = custom_presets.reject { |p| incoming.any? { |i| i['name'] == p['name'] } }
         raise ArgumentError, "Quá nhiều preset (tối đa #{Preset::MAX_PRESETS})." if kept.size + incoming.size > Preset::MAX_PRESETS
@@ -115,6 +118,7 @@ module VGD
         raw = Storage.read('table_view')
         return {} unless raw.is_a?(Hash)
         state = raw.select { |k, _| VIEW_KEYS.include?(k) }
+        state['group'] = Tags.migrate_group(state['group']) if state['group'].is_a?(String) # trạng thái cũ dùng nhóm cũ
         state['rowHeight'] = row_height(state['rowHeight']) if state.key?('rowHeight') # file sửa tay: giá trị lạ bị bỏ
         state.delete('rowHeight') if state['rowHeight'].nil?
         state['headers'] = Preset.headers(state['headers'], COLUMN_KEYS) if state.key?('headers')

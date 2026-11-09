@@ -742,7 +742,7 @@ module VGD
             layer = Tags.find_layer(@model, tag['name'])
             tag.merge('in_model' => !layer.nil?, 'visible' => layer ? layer.visible? : true)
           end
-          {tags: tags, groups: Tags::GROUPS, selection: taggable_selection.size, rules: TagRules.load}
+          {tags: tags, groups: Tags::GROUPS, selection: taggable_selection.size, rules: TagRules.load, catalog: TagCatalog.summary}
         end
         def assign_tag(payload)
           check_model!

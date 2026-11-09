@@ -221,3 +221,6 @@ body.light #theme{--theme-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://w
 /* Gắn tag tự động theo tên (tab Soạn tag) */
 .auto-rules input{width:100%}.auto-rules td:last-child .actions{flex-wrap:nowrap}.auto-opts{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;margin:10px 0}
 .auto-opt{display:inline-flex;gap:6px;align-items:center}#tag-auto-plan ul{margin:6px 0;padding-left:18px}#tag-auto-plan .tag-name{margin-right:8px}
+/* Thư viện tag mẫu (tab Soạn tag) */
+.catalog-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:4px 16px;margin:8px 0}.catalog-row{display:flex;gap:8px;align-items:flex-start}.catalog-row summary{cursor:pointer}.catalog-row details p{margin:4px 0 8px;font-size:11px;overflow-wrap:anywhere}
+.catalog-row summary .muted{margin-left:8px}

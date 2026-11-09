@@ -32,7 +32,7 @@ module UI
   def self.messagebox(*); $panels.fetch(:confirm, IDYES); end
 end
 ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
-%w[storage tags measure geometry tag_rules].each { |f| require File.join(ROOT, "core/#{f}") }
+%w[storage tags measure geometry tag_rules tag_catalog].each { |f| require File.join(ROOT, "core/#{f}") }
 require File.join(ROOT, 'ui/tag_auto')
 
 class FLayer
@@ -106,7 +106,7 @@ d.tag_auto_preview(payload)
 plan = d.last('tag_auto_plan')
 ok('xem trước (đang chọn): tính đủ 5 đối tượng, gắn 2 (Tường, Cửa), giữ 1 đã có tag khác, 1 không khớp, 1 bị khóa',
    plan && plan[:total] == 5 && plan[:assign] == 2 && plan[:kept] == 1 && plan[:unmatched] == 1 && plan[:locked] == 1 && plan[:same] == 0)
-ok('xem trước: tóm tắt theo tag kèm tên mẫu', plan[:rules].map { |r| [r[:tag], r[:count], r[:samples]] } == [['Tường', 1, ['Tường 100']], ['Cửa', 1, ['Door_900']]])
+ok('xem trước: tóm tắt theo tag kèm tên mẫu', plan[:rules].map { |r| [r[:tag], r[:count], r[:samples]] } == [['A. WALL', 1, ['Tường 100']], ['A. DOOR', 1, ['Door_900']]])
 ok('xem trước: không sửa gì trong model, không mở bước hoàn tác', wall.layer.nil? && door.layer.nil? && $transactions.empty?)
 
 d.tag_auto_preview(payload('overwrite' => true))
@@ -138,7 +138,7 @@ ok('quá nhiều đối tượng: báo lỗi, không treo', (many = Array.new(VG
 comp_named = FComponent.new('Bản 1', FDefinition.new('Window_A'))
 _, based = build(selection: [comp_named])
 ok('dựa theo tên bản sao: "Bản 1" không khớp', (based.tag_auto_preview(payload('based_on' => 'instance')); based.last('tag_auto_plan')[:assign] == 0))
-ok('dựa theo tên component: "Window_A" khớp Cửa sổ', (based.tag_auto_preview(payload('based_on' => 'definition')); based.last('tag_auto_plan')[:rules].map { |r| r[:tag] } == ['Cửa sổ']))
+ok('dựa theo tên component: "Window_A" khớp A. WINDOW', (based.tag_auto_preview(payload('based_on' => 'definition')); based.last('tag_auto_plan')[:rules].map { |r| r[:tag] } == ['A. WINDOW']))
 ok('cả hai: khớp qua tên component', (based.tag_auto_preview(payload('based_on' => 'both')); based.last('tag_auto_plan')[:assign] == 1))
 ok('group không có tên component: dựa theo "tên component" thì dùng tên group', (_, g = build(selection: [FGroup.new('Wall X')]); g.tag_auto_preview(payload('based_on' => 'definition')); g.last('tag_auto_plan')[:assign] == 1))
 
@@ -148,18 +148,36 @@ ok('luật sai bị từ chối, nêu số dòng', error_of { d.tag_auto_preview
 
 # ---- Áp dụng ----
 $transactions.clear
-model, ap = build(selection: [wall, door, chair, tagged, locked], layers: [FLayer.new('Untagged'), FLayer.new('Cửa', false)])
+model, ap = build(selection: [wall, door, chair, tagged, locked], layers: [FLayer.new('Untagged'), FLayer.new('A. DOOR', false)])
 ap.tag_auto_apply(payload)
-ok('áp dụng: gắn Tường (tạo tag mới) và Cửa (dùng tag có sẵn), giữ đối tượng đã có tag khác, bỏ qua đối tượng khóa / không khớp',
-   wall.layer && wall.layer.name == 'Tường' && door.layer.name == 'Cửa' && model.layers.map(&:name) == %w[Untagged Cửa Tường] && tagged.layer.name == 'Khác' && locked.layer.nil? && chair.layer.nil?)
+ok('áp dụng: gắn A. WALL (tạo tag mới) và A. DOOR (dùng tag có sẵn), giữ đối tượng đã có tag khác, bỏ qua đối tượng khóa / không khớp',
+   wall.layer && wall.layer.name == 'A. WALL' && door.layer.name == 'A. DOOR' && model.layers.map(&:name) == ['Untagged', 'A. DOOR', 'A. WALL'] && tagged.layer.name == 'Khác' && locked.layer.nil? && chair.layer.nil?)
 ok('áp dụng: đúng một bước hoàn tác cho cả đợt', $transactions == ['VGD BIM · Gắn tag tự động'])
 msg = ap.messages.last
-ok('áp dụng: báo số đối tượng, số tag, giữ nguyên, bị khóa và cảnh báo tag đang ẩn', msg.start_with?('Đã gắn tag tự động cho 2 đối tượng (2 tag).') && msg.include?('Giữ nguyên 1') && msg.include?('Bỏ qua 1 đối tượng bị khóa') && msg.include?('Cửa') && msg.include?('ẩn'))
+ok('áp dụng: báo số đối tượng, số tag, giữ nguyên, bị khóa và cảnh báo tag đang ẩn', msg.start_with?('Đã gắn tag tự động cho 2 đối tượng (2 tag).') && msg.include?('Giữ nguyên 1') && msg.include?('Bỏ qua 1 đối tượng bị khóa') && msg.include?('A. DOOR') && msg.include?('ẩn'))
 ok('áp dụng: xóa bản xem trước cũ ở giao diện và cập nhật danh sách tag', ap.last('tag_auto_plan') == {cleared: true} && ap.events.any? { |e, _| e == 'tags' })
 $transactions.clear
 ok('áp dụng lần hai khi đã đúng tag: báo không còn gì để gắn, không mở bước hoàn tác', error_of { ap.tag_auto_apply(payload) }.to_s.include?('Không có đối tượng nào cần gắn') && $transactions.empty?)
-ok('áp dụng có ghi đè: đổi tag của đối tượng đã có tag khác', (ap.tag_auto_apply(payload('overwrite' => true)); tagged.layer.name == 'Tường'))
+ok('áp dụng có ghi đè: đổi tag của đối tượng đã có tag khác', (ap.tag_auto_apply(payload('overwrite' => true)); tagged.layer.name == 'A. WALL'))
 ok('áp dụng không đụng tới đối tượng bị khóa dù bật ghi đè', locked.layer.nil?)
+
+# ---- Thư viện tag mẫu: tick cụm rồi Nhập ----
+$transactions.clear
+VGD::BIM::Tags.save(VGD::BIM::Tags::DEFAULT_SET + [{'name' => 'Tag riêng', 'group' => '# BASIC'}])
+cat_model, cat = build(layers: [FLayer.new('Untagged'), FLayer.new('a. door')])
+cat.tag_catalog_import('groups' => ['F. FIRE PROTECTION', 'A. ARCHITECTURAL'])
+set_names = VGD::BIM::Tags.load.map { |t| t['name'] }
+ok('Nhập cụm: tag của các cụm đã tick vào bộ tag của BIM (16 tag), không trùng, tag riêng cũ giữ nguyên', set_names.include?('A. CHIMNEY') && set_names.include?('F. FIRE SUPPRESSION') && set_names.include?('Tag riêng') && set_names.size == set_names.map { |n| VGD::BIM::Tags.key(n) }.uniq.size && set_names.size == 16 + 1)
+ok('Nhập cụm: mỗi tag mang nhóm của cụm', VGD::BIM::Tags.load.find { |t| t['name'] == 'F. FIRE SUPPRESSION' }['group'] == 'F. FIRE PROTECTION' && VGD::BIM::Tags.load.find { |t| t['name'] == 'A. WALL' }['group'] == 'A. ARCHITECTURAL')
+layer_names = cat_model.layers.map(&:name)
+ok('Nhập cụm: tạo luôn tag trong model (15 tag mới; tag đã có "a. door" không tạo lại dù khác hoa thường)', layer_names.size == 2 + 15 && layer_names.count { |n| n.casecmp('A. DOOR').zero? } == 1 && layer_names.include?('F. FIRE SUPPRESSION'))
+ok('Nhập cụm: đúng một bước hoàn tác cho cả đợt', $transactions == ['VGD BIM · Nhập tag mẫu'])
+ok('Nhập cụm: báo số tag, số cụm, số tag mới trong model và cập nhật danh sách tag ở giao diện', cat.messages.last == 'Đã nhập 16 tag từ 2 cụm vào bộ tag (15 tag mới tạo trong model).' && cat.events.any? { |e, _| e == 'tags' })
+$transactions.clear
+cat.tag_catalog_import('groups' => ['F. FIRE PROTECTION'])
+ok('Nhập lại cụm đã nhập: không tạo thêm tag, báo 0 tag mới', cat.messages.last == 'Đã nhập 1 tag từ 1 cụm vào bộ tag (0 tag mới tạo trong model).' && cat_model.layers.map(&:name).size == 17)
+$transactions.clear
+ok('Nhập khi chưa tick cụm nào hoặc cụm lạ: báo lỗi, không đụng vào bộ tag và model', error_of { cat.tag_catalog_import('groups' => []) }.to_s.include?('tick') && error_of { cat.tag_catalog_import('groups' => ['Phần thô']) }.to_s.include?('không hợp lệ') && error_of { cat.tag_catalog_import({}) }.to_s.include?('tick') && $transactions.empty? && VGD::BIM::Tags.load.size == 17)
 
 # ---- Lưu, đặt lại, nhập, xuất ----
 _, io = build

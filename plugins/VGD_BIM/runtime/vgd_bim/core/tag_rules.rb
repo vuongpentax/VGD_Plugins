@@ -18,17 +18,14 @@ module VGD
       BASED_ON = %w[both instance definition].freeze # tên bản sao, tên component, hoặc cả hai
       SAMPLES = 3
 
-      # Bộ luật mẫu ban đầu. "Cửa sổ" đứng trước "Cửa" để tên "Cửa sổ 1" ra đúng tag.
+      # Bộ luật mẫu ban đầu: 5 luật mặc định của 5D Auto Tag (tên tag, từ khóa tiếng Anh) kèm từ khóa tiếng Việt để model Việt vẫn khớp.
+      # "Window" đứng trước "Door" (khác thứ tự của Auto Tag) vì từ khóa tiếng Việt "cửa" cũng nằm trong "cửa sổ".
       DEFAULT = [
-        {'tag' => 'Tường', 'keywords' => 'tường, wall'},
-        {'tag' => 'Cột', 'keywords' => 'cột, column'},
-        {'tag' => 'Dầm', 'keywords' => 'dầm, beam'},
-        {'tag' => 'Sàn', 'keywords' => 'sàn, slab'},
-        {'tag' => 'Trần', 'keywords' => 'trần, ceiling'},
-        {'tag' => 'Cửa sổ', 'keywords' => 'cửa sổ, window'},
-        {'tag' => 'Cửa', 'keywords' => 'cửa, door'},
-        {'tag' => 'Cầu thang', 'keywords' => 'cầu thang, stair'},
-        {'tag' => 'Lan can', 'keywords' => 'lan can, railing'}
+        {'tag' => 'A. WALL', 'keywords' => 'wall, tường'},
+        {'tag' => 'A. WINDOW', 'keywords' => 'window, cửa sổ'},
+        {'tag' => 'A. DOOR', 'keywords' => 'door, cửa'},
+        {'tag' => 'A. RAILING', 'keywords' => 'railing, lan can'},
+        {'tag' => 'A. STAIR', 'keywords' => 'stair, cầu thang'}
       ].freeze
 
       def self.default

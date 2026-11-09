@@ -17,7 +17,7 @@ ok('từ khóa: quá ngắn bị từ chối', raises?('ít nhất') { R.keyword
 ok('từ khóa: quá dài hoặc quá nhiều bị từ chối', raises?('tối đa') { R.keywords('x' * 41) } && raises?('tối đa') { R.keywords((1..31).map { |i| "tu#{i}" }.join(',')) })
 
 # ---- Kiểm tra bộ luật ----
-ok('bộ luật mặc định hợp lệ; "Cửa sổ" đứng trước "Cửa" để khớp đúng', (tags = R.default.map { |r| r['tag'] }; R.sanitize(R.default) == R.default && tags.index('Cửa sổ') < tags.index('Cửa')))
+ok('bộ luật mặc định = 5 luật của Auto Tag (A. WALL, A. WINDOW, A. DOOR, A. RAILING, A. STAIR); A. WINDOW đứng trước A. DOOR để "cửa sổ" không bị nhận là cửa đi', (tags = R.default.map { |r| r['tag'] }; R.sanitize(R.default) == R.default && tags.index('A. WINDOW') < tags.index('A. DOOR')))
 ok('luật: bỏ khoảng trắng thừa trong tên tag và từ khóa', R.sanitize([{'tag' => '  Tường   100 ', 'keywords' => ' tường ,  wall '}]) == [{'tag' => 'Tường 100', 'keywords' => 'tường, wall'}])
 ok('luật: không phải danh sách bị từ chối', raises?('danh sách') { R.sanitize('x') } && raises?('danh sách') { R.sanitize(nil) })
 ok('luật: thiếu tag hoặc thiếu từ khóa bị từ chối, nêu số dòng', raises?('dòng 2') { R.sanitize([{'tag' => 'A1', 'keywords' => 'ab'}, {'tag' => '', 'keywords' => 'xy'}]) } && raises?('dòng 1') { R.sanitize([{'tag' => 'A1', 'keywords' => ''}]) })
@@ -27,22 +27,22 @@ ok('luật: quá 100 luật bị từ chối', raises?('tối đa') { R.sanitize
 # ---- Khớp ----
 rules = R.compile(R.default)
 match = ->(*names) { (i = R.match(rules, names)) && rules[i][:tag] }
-ok('khớp không phân biệt hoa thường và dấu: "TUONG_01" và "Tường 100" đều ra Tường', match.call('TUONG_01') == 'Tường' && match.call('Tường 100') == 'Tường')
-ok('luật đứng trước thắng: "Cửa sổ 1" ra Cửa sổ chứ không ra Cửa', match.call('Cửa sổ 1') == 'Cửa sổ' && match.call('Door_main') == 'Cửa' && match.call('Window A') == 'Cửa sổ')
-ok('khớp tên bản sao hoặc tên định nghĩa: lấy cái nào khớp (tên thứ hai)', match.call('', 'Wall_100') == 'Tường' && match.call('Group#1', 'Beam B2') == 'Dầm')
+ok('khớp không phân biệt hoa thường và dấu: "TUONG_01" và "Tường 100" đều ra A. WALL', match.call('TUONG_01') == 'A. WALL' && match.call('Tường 100') == 'A. WALL')
+ok('luật đứng trước thắng: "Cửa sổ 1" ra A. WINDOW chứ không ra A. DOOR', match.call('Cửa sổ 1') == 'A. WINDOW' && match.call('Door_main') == 'A. DOOR' && match.call('Window A') == 'A. WINDOW')
+ok('khớp tên bản sao hoặc tên định nghĩa: lấy cái nào khớp (tên thứ hai)', match.call('', 'Wall_100') == 'A. WALL' && match.call('Group#1', 'Stair B2') == 'A. STAIR')
 ok('không khớp luật nào hoặc tên rỗng: nil', match.call('Ghế ăn').nil? && match.call('', nil).nil? && R.match([], ['x']).nil?)
-ok('khớp theo từ khóa chứa trong tên (không cần cả từ): "Doorway" cũng khớp "door" (đây là lý do luôn xem trước)', match.call('Doorway') == 'Cửa')
+ok('khớp theo từ khóa chứa trong tên (không cần cả từ): "Doorway" cũng khớp "door" (đây là lý do luôn xem trước)', match.call('Doorway') == 'A. DOOR')
 
 # ---- Kế hoạch ----
 item = ->(label, names, tag: '', locked: false) { {label: label, names: names, tag: tag, locked: locked} }
-items = [item.call('T1', ['Tường 1']), item.call('T2', ['Wall 2'], tag: 'Tường'), item.call('T3', ['Tường 3'], tag: 'Khác'), item.call('C1', ['Cửa 1']),
+items = [item.call('T1', ['Tường 1']), item.call('T2', ['Wall 2'], tag: 'A. WALL'), item.call('T3', ['Tường 3'], tag: 'Khác'), item.call('C1', ['Cửa 1']),
          item.call('G1', ['Ghế']), item.call('K1', ['Tường khóa'], locked: true), item.call('G2', ['Ghế 2'], tag: 'Nội thất')]
 plan = R.plan(items, rules, overwrite: false)
-ok('kế hoạch (không ghi đè): gắn Tường 1 và Cửa 1; Tường 2 đã đúng tag; Tường 3 đã có tag khác nên giữ; Ghế không khớp; 1 bị khóa',
-   plan[:assign].map { |i, r| [i[:label], rules[r][:tag]] } == [%w[T1 Tường], %w[C1 Cửa]] && plan[:same] == 1 && plan[:kept] == 1 && plan[:unmatched] == 2 && plan[:locked] == 1 && plan[:total] == 7)
+ok('kế hoạch (không ghi đè): gắn Tường 1 (A. WALL) và Cửa 1 (A. DOOR); Tường 2 đã đúng tag; Tường 3 đã có tag khác nên giữ; Ghế không khớp; 1 bị khóa',
+   plan[:assign].map { |i, r| [i[:label], rules[r][:tag]] } == [['T1', 'A. WALL'], ['C1', 'A. DOOR']] && plan[:same] == 1 && plan[:kept] == 1 && plan[:unmatched] == 2 && plan[:locked] == 1 && plan[:total] == 7)
 plan2 = R.plan(items, rules, overwrite: true)
 ok('kế hoạch (ghi đè): Tường 3 cũng bị đổi sang Tường; Tường 2 vẫn là "đã đúng"; không còn mục giữ', plan2[:assign].map { |i, _| i[:label] } == %w[T1 T3 C1] && plan2[:same] == 1 && plan2[:kept] == 0)
-ok('kế hoạch: tóm tắt theo luật (số đối tượng và vài tên mẫu), chỉ các luật có đối tượng', plan[:rules].map { |r| [r[:tag], r[:count], r[:samples]] } == [['Tường', 1, ['T1']], ['Cửa', 1, ['C1']]])
+ok('kế hoạch: tóm tắt theo luật (số đối tượng và vài tên mẫu), chỉ các luật có đối tượng', plan[:rules].map { |r| [r[:tag], r[:count], r[:samples]] } == [['A. WALL', 1, ['T1']], ['A. DOOR', 1, ['C1']]])
 many = Array.new(10) { |i| item.call("W#{i}", ["Wall #{i}"]) }
 ok('kế hoạch: tên mẫu tối đa 3', R.plan(many, rules, overwrite: false)[:rules][0][:samples] == %w[W0 W1 W2])
 ok('đối tượng khóa không bao giờ bị gắn, kể cả khi bật ghi đè', R.plan([item.call('K', ['Wall'], locked: true, tag: 'Khác')], rules, overwrite: true)[:assign].empty?)
@@ -59,7 +59,7 @@ ok('đặt lại: xóa bộ đã lưu và trả bộ mặc định', R.reset == 
 ok('đặt lại khi chưa lưu gì: không lỗi', R.reset == R.default)
 
 # ---- Nhập xuất JSON ----
-list = [{'tag' => 'Tường', 'keywords' => 'tường, wall'}, {'tag' => 'Cửa', 'keywords' => 'cửa'}]
+list = [{'tag' => 'A. WALL', 'keywords' => 'tường, wall'}, {'tag' => 'A. DOOR', 'keywords' => 'cửa'}]
 text = R.to_json(list)
 ok('xuất JSON có định dạng riêng và nhập lại đúng', JSON.parse(text)['format'] == R::FORMAT && R.from_json(text) == list)
 ok('nhập mảng luật trần', R.from_json(JSON.generate(list)) == list)

@@ -23,6 +23,7 @@ module VGD; module BIM; def self.log(m); end
     GROUPS = ['Phần thô'].freeze
     def self.load; [{'name' => 'Trong bộ'}, {'name' => '000 CUA'}]; end
     def self.key(n); n.to_s.downcase; end
+    def self.migrate_group(group); group.to_s; end
     # Như Tags.normalize_name / layer_for thật (đã có test riêng trong test_tags.rb)
     def self.normalize_name(n)
       t = n.to_s.strip

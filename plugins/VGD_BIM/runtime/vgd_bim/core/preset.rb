@@ -141,9 +141,9 @@ module VGD
 
       BUILT_IN = [
         builtin('Tất cả', '', %w[ordinal image entity definition instance description material tag status quantity]),
-        builtin('Phần thô', 'Phần thô', %w[ordinal entity instance lenX lenY lenZ areaFace volume tag material quantity]),
-        builtin('Hoàn thiện', 'Hoàn thiện', %w[ordinal entity instance description lenX lenY lenZ areaXZ areaXY areaFace tag material status quantity]),
-        builtin('Đồ rời', 'Đồ rời', %w[ordinal entity definition instance description lenX lenY lenZ tag material status quantity]),
+        builtin('Phần thô', 'S. STRUCTURAL', %w[ordinal entity instance lenX lenY lenZ areaFace volume tag material quantity]),
+        builtin('Hoàn thiện', 'A. ARCHITECTURAL', %w[ordinal entity instance description lenX lenY lenZ areaXZ areaXY areaFace tag material status quantity]),
+        builtin('Đồ rời', 'I. INTERIOR', %w[ordinal entity definition instance description lenX lenY lenZ tag material status quantity]),
         builtin('Mặc định', '', %w[ordinal entity definition instance description tag material], {}, METERS.merge(SMALL_IMAGES)),
         builtin('Phòng & Khu vực', '', %w[ordinal image definition instance lenX lenY areaProjected],
                 {'ordinal' => 'STT', 'image' => 'Ảnh', 'definition' => 'Mã phòng', 'instance' => 'Tên phòng', 'lenX' => 'Rộng', 'lenY' => 'Dài', 'areaProjected' => 'Diện tích phòng'},

@@ -17,6 +17,7 @@ module VGD
           @dialog.add_action_callback('tag_rules_import') { |_ctx, _payload| safely { tag_rules_import } }
           @dialog.add_action_callback('tag_auto_preview') { |_ctx, payload| safely { tag_auto_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('tag_auto_apply') { |_ctx, payload| safely { tag_auto_apply(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tag_catalog_import') { |_ctx, payload| safely { tag_catalog_import(JSON.parse(payload)) } }
         end
 
         # ---- Bộ luật: lưu làm mặc định, đặt lại, nhập xuất (bộ luật đang sửa nằm ở giao diện, gửi kèm mỗi lệnh) ----
@@ -47,6 +48,26 @@ module VGD
           rules = TagRules.from_json(File.read(path, encoding: 'bom|utf-8'))
           emit('tag_rules', {rules: rules, imported: true})
           emit('message', {text: "Đã nhập #{rules.size} luật từ file. Bộ luật chưa lưu làm mặc định."})
+        end
+
+        # ---- Thư viện tag mẫu (xem TagCatalog): payload {'groups' => [tên cụm đã tick]} ----
+        # Thêm tag của các cụm vào bộ tag của BIM (tag trùng tên lấy từ thư viện) và tạo sẵn trong model đang mở trong MỘT bước hoàn tác.
+        # Chỉ tạo tên tag (chưa có màu, nét đứt, thư mục tag), không đổi đối tượng nào.
+        def tag_catalog_import(payload)
+          check_model!
+          groups = payload['groups']
+          incoming = TagCatalog.tags_for(groups)
+          Tags.save(Tags.merge(Tags.load, incoming))
+          created = 0
+          Data.transaction(@model, 'VGD BIM · Nhập tag mẫu') do
+            incoming.each do |tag|
+              next if Tags.find_layer(@model, tag['name'])
+              Tags.layer_for(@model, tag['name'])
+              created += 1
+            end
+          end
+          emit('tags', tag_state)
+          emit('message', {text: "Đã nhập #{incoming.size} tag từ #{groups.uniq.size} cụm vào bộ tag (#{created} tag mới tạo trong model)."})
         end
 
         # ---- Xem trước và áp dụng ----
