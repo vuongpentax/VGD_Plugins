@@ -1,0 +1,89 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Đoạn 2 · Cập nhật và gỡ plugin</title>
+<link rel="stylesheet" href="common.css"><style>
+#center{width:600px;height:640px}.cbody{height:582px}
+.foot{height:28px;border-top:1px solid var(--b);background:var(--s);display:flex;justify-content:space-between;align-items:center;padding:0 12px;font-size:10px;color:var(--m)}
+.foot i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--as);margin-right:7px}
+#ov{position:absolute;left:0;top:30px;right:0;bottom:0;background:rgba(0,0,0,.52);display:grid;place-items:center;opacity:0}
+#dlg{width:330px;padding:24px;background:var(--s);border:1px solid var(--b);border-radius:8px;text-align:center;box-shadow:0 20px 50px #000a}
+#dic{width:46px;height:46px;margin:0 auto 12px;border-radius:50%;background:var(--tint);color:var(--as);display:grid;place-items:center}
+#dic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#dlg h2{font-size:15px;margin-bottom:6px}#dlg p{font-size:11.5px;color:var(--m);line-height:1.55}
+.prog{height:5px;border-radius:5px;background:var(--e);margin:16px 0;overflow:hidden}.prog span{display:block;height:100%;width:0;background:var(--a);border-radius:5px}
+#done{display:flex;opacity:0;justify-content:center;width:100%;height:0;min-height:0;padding:0;border-width:0;overflow:hidden}
+.st{display:flex;align-items:center;gap:6px;color:var(--m);font-size:10px;margin-top:2px}.st i{width:6px;height:6px;border-radius:50%;background:var(--as)}.st i.up{background:var(--a)}
+/* Hộp xác nhận gốc của SketchUp (UI.messagebox), kiểu Windows */
+#mb{position:absolute;left:450px;top:290px;width:380px;background:#fff;color:#000;border:1px solid #7a7a7a;box-shadow:0 16px 50px #000b;font-family:'Segoe UI',M,sans-serif;opacity:0}
+#mb .mt{height:30px;display:flex;align-items:center;padding:0 10px;font-size:12px;background:#fff;border-bottom:1px solid #e5e5e5}
+#mb .mx{padding:18px 18px 16px;font-size:13px;line-height:1.5;background:#fff}
+#mb .mf{background:#f0f0f0;padding:12px 14px;display:flex;justify-content:flex-end;gap:8px}
+#mb .mbtn{min-width:78px;height:26px;border:1px solid #adadad;background:#e1e1e1;color:#000;display:grid;place-items:center;font-size:12px}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark" id="center"><div class="title"><span>VGD Center</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div>
+ <div class="cbody"><div class="side"><i>VGD PLUGINS</i><div>Tổng quan</div><div class="on">Kho plugin</div><div>Quản lý</div><div>Cài đặt</div></div>
+ <div class="main"><h2>Kho plugin</h2><div class="sub">Chọn plugin cần cài hoặc cập nhật.</div>
+ <div class="row"><div class="ic"></div><div><div class="nm">VGD Cabinet Draw<span class="bd">stable</span></div><div class="ds">Vẽ tủ gỗ công nghiệp</div></div><div class="acts"><div class="btn"><svg viewBox="0 0 24 24"><use href="#bk"/></svg>Hướng dẫn</div><div class="btn">Đã cài</div><div class="btn">Gỡ cài đặt</div></div></div>
+ <div class="row" id="rowSc"><div class="ic"></div><div><div class="nm">VGD Scenes<span class="bd">stable</span></div><div class="st"><i class="up" id="scDot"></i><span id="scState">Có bản Stable mới</span></div></div>
+  <div class="acts" id="s1"><div class="btn"><svg viewBox="0 0 24 24"><use href="#bk"/></svg>Hướng dẫn</div><div class="btn p" id="btnUpd">Cập nhật</div><div class="btn">Gỡ cài đặt</div></div>
+  <div class="acts" id="s2" style="display:none"><div class="btn"><svg viewBox="0 0 24 24"><use href="#bk"/></svg>Hướng dẫn</div><div class="btn">Đã cài</div><div class="btn">Gỡ cài đặt</div></div></div>
+ <div class="row" id="rowDim"><div class="ic"></div><div><div class="nm">VGD Dim<span class="bd">stable</span></div><div class="st"><i id="dmDot"></i><span id="dmState">Đã ở phiên bản mới nhất</span></div></div>
+  <div class="acts" id="d1"><div class="btn"><svg viewBox="0 0 24 24"><use href="#bk"/></svg>Hướng dẫn</div><div class="btn">Đã cài</div><div class="btn" id="btnUn">Gỡ cài đặt</div></div>
+  <div class="acts" id="d2" style="display:none"><div class="btn"><svg viewBox="0 0 24 24"><use href="#bk"/></svg>Hướng dẫn</div><div class="btn p">Cài đặt</div></div></div>
+ </div></div>
+ <div class="foot"><span><i></i><span id="fst">VGD Center</span></span><span>SketchUp extension · VGD Center</span></div>
+ <div id="ov"><div id="dlg"><div id="dic"><svg viewBox="0 0 24 24" id="icoA"></svg></div>
+  <h2 id="dt"></h2><p id="dp"></p><div class="prog"><span id="bar"></span></div><div class="btn p" id="done">Đã hiểu</div></div></div>
+ </div>
+ <div id="spot"></div>
+ <div id="mb"><div class="mt">SketchUp</div><div class="mx">Gỡ VGD Dim khỏi SketchUp?<br><br>Các tệp của plugin sẽ bị xóa. Hãy khởi động lại SketchUp sau khi gỡ.</div><div class="mf"><div class="mbtn" id="mbYes">Có</div><div class="mbtn">Không</div></div></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Plugin có bản mới? Bấm “Cập nhật”</div>
+<div class="cap" id="c2"><span>Bước 2</span>Center tải, xác minh và cài bản mới</div>
+<div class="cap" id="c3"><span>Bước 3</span>Muốn bỏ plugin? Bấm “Gỡ cài đặt”</div>
+<div class="cap big" id="c4"><span>Bước 4</span>Đọc kỹ rồi bấm “Có” để gỡ</div>
+<div class="cap" id="c5">Đã gỡ. Khởi động lại SketchUp để áp dụng.</div>
+<div class="cap" id="c6">Cập nhật và gỡ plugin ngay trong Center</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<svg width="0" height="0" style="position:absolute"><symbol id="bk" viewBox="0 0 24 24"><path d="M5 4.5h10.5A3.5 3.5 0 0 1 19 8v11.5H8A3 3 0 0 1 5 16.5z"/><path d="M5 16.5a3 3 0 0 1 3-3h11M9 8h6M9 10.5h5"/></symbol></svg>
+<script src="common.js"></script><script>
+const DUR=25;let M,rSc,rDim,Z,TU,TUn,TY,TD;
+const RESTART='<path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/>',CLOUD='<path d="M7 18a4 4 0 0 1-.6-7.9A5.5 5.5 0 0 1 17 9a4.5 4.5 0 0 1 .5 9z"/><path d="M12 11v6m0 0-2.5-2.5M12 17l2.5-2.5"/>';
+const SAME='VGD Center đang xử lý VGD Scenes. Vui lòng đợi đến khi thao tác hoàn tất.';
+function init(){
+ rSc=R($('rowSc'));rDim=R($('rowDim'));TU=aim(R($('btnUpd')),.72);TUn=aim(R($('btnUn')),.72);
+ const mb=$('mb');mb.style.opacity=1;const mr=R(mb);TY=aim(R($('mbYes')),.7);mb.style.opacity=0;
+ const d=$('done');d.style.cssText='opacity:1;height:34px;min-height:34px;border-width:1px';$('ov').style.opacity=1;const dl=R($('dlg')),dn=R(d);d.style.cssText='';$('ov').style.opacity=0;TD=aim(dn,.7);
+ Z=zoomTo(mr.x+mr.w/2,mr.y+mr.h/2,2,640,370);
+ M=[{a:.8,b:2.4,f:{x:1010,y:690},t:TU,arc:-90},{a:4.4,b:5.4,f:TU,t:{x:820,y:520},arc:40},{a:8.6,b:9.6,f:{x:820,y:520},t:TD,arc:30},
+    {a:10.8,b:12.4,f:TD,t:TUn,arc:-50},{a:14.6,b:16.2,f:TUn,t:TY,arc:40},{a:19.9,b:21.0,f:TY,t:TD,arc:-40}];
+ render(0)}
+function render(t){
+ const c=mix({s:1,x:0,y:0},Z,E(P(t,14.6,15.4))*(1-E(P(t,18.5,19.3))));setWorld(c);
+ // hộp thoại của Center: cập nhật (3.8–10.4) rồi kết quả gỡ (19.4–22.0)
+ const ov=Math.max(E(P(t,3.8,4.1))*(1-E(P(t,10.1,10.4))),E(P(t,19.4,19.7))*(1-E(P(t,21.7,22.0))));$('ov').style.opacity=ov;$('dlg').style.transform=`scale(${.96+.04*Math.min(1,ov)})`;
+ const bar=t<6?lerp(4,60,P(t,3.9,6)):lerp(60,100,P(t,6,8));$('bar').style.width=(t>19?100:bar)+'%';
+ const ph=t>19?3:t<6?0:t<8?1:2,dip=Math.max(1-P(Math.abs(t-6),0,.2),1-P(Math.abs(t-8),0,.2));
+ const txt=[['Đang tải gói',SAME],['Đang xác minh và cài đặt',SAME],['Đã hoàn tất','Đã cài hoặc cập nhật 1 plugin. Hãy lưu model và khởi động lại SketchUp để nạp phiên bản mới.'],['Đã gỡ plugin','Đã gỡ VGD Dim. Hãy khởi động lại SketchUp để áp dụng.']][ph];
+ $('dt').textContent=txt[0];$('dp').textContent=txt[1];$('dt').style.opacity=$('dp').style.opacity=1-dip*.9;$('icoA').innerHTML=ph>=2?RESTART:CLOUD;
+ const dk=t>19?E(P(t,19.7,20.0)):E(P(t,8.2,8.5)),dd=$('done');dd.style.opacity=dk;dd.style.height=34*dk+'px';dd.style.minHeight=dd.style.height;dd.style.borderWidth=dk?'1px':'0';
+ $('fst').textContent=t<3.8?'VGD Center':t<6?'Đang tải gói · VGD Scenes':t<8?'Đang xác minh và cài đặt · VGD Scenes':t<19.4?'Hoàn tất · Cần khởi động lại SketchUp':'Hoàn tất · Cần khởi động lại SketchUp';
+ // trạng thái thẻ: Scenes sau khi cập nhật, Dim sau khi gỡ
+ const up=t>=8.1,un=t>=18.7;$('s1').style.display=up?'none':'flex';$('s2').style.display=up?'flex':'none';$('scState').textContent=up?'Đã ở phiên bản mới nhất':'Có bản Stable mới';$('scDot').className=up?'':'up';
+ $('d1').style.display=un?'none':'flex';$('d2').style.display=un?'flex':'none';$('dmState').textContent=un?'Chưa cài':'Đã ở phiên bản mới nhất';
+ // làm tối nền, làm nổi thẻ (mẫu 2)
+ const s=$('spot'),on1=E(P(t,1.2,1.8))*(1-E(P(t,3.6,3.9))),on2=E(P(t,11.2,11.8))*(1-E(P(t,13.8,14.1)));
+ const rr=on2>on1?rDim:rSc;s.style.cssText+=`;opacity:${Math.max(on1,on2)};left:${rr.x-4}px;top:${rr.y-4}px;width:${rr.w+8}px;height:${rr.h+8}px`;
+ $('btnUpd').classList.toggle('hov',t>=2.4&&t<3.9);$('btnUpd').style.transform=`scale(${1-.06*pulse(t,3.5,3.85)})`;
+ $('btnUn').classList.toggle('hov',t>=12.4&&t<14.0);$('btnUn').style.transform=`scale(${1-.06*pulse(t,13.7,14.05)})`;
+ $('done').style.transform=`scale(${1-.06*(pulse(t,9.8,10.15)||pulse(t,21.3,21.65))})`;
+ // hộp xác nhận gốc của SketchUp
+ $('mb').style.opacity=E(P(t,14.0,14.3))*(1-E(P(t,18.4,18.6)));$('mbYes').style.borderColor=t>16.2&&t<18.5?'#0078d7':'#adadad';$('mbYes').style.transform=`scale(${1-.06*pulse(t,18.1,18.45)})`;
+ const rp_=a=>P(t,a,a+.45),press=pulse(t,3.5,3.85)||pulse(t,9.8,10.15)||pulse(t,13.7,14.05)||pulse(t,18.1,18.45)||pulse(t,21.3,21.65);
+ drawCursor(c,pos(M,t),t,.6,24.4,press,Math.max(rp_(3.5)*(t<6),rp_(9.8)*(t>9&&t<11),rp_(13.7)*(t>13&&t<15),rp_(18.1)*(t>18&&t<19.5),rp_(21.3)*(t>21&&t<23)));
+ cap($('c1'),t,.9,4.0,0);cap($('c2'),t,4.3,7.9,0);cap($('c3'),t,11.0,14.2,0);cap($('c4'),t,15.0,18.3,0);cap($('c5'),t,19.6,22.0,0);cap($('c6'),t,22.6,24.6,0);
+ for(const k of [1,2,3,5,6])$('c'+k).style.top='640px';$('c4').style.top='38px';
+ $('stage').style.opacity=1-E(P(t,24.7,25))}
+start();
+</script></body></html>

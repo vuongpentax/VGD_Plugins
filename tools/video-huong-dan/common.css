@@ -23,6 +23,7 @@ html,body{background:#0b0b0b}
 .btn.p{background:var(--a);border-color:var(--a);color:var(--oa)}
 .btn svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .btn.hov{background:var(--e);border-color:var(--a)}
+.btn.p.hov{background:var(--as);border-color:var(--as);color:var(--oa)}
 #spot{position:absolute;border-radius:8px;box-shadow:0 0 0 2000px rgba(0,0,0,.66),0 0 0 3px #B48963;opacity:0;pointer-events:none}
 #cur{position:absolute;left:0;top:0;width:27px;height:27px;opacity:0;z-index:20;filter:drop-shadow(0 2px 3px #000a)}
 #rip{position:absolute;left:0;top:0;width:10px;height:10px;border-radius:50%;border:2px solid #fff;opacity:0;z-index:19}
