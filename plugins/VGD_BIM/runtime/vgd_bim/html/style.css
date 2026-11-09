@@ -182,9 +182,12 @@ body.light #theme{--theme-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://w
 /* Ngăn Chọn cột (kiểu Auto Info, gọn): trượt ra bên trái, bảng bị đẩy sang phải nên cột đầu không bị che */
 .tv-split{flex:1;min-height:0;display:flex}
 .col-side{flex:none;width:0;margin-right:0;overflow:hidden;transition:width .22s ease,margin-right .22s ease}
-.col-side.open{width:230px;margin-right:8px}
-.col-side-in{width:230px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:4px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:6px}
+.col-side.open{width:var(--side-w,230px);margin-right:8px}
+.col-side.resizing{transition:none}
+.col-side-in{position:relative;width:var(--side-w,230px);height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:4px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:6px}
 .col-side-in>*{flex:none}
+.cs-grip{position:absolute;top:0;right:0;bottom:0;width:7px;cursor:col-resize;border-radius:0 6px 6px 0}
+.cs-grip:hover,.col-side.resizing .cs-grip{background:var(--accent);opacity:.35}
 .cs-head{display:flex;gap:4px;align-items:center}
 .cs-head .pop-search{flex:1;min-width:0;height:28px;margin:0}
 .cs-close{min-height:0;width:26px;height:28px;padding:0;border-color:transparent;background:transparent;color:var(--muted);font-size:16px;line-height:1}

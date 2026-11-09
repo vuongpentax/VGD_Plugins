@@ -829,6 +829,21 @@ function renderColumnList(list){
   });
   sortableList(list);
 }
+// Mép phải của ngăn bên: kéo để đổi độ rộng, dùng chung cho Chọn cột và Loại trừ tag, chỉ nhớ trong lúc ngăn còn mở (mở lại về 230 px).
+const SIDE_MIN=180;
+function sideGrip(side){
+  const grip=node('div',undefined,'cs-grip');grip.title='Kéo để đổi độ rộng';
+  grip.onmousedown=event=>{
+    event.preventDefault();event.stopPropagation();
+    const startX=event.clientX,startW=side.firstElementChild.offsetWidth,room=side.parentElement.clientWidth;
+    const max=Math.max(SIDE_MIN,room-300); // chừa chỗ cho bảng
+    side.classList.add('resizing');
+    const move=e=>side.style.setProperty('--side-w',Math.round(Math.min(max,Math.max(SIDE_MIN,startW+e.clientX-startX)))+'px');
+    const up=()=>{document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);side.classList.remove('resizing');};
+    document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+  };
+  return grip;
+}
 function buildColumnPanel(side){
   const inner=node('div',undefined,'col-side-in');
   const head=node('div',undefined,'cs-head');
@@ -851,7 +866,7 @@ function buildColumnPanel(side){
   [['','Hàng: Vừa'],['dense','Hàng: Gọn'],['roomy','Hàng: Thoáng']].forEach(([v,t])=>density.append(new Option(t,v)));
   density.value=tableState.density;density.onchange=()=>{tableState.density=density.value;tableState.rowHeight=0;renderGrid($('grid-host'));persistView();};
   density.title='Giữ Ctrl và lăn chuột giữa trên bảng để đổi độ cao hàng (ảnh to ra theo).'; // gợi ý, không chiếm chỗ của danh sách cột
-  inner.append(head,bar,list,density);
+  inner.append(head,bar,list,density,sideGrip(side));
   side.replaceChildren(inner);
   updateColumnCounts();
 }
@@ -919,7 +934,7 @@ function buildExcludePanel(side){
   const list=node('div',undefined,'pop-cols');
   search.oninput=()=>{tableState.excludeSearch=search.value;renderExcludeList(list);updateExcludeCounts();};
   renderExcludeList(list);
-  inner.append(head,note,bar,list);
+  inner.append(head,note,bar,list,sideGrip(side));
   side.replaceChildren(inner);side.dataset.kind='exclude';
   updateExcludeCounts();
 }
@@ -934,6 +949,7 @@ function buildSide(kind,side){if(kind==='exclude')buildExcludePanel(side);else{b
 function openSide(kind,animate=true){
   const side=$('col-side');if(!side)return;
   clearTimeout(side._closing);
+  if(!side.classList.contains('open'))side.style.removeProperty('--side-w'); // mở lại từ đóng: về 230 px
   tableState.panel=kind;
   buildSide(kind,side);
   markSideButtons();

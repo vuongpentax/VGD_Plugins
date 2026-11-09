@@ -470,6 +470,25 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok((await page.locator('#col-side').getAttribute('data-kind'))==='exclude','bấm lại Loại trừ tag: đổi về ngăn Loại trừ');
   await page.click('#exclude-btn');await page.waitForTimeout(400);
   ok(!(await page.locator('#col-side').evaluate(el=>el.classList.contains('open'))) && (await page.locator('#exclude-btn').getAttribute('aria-expanded'))==='false','bấm Loại trừ tag khi đang mở: đóng ngăn');
+  // Kéo mép phải của ngăn bên để đổi độ rộng (dùng chung hai ngăn, mở lại từ đóng thì về 230 px)
+  const sideW=()=>page.locator('.col-side-in').evaluate(el=>Math.round(el.getBoundingClientRect().width));
+  await page.click('#exclude-btn');await page.waitForTimeout(400);
+  ok(await sideW()===230,'ngăn bên mở ra mặc định rộng 230 px');
+  const grip=async dx=>{const b=await page.locator('.cs-grip').boundingBox();const x=b.x+b.width/2,y=b.y+b.height/2;await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+dx/2,y);await page.mouse.move(x+dx,y);await page.mouse.up();};
+  await grip(120);
+  ok(await sideW()===350,'kéo mép phải sang phải 120 px: ngăn rộng 350 px');
+  await grip(-400);
+  ok(await sideW()===180,'kéo quá hẹp: dừng ở mức nhỏ nhất 180 px');
+  await grip(5000);
+  ok(await sideW()>=300 && await sideW()<=await page.locator('.tv-split').evaluate(el=>el.clientWidth-300+1),'kéo quá rộng: chừa lại ít nhất 300 px cho bảng');
+  await grip(-5000);await grip(150);
+  await page.click('#cols-btn');await page.waitForTimeout(150);
+  ok((await page.locator('#col-side').getAttribute('data-kind'))==='columns' && await sideW()===330,'đổi sang Chọn cột khi đang mở: giữ nguyên độ rộng đã kéo');
+  ok(await page.locator('.cs-grip').count()===1 && await page.locator('.col-side .pop-col').first().isVisible(),'mỗi ngăn có đúng một tay kéo và danh sách vẫn hiện');
+  await page.click('#cols-btn');await page.waitForTimeout(400);
+  await page.click('#exclude-btn');await page.waitForTimeout(400);
+  ok(await sideW()===230,'đóng rồi mở lại: về 230 px');
+  await page.click('#exclude-btn');await page.waitForTimeout(400);
   await receive('config',config('table'));await receive('table',table());await clear();
 
   // ---- Số đo thân: từ khóa loại trừ và công tắc cắt phần nhô nằm trong bảng Preset ----
