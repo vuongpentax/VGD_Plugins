@@ -76,6 +76,11 @@ function presetPanel(panel){
   const look=node('div',undefined,'pp-row');
   look.append(selectOf(c.views.map(v=>[v,VIEW_LABELS[v]||v]),s.image_view,'Góc nhìn ảnh',v=>setSetting('image_view',v)),selectOf(c.styles.map(v=>[v,STYLE_LABELS[v]||v]),s.image_style,'Kiểu hiển thị ảnh',v=>setSetting('image_style',v)));
   left.append(look);
+  const margin=node('div',undefined,'pp-row');
+  const marginInput=node('input');marginInput.type='number';marginInput.min='0';marginInput.max='100';marginInput.step='5';marginInput.value=String(s.image_margin);
+  marginInput.setAttribute('aria-label','Chừa lề (%)');marginInput.title='Chừa lề quanh món khi chụp ảnh Iso / Chính diện, tính theo %: 0 = ôm sát món, 20 = chừa 20%.';
+  marginInput.onchange=()=>{const v=Math.min(100,Math.max(0,Math.round(Number(marginInput.value)||0)));marginInput.value=String(v);setSetting('image_margin',v);};
+  margin.append(node('label','Chừa lề (%)'),marginInput);left.append(margin);
   const bg=node('div',undefined,'pp-row');bg.append(selectOf(c.backgrounds.map(v=>[v,BACKGROUND_LABELS[v]||v]),s.image_background,'Nền ảnh',v=>setSetting('image_background',v)));left.append(bg);
   const folder=node('div',undefined,'pp-row pp-folder');
   const dir=node('input');dir.type='text';dir.value=app.settings.image_dir;dir.placeholder=app.dir||'Thư mục lưu ảnh…';dir.maxLength=240;dir.setAttribute('aria-label','Thư mục lưu ảnh');dir.title='Thư mục lưu ảnh (dùng chung mọi preset). Để trống để dùng thư mục mặc định.';

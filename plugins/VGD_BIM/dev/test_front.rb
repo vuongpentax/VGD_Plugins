@@ -115,6 +115,9 @@ ok('camera Iso luôn ở phía trước (cùng chiều mặt trước) và bên 
   right = [-f[1], f[0]]
   e[0] * f[0] + e[1] * f[1] > 0 && e[0] * right[0] + e[1] * right[1] > 0 && e[2] > 0
 end)
+ok('camera Iso bên trái (đối xứng qua mặt phẳng nhìn thẳng mặt trước): mặt trước -y ra (-1, -1, 0,8); +y ra (1, 1, 0,8); +x ra (1, -1, 0,8)', near_vec?(F.camera_direction('isometric', [0.0, -1.0], 'left'), [-1.0, -1.0, 0.8]) && near_vec?(F.camera_direction('isometric', [0.0, 1.0], 'left'), [1.0, 1.0, 0.8]) && near_vec?(F.camera_direction('isometric', [1.0, 0.0], 'left'), [1.0, -1.0, 0.8]))
+ok('camera Iso mặc định và "right" giống nhau; Chính diện không đổi theo bên', near_vec?(F.camera_direction('isometric', [0.0, -1.0], 'right'), F.camera_direction('isometric', [0.0, -1.0])) && near_vec?(F.camera_direction('front', [0.0, 1.0], 'left'), [0.0, 1.0, 0.0]))
+ok('bên Iso lạ bị từ chối', (begin; F.camera_direction('isometric', [0.0, -1.0], 'giữa'); false; rescue ArgumentError; true; end))
 ok('camera Chính diện: thẳng theo mặt trước, không nghiêng lên xuống', near_vec?(F.camera_direction('front', [0.0, 1.0]), [0.0, 1.0, 0.0]) && near_vec?(F.camera_direction('front', [-1.0, 0.0]), [-1.0, 0.0, 0.0]))
 ok('góc nhìn lạ bị từ chối', (begin; F.camera_direction('top', [0.0, -1.0]); false; rescue ArgumentError; true; end))
 ok('chiều Rộng / Sâu theo mặt trước: trục Y giữ nguyên, trục X đổi chỗ, chưa có thì giữ', F.frame_sizes(1200, 600, '+y') == [1200, 600] && F.frame_sizes(1200, 600, '-y') == [1200, 600] && F.frame_sizes(1200, 600, '+x') == [600, 1200] && F.frame_sizes(1200, 600, '-x') == [600, 1200] && F.frame_sizes(1200, 600, nil) == [1200, 600])

@@ -146,6 +146,17 @@ _, _, view, _ = shoot('image_view' => 'isometric', 'image_width' => 640, 'image_
 check 'cỡ ảnh theo preset: 640 x 480', view.writes[0].values_at(:width, :height) == [640, 480]
 _, _, view, _ = shoot('image_view' => 'isometric', 'image_width' => 300, 'image_height' => 900)
 check 'ảnh dọc theo preset: 300 x 900', view.writes[0].values_at(:width, :height) == [300, 900]
+_, _, view_m0, _ = shoot('image_view' => 'isometric', 'image_margin' => 0)
+_, _, view_m50, _ = shoot('image_view' => 'isometric', 'image_margin' => 50)
+check 'lề ảnh theo thiết lập: 0% ôm sát hộp bao (xa đúng tỉ lệ 1,0), 50% lùi xa hơn đúng tỉ lệ 1,5 / 1,0 so với 0%', near?([dist.(view_m50.states[0]) / dist.(view_m0.states[0])], [1.5]) && dist.(view_m0.states[0]) >= need_wide * 0.999
+model_l, items_l = world
+C.shoot(model_l, {entity: items_l[0], path: [items_l[0]]}, D.merge('image_view' => 'isometric'), iso_side: 'left')
+model_r, items_r = world
+C.shoot(model_r, {entity: items_r[0], path: [items_r[0]]}, D.merge('image_view' => 'isometric'), iso_side: 'right')
+dir_l = model_l.active_view.states[0][:eye].zip(model_l.active_view.states[0][:target]).map { |e, t| e - t }
+dir_r = model_r.active_view.states[0][:eye].zip(model_r.active_view.states[0][:target]).map { |e, t| e - t }
+check 'Iso bên trái (món chưa có mặt trước, theo trục thế giới): camera ở phía -X, đối xứng với bên phải ở +X; cao và xa như nhau', dir_l[0] < 0 && dir_r[0] > 0 && (dir_l[0] + dir_r[0]).abs < 1e-6 && (dir_l[1] - dir_r[1]).abs < 1e-6 && (dir_l[2] - dir_r[2]).abs < 1e-6
+check 'bên Iso lạ bị từ chối trước khi chụp', raises?('bên') { C.shoot(world[0], {entity: world[1][0], path: [world[1][0]]}, D, iso_side: 'giữa') }
 _, _, view_wide, _ = shoot('image_view' => 'isometric', 'image_width' => 800, 'image_height' => 400)
 _, _, view_tall, _ = shoot('image_view' => 'isometric', 'image_width' => 400, 'image_height' => 800)
 check 'ảnh ngang 800 x 400: lùi theo góc dọc hẹp hơn, xa hơn ảnh vuông (món cao không bị cắt trên dưới)', view_wide.states.all? { |st| dist.(st) >= need_wide * 1.15 && dist.(st) <= need_wide * 1.25 } && dist.(view_wide.states[0]) > need * 1.4

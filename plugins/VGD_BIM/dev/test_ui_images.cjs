@@ -128,7 +128,10 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page2.close();
 
   // ---- Nút nhỏ khi rê chuột vào ảnh ----
-  ok(await page.locator('.grid tbody tr').nth(1).locator('.cell-tool').count()===2 && await page.locator('.grid tbody tr').nth(0).locator('.cell-tool').count()===3,'ô ảnh có nút Chụp lại, Chọn ảnh, và Xóa ảnh (chỉ khi đã có ảnh)');
+  ok(await page.locator('.grid tbody tr').nth(1).locator('.cell-tool').count()===4 && await page.locator('.grid tbody tr').nth(0).locator('.cell-tool').count()===5,'ô ảnh có nút Iso trái, Iso phải, Chụp lại, Chọn ảnh, và Xóa ảnh (chỉ khi đã có ảnh)');
+  ok(JSON.stringify(await page.locator('.grid tbody tr').nth(0).locator('.cell-tool').evaluateAll(list=>list.map(b=>b.title)))===JSON.stringify(['Chụp Iso từ bên trái','Chụp Iso từ bên phải','Chụp lại','Chọn ảnh…','Xóa ảnh']),'hai nút ký hiệu Iso trái / phải đứng trước nút chụp lại');
+  await page.locator('.grid tbody tr').nth(0).locator('td.img').hover();
+  ok(await page.locator('.grid tbody tr').nth(0).evaluate(tr=>{const pic=tr.querySelector('.cell-pic').getBoundingClientRect(),mid=(pic.left+pic.right)/2;const tools=[...tr.querySelectorAll('.cell-tool')];const rects=tools.map(b=>b.getBoundingClientRect());const lo=Math.min(...rects.map(r=>r.left)),hi=Math.max(...rects.map(r=>r.right));return tools.length===5 && Math.abs((lo+hi)/2-mid)<2 && rects.every(r=>r.top>=pic.top-0.5&&r.bottom<=pic.bottom+0.5) && tools.every((b,i)=>document.elementFromPoint((rects[i].left+rects[i].right)/2,(rects[i].top+rects[i].bottom)/2)===b);}),'khi rê chuột: 5 nút nằm một hàng, căn giữa ô ảnh, bấm được từng nút (không bị ô khác che), kể cả ở hàng Gọn');
   await clear();
   await page.locator('.grid tbody tr').nth(1).locator('td.img').hover();
   await page.locator('.grid tbody tr').nth(1).locator('.cell-tool[title="Chụp ảnh"]').click();
@@ -264,9 +267,23 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   view=await viewJson();
   ok(view.settings.length_unit==='mm' && view.settings.area_unit==='m2','mọi thay đổi thiết lập được lưu vào trạng thái bảng');
   await clear();await choose('Góc nhìn ảnh','front');await choose('Kiểu hiển thị ảnh','current');await choose('Chiều rộng ảnh',1024);await choose('Chiều cao ảnh',768);await choose('Nền ảnh','white');
+  const marginBox=page.locator('#preset-panel input[aria-label="Chừa lề (%)"]');
+  ok(await marginBox.inputValue()==='20','ô Chừa lề (%) trong thiết lập ảnh: mặc định 20');
+  await marginBox.fill('150');await page.keyboard.press('Tab');
+  ok(await marginBox.inputValue()==='100','lề nhập quá 100 bị kẹp về 100');
+  await marginBox.fill('35');await page.keyboard.press('Tab');
+  view=await viewJson();
+  ok(view.settings.image_margin===35,'lề ảnh được lưu cùng thiết lập của bảng (35)');
   await page.keyboard.press('Escape');await page.locator('.grid tbody tr').nth(0).locator('td.img').hover();await page.locator('.grid tbody tr').nth(0).locator('.cell-tool[title="Chụp lại"]').click();
   cap=await json('images_capture');
   ok(cap.settings.image_view==='front' && cap.settings.image_style==='current' && cap.settings.image_width===1024 && cap.settings.image_height===768 && cap.settings.image_background==='white','thiết lập ảnh đổi trong bảng preset đi cùng lệnh chụp kế tiếp');
+  ok(cap.settings.image_margin===35 && !('iso_side' in cap),'lệnh chụp mang lề ảnh của preset (35%) và nút ↻ không ép bên Iso');
+  await clear();await page.locator('.grid tbody tr').nth(0).locator('td.img').hover();await page.locator('.grid tbody tr').nth(0).locator('.cell-tool[title="Chụp Iso từ bên trái"]').click();
+  cap=await json('images_capture');
+  ok(cap.indexes.length===1 && cap.indexes[0]===0 && cap.iso_side==='left' && cap.settings.image_view==='isometric' && cap.settings.image_width===1024,'nút Iso trái: chụp đúng dòng đó một lần theo góc Iso bên trái dù preset đang là Chính diện, vẫn theo cỡ ảnh của preset');
+  await clear();await page.locator('.grid tbody tr').nth(1).locator('td.img').hover();await page.locator('.grid tbody tr').nth(1).locator('.cell-tool[title="Chụp Iso từ bên phải"]').click();
+  cap=await json('images_capture');
+  ok(cap.indexes[0]===1 && cap.iso_side==='right' && cap.settings.image_view==='isometric','nút Iso phải: chụp dòng đó theo góc Iso bên phải (cả dòng chưa có ảnh)');
   ok((await calls('table_preset')).length===0,'preset có sẵn: đổi thiết lập không ghi đè preset gốc (chỉ preset tự tạo mới tự cập nhật)');
 
   // ---- Tạo, cập nhật, xóa, khôi phục preset ----

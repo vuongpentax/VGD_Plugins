@@ -23,6 +23,8 @@ check 'thiếu mục thì lấy mặc định', P.settings!('length_unit' => 'cm
   check "#{k} lạ bị từ chối", raises? { P.settings!(k => 'zzz') }
 end
 check 'số lẻ ngoài 0..4 bị từ chối', raises?('số lẻ') { P.settings!('length_digits' => 9) } && raises?('số lẻ') { P.settings!('area_digits' => -1) } && raises?('số lẻ') { P.settings!('volume_digits' => 'nhiều') }
+check 'lề ảnh mặc định 20%, nhận 0..100, giá trị ngoài khoảng hoặc không phải số bị từ chối', d['image_margin'] == 20 && P.settings!('image_margin' => 0)['image_margin'] == 0 && P.settings!('image_margin' => '35')['image_margin'] == 35 && raises?('lề') { P.settings!('image_margin' => 101) } && raises?('lề') { P.settings!('image_margin' => -1) } && raises?('lề') { P.settings!('image_margin' => 'abc') }
+check 'lề ảnh: bản dễ tính (file cũ không có mục này, giá trị sai) về mặc định 20', P.settings('length_unit' => 'cm')['image_margin'] == 20 && P.settings('image_margin' => 500)['image_margin'] == 20
 check 'cỡ ảnh ngoài 128..4096 bị từ chối', raises?('cỡ ảnh') { P.settings!('image_width' => 50) } && raises?('cỡ ảnh') { P.settings!('image_height' => 9999) }
 check 'thiết lập không phải Hash bị từ chối', raises? { P.settings!('x') } && raises? { P.settings!(nil) }
 check 'bản dễ tính: mục sai về mặc định, mục đúng giữ, mục lạ bỏ', P.settings('length_unit' => 'cm', 'area_unit' => 'zzz', 'hack' => 1, 'image_width' => 'abc') == d.merge('length_unit' => 'cm')

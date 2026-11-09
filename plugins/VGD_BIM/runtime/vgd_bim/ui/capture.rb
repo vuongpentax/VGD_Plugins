@@ -17,13 +17,14 @@ module VGD
         # Hướng từ tâm món đồ tới camera theo trục thế giới, chỉ dùng khi món chưa có mặt trước (có thì xem Front.camera_direction): iso nhìn từ phía trước (-Y), bên phải (+X), phía trên; front nhìn thẳng từ phía -Y.
         DIRECTIONS = {'isometric' => [1, -1, 0.8], 'front' => [0, -1, 0]}.freeze
         COLOR_STYLE = {'RenderMode' => 3, 'DisplayColorByLayer' => false}.freeze # shaded có texture, không tô màu theo tag
-        CAPTURE_MARGIN = 1.2 # chừa lề rộng hơn lúc thu phóng để chụp: món dài, cao không bị cắt mép ảnh
+        ISO_SIDES = %w[right left].freeze # Iso nhìn từ bên phải (mặc định) hoặc bên trái của mặt trước
         WHITE_BACKGROUND = {'DrawGround' => false, 'DrawHorizon' => false}.freeze # cùng với màu nền trắng
 
         # record: một phần tử của Table.build (có :entity và :path). settings: thiết lập ảnh của preset.
         # Trả về {pid:, stamp:} và thêm :note khi phải chụp bằng cách thay thế (xem write).
-        def self.shoot(model, record, settings)
+        def self.shoot(model, record, settings, iso_side: 'right')
           settings = Preset.settings!(settings)
+          raise ArgumentError, 'Bên của góc Iso không hợp lệ.' unless ISO_SIDES.include?(iso_side)
           entity = record[:entity]
           raise ArgumentError, 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless entity.respond_to?(:valid?) && entity.valid?
           pid = Images.id!(entity.persistent_id)
@@ -42,10 +43,10 @@ module VGD
             end
             saved[:options] = tweak_options(model, settings)
             if isolate
-              notes << aim(view, entity, settings['image_view'], FrontProbe.front_world(record))
+              notes << aim(view, entity, settings['image_view'], FrontProbe.front_world(record), iso_side)
             end
             size = [settings['image_width'], settings['image_height']]
-            frame(view, record, size) if isolate
+            frame(view, record, size, 1.0 + settings['image_margin'] / 100.0) if isolate
             view.refresh
             notes << write(view, Images.temp_path(model, pid), size, settings)
             Images.commit(model, pid)
@@ -144,10 +145,11 @@ module VGD
         # Đặt camera nhìn vào tâm món đồ từ góc đã chọn, đủ xa để không nằm trong món đồ; frame sau đó lùi ra cho trọn món đồ.
         # front: hướng mặt trước của món trong thế giới ([x, y] đơn vị, từ FrontProbe.front_world); có thì chụp theo mặt trước,
         # chưa có thì chụp theo trục thế giới (DIRECTIONS) và trả về ghi chú để người dùng biết ảnh đó chưa đồng bộ.
-        def self.aim(view, entity, name, front = nil)
+        def self.aim(view, entity, name, front = nil, side = 'right')
           box = entity.bounds
           center = box.center
-          vector = front ? Front.camera_direction(name, front) : DIRECTIONS.fetch(name)
+          vector = front ? Front.camera_direction(name, front, side) : DIRECTIONS.fetch(name)
+          vector = [-vector[0], vector[1], vector[2]] if !front && name == 'isometric' && side == 'left' # theo trục thế giới: đối xứng qua mặt phẳng nhìn thẳng từ -Y
           direction = Geom::Vector3d.new(*vector).normalize
           eye = center.offset(direction, [box.diagonal.to_f, 1.0].max * 2.0)
           camera = Sketchup::Camera.new(eye, center, Geom::Vector3d.new(0, 0, 1))
@@ -161,7 +163,7 @@ module VGD
         # Lùi camera ra (extend) cho trọn hộp bao của món rồi mới chụp: hộp bao tính theo tọa độ thế giới (View#zoom tính theo tọa độ cục bộ với đối tượng
         # nằm trong group, nên lệch), và tính theo CẢ tỉ lệ ảnh lẫn tỉ lệ khung nhìn rồi lấy khoảng cách xa hơn, vì write_image có thể lấy khung theo bên nào
         # cũng được; nhờ vậy món dài hoặc cao không bị cắt khi ảnh có tỉ lệ khác khung nhìn. Giữ hướng nhìn đã đặt bởi aim.
-        def self.frame(view, record, size)
+        def self.frame(view, record, size, margin)
           entity = record[:entity]
           bounds = record[:transform] ? Geometry.world_bounds([record]) : entity.bounds
           return view.zoom(entity) if bounds.empty? # không tính được hộp bao: về cách cũ
@@ -169,7 +171,7 @@ module VGD
           view_aspect = view.vpheight.to_f.positive? ? view.vpwidth.to_f / view.vpheight : 1.0
           fits = [size[0].to_f / size[1], view_aspect].uniq.map do |aspect|
             ViewFit.camera(bounds.min.to_a, bounds.max.to_a, direction: camera.direction.to_a, up: camera.up.to_a, perspective: camera.perspective?,
-                                                              fov: camera.fov, fov_is_height: camera.fov_is_height?, aspect: aspect, margin: CAPTURE_MARGIN)
+                                                              fov: camera.fov, fov_is_height: camera.fov_is_height?, aspect: aspect, margin: margin)
           end
           fit = fits.max_by { |candidate| candidate[:height] || Math.sqrt(candidate[:eye].zip(candidate[:target]).sum { |e, t| (e - t)**2 }) }
           camera.set(Geom::Point3d.new(*fit[:eye]), Geom::Point3d.new(*fit[:target]), Geom::Vector3d.new(*fit[:up]))

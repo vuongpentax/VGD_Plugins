@@ -166,11 +166,14 @@ module VGD
       # Hướng từ tâm món tới camera khi chụp, theo mặt trước (vector ngang đơn vị trong thế giới, hướng ra khỏi món).
       # 'front': nhìn thẳng vào mặt trước. 'isometric': từ phía trước, bên phải (người đứng ngoài nhìn vào mặt trước) và phía trên,
       # cùng tỉ lệ 1 : 1 : 0,8 như khi chụp theo trục thế giới (mặt trước -Y thì ra đúng (1, -1, 0,8)).
-      def self.camera_direction(name, front)
+      # side: 'right' (mặc định) hoặc 'left' (đối xứng qua mặt phẳng nhìn thẳng mặt trước), chỉ dùng cho Iso: món sát tường bên phải thì chụp từ bên trái.
+      def self.camera_direction(name, front, side = 'right')
         fx, fy = front
         case name
         when 'front' then [fx, fy, 0.0]
-        when 'isometric' then [fx - fy, fy + fx, 0.8]
+        when 'isometric'
+          raise ArgumentError, 'Bên của góc Iso không hợp lệ.' unless %w[right left].include?(side)
+          side == 'left' ? [fx + fy, fy - fx, 0.8] : [fx - fy, fy + fx, 0.8]
         else raise ArgumentError, 'Góc nhìn không hợp lệ.'
         end
       end

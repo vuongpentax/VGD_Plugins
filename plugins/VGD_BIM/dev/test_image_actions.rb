@@ -46,12 +46,14 @@ ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
 %w[core/storage core/settings core/images core/preset core/table_report core/measure_probe].each { |f| require File.join(ROOT, f) }
 module VGD; module BIM; module UI
   module Capture
-    def self.shoot(model, record, settings)
+    ISO_SIDES = %w[right left].freeze
+    def self.shoot(model, record, settings, iso_side: 'right')
       pid = record[:entity].persistent_id
       raise 'SketchUp không chụp được ảnh.' if pid == 902
       raise NoMethodError, "undefined method `bounds' for nil:NilClass" if pid == 906
       note = pid == 907 ? 'nền trong suốt không dùng được trên máy này nên ảnh dùng cách thay thế' : nil
       $shot << [pid, settings['image_view']]
+      ($sides ||= []) << iso_side
       Images.write(model, pid, PNG)
       {pid: pid, stamp: Images.info(model, pid)[:stamp], note: note}.compact
     end
@@ -254,6 +256,20 @@ ok('Windows: mở bằng explorer.exe với đường dẫn Windows (dấu gạc
 d.define_singleton_method(:windows?) { false }
 d.safely { d.images_open_dir }
 ok('không phải Windows: vẫn dùng UI.openURL, không chạy explorer', launched.size == 1 && UI.opened.size == opened_before + 1)
+
+# ---- Iso bên trái / phải (nút ◣ ◢ trong ô ảnh) đi cùng lệnh chụp ----
+d = make_dialog
+$sides = []
+d.safely { d.images_capture('indexes' => [0], 'settings' => {'image_view' => 'isometric'}, 'iso_side' => 'left') }
+UI.run_timers
+ok('lệnh chụp mang bên Iso (trái) tới Capture.shoot', $sides == ['left'])
+$sides = []
+d.safely { d.images_capture('indexes' => [0], 'settings' => {'image_view' => 'isometric'}) }
+UI.run_timers
+ok('không nói bên Iso: mặc định bên phải như trước', $sides == ['right'])
+d = make_dialog
+d.safely { d.images_capture('indexes' => [0], 'settings' => {'image_view' => 'isometric'}, 'iso_side' => 'giữa') }
+ok('bên Iso lạ bị từ chối trước khi chụp: không hẹn giờ, không ẩn khung', error_of(d).to_s.include?('bên Iso') && UI.timers.empty? && d.instance_variable_get(:@capture).nil?)
 
 # ---- Thiết lập ảnh của preset đi cùng lệnh chụp ----
 d = make_dialog

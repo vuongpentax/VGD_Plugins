@@ -84,12 +84,14 @@ module VGD
           check_model!
           raise 'Đang chụp ảnh. Hãy đợi xong hoặc bấm Dừng.' if @capture
           settings = Preset.settings!(payload.fetch('settings', {}))
+          iso_side = payload['iso_side'] || 'right'
+          raise 'Hãy chọn bên Iso là trái hoặc phải.' unless Capture::ISO_SIDES.include?(iso_side)
           wanted = payload['indexes'].is_a?(Array) ? table_indexes(payload) : Array(@table_records).each_index.to_a
           jobs = wanted.map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
           jobs.reject! { |index, _| @table_rows[index][:has_image] } if payload['only_missing']
           raise 'Không có đối tượng nào cần chụp.' if jobs.empty?
           raise "Mỗi lần chỉ chụp tối đa #{MAX_CAPTURE_BATCH} đối tượng. Hãy chọn ít hơn." if jobs.size > MAX_CAPTURE_BATCH
-          @capture = {queue: jobs, total: jobs.size, done: 0, errors: [], updated: [], cancel: false, notes: [], settings: settings}
+          @capture = {queue: jobs, total: jobs.size, done: 0, errors: [], updated: [], cancel: false, notes: [], settings: settings, iso_side: iso_side}
           release_preview # khung đánh dấu không được lọt vào ảnh
           hide_overlay
           emit('images_progress', {done: 0, total: jobs.size})
@@ -111,7 +113,7 @@ module VGD
           end
           _index, record = job[:queue].shift
           begin
-            result = Capture.shoot(@model, record, job[:settings])
+            result = Capture.shoot(@model, record, job[:settings], iso_side: job[:iso_side])
             job[:updated] << result
             job[:notes] << result[:note] if result[:note]
           rescue StandardError => error

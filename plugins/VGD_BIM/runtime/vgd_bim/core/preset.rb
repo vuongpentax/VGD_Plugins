@@ -14,6 +14,7 @@ module VGD
       BACKGROUNDS = %w[transparent white].freeze
       DIGITS = (0..4).freeze
       IMAGE_SIZE = (128..4096).freeze
+      IMAGE_MARGIN = (0..100).freeze # lề chừa quanh món khi chụp ảnh, tính theo % (20 = chừa 20%)
       MAX_NAME = 40
       MAX_HEADER = 60
       MAX_PRESETS = 100
@@ -25,7 +26,8 @@ module VGD
         'volume_unit' => 'm3', 'volume_digits' => 3,
         'decimal_separator' => ',', 'currency' => 'VND',
         'image_width' => 512, 'image_height' => 512,
-        'image_view' => 'isometric', 'image_style' => 'color', 'image_background' => 'transparent'
+        'image_view' => 'isometric', 'image_style' => 'color', 'image_background' => 'transparent',
+        'image_margin' => 20
       }.freeze
 
       ENUMS = {
@@ -69,6 +71,10 @@ module VGD
         elsif key.end_with?('_digits')
           number = integer(value)
           raise ArgumentError, "Số chữ số lẻ phải từ #{DIGITS.first} đến #{DIGITS.last}." unless number && DIGITS.cover?(number)
+          number
+        elsif key == 'image_margin'
+          number = integer(value)
+          raise ArgumentError, "Lề ảnh phải từ #{IMAGE_MARGIN.first} đến #{IMAGE_MARGIN.last} (%)." unless number && IMAGE_MARGIN.cover?(number)
           number
         else # image_width, image_height
           number = integer(value)

@@ -25,7 +25,8 @@ function imageCell(td,row){
   // Nút nhỏ hiện khi rê chuột: chụp lại, chọn file ảnh, xóa ảnh. Chỉ chụp khi bấm nút.
   const tools=node('div',undefined,'cell-tools');
   const tool=(text,title,handler)=>{const b=node('button',text,'cell-tool');b.type='button';b.title=title;b.setAttribute('aria-label',title);b.onclick=e=>{e.stopPropagation();handler();};b.ondblclick=e=>e.stopPropagation();return b;};
-  tools.append(tool('↻',row.has_image?'Chụp lại':'Chụp ảnh',()=>runCapture([row.index],false)),tool('⋯','Chọn ảnh…',()=>pickImageFile(row.pid)));
+  tools.append(tool('◣','Chụp Iso từ bên trái',()=>runCapture([row.index],false,'left')),tool('◢','Chụp Iso từ bên phải',()=>runCapture([row.index],false,'right')),
+    tool('↻',row.has_image?'Chụp lại':'Chụp ảnh',()=>runCapture([row.index],false)),tool('⋯','Chọn ảnh…',()=>pickImageFile(row.pid)));
   if(row.has_image)tools.append(tool('×','Xóa ảnh',()=>call('image_delete',row.pid)));
   holder.append(tools);
   td.title='Kéo thả ảnh vào đây hoặc chọn ô rồi dán (Ctrl+V)';
@@ -121,9 +122,11 @@ function syncBusy(){
   document.querySelectorAll('.cell-tool').forEach(b=>{b.disabled=captureState.busy;});
 }
 // Thiết lập ảnh của preset đang dùng đi kèm lệnh chụp; phía Ruby kiểm tra lại.
-function runCapture(indexes,onlyMissing){
+// isoSide ('left' | 'right'): chụp một lần theo góc Iso từ bên đó, bất kể góc nhìn của preset (nút ◣ ◢ trong ô ảnh).
+function runCapture(indexes,onlyMissing,isoSide){
   const s=workSettings();
-  const payload={only_missing:!!onlyMissing,settings:{image_width:s.image_width,image_height:s.image_height,image_view:s.image_view,image_style:s.image_style,image_background:s.image_background}};
+  const payload={only_missing:!!onlyMissing,settings:{image_width:s.image_width,image_height:s.image_height,image_view:isoSide?'isometric':s.image_view,image_style:s.image_style,image_background:s.image_background,image_margin:s.image_margin}};
+  if(isoSide)payload.iso_side=isoSide;
   if(indexes)payload.indexes=indexes;
   call('images_capture',JSON.stringify(payload));
 }
