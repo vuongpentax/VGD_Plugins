@@ -109,7 +109,7 @@ function preview(data) {
   const dl=node('dl',undefined,'preview-values');Object.entries(data.data).forEach(([key,value])=>dl.append(node('dt',label(key)),node('dd',displayValue(key,value))));p.append(dl,node('p','Giữ nguyên hình học, tên, thẻ và vật liệu.'));$('confirm-preview').disabled=false;$('preview').showModal();
 }
 // ---- Bảng đối tượng kiểu Auto Info ----
-const tableState={replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null};
+const tableState={replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null,manual:[],dragRow:null};
 const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total']);
 const WIDTHS={image_location:110,measure_note:260,front:80,front_state:150,ordinal:44,image:72,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80,areaProjected:110,ifc:120,owner:120,url:170,size:110,price:110,total:120};
 const unitTextOf=key=>LEN_KEYS.has(key)?lengthLabel():AREA_KEYS.has(key)?areaLabel():key==='volume'?volumeLabel():key==='quantity'?'cái':(key==='price'||key==='total')?workSettings().currency:undefined;
@@ -202,6 +202,14 @@ function cellText(row,key){
   }
 }
 function sortValue(row,key){if(NUMERIC.has(key))return row[key]==null?-Infinity:row[key];return String(cellText(row,key)||'').toLocaleLowerCase('vi');}
+// Thứ tự dòng do người dùng kéo tay: danh sách mã món lưu trong model (xem core/row_order.rb). Món chưa có trong danh sách (món mới) xuống cuối, theo thứ tự quét.
+function pidMap(){const map=new Map();tableState.data.rows.forEach(r=>{if(Number.isInteger(r.pid)&&r.pid>0)map.set(r.index,r.pid);});return map;}
+function manualSorted(rows){
+  if(!tableState.manual.length)return rows;
+  const rank=new Map(),pids=pidMap();tableState.manual.forEach((pid,i)=>rank.set(pid,i));
+  const rankOf=row=>{let best=Infinity;membersOf(row).forEach(i=>{const r=rank.get(pids.get(i));if(r!==undefined&&r<best)best=r;});return best;};
+  return rows.map(row=>({row,rank:rankOf(row)})).sort((a,b)=>a.rank===b.rank?a.row.index-b.row.index:(a.rank<b.rank?-1:1)).map(k=>k.row);
+}
 function filteredRows(){
   const q=tableState.search.trim().toLocaleLowerCase('vi');
   return tableState.data.rows.filter(r=>(!tableState.group||r.tag_group===tableState.group)&&(!q||[r.name,r.definition,r.description,r.tag,r.material].some(v=>String(v||'').toLocaleLowerCase('vi').includes(q))));
@@ -414,7 +422,8 @@ function viewModel(){
   const filtered=filteredRows();
   const shown=new Set(filtered.map(r=>r.index));
   const rows=tableState.merge?mergeRows(filtered):filtered;
-  const ordered=tableState.sort?[...rows].sort((a,b)=>{const va=sortValue(a,tableState.sort.key),vb=sortValue(b,tableState.sort.key);if(va<vb)return -tableState.sort.dir;if(va>vb)return tableState.sort.dir;return a.index-b.index;}):rows;
+  const placed=manualSorted(rows); // sắp theo cột là sắp ổn định trên thứ tự này nên các dòng bằng nhau giữ thứ tự tay (không có thứ tự tay thì là thứ tự quét)
+  const ordered=tableState.sort?[...placed].sort((a,b)=>{const va=sortValue(a,tableState.sort.key),vb=sortValue(b,tableState.sort.key);if(va<vb)return -tableState.sort.dir;if(va>vb)return tableState.sort.dir;return 0;}):placed;
   // Cộng tổng: mặc định chỉ cộng đối tượng cấp cao nhất để không đếm trùng group lồng nhau.
   const counted=list=>list.filter(r=>!(tableState.onlyTop&&r.parents.some(p=>shown.has(p))));
   const sumOf=(list,key)=>counted(list).reduce((s,r)=>s+(typeof r[key]==='number'?r[key]:0),0);
@@ -427,6 +436,66 @@ function viewModel(){
     sections=[...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],'vi',{numeric:true})).map(([label,list])=>({label,rows:list}));
   }
   return {cols,rows,sections,sumOf,countOf};
+}
+// Kéo thả dòng bằng tay nắm ở ô đầu: chỉ đổi chỗ trong cùng một nhóm; kéo một dòng đang được chọn cùng nhiều dòng chọn thì dời cả cụm.
+function rowGrip(tr,row,section,pids,host){
+  if(!membersOf(row).every(i=>pids.has(i)))return; // món không có mã bền thì không lưu được chỗ
+  const first=tr.firstElementChild;if(!first)return;
+  const grip=node('span','⋮⋮','row-grip');grip.draggable=true;grip.title='Kéo để đổi vị trí dòng';grip.setAttribute('aria-hidden','true');
+  grip.ondblclick=e=>e.stopPropagation();
+  grip.ondragstart=e=>{
+    const picked=section.rows.filter(r=>membersOf(r).every(m=>tableState.sel.has(m)));
+    const moving=picked.length>1&&picked.some(r=>r.index===row.index)?picked:[row];
+    tableState.dragRow={section,moving};
+    e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','vgd-row');e.dataTransfer.setDragImage(tr,12,12);
+    setTimeout(()=>moving.forEach(r=>{const el=host.querySelector(`tr[data-index="${r.index}"]`);if(el)el.classList.add('dragging');}),0);
+  };
+  grip.ondragend=()=>clearRowDrag(host);
+  first.classList.add('has-grip');first.prepend(grip);
+}
+function rowDrag(tr,row,section,pids,host){
+  const side=e=>{const box=tr.getBoundingClientRect();return e.clientY>box.top+box.height/2;};
+  tr.ondragover=e=>{
+    const drag=tableState.dragRow;if(!drag||drag.section!==section)return; // kéo ảnh từ ngoài vào, hoặc sang nhóm khác: để nguyên
+    e.preventDefault();e.dataTransfer.dropEffect='move';
+    const after=side(e);
+    host.querySelectorAll('tr.drop-before,tr.drop-after').forEach(el=>{if(el!==tr)el.classList.remove('drop-before','drop-after');});
+    tr.classList.toggle('drop-before',!after);tr.classList.toggle('drop-after',after);
+  };
+  tr.ondrop=e=>{
+    const drag=tableState.dragRow;if(!drag||drag.section!==section)return;
+    e.preventDefault();const after=side(e);clearRowDrag(host);dropRows(drag,row,after);
+  };
+}
+function clearRowDrag(host){
+  tableState.dragRow=null;
+  host.querySelectorAll('tr.dragging,tr.drop-before,tr.drop-after').forEach(el=>el.classList.remove('dragging','drop-before','drop-after'));
+}
+function dropRows(drag,target,after){
+  const list=drag.section.rows,moving=new Set(drag.moving.map(r=>r.index));
+  if(moving.has(target.index))return;
+  const lifted=list.filter(r=>moving.has(r.index)),rest=list.filter(r=>!moving.has(r.index));
+  const at=rest.findIndex(r=>r.index===target.index)+(after?1:0);
+  const next=[...rest.slice(0,at),...lifted,...rest.slice(at)];
+  if(next.every((r,i)=>r.index===list[i].index))return; // thả về đúng chỗ cũ
+  commitManualOrder(list,next);
+}
+// Các dòng của nhóm chiếm lại đúng những chỗ của chúng trong thứ tự chung theo thứ tự mới; dòng bị lọc hoặc ở nhóm khác giữ nguyên chỗ.
+function commitManualOrder(oldList,newList){
+  const pids=pidMap(),pidsOf=rows=>rows.flatMap(r=>membersOf(r).map(i=>pids.get(i)));
+  const full=manualSorted(tableState.data.rows).map(r=>pids.get(r.index)).filter(pid=>pid!==undefined);
+  const owned=new Set(pidsOf(oldList)),fill=pidsOf(newList),result=[...full];let n=0;
+  full.forEach((pid,i)=>{if(owned.has(pid))result[i]=fill[n++];});
+  tableState.manual=result;
+  if(tableState.sort){tableState.sort=null;message('Đã bỏ sắp xếp theo cột để giữ thứ tự bạn vừa kéo.');}
+  call('table_order',JSON.stringify({order:result}));
+  tableView(tableState.data);
+}
+function resetManualOrder(){
+  const own=[...pidMap().values()],set=new Set(own);
+  tableState.manual=tableState.manual.filter(pid=>!set.has(pid));
+  call('table_order',JSON.stringify({reset:own}));
+  tableView(tableState.data);
 }
 function renderGrid(host){
   const data=tableState.data;
@@ -472,7 +541,7 @@ function renderGrid(host){
   // Nhãn "Tổng cộng" / tên nhóm đặt ở cột rộng nhất có sẵn (Tên, rồi Họ, rồi Loại) để không bị cắt.
   const labelKey=['instance','definition','entity'].find(k=>cols.some(c=>c.key===k));
   const labelIndex=Math.max(0,cols.findIndex(col=>col.key===labelKey));
-  const tbody=node('tbody');
+  const tbody=node('tbody'),pids=pidMap();
   let pos=0;
   sections.forEach(section=>{
     if(section.label!==null){
@@ -497,6 +566,7 @@ function renderGrid(host){
       pos++;
       const members=membersOf(row);
       const tr=node('tr');tr.dataset.index=String(row.index);tr.dataset.members=members.join(',');
+      rowDrag(tr,row,section,pids,host);
       if(members.every(m=>tableState.sel.has(m)))tr.classList.add('selected');
       tr.onclick=e=>{
         if(e.target.closest('input,select,button'))return; // đang gõ trong ô sửa
@@ -530,6 +600,7 @@ function renderGrid(host){
         if(col.key==='front_state'&&row.front_note)td.title=row.front_note; // lý do tự động chọn mặt trước, để duyệt
         tr.append(td);
       });
+      rowGrip(tr,row,section,pids,host);
       tbody.append(tr);
     });
   });
@@ -683,7 +754,11 @@ function toolbar(){
   const excludeCount=excludedTags().size;
   const exclude=button(excludeCount?`Loại trừ tag (${excludeCount})`:'Loại trừ tag',toggleExclude);exclude.id='exclude-btn';exclude.title='Chọn các tag không tính vào Rộng / Dài / Cao';
   exclude.setAttribute('aria-expanded',String(tableState.panel==='exclude'));
-  bar.append(cols,exclude,searchWrap,replaceBox,group,node('span',undefined,'grow'),rename,front,snap,stop,progress,groupAnchor);
+  const own=new Set(pidMap().values()),placed=tableState.manual.some(pid=>own.has(pid));
+  const unplace=button('Bỏ xếp tay',resetManualOrder);unplace.id='order-reset';unplace.title='Bỏ thứ tự bạn đã kéo, về thứ tự quét ban đầu';
+  bar.append(cols,exclude,searchWrap,replaceBox,group,node('span',undefined,'grow'),rename,front,snap,stop,progress);
+  if(placed)bar.append(unplace);
+  bar.append(groupAnchor);
   return bar;
 }
 // Mặt trước: phát hiện tự động (tường + hình học), đặt tay theo hướng nhìn / xoay / đảo, xóa. Chỉ ghi dữ liệu, không đổi hình học.
@@ -1118,7 +1193,7 @@ function tableView(data){
 const TAB_OF={rules:'mapping',validate_model:'mapping',validate_selection:'mapping',export:'scan',convert_selection:'information'};
 window.VGD={receive(event,data){
   if(event==='config'){document.body.classList.remove('table-mode');updateSelInfo();if(appliedLanguage&&data.language&&appliedLanguage!==data.language){location.reload();return;}appliedLanguage=data.language||'vi';VGD_I18N.setLanguage(appliedLanguage,data.vi_en);config=data;if(config.table&&!tableState.restored)restoreView({view:config.table.view,columns:config.table.columns,presets:config.table.presets});updatePresetButton();locale=data.locale||locale;$('subtitle').textContent=`${data.version} · ${translated('modes',data.mode)}`;document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===(TAB_OF[data.mode]||data.mode);b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});$('preview').close();$('content').replaceChildren();$('primary-actions').replaceChildren();document.querySelector('main').scrollTop=0;message('Đang đọc dữ liệu…');}
-  if(event==='table'){tableState.rename.preview=null;tableState.sel=new Set(Array.isArray(data.selected)?data.selected:[]);if(!tableState.sel.has(tableState.anchor))tableState.anchor=null;} // bảng đổi thì bản xem trước đổi tên cũ không còn đúng
+  if(event==='table'){tableState.manual=Array.isArray(data.row_order)?data.row_order:[];tableState.rename.preview=null;tableState.sel=new Set(Array.isArray(data.selected)?data.selected:[]);if(!tableState.sel.has(tableState.anchor))tableState.anchor=null;} // bảng đổi thì bản xem trước đổi tên cũ không còn đúng
   const renderers={information,scan,mapping,validation,rules,tags:tagEditor,table:tableView};if(renderers[event]){renderers[event](data);message('Sẵn sàng.');}
   if(event==='highlight')highlightRows(data.indexes);
   if(event==='options'&&tableState.data){tableState.data.options=data;tableView(tableState.data);}

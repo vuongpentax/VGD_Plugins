@@ -77,7 +77,9 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await receive('folder_auto_plan',{total:7,assign:0,same:7,kept:0,unmatched:0,rules:[]});await scan('Soạn tag (không cần xếp thư mục)');
   const table=cfg=>({columns:F.columns,presets:F.presets,groups:F.groups,statuses:F.statuses,options:{zoom:true,isolate:false,deep:false,projected:false,isolating:false},rows,selected:[],hint:null,view:{},choices:{tags:['Tag0','Tag1'],materials:['Oak']},...cfg});
   await receive('config',config(lang,'table'));
-  await receive('table',table({selected:[0]}));await scan('Bảng');
+  const ids=rows.map(r=>r.pid).filter(Number.isInteger);
+  await receive('table',table({selected:[0],row_order:ids.slice(0,2).reverse()}));await scan('Bảng');
+  if(!(ids.length>1&&await page.locator('#order-reset').count()===1&&await page.locator('.row-grip').count()>0))throw Error('Manual row order controls (grip, clear button) did not show in the table fixture');
   await page.evaluate(()=>{for(const p of ['columns','presets','group','rename']){tableState.panel=p;tableView(tableState.data);}});
   for(const p of ['columns','presets','group','rename']){await page.evaluate(p=>{tableState.panel=p;tableView(tableState.data);},p);await scan('Bảng ('+p+')');}
   await page.evaluate(()=>{tableState.rename.preview={counts:{ok:2,same:1,locked:1,empty:1,long:1,duplicate:1},rows:[{old:'a',new:'b',status:'ok',duplicate:true},{old:'',new:'',status:'empty'},{old:'x',new:'x',status:'same'},{old:'y',new:'y',status:'locked'},{old:'z',new:'z',status:'long'}]};tableState.panel='rename';tableView(tableState.data);});await scan('Bảng (xem trước đổi tên)');

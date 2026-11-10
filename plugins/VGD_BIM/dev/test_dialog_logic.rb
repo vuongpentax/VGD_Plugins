@@ -500,4 +500,30 @@ VGD::BIM::Table.delete_preset('Phong'); VGD::BIM::Table.delete_preset('Của tô
 ok('xuất khi chưa có preset tự tạo: báo lỗi rõ', (begin; ed.table_preset({'action' => 'export'}); false; rescue ArgumentError => e; e.message.include?('Chưa có preset'); end))
 $model = ORIGINAL_MODEL
 
+# Thứ tự dòng kéo tay: chỉ ghi danh sách mã món vào model, không đụng đối tượng; model đã đổi thì từ chối
+require File.join(ROOT, 'core/row_order')
+class OrderModel
+  attr_reader :attrs
+  def initialize; @attrs = {}; end
+  def get_attribute(dict, key, default = nil); @attrs.dig(dict, key) || default; end
+  def set_attribute(dict, key, value); (@attrs[dict] ||= {})[key] = value; end
+  def start_operation(*); true; end
+  def commit_operation; true; end
+  def abort_operation; true; end
+end
+order_model = OrderModel.new
+$model = order_model
+od = D.allocate
+od.instance_variable_set(:@model, order_model)
+od.table_order({'order' => [30, 10, 20]})
+ok('table_order: ghi thứ tự vào model', VGD::BIM::RowOrder.read(order_model) == [30, 10, 20])
+od.table_order({'reset' => [10]})
+ok('table_order: bỏ xếp tay các món của bảng', VGD::BIM::RowOrder.read(order_model) == [30, 20])
+bad_order = begin; od.table_order({'order' => ['x']}); nil; rescue ArgumentError => e; e.message; end
+ok('table_order: mã sai bị từ chối, dữ liệu cũ còn nguyên', bad_order.to_s.include?('mã món') && VGD::BIM::RowOrder.read(order_model) == [30, 20])
+$model = OrderModel.new
+stale_order = begin; od.table_order({'order' => [1]}); nil; rescue StandardError => e; e.message; end
+ok('table_order: model đã đổi thì từ chối, không ghi', stale_order.to_s.include?('làm mới') && VGD::BIM::RowOrder.read($model) == [])
+$model = ORIGINAL_MODEL
+
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

@@ -86,7 +86,7 @@ const VGD_I18N=(()=>{
     'Bỏ chọn':'Deselect','(Không có tag)':'(No tag)','(Không vật liệu)':'(No material)','Tìm...':'Search...','Tìm trong danh sách':'Search in list','Không có mục nào khớp.':'No matching items.',
     'Đối tượng đang bị khóa nên không sửa được.':'The object is locked and cannot be edited.','Không nhóm':'No grouping','Cha (Parent)':'Parent','Loại (Entity)':'Type (Entity)',
     'Tên họ (Definition)':'Family name (Definition)','Tên (Instance)':'Name (Instance)','Tag':'Tag','Tình trạng':'Status','(Gốc)':'(Root)','(Chưa đặt tên)':'(Unnamed)','(Chưa phân loại)':'(Unclassified)','(Untagged)':'(Untagged)',
-'Tổng cộng':'Total','Bấm để chọn cả nhóm':'Click to select the whole group','Mở nhóm':'Expand group','Thu gọn nhóm':'Collapse group',
+'Tổng cộng':'Total','Bấm để chọn cả nhóm':'Click to select the whole group','Kéo để đổi vị trí dòng':'Drag to move this row','Bỏ xếp tay':'Clear manual order','Bỏ thứ tự bạn đã kéo, về thứ tự quét ban đầu':'Remove the order you dragged and go back to the scan order','Đã bỏ sắp xếp theo cột để giữ thứ tự bạn vừa kéo.':'Column sorting was turned off to keep the order you just dragged.','Mở nhóm':'Expand group','Thu gọn nhóm':'Collapse group',
     'Không có đối tượng nào khớp bộ lọc.':'No objects match the filter.','Nhóm theo':'Group by','Gộp dòng giống nhau':'Merge identical rows',
     'Chỉ đổi cách hiển thị. Dòng gộp: Số lượng, diện tích, thể tích là tổng của các dòng gộp.':'Display only. On merged rows, quantity, area and volume are the sum of the merged rows.',
     // --- Cột bảng (Ruby gửi) ---

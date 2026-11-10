@@ -81,6 +81,7 @@ module VGD
           @dialog.add_action_callback('rename_preview') { |_ctx, payload| safely { rename_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { rename_apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_view') { |_ctx, payload| safely { Table.save_view_state(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_order') { |_ctx, payload| safely { table_order(JSON.parse(payload)) } }
           register_image_callbacks
           register_front_callbacks
           register_tag_auto_callbacks
@@ -340,7 +341,13 @@ module VGD
                  end
           emit('table', {columns: Table::COLUMNS, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
                          statuses: Table::STATUS_LABELS, options: @table_options.merge(isolating: !@isolated.empty?),
-                         rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state, choices: table_choices})
+                         rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state, choices: table_choices,
+                         row_order: RowOrder.read(@model)})
+        end
+        # Thứ tự dòng người dùng kéo tay: chỉ ghi danh sách mã món vào model (RowOrder), không đổi gì trên đối tượng; bảng đã tự xếp lại ở giao diện.
+        def table_order(payload)
+          check_model!
+          RowOrder.apply(@model, payload)
         end
         # payload: {'indexes' => [các dòng đã chọn trong bảng], 'field' => tên cột đã bấm (chỉ dùng khi chọn đúng một dòng)}
         # Chọn nhiều dòng kiểu Excel (Shift / Ctrl) ở giao diện; SketchUp chọn theo các đối tượng đó để các tab khác dùng luôn.
