@@ -82,9 +82,9 @@ function presetPanel(panel){
   marginInput.onchange=()=>{const v=Math.min(100,Math.max(0,Math.round(Number(marginInput.value)||0)));marginInput.value=String(v);setSetting('image_margin',v);};
   margin.append(node('label','Chừa lề (%)'),marginInput);left.append(margin);
   const scale=node('div',undefined,'pp-row');
-  const scaleInput=node('input');scaleInput.type='number';scaleInput.min='2';scaleInput.max='20';scaleInput.step='1';scaleInput.value=String(s.image_location_scale);
-  scaleInput.setAttribute('aria-label','Vùng nhìn ảnh vị trí (lần)');scaleInput.title='Ảnh vị trí nhìn vùng quanh món rộng gấp bao nhiêu lần kích thước món: 2 = gần, 4 = vừa, 10 = xa (thấy cả căn phòng).';
-  scaleInput.onchange=()=>{const v=Math.min(20,Math.max(2,Math.round(Number(scaleInput.value)||4)));scaleInput.value=String(v);setSetting('image_location_scale',v);};
+  const scaleInput=node('input');scaleInput.type='number';scaleInput.min='1';scaleInput.max='20';scaleInput.step='1';scaleInput.value=String(s.image_location_scale);
+  scaleInput.setAttribute('aria-label','Vùng nhìn ảnh vị trí (lần)');scaleInput.title='Ảnh vị trí nhìn vùng quanh món rộng gấp bao nhiêu lần kích thước món: 1 = đúng như ảnh Iso, 2 = gần, 4 = vừa, 10 = xa (thấy cả căn phòng).';
+  scaleInput.onchange=()=>{const v=Math.min(20,Math.max(1,Math.round(Number(scaleInput.value)||4)));scaleInput.value=String(v);setSetting('image_location_scale',v);};
   scale.append(node('label','Vùng nhìn ảnh vị trí (lần)'),scaleInput);left.append(scale);
   const bg=node('div',undefined,'pp-row');bg.append(selectOf(c.backgrounds.map(v=>[v,BACKGROUND_LABELS[v]||v]),s.image_background,'Nền ảnh',v=>setSetting('image_background',v)));left.append(bg);
   const folder=node('div',undefined,'pp-row pp-folder');

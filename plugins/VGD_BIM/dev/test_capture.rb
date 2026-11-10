@@ -62,8 +62,11 @@ class FakeOptions
   def each_key(&block); raise LocalJumpError, 'no block given' unless block; @values.keys.each(&block); end
 end
 class FakeView
-  attr_accessor :vpwidth, :vpheight, :camera, :zoomed, :writes, :fail_next, :fail_on_call, :states, :reject_transparent, :raise_on_transparent, :attempts, :reject_all_options
+  attr_reader :camera
+  attr_accessor :vpwidth, :vpheight, :zoomed, :writes, :fail_next, :fail_on_call, :states, :reject_transparent, :raise_on_transparent, :attempts, :reject_all_options
   def initialize(model); @model = model; @camera = Sketchup::Camera.new(Geom::Point3d.new(0, 0, 100), Geom::Point3d.new(0, 0, 0), Geom::Vector3d.new(0, 0, 1)); @writes = []; @zoomed = []; @states = []; @vpwidth = 1000; @vpheight = 500; end
+  # SketchUp thật hiểu FOV của camera được gán theo chế độ (ngang / dọc) của khung nhìn, nên camera.fov_is_height? của camera mới lấy theo khung nhìn
+  def camera=(new_camera); new_camera.fov_is_height = @camera.fov_is_height? if new_camera.perspective? && @camera.perspective?; @camera = new_camera; end
   def refresh; end
   def zoom(entity); @zoomed << entity; end
   def write_image(options)
@@ -324,10 +327,18 @@ model, v60, _ = shoot_with_camera({}, kind: :location) { |c| c.fov = 60.0 }
 _, v20, _ = shoot_with_camera({}, kind: :location) { |c| c.fov = 20.0 }
 check 'ảnh vị trí: dùng đúng FOV đang dùng (60 độ), FOV hẹp hơn thì camera lùi xa hơn', v60.states.all? { |st| near?([st[:fov]], [60.0]) } && dist_state.(v20.states.last) > dist_state.(v60.states.last) * 1.5
 check 'sau khi chụp: FOV của khung nhìn được trả lại như cũ', near?([model.active_view.camera.fov], [60.0])
-model, view, _ = shoot_with_camera({'image_view' => 'isometric'}) { |c| c.fov = 40.0; c.fov_is_height = true } # fov đo theo chiều cao: đổi sang góc ngang theo tỉ lệ khung nhìn 1000 x 500
-horizontal = 2.0 * Math.atan(Math.tan(20.0 * Math::PI / 180.0) * 2.0) * 180.0 / Math::PI
-check 'FOV đo theo chiều cao: đổi đúng sang FOV ngang cho camera mới (không hiểu nhầm là góc ngang)', view.states.all? { |st| near?([st[:fov]], [horizontal]) }
-check 'FOV đo theo chiều cao: khung nhìn của người dùng sau khi chụp vẫn nhìn rộng như cũ (FOV ngang tương đương)', near?([model.active_view.camera.fov], [horizontal])
+# FOV theo chiều cao (fov_is_height? = true, như khung nhìn thật của người dùng): SketchUp hiểu giá trị FOV theo chế độ của khung nhìn nên KHÔNG được đổi sang góc ngang,
+# nếu không 60 độ thành 82,32 độ sau mỗi lần chụp (lỗi beta.53). Chụp nhiều món liên tiếp phải giữ nguyên FOV.
+model, items = world
+model.active_view.camera.fov = 60.0
+model.active_view.camera.fov_is_height = true
+3.times do |i|
+  C.shoot(model, {entity: items[i % 3], path: [items[i % 3]]}, D.merge('image_view' => 'isometric'))
+  check "FOV theo chiều cao: sau lần chụp thứ #{i + 1} khung nhìn vẫn đúng 60 độ (không tăng)", near?([model.active_view.camera.fov], [60.0])
+end
+check 'FOV theo chiều cao: lúc chụp camera dùng đúng giá trị FOV của khung nhìn (60), không đổi sang góc ngang', model.active_view.states.all? { |st| near?([st[:fov]], [60.0]) }
+model, view, _ = shoot_with_camera({}, kind: :location) { |c| c.fov = 60.0; c.fov_is_height = true }
+check 'FOV theo chiều cao (ảnh vị trí): giữ nguyên 60 độ lúc chụp và sau khi chụp', view.states.all? { |st| near?([st[:fov]], [60.0]) } && near?([model.active_view.camera.fov], [60.0])
 [{'image_view' => 'isometric'}, {'image_view' => 'front'}].each do |settings|
   model, view, _ = shoot_with_camera(settings) { |c| c.perspective = false; c.height = 250.0 }
   check "camera song song (#{settings['image_view']}): vẫn song song (độ cao khung do khung hình quyết định), không đọc FOV (SketchUp báo cảnh báo)", view.states.all? { |st| !st[:perspective] && st[:height] != 250.0 } && model.active_view.camera.parallel_reads == 0
@@ -357,6 +368,8 @@ _, _, iso_view, _ = shoot('image_view' => 'isometric')
 _, _, scale4, _ = shoot_location
 _, _, scale2, _ = shoot_location('image_location_scale' => 2)
 _, _, scale10, _ = shoot_location('image_location_scale' => 10)
+_, _, scale1, _ = shoot_location('image_location_scale' => 1)
+check 'ảnh vị trí: vùng nhìn gấp 1 lần thì camera đặt đúng như ảnh Iso của món', (dist_of.(scale1) - dist_of.(iso_view)).abs < 1e-6
 iso_state, loc_state = iso_view.states.last, scale4.states.last
 dir_of = ->(st) { d = st[:eye].zip(st[:target]).map { |e, t| e - t }; l = Math.sqrt(d.sum { |v| v * v }); d.map { |v| v / l } }
 check 'ảnh vị trí: cùng hướng nhìn và cùng điểm nhìn với ảnh Iso của món (chỉ khác khoảng cách)', near?(dir_of.(iso_state), dir_of.(loc_state)) && iso_state[:target] == loc_state[:target]

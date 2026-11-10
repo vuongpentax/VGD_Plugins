@@ -14,7 +14,7 @@ module VGD
       BACKGROUNDS = %w[transparent white].freeze
       DIGITS = (0..4).freeze
       IMAGE_SIZE = (128..4096).freeze
-      IMAGE_LOCATION_SCALE = (2..20).freeze # ảnh vị trí: vùng nhìn rộng gấp bao nhiêu lần kích thước món (4 = gấp 4 lần)
+      IMAGE_LOCATION_SCALE = (1..20).freeze # ảnh vị trí: vùng nhìn rộng gấp bao nhiêu lần kích thước món (4 = gấp 4 lần)
       IMAGE_MARGIN = (0..100).freeze # lề chừa quanh món khi chụp ảnh, tính theo % (20 = chừa 20%)
       MAX_NAME = 40
       MAX_HEADER = 60

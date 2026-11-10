@@ -1060,6 +1060,12 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(viewLoc && viewLoc.settings.image_location_scale===8,'đổi vùng nhìn ảnh vị trí: lưu cùng thiết lập của preset (8)');
   await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').fill('99');await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').dispatchEvent('change');
   ok(await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').inputValue()==='20','nhập quá lớn: bị giới hạn ở 20');
+  ok(await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').getAttribute('min')==='1','ô Vùng nhìn ảnh vị trí: giá trị nhỏ nhất là 1');
+  await clear();await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').fill('1');await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').dispatchEvent('change');
+  const viewLoc1=await viewJson();
+  ok(await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').inputValue()==='1'&&viewLoc1&&viewLoc1.settings.image_location_scale===1,'nhập 1 vào ô Vùng nhìn: nhận và lưu 1 (không bị nâng lên 2)');
+  await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').fill('0');await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').dispatchEvent('change');
+  ok(await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').inputValue()==='1','nhập 0: bị giới hạn ở 1');
   await page.click('#preset-btn');
 
   // ---- Đổi ngôn ngữ thì tải lại cửa sổ ----

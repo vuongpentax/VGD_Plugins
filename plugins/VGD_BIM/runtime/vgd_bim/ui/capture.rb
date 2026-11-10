@@ -161,7 +161,7 @@ module VGD
           camera = Sketchup::Camera.new(eye, center, Geom::Vector3d.new(0, 0, 1))
           current = view.camera
           camera.perspective = current.perspective?
-          if current.perspective? then camera.fov = horizontal_fov(view, current) else camera.height = current.height end # giữ FOV (phối cảnh) hoặc độ cao khung (song song) đang dùng
+          if current.perspective? then camera.fov = current.fov else camera.height = current.height end # giữ đúng FOV (phối cảnh) hoặc độ cao khung (song song) đang dùng
           view.camera = camera
           front ? nil : 'món chưa có mặt trước nên chụp theo trục thế giới'
         end
@@ -195,24 +195,15 @@ module VGD
           view.camera = camera
         end
 
+        # Camera.new luôn bắt đầu ở FOV 35 độ nên phải gán lại đúng FOV đang dùng. Gán nguyên giá trị Camera#fov, KHÔNG đổi sang góc ngang dù fov_is_height?:
+        # SketchUp hiểu giá trị theo chế độ (ngang / dọc) của khung nhìn khi gán camera, đổi đi là FOV bị tăng sau mỗi lần chụp (60 thành 82,32 ở beta.53).
+        # Chỉ đọc fov / fov_is_height? khi camera là phối cảnh: đọc ở camera song song làm SketchUp báo cảnh báo trong cửa sổ Ruby Console.
         def self.copy_camera(view)
           camera = view.camera
           copy = Sketchup::Camera.new(camera.eye, camera.target, camera.up)
           copy.perspective = camera.perspective?
-          if camera.perspective? then copy.fov = horizontal_fov(view, camera) else copy.height = camera.height end
+          if camera.perspective? then copy.fov = camera.fov else copy.height = camera.height end
           copy
-        end
-
-        # FOV ngang (độ) của camera phối cảnh để gán cho camera mới (Camera.new luôn bắt đầu ở 35 độ nên phải gán lại đúng FOV đang dùng).
-        # Camera#fov là góc theo chiều cao khi fov_is_height?: đổi sang góc ngang theo tỉ lệ khung nhìn, rồi kẹp trong 1 đến 120 độ của SketchUp.
-        # Chỉ gọi với camera phối cảnh: đọc fov của camera song song làm SketchUp báo cảnh báo trong cửa sổ Ruby Console.
-        def self.horizontal_fov(view, camera)
-          fov = camera.fov.to_f
-          if camera.fov_is_height?
-            aspect = view.vpheight.to_f.positive? ? view.vpwidth.to_f / view.vpheight : 1.0
-            fov = 2.0 * Math.atan(Math.tan(fov * Math::PI / 360.0) * aspect) * 180.0 / Math::PI
-          end
-          fov.clamp(1.0, 120.0)
         end
 
         # Đổi tạm tuỳ chọn hiển thị theo kiểu và nền của preset (chỉ đụng các khóa có trong bản SketchUp này). Trả về giá trị cũ để trả lại.
