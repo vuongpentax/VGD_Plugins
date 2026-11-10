@@ -26,6 +26,7 @@
 - **Chọn cột kiểu mới** (theo Auto Info, gọn hơn): ngăn trượt ra bên trái và đẩy bảng sang phải nên cột đầu không bị che; ô tick tự vẽ, kéo thả đổi chỗ cột có hiệu ứng trượt, nút gạt chân trang trượt mượt.
 - **Giao diện không còn thanh cuộn dọc** ở bảng, bảng Chọn cột, Preset và các tab (vẫn cuộn bằng con lăn chuột); chỉ giữ thanh cuộn ngang của bảng khi nhiều cột.
 - **Tiếng Anh** cho toàn bộ giao diện (báo cáo CSV và hộp thoại gốc của SketchUp vẫn tiếng Việt).
+- **Nút dán ảnh từ clipboard** (beta.58): dán ảnh chụp màn hình hoặc ảnh đã copy vào ô ảnh chính / ảnh vị trí bằng một nút; Ctrl+V dán được cả vào ô ảnh vị trí.
 - **Xem trước góc chụp** (beta.57): nút 👁 trên ô ảnh và nút Xem trước trong hộp Cập nhật ảnh; lưới ảnh nháp của cả lô, bỏ tick món bị cấn vật thể rồi chụp các món còn lại.
 - **Nút chụp view hiện tại (◉) và thông số ảnh riêng từng món (⚙)** (beta.56): ◉ chụp đúng khung nhìn đang thấy vào ô ảnh chính hoặc ảnh vị trí; ⚙ mở khung chỉnh góc nhìn, bên Iso, lệch trái / phải, góc cao, lề, vùng nhìn riêng cho món đó, lưu trong file SketchUp.
 - **Ảnh vị trí có thiết lập riêng và góc lệch trái / phải** (beta.55): khối Ảnh vị trí trong bảng Preset (cỡ, góc nhìn, kiểu, nền, lề), ô Lệch trái / phải (độ) và Góc cao (độ) cho góc nhìn Chính diện ở cả ảnh chính và ảnh vị trí để thấy một chút bên hông món; nút ● Theo preset trong hộp Cập nhật ảnh.

@@ -128,10 +128,10 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page2.close();
 
   // ---- Nút nhỏ khi rê chuột vào ảnh ----
-  ok(await page.locator('.grid tbody tr').nth(1).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"]):not([title="Xem trước góc chụp"])').count()===5 && await page.locator('.grid tbody tr').nth(0).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"]):not([title="Xem trước góc chụp"])').count()===6,'ô ảnh có nút chụp view hiện tại, Iso trái, Iso phải, Chụp lại, Chọn ảnh, và Xóa ảnh (chỉ khi đã có ảnh)');
-  ok(JSON.stringify(await page.locator('.grid tbody tr').nth(0).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"]):not([title="Xem trước góc chụp"])').evaluateAll(list=>list.map(b=>b.title)))===JSON.stringify(['Chụp view hiện tại','Chụp Iso từ bên trái','Chụp Iso từ bên phải','Chụp lại','Chọn ảnh…','Xóa ảnh']),'nút chụp view hiện tại và hai nút ký hiệu Iso trái / phải đứng trước nút chụp lại');
+  ok(await page.locator('.grid tbody tr').nth(1).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"]):not([title="Xem trước góc chụp"])').count()===6 && await page.locator('.grid tbody tr').nth(0).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"]):not([title="Xem trước góc chụp"])').count()===7,'ô ảnh có nút chụp view hiện tại, Iso trái, Iso phải, Chụp lại, Dán ảnh, Chọn ảnh, và Xóa ảnh (chỉ khi đã có ảnh)');
+  ok(JSON.stringify(await page.locator('.grid tbody tr').nth(0).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"]):not([title="Xem trước góc chụp"])').evaluateAll(list=>list.map(b=>b.title)))===JSON.stringify(['Chụp view hiện tại','Chụp Iso từ bên trái','Chụp Iso từ bên phải','Chụp lại','Dán ảnh từ clipboard','Chọn ảnh…','Xóa ảnh']),'nút chụp view hiện tại và hai nút ký hiệu Iso trái / phải đứng trước nút chụp lại');
   await page.locator('.grid tbody tr').nth(0).locator('td.img').hover();
-  ok(await page.locator('.grid tbody tr').nth(0).evaluate(tr=>{const pic=tr.querySelector('.cell-pic').getBoundingClientRect(),mid=(pic.left+pic.right)/2;const tools=[...tr.querySelectorAll('.cell-tool')];const rects=tools.map(b=>b.getBoundingClientRect());const lo=Math.min(...rects.map(r=>r.left)),hi=Math.max(...rects.map(r=>r.right));return tools.length===8 && Math.abs(lo-pic.left)<4 && rects.every(r=>r.top>=pic.top-0.5&&r.bottom<=pic.bottom+0.5) && tools.every((b,i)=>b.contains(document.elementFromPoint((rects[i].left+rects[i].right)/2,(rects[i].top+rects[i].bottom)/2)));}),'khi rê chuột: 8 nút (⚙ và 👁 cùng hàng vì ô thấp) nằm một hàng, bắt đầu từ mép trái ô ảnh, bấm được từng nút (không bị ô khác che), kể cả ở hàng Gọn');
+  ok(await page.locator('.grid tbody tr').nth(0).evaluate(tr=>{const pic=tr.querySelector('.cell-pic').getBoundingClientRect(),mid=(pic.left+pic.right)/2;const tools=[...tr.querySelectorAll('.cell-tool')];const rects=tools.map(b=>b.getBoundingClientRect());const lo=Math.min(...rects.map(r=>r.left)),hi=Math.max(...rects.map(r=>r.right));return tools.length===9 && Math.abs(lo-pic.left)<4 && rects.every(r=>r.top>=pic.top-0.5&&r.bottom<=pic.bottom+0.5) && tools.every((b,i)=>b.contains(document.elementFromPoint((rects[i].left+rects[i].right)/2,(rects[i].top+rects[i].bottom)/2)));}),'khi rê chuột: 9 nút (⚙ và 👁 cùng hàng vì ô thấp) nằm một hàng, bắt đầu từ mép trái ô ảnh, bấm được từng nút (không bị ô khác che), kể cả ở hàng Gọn');
   await clear();
   await page.locator('.grid tbody tr').nth(1).locator('td.img').hover();
   await page.locator('.grid tbody tr').nth(1).locator('.cell-tool[title="Chụp ảnh"]').click();
@@ -1012,7 +1012,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   const locCell=i=>page.locator('.grid tbody tr').nth(i).locator('td[data-key="image_location"]');
   ok(await page.locator('.grid thead th[data-key="image_location"]').count()===1 && (await page.locator('.grid thead th[data-key="image_location"]').innerText()).includes('Ảnh vị trí'),'cột Ảnh vị trí có trong bảng (bật bằng Chọn cột)');
   ok(await locCell(0).locator('img.cell-img[data-kind="location"]').count()===1 && await locCell(1).locator('img').count()===0 && await locCell(1).locator('.cell-empty').count()===1,'dòng có ảnh vị trí hiện ảnh, dòng chưa có hiện dấu +');
-  ok(JSON.stringify(await locCell(0).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"]):not([title="Xem trước góc chụp"])').evaluateAll(l=>l.map(b=>b.title)))===JSON.stringify(['Chụp view hiện tại','Chụp vị trí từ bên trái (Iso)','Chụp vị trí từ bên phải (Iso)','Chụp lại','Chọn ảnh…','Xóa ảnh vị trí']) && await locCell(1).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"]):not([title="Xem trước góc chụp"])').count()===5,'ô ảnh vị trí có nút chụp trái, phải, chụp lại, chọn ảnh, xóa (xóa chỉ khi đã có ảnh)');
+  ok(JSON.stringify(await locCell(0).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"]):not([title="Xem trước góc chụp"])').evaluateAll(l=>l.map(b=>b.title)))===JSON.stringify(['Chụp view hiện tại','Chụp vị trí từ bên trái (Iso)','Chụp vị trí từ bên phải (Iso)','Chụp lại','Dán ảnh từ clipboard','Chọn ảnh…','Xóa ảnh vị trí']) && await locCell(1).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"]):not([title="Xem trước góc chụp"])').count()===6,'ô ảnh vị trí có nút chụp trái, phải, chụp lại, chọn ảnh, xóa (xóa chỉ khi đã có ảnh)');
   await clear();await locCell(0).hover();await locCell(0).getByRole('button',{name:'Chụp vị trí từ bên trái (Iso)'}).click();
   let lc=await json('images_capture');
   ok(lc && lc.kind==='location' && lc.iso_side==='left' && JSON.stringify(lc.indexes)==='[0]' && lc.settings.image_location_scale===4,'nút ◣ trên ô ảnh vị trí: chụp ảnh vị trí bên trái, kèm hệ số vùng nhìn của preset');
@@ -1117,7 +1117,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   for(const [name,setup] of [['hàng Gọn',()=>{tableState.density='dense';tableState.rowHeight=0;}],['độ cao hàng tự chọn thấp (30)',()=>{tableState.density='';tableState.rowHeight=30;}]]){
     await page.evaluate(`(${setup.toString()})();tableView(tableState.data);`);
     await mainCell(0).hover();
-    ok(await mainCell(0).locator('.cell-tools.top').count()===0&&await mainCell(0).evaluate(td=>{const tools=[...td.querySelectorAll('.cell-tools .cell-tool')],gear=tools[0],box=gear.getBoundingClientRect();return gear.title==='Thông số ảnh riêng của món này'&&tools.length===8&&document.elementFromPoint((box.left+box.right)/2,(box.top+box.bottom)/2)===gear;}),name+': ô quá thấp cho hai hàng nút nên ⚙ đứng đầu hàng nút dưới và bấm được');
+    ok(await mainCell(0).locator('.cell-tools.top').count()===0&&await mainCell(0).evaluate(td=>{const tools=[...td.querySelectorAll('.cell-tools .cell-tool')],gear=tools[0],box=gear.getBoundingClientRect();return gear.title==='Thông số ảnh riêng của món này'&&tools.length===9&&document.elementFromPoint((box.left+box.right)/2,(box.top+box.bottom)/2)===gear;}),name+': ô quá thấp cho hai hàng nút nên ⚙ đứng đầu hàng nút dưới và bấm được');
   }
   await page.evaluate(()=>{tableState.density='';tableState.rowHeight=0;tableView(tableState.data);});
   // Khung thông số
@@ -1212,6 +1212,56 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await receive('preview_done',{done:0,total:1,ok:0,errors:[],notes:[],cancelled:true});
   ok((await prevBoard.locator('.pb-state').innerText())==='Đã dừng'&&(await prevBoard.locator('.pb-shot').innerText())==='Chưa vẽ'&&await prevBoard.locator('.pb-run').isDisabled(),'dừng giữa chừng: khung chưa vẽ ghi "Chưa vẽ", bỏ tick, không chụp được');
   await prevBoard.getByRole('button',{name:'Đóng'}).click();
+
+  // ---- Nút dán ảnh từ clipboard (và Ctrl+V vào ô ảnh vị trí) ----
+  await page.evaluate(()=>{tableState.density='';tableState.rowHeight=0;tableState.panel=null;tableState.sel=new Set();tableView(tableState.data);});
+  await receive('table',table());
+  const fakeClipboard=mode=>page.evaluate(async mode=>{
+    const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const blob=await (await fetch(png)).blob();
+    const clip={read:async()=>{
+      if(mode==='denied')throw new DOMException('denied','NotAllowedError');
+      if(mode==='empty')return [{types:['text/plain'],getType:async()=>new Blob(['x'],{type:'text/plain'})}];
+      return [{types:['text/plain','image/png'],getType:async type=>blob}];
+    }};
+    Object.defineProperty(navigator,'clipboard',{value:mode==='missing'?undefined:clip,configurable:true});
+  },mode);
+  const pasteBtn=(cell)=>cell.getByRole('button',{name:'Dán ảnh từ clipboard'});
+  await fakeClipboard('image');
+  await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_set'));
+  let setNow=await json('image_set');
+  ok(setNow&&setNow.pid===901&&!('kind' in setNow)&&typeof setNow.full==='string'&&setNow.full.length>20,'nút dán ở ô ảnh chính: đọc ảnh trong clipboard và gửi lưu cho đúng món (ảnh chính)');
+  await locCell(2).hover();await clear();await pasteBtn(locCell(2)).click();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_set'));
+  setNow=await json('image_set');
+  ok(setNow&&setNow.pid===902&&setNow.kind==='location'&&typeof setNow.full==='string','nút dán ở ô ảnh vị trí: lưu thành ảnh vị trí của món');
+  await fakeClipboard('empty');
+  await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
+  await page.waitForFunction(()=>document.querySelector('#message').innerText.includes('chưa có ảnh'));
+  ok(!(await calls('image_set')).length,'clipboard không có ảnh: báo rõ, không lưu gì');
+  await fakeClipboard('denied');
+  await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
+  await page.waitForFunction(()=>document.querySelector('#message').innerText.includes('Ctrl+V'));
+  ok(!(await calls('image_set')).length,'không đọc được clipboard bằng nút (từ chối quyền): hướng dẫn nhấn Ctrl+V, không lưu gì');
+  await fakeClipboard('missing');
+  await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
+  await page.waitForFunction(()=>document.querySelector('#message').innerText.includes('Ctrl+V'));
+  ok(!(await calls('image_set')).length,'cửa sổ không có API clipboard: hướng dẫn nhấn Ctrl+V');
+  // Ctrl+V: ô ảnh vị trí vừa bấm là nơi nhận; bấm chỗ khác thì về món đang chọn
+  const firePaste=()=>page.evaluate(async()=>{
+    const blob=await (await fetch('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')).blob();
+    const data=new DataTransfer();data.items.add(new File([blob],'a.png',{type:'image/png'}));
+    document.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));
+  });
+  await clear();await locCell(1).click({position:{x:5,y:5}});await firePaste();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_set'));
+  setNow=await json('image_set');
+  ok(setNow&&setNow.pid===901&&setNow.kind==='location','Ctrl+V sau khi bấm ô ảnh vị trí: dán thành ảnh vị trí của món đó');
+  await clear();await page.locator('.grid tbody tr').nth(2).locator('td[data-key="quantity"]').click();await firePaste();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_set'));
+  setNow=await json('image_set');
+  ok(setNow&&setNow.pid===902&&!('kind' in setNow),'Ctrl+V sau khi chọn một dòng (bấm ô khác): dán thành ảnh chính của dòng đang chọn như trước');
 
   // ---- Đổi ngôn ngữ thì tải lại cửa sổ ----
   await receive('config',config('table'));

@@ -44,7 +44,7 @@ function imageCell(td,row,kind='full'){
   const lowPic=(tableState.rowHeight>0?tableState.rowHeight-5:({dense:26,roomy:64}[tableState.density]||46))<40; // hai hàng nút cao 20 + 20
   if(!lowPic){const top=node('div',undefined,'cell-tools top');top.append(gear,eye);holder.append(top);}
   tools.append(tool('◉','Chụp view hiện tại',()=>runCapture([row.index],false,undefined,kindArg,{view:'current'})),tool('◣',place?'Chụp vị trí từ bên trái (Iso)':'Chụp Iso từ bên trái',()=>runCapture([row.index],false,'left',kindArg)),tool('◢',place?'Chụp vị trí từ bên phải (Iso)':'Chụp Iso từ bên phải',()=>runCapture([row.index],false,'right',kindArg)),
-    tool('↻',row[f.has]?'Chụp lại':'Chụp ảnh',()=>runCapture([row.index],false,undefined,kindArg)),tool('⋯','Chọn ảnh…',()=>pickImageFile(row.pid,kind)));
+    tool('↻',row[f.has]?'Chụp lại':'Chụp ảnh',()=>runCapture([row.index],false,undefined,kindArg)),pasteTool(tool,row.pid,kind),tool('⋯','Chọn ảnh…',()=>pickImageFile(row.pid,kind)));
   if(row[f.has])tools.append(tool('×',place?'Xóa ảnh vị trí':'Xóa ảnh',()=>call(place?'image_location_delete':'image_delete',row.pid)));
   if(lowPic){tools.prepend(gear,eye);tools.classList.add('wide');} // 8 nút: hàng quá rộng để căn giữa ô hẹp (bị cắt ở mép bảng), nên bắt đầu từ mép trái ô và tràn sang phải
   holder.append(tools);
@@ -89,7 +89,7 @@ async function sendImage(pid,file,kind='full'){
   if(!isImageFile(file))throw Error('Hãy dùng file ảnh PNG, JPG, WebP hoặc BMP.');
   if(file.size>PASTE_LIMIT)throw Error('Ảnh quá lớn (tối đa 20 MB).');
   const bitmap=await createImageBitmap(file),s=workSettings();
-  let w=s.image_width,h=s.image_height,full=scaledPng(bitmap,w,h);
+  let w=kind==='location'?s.loc_width:s.image_width,h=kind==='location'?s.loc_height:s.image_height,full=scaledPng(bitmap,w,h); // cỡ theo thiết lập của đúng loại ảnh
   while(full.length>PNG_SAFE_CHARS&&w>128){w=Math.round(w*0.7);h=Math.round(h*0.7);full=scaledPng(bitmap,w,h);}
   if(typeof bitmap.close==='function')bitmap.close();
   call('image_set',JSON.stringify(kind==='location'?{pid,kind,full:full.split(',')[1]}:{pid,full:full.split(',')[1]}));
@@ -112,8 +112,9 @@ function bindImageTarget(el,pid,kind='full'){
     if(kind==='full')imagesState.target=pid;
     guarded(sendImage(pid,file,kind));
   });
-  if(kind==='full')el.addEventListener('mousedown',()=>{imagesState.target=pid;});
+  el.addEventListener('mousedown',()=>{if(kind==='full')imagesState.target=pid;imagesState.last={pid,kind};}); // ô vừa bấm là nơi nhận ảnh khi nhấn Ctrl+V
 }
+document.addEventListener('mousedown',()=>{imagesState.last=null;},true); // bấm chỗ khác: bỏ ô đã nhớ (ô ảnh tự đặt lại ngay sau đó)
 // Trình duyệt mặc định mở file khi thả ra ngoài ô; chặn để thả trượt không làm cửa sổ chuyển sang file ảnh.
 window.addEventListener('dragover',e=>e.preventDefault());
 window.addEventListener('drop',e=>e.preventDefault());
@@ -128,10 +129,24 @@ document.addEventListener('paste',e=>{
   const item=[...(e.clipboardData?e.clipboardData.items:[])].find(i=>i.kind==='file'&&/^image\//.test(i.type));
   if(!item)return;
   e.preventDefault();
-  const pid=pasteTargetPid();
-  if(!pid)return message('Hãy chọn đúng một đối tượng (hoặc bấm vào ô ảnh của nó) rồi dán ảnh.',true);
-  guarded(sendImage(pid,item.getAsFile()));
+  const target=imagesState.last||(pasteTargetPid()?{pid:pasteTargetPid(),kind:'full'}:null);
+  if(!target)return message('Hãy chọn đúng một đối tượng (hoặc bấm vào ô ảnh của nó) rồi dán ảnh.',true);
+  guarded(sendImage(target.pid,item.getAsFile(),target.kind));
 });
+// Nút dán trên ô ảnh: đọc ảnh đang có trong clipboard (chụp màn hình, hoặc copy ảnh) bằng API clipboard của cửa sổ rồi lưu cho món.
+// Cửa sổ không cho đọc clipboard bằng nút (hoặc người dùng từ chối quyền) thì nhớ ô này làm nơi nhận và hướng dẫn nhấn Ctrl+V.
+async function pasteImageFromClipboard(pid,kind){
+  imagesState.last={pid,kind};
+  const hint='Không đọc được clipboard bằng nút. Hãy bấm vào ô ảnh rồi nhấn Ctrl+V.';
+  if(!navigator.clipboard||typeof navigator.clipboard.read!=='function')throw Error(hint);
+  let items;
+  try{items=await navigator.clipboard.read();}catch(error){throw Error(hint);}
+  for(const item of items){
+    const type=item.types.find(t=>/^image\//.test(t));
+    if(type)return sendImage(pid,await item.getType(type),kind);
+  }
+  throw Error('Trong clipboard chưa có ảnh. Hãy chụp màn hình hoặc copy ảnh rồi bấm lại.');
+}
 
 // ---- Chụp ảnh: chỉ khi người dùng bấm ----
 function syncBusy(){
@@ -251,6 +266,13 @@ function receivePhotoSettings(data){
   if(tableState.data&&$('grid-host'))renderGrid($('grid-host'));
 }
 
+function pasteTool(tool,pid,kind){
+  const button=tool('','Dán ảnh từ clipboard',()=>guarded(pasteImageFromClipboard(pid,kind)));
+  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
+  svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('width','12');svg.setAttribute('height','12');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','2.4');svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');svg.setAttribute('aria-hidden','true');
+  [['rect',{x:5,y:4,width:14,height:18,rx:2}],['path',{d:'M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1'}],['path',{d:'M9 13h6M9 17h4'}]].forEach(([tag,attrs])=>{const el=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));svg.append(el);});
+  button.append(svg);return button;
+}
 // ---- Bảng xem trước góc chụp ----
 // Hiện ảnh nháp của từng món sắp chụp (Ruby gửi từng khung qua 'image_preview'); người dùng bỏ tick món bị cấn vật thể rồi chụp các món còn lại.
 const previewState={board:null,payload:null,busy:false,cards:new Map()};
