@@ -857,6 +857,24 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await rowOf('tag',15).count()===1,'nhận danh sách mới từ Ruby: vẽ lại, giữ ô tìm và các thư mục đã mở');
   await receive('tag_tree',{supported:false,isolated:null,folders:[],layers:[{id:1,name:'Tag',visible:true,folder_id:null}]});
   ok((await page.locator('#tag-tree-list').innerText()).includes('cần SketchUp 2021') && await treeRows().count()===1,'SketchUp cũ không có thư mục tag: báo rõ và vẫn liệt kê tag');
+  // Màu, kiểu nét, tô màu theo tag
+  const STYLED={supported:true,styles_supported:true,line_styles:['Solid Line','Dashed Line'],color_by_tag:false,isolated:null,folders:[],layers:[{id:10,name:'A. WALL',visible:true,folder_id:null,color:'#c0392b',line_style:'Solid Line'},{id:11,name:'A. DOOR',visible:true,folder_id:null,color:'#2980b9',line_style:''}]};
+  await receive('tag_tree',STYLED);
+  ok(await rowOf('tag',10).locator('input[type=color]').inputValue()==='#c0392b' && await rowOf('tag',10).locator('select.tm-style').inputValue()==='Solid Line' && await rowOf('tag',11).locator('select.tm-style').inputValue()==='','mỗi tag có ô màu và ô kiểu nét đúng giá trị (kiểu chưa đặt hiện mặc định)');
+  ok((await rowOf('tag',10).locator('select.tm-style option').allInnerTexts()).join('|')==='Solid Line|Dashed Line' && (await rowOf('tag',11).locator('select.tm-style option').allInnerTexts()).join('|')==='(mặc định)|Solid Line|Dashed Line','danh sách kiểu nét lấy từ model');
+  await clear();await rowOf('tag',10).locator('input[type=color]').evaluate(el=>{el.value='#00ff88';el.dispatchEvent(new Event('change',{bubbles:true}));});
+  ok(JSON.stringify(await json('tm_color'))==='{"id":10,"color":"#00ff88"}','đổi màu: gửi mã tag và màu #rrggbb');
+  await clear();await rowOf('tag',11).locator('select.tm-style').selectOption('Dashed Line');
+  ok(JSON.stringify(await json('tm_line_style'))==='{"id":11,"style":"Dashed Line"}','đổi kiểu nét: gửi mã tag và tên kiểu');
+  ok(await page.locator('#tag-tree-colorbytag').getAttribute('aria-pressed')==='false','nút Tô màu theo tag: chưa bật thì không nhấn');
+  await clear();await page.locator('#tag-tree-colorbytag').click();
+  ok(JSON.stringify(await json('tm_color_by_tag'))==='{"enabled":true}','bấm Tô màu theo tag: gửi lệnh bật');
+  await receive('tag_tree',{...STYLED,color_by_tag:true});
+  ok(await page.locator('#tag-tree-colorbytag').getAttribute('aria-pressed')==='true','đang bật: nút ở trạng thái nhấn');
+  await clear();await page.locator('#tag-tree-colorbytag').click();
+  ok(JSON.stringify(await json('tm_color_by_tag'))==='{"enabled":false}','bấm lại khi đang bật: gửi lệnh tắt');
+  await receive('tag_tree',{...STYLED,styles_supported:false,line_styles:[]});
+  ok(await page.locator('select.tm-style').count()===0 && await page.locator('input[type=color]').count()===2,'SketchUp cũ không có kiểu nét: ẩn ô kiểu nét, vẫn có ô màu');
   await receive('tag_tree',{supported:true,isolated:null,folders:[],layers:[]});
   ok((await page.locator('#tag-tree-list').innerText()).includes('chưa có tag nào'),'model không có tag: báo trống');
   ok(await page.locator('#tag-assign').isVisible(),'thanh Gán tag vẫn thấy ở tab Trong model');

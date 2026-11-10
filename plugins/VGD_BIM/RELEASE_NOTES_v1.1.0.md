@@ -26,6 +26,7 @@
 - **Chọn cột kiểu mới** (theo Auto Info, gọn hơn): ngăn trượt ra bên trái và đẩy bảng sang phải nên cột đầu không bị che; ô tick tự vẽ, kéo thả đổi chỗ cột có hiệu ứng trượt, nút gạt chân trang trượt mượt.
 - **Giao diện không còn thanh cuộn dọc** ở bảng, bảng Chọn cột, Preset và các tab (vẫn cuộn bằng con lăn chuột); chỉ giữ thanh cuộn ngang của bảng khi nhiều cột.
 - **Tiếng Anh** cho toàn bộ giao diện (báo cáo CSV và hộp thoại gốc của SketchUp vẫn tiếng Việt).
+- **Màu tag, kiểu nét, Tô màu theo tag** (beta.42, bước 3b-1): tab Trong model có ô màu và ô kiểu nét cho từng tag, nút bật / tắt Color by Tag. Ghim, tag gần đây, kéo thả: bước 3b-2.
 - **Quản lý tag trong model, bước 3a** (beta.41): tab nhỏ Trong model với cây thư mục tag, mắt ẩn / hiện, cô lập tag hoặc thư mục (bấm lại để khôi phục), ô tìm. Màu, nét đứt, ghim, tag gần đây, kéo thả: bước 3b.
 - **Bố cục lại tab Soạn tag** (beta.40): thanh Gán tag cố định ở đầu, ba tab nhỏ Bộ tag / Tự động / Thư viện mẫu, bộ tag gom theo nhóm gập được kèm ô tìm và lọc nhóm, bảng luật tự động gập lại. Không đổi chức năng.
 - **Kéo rộng ngăn bên** (beta.39): ngăn Chọn cột và Loại trừ tag kéo rộng / hẹp bằng mép phải để đọc tên dài; hai ngăn dùng chung độ rộng, mở lại về mặc định.

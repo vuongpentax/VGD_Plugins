@@ -4,7 +4,9 @@ require 'json'
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 def error_of; yield; nil; rescue StandardError => e; e.message; end
-module Sketchup; class Group; end; class ComponentInstance; end; class Face; end; end
+module Sketchup; class Group; end; class ComponentInstance; end; class Face; end
+  class Color; attr_reader :r, :g, :b; def initialize(r, g, b); @r = r; @g = g; @b = b; end; def to_a; [@r, @g, @b, 255]; end; end
+end
 module VGD; module BIM
   def self.log(_m); end
   module Data
@@ -44,10 +46,11 @@ class FFolder
   def visible?; @visible; end
   def visible=(v); @visible = v; end
 end
+class FStyle; attr_reader :name; def initialize(name); @name = name; end; end
 class FTag
   attr_reader :persistent_id, :name
-  attr_accessor :folder
-  def initialize(id, name, visible = true, folder = nil); @persistent_id = id; @name = name; @visible = visible; @folder = folder; end
+  attr_accessor :folder, :color, :line_style
+  def initialize(id, name, visible = true, folder = nil); @persistent_id = id; @name = name; @visible = visible; @folder = folder; @color = Sketchup::Color.new(10, 20, 30); @line_style = nil; end
   def visible?; @visible; end
   def visible=(v); @visible = v; end
 end
@@ -64,7 +67,11 @@ class OldTags
   def each(&block); @list.each(&block); end
   def to_a; @list.dup; end
 end
-FModel = Struct.new(:layers)
+FModel = Struct.new(:layers) do
+  def rendering_options; @options ||= {'DisplayColorByLayer' => false}; end
+  def line_styles; @styles ||= Struct.new(:to_a).new([FStyle.new('Solid Line'), FStyle.new('Dashed Line')]); end
+end
+OldModel = Struct.new(:layers) { def rendering_options; @options ||= {}; end }
 class Probe
   include VGD::BIM::UI::TagManager
   attr_reader :events
@@ -113,7 +120,7 @@ ok('đổi sang model khác: không còn coi là đang cô lập (tránh khôi p
 ok('cô lập mục không có / dữ liệu sai: báo lỗi', error_of { probe.tm_isolate('kind' => 'tag', 'id' => 99) }.include?('làm mới') && error_of { probe.tm_isolate('kind' => 'tag', 'id' => 'a') }.include?('không hợp lệ'))
 
 # SketchUp cũ không có thư mục tag: chỉ liệt kê tag phẳng
-old = FModel.new(OldTags.new([FTag.new(1, 'A'), FTag.new(2, 'B', false)]))
+old = OldModel.new(OldTags.new([FTag.new(1, 'A'), FTag.new(2, 'B', false)]))
 old_probe = Probe.new(old)
 old_tree = old_probe.tag_tree_state
 ok('SketchUp cũ không có thư mục tag: supported = false, tag liệt kê phẳng', old_tree[:supported] == false && old_tree[:folders].empty? && old_tree[:layers].map { |l| l[:folder_id] } == [nil, nil])
@@ -122,6 +129,25 @@ old_probe.tm_isolate('kind' => 'tag', 'id' => 1)
 isolated = old.layers.to_a.map(&:visible?)
 old_probe.tm_isolate('kind' => 'tag', 'id' => 1)
 ok('SketchUp cũ: vẫn cô lập và khôi phục được tag', isolated == [true, false] && old.layers.to_a.map(&:visible?) == [true, true])
+
+# ---- Màu, kiểu nét, tô màu theo tag ----
+ok('parse_color / hex_color: chấp nhận #rrggbb (hoa thường), đổi qua lại đúng', T.parse_color('#0A1b2C') == [10, 27, 44] && T.hex_color([10, 27, 44]) == '#0a1b2c' && T.hex_color([300, -5, 7.9]) == '#ff0007')
+ok('parse_color: dạng sai bị từ chối', %w[red #12345 #1234567 #gggggg 123456].all? { |bad| error_of { T.parse_color(bad) } == 'Màu không hợp lệ.' } && error_of { T.parse_color(nil) } == 'Màu không hợp lệ.')
+model, probe, tags, = world
+tree = probe.tag_tree_state
+ok('tag_tree_state: mỗi tag có màu (#rrggbb) và kiểu nét; có danh sách kiểu nét và trạng thái tô màu theo tag', tree[:layers][0][:color] == '#0a141e' && tree[:layers][0][:line_style] == '' && tree[:styles_supported] && tree[:line_styles] == ['Solid Line', 'Dashed Line'] && tree[:color_by_tag] == false)
+probe.tm_color('id' => 10, 'color' => '#FF8800')
+ok('tm_color: đổi màu tag, một bước hoàn tác, gửi lại cây', tags[0].color.to_a.first(3) == [255, 136, 0] && $transactions.last == 'VGD BIM · Đổi màu tag' && probe.last('tag_tree')[:layers][0][:color] == '#ff8800')
+ok('tm_color: màu sai / tag không có / mã sai bị từ chối, không đổi', error_of { probe.tm_color('id' => 10, 'color' => 'red') } == 'Màu không hợp lệ.' && error_of { probe.tm_color('id' => 99, 'color' => '#000000') }.include?('làm mới') && error_of { probe.tm_color('id' => '10', 'color' => '#000000') }.include?('không hợp lệ') && tags[0].color.to_a.first(3) == [255, 136, 0])
+probe.tm_line_style('id' => 11, 'style' => 'Dashed Line')
+ok('tm_line_style: đổi kiểu nét của tag, một bước hoàn tác', tags[1].line_style.name == 'Dashed Line' && $transactions.last == 'VGD BIM · Đổi kiểu nét tag' && probe.last('tag_tree')[:layers][1][:line_style] == 'Dashed Line')
+ok('tm_line_style: kiểu nét không có trong model / tag không có bị từ chối', error_of { probe.tm_line_style('id' => 11, 'style' => 'Lạ') } == 'Kiểu nét không có trong model.' && error_of { probe.tm_line_style('id' => 99, 'style' => 'Solid Line') }.include?('làm mới') && tags[1].line_style.name == 'Dashed Line')
+probe.tm_color_by_tag('enabled' => true)
+ok('tm_color_by_tag: bật chế độ tô màu theo tag của SketchUp và báo lại', model.rendering_options['DisplayColorByLayer'] == true && probe.last('tag_tree')[:color_by_tag] == true)
+probe.tm_color_by_tag('enabled' => false)
+ok('tm_color_by_tag: tắt được; giá trị sai bị từ chối', model.rendering_options['DisplayColorByLayer'] == false && error_of { probe.tm_color_by_tag('enabled' => 'x') }.include?('không hợp lệ'))
+ok('SketchUp cũ không có kiểu nét: không báo hỗ trợ, tm_line_style báo lỗi rõ', old_tree[:styles_supported] == false && old_tree[:line_styles].empty? && error_of { old_probe.tm_line_style('id' => 1, 'style' => 'x') }.include?('cần SketchUp 2021'))
+ok('tag_tree_state vẫn sinh được JSON sau khi thêm màu / kiểu nét', JSON.parse(JSON.generate(probe.tag_tree_state))['layers'][0]['color'] == '#ff8800')
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)

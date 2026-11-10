@@ -5,6 +5,18 @@ module VGD
     #   folders: [{id:, name:, visible:, parent_id:}]   parent_id nil = nằm ở gốc
     # (id là persistent_id của SketchUp; phần tử có thêm khóa khác, ví dụ :object, thì bỏ qua).
     module TagTree
+      # "#rrggbb" (hoa thường đều được) -> [r, g, b]. Ném lỗi nếu không đúng dạng.
+      def self.parse_color(text)
+        match = text.to_s.strip.match(/\A#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})\z/)
+        raise ArgumentError, 'Màu không hợp lệ.' unless match
+        match.captures.map { |part| part.to_i(16) }
+      end
+
+      # [r, g, b] -> "#rrggbb" (chữ thường).
+      def self.hex_color(rgb)
+        format('#%02x%02x%02x', *rgb.first(3).map { |value| [[value.to_i, 0].max, 255].min })
+      end
+
       # Hiển thị hiện tại của mọi tag và thư mục, để khôi phục sau khi cô lập.
       def self.snapshot(layers, folders)
         {layers: layers.to_h { |layer| [layer[:id], layer[:visible] ? true : false] },

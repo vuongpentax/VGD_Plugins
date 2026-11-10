@@ -10,6 +10,9 @@ module VGD
           @dialog.add_action_callback('tm_refresh') { |_ctx, _payload| safely { tm_refresh } }
           @dialog.add_action_callback('tm_visible') { |_ctx, payload| safely { tm_visible(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_isolate') { |_ctx, payload| safely { tm_isolate(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tm_color') { |_ctx, payload| safely { tm_color(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tm_line_style') { |_ctx, payload| safely { tm_line_style(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tm_color_by_tag') { |_ctx, payload| safely { tm_color_by_tag(JSON.parse(payload)) } }
         end
 
         # Dữ liệu gửi cho giao diện: {supported:, folders: [...], layers: [...], isolated: {kind, id, name} hoặc nil}
@@ -17,7 +20,8 @@ module VGD
           layers, folders = tag_tree_read
           tree = {supported: folders_supported?,
                   folders: folders.map { |item| item.slice(:id, :name, :visible, :parent_id) },
-                  layers: layers.map { |item| item.slice(:id, :name, :visible, :folder_id) },
+                  layers: layers.map { |item| item.slice(:id, :name, :visible, :folder_id, :color, :line_style) },
+                  styles_supported: line_styles_supported?, line_styles: line_style_names, color_by_tag: color_by_tag?,
                   isolated: nil}
           tree[:isolated] = {kind: @isolation[:kind], id: @isolation[:id], name: @isolation[:name]} if isolation_active?
           tree
@@ -39,6 +43,36 @@ module VGD
           item = (kind == 'folder' ? folders : layers).find { |entry| entry[:id] == id }
           raise 'Không tìm thấy tag hoặc thư mục này. Hãy làm mới danh sách.' unless item
           Data.transaction(@model, visible ? 'VGD BIM · Hiện tag' : 'VGD BIM · Ẩn tag') { item[:object].visible = visible }
+          emit('tag_tree', tag_tree_state)
+        end
+
+        # payload: {'id' => persistent_id của tag, 'color' => '#rrggbb'}
+        def tm_color(payload)
+          check_model!
+          id = tm_id(payload)
+          rgb = TagTree.parse_color(payload['color'])
+          layer = tag_tree_read.first.find { |entry| entry[:id] == id }&.fetch(:object) or raise 'Không tìm thấy tag này. Hãy làm mới danh sách.'
+          Data.transaction(@model, 'VGD BIM · Đổi màu tag') { layer.color = Sketchup::Color.new(*rgb) }
+          emit('tag_tree', tag_tree_state)
+        end
+
+        # payload: {'id' => persistent_id của tag, 'style' => tên kiểu nét có trong model (model.line_styles)}
+        def tm_line_style(payload)
+          check_model!
+          raise 'Phiên bản SketchUp này chưa có kiểu nét cho tag (cần SketchUp 2021 trở lên).' unless line_styles_supported?
+          id = tm_id(payload)
+          style = @model.line_styles.to_a.find { |entry| entry.name.to_s == payload['style'].to_s } or raise 'Kiểu nét không có trong model.'
+          layer = tag_tree_read.first.find { |entry| entry[:id] == id }&.fetch(:object) or raise 'Không tìm thấy tag này. Hãy làm mới danh sách.'
+          Data.transaction(@model, 'VGD BIM · Đổi kiểu nét tag') { layer.line_style = style }
+          emit('tag_tree', tag_tree_state)
+        end
+
+        # payload: {'enabled' => true / false}: bật / tắt chế độ tô màu theo tag của SketchUp (không nằm trong lịch sử hoàn tác của SketchUp).
+        def tm_color_by_tag(payload)
+          check_model!
+          enabled = payload['enabled']
+          raise 'Giá trị không hợp lệ.' unless enabled == true || enabled == false
+          @model.rendering_options['DisplayColorByLayer'] = enabled
           emit('tag_tree', tag_tree_state)
         end
 
@@ -74,6 +108,20 @@ module VGD
           id
         end
 
+        def line_styles_supported?
+          @model.respond_to?(:line_styles)
+        end
+
+        def line_style_names
+          line_styles_supported? ? @model.line_styles.to_a.map { |style| style.name.to_s } : []
+        end
+
+        def color_by_tag?
+          @model.rendering_options['DisplayColorByLayer'] == true
+        rescue StandardError
+          false
+        end
+
         def folders_supported?
           @model.layers.respond_to?(:folders)
         end
@@ -96,7 +144,9 @@ module VGD
           end
           layers = @model.layers.to_a.map do |layer|
             parent = layer.respond_to?(:folder) ? layer.folder : nil
-            {id: layer.persistent_id, name: layer.name.to_s, visible: layer.visible?, folder_id: parent ? parent.persistent_id : nil, object: layer}
+            style = line_styles_supported? && layer.line_style ? layer.line_style.name.to_s : ''
+            {id: layer.persistent_id, name: layer.name.to_s, visible: layer.visible?, folder_id: parent ? parent.persistent_id : nil,
+             color: TagTree.hex_color(layer.color.to_a), line_style: style, object: layer}
           end
           [layers, folders]
         end

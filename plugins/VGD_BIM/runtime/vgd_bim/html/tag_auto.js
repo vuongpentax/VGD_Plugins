@@ -297,7 +297,9 @@ function tagTreePane(pane){
   const expand=button('Mở hết',()=>{(treeState.data?treeState.data.folders:[]).forEach(f=>treeState.open.add(f.id));paintTagTree();},'sm');
   const collapse=button('Gập hết',()=>{treeState.open.clear();paintTagTree();},'sm');
   const refresh=button('Làm mới',()=>call('tm_refresh'),'sm');
-  bar.append(search,expand,collapse,refresh);
+  const colorByTag=button('Tô màu theo tag',()=>call('tm_color_by_tag',JSON.stringify({enabled:!(treeState.data&&treeState.data.color_by_tag)})),'sm');colorByTag.id='tag-tree-colorbytag';
+  colorByTag.title='Bật / tắt chế độ tô màu theo tag của SketchUp (Color by Tag)';colorByTag.setAttribute('aria-pressed','false');
+  bar.append(search,expand,collapse,refresh,colorByTag);
   const banner=node('div',undefined,'tm-banner');banner.id='tag-tree-banner';banner.hidden=true;
   const list=node('div',undefined,'tag-scroll tm-list');list.id='tag-tree-list';
   pane.append(bar,banner,list,node('p','Mắt ẩn / hiện tag hoặc cả thư mục trong model; nút tròn cô lập: chỉ hiện mục đó, ẩn mọi thứ còn lại, bấm lại để trả hiển thị như cũ. Mỗi thao tác là một bước hoàn tác.','muted tag-note'));
@@ -308,6 +310,7 @@ function paintTagTree(){
   const list=$('tag-tree-list'),banner=$('tag-tree-banner');
   if(!list)return;
   const data=treeState.data,scroll=list.scrollTop;
+  const cbt=$('tag-tree-colorbytag');if(cbt)cbt.setAttribute('aria-pressed',String(!!(data&&data.color_by_tag)));
   list.replaceChildren();banner.replaceChildren();banner.hidden=true;
   if(!data){list.append(node('p','Model chưa có tag nào.','muted'));return;}
   if(data.isolated){
@@ -345,7 +348,21 @@ function paintTagTree(){
     const noun=isFolder?'thư mục':'tag';
     row.append(treeButton(item.visible?'eye':'eyeOff',item.visible?`Ẩn ${noun}`:`Hiện ${noun}`,()=>call('tm_visible',JSON.stringify({kind,id,visible:!item.visible})),item.visible?'on':'off'));
     const name=node('span',item.name,'tm-name'+(isFolder?' folder':''));name.title=item.name;row.append(name);
-    if(isFolder)row.append(node('span',`${countTags(id)} tag`,'muted tm-count'));
+    if(isFolder)row.append(node('span',`${countTags(id)} tag`,'muted tm-count'),node('span',undefined,'tm-pad'),node('span',undefined,'tm-pad-style'));
+    else{
+      // Màu và kiểu nét của tag. Màu đổi khi đóng bảng chọn màu (sự kiện change), không gửi liên tục lúc kéo.
+      const color=node('input',undefined,'tm-color');color.type='color';color.value=item.color||'#000000';color.title='Màu tag';color.setAttribute('aria-label','Màu tag');
+      color.onchange=()=>call('tm_color',JSON.stringify({id,color:color.value}));
+      row.append(color);
+      if(data.styles_supported){
+        const style=node('select',undefined,'tm-style');style.setAttribute('aria-label','Kiểu nét');style.title='Kiểu nét';
+        const styles=data.line_styles.includes(item.line_style)||!item.line_style?data.line_styles:[item.line_style,...data.line_styles];
+        if(!item.line_style)style.append(new Option('(mặc định)',''));
+        styles.forEach(name=>style.append(new Option(name,name)));style.value=item.line_style||'';
+        style.onchange=()=>{if(style.value)call('tm_line_style',JSON.stringify({id,style:style.value}));};
+        row.append(style);
+      }else row.append(node('span',undefined,'tm-pad-style'));
+    }
     row.append(treeButton('target',data.isolated&&data.isolated.kind===kind&&data.isolated.id===id?'Bỏ cô lập':`Cô lập ${noun}`,()=>call('tm_isolate',JSON.stringify({kind,id})),'iso'));
     list.append(row);rows+=1;
   };
