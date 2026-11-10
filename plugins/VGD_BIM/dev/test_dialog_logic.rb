@@ -219,6 +219,13 @@ module Geom
   end
   class Point3d; attr_reader :to_a; def initialize(*xyz); @to_a = xyz.map(&:to_f); end; end
   class Vector3d < Point3d; end
+  # Biến đổi chỉ gồm tịnh tiến (đủ để kiểm tra việc nhân biến đổi của các group cha)
+  class Transformation
+    attr_reader :shift
+    def initialize(shift = [0.0, 0.0, 0.0]); @shift = shift.map(&:to_f); end
+    def *(other); Transformation.new(@shift.zip(other.shift).map { |a, b| a + b }); end
+    def to_a; [1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0, 0, *@shift, 1.0]; end
+  end
 end
 WPoint = Struct.new(:x, :y, :z) { def transform(shift); WPoint.new(x + shift[0], y + shift[1], z + shift[2]); end; def to_a; [x, y, z]; end }
 class WLocalBounds; def empty?; false; end; def corner(i); WPoint.new(i & 1, (i >> 1) & 1, (i >> 2) & 1); end; end
@@ -266,12 +273,32 @@ ok('chọn nhiều dòng: camera nhìn vào tâm hộp bao thế giới của c�
    target == [501.5, 20.5, 0.5] && up == [0.0, 0.0, 1.0] && pm.active_view.assigned.equal?(cam))
 ok('chọn nhiều dòng: mắt lùi sau tâm theo hướng nhìn cũ (cùng x, z với tâm, y nhỏ hơn)', eye[0] == 501.5 && eye[2] == 0.5 && eye[1] < 20.5)
 # Ngữ cảnh lúc quét được nhớ: bấm dòng con làm active_path đổi, nhưng dựng lại bảng vẫn dùng ngữ cảnh lúc quét
-pm.define_singleton_method(:edit_transform) { :tf_lúc_quét }
+parent.define_singleton_method(:transformation) { Geom::Transformation.new([5, 0, 0]) }
+other_parent.define_singleton_method(:transformation) { Geom::Transformation.new([7, 0, 0]) }
+pm.define_singleton_method(:edit_transform) { Geom::Transformation.new([5, 0, 0]) }
 pm.active_path = [parent]
+pcalls.clear
 D.instance_method(:table_scan_selection!).bind(pd).call # bản thật (pd đã thay bằng bản giả ở trên)
 pm.active_path = [other_parent, parent]
 ctx_saved = pd.scan_context
-ok('quét ghi nhớ ngữ cảnh (group đang mở và biến đổi) tại thời điểm quét', ctx_saved && ctx_saved[:path] == [parent] && ctx_saved[:transform] == :tf_lúc_quét)
+ok('quét ghi nhớ ngữ cảnh (group đang mở và biến đổi) tại thời điểm quét', ctx_saved && ctx_saved[:path] == [parent] && ctx_saved[:transform].to_a == Geom::Transformation.new([5, 0, 0]).to_a && pcalls.none? { |c| c[0] == 'message' })
+# Model#edit_transform báo sai (ví dụ đơn vị trong khi group cha đã dời 5): dùng tích biến đổi của các group trong active_path và báo một lần
+pm.define_singleton_method(:edit_transform) { Geom::Transformation.new }
+pm.active_path = [other_parent, parent]
+D.instance_method(:table_scan_selection!).bind(pd).call
+mismatch_ctx = pd.instance_variable_get(:@table_context)
+ok('edit_transform khác tích biến đổi của group đang mở: dùng tích (7 + 5 = 12), không dùng edit_transform', mismatch_ctx[:transform].to_a[12, 3] == [12.0, 0.0, 0.0] && mismatch_ctx[:path] == [other_parent, parent])
+ok('edit_transform khác tích: có báo cho người dùng một lần', pcalls.count { |c| c[0] == 'message' && c[1][:text].to_s.include?('Lưu ý') } == 1)
+D.instance_method(:table_scan_selection!).bind(pd).call
+ok('quét lại cùng ngữ cảnh: không báo lặp', pcalls.count { |c| c[0] == 'message' && c[1][:text].to_s.include?('Lưu ý') } == 1)
+pm.define_singleton_method(:edit_transform) { Geom::Transformation.new }
+pm.active_path = []
+D.instance_method(:table_scan_selection!).bind(pd).call
+ok('không mở group nào: giữ edit_transform của SketchUp (đơn vị)', pd.instance_variable_get(:@table_context)[:transform].to_a == Geom::Transformation.new.to_a)
+pm.define_singleton_method(:edit_transform) { Geom::Transformation.new([5, 0, 0]) }
+pm.active_path = [parent]
+D.instance_method(:table_scan_selection!).bind(pd).call # lại ngữ cảnh [parent] như trước đoạn kiểm tra trên
+pm.active_path = [other_parent, parent]
 ok('đổi ngữ cảnh đang mở sau đó (mở sâu vào dòng con): dựng bảng vẫn dùng ngữ cảnh đã nhớ', pd.scan_context[:path] == [parent])
 parent.instance_variable_set(:@valid, false)
 ok('group của ngữ cảnh đã nhớ không còn tồn tại: không dùng (để Table.build lấy ngữ cảnh đang mở)', pd.scan_context.nil?)

@@ -256,9 +256,44 @@ module VGD
         def table_scan_selection!
           @model = Sketchup.active_model
           @table_scope = @model.selection.to_a.select { |e| Data.supported?(e) && e.valid? }
-          @table_context = {path: (@model.active_path || []).dup, transform: @model.edit_transform}
+          @table_context = {path: (@model.active_path || []).dup, transform: context_transform}
           @table_picks = nil
           @picked_entities = []
+        end
+        # Biến đổi (cục bộ -> thế giới) của ngữ cảnh đang mở, tính bằng cách nhân biến đổi của các group / component trong active_path,
+        # không tin riêng Model#edit_transform: chọn món con bằng tay trong group vừa nhấp đúp mở thì khung từng lệch xa món, giống như
+        # thiếu biến đổi của group cha. Hai cách trùng nhau thì không đổi gì; khác nhau thì dùng tích của path và báo một lần để biết.
+        def context_transform
+          path = @model.active_path || []
+          reported = @model.edit_transform
+          return reported if path.empty?
+          composed = path.inject(Geom::Transformation.new) { |total, entity| total * entity.transformation }
+          unless same_transform?(composed, reported)
+            key = [path.map(&:object_id), composed.to_a, reported.to_a]
+            unless @context_mismatch == key
+              @context_mismatch = key
+              BIM.log("edit_transform khác tích biến đổi của group đang mở: edit_transform dịch #{translation_text(reported)}, tích dịch #{translation_text(composed)} (đang dùng tích)")
+              emit('message', {text: 'Lưu ý: SketchUp báo vị trí group đang mở khác với vị trí tính từ các group cha. VGD_BIM dùng vị trí tính từ các group cha.'})
+            end
+          end
+          composed
+        end
+        def same_transform?(first, second)
+          a = first.to_a
+          b = second.to_a
+          a.size == b.size && a.zip(b).all? { |x, y| (x - y).abs < 1e-6 }
+        end
+        # Ghi một dòng chẩn đoán (cửa sổ Ruby Console) về khung vừa vẽ; không bao giờ làm hỏng việc vẽ.
+        def log_outline(targets)
+          BIM.log("Khung đánh dấu: #{targets.size} đối tượng, nằm sâu #{targets.first[:path].size} cấp, hộp thế giới của đối tượng đầu #{box_text(Table.bounding_box(targets.first))}")
+        rescue StandardError
+          nil
+        end
+        def box_text(box)
+          box.empty? ? 'rỗng' : "#{box.min.to_a.map { |value| value.round(1) }}..#{box.max.to_a.map { |value| value.round(1) }}"
+        end
+        def translation_text(transform)
+          transform.to_a[12, 3].map { |value| value.round(2) }.inspect
         end
         def table_selection_changed
           @model = Sketchup.active_model
@@ -617,6 +652,7 @@ module VGD
           box = single ? Table.bounding_box(single) : nil
           label_point = box && !box.empty? ? box.center : nil
           fills = targets.flat_map { |r| Table.box_triangles(r) }
+          log_outline(targets)
           # Đối tượng bị xóa: khung tự tắt và bảng bỏ dòng đã xóa.
           alive = -> { targets.all? { |r| r[:path].all?(&:valid?) } }
           stale = -> { safely { table_build if @mode == 'table' && @dialog.visible? } }

@@ -26,6 +26,7 @@
 - **Chọn cột kiểu mới** (theo Auto Info, gọn hơn): ngăn trượt ra bên trái và đẩy bảng sang phải nên cột đầu không bị che; ô tick tự vẽ, kéo thả đổi chỗ cột có hiệu ứng trượt, nút gạt chân trang trượt mượt.
 - **Giao diện không còn thanh cuộn dọc** ở bảng, bảng Chọn cột, Preset và các tab (vẫn cuộn bằng con lăn chuột); chỉ giữ thanh cuộn ngang của bảng khi nhiều cột.
 - **Tiếng Anh** cho toàn bộ giao diện (báo cáo CSV và hộp thoại gốc của SketchUp vẫn tiếng Việt).
+- **Chọn tay món con trong group đã mở** (beta.44): vị trí của group đang mở được tính từ biến đổi của các group cha thay vì chỉ tin `Model#edit_transform`; nếu hai cách khác nhau, plugin báo một lần và ghi chẩn đoán vào Ruby Console.
 - **Sửa khung đánh dấu của món con** (beta.43): khi đang mở sửa group (chọn món nằm sâu trong bảng), khung vẽ bằng tọa độ màn hình với điểm chiếu từ SketchUp nên không còn lệch đúng bằng vị trí group cha.
 - **Màu tag, kiểu nét, Tô màu theo tag** (beta.42, bước 3b-1): tab Trong model có ô màu và ô kiểu nét cho từng tag, nút bật / tắt Color by Tag. Ghim, tag gần đây, kéo thả: bước 3b-2.
 - **Quản lý tag trong model, bước 3a** (beta.41): tab nhỏ Trong model với cây thư mục tag, mắt ẩn / hiện, cô lập tag hoặc thư mục (bấm lại để khôi phục), ô tìm. Màu, nét đứt, ghim, tag gần đây, kéo thả: bước 3b.

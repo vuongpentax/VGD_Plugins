@@ -209,6 +209,7 @@ const VGD_I18N=(()=>{
     'Kéo để đổi độ rộng':'Drag to resize',
     'Tô màu theo tag':'Color by tag','Bật / tắt chế độ tô màu theo tag của SketchUp (Color by Tag)':'Turn the SketchUp Color by Tag display mode on or off','Màu tag':'Tag color','Kiểu nét':'Line style','(mặc định)':'(default)',
     'Màu không hợp lệ.':'The color is not valid.','Kiểu nét không có trong model.':'This line style is not in the model.','Phiên bản SketchUp này chưa có kiểu nét cho tag (cần SketchUp 2021 trở lên).':'This SketchUp version has no tag line styles (SketchUp 2021 or newer is required).','Giá trị không hợp lệ.':'The value is not valid.',
+    'Lưu ý: SketchUp báo vị trí group đang mở khác với vị trí tính từ các group cha. VGD_BIM dùng vị trí tính từ các group cha.':'Note: SketchUp reports a different position for the open group than the one computed from its parent groups. VGD_BIM uses the position computed from the parent groups.',
     'Trong model':'In model','Mở hết':'Expand all','Gập hết':'Collapse all','Làm mới':'Refresh','Mở':'Expand','Gập':'Collapse','Khôi phục hiển thị':'Restore visibility','Bỏ cô lập':'Remove isolation',
     'Tìm tag hoặc thư mục...':'Find tag or folder...','Tìm tag hoặc thư mục':'Find tag or folder','Model chưa có tag nào.':'The model has no tags yet.','Không có tag hoặc thư mục nào khớp.':'No tag or folder matches.',
     'Ẩn tag':'Hide tag','Hiện tag':'Show tag','Ẩn thư mục':'Hide folder','Hiện thư mục':'Show folder','Cô lập tag':'Isolate tag','Cô lập thư mục':'Isolate folder',
