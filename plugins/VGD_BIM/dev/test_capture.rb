@@ -29,11 +29,14 @@ module Sketchup
     def to_s; "color#{@parts}"; end
   end
   class Camera
-    attr_accessor :eye, :target, :up, :fov, :height
-    attr_writer :perspective
-    def initialize(eye, target, up); @eye = eye; @target = target; @up = up; @perspective = true; @fov = 35.0; @height = 100.0; end
+    attr_accessor :eye, :target, :up, :height
+    attr_writer :perspective, :fov, :fov_is_height
+    attr_reader :parallel_reads
+    # SketchUp thật in cảnh báo "fov is only valid for perspective cameras" khi đọc fov của camera song song: đếm số lần đọc để test bắt được
+    def initialize(eye, target, up); @eye = eye; @target = target; @up = up; @perspective = true; @fov = 35.0; @fov_is_height = false; @height = 100.0; @parallel_reads = 0; end
     def perspective?; @perspective; end
-    def fov_is_height?; false; end
+    def fov; @parallel_reads += 1 unless @perspective; @fov; end
+    def fov_is_height?; @parallel_reads += 1 unless @perspective; @fov_is_height; end
     def direction; d = target.to_a.zip(eye.to_a).map { |t, e| t - e }; l = Math.sqrt(d.sum { |v| v * v }); Geom::Vector3d.new(*d.map { |v| v / l }); end
     def set(new_eye, new_target, new_up); @eye = new_eye; @target = new_target; @up = new_up; end
   end
@@ -70,7 +73,7 @@ class FakeView
     return false if @reject_all_options && options[:antialias]
     return false if @fail_next || (@fail_on_call && @writes.size + 1 == @fail_on_call)
     @writes << options
-    @states << {active_path: (@model.active_path || []).map(&:pid), hidden: @model.all.select(&:hidden).map(&:pid), selection: @model.selection.map(&:pid), eye: @camera.eye.to_a, target: @camera.target.to_a, options: @model.rendering_options.instance_variable_get(:@values).dup}
+    @states << {active_path: (@model.active_path || []).map(&:pid), hidden: @model.all.select(&:hidden).map(&:pid), selection: @model.selection.map(&:pid), eye: @camera.eye.to_a, target: @camera.target.to_a, perspective: @camera.perspective?, fov: (@camera.perspective? ? @camera.fov : nil), height: @camera.height, options: @model.rendering_options.instance_variable_get(:@values).dup}
     File.binwrite(options[:filename], PNG_BYTES)
     true
   end
@@ -302,6 +305,37 @@ check 'chưa có mặt trước: chụp theo trục thế giới (1, -1, 0.8) v�
 view, result = shoot_front({'image_view' => 'current'}, '+y', IDENTITY)
 check 'Khung nhìn hiện tại: không đặt camera, không ghi chú dù có hay không có mặt trước', view.states.last[:eye] == [0.0, 0.0, 100.0] && !result.key?(:note)
 check 'Front.camera_direction: góc nhìn lạ bị từ chối', raises?('góc nhìn') { VGD::BIM::Front.camera_direction('top', [0.0, -1.0]) }
+
+# ---- FOV đang dùng: ảnh Iso / Chính diện / vị trí nhận đúng FOV của khung nhìn (trước đây camera mới luôn lấy 35 độ mặc định) ----
+def shoot_with_camera(settings, kind: :full, side: 'right')
+  model, items = world
+  yield model.active_view.camera
+  result = C.shoot(model, {entity: items[0], path: [items[0]]}, D.merge(settings), iso_side: side, kind: kind)
+  [model, model.active_view, result]
+end
+dist_state = ->(st) { Math.sqrt(st[:eye].zip(st[:target]).sum { |e, t| (e - t)**2 }) }
+%w[isometric front].each do |name|
+  _, v60, _ = shoot_with_camera({'image_view' => name}) { |c| c.fov = 60.0 }
+  _, v20, _ = shoot_with_camera({'image_view' => name}) { |c| c.fov = 20.0 }
+  check "ảnh #{name}: dùng đúng FOV đang dùng của khung nhìn (60 độ)", v60.states.all? { |st| st[:perspective] && near?([st[:fov]], [60.0]) }
+  check "ảnh #{name}: FOV hẹp hơn thì camera lùi xa hơn (20 độ xa hơn 60 độ)", dist_state.(v20.states.last) > dist_state.(v60.states.last) * 1.5
+end
+model, v60, _ = shoot_with_camera({}, kind: :location) { |c| c.fov = 60.0 }
+_, v20, _ = shoot_with_camera({}, kind: :location) { |c| c.fov = 20.0 }
+check 'ảnh vị trí: dùng đúng FOV đang dùng (60 độ), FOV hẹp hơn thì camera lùi xa hơn', v60.states.all? { |st| near?([st[:fov]], [60.0]) } && dist_state.(v20.states.last) > dist_state.(v60.states.last) * 1.5
+check 'sau khi chụp: FOV của khung nhìn được trả lại như cũ', near?([model.active_view.camera.fov], [60.0])
+model, view, _ = shoot_with_camera({'image_view' => 'isometric'}) { |c| c.fov = 40.0; c.fov_is_height = true } # fov đo theo chiều cao: đổi sang góc ngang theo tỉ lệ khung nhìn 1000 x 500
+horizontal = 2.0 * Math.atan(Math.tan(20.0 * Math::PI / 180.0) * 2.0) * 180.0 / Math::PI
+check 'FOV đo theo chiều cao: đổi đúng sang FOV ngang cho camera mới (không hiểu nhầm là góc ngang)', view.states.all? { |st| near?([st[:fov]], [horizontal]) }
+check 'FOV đo theo chiều cao: khung nhìn của người dùng sau khi chụp vẫn nhìn rộng như cũ (FOV ngang tương đương)', near?([model.active_view.camera.fov], [horizontal])
+[{'image_view' => 'isometric'}, {'image_view' => 'front'}].each do |settings|
+  model, view, _ = shoot_with_camera(settings) { |c| c.perspective = false; c.height = 250.0 }
+  check "camera song song (#{settings['image_view']}): vẫn song song (độ cao khung do khung hình quyết định), không đọc FOV (SketchUp báo cảnh báo)", view.states.all? { |st| !st[:perspective] && st[:height] != 250.0 } && model.active_view.camera.parallel_reads == 0
+end
+model, view, _ = shoot_with_camera({}, kind: :location) { |c| c.perspective = false; c.height = 250.0 }
+check 'camera song song (ảnh vị trí): vẫn song song, không đọc FOV', view.states.all? { |st| !st[:perspective] } && model.active_view.camera.parallel_reads == 0
+model, view, _ = shoot_with_camera({'image_view' => 'current'}) { |c| c.fov = 60.0 }
+check 'Khung nhìn hiện tại: không đụng camera nên FOV giữ nguyên', view.states.all? { |st| near?([st[:fov]], [60.0]) }
 
 # ---- Ảnh vị trí (kind: :location): camera y như Iso nhưng không đổi gì trong model (không cô lập, không ẩn, không mở ngữ cảnh), nhìn vùng rộng gấp nhiều lần món, lưu file _loc ----
 def shoot_location(settings = {}, side = 'right', user_path = [])

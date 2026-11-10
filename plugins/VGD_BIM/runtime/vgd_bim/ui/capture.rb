@@ -35,7 +35,7 @@ module VGD
           pid = Images.id!(entity.persistent_id)
           view = model.active_view
           isolate = !location && ISOLATING_VIEWS.include?(settings['image_view'])
-          saved = {camera: copy_camera(view.camera), selection: model.selection.to_a, options: nil}
+          saved = {camera: copy_camera(view), selection: model.selection.to_a, options: nil}
           ensure_writable(Images.dir(model))
           operation = false
           notes = []
@@ -161,7 +161,7 @@ module VGD
           camera = Sketchup::Camera.new(eye, center, Geom::Vector3d.new(0, 0, 1))
           current = view.camera
           camera.perspective = current.perspective?
-          camera.height = current.height unless current.perspective?
+          if current.perspective? then camera.fov = horizontal_fov(view, current) else camera.height = current.height end # giữ FOV (phối cảnh) hoặc độ cao khung (song song) đang dùng
           view.camera = camera
           front ? nil : 'món chưa có mặt trước nên chụp theo trục thế giới'
         end
@@ -184,9 +184,10 @@ module VGD
           end
           camera = view.camera
           view_aspect = view.vpheight.to_f.positive? ? view.vpwidth.to_f / view.vpheight : 1.0
+          perspective = camera.perspective?
           fits = [size[0].to_f / size[1], view_aspect].uniq.map do |aspect|
-            ViewFit.camera(low, high, direction: camera.direction.to_a, up: camera.up.to_a, perspective: camera.perspective?,
-                                                              fov: camera.fov, fov_is_height: camera.fov_is_height?, aspect: aspect, margin: margin)
+            ViewFit.camera(low, high, direction: camera.direction.to_a, up: camera.up.to_a, perspective: perspective,
+                                                              fov: perspective ? camera.fov : nil, fov_is_height: perspective && camera.fov_is_height?, aspect: aspect, margin: margin)
           end
           fit = fits.max_by { |candidate| candidate[:height] || Math.sqrt(candidate[:eye].zip(candidate[:target]).sum { |e, t| (e - t)**2 }) }
           camera.set(Geom::Point3d.new(*fit[:eye]), Geom::Point3d.new(*fit[:target]), Geom::Vector3d.new(*fit[:up]))
@@ -194,11 +195,24 @@ module VGD
           view.camera = camera
         end
 
-        def self.copy_camera(camera)
+        def self.copy_camera(view)
+          camera = view.camera
           copy = Sketchup::Camera.new(camera.eye, camera.target, camera.up)
           copy.perspective = camera.perspective?
-          if camera.perspective? then copy.fov = camera.fov else copy.height = camera.height end
+          if camera.perspective? then copy.fov = horizontal_fov(view, camera) else copy.height = camera.height end
           copy
+        end
+
+        # FOV ngang (độ) của camera phối cảnh để gán cho camera mới (Camera.new luôn bắt đầu ở 35 độ nên phải gán lại đúng FOV đang dùng).
+        # Camera#fov là góc theo chiều cao khi fov_is_height?: đổi sang góc ngang theo tỉ lệ khung nhìn, rồi kẹp trong 1 đến 120 độ của SketchUp.
+        # Chỉ gọi với camera phối cảnh: đọc fov của camera song song làm SketchUp báo cảnh báo trong cửa sổ Ruby Console.
+        def self.horizontal_fov(view, camera)
+          fov = camera.fov.to_f
+          if camera.fov_is_height?
+            aspect = view.vpheight.to_f.positive? ? view.vpwidth.to_f / view.vpheight : 1.0
+            fov = 2.0 * Math.atan(Math.tan(fov * Math::PI / 360.0) * aspect) * 180.0 / Math::PI
+          end
+          fov.clamp(1.0, 120.0)
         end
 
         # Đổi tạm tuỳ chọn hiển thị theo kiểu và nền của preset (chỉ đụng các khóa có trong bản SketchUp này). Trả về giá trị cũ để trả lại.
