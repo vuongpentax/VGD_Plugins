@@ -261,7 +261,7 @@ module VGD
       def self.extra_columns(entity, data)
         extras = Extras.read(entity)
         {owner: data[:manufacturer].to_s, url: extras[:url], size: extras[:size], price: extras[:price],
-         total: extras[:price], ifc: ifc_class(entity)}.merge(front_columns(entity))
+         total: extras[:price], ifc: ifc_class(entity), photo_full: PhotoSettings.read(entity, :full), photo_location: PhotoSettings.read(entity, :location)}.merge(front_columns(entity))
       end
 
       # Mặt trước (lưu ở định nghĩa): hướng cục bộ, nhãn trạng thái, ghi chú lý do.

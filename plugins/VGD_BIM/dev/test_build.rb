@@ -45,6 +45,7 @@ module VGD; module BIM
     GROUPS = ['Phần thô'].freeze
   end
 end; end
+require File.join(ROOT, 'core/photo_settings')
 require File.join(ROOT, 'core/table')
 
 class Model; attr_accessor :active_path; def edit_transform; Tr.new; end; end

@@ -12,8 +12,13 @@ module Sketchup
   class SelectionObserver; end
   class Entity
     attr_reader :persistent_id, :name
-    def initialize(pid, name); @persistent_id = pid; @name = name; end
+    attr_accessor :locked
+    def initialize(pid, name); @persistent_id = pid; @name = name; @attrs = {}; @locked = false; end
     def valid?; true; end
+    def locked?; @locked; end
+    def get_attribute(dict, key, default = nil); @attrs.dig(dict, key) || default; end
+    def set_attribute(dict, key, value); (@attrs[dict] ||= {})[key] = value; end
+    def delete_attribute(dict, key); (@attrs[dict] || {}).delete(key); end
   end
   def self.active_model; $model; end
 end
@@ -31,7 +36,7 @@ end
 FakeModel = Struct.new(:guid) { def title; 'Nhà mẫu'; end }
 $model = FakeModel.new('MODEL-A')
 module VGD; module BIM; def self.log(m); end
-  module Data; def self.supported?(e); true; end; end
+  module Data; def self.supported?(e); true; end; def self.transaction(_model, name = nil); ($transactions ||= []) << name; yield; end; end
   module Scanner; end; module Geometry; def self.definition(e); Struct.new(:name).new('Họ'); end; end
   module Tags; GROUPS = [].freeze; end
   module Table
@@ -43,7 +48,7 @@ module VGD; module BIM; def self.log(m); end
   module UI; end
 end; end
 ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
-%w[core/storage core/settings core/images core/row_order core/preset core/table_report core/measure_probe].each { |f| require File.join(ROOT, f) }
+%w[core/storage core/settings core/images core/row_order core/preset core/photo_settings core/table_report core/measure_probe].each { |f| require File.join(ROOT, f) }
 module VGD; module BIM; module UI
   module Capture
     ISO_SIDES = %w[right left].freeze
@@ -54,6 +59,7 @@ module VGD; module BIM; module UI
       note = pid == 907 ? 'nền trong suốt không dùng được trên máy này nên ảnh dùng cách thay thế' : nil
       $shot << [pid, settings['image_view']]
       ($sides ||= []) << iso_side
+      ($seen ||= []) << [pid, settings]
       ($kinds ||= []) << kind
       Images.write(model, pid, PNG, kind)
       {pid: pid, kind: kind, stamp: Images.info(model, pid, Images.dir(model), kind)[:stamp], note: note}.compact
@@ -348,6 +354,50 @@ ok('in PDF: mở trang báo cáo bằng trình duyệt (địa chỉ file:///)',
 page = File.file?(html_path) ? File.read(html_path, encoding: 'UTF-8') : ''
 ok('in PDF: trang báo cáo có tên model, đủ 3 dòng và 2 ảnh', page.include?('Mô hình: Nhà mẫu') && page.scan('<tr class="row">').size == 3 && page.scan('data:image/png;base64,').size == 2 && page.include?([FULL[901]].pack('m0')))
 ok('in PDF: báo đã mở trình duyệt, hướng dẫn Lưu thành PDF', events(d, 'message').last['text'].include?('trình duyệt') && events(d, 'message').last['text'].include?('PDF'))
+
+# ---- Thông số ảnh riêng của từng món (nút ⚙) và nút chụp một lần ----
+saved = ->(d, index, kind, settings) { d.safely { d.image_item_save('index' => index, 'kind' => kind, 'settings' => settings) } }
+d = make_dialog(3)
+$transactions = []
+saved.(d, 0, 'full', {'view' => 'front', 'yaw' => 20, 'side' => 'left', 'margin' => 35})
+ok('lưu thông số ảnh riêng: ghi vào đối tượng, một thao tác hoàn tác, bảng đổi theo, báo giao diện', $records[0][:entity].get_attribute('VGD_BIM_TABLE', 'photo_full').to_s.include?('"yaw":20') && $transactions == ['VGD_BIM · Thông số ảnh'] && $rows[0][:photo_full] == {'view' => 'front', 'side' => 'left', 'yaw' => 20, 'margin' => 35} && events(d, 'photo_settings').last == {'pid' => 901, 'kind' => 'full', 'settings' => {'view' => 'front', 'side' => 'left', 'yaw' => 20, 'margin' => 35}})
+$seen = []; $sides = []
+d.safely { d.images_capture('indexes' => [0, 2], 'settings' => {'image_view' => 'isometric', 'image_yaw' => 0, 'image_margin' => 20}) }
+UI.run_timers
+first, second = $seen
+ok('chụp: món có thông số riêng dùng thông số riêng (góc nhìn, góc lệch, lề, bên Iso), món khác theo preset', first[1].values_at('image_view', 'image_yaw', 'image_margin') == ['front', 20, 35] && second[1].values_at('image_view', 'image_yaw', 'image_margin') == ['isometric', 0, 20] && $sides == ['left', 'right'])
+$seen = []; $sides = []
+d.safely { d.images_capture('indexes' => [0], 'settings' => {'image_view' => 'current'}, 'force_view' => true) }
+UI.run_timers
+ok('nút chụp một lần (ép góc nhìn): bỏ qua góc nhìn riêng của món nhưng vẫn áp góc lệch và lề riêng', $seen[0][1].values_at('image_view', 'image_yaw', 'image_margin') == ['current', 20, 35] && $sides == ['right'])
+$seen = []; $sides = []
+d.safely { d.images_capture('indexes' => [0], 'settings' => {'image_view' => 'isometric'}, 'force_view' => true, 'iso_side' => 'right') }
+UI.run_timers
+ok('nút Iso một lần: bên Iso do nút quyết định, không theo bên riêng của món (trái)', $sides == ['right'] && $seen[0][1]['image_view'] == 'isometric')
+$seen = []; $sides = []
+d.safely { d.images_capture('indexes' => [2], 'settings' => {'image_view' => 'isometric'}, 'item_settings' => {'view' => 'front', 'pitch' => 25, 'side' => 'left'}) }
+UI.run_timers
+ok('chụp kèm thông số nhập trong khung (chưa lưu): dùng thông số đó thay cho thông số đã lưu của món', $seen[0][1].values_at('image_view', 'image_pitch') == ['front', 25] && $sides == ['left'] && $records[2][:entity].get_attribute('VGD_BIM_TABLE', 'photo_full').nil?)
+d.safely { d.images_capture('indexes' => [2], 'item_settings' => {'yaw' => 999}) }
+ok('thông số nhập trong khung sai bị từ chối trước khi chụp', error_of(d).to_s.include?('Góc lệch') && d.instance_variable_get(:@capture).nil? && UI.timers.empty?)
+saved.(d, 0, 'location', {'view' => 'front', 'pitch' => 10, 'scale' => 2, 'margin' => 5})
+$seen = []
+d.safely { d.images_capture('indexes' => [0], 'kind' => 'location', 'settings' => {'loc_view' => 'isometric', 'image_location_scale' => 4}) }
+UI.run_timers
+ok('ảnh vị trí: dùng thông số riêng loại ảnh vị trí (loc_*, vùng nhìn), không lẫn thông số của ảnh chính', $seen[0][1].values_at('loc_view', 'loc_pitch', 'image_location_scale', 'loc_margin', 'image_view') == ['front', 10, 2, 5, 'isometric'])
+saved.(d, 0, 'full', {})
+ok('lưu rỗng: bỏ thông số riêng của ảnh chính (về theo preset), ảnh vị trí còn', $records[0][:entity].get_attribute('VGD_BIM_TABLE', 'photo_full').nil? && !$records[0][:entity].get_attribute('VGD_BIM_TABLE', 'photo_location').nil? && $rows[0][:photo_full] == {})
+saved.(d, 0, 'full', {'yaw' => 500})
+ok('lưu thông số sai: báo lỗi, không ghi', error_of(d).to_s.include?('Góc lệch') && $records[0][:entity].get_attribute('VGD_BIM_TABLE', 'photo_full').nil?)
+$records[1][:entity].locked = true
+saved.(d, 1, 'full', {'view' => 'front'})
+ok('món bị khóa: không lưu được, báo rõ', error_of(d).to_s.include?('khóa') && $records[1][:entity].get_attribute('VGD_BIM_TABLE', 'photo_full').nil?)
+saved.(d, 99, 'full', {'view' => 'front'})
+ok('dòng không có trong bảng: báo bảng đã cũ', error_of(d).to_s.include?('Bảng đã cũ'))
+saved.(d, 0, 'zzz', {'view' => 'front'})
+ok('loại ảnh lạ bị từ chối khi lưu', error_of(d).to_s.include?('Loại ảnh'))
+# các ảnh do phần thử trên tạo ra không được để lại (thư mục ảnh của test dùng chung giữa các lần chạy, phần xuất Excel ở trên cần món thứ 3 chưa có ảnh)
+%w[901.png 903.png 901_loc.png 903_loc.png].each { |name| FileUtils.rm_f(File.join(I.dir($model), name)) }
 
 # ---- Ảnh vị trí (kind: location) đi cùng lệnh chụp, dán / kéo thả và xóa ----
 $kinds = []

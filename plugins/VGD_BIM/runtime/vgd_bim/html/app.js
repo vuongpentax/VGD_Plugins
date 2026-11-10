@@ -1246,6 +1246,7 @@ window.VGD={receive(event,data){
   if(event==='images_progress')imagesProgress(data);
   if(event==='images_done')imagesDone(data);
   if(event==='images_changed')imagesChanged(data.items);
+  if(event==='photo_settings')receivePhotoSettings(data);
   if(event==='image_data')receiveImageData(data);
   if(event==='tag_rules')receiveTagRules(data);
   if(event==='tag_auto_plan')receiveTagAutoPlan(data);

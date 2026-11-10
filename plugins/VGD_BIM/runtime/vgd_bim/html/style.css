@@ -262,3 +262,7 @@ button.danger{background:var(--danger,#b3412d);border-color:var(--danger,#b3412d
 .grid td.has-grip{position:relative;padding-left:16px}.row-grip{position:absolute;left:1px;top:50%;transform:translateY(-50%);width:12px;text-align:center;font-size:11px;line-height:1;letter-spacing:-2px;color:var(--muted);cursor:grab;opacity:0;user-select:none}.row-grip:active{cursor:grabbing}.grid tr:hover .row-grip,.grid tr.selected .row-grip{opacity:.85}
 .grid tr.dragging{opacity:.45}.grid tr.drop-before td{box-shadow:inset 0 2px 0 var(--accent)}.grid tr.drop-after td{box-shadow:inset 0 -2px 0 var(--accent)}
 .grid th.col-dragging{opacity:.5}.grid th.drop-left{box-shadow:inset 3px 0 0 var(--accent)}.grid th.drop-right{box-shadow:inset -3px 0 0 var(--accent)}
+.cell-tools.top{top:0;bottom:auto;z-index:6}.cell-tool.own{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.photo-pop{position:fixed;z-index:60;width:270px;box-sizing:border-box;padding:10px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 24px #0007;font-size:12px}
+.photo-pop .pop-title{font-weight:700;margin:0 0 6px;color:var(--accent-dark)}.pop-field{display:flex;align-items:center;gap:6px;margin:5px 0}.pop-field label{flex:0 0 118px;color:var(--muted)}.pop-field select,.pop-field input{flex:1;min-width:0;box-sizing:border-box}.pop-field :disabled{opacity:.45}
+.photo-pop .pop-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}

@@ -17,6 +17,7 @@ module VGD
           @dialog.add_action_callback('settings_pick_dir') { |_ctx| safely { settings_pick_dir } }
           @dialog.add_action_callback('images_open_dir') { |_ctx| safely { images_open_dir } }
           @dialog.add_action_callback('images_capture') { |_ctx, payload| safely { images_capture(JSON.parse(payload)) } }
+          @dialog.add_action_callback('image_item_save') { |_ctx, payload| safely { image_item_save(JSON.parse(payload)) } }
           @dialog.add_action_callback('images_cancel') { |_ctx| safely { @capture[:cancel] = true if @capture } }
           @dialog.add_action_callback('image_set') { |_ctx, payload| safely { image_set(JSON.parse(payload)) } }
           @dialog.add_action_callback('image_delete') { |_ctx, pid| safely { image_delete(pid) } }
@@ -81,24 +82,48 @@ module VGD
         # ---- Chụp ảnh (nút trong Bảng khối lượng) ----
         # payload: {'indexes' => [dòng cần chụp] (không có = mọi dòng đang hiện), 'only_missing' => chỉ chụp dòng chưa có ảnh,
         #          'settings' => thiết lập ảnh của preset đang dùng (cỡ, góc nhìn, kiểu, nền); được kiểm tra lại ở đây,
-        #          'kind' => 'full' (ảnh món, mặc định) hoặc 'location' (ảnh vị trí trong công trình)}
+        #          'kind' => 'full' (ảnh món, mặc định) hoặc 'location' (ảnh vị trí trong công trình),
+        #          'iso_side' => bên Iso của nút ◣ ◢ (thắng bên riêng của món),
+        #          'force_view' => true khi bấm nút chụp một lần (Khung nhìn hiện tại / Iso): bỏ qua góc nhìn riêng của món,
+        #          'item_settings' => thông số nhập trong khung ⚙ (chưa cần lưu), dùng thay cho thông số đã lưu của món}
+        # Mỗi món chụp theo thông số riêng đã lưu của nó (PhotoSettings) ghép lên thiết lập của preset; món chưa đặt thì theo preset.
         def images_capture(payload)
           check_model!
           raise 'Đang chụp ảnh. Hãy đợi xong hoặc bấm Dừng.' if @capture
           settings = Preset.settings!(payload.fetch('settings', {}))
           kind = capture_kind!(payload['kind'])
-          iso_side = payload['iso_side'] || 'right'
-          raise 'Hãy chọn bên Iso là trái hoặc phải.' unless Capture::ISO_SIDES.include?(iso_side)
+          iso_side = payload['iso_side']
+          raise 'Hãy chọn bên Iso là trái hoặc phải.' unless iso_side.nil? || Capture::ISO_SIDES.include?(iso_side)
+          inline = payload.key?('item_settings') ? PhotoSettings.sanitize!(payload['item_settings'], kind) : nil
           wanted = payload['indexes'].is_a?(Array) ? table_indexes(payload) : Array(@table_records).each_index.to_a
           jobs = wanted.map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
           jobs.reject! { |index, _| @table_rows[index][kind == :location ? :has_location : :has_image] } if payload['only_missing']
           raise 'Không có đối tượng nào cần chụp.' if jobs.empty?
           raise "Mỗi lần chỉ chụp tối đa #{MAX_CAPTURE_BATCH} đối tượng. Hãy chọn ít hơn." if jobs.size > MAX_CAPTURE_BATCH
-          @capture = {queue: jobs, total: jobs.size, done: 0, errors: [], updated: [], cancel: false, notes: [], settings: settings, iso_side: iso_side, kind: kind}
+          queue = jobs.map do |index, record|
+            own, side = PhotoSettings.apply(settings, inline || PhotoSettings.read(record[:entity], kind), kind, force_view: payload['force_view'] == true)
+            [index, record, own, iso_side || side || 'right']
+          end
+          @capture = {queue: queue, total: queue.size, done: 0, errors: [], updated: [], cancel: false, notes: [], kind: kind}
           release_preview # khung đánh dấu không được lọt vào ảnh
           hide_overlay
-          emit('images_progress', {done: 0, total: jobs.size})
+          emit('images_progress', {done: 0, total: queue.size})
           schedule_capture_step
+        end
+
+        # Lưu (hoặc bỏ, khi settings rỗng) thông số ảnh riêng của một món. payload: {'index' => dòng, 'kind' => 'full' | 'location', 'settings' => {...}}.
+        # Ghi vào dictionary của đối tượng trong một thao tác (một bước hoàn tác); đối tượng bị khóa hoặc dữ liệu sai thì báo lỗi và không ghi.
+        def image_item_save(payload)
+          check_model!
+          kind = capture_kind!(payload['kind'])
+          index = table_indexes('indexes' => [payload['index']]).first
+          record = @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless record[:path].all?(&:valid?)
+          clean = nil
+          Data.transaction(@model, 'VGD_BIM · Thông số ảnh') { clean = PhotoSettings.write(record[:entity], kind, payload.fetch('settings', {})) }
+          @table_rows[index][kind == :location ? :photo_location : :photo_full] = clean
+          emit('photo_settings', {pid: record[:entity].persistent_id, kind: kind.to_s, settings: clean})
+          emit('message', {text: clean.empty? ? 'Đã bỏ thông số ảnh riêng của món này, món theo preset.' : 'Đã lưu thông số ảnh riêng của món này.'})
         end
 
         # Mỗi lần một đối tượng, cách nhau một nhịp, để cửa sổ kịp báo tiến độ và nút Dừng bấm được.
@@ -114,9 +139,9 @@ module VGD
             job[:errors] << 'Mô hình đã thay đổi. Hãy làm mới trước khi tiếp tục.'
             return finish_capture
           end
-          _index, record = job[:queue].shift
+          _index, record, settings, iso_side = job[:queue].shift
           begin
-            result = Capture.shoot(@model, record, job[:settings], iso_side: job[:iso_side], kind: job[:kind])
+            result = Capture.shoot(@model, record, settings, iso_side: iso_side, kind: job[:kind])
             job[:updated] << result
             job[:notes] << result[:note] if result[:note]
           rescue StandardError => error

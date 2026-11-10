@@ -34,9 +34,17 @@ function imageCell(td,row,kind='full'){
   const tools=node('div',undefined,'cell-tools');
   const tool=(text,title,handler)=>{const b=node('button',text,'cell-tool');b.type='button';b.title=title;b.setAttribute('aria-label',title);b.onclick=e=>{e.stopPropagation();handler();};b.ondblclick=e=>e.stopPropagation();return b;};
   const kindArg=place?'location':undefined;
-  tools.append(tool('◣',place?'Chụp vị trí từ bên trái (Iso)':'Chụp Iso từ bên trái',()=>runCapture([row.index],false,'left',kindArg)),tool('◢',place?'Chụp vị trí từ bên phải (Iso)':'Chụp Iso từ bên phải',()=>runCapture([row.index],false,'right',kindArg)),
+  // Hàng nút trên đầu ảnh: ⚙ mở khung thông số ảnh riêng của món (nổi màu khi món đã có thông số riêng).
+  // Ô ảnh quá thấp để chứa hai hàng nút (hàng Gọn, hoặc độ cao tự chọn nhỏ): ⚙ đứng đầu hàng nút dưới thay vì hàng riêng ở trên.
+  const own=row[place?'photo_location':'photo_full'];
+  const gear=tool('⚙','Thông số ảnh riêng của món này',()=>openPhotoPop(row,kind,gear));
+  if(own&&Object.keys(own).length)gear.classList.add('own');
+  const lowPic=(tableState.rowHeight>0?tableState.rowHeight-5:({dense:26,roomy:64}[tableState.density]||46))<40; // hai hàng nút cao 20 + 20
+  if(!lowPic){const top=node('div',undefined,'cell-tools top');top.append(gear);holder.append(top);}
+  tools.append(tool('◉','Chụp view hiện tại',()=>runCapture([row.index],false,undefined,kindArg,{view:'current'})),tool('◣',place?'Chụp vị trí từ bên trái (Iso)':'Chụp Iso từ bên trái',()=>runCapture([row.index],false,'left',kindArg)),tool('◢',place?'Chụp vị trí từ bên phải (Iso)':'Chụp Iso từ bên phải',()=>runCapture([row.index],false,'right',kindArg)),
     tool('↻',row[f.has]?'Chụp lại':'Chụp ảnh',()=>runCapture([row.index],false,undefined,kindArg)),tool('⋯','Chọn ảnh…',()=>pickImageFile(row.pid,kind)));
   if(row[f.has])tools.append(tool('×',place?'Xóa ảnh vị trí':'Xóa ảnh',()=>call(place?'image_location_delete':'image_delete',row.pid)));
+  if(lowPic)tools.prepend(gear);
   holder.append(tools);
   td.title=place?'Kéo thả ảnh vào đây để dùng làm ảnh vị trí':'Kéo thả ảnh vào đây hoặc chọn ô rồi dán (Ctrl+V)';
   bindImageTarget(td,row.pid,kind);
@@ -134,12 +142,17 @@ function syncBusy(){
 // Thiết lập ảnh của preset đang dùng đi kèm lệnh chụp; phía Ruby kiểm tra lại.
 // isoSide ('left' | 'right'): chụp một lần theo góc Iso từ bên đó, bất kể góc nhìn của preset (nút ◣ ◢ trong ô ảnh).
 // kind 'location': chụp ảnh vị trí trong công trình (không cô lập, vùng nhìn rộng theo image_location_scale) cho cột Ảnh vị trí.
-function runCapture(indexes,onlyMissing,isoSide,kind){
+// extra.view: chụp một lần theo góc nhìn đó (nút ◉ Khung nhìn hiện tại) bất kể thiết lập preset và góc nhìn riêng của món; extra.itemSettings: thông số trong khung ⚙, dùng thay cho thông số đã lưu của món.
+function runCapture(indexes,onlyMissing,isoSide,kind,extra){
   const s=workSettings();
   const settings={image_width:s.image_width,image_height:s.image_height,image_view:s.image_view,image_style:s.image_style,image_background:s.image_background,image_margin:s.image_margin,image_yaw:s.image_yaw,image_pitch:s.image_pitch,
     image_location_scale:s.image_location_scale,loc_width:s.loc_width,loc_height:s.loc_height,loc_view:s.loc_view,loc_style:s.loc_style,loc_background:s.loc_background,loc_margin:s.loc_margin,loc_yaw:s.loc_yaw,loc_pitch:s.loc_pitch};
-  if(isoSide)settings[kind==='location'?'loc_view':'image_view']='isometric'; // nút ◣ ◢: chụp Iso một lần, không đổi thiết lập của preset
+  const viewKey=kind==='location'?'loc_view':'image_view';
+  if(isoSide)settings[viewKey]='isometric'; // nút ◣ ◢: chụp Iso một lần, không đổi thiết lập của preset
+  if(extra&&extra.view)settings[viewKey]=extra.view;
   const payload={only_missing:!!onlyMissing,settings};
+  if(isoSide||(extra&&extra.view))payload.force_view=true; // bấm nút chụp một lần: bỏ qua góc nhìn riêng của món
+  if(extra&&extra.itemSettings)payload.item_settings=extra.itemSettings;
   if(kind==='location')payload.kind='location';
   if(isoSide)payload.iso_side=isoSide;
   if(indexes)payload.indexes=indexes;
@@ -162,4 +175,66 @@ function imagesDone(data){
   const head=data.cancelled?`Đã dừng: chụp được ${data.ok}/${data.total} ảnh.`:`Đã chụp ${data.ok}/${data.total} ảnh.`;
   const note=(data.notes&&data.notes.length)?` Lưu ý: ${data.notes.join('; ')}.`:'';
   message((data.errors.length?`${head} Lỗi: ${data.errors.join(' | ')}`:head)+note,data.errors.length>0&&data.ok===0);
+}
+
+// ---- Khung thông số ảnh riêng của một món (nút ⚙ trên đầu ô ảnh) ----
+// Mỗi mục để trống nghĩa là theo preset; Ruby kiểm tra lại và lưu trong chính đối tượng (xem core/photo_settings.rb).
+let photoPop=null;
+function closePhotoPop(){
+  if(photoPop){photoPop.remove();photoPop=null;}
+  document.removeEventListener('mousedown',photoPopOutside,true);document.removeEventListener('keydown',photoPopKey,true);
+}
+function photoPopOutside(e){if(photoPop&&!photoPop.contains(e.target)&&!e.target.closest('.cell-tool'))closePhotoPop();}
+function photoPopKey(e){if(e.key==='Escape')closePhotoPop();}
+function openPhotoPop(row,kind,anchor){
+  closePhotoPop();
+  const place=kind==='location',s=workSettings(),own=(row[place?'photo_location':'photo_full'])||{};
+  const preset=place?{view:s.loc_view,yaw:s.loc_yaw,pitch:s.loc_pitch,margin:s.loc_margin}:{view:s.image_view,yaw:s.image_yaw,pitch:s.image_pitch,margin:s.image_margin};
+  const pop=node('div',undefined,'photo-pop');pop.setAttribute('role','dialog');
+  pop.append(node('div',place?'Thông số ảnh vị trí của món này':'Thông số ảnh chính của món này','pop-title'));
+  const field=(label,control)=>{const line=node('div',undefined,'pop-field');line.append(node('label',label),control);pop.append(line);return control;};
+  const select=(label,aria,options,value)=>{
+    const sel=node('select');sel.setAttribute('aria-label',aria);options.forEach(([v,t])=>sel.append(new Option(t,v)));sel.value=value||'';
+    return field(label,sel);
+  };
+  const number=(label,aria,min,max,value,hint)=>{
+    const input=node('input');input.type='number';input.min=String(min);input.max=String(max);input.step='1';input.placeholder=String(hint);
+    input.value=value==null?'':String(value);input.setAttribute('aria-label',aria);
+    return field(label,input);
+  };
+  const view=select('Góc nhìn','Góc nhìn riêng',[['','Theo preset'],['current','Khung nhìn hiện tại'],['isometric','Phối cảnh iso'],['front','Chính diện']],own.view);
+  const side=select('Bên Iso','Bên Iso riêng',[['','Theo preset'],['right','Iso phải'],['left','Iso trái']],own.side);
+  const yaw=number('Lệch trái / phải (độ)','Lệch trái / phải riêng',-90,90,own.yaw,preset.yaw);
+  const pitch=number('Góc cao (độ)','Góc cao riêng',-30,80,own.pitch,preset.pitch);
+  const margin=number('Chừa lề (%)','Chừa lề riêng',0,100,own.margin,preset.margin);
+  const scale=place?number('Vùng nhìn (lần)','Vùng nhìn riêng',1,20,own.scale,s.image_location_scale):null;
+  const gate=()=>{const effective=view.value||preset.view;side.disabled=effective!=='isometric';yaw.disabled=pitch.disabled=effective!=='front';};
+  view.onchange=gate;gate();
+  const collect=()=>{
+    const out={};
+    if(view.value)out.view=view.value;
+    if(side.value&&!side.disabled)out.side=side.value;
+    [['yaw',yaw],['pitch',pitch],['margin',margin],['scale',scale]].forEach(([key,input])=>{if(input&&input.value.trim()!==''&&!input.disabled)out[key]=Number(input.value);});
+    return out;
+  };
+  const save=settings=>call('image_item_save',JSON.stringify({index:row.index,kind,settings}));
+  const buttons=node('div',undefined,'pop-actions');
+  buttons.append(
+    button('Lưu',()=>{save(collect());closePhotoPop();},'primary'),
+    button('Lưu và chụp',()=>{const own=collect();save(own);closePhotoPop();runCapture([row.index],false,undefined,kind,{itemSettings:own});}),
+    button('Về theo preset',()=>{save({});closePhotoPop();}),
+    button('Đóng',closePhotoPop));
+  pop.append(buttons);
+  document.body.append(pop);photoPop=pop;
+  const box=anchor.getBoundingClientRect(),width=pop.offsetWidth,height=pop.offsetHeight;
+  pop.style.left=Math.max(8,Math.min(innerWidth-width-8,box.left-4))+'px';
+  pop.style.top=Math.max(8,Math.min(innerHeight-height-8,box.bottom+4))+'px';
+  document.addEventListener('mousedown',photoPopOutside,true);document.addEventListener('keydown',photoPopKey,true);
+  view.focus();
+}
+// Ruby báo đã lưu / bỏ thông số riêng của một món: cập nhật dòng rồi vẽ lại bảng.
+function receivePhotoSettings(data){
+  const key=data.kind==='location'?'photo_location':'photo_full';
+  if(tableState.data)tableState.data.rows.filter(r=>r.pid===data.pid).forEach(r=>{r[key]=data.settings||{};});
+  if(tableState.data&&$('grid-host'))renderGrid($('grid-host'));
 }

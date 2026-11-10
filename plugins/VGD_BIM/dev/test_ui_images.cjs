@@ -128,10 +128,10 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page2.close();
 
   // ---- Nút nhỏ khi rê chuột vào ảnh ----
-  ok(await page.locator('.grid tbody tr').nth(1).locator('.cell-tool').count()===4 && await page.locator('.grid tbody tr').nth(0).locator('.cell-tool').count()===5,'ô ảnh có nút Iso trái, Iso phải, Chụp lại, Chọn ảnh, và Xóa ảnh (chỉ khi đã có ảnh)');
-  ok(JSON.stringify(await page.locator('.grid tbody tr').nth(0).locator('.cell-tool').evaluateAll(list=>list.map(b=>b.title)))===JSON.stringify(['Chụp Iso từ bên trái','Chụp Iso từ bên phải','Chụp lại','Chọn ảnh…','Xóa ảnh']),'hai nút ký hiệu Iso trái / phải đứng trước nút chụp lại');
+  ok(await page.locator('.grid tbody tr').nth(1).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"])').count()===5 && await page.locator('.grid tbody tr').nth(0).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"])').count()===6,'ô ảnh có nút chụp view hiện tại, Iso trái, Iso phải, Chụp lại, Chọn ảnh, và Xóa ảnh (chỉ khi đã có ảnh)');
+  ok(JSON.stringify(await page.locator('.grid tbody tr').nth(0).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"])').evaluateAll(list=>list.map(b=>b.title)))===JSON.stringify(['Chụp view hiện tại','Chụp Iso từ bên trái','Chụp Iso từ bên phải','Chụp lại','Chọn ảnh…','Xóa ảnh']),'nút chụp view hiện tại và hai nút ký hiệu Iso trái / phải đứng trước nút chụp lại');
   await page.locator('.grid tbody tr').nth(0).locator('td.img').hover();
-  ok(await page.locator('.grid tbody tr').nth(0).evaluate(tr=>{const pic=tr.querySelector('.cell-pic').getBoundingClientRect(),mid=(pic.left+pic.right)/2;const tools=[...tr.querySelectorAll('.cell-tool')];const rects=tools.map(b=>b.getBoundingClientRect());const lo=Math.min(...rects.map(r=>r.left)),hi=Math.max(...rects.map(r=>r.right));return tools.length===5 && Math.abs((lo+hi)/2-mid)<2 && rects.every(r=>r.top>=pic.top-0.5&&r.bottom<=pic.bottom+0.5) && tools.every((b,i)=>document.elementFromPoint((rects[i].left+rects[i].right)/2,(rects[i].top+rects[i].bottom)/2)===b);}),'khi rê chuột: 5 nút nằm một hàng, căn giữa ô ảnh, bấm được từng nút (không bị ô khác che), kể cả ở hàng Gọn');
+  ok(await page.locator('.grid tbody tr').nth(0).evaluate(tr=>{const pic=tr.querySelector('.cell-pic').getBoundingClientRect(),mid=(pic.left+pic.right)/2;const tools=[...tr.querySelectorAll('.cell-tool')];const rects=tools.map(b=>b.getBoundingClientRect());const lo=Math.min(...rects.map(r=>r.left)),hi=Math.max(...rects.map(r=>r.right));return tools.length===7 && Math.abs((lo+hi)/2-mid)<2 && rects.every(r=>r.top>=pic.top-0.5&&r.bottom<=pic.bottom+0.5) && tools.every((b,i)=>document.elementFromPoint((rects[i].left+rects[i].right)/2,(rects[i].top+rects[i].bottom)/2)===b);}),'khi rê chuột: 7 nút (⚙ cùng hàng vì ô thấp) nằm một hàng, căn giữa ô ảnh, bấm được từng nút (không bị ô khác che), kể cả ở hàng Gọn');
   await clear();
   await page.locator('.grid tbody tr').nth(1).locator('td.img').hover();
   await page.locator('.grid tbody tr').nth(1).locator('.cell-tool[title="Chụp ảnh"]').click();
@@ -1012,7 +1012,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   const locCell=i=>page.locator('.grid tbody tr').nth(i).locator('td[data-key="image_location"]');
   ok(await page.locator('.grid thead th[data-key="image_location"]').count()===1 && (await page.locator('.grid thead th[data-key="image_location"]').innerText()).includes('Ảnh vị trí'),'cột Ảnh vị trí có trong bảng (bật bằng Chọn cột)');
   ok(await locCell(0).locator('img.cell-img[data-kind="location"]').count()===1 && await locCell(1).locator('img').count()===0 && await locCell(1).locator('.cell-empty').count()===1,'dòng có ảnh vị trí hiện ảnh, dòng chưa có hiện dấu +');
-  ok(JSON.stringify(await locCell(0).locator('.cell-tool').evaluateAll(l=>l.map(b=>b.title)))===JSON.stringify(['Chụp vị trí từ bên trái (Iso)','Chụp vị trí từ bên phải (Iso)','Chụp lại','Chọn ảnh…','Xóa ảnh vị trí']) && await locCell(1).locator('.cell-tool').count()===4,'ô ảnh vị trí có nút chụp trái, phải, chụp lại, chọn ảnh, xóa (xóa chỉ khi đã có ảnh)');
+  ok(JSON.stringify(await locCell(0).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"])').evaluateAll(l=>l.map(b=>b.title)))===JSON.stringify(['Chụp view hiện tại','Chụp vị trí từ bên trái (Iso)','Chụp vị trí từ bên phải (Iso)','Chụp lại','Chọn ảnh…','Xóa ảnh vị trí']) && await locCell(1).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"])').count()===5,'ô ảnh vị trí có nút chụp trái, phải, chụp lại, chọn ảnh, xóa (xóa chỉ khi đã có ảnh)');
   await clear();await locCell(0).hover();await locCell(0).getByRole('button',{name:'Chụp vị trí từ bên trái (Iso)'}).click();
   let lc=await json('images_capture');
   ok(lc && lc.kind==='location' && lc.iso_side==='left' && JSON.stringify(lc.indexes)==='[0]' && lc.settings.image_location_scale===4,'nút ◣ trên ô ảnh vị trí: chụp ảnh vị trí bên trái, kèm hệ số vùng nhìn của preset');
@@ -1098,6 +1098,67 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   lc=await json('images_capture');
   ok(lc&&lc.kind==='location'&&lc.settings.loc_view==='front'&&lc.settings.loc_yaw===-90&&lc.settings.loc_pitch===0&&lc.settings.image_yaw===-35&&!('iso_side' in lc),'nút ↻ ảnh vị trí: chụp theo thiết lập preset (Chính diện, góc lệch -90, góc cao 0), ảnh chính giữ góc lệch riêng -35');
   await page.click('#preset-btn');
+
+  // ---- Nút ◉ chụp view hiện tại và nút ⚙ thông số ảnh riêng của từng món ----
+  await receive('table',table());
+  if(await page.locator('#preset-panel').isVisible())await page.click('#preset-btn');
+  await page.evaluate(()=>{tableState.settings={...workSettings(),image_view:'isometric',image_yaw:0,image_pitch:0,loc_view:'isometric',loc_yaw:0,loc_pitch:0};}); // các phép thử trước đã đổi thiết lập preset
+  await page.evaluate(()=>{tableState.density='';tableState.rowHeight=0;tableView(tableState.data);}); // mật độ và độ cao hàng thường (các phép thử trước có thể để hàng Gọn hoặc độ cao thấp)
+  const mainCell=i=>page.locator('.grid tbody tr').nth(i).locator('td[data-key="image"]');
+  await mainCell(0).hover();
+  ok(await mainCell(0).locator('.cell-tools.top .cell-tool').count()===1&&await mainCell(0).locator('.cell-tools.top .cell-tool').getAttribute('title')==='Thông số ảnh riêng của món này','ô ảnh chính có nút ⚙ ở hàng nút trên đầu ảnh');
+  ok(await mainCell(0).evaluate(td=>{const pic=td.querySelector('.cell-pic').getBoundingClientRect(),top=td.querySelector('.cell-tools.top').getBoundingClientRect(),bottom=td.querySelector('.cell-tools:not(.top)').getBoundingClientRect();return Math.abs(top.top-pic.top)<3&&bottom.bottom>pic.bottom-3&&Math.abs((top.left+top.right)/2-(pic.left+pic.right)/2)<2;}),'nút ⚙ nằm trên đầu ảnh, căn giữa; hàng nút chụp vẫn ở dưới');
+  await clear();await mainCell(0).getByRole('button',{name:'Chụp view hiện tại'}).click();
+  let cur=await json('images_capture');
+  ok(cur&&!cur.kind&&cur.settings.image_view==='current'&&cur.force_view===true&&!('iso_side' in cur)&&JSON.stringify(cur.indexes)==='[0]','nút ◉ ở ô ảnh chính: chụp khung nhìn hiện tại một lần (ép góc nhìn), không gửi bên Iso');
+  await clear();await locCell(0).hover();await locCell(0).getByRole('button',{name:'Chụp view hiện tại'}).click();
+  cur=await json('images_capture');
+  ok(cur&&cur.kind==='location'&&cur.settings.loc_view==='current'&&cur.force_view===true&&cur.settings.image_view!=='current','nút ◉ ở ô ảnh vị trí: chụp khung nhìn hiện tại vào ảnh vị trí (loc_view), không đổi góc nhìn của ảnh chính');
+  for(const [name,setup] of [['hàng Gọn',()=>{tableState.density='dense';tableState.rowHeight=0;}],['độ cao hàng tự chọn thấp (30)',()=>{tableState.density='';tableState.rowHeight=30;}]]){
+    await page.evaluate(`(${setup.toString()})();tableView(tableState.data);`);
+    await mainCell(0).hover();
+    ok(await mainCell(0).locator('.cell-tools.top').count()===0&&await mainCell(0).evaluate(td=>{const tools=[...td.querySelectorAll('.cell-tools .cell-tool')],gear=tools[0],box=gear.getBoundingClientRect();return gear.title==='Thông số ảnh riêng của món này'&&tools.length===7&&document.elementFromPoint((box.left+box.right)/2,(box.top+box.bottom)/2)===gear;}),name+': ô quá thấp cho hai hàng nút nên ⚙ đứng đầu hàng nút dưới và bấm được');
+  }
+  await page.evaluate(()=>{tableState.density='';tableState.rowHeight=0;tableView(tableState.data);});
+  // Khung thông số
+  await mainCell(0).hover();await mainCell(0).getByRole('button',{name:'Thông số ảnh riêng của món này'}).click();
+  const pop=page.locator('.photo-pop');
+  ok(await pop.count()===1&&(await pop.locator('.pop-title').innerText())==='Thông số ảnh chính của món này'&&await pop.locator('[aria-label="Vùng nhìn riêng"]').count()===0,'bấm ⚙ ở ảnh chính: mở khung thông số (không có ô Vùng nhìn)');
+  const pf=label=>pop.locator(`[aria-label="${label}"]`);
+  ok(await pf('Góc nhìn riêng').inputValue()===''&&await pf('Bên Iso riêng').isEnabled()&&await pf('Lệch trái / phải riêng').isDisabled()&&await pf('Góc cao riêng').isDisabled(),'preset để Iso: khung mở với góc nhìn theo preset, ô bên Iso mở, ô góc lệch và góc cao khóa');
+  await pf('Góc nhìn riêng').selectOption('front');
+  ok(await pf('Bên Iso riêng').isDisabled()&&await pf('Lệch trái / phải riêng').isEnabled()&&await pf('Góc cao riêng').isEnabled(),'chọn Chính diện riêng: mở ô góc lệch và góc cao, khóa bên Iso');
+  await pf('Lệch trái / phải riêng').fill('20');await pf('Góc cao riêng').fill('10');await pf('Chừa lề riêng').fill('30');
+  await clear();await pop.getByRole('button',{name:'Lưu',exact:true}).click();
+  let sv=await json('image_item_save');
+  ok(sv&&sv.index===0&&sv.kind==='full'&&JSON.stringify(sv.settings)==='{"view":"front","yaw":20,"pitch":10,"margin":30}'&&await pop.count()===0&&!(await calls('images_capture')).length,'Lưu: gửi đúng thông số đã đặt cho món, đóng khung, không chụp');
+  await receive('photo_settings',{pid:900,kind:'full',settings:{view:'front',yaw:20,pitch:10,margin:30}});
+  await mainCell(0).hover();
+  ok(await mainCell(0).locator('.cell-tools.top .cell-tool.own').count()===1&&await mainCell(1).locator('.cell-tools.top .cell-tool.own').count()===0,'Ruby báo đã lưu: nút ⚙ của món đó nổi màu, món khác không');
+  await mainCell(0).getByRole('button',{name:'Thông số ảnh riêng của món này'}).click();
+  ok(await pf('Góc nhìn riêng').inputValue()==='front'&&await pf('Lệch trái / phải riêng').inputValue()==='20'&&await pf('Góc cao riêng').inputValue()==='10'&&await pf('Chừa lề riêng').inputValue()==='30','mở lại khung: hiện đúng thông số đã lưu của món');
+  await clear();await pop.getByRole('button',{name:'Lưu và chụp'}).click();
+  const calls2=await page.evaluate(()=>window.calls.map(c=>c.name));
+  const capNow=await json('images_capture');
+  ok(JSON.stringify(calls2)==='["image_item_save","images_capture"]'&&capNow&&JSON.stringify(capNow.item_settings)==='{"view":"front","yaw":20,"pitch":10,"margin":30}'&&JSON.stringify(capNow.indexes)==='[0]'&&!('iso_side' in capNow)&&!capNow.force_view,'Lưu và chụp: lưu rồi chụp kèm đúng thông số trong khung (dùng thay thông số đã lưu), không ép góc nhìn');
+  await mainCell(0).hover();await mainCell(0).getByRole('button',{name:'Thông số ảnh riêng của món này'}).click();
+  await clear();await pop.getByRole('button',{name:'Về theo preset'}).click();
+  sv=await json('image_item_save');
+  ok(sv&&sv.index===0&&JSON.stringify(sv.settings)==='{}','Về theo preset: gửi thông số rỗng (bỏ thông số riêng)');
+  await receive('photo_settings',{pid:900,kind:'full',settings:{}});
+  await mainCell(0).hover();
+  ok(await mainCell(0).locator('.cell-tools.top .cell-tool.own').count()===0,'đã bỏ thông số riêng: nút ⚙ hết nổi màu');
+  await mainCell(0).getByRole('button',{name:'Thông số ảnh riêng của món này'}).click();
+  await page.keyboard.press('Escape');
+  ok(await pop.count()===0,'Esc đóng khung thông số');
+  await locCell(0).hover();await locCell(0).getByRole('button',{name:'Thông số ảnh riêng của món này'}).click();
+  ok((await pop.locator('.pop-title').innerText())==='Thông số ảnh vị trí của món này'&&await pf('Vùng nhìn riêng').count()===1&&await pf('Vùng nhìn riêng').getAttribute('placeholder')==='1','bấm ⚙ ở ảnh vị trí: khung có thêm ô Vùng nhìn (gợi ý theo preset)');
+  await pf('Vùng nhìn riêng').fill('6');await clear();await pop.getByRole('button',{name:'Lưu',exact:true}).click();
+  sv=await json('image_item_save');
+  ok(sv&&sv.kind==='location'&&JSON.stringify(sv.settings)==='{"scale":6}','ảnh vị trí: lưu vùng nhìn riêng');
+  await locCell(0).hover();await locCell(0).getByRole('button',{name:'Thông số ảnh riêng của món này'}).click();
+  await page.mouse.click(5,5);
+  ok(await pop.count()===0,'bấm ra ngoài khung thì khung đóng');
 
   // ---- Đổi ngôn ngữ thì tải lại cửa sổ ----
   await receive('config',config('table'));

@@ -82,6 +82,13 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   if(!(ids.length>1&&await page.locator('#order-reset').count()===1&&await page.locator('.row-grip').count()>0))throw Error('Manual row order controls (grip, clear button) did not show in the table fixture');
   await page.evaluate(()=>{for(const p of ['columns','presets','group','rename']){tableState.panel=p;tableView(tableState.data);}});
   for(const p of ['columns','presets','group','rename']){await page.evaluate(p=>{tableState.panel=p;tableView(tableState.data);},p);await scan('Bảng ('+p+')');}
+  // Khung thông số ảnh riêng của một món (nút ⚙): ảnh chính và ảnh vị trí
+  await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
+  for(const [column,label] of [['image','Khung thông số ảnh chính'],['image_location','Khung thông số ảnh vị trí']]){
+    const opened=await page.evaluate(column=>{const td=document.querySelector(`.grid tbody tr td[data-key="${column}"]`);if(!td)return false;const gear=[...td.querySelectorAll('.cell-tool')].find(b=>b.textContent==='⚙');if(!gear)return false;gear.click();return !!document.querySelector('.photo-pop');},column);
+    if(opened){await scan(label);await page.keyboard.press('Escape');}
+    else if(column==='image')throw Error('Photo settings gear (⚙) did not open the panel in the table fixture');
+  }
   await page.evaluate(()=>{tableState.rename.preview={counts:{ok:2,same:1,locked:1,empty:1,long:1,duplicate:1},rows:[{old:'a',new:'b',status:'ok',duplicate:true},{old:'',new:'',status:'empty'},{old:'x',new:'x',status:'same'},{old:'y',new:'y',status:'locked'},{old:'z',new:'z',status:'long'}]};tableState.panel='rename';tableView(tableState.data);});await scan('Bảng (xem trước đổi tên)');
   await page.evaluate(()=>{tableState.panel=null;tableState.groupBy='parent';tableState.merge=true;tableView(tableState.data);});await scan('Bảng (nhóm)');
   for(const g of ['entity','definition','instance','material','tag','tag_group','status']){await page.evaluate(g=>{tableState.groupBy=g;tableView(tableState.data);},g);await scan('Bảng (nhóm '+g+')');}
