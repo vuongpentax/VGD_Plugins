@@ -51,7 +51,7 @@ function init(){
  $('btnLoad').style.display='inline-flex';$('pend').style.display='inline';TL=aim(R($('btnLoad')),.72);$('btnLoad').style.display='none';$('pend').style.display='none';
  $('out').style.opacity=1;$('out').textContent=MSG.on;const mo=R($('out'));$('out').style.opacity=0;
  const mb=$('mb');mb.style.opacity=1;const mr=R(mb);TY=aim(R($('mbYes')),.7);mb.style.opacity=0;
- Z1=zoomTo(mo.x+mo.w/2,mo.y+mo.h/2,1.9,640,360);Z2=zoomTo(mr.x+mr.w/2,mr.y+mr.h/2,1.55,640,405);
+ Z1=fitZoom(mo,1.6,640,360);Z2=fitZoom(mr,1.5,640,405);
  M=[{a:.8,b:2.2,f:{x:1010,y:690},t:TS1,arc:-80},{a:5.0,b:5.8,f:TS1,t:{x:860,y:560},arc:30},{a:8.6,b:10.0,f:{x:860,y:560},t:TS2,arc:-40},
     {a:11.8,b:13.2,f:TS2,t:TL,arc:-30},{a:15.2,b:16.8,f:TL,t:TY,arc:50},{a:20.5,b:21.5,f:TY,t:{x:900,y:560},arc:30}];
  render(0)}

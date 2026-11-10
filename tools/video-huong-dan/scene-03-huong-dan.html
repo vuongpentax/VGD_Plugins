@@ -44,7 +44,7 @@ function init(){
  rd=R($('rowDim'));const rg=R($('btnGuide')),rt=R($('btnTheme')),rp=R($('btnPrint'));
  T1=aim(rg,.72);T2=aim(rt,.78);T3=aim(rp,.78);
  M=[{a:.8,b:2.4,f:{x:1010,y:690},t:T1,arc:-90},{a:4.7,b:5.7,f:T1,t:{x:930,y:430},arc:50},{a:8.5,b:9.8,f:{x:930,y:430},t:T2,arc:40},{a:11.3,b:12.1,f:T2,t:T3,arc:20}];
- Z=zoomTo((rt.x+rp.x+rp.w)/2,rt.y+rt.h/2,2.3,760,330);render(0)}
+ Z=zoomTo((rt.x+rp.x+rp.w)/2,rt.y+rt.h/2,1.9,760,330);render(0)}
 function render(t){
  const c=mix({s:1,x:0,y:0},Z,E(P(t,8.0,8.9))*(1-E(P(t,12.8,13.7))));setWorld(c);
  const open=E(P(t,3.9,4.4));$('center').style.filter=`brightness(${1-.3*open})`;

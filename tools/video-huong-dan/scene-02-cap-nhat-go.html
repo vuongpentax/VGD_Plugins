@@ -50,7 +50,7 @@ function init(){
  rSc=R($('rowSc'));rDim=R($('rowDim'));TU=aim(R($('btnUpd')),.72);TUn=aim(R($('btnUn')),.72);
  const mb=$('mb');mb.style.opacity=1;const mr=R(mb);TY=aim(R($('mbYes')),.7);mb.style.opacity=0;
  const d=$('done');d.style.cssText='opacity:1;height:34px;min-height:34px;border-width:1px';$('ov').style.opacity=1;const dl=R($('dlg')),dn=R(d);d.style.cssText='';$('ov').style.opacity=0;TD=aim(dn,.7);
- Z=zoomTo(mr.x+mr.w/2,mr.y+mr.h/2,2,640,370);
+ Z=fitZoom(mr,1.6,640,370);
  M=[{a:.8,b:2.4,f:{x:1010,y:690},t:TU,arc:-90},{a:4.4,b:5.4,f:TU,t:{x:820,y:520},arc:40},{a:8.6,b:9.6,f:{x:820,y:520},t:TD,arc:30},
     {a:10.8,b:12.4,f:TD,t:TUn,arc:-50},{a:14.6,b:16.2,f:TUn,t:TY,arc:40},{a:19.9,b:21.0,f:TY,t:TD,arc:-40}];
  render(0)}

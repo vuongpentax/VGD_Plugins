@@ -33,7 +33,7 @@ function init(){
  TSrc=aim(R($('selSrc')),.6);TDst=aim(R($('selDst')),.6);TNone=aim(R($('btnNone')),.7);TC1=aim(R($('pc1')),.9);TC2=aim(R($('pc2')),.9);TOv=aim(R($('ovw')),.9);TGo=aim(R($('btnGo')),.72);
  $('out').style.opacity=1;$('out').textContent=OUT;const mo=R($('out'));$('out').style.opacity=0;$('out').textContent='';
  const ro=R($('ovwRow'));
- Z1=zoomTo(ro.x+ro.w/2,ro.y+ro.h/2,2.1,640,380);Z2=zoomTo(mo.x+mo.w/2,mo.y+mo.h/2,1.9,640,370);
+ Z1=fitZoom(ro,1.6,640,380);Z2=fitZoom(mo,1.6,640,370);
  M=[{a:.8,b:2.0,f:{x:1010,y:690},t:TSrc,arc:-80},{a:2.8,b:3.6,f:TSrc,t:TDst,arc:-20},{a:4.6,b:5.8,f:TDst,t:TNone,arc:30},{a:6.6,b:7.8,f:TNone,t:TC1,arc:-30},{a:8.6,b:9.4,f:TC1,t:TC2,arc:-20},
     {a:10.4,b:11.4,f:TC2,t:TOv,arc:30},{a:17.2,b:19.2,f:TOv,t:TGo,arc:-40},{a:21.6,b:22.4,f:TGo,t:{x:860,y:540},arc:30}];
  render(0)}

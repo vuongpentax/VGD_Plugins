@@ -39,7 +39,7 @@ function init(){
  TTab=aim(R($('tabM')),.6);TCk=aim(R($('pc3')),.9);TExp=aim(R($('btnExp')),.72);rExp=R($('btnExp'));
  $('out').style.opacity=0;$('pm').style.opacity=0;$('out').textContent='';
  const sd=$('sd');sd.style.opacity=1;const sr=R(sd);TSave=aim(R($('sdSave')),.7);sd.style.opacity=0;
- Z=zoomTo(sr.x+sr.w/2,sr.y+sr.h/2,1.55,640,400);
+ Z=fitZoom(sr,1.5,640,400);
  M=[{a:.8,b:2.2,f:{x:1010,y:690},t:TTab,arc:-80},{a:3.8,b:5.0,f:TTab,t:TCk,arc:-40},{a:6.2,b:7.6,f:TCk,t:TExp,arc:30},{a:9.2,b:11.4,f:TExp,t:TSave,arc:60},{a:12.8,b:13.8,f:TSave,t:{x:800,y:560},arc:-30}];
  render(0)}
 function render(t){

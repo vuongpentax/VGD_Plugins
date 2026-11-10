@@ -45,7 +45,7 @@ function init(){
  rd=R($('rowDim'));TI=aim(R($('btnInstall')),.72);
  // hộp thoại đang hiện (opacity 0) vẫn đo được vị trí để đặt camera và con trỏ
  const d=$('done');d.style.cssText='opacity:1;height:34px;min-height:34px;border-width:1px';const dl=R($('dlg')),dn=R(d);d.style.cssText='';TD=aim(dn,.7);
- Z=zoomTo(dl.x+dl.w/2,dl.y+dl.h/2,1.8,640,405);
+ Z=fitZoom(dl,1.5,640,405);
  M=[{a:.8,b:2.4,f:{x:1010,y:690},t:TI,arc:-90},{a:4.4,b:5.6,f:TI,t:{x:820,y:520},arc:40},{a:14.8,b:16.0,f:{x:820,y:520},t:TD,arc:30},{a:17.4,b:19.2,f:TD,t:{x:960,y:560},arc:-30}];
  render(0)}
 function render(t){

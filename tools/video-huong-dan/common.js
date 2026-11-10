@@ -32,3 +32,5 @@ const MIG_PANEL='<div class="vr"><span>Từ bản<span class="selbox" id="selSrc
  +'<div class="lst" id="plist">'+PLUG.map((n,i)=>`<div class="mr" id="pr${i}"><span class="cbx" id="pc${i}"></span><div class="nm">${n}</div></div>`).join('')+'</div><div class="out" id="out"></div>';
 // đặt dấu chọn cho từng plugin và cập nhật dòng "Đã chọn n/4"
 function setChecks(on){on.forEach((v,i)=>$('pc'+i).className='cbx'+(v?' on':''));$('cnt').textContent='Đã chọn '+on.filter(Boolean).length+'/'+on.length}
+// Zoom vừa đủ để cả vùng r nằm trọn trong khung hình (chừa lề pad mỗi bên); maxS là mức zoom tối đa
+const fitZoom=(r,maxS,tx,ty,pad=80)=>zoomTo(r.x+r.w/2,r.y+r.h/2,Math.min(maxS,(1280-2*pad)/r.w),tx,ty);
