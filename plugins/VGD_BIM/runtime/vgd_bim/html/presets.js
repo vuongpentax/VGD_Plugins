@@ -84,7 +84,7 @@ function presetPanel(panel){
   const scale=node('div',undefined,'pp-row');
   const scaleInput=node('input');scaleInput.type='number';scaleInput.min='1';scaleInput.max='20';scaleInput.step='1';scaleInput.value=String(s.image_location_scale);
   scaleInput.setAttribute('aria-label','Vùng nhìn ảnh vị trí (lần)');scaleInput.title='Ảnh vị trí nhìn vùng quanh món rộng gấp bao nhiêu lần kích thước món: 1 = đúng như ảnh Iso, 2 = gần, 4 = vừa, 10 = xa (thấy cả căn phòng).';
-  scaleInput.onchange=()=>{const v=Math.min(20,Math.max(1,Math.round(Number(scaleInput.value)||4)));scaleInput.value=String(v);setSetting('image_location_scale',v);};
+  scaleInput.onchange=()=>{const n=Number(scaleInput.value),v=Math.min(20,Math.max(1,Math.round(scaleInput.value.trim()!==''&&Number.isFinite(n)?n:4))); /* ô trống hoặc không phải số: về 4; số 0 trở xuống: về 1 */scaleInput.value=String(v);setSetting('image_location_scale',v);};
   scale.append(node('label','Vùng nhìn ảnh vị trí (lần)'),scaleInput);left.append(scale);
   const bg=node('div',undefined,'pp-row');bg.append(selectOf(c.backgrounds.map(v=>[v,BACKGROUND_LABELS[v]||v]),s.image_background,'Nền ảnh',v=>setSetting('image_background',v)));left.append(bg);
   const folder=node('div',undefined,'pp-row pp-folder');
