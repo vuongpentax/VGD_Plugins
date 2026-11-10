@@ -14,7 +14,9 @@ module VGD; module BIM; def self.log(m); end
   module Data
     def self.supported?(e); e.is_a?(Sketchup::Group); end
     def self.write(entity, values, source); $writes << [entity, values, source]; end
-    def self.source(_entity); 'VGD'; end
+    def self.source(entity); $vgd_data.key?(entity) ? 'VGD' : 'RAW'; end
+    def self.read(entity); $vgd_data.fetch(entity, {}); end
+    def self.has_data?(entity); $vgd_data.key?(entity); end
     # Như Data.transaction thật: một bước hoàn tác cho cả khối
     def self.transaction(model, name = nil); $transactions << name; yield; end
   end
@@ -37,7 +39,9 @@ module VGD; module BIM; def self.log(m); end
 end; end
 $transactions = []
 $writes = []
+$vgd_data = {}
 require File.join(ROOT, 'core/settings')
+%w[core/measure core/schema core/quantity].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
@@ -525,5 +529,65 @@ $model = OrderModel.new
 stale_order = begin; od.table_order({'order' => [1]}); nil; rescue StandardError => e; e.message; end
 ok('table_order: model đã đổi thì từ chối, không ghi', stale_order.to_s.include?('làm mới') && VGD::BIM::RowOrder.read($model) == [])
 $model = ORIGINAL_MODEL
+
+# Cách tính suy ra từ tag: đổi theo tag bằng nhấp đúp ô Cách tính, và ghi vào món (chỉ mục còn trống)
+$vgd_data = {}
+class CalcEnt < Sketchup::Group
+  attr_accessor :name, :locked
+  def initialize(name, locked = false); @name = name; @locked = locked; end
+  def valid?; true; end
+  def locked?; @locked; end
+end
+cm = EditModel.new
+$model = cm
+cents = [CalcEnt.new('Tường'), CalcEnt.new('Cửa'), CalcEnt.new('Ghế', true), CalcEnt.new('Trơn')]
+crecs = cents.each_with_index.map { |e, i| {entity: e, path: [e], locked: false, index: i} }
+crows = [{index: 0, tag: 'A. WALL', calc_category: 'architecture', calc_method: 'area'}, {index: 1, tag: 'A. DOOR', calc_category: 'architecture', calc_method: 'count'},
+         {index: 2, tag: 'I. CHAIR', calc_category: 'furniture', calc_method: 'count'}, {index: 3, tag: '', calc_category: 'other', calc_method: 'count'}]
+cd = D.allocate
+cd.instance_variable_set(:@model, cm)
+cd.instance_variable_set(:@table_rows, crows)
+cd.instance_variable_set(:@table_records, crecs)
+ccalls = []
+cd.define_singleton_method(:emit) { |ev, payload| ccalls << [ev, payload] }
+cd.define_singleton_method(:table_build) { ccalls << [:build] }
+cd.define_singleton_method(:show_outline) { nil }
+overrides_before = VGD::BIM::Quantity.overrides
+cd.table_edit({'indexes' => [0], 'field' => 'calc_method', 'value' => 'length'})
+ok('đổi cách tính theo tag: lưu ghi đè của tag đó, không ghi vào món, bảng dựng lại, báo kết quả', VGD::BIM::Quantity.overrides[VGD::BIM::Quantity.key('A. WALL')] == 'length' && $writes.empty? && ccalls.any? { |c| c[0] == :build } && ccalls.any? { |c| c[0] == 'message' && c[1][:text].include?('A. WALL') })
+cd.table_edit({'indexes' => [0, 1], 'field' => 'calc_method', 'value' => 'area'})
+ok('đổi cho nhiều dòng: áp cho từng tag khác nhau của các dòng', VGD::BIM::Quantity.overrides.values_at(VGD::BIM::Quantity.key('A. WALL'), VGD::BIM::Quantity.key('A. DOOR')) == %w[area area])
+cd.table_edit({'indexes' => [0, 1], 'field' => 'calc_method', 'value' => ''})
+ok('giá trị rỗng: bỏ ghi đè của các tag', VGD::BIM::Quantity.overrides == overrides_before)
+bad = ->(payload) { begin; cd.table_edit(payload); nil; rescue StandardError => e; e.message; end }
+ok('dòng chưa có tag: báo cần gắn tag trước', bad.call({'indexes' => [3], 'field' => 'calc_method', 'value' => 'area'}).to_s.include?('chưa có tag'))
+ok('cách tính lạ bị từ chối, không đổi ghi đè', bad.call({'indexes' => [0], 'field' => 'calc_method', 'value' => 'zzz'}).to_s.include?('Cách tính') && VGD::BIM::Quantity.overrides == overrides_before)
+ok('đối tượng bị khóa vẫn đổi được cách tính theo tag (không ghi vào món)', (cd.table_edit({'indexes' => [2], 'field' => 'calc_method', 'value' => 'volume'}); VGD::BIM::Quantity.overrides[VGD::BIM::Quantity.key('I. CHAIR')] == 'volume'))
+VGD::BIM::Quantity.set_override('I. CHAIR', '')
+# Ghi vào món
+$transactions.clear; $writes.clear; ccalls.clear
+$vgd_data[cents[1]] = {category: 'furniture', quantity_method: '', unit: '', include_boq: true} # món đã có dữ liệu, còn trống cách tính
+cd.table_commit_calc({'indexes' => [0, 1, 2, 3]})
+ok('ghi vào món: một thao tác hoàn tác, bỏ qua món khóa, chỉ ghi mục còn trống, nguồn MAPPED cho món chưa có dữ liệu', $transactions == ['VGD_BIM · Ghi cách tính vào món'] && $writes.size == 3 && $writes.none? { |w| w[0].equal?(cents[2]) })
+wall_write = $writes.find { |w| w[0].equal?(cents[0]) }
+door_write = $writes.find { |w| w[0].equal?(cents[1]) }
+plain_write = $writes.find { |w| w[0].equal?(cents[3]) }
+ok('món chưa có dữ liệu: ghi hạng mục, cách tính, đơn vị theo tag (tường m2)', wall_write[1] == {category: 'architecture', quantity_method: 'area', unit: 'm2'} && wall_write[2] == 'MAPPED')
+ok('món đã có hạng mục: không ghi đè hạng mục, chỉ bổ sung cách tính và đơn vị, giữ nguồn cũ', door_write[1] == {quantity_method: 'count', unit: 'pcs'} && door_write[2] == 'VGD')
+ok('món không tag: ghi theo mặc định (cái)', plain_write[1] == {category: 'other', quantity_method: 'count', unit: 'pcs'})
+ok('ghi vào món: bảng dựng lại và báo số món đã ghi, món khóa bỏ qua', ccalls.any? { |c| c[0] == :build } && ccalls.any? { |c| c[0] == 'message' && c[1][:text].include?('3') && c[1][:text].include?('khóa') })
+$writes.clear; ccalls.clear
+$vgd_data[cents[0]] = {category: 'architecture', quantity_method: 'area', unit: 'm2', include_boq: true}
+$vgd_data[cents[1]] = {category: 'furniture', quantity_method: 'count', unit: 'pcs', include_boq: true}
+$vgd_data[cents[3]] = {category: 'other', quantity_method: 'count', unit: 'pcs', include_boq: true}
+cd.table_commit_calc({'indexes' => [0, 1, 3]})
+ok('món đã đủ dữ liệu: không ghi gì, báo rõ', $writes.empty? && ccalls.any? { |c| c[0] == 'message' && c[1][:text].include?('đã đủ') })
+cd.table_commit_calc({'indexes' => [2]}) rescue nil
+locked_error = begin; cd.table_commit_calc({'indexes' => [2]}); nil; rescue StandardError => e; e.message; end
+ok('chỉ chọn món khóa: báo lỗi, không ghi', locked_error.to_s.include?('khóa') && $writes.empty?)
+nothing = begin; cd.table_commit_calc({'indexes' => [9]}); nil; rescue StandardError => e; e.message; end
+ok('dòng không có trong bảng: báo bảng đã cũ', nothing.to_s.include?('Bảng đã cũ'))
+$model = ORIGINAL_MODEL
+$vgd_data = {}
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

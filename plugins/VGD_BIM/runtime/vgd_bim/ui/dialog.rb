@@ -72,6 +72,7 @@ module VGD
           @dialog.add_action_callback('import_tags') { |_ctx, kind| safely { import_tags(kind) } }
           @dialog.add_action_callback('table_select') { |_ctx, payload| safely { table_select(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_edit') { |_ctx, payload| safely { table_edit(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_commit_calc') { |_ctx, payload| safely { table_commit_calc(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_option') { |_ctx, payload| safely { table_option(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_export') { |_ctx, payload| safely { table_export(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_replace') { |_ctx, payload| safely { table_replace(JSON.parse(payload)) } }
@@ -397,7 +398,7 @@ module VGD
         # Sửa ô bằng nhấp đúp. payload: {'indexes' => [các dòng], 'field' => name|description|status|tag|material, 'value' => giá trị}.
         # Áp cho mọi dòng gửi lên, bỏ qua đối tượng khóa; cả đợt là một bước hoàn tác. ('index' => một dòng vẫn được nhận.)
         EDIT_LABELS = {'name' => 'tên', 'description' => 'mô tả', 'status' => 'tình trạng', 'tag' => 'tag', 'material' => 'vật liệu',
-                       'owner' => 'hãng', 'url' => 'link', 'size' => 'cỡ', 'price' => 'đơn giá'}.freeze
+                       'owner' => 'hãng', 'url' => 'link', 'size' => 'cỡ', 'price' => 'đơn giá', 'calc_method' => 'cách tính'}.freeze
         def table_edit(payload)
           check_model!
           field = payload.fetch('field')
@@ -406,6 +407,7 @@ module VGD
           indexes = payload.key?('indexes') ? table_indexes(payload) : table_indexes('indexes' => [payload.fetch('index')])
           records = indexes.map { |index| @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' } }
           raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |record| record[:path].all?(&:valid?) }
+          return table_calc_method(indexes, value) if field == 'calc_method'
           editable = records.reject { |record| record[:locked] || record[:entity].locked? }
           raise 'Đối tượng đang bị khóa nên không sửa được.' if editable.empty?
           material = field == 'material' && !value.empty? ? find_material(value) : nil
@@ -417,6 +419,45 @@ module VGD
           show_outline
           text = "Đã sửa #{EDIT_LABELS[field]} cho #{editable.size} đối tượng."
           text += " Bỏ qua #{records.size - editable.size} đối tượng bị khóa." if records.size > editable.size
+          emit('message', {text: text})
+        end
+        # Đổi cách tính theo TAG của các dòng đã chọn (lưu trên máy, mọi món cùng tag đổi theo); không ghi vào món nên cả món bị khóa cũng đổi được.
+        # Giá trị rỗng: bỏ cách tính riêng của tag (về theo từ khóa / nhóm tag).
+        def table_calc_method(indexes, value)
+          tags = indexes.map { |index| @table_rows.fetch(index)[:tag].to_s }.reject(&:empty?).uniq
+          raise 'Món chưa có tag nên không đặt cách tính theo tag được. Hãy gắn tag trước, hoặc dùng Ghi cách tính vào món.' if tags.empty?
+          tags.each { |tag| Quantity.set_override(tag, value) }
+          table_build
+          text = value.empty? ? "Đã bỏ cách tính riêng của #{tags.size} tag, tính theo từ khóa / nhóm tag." : "Đã đặt cách tính #{Quantity::LABELS.fetch(value)} cho #{tags.size} tag: #{tags.first(3).join(', ')}#{tags.size > 3 ? '…' : ''}."
+          emit('message', {text: text})
+        end
+        # Ghi cách tính suy ra từ tag vào chính các món (nút "Ghi cách tính vào món"): chỉ điền các mục dữ liệu chuẩn còn trống (hạng mục, cách tính, đơn vị),
+        # không ghi đè gì người dùng đã nhập; bỏ qua món bị khóa; cả đợt là một bước hoàn tác. payload: {'indexes' => [các dòng]}.
+        def table_commit_calc(payload)
+          check_model!
+          indexes = table_indexes(payload)
+          records = indexes.map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |_index, record| record[:path].all?(&:valid?) }
+          editable = records.reject { |_index, record| record[:locked] || record[:entity].locked? }
+          raise 'Đối tượng đang bị khóa nên không ghi được.' if editable.empty?
+          written = 0
+          Data.transaction(@model, 'VGD_BIM · Ghi cách tính vào món') do
+            editable.each do |index, record|
+              row = @table_rows.fetch(index)
+              entity = record[:entity]
+              has_data = Data.has_data?(entity)
+              values = Quantity.commit_values(Data.read(entity), has_data, {category: row[:calc_category], method: row[:calc_method]})
+              next if values.empty?
+              Data.write(entity, values, has_data ? Data.source(entity) : 'MAPPED')
+              written += 1
+            end
+          end
+          table_build
+          full = editable.size - written
+          skipped = records.size - editable.size
+          text = written.zero? ? 'Các món đã đủ dữ liệu chuẩn, không có gì để ghi.' : "Đã ghi cách tính vào #{written} món."
+          text += " #{full} món đã đủ dữ liệu." if written.positive? && full.positive?
+          text += " Bỏ qua #{skipped} món bị khóa." if skipped.positive?
           emit('message', {text: text})
         end
         def apply_edit(entity, field, value, material, layer)

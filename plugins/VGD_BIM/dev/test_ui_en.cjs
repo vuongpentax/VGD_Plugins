@@ -9,7 +9,7 @@ const VIET=/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềế
 // Chữ tiếng Việt được phép còn lại: mã mẫu đổi tên (là cú pháp), tên ngôn ngữ, ví dụ tên cột trong thông báo nhập tag.
 const ALLOWED=new Set(['{tên}','{họ}','{phân loại}','{nhóm}','{số}','Tiếng Việt']);
 const config=(lang,mode)=>({mode,version:'1.1.0',language:lang,app:{settings:{language:lang,image_dir:'',exclude_words:'tay nam, handle'},dir:'C:\\data\\images',dir_exists:false},preset_info:F.preset_info,table:{columns:F.columns,presets:F.presets,view:{}},fields:F.fields,categories:F.categories,units:F.units,methods:F.methods,presets,locale:lang==='en'?F.en:F.vi,vi_en:lang==='en'?F.vi_en:null,scan_options:{scope:'model',faces:true}});
-const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',definition:'Cabinet',name:'Cab '+i,description:'Oak',lenX:1200,lenY:600,lenZ:800,areaXZ:0.96,areaXY:0.72,areaFace:2.1,volume:0.5,tag:'Tag'+i,tag_group:'Phần thô',material:'Oak',status:['new','existing','reuse'][i],locked:i===2,quantity:1,parents:[],parent:i?'Parent A':'',pid:900+i,has_image:i===0,image_stamp:5,areaProjected:1.5,ifc:'IfcWall',owner:'Hafele',url:'https://a.vn',size:'1x2',price:1000,total:1000}));
+const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',definition:'Cabinet',name:'Cab '+i,description:'Oak',lenX:1200,lenY:600,lenZ:800,areaXZ:0.96,areaXY:0.72,areaFace:2.1,volume:0.5,tag:'Tag'+i,tag_group:'Phần thô',material:'Oak',status:['new','existing','reuse'][i],locked:i===2,quantity:1,parents:[],parent:i?'Parent A':'',pid:900+i,has_image:i===0,image_stamp:5,areaProjected:1.5,ifc:'IfcWall',owner:'Hafele',url:'https://a.vn',size:'1x2',price:1000,total:1000,calc_category:'furniture',calc_method:['count','area','none'][i],calc_source:['tag','keyword','group'][i],calc_qty:[1,0.96,null][i],calc_total:[1000,960,null][i],calc_note:i===1?'ước tính theo khối bao':''}));
 (async()=>{
  const browser=await chromium.launch({headless:true,channel:process.env.VGD_BROWSER_CHANNEL||undefined});
  try{
@@ -89,6 +89,15 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
     if(opened){await scan(label);await page.keyboard.press('Escape');}
     else if(column==='image')throw Error('Photo settings gear (⚙) did not open the panel in the table fixture');
   }
+  // Cột Khối lượng tính theo tag, menu đổi cách tính, nút ghi cách tính vào món
+  await page.evaluate(()=>{['calc_category','calc_method','calc_qty','calc_unit','calc_total'].forEach(k=>tableState.visible.add(k));tableState.sel=new Set();tableView(tableState.data);});
+  await scan('Bảng (cột khối lượng tính)');
+  await page.evaluate(()=>{const td=document.querySelector('.grid tbody tr td[data-key="calc_method"]');td.dispatchEvent(new MouseEvent('dblclick',{bubbles:true}));});
+  await scan('Bảng (menu cách tính)');
+  await page.keyboard.press('Escape');
+  await page.evaluate(()=>{tableState.panel='io';tableView(tableState.data);});
+  await scan('Bảng (menu Nhập / Xuất)');
+  await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
   // Bảng xem trước góc chụp: đang vẽ, có ảnh, có khung lỗi, đã xong
   await page.evaluate(()=>{openPreviewBoard({kind:'location',indexes:[0,1,2],settings:{}});});
   await scan('Bảng xem trước (đang vẽ)');

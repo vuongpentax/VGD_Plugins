@@ -48,6 +48,11 @@ module VGD
         {key: 'price', label: 'Đơn giá', kind: 'number', editable: 'price'},
         {key: 'quantity', label: 'Số lượng', kind: 'sum'},
         {key: 'total', label: 'Thành tiền', kind: 'sum'},
+        {key: 'calc_category', label: 'Hạng mục (suy ra từ tag)', kind: 'text'},
+        {key: 'calc_method', label: 'Cách tính', kind: 'text', editable: 'calc_method'},
+        {key: 'calc_qty', label: 'Khối lượng tính', kind: 'calc'},
+        {key: 'calc_unit', label: 'Đơn vị tính', kind: 'text'},
+        {key: 'calc_total', label: 'Thành tiền (theo khối lượng tính)', kind: 'sum'},
         {key: 'front', label: 'Mặt trước', kind: 'text'},
         {key: 'front_state', label: 'Độ tin cậy mặt trước', kind: 'text'},
         {key: 'measure_note', label: 'Ghi chú số đo', kind: 'text'}
@@ -181,7 +186,8 @@ module VGD
         index_of = {}
         records.each_with_index { |record, i| index_of[path_key(record[:path])] = i }
         image_folder = model.respond_to?(:guid) ? Images.dir(model) : nil # một lần cho cả bảng
-        rows = records.each_with_index.map { |record, i| row_for(record, i, groups, projected: projected, measure: measure).merge(image_state(model, record[:entity], image_folder)) }
+        overrides = Quantity.overrides # cách tính ghi đè theo tag, đọc một lần cho cả bảng
+        rows = records.each_with_index.map { |record, i| row_for(record, i, groups, projected: projected, measure: measure, overrides: overrides).merge(image_state(model, record[:entity], image_folder)) }
         # Đối tượng cha đang có trong bảng: dùng để tránh cộng trùng khi tính tổng.
         records.each_with_index do |record, i|
           rows[i][:parents] = (1...record[:path].size).map { |n| index_of[path_key(record[:path][0...n])] }.compact
@@ -221,7 +227,7 @@ module VGD
         name.empty? ? Geometry.definition(parent).name.to_s : name
       end
 
-      def self.row_for(record, index, groups, projected: false, measure: nil)
+      def self.row_for(record, index, groups, projected: false, measure: nil, overrides: {})
         entity = record[:entity]
         transform = record[:transform]
         dims = Geometry.dimensions(entity, transform, measure: measure)
@@ -235,7 +241,7 @@ module VGD
         status = data[:status].to_s
         status = 'new' if status.empty?
         faces = Geometry.definition(entity).entities.grep(Sketchup::Face)
-        {
+        row = {
           index: index,
           entity_type: entity.is_a?(Sketchup::Group) ? 'Nhóm' : 'Thành phần',
           definition: Geometry.definition(entity).name.to_s,
@@ -255,6 +261,7 @@ module VGD
           quantity: 1,
           parents: []
         }.merge(extra_columns(entity, data)).merge(measure_note: body ? body[:note].to_s : '')
+        row.merge(Quantity.row_fields(row, tag, row[:tag_group], data, overrides)) # hạng mục / cách tính / khối lượng suy ra từ tag (tính ảo, không ghi vào món)
       end
 
       # Xuất xứ (trường manufacturer của dữ liệu VGD), Liên kết / Quy cách / Đơn giá (dictionary riêng của bảng), Loại IFC, Thành tiền.

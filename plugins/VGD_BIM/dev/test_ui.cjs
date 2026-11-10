@@ -263,6 +263,56 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   await page.locator('.grid th[data-key="tag"]').dragTo(page.locator('.grid th[data-key="tag"]'),{targetPosition:{x:4,y:6}});
   assert(JSON.stringify(await headKeys())==='["quantity","instance","description","tag","material","status","ordinal"]','Dropping a header on itself changed the order');
   assert(await page.locator('.grid th.drop-left,.grid th.drop-right,.grid th.col-dragging').count()===0,'Drop markers were left on the headers');
+  // Khối lượng tính theo tag: cột mới, tổng theo đơn vị, đổi cách tính theo tag bằng nhấp đúp, ghi vào món
+  const calcColumns=[...columns,{key:'calc_category',label:'Hạng mục (suy ra từ tag)',kind:'text'},{key:'calc_method',label:'Cách tính',kind:'text',editable:'calc_method'},{key:'calc_qty',label:'Khối lượng tính',kind:'calc'},{key:'calc_unit',label:'Đơn vị tính',kind:'text'},{key:'calc_total',label:'Thành tiền (theo khối lượng tính)',kind:'sum'}];
+  const calcPreset={name:'Tất cả',group:'',columns:['ordinal','instance','tag','calc_category','calc_method','calc_qty','calc_unit','calc_total'],builtin:true};
+  const calcRows=[
+    tableRow(0,'Tường A',{pid:301,tag:'A. WALL',calc_category:'architecture',calc_method:'area',calc_source:'keyword',calc_qty:2.88,calc_total:4320000}),
+    tableRow(1,'Cửa C',{definition:'GC',pid:302,tag:'A. DOOR',calc_category:'architecture',calc_method:'count',calc_source:'keyword',calc_qty:1,calc_total:1500000}),
+    tableRow(2,'Cửa C',{definition:'GC',pid:303,tag:'A. DOOR',calc_category:'architecture',calc_method:'count',calc_source:'tag',calc_qty:1,calc_total:null}),
+    tableRow(3,'Cột K1',{pid:304,tag:'S. COLUMN',calc_category:'architecture',calc_method:'volume',calc_source:'keyword',calc_qty:1.234,calc_note:'ước tính theo khối bao',calc_total:null}),
+    tableRow(4,'Ghi chú',{pid:305,tag:'# BASIC',calc_category:'other',calc_method:'none',calc_source:'group',calc_qty:null,calc_total:null})
+  ];
+  await page.evaluate(()=>{tableState.order=[];tableState.visible=new Set();tableState.sort=null;tableState.groupBy='';tableState.merge=false;tableState.search='';tableState.group='';tableState.panel=null;tableState.sel=new Set();});
+  await receive('table',{...tablePayload,columns:calcColumns,presets:[calcPreset],rows:calcRows,selected:[]});
+  const calcCell=(i,key)=>page.locator(`.grid tr[data-index="${i}"] td[data-key="${key}"]`);
+  assert((await calcCell(0,'calc_category').innerText())==='Kiến trúc'&&(await calcCell(0,'calc_method').innerText())==='Theo diện tích'&&(await calcCell(0,'calc_qty').innerText())==='2,88'&&(await calcCell(0,'calc_unit').innerText())==='m²','Area row did not show category, method, quantity and unit');
+  assert((await calcCell(1,'calc_qty').innerText())==='1'&&(await calcCell(1,'calc_unit').innerText())==='cái'&&(await calcCell(3,'calc_qty').innerText())==='1,234'&&(await calcCell(3,'calc_unit').innerText())==='m³','Count / volume rows used wrong digits or unit');
+  assert((await calcCell(4,'calc_method').innerText())==='Không tính'&&(await calcCell(4,'calc_qty').innerText())===''&&(await calcCell(4,'calc_unit').innerText())==='','A not-counted row must have no quantity and no unit');
+  assert((await calcCell(0,'calc_method').getAttribute('title')).includes('từ khóa trong tên tag')&&(await calcCell(3,'calc_qty').getAttribute('title')).includes('ước tính theo khối bao'),'Calculation source / note tooltip missing');
+  const footer=await page.locator('.grid tfoot tr td').allInnerTexts();
+  assert(footer.includes('2 cái · 2,88 m² · 1,234 m³')&&footer.includes('5.820.000'),'Footer did not total the calculated quantity per unit and the amount: '+JSON.stringify(footer));
+  await page.evaluate(()=>{tableState.groupBy='tag';tableView(tableState.data);});
+  assert((await page.locator('.group-row').filter({hasText:'A. DOOR'}).innerText()).includes('2 cái'),'Group header did not total the calculated quantity per unit');
+  await page.evaluate(()=>{tableState.groupBy='';tableState.merge=true;tableView(tableState.data);});
+  assert(await page.locator('.grid tbody tr').count()===4&&(await page.locator('.grid tr[data-members="1,2"] td[data-key="calc_qty"]').innerText())==='2','Merged identical rows must add the calculated quantity');
+  await page.evaluate(()=>{tableState.merge=false;tableView(tableState.data);});
+  await page.locator('.grid th[data-key="calc_qty"]').click();await page.waitForTimeout(400);
+  assert(JSON.stringify(await page.locator('.grid tbody tr[data-index]').evaluateAll(r=>r.map(x=>Number(x.dataset.index))))==='[4,1,2,3,0]','Sorting by calculated quantity must be numeric (empty first)');
+  await page.evaluate(()=>{tableState.sort=null;tableView(tableState.data);});
+  // Đổi cách tính theo tag bằng nhấp đúp
+  await page.evaluate(()=>window.calls.length=0);
+  await calcCell(1,'calc_method').dblclick();
+  const menuTexts=await page.locator('.cell-menu .cell-item').allInnerTexts();
+  assert(menuTexts.length===6&&menuTexts[0].startsWith('Theo từ khóa / nhóm tag')&&menuTexts.some(t=>t.startsWith('Theo mét dài')),'Calculation menu options wrong: '+JSON.stringify(menuTexts));
+  await page.locator('.cell-menu .cell-item',{hasText:'Theo mét dài'}).click();
+  let calcEdit=await lastCall();
+  assert(calcEdit.name==='table_edit'&&calcEdit.data.field==='calc_method'&&calcEdit.data.value==='length'&&JSON.stringify(calcEdit.data.indexes)==='[1]','Changing the calculation did not send field calc_method with the chosen method');
+  await calcCell(1,'calc_method').dblclick();
+  await page.locator('.cell-menu .cell-item').first().click();
+  calcEdit=await lastCall();
+  assert(calcEdit.name==='table_edit'&&calcEdit.data.field==='calc_method'&&calcEdit.data.value==='','The first menu entry must remove the own calculation (empty value)');
+  // Ghi cách tính vào món: phải chọn dòng
+  await page.evaluate(()=>{tableState.sel=new Set();tableView(tableState.data);});
+  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();
+  const writeBefore=await page.evaluate(()=>window.calls.filter(c=>c.name==='table_commit_calc').length);
+  await page.locator('#calc-commit').click();
+  assert(await page.evaluate(()=>window.calls.filter(c=>c.name==='table_commit_calc').length)===writeBefore&&(await page.locator('#message').innerText()).includes('chọn các dòng'),'Writing the calculation with no row selected must only show a hint');
+  await calcCell(0,'instance').click();await calcCell(1,'instance').click({modifiers:['Control']});
+  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await page.locator('#calc-commit').click();
+  const commitCall=await page.evaluate(()=>window.calls.filter(c=>c.name==='table_commit_calc').at(-1));
+  assert(commitCall&&JSON.stringify(JSON.parse(commitCall.args[0]).indexes.sort())==='[0,1]','Write calculation did not send the selected rows');
+  await receive('table',{...tablePayload,rows:tableRows});
   await receive('config',{...config,mode:'information'});await receive('information',{count:0,fields:{},objects:[]});assert(await page.getByRole('button',{name:'Áp dụng thông tin',exact:true}).isDisabled(),'Empty selection can apply');
   await receive('information',{count:10,fields:{category:'electrical',item_type:'socket',description:'Ổ cắm đôi',unit:'pcs',quantity_method:'count',zone:'MASTER',include_boq:true},objects:[]});
   const output=path.resolve(__dirname,'../outputs');fs.mkdirSync(output,{recursive:true});await page.screenshot({path:path.join(output,'information_light.png'),fullPage:true});

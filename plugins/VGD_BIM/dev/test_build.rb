@@ -1,3 +1,6 @@
+require 'json'
+require 'tmpdir'
+ENV['VGD_BIM_DATA_DIR'] ||= Dir.mktmpdir('vgd_bim_build')
 # Kiểm tra Table.build: chế độ mặc định (chỉ đối tượng đang chọn) và chế độ chọn sâu.
 ROOT = ARGV[0] || File.expand_path('../runtime/vgd_bim', __dir__)
 $fails = 0
@@ -45,7 +48,7 @@ module VGD; module BIM
     GROUPS = ['Phần thô'].freeze
   end
 end; end
-require File.join(ROOT, 'core/photo_settings')
+%w[core/storage core/measure core/schema core/photo_settings core/quantity].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/table')
 
 class Model; attr_accessor :active_path; def edit_transform; Tr.new; end; end
@@ -114,6 +117,20 @@ hid = VGD::BIM::Table.build(deep_ctx, [scan_root], false, measure: FakeMeasure.n
 ok('lọc tag loại trừ không xét các group trong ngữ cảnh', hid[:hidden] == 0 && hid[:rows].size == 1)
 
 editable = VGD::BIM::Table::COLUMNS.select { |c| c[:editable] }.map { |c| [c[:key], c[:editable]] }
-ok('cột sửa được: tên, mô tả, tag, vật liệu, tình trạng, hãng, link, cỡ, đơn giá', editable == [%w[instance name], %w[description description], %w[tag tag], %w[material material], %w[status status], %w[owner owner], %w[url url], %w[size size], %w[price price]])
+ok('cột sửa được: tên, mô tả, tag, vật liệu, tình trạng, hãng, link, cỡ, đơn giá, cách tính (theo tag)', editable == [%w[instance name], %w[description description], %w[tag tag], %w[material material], %w[status status], %w[owner owner], %w[url url], %w[size size], %w[price price], %w[calc_method calc_method]])
+
+# Khối lượng tính suy ra từ tag (Quantity): tính ảo trong dòng, không đụng vào món
+calc_door = Sketchup::Group.new('Cửa'); calc_door.layer = Struct.new(:name).new('A. DOOR')
+calc_wall = Sketchup::Group.new('Tường'); calc_wall.layer = Struct.new(:name).new('A. WALL')
+calc_plain = Sketchup::Group.new('Trơn')
+calc_rows = VGD::BIM::Table.build(m, [calc_door, calc_wall, calc_plain], false)[:rows]
+ok('dòng có tag cửa: tính theo cái (1), nguồn từ khóa tên tag', calc_rows[0].values_at(:calc_method, :calc_qty, :calc_source) == ['count', 1.0, 'keyword'])
+ok('dòng có tag tường: tính theo diện tích Rộng x Cao (1000 x 2000 mm = 2 m²)', calc_rows[1].values_at(:calc_method, :calc_qty, :calc_category) == ['area', 2.0, 'other'])
+ok('dòng chưa có tag: theo cái, nguồn mặc định', calc_rows[2].values_at(:calc_method, :calc_qty, :calc_source) == ['count', 1.0, 'default'])
+ok('dòng chưa có đơn giá: thành tiền theo khối lượng tính để trống', calc_rows.all? { |r| r[:calc_total].nil? })
+File.write(File.join(ENV['VGD_BIM_DATA_DIR'], 'tag_quantity.json'), JSON.generate('tags' => {VGD::BIM::Quantity.key('A. WALL') => 'length'}))
+calc_rows = VGD::BIM::Table.build(m, [calc_door, calc_wall], false)[:rows]
+ok('ghi đè theo tag đọc từ file: tường theo mét dài (Rộng 1 m)', calc_rows[1].values_at(:calc_method, :calc_qty, :calc_source) == ['length', 1.0, 'tag'] && calc_rows[0][:calc_method] == 'count')
+File.delete(File.join(ENV['VGD_BIM_DATA_DIR'], 'tag_quantity.json'))
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

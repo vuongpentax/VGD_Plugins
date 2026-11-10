@@ -110,7 +110,14 @@ function preview(data) {
 }
 // ---- Bảng đối tượng kiểu Auto Info ----
 const tableState={replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null,manual:[],dragRow:null,dragCol:null};
-const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total']);
+const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total','calc_qty','calc_total']);
+// Khối lượng tính theo tag (xem core/quantity.rb): nhãn cách tính, đơn vị và số lẻ cố định theo từng cách (m, m², m³ không đổi theo đơn vị của preset).
+const METHOD_LABELS={count:'Theo cái',area:'Theo diện tích',length:'Theo mét dài',volume:'Theo thể tích',none:'Không tính'};
+const CALC_UNIT={count:'cái',area:'m²',length:'m',volume:'m³'};
+const CALC_DIGITS={count:0,area:2,length:2,volume:3};
+const CALC_ORDER=['count','area','length','volume'];
+const CATEGORY_LABELS={architecture:'Kiến trúc',finish:'Hoàn thiện',furniture:'Nội thất',electrical:'Điện',equipment:'Thiết bị',plumbing:'Cấp thoát nước',hvac:'Điều hòa / Thông gió',other:'Khác'};
+const CALC_SOURCES={item:'Theo dữ liệu đã ghi trong món',tag:'Theo cách tính bạn đặt cho tag',keyword:'Theo từ khóa trong tên tag',group:'Theo nhóm tag',default:'Mặc định (theo cái)'};
 const WIDTHS={image_location:110,measure_note:260,front:80,front_state:150,ordinal:44,image:72,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80,areaProjected:110,ifc:120,owner:120,url:170,size:110,price:110,total:120};
 const unitTextOf=key=>LEN_KEYS.has(key)?lengthLabel():AREA_KEYS.has(key)?areaLabel():key==='volume'?volumeLabel():key==='quantity'?'cái':(key==='price'||key==='total')?workSettings().currency:undefined;
 const colLabel=col=>(tableState.headers&&tableState.headers[col.key])||withUnit(col.label);
@@ -198,6 +205,9 @@ function cellText(row,key){
     case 'front':return row.front||'';
     case 'front_state':return row.front_state||'';
     case 'measure_note':return row.measure_note||'';
+    case 'calc_category':return CATEGORY_LABELS[row.calc_category]||'';
+    case 'calc_method':return METHOD_LABELS[row.calc_method]||'';
+    case 'calc_unit':return CALC_UNIT[row.calc_method]||'';
     default:return '';
   }
 }
@@ -314,12 +324,13 @@ function inlineEdit(td,row,col){
 function menuItems(field){
   const d=tableState.data,choices=d.choices||{tags:[],materials:[]};
   if(field==='status')return Object.entries(d.statuses||{}).map(([value,label])=>({value,label}));
+  if(field==='calc_method')return [{value:'',label:'Theo từ khóa / nhóm tag (bỏ cách tính riêng)'},...Object.entries(METHOD_LABELS).map(([value,label])=>({value,label}))];
   if(field==='tag')return [{value:'',label:'(Không có tag)'},...choices.tags.map(name=>({value:name,label:name}))];
   return [{value:'',label:'(Không vật liệu)'},...choices.materials.map(name=>({value:name,label:name}))];
 }
 function menuEdit(td,row,col){
   closeMenu();
-  const field=col.editable,current=field==='status'?row.status:(field==='tag'?row.tag:row.material),all=menuItems(field);
+  const field=col.editable,current=field==='status'?row.status:(field==='tag'?row.tag:(field==='calc_method'?row.calc_method:row.material)),all=menuItems(field);
   const menu=node('div',undefined,'cell-menu');menu.setAttribute('role','listbox');
   const search=node('input');search.type='search';search.placeholder='Tìm...';search.setAttribute('aria-label','Tìm trong danh sách');
   const list=node('div',undefined,'cell-menu-list');
@@ -388,7 +399,7 @@ function startResize(event,key,host,cols){
 }
 // Nhóm theo và gộp dòng giống nhau (chỉ đổi cách hiển thị, không đổi dữ liệu).
 const GROUP_OPTIONS=[['','Không nhóm'],['parent','Cha (Parent)'],['entity','Loại (Entity)'],['definition','Tên họ (Definition)'],['instance','Tên (Instance)'],['material','Vật liệu'],['tag','Tag'],['tag_group','Nhóm hạng mục'],['status','Tình trạng'],['front_state','Mặt trước (độ tin cậy)']];
-const SUM_KEYS=['areaXZ','areaXY','areaFace','areaProjected','volume','quantity','total'];
+const SUM_KEYS=['areaXZ','areaXY','areaFace','areaProjected','volume','quantity','total','calc_qty','calc_total'];
 function groupLabel(row,key){
   switch(key){
     case 'parent':return row.parent||'(Gốc)';
@@ -408,7 +419,7 @@ function groupLabel(row,key){
 function mergeRows(rows){
   const map=new Map();
   rows.forEach(row=>{
-    const key=JSON.stringify([row.entity_type,row.definition,row.name,row.description,row.lenX,row.lenY,row.lenZ,row.tag,row.material,row.status]);
+    const key=JSON.stringify([row.entity_type,row.definition,row.name,row.description,row.lenX,row.lenY,row.lenZ,row.tag,row.material,row.status,row.calc_method]);
     const hit=map.get(key);
     if(!hit){map.set(key,{...row,members:[row.index]});return;}
     hit.members.push(row.index);
@@ -429,6 +440,8 @@ function viewModel(){
   const counted=list=>list.filter(r=>!(tableState.onlyTop&&r.parents.some(p=>shown.has(p))));
   const sumOf=(list,key)=>counted(list).reduce((s,r)=>s+(typeof r[key]==='number'?r[key]:0),0);
   const countOf=list=>counted(list).reduce((s,r)=>s+membersOf(r).length,0);
+  // Khối lượng tính cộng theo từng đơn vị (m², cái... không cộng lẫn nhau): "4,25 m² · 3 cái"
+  const calcText=list=>{const by={};counted(list).forEach(r=>{if(r.calc_qty!=null&&CALC_UNIT[r.calc_method])by[r.calc_method]=(by[r.calc_method]||0)+r.calc_qty;});return CALC_ORDER.filter(k=>by[k]!=null).map(k=>`${fmt(by[k],CALC_DIGITS[k])} ${exportText(CALC_UNIT[k])}`).join(' · ');}; // đơn vị dịch theo ngôn ngữ đang dùng
   // Danh sách theo thứ tự hiển thị: các nhóm (nếu có) rồi các dòng của nhóm chưa thu gọn.
   let sections=[{label:null,rows:ordered}];
   if(tableState.groupBy){
@@ -436,7 +449,7 @@ function viewModel(){
     ordered.forEach(row=>{const label=groupLabel(row,tableState.groupBy);if(!map.has(label))map.set(label,[]);map.get(label).push(row);});
     sections=[...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],'vi',{numeric:true})).map(([label,list])=>({label,rows:list}));
   }
-  return {cols,rows,sections,sumOf,countOf};
+  return {cols,rows,sections,sumOf,countOf,calcText};
 }
 // Kéo tiêu đề cột để dời chỗ ngay trên bảng (cùng thứ tự với bảng Chọn cột): các cột đang hiện chiếm lại đúng những chỗ của chúng, cột ẩn giữ nguyên chỗ.
 function columnDrag(th,col,host){
@@ -536,7 +549,7 @@ function resetManualOrder(){
 }
 function renderGrid(host){
   const data=tableState.data;
-  const {cols,rows,sections,sumOf,countOf}=viewModel();
+  const {cols,rows,sections,sumOf,countOf,calcText}=viewModel();
   const collapsedKey=section=>`${tableState.groupBy}:${section.label}`;
   const visibleRows=sections.flatMap(section=>section.label!==null&&tableState.collapsed.has(collapsedKey(section))?[]:section.rows);
   tableState.shownRows=visibleRows;
@@ -595,6 +608,7 @@ function renderGrid(host){
           chev.onclick=e=>{e.stopPropagation();if(closed)tableState.collapsed.delete(key);else tableState.collapsed.add(key);renderGrid(host);};
           td.append(chev,document.createTextNode(` ${section.label} · ${countOf(section.rows)}`));
         }else if(col.kind==='sum'){td.textContent=fmt(scaledValue(col.key,sumOf(section.rows,col.key)),digitsFor(col.key));td.className='num';}
+        else if(col.kind==='calc'){td.textContent=calcText(section.rows);td.className='num';}
         head.append(td);
       });
       tbody.append(head);
@@ -629,13 +643,14 @@ function renderGrid(host){
         if(col.key==='ordinal')td.textContent=String(pos);
         else if(col.kind==='image')imageCell(td,row);
         else if(col.kind==='image_location')imageCell(td,row,'location');
-        else if(NUMERIC.has(col.key)){td.textContent=fmt(scaledValue(col.key,row[col.key]),digitsFor(col.key));td.className='num';}
+        else if(NUMERIC.has(col.key)){td.textContent=fmt(scaledValue(col.key,row[col.key]),col.key==='calc_qty'?(CALC_DIGITS[row.calc_method]||0):digitsFor(col.key));td.className='num';}
         else if(col.key==='url'){
           td.append(node('span',row.url,'cell-url'));
           if(row.url){const open=node('button','↗','cell-open');open.type='button';open.title='Mở link';open.setAttribute('aria-label','Mở link');open.onclick=e=>{e.stopPropagation();call('open_url',row.url);};open.ondblclick=e=>e.stopPropagation();td.append(open);}
         }
         else td.textContent=cellText(row,col.key);
         if(col.key==='front_state'&&row.front_note)td.title=row.front_note; // lý do tự động chọn mặt trước, để duyệt
+        if(col.key.startsWith('calc_')&&row.calc_source)td.title=exportText(CALC_SOURCES[row.calc_source]||'')+(row.calc_note?' · '+exportText(row.calc_note):'')+(col.key==='calc_method'?'. '+exportText('Nhấp đúp để đổi cách tính của tag này.'):''); // vì sao ra cách tính này (dịch từng phần theo ngôn ngữ)
         tr.append(td);
       });
       rowGrip(tr,row,section,pids,host);
@@ -649,6 +664,7 @@ function renderGrid(host){
       const td=node('td');
       if(i===labelIndex)td.textContent=`Tổng cộng · ${countOf(rows)} đối tượng`;
       else if(col.kind==='sum'){td.textContent=fmt(scaledValue(col.key,sumOf(rows,col.key)),digitsFor(col.key));td.className='num';}
+      else if(col.kind==='calc'){td.textContent=calcText(rows);td.className='num';}
       foot.append(td);
     });
     const tfoot=node('tfoot');tfoot.append(foot);t.append(tfoot);
@@ -1146,7 +1162,8 @@ const IO_ICONS={
   bridge:[['path',{d:'M21 12a9 9 0 0 0-15-6.7L3 8'}],['path',{d:'M3 3v5h5'}],['path',{d:'M3 12a9 9 0 0 0 15 6.7L21 16'}],['path',{d:'M16 16h5v5'}]],
   excel:[['path',{d:'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'}],['path',{d:'M14 3v6h6'}],['path',{d:'M9 13l4 5M13 13l-4 5'}]],
   pdf:[['path',{d:'M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z'}],['path',{d:'M14 3v6h6'}],['path',{d:'M8 13h8M8 17h5'}]],
-  preset:[['path',{d:'M4 6h16M4 12h16M4 18h16'}]]
+  preset:[['path',{d:'M4 6h16M4 12h16M4 18h16'}]],
+  calc:[['rect',{x:5,y:3,width:14,height:18,rx:2}],['path',{d:'M8 7h8M8 12h2M12 12h2M8 16h2M12 16h2'}]]
 };
 function ioPanel(){
   const p=node('div',undefined,'popover up right io-panel');
@@ -1159,6 +1176,10 @@ function ioPanel(){
   };
   p.append(item('bridge','Cầu nối dữ liệu',()=>{},'Sắp có'),item('excel','Xuất Excel',()=>exportTable('xlsx')),item('pdf','In PDF',()=>exportTable('pdf')));
   p.append(node('div',undefined,'io-sep'));
+  // Ghi cách tính suy ra từ tag vào các món đang chọn (chỉ điền mục còn trống; một bước hoàn tác). Phải chọn dòng rõ ràng để không ghi hàng loạt nhầm.
+  const calc=item('calc','Ghi cách tính vào món đang chọn',()=>{if(!tableState.sel.size)return message('Hãy chọn các dòng cần ghi cách tính (Ctrl+A chọn hết các dòng đang hiện).',true);call('table_commit_calc',JSON.stringify({indexes:[...tableState.sel]}));});
+  calc.id='calc-commit';calc.title='Ghi hạng mục, cách tính và đơn vị suy ra từ tag vào các món đang chọn (chỉ điền mục còn trống, không ghi đè dữ liệu đã nhập; một bước hoàn tác)';
+  p.append(calc);
   p.append(item('preset','Nhập preset (JSON)',()=>call('table_preset',JSON.stringify({action:'import'}))),item('preset','Xuất preset (JSON)',()=>call('table_preset',JSON.stringify({action:'export'}))));
   return p;
 }

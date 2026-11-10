@@ -73,7 +73,7 @@ ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
 real = File.read(File.join(ROOT, 'core/geometry.rb'), encoding: 'UTF-8')
 fa = real[/def self\.face_area.*?\n      end\n/m] + real[/def self\.projected_area.*?\n      end\n/m].to_s
 VGD::BIM::Geometry.module_eval(fa)
-%w[core/schema core/preset core/photo_settings core/table].each { |f| require File.join(ROOT, f) }
+%w[core/schema core/storage core/measure core/preset core/photo_settings core/quantity core/table].each { |f| require File.join(ROOT, f) }
 T = VGD::BIM::Table
 X = T::Extras
 class Model; def edit_transform; Identity.new; end; def active_path; []; end; def guid; 'M'; end; end
