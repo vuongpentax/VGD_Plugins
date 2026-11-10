@@ -26,6 +26,7 @@
 - **Chọn cột kiểu mới** (theo Auto Info, gọn hơn): ngăn trượt ra bên trái và đẩy bảng sang phải nên cột đầu không bị che; ô tick tự vẽ, kéo thả đổi chỗ cột có hiệu ứng trượt, nút gạt chân trang trượt mượt.
 - **Giao diện không còn thanh cuộn dọc** ở bảng, bảng Chọn cột, Preset và các tab (vẫn cuộn bằng con lăn chuột); chỉ giữ thanh cuộn ngang của bảng khi nhiều cột.
 - **Tiếng Anh** cho toàn bộ giao diện (báo cáo CSV và hộp thoại gốc của SketchUp vẫn tiếng Việt).
+- **Lấy mẫu tag và xóa tag có gán lại** (beta.48): nút Lấy mẫu (bấm đối tượng để lấy tag), nút thùng rác trên dòng tag (chọn tag nhận, không xóa đối tượng).
 - **Quản lý tag 3b-2** (beta.47): ghim tag, hàng chip Đã ghim / Gần đây, bấm để chọn tag cho nút Gán tag, kéo thả tag vào thư mục.
 - **Mũi tên lên / xuống trong Bảng khối lượng** (beta.46): chuyển dòng như bấm vào dòng đó (chọn, thu phóng, cô lập theo tuỳ chọn), Shift mở rộng vùng chọn, bảng tự cuộn.
 - **Ảnh vị trí trong công trình** (beta.45): cột Ảnh vị trí và nút chụp Iso trái / phải không cô lập món (nhìn vùng quanh món rộng gấp N lần, mờ phần còn lại), lưu file `_loc.png` riêng, xuất Excel / PDF có cột này.

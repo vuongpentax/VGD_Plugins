@@ -217,6 +217,12 @@ const VGD_I18N=(()=>{
     'Đã ghim':'Pinned','Gần đây':'Recent','Ghim tag':'Pin tag','Bỏ ghim tag':'Unpin tag','Chọn tag này cho nút Gán tag':'Choose this tag for the Assign tag button',
     'Bấm tên để chọn tag cho nút Gán tag · kéo thả vào thư mục để chuyển':'Click the name to choose the tag for the Assign tag button · drag and drop onto a folder to move it','Thả vào đây để đưa tag ra ngoài thư mục (gốc)':'Drop here to move the tag out of its folder (root)',
     'Tag đã nằm sẵn ở đó.':'The tag is already there.','Tag Untagged không xếp vào thư mục được.':'The Untagged tag cannot be placed in a folder.','Mã thư mục không hợp lệ.':'The folder id is not valid.',
+    'Lấy mẫu':'Sample','Bấm vào một đối tượng trong view để lấy tag của nó (Esc để hủy)':'Click an object in the view to pick up its tag (Esc to cancel)','Xóa tag (các đối tượng đang dùng sẽ chuyển sang tag khác)':'Delete tag (objects using it are moved to another tag)',
+    'Không bấm trúng đối tượng nào.':'No object was clicked.','Đối tượng này chưa có tag (Untagged).':'This object has no tag (Untagged).',
+    'Chuyển các đối tượng sang tag:':'Move the objects to tag:','Chuyển các đối tượng sang tag':'Move the objects to tag','Untagged (không có tag)':'Untagged (no tag)','Xóa tag':'Delete tag',
+    'Không đối tượng nào bị xóa: chỉ đổi tag của chúng rồi gỡ tag.':'No object is deleted: their tag is changed and then the tag is removed.',
+    'Bấm vào một đối tượng trong view để lấy tag của nó (Esc để hủy).':'Click an object in the view to pick up its tag (Esc to cancel).',
+    'Mã tag nhận không hợp lệ.':'The receiving tag id is not valid.','Không tìm thấy tag nhận. Hãy làm mới danh sách.':'The receiving tag was not found. Refresh the list.','Tag nhận phải khác tag cần xóa.':'The receiving tag must differ from the tag to delete.','Tag Untagged không xóa được.':'The Untagged tag cannot be deleted.',
     'Trong model':'In model','Mở hết':'Expand all','Gập hết':'Collapse all','Làm mới':'Refresh','Mở':'Expand','Gập':'Collapse','Khôi phục hiển thị':'Restore visibility','Bỏ cô lập':'Remove isolation',
     'Tìm tag hoặc thư mục...':'Find tag or folder...','Tìm tag hoặc thư mục':'Find tag or folder','Model chưa có tag nào.':'The model has no tags yet.','Không có tag hoặc thư mục nào khớp.':'No tag or folder matches.',
     'Ẩn tag':'Hide tag','Hiện tag':'Show tag','Ẩn thư mục':'Hide folder','Hiện thư mục':'Show folder','Cô lập tag':'Isolate tag','Cô lập thư mục':'Isolate folder',
@@ -356,6 +362,9 @@ const VGD_I18N=(()=>{
   rule(/^(\d+) đối tượng( · .*)?$/,(m,n,rest)=>`${plural(n,'object','objects')}${rest||''}`);
   rule(/^Nhập (\d+) cụm \((\d+) tag\)$/,(m,a,b)=>`Import ${plural(a,'cluster','clusters')} (${plural(b,'tag','tags')})`);
   rule(/^Đã chuyển tag "(.*)" (vào thư mục "(.*)"|ra ngoài thư mục)\.$/,(m,name,where,folder)=>`Moved tag "${name}" ${folder?`into folder "${folder}"`:'out of its folder'}.`);
+  rule(/^Đã lấy tag "(.*)"\. Chọn đối tượng rồi bấm Gán tag để gán\.$/,(m,name)=>`Picked up tag "${name}". Select objects and click Assign tag to assign it.`);
+  rule(/^: (\d+) đối tượng đang dùng tag này$/,(m,n)=>`: ${plural(n,'object uses','objects use')} this tag`);
+  rule(/^Đã xóa tag "([^"]*)"\.( Đã chuyển (\d+) đối tượng sang tag "([^"]*)"\.)?( Các đối tượng đang dùng tag này đã về Untagged\.)?$/,(m,name,moved,n,target,back)=>`Deleted tag "${name}".${moved?` Moved ${plural(n,'object','objects')} to tag "${target}".`:''}${back?' The objects that used this tag are now Untagged.':''}`);
   rule(/^Đang cô lập: (.*)$/,(m,name)=>`Isolated: ${name}`);
   rule(/^Đã cô lập (tag|thư mục) "(.*)" \(ẩn (\d+) tag khác\)\. Bấm lại để khôi phục hiển thị\.$/,(m,kind,name,n)=>`Isolated ${kind==='tag'?'tag':'folder'} "${name}" (${plural(n,'other tag','other tags')} hidden). Click again to restore visibility.`);
   rule(/^(\d+) luật$/,(m,n)=>plural(n,'rule','rules'));

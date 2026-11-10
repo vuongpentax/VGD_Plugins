@@ -936,6 +936,36 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(JSON.stringify(await json('tm_move'))==='{"id":10,"folder_id":null}' && await page.locator('#tag-tree-rootdrop').isHidden(),'thả vào vùng gốc: gửi lệnh đưa ra ngoài thư mục và ẩn vùng thả');
   await clear();await page.evaluate(()=>{const src=document.querySelector('#tag-tree-list .tm-row[data-kind="folder"][data-id="2"]');const dst=document.querySelector('#tag-tree-list .tm-row[data-kind="folder"][data-id="1"]');const dt=new DataTransfer();dst.dispatchEvent(new DragEvent('dragover',{dataTransfer:dt,bubbles:true,cancelable:true}));dst.dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true}));});
   ok((await calls('tm_move')).length===0,'thả thứ không phải tag (không có tag đang kéo): không gửi lệnh');
+  // Lấy mẫu tag bằng công cụ bấm vào đối tượng
+  await receive('tag_tree',{...TREE,styles_supported:false,pinned:[],recent:[]});
+  await clear();await page.locator('#tag-tree-sample').click();
+  ok((await calls('tm_sample')).length===1,'nút Lấy mẫu: gửi lệnh bật công cụ lấy mẫu');
+  await page.click('#tag-tab-set');
+  await receive('tag_sample',{name:'A. DOOR'});
+  ok(await page.locator('#tag-pane-model').isVisible() && await page.locator('#tag-pick').inputValue()==='A. DOOR','lấy mẫu xong: chuyển về tab Trong model và chọn tag đó trong ô Gán tag');
+  ok(await rowOf('tag',12).evaluate(el=>el.classList.contains('focus')) && await rowOf('tag',12).isVisible(),'lấy mẫu xong: mở các thư mục chứa tag (A. ARCHITECTURAL > Con) và sáng dòng tag');
+  ok((await message()).includes('Đã lấy tag "A. DOOR"'),'lấy mẫu xong: báo đã lấy tag');
+  await receive('tag_sample',{name:'Untagged'});
+  ok((await message()).includes('chưa có tag') && await page.locator('#tag-pick').inputValue()==='A. DOOR','lấy mẫu đối tượng Untagged: báo chưa có tag, không đổi ô Gán tag');
+  await receive('tag_sample',{name:''});
+  ok((await message()).includes('Không bấm trúng'),'bấm vào chỗ trống: báo không bấm trúng đối tượng');
+  // Xóa tag có gán lại
+  await clear();await rowOf('tag',12).getByRole('button',{name:/Xóa tag \(/}).click();
+  ok(JSON.stringify(await json('tm_delete_preview'))==='{"id":12}','nút thùng rác trên dòng tag: xin Ruby đếm số đối tượng đang dùng tag');
+  ok(await rowOf('tag',14).getByRole('button',{name:/Xóa tag \(/}).count()===0 && await rowOf('folder',1).getByRole('button',{name:/Xóa tag \(/}).count()===0,'Untagged và thư mục không có nút xóa tag');
+  await receive('tag_delete_preview',{id:12,name:'A. DOOR',count:7});
+  const delBox=page.locator('#tag-tree-delete');
+  ok(await delBox.isVisible() && (await delBox.innerText()).includes('A. DOOR') && (await delBox.innerText()).includes('7 đối tượng đang dùng tag này') && (await delBox.innerText()).includes('Không đối tượng nào bị xóa'),'hộp xóa tag: nêu tên tag, số đối tượng đang dùng và cam kết không xóa đối tượng');
+  ok((await delBox.locator('select option').allInnerTexts()).join('|')==='Untagged (không có tag)|A. WALL|A. WINDOW|S. BEAM','ô chọn tag nhận: Untagged (mặc định) và các tag khác (không có chính tag xóa, không có Untagged lặp)');
+  await clear();await delBox.getByRole('button',{name:'Xóa tag',exact:true}).click();
+  ok(JSON.stringify(await json('tm_delete'))==='{"id":12,"to_id":null}' && await delBox.isHidden(),'xác nhận với tag nhận mặc định Untagged: gửi to_id null, đóng hộp');
+  await receive('tag_delete_preview',{id:12,name:'A. DOOR',count:7});
+  await delBox.locator('select').selectOption({label:'A. WALL'});
+  await clear();await delBox.getByRole('button',{name:'Xóa tag',exact:true}).click();
+  ok(JSON.stringify(await json('tm_delete'))==='{"id":12,"to_id":10}','chọn tag nhận A. WALL: gửi mã tag nhận');
+  await receive('tag_delete_preview',{id:12,name:'A. DOOR',count:0});
+  await clear();await delBox.getByRole('button',{name:'Hủy'}).click();
+  ok(await delBox.isHidden() && (await calls('tm_delete')).length===0,'Hủy: đóng hộp, không xóa gì');
   await receive('tag_tree',{...TREE,supported:false,folders:[],layers:[{id:1,name:'Tag',visible:true,folder_id:null}],pinned:[],recent:[]});
   ok(await page.locator('#tag-tree-list .tm-row[draggable="true"]').count()===0,'SketchUp cũ không có thư mục tag: không có dòng kéo thả');
   await receive('tag_tree',{...TREE,styles_supported:false,pinned:[],recent:[]});

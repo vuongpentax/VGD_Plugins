@@ -284,6 +284,7 @@ const TREE_ICONS={
   eyeOff:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7c2.4 0 4.4.8 6 1.8M23 12s-4 7-11 7c-2.4 0-4.4-.8-6-1.8"/><path d="M3 3l18 18"/></svg>',
   pin:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5M9 3h6l-1 6 3 4H7l3-4z"/></svg>',
   pinOn:'<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5M9 3h6l-1 6 3 4H7l3-4z"/></svg>',
+  trash:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 10v6M14 10v6"/></svg>',
   target:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></svg>'
 };
 function treeButton(icon,title,handler,cls){
@@ -301,13 +302,15 @@ function tagTreePane(pane){
   const refresh=button('Làm mới',()=>call('tm_refresh'),'sm');
   const colorByTag=button('Tô màu theo tag',()=>call('tm_color_by_tag',JSON.stringify({enabled:!(treeState.data&&treeState.data.color_by_tag)})),'sm');colorByTag.id='tag-tree-colorbytag';
   colorByTag.title='Bật / tắt chế độ tô màu theo tag của SketchUp (Color by Tag)';colorByTag.setAttribute('aria-pressed','false');
-  bar.append(search,expand,collapse,refresh,colorByTag);
+  const sample=button('Lấy mẫu',()=>call('tm_sample'),'sm');sample.id='tag-tree-sample';sample.title='Bấm vào một đối tượng trong view để lấy tag của nó (Esc để hủy)';
+  bar.append(search,expand,collapse,refresh,sample,colorByTag);
   const chips=node('div',undefined,'tm-chip-area');chips.id='tag-tree-chips';
   const rootDrop=node('div','Thả vào đây để đưa tag ra ngoài thư mục (gốc)','tm-root-drop');rootDrop.id='tag-tree-rootdrop';rootDrop.hidden=true;
   acceptTagDrop(rootDrop,null);
   const banner=node('div',undefined,'tm-banner');banner.id='tag-tree-banner';banner.hidden=true;
+  const del=node('div',undefined,'tm-delete');del.id='tag-tree-delete';del.hidden=true;
   const list=node('div',undefined,'tag-scroll tm-list');list.id='tag-tree-list';
-  pane.append(bar,chips,rootDrop,banner,list,node('p','Mắt ẩn / hiện tag hoặc cả thư mục trong model; nút tròn cô lập: chỉ hiện mục đó, ẩn mọi thứ còn lại, bấm lại để trả hiển thị như cũ. Mỗi thao tác là một bước hoàn tác.','muted tag-note'));
+  pane.append(bar,chips,rootDrop,banner,del,list,node('p','Mắt ẩn / hiện tag hoặc cả thư mục trong model; nút tròn cô lập: chỉ hiện mục đó, ẩn mọi thứ còn lại, bấm lại để trả hiển thị như cũ. Mỗi thao tác là một bước hoàn tác.','muted tag-note'));
   paintTagTree();
 }
 
@@ -384,6 +387,7 @@ function paintTagTree(){
       const pinned=pinnedKeys(data).has(foldText(item.name));
       row.append(treeButton(pinned?'pinOn':'pin',pinned?'Bỏ ghim tag':'Ghim tag',()=>call('tm_pin',JSON.stringify({name:item.name,pinned:!pinned})),pinned?'on':''));
     }
+    if(!isFolder&&!UNTAGGED_TREE.includes(item.name))row.append(treeButton('trash','Xóa tag (các đối tượng đang dùng sẽ chuyển sang tag khác)',()=>call('tm_delete_preview',JSON.stringify({id})),'del'));
     row.append(treeButton('target',data.isolated&&data.isolated.kind===kind&&data.isolated.id===id?'Bỏ cô lập':`Cô lập ${noun}`,()=>call('tm_isolate',JSON.stringify({kind,id})),'iso'));
     list.append(row);rows+=1;
   };
@@ -444,5 +448,36 @@ function acceptTagDrop(el,folderId){
     const zone=$('tag-tree-rootdrop');if(zone)zone.hidden=true;
     if(id!==null)call('tm_move',JSON.stringify({id,folder_id:folderId}));
   });
+}
+// Lấy mẫu: Ruby gửi tên tag của đối tượng vừa bấm trong view. Chọn tag đó cho nút Gán tag, mở các thư mục chứa nó và sáng dòng.
+function receiveTagSample(data){
+  const name=data.name||'';
+  if(!name)return message('Không bấm trúng đối tượng nào.',true);
+  if(UNTAGGED_TREE.includes(name))return message('Đối tượng này chưa có tag (Untagged).',true);
+  selectTagTab('model');
+  const tree=treeState.data;
+  if(tree){
+    const layer=tree.layers.find(l=>l.name===name);
+    let folder=layer?tree.folders.find(f=>f.id===layer.folder_id):null;
+    while(folder){treeState.open.add(folder.id);folder=tree.folders.find(f=>f.id===folder.parent_id);}
+  }
+  selectAssignTag(name);
+  const row=document.querySelector('#tag-tree-list .tm-row.focus');if(row&&row.scrollIntoView)row.scrollIntoView({block:'nearest'});
+  message(`Đã lấy tag "${name}". Chọn đối tượng rồi bấm Gán tag để gán.`);
+}
+// Xóa tag có gán lại: Ruby đếm số đối tượng đang dùng tag (tag_delete_preview), rồi người dùng chọn tag nhận và xác nhận ở đây.
+function receiveTagDeletePreview(data){
+  const box=$('tag-tree-delete'),tree=treeState.data;
+  if(!box)return;
+  box.hidden=false;box.replaceChildren();
+  const head=node('p',undefined,'tm-delete-head');head.append(node('span','Xóa tag'),node('b',data.name),node('span',`: ${data.count} đối tượng đang dùng tag này`));
+  const pick=node('select');pick.setAttribute('aria-label','Chuyển các đối tượng sang tag');
+  pick.append(new Option('Untagged (không có tag)',''));
+  ((tree&&tree.layers)||[]).filter(l=>l.id!==data.id&&!UNTAGGED_TREE.includes(l.name)).sort(byName).forEach(l=>pick.append(new Option(l.name,String(l.id))));
+  const row=node('label',undefined,'tm-delete-row');row.append(node('span','Chuyển các đối tượng sang tag:'),pick);
+  const actions=node('div',undefined,'actions');
+  const confirm=button('Xóa tag',()=>{box.hidden=true;box.replaceChildren();call('tm_delete',JSON.stringify({id:data.id,to_id:pick.value===''?null:Number(pick.value)}));},'danger');confirm.id='tag-delete-confirm';
+  actions.append(confirm,button('Hủy',()=>{box.hidden=true;box.replaceChildren();}));
+  box.append(head,row,node('p','Không đối tượng nào bị xóa: chỉ đổi tag của chúng rồi gỡ tag.','muted'),actions);
 }
 function receiveTagTree(data){treeState.data=data;paintTagTree();}

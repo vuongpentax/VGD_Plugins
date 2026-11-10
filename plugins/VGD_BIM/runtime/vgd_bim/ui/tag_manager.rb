@@ -14,6 +14,9 @@ module VGD
           @dialog.add_action_callback('tm_isolate') { |_ctx, payload| safely { tm_isolate(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_color') { |_ctx, payload| safely { tm_color(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_line_style') { |_ctx, payload| safely { tm_line_style(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tm_sample') { |_ctx, _payload| safely { tm_sample } }
+          @dialog.add_action_callback('tm_delete_preview') { |_ctx, payload| safely { tm_delete_preview(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tm_delete') { |_ctx, payload| safely { tm_delete(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_pin') { |_ctx, payload| safely { tm_pin(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_move') { |_ctx, payload| safely { tm_move(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_color_by_tag') { |_ctx, payload| safely { tm_color_by_tag(JSON.parse(payload)) } }
@@ -70,6 +73,53 @@ module VGD
           layer = tag_tree_read.first.find { |entry| entry[:id] == id }&.fetch(:object) or raise 'Không tìm thấy tag này. Hãy làm mới danh sách.'
           Data.transaction(@model, 'VGD BIM · Đổi kiểu nét tag') { layer.line_style = style }
           emit('tag_tree', tag_tree_state)
+        end
+
+        # Công cụ lấy mẫu: bấm vào đối tượng trong view để lấy tag, kết quả gửi cho giao diện (sự kiện tag_sample) để chọn sẵn trong ô Gán tag.
+        def tm_sample
+          check_model!
+          release_preview if respond_to?(:release_preview, true) # khung đánh dấu của bảng không được che hay chiếm chuột của công cụ lấy mẫu
+          @sample_tool = TagSampleTool.new(->(name) { safely { tm_sampled(name) } }, -> { @sample_tool = nil })
+          @model.select_tool(@sample_tool)
+          emit('message', {text: 'Bấm vào một đối tượng trong view để lấy tag của nó (Esc để hủy).'})
+        end
+
+        def tm_sampled(name)
+          emit('tag_sample', {name: name.to_s})
+        end
+
+        # Xóa tag có gán lại, bước 1: đếm số đối tượng (kể cả bên trong group / component) đang dùng tag, để giao diện hỏi lại trước khi xóa.
+        # payload: {'id' => persistent_id của tag}
+        def tm_delete_preview(payload)
+          check_model!
+          layer = tm_deletable_layer(payload)
+          emit('tag_delete_preview', {id: layer[:id], name: layer[:name], count: tm_count_users(layer[:object])})
+        end
+
+        # Xóa tag có gán lại, bước 2. payload: {'id' => tag cần xóa, 'to_id' => tag nhận các đối tượng (nil = Untagged)}. Một bước hoàn tác.
+        # Không bao giờ xóa đối tượng: chỉ đổi tag của chúng rồi bỏ tag.
+        def tm_delete(payload)
+          check_model!
+          layer = tm_deletable_layer(payload)
+          raw = payload['to_id']
+          raise 'Mã tag nhận không hợp lệ.' unless raw.nil? || raw.is_a?(Integer)
+          layers, = tag_tree_read
+          target = raw.nil? ? nil : (layers.find { |entry| entry[:id] == raw } or raise 'Không tìm thấy tag nhận. Hãy làm mới danh sách.')
+          raise 'Tag nhận phải khác tag cần xóa.' if target && target[:id] == layer[:id]
+          untagged = target.nil? || UNTAGGED_NAMES.include?(target[:name])
+          moved = 0
+          Data.transaction(@model, 'VGD BIM · Xóa tag') do
+            # Đưa các đối tượng sang tag nhận; về Untagged thì SketchUp tự làm khi gỡ tag nên không cần duyệt cả model.
+            moved = tm_reassign(layer[:object], target[:object]) unless untagged
+            @model.active_layer = untagged_layer if @model.active_layer == layer[:object] # SketchUp không cho gỡ tag đang hiện hành
+            @model.layers.remove(layer[:object])
+          end
+          tm_forget_tag(layer[:name])
+          emit('tag_tree', tag_tree_state)
+          text = "Đã xóa tag \"#{layer[:name]}\"."
+          text += " Đã chuyển #{moved} đối tượng sang tag \"#{target[:name]}\"." if !untagged && moved.positive?
+          text += ' Các đối tượng đang dùng tag này đã về Untagged.' if untagged
+          emit('message', {text: text})
         end
 
         # payload: {'name' => tên tag, 'pinned' => true / false}: ghim tag lên hàng chip phía trên danh sách (lưu trên máy, dùng cho mọi model).
@@ -130,6 +180,47 @@ module VGD
         end
 
         private
+
+        # Tag xóa được: có trong model, không phải Untagged.
+        def tm_deletable_layer(payload)
+          id = tm_id(payload)
+          layers, = tag_tree_read
+          layer = layers.find { |entry| entry[:id] == id } or raise 'Không tìm thấy tag này. Hãy làm mới danh sách.'
+          raise 'Tag Untagged không xóa được.' if UNTAGGED_NAMES.include?(layer[:name])
+          layer
+        end
+
+        # Duyệt mọi đối tượng của model (cả trong các định nghĩa group / component) rồi gọi khối với từng đối tượng có thuộc tính layer.
+        def tm_each_drawing_element
+          lists = [@model.entities] + @model.definitions.to_a.map(&:entities)
+          lists.each do |entities|
+            entities.each { |entity| yield entity if entity.respond_to?(:layer) }
+          end
+        end
+
+        # Số đối tượng (kể cả mặt, cạnh và đối tượng trong group / component) đang dùng tag. Model rất lớn thì có thể mất vài giây.
+        def tm_count_users(layer)
+          count = 0
+          tm_each_drawing_element { |entity| count += 1 if entity.layer == layer }
+          count
+        end
+
+        def tm_reassign(from, to)
+          moved = 0
+          tm_each_drawing_element do |entity|
+            next unless entity.layer == from
+            entity.layer = to
+            moved += 1
+          end
+          moved
+        end
+
+        # Tag đã xóa thì bỏ khỏi danh sách ghim và gần đây.
+        def tm_forget_tag(name)
+          Settings.set_pinned(name, false)
+          recent = Settings.read['recent_tags'].reject { |item| Measure.normalize(item) == Measure.normalize(name) }
+          Settings.update('recent_tags' => recent)
+        end
 
         def tm_id(payload)
           id = payload['id']

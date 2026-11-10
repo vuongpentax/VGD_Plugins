@@ -1137,6 +1137,8 @@ window.VGD={receive(event,data){
   if(event==='tag_rules')receiveTagRules(data);
   if(event==='tag_auto_plan')receiveTagAutoPlan(data);
   if(event==='tag_tree')receiveTagTree(data);
+  if(event==='tag_sample')receiveTagSample(data);
+  if(event==='tag_delete_preview')receiveTagDeletePreview(data);
   if(event==='folder_rules')receiveFolderRules(data);
   if(event==='folder_auto_plan')receiveFolderAutoPlan(data);
   if(event==='progress')message(`Đang quét… ${number(data.count,0)} đối tượng hình học.`);

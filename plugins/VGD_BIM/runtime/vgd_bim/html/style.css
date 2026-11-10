@@ -255,3 +255,6 @@ body.light #theme{--theme-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://w
 .tm-chip-name{min-height:0;padding:2px 2px;border:0;background:transparent;font-weight:600;font-size:12px}.tm-chip .tm-btn{width:20px;height:20px}
 .tm-root-drop{margin:0 0 6px;padding:6px 10px;border:2px dashed var(--accent);border-radius:6px;background:var(--soft);font-size:12px;color:var(--accent-dark);text-align:center}.tm-root-drop[hidden]{display:none}.tm-root-drop.drop{background:var(--tile)}
 .tm-row.drop{background:var(--soft);box-shadow:inset 0 0 0 2px var(--accent)}.tm-row.drag-src{opacity:.45}.tm-row[draggable=true]{cursor:grab}.tm-row.focus .tm-name{color:var(--accent-dark);font-weight:700}
+.tm-delete{margin:0 0 8px;padding:8px 10px;border:1px solid var(--danger,#b3412d);border-radius:6px;background:var(--soft)}.tm-delete[hidden]{display:none}.tm-delete-head{margin:0 0 6px}.tm-delete-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;font-size:12px}.tm-delete-row select{min-width:200px;height:28px}.tm-btn.del{opacity:.35}.tm-row:hover .tm-btn.del{opacity:1}.tm-btn.del:hover{color:var(--danger,#b3412d)}
+button.danger{background:var(--danger,#b3412d);border-color:var(--danger,#b3412d);color:#fff}button.danger:hover{filter:brightness(.92);background:var(--danger,#b3412d)}
+.tm-delete-head b{margin:0 4px}

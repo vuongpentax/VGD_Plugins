@@ -2,6 +2,7 @@ require 'json'
 require_relative 'image_actions'
 require_relative 'front_actions'
 require_relative 'tag_auto'
+require_relative 'tag_sample'
 require_relative 'tag_manager'
 module VGD
   module BIM

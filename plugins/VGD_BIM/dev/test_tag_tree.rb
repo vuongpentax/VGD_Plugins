@@ -20,6 +20,7 @@ require 'tmpdir'
 ENV['VGD_BIM_DATA_DIR'] ||= Dir.mktmpdir('vgd_bim_tag_tree')
 %w[storage measure settings].each { |f| require File.join(ROOT, "core/#{f}") }
 require File.join(ROOT, 'core/tag_tree')
+require File.join(ROOT, 'ui/tag_sample')
 require File.join(ROOT, 'ui/tag_manager')
 T = VGD::BIM::TagTree
 
@@ -63,6 +64,9 @@ class FTags
   def initialize(list, folders); @list = list; @folders = folders; end
   def each(&block); @list.each(&block); end
   def to_a; @list.dup; end
+  def [](index); @list[index]; end
+  def remove(layer); @removed = (@removed || []) << layer; @list.delete(layer); end
+  def removed; @removed || []; end
 end
 class OldTags
   include Enumerable
@@ -70,7 +74,8 @@ class OldTags
   def each(&block); @list.each(&block); end
   def to_a; @list.dup; end
 end
-FModel = Struct.new(:layers) do
+FModel = Struct.new(:layers, :entities, :definitions, :active_layer, :active_path, :tool) do
+  def select_tool(tool); self.tool = tool; end
   def rendering_options; @options ||= {'DisplayColorByLayer' => false}; end
   def line_styles; @styles ||= Struct.new(:to_a).new([FStyle.new('Solid Line'), FStyle.new('Dashed Line')]); end
 end
@@ -81,6 +86,9 @@ class Probe
   def initialize(model); @model = model; @events = []; end
   def emit(event, payload); @events << [event, payload]; end
   def check_model!; end
+  def untagged_layer; @model.layers.to_a.find { |l| l.name == 'Untagged' } || @model.layers[0]; end
+  def release_preview; @released = true; end
+  def safely; yield; end
   def last(event); @events.reverse.find { |e, _| e == event }&.last; end
   def messages; @events.select { |e, _| e == 'message' }.map { |_, p| p[:text] }; end
 end
@@ -176,6 +184,81 @@ ok('tm_move: tag Untagged không xếp vào thư mục', error_of { probe.tm_mov
 ok('tm_move: tag / thư mục không có hoặc mã sai bị từ chối, không đổi', error_of { probe.tm_move('id' => 99, 'folder_id' => 1) }.include?('làm mới') && error_of { probe.tm_move('id' => 10, 'folder_id' => 99) }.include?('làm mới') && error_of { probe.tm_move('id' => 10, 'folder_id' => 'x') }.include?('không hợp lệ') && error_of { probe.tm_move('id' => '10', 'folder_id' => 1) }.include?('không hợp lệ') && tags[0].folder.nil?)
 old_move = Probe.new(OldModel.new(OldTags.new([FTag.new(1, 'A')])))
 ok('SketchUp cũ không có thư mục tag: tm_move báo lỗi rõ', error_of { old_move.tm_move('id' => 1, 'folder_id' => nil) }.include?('cần SketchUp 2021'))
+
+# ---- Công cụ lấy mẫu tag ----
+class FEnt; attr_accessor :layer; def initialize(layer = nil); @layer = layer; end; end
+class FPick
+  def initialize(paths); @paths = paths; end
+  def do_pick(_x, _y); end
+  def count; @paths.size; end
+  def path_at(i); @paths[i]; end
+end
+class FPickView
+  attr_reader :model
+  def initialize(model, paths); @model = model; @paths = paths; end
+  def pick_helper; FPick.new(@paths); end
+end
+model, probe, tags, fold = world
+model.active_path = []
+probe.tm_sample
+tool = model.tool
+ok('tm_sample: chọn công cụ lấy mẫu, bỏ khung đánh dấu của bảng, báo hướng dẫn', tool.is_a?(VGD::BIM::UI::TagSampleTool) && probe.instance_variable_get(:@released) && probe.messages.last.include?('lấy tag'))
+wall_part = FEnt.new(tags[0]); group = FEnt.new(tags[1])
+tool.onLButtonDown(0, 10, 10, FPickView.new(model, [[group, wall_part]]))
+ok('bấm vào đối tượng: lấy tag của đối tượng ở cấp hiện tại (không chọn sâu), gửi cho giao diện, rồi thoát công cụ', probe.last('tag_sample') == {name: 'A. DOOR'} && model.tool.nil?)
+probe.tm_sample
+model.tool.onLButtonDown(0, 10, 10, FPickView.new(model, [[FEnt.new(tags[3])]]))
+ok('đối tượng chưa có tag (Untagged): gửi tên Untagged để giao diện báo', probe.last('tag_sample') == {name: 'Untagged'})
+probe.tm_sample
+model.tool.onLButtonDown(0, 10, 10, FPickView.new(model, []))
+ok('bấm vào chỗ trống: gửi tên rỗng, vẫn thoát công cụ', probe.last('tag_sample') == {name: ''} && model.tool.nil?)
+model.active_path = [Object.new]
+probe.tm_sample
+model.tool.onLButtonDown(0, 10, 10, FPickView.new(model, [[Object.new, FEnt.new(tags[2])]]))
+ok('đang mở sửa một group: lấy đối tượng ở cấp đang mở (phần tử thứ hai của đường dẫn)', probe.last('tag_sample') == {name: 'S. BEAM'})
+model.active_path = []
+events_before = probe.events.size
+probe.tm_sample
+model.tool.onCancel(0, FPickView.new(model, []))
+ok('Esc hủy: không gửi gì, thoát công cụ', probe.events.size == events_before + 1 && model.tool.nil?)
+
+# ---- Xóa tag có gán lại ----
+def del_world
+  model, probe, live, fold = world
+  tags = live.dup # bản sao: FTags tự xóa khỏi danh sách gốc khi gỡ tag
+  wall, door, beam, untagged = tags
+  top = [FEnt.new(wall), FEnt.new(door), FEnt.new(untagged)]
+  inside = [FEnt.new(wall), FEnt.new(wall), FEnt.new(beam)]
+  model.entities = top
+  model.definitions = [Struct.new(:entities).new(inside), Struct.new(:entities).new([FEnt.new(wall)])]
+  model.active_layer = untagged
+  [model, probe, tags, top, inside]
+end
+# Danh sách tag gốc của model (FTags giữ mảng này và xóa khỏi nó khi gỡ tag), nên dùng bản sao tags để đối chiếu
+
+model, probe, tags, top, inside = del_world
+probe.tm_delete_preview('id' => 10)
+ok('xem trước xóa: đếm đối tượng dùng tag kể cả bên trong định nghĩa group / component', probe.last('tag_delete_preview') == {id: 10, name: 'A. WALL', count: 4})
+ok('xem trước xóa: tag Untagged / không có / mã sai bị từ chối', error_of { probe.tm_delete_preview('id' => 13) }.include?('Untagged') && error_of { probe.tm_delete_preview('id' => 99) }.include?('làm mới') && error_of { probe.tm_delete_preview('id' => 'x') }.include?('không hợp lệ'))
+VGD::BIM::Settings.set_pinned('A. WALL', true); VGD::BIM::Settings.touch_recent('A. WALL'); VGD::BIM::Settings.touch_recent('A. DOOR')
+before = $transactions.size
+probe.tm_delete('id' => 10, 'to_id' => 11)
+ok('xóa tag, gán lại sang tag khác: mọi đối tượng (kể cả trong định nghĩa) đổi sang tag nhận, tag bị gỡ, một bước hoàn tác', (top + inside).count { |e| e.layer == tags[1] } == 4 && (top + inside + model.definitions.to_a.flat_map { |d| d.entities.to_a }).none? { |e| e.layer == tags[0] } && model.layers.removed == [tags[0]] && $transactions.size == before + 1 && $transactions.last == 'VGD BIM · Xóa tag')
+ok('xóa tag: thông báo nêu số đối tượng đã chuyển, cây được gửi lại không còn tag', probe.messages.last.include?('Đã chuyển 4 đối tượng sang tag "A. DOOR"') && probe.last('tag_tree')[:layers].none? { |l| l[:id] == 10 })
+ok('xóa tag: bỏ khỏi danh sách ghim và gần đây', VGD::BIM::Settings.read['pinned_tags'].empty? && VGD::BIM::Settings.read['recent_tags'] == ['A. DOOR'])
+model, probe, tags, top, inside = del_world
+probe.tm_delete('id' => 10, 'to_id' => nil)
+ok('xóa tag, về Untagged: không duyệt gán lại (SketchUp tự đưa về Untagged khi gỡ tag), tag bị gỡ', model.layers.removed == [tags[0]] && top[0].layer == tags[0] && probe.messages.last.include?('về Untagged'))
+model, probe, tags, top, inside = del_world
+model.active_layer = tags[0]
+probe.tm_delete('id' => 10, 'to_id' => nil)
+ok('xóa đúng tag đang hiện hành: đổi hiện hành về Untagged trước khi gỡ', model.active_layer == tags[3] && model.layers.removed == [tags[0]])
+model, probe, tags, = del_world
+ok('xóa tag: tag nhận trùng tag xóa, không có, mã sai, Untagged bị từ chối; không gỡ gì', error_of { probe.tm_delete('id' => 10, 'to_id' => 10) }.include?('khác') && error_of { probe.tm_delete('id' => 10, 'to_id' => 99) }.include?('làm mới') && error_of { probe.tm_delete('id' => 10, 'to_id' => 'x') }.include?('không hợp lệ') && error_of { probe.tm_delete('id' => 13, 'to_id' => nil) }.include?('Untagged') && model.layers.removed.empty?)
+model, probe, tags, top, inside = del_world
+probe.tm_delete('id' => 10, 'to_id' => 13)
+ok('xóa tag, nhận là tag Untagged: coi như về Untagged', model.layers.removed == [tags[0]] && top[0].layer == tags[0])
+ok('không bao giờ xóa đối tượng: số đối tượng của model không đổi sau khi xóa tag', top.size == 3 && inside.size == 3 && model.definitions.to_a.map { |d| d.entities.to_a.size } == [3, 1])
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)
