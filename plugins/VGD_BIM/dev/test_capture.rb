@@ -348,6 +348,32 @@ check 'camera song song (ảnh vị trí): vẫn song song, không đọc FOV', 
 model, view, _ = shoot_with_camera({'image_view' => 'current'}) { |c| c.fov = 60.0 }
 check 'Khung nhìn hiện tại: không đụng camera nên FOV giữ nguyên', view.states.all? { |st| near?([st[:fov]], [60.0]) }
 
+# ---- Xem trước góc chụp (preview): cùng camera như chụp thật, ảnh nhỏ, không lưu gì ----
+def shoot_preview(settings = {}, kind: :full, item: 0)
+  model, items = world
+  model.instance_variable_set(:@guid, "PREVIEW-#{rand(10**9)}") # thư mục ảnh riêng: không lẫn với ảnh do các phép thử khác để lại
+  result = C.shoot(model, {entity: items[item], path: [items[item]]}, D.merge(settings), kind: kind, preview: 360)
+  [model, items, model.active_view, result]
+end
+pmodel, _, pview, presult = shoot_preview({'image_view' => 'isometric', 'image_width' => 800, 'image_height' => 400})
+_, _, rview, _ = shoot('image_view' => 'isometric', 'image_width' => 800, 'image_height' => 400)
+check 'xem trước: trả về nội dung PNG, chụp ảnh nhỏ đúng tỉ lệ ảnh thật (800 x 400 thành 360 x 180)', presult[:png] == PNG_BYTES && pview.writes[0].values_at(:width, :height) == [360, 180]
+check 'xem trước: không lưu ảnh nào (không có file ảnh, không file tạm, không file xem trước còn lại)', !File.exist?(I.path(pmodel, 11)) && Dir[File.join(I.dir(pmodel), '*')].empty? && Dir[File.join(I.dir(pmodel), '.preview_*')].empty?
+check 'xem trước: camera đặt y như chụp thật (cùng hướng, cùng điểm nhìn, cùng khoảng cách)', pview.states.last[:eye] == rview.states.last[:eye] && pview.states.last[:target] == rview.states.last[:target]
+check 'xem trước: cô lập như chụp thật rồi hủy, trả camera và lựa chọn như cũ', pview.states.all? { |st| st[:hidden].sort == [12, 13] } && pmodel.ops == [:start, :abort] && pview.camera.eye.to_a == [0.0, 0.0, 100.0] && pmodel.selection.map(&:pid) == [11, 12]
+check 'xem trước: không có mốc thời gian của ảnh (không phải ảnh được lưu)', !presult.key?(:stamp) && presult[:pid] == 11 && presult[:kind] == :full
+_, _, v, r = shoot_preview({'image_width' => 200, 'image_height' => 200})
+check 'xem trước: ảnh gốc nhỏ hơn 360 thì không phóng to (giữ 200 x 200)', v.writes[0].values_at(:width, :height) == [200, 200]
+_, _, v, r = shoot_preview({'loc_view' => 'front', 'loc_yaw' => 90, 'loc_width' => 1000, 'loc_height' => 500}, kind: :location)
+check 'xem trước ảnh vị trí: theo thiết lập riêng (góc nhìn, góc lệch, tỉ lệ ảnh vị trí), không lưu file _loc', v.writes[0].values_at(:width, :height) == [360, 180] && near?(eye_dir(v), unit(1, 0, 0)) && r[:png] == PNG_BYTES && Dir[File.join(I.dir(v.instance_variable_get(:@model)), '*')].empty?
+_, _, v, r = shoot_preview({'image_view' => 'current'})
+check 'xem trước Khung nhìn hiện tại: không đặt camera, vẫn ra ảnh nhỏ', v.states.all? { |st| st[:eye] == [0.0, 0.0, 100.0] } && r[:png] == PNG_BYTES
+fmodel, fitems = world
+fmodel.instance_variable_set(:@guid, "PREVIEW-#{rand(10**9)}")
+fmodel.active_view.fail_next = true
+failed = raises? { C.shoot(fmodel, {entity: fitems[0], path: [fitems[0]]}, D, preview: 360) }
+check 'xem trước lỗi: báo lỗi, hủy thao tác, trả camera, dọn file xem trước', failed && fmodel.ops == [:start, :abort] && fmodel.active_view.camera.eye.to_a == [0.0, 0.0, 100.0] && Dir[File.join(I.dir(fmodel), '*')].empty? && Dir[File.join(I.dir(fmodel), '.preview_*')].empty?
+
 # ---- Ảnh vị trí (kind: :location): camera y như Iso nhưng không đổi gì trong model (không cô lập, không ẩn, không mở ngữ cảnh), nhìn vùng rộng gấp nhiều lần món, lưu file _loc ----
 def shoot_location(settings = {}, side = 'right', user_path = [])
   model, items = world

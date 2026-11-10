@@ -39,12 +39,14 @@ function imageCell(td,row,kind='full'){
   const own=row[place?'photo_location':'photo_full'];
   const gear=tool('⚙','Thông số ảnh riêng của món này',()=>openPhotoPop(row,kind,gear));
   if(own&&Object.keys(own).length)gear.classList.add('own');
+  const eye=tool('','Xem trước góc chụp',()=>runPreview([row.index],false,undefined,kindArg));
+  eye.append(eyeIcon());
   const lowPic=(tableState.rowHeight>0?tableState.rowHeight-5:({dense:26,roomy:64}[tableState.density]||46))<40; // hai hàng nút cao 20 + 20
-  if(!lowPic){const top=node('div',undefined,'cell-tools top');top.append(gear);holder.append(top);}
+  if(!lowPic){const top=node('div',undefined,'cell-tools top');top.append(gear,eye);holder.append(top);}
   tools.append(tool('◉','Chụp view hiện tại',()=>runCapture([row.index],false,undefined,kindArg,{view:'current'})),tool('◣',place?'Chụp vị trí từ bên trái (Iso)':'Chụp Iso từ bên trái',()=>runCapture([row.index],false,'left',kindArg)),tool('◢',place?'Chụp vị trí từ bên phải (Iso)':'Chụp Iso từ bên phải',()=>runCapture([row.index],false,'right',kindArg)),
     tool('↻',row[f.has]?'Chụp lại':'Chụp ảnh',()=>runCapture([row.index],false,undefined,kindArg)),tool('⋯','Chọn ảnh…',()=>pickImageFile(row.pid,kind)));
   if(row[f.has])tools.append(tool('×',place?'Xóa ảnh vị trí':'Xóa ảnh',()=>call(place?'image_location_delete':'image_delete',row.pid)));
-  if(lowPic)tools.prepend(gear);
+  if(lowPic){tools.prepend(gear,eye);tools.classList.add('wide');} // 8 nút: hàng quá rộng để căn giữa ô hẹp (bị cắt ở mép bảng), nên bắt đầu từ mép trái ô và tràn sang phải
   holder.append(tools);
   td.title=place?'Kéo thả ảnh vào đây để dùng làm ảnh vị trí':'Kéo thả ảnh vào đây hoặc chọn ô rồi dán (Ctrl+V)';
   bindImageTarget(td,row.pid,kind);
@@ -143,7 +145,7 @@ function syncBusy(){
 // isoSide ('left' | 'right'): chụp một lần theo góc Iso từ bên đó, bất kể góc nhìn của preset (nút ◣ ◢ trong ô ảnh).
 // kind 'location': chụp ảnh vị trí trong công trình (không cô lập, vùng nhìn rộng theo image_location_scale) cho cột Ảnh vị trí.
 // extra.view: chụp một lần theo góc nhìn đó (nút ◉ Khung nhìn hiện tại) bất kể thiết lập preset và góc nhìn riêng của món; extra.itemSettings: thông số trong khung ⚙, dùng thay cho thông số đã lưu của món.
-function runCapture(indexes,onlyMissing,isoSide,kind,extra){
+function capturePayload(indexes,onlyMissing,isoSide,kind,extra){
   const s=workSettings();
   const settings={image_width:s.image_width,image_height:s.image_height,image_view:s.image_view,image_style:s.image_style,image_background:s.image_background,image_margin:s.image_margin,image_yaw:s.image_yaw,image_pitch:s.image_pitch,
     image_location_scale:s.image_location_scale,loc_width:s.loc_width,loc_height:s.loc_height,loc_view:s.loc_view,loc_style:s.loc_style,loc_background:s.loc_background,loc_margin:s.loc_margin,loc_yaw:s.loc_yaw,loc_pitch:s.loc_pitch};
@@ -156,7 +158,17 @@ function runCapture(indexes,onlyMissing,isoSide,kind,extra){
   if(kind==='location')payload.kind='location';
   if(isoSide)payload.iso_side=isoSide;
   if(indexes)payload.indexes=indexes;
-  call('images_capture',JSON.stringify(payload));
+  return payload;
+}
+function runCapture(indexes,onlyMissing,isoSide,kind,extra){call('images_capture',JSON.stringify(capturePayload(indexes,onlyMissing,isoSide,kind,extra)));}
+// Xem trước góc chụp: cùng thông số như chụp thật (kể cả thông số riêng của từng món) nhưng chỉ vẽ ảnh nháp nhỏ trong bảng xem trước, không lưu ảnh.
+function runPreview(indexes,onlyMissing,isoSide,kind,extra){
+  const f=IMG_FIELDS[kind==='location'?'location':'full'],rows=tableState.data?tableState.data.rows:[];
+  const list=(indexes||captureTargets()).filter(i=>!onlyMissing||!(rows.find(r=>r.index===i)||{})[f.has]);
+  if(!list.length){message('Không có đối tượng nào cần chụp.',true);return;}
+  const payload=capturePayload(list,false,isoSide,kind,extra);
+  openPreviewBoard(payload);
+  call('images_preview',JSON.stringify(payload));
 }
 function imagesChanged(items){
   items.forEach(item=>{
@@ -237,4 +249,95 @@ function receivePhotoSettings(data){
   const key=data.kind==='location'?'photo_location':'photo_full';
   if(tableState.data)tableState.data.rows.filter(r=>r.pid===data.pid).forEach(r=>{r[key]=data.settings||{};});
   if(tableState.data&&$('grid-host'))renderGrid($('grid-host'));
+}
+
+// ---- Bảng xem trước góc chụp ----
+// Hiện ảnh nháp của từng món sắp chụp (Ruby gửi từng khung qua 'image_preview'); người dùng bỏ tick món bị cấn vật thể rồi chụp các món còn lại.
+const previewState={board:null,payload:null,busy:false,cards:new Map()};
+function eyeIcon(){
+  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
+  svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('width','12');svg.setAttribute('height','12');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','2.4');svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');svg.setAttribute('aria-hidden','true');
+  [['path',{d:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z'}],['circle',{cx:12,cy:12,r:3}]].forEach(([tag,attrs])=>{const el=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>el.setAttribute(k,v));svg.append(el);});
+  return svg;
+}
+function previewKeyHandler(e){if(e.key==='Escape')closePreviewBoard();}
+function closePreviewBoard(){
+  if(previewState.busy)call('images_cancel'); // đang vẽ dở: dừng
+  previewState.busy=false;
+  if(previewState.board){previewState.board.remove();previewState.board=null;}
+  previewState.cards=new Map();previewState.payload=null;
+  document.removeEventListener('keydown',previewKeyHandler,true);
+}
+function previewChosen(){return [...previewState.cards.entries()].filter(([,card])=>card.box.checked).map(([index])=>index);}
+function updatePreviewBoard(){
+  const board=previewState.board;if(!board)return;
+  const chosen=previewChosen().length;
+  board.querySelector('.pb-count').textContent=String(chosen);
+  board.querySelector('.pb-run').disabled=previewState.busy||!chosen;
+  board.querySelector('.pb-stop').hidden=!previewState.busy;
+}
+function openPreviewBoard(payload){
+  closePreviewBoard();
+  const place=payload.kind==='location',rows=tableState.data?tableState.data.rows:[];
+  previewState.payload=payload;previewState.busy=true;
+  const board=node('div',undefined,'preview-board');board.setAttribute('role','dialog');board.setAttribute('aria-modal','true');
+  const panel=node('div',undefined,'pb-panel');
+  const head=node('div',undefined,'pb-head');
+  head.append(node('strong','Xem trước góc chụp'),node('span',place?'Ảnh vị trí':'Ảnh chính','muted pb-kind'));
+  const status=node('span',undefined,'muted pb-status');status.append(node('span','Đang vẽ','pb-state'),document.createTextNode(' '),node('span','0/'+payload.indexes.length,'pb-num'));
+  head.append(status);
+  const bar=node('div',undefined,'pb-bar');
+  const all=button('Chọn hết',()=>{previewState.cards.forEach(card=>{if(!card.box.disabled)card.box.checked=true;});updatePreviewBoard();});
+  const none=button('Bỏ chọn hết',()=>{previewState.cards.forEach(card=>{card.box.checked=false;});updatePreviewBoard();});
+  const stop=button('Dừng',()=>call('images_cancel'),'pb-stop');
+  const run=button('Chụp các món đã chọn',()=>{
+    const indexes=previewChosen();if(!indexes.length)return;
+    const payload=previewState.payload;closePreviewBoard();
+    call('images_capture',JSON.stringify({...payload,indexes}));
+  },'primary pb-run');
+  run.append(document.createTextNode(' '),node('span','0','pb-count'));
+  const close=button('Đóng',closePreviewBoard);
+  bar.append(all,none,node('span',undefined,'grow'),stop,run,close);
+  const grid=node('div',undefined,'pb-grid');
+  payload.indexes.forEach(index=>{
+    const row=rows.find(r=>r.index===index)||{};
+    const card=node('div',undefined,'pb-card');card.dataset.index=String(index);
+    const label=node('label',undefined,'pb-name');const box=node('input');box.type='checkbox';box.checked=true;box.disabled=true;box.onchange=updatePreviewBoard;
+    label.append(box,document.createTextNode(' '+(row.name||row.definition||'—')));
+    const shot=node('div','Đang vẽ…','pb-shot');
+    card.append(label,shot);grid.append(card);
+    previewState.cards.set(index,{box,shot,card,pending:true});
+  });
+  panel.append(head,bar,grid);board.append(panel);document.body.append(board);previewState.board=board;
+  document.addEventListener('keydown',previewKeyHandler,true);
+  updatePreviewBoard();
+}
+function receivePreviewFrame(data){
+  const card=previewState.cards.get(data.index);if(!card)return;
+  card.shot.replaceChildren();card.pending=false;
+  if(data.error){
+    card.card.classList.add('error');card.box.checked=false;card.box.disabled=true;
+    const failed=node('span',undefined,'pb-error');failed.append(node('span','Không vẽ được'),document.createTextNode(': '),node('span',data.error)); // lý do do Ruby báo (tiếng Việt, được dịch nếu có trong từ điển)
+    card.shot.append(failed);
+  }else{
+    const img=node('img',undefined,'pb-img');img.alt='';img.draggable=false;img.src=data.image;
+    if(data.note)img.title=data.note;
+    card.shot.append(img);card.box.disabled=false;card.box.checked=true;
+  }
+  updatePreviewBoard();
+}
+function receivePreviewProgress(data){
+  const board=previewState.board;if(!board)return;
+  previewState.busy=data.done<data.total;
+  board.querySelector('.pb-num').textContent=`${data.done}/${data.total}`;
+  updatePreviewBoard();
+}
+function receivePreviewDone(data){
+  const board=previewState.board;if(!board)return;
+  previewState.busy=false;
+  board.querySelector('.pb-state').textContent=data.cancelled?'Đã dừng':'Đã vẽ xong';
+  board.querySelector('.pb-num').textContent=`${data.ok}/${data.total}`;
+  // khung chưa vẽ tới (bấm Dừng) không chụp được: bỏ tick
+  previewState.cards.forEach(card=>{if(card.pending){card.shot.textContent='Chưa vẽ';card.box.checked=false;card.box.disabled=true;}});
+  updatePreviewBoard();
 }

@@ -1,6 +1,7 @@
 require 'json'
 require 'fileutils'
 require 'rbconfig'
+require 'base64'
 
 module VGD
   module BIM
@@ -11,12 +12,14 @@ module VGD
       module ImageActions
         MAX_CAPTURE_BATCH = 200 # số đối tượng tối đa cho một lần bấm chụp
         MAX_FULL_REQUEST = 6    # số ảnh gốc giao diện được xin mỗi lần (dự phòng; ảnh gốc nặng nên ít hơn trước)
+        PREVIEW_WIDTH = 360     # chiều rộng tối đa (điểm ảnh) của ảnh nháp khi xem trước góc chụp
 
         def register_image_callbacks
           @dialog.add_action_callback('settings_save') { |_ctx, payload| safely { settings_save(JSON.parse(payload)) } }
           @dialog.add_action_callback('settings_pick_dir') { |_ctx| safely { settings_pick_dir } }
           @dialog.add_action_callback('images_open_dir') { |_ctx| safely { images_open_dir } }
           @dialog.add_action_callback('images_capture') { |_ctx, payload| safely { images_capture(JSON.parse(payload)) } }
+          @dialog.add_action_callback('images_preview') { |_ctx, payload| safely { images_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('image_item_save') { |_ctx, payload| safely { image_item_save(JSON.parse(payload)) } }
           @dialog.add_action_callback('images_cancel') { |_ctx| safely { @capture[:cancel] = true if @capture } }
           @dialog.add_action_callback('image_set') { |_ctx, payload| safely { image_set(JSON.parse(payload)) } }
@@ -88,6 +91,19 @@ module VGD
         #          'item_settings' => thông số nhập trong khung ⚙ (chưa cần lưu), dùng thay cho thông số đã lưu của món}
         # Mỗi món chụp theo thông số riêng đã lưu của nó (PhotoSettings) ghép lên thiết lập của preset; món chưa đặt thì theo preset.
         def images_capture(payload)
+          kind, queue = capture_queue(payload)
+          start_capture(kind, queue, false)
+        end
+
+        # Xem trước góc chụp: cùng payload, cùng hàng đợi và thông số như chụp thật, nhưng chụp ảnh nháp nhỏ gửi từng khung cho giao diện ('image_preview'),
+        # không lưu ảnh nào, không đổi model (cũng cô lập rồi hủy như chụp thật). Dùng chung nút Dừng với chụp.
+        def images_preview(payload)
+          kind, queue = capture_queue(payload)
+          start_capture(kind, queue, true)
+        end
+
+        # Kiểm tra payload và dựng hàng đợi [dòng, bản ghi, thiết lập riêng của món, bên Iso] (dùng chung cho chụp và xem trước).
+        def capture_queue(payload)
           check_model!
           raise 'Đang chụp ảnh. Hãy đợi xong hoặc bấm Dừng.' if @capture
           settings = Preset.settings!(payload.fetch('settings', {}))
@@ -104,10 +120,14 @@ module VGD
             own, side = PhotoSettings.apply(settings, inline || PhotoSettings.read(record[:entity], kind), kind, force_view: payload['force_view'] == true)
             [index, record, own, iso_side || side || 'right']
           end
-          @capture = {queue: queue, total: queue.size, done: 0, errors: [], updated: [], cancel: false, notes: [], kind: kind}
+          [kind, queue]
+        end
+
+        def start_capture(kind, queue, preview)
+          @capture = {queue: queue, total: queue.size, done: 0, errors: [], updated: [], cancel: false, notes: [], kind: kind, preview: preview}
           release_preview # khung đánh dấu không được lọt vào ảnh
           hide_overlay
-          emit('images_progress', {done: 0, total: queue.size})
+          emit(preview ? 'preview_progress' : 'images_progress', {done: 0, total: queue.size})
           schedule_capture_step
         end
 
@@ -139,17 +159,21 @@ module VGD
             job[:errors] << 'Mô hình đã thay đổi. Hãy làm mới trước khi tiếp tục.'
             return finish_capture
           end
-          _index, record, settings, iso_side = job[:queue].shift
+          index, record, settings, iso_side = job[:queue].shift
+          preview = job[:preview]
           begin
-            result = Capture.shoot(@model, record, settings, iso_side: iso_side, kind: job[:kind])
+            result = Capture.shoot(@model, record, settings, iso_side: iso_side, kind: job[:kind], preview: preview ? PREVIEW_WIDTH : nil)
             job[:updated] << result
             job[:notes] << result[:note] if result[:note]
+            emit('image_preview', preview_frame(index, record, job[:kind], result)) if preview
           rescue StandardError => error
             BIM.log("Capture failed: #{error.message}")
-            job[:errors] << "#{capture_label(record)}: #{capture_error_text(error)}"
+            reason = capture_error_text(error)
+            job[:errors] << "#{capture_label(record)}: #{reason}"
+            emit('image_preview', {index: index, pid: record[:entity].persistent_id, kind: job[:kind].to_s, name: capture_label(record), error: reason}) if preview
           end
           job[:done] += 1
-          emit('images_progress', {done: job[:done], total: job[:total]})
+          emit(preview ? 'preview_progress' : 'images_progress', {done: job[:done], total: job[:total]})
           schedule_capture_step
         rescue StandardError => error
           BIM.log("Capture step failed: #{error.message}")
@@ -161,10 +185,20 @@ module VGD
           @capture = nil
           return unless job
           unless @closed
-            emit('images_changed', {items: job[:updated].map { |item| image_change(item[:pid], true, item[:stamp], item[:kind] || :full) }})
-            emit('images_done', {done: job[:done], total: job[:total], ok: job[:updated].size, errors: job[:errors].first(5), notes: job[:notes].uniq.first(3), cancelled: job[:cancel]})
+            if job[:preview]
+              emit('preview_done', {done: job[:done], total: job[:total], ok: job[:updated].size, errors: job[:errors].first(5), notes: job[:notes].uniq.first(3), cancelled: job[:cancel]})
+            else
+              emit('images_changed', {items: job[:updated].map { |item| image_change(item[:pid], true, item[:stamp], item[:kind] || :full) }})
+              emit('images_done', {done: job[:done], total: job[:total], ok: job[:updated].size, errors: job[:errors].first(5), notes: job[:notes].uniq.first(3), cancelled: job[:cancel]})
+            end
             show_outline if @mode == 'table'
           end
+        end
+
+        # Một khung xem trước gửi cho giao diện: ảnh nháp dạng data URL (không qua file), kèm tên món để người dùng nhận ra.
+        def preview_frame(index, record, kind, result)
+          frame = {index: index, pid: result[:pid], kind: kind.to_s, name: capture_label(record), image: "data:image/png;base64,#{Base64.strict_encode64(result[:png])}"}
+          result[:note] ? frame.merge(note: result[:note]) : frame
         end
 
         # 'full' (mặc định, ảnh món) hoặc 'location' (ảnh vị trí); giá trị khác bị từ chối.

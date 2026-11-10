@@ -128,10 +128,10 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page2.close();
 
   // ---- Nút nhỏ khi rê chuột vào ảnh ----
-  ok(await page.locator('.grid tbody tr').nth(1).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"])').count()===5 && await page.locator('.grid tbody tr').nth(0).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"])').count()===6,'ô ảnh có nút chụp view hiện tại, Iso trái, Iso phải, Chụp lại, Chọn ảnh, và Xóa ảnh (chỉ khi đã có ảnh)');
-  ok(JSON.stringify(await page.locator('.grid tbody tr').nth(0).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"])').evaluateAll(list=>list.map(b=>b.title)))===JSON.stringify(['Chụp view hiện tại','Chụp Iso từ bên trái','Chụp Iso từ bên phải','Chụp lại','Chọn ảnh…','Xóa ảnh']),'nút chụp view hiện tại và hai nút ký hiệu Iso trái / phải đứng trước nút chụp lại');
+  ok(await page.locator('.grid tbody tr').nth(1).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"]):not([title="Xem trước góc chụp"])').count()===5 && await page.locator('.grid tbody tr').nth(0).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"]):not([title="Xem trước góc chụp"])').count()===6,'ô ảnh có nút chụp view hiện tại, Iso trái, Iso phải, Chụp lại, Chọn ảnh, và Xóa ảnh (chỉ khi đã có ảnh)');
+  ok(JSON.stringify(await page.locator('.grid tbody tr').nth(0).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"]):not([title="Xem trước góc chụp"])').evaluateAll(list=>list.map(b=>b.title)))===JSON.stringify(['Chụp view hiện tại','Chụp Iso từ bên trái','Chụp Iso từ bên phải','Chụp lại','Chọn ảnh…','Xóa ảnh']),'nút chụp view hiện tại và hai nút ký hiệu Iso trái / phải đứng trước nút chụp lại');
   await page.locator('.grid tbody tr').nth(0).locator('td.img').hover();
-  ok(await page.locator('.grid tbody tr').nth(0).evaluate(tr=>{const pic=tr.querySelector('.cell-pic').getBoundingClientRect(),mid=(pic.left+pic.right)/2;const tools=[...tr.querySelectorAll('.cell-tool')];const rects=tools.map(b=>b.getBoundingClientRect());const lo=Math.min(...rects.map(r=>r.left)),hi=Math.max(...rects.map(r=>r.right));return tools.length===7 && Math.abs((lo+hi)/2-mid)<2 && rects.every(r=>r.top>=pic.top-0.5&&r.bottom<=pic.bottom+0.5) && tools.every((b,i)=>document.elementFromPoint((rects[i].left+rects[i].right)/2,(rects[i].top+rects[i].bottom)/2)===b);}),'khi rê chuột: 7 nút (⚙ cùng hàng vì ô thấp) nằm một hàng, căn giữa ô ảnh, bấm được từng nút (không bị ô khác che), kể cả ở hàng Gọn');
+  ok(await page.locator('.grid tbody tr').nth(0).evaluate(tr=>{const pic=tr.querySelector('.cell-pic').getBoundingClientRect(),mid=(pic.left+pic.right)/2;const tools=[...tr.querySelectorAll('.cell-tool')];const rects=tools.map(b=>b.getBoundingClientRect());const lo=Math.min(...rects.map(r=>r.left)),hi=Math.max(...rects.map(r=>r.right));return tools.length===8 && Math.abs(lo-pic.left)<4 && rects.every(r=>r.top>=pic.top-0.5&&r.bottom<=pic.bottom+0.5) && tools.every((b,i)=>b.contains(document.elementFromPoint((rects[i].left+rects[i].right)/2,(rects[i].top+rects[i].bottom)/2)));}),'khi rê chuột: 8 nút (⚙ và 👁 cùng hàng vì ô thấp) nằm một hàng, bắt đầu từ mép trái ô ảnh, bấm được từng nút (không bị ô khác che), kể cả ở hàng Gọn');
   await clear();
   await page.locator('.grid tbody tr').nth(1).locator('td.img').hover();
   await page.locator('.grid tbody tr').nth(1).locator('.cell-tool[title="Chụp ảnh"]').click();
@@ -1012,7 +1012,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   const locCell=i=>page.locator('.grid tbody tr').nth(i).locator('td[data-key="image_location"]');
   ok(await page.locator('.grid thead th[data-key="image_location"]').count()===1 && (await page.locator('.grid thead th[data-key="image_location"]').innerText()).includes('Ảnh vị trí'),'cột Ảnh vị trí có trong bảng (bật bằng Chọn cột)');
   ok(await locCell(0).locator('img.cell-img[data-kind="location"]').count()===1 && await locCell(1).locator('img').count()===0 && await locCell(1).locator('.cell-empty').count()===1,'dòng có ảnh vị trí hiện ảnh, dòng chưa có hiện dấu +');
-  ok(JSON.stringify(await locCell(0).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"])').evaluateAll(l=>l.map(b=>b.title)))===JSON.stringify(['Chụp view hiện tại','Chụp vị trí từ bên trái (Iso)','Chụp vị trí từ bên phải (Iso)','Chụp lại','Chọn ảnh…','Xóa ảnh vị trí']) && await locCell(1).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"])').count()===5,'ô ảnh vị trí có nút chụp trái, phải, chụp lại, chọn ảnh, xóa (xóa chỉ khi đã có ảnh)');
+  ok(JSON.stringify(await locCell(0).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"]):not([title="Xem trước góc chụp"])').evaluateAll(l=>l.map(b=>b.title)))===JSON.stringify(['Chụp view hiện tại','Chụp vị trí từ bên trái (Iso)','Chụp vị trí từ bên phải (Iso)','Chụp lại','Chọn ảnh…','Xóa ảnh vị trí']) && await locCell(1).locator('.cell-tool:not([title="Thông số ảnh riêng của món này"]):not([title="Xem trước góc chụp"])').count()===5,'ô ảnh vị trí có nút chụp trái, phải, chụp lại, chọn ảnh, xóa (xóa chỉ khi đã có ảnh)');
   await clear();await locCell(0).hover();await locCell(0).getByRole('button',{name:'Chụp vị trí từ bên trái (Iso)'}).click();
   let lc=await json('images_capture');
   ok(lc && lc.kind==='location' && lc.iso_side==='left' && JSON.stringify(lc.indexes)==='[0]' && lc.settings.image_location_scale===4,'nút ◣ trên ô ảnh vị trí: chụp ảnh vị trí bên trái, kèm hệ số vùng nhìn của preset');
@@ -1106,7 +1106,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.evaluate(()=>{tableState.density='';tableState.rowHeight=0;tableView(tableState.data);}); // mật độ và độ cao hàng thường (các phép thử trước có thể để hàng Gọn hoặc độ cao thấp)
   const mainCell=i=>page.locator('.grid tbody tr').nth(i).locator('td[data-key="image"]');
   await mainCell(0).hover();
-  ok(await mainCell(0).locator('.cell-tools.top .cell-tool').count()===1&&await mainCell(0).locator('.cell-tools.top .cell-tool').getAttribute('title')==='Thông số ảnh riêng của món này','ô ảnh chính có nút ⚙ ở hàng nút trên đầu ảnh');
+  ok(await mainCell(0).locator('.cell-tools.top .cell-tool').count()===2&&JSON.stringify(await mainCell(0).locator('.cell-tools.top .cell-tool').evaluateAll(l=>l.map(b=>b.title)))===JSON.stringify(['Thông số ảnh riêng của món này','Xem trước góc chụp']),'ô ảnh chính có nút ⚙ và nút xem trước ở hàng nút trên đầu ảnh');
   ok(await mainCell(0).evaluate(td=>{const pic=td.querySelector('.cell-pic').getBoundingClientRect(),top=td.querySelector('.cell-tools.top').getBoundingClientRect(),bottom=td.querySelector('.cell-tools:not(.top)').getBoundingClientRect();return Math.abs(top.top-pic.top)<3&&bottom.bottom>pic.bottom-3&&Math.abs((top.left+top.right)/2-(pic.left+pic.right)/2)<2;}),'nút ⚙ nằm trên đầu ảnh, căn giữa; hàng nút chụp vẫn ở dưới');
   await clear();await mainCell(0).getByRole('button',{name:'Chụp view hiện tại'}).click();
   let cur=await json('images_capture');
@@ -1117,7 +1117,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   for(const [name,setup] of [['hàng Gọn',()=>{tableState.density='dense';tableState.rowHeight=0;}],['độ cao hàng tự chọn thấp (30)',()=>{tableState.density='';tableState.rowHeight=30;}]]){
     await page.evaluate(`(${setup.toString()})();tableView(tableState.data);`);
     await mainCell(0).hover();
-    ok(await mainCell(0).locator('.cell-tools.top').count()===0&&await mainCell(0).evaluate(td=>{const tools=[...td.querySelectorAll('.cell-tools .cell-tool')],gear=tools[0],box=gear.getBoundingClientRect();return gear.title==='Thông số ảnh riêng của món này'&&tools.length===7&&document.elementFromPoint((box.left+box.right)/2,(box.top+box.bottom)/2)===gear;}),name+': ô quá thấp cho hai hàng nút nên ⚙ đứng đầu hàng nút dưới và bấm được');
+    ok(await mainCell(0).locator('.cell-tools.top').count()===0&&await mainCell(0).evaluate(td=>{const tools=[...td.querySelectorAll('.cell-tools .cell-tool')],gear=tools[0],box=gear.getBoundingClientRect();return gear.title==='Thông số ảnh riêng của món này'&&tools.length===8&&document.elementFromPoint((box.left+box.right)/2,(box.top+box.bottom)/2)===gear;}),name+': ô quá thấp cho hai hàng nút nên ⚙ đứng đầu hàng nút dưới và bấm được');
   }
   await page.evaluate(()=>{tableState.density='';tableState.rowHeight=0;tableView(tableState.data);});
   // Khung thông số
@@ -1159,6 +1159,59 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await locCell(0).hover();await locCell(0).getByRole('button',{name:'Thông số ảnh riêng của món này'}).click();
   await page.mouse.click(5,5);
   ok(await pop.count()===0,'bấm ra ngoài khung thì khung đóng');
+
+  // ---- Xem trước góc chụp: nút 👁 trên ô ảnh và nút Xem trước trong hộp Cập nhật ảnh ----
+  await page.evaluate(()=>{tableState.density='';tableState.rowHeight=0;tableState.panel=null;tableState.sel=new Set();tableState.search='';tableState.group='';tableState.groupBy='';imagesState.only=false;tableView(tableState.data);});
+  await receive('table',table());
+  await mainCell(0).hover();
+  await clear();await mainCell(0).getByRole('button',{name:'Xem trước góc chụp'}).click();
+  let pvw=await json('images_preview');
+  const prevBoard=page.locator('.preview-board');
+  ok(pvw&&JSON.stringify(pvw.indexes)==='[0]'&&!pvw.kind&&pvw.settings.image_view==='isometric'&&pvw.only_missing===false&&!(await calls('images_capture')).length,'nút 👁 ở ô ảnh chính: xin xem trước đúng dòng đó theo thiết lập ảnh chính, chưa chụp');
+  ok(await prevBoard.count()===1&&(await prevBoard.locator('.pb-head strong').innerText())==='Xem trước góc chụp'&&(await prevBoard.locator('.pb-kind').innerText())==='Ảnh chính'&&await prevBoard.locator('.pb-card').count()===1&&(await prevBoard.locator('.pb-shot').innerText())==='Đang vẽ…'&&await prevBoard.locator('.pb-run').isDisabled(),'mở bảng xem trước: một khung đang vẽ, nút Chụp khóa trong lúc vẽ');
+  await receive('image_preview',{index:0,pid:900,kind:'full',name:'Tủ 1',image:PNG1});
+  await receive('preview_progress',{done:1,total:1});
+  await receive('preview_done',{done:1,total:1,ok:1,errors:[],notes:[],cancelled:false});
+  ok(await prevBoard.locator('.pb-card img.pb-img').count()===1&&await prevBoard.locator('.pb-card input').isChecked()&&(await prevBoard.locator('.pb-state').innerText())==='Đã vẽ xong'&&await prevBoard.locator('.pb-run').isEnabled()&&(await prevBoard.locator('.pb-count').innerText())==='1','nhận khung xem trước: hiện ảnh nháp, tick sẵn, báo xong, mở nút Chụp (1 món)');
+  await clear();await prevBoard.locator('.pb-run').click();
+  let goNow=await json('images_capture');
+  ok(goNow&&JSON.stringify(goNow.indexes)==='[0]'&&JSON.stringify(goNow.settings)===JSON.stringify(pvw.settings)&&goNow.only_missing===false&&await prevBoard.count()===0&&!(await calls('images_cancel')).length,'Chụp các món đã chọn: chụp thật đúng thông số của lần xem trước, đóng bảng, không gửi Dừng');
+  // Hộp Cập nhật ảnh: xem trước cả lô, bỏ món lỗi / món bị cấn
+  await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});
+  await clear();await page.locator('.capture-panel .rename-actions').getByRole('button',{name:'Xem trước'}).click();
+  pvw=await json('images_preview');
+  ok(pvw&&JSON.stringify(pvw.indexes)==='[0,1,2]'&&await prevBoard.locator('.pb-card').count()===3,'hộp Cập nhật ảnh: nút Xem trước mở bảng cho mọi đối tượng đang hiện (3 món)');
+  await receive('image_preview',{index:0,pid:900,kind:'full',name:'Tủ 1',image:PNG1});
+  await receive('image_preview',{index:1,pid:901,kind:'full',name:'Tủ 2',error:'SketchUp không chụp được ảnh.'});
+  await receive('image_preview',{index:2,pid:902,kind:'full',name:'Tủ 3',image:PNG1,note:'ảnh nháp dùng cách thay thế'});
+  await receive('preview_progress',{done:3,total:3});await receive('preview_done',{done:3,total:3,ok:2,errors:['Tủ 2: SketchUp không chụp được ảnh.'],notes:[],cancelled:false});
+  ok(await prevBoard.locator('.pb-card.error').count()===1&&await prevBoard.locator('.pb-card').nth(1).locator('input').isDisabled()&&!(await prevBoard.locator('.pb-card').nth(1).locator('input').isChecked())&&(await prevBoard.locator('.pb-card.error').innerText()).includes('SketchUp không chụp được ảnh.')&&(await prevBoard.locator('.pb-count').innerText())==='2','món vẽ lỗi: hiện lý do, bỏ tick và khóa; số món đã chọn còn 2');
+  await prevBoard.locator('.pb-card').nth(0).locator('input').uncheck();
+  ok((await prevBoard.locator('.pb-count').innerText())==='1','bỏ tick món bị cấn vật thể: số món đã chọn giảm');
+  await clear();await prevBoard.locator('.pb-run').click();
+  goNow=await json('images_capture');
+  ok(goNow&&JSON.stringify(goNow.indexes)==='[2]'&&goNow.settings.image_view===pvw.settings.image_view,'chụp các món còn tick: chỉ chụp dòng 2 (món đã bỏ tick và món lỗi không chụp)');
+  await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});
+  await page.locator('#cap-only').check();await clear();await page.locator('.capture-panel .rename-actions').getByRole('button',{name:'Xem trước'}).click();
+  pvw=await json('images_preview');
+  const missingRows=await page.evaluate(()=>tableState.data.rows.filter(r=>!r.has_image).map(r=>r.index));
+  ok(pvw&&missingRows.length>0&&missingRows.length<3&&JSON.stringify(pvw.indexes)===JSON.stringify(missingRows)&&pvw.only_missing===false,'tùy chọn chỉ đối tượng chưa có ảnh: bảng xem trước chỉ gồm các món chưa có ảnh');
+  await page.keyboard.press('Escape');
+  ok(await prevBoard.count()===0&&(await calls('images_cancel')).length===1,'Esc đóng bảng khi đang vẽ dở: dừng việc vẽ');
+  // Ảnh vị trí
+  await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});
+  await page.locator('#cap-only').uncheck();await clear();await page.locator('.capture-panel .cap-place').getByRole('button',{name:'Xem trước'}).click();
+  pvw=await json('images_preview');
+  ok(pvw&&pvw.kind==='location'&&!('iso_side' in pvw)&&pvw.settings.loc_view!==undefined&&(await prevBoard.locator('.pb-kind').innerText())==='Ảnh vị trí','hộp Cập nhật ảnh, hàng Ảnh vị trí: Xem trước theo thiết lập ảnh vị trí của preset');
+  await clear();await prevBoard.getByRole('button',{name:'Đóng'}).click();
+  ok(await prevBoard.count()===0&&(await calls('images_cancel')).length===1,'nút Đóng khi chưa vẽ xong: dừng việc vẽ');
+  await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
+  await locCell(0).hover();await clear();await locCell(0).getByRole('button',{name:'Xem trước góc chụp'}).click();
+  pvw=await json('images_preview');
+  ok(pvw&&pvw.kind==='location'&&JSON.stringify(pvw.indexes)==='[0]','nút 👁 ở ô ảnh vị trí: xem trước ảnh vị trí của đúng dòng đó');
+  await receive('preview_done',{done:0,total:1,ok:0,errors:[],notes:[],cancelled:true});
+  ok((await prevBoard.locator('.pb-state').innerText())==='Đã dừng'&&(await prevBoard.locator('.pb-shot').innerText())==='Chưa vẽ'&&await prevBoard.locator('.pb-run').isDisabled(),'dừng giữa chừng: khung chưa vẽ ghi "Chưa vẽ", bỏ tick, không chụp được');
+  await prevBoard.getByRole('button',{name:'Đóng'}).click();
 
   // ---- Đổi ngôn ngữ thì tải lại cửa sổ ----
   await receive('config',config('table'));

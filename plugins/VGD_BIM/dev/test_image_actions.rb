@@ -52,9 +52,13 @@ ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
 module VGD; module BIM; module UI
   module Capture
     ISO_SIDES = %w[right left].freeze
-    def self.shoot(model, record, settings, iso_side: 'right', kind: :full)
+    def self.shoot(model, record, settings, iso_side: 'right', kind: :full, preview: nil)
       pid = record[:entity].persistent_id
       raise 'SketchUp không chụp được ảnh.' if pid == 902
+      if preview
+        ($previews ||= []) << {pid: pid, settings: settings, side: iso_side, kind: kind, width: preview}
+        return {pid: pid, kind: kind, png: PNG, note: pid == 907 ? 'ảnh nháp dùng cách thay thế' : nil}.compact
+      end
       raise NoMethodError, "undefined method `bounds' for nil:NilClass" if pid == 906
       note = pid == 907 ? 'nền trong suốt không dùng được trên máy này nên ảnh dùng cách thay thế' : nil
       $shot << [pid, settings['image_view']]
@@ -398,6 +402,52 @@ saved.(d, 0, 'zzz', {'view' => 'front'})
 ok('loại ảnh lạ bị từ chối khi lưu', error_of(d).to_s.include?('Loại ảnh'))
 # các ảnh do phần thử trên tạo ra không được để lại (thư mục ảnh của test dùng chung giữa các lần chạy, phần xuất Excel ở trên cần món thứ 3 chưa có ảnh)
 %w[901.png 903.png 901_loc.png 903_loc.png].each { |name| FileUtils.rm_f(File.join(I.dir($model), name)) }
+
+# ---- Xem trước góc chụp (images_preview): cùng hàng đợi và thông số như chụp thật, ảnh nháp gửi từng khung, không lưu gì ----
+$previews = []
+d = make_dialog(3)
+saved.(d, 0, 'full', {'view' => 'front', 'yaw' => 20})
+d.safely { d.images_preview('indexes' => [0, 2], 'settings' => {'image_view' => 'isometric'}) }
+ok('xem trước: báo tiến độ 0 / 2 ngay, chưa chụp, bận như chụp thật (không cho chụp / xem trước chồng nhau)', events(d, 'preview_progress').last == {'done' => 0, 'total' => 2} && $previews.empty? && events(d, 'images_progress').empty?)
+d.safely { d.images_capture('indexes' => [1]) }
+ok('đang xem trước: yêu cầu chụp hoặc xem trước khác bị từ chối', error_of(d).to_s.include?('Đang chụp ảnh'))
+UI.run_timers
+shown = events(d, 'image_preview')
+ok('xem trước: gửi từng khung theo thứ tự, kèm dòng, mã, tên, loại ảnh và ảnh nháp dạng data URL', shown.map { |e| e['index'] } == [0, 2] && shown.map { |e| e['pid'] } == [901, 903] && shown.map { |e| e['name'] } == ['Tủ 1', 'Tủ 3'] && shown.all? { |e| e['kind'] == 'full' && e['image'].start_with?('data:image/png;base64,') })
+ok('xem trước: ảnh nháp có chiều rộng tối đa 360 và đúng nội dung PNG', $previews.all? { |p| p[:width] == 360 } && Base64.decode64(shown[0]['image'].split(',', 2)[1]) == PNG)
+ok('xem trước: món có thông số riêng dùng thông số riêng như chụp thật, món khác theo preset', $previews[0][:settings].values_at('image_view', 'image_yaw') == ['front', 20] && $previews[1][:settings]['image_view'] == 'isometric')
+done_event = events(d, 'preview_done').last
+ok('xem trước xong: báo số khung, không báo ảnh đã đổi (không lưu gì), không báo chụp xong', done_event['done'] == 2 && done_event['total'] == 2 && done_event['ok'] == 2 && done_event['errors'] == [] && events(d, 'images_changed').empty? && events(d, 'images_done').empty? && d.instance_variable_get(:@capture).nil?)
+ok('xem trước: khung đánh dấu được ẩn trước khi vẽ (không lọt vào ảnh nháp)', $outline_hidden >= 2)
+$previews = []
+d = make_dialog(3)
+d.safely { d.images_preview('indexes' => [0, 1, 2], 'settings' => {'image_view' => 'isometric'}) }
+UI.run_timers
+shown = events(d, 'image_preview')
+ok('xem trước: một món lỗi gửi khung lỗi kèm lý do, các món khác vẫn xem tiếp', shown.map { |e| e['index'] } == [0, 1, 2] && shown[1]['error'].to_s.include?('SketchUp không chụp được ảnh') && !shown[1].key?('image') && shown[2]['image'] && events(d, 'preview_done').last['ok'] == 2 && events(d, 'preview_done').last['errors'].size == 1)
+d = make_dialog(3)
+$previews = []
+d.safely { d.images_preview('indexes' => [0], 'kind' => 'location', 'iso_side' => 'left', 'force_view' => true, 'settings' => {'loc_view' => 'current'}) }
+UI.run_timers
+ok('xem trước ảnh vị trí: mang loại ảnh, bên Iso và ép góc nhìn như chụp thật', events(d, 'image_preview').last['kind'] == 'location' && $previews[0].values_at(:side, :kind) == ['left', :location] && $previews[0][:settings]['loc_view'] == 'current')
+d = make_dialog(3, has_image: [0, 1])
+$previews = []
+d.safely { d.images_preview('only_missing' => true) }
+UI.run_timers
+ok('xem trước: tùy chọn chỉ món chưa có ảnh được tôn trọng như chụp thật', $previews.map { |p| p[:pid] } == [903])
+d = make_dialog(3)
+$previews = []
+d.safely { d.images_preview('indexes' => [0, 1, 2], 'settings' => {'image_view' => 'isometric'}) }
+d.instance_variable_get(:@capture)[:cancel] = true
+UI.run_timers
+ok('bấm Dừng khi xem trước: dừng, báo đã dừng', events(d, 'preview_done').last['cancelled'] == true && $previews.empty?)
+d = make_dialog(3)
+d.safely { d.images_preview('indexes' => [0], 'settings' => {'image_view' => 'top'}) }
+ok('xem trước với thiết lập sai: từ chối trước khi vẽ, không hẹn giờ', error_of(d).to_s.include?('Góc nhìn') && UI.timers.empty? && d.instance_variable_get(:@capture).nil?)
+d.safely { d.images_preview('indexes' => [0], 'item_settings' => {'yaw' => 999}) }
+ok('xem trước với thông số nhập sai: từ chối như chụp thật', error_of(d).to_s.include?('Góc lệch') && UI.timers.empty?)
+d.safely { d.images_preview('indexes' => []) }
+ok('xem trước không có món nào: báo rõ như chụp thật', error_of(d).to_s.include?('ít nhất một dòng'))
 
 # ---- Ảnh vị trí (kind: location) đi cùng lệnh chụp, dán / kéo thả và xóa ----
 $kinds = []

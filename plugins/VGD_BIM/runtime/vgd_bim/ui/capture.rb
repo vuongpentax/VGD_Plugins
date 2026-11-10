@@ -29,7 +29,9 @@ module VGD
 
         # record: một phần tử của Table.build (có :entity và :path). settings: thiết lập ảnh của preset.
         # Trả về {pid:, stamp:} và thêm :note khi phải chụp bằng cách thay thế (xem write).
-        def self.shoot(model, record, settings, iso_side: 'right', kind: :full)
+        # preview: chiều rộng tối đa (điểm ảnh) của ảnh nháp. Có thì chụp đúng như thật (cùng cô lập, camera, kiểu, nền) nhưng ảnh nhỏ theo tỉ lệ ảnh thật,
+        #   không lưu ảnh nào, trả về {pid:, kind:, png: nội dung PNG} (xem trước góc chụp trước khi chụp hàng loạt).
+        def self.shoot(model, record, settings, iso_side: 'right', kind: :full, preview: nil)
           settings = Preset.settings!(settings)
           Images.kind!(kind)
           location = kind == :location
@@ -43,6 +45,8 @@ module VGD
           framed = isolate || (location && ISOLATING_VIEWS.include?(settings['image_view'])) # có đặt camera (Iso / Chính diện); Khung nhìn hiện tại thì chụp nguyên khung
           saved = {camera: copy_camera(view), selection: model.selection.to_a, options: nil}
           ensure_writable(Images.dir(model))
+          temp = preview ? preview_path(model, pid, kind) : Images.temp_path(model, pid, kind)
+          png = nil
           operation = false
           notes = []
           begin
@@ -57,19 +61,31 @@ module VGD
               notes << aim(view, entity, settings['image_view'], FrontProbe.front_world(record), iso_side, yaw: settings['image_yaw'], pitch: settings['image_pitch'])
             end
             size = [settings['image_width'], settings['image_height']]
+            size = preview_size(size, preview) if preview
             frame(view, record, size, 1.0 + settings['image_margin'] / 100.0, scale: location ? settings['image_location_scale'] : 1) if framed
             view.refresh
-            notes << write(view, Images.temp_path(model, pid, kind), size, settings)
-            Images.commit(model, pid, kind)
+            notes << write(view, temp, size, settings)
+            if preview then png = File.binread(temp) else Images.commit(model, pid, kind) end
           rescue StandardError => error
             log("#{error.class}: #{error.message} | đối tượng #{pid} | #{settings.inspect} | #{error.backtrace.to_a.first(4).join(' <- ')}")
             raise
           ensure
-            restore(model, view, saved, operation, pid, kind)
+            restore(model, view, saved, operation, temp)
           end
-          result = Images.info(model, pid, Images.dir(model), kind).merge(pid: pid, kind: kind).reject { |key, _| key == :has }
+          result = preview ? {pid: pid, kind: kind, png: png} : Images.info(model, pid, Images.dir(model), kind).merge(pid: pid, kind: kind).reject { |key, _| key == :has }
           note = notes.compact.uniq.join('; ')
           note.empty? ? result : result.merge(note: note)
+        end
+
+        # Ảnh nháp: tối đa max_width điểm ảnh bề ngang, cùng tỉ lệ với ảnh thật; ảnh thật nhỏ hơn thì giữ nguyên (không phóng to).
+        def self.preview_size(size, max_width)
+          width = [size[0], max_width].min
+          [width, [(size[1] * width.to_f / size[0]).round, 32].max]
+        end
+
+        # File tạm của ảnh nháp (xóa ngay sau khi đọc), tên bắt đầu bằng dấu chấm để không lẫn với ảnh của món.
+        def self.preview_path(model, pid, kind)
+          File.join(Images.dir(model), ".preview_#{pid}#{kind == :location ? '_loc' : ''}.png")
         end
 
         def self.location_settings(settings)
@@ -78,13 +94,13 @@ module VGD
 
         # Mỗi bước khôi phục chạy độc lập: một bước lỗi không được làm hỏng các bước sau, cũng không được biến lần chụp
         # đã thành công thành thất bại (lỗi khôi phục chỉ ghi vào capture.log).
-        def self.restore(model, view, saved, operation, pid, kind = :full)
+        def self.restore(model, view, saved, operation, temp)
           steps = {
             'hủy thao tác' => -> { model.abort_operation if operation },
             'trả tuỳ chọn hiển thị' => -> { restore_options(model, saved[:options]) },
             'trả camera' => -> { view.camera = saved[:camera] },
             'trả lựa chọn' => -> { restore_selection(model, saved[:selection]) },
-            'dọn file tạm' => -> { FileUtils.rm_f(Images.temp_path(model, pid, kind)) }
+            'dọn file tạm' => -> { FileUtils.rm_f(temp) }
           }
           steps.each do |name, step|
             begin

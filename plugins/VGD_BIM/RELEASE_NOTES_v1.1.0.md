@@ -26,6 +26,7 @@
 - **Chọn cột kiểu mới** (theo Auto Info, gọn hơn): ngăn trượt ra bên trái và đẩy bảng sang phải nên cột đầu không bị che; ô tick tự vẽ, kéo thả đổi chỗ cột có hiệu ứng trượt, nút gạt chân trang trượt mượt.
 - **Giao diện không còn thanh cuộn dọc** ở bảng, bảng Chọn cột, Preset và các tab (vẫn cuộn bằng con lăn chuột); chỉ giữ thanh cuộn ngang của bảng khi nhiều cột.
 - **Tiếng Anh** cho toàn bộ giao diện (báo cáo CSV và hộp thoại gốc của SketchUp vẫn tiếng Việt).
+- **Xem trước góc chụp** (beta.57): nút 👁 trên ô ảnh và nút Xem trước trong hộp Cập nhật ảnh; lưới ảnh nháp của cả lô, bỏ tick món bị cấn vật thể rồi chụp các món còn lại.
 - **Nút chụp view hiện tại (◉) và thông số ảnh riêng từng món (⚙)** (beta.56): ◉ chụp đúng khung nhìn đang thấy vào ô ảnh chính hoặc ảnh vị trí; ⚙ mở khung chỉnh góc nhìn, bên Iso, lệch trái / phải, góc cao, lề, vùng nhìn riêng cho món đó, lưu trong file SketchUp.
 - **Ảnh vị trí có thiết lập riêng và góc lệch trái / phải** (beta.55): khối Ảnh vị trí trong bảng Preset (cỡ, góc nhìn, kiểu, nền, lề), ô Lệch trái / phải (độ) và Góc cao (độ) cho góc nhìn Chính diện ở cả ảnh chính và ảnh vị trí để thấy một chút bên hông món; nút ● Theo preset trong hộp Cập nhật ảnh.
 - **Chụp ảnh nhận FOV đang dùng** (beta.53, sửa ở beta.54): ảnh Iso, Chính diện và ảnh vị trí dùng đúng FOV của khung nhìn (phối cảnh), vẫn giữ camera song song, FOV của khung nhìn giữ nguyên sau khi chụp; trước đây FOV luôn là 35 độ mặc định. Ô Vùng nhìn ảnh vị trí nhận từ 1 (đúng như ảnh Iso) đến 20.

@@ -89,6 +89,19 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
     if(opened){await scan(label);await page.keyboard.press('Escape');}
     else if(column==='image')throw Error('Photo settings gear (⚙) did not open the panel in the table fixture');
   }
+  // Bảng xem trước góc chụp: đang vẽ, có ảnh, có khung lỗi, đã xong
+  await page.evaluate(()=>{openPreviewBoard({kind:'location',indexes:[0,1,2],settings:{}});});
+  await scan('Bảng xem trước (đang vẽ)');
+  await page.evaluate(()=>{
+    const png='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    receivePreviewFrame({index:0,pid:1,kind:'location',name:'A',image:png});
+    receivePreviewFrame({index:1,pid:2,kind:'location',name:'B',error:'Loại ảnh không hợp lệ.'});
+    receivePreviewProgress({done:2,total:3});
+  });
+  await scan('Bảng xem trước (có ảnh và khung lỗi)');
+  await page.evaluate(()=>{receivePreviewDone({done:3,total:3,ok:1,errors:[],notes:[],cancelled:true});});
+  await scan('Bảng xem trước (đã dừng)');
+  await page.evaluate(()=>closePreviewBoard());
   await page.evaluate(()=>{tableState.rename.preview={counts:{ok:2,same:1,locked:1,empty:1,long:1,duplicate:1},rows:[{old:'a',new:'b',status:'ok',duplicate:true},{old:'',new:'',status:'empty'},{old:'x',new:'x',status:'same'},{old:'y',new:'y',status:'locked'},{old:'z',new:'z',status:'long'}]};tableState.panel='rename';tableView(tableState.data);});await scan('Bảng (xem trước đổi tên)');
   await page.evaluate(()=>{tableState.panel=null;tableState.groupBy='parent';tableState.merge=true;tableView(tableState.data);});await scan('Bảng (nhóm)');
   for(const g of ['entity','definition','instance','material','tag','tag_group','status']){await page.evaluate(g=>{tableState.groupBy=g;tableView(tableState.data);},g);await scan('Bảng (nhóm '+g+')');}
