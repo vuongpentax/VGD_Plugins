@@ -11,9 +11,9 @@ module VGD
       #   cho vừa. Mọi thay đổi trong model nằm trong một thao tác mở rồi HỦY (abort_operation), nên không để lại bước undo
       #   và trạng thái ẩn / hiện tự trở lại như cũ ngay cả khi lỗi giữa chừng.
       # Góc nhìn current: chụp đúng khung nhìn đang thấy, không đổi camera hay model.
-      # Ảnh vị trí (kind: :location): không cô lập món. Camera đặt theo góc Iso (trái / phải) nhìn vùng quanh món rộng gấp
-      #   image_location_scale lần kích thước món, và món được mở làm ngữ cảnh sửa nên SketchUp làm mờ phần còn lại của model, để thấy món nằm đâu
-      #   trong công trình. Cũng trong một thao tác mở rồi hủy; ngữ cảnh đang mở của người dùng được trả lại.
+      # Ảnh vị trí (kind: :location): đặt camera y như ảnh Iso (cùng hướng theo mặt trước của món, trái / phải) nhưng KHÔNG đổi gì trong model:
+      #   không cô lập, không ẩn, không làm mờ, không đổi ngữ cảnh đang mở; chỉ lùi camera ra nhìn vùng quanh món rộng gấp image_location_scale lần
+      #   kích thước món, để thấy món nằm đâu so với tường và nội thất khác đúng như đang hiện trong SketchUp (kể cả mặt cắt trần, trần đã ẩn).
       # Cả hai bỏ chọn tạm thời (để khung chọn không lọt vào ảnh) rồi trả lại; camera và tuỳ chọn hiển thị luôn được trả lại.
       module Capture
         ISOLATING_VIEWS = %w[isometric front].freeze
@@ -35,7 +35,7 @@ module VGD
           pid = Images.id!(entity.persistent_id)
           view = model.active_view
           isolate = !location && ISOLATING_VIEWS.include?(settings['image_view'])
-          saved = {camera: copy_camera(view.camera), selection: model.selection.to_a, options: nil, active_path: location ? (model.active_path || []).dup : nil}
+          saved = {camera: copy_camera(view.camera), selection: model.selection.to_a, options: nil}
           ensure_writable(Images.dir(model))
           operation = false
           notes = []
@@ -45,10 +45,6 @@ module VGD
               model.start_operation('VGD_BIM · Chụp ảnh', true)
               operation = true
               Table.isolate(model, record[:path])
-            elsif location
-              model.start_operation('VGD_BIM · Chụp ảnh vị trí', true)
-              operation = true
-              model.active_path = record[:path] # mở món làm ngữ cảnh sửa: SketchUp làm mờ phần còn lại của model
             end
             saved[:options] = tweak_options(model, settings)
             if isolate || location
@@ -76,7 +72,6 @@ module VGD
         def self.restore(model, view, saved, operation, pid, kind = :full)
           steps = {
             'hủy thao tác' => -> { model.abort_operation if operation },
-            'trả ngữ cảnh đang mở' => -> { restore_active_path(model, saved[:active_path]) },
             'trả tuỳ chọn hiển thị' => -> { restore_options(model, saved[:options]) },
             'trả camera' => -> { view.camera = saved[:camera] },
             'trả lựa chọn' => -> { restore_selection(model, saved[:selection]) },
@@ -89,14 +84,6 @@ module VGD
               log("Khôi phục (#{name}) lỗi: #{error.class}: #{error.message}")
             end
           end
-        end
-
-        # Trả ngữ cảnh sửa group đang mở của người dùng (chỉ ảnh vị trí đổi ngữ cảnh). Rỗng nghĩa là về gốc model.
-        def self.restore_active_path(model, path)
-          return if path.nil?
-          current = model.active_path || []
-          return if current == path
-          model.active_path = path.empty? ? nil : path
         end
 
         # SketchUp báo lỗi khi gọi Selection#add mà không có đối tượng nào, nên chỉ thêm khi có.

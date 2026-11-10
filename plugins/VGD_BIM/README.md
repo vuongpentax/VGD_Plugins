@@ -1,4 +1,4 @@
-# VGD_BIM 1.1.0-beta.51
+# VGD_BIM 1.1.0-beta.52
 
 Bản thử của 1.1.0 (chưa có bản ổn định). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -48,7 +48,7 @@ Nút **Preset** (cạnh nút Sáng/Tối) mở bảng gồm **Đơn vị**, **H�
 
 Đơn vị: chiều dài mm / cm / m / in / ft, diện tích m² / cm² / ft², thể tích m³ / cm³ / ft³, 0 đến 4 số lẻ, dấu thập phân "," hoặc "." (dấu còn lại là dấu nghìn). Chỉ đổi khi hiển thị (bảng, tab Thông tin, nhãn khung đánh dấu); số liệu gốc luôn là mm, m², m³ và báo cáo CSV giữ nguyên mm.
 
-**Ảnh vị trí trong công trình** (từ beta.45, cột **Ảnh vị trí**, bật bằng Chọn cột): ảnh thứ hai của mỗi món cho biết món nằm ở đâu trong công trình. Khác ảnh Iso của món: **không cô lập** món, camera tự đặt theo góc Iso (trái hoặc phải, theo mặt trước của món như ảnh Iso) nhìn vùng quanh món rộng gấp **N lần** kích thước món (N đặt trong bảng Preset, ô "Vùng nhìn ảnh vị trí (lần)", 2 đến 20, mặc định 4); món được mở làm ngữ cảnh sửa nên SketchUp làm mờ phần còn lại của model để món nổi bật. Chụp bằng nút ◣ ◢ ↻ trên ô ảnh vị trí hoặc hàng "Ảnh vị trí trong công trình" (◣ Trái, ◢ Phải) trong hộp Cập nhật ảnh (cũng có tuỳ chọn chỉ đối tượng chưa có ảnh); lưu thành file `<mã>_loc.png` cạnh ảnh món, không đè ảnh món; kéo thả ảnh riêng vào ô cũng được; xuất Excel / PDF có cột ảnh vị trí. Cũng như ảnh món, chỉ chụp khi bạn bấm.
+**Ảnh vị trí trong công trình** (từ beta.45, cột **Ảnh vị trí**, bật bằng Chọn cột): ảnh thứ hai của mỗi món cho biết món nằm ở đâu trong công trình. Camera đặt **y như ảnh Iso** của món (cùng hướng nhìn theo mặt trước, trái hoặc phải) nhưng **không đổi gì trong model**: không cô lập, không ẩn, không làm mờ, không đổi group đang mở, nên ảnh hiện đúng như đang thấy trong SketchUp (kể cả mặt cắt trần hoặc trần đã ẩn); chỉ khác là camera lùi ra nhìn vùng quanh món rộng gấp **N lần** kích thước món (N đặt trong bảng Preset, ô "Vùng nhìn ảnh vị trí (lần)", 2 đến 20, mặc định 4). Từ beta.52 không còn làm mờ phần còn lại; món không được tô nổi, chỉ nằm ở tâm ảnh. Chụp bằng nút ◣ ◢ ↻ trên ô ảnh vị trí hoặc hàng "Ảnh vị trí trong công trình" (◣ Trái, ◢ Phải) trong hộp Cập nhật ảnh (cũng có tuỳ chọn chỉ đối tượng chưa có ảnh); lưu thành file `<mã>_loc.png` cạnh ảnh món, không đè ảnh món; kéo thả ảnh riêng vào ô cũng được; xuất Excel / PDF có cột ảnh vị trí. Cũng như ảnh món, chỉ chụp khi bạn bấm.
 
 **Ảnh chỉ được chụp khi bạn bấm**: nút **Cập nhật ảnh** (hỏi lại, chụp các dòng đang chọn hoặc tất cả dòng đang hiện, có tuỳ chọn chỉ đối tượng chưa có ảnh, có nút Dừng), hoặc nút ↻ hiện khi rê chuột vào ô ảnh (chỉ dòng đó). Góc nhìn **Khung nhìn hiện tại** chụp đúng những gì đang thấy; **Phối cảnh iso** và **Chính diện** cô lập món đồ (ẩn tạm phần còn lại, rồi trả model về như cũ, không để lại bước hoàn tác), đặt camera từ góc đó và zoom vào món đồ (chính diện là nhìn từ phía -Y của model, không theo hướng quay của món đồ). Muốn dùng ảnh riêng: kéo thả file ảnh vào ô, bấm ô rồi dán (Ctrl+V), hoặc nút ⋯. Ảnh lưu thành PNG ngoài file SketchUp. Thư mục lưu ảnh (dùng chung mọi preset) đặt trong bảng Preset. Nút ⚙ ở thanh đầu chỉ để chọn ngôn ngữ (Tiếng Việt / English).
 
@@ -101,4 +101,4 @@ Chạy từ `plugins/VGD_BIM`:
 - `python3 dev/make_preview.py`: tạo trang HTML xem trước giao diện với dữ liệu mẫu (`outputs/VGD_BIM_giao_dien.html`).
 - `python plugins/VGD_BIM/dev/package.py <phiên bản>` (từ gốc repo): tạo RBZ trong `outputs/local_release_<phiên bản>/`, kiểm tra từng byte trong archive và in SHA-256.
 
-Bản 1.1.0-beta.51 được kiểm tra tự động bằng mô phỏng, chưa kiểm thử thủ công trong SketchUp thật. `VALIDATION.md` ghi chi tiết phần đã và chưa kiểm chứng.
+Bản 1.1.0-beta.52 được kiểm tra tự động bằng mô phỏng, chưa kiểm thử thủ công trong SketchUp thật. `VALIDATION.md` ghi chi tiết phần đã và chưa kiểm chứng.

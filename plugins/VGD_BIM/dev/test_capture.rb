@@ -303,7 +303,7 @@ view, result = shoot_front({'image_view' => 'current'}, '+y', IDENTITY)
 check 'Khung nhìn hiện tại: không đặt camera, không ghi chú dù có hay không có mặt trước', view.states.last[:eye] == [0.0, 0.0, 100.0] && !result.key?(:note)
 check 'Front.camera_direction: góc nhìn lạ bị từ chối', raises?('góc nhìn') { VGD::BIM::Front.camera_direction('top', [0.0, -1.0]) }
 
-# ---- Ảnh vị trí (kind: :location): không cô lập, mở món làm ngữ cảnh để mờ phần còn lại, nhìn vùng rộng gấp nhiều lần món, lưu file _loc ----
+# ---- Ảnh vị trí (kind: :location): camera y như Iso nhưng không đổi gì trong model (không cô lập, không ẩn, không mở ngữ cảnh), nhìn vùng rộng gấp nhiều lần món, lưu file _loc ----
 def shoot_location(settings = {}, side = 'right', user_path = [])
   model, items = world
   model.active_path = user_path.map { |i| items[i] }
@@ -312,9 +312,9 @@ def shoot_location(settings = {}, side = 'right', user_path = [])
 end
 model, items, view, result = shoot_location('image_view' => 'front') # góc nhìn của preset (Chính diện) không ảnh hưởng ảnh vị trí
 check 'ảnh vị trí: không ẩn gì cả (khác ảnh Iso cô lập), không còn đối tượng chọn lúc chụp', view.states.all? { |s| s[:hidden].empty? && s[:selection].empty? }
-check 'ảnh vị trí: mở món làm ngữ cảnh sửa lúc chụp (để SketchUp làm mờ phần còn lại)', view.states.all? { |s| s[:active_path] == [11] }
-check 'ảnh vị trí: một thao tác mở rồi hủy, không để lại bước undo', model.ops == [:start, :abort]
-check 'ảnh vị trí: sau khi chụp trả ngữ cảnh (về gốc), camera và lựa chọn như cũ', model.active_path.to_a.empty? && view.camera.eye.to_a == [0.0, 0.0, 100.0] && model.selection.map(&:pid) == [11, 12]
+check 'ảnh vị trí: không đổi ngữ cảnh đang mở của người dùng (về gốc model) lúc chụp', view.states.all? { |s| s[:active_path].empty? }
+check 'ảnh vị trí: không mở thao tác nào trong model (không đổi gì, không có bước undo)', model.ops.empty?
+check 'ảnh vị trí: sau khi chụp camera và lựa chọn như cũ', model.active_path.to_a.empty? && view.camera.eye.to_a == [0.0, 0.0, 100.0] && model.selection.map(&:pid) == [11, 12]
 check 'ảnh vị trí: lưu vào file _loc, không còn file tạm', File.binread(I.path(model, 11, :location)) == PNG_BYTES && File.basename(I.path(model, 11, :location)) == '11_loc.png' && Dir[File.join(I.dir(model), '*.tmp.png')].empty?
 check 'ảnh vị trí: kết quả ghi loại ảnh và mốc thời gian', result[:kind] == :location && result[:pid] == 11 && result[:stamp] > 0
 check 'ảnh vị trí: nhìn theo góc Iso (1, -1, 0.8) nhìn vào tâm món', view.states.all? { |s| s[:target] == [10.0, 20.0, 30.0] && near?(s[:eye].zip([10.0, 20.0, 30.0]).map { |e, c| e - c }.then { |d| l = Math.sqrt(d.sum { |v| v * v }); d.map { |v| v / l } }, [1, -1, 0.8].then { |d| l = Math.sqrt(d.sum { |v| v * v }); d.map { |v| v / l } }) }
@@ -323,16 +323,19 @@ _, _, iso_view, _ = shoot('image_view' => 'isometric')
 _, _, scale4, _ = shoot_location
 _, _, scale2, _ = shoot_location('image_location_scale' => 2)
 _, _, scale10, _ = shoot_location('image_location_scale' => 10)
+iso_state, loc_state = iso_view.states.last, scale4.states.last
+dir_of = ->(st) { d = st[:eye].zip(st[:target]).map { |e, t| e - t }; l = Math.sqrt(d.sum { |v| v * v }); d.map { |v| v / l } }
+check 'ảnh vị trí: cùng hướng nhìn và cùng điểm nhìn với ảnh Iso của món (chỉ khác khoảng cách)', near?(dir_of.(iso_state), dir_of.(loc_state)) && iso_state[:target] == loc_state[:target]
 check 'ảnh vị trí: nhìn vùng rộng gấp 4 lần (mặc định) nên camera lùi xa hơn ảnh Iso của món khoảng 4 lần', dist_of.(scale4) > dist_of.(iso_view) * 3.0 && dist_of.(scale4) < dist_of.(iso_view) * 4.2
 check 'ảnh vị trí: hệ số vùng nhìn của preset được dùng (2 gần hơn 4, 10 xa hơn 4)', dist_of.(scale2) < dist_of.(scale4) && dist_of.(scale4) < dist_of.(scale10)
 _, _, left_view, _ = shoot_location({}, 'left')
 check 'ảnh vị trí: nút trái / phải đối xứng nhau qua mặt phẳng nhìn thẳng (x đảo dấu quanh tâm)', near?([left_view.states.last[:eye][0] - 10.0], [-(scale4.states.last[:eye][0] - 10.0)]) && near?([left_view.states.last[:eye][1]], [scale4.states.last[:eye][1]])
 model, items, view, _ = shoot_location({}, 'right', [2])
-check 'người dùng đang mở sửa một group khác: sau khi chụp ngữ cảnh đó được trả lại', model.active_path.map(&:pid) == [13] && view.states.all? { |s| s[:active_path] == [11] }
+check 'người dùng đang mở sửa một group khác: ngữ cảnh đó giữ nguyên suốt lúc chụp và sau khi chụp', model.active_path.map(&:pid) == [13] && view.states.all? { |s| s[:active_path] == [13] }
 model, items = world
 model.active_view.fail_next = true
 failed = raises? { C.shoot(model, {entity: items[0], path: [items[0]]}, D, kind: :location) }
-check 'ảnh vị trí chụp lỗi: vẫn trả ngữ cảnh, hủy thao tác, dọn file tạm', failed && model.active_path.to_a.empty? && model.ops == [:start, :abort] && Dir[File.join(I.dir(model), '*.tmp.png')].empty?
+check 'ảnh vị trí chụp lỗi: model không bị đổi, camera như cũ, dọn file tạm', failed && model.active_path.to_a.empty? && model.ops.empty? && model.active_view.camera.eye.to_a == [0.0, 0.0, 100.0] && Dir[File.join(I.dir(model), '*.tmp.png')].empty?
 check 'loại ảnh lạ bị từ chối', raises?('loại ảnh') { C.shoot(world[0], {entity: world[1][0], path: [world[1][0]]}, D, kind: :zzz) }
 model.active_view.fail_next = false
 check 'ảnh vị trí và ảnh món là hai file riêng', (C.shoot(model, {entity: items[0], path: [items[0]]}, D); C.shoot(model, {entity: items[0], path: [items[0]]}, D, kind: :location); File.exist?(I.path(model, 11)) && File.exist?(I.path(model, 11, :location)))

@@ -32,7 +32,7 @@
 - **Lấy mẫu tag và xóa tag có gán lại** (beta.48): nút Lấy mẫu (bấm đối tượng để lấy tag), nút thùng rác trên dòng tag (chọn tag nhận, không xóa đối tượng).
 - **Quản lý tag 3b-2** (beta.47): ghim tag, hàng chip Đã ghim / Gần đây, bấm để chọn tag cho nút Gán tag, kéo thả tag vào thư mục.
 - **Mũi tên lên / xuống trong Bảng khối lượng** (beta.46): chuyển dòng như bấm vào dòng đó (chọn, thu phóng, cô lập theo tuỳ chọn), Shift mở rộng vùng chọn, bảng tự cuộn.
-- **Ảnh vị trí trong công trình** (beta.45): cột Ảnh vị trí và nút chụp Iso trái / phải không cô lập món (nhìn vùng quanh món rộng gấp N lần, mờ phần còn lại), lưu file `_loc.png` riêng, xuất Excel / PDF có cột này.
+- **Ảnh vị trí trong công trình** (beta.45, sửa ở beta.52): cột Ảnh vị trí và nút chụp Iso trái / phải đặt camera y như ảnh Iso nhưng không đổi gì trong model (không cô lập, không ẩn, không làm mờ), nhìn vùng quanh món rộng gấp N lần, lưu file `_loc.png` riêng, xuất Excel / PDF có cột này.
 - **Chọn tay món con trong group đã mở** (beta.44): vị trí của group đang mở được tính từ biến đổi của các group cha thay vì chỉ tin `Model#edit_transform`; nếu hai cách khác nhau, plugin báo một lần và ghi chẩn đoán vào Ruby Console.
 - **Sửa khung đánh dấu của món con** (beta.43): khi đang mở sửa group (chọn món nằm sâu trong bảng), khung vẽ bằng tọa độ màn hình với điểm chiếu từ SketchUp nên không còn lệch đúng bằng vị trí group cha.
 - **Màu tag, kiểu nét, Tô màu theo tag** (beta.42, bước 3b-1): tab Trong model có ô màu và ô kiểu nét cho từng tag, nút bật / tắt Color by Tag. Ghim, tag gần đây, kéo thả: bước 3b-2.
