@@ -111,7 +111,7 @@ function preview(data) {
 // ---- Bảng đối tượng kiểu Auto Info ----
 const tableState={replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null};
 const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total']);
-const WIDTHS={measure_note:260,front:80,front_state:150,ordinal:44,image:72,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80,areaProjected:110,ifc:120,owner:120,url:170,size:110,price:110,total:120};
+const WIDTHS={image_location:110,measure_note:260,front:80,front_state:150,ordinal:44,image:72,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80,areaProjected:110,ifc:120,owner:120,url:170,size:110,price:110,total:120};
 const unitTextOf=key=>LEN_KEYS.has(key)?lengthLabel():AREA_KEYS.has(key)?areaLabel():key==='volume'?volumeLabel():key==='quantity'?'cái':(key==='price'||key==='total')?workSettings().currency:undefined;
 const colLabel=col=>(tableState.headers&&tableState.headers[col.key])||withUnit(col.label);
 const lenText=value=>fmt(toUnit(value),digitsFor('lenX'));
@@ -133,10 +133,12 @@ function wheelRowHeight(e,t){
   if(next===tableState.rowHeight)return;
   tableState.rowHeight=next;
   tableState.widths.image=Math.max(WIDTHS.image,next+8); // cột Ảnh rộng theo độ cao hàng để ảnh to ra thật sự; vẫn kéo tay đổi được
+  tableState.widths.image_location=Math.max(WIDTHS.image_location,Math.round((next+8)*1.5)); // ảnh vị trí là cảnh rộng nên cột rộng hơn
   rowStyle(t);
-  const index=[...t.querySelectorAll('thead tr:first-child th')].findIndex(th=>th.dataset.key==='image');
-  if(index>=0){
-    const cols=t.querySelectorAll('col');cols[index].style.width=tableState.widths.image+'px';
+  const heads=[...t.querySelectorAll('thead tr:first-child th')];
+  const index=heads.findIndex(th=>th.dataset.key==='image'),locIndex=heads.findIndex(th=>th.dataset.key==='image_location');
+  if(index>=0||locIndex>=0){
+    const cols=t.querySelectorAll('col');if(index>=0)cols[index].style.width=tableState.widths.image+'px';if(locIndex>=0)cols[locIndex].style.width=tableState.widths.image_location+'px';
     t.style.width=[...cols].reduce((sum,c)=>sum+(parseFloat(c.style.width)||0),0)+'px';
   }
   persistView();
@@ -484,6 +486,7 @@ function renderGrid(host){
         if(col.editable)td.classList.add('editable');
         if(col.key==='ordinal')td.textContent=String(pos);
         else if(col.kind==='image')imageCell(td,row);
+        else if(col.kind==='image_location')imageCell(td,row,'location');
         else if(NUMERIC.has(col.key)){td.textContent=fmt(scaledValue(col.key,row[col.key]),digitsFor(col.key));td.className='num';}
         else if(col.key==='url'){
           td.append(node('span',row.url,'cell-url'));
@@ -709,8 +712,11 @@ function capturePanel(){
   const s=workSettings();
   p.append(onlyLabel,node('p',`Cỡ ${s.image_width} x ${s.image_height}, ${VIEW_LABELS[s.image_view]||s.image_view}. Đổi trong bảng preset.`,'muted'));
   const actions=node('div',undefined,'rename-actions');
+  const place=node('div',undefined,'cap-place');
+  place.append(node('span','Ảnh vị trí trong công trình','muted'),button('◣ Trái',()=>{tableState.panel=null;runCapture(targets,imagesState.only,'left','location');tableView(tableState.data);}),button('◢ Phải',()=>{tableState.panel=null;runCapture(targets,imagesState.only,'right','location');tableView(tableState.data);}));
+  place.title='Chụp cảnh quanh món (không cô lập) theo góc Iso trái / phải, lưu vào cột Ảnh vị trí';
   actions.append(button('Chụp',()=>{tableState.panel=null;runCapture(targets,imagesState.only);tableView(tableState.data);},'primary'),button('Hủy',()=>{tableState.panel=null;tableView(tableState.data);}));
-  p.append(actions);
+  p.append(actions,place);
   return p;
 }
 // ---- Ngăn Chọn cột: trượt ra bên trái và đẩy bảng sang phải (cột đầu không bị che), gọn theo kiểu Auto Info ----
@@ -950,12 +956,13 @@ function toggleButton(text,on,handler){
 // Ô số gửi dạng số đã đổi sang đơn vị của preset, chưa làm tròn (Excel tự định dạng theo số lẻ của cột). Chữ dịch theo ngôn ngữ đang dùng.
 const exportText=text=>VGD_I18N.language==='en'?VGD_I18N.translateText(text):text;
 function exportColumn(col){
-  const type=col.key==='ordinal'?'ordinal':col.kind==='image'?'image':NUMERIC.has(col.key)?'number':col.key==='url'?'link':'text';
-  return {label:exportText(colLabel(col)),unit:exportText(unitTextOf(col.key)||''),type,digits:type==='number'?digitsFor(col.key):0,width:Math.min(2000,Math.max(20,Math.round(widthOf(col.key))))}; // độ rộng cột đang chỉnh trên màn hình, dùng làm tỉ lệ ban đầu của trang in
+  const type=col.key==='ordinal'?'ordinal':(col.kind==='image'||col.kind==='image_location')?'image':NUMERIC.has(col.key)?'number':col.key==='url'?'link':'text';
+  const imageKind=col.kind==='image_location'?{image_kind:'location'}:{};
+  return {...imageKind,label:exportText(colLabel(col)),unit:exportText(unitTextOf(col.key)||''),type,digits:type==='number'?digitsFor(col.key):0,width:Math.min(2000,Math.max(20,Math.round(widthOf(col.key))))}; // độ rộng cột đang chỉnh trên màn hình, dùng làm tỉ lệ ban đầu của trang in
 }
 function exportCell(row,col,position){
   if(col.key==='ordinal')return position;
-  if(col.kind==='image')return null;
+  if(col.kind==='image'||col.kind==='image_location')return null;
   if(NUMERIC.has(col.key)){const value=scaledValue(col.key,row[col.key]);return value==null||value===''?null:Number(value);}
   return String(cellText(row,col.key)||'');
 }

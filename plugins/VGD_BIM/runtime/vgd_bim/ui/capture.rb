@@ -11,6 +11,9 @@ module VGD
       #   cho vừa. Mọi thay đổi trong model nằm trong một thao tác mở rồi HỦY (abort_operation), nên không để lại bước undo
       #   và trạng thái ẩn / hiện tự trở lại như cũ ngay cả khi lỗi giữa chừng.
       # Góc nhìn current: chụp đúng khung nhìn đang thấy, không đổi camera hay model.
+      # Ảnh vị trí (kind: :location): không cô lập món. Camera đặt theo góc Iso (trái / phải) nhìn vùng quanh món rộng gấp
+      #   image_location_scale lần kích thước món, và món được mở làm ngữ cảnh sửa nên SketchUp làm mờ phần còn lại của model, để thấy món nằm đâu
+      #   trong công trình. Cũng trong một thao tác mở rồi hủy; ngữ cảnh đang mở của người dùng được trả lại.
       # Cả hai bỏ chọn tạm thời (để khung chọn không lọt vào ảnh) rồi trả lại; camera và tuỳ chọn hiển thị luôn được trả lại.
       module Capture
         ISOLATING_VIEWS = %w[isometric front].freeze
@@ -22,15 +25,17 @@ module VGD
 
         # record: một phần tử của Table.build (có :entity và :path). settings: thiết lập ảnh của preset.
         # Trả về {pid:, stamp:} và thêm :note khi phải chụp bằng cách thay thế (xem write).
-        def self.shoot(model, record, settings, iso_side: 'right')
+        def self.shoot(model, record, settings, iso_side: 'right', kind: :full)
           settings = Preset.settings!(settings)
+          Images.kind!(kind)
+          location = kind == :location
           raise ArgumentError, 'Bên của góc Iso không hợp lệ.' unless ISO_SIDES.include?(iso_side)
           entity = record[:entity]
           raise ArgumentError, 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless entity.respond_to?(:valid?) && entity.valid?
           pid = Images.id!(entity.persistent_id)
           view = model.active_view
-          isolate = ISOLATING_VIEWS.include?(settings['image_view'])
-          saved = {camera: copy_camera(view.camera), selection: model.selection.to_a, options: nil}
+          isolate = !location && ISOLATING_VIEWS.include?(settings['image_view'])
+          saved = {camera: copy_camera(view.camera), selection: model.selection.to_a, options: nil, active_path: location ? (model.active_path || []).dup : nil}
           ensure_writable(Images.dir(model))
           operation = false
           notes = []
@@ -40,36 +45,42 @@ module VGD
               model.start_operation('VGD_BIM · Chụp ảnh', true)
               operation = true
               Table.isolate(model, record[:path])
+            elsif location
+              model.start_operation('VGD_BIM · Chụp ảnh vị trí', true)
+              operation = true
+              model.active_path = record[:path] # mở món làm ngữ cảnh sửa: SketchUp làm mờ phần còn lại của model
             end
             saved[:options] = tweak_options(model, settings)
-            if isolate
-              notes << aim(view, entity, settings['image_view'], FrontProbe.front_world(record), iso_side)
+            if isolate || location
+              notes << aim(view, entity, 'isometric', FrontProbe.front_world(record), iso_side) if location
+              notes << aim(view, entity, settings['image_view'], FrontProbe.front_world(record), iso_side) if isolate
             end
             size = [settings['image_width'], settings['image_height']]
-            frame(view, record, size, 1.0 + settings['image_margin'] / 100.0) if isolate
+            frame(view, record, size, 1.0 + settings['image_margin'] / 100.0, scale: location ? settings['image_location_scale'] : 1) if isolate || location
             view.refresh
-            notes << write(view, Images.temp_path(model, pid), size, settings)
-            Images.commit(model, pid)
+            notes << write(view, Images.temp_path(model, pid, kind), size, settings)
+            Images.commit(model, pid, kind)
           rescue StandardError => error
             log("#{error.class}: #{error.message} | đối tượng #{pid} | #{settings.inspect} | #{error.backtrace.to_a.first(4).join(' <- ')}")
             raise
           ensure
-            restore(model, view, saved, operation, pid)
+            restore(model, view, saved, operation, pid, kind)
           end
-          result = Images.info(model, pid).merge(pid: pid).reject { |key, _| key == :has }
+          result = Images.info(model, pid, Images.dir(model), kind).merge(pid: pid, kind: kind).reject { |key, _| key == :has }
           note = notes.compact.uniq.join('; ')
           note.empty? ? result : result.merge(note: note)
         end
 
         # Mỗi bước khôi phục chạy độc lập: một bước lỗi không được làm hỏng các bước sau, cũng không được biến lần chụp
         # đã thành công thành thất bại (lỗi khôi phục chỉ ghi vào capture.log).
-        def self.restore(model, view, saved, operation, pid)
+        def self.restore(model, view, saved, operation, pid, kind = :full)
           steps = {
             'hủy thao tác' => -> { model.abort_operation if operation },
+            'trả ngữ cảnh đang mở' => -> { restore_active_path(model, saved[:active_path]) },
             'trả tuỳ chọn hiển thị' => -> { restore_options(model, saved[:options]) },
             'trả camera' => -> { view.camera = saved[:camera] },
             'trả lựa chọn' => -> { restore_selection(model, saved[:selection]) },
-            'dọn file tạm' => -> { FileUtils.rm_f(Images.temp_path(model, pid)) }
+            'dọn file tạm' => -> { FileUtils.rm_f(Images.temp_path(model, pid, kind)) }
           }
           steps.each do |name, step|
             begin
@@ -78,6 +89,14 @@ module VGD
               log("Khôi phục (#{name}) lỗi: #{error.class}: #{error.message}")
             end
           end
+        end
+
+        # Trả ngữ cảnh sửa group đang mở của người dùng (chỉ ảnh vị trí đổi ngữ cảnh). Rỗng nghĩa là về gốc model.
+        def self.restore_active_path(model, path)
+          return if path.nil?
+          current = model.active_path || []
+          return if current == path
+          model.active_path = path.empty? ? nil : path
         end
 
         # SketchUp báo lỗi khi gọi Selection#add mà không có đối tượng nào, nên chỉ thêm khi có.
@@ -163,14 +182,23 @@ module VGD
         # Lùi camera ra (extend) cho trọn hộp bao của món rồi mới chụp: hộp bao tính theo tọa độ thế giới (View#zoom tính theo tọa độ cục bộ với đối tượng
         # nằm trong group, nên lệch), và tính theo CẢ tỉ lệ ảnh lẫn tỉ lệ khung nhìn rồi lấy khoảng cách xa hơn, vì write_image có thể lấy khung theo bên nào
         # cũng được; nhờ vậy món dài hoặc cao không bị cắt khi ảnh có tỉ lệ khác khung nhìn. Giữ hướng nhìn đã đặt bởi aim.
-        def self.frame(view, record, size, margin)
+        # scale > 1: nhìn vùng rộng gấp scale lần hộp bao quanh tâm hộp (ảnh vị trí).
+        def self.frame(view, record, size, margin, scale: 1)
           entity = record[:entity]
           bounds = record[:transform] ? Geometry.world_bounds([record]) : entity.bounds
           return view.zoom(entity) if bounds.empty? # không tính được hộp bao: về cách cũ
+          low = bounds.min.to_a
+          high = bounds.max.to_a
+          if scale != 1
+            center = low.zip(high).map { |a, b| (a + b) / 2.0 }
+            half = low.zip(high).map { |a, b| (b - a) / 2.0 * scale }
+            low = center.zip(half).map { |c, h| c - h }
+            high = center.zip(half).map { |c, h| c + h }
+          end
           camera = view.camera
           view_aspect = view.vpheight.to_f.positive? ? view.vpwidth.to_f / view.vpheight : 1.0
           fits = [size[0].to_f / size[1], view_aspect].uniq.map do |aspect|
-            ViewFit.camera(bounds.min.to_a, bounds.max.to_a, direction: camera.direction.to_a, up: camera.up.to_a, perspective: camera.perspective?,
+            ViewFit.camera(low, high, direction: camera.direction.to_a, up: camera.up.to_a, perspective: camera.perspective?,
                                                               fov: camera.fov, fov_is_height: camera.fov_is_height?, aspect: aspect, margin: margin)
           end
           fit = fits.max_by { |candidate| candidate[:height] || Math.sqrt(candidate[:eye].zip(candidate[:target]).sum { |e, t| (e - t)**2 }) }

@@ -6,11 +6,13 @@ module VGD
   module BIM
     # Ảnh của từng món đồ, lưu thành file PNG trong thư mục ảnh của cài đặt:
     #   <thư mục ảnh>/<mã model>/<mã đối tượng>.png      ảnh đầy đủ, cũng là ảnh hiện trong bảng (không còn ảnh nhỏ)
+    #   <thư mục ảnh>/<mã model>/<mã đối tượng>_loc.png  ảnh vị trí của món trong công trình (cột Ảnh vị trí)
     # Mã đối tượng là persistent_id của group / component. Không ghi gì vào file SketchUp.
     module Images
       MAX_BYTES = 8 * 1024 * 1024 # ảnh dán / kéo thả quá lớn thì từ chối
       PNG_SIGNATURE = "\x89PNG\r\n\x1A\n".b.freeze
-      KINDS = {full: '.png'}.freeze
+      KINDS = {full: '.png', location: '_loc.png'}.freeze
+      TEMP_KINDS = {full: '.tmp.png', location: '_loc.tmp.png'}.freeze
       LEGACY_THUMB = '_t.png'.freeze # ảnh nhỏ của các bản beta trước: không còn tạo hay đọc, chỉ dọn khi xóa ảnh
 
       # Thư mục ảnh của model theo mã cố định lưu trong chính file SketchUp (dictionary VGD_BIM_MODEL). Không dùng model.guid vì SketchUp
@@ -70,12 +72,17 @@ module VGD
         File.join(Settings.image_dir, model_key(model))
       end
 
-      def self.path(model, pid)
-        File.join(dir(model), "#{id!(pid)}#{KINDS.fetch(:full)}")
+      def self.kind!(kind)
+        raise ArgumentError, 'Loại ảnh không hợp lệ.' unless KINDS.key?(kind)
+        kind
       end
 
-      def self.temp_path(model, pid)
-        File.join(dir(model), "#{id!(pid)}.tmp.png")
+      def self.path(model, pid, kind = :full)
+        File.join(dir(model), "#{id!(pid)}#{KINDS.fetch(kind!(kind))}")
+      end
+
+      def self.temp_path(model, pid, kind = :full)
+        File.join(dir(model), "#{id!(pid)}#{TEMP_KINDS.fetch(kind!(kind))}")
       end
 
       def self.id!(pid)
@@ -85,8 +92,8 @@ module VGD
       end
 
       # {has: có ảnh không, stamp: giây sửa đổi cuối} để giao diện biết khi nào cần tải lại.
-      def self.info(model, pid, folder = dir(model))
-        file = File.join(folder, "#{id!(pid)}#{KINDS.fetch(:full)}")
+      def self.info(model, pid, folder = dir(model), kind = :full)
+        file = File.join(folder, "#{id!(pid)}#{KINDS.fetch(kind!(kind))}")
         File.file?(file) ? {has: true, stamp: File.mtime(file).to_i} : {has: false, stamp: 0}
       end
 
@@ -114,17 +121,17 @@ module VGD
       end
 
       # Ghi ảnh (kiểm tra PNG trước khi ghi nên không để lại ảnh dở).
-      def self.write(model, pid, full)
+      def self.write(model, pid, full, kind = :full)
         check_png!(full)
         FileUtils.mkdir_p(dir(model))
-        temp = temp_path(model, pid)
+        temp = temp_path(model, pid, kind)
         File.binwrite(temp, full)
-        replace_file(temp, path(model, pid))
+        replace_file(temp, path(model, pid, kind))
       end
 
       # Đổi file tạm do SketchUp chụp (write_image) thành ảnh chính. Không phải PNG hoặc chưa có file thì giữ ảnh cũ.
-      def self.commit(model, pid)
-        temp = temp_path(model, pid)
+      def self.commit(model, pid, kind = :full)
+        temp = temp_path(model, pid, kind)
         raise ArgumentError, 'SketchUp không tạo được ảnh. Kiểm tra thư mục lưu ảnh trong bảng Preset.' unless File.file?(temp)
         begin
           check_png!(File.binread(temp))
@@ -132,19 +139,19 @@ module VGD
           File.delete(temp)
           raise
         end
-        replace_file(temp, path(model, pid))
+        replace_file(temp, path(model, pid, kind))
       end
 
-      def self.delete(model, pid)
-        FileUtils.rm_f(path(model, pid))
-        FileUtils.rm_f(File.join(dir(model), "#{id!(pid)}#{LEGACY_THUMB}"))
+      def self.delete(model, pid, kind = :full)
+        FileUtils.rm_f(path(model, pid, kind))
+        FileUtils.rm_f(File.join(dir(model), "#{id!(pid)}#{LEGACY_THUMB}")) if kind == :full
       end
 
       # Đường dẫn file để giao diện hiện ảnh trực tiếp (<img src>), không phải chuyển cả ảnh qua Ruby. stamp (giờ sửa file) đi kèm
       # sau dấu ? để ảnh được tải lại khi đổi.
       # folder: thư mục ảnh của model (bảng lớn truyền sẵn để không tính lại cho từng dòng).
-      def self.file_url(model, pid, stamp, folder = dir(model))
-        encoded = File.join(folder, "#{id!(pid)}#{KINDS.fetch(:full)}").tr('\\', '/').b.gsub(%r{[^A-Za-z0-9/:._~-]}n) { |c| format('%%%02X', c.ord) }
+      def self.file_url(model, pid, stamp, folder = dir(model), kind = :full)
+        encoded = File.join(folder, "#{id!(pid)}#{KINDS.fetch(kind!(kind))}").tr('\\', '/').b.gsub(%r{[^A-Za-z0-9/:._~-]}n) { |c| format('%%%02X', c.ord) }
         "file:///#{encoded.sub(%r{\A/+}, '')}?v=#{Integer(stamp)}"
       end
 

@@ -47,15 +47,16 @@ ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
 module VGD; module BIM; module UI
   module Capture
     ISO_SIDES = %w[right left].freeze
-    def self.shoot(model, record, settings, iso_side: 'right')
+    def self.shoot(model, record, settings, iso_side: 'right', kind: :full)
       pid = record[:entity].persistent_id
       raise 'SketchUp không chụp được ảnh.' if pid == 902
       raise NoMethodError, "undefined method `bounds' for nil:NilClass" if pid == 906
       note = pid == 907 ? 'nền trong suốt không dùng được trên máy này nên ảnh dùng cách thay thế' : nil
       $shot << [pid, settings['image_view']]
       ($sides ||= []) << iso_side
-      Images.write(model, pid, PNG)
-      {pid: pid, stamp: Images.info(model, pid)[:stamp], note: note}.compact
+      ($kinds ||= []) << kind
+      Images.write(model, pid, PNG, kind)
+      {pid: pid, kind: kind, stamp: Images.info(model, pid, Images.dir(model), kind)[:stamp], note: note}.compact
     end
   end
 end; end; end
@@ -73,9 +74,9 @@ class FakeDialog
 end
 def events(d, name); d.instance_variable_get(:@dialog).events.map { |s| JSON.parse(s[/receive\(".*?", (.*)\)\z/m, 1]) if s.include?("receive(\"#{name}\"") }.compact; end
 
-def make_dialog(count = 3, has_image: [])
+def make_dialog(count = 3, has_image: [], has_location: [])
   entities = (1..count).map { |i| Sketchup::Entity.new(900 + i, "Tủ #{i}") }
-  $rows = entities.each_with_index.map { |e, i| {index: i, pid: e.persistent_id, name: e.name, has_image: has_image.include?(i), image_stamp: 0} }
+  $rows = entities.each_with_index.map { |e, i| {index: i, pid: e.persistent_id, name: e.name, has_image: has_image.include?(i), image_stamp: 0, has_location: has_location.include?(i)} }
   $records = entities.map { |e| {entity: e, path: [e]} }
   $shot = []
   d = D.allocate
@@ -198,7 +199,7 @@ d = make_dialog
 png64 = Base64.strict_encode64(PNG)
 d.safely { d.image_set('pid' => 901, 'full' => png64) }
 ok('dán ảnh cho đối tượng trong bảng: chỉ lưu ảnh gốc (không tạo ảnh nhỏ)', File.binread(I.path($model, 901)) == PNG && Dir[File.join(I.dir($model), '901*')].size == 1)
-ok('dán ảnh: báo ảnh đổi', events(d, 'images_changed').last['items'] == [{'pid' => 901, 'has' => true, 'stamp' => I.info($model, 901)[:stamp], 'url' => I.file_url($model, 901, I.info($model, 901)[:stamp])}])
+ok('dán ảnh: báo ảnh đổi', events(d, 'images_changed').last['items'] == [{'pid' => 901, 'kind' => 'full', 'has' => true, 'stamp' => I.info($model, 901)[:stamp], 'url' => I.file_url($model, 901, I.info($model, 901)[:stamp])}])
 d.safely { d.image_set('pid' => 5555, 'full' => png64) }
 ok('dán ảnh cho mã không có trong bảng bị từ chối, không ghi file', error_of(d).to_s.include?('không còn trong bảng') && !File.exist?(I.path($model, 5555)))
 d.safely { d.image_set('pid' => 902, 'full' => Base64.strict_encode64('<script>x</script>')) }
@@ -206,7 +207,7 @@ ok('dán dữ liệu không phải PNG bị từ chối, không ghi file', error
 d.safely { d.image_set('pid' => '901; rm -rf', 'full' => png64) }
 ok('mã đối tượng có ký tự lạ bị từ chối', error_of(d).to_s.include?('Mã đối tượng'))
 d.safely { d.image_delete(901) }
-ok('xóa ảnh: mất file và báo ảnh đổi', !File.exist?(I.path($model, 901)) && events(d, 'images_changed').last['items'] == [{'pid' => 901, 'has' => false, 'stamp' => 0, 'url' => nil}])
+ok('xóa ảnh: mất file và báo ảnh đổi', !File.exist?(I.path($model, 901)) && events(d, 'images_changed').last['items'] == [{'pid' => 901, 'kind' => 'full', 'has' => false, 'stamp' => 0, 'url' => nil}])
 d.safely { d.image_delete(5555) }
 ok('xóa ảnh của mã không có trong bảng bị từ chối', error_of(d).to_s.include?('không còn trong bảng'))
 
@@ -347,6 +348,37 @@ ok('in PDF: mở trang báo cáo bằng trình duyệt (địa chỉ file:///)',
 page = File.file?(html_path) ? File.read(html_path, encoding: 'UTF-8') : ''
 ok('in PDF: trang báo cáo có tên model, đủ 3 dòng và 2 ảnh', page.include?('Mô hình: Nhà mẫu') && page.scan('<tr class="row">').size == 3 && page.scan('data:image/png;base64,').size == 2 && page.include?([FULL[901]].pack('m0')))
 ok('in PDF: báo đã mở trình duyệt, hướng dẫn Lưu thành PDF', events(d, 'message').last['text'].include?('trình duyệt') && events(d, 'message').last['text'].include?('PDF'))
+
+# ---- Ảnh vị trí (kind: location) đi cùng lệnh chụp, dán / kéo thả và xóa ----
+$kinds = []
+d = make_dialog
+d.safely { d.images_capture('indexes' => [0], 'kind' => 'location', 'iso_side' => 'left') }
+UI.run_timers
+ok('chụp ảnh vị trí: mang loại ảnh và bên Iso tới Capture.shoot', $kinds == [:location] && $sides.last == 'left')
+loc_items = events(d, 'images_changed').last['items']
+ok('chụp ảnh vị trí: báo ảnh đổi kèm loại location và đường dẫn file _loc', loc_items.size == 1 && loc_items[0]['kind'] == 'location' && loc_items[0]['url'].include?('901_loc.png?v='))
+$kinds = []
+d.safely { d.images_capture('indexes' => [0]) }
+UI.run_timers
+ok('không nói loại ảnh: mặc định chụp ảnh món như trước', $kinds == [:full])
+d = make_dialog(3, has_location: [0, 1])
+$kinds = []
+d.safely { d.images_capture('only_missing' => true, 'kind' => 'location') }
+UI.run_timers
+ok('chỉ chụp dòng chưa có ảnh vị trí (theo has_location, không theo has_image)', $shot.map(&:first) == [903] && $kinds == [:location])
+d = make_dialog(3, has_image: [0, 1, 2], has_location: [1])
+d.safely { d.images_capture('only_missing' => true, 'kind' => 'location') }
+UI.run_timers
+ok('chụp thiếu ảnh vị trí: dù đã có ảnh món vẫn chụp ảnh vị trí cho dòng chưa có', $shot.map(&:first) == [901, 903])
+d = make_dialog
+d.safely { d.images_capture('indexes' => [0], 'kind' => 'zzz') }
+err = events(d, 'message').last
+ok('loại ảnh lạ: báo lỗi, không chụp', err && err['error'].to_s.include?('Loại ảnh') && $shot.empty?)
+d = make_dialog
+d.safely { d.image_set('pid' => 901, 'kind' => 'location', 'full' => [PNG].pack('m0')) }
+ok('dán ảnh vị trí: ghi vào file _loc và báo ảnh đổi loại location', File.exist?(I.path($model, 901, :location)) && events(d, 'images_changed').last['items'][0]['kind'] == 'location' && events(d, 'images_changed').last['items'][0]['url'].include?('_loc.png'))
+d.safely { d.image_delete(901, :location) }
+ok('xóa ảnh vị trí: chỉ xóa file _loc, báo ảnh đổi loại location', !File.exist?(I.path($model, 901, :location)) && events(d, 'images_changed').last['items'] == [{'pid' => 901, 'kind' => 'location', 'has' => false, 'stamp' => 0, 'url' => nil}])
 File.delete(html_path) if File.file?(html_path)
 
 puts $fails.zero? ? 'Done' : "#{$fails} lỗi"

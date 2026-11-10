@@ -150,11 +150,11 @@ module VGD
             base = {border: row[:kind] == 'total' ? 2 : 1, fill: row[:kind] == 'row' ? 0 : (row[:kind] == 'group' ? 3 : 2), font: row[:kind] == 'row' ? Styles::FONT_NORMAL : Styles::FONT_BOLD}
             if col[:type] == 'image'
               cells << blank_cell(row_number, i, styles.xf(**base))
-              image = row[:image]
+              image = row[:images] && row[:images][i]
               next unless image
-              media[row[:pid]] ||= media.size + 1
+              media[image[:key]] ||= media.size + 1
               fit = fit_image(image[:width], image[:height])
-              pictures << {pid: row[:pid], col: i, row: row_number - 1, w: fit[0], h: fit[1], dx: [(image_px - fit[0]) / 2, 0].max, dy: [(row_px(IMAGE_ROW_POINTS) - fit[1]) / 2, 0].max}
+              pictures << {pid: image[:key], col: i, row: row_number - 1, w: fit[0], h: fit[1], dx: [(image_px - fit[0]) / 2, 0].max, dy: [(row_px(IMAGE_ROW_POINTS) - fit[1]) / 2, 0].max}
               height = IMAGE_ROW_POINTS
             elsif value.is_a?(Numeric) && col[:type] == 'ordinal'
               cells << number_cell(row_number, i, value, styles.xf(**base, h: 'center'))

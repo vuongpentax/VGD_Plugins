@@ -232,5 +232,22 @@ Dir.mktmpdir do |dir|
 end
 ok('địa chỉ file:/// mã hóa khoảng trắng và tiếng Việt, giữ ổ đĩa Windows', TR.file_url('C:\\Users\\Nguyễn Văn A\\AppData\\Local\\Temp\\b.html') == 'file:///C:/Users/Nguy%E1%BB%85n%20V%C4%83n%20A/AppData/Local/Temp/b.html' && TR.file_url('/tmp/a b.html') == 'file:///tmp/a%20b.html')
 
+# ---- Cột Ảnh vị trí (image_kind: location): ảnh riêng của cùng một món, không lẫn với ảnh món ----
+LOC_IMAGES = {900 => png(200, 100), 902 => png(160, 90)}.freeze
+LOC_FINDER = ->(pid, kind = :full) { kind == :location ? LOC_IMAGES[pid] : IMAGES[pid] }
+loc_columns = COLUMNS.dup.insert(2, {'label' => 'Ảnh vị trí', 'unit' => '', 'type' => 'image', 'digits' => 0, 'image_kind' => 'location'})
+loc_rows = ROWS.map { |r| r.merge('cells' => r['cells'].dup.insert(2, nil)) }
+loc_report = TR.build(payload(columns: loc_columns, rows: loc_rows), 'Nhà mẫu', LOC_FINDER)
+ok('ảnh vị trí: nạp theo cột (ảnh món theo mã, ảnh vị trí theo khóa loc<mã>), hai ảnh của cùng món không đè nhau', loc_report[:images].keys.sort_by(&:to_s) == [900, 901, 'loc900', 'loc902'].sort_by(&:to_s) && loc_report[:images][900][:width] == 128 && loc_report[:images]['loc900'][:width] == 200)
+row900 = loc_report[:rows][1]
+ok('ảnh vị trí: dòng giữ ảnh theo từng cột (cột 1 ảnh món, cột 2 ảnh vị trí)', row900[:images][1][:width] == 128 && row900[:images][2][:width] == 200 && row900[:image][:width] == 128)
+ok('ảnh vị trí: dòng không có ảnh vị trí thì ô vị trí trống, ảnh món vẫn có', loc_report[:rows][2][:images][1] && loc_report[:rows][2][:images][2].nil?)
+ok('ảnh vị trí: loại ảnh lạ trong cột bị từ chối', error_of { TR.build(payload(columns: loc_columns.map { |c| c.merge('image_kind' => c['image_kind'] ? 'zzz' : c['image_kind']) }, rows: loc_rows), 'Nhà mẫu', LOC_FINDER) } == 'Dữ liệu bảng không hợp lệ.')
+ok('ảnh vị trí: cột Ảnh món cũ (không có image_kind) vẫn dùng bộ tìm ảnh một tham số như trước', build[:images].keys.sort == [900, 901])
+loc_files = read_zip(VGD::BIM::Xlsx.build(loc_report))
+ok('xlsx có ảnh vị trí: nhúng đủ 4 ảnh (2 ảnh món, 2 ảnh vị trí) đúng byte', (1..4).all? { |n| loc_files.key?("xl/media/image#{n}.png") } && [IMAGES[900], IMAGES[901], LOC_IMAGES[900], LOC_IMAGES[902]].all? { |bytes| (1..4).any? { |n| loc_files["xl/media/image#{n}.png"] == bytes } })
+loc_page = TR.html(loc_report)
+ok('trang in PDF có ảnh vị trí trong đúng cột', loc_page.scan('<td class="img"><img').size == 4 && loc_page.include?([LOC_IMAGES[900]].pack('m0')))
+
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)

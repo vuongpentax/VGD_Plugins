@@ -25,6 +25,7 @@ end
 check 'số lẻ ngoài 0..4 bị từ chối', raises?('số lẻ') { P.settings!('length_digits' => 9) } && raises?('số lẻ') { P.settings!('area_digits' => -1) } && raises?('số lẻ') { P.settings!('volume_digits' => 'nhiều') }
 check 'lề ảnh mặc định 20%, nhận 0..100, giá trị ngoài khoảng hoặc không phải số bị từ chối', d['image_margin'] == 20 && P.settings!('image_margin' => 0)['image_margin'] == 0 && P.settings!('image_margin' => '35')['image_margin'] == 35 && raises?('lề') { P.settings!('image_margin' => 101) } && raises?('lề') { P.settings!('image_margin' => -1) } && raises?('lề') { P.settings!('image_margin' => 'abc') }
 check 'lề ảnh: bản dễ tính (file cũ không có mục này, giá trị sai) về mặc định 20', P.settings('length_unit' => 'cm')['image_margin'] == 20 && P.settings('image_margin' => 500)['image_margin'] == 20
+check 'vùng nhìn ảnh vị trí mặc định gấp 4, nhận 2..20, ngoài khoảng hoặc không phải số bị từ chối', d['image_location_scale'] == 4 && P.settings!('image_location_scale' => 2)['image_location_scale'] == 2 && P.settings!('image_location_scale' => '20')['image_location_scale'] == 20 && raises?('vùng nhìn') { P.settings!('image_location_scale' => 1) } && raises?('vùng nhìn') { P.settings!('image_location_scale' => 21) } && raises?('vùng nhìn') { P.settings!('image_location_scale' => 'x') } && P.settings('image_location_scale' => 99)['image_location_scale'] == 4
 check 'cỡ ảnh ngoài 128..4096 bị từ chối', raises?('cỡ ảnh') { P.settings!('image_width' => 50) } && raises?('cỡ ảnh') { P.settings!('image_height' => 9999) }
 check 'thiết lập không phải Hash bị từ chối', raises? { P.settings!('x') } && raises? { P.settings!(nil) }
 check 'bản dễ tính: mục sai về mặc định, mục đúng giữ, mục lạ bỏ', P.settings('length_unit' => 'cm', 'area_unit' => 'zzz', 'hack' => 1, 'image_width' => 'abc') == d.merge('length_unit' => 'cm')
@@ -53,7 +54,7 @@ check '4 preset BIM cũ giữ nguyên cột và nhóm', T::BUILT_IN_PRESETS[1]['
 
 # ---- Cột mới ----
 %w[areaProjected ifc owner url size price total].each { |k| check "có cột #{k}", keys.include?(k) }
-check 'có 31 cột, không trùng', keys.size == 31 && keys.uniq.size == 31
+check 'có 32 cột, không trùng', keys.size == 32 && keys.uniq.size == 32
 check 'cột sửa được: owner, url, size, price', %w[owner url size price].all? { |k| T::COLUMNS.find { |c| c[:key] == k }[:editable] == k }
 check 'cột tính tổng: diện tích chiếu và thành tiền', %w[areaProjected total].all? { |k| T::COLUMNS.find { |c| c[:key] == k }[:kind] == 'sum' }
 

@@ -21,6 +21,7 @@ module VGD
       COLUMNS = [
         {key: 'ordinal', label: '#', kind: 'text'},
         {key: 'image', label: 'Ảnh', kind: 'image'},
+        {key: 'image_location', label: 'Ảnh vị trí', kind: 'image_location'},
         {key: 'entity', label: 'Loại', kind: 'text'},
         {key: 'definition', label: 'Họ', kind: 'text'},
         {key: 'instance', label: 'Tên', kind: 'text', editable: 'name'},
@@ -202,11 +203,14 @@ module VGD
       # Mã bền (persistent_id) và tình trạng ảnh của đối tượng. Ảnh nằm ngoài file SketchUp (xem Images).
       def self.image_state(model, entity, folder = nil)
         pid = entity.respond_to?(:persistent_id) ? entity.persistent_id : nil
-        return {pid: nil, has_image: false, image_stamp: 0, image_url: nil} unless pid.is_a?(Integer) && pid > 0 && model.respond_to?(:guid)
+        none = {pid: nil, has_image: false, image_stamp: 0, image_url: nil, has_location: false, location_stamp: 0, location_url: nil}
+        return none unless pid.is_a?(Integer) && pid > 0 && model.respond_to?(:guid)
         folder ||= Images.dir(model)
         info = Images.info(model, pid, folder)
-        # image_url: giao diện hiện ảnh gốc trực tiếp từ file (không chuyển qua Ruby); chưa có ảnh thì nil.
-        {pid: pid, has_image: info[:has], image_stamp: info[:stamp], image_url: info[:has] ? Images.file_url(model, pid, info[:stamp], folder) : nil}
+        place = Images.info(model, pid, folder, :location)
+        # image_url / location_url: giao diện hiện ảnh gốc trực tiếp từ file (không chuyển qua Ruby); chưa có ảnh thì nil.
+        {pid: pid, has_image: info[:has], image_stamp: info[:stamp], image_url: info[:has] ? Images.file_url(model, pid, info[:stamp], folder) : nil,
+         has_location: place[:has], location_stamp: place[:stamp], location_url: place[:has] ? Images.file_url(model, pid, place[:stamp], folder, :location) : nil}
       end
 
       # Tên của đối tượng cha trực tiếp (để nhóm theo cha); cấp gốc của model thì để trống.

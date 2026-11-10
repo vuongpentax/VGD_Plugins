@@ -6,7 +6,7 @@ const AREA_FACTORS={m2:1,cm2:1e4,ft2:10.763910416709722};
 const VOLUME_FACTORS={m3:1,cm3:1e6,ft3:35.31466672148859};
 const UNIT_LABELS={mm:'mm',cm:'cm',m:'m',in:'in',ft:'ft',m2:'m²',cm2:'cm²',ft2:'ft²',m3:'m³',cm3:'cm³',ft3:'ft³'};
 // Dùng khi chưa có thiết lập từ Ruby; trùng với Preset::DEFAULT_SETTINGS (Ruby gửi bản chính thức trong config.preset_info).
-const FALLBACK_SETTINGS={length_unit:'mm',length_digits:0,area_unit:'m2',area_digits:2,volume_unit:'m3',volume_digits:3,decimal_separator:',',currency:'VND',image_margin:20,image_width:512,image_height:512,image_view:'isometric',image_style:'color',image_background:'transparent'};
+const FALLBACK_SETTINGS={length_unit:'mm',length_digits:0,area_unit:'m2',area_digits:2,volume_unit:'m3',volume_digits:3,decimal_separator:',',currency:'VND',image_margin:20,image_location_scale:4,image_width:512,image_height:512,image_view:'isometric',image_style:'color',image_background:'transparent'};
 function defaultSettings(){return (config&&config.preset_info&&config.preset_info.defaults)||FALLBACK_SETTINGS;}
 function workSettings(){return (tableState&&tableState.settings)||defaultSettings();}
 const unitLabel=key=>UNIT_LABELS[key]||key;

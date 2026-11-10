@@ -3,20 +3,28 @@
 // Ảnh chỉ được chụp khi người dùng bấm nút. Dùng các hàm chung của app.js ($, node, button, call, message, tableState...) vào lúc gọi.
 const imagesState={only:false,target:null,fallback:new Map(),fallbackQueue:[],fallbackBusy:false,fallbackTimer:null,fallbackSoon:null,pickPid:null};
 const captureState={busy:false,done:0,total:0};
+// Ảnh món (cột Ảnh) và ảnh vị trí trong công trình (cột Ảnh vị trí) dùng chung cách vẽ ô; mỗi loại đọc các trường riêng của dòng.
+const IMG_FIELDS={full:{has:'has_image',stamp:'image_stamp',url:'image_url'},location:{has:'has_location',stamp:'location_stamp',url:'location_url'}};
 const FALLBACK_BATCH=6,PASTE_LIMIT=20*1024*1024,PNG_SAFE_CHARS=Math.floor(7*1024*1024*4/3); // dưới giới hạn 8 MB của phía Ruby
 
 // ---- Ảnh gốc trong bảng ----
 // Ô ảnh hiện ảnh gốc trực tiếp bằng đường dẫn file (row.image_url): nhanh, không chuyển ảnh qua Ruby. Nếu cửa sổ không nạp được file
 // thì xin Ruby gửi ảnh gốc dạng data URL (image_full, từng lô nhỏ) và nhớ lại để các lần vẽ bảng sau dùng luôn.
-function imageCell(td,row){
+// kind: 'full' (ảnh món) hoặc 'location' (ảnh vị trí; không có đường dự phòng qua Ruby, ảnh lỗi thì ẩn đi).
+function imageCell(td,row,kind='full'){
+  const f=IMG_FIELDS[kind],place=kind==='location';
   td.classList.add('img');
   const holder=node('div',undefined,'cell-pic');
-  if(row.pid&&row.has_image){
-    const img=node('img',undefined,'cell-img');img.alt='';img.dataset.pid=String(row.pid);img.draggable=false;img.loading='lazy';
-    const backup=imagesState.fallback.get(row.pid);
-    if(backup&&backup.stamp===row.image_stamp&&backup.url)img.src=backup.url;
-    else if(row.image_url){img.onerror=()=>imageFailed(row);img.src=row.image_url;}
-    else imageFailed(row);
+  if(row.pid&&row[f.has]){
+    const img=node('img',undefined,'cell-img');img.alt='';img.draggable=false;img.loading='lazy';
+    if(place){img.dataset.kind='location';img.onerror=()=>{img.style.visibility='hidden';};img.src=row[f.url];}
+    else{
+      img.dataset.pid=String(row.pid);
+      const backup=imagesState.fallback.get(row.pid);
+      if(backup&&backup.stamp===row.image_stamp&&backup.url)img.src=backup.url;
+      else if(row.image_url){img.onerror=()=>imageFailed(row);img.src=row.image_url;}
+      else imageFailed(row);
+    }
     holder.append(img);
   }
   else holder.append(node('span','+','cell-empty'));
@@ -25,12 +33,13 @@ function imageCell(td,row){
   // Nút nhỏ hiện khi rê chuột: chụp lại, chọn file ảnh, xóa ảnh. Chỉ chụp khi bấm nút.
   const tools=node('div',undefined,'cell-tools');
   const tool=(text,title,handler)=>{const b=node('button',text,'cell-tool');b.type='button';b.title=title;b.setAttribute('aria-label',title);b.onclick=e=>{e.stopPropagation();handler();};b.ondblclick=e=>e.stopPropagation();return b;};
-  tools.append(tool('◣','Chụp Iso từ bên trái',()=>runCapture([row.index],false,'left')),tool('◢','Chụp Iso từ bên phải',()=>runCapture([row.index],false,'right')),
-    tool('↻',row.has_image?'Chụp lại':'Chụp ảnh',()=>runCapture([row.index],false)),tool('⋯','Chọn ảnh…',()=>pickImageFile(row.pid)));
-  if(row.has_image)tools.append(tool('×','Xóa ảnh',()=>call('image_delete',row.pid)));
+  const kindArg=place?'location':undefined;
+  tools.append(tool('◣',place?'Chụp vị trí từ bên trái (Iso)':'Chụp Iso từ bên trái',()=>runCapture([row.index],false,'left',kindArg)),tool('◢',place?'Chụp vị trí từ bên phải (Iso)':'Chụp Iso từ bên phải',()=>runCapture([row.index],false,'right',kindArg)),
+    tool('↻',row[f.has]?'Chụp lại':'Chụp ảnh',()=>runCapture([row.index],false,place?'right':undefined,kindArg)),tool('⋯','Chọn ảnh…',()=>pickImageFile(row.pid,kind)));
+  if(row[f.has])tools.append(tool('×',place?'Xóa ảnh vị trí':'Xóa ảnh',()=>call(place?'image_location_delete':'image_delete',row.pid)));
   holder.append(tools);
-  td.title='Kéo thả ảnh vào đây hoặc chọn ô rồi dán (Ctrl+V)';
-  bindImageTarget(td,row.pid);
+  td.title=place?'Kéo thả ảnh vào đây để dùng làm ảnh vị trí':'Kéo thả ảnh vào đây hoặc chọn ô rồi dán (Ctrl+V)';
+  bindImageTarget(td,row.pid,kind);
 }
 // Ảnh không nạp được bằng đường dẫn file: xin Ruby gửi (mỗi mốc ảnh chỉ xin một lần).
 function imageFailed(row){
@@ -66,33 +75,34 @@ function scaledPng(bitmap,width,height){
   return canvas.toDataURL('image/png');
 }
 // Thu nhỏ vừa khung rộng x cao của preset (giữ tỉ lệ), đổi sang PNG; nếu vẫn quá lớn thì thu nhỏ thêm cho tới khi vừa.
-async function sendImage(pid,file){
+async function sendImage(pid,file,kind='full'){
   if(!isImageFile(file))throw Error('Hãy dùng file ảnh PNG, JPG, WebP hoặc BMP.');
   if(file.size>PASTE_LIMIT)throw Error('Ảnh quá lớn (tối đa 20 MB).');
   const bitmap=await createImageBitmap(file),s=workSettings();
   let w=s.image_width,h=s.image_height,full=scaledPng(bitmap,w,h);
   while(full.length>PNG_SAFE_CHARS&&w>128){w=Math.round(w*0.7);h=Math.round(h*0.7);full=scaledPng(bitmap,w,h);}
   if(typeof bitmap.close==='function')bitmap.close();
-  call('image_set',JSON.stringify({pid,full:full.split(',')[1]}));
+  call('image_set',JSON.stringify(kind==='location'?{pid,kind,full:full.split(',')[1]}:{pid,full:full.split(',')[1]}));
 }
 function guarded(task){task.catch(error=>message(error.message||'Không đọc được ảnh.',true));}
-function pickImageFile(pid){
+function pickImageFile(pid,kind='full'){
   let input=$('img-file');
   if(!input){input=node('input');input.type='file';input.id='img-file';input.accept='image/png,image/jpeg,image/webp,image/bmp';input.hidden=true;document.body.append(input);}
-  imagesState.pickPid=pid;
-  input.onchange=()=>{const file=input.files[0];input.value='';if(file&&imagesState.pickPid){imagesState.target=imagesState.pickPid;guarded(sendImage(imagesState.pickPid,file));}};
+  imagesState.pickPid=pid;imagesState.pickKind=kind;
+  input.onchange=()=>{const file=input.files[0];input.value='';if(file&&imagesState.pickPid){if(imagesState.pickKind==='full')imagesState.target=imagesState.pickPid;guarded(sendImage(imagesState.pickPid,file,imagesState.pickKind));}};
   input.click();
 }
-function bindImageTarget(el,pid){
+function bindImageTarget(el,pid,kind='full'){
   el.addEventListener('dragover',e=>{if(e.dataTransfer&&[...e.dataTransfer.types].includes('Files')){e.preventDefault();el.classList.add('drop');}});
   el.addEventListener('dragleave',()=>el.classList.remove('drop'));
   el.addEventListener('drop',e=>{
     e.preventDefault();el.classList.remove('drop');
     const file=[...(e.dataTransfer?e.dataTransfer.files:[])].find(isImageFile);
     if(!file)return message('Hãy thả file ảnh PNG, JPG, WebP hoặc BMP.',true);
-    imagesState.target=pid;guarded(sendImage(pid,file));
+    if(kind==='full')imagesState.target=pid;
+    guarded(sendImage(pid,file,kind));
   });
-  el.addEventListener('mousedown',()=>{imagesState.target=pid;});
+  if(kind==='full')el.addEventListener('mousedown',()=>{imagesState.target=pid;});
 }
 // Trình duyệt mặc định mở file khi thả ra ngoài ô; chặn để thả trượt không làm cửa sổ chuyển sang file ảnh.
 window.addEventListener('dragover',e=>e.preventDefault());
@@ -123,17 +133,20 @@ function syncBusy(){
 }
 // Thiết lập ảnh của preset đang dùng đi kèm lệnh chụp; phía Ruby kiểm tra lại.
 // isoSide ('left' | 'right'): chụp một lần theo góc Iso từ bên đó, bất kể góc nhìn của preset (nút ◣ ◢ trong ô ảnh).
-function runCapture(indexes,onlyMissing,isoSide){
+// kind 'location': chụp ảnh vị trí trong công trình (không cô lập, vùng nhìn rộng theo image_location_scale) cho cột Ảnh vị trí.
+function runCapture(indexes,onlyMissing,isoSide,kind){
   const s=workSettings();
-  const payload={only_missing:!!onlyMissing,settings:{image_width:s.image_width,image_height:s.image_height,image_view:isoSide?'isometric':s.image_view,image_style:s.image_style,image_background:s.image_background,image_margin:s.image_margin}};
+  const payload={only_missing:!!onlyMissing,settings:{image_width:s.image_width,image_height:s.image_height,image_view:isoSide?'isometric':s.image_view,image_style:s.image_style,image_background:s.image_background,image_margin:s.image_margin,image_location_scale:s.image_location_scale}};
+  if(kind==='location')payload.kind='location';
   if(isoSide)payload.iso_side=isoSide;
   if(indexes)payload.indexes=indexes;
   call('images_capture',JSON.stringify(payload));
 }
 function imagesChanged(items){
   items.forEach(item=>{
-    (tableState.data?tableState.data.rows:[]).filter(row=>row.pid===item.pid).forEach(row=>{row.has_image=item.has;row.image_stamp=item.stamp;row.image_url=item.url||null;});
-    imagesState.fallback.delete(item.pid);
+    const f=IMG_FIELDS[item.kind==='location'?'location':'full'];
+    (tableState.data?tableState.data.rows:[]).filter(row=>row.pid===item.pid).forEach(row=>{row[f.has]=item.has;row[f.stamp]=item.stamp;row[f.url]=item.url||null;});
+    if(item.kind!=='location')imagesState.fallback.delete(item.pid);
   });
   if(tableState.data&&$('grid-host'))renderGrid($('grid-host'));
 }

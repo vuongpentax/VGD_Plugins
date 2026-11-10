@@ -15,7 +15,7 @@ model = Model.new('3F2A-91C0-aa11')
 PNG = ("\x89PNG\r\n\x1A\n".b + 'noi dung anh'.b).freeze
 
 check 'ảnh nằm trong thư mục ảnh / mã model / mã đối tượng', I.path(model, 123) == File.join(S.image_dir, '3F2A-91C0-aa11', '123.png')
-check 'chỉ còn ảnh gốc, không có ảnh nhỏ (thumbnail)', I::KINDS.keys == [:full] && !I.respond_to?(:thumb_path)
+check 'chỉ có ảnh gốc và ảnh vị trí, không có ảnh nhỏ (thumbnail)', I::KINDS.keys == [:full, :location] && !I.respond_to?(:thumb_path)
 check 'mã model có ký tự lạ được làm sạch, không thoát khỏi thư mục ảnh', I.dir(Model.new('../../x/y')).start_with?(S.image_dir) && !I.dir(Model.new('../../x/y')).include?('..')
 check 'model chưa có mã dùng thư mục chung "model"', I.dir(Model.new(nil)) == File.join(S.image_dir, 'model') && I.dir(Model.new('')) == File.join(S.image_dir, 'model')
 check 'mã đối tượng phải là số nguyên dương', raises?('mã đối tượng') { I.path(model, '1/../x') } && raises?('mã đối tượng') { I.path(model, 0) } && raises?('mã đối tượng') { I.path(model, nil) }
@@ -106,3 +106,23 @@ I.commit(model, 9)
 check 'commit đổi file tạm thành ảnh chính', File.binread(I.path(model, 9)).end_with?('moi') && !File.exist?(tmp)
 File.binwrite(I.temp_path(model, 9), 'khong phai png')
 check 'commit từ chối file tạm không phải PNG, giữ ảnh cũ, dọn file tạm', raises?('png') { I.commit(model, 9) } && File.binread(I.path(model, 9)).end_with?('moi') && !File.exist?(I.temp_path(model, 9))
+
+# ---- Ảnh vị trí (kind :location): file _loc riêng, không đụng ảnh món ----
+loc_model = Model.new('LOC-0001-aaaa')
+check 'ảnh vị trí nằm cạnh ảnh món, tên có hậu tố _loc', I.path(loc_model, 7, :location) == File.join(S.image_dir, 'LOC-0001-aaaa', '7_loc.png') && I.path(loc_model, 7) == File.join(S.image_dir, 'LOC-0001-aaaa', '7.png')
+check 'file tạm của ảnh vị trí tách khỏi file tạm của ảnh món', I.temp_path(loc_model, 7, :location) != I.temp_path(loc_model, 7) && I.temp_path(loc_model, 7, :location).end_with?('7_loc.tmp.png')
+check 'loại ảnh lạ bị từ chối', raises?('loại ảnh') { I.path(loc_model, 7, :zzz) } && raises?('loại ảnh') { I.info(loc_model, 7, I.dir(loc_model), :zzz) }
+check 'chưa có ảnh vị trí: info báo chưa có', I.info(loc_model, 7, I.dir(loc_model), :location) == {has: false, stamp: 0}
+I.write(loc_model, 7, PNG + 'vitri'.b, :location)
+check 'ghi ảnh vị trí: có ảnh vị trí, vẫn chưa có ảnh món', I.info(loc_model, 7, I.dir(loc_model), :location)[:has] && !I.info(loc_model, 7)[:has]
+I.write(loc_model, 7, PNG + 'mon'.b)
+check 'ghi ảnh món sau đó: hai ảnh độc lập', File.binread(I.path(loc_model, 7)).end_with?('mon') && File.binread(I.path(loc_model, 7, :location)).end_with?('vitri')
+check 'file_url của ảnh vị trí trỏ tới file _loc', I.file_url(loc_model, 7, 5, I.dir(loc_model), :location).include?('7_loc.png?v=5') && I.file_url(loc_model, 7, 5).include?('7.png?v=5')
+File.binwrite(I.temp_path(loc_model, 7, :location), PNG + 'moi'.b)
+I.commit(loc_model, 7, :location)
+check 'commit ảnh vị trí: đổi file tạm vị trí thành ảnh vị trí, ảnh món không đổi', File.binread(I.path(loc_model, 7, :location)).end_with?('moi') && File.binread(I.path(loc_model, 7)).end_with?('mon') && !File.exist?(I.temp_path(loc_model, 7, :location))
+I.delete(loc_model, 7, :location)
+check 'xóa ảnh vị trí: chỉ xóa ảnh vị trí, giữ ảnh món', !File.exist?(I.path(loc_model, 7, :location)) && File.exist?(I.path(loc_model, 7))
+I.write(loc_model, 7, PNG + 'vitri2'.b, :location)
+I.delete(loc_model, 7)
+check 'xóa ảnh món: chỉ xóa ảnh món, giữ ảnh vị trí', !File.exist?(I.path(loc_model, 7)) && File.exist?(I.path(loc_model, 7, :location))

@@ -23,7 +23,7 @@ module VGD
       PREFIX = 'VGD_BIM_bao_cao_'.freeze
       KEEP_SECONDS = 2 * 24 * 3600
 
-      # image_for: gọi với mã đối tượng, trả về nội dung PNG (hoặc nil nếu không có / mã không thuộc bảng).
+      # image_for: gọi với mã đối tượng (ảnh món) hoặc với (mã đối tượng, :location) cho cột Ảnh vị trí; trả về nội dung PNG (hoặc nil nếu không có / mã không thuộc bảng).
       def self.build(payload, model_name, image_for)
         raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless payload.is_a?(Hash)
         columns = columns!(payload['columns'])
@@ -34,11 +34,16 @@ module VGD
         preset = text!(payload['preset'], 100)
         separator = payload['decimal_separator'] == '.' ? '.' : ','
         images = {}
-        has_image_column = columns.any? { |c| c[:type] == 'image' }
+        image_columns = columns.each_index.select { |i| columns[i][:type] == 'image' }
         rows.each do |row|
-          next unless has_image_column && row[:pid]
-          images[row[:pid]] = load_image(row[:pid], image_for) unless images.key?(row[:pid])
-          row[:image] = images[row[:pid]]
+          next if image_columns.empty? || !row[:pid]
+          image_columns.each do |i|
+            kind = columns[i][:image_kind]
+            key = image_key(row[:pid], kind)
+            images[key] = load_image(row[:pid], image_for, kind) unless images.key?(key)
+            row[:images][i] = images[key]
+            row[:image] ||= images[key] if kind == :full # tương thích: ảnh món của dòng
+          end
         end
         meta = ["#{labels['model']}: #{model_name}", ("#{labels['preset']}: #{preset}" unless preset.empty?), "#{labels['date']}: #{Time.now.strftime('%d/%m/%Y')}"].compact.join('  ·  ')
         {title: title, meta: meta, preset: preset, model: model_name, labels: labels, separator: separator, columns: columns, rows: rows,
@@ -53,7 +58,9 @@ module VGD
           raise ArgumentError, 'Số lẻ không hợp lệ.' unless digits.is_a?(Integer) && digits.between?(0, 6)
           width = col['width']
           raise ArgumentError, "Độ rộng cột phải là số từ #{MIN_WIDTH} đến #{MAX_WIDTH}." unless width.nil? || (width.is_a?(Numeric) && width.finite? && width.between?(MIN_WIDTH, MAX_WIDTH))
-          {label: text!(col['label'], 200), unit: text!(col['unit'], 20), type: col['type'], digits: digits, width: width}
+          kind = col['image_kind'].to_s
+          raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless kind.empty? || %w[full location].include?(kind)
+          {label: text!(col['label'], 200), unit: text!(col['unit'], 20), type: col['type'], digits: digits, width: width, image_kind: kind == 'location' ? :location : :full}
         end
       end
 
@@ -63,7 +70,7 @@ module VGD
           raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless row.is_a?(Hash) && KINDS.include?(row['kind']) && row['cells'].is_a?(Array) && row['cells'].size == width
           pid = row['pid'].nil? ? nil : Images.id!(row['pid'])
           cells = row['cells'].map { |value| cell!(value) }
-          {kind: row['kind'], pid: pid, cells: cells, image: nil}
+          {kind: row['kind'], pid: pid, cells: cells, image: nil, images: {}}
         end
       end
 
@@ -82,12 +89,17 @@ module VGD
       end
 
       # Ảnh đầy đủ do plugin ghi (không dùng ảnh thu nhỏ của bảng): phải là PNG đọc được kích thước. Ảnh hỏng thì bỏ qua (ô để trống), không làm hỏng cả báo cáo.
-      def self.load_image(pid, image_for)
-        bytes = image_for.call(pid)
+      # Khóa của ảnh trong báo cáo: ảnh món theo mã đối tượng, ảnh vị trí theo "loc<mã>" (để hai ảnh của cùng một món không trùng nhau).
+      def self.image_key(pid, kind)
+        kind == :location ? "loc#{pid}" : pid
+      end
+
+      def self.load_image(pid, image_for, kind = :full)
+        bytes = kind == :location ? image_for.call(pid, :location) : image_for.call(pid)
         return nil unless Images.png?(bytes) && bytes.bytesize <= Images::MAX_BYTES
         width, height = bytes.byteslice(16, 8).unpack('NN')
         return nil unless width.to_i.between?(1, 16_384) && height.to_i.between?(1, 16_384)
-        {bytes: bytes, width: width, height: height, mime: 'image/png'}
+        {bytes: bytes, width: width, height: height, mime: 'image/png', key: image_key(pid, kind)}
       end
 
       # Số theo định dạng của preset (dấu thập phân, nhóm hàng nghìn), dùng cho trang in PDF.
@@ -102,7 +114,7 @@ module VGD
         value = row[:cells][index]
         case col[:type]
         when 'image'
-          image = row[:image]
+          image = row[:images][index]
           return '<td class="img"></td>' unless image
           %(<td class="img"><img alt="" src="data:image/png;base64,#{[image[:bytes]].pack('m0')}"></td>)
         when 'ordinal'

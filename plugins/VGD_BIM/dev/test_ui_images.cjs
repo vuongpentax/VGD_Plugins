@@ -879,6 +879,64 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok((await page.locator('#tag-tree-list').innerText()).includes('chưa có tag nào'),'model không có tag: báo trống');
   ok(await page.locator('#tag-assign').isVisible(),'thanh Gán tag vẫn thấy ở tab Trong model');
 
+  // ---- Cột Ảnh vị trí: ảnh cảnh quanh món trong công trình ----
+  await receive('config',config('table'));
+  const locRows=rows.map((r,i)=>({...r,pid:500+i,has_image:false,image_url:null,has_location:i===0,location_stamp:i===0?7:0,location_url:i===0?PNG1:null}));
+  await receive('table',table({rows:locRows}));
+  await page.evaluate(()=>{tableState.visible.add('image_location');tableState.order=tableState.data.columns.map(c=>c.key);tableView(tableState.data);});
+  const locCell=i=>page.locator('.grid tbody tr').nth(i).locator('td[data-key="image_location"]');
+  ok(await page.locator('.grid thead th[data-key="image_location"]').count()===1 && (await page.locator('.grid thead th[data-key="image_location"]').innerText()).includes('Ảnh vị trí'),'cột Ảnh vị trí có trong bảng (bật bằng Chọn cột)');
+  ok(await locCell(0).locator('img.cell-img[data-kind="location"]').count()===1 && await locCell(1).locator('img').count()===0 && await locCell(1).locator('.cell-empty').count()===1,'dòng có ảnh vị trí hiện ảnh, dòng chưa có hiện dấu +');
+  ok(JSON.stringify(await locCell(0).locator('.cell-tool').evaluateAll(l=>l.map(b=>b.title)))===JSON.stringify(['Chụp vị trí từ bên trái (Iso)','Chụp vị trí từ bên phải (Iso)','Chụp lại','Chọn ảnh…','Xóa ảnh vị trí']) && await locCell(1).locator('.cell-tool').count()===4,'ô ảnh vị trí có nút chụp trái, phải, chụp lại, chọn ảnh, xóa (xóa chỉ khi đã có ảnh)');
+  await clear();await locCell(0).hover();await locCell(0).getByRole('button',{name:'Chụp vị trí từ bên trái (Iso)'}).click();
+  let lc=await json('images_capture');
+  ok(lc && lc.kind==='location' && lc.iso_side==='left' && JSON.stringify(lc.indexes)==='[0]' && lc.settings.image_location_scale===4,'nút ◣ trên ô ảnh vị trí: chụp ảnh vị trí bên trái, kèm hệ số vùng nhìn của preset');
+  await clear();await locCell(1).hover();await locCell(1).getByRole('button',{name:'Chụp vị trí từ bên phải (Iso)'}).click();
+  lc=await json('images_capture');
+  ok(lc && lc.kind==='location' && lc.iso_side==='right' && JSON.stringify(lc.indexes)==='[1]','nút ◢ trên ô ảnh vị trí: chụp bên phải');
+  await clear();await locCell(1).hover();await locCell(1).getByRole('button',{name:'Chụp ảnh'}).click();
+  lc=await json('images_capture');
+  ok(lc && lc.kind==='location' && lc.iso_side==='right','nút ↻ trên ô ảnh vị trí: chụp ảnh vị trí (mặc định bên phải)');
+  await clear();await page.locator('.grid tbody tr').nth(0).locator('td[data-key="ordinal"]').click();
+  await clear();await locCell(0).hover();await locCell(0).getByRole('button',{name:'Xóa ảnh vị trí'}).click();
+  ok((await calls('image_location_delete')).length===1 && (await calls('image_delete')).length===0 && (await last('image_location_delete')).args[0]===500,'nút × trên ô ảnh vị trí: xóa ảnh vị trí, không xóa ảnh món');
+  await receive('images_changed',{items:[{pid:500,kind:'location',has:false,stamp:0,url:null}]});
+  ok(await locCell(0).locator('img').count()===0,'Ruby báo đã xóa ảnh vị trí: ô trở về dấu +');
+  await receive('images_changed',{items:[{pid:501,kind:'location',has:true,stamp:9,url:PNG1}]});
+  ok(await locCell(1).locator('img.cell-img[data-kind="location"]').count()===1 && await page.locator('.grid tbody tr').nth(1).locator('td[data-key="image"] img').count()===0,'Ruby báo chụp xong ảnh vị trí: ô vị trí hiện ảnh, cột Ảnh món không bị đổi');
+  await clear();await dropFile('.grid tbody tr:nth-child(3) td[data-key="image_location"]',{});await page.waitForTimeout(300);
+  const dropped=await json('image_set');
+  ok(dropped && dropped.pid===502 && dropped.kind==='location' && dropped.full.length>20,'kéo thả file ảnh vào ô ảnh vị trí: gửi ảnh với loại location');
+  await clear();await dropFile('.grid tbody tr:nth-child(3) td[data-key="image"]',{});await page.waitForTimeout(300);
+  const droppedMain=await json('image_set');
+  ok(droppedMain && droppedMain.pid===502 && !('kind' in droppedMain),'kéo thả vào ô Ảnh món: như cũ, không có loại ảnh (mặc định ảnh món)');
+  await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});
+  ok(await page.locator('.capture-panel .cap-place').count()===1 && (await page.locator('.capture-panel .cap-place').innerText()).includes('Ảnh vị trí'),'hộp Cập nhật ảnh có thêm hàng chụp ảnh vị trí trái / phải');
+  await page.locator('#cap-only').uncheck();
+  await clear();await page.locator('.capture-panel .cap-place').getByRole('button',{name:'◢ Phải'}).click();
+  lc=await json('images_capture');
+  ok(lc && lc.kind==='location' && lc.iso_side==='right' && JSON.stringify(lc.indexes)==='[0]' && lc.only_missing===false,'hộp Cập nhật ảnh: nút ◢ Phải chụp ảnh vị trí cho các đối tượng đang chọn (dòng 0)');
+  await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});
+  await page.locator('#cap-only').check();await clear();await page.locator('.capture-panel .cap-place').getByRole('button',{name:'◣ Trái'}).click();
+  lc=await json('images_capture');
+  ok(lc && lc.kind==='location' && lc.iso_side==='left' && lc.only_missing===true,'tùy chọn "Chỉ chụp đối tượng chưa có ảnh" cũng áp cho ảnh vị trí');
+  // Xuất Excel / PDF mang theo cột Ảnh vị trí với loại ảnh riêng
+  await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
+  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
+  const expLoc=await json('table_export');
+  const locCol=expLoc.columns.find(c=>c.label==='Ảnh vị trí'),mainCol=expLoc.columns.find(c=>c.label==='Ảnh');
+  ok(locCol && locCol.type==='image' && locCol.image_kind==='location' && (!mainCol || !('image_kind' in mainCol)),'xuất Excel: cột Ảnh vị trí gửi type image kèm image_kind location, cột Ảnh món không có image_kind');
+  ok(expLoc.rows.filter(r=>r.kind==='row').every(r=>r.cells[expLoc.columns.indexOf(locCol)]===null),'xuất Excel: ô ảnh vị trí để trống trong dữ liệu (Ruby nạp ảnh theo mã đối tượng)');
+  // Vùng nhìn ảnh vị trí trong bảng preset
+  await receive('table',table());await page.click('#preset-btn');
+  ok(await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').inputValue()==='4','bảng preset: ô Vùng nhìn ảnh vị trí (lần) mặc định 4');
+  await clear();await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').fill('8');await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').dispatchEvent('change');
+  const viewLoc=await viewJson();
+  ok(viewLoc && viewLoc.settings.image_location_scale===8,'đổi vùng nhìn ảnh vị trí: lưu cùng thiết lập của preset (8)');
+  await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').fill('99');await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').dispatchEvent('change');
+  ok(await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').inputValue()==='20','nhập quá lớn: bị giới hạn ở 20');
+  await page.click('#preset-btn');
+
   // ---- Đổi ngôn ngữ thì tải lại cửa sổ ----
   await receive('config',config('table'));
   const reloaded=page.waitForEvent('load',{timeout:5000}).then(()=>true,()=>false);

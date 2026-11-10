@@ -546,7 +546,7 @@ module VGD
           raise 'Dữ liệu bảng không hợp lệ.' unless payload.is_a?(Hash)
           format = payload['format']
           raise 'Định dạng xuất không hợp lệ.' unless %w[xlsx pdf].include?(format)
-          report = TableReport.build(payload, model_name, ->(pid) { table_image(pid) })
+          report = TableReport.build(payload, model_name, ->(pid, kind = :full) { table_image(pid, kind) })
           count = report[:rows].count { |row| row[:kind] == 'row' }
           if format == 'pdf'
             ::UI.openURL(TableReport.file_url(TableReport.write_html(report)))
@@ -563,9 +563,9 @@ module VGD
           title.empty? ? 'Chưa đặt tên' : title
         end
         # Ảnh đầy đủ (đúng cỡ đã chụp theo preset) của một đối tượng trong bảng; nil nếu mã không thuộc bảng hoặc chưa có ảnh.
-        def table_image(pid)
+        def table_image(pid, kind = :full)
           return nil unless known_pid?(pid)
-          file = Images.path(@model, pid)
+          file = Images.path(@model, pid, kind)
           File.file?(file) ? File.binread(file) : nil
         end
         def preset_export

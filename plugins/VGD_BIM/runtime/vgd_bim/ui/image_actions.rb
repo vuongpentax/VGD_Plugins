@@ -20,6 +20,7 @@ module VGD
           @dialog.add_action_callback('images_cancel') { |_ctx| safely { @capture[:cancel] = true if @capture } }
           @dialog.add_action_callback('image_set') { |_ctx, payload| safely { image_set(JSON.parse(payload)) } }
           @dialog.add_action_callback('image_delete') { |_ctx, pid| safely { image_delete(pid) } }
+          @dialog.add_action_callback('image_location_delete') { |_ctx, pid| safely { image_delete(pid, :location) } }
           @dialog.add_action_callback('image_full') { |_ctx, payload| safely { image_full(JSON.parse(payload)) } }
         end
 
@@ -79,19 +80,21 @@ module VGD
 
         # ---- Chụp ảnh (nút trong Bảng khối lượng) ----
         # payload: {'indexes' => [dòng cần chụp] (không có = mọi dòng đang hiện), 'only_missing' => chỉ chụp dòng chưa có ảnh,
-        #          'settings' => thiết lập ảnh của preset đang dùng (cỡ, góc nhìn, kiểu, nền); được kiểm tra lại ở đây}
+        #          'settings' => thiết lập ảnh của preset đang dùng (cỡ, góc nhìn, kiểu, nền); được kiểm tra lại ở đây,
+        #          'kind' => 'full' (ảnh món, mặc định) hoặc 'location' (ảnh vị trí trong công trình)}
         def images_capture(payload)
           check_model!
           raise 'Đang chụp ảnh. Hãy đợi xong hoặc bấm Dừng.' if @capture
           settings = Preset.settings!(payload.fetch('settings', {}))
+          kind = capture_kind!(payload['kind'])
           iso_side = payload['iso_side'] || 'right'
           raise 'Hãy chọn bên Iso là trái hoặc phải.' unless Capture::ISO_SIDES.include?(iso_side)
           wanted = payload['indexes'].is_a?(Array) ? table_indexes(payload) : Array(@table_records).each_index.to_a
           jobs = wanted.map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
-          jobs.reject! { |index, _| @table_rows[index][:has_image] } if payload['only_missing']
+          jobs.reject! { |index, _| @table_rows[index][kind == :location ? :has_location : :has_image] } if payload['only_missing']
           raise 'Không có đối tượng nào cần chụp.' if jobs.empty?
           raise "Mỗi lần chỉ chụp tối đa #{MAX_CAPTURE_BATCH} đối tượng. Hãy chọn ít hơn." if jobs.size > MAX_CAPTURE_BATCH
-          @capture = {queue: jobs, total: jobs.size, done: 0, errors: [], updated: [], cancel: false, notes: [], settings: settings, iso_side: iso_side}
+          @capture = {queue: jobs, total: jobs.size, done: 0, errors: [], updated: [], cancel: false, notes: [], settings: settings, iso_side: iso_side, kind: kind}
           release_preview # khung đánh dấu không được lọt vào ảnh
           hide_overlay
           emit('images_progress', {done: 0, total: jobs.size})
@@ -113,7 +116,7 @@ module VGD
           end
           _index, record = job[:queue].shift
           begin
-            result = Capture.shoot(@model, record, job[:settings], iso_side: job[:iso_side])
+            result = Capture.shoot(@model, record, job[:settings], iso_side: job[:iso_side], kind: job[:kind])
             job[:updated] << result
             job[:notes] << result[:note] if result[:note]
           rescue StandardError => error
@@ -133,10 +136,17 @@ module VGD
           @capture = nil
           return unless job
           unless @closed
-            emit('images_changed', {items: job[:updated].map { |item| image_change(item[:pid], true, item[:stamp]) }})
+            emit('images_changed', {items: job[:updated].map { |item| image_change(item[:pid], true, item[:stamp], item[:kind] || :full) }})
             emit('images_done', {done: job[:done], total: job[:total], ok: job[:updated].size, errors: job[:errors].first(5), notes: job[:notes].uniq.first(3), cancelled: job[:cancel]})
             show_outline if @mode == 'table'
           end
+        end
+
+        # 'full' (mặc định, ảnh món) hoặc 'location' (ảnh vị trí); giá trị khác bị từ chối.
+        def capture_kind!(value)
+          return :full if value.nil? || value == 'full'
+          return :location if value == 'location'
+          raise 'Loại ảnh không hợp lệ.'
         end
 
         def capture_label(record)
@@ -158,22 +168,23 @@ module VGD
         def image_set(payload)
           check_model!
           pid = known_pid!(payload['pid'])
-          Images.write(@model, pid, Images.decode_png(payload['full']))
-          emit('images_changed', {items: [image_change(pid, true, Images.info(@model, pid)[:stamp])]})
+          kind = capture_kind!(payload['kind'])
+          Images.write(@model, pid, Images.decode_png(payload['full']), kind)
+          emit('images_changed', {items: [image_change(pid, true, Images.info(@model, pid, Images.dir(@model), kind)[:stamp], kind)]})
           emit('message', {text: 'Đã lưu ảnh cho đối tượng.'})
         end
 
         # Một mục của sự kiện images_changed: url là đường dẫn file ảnh gốc (kèm mốc thời gian để làm mới), nil khi không còn ảnh.
-        def image_change(pid, has, stamp)
-          {pid: pid, has: has, stamp: stamp, url: has ? Images.file_url(@model, pid, stamp) : nil}
+        def image_change(pid, has, stamp, kind = :full)
+          {pid: pid, kind: kind.to_s, has: has, stamp: stamp, url: has ? Images.file_url(@model, pid, stamp, Images.dir(@model), kind) : nil}
         end
 
-        def image_delete(pid)
+        def image_delete(pid, kind = :full)
           check_model!
           pid = known_pid!(pid)
-          Images.delete(@model, pid)
-          emit('images_changed', {items: [image_change(pid, false, 0)]})
-          emit('message', {text: 'Đã xóa ảnh của đối tượng.'})
+          Images.delete(@model, pid, kind)
+          emit('images_changed', {items: [image_change(pid, false, 0, kind)]})
+          emit('message', {text: kind == :location ? 'Đã xóa ảnh vị trí của đối tượng.' : 'Đã xóa ảnh của đối tượng.'})
         end
 
         # Ảnh gốc dạng data URL cho các mã giao diện xin (dự phòng của ô ảnh hiện bằng đường dẫn file).
