@@ -14,6 +14,9 @@ module VGD
         PADDING = 10
         MAX_LABEL_WIDTH = 360 # chiều rộng chữ tối đa (điểm ảnh); tên dài hơn thì rút gọn bằng "…"
         ELLIPSIS = '…'.freeze
+        PROBE_DISTANCE = 100.0 # inch, khoảng cách điểm thử trên trục nhìn của camera
+        UNDECIDED_PX = 40.0    # cả hai cách đều lệch tâm quá mức này: không tin phép đo
+        NEAR_PX = 2.0          # hai cách lệch tâm gần như nhau (ngữ cảnh trùng thế giới): coi là thế giới
         IDENTITY_MATRIX = [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0].freeze
 
         def alive?
@@ -22,9 +25,8 @@ module VGD
           false
         end
 
-        # Đang mở sửa một group / component thì tùy phiên bản và loại vẽ (công cụ hay lớp phủ), SketchUp hiểu điểm vẽ theo tọa độ cục bộ
-        # của ngữ cảnh đang mở hoặc theo tọa độ thế giới; hiểu sai thì khung lệch đúng bằng vị trí của ngữ cảnh. Không đoán: tự đo
-        # (xem local_drawing?) rồi đổi điểm thế giới bằng edit_transform.inverse nếu cần. Kết quả được nhớ lại cho tới khi ngữ cảnh đổi.
+        # Cách vẽ 3D cũ (View#draw), chỉ còn dùng khi không mở ngữ cảnh nào (điểm thế giới giữ nguyên) hoặc khi đang mở sửa group mà
+        # chưa đo được kiểu tọa độ của screen_coords (xem screen_mode): lúc đó đổi điểm thế giới sang tọa độ cục bộ bằng edit_transform.inverse.
         # Trả về [đường viền, tô mặt, điểm khung tên, mũi tên tô, mũi tên viền].
         def drawing_shapes(view)
           context = view.model.edit_transform
@@ -47,45 +49,86 @@ module VGD
           @shape_cache
         end
 
-        # SketchUp đang hiểu điểm vẽ theo tọa độ cục bộ của ngữ cảnh (true) hay tọa độ thế giới (false)? nil nếu chưa đo được.
-        # Chiếu một điểm thế giới bằng camera (ViewFit.project) rồi so với View#screen_coords của chính điểm đó (hiểu theo thế giới)
-        # và của điểm đã đổi sang cục bộ: cách nào ra gần vị trí thật hơn là cách SketchUp đang dùng.
+        # View#screen_coords đang hiểu điểm theo tọa độ cục bộ của ngữ cảnh đang mở (true) hay tọa độ thế giới (false)? nil nếu không đo được.
+        # Đo bằng một điểm biết chắc vị trí trên màn hình, không dựa vào công thức chiếu của plugin: điểm nằm đúng trên trục nhìn của camera
+        # (mắt + hướng nhìn x khoảng cách) luôn rơi vào tâm khung nhìn. Điểm thế giới đó và điểm đã đổi sang cục bộ, cách nào cho
+        # screen_coords ra gần tâm hơn là cách SketchUp đang dùng. Ngữ cảnh gần như trùng thế giới (hai cách cùng gần tâm) thì dùng thế giới.
         def local_drawing?(view, context)
-          probe = @points.first
-          return nil unless probe
           camera = view.camera
-          expected = ViewFit.project(probe.to_a, eye: camera.eye.to_a, direction: camera.direction.to_a, up: camera.up.to_a,
-                                                 perspective: camera.perspective?, fov: camera.fov, fov_is_height: camera.fov_is_height?,
-                                                 width: view.vpwidth.to_f, height: view.vpheight.to_f, camera_height: camera.height)
-          return nil unless expected
+          probe = camera.eye.offset(camera.direction, PROBE_DISTANCE)
+          center = [view.vpwidth.to_f / 2.0, view.vpheight.to_f / 2.0]
           as_world = view.screen_coords(probe)
           as_local = view.screen_coords(probe.transform(context.inverse))
-          off_world = Math.hypot(as_world.x - expected[0], as_world.y - expected[1])
-          off_local = Math.hypot(as_local.x - expected[0], as_local.y - expected[1])
-          BIM.log("Khung đánh dấu khi mở sửa group: lệch nếu hiểu là thế giới #{off_world.round}px, nếu hiểu là cục bộ #{off_local.round}px")
-          off_local <= off_world
+          off_world = Math.hypot(as_world.x - center[0], as_world.y - center[1])
+          off_local = Math.hypot(as_local.x - center[0], as_local.y - center[1])
+          BIM.log("Khung đánh dấu khi mở sửa group: screen_coords lệch tâm #{off_world.round}px nếu hiểu là thế giới, #{off_local.round}px nếu hiểu là cục bộ")
+          return nil if [off_world, off_local].min > UNDECIDED_PX
+          off_local < off_world - NEAR_PX
         rescue StandardError => error
           BIM.log("Không đo được kiểu tọa độ vẽ: #{error.message}")
           nil
+        end
+
+        # Đang mở sửa group và đo được kiểu tọa độ của screen_coords: {local:, inverse:}. Khi đó khung được vẽ bằng tọa độ màn hình
+        # (draw2d) với điểm chiếu bằng chính View#screen_coords, nên không phụ thuộc cách View#draw hiểu tọa độ trong ngữ cảnh đang mở.
+        # nil: không mở ngữ cảnh nào (vẽ 3D như cũ) hoặc chưa đo được (giữ cách cũ, đo lại ở lần vẽ sau).
+        def screen_mode(view)
+          context = view.model.edit_transform
+          return nil if context.to_a == IDENTITY_MATRIX
+          key = context.to_a
+          unless @screen_key == key
+            @screen_local = local_drawing?(view, context)
+            @screen_key = key unless @screen_local.nil?
+          end
+          @screen_local.nil? ? nil : {local: @screen_local, inverse: context.inverse}
+        end
+
+        # Điểm thế giới -> điểm màn hình (z = 0) để vẽ bằng draw2d; nil nếu điểm nằm sau camera (chiếu phối cảnh sẽ lật ngược).
+        def screen_point(view, point, mode)
+          camera = view.camera
+          if camera.perspective?
+            eye = camera.eye
+            direction = camera.direction
+            return nil if (point.x - eye.x) * direction.x + (point.y - eye.y) * direction.y + (point.z - eye.z) * direction.z <= 0.0
+          end
+          screen = view.screen_coords(mode[:local] ? point.transform(mode[:inverse]) : point)
+          Geom::Point3d.new(screen.x, screen.y, 0)
+        end
+
+        # Vẽ các đoạn thẳng (cặp điểm) bằng tọa độ màn hình; đoạn có điểm sau camera thì bỏ.
+        def draw_screen_segments(view, points, mode)
+          screen = points.map { |point| screen_point(view, point, mode) }
+          lines = screen.each_slice(2).select { |pair| pair.size == 2 && pair.none?(&:nil?) }.flatten
+          view.draw2d(GL_LINES, lines) unless lines.empty?
+        end
+
+        # Vẽ các tam giác (ba điểm một) bằng tọa độ màn hình; tam giác có điểm sau camera thì bỏ.
+        def draw_screen_triangles(view, points, mode)
+          screen = points.map { |point| screen_point(view, point, mode) }
+          triangles = screen.each_slice(3).select { |tri| tri.size == 3 && tri.none?(&:nil?) }.flatten
+          view.draw2d(GL_TRIANGLES, triangles) unless triangles.empty?
         end
 
         # Tô nhẹ các mặt của đối tượng (danh sách tam giác theo tọa độ thế giới).
         def draw_fills(view)
           return if @fills.empty?
           view.drawing_color = Sketchup::Color.new(*FILL_COLOR)
+          mode = screen_mode(view)
+          return draw_screen_triangles(view, @fills, mode) if mode
           view.draw(GL_TRIANGLES, drawing_shapes(view)[1])
         end
 
         # Mũi tên mặt trước: tô đặc và viền đậm, vẽ trên mặt trên của khung bao.
         def draw_arrows(view)
           return if @arrow_fills.nil? || @arrow_fills.empty?
-          shapes = drawing_shapes(view)
+          mode = screen_mode(view)
+          shapes = mode ? nil : drawing_shapes(view)
           view.drawing_color = Sketchup::Color.new(*ARROW_FILL)
-          view.draw(GL_TRIANGLES, shapes[3])
+          mode ? draw_screen_triangles(view, @arrow_fills, mode) : view.draw(GL_TRIANGLES, shapes[3])
           view.line_stipple = ''
           view.line_width = 3
           view.drawing_color = Sketchup::Color.new(*BOX_COLOR)
-          view.draw_lines(shapes[4])
+          mode ? draw_screen_segments(view, @arrow_lines, mode) : view.draw_lines(shapes[4])
         end
 
         def draw_outline(view)
@@ -93,7 +136,8 @@ module VGD
           view.line_stipple = '-'
           view.line_width = 2
           view.drawing_color = Sketchup::Color.new(*LINE_COLOR)
-          view.draw_lines(drawing_shapes(view)[0])
+          mode = screen_mode(view)
+          mode ? draw_screen_segments(view, @points, mode) : view.draw_lines(drawing_shapes(view)[0])
           view.line_stipple = ''
         end
 
@@ -101,7 +145,9 @@ module VGD
         # draw_text nhận tọa độ màn hình, nên đổi điểm 3D sang tọa độ màn hình trước khi viết chữ.
         def draw_label(view)
           return if @label.nil? || @label.empty? || @label_point.nil?
-          screen = view.screen_coords(drawing_shapes(view)[2])
+          mode = screen_mode(view)
+          return if mode && screen_point(view, @label_point, mode).nil? # điểm đặt khung tên nằm sau camera
+          screen = mode ? screen_point(view, @label_point, mode) : view.screen_coords(drawing_shapes(view)[2])
           metrics = label_metrics(view)
           half_width = (metrics[:width] + PADDING * 2) / 2.0
           half_height = [LABEL_HEIGHT, metrics[:height] + 8].max / 2.0
@@ -199,6 +245,7 @@ module VGD
           @finished = false
           @stale = false
           @shape_key = nil
+          @screen_key = nil
           @label_metrics = nil
         end
 
@@ -317,6 +364,7 @@ module VGD
             @alive = alive
             @on_stale = on_stale
             @shape_key = nil
+            @screen_key = nil
             @label_metrics = nil
             @visible = true
           end

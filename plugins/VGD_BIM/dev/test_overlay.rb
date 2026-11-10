@@ -4,6 +4,7 @@
 ROOT_UI = ARGV[0] || File.expand_path('../runtime/vgd_bim/ui/bounds_preview.rb', __dir__)
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
+GL_LINES = 1
 GL_TRIANGLES = 4
 GL_QUADS = 7
 module Geom
@@ -38,15 +39,15 @@ class FakeEditModel
   def initialize(transform); @edit_transform = transform; end
 end
 class View
-  attr_reader :lines, :texts, :triangles, :quads, :screen_points
+  attr_reader :lines, :texts, :triangles, :quads, :screen_points, :lines2d, :triangles2d
   attr_accessor :model
-  def initialize(model = nil); @model = model || FakeEditModel.new(FakeTransform.new(IDENTITY)); @lines = []; @texts = []; @triangles = []; @quads = []; @screen_points = []; end
+  def initialize(model = nil); @model = model || FakeEditModel.new(FakeTransform.new(IDENTITY)); @lines = []; @texts = []; @triangles = []; @quads = []; @screen_points = []; @lines2d = []; @triangles2d = []; end
   def line_stipple=(v); end
   def line_width=(v); end
   def drawing_color=(v); end
   def draw_lines(pts); @lines << pts; end
   def draw(mode, pts); @triangles << pts if mode == GL_TRIANGLES; end
-  def draw2d(mode, pts); @quads << pts if mode == GL_QUADS; end
+  def draw2d(mode, pts); (@quads << pts) if mode == GL_QUADS; (@lines2d << pts) if mode == GL_LINES; (@triangles2d << pts) if mode == GL_TRIANGLES; end
   def screen_coords(pt); @screen_points << pt; Geom::Point3d.new(100, 50, 0); end
   def draw_text(pt, text, opts); @texts << text; end
 end
@@ -123,6 +124,7 @@ class NumPoint
   def initialize(x, y, z); @x, @y, @z = x.to_f, y.to_f, z.to_f; end
   def to_a; [x, y, z]; end
   def transform(shift); NumPoint.new(x + shift.dx, y + shift.dy, z + shift.dz); end
+  def offset(vector, length); NumPoint.new(x + vector.x * length, y + vector.y * length, z + vector.z * length); end
 end
 class ShiftTransform
   attr_reader :dx, :dy, :dz
@@ -154,25 +156,52 @@ class SpaceView < View
 end
 shift = ShiftTransform.new(5000, 0, 0) # group đang mở nằm cách gốc 5000 theo X
 world_points = [NumPoint.new(5010, 100, 20), NumPoint.new(5030, 100, 20)]
+true_x = world_points.map { |pt| VGD::BIM::ViewFit.project(pt.to_a, eye: [0, -300, 0], direction: [0, 1, 0], up: [0, 0, 1], perspective: true, fov: 60.0, fov_is_height: false, width: 1000.0, height: 600.0)[0] }
 space_overlay = ->(interpret) do
   o = VGD::BIM::UI::BoundsOverlay.new
   o.show_shapes(world_points, fills: [], label: nil)
   v = SpaceView.new(FakeEditModel.new(shift), interpret)
   o.draw(v)
-  v.lines[0].map(&:x)
+  v
 end
-ok('SketchUp hiểu điểm vẽ theo tọa độ thế giới (như lớp phủ trong ảnh lỗi): giữ nguyên điểm thế giới, không đổi sang cục bộ', space_overlay.call(:world) == [5010.0, 5030.0])
-ok('SketchUp hiểu điểm vẽ theo tọa độ cục bộ của group đang mở: đổi sang cục bộ (trừ vị trí group)', space_overlay.call(:local) == [10.0, 30.0])
+# Đang mở sửa group: khung vẽ bằng tọa độ màn hình, điểm chiếu bằng View#screen_coords. Dù SketchUp hiểu screen_coords theo tọa độ
+# thế giới hay cục bộ của group đang mở, khung vẫn rơi đúng vị trí thật trên màn hình (không lệch đúng bằng vị trí của group).
+[:world, :local].each do |interpret|
+  v = space_overlay.call(interpret)
+  ok("screen_coords hiểu theo #{interpret == :world ? 'thế giới' : 'cục bộ'}: khung vẽ 2D đúng vị trí thật trên màn hình", v.lines2d.size == 1 && v.lines2d[0].map(&:x).zip(true_x).all? { |got, want| (got - want).abs < 1e-6 } && v.lines.empty?)
+end
 lazy = VGD::BIM::UI::BoundsOverlay.new
 lazy.show_shapes(world_points, fills: [])
-cache_view = SpaceView.new(FakeEditModel.new(shift), :world)
+cache_view = SpaceView.new(FakeEditModel.new(shift), :local)
 lazy.draw(cache_view); lazy.draw(cache_view)
-ok('đã đo xong thì dùng lại cho các lần vẽ sau (không gọi screen_coords lại để đo)', cache_view.probes == 2)
+ok('đã đo xong thì dùng lại cho các lần vẽ sau (chỉ đo một lần: 2 điểm thử, các lần vẽ chỉ chiếu 2 điểm của khung)', cache_view.probes == 2 + 2 + 2)
+# Điểm thuộc khung nằm sau camera thì bỏ đoạn đó; điểm thử đo kiểu tọa độ nằm trên trục nhìn nên không bị ảnh hưởng
+behind = VGD::BIM::UI::BoundsOverlay.new
+behind.show_shapes([NumPoint.new(5010, -900, 0), NumPoint.new(5030, -900, 0), NumPoint.new(5010, 100, 20), NumPoint.new(5030, 100, 20)], fills: [])
+behind_view = SpaceView.new(FakeEditModel.new(shift), :local)
+behind.draw(behind_view)
+ok('đoạn có điểm sau camera bị bỏ, đoạn còn lại vẫn vẽ', behind_view.lines2d.size == 1 && behind_view.lines2d[0].size == 2)
+# Tô mặt và mũi tên cũng đi bằng tọa độ màn hình
+tri = VGD::BIM::UI::BoundsOverlay.new
+tri.show_shapes(world_points, fills: [world_points[0], world_points[1], NumPoint.new(5020, 100, 60)], arrows: [[world_points[0], world_points[1], NumPoint.new(5020, 100, 60)], [world_points[0], world_points[1]]])
+tri_view = SpaceView.new(FakeEditModel.new(shift), :world)
+tri.draw(tri_view)
+ok('đang mở sửa group: tô mặt và mũi tên cũng vẽ bằng tọa độ màn hình (2 lượt tam giác, đường viền mũi tên)', tri_view.triangles2d.size == 2 && tri_view.triangles2d.all? { |t| t.size == 3 } && tri_view.lines2d.size == 2 && tri_view.triangles.empty?)
+# Không đo được (screen_coords lỗi): dùng cách cũ là vẽ 3D theo tọa độ cục bộ, không báo lỗi
+class BrokenScreenView < SpaceView
+  def screen_coords(_pt); raise 'không có'; end
+end
 undecidable = VGD::BIM::UI::BoundsOverlay.new
-undecidable.show_shapes([NumPoint.new(0, -900, 0), NumPoint.new(10, -900, 0)], fills: []) # điểm nằm sau camera: không đo được
-behind_view = SpaceView.new(FakeEditModel.new(shift), :world)
-undecidable.draw(behind_view)
-ok('không đo được (điểm sau camera): dùng cách cũ là tọa độ cục bộ, không báo lỗi', behind_view.lines[0].map(&:x) == [-5000.0, -4990.0])
+undecidable.show_shapes(world_points, fills: [])
+broken = BrokenScreenView.new(FakeEditModel.new(shift), :world)
+undecidable.draw(broken)
+ok('không đo được: dùng cách cũ (tọa độ cục bộ, vẽ 3D), không báo lỗi', broken.lines[0].map(&:x) == [10.0, 30.0] && broken.lines2d.empty?)
+# Đo bằng điểm trên trục nhìn: ngữ cảnh gần như trùng thế giới (dịch chuyển nhỏ) thì hai cách cùng gần tâm, coi là thế giới
+tiny = VGD::BIM::UI::BoundsOverlay.new
+tiny.show_shapes(world_points, fills: [])
+tiny_view = SpaceView.new(FakeEditModel.new(ShiftTransform.new(0.5, 0, 0)), :world)
+tiny.draw(tiny_view)
+ok('ngữ cảnh dịch rất nhỏ: vẫn vẽ đúng vị trí thật', tiny_view.lines2d.size == 1 && tiny_view.lines2d[0].map(&:x).zip(true_x).all? { |got, want| (got - want).abs < 1e-6 })
 
 # Khung tên: hộp ôm đúng chiều rộng chữ (đo bằng View#text_bounds), tên quá dài thì rút gọn bằng "…" để chữ không tràn hộp
 class MeasuringView < View
