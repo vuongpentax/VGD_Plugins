@@ -97,3 +97,7 @@ Chữ giao diện và hành vi lấy từ `plugins/VGD_Center/README.md`. Tên n
 Thứ tự làm đề xuất: làm thử đoạn 3 (đơn giản nhất) để kiểm tra quy trình xuất, rồi 1, 2, 4, 6, 7, cuối cùng đoạn 5.
 
 Chưa xác minh: hộp thoại chọn file, dời file thật và hành vi trong SketchUp thật (README và test của plugin cũng ghi chưa xác minh trong SketchUp thật).
+
+## Kết quả
+
+Đã dựng đủ 7 đoạn. Mã nguồn, cách chạy lại và thông số: `tools/video-huong-dan/HUONG-DAN.md`. Chưa nhúng vào VGD Center, chưa đối chiếu với SketchUp thật.

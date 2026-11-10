@@ -1,0 +1,59 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Đoạn 5 · Chuyển plugin 2022 ↔ 2024</title>
+<link rel="stylesheet" href="common.css"><style>
+#center{width:600px;height:640px}.cbody{height:582px}.main{padding:14px 16px;overflow:hidden;position:relative}
+.met{padding:5px 10px}.met b{font-size:14px}.mr{height:34px}.mets{margin-bottom:6px}.main h2{margin-bottom:6px}.tabs{margin-bottom:8px}
+.tabs .sel{color:var(--as);border-bottom:2px solid var(--a)}
+#pm{position:absolute;left:16px;right:16px;top:148px}.out{min-height:76px;font-size:10.5px}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark" id="center"><div class="title"><span>VGD Center</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div>
+ <div class="cbody"><div class="side"><i>VGD PLUGINS</i><div>Tổng quan</div><div>Kho plugin</div><div class="on">Quản lý</div><div>Cài đặt</div></div>
+ <div class="main"><div id="head"></div><div id="pm"></div></div></div>
+ <div class="foot"><span><i></i><span>VGD Center</span></span><span>SketchUp extension · VGD Center</span></div></div>
+ <div id="spot"></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Chọn bản SketchUp nguồn và bản đích</div>
+<div class="cap" id="c2"><span>Bước 2</span>Tick các plugin cần chuyển</div>
+<div class="cap big" id="c3">Không tick “Ghi đè”: plugin đã có ở bản đích được giữ nguyên</div>
+<div class="cap" id="c4"><span>Bước 3</span>Bấm “Chuyển sang bản 2024”</div>
+<div class="cap big" id="c5"><span>Lưu ý</span>Đọc kỹ cảnh báo tương thích</div>
+<div class="cap" id="c6">Đóng SketchUp và mở lại bản 2024 để áp dụng</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="common.js"></script><script>
+const DUR=30;let M,Z1,Z2,rSel,TSrc,TDst,TNone,TC1,TC2,TOv,TGo;
+// Thông báo kết quả theo mẫu của Center; "TenPlugin" chỉ là ví dụ cho dòng cảnh báo
+const OUT='Đã chép: 4 mục.\nCảnh báo tương thích: TenPlugin: có file mã hóa (.rbe), thường chỉ chạy đúng bản Ruby mà nó được mã hóa cho; nếu lỗi hãy cài lại bản dành cho SketchUp đích\nHãy đóng SketchUp và mở lại bản 2024 để áp dụng.';
+function init(){
+ $('head').innerHTML=MGR_HEAD;$('pm').innerHTML=MIG_PANEL;$('tabM').className='sel';
+ setChecks([1,1,1,1]);
+ rSel=R($('selSrc'));const rd=R($('selDst'));
+ const sr={x:rSel.x,y:rSel.y,w:rd.x+rd.w-rSel.x,h:rSel.h};rSel=sr;
+ TSrc=aim(R($('selSrc')),.6);TDst=aim(R($('selDst')),.6);TNone=aim(R($('btnNone')),.7);TC1=aim(R($('pc1')),.9);TC2=aim(R($('pc2')),.9);TOv=aim(R($('ovw')),.9);TGo=aim(R($('btnGo')),.72);
+ $('out').style.opacity=1;$('out').textContent=OUT;const mo=R($('out'));$('out').style.opacity=0;$('out').textContent='';
+ const ro=R($('ovwRow'));
+ Z1=zoomTo(ro.x+ro.w/2,ro.y+ro.h/2,2.1,640,380);Z2=zoomTo(mo.x+mo.w/2,mo.y+mo.h/2,1.9,640,370);
+ M=[{a:.8,b:2.0,f:{x:1010,y:690},t:TSrc,arc:-80},{a:2.8,b:3.6,f:TSrc,t:TDst,arc:-20},{a:4.6,b:5.8,f:TDst,t:TNone,arc:30},{a:6.6,b:7.8,f:TNone,t:TC1,arc:-30},{a:8.6,b:9.4,f:TC1,t:TC2,arc:-20},
+    {a:10.4,b:11.4,f:TC2,t:TOv,arc:30},{a:17.2,b:19.2,f:TOv,t:TGo,arc:-40},{a:21.6,b:22.4,f:TGo,t:{x:860,y:540},arc:30}];
+ render(0)}
+function render(t){
+ const zA=E(P(t,10.6,11.4))*(1-E(P(t,17.0,17.8))),zB=E(P(t,21.4,22.2))*(1-E(P(t,27.4,28.2)));
+ const c=mix(mix({s:1,x:0,y:0},Z1,zA),Z2,zB);setWorld(c);
+ // dấu chọn: tất cả → bỏ hết (5.6) → tick VGD_Dim (8.0) và VGD_Scenes (9.6)
+ const on=t<5.6?[1,1,1,1]:[0,t>=8.0?1:0,t>=9.6?1:0,0];setChecks(on);
+ $('btnNone').classList.toggle('hov',t>=5.8&&t<6.2);$('btnNone').style.transform=`scale(${1-.06*pulse(t,5.45,5.8)})`;
+ $('pc1').style.transform=`scale(${1-.25*pulse(t,7.85,8.2)})`;$('pc2').style.transform=`scale(${1-.25*pulse(t,9.45,9.8)})`;
+ // làm tối nền, làm nổi cặp ô chọn phiên bản và nút Chuyển
+ const rg=R($('btnGo')),k1=E(P(t,1.0,1.5))*(1-E(P(t,4.0,4.4))),k2=E(P(t,18.6,19.2))*(1-E(P(t,20.2,20.5)));
+ const rr=k1>=k2?rSel:rg,s=$('spot');s.style.cssText+=`;opacity:${Math.max(k1,k2)};left:${rr.x-4}px;top:${rr.y-4}px;width:${rr.w+8}px;height:${rr.h+8}px`;
+ $('ovwRow').style.outline=t>11.4&&t<17?'2px solid #B48963':'none';
+ $('btnGo').classList.toggle('hov',t>=19.2&&t<20.3);$('btnGo').style.transform=`scale(${1-.06*pulse(t,20.0,20.35)})`;
+ $('out').textContent=t>=20.6?OUT:'';$('out').style.opacity=P(t,20.6,20.9);
+ const press=pulse(t,5.45,5.8)||pulse(t,7.85,8.2)||pulse(t,9.45,9.8)||pulse(t,20.0,20.35),rp_=a=>P(t,a,a+.45);
+ drawCursor(c,pos(M,t),t,.6,29.5,press,Math.max(rp_(5.45)*(t<7),rp_(7.85)*(t>7&&t<9),rp_(9.45)*(t>9&&t<11),rp_(20.0)*(t>19.5&&t<22)));
+ cap($('c1'),t,.9,4.4,0);cap($('c2'),t,5.0,10.4,0);cap($('c3'),t,11.0,17.0,0);cap($('c4'),t,17.4,20.4,0);cap($('c5'),t,21.8,27.2,0);cap($('c6'),t,28.2,29.6,0);
+ for(const q of [1,2,4,6])$('c'+q).style.top='640px';$('c3').style.top=$('c5').style.top='38px';
+ $('stage').style.opacity=1-E(P(t,29.7,30))}
+start();
+</script></body></html>

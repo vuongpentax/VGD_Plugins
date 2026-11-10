@@ -1,0 +1,59 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Đoạn 7 · Cài đặt</title>
+<link rel="stylesheet" href="common.css"><style>
+#center{width:600px;height:640px}.cbody{height:582px}.main{padding:16px}
+.sc{background:var(--s);border:1px solid var(--b);border-radius:6px;padding:4px 16px}
+.sv{font-size:12px;color:var(--m);padding:12px 0;border-bottom:1px solid var(--b)}.sv b{color:var(--t)}
+.sr{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--b)}.sr:last-child{border-bottom:0}
+.sr strong{display:block;font-size:12.5px}.sr span{display:block;font-size:10.5px;color:var(--m);margin-top:3px;max-width:290px;line-height:1.45}
+.lg{display:flex;border:1px solid var(--b);border-radius:5px;overflow:hidden}.lg div{padding:6px 11px;font-size:11px;font-weight:650;color:var(--m);background:var(--s);border-left:1px solid var(--b)}.lg div:first-child{border-left:0}
+.lg div.on{background:var(--tint);color:var(--as)}
+.sw{flex:none}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark" id="center"><div class="title"><span>VGD Center</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div>
+ <div class="cbody"><div class="side"><i>VGD PLUGINS</i><div data-k="ov">Tổng quan</div><div data-k="kho">Kho plugin</div><div data-k="ql">Quản lý</div><div class="on" data-k="cd">Cài đặt</div></div>
+ <div class="main"><div class="eb">VGD CENTER</div><h2 data-k="h1">Cài đặt</h2>
+ <div class="sc"><div class="sv">VGD Center</div>
+  <div class="sr" id="rowLang"><div><strong data-k="lang">Ngôn ngữ</strong><span data-k="langd">Chọn ngôn ngữ giao diện</span></div><div class="lg"><div data-k="auto">Tự động</div><div id="bVi" data-k="vi">Tiếng Việt</div><div id="bEn">English</div></div></div>
+  <div class="sr" id="rowAuto"><div><strong data-k="au">Tự động cập nhật VGD Center</strong><span data-k="aud">Tự kiểm tra và cài bản VGD Center stable mới khi mở SketchUp.</span></div><div class="sw" id="sw"><b id="swb"></b><i id="swk"></i></div></div>
+  <div class="sr"><div><strong data-k="up">VGD Center đã mới nhất</strong><span data-k="last">Lần kiểm tra cập nhật Center gần nhất: Chưa kiểm tra</span></div><div class="btn" data-k="chk">Kiểm tra cập nhật</div></div>
+ </div></div></div>
+ <div class="foot"><span><i></i><span>VGD Center</span></span><span>SketchUp extension · VGD Center</span></div></div>
+ <div id="spot"></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Chọn ngôn ngữ giao diện</div>
+<div class="cap" id="c2">Đổi lại bất cứ lúc nào</div>
+<div class="cap big" id="c3"><span>Bước 2</span>Tự cập nhật VGD Center khi mở SketchUp</div>
+<div class="cap" id="c4">Mọi cài đặt nằm ngay trong Center</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="common.js"></script><script>
+const DUR=15;let M,rLang,rAuto,Z,TEn,TVi,TSw;
+// Chữ giao diện: lấy từ bảng englishText trong dialog.html
+const EN={ov:'Overview',kho:'Plugin catalog',ql:'Manage',cd:'Settings',h1:'Settings',lang:'Language',langd:'Choose the interface language',auto:'Automatic',vi:'Vietnamese',
+ au:'Automatically update VGD Center',aud:'Check for and install stable VGD Center updates when SketchUp starts.',up:'VGD Center is up to date',last:'Last Center update check: Never',chk:'Check for updates'};
+let VI=null;
+function init(){
+ VI={};document.querySelectorAll('[data-k]').forEach(e=>VI[e.dataset.k]=e.textContent);
+ rLang=R($('rowLang'));rAuto=R($('rowAuto'));TEn=aim(R($('bEn')),.55);TVi=aim(R($('bVi')),.55);TSw=aim(R($('sw')),.7);
+ Z=zoomTo(rAuto.x+rAuto.w/2,rAuto.y+rAuto.h/2,1.9,640,370);
+ M=[{a:.8,b:2.0,f:{x:1010,y:690},t:TEn,arc:-80},{a:4.2,b:5.4,f:TEn,t:TVi,arc:-25},{a:6.6,b:7.8,f:TVi,t:TSw,arc:40},{a:11.5,b:12.5,f:TSw,t:{x:860,y:520},arc:30}];
+ render(0)}
+function render(t){
+ const c=mix({s:1,x:0,y:0},Z,E(P(t,7.4,8.2))*(1-E(P(t,12.2,13.0))));setWorld(c);
+ // chữ giao diện đổi sang tiếng Anh khi bấm English (2.6) và về tiếng Việt khi bấm Tiếng Việt (6.0)
+ const en=t>=2.6&&t<6.0;document.querySelectorAll('[data-k]').forEach(e=>e.textContent=en?EN[e.dataset.k]:VI[e.dataset.k]);
+ $('bEn').className=en?'on':'';$('bVi').className=en?'':'on';
+ // công tắc tự cập nhật: bật → tắt (9.4) → bật (11.0)
+ const v=t<9.4?1:t<11.0?1-E(P(t,9.4,9.6)):E(P(t,11.0,11.2));$('swk').style.left=lerp(2,20,v)+'px';$('swk').style.background=v>.5?'var(--oa)':'var(--m)';$('swb').style.opacity=v;
+ $('sw').style.transform=`scale(${1-.08*(pulse(t,9.25,9.6)||pulse(t,10.85,11.2))})`;
+ const s=$('spot'),k1=E(P(t,1.2,1.8))*(1-E(P(t,2.4,2.7))),k2=E(P(t,6.9,7.3))*(1-E(P(t,7.8,8.1)));
+ s.style.cssText+=`;opacity:${Math.max(k1,k2)};left:${(k1>=k2?rLang:rAuto).x-6}px;top:${(k1>=k2?rLang:rAuto).y-4}px;width:${(k1>=k2?rLang:rAuto).w+12}px;height:${(k1>=k2?rLang:rAuto).h+8}px`;
+ const press=pulse(t,2.45,2.8)||pulse(t,5.85,6.2)||pulse(t,9.25,9.6)||pulse(t,10.85,11.2),rp_=a=>P(t,a,a+.45);
+ drawCursor(c,pos(M,t),t,.6,14.5,press,Math.max(rp_(2.45)*(t<4),rp_(5.85)*(t>5&&t<7),rp_(9.25)*(t>9&&t<10.5),rp_(10.85)*(t>10.5&&t<12)));
+ cap($('c1'),t,.9,3.9,0);cap($('c2'),t,4.3,7.0,0);cap($('c3'),t,7.6,12.1,0);cap($('c4'),t,13.0,14.5,0);
+ for(const k of [1,2,4])$('c'+k).style.top='640px';$('c3').style.top='38px';
+ $('stage').style.opacity=1-E(P(t,14.7,15))}
+start();
+</script></body></html>

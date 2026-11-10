@@ -36,3 +36,24 @@ html,body{background:#0b0b0b}
 #mb .mx{padding:18px 18px 16px;font-size:13px;line-height:1.5;background:#fff}
 #mb .mf{background:#f0f0f0;padding:12px 14px;display:flex;justify-content:flex-end;gap:8px}
 #mb .mbtn{min-width:78px;height:26px;border:1px solid #adadad;background:#e1e1e1;color:#000;display:grid;place-items:center;font-size:12px}
+/* Giao diện tab Quản lý (dùng cho đoạn 4, 5, 6) */
+.foot{height:28px;border-top:1px solid var(--b);background:var(--s);display:flex;justify-content:space-between;align-items:center;padding:0 12px;font-size:10px;color:var(--m)}
+.foot i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--as);margin-right:7px}
+.eb{font-size:8px;letter-spacing:.16em;color:var(--as);font-weight:700}.main h2{font-size:18px;margin:2px 0 10px}
+.mets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.met{background:var(--s);border:1px solid var(--b);border-radius:6px;padding:8px 10px}.met b{display:block;font-size:17px}.met span{font-size:10px;color:var(--m)}
+.tabs{display:flex;gap:4px;margin-bottom:10px;border-bottom:1px solid var(--b)}.tabs div{padding:7px 12px;font-size:11.5px;font-weight:650;color:var(--m)}.tabs .sel{color:var(--as);border-bottom:2px solid var(--a)}
+.tb{display:flex;gap:6px;margin-bottom:8px;align-items:center}.in{flex:1;height:28px;border:1px solid var(--b);border-radius:4px;background:var(--s);color:var(--m);font-size:10.5px;display:flex;align-items:center;padding:0 9px}
+.lst{background:var(--s);border:1px solid var(--b);border-radius:6px}
+.mr{display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--b);height:38px}.mr:last-child{border-bottom:0}
+.mr .ck{width:13px;height:13px;border:1px solid var(--b);border-radius:3px;background:var(--e)}.mr .nm{flex:1;font-size:12px;font-weight:650}
+.pend{display:none;font-size:9.5px;font-weight:700;padding:2px 8px;border-radius:10px;border:1px solid var(--a);color:var(--a)}
+.sw{position:relative;width:40px;height:22px;min-width:40px;border-radius:11px;border:1px solid var(--b);background:var(--e)}
+.sw b{position:absolute;inset:-1px;border-radius:11px;background:var(--a)}.sw i{position:absolute;top:2px;width:16px;height:16px;border-radius:50%;background:var(--m)}
+.out{margin-top:10px;min-height:70px;border:1px solid var(--b);border-left:3px solid var(--a);border-radius:6px;background:var(--tint);padding:10px 12px;font-size:11px;line-height:1.55;white-space:pre-wrap;color:var(--t);opacity:0}
+/* Tab Chuyển plugin (dùng cho đoạn 5, 6) */
+.vr{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-bottom:8px;font-size:11px;color:var(--m)}
+.selbox{display:inline-flex;align-items:center;gap:20px;height:26px;padding:0 9px;border:1px solid var(--b);border-radius:4px;background:var(--s);color:var(--t);font-weight:650;margin-left:6px}
+.cbx{display:inline-block;width:13px;height:13px;border:1px solid var(--b);border-radius:3px;background:var(--e);position:relative;vertical-align:middle}
+.cbx.on{background:var(--a);border-color:var(--a)}.cbx.on::after{content:"";position:absolute;left:3.5px;top:.5px;width:3px;height:7px;border:solid var(--oa);border-width:0 1.6px 1.6px 0;transform:rotate(40deg)}
+.mt2{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px}.mt2 small{font-size:10px;color:var(--m)}

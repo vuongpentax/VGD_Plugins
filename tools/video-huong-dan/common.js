@@ -21,3 +21,14 @@ function drawCursor(c,p,t,fadeIn,fadeOut,press,rip){const sx=c.x+c.s*p.x,sy=c.y+
  const r=$('rip');r.style.opacity=rip>0&&rip<1?1-rip:0;r.style.transform=`translate(${sx-5}px,${sy-5}px) scale(${1+rip*3})`}
 function start(){document.fonts.ready.then(init);
  if(location.search.includes('play')){const t0=performance.now();(function f(){render(((performance.now()-t0)/1000)%DUR);requestAnimationFrame(f)})()}}
+// --- Giao diện tab Quản lý > Chuyển plugin (dùng chung cho đoạn 5, 6) ---
+const PLUG=['VGD_Cabinet_Draw','VGD_Dim','VGD_Scenes','VGD_Library'];
+const MGR_HEAD='<div class="eb">MỌI PLUGIN TRONG SKETCHUP</div><h2>Quản lý</h2><div class="mets"><div class="met"><b>3</b><span>Đang bật</span></div><div class="met"><b>1</b><span>Đã tắt</span></div><div class="met"><b>0</b><span>Bộ plugin</span></div></div>'
+ +'<div class="tabs"><div id="tabT">Bật/tắt</div><div id="tabM">Chuyển plugin</div></div>';
+const MIG_PANEL='<div class="vr"><span>Từ bản<span class="selbox" id="selSrc">2022 <small>▾</small></span></span><span>Sang bản<span class="selbox" id="selDst">2024 <small>▾</small></span></span></div>'
+ +'<div class="vr" id="ovwRow"><span class="cbx" id="ovw"></span><span>Ghi đè nếu plugin đã tồn tại ở bản đích</span></div>'
+ +'<div class="mt2"><div class="in" style="max-width:150px">Tìm plugin...</div><div class="btn" id="btnAll" style="min-height:26px;font-size:10px">Chọn hết đang hiện</div><div class="btn" id="btnNone" style="min-height:26px;font-size:10px">Bỏ chọn hết</div><small id="cnt"></small></div>'
+ +'<div class="mt2" style="justify-content:flex-end"><div class="btn" id="btnExp" style="min-height:28px">Xuất gói .rbz tổng</div><div class="btn p" id="btnGo" style="min-height:28px">Chuyển sang bản 2024</div></div>'
+ +'<div class="lst" id="plist">'+PLUG.map((n,i)=>`<div class="mr" id="pr${i}"><span class="cbx" id="pc${i}"></span><div class="nm">${n}</div></div>`).join('')+'</div><div class="out" id="out"></div>';
+// đặt dấu chọn cho từng plugin và cập nhật dòng "Đã chọn n/4"
+function setChecks(on){on.forEach((v,i)=>$('pc'+i).className='cbx'+(v?' on':''));$('cnt').textContent='Đã chọn '+on.filter(Boolean).length+'/'+on.length}
