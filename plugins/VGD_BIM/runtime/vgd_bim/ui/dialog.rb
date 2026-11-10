@@ -794,6 +794,8 @@ module VGD
           text += ' Tag này đang tắt hiển thị nên các đối tượng gán vào sẽ bị ẩn.' if result[:hidden]
           emit('message', {text: text})
           emit('selection', {count: taggable_selection.size})
+          Settings.touch_recent(name)
+          emit('tag_tree', tag_tree_state)
         end
         def clear
           check_model!

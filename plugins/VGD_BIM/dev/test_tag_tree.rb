@@ -16,6 +16,9 @@ module VGD; module BIM
 end; end
 $transactions = []
 ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
+require 'tmpdir'
+ENV['VGD_BIM_DATA_DIR'] ||= Dir.mktmpdir('vgd_bim_tag_tree')
+%w[storage measure settings].each { |f| require File.join(ROOT, "core/#{f}") }
 require File.join(ROOT, 'core/tag_tree')
 require File.join(ROOT, 'ui/tag_manager')
 T = VGD::BIM::TagTree
@@ -148,6 +151,31 @@ probe.tm_color_by_tag('enabled' => false)
 ok('tm_color_by_tag: tắt được; giá trị sai bị từ chối', model.rendering_options['DisplayColorByLayer'] == false && error_of { probe.tm_color_by_tag('enabled' => 'x') }.include?('không hợp lệ'))
 ok('SketchUp cũ không có kiểu nét: không báo hỗ trợ, tm_line_style báo lỗi rõ', old_tree[:styles_supported] == false && old_tree[:line_styles].empty? && error_of { old_probe.tm_line_style('id' => 1, 'style' => 'x') }.include?('cần SketchUp 2021'))
 ok('tag_tree_state vẫn sinh được JSON sau khi thêm màu / kiểu nét', JSON.parse(JSON.generate(probe.tag_tree_state))['layers'][0]['color'] == '#ff8800')
+
+# ---- Ghim, gần đây, kéo thả vào thư mục ----
+File.delete(File.join(VGD::BIM::Storage.dir, 'settings.json')) if File.exist?(File.join(VGD::BIM::Storage.dir, 'settings.json'))
+model, probe, tags, fold = world
+ok('tag_tree_state có danh sách ghim và gần đây (rỗng lúc đầu)', probe.tag_tree_state[:pinned] == [] && probe.tag_tree_state[:recent] == [])
+probe.tm_pin('name' => 'A. WALL', 'pinned' => true)
+ok('tm_pin: ghim tag, gửi lại cây kèm danh sách ghim, lưu trên máy', probe.last('tag_tree')[:pinned] == ['A. WALL'] && VGD::BIM::Settings.read['pinned_tags'] == ['A. WALL'])
+probe.tm_pin('name' => 'A. WALL', 'pinned' => false)
+ok('tm_pin: bỏ ghim', probe.last('tag_tree')[:pinned] == [])
+ok('tm_pin: giá trị sai bị từ chối', error_of { probe.tm_pin('name' => 'A. WALL', 'pinned' => 'x') }.include?('không hợp lệ') && error_of { probe.tm_pin('name' => '', 'pinned' => true) }.include?('chọn'))
+VGD::BIM::Settings.touch_recent('A. DOOR')
+ok('tag_tree_state phản ánh tag gần đây', probe.tag_tree_state[:recent] == ['A. DOOR'])
+
+model, probe, tags, fold = world
+probe.tm_move('id' => 10, 'folder_id' => 3)
+ok('tm_move: đưa tag vào thư mục, một bước hoàn tác, gửi lại cây', tags[0].folder.equal?(fold[2]) && $transactions.last == 'VGD BIM · Chuyển tag vào thư mục' && probe.last('tag_tree')[:layers][0][:folder_id] == 3 && probe.messages.last.include?('vào thư mục "S. STRUCTURAL"'))
+probe.tm_move('id' => 10, 'folder_id' => nil)
+ok('tm_move: đưa tag ra gốc (folder_id nil)', tags[0].folder.nil? && probe.last('tag_tree')[:layers][0][:folder_id].nil? && probe.messages.last.include?('ra ngoài thư mục'))
+before = $transactions.size
+probe.tm_move('id' => 11, 'folder_id' => 1)
+ok('tm_move: tag đã nằm sẵn trong thư mục đó thì không làm gì, không tạo bước hoàn tác', $transactions.size == before && probe.messages.last == 'Tag đã nằm sẵn ở đó.')
+ok('tm_move: tag Untagged không xếp vào thư mục', error_of { probe.tm_move('id' => 13, 'folder_id' => 1) }.include?('Untagged') && tags[3].folder.nil?)
+ok('tm_move: tag / thư mục không có hoặc mã sai bị từ chối, không đổi', error_of { probe.tm_move('id' => 99, 'folder_id' => 1) }.include?('làm mới') && error_of { probe.tm_move('id' => 10, 'folder_id' => 99) }.include?('làm mới') && error_of { probe.tm_move('id' => 10, 'folder_id' => 'x') }.include?('không hợp lệ') && error_of { probe.tm_move('id' => '10', 'folder_id' => 1) }.include?('không hợp lệ') && tags[0].folder.nil?)
+old_move = Probe.new(OldModel.new(OldTags.new([FTag.new(1, 'A')])))
+ok('SketchUp cũ không có thư mục tag: tm_move báo lỗi rõ', error_of { old_move.tm_move('id' => 1, 'folder_id' => nil) }.include?('cần SketchUp 2021'))
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)

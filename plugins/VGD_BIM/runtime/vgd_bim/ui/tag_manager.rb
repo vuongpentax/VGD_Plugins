@@ -6,12 +6,16 @@ module VGD
       # Chỉ đổi hiển thị (Layer#visible=, LayerFolder#visible=), mỗi lệnh là MỘT bước hoàn tác. Thư mục tag cần SketchUp 2021 trở lên.
       # Trộn vào UI::Dialog (dùng @model, emit, check_model!...).
       module TagManager
+        UNTAGGED_NAMES = %w[Untagged Layer0].freeze
+
         def register_tag_manager_callbacks
           @dialog.add_action_callback('tm_refresh') { |_ctx, _payload| safely { tm_refresh } }
           @dialog.add_action_callback('tm_visible') { |_ctx, payload| safely { tm_visible(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_isolate') { |_ctx, payload| safely { tm_isolate(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_color') { |_ctx, payload| safely { tm_color(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_line_style') { |_ctx, payload| safely { tm_line_style(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tm_pin') { |_ctx, payload| safely { tm_pin(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tm_move') { |_ctx, payload| safely { tm_move(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_color_by_tag') { |_ctx, payload| safely { tm_color_by_tag(JSON.parse(payload)) } }
         end
 
@@ -22,6 +26,7 @@ module VGD
                   folders: folders.map { |item| item.slice(:id, :name, :visible, :parent_id) },
                   layers: layers.map { |item| item.slice(:id, :name, :visible, :folder_id, :color, :line_style) },
                   styles_supported: line_styles_supported?, line_styles: line_style_names, color_by_tag: color_by_tag?,
+                  pinned: Settings.read['pinned_tags'], recent: Settings.read['recent_tags'],
                   isolated: nil}
           tree[:isolated] = {kind: @isolation[:kind], id: @isolation[:id], name: @isolation[:name]} if isolation_active?
           tree
@@ -65,6 +70,30 @@ module VGD
           layer = tag_tree_read.first.find { |entry| entry[:id] == id }&.fetch(:object) or raise 'Không tìm thấy tag này. Hãy làm mới danh sách.'
           Data.transaction(@model, 'VGD BIM · Đổi kiểu nét tag') { layer.line_style = style }
           emit('tag_tree', tag_tree_state)
+        end
+
+        # payload: {'name' => tên tag, 'pinned' => true / false}: ghim tag lên hàng chip phía trên danh sách (lưu trên máy, dùng cho mọi model).
+        def tm_pin(payload)
+          raise 'Giá trị không hợp lệ.' unless payload['pinned'] == true || payload['pinned'] == false
+          Settings.set_pinned(payload['name'], payload['pinned'])
+          emit('tag_tree', tag_tree_state)
+        end
+
+        # Kéo thả: đưa một tag vào thư mục (folder_id) hoặc ra gốc (folder_id nil). payload: {'id' => persistent_id của tag, 'folder_id' => persistent_id hoặc nil}
+        def tm_move(payload)
+          check_model!
+          raise 'Phiên bản SketchUp này chưa có thư mục tag (cần SketchUp 2021 trở lên).' unless folders_supported?
+          id = tm_id(payload)
+          raw = payload['folder_id']
+          raise 'Mã thư mục không hợp lệ.' unless raw.nil? || raw.is_a?(Integer)
+          layers, folders = tag_tree_read
+          item = layers.find { |entry| entry[:id] == id } or raise 'Không tìm thấy tag này. Hãy làm mới danh sách.'
+          raise 'Tag Untagged không xếp vào thư mục được.' if UNTAGGED_NAMES.include?(item[:name])
+          target = raw.nil? ? nil : (folders.find { |entry| entry[:id] == raw } or raise 'Không tìm thấy thư mục này. Hãy làm mới danh sách.')
+          return emit('message', {text: 'Tag đã nằm sẵn ở đó.'}) if item[:folder_id] == raw
+          Data.transaction(@model, 'VGD BIM · Chuyển tag vào thư mục') { item[:object].folder = target && target[:object] }
+          emit('tag_tree', tag_tree_state)
+          emit('message', {text: "Đã chuyển tag \"#{item[:name]}\" #{target ? "vào thư mục \"#{target[:name]}\"" : 'ra ngoài thư mục'}."})
         end
 
         # payload: {'enabled' => true / false}: bật / tắt chế độ tô màu theo tag của SketchUp (không nằm trong lịch sử hoàn tác của SketchUp).

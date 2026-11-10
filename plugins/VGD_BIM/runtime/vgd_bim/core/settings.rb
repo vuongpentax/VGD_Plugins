@@ -12,8 +12,12 @@ module VGD
         'image_dir' => '',  # trống = thư mục mặc định trong thư mục dữ liệu của plugin
         # Số đo thân của Bảng khối lượng (xem Measure): từ khóa tên / tag của phần không tính vào Rộng / Dài / Cao (như tay nắm).
         'exclude_words' => 'tay nắm, tay nam, handle, knob',
-        'exclude_tags' => [] # tên các tag loại khỏi số đo (chọn bằng bảng tick trong Bảng khối lượng)
+        'exclude_tags' => [], # tên các tag loại khỏi số đo (chọn bằng bảng tick trong Bảng khối lượng)
+        # Tab Soạn tag > Trong model: tag ghim (người dùng tự ghim) và tag vừa gán gần đây (tự cập nhật khi gán, mới nhất đứng đầu)
+        'pinned_tags' => [],
+        'recent_tags' => []
       }.freeze
+      RECENT_LIMIT = 8
       LANGUAGES = %w[vi en].freeze
       MAX_DIR_LENGTH = 240 # dưới giới hạn đường dẫn 260 ký tự của Windows, chừa chỗ cho tên file
 
@@ -35,6 +39,28 @@ module VGD
         merged
       end
 
+      # Ghi nhớ tag vừa gán: đưa lên đầu danh sách gần đây (không trùng, không phân biệt hoa thường / dấu), tối đa RECENT_LIMIT tag.
+      def self.touch_recent(name)
+        name = name.to_s.strip
+        return if name.empty?
+        key = Measure.normalize(name)
+        current = read['recent_tags']
+        updated = ([name] + current.reject { |item| Measure.normalize(item) == key }).first(RECENT_LIMIT)
+        update('recent_tags' => updated) unless updated == current
+      rescue StandardError => error
+        BIM.log("Không ghi được tag gần đây: #{error.message}") # chỉ là tiện ích, không làm hỏng việc gán tag
+      end
+
+      # Ghim / bỏ ghim một tag (theo tên, không phân biệt hoa thường / dấu).
+      def self.set_pinned(name, pinned)
+        name = name.to_s.strip
+        raise ArgumentError, 'Hãy chọn một tag.' if name.empty?
+        key = Measure.normalize(name)
+        list = read['pinned_tags'].reject { |item| Measure.normalize(item) == key }
+        list << name if pinned
+        update('pinned_tags' => list)['pinned_tags']
+      end
+
       # Thư mục lưu ảnh đang dùng (mặc định hoặc do người dùng chọn).
       def self.image_dir
         custom = read['image_dir']
@@ -47,7 +73,8 @@ module VGD
           raise ArgumentError, 'Ngôn ngữ không hợp lệ.' unless LANGUAGES.include?(value.to_s)
           value.to_s
         when 'image_dir' then directory(value)
-        when 'exclude_tags' then Measure.parse_tags(value)
+        when 'exclude_tags', 'pinned_tags' then Measure.parse_tags(value)
+        when 'recent_tags' then Measure.parse_tags(value).first(RECENT_LIMIT)
         when 'exclude_words'
           Measure.parse_words(value) # chỉ để kiểm tra; lưu nguyên chữ người dùng gõ
           value.to_s.strip

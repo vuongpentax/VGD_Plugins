@@ -214,6 +214,9 @@ const VGD_I18N=(()=>{
     'Vùng nhìn ảnh vị trí (lần)':'Location photo view area (times)','Ảnh vị trí nhìn vùng quanh món rộng gấp bao nhiêu lần kích thước món: 2 = gần, 4 = vừa, 10 = xa (thấy cả căn phòng).':'How many times wider than the item the location photo looks: 2 = close, 4 = medium, 10 = far (shows the whole room).',
     'Ảnh vị trí trong công trình':'Location photo in the building','◣ Trái':'◣ Left','◢ Phải':'◢ Right','Chụp cảnh quanh món (không cô lập) theo góc Iso trái / phải, lưu vào cột Ảnh vị trí':'Captures the scene around the item (not isolated) from an isometric left / right angle and saves it to the Location photo column',
     'Đã xóa ảnh vị trí của đối tượng.':'Deleted the location photo of the object.','Loại ảnh không hợp lệ.':'The image type is not valid.','Vùng nhìn của ảnh vị trí phải từ 2 đến 20 lần kích thước món.':'The location photo view area must be between 2 and 20 times the item size.',
+    'Đã ghim':'Pinned','Gần đây':'Recent','Ghim tag':'Pin tag','Bỏ ghim tag':'Unpin tag','Chọn tag này cho nút Gán tag':'Choose this tag for the Assign tag button',
+    'Bấm tên để chọn tag cho nút Gán tag · kéo thả vào thư mục để chuyển':'Click the name to choose the tag for the Assign tag button · drag and drop onto a folder to move it','Thả vào đây để đưa tag ra ngoài thư mục (gốc)':'Drop here to move the tag out of its folder (root)',
+    'Tag đã nằm sẵn ở đó.':'The tag is already there.','Tag Untagged không xếp vào thư mục được.':'The Untagged tag cannot be placed in a folder.','Mã thư mục không hợp lệ.':'The folder id is not valid.',
     'Trong model':'In model','Mở hết':'Expand all','Gập hết':'Collapse all','Làm mới':'Refresh','Mở':'Expand','Gập':'Collapse','Khôi phục hiển thị':'Restore visibility','Bỏ cô lập':'Remove isolation',
     'Tìm tag hoặc thư mục...':'Find tag or folder...','Tìm tag hoặc thư mục':'Find tag or folder','Model chưa có tag nào.':'The model has no tags yet.','Không có tag hoặc thư mục nào khớp.':'No tag or folder matches.',
     'Ẩn tag':'Hide tag','Hiện tag':'Show tag','Ẩn thư mục':'Hide folder','Hiện thư mục':'Show folder','Cô lập tag':'Isolate tag','Cô lập thư mục':'Isolate folder',
@@ -352,6 +355,7 @@ const VGD_I18N=(()=>{
   rule(/^Mỗi luật tối đa (\d+) từ khóa, mỗi từ khóa không quá (\d+) ký tự\.$/,(m,a,b)=>`Each rule allows at most ${a} keywords of ${b} characters.`);
   rule(/^(\d+) đối tượng( · .*)?$/,(m,n,rest)=>`${plural(n,'object','objects')}${rest||''}`);
   rule(/^Nhập (\d+) cụm \((\d+) tag\)$/,(m,a,b)=>`Import ${plural(a,'cluster','clusters')} (${plural(b,'tag','tags')})`);
+  rule(/^Đã chuyển tag "(.*)" (vào thư mục "(.*)"|ra ngoài thư mục)\.$/,(m,name,where,folder)=>`Moved tag "${name}" ${folder?`into folder "${folder}"`:'out of its folder'}.`);
   rule(/^Đang cô lập: (.*)$/,(m,name)=>`Isolated: ${name}`);
   rule(/^Đã cô lập (tag|thư mục) "(.*)" \(ẩn (\d+) tag khác\)\. Bấm lại để khôi phục hiển thị\.$/,(m,kind,name,n)=>`Isolated ${kind==='tag'?'tag':'folder'} "${name}" (${plural(n,'other tag','other tags')} hidden). Click again to restore visibility.`);
   rule(/^(\d+) luật$/,(m,n)=>plural(n,'rule','rules'));

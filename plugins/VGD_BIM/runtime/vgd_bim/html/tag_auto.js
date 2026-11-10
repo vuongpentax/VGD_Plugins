@@ -193,7 +193,7 @@ function tagEditor(data){
   const pick=node('select');pick.id='tag-pick';pick.setAttribute('aria-label','Chọn tag');
   (data.tags||[]).forEach(tag=>pick.append(new Option(tag.name,tag.name)));
   const go=button('Gán tag',()=>{if(!pick.value)throw Error('Hãy lưu bộ tag trước, rồi chọn tag để gán.');call('assign_tag',JSON.stringify({name:pick.value}));},'primary');
-  go.id='tag-assign';go.disabled=!data.selection||!(data.tags||[]).length;
+  go.id='tag-assign';go.dataset.count=String(data.selection);go.disabled=!data.selection||!(data.tags||[]).length;
   go.title='Nếu tag đang tắt hiển thị, các đối tượng gán vào sẽ bị ẩn.';
   assign.append(info,pick,go);
   const tabs=node('div',undefined,'tag-tabs');tabs.setAttribute('role','tablist');
@@ -278,10 +278,12 @@ function tagSetPane(data,pane){
 }
 
 // ---- Tab nhỏ "Trong model": cây thư mục tag / tag của model đang mở, mắt ẩn / hiện, cô lập, tìm kiếm ----
-const treeState={data:null,open:new Set(),query:''};
+const treeState={data:null,open:new Set(),query:'',focus:'',dragging:null};
 const TREE_ICONS={
   eye:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>',
   eyeOff:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7c2.4 0 4.4.8 6 1.8M23 12s-4 7-11 7c-2.4 0-4.4-.8-6-1.8"/><path d="M3 3l18 18"/></svg>',
+  pin:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5M9 3h6l-1 6 3 4H7l3-4z"/></svg>',
+  pinOn:'<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5M9 3h6l-1 6 3 4H7l3-4z"/></svg>',
   target:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/></svg>'
 };
 function treeButton(icon,title,handler,cls){
@@ -300,9 +302,12 @@ function tagTreePane(pane){
   const colorByTag=button('Tô màu theo tag',()=>call('tm_color_by_tag',JSON.stringify({enabled:!(treeState.data&&treeState.data.color_by_tag)})),'sm');colorByTag.id='tag-tree-colorbytag';
   colorByTag.title='Bật / tắt chế độ tô màu theo tag của SketchUp (Color by Tag)';colorByTag.setAttribute('aria-pressed','false');
   bar.append(search,expand,collapse,refresh,colorByTag);
+  const chips=node('div',undefined,'tm-chip-area');chips.id='tag-tree-chips';
+  const rootDrop=node('div','Thả vào đây để đưa tag ra ngoài thư mục (gốc)','tm-root-drop');rootDrop.id='tag-tree-rootdrop';rootDrop.hidden=true;
+  acceptTagDrop(rootDrop,null);
   const banner=node('div',undefined,'tm-banner');banner.id='tag-tree-banner';banner.hidden=true;
   const list=node('div',undefined,'tag-scroll tm-list');list.id='tag-tree-list';
-  pane.append(bar,banner,list,node('p','Mắt ẩn / hiện tag hoặc cả thư mục trong model; nút tròn cô lập: chỉ hiện mục đó, ẩn mọi thứ còn lại, bấm lại để trả hiển thị như cũ. Mỗi thao tác là một bước hoàn tác.','muted tag-note'));
+  pane.append(bar,chips,rootDrop,banner,list,node('p','Mắt ẩn / hiện tag hoặc cả thư mục trong model; nút tròn cô lập: chỉ hiện mục đó, ẩn mọi thứ còn lại, bấm lại để trả hiển thị như cũ. Mỗi thao tác là một bước hoàn tác.','muted tag-note'));
   paintTagTree();
 }
 
@@ -318,6 +323,7 @@ function paintTagTree(){
     banner.append(node('span',`Đang cô lập: ${data.isolated.name}`),button('Khôi phục hiển thị',()=>call('tm_isolate',JSON.stringify({restore:true})),'sm'));
   }
   if(!data.supported)list.append(node('p','Phiên bản SketchUp này chưa có thư mục tag (cần SketchUp 2021 trở lên). Chỉ hiện danh sách tag.','muted'));
+  paintTreeChips(data);
   const q=foldText(treeState.query.trim());
   const folderById=new Map(data.folders.map(f=>[f.id,f]));
   const childFolders=new Map(),childLayers=new Map();
@@ -348,6 +354,17 @@ function paintTagTree(){
     const noun=isFolder?'thư mục':'tag';
     row.append(treeButton(item.visible?'eye':'eyeOff',item.visible?`Ẩn ${noun}`:`Hiện ${noun}`,()=>call('tm_visible',JSON.stringify({kind,id,visible:!item.visible})),item.visible?'on':'off'));
     const name=node('span',item.name,'tm-name'+(isFolder?' folder':''));name.title=item.name;row.append(name);
+    if(!isFolder&&data.supported)row.title='Bấm tên để chọn tag cho nút Gán tag · kéo thả vào thư mục để chuyển';
+    if(!isFolder){
+      name.onclick=()=>selectAssignTag(item.name);
+      if(treeState.focus&&treeState.focus===item.name)row.classList.add('focus');
+      if(data.supported&&!UNTAGGED_TREE.includes(item.name)){
+        row.draggable=true;
+        row.ondragstart=e=>{e.dataTransfer.setData('text/plain',`vgd-tag:${id}`);e.dataTransfer.effectAllowed='move';treeState.dragging=id;row.classList.add('drag-src');const zone=$('tag-tree-rootdrop');if(zone)zone.hidden=false;};
+        row.ondragend=()=>{treeState.dragging=null;row.classList.remove('drag-src');const zone=$('tag-tree-rootdrop');if(zone)zone.hidden=true;list.querySelectorAll('.drop').forEach(el=>el.classList.remove('drop'));};
+      }
+    }
+    if(data.supported)acceptTagDrop(row,isFolder?id:(item.folder_id===undefined?null:item.folder_id));
     if(isFolder)row.append(node('span',`${countTags(id)} tag`,'muted tm-count'),node('span',undefined,'tm-pad'),node('span',undefined,'tm-pad-style'));
     else{
       // Màu và kiểu nét của tag. Màu đổi khi đóng bảng chọn màu (sự kiện change), không gửi liên tục lúc kéo.
@@ -362,6 +379,10 @@ function paintTagTree(){
         style.onchange=()=>{if(style.value)call('tm_line_style',JSON.stringify({id,style:style.value}));};
         row.append(style);
       }else row.append(node('span',undefined,'tm-pad-style'));
+    }
+    if(!isFolder){
+      const pinned=pinnedKeys(data).has(foldText(item.name));
+      row.append(treeButton(pinned?'pinOn':'pin',pinned?'Bỏ ghim tag':'Ghim tag',()=>call('tm_pin',JSON.stringify({name:item.name,pinned:!pinned})),pinned?'on':''));
     }
     row.append(treeButton('target',data.isolated&&data.isolated.kind===kind&&data.isolated.id===id?'Bỏ cô lập':`Cô lập ${noun}`,()=>call('tm_isolate',JSON.stringify({kind,id})),'iso'));
     list.append(row);rows+=1;
@@ -378,5 +399,50 @@ function paintTagTree(){
   (childLayers.get(null)||[]).filter(l=>!q||foldText(l.name).includes(q)).slice().sort(byName).forEach(l=>addRow('tag',l,0,false));
   if(!rows)list.append(node('p',data.layers.length?'Không có tag hoặc thư mục nào khớp.':'Model chưa có tag nào.','muted'));
   list.scrollTop=scroll;
+}
+const UNTAGGED_TREE=['Untagged','Layer0'];
+const pinnedKeys=data=>new Set((data.pinned||[]).map(foldText));
+// Chọn tag cho nút Gán tag (ô chọn tag ở đầu tab): thêm vào ô nếu tag chưa có trong bộ tag đã lưu; đánh dấu dòng trong danh sách.
+function selectAssignTag(name){
+  treeState.focus=name;
+  const pick=$('tag-pick'),go=$('tag-assign');
+  if(pick){
+    if(![...pick.options].some(o=>o.value===name))pick.insertBefore(new Option(name,name),pick.firstChild);
+    pick.value=name;
+    if(go)go.disabled=go.dataset.count==='0'||!pick.options.length;
+  }
+  paintTagTree();
+}
+// Hàng chip phía trên danh sách: tag đã ghim (có nút bỏ ghim) và tag gán gần đây (có nút ghim). Bấm tên chip để chọn tag cho nút Gán tag.
+function paintTreeChips(data){
+  const box=$('tag-tree-chips');
+  if(!box)return;
+  box.replaceChildren();
+  const exists=new Set(data.layers.map(l=>foldText(l.name))),keys=pinnedKeys(data);
+  const pinned=data.pinned||[],recent=(data.recent||[]).filter(n=>!keys.has(foldText(n)));
+  const group=(label,names,isPinned)=>{
+    if(!names.length)return;
+    const row=node('div',undefined,'tm-chips');row.append(node('span',label,'muted tm-chips-label'));
+    names.forEach(name=>{
+      const chip=node('span',undefined,'tm-chip'+(exists.has(foldText(name))?'':' missing')+(treeState.focus===name?' focus':''));
+      const pick=node('button',name,'tm-chip-name');pick.type='button';pick.title='Chọn tag này cho nút Gán tag';pick.onclick=()=>selectAssignTag(name);
+      const pin=treeButton(isPinned?'pinOn':'pin',isPinned?'Bỏ ghim tag':'Ghim tag',()=>call('tm_pin',JSON.stringify({name,pinned:!isPinned})),isPinned?'on':'');
+      chip.append(pick,pin);row.append(chip);
+    });
+    box.append(row);
+  };
+  group('Đã ghim',pinned,true);
+  group('Gần đây',recent,false);
+}
+// Thả tag vào hàng này: chuyển tag vào thư mục folderId (null = ra ngoài thư mục). Dùng cho dòng thư mục, dòng tag (cùng thư mục với nó) và vùng "gốc".
+function acceptTagDrop(el,folderId){
+  el.addEventListener('dragover',e=>{if(treeState.dragging===null)return;e.preventDefault();e.dataTransfer.dropEffect='move';el.classList.add('drop');});
+  el.addEventListener('dragleave',()=>el.classList.remove('drop'));
+  el.addEventListener('drop',e=>{
+    e.preventDefault();el.classList.remove('drop');
+    const id=treeState.dragging;treeState.dragging=null;
+    const zone=$('tag-tree-rootdrop');if(zone)zone.hidden=true;
+    if(id!==null)call('tm_move',JSON.stringify({id,folder_id:folderId}));
+  });
 }
 function receiveTagTree(data){treeState.data=data;paintTagTree();}
