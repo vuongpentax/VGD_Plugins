@@ -35,7 +35,7 @@ function imageCell(td,row,kind='full'){
   const tool=(text,title,handler)=>{const b=node('button',text,'cell-tool');b.type='button';b.title=title;b.setAttribute('aria-label',title);b.onclick=e=>{e.stopPropagation();handler();};b.ondblclick=e=>e.stopPropagation();return b;};
   const kindArg=place?'location':undefined;
   tools.append(tool('◣',place?'Chụp vị trí từ bên trái (Iso)':'Chụp Iso từ bên trái',()=>runCapture([row.index],false,'left',kindArg)),tool('◢',place?'Chụp vị trí từ bên phải (Iso)':'Chụp Iso từ bên phải',()=>runCapture([row.index],false,'right',kindArg)),
-    tool('↻',row[f.has]?'Chụp lại':'Chụp ảnh',()=>runCapture([row.index],false,place?'right':undefined,kindArg)),tool('⋯','Chọn ảnh…',()=>pickImageFile(row.pid,kind)));
+    tool('↻',row[f.has]?'Chụp lại':'Chụp ảnh',()=>runCapture([row.index],false,undefined,kindArg)),tool('⋯','Chọn ảnh…',()=>pickImageFile(row.pid,kind)));
   if(row[f.has])tools.append(tool('×',place?'Xóa ảnh vị trí':'Xóa ảnh',()=>call(place?'image_location_delete':'image_delete',row.pid)));
   holder.append(tools);
   td.title=place?'Kéo thả ảnh vào đây để dùng làm ảnh vị trí':'Kéo thả ảnh vào đây hoặc chọn ô rồi dán (Ctrl+V)';
@@ -136,7 +136,10 @@ function syncBusy(){
 // kind 'location': chụp ảnh vị trí trong công trình (không cô lập, vùng nhìn rộng theo image_location_scale) cho cột Ảnh vị trí.
 function runCapture(indexes,onlyMissing,isoSide,kind){
   const s=workSettings();
-  const payload={only_missing:!!onlyMissing,settings:{image_width:s.image_width,image_height:s.image_height,image_view:isoSide?'isometric':s.image_view,image_style:s.image_style,image_background:s.image_background,image_margin:s.image_margin,image_location_scale:s.image_location_scale}};
+  const settings={image_width:s.image_width,image_height:s.image_height,image_view:s.image_view,image_style:s.image_style,image_background:s.image_background,image_margin:s.image_margin,image_yaw:s.image_yaw,image_pitch:s.image_pitch,
+    image_location_scale:s.image_location_scale,loc_width:s.loc_width,loc_height:s.loc_height,loc_view:s.loc_view,loc_style:s.loc_style,loc_background:s.loc_background,loc_margin:s.loc_margin,loc_yaw:s.loc_yaw,loc_pitch:s.loc_pitch};
+  if(isoSide)settings[kind==='location'?'loc_view':'image_view']='isometric'; // nút ◣ ◢: chụp Iso một lần, không đổi thiết lập của preset
+  const payload={only_missing:!!onlyMissing,settings};
   if(kind==='location')payload.kind='location';
   if(isoSide)payload.iso_side=isoSide;
   if(indexes)payload.indexes=indexes;

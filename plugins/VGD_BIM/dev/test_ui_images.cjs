@@ -246,7 +246,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   // ---- Bảng preset ----
   await receive('table',table());await clear();
   await page.click('#preset-btn');
-  ok(await page.locator('#preset-panel').isVisible() && (await page.locator('#preset-panel h3').allInnerTexts()).join('|')==='Đơn vị|Hình ảnh|Số đo thân','bấm nút preset: mở bảng có ba phần Đơn vị, Hình ảnh và Số đo thân');
+  ok(await page.locator('#preset-panel').isVisible() && (await page.locator('#preset-panel h3').allInnerTexts()).join('|')==='Đơn vị|Hình ảnh|Ảnh vị trí|Số đo thân','bấm nút preset: mở bảng có bốn phần Đơn vị, Hình ảnh, Ảnh vị trí và Số đo thân');
   ok(await page.locator('#preset-panel .pp-pick').count()===11 && (await page.locator('#preset-panel .pp-pick.active').innerText())==='Tất cả','bảng preset liệt kê 11 preset, preset đang dùng được tô nổi bật');
   ok(await page.locator('#preset-panel select[aria-label="Chiều dài: đơn vị"]').inputValue()==='mm' && await page.locator('#preset-panel select[aria-label="Chiều dài: số lẻ"]').inputValue()==='0','thiết lập đang dùng hiện đúng trong bảng (mm, 0 số lẻ)');
   ok((await page.locator('#preset-panel select[aria-label="Chiều dài: số lẻ"] option').allInnerTexts()).join(',')==='0,0.0,0.00,0.000,0.0000','số lẻ hiện dạng 0, 0.0, 0.00, ...');
@@ -1021,7 +1021,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(lc && lc.kind==='location' && lc.iso_side==='right' && JSON.stringify(lc.indexes)==='[1]','nút ◢ trên ô ảnh vị trí: chụp bên phải');
   await clear();await locCell(1).hover();await locCell(1).getByRole('button',{name:'Chụp ảnh'}).click();
   lc=await json('images_capture');
-  ok(lc && lc.kind==='location' && lc.iso_side==='right','nút ↻ trên ô ảnh vị trí: chụp ảnh vị trí (mặc định bên phải)');
+  ok(lc && lc.kind==='location' && !('iso_side' in lc) && lc.settings.loc_view==='isometric','nút ↻ trên ô ảnh vị trí: chụp theo thiết lập ảnh vị trí của preset (không ép bên Iso)');
   await clear();await page.locator('.grid tbody tr').nth(0).locator('td[data-key="ordinal"]').click();
   await clear();await locCell(0).hover();await locCell(0).getByRole('button',{name:'Xóa ảnh vị trí'}).click();
   ok((await calls('image_location_delete')).length===1 && (await calls('image_delete')).length===0 && (await last('image_location_delete')).args[0]===500,'nút × trên ô ảnh vị trí: xóa ảnh vị trí, không xóa ảnh món');
@@ -1045,6 +1045,10 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.locator('#cap-only').check();await clear();await page.locator('.capture-panel .cap-place').getByRole('button',{name:'◣ Trái'}).click();
   lc=await json('images_capture');
   ok(lc && lc.kind==='location' && lc.iso_side==='left' && lc.only_missing===true,'tùy chọn "Chỉ chụp đối tượng chưa có ảnh" cũng áp cho ảnh vị trí');
+  await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});
+  await clear();await page.locator('.capture-panel .cap-place').getByRole('button',{name:'● Theo preset'}).click();
+  lc=await json('images_capture');
+  ok(lc && lc.kind==='location' && !('iso_side' in lc) && lc.settings.loc_view==='isometric' && lc.settings.loc_width===512 && lc.settings.loc_yaw===0,'hộp Cập nhật ảnh: nút ● Theo preset chụp ảnh vị trí theo thiết lập ảnh vị trí của preset (không gửi bên Iso)');
   // Xuất Excel / PDF mang theo cột Ảnh vị trí với loại ảnh riêng
   await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
   await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
@@ -1066,6 +1070,33 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').inputValue()==='1'&&viewLoc1&&viewLoc1.settings.image_location_scale===1,'nhập 1 vào ô Vùng nhìn: nhận và lưu 1 (không bị nâng lên 2)');
   await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').fill('0');await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').dispatchEvent('change');
   ok(await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').inputValue()==='1','nhập 0: bị giới hạn ở 1');
+  // ---- Thiết lập riêng của ảnh vị trí + góc lệch / góc cao (Chính diện) ----
+  await receive('table',table());if(!(await page.locator('#preset-panel').isVisible()))await page.click('#preset-btn'); // bảng preset phải đang mở
+  const pin=label=>page.locator(`#preset-panel [aria-label="${label}"]`);
+  ok(await pin('Chiều rộng ảnh vị trí').inputValue()==='512'&&await pin('Góc nhìn ảnh vị trí').inputValue()==='isometric'&&await pin('Kiểu hiển thị ảnh vị trí').inputValue()==='color'&&await pin('Nền ảnh vị trí').inputValue()==='transparent'&&await pin('Chừa lề ảnh vị trí (%)').inputValue()==='20','bảng preset: khối Ảnh vị trí có cỡ, góc nhìn, kiểu, nền, lề riêng (mặc định giống ảnh chính, góc Iso)');
+  ok(await pin('Lệch trái / phải (độ)').isDisabled()&&await pin('Góc cao (độ)').isDisabled()&&await pin('Lệch trái / phải ảnh vị trí (độ)').isDisabled()&&await pin('Góc cao ảnh vị trí (độ)').isDisabled(),'ô góc lệch và góc cao bị khóa khi góc nhìn không phải Chính diện');
+  await clear();await pin('Chiều rộng ảnh vị trí').selectOption('1024');
+  const locSize=await viewJson();
+  ok(locSize&&locSize.settings.loc_width===1024&&locSize.settings.image_width===512,'đổi cỡ ảnh vị trí: lưu riêng (loc_width), không đổi cỡ ảnh chính');
+  await pin('Góc nhìn ảnh vị trí').selectOption('front');
+  ok(!(await pin('Lệch trái / phải ảnh vị trí (độ)').isDisabled())&&!(await pin('Góc cao ảnh vị trí (độ)').isDisabled())&&await pin('Lệch trái / phải (độ)').isDisabled(),'chọn Chính diện cho ảnh vị trí: mở khóa góc lệch và góc cao của ảnh vị trí, ảnh chính vẫn khóa');
+  await clear();await pin('Lệch trái / phải ảnh vị trí (độ)').fill('20');await pin('Lệch trái / phải ảnh vị trí (độ)').dispatchEvent('change');
+  await pin('Góc cao ảnh vị trí (độ)').fill('15');await pin('Góc cao ảnh vị trí (độ)').dispatchEvent('change');
+  const locAngle=await viewJson();
+  ok(locAngle&&locAngle.settings.loc_view==='front'&&locAngle.settings.loc_yaw===20&&locAngle.settings.loc_pitch===15&&locAngle.settings.image_yaw===0,'nhập góc lệch 20 và góc cao 15 cho ảnh vị trí: lưu riêng, ảnh chính không đổi');
+  await pin('Lệch trái / phải ảnh vị trí (độ)').fill('-200');await pin('Lệch trái / phải ảnh vị trí (độ)').dispatchEvent('change');
+  await pin('Góc cao ảnh vị trí (độ)').fill('');await pin('Góc cao ảnh vị trí (độ)').dispatchEvent('change');
+  ok(await pin('Lệch trái / phải ảnh vị trí (độ)').inputValue()==='-90'&&await pin('Góc cao ảnh vị trí (độ)').inputValue()==='0','nhập quá giới hạn thì giữ ở -90; để trống thì về 0');
+  await pin('Góc nhìn ảnh').selectOption('front');
+  ok(!(await pin('Lệch trái / phải (độ)').isDisabled()),'chọn Chính diện cho ảnh chính: mở khóa góc lệch của ảnh chính');
+  await pin('Lệch trái / phải (độ)').fill('-35');await pin('Lệch trái / phải (độ)').dispatchEvent('change');
+  if(await page.locator('#preset-panel').isVisible())await page.click('#preset-btn');
+  await clear();await locCell(0).hover();await locCell(0).getByRole('button',{name:'Chụp vị trí từ bên trái (Iso)'}).click();
+  lc=await json('images_capture');
+  ok(lc&&lc.kind==='location'&&lc.settings.loc_view==='isometric'&&lc.settings.image_view==='front'&&lc.settings.loc_width===1024,'nút ◣ ảnh vị trí: chụp Iso một lần (loc_view = isometric) dù preset để Chính diện, không đổi thiết lập; kèm cỡ riêng của ảnh vị trí');
+  await clear();await locCell(1).hover();await locCell(1).getByRole('button',{name:'Chụp ảnh'}).click();
+  lc=await json('images_capture');
+  ok(lc&&lc.kind==='location'&&lc.settings.loc_view==='front'&&lc.settings.loc_yaw===-90&&lc.settings.loc_pitch===0&&lc.settings.image_yaw===-35&&!('iso_side' in lc),'nút ↻ ảnh vị trí: chụp theo thiết lập preset (Chính diện, góc lệch -90, góc cao 0), ảnh chính giữ góc lệch riêng -35');
   await page.click('#preset-btn');
 
   // ---- Đổi ngôn ngữ thì tải lại cửa sổ ----

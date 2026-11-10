@@ -861,8 +861,8 @@ function capturePanel(){
   p.append(onlyLabel,node('p',`Cỡ ${s.image_width} x ${s.image_height}, ${VIEW_LABELS[s.image_view]||s.image_view}. Đổi trong bảng preset.`,'muted'));
   const actions=node('div',undefined,'rename-actions');
   const place=node('div',undefined,'cap-place');
-  place.append(node('span','Ảnh vị trí trong công trình','muted'),button('◣ Trái',()=>{tableState.panel=null;runCapture(targets,imagesState.only,'left','location');tableView(tableState.data);}),button('◢ Phải',()=>{tableState.panel=null;runCapture(targets,imagesState.only,'right','location');tableView(tableState.data);}));
-  place.title='Chụp cảnh quanh món (không cô lập) theo góc Iso trái / phải, lưu vào cột Ảnh vị trí';
+  place.append(node('span','Ảnh vị trí trong công trình','muted'),button('◣ Trái',()=>{tableState.panel=null;runCapture(targets,imagesState.only,'left','location');tableView(tableState.data);}),button('◢ Phải',()=>{tableState.panel=null;runCapture(targets,imagesState.only,'right','location');tableView(tableState.data);}),button('● Theo preset',()=>{tableState.panel=null;runCapture(targets,imagesState.only,undefined,'location');tableView(tableState.data);}));
+  place.title='Chụp cảnh quanh món (không cô lập), lưu vào cột Ảnh vị trí: Trái / Phải chụp Iso một lần từ bên đó, Theo preset chụp đúng thiết lập ảnh vị trí của preset (góc nhìn, góc lệch, cỡ ảnh...)';
   actions.append(button('Chụp',()=>{tableState.panel=null;runCapture(targets,imagesState.only);tableView(tableState.data);},'primary'),button('Hủy',()=>{tableState.panel=null;tableView(tableState.data);}));
   p.append(actions,place);
   return p;

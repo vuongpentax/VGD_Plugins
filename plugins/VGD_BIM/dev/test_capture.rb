@@ -375,6 +375,48 @@ dir_of = ->(st) { d = st[:eye].zip(st[:target]).map { |e, t| e - t }; l = Math.s
 check 'ảnh vị trí: cùng hướng nhìn và cùng điểm nhìn với ảnh Iso của món (chỉ khác khoảng cách)', near?(dir_of.(iso_state), dir_of.(loc_state)) && iso_state[:target] == loc_state[:target]
 check 'ảnh vị trí: nhìn vùng rộng gấp 4 lần (mặc định) nên camera lùi xa hơn ảnh Iso của món khoảng 4 lần', dist_of.(scale4) > dist_of.(iso_view) * 3.0 && dist_of.(scale4) < dist_of.(iso_view) * 4.2
 check 'ảnh vị trí: hệ số vùng nhìn của preset được dùng (2 gần hơn 4, 10 xa hơn 4)', dist_of.(scale2) < dist_of.(scale4) && dist_of.(scale4) < dist_of.(scale10)
+# ---- Thiết lập riêng của ảnh vị trí (cỡ, góc nhìn, kiểu, nền, lề, góc lệch / góc cao); ảnh chính không bị ảnh hưởng ----
+_, _, v, _ = shoot_location('loc_width' => 1024, 'loc_height' => 640, 'image_width' => 300, 'image_height' => 300)
+check 'ảnh vị trí: cỡ ảnh theo thiết lập riêng (1024 x 640), không theo ảnh chính', v.writes[0].values_at(:width, :height) == [1024, 640]
+_, _, v, _ = shoot('image_view' => 'isometric', 'image_width' => 300, 'image_height' => 300, 'loc_width' => 1024, 'loc_height' => 640)
+check 'ảnh chính: vẫn theo cỡ của ảnh chính (300 x 300), không theo thiết lập ảnh vị trí', v.writes[0].values_at(:width, :height) == [300, 300]
+_, _, v, _ = shoot_location('image_style' => 'color', 'loc_style' => 'current')
+check 'ảnh vị trí: kiểu hiển thị riêng (Kiểu hiện tại thì không đổi kiểu dù ảnh chính là Màu)', v.states.all? { |st| st[:options]['RenderMode'] == 2 && st[:options]['DisplayColorByLayer'] == true }
+_, _, v, _ = shoot_location('image_style' => 'current', 'loc_style' => 'color')
+check 'ảnh vị trí: kiểu Màu riêng áp dụng dù ảnh chính để Kiểu hiện tại', v.states.all? { |st| st[:options]['RenderMode'] == 3 && st[:options]['DisplayColorByLayer'] == false }
+_, _, v, _ = shoot_location('image_background' => 'white', 'loc_background' => 'transparent')
+check 'ảnh vị trí: nền riêng (trong suốt, không đổi nền model) dù ảnh chính là nền trắng', v.writes[0][:transparent] == true && v.states.all? { |st| st[:options]['DrawGround'] == true }
+_, _, v, _ = shoot_location('image_background' => 'transparent', 'loc_background' => 'white')
+check 'ảnh vị trí: nền trắng riêng áp dụng dù ảnh chính là nền trong suốt', v.writes[0][:transparent] == false && v.states.all? { |st| st[:options]['DrawGround'] == false }
+_, _, m0, _ = shoot_location('loc_margin' => 0)
+_, _, m60, _ = shoot_location('loc_margin' => 60)
+_, _, main60, _ = shoot_location('image_margin' => 60)
+check 'ảnh vị trí: lề riêng (60% thì camera xa hơn 0%), không theo lề của ảnh chính', dist_of.(m60) > dist_of.(m0) * 1.4 && (dist_of.(main60) - dist_of.(scale4)).abs < 1e-6
+_, _, v, result = shoot_location('loc_view' => 'front')
+check 'ảnh vị trí chọn Chính diện: nhìn thẳng từ mặt trước (chưa có mặt trước thì theo trục thế giới -Y, có ghi chú)', near?(eye_dir(v), unit(0, -1, 0)) && result[:note] == 'món chưa có mặt trước nên chụp theo trục thế giới'
+_, _, v, _ = shoot_location('loc_view' => 'front', 'loc_yaw' => 90)
+check 'ảnh vị trí Chính diện lệch phải 90 độ: camera sang bên phải (+X)', near?(eye_dir(v), unit(1, 0, 0))
+_, _, v, _ = shoot_location('loc_view' => 'front', 'loc_yaw' => -30)
+check 'ảnh vị trí Chính diện lệch trái 30 độ: camera sang bên trái (-X), vẫn ngang', near?(eye_dir(v), [-Math.sin(Math::PI / 6), -Math.cos(Math::PI / 6), 0.0])
+_, _, v, _ = shoot_location('loc_view' => 'front', 'loc_yaw' => 20, 'loc_pitch' => 30)
+check 'ảnh vị trí Chính diện lệch phải 20 độ và nâng 30 độ', near?(eye_dir(v), [Math.sin(Math::PI * 20 / 180) * Math.cos(Math::PI / 6), -Math.cos(Math::PI * 20 / 180) * Math.cos(Math::PI / 6), 0.5])
+_, _, v, _ = shoot_location('loc_view' => 'front', 'image_yaw' => 90, 'image_pitch' => 40)
+check 'góc lệch của ảnh chính không ảnh hưởng ảnh vị trí', near?(eye_dir(v), unit(0, -1, 0))
+_, _, v, _ = shoot_location('loc_view' => 'isometric', 'loc_yaw' => 40, 'loc_pitch' => 20)
+check 'ảnh vị trí chọn Iso: góc lệch / góc cao không áp dụng, vẫn đúng hướng Iso', near?(eye_dir(v), unit(1, -1, 0.8))
+_, _, v, result = shoot_location('loc_view' => 'current')
+check 'ảnh vị trí chọn Khung nhìn hiện tại: không đặt camera, không ghi chú, vẫn chụp đúng cỡ riêng', v.states.all? { |st| st[:eye] == [0.0, 0.0, 100.0] } && !result.key?(:note) && v.writes[0].values_at(:width, :height) == [512, 512]
+_, _, v, _ = shoot('image_view' => 'front', 'image_yaw' => 90)
+check 'ảnh chính Chính diện lệch phải 90 độ: camera sang bên phải (+X)', near?(eye_dir(v), unit(1, 0, 0))
+_, _, v, _ = shoot('image_view' => 'front', 'image_yaw' => -20, 'image_pitch' => 25)
+check 'ảnh chính Chính diện lệch trái 20 độ và nâng 25 độ', near?(eye_dir(v), [-Math.sin(Math::PI * 20 / 180) * Math.cos(Math::PI * 25 / 180), -Math.cos(Math::PI * 20 / 180) * Math.cos(Math::PI * 25 / 180), Math.sin(Math::PI * 25 / 180)])
+_, _, v, _ = shoot('image_view' => 'isometric', 'image_yaw' => 40, 'image_pitch' => 20)
+check 'ảnh chính Iso: góc lệch / góc cao không áp dụng', near?(eye_dir(v), unit(1, -1, 0.8))
+_, _, v, _ = shoot('image_view' => 'front', 'loc_yaw' => 60, 'loc_pitch' => 30)
+check 'ảnh chính: góc lệch của ảnh vị trí không ảnh hưởng', near?(eye_dir(v), unit(0, -1, 0))
+_, _, v, _ = shoot_location({'loc_view' => 'front', 'loc_yaw' => 90}, 'left')
+check 'nút trái / phải (Iso) không đổi góc lệch của Chính diện: bên Iso chỉ dùng cho Iso', near?(eye_dir(v), unit(1, 0, 0))
+
 _, _, left_view, _ = shoot_location({}, 'left')
 check 'ảnh vị trí: nút trái / phải đối xứng nhau qua mặt phẳng nhìn thẳng (x đảo dấu quanh tâm)', near?([left_view.states.last[:eye][0] - 10.0], [-(scale4.states.last[:eye][0] - 10.0)]) && near?([left_view.states.last[:eye][1]], [scale4.states.last[:eye][1]])
 model, items, view, _ = shoot_location({}, 'right', [2])

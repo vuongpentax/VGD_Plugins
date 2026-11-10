@@ -26,6 +26,7 @@
 - **Chọn cột kiểu mới** (theo Auto Info, gọn hơn): ngăn trượt ra bên trái và đẩy bảng sang phải nên cột đầu không bị che; ô tick tự vẽ, kéo thả đổi chỗ cột có hiệu ứng trượt, nút gạt chân trang trượt mượt.
 - **Giao diện không còn thanh cuộn dọc** ở bảng, bảng Chọn cột, Preset và các tab (vẫn cuộn bằng con lăn chuột); chỉ giữ thanh cuộn ngang của bảng khi nhiều cột.
 - **Tiếng Anh** cho toàn bộ giao diện (báo cáo CSV và hộp thoại gốc của SketchUp vẫn tiếng Việt).
+- **Ảnh vị trí có thiết lập riêng và góc lệch trái / phải** (beta.55): khối Ảnh vị trí trong bảng Preset (cỡ, góc nhìn, kiểu, nền, lề), ô Lệch trái / phải (độ) và Góc cao (độ) cho góc nhìn Chính diện ở cả ảnh chính và ảnh vị trí để thấy một chút bên hông món; nút ● Theo preset trong hộp Cập nhật ảnh.
 - **Chụp ảnh nhận FOV đang dùng** (beta.53, sửa ở beta.54): ảnh Iso, Chính diện và ảnh vị trí dùng đúng FOV của khung nhìn (phối cảnh), vẫn giữ camera song song, FOV của khung nhìn giữ nguyên sau khi chụp; trước đây FOV luôn là 35 độ mặc định. Ô Vùng nhìn ảnh vị trí nhận từ 1 (đúng như ảnh Iso) đến 20.
 - **Dời cột bằng kéo thả** (beta.51): kéo tiêu đề cột ngay trên bảng sang trái / phải.
 - **Sắp xếp dòng thủ công trong Bảng khối lượng** (beta.50): kéo tay nắm ⋮⋮ để đổi chỗ dòng (kéo cả cụm dòng đang chọn), thứ tự lưu trong file SketchUp theo mã món, món mới xuống cuối, nút Bỏ xếp tay.

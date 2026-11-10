@@ -22,6 +22,10 @@ module VGD
         COLOR_STYLE = {'RenderMode' => 3, 'DisplayColorByLayer' => false}.freeze # shaded có texture, không tô màu theo tag
         ISO_SIDES = %w[right left].freeze # Iso nhìn từ bên phải (mặc định) hoặc bên trái của mặt trước
         WHITE_BACKGROUND = {'DrawGround' => false, 'DrawHorizon' => false}.freeze # cùng với màu nền trắng
+        # Ảnh vị trí có bộ thiết lập riêng (loc_*) cùng loại với ảnh chính; khi chụp ảnh vị trí, các mục image_* được thay bằng mục loc_* tương ứng
+        # để mọi hàm chụp bên dưới dùng chung một cách đọc.
+        LOCATION_SETTINGS = {'image_width' => 'loc_width', 'image_height' => 'loc_height', 'image_view' => 'loc_view', 'image_style' => 'loc_style',
+                             'image_background' => 'loc_background', 'image_margin' => 'loc_margin', 'image_yaw' => 'loc_yaw', 'image_pitch' => 'loc_pitch'}.freeze
 
         # record: một phần tử của Table.build (có :entity và :path). settings: thiết lập ảnh của preset.
         # Trả về {pid:, stamp:} và thêm :note khi phải chụp bằng cách thay thế (xem write).
@@ -29,12 +33,14 @@ module VGD
           settings = Preset.settings!(settings)
           Images.kind!(kind)
           location = kind == :location
+          settings = location_settings(settings) if location
           raise ArgumentError, 'Bên của góc Iso không hợp lệ.' unless ISO_SIDES.include?(iso_side)
           entity = record[:entity]
           raise ArgumentError, 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless entity.respond_to?(:valid?) && entity.valid?
           pid = Images.id!(entity.persistent_id)
           view = model.active_view
           isolate = !location && ISOLATING_VIEWS.include?(settings['image_view'])
+          framed = isolate || (location && ISOLATING_VIEWS.include?(settings['image_view'])) # có đặt camera (Iso / Chính diện); Khung nhìn hiện tại thì chụp nguyên khung
           saved = {camera: copy_camera(view), selection: model.selection.to_a, options: nil}
           ensure_writable(Images.dir(model))
           operation = false
@@ -47,12 +53,11 @@ module VGD
               Table.isolate(model, record[:path])
             end
             saved[:options] = tweak_options(model, settings)
-            if isolate || location
-              notes << aim(view, entity, 'isometric', FrontProbe.front_world(record), iso_side) if location
-              notes << aim(view, entity, settings['image_view'], FrontProbe.front_world(record), iso_side) if isolate
+            if framed
+              notes << aim(view, entity, settings['image_view'], FrontProbe.front_world(record), iso_side, yaw: settings['image_yaw'], pitch: settings['image_pitch'])
             end
             size = [settings['image_width'], settings['image_height']]
-            frame(view, record, size, 1.0 + settings['image_margin'] / 100.0, scale: location ? settings['image_location_scale'] : 1) if isolate || location
+            frame(view, record, size, 1.0 + settings['image_margin'] / 100.0, scale: location ? settings['image_location_scale'] : 1) if framed
             view.refresh
             notes << write(view, Images.temp_path(model, pid, kind), size, settings)
             Images.commit(model, pid, kind)
@@ -65,6 +70,10 @@ module VGD
           result = Images.info(model, pid, Images.dir(model), kind).merge(pid: pid, kind: kind).reject { |key, _| key == :has }
           note = notes.compact.uniq.join('; ')
           note.empty? ? result : result.merge(note: note)
+        end
+
+        def self.location_settings(settings)
+          LOCATION_SETTINGS.each_with_object(settings.dup) { |(main, own), out| out[main] = settings.fetch(own) }
         end
 
         # Mỗi bước khôi phục chạy độc lập: một bước lỗi không được làm hỏng các bước sau, cũng không được biến lần chụp
@@ -151,10 +160,14 @@ module VGD
         # Đặt camera nhìn vào tâm món đồ từ góc đã chọn, đủ xa để không nằm trong món đồ; frame sau đó lùi ra cho trọn món đồ.
         # front: hướng mặt trước của món trong thế giới ([x, y] đơn vị, từ FrontProbe.front_world); có thì chụp theo mặt trước,
         # chưa có thì chụp theo trục thế giới (DIRECTIONS) và trả về ghi chú để người dùng biết ảnh đó chưa đồng bộ.
-        def self.aim(view, entity, name, front = nil, side = 'right')
+        # yaw / pitch (độ): góc lệch ngang và góc cao, chỉ dùng cho Chính diện (xem Front.camera_direction); chưa có mặt trước thì lệch quanh hướng -Y của thế giới.
+        def self.aim(view, entity, name, front = nil, side = 'right', yaw: 0, pitch: 0)
           box = entity.bounds
           center = box.center
-          vector = front ? Front.camera_direction(name, front, side) : DIRECTIONS.fetch(name)
+          vector = if name == 'front' then Front.camera_direction(name, front || [0.0, -1.0], side, yaw: yaw, pitch: pitch)
+                   elsif front then Front.camera_direction(name, front, side)
+                   else DIRECTIONS.fetch(name)
+                   end
           vector = [-vector[0], vector[1], vector[2]] if !front && name == 'isometric' && side == 'left' # theo trục thế giới: đối xứng qua mặt phẳng nhìn thẳng từ -Y
           direction = Geom::Vector3d.new(*vector).normalize
           eye = center.offset(direction, [box.diagonal.to_f, 1.0].max * 2.0)
