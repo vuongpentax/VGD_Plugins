@@ -175,7 +175,7 @@ const VGD_I18N=(()=>{
     'Thay chữ đang tìm trong các cột Tên, Mô tả, Xuất xứ, Quy cách đang hiện (một bước hoàn tác)':'Replaces the searched text in the visible Name, Description, Brand and Size columns (one undo step)',
     'Hãy hiện ít nhất một cột Tên, Mô tả, Hãng hoặc Cỡ':'Show at least one Name, Description, Brand or Size column',
 
-    'Nhấp để sắp xếp · nhấp đúp để đổi tên cột':'Click to sort · double-click to rename the column','Tên cột':'Column name',
+    'Nhấp để sắp xếp · nhấp đúp để đổi tên cột · kéo để dời cột':'Click to sort · double-click to rename the column · drag to move the column','Tên cột':'Column name',
     'SketchUp không chụp được ảnh. Kiểm tra thư mục lưu ảnh.':'SketchUp could not take the photo. Check the image folder.','SketchUp không tạo được ảnh. Kiểm tra thư mục lưu ảnh trong bảng Preset.':'SketchUp could not create the image. Check the image folder in the Preset panel.',
     'nền trong suốt không dùng được trên máy này nên ảnh dùng cách thay thế':'transparent background is not available on this computer, so the image uses a normal background','khử răng cưa không dùng được trên máy này nên ảnh dùng cách thay thế':'anti-aliasing is not available on this computer, so the image uses a fallback','nền trong suốt và khử răng cưa không dùng được trên máy này nên ảnh dùng cách thay thế':'transparent background and anti-aliasing are not available on this computer, so the image uses a fallback',
     'Chụp':'Shoot','Chụp ảnh':'Take photo','Chụp lại':'Retake','Xóa ảnh':'Delete photo','Chọn ảnh…':'Choose image…','Mở thư mục ảnh':'Open image folder','Mở link':'Open link','Dừng':'Stop','Cập nhật ảnh':'Update photos',

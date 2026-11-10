@@ -109,7 +109,7 @@ function preview(data) {
   const dl=node('dl',undefined,'preview-values');Object.entries(data.data).forEach(([key,value])=>dl.append(node('dt',label(key)),node('dd',displayValue(key,value))));p.append(dl,node('p','Giữ nguyên hình học, tên, thẻ và vật liệu.'));$('confirm-preview').disabled=false;$('preview').showModal();
 }
 // ---- Bảng đối tượng kiểu Auto Info ----
-const tableState={replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null,manual:[],dragRow:null};
+const tableState={replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null,manual:[],dragRow:null,dragCol:null};
 const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total']);
 const WIDTHS={image_location:110,measure_note:260,front:80,front_state:150,ordinal:44,image:72,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80,areaProjected:110,ifc:120,owner:120,url:170,size:110,price:110,total:120};
 const unitTextOf=key=>LEN_KEYS.has(key)?lengthLabel():AREA_KEYS.has(key)?areaLabel():key==='volume'?volumeLabel():key==='quantity'?'cái':(key==='price'||key==='total')?workSettings().currency:undefined;
@@ -361,6 +361,7 @@ function editCell(td,row,col){
 }
 // Đổi tên tiêu đề cột (lưu theo preset). Để trống hoặc trùng tên gốc thì dùng lại tên gốc.
 function editHeader(th,col){
+  th.draggable=false; // đang gõ trong ô: kéo chuột là chọn chữ, không dời cột
   const input=node('input');input.type='text';input.maxLength=60;input.value=colLabel(col);input.setAttribute('aria-label','Tên cột');input.className='header-input';
   th.replaceChildren(input);input.focus();input.select();
   let done=false;
@@ -436,6 +437,42 @@ function viewModel(){
     sections=[...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],'vi',{numeric:true})).map(([label,list])=>({label,rows:list}));
   }
   return {cols,rows,sections,sumOf,countOf};
+}
+// Kéo tiêu đề cột để dời chỗ ngay trên bảng (cùng thứ tự với bảng Chọn cột): các cột đang hiện chiếm lại đúng những chỗ của chúng, cột ẩn giữ nguyên chỗ.
+function columnDrag(th,col,host){
+  th.draggable=true;
+  const side=e=>e.clientX>th.getBoundingClientRect().left+th.getBoundingClientRect().width/2;
+  th.ondragstart=e=>{
+    tableState.dragCol=col.key;
+    e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','vgd-col');
+    setTimeout(()=>th.classList.add('col-dragging'),0);
+  };
+  th.ondragend=()=>clearColumnDrag(host);
+  th.ondragover=e=>{
+    if(!tableState.dragCol)return; // kéo ảnh từ ngoài vào hoặc kéo dòng: để nguyên
+    e.preventDefault();e.dataTransfer.dropEffect='move';
+    const after=side(e);
+    host.querySelectorAll('th.drop-left,th.drop-right').forEach(el=>{if(el!==th)el.classList.remove('drop-left','drop-right');});
+    th.classList.toggle('drop-left',!after);th.classList.toggle('drop-right',after);
+  };
+  th.ondrop=e=>{
+    if(!tableState.dragCol)return;
+    e.preventDefault();const after=side(e),from=tableState.dragCol;clearColumnDrag(host);dropColumn(from,col.key,after);
+  };
+}
+function clearColumnDrag(host){
+  tableState.dragCol=null;
+  host.querySelectorAll('th.col-dragging,th.drop-left,th.drop-right').forEach(el=>el.classList.remove('col-dragging','drop-left','drop-right'));
+}
+function dropColumn(from,target,after){
+  if(from===target)return;
+  const shown=orderedKeys(),keys=shown.filter(k=>k!==from);
+  if(!shown.includes(from)||!keys.includes(target))return;
+  keys.splice(keys.indexOf(target)+(after?1:0),0,from);
+  if(keys.every((k,i)=>k===shown[i]))return; // thả về đúng chỗ cũ
+  applyListOrder(keys);refreshColumns();
+  const side=$('col-side'),list=side&&side.dataset.kind==='columns'?side.querySelector('.pop-cols'):null;
+  if(list)renderColumnList(list); // bảng Chọn cột đang mở thì đổi theo
 }
 // Kéo thả dòng bằng tay nắm ở ô đầu: chỉ đổi chỗ trong cùng một nhóm; kéo một dòng đang được chọn cùng nhiều dòng chọn thì dời cả cụm.
 function rowGrip(tr,row,section,pids,host){
@@ -524,7 +561,8 @@ function renderGrid(host){
   cols.forEach(col=>{
     const active=tableState.sort&&tableState.sort.key===col.key;
     const th=node('th',colLabel(col)+(active?(tableState.sort.dir>0?' ▲':' ▼'):''));
-    th.dataset.key=col.key;th.title='Nhấp để sắp xếp · nhấp đúp để đổi tên cột';
+    th.dataset.key=col.key;th.title='Nhấp để sắp xếp · nhấp đúp để đổi tên cột · kéo để dời cột';
+    columnDrag(th,col,host);
     // Nhấp đúp = đổi tên cột, nên việc sắp xếp chờ một nhịp xem có phải nhấp đúp không.
     th.onclick=()=>{clearTimeout(th._sort);th._sort=setTimeout(()=>{tableState.sort=active?{key:col.key,dir:-tableState.sort.dir}:{key:col.key,dir:1};renderGrid(host);},260);};
     th.ondblclick=e=>{clearTimeout(th._sort);e.stopPropagation();editHeader(th,col);};

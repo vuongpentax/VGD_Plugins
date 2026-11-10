@@ -26,6 +26,7 @@
 - **Chọn cột kiểu mới** (theo Auto Info, gọn hơn): ngăn trượt ra bên trái và đẩy bảng sang phải nên cột đầu không bị che; ô tick tự vẽ, kéo thả đổi chỗ cột có hiệu ứng trượt, nút gạt chân trang trượt mượt.
 - **Giao diện không còn thanh cuộn dọc** ở bảng, bảng Chọn cột, Preset và các tab (vẫn cuộn bằng con lăn chuột); chỉ giữ thanh cuộn ngang của bảng khi nhiều cột.
 - **Tiếng Anh** cho toàn bộ giao diện (báo cáo CSV và hộp thoại gốc của SketchUp vẫn tiếng Việt).
+- **Dời cột bằng kéo thả** (beta.51): kéo tiêu đề cột ngay trên bảng sang trái / phải.
 - **Sắp xếp dòng thủ công trong Bảng khối lượng** (beta.50): kéo tay nắm ⋮⋮ để đổi chỗ dòng (kéo cả cụm dòng đang chọn), thứ tự lưu trong file SketchUp theo mã món, món mới xuống cuối, nút Bỏ xếp tay.
 - **Nhập tag từ Excel .xlsx** (beta.49): đọc thẳng file Excel, xem trước, tạo tag kèm màu, kiểu nét, thư mục.
 - **Lấy mẫu tag và xóa tag có gán lại** (beta.48): nút Lấy mẫu (bấm đối tượng để lấy tag), nút thùng rác trên dòng tag (chọn tag nhận, không xóa đối tượng).
