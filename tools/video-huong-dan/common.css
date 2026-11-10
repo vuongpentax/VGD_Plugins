@@ -57,3 +57,5 @@ html,body{background:#0b0b0b}
 .cbx{display:inline-block;width:13px;height:13px;border:1px solid var(--b);border-radius:3px;background:var(--e);position:relative;vertical-align:middle}
 .cbx.on{background:var(--a);border-color:var(--a)}.cbx.on::after{content:"";position:absolute;left:3.5px;top:.5px;width:3px;height:7px;border:solid var(--oa);border-width:0 1.6px 1.6px 0;transform:rotate(40deg)}
 .mt2{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:8px}.mt2 small{font-size:10px;color:var(--m)}
+/* Cửa sổ Center kéo rộng và đặt giữa khung hình (đoạn 1, 2, 4, 5, 6, 7) */
+.wide #center{left:210px;width:860px}
