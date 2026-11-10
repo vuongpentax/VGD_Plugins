@@ -26,6 +26,7 @@
 - **Chọn cột kiểu mới** (theo Auto Info, gọn hơn): ngăn trượt ra bên trái và đẩy bảng sang phải nên cột đầu không bị che; ô tick tự vẽ, kéo thả đổi chỗ cột có hiệu ứng trượt, nút gạt chân trang trượt mượt.
 - **Giao diện không còn thanh cuộn dọc** ở bảng, bảng Chọn cột, Preset và các tab (vẫn cuộn bằng con lăn chuột); chỉ giữ thanh cuộn ngang của bảng khi nhiều cột.
 - **Tiếng Anh** cho toàn bộ giao diện (báo cáo CSV và hộp thoại gốc của SketchUp vẫn tiếng Việt).
+- **Mũi tên lên / xuống trong Bảng khối lượng** (beta.46): chuyển dòng như bấm vào dòng đó (chọn, thu phóng, cô lập theo tuỳ chọn), Shift mở rộng vùng chọn, bảng tự cuộn.
 - **Ảnh vị trí trong công trình** (beta.45): cột Ảnh vị trí và nút chụp Iso trái / phải không cô lập món (nhìn vùng quanh món rộng gấp N lần, mờ phần còn lại), lưu file `_loc.png` riêng, xuất Excel / PDF có cột này.
 - **Chọn tay món con trong group đã mở** (beta.44): vị trí của group đang mở được tính từ biến đổi của các group cha thay vì chỉ tin `Model#edit_transform`; nếu hai cách khác nhau, plugin báo một lần và ghi chẩn đoán vào Ruby Console.
 - **Sửa khung đánh dấu của món con** (beta.43): khi đang mở sửa group (chọn món nằm sâu trong bảng), khung vẽ bằng tọa độ màn hình với điểm chiếu từ SketchUp nên không còn lệch đúng bằng vị trí group cha.

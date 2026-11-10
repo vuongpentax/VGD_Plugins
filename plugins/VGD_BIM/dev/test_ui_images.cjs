@@ -197,6 +197,16 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await page.locator('.table-view > p.hint').count()===0 && await page.getByText('Nhấp đúp vào ô để sửa').count()===0 && await page.locator('.table-view > p.muted').count()===0,'đã bỏ đoạn hướng dẫn và chú thích đơn vị trong bảng (chuyển sang file hướng dẫn)');
   const many=Array.from({length:60},(_,i)=>({...rows[0],index:i,name:'Hàng '+i,pid:2000+i,has_image:false}));
   await receive('table',table({rows:many}));
+  // Mũi tên lên / xuống trong bảng dài: dòng được chọn luôn hiện trọn vẹn, không nằm sau tiêu đề hoặc dòng tổng cố định
+  await page.locator('.grid tbody tr').nth(0).locator('td').nth(2).click();
+  const inView=()=>page.evaluate(()=>{const wrap=document.querySelector('.grid-wrap'),tr=document.querySelector('.grid tbody tr.selected');if(!tr)return false;const w=wrap.getBoundingClientRect(),r=tr.getBoundingClientRect(),h=document.querySelector('.grid thead').getBoundingClientRect(),f=document.querySelector('.grid tfoot').getBoundingClientRect();return r.top>=h.bottom-1&&r.bottom<=f.top+1&&r.bottom<=w.bottom+1;});
+  let allVisible=true;
+  for(let i=0;i<40;i++){await page.keyboard.press('ArrowDown');if(!(await inView()))allVisible=false;}
+  ok(allVisible && await page.locator('.grid tbody tr.selected').count()===1 && (await page.locator('.grid tbody tr.selected').getAttribute('data-index'))==='40' && await page.locator('.grid-wrap').evaluate(w=>w.scrollTop)>0,'bấm mũi tên xuống 40 lần: bảng tự cuộn, dòng đang chọn (dòng 40) luôn hiện trọn vẹn');
+  allVisible=true;
+  for(let i=0;i<25;i++){await page.keyboard.press('ArrowUp');if(!(await inView()))allVisible=false;}
+  ok(allVisible && (await page.locator('.grid tbody tr.selected').getAttribute('data-index'))==='15','bấm mũi tên lên 25 lần: bảng cuộn ngược, dòng đang chọn (dòng 15) luôn hiện trọn vẹn');
+  await page.waitForTimeout(250);await page.keyboard.press('Escape');
   const lay=await page.evaluate(()=>{
     const main=document.querySelector('main'),wrap=document.querySelector('.grid-wrap'),bar=document.querySelector('.bottombar');
     const before={mainScroll:main.scrollHeight-main.clientHeight,wrapScroll:wrap.scrollHeight-wrap.clientHeight};

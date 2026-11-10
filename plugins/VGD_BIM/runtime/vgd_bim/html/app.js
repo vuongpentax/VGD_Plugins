@@ -224,11 +224,13 @@ function paintSelection(){
   if(tableState.panel==='rename'&&tableState.data)tableView(tableState.data);
 }
 function pickRows(indexes,field){
+  clearTimeout(tableState.stepTimer);
   tableState.sel=new Set(indexes);paintSelection();
-  if(!tableState.sel.size){call('table_clear');return;}
+  if(!tableState.sel.size){tableState.cursor=null;call('table_clear');return;}
   call('table_select',JSON.stringify({indexes:[...tableState.sel],field:tableState.sel.size===1?(field||''):''}));
 }
 function clickRow(row,field,e){
+  tableState.cursor=row.index;
   const members=membersOf(row),order=tableState.displayed,additive=e.ctrlKey||e.metaKey;
   const pos=order.findIndex(r=>r.index===row.index),anchorPos=order.findIndex(r=>r.index===tableState.anchor);
   if(e.shiftKey&&anchorPos>=0&&pos>=0){
@@ -244,7 +246,37 @@ function clickRow(row,field,e){
   }
   pickRows(members,field);
 }
+// Mũi tên lên / xuống trong bảng: chuyển sang dòng liền trước / liền sau (theo thứ tự đang hiện), như bấm vào dòng đó: SketchUp chọn, thu phóng,
+// cô lập... theo tuỳ chọn đang bật. Shift + mũi tên mở rộng vùng chọn từ dòng mốc. Chưa chọn gì: xuống = dòng đầu, lên = dòng cuối.
+// Hiện dòng ngay nhưng chỉ gửi lệnh chọn cho SketchUp sau một khoảng ngắn không bấm nữa, để giữ phím không làm SketchUp thu phóng liên tục.
+function stepRow(delta,extend){
+  const order=tableState.displayed;
+  if(!order||!order.length)return;
+  let from=order.findIndex(r=>r.index===tableState.cursor);
+  if(from<0)order.forEach((r,i)=>{if(r.members.some(m=>tableState.sel.has(m)))from=i;}); // dòng đang chọn cuối cùng trong thứ tự hiện
+  const to=from<0?(delta>0?0:order.length-1):Math.min(order.length-1,Math.max(0,from+delta));
+  const row=order[to];
+  tableState.cursor=row.index;
+  let picked=row.members;
+  const anchorPos=order.findIndex(r=>r.index===tableState.anchor);
+  if(extend&&anchorPos>=0)picked=[...new Set(order.slice(Math.min(anchorPos,to),Math.max(anchorPos,to)+1).flatMap(r=>r.members))];
+  else tableState.anchor=row.index;
+  clearTimeout(tableState.stepTimer);
+  tableState.sel=new Set(picked);paintSelection();revealRow(row.index);
+  tableState.stepTimer=setTimeout(()=>call('table_select',JSON.stringify({indexes:[...tableState.sel],field:''})),STEP_SELECT_MS);
+}
+const STEP_SELECT_MS=120;
+// Cuộn bảng cho dòng hiện trọn vẹn, tránh hàng tiêu đề và dòng tổng cộng cố định.
+function revealRow(index){
+  const wrap=document.querySelector('.grid-wrap'),tr=wrap&&wrap.querySelector(`tbody tr[data-index="${index}"]`);
+  if(!tr)return;
+  const head=wrap.querySelector('thead'),foot=wrap.querySelector('tfoot');
+  const top=wrap.getBoundingClientRect().top+(head?head.getBoundingClientRect().height:0),bottom=wrap.getBoundingClientRect().bottom-(foot?foot.getBoundingClientRect().height:0);
+  const box=tr.getBoundingClientRect();
+  if(box.top<top)wrap.scrollTop-=top-box.top;else if(box.bottom>bottom)wrap.scrollTop+=box.bottom-bottom;
+}
 function highlightRows(indexes){
+  tableState.cursor=null; // vùng chọn do SketchUp đặt: mũi tên đi tiếp từ dòng chọn cuối cùng
   tableState.sel=new Set(indexes||[]);paintSelection();
   const first=[...tableState.sel][0];
   if(first===undefined)return;
@@ -404,6 +436,7 @@ function renderGrid(host){
   tableState.shownRows=visibleRows;
   tableState.displayed=visibleRows.map(row=>({index:row.index,members:membersOf(row)})); // thứ tự dòng đang hiện, dùng cho chọn dãy bằng Shift
   closeMenu();
+  const hadFocus=!!document.activeElement&&document.activeElement.classList&&document.activeElement.classList.contains('grid-wrap'); // vẽ lại bảng không được làm mất phím mũi tên
   host.replaceChildren();
   const wrap=node('div',undefined,'grid-wrap');
   wrap.tabIndex=0;
@@ -412,6 +445,7 @@ function renderGrid(host){
     if(e.target.closest('input,select,textarea'))return;
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();pickRows(tableState.displayed.flatMap(membersOf),'');}
     else if(e.key==='Escape'&&tableState.sel.size){pickRows([],'');}
+    else if((e.key==='ArrowDown'||e.key==='ArrowUp')&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();stepRow(e.key==='ArrowDown'?1:-1,e.shiftKey);}
   };
   const t=node('table',undefined,'grid'+(tableState.density?' '+tableState.density:''));
   t.style.width=cols.reduce((sum,col)=>sum+widthOf(col.key),0)+'px';rowStyle(t);
@@ -511,6 +545,7 @@ function renderGrid(host){
     const tfoot=node('tfoot');tfoot.append(foot);t.append(tfoot);
   }
   wrap.append(t);host.append(wrap);
+  if(hadFocus)wrap.focus({preventScroll:true});
   if(!rows.length)host.append(node('p','Không có đối tượng nào khớp bộ lọc.','empty'));
   fillImages();
 }
