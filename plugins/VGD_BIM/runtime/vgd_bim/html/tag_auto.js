@@ -302,15 +302,17 @@ function tagTreePane(pane){
   const refresh=button('Làm mới',()=>call('tm_refresh'),'sm');
   const colorByTag=button('Tô màu theo tag',()=>call('tm_color_by_tag',JSON.stringify({enabled:!(treeState.data&&treeState.data.color_by_tag)})),'sm');colorByTag.id='tag-tree-colorbytag';
   colorByTag.title='Bật / tắt chế độ tô màu theo tag của SketchUp (Color by Tag)';colorByTag.setAttribute('aria-pressed','false');
+  const excel=button('Nhập Excel',()=>call('tm_excel_open'),'sm');excel.id='tag-tree-excel';excel.title='Nhập tag (kèm màu, kiểu nét, thư mục) từ file Excel .xlsx';
   const sample=button('Lấy mẫu',()=>call('tm_sample'),'sm');sample.id='tag-tree-sample';sample.title='Bấm vào một đối tượng trong view để lấy tag của nó (Esc để hủy)';
-  bar.append(search,expand,collapse,refresh,sample,colorByTag);
+  bar.append(search,expand,collapse,refresh,sample,excel,colorByTag);
   const chips=node('div',undefined,'tm-chip-area');chips.id='tag-tree-chips';
   const rootDrop=node('div','Thả vào đây để đưa tag ra ngoài thư mục (gốc)','tm-root-drop');rootDrop.id='tag-tree-rootdrop';rootDrop.hidden=true;
   acceptTagDrop(rootDrop,null);
   const banner=node('div',undefined,'tm-banner');banner.id='tag-tree-banner';banner.hidden=true;
   const del=node('div',undefined,'tm-delete');del.id='tag-tree-delete';del.hidden=true;
+  const excelCard=node('div',undefined,'tm-excel');excelCard.id='tag-excel-card';excelCard.hidden=true;
   const list=node('div',undefined,'tag-scroll tm-list');list.id='tag-tree-list';
-  pane.append(bar,chips,rootDrop,banner,del,list,node('p','Mắt ẩn / hiện tag hoặc cả thư mục trong model; nút tròn cô lập: chỉ hiện mục đó, ẩn mọi thứ còn lại, bấm lại để trả hiển thị như cũ. Mỗi thao tác là một bước hoàn tác.','muted tag-note'));
+  pane.append(bar,chips,rootDrop,banner,del,excelCard,list,node('p','Mắt ẩn / hiện tag hoặc cả thư mục trong model; nút tròn cô lập: chỉ hiện mục đó, ẩn mọi thứ còn lại, bấm lại để trả hiển thị như cũ. Mỗi thao tác là một bước hoàn tác.','muted tag-note'));
   paintTagTree();
 }
 
@@ -479,5 +481,57 @@ function receiveTagDeletePreview(data){
   const confirm=button('Xóa tag',()=>{box.hidden=true;box.replaceChildren();call('tm_delete',JSON.stringify({id:data.id,to_id:pick.value===''?null:Number(pick.value)}));},'danger');confirm.id='tag-delete-confirm';
   actions.append(confirm,button('Hủy',()=>{box.hidden=true;box.replaceChildren();}));
   box.append(head,row,node('p','Không đối tượng nào bị xóa: chỉ đổi tag của chúng rồi gỡ tag.','muted'),actions);
+}
+// Nhập tag từ Excel: Ruby đọc file .xlsx và gửi bản xem trước (tag_excel); người dùng tick dòng cần nhập rồi bấm Nhập.
+const excelState={data:null,selected:new Set(),overwrite:false};
+function receiveTagExcel(data){
+  const box=$('tag-excel-card');
+  if(!box)return;
+  if(data.cleared){excelState.data=null;box.hidden=true;box.replaceChildren();return;}
+  excelState.data=data;excelState.selected=new Set(data.rows.map((_,i)=>i));excelState.overwrite=false;
+  selectTagTab('model');
+  paintTagExcel();
+}
+function paintTagExcel(){
+  const box=$('tag-excel-card'),data=excelState.data;
+  if(!box||!data)return;
+  box.hidden=false;box.replaceChildren();
+  const existing=data.rows.filter(r=>r.exists).length;
+  const head=node('div',undefined,'tm-excel-head');head.append(node('b','Nhập tag từ Excel'),node('span',data.file,'muted tm-excel-file'),node('span',`${data.rows.length} dòng · ${existing} đã có trong model`,'muted'));
+  box.append(head);
+  (data.warnings||[]).forEach(text=>box.append(node('p',text,'muted tm-excel-warning')));
+  if(data.more_warnings)box.append(node('p',`… và ${data.more_warnings} cảnh báo khác`,'muted tm-excel-warning'));
+  const wrap=node('div',undefined,'tag-scroll tm-excel-scroll'),table=node('table'),thead=node('thead'),htr=node('tr');
+  ['','Tên tag','Màu','Kiểu nét','Thư mục','Trạng thái'].forEach(h=>htr.append(node('th',h)));thead.append(htr);table.append(thead);
+  const tbody=node('tbody');
+  data.rows.forEach((row,i)=>{
+    const tr=node('tr',undefined,row.exists?'exists':'');
+    const box1=node('input',undefined,'cb');box1.type='checkbox';box1.checked=excelState.selected.has(i);box1.setAttribute('aria-label',row.name);
+    box1.onchange=()=>{if(box1.checked)excelState.selected.add(i);else excelState.selected.delete(i);paintTagExcelActions();};
+    cell(tr,box1);cell(tr,row.name);
+    const swatch=node('span',undefined,'tm-swatch');if(row.color)swatch.style.background=row.color;
+    const colorCell=node('span');colorCell.append(swatch,node('span',row.color||'—','muted'));cell(tr,colorCell);
+    cell(tr,row.style||'—');cell(tr,row.folder||'—');
+    cell(tr,node('span',row.exists?'Đã có':'Mới',row.exists?'muted':''));
+    tbody.append(tr);
+  });
+  table.append(tbody);wrap.append(table);box.append(wrap);
+  const opts=node('div',undefined,'auto-opts');
+  const over=node('label',undefined,'auto-opt'),overBox=node('input',undefined,'cb');overBox.type='checkbox';overBox.checked=excelState.overwrite;overBox.onchange=()=>{excelState.overwrite=overBox.checked;};
+  over.append(overBox,node('span','Cập nhật cả tag đã có (màu, kiểu nét, thư mục); mặc định chỉ tạo tag mới'));opts.append(over);box.append(opts);
+  const actions=node('div',undefined,'actions');actions.id='tag-excel-actions';box.append(actions);
+  paintTagExcelActions();
+}
+function paintTagExcelActions(){
+  const actions=$('tag-excel-actions'),data=excelState.data;
+  if(!actions||!data)return;
+  actions.replaceChildren();
+  const n=excelState.selected.size;
+  const go=button(n?`Nhập ${n} tag`:'Nhập',()=>{
+    const rows=data.rows.filter((_,i)=>excelState.selected.has(i)).map(r=>({name:r.name,color:r.color,style:r.style,folder:r.folder}));
+    call('tm_excel_apply',JSON.stringify({rows,overwrite:excelState.overwrite}));
+  },'primary');go.id='tag-excel-import';go.disabled=!n;
+  actions.append(go,button('Chọn tất cả',()=>{data.rows.forEach((_,i)=>excelState.selected.add(i));paintTagExcel();}),button('Bỏ chọn',()=>{excelState.selected.clear();paintTagExcel();}),
+    button('Hủy',()=>{excelState.data=null;const box=$('tag-excel-card');box.hidden=true;box.replaceChildren();}));
 }
 function receiveTagTree(data){treeState.data=data;paintTagTree();}

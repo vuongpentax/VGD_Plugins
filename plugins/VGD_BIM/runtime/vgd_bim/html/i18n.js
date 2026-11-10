@@ -223,6 +223,13 @@ const VGD_I18N=(()=>{
     'Không đối tượng nào bị xóa: chỉ đổi tag của chúng rồi gỡ tag.':'No object is deleted: their tag is changed and then the tag is removed.',
     'Bấm vào một đối tượng trong view để lấy tag của nó (Esc để hủy).':'Click an object in the view to pick up its tag (Esc to cancel).',
     'Mã tag nhận không hợp lệ.':'The receiving tag id is not valid.','Không tìm thấy tag nhận. Hãy làm mới danh sách.':'The receiving tag was not found. Refresh the list.','Tag nhận phải khác tag cần xóa.':'The receiving tag must differ from the tag to delete.','Tag Untagged không xóa được.':'The Untagged tag cannot be deleted.',
+    'Nhập Excel':'Import Excel','Nhập tag (kèm màu, kiểu nét, thư mục) từ file Excel .xlsx':'Import tags (with color, line style and folder) from an Excel .xlsx file','Nhập tag từ Excel':'Import tags from Excel','Đã có':'Exists','Màu':'Color','Thư mục':'Folder',
+    'Cập nhật cả tag đã có (màu, kiểu nét, thư mục); mặc định chỉ tạo tag mới':'Also update tags that already exist (color, line style, folder); by default only new tags are created',
+    'Hãy chọn file Excel đuôi .xlsx.':'Choose an Excel file ending in .xlsx.','Chưa chọn tag nào để nhập.':'No tag is selected to import.',
+    'File Excel quá lớn (tối đa 5 MB).':'The Excel file is too large (5 MB at most).','File không phải Excel (.xlsx) hợp lệ.':'The file is not a valid Excel (.xlsx) file.','File Excel có quá nhiều phần.':'The Excel file has too many parts.','File Excel có mã hóa, chưa đọc được.':'The Excel file is encrypted and cannot be read yet.',
+    'File Excel có phần quá lớn.':'The Excel file has a part that is too large.','File Excel dùng kiểu nén chưa hỗ trợ.':'The Excel file uses an unsupported compression type.','File Excel bị hỏng (không giải nén được).':'The Excel file is damaged (cannot be unzipped).','Không đọc được trang tính đầu tiên.':'The first worksheet cannot be read.',
+    'File Excel không có dữ liệu.':'The Excel file has no data.','Không tìm thấy dòng tiêu đề. Dòng đầu của bảng cần có cột "Name" (hoặc "Tên tag").':'No header row was found. The table needs a column named "Name" (or "Tag name") in its first row.','File không có tag nào để nhập.':'The file has no tags to import.','Danh sách tag không hợp lệ.':'The tag list is not valid.',
+    'Tên tag không được để trống.':'The tag name cannot be empty.',
     'Trong model':'In model','Mở hết':'Expand all','Gập hết':'Collapse all','Làm mới':'Refresh','Mở':'Expand','Gập':'Collapse','Khôi phục hiển thị':'Restore visibility','Bỏ cô lập':'Remove isolation',
     'Tìm tag hoặc thư mục...':'Find tag or folder...','Tìm tag hoặc thư mục':'Find tag or folder','Model chưa có tag nào.':'The model has no tags yet.','Không có tag hoặc thư mục nào khớp.':'No tag or folder matches.',
     'Ẩn tag':'Hide tag','Hiện tag':'Show tag','Ẩn thư mục':'Hide folder','Hiện thư mục':'Show folder','Cô lập tag':'Isolate tag','Cô lập thư mục':'Isolate folder',
@@ -365,6 +372,22 @@ const VGD_I18N=(()=>{
   rule(/^Đã lấy tag "(.*)"\. Chọn đối tượng rồi bấm Gán tag để gán\.$/,(m,name)=>`Picked up tag "${name}". Select objects and click Assign tag to assign it.`);
   rule(/^: (\d+) đối tượng đang dùng tag này$/,(m,n)=>`: ${plural(n,'object uses','objects use')} this tag`);
   rule(/^Đã xóa tag "([^"]*)"\.( Đã chuyển (\d+) đối tượng sang tag "([^"]*)"\.)?( Các đối tượng đang dùng tag này đã về Untagged\.)?$/,(m,name,moved,n,target,back)=>`Deleted tag "${name}".${moved?` Moved ${plural(n,'object','objects')} to tag "${target}".`:''}${back?' The objects that used this tag are now Untagged.':''}`);
+  rule(/^Nhập (\d+) tag$/,(m,n)=>`Import ${plural(n,'tag','tags')}`);
+  rule(/^File Excel có quá nhiều dòng \(tối đa (\d+)\)\.$/,(m,n)=>`The Excel file has too many rows (${n} at most).`);
+  rule(/^Quá nhiều tag \(tối đa (\d+)\)\.$/,(m,n)=>`Too many tags (${n} at most).`);
+  rule(/^Tên tag không hợp lệ: (.*)$/,(m,t)=>`The tag name is not valid: ${t}`);
+  rule(/^Màu của tag "(.*)" không hợp lệ\.$/,(m,t)=>`The color of tag "${t}" is not valid.`);
+  rule(/^Kiểu nét của tag "(.*)" không hợp lệ\.$/,(m,t)=>`The line style of tag "${t}" is not valid.`);
+  rule(/^Tên thư mục của tag "(.*)" không hợp lệ\.$/,(m,t)=>`The folder name of tag "${t}" is not valid.`);
+  rule(/^thiếu tên tag, bỏ qua\.$/,()=>'missing tag name, skipped.');
+  rule(/^tên tag quá dài \(tối đa (\d+) ký tự\), bỏ qua\.$/,(m,n)=>`tag name too long (${n} characters at most), skipped.`);
+  rule(/^Untagged là tag mặc định của SketchUp, bỏ qua\.$/,()=>'Untagged is SketchUp\'s default tag, skipped.');
+  rule(/^tag "(.*)" bị trùng, bỏ qua\.$/,(m,t)=>`tag "${t}" is duplicated, skipped.`);
+  rule(/^màu "(.*)" không đọc được, bỏ qua màu\.$/,(m,t)=>`color "${t}" cannot be read, color skipped.`);
+  rule(/^tên thư mục không hợp lệ, bỏ thư mục\.$/,()=>'invalid folder name, folder skipped.');
+  rule(/^… và (\d+) cảnh báo khác$/,(m,n)=>`… and ${plural(n,'more warning','more warnings')}`);
+  rule(/^(\d+) dòng · (\d+) đã có trong model$/,(m,a,b)=>`${plural(a,'row','rows')} · ${b} already in the model`);
+  rule(/^Đã nhập (\d+) tag từ Excel \((\d+) mới tạo, (\d+) cập nhật\)\.( Bỏ qua (\d+) tag đã có trong model\.)?( Đã tạo (\d+) thư mục tag\.)?( Kiểu nét không nhận ra, đã bỏ qua: (.*)\.)?$/,(m,n,c,u,sk,skn,fo,fn,st,names)=>`Imported ${plural(n,'tag','tags')} from Excel (${c} new, ${u} updated).${sk?` Skipped ${skn} tags that already exist in the model.`:''}${fo?` Created ${plural(fn,'tag folder','tag folders')}.`:''}${st?` Line styles not recognized and skipped: ${names}.`:''}`);
   rule(/^Đang cô lập: (.*)$/,(m,name)=>`Isolated: ${name}`);
   rule(/^Đã cô lập (tag|thư mục) "(.*)" \(ẩn (\d+) tag khác\)\. Bấm lại để khôi phục hiển thị\.$/,(m,kind,name,n)=>`Isolated ${kind==='tag'?'tag':'folder'} "${name}" (${plural(n,'other tag','other tags')} hidden). Click again to restore visibility.`);
   rule(/^(\d+) luật$/,(m,n)=>plural(n,'rule','rules'));

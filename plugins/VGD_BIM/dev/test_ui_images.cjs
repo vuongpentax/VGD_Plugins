@@ -936,6 +936,37 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(JSON.stringify(await json('tm_move'))==='{"id":10,"folder_id":null}' && await page.locator('#tag-tree-rootdrop').isHidden(),'thả vào vùng gốc: gửi lệnh đưa ra ngoài thư mục và ẩn vùng thả');
   await clear();await page.evaluate(()=>{const src=document.querySelector('#tag-tree-list .tm-row[data-kind="folder"][data-id="2"]');const dst=document.querySelector('#tag-tree-list .tm-row[data-kind="folder"][data-id="1"]');const dt=new DataTransfer();dst.dispatchEvent(new DragEvent('dragover',{dataTransfer:dt,bubbles:true,cancelable:true}));dst.dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true}));});
   ok((await calls('tm_move')).length===0,'thả thứ không phải tag (không có tag đang kéo): không gửi lệnh');
+  // Nhập tag từ Excel: xem trước rồi nhập
+  await page.click('#tag-tab-model');
+  await receive('tag_tree',{...TREE,styles_supported:false,pinned:[],recent:[]});
+  await clear();await page.locator('#tag-tree-excel').click();
+  ok((await calls('tm_excel_open')).length===1,'nút Nhập Excel: gửi lệnh chọn file .xlsx');
+  const EXCEL={file:'tags.xlsx',styles_supported:true,folders_supported:true,more_warnings:2,warnings:['Dòng 7: tag "A. WALL" bị trùng, bỏ qua.'],rows:[{name:'NEW. ONE',color:'#ff0000',style:'Dash',folder:'A. ARCHITECTURAL',exists:false},{name:'A. DOOR',color:null,style:'',folder:'',exists:true},{name:'NEW. TWO',color:'#00ff88',style:'',folder:'Thu muc',exists:false}]};
+  await page.click('#tag-tab-set');
+  await receive('tag_excel',EXCEL);
+  const exCard=page.locator('#tag-excel-card');
+  ok(await page.locator('#tag-pane-model').isVisible() && await exCard.isVisible(),'nhận bản xem trước Excel: chuyển về tab Trong model và hiện thẻ xem trước');
+  const exText=await exCard.innerText();
+  ok(exText.includes('tags.xlsx') && exText.includes('3 dòng · 1 đã có trong model') && exText.includes('"A. WALL" bị trùng') && exText.includes('và 2 cảnh báo khác'),'thẻ xem trước: tên file, số dòng và số tag đã có, cảnh báo');
+  ok(await exCard.locator('tbody tr').count()===3 && (await exCard.locator('tbody tr').nth(0).innerText()).includes('#ff0000') && (await exCard.locator('tbody tr').nth(0).innerText()).includes('Dash') && (await exCard.locator('tbody tr').nth(1).innerText()).includes('Đã có') && (await exCard.locator('tbody tr').nth(2).innerText()).includes('Mới'),'bảng xem trước: tên, màu, kiểu nét, thư mục và trạng thái Mới / Đã có');
+  ok(await exCard.locator('tbody input.cb:checked').count()===3 && (await page.locator('#tag-excel-import').innerText())==='Nhập 3 tag','mặc định tick hết các dòng, nút Nhập ghi số tag');
+  await exCard.locator('tbody tr').nth(1).locator('input.cb').uncheck();
+  ok((await page.locator('#tag-excel-import').innerText())==='Nhập 2 tag','bỏ tick một dòng: nút Nhập cập nhật số tag');
+  await clear();await page.locator('#tag-excel-import').click();
+  let imp=await json('tm_excel_apply');
+  ok(imp && imp.overwrite===false && JSON.stringify(imp.rows.map(r=>r.name))==='["NEW. ONE","NEW. TWO"]' && imp.rows[0].color==='#ff0000' && imp.rows[0].style==='Dash' && imp.rows[0].folder==='A. ARCHITECTURAL','bấm Nhập: gửi đúng các dòng đã tick (tên, màu, kiểu nét, thư mục), không ghi đè');
+  await exCard.getByLabel('Cập nhật cả tag đã có',{exact:false}).check();
+  await clear();await page.locator('#tag-excel-import').click();
+  imp=await json('tm_excel_apply');
+  ok(imp && imp.overwrite===true,'bật "Cập nhật cả tag đã có": gửi overwrite true');
+  await exCard.getByRole('button',{name:'Bỏ chọn'}).click();
+  ok(await page.locator('#tag-excel-import').isDisabled() && (await page.locator('#tag-excel-import').innerText())==='Nhập','bỏ chọn tất cả: nút Nhập bị khóa');
+  await exCard.getByRole('button',{name:'Chọn tất cả'}).click();
+  ok((await page.locator('#tag-excel-import').innerText())==='Nhập 3 tag','chọn tất cả: tick lại mọi dòng');
+  await receive('tag_excel',{cleared:true});
+  ok(await exCard.isHidden(),'Ruby báo đã nhập xong: đóng thẻ xem trước');
+  await receive('tag_excel',EXCEL);await exCard.getByRole('button',{name:'Hủy'}).click();
+  ok(await exCard.isHidden() && (await calls('tm_excel_apply')).length===1,'Hủy: đóng thẻ, không nhập gì thêm');
   // Lấy mẫu tag bằng công cụ bấm vào đối tượng
   await receive('tag_tree',{...TREE,styles_supported:false,pinned:[],recent:[]});
   await clear();await page.locator('#tag-tree-sample').click();

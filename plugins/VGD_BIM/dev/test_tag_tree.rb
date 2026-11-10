@@ -18,7 +18,7 @@ $transactions = []
 ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
 require 'tmpdir'
 ENV['VGD_BIM_DATA_DIR'] ||= Dir.mktmpdir('vgd_bim_tag_tree')
-%w[storage measure settings].each { |f| require File.join(ROOT, "core/#{f}") }
+%w[storage measure settings tags xlsx_reader tag_excel].each { |f| require File.join(ROOT, "core/#{f}") }
 require File.join(ROOT, 'core/tag_tree')
 require File.join(ROOT, 'ui/tag_sample')
 require File.join(ROOT, 'ui/tag_manager')
@@ -65,11 +65,14 @@ class FTags
   def each(&block); @list.each(&block); end
   def to_a; @list.dup; end
   def [](index); @list[index]; end
+  def add(name); tag = FTag.new(100 + @list.size, name); @list << tag; tag; end
+  def add_folder(name); folder = FFolder.new(200 + @folders.size, name); @folders << folder; folder; end
   def remove(layer); @removed = (@removed || []) << layer; @list.delete(layer); end
   def removed; @removed || []; end
 end
 class OldTags
   include Enumerable
+  def add(name); tag = FTag.new(300 + @list.size, name); @list << tag; tag; end
   def initialize(list); @list = list; end
   def each(&block); @list.each(&block); end
   def to_a; @list.dup; end
@@ -89,6 +92,7 @@ class Probe
   def untagged_layer; @model.layers.to_a.find { |l| l.name == 'Untagged' } || @model.layers[0]; end
   def release_preview; @released = true; end
   def safely; yield; end
+  def model_layers_names; @model.layers.to_a.map(&:name); end
   def last(event); @events.reverse.find { |e, _| e == event }&.last; end
   def messages; @events.select { |e, _| e == 'message' }.map { |_, p| p[:text] }; end
 end
@@ -259,6 +263,35 @@ model, probe, tags, top, inside = del_world
 probe.tm_delete('id' => 10, 'to_id' => 13)
 ok('xóa tag, nhận là tag Untagged: coi như về Untagged', model.layers.removed == [tags[0]] && top[0].layer == tags[0])
 ok('không bao giờ xóa đối tượng: số đối tượng của model không đổi sau khi xóa tag', top.size == 3 && inside.size == 3 && model.definitions.to_a.map { |d| d.entities.to_a.size } == [3, 1])
+
+# ---- Nhập tag từ Excel (bước áp dụng) ----
+module Sketchup; end unless defined?(Sketchup)
+def excel_world
+  model, probe, live, fold = world
+  [model, probe, live, fold]
+end
+model, probe, tags, fold = excel_world
+before = $transactions.size
+rows = [{'name' => 'NEW. ONE', 'color' => '#ff0000', 'style' => 'Dash', 'folder' => 'A. ARCHITECTURAL'},
+        {'name' => 'new. two', 'color' => nil, 'style' => '', 'folder' => 'Thư mục mới'},
+        {'name' => 'a. wall', 'color' => '#00ff00', 'style' => '', 'folder' => ''}]
+probe.tm_excel_apply('rows' => rows)
+created = model.layers.to_a.select { |l| ['NEW. ONE', 'new. two'].include?(l.name) }
+ok('nhập Excel: tạo tag mới kèm màu, kiểu nét (khớp gần Dash -> Dashed Line) và thư mục có sẵn (không tạo trùng)', created.size == 2 && created[0].color.to_a.first(3) == [255, 0, 0] && created[0].line_style.name == 'Dashed Line' && created[0].folder.equal?(fold[0]) && model.layers.folders.size == 3)
+ok('nhập Excel: thư mục chưa có thì tạo mới và xếp tag vào', created[1].folder && created[1].folder.name == 'Thư mục mới' && model.layers.folders.size == 3)
+ok('nhập Excel: tag đã có (không phân biệt hoa thường) không bị đổi khi chưa bật ghi đè', tags.find { |t| t.name == 'A. WALL' }.color.to_a.first(3) == [10, 20, 30])
+ok('nhập Excel: một bước hoàn tác, gửi lại cây, xóa bản xem trước, báo kết quả', $transactions.size == before + 1 && $transactions.last == 'VGD BIM · Nhập tag từ Excel' && probe.last('tag_excel') == {cleared: true} && probe.messages.last.include?('Đã nhập 2 tag từ Excel (2 mới tạo, 0 cập nhật)') && probe.messages.last.include?('Bỏ qua 1 tag đã có') && probe.messages.last.include?('Đã tạo 1 thư mục tag'))
+model, probe, tags, fold = excel_world
+probe.tm_excel_apply('rows' => rows, 'overwrite' => true)
+wall = model.layers.to_a.find { |l| l.name == 'A. WALL' }
+ok('nhập Excel có ghi đè: tag đã có được cập nhật màu', wall.color.to_a.first(3) == [0, 255, 0] && probe.messages.last.include?('(2 mới tạo, 1 cập nhật)'))
+model, probe, tags, fold = excel_world
+probe.tm_excel_apply('rows' => [{'name' => 'X', 'color' => nil, 'style' => 'Zigzag', 'folder' => ''}])
+ok('kiểu nét không nhận ra: bỏ qua kiểu nét, vẫn tạo tag, báo tên kiểu', model.layers.to_a.any? { |l| l.name == 'X' && l.line_style.nil? } && probe.messages.last.include?('Kiểu nét không nhận ra, đã bỏ qua: Zigzag'))
+ok('nhập Excel: không chọn dòng nào / dữ liệu sai bị từ chối, không đổi model', error_of { probe.tm_excel_apply('rows' => []) }.include?('Chưa chọn') && error_of { probe.tm_excel_apply('rows' => 'x') }.include?('không hợp lệ') && error_of { probe.tm_excel_apply('rows' => [{'name' => 'Untagged'}]) }.include?('Untagged') && model.layers.to_a.size == 5)
+old_excel = Probe.new(OldModel.new(OldTags.new([FTag.new(1, 'A')])))
+old_excel.tm_excel_apply('rows' => [{'name' => 'B', 'color' => '#010203', 'style' => 'Dash', 'folder' => 'F'}])
+ok('SketchUp cũ không có thư mục / kiểu nét: vẫn tạo tag và đặt màu, bỏ qua thư mục, không lỗi', old_excel.model_layers_names == %w[A B] && old_excel.last('tag_excel') == {cleared: true})
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)

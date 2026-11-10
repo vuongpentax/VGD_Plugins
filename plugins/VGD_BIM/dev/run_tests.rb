@@ -6,7 +6,7 @@ require 'rbconfig'
 
 DEV = __dir__
 RUNTIME = File.expand_path('../runtime', DEV)
-TESTS = %w[bim table build dialog_logic loader_menu load preview overlay rename tags tags_io settings images capture image_actions preset columns table_report front front_probe front_actions front_align measure tag_rules tag_auto tag_catalog folder_rules tag_folders tag_tree].freeze
+TESTS = %w[bim table build dialog_logic loader_menu load preview overlay rename tags tags_io settings images capture image_actions preset columns table_report front front_probe front_actions front_align measure tag_rules tag_auto tag_catalog folder_rules tag_folders tag_tree tag_excel].freeze
 failed = []
 
 puts "Ruby #{RUBY_VERSION}"

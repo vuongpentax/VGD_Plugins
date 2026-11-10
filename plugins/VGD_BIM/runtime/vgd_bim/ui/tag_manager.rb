@@ -17,6 +17,8 @@ module VGD
           @dialog.add_action_callback('tm_sample') { |_ctx, _payload| safely { tm_sample } }
           @dialog.add_action_callback('tm_delete_preview') { |_ctx, payload| safely { tm_delete_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_delete') { |_ctx, payload| safely { tm_delete(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tm_excel_open') { |_ctx, _payload| safely { tm_excel_open } }
+          @dialog.add_action_callback('tm_excel_apply') { |_ctx, payload| safely { tm_excel_apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_pin') { |_ctx, payload| safely { tm_pin(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_move') { |_ctx, payload| safely { tm_move(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_color_by_tag') { |_ctx, payload| safely { tm_color_by_tag(JSON.parse(payload)) } }
@@ -73,6 +75,67 @@ module VGD
           layer = tag_tree_read.first.find { |entry| entry[:id] == id }&.fetch(:object) or raise 'Không tìm thấy tag này. Hãy làm mới danh sách.'
           Data.transaction(@model, 'VGD BIM · Đổi kiểu nét tag') { layer.line_style = style }
           emit('tag_tree', tag_tree_state)
+        end
+
+        # Nhập tag từ Excel, bước 1: chọn file .xlsx, đọc và gửi bản xem trước cho giao diện (chưa đổi gì trong model).
+        def tm_excel_open
+          check_model!
+          path = ::UI.openpanel('Nhập tag từ Excel (.xlsx)', '', 'Excel|*.xlsx||')
+          return unless path
+          raise 'Hãy chọn file Excel đuôi .xlsx.' unless File.extname(path).downcase == '.xlsx'
+          raise 'File Excel quá lớn (tối đa 5 MB).' if File.size(path) > XlsxReader::MAX_FILE_BYTES
+          parsed = TagExcel.parse(XlsxReader.read(File.binread(path)))
+          layers, = tag_tree_read
+          present = layers.map { |layer| Tags.key(layer[:name]) }
+          rows = parsed[:tags].map { |tag| tag.merge('exists' => present.include?(Tags.key(tag['name']))) }
+          emit('tag_excel', {file: File.basename(path), rows: rows, warnings: parsed[:warnings].first(10), more_warnings: [parsed[:warnings].size - 10, 0].max,
+                             styles_supported: line_styles_supported?, folders_supported: folders_supported?})
+        end
+
+        # Nhập tag từ Excel, bước 2. payload: {'rows' => [{'name','color','style','folder'}] (các dòng đã tick), 'overwrite' => true / false}.
+        # Tag mới thì tạo kèm màu, kiểu nét, thư mục; tag đã có chỉ bị đổi khi bật ghi đè, còn không thì bỏ qua. Một bước hoàn tác.
+        def tm_excel_apply(payload)
+          check_model!
+          rows = TagExcel.sanitize(payload['rows'])
+          raise 'Chưa chọn tag nào để nhập.' if rows.empty?
+          overwrite = payload['overwrite'] == true
+          style_names = line_styles_supported? ? @model.line_styles.to_a.map { |style| style.name.to_s } : []
+          counts = {created: 0, updated: 0, skipped: 0, folders: 0}
+          unknown_styles = []
+          Data.transaction(@model, 'VGD BIM · Nhập tag từ Excel') do
+            folders = {}
+            @model.layers.folders.each { |folder| folders[Tags.key(folder.name)] ||= folder } if folders_supported?
+            rows.each do |row|
+              layer = Tags.find_layer(@model, row['name'])
+              if layer && !overwrite
+                counts[:skipped] += 1
+                next
+              end
+              fresh = layer.nil?
+              layer ||= @model.layers.add(row['name'])
+              layer.color = Sketchup::Color.new(*TagTree.parse_color(row['color'])) if row['color']
+              unless row['style'].empty?
+                style_name = TagExcel.match_style(row['style'], style_names)
+                if style_name then layer.line_style = @model.line_styles.to_a.find { |style| style.name.to_s == style_name } else unknown_styles << row['style'] end
+              end
+              if !row['folder'].empty? && folders_supported?
+                key = Tags.key(row['folder'])
+                unless folders[key]
+                  folders[key] = @model.layers.add_folder(row['folder'])
+                  counts[:folders] += 1
+                end
+                layer.folder = folders[key]
+              end
+              fresh ? counts[:created] += 1 : counts[:updated] += 1
+            end
+          end
+          emit('tag_tree', tag_tree_state)
+          emit('tag_excel', {cleared: true})
+          text = "Đã nhập #{counts[:created] + counts[:updated]} tag từ Excel (#{counts[:created]} mới tạo, #{counts[:updated]} cập nhật)."
+          text += " Bỏ qua #{counts[:skipped]} tag đã có trong model." if counts[:skipped].positive?
+          text += " Đã tạo #{counts[:folders]} thư mục tag." if counts[:folders].positive?
+          text += " Kiểu nét không nhận ra, đã bỏ qua: #{unknown_styles.uniq.first(5).join(', ')}." unless unknown_styles.empty?
+          emit('message', {text: text})
         end
 
         # Công cụ lấy mẫu: bấm vào đối tượng trong view để lấy tag, kết quả gửi cho giao diện (sự kiện tag_sample) để chọn sẵn trong ô Gán tag.
