@@ -114,4 +114,15 @@ check 'tô khung: tổng diện tích bằng diện tích 6 mặt của hộp (4
 check 'tô khung: mọi điểm là góc của hộp', tris.all? { |pt| [[10.0, 14.0], [20.0, 23.0], [30.0, 32.0]].each_with_index.all? { |pair, i| pair.include?(pt.to_a[i]) } }
 box_empty = Class.new { def bounds; Class.new { def empty?; true; end }.new; end }.new
 check 'đối tượng rỗng: không có khung và không có tam giác', T.world_corners(entity: box_empty, transform: [0, 0, 0]).empty? && T.box_triangles(entity: box_empty, transform: [0, 0, 0]).empty?
+# ---- Cột thêm tay (CustomColumns) trong preset và trạng thái bảng ----
+cc = VGD::BIM::CustomColumns
+custom_col = cc.add('label' => 'Mã vật tư', 'kind' => 'attribute', 'dictionary' => 'vgd', 'attribute' => 'ma')
+check 'cột thêm tay: có trong danh sách cột gửi giao diện, khóa hợp lệ, không lẫn vào cột chuẩn', T.columns.last[:key] == custom_col['key'] && T.column_keys.include?(custom_col['key']) && !T::COLUMN_KEYS.include?(custom_col['key']) && T.columns.size == T::COLUMNS.size + 1
+T.save_preset('Có cột tay', '', ['instance', custom_col['key']])
+check 'preset lưu được cột thêm tay', T.custom_presets.find { |preset| preset['name'] == 'Có cột tay' }['columns'] == ['instance', custom_col['key']]
+T.save_view_state('order' => ['instance', custom_col['key'], 'khong_co'], 'visible' => [custom_col['key']], 'widths' => {custom_col['key'] => 150, 'khong_co' => 9}, 'headers' => {custom_col['key'] => 'Mã VT'})
+view = T.view_state
+check 'trạng thái bảng giữ cột thêm tay (thứ tự, hiện, độ rộng, tiêu đề), bỏ khóa lạ', view['order'] == ['instance', custom_col['key']] && view['visible'] == [custom_col['key']] && view['widths'] == {custom_col['key'] => 150} && view['headers'][custom_col['key']] == 'Mã VT'
+cc.remove(custom_col['key'])
+check 'xóa cột thêm tay: preset và trạng thái bảng tự bỏ khóa đó, không lỗi', T.custom_presets.find { |preset| preset['name'] == 'Có cột tay' }.nil? || !T.custom_presets.find { |preset| preset['name'] == 'Có cột tay' }['columns'].include?(custom_col['key'])
 puts 'Done'

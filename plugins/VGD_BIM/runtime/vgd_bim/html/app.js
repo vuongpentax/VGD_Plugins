@@ -208,7 +208,7 @@ function cellText(row,key){
     case 'calc_category':return CATEGORY_LABELS[row.calc_category]||'';
     case 'calc_method':return METHOD_LABELS[row.calc_method]||'';
     case 'calc_unit':return CALC_UNIT[row.calc_method]||'';
-    default:return '';
+    default:return key.startsWith('custom_')&&row[key]!=null?String(row[key]):''; // cột thêm tay: chữ do Ruby đọc sẵn
   }
 }
 function sortValue(row,key){if(NUMERIC.has(key))return row[key]==null?-Infinity:row[key];return String(cellText(row,key)||'').toLocaleLowerCase('vi');}
@@ -368,7 +368,7 @@ function menuEdit(td,row,col){
 function editCell(td,row,col){
   if(!col.editable)return;
   if(row.locked&&!row.members)return message('Đối tượng đang bị khóa nên không sửa được.',true);
-  if(['name','description','owner','url','size','price'].includes(col.editable))inlineEdit(td,row,col);else menuEdit(td,row,col);
+  if(['name','description','owner','url','size','price'].includes(col.editable)||col.editable.startsWith('custom_'))inlineEdit(td,row,col);else menuEdit(td,row,col);
 }
 // Đổi tên tiêu đề cột (lưu theo preset). Để trống hoặc trùng tên gốc thì dùng lại tên gốc.
 function editHeader(th,col){
@@ -956,7 +956,12 @@ function renderColumnList(list){
     const label=node('label');label.append(box,node('span',standard,'cs-name'));
     if(alias)label.append(node('span',`hiện trong bảng: ${alias}`,'cs-alias'));
     const grip=node('span','⠿','drag');grip.setAttribute('aria-hidden','true');
-    item.append(label,grip);list.append(item);
+    item.append(label);
+    if(col.custom){ // cột thêm tay: xóa được (chỉ bỏ cột khỏi bảng, dữ liệu đã nhập trong các món vẫn còn)
+      const del=button('×',()=>call('table_custom_column',JSON.stringify({action:'remove',key})),'cs-del');
+      del.title='Xóa cột này (dữ liệu đã nhập trong các món vẫn còn)';del.setAttribute('aria-label','Xóa cột '+standard);item.append(del);
+    }
+    item.append(grip);list.append(item);
   });
   sortableList(list);
 }
@@ -975,12 +980,41 @@ function sideGrip(side){
   };
   return grip;
 }
+// Form thêm cột thủ công (theo AutoInfo): kiểu cột, tên cột, và dictionary + tên thuộc tính khi đọc thuộc tính của món. Ruby kiểm tra lại mọi giá trị.
+function customColumnForm(host){
+  host.replaceChildren();
+  const form=node('div',undefined,'cc-form');
+  const kind=node('select');kind.setAttribute('aria-label','Kiểu cột');
+  [['attribute','Thuộc tính tùy chọn'],['dynamic','Thuộc tính động (Dynamic Components)'],['text','Cột tự nhập']].forEach(([value,text])=>kind.append(new Option(text,value)));
+  const field=(label,hint)=>{const wrap=node('label',undefined,'cc-field');const input=node('input');input.type='text';input.maxLength=80;input.placeholder=hint;input.setAttribute('aria-label',label);wrap.append(node('span',label),input);return {wrap,input};};
+  const name=field('Tên cột','Ví dụ: Mã vật tư'),dict=field('Tên dictionary','Ví dụ: vgd'),attr=field('Tên thuộc tính','Ví dụ: ma_vat_tu');
+  const sync=()=>{dict.wrap.hidden=kind.value!=='attribute';attr.wrap.hidden=kind.value==='text';attr.input.placeholder=kind.value==='dynamic'?'Ví dụ: price':'Ví dụ: ma_vat_tu';};
+  kind.onchange=sync;sync();
+  const need=(input,text)=>{if(!input.value.trim()){input.focus();throw Error(text);}};
+  const submit=button('Thêm',()=>{
+    need(name.input,'Hãy nhập tên cột.');
+    if(kind.value==='attribute')need(dict.input,'Hãy nhập tên dictionary.');
+    if(kind.value!=='text')need(attr.input,'Hãy nhập tên thuộc tính.');
+    const column={kind:kind.value,label:name.input.value};
+    if(kind.value!=='text')column.attribute=attr.input.value;
+    if(kind.value==='attribute')column.dictionary=dict.input.value;
+    call('table_custom_column',JSON.stringify({action:'add',column}));
+    host.replaceChildren();
+  },'primary');
+  const cancel=button('Hủy',()=>host.replaceChildren());
+  const actions=node('div',undefined,'cc-actions');actions.append(submit,cancel);
+  form.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();submit.click();}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();host.replaceChildren();}};
+  form.append(kind,name.wrap,dict.wrap,attr.wrap,actions);host.append(form);name.input.focus();
+}
 function buildColumnPanel(side){
   const inner=node('div',undefined,'col-side-in');
   const head=node('div',undefined,'cs-head');
   const search=node('input');search.type='search';search.placeholder='Tìm cột...';search.value=tableState.colSearch;search.className='pop-search';search.setAttribute('aria-label','Tìm cột');
   const close=button('×',closeColumns,'cs-close');close.title='Ẩn danh sách cột';close.setAttribute('aria-label','Ẩn danh sách cột');
-  head.append(search,close);
+  const formHost=node('div',undefined,'cs-form-host');
+  const add=button('+',()=>{if(formHost.firstChild)formHost.replaceChildren();else customColumnForm(formHost);},'cs-add');
+  add.title='Thêm cột mới: thuộc tính tùy chọn, thuộc tính động hoặc cột tự nhập';add.setAttribute('aria-label','Thêm cột');
+  head.append(search,add,close);
   const bar=node('div',undefined,'cs-all');
   const allBox=node('input',undefined,'cb');allBox.type='checkbox';allBox.setAttribute('aria-label','Chọn tất cả cột');
   allBox.onchange=()=>{
@@ -997,7 +1031,7 @@ function buildColumnPanel(side){
   [['','Hàng: Vừa'],['dense','Hàng: Gọn'],['roomy','Hàng: Thoáng']].forEach(([v,t])=>density.append(new Option(t,v)));
   density.value=tableState.density;density.onchange=()=>{tableState.density=density.value;tableState.rowHeight=0;renderGrid($('grid-host'));persistView();};
   density.title='Giữ Ctrl và lăn chuột giữa trên bảng để đổi độ cao hàng (ảnh to ra theo).'; // gợi ý, không chiếm chỗ của danh sách cột
-  inner.append(head,bar,list,density,sideGrip(side));
+  inner.append(head,formHost,bar,list,density,sideGrip(side));
   side.replaceChildren(inner);
   updateColumnCounts();
 }
@@ -1167,7 +1201,7 @@ function exportRows(model){
 }
 function exportTable(format){
   const model=viewModel();
-  call('table_export',JSON.stringify({format,title:exportText('Bảng khối lượng'),preset:tableState.preset||'',decimal_separator:workSettings().decimal_separator,
+  call('table_export',JSON.stringify({format,...(tableState.rowHeight>0?{row_height:tableState.rowHeight}:{}),title:exportText('Bảng khối lượng'),preset:tableState.preset||'',decimal_separator:workSettings().decimal_separator,
     labels:{model:exportText('Mô hình'),preset:'Preset',date:exportText('Ngày'),print:exportText('In / Lưu PDF'),reset:exportText('Đặt lại độ rộng cột'),hint:exportText('Kéo mép tiêu đề cột để chỉnh độ rộng.')},columns:model.cols.map(exportColumn),rows:exportRows(model)}));
 }
 // Biểu tượng nhỏ cho menu (SVG, dùng màu chữ hiện tại).
@@ -1199,7 +1233,6 @@ function ioPanel(){
   const calc=item('calc','Ghi cách tính vào món đang chọn',()=>{if(!tableState.sel.size)return message('Hãy chọn các dòng cần ghi cách tính (Ctrl+A chọn hết các dòng đang hiện).',true);call('table_commit_calc',JSON.stringify({indexes:[...tableState.sel]}));});
   calc.id='calc-commit';calc.title='Ghi hạng mục, cách tính và đơn vị suy ra từ tag vào các món đang chọn (chỉ điền mục còn trống, không ghi đè dữ liệu đã nhập; một bước hoàn tác)';
   p.append(calc);
-  p.append(item('preset','Nhập preset (JSON)',()=>call('table_preset',JSON.stringify({action:'import'}))),item('preset','Xuất preset (JSON)',()=>call('table_preset',JSON.stringify({action:'export'}))));
   return p;
 }
 function bottomBar(){
@@ -1229,11 +1262,17 @@ function syncBottomBar(view){
   old.querySelector('.footer-menu').replaceWith(fresh.querySelector('.footer-menu'));
 }
 function tableView(data){
+  const knownKeys=tableState.data?new Set(tableState.data.columns.map(c=>c.key)):null; // để nhận ra cột thêm tay vừa tạo
   tableState.data=data;
   document.body.classList.add('table-mode');updateSelInfo(); // bảng chiếm hết chiều cao cửa sổ: tiêu đề cột và chân trang cố định, chỉ cuộn các hàng
   const restored=!tableState.restored&&restoreView(data);
   if(!restored&&!tableState.order.length)applyPreset(tableState.preset);
   if(!(data.presets||[]).some(p=>p.name===tableState.preset))applyPreset((data.presets||[])[0].name);
+  const keys=new Set(data.columns.map(c=>c.key)); // cột thêm tay đã xóa thì bỏ khỏi thứ tự / cột đang hiện; cột mới tạo thì hiện luôn, ở cuối
+  tableState.order=tableState.order.filter(k=>keys.has(k));[...tableState.visible].forEach(k=>{if(!keys.has(k))tableState.visible.delete(k);});
+  const added=knownKeys?data.columns.filter(c=>c.custom&&!knownKeys.has(c.key)):[];
+  added.forEach(c=>{tableState.visible.add(c.key);if(!tableState.order.includes(c.key))tableState.order.push(c.key);});
+  if(added.length)syncCustomPreset();
   if(!tableState.projectedChecked){tableState.projectedChecked=true;ensureProjected();} // preset đã lưu có cột Diện tích chiếu: bật công tắc một lần khi bảng nạp xong
   const content=$('content');
   let view=content.querySelector('.table-view');

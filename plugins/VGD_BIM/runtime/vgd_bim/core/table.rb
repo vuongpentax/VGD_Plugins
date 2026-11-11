@@ -4,6 +4,7 @@ require_relative 'images'
 require_relative 'preset'
 require_relative 'front'
 require_relative 'measure'
+require_relative 'custom_columns'
 
 module VGD
   module BIM
@@ -59,6 +60,15 @@ module VGD
       ].freeze
       COLUMN_KEYS = COLUMNS.map { |column| column[:key] }.freeze
 
+      # Cột chuẩn + cột người dùng thêm tay (CustomColumns, lưu trên máy). Dùng khi kiểm tra tên cột của preset / trạng thái bảng.
+      def self.columns
+        COLUMNS + CustomColumns.columns
+      end
+
+      def self.column_keys
+        COLUMN_KEYS + CustomColumns.keys
+      end
+
       STATUS_LABELS = {'new' => 'Mới', 'existing' => 'Hiện hữu', 'reuse' => 'Dùng lại', 'temporary' => 'Tạm thời', 'removed' => 'Loại bỏ'}.freeze
 
       # Preset có sẵn (xem Preset::BUILT_IN). Preset do người dùng lưu nằm trong custom_presets.
@@ -83,7 +93,7 @@ module VGD
       # Preset đã lưu / nhập từ bản cũ có thể dùng 5 nhóm cũ: đổi sang nhóm mới tương ứng trước khi kiểm tra.
       def self.sanitize_preset(item)
         item = item.merge('group' => Tags.migrate_group(item['group'])) if item.is_a?(Hash) && item.key?('group')
-        Preset.sanitize(item, COLUMN_KEYS, Tags::GROUPS)
+        Preset.sanitize(item, column_keys, Tags::GROUPS)
       end
 
       def self.save_preset(name, group, columns, headers = nil, settings = nil)
@@ -103,7 +113,7 @@ module VGD
       # Nhập preset từ file JSON (định dạng riêng hoặc của plugin tham khảo). Trùng tên preset đã lưu thì ghi đè.
       def self.import_presets(obj)
         obj = obj.merge('presets' => obj['presets'].map { |item| item.is_a?(Hash) && item.key?('group') ? item.merge('group' => Tags.migrate_group(item['group'])) : item }) if obj.is_a?(Hash) && obj['presets'].is_a?(Array)
-        incoming = Preset.import(obj, COLUMN_KEYS, Tags::GROUPS, BUILT_IN_NAMES)
+        incoming = Preset.import(obj, column_keys, Tags::GROUPS, BUILT_IN_NAMES)
         kept = custom_presets.reject { |p| incoming.any? { |i| i['name'] == p['name'] } }
         raise ArgumentError, "Quá nhiều preset (tối đa #{Preset::MAX_PRESETS})." if kept.size + incoming.size > Preset::MAX_PRESETS
         Storage.write('table_presets', kept + incoming)
@@ -127,7 +137,7 @@ module VGD
         state['group'] = Tags.migrate_group(state['group']) if state['group'].is_a?(String) # trạng thái cũ dùng nhóm cũ
         state['rowHeight'] = row_height(state['rowHeight']) if state.key?('rowHeight') # file sửa tay: giá trị lạ bị bỏ
         state.delete('rowHeight') if state['rowHeight'].nil?
-        state['headers'] = Preset.headers(state['headers'], COLUMN_KEYS) if state.key?('headers')
+        state['headers'] = Preset.headers(state['headers'], column_keys) if state.key?('headers')
         state['settings'] = Preset.settings(state['settings']) if state.key?('settings')
         state
       end
@@ -135,11 +145,11 @@ module VGD
       def self.save_view_state(state)
         raise ArgumentError, 'Trạng thái bảng không hợp lệ.' unless state.is_a?(Hash)
         clean = state.select { |k, _| VIEW_KEYS.include?(k) }
-        %w[order visible].each { |k| clean[k] = Array(clean[k]).map(&:to_s).select { |key| COLUMN_KEYS.include?(key) } if clean.key?(k) }
-        clean['widths'] = (clean['widths'].is_a?(Hash) ? clean['widths'] : {}).select { |k, v| COLUMN_KEYS.include?(k) && v.is_a?(Numeric) } if clean.key?('widths')
+        %w[order visible].each { |k| clean[k] = Array(clean[k]).map(&:to_s).select { |key| column_keys.include?(key) } if clean.key?(k) }
+        clean['widths'] = (clean['widths'].is_a?(Hash) ? clean['widths'] : {}).select { |k, v| column_keys.include?(k) && v.is_a?(Numeric) } if clean.key?('widths')
         clean['rowHeight'] = row_height(clean['rowHeight']) if clean.key?('rowHeight')
         clean.delete('rowHeight') if clean['rowHeight'].nil?
-        clean['headers'] = Preset.headers(clean['headers'], COLUMN_KEYS) if clean.key?('headers')
+        clean['headers'] = Preset.headers(clean['headers'], column_keys) if clean.key?('headers')
         clean['settings'] = Preset.settings(clean['settings']) if clean.key?('settings')
         Storage.write('table_view', clean)
       end
@@ -187,7 +197,8 @@ module VGD
         records.each_with_index { |record, i| index_of[path_key(record[:path])] = i }
         image_folder = model.respond_to?(:guid) ? Images.dir(model) : nil # một lần cho cả bảng
         overrides = Quantity.overrides # cách tính ghi đè theo tag, đọc một lần cho cả bảng
-        rows = records.each_with_index.map { |record, i| row_for(record, i, groups, projected: projected, measure: measure, overrides: overrides).merge(image_state(model, record[:entity], image_folder)) }
+        custom = CustomColumns.read # cột thêm tay, đọc một lần cho cả bảng
+        rows = records.each_with_index.map { |record, i| row_for(record, i, groups, projected: projected, measure: measure, overrides: overrides, custom: custom).merge(image_state(model, record[:entity], image_folder)) }
         # Đối tượng cha đang có trong bảng: dùng để tránh cộng trùng khi tính tổng.
         records.each_with_index do |record, i|
           rows[i][:parents] = (1...record[:path].size).map { |n| index_of[path_key(record[:path][0...n])] }.compact
@@ -227,7 +238,7 @@ module VGD
         name.empty? ? Geometry.definition(parent).name.to_s : name
       end
 
-      def self.row_for(record, index, groups, projected: false, measure: nil, overrides: {})
+      def self.row_for(record, index, groups, projected: false, measure: nil, overrides: {}, custom: [])
         entity = record[:entity]
         transform = record[:transform]
         dims = Geometry.dimensions(entity, transform, measure: measure)
@@ -260,7 +271,7 @@ module VGD
           locked: record[:locked] ? true : false,
           quantity: 1,
           parents: []
-        }.merge(extra_columns(entity, data)).merge(measure_note: body ? body[:note].to_s : '')
+        }.merge(extra_columns(entity, data)).merge(measure_note: body ? body[:note].to_s : '').merge(CustomColumns.values(entity, custom))
         row.merge(Quantity.row_fields(row, tag, row[:tag_group], data, overrides)) # hạng mục / cách tính / khối lượng suy ra từ tag (tính ảo, không ghi vào món)
       end
 

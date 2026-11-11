@@ -12,6 +12,10 @@ module VGD
       IMAGE_COLUMN_CHARS = 20  # độ rộng cột Ảnh (ký tự Excel, 145 px)
       IMAGE_ROW_POINTS = 84    # chiều cao hàng có ảnh (point, 112 px)
       IMAGE_BOX_PX = [136, 106].freeze # khung chứa ảnh trong ô (rộng, cao), chừa lề nhỏ; ảnh vẫn nhúng nguyên độ phân giải
+      IMAGE_PAD_PX = 8         # lề quanh ảnh khi ô theo độ cao hàng và độ rộng cột trên màn hình
+      MAX_ROW_POINTS = 409     # Excel không cho hàng cao hơn 409 point
+      MAX_COLUMN_CHARS = 255   # Excel không cho cột rộng hơn 255 ký tự
+      UPSCALE_MAX = 2.0        # ô lớn theo màn hình: ảnh được phóng tối đa gấp đôi (mặc định không phóng)
 
       NS_MAIN = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'.freeze
       NS_REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'.freeze
@@ -139,7 +143,7 @@ module VGD
         media = {}      # pid => số thứ tự ảnh
         pictures = []   # {pid, col, row, w, h, dx, dy} (px)
         hyperlinks = []
-        image_px = image_col ? column_px(IMAGE_COLUMN_CHARS) : 0
+        row_points = image_row_points(report)
         row_number = first_data - 1
         report[:rows].each do |row|
           row_number += 1
@@ -153,9 +157,10 @@ module VGD
               image = row[:images] && row[:images][i]
               next unless image
               media[image[:key]] ||= media.size + 1
-              fit = fit_image(image[:width], image[:height])
-              pictures << {pid: image[:key], col: i, row: row_number - 1, w: fit[0], h: fit[1], dx: [(image_px - fit[0]) / 2, 0].max, dy: [(row_px(IMAGE_ROW_POINTS) - fit[1]) / 2, 0].max}
-              height = IMAGE_ROW_POINTS
+              col_px = column_px(column_chars(report, i))
+              fit = fit_image(image[:width], image[:height], image_box(report, col_px, row_points))
+              pictures << {pid: image[:key], col: i, row: row_number - 1, w: fit[0], h: fit[1], dx: [(col_px - fit[0]) / 2, 0].max, dy: [(row_px(row_points) - fit[1]) / 2, 0].max}
+              height = row_points
             elsif value.is_a?(Numeric) && col[:type] == 'ordinal'
               cells << number_cell(row_number, i, value, styles.xf(**base, h: 'center'))
             elsif value.is_a?(Numeric)
@@ -167,7 +172,7 @@ module VGD
               cells << (value.to_s.empty? ? blank_cell(row_number, i, styles.xf(**base)) : text_cell(row_number, i, value, styles.xf(**base, wrap: col[:type] == 'text', h: col[:type] == 'ordinal' ? 'center' : 'left')))
             end
           end
-          height = IMAGE_ROW_POINTS if image_col && height.nil? && row[:kind] == 'row'
+          height = row_points if image_col && height.nil? && row[:kind] == 'row'
           sheet_rows << row_xml(row_number, cells, height)
         end
         last_row = [row_number, first_data].max
@@ -193,8 +198,20 @@ module VGD
         zip.to_s
       end
 
-      def self.fit_image(width, height)
-        scale = [IMAGE_BOX_PX[0].to_f / width, IMAGE_BOX_PX[1].to_f / height, 1.0].min
+      # Người dùng đã chỉnh độ cao hàng trên màn hình (report[:row_height], điểm ảnh): hàng Excel cao đúng bằng đó (tối đa 409 point).
+      def self.image_row_points(report)
+        return IMAGE_ROW_POINTS unless report[:row_height]
+        [report[:row_height] * 0.75, MAX_ROW_POINTS].min.round(2)
+      end
+
+      # Khung chứa ảnh trong ô: mặc định cố định; theo độ cao hàng thì lấy theo ô (trừ lề) và cho phóng ảnh nhỏ tới UPSCALE_MAX.
+      def self.image_box(report, col_px, row_points)
+        return IMAGE_BOX_PX unless report[:row_height]
+        [[col_px - IMAGE_PAD_PX, 1].max, [row_px(row_points) - IMAGE_PAD_PX, 1].max]
+      end
+
+      def self.fit_image(width, height, box = IMAGE_BOX_PX)
+        scale = [box[0].to_f / width, box[1].to_f / height, box.equal?(IMAGE_BOX_PX) ? 1.0 : UPSCALE_MAX].min
         [[(width * scale).round, 1].max, [(height * scale).round, 1].max]
       end
 
@@ -202,11 +219,17 @@ module VGD
       def self.column_chars(report, index)
         col = report[:columns][index]
         return 6 if col[:type] == 'ordinal'
-        return IMAGE_COLUMN_CHARS if col[:type] == 'image'
+        return image_column_chars(report, col) if col[:type] == 'image'
         longest = report[:rows].map { |row| value = row[:cells][index]; value.is_a?(Numeric) ? 14 : value.to_s.length }.max.to_i
         header = [col[:label].to_s.length, col[:unit].to_s.length].max
         return 14 if col[:type] == 'number' && header <= 14
         [[longest, header * 0.75 + 2].max + 2, 10].max.clamp(10, col[:type] == 'link' ? 36 : 45).to_f
+      end
+
+      # Cột Ảnh: mặc định rộng cố định; khi người dùng chỉnh độ cao hàng thì rộng đúng bằng cột trên màn hình (điểm ảnh, tối đa 255 ký tự).
+      def self.image_column_chars(report, col)
+        return IMAGE_COLUMN_CHARS unless report[:row_height] && col[:width]
+        [[(col[:width] - 5) / 7.0, 3.0].max, MAX_COLUMN_CHARS.to_f].min
       end
 
       def self.column_px(chars)

@@ -249,5 +249,32 @@ ok('xlsx có ảnh vị trí: nhúng đủ 4 ảnh (2 ảnh món, 2 ảnh vị t
 loc_page = TR.html(loc_report)
 ok('trang in PDF có ảnh vị trí trong đúng cột', loc_page.scan('<td class="img"><img').size == 4 && loc_page.include?([LOC_IMAGES[900]].pack('m0')))
 
+# ---- Độ cao hàng người dùng chỉnh trên màn hình: Excel và PDF theo đó ----
+ok('độ cao hàng: không gửi thì giữ cách xuất mặc định', build[:row_height].nil?)
+%w[abc].push(5, 20, 641, 99_999, -1, Float::NAN, true).each do |bad_height|
+  ok("độ cao hàng #{bad_height.inspect} bị từ chối", error_of { build('row_height' => bad_height) }.to_s.include?('Độ cao hàng'))
+end
+ok('độ cao hàng 200 được nhận', build('row_height' => 200)[:row_height] == 200)
+wide_columns = COLUMNS.each_with_index.map { |c, i| c.merge('width' => [44, 260, 140, 90, 90, 170, 90][i]) }
+tall = build('row_height' => 200, 'columns' => wide_columns)
+tall_files = read_zip(VGD::BIM::Xlsx.build(tall))
+tall_sheet = xml(tall_files['xl/worksheets/sheet1.xml'])
+tall_rows = REXML::XPath.match(tall_sheet, '//m:row', NS).to_h { |r| [r.attributes['r'].to_i, r.attributes['ht']] }
+ok('xlsx theo độ cao hàng: hàng có ảnh cao 200 px = 150 point', tall_rows[7] == '150.0' && tall_rows[8] == '150.0' && tall_rows[4].nil?)
+col_widths = REXML::XPath.match(tall_sheet, '//m:col', NS).map { |c| c.attributes['width'].to_f }
+ok('xlsx theo độ cao hàng: cột Ảnh rộng đúng cột trên màn hình (260 px), cột khác không đổi', (col_widths[1] - (260 - 5) / 7.0).abs < 0.01 && col_widths[0] == 6.0)
+tall_anchors = REXML::XPath.match(xml(tall_files['xl/drawings/drawing1.xml']), '//xdr:oneCellAnchor', 'xdr' => 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing')
+tall_sizes = tall_anchors.map { |a| ext = REXML::XPath.first(a, 'xdr:ext', 'xdr' => 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing'); [ext.attributes['cx'].to_i / 9525, ext.attributes['cy'].to_i / 9525] }
+ok('xlsx theo độ cao hàng: ảnh to hơn mặc định, giữ tỉ lệ, nằm trong ô trừ lề', tall_sizes[0][0] > 128 && tall_sizes[0][0] <= 252 && tall_sizes[0][1] <= 192 && tall_sizes[1][1] == 192 && tall_sizes.all? { |w, h| w <= 252 && h <= 192 })
+huge = read_zip(VGD::BIM::Xlsx.build(build('row_height' => 640, 'columns' => wide_columns.map { |c| c['type'] == 'image' ? c.merge('width' => 2000) : c })))
+huge_sheet = xml(huge['xl/worksheets/sheet1.xml'])
+ok('xlsx: hàng cao quá giới hạn Excel thì chặn ở 409 point, cột chặn ở 255 ký tự', REXML::XPath.match(huge_sheet, '//m:row', NS).any? { |r| r.attributes['ht'] == '409' || r.attributes['ht'] == '409.0' } && REXML::XPath.match(huge_sheet, '//m:col', NS).map { |c| c.attributes['width'].to_f }.max <= 255.0)
+default_rows = REXML::XPath.match(xml(read_zip(VGD::BIM::Xlsx.build(build))['xl/worksheets/sheet1.xml']), '//m:row', NS).to_h { |r| [r.attributes['r'].to_i, r.attributes['ht']] }
+ok('không chỉnh độ cao hàng: xlsx vẫn như cũ (84 point)', default_rows[7] == '84')
+tall_page = TR.html(tall)
+expected_mm = (200 * 277 / 884.0).round(1)
+ok('PDF theo độ cao hàng: hàng cao tỉ lệ cùng độ rộng cột, ảnh vừa ô', tall_page.include?("tr.row td{height:#{expected_mm}mm}") && tall_page.include?("max-height:#{(expected_mm - 2).round(1)}mm") && !tall_page.include?('max-height:22mm'))
+ok('PDF không chỉnh độ cao hàng: giữ ảnh cao tối đa 22 mm, không thêm luật chiều cao hàng', !TR.html(build).include?('tr.row td{height'))
+
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)

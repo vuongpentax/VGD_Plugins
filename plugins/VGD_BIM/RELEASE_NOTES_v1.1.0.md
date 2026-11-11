@@ -27,6 +27,9 @@
 - **Chọn cột kiểu mới** (theo Auto Info, gọn hơn): ngăn trượt ra bên trái và đẩy bảng sang phải nên cột đầu không bị che; ô tick tự vẽ, kéo thả đổi chỗ cột có hiệu ứng trượt, nút gạt chân trang trượt mượt.
 - **Giao diện không còn thanh cuộn dọc** ở bảng, bảng Chọn cột, Preset và các tab (vẫn cuộn bằng con lăn chuột); chỉ giữ thanh cuộn ngang của bảng khi nhiều cột.
 - **Tiếng Anh** cho toàn bộ giao diện (báo cáo CSV và hộp thoại gốc của SketchUp vẫn tiếng Việt).
+- **Xuất Excel / PDF theo độ cao hàng** (beta.61): khi đã chỉnh độ cao hàng (Ctrl + lăn chuột), file xuất cao đúng như trên màn hình, cột Ảnh rộng bằng cột trên màn hình và ảnh to ra theo (PDF thu cùng tỉ lệ với độ rộng cột; Excel tối đa 409 point). Chưa chỉnh thì giữ như cũ.
+- **Thêm cột thủ công** (beta.61): nút + ở ngăn Chọn cột, theo AutoInfo: thuộc tính tùy chọn (dictionary + tên thuộc tính), thuộc tính động (Dynamic Components) đều chỉ đọc, và cột tự nhập sửa được trong bảng. Tối đa 20 cột, lưu trên máy.
+- **Nhập / xuất preset JSON chuyển vào bảng Preset** (beta.61), không còn trong menu Nhập / Xuất.
 - **Bảng nổi tự đóng** (beta.60): bấm ra ngoài (ô tìm, nút khác, bảng dữ liệu, Preset) thì các bảng Đổi tên, Mặt trước, Cập nhật ảnh, Nhóm theo, Nhập / Xuất và ngăn Chọn cột / Loại trừ tag tự đóng; mở bảng này thì bảng kia đóng. Riêng Đổi tên, Mặt trước, Cập nhật ảnh giữ nguyên khi bấm chọn dòng trong bảng.
 - **Khối lượng tính theo tag** (beta.59): năm cột mới (hạng mục, cách tính, khối lượng tính, đơn vị tính, thành tiền theo khối lượng tính) suy ra từ tag và nhóm tag; đổi cách tính theo tag bằng nhấp đúp; nút Ghi cách tính vào món (chỉ điền mục còn trống); cột Số lượng và Thành tiền cũ giữ nguyên.
 - **Nút dán ảnh từ clipboard** (beta.58): dán ảnh chụp màn hình hoặc ảnh đã copy vào ô ảnh chính / ảnh vị trí bằng một nút; Ctrl+V dán được cả vào ô ảnh vị trí.

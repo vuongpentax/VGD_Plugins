@@ -81,6 +81,7 @@ module VGD
           @dialog.add_action_callback('table_clear') { |_ctx| safely { table_clear } }
           @dialog.add_action_callback('rename_preview') { |_ctx, payload| safely { rename_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { rename_apply(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_custom_column') { |_ctx, payload| safely { table_custom_column(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_view') { |_ctx, payload| safely { Table.save_view_state(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_order') { |_ctx, payload| safely { table_order(JSON.parse(payload)) } }
           register_image_callbacks
@@ -143,7 +144,7 @@ module VGD
           @model = Sketchup.active_model
           language = Settings.read['language']
           emit('config', {mode: @mode, version: BIM::VERSION, language: language, app: settings_payload, preset_info: {defaults: Preset::DEFAULT_SETTINGS, choices: Preset.choices},
-                         table: {columns: Table::COLUMNS, presets: Table.presets, view: Table.view_state}, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.ui_dictionary(language), vi_en: (language == 'en' ? Locale.vi_en_names : nil), scan_options: {scope: @scan_options[:scope], faces: faces?}})
+                         table: {columns: Table.columns, presets: Table.presets, view: Table.view_state}, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.ui_dictionary(language), vi_en: (language == 'en' ? Locale.vi_en_names : nil), scan_options: {scope: @scan_options[:scope], faces: faces?}})
           if %w[information tags table].include?(@mode)
             @observer = SelectionObserver.new(self)
             @model.selection.add_observer(@observer)
@@ -340,7 +341,7 @@ module VGD
                  elsif built[:hidden].to_i.positive?
                    "Đã ẩn #{built[:hidden]} đối tượng thuộc tag loại trừ."
                  end
-          emit('table', {columns: Table::COLUMNS, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
+          emit('table', {columns: Table.columns, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
                          statuses: Table::STATUS_LABELS, options: @table_options.merge(isolating: !@isolated.empty?),
                          rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state, choices: table_choices,
                          row_order: RowOrder.read(@model)})
@@ -402,7 +403,8 @@ module VGD
         def table_edit(payload)
           check_model!
           field = payload.fetch('field')
-          raise ArgumentError, 'Ô này không sửa được trong bảng.' unless EDIT_LABELS.key?(field)
+          custom = CustomColumns.find(field)
+          raise ArgumentError, 'Ô này không sửa được trong bảng.' unless EDIT_LABELS.key?(field) || (custom && custom['kind'] == 'text')
           value = payload.fetch('value').to_s.strip
           indexes = payload.key?('indexes') ? table_indexes(payload) : table_indexes('indexes' => [payload.fetch('index')])
           records = indexes.map { |index| @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' } }
@@ -417,8 +419,21 @@ module VGD
           end
           table_build
           show_outline
-          text = "Đã sửa #{EDIT_LABELS[field]} cho #{editable.size} đối tượng."
+          text = "Đã sửa #{custom ? custom['label'] : EDIT_LABELS[field]} cho #{editable.size} đối tượng."
           text += " Bỏ qua #{records.size - editable.size} đối tượng bị khóa." if records.size > editable.size
+          emit('message', {text: text})
+        end
+        # Thêm / xóa cột thêm tay (nút + ở ngăn Chọn cột). Chỉ đổi danh sách cột trên máy, không đụng gì trong model;
+        # xóa cột không xóa dữ liệu đã nhập trong món. Đổi tên cột dùng tiêu đề cột của preset (nhấp đúp tiêu đề). payload: {'action' => 'add' | 'remove', ...}.
+        def table_custom_column(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu cột không hợp lệ.' unless payload.is_a?(Hash)
+          text = case payload['action']
+                 when 'add' then "Đã thêm cột #{CustomColumns.add(payload['column'])['label']}."
+                 when 'remove' then (CustomColumns.remove(payload['key']); 'Đã xóa cột. Dữ liệu đã nhập trong các món vẫn còn.')
+                 else raise ArgumentError, 'Dữ liệu cột không hợp lệ.'
+                 end
+          table_build
           emit('message', {text: text})
         end
         # Đổi cách tính theo TAG của các dòng đã chọn (lưu trên máy, mọi món cùng tag đổi theo); không ghi vào món nên cả món bị khóa cũng đổi được.
@@ -466,6 +481,7 @@ module VGD
           when 'tag' then entity.layer = layer
           when 'material' then entity.material = material
           when 'url', 'size', 'price' then Table::Extras.write(entity, field, value) # dữ liệu riêng của bảng, không thuộc schema VGD
+          when CustomColumns::KEY_PATTERN then CustomColumns.write(entity, field, value) # cột tự nhập do người dùng thêm
           when 'owner' then Data.write(entity, {manufacturer: value}, Data.source(entity) == 'RAW' ? 'MANUAL' : Data.source(entity))
           else Data.write(entity, {field.to_sym => value}, Data.source(entity) == 'RAW' ? 'MANUAL' : Data.source(entity))
           end

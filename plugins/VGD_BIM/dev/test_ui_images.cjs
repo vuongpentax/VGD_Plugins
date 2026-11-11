@@ -387,14 +387,17 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await receive('options',{zoom:true,isolate:false,deep:false,projected:false,label:true,isolating:false});  await page.getByRole('switch',{name:'Diện tích chiếu',exact:true}).click();
   ok(JSON.stringify(await json('table_option'))==='{"projected":true}','công tắc Diện tích chiếu: gửi tuỳ chọn');
   await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();
-  ok((await page.locator('.io-panel button').allInnerTexts()).map(x=>x.replace(/\s+/g,' ').trim()).join('|')==='Cầu nối dữ liệu Sắp có|Xuất Excel|In PDF|Ghi cách tính vào món đang chọn|Nhập preset (JSON)|Xuất preset (JSON)','menu Nhập / Xuất: Cầu nối dữ liệu (để sẵn, chưa dùng được), Xuất Excel, In PDF, Ghi cách tính vào món, nhập / xuất preset');
+  ok((await page.locator('.io-panel button').allInnerTexts()).map(x=>x.replace(/\s+/g,' ').trim()).join('|')==='Cầu nối dữ liệu Sắp có|Xuất Excel|In PDF|Ghi cách tính vào món đang chọn','menu Nhập / Xuất: Cầu nối dữ liệu (để sẵn, chưa dùng được), Xuất Excel, In PDF, Ghi cách tính vào món, nhập / xuất preset');
   const ioBox=await page.locator('.io-panel').boundingBox(),vp=page.viewportSize();
   ok(ioBox.x>=0 && ioBox.x+ioBox.width<=vp.width && ioBox.y>=0,'menu Nhập / Xuất nằm trọn trong cửa sổ (không bị cắt mép phải)');
   ok(await page.getByRole('button',{name:/Cầu nối dữ liệu/}).isDisabled(),'Cầu nối dữ liệu: để sẵn chỗ, nút chưa bấm được');
+  ok(await page.getByRole('button',{name:'Nhập preset (JSON)'}).count()===0,'menu Nhập / Xuất không còn nút nhập / xuất preset JSON');
+  await page.click('#preset-btn');
   await clear();await page.getByRole('button',{name:'Nhập preset (JSON)'}).click();
-  ok(JSON.stringify(await json('table_preset'))==='{"action":"import"}' && await page.locator('.io-panel').count()===0,'Nhập preset: gửi lệnh và đóng menu');
-  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất preset (JSON)'}).click();
-  ok(JSON.stringify(await json('table_preset'))==='{"action":"export"}','Xuất preset: gửi lệnh');
+  ok(JSON.stringify(await json('table_preset'))==='{"action":"import"}','Nhập preset (JSON) nằm trong bảng Preset: gửi lệnh');
+  await clear();await page.getByRole('button',{name:'Xuất preset (JSON)'}).click();
+  ok(JSON.stringify(await json('table_preset'))==='{"action":"export"}','Xuất preset (JSON) nằm trong bảng Preset: gửi lệnh');
+  await page.click('#preset-btn');
   await usePreset('Nội thất');await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
   const exp=await json('table_export');
@@ -405,6 +408,13 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(JSON.stringify(dataRows[0].cells)==='[1,null,"Cabinet","Cab 0","","1.200 × 600 × 800","Hafele",1]' && dataRows[0].pid===900 && dataRows[1].pid===901,'xuất Excel: ô đúng như đang hiện (cột Ảnh gửi kèm mã đối tượng, số quantity là số)');
   ok(exp.columns.every(c=>Number.isInteger(c.width)&&c.width>=20&&c.width<=2000) && exp.columns[1].width===72 && exp.labels.reset==='Đặt lại độ rộng cột' && exp.labels.hint.includes('Kéo mép'),'xuất: gửi kèm độ rộng từng cột đang chỉnh trên màn hình (cột Ảnh 72) và nhãn nút chỉnh độ rộng')
   ok(totalRow[0].cells[3]==='Tổng cộng · 3 đối tượng' && totalRow[0].cells[7]===3,'xuất Excel: dòng tổng có nhãn và tổng số lượng');
+  await page.evaluate(()=>{tableState.rowHeight=0;});
+  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
+  ok(!('row_height' in await json('table_export')),'xuất: chưa chỉnh độ cao hàng thì không gửi row_height (giữ cách xuất mặc định)');
+  await page.evaluate(()=>{tableState.rowHeight=140;});
+  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
+  ok((await json('table_export')).row_height===140,'xuất: đã chỉnh độ cao hàng (140 px) thì gửi row_height để Excel / PDF to đúng như trên màn hình');
+  await page.evaluate(()=>{tableState.rowHeight=0;});
   await usePreset('Tất cả');await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Chọn cột'}).click();
   for(const label of ['Rộng (X) mm','Đơn giá'])await page.locator('.pop-col',{hasText:new RegExp('^\\s*'+label.replace(/[()]/g,'\\$&')+'\\s*⠿?$')}).locator('input').check();

@@ -41,7 +41,7 @@ $transactions = []
 $writes = []
 $vgd_data = {}
 require File.join(ROOT, 'core/settings')
-%w[core/measure core/schema core/quantity].each { |f| require File.join(ROOT, f) }
+%w[core/measure core/schema core/quantity core/custom_columns].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
@@ -431,6 +431,24 @@ ok('Link sai bị từ chối, đối tượng không đổi', bad_edit.call({'i
 ok('Đơn giá sai bị từ chối, đối tượng không đổi', bad_edit.call({'indexes' => [0], 'field' => 'price', 'value' => '1.500.000'}).to_s.include?('Đơn giá') && eents[0].attrs['VGD_BIM_TABLE']['price'] == 1_500_000.0)
 ed.table_edit({'indexes' => [0], 'field' => 'price', 'value' => ''})
 ok('xóa Đơn giá: bỏ khỏi dictionary', !eents[0].attrs['VGD_BIM_TABLE'].key?('price'))
+
+# Cột thêm tay: thêm / đổi tên / xóa chỉ đổi danh sách trên máy; cột tự nhập sửa được, cột thuộc tính chỉ đọc
+CC = VGD::BIM::CustomColumns
+bad_column = ->(payload) { begin; ed.table_custom_column(payload); nil; rescue StandardError => e; e.message; end }
+ed.table_custom_column({'action' => 'add', 'column' => {'label' => 'Ghi chú thi công', 'kind' => 'text'}})
+ed.table_custom_column({'action' => 'add', 'column' => {'label' => 'Mã vật tư', 'kind' => 'attribute', 'dictionary' => 'vgd', 'attribute' => 'ma'}})
+text_key, attr_key = CC.keys
+ok('thêm cột thêm tay: lưu trên máy, có cột tự nhập và cột thuộc tính', CC.read.map { |c| c['kind'] } == %w[text attribute])
+ok('thêm cột sai dữ liệu bị từ chối, danh sách không đổi', bad_column.call({'action' => 'add', 'column' => {'label' => '', 'kind' => 'text'}}).to_s.include?('tên cột') && bad_column.call({'action' => 'xoa-het'}).to_s.include?('không hợp lệ') && bad_column.call('x').to_s.include?('không hợp lệ') && CC.keys.size == 2)
+ed.table_edit({'indexes' => [0, 2], 'field' => text_key, 'value' => '  Lắp sau  '})
+ok('sửa cột tự nhập: ghi vào dictionary riêng của bảng, không đụng dữ liệu VGD', eents[0].attrs['VGD_BIM_TABLE'][text_key] == 'Lắp sau' && eents[2].attrs['VGD_BIM_TABLE'][text_key] == 'Lắp sau')
+ok('đối tượng khóa không bị ghi cột tự nhập', eents[1].attrs.empty?)
+ok('cột thuộc tính tùy chọn chỉ đọc: sửa bị từ chối', bad_edit.call({'indexes' => [0], 'field' => attr_key, 'value' => 'x'}).to_s.include?('không sửa được'))
+ok('khóa cột không có trong danh sách: sửa bị từ chối', bad_edit.call({'indexes' => [0], 'field' => 'custom_99', 'value' => 'x'}).to_s.include?('không sửa được'))
+ok('giá trị cột tự nhập quá dài bị từ chối, giá trị cũ giữ nguyên', bad_edit.call({'indexes' => [0], 'field' => text_key, 'value' => 'a' * 300}).to_s.include?('tối đa') && eents[0].attrs['VGD_BIM_TABLE'][text_key] == 'Lắp sau')
+ed.table_custom_column({'action' => 'remove', 'key' => text_key})
+ok('xóa cột: bỏ khỏi danh sách, dữ liệu đã nhập trong món vẫn còn', CC.keys == [attr_key] && eents[0].attrs['VGD_BIM_TABLE'][text_key] == 'Lắp sau')
+CC.remove(attr_key)
 
 # Thay thế hàng loạt chữ trong Tên / Mô tả / Hãng / Cỡ
 rrows = eents.each_with_index.map { |e, i| {index: i, name: ['Tủ cũ', 'Tủ cũ', 'Bàn'][i], description: ['Gỗ TỦ', '', 'x'][i], owner: '', size: ['', '', ''][i]} }

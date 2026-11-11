@@ -126,6 +126,12 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await page.click('#gear');await scan('Bánh răng');await page.keyboard.press('Escape');
   await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});await scan('Hộp xác nhận chụp ảnh');
   await page.evaluate(()=>{tableState.panel='io';tableView(tableState.data);});await scan('Menu Nhập / Xuất');
+  await page.evaluate(()=>{tableState.headers={};tableState.panel=null;toggleColumns();});await page.locator('.cs-add').click();await scan('Ngăn Chọn cột (form thêm cột)');
+  await page.getByLabel((lang==='en')?'Column type':'Kiểu cột').selectOption('dynamic');await scan('Form thêm cột (thuộc tính động)');
+  await page.getByLabel((lang==='en')?'Column type':'Kiểu cột').selectOption('text');await scan('Form thêm cột (cột tự nhập)');
+  await receive('message',{text:'Đã thêm cột Notes.'});await scan('Thông báo thêm cột');
+  await receive('message',{text:'Đã sửa Notes cho 2 đối tượng.'});await scan('Thông báo sửa cột thêm tay');
+  await page.evaluate(()=>{closeColumns(false);});
   await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
   await page.evaluate(()=>{window.calls.length=0;exportTable('xlsx');});
   const exported=await page.evaluate(()=>JSON.parse(window.calls.filter(c=>c.name==='table_export').pop().args[0]));

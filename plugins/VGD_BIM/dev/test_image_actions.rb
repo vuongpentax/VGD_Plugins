@@ -42,6 +42,7 @@ module VGD; module BIM; def self.log(m); end
   module Table
     def self.build(model, scope, deep, **_options); {rows: $rows, records: $records}; end
     COLUMNS = [].freeze; STATUS_LABELS = {}.freeze; UNTAGGED_GROUP = 'Chưa phân loại'.freeze
+    def self.columns; COLUMNS; end
     def self.presets; []; end
     def self.view_state; {}; end
   end

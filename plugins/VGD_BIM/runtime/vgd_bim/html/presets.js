@@ -147,7 +147,10 @@ function presetPanel(panel){
     tail.title=preset.builtin?'Khôi phục cột, tiêu đề và thiết lập gốc của preset':'Xóa preset';tail.setAttribute('aria-label',tail.title+': '+preset.name);
     line.append(pick,tail);list.append(line);
   });
-  right.append(list,node('p','Preset lưu cột hiển thị, thứ tự, tiêu đề cột, đơn vị và cách chụp ảnh, trên máy này. Đang dùng preset tự tạo thì mọi thay đổi tự cập nhật vào preset đó.','muted'));
+  // Nhập / xuất file JSON của các preset (trước đây ở menu Nhập / Xuất).
+  const io=node('div',undefined,'pp-io');
+  io.append(button('Nhập preset (JSON)',()=>call('table_preset',JSON.stringify({action:'import'}))),button('Xuất preset (JSON)',()=>call('table_preset',JSON.stringify({action:'export'}))));
+  right.append(list,io,node('p','Preset lưu cột hiển thị, thứ tự, tiêu đề cột, đơn vị và cách chụp ảnh, trên máy này. Đang dùng preset tự tạo thì mọi thay đổi tự cập nhật vào preset đó.','muted'));
   grid.append(left,right);panel.append(grid);
 }
 function languagePanel(panel){
