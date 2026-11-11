@@ -313,6 +313,48 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   const commitCall=await page.evaluate(()=>window.calls.filter(c=>c.name==='table_commit_calc').at(-1));
   assert(commitCall&&JSON.stringify(JSON.parse(commitCall.args[0]).indexes.sort())==='[0,1]','Write calculation did not send the selected rows');
   await receive('table',{...tablePayload,rows:tableRows});
+  // Bảng nổi tự đóng khi bấm ra ngoài; Đổi tên / Mặt trước / Cập nhật ảnh giữ khi chọn dòng; nút mở bảng khác thì bảng cũ đóng
+  await page.evaluate(()=>{tableState.groupBy='';tableState.merge=false;tableState.sort=null;tableState.search='';tableState.group='';tableState.sel=new Set();tableState.panel=null;});
+  await receive('table',{...tablePayload,rows:tableRows});
+  const row0=()=>page.locator('.grid tbody tr[data-index="0"] td').last();
+  const popCount=()=>page.locator('.popover').count();
+  const panelNow=()=>page.evaluate(()=>tableState.panel);
+  await page.getByRole('button',{name:'Đổi tên',exact:true}).click();
+  assert(await panelNow()==='rename'&&await popCount()===1,'Rename panel did not open for the auto-close test');
+  await row0().dispatchEvent('mousedown'); // bảng Đổi tên phủ giữa cửa sổ nên không bấm thật được; mousedown giả lập đủ cho nghe sự kiện
+  assert(await panelNow()==='rename'&&await popCount()===1,'Choosing a row must keep the rename panel open');
+  await page.getByLabel('Tìm trong bảng').dispatchEvent('mousedown');
+  assert(await panelNow()===null&&await popCount()===0,'Clicking the search box did not close the rename panel');
+  assert(await page.getByRole('button',{name:'Đổi tên',exact:true}).getAttribute('aria-expanded')==='false','Rename button still marked expanded after auto-close');
+  await page.getByRole('button',{name:'Mặt trước',exact:true}).click();
+  await page.getByLabel('Tìm trong bảng').click();
+  assert(await panelNow()===null,'Clicking the search box did not close the Mặt trước panel');
+  await page.keyboard.type('abc');
+  assert(await page.getByLabel('Tìm trong bảng').inputValue()==='abc','Search box lost focus when the panel auto-closed');
+  await page.getByLabel('Tìm trong bảng').fill('');await page.evaluate(()=>{tableState.search='';});
+  await page.getByRole('button',{name:'Đổi tên',exact:true}).click();
+  const frontBtn=page.getByRole('button',{name:'Mặt trước',exact:true});await frontBtn.dispatchEvent('mousedown');await frontBtn.dispatchEvent('click'); // nút nằm dưới bảng Đổi tên, giả lập bấm
+  assert(await panelNow()==='front'&&await page.locator('.popover.rename').count()===0&&await page.locator('.popover.front-panel').count()===1,'Opening Mặt trước did not close the rename panel');
+  await page.locator('.popover.front-panel').click({position:{x:5,y:5}});
+  assert(await panelNow()==='front','Clicking inside a panel must not close it');
+  await page.getByRole('button',{name:/Nhóm theo/}).click();
+  assert(await panelNow()==='group'&&await page.locator('.popover.front-panel').count()===0,'Opening Nhóm theo did not close Mặt trước');
+  await row0().dispatchEvent('mousedown');
+  assert(await panelNow()===null&&await popCount()===0,'Clicking a row did not close the Nhóm theo panel');
+  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();
+  assert(await panelNow()==='io','Nhập / Xuất did not open');
+  await page.locator('.grid-wrap').dispatchEvent('mousedown');
+  assert(await panelNow()===null&&await popCount()===0,'Clicking the table did not close Nhập / Xuất');
+  await page.getByRole('button',{name:'Đổi tên',exact:true}).click();
+  await page.click('#preset-btn');
+  assert(await panelNow()===null&&await popCount()===0&&await page.locator('#preset-panel').isVisible(),'Opening Preset did not close the rename panel');
+  const renameBtn=page.getByRole('button',{name:'Đổi tên',exact:true});await renameBtn.dispatchEvent('mousedown');await renameBtn.dispatchEvent('click'); // nút nằm dưới bảng Preset, giả lập bấm
+  assert(await page.locator('#preset-panel').isHidden()&&await panelNow()==='rename','Opening rename did not close the Preset panel');
+  await page.getByRole('button',{name:'Đóng',exact:true}).click();
+  await page.evaluate(()=>toggleColumns());
+  assert(await page.evaluate(()=>tableState.panel==='columns'),'Column side did not open');
+  await row0().dispatchEvent('mousedown');
+  assert(await page.evaluate(()=>tableState.panel===null),'Clicking the table did not close the column side');
   await receive('config',{...config,mode:'information'});await receive('information',{count:0,fields:{},objects:[]});assert(await page.getByRole('button',{name:'Áp dụng thông tin',exact:true}).isDisabled(),'Empty selection can apply');
   await receive('information',{count:10,fields:{category:'electrical',item_type:'socket',description:'Ổ cắm đôi',unit:'pcs',quantity_method:'count',zone:'MASTER',include_boq:true},objects:[]});
   const output=path.resolve(__dirname,'../outputs');fs.mkdirSync(output,{recursive:true});await page.screenshot({path:path.join(output,'information_light.png'),fullPage:true});

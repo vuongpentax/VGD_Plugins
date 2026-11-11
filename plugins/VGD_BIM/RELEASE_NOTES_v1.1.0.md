@@ -26,6 +26,7 @@
 - **Chọn cột kiểu mới** (theo Auto Info, gọn hơn): ngăn trượt ra bên trái và đẩy bảng sang phải nên cột đầu không bị che; ô tick tự vẽ, kéo thả đổi chỗ cột có hiệu ứng trượt, nút gạt chân trang trượt mượt.
 - **Giao diện không còn thanh cuộn dọc** ở bảng, bảng Chọn cột, Preset và các tab (vẫn cuộn bằng con lăn chuột); chỉ giữ thanh cuộn ngang của bảng khi nhiều cột.
 - **Tiếng Anh** cho toàn bộ giao diện (báo cáo CSV và hộp thoại gốc của SketchUp vẫn tiếng Việt).
+- **Bảng nổi tự đóng** (beta.60): bấm ra ngoài (ô tìm, nút khác, bảng dữ liệu, Preset) thì các bảng Đổi tên, Mặt trước, Cập nhật ảnh, Nhóm theo, Nhập / Xuất và ngăn Chọn cột / Loại trừ tag tự đóng; mở bảng này thì bảng kia đóng. Riêng Đổi tên, Mặt trước, Cập nhật ảnh giữ nguyên khi bấm chọn dòng trong bảng.
 - **Khối lượng tính theo tag** (beta.59): năm cột mới (hạng mục, cách tính, khối lượng tính, đơn vị tính, thành tiền theo khối lượng tính) suy ra từ tag và nhóm tag; đổi cách tính theo tag bằng nhấp đúp; nút Ghi cách tính vào món (chỉ điền mục còn trống); cột Số lượng và Thành tiền cũ giữ nguyên.
 - **Nút dán ảnh từ clipboard** (beta.58): dán ảnh chụp màn hình hoặc ảnh đã copy vào ô ảnh chính / ảnh vị trí bằng một nút; Ctrl+V dán được cả vào ô ảnh vị trí.
 - **Xem trước góc chụp** (beta.57): nút 👁 trên ô ảnh và nút Xem trước trong hộp Cập nhật ảnh; lưới ảnh nháp của cả lô, bỏ tick món bị cấn vật thể rồi chụp các món còn lại.

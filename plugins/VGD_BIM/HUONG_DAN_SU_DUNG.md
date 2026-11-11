@@ -22,6 +22,8 @@ Mở bằng **Extensions → VGD → VGD_BIM**: cửa sổ mở thẳng tab **B�
 
 ## Đổi tên hàng loạt
 
+Các bảng nổi (Đổi tên, Mặt trước, Cập nhật ảnh, Nhóm theo, Nhập / Xuất) và ngăn Chọn cột / Loại trừ tag tự đóng khi bạn bấm ra ngoài hoặc mở bảng khác. Riêng Đổi tên, Mặt trước, Cập nhật ảnh vẫn giữ nguyên khi bạn bấm chọn dòng trong bảng.
+
 1. Trong tab **Bảng khối lượng**, chọn các dòng cần đặt tên (Ctrl / Shift như trên) rồi bấm **Đổi tên**. Panel ghi rõ áp dụng cho bao nhiêu dòng; chưa chọn dòng nào thì áp cho mọi dòng trong bảng.
 2. Nhập **Mẫu tên**, ví dụ `Cửa-{số}` hoặc `{phân loại}-{số}`. Bấm các nút `{tên}`, `{họ}`, `{phân loại}`, `{nhóm}`, `{số}` để chèn: tên hiện tại, tên định nghĩa, phân loại, nhóm hạng mục, số thứ tự.
 3. Cần thì **Tìm** / **Thay bằng**, **Tiền tố** / **Hậu tố**, **Kiểu chữ**. Với số thứ tự, chọn **Số bắt đầu**, **Số chữ số** (ví dụ 2 thì ra 01, 02), **Bước nhảy** và **Đánh số theo**: thứ tự trong bảng, vị trí (X rồi Y rồi Z) hoặc tên hiện tại.

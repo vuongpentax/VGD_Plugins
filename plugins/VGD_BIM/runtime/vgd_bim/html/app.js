@@ -1106,6 +1106,25 @@ function toggleSide(kind){
   const other=!!tableState.panel; // đang mở bảng khác (Đổi tên, Chụp ảnh...): đóng bảng đó khi mở ngăn này
   openSide(kind);if(other)tableView(tableState.data);
 }
+// Bấm ra ngoài thì đóng bảng đang mở (Đổi tên, Mặt trước, Cập nhật ảnh, Nhóm theo, Nhập/Xuất, ngăn Cột, ngăn Loại trừ).
+// Không vẽ lại thanh công cụ (vẽ lại sẽ làm mất con trỏ ở ô tìm kiếm vừa bấm), chỉ gỡ bảng nổi và đặt lại nút.
+function closeTablePanel(){
+  if(!tableState.panel)return;
+  if(sideKind()){closeColumns();return;}
+  tableState.panel=null;
+  document.querySelectorAll('.popover').forEach(p=>p.remove());
+  document.querySelectorAll('button[aria-expanded="true"]').forEach(b=>{if(!b.closest('header'))b.setAttribute('aria-expanded','false');});
+}
+const PANELS_KEEP_ON_ROW_CLICK=['rename','front','capture']; // ba bảng này dùng các dòng đang chọn: bấm chọn dòng không đóng
+document.addEventListener('mousedown',e=>{
+  if(!tableState.panel||!(e.target instanceof Element))return;
+  const t=e.target;
+  if(t.closest('.popover,.header-panel,.photo-pop,.preview-board,.cell-menu,dialog,.col-side'))return; // bên trong bảng nổi hoặc ngăn
+  const toggle=t.closest('button[aria-expanded]');
+  if(toggle&&!toggle.closest('header'))return; // nút mở bảng tự bật / tắt đúng bảng của nó
+  if(PANELS_KEEP_ON_ROW_CLICK.includes(tableState.panel)&&t.closest('.grid'))return;
+  closeTablePanel();
+},true);
 const toggleColumns=()=>toggleSide('columns');
 const toggleExclude=()=>toggleSide('exclude');
 // Nút gạt (công tắc) giống tab Quản lý của VGD Center: bấm vào nút hoặc chữ đều gạt.
