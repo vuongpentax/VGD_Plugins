@@ -1,5 +1,6 @@
 # VGD_BIM 1.1.0
 
+- **Thay thế VGD BIM Lite:** VGD_BIM là bản kế tiếp của VGD BIM Lite 1.0.0 (extension tên khác, hai plugin cài song song được). Sau khi dùng thử VGD_BIM, nên tắt hoặc gỡ BIM Lite trong tab Quản lý của VGD Center để khỏi trùng menu và toolbar. Cần VGD Center 1.2.4 trở lên để Kho nhận VGD_BIM.
 - **Bảng khối lượng** (mở đầu tiên): bảng tự đọc đối tượng đang chọn, 28 cột, chọn cột, kéo đổi thứ tự, co giãn cột, dòng tổng cộng, preset cột (Tất cả / Phần thô / Hoàn thiện / Đồ rời và preset tự tạo), sửa trực tiếp Tên, Mô tả, Tình trạng. Tuỳ chọn thu phóng, cô lập, chọn sâu và tổng cấp cao nhất.
 - **Sửa bằng nhấp đúp:** Tên, Mô tả gõ ngay trong ô; Tình trạng, Tag, Vật liệu chọn từ bảng có ô tìm kiếm (Tag có thể tạo mới). Áp dụng cho cả vùng chọn nhiều dòng, một bước hoàn tác, bỏ qua đối tượng khóa.
 - **Nhóm theo** (Cha, Loại, Tên họ, Tên, Vật liệu, Tag, Nhóm hạng mục, Tình trạng) với dòng tiêu đề từng nhóm, thu gọn / chọn cả nhóm, và **Gộp dòng giống nhau**.
