@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+
+<head>
+  <meta charset="utf-8" />
+
+  <!-- Custom styles -->
+  <link href="../css/modus.min.css" rel="stylesheet" id="theme-stylesheet" />
+  <link href="../css/modus-layout.min.css" rel="stylesheet" />
+  <link href="../css/styles.css" rel="stylesheet" />
+
+  <!-- Modus icons -->
+  <link href="../fonts/modus-icons.css" rel="stylesheet" />
+
+  <!-- Modus Bootstrap -->
+  <script src="../js/lib/jquery-3.6.0.min.js"></script>
+  <script src="../js/lib/bootstrap.bundle.min.js"></script>
+
+  <!-- Vue -->
+  <script src="../js/lib/vue.js"></script>
+
+  <!-- For Sortable -->
+  <script src="../js/lib/sortable.min.js"></script>
+
+  <!-- Translate -->
+  <script src="../js/lib/axios.min.js"></script>
+
+  <!-- For reading Excel -->
+  <script src="../js/lib/xlsx.full.min.js"></script>
+
+  <!-- Common functions -->
+  <script src="../js/common.js"></script>
+
+  <!-- Components -->
+  <script src="../js/components/settings/file-manager.js"></script>
+  <script src="../js/components/settings/header-list.js"></script>
+  <script src="../js/components/settings/folders-setting.js"></script>
+  <script src="../js/components/settings/names-setting.js"></script>
+  <script src="../js/components/settings/settings-footer.js"></script>
+
+  <script src="../js/components/modals/modal-header.js"></script>
+  <script src="../js/components/modals/modal-footer.js"></script>
+  <script src="../js/components/modals/action-modal.js"></script>
+  <script src="../js/components/modals/message-modal.js"></script>
+  <script src="../js/components/modals/select-sheet-modal.js"></script>
+</head>
+
+<body>
+  <div class="modus-layout" id="app">
+    <nav class="modus-header">
+      <ul class="nav nav-tabs custom-nav-tabs justify-content-center mx-3" role="tablist">
+        <li class="nav-item w-50">
+          <a class="nav-link custom-nav-link cursor-default active text-capitalize" id="firstTabSetting"
+            data-toggle="tab" href="#foldersSettingContainer" role="tab" aria-controls="settingFirst"
+            aria-selected="true" @click="toggleSettings('folders')">
+            <div class="d-flex justify-content-center align-items-center">
+              <span>{{ translated('tag') }}</span>
+              <i class="modus-icons" :class="{'text-primary': currentSetting === 'folders'}">caret_right</i>
+              <span>{{ translated('folder') }}</span>
+            </div>
+          </a>
+        </li>
+        <li class="nav-item w-50">
+          <a class="nav-link custom-nav-link cursor-default text-capitalize" id="secondTabSetting" data-toggle="tab"
+            href="#namesSettingContainer" role="tab" aria-controls="settingSecond" aria-selected="false"
+            @click="toggleSettings('names')">
+            <div class="d-flex justify-content-center align-items-center">
+              <span>{{ translated('name') }}</span>
+              <i class="modus-icons" :class="{'text-primary': currentSetting === 'names'}">caret_right</i>
+              <span>{{ translated('tag') }}</span>
+            </div>
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="modus-content bg-white py-3" id="settingContent">
+      <div class="message message-primary mx-3">
+        {{ tabDescription }}
+      </div>
+
+      <!-- FILE MANAGER -->
+      <file-manager></file-manager>
+
+      <!-- HEADER LIST -->
+      <header-list></header-list>
+
+      <div class="tab-content" id="tabContent">
+        <!-- FOLDERS MAPPINGs -->
+        <folders-setting></folders-setting>
+
+        <!-- NAMES MAPPINGS -->
+        <names-setting></names-setting>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <settings-footer></settings-footer>
+
+    <!-- Select Excel sheet Modal -->
+    <select-sheet-modal></select-sheet-modal>
+
+    <!-- Action Modal -->
+    <action-modal
+      :modal-title="modalTitle"
+      :edit-title="editTitle"
+      :edit-action="editAction"
+      :modal-message="modalMessage"
+      :modal-action0="modalAction0"
+      :modal-action1="modalAction1"
+      :modal-action2="modalAction2"
+    ></action-modal>
+
+    <!-- Message Modal -->
+    <message-modal></message-modal>
+  </div>
+
+  <script src="../js/settings.js"></script>
+</body>
+
+</html>

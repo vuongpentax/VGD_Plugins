@@ -61,7 +61,7 @@ const data=[
 ['VGD CENTER',[['center','Mở VGD Center']]]
 ];
 const svg=(id)=>`<svg viewBox="0 0 24 24" aria-hidden="true">${paths[id]}</svg>`;
-const mainVisuals=[["VGD Dim","dim"],["VGD Cabinet","cabinet"],["VGD Image Importer","import"],["VGD Scenes","camera"],["VGD BIM Lite","bim"],["VGD Library","library"],["VGD Cabinet Draw · chờ duyệt","cabinetdraw"],["VGD Center · Logo cũ","center"]];
+const mainVisuals=[["VGD Dim","dim"],["VGD Cabinet","cabinet"],["VGD Image Importer","import"],["VGD Scenes","camera"],["VGD_BIM","bim"],["VGD Library","library"],["VGD Cabinet Draw · chờ duyệt","cabinetdraw"],["VGD Center · Logo cũ","center"]];
 const mainGallery=document.createElement("section");mainGallery.className="section";mainGallery.innerHTML=`<h2>Biểu tượng plugin chính · hình đã chốt</h2><p class="sub">Sáu biểu tượng plugin đã chốt và logo VGD Center cũ; các công cụ phía dưới kế thừa hình tượng riêng của từng plugin.</p><div class="grid">${mainVisuals.map(([name,id])=>`<article class="item"><div class="glyph">${svg(id)}</div><div><div class="name">${name}</div><div class="group">Biểu tượng chính</div></div></article>`).join("")}</div>`;
 document.getElementById("catalog").prepend(mainGallery);
 const toolbar=document.querySelector('#toolbar');data.forEach(([g,items])=>items.forEach(([id])=>{toolbar.insertAdjacentHTML('beforeend',`<div class="tool" title="${id}">${svg(id)}</div>`)}));

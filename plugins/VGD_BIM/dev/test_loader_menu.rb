@@ -35,15 +35,15 @@ module UI
 end
 $LOAD_PATH.unshift File.expand_path('stubs', __dir__)
 Dir.chdir(__dir__)
-ext_loader = File.expand_path('../runtime/vgd_bim_lite.rb', __dir__)
+ext_loader = File.expand_path('../runtime/vgd_bim.rb', __dir__)
 require ext_loader
 ext = Sketchup.respond_to?(:register_extension) ? nil : nil
-loader = File.expand_path('../runtime/vgd_bim_lite/loader.rb', __dir__)
+loader = File.expand_path('../runtime/vgd_bim/loader.rb', __dir__)
 $opened = []
 require loader rescue (puts "load error: #{$!.class}: #{$!.message}"; raise)
 vgd = UI::MENU_ROOT['Extensions'].subs['VGD']
 ok('menu VGD: VGD_BIM và Tải lại code, không còn Giới thiệu', vgd && vgd.items.map(&:first) == ['VGD_BIM', 'VGD_BIM · Tải lại code'])
-ok('không còn submenu "BIM Lite"', vgd && !vgd.subs.key?('BIM Lite') && vgd.subs.empty?)
+ok('menu VGD không có submenu', vgd && vgd.subs.empty?)
 VGD::BIM.define_singleton_method(:open_panel) { |mode| $opened << mode }
 vgd.items.find { |n, _| n == 'VGD_BIM' }[1].call
 ok('bấm VGD_BIM mở thẳng bảng khối lượng', $opened == ['table'])

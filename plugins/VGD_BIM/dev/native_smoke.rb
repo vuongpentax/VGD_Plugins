@@ -19,8 +19,8 @@ module VGDBIMNativeTest
   def self.run
     model = Sketchup.active_model
     check(model.path.empty? && model.entities.count.zero?, 'Refuse user/non-empty model')
-    require File.join(ROOT, 'runtime', 'vgd_bim_lite.rb')
-    require File.join(ROOT, 'runtime', 'vgd_bim_lite', 'loader.rb')
+    require File.join(ROOT, 'runtime', 'vgd_bim.rb')
+    require File.join(ROOT, 'runtime', 'vgd_bim', 'loader.rb')
     data = VGD::BIM::Data
     results = {success: false, version: Sketchup.version, ruby: RUBY_VERSION, tests: []}
     model.start_operation('VGD BIM Test Fixture', true)

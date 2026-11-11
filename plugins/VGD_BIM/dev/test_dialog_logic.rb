@@ -1,4 +1,6 @@
-ROOT = ARGV[0] || File.expand_path('../runtime/vgd_bim_lite', __dir__)
+require 'tmpdir'
+ENV['VGD_BIM_DATA_DIR'] ||= Dir.mktmpdir('vgd_bim_dialog') # không ghi vào thư mục dữ liệu thật khi chạy riêng
+ROOT = ARGV[0] || File.expand_path('../runtime/vgd_bim', __dir__)
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 module Sketchup
@@ -12,15 +14,18 @@ module VGD; module BIM; def self.log(m); end
   module Data
     def self.supported?(e); e.is_a?(Sketchup::Group); end
     def self.write(entity, values, source); $writes << [entity, values, source]; end
-    def self.source(_entity); 'VGD'; end
+    def self.source(entity); $vgd_data.key?(entity) ? 'VGD' : 'RAW'; end
+    def self.read(entity); $vgd_data.fetch(entity, {}); end
+    def self.has_data?(entity); $vgd_data.key?(entity); end
     # Như Data.transaction thật: một bước hoàn tác cho cả khối
     def self.transaction(model, name = nil); $transactions << name; yield; end
   end
-  module Scanner; end; module Geometry; INCH_MM = 25.4; end
+  module Scanner; end
   module Tags
     GROUPS = ['Phần thô'].freeze
     def self.load; [{'name' => 'Trong bộ'}, {'name' => '000 CUA'}]; end
     def self.key(n); n.to_s.downcase; end
+    def self.migrate_group(group); group.to_s; end
     # Như Tags.normalize_name / layer_for thật (đã có test riêng trong test_tags.rb)
     def self.normalize_name(n)
       t = n.to_s.strip
@@ -34,6 +39,12 @@ module VGD; module BIM; def self.log(m); end
 end; end
 $transactions = []
 $writes = []
+$vgd_data = {}
+require File.join(ROOT, 'core/settings')
+%w[core/measure core/schema core/quantity].each { |f| require File.join(ROOT, f) }
+require File.join(ROOT, 'core/preset')
+require File.join(ROOT, 'core/geometry')
+require File.join(ROOT, 'core/view_fit')
 require File.join(ROOT, 'core/table')
 require File.join(ROOT, 'core/rename')
 require File.join(ROOT, 'ui/dialog')
@@ -51,6 +62,13 @@ ok('ô Tên: chỉ hiện tên', lbl.('instance') == 'Tủ bếp A')
 ok('ô Mô tả: chỉ hiện mô tả', lbl.('description') == 'Gỗ sồi')
 ok('ô Rộng: có đơn vị mm', lbl.('lenX') == '1200 mm')
 ok('ô (X)x(Z): ghép hai cạnh', lbl.('lenXZ') == '1200 x 800 mm')
+VGD::BIM::Table.save_view_state('settings' => {'length_unit' => 'cm', 'length_digits' => 1})
+ok('đơn vị cm trong preset: nhãn khung đổi theo (120 x 80 cm)', lbl.('lenXZ') == '120 x 80 cm' && lbl.('lenX') == '120 cm' && lbl.('lenXYZ') == '120 x 60 x 80 cm')
+VGD::BIM::Table.save_view_state('settings' => {'length_unit' => 'm', 'length_digits' => 2})
+ok('đơn vị m, 2 số lẻ: 1.2 x 0.8 m', lbl.('lenXZ') == '1.2 x 0.8 m')
+VGD::BIM::Table.save_view_state('settings' => {'length_unit' => 'ft', 'length_digits' => 2})
+ok('đơn vị ft: 3.94 x 2.62 ft', lbl.('lenXZ') == '3.94 x 2.62 ft')
+VGD::BIM::Table.save_view_state('preset' => 'x')
 ok('ô thể tích: m³', lbl.('volume') == '0.576 m³')
 ok('ô tình trạng: nhãn tiếng Việt', lbl.('status') == 'Mới')
 ok('không chọn ô: hiện cả dòng', lbl.(nil) == 'Tủ bếp A · Gỗ sồi · Mới · Tủ')
@@ -168,15 +186,59 @@ class PickSel
   def add(*entities); @items.concat(entities.flatten); end
   def to_a; @items.dup; end
 end
-class PickView; attr_reader :zoomed; def zoom(target); @zoomed = target; end; end
+# Camera giả: chỉ có phần API được dùng (direction / up / perspective? / fov / fov_is_height? / set / height=)
+class PickCamera
+  attr_reader :set_args, :height
+  def direction; Geom::Vector3d.new(0, 1, 0); end
+  def up; Geom::Vector3d.new(0, 0, 1); end
+  def perspective?; true; end
+  def fov; 35.0; end
+  def fov_is_height?; false; end
+  def set(eye, target, up); @set_args = [eye.to_a, target.to_a, up.to_a]; end
+  def height=(value); @height = value; end
+end
+class PickView
+  attr_reader :camera, :assigned
+  def initialize; @camera = PickCamera.new; end
+  def vpwidth; 1000; end
+  def vpheight; 500; end
+  def camera=(value); @assigned = value; end
+  def invalidate; end
+  def zoom(*); raise 'View#zoom không được dùng để thu phóng tới món trong bảng'; end
+end
 class PickModel
   attr_reader :selection, :active_view
   attr_accessor :active_path
   def initialize; @selection = PickSel.new; @active_view = PickView.new; @active_path = []; end
 end
+# Hộp bao thế giới để thu phóng (mô phỏng phần API dùng: BoundingBox#add / empty?, Point3d#transform, định nghĩa có bounds.corner(i))
+module Geom
+  class BoundingBox
+    attr_reader :points
+    def initialize; @points = []; end
+    def add(point); @points << point; end
+    def empty?; @points.empty?; end
+    def min; WPoint.new(*%i[x y z].map { |axis| @points.map(&axis).min }); end
+    def max; WPoint.new(*%i[x y z].map { |axis| @points.map(&axis).max }); end
+  end
+  class Point3d; attr_reader :to_a; def initialize(*xyz); @to_a = xyz.map(&:to_f); end; end
+  class Vector3d < Point3d; end
+  # Biến đổi chỉ gồm tịnh tiến (đủ để kiểm tra việc nhân biến đổi của các group cha)
+  class Transformation
+    attr_reader :shift
+    def initialize(shift = [0.0, 0.0, 0.0]); @shift = shift.map(&:to_f); end
+    def *(other); Transformation.new(@shift.zip(other.shift).map { |a, b| a + b }); end
+    def to_a; [1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0, 0, *@shift, 1.0]; end
+  end
+end
+WPoint = Struct.new(:x, :y, :z) { def transform(shift); WPoint.new(x + shift[0], y + shift[1], z + shift[2]); end; def to_a; [x, y, z]; end }
+class WLocalBounds; def empty?; false; end; def corner(i); WPoint.new(i & 1, (i >> 1) & 1, (i >> 2) & 1); end; end
+WDefinition = Struct.new(:bounds)
+WEntities = Struct.new(:parent)
 # Đối tượng chọn phải là Sketchup::Group để Data.supported? nhận
 class PickEnt < Sketchup::Group
   attr_accessor :name
+  def entities; WEntities.new(WDefinition.new(WLocalBounds.new)); end
   def initialize(name); @name = name; end
   def valid?; true; end
   def locked?; false; end
@@ -188,10 +250,10 @@ parent = RenameEnt.new('Cha')
 other_parent = RenameEnt.new('Cha khác')
 pents = [PickEnt.new('P0'), PickEnt.new('P1'), PickEnt.new('P2'), PickEnt.new('P3')]
 precs = [
-  {entity: pents[0], path: [parent, pents[0]], locked: false, box: RBox.new(RPoint.new(0.0, 0.0, 0.0))},
-  {entity: pents[1], path: [parent, pents[1]], locked: false, box: RBox.new(RPoint.new(1.0, 0.0, 0.0))},
-  {entity: pents[2], path: [parent, pents[2]], locked: false, box: RBox.new(RPoint.new(2.0, 0.0, 0.0))},
-  {entity: pents[3], path: [other_parent, pents[3]], locked: false, box: RBox.new(RPoint.new(3.0, 0.0, 0.0))}
+  {entity: pents[0], path: [parent, pents[0]], locked: false, transform: [500.0 + 0, 20.0, 0.0], box: RBox.new(RPoint.new(0.0, 0.0, 0.0))},
+  {entity: pents[1], path: [parent, pents[1]], locked: false, transform: [500.0 + 1, 20.0, 0.0], box: RBox.new(RPoint.new(1.0, 0.0, 0.0))},
+  {entity: pents[2], path: [parent, pents[2]], locked: false, transform: [500.0 + 2, 20.0, 0.0], box: RBox.new(RPoint.new(2.0, 0.0, 0.0))},
+  {entity: pents[3], path: [other_parent, pents[3]], locked: false, transform: [500.0 + 3, 20.0, 0.0], box: RBox.new(RPoint.new(3.0, 0.0, 0.0))}
 ]
 prows = pents.each_with_index.map { |e, i| {index: i, name: e.name, definition: 'Họ', tag: '', tag_group: ''} }
 pd = D.allocate
@@ -209,7 +271,46 @@ pd.table_select({'indexes' => [0, 2], 'field' => 'instance'})
 ok('chọn nhiều dòng cùng cấp: SketchUp chọn đúng các đối tượng đó', pm.selection.to_a == [pents[0], pents[2]] && pm.active_path == [parent])
 ok('chọn nhiều dòng: nhớ các dòng đã chọn trong bảng', pd.instance_variable_get(:@picked_entities) == [pents[0], pents[2]])
 ok('chọn nhiều dòng: bỏ qua ô đã bấm (không có khung tên theo ô)', pd.instance_variable_get(:@outline_field).nil?)
-ok('chọn nhiều dòng: thu phóng tới các đối tượng đã chọn', pm.active_view.zoomed == [pents[0], pents[2]])
+cam = pm.active_view.camera
+eye, target, up = cam.set_args
+ok('chọn nhiều dòng: camera nhìn vào tâm hộp bao thế giới của các đối tượng đã chọn (501,5; 20,5; 0,5), không phải tọa độ cục bộ gần gốc',
+   target == [501.5, 20.5, 0.5] && up == [0.0, 0.0, 1.0] && pm.active_view.assigned.equal?(cam))
+ok('chọn nhiều dòng: mắt lùi sau tâm theo hướng nhìn cũ (cùng x, z với tâm, y nhỏ hơn)', eye[0] == 501.5 && eye[2] == 0.5 && eye[1] < 20.5)
+# Ngữ cảnh lúc quét được nhớ: bấm dòng con làm active_path đổi, nhưng dựng lại bảng vẫn dùng ngữ cảnh lúc quét
+parent.define_singleton_method(:transformation) { Geom::Transformation.new([5, 0, 0]) }
+other_parent.define_singleton_method(:transformation) { Geom::Transformation.new([7, 0, 0]) }
+pm.define_singleton_method(:edit_transform) { Geom::Transformation.new([5, 0, 0]) }
+pm.active_path = [parent]
+pcalls.clear
+D.instance_method(:table_scan_selection!).bind(pd).call # bản thật (pd đã thay bằng bản giả ở trên)
+pm.active_path = [other_parent, parent]
+ctx_saved = pd.scan_context
+ok('quét ghi nhớ ngữ cảnh (group đang mở và biến đổi) tại thời điểm quét', ctx_saved && ctx_saved[:path] == [parent] && ctx_saved[:transform].to_a == Geom::Transformation.new([5, 0, 0]).to_a && pcalls.none? { |c| c[0] == 'message' })
+# Model#edit_transform báo sai (ví dụ đơn vị trong khi group cha đã dời 5): dùng tích biến đổi của các group trong active_path và báo một lần
+pm.define_singleton_method(:edit_transform) { Geom::Transformation.new }
+pm.active_path = [other_parent, parent]
+D.instance_method(:table_scan_selection!).bind(pd).call
+mismatch_ctx = pd.instance_variable_get(:@table_context)
+ok('edit_transform khác tích biến đổi của group đang mở: dùng tích (7 + 5 = 12), không dùng edit_transform', mismatch_ctx[:transform].to_a[12, 3] == [12.0, 0.0, 0.0] && mismatch_ctx[:path] == [other_parent, parent])
+ok('edit_transform khác tích: có báo cho người dùng một lần', pcalls.count { |c| c[0] == 'message' && c[1][:text].to_s.include?('Lưu ý') } == 1)
+D.instance_method(:table_scan_selection!).bind(pd).call
+ok('quét lại cùng ngữ cảnh: không báo lặp', pcalls.count { |c| c[0] == 'message' && c[1][:text].to_s.include?('Lưu ý') } == 1)
+pm.define_singleton_method(:edit_transform) { Geom::Transformation.new }
+pm.active_path = []
+D.instance_method(:table_scan_selection!).bind(pd).call
+ok('không mở group nào: giữ edit_transform của SketchUp (đơn vị)', pd.instance_variable_get(:@table_context)[:transform].to_a == Geom::Transformation.new.to_a)
+pm.define_singleton_method(:edit_transform) { Geom::Transformation.new([5, 0, 0]) }
+pm.active_path = [parent]
+D.instance_method(:table_scan_selection!).bind(pd).call # lại ngữ cảnh [parent] như trước đoạn kiểm tra trên
+pm.active_path = [other_parent, parent]
+ok('đổi ngữ cảnh đang mở sau đó (mở sâu vào dòng con): dựng bảng vẫn dùng ngữ cảnh đã nhớ', pd.scan_context[:path] == [parent])
+parent.instance_variable_set(:@valid, false)
+ok('group của ngữ cảnh đã nhớ không còn tồn tại: không dùng (để Table.build lấy ngữ cảnh đang mở)', pd.scan_context.nil?)
+parent.instance_variable_set(:@valid, true)
+pm.active_path = [parent]
+pd.instance_variable_set(:@table_picks, [pents[0], pents[2]]) # quét thật đã xóa lựa chọn nhớ; trả lại như trước đoạn này
+pd.instance_variable_set(:@picked_entities, [pents[0], pents[2]])
+
 pcalls.clear
 pd.table_selection_changed
 ok('SketchUp báo đã chọn đúng các đối tượng bảng vừa chọn: không quét lại, không đổi bảng, không đổi đánh dấu dòng',
@@ -262,6 +363,9 @@ class EditEnt < Sketchup::Group
   def initialize(name, locked = false); @name = name; @locked = locked; end
   def valid?; true; end
   def locked?; @locked; end
+  def attrs; @attrs ||= {}; end
+  def set_attribute(dict, key, value); (attrs[dict] ||= {})[key] = value; end
+  def delete_attribute(dict, key); (attrs[dict] || {}).delete(key); end
 end
 class EditModel
   attr_reader :layers, :materials
@@ -313,6 +417,177 @@ ok('ô không sửa được: báo lỗi tiếng Việt', bad_edit.call({'indexe
 ok('tên tag không hợp lệ: báo lỗi', bad_edit.call({'indexes' => [0], 'field' => 'tag', 'value' => 'untagged'}).to_s.include?('Untagged'))
 ok('chỉ có đối tượng khóa: báo lỗi, không mở bước hoàn tác', (($transactions.clear) && bad_edit.call({'indexes' => [1], 'field' => 'name', 'value' => 'Z'}).to_s.include?('khóa')) && $transactions.empty?)
 ok('không gửi dòng nào: báo lỗi', bad_edit.call({'indexes' => [], 'field' => 'name', 'value' => 'Z'}).to_s.match?(/[À-ỹ]/))
+# Cột mới sửa được: Hãng ghi vào dữ liệu VGD, Link / Cỡ / Đơn giá ghi vào dictionary riêng của bảng
+$writes.clear
+ed.table_edit({'indexes' => [0, 2], 'field' => 'owner', 'value' => 'Hafele'})
+ok('sửa Hãng: ghi vào trường manufacturer của dữ liệu VGD', $writes.map { |w| w[1] } == [{manufacturer: 'Hafele'}, {manufacturer: 'Hafele'}])
+$writes.clear
+ed.table_edit({'indexes' => [0, 2], 'field' => 'url', 'value' => 'https://vgd.vn/tu'})
+ed.table_edit({'indexes' => [0], 'field' => 'size', 'value' => '1200x600'})
+ed.table_edit({'indexes' => [0, 2], 'field' => 'price', 'value' => '1500000'})
+ok('sửa Link / Cỡ / Đơn giá: ghi vào dictionary riêng, không đụng dữ liệu VGD', $writes.empty? && eents[0].attrs['VGD_BIM_TABLE'] == {'url' => 'https://vgd.vn/tu', 'size' => '1200x600', 'price' => 1_500_000.0} && eents[2].attrs['VGD_BIM_TABLE'] == {'url' => 'https://vgd.vn/tu', 'price' => 1_500_000.0})
+ok('đối tượng khóa không bị ghi Link / Đơn giá', eents[1].attrs.empty?)
+ok('Link sai bị từ chối, đối tượng không đổi', bad_edit.call({'indexes' => [0], 'field' => 'url', 'value' => 'javascript:alert(1)'}).to_s.include?('Link') && eents[0].attrs['VGD_BIM_TABLE']['url'] == 'https://vgd.vn/tu')
+ok('Đơn giá sai bị từ chối, đối tượng không đổi', bad_edit.call({'indexes' => [0], 'field' => 'price', 'value' => '1.500.000'}).to_s.include?('Đơn giá') && eents[0].attrs['VGD_BIM_TABLE']['price'] == 1_500_000.0)
+ed.table_edit({'indexes' => [0], 'field' => 'price', 'value' => ''})
+ok('xóa Đơn giá: bỏ khỏi dictionary', !eents[0].attrs['VGD_BIM_TABLE'].key?('price'))
+
+# Thay thế hàng loạt chữ trong Tên / Mô tả / Hãng / Cỡ
+rrows = eents.each_with_index.map { |e, i| {index: i, name: ['Tủ cũ', 'Tủ cũ', 'Bàn'][i], description: ['Gỗ TỦ', '', 'x'][i], owner: '', size: ['', '', ''][i]} }
+ed.instance_variable_set(:@table_rows, rrows)
+$writes.clear
+$transactions.clear
+eents.each { |e| e.name = rrows[eents.index(e)][:name] }
+ed.table_replace({'find' => 'tủ', 'replace' => 'Cửa', 'fields' => %w[name description]})
+ok('thay thế: không phân biệt hoa thường, đổi tên và mô tả, bỏ qua đối tượng khóa', eents.map(&:name) == ['Cửa cũ', 'Tủ cũ', 'Bàn'] && $writes.map { |w| w[1] } == [{description: 'Gỗ Cửa'}])
+ok('thay thế: cả đợt là một bước hoàn tác', $transactions == ['VGD_BIM · Thay thế'])
+ok('thay thế: báo số ô đã đổi', ecalls.any? { |c| c[0] == 'message' && c[1][:text].include?('Đã thay') && c[1][:text].include?('2') })
+$writes.clear
+eents[0].name = 'Tủ'; eents[2].name = 'Tủ'; rrows[0][:name] = 'Tủ'; rrows[2][:name] = 'Tủ'
+ed.table_replace({'find' => 'Tủ', 'replace' => 'a\\0b$1', 'fields' => %w[name], 'indexes' => [2]})
+ok('thay thế: chuỗi thay được hiểu nguyên văn (không phải mẫu biểu thức), chỉ áp cho dòng gửi lên', eents[2].name == 'a\\0b$1' && eents[0].name == 'Tủ')
+rrows[2][:name] = 'Bàn'
+bad_replace = ->(payload) { begin; ed.table_replace(payload); nil; rescue StandardError => e; e.message; end }
+ok('thay thế: chữ cần tìm rỗng bị từ chối', bad_replace.call({'find' => '', 'replace' => 'x', 'fields' => %w[name]}).to_s.include?('chữ cần tìm'))
+ok('thay thế: chữ cần tìm quá dài bị từ chối', bad_replace.call({'find' => 'a' * 201, 'replace' => 'x', 'fields' => %w[name]}).to_s.include?('quá dài'))
+ok('thay thế: cột không cho phép bị từ chối (chỉ Tên, Mô tả, Xuất xứ, Quy cách)', bad_replace.call({'find' => 'a', 'replace' => 'x', 'fields' => %w[tag]}).to_s.include?('cột'))
+ok('thay thế: không có ô nào khớp thì báo, không mở bước hoàn tác', (($transactions.clear) && bad_replace.call({'find' => 'zzzz', 'replace' => 'x', 'fields' => %w[name]}).to_s.include?('Không có ô nào')) && $transactions.empty?)
+
+# Mở link: chỉ http / https
+opened = []
+Object.const_set(:UI, Module.new) unless defined?(::UI)
+::UI.define_singleton_method(:openURL) { |url| opened << url }
+ok('mở link hợp lệ bằng trình duyệt', (ed.open_url('https://vgd.vn/tu'); opened == ['https://vgd.vn/tu']))
+ok('không mở link lạ (javascript:, file:, rỗng)', ['javascript:alert(1)', 'file:///C:/x', '', 'vgd.vn'].all? { |u| bad = (ed.open_url(u) rescue :error); true } && opened == ['https://vgd.vn/tu'])
+
+# Công tắc Diện tích chiếu: bật thì đọc lại bảng
+ed.instance_variable_set(:@table_options, {zoom: true, isolate: false, deep: false, projected: false})
+ed.instance_variable_set(:@isolated, [])
+ecalls.clear
+ed.table_option({'projected' => true})
+ok('bật Diện tích chiếu: lưu tuỳ chọn và đọc lại bảng', ed.instance_variable_get(:@table_options)[:projected] == true && ecalls.any? { |c| c[0] == :build })
+# Preset: lưu kèm tiêu đề và thiết lập, nhập / xuất file JSON qua hộp chọn file
+Object.const_set(:UI, Module.new) unless defined?(::UI)
+$picked = nil
+::UI.define_singleton_method(:openpanel) { |*_args| $picked }
+::UI.define_singleton_method(:savepanel) { |*_args| $picked }
+ecalls.clear
+ed.table_preset({'action' => 'save', 'name' => 'Của tôi', 'group' => '', 'columns' => %w[ordinal instance price], 'headers' => {'price' => 'Giá'}, 'settings' => {'length_unit' => 'cm'}, 'silent' => true})
+mine = VGD::BIM::Table.custom_presets.find { |p| p['name'] == 'Của tôi' }
+ok('lưu preset: kèm tiêu đề và thiết lập, gửi lại danh sách preset', mine && mine['headers'] == {'price' => 'Giá'} && mine['settings']['length_unit'] == 'cm' && ecalls.any? { |c| c[0] == 'presets' && c[1].any? { |p| p['name'] == 'Của tôi' && p['builtin'] == false } })
+ok('lưu preset thiết lập sai: báo lỗi, không lưu', bad_edit.call(nil) || (begin; ed.table_preset({'action' => 'save', 'name' => 'Hỏng', 'group' => '', 'columns' => %w[instance], 'settings' => {'length_unit' => 'km'}}); false; rescue ArgumentError; true; end) && VGD::BIM::Table.custom_presets.none? { |p| p['name'] == 'Hỏng' })
+export_path = File.join(Dir.mktmpdir('vgd_bim_export'), 'presets.json')
+$picked = export_path
+ed.table_preset({'action' => 'export'})
+exported = JSON.parse(File.read(export_path, encoding: 'UTF-8'))
+ok('xuất preset: ghi file JSON định dạng riêng có preset tự tạo', exported['format'] == 'VGD_BIM_PRESETS' && exported['presets'].any? { |p| p['name'] == 'Của tôi' })
+$picked = nil
+ecalls.clear
+ed.table_preset({'action' => 'export'})
+ok('hủy hộp lưu file: không ghi, không báo lỗi', ecalls.none? { |c| c[0] == 'message' })
+VGD::BIM::Table.delete_preset('Của tôi')
+$picked = export_path
+ed.table_preset({'action' => 'import'})
+ok('nhập preset từ file vừa xuất: có lại preset và gửi danh sách mới', VGD::BIM::Table.custom_presets.any? { |p| p['name'] == 'Của tôi' } && ecalls.any? { |c| c[0] == 'message' && c[1][:text].include?('Đã nhập 1') })
+ref_path = File.join(File.dirname(export_path), 'ref.json')
+File.write(ref_path, JSON.generate('Phong' => {'columns' => {'instance' => true, 'lenX' => true}, 'settings' => {'formatLength' => 1, 'roundLength' => 2}}))
+$picked = ref_path
+ed.table_preset({'action' => 'import'})
+ok('nhập preset định dạng của plugin tham khảo', VGD::BIM::Table.custom_presets.find { |p| p['name'] == 'Phong' }&.dig('settings', 'length_unit') == 'm')
+File.write(ref_path, 'không phải json {')
+bad_import = begin; ed.table_preset({'action' => 'import'}); nil; rescue StandardError => e; e.message; end
+ok('nhập file không phải JSON: báo lỗi tiếng Việt, không đổi preset', bad_import.to_s.include?('JSON') && VGD::BIM::Table.custom_presets.size == 2)
+File.write(ref_path, 'x' * (VGD::BIM::UI::Dialog::MAX_PRESET_FILE + 1))
+big_import = begin; ed.table_preset({'action' => 'import'}); nil; rescue StandardError => e; e.message; end
+ok('nhập file quá lớn: từ chối trước khi đọc', big_import.to_s.include?('quá lớn'))
+VGD::BIM::Table.delete_preset('Phong'); VGD::BIM::Table.delete_preset('Của tôi')
+ok('xuất khi chưa có preset tự tạo: báo lỗi rõ', (begin; ed.table_preset({'action' => 'export'}); false; rescue ArgumentError => e; e.message.include?('Chưa có preset'); end))
 $model = ORIGINAL_MODEL
+
+# Thứ tự dòng kéo tay: chỉ ghi danh sách mã món vào model, không đụng đối tượng; model đã đổi thì từ chối
+require File.join(ROOT, 'core/row_order')
+class OrderModel
+  attr_reader :attrs
+  def initialize; @attrs = {}; end
+  def get_attribute(dict, key, default = nil); @attrs.dig(dict, key) || default; end
+  def set_attribute(dict, key, value); (@attrs[dict] ||= {})[key] = value; end
+  def start_operation(*); true; end
+  def commit_operation; true; end
+  def abort_operation; true; end
+end
+order_model = OrderModel.new
+$model = order_model
+od = D.allocate
+od.instance_variable_set(:@model, order_model)
+od.table_order({'order' => [30, 10, 20]})
+ok('table_order: ghi thứ tự vào model', VGD::BIM::RowOrder.read(order_model) == [30, 10, 20])
+od.table_order({'reset' => [10]})
+ok('table_order: bỏ xếp tay các món của bảng', VGD::BIM::RowOrder.read(order_model) == [30, 20])
+bad_order = begin; od.table_order({'order' => ['x']}); nil; rescue ArgumentError => e; e.message; end
+ok('table_order: mã sai bị từ chối, dữ liệu cũ còn nguyên', bad_order.to_s.include?('mã món') && VGD::BIM::RowOrder.read(order_model) == [30, 20])
+$model = OrderModel.new
+stale_order = begin; od.table_order({'order' => [1]}); nil; rescue StandardError => e; e.message; end
+ok('table_order: model đã đổi thì từ chối, không ghi', stale_order.to_s.include?('làm mới') && VGD::BIM::RowOrder.read($model) == [])
+$model = ORIGINAL_MODEL
+
+# Cách tính suy ra từ tag: đổi theo tag bằng nhấp đúp ô Cách tính, và ghi vào món (chỉ mục còn trống)
+$vgd_data = {}
+class CalcEnt < Sketchup::Group
+  attr_accessor :name, :locked
+  def initialize(name, locked = false); @name = name; @locked = locked; end
+  def valid?; true; end
+  def locked?; @locked; end
+end
+cm = EditModel.new
+$model = cm
+cents = [CalcEnt.new('Tường'), CalcEnt.new('Cửa'), CalcEnt.new('Ghế', true), CalcEnt.new('Trơn')]
+crecs = cents.each_with_index.map { |e, i| {entity: e, path: [e], locked: false, index: i} }
+crows = [{index: 0, tag: 'A. WALL', calc_category: 'architecture', calc_method: 'area'}, {index: 1, tag: 'A. DOOR', calc_category: 'architecture', calc_method: 'count'},
+         {index: 2, tag: 'I. CHAIR', calc_category: 'furniture', calc_method: 'count'}, {index: 3, tag: '', calc_category: 'other', calc_method: 'count'}]
+cd = D.allocate
+cd.instance_variable_set(:@model, cm)
+cd.instance_variable_set(:@table_rows, crows)
+cd.instance_variable_set(:@table_records, crecs)
+ccalls = []
+cd.define_singleton_method(:emit) { |ev, payload| ccalls << [ev, payload] }
+cd.define_singleton_method(:table_build) { ccalls << [:build] }
+cd.define_singleton_method(:show_outline) { nil }
+overrides_before = VGD::BIM::Quantity.overrides
+cd.table_edit({'indexes' => [0], 'field' => 'calc_method', 'value' => 'length'})
+ok('đổi cách tính theo tag: lưu ghi đè của tag đó, không ghi vào món, bảng dựng lại, báo kết quả', VGD::BIM::Quantity.overrides[VGD::BIM::Quantity.key('A. WALL')] == 'length' && $writes.empty? && ccalls.any? { |c| c[0] == :build } && ccalls.any? { |c| c[0] == 'message' && c[1][:text].include?('A. WALL') })
+cd.table_edit({'indexes' => [0, 1], 'field' => 'calc_method', 'value' => 'area'})
+ok('đổi cho nhiều dòng: áp cho từng tag khác nhau của các dòng', VGD::BIM::Quantity.overrides.values_at(VGD::BIM::Quantity.key('A. WALL'), VGD::BIM::Quantity.key('A. DOOR')) == %w[area area])
+cd.table_edit({'indexes' => [0, 1], 'field' => 'calc_method', 'value' => ''})
+ok('giá trị rỗng: bỏ ghi đè của các tag', VGD::BIM::Quantity.overrides == overrides_before)
+bad = ->(payload) { begin; cd.table_edit(payload); nil; rescue StandardError => e; e.message; end }
+ok('dòng chưa có tag: báo cần gắn tag trước', bad.call({'indexes' => [3], 'field' => 'calc_method', 'value' => 'area'}).to_s.include?('chưa có tag'))
+ok('cách tính lạ bị từ chối, không đổi ghi đè', bad.call({'indexes' => [0], 'field' => 'calc_method', 'value' => 'zzz'}).to_s.include?('Cách tính') && VGD::BIM::Quantity.overrides == overrides_before)
+ok('đối tượng bị khóa vẫn đổi được cách tính theo tag (không ghi vào món)', (cd.table_edit({'indexes' => [2], 'field' => 'calc_method', 'value' => 'volume'}); VGD::BIM::Quantity.overrides[VGD::BIM::Quantity.key('I. CHAIR')] == 'volume'))
+VGD::BIM::Quantity.set_override('I. CHAIR', '')
+# Ghi vào món
+$transactions.clear; $writes.clear; ccalls.clear
+$vgd_data[cents[1]] = {category: 'furniture', quantity_method: '', unit: '', include_boq: true} # món đã có dữ liệu, còn trống cách tính
+cd.table_commit_calc({'indexes' => [0, 1, 2, 3]})
+ok('ghi vào món: một thao tác hoàn tác, bỏ qua món khóa, chỉ ghi mục còn trống, nguồn MAPPED cho món chưa có dữ liệu', $transactions == ['VGD_BIM · Ghi cách tính vào món'] && $writes.size == 3 && $writes.none? { |w| w[0].equal?(cents[2]) })
+wall_write = $writes.find { |w| w[0].equal?(cents[0]) }
+door_write = $writes.find { |w| w[0].equal?(cents[1]) }
+plain_write = $writes.find { |w| w[0].equal?(cents[3]) }
+ok('món chưa có dữ liệu: ghi hạng mục, cách tính, đơn vị theo tag (tường m2)', wall_write[1] == {category: 'architecture', quantity_method: 'area', unit: 'm2'} && wall_write[2] == 'MAPPED')
+ok('món đã có hạng mục: không ghi đè hạng mục, chỉ bổ sung cách tính và đơn vị, giữ nguồn cũ', door_write[1] == {quantity_method: 'count', unit: 'pcs'} && door_write[2] == 'VGD')
+ok('món không tag: ghi theo mặc định (cái)', plain_write[1] == {category: 'other', quantity_method: 'count', unit: 'pcs'})
+ok('ghi vào món: bảng dựng lại và báo số món đã ghi, món khóa bỏ qua', ccalls.any? { |c| c[0] == :build } && ccalls.any? { |c| c[0] == 'message' && c[1][:text].include?('3') && c[1][:text].include?('khóa') })
+$writes.clear; ccalls.clear
+$vgd_data[cents[0]] = {category: 'architecture', quantity_method: 'area', unit: 'm2', include_boq: true}
+$vgd_data[cents[1]] = {category: 'furniture', quantity_method: 'count', unit: 'pcs', include_boq: true}
+$vgd_data[cents[3]] = {category: 'other', quantity_method: 'count', unit: 'pcs', include_boq: true}
+cd.table_commit_calc({'indexes' => [0, 1, 3]})
+ok('món đã đủ dữ liệu: không ghi gì, báo rõ', $writes.empty? && ccalls.any? { |c| c[0] == 'message' && c[1][:text].include?('đã đủ') })
+cd.table_commit_calc({'indexes' => [2]}) rescue nil
+locked_error = begin; cd.table_commit_calc({'indexes' => [2]}); nil; rescue StandardError => e; e.message; end
+ok('chỉ chọn món khóa: báo lỗi, không ghi', locked_error.to_s.include?('khóa') && $writes.empty?)
+nothing = begin; cd.table_commit_calc({'indexes' => [9]}); nil; rescue StandardError => e; e.message; end
+ok('dòng không có trong bảng: báo bảng đã cũ', nothing.to_s.include?('Bảng đã cũ'))
+$model = ORIGINAL_MODEL
+$vgd_data = {}
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

@@ -377,7 +377,7 @@
       const dialogIcon = document.getElementById('dialogIcon');
       const dialogActions = document.getElementById('dialogActions');
       const progressBar = document.getElementById('progressBar');
-      const iconIds = {dim:'vgd-dim', scenes:'vgd-scenes', cabinet:'vgd-cabinet', library:'vgd-library', image_importer:'vgd-import', bim_lite:'vgd-bim',reference:'vgd-reference',cabinet_draw:'vgd-cabinet-draw'};
+      const iconIds = {dim:'vgd-dim', scenes:'vgd-scenes', cabinet:'vgd-cabinet', library:'vgd-library', image_importer:'vgd-import', bim:'vgd-bim',reference:'vgd-reference',cabinet_draw:'vgd-cabinet-draw'};
       let currentState = {products:[]};
       let activePluginId = null;
       let activeLanguage = 'vi';
@@ -434,7 +434,7 @@
       const notInstalled = () => currentState.products.filter(product => product.compatible && product.action === 'install');
       const productDescription = product => {
         if (activeLanguage !== 'en') return product.description;
-        const descriptions = {dim:'Measure dimensions and style labels, or create smart dimensions.',cabinet:'Design cabinets, compartments, doors, and drawers.',library:'Browse and manage VGD materials and models.',image_importer:'Import images as components, planes, or materials.',scenes:'Manage views, section cuts, and exports.',bim_lite:'Review and audit SketchUp model data.',reference:'Pin and edit reference images over the SketchUp viewport.'};
+        const descriptions = {dim:'Measure dimensions and style labels, or create smart dimensions.',cabinet:'Design cabinets, compartments, doors, and drawers.',library:'Browse and manage VGD materials and models.',image_importer:'Import images as components, planes, or materials.',scenes:'Manage views, section cuts, and exports.',bim:'Review and audit SketchUp model data.',reference:'Pin and edit reference images over the SketchUp viewport.'};
         return descriptions[product.id] || product.description;
       };
       const actionButton = product => {
@@ -681,10 +681,10 @@
       document.getElementById('brandLink').addEventListener('click', () => { if (window.sketchup && typeof window.sketchup.open_website === 'function') window.sketchup.open_website(); else window.open('https://vgdtools.vercel.app/', '_blank', 'noopener'); });
       if (window.sketchup && typeof window.sketchup.center_ready === 'function') window.sketchup.center_ready();
       else if (new URLSearchParams(window.location.search).has('preview') || (window.location.protocol === 'file:' && !window.sketchup)) {
-        const versions = {dim:'3.3.0-beta.5',cabinet:'4.5.0-beta.4',library:'1.1.2-beta.4',image_importer:'1.1.0-beta.5',scenes:'1.5.3-beta.3',bim_lite:'0.1.4-alpha',reference:'1.0.0-beta.6'};
-        const descriptions = {dim:'Đo kích thước, chỉnh kiểu Dim/Text và tạo Smart Dim.',cabinet:'Dựng tủ, chia khoang, cánh và ngăn kéo trong SketchUp.',library:'Tìm kiếm và quản lý thư viện vật liệu, model VGD.',image_importer:'Nhập ảnh vào SketchUp dưới dạng component, mặt phẳng hoặc vật liệu.',scenes:'Quản lý góc nhìn, mặt cắt và xuất hồ sơ.',bim_lite:'Đọc thông tin và rà soát dữ liệu model SketchUp.',reference:'Ghim và chỉnh sửa ảnh tham chiếu ngay trên khung nhìn SketchUp.'};
-        const names = {dim:'VGD Dim',cabinet:'VGD Cabinet',library:'VGD Library',image_importer:'VGD Image Importer',scenes:'VGD Scenes',bim_lite:'VGD_BIM',reference:'VGD Reference'};
-        const channels = {dim:'beta',cabinet:'beta',library:'beta',image_importer:'beta',scenes:'beta',bim_lite:'alpha',reference:'beta'};
+        const versions = {dim:'3.3.0-beta.5',cabinet:'4.5.0-beta.4',library:'1.1.2-beta.4',image_importer:'1.1.0-beta.5',scenes:'1.5.3-beta.3',bim:'0.1.4-alpha',reference:'1.0.0-beta.6'};
+        const descriptions = {dim:'Đo kích thước, chỉnh kiểu Dim/Text và tạo Smart Dim.',cabinet:'Dựng tủ, chia khoang, cánh và ngăn kéo trong SketchUp.',library:'Tìm kiếm và quản lý thư viện vật liệu, model VGD.',image_importer:'Nhập ảnh vào SketchUp dưới dạng component, mặt phẳng hoặc vật liệu.',scenes:'Quản lý góc nhìn, mặt cắt và xuất hồ sơ.',bim:'Đọc thông tin và rà soát dữ liệu model SketchUp.',reference:'Ghim và chỉnh sửa ảnh tham chiếu ngay trên khung nhìn SketchUp.'};
+        const names = {dim:'VGD Dim',cabinet:'VGD Cabinet',library:'VGD Library',image_importer:'VGD Image Importer',scenes:'VGD Scenes',bim:'VGD_BIM',reference:'VGD Reference'};
+        const channels = {dim:'beta',cabinet:'beta',library:'beta',image_importer:'beta',scenes:'beta',bim:'alpha',reference:'beta'};
         const installedIds = ['dim','cabinet','library','image_importer','scenes'];
         const updateIds = ['dim','scenes'];
         window.VGD.receiveState({version:'1.0.7',sketchup:'22.0.316',settings:{language:'vi',auto_update:true},center_update:{state:'latest',current_version:'1.0.7',latest_version:'1.0.7'},products:Object.keys(versions).map(id=>({id,name:names[id],version:versions[id],release_channel:channels[id],description:descriptions[id],icon:id,minimum_sketchup:'22.0.0',compatible:true,installed:installedIds.includes(id),installed_version:installedIds.includes(id)?(updateIds.includes(id)?'bản cũ':'đang dùng'):null,action:!installedIds.includes(id)?'install':updateIds.includes(id)?'update':null}))});

@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8" />
+  <!-- <title>One Last Time 30/04/2018</title> -->
+  <!-- <title>One Last Time 06/09/2023</title> -->
+  <!-- <title>One Last Time 10/09/2025</title> -->
+
+  <!-- Custom styles -->
+  <link href="../css/modus.min.css" rel="stylesheet" id="theme-stylesheet" />
+  <link href="../css/modus-layout.min.css" rel="stylesheet" />
+  <link href="../css/styles.css" rel="stylesheet" />
+  <link href="../css/styles-color.css" rel="stylesheet" />
+
+  <!-- Modus icons -->
+  <link href="../fonts/modus-icons.css" rel="stylesheet" />
+
+  <!-- Modus Bootstrap -->
+  <script src="../js/lib/jquery-3.6.0.min.js"></script>
+  <script src="../js/lib/bootstrap.bundle.min.js"></script>
+
+  <!-- Vue -->
+  <script src="../js/lib/vue.js"></script>
+
+  <!-- Translate -->
+  <script src="../js/lib/axios.min.js"></script>
+
+  <!-- Sortable -->
+  <script src="../js/lib/sortable.min.js"></script>
+
+  <!-- Iro Color Picker -->
+  <script src="../js/lib/iro/iro.js"></script>
+  <link href="../js/lib/iro/iro.css" rel="stylesheet" />
+
+  <!-- Reading Excel -->
+  <script src="../js/lib/xlsx.full.min.js"></script>
+
+  <!-- Common functions -->
+  <script src="../js/common.js"></script>
+
+  <!-- Components -->
+  <script src="../js/components/main/folder-item.js"></script>
+  <script src="../js/components/main/pin-layer-item.js"></script>
+  <script src="../js/components/main/layer-item.js"></script>
+
+  <script src="../js/components/main/context-menu.js"></script>
+  <script src="../js/components/main/dashes-list.js"></script>
+  <script src="../js/components/main/excel-layers.js"></script>
+  <script src="../js/components/main/exclusion-list.js"></script>
+  <script src="../js/components/main/export-layers.js"></script>
+
+  <script src="../js/components/main/custom-footer.js"></script>
+  <script src="../js/components/main/settings-container.js"></script>
+
+  <script src="../js/components/modals/modal-header.js"></script>
+  <script src="../js/components/modals/modal-footer.js"></script>
+  <script src="../js/components/modals/action-modal.js"></script>
+  <script src="../js/components/modals/message-modal.js"></script>
+  <script src="../js/components/modals/delete-layer-modal.js"></script>
+  <script src="../js/components/modals/color-modal.js"></script>
+  <script src="../js/components/modals/select-sheet-modal.js"></script>
+  <script src="../js/components/modals/support-modal.js"></script>
+  <script src="../js/components/modals/user-options-modal.js"></script>
+</head>
+<body>
+  <div class="modus-layout" id="app">
+    <nav v-show="!compactMode" class="modus-header">
+      <ul class="nav nav-tabs custom-nav-tabs d-flex ml-3" role="tablist">
+        <li class="nav-item">
+          <a
+            class="nav-link custom-nav-link"
+            :class="{ 'active': isExcel }"
+            data-toggle="tooltip"
+            :title="translated('importFromExcel')"
+            @click="useExcel()"
+          >
+            <i class="modus-icons">file_type_xls</i>
+          </a>
+        </li>
+
+        <!-- Settings -->
+        <settings-container></settings-container>
+      </ul>
+    </nav>
+
+    <!-- CONTROL PANEL MAIN -->
+    <div class="d-flex p-2">
+      <!-- CREATE LAYER -->
+      <button
+        v-show="!compactMode && !isExcel"
+        type="button"
+        class="btn btn-icon-only btn-text-dark bg-gray-light mr-1"
+        data-toggle="tooltip"
+        :title="translated('createTag')"
+        @click="createLayer(inputSearchQuery)"
+      >
+        <i class="modus-icons">add</i>
+      </button>
+
+      <!-- CREATE FOLDER -->
+      <button
+        v-show="!compactMode && !isExcel"
+        type="button"
+        class="btn btn-icon-only btn-text-dark bg-gray-light mr-1"
+        data-toggle="tooltip"
+        :title="translated('createTagFolder')"
+        @click="createFolder(inputSearchQuery)"
+      >
+        <i class="modus-icons">folder_new</i>
+      </button>
+
+      <!-- MODEL LAYERS SEARCH -->
+      <div class="input-with-icon-right flex-grow-1" id="exportSearch">
+        <input
+          v-model="inputSearchQuery"
+          ref="layerInput"
+          class="form-control"
+          :placeholder="translated('search')"
+          id="searchInput"
+          @keydown.enter="createLayer(inputSearchQuery)"
+        />
+        <div class="input-icon cursor-pointer hover-icon">
+          <i
+            class="modus-icons"
+            @click="inputSearchQuery ? clearSearch() : null"
+          >
+            {{ inputSearchQuery ? 'close' : 'search' }}
+          </i>
+        </div>
+      </div>
+
+      <!-- SAMPLE TOOL -->
+      <button
+        class="btn btn-icon-only btn-text-dark bg-gray-light ml-1"
+        type="button"
+        data-toggle="tooltip"
+        :title="translated('sampleTool')"
+        @click="activeSampleTool()"
+      >
+        <i class="modus-icons">color_picker</i>
+      </button>
+
+      <!-- COLOR BY TAG -->
+      <button
+        v-show="!compactMode && !isExcel"
+        type="button"
+        :class="['btn btn-icon-only bg-gray-light ml-1', colorByTag ? 'btn-text-danger': 'btn-text-dark' ]"
+        data-toggle="tooltip"
+        :title="translated('colorByTag')"
+        id="colorByTag"
+        @click="handleColorByTag()"
+      >
+        <i class="modus-icons">layer</i>
+      </button>
+    </div>
+
+    <!-- CONTROL PANEL EXCEL -->
+    <div
+      v-show="isExcel"
+      class="modus-panel px-2 py-2"
+      id="controlPanelExcel"
+    >
+      <div class="d-flex">
+        <button
+          v-if="excelFileName && !excelSaved"
+          class="btn btn-primary mr-1"
+          type="button"
+          data-toggle="tooltip"
+          :title="translated('saveExcelAsDefault')"
+          @click="saveExcelAsDefault()"
+        >
+          {{ translated('save') }}
+        </button>
+        <div class="custom-file flex-grow-1">
+          <input
+            type="file"
+            class="custom-file-input"
+            id="customFileExcel"
+            accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            @change="loadExcelFile"
+          />
+          <label
+            class="custom-file-label text-gray-4"
+            for="customFileExcel"
+            id="fileNameExcel"
+            >{{ excelFileName ? excelFileName : translated('chooseFile') + '*.xlsx' }}</label
+          >
+        </div>
+        <button
+          v-show="!isResetExcel || !excelSaved"
+          type="button"
+          class="btn btn-icon-only btn-dark ml-1"
+          data-toggle="tooltip"
+          :title="translated('reset')"
+          @click="resetExcel()"
+        >
+          <i class="modus-icons">refresh</i>
+        </button>
+      </div>
+    </div>
+
+    <!-- SAVED LAYER -->
+    <div v-if="!isExcel && (Object.keys(filteredPinLayers).length !== 0 || recentLayer !== null)" class="px-1 mb-2" id="saveLayers">
+      <div
+        v-if="recentLayer !== null"
+        class="d-flex"
+        id="recentLayerContainer"
+      >
+        <div
+          class="chip chip-solid flex-grow-1 cursor-default"
+          data-toggle="tooltip"
+          :title="translated('recentLayer')"
+          @contextmenu="toggleContextMenu($event, 'layer', recentLayer.name)"
+        >
+          <i
+            class="modus-icons cursor-pointer hover-icon mr-2 recent-layer"
+            @click=toggleVisibleLayer(recentLayer)
+          >
+            {{ hiddenLayers.includes(recentLayer.name) ? 'visibility_off' : 'visibility_on' }}
+          </i>
+  
+          <div class="chip-text pin-text"> {{ recentLayer.name }} </div>
+          <div
+            class="chip-delete-right chip-pin-right hover-icon m-0"
+            :class="{
+              'text-danger': pinLayers[recentLayer.id]
+            }"
+            @click="togglePinLayer(recentLayer)"
+          >
+            <i class="modus-icons cursor-pointer">map_marker</i>
+          </div>
+        </div>
+      </div>
+      <div
+        v-if="Object.keys(pinLayers).length !== 0"
+        class="flex-wrap-container"
+        :class="compactMode ? 'compact-mode' : 'normal-mode'"
+        id="pinLayersContainer"
+      >
+        <pin-layer-item
+          v-for="pinLayer in filteredPinLayers"
+          :key="pinLayer.id"
+          :layer="pinLayer"
+        />
+      </div>
+    </div>
+
+    <!-- NO SAVED TAGS NOTICE -->
+    <div v-if="Object.keys(pinLayers).length === 0 && compactMode && !inputSearchQuery" class="text-center">
+      <p class="mt-5 p-2 text-gray-4">{{ translated('noSavedTags') }}</p>
+    </div>
+
+    <!-- BODY -->
+    <div v-show="(inputSearchQuery !== '' && compactMode) || !compactMode" class="modus-content"
+      @dragover.prevent
+      @drop="onDropOutside($event)"
+    >
+      <div v-if="!isExcel" id="modelLayers">
+        <!-- Header -->
+        <div
+          v-show="filteredLayers.length !== 0"
+          class="d-flex font-weight-bold bg-gray-2 sticky-top header-container pl-2 pr-1"
+        >
+          <div
+            class="hover-icon text-center cursor-pointer mt-1 mr-1"
+            :class="{
+              'text-gray-4': sortColumn === 'visible' && sortOrder === -1
+            }"
+            data-toggle="tooltip"
+            :title="translated('clickToSort')"
+            @click="toggleSort('visible')"
+          >
+            <i
+              class="modus-icons"
+            >
+              {{ sortColumn === 'visible' ? (sortOrder === 1 ? 'visibility_on' : 'visibility_off') : 'visibility_on' }}
+            </i>
+          </div>
+
+          <div
+            class="hover-icon text-center cursor-pointer mt-1 mr-1"
+            data-toggle="tooltip"
+            :title="translated(expandFolders.length > 0 ? 'collapseAll' : 'expandAll')"
+            @click="moreActions(expandFolders.length > 0 ? 'collapseAll' : 'expandAll')"
+          >
+            <i class="modus-icons">
+              {{ expandFolders.length > 0 ? 'caret_down' : 'caret_right' }}
+            </i>
+          </div>
+
+          <div 
+            class="d-flex flex-fill cursor-default"
+            @click="toggleSort('name')"
+          >
+            {{ translated('name') }}
+            <i
+              v-if="sortColumn === 'name'"
+              class="modus-icons cursor-pointer ml-auto mr-2"
+              data-toggle="tooltip"
+              :title="translated('clickToSort')"
+            >
+              {{ sortOrder === 1 ? 'expand_more' : 'expand_less' }}
+            </i>
+          </div>
+          <div
+            v-if="!compactMode"
+            class="d-flex dash-box cursor-default ml-2 pr-3"
+            style="width: 120px"
+            data-toggle="tooltip"
+            :title="translated('clickToSort')"
+            @click="toggleSort('dash')"
+          >
+            {{ translated('dashes') }}
+            <i
+              v-if="sortColumn === 'dash'"
+              class="modus-icons ml-auto mr-2"
+            >
+              {{ sortOrder === 1 ? 'expand_more' : 'expand_less' }}
+            </i>
+          </div>
+          <div
+            class="text-center cursor-pointer mt-1"
+            data-toggle="tooltip"
+            :title="translated('clickToSort')"
+            @click="toggleSort('pin')"
+          >
+            <i
+              class="modus-icons hover-icon"
+              :class="{
+                'text-danger': sortColumn === 'pin' && sortOrder === 1
+              }"
+            >
+              map_marker
+            </i>
+          </div>
+
+          <div
+            class="text-center cursor-pointer ml-2 mr-1"
+            data-toggle="tooltip"
+            :title="translated('clickToSort')"
+            @click="toggleSort('color')"
+          >
+            <div
+              class="color-box"
+              :style="{
+                backgroundColor: sortOrder === 1 ? 'black' : 'white'
+              }"
+            >
+            </div>
+          </div>
+        </div>
+
+        <!-- Folders List -->
+        <ul
+          class="list-group list-group-sm list-group-borderless"
+          id="foldersContainer"
+        >
+          <folder-item
+            v-for="folder in filteredFoldersTree"
+            :key="folder.id"
+            :folder="folder"
+            :expand-folders="expandFolders"
+            :layers-in-folders="layersInFolder"
+            :hidden-folders="hiddenFolders"
+            :hidden-layers="hiddenLayers"
+            :pin-layers="pinLayers"
+            :selected-folder="selectedFolder"
+            @toggle-folder="handleToggleFolder"
+            @toggle-visible-folder="toggleVisibleFolder"
+            @toggle-isolate-folder="toggleIsolateFolder"
+            @select-folder="selectFolder"
+          />
+        </ul>
+
+        <!-- Layers without Folder -->
+        <ul class="list-group list-group-sm list-group-borderless" id="layersContainer">
+          <layer-item
+            v-for="layer in layersWithoutFolder"
+            :key="layer.id"
+            :layer="layer"
+          />
+        </ul>
+      </div>
+
+      <!-- EXCEL -->
+      <excel-layers :dashes-src="`../images/${dashesSource}/`"></excel-layers>
+    </div>
+
+    <!-- FOOTER -->
+    <custom-footer></custom-footer>
+
+    <!-- Dashes List -->
+    <dashes-list></dashes-list>
+
+    <!-- Context Menu -->
+    <context-menu></context-menu>
+
+    <!-- Exclusion List Modal -->
+    <exclusion-list></exclusion-list>
+
+    <!-- Modal Confirm Delete Layer -->
+    <delete-layer-modal></delete-layer-modal>
+
+    <!-- Modal select Excel sheet -->
+    <select-sheet-modal></select-sheet-modal>
+
+    <!-- Modal Export Layers List -->
+    <export-layers></export-layers>
+
+    <!-- Modal Support -->
+    <support-modal></support-modal>
+
+    <!-- Modal Color -->
+    <color-modal></color-modal>
+
+    <!-- User Options Modal -->
+    <user-options-modal></user-options-modal>
+
+    <!-- Action Modal -->
+    <action-modal
+      :modal-title="modalTitle"
+      :edit-title="editTitle"
+      :edit-action="editAction"
+      :modal-message="modalMessage"
+      :modal-action0="modalAction0"
+      :modal-action1="modalAction1"
+      :modal-action2="modalAction2"
+    ></action-modal>
+
+    <!-- Message Modal -->
+    <message-modal></message-modal>
+  </div>
+
+  <script src="../js/main.js"></script>
+</body>
+</html>

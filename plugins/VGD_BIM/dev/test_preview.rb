@@ -1,4 +1,4 @@
-ROOT_UI = ARGV[0] || File.expand_path('../runtime/vgd_bim_lite/ui/bounds_preview.rb', __dir__)
+ROOT_UI = ARGV[0] || File.expand_path('../runtime/vgd_bim/ui/bounds_preview.rb', __dir__)
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 GL_TRIANGLES = 4
@@ -111,6 +111,19 @@ v3 = View.new(model, helper)
 filled.draw(v3)
 ok('tô mặt: vẽ GL_TRIANGLES đúng số điểm', v3.triangles.size == 1 && v3.triangles[0][1] == tris)
 ok('tô mặt: màu VGD có độ trong suốt', v3.colors.any? { |c| c.r == 180 && c.a < 255 })
+
+# Mũi tên mặt trước: tô đặc màu sáng + viền nâu đậm, vẽ sau khung; không có mũi tên thì không vẽ thêm gì
+arrow_fills = [[0, 0, 5], [1, 0, 5], [0, 1, 5], [2, 0, 5], [3, 0, 5], [2, 1, 5], [4, 0, 5], [5, 0, 5], [4, 1, 5]]
+arrow_lines = [[0, 0, 5], [1, 0, 5], [1, 0, 5], [1, 1, 5]]
+arrowed = VGD::BIM::UI::BoundsPreview.new([[1, 2, 3], [4, 5, 6]], arrows: [arrow_fills, arrow_lines]) { }
+v6 = View.new(model, helper)
+arrowed.draw(v6)
+ok('mũi tên: tô bằng GL_TRIANGLES đúng điểm', v6.triangles.size == 1 && v6.triangles[0][1] == arrow_fills)
+ok('mũi tên: viền vẽ sau đường viền khung, đúng điểm', v6.lines.size == 2 && v6.lines[1] == arrow_lines)
+ok('mũi tên: màu tô sáng (255, 244, 224) rồi viền nâu đậm (142, 107, 76)', v6.colors.any? { |c| [c.r, c.g, c.b] == [255, 244, 224] } && v6.colors.last.then { |c| [c.r, c.g, c.b] == [142, 107, 76] })
+v7 = View.new(model, helper)
+VGD::BIM::UI::BoundsPreview.new([[1, 2, 3], [4, 5, 6]]) { }.draw(v7)
+ok('không có mũi tên: chỉ vẽ đường viền khung, không tô thêm', v7.lines.size == 1 && v7.triangles.empty?)
 
 # Chữ phải nằm trong khung tên (tọa độ màn hình), không bị đẩy lên góc trái màn hình.
 lab = VGD::BIM::UI::BoundsPreview.new([[1, 2, 3], [4, 5, 6]], label: 'Tủ', label_point: Geom::Point3d.new(5000, 9000, 0)) { }

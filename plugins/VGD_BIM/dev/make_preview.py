@@ -2,10 +2,10 @@
 # Kết quả ở outputs/VGD_BIM_giao_dien.html (outputs/ không đưa vào git). Chỉ để xem giao diện, không thay SketchUp.
 import base64, json, os, re
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-B = os.path.join(ROOT, 'runtime', 'vgd_bim_lite')
+B = os.path.join(ROOT, 'runtime', 'vgd_bim')
 OUT = os.path.join(ROOT, 'outputs', 'VGD_BIM_giao_dien.html')
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
-VERSION = re.search(r"VERSION = '([^']+)'", open(os.path.join(ROOT, 'runtime', 'vgd_bim_lite.rb'), encoding='utf-8').read()).group(1)
+VERSION = re.search(r"VERSION = '([^']+)'", open(os.path.join(ROOT, 'runtime', 'vgd_bim.rb'), encoding='utf-8').read()).group(1)
 def rd(p): return open(os.path.join(B, p), encoding='utf-8').read()
 def data_uri(p, mime): return f"data:{mime};base64," + base64.b64encode(open(os.path.join(B, p), 'rb').read()).decode()
 
@@ -127,7 +127,12 @@ out = html
 out = out.replace('<link rel="stylesheet" href="vgd-theme/vgd-theme.css">', '<style>' + theme_css + '</style>')
 out = out.replace('<link rel="stylesheet" href="style.css">', '<style>' + style_css + '</style>')
 out = out.replace('<script src="vgd-theme/vgd-theme.js"></script>', '<script>' + theme_js.replace('</script', '<\\/script') + '</script>')
-out = out.replace('<script src="app.js"></script>', '<script>' + mock + '</script><script>' + app_js.replace('</script', '<\\/script') + '</script>')
+# Các script phụ nạp đúng thứ tự trong index.html: i18n, units, images trước app.js; presets sau app.js.
+def inline(name):
+    return '<script>' + rd('html/' + name).replace('</script', '<\\/script') + '</script>'
+for name in ('i18n.js', 'units.js', 'images.js', 'presets.js'):
+    out = out.replace(f'<script src="{name}"></script>', '')
+out = out.replace('<script src="app.js"></script>', inline('i18n.js') + inline('units.js') + inline('images.js') + '<script>' + mock + '</script><script>' + app_js.replace('</script', '<\\/script') + '</script>' + inline('presets.js'))
 out = out.replace('<title>VGD_BIM</title>', '<title>VGD_BIM · Bản xem trước giao diện</title>')
 assert '<script src=' not in out and 'href="style.css"' not in out, 'external refs remain'
 open(OUT, 'w', encoding='utf-8').write(out)

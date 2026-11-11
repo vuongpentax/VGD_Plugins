@@ -1,0 +1,1548 @@
+{
+ "source": "5d_auto_tag assets default.xlsx + default_vi.xlsx + default_ifc.xlsx (đã đọc lại thành JSON; file xlsx gốc không đưa vào repo)",
+ "note": "Thư mục tag: tên có dạng \"<A.> ARCHITECTURAL\"; mô tả tiếng Việt lấy từ default_vi.xlsx; tag giữ tên tiếng Anh.",
+ "default_name_rules": [
+  {
+   "A. WALL": [
+    "Wall"
+   ]
+  },
+  {
+   "A. DOOR": [
+    "Door"
+   ]
+  },
+  {
+   "A. WINDOW": [
+    "Window"
+   ]
+  },
+  {
+   "A. RAILING": [
+    "Railing"
+   ]
+  },
+  {
+   "A. STAIR": [
+    "Stair"
+   ]
+  }
+ ],
+ "folders": [
+  {
+   "folder": "<!> INFORMATION",
+   "description_vi": "THÔNG TIN",
+   "tags": [
+    {
+     "name": "!annotation",
+     "description_vi": "Ghi chú",
+     "color": "Color(177, 154, 120, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcAnnotation"
+    },
+    {
+     "name": "!contour",
+     "description_vi": "Đường đồng mức",
+     "color": "Color(255, 135, 221, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcTopologyResource"
+    },
+    {
+     "name": "!dimension",
+     "description_vi": "Kích thước",
+     "color": "Color(68, 84, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcDimensionCount"
+    },
+    {
+     "name": "!grid",
+     "description_vi": "Lưới trục",
+     "color": "Color(186, 0, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcGrid"
+    },
+    {
+     "name": "!label",
+     "description_vi": "Tên nhãn",
+     "color": "Color(186, 0, 255, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcLabel"
+    },
+    {
+     "name": "!sign",
+     "description_vi": "Ký hiệu",
+     "color": "Color(255, 0, 119, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcSign"
+    },
+    {
+     "name": "!space",
+     "description_vi": "Không gian",
+     "color": "Color(255, 84, 84, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcSpace"
+    },
+    {
+     "name": "!zone",
+     "description_vi": "Khu vực",
+     "color": "Color(0, 102, 153, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcSpatialZone"
+    },
+    {
+     "name": "!opening",
+     "description_vi": "Lỗ mở",
+     "color": "Color(102, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcOpeningElement"
+    }
+   ]
+  },
+  {
+   "folder": "<#> BASIC",
+   "description_vi": "CƠ BẢN",
+   "tags": [
+    {
+     "name": "#2d_graphic",
+     "description_vi": "Đồ họa 2 chiều",
+     "color": "Color(0, 153, 135, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProxy"
+    },
+    {
+     "name": "#3d_object",
+     "description_vi": "Vật thể 3 chiều",
+     "color": "Color(119, 119, 153, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProxy"
+    },
+    {
+     "name": "#hidden",
+     "description_vi": "Vật thể ẩn",
+     "color": "Color(153, 0, 255, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProxy"
+    },
+    {
+     "name": "#proxy",
+     "description_vi": "Vật thể đại diện",
+     "color": "Color(204, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProxy"
+    },
+    {
+     "name": "#text",
+     "description_vi": "Chữ",
+     "color": "Color(170, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcText"
+    },
+    {
+     "name": "#viewport",
+     "description_vi": "Khung nhìn đồ họa",
+     "color": "Color(192, 192,192, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProxy"
+    },
+    {
+     "name": "edge_bold",
+     "description_vi": "Nét đậm",
+     "color": "Color(0, 0, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcEdge"
+    },
+    {
+     "name": "edge_bold_extra",
+     "description_vi": "Nét siêu đậm",
+     "color": "Color(135, 119, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcEdge"
+    },
+    {
+     "name": "edge_medium",
+     "description_vi": "Nét trung bình",
+     "color": "Color(255, 102, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcEdge"
+    },
+    {
+     "name": "edge_thin",
+     "description_vi": "Nét mảnh",
+     "color": "Color(255, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcEdge"
+    },
+    {
+     "name": "edge_center",
+     "description_vi": "Nét trung tâm",
+     "color": "Color(255, 186, 0, 1.0)",
+     "dashes": "Long-dash dash",
+     "ifc": "IfcEdge"
+    },
+    {
+     "name": "edge_dash",
+     "description_vi": "Nét gạch đứt",
+     "color": "Color(255, 0, 204, 1.0)",
+     "dashes": "Short dash",
+     "ifc": "IfcEdge"
+    },
+    {
+     "name": "edge_tiling",
+     "description_vi": "Nét chia ô",
+     "color": "Color(255, 153, 102, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcEdge"
+    },
+    {
+     "name": "face_color_01",
+     "description_vi": "Diện màu 1",
+     "color": "Color(204, 186, 237, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcFace"
+    },
+    {
+     "name": "face_color_02",
+     "description_vi": "Diện màu 2",
+     "color": "Color(17, 102, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcFace"
+    },
+    {
+     "name": "face_color_03",
+     "description_vi": "Diện màu 3",
+     "color": "Color(255, 153, 186, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcFace"
+    },
+    {
+     "name": "face_color_04",
+     "description_vi": "Diện màu 4",
+     "color": "Color(204, 17, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcFace"
+    }
+   ]
+  },
+  {
+   "folder": "<@> STATUS",
+   "description_vi": "TÌNH TRẠNG",
+   "tags": [
+    {
+     "name": "@external",
+     "description_vi": "Bên ngoài",
+     "color": "Color(255, 170, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProxy"
+    },
+    {
+     "name": "@internal",
+     "description_vi": "Bên trong",
+     "color": "Color(0, 170, 186, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProxy"
+    },
+    {
+     "name": "@demolition",
+     "description_vi": "Phá dỡ",
+     "color": "Color(102, 221, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProxy"
+    },
+    {
+     "name": "@existing",
+     "description_vi": "Hiện trạng",
+     "color": "Color(153, 153, 153, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProxy"
+    },
+    {
+     "name": "@new",
+     "description_vi": "Mới",
+     "color": "Color(170, 168, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProxy"
+    },
+    {
+     "name": "@reuse",
+     "description_vi": "Dùng lại",
+     "color": "Color(204, 135, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProxy"
+    },
+    {
+     "name": "@temporary",
+     "description_vi": "Tạm thời",
+     "color": "Color(237, 255, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProxy"
+    }
+   ]
+  },
+  {
+   "folder": "<1.> CONTEXT",
+   "description_vi": "BỐI CẢNH",
+   "tags": [
+    {
+     "name": "1. GEOGRAPHIC",
+     "description_vi": "Cảnh quan địa lý",
+     "color": "Color(204, 102, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcGeographicElement"
+    },
+    {
+     "name": "1. ANIMAL",
+     "description_vi": "Động vật",
+     "color": "Color(120, 120, 150, 1.0)",
+     "dashes": "Default",
+     "ifc": ""
+    },
+    {
+     "name": "1. HUMAN",
+     "description_vi": "Con người",
+     "color": "Color(204, 84, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    },
+    {
+     "name": "1. VEGETATION",
+     "description_vi": "Thực vật",
+     "color": "Color(153, 153, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": ""
+    },
+    {
+     "name": "1. VEHICLE",
+     "description_vi": "Phương tiện",
+     "color": "Color(153, 153, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    }
+   ]
+  },
+  {
+   "folder": "<2.> SITE",
+   "description_vi": "CÔNG TRƯỜNG",
+   "tags": [
+    {
+     "name": "2. BUILDING",
+     "description_vi": "Công trình xây dựng",
+     "color": "Color(255, 135, 170, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcBuilding"
+    },
+    {
+     "name": "2. PROPERTY",
+     "description_vi": "Ranh giới đất",
+     "color": "Color(128, 128, 20, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcSite"
+    },
+    {
+     "name": "2. SETBACK",
+     "description_vi": "Khoảng lùi",
+     "color": "Color(0, 0, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcSite"
+    },
+    {
+     "name": "2. SITE ELEMENT",
+     "description_vi": "Cổng tường rào",
+     "color": "Color(102, 102, 102, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcSite"
+    }
+   ]
+  },
+  {
+   "folder": "<3.> BUILDING STORIES",
+   "description_vi": "TẦNG NHÀ",
+   "tags": [
+    {
+     "name": "3. LEVEL 1",
+     "description_vi": "Tầng 1",
+     "color": "Color(119, 0, 119, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcBuildingStorey"
+    },
+    {
+     "name": "3. LEVEL 2",
+     "description_vi": "Tầng 2",
+     "color": "Color(170, 102, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcBuildingStorey"
+    },
+    {
+     "name": "3. LEVEL 3",
+     "description_vi": "Tầng 3",
+     "color": "Color(255, 204, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcBuildingStorey"
+    }
+   ]
+  },
+  {
+   "folder": "<A.> ARCHITECTURAL",
+   "description_vi": "KIẾN TRÚC",
+   "tags": [
+    {
+     "name": "A. CHIMNEY",
+     "description_vi": "Ống khói",
+     "color": "Color(186, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcChimney"
+    },
+    {
+     "name": "A. CURTAIN WALL",
+     "description_vi": "Tường đứng",
+     "color": "Color(186, 51, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCurtainWall"
+    },
+    {
+     "name": "A. DOOR",
+     "description_vi": "Cửa đi",
+     "color": "Color(255, 119, 102, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcDoor"
+    },
+    {
+     "name": "A. FINISHING CEILING",
+     "description_vi": "Trần hoàn thiện",
+     "color": "Color(153, 0, 255, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCovering"
+    },
+    {
+     "name": "A. FINISHING FLOOR",
+     "description_vi": "Sàn hoàn thiện",
+     "color": "Color(0, 0, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCovering"
+    },
+    {
+     "name": "A. FINISHING WALL",
+     "description_vi": "Tường hoàn thiện",
+     "color": "Color(186, 237, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCovering"
+    },
+    {
+     "name": "A. RAILING",
+     "description_vi": "Lan can",
+     "color": "Color(0, 0, 102, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcRailing"
+    },
+    {
+     "name": "A. RAMP",
+     "description_vi": "Đường dốc",
+     "color": "Color(0, 0, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcRamp"
+    },
+    {
+     "name": "A. RAMP FLIGHT",
+     "description_vi": "Phân đoạn đường dốc",
+     "color": "Color(135, 119, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcRampFlight"
+    },
+    {
+     "name": "A. ROOF",
+     "description_vi": "Mái công trình",
+     "color": "Color(255, 102, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcRoof"
+    },
+    {
+     "name": "A. SHADING",
+     "description_vi": "Cấu kiện che nắng",
+     "color": "Color(255, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcShadingDevice"
+    },
+    {
+     "name": "A. STAIR",
+     "description_vi": "Cầu thang bộ",
+     "color": "Color(255, 186, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcStair"
+    },
+    {
+     "name": "A. STAIR FLIGHT",
+     "description_vi": "Phân đoạn thang",
+     "color": "Color(255, 0, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcStairFlight"
+    },
+    {
+     "name": "A. WALL",
+     "description_vi": "Tường",
+     "color": "Color(255, 153, 102, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcWall"
+    },
+    {
+     "name": "A. WINDOW",
+     "description_vi": "Cửa sổ",
+     "color": "Color(204, 186, 237, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcWindow"
+    }
+   ]
+  },
+  {
+   "folder": "<I.> INTERIOR",
+   "description_vi": "",
+   "tags": [
+    {
+     "name": "I. FURNITURE",
+     "description_vi": "Vật dụng nội thất",
+     "color": "Color(119, 119, 153, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcFurniture"
+    },
+    {
+     "name": "I. DECORATION",
+     "description_vi": "Đồ trang trí nội thất",
+     "color": "Color(153, 0, 255, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcBuildingElementProxy"
+    },
+    {
+     "name": "I. COVERING",
+     "description_vi": "Hoàn thiện nội thất",
+     "color": "Color(204, 84, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCovering"
+    },
+    {
+     "name": "I. PARTITION",
+     "description_vi": "Vách ngăn nội thất",
+     "color": "Color(153, 153, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCovering"
+    },
+    {
+     "name": "I. EQUIPMENT",
+     "description_vi": "Thiết bị nội thất",
+     "color": "Color(128, 128, 20, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcBuildingElementProxy"
+    }
+   ]
+  },
+  {
+   "folder": "<E.> ELECTRICAL",
+   "description_vi": "ĐIỆN",
+   "tags": [
+    {
+     "name": "E. CABLE CARRIER FITTING",
+     "description_vi": "Khớp nối thang máng cáp",
+     "color": "Color(68, 84, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCableCarrierFitting"
+    },
+    {
+     "name": "E. CABLE CARRIER SEGMENT",
+     "description_vi": "Đoạn thang máng cáp",
+     "color": "Color(186, 0, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCableCarrierSegment"
+    },
+    {
+     "name": "E. CABLE FITTING",
+     "description_vi": "Khớp nối cáp",
+     "color": "Color(186, 0, 255, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCableFitting"
+    },
+    {
+     "name": "E. CABLE SEGMENT",
+     "description_vi": "Đoạn cáp",
+     "color": "Color(255, 0, 119, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCableSegment"
+    },
+    {
+     "name": "E. ELECTRIC DISTRIBUTION BOARD",
+     "description_vi": "Bảng điện",
+     "color": "Color(255, 84, 84, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcElectricDistributionBoard"
+    },
+    {
+     "name": "E. ELECTRIC FLOW STORAGE",
+     "description_vi": "Bộ lưu điện",
+     "color": "Color(0, 102, 153, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcElectricFlowStorageDevice"
+    },
+    {
+     "name": "E. ELECTRIC GENERATOR",
+     "description_vi": "Máy phát điện",
+     "color": "Color(102, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcElectricGenerator"
+    },
+    {
+     "name": "E. ELECTRIC MOTOR",
+     "description_vi": "Mô tơ điện",
+     "color": "Color(0, 153, 135, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcElectricMotor"
+    },
+    {
+     "name": "E. ELECTRIC TIME CONTROL",
+     "description_vi": "Bộ điều khiển định giờ",
+     "color": "Color(119, 119, 153, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcElectricTimeControl"
+    },
+    {
+     "name": "E. JUNCTION BOX",
+     "description_vi": "Hộp nối điện",
+     "color": "Color(153, 0, 255, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcJunctionBox"
+    },
+    {
+     "name": "E. LIGHT FIXTURE",
+     "description_vi": "Đèn được điều khiển chung",
+     "color": "Color(204, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcLightFixture"
+    },
+    {
+     "name": "E. PROTECTIVE DEVICE",
+     "description_vi": "Thiết bị bảo vệ điện",
+     "color": "Color(170, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProtectiveDevice"
+    },
+    {
+     "name": "E. TRANSFORMER",
+     "description_vi": "Máy biến áp",
+     "color": "Color(204, 102, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcTransformer"
+    },
+    {
+     "name": "E. TRIPPING UNIT",
+     "description_vi": "Thiết bị ngắt mạch",
+     "color": "Color(204, 84, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProtectiveDeviceTrippingUnit"
+    }
+   ]
+  },
+  {
+   "folder": "<F.> FIRE PROTECTION",
+   "description_vi": "PHÒNG CHÁY CHỮA CHÁY",
+   "tags": [
+    {
+     "name": "F. FIRE SUPPRESSION",
+     "description_vi": "Hệ thống dập lửa",
+     "color": "Color(153, 153, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcFireSuppressionTerminal"
+    }
+   ]
+  },
+  {
+   "folder": "<M.> MECHANICAL",
+   "description_vi": "ĐIỀU HÒA KHÔNG KHÍ & THÔNG GIÓ",
+   "tags": [
+    {
+     "name": "M. ACTUATOR",
+     "description_vi": "Bộ truyền động",
+     "color": "Color(0, 170, 186, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcActuator"
+    },
+    {
+     "name": "M. AIR TERMINAL",
+     "description_vi": "Thiết bị điều hòa không khí",
+     "color": "Color(102, 221, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcAirTerminal"
+    },
+    {
+     "name": "M. AIR TERMINAL BOX",
+     "description_vi": "Hộp chia gió",
+     "color": "Color(153, 153, 153, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcAirTerminalBox"
+    },
+    {
+     "name": "M. AIR TO AIR HEAT RECOVERY",
+     "description_vi": "Thiết bị thu hồi nhiệt",
+     "color": "Color(170, 168, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcAirToAirHeatRecovery"
+    },
+    {
+     "name": "M. BOILER",
+     "description_vi": "Nồi hơi",
+     "color": "Color(204, 135, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcBoiler"
+    },
+    {
+     "name": "M. CHILLER",
+     "description_vi": "Dàn lạnh",
+     "color": "Color(237, 255, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcChiller"
+    },
+    {
+     "name": "M. COIL",
+     "description_vi": "Bộ gia nhiệt",
+     "color": "Color(186, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCoil"
+    },
+    {
+     "name": "M. COMPRESSOR",
+     "description_vi": "Thiết bị nén chất lỏng",
+     "color": "Color(237, 153, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCompressor"
+    },
+    {
+     "name": "M. CONDENSER",
+     "description_vi": "Thiết bị ngưng tụ",
+     "color": "Color(186, 51, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCondenser"
+    },
+    {
+     "name": "M. COOLED BEAM",
+     "description_vi": "Thiết bị giải nhiệt",
+     "color": "Color(255, 119, 102, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCooledBeam"
+    },
+    {
+     "name": "M. COOLING TOWER",
+     "description_vi": "Tháp giải nhiệt",
+     "color": "Color(0, 0, 102, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCoolingTower"
+    },
+    {
+     "name": "M. DAMPER",
+     "description_vi": "Van chỉnh",
+     "color": "Color(0, 0, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcDamper"
+    },
+    {
+     "name": "M. DUCT FITTING",
+     "description_vi": "Khớp nối ống gió",
+     "color": "Color(135, 119, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcDuctFitting"
+    },
+    {
+     "name": "M. DUCT SEGMENT",
+     "description_vi": "Đoạn ống gió",
+     "color": "Color(255, 102, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcDuctSegment"
+    },
+    {
+     "name": "M. DUCT SILENCER",
+     "description_vi": "Tiêu âm ống gió",
+     "color": "Color(255, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcDuctSilencer"
+    },
+    {
+     "name": "M. ENGINE",
+     "description_vi": "Động cơ",
+     "color": "Color(255, 186, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcEngine"
+    },
+    {
+     "name": "M. EVAPORATIVE COOLER",
+     "description_vi": "Máy làm mát bằng hơi nước",
+     "color": "Color(255, 0, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcEvaporativeCooler"
+    },
+    {
+     "name": "M. EVAPORATOR",
+     "description_vi": "Thiết bị làm bay hơi",
+     "color": "Color(255, 153, 102, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcEvaporator"
+    },
+    {
+     "name": "M. FILTER",
+     "description_vi": "Thiết bị lọc",
+     "color": "Color(204, 186, 237, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcFilter"
+    },
+    {
+     "name": "M. HEAT EXCHANGER",
+     "description_vi": "Bộ trao đổi nhiệt",
+     "color": "Color(17, 102, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcHeatExchanger"
+    },
+    {
+     "name": "M. HUMIDIFIER",
+     "description_vi": "Thiết bị tạo ẩm",
+     "color": "Color(255, 153, 186, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcHumidifier"
+    },
+    {
+     "name": "M. MOTOR CONNECTION",
+     "description_vi": "Kết nối mô tơ",
+     "color": "Color(204, 17, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMotorConnection"
+    },
+    {
+     "name": "M. TUBE BUNDLE",
+     "description_vi": "Bộ ống dẫn môi chất lạnh",
+     "color": "Color(204, 84, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcTubeBundle"
+    },
+    {
+     "name": "M. VIBRATION ISOLATOR",
+     "description_vi": "Bộ giảm chấn",
+     "color": "Color(153, 102, 17, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcVibrationIsolator"
+    }
+   ]
+  },
+  {
+   "folder": "<P.> PLUMBING",
+   "description_vi": "NƯỚC",
+   "tags": [
+    {
+     "name": "P. DISTRIBUTION CHAMBER",
+     "description_vi": "Hố ga phân phối",
+     "color": "Color(119, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcDistributionChamberElement"
+    },
+    {
+     "name": "P. FLOW INSTRUMENT",
+     "description_vi": "Bộ đo lưu lượng dòng chảy",
+     "color": "Color(221, 17, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcFlowInstrument"
+    },
+    {
+     "name": "P. FLOW METER",
+     "description_vi": "Đồng ho đo dòng chảy",
+     "color": "Color(255, 153, 153, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcFlowMeter"
+    },
+    {
+     "name": "P. INTERCEPTOR",
+     "description_vi": "Thiết bị lọc tách",
+     "color": "Color(186, 237, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcInterceptor"
+    },
+    {
+     "name": "P. PIPE FITTING",
+     "description_vi": "Khớp nối ống",
+     "color": "Color(119, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcPipeFitting"
+    },
+    {
+     "name": "P. PIPE SEGMENT",
+     "description_vi": "Đoạn ống",
+     "color": "Color(119, 119, 119, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcPipeSegment"
+    },
+    {
+     "name": "P. PUMP",
+     "description_vi": "Bơm",
+     "color": "Color(135, 204, 255, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcPump"
+    },
+    {
+     "name": "P. VALVE",
+     "description_vi": "Van",
+     "color": "Color(186, 255, 186, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcValve"
+    },
+    {
+     "name": "P. WASTE TERMINAL",
+     "description_vi": "Bể xử lý nước thải",
+     "color": "Color(135, 135, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcWasteTerminal"
+    }
+   ]
+  },
+  {
+   "folder": "<L.> LANDSCAPE",
+   "description_vi": "CẢNH QUAN",
+   "tags": [
+    {
+     "name": "L. HARDSCAPE",
+     "description_vi": "Cảnh quan nhân tạo",
+     "color": "Color(255, 135, 170, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcGeographicElement"
+    },
+    {
+     "name": "L. SOFTSCAPE",
+     "description_vi": "Cảnh quan sinh học",
+     "color": "Color(128, 128, 20, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcGeographicElement"
+    },
+    {
+     "name": "L. TOPOGRAPHY",
+     "description_vi": "Cảnh quan địa hình",
+     "color": "Color(0, 0, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcGeographicElement"
+    },
+    {
+     "name": "L. WATER FEATURE",
+     "description_vi": "Cảnh quan mặt nước",
+     "color": "Color(102, 102, 102, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcGeographicElement"
+    },
+    {
+     "name": "L. LAWN",
+     "description_vi": "Thảm cỏ",
+     "color": "Color(119, 0, 119, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcGeographicElement"
+    },
+    {
+     "name": "L. SHRUB",
+     "description_vi": "Cây bụi",
+     "color": "Color(170, 102, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcGeographicElement"
+    },
+    {
+     "name": "L. TREE",
+     "description_vi": "Cây xanh",
+     "color": "Color(255, 204, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcGeographicElement"
+    },
+    {
+     "name": "L. WALKWAY",
+     "description_vi": "Đường dạo bộ",
+     "color": "Color(255, 170, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcGeographicElement"
+    }
+   ]
+  },
+  {
+   "folder": "<Q.> EQUIPMENT",
+   "description_vi": "THIẾT BỊ & VẬT DỤNG",
+   "tags": [
+    {
+     "name": "Q. ACCESSORY",
+     "description_vi": "Phụ kiện thiết bị",
+     "color": "Color(177, 154, 120, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcDiscreteAccessory"
+    },
+    {
+     "name": "Q. ALARM",
+     "description_vi": "Chuông báo",
+     "color": "Color(255, 135, 221, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcAlarm"
+    },
+    {
+     "name": "Q. AUDIO VISUAL APPLIANCE",
+     "description_vi": "Thiết bị nghe nhìn",
+     "color": "Color(68, 84, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcAudioVisualAppliance"
+    },
+    {
+     "name": "Q. BURNER",
+     "description_vi": "Thiết bị đốt",
+     "color": "Color(186, 0, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcBurner"
+    },
+    {
+     "name": "Q. COMMUNICATIONS APPLIANCE",
+     "description_vi": "Thiết bị viễn thông",
+     "color": "Color(186, 0, 255, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCommunicationsAppliance"
+    },
+    {
+     "name": "Q. CONTROLLER",
+     "description_vi": "Thiết bị điều khiển",
+     "color": "Color(255, 0, 119, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcController"
+    },
+    {
+     "name": "Q. ELECTRIC APPLIANCE",
+     "description_vi": "Thiết bị điện gia dụng",
+     "color": "Color(255, 84, 84, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcElectricAppliance"
+    },
+    {
+     "name": "Q. FAN",
+     "description_vi": "Quạt",
+     "color": "Color(0, 102, 153, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcFan"
+    },
+    {
+     "name": "Q. FASTENER",
+     "description_vi": "Liên kết",
+     "color": "Color(102, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcFastener"
+    },
+    {
+     "name": "Q. FURNITURE",
+     "description_vi": "Vật dụng",
+     "color": "Color(0, 153, 135, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcFurniture"
+    },
+    {
+     "name": "Q. FURNITURE ELEMENT",
+     "description_vi": "Thành phần vật dụng",
+     "color": "Color(119, 119, 153, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcSystemFurnitureElement"
+    },
+    {
+     "name": "Q. LAMP",
+     "description_vi": "Bóng đèn",
+     "color": "Color(153, 0, 255, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcLamp"
+    },
+    {
+     "name": "Q. MECHANICAL FASTENER",
+     "description_vi": "Liên kết cơ khí",
+     "color": "Color(204, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMechanicalFastener"
+    },
+    {
+     "name": "Q. MEDICAL DEVICE",
+     "description_vi": "Thiết bị y tế",
+     "color": "Color(170, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMedicalDevice"
+    },
+    {
+     "name": "Q. OUTLET",
+     "description_vi": "Ổ cắm",
+     "color": "Color(204, 102, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcOutlet"
+    },
+    {
+     "name": "Q. SANITARY",
+     "description_vi": "Thiết bị vệ sinh",
+     "color": "Color(204, 84, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcSanitaryTerminal"
+    },
+    {
+     "name": "Q. SENSOR",
+     "description_vi": "Thiết bị cảm biến",
+     "color": "Color(153, 153, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcSensor"
+    },
+    {
+     "name": "Q. SOLAR DEVICE",
+     "description_vi": "Thiết bị năng lượng mặt trời",
+     "color": "Color(255, 135, 170, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcSolarDevice"
+    },
+    {
+     "name": "Q. SPACE HEATER",
+     "description_vi": "Thiết bị sưởi",
+     "color": "Color(128, 128, 20, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcSpaceHeater"
+    },
+    {
+     "name": "Q. STACK",
+     "description_vi": "Thiết bị che chắn",
+     "color": "Color(0, 0, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcStackTerminal"
+    },
+    {
+     "name": "Q. SWITCH",
+     "description_vi": "Công tắc",
+     "color": "Color(102, 102, 102, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcSwitchingDevice"
+    },
+    {
+     "name": "Q. TANK",
+     "description_vi": "Bể chứa",
+     "color": "Color(119, 0, 119, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcTank"
+    },
+    {
+     "name": "Q. TRANSPORT ELEMENT",
+     "description_vi": "Thiết bị vận chuyển",
+     "color": "Color(170, 102, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcTransportElement"
+    },
+    {
+     "name": "Q. UNITARY CONTROL ELEMENT",
+     "description_vi": "Bộ điều khiển",
+     "color": "Color(255, 204, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcUnitaryControlElement"
+    },
+    {
+     "name": "Q. UNITARY EQUIPMENT",
+     "description_vi": "Bộ thiết bị",
+     "color": "Color(255, 170, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcUnitaryEquipment"
+    }
+   ]
+  },
+  {
+   "folder": "<S.> STRUCTURAL",
+   "description_vi": "KẾT CẤU",
+   "tags": [
+    {
+     "name": "S. BEAM",
+     "description_vi": "Dầm",
+     "color": "Color(0, 170, 186, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcBeam"
+    },
+    {
+     "name": "S. COLUMN",
+     "description_vi": "Cột",
+     "color": "Color(102, 221, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcColumn"
+    },
+    {
+     "name": "S. FOOTING",
+     "description_vi": "Móng",
+     "color": "Color(153, 153, 153, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcFooting"
+    },
+    {
+     "name": "S. MEMBER",
+     "description_vi": "Giằng",
+     "color": "Color(170, 168, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMember"
+    },
+    {
+     "name": "S. PILE",
+     "description_vi": "Cọc",
+     "color": "Color(204, 135, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcPile"
+    },
+    {
+     "name": "S. PLATE",
+     "description_vi": "Bản thép",
+     "color": "Color(237, 255, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcPlate"
+    },
+    {
+     "name": "S. REINFORCING BAR",
+     "description_vi": "Thanh thép chịu lực",
+     "color": "Color(186, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcReinforcingBar"
+    },
+    {
+     "name": "S. REINFORCING MESH",
+     "description_vi": "Lưới thép chịu lực",
+     "color": "Color(237, 153, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcReinforcingMesh"
+    },
+    {
+     "name": "S. SLAB",
+     "description_vi": "Bản sàn",
+     "color": "Color(186, 51, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcSlab"
+    },
+    {
+     "name": "S. TENDON",
+     "description_vi": "Cáp",
+     "color": "Color(255, 119, 102, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcTendon"
+    },
+    {
+     "name": "S. TENDON ANCHOR",
+     "description_vi": "Neo cáp",
+     "color": "Color(0, 0, 102, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcTendonAnchor"
+    }
+   ]
+  },
+  {
+   "folder": "<C.> CIVIL",
+   "description_vi": "HẠ TẦNG DÂN DỤNG",
+   "tags": [
+    {
+     "name": "C. BRIDGE",
+     "description_vi": "Cầu",
+     "color": "Color(17, 102, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    },
+    {
+     "name": "C. BUILDINGS",
+     "description_vi": "Công trình",
+     "color": "Color(255, 153, 186, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    },
+    {
+     "name": "C. DAM",
+     "description_vi": "Đê đập",
+     "color": "Color(204, 17, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    },
+    {
+     "name": "C. DRAIN",
+     "description_vi": "Mương cống thoát nước",
+     "color": "Color(204, 84, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    },
+    {
+     "name": "C. LANDUSE 1",
+     "description_vi": "Loại đất 1",
+     "color": "Color(153, 102, 17, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    },
+    {
+     "name": "C. LANDUSE 2",
+     "description_vi": "Loại đất 2",
+     "color": "Color(119, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    },
+    {
+     "name": "C. MOAT",
+     "description_vi": "Hào nước",
+     "color": "Color(221, 17, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    },
+    {
+     "name": "C. POWER SUPPLY",
+     "description_vi": "Hạ tầng cấp điện",
+     "color": "Color(255, 153, 153, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    },
+    {
+     "name": "C. RAILWAY",
+     "description_vi": "Đường sắt",
+     "color": "Color(186, 237, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    },
+    {
+     "name": "C. ROAD",
+     "description_vi": "Đường bộ",
+     "color": "Color(119, 68, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    },
+    {
+     "name": "C. SIDEWALK",
+     "description_vi": "Vỉa hè",
+     "color": "Color(119, 119, 119, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    },
+    {
+     "name": "C. TELECOMMUNICATION",
+     "description_vi": "Hạ tầng viễn thông",
+     "color": "Color(135, 204, 255, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    },
+    {
+     "name": "C. TRAIL",
+     "description_vi": "Đường mòn",
+     "color": "Color(186, 255, 186, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    },
+    {
+     "name": "C. TUNNEL",
+     "description_vi": "Đường hầm",
+     "color": "Color(135, 135, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcCivilElement"
+    },
+    {
+     "name": "C. WATER SUPPLY",
+     "description_vi": "Hạ tầng cấp nước",
+     "color": "Color(177, 154, 120, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcDistributionElement"
+    },
+    {
+     "name": "C. WATER WASTE",
+     "description_vi": "Hạ tầng thoát nước thải",
+     "color": "Color(255, 135, 221, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcDistributionElement"
+    }
+   ]
+  },
+  {
+   "folder": "<@> REFERENCES",
+   "description_vi": "",
+   "tags": [
+    {
+     "name": "Reference: Skp",
+     "description_vi": "SketchUp tham chiếu",
+     "color": "Color(128, 128, 128, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProxy"
+    },
+    {
+     "name": "Reference: Cad",
+     "description_vi": "Cad tham chiếu",
+     "color": "Color(128, 128, 128, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProxy"
+    },
+    {
+     "name": "Reference: Image",
+     "description_vi": "Ảnh tham chiếu ",
+     "color": "Color(128, 128, 128, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcProxy"
+    }
+   ]
+  },
+  {
+   "folder": "<#> MATERIALS",
+   "description_vi": "VẬT LIỆU",
+   "tags": [
+    {
+     "name": "m_brick#1",
+     "description_vi": "Vật liệu gạch xây #1",
+     "color": "Color(225, 159, 127, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_brick#2",
+     "description_vi": "Vật liệu gạch xây #2",
+     "color": "Color(255, 127, 127, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_ceiling",
+     "description_vi": "Vật liệu hoàn thiện trần",
+     "color": "Color(102, 204, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_ceramic",
+     "description_vi": "Vật liệu gốm",
+     "color": "Color(255, 127, 159, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_cladding",
+     "description_vi": "Vật liệu ốp tường",
+     "color": "Color(102, 102, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_concrete#1",
+     "description_vi": "Vật liệu bê tông #1",
+     "color": "Color(128, 128, 128, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_concrete#2",
+     "description_vi": "Vật liệu bê tông #2",
+     "color": "Color(192, 192, 192, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_earth",
+     "description_vi": "Vật liệu đất",
+     "color": "Color(204, 153, 102, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_fabric",
+     "description_vi": "Vật liệu vải",
+     "color": "Color(192, 192, 192, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_fill",
+     "description_vi": "Vật liệu bồi đắp",
+     "color": "Color(204, 102, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_flooring",
+     "description_vi": "Vật liệu hoàn thiện sàn",
+     "color": "Color(191, 255, 127, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_frame",
+     "description_vi": "Vật liệu hệ khung",
+     "color": "Color(255, 223, 127, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_glass",
+     "description_vi": "Vật liệu kính",
+     "color": "Color(128, 128, 128, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_gypsum",
+     "description_vi": "Vật liệu thạch cao",
+     "color": "Color(255, 127, 191, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_insulation",
+     "description_vi": "Vật liệu cách ly",
+     "color": "Color(255, 204, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_metal",
+     "description_vi": "Vật liệu kim loại",
+     "color": "Color(255, 170, 0, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_others",
+     "description_vi": "Vật liệu khác",
+     "color": "Color(192, 192, 192, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_plastic",
+     "description_vi": "Vật liệu nhựa",
+     "color": "Color(127, 255, 159, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_rhs",
+     "description_vi": "Vật liệu thép hình rỗng",
+     "color": "Color(153, 153, 153, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_roofing",
+     "description_vi": "Vật liệu hoàn thiện mái",
+     "color": "Color(127, 102, 204, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_sand",
+     "description_vi": "Vật liệu cát",
+     "color": "Color(204, 204, 102, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_screed",
+     "description_vi": "Vật liệu vữa",
+     "color": "Color(192, 192, 192, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_stone",
+     "description_vi": "Vật liệu đá",
+     "color": "Color(127, 255, 255, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_water",
+     "description_vi": "Vật liệu nước",
+     "color": "Color(127, 223, 255, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    },
+    {
+     "name": "m_wood",
+     "description_vi": "Vật liệu gỗ",
+     "color": "Color(255, 191, 127, 1.0)",
+     "dashes": "Default",
+     "ifc": "IfcMaterial"
+    }
+   ]
+  }
+ ]
+}

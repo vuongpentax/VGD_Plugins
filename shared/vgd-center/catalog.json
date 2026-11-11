@@ -197,40 +197,11 @@
       ]
     },
     {
-      "id": "bim_lite",
+      "id": "bim",
       "name": "VGD_BIM",
-      "extension_name": "VGD BIM Lite",
-      "version": "1.0.0",
-      "release_channel": "stable",
-      "description": "Đọc thông tin và rà soát dữ liệu mô hình SketchUp.",
-      "icon": "bim_lite",
-      "minimum_sketchup": "22.0.0",
-      "download": {
-        "filename": "VGD_BIM_Lite_v1.0.0.rbz",
-        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-bim-lite-v1.0.0/VGD_BIM_Lite_v1.0.0.rbz",
-        "size": 72431,
-        "sha256": "d17b90863074d0f559f1bed2ccfe31abd48706469711567464856386b0ad8d1d"
-      },
-      "allowed_paths": [
-        "vgd_bim_lite.rb",
-        "vgd_bim_lite/"
-      ],
-      "releases": [
-        {
-          "version": "1.0.0",
-          "release_channel": "stable",
-          "published_at": "2026-10-27",
-          "tag": "vgd-bim-lite-v1.0.0",
-          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-bim-lite-v1.0.0"
-        },
-        {
-          "version": "0.1.4-alpha",
-          "release_channel": "alpha",
-          "published_at": "2026-10-16",
-          "tag": "vgd-bim-lite-v0.1.4-alpha",
-          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-bim-lite-v0.1.4-alpha"
-        }
-      ]
+      "kind": "plugin",
+      "lifecycle": "in_development",
+      "visibility": "public"
     },
     {
       "id": "reference",

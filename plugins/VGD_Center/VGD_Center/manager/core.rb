@@ -94,16 +94,6 @@ module VGD
         { done: done, skipped: skipped, failed: failed, backup: backup_path }
       end
 
-      # Một dòng nhật ký cho mỗi lần chuyển plugin (kể cả khi thành công), để người hỗ trợ biết đã chép, bỏ qua, lỗi gì.
-      def self.migration_log_line(src_ver, dst_ver, overwrite, result, warns)
-        parts = ["Chuyển plugin #{src_ver} -> #{dst_ver} (ghi đè: #{overwrite ? 'có' : 'không'})",
-                 "đã chép: #{result[:done].join(', ')}",
-                 "bỏ qua: #{result[:skipped].join(', ')}",
-                 "lỗi: #{result[:failed].join(' | ')}"]
-        parts << "cảnh báo: #{warns.join(' | ')}" if warns.any?
-        parts.join('; ')
-      end
-
       # Danh sách file (đường dẫn tương đối => dung lượng) của một mục; mục là một file thì khóa rỗng.
       def self.tree_files(path)
         return { '' => File.size(path) } unless File.directory?(path)

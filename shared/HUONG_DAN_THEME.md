@@ -64,7 +64,7 @@ Kit đã cung cấp sẵn: `color-scheme`, font Manrope (bundle sẵn, không c�
 | VGD Scenes | `runtime/vgd_scenes/dialog.js` | `VGD.Scenes.Theme` | `#theme` |
 | VGD Library | `runtime/vgd_library/dialog.js` và `seamless.js` | `VGD.Library.Theme` | `#themeToggle` |
 | VGD Image Importer | `runtime/vgd_image_importer/dialog.js` | `vgd.image_importer.theme` | `#theme` |
-| VGD_BIM | `runtime/vgd_bim_lite/html/app.js` | `VGD_BIM_theme` | `#theme` |
+| VGD_BIM | `runtime/vgd_bim/html/app.js` | `VGD_BIM_theme` | `#theme` |
 | VGD Reference | `runtime/vgd_reference/ui/web/app.js` | `vgd.reference.theme` | `#appearanceSettings` |
 | VGD Package | `VGD_Package/ui/dialog.js` | `vgd-package-theme` | `#themeButton` |
 
@@ -107,3 +107,31 @@ Kiểm tra nhanh: `grep -rlE "#[0-9A-Fa-f]{6}\b" plugins --include=*.css --inclu
 - Icon đã có trong plugin (ví dụ Library, Scenes, Dim, Reference) vẫn dùng `#A67C58`. Đổi các icon này là việc riêng, làm từng plugin.
 - Không nền, không khung trang trí. Nhận ra được ở 16–24 px.
 - Chỉ đưa vào plugin sau khi đã duyệt trong `VGD_ICON_SYSTEM_PREVIEW.html`.
+
+## 9. Chuẩn điều khiển và hiệu ứng (nút gạt, thanh cuộn, ngăn trượt)
+
+Rút ra từ VGD_BIM (bản 1.1.0-beta.19) và tab Quản lý của VGD Center. Mã dùng chung là `shared/vgd-theme/vgd-controls.css`, xem mẫu chạy được ở `shared/vgd-ui/vgd-controls-preview.html`. Khi sửa hoặc làm mới dialog của một plugin, áp theo chuẩn này; không tự đặt số đo khác.
+
+File CSS nằm trong bộ theme nên `python tools/sync_vgd_theme.py` đã chép nó vào `vgd-theme/` của cả 9 plugin (không sửa bản copy). Plugin nào dùng thì thêm sau `vgd-theme.css`: `<link rel="stylesheet" href="vgd-theme/vgd-controls.css">` và để `<body class="vgd-ui">`. Nếu plugin có danh sách file đóng gói riêng (ví dụ VGD Dim `dev/package.py`), thêm `vgd-theme/vgd-controls.css` vào danh sách đó khi bắt đầu dùng. Plugin chưa dùng thì file chỉ nằm trong source, không ảnh hưởng giao diện.
+
+**Nút gạt** (`.vgd-switch`, `<button role="switch" aria-checked>`):
+- Cỡ cố định **40 x 22 px**, bo 11 px, viền 1 px. Đầu gạt **16 x 16 px**, cách mép 2 px, gạt sang `left: 20px`.
+- Tắt: nền `--vgd-elevated`, đầu gạt `--vgd-muted`. Bật: nền và viền `--vgd-accent`, đầu gạt `--vgd-on-accent`.
+- Chữ nhãn 12 px (gọn: 11 px), màu muted khi tắt, màu chữ chính khi bật; bấm vào chữ cũng gạt. Có `aria-label`, viền focus 2 px.
+- Dùng nút gạt cho tuỳ chọn bật / tắt có hiệu lực ngay. Danh sách chọn nhiều mục dùng **ô tick** (`.vgd-checkbox`, 15 x 15 px).
+
+**Thanh cuộn:**
+- **Không hiện thanh cuộn dọc ở bất kỳ đâu** (khung chính, bảng, danh sách, bảng thả xuống). Người dùng vẫn cuộn bằng con lăn chuột; thanh dọc dễ bị lăn nhầm và làm giao diện rối.
+- Chỉ giữ **thanh cuộn ngang mảnh 10 px** ở bảng nhiều cột, để trượt xem.
+- Làm bằng `::-webkit-scrollbar { width: 0; height: 10px }`. **Không** đặt `scrollbar-width` hoặc `scrollbar-gutter` trên các phần tử đó vì trình duyệt sẽ bỏ qua `::-webkit-scrollbar`.
+- Playwright mặc định chạy với `--hide-scrollbars` nên không đo được thanh cuộn; test phải khởi động với `ignoreDefaultArgs: ['--hide-scrollbars']`.
+
+**Hiệu ứng:**
+- Thời lượng: ô tick và đổi chỗ trong danh sách 150 ms, nút gạt 180 ms (`cubic-bezier(.4,0,.2,1)`), ngăn / bảng trượt 220 ms (`ease`). Biến: `--vgd-dur-check`, `--vgd-dur-switch`, `--vgd-dur-panel`, `--vgd-ease`.
+- Hiệu ứng chỉ chạy khi **đổi trạng thái trên cùng một phần tử**. Nếu đoạn mã dựng lại phần tử (xoá rồi tạo mới) sau mỗi lần bấm thì hiệu ứng bị cắt. Khi trạng thái đến từ Ruby, cập nhật `aria-checked` tại chỗ thay vì vẽ lại cả khối.
+- **Ngăn trượt (drawer)** (`.vgd-split` / `.vgd-drawer`): mở ra thì **đẩy** nội dung sang bên, không đè lên, để cột đầu của bảng không bị che. Mở bằng cách thêm class `open` sau hai `requestAnimationFrame` lồng nhau (để width 0 được vẽ trước); đóng bằng cách bỏ `open`, rồi dọn nội dung sau 220 ms.
+- **Kéo đổi chỗ trong danh sách:** dùng kéo thả HTML5, đổi chỗ trực tiếp khi kéo và làm các mục khác trượt bằng kỹ thuật FLIP (ghi vị trí cũ, đổi DOM, đặt `translateY` chênh lệch rồi cho về 0 bằng `transition: transform 150ms ease`). Chốt thứ tự khi thả (`dragend`). Mẫu đầy đủ trong `vgd-controls-preview.html`.
+- Tôn trọng `prefers-reduced-motion: reduce`: tắt toàn bộ hiệu ứng (đã có trong CSS).
+- Chỉ dùng hiệu ứng để giải thích thay đổi (bật / tắt, đổi chỗ, mở ngăn). Không thêm hiệu ứng trang trí.
+
+**Kiểm tra:** đo hiệu ứng giữa chừng (ví dụ đọc `left` của đầu gạt sau 60 ms phải nằm giữa 2 và 20 px) và thử phá code để chắc test báo lỗi đúng. Phần chưa kiểm trong HtmlDialog thật (độ mượt, kéo thả HTML5 trong SketchUp) phải ghi là chưa xác minh.

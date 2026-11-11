@@ -10,7 +10,7 @@ require File.join(File.dirname(__FILE__), 'manager', 'core')
 
 module VGD
   module Center
-    VERSION = '1.2.4-beta.3'.freeze
+    VERSION = '1.2.4'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
@@ -21,19 +21,17 @@ module VGD
     MAX_GUIDE_BYTES = 300 * 1024
     MIN_GUIDE_BYTES = 200
     GUIDE_TIMEOUT = 5.0
-    ALLOWED_IDS = %w[dim cabinet library image_importer scenes bim_lite reference].freeze
+    ALLOWED_IDS = %w[dim cabinet library image_importer scenes bim reference].freeze
     PLUGIN_LAYOUTS = {
       'dim' => ['VGD Dim', ['vgd_dim.rb', 'VGD_Dim/']],
       'cabinet' => ['VGD Cabinet', ['vgd_cabinet.rb', 'VGD_Cabinet/']],
       'library' => ['VGD Library', ['vgd_library.rb', 'vgd_library/']],
       'image_importer' => ['VGD Image Importer', ['vgd_image_importer.rb', 'vgd_image_importer/']],
       'scenes' => ['VGD Scenes', ['vgd_scenes.rb', 'vgd_scenes/']],
-      'bim_lite' => ['VGD_BIM', ['vgd_bim_lite.rb', 'vgd_bim_lite/']],
+      'bim' => ['VGD_BIM', ['vgd_bim.rb', 'vgd_bim/']],
       'reference' => ['VGD Reference', ['vgd_reference.rb', 'vgd_reference/']],
       'center' => ['VGD Center', ['VGD_Center.rb', 'VGD_Center/']]
     }.freeze
-    # Tên extension cũ của plugin đã đổi tên, chỉ để nhận bản đã cài trước đó và catalog chưa đổi tên (BIM 1.0.x đăng ký là "VGD BIM Lite").
-    LEGACY_EXTENSION_NAMES = { 'bim_lite' => ['VGD BIM Lite'] }.freeze
     # Plugin chưa có trong PLUGIN_LAYOUTS vẫn được nhận nếu catalog khai báo cấu trúc hợp lệ (xem validate_plugin_layout).
     PLUGIN_ID_PATTERN = /\A[a-z][a-z0-9_]{1,39}\z/
     EXTENSION_NAME_PATTERN = /\AVGD [A-Za-z0-9][A-Za-z0-9 ._-]{0,59}\z/
@@ -499,7 +497,7 @@ module VGD
         claimed = {
           paths: PLUGIN_LAYOUTS.values.flat_map { |layout| layout[1].map(&:downcase) } +
                  Manager::SELF_NAMES.flat_map { |name| [name.downcase, "#{name.downcase}/"] },
-          names: PLUGIN_LAYOUTS.values.map { |layout| layout[0].downcase } + LEGACY_EXTENSION_NAMES.values.flatten.map(&:downcase)
+          names: PLUGIN_LAYOUTS.values.map { |layout| layout[0].downcase }
         }
         normalized = products.each_with_object([]) do |product, valid_products|
           # Products without a release are listed on the website only; skip them silently.
@@ -516,7 +514,7 @@ module VGD
             ids << id
             if known
               expected_name, expected_paths = PLUGIN_LAYOUTS.fetch(id)
-              raise "tên extension không hợp lệ: #{id}" unless ([expected_name] + LEGACY_EXTENSION_NAMES.fetch(id, [])).include?(product['extension_name'])
+              raise "tên extension không hợp lệ: #{id}" unless product['extension_name'] == expected_name
             end
 
             version = product['version'].to_s
@@ -719,8 +717,8 @@ module VGD
             name.match?(/\AVGD_Cabinet(?:\s|\z)/i)
           when 'library'
             name.casecmp('VGD_Library').zero?
-          when 'bim_lite'
-            ([PLUGIN_LAYOUTS['bim_lite'][0]] + LEGACY_EXTENSION_NAMES['bim_lite']).any? { |known| name.casecmp(known).zero? }
+          when 'bim'
+            name.casecmp(PLUGIN_LAYOUTS['bim'][0]).zero?
           else
             false
           end
