@@ -199,9 +199,32 @@
     {
       "id": "bim",
       "name": "VGD_BIM",
-      "kind": "plugin",
-      "lifecycle": "in_development",
-      "visibility": "public"
+      "extension_name": "VGD_BIM",
+      "version": "1.1.0-beta.60",
+      "release_channel": "beta",
+      "description": "Bảng khối lượng, ảnh món, đổi tên và quản lý tag cho dữ liệu mô hình nội thất.",
+      "guide": true,
+      "icon": "bim",
+      "minimum_sketchup": "22.0.0",
+      "download": {
+        "filename": "VGD_BIM_v1.1.0-beta.60.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-bim-v1.1.0-beta.60/VGD_BIM_v1.1.0-beta.60.rbz",
+        "size": 283159,
+        "sha256": "450ec523186c23c7c2d3134ee01c150e961617b90b61192ba974fcfe37080699"
+      },
+      "allowed_paths": [
+        "vgd_bim.rb",
+        "vgd_bim/"
+      ],
+      "releases": [
+        {
+          "version": "1.1.0-beta.60",
+          "release_channel": "beta",
+          "published_at": "2026-11-11",
+          "tag": "vgd-bim-v1.1.0-beta.60",
+          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-bim-v1.1.0-beta.60"
+        }
+      ]
     },
     {
       "id": "reference",
