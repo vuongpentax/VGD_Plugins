@@ -46,6 +46,8 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await receive('preview',{objects:28,occurrences:30,skipped:2,data:map.suggestion.data,rule:true,shared:true,material:true});await scan('Xem trước');
   await receive('config',config(lang,'validate_model'));
   const vf=F.vi.fields,m=F.vi.quantity_method,u=F.vi.unit;
+  await receive('config',config(lang,'scan'));await receive('scan_pending',{mode:'scan'});await scan('Trang chờ quét');
+  await receive('config',config(lang,'validate_model'));await receive('scan_pending',{mode:'validate_model'});await scan('Trang chờ quét (Kiểm tra)');
   await receive('validation',[{index:0,status:'ERROR',instance_name:'',definition_name:'D',issues:[
     {severity:'INFO',code:'missing_id',message:'Chưa có VGD ID, hãy bấm Gán VGD ID cho tất cả món chưa có'},
     {severity:'ERROR',message:`Thiếu ${vf.description.toLowerCase()}`},{severity:'ERROR',message:`${vf.code} phải là văn bản`},{severity:'ERROR',message:`${vf.unit} không hợp lệ`},

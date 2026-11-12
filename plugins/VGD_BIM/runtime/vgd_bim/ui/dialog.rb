@@ -30,6 +30,7 @@ module VGD
           @targets = []
           @generation = 0
           @scan_options = {scope: 'model', faces: nil}
+          @scan_armed = false # các tab quét (Quét & xuất, Phân loại, Kiểm tra) chỉ quét khi người dùng bấm Quét ngay, không tự quét lúc mở tab
           @table_rows = []
           @table_records = []
           @table_scope = []
@@ -68,6 +69,7 @@ module VGD
           @dialog.add_action_callback('import_rules') { |_ctx| safely { check_model!; path = ::UI.openpanel('Nhập quy tắc phân loại', '', 'JSON|*.json||'); if path; MappingRules.import_file(path); refresh; end } }
           @dialog.add_action_callback('save_tags') { |_ctx, payload| safely { Tags.save(JSON.parse(payload)); refresh; emit('message', {text: 'Đã lưu bộ tag trên máy này.'}) } }
           @dialog.add_action_callback('assign_tag') { |_ctx, payload| safely { assign_tag(JSON.parse(payload)) } }
+          @dialog.add_action_callback('scan_start') { |_ctx| safely { scan_start } }
           @dialog.add_action_callback('scan_options') { |_ctx, payload| safely { set_scan_options(JSON.parse(payload)) } }
           @dialog.add_action_callback('export_tags') { |_ctx, kind| safely { export_tags(kind) } }
           @dialog.add_action_callback('import_tags') { |_ctx, kind| safely { import_tags(kind) } }
@@ -115,6 +117,7 @@ module VGD
           mode = ALIASES.fetch(mode, mode)
           raise ArgumentError, 'Tính năng không hợp lệ.' unless MODES.include?(mode)
           @mode = mode
+          @scan_armed = false
           refresh if @ready
         end
         def safely
@@ -185,8 +188,13 @@ module VGD
           when 'rules'
             emit('rules', MappingRules.read(@model))
           else
-            scan_now
+            @scan_armed ? scan_now : emit('scan_pending', {mode: @mode}) # model lớn: quét cả file có thể treo máy, nên chờ người dùng bấm
           end
+        end
+        # Bấm Quét ngay ở tab quét: từ đây tab quét (và các lần làm mới sau) chạy bình thường cho tới khi đổi tab.
+        def scan_start
+          @scan_armed = true
+          refresh
         end
         # Quét một mạch, không dùng bộ hẹn giờ, nên không bị ngắt khi di chuột hoặc thao tác khác.
         def scan_now

@@ -57,6 +57,17 @@ function scanOptionsBar(parent) {
   bar.append(node('p',faces.checked?'Quét cả mặt sẽ chậm hơn với model lớn. Tắt nếu chỉ cần đếm group / component.':'Đang tắt quét mặt: diện tích và số liệu theo mặt sẽ để trống.','muted'));
   parent.append(bar);
 }
+// Tab quét (Quét & xuất, Phân loại, Kiểm tra) không tự quét khi mở: quét cả file có thể treo máy với model lớn, nên chỉ quét khi bấm Quét ngay.
+const SCAN_TITLES={scan:'Quét & xuất',mapping:'Phân loại',validate_model:'Kiểm tra',validate_selection:'Kiểm tra'};
+function scanPending(data) {
+  $('content').replaceChildren();
+  if(['mapping','validate_model','validate_selection'].includes(data.mode))subTabs();
+  if(['validate_model','validate_selection'].includes(data.mode))scope([['Toàn bộ mô hình','validate_model'],['Đối tượng đang chọn','validate_selection']]);
+  if(['scan','mapping'].includes(data.mode))scanOptionsBar($('content'));
+  const c=card(SCAN_TITLES[data.mode]||'Quét');
+  c.append(node('p','Chưa quét. Quét toàn bộ model có thể mất vài phút và làm SketchUp đứng hình với model lớn. Chọn phạm vi rồi bấm Quét ngay khi bạn sẵn sàng.','hint'));
+  const run=button('Quét ngay',()=>call('scan_start'),'primary');run.id='scan-start';c.append(run);
+}
 function scan(data) {
   $('content').replaceChildren();scanOptionsBar($('content'));metrics(data.summary);const components=card('Thống kê thành phần của mô hình');
   table(components,['Tên định nghĩa','Tên đối tượng','Số lượng','Thẻ / Vật liệu','Rộng × Sâu × Cao mẫu (mm)'],data.components,(r,tr)=>{cell(tr,r.definition_name||'Chưa đặt tên');cell(tr,r.names.join(', '));cell(tr,r.instances);cell(tr,r.tags.join(', ')+' / '+(r.material||'Chưa có vật liệu'));cell(tr,dimensions(r.dimensions)+(r.dimension_variants>1?` (${r.dimension_variants} biến thể)`:''));});
@@ -1573,7 +1584,7 @@ const TAB_OF={rules:'mapping',validate_model:'mapping',validate_selection:'mappi
 window.VGD={receive(event,data){
   if(event==='config'){document.body.classList.remove('table-mode');updateSelInfo();if(appliedLanguage&&data.language&&appliedLanguage!==data.language){location.reload();return;}appliedLanguage=data.language||'vi';VGD_I18N.setLanguage(appliedLanguage,data.vi_en);config=data;if(config.table&&!tableState.restored)restoreView({view:config.table.view,columns:config.table.columns,presets:config.table.presets});updatePresetButton();locale=data.locale||locale;$('subtitle').textContent=`${data.version} · ${translated('modes',data.mode)}`;document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===(TAB_OF[data.mode]||data.mode);b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});$('preview').close();$('content').replaceChildren();$('primary-actions').replaceChildren();document.querySelector('main').scrollTop=0;message('Đang đọc dữ liệu…');}
   if(event==='table'){tableState.manual=Array.isArray(data.row_order)?data.row_order:[];tableState.rename.preview=null;tableState.sel=new Set(Array.isArray(data.selected)?data.selected:[]);if(!tableState.sel.has(tableState.anchor))tableState.anchor=null;} // bảng đổi thì bản xem trước đổi tên cũ không còn đúng
-  const renderers={information,scan,mapping,validation,rules,tags:tagEditor,table:tableView};if(renderers[event]){renderers[event](data);message('Sẵn sàng.');}
+  const renderers={information,scan,scan_pending:scanPending,mapping,validation,rules,tags:tagEditor,table:tableView};if(renderers[event]){renderers[event](data);message('Sẵn sàng.');}
   if(event==='snapshots'){tableState.snapshots=data;if(tableState.panel==='snapshots'&&tableState.data)tableView(tableState.data);}
   if(event==='snapshot_diff'){tableState.snapshotDiff=data;tableState.panel='snapshots';if(tableState.data)tableView(tableState.data);}
   if(event==='check_results'){tableState.checkResults=data;tableState.panel='checks';if(tableState.data)tableView(tableState.data);}

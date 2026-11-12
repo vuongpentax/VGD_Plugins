@@ -838,6 +838,20 @@ ok('danh sách mốc: gửi đúng một mốc', sd.scalls.last[0] == 'snapshots
 ok('xóa mốc không có: lỗi', bad_snap.call { sd.snapshot_delete({'id' => 'sn_00000000'}) }.to_s.include?('Không tìm thấy'))
 sd.snapshot_delete({'id' => sid})
 ok('xóa mốc: model hết mốc', VGD::BIM::Snapshots.read(sm).empty? && sd.scalls.last[1][:text].include?('xóa'))
+# Tab quét (Quét & xuất, Phân loại, Kiểm tra) không tự quét khi mở: chỉ quét sau khi bấm Quét ngay (scan_start); đổi tab thì chờ lại
+qd = D.allocate
+qd.instance_variable_set(:@ready, true)
+qd.instance_variable_set(:@scan_armed, false)
+refreshed = 0
+qd.define_singleton_method(:refresh) { refreshed += 1 }
+qd.switch_mode('scan')
+ok('mở tab Quét & xuất: chưa bật quét', qd.instance_variable_get(:@scan_armed) == false && refreshed == 1)
+qd.scan_start
+ok('bấm Quét ngay: bật quét và làm mới một lần', qd.instance_variable_get(:@scan_armed) == true && refreshed == 2)
+qd.switch_mode('mapping')
+ok('đổi sang tab Phân loại: tắt quét, phải bấm Quét ngay lại', qd.instance_variable_get(:@scan_armed) == false)
+qd.scan_start; qd.switch_mode('validate_model')
+ok('đổi sang tab Kiểm tra: tắt quét', qd.instance_variable_get(:@scan_armed) == false)
 $model = ORIGINAL_MODEL
 $vgd_data = {}
 

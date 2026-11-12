@@ -44,6 +44,15 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   last=await page.evaluate(()=>window.calls.at(-1));assert(last.name==='validation_assign_ids','kiểm tra: nút gán VGD ID gọi validation_assign_ids');
   await receive('validation',[{index:0,status:'UNCLASSIFIED',instance_name:'Chair',issues:[]}]);
   assert(await page.getByRole('button',{name:/Gán VGD ID cho tất cả/}).count()===0,'kiểm tra: hết món thiếu ID thì ẩn nút');
+  // Tab quét không tự quét: hiện trang chờ, chỉ gọi scan_start khi bấm Quét ngay
+  for(const mode of ['scan','mapping','validate_model']){
+    await receive('config',{...config,mode});await receive('scan_pending',{mode});
+    assert(await page.locator('#scan-start').isVisible() && (await page.evaluate(()=>window.calls.filter(c=>c.name==='scan_start').length))===0,'tab '+mode+': trang chờ quét, chưa gọi scan_start');
+  }
+  await receive('config',{...config,mode:'scan'});await receive('scan_pending',{mode:'scan'});
+  assert(await page.locator('.scan-options').count()===1,'tab Quét & xuất chờ quét: vẫn chọn được phạm vi quét');
+  await page.locator('#scan-start').click();
+  last=await page.evaluate(()=>window.calls.at(-1));assert(last.name==='scan_start','bấm Quét ngay gọi scan_start');
   await receive('config',{...config,mode:'rules'});await receive('rules',[]);await page.getByText('Nâng cao · Chỉnh dữ liệu kỹ thuật',{exact:true}).click();await page.fill('#rules-json','INVALID');await page.getByRole('button',{name:'Lưu dữ liệu kỹ thuật'}).click();assert((await page.locator('#message').innerText()).includes('không đúng định dạng'),'Invalid rules JSON accepted');
   await page.getByRole('button',{name:'Thêm quy tắc',exact:true}).click();await page.fill('#rule-source-value','O_CAM_DOI');await page.selectOption('#preset','3');await page.getByRole('button',{name:'Lưu quy tắc',exact:true}).click();last=await page.evaluate(()=>window.calls.at(-1));assert(last.name==='save_rule'&&JSON.parse(last.args[0]).data.item_type==='socket','Friendly rule editor did not save canonical data');
   await page.locator('[data-mode="scan"]').click();last=await page.evaluate(()=>window.calls.at(-1));assert(last.name==='open_panel'&&last.args[0]==='scan','Scan navigation missing');
