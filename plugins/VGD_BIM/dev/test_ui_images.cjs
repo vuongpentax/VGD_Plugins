@@ -246,7 +246,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   // ---- Bảng preset ----
   await receive('table',table());await clear();
   await page.click('#preset-btn');
-  ok(await page.locator('#preset-panel').isVisible() && (await page.locator('#preset-panel h3').allInnerTexts()).join('|')==='Đơn vị|Hình ảnh|Ảnh vị trí|Ảnh 3|Ảnh 4|Số đo thân','bấm nút preset: mở bảng có sáu phần Đơn vị, Hình ảnh, Ảnh vị trí, Ảnh 3, Ảnh 4 và Số đo thân');
+  ok(await page.locator('#preset-panel').isVisible() && (await page.locator('#preset-panel h3').allInnerTexts()).join('|')==='Đơn vị|Số đo thân' && (await page.locator('#preset-panel details.pp-group > summary').allInnerTexts()).join('|')==='Hình ảnh|Ảnh vị trí|Ảnh 3|Ảnh 4','bấm nút preset: mở bảng có phần Đơn vị, bốn nhóm ảnh gập được (Hình ảnh, Ảnh vị trí, Ảnh 3, Ảnh 4) và Số đo thân');
   ok(await page.locator('#preset-panel .pp-pick').count()===12 && (await page.locator('#preset-panel .pp-pick.active').innerText())==='Tất cả','bảng preset liệt kê 12 preset, preset đang dùng được tô nổi bật');
   ok(await page.locator('#preset-panel select[aria-label="Chiều dài: đơn vị"]').inputValue()==='mm' && await page.locator('#preset-panel select[aria-label="Chiều dài: số lẻ"]').inputValue()==='0','thiết lập đang dùng hiện đúng trong bảng (mm, 0 số lẻ)');
   ok((await page.locator('#preset-panel select[aria-label="Chiều dài: số lẻ"] option').allInnerTexts()).join(',')==='0,0.0,0.00,0.000,0.0000','số lẻ hiện dạng 0, 0.0, 0.00, ...');
@@ -277,6 +277,10 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   view=await viewJson();
   ok(view.settings.length_unit==='mm' && view.settings.area_unit==='m2','mọi thay đổi thiết lập được lưu vào trạng thái bảng');
   await clear();await choose('Góc nhìn ảnh','front');await choose('Kiểu hiển thị ảnh','current');await choose('Chiều rộng ảnh',1024);await choose('Chiều cao ảnh',768);await choose('Nền ảnh','white');
+  await page.locator('#preset-panel details.pp-group').nth(1).locator('summary').click();
+  ok(!(await page.locator('#preset-panel details.pp-group').nth(1).evaluate(d=>d.open)) && await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').isHidden(),'gập nhóm Ảnh vị trí: các ô trong nhóm ẩn đi');
+  await page.locator('#preset-panel details.pp-group').nth(1).locator('summary').click();
+  ok(await page.locator('#preset-panel details.pp-group').nth(1).evaluate(d=>d.open) && await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').isVisible(),'mở lại nhóm Ảnh vị trí: các ô hiện lại');
   const marginBox=page.locator('#preset-panel input[aria-label="Chừa lề (%)"]');
   ok(await marginBox.inputValue()==='20','ô Chừa lề (%) trong thiết lập ảnh: mặc định 20');
   await marginBox.fill('150');await page.keyboard.press('Tab');
