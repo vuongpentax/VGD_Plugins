@@ -41,7 +41,7 @@ $transactions = []
 $writes = []
 $vgd_data = {}
 require File.join(ROOT, 'core/settings')
-%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/levels].each { |f| require File.join(ROOT, f) }
+%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/levels core/rooms].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
@@ -704,6 +704,57 @@ ok('tầng không có trong danh sách: từ chối', bad_level.call { ld.table_
 lm2 = LevelModel.new
 ld.instance_variable_set(:@model, lm2); $model = lm2
 ok('chưa có tầng: gán theo cao độ báo cần thêm tầng', bad_level.call { ld.table_assign_levels_auto({'indexes' => [0]}) }.to_s.include?('Chưa có tầng'))
+# Phòng: tạo từ mặt đang chọn (chỉ đọc viền), lưu danh sách, gán món theo vị trí, gán tay bằng menu
+class RoomPoint; attr_reader :x, :y, :z; def initialize(x, y, z); @x = x; @y = y; @z = z; end; end
+class RoomVertex; attr_reader :position; def initialize(x, y, z); @position = RoomPoint.new(x / 25.4, y / 25.4, z / 25.4); end; end
+class RoomLoop; def initialize(points); @points = points; end; def vertices; @points.map { |x, y, z| RoomVertex.new(x, y, z) }; end; end
+class RoomFace < Sketchup::Face; def initialize(points); @points = points; end; def outer_loop; RoomLoop.new(@points); end; end
+class RoomIdentity; def *(point); point; end; end
+class RoomModel < LevelModel
+  attr_reader :selection
+  def initialize; super; @selection = FakeSel.new; end
+  def active_path; []; end
+  def edit_transform; RoomIdentity.new; end
+end
+rmm = RoomModel.new
+$model = rmm
+rme = [IdEnt.new(1), IdEnt.new(2), IdEnt.new(3, true), IdEnt.new(4)]
+rmrecs = rme.each_with_index.map { |e, i| {entity: e, path: [e], locked: false, index: i} }
+rmrows = [{index: 0, base_x: 1000.0, base_y: 1000.0, base_z: 0.0}, {index: 1, base_x: 9000.0, base_y: 1000.0, base_z: 0.0}, {index: 2, base_x: 1000.0, base_y: 1000.0, base_z: 0.0}, {index: 3, base_x: nil, base_y: nil, base_z: nil}]
+rd2 = D.allocate
+rd2.instance_variable_set(:@model, rmm)
+rd2.instance_variable_set(:@table_records, rmrecs)
+rd2.instance_variable_set(:@table_rows, rmrows)
+rd2.define_singleton_method(:emit) { |ev, payload| (@rcalls ||= []) << [ev, payload] }
+rd2.define_singleton_method(:rcalls) { @rcalls ||= [] }
+rd2.define_singleton_method(:table_build) { nil }
+rd2.define_singleton_method(:show_outline) { nil }
+bad_room = ->(&block) { begin; block.call; nil; rescue StandardError => e; e.message; end }
+ok('tạo phòng khi chưa chọn mặt: báo lỗi', bad_room.call { rd2.table_room_from_selection({}) }.to_s.include?('chọn một mặt sàn'))
+rmm.selection.items = [RoomFace.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 500]])]
+ok('mặt không nằm ngang: báo lỗi, chưa lưu phòng nào', bad_room.call { rd2.table_room_from_selection({}) }.to_s.include?('nằm ngang') && VGD::BIM::Rooms.read(rmm).empty?)
+rmm.selection.items = [RoomFace.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 0], [0, 3000, 0]])]
+rd2.table_room_from_selection({'name' => 'Phòng khách', 'number' => 'P01', 'height' => 2800})
+rooms = VGD::BIM::Rooms.read(rmm)
+ok('tạo phòng từ mặt đang chọn: lưu viền, cao độ sàn, chiều cao; báo diện tích 12 m²', rooms.size == 1 && rooms[0]['boundary'].map { |pt| pt.map(&:round) } == [[0, 0], [4000, 0], [4000, 3000], [0, 3000]] && rooms[0]['height'] == 2800.0 && rd2.rcalls.last[1][:text].include?('12.0'))
+rd2.table_room_from_selection({})
+ok('phòng thứ hai không đặt tên: tên mặc định, chiều cao mặc định 3000 khi không có tầng', VGD::BIM::Rooms.read(rmm).map { |r| r['name'] }.include?('Phòng 2') && VGD::BIM::Rooms.read(rmm).find { |r| r['name'] == 'Phòng 2' }['height'] == 3000.0)
+ok('tên phòng trùng: từ chối, không thêm', bad_room.call { rd2.table_room_from_selection({'name' => 'Phòng khách'}) }.to_s.include?('trùng') && VGD::BIM::Rooms.read(rmm).size == 2)
+ok('lưu danh sách phòng sai dữ liệu: từ chối', bad_room.call { rd2.table_rooms({'rooms' => [{'name' => ''}]}) }.to_s.include?('tên phòng') && bad_room.call { rd2.table_rooms('x') }.to_s.include?('không hợp lệ'))
+kept = VGD::BIM::Rooms.read(rmm).first(1)
+rd2.table_rooms({'rooms' => kept})
+ok('lưu danh sách phòng (xóa phòng 2): báo số phòng', VGD::BIM::Rooms.read(rmm).size == 1 && rd2.rcalls.last[1][:text].include?('1 phòng'))
+$transactions.clear
+rd2.table_assign_rooms_auto({'indexes' => [0, 1, 2, 3]})
+rid = VGD::BIM::Rooms.read(rmm)[0]['id']
+ok('gán phòng theo vị trí: món 0 trong phòng; món 1 ngoài phòng, món 3 không đo được vị trí, món 2 khóa: không gán; một bước hoàn tác', $transactions == ['VGD_BIM · Gán phòng theo vị trí'] && VGD::BIM::Rooms.entity_room(rme[0]) == rid && [1, 2, 3].all? { |i| VGD::BIM::Rooms.entity_room(rme[i]) == '' })
+ok('gán theo vị trí: báo số món đã gán, ngoài phòng và bị khóa', rd2.rcalls.last[1][:text].include?('1 món') && rd2.rcalls.last[1][:text].include?('ngoài mọi phòng') && rd2.rcalls.last[1][:text].include?('khóa'))
+ok('chỉ chọn món khóa / ngoài phòng: báo lỗi', bad_room.call { rd2.table_assign_rooms_auto({'indexes' => [1, 2]}) }.to_s.include?('Không gán được'))
+rd2.table_edit({'indexes' => [1], 'field' => 'room', 'value' => rid})
+ok('gán tay qua ô Phòng: nhãn phòng, không đụng dữ liệu VGD', VGD::BIM::Rooms.entity_room(rme[1]) == rid && rme[1].attrs.keys == ['VGD_BIM_LOC'])
+ok('phòng không có trong danh sách: từ chối', bad_room.call { rd2.table_edit({'indexes' => [1], 'field' => 'room', 'value' => 'rm_deadbeef'}) }.to_s.include?('không còn trong danh sách'))
+rd2.table_edit({'indexes' => [1], 'field' => 'room', 'value' => ''})
+ok('bỏ phòng bằng giá trị rỗng', VGD::BIM::Rooms.entity_room(rme[1]) == '')
 $model = ORIGINAL_MODEL
 $vgd_data = {}
 

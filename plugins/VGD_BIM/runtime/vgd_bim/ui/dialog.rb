@@ -81,6 +81,9 @@ module VGD
           @dialog.add_action_callback('table_clear') { |_ctx| safely { table_clear } }
           @dialog.add_action_callback('rename_preview') { |_ctx, payload| safely { rename_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { rename_apply(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_rooms') { |_ctx, payload| safely { table_rooms(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_room_from_selection') { |_ctx, payload| safely { table_room_from_selection(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_assign_rooms_auto') { |_ctx, payload| safely { table_assign_rooms_auto(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_levels') { |_ctx, payload| safely { table_levels(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_assign_levels_auto') { |_ctx, payload| safely { table_assign_levels_auto(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_assign_codes') { |_ctx, payload| safely { table_assign_codes(JSON.parse(payload)) } }
@@ -346,7 +349,7 @@ module VGD
                  elsif built[:hidden].to_i.positive?
                    "Đã ẩn #{built[:hidden]} đối tượng thuộc tag loại trừ."
                  end
-          emit('table', {levels: Levels.read(@model), columns: Table.columns, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
+          emit('table', {rooms: rooms_view, levels: Levels.read(@model), columns: Table.columns, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
                          statuses: Table::STATUS_LABELS, options: @table_options.merge(isolating: !@isolated.empty?),
                          rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state, choices: table_choices,
                          row_order: RowOrder.read(@model)})
@@ -404,13 +407,14 @@ module VGD
         # Sửa ô bằng nhấp đúp. payload: {'indexes' => [các dòng], 'field' => name|description|status|tag|material, 'value' => giá trị}.
         # Áp cho mọi dòng gửi lên, bỏ qua đối tượng khóa; cả đợt là một bước hoàn tác. ('index' => một dòng vẫn được nhận.)
         EDIT_LABELS = {'name' => 'tên', 'description' => 'mô tả', 'status' => 'tình trạng', 'tag' => 'tag', 'material' => 'vật liệu',
-                       'owner' => 'hãng', 'url' => 'link', 'size' => 'cỡ', 'price' => 'đơn giá', 'calc_method' => 'cách tính', 'code' => 'mã đối tượng', 'level' => 'tầng'}.freeze
+                       'owner' => 'hãng', 'url' => 'link', 'size' => 'cỡ', 'price' => 'đơn giá', 'calc_method' => 'cách tính', 'code' => 'mã đối tượng', 'level' => 'tầng', 'room' => 'phòng'}.freeze
         def table_edit(payload)
           check_model!
           field = payload.fetch('field')
           custom = CustomColumns.find(field)
           raise ArgumentError, 'Ô này không sửa được trong bảng.' unless EDIT_LABELS.key?(field) || (custom && custom['kind'] == 'text')
           value = payload.fetch('value').to_s.strip
+          raise 'Phòng này không còn trong danh sách. Hãy mở lại Quản lý phòng.' if field == 'room' && !value.empty? && Rooms.read(@model).none? { |room| room['id'] == value }
           raise 'Tầng này không còn trong danh sách. Hãy mở lại Quản lý tầng.' if field == 'level' && !value.empty? && Levels.read(@model).none? { |level| level['id'] == value }
           indexes = payload.key?('indexes') ? table_indexes(payload) : table_indexes('indexes' => [payload.fetch('index')])
           records = indexes.map { |index| @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' } }
@@ -445,6 +449,58 @@ module VGD
           table_build
           have = plan[:keep].empty? ? '' : " #{plan[:keep].size} món đã có ID từ trước."
           emit('message', {text: "Đã gán VGD ID cho #{plan[:assign].size} món.#{have}#{note}"})
+        end
+        # Phòng kèm số đo (diện tích, chu vi, thể tích, tường, trần) để giao diện hiện; tính lại mỗi lần dựng bảng.
+        def rooms_view
+          Rooms.read(@model).map { |room| room.merge('metrics' => Rooms.metrics(room)) }
+        end
+        # Lưu danh sách phòng. payload: {'rooms' => [...]}. Chỉ ghi vào model (không đụng đối tượng, không dựng hình; khối phòng do VGD_Room dựng).
+        def table_rooms(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless payload.is_a?(Hash)
+          list = Rooms.sanitize!(payload['rooms'])
+          Rooms.write(@model, list)
+          table_build
+          emit('message', {text: "Đã lưu #{list.size} phòng."})
+        end
+        # Tạo phòng từ mặt sàn đang chọn trong SketchUp: chỉ ĐỌC viền (vòng ngoài của mặt nằm ngang), lưu dữ liệu phòng. Không dựng hình.
+        # payload: {'name'?, 'number'?, 'level'? (id tầng), 'height'? (mm)}; thiếu thì tên "Phòng N", chiều cao theo tầng hoặc 3000.
+        def table_room_from_selection(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless payload.is_a?(Hash)
+          face = @model.selection.to_a.find { |entity| entity.is_a?(Sketchup::Face) }
+          raise 'Hãy chọn một mặt sàn (Face) trong SketchUp rồi bấm lại.' unless face
+          context = context_transform
+          points = face.outer_loop.vertices.map { |vertex| p = context * vertex.position; [p.x.to_f * Geometry::INCH_MM, p.y.to_f * Geometry::INCH_MM, p.z.to_f * Geometry::INCH_MM] }
+          shape = Rooms.boundary_from_points(points)
+          rooms = Rooms.read(@model)
+          level = payload['level'].to_s
+          level_data = Levels.read(@model).find { |l| l['id'] == level }
+          name = payload['name'].to_s.strip
+          name = "Phòng #{rooms.size + 1}" if name.empty?
+          height = payload['height'].is_a?(Numeric) ? payload['height'] : (level_data ? level_data['height'] : 3000)
+          created = {'name' => name, 'number' => payload['number'].to_s, 'level' => level_data ? level : '', 'height' => height, 'elevation' => shape[:elevation], 'boundary' => shape[:boundary]}
+          Rooms.write(@model, rooms + [created])
+          table_build
+          area = Rooms.metrics(Rooms.sanitize!([created]).first)[:area]
+          emit('message', {text: "Đã tạo phòng #{name} từ mặt đang chọn (diện tích #{area} m²). Hình khối phòng do plugin VGD_Room dựng."})
+        end
+        # Gán món vào phòng theo vị trí (tâm đáy món trong viền và trong khoảng cao của phòng). Nhãn, không dời hình. Một bước hoàn tác.
+        def table_assign_rooms_auto(payload)
+          check_model!
+          rooms = Rooms.read(@model)
+          raise 'Chưa có phòng nào. Hãy tạo phòng trong Quản lý phòng trước.' if rooms.empty?
+          records = table_indexes(payload).map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |_index, record| record[:path].all?(&:valid?) }
+          items = records.map { |index, record| row = @table_rows.fetch(index); {index: index, x: row[:base_x], y: row[:base_y], z: row[:base_z], locked: record[:locked] || record[:entity].locked? ? true : false} }
+          plan = Rooms.plan_auto(items, rooms)
+          raise 'Không gán được phòng nào (món bị khóa hoặc nằm ngoài mọi phòng).' if plan[:assign].empty?
+          Data.transaction(@model, 'VGD_BIM · Gán phòng theo vị trí') { plan[:assign].each { |index, id| Rooms.assign(@table_records.fetch(index)[:entity], id) } }
+          table_build
+          notes = ''
+          notes += " #{plan[:none].size} món nằm ngoài mọi phòng hoặc không đo được vị trí." unless plan[:none].empty?
+          notes += " Bỏ qua #{plan[:locked].size} món bị khóa." unless plan[:locked].empty?
+          emit('message', {text: "Đã gán phòng cho #{plan[:assign].size} món theo vị trí.#{notes}"})
         end
         # Lưu danh sách tầng của công trình (Quản lý tầng). payload: {'levels' => [{id?, name, elevation, height}]}. Chỉ ghi vào model (không đụng đối tượng).
         def table_levels(payload)
@@ -565,6 +621,7 @@ module VGD
           when 'tag' then entity.layer = layer
           when 'material' then entity.material = material
           when 'url', 'size', 'price' then Table::Extras.write(entity, field, value) # dữ liệu riêng của bảng, không thuộc schema VGD
+          when 'room' then Rooms.assign(entity, value) # nhãn phòng, không đổi hình học
           when 'level' then Levels.assign(entity, value) # nhãn tầng, không đổi hình học
           when CustomColumns::KEY_PATTERN then CustomColumns.write(entity, field, value) # cột tự nhập do người dùng thêm
           when 'owner' then Data.write(entity, {manufacturer: value}, Data.source(entity) == 'RAW' ? 'MANUAL' : Data.source(entity))
@@ -584,7 +641,8 @@ module VGD
           materials = @model.materials.to_a.map { |material| material.display_name.to_s }
           model_tags = @model.layers.to_a.map { |layer| layer.name.to_s }.reject(&untagged).sort_by { |name| name.downcase } # chỉ tag có trong model (bảng Loại trừ tag)
           {tags: tags.sort_by { |name| name.downcase }, materials: materials.sort_by { |name| name.downcase }, model_tags: model_tags,
-           levels: Levels.read(@model).map { |level| {value: level['id'], label: level['name']} }}
+           levels: Levels.read(@model).map { |level| {value: level['id'], label: level['name']} },
+           rooms: Rooms.read(@model).map { |room| {value: room['id'], label: room['number'].empty? ? room['name'] : "#{room['number']} · #{room['name']}"} }}
         end
         # Cột chữ cho phép thay hàng loạt, và cách đọc giá trị hiện tại của dòng.
         REPLACE_FIELDS = {'name' => :name, 'description' => :description, 'owner' => :owner, 'size' => :size}.freeze

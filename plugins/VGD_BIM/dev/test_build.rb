@@ -117,7 +117,7 @@ hid = VGD::BIM::Table.build(deep_ctx, [scan_root], false, measure: FakeMeasure.n
 ok('lọc tag loại trừ không xét các group trong ngữ cảnh', hid[:hidden] == 0 && hid[:rows].size == 1)
 
 editable = VGD::BIM::Table::COLUMNS.select { |c| c[:editable] }.map { |c| [c[:key], c[:editable]] }
-ok('cột sửa được: tên, mô tả, tag, vật liệu, tình trạng, hãng, link, cỡ, đơn giá, cách tính (theo tag)', editable == [%w[instance name], %w[code code], %w[level level], %w[description description], %w[tag tag], %w[material material], %w[status status], %w[owner owner], %w[url url], %w[size size], %w[price price], %w[calc_method calc_method]])
+ok('cột sửa được: tên, mô tả, tag, vật liệu, tình trạng, hãng, link, cỡ, đơn giá, cách tính (theo tag)', editable == [%w[instance name], %w[code code], %w[level level], %w[room room], %w[description description], %w[tag tag], %w[material material], %w[status status], %w[owner owner], %w[url url], %w[size size], %w[price price], %w[calc_method calc_method]])
 
 # Khối lượng tính suy ra từ tag (Quantity): tính ảo trong dòng, không đụng vào món
 calc_door = Sketchup::Group.new('Cửa'); calc_door.layer = Struct.new(:name).new('A. DOOR')

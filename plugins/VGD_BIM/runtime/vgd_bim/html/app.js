@@ -192,6 +192,7 @@ function cellText(row,key){
     case 'instance':return row.name;
     case 'code':return row.code||'';
     case 'level':return row.level||'';
+    case 'room':return row.room||'';
     case 'vgd_id':return row.vgd_id?'VGD-'+String(row.vgd_id).slice(0,6).toUpperCase()+(row.vgd_dup?' (trùng)':''):''; // dạng ngắn; ID đầy đủ ở chú thích ô
     case 'description':return row.description;
     case 'lenXZ':return `${lenText(row.lenX)} × ${lenText(row.lenZ)}`;
@@ -328,13 +329,14 @@ function menuItems(field){
   const d=tableState.data,choices=d.choices||{tags:[],materials:[]};
   if(field==='status')return Object.entries(d.statuses||{}).map(([value,label])=>({value,label}));
   if(field==='calc_method')return [{value:'',label:'Theo từ khóa / nhóm tag (bỏ cách tính riêng)'},...Object.entries(METHOD_LABELS).map(([value,label])=>({value,label}))];
+  if(field==='room')return [{value:'',label:'(Không có phòng)'},...(choices.rooms||[])];
   if(field==='level')return [{value:'',label:'(Không có tầng)'},...(choices.levels||[])];
   if(field==='tag')return [{value:'',label:'(Không có tag)'},...choices.tags.map(name=>({value:name,label:name}))];
   return [{value:'',label:'(Không vật liệu)'},...choices.materials.map(name=>({value:name,label:name}))];
 }
 function menuEdit(td,row,col){
   closeMenu();
-  const field=col.editable,current=field==='level'?row.level_id:field==='status'?row.status:(field==='tag'?row.tag:(field==='calc_method'?row.calc_method:row.material)),all=menuItems(field);
+  const field=col.editable,current=field==='room'?row.room_id:field==='level'?row.level_id:field==='status'?row.status:(field==='tag'?row.tag:(field==='calc_method'?row.calc_method:row.material)),all=menuItems(field);
   const menu=node('div',undefined,'cell-menu');menu.setAttribute('role','listbox');
   const search=node('input');search.type='search';search.placeholder='Tìm...';search.setAttribute('aria-label','Tìm trong danh sách');
   const list=node('div',undefined,'cell-menu-list');
@@ -402,12 +404,13 @@ function startResize(event,key,host,cols){
   document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
 }
 // Nhóm theo và gộp dòng giống nhau (chỉ đổi cách hiển thị, không đổi dữ liệu).
-const GROUP_OPTIONS=[['','Không nhóm'],['parent','Cha (Parent)'],['entity','Loại (Entity)'],['definition','Tên họ (Definition)'],['instance','Tên (Instance)'],['material','Vật liệu'],['tag','Tag'],['tag_group','Nhóm hạng mục'],['status','Tình trạng'],['level','Tầng'],['front_state','Mặt trước (độ tin cậy)']];
+const GROUP_OPTIONS=[['','Không nhóm'],['parent','Cha (Parent)'],['entity','Loại (Entity)'],['definition','Tên họ (Definition)'],['instance','Tên (Instance)'],['material','Vật liệu'],['tag','Tag'],['tag_group','Nhóm hạng mục'],['status','Tình trạng'],['level','Tầng'],['room','Phòng'],['front_state','Mặt trước (độ tin cậy)']];
 const SUM_KEYS=['areaXZ','areaXY','areaFace','areaProjected','volume','quantity','total','calc_qty','calc_total'];
 function groupLabel(row,key){
   switch(key){
     case 'parent':return row.parent||'(Gốc)';
     case 'level':return row.level||'(Chưa gán tầng)';
+    case 'room':return row.room||'(Chưa gán phòng)';
     case 'entity':return row.entity_type;
     case 'definition':return row.definition||'(Chưa đặt tên)';
     case 'instance':return row.name||'(Chưa đặt tên)';
@@ -895,6 +898,47 @@ function codesPanel(){
   p.append(prefix.wrap,row,overLabel,preview,actions);
   return p;
 }
+// Quản lý phòng: dữ liệu phòng (tên, mã, tầng, chiều cao, hoàn thiện) và số đo tính từ viền (diện tích, chu vi, thể tích, tường, trần), lưu trong model.
+// "Tạo phòng từ mặt đang chọn" chỉ ĐỌC viền của mặt sàn đang chọn trong SketchUp; khối 3D do plugin VGD_Room dựng. Ruby kiểm tra lại mọi giá trị.
+function roomsPanel(){
+  const p=node('div',undefined,'popover right capture-panel rooms-panel');
+  const rooms=((tableState.data&&tableState.data.rooms)||[]).map(r=>({...r}));
+  const levels=(tableState.data&&tableState.data.levels)||[];
+  p.append(node('div','Quản lý phòng','pop-title'));
+  const save=()=>call('table_rooms',JSON.stringify({rooms:rooms.map(({metrics,...rest})=>rest)}));
+  const fieldInput=(room,key,label,type,width)=>{const i=node('input');i.type=type;i.value=room[key]??'';i.setAttribute('aria-label',label);i.title=label;if(width)i.style.width=width;i.onchange=()=>{room[key]=type==='number'?Number(i.value):i.value;save();};return i;};
+  rooms.forEach(room=>{
+    const box=node('div',undefined,'rm-item');box.dataset.id=room.id;
+    const top=node('div',undefined,'rm-top');
+    const name=fieldInput(room,'name','Tên phòng','text');name.className='rm-name';name.maxLength=60;
+    const number=fieldInput(room,'number','Mã phòng','text');number.className='rm-number';number.maxLength=60;number.placeholder='Mã';
+    const del=button('×',()=>{rooms.splice(rooms.indexOf(room),1);save();},'cs-del');del.title='Xóa phòng này (món đã gán chỉ hiện "phòng đã xóa", không mất dữ liệu khác)';del.setAttribute('aria-label','Xóa phòng '+room.name);
+    top.append(name,number,del);
+    const mid=node('div',undefined,'rm-mid');
+    const lv=node('select');lv.setAttribute('aria-label','Tầng của phòng');lv.append(new Option('(Không có tầng)',''));levels.forEach(l=>lv.append(new Option(l.name,l.id)));lv.value=room.level||'';lv.onchange=()=>{room.level=lv.value;save();};
+    mid.append(lv,fieldInput(room,'height','Chiều cao phòng (mm)','number','70px'),fieldInput(room,'elevation','Cao độ sàn (mm)','number','70px'));
+    const fin=node('div',undefined,'rm-fin');
+    [['finish_floor','Sàn'],['finish_wall','Tường'],['finish_ceiling','Trần']].forEach(([k,t])=>{const i=fieldInput(room,k,'Hoàn thiện '+t.toLowerCase(),'text');i.placeholder='Hoàn thiện '+t.toLowerCase();i.maxLength=60;fin.append(i);});
+    const m=room.metrics||{};
+    box.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường ${m.wall_area} m² · Trần ${m.ceiling_area} m²`,'muted rm-metrics'));
+    p.append(box);
+  });
+  if(!rooms.length)p.append(node('p','Chưa có phòng nào. Chọn một mặt sàn trong SketchUp rồi bấm Tạo phòng từ mặt đang chọn.','muted'));
+  const newName=node('input');newName.type='text';newName.placeholder='Tên phòng mới';newName.maxLength=60;newName.setAttribute('aria-label','Tên phòng mới');
+  const newNumber=node('input');newNumber.type='text';newNumber.placeholder='Mã';newNumber.maxLength=60;newNumber.setAttribute('aria-label','Mã phòng mới');
+  const newLevel=node('select');newLevel.setAttribute('aria-label','Tầng của phòng mới');newLevel.append(new Option('(Không có tầng)',''));levels.forEach(l=>newLevel.append(new Option(l.name,l.id)));
+  const create=node('div',undefined,'rm-new');create.append(newName,newNumber,newLevel);
+  const make=button('Tạo phòng từ mặt đang chọn',()=>call('table_room_from_selection',JSON.stringify({name:newName.value,number:newNumber.value,level:newLevel.value})),'primary');make.id='rm-make';
+  make.title='Đọc viền của mặt sàn (Face nằm ngang) đang chọn trong SketchUp và lưu thành phòng. Chỉ lưu dữ liệu, không dựng hình.';
+  const picked=tableState.displayed.filter(r=>r.members.some(m=>tableState.sel.has(m)));
+  const auto=button('Gán món vào phòng theo vị trí',()=>{
+    if(!picked.length)throw Error('Hãy chọn các dòng cần gán phòng (Ctrl+A chọn hết các dòng đang hiện).');
+    call('table_assign_rooms_auto',JSON.stringify({indexes:picked.flatMap(r=>r.members.filter(m=>tableState.sel.has(m)).slice(0,1))}));
+  });auto.id='rm-auto';auto.title='Mỗi món nhận phòng chứa tâm đáy của nó (trong viền và trong khoảng cao của phòng). Chỉ là nhãn, không dời hình.';
+  const actions=node('div',undefined,'rename-actions');actions.append(make,auto,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
+  p.append(create,node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán phòng theo vị trí; hoặc nhấp đúp ô Phòng để gán tay.','muted'),actions);
+  return p;
+}
 // Quản lý tầng: tên, cao độ sàn và chiều cao (mm) của từng tầng, lưu trong model (chỉ nhãn, không dời hình học); gán tầng theo cao độ cho các dòng đang chọn.
 // Ô tầng trong bảng nhấp đúp để gán tay. Ruby kiểm tra lại mọi giá trị.
 function levelsPanel(){
@@ -1211,7 +1255,7 @@ function closeTablePanel(){
   document.querySelectorAll('.popover').forEach(p=>p.remove());
   document.querySelectorAll('button[aria-expanded="true"]').forEach(b=>{if(!b.closest('header'))b.setAttribute('aria-expanded','false');});
 }
-const PANELS_KEEP_ON_ROW_CLICK=['rename','front','capture','codes','levels']; // ba bảng này dùng các dòng đang chọn: bấm chọn dòng không đóng
+const PANELS_KEEP_ON_ROW_CLICK=['rename','front','capture','codes','levels','rooms']; // ba bảng này dùng các dòng đang chọn: bấm chọn dòng không đóng
 document.addEventListener('mousedown',e=>{
   if(!tableState.panel||!(e.target instanceof Element))return;
   const t=e.target;
@@ -1305,7 +1349,9 @@ function ioPanel(){
   fixIds.id='ids-fix';fixIds.title='Các món do copy mà dùng chung VGD ID: món cũ nhất giữ ID, các món còn lại nhận ID mới (một bước hoàn tác)';
   const levelsBtn=item('id','Quản lý tầng...',()=>{tableState.panel='levels';tableView(tableState.data);});
   levelsBtn.id='levels-open';levelsBtn.title='Thêm / sửa tầng của công trình và gán tầng cho món (chỉ là nhãn, không dời hình)';
-  p.append(assignIds,fixIds,codesBtn,levelsBtn);
+  const roomsBtn=item('id','Quản lý phòng...',()=>{tableState.panel='rooms';tableView(tableState.data);});
+  roomsBtn.id='rooms-open';roomsBtn.title='Tạo phòng từ mặt sàn đang chọn, sửa tên / mã / tầng / chiều cao / hoàn thiện, xem diện tích, thể tích và gán món vào phòng (chỉ là dữ liệu, hình khối do VGD_Room dựng)';
+  p.append(assignIds,fixIds,codesBtn,levelsBtn,roomsBtn);
   return p;
 }
 function bottomBar(){
@@ -1364,6 +1410,7 @@ function tableView(data){
   if(tableState.panel==='capture')bar.append(capturePanel());
   if(tableState.panel==='codes')bar.append(codesPanel());
   if(tableState.panel==='levels')bar.append(levelsPanel());
+  if(tableState.panel==='rooms')bar.append(roomsPanel());
   if(tableState.panel==='front')bar.append(frontPanel());
   if(tableState.panel==='rename')bar.append(renamePanel());
   const side=$('col-side'),host=$('grid-host');

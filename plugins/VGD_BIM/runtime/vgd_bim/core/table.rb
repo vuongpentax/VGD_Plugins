@@ -8,6 +8,7 @@ require_relative 'custom_columns'
 require_relative 'vgd_id'
 require_relative 'object_code'
 require_relative 'levels'
+require_relative 'rooms'
 
 module VGD
   module BIM
@@ -32,6 +33,7 @@ module VGD
         {key: 'code', label: 'Mã đối tượng', kind: 'text', editable: 'code'},
         {key: 'vgd_id', label: 'VGD ID', kind: 'text'},
         {key: 'level', label: 'Tầng', kind: 'text', editable: 'level'},
+        {key: 'room', label: 'Phòng', kind: 'text', editable: 'room'},
         {key: 'description', label: 'Mô tả', kind: 'text', editable: 'description'},
         {key: 'lenX', label: 'Rộng (X) mm', kind: 'number'},
         {key: 'lenY', label: 'Dài (Y) mm', kind: 'number'},
@@ -207,11 +209,16 @@ module VGD
         rows = records.each_with_index.map { |record, i| row_for(record, i, groups, projected: projected, measure: measure, overrides: overrides, custom: custom).merge(image_state(model, record[:entity], image_folder)) }
         levels = Levels.read(model) # tầng của công trình (lưu trong model); đọc một lần cho cả bảng
         level_names = levels.to_h { |level| [level['id'], level['name']] }
+        room_names = Rooms.read(model).to_h { |room| [room['id'], room['number'].empty? ? room['name'] : "#{room['number']} · #{room['name']}"] }
         records.each_with_index do |record, i|
           lid = Levels.entity_level(record[:entity])
           rows[i][:level_id] = lid
           rows[i][:level] = lid.empty? ? '' : level_names.fetch(lid, '(tầng đã xóa)')
           rows[i][:base_z] = base_z(record) # cao độ đáy món (mm, thế giới) để gợi ý tầng
+          rows[i][:base_x], rows[i][:base_y] = base_xy(record) # tâm đáy món (mm, thế giới) để gợi ý phòng
+          rid = Rooms.entity_room(record[:entity])
+          rows[i][:room_id] = rid
+          rows[i][:room] = rid.empty? ? '' : room_names.fetch(rid, '(phòng đã xóa)')
         end
         VgdId.duplicates(rows.map { |row| {index: row[:index], pid: row[:pid], guid: row[:vgd_id]} }).flatten.each { |i| rows[i][:vgd_dup] = true } # ID dùng chung giữa các dòng (do copy)
         # Đối tượng cha đang có trong bảng: dùng để tránh cộng trùng khi tính tổng.
@@ -228,6 +235,15 @@ module VGD
         box.empty? ? nil : (box.min.z.to_f * Geometry::INCH_MM).round(1)
       rescue StandardError
         nil
+      end
+
+      # Tâm X, Y (mm, thế giới) của hộp bao món; không đo được thì [nil, nil].
+      def self.base_xy(record)
+        box = bounding_box(record)
+        return [nil, nil] if box.empty?
+        [((box.min.x.to_f + box.max.x.to_f) / 2 * Geometry::INCH_MM).round(1), ((box.min.y.to_f + box.max.y.to_f) / 2 * Geometry::INCH_MM).round(1)]
+      rescue StandardError
+        [nil, nil]
       end
 
       # Bỏ dòng gắn tag loại trừ (tên tag đã chuẩn hóa) và mọi món nằm trong nó. Chỉ xét các đối tượng được đọc (từ path[skip..]),
