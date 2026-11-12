@@ -81,6 +81,8 @@ module VGD
           @dialog.add_action_callback('table_clear') { |_ctx| safely { table_clear } }
           @dialog.add_action_callback('rename_preview') { |_ctx, payload| safely { rename_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { rename_apply(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_levels') { |_ctx, payload| safely { table_levels(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_assign_levels_auto') { |_ctx, payload| safely { table_assign_levels_auto(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_assign_codes') { |_ctx, payload| safely { table_assign_codes(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_assign_ids') { |_ctx, payload| safely { table_assign_ids(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_fix_duplicate_ids') { |_ctx| safely { table_fix_duplicate_ids } }
@@ -344,7 +346,7 @@ module VGD
                  elsif built[:hidden].to_i.positive?
                    "Đã ẩn #{built[:hidden]} đối tượng thuộc tag loại trừ."
                  end
-          emit('table', {columns: Table.columns, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
+          emit('table', {levels: Levels.read(@model), columns: Table.columns, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
                          statuses: Table::STATUS_LABELS, options: @table_options.merge(isolating: !@isolated.empty?),
                          rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state, choices: table_choices,
                          row_order: RowOrder.read(@model)})
@@ -402,13 +404,14 @@ module VGD
         # Sửa ô bằng nhấp đúp. payload: {'indexes' => [các dòng], 'field' => name|description|status|tag|material, 'value' => giá trị}.
         # Áp cho mọi dòng gửi lên, bỏ qua đối tượng khóa; cả đợt là một bước hoàn tác. ('index' => một dòng vẫn được nhận.)
         EDIT_LABELS = {'name' => 'tên', 'description' => 'mô tả', 'status' => 'tình trạng', 'tag' => 'tag', 'material' => 'vật liệu',
-                       'owner' => 'hãng', 'url' => 'link', 'size' => 'cỡ', 'price' => 'đơn giá', 'calc_method' => 'cách tính', 'code' => 'mã đối tượng'}.freeze
+                       'owner' => 'hãng', 'url' => 'link', 'size' => 'cỡ', 'price' => 'đơn giá', 'calc_method' => 'cách tính', 'code' => 'mã đối tượng', 'level' => 'tầng'}.freeze
         def table_edit(payload)
           check_model!
           field = payload.fetch('field')
           custom = CustomColumns.find(field)
           raise ArgumentError, 'Ô này không sửa được trong bảng.' unless EDIT_LABELS.key?(field) || (custom && custom['kind'] == 'text')
           value = payload.fetch('value').to_s.strip
+          raise 'Tầng này không còn trong danh sách. Hãy mở lại Quản lý tầng.' if field == 'level' && !value.empty? && Levels.read(@model).none? { |level| level['id'] == value }
           indexes = payload.key?('indexes') ? table_indexes(payload) : table_indexes('indexes' => [payload.fetch('index')])
           records = indexes.map { |index| @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' } }
           raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |record| record[:path].all?(&:valid?) }
@@ -442,6 +445,32 @@ module VGD
           table_build
           have = plan[:keep].empty? ? '' : " #{plan[:keep].size} món đã có ID từ trước."
           emit('message', {text: "Đã gán VGD ID cho #{plan[:assign].size} món.#{have}#{note}"})
+        end
+        # Lưu danh sách tầng của công trình (Quản lý tầng). payload: {'levels' => [{id?, name, elevation, height}]}. Chỉ ghi vào model (không đụng đối tượng).
+        def table_levels(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu tầng không hợp lệ.' unless payload.is_a?(Hash)
+          list = Levels.sanitize!(payload['levels'])
+          Levels.write(@model, list)
+          table_build
+          emit('message', {text: "Đã lưu #{list.size} tầng."})
+        end
+        # Gán tầng cho các dòng đã chọn theo cao độ đáy món (gợi ý, nhãn): món khóa bỏ qua, món thấp hơn mọi tầng không gán. Một bước hoàn tác.
+        def table_assign_levels_auto(payload)
+          check_model!
+          levels = Levels.read(@model)
+          raise 'Chưa có tầng nào. Hãy thêm tầng trong Quản lý tầng trước.' if levels.empty?
+          records = table_indexes(payload).map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |_index, record| record[:path].all?(&:valid?) }
+          items = records.map { |index, record| {index: index, z: @table_rows.fetch(index)[:base_z], locked: record[:locked] || record[:entity].locked? ? true : false} }
+          plan = Levels.plan_auto(items, levels)
+          raise 'Không gán được tầng nào (món bị khóa hoặc thấp hơn mọi tầng).' if plan[:assign].empty?
+          Data.transaction(@model, 'VGD_BIM · Gán tầng theo cao độ') { plan[:assign].each { |index, id| Levels.assign(@table_records.fetch(index)[:entity], id) } }
+          table_build
+          notes = ''
+          notes += " #{plan[:none].size} món thấp hơn mọi tầng hoặc không đo được cao độ." unless plan[:none].empty?
+          notes += " Bỏ qua #{plan[:locked].size} món bị khóa." unless plan[:locked].empty?
+          emit('message', {text: "Đã gán tầng cho #{plan[:assign].size} món theo cao độ.#{notes}"})
         end
         # Đặt Mã đối tượng hàng loạt (tiền tố + số, theo thứ tự các dòng gửi lên): chỉ món chưa có mã (trừ khi ghi đè), bỏ qua món khóa, không trùng mã món khác, một bước hoàn tác.
         def table_assign_codes(payload)
@@ -536,6 +565,7 @@ module VGD
           when 'tag' then entity.layer = layer
           when 'material' then entity.material = material
           when 'url', 'size', 'price' then Table::Extras.write(entity, field, value) # dữ liệu riêng của bảng, không thuộc schema VGD
+          when 'level' then Levels.assign(entity, value) # nhãn tầng, không đổi hình học
           when CustomColumns::KEY_PATTERN then CustomColumns.write(entity, field, value) # cột tự nhập do người dùng thêm
           when 'owner' then Data.write(entity, {manufacturer: value}, Data.source(entity) == 'RAW' ? 'MANUAL' : Data.source(entity))
           else Data.write(entity, {field.to_sym => value}, Data.source(entity) == 'RAW' ? 'MANUAL' : Data.source(entity))
@@ -553,7 +583,8 @@ module VGD
           tags = @model.layers.to_a.map { |layer| layer.name.to_s }.reject(&untagged) | Tags.load.map { |tag| tag['name'].to_s }
           materials = @model.materials.to_a.map { |material| material.display_name.to_s }
           model_tags = @model.layers.to_a.map { |layer| layer.name.to_s }.reject(&untagged).sort_by { |name| name.downcase } # chỉ tag có trong model (bảng Loại trừ tag)
-          {tags: tags.sort_by { |name| name.downcase }, materials: materials.sort_by { |name| name.downcase }, model_tags: model_tags}
+          {tags: tags.sort_by { |name| name.downcase }, materials: materials.sort_by { |name| name.downcase }, model_tags: model_tags,
+           levels: Levels.read(@model).map { |level| {value: level['id'], label: level['name']} }}
         end
         # Cột chữ cho phép thay hàng loạt, và cách đọc giá trị hiện tại của dòng.
         REPLACE_FIELDS = {'name' => :name, 'description' => :description, 'owner' => :owner, 'size' => :size}.freeze

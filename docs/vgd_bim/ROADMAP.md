@@ -161,7 +161,7 @@ Relationship đầy đủ (Object → Object / Room / Level / Type / Material), 
 | Cột mốc | Trạng thái |
 |---|---|
 | 1 Danh tính và Category | **Xong ở beta.63** (1a VGD ID, 1b Mã đối tượng hàng loạt và ID trùng ở tab Kiểm tra, 1c danh mục mở rộng). Chủ dự án chốt không làm chuyển đổi dữ liệu cũ nên không đổi `schema_version`; chờ người dùng thử trong SketchUp thật |
-| 2 Tầng và Phòng | Chưa bắt đầu |
+| 2 Tầng và Phòng | Đang làm: 2a Tầng xong (beta.64: danh sách tầng trong model, nhãn ở dictionary `VGD_BIM_LOC`, gợi ý theo cao độ). Câu hỏi mở đã chốt 12/11/2026: viền phòng lấy từ mặt sàn hoặc đa giác đóng được chọn (dò tường làm sau); tầng gợi ý theo Z rồi người dùng xác nhận; khối phòng do plugin `VGD_Room` dựng (chỉ khối), dữ liệu và diện tích do VGD_BIM tính. Còn 2b (Phòng) và 2c (món thuộc phòng) |
 | 3 Vật liệu và luật khối lượng | Chưa bắt đầu |
 | 4 Schedule, Audit, Validation | Chưa bắt đầu |
 | 5 Type, Classification, so sánh phiên bản, VGD_Cabinet | Chưa bắt đầu |

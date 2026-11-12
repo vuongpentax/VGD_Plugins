@@ -191,6 +191,7 @@ function cellText(row,key){
     case 'definition':return row.definition;
     case 'instance':return row.name;
     case 'code':return row.code||'';
+    case 'level':return row.level||'';
     case 'vgd_id':return row.vgd_id?'VGD-'+String(row.vgd_id).slice(0,6).toUpperCase()+(row.vgd_dup?' (trùng)':''):''; // dạng ngắn; ID đầy đủ ở chú thích ô
     case 'description':return row.description;
     case 'lenXZ':return `${lenText(row.lenX)} × ${lenText(row.lenZ)}`;
@@ -327,12 +328,13 @@ function menuItems(field){
   const d=tableState.data,choices=d.choices||{tags:[],materials:[]};
   if(field==='status')return Object.entries(d.statuses||{}).map(([value,label])=>({value,label}));
   if(field==='calc_method')return [{value:'',label:'Theo từ khóa / nhóm tag (bỏ cách tính riêng)'},...Object.entries(METHOD_LABELS).map(([value,label])=>({value,label}))];
+  if(field==='level')return [{value:'',label:'(Không có tầng)'},...(choices.levels||[])];
   if(field==='tag')return [{value:'',label:'(Không có tag)'},...choices.tags.map(name=>({value:name,label:name}))];
   return [{value:'',label:'(Không vật liệu)'},...choices.materials.map(name=>({value:name,label:name}))];
 }
 function menuEdit(td,row,col){
   closeMenu();
-  const field=col.editable,current=field==='status'?row.status:(field==='tag'?row.tag:(field==='calc_method'?row.calc_method:row.material)),all=menuItems(field);
+  const field=col.editable,current=field==='level'?row.level_id:field==='status'?row.status:(field==='tag'?row.tag:(field==='calc_method'?row.calc_method:row.material)),all=menuItems(field);
   const menu=node('div',undefined,'cell-menu');menu.setAttribute('role','listbox');
   const search=node('input');search.type='search';search.placeholder='Tìm...';search.setAttribute('aria-label','Tìm trong danh sách');
   const list=node('div',undefined,'cell-menu-list');
@@ -400,11 +402,12 @@ function startResize(event,key,host,cols){
   document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
 }
 // Nhóm theo và gộp dòng giống nhau (chỉ đổi cách hiển thị, không đổi dữ liệu).
-const GROUP_OPTIONS=[['','Không nhóm'],['parent','Cha (Parent)'],['entity','Loại (Entity)'],['definition','Tên họ (Definition)'],['instance','Tên (Instance)'],['material','Vật liệu'],['tag','Tag'],['tag_group','Nhóm hạng mục'],['status','Tình trạng'],['front_state','Mặt trước (độ tin cậy)']];
+const GROUP_OPTIONS=[['','Không nhóm'],['parent','Cha (Parent)'],['entity','Loại (Entity)'],['definition','Tên họ (Definition)'],['instance','Tên (Instance)'],['material','Vật liệu'],['tag','Tag'],['tag_group','Nhóm hạng mục'],['status','Tình trạng'],['level','Tầng'],['front_state','Mặt trước (độ tin cậy)']];
 const SUM_KEYS=['areaXZ','areaXY','areaFace','areaProjected','volume','quantity','total','calc_qty','calc_total'];
 function groupLabel(row,key){
   switch(key){
     case 'parent':return row.parent||'(Gốc)';
+    case 'level':return row.level||'(Chưa gán tầng)';
     case 'entity':return row.entity_type;
     case 'definition':return row.definition||'(Chưa đặt tên)';
     case 'instance':return row.name||'(Chưa đặt tên)';
@@ -892,6 +895,39 @@ function codesPanel(){
   p.append(prefix.wrap,row,overLabel,preview,actions);
   return p;
 }
+// Quản lý tầng: tên, cao độ sàn và chiều cao (mm) của từng tầng, lưu trong model (chỉ nhãn, không dời hình học); gán tầng theo cao độ cho các dòng đang chọn.
+// Ô tầng trong bảng nhấp đúp để gán tay. Ruby kiểm tra lại mọi giá trị.
+function levelsPanel(){
+  const p=node('div',undefined,'popover right capture-panel levels-panel');
+  const levels=(tableState.data&&tableState.data.levels)||[];
+  p.append(node('div','Quản lý tầng','pop-title'));
+  const rows=node('div',undefined,'lv-rows');
+  const collect=()=>[...rows.querySelectorAll('.lv-row')].map(r=>{const o={name:r.querySelector('.lv-name').value,elevation:Number(r.querySelector('.lv-elev').value),height:Number(r.querySelector('.lv-height').value)};if(r.dataset.id)o.id=r.dataset.id;return o;});
+  const save=()=>call('table_levels',JSON.stringify({levels:collect()}));
+  const addRow=level=>{
+    const r=node('div',undefined,'lv-row');if(level.id)r.dataset.id=level.id;
+    const input=(cls,value,label,type)=>{const i=node('input',undefined,cls);i.type=type;i.value=value;i.setAttribute('aria-label',label);i.onchange=save;return i;};
+    const name=input('lv-name',level.name,'Tên tầng','text');name.maxLength=60;
+    const del=button('×',()=>{r.remove();save();},'cs-del');del.title='Xóa tầng này (món đã gán chỉ hiện "tầng đã xóa", không mất dữ liệu khác)';del.setAttribute('aria-label','Xóa tầng '+level.name);
+    r.append(name,input('lv-elev',level.elevation,'Cao độ sàn (mm)','number'),input('lv-height',level.height,'Chiều cao tầng (mm)','number'),del);rows.append(r);
+  };
+  if(levels.length){const head=node('div',undefined,'lv-row lv-head');head.append(node('span','Tên'),node('span','Cao độ (mm)'),node('span','Cao (mm)'),node('span'));p.append(head);}
+  levels.forEach(addRow);p.append(rows);
+  if(!levels.length)p.append(node('p','Chưa có tầng nào. Bấm Thêm tầng.','muted'));
+  const add=button('+ Thêm tầng',()=>{
+    const last=levels[levels.length-1];
+    const next={name:`Tầng ${levels.length+1}`,elevation:last?Math.round((last.elevation+last.height)*10)/10:0,height:last?last.height:3300};
+    call('table_levels',JSON.stringify({levels:[...collect(),next]}));
+  });add.id='lv-add';
+  const picked=tableState.displayed.filter(r=>r.members.some(m=>tableState.sel.has(m)));
+  const auto=button('Gán tầng theo cao độ cho món đang chọn',()=>{
+    if(!picked.length)throw Error('Hãy chọn các dòng cần gán tầng (Ctrl+A chọn hết các dòng đang hiện).');
+    call('table_assign_levels_auto',JSON.stringify({indexes:picked.flatMap(r=>r.members.filter(m=>tableState.sel.has(m)).slice(0,1))}));
+  },'primary');auto.id='lv-auto';auto.title='Mỗi món nhận tầng cao nhất có cao độ sàn bằng hoặc thấp hơn đáy món (dung sai 50 mm). Chỉ là nhãn, không dời hình.';
+  const actions=node('div',undefined,'rename-actions');actions.append(add,auto,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
+  p.append(node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán tầng theo cao độ; hoặc nhấp đúp ô Tầng để gán tay.','muted'),actions);
+  return p;
+}
 function capturePanel(){
   const p=node('div',undefined,'popover right capture-panel');
   const targets=captureTargets(),chosen=tableState.sel.size>0;
@@ -1175,7 +1211,7 @@ function closeTablePanel(){
   document.querySelectorAll('.popover').forEach(p=>p.remove());
   document.querySelectorAll('button[aria-expanded="true"]').forEach(b=>{if(!b.closest('header'))b.setAttribute('aria-expanded','false');});
 }
-const PANELS_KEEP_ON_ROW_CLICK=['rename','front','capture','codes']; // ba bảng này dùng các dòng đang chọn: bấm chọn dòng không đóng
+const PANELS_KEEP_ON_ROW_CLICK=['rename','front','capture','codes','levels']; // ba bảng này dùng các dòng đang chọn: bấm chọn dòng không đóng
 document.addEventListener('mousedown',e=>{
   if(!tableState.panel||!(e.target instanceof Element))return;
   const t=e.target;
@@ -1267,7 +1303,9 @@ function ioPanel(){
   assignIds.id='ids-assign';assignIds.title='Gán mã định danh VGD ID cho các món đang chọn chưa có ID (món đã có ID giữ nguyên, món bị khóa bỏ qua; một bước hoàn tác)';
   const fixIds=item('id','Sửa VGD ID trùng',()=>call('table_fix_duplicate_ids'));
   fixIds.id='ids-fix';fixIds.title='Các món do copy mà dùng chung VGD ID: món cũ nhất giữ ID, các món còn lại nhận ID mới (một bước hoàn tác)';
-  p.append(assignIds,fixIds,codesBtn);
+  const levelsBtn=item('id','Quản lý tầng...',()=>{tableState.panel='levels';tableView(tableState.data);});
+  levelsBtn.id='levels-open';levelsBtn.title='Thêm / sửa tầng của công trình và gán tầng cho món (chỉ là nhãn, không dời hình)';
+  p.append(assignIds,fixIds,codesBtn,levelsBtn);
   return p;
 }
 function bottomBar(){
@@ -1325,6 +1363,7 @@ function tableView(data){
   bar.replaceChildren(toolbar());
   if(tableState.panel==='capture')bar.append(capturePanel());
   if(tableState.panel==='codes')bar.append(codesPanel());
+  if(tableState.panel==='levels')bar.append(levelsPanel());
   if(tableState.panel==='front')bar.append(frontPanel());
   if(tableState.panel==='rename')bar.append(renamePanel());
   const side=$('col-side'),host=$('grid-host');

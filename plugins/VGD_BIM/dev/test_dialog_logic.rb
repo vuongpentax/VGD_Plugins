@@ -41,7 +41,7 @@ $transactions = []
 $writes = []
 $vgd_data = {}
 require File.join(ROOT, 'core/settings')
-%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code].each { |f| require File.join(ROOT, f) }
+%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/levels].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
@@ -611,6 +611,7 @@ class IdEnt
   def initialize(pid, locked = false); @attrs = {}; @persistent_id = pid; @locked = locked; end
   def get_attribute(dict, key, default = nil); @attrs.dig(dict, key).nil? ? default : @attrs[dict][key]; end
   def set_attribute(dict, key, value); (@attrs[dict] ||= {})[key] = value; end
+  def delete_attribute(dict, key = nil); key ? @attrs[dict]&.delete(key) : @attrs.delete(dict); end
   def valid?; true; end
   def locked?; @locked; end
 end
@@ -662,6 +663,47 @@ $writes.clear
 cdd.table_assign_codes({'indexes' => [2], 'prefix' => 'X', 'start' => 5, 'pad' => 3, 'overwrite' => true})
 ok('ghi đè: món đã có mã được đặt lại', $writes.map { |w| w[1] } == [{code: 'X005'}])
 
+# Tầng: lưu danh sách trong model, gán tay (menu ô Tầng), gán theo cao độ
+class LevelModel
+  attr_reader :attrs
+  def initialize; @attrs = {}; end
+  def get_attribute(dict, key, default = nil); @attrs.dig(dict, key) || default; end
+  def set_attribute(dict, key, value); (@attrs[dict] ||= {})[key] = value; end
+  def start_operation(*); true; end
+  def commit_operation; true; end
+  def abort_operation; true; end
+end
+lm = LevelModel.new
+$model = lm
+lve = [IdEnt.new(1), IdEnt.new(2), IdEnt.new(3, true), IdEnt.new(4)]
+lrecs = lve.each_with_index.map { |e, i| {entity: e, path: [e], locked: false, index: i} }
+lrows = [{index: 0, base_z: 0.0}, {index: 1, base_z: 3350.0}, {index: 2, base_z: 100.0}, {index: 3, base_z: -900.0}]
+ld = D.allocate
+ld.instance_variable_set(:@model, lm)
+ld.instance_variable_set(:@table_records, lrecs)
+ld.instance_variable_set(:@table_rows, lrows)
+ld.define_singleton_method(:emit) { |ev, payload| (@lcalls ||= []) << [ev, payload] }
+ld.define_singleton_method(:lcalls) { @lcalls ||= [] }
+ld.define_singleton_method(:table_build) { nil }
+ld.define_singleton_method(:show_outline) { nil }
+bad_level = ->(&block) { begin; block.call; nil; rescue StandardError => e; e.message; end }
+ok('lưu tầng sai dữ liệu: từ chối, model không đổi', bad_level.call { ld.table_levels({'levels' => [{'name' => '', 'elevation' => 0, 'height' => 3000}]}) }.to_s.include?('tên tầng') && VGD::BIM::Levels.read(lm).empty? && bad_level.call { ld.table_levels('x') }.to_s.include?('không hợp lệ'))
+ld.table_levels({'levels' => [{'name' => 'Tầng 2', 'elevation' => 3300, 'height' => 3300}, {'name' => 'Tầng 1', 'elevation' => 0, 'height' => 3300}]})
+levels = VGD::BIM::Levels.read(lm)
+ok('lưu tầng: ghi vào model theo cao độ, báo số tầng', levels.map { |l| l['name'] } == ['Tầng 1', 'Tầng 2'] && ld.lcalls.last[1][:text].include?('2 tầng'))
+$transactions.clear
+ld.table_assign_levels_auto({'indexes' => [0, 1, 2, 3]})
+ok('gán tầng theo cao độ: món 0 → Tầng 1, món 1 → Tầng 2; món khóa (2) bỏ qua; món thấp hơn mọi tầng (3) không gán; một bước hoàn tác', $transactions == ['VGD_BIM · Gán tầng theo cao độ'] && VGD::BIM::Levels.entity_level(lve[0]) == levels[0]['id'] && VGD::BIM::Levels.entity_level(lve[1]) == levels[1]['id'] && VGD::BIM::Levels.entity_level(lve[2]) == '' && VGD::BIM::Levels.entity_level(lve[3]) == '')
+ok('gán theo cao độ: báo số món đã gán, món không gán được và bị khóa', ld.lcalls.last[1][:text].include?('2 món') && ld.lcalls.last[1][:text].include?('thấp hơn') && ld.lcalls.last[1][:text].include?('khóa'))
+ok('chỉ chọn món khóa hoặc thấp hơn mọi tầng: báo lỗi', bad_level.call { ld.table_assign_levels_auto({'indexes' => [2, 3]}) }.to_s.include?('Không gán được'))
+ld.table_edit({'indexes' => [3], 'field' => 'level', 'value' => levels[1]['id']})
+ok('gán tay qua ô Tầng: ghi nhãn tầng, không đụng dữ liệu VGD', VGD::BIM::Levels.entity_level(lve[3]) == levels[1]['id'] && lve[3].attrs.keys == ['VGD_BIM_LOC'])
+ld.table_edit({'indexes' => [3], 'field' => 'level', 'value' => ''})
+ok('bỏ tầng bằng giá trị rỗng', VGD::BIM::Levels.entity_level(lve[3]) == '')
+ok('tầng không có trong danh sách: từ chối', bad_level.call { ld.table_edit({'indexes' => [3], 'field' => 'level', 'value' => 'lv_deadbeef'}) }.to_s.include?('không còn trong danh sách'))
+lm2 = LevelModel.new
+ld.instance_variable_set(:@model, lm2); $model = lm2
+ok('chưa có tầng: gán theo cao độ báo cần thêm tầng', bad_level.call { ld.table_assign_levels_auto({'indexes' => [0]}) }.to_s.include?('Chưa có tầng'))
 $model = ORIGINAL_MODEL
 $vgd_data = {}
 

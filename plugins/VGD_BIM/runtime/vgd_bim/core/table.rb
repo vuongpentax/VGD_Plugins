@@ -7,6 +7,7 @@ require_relative 'measure'
 require_relative 'custom_columns'
 require_relative 'vgd_id'
 require_relative 'object_code'
+require_relative 'levels'
 
 module VGD
   module BIM
@@ -30,6 +31,7 @@ module VGD
         {key: 'instance', label: 'Tên', kind: 'text', editable: 'name'},
         {key: 'code', label: 'Mã đối tượng', kind: 'text', editable: 'code'},
         {key: 'vgd_id', label: 'VGD ID', kind: 'text'},
+        {key: 'level', label: 'Tầng', kind: 'text', editable: 'level'},
         {key: 'description', label: 'Mô tả', kind: 'text', editable: 'description'},
         {key: 'lenX', label: 'Rộng (X) mm', kind: 'number'},
         {key: 'lenY', label: 'Dài (Y) mm', kind: 'number'},
@@ -203,6 +205,14 @@ module VGD
         overrides = Quantity.overrides # cách tính ghi đè theo tag, đọc một lần cho cả bảng
         custom = CustomColumns.read # cột thêm tay, đọc một lần cho cả bảng
         rows = records.each_with_index.map { |record, i| row_for(record, i, groups, projected: projected, measure: measure, overrides: overrides, custom: custom).merge(image_state(model, record[:entity], image_folder)) }
+        levels = Levels.read(model) # tầng của công trình (lưu trong model); đọc một lần cho cả bảng
+        level_names = levels.to_h { |level| [level['id'], level['name']] }
+        records.each_with_index do |record, i|
+          lid = Levels.entity_level(record[:entity])
+          rows[i][:level_id] = lid
+          rows[i][:level] = lid.empty? ? '' : level_names.fetch(lid, '(tầng đã xóa)')
+          rows[i][:base_z] = base_z(record) # cao độ đáy món (mm, thế giới) để gợi ý tầng
+        end
         VgdId.duplicates(rows.map { |row| {index: row[:index], pid: row[:pid], guid: row[:vgd_id]} }).flatten.each { |i| rows[i][:vgd_dup] = true } # ID dùng chung giữa các dòng (do copy)
         # Đối tượng cha đang có trong bảng: dùng để tránh cộng trùng khi tính tổng.
         records.each_with_index do |record, i|
@@ -210,6 +220,14 @@ module VGD
           rows[i][:parent] = parent_label(record)
         end
         {rows: rows, records: records, hidden: hidden}
+      end
+
+      # Cao độ Z (mm) của đáy hộp bao thế giới của món; không đo được thì nil.
+      def self.base_z(record)
+        box = bounding_box(record)
+        box.empty? ? nil : (box.min.z.to_f * Geometry::INCH_MM).round(1)
+      rescue StandardError
+        nil
       end
 
       # Bỏ dòng gắn tag loại trừ (tên tag đã chuẩn hóa) và mọi món nằm trong nó. Chỉ xét các đối tượng được đọc (từ path[skip..]),
