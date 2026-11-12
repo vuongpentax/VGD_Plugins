@@ -35,7 +35,7 @@ Mở bằng **Extensions → VGD → VGD_BIM**: cửa sổ mở thẳng tab **B�
 
 ## Đổi tên hàng loạt
 
-Các bảng nổi (Đổi tên, Mặt trước, Cập nhật ảnh, Nhóm theo, Nhập / Xuất) và ngăn Chọn cột / Loại trừ tag tự đóng khi bạn bấm ra ngoài hoặc mở bảng khác. Riêng Đổi tên, Mặt trước, Cập nhật ảnh vẫn giữ nguyên khi bạn bấm chọn dòng trong bảng.
+Các bảng nổi (Đổi tên, Mặt trước, Cập nhật ảnh, Nhóm theo, Tùy chọn, Công cụ) và ngăn Chọn cột / Loại trừ tag tự đóng khi bạn bấm ra ngoài hoặc mở bảng khác. Riêng Đổi tên, Mặt trước, Cập nhật ảnh vẫn giữ nguyên khi bạn bấm chọn dòng trong bảng.
 
 1. Trong tab **Bảng khối lượng**, chọn các dòng cần đặt tên (Ctrl / Shift như trên) rồi bấm **Đổi tên**. Panel ghi rõ áp dụng cho bao nhiêu dòng; chưa chọn dòng nào thì áp cho mọi dòng trong bảng.
 2. Nhập **Mẫu tên**, ví dụ `Cửa-{số}` hoặc `{phân loại}-{số}`. Bấm các nút `{tên}`, `{họ}`, `{phân loại}`, `{nhóm}`, `{số}` để chèn: tên hiện tại, tên định nghĩa, phân loại, nhóm hạng mục, số thứ tự.
@@ -86,7 +86,7 @@ Nút **Preset** nằm cạnh nút Sáng/Tối. Bấm vào để mở bảng gồ
 2. **Tạo preset**: sắp xếp bảng như ý (chọn cột, kéo thứ tự, đổi đơn vị, đổi tên cột), gõ tên vào ô **Tạo mới...** rồi bấm **+**. Từ đó, mọi thay đổi trong lúc dùng preset này tự cập nhật vào nó. Nút × xóa preset tự tạo.
 3. **Đổi tên cột**: nhấp đúp vào tiêu đề cột, gõ tên mới rồi Enter (Esc hủy, để trống để về tên gốc). Tên cột lưu theo preset.
 4. **Đơn vị**: chọn đơn vị và số lẻ cho chiều dài, diện tích, thể tích; chọn tiền tệ và dấu thập phân. Chỉ đổi cách hiển thị, báo cáo CSV ở tab Quét & xuất vẫn dùng mm.
-5. **Nhập / Xuất** (menu ở chân trang): xuất bảng đang hiện. Nhập / xuất preset bằng file JSON (đọc được file preset của plugin tham khảo) nằm trong bảng **Preset** (nút cạnh nút Sáng/Tối):
+5. **Công cụ** (menu ở chân trang, chia nhóm Xuất; Mã và dữ liệu món; Công trình; Vật liệu và kiểm tra): xuất bảng đang hiện, gán mã, quản lý tầng / phòng / vật liệu, luật kiểm tra, so sánh phiên bản. Nút **Tùy chọn** bên cạnh gom các công tắc (thu phóng, cô lập, chọn sâu, diện tích chiếu, bảng tên trên model, dòng tổng). Nhập / xuất preset bằng file JSON (đọc được file preset của plugin tham khảo) nằm trong bảng **Preset** (nút cạnh nút Sáng/Tối):
    - **Xuất Excel**: tạo file .xlsx đúng như bảng đang hiện (cột, thứ tự, tiêu đề, đơn vị, nhóm, dòng tổng), có ảnh món đồ trong ô. Muốn có ảnh, hãy bấm Cập nhật ảnh trước. Ảnh trong Excel và PDF là ảnh đầy đủ theo cỡ đã chụp (đặt trong bảng Preset), chỉ hiển thị thu nhỏ vừa ô; bấm vào ảnh trong Excel để xem rõ. Chụp cỡ lớn thì file xuất nặng hơn. Khi bạn đã chỉnh độ cao hàng (Ctrl + lăn chuột), Excel và PDF cũng cao đúng bấy nhiêu và cột Ảnh rộng đúng như trên màn hình, ảnh to ra theo (Excel giới hạn hàng cao tối đa 409 point); chưa chỉnh thì giữ cỡ ảnh mặc định.
    - **In PDF**: tạo trang báo cáo rồi mở trong trình duyệt. Trang **không tự mở hộp in**; khi cần in, bấm nút **In / Lưu PDF** trên trang (hoặc Ctrl+P) và chọn **Lưu thành PDF**. Ô nào quá rộng thì kéo mép tiêu đề cột trên trang để chia lại độ rộng (cột bên cạnh hẹp đi tương ứng); nút **Đặt lại độ rộng cột** đưa về lúc đầu. Độ rộng ban đầu theo độ rộng cột bạn đã chỉnh trong bảng. Trang A4 ngang, tiêu đề cột lặp lại mỗi trang.
    - **Cầu nối dữ liệu**: đã có sẵn chỗ trong menu, sẽ làm sau.
