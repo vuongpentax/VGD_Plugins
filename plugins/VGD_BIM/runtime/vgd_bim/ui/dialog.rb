@@ -59,6 +59,7 @@ module VGD
           end
           @dialog.add_action_callback('apply') { |_ctx, payload| safely { apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('clear') { |_ctx| safely { clear } }
+          @dialog.add_action_callback('validation_assign_ids') { |_ctx| safely { validation_assign_ids } }
           @dialog.add_action_callback('select_entity') { |_ctx, index| safely { select_entity(index.to_i) } }
           @dialog.add_action_callback('preview_convert') { |_ctx, payload| safely { preview_convert(JSON.parse(payload)) } }
           @dialog.add_action_callback('confirm_convert') { |_ctx| safely { confirm_convert } }
@@ -212,14 +213,30 @@ module VGD
           @scan_options[:faces] = payload['faces'] ? true : false
           refresh
         end
+        def emit_validation
+          @validation = Validator.validate(@records)
+          rows = @validation.each_with_index.map do |r, index|
+            RawScanner.identity(r[:entity]).merge(index: index, status: r[:status], issues: r[:issues], path: r[:path].select { |e| Data.supported?(e) }.map { |e| e.name.to_s.empty? ? Geometry.definition(e).name : e.name }.join(' / '))
+          end
+          emit('validation', rows)
+        end
+        # Tab Kiểm tra: gán VGD ID cho mọi món đang liệt kê mà chưa có ID (bỏ qua món khóa), một bước hoàn tác, rồi hiện lại kết quả.
+        def validation_assign_ids
+          check_model!
+          raise 'Hãy chạy kiểm tra trước.' if @validation.nil? || @validation.empty?
+          raise 'Đối tượng không còn tồn tại. Hãy chạy kiểm tra lại.' unless @validation.all? { |record| record[:path].all?(&:valid?) }
+          items = @validation.each_with_index.map { |record, index| {index: index, guid: VgdId.read(record[:entity]), locked: record[:locked] || record[:entity].locked? ? true : false} }
+          plan = VgdId.assign_plan(items)
+          note = plan[:locked].empty? ? '' : " Bỏ qua #{plan[:locked].size} món bị khóa."
+          return emit('message', {text: "Mọi món đều đã có VGD ID.#{note}"}) if plan[:assign].empty?
+          Data.transaction(@model, 'VGD_BIM · Gán VGD ID') { plan[:assign].each { |index| VgdId.assign(@validation.fetch(index)[:entity]) } }
+          emit_validation
+          emit('message', {text: "Đã gán VGD ID cho #{plan[:assign].size} món.#{note}"})
+        end
         def finish_scan
           @scan_complete = true
           if @mode.start_with?('validate')
-            @validation = Validator.validate(@records)
-            rows = @validation.each_with_index.map do |r, index|
-              RawScanner.identity(r[:entity]).merge(index: index, status: r[:status], issues: r[:issues], path: r[:path].select { |e| Data.supported?(e) }.map { |e| e.name.to_s.empty? ? Geometry.definition(e).name : e.name }.join(' / '))
-            end
-            emit('validation', rows)
+            emit_validation
           else
             report = RawScanner.report(@records, @model)
             if @mode == 'mapping'

@@ -47,6 +47,7 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await receive('config',config(lang,'validate_model'));
   const vf=F.vi.fields,m=F.vi.quantity_method,u=F.vi.unit;
   await receive('validation',[{index:0,status:'ERROR',instance_name:'',definition_name:'D',issues:[
+    {severity:'INFO',code:'missing_id',message:'Chưa có VGD ID, hãy bấm Gán VGD ID cho tất cả món chưa có'},
     {severity:'ERROR',message:`Thiếu ${vf.description.toLowerCase()}`},{severity:'ERROR',message:`${vf.code} phải là văn bản`},{severity:'ERROR',message:`${vf.unit} không hợp lệ`},
     {severity:'ERROR',message:`${m.count} cần đơn vị ${u.pcs} / ${u.set}`},{severity:'WARNING',message:'Chưa nhập mã hạng mục'},{severity:'WARNING',message:'Chưa gán khu vực / phòng'},{severity:'INFO',message:'Chưa phân loại'}]}]);await scan('Kiểm tra');
   await receive('config',config(lang,'rules'));

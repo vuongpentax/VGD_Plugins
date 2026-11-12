@@ -779,6 +779,24 @@ ok('lưu vật liệu sai dữ liệu: từ chối, thư viện không đổi', 
 rd2.material_library_save({'items' => [{'name' => 'MFC Oak', 'code' => 'MFC01', 'unit' => 'm2', 'price' => 285_000, 'waste' => 5, 'sketchup_material' => 'Gỗ sồi'}]})
 ok('lưu vật liệu: ghi vào thư viện trên máy, báo số vật liệu', VGD::BIM::MaterialLibrary.read.map { |i| i['code'] } == ['MFC01'] && rd2.rcalls.last[1][:text].include?('1 vật liệu'))
 VGD::BIM::MaterialLibrary.write([])
+# Tab Kiểm tra: gán VGD ID cho mọi món chưa có (bỏ qua món khóa), một bước hoàn tác, rồi hiện lại kết quả
+$model = cm
+vents = [IdEnt.new(1), IdEnt.new(2), IdEnt.new(3, true), IdEnt.new(4)]
+vents[3].set_attribute('VGD_BIM_ID', 'guid', VGD::BIM::VgdId.generate)
+vd = D.allocate
+vd.instance_variable_set(:@model, cm)
+vd.instance_variable_set(:@validation, vents.map { |e| {entity: e, path: [e], locked: false} })
+vd.define_singleton_method(:emit) { |ev, payload| (@icalls ||= []) << [ev, payload] }
+vd.define_singleton_method(:icalls) { @icalls ||= [] }
+vd.define_singleton_method(:emit_validation) { (@icalls ||= []) << ['validation', nil] }
+$transactions.clear
+vd.validation_assign_ids
+ok('kiểm tra: gán ID cho món chưa có (0, 1), món khóa (2) bỏ qua, món có ID (3) giữ nguyên; một bước hoàn tác và hiện lại kết quả',
+   $transactions == ['VGD_BIM · Gán VGD ID'] && [0, 1].all? { |i| VGD::BIM::VgdId.valid?(VGD::BIM::VgdId.read(vents[i])) } && VGD::BIM::VgdId.read(vents[2]).empty? &&
+   vd.icalls.map(&:first) == ['validation', 'message'] && vd.icalls.last[1][:text].include?('2 món') && vd.icalls.last[1][:text].include?('1 món bị khóa'))
+$transactions.clear
+vd.validation_assign_ids
+ok('kiểm tra: không còn món nào cần gán thì báo rõ, không mở thao tác', $transactions.empty? && vd.icalls.last[1][:text].include?('đều đã có'))
 $model = ORIGINAL_MODEL
 $vgd_data = {}
 

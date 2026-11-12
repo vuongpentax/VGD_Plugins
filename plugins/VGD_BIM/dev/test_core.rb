@@ -51,3 +51,8 @@ dup_results = VGD::BIM::Validator.validate([dup_a, dup_b, dup_c].map { |e| {enti
 flags = dup_results.map { |r| r[:issues].any? { |i| i[:code] == 'duplicate_id' } }
 assert(flags == [true, true, false], 'VGD ID trùng không được báo đúng')
 assert(dup_results.all? { |r| r[:status] == 'UNCLASSIFIED' }, 'Cảnh báo trùng ID không được làm đổi trạng thái phân loại')
+# Món chưa có VGD ID: báo INFO (code missing_id) ở tab Kiểm tra, không đổi trạng thái
+no_id = Sketchup::Group.new(model)
+no_id_result = VGD::BIM::Validator.validate([{entity: no_id}, {entity: dup_c}]).map { |r| r[:issues].any? { |i| i[:code] == 'missing_id' && i[:severity] == 'INFO' } }
+assert(no_id_result == [true, false], 'Món chưa có VGD ID phải được báo INFO missing_id, món có ID thì không')
+puts 'PASS: cảnh báo thiếu VGD ID'

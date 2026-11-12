@@ -33,6 +33,7 @@ module VGD
         shared = by_id.values.flatten.map { |r| r[:entity] }
         supported.map do |record|
           issues = inspect_entity(record[:entity])
+          issues << {severity: 'INFO', message: 'Chưa có VGD ID, hãy bấm Gán VGD ID cho tất cả món chưa có', code: 'missing_id'} if VgdId.read(record[:entity]).empty?
           issues << {severity: 'WARNING', message: 'VGD ID trùng với món khác (do copy), hãy dùng Sửa VGD ID trùng ở Bảng khối lượng', code: 'duplicate_id'} if shared.any? { |e| e.equal?(record[:entity]) }
           errors = issues.select { |i| i[:severity] == 'ERROR' }
           status = if !Data.has_data?(record[:entity])
