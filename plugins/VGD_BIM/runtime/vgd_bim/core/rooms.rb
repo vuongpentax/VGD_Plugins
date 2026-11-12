@@ -156,6 +156,14 @@ module VGD
          wall_area: (perimeter * room['height'] / 1.0e6).round(3), ceiling_area: (area / 1.0e6).round(3)}
       end
 
+      # ---- Khối phòng do plugin VGD_Room dựng (cầu nối room_volume, docs/vgd_bim/BRIDGE.md) ----
+      SOURCE_DICTIONARY = 'VGD_BIM_SOURCE'.freeze
+
+      # Đối tượng là khối phòng do plugin dựng: không tính khối lượng.
+      def self.volume_entity?(entity)
+        entity.respond_to?(:get_attribute) && entity.get_attribute(SOURCE_DICTIONARY, 'kind') == 'room'
+      end
+
       # ---- Món thuộc phòng ----
       def self.entity_room(entity)
         return '' unless entity.respond_to?(:get_attribute)

@@ -81,6 +81,7 @@ module VGD
           @dialog.add_action_callback('table_clear') { |_ctx| safely { table_clear } }
           @dialog.add_action_callback('rename_preview') { |_ctx, payload| safely { rename_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { rename_apply(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_room_build') { |_ctx, payload| safely { table_room_build(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_rooms') { |_ctx, payload| safely { table_rooms(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_from_selection') { |_ctx, payload| safely { table_room_from_selection(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_assign_rooms_auto') { |_ctx, payload| safely { table_assign_rooms_auto(JSON.parse(payload)) } }
@@ -349,7 +350,7 @@ module VGD
                  elsif built[:hidden].to_i.positive?
                    "Đã ẩn #{built[:hidden]} đối tượng thuộc tag loại trừ."
                  end
-          emit('table', {rooms: rooms_view, levels: Levels.read(@model), columns: Table.columns, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
+          emit('table', {bridge: {room_volume: !Bridge.provider_for('room_volume').nil?}, rooms: rooms_view, levels: Levels.read(@model), columns: Table.columns, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
                          statuses: Table::STATUS_LABELS, options: @table_options.merge(isolating: !@isolated.empty?),
                          rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state, choices: table_choices,
                          row_order: RowOrder.read(@model)})
@@ -452,7 +453,21 @@ module VGD
         end
         # Phòng kèm số đo (diện tích, chu vi, thể tích, tường, trần) để giao diện hiện; tính lại mỗi lần dựng bảng.
         def rooms_view
-          Rooms.read(@model).map { |room| room.merge('metrics' => Rooms.metrics(room)) }
+          provider = Bridge.provider_for('room_volume')
+          Rooms.read(@model).map { |room| room.merge('metrics' => Rooms.metrics(room), 'has_volume' => provider ? !Bridge.call('room_volume', 'find', @model, room['id']).nil? : false) }
+        end
+        # Dựng (hoặc dựng lại) khối 3D của phòng bằng plugin VGD_Room qua cầu nối. VGD_BIM không tự dựng hình. payload: {'id' => mã phòng}.
+        # VGD ID của khối do BIM cấp (dựng lại thì plugin giữ ID cũ). Plugin tự mở một thao tác (một bước hoàn tác).
+        def table_room_build(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless payload.is_a?(Hash) && payload['id'].is_a?(String)
+          room = Rooms.read(@model).find { |item| item['id'] == payload['id'] }
+          raise 'Phòng này không còn trong danh sách. Hãy mở lại Quản lý phòng.' unless room
+          raise 'Chưa cài plugin VGD Room để dựng khối phòng. Hãy cài qua VGD Center rồi khởi động lại SketchUp.' unless Bridge.provider_for('room_volume')
+          existed = !Bridge.call('room_volume', 'find', @model, room['id']).nil?
+          Bridge.call('room_volume', 'build', @model, room, VgdId.generate)
+          table_build
+          emit('message', {text: "Đã #{existed ? 'dựng lại' : 'dựng'} khối phòng #{room['name']} (thể tích #{Rooms.metrics(room)[:volume]} m³)."})
         end
         # Lưu danh sách phòng. payload: {'rooms' => [...]}. Chỉ ghi vào model (không đụng đối tượng, không dựng hình; khối phòng do VGD_Room dựng).
         def table_rooms(payload)

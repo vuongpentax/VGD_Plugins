@@ -920,7 +920,10 @@ function roomsPanel(){
     const fin=node('div',undefined,'rm-fin');
     [['finish_floor','Sàn'],['finish_wall','Tường'],['finish_ceiling','Trần']].forEach(([k,t])=>{const i=fieldInput(room,k,'Hoàn thiện '+t.toLowerCase(),'text');i.placeholder='Hoàn thiện '+t.toLowerCase();i.maxLength=60;fin.append(i);});
     const m=room.metrics||{};
-    box.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường ${m.wall_area} m² · Trần ${m.ceiling_area} m²`,'muted rm-metrics'));
+    const hasPlugin=!!(tableState.data.bridge&&tableState.data.bridge.room_volume);
+    const build=button(room.has_volume?'Dựng lại khối':'Dựng khối',()=>call('table_room_build',JSON.stringify({id:room.id})));build.className='rm-build';
+    build.disabled=!hasPlugin;build.title=hasPlugin?'Dựng (hoặc dựng lại) khối 3D của phòng bằng plugin VGD Room: một khối trên tag VGD_ROOMS, một bước hoàn tác.':'Cần cài plugin VGD Room (qua VGD Center) để dựng khối phòng.';
+    box.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường ${m.wall_area} m² · Trần ${m.ceiling_area} m²`,'muted rm-metrics'),build);
     p.append(box);
   });
   if(!rooms.length)p.append(node('p','Chưa có phòng nào. Chọn một mặt sàn trong SketchUp rồi bấm Tạo phòng từ mặt đang chọn.','muted'));

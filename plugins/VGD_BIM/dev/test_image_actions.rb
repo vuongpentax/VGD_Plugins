@@ -49,7 +49,7 @@ module VGD; module BIM; def self.log(m); end
   module UI; end
 end; end
 ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
-%w[core/storage core/settings core/images core/row_order core/preset core/photo_settings core/levels core/rooms core/table_report core/measure_probe].each { |f| require File.join(ROOT, f) }
+%w[core/storage core/settings core/images core/row_order core/preset core/photo_settings core/bridge core/levels core/rooms core/table_report core/measure_probe].each { |f| require File.join(ROOT, f) }
 module VGD; module BIM; module UI
   module Capture
     ISO_SIDES = %w[right left].freeze

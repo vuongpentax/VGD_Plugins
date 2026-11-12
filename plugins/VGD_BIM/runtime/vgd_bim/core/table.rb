@@ -200,6 +200,7 @@ module VGD
           end
         end
         records, hidden = drop_excluded_tags(records, path.size, measure ? measure.tags : [])
+        records = records.reject { |record| Rooms.volume_entity?(record[:entity]) } # khối phòng do VGD_Room dựng: không phải món, không tính khối lượng
         groups = tag_groups
         index_of = {}
         records.each_with_index { |record, i| index_of[path_key(record[:path])] = i }

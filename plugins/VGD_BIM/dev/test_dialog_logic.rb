@@ -41,7 +41,7 @@ $transactions = []
 $writes = []
 $vgd_data = {}
 require File.join(ROOT, 'core/settings')
-%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/levels core/rooms].each { |f| require File.join(ROOT, f) }
+%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/bridge core/levels core/rooms].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
@@ -755,6 +755,25 @@ ok('gán tay qua ô Phòng: nhãn phòng, không đụng dữ liệu VGD', VGD::
 ok('phòng không có trong danh sách: từ chối', bad_room.call { rd2.table_edit({'indexes' => [1], 'field' => 'room', 'value' => 'rm_deadbeef'}) }.to_s.include?('không còn trong danh sách'))
 rd2.table_edit({'indexes' => [1], 'field' => 'room', 'value' => ''})
 ok('bỏ phòng bằng giá trị rỗng', VGD::BIM::Rooms.entity_room(rme[1]) == '')
+# Dựng khối phòng qua cầu nối (plugin VGD_Room): BIM không tự dựng hình
+rd2.instance_variable_set(:@model, rmm); $model = rmm
+VGD::BIM::Rooms.write(rmm, [{'name' => 'Khách', 'number' => 'P01', 'boundary' => [[0, 0], [4000, 0], [4000, 3000], [0, 3000]], 'height' => 2800, 'elevation' => 0}])
+room_id = VGD::BIM::Rooms.read(rmm)[0]['id']
+VGD::Bridge.providers.clear
+ok('chưa cài plugin dựng phòng: báo cần cài VGD Room, không dựng gì', bad_room.call { rd2.table_room_build({'id' => room_id}) }.to_s.include?('Chưa cài plugin VGD Room'))
+ok('phòng không có trong danh sách / dữ liệu sai: từ chối', bad_room.call { rd2.table_room_build({'id' => 'rm_deadbeef'}) }.to_s.include?('không còn trong danh sách') && bad_room.call { rd2.table_room_build('x') }.to_s.include?('không hợp lệ'))
+built = []
+volume = nil
+VGD::Bridge.register('vgd_room_fake', {bridge_version: 1, version: '0', provides: ['room_volume'], commands: {
+  'build' => ->(model, room, id) { built << [room['id'], id, room['height']]; volume = Object.new },
+  'find' => ->(_model, _room_id) { volume }
+}})
+rd2.table_room_build({'id' => room_id})
+ok('có plugin: BIM gọi lệnh build qua cầu nối với dữ liệu phòng đã kiểm tra và một VGD ID hợp lệ', built.size == 1 && built[0][0] == room_id && VGD::BIM::VgdId.valid?(built[0][1]) && built[0][2] == 2800.0 && rd2.rcalls.last[1][:text].include?('Đã dựng khối phòng Khách') && rd2.rcalls.last[1][:text].include?('33.6'))
+rd2.table_room_build({'id' => room_id})
+ok('đã có khối: báo "dựng lại"', rd2.rcalls.last[1][:text].include?('Đã dựng lại'))
+ok('lệnh của plugin lỗi: lỗi được báo ra, không nuốt', (VGD::Bridge.providers['vgd_room_fake'][:commands]['build'] = ->(*_) { raise 'SketchUp lỗi' }; bad_room.call { rd2.table_room_build({'id' => room_id}) } == 'SketchUp lỗi'))
+VGD::Bridge.providers.clear
 $model = ORIGINAL_MODEL
 $vgd_data = {}
 

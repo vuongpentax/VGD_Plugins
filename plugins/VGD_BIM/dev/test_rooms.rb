@@ -101,5 +101,10 @@ ok('viền từ mặt phẳng ngang: bỏ Z, lấy cao độ sàn', RM.boundary_
 ok('mặt không nằm ngang (lệch Z): từ chối', error_of { RM.boundary_from_points([[0, 0, 0], [4000, 0, 0], [4000, 3000, 500]]) }.to_s.include?('nằm ngang'))
 ok('bỏ điểm trùng liên tiếp và điểm thẳng hàng thừa', RM.boundary_from_points([[0, 0, 0], [2000, 0, 0], [4000, 0, 0], [4000, 3000, 0], [0, 3000, 0], [0, 3000, 0]])[:boundary].size == 4)
 
+# ---- Khối phòng do plugin dựng ----
+vol = FakeEntity.new; vol.set_attribute('VGD_BIM_SOURCE', 'kind', 'room')
+plain = FakeEntity.new; plain.set_attribute('VGD_BIM_SOURCE', 'kind', 'stair')
+ok('nhận ra khối phòng do plugin dựng (VGD_BIM_SOURCE.kind = room); đối tượng khác thì không', RM.volume_entity?(vol) && !RM.volume_entity?(plain) && !RM.volume_entity?(FakeEntity.new) && !RM.volume_entity?(Object.new))
+
 puts($fails.zero? ? "\nTẤT CẢ ĐẠT" : "\n#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)
