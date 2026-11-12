@@ -12,8 +12,12 @@ module VGD
     module Images
       MAX_BYTES = 8 * 1024 * 1024 # ảnh dán / kéo thả quá lớn thì từ chối
       PNG_SIGNATURE = "\x89PNG\r\n\x1A\n".b.freeze
-      KINDS = {full: '.png', location: '_loc.png'}.freeze
-      TEMP_KINDS = {full: '.tmp.png', location: '_loc.tmp.png'}.freeze
+      # Loại ảnh: full (ảnh chính), location (ảnh vị trí), extra1 / extra2 (ảnh phụ: chụp thêm góc khác của cùng món, cột Ảnh 3 / Ảnh 4).
+      KINDS = {full: '.png', location: '_loc.png', extra1: '_x1.png', extra2: '_x2.png'}.freeze
+      TEMP_KINDS = {full: '.tmp.png', location: '_loc.tmp.png', extra1: '_x1.tmp.png', extra2: '_x2.tmp.png'}.freeze
+      EXTRA_KINDS = %i[extra1 extra2].freeze
+      # Tiền tố thiết lập của preset cho từng loại ảnh (image_width / loc_width / x1_width / x2_width...).
+      PREFIX = {full: 'image', location: 'loc', extra1: 'x1', extra2: 'x2'}.freeze
       LEGACY_THUMB = '_t.png'.freeze # ảnh nhỏ của các bản beta trước: không còn tạo hay đọc, chỉ dọn khi xóa ảnh
 
       # Thư mục ảnh của model theo mã cố định lưu trong chính file SketchUp (dictionary VGD_BIM_MODEL). Không dùng model.guid vì SketchUp

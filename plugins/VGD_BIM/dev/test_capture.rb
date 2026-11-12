@@ -452,5 +452,19 @@ model.active_view.fail_next = true
 failed = raises? { C.shoot(model, {entity: items[0], path: [items[0]]}, D, kind: :location) }
 check 'ảnh vị trí chụp lỗi: model không bị đổi, camera như cũ, dọn file tạm', failed && model.active_path.to_a.empty? && model.ops.empty? && model.active_view.camera.eye.to_a == [0.0, 0.0, 100.0] && Dir[File.join(I.dir(model), '*.tmp.png')].empty?
 check 'loại ảnh lạ bị từ chối', raises?('loại ảnh') { C.shoot(world[0], {entity: world[1][0], path: [world[1][0]]}, D, kind: :zzz) }
+# Ảnh phụ (extra1 / extra2): bộ thiết lập x1_* / x2_*, chụp như ảnh chính (cô lập món rồi hủy), lưu file _x1 / _x2
+xmodel, xitems = world
+xmodel.instance_variable_set(:@guid, "EXTRA-#{rand(10**9)}")
+xres = C.shoot(xmodel, {entity: xitems[0], path: [xitems[0]]}, D.merge('image_view' => 'isometric', 'image_width' => 200, 'image_height' => 200, 'x1_view' => 'front', 'x1_width' => 640, 'x1_height' => 320), kind: :extra1)
+xview = xmodel.active_view
+check 'ảnh phụ 1: dùng thiết lập x1_* (cỡ 640 x 320, nhìn chính diện) chứ không phải image_*', xview.writes[0].values_at(:width, :height) == [640, 320] && near?(eye_dir(xview), unit(0, -1, 0)) && xres[:kind] == :extra1
+check 'ảnh phụ 1: cô lập món như ảnh chính rồi hủy, không để lại bước hoàn tác', xmodel.ops == [:start, :abort]
+check 'ảnh phụ 1: lưu file _x1, không đụng ảnh món, ảnh vị trí và ảnh phụ 2', File.exist?(I.path(xmodel, xitems[0].persistent_id, :extra1)) && !File.exist?(I.path(xmodel, xitems[0].persistent_id)) && !File.exist?(I.path(xmodel, xitems[0].persistent_id, :location)) && !File.exist?(I.path(xmodel, xitems[0].persistent_id, :extra2))
+xmodel2, xitems2 = world
+xmodel2.instance_variable_set(:@guid, "EXTRA2-#{rand(10**9)}")
+C.shoot(xmodel2, {entity: xitems2[0], path: [xitems2[0]]}, D.merge('x2_view' => 'isometric', 'x2_width' => 300, 'x2_height' => 200, 'x2_yaw' => 0), kind: :extra2)
+check 'ảnh phụ 2: dùng thiết lập x2_* và lưu file _x2', xmodel2.active_view.writes[0].values_at(:width, :height) == [300, 200] && File.exist?(I.path(xmodel2, xitems2[0].persistent_id, :extra2))
+_, _, v, r = shoot_preview({'x1_view' => 'front', 'x1_width' => 1000, 'x1_height' => 500}, kind: :extra1)
+check 'xem trước ảnh phụ: theo thiết lập x1_*, ảnh nhỏ đúng tỉ lệ, không lưu file _x1', v.writes[0].values_at(:width, :height) == [360, 180] && r[:png] == PNG_BYTES && r[:kind] == :extra1 && Dir[File.join(I.dir(v.instance_variable_get(:@model)), '*_x1*')].empty?
 model.active_view.fail_next = false
 check 'ảnh vị trí và ảnh món là hai file riêng', (C.shoot(model, {entity: items[0], path: [items[0]]}, D); C.shoot(model, {entity: items[0], path: [items[0]]}, D, kind: :location); File.exist?(I.path(model, 11)) && File.exist?(I.path(model, 11, :location)))

@@ -26,7 +26,7 @@ module VGD
       PREFIX = 'VGD_BIM_bao_cao_'.freeze
       KEEP_SECONDS = 2 * 24 * 3600
 
-      # image_for: gọi với mã đối tượng (ảnh món) hoặc với (mã đối tượng, :location) cho cột Ảnh vị trí; trả về nội dung PNG (hoặc nil nếu không có / mã không thuộc bảng).
+      # image_for: gọi với mã đối tượng (ảnh món) hoặc với (mã đối tượng, loại ảnh) cho cột Ảnh vị trí / Ảnh 3 / Ảnh 4; trả về nội dung PNG (hoặc nil nếu không có / mã không thuộc bảng).
       def self.build(payload, model_name, image_for)
         raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless payload.is_a?(Hash)
         columns = columns!(payload['columns'])
@@ -69,8 +69,8 @@ module VGD
           width = col['width']
           raise ArgumentError, "Độ rộng cột phải là số từ #{MIN_WIDTH} đến #{MAX_WIDTH}." unless width.nil? || (width.is_a?(Numeric) && width.finite? && width.between?(MIN_WIDTH, MAX_WIDTH))
           kind = col['image_kind'].to_s
-          raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless kind.empty? || %w[full location].include?(kind)
-          {label: text!(col['label'], 200), unit: text!(col['unit'], 20), type: col['type'], digits: digits, width: width, image_kind: kind == 'location' ? :location : :full}
+          raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless kind.empty? || Images::KINDS.key?(kind.to_sym)
+          {label: text!(col['label'], 200), unit: text!(col['unit'], 20), type: col['type'], digits: digits, width: width, image_kind: kind.empty? ? :full : kind.to_sym}
         end
       end
 
@@ -101,11 +101,11 @@ module VGD
       # Ảnh đầy đủ do plugin ghi (không dùng ảnh thu nhỏ của bảng): phải là PNG đọc được kích thước. Ảnh hỏng thì bỏ qua (ô để trống), không làm hỏng cả báo cáo.
       # Khóa của ảnh trong báo cáo: ảnh món theo mã đối tượng, ảnh vị trí theo "loc<mã>" (để hai ảnh của cùng một món không trùng nhau).
       def self.image_key(pid, kind)
-        kind == :location ? "loc#{pid}" : pid
+        kind == :full ? pid : "#{Images::PREFIX.fetch(kind)}#{pid}"
       end
 
       def self.load_image(pid, image_for, kind = :full)
-        bytes = kind == :location ? image_for.call(pid, :location) : image_for.call(pid)
+        bytes = kind == :full ? image_for.call(pid) : image_for.call(pid, kind)
         return nil unless Images.png?(bytes) && bytes.bytesize <= Images::MAX_BYTES
         width, height = bytes.byteslice(16, 8).unpack('NN')
         return nil unless width.to_i.between?(1, 16_384) && height.to_i.between?(1, 16_384)

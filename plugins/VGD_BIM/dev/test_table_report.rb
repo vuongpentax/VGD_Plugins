@@ -249,6 +249,18 @@ ok('xlsx có ảnh vị trí: nhúng đủ 4 ảnh (2 ảnh món, 2 ảnh vị t
 loc_page = TR.html(loc_report)
 ok('trang in PDF có ảnh vị trí trong đúng cột', loc_page.scan('<td class="img"><img').size == 4 && loc_page.include?([LOC_IMAGES[900]].pack('m0')))
 
+# ---- Cột Ảnh 3 / Ảnh 4 (image_kind: extra1 / extra2): ảnh riêng của cùng món, khóa riêng trong báo cáo ----
+X1_IMAGES = {900 => png(120, 80)}.freeze
+X2_IMAGES = {900 => png(90, 60), 902 => png(70, 50)}.freeze
+X_FINDER = ->(pid, kind = :full) { { extra1: X1_IMAGES, extra2: X2_IMAGES }.fetch(kind) { IMAGES }[pid] }
+x_columns = COLUMNS.dup.insert(2, {'label' => 'Ảnh 3', 'unit' => '', 'type' => 'image', 'digits' => 0, 'image_kind' => 'extra1'}).insert(3, {'label' => 'Ảnh 4', 'unit' => '', 'type' => 'image', 'digits' => 0, 'image_kind' => 'extra2'})
+x_rows = ROWS.map { |r| r.merge('cells' => r['cells'].dup.insert(2, nil).insert(3, nil)) }
+x_report = TR.build(payload(columns: x_columns, rows: x_rows), 'Nhà mẫu', X_FINDER)
+ok('ảnh phụ: khóa riêng x1<mã> / x2<mã>, các ảnh của cùng món không đè nhau', x_report[:images].keys.sort_by(&:to_s) == [900, 901, 'x1900', 'x2900', 'x2902'].sort_by(&:to_s))
+ok('ảnh phụ: dòng giữ ảnh theo từng cột; dòng thiếu ảnh phụ thì ô trống, ảnh món vẫn có', x_report[:rows][1][:images][2][:width] == 120 && x_report[:rows][1][:images][3][:width] == 90 && x_report[:rows][2][:images][1] && x_report[:rows][2][:images][2].nil? && x_report[:rows][2][:images][3].nil?)
+x_files = read_zip(VGD::BIM::Xlsx.build(x_report))
+ok('xlsx có ảnh phụ: nhúng đủ 5 ảnh', (1..5).all? { |n| x_files.key?("xl/media/image#{n}.png") })
+
 # ---- Độ cao hàng người dùng chỉnh trên màn hình: Excel và PDF theo đó ----
 ok('độ cao hàng: không gửi thì giữ cách xuất mặc định', build[:row_height].nil?)
 %w[abc].push(5, 20, 641, 99_999, -1, Float::NAN, true).each do |bad_height|

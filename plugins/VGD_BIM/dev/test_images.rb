@@ -15,7 +15,7 @@ model = Model.new('3F2A-91C0-aa11')
 PNG = ("\x89PNG\r\n\x1A\n".b + 'noi dung anh'.b).freeze
 
 check 'ảnh nằm trong thư mục ảnh / mã model / mã đối tượng', I.path(model, 123) == File.join(S.image_dir, '3F2A-91C0-aa11', '123.png')
-check 'chỉ có ảnh gốc và ảnh vị trí, không có ảnh nhỏ (thumbnail)', I::KINDS.keys == [:full, :location] && !I.respond_to?(:thumb_path)
+check 'chỉ có ảnh gốc, ảnh vị trí và hai ảnh phụ, không có ảnh nhỏ (thumbnail)', I::KINDS.keys == [:full, :location, :extra1, :extra2] && !I.respond_to?(:thumb_path)
 check 'mã model có ký tự lạ được làm sạch, không thoát khỏi thư mục ảnh', I.dir(Model.new('../../x/y')).start_with?(S.image_dir) && !I.dir(Model.new('../../x/y')).include?('..')
 check 'model chưa có mã dùng thư mục chung "model"', I.dir(Model.new(nil)) == File.join(S.image_dir, 'model') && I.dir(Model.new('')) == File.join(S.image_dir, 'model')
 check 'mã đối tượng phải là số nguyên dương', raises?('mã đối tượng') { I.path(model, '1/../x') } && raises?('mã đối tượng') { I.path(model, 0) } && raises?('mã đối tượng') { I.path(model, nil) }
@@ -126,3 +126,11 @@ check 'xóa ảnh vị trí: chỉ xóa ảnh vị trí, giữ ảnh món', !Fil
 I.write(loc_model, 7, PNG + 'vitri2'.b, :location)
 I.delete(loc_model, 7)
 check 'xóa ảnh món: chỉ xóa ảnh món, giữ ảnh vị trí', !File.exist?(I.path(loc_model, 7)) && File.exist?(I.path(loc_model, 7, :location))
+# Ảnh phụ (extra1 / extra2): file riêng _x1 / _x2, độc lập với ảnh món và ảnh vị trí
+x_model = Model.new('EXTRA-aa11-bb22')
+I.write(x_model, 9, PNG, :full); I.write(x_model, 9, PNG + 'x1'.b, :extra1); I.write(x_model, 9, PNG + 'x2'.b, :extra2)
+check 'ảnh phụ: file _x1.png / _x2.png cạnh ảnh món', I.path(x_model, 9, :extra1).end_with?('9_x1.png') && I.path(x_model, 9, :extra2).end_with?('9_x2.png') && File.exist?(I.path(x_model, 9, :extra1)) && File.exist?(I.path(x_model, 9, :extra2))
+I.delete(x_model, 9, :extra1)
+check 'xóa ảnh phụ 1: chỉ xóa ảnh đó, giữ ảnh món và ảnh phụ 2', !File.exist?(I.path(x_model, 9, :extra1)) && File.exist?(I.path(x_model, 9)) && File.exist?(I.path(x_model, 9, :extra2)) && I.info(x_model, 9, I.dir(x_model), :extra2)[:has] && !I.info(x_model, 9, I.dir(x_model), :extra1)[:has]
+check 'đường dẫn file ảnh phụ kèm mốc thời gian', I.file_url(x_model, 9, 5, I.dir(x_model), :extra2).include?('9_x2.png?v=5')
+check 'loại ảnh lạ vẫn bị từ chối', raises? { I.path(x_model, 9, :extra3) }

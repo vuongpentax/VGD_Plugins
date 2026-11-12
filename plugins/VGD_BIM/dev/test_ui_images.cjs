@@ -246,7 +246,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   // ---- Bảng preset ----
   await receive('table',table());await clear();
   await page.click('#preset-btn');
-  ok(await page.locator('#preset-panel').isVisible() && (await page.locator('#preset-panel h3').allInnerTexts()).join('|')==='Đơn vị|Hình ảnh|Ảnh vị trí|Số đo thân','bấm nút preset: mở bảng có bốn phần Đơn vị, Hình ảnh, Ảnh vị trí và Số đo thân');
+  ok(await page.locator('#preset-panel').isVisible() && (await page.locator('#preset-panel h3').allInnerTexts()).join('|')==='Đơn vị|Hình ảnh|Ảnh vị trí|Ảnh 3|Ảnh 4|Số đo thân','bấm nút preset: mở bảng có sáu phần Đơn vị, Hình ảnh, Ảnh vị trí, Ảnh 3, Ảnh 4 và Số đo thân');
   ok(await page.locator('#preset-panel .pp-pick').count()===12 && (await page.locator('#preset-panel .pp-pick.active').innerText())==='Tất cả','bảng preset liệt kê 12 preset, preset đang dùng được tô nổi bật');
   ok(await page.locator('#preset-panel select[aria-label="Chiều dài: đơn vị"]').inputValue()==='mm' && await page.locator('#preset-panel select[aria-label="Chiều dài: số lẻ"]').inputValue()==='0','thiết lập đang dùng hiện đúng trong bảng (mm, 0 số lẻ)');
   ok((await page.locator('#preset-panel select[aria-label="Chiều dài: số lẻ"] option').allInnerTexts()).join(',')==='0,0.0,0.00,0.000,0.0000','số lẻ hiện dạng 0, 0.0, 0.00, ...');
@@ -1042,21 +1042,48 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await clear();await dropFile('.grid tbody tr:nth-child(3) td[data-key="image_location"]',{});await page.waitForTimeout(300);
   const dropped=await json('image_set');
   ok(dropped && dropped.pid===502 && dropped.kind==='location' && dropped.full.length>20,'kéo thả file ảnh vào ô ảnh vị trí: gửi ảnh với loại location');
+  // ---- Cột Ảnh 3 / Ảnh 4: chụp thêm góc khác của cùng món ----
+  const xRows=rows.map((r,i)=>({...r,pid:500+i,has_image:false,image_url:null,has_location:false,has_extra1:i===0,extra1_stamp:i===0?5:0,extra1_url:i===0?PNG1:null,has_extra2:false,extra2_stamp:0,extra2_url:null}));
+  await receive('table',table({rows:xRows}));
+  await page.evaluate(()=>{tableState.visible.add('image_extra1');tableState.visible.add('image_extra2');tableState.order=tableState.data.columns.map(c=>c.key);tableView(tableState.data);});
+  const exCell=(i,key)=>page.locator('.grid tbody tr').nth(i).locator(`td[data-key="${key}"]`);
+  ok((await page.locator('.grid thead th[data-key="image_extra1"]').innerText()).includes('Ảnh 3') && (await page.locator('.grid thead th[data-key="image_extra2"]').innerText()).includes('Ảnh 4'),'cột Ảnh 3 và Ảnh 4 có trong bảng (bật bằng Chọn cột)');
+  ok(await exCell(0,'image_extra1').locator('img.cell-img[data-kind="extra1"]').count()===1 && await exCell(1,'image_extra1').locator('.cell-empty').count()===1 && await exCell(0,'image_extra2').locator('.cell-empty').count()===1,'ô ảnh 3 hiện ảnh của dòng có ảnh, dòng chưa có hiện dấu +, ảnh 4 độc lập');
+  await clear();await exCell(1,'image_extra1').hover();await exCell(1,'image_extra1').getByRole('button',{name:'Chụp ảnh'}).click();
+  let xc=await json('images_capture');
+  ok(xc && xc.kind==='extra1' && !('iso_side' in xc) && JSON.stringify(xc.indexes)==='[1]' && xc.settings.x1_view==='front' && xc.settings.x2_view==='isometric','nút ↻ trên ô ảnh 3: chụp loại extra1 theo thiết lập x1_* của preset');
+  await clear();await exCell(1,'image_extra2').hover();await exCell(1,'image_extra2').getByRole('button',{name:'Chụp Iso từ bên trái'}).click();
+  xc=await json('images_capture');
+  ok(xc && xc.kind==='extra2' && xc.iso_side==='left' && xc.settings.x2_view==='isometric','nút ◣ trên ô ảnh 4: chụp Iso trái, loại extra2');
+  await clear();await exCell(0,'image_extra1').hover();await exCell(0,'image_extra1').getByRole('button',{name:'Xóa ảnh 3'}).click();
+  ok((await calls('image_extra1_delete')).length===1 && (await last('image_extra1_delete')).args[0]===500 && (await calls('image_delete')).length===0,'nút × trên ô ảnh 3: xóa ảnh 3, không xóa ảnh món');
+  await receive('images_changed',{items:[{pid:501,kind:'extra2',has:true,stamp:3,url:PNG1}]});
+  ok(await exCell(1,'image_extra2').locator('img.cell-img[data-kind="extra2"]').count()===1 && await exCell(1,'image_extra1').locator('img').count()===0,'Ruby báo chụp xong ảnh 4: chỉ ô ảnh 4 hiện ảnh');
+  await clear();await dropFile('.grid tbody tr:nth-child(3) td[data-key="image_extra1"]',{});await page.waitForTimeout(300);
+  const droppedX=await json('image_set');
+  ok(droppedX && droppedX.pid===502 && droppedX.kind==='extra1' && droppedX.full.length>20,'kéo thả file ảnh vào ô ảnh 3: gửi ảnh với loại extra1');
+  await exCell(1,'image_extra1').hover();await exCell(1,'image_extra1').locator('.cell-tool[title="Thông số ảnh riêng của món này"]').first().click();
+  ok((await page.locator('.photo-pop .pop-title').innerText()).includes('ảnh 3'),'khung ⚙ của ô ảnh 3: tiêu đề nói rõ ảnh 3');
+  await page.locator('.photo-pop').getByRole('button',{name:'Đóng'}).click();
+  await receive('photo_settings',{pid:500,kind:'extra1',settings:{view:'front',yaw:10}});
+  ok((await page.evaluate(()=>tableState.data.rows.find(r=>r.pid===500).photo_extra1)).yaw===10,'Ruby báo thông số riêng ảnh 3: lưu vào photo_extra1 của dòng');
+  await receive('table',table({rows:locRows}));await page.evaluate(()=>{tableState.visible.delete('image_extra1');tableState.visible.delete('image_extra2');tableView(tableState.data);}); // trả bảng về như trước khối ảnh phụ
+  await page.locator('.grid tbody tr').nth(0).locator('td[data-key="ordinal"]').click(); // chọn lại dòng 0 như trước khối ảnh phụ
   await clear();await dropFile('.grid tbody tr:nth-child(3) td[data-key="image"]',{});await page.waitForTimeout(300);
   const droppedMain=await json('image_set');
   ok(droppedMain && droppedMain.pid===502 && !('kind' in droppedMain),'kéo thả vào ô Ảnh món: như cũ, không có loại ảnh (mặc định ảnh món)');
   await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});
-  ok(await page.locator('.capture-panel .cap-place').count()===1 && (await page.locator('.capture-panel .cap-place').innerText()).includes('Ảnh vị trí'),'hộp Cập nhật ảnh có thêm hàng chụp ảnh vị trí trái / phải');
+  ok(await page.locator('.capture-panel .cap-place').count()===3 && (await page.locator('.capture-panel .cap-place').first().innerText()).includes('Ảnh vị trí') && (await page.locator('.capture-panel .cap-place').nth(1).innerText()).includes('Ảnh 3') && (await page.locator('.capture-panel .cap-place').nth(2).innerText()).includes('Ảnh 4'),'hộp Cập nhật ảnh có thêm hàng chụp ảnh vị trí trái / phải và hai hàng ảnh 3, ảnh 4');
   await page.locator('#cap-only').uncheck();
-  await clear();await page.locator('.capture-panel .cap-place').getByRole('button',{name:'◢ Phải'}).click();
+  await clear();await page.locator('.capture-panel .cap-place').first().getByRole('button',{name:'◢ Phải'}).click();
   lc=await json('images_capture');
   ok(lc && lc.kind==='location' && lc.iso_side==='right' && JSON.stringify(lc.indexes)==='[0]' && lc.only_missing===false,'hộp Cập nhật ảnh: nút ◢ Phải chụp ảnh vị trí cho các đối tượng đang chọn (dòng 0)');
   await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});
-  await page.locator('#cap-only').check();await clear();await page.locator('.capture-panel .cap-place').getByRole('button',{name:'◣ Trái'}).click();
+  await page.locator('#cap-only').check();await clear();await page.locator('.capture-panel .cap-place').first().getByRole('button',{name:'◣ Trái'}).click();
   lc=await json('images_capture');
   ok(lc && lc.kind==='location' && lc.iso_side==='left' && lc.only_missing===true,'tùy chọn "Chỉ chụp đối tượng chưa có ảnh" cũng áp cho ảnh vị trí');
   await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});
-  await clear();await page.locator('.capture-panel .cap-place').getByRole('button',{name:'● Theo preset'}).click();
+  await clear();await page.locator('.capture-panel .cap-place').first().getByRole('button',{name:'● Theo preset'}).click();
   lc=await json('images_capture');
   ok(lc && lc.kind==='location' && !('iso_side' in lc) && lc.settings.loc_view==='isometric' && lc.settings.loc_width===512 && lc.settings.loc_yaw===0,'hộp Cập nhật ảnh: nút ● Theo preset chụp ảnh vị trí theo thiết lập ảnh vị trí của preset (không gửi bên Iso)');
   // Xuất Excel / PDF mang theo cột Ảnh vị trí với loại ảnh riêng
@@ -1210,7 +1237,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await prevBoard.count()===0&&(await calls('images_cancel')).length===1,'Esc đóng bảng khi đang vẽ dở: dừng việc vẽ');
   // Ảnh vị trí
   await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});
-  await page.locator('#cap-only').uncheck();await clear();await page.locator('.capture-panel .cap-place').getByRole('button',{name:'Xem trước'}).click();
+  await page.locator('#cap-only').uncheck();await clear();await page.locator('.capture-panel .cap-place').first().getByRole('button',{name:'Xem trước'}).click();
   pvw=await json('images_preview');
   ok(pvw&&pvw.kind==='location'&&!('iso_side' in pvw)&&pvw.settings.loc_view!==undefined&&(await prevBoard.locator('.pb-kind').innerText())==='Ảnh vị trí','hộp Cập nhật ảnh, hàng Ảnh vị trí: Xem trước theo thiết lập ảnh vị trí của preset');
   await clear();await prevBoard.getByRole('button',{name:'Đóng'}).click();

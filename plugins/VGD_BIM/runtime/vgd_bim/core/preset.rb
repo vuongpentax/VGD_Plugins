@@ -33,12 +33,21 @@ module VGD
         'image_margin' => 20, 'image_location_scale' => 4, 'image_yaw' => 0, 'image_pitch' => 0,
         # Ảnh vị trí (cột Ảnh vị trí) có bộ thiết lập riêng cùng loại với ảnh chính; góc nhìn mặc định Iso như trước.
         'loc_width' => 512, 'loc_height' => 512, 'loc_view' => 'isometric', 'loc_style' => 'color', 'loc_background' => 'transparent',
-        'loc_margin' => 20, 'loc_yaw' => 0, 'loc_pitch' => 0
+        'loc_margin' => 20, 'loc_yaw' => 0, 'loc_pitch' => 0,
+        # Ảnh phụ (cột Ảnh 3, Ảnh 4): chụp thêm góc khác của cùng món, cùng cách chụp với ảnh chính, mỗi ảnh một bộ thiết lập riêng.
+        'x1_width' => 512, 'x1_height' => 512, 'x1_view' => 'front', 'x1_style' => 'color', 'x1_background' => 'transparent',
+        'x1_margin' => 20, 'x1_yaw' => 0, 'x1_pitch' => 0,
+        'x2_width' => 512, 'x2_height' => 512, 'x2_view' => 'isometric', 'x2_style' => 'color', 'x2_background' => 'transparent',
+        'x2_margin' => 20, 'x2_yaw' => 0, 'x2_pitch' => 0
       }.freeze
 
       # Preset cũ chưa có thiết lập ảnh vị trí: lấy theo thiết lập của ảnh chính để ảnh vị trí không đổi cỡ / kiểu / nền / lề sau khi cập nhật plugin.
       LOCATION_FOLLOWS = {'loc_width' => 'image_width', 'loc_height' => 'image_height', 'loc_style' => 'image_style',
-                          'loc_background' => 'image_background', 'loc_margin' => 'image_margin'}.freeze
+                          'loc_background' => 'image_background', 'loc_margin' => 'image_margin',
+                          'x1_width' => 'image_width', 'x1_height' => 'image_height', 'x1_style' => 'image_style',
+                          'x1_background' => 'image_background', 'x1_margin' => 'image_margin',
+                          'x2_width' => 'image_width', 'x2_height' => 'image_height', 'x2_style' => 'image_style',
+                          'x2_background' => 'image_background', 'x2_margin' => 'image_margin'}.freeze
 
       ENUMS = {
         'length_unit' => [LENGTH_UNITS, 'Đơn vị chiều dài không hợp lệ.'],
@@ -51,7 +60,13 @@ module VGD
         'image_background' => [BACKGROUNDS, 'Nền ảnh không hợp lệ.'],
         'loc_view' => [IMAGE_VIEWS, 'Góc nhìn của ảnh vị trí không hợp lệ.'],
         'loc_style' => [IMAGE_STYLES, 'Kiểu hiển thị của ảnh vị trí không hợp lệ.'],
-        'loc_background' => [BACKGROUNDS, 'Nền ảnh vị trí không hợp lệ.']
+        'loc_background' => [BACKGROUNDS, 'Nền ảnh vị trí không hợp lệ.'],
+        'x1_view' => [IMAGE_VIEWS, 'Góc nhìn của ảnh 3 không hợp lệ.'],
+        'x1_style' => [IMAGE_STYLES, 'Kiểu hiển thị của ảnh 3 không hợp lệ.'],
+        'x1_background' => [BACKGROUNDS, 'Nền ảnh 3 không hợp lệ.'],
+        'x2_view' => [IMAGE_VIEWS, 'Góc nhìn của ảnh 4 không hợp lệ.'],
+        'x2_style' => [IMAGE_STYLES, 'Kiểu hiển thị của ảnh 4 không hợp lệ.'],
+        'x2_background' => [BACKGROUNDS, 'Nền ảnh 4 không hợp lệ.']
       }.freeze
 
       # Các lựa chọn của thiết lập preset, gửi cho giao diện để không phải chép lại ở JavaScript.
@@ -96,19 +111,19 @@ module VGD
           number = integer(value)
           raise ArgumentError, "Vùng nhìn của ảnh vị trí phải từ #{IMAGE_LOCATION_SCALE.first} đến #{IMAGE_LOCATION_SCALE.last} lần kích thước món." unless number && IMAGE_LOCATION_SCALE.cover?(number)
           number
-        elsif key == 'image_yaw' || key == 'loc_yaw'
+        elsif key.end_with?('_yaw')
           number = integer(value)
           raise ArgumentError, "Góc lệch trái / phải phải từ #{IMAGE_YAW.first} đến #{IMAGE_YAW.last} độ." unless number && IMAGE_YAW.cover?(number)
           number
-        elsif key == 'image_pitch' || key == 'loc_pitch'
+        elsif key.end_with?('_pitch')
           number = integer(value)
           raise ArgumentError, "Góc cao phải từ #{IMAGE_PITCH.first} đến #{IMAGE_PITCH.last} độ." unless number && IMAGE_PITCH.cover?(number)
           number
-        elsif key == 'image_margin' || key == 'loc_margin'
+        elsif key.end_with?('_margin')
           number = integer(value)
           raise ArgumentError, "Lề ảnh phải từ #{IMAGE_MARGIN.first} đến #{IMAGE_MARGIN.last} (%)." unless number && IMAGE_MARGIN.cover?(number)
           number
-        else # image_width, image_height, loc_width, loc_height
+        else # image_width, image_height, loc_*, x1_*, x2_* (rộng, cao)
           number = integer(value)
           raise ArgumentError, "Cỡ ảnh phải từ #{IMAGE_SIZE.first} đến #{IMAGE_SIZE.last} điểm ảnh." unless number && IMAGE_SIZE.cover?(number)
           number

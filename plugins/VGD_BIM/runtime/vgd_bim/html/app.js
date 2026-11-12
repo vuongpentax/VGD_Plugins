@@ -119,7 +119,11 @@ const CALC_DIGITS={count:0,area:2,length:2,volume:3};
 const CALC_ORDER=['count','area','length','volume'];
 const CATEGORY_LABELS={architecture:'Kiến trúc',finish:'Hoàn thiện',furniture:'Nội thất',electrical:'Điện',equipment:'Thiết bị',plumbing:'Cấp thoát nước',hvac:'Điều hòa / Thông gió',other:'Khác',wall:'Tường',floor:'Sàn',ceiling:'Trần',door:'Cửa đi',window:'Cửa sổ',column:'Cột',beam:'Dầm',stair:'Cầu thang',cabinet:'Tủ',sanitary:'Thiết bị vệ sinh',lighting:'Chiếu sáng',generic:'Chung'};
 const CALC_SOURCES={item:'Theo dữ liệu đã ghi trong món',tag:'Theo cách tính bạn đặt cho tag',keyword:'Theo từ khóa trong tên tag',group:'Theo nhóm tag',default:'Mặc định (theo cái)'};
-const WIDTHS={image_location:110,measure_note:260,front:80,front_state:150,ordinal:44,image:72,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80,areaProjected:110,ifc:120,owner:120,url:170,size:110,price:110,total:120};
+// Cột ảnh phụ (Ảnh 3, Ảnh 4): kind của cột => loại ảnh (xem images.js).
+const IMAGE_EXTRA_KINDS={image_extra1:'extra1',image_extra2:'extra2'};
+const IMAGE_EXTRA_KEYS=['image_extra1','image_extra2'];
+const isImageColumn=col=>col.kind==='image'||col.kind==='image_location'||!!IMAGE_EXTRA_KINDS[col.kind];
+const WIDTHS={image_location:110,image_extra1:110,image_extra2:110,measure_note:260,front:80,front_state:150,ordinal:44,image:72,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80,areaProjected:110,ifc:120,owner:120,url:170,size:110,price:110,total:120};
 const unitTextOf=key=>LEN_KEYS.has(key)?lengthLabel():AREA_KEYS.has(key)?areaLabel():key==='volume'?volumeLabel():key==='quantity'?'cái':(key==='price'||key==='total')?workSettings().currency:undefined;
 const colLabel=col=>(tableState.headers&&tableState.headers[col.key])||withUnit(col.label);
 const lenText=value=>fmt(toUnit(value),digitsFor('lenX'));
@@ -142,11 +146,13 @@ function wheelRowHeight(e,t){
   tableState.rowHeight=next;
   tableState.widths.image=Math.max(WIDTHS.image,next+8); // cột Ảnh rộng theo độ cao hàng để ảnh to ra thật sự; vẫn kéo tay đổi được
   tableState.widths.image_location=Math.max(WIDTHS.image_location,Math.round((next+8)*1.5)); // ảnh vị trí là cảnh rộng nên cột rộng hơn
+  IMAGE_EXTRA_KEYS.forEach(key=>{tableState.widths[key]=Math.max(WIDTHS[key],next+8);}); // ảnh phụ vuông như ảnh chính
   rowStyle(t);
   const heads=[...t.querySelectorAll('thead tr:first-child th')];
   const index=heads.findIndex(th=>th.dataset.key==='image'),locIndex=heads.findIndex(th=>th.dataset.key==='image_location');
-  if(index>=0||locIndex>=0){
-    const cols=t.querySelectorAll('col');if(index>=0)cols[index].style.width=tableState.widths.image+'px';if(locIndex>=0)cols[locIndex].style.width=tableState.widths.image_location+'px';
+  const extraIndexes=IMAGE_EXTRA_KEYS.map(key=>[key,heads.findIndex(th=>th.dataset.key===key)]).filter(([,i])=>i>=0);
+  if(index>=0||locIndex>=0||extraIndexes.length){
+    const cols=t.querySelectorAll('col');if(index>=0)cols[index].style.width=tableState.widths.image+'px';if(locIndex>=0)cols[locIndex].style.width=tableState.widths.image_location+'px';extraIndexes.forEach(([key,i])=>{cols[i].style.width=tableState.widths[key]+'px';});
     t.style.width=[...cols].reduce((sum,c)=>sum+(parseFloat(c.style.width)||0),0)+'px';
   }
   persistView();
@@ -653,6 +659,7 @@ function renderGrid(host){
         if(col.key==='ordinal')td.textContent=String(pos);
         else if(col.kind==='image')imageCell(td,row);
         else if(col.kind==='image_location')imageCell(td,row,'location');
+        else if(IMAGE_EXTRA_KINDS[col.kind])imageCell(td,row,IMAGE_EXTRA_KINDS[col.kind]);
         else if(NUMERIC.has(col.key)){td.textContent=fmt(scaledValue(col.key,row[col.key]),(col.key==='calc_qty'||col.key==='mat_qty')?(CALC_DIGITS[row.calc_method]||0):col.key==='mat_waste'?1:digitsFor(col.key));td.className='num';}
         else if(col.key==='url'){
           td.append(node('span',row.url,'cell-url'));
@@ -1045,7 +1052,7 @@ const CHECK_SEVERITIES=[['INFO','Thông tin'],['WARNING','Cảnh báo'],['ERROR'
 function checksPanel(){
   const p=node('div',undefined,'popover right capture-panel checks-panel');
   const rules=(tableState.data&&tableState.data.check_rules)||[];
-  const columns=((tableState.data&&tableState.data.columns)||[]).filter(c=>!['image','image_location'].includes(c.kind));
+  const columns=((tableState.data&&tableState.data.columns)||[]).filter(c=>!['image','image_location','image_extra1','image_extra2'].includes(c.kind));
   p.append(node('div','Luật kiểm tra','pop-title'),node('p','Mỗi luật kiểm tra một cột của bảng (số đo tính bằng mm). Luật lưu trong file SketchUp, chỉ đọc bảng, không đổi gì trong model.','muted'));
   const rows=node('div',undefined,'ck-rows');
   const collect=()=>[...rows.querySelectorAll('.ck-item')].map(r=>{const o={name:r.querySelector('.ck-name').value,column:r.querySelector('.ck-col').value,op:r.querySelector('.ck-op').value,value:r.querySelector('.ck-val').value,severity:r.querySelector('.ck-sev').value,message:r.querySelector('.ck-msg').value};if(r.dataset.id)o.id=r.dataset.id;return o;});
@@ -1104,7 +1111,13 @@ function capturePanel(){
   place.append(node('span','Ảnh vị trí trong công trình','muted'),button('◣ Trái',()=>{tableState.panel=null;runCapture(targets,imagesState.only,'left','location');tableView(tableState.data);}),button('◢ Phải',()=>{tableState.panel=null;runCapture(targets,imagesState.only,'right','location');tableView(tableState.data);}),button('● Theo preset',()=>{tableState.panel=null;runCapture(targets,imagesState.only,undefined,'location');tableView(tableState.data);}),button('Xem trước',()=>{tableState.panel=null;tableView(tableState.data);runPreview(targets,imagesState.only,undefined,'location');}));
   place.title='Chụp cảnh quanh món (không cô lập), lưu vào cột Ảnh vị trí: Trái / Phải chụp Iso một lần từ bên đó, Theo preset chụp đúng thiết lập ảnh vị trí của preset (góc nhìn, góc lệch, cỡ ảnh...)';
   actions.append(button('Chụp',()=>{tableState.panel=null;runCapture(targets,imagesState.only);tableView(tableState.data);},'primary'),button('Xem trước',()=>{tableState.panel=null;tableView(tableState.data);runPreview(targets,imagesState.only);}),button('Hủy',()=>{tableState.panel=null;tableView(tableState.data);}));
-  p.append(actions,place);
+  const extraRows=[['extra1','Ảnh 3'],['extra2','Ảnh 4']].map(([kind,label])=>{
+    const row=node('div',undefined,'cap-place');
+    row.append(node('span',label,'muted'),button('● Theo preset',()=>{tableState.panel=null;runCapture(targets,imagesState.only,undefined,kind);tableView(tableState.data);}),button('Xem trước',()=>{tableState.panel=null;tableView(tableState.data);runPreview(targets,imagesState.only,undefined,kind);}));
+    row.title='Chụp thêm góc khác của món (cô lập như ảnh chính), lưu vào cột '+label+' theo thiết lập '+label+' của preset (góc nhìn, góc lệch, cỡ ảnh...)';
+    return row;
+  });
+  p.append(actions,place,...extraRows);
   return p;
 }
 // ---- Ngăn Chọn cột: trượt ra bên trái và đẩy bảng sang phải (cột đầu không bị che), gọn theo kiểu Auto Info ----
@@ -1397,13 +1410,13 @@ function toggleButton(text,on,handler){
 // Ô số gửi dạng số đã đổi sang đơn vị của preset, chưa làm tròn (Excel tự định dạng theo số lẻ của cột). Chữ dịch theo ngôn ngữ đang dùng.
 const exportText=text=>VGD_I18N.language==='en'?VGD_I18N.translateText(text):text;
 function exportColumn(col){
-  const type=col.key==='ordinal'?'ordinal':(col.kind==='image'||col.kind==='image_location')?'image':NUMERIC.has(col.key)?'number':col.key==='url'?'link':'text';
-  const imageKind=col.kind==='image_location'?{image_kind:'location'}:{};
+  const type=col.key==='ordinal'?'ordinal':isImageColumn(col)?'image':NUMERIC.has(col.key)?'number':col.key==='url'?'link':'text';
+  const imageKind=col.kind==='image_location'?{image_kind:'location'}:IMAGE_EXTRA_KINDS[col.kind]?{image_kind:IMAGE_EXTRA_KINDS[col.kind]}:{};
   return {...imageKind,label:exportText(colLabel(col)),unit:exportText(unitTextOf(col.key)||''),type,digits:type==='number'?digitsFor(col.key):0,width:Math.min(2000,Math.max(20,Math.round(widthOf(col.key))))}; // độ rộng cột đang chỉnh trên màn hình, dùng làm tỉ lệ ban đầu của trang in
 }
 function exportCell(row,col,position){
   if(col.key==='ordinal')return position;
-  if(col.kind==='image'||col.kind==='image_location')return null;
+  if(isImageColumn(col))return null;
   if(NUMERIC.has(col.key)){const value=scaledValue(col.key,row[col.key]);return value==null||value===''?null:Number(value);}
   return String(cellText(row,col.key)||'');
 }

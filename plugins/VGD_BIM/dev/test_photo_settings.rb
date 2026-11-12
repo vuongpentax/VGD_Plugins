@@ -62,6 +62,13 @@ ok('bấm nút chụp một lần (ép góc nhìn): bỏ qua góc nhìn và bên
 out, side = P.apply(base, {}, :full)
 ok('không có thông số riêng: giữ nguyên thiết lập của preset', out == base && side.nil?)
 ok('apply với thông số rỗng không đổi bản gốc', out.equal?(base) == false)
+# Ảnh phụ (extra1 / extra2): thông số riêng như ảnh chính (không có vùng nhìn), khóa riêng, áp vào mục x1_* / x2_*
+ok('ảnh phụ: nhận góc nhìn, góc lệch, lề; không nhận vùng nhìn', P.sanitize!({'view' => 'front', 'yaw' => 30, 'margin' => 10}, :extra1) == {'view' => 'front', 'yaw' => 30, 'margin' => 10} && error_of { P.sanitize!({'scale' => 4}, :extra2) }.to_s.include?('scale'))
+ex = FakeEntity.new
+P.write(ex, :extra1, {'view' => 'front', 'yaw' => 40}); P.write(ex, :extra2, {'view' => 'isometric', 'side' => 'left'})
+ok('ảnh phụ: mỗi ảnh một khóa riêng (photo_extra1 / photo_extra2), độc lập nhau và với ảnh chính', P.read(ex, :extra1) == {'view' => 'front', 'yaw' => 40} && P.read(ex, :extra2) == {'view' => 'isometric', 'side' => 'left'} && P.read(ex, :full) == {} && ex.attrs['VGD_BIM_TABLE'].key?('photo_extra1') && ex.attrs['VGD_BIM_TABLE'].key?('photo_extra2'))
+merged, side = P.apply(VGD::BIM::Preset::DEFAULT_SETTINGS, {'view' => 'current', 'yaw' => 15, 'margin' => 5, 'side' => 'left'}, :extra2)
+ok('ảnh phụ: thông số riêng áp vào mục x2_*, không đụng image_* hay x1_*', merged['x2_view'] == 'current' && merged['x2_yaw'] == 15 && merged['x2_margin'] == 5 && merged['image_view'] == 'isometric' && merged['x1_view'] == 'front' && side == 'left')
 
 puts($fails.zero? ? "\nTẤT CẢ ĐẠT" : "\n#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

@@ -29,6 +29,8 @@ module VGD
         {key: 'ordinal', label: '#', kind: 'text'},
         {key: 'image', label: 'Ảnh', kind: 'image'},
         {key: 'image_location', label: 'Ảnh vị trí', kind: 'image_location'},
+        {key: 'image_extra1', label: 'Ảnh 3', kind: 'image_extra1'},
+        {key: 'image_extra2', label: 'Ảnh 4', kind: 'image_extra2'},
         {key: 'entity', label: 'Loại', kind: 'text'},
         {key: 'definition', label: 'Họ', kind: 'text'},
         {key: 'instance', label: 'Tên', kind: 'text', editable: 'name'},
@@ -275,14 +277,21 @@ module VGD
       # Mã bền (persistent_id) và tình trạng ảnh của đối tượng. Ảnh nằm ngoài file SketchUp (xem Images).
       def self.image_state(model, entity, folder = nil)
         pid = entity.respond_to?(:persistent_id) ? entity.persistent_id : nil
-        none = {pid: nil, has_image: false, image_stamp: 0, image_url: nil, has_location: false, location_stamp: 0, location_url: nil}
+        none = {pid: nil, has_image: false, image_stamp: 0, image_url: nil, has_location: false, location_stamp: 0, location_url: nil,
+                has_extra1: false, extra1_stamp: 0, extra1_url: nil, has_extra2: false, extra2_stamp: 0, extra2_url: nil}
         return none unless pid.is_a?(Integer) && pid > 0 && model.respond_to?(:guid)
         folder ||= Images.dir(model)
         info = Images.info(model, pid, folder)
         place = Images.info(model, pid, folder, :location)
+        extras = Images::EXTRA_KINDS.each_with_object({}) do |kind, out|
+          extra = Images.info(model, pid, folder, kind)
+          out[:"has_#{kind}"] = extra[:has]
+          out[:"#{kind}_stamp"] = extra[:stamp]
+          out[:"#{kind}_url"] = extra[:has] ? Images.file_url(model, pid, extra[:stamp], folder, kind) : nil
+        end
         # image_url / location_url: giao diện hiện ảnh gốc trực tiếp từ file (không chuyển qua Ruby); chưa có ảnh thì nil.
         {pid: pid, has_image: info[:has], image_stamp: info[:stamp], image_url: info[:has] ? Images.file_url(model, pid, info[:stamp], folder) : nil,
-         has_location: place[:has], location_stamp: place[:stamp], location_url: place[:has] ? Images.file_url(model, pid, place[:stamp], folder, :location) : nil}
+         has_location: place[:has], location_stamp: place[:stamp], location_url: place[:has] ? Images.file_url(model, pid, place[:stamp], folder, :location) : nil}.merge(extras)
       end
 
       # Tên của đối tượng cha trực tiếp (để nhóm theo cha); cấp gốc của model thì để trống.
@@ -336,7 +345,8 @@ module VGD
       def self.extra_columns(entity, data)
         extras = Extras.read(entity)
         {owner: data[:manufacturer].to_s, url: extras[:url], size: extras[:size], price: extras[:price],
-         total: extras[:price], ifc: ifc_class(entity), photo_full: PhotoSettings.read(entity, :full), photo_location: PhotoSettings.read(entity, :location)}.merge(front_columns(entity))
+         total: extras[:price], ifc: ifc_class(entity), photo_full: PhotoSettings.read(entity, :full), photo_location: PhotoSettings.read(entity, :location),
+         photo_extra1: PhotoSettings.read(entity, :extra1), photo_extra2: PhotoSettings.read(entity, :extra2)}.merge(front_columns(entity))
       end
 
       # Mặt trước (lưu ở định nghĩa): hướng cục bộ, nhãn trạng thái, ghi chú lý do.

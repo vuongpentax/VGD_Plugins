@@ -495,6 +495,28 @@ d = make_dialog(3, has_image: [0, 1, 2], has_location: [1])
 d.safely { d.images_capture('only_missing' => true, 'kind' => 'location') }
 UI.run_timers
 ok('chụp thiếu ảnh vị trí: dù đã có ảnh món vẫn chụp ảnh vị trí cho dòng chưa có', $shot.map(&:first) == [901, 903])
+# Ảnh phụ (kind: extra1 / extra2): chụp, chỉ chụp dòng thiếu, dán, xóa, thông số riêng
+$kinds = []
+d = make_dialog
+d.safely { d.images_capture('indexes' => [0], 'kind' => 'extra1') }
+UI.run_timers
+ok('chụp ảnh 3: mang loại extra1 tới Capture.shoot', $kinds == [:extra1])
+x_items = events(d, 'images_changed').last['items']
+ok('chụp ảnh 3: báo ảnh đổi kèm loại extra1 và đường dẫn file _x1', x_items.size == 1 && x_items[0]['kind'] == 'extra1' && x_items[0]['url'].include?('901_x1.png?v='))
+d = make_dialog(3)
+$rows[0][:has_extra2] = true; $rows[1][:has_extra2] = true
+$kinds = []
+d.safely { d.images_capture('only_missing' => true, 'kind' => 'extra2') }
+UI.run_timers
+ok('chỉ chụp dòng chưa có ảnh 4 (theo has_extra2, không theo has_image)', $shot.map(&:first) == [903] && $kinds == [:extra2])
+d = make_dialog
+d.safely { d.image_set('pid' => 901, 'kind' => 'extra1', 'full' => [PNG].pack('m0')) }
+ok('dán ảnh 3: ghi vào file _x1 và báo ảnh đổi loại extra1', File.exist?(I.path($model, 901, :extra1)) && !File.exist?(I.path($model, 901, :extra2)) && events(d, 'images_changed').last['items'][0]['kind'] == 'extra1')
+d.safely { d.image_delete(901, :extra1) }
+ok('xóa ảnh 3: chỉ xóa file _x1, báo đúng câu', !File.exist?(I.path($model, 901, :extra1)) && events(d, 'images_changed').last['items'][0]['kind'] == 'extra1' && events(d, 'message').last['text'].include?('ảnh 3'))
+d = make_dialog
+saved.(d, 0, 'extra1', {'view' => 'current', 'yaw' => 20})
+ok('lưu thông số riêng ảnh 3: ghi khóa photo_extra1, cập nhật dòng, không đụng ảnh chính', $records[0][:entity].get_attribute('VGD_BIM_TABLE', 'photo_extra1').to_s.include?('current') && $rows[0][:photo_extra1] == {'view' => 'current', 'yaw' => 20} && $records[0][:entity].get_attribute('VGD_BIM_TABLE', 'photo_full').nil?)
 d = make_dialog
 d.safely { d.images_capture('indexes' => [0], 'kind' => 'zzz') }
 err = events(d, 'message').last

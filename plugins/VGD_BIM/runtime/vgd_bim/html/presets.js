@@ -60,12 +60,13 @@ function unitRow(title,digitsKey,unitKey,units,fixed){
 // Khối thiết lập ảnh dùng cho cả ảnh chính và ảnh vị trí: cỡ, góc nhìn, kiểu hiển thị, lề, (vùng nhìn), góc lệch / góc cao (chỉ Chính diện), nền.
 // keys: tên các mục trong thiết lập của preset; suffix: đuôi của nhãn đọc màn hình để hai khối không trùng nhãn.
 function imageSettingsRows(left,s,c,keys,suffix,withScale){
+  const who=suffix===' vị trí'?' ảnh vị trí':suffix?' ảnh'+suffix:''; // nhãn đọc màn hình: ảnh vị trí / ảnh 3 / ảnh 4
   const size=node('div',undefined,'pp-row');
   size.append(selectOf(c.sizes.map(n=>[n,String(n)]),s[keys.width],'Chiều rộng ảnh'+suffix,v=>setSetting(keys.width,Number(v))),selectOf(c.sizes.map(n=>[n,String(n)]),s[keys.height],'Chiều cao ảnh'+suffix,v=>setSetting(keys.height,Number(v))));
   left.append(size);
   const angle=(label,key,min,max,tip)=>{
     const input=node('input');input.type='number';input.min=String(min);input.max=String(max);input.step='5';input.value=String(s[key]||0);
-    input.setAttribute('aria-label',label+(suffix?' ảnh vị trí':'')+' (độ)');input.title=tip;
+    input.setAttribute('aria-label',label+who+' (độ)');input.title=tip;
     input.onchange=()=>{const n=Number(input.value),v=Math.min(max,Math.max(min,Math.round(input.value.trim()!==''&&Number.isFinite(n)?n:0)));input.value=String(v);setSetting(key,v);};
     return input;
   };
@@ -77,7 +78,7 @@ function imageSettingsRows(left,s,c,keys,suffix,withScale){
   left.append(look);
   const margin=node('div',undefined,'pp-row');
   const marginInput=node('input');marginInput.type='number';marginInput.min='0';marginInput.max='100';marginInput.step='5';marginInput.value=String(s[keys.margin]);
-  marginInput.setAttribute('aria-label','Chừa lề'+(suffix?' ảnh vị trí':'')+' (%)');marginInput.title='Chừa lề quanh món khi chụp ảnh Iso / Chính diện, tính theo %: 0 = ôm sát món, 20 = chừa 20%.';
+  marginInput.setAttribute('aria-label','Chừa lề'+who+' (%)');marginInput.title='Chừa lề quanh món khi chụp ảnh Iso / Chính diện, tính theo %: 0 = ôm sát món, 20 = chừa 20%.';
   marginInput.onchange=()=>{const v=Math.min(100,Math.max(0,Math.round(Number(marginInput.value)||0)));marginInput.value=String(v);setSetting(keys.margin,v);};
   margin.append(node('label','Chừa lề (%)'),marginInput);left.append(margin);
   if(withScale){
@@ -109,6 +110,11 @@ function presetPanel(panel){
   // Ảnh vị trí (cột Ảnh vị trí) có bộ thiết lập riêng, cùng loại với ảnh chính; thêm ô Vùng nhìn.
   left.append(node('h3','Ảnh vị trí'));
   imageSettingsRows(left,s,c,{width:'loc_width',height:'loc_height',view:'loc_view',style:'loc_style',background:'loc_background',margin:'loc_margin',yaw:'loc_yaw',pitch:'loc_pitch'},' vị trí',true);
+  // Ảnh phụ (cột Ảnh 3, Ảnh 4): chụp thêm góc khác của cùng món, mỗi ảnh một bộ thiết lập riêng cùng loại với ảnh chính.
+  ['x1','x2'].forEach((p,i)=>{
+    left.append(node('h3','Ảnh '+(i+3)));
+    imageSettingsRows(left,s,c,{width:p+'_width',height:p+'_height',view:p+'_view',style:p+'_style',background:p+'_background',margin:p+'_margin',yaw:p+'_yaw',pitch:p+'_pitch'},' '+(i+3));
+  });
   const folder=node('div',undefined,'pp-row pp-folder');
   const dir=node('input');dir.type='text';dir.value=app.settings.image_dir;dir.placeholder=app.dir||'Thư mục lưu ảnh…';dir.maxLength=240;dir.setAttribute('aria-label','Thư mục lưu ảnh');dir.title='Thư mục lưu ảnh của file SketchUp này (lưu trong file, mở file khác không bị đổi theo). Để trống để dùng thư mục mặc định.';
   const commit=()=>{if(dir.value.trim()!==app.settings.image_dir)call('settings_save',JSON.stringify({image_dir:dir.value.trim()}));};
