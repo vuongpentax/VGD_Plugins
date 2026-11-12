@@ -41,7 +41,7 @@ $transactions = []
 $writes = []
 $vgd_data = {}
 require File.join(ROOT, 'core/settings')
-%w[core/measure core/schema core/quantity core/custom_columns].each { |f| require File.join(ROOT, f) }
+%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
@@ -605,6 +605,40 @@ locked_error = begin; cd.table_commit_calc({'indexes' => [2]}); nil; rescue Stan
 ok('chỉ chọn món khóa: báo lỗi, không ghi', locked_error.to_s.include?('khóa') && $writes.empty?)
 nothing = begin; cd.table_commit_calc({'indexes' => [9]}); nil; rescue StandardError => e; e.message; end
 ok('dòng không có trong bảng: báo bảng đã cũ', nothing.to_s.include?('Bảng đã cũ'))
+# VGD ID: gán cho món chưa có, sửa ID trùng (giữ món có mã bền nhỏ nhất), món khóa bỏ qua, một bước hoàn tác
+class IdEnt
+  attr_reader :attrs, :persistent_id
+  def initialize(pid, locked = false); @attrs = {}; @persistent_id = pid; @locked = locked; end
+  def get_attribute(dict, key, default = nil); @attrs.dig(dict, key).nil? ? default : @attrs[dict][key]; end
+  def set_attribute(dict, key, value); (@attrs[dict] ||= {})[key] = value; end
+  def valid?; true; end
+  def locked?; @locked; end
+end
+ids = [IdEnt.new(30), IdEnt.new(10), IdEnt.new(20, true), IdEnt.new(40)]
+irecs = ids.each_with_index.map { |e, i| {entity: e, path: [e], locked: false, index: i} }
+shared = VGD::BIM::VgdId.generate
+ids[0].set_attribute('VGD_BIM_ID', 'guid', shared); ids[1].set_attribute('VGD_BIM_ID', 'guid', shared)
+irows = lambda { ids.each_with_index.map { |e, i| {index: i, pid: e.persistent_id, vgd_id: VGD::BIM::VgdId.read(e)} } }
+idd = D.allocate
+idd.instance_variable_set(:@model, cm)
+idd.instance_variable_set(:@table_records, irecs)
+idd.define_singleton_method(:emit) { |ev, payload| (@icalls ||= []) << [ev, payload] }
+idd.define_singleton_method(:icalls) { @icalls ||= [] }
+idd.define_singleton_method(:table_build) { instance_variable_set(:@table_rows, ids.each_with_index.map { |e, i| {index: i, pid: e.persistent_id, vgd_id: VGD::BIM::VgdId.read(e)} }) }
+idd.instance_variable_set(:@table_rows, irows.call)
+$transactions.clear
+idd.table_assign_ids({'indexes' => [0, 1, 2, 3]})
+ok('gán VGD ID: món chưa có ID được gán (món 3), món đã có giữ nguyên (0, 1), món khóa (2) bỏ qua; một bước hoàn tác', $transactions == ['VGD_BIM · Gán VGD ID'] && VGD::BIM::VgdId.valid?(VGD::BIM::VgdId.read(ids[3])) && VGD::BIM::VgdId.read(ids[0]) == shared && VGD::BIM::VgdId.read(ids[2]) == '')
+ok('gán VGD ID: báo số món đã gán, đã có và bị khóa', idd.icalls.last[0] == 'message' && idd.icalls.last[1][:text].include?('1 món') && idd.icalls.last[1][:text].include?('khóa'))
+bad_id = ->(&block) { begin; block.call; nil; rescue StandardError => e; e.message; end }
+ok('gán VGD ID khi các món đã có ID: báo rõ, không mở thao tác', (idd.table_assign_ids({'indexes' => [0, 1]}); idd.icalls.last[1][:text].include?('đã có')) && $transactions.size == 1)
+ok('chỉ chọn món khóa: báo lỗi khóa', bad_id.call { idd.table_assign_ids({'indexes' => [2]}) }.to_s.include?('khóa'))
+ok('không chọn dòng: báo lỗi; dòng không có trong bảng: báo bảng đã cũ', bad_id.call { idd.table_assign_ids({'indexes' => []}) }.to_s.include?('chọn') && bad_id.call { idd.table_assign_ids({'indexes' => [9]}) }.to_s.include?('Bảng đã cũ'))
+$transactions.clear
+idd.table_fix_duplicate_ids
+ok('sửa ID trùng: món có mã bền nhỏ nhất (10) giữ ID, món 30 nhận ID mới; một bước hoàn tác', $transactions == ['VGD_BIM · Sửa VGD ID trùng'] && VGD::BIM::VgdId.read(ids[1]) == shared && VGD::BIM::VgdId.read(ids[0]) != shared && VGD::BIM::VgdId.valid?(VGD::BIM::VgdId.read(ids[0])))
+ok('sửa ID trùng: báo số món đã đổi', idd.icalls.last[1][:text].include?('1 món'))
+ok('không còn trùng: báo rõ, không mở thao tác', (idd.table_fix_duplicate_ids; idd.icalls.last[1][:text].include?('Không có') && $transactions.size == 1))
 $model = ORIGINAL_MODEL
 $vgd_data = {}
 

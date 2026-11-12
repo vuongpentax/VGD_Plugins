@@ -103,7 +103,7 @@ Quy tắc chung mỗi bản (theo `CLAUDE.md` của repo): viết kiểm tra v�
 ### Cột mốc 1 — Danh tính và Category
 
 Làm: VGD ID, Mã đối tượng, phát hiện và sửa trùng, mở rộng Category cho kiến trúc (Wall, Floor, Ceiling, Door, Window, Column, Beam, Stair) và nội thất (Furniture, Cabinet, Sanitary, Lighting, Equipment, Generic), chuyển `schema_version` 1 → 2.
-- 1a: `guid` + nút "Gán VGD ID" (món đang chọn / cả bảng, xem trước số món sẽ gán), cột VGD ID trong bảng, kiểm tra trùng trong tab Kiểm tra.
+- 1a (**xong ở beta.62**, ghi ở dictionary riêng `VGD_BIM_ID` thay vì `VGD_BIM` để không làm đổi nghĩa "món đã có dữ liệu VGD"; trùng mới phát hiện trong bảng, tab Kiểm tra làm ở 1b): `guid` + nút "Gán VGD ID" (món đang chọn / cả bảng, xem trước số món sẽ gán), cột VGD ID trong bảng, kiểm tra trùng trong tab Kiểm tra.
 - 1b: nút sửa ID trùng (xem trước); đặt Mã đối tượng hàng loạt theo mẫu.
 - 1c: Category mở rộng + bảng ánh xạ 8 nhóm cũ sang nhóm mới (không mất dữ liệu cũ); migration `schema_version`.
 - Kiểm tra: dữ liệu sai, copy trùng, file cũ không có `guid`, hoàn tác một bước, món khóa.
@@ -160,7 +160,7 @@ Relationship đầy đủ (Object → Object / Room / Level / Type / Material), 
 
 | Cột mốc | Trạng thái |
 |---|---|
-| 1 Danh tính và Category | Chưa bắt đầu (đã duyệt kế hoạch 12/11/2026) |
+| 1 Danh tính và Category | Đang làm: 1a xong (beta.62); còn 1b (Mã đối tượng hàng loạt, kiểm tra trùng trong tab Kiểm tra), 1c (Category mở rộng, schema 2) |
 | 2 Tầng và Phòng | Chưa bắt đầu |
 | 3 Vật liệu và luật khối lượng | Chưa bắt đầu |
 | 4 Schedule, Audit, Validation | Chưa bắt đầu |

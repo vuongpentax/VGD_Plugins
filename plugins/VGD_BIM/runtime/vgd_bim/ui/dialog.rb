@@ -81,6 +81,8 @@ module VGD
           @dialog.add_action_callback('table_clear') { |_ctx| safely { table_clear } }
           @dialog.add_action_callback('rename_preview') { |_ctx, payload| safely { rename_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { rename_apply(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_assign_ids') { |_ctx, payload| safely { table_assign_ids(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_fix_duplicate_ids') { |_ctx| safely { table_fix_duplicate_ids } }
           @dialog.add_action_callback('table_custom_column') { |_ctx, payload| safely { table_custom_column(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_view') { |_ctx, payload| safely { Table.save_view_state(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_order') { |_ctx, payload| safely { table_order(JSON.parse(payload)) } }
@@ -422,6 +424,36 @@ module VGD
           text = "Đã sửa #{custom ? custom['label'] : EDIT_LABELS[field]} cho #{editable.size} đối tượng."
           text += " Bỏ qua #{records.size - editable.size} đối tượng bị khóa." if records.size > editable.size
           emit('message', {text: text})
+        end
+        # Gán VGD ID (mã định danh ổn định, xem core/vgd_id.rb) cho các dòng đã chọn: chỉ món chưa có ID, bỏ qua món khóa, một bước hoàn tác.
+        def table_assign_ids(payload)
+          check_model!
+          records = table_indexes(payload).map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |_index, record| record[:path].all?(&:valid?) }
+          items = records.map { |index, record| {index: index, guid: @table_rows.fetch(index)[:vgd_id].to_s, locked: record[:locked] || record[:entity].locked? ? true : false} }
+          plan = VgdId.assign_plan(items)
+          raise 'Đối tượng đang bị khóa nên không gán được VGD ID.' if plan[:assign].empty? && plan[:keep].empty?
+          note = plan[:locked].empty? ? '' : " Bỏ qua #{plan[:locked].size} món bị khóa."
+          if plan[:assign].empty?
+            return emit('message', {text: "Các món đã chọn đều đã có VGD ID.#{note}"})
+          end
+          Data.transaction(@model, 'VGD_BIM · Gán VGD ID') { plan[:assign].each { |index| VgdId.assign(@table_records.fetch(index)[:entity]) } }
+          table_build
+          have = plan[:keep].empty? ? '' : " #{plan[:keep].size} món đã có ID từ trước."
+          emit('message', {text: "Đã gán VGD ID cho #{plan[:assign].size} món.#{have}#{note}"})
+        end
+        # Sửa VGD ID trùng (do copy món): trong các món của bảng dùng chung một ID, món có mã bền nhỏ nhất giữ ID, các món khác nhận ID mới. Một bước hoàn tác.
+        def table_fix_duplicate_ids
+          check_model!
+          items = @table_rows.map { |row| record = @table_records.fetch(row[:index]); {index: row[:index], pid: row[:pid], guid: row[:vgd_id].to_s, locked: record[:locked] || record[:entity].locked? ? true : false} }
+          raise 'Có đối tượng không còn tồn tại. Hãy làm mới bảng.' unless @table_records.all? { |record| record[:path].all?(&:valid?) }
+          plan = VgdId.fix_plan(items)
+          note = plan[:locked].empty? ? '' : " #{plan[:locked].size} món bị khóa nên chưa đổi được."
+          return emit('message', {text: "Không có VGD ID trùng trong bảng.#{note}"}) if plan[:renew].empty? && plan[:locked].empty?
+          return emit('message', {text: "Không đổi được ID nào.#{note}"}) if plan[:renew].empty?
+          Data.transaction(@model, 'VGD_BIM · Sửa VGD ID trùng') { plan[:renew].each { |index| VgdId.renew(@table_records.fetch(index)[:entity]) } }
+          table_build
+          emit('message', {text: "Đã cấp VGD ID mới cho #{plan[:renew].size} món bị trùng (món cũ nhất giữ ID).#{note}"})
         end
         # Thêm / xóa cột thêm tay (nút + ở ngăn Chọn cột). Chỉ đổi danh sách cột trên máy, không đụng gì trong model;
         # xóa cột không xóa dữ liệu đã nhập trong món. Đổi tên cột dùng tiêu đề cột của preset (nhấp đúp tiêu đề). payload: {'action' => 'add' | 'remove', ...}.

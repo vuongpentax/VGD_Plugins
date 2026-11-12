@@ -27,6 +27,7 @@
 - **Chọn cột kiểu mới** (theo Auto Info, gọn hơn): ngăn trượt ra bên trái và đẩy bảng sang phải nên cột đầu không bị che; ô tick tự vẽ, kéo thả đổi chỗ cột có hiệu ứng trượt, nút gạt chân trang trượt mượt.
 - **Giao diện không còn thanh cuộn dọc** ở bảng, bảng Chọn cột, Preset và các tab (vẫn cuộn bằng con lăn chuột); chỉ giữ thanh cuộn ngang của bảng khi nhiều cột.
 - **Tiếng Anh** cho toàn bộ giao diện (báo cáo CSV và hộp thoại gốc của SketchUp vẫn tiếng Việt).
+- **VGD ID** (beta.62, bước đầu của lộ trình BIM, xem `docs/vgd_bim/ROADMAP.md`): mã định danh ổn định cho từng món (UUID 128 bit, lưu ở dictionary riêng `VGD_BIM_ID`), cột **VGD ID** trong Chọn cột (dạng ngắn VGD-8A42F1, rê chuột xem đủ), nút **Gán VGD ID cho món đang chọn** và **Sửa VGD ID trùng** ở menu Nhập / Xuất. Món copy ra bị trùng ID sẽ ghi "(trùng)"; sửa trùng giữ ID cho món cũ nhất.
 - **Xuất Excel / PDF theo độ cao hàng** (beta.61): khi đã chỉnh độ cao hàng (Ctrl + lăn chuột), file xuất cao đúng như trên màn hình, cột Ảnh rộng bằng cột trên màn hình và ảnh to ra theo (PDF thu cùng tỉ lệ với độ rộng cột; Excel tối đa 409 point). Chưa chỉnh thì giữ như cũ.
 - **Thêm cột thủ công** (beta.61): nút + ở ngăn Chọn cột, theo AutoInfo: thuộc tính tùy chọn (dictionary + tên thuộc tính), thuộc tính động (Dynamic Components) đều chỉ đọc, và cột tự nhập sửa được trong bảng. Tối đa 20 cột, lưu trên máy.
 - **Nhập / xuất preset JSON chuyển vào bảng Preset** (beta.61), không còn trong menu Nhập / Xuất.

@@ -5,6 +5,7 @@ require_relative 'preset'
 require_relative 'front'
 require_relative 'measure'
 require_relative 'custom_columns'
+require_relative 'vgd_id'
 
 module VGD
   module BIM
@@ -26,6 +27,7 @@ module VGD
         {key: 'entity', label: 'Loại', kind: 'text'},
         {key: 'definition', label: 'Họ', kind: 'text'},
         {key: 'instance', label: 'Tên', kind: 'text', editable: 'name'},
+        {key: 'vgd_id', label: 'VGD ID', kind: 'text'},
         {key: 'description', label: 'Mô tả', kind: 'text', editable: 'description'},
         {key: 'lenX', label: 'Rộng (X) mm', kind: 'number'},
         {key: 'lenY', label: 'Dài (Y) mm', kind: 'number'},
@@ -199,6 +201,7 @@ module VGD
         overrides = Quantity.overrides # cách tính ghi đè theo tag, đọc một lần cho cả bảng
         custom = CustomColumns.read # cột thêm tay, đọc một lần cho cả bảng
         rows = records.each_with_index.map { |record, i| row_for(record, i, groups, projected: projected, measure: measure, overrides: overrides, custom: custom).merge(image_state(model, record[:entity], image_folder)) }
+        VgdId.duplicates(rows.map { |row| {index: row[:index], pid: row[:pid], guid: row[:vgd_id]} }).flatten.each { |i| rows[i][:vgd_dup] = true } # ID dùng chung giữa các dòng (do copy)
         # Đối tượng cha đang có trong bảng: dùng để tránh cộng trùng khi tính tổng.
         records.each_with_index do |record, i|
           rows[i][:parents] = (1...record[:path].size).map { |n| index_of[path_key(record[:path][0...n])] }.compact
@@ -270,6 +273,7 @@ module VGD
           status: status,
           locked: record[:locked] ? true : false,
           quantity: 1,
+          vgd_id: VgdId.read(entity),
           parents: []
         }.merge(extra_columns(entity, data)).merge(measure_note: body ? body[:note].to_s : '').merge(CustomColumns.values(entity, custom))
         row.merge(Quantity.row_fields(row, tag, row[:tag_group], data, overrides)) # hạng mục / cách tính / khối lượng suy ra từ tag (tính ảo, không ghi vào món)

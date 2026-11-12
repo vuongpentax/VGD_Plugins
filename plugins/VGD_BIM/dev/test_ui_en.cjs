@@ -130,6 +130,10 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await page.getByLabel((lang==='en')?'Column type':'Kiểu cột').selectOption('dynamic');await scan('Form thêm cột (thuộc tính động)');
   await page.getByLabel((lang==='en')?'Column type':'Kiểu cột').selectOption('text');await scan('Form thêm cột (cột tự nhập)');
   await receive('message',{text:'Đã thêm cột Notes.'});await scan('Thông báo thêm cột');
+  await receive('message',{text:'Đã gán VGD ID cho 3 món. 2 món đã có ID từ trước. Bỏ qua 1 món bị khóa.'});await scan('Thông báo gán VGD ID');
+  await receive('message',{text:'Các món đã chọn đều đã có VGD ID.'});await scan('Thông báo đã có VGD ID');
+  await receive('message',{text:'Đã cấp VGD ID mới cho 2 món bị trùng (món cũ nhất giữ ID). 1 món bị khóa nên chưa đổi được.'});await scan('Thông báo sửa trùng');
+  await receive('message',{text:'Không có VGD ID trùng trong bảng.'});await scan('Thông báo không trùng');
   await receive('message',{text:'Đã sửa Notes cho 2 đối tượng.'});await scan('Thông báo sửa cột thêm tay');
   await page.evaluate(()=>{closeColumns(false);});
   await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
