@@ -126,4 +126,20 @@ check 'trạng thái bảng giữ cột thêm tay (thứ tự, hiện, độ r�
 cc.remove(custom_col['key'])
 check 'xóa cột thêm tay: preset và trạng thái bảng tự bỏ khóa đó, không lỗi', T.custom_presets.find { |preset| preset['name'] == 'Có cột tay' }.nil? || !T.custom_presets.find { |preset| preset['name'] == 'Có cột tay' }['columns'].include?(custom_col['key'])
 check 'cột VGD ID có trong danh sách cột chuẩn, đứng sau cột Tên', T::COLUMN_KEYS.include?('vgd_id') && T::COLUMN_KEYS.index('vgd_id') == T::COLUMN_KEYS.index('instance') + 2 && T::COLUMN_KEYS.index('code') == T::COLUMN_KEYS.index('instance') + 1
+# Trạng thái bảng riêng từng file SketchUp: file đã lưu riêng giữ nguyên dù trạng thái chung đổi sau đó
+class ViewModel
+  def initialize; @attrs = {}; end
+  def get_attribute(d, k, default = nil); @attrs.dig(d, k) || default; end
+  def set_attribute(d, k, v); (@attrs[d] ||= {})[k] = v; end
+  def start_operation(*); true; end
+  def commit_operation; true; end
+  def abort_operation; true; end
+end
+view_a = ViewModel.new; view_b = ViewModel.new
+T.save_view_state({'preset' => 'Đồ rời', 'visible' => %w[instance], 'rowHeight' => 90}, view_a)
+T.save_view_state({'preset' => 'Phần thô', 'visible' => %w[quantity], 'rowHeight' => 40}, view_b)
+check 'trạng thái bảng: mỗi file giữ riêng (preset, cột hiện, độ cao hàng)', T.view_state(view_a).values_at('preset', 'visible', 'rowHeight') == ['Đồ rời', %w[instance], 90] && T.view_state(view_b).values_at('preset', 'visible', 'rowHeight') == ['Phần thô', %w[quantity], 40]
+check 'trạng thái chung (mẫu cho file mới) là lần lưu gần nhất', T.view_state['preset'] == 'Phần thô'
+check 'file chưa lưu riêng thì theo trạng thái chung', T.view_state(ViewModel.new)['preset'] == 'Phần thô'
+check 'trạng thái riêng cũng được kiểm tra khi đọc (cột lạ, độ cao quá lớn)', (view_a.set_attribute('VGD_BIM_MODEL', 'settings', JSON.generate('table_view' => {'rowHeight' => 99999, 'preset' => 'x'})); T.view_state(view_a)['rowHeight'] == T::ROW_HEIGHT_MAX)
 puts 'Done'

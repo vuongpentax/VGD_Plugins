@@ -30,15 +30,17 @@ module VGD
 
         # ---- Cài đặt ----
         def settings_payload
-          dir = Settings.image_dir
-          {settings: Settings.read, dir: dir, dir_exists: File.directory?(dir)}
+          dir = ModelSettings.image_dir(@model)
+          {settings: ModelSettings.effective(@model), dir: dir, dir_exists: File.directory?(dir)}
         end
 
         def settings_save(payload)
-          before = Settings.read
+          before = ModelSettings.effective(@model)
           language = before['language']
-          Settings.update(payload)
-          measure_changed = %w[exclude_words exclude_tags].any? { |key| Settings.read[key] != before[key] }
+          Settings.update(payload) # cài đặt chung (cũng là mẫu cho file chưa có riêng)
+          own = payload.select { |key, _| ModelSettings::MODEL_KEYS.include?(key) }
+          ModelSettings.write(@model, own.keys.to_h { |key| [key, Settings.read[key]] }) unless own.empty? # phần riêng của file này
+          measure_changed = %w[exclude_words exclude_tags].any? { |key| ModelSettings.effective(@model)[key] != before[key] }
           if Settings.read['language'] != language
             refresh # đổi ngôn ngữ: gửi lại cấu hình và từ điển, vẽ lại cả cửa sổ
           else
@@ -50,16 +52,17 @@ module VGD
 
         def settings_pick_dir
           raise 'Bản SketchUp này không có hộp chọn thư mục. Hãy gõ đường dẫn thư mục vào ô.' unless ::UI.respond_to?(:select_directory)
-          current = Settings.image_dir
+          current = ModelSettings.image_dir(@model)
           path = ::UI.select_directory(title: 'Chọn thư mục lưu ảnh', directory: File.directory?(current) ? current : Dir.home)
           return unless path
           Settings.update('image_dir' => path)
+          ModelSettings.write(@model, 'image_dir' => Settings.read['image_dir'])
           emit('settings', settings_payload)
-          emit('message', {text: 'Đã đổi thư mục lưu ảnh.'})
+          emit('message', {text: 'Đã đổi thư mục lưu ảnh của file này.'})
         end
 
         def images_open_dir
-          dir = Settings.image_dir
+          dir = ModelSettings.image_dir(@model)
           FileUtils.mkdir_p(dir)
           open_folder(dir)
         end

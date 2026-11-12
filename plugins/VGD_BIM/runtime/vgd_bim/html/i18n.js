@@ -120,7 +120,7 @@ const VGD_I18N=(()=>{
 'Chụp lại':'Retake','Chọn ảnh…':'Choose image…','Xóa ảnh':'Delete photo',
 
     // --- Thông báo từ Ruby ---
-    'Đã lưu cài đặt.':'Settings saved.','Đã đổi thư mục lưu ảnh.':'Image folder changed.','Đã lưu ảnh cho đối tượng.':'Photo saved for the object.','Đã xóa ảnh của đối tượng.':'Photo deleted for the object.',
+    'Đã lưu cài đặt.':'Settings saved.','Đã đổi thư mục lưu ảnh.':'Image folder changed.','Đã đổi thư mục lưu ảnh của file này.':'Image folder of this file changed.','Đã lưu ảnh cho đối tượng.':'Photo saved for the object.','Đã xóa ảnh của đối tượng.':'Photo deleted for the object.',
     'Bản SketchUp này không có hộp chọn thư mục. Hãy gõ đường dẫn thư mục vào ô.':'This SketchUp version has no folder picker. Type the folder path into the box.',
     'Đang chụp ảnh. Hãy đợi xong hoặc bấm Dừng.':'A capture is running. Wait for it to finish or press Stop.','Bảng đã cũ. Hãy làm mới bảng.':'The table is out of date. Refresh the table.',
     'Không có đối tượng nào cần chụp.':'No objects need photographing.','Danh sách ảnh không hợp lệ.':'Invalid image list.','Đối tượng không còn trong bảng. Hãy làm mới bảng.':'The object is no longer in the table. Refresh the table.',
@@ -162,7 +162,7 @@ const VGD_I18N=(()=>{
     'Chiều dài: số lẻ':'Length: decimals','Chiều dài: đơn vị':'Length: unit','Diện tích: số lẻ':'Area: decimals','Diện tích: đơn vị':'Area: unit','Thể tích: số lẻ':'Volume: decimals','Thể tích: đơn vị':'Volume: unit',
     'Chiều rộng ảnh':'Image width','Chiều cao ảnh':'Image height','Góc nhìn ảnh':'Image view','Kiểu hiển thị ảnh':'Image style',
     'Khung nhìn hiện tại':'Current view','Phối cảnh iso':'Isometric view','Chính diện':'Front view','Màu (có texture)':'Color (textured)','Kiểu hiện tại':'Current style','Nền trong suốt':'Transparent background','Nền trắng':'White background',
-    'Thư mục lưu ảnh (dùng chung mọi preset). Để trống để dùng thư mục mặc định.':'Image folder (shared by all presets). Leave empty to use the default folder.',
+    'Thư mục lưu ảnh của file SketchUp này (lưu trong file, mở file khác không bị đổi theo). Để trống để dùng thư mục mặc định.':'Image folder of this SketchUp file (saved in the file, so opening another file does not change it). Leave empty to use the default folder.',
     'Chọn thư mục lưu ảnh':'Choose image folder','Tạo preset từ bảng hiện tại':'Create a preset from the current table',
     'Khôi phục cột, tiêu đề và thiết lập gốc của preset':'Restore the preset\'s original columns, headers and settings',
     'Preset lưu cột hiển thị, thứ tự, tiêu đề cột, đơn vị và cách chụp ảnh, trên máy này. Đang dùng preset tự tạo thì mọi thay đổi tự cập nhật vào preset đó.':'A preset stores the visible columns, their order, column headers, units and photo settings, on this computer. While a custom preset is active, every change updates it automatically.',

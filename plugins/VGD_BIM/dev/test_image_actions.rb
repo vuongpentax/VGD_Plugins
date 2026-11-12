@@ -44,7 +44,7 @@ module VGD; module BIM; def self.log(m); end
     COLUMNS = [].freeze; STATUS_LABELS = {}.freeze; UNTAGGED_GROUP = 'Chưa phân loại'.freeze
     def self.columns; COLUMNS; end
     def self.presets; []; end
-    def self.view_state; {}; end
+    def self.view_state(_model = nil); {}; end
   end
   module UI; end
 end; end
@@ -294,6 +294,30 @@ ok('thiết lập ảnh sai bị từ chối trước khi chụp: không hẹn g
 d = make_dialog
 d.safely { d.images_capture('indexes' => [0], 'settings' => {'image_width' => 5}) }
 ok('cỡ ảnh sai bị từ chối trước khi chụp', error_of(d).to_s.include?('Cỡ ảnh') && UI.timers.empty?)
+
+# ---- Cài đặt riêng từng file: thư mục ảnh và loại trừ số đo của file này không bị file khác đổi ----
+class OwnModel
+  def initialize; @attrs = {}; end
+  def get_attribute(dict, key, default = nil); @attrs.dig(dict, key) || default; end
+  def set_attribute(dict, key, value); (@attrs[dict] ||= {})[key] = value; end
+  def start_operation(*); true; end
+  def commit_operation; true; end
+  def abort_operation; true; end
+  def guid; 'g'; end
+end
+dir_a = File.join(Dir.tmpdir, 'anh_file_a'); dir_b = File.join(Dir.tmpdir, 'anh_file_b')
+model_a = OwnModel.new; model_b = OwnModel.new
+da = make_dialog; da.instance_variable_set(:@model, model_a); da.define_singleton_method(:refresh) { }
+db = make_dialog; db.instance_variable_set(:@model, model_b); db.define_singleton_method(:refresh) { }
+da.safely { da.settings_save('image_dir' => dir_a, 'exclude_tags' => ['Handle']) }
+db.safely { db.settings_save('image_dir' => dir_b, 'exclude_tags' => ['Door']) }
+ok('hai file: mỗi file giữ thư mục ảnh riêng dù file kia đổi sau', I.dir(model_a).start_with?(dir_a) && I.dir(model_b).start_with?(dir_b))
+ok('hai file: mỗi file giữ tag loại trừ riêng', VGD::BIM::ModelSettings.effective(model_a)['exclude_tags'] == ['Handle'] && VGD::BIM::ModelSettings.effective(model_b)['exclude_tags'] == ['Door'])
+ok('cài đặt gửi giao diện là của file đang mở', events(da, 'settings').last['dir'] == dir_a && events(da, 'settings').last['settings']['exclude_tags'] == ['Handle'])
+$picked_dir = File.join(Dir.tmpdir, 'anh_file_a2')
+da.safely { da.settings_pick_dir }
+ok('chọn lại thư mục ảnh ở file A: file A đổi, file B không', I.dir(model_a).start_with?($picked_dir) && I.dir(model_b).start_with?(dir_b))
+$picked_dir = nil
 
 # ---- Mã model cố định: bảng luôn đảm bảo mã trước khi đọc / chụp ảnh ----
 d = make_dialog

@@ -99,7 +99,7 @@ module VGD
           @dialog.add_action_callback('table_assign_ids') { |_ctx, payload| safely { table_assign_ids(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_fix_duplicate_ids') { |_ctx| safely { table_fix_duplicate_ids } }
           @dialog.add_action_callback('table_custom_column') { |_ctx, payload| safely { table_custom_column(JSON.parse(payload)) } }
-          @dialog.add_action_callback('table_view') { |_ctx, payload| safely { Table.save_view_state(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_view') { |_ctx, payload| safely { Table.save_view_state(JSON.parse(payload), @model) } }
           @dialog.add_action_callback('table_order') { |_ctx, payload| safely { table_order(JSON.parse(payload)) } }
           register_image_callbacks
           register_front_callbacks
@@ -161,7 +161,7 @@ module VGD
           @model = Sketchup.active_model
           language = Settings.read['language']
           emit('config', {mode: @mode, version: BIM::VERSION, language: language, app: settings_payload, preset_info: {defaults: Preset::DEFAULT_SETTINGS, choices: Preset.choices},
-                         table: {columns: Table.columns, presets: Table.presets, view: Table.view_state}, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.ui_dictionary(language), vi_en: (language == 'en' ? Locale.vi_en_names : nil), scan_options: {scope: @scan_options[:scope], faces: faces?}})
+                         table: {columns: Table.columns, presets: Table.presets, view: Table.view_state(@model)}, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.ui_dictionary(language), vi_en: (language == 'en' ? Locale.vi_en_names : nil), scan_options: {scope: @scan_options[:scope], faces: faces?}})
           if %w[information tags table].include?(@mode)
             @observer = SelectionObserver.new(self)
             @model.selection.add_observer(@observer)
@@ -364,9 +364,10 @@ module VGD
         end
         def table_build
           @model = Sketchup.active_model
+          ModelSettings.pin(@model, Table.view_state) # file chưa có cài đặt riêng thì ghi lại cài đặt chung đang dùng, để mở file khác không làm đổi theo
           Images.ensure_model_id(@model) # mã model cố định trong file, để ảnh còn sau khi tắt mở lại (trước mọi thao tác khác)
           scope = @table_scope.select(&:valid?)
-          built = Table.build(@model, scope, @table_options[:deep] ? true : false, projected: @table_options[:projected], measure: MeasureProbe.context, context: scan_context)
+          built = Table.build(@model, scope, @table_options[:deep] ? true : false, projected: @table_options[:projected], measure: MeasureProbe.context(ModelSettings.effective(@model)), context: scan_context)
           @table_rows = built[:rows]
           @table_records = built[:records]
           hint = if scope.empty?
@@ -376,7 +377,7 @@ module VGD
                  end
           emit('table', {check_rules: CheckRules.read(@model), material_library: MaterialLibrary.read, sketchup_materials: (@model.respond_to?(:materials) ? @model.materials.to_a.map { |m| m.display_name.to_s }.sort_by(&:downcase) : []), bridge: {room_volume: !Bridge.provider_for('room_volume').nil?}, rooms: rooms_view, levels: Levels.read(@model), columns: Table.columns, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
                          statuses: Table::STATUS_LABELS, options: @table_options.merge(isolating: !@isolated.empty?),
-                         rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state, choices: table_choices,
+                         rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state(@model), choices: table_choices,
                          row_order: RowOrder.read(@model)})
         end
         # Thứ tự dòng người dùng kéo tay: chỉ ghi danh sách mã món vào model (RowOrder), không đổi gì trên đối tượng; bảng đã tự xếp lại ở giao diện.
@@ -1014,7 +1015,7 @@ module VGD
         end
         # Kích thước trong nhãn khung đánh dấu theo đơn vị và số lẻ của preset đang dùng, như bảng hiện (số liệu gốc luôn là mm).
         LENGTH_FACTORS = {'mm' => 1.0, 'cm' => 0.1, 'm' => 0.001, 'in' => 1 / 25.4, 'ft' => 1 / 304.8}.freeze
-        def table_settings; Preset.settings(Table.view_state['settings']); end
+        def table_settings; Preset.settings(Table.view_state(@model)['settings']); end
         def length_unit; table_settings['length_unit']; end
         def length_num(mm)
           return '' if mm.nil?

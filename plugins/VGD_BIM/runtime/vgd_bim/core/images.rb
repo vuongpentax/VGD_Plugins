@@ -1,6 +1,7 @@
 require 'fileutils'
 require 'securerandom'
 require_relative 'settings'
+require_relative 'model_settings'
 
 module VGD
   module BIM
@@ -61,15 +62,15 @@ module VGD
 
       # Ảnh đã chụp trong phiên này nằm ở thư mục theo guid: đổi tên thành thư mục theo mã mới (không đè nếu đã có).
       def self.adopt_legacy_folder(model, id)
-        old = File.join(Settings.image_dir, legacy_key(model))
-        new = File.join(Settings.image_dir, id)
+        old = File.join(ModelSettings.image_dir(model), legacy_key(model))
+        new = File.join(ModelSettings.image_dir(model), id)
         File.rename(old, new) if File.directory?(old) && !File.exist?(new)
       rescue SystemCallError => error
         BIM.log("Không chuyển được thư mục ảnh cũ: #{error.message}")
       end
 
       def self.dir(model)
-        File.join(Settings.image_dir, model_key(model))
+        File.join(ModelSettings.image_dir(model), model_key(model))
       end
 
       def self.kind!(kind)

@@ -110,7 +110,7 @@ function presetPanel(panel){
   left.append(node('h3','Ảnh vị trí'));
   imageSettingsRows(left,s,c,{width:'loc_width',height:'loc_height',view:'loc_view',style:'loc_style',background:'loc_background',margin:'loc_margin',yaw:'loc_yaw',pitch:'loc_pitch'},' vị trí',true);
   const folder=node('div',undefined,'pp-row pp-folder');
-  const dir=node('input');dir.type='text';dir.value=app.settings.image_dir;dir.placeholder=app.dir||'Thư mục lưu ảnh…';dir.maxLength=240;dir.setAttribute('aria-label','Thư mục lưu ảnh');dir.title='Thư mục lưu ảnh (dùng chung mọi preset). Để trống để dùng thư mục mặc định.';
+  const dir=node('input');dir.type='text';dir.value=app.settings.image_dir;dir.placeholder=app.dir||'Thư mục lưu ảnh…';dir.maxLength=240;dir.setAttribute('aria-label','Thư mục lưu ảnh');dir.title='Thư mục lưu ảnh của file SketchUp này (lưu trong file, mở file khác không bị đổi theo). Để trống để dùng thư mục mặc định.';
   const commit=()=>{if(dir.value.trim()!==app.settings.image_dir)call('settings_save',JSON.stringify({image_dir:dir.value.trim()}));};
   dir.onchange=commit;dir.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit();}};
   const pick=button('📁',()=>call('settings_pick_dir'));pick.title='Chọn thư mục lưu ảnh';pick.setAttribute('aria-label','Chọn thư mục lưu ảnh');
