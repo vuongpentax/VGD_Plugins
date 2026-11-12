@@ -938,7 +938,7 @@ function materialsPanel(){
     top.append(code,name,del);
     const mid=node('div',undefined,'mt-mid');
     const unit=node('select');unit.setAttribute('aria-label','Đơn vị vật liệu');MATERIAL_UNITS.forEach(([v,t])=>unit.append(new Option(t,v)));unit.value=item.unit||'m2';unit.onchange=()=>{item.unit=unit.value;save();};
-    mid.append(unit,input(item,'price','Đơn giá','number','90px','Đơn giá'),input(item,'waste','Hao hụt (%)','number','60px','Hao hụt %'),input(item,'thickness','Độ dày (mm)','number','60px','Dày mm'));
+    mid.append(miniField('Đơn vị',unit),miniField('Đơn giá',input(item,'price','Đơn giá','number',null)),miniField('Hao hụt %',input(item,'waste','Hao hụt (%)','number',null)),miniField('Dày mm',input(item,'thickness','Độ dày (mm)','number',null)));
     const link=node('select');link.setAttribute('aria-label','Vật liệu SketchUp được nối');link.append(new Option('(Chưa nối vật liệu SketchUp)',''));
     [...new Set([...names,item.sketchup_material].filter(Boolean))].forEach(n=>link.append(new Option(n,n)));link.value=item.sketchup_material||'';link.onchange=()=>{item.sketchup_material=link.value;save();};
     const more=node('div',undefined,'mt-more');
@@ -969,7 +969,7 @@ function roomsPanel(){
     top.append(name,number,del);
     const mid=node('div',undefined,'rm-mid');
     const lv=node('select');lv.setAttribute('aria-label','Tầng của phòng');lv.append(new Option('(Không có tầng)',''));levels.forEach(l=>lv.append(new Option(l.name,l.id)));lv.value=room.level||'';lv.onchange=()=>{room.level=lv.value;save();};
-    mid.append(lv,fieldInput(room,'height','Chiều cao phòng (mm)','number','70px'),fieldInput(room,'elevation','Cao độ sàn (mm)','number','70px'));
+    mid.append(miniField('Tầng',lv),miniField('Cao mm',fieldInput(room,'height','Chiều cao phòng (mm)','number')),miniField('Cao độ sàn',fieldInput(room,'elevation','Cao độ sàn (mm)','number')));
     const fin=node('div',undefined,'rm-fin');
     [['finish_floor','Sàn'],['finish_wall','Tường'],['finish_ceiling','Trần']].forEach(([k,t])=>{const i=fieldInput(room,k,'Hoàn thiện '+t.toLowerCase(),'text');i.placeholder='Hoàn thiện '+t.toLowerCase();i.maxLength=60;fin.append(i);});
     const m=room.metrics||{};
@@ -997,6 +997,8 @@ function roomsPanel(){
 }
 // Quản lý tầng: tên, cao độ sàn và chiều cao (mm) của từng tầng, lưu trong model (chỉ nhãn, không dời hình học); gán tầng theo cao độ cho các dòng đang chọn.
 // Ô tầng trong bảng nhấp đúp để gán tay. Ruby kiểm tra lại mọi giá trị.
+// Ô số có nhãn ngắn ở trên (thay cho placeholder bị cắt chữ trong ô hẹp).
+const miniField=(text,input)=>{const box=node('label',undefined,'f-mini');box.append(node('span',text),input);return box;};
 function levelsPanel(){
   const p=node('div',undefined,'popover right capture-panel levels-panel');
   const levels=(tableState.data&&tableState.data.levels)||[];
