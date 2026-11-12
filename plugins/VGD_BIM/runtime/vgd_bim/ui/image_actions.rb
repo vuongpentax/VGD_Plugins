@@ -12,7 +12,7 @@ module VGD
       module ImageActions
         MAX_CAPTURE_BATCH = 200 # số đối tượng tối đa cho một lần bấm chụp
         MAX_FULL_REQUEST = 6    # số ảnh gốc giao diện được xin mỗi lần (dự phòng; ảnh gốc nặng nên ít hơn trước)
-        PREVIEW_WIDTH = 360     # chiều rộng tối đa (điểm ảnh) của ảnh nháp khi xem trước góc chụp
+        PREVIEW_WIDTH = 180     # chiều rộng tối đa (điểm ảnh) của ảnh nháp khi xem trước góc chụp
 
         def register_image_callbacks
           @dialog.add_action_callback('settings_save') { |_ctx, payload| safely { settings_save(JSON.parse(payload)) } }

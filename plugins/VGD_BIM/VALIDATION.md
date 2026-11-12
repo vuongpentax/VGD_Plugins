@@ -2,7 +2,7 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.0-beta.67: đã kiểm tra tự động
+## Bản 1.1.0-beta.68: đã kiểm tra tự động
 
 Chạy từ `plugins/VGD_BIM`: `ruby dev/run_tests.rb` (cú pháp mọi file Ruby và 32 bộ test) và các bộ Playwright `dev/test_ui.cjs`, `dev/test_ui_images.cjs`, `dev/test_ui_en.cjs`, `dev/test_report_page.cjs`.
 

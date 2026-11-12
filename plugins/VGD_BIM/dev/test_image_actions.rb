@@ -415,7 +415,7 @@ ok('đang xem trước: yêu cầu chụp hoặc xem trước khác bị từ ch
 UI.run_timers
 shown = events(d, 'image_preview')
 ok('xem trước: gửi từng khung theo thứ tự, kèm dòng, mã, tên, loại ảnh và ảnh nháp dạng data URL', shown.map { |e| e['index'] } == [0, 2] && shown.map { |e| e['pid'] } == [901, 903] && shown.map { |e| e['name'] } == ['Tủ 1', 'Tủ 3'] && shown.all? { |e| e['kind'] == 'full' && e['image'].start_with?('data:image/png;base64,') })
-ok('xem trước: ảnh nháp có chiều rộng tối đa 360 và đúng nội dung PNG', $previews.all? { |p| p[:width] == 360 } && Base64.decode64(shown[0]['image'].split(',', 2)[1]) == PNG)
+ok('xem trước: ảnh nháp có chiều rộng tối đa 180 và đúng nội dung PNG', $previews.all? { |p| p[:width] == 180 } && Base64.decode64(shown[0]['image'].split(',', 2)[1]) == PNG)
 ok('xem trước: món có thông số riêng dùng thông số riêng như chụp thật, món khác theo preset', $previews[0][:settings].values_at('image_view', 'image_yaw') == ['front', 20] && $previews[1][:settings]['image_view'] == 'isometric')
 done_event = events(d, 'preview_done').last
 ok('xem trước xong: báo số khung, không báo ảnh đã đổi (không lưu gì), không báo chụp xong', done_event['done'] == 2 && done_event['total'] == 2 && done_event['ok'] == 2 && done_event['errors'] == [] && events(d, 'images_changed').empty? && events(d, 'images_done').empty? && d.instance_variable_get(:@capture).nil?)
