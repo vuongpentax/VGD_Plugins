@@ -110,7 +110,7 @@ function preview(data) {
 }
 // ---- Bảng đối tượng kiểu Auto Info ----
 const tableState={replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null,manual:[],dragRow:null,dragCol:null};
-const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total','calc_qty','calc_total']);
+const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total','calc_qty','calc_total','mat_price','mat_waste','mat_qty','mat_cost']);
 // Khối lượng tính theo tag (xem core/quantity.rb): nhãn cách tính, đơn vị và số lẻ cố định theo từng cách (m, m², m³ không đổi theo đơn vị của preset).
 const METHOD_LABELS={count:'Theo cái',area:'Theo diện tích',length:'Theo mét dài',volume:'Theo thể tích',none:'Không tính'};
 const CALC_UNIT={count:'cái',area:'m²',length:'m',volume:'m³'};
@@ -191,6 +191,7 @@ function cellText(row,key){
     case 'definition':return row.definition;
     case 'instance':return row.name;
     case 'code':return row.code||'';
+    case 'mat_code':return row.mat_code||'';
     case 'level':return row.level||'';
     case 'room':return row.room||'';
     case 'vgd_id':return row.vgd_id?'VGD-'+String(row.vgd_id).slice(0,6).toUpperCase()+(row.vgd_dup?' (trùng)':''):''; // dạng ngắn; ID đầy đủ ở chú thích ô
@@ -405,7 +406,7 @@ function startResize(event,key,host,cols){
 }
 // Nhóm theo và gộp dòng giống nhau (chỉ đổi cách hiển thị, không đổi dữ liệu).
 const GROUP_OPTIONS=[['','Không nhóm'],['parent','Cha (Parent)'],['entity','Loại (Entity)'],['definition','Tên họ (Definition)'],['instance','Tên (Instance)'],['material','Vật liệu'],['tag','Tag'],['tag_group','Nhóm hạng mục'],['status','Tình trạng'],['level','Tầng'],['room','Phòng'],['front_state','Mặt trước (độ tin cậy)']];
-const SUM_KEYS=['areaXZ','areaXY','areaFace','areaProjected','volume','quantity','total','calc_qty','calc_total'];
+const SUM_KEYS=['areaXZ','areaXY','areaFace','areaProjected','volume','quantity','total','calc_qty','calc_total','mat_cost'];
 function groupLabel(row,key){
   switch(key){
     case 'parent':return row.parent||'(Gốc)';
@@ -651,7 +652,7 @@ function renderGrid(host){
         if(col.key==='ordinal')td.textContent=String(pos);
         else if(col.kind==='image')imageCell(td,row);
         else if(col.kind==='image_location')imageCell(td,row,'location');
-        else if(NUMERIC.has(col.key)){td.textContent=fmt(scaledValue(col.key,row[col.key]),col.key==='calc_qty'?(CALC_DIGITS[row.calc_method]||0):digitsFor(col.key));td.className='num';}
+        else if(NUMERIC.has(col.key)){td.textContent=fmt(scaledValue(col.key,row[col.key]),(col.key==='calc_qty'||col.key==='mat_qty')?(CALC_DIGITS[row.calc_method]||0):col.key==='mat_waste'?1:digitsFor(col.key));td.className='num';}
         else if(col.key==='url'){
           td.append(node('span',row.url,'cell-url'));
           if(row.url){const open=node('button','↗','cell-open');open.type='button';open.title='Mở link';open.setAttribute('aria-label','Mở link');open.onclick=e=>{e.stopPropagation();call('open_url',row.url);};open.ondblclick=e=>e.stopPropagation();td.append(open);}
@@ -659,6 +660,7 @@ function renderGrid(host){
         else td.textContent=cellText(row,col.key);
         if(col.key==='front_state'&&row.front_note)td.title=row.front_note; // lý do tự động chọn mặt trước, để duyệt
         if(col.key==='vgd_id'&&row.vgd_id)td.title=row.vgd_id;
+        if(col.key==='mat_cost'&&row.mat_note)td.title=exportText(row.mat_note);
         if(col.key.startsWith('calc_')&&row.calc_source)td.title=exportText(CALC_SOURCES[row.calc_source]||'')+(row.calc_note?' · '+exportText(row.calc_note):'')+(col.key==='calc_method'?'. '+exportText('Nhấp đúp để đổi cách tính của tag này.'):''); // vì sao ra cách tính này (dịch từng phần theo ngôn ngữ)
         tr.append(td);
       });
@@ -896,6 +898,38 @@ function codesPanel(){
   },'primary');
   const actions=node('div',undefined,'rename-actions');actions.append(apply,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
   p.append(prefix.wrap,row,overLabel,preview,actions);
+  return p;
+}
+// Thư viện vật liệu: lưu trên máy (dùng cho mọi model), nối với vật liệu SketchUp theo tên. Ruby kiểm tra lại mọi giá trị.
+const MATERIAL_UNITS=[['m2','m²'],['m','m'],['m3','m³'],['pcs','cái'],['set','bộ'],['lot','lô'],['kg','kg'],['none','không']];
+function materialsPanel(){
+  const p=node('div',undefined,'popover right capture-panel materials-panel');
+  const items=((tableState.data&&tableState.data.material_library)||[]).map(i=>({...i}));
+  const names=(tableState.data&&tableState.data.sketchup_materials)||[];
+  p.append(node('div','Thư viện vật liệu','pop-title'));
+  p.append(node('p','Nối với vật liệu SketchUp theo tên. Khối lượng có hao hụt = khối lượng tính x (1 + hao hụt %). Thành tiền chỉ tính khi đơn vị vật liệu trùng đơn vị tính của dòng (m², m, m³, cái).','muted'));
+  const save=()=>call('material_library_save',JSON.stringify({items}));
+  const input=(item,key,label,type,width,place)=>{const i=node('input');i.type=type;i.value=item[key]??'';i.setAttribute('aria-label',label);i.title=label;if(place)i.placeholder=place;if(width)i.style.width=width;i.onchange=()=>{item[key]=type==='number'?(i.value===''?null:Number(i.value)):i.value;save();};return i;};
+  items.forEach(item=>{
+    const box=node('div',undefined,'mt-item');box.dataset.id=item.id;
+    const top=node('div',undefined,'mt-top');
+    const code=input(item,'code','Mã vật liệu','text','80px','Mã');code.maxLength=30;
+    const name=input(item,'name','Tên vật liệu','text');name.className='mt-name';name.maxLength=80;
+    const del=button('×',()=>{items.splice(items.indexOf(item),1);save();},'cs-del');del.title='Xóa vật liệu này khỏi thư viện';del.setAttribute('aria-label','Xóa vật liệu '+item.name);
+    top.append(code,name,del);
+    const mid=node('div',undefined,'mt-mid');
+    const unit=node('select');unit.setAttribute('aria-label','Đơn vị vật liệu');MATERIAL_UNITS.forEach(([v,t])=>unit.append(new Option(t,v)));unit.value=item.unit||'m2';unit.onchange=()=>{item.unit=unit.value;save();};
+    mid.append(unit,input(item,'price','Đơn giá','number','90px','Đơn giá'),input(item,'waste','Hao hụt (%)','number','60px','Hao hụt %'),input(item,'thickness','Độ dày (mm)','number','60px','Dày mm'));
+    const link=node('select');link.setAttribute('aria-label','Vật liệu SketchUp được nối');link.append(new Option('(Chưa nối vật liệu SketchUp)',''));
+    [...new Set([...names,item.sketchup_material].filter(Boolean))].forEach(n=>link.append(new Option(n,n)));link.value=item.sketchup_material||'';link.onchange=()=>{item.sketchup_material=link.value;save();};
+    const more=node('div',undefined,'mt-more');
+    more.append(input(item,'manufacturer','Hãng','text',null,'Hãng'),input(item,'product','Sản phẩm','text',null,'Sản phẩm'),input(item,'spec','Quy cách','text',null,'Quy cách'));
+    box.append(top,mid,link,more);p.append(box);
+  });
+  if(!items.length)p.append(node('p','Chưa có vật liệu nào. Bấm Thêm vật liệu.','muted'));
+  const add=button('+ Thêm vật liệu',()=>{items.push({name:`Vật liệu ${items.length+1}`,code:'',unit:'m2',waste:0,price:null,thickness:null,manufacturer:'',product:'',spec:'',sketchup_material:''});save();});add.id='mt-add';
+  const actions=node('div',undefined,'rename-actions');actions.append(add,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
+  p.append(actions);
   return p;
 }
 // Quản lý phòng: dữ liệu phòng (tên, mã, tầng, chiều cao, hoàn thiện) và số đo tính từ viền (diện tích, chu vi, thể tích, tường, trần), lưu trong model.
@@ -1258,7 +1292,7 @@ function closeTablePanel(){
   document.querySelectorAll('.popover').forEach(p=>p.remove());
   document.querySelectorAll('button[aria-expanded="true"]').forEach(b=>{if(!b.closest('header'))b.setAttribute('aria-expanded','false');});
 }
-const PANELS_KEEP_ON_ROW_CLICK=['rename','front','capture','codes','levels','rooms']; // ba bảng này dùng các dòng đang chọn: bấm chọn dòng không đóng
+const PANELS_KEEP_ON_ROW_CLICK=['rename','front','capture','codes','levels','rooms','materials']; // ba bảng này dùng các dòng đang chọn: bấm chọn dòng không đóng
 document.addEventListener('mousedown',e=>{
   if(!tableState.panel||!(e.target instanceof Element))return;
   const t=e.target;
@@ -1354,7 +1388,9 @@ function ioPanel(){
   levelsBtn.id='levels-open';levelsBtn.title='Thêm / sửa tầng của công trình và gán tầng cho món (chỉ là nhãn, không dời hình)';
   const roomsBtn=item('id','Quản lý phòng...',()=>{tableState.panel='rooms';tableView(tableState.data);});
   roomsBtn.id='rooms-open';roomsBtn.title='Tạo phòng từ mặt sàn đang chọn, sửa tên / mã / tầng / chiều cao / hoàn thiện, xem diện tích, thể tích và gán món vào phòng (chỉ là dữ liệu, hình khối do VGD_Room dựng)';
-  p.append(assignIds,fixIds,codesBtn,levelsBtn,roomsBtn);
+  const materialsBtn=item('id','Thư viện vật liệu...',()=>{tableState.panel='materials';tableView(tableState.data);});
+  materialsBtn.id='materials-open';materialsBtn.title='Thư viện vật liệu (mã, hãng, đơn giá, hao hụt...) nối với vật liệu SketchUp theo tên để tính khối lượng có hao hụt và thành tiền theo vật liệu';
+  p.append(assignIds,fixIds,codesBtn,levelsBtn,roomsBtn,materialsBtn);
   return p;
 }
 function bottomBar(){
@@ -1414,6 +1450,7 @@ function tableView(data){
   if(tableState.panel==='codes')bar.append(codesPanel());
   if(tableState.panel==='levels')bar.append(levelsPanel());
   if(tableState.panel==='rooms')bar.append(roomsPanel());
+  if(tableState.panel==='materials')bar.append(materialsPanel());
   if(tableState.panel==='front')bar.append(frontPanel());
   if(tableState.panel==='rename')bar.append(renamePanel());
   const side=$('col-side'),host=$('grid-host');

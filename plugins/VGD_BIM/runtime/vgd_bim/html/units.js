@@ -41,6 +41,6 @@ function digitsFor(key){
   if(key.startsWith('len'))return s.length_digits;
   if(AREA_KEYS.has(key))return s.area_digits;
   if(key==='volume')return s.volume_digits;
-  if(key==='price'||key==='total'||key==='calc_total')return s.currency==='VND'?0:2;
+  if(key==='price'||key==='total'||key==='calc_total'||key==='mat_price'||key==='mat_cost')return s.currency==='VND'?0:2;
   return 0;
 }

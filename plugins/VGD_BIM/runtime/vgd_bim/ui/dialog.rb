@@ -81,6 +81,7 @@ module VGD
           @dialog.add_action_callback('table_clear') { |_ctx| safely { table_clear } }
           @dialog.add_action_callback('rename_preview') { |_ctx, payload| safely { rename_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { rename_apply(JSON.parse(payload)) } }
+          @dialog.add_action_callback('material_library_save') { |_ctx, payload| safely { material_library_save(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_build') { |_ctx, payload| safely { table_room_build(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_rooms') { |_ctx, payload| safely { table_rooms(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_from_selection') { |_ctx, payload| safely { table_room_from_selection(JSON.parse(payload)) } }
@@ -350,7 +351,7 @@ module VGD
                  elsif built[:hidden].to_i.positive?
                    "Đã ẩn #{built[:hidden]} đối tượng thuộc tag loại trừ."
                  end
-          emit('table', {bridge: {room_volume: !Bridge.provider_for('room_volume').nil?}, rooms: rooms_view, levels: Levels.read(@model), columns: Table.columns, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
+          emit('table', {material_library: MaterialLibrary.read, sketchup_materials: (@model.respond_to?(:materials) ? @model.materials.to_a.map { |m| m.display_name.to_s }.sort_by(&:downcase) : []), bridge: {room_volume: !Bridge.provider_for('room_volume').nil?}, rooms: rooms_view, levels: Levels.read(@model), columns: Table.columns, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
                          statuses: Table::STATUS_LABELS, options: @table_options.merge(isolating: !@isolated.empty?),
                          rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state, choices: table_choices,
                          row_order: RowOrder.read(@model)})
@@ -455,6 +456,14 @@ module VGD
         def rooms_view
           provider = Bridge.provider_for('room_volume')
           Rooms.read(@model).map { |room| room.merge('metrics' => Rooms.metrics(room), 'has_volume' => provider ? !Bridge.call('room_volume', 'find', @model, room['id']).nil? : false) }
+        end
+        # Lưu thư viện vật liệu (trên máy, dùng cho mọi model). payload: {'items' => [...]}. Không đụng gì trong model.
+        def material_library_save(payload)
+          raise ArgumentError, 'Dữ liệu vật liệu không hợp lệ.' unless payload.is_a?(Hash)
+          items = MaterialLibrary.sanitize!(payload['items'])
+          MaterialLibrary.write(items)
+          table_build
+          emit('message', {text: "Đã lưu #{items.size} vật liệu."})
         end
         # Dựng (hoặc dựng lại) khối 3D của phòng bằng plugin VGD_Room qua cầu nối. VGD_BIM không tự dựng hình. payload: {'id' => mã phòng}.
         # VGD ID của khối do BIM cấp (dựng lại thì plugin giữ ID cũ). Plugin tự mở một thao tác (một bước hoàn tác).

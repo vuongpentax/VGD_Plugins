@@ -139,6 +139,10 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await page.evaluate(()=>{tableState.data.bridge={room_volume:true};tableState.data.rooms=[{id:'rm_aaaaaaaa',name:'R1',number:'P1',level:'',height:3000,elevation:0,boundary:[[0,0],[4000,0],[4000,3000],[0,3000]],finish_floor:'',finish_wall:'',finish_ceiling:'',has_volume:true,metrics:{area:12,perimeter:14,volume:36,wall_area:42,ceiling_area:12}}];tableState.panel='rooms';tableView(tableState.data);});await scan('Hộp phòng (đã có khối)');
   await page.evaluate(()=>{tableState.data.bridge={room_volume:false};tableState.data.rooms[0].has_volume=false;tableState.panel='rooms';tableView(tableState.data);});await scan('Hộp phòng (chưa cài plugin)');
   await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
+  await receive('message',{text:'Đã lưu 3 vật liệu.'});await scan('Thông báo lưu vật liệu');
+  await page.evaluate(()=>{tableState.data.material_library=[{id:'mt_aaaaaaaa',code:'M1',name:'Oak',manufacturer:'',product:'',thickness:null,unit:'m2',price:null,waste:0,spec:'',sketchup_material:''}];tableState.data.sketchup_materials=['Wood'];tableState.panel='materials';tableView(tableState.data);});await scan('Hộp thư viện vật liệu');
+  await page.evaluate(()=>{tableState.data.material_library=[];tableState.panel='materials';tableView(tableState.data);});await scan('Hộp thư viện vật liệu (trống)');
+  await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
   await receive('message',{text:'Đã lưu 2 phòng.'});await scan('Thông báo lưu phòng');
   await receive('message',{text:'Đã gán phòng cho 3 món theo vị trí. 1 món nằm ngoài mọi phòng hoặc không đo được vị trí. Bỏ qua 1 món bị khóa.'});await scan('Thông báo gán phòng');
   await receive('message',{text:'Đã tạo phòng Kitchen từ mặt đang chọn (diện tích 12.0 m²). Hình khối phòng do plugin VGD_Room dựng.'});await scan('Thông báo tạo phòng');

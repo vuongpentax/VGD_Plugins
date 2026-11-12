@@ -117,6 +117,8 @@ Làm: VGD ID, Mã đối tượng, phát hiện và sửa trùng, mở rộng Ca
 
 ### Cột mốc 3 — Vật liệu có dữ liệu và luật khối lượng
 
+Trạng thái: 3a, 3b và hao hụt % của 3c đã làm (beta.67). Còn lại của 3c: trừ ô cửa / cửa sổ (cần quan hệ món–tường) và công thức đơn giản.
+
 - 3a Thư viện vật liệu (mã, tên, hãng, sản phẩm, độ dày, đơn vị, đơn giá, quy cách), lưu trên máy, nhập / xuất; nối với vật liệu SketchUp theo tên.
 - 3b Nối vật liệu → khối lượng → thành tiền.
 - 3c Luật khối lượng mở rộng: hao hụt %, trừ ô cửa / cửa sổ khỏi tường, công thức đơn giản. Không viết cứng trong mã.

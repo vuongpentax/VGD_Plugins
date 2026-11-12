@@ -9,6 +9,7 @@ require_relative 'vgd_id'
 require_relative 'object_code'
 require_relative 'levels'
 require_relative 'rooms'
+require_relative 'material_library'
 
 module VGD
   module BIM
@@ -62,6 +63,11 @@ module VGD
         {key: 'calc_qty', label: 'Khối lượng tính', kind: 'calc'},
         {key: 'calc_unit', label: 'Đơn vị tính', kind: 'text'},
         {key: 'calc_total', label: 'Thành tiền (theo khối lượng tính)', kind: 'sum'},
+        {key: 'mat_code', label: 'Mã vật liệu', kind: 'text'},
+        {key: 'mat_price', label: 'Đơn giá vật liệu', kind: 'number'},
+        {key: 'mat_waste', label: 'Hao hụt vật liệu %', kind: 'number'},
+        {key: 'mat_qty', label: 'Khối lượng có hao hụt', kind: 'number'},
+        {key: 'mat_cost', label: 'Thành tiền (theo vật liệu)', kind: 'sum'},
         {key: 'front', label: 'Mặt trước', kind: 'text'},
         {key: 'front_state', label: 'Độ tin cậy mặt trước', kind: 'text'},
         {key: 'measure_note', label: 'Ghi chú số đo', kind: 'text'}
@@ -208,11 +214,15 @@ module VGD
         overrides = Quantity.overrides # cách tính ghi đè theo tag, đọc một lần cho cả bảng
         custom = CustomColumns.read # cột thêm tay, đọc một lần cho cả bảng
         rows = records.each_with_index.map { |record, i| row_for(record, i, groups, projected: projected, measure: measure, overrides: overrides, custom: custom).merge(image_state(model, record[:entity], image_folder)) }
+        library = MaterialLibrary.read # thư viện vật liệu (trên máy), đọc một lần cho cả bảng
         levels = Levels.read(model) # tầng của công trình (lưu trong model); đọc một lần cho cả bảng
         level_names = levels.to_h { |level| [level['id'], level['name']] }
         room_names = Rooms.read(model).to_h { |room| [room['id'], room['number'].empty? ? room['name'] : "#{room['number']} · #{room['name']}"] }
         records.each_with_index do |record, i|
           lid = Levels.entity_level(record[:entity])
+          entry = MaterialLibrary.find(library, rows[i][:material])
+          priced = MaterialLibrary.cost(entry, rows[i][:calc_method], rows[i][:calc_qty])
+          rows[i].merge!(mat_code: entry ? entry['code'] : '', mat_price: entry ? entry['price'] : nil, mat_waste: entry ? entry['waste'] : nil, mat_qty: priced[:qty], mat_cost: priced[:cost], mat_note: priced[:note].to_s)
           rows[i][:level_id] = lid
           rows[i][:level] = lid.empty? ? '' : level_names.fetch(lid, '(tầng đã xóa)')
           rows[i][:base_z] = base_z(record) # cao độ đáy món (mm, thế giới) để gợi ý tầng
