@@ -1010,6 +1010,36 @@ function levelsPanel(){
   p.append(node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán tầng theo cao độ; hoặc nhấp đúp ô Tầng để gán tay.','muted'),actions);
   return p;
 }
+const SNAPSHOT_FIELDS={name:'Tên',code:'Mã',level:'Tầng',room:'Phòng',material:'Vật liệu',lenX:'Rộng',lenY:'Sâu',lenZ:'Cao',calc_qty:'Khối lượng tính'};
+function snapshotsPanel(){
+  const p=node('div',undefined,'popover right capture-panel snapshots-panel');
+  const list=tableState.snapshots||[];
+  p.append(node('div','So sánh phiên bản','pop-title'),node('p','Chụp mốc để nhớ giá trị của các món ở thời điểm này, sau đó so với bảng hiện tại để biết món nào thêm, xóa hoặc đổi. Mốc lưu trong file SketchUp (tối đa 5 mốc), chỉ đọc bảng.','muted'));
+  const name=node('input',undefined,'sn-name');name.type='text';name.maxLength=60;name.placeholder='Tên mốc (ví dụ Bản gửi khách 12/11)';name.setAttribute('aria-label','Tên mốc');
+  const take=button('Chụp mốc hiện tại',()=>{if(!name.value.trim())throw Error('Hãy nhập tên mốc.');call('snapshot_save',JSON.stringify({name:name.value}));},'primary');take.id='sn-take';
+  const bar=node('div',undefined,'sn-bar');bar.append(name,take);p.append(bar);
+  const rows=node('div',undefined,'sn-list');
+  list.forEach(snap=>{
+    const r=node('div',undefined,'sn-item');
+    const del=button('×',()=>call('snapshot_delete',JSON.stringify({id:snap.id})),'cs-del');del.title='Xóa mốc này';del.setAttribute('aria-label','Xóa mốc '+snap.name);
+    r.append(node('span',snap.name,'sn-title'),node('span',`${String(snap.created||'').slice(0,16).replace('T',' ')} · ${snap.count} món`,'muted'),button('So sánh',()=>call('snapshot_compare',JSON.stringify({id:snap.id}))),del);
+    rows.append(r);
+  });
+  p.append(rows);
+  if(!list.length)p.append(node('p','Chưa có mốc nào. Nhập tên rồi bấm Chụp mốc hiện tại.','muted'));
+  const diff=tableState.snapshotDiff;
+  if(diff){
+    const sum=node('p',`So với mốc ${diff.name}: ${diff.added.length} món mới, ${diff.removed.length} món không còn, ${diff.changed.length} món đổi, ${diff.unchanged} món giữ nguyên.`,'muted');sum.id='sn-summary';p.append(sum);
+    const out=node('div',undefined,'sn-results');
+    const line=(tag,label,text,index)=>{const row=node('div',undefined,'sn-result'+(index!==undefined?' clickable':''));row.append(node('span',tag,'badge '+(tag==='Mới'?'':tag==='Không còn'?'error':'warning')),node('span',label),node('span',text,'muted'));if(index!==undefined){row.tabIndex=0;row.onclick=()=>{tableState.sel=new Set([index]);call('table_select',JSON.stringify({indexes:[index],field:''}));};row.onkeydown=e=>{if(e.key==='Enter')row.click();};}out.append(row);};
+    diff.added.forEach(a=>line('Mới',a.name,'',a.index));
+    diff.changed.forEach(c=>line('Thay đổi',c.name,c.diffs.map(d=>`${SNAPSHOT_FIELDS[d.field]||d.field}: ${d.old===null||d.old===''?'—':d.old} → ${d.new===null||d.new===''?'—':d.new}`).join('; '),c.index));
+    diff.removed.forEach(r=>line('Không còn',r.name,''));
+    p.append(out);
+  }
+  p.append((()=>{const a=node('div',undefined,'rename-actions');a.append(button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));return a;})());
+  return p;
+}
 const CHECK_OPS=[['lt','nhỏ hơn'],['lte','nhỏ hơn hoặc bằng'],['gt','lớn hơn'],['gte','lớn hơn hoặc bằng'],['eq','bằng'],['neq','khác'],['contains','chứa'],['empty','để trống'],['not_empty','không để trống']];
 const CHECK_SEVERITIES=[['INFO','Thông tin'],['WARNING','Cảnh báo'],['ERROR','Lỗi']];
 function checksPanel(){
@@ -1343,7 +1373,7 @@ function closeTablePanel(){
   document.querySelectorAll('.popover').forEach(p=>p.remove());
   document.querySelectorAll('button[aria-expanded="true"]').forEach(b=>{if(!b.closest('header'))b.setAttribute('aria-expanded','false');});
 }
-const PANELS_KEEP_ON_ROW_CLICK=['rename','front','capture','codes','levels','rooms','materials','checks']; // ba bảng này dùng các dòng đang chọn: bấm chọn dòng không đóng
+const PANELS_KEEP_ON_ROW_CLICK=['rename','front','capture','codes','levels','rooms','materials','checks','snapshots']; // ba bảng này dùng các dòng đang chọn: bấm chọn dòng không đóng
 document.addEventListener('mousedown',e=>{
   if(!tableState.panel||!(e.target instanceof Element))return;
   const t=e.target;
@@ -1443,7 +1473,9 @@ function ioPanel(){
   materialsBtn.id='materials-open';materialsBtn.title='Thư viện vật liệu (mã, hãng, đơn giá, hao hụt...) nối với vật liệu SketchUp theo tên để tính khối lượng có hao hụt và thành tiền theo vật liệu';
   const checksBtn=item('id','Luật kiểm tra...',()=>{tableState.panel='checks';tableView(tableState.data);});
   checksBtn.id='checks-open';checksBtn.title='Đặt luật kiểm tra riêng cho bảng (ví dụ Rộng nhỏ hơn 700 thì cảnh báo, Tầng để trống thì thông tin) rồi chạy và bấm vào kết quả để chọn món';
-  p.append(assignIds,fixIds,codesBtn,levelsBtn,roomsBtn,materialsBtn,checksBtn);
+  const snapBtn=item('id','So sánh phiên bản...',()=>{tableState.panel='snapshots';tableState.snapshotDiff=null;call('snapshot_list');tableView(tableState.data);});
+  snapBtn.id='snapshots-open';snapBtn.title='Chụp mốc giá trị các món rồi so với bảng hiện tại để biết món nào thêm, xóa hoặc đổi';
+  p.append(assignIds,fixIds,codesBtn,levelsBtn,roomsBtn,materialsBtn,checksBtn,snapBtn);
   return p;
 }
 function bottomBar(){
@@ -1505,6 +1537,7 @@ function tableView(data){
   if(tableState.panel==='rooms')bar.append(roomsPanel());
   if(tableState.panel==='materials')bar.append(materialsPanel());
   if(tableState.panel==='checks')bar.append(checksPanel());
+  if(tableState.panel==='snapshots')bar.append(snapshotsPanel());
   if(tableState.panel==='front')bar.append(frontPanel());
   if(tableState.panel==='rename')bar.append(renamePanel());
   const side=$('col-side'),host=$('grid-host');
@@ -1528,6 +1561,8 @@ window.VGD={receive(event,data){
   if(event==='config'){document.body.classList.remove('table-mode');updateSelInfo();if(appliedLanguage&&data.language&&appliedLanguage!==data.language){location.reload();return;}appliedLanguage=data.language||'vi';VGD_I18N.setLanguage(appliedLanguage,data.vi_en);config=data;if(config.table&&!tableState.restored)restoreView({view:config.table.view,columns:config.table.columns,presets:config.table.presets});updatePresetButton();locale=data.locale||locale;$('subtitle').textContent=`${data.version} · ${translated('modes',data.mode)}`;document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===(TAB_OF[data.mode]||data.mode);b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});$('preview').close();$('content').replaceChildren();$('primary-actions').replaceChildren();document.querySelector('main').scrollTop=0;message('Đang đọc dữ liệu…');}
   if(event==='table'){tableState.manual=Array.isArray(data.row_order)?data.row_order:[];tableState.rename.preview=null;tableState.sel=new Set(Array.isArray(data.selected)?data.selected:[]);if(!tableState.sel.has(tableState.anchor))tableState.anchor=null;} // bảng đổi thì bản xem trước đổi tên cũ không còn đúng
   const renderers={information,scan,mapping,validation,rules,tags:tagEditor,table:tableView};if(renderers[event]){renderers[event](data);message('Sẵn sàng.');}
+  if(event==='snapshots'){tableState.snapshots=data;if(tableState.panel==='snapshots'&&tableState.data)tableView(tableState.data);}
+  if(event==='snapshot_diff'){tableState.snapshotDiff=data;tableState.panel='snapshots';if(tableState.data)tableView(tableState.data);}
   if(event==='check_results'){tableState.checkResults=data;tableState.panel='checks';if(tableState.data)tableView(tableState.data);}
   if(event==='highlight')highlightRows(data.indexes);
   if(event==='options'&&tableState.data){tableState.data.options=data;tableView(tableState.data);}

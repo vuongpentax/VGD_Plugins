@@ -185,6 +185,8 @@ module VGD
                 METERS.merge(SMALL_IMAGES).merge('image_view' => 'front')),
         builtin('Nội thất', '', %w[ordinal image definition instance description lenXYZ owner quantity],
                 LIST_HEADERS.merge('description' => 'Mô tả', 'lenXYZ' => 'Kích thước (R x S x C)', 'owner' => 'Thương hiệu'), MILLIMETERS.merge(SMALL_IMAGES)),
+        builtin('Tủ', 'I. INTERIOR', %w[ordinal image definition instance description lenXYZ material level room quantity],
+                LIST_HEADERS.merge('description' => 'Mô tả', 'lenXYZ' => 'Kích thước (R x S x C)', 'material' => 'Vật liệu', 'level' => 'Tầng', 'room' => 'Phòng'), MILLIMETERS.merge(SMALL_IMAGES).merge('image_view' => 'front')),
         builtin('Thiết bị & Phụ kiện', '', %w[ordinal image definition instance description lenXYZ owner quantity],
                 LIST_HEADERS.merge('description' => 'Thông số', 'lenXYZ' => 'Kích thước (R x S x C)', 'owner' => 'Thương hiệu'), MILLIMETERS.merge(SMALL_IMAGES)),
         builtin('Chiếu sáng', '', %w[ordinal image definition instance description lenXYZ owner quantity],

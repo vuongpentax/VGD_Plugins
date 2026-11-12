@@ -247,7 +247,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await receive('table',table());await clear();
   await page.click('#preset-btn');
   ok(await page.locator('#preset-panel').isVisible() && (await page.locator('#preset-panel h3').allInnerTexts()).join('|')==='Đơn vị|Hình ảnh|Ảnh vị trí|Số đo thân','bấm nút preset: mở bảng có bốn phần Đơn vị, Hình ảnh, Ảnh vị trí và Số đo thân');
-  ok(await page.locator('#preset-panel .pp-pick').count()===11 && (await page.locator('#preset-panel .pp-pick.active').innerText())==='Tất cả','bảng preset liệt kê 11 preset, preset đang dùng được tô nổi bật');
+  ok(await page.locator('#preset-panel .pp-pick').count()===12 && (await page.locator('#preset-panel .pp-pick.active').innerText())==='Tất cả','bảng preset liệt kê 12 preset, preset đang dùng được tô nổi bật');
   ok(await page.locator('#preset-panel select[aria-label="Chiều dài: đơn vị"]').inputValue()==='mm' && await page.locator('#preset-panel select[aria-label="Chiều dài: số lẻ"]').inputValue()==='0','thiết lập đang dùng hiện đúng trong bảng (mm, 0 số lẻ)');
   ok((await page.locator('#preset-panel select[aria-label="Chiều dài: số lẻ"] option').allInnerTexts()).join(',')==='0,0.0,0.00,0.000,0.0000','số lẻ hiện dạng 0, 0.0, 0.00, ...');
   await page.keyboard.press('Escape');
@@ -304,7 +304,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(saved.action==='save' && saved.name==='KL THO' && saved.columns.includes('definition') && saved.headers.definition==='Mã phòng' && saved.settings.image_view==='front' && saved.settings.length_unit==='mm','dấu +: lưu preset mới kèm cột, tiêu đề tự đặt và thiết lập hiện tại');
   const custom={name:'KL THO',group:'',columns:saved.columns,headers:saved.headers,settings:saved.settings,builtin:false};
   await receive('presets',[...F.presets,custom]);
-  ok(await page.locator('#preset-panel .pp-pick').count()===12 && (await page.locator('#preset-panel .pp-pick.active').innerText())==='KL THO' && (await page.locator('#preset-btn').innerText()).includes('KL THO'),'danh sách preset có thêm preset mới và nó đang được dùng');
+  ok(await page.locator('#preset-panel .pp-pick').count()===13 && (await page.locator('#preset-panel .pp-pick.active').innerText())==='KL THO' && (await page.locator('#preset-btn').innerText()).includes('KL THO'),'danh sách preset có thêm preset mới và nó đang được dùng');
   await clear();
   await choose('Chiều dài: đơn vị','m');
   saved=await json('table_preset');
@@ -387,7 +387,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await receive('options',{zoom:true,isolate:false,deep:false,projected:false,label:true,isolating:false});  await page.getByRole('switch',{name:'Diện tích chiếu',exact:true}).click();
   ok(JSON.stringify(await json('table_option'))==='{"projected":true}','công tắc Diện tích chiếu: gửi tuỳ chọn');
   await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();
-  ok((await page.locator('.io-panel button').allInnerTexts()).map(x=>x.replace(/\s+/g,' ').trim()).join('|')==='Cầu nối dữ liệu Sắp có|Xuất Excel|In PDF|Ghi cách tính vào món đang chọn|Gán VGD ID cho món đang chọn|Sửa VGD ID trùng|Đặt mã đối tượng hàng loạt...|Quản lý tầng...|Quản lý phòng...|Thư viện vật liệu...|Luật kiểm tra...','menu Nhập / Xuất: Cầu nối dữ liệu (để sẵn, chưa dùng được), Xuất Excel, In PDF, Ghi cách tính vào món, nhập / xuất preset');
+  ok((await page.locator('.io-panel button').allInnerTexts()).map(x=>x.replace(/\s+/g,' ').trim()).join('|')==='Cầu nối dữ liệu Sắp có|Xuất Excel|In PDF|Ghi cách tính vào món đang chọn|Gán VGD ID cho món đang chọn|Sửa VGD ID trùng|Đặt mã đối tượng hàng loạt...|Quản lý tầng...|Quản lý phòng...|Thư viện vật liệu...|Luật kiểm tra...|So sánh phiên bản...','menu Nhập / Xuất: Cầu nối dữ liệu (để sẵn, chưa dùng được), Xuất Excel, In PDF, Ghi cách tính vào món, nhập / xuất preset');
   const ioBox=await page.locator('.io-panel').boundingBox(),vp=page.viewportSize();
   ok(ioBox.x>=0 && ioBox.x+ioBox.width<=vp.width && ioBox.y>=0,'menu Nhập / Xuất nằm trọn trong cửa sổ (không bị cắt mép phải)');
   ok(await page.getByRole('button',{name:/Cầu nối dữ liệu/}).isDisabled(),'Cầu nối dữ liệu: để sẵn chỗ, nút chưa bấm được');

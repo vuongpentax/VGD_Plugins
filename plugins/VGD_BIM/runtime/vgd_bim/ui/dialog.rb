@@ -87,6 +87,10 @@ module VGD
           @dialog.add_action_callback('table_rooms') { |_ctx, payload| safely { table_rooms(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_from_selection') { |_ctx, payload| safely { table_room_from_selection(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_assign_rooms_auto') { |_ctx, payload| safely { table_assign_rooms_auto(JSON.parse(payload)) } }
+          @dialog.add_action_callback('snapshot_list') { |_ctx| safely { snapshot_list } }
+          @dialog.add_action_callback('snapshot_save') { |_ctx, payload| safely { snapshot_save(JSON.parse(payload)) } }
+          @dialog.add_action_callback('snapshot_delete') { |_ctx, payload| safely { snapshot_delete(JSON.parse(payload)) } }
+          @dialog.add_action_callback('snapshot_compare') { |_ctx, payload| safely { snapshot_compare(JSON.parse(payload)) } }
           @dialog.add_action_callback('check_rules_save') { |_ctx, payload| safely { check_rules_save(JSON.parse(payload)) } }
           @dialog.add_action_callback('check_rules_run') { |_ctx| safely { check_rules_run } }
           @dialog.add_action_callback('table_levels') { |_ctx, payload| safely { table_levels(JSON.parse(payload)) } }
@@ -544,6 +548,40 @@ module VGD
           notes += " #{plan[:none].size} món nằm ngoài mọi phòng hoặc không đo được vị trí." unless plan[:none].empty?
           notes += " Bỏ qua #{plan[:locked].size} món bị khóa." unless plan[:locked].empty?
           emit('message', {text: "Đã gán phòng cho #{plan[:assign].size} món theo vị trí.#{notes}"})
+        end
+        # Mốc phiên bản của bảng (core/snapshots.rb): danh sách đọc theo yêu cầu (không đọc mỗi lần dựng bảng vì có thể lớn).
+        def snapshot_list
+          check_model!
+          emit('snapshots', Snapshots.summary(Snapshots.read(@model)))
+        end
+        # Chụp mốc từ các dòng hiện có của bảng. payload: {'name' => tên}. Chỉ ghi dictionary của model, không đụng đối tượng.
+        def snapshot_save(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu mốc không hợp lệ.' unless payload.is_a?(Hash)
+          raise 'Bảng chưa có dữ liệu. Hãy làm mới bảng.' if @table_rows.nil?
+          list = Snapshots.add(Snapshots.read(@model), Snapshots.capture(payload['name'], @table_rows))
+          Snapshots.write(@model, list)
+          emit('snapshots', Snapshots.summary(list))
+          emit('message', {text: "Đã chụp mốc #{list.last['name']} (#{list.last['items'].size} món)."})
+        end
+        def snapshot_delete(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu mốc không hợp lệ.' unless payload.is_a?(Hash)
+          list = Snapshots.read(@model)
+          kept = list.reject { |snap| snap['id'] == payload['id'] }
+          raise 'Không tìm thấy mốc này.' if kept.size == list.size
+          Snapshots.write(@model, kept)
+          emit('snapshots', Snapshots.summary(kept))
+          emit('message', {text: 'Đã xóa mốc.'})
+        end
+        # So mốc với bảng hiện tại (chỉ đọc), gửi kết quả cho giao diện. payload: {'id' => mã mốc}.
+        def snapshot_compare(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu mốc không hợp lệ.' unless payload.is_a?(Hash)
+          raise 'Bảng chưa có dữ liệu. Hãy làm mới bảng.' if @table_rows.nil?
+          snap = Snapshots.read(@model).find { |item| item['id'] == payload['id'] }
+          raise 'Không tìm thấy mốc này.' unless snap
+          emit('snapshot_diff', Snapshots.compare(snap, @table_rows).merge('name' => snap['name'], 'created' => snap['created']))
         end
         # Lưu luật kiểm tra tự đặt (lưu trong model, chỉ ghi dictionary của model, không đụng đối tượng). payload: {'rules' => [...]}.
         def check_rules_save(payload)

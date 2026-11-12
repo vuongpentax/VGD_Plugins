@@ -131,6 +131,8 @@ Trạng thái: 4a đã có sẵn trong preset (Cửa & Cửa sổ, Nội thất,
 - 4b Audit: liệt kê lỗi theo mức INFO / WARNING / ERROR, "Fix All" có xem trước.
 - 4c Luật kiểm tra tự đặt (ví dụ cửa rộng < 700 thì cảnh báo; món chưa có tầng / phòng / ID).
 
+Trạng thái cột mốc 5: so sánh phiên bản (mốc dữ liệu bảng) đã làm ở beta.71; preset Tủ đã thêm. Chưa làm: Type/Instance riêng, Classification mở, tích hợp VGD_Cabinet (cần phiên thiết kế riêng với chủ dự án).
+
 ### Cột mốc 5 — Type, Classification, so sánh phiên bản, VGD_Cabinet
 
 - 5a Type / Instance có dữ liệu Type riêng (sửa Type thì các Instance cập nhật).

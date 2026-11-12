@@ -41,7 +41,7 @@ $transactions = []
 $writes = []
 $vgd_data = {}
 require File.join(ROOT, 'core/settings')
-%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/material_library core/check_rules core/bridge core/levels core/rooms].each { |f| require File.join(ROOT, f) }
+%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/material_library core/check_rules core/snapshots core/bridge core/levels core/rooms].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
@@ -815,6 +815,29 @@ ok('lưu luật: ghi vào model, dựng lại bảng, báo số luật', VGD::BI
 kd.check_rules_run
 res = kd.kcalls.last
 ok('chạy luật: gửi check_results với đúng dòng vi phạm', res[0] == 'check_results' && res[1][:results].map { |r| [r[:name], r[:index]] } == [['Cửa hẹp', 0], ['Thiếu tầng', 0]] && res[1][:rows] == 2 && res[1][:rules] == 2)
+# Mốc phiên bản: chụp từ bảng, lưu trong model, so sánh (chỉ đọc), xóa
+sm = LevelModel.new
+$model = sm
+sd = D.allocate
+sd.instance_variable_set(:@model, sm)
+sd.define_singleton_method(:emit) { |ev, payload| (@scalls ||= []) << [ev, payload] }
+sd.define_singleton_method(:scalls) { @scalls ||= [] }
+sd.instance_variable_set(:@table_rows, [{index: 0, pid: 11, vgd_id: '', name: 'Tu', lenX: 600.0}, {index: 1, pid: 12, vgd_id: '', name: 'Ban', lenX: 900.0}])
+bad_snap = ->(&b) { begin; b.call; nil; rescue StandardError => e; e.message; end }
+ok('chụp mốc không tên: từ chối, model không đổi', bad_snap.call { sd.snapshot_save({'name' => ' '}) }.to_s.include?('tên mốc') && sm.attrs.empty?)
+sd.snapshot_save({'name' => 'Ban dau'})
+ok('chụp mốc: lưu vào model, gửi danh sách gọn và báo số món', VGD::BIM::Snapshots.read(sm).size == 1 && sd.scalls[-2][0] == 'snapshots' && sd.scalls[-2][1][0]['count'] == 2 && sd.scalls.last[1][:text].include?('2 món'))
+sid = VGD::BIM::Snapshots.read(sm)[0]['id']
+sd.instance_variable_set(:@table_rows, [{index: 0, pid: 11, vgd_id: '', name: 'Tu', lenX: 650.0}, {index: 1, pid: 13, vgd_id: '', name: 'Ghe', lenX: 400.0}])
+sd.snapshot_compare({'id' => sid})
+diff = sd.scalls.last
+ok('so sánh: gửi snapshot_diff đúng món mới / không còn / đổi', diff[0] == 'snapshot_diff' && diff[1]['added'].map { |a| a['name'] } == ['Ghe'] && diff[1]['removed'].map { |r| r['name'] } == ['Ban'] && diff[1]['changed'].map { |c| c['name'] } == ['Tu'] && diff[1]['name'] == 'Ban dau')
+ok('so sánh mốc không có: lỗi', bad_snap.call { sd.snapshot_compare({'id' => 'sn_00000000'}) }.to_s.include?('Không tìm thấy'))
+sd.snapshot_list
+ok('danh sách mốc: gửi đúng một mốc', sd.scalls.last[0] == 'snapshots' && sd.scalls.last[1].size == 1)
+ok('xóa mốc không có: lỗi', bad_snap.call { sd.snapshot_delete({'id' => 'sn_00000000'}) }.to_s.include?('Không tìm thấy'))
+sd.snapshot_delete({'id' => sid})
+ok('xóa mốc: model hết mốc', VGD::BIM::Snapshots.read(sm).empty? && sd.scalls.last[1][:text].include?('xóa'))
 $model = ORIGINAL_MODEL
 $vgd_data = {}
 

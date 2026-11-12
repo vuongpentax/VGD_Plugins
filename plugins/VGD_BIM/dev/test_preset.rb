@@ -50,7 +50,7 @@ check 'bản dễ tính: tiêu đề sai bị bỏ, không báo lỗi', P.header
 
 # ---- Preset có sẵn ----
 names = T::BUILT_IN_PRESETS.map { |p| p['name'] }
-check '11 preset có sẵn: 4 của BIM rồi 7 từ JSON, tên không trùng', names == ['Tất cả', 'Phần thô', 'Hoàn thiện', 'Đồ rời', 'Mặc định', 'Phòng & Khu vực', 'Cửa & Cửa sổ', 'Nội thất', 'Thiết bị & Phụ kiện', 'Chiếu sáng', 'Vật liệu'] && names.uniq.size == 11
+check '12 preset có sẵn: 4 của BIM, 7 từ JSON và Tủ, tên không trùng', names == ['Tất cả', 'Phần thô', 'Hoàn thiện', 'Đồ rời', 'Mặc định', 'Phòng & Khu vực', 'Cửa & Cửa sổ', 'Nội thất', 'Tủ', 'Thiết bị & Phụ kiện', 'Chiếu sáng', 'Vật liệu'] && names.uniq.size == 12
 check 'mọi preset có sẵn hợp lệ: cột, tiêu đề, thiết lập, nhóm', T::BUILT_IN_PRESETS.all? { |p| T.sanitize_preset(p) && (p['headers'] || {}).keys.all? { |k| keys.include?(k) } && P.settings!(p['settings']) == p['settings'] }
 check 'mọi preset có sẵn có đủ thiết lập (không thiếu mục)', T::BUILT_IN_PRESETS.all? { |p| p['settings'].keys.sort == d.keys.sort }
 check 'tiêu đề của preset có sẵn chỉ nói về cột đang hiện', T::BUILT_IN_PRESETS.all? { |p| (p['headers'] || {}).keys.all? { |k| p['columns'].include?(k) } }

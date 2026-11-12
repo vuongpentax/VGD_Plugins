@@ -145,6 +145,9 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await page.evaluate(()=>{tableState.data.material_library=[];tableState.panel='materials';tableView(tableState.data);});await scan('Hộp thư viện vật liệu (trống)');
   await page.evaluate(()=>{tableState.data.check_rules=[{id:'ck_aaaaaaaa',name:'Narrow',column:'description',op:'contains',value:'Door',severity:'WARNING',message:'Too narrow'}];tableState.checkResults={results:[{rule:'ck_aaaaaaaa',name:'Narrow',severity:'WARNING',message:'Too narrow',index:0}],truncated:false,rows:3,rules:1};tableState.panel='checks';tableView(tableState.data);});await scan('Hộp luật kiểm tra');
   await page.evaluate(()=>{tableState.data.check_rules=[];tableState.checkResults={results:[],truncated:false,rows:3,rules:1};tableState.panel='checks';tableView(tableState.data);});await scan('Hộp luật kiểm tra (trống)');
+  await page.evaluate(()=>{tableState.snapshots=[{id:'sn_aaaaaaaa',name:'Version A',created:'2026-11-12T08:00:00Z',count:12}];tableState.snapshotDiff={name:'Version A',created:'2026-11-12T08:00:00Z',added:[{key:'k1',name:'Chair',index:2}],removed:[{key:'k2',name:'Old table'}],changed:[{key:'k3',name:'Cabinet',index:1,diffs:[{field:'lenX',old:600,new:650},{field:'calc_qty',old:null,new:2},{field:'room',old:'',new:'R1'}]}],unchanged:9};tableState.panel='snapshots';tableView(tableState.data);});await scan('Hộp so sánh phiên bản');
+  await page.evaluate(()=>{tableState.snapshots=[];tableState.snapshotDiff=null;tableState.panel='snapshots';tableView(tableState.data);});await scan('Hộp so sánh phiên bản (trống)');
+  await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
   await page.evaluate(()=>{tableState.panel=null;tableState.checkResults=null;tableView(tableState.data);});
   await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
   await receive('message',{text:'Đã lưu 2 phòng.'});await scan('Thông báo lưu phòng');

@@ -26,7 +26,7 @@ keys = T::COLUMN_KEYS
 check 'có đủ cột kiểu Auto Info, cột Ảnh, cột Ảnh vị trí, 7 cột mới và 2 cột Mặt trước, 1 cột Ghi chú số đo, 5 cột Khối lượng tính (46 cột, không trùng)', keys.size == 46 && keys.uniq.size == keys.size && %w[calc_category calc_method calc_qty calc_unit calc_total].all? { |k| keys.include?(k) }
 check 'mọi cột của preset có sẵn đều hợp lệ', T::BUILT_IN_PRESETS.all? { |p| p['columns'].all? { |c| keys.include?(c) } }
 check 'preset có sẵn có nhóm hợp lệ', T::BUILT_IN_PRESETS.all? { |p| p['group'].empty? || VGD::BIM::Tags::GROUPS.include?(p['group']) }
-check 'có 11 preset có sẵn, 4 preset BIM đứng đầu', T::BUILT_IN_PRESETS.size == 11 && T::BUILT_IN_PRESETS.first(4).map { |p| p['name'] } == ['Tất cả', 'Phần thô', 'Hoàn thiện', 'Đồ rời']
+check 'có 12 preset có sẵn, 4 preset BIM đứng đầu', T::BUILT_IN_PRESETS.size == 12 && T::BUILT_IN_PRESETS.first(4).map { |p| p['name'] } == ['Tất cả', 'Phần thô', 'Hoàn thiện', 'Đồ rời']
 check 'Phần thô, Hoàn thiện, Đồ rời lọc đúng nhóm mới S. STRUCTURAL, A. ARCHITECTURAL, I. INTERIOR (nhóm cũ đã bỏ)', T::BUILT_IN_PRESETS[1..3].map { |p| p['group'] } == ['S. STRUCTURAL', 'A. ARCHITECTURAL', 'I. INTERIOR']
 check 'cột giữ đúng thứ tự người dùng sắp xếp khi lưu preset', T.sanitize_preset('name' => 'x', 'group' => '', 'columns' => %w[quantity lenX ordinal])['columns'] == %w[quantity lenX ordinal]
 check 'bỏ cột lạ khi lưu preset', T.sanitize_preset('name' => 'x', 'group' => '', 'columns' => %w[lenX abc])['columns'] == %w[lenX]
@@ -37,7 +37,7 @@ check 'từ chối nhóm preset lạ', raises? { T.sanitize_preset('name' => 'x'
 check 'không lưu được preset trùng tên có sẵn', raises?('trùng') { T.save_preset('Phần thô', 'Phần thô', %w[lenX]) }
 T.save_preset('Vách kính', 'Hoàn thiện', %w[instance areaFace quantity])
 check 'lưu preset riêng rồi đọc lại được', T.custom_presets.map { |p| p['name'] } == ['Vách kính']
-check 'danh sách preset có cả preset có sẵn và preset đã lưu', T.presets.size == 12 && T.presets.last['builtin'] == false
+check 'danh sách preset có cả preset có sẵn và preset đã lưu', T.presets.size == 13 && T.presets.last['builtin'] == false
 T.save_preset('Vách kính', 'Đồ rời', %w[instance quantity])
 check 'lưu trùng tên thì ghi đè, không nhân đôi', T.custom_presets.size == 1 && T.custom_presets.first['group'] == 'I. INTERIOR'
 T.delete_preset('Vách kính')

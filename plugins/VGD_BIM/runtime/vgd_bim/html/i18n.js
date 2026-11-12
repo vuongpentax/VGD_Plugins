@@ -284,6 +284,19 @@ const VGD_I18N=(()=>{
     'Mức độ':'Severity',
     'Lời nhắn (để trống thì dùng tên luật)':'Message (leave empty to use the rule name)',
     'Chưa có luật nào. Bấm Thêm luật.':'No rules yet. Press Add rule.',
+    'So sánh phiên bản...':'Compare versions...',
+    'So sánh phiên bản':'Compare versions',
+    'Chụp mốc giá trị các món rồi so với bảng hiện tại để biết món nào thêm, xóa hoặc đổi':'Take a snapshot of item values, then compare it with the current table to see which items were added, removed or changed',
+    'Chụp mốc để nhớ giá trị của các món ở thời điểm này, sau đó so với bảng hiện tại để biết món nào thêm, xóa hoặc đổi. Mốc lưu trong file SketchUp (tối đa 5 mốc), chỉ đọc bảng.':'Take a snapshot to remember item values at this moment, then compare it with the current table to see which items were added, removed or changed. Snapshots are saved in the SketchUp file (up to 5) and only read the table.',
+    'Tên mốc':'Snapshot name',
+    'Tên mốc (ví dụ Bản gửi khách 12/11)':'Snapshot name (e.g. Version sent to client)',
+    'Chụp mốc hiện tại':'Take snapshot now',
+    'So sánh':'Compare',
+    'Xóa mốc này':'Delete this snapshot',
+    'Chưa có mốc nào. Nhập tên rồi bấm Chụp mốc hiện tại.':'No snapshots yet. Enter a name and press Take snapshot now.',
+    'Đã xóa mốc.':'Snapshot deleted.',
+    'Hãy nhập tên mốc.':'Enter a snapshot name.',
+    'Thay đổi':'Changed','Không còn':'Removed',
     'Gán VGD ID cho món đang chọn':'Assign VGD ID to selected items','Sửa VGD ID trùng':'Fix duplicate VGD IDs','Hãy chọn các dòng cần gán VGD ID (Ctrl+A chọn hết các dòng đang hiện).':'Select the rows to assign a VGD ID (Ctrl+A selects all visible rows).','Gán mã định danh VGD ID cho các món đang chọn chưa có ID (món đã có ID giữ nguyên, món bị khóa bỏ qua; một bước hoàn tác)':'Assign a VGD ID to the selected items that have none (items that already have one are kept, locked items are skipped; one undo step)','Các món do copy mà dùng chung VGD ID: món cũ nhất giữ ID, các món còn lại nhận ID mới (một bước hoàn tác)':'Items that share a VGD ID because of copying: the oldest keeps the ID, the others get a new one (one undo step)','VGD ID':'VGD ID',
     'Thêm cột mới: thuộc tính tùy chọn, thuộc tính động hoặc cột tự nhập':'Add a column: custom attribute, dynamic attribute or free-text column','Thêm cột':'Add column','Kiểu cột':'Column type','Thuộc tính tùy chọn':'Custom attribute','Thuộc tính động (Dynamic Components)':'Dynamic attribute (Dynamic Components)','Cột tự nhập':'Free-text column',
     'Tên cột':'Column name','Tên dictionary':'Dictionary name','Tên thuộc tính':'Attribute name','Ví dụ: Mã vật tư':'e.g. Material code','Ví dụ: vgd':'e.g. vgd','Ví dụ: ma_vat_tu':'e.g. material_code','Ví dụ: price':'e.g. price','Thêm':'Add',
@@ -343,6 +356,10 @@ const VGD_I18N=(()=>{
   rule(/^(\d+) vi phạm trên (\d+) dòng \((\d+) luật\)\.( Chỉ hiện một phần\.)? Bấm vào dòng để chọn món trong bảng\.$/,(m,n,rows,rules,part)=>`${n} violations in ${rows} rows (${rules} rules).${part?' Showing only part.':''} Click a row to select the item in the table.`);
   rule(/^Không có vi phạm nào \((\d+) dòng, (\d+) luật\)\.$/,(m,rows,rules)=>`No violations (${rows} rows, ${rules} rules).`);
   rule(/^Đã lưu (\d+) luật kiểm tra\.$/,(m,n)=>`Saved ${n} check rules.`);
+  rule(/^Xóa mốc (.+)$/,(m,name)=>`Delete snapshot ${name}`);
+  rule(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}) · (\d+) món$/,(m,when,n)=>`${when} · ${n} items`);
+  rule(/^So với mốc (.+): (\d+) món mới, (\d+) món không còn, (\d+) món đổi, (\d+) món giữ nguyên\.$/,(m,name,a,r,c,u)=>`Compared with snapshot ${name}: ${a} new, ${r} removed, ${c} changed, ${u} unchanged.`);
+  rule(/^Đã chụp mốc (.+) \((\d+) món\)\.$/,(m,name,n)=>`Snapshot ${name} taken (${n} items).`);
   rule(/^Xóa vật liệu (.+)$/,(m,name)=>`Delete material ${name}`);
   rule(/^Đang chọn ([\d.,]+) đối tượng trong SketchUp\.$/,(m,n)=>`${plural(n,'object','objects')} selected in SketchUp.`);
   rule(/^Đang chọn ([\d.,]+) đối tượng hoặc mặt trong SketchUp\.$/,(m,n)=>`${plural(n,'object or face','objects or faces')} selected in SketchUp.`);
