@@ -143,6 +143,9 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await receive('message',{text:'Đã lưu 3 vật liệu.'});await scan('Thông báo lưu vật liệu');
   await page.evaluate(()=>{tableState.data.material_library=[{id:'mt_aaaaaaaa',code:'M1',name:'Oak',manufacturer:'',product:'',thickness:null,unit:'m2',price:null,waste:0,spec:'',sketchup_material:''}];tableState.data.sketchup_materials=['Wood'];tableState.panel='materials';tableView(tableState.data);});await scan('Hộp thư viện vật liệu');
   await page.evaluate(()=>{tableState.data.material_library=[];tableState.panel='materials';tableView(tableState.data);});await scan('Hộp thư viện vật liệu (trống)');
+  await page.evaluate(()=>{tableState.data.check_rules=[{id:'ck_aaaaaaaa',name:'Narrow',column:'description',op:'contains',value:'Door',severity:'WARNING',message:'Too narrow'}];tableState.checkResults={results:[{rule:'ck_aaaaaaaa',name:'Narrow',severity:'WARNING',message:'Too narrow',index:0}],truncated:false,rows:3,rules:1};tableState.panel='checks';tableView(tableState.data);});await scan('Hộp luật kiểm tra');
+  await page.evaluate(()=>{tableState.data.check_rules=[];tableState.checkResults={results:[],truncated:false,rows:3,rules:1};tableState.panel='checks';tableView(tableState.data);});await scan('Hộp luật kiểm tra (trống)');
+  await page.evaluate(()=>{tableState.panel=null;tableState.checkResults=null;tableView(tableState.data);});
   await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
   await receive('message',{text:'Đã lưu 2 phòng.'});await scan('Thông báo lưu phòng');
   await receive('message',{text:'Đã gán phòng cho 3 món theo vị trí. 1 món nằm ngoài mọi phòng hoặc không đo được vị trí. Bỏ qua 1 món bị khóa.'});await scan('Thông báo gán phòng');

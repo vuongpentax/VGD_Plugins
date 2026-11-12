@@ -125,7 +125,7 @@ Trạng thái: 3a, 3b và hao hụt % của 3c đã làm (beta.67). Còn lại c
 
 ### Cột mốc 4 — Schedule mẫu, Audit và Validation
 
-Trạng thái: 4a đã có sẵn trong preset (Cửa & Cửa sổ, Nội thất, Hoàn thiện...); chưa thêm mẫu Cabinet riêng vì chờ chốt cột cho tủ. Một phần 4b đã làm (beta.69): báo món thiếu VGD ID và nút gán hàng loạt. Còn lại: Fix All khác và luật kiểm tra tự đặt (4c).
+Trạng thái: 4a đã có sẵn trong preset (Cửa & Cửa sổ, Nội thất, Hoàn thiện...); chưa thêm mẫu Cabinet riêng vì chờ chốt cột cho tủ. Một phần 4b đã làm (beta.69): báo món thiếu VGD ID và nút gán hàng loạt. 4c đã làm (beta.70): luật cột + so sánh + giá trị, lưu trong file SketchUp, chạy trên Bảng khối lượng. Còn lại: Fix All khác và điều kiện lọc theo nhóm món.
 
 - 4a Mẫu Door / Window / Furniture / Cabinet / Finish Schedule lưu như preset; bấm dòng chọn và zoom tới món (đã có).
 - 4b Audit: liệt kê lỗi theo mức INFO / WARNING / ERROR, "Fix All" có xem trước.

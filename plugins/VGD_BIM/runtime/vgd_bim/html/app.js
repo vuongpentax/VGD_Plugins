@@ -1010,6 +1010,56 @@ function levelsPanel(){
   p.append(node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán tầng theo cao độ; hoặc nhấp đúp ô Tầng để gán tay.','muted'),actions);
   return p;
 }
+const CHECK_OPS=[['lt','nhỏ hơn'],['lte','nhỏ hơn hoặc bằng'],['gt','lớn hơn'],['gte','lớn hơn hoặc bằng'],['eq','bằng'],['neq','khác'],['contains','chứa'],['empty','để trống'],['not_empty','không để trống']];
+const CHECK_SEVERITIES=[['INFO','Thông tin'],['WARNING','Cảnh báo'],['ERROR','Lỗi']];
+function checksPanel(){
+  const p=node('div',undefined,'popover right capture-panel checks-panel');
+  const rules=(tableState.data&&tableState.data.check_rules)||[];
+  const columns=((tableState.data&&tableState.data.columns)||[]).filter(c=>!['image','image_location'].includes(c.kind));
+  p.append(node('div','Luật kiểm tra','pop-title'),node('p','Mỗi luật kiểm tra một cột của bảng (số đo tính bằng mm). Luật lưu trong file SketchUp, chỉ đọc bảng, không đổi gì trong model.','muted'));
+  const rows=node('div',undefined,'ck-rows');
+  const collect=()=>[...rows.querySelectorAll('.ck-item')].map(r=>{const o={name:r.querySelector('.ck-name').value,column:r.querySelector('.ck-col').value,op:r.querySelector('.ck-op').value,value:r.querySelector('.ck-val').value,severity:r.querySelector('.ck-sev').value,message:r.querySelector('.ck-msg').value};if(r.dataset.id)o.id=r.dataset.id;return o;});
+  const save=()=>call('check_rules_save',JSON.stringify({rules:collect()}));
+  const select=(cls,options,value,label)=>{const s=node('select',undefined,cls);options.forEach(([v,t])=>s.append(new Option(t,v)));s.value=value;s.setAttribute('aria-label',label);s.onchange=save;return s;};
+  const input=(cls,value,label,max)=>{const i=node('input',undefined,cls);i.type='text';i.value=value;i.maxLength=max;i.setAttribute('aria-label',label);i.onchange=save;return i;};
+  const addRule=rule=>{
+    const r=node('div',undefined,'ck-item');if(rule.id)r.dataset.id=rule.id;
+    const val=input('ck-val',rule.value||'','Giá trị so sánh',80);
+    const op=select('ck-op',CHECK_OPS,rule.op,'Phép so sánh');
+    const sync=()=>{val.hidden=['empty','not_empty'].includes(op.value);};op.addEventListener('change',sync);sync();
+    const del=button('×',()=>{r.remove();save();},'cs-del');del.title='Xóa luật này';del.setAttribute('aria-label','Xóa luật '+rule.name);
+    const top=node('div',undefined,'ck-top');top.append(input('ck-name',rule.name,'Tên luật',60),del);
+    const mid=node('div',undefined,'ck-mid');mid.append(select('ck-col',columns.map(c=>[c.key,c.label]),rule.column,'Cột'),op,val);
+    const low=node('div',undefined,'ck-low');low.append(select('ck-sev',CHECK_SEVERITIES,rule.severity,'Mức độ'),input('ck-msg',rule.message||'','Lời nhắn (để trống thì dùng tên luật)',120));
+    r.append(top,mid,low);rows.append(r);
+  };
+  rules.forEach(addRule);p.append(rows);
+  if(!rules.length)p.append(node('p','Chưa có luật nào. Bấm Thêm luật.','muted'));
+  const add=button('+ Thêm luật',()=>{
+    const first=columns.find(c=>c.kind==='number')||columns[0];
+    if(!first)throw Error('Bảng chưa có cột nào để kiểm tra.');
+    call('check_rules_save',JSON.stringify({rules:[...collect(),{name:`Luật ${rules.length+1}`,column:first.key,op:'lt',value:'0',severity:'WARNING',message:''}]}));
+  });add.id='ck-add';
+  const run=button('Chạy kiểm tra',()=>call('check_rules_run'),'primary');run.id='ck-run';
+  const actions=node('div',undefined,'rename-actions');actions.append(add,run,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
+  p.append(actions);
+  const result=tableState.checkResults;
+  if(result){
+    const found=result.results||[];
+    const sum=node('p',found.length?`${found.length} vi phạm trên ${result.rows} dòng (${result.rules} luật).${result.truncated?' Chỉ hiện một phần.':''} Bấm vào dòng để chọn món trong bảng.`:`Không có vi phạm nào (${result.rows} dòng, ${result.rules} luật).`,'muted');sum.id='ck-summary';p.append(sum);
+    const list=node('div',undefined,'ck-results');
+    found.forEach(f=>{
+      const row=node('div',undefined,'ck-result clickable');row.tabIndex=0;
+      const who=(tableState.data.rows||[]).find(r=>r.index===f.index);
+      row.append(badge(f.severity),node('span',f.message),node('span',who?(who.name||who.definition||''):'','muted'));
+      row.onclick=()=>{tableState.sel=new Set([f.index]);call('table_select',JSON.stringify({indexes:[f.index],field:''}));};
+      row.onkeydown=e=>{if(e.key==='Enter')row.click();};
+      list.append(row);
+    });
+    p.append(list);
+  }
+  return p;
+}
 function capturePanel(){
   const p=node('div',undefined,'popover right capture-panel');
   const targets=captureTargets(),chosen=tableState.sel.size>0;
@@ -1293,7 +1343,7 @@ function closeTablePanel(){
   document.querySelectorAll('.popover').forEach(p=>p.remove());
   document.querySelectorAll('button[aria-expanded="true"]').forEach(b=>{if(!b.closest('header'))b.setAttribute('aria-expanded','false');});
 }
-const PANELS_KEEP_ON_ROW_CLICK=['rename','front','capture','codes','levels','rooms','materials']; // ba bảng này dùng các dòng đang chọn: bấm chọn dòng không đóng
+const PANELS_KEEP_ON_ROW_CLICK=['rename','front','capture','codes','levels','rooms','materials','checks']; // ba bảng này dùng các dòng đang chọn: bấm chọn dòng không đóng
 document.addEventListener('mousedown',e=>{
   if(!tableState.panel||!(e.target instanceof Element))return;
   const t=e.target;
@@ -1391,7 +1441,9 @@ function ioPanel(){
   roomsBtn.id='rooms-open';roomsBtn.title='Tạo phòng từ mặt sàn đang chọn, sửa tên / mã / tầng / chiều cao / hoàn thiện, xem diện tích, thể tích và gán món vào phòng (chỉ là dữ liệu, hình khối do VGD_Room dựng)';
   const materialsBtn=item('id','Thư viện vật liệu...',()=>{tableState.panel='materials';tableView(tableState.data);});
   materialsBtn.id='materials-open';materialsBtn.title='Thư viện vật liệu (mã, hãng, đơn giá, hao hụt...) nối với vật liệu SketchUp theo tên để tính khối lượng có hao hụt và thành tiền theo vật liệu';
-  p.append(assignIds,fixIds,codesBtn,levelsBtn,roomsBtn,materialsBtn);
+  const checksBtn=item('id','Luật kiểm tra...',()=>{tableState.panel='checks';tableView(tableState.data);});
+  checksBtn.id='checks-open';checksBtn.title='Đặt luật kiểm tra riêng cho bảng (ví dụ Rộng nhỏ hơn 700 thì cảnh báo, Tầng để trống thì thông tin) rồi chạy và bấm vào kết quả để chọn món';
+  p.append(assignIds,fixIds,codesBtn,levelsBtn,roomsBtn,materialsBtn,checksBtn);
   return p;
 }
 function bottomBar(){
@@ -1452,6 +1504,7 @@ function tableView(data){
   if(tableState.panel==='levels')bar.append(levelsPanel());
   if(tableState.panel==='rooms')bar.append(roomsPanel());
   if(tableState.panel==='materials')bar.append(materialsPanel());
+  if(tableState.panel==='checks')bar.append(checksPanel());
   if(tableState.panel==='front')bar.append(frontPanel());
   if(tableState.panel==='rename')bar.append(renamePanel());
   const side=$('col-side'),host=$('grid-host');
@@ -1475,6 +1528,7 @@ window.VGD={receive(event,data){
   if(event==='config'){document.body.classList.remove('table-mode');updateSelInfo();if(appliedLanguage&&data.language&&appliedLanguage!==data.language){location.reload();return;}appliedLanguage=data.language||'vi';VGD_I18N.setLanguage(appliedLanguage,data.vi_en);config=data;if(config.table&&!tableState.restored)restoreView({view:config.table.view,columns:config.table.columns,presets:config.table.presets});updatePresetButton();locale=data.locale||locale;$('subtitle').textContent=`${data.version} · ${translated('modes',data.mode)}`;document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===(TAB_OF[data.mode]||data.mode);b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});$('preview').close();$('content').replaceChildren();$('primary-actions').replaceChildren();document.querySelector('main').scrollTop=0;message('Đang đọc dữ liệu…');}
   if(event==='table'){tableState.manual=Array.isArray(data.row_order)?data.row_order:[];tableState.rename.preview=null;tableState.sel=new Set(Array.isArray(data.selected)?data.selected:[]);if(!tableState.sel.has(tableState.anchor))tableState.anchor=null;} // bảng đổi thì bản xem trước đổi tên cũ không còn đúng
   const renderers={information,scan,mapping,validation,rules,tags:tagEditor,table:tableView};if(renderers[event]){renderers[event](data);message('Sẵn sàng.');}
+  if(event==='check_results'){tableState.checkResults=data;tableState.panel='checks';if(tableState.data)tableView(tableState.data);}
   if(event==='highlight')highlightRows(data.indexes);
   if(event==='options'&&tableState.data){tableState.data.options=data;tableView(tableState.data);}
   if(event==='presets'){

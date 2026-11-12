@@ -261,6 +261,29 @@ const VGD_I18N=(()=>{
     'Tạo phòng từ mặt đang chọn':'Create room from selected face','Gán món vào phòng theo vị trí':'Assign items to rooms by position','Chưa có phòng nào. Chọn một mặt sàn trong SketchUp rồi bấm Tạo phòng từ mặt đang chọn.':'No rooms yet. Select a floor face in SketchUp, then click Create room from selected face.','Chọn dòng để gán phòng theo vị trí; hoặc nhấp đúp ô Phòng để gán tay.':'Select rows to assign rooms by position, or double-click a Room cell to assign by hand.','Hãy chọn các dòng cần gán phòng (Ctrl+A chọn hết các dòng đang hiện).':'Select the rows to assign a room (Ctrl+A selects all visible rows).',
     'Xóa phòng này (món đã gán chỉ hiện "phòng đã xóa", không mất dữ liệu khác)':'Delete this room (assigned items just show "deleted room", no other data is lost)','Đọc viền của mặt sàn (Face nằm ngang) đang chọn trong SketchUp và lưu thành phòng. Chỉ lưu dữ liệu, không dựng hình.':'Reads the outline of the selected horizontal floor face in SketchUp and saves it as a room. Data only, no geometry is built.','Mỗi món nhận phòng chứa tâm đáy của nó (trong viền và trong khoảng cao của phòng). Chỉ là nhãn, không dời hình.':'Each item gets the room that contains the centre of its base (inside the outline and the room height). Labels only, nothing is moved.','Tạo phòng từ mặt sàn đang chọn, sửa tên / mã / tầng / chiều cao / hoàn thiện, xem diện tích, thể tích và gán món vào phòng (chỉ là dữ liệu, hình khối do VGD_Room dựng)':'Create rooms from the selected floor face, edit name / code / level / height / finishes, see area and volume and assign items to rooms (data only, the 3D volume is built by VGD_Room)',
     'Chưa có VGD ID, hãy bấm Gán VGD ID cho tất cả món chưa có':'No VGD ID yet. Press Assign VGD ID to all items without one','Mọi món đều đã có VGD ID.':'All items already have a VGD ID.',
+    'Luật kiểm tra...':'Check rules...',
+    'Đặt luật kiểm tra riêng cho bảng (ví dụ Rộng nhỏ hơn 700 thì cảnh báo, Tầng để trống thì thông tin) rồi chạy và bấm vào kết quả để chọn món':'Define your own check rules for the table (for example Width less than 700 gives a warning, empty Level gives info), run them and click a result to select the item',
+    'Luật kiểm tra':'Check rules',
+    'Mỗi luật kiểm tra một cột của bảng (số đo tính bằng mm). Luật lưu trong file SketchUp, chỉ đọc bảng, không đổi gì trong model.':'Each rule checks one table column (measurements are in mm). Rules are saved in the SketchUp file; they only read the table and change nothing in the model.',
+    'nhỏ hơn':'less than',
+    'nhỏ hơn hoặc bằng':'less than or equal to',
+    'lớn hơn':'greater than',
+    'lớn hơn hoặc bằng':'greater than or equal to',
+    'bằng':'equals',
+    'khác':'not equal to',
+    'chứa':'contains',
+    'để trống':'is empty',
+    'không để trống':'is not empty',
+    'Lỗi':'Error',
+    '+ Thêm luật':'+ Add rule',
+    'Chạy kiểm tra':'Run check',
+    'Tên luật':'Rule name',
+    'Xóa luật này':'Delete this rule',
+    'Phép so sánh':'Comparison',
+    'Giá trị so sánh':'Compare to value',
+    'Mức độ':'Severity',
+    'Lời nhắn (để trống thì dùng tên luật)':'Message (leave empty to use the rule name)',
+    'Chưa có luật nào. Bấm Thêm luật.':'No rules yet. Press Add rule.',
     'Gán VGD ID cho món đang chọn':'Assign VGD ID to selected items','Sửa VGD ID trùng':'Fix duplicate VGD IDs','Hãy chọn các dòng cần gán VGD ID (Ctrl+A chọn hết các dòng đang hiện).':'Select the rows to assign a VGD ID (Ctrl+A selects all visible rows).','Gán mã định danh VGD ID cho các món đang chọn chưa có ID (món đã có ID giữ nguyên, món bị khóa bỏ qua; một bước hoàn tác)':'Assign a VGD ID to the selected items that have none (items that already have one are kept, locked items are skipped; one undo step)','Các món do copy mà dùng chung VGD ID: món cũ nhất giữ ID, các món còn lại nhận ID mới (một bước hoàn tác)':'Items that share a VGD ID because of copying: the oldest keeps the ID, the others get a new one (one undo step)','VGD ID':'VGD ID',
     'Thêm cột mới: thuộc tính tùy chọn, thuộc tính động hoặc cột tự nhập':'Add a column: custom attribute, dynamic attribute or free-text column','Thêm cột':'Add column','Kiểu cột':'Column type','Thuộc tính tùy chọn':'Custom attribute','Thuộc tính động (Dynamic Components)':'Dynamic attribute (Dynamic Components)','Cột tự nhập':'Free-text column',
     'Tên cột':'Column name','Tên dictionary':'Dictionary name','Tên thuộc tính':'Attribute name','Ví dụ: Mã vật tư':'e.g. Material code','Ví dụ: vgd':'e.g. vgd','Ví dụ: ma_vat_tu':'e.g. material_code','Ví dụ: price':'e.g. price','Thêm':'Add',
@@ -316,6 +339,10 @@ const VGD_I18N=(()=>{
   rule(/^Đã thêm cột (.+)\.$/,(m,name)=>`Added column ${name}.`);
   rule(/^Xóa cột (.+)$/,(m,name)=>`Delete column ${name}`);
   rule(/^Gán VGD ID cho tất cả món chưa có \((\d+)\)$/,(m,n)=>`Assign VGD ID to all items without one (${n})`);
+  rule(/^Xóa luật (.+)$/,(m,name)=>`Delete rule ${name}`);
+  rule(/^(\d+) vi phạm trên (\d+) dòng \((\d+) luật\)\.( Chỉ hiện một phần\.)? Bấm vào dòng để chọn món trong bảng\.$/,(m,n,rows,rules,part)=>`${n} violations in ${rows} rows (${rules} rules).${part?' Showing only part.':''} Click a row to select the item in the table.`);
+  rule(/^Không có vi phạm nào \((\d+) dòng, (\d+) luật\)\.$/,(m,rows,rules)=>`No violations (${rows} rows, ${rules} rules).`);
+  rule(/^Đã lưu (\d+) luật kiểm tra\.$/,(m,n)=>`Saved ${n} check rules.`);
   rule(/^Xóa vật liệu (.+)$/,(m,name)=>`Delete material ${name}`);
   rule(/^Đang chọn ([\d.,]+) đối tượng trong SketchUp\.$/,(m,n)=>`${plural(n,'object','objects')} selected in SketchUp.`);
   rule(/^Đang chọn ([\d.,]+) đối tượng hoặc mặt trong SketchUp\.$/,(m,n)=>`${plural(n,'object or face','objects or faces')} selected in SketchUp.`);

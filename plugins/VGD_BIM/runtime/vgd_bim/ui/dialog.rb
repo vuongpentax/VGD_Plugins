@@ -87,6 +87,8 @@ module VGD
           @dialog.add_action_callback('table_rooms') { |_ctx, payload| safely { table_rooms(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_from_selection') { |_ctx, payload| safely { table_room_from_selection(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_assign_rooms_auto') { |_ctx, payload| safely { table_assign_rooms_auto(JSON.parse(payload)) } }
+          @dialog.add_action_callback('check_rules_save') { |_ctx, payload| safely { check_rules_save(JSON.parse(payload)) } }
+          @dialog.add_action_callback('check_rules_run') { |_ctx| safely { check_rules_run } }
           @dialog.add_action_callback('table_levels') { |_ctx, payload| safely { table_levels(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_assign_levels_auto') { |_ctx, payload| safely { table_assign_levels_auto(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_assign_codes') { |_ctx, payload| safely { table_assign_codes(JSON.parse(payload)) } }
@@ -368,7 +370,7 @@ module VGD
                  elsif built[:hidden].to_i.positive?
                    "Đã ẩn #{built[:hidden]} đối tượng thuộc tag loại trừ."
                  end
-          emit('table', {material_library: MaterialLibrary.read, sketchup_materials: (@model.respond_to?(:materials) ? @model.materials.to_a.map { |m| m.display_name.to_s }.sort_by(&:downcase) : []), bridge: {room_volume: !Bridge.provider_for('room_volume').nil?}, rooms: rooms_view, levels: Levels.read(@model), columns: Table.columns, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
+          emit('table', {check_rules: CheckRules.read(@model), material_library: MaterialLibrary.read, sketchup_materials: (@model.respond_to?(:materials) ? @model.materials.to_a.map { |m| m.display_name.to_s }.sort_by(&:downcase) : []), bridge: {room_volume: !Bridge.provider_for('room_volume').nil?}, rooms: rooms_view, levels: Levels.read(@model), columns: Table.columns, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
                          statuses: Table::STATUS_LABELS, options: @table_options.merge(isolating: !@isolated.empty?),
                          rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state, choices: table_choices,
                          row_order: RowOrder.read(@model)})
@@ -542,6 +544,24 @@ module VGD
           notes += " #{plan[:none].size} món nằm ngoài mọi phòng hoặc không đo được vị trí." unless plan[:none].empty?
           notes += " Bỏ qua #{plan[:locked].size} món bị khóa." unless plan[:locked].empty?
           emit('message', {text: "Đã gán phòng cho #{plan[:assign].size} món theo vị trí.#{notes}"})
+        end
+        # Lưu luật kiểm tra tự đặt (lưu trong model, chỉ ghi dictionary của model, không đụng đối tượng). payload: {'rules' => [...]}.
+        def check_rules_save(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu luật không hợp lệ.' unless payload.is_a?(Hash)
+          list = CheckRules.sanitize!(payload['rules'], Table.column_keys)
+          CheckRules.write(@model, list)
+          table_build
+          emit('message', {text: "Đã lưu #{list.size} luật kiểm tra."})
+        end
+        # Chạy các luật đã lưu trên các dòng đang có của bảng (chỉ đọc), gửi kết quả cho giao diện.
+        def check_rules_run
+          check_model!
+          rules = CheckRules.read(@model)
+          raise 'Chưa có luật nào. Hãy thêm luật kiểm tra trước.' if rules.empty?
+          raise 'Bảng chưa có dữ liệu. Hãy làm mới bảng.' if @table_rows.nil?
+          outcome = CheckRules.evaluate(rules, @table_rows)
+          emit('check_results', outcome.merge(rows: @table_rows.size, rules: rules.size))
         end
         # Lưu danh sách tầng của công trình (Quản lý tầng). payload: {'levels' => [{id?, name, elevation, height}]}. Chỉ ghi vào model (không đụng đối tượng).
         def table_levels(payload)

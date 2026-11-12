@@ -41,7 +41,7 @@ $transactions = []
 $writes = []
 $vgd_data = {}
 require File.join(ROOT, 'core/settings')
-%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/material_library core/bridge core/levels core/rooms].each { |f| require File.join(ROOT, f) }
+%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/material_library core/check_rules core/bridge core/levels core/rooms].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
@@ -797,6 +797,24 @@ ok('kiểm tra: gán ID cho món chưa có (0, 1), món khóa (2) bỏ qua, món
 $transactions.clear
 vd.validation_assign_ids
 ok('kiểm tra: không còn món nào cần gán thì báo rõ, không mở thao tác', $transactions.empty? && vd.icalls.last[1][:text].include?('đều đã có'))
+# Luật kiểm tra tự đặt: lưu trong model, chạy trên dòng của bảng (chỉ đọc)
+km = LevelModel.new
+$model = km
+kd = D.allocate
+kd.instance_variable_set(:@model, km)
+kd.define_singleton_method(:emit) { |ev, payload| (@kcalls ||= []) << [ev, payload] }
+kd.define_singleton_method(:kcalls) { @kcalls ||= [] }
+kd.define_singleton_method(:table_build) { @built = (@built || 0) + 1 }
+kd.instance_variable_set(:@table_rows, [{index: 0, lenX: 650, level: ''}, {index: 1, lenX: 900, level: 'T1'}])
+bad_rule = ->(&b) { begin; b.call; nil; rescue StandardError => e; e.message; end }
+ok('chạy khi chưa có luật: báo lỗi', bad_rule.call { kd.check_rules_run }.to_s.include?('Chưa có luật'))
+ok('lưu luật có cột không có trong bảng: từ chối, model không đổi', bad_rule.call { kd.check_rules_save({'rules' => [{'name' => 'X', 'column' => 'zzz', 'op' => 'empty', 'severity' => 'INFO'}]}) }.to_s.include?('không có trong bảng') && km.attrs.empty?)
+ok('lưu luật không phải Hash: từ chối', bad_rule.call { kd.check_rules_save([]) }.to_s.include?('không hợp lệ'))
+kd.check_rules_save({'rules' => [{'name' => 'Cửa hẹp', 'column' => 'lenX', 'op' => 'lt', 'value' => '700', 'severity' => 'WARNING', 'message' => ''}, {'name' => 'Thiếu tầng', 'column' => 'level', 'op' => 'empty', 'severity' => 'INFO'}]})
+ok('lưu luật: ghi vào model, dựng lại bảng, báo số luật', VGD::BIM::CheckRules.read(km).size == 2 && kd.instance_variable_get(:@built) == 1 && kd.kcalls.last[1][:text].include?('2 luật'))
+kd.check_rules_run
+res = kd.kcalls.last
+ok('chạy luật: gửi check_results với đúng dòng vi phạm', res[0] == 'check_results' && res[1][:results].map { |r| [r[:name], r[:index]] } == [['Cửa hẹp', 0], ['Thiếu tầng', 0]] && res[1][:rows] == 2 && res[1][:rules] == 2)
 $model = ORIGINAL_MODEL
 $vgd_data = {}
 
