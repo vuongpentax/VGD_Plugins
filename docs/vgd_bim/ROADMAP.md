@@ -34,7 +34,7 @@ Nguyên tắc đề xuất cho cầu nối (chi tiết viết thành đặc tả
 4. **Danh bạ plugin (registry):** mỗi plugin khai báo mã, loại đối tượng nó dựng, lệnh Tạo mới và lệnh Sửa đối tượng đã có. BIM hiện nút "Sửa bằng <plugin>" trên dòng của đối tượng đó. VGD Center (đã biết plugin nào được cài) là nơi hợp lý để giữ danh bạ này.
 5. **Có số phiên bản cầu nối** (`bridge_version`); plugin và BIM khác phiên bản thì báo rõ, không đoán.
 6. **Một nguồn sự thật cho hình và tham số:** hình và tham số thuộc plugin dựng; thông tin quản lý (ID, tầng, phòng, vật liệu, khối lượng, trạng thái) thuộc BIM. BIM không sửa tham số hình của plugin khác.
-7. **Phát triển dần:** cột mốc 1 viết đặc tả hợp đồng dữ liệu (ID, Category, nguồn tạo) để mọi plugin dựng hình về sau theo đúng; danh bạ và lệnh Tạo / Sửa (BIM gọi plugin) làm khi có plugin dựng hình đầu tiên (VGD_Cabinet hoặc plugin Phòng ở cột mốc 2, tùy cái nào tới trước). Trên menu Nhập / Xuất của VGD_BIM đã có chỗ giữ sẵn tên "Cầu nối dữ liệu".
+7. **Phát triển dần:** cột mốc 1 viết đặc tả hợp đồng dữ liệu (ID, Category, nguồn tạo) để mọi plugin dựng hình về sau theo đúng; danh bạ và lệnh Tạo / Sửa (BIM gọi plugin) làm khi có plugin dựng hình đầu tiên (VGD_Cabinet hoặc plugin Phòng ở cột mốc 2, tùy cái nào tới trước). Trên menu Công cụ của VGD_BIM đã có chỗ giữ sẵn tên "Cầu nối dữ liệu".
 
 Hệ quả cho kế hoạch: tường, sàn, cửa, thang, mái... **không phải việc của VGD_BIM**; mục "công cụ dựng đối tượng kiến trúc có tham số" ở cuối mục 5 được hiểu là các plugin riêng nối qua cầu nối.
 

@@ -76,14 +76,14 @@ main{flex:1;min-height:0;overflow:auto;padding:14px 16px}.card{background:var(--
 /* Thanh công cụ một hàng */
 .toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 .toolbar .grow{flex:1 1 8px}
-.search-wrap{position:relative;display:inline-flex;align-items:center}
-.search-wrap input{width:170px;padding-right:24px}
+.search-wrap{position:relative;display:inline-flex;align-items:center;flex:1 1 110px;max-width:200px;min-width:90px}
+.search-wrap input{width:100%;padding-right:24px}
 .search-clear{position:absolute;right:2px;min-height:0;height:22px;width:22px;padding:0;border:0;background:transparent;font-size:15px;line-height:1;color:var(--muted)}
 .replace-box{display:inline-flex;gap:4px;align-items:center}
 .replace-box input{width:140px}
 .capture-panel{width:300px}
 .popover.up{top:auto;bottom:calc(100% + 4px)}
-.io-panel{width:230px;display:flex;flex-direction:column;gap:2px}
+.io-panel{width:270px;display:flex;flex-direction:column;gap:2px}
 .io-panel .pop-pick{text-align:left}
 .io-item{display:flex;align-items:center;gap:8px}
 .io-item svg{flex:none}
@@ -122,7 +122,7 @@ main{flex:1;min-height:0;overflow:auto;padding:14px 16px}.card{background:var(--
 @media(max-width:640px){.pp-grid{grid-template-columns:1fr}.pp-right{border-left:0;padding-left:0;border-top:1px solid var(--border);padding-top:10px}}
 .bottombar select{height:28px;font-size:12px}
 .bottombar>button,.footer-menu>button{min-height:28px;padding:4px 10px;font-size:12px}
-.footer-menu{margin-left:auto}
+.footer-menu{margin-left:auto;display:flex;gap:6px;align-items:center}
 
 /* Bảng khối lượng chiếm hết chiều cao: thanh công cụ và chân trang cố định, tiêu đề cột và dòng tổng cố định, chỉ cuộn các hàng trong bảng */
 body.table-mode main{display:flex;flex-direction:column;overflow:hidden;padding:10px 12px 0}
@@ -290,3 +290,9 @@ button.danger{background:var(--danger,#b3412d);border-color:var(--danger,#b3412d
 .pp-group .pp-row label:not(.pp-mini){flex:0 0 96px}
 .f-mini{display:flex;flex-direction:column;gap:1px;font-size:10px;color:var(--muted);min-width:0}.f-mini input,.f-mini select{width:100%}
 .lv-row input{height:30px}
+
+.io-head{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:6px 6px 1px}.io-head:first-child{padding-top:2px}
+.opts-panel{width:260px;display:flex;flex-direction:column}.opts-panel .switches{display:flex;flex-direction:column;flex-wrap:nowrap;gap:7px}.opts-panel .sw-label{font-size:12px}
+.toolbar select[aria-label="Nhóm hạng mục"]{flex:0 1 150px;min-width:100px}
+.io-panel{max-height:calc(100vh - 170px)}.io-panel>*{flex:none}
+.opts-panel .switches{align-items:flex-start}.opts-panel .io-head{align-self:stretch;text-align:left}.opts-panel .sw-item{justify-content:flex-start}

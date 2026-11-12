@@ -40,6 +40,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   });
   const cellText=(row,key)=>page.locator('.grid tbody tr').nth(row).locator(`td[data-key="${key}"]`).innerText();
   const headText=()=>page.locator('.grid thead tr:first-child').innerText();
+  const openOptions=async()=>{if(!(await page.locator('.opts-panel').count()))await page.click('#opts-btn');}; // công tắc nằm trong bảng Tùy chọn
   const openPresets=async()=>{if(!(await page.locator('#preset-panel').isVisible()))await page.click('#preset-btn');};
   const usePreset=async name=>{await openPresets();await page.locator('#preset-panel .pp-pick',{hasText:new RegExp('^'+name.replace(/[.*+?^${}()|[\]\\&]/g,'\\$&')+'$')}).click();};
   const choose=(label,value)=>page.selectOption(`#preset-panel select[aria-label="${label}"]`,String(value));
@@ -220,6 +221,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(Math.abs(lay.footGap)<=1,'cuộn xuống: dòng tổng cộng vẫn dính ở đáy khung bảng');
   ok(lay.fillGap<=14,'khung bảng kéo dài tới sát chân trang (không để trống khoảng lớn bên dưới)');
   ok(lay.barInside,'chân trang (các nút gạt) nằm cố định dưới khung bảng, không bị cuộn mất');
+  await openOptions();
   const sw=await page.locator('.bottombar .sw').first().evaluate(el=>({w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height}));
   ok(Math.round(sw.w)===40 && Math.round(sw.h)===22,'nút gạt cùng kích thước với tab Quản lý của Center (40 x 22)');
   await receive('table',table());
@@ -378,19 +380,25 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
 
   // ---- Chân trang ----
   await clear();
+  await openOptions();
   ok((await page.locator('.bottombar .sw-label').allInnerTexts()).join('|')==='Thu phóng đối tượng|Cô lập đối tượng chọn|Chọn sâu bên trong|Diện tích chiếu|Bảng tên trên model|Hiển thị dòng tính tổng|Tổng chỉ cấp cao nhất' && await page.locator('.bottombar button[role="switch"]').count()===7,'chân trang: 7 nút gạt (role switch), có Diện tích chiếu và Bảng tên trên model');
 
   await clear();
+  await openOptions();
   ok((await page.locator('.bottombar .sw').nth(4).getAttribute('aria-checked'))==='true','công tắc Bảng tên trên model: mặc định bật');
+  await openOptions();
   await page.getByRole('switch',{name:'Bảng tên trên model'}).click();
   ok(JSON.stringify(await json('table_option'))==='{"label":false}','tắt Bảng tên trên model: gửi label = false cho Ruby');
   await receive('options',{zoom:true,isolate:false,deep:false,projected:false,label:false,isolating:false});
+  await openOptions();
   ok((await page.locator('.bottombar .sw').nth(4).getAttribute('aria-checked'))==='false','Ruby báo tắt: công tắc chuyển sang tắt');
+  await openOptions();
   await clear();await page.getByRole('switch',{name:'Bảng tên trên model'}).click();
   ok(JSON.stringify(await json('table_option'))==='{"label":true}','bật lại: gửi label = true');
+  await openOptions();
   await receive('options',{zoom:true,isolate:false,deep:false,projected:false,label:true,isolating:false});  await page.getByRole('switch',{name:'Diện tích chiếu',exact:true}).click();
   ok(JSON.stringify(await json('table_option'))==='{"projected":true}','công tắc Diện tích chiếu: gửi tuỳ chọn');
-  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();
   ok((await page.locator('.io-panel button').allInnerTexts()).map(x=>x.replace(/\s+/g,' ').trim()).join('|')==='Cầu nối dữ liệu Sắp có|Xuất Excel|In PDF|Ghi cách tính vào món đang chọn|Gán VGD ID cho món đang chọn|Sửa VGD ID trùng|Đặt mã đối tượng hàng loạt...|Quản lý tầng...|Quản lý phòng...|Thư viện vật liệu...|Luật kiểm tra...|So sánh phiên bản...','menu Nhập / Xuất: Cầu nối dữ liệu (để sẵn, chưa dùng được), Xuất Excel, In PDF, Ghi cách tính vào món, nhập / xuất preset');
   const ioBox=await page.locator('.io-panel').boundingBox(),vp=page.viewportSize();
   ok(ioBox.x>=0 && ioBox.x+ioBox.width<=vp.width && ioBox.y>=0,'menu Nhập / Xuất nằm trọn trong cửa sổ (không bị cắt mép phải)');
@@ -403,7 +411,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(JSON.stringify(await json('table_preset'))==='{"action":"export"}','Xuất preset (JSON) nằm trong bảng Preset: gửi lệnh');
   await page.click('#preset-btn');
   await usePreset('Nội thất');await page.keyboard.press('Escape');
-  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
   const exp=await json('table_export');
   ok(exp.format==='xlsx' && exp.title==='Bảng khối lượng' && exp.preset==='Nội thất' && exp.decimal_separator===',','xuất Excel: gửi định dạng, tiêu đề, preset và dấu thập phân');
   ok(JSON.stringify(exp.columns.map(c=>c.label))==='["STT","Ảnh","Mã hạng mục","Loại","Mô tả","Kích thước (R x S x C)","Thương hiệu","Số lượng"]' && JSON.stringify(exp.columns.map(c=>c.type))==='["ordinal","image","text","text","text","text","text","number"]','xuất Excel: tiêu đề cột theo preset (kể cả tên tự đặt) và kiểu cột');
@@ -413,27 +421,27 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(exp.columns.every(c=>Number.isInteger(c.width)&&c.width>=20&&c.width<=2000) && exp.columns[1].width===72 && exp.labels.reset==='Đặt lại độ rộng cột' && exp.labels.hint.includes('Kéo mép'),'xuất: gửi kèm độ rộng từng cột đang chỉnh trên màn hình (cột Ảnh 72) và nhãn nút chỉnh độ rộng')
   ok(totalRow[0].cells[3]==='Tổng cộng · 3 đối tượng' && totalRow[0].cells[7]===3,'xuất Excel: dòng tổng có nhãn và tổng số lượng');
   await page.evaluate(()=>{tableState.rowHeight=0;});
-  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
   ok(!('row_height' in await json('table_export')),'xuất: chưa chỉnh độ cao hàng thì không gửi row_height (giữ cách xuất mặc định)');
   await page.evaluate(()=>{tableState.rowHeight=140;});
-  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
   ok((await json('table_export')).row_height===140,'xuất: đã chỉnh độ cao hàng (140 px) thì gửi row_height để Excel / PDF to đúng như trên màn hình');
   await page.evaluate(()=>{tableState.rowHeight=0;});
   await usePreset('Tất cả');await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Chọn cột'}).click();
   for(const label of ['Rộng (X) mm','Đơn giá'])await page.locator('.pop-col',{hasText:new RegExp('^\\s*'+label.replace(/[()]/g,'\\$&')+'\\s*⠿?$')}).locator('input').check();
   await page.getByRole('button',{name:'Chọn cột'}).click();
-  await page.getByRole('button',{name:'Nhóm theo: Không nhóm ▾'}).click();
-  const gb=await page.getByRole('button',{name:'Nhóm theo: Không nhóm ▾'}).boundingBox(),gp=await page.locator('.group-panel').boundingBox();
+  await page.getByRole('button',{name:'Nhóm theo ▾'}).click();
+  const gb=await page.getByRole('button',{name:'Nhóm theo ▾'}).boundingBox(),gp=await page.locator('.group-panel').boundingBox();
   ok(Math.abs((gp.x+gp.width)-(gb.x+gb.width))<=1 && gp.y>=gb.y+gb.height-1 && gp.x>=0,'popup Nhóm theo nằm ngay dưới nút Nhóm theo, canh phải theo nút (không lệch sang cạnh nút Chọn cột)');
   await page.getByRole('button',{name:'Tên họ (Definition)'}).click();
-  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await clear();await page.getByRole('button',{name:'In PDF'}).click();
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();await clear();await page.getByRole('button',{name:'In PDF'}).click();
   const pdf=await json('table_export');
   const lenCol=pdf.columns.findIndex(c=>c.label.startsWith('Rộng')),priceCol=pdf.columns.findIndex(c=>c.label==='Đơn giá');
   ok(pdf.format==='pdf' && pdf.rows[0].kind==='group' && pdf.rows[0].cells.some(c=>typeof c==='string' && c.includes('Cabinet · 3')),'In PDF với nhóm theo: dòng nhóm đứng đầu, có tên nhóm và số đối tượng');
   ok(pdf.rows.filter(r=>r.kind==='row').length===3 && pdf.rows[1].cells[lenCol]===1200 && pdf.rows[1].cells[priceCol]===2500000 && pdf.rows[2].cells[priceCol]===null,'xuất theo nhóm: số gửi dạng số đã đổi đơn vị, ô không có giá trị là rỗng');
   ok(pdf.columns[lenCol].unit==='mm' && pdf.columns[lenCol].digits===0 && pdf.columns[priceCol].unit==='VND','xuất: gửi kèm đơn vị và số lẻ của từng cột');
-  await page.getByRole('button',{name:'Nhóm theo: Tên họ (Definition) ▾'}).click();await page.getByRole('button',{name:'Không nhóm'}).click();
+  await page.getByRole('button',{name:'Nhóm: Tên họ (Definition) ▾'}).click();await page.getByRole('button',{name:'Không nhóm'}).click();
 
   // ---- Cột mới ----
   await receive('config',config('table'));await receive('table',table());await usePreset('Tất cả');await page.keyboard.press('Escape');await clear();
@@ -456,6 +464,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await page.locator('.grid tfoot td').allInnerTexts().then(t=>t.some(x=>x==='2.500.000')),'dòng tổng cộng: cộng Thành tiền');
   await usePreset('Tất cả').catch(()=>{});await page.keyboard.press('Escape');
   await receive('table',table({options:{zoom:true,isolate:false,deep:false,projected:true,isolating:false}}));
+  await openOptions();
   ok(await page.locator('.bottombar .sw[aria-checked="true"][aria-label="Diện tích chiếu"]').count()===1,'công tắc Diện tích chiếu phản ánh tuỳ chọn Ruby gửi về');
 
   // ---- Thông tin theo đơn vị của preset ----
@@ -533,10 +542,10 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.evaluate(()=>{tableState.visible.add('front');tableState.visible.add('front_state');tableState.order=tableState.data.columns.map(c=>c.key);tableView(tableState.data);});
   ok(await cellText(0,'front')==='+Y' && await cellText(0,'front_state')==='Tự động · cao' && await cellText(2,'front')==='','cột Mặt trước và Độ tin cậy: hiện hướng và trạng thái, món chưa có thì để trống');
   ok((await page.locator('.grid tbody tr').nth(1).locator('td[data-key="front_state"]').getAttribute('title')).includes('cần duyệt') && !(await page.locator('.grid tbody tr').nth(0).locator('td[data-key="front_state"]').getAttribute('title')),'ô Độ tin cậy: rê chuột hiện lý do tự động chọn (chỉ khi có ghi chú)');
-  await page.getByRole('button',{name:'Nhóm theo: Không nhóm ▾'}).click();await page.getByRole('button',{name:'Mặt trước (độ tin cậy)'}).click();
+  await page.getByRole('button',{name:'Nhóm theo ▾'}).click();await page.getByRole('button',{name:'Mặt trước (độ tin cậy)'}).click();
   const groups=await page.locator('.grid tbody tr.group-row').allInnerTexts();
   ok(groups.some(g=>g.includes('Cần duyệt')) && groups.some(g=>g.includes('(Chưa có mặt trước)')) && groups.some(g=>g.includes('Tự động · cao')),'nhóm theo Mặt trước (độ tin cậy): có nhóm Cần duyệt, Tự động · cao, Chưa có mặt trước');
-  await page.getByRole('button',{name:/Nhóm theo: Mặt trước/}).click();await page.getByRole('button',{name:'Không nhóm'}).click();
+  await page.getByRole('button',{name:/Nhóm: Mặt trước/}).click();await page.getByRole('button',{name:'Không nhóm'}).click();
   await clear();
   await page.click('#front-btn');
   ok((await page.locator('.front-panel').innerText()).includes('Chưa chọn dòng nào: phát hiện tự động cho tất cả 3 đối tượng đang hiện.'),'bảng Mặt trước: chưa chọn dòng thì nói rõ phát hiện cho tất cả');
@@ -621,12 +630,15 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.waitForTimeout(400);
   ok((await sideBox()).width===0 && (await gridLeft())===left0 && (await page.locator('.col-side').evaluate(el=>el.childElementCount))===0,'đóng: ngăn thu lại hết, bảng về chỗ cũ');
   // Nút gạt chân trang: cùng một nút, trượt từ từ
+  await openOptions();
   const totalsSwitch=page.locator('.bottombar .sw').nth(5); // Hiển thị dòng tính tổng
   const swBefore=await totalsSwitch.getAttribute('aria-checked');
+  await openOptions();
   await page.evaluate(()=>{window.__sw=document.querySelectorAll('.bottombar .sw')[5];});
   await totalsSwitch.click();
   await page.waitForTimeout(60);
   const thumb=await page.evaluate(()=>parseFloat(getComputedStyle(window.__sw,'::after').left));
+  await openOptions();
   ok((await totalsSwitch.getAttribute('aria-checked'))!==swBefore && thumb>2 && thumb<20 && await page.evaluate(()=>window.__sw===document.querySelectorAll('.bottombar .sw')[5]),'nút gạt: cùng một phần tử, đầu gạt đang trượt (không nhảy), trạng thái đổi');
   await page.waitForTimeout(250);
   await totalsSwitch.click();await page.waitForTimeout(250);
@@ -1092,7 +1104,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(lc && lc.kind==='location' && !('iso_side' in lc) && lc.settings.loc_view==='isometric' && lc.settings.loc_width===512 && lc.settings.loc_yaw===0,'hộp Cập nhật ảnh: nút ● Theo preset chụp ảnh vị trí theo thiết lập ảnh vị trí của preset (không gửi bên Iso)');
   // Xuất Excel / PDF mang theo cột Ảnh vị trí với loại ảnh riêng
   await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
-  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
   const expLoc=await json('table_export');
   const locCol=expLoc.columns.find(c=>c.label==='Ảnh vị trí'),mainCol=expLoc.columns.find(c=>c.label==='Ảnh');
   ok(locCol && locCol.type==='image' && locCol.image_kind==='location' && (!mainCol || !('image_kind' in mainCol)),'xuất Excel: cột Ảnh vị trí gửi type image kèm image_kind location, cột Ảnh món không có image_kind');

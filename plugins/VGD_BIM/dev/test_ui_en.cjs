@@ -128,7 +128,8 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await page.keyboard.press('Escape');await scan('Bảng (preset Phòng & Khu vực)');
   await page.click('#gear');await scan('Bánh răng');await page.keyboard.press('Escape');
   await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});await scan('Hộp xác nhận chụp ảnh');
-  await page.evaluate(()=>{tableState.panel='io';tableView(tableState.data);});await scan('Menu Nhập / Xuất');
+  await page.evaluate(()=>{tableState.panel='io';tableView(tableState.data);});await scan('Menu Công cụ');
+  await page.evaluate(()=>{tableState.panel='opts';tableView(tableState.data);});await scan('Bảng Tùy chọn');
   await page.evaluate(()=>{tableState.headers={};tableState.panel=null;toggleColumns();});await page.locator('.cs-add').click();await scan('Ngăn Chọn cột (form thêm cột)');
   await page.getByLabel((lang==='en')?'Column type':'Kiểu cột').selectOption('dynamic');await scan('Form thêm cột (thuộc tính động)');
   await page.getByLabel((lang==='en')?'Column type':'Kiểu cột').selectOption('text');await scan('Form thêm cột (cột tự nhập)');

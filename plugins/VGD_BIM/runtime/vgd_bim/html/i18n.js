@@ -334,6 +334,8 @@ const VGD_I18N=(()=>{
     'Lề %':'Margin %','Lệch °':'Turn °','Cao °':'Tilt °','Vùng nhìn (lần)':'View area (times)',
     'Quét ngay':'Scan now','Quét':'Scan','Chưa quét. Quét toàn bộ model có thể mất vài phút và làm SketchUp đứng hình với model lớn. Chọn phạm vi rồi bấm Quét ngay khi bạn sẵn sàng.':'Not scanned yet. Scanning the whole model can take minutes and freeze SketchUp on large models. Choose the scope and press Scan now when you are ready.',
     'Hao hụt %':'Waste %','Dày mm':'Thick. mm','Cao mm':'Height mm','Cao độ sàn':'Floor level',
+    'Công cụ ▾':'Tools ▾','Tùy chọn ▾':'Options ▾','Nhóm theo ▾':'Group by ▾','Xuất':'Export','Mã và dữ liệu món':'Codes and item data','Công trình':'Building','Vật liệu và kiểm tra':'Materials and checks','Khi chọn dòng trong bảng':'When selecting rows','Dòng tính tổng':'Total row',
+    'Thu phóng, cô lập, chọn sâu, diện tích chiếu, bảng tên trên model, dòng tính tổng':'Zoom, isolate, deep select, projected area, model label, total row','Xuất Excel / PDF, mã và VGD ID, tầng, phòng, vật liệu, luật kiểm tra, so sánh phiên bản':'Export Excel / PDF, codes and VGD ID, levels, rooms, materials, check rules, compare versions',
     'Gán VGD ID cho món đang chọn':'Assign VGD ID to selected items','Sửa VGD ID trùng':'Fix duplicate VGD IDs','Hãy chọn các dòng cần gán VGD ID (Ctrl+A chọn hết các dòng đang hiện).':'Select the rows to assign a VGD ID (Ctrl+A selects all visible rows).','Gán mã định danh VGD ID cho các món đang chọn chưa có ID (món đã có ID giữ nguyên, món bị khóa bỏ qua; một bước hoàn tác)':'Assign a VGD ID to the selected items that have none (items that already have one are kept, locked items are skipped; one undo step)','Các món do copy mà dùng chung VGD ID: món cũ nhất giữ ID, các món còn lại nhận ID mới (một bước hoàn tác)':'Items that share a VGD ID because of copying: the oldest keeps the ID, the others get a new one (one undo step)','VGD ID':'VGD ID',
     'Thêm cột mới: thuộc tính tùy chọn, thuộc tính động hoặc cột tự nhập':'Add a column: custom attribute, dynamic attribute or free-text column','Thêm cột':'Add column','Kiểu cột':'Column type','Thuộc tính tùy chọn':'Custom attribute','Thuộc tính động (Dynamic Components)':'Dynamic attribute (Dynamic Components)','Cột tự nhập':'Free-text column',
     'Tên cột':'Column name','Tên dictionary':'Dictionary name','Tên thuộc tính':'Attribute name','Ví dụ: Mã vật tư':'e.g. Material code','Ví dụ: vgd':'e.g. vgd','Ví dụ: ma_vat_tu':'e.g. material_code','Ví dụ: price':'e.g. price','Thêm':'Add',
@@ -424,6 +426,7 @@ const VGD_I18N=(()=>{
   rule(/^(.*) \((vật liệu|đối tượng)\)$/,(m,n,k)=>`${T(n)} (${k==='vật liệu'?'material':'object'})`);
   rule(/^Đã chọn (\d+) \/ (\d+) dòng$/,(m,a,b)=>`Selected ${a} / ${b} rows`);
   rule(/^Nhóm theo: (.*) ▾$/,(m,g)=>`Group by: ${T(g)} ▾`);
+  rule(/^Nhóm: (.*) ▾$/,(m,g)=>`Group: ${T(g)} ▾`);
   rule(/^(.+) ▾$/,(m,g)=>lookup(g)===undefined?m:`${T(g)} ▾`);
   rule(/^Cập nhật (.+)$/,(m,f)=>`Update ${f}`);
   rule(/^Tổng cộng · (\d+) đối tượng$/,(m,n)=>`Total · ${plural(n,'object','objects')}`);
