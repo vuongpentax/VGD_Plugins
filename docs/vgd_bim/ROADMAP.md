@@ -160,7 +160,7 @@ Relationship đầy đủ (Object → Object / Room / Level / Type / Material), 
 
 | Cột mốc | Trạng thái |
 |---|---|
-| 1 Danh tính và Category | Đang làm: 1a xong (beta.62); còn 1b (Mã đối tượng hàng loạt, kiểm tra trùng trong tab Kiểm tra), 1c (Category mở rộng, schema 2) |
+| 1 Danh tính và Category | **Xong ở beta.63** (1a VGD ID, 1b Mã đối tượng hàng loạt và ID trùng ở tab Kiểm tra, 1c danh mục mở rộng). Chủ dự án chốt không làm chuyển đổi dữ liệu cũ nên không đổi `schema_version`; chờ người dùng thử trong SketchUp thật |
 | 2 Tầng và Phòng | Chưa bắt đầu |
 | 3 Vật liệu và luật khối lượng | Chưa bắt đầu |
 | 4 Schedule, Audit, Validation | Chưa bắt đầu |

@@ -6,6 +6,7 @@ require_relative 'front'
 require_relative 'measure'
 require_relative 'custom_columns'
 require_relative 'vgd_id'
+require_relative 'object_code'
 
 module VGD
   module BIM
@@ -27,6 +28,7 @@ module VGD
         {key: 'entity', label: 'Loại', kind: 'text'},
         {key: 'definition', label: 'Họ', kind: 'text'},
         {key: 'instance', label: 'Tên', kind: 'text', editable: 'name'},
+        {key: 'code', label: 'Mã đối tượng', kind: 'text', editable: 'code'},
         {key: 'vgd_id', label: 'VGD ID', kind: 'text'},
         {key: 'description', label: 'Mô tả', kind: 'text', editable: 'description'},
         {key: 'lenX', label: 'Rộng (X) mm', kind: 'number'},
@@ -261,6 +263,7 @@ module VGD
           definition: Geometry.definition(entity).name.to_s,
           name: entity.name.to_s,
           description: data[:description].to_s,
+          code: data[:code].to_s,
           lenX: width, lenY: depth, lenZ: height,
           areaXZ: (width * height / 1_000_000.0).round(3),
           areaXY: (width * depth / 1_000_000.0).round(3),

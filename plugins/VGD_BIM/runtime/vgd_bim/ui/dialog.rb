@@ -81,6 +81,7 @@ module VGD
           @dialog.add_action_callback('table_clear') { |_ctx| safely { table_clear } }
           @dialog.add_action_callback('rename_preview') { |_ctx, payload| safely { rename_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { rename_apply(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_assign_codes') { |_ctx, payload| safely { table_assign_codes(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_assign_ids') { |_ctx, payload| safely { table_assign_ids(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_fix_duplicate_ids') { |_ctx| safely { table_fix_duplicate_ids } }
           @dialog.add_action_callback('table_custom_column') { |_ctx, payload| safely { table_custom_column(JSON.parse(payload)) } }
@@ -401,7 +402,7 @@ module VGD
         # Sửa ô bằng nhấp đúp. payload: {'indexes' => [các dòng], 'field' => name|description|status|tag|material, 'value' => giá trị}.
         # Áp cho mọi dòng gửi lên, bỏ qua đối tượng khóa; cả đợt là một bước hoàn tác. ('index' => một dòng vẫn được nhận.)
         EDIT_LABELS = {'name' => 'tên', 'description' => 'mô tả', 'status' => 'tình trạng', 'tag' => 'tag', 'material' => 'vật liệu',
-                       'owner' => 'hãng', 'url' => 'link', 'size' => 'cỡ', 'price' => 'đơn giá', 'calc_method' => 'cách tính'}.freeze
+                       'owner' => 'hãng', 'url' => 'link', 'size' => 'cỡ', 'price' => 'đơn giá', 'calc_method' => 'cách tính', 'code' => 'mã đối tượng'}.freeze
         def table_edit(payload)
           check_model!
           field = payload.fetch('field')
@@ -441,6 +442,28 @@ module VGD
           table_build
           have = plan[:keep].empty? ? '' : " #{plan[:keep].size} món đã có ID từ trước."
           emit('message', {text: "Đã gán VGD ID cho #{plan[:assign].size} món.#{have}#{note}"})
+        end
+        # Đặt Mã đối tượng hàng loạt (tiền tố + số, theo thứ tự các dòng gửi lên): chỉ món chưa có mã (trừ khi ghi đè), bỏ qua món khóa, không trùng mã món khác, một bước hoàn tác.
+        def table_assign_codes(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu không hợp lệ.' unless payload.is_a?(Hash)
+          indexes = table_indexes(payload)
+          records = indexes.map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |_index, record| record[:path].all?(&:valid?) }
+          items = records.map { |index, record| {index: index, code: @table_rows.fetch(index)[:code].to_s, locked: record[:locked] || record[:entity].locked? ? true : false} }
+          others = @table_rows.reject { |row| indexes.include?(row[:index]) }.map { |row| row[:code].to_s }
+          plan = ObjectCode.plan(items, prefix: payload['prefix'], start: payload['start'], pad: payload['pad'], overwrite: payload['overwrite'] == true, others: others)
+          note = plan[:locked].empty? ? '' : " Bỏ qua #{plan[:locked].size} món bị khóa."
+          raise "Không có món nào để đặt mã (món đã có mã hoặc bị khóa).#{note}" if plan[:assign].empty?
+          Data.transaction(@model, 'VGD_BIM · Đặt mã đối tượng') do
+            plan[:assign].each do |index, code|
+              entity = @table_records.fetch(index)[:entity]
+              Data.write(entity, {code: code}, Data.source(entity) == 'RAW' ? 'MANUAL' : Data.source(entity))
+            end
+          end
+          table_build
+          kept = plan[:kept].empty? ? '' : " #{plan[:kept].size} món đã có mã giữ nguyên."
+          emit('message', {text: "Đã đặt mã cho #{plan[:assign].size} món.#{kept}#{note}"})
         end
         # Sửa VGD ID trùng (do copy món): trong các món của bảng dùng chung một ID, món có mã bền nhỏ nhất giữ ID, các món khác nhận ID mới. Một bước hoàn tác.
         def table_fix_duplicate_ids

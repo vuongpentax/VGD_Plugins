@@ -116,7 +116,7 @@ const METHOD_LABELS={count:'Theo cái',area:'Theo diện tích',length:'Theo mé
 const CALC_UNIT={count:'cái',area:'m²',length:'m',volume:'m³'};
 const CALC_DIGITS={count:0,area:2,length:2,volume:3};
 const CALC_ORDER=['count','area','length','volume'];
-const CATEGORY_LABELS={architecture:'Kiến trúc',finish:'Hoàn thiện',furniture:'Nội thất',electrical:'Điện',equipment:'Thiết bị',plumbing:'Cấp thoát nước',hvac:'Điều hòa / Thông gió',other:'Khác'};
+const CATEGORY_LABELS={architecture:'Kiến trúc',finish:'Hoàn thiện',furniture:'Nội thất',electrical:'Điện',equipment:'Thiết bị',plumbing:'Cấp thoát nước',hvac:'Điều hòa / Thông gió',other:'Khác',wall:'Tường',floor:'Sàn',ceiling:'Trần',door:'Cửa đi',window:'Cửa sổ',column:'Cột',beam:'Dầm',stair:'Cầu thang',cabinet:'Tủ',sanitary:'Thiết bị vệ sinh',lighting:'Chiếu sáng',generic:'Chung'};
 const CALC_SOURCES={item:'Theo dữ liệu đã ghi trong món',tag:'Theo cách tính bạn đặt cho tag',keyword:'Theo từ khóa trong tên tag',group:'Theo nhóm tag',default:'Mặc định (theo cái)'};
 const WIDTHS={image_location:110,measure_note:260,front:80,front_state:150,ordinal:44,image:72,entity:90,definition:150,instance:180,description:200,status:120,tag:130,tag_group:130,material:150,quantity:80,areaProjected:110,ifc:120,owner:120,url:170,size:110,price:110,total:120};
 const unitTextOf=key=>LEN_KEYS.has(key)?lengthLabel():AREA_KEYS.has(key)?areaLabel():key==='volume'?volumeLabel():key==='quantity'?'cái':(key==='price'||key==='total')?workSettings().currency:undefined;
@@ -190,6 +190,7 @@ function cellText(row,key){
     case 'entity':return row.entity_type;
     case 'definition':return row.definition;
     case 'instance':return row.name;
+    case 'code':return row.code||'';
     case 'vgd_id':return row.vgd_id?'VGD-'+String(row.vgd_id).slice(0,6).toUpperCase()+(row.vgd_dup?' (trùng)':''):''; // dạng ngắn; ID đầy đủ ở chú thích ô
     case 'description':return row.description;
     case 'lenXZ':return `${lenText(row.lenX)} × ${lenText(row.lenZ)}`;
@@ -868,6 +869,29 @@ function frontPanel(){
 }
 // Chụp ảnh: hỏi lại trước khi chụp nhiều đối tượng. Chỉ chụp khi bấm nút Chụp.
 function captureTargets(){return tableState.sel.size?[...tableState.sel]:filteredRows().map(r=>r.index);}
+// Đặt Mã đối tượng hàng loạt: tiền tố + số thứ tự theo thứ tự dòng đang hiện (chỉ các dòng đang chọn). Ruby kiểm tra lại và không để trùng mã.
+function codesPanel(){
+  const p=node('div',undefined,'popover right capture-panel codes-panel');
+  const picked=tableState.displayed.filter(r=>r.members.some(m=>tableState.sel.has(m)));
+  p.append(node('div','Đặt mã đối tượng','pop-title'));
+  p.append(node('p',picked.length?`Đặt mã cho ${picked.length} dòng đang chọn, theo thứ tự trong bảng.`:'Hãy chọn các dòng cần đặt mã (Ctrl+A chọn hết các dòng đang hiện).','rename-scope'));
+  const field=(label,value,type)=>{const wrap=node('label',undefined,'rename-field');const input=node('input');input.type=type||'text';input.value=value;input.setAttribute('aria-label',label);wrap.append(node('span',label),input);return {wrap,input};};
+  const prefix=field('Tiền tố','D'),start=field('Số bắt đầu','1','number'),pad=field('Số chữ số','2','number');
+  prefix.input.maxLength=20;
+  const row=node('div',undefined,'rename-row');row.append(start.wrap,pad.wrap);
+  const over=node('input');over.type='checkbox';const overLabel=node('label',undefined,'merge-opt');overLabel.append(over,document.createTextNode(' Đặt lại cả món đã có mã'));
+  const preview=node('p',undefined,'muted');
+  const sample=()=>{const n=Number(start.input.value),d=Number(pad.input.value);preview.textContent=Number.isInteger(n)&&Number.isInteger(d)&&d>=1&&d<=6?`Ví dụ: ${prefix.input.value.trim()}${String(n).padStart(d,'0')}, ${prefix.input.value.trim()}${String(n+1).padStart(d,'0')}...`:'';};
+  [prefix,start,pad].forEach(f=>f.input.oninput=sample);sample();
+  const apply=button('Áp dụng',()=>{
+    if(!picked.length)throw Error('Hãy chọn các dòng cần đặt mã.');
+    call('table_assign_codes',JSON.stringify({indexes:picked.flatMap(r=>r.members.filter(m=>tableState.sel.has(m)).slice(0,1)),prefix:prefix.input.value,start:Number(start.input.value),pad:Number(pad.input.value),overwrite:over.checked}));
+    tableState.panel=null;tableView(tableState.data);
+  },'primary');
+  const actions=node('div',undefined,'rename-actions');actions.append(apply,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
+  p.append(prefix.wrap,row,overLabel,preview,actions);
+  return p;
+}
 function capturePanel(){
   const p=node('div',undefined,'popover right capture-panel');
   const targets=captureTargets(),chosen=tableState.sel.size>0;
@@ -1151,7 +1175,7 @@ function closeTablePanel(){
   document.querySelectorAll('.popover').forEach(p=>p.remove());
   document.querySelectorAll('button[aria-expanded="true"]').forEach(b=>{if(!b.closest('header'))b.setAttribute('aria-expanded','false');});
 }
-const PANELS_KEEP_ON_ROW_CLICK=['rename','front','capture']; // ba bảng này dùng các dòng đang chọn: bấm chọn dòng không đóng
+const PANELS_KEEP_ON_ROW_CLICK=['rename','front','capture','codes']; // ba bảng này dùng các dòng đang chọn: bấm chọn dòng không đóng
 document.addEventListener('mousedown',e=>{
   if(!tableState.panel||!(e.target instanceof Element))return;
   const t=e.target;
@@ -1238,10 +1262,12 @@ function ioPanel(){
   p.append(calc);
   // VGD ID: mã định danh ổn định của món (xem docs/vgd_bim/ROADMAP.md). Gán chỉ cho món chưa có ID và phải chọn dòng rõ ràng; sửa trùng áp cho cả bảng (món cũ nhất giữ ID).
   const assignIds=item('id','Gán VGD ID cho món đang chọn',()=>{if(!tableState.sel.size)return message('Hãy chọn các dòng cần gán VGD ID (Ctrl+A chọn hết các dòng đang hiện).',true);call('table_assign_ids',JSON.stringify({indexes:[...tableState.sel]}));});
+  const codesBtn=item('id','Đặt mã đối tượng hàng loạt...',()=>{tableState.panel='codes';tableView(tableState.data);});
+  codesBtn.id='codes-open';codesBtn.title='Đặt Mã đối tượng (D01, D02...) cho các món đang chọn theo thứ tự trong bảng';
   assignIds.id='ids-assign';assignIds.title='Gán mã định danh VGD ID cho các món đang chọn chưa có ID (món đã có ID giữ nguyên, món bị khóa bỏ qua; một bước hoàn tác)';
   const fixIds=item('id','Sửa VGD ID trùng',()=>call('table_fix_duplicate_ids'));
   fixIds.id='ids-fix';fixIds.title='Các món do copy mà dùng chung VGD ID: món cũ nhất giữ ID, các món còn lại nhận ID mới (một bước hoàn tác)';
-  p.append(assignIds,fixIds);
+  p.append(assignIds,fixIds,codesBtn);
   return p;
 }
 function bottomBar(){
@@ -1298,6 +1324,7 @@ function tableView(data){
   const bar=view.querySelector('.toolbar-wrap');
   bar.replaceChildren(toolbar());
   if(tableState.panel==='capture')bar.append(capturePanel());
+  if(tableState.panel==='codes')bar.append(codesPanel());
   if(tableState.panel==='front')bar.append(frontPanel());
   if(tableState.panel==='rename')bar.append(renamePanel());
   const side=$('col-side'),host=$('grid-host');

@@ -41,7 +41,7 @@ $transactions = []
 $writes = []
 $vgd_data = {}
 require File.join(ROOT, 'core/settings')
-%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id].each { |f| require File.join(ROOT, f) }
+%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
@@ -639,6 +639,29 @@ idd.table_fix_duplicate_ids
 ok('sửa ID trùng: món có mã bền nhỏ nhất (10) giữ ID, món 30 nhận ID mới; một bước hoàn tác', $transactions == ['VGD_BIM · Sửa VGD ID trùng'] && VGD::BIM::VgdId.read(ids[1]) == shared && VGD::BIM::VgdId.read(ids[0]) != shared && VGD::BIM::VgdId.valid?(VGD::BIM::VgdId.read(ids[0])))
 ok('sửa ID trùng: báo số món đã đổi', idd.icalls.last[1][:text].include?('1 món'))
 ok('không còn trùng: báo rõ, không mở thao tác', (idd.table_fix_duplicate_ids; idd.icalls.last[1][:text].include?('Không có') && $transactions.size == 1))
+# Mã đối tượng hàng loạt
+cde = [IdEnt.new(1), IdEnt.new(2, true), IdEnt.new(3), IdEnt.new(4)]
+ccrecs = cde.each_with_index.map { |e, i| {entity: e, path: [e], locked: false, index: i} }
+ccrows = [{index: 0, code: ''}, {index: 1, code: ''}, {index: 2, code: 'D07'}, {index: 3, code: 'D01'}]
+cdd = D.allocate
+cdd.instance_variable_set(:@model, cm)
+cdd.instance_variable_set(:@table_records, ccrecs)
+cdd.instance_variable_set(:@table_rows, ccrows)
+cdd.define_singleton_method(:emit) { |ev, payload| (@ccalls ||= []) << [ev, payload] }
+cdd.define_singleton_method(:ccalls) { @ccalls ||= [] }
+cdd.define_singleton_method(:table_build) { nil }
+bad_code = ->(payload) { begin; cdd.table_assign_codes(payload); nil; rescue StandardError => e; e.message; end }
+$writes.clear; $transactions.clear
+ok('mã trùng mã của món ngoài danh sách (D01 ở món 3): từ chối, không ghi', bad_code.call({'indexes' => [0, 1, 2], 'prefix' => 'D', 'start' => 1, 'pad' => 2}).to_s.include?('D01') && $writes.empty? && $transactions.empty?)
+ok('tham số sai (tiền tố rỗng, số bắt đầu chữ): từ chối', bad_code.call({'indexes' => [0], 'prefix' => '', 'start' => 1, 'pad' => 2}).to_s.include?('tiền tố') && bad_code.call({'indexes' => [0], 'prefix' => 'D', 'start' => 'a', 'pad' => 2}).to_s.include?('Số bắt đầu'))
+cdd.table_assign_codes({'indexes' => [0, 1, 2], 'prefix' => 'TB', 'start' => 1, 'pad' => 2})
+ok('đặt mã: món 0 được TB01; món khóa (1) bỏ qua; món có mã (2) giữ; ghi đúng trường code, một bước hoàn tác', $transactions == ['VGD_BIM · Đặt mã đối tượng'] && $writes.map { |w| [w[0].equal?(cde[0]), w[1]] } == [[true, {code: 'TB01'}]])
+ok('đặt mã: báo số món đã đặt, giữ nguyên và bị khóa', cdd.ccalls.last[1][:text].include?('1 món') && cdd.ccalls.last[1][:text].include?('giữ nguyên') && cdd.ccalls.last[1][:text].include?('khóa'))
+ok('không món nào để đặt (đã có mã / khóa): báo lỗi', bad_code.call({'indexes' => [1, 2], 'prefix' => 'TB', 'start' => 1, 'pad' => 2}).to_s.include?('Không có món nào'))
+$writes.clear
+cdd.table_assign_codes({'indexes' => [2], 'prefix' => 'X', 'start' => 5, 'pad' => 3, 'overwrite' => true})
+ok('ghi đè: món đã có mã được đặt lại', $writes.map { |w| w[1] } == [{code: 'X005'}])
+
 $model = ORIGINAL_MODEL
 $vgd_data = {}
 

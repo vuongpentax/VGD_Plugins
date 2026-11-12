@@ -63,7 +63,7 @@ check '4 preset BIM cũ giữ nguyên cột và nhóm', T::BUILT_IN_PRESETS[1]['
 
 # ---- Cột mới ----
 %w[areaProjected ifc owner url size price total].each { |k| check "có cột #{k}", keys.include?(k) }
-check 'có 38 cột, không trùng', keys.size == 38 && keys.uniq.size == 38
+check 'có 39 cột, không trùng', keys.size == 39 && keys.uniq.size == 39
 check 'cột sửa được: owner, url, size, price', %w[owner url size price].all? { |k| T::COLUMNS.find { |c| c[:key] == k }[:editable] == k }
 check 'cột tính tổng: diện tích chiếu và thành tiền', %w[areaProjected total].all? { |k| T::COLUMNS.find { |c| c[:key] == k }[:kind] == 'sum' }
 

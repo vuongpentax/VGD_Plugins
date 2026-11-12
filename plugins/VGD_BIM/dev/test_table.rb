@@ -23,7 +23,7 @@ def check(label, cond); puts "#{cond ? 'PASS' : 'FAIL'}  #{label}"; end
 def raises?(msg = nil); yield; false; rescue ArgumentError => e; msg ? e.message.include?(msg) : true; end
 
 keys = T::COLUMN_KEYS
-check 'có đủ cột kiểu Auto Info, cột Ảnh, cột Ảnh vị trí, 7 cột mới và 2 cột Mặt trước, 1 cột Ghi chú số đo, 5 cột Khối lượng tính (38 cột, không trùng)', keys.size == 38 && keys.uniq.size == keys.size && %w[calc_category calc_method calc_qty calc_unit calc_total].all? { |k| keys.include?(k) }
+check 'có đủ cột kiểu Auto Info, cột Ảnh, cột Ảnh vị trí, 7 cột mới và 2 cột Mặt trước, 1 cột Ghi chú số đo, 5 cột Khối lượng tính (39 cột, không trùng)', keys.size == 39 && keys.uniq.size == keys.size && %w[calc_category calc_method calc_qty calc_unit calc_total].all? { |k| keys.include?(k) }
 check 'mọi cột của preset có sẵn đều hợp lệ', T::BUILT_IN_PRESETS.all? { |p| p['columns'].all? { |c| keys.include?(c) } }
 check 'preset có sẵn có nhóm hợp lệ', T::BUILT_IN_PRESETS.all? { |p| p['group'].empty? || VGD::BIM::Tags::GROUPS.include?(p['group']) }
 check 'có 11 preset có sẵn, 4 preset BIM đứng đầu', T::BUILT_IN_PRESETS.size == 11 && T::BUILT_IN_PRESETS.first(4).map { |p| p['name'] } == ['Tất cả', 'Phần thô', 'Hoàn thiện', 'Đồ rời']
@@ -125,5 +125,5 @@ view = T.view_state
 check 'trạng thái bảng giữ cột thêm tay (thứ tự, hiện, độ rộng, tiêu đề), bỏ khóa lạ', view['order'] == ['instance', custom_col['key']] && view['visible'] == [custom_col['key']] && view['widths'] == {custom_col['key'] => 150} && view['headers'][custom_col['key']] == 'Mã VT'
 cc.remove(custom_col['key'])
 check 'xóa cột thêm tay: preset và trạng thái bảng tự bỏ khóa đó, không lỗi', T.custom_presets.find { |preset| preset['name'] == 'Có cột tay' }.nil? || !T.custom_presets.find { |preset| preset['name'] == 'Có cột tay' }['columns'].include?(custom_col['key'])
-check 'cột VGD ID có trong danh sách cột chuẩn, đứng sau cột Tên', T::COLUMN_KEYS.include?('vgd_id') && T::COLUMN_KEYS.index('vgd_id') == T::COLUMN_KEYS.index('instance') + 1
+check 'cột VGD ID có trong danh sách cột chuẩn, đứng sau cột Tên', T::COLUMN_KEYS.include?('vgd_id') && T::COLUMN_KEYS.index('vgd_id') == T::COLUMN_KEYS.index('instance') + 2 && T::COLUMN_KEYS.index('code') == T::COLUMN_KEYS.index('instance') + 1
 puts 'Done'

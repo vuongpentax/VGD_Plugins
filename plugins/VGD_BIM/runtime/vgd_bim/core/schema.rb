@@ -3,7 +3,7 @@ module VGD
     module Schema
       DICTIONARY = 'VGD_BIM'.freeze
       FIELDS = %i[schema_version category item_type code description unit quantity_method zone floor include_boq finish_code manufacturer model_number note status].freeze
-      CATEGORIES = %w[architecture finish furniture electrical equipment plumbing hvac other].freeze
+      CATEGORIES = %w[architecture finish furniture electrical equipment plumbing hvac other wall floor ceiling door window column beam stair cabinet sanitary lighting generic].freeze
       UNITS = %w[m2 m m3 pcs set lot kg none].freeze
       METHODS = %w[area length volume count assembly manual].freeze
       # Tình trạng 5 mức. Ô trống được hiểu là "new" (Mới).
