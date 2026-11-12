@@ -2,6 +2,8 @@
 
 Tài liệu này là kế hoạch làm việc của plugin `plugins/VGD_BIM`, lập từ bản kế hoạch tổng hợp do chủ dự án soạn (`MASTER_PLAN.md` cùng thư mục, giữ nguyên bản gốc). Mỗi lần làm xong một cột mốc phải cập nhật phần "Trạng thái" bên dưới trong cùng commit. Tài liệu viết cho người không chuyên mã nguồn; thuật ngữ khó có giải thích ngay chỗ dùng.
 
+**Tầm nhìn (chủ dự án, 12/11/2026):** biến SketchUp thành phần mềm **dựng hình và BIM đối tượng**, như Archicad hay Revit: dựng hình bằng các plugin nhỏ, còn VGD_BIM định nghĩa, quản lý và điều khiển thông tin của mọi đối tượng.
+
 ## 1. Những điều đã chốt
 
 | Việc | Quyết định |
@@ -12,7 +14,9 @@ Tài liệu này là kế hoạch làm việc của plugin `plugins/VGD_BIM`, l�
 | Tầm nhìn | Về sau làm đủ các tính năng BIM (IFC, Clash, Documentation, 4D, 5D...). Mỗi tính năng lớn có đặc tả riêng trước khi code. |
 | Cách ghi ID | Theo chuẩn của BIM (xem mục 3), không tự bịa kiểu mới. |
 | Giữ một plugin | VGD_BIM vẫn là một plugin, chia module trong `core/`. VGD_Cabinet nối qua dữ liệu chung (dictionary), không gộp mã. |
-| Dựng hình | **BIM không tự dựng hình** (giữ lõi nhẹ). Việc dựng do các plugin nhỏ riêng đảm nhận (tủ, cầu thang, cửa, sàn, tường... tên plugin chỉ là ví dụ, chưa sản xuất), nối với BIM qua "cầu nối" (mục 1b). Kế hoạch triển khai từng plugin viết khi tới phase của nó. |
+| Dựng hình | **BIM không tự dựng hình** (giữ lõi nhẹ). Việc dựng do các plugin nhỏ riêng đảm nhận (tủ, cầu thang, cửa, sàn, tường, phòng... tên plugin chỉ là ví dụ, chưa sản xuất), nối với BIM qua "cầu nối" (mục 1b). **BIM đọc dữ liệu và khi cần sửa thì BIM gọi đúng plugin đã dựng ra đối tượng đó để sửa mô hình**, như Revit / Archicad. Kế hoạch triển khai từng plugin viết khi tới phase của nó. |
+| ID | **VGD ID** (xem mục 3). |
+| Nơi giữ danh bạ plugin | Trong repo (toàn bộ plugin đã nằm trong repo); VGD Center đã giữ danh mục plugin (`shared/vgd-center/catalog.json`) nên mở rộng danh mục đó để khai báo cầu nối. |
 
 ## 1b. Kiến trúc: BIM quản lý, plugin nhỏ dựng hình (định hướng, chủ dự án chốt 12/11/2026)
 
@@ -24,12 +28,13 @@ Tài liệu này là kế hoạch làm việc của plugin `plugins/VGD_BIM`, l�
 
 Nguyên tắc đề xuất cho cầu nối (chi tiết viết thành đặc tả riêng ở cột mốc 1, trước khi có plugin dựng hình nào dùng nó):
 
-1. **Hợp đồng bằng dữ liệu, không bằng mã.** Plugin dựng hình ghi vào dictionary `VGD_BIM` của đối tượng theo đặc tả công bố (category, loại, nguồn tạo `source_plugin` và `source_version`, trường bắt buộc), tham số riêng của plugin nằm trong dictionary riêng của plugin đó. BIM chỉ đọc hợp đồng, nên BIM đọc được đối tượng của plugin chưa cài (chỉ không sửa được hình).
-2. **ID do ai gán:** quy tắc duy nhất. Đề xuất: plugin dựng hình gọi hàm chung của BIM để xin VGD ID khi tạo đối tượng; nếu BIM chưa cài thì để trống, BIM sẽ gán sau bằng nút "Gán VGD ID". Plugin dựng hình không tự sinh ID kiểu riêng.
-3. **Danh bạ plugin (registry):** mỗi plugin khai báo mã, loại đối tượng nó dựng, lệnh Tạo mới và lệnh Sửa đối tượng đã có. BIM hiện nút "Sửa bằng <plugin>" trên dòng của đối tượng đó. VGD Center (đã biết plugin nào được cài) là nơi hợp lý để giữ danh bạ này.
-4. **Có số phiên bản cầu nối** (`bridge_version`); plugin và BIM khác phiên bản thì báo rõ, không đoán.
-5. **Một nguồn sự thật cho hình và tham số:** hình và tham số thuộc plugin dựng; thông tin quản lý (ID, tầng, phòng, vật liệu, khối lượng, trạng thái) thuộc BIM. BIM không sửa tham số hình của plugin khác.
-6. **Phát triển dần:** cột mốc 1 chỉ cần hợp đồng dữ liệu (ID, Category, nguồn tạo); danh bạ và lệnh Tạo / Sửa làm khi có plugin dựng hình đầu tiên (VGD_Cabinet, ở cột mốc 5d). Trên menu Nhập / Xuất của VGD_BIM đã có chỗ giữ sẵn tên "Cầu nối dữ liệu".
+1. **Hợp đồng bằng dữ liệu để ĐỌC.** Plugin dựng hình ghi vào dictionary `VGD_BIM` của đối tượng theo đặc tả công bố (category, loại, nguồn tạo `source_plugin` và `source_version`, trường bắt buộc), tham số riêng của plugin nằm trong dictionary riêng của plugin đó. BIM đọc được đối tượng của plugin chưa cài (chỉ không sửa được hình).
+2. **Lệnh để SỬA do BIM gọi.** Khi người dùng muốn sửa hình một đối tượng, BIM tìm plugin nguồn (`source_plugin`), kiểm tra plugin đã cài và đủ phiên bản cầu nối, rồi gọi lệnh "Sửa đối tượng" của plugin đó với đối tượng đang chọn; plugin tự mở giao diện / công cụ sửa và dựng lại hình. Tương tự lệnh "Tạo mới" để BIM điều khiển việc dựng. Chưa cài plugin thì BIM báo rõ cần cài plugin nào (qua VGD Center).
+3. **ID do ai gán:** quy tắc duy nhất. Đề xuất: plugin dựng hình gọi hàm chung của BIM để xin VGD ID khi tạo đối tượng; nếu BIM chưa cài thì để trống, BIM sẽ gán sau bằng nút "Gán VGD ID". Plugin dựng hình không tự sinh ID kiểu riêng.
+4. **Danh bạ plugin (registry):** mỗi plugin khai báo mã, loại đối tượng nó dựng, lệnh Tạo mới và lệnh Sửa đối tượng đã có. BIM hiện nút "Sửa bằng <plugin>" trên dòng của đối tượng đó. VGD Center (đã biết plugin nào được cài) là nơi hợp lý để giữ danh bạ này.
+5. **Có số phiên bản cầu nối** (`bridge_version`); plugin và BIM khác phiên bản thì báo rõ, không đoán.
+6. **Một nguồn sự thật cho hình và tham số:** hình và tham số thuộc plugin dựng; thông tin quản lý (ID, tầng, phòng, vật liệu, khối lượng, trạng thái) thuộc BIM. BIM không sửa tham số hình của plugin khác.
+7. **Phát triển dần:** cột mốc 1 viết đặc tả hợp đồng dữ liệu (ID, Category, nguồn tạo) để mọi plugin dựng hình về sau theo đúng; danh bạ và lệnh Tạo / Sửa (BIM gọi plugin) làm khi có plugin dựng hình đầu tiên (VGD_Cabinet hoặc plugin Phòng ở cột mốc 2, tùy cái nào tới trước). Trên menu Nhập / Xuất của VGD_BIM đã có chỗ giữ sẵn tên "Cầu nối dữ liệu".
 
 Hệ quả cho kế hoạch: tường, sàn, cửa, thang, mái... **không phải việc của VGD_BIM**; mục "công cụ dựng đối tượng kiến trúc có tham số" ở cuối mục 5 được hiểu là các plugin riêng nối qua cầu nối.
 
@@ -106,9 +111,9 @@ Làm: VGD ID, Mã đối tượng, phát hiện và sửa trùng, mở rộng Ca
 ### Cột mốc 2 — Tầng và Phòng (có hình, 3D)
 
 - 2a **Tầng (Level):** danh sách tầng lưu trong model (tên, cao độ, chiều cao). Gán món vào tầng (nhãn, **không dời hình học**). Cột Tầng, nhóm theo tầng, ẩn / hiện theo tầng.
-- 2b **Phòng (Room):** mỗi phòng là một nhóm SketchUp do plugin tạo, có viền (đa giác) lấy từ mặt sàn / đường viền người dùng chọn hoặc vẽ, có tên, mã, tầng, cao độ trần, hoàn thiện sàn / tường / trần. Tính **diện tích, chu vi, thể tích**. Dựng **khối 3D** của phòng (đùn từ viền lên cao độ trần) nằm trên tag riêng, tắt / bật được.
+- 2b **Phòng (Room):** phòng trong BIM là **khoảng không gian (thể tích) được bao bởi sàn, tường, trần**, không phải bản thân tường / sàn / trần (như Room của Revit, Zone của Archicad). Dữ liệu phòng do VGD_BIM quản lý: viền (đa giác), tên, mã, tầng, cao độ trần, vật liệu hoàn thiện của sàn / tường / trần, trạng thái. VGD_BIM tính **diện tích sàn, chu vi, thể tích, diện tích trần, diện tích tường hoàn thiện** (chu vi x cao, trừ ô cửa khi đã có dữ liệu cửa). **Khối 3D của phòng do một plugin nhỏ dựng riêng** (đùn từ viền lên cao độ trần, nằm trên tag riêng, tắt / bật được), BIM điều khiển qua cầu nối; sàn, tường, trần thật là các đối tượng khác do plugin sàn / tường / trần dựng. Cần phiên thiết kế plugin Phòng riêng khi tới cột mốc này.
 - 2c **Món thuộc phòng:** tự gợi ý theo vị trí (tâm đáy của món nằm trong viền phòng), người dùng xác nhận, có thể gán tay. Cột Phòng, tổng khối lượng theo phòng, Finish Schedule.
-- Cảnh báo: bước 2b **thêm đối tượng mới vào model của người dùng** (nhóm phòng). Chỉ tạo khi bấm nút, một bước hoàn tác, đặt trên tag riêng và có thể khóa.
+- Cảnh báo: dựng khối phòng **thêm đối tượng mới vào model của người dùng**. Chỉ tạo khi bấm nút, một bước hoàn tác, đặt trên tag riêng và có thể khóa.
 
 ### Cột mốc 3 — Vật liệu có dữ liệu và luật khối lượng
 
@@ -148,8 +153,8 @@ Relationship đầy đủ (Object → Object / Room / Level / Type / Material), 
 2. Cột mốc 2: viền phòng lấy bằng cách nào là chính: chọn mặt sàn có sẵn, vẽ đa giác, hay tự dò từ các tường vây quanh.
 3. Cột mốc 2: tầng có tự gợi ý theo cao độ Z của món không, hay chỉ gán tay.
 4. Cột mốc 5d: cách VGD_Cabinet và VGD_BIM trao đổi dữ liệu.
-5. Phòng 3D (cột mốc 2b): khối phòng đùn từ viền là hình rất đơn giản; có giữ trong VGD_BIM (để lõi vẫn tự đủ cho Room) hay tách thành plugin dựng riêng nối qua cầu nối.
-6. Cầu nối: ai gán VGD ID khi plugin dựng hình tạo đối tượng (đề xuất ở mục 1b điểm 2) và danh bạ plugin đặt ở VGD Center hay ở VGD_BIM.
+5. ~~Phòng 3D~~ **Đã chốt:** khối phòng do plugin nhỏ dựng riêng, BIM điều khiển (xem cột mốc 2b). Còn mở: tên và phạm vi plugin Phòng (chỉ dựng khối hay cả vẽ viền).
+6. Cầu nối: ai gán VGD ID khi plugin dựng hình tạo đối tượng (đề xuất mục 1b điểm 3); danh bạ mở rộng từ `shared/vgd-center/catalog.json` (đã chốt hướng, còn thiết kế chi tiết).
 
 ## 8. Trạng thái
 
