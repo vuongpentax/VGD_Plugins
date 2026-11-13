@@ -8,20 +8,20 @@ param(
 $ErrorActionPreference='Stop'
 $preserveStage=$false
 $owned=@(
- 'vgd_dim.rb','VGD_Dim/main.rb','VGD_Dim/defaults.rb','VGD_Dim/reload.rb','VGD_Dim/engine.rb',
- 'VGD_Dim/native_style.rb','VGD_Dim/store.rb','VGD_Dim/managed.rb','VGD_Dim/core.rb','VGD_Dim/presets.rb',
- 'VGD_Dim/autostyle.rb','VGD_Dim/animation.rb','VGD_Dim/smartdim.rb','VGD_Dim/regions.rb','VGD_Dim/manual_dim.rb','VGD_Dim/probe.rb','VGD_Dim/dialog.rb',
- 'VGD_Dim/dialog.html','VGD_Dim/dialog.css','VGD_Dim/dialog.js','VGD_Dim/dim.svg','VGD_Dim/smart_dim.svg',
- 'VGD_Dim/version.rb','VGD_Dim/update_core/manifest.rb','VGD_Dim/update_core/bootstrap.rb',
- 'VGD_Dim/update_core/client.rb','VGD_Dim/update_core/installer.rb','VGD_Dim/update_core/updater.rb',
- 'VGD_Dim/update_core/update_installer.ps1',
- 'VGD_Dim/vgd-theme/vgd-theme.css','VGD_Dim/vgd-theme/vgd-theme.js','VGD_Dim/vgd-theme/fonts/manrope-latin-wght-normal.woff2','VGD_Dim/vgd-theme/fonts/manrope-vietnamese-wght-normal.woff2','VGD_Dim/vgd-theme/fonts/LICENSE'
+ 'vgd_dim.rb','vgd_dim/main.rb','vgd_dim/defaults.rb','vgd_dim/reload.rb','vgd_dim/engine.rb',
+ 'vgd_dim/native_style.rb','vgd_dim/store.rb','vgd_dim/managed.rb','vgd_dim/core.rb','vgd_dim/presets.rb',
+ 'vgd_dim/autostyle.rb','vgd_dim/animation.rb','vgd_dim/smartdim.rb','vgd_dim/regions.rb','vgd_dim/manual_dim.rb','vgd_dim/probe.rb','vgd_dim/dialog.rb',
+ 'vgd_dim/dialog.html','vgd_dim/dialog.css','vgd_dim/dialog.js','vgd_dim/dim.svg','vgd_dim/smart_dim.svg',
+ 'vgd_dim/version.rb','vgd_dim/update_core/manifest.rb','vgd_dim/update_core/bootstrap.rb',
+ 'vgd_dim/update_core/client.rb','vgd_dim/update_core/installer.rb','vgd_dim/update_core/updater.rb',
+ 'vgd_dim/update_core/update_installer.ps1',
+ 'vgd_dim/vgd-theme/vgd-theme.css','vgd_dim/vgd-theme/vgd-theme.js','vgd_dim/vgd-theme/fonts/manrope-latin-wght-normal.woff2','vgd_dim/vgd-theme/fonts/manrope-vietnamese-wght-normal.woff2','vgd_dim/vgd-theme/fonts/LICENSE'
 )
 $root=[IO.Path]::GetFullPath($Plugins)
-$plugin=Join-Path $root 'VGD_Dim'
-$stage=Join-Path $root ('.VGD_Dim.stage_'+[guid]::NewGuid().ToString('N'))
-$stagePlugin=Join-Path $stage 'VGD_Dim'
-$backup=Join-Path $root ('VGD_Dim.backup_'+[guid]::NewGuid().ToString('N'))
+$plugin=Join-Path $root 'vgd_dim'
+$stage=Join-Path $root ('.vgd_dim.stage_'+[guid]::NewGuid().ToString('N'))
+$stagePlugin=Join-Path $stage 'vgd_dim'
+$backup=Join-Path $root ('vgd_dim.backup_'+[guid]::NewGuid().ToString('N'))
 $loader=Join-Path $root 'vgd_dim.rb'
 $loaderBackup=Join-Path $root ('vgd_dim.backup_'+[guid]::NewGuid().ToString('N')+'.rb')
 $journal=Join-Path $root 'vgd_dim_update.json'
@@ -58,7 +58,7 @@ try {
    if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Missing archive member: $rel" }
    if ($rel -eq 'vgd_dim.rb') { Copy-Item -LiteralPath $source -Destination (Join-Path $stage 'vgd_dim.rb') }
    else {
-     $inside=$rel.Substring('VGD_Dim/'.Length)
+     $inside=$rel.Substring('vgd_dim/'.Length)
      $dest=Join-Path $stagePlugin $inside
      Assert-Within $dest $stagePlugin
      New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($dest)) -Force | Out-Null
@@ -67,7 +67,7 @@ try {
  }
  $expected=@{}
  foreach ($rel in $owned | Where-Object { $_ -ne 'vgd_dim.rb' }) {
-   $inside=$rel.Substring('VGD_Dim/'.Length)
+   $inside=$rel.Substring('vgd_dim/'.Length)
    $expected[$inside]=(Get-FileHash -LiteralPath (Join-Path $work $rel) -Algorithm SHA256).Hash
  }
  $expectedLoader=(Get-FileHash -LiteralPath (Join-Path $work 'vgd_dim.rb') -Algorithm SHA256).Hash
@@ -80,7 +80,7 @@ try {
  if (Test-Path -LiteralPath $loader) {
    if ((Get-Item -LiteralPath $loader -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Loader is a reparse point." }
    $loaderText=Get-Content -LiteralPath $loader -Raw
-   if ($loaderText -notmatch 'VGD_Dim/main' -or $loaderText -notmatch 'module VGD') { throw 'Existing VGD Dim loader guard failed.' }
+   if ($loaderText -notmatch 'vgd_dim/main' -or $loaderText -notmatch 'module VGD') { throw 'Existing VGD Dim loader guard failed.' }
    Copy-Item -LiteralPath $loader -Destination $loaderBackup
  }
  $state=[ordered]@{phase='prepared';backup=$backup;loader_backup=$loaderBackup;expected=$expected;expected_loader=$expectedLoader}

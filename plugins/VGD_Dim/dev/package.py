@@ -8,12 +8,12 @@ root = Path(__file__).resolve().parent.parent
 runtime = root / 'runtime'
 output = root / 'outputs'
 output.mkdir(exist_ok=True)
-version_text = (runtime / 'VGD_Dim/version.rb').read_text(encoding='utf-8')
+version_text = (runtime / 'vgd_dim/version.rb').read_text(encoding='utf-8')
 match = re.search(r"VERSION\s*=\s*'([^']+)'", version_text)
 if not match:
     raise SystemExit('Cannot determine VGD Dim version.')
 version = match.group(1)
-runtime_files = ['vgd_dim.rb'] + ['VGD_Dim/' + name for name in [
+runtime_files = ['vgd_dim.rb'] + ['vgd_dim/' + name for name in [
     'main.rb', 'defaults.rb', 'reload.rb', 'engine.rb', 'native_style.rb', 'store.rb',
     'managed.rb', 'core.rb', 'presets.rb', 'autostyle.rb', 'animation.rb', 'smartdim.rb', 'regions.rb', 'manual_dim.rb',
     'probe.rb', 'dialog.rb', 'dialog.html', 'dialog.css', 'dialog.js', 'dim.svg',

@@ -91,6 +91,7 @@ module UI
     def stop_timer(id); @timers.delete(id); end
     def drain; 20.times { break if @timers.empty?; b=@timers.values; @timers={}; b.each(&:call) }; raise 'Timer loop' unless @timers.empty?; end
     def menu(_); self; end
+    def add_submenu(_); self; end
     def add_item(item,&b); @menus << [item,b]; end
   end
   class Command

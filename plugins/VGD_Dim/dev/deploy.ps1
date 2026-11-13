@@ -6,39 +6,39 @@ $sourceRoot = Join-Path $taskRoot 'runtime'
 $pluginRoot = Join-Path $env:APPDATA 'SketchUp\SketchUp 2022\SketchUp\Plugins'
 $ownedFiles = @(
     'vgd_dim.rb',
-    'VGD_Dim\main.rb',
-    'VGD_Dim\defaults.rb',
-    'VGD_Dim\reload.rb',
-    'VGD_Dim\engine.rb',
-    'VGD_Dim\native_style.rb',
-    'VGD_Dim\store.rb',
-    'VGD_Dim\managed.rb',
-    'VGD_Dim\core.rb',
-    'VGD_Dim\presets.rb',
-    'VGD_Dim\autostyle.rb',
-    'VGD_Dim\animation.rb',
-    'VGD_Dim\smartdim.rb',
-    'VGD_Dim\regions.rb',
-    'VGD_Dim\manual_dim.rb',
-    'VGD_Dim\probe.rb',
-    'VGD_Dim\dialog.rb',
-    'VGD_Dim\dialog.html',
-    'VGD_Dim\dialog.css',
-    'VGD_Dim\dialog.js',
-    'VGD_Dim\vgd-theme\vgd-theme.css',
-    'VGD_Dim\vgd-theme\vgd-theme.js',
-    'VGD_Dim\vgd-theme\fonts\manrope-latin-wght-normal.woff2',
-    'VGD_Dim\vgd-theme\fonts\manrope-vietnamese-wght-normal.woff2',
-    'VGD_Dim\vgd-theme\fonts\LICENSE',
-    'VGD_Dim\dim.svg',
-    'VGD_Dim\smart_dim.svg',
-    'VGD_Dim\version.rb',
-    'VGD_Dim\update_core\manifest.rb',
-    'VGD_Dim\update_core\bootstrap.rb',
-    'VGD_Dim\update_core\client.rb',
-    'VGD_Dim\update_core\installer.rb',
-    'VGD_Dim\update_core\updater.rb',
-    'VGD_Dim\update_core\update_installer.ps1'
+    'vgd_dim\main.rb',
+    'vgd_dim\defaults.rb',
+    'vgd_dim\reload.rb',
+    'vgd_dim\engine.rb',
+    'vgd_dim\native_style.rb',
+    'vgd_dim\store.rb',
+    'vgd_dim\managed.rb',
+    'vgd_dim\core.rb',
+    'vgd_dim\presets.rb',
+    'vgd_dim\autostyle.rb',
+    'vgd_dim\animation.rb',
+    'vgd_dim\smartdim.rb',
+    'vgd_dim\regions.rb',
+    'vgd_dim\manual_dim.rb',
+    'vgd_dim\probe.rb',
+    'vgd_dim\dialog.rb',
+    'vgd_dim\dialog.html',
+    'vgd_dim\dialog.css',
+    'vgd_dim\dialog.js',
+    'vgd_dim\vgd-theme\vgd-theme.css',
+    'vgd_dim\vgd-theme\vgd-theme.js',
+    'vgd_dim\vgd-theme\fonts\manrope-latin-wght-normal.woff2',
+    'vgd_dim\vgd-theme\fonts\manrope-vietnamese-wght-normal.woff2',
+    'vgd_dim\vgd-theme\fonts\LICENSE',
+    'vgd_dim\dim.svg',
+    'vgd_dim\smart_dim.svg',
+    'vgd_dim\version.rb',
+    'vgd_dim\update_core\manifest.rb',
+    'vgd_dim\update_core\bootstrap.rb',
+    'vgd_dim\update_core\client.rb',
+    'vgd_dim\update_core\installer.rb',
+    'vgd_dim\update_core\updater.rb',
+    'vgd_dim\update_core\update_installer.ps1'
 )
 function Assert-TaskPath([string]$Path,[string]$Root) {
     $full = [IO.Path]::GetFullPath($Path)
@@ -59,7 +59,7 @@ $loader = Join-Path $pluginRoot 'vgd_dim.rb'
 Assert-TaskPath $loader $pluginRoot
 if (Test-Path -LiteralPath $loader) {
     $text = Get-Content -LiteralPath $loader -Raw
-    if ($text -notmatch 'VGD_Dim/main' -or $text -notmatch 'module VGD') { throw 'Loader hiện tại không thuộc VGD Dim; từ chối ghi đè.' }
+    if ($text -notmatch 'vgd_dim/main' -or $text -notmatch 'module VGD') { throw 'Loader hiện tại không thuộc VGD Dim; từ chối ghi đè.' }
 }
 # Explicit predecessor only. Keep its runtime files inert for recovery; never scan other extensions.
 $legacy = Join-Path $pluginRoot 'tplus_dim.rb'

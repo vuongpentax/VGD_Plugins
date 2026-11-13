@@ -30,7 +30,7 @@ with tempfile.TemporaryDirectory(prefix='deploy_fixture_', dir=outputs) as direc
     assert result.returncode == 0, result.stderr
     assert not legacy.exists()
     assert other.read_bytes() == b'CABINET MUST BE PRESERVED'
-    owned = ['vgd_dim.rb'] + ['VGD_Dim/' + name for name in [
+    owned = ['vgd_dim.rb'] + ['vgd_dim/' + name for name in [
         'main.rb','defaults.rb','reload.rb','engine.rb','native_style.rb','store.rb','managed.rb',
         'core.rb','presets.rb','autostyle.rb','animation.rb','smartdim.rb','regions.rb','manual_dim.rb','probe.rb','dialog.rb',
         'dialog.html','dialog.css','dialog.js','dim.svg','smart_dim.svg','version.rb',

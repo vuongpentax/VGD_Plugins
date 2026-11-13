@@ -48,11 +48,12 @@ module VGD
     unless @command
       @command=UI::Command.new('VGD Dim') { show_dialog }
       @command.small_icon=@command.large_icon=File.join(__dir__.dup.force_encoding(Encoding::UTF_8),'dim.svg')
-      UI.menu('Extensions').add_item(@command) unless file_loaded?(__FILE__)
-      @toolbar ||= UI::Toolbar.new('VGD Dim')
+      @menu ||= UI.menu('Extensions').add_submenu('VGD').add_submenu('VGD Dim')
+      @menu.add_item(@command) unless file_loaded?(__FILE__)
+      @toolbar ||= UI::Toolbar.new('VGD DIM')
       @toolbar.add_item(@command)
-      UI.menu('Extensions').add_item('Hiện toolbar VGD Dim') { @toolbar.show }
-      UI.menu('Extensions').add_item('Nạp lại VGD Dim') { reload_extension }
+      @menu.add_item('Hiện toolbar VGD DIM') { @toolbar.show }
+      @menu.add_item('Nạp lại VGD Dim') { reload_extension }
       file_loaded(__FILE__)
     end
     @command.tooltip='VGD Dim'
@@ -63,7 +64,7 @@ module VGD
       @smart_command.tooltip = 'Smart Dim — dùng thiết lập đã lưu'
       @smart_command.status_bar_text = 'Chọn tủ rồi đo ngay; cập nhật bộ Dim cùng tủ/mặt/Scene.'
       @toolbar.add_item(@smart_command)
-      UI.menu('Extensions').add_item(@smart_command)
+      @menu.add_item(@smart_command)
     end
     AutoStyle.start
     UpdateCore::UIHooks.start

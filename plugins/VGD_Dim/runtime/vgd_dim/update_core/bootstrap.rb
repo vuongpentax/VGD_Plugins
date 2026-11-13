@@ -15,8 +15,8 @@ module VGD
           data = JSON.parse(File.read(journal))
           phase = data.fetch('phase')
           raise 'Unknown update transaction phase.' unless %w[prepared old_moved new_moved].include?(phase)
-          plugin = File.join(plugins, 'VGD_Dim')
-          backup = sibling_path!(data.fetch('backup'), plugins, /\AVGD_Dim\.backup_[0-9a-f]{32}\z/i)
+          plugin = File.join(plugins, 'vgd_dim')
+          backup = sibling_path!(data.fetch('backup'), plugins, /\Avgd_dim\.backup_[0-9a-f]{32}\z/i)
           loader = File.join(plugins, 'vgd_dim.rb')
           loader_backup = data['loader_backup']
           if loader_backup
@@ -33,7 +33,7 @@ module VGD
           end
           if File.directory?(backup)
             if File.exist?(plugin)
-              failed = File.join(plugins, "VGD_Dim.failed_#{Time.now.to_i}")
+              failed = File.join(plugins, "vgd_dim.failed_#{Time.now.to_i}")
               File.rename(plugin, failed)
             end
             File.rename(backup, plugin)

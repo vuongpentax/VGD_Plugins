@@ -5,8 +5,8 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 ## Thông tin plugin
 
 - Tên extension: VGD Dim. Namespace: `VGD::Dim`.
-- Loader: `runtime/vgd_dim.rb`; thư mục mã `runtime/VGD_Dim/`.
-- Phiên bản: `runtime/VGD_Dim/version.rb`. Khi đổi phiên bản, cập nhật cả changelog trong `VGD_UPDATE_MANIFEST.json`.
+- Loader: `runtime/vgd_dim.rb`; thư mục mã `runtime/vgd_dim/`.
+- Phiên bản: `runtime/vgd_dim/version.rb`. Khi đổi phiên bản, cập nhật cả changelog trong `VGD_UPDATE_MANIFEST.json`.
 - SketchUp tối thiểu: 2022.
 
 ## Cấu trúc
@@ -31,7 +31,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 Yêu cầu mới ngày 2026-10-07: tiếp tục VGD_Dim_6.rbz, sidebar, mặt cắt/Scene/Tag, thay bộ Dim trùng, one-touch, giới hạn xoay và tách Units. Chỉ phát triển Dim; không sửa Cabinet/Scenes/Importer/Library.
 
-- Tên VGD Dim; loader vgd_dim.rb, namespace VGD::Dim, thư mục VGD_Dim. Style T+ sáng/nâu đồng.
+- Tên VGD Dim; loader vgd_dim.rb, namespace VGD::Dim, thư mục vgd_dim. Style T+ sáng/nâu đồng.
 - Phạm vi selected/context/model, mặc định selected; bộ lọc nested/components/hidden/locked. Definition dùng chung dedup, ảnh hưởng các bản sao và giải thích trên UI.
 - Smart Dim: trục riêng của tủ, upright yaw/mirror/axis scale; không gắn nhãn projected size cho tilt/shear/khác hệ trục. Group owned metadata, thay bộ cùng nguồn/mặt/Scene sau khi dựng xong; không xóa trùng tên hoặc Group có nội dung thêm tay. Tag mặt cắt riêng, Dim nội bộ Untagged; giữ selection. Không tạo edge/mesh.
 - Scene: chỉ riêng Tag bộ Smart và các Scene lưu Tags; không update camera/style hay tự bật flag Scene. Tủ/Group cũ V6 không có metadata không tự xóa. Xem DEVELOPMENT_NOTES.md.
