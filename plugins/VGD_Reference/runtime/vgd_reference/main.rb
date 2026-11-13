@@ -46,7 +46,7 @@ else
           Session.enter_edit(Session.store.selected_id) if Session.store && Session.store.selected_id
         end)
 
-        @toolbar = UI::Toolbar.new('VGD Reference')
+        @toolbar = UI::Toolbar.new('VGD REF')
         @toolbar.add_item(manager)
         @toolbar.restore
         @ui_registered = true
