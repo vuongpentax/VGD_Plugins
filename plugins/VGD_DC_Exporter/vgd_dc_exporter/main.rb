@@ -1,8 +1,15 @@
 require 'sketchup.rb'
 require 'json'
 
+# Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
+module VGD
+  def self.menu
+    @extensions_menu ||= ::UI.menu('Extensions').add_submenu('VGD')
+  end unless respond_to?(:menu)
+end
+
 module VGD_DC_Exporter
-  VERSION = '1.0.2'.freeze unless const_defined?(:VERSION)
+  VERSION = '1.0.3'.freeze unless const_defined?(:VERSION)
 
   # Nạp đủ phần xử lý (chỉ đọc file, không sửa mô hình).
   load File.join(__dir__, 'params.rb')
@@ -38,7 +45,7 @@ module VGD_DC_Exporter
   end
 
   unless file_loaded?(__FILE__)
-    UI.menu('Extensions').add_submenu('VGD').add_item('VGD DC Exporter — Xuất JSON đối tượng đang chọn') { export_selected }
+    ::VGD.menu.add_submenu('VGD DC Exporter').add_item('Xuất JSON đối tượng đang chọn') { export_selected }
     file_loaded(__FILE__)
   end
 end

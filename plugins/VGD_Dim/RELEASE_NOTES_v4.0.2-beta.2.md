@@ -1,4 +1,4 @@
-# VGD Dim 4.0.2-beta.1
+# VGD Dim 4.0.2-beta.2
 
 - Gom menu: các lệnh nằm trong **Extensions → VGD → VGD Dim** (trước đây là bốn mục lẻ trong Extensions).
 - Thanh công cụ đổi tên rút gọn thành **VGD DIM**; mục menu "Hiện toolbar" ghi theo tên mới.

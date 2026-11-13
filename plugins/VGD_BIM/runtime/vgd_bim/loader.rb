@@ -1,6 +1,13 @@
 require 'sketchup.rb'
 require 'json'
 require_relative 'update_notice'
+# Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
+module VGD
+  def self.menu
+    @extensions_menu ||= ::UI.menu('Extensions').add_submenu('VGD')
+  end unless respond_to?(:menu)
+end
+
 module VGD
   module BIM
     ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze unless defined?(ROOT)
@@ -56,7 +63,7 @@ end
 VGD::BIM::FILES.each { |file| require File.join(VGD::BIM::ROOT, file) }
 unless file_loaded?(__FILE__)
   # Menu Extensions > VGD > VGD BIM.
-  vgd_menu = ::UI.menu('Extensions').add_submenu('VGD').add_submenu('VGD BIM')
+  vgd_menu = ::VGD.menu.add_submenu('VGD BIM')
   vgd_menu.add_item('Mở bảng khối lượng') { VGD::BIM.open_panel('table') }
   vgd_menu.add_item('Tải lại code') { VGD::BIM.reload }
   VGD::UpdateNotice.start('vgd-bim', 'VGD_BIM', VGD::BIM::VERSION)

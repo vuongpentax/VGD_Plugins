@@ -14,6 +14,13 @@ require_relative 'drive'
 require_relative 'shell_sync'
 require_relative 'update_notice'
 
+# Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
+module VGD
+  def self.menu
+    @extensions_menu ||= ::UI.menu('Extensions').add_submenu('VGD')
+  end unless respond_to?(:menu)
+end
+
 module VGD
   module Library
     ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze
@@ -369,7 +376,7 @@ module VGD
         UI.messagebox('VGD_Library yêu cầu SketchUp 2022 trở lên.')
       else
         toolbar = UI::Toolbar.new('VGD LIB')
-        menu = UI.menu('Extensions').add_submenu('VGD').add_submenu('VGD Library')
+        menu = ::VGD.menu.add_submenu('VGD Library')
         COMMANDS.each do |title, action, tip|
           command = UI::Command.new(title) { safely { run(action) } }
           command.tooltip = title

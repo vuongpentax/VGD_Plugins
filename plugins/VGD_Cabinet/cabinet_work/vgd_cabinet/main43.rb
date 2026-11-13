@@ -15,9 +15,16 @@ require_relative 'library_store'
 require_relative 'model_data'
 require_relative 'box_conversion'
 require_relative 'update_notice'
+# Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
+module VGD
+  def self.menu
+    @extensions_menu ||= ::UI.menu('Extensions').add_submenu('VGD')
+  end unless respond_to?(:menu)
+end
+
 module VGD_Cabinet
   remove_const(:VERSION) if const_defined?(:VERSION, false)
-  VERSION = '4.5.4-beta.1'
+  VERSION = '4.5.4-beta.2'
   remove_const(:FRONT_SETTING_KEYS) if const_defined?(:FRONT_SETTING_KEYS, false)
   FRONT_SETTING_KEYS = %w[
     opt_door door_style auto_door_count max_door_w door_count
@@ -668,7 +675,7 @@ module VGD_Cabinet
     existing_toolbar=@toolbar
     existing_commands=[]
     existing_toolbar.each { |item| existing_commands << item if item.is_a?(UI::Command) } if existing_toolbar
-    menu=UI.menu('Extensions').add_submenu('VGD').add_submenu('VGD Cabinet')
+    menu=::VGD.menu.add_submenu('VGD Cabinet')
     command=existing_commands.find { |item| item.menu_text.include?('Dựng hình') }
     unless command
       command=UI::Command.new('VGD Cabinet — Dựng hình') { show_dialog }

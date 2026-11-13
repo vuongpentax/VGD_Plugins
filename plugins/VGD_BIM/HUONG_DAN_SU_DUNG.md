@@ -1,6 +1,6 @@
 # VGD_BIM — Hướng dẫn nhanh
 
-Mở bằng **Extensions → VGD → VGD_BIM**: cửa sổ mở thẳng tab **Bảng khối lượng**. Cửa sổ có 5 tab: Bảng khối lượng · Thông tin · Quét & xuất · Phân loại · Soạn tag. Mọi tab nằm trong cùng một cửa sổ.
+Mở bằng **Extensions → VGD → VGD BIM → Mở bảng khối lượng**: cửa sổ mở thẳng tab **Bảng khối lượng**. Cửa sổ có 5 tab: Bảng khối lượng · Thông tin · Quét & xuất · Phân loại · Soạn tag. Mọi tab nằm trong cùng một cửa sổ.
 
 ## Bóc khối lượng nhanh (Bảng khối lượng)
 
@@ -168,4 +168,4 @@ Trong tab **Phân loại**, mở **Quy tắc → Thêm quy tắc**: chọn loạ
 
 ## Cửa sổ và cập nhật
 
-Nút **Sáng / Tối** lưu lựa chọn giao diện trên máy. Sau khi cài đè bản mới, dùng **Extensions → VGD → VGD_BIM · Tải lại code** để nạp lại mã mà không cần mở lại SketchUp; menu và toolbar mới chỉ có tác dụng sau khi mở lại SketchUp. Lưu file đang làm trước khi tải lại.
+Nút **Sáng / Tối** lưu lựa chọn giao diện trên máy. Sau khi cài đè bản mới, dùng **Extensions → VGD → VGD BIM → Tải lại code** để nạp lại mã mà không cần mở lại SketchUp; menu và toolbar mới chỉ có tác dụng sau khi mở lại SketchUp. Lưu file đang làm trước khi tải lại.

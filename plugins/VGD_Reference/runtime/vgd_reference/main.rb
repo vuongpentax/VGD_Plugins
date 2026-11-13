@@ -2,6 +2,13 @@ require 'sketchup.rb'
 require_relative 'core/constants'
 require_relative 'core/compatibility'
 
+# Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
+module VGD
+  def self.menu
+    @extensions_menu ||= ::UI.menu('Extensions').add_submenu('VGD')
+  end unless respond_to?(:menu)
+end
+
 unless VGD::Reference::Compatibility.supported?(Sketchup.active_model)
   UI.messagebox('VGD Reference yêu cầu SketchUp 2023 trở lên với API Overlay. SketchUp 2022 chưa được hỗ trợ trong bản này.')
 else
@@ -37,7 +44,7 @@ else
         manager.status_bar_text = 'Mở hoặc ẩn bảng quản lý ảnh tham chiếu.'
         Icons.bind(manager)
 
-        menu = UI.menu('Extensions').add_submenu('VGD').add_submenu('VGD Reference')
+        menu = ::VGD.menu.add_submenu('VGD Reference')
         menu.add_item(UI::Command.new('Mở bảng quản lý') { Manager.open })
         menu.add_item(UI::Command.new('Thêm ảnh tham chiếu') { Session.add_from_picker })
         menu.add_item(UI::Command.new('Dán ảnh tham chiếu') { Session.paste_reference })

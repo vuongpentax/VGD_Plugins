@@ -22,7 +22,7 @@ Phiên bản hiện tại 1.0.2, tối thiểu SketchUp 2023; chi tiết ở [RE
 
 ## Cài đặt
 
-Trong SketchUp, mở **Extension Manager → Install Extension** và chọn file `VGD_Reference_v1.0.3-beta.2.rbz`. Khởi động lại SketchUp sau khi cài. Mở **Extensions → VGD → VGD Reference → Mở bảng quản lý** hoặc nhấn nút **VGD Reference** trên thanh công cụ.
+Trong SketchUp, mở **Extension Manager → Install Extension** và chọn file `VGD_Reference_v1.0.3-beta.3.rbz`. Khởi động lại SketchUp sau khi cài. Mở **Extensions → VGD → VGD Reference → Mở bảng quản lý** hoặc nhấn nút **VGD Reference** trên thanh công cụ.
 
 ## Kéo ảnh từ Pinterest / web
 

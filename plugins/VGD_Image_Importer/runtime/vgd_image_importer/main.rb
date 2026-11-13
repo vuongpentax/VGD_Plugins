@@ -10,6 +10,13 @@ require_relative 'file_picker'
 require_relative 'conversion'
 require_relative 'update_notice'
 
+# Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
+module VGD
+  def self.menu
+    @extensions_menu ||= ::UI.menu('Extensions').add_submenu('VGD')
+  end unless respond_to?(:menu)
+end
+
 module VGD_ImageImporter
   SETTINGS = 'VGD_ImageImporter'.freeze
 
@@ -316,7 +323,7 @@ module VGD_ImageImporter
     command.tooltip = 'VGD Image Importer'
     command.status_bar_text = 'Nhập ảnh 2D, sắp xếp ảnh hoặc thêm vật liệu vào model.'
     command.small_icon = command.large_icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'icon.svg')
-    UI.menu('Extensions').add_submenu('VGD').add_item(command)
+    ::VGD.menu.add_submenu('VGD Image Importer').add_item(command)
     @toolbar = UI::Toolbar.new('VGD IMP')
     @toolbar.add_item(command)
     @toolbar.restore

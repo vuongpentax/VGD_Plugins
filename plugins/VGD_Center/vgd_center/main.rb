@@ -8,9 +8,16 @@ require 'securerandom'
 # Tab "Quản lý" (bật/tắt plugin, chuyển plugin giữa các bản SketchUp, xuất gói .rbz tổng)
 require File.join(File.dirname(__FILE__), 'manager', 'core')
 
+# Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
+module VGD
+  def self.menu
+    @extensions_menu ||= ::UI.menu('Extensions').add_submenu('VGD')
+  end unless respond_to?(:menu)
+end
+
 module VGD
   module Center
-    VERSION = '1.2.5-beta.1'.freeze
+    VERSION = '1.2.5-beta.2'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
@@ -1010,7 +1017,7 @@ module VGD
         icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'icon.svg')
         command.small_icon = icon
         command.large_icon = icon
-        UI.menu('Extensions').add_submenu('VGD').add_item(command)
+        ::VGD.menu.add_submenu('VGD Center').add_item(command)
         toolbar = UI::Toolbar.new('VGD CEN')
         toolbar.add_item(command)
         toolbar.restore

@@ -21,6 +21,13 @@ require_relative 'update_core/manifest'
 require_relative 'update_core/client'
 require_relative 'update_core/installer'
 require_relative 'update_core/updater'
+# Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
+module VGD
+  def self.menu
+    @extensions_menu ||= ::UI.menu('Extensions').add_submenu('VGD')
+  end unless respond_to?(:menu)
+end
+
 module VGD
   module Dim
     extend self
@@ -48,7 +55,7 @@ module VGD
     unless @command
       @command=UI::Command.new('VGD Dim') { show_dialog }
       @command.small_icon=@command.large_icon=File.join(__dir__.dup.force_encoding(Encoding::UTF_8),'dim.svg')
-      @menu ||= UI.menu('Extensions').add_submenu('VGD').add_submenu('VGD Dim')
+      @menu ||= ::VGD.menu.add_submenu('VGD Dim')
       @menu.add_item(@command) unless file_loaded?(__FILE__)
       @toolbar ||= UI::Toolbar.new('VGD DIM')
       @toolbar.add_item(@command)

@@ -14,9 +14,16 @@ require_relative 'export'
 require_relative 'transfer'
 require_relative 'camera'
 require_relative 'update_notice'
+# Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
+module VGD
+  def self.menu
+    @extensions_menu ||= ::UI.menu('Extensions').add_submenu('VGD')
+  end unless respond_to?(:menu)
+end
+
 module VGD
   module Scenes
-    VERSION = '1.6.1-beta.1'.freeze unless const_defined?(:VERSION, false)
+    VERSION = '1.6.1-beta.2'.freeze unless const_defined?(:VERSION, false)
     # Clears the section preview before SketchUp saves, so Ctrl+S never writes it.
     class SaveGuard < Sketchup::ModelObserver
       def onPreSaveModel(model)
@@ -363,7 +370,7 @@ module VGD
 
       def initialize_ui
         return if @initialized
-        menu = ::UI.menu('Extensions').add_submenu('VGD').add_submenu('VGD Scenes')
+        menu = ::VGD.menu.add_submenu('VGD Scenes')
         open_command = ::UI::Command.new('VGD Scenes · Bảng điều khiển') { open }
         quick_command = ::UI::Command.new('VGD · Tạo/cập nhật 4 view nhanh') { quick_views }
         capture_command = ::UI::Command.new('VGD · Lưu view') { capture_current_view }
