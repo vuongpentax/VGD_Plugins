@@ -368,8 +368,8 @@ module VGD
       if Sketchup.version.to_i < 22
         UI.messagebox('VGD_Library yêu cầu SketchUp 2022 trở lên.')
       else
-        toolbar = UI::Toolbar.new('VGD_Library')
-        menu = UI.menu('Plugins').add_submenu('VGD_Library')
+        toolbar = UI::Toolbar.new('VGD LIB')
+        menu = UI.menu('Extensions').add_submenu('VGD').add_submenu('VGD Library')
         COMMANDS.each do |title, action, tip|
           command = UI::Command.new(title) { safely { run(action) } }
           command.tooltip = title

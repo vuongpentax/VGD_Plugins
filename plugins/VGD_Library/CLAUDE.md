@@ -4,7 +4,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Thông tin plugin
 
-- Tên extension: VGD_Library. Namespace: `VGD::Library`.
+- Tên extension: VGD Library. Namespace: `VGD::Library`.
 - Loader: `runtime/vgd_library.rb` (nạp `vgd_library/main`).
 - Phiên bản: hằng `VERSION` trong `runtime/vgd_library.rb`.
 - SketchUp tối thiểu: 2022.

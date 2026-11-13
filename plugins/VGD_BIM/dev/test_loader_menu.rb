@@ -41,11 +41,11 @@ ext = Sketchup.respond_to?(:register_extension) ? nil : nil
 loader = File.expand_path('../runtime/vgd_bim/loader.rb', __dir__)
 $opened = []
 require loader rescue (puts "load error: #{$!.class}: #{$!.message}"; raise)
-vgd = UI::MENU_ROOT['Extensions'].subs['VGD']
-ok('menu VGD: VGD_BIM và Tải lại code, không còn Giới thiệu', vgd && vgd.items.map(&:first) == ['VGD_BIM', 'VGD_BIM · Tải lại code'])
-ok('menu VGD không có submenu', vgd && vgd.subs.empty?)
+vgd = UI::MENU_ROOT['Extensions'].subs['VGD'].subs['VGD BIM']
+ok('menu Extensions > VGD > VGD BIM: Mở bảng khối lượng và Tải lại code', vgd && vgd.items.map(&:first) == ['Mở bảng khối lượng', 'Tải lại code'])
+ok('menu VGD BIM không có submenu', vgd && vgd.subs.empty?)
 VGD::BIM.define_singleton_method(:open_panel) { |mode| $opened << mode }
-vgd.items.find { |n, _| n == 'VGD_BIM' }[1].call
-ok('bấm VGD_BIM mở thẳng bảng khối lượng', $opened == ['table'])
+vgd.items.find { |n, _| n == 'Mở bảng khối lượng' }[1].call
+ok('bấm Mở bảng khối lượng mở thẳng bảng khối lượng', $opened == ['table'])
 ok('phiên bản theo chuẩn repo x.y.z hoặc x.y.z-beta.N, không có chữ v', VGD::BIM::VERSION.match?(/\A\d+\.\d+\.\d+(-beta\.\d+)?\z/))
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

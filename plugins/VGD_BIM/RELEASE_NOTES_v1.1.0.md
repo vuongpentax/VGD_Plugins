@@ -79,3 +79,4 @@
 - Quét nhanh hơn: không còn đọc cạnh (edge); báo cáo không còn số cạnh và chiều dài cạnh. Có thể tắt quét mặt khi chỉ cần group / component.
 
 Kiểm tra: tự động bằng mô phỏng (cú pháp Ruby, test lõi, bảng, lưu cài đặt, soạn tag, menu, khung đánh dấu, giao diện HTML). Chưa kiểm thử thủ công trong SketchUp thật.
+- **Đặt lại tên theo chuẩn VGD:** tên extension là **VGD BIM** (trước đây `VGD_BIM`), menu **Extensions → VGD → VGD BIM**, toolbar **VGD BIM**. Tên dictionary dữ liệu trong file SketchUp (`VGD_BIM`, `VGD_BIM_TABLE`…) giữ nguyên nên file cũ vẫn đọc được.

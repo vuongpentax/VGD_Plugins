@@ -16,7 +16,7 @@ require_relative 'camera'
 require_relative 'update_notice'
 module VGD
   module Scenes
-    VERSION = '1.6.0'.freeze unless const_defined?(:VERSION, false)
+    VERSION = '1.6.1-beta.1'.freeze unless const_defined?(:VERSION, false)
     # Clears the section preview before SketchUp saves, so Ctrl+S never writes it.
     class SaveGuard < Sketchup::ModelObserver
       def onPreSaveModel(model)
@@ -363,7 +363,7 @@ module VGD
 
       def initialize_ui
         return if @initialized
-        menu = ::UI.menu('Extensions').add_submenu('VGD Scenes')
+        menu = ::UI.menu('Extensions').add_submenu('VGD').add_submenu('VGD Scenes')
         open_command = ::UI::Command.new('VGD Scenes · Bảng điều khiển') { open }
         quick_command = ::UI::Command.new('VGD · Tạo/cập nhật 4 view nhanh') { quick_views }
         capture_command = ::UI::Command.new('VGD · Lưu view') { capture_current_view }
@@ -392,7 +392,7 @@ module VGD
         copy_command.status_bar_text = 'Sao chép camera và khung hiện tại để dán vào view khác.'
         paste_command.status_bar_text = 'Dán camera và khung vào view đang hoạt động.'
         menu.add_item(open_command); menu.add_item(quick_command); menu.add_item(capture_command)
-        @toolbar = ::UI::Toolbar.new('VGD Scenes')
+        @toolbar = ::UI::Toolbar.new('VGD SCN')
         @toolbar.add_item(open_command); @toolbar.add_item(quick_command); @toolbar.add_item(capture_command)
         @toolbar.add_item(copy_command); @toolbar.add_item(paste_command)
         menu.add_item(copy_command); menu.add_item(paste_command)

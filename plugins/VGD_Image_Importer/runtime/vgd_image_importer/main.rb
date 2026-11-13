@@ -316,8 +316,8 @@ module VGD_ImageImporter
     command.tooltip = 'VGD Image Importer'
     command.status_bar_text = 'Nhập ảnh 2D, sắp xếp ảnh hoặc thêm vật liệu vào model.'
     command.small_icon = command.large_icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'icon.svg')
-    UI.menu('Plugins').add_submenu('VGD Tools').add_item(command)
-    @toolbar = UI::Toolbar.new('VGD Image Importer')
+    UI.menu('Extensions').add_submenu('VGD').add_item(command)
+    @toolbar = UI::Toolbar.new('VGD IMP')
     @toolbar.add_item(command)
     @toolbar.restore
     file_loaded(__FILE__)

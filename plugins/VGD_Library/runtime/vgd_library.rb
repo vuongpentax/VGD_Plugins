@@ -4,9 +4,9 @@ require 'extensions.rb'
 
 module VGD
   module Library
-    VERSION = '1.2.0'.freeze
+    VERSION = '1.2.1-beta.1'.freeze
     unless file_loaded?(__FILE__)
-      extension = SketchupExtension.new('VGD_Library', 'vgd_library/main')
+      extension = SketchupExtension.new('VGD Library', 'vgd_library/main')
       extension.description = 'Thư viện vật liệu/model, kho Drive đồng bộ và bộ công cụ map VGD.'
       extension.version = VERSION
       extension.creator = 'VGD'

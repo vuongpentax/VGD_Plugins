@@ -4,7 +4,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Thông tin plugin
 
-- Tên extension: VGD_BIM (VGD Center chỉ nhận tên này qua `find_installed_extension`). Namespace: `VGD::BIM`. Id trong catalog của Center: `bim`.
+- Tên extension: VGD BIM (VGD Center nhận tên này qua `find_installed_extension`; tên cũ `VGD_BIM` vẫn được nhận cho bản đã cài). Namespace: `VGD::BIM`. Id trong catalog của Center: `bim`.
 - Loader: `runtime/vgd_bim.rb` (nạp `vgd_bim/loader`). Thư mục và tên file giữ `vgd_bim` vì Center khai báo đúng hai đường dẫn này.
 - Phiên bản: hằng `VERSION` trong `runtime/vgd_bim.rb` (dạng `x.y.z` hoặc `x.y.z-beta.N`, không có chữ `v`). Tiêu đề README phải khớp số này. Đóng gói cần có `RELEASE_NOTES_v<x.y.z>.md` (bản beta dùng chung ghi chú của bản chốt).
 - SketchUp tối thiểu: 2022. Windows là môi trường chính.

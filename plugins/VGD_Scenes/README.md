@@ -1,6 +1,6 @@
-# VGD Scenes 1.6.0 — SketchUp 2022–2026.2
+# VGD Scenes 1.6.1 (beta.1) — SketchUp 2022–2026.2
 
-Phiên bản hiện tại 1.6.0, chi tiết ở [RELEASE_NOTES_v1.6.0.md](RELEASE_NOTES_v1.6.0.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
+Phiên bản hiện tại 1.6.1-beta.1, chi tiết ở [RELEASE_NOTES_v1.6.1.md](RELEASE_NOTES_v1.6.1.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
 Plugin không hiện popup cập nhật khi khởi động: VGD Center báo bản mới. Cài bản mới qua Extension Manager rồi khởi động lại.
 
@@ -79,7 +79,7 @@ Kiểm thử hồi quy mới đã qua Ruby 2.7.2 DLL (API giả lập), WASM 3.2
 - Lượt cài 1.3.1 ngày 04/10/2026: 17 file khớp runtime; **19.881 file plugin khác không đổi**. Backup: `outputs/install_20261004_015555_095/`.
 - Báo cáo và bản sao loader cũ nằm trong `outputs/install_*/` trên máy đã cài, không đưa lên GitHub.
 
-Hãy lưu công việc và khởi động lại SketchUp khi thuận tiện. Mở **Extensions → VGD Scenes → VGD Scenes · Bảng điều khiển**. Nếu muốn toolbar, chọn **Hiện thanh công cụ VGD Scenes** trong menu này.
+Hãy lưu công việc và khởi động lại SketchUp khi thuận tiện. Mở **Extensions → VGD → VGD Scenes → VGD Scenes · Bảng điều khiển**. Nếu muốn toolbar, chọn **Hiện thanh công cụ VGD Scenes** trong menu này.
 
 ### Cập nhật view bằng một nút
 
@@ -108,7 +108,7 @@ Thông báo “FOV quy đổi: ngoài giới hạn” trước đây xuất hi�
 
 ### Bỏ khung xám trước khi gửi SKP (1.2.1)
 
-Trong **Xuất & Khung → Gửi file SketchUp**, bấm **Bỏ khung xám tất cả scene**, xác nhận rồi lưu SKP. Hoặc dùng **Extensions → VGD Scenes → VGD · Bỏ khung xám tất cả scene để gửi SKP** mà không mở bảng. Lệnh áp dụng toàn bộ scene trong model, kể cả scene ngoài VGD và scene không được đánh dấu xuất, cùng view hiện tại.
+Trong **Xuất & Khung → Gửi file SketchUp**, bấm **Bỏ khung xám tất cả scene**, xác nhận rồi lưu SKP. Hoặc dùng **Extensions → VGD → VGD Scenes → VGD · Bỏ khung xám tất cả scene để gửi SKP** mà không mở bảng. Lệnh áp dụng toàn bộ scene trong model, kể cả scene ngoài VGD và scene không được đánh dấu xuất, cùng view hiện tại.
 
 Lệnh đặt `camera.aspect_ratio = 0` trên camera gốc của từng scene theo [Camera API](https://ruby.sketchup.com/Sketchup/Camera.html). Người nhận không cần VGD để xem scene không còn dải xám. Khung nhìn theo tỷ lệ cửa sổ SketchUp của họ nên vùng thấy ở mép có thể rộng/hẹp hơn; kích thước xuất VGD đã lưu vẫn được giữ. Lệnh không cập nhật toàn bộ scene, không đổi vị trí/hướng camera, tên/ID/thứ tự, Tags/style/mặt cắt và không xóa geometry. Không tự lưu/ghi đè SKP.
 

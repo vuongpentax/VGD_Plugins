@@ -55,17 +55,17 @@ module VGD
 end
 VGD::BIM::FILES.each { |file| require File.join(VGD::BIM::ROOT, file) }
 unless file_loaded?(__FILE__)
-  # Menu VGD > VGD_BIM: một cú bấm là mở luôn bảng khối lượng.
-  vgd_menu = ::UI.menu('Extensions').add_submenu('VGD')
-  vgd_menu.add_item('VGD_BIM') { VGD::BIM.open_panel('table') }
-  vgd_menu.add_item('VGD_BIM · Tải lại code') { VGD::BIM.reload }
+  # Menu Extensions > VGD > VGD BIM.
+  vgd_menu = ::UI.menu('Extensions').add_submenu('VGD').add_submenu('VGD BIM')
+  vgd_menu.add_item('Mở bảng khối lượng') { VGD::BIM.open_panel('table') }
+  vgd_menu.add_item('Tải lại code') { VGD::BIM.reload }
   VGD::UpdateNotice.start('vgd-bim', 'VGD_BIM', VGD::BIM::VERSION)
   ::UI.add_context_menu_handler do |context|
     if Sketchup.active_model.selection.any? { |e| VGD::BIM::Data.supported?(e) }
       context.add_item('VGD_BIM · Thông tin đối tượng') { VGD::BIM.open_panel('information') }
     end
   end
-  toolbar = ::UI::Toolbar.new('VGD_BIM')
+  toolbar = ::UI::Toolbar.new('VGD BIM')
   command = ::UI::Command.new('VGD_BIM') { VGD::BIM.open_panel('table') }
   command.tooltip = 'VGD_BIM · Bảng khối lượng'
   command.status_bar_text = 'VGD_BIM: mở bảng khối lượng của đối tượng đang chọn'

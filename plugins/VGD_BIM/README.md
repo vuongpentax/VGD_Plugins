@@ -1,4 +1,4 @@
-# VGD_BIM 1.1.0-beta.77
+# VGD BIM 1.1.0-beta.78
 
 Bản thử của 1.1.0 (chưa có bản ổn định). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -8,7 +8,7 @@ Báo cáo CSV ở tab Quét & xuất là dữ liệu/khối lượng gốc, khô
 
 ## Cài đặt
 
-Trong SketchUp, mở **Extensions → Extension Manager → Install Extension**, chọn file `VGD_BIM_v<phiên bản>.rbz`. Khởi động lại SketchUp. Menu: **Extensions → VGD → VGD_BIM** mở thẳng Bảng khối lượng; **VGD_BIM · Tải lại code** nạp lại mã sau khi cài đè bản mới (menu và toolbar mới chỉ có tác dụng sau khi mở lại SketchUp). Có toolbar một nút và mục "VGD_BIM · Thông tin đối tượng" trong context menu của Group/Component.
+Trong SketchUp, mở **Extensions → Extension Manager → Install Extension**, chọn file `VGD_BIM_v<phiên bản>.rbz`. Khởi động lại SketchUp. Menu: **Extensions → VGD → VGD BIM → Mở bảng khối lượng**; **Tải lại code** nạp lại mã sau khi cài đè bản mới (menu và toolbar mới chỉ có tác dụng sau khi mở lại SketchUp). Toolbar một nút tên **VGD BIM**, và mục "VGD_BIM · Thông tin đối tượng" trong context menu của Group/Component.
 
 Hoặc chạy `dev/deploy.ps1` để cài nguồn runtime vào Plugins của SketchUp 2022. Script chỉ copy file plugin này, sao lưu file cũ và kiểm tra SHA256. `-PluginRoot` chọn bản SketchUp khác; `-VerifyOnly` kiểm tra cài đặt.
 
@@ -101,4 +101,4 @@ Chạy từ `plugins/VGD_BIM`:
 - `python3 dev/make_preview.py`: tạo trang HTML xem trước giao diện với dữ liệu mẫu (`outputs/VGD_BIM_giao_dien.html`).
 - `python plugins/VGD_BIM/dev/package.py <phiên bản>` (từ gốc repo): tạo RBZ trong `outputs/local_release_<phiên bản>/`, kiểm tra từng byte trong archive và in SHA-256.
 
-Bản 1.1.0-beta.77 được kiểm tra tự động bằng mô phỏng, chưa kiểm thử thủ công trong SketchUp thật. `VALIDATION.md` ghi chi tiết phần đã và chưa kiểm chứng.
+Bản 1.1.0-beta.78 được kiểm tra tự động bằng mô phỏng, chưa kiểm thử thủ công trong SketchUp thật. `VALIDATION.md` ghi chi tiết phần đã và chưa kiểm chứng.
