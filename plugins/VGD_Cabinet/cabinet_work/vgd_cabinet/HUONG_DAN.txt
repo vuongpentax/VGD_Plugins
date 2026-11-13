@@ -1,7 +1,7 @@
-VGD_Cabinet 4.5.3
+VGD_Cabinet 4.5.4-beta.1
 
 CÀI ĐẶT
-Cài file RBZ bằng Extension Manager trong SketchUp 2022 rồi khởi động lại SketchUp. Sau khi cài, lệnh dựng tủ nằm trong Extensions > VGD Cabinet — Dựng hình; lệnh nạp lại mã nằm trong Extensions > VGD Cabinet > VGD — Nạp lại mã. Toolbar có lệnh dựng hình. Khi có bản mới, plugin hỏi trước khi mở trang tải; cài RBZ rồi khởi động lại.
+Cài file RBZ bằng Extension Manager trong SketchUp 2022 rồi khởi động lại SketchUp. Sau khi cài, lệnh dựng tủ nằm trong Extensions > VGD > VGD Cabinet > VGD Cabinet — Dựng hình; lệnh nạp lại mã nằm cùng menu đó: VGD — Nạp lại mã. Toolbar có lệnh dựng hình. Khi có bản mới, plugin hỏi trước khi mở trang tải; cài RBZ rồi khởi động lại.
 
 DỰNG VÀ SỬA TỦ
 Dùng lệnh VGD Cabinet — Dựng hình để mở bảng. Chỉnh kích thước và cấu hình trong các trang, sau đó tạo cabinet hoặc chọn một cabinet VGD để nạp thông số và preview cập nhật. Công cụ dựng 3 điểm đặt hướng mặt ở điểm đầu; nhập kích thước theo đơn vị hiển thị. Esc hủy thao tác đang preview.
@@ -15,12 +15,12 @@ Mở Dựng từ mô tả > Hướng dẫn cho ChatGPT, gửi hướng dẫn cù
 
 PRESET VÀ THƯ VIỆN
 Preset lưu thông số tại:
-%APPDATA%/VGD/SketchUp/VGD_Cabinet/presets_v1.json
+%APPDATA%/VGD/SketchUp/vgd_cabinet/presets_v1.json
 
 Tạo mới, cập nhật mẫu đã chọn và đổi tên là các lệnh riêng. Tên trùng, kể cả chỉ khác hoa/thường, bị chặn. Lần đầu chưa có kho mới, plugin có thể đọc preset T+ cũ từ Preferences; không ghi ngược Preferences cũ.
 
 Thư viện lưu cabinet đã dựng, gồm SKP, preview và index tại:
-%APPDATA%/VGD/SketchUp/VGD_Cabinet/library/
+%APPDATA%/VGD/SketchUp/vgd_cabinet/library/
 
 Lưu mẫu bằng cách chọn đúng một cabinet rồi đặt tên. Để chuyển thư viện sang máy khác, sao chép cả thư mục library, gồm index và assets. Thư viện lưu hình học thực tế, kể cả chỉnh sửa thủ công; preset chỉ lưu thông số.
 

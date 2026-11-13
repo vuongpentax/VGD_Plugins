@@ -2,11 +2,11 @@
 # aborts the model operation, and stores test files under this project's outputs.
 require 'json'
 require 'fileutils'
-require_relative '../cabinet_work/VGD_Cabinet/main43'
+require_relative '../cabinet_work/vgd_cabinet/main43'
 # The native fixture can be rerun from the Ruby Console without restarting SketchUp.
 # `require_relative` caches an already-loaded feature, so refresh the source under test.
 %w[modeling_rules.rb frame_divisions.rb pano.rb rail_joinery.rb modeling.rb defaults.rb preview_mesh.rb model_data.rb box_conversion.rb main43.rb].each do |file|
-  load File.expand_path('../cabinet_work/VGD_Cabinet/'+file,__dir__.dup.force_encoding(Encoding::UTF_8))
+  load File.expand_path('../cabinet_work/vgd_cabinet/'+file,__dir__.dup.force_encoding(Encoding::UTF_8))
 end
 module VGDCabinetNativeUpgrade
   module_function

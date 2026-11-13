@@ -9,12 +9,12 @@ with tempfile.TemporaryDirectory(prefix='deploy_fixture_') as directory:
     plugins=fixture/'SketchUp/SketchUp 2022/SketchUp/Plugins'; plugins.mkdir(parents=True)
     preserved_utilities={'utilities.rb':b'legacy VGD utility module','combine.svg':b'legacy combine icon','untag.svg':b'legacy untag icon','logo.svg':b'legacy unused logo'}
     for name,expected_bytes in preserved_utilities.items():
-        path=plugins/'VGD_Cabinet'/name; path.parent.mkdir(parents=True,exist_ok=True); path.write_bytes(expected_bytes)
+        path=plugins/'vgd_cabinet'/name; path.parent.mkdir(parents=True,exist_ok=True); path.write_bytes(expected_bytes)
     legacy=plugins/'tplus_cabinet.rb'
     previous=b"module TPlus_Cabinet\nend\n# TPlus_Cabinet/main43.rb\n"
     legacy.write_bytes(previous)
     other=plugins/'vgd_dim.rb'; other.write_bytes(b'DIM MUST NOT CHANGE')
-    data=fixture/'VGD/SketchUp/VGD_Cabinet/presets_v1.json'; data.parent.mkdir(parents=True); data.write_bytes(b'USER PRESETS MUST NOT CHANGE')
+    data=fixture/'VGD/SketchUp/vgd_cabinet/presets_v1.json'; data.parent.mkdir(parents=True); data.write_bytes(b'USER PRESETS MUST NOT CHANGE')
     library=data.parent/'library/library_v1.json'; library.parent.mkdir(); library.write_bytes(b'USER LIBRARY MUST NOT CHANGE')
     def deploy(*args):
         return subprocess.run([str(shell),'-NoProfile','-File',str(root/'cabinet_dev/sync_sketchup_2022.ps1'),*args],env=dict(os.environ,APPDATA=str(fixture)),capture_output=True)
@@ -22,14 +22,14 @@ with tempfile.TemporaryDirectory(prefix='deploy_fixture_') as directory:
     assert legacy.read_bytes()==previous and not (plugins/'vgd_cabinet.rb').exists()
     result=deploy(); assert result.returncode==0,result.stderr
     assert not legacy.exists()
-    files=['vgd_cabinet.rb']+['VGD_Cabinet/'+n for n in ['main43.rb','geometry_engine.rb','modeling_rules.rb','modeling.rb','pano.rb','component_sharing.rb','frame_divisions.rb','rail_joinery.rb','preview_mesh.rb','library_store.rb','model_data.rb','box_conversion.rb','preset_store.rb','description_import.rb','defaults.rb','draw_tool.rb','ui_renderer.rb','VGD_Cabinet_UI.html','reload.rb','update_notice.rb','cabinet.svg','HUONG_DAN.txt']]
+    files=['vgd_cabinet.rb']+['vgd_cabinet/'+n for n in ['main43.rb','geometry_engine.rb','modeling_rules.rb','modeling.rb','pano.rb','component_sharing.rb','frame_divisions.rb','rail_joinery.rb','preview_mesh.rb','library_store.rb','model_data.rb','box_conversion.rb','preset_store.rb','description_import.rb','defaults.rb','draw_tool.rb','ui_renderer.rb','VGD_Cabinet_UI.html','reload.rb','update_notice.rb','cabinet.svg','HUONG_DAN.txt']]
     for name in files: assert (plugins/name).read_bytes()==(root/'cabinet_work'/name).read_bytes(),name
     reports=[json.loads(p.read_text(encoding='utf-8-sig')) for p in outputs.glob('install_*/INSTALL_REPORT.json')]
     receipt=next(r for r in reports if r['Target']==str(plugins))
     assert receipt['Status']=='VERIFIED' and Path(receipt['LegacyBackup']).read_bytes()==previous
     backup_root=Path(receipt['LegacyBackup']).parent.parent
     for name,expected_bytes in preserved_utilities.items():
-        assert (plugins/'VGD_Cabinet'/name).read_bytes()==expected_bytes,f'{name} was changed or removed'
+        assert (plugins/'vgd_cabinet'/name).read_bytes()==expected_bytes,f'{name} was changed or removed'
     assert not (backup_root/'retired').exists(),'utility files were unexpectedly backed up for retirement'
     result=deploy(); assert result.returncode==0,result.stderr
     before={name:(plugins/name).read_bytes() for name in files}

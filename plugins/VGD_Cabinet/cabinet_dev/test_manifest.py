@@ -9,7 +9,7 @@ import re
 
 root = Path(__file__).resolve().parents[1]
 runtime = root / 'cabinet_work'
-RUNTIME_DIR = 'VGD_Cabinet'
+RUNTIME_DIR = 'vgd_cabinet'
 
 
 def quoted(text):
@@ -22,7 +22,7 @@ def statement(source, start, end):
 
 
 def with_prefix(tokens):
-    """Ghép tiền tố VGD_Cabinet/ cho các tên chỉ có phần tên file, giữ nguyên loader vgd_cabinet.rb."""
+    """Ghép tiền tố vgd_cabinet/ cho các tên chỉ có phần tên file, giữ nguyên loader vgd_cabinet.rb."""
     names = [token for token in tokens if token != RUNTIME_DIR + '/']
     return [name if name == 'vgd_cabinet.rb' else RUNTIME_DIR + '/' + name for name in names]
 

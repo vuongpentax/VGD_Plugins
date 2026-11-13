@@ -1,7 +1,7 @@
 const fs=require('fs'),assert=require('assert');
 const {JSDOM}=require('./dependencies.cjs').load('jsdom');
 const defaults=JSON.parse(fs.readFileSync('cabinet_dev/defaults.json'));
-let html=fs.readFileSync('cabinet_work/VGD_Cabinet/VGD_Cabinet_UI.html','utf8');
+let html=fs.readFileSync('cabinet_work/vgd_cabinet/VGD_Cabinet_UI.html','utf8');
 for(const [key,data]of [['default_json',defaults],['initial_json',defaults],['presets_json',{}]])html=html.replace('#{'+key+'}',()=>JSON.stringify(JSON.stringify(data)).replace(/</g,'\\u003c'));
 const dom=new JSDOM(html,{runScripts:'dangerously',url:'https://vgd.test',beforeParse(w){w.calls=[];w.sketchup=new Proxy({},{get:(_,k)=>data=>w.calls.push({action:k,data})});}});
 const w=dom.window,d=w.document;

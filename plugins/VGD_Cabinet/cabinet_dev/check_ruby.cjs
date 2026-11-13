@@ -13,7 +13,7 @@ const {RubyVM}=require('./dependencies.cjs').load('@ruby/wasm-wasi/dist/vm');
    return result;
  };
  const {vm}=await makeVM();
- const root='cabinet_work/VGD_Cabinet/';
+ const root='cabinet_work/vgd_cabinet/';
  vm.eval('RubyVM::InstructionSequence.compile('+JSON.stringify(fs.readFileSync('cabinet_work/vgd_cabinet.rb','utf8'))+')');
  for(const name of fs.readdirSync(root).filter(n=>n.endsWith('.rb'))){
    vm.eval('RubyVM::InstructionSequence.compile('+JSON.stringify(fs.readFileSync(root+name,'utf8')).replace(/#/g,'\\#')+')');

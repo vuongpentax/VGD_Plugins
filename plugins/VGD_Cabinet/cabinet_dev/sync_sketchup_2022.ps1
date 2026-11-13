@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 $taskRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $sourceRoot = Join-Path $taskRoot 'cabinet_work'
 $pluginRoot = Join-Path $env:APPDATA 'SketchUp\SketchUp 2022\SketchUp\Plugins'
-$ownedFiles = @('vgd_cabinet.rb','VGD_Cabinet\main43.rb','VGD_Cabinet\geometry_engine.rb','VGD_Cabinet\modeling_rules.rb','VGD_Cabinet\modeling.rb','VGD_Cabinet\pano.rb','VGD_Cabinet\component_sharing.rb','VGD_Cabinet\frame_divisions.rb','VGD_Cabinet\rail_joinery.rb','VGD_Cabinet\preview_mesh.rb','VGD_Cabinet\library_store.rb','VGD_Cabinet\model_data.rb','VGD_Cabinet\box_conversion.rb','VGD_Cabinet\preset_store.rb','VGD_Cabinet\description_import.rb','VGD_Cabinet\defaults.rb','VGD_Cabinet\draw_tool.rb','VGD_Cabinet\ui_renderer.rb','VGD_Cabinet\VGD_Cabinet_UI.html','VGD_Cabinet\reload.rb','VGD_Cabinet\update_notice.rb','VGD_Cabinet\cabinet.svg','VGD_Cabinet\HUONG_DAN.txt')
+$ownedFiles = @('vgd_cabinet.rb','vgd_cabinet\main43.rb','vgd_cabinet\geometry_engine.rb','vgd_cabinet\modeling_rules.rb','vgd_cabinet\modeling.rb','vgd_cabinet\pano.rb','vgd_cabinet\component_sharing.rb','vgd_cabinet\frame_divisions.rb','vgd_cabinet\rail_joinery.rb','vgd_cabinet\preview_mesh.rb','vgd_cabinet\library_store.rb','vgd_cabinet\model_data.rb','vgd_cabinet\box_conversion.rb','vgd_cabinet\preset_store.rb','vgd_cabinet\description_import.rb','vgd_cabinet\defaults.rb','vgd_cabinet\draw_tool.rb','vgd_cabinet\ui_renderer.rb','vgd_cabinet\VGD_Cabinet_UI.html','vgd_cabinet\reload.rb','vgd_cabinet\update_notice.rb','vgd_cabinet\cabinet.svg','vgd_cabinet\HUONG_DAN.txt')
 function Assert-TaskPath([string]$Path,[string]$Root) {
     $full = [IO.Path]::GetFullPath($Path)
     $allowed = [IO.Path]::GetFullPath($Root).TrimEnd('\')
@@ -24,7 +24,7 @@ $loader = Join-Path $pluginRoot 'vgd_cabinet.rb'
 Assert-TaskPath $loader $pluginRoot
 if (Test-Path -LiteralPath $loader) {
     $text = Get-Content -LiteralPath $loader -Raw
-    if ($text -notmatch 'VGD_Cabinet/main43' -or $text -notmatch 'module VGD_Cabinet') { throw 'Loader hiện tại không thuộc VGD_Cabinet; từ chối ghi đè.' }
+    if ($text -notmatch 'vgd_cabinet/main43' -or $text -notmatch 'module VGD_Cabinet') { throw 'Loader hiện tại không thuộc VGD_Cabinet; từ chối ghi đè.' }
 }
 # Explicit predecessor only. Keep its runtime files inert for recovery; never scan other extensions.
 $legacy = Join-Path $pluginRoot 'tplus_cabinet.rb'
