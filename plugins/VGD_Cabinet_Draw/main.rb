@@ -1,1 +1,1 @@
-require_relative 'runtime/VGD_Cabinet_Draw/main'
+require_relative 'runtime/vgd_cabinet_draw/main'

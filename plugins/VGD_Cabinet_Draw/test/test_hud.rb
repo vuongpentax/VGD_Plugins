@@ -1,7 +1,7 @@
 # Test HUD 3 phần (Mẫu · Chế độ · Thông số), chế độ cánh phủ/lọt/thông thủy, chế độ ngăn kéo, thanh trạng thái.
 # Chạy: ruby test_hud.rb [thư mục runtime]
 $stdout.sync = true
-RT = File.expand_path(ARGV[0] || '../runtime/VGD_Cabinet_Draw', __dir__)
+RT = File.expand_path(ARGV[0] || '../runtime/vgd_cabinet_draw', __dir__)
 require 'tmpdir'
 require_relative 'mock_su'
 $LOAD_PATH.unshift(__dir__)

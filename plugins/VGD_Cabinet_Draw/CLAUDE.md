@@ -5,29 +5,29 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 ## Thông tin plugin
 
 - Tên extension: VGD Cabinet Draw (có dấu cách, theo quy tắc catalog của VGD Center; bản beta cũ dùng "VGD_Cabinet Draw"). Namespace: `VGD_Cabinet_Draw` (không có tiền tố `VGD::`).
-- Loader: `VGD_Cabinet_Draw.rb` (nạp `VGD_Cabinet_Draw/main`); `main.rb` gọi `runtime/VGD_Cabinet_Draw/main.rb`.
-- Phiên bản: `VERSION` trong `runtime/VGD_Cabinet_Draw/main.rb`. Phải khớp `extension.version` trong `VGD_Cabinet_Draw.rb` và số phiên bản trong `runtime/VGD_Cabinet_Draw/dialog.html`: đổi phiên bản thì sửa cả ba chỗ.
+- Loader: `vgd_cabinet_draw.rb` (nạp `vgd_cabinet_draw/main`); `main.rb` gọi `runtime/vgd_cabinet_draw/main.rb`.
+- Phiên bản: `VERSION` trong `runtime/vgd_cabinet_draw/main.rb`. Phải khớp `extension.version` trong `vgd_cabinet_draw.rb` và số phiên bản trong `runtime/vgd_cabinet_draw/dialog.html`: đổi phiên bản thì sửa cả ba chỗ.
 - SketchUp tối thiểu: 2022, dùng Ruby 2.7. Code phải chạy được trên Ruby 2.7 dù test chạy ở Ruby 3.x.
 - Dữ liệu: dictionary model `VGD_Cabinet_Draw` và thư mục `%APPDATA%/VGD/SketchUp/VGD_Cabinet_Draw`. Không đọc dictionary hay preset của VGD_Cabinet cũ.
 
 ## Cấu trúc
 
-- `runtime/VGD_Cabinet_Draw/`: các module nạp theo thứ tự trong `RUNTIME_FILES` của `main.rb`. Module mới phải khai báo thêm trong `RUNTIME_FILES` và `RUNTIME_CONSTANTS`.
+- `runtime/vgd_cabinet_draw/`: các module nạp theo thứ tự trong `RUNTIME_FILES` của `main.rb`. Module mới phải khai báo thêm trong `RUNTIME_FILES` và `RUNTIME_CONSTANTS`.
 - `test/`: các file `test_*.rb` và giả lập SketchUp (`mock_su.rb`, `sketchup.rb`).
 - `dev/`: `build_release.py`, `native_smoke.rb`, và ba script chẩn đoán chỉ đọc chạy trong Ruby Console của SketchUp thật (`check_parts_solid.rb`, `check_feature_sizes.rb`, `dump_part_structure.rb`).
-- `docs/QUAN_HE_CONG_CU.md`: quan hệ giữa công cụ và cấu kiện. `icon.svg` ở gốc plugin; icon thanh công cụ ở `runtime/VGD_Cabinet_Draw/icons/`.
-- `runtime/VGD_Cabinet_Draw/vgd-theme/`: bản sao bộ theme chung, không sửa tay.
+- `docs/QUAN_HE_CONG_CU.md`: quan hệ giữa công cụ và cấu kiện. `icon.svg` ở gốc plugin; icon thanh công cụ ở `runtime/vgd_cabinet_draw/icons/`.
+- `runtime/vgd_cabinet_draw/vgd-theme/`: bản sao bộ theme chung, không sửa tay.
 
 ## Kiểm thử
 
-- Chạy từng file từ `plugins/VGD_Cabinet_Draw/test`, ví dụ `ruby test_build.rb`. Mặc định các test trỏ tới `../runtime/VGD_Cabinet_Draw`; riêng `test_back_modes.rb`, `test_panel_model.rb`, `test_rails.rb` bắt buộc truyền đường dẫn: `ruby test_rails.rb ../runtime/VGD_Cabinet_Draw`. Chạy đủ mọi `test_*.rb` trước khi đóng gói.
+- Chạy từng file từ `plugins/VGD_Cabinet_Draw/test`, ví dụ `ruby test_build.rb`. Mặc định các test trỏ tới `../runtime/vgd_cabinet_draw`; riêng `test_back_modes.rb`, `test_panel_model.rb`, `test_rails.rb` bắt buộc truyền đường dẫn: `ruby test_rails.rb ../runtime/vgd_cabinet_draw`. Chạy đủ mọi `test_*.rb` trước khi đóng gói.
 - Test dùng giả lập SketchUp, không phải SketchUp thật. Không ghi là đã test trong SketchUp khi chỉ chạy các test này.
 - `dev/native_smoke.rb` có thao tác hình học, chỉ chạy trong SketchUp thật; chưa đối chiếu với bản hiện tại.
 - Phần chưa xác minh: xem `README.md`, mục "Điều chưa kiểm chứng".
 
 ## Đóng gói
 
-- `python3 dev/build_release.py` tạo `outputs/` (git bỏ qua). Gói `.rbz` gồm `VGD_Cabinet_Draw.rb`, `VGD_Cabinet_Draw/main.rb` và toàn bộ `runtime/`; script tự quét thư mục `runtime/`, không có danh sách file cứng.
+- `python3 dev/build_release.py` tạo `outputs/` (git bỏ qua). Gói `.rbz` gồm `vgd_cabinet_draw.rb`, `vgd_cabinet_draw/main.rb` và toàn bộ `runtime/`; script tự quét thư mục `runtime/`, không có danh sách file cứng.
 
 ## Tài liệu đọc trước khi sửa
 

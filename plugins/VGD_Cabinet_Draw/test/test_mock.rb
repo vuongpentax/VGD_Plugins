@@ -1,6 +1,6 @@
 # Chạy: ruby test_mock.rb <đường dẫn thư mục runtime>
 $stdout.sync = true
-RT = File.expand_path(ARGV[0] || '../runtime/VGD_Cabinet_Draw', __dir__)
+RT = File.expand_path(ARGV[0] || '../runtime/vgd_cabinet_draw', __dir__)
 require 'tmpdir'
 require_relative 'mock_su'
 $LOAD_PATH.unshift(__dir__)
@@ -686,7 +686,7 @@ tb = V.instance_variable_get(:@toolbar)
 check 'toolbar có 8 nút', tb.commands.length == 8, tb.commands.length
 check 'toolbar thứ tự', tb.commands.map(&:title) == ['Box → Board', 'Chia đợt / vách', 'Cánh tủ', 'Ngăn kéo', 'Scale VGD', 'Quét & dời tấm', 'VGD Chọn', 'Setting']
 check 'mọi nút có icon tồn tại', tb.commands.all? { |c| File.file?(c.small_icon.to_s) && File.file?(c.large_icon.to_s) }, tb.commands.map(&:small_icon).inspect
-check 'submenu Extensions có đủ nút', UI.menu('Extensions').subs['VGD Cabinet Draw'].items.length == 12
+check 'submenu Extensions → VGD → VGD Cabinet Draw có đủ nút', UI.menu('Extensions').subs['VGD'].subs['VGD Cabinet Draw'].items.length == 12
 sd = V::ToolSettings.new
 sd.save_base({'board_thickness' => 18})
 d1 = sd.save('door', 'Khe 3', {'door_gap' => 3}); sd.set_default('door', d1['id'])

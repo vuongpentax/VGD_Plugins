@@ -1,6 +1,6 @@
 # Test kiểu hậu (beta.38): âm 4 cạnh, âm 2 hông, lùa trên, lùa đáy, phủ, không hậu.
 # Chạy: ruby test_back_modes.rb <đường dẫn runtime/VGD_Cabinet_Draw>
-dir = ARGV[0] or abort('Cần đường dẫn thư mục runtime/VGD_Cabinet_Draw')
+dir = ARGV[0] or abort('Cần đường dẫn thư mục runtime/vgd_cabinet_draw')
 load File.join(dir, 'panel_model.rb')
 PM = VGD_Cabinet_Draw::PanelModel
 

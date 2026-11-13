@@ -5,11 +5,11 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'outputs'
-VERSION = '1.0.0'
-RUNTIME_DIR = ROOT / 'runtime' / 'VGD_Cabinet_Draw'
+VERSION = '1.0.1-beta.1'
+RUNTIME_DIR = ROOT / 'runtime' / 'vgd_cabinet_draw'
 LOADER_FILES = [
-    ('VGD_Cabinet_Draw.rb', 'VGD_Cabinet_Draw.rb'),
-    ('main.rb', 'VGD_Cabinet_Draw/main.rb'),
+    ('vgd_cabinet_draw.rb', 'vgd_cabinet_draw.rb'),
+    ('main.rb', 'vgd_cabinet_draw/main.rb'),
 ]
 
 def packaged_files():
@@ -18,7 +18,7 @@ def packaged_files():
     for path in sorted(RUNTIME_DIR.rglob('*')):
         if path.is_file() and '__pycache__' not in path.parts:
             relative = path.relative_to(ROOT).as_posix()
-            files.append((relative, f'VGD_Cabinet_Draw/{relative}'))
+            files.append((relative, f'vgd_cabinet_draw/{relative}'))
     return files
 
 def sha256(path):
@@ -41,7 +41,7 @@ def main():
     with zipfile.ZipFile(rbz) as archive:
         assert archive.testzip() is None
         assert len(archive.namelist()) == len(files)
-        assert 'VGD_Cabinet_Draw/main.rb' in archive.namelist()
+        assert 'vgd_cabinet_draw/main.rb' in archive.namelist()
         assert 'main.rb' not in archive.namelist()
     print(f'RBZ: {rbz}')
     print(f'Source: {source}')
