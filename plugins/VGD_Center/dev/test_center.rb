@@ -7,7 +7,7 @@ require 'fileutils'
 require 'zlib'
 
 $LOAD_PATH.unshift(File.join(__dir__, 'stub'))
-require_relative '../VGD_Center/main'
+require_relative '../vgd_center/main'
 
 CENTER = VGD::Center
 PASSED = []
@@ -123,9 +123,9 @@ check 'dim có trang hướng dẫn trong Center', by_id['dim'][:guide] == true
 check 'plugin mới không có trang hướng dẫn (nút sẽ ẩn)', by_id['demo_tool'][:guide] == false
 check 'plugin mới hiện là "cài đặt"', by_id['demo_tool'][:action] == 'install' && by_id['demo_tool'][:installed] == false
 check 'mọi plugin bundle đều có trang hướng dẫn thật',
-      (accepted.map { |item| item['id'] } - %w[]).all? { |id| File.file?(File.join(__dir__, '..', 'VGD_Center', 'guides', "#{id}.html")) }
+      (accepted.map { |item| item['id'] } - %w[]).all? { |id| File.file?(File.join(__dir__, '..', 'vgd_center', 'guides', "#{id}.html")) }
 
-guide_dir = File.join(__dir__, '..', 'VGD_Center', 'guides')
+guide_dir = File.join(__dir__, '..', 'vgd_center', 'guides')
 cd_guide = File.read(File.join(guide_dir, 'cabinet_draw.html'), encoding: 'UTF-8')
 check 'cabinet_draw có trang hướng dẫn (Center tìm theo id sản phẩm)', File.file?(CENTER.guide_path('cabinet_draw').to_s)
 check 'trang hướng dẫn Cabinet Draw: liên kết trang khác đều có thật', cd_guide.scan(/href="([^"#]+\.html)"/).flatten.all? { |f| File.file?(File.join(guide_dir, f)) }
@@ -134,7 +134,7 @@ check 'trang hướng dẫn Cabinet Draw: có tiêu đề và tên plugin', cd_g
 
 # ---------- 5b. Kiểu cửa sổ ----------
 # STYLE_WINDOW là cửa sổ độc lập, bị chìm xuống sau SketchUp khi bấm ra ngoài (trông như tự đóng). Các plugin VGD dùng STYLE_DIALOG.
-center_source = File.read(File.join(__dir__, '..', 'VGD_Center', 'main.rb'), encoding: 'UTF-8')
+center_source = File.read(File.join(__dir__, '..', 'vgd_center', 'main.rb'), encoding: 'UTF-8')
 styles = center_source.scan(/UI::HtmlDialog::(STYLE_\w+)/).flatten
 check 'mọi cửa sổ HtmlDialog của Center (chính và hướng dẫn) dùng STYLE_DIALOG', styles.size == 2 && styles.uniq == ['STYLE_DIALOG'], styles.inspect
 check 'mọi HtmlDialog.new đều có một style tương ứng', center_source.scan('UI::HtmlDialog.new(').size == styles.size
@@ -244,7 +244,7 @@ CENTER.register_callbacks(web_dlg)
 $stub_opened_urls.clear
 web_dlg.callback('open_website').call(nil, 'https://evil.example/')
 check 'logo: mở đúng trang web VGD, bỏ qua địa chỉ do giao diện gửi', $stub_opened_urls == ['https://vgdtools.vercel.app/']
-web_html = File.read(File.join(__dir__, '..', 'VGD_Center', 'dialog.html'), encoding: 'UTF-8')
+web_html = File.read(File.join(__dir__, '..', 'vgd_center', 'dialog.html'), encoding: 'UTF-8')
 check 'logo là nút bấm gọi open_website, có tiếng Anh',
       web_html.include?('id="brandLink"') && web_html.include?('window.sketchup.open_website()') && web_html.include?('Open the VGD website')
 

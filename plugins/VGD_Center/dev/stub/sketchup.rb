@@ -28,6 +28,7 @@ end
 module UI
   class Menu
     def add_item(_command); end
+    def add_submenu(_name); self; end
   end
   class Command
     attr_accessor :tooltip, :status_bar_text, :small_icon, :large_icon

@@ -5,9 +5,9 @@ require 'extensions.rb'
 module VGD
   module Center
     unless file_loaded?(__FILE__)
-      extension = SketchupExtension.new('VGD Center', 'VGD_Center/main')
+      extension = SketchupExtension.new('VGD Center', 'vgd_center/main')
       extension.creator = 'VGD'
-      extension.version = '1.2.4'
+      extension.version = '1.2.5-beta.1'
       extension.description = 'Cài đặt và cập nhật các plugin VGD trong SketchUp.'
       Sketchup.register_extension(extension, true)
       file_loaded(__FILE__)

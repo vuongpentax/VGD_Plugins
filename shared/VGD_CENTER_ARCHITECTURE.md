@@ -41,7 +41,7 @@ Từ VGD Center 1.2.0, plugin có `id` mới không cần cập nhật Center n�
 
 ## Hướng dẫn (từ 1.2.2)
 
-- Bản gốc của mọi trang hướng dẫn: `shared/vgd-center/guides/<id>.html`. Gói Center mang bản đi kèm ở `VGD_Center/guides/` (`package.py` chép từ shared khi đóng gói; `dev/test_guides.rb` kiểm tra hai nơi giống nhau).
+- Bản gốc của mọi trang hướng dẫn: `shared/vgd-center/guides/<id>.html`. Gói Center mang bản đi kèm ở `vgd_center/guides/` (`package.py` chép từ shared khi đóng gói; `dev/test_guides.rb` kiểm tra hai nơi giống nhau).
 - Bấm **Hướng dẫn** (`open_guide`): Center tải `https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/guides/<id>.html`, kiểm tra (`valid_guide_html?`), ghi vào `guides/<id>.html` (file tạm rồi đổi tên) rồi mở. Chờ tối đa `GUIDE_TIMEOUT` (5 giây); lỗi mạng, mã khác 200 hoặc trang không hợp lệ thì mở bản đang có (đi kèm gói hoặc tải lần trước). Chưa có bản nào thì báo chưa có.
 - Nút hiện nếu trang đã có trong thư mục guides hoặc mục catalog khai báo `"guide": true` (plugin mới chưa có trang trong gói).
 - Trang chỉ được là tài liệu tĩnh (không script, khung nhúng, form, base, meta refresh, tài nguyên hay liên kết ra ngoài). Ai sửa được `main` có thể đổi nội dung trang, cũng như đã có thể đổi catalog, nên `main` phải được bảo vệ như nguồn phát hành.
@@ -49,10 +49,10 @@ Từ VGD Center 1.2.0, plugin có `id` mới không cần cập nhật Center n�
 
 ## Tab Quản lý (từ 1.2.1)
 
-Tab Quản lý có nguồn gốc từ VGD Plugin Manager 1.0.0-beta.17. Plugin đó đã được gỡ khỏi repo và khỏi catalog; mã nằm trong Center (`VGD_Center/manager/`, module `VGD::Center::Manager`). Giao diện: trang `page-manager` trong `dialog.html`, cùng `manager/manager.js` và `manager/manager.css` (tên lớp có tiền tố `mgr-`). Khác với phần cài đặt, tab này **dời file của mọi plugin** trong thư mục Plugins, nên rủi ro cao hơn:
+Tab Quản lý có nguồn gốc từ VGD Plugin Manager 1.0.0-beta.17. Plugin đó đã được gỡ khỏi repo và khỏi catalog; mã nằm trong Center (`vgd_center/manager/`, module `VGD::Center::Manager`). Giao diện: trang `page-manager` trong `dialog.html`, cùng `manager/manager.js` và `manager/manager.css` (tên lớp có tiền tố `mgr-`). Khác với phần cài đặt, tab này **dời file của mọi plugin** trong thư mục Plugins, nên rủi ro cao hơn:
 
 - **Mục được bảo vệ** (`Manager::SELF_NAMES`): `VGD_Center`, `VGD_PluginManager` và tên cũ `vgd_plugin_migrator`. Không bao giờ hiện trong danh sách, không tắt hay chuyển được; so khớp không phân biệt hoa thường. `VGD_Center` chứa thư mục dữ liệu; `VGD_PluginManager` được giữ vì máy cũ có thể còn cài Plugin Manager hoặc còn dữ liệu cũ chưa chuyển.
-- **Thư mục dữ liệu** `Plugins/VGD_Center/data` (`disabled/` chứa plugin đã tắt, `sets.json` chứa bộ plugin). Không phải trong `VGD_PluginManager` như Plugin Manager cũ.
+- **Thư mục dữ liệu** `Plugins/vgd_center/data` (`disabled/` chứa plugin đã tắt, `sets.json` chứa bộ plugin). Không phải trong `VGD_PluginManager` như Plugin Manager cũ.
 - **Chuyển dữ liệu cũ** (`Toggle.migrate_old_data`): dữ liệu ở `Plugins/VGD_PluginManager/data` (Plugin Manager beta.4 trở đi) và ở thư mục beta.3 (ngoài Plugins) được chuyển vào `VGD_Center/data`, vì gỡ Plugin Manager bằng Extension Manager có thể xóa thư mục của nó. Chạy ngay lúc khởi động SketchUp (hẹn giờ 8 giây sau khi nạp, `Manager.migrate_on_start`) và mỗi lần mở tab Quản lý. Chỉ dùng thao tác đổi chỗ từng mục, không bao giờ xóa đệ quy, không ghi đè: mục trùng tên ở chỗ mới ở lại chỗ cũ và được báo; file bộ plugin được gộp (bộ cùng tên ở chỗ mới thắng), file hỏng giữ nguyên. Thư mục cũ chỉ bị xóa khi đã rỗng. Plugin Manager cũ còn cài sẽ không thấy dữ liệu đã chuyển; tab báo để người dùng gỡ nó. Gỡ Extension Manager của chính Center sẽ xóa luôn `VGD_Center/data`; Center không tự gỡ mình.
 - **Nạp ngay** (`Toggle.load_now`, lệnh `mgr_load`): nạp plugin đang bật mà chưa chạy trong phiên bằng `Sketchup.require` trên file nạp (`.rb/.rbe/.rbs` cùng tên plugin), không cần khởi động lại. Plugin "đã chạy" nếu có trong Plugins lúc SketchUp khởi động (`Toggle.remember_startup`, gọi trong `main.rb`), đã được Nạp ngay, hoặc có trong `$LOADED_FEATURES`; những plugin này không bị nạp lại vì sẽ nhân đôi menu, toolbar, observer. Thư viện nền (tên chứa `lib`) nạp trước; lỗi của một plugin không dừng các plugin còn lại (bắt cả `SyntaxError`/`LoadError`) và plugin lỗi vẫn ở trạng thái chờ nạp. Hộp xác nhận chỉ hiện lần đầu mỗi phiên. Tắt plugin không gỡ được khỏi bộ nhớ.
 - **Khóa khi Center bận**: bật/tắt, bộ plugin và chuyển plugin bị từ chối khi Center đang tải/cài/gỡ (`VGD::Center.busy?`), để không dời file trong Plugins cùng lúc.
@@ -71,9 +71,9 @@ Mã, HANDOFF và hướng dẫn kiểm thử thủ công của Plugin Manager xe
 
 ## Tệp chính
 
-- `VGD_Center.rb`: đăng ký extension.
-- `VGD_Center/main.rb`: dialog, catalog, kiểm tra phiên bản, tải, xác minh, sao lưu/khôi phục và cài RBZ.
-- `VGD_Center/dialog.html`: giao diện động, mặc định tối và có chế độ sáng.
+- `vgd_center.rb`: đăng ký extension.
+- `vgd_center/main.rb`: dialog, catalog, kiểm tra phiên bản, tải, xác minh, sao lưu/khôi phục và cài RBZ.
+- `vgd_center/dialog.html`: giao diện động, mặc định tối và có chế độ sáng.
 - `shared/vgd-center/catalog.json`: catalog phiên bản mới nhất được phân phối trên GitHub.
 - `VGD_Center/build_release.ps1`: tạo RBZ, source zip và file SHA-256.
 

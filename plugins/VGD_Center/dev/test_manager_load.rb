@@ -8,7 +8,7 @@ $LOAD_PATH.unshift(File.join(__dir__, 'stub'))
 fake = Dir.mktmpdir('fake_appdata')
 ENV['APPDATA'] = fake
 plug = File.join(fake, 'SketchUp/SketchUp 2024/SketchUp/Plugins')
-off = File.join(plug, 'VGD_Center/data/disabled')
+off = File.join(plug, 'vgd_center/data/disabled')
 FileUtils.mkdir_p(plug)
 FileUtils.mkdir_p(off)
 $ran = []
@@ -17,7 +17,7 @@ File.write(File.join(plug, 'started.rb'), "$ran << 'started'\n")
 # Đã tắt từ trước khi khởi động: chưa từng chạy trong phiên này
 File.write(File.join(off, 'was_off.rb'), "$ran << 'was_off'\n")
 
-require_relative '../VGD_Center/main'
+require_relative '../vgd_center/main'
 M = VGD::Center::Manager::Toggle
 
 def check(label, cond, detail = nil)

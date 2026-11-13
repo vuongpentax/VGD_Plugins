@@ -44,9 +44,9 @@ module UI
   def self.start_timer(seconds, _repeat, &block); @timers << [seconds, block]; 1; end
 end
 
-require_relative '../VGD_Center/main'
+require_relative '../vgd_center/main'
 CENTER = VGD::Center
-GUIDES = File.expand_path('../VGD_Center/guides', __dir__)
+GUIDES = File.expand_path('../vgd_center/guides', __dir__)
 SHARED = File.expand_path('../../../shared/vgd-center/guides', __dir__)
 
 def check(label, cond, detail = nil)

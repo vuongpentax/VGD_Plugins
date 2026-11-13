@@ -16,8 +16,8 @@ from pathlib import Path
 PLUGIN = Path(__file__).resolve().parents[1]
 REPO = PLUGIN.parents[1]
 SHARED = REPO / 'shared' / 'vgd-center'
-RUNTIME = PLUGIN / 'VGD_Center'
-LOADER = PLUGIN / 'VGD_Center.rb'
+RUNTIME = PLUGIN / 'vgd_center'
+LOADER = PLUGIN / 'vgd_center.rb'
 
 
 sys.stdout.reconfigure(encoding='utf-8')
@@ -70,7 +70,7 @@ def check_catalog():
 
 
 def collect_files():
-    files = [(LOADER, 'VGD_Center.rb')]
+    files = [(LOADER, 'vgd_center.rb')]
     for path in sorted(RUNTIME.rglob('*')):
         if path.is_file() and '__pycache__' not in path.parts:
             files.append((path, path.relative_to(PLUGIN).as_posix()))

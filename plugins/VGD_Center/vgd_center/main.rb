@@ -10,7 +10,7 @@ require File.join(File.dirname(__FILE__), 'manager', 'core')
 
 module VGD
   module Center
-    VERSION = '1.2.4'.freeze
+    VERSION = '1.2.5-beta.1'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
@@ -23,14 +23,21 @@ module VGD
     GUIDE_TIMEOUT = 5.0
     ALLOWED_IDS = %w[dim cabinet library image_importer scenes bim reference].freeze
     PLUGIN_LAYOUTS = {
-      'dim' => ['VGD Dim', ['vgd_dim.rb', 'VGD_Dim/']],
-      'cabinet' => ['VGD Cabinet', ['vgd_cabinet.rb', 'VGD_Cabinet/']],
+      'dim' => ['VGD Dim', ['vgd_dim.rb', 'vgd_dim/']],
+      'cabinet' => ['VGD Cabinet', ['vgd_cabinet.rb', 'vgd_cabinet/']],
       'library' => ['VGD Library', ['vgd_library.rb', 'vgd_library/']],
       'image_importer' => ['VGD Image Importer', ['vgd_image_importer.rb', 'vgd_image_importer/']],
       'scenes' => ['VGD Scenes', ['vgd_scenes.rb', 'vgd_scenes/']],
-      'bim' => ['VGD_BIM', ['vgd_bim.rb', 'vgd_bim/']],
+      'bim' => ['VGD BIM', ['vgd_bim.rb', 'vgd_bim/']],
       'reference' => ['VGD Reference', ['vgd_reference.rb', 'vgd_reference/']],
-      'center' => ['VGD Center', ['VGD_Center.rb', 'VGD_Center/']]
+      'center' => ['VGD Center', ['vgd_center.rb', 'vgd_center/']]
+    }.freeze
+    # Cấu trúc cũ (trước khi thư mục và loader đổi sang chữ thường, tên extension BIM đổi thành "VGD BIM").
+    # Catalog trên nhánh main có thể còn ghi cấu trúc cũ cho tới khi các bản mới được phát hành, nên vẫn chấp nhận.
+    LEGACY_LAYOUTS = {
+      'dim' => ['VGD Dim', ['vgd_dim.rb', 'VGD_Dim/']],
+      'cabinet' => ['VGD Cabinet', ['vgd_cabinet.rb', 'VGD_Cabinet/']],
+      'bim' => ['VGD_BIM', ['vgd_bim.rb', 'vgd_bim/']]
     }.freeze
     # Plugin chưa có trong PLUGIN_LAYOUTS vẫn được nhận nếu catalog khai báo cấu trúc hợp lệ (xem validate_plugin_layout).
     PLUGIN_ID_PATTERN = /\A[a-z][a-z0-9_]{1,39}\z/
@@ -514,7 +521,8 @@ module VGD
             ids << id
             if known
               expected_name, expected_paths = PLUGIN_LAYOUTS.fetch(id)
-              raise "tên extension không hợp lệ: #{id}" unless product['extension_name'] == expected_name
+              legacy_name, legacy_paths = LEGACY_LAYOUTS[id]
+              raise "tên extension không hợp lệ: #{id}" unless [expected_name, legacy_name].include?(product['extension_name'])
             end
 
             version = product['version'].to_s
@@ -541,7 +549,7 @@ module VGD
             paths = product['allowed_paths']
             raise "thiếu đường dẫn gói được phép: #{id}" unless paths.is_a?(Array) && !paths.empty?
             if known
-              raise "cấu trúc gói không hợp lệ: #{id}" unless paths == expected_paths
+              raise "cấu trúc gói không hợp lệ: #{id}" unless paths == expected_paths || paths == legacy_paths
             else
               validate_plugin_layout(product, claimed)
             end
@@ -718,7 +726,7 @@ module VGD
           when 'library'
             name.casecmp('VGD_Library').zero?
           when 'bim'
-            name.casecmp(PLUGIN_LAYOUTS['bim'][0]).zero?
+            name.casecmp(PLUGIN_LAYOUTS['bim'][0]).zero? || name.casecmp(LEGACY_LAYOUTS['bim'][0]).zero?
           else
             false
           end
@@ -1002,8 +1010,8 @@ module VGD
         icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'icon.svg')
         command.small_icon = icon
         command.large_icon = icon
-        UI.menu('Extensions').add_item(command)
-        toolbar = UI::Toolbar.new('VGD Center')
+        UI.menu('Extensions').add_submenu('VGD').add_item(command)
+        toolbar = UI::Toolbar.new('VGD CEN')
         toolbar.add_item(command)
         toolbar.restore
         file_loaded(__FILE__)

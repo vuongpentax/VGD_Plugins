@@ -16,10 +16,10 @@ module VGD
           (2000 + Sketchup.version.to_i).to_s
         end
 
-        # Dữ liệu (plugin đã tắt, bộ plugin) nằm trong thư mục của Center: Plugins/VGD_Center/data.
+        # Dữ liệu (plugin đã tắt, bộ plugin) nằm trong thư mục của Center: Plugins/vgd_center/data.
         # VGD_Center bị bỏ qua khi quét plugin (SELF_NAMES) nên các mục đã tắt không hiện lại trong danh sách.
         def self.root_dir
-          File.join(PM.plugins_dir(year), 'VGD_Center', 'data')
+          File.join(PM.plugins_dir(year), 'vgd_center', 'data')
         end
 
         # Các vị trí cũ, theo thứ tự chuyển: VGD Plugin Manager beta.4 trở đi (trong Plugins), rồi beta.3 (ngoài Plugins).
