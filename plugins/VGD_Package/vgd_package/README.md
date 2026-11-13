@@ -1,12 +1,12 @@
-# VGD_Package 0.1.3 — Bản nghiên cứu
+# VGD Package 0.1.4 — Bản nghiên cứu
 
-Baseline nghiên cứu 0.1.3: source đã đối chiếu 15 entry trong RBZ local của repo nguồn; không suy ra phát hành công khai hoặc native validation. Layout giữ loader ở cấp trên thư mục VGD_Package để bảo toàn đường dẫn builder. Không kèm RBZ/ZIP. Đợt chuyển repository chỉ đối chiếu source/checksum; chưa chạy lại test tự động hoặc kiểm thử native SketchUp. Các kết quả PASS bên dưới thuộc lịch sử workspace nguồn.
+Baseline nghiên cứu 0.1.3: source đã đối chiếu 15 entry trong RBZ local của repo nguồn; không suy ra phát hành công khai hoặc native validation. Layout giữ loader ở cấp trên thư mục vgd_package để bảo toàn đường dẫn builder. Không kèm RBZ/ZIP. Đợt chuyển repository chỉ đối chiếu source/checksum; chưa chạy lại test tự động hoặc kiểm thử native SketchUp. Các kết quả PASS bên dưới thuộc lịch sử workspace nguồn.
 
 Plugin độc lập cho SketchUp 2022 trở lên. Phiên bản này có lớp nhận diện API tương thích, quét texture vật liệu SketchUp và kiểm tra thuộc tính Enscape chỉ đọc. Chưa có chức năng đóng gói hoặc liên kết lại.
 
 ## Cài đặt
 
-Cài gói RBZ 0.1.3 đã xác minh riêng qua Extension Manager; artifact không nằm trong thư mục source này. Mở tại Extensions → VGD → VGD_Package.
+Cài gói RBZ 0.1.4 qua Extension Manager (bản 0.1.3 đã xác minh riêng; 0.1.4 chưa xác minh trong SketchUp); artifact không nằm trong thư mục source này. Mở tại Extensions → VGD → VGD Package.
 
 ## Chức năng hiện tại
 

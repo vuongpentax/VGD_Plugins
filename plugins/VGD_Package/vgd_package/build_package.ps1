@@ -1,11 +1,11 @@
 $ErrorActionPreference = 'Stop'
 
 $pluginRoot = Split-Path -Parent $PSScriptRoot
-$sourceFile = Join-Path $pluginRoot 'VGD_Package.rb'
-$pluginFolder = Join-Path $pluginRoot 'VGD_Package'
+$sourceFile = Join-Path $pluginRoot 'vgd_package.rb'
+$pluginFolder = Join-Path $pluginRoot 'vgd_package'
 $outputFolder = Join-Path $pluginFolder 'outputs'
-$packagePath = Join-Path $outputFolder 'VGD_Package_v0.1.3.rbz'
-$zipBuildPath = Join-Path $outputFolder 'VGD_Package_v0.1.3_build.zip'
+$packagePath = Join-Path $outputFolder 'VGD_Package_v0.1.4.rbz'
+$zipBuildPath = Join-Path $outputFolder 'VGD_Package_v0.1.4_build.zip'
 $stagingRoot = Join-Path $outputFolder ('.staging-' + [guid]::NewGuid().ToString('N'))
 $outputRootResolved = [System.IO.Path]::GetFullPath($outputFolder).TrimEnd([System.IO.Path]::DirectorySeparatorChar) + [System.IO.Path]::DirectorySeparatorChar
 $stagingRootResolved = [System.IO.Path]::GetFullPath($stagingRoot)
@@ -14,14 +14,14 @@ if (-not $stagingRootResolved.StartsWith($outputRootResolved, [System.StringComp
 }
 
 if (-not (Test-Path -LiteralPath $sourceFile) -or -not (Test-Path -LiteralPath $pluginFolder)) {
-  throw 'VGD_Package.rb or the VGD_Package runtime folder is missing.'
+  throw 'vgd_package.rb or the vgd_package runtime folder is missing.'
 }
 
 New-Item -ItemType Directory -Path $outputFolder -Force | Out-Null
 New-Item -ItemType Directory -Path $stagingRoot | Out-Null
 try {
   Copy-Item -LiteralPath $sourceFile -Destination $stagingRoot
-  $stagedPlugin = Join-Path $stagingRoot 'VGD_Package'
+  $stagedPlugin = Join-Path $stagingRoot 'vgd_package'
   New-Item -ItemType Directory -Path $stagedPlugin | Out-Null
   Get-ChildItem -LiteralPath $pluginFolder -Force | Where-Object { $_.Name -ne 'outputs' } | ForEach-Object {
     Copy-Item -LiteralPath $_.FullName -Destination $stagedPlugin -Recurse

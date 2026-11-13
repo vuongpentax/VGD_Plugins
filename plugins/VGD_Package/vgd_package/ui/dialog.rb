@@ -12,7 +12,7 @@ module VGD
           return
         end
         @dialog = ::UI::HtmlDialog.new(
-          dialog_title: 'VGD_Package', preferences_key: 'VGD_Package_Main',
+          dialog_title: 'VGD Package', preferences_key: 'VGD_Package_Main',
           scrollable: true, resizable: true, width: 900, height: 640,
           min_width: 720, min_height: 480, style: ::UI::HtmlDialog::STYLE_DIALOG
         )
@@ -22,7 +22,7 @@ module VGD
         @dialog.add_action_callback('close') { |_context| @dialog.close }
         @dialog.show
       rescue StandardError => e
-        ::UI.messagebox("VGD_Package không thể mở giao diện.\n#{e.message}")
+        ::UI.messagebox("VGD Package không thể mở giao diện.\n#{e.message}")
       end
 
       def scan_project
@@ -51,7 +51,7 @@ module VGD
         message = error.message.to_s.gsub('\\', '\\\\').gsub("'", "\\'").gsub("\n", '\\n')
         @dialog.execute_script("window.VGDPack.showError('#{message}')") if @dialog
       rescue StandardError
-        ::UI.messagebox("VGD_Package: #{error.message}")
+        ::UI.messagebox("VGD Package: #{error.message}")
       end
     end
   end

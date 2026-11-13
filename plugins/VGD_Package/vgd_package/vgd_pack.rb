@@ -8,7 +8,7 @@ require 'time'
 
 module VGD
   module Pack
-    PLUGIN_VERSION = '0.1.3'.freeze unless const_defined?(:PLUGIN_VERSION)
+    PLUGIN_VERSION = '0.1.4'.freeze unless const_defined?(:PLUGIN_VERSION)
     ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze unless const_defined?(:ROOT)
 
     require File.join(ROOT, 'compatibility')
@@ -21,9 +21,9 @@ module VGD
 
     unless file_loaded?(__FILE__)
       unless Compatibility.supported?
-        ::UI.messagebox('VGD_Package cần SketchUp 2022 trở lên.')
+        ::UI.messagebox('VGD Package cần SketchUp 2022 trở lên.')
       else
-        ::UI.menu('Extensions').add_submenu('VGD').add_item('VGD_Package') { UI.show }
+        ::UI.menu('Extensions').add_submenu('VGD').add_item('VGD Package') { UI.show }
       end
       file_loaded(__FILE__)
     end
