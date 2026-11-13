@@ -3,7 +3,7 @@
 $stdout.sync = true
 require 'json'
 require 'time'
-ROOT = File.expand_path('../VGD_DC_Exporter', __dir__)
+ROOT = File.expand_path('../vgd_dc_exporter', __dir__)
 module Sketchup
   def self.version; '2024.0'; end
   class Entity; attr_accessor :name, :typename; end

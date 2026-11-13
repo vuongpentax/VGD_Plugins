@@ -2,7 +2,7 @@ require 'sketchup.rb'
 require 'json'
 
 module VGD_DC_Exporter
-  VERSION = '1.0.1'.freeze unless const_defined?(:VERSION)
+  VERSION = '1.0.2'.freeze unless const_defined?(:VERSION)
 
   # Nạp đủ phần xử lý (chỉ đọc file, không sửa mô hình).
   load File.join(__dir__, 'params.rb')
@@ -38,7 +38,7 @@ module VGD_DC_Exporter
   end
 
   unless file_loaded?(__FILE__)
-    UI.menu('Extensions').add_item('VGD DC Exporter — Xuất JSON đối tượng đang chọn') { export_selected }
+    UI.menu('Extensions').add_submenu('VGD').add_item('VGD DC Exporter — Xuất JSON đối tượng đang chọn') { export_selected }
     file_loaded(__FILE__)
   end
 end

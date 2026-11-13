@@ -5,13 +5,13 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 ## Thông tin plugin
 
 - Tên extension: VGD DC Exporter. Namespace: `VGD_DC_Exporter`.
-- Loader: `VGD_DC_Exporter.rb` (nạp `VGD_DC_Exporter/main`); mã nằm trong `VGD_DC_Exporter/` (`main.rb`, `params.rb`, `walker.rb`).
-- Phiên bản: `extension.version` trong `VGD_DC_Exporter.rb`. Phải khớp `VERSION` trong `VGD_DC_Exporter/main.rb` và `VERSION` trong `dev/build_release.py`: đổi phiên bản thì sửa cả ba chỗ và `README.md`.
+- Loader: `vgd_dc_exporter.rb` (nạp `vgd_dc_exporter/main`); mã nằm trong `vgd_dc_exporter/` (`main.rb`, `params.rb`, `walker.rb`).
+- Phiên bản: `extension.version` trong `vgd_dc_exporter.rb`. Phải khớp `VERSION` trong `vgd_dc_exporter/main.rb` và `VERSION` trong `dev/build_release.py`: đổi phiên bản thì sửa cả ba chỗ và `README.md`.
 - Công cụ chỉ đọc: không sửa thuộc tính, không redraw DC, không explode, không lưu SKP, không gửi mạng.
 
 ## Cấu trúc
 
-- `VGD_DC_Exporter/`: `main.rb` (menu và xuất file), `params.rb` (tham số DC), `walker.rb` (duyệt cấu trúc component).
+- `vgd_dc_exporter/`: `main.rb` (menu và xuất file), `params.rb` (tham số DC), `walker.rb` (duyệt cấu trúc component).
 - `dev/build_release.py`: đóng gói. `test/test_exporter.rb`: kiểm thử.
 
 ## Kiểm thử
