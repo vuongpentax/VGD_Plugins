@@ -47,6 +47,15 @@ Từ VGD Center 1.2.0, plugin có `id` mới không cần cập nhật Center n�
 - Trang chỉ được là tài liệu tĩnh (không script, khung nhúng, form, base, meta refresh, tài nguyên hay liên kết ra ngoài). Ai sửa được `main` có thể đổi nội dung trang, cũng như đã có thể đổi catalog, nên `main` phải được bảo vệ như nguồn phát hành.
 - Chưa kiểm thử trong SketchUp thật: `Sketchup::Http::Request` với raw.githubusercontent.com, ghi file vào thư mục guides trên Windows.
 
+### Hướng dẫn tương tác (từ 1.2.6)
+
+- Hoạt ảnh chạy bằng script nên **không** đi qua `valid_guide_html?` (quy tắc trang chữ giữ nguyên). Trang đặt trên GitHub Pages của kho: `https://vuongpentax.github.io/VGD_Plugins/guides/<id>/`, nguồn ở `tools/video-huong-dan/guides/<id>/`, đăng bằng `.github/workflows/pages.yml` khi có thay đổi trên `main` (cần bật Settings → Pages → Source: GitHub Actions).
+- Catalog khai báo `"guide_url"` cho từng plugin; Center có địa chỉ riêng cho `center` (nút **Hướng dẫn** ở trang Tổng quan). `web_guide_url` chỉ nhận `https://vuongpentax.github.io/VGD_Plugins/guides/<id>/` (tùy chọn `?bai=<số>`), đúng `<id>` của plugin; địa chỉ khác bị bỏ qua. Bản Center cũ bỏ qua trường này.
+- Bấm Hướng dẫn: nếu có `guide_url`, Center gửi một yêu cầu kiểm tra trang còn tải được (`GUIDE_TIMEOUT`); trả về 200 thì mở bằng `set_url` trong cửa sổ không đăng ký callback Ruby nào (mã trên trang không điều khiển được SketchUp). Lỗi, mạng chậm, không có mạng hoặc không bắt đầu được yêu cầu: quay về luồng trang chữ ở trên.
+- Thêm hướng dẫn tương tác cho plugin mới: tạo `tools/video-huong-dan/guides/<id>/index.html` và thêm `guide_url` vào mục catalog; không cần phát hành Center mới. Đổi tên miền Pages thì phải sửa `GUIDE_WEB_PREFIX` và phát hành Center mới.
+- Rủi ro cần biết: nếu tài khoản GitHub bị chiếm, kẻ xấu có thể đăng trang giả hiện trong cửa sổ hướng dẫn (không điều khiển được SketchUp). Bật xác thực 2 lớp cho tài khoản.
+- Chưa kiểm thử trong SketchUp thật: `UI::HtmlDialog#set_url` tới trang này trên SketchUp 2022 (CEF), chạy trọn mã hoạt ảnh (iframe, `fetch`, `async`).
+
 ## Tab Quản lý (từ 1.2.1)
 
 Tab Quản lý có nguồn gốc từ VGD Plugin Manager 1.0.0-beta.17. Plugin đó đã được gỡ khỏi repo và khỏi catalog; mã nằm trong Center (`vgd_center/manager/`, module `VGD::Center::Manager`). Giao diện: trang `page-manager` trong `dialog.html`, cùng `manager/manager.js` và `manager/manager.css` (tên lớp có tiền tố `mgr-`). Khác với phần cài đặt, tab này **dời file của mọi plugin** trong thư mục Plugins, nên rủi ro cao hơn:
