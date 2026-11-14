@@ -32,11 +32,13 @@ Giao diện Center đổi thì chỉ cần quay lại: video lấy hình trực 
 
 ## Đăng lên GitHub Pages (hướng dẫn tương tác)
 
-Mỗi plugin có một trang hướng dẫn tương tác ở `tools/video-huong-dan/guides/<id>/index.html` (id trùng id trong `catalog.json`). Hiện có `guides/center/`: 7 chương, bấm chương nào thì hoạt ảnh chạy trực tiếp trên giao diện Center, có `?bai=<số>` để mở thẳng một chương.
+Mỗi plugin có một thư mục `tools/video-huong-dan/guides/<id>/chapters.json` (id trùng id trong `catalog.json`) liệt kê tiêu đề, các chương (đoạn hoạt ảnh và thời lượng) và, nếu cần, thư mục web của plugin (`web`) để chép lên site. Trang `index.html` được sinh từ mẫu chung `guides/_template.html`, nên không phải viết lại giao diện cho từng plugin. Hiện có `guides/center/`: 7 chương, bấm chương nào thì hoạt ảnh chạy trực tiếp trên giao diện Center, có `?bai=<số>` để mở thẳng một chương.
+
+Mã dùng chung: `common.js` (sân khấu, camera, con trỏ, chú thích, nhúng giao diện thật của một plugin bằng `mountApp`) và `center.js` (phần riêng của Center). Mỗi plugin khác có đoạn hoạt ảnh trong `tools/video-huong-dan/<tên thư mục>/`.
 
 - Dựng thử: `python3 tools/video-huong-dan/build_site.py` tạo thư mục `_site/` (không commit). Script chỉ chép file web cần chạy và giữ nguyên đường dẫn tương đối, nên luôn khớp với mã hiện tại của Center.
 - Đăng: `.github/workflows/pages.yml` tự dựng và đăng khi có thay đổi trên `main`. Bật một lần: Settings → Pages → Source: GitHub Actions. Địa chỉ: `https://vuongpentax.github.io/VGD_Plugins/guides/<id>/`.
-- Thêm hướng dẫn cho plugin mới: tạo `guides/<id>/index.html` cùng các đoạn hoạt ảnh; không cần phát hành lại Center khi Center đã biết đọc `guide_url` trong `catalog.json` (phần này chưa làm).
+- Thêm hướng dẫn cho plugin mới: tạo `guides/<id>/chapters.json` cùng các đoạn hoạt ảnh; không cần phát hành lại Center khi Center đã biết đọc `guide_url` trong `catalog.json` (phần này chưa làm).
 - Cần có mạng để xem. Trang chạy script, nên chỉ nên mở trong cửa sổ không nối với Ruby (như cửa sổ hướng dẫn của Center).
 
 ## Thông số

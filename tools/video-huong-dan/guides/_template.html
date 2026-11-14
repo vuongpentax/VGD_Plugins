@@ -1,4 +1,4 @@
-<!doctype html><html lang="vi" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hướng dẫn · VGD Center</title>
+<!doctype html><html lang="vi" data-theme="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hướng dẫn</title>
 <style>
 @font-face{font-family:M;src:url(../../shared/vgd-theme/fonts/manrope-latin-wght-normal.woff2);font-weight:200 800;unicode-range:U+0000-00FF}
 @font-face{font-family:M;src:url(../../shared/vgd-theme/fonts/manrope-vietnamese-wght-normal.woff2);font-weight:200 800;unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+1EA0-1EF9}
@@ -25,26 +25,30 @@ footer{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);color:v
 </style></head><body>
 <header class="bar"><div class="brand">VGD · HƯỚNG DẪN</div><button class="tool" id="theme" type="button">Sáng / Tối</button></header>
 <main>
-<div class="eyebrow">Hướng dẫn tương tác</div><h1>VGD Center</h1>
-<p class="lead">Chọn một phần để xem hoạt ảnh. Hoạt ảnh chạy trực tiếp trên giao diện Center và tự lặp lại.</p>
+<div class="eyebrow" id="eyebrow"></div><h1 id="title"></h1>
+<p class="lead" id="lead"></p>
 <div class="layout"><ul class="tabs" id="tabs" role="tablist"></ul>
 <div><div id="player"><div id="hint">Chọn một phần ở bên cạnh để bắt đầu xem.</div></div>
 <div class="row"><span id="now"></span><button class="again" id="again" type="button" hidden>Phát lại từ đầu</button></div></div></div>
-<footer>Hoạt ảnh minh họa dựa trên giao diện VGD Center; số liệu trong khung kết quả chỉ là ví dụ.</footer>
+<footer id="note"></footer>
 </main>
 <script>
-// Mỗi chương là một trang hoạt ảnh trong tools/video-huong-dan (đã được dựng cùng thư mục khi đăng lên Pages)
-const CH=[['scene-01-cai-plugin','Cài plugin từ Kho','25 giây'],['scene-02-cap-nhat-go','Cập nhật và gỡ plugin','25 giây'],['scene-03-huong-dan','Mở Hướng dẫn','15 giây'],['scene-04-quan-ly-bat-tat','Tab Quản lý: bật/tắt','25 giây'],['scene-05-chuyen-plugin','Chuyển plugin giữa hai bản SketchUp','30 giây'],['scene-06-xuat-rbz','Xuất gói .rbz tổng','20 giây'],['scene-07-cai-dat','Cài đặt: ngôn ngữ, tự cập nhật','15 giây']];
+// Mỗi chương là một trang hoạt ảnh trong tools/video-huong-dan (đã được dựng cùng thư mục khi đăng lên Pages).
+// Nội dung trang lấy từ chapters.json cùng thư mục: {title, eyebrow, lead, note, chapters:[{scene, title, duration}]}.
+let CH=[];
 const $=id=>document.getElementById(id),player=$('player');let cur=-1,frame=null;
 function fit(){if(frame)frame.style.transform=`scale(${player.clientWidth/1280})`}
 function open(i){cur=i;[...document.querySelectorAll('.tab')].forEach((b,k)=>b.setAttribute('aria-selected',k===i));
  if(frame)frame.remove();$('hint').hidden=true;frame=document.createElement('iframe');frame.title=CH[i][1];frame.setAttribute('sandbox','allow-scripts allow-same-origin');
  frame.src='../../tools/video-huong-dan/'+CH[i][0]+'.html?play';player.appendChild(frame);fit();$('now').textContent=`${i+1}. ${CH[i][1]}`;$('again').hidden=false;
  try{history.replaceState(null,'','?bai='+(i+1))}catch(_){}}
-CH.forEach((c,i)=>{const li=document.createElement('li'),b=document.createElement('button');b.type='button';b.className='tab';b.setAttribute('role','tab');b.setAttribute('aria-selected','false');
- b.innerHTML=`<b>${i+1}. ${c[1]}</b><span>${c[2]}</span>`;b.onclick=()=>open(i);li.appendChild(b);$('tabs').appendChild(li)});
 $('again').onclick=()=>{if(cur>=0)open(cur)};
 $('theme').onclick=()=>{const d=document.documentElement;d.dataset.theme=d.dataset.theme==='dark'?'light':'dark'};
 addEventListener('resize',fit);
-const q=parseInt(new URLSearchParams(location.search).get('bai'),10);if(q>=1&&q<=CH.length)open(q-1);
+fetch('chapters.json').then(r=>r.json()).then(d=>{CH=d.chapters.map(c=>[c.scene,c.title,c.duration]);document.title='Hướng dẫn · '+d.title;
+ $('eyebrow').textContent=d.eyebrow;$('title').textContent=d.title;$('lead').textContent=d.lead;$('note').textContent=d.note||'';
+CH.forEach((c,i)=>{const li=document.createElement('li'),b=document.createElement('button');b.type='button';b.className='tab';b.setAttribute('role','tab');b.setAttribute('aria-selected','false');
+  b.innerHTML=`<b>${i+1}. ${c[1]}</b><span>${c[2]}</span>`;b.onclick=()=>open(i);li.appendChild(b);$('tabs').appendChild(li)});
+ 
+ const q=parseInt(new URLSearchParams(location.search).get('bai'),10);if(q>=1&&q<=CH.length)open(q-1)});
 </script></body></html>
