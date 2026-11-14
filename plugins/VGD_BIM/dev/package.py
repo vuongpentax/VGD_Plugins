@@ -1,5 +1,5 @@
 # Đóng gói VGD BIM thành .rbz. Từ gốc repo: python plugins/VGD_BIM/dev/package.py <phiên bản>
-# <phiên bản> phải khớp VERSION trong runtime/vgd_bim_lite.rb (x.y.z hoặc x.y.z-beta.N).
+# <phiên bản> phải khớp VERSION trong runtime/vgd_bim.rb (x.y.z hoặc x.y.z-beta.N).
 # Kết quả: plugins/VGD_BIM/outputs/local_release_<phiên bản>/VGD_BIM_v<phiên bản>.rbz (outputs/ không đưa vào git).
 from pathlib import Path
 import hashlib
@@ -16,9 +16,9 @@ def fail(message):
     sys.exit(1)
 
 
-match = re.search(r"VERSION = '(\d+\.\d+\.\d+(?:-(?:alpha|beta)\.\d+)?)'", (runtime / 'vgd_bim_lite.rb').read_text(encoding='utf-8'))
+match = re.search(r"VERSION = '(\d+\.\d+\.\d+(?:-(?:alpha|beta)\.\d+)?)'", (runtime / 'vgd_bim.rb').read_text(encoding='utf-8'))
 if not match:
-    fail('Không tìm thấy VERSION hợp lệ trong runtime/vgd_bim_lite.rb')
+    fail('Không tìm thấy VERSION hợp lệ trong runtime/vgd_bim.rb')
 version = match.group(1)
 if len(sys.argv) > 1 and sys.argv[1] != version:
     fail(f'VERSION trong mã là {version}, không phải {sys.argv[1]}.')
@@ -42,7 +42,7 @@ with zipfile.ZipFile(target) as archive:
     if archive.testzip() is not None:
         fail('Gói zip bị lỗi.')
     names = archive.namelist()
-    for required in ['vgd_bim_lite.rb', 'vgd_bim_lite/loader.rb', 'vgd_bim_lite/update_notice.rb']:
+    for required in ['vgd_bim.rb', 'vgd_bim/loader.rb']:
         if required not in names:
             fail(f'Gói thiếu {required}')
     for name in names:

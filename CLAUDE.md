@@ -33,13 +33,39 @@ VGD_Plugins/
 
 Tất cả plugin SketchUp dùng thực tế phải nằm trong thư mục `plugins/`.
 
-`shared/` chứa tài nguyên dùng chung giữa các plugin (theme giao diện, catalog và tài liệu của VGD Center, quy tắc icon).
+`shared/` chứa tài nguyên dùng chung giữa các plugin (theme giao diện, chuẩn điều khiển và hiệu ứng `shared/vgd-theme/vgd-controls.css` (mẫu xem trong `shared/vgd-ui/`), catalog và tài liệu của VGD Center, quy tắc icon).
 
 Mỗi plugin nên được tổ chức tương đối độc lập. Danh sách plugin hiện có xem trực tiếp trong `plugins/`.
 
-Mỗi plugin tự giữ test và script hỗ trợ trong thư mục riêng của nó (thường là `dev/`); `tests/` ở gốc dành cho kiểm thử dùng chung toàn repo và hiện chưa có bộ nào.
+Mỗi plugin tự giữ test và script hỗ trợ trong thư mục riêng của nó (thường là `dev/`); `tests/` ở gốc dành cho kiểm thử dùng chung toàn repo; hiện có `tests/test_vgd_conventions.rb` (kiểm tra quy ước đặt tên và menu bên dưới, chạy `ruby tests/test_vgd_conventions.rb` từ gốc repo).
 
 Không tự tạo plugin mới nếu chưa được yêu cầu hoặc chưa thực sự được chuyển vào.
+
+### Đặt tên, menu và toolbar (mọi plugin VGD)
+
+- Tên extension: `VGD Tên` (có dấu cách, không dùng gạch dưới). Loader và thư mục mã viết thường: `vgd_ten.rb`, `vgd_ten/`.
+- Toolbar: tên rút gọn `VGD XXX` (3 chữ in hoa, ví dụ `VGD CAB`). Plugin không có toolbar thì bỏ qua.
+- Menu: chỉ có **một** menu `Extensions → VGD`, bên trong mỗi plugin có menu con riêng tên đầy đủ (kể cả plugin chỉ có một lệnh). SketchUp không gộp menu trùng tên, nên plugin **không được tự gọi** `add_submenu('VGD')`; phải dùng `::VGD.menu`. Mỗi plugin tự chép đoạn sau ở đầu file nạp menu (ngoài mọi `module` khác, vì plugin độc lập không dùng chung mã):
+
+```ruby
+module VGD
+  def self.menu
+    @extensions_menu ||= ::UI.menu('Extensions').add_submenu('VGD')
+  end unless respond_to?(:menu)
+end
+```
+
+  rồi tạo menu con: `::VGD.menu.add_submenu('VGD Tên').add_item(...)`.
+- Tải lại code (mọi plugin có menu): trong menu con của plugin phải có mục tên đúng **`Tải lại code`** (Extensions → VGD → VGD Tên → Tải lại code), để nạp lại mã sau khi cài đè bản mới mà không phải mở lại SketchUp. Plugin không có giao diện riêng mà do plugin khác điều khiển (ví dụ VGD Room) thì không cần. Yêu cầu khi viết phần tải lại:
+  - Danh sách file nạp dùng chung cho lúc khởi động và lúc tải lại (một nơi duy nhất), nạp bằng `load`, chỉ file của chính plugin, không đụng plugin khác.
+  - Không đăng ký lại menu, toolbar, observer, context menu (nhân đôi mục): phần đăng ký giao diện chạy một lần (cờ hoặc `file_loaded?`), phần tải lại chỉ nạp lại mã.
+  - Báo kết quả bằng hộp thoại, đúng chữ: thành công `Đã tải lại VGD Tên <phiên bản>.`; thất bại `Tải lại thất bại:` + lỗi + một dòng cuối: lỗi cú pháp bị chặn trước khi nạp thì `Bản đang chạy được giữ nguyên.`, lỗi khi đang nạp thì `Hãy mở lại SketchUp nếu giao diện báo lỗi.`; đang bận thì nói rõ việc đang làm và `Hãy chờ xong rồi tải lại code.`
+  - Kiểm tra cú pháp cả bộ file (`RubyVM::InstructionSequence.compile_file`) trước khi nạp bất kỳ file nào.
+  - Có hộp thoại đang mở thì đóng và mở lại sau khi nạp (không mở cửa sổ nếu trước đó đang đóng). Lỗi cú pháp hoặc thiếu file: giữ bản đang chạy, báo lỗi rõ cho người dùng, không làm hỏng giao diện. Đang vẽ hoặc đang sửa model thì không cho tải lại.
+  - Viết test trong thư mục test của plugin: tải lại nhiều lần không nhân đôi menu/toolbar, lỗi file không làm hỏng bản đang chạy (mẫu: `plugins/VGD_Cabinet/cabinet_dev/test_reload.rb`). Menu/toolbar thực tế chỉ có hiệu lực sau khi mở lại SketchUp: ghi điều này vào README của plugin.
+- Cập nhật: plugin không tự kiểm tra, tải hay cài cập nhật, và không có mục menu, nút hay mã "kiểm tra cập nhật" riêng; việc đó do VGD Center làm (catalog, `center-update.json`). Không thêm lại `update_notice.rb` hay bộ tự cập nhật vào plugin.
+- Plugin mới được phát hành: thêm mục vào `shared/vgd-center/catalog.json` (id, `extension_name`, đúng hai `allowed_paths` là loader và thư mục viết thường) theo quy tắc trong `shared/VGD_CENTER_ARCHITECTURE.md`.
+- Chạy `ruby tests/test_vgd_conventions.rb` sau khi thêm hoặc đổi plugin; test báo lỗi nếu có menu VGD thứ hai, tên extension hoặc loader sai quy ước, hoặc toolbar sai dạng.
 
 ### CLAUDE.md của từng plugin
 
@@ -126,6 +152,7 @@ Khi chỉnh giao diện:
 - giao diện nên gọn và thực dụng;
 - không tự thiết kế lại những phần UI không liên quan;
 - giao tiếp Ruby ↔ JavaScript phải rõ ràng;
+- khi làm mới hoặc sửa lớn dialog HTML, theo chuẩn trong `shared/HUONG_DAN_THEME.md` mục 9 và `shared/vgd-theme/vgd-controls.css`: nút gạt 40 × 22 px, không hiện thanh cuộn dọc (chỉ giữ thanh ngang mảnh), hiệu ứng 150 / 180 / 220 ms đổi trên cùng một phần tử, ngăn trượt đẩy nội dung chứ không đè;
 - phải kiểm tra dữ liệu người dùng trước khi áp dụng thay đổi lên model SketchUp.
 
 ## Kiểm thử và xác minh
@@ -174,7 +201,13 @@ Không tạo tài liệu chỉ để tăng số lượng file. Ưu tiên ít tà
 - Mỗi lần đổi phiên bản phải cập nhật `README.md` của plugin cho khớp (số phiên bản, tính năng, tên file cài, trạng thái kiểm thử) trong cùng commit.
 - Mỗi lần cập nhật plugin xong (đã đạt kiểm tra) phải đóng gói và gửi RBZ cho người dùng test, kèm SHA-256; không chờ người dùng nhắc.
 - Người dùng tự phát hành trên GitHub. Không tạo file hướng dẫn phát hành (kiểu `HOW_TO_RELEASE.md`) trong plugin.
-- Khi hướng dẫn người dùng tạo Release, đưa **một link tạo Release điền sẵn** để họ chỉ việc mở link, kéo thả file RBZ rồi bấm Publish: `https://github.com/vuongpentax/VGD_Plugins/releases/new?tag=<tag>&target=main&title=<tiêu đề>&body=<nội dung RELEASE_NOTES_v<phiên bản>.md>` (mã hóa URL toàn bộ giá trị, kiểm tra giải mã lại đúng nội dung; ghi chú phải đã nằm trên `main`). GitHub không đính kèm file qua link nên phải nhắc kéo thả đúng tên file RBZ. Gửi kèm file RBZ, SHA-256 và gợi ý bước cuối (báo "xong" để cập nhật `center-update.json`/catalog).
+- Quy trình hướng dẫn phát hành (làm theo đúng thứ tự, không hỏi lại từng bước):
+  1. Chốt phiên bản ổn định (bỏ hậu tố beta, sửa mọi chỗ ghi số phiên bản và README), chạy đủ test của plugin, đóng gói RBZ (`package.py`), ghi lại SHA-256 và dung lượng. `RELEASE_NOTES_v<phiên bản>.md` phải có sẵn.
+  2. Ghi chú phát hành phải nằm trên `main`: chỉ tạo PR và merge khi người dùng yêu cầu (người dùng đã duyệt một lần cho Center 1.2.4). Cảnh báo trước nếu việc merge làm đổi `shared/vgd-center/` (catalog, hướng dẫn), vì file ở đó có hiệu lực ngay với người dùng.
+  3. Gửi RBZ cho người dùng bằng `SendUserFile` kèm SHA-256 và dung lượng, và **gửi link tạo Release ĐẦY ĐỦ ngay trong tin nhắn** (chỉ cần link, không tạo file HTML hay file phụ nào). Link: `https://github.com/vuongpentax/VGD_Plugins/releases/new?tag=<tag>&target=main&title=<tiêu đề>&body=<nội dung RELEASE_NOTES_v<phiên bản>.md>`, mã hóa URL toàn bộ giá trị (`urllib.parse.quote`), kiểm tra giải mã lại đúng nội dung. Tag theo mẫu `vgd-<plugin>-v<phiên bản>` (ví dụ `vgd-center-v1.2.4`). Ghi chú dài quá (URL mã hóa vượt khoảng 6.000 ký tự, GitHub sẽ cắt hoặc từ chối) thì ghi trong `body` bản tóm tắt vài gạch đầu dòng kèm link tới `RELEASE_NOTES_v<phiên bản>.md` trên `main`; bản beta thêm `prerelease=1` vào link. Cho thêm link ngắn dự phòng (chỉ tag, target, title) và đoạn ghi chú để dán tay.
+  4. Nhắc người dùng: mở link, kéo thả đúng file RBZ, KHÔNG tick pre-release với bản ổn định (tick với bản beta), bấm Publish release.
+  5. Khi người dùng báo "xong": cập nhật `shared/vgd-center/center-update.json` (Center) hoặc mục plugin trong `shared/vgd-center/catalog.json` (version, kênh, URL tải, size, SHA-256, `releases`), chạy test, commit và push. Hai file này trên `main` có hiệu lực ngay, nên chỉ sửa sau khi Release đã Publish.
+  - Phiên Claude Code không tạo được GitHub Release (cả `gh` lẫn REST đều trả 403 "not permitted for this session type"); không thử lách quyền này, chỉ đưa link cho người dùng. Phải dùng đúng file RBZ đã gửi để đăng, không đóng lại cùng số phiên bản (sửa gì thì tăng số).
 
 ## Quy tắc Git
 

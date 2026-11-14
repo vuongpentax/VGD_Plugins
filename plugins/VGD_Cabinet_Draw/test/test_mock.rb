@@ -1,6 +1,6 @@
 # Chạy: ruby test_mock.rb <đường dẫn thư mục runtime>
 $stdout.sync = true
-RT = File.expand_path(ARGV[0] || '../runtime/VGD_Cabinet_Draw', __dir__)
+RT = File.expand_path(ARGV[0] || '../runtime/vgd_cabinet_draw', __dir__)
 require 'tmpdir'
 require_relative 'mock_su'
 $LOAD_PATH.unshift(__dir__)
@@ -686,7 +686,7 @@ tb = V.instance_variable_get(:@toolbar)
 check 'toolbar có 8 nút', tb.commands.length == 8, tb.commands.length
 check 'toolbar thứ tự', tb.commands.map(&:title) == ['Box → Board', 'Chia đợt / vách', 'Cánh tủ', 'Ngăn kéo', 'Scale VGD', 'Quét & dời tấm', 'VGD Chọn', 'Setting']
 check 'mọi nút có icon tồn tại', tb.commands.all? { |c| File.file?(c.small_icon.to_s) && File.file?(c.large_icon.to_s) }, tb.commands.map(&:small_icon).inspect
-check 'submenu Extensions có đủ nút', UI.menu('Extensions').subs['VGD Cabinet Draw'].items.length == 12
+check 'submenu Extensions → VGD → VGD Cabinet Draw có đủ nút', UI.menu('Extensions').subs['VGD'].subs['VGD Cabinet Draw'].items.length == 12
 sd = V::ToolSettings.new
 sd.save_base({'board_thickness' => 18})
 d1 = sd.save('door', 'Khe 3', {'door_gap' => 3}); sd.set_default('door', d1['id'])
@@ -714,7 +714,27 @@ n_consts = V.constants.length
 V.reload!
 check 'reload no dup menu', UI.menu('Extensions').items.length == menus_before
 check 'reload no dup constants', V.constants.length == n_consts, "#{n_consts} → #{V.constants.length}"
-check 'reload message', UI.msgs.last.include?('đã nạp lại')
+check 'reload message', UI.msgs.last.start_with?('Đã tải lại')
 check 'tools after reload', V::Tools.respond_to?(:build)
+# Đang dùng công cụ VGD: không cho tải lại.
+fake_tool = Object.new
+def fake_tool.active?; true; end
+V.instance_variable_set(:@active_tool, fake_tool)
+check 'reload bị chặn khi đang dùng công cụ VGD', V.reload! == false && UI.msgs.last.start_with?('Đang dùng công cụ')
+V.instance_variable_set(:@active_tool, nil)
+# Lỗi cú pháp: kiểm tra trước khi nạp, giữ nguyên bản đang chạy (không nạp file nào).
+loaded = []
+Kernel.send(:alias_method, :__orig_load_for_test, :load)
+Kernel.send(:define_method, :load) { |*args, **kw| loaded << args.first; __orig_load_for_test(*args, **kw) }
+orig_compile = RubyVM::InstructionSequence.method(:compile_file)
+RubyVM::InstructionSequence.define_singleton_method(:compile_file) do |path, *rest|
+  raise SyntaxError, 'lỗi cú pháp giả lập' if path.end_with?('/geometry.rb')
+  orig_compile.call(path, *rest)
+end
+result = V.reload!
+RubyVM::InstructionSequence.define_singleton_method(:compile_file) { |path, *rest| orig_compile.call(path, *rest) }
+Kernel.send(:define_method, :load) { |*args, **kw| __orig_load_for_test(*args, **kw) }
+check 'lỗi cú pháp: báo lỗi và giữ nguyên bản đang chạy', result == false && UI.msgs.last.start_with?('Tải lại thất bại') && UI.msgs.last.include?('giữ nguyên') && loaded.empty?
+check 'lỗi cú pháp: công cụ vẫn dùng được', V::Tools.respond_to?(:build)
 puts "\nTHÀNH CÔNG: #{$pass}  THẤT BẠI: #{$fail.length}"
 exit($fail.empty? ? 0 : 1)

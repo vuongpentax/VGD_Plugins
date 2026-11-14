@@ -29,7 +29,7 @@ module UI
   def self.messagebox(*_args); @asked = asked + 1; @answer || IDYES; end
 end
 
-require_relative '../VGD_Center/main'
+require_relative '../vgd_center/main'
 CENTER = VGD::Center
 MGR = VGD::Center::Manager
 
@@ -44,9 +44,9 @@ last = -> { dlg.scripts.last.to_s }
 status = -> { MGR::Toggle.state['plugins'].map { |x| [x['name'], x['status']] }.to_h }
 
 # ---- Nối giao diện (manager.js) với Ruby ----
-js = File.read(File.join(__dir__, '..', 'VGD_Center', 'manager', 'manager.js'), encoding: 'UTF-8')
-html = File.read(File.join(__dir__, '..', 'VGD_Center', 'dialog.html'), encoding: 'UTF-8')
-rb = File.read(File.join(__dir__, '..', 'VGD_Center', 'manager', 'callbacks.rb'), encoding: 'UTF-8')
+js = File.read(File.join(__dir__, '..', 'vgd_center', 'manager', 'manager.js'), encoding: 'UTF-8')
+html = File.read(File.join(__dir__, '..', 'vgd_center', 'dialog.html'), encoding: 'UTF-8')
+rb = File.read(File.join(__dir__, '..', 'vgd_center', 'manager', 'callbacks.rb'), encoding: 'UTF-8')
 js_calls = js.scan(/call\('(mgr_[a-z_]+)'/).flatten.uniq
 missing = js_calls.reject { |name| dlg.callback(name) }
 check "mọi lệnh manager.js gọi đều có callback Ruby (thiếu: #{missing.join(', ')})", missing.empty?
@@ -122,12 +122,12 @@ dlg.callback('mgr_list').call(nil, { src: '2022', dst: '2022' }.to_json)
 check 'mgr_list báo lỗi khi nguồn trùng đích', !last.call.include?('renderMigrate') && last.call.include?('khác nhau')
 dlg.callback('mgr_list').call(nil, { src: '../x', dst: '2024' }.to_json)
 check 'mgr_list từ chối phiên bản lạ (chống tên thư mục lạ)', !last.call.include?('renderMigrate') && last.call.include?('chọn')
+File.delete(MGR::Log.path) if File.exist?(MGR::Log.path)
 dlg.callback('mgr_migrate').call(nil, { src: '2022', dst: '2024', plugins: %w[alpha_tool beta_tool VGD_Center], overwrite: false }.to_json)
 check 'chuyển plugin: chép đúng mục, không chép VGD Center', File.exist?(File.join(plug24, 'alpha_tool.rb')) && File.directory?(File.join(plug24, 'beta_tool')) &&
   File.read(File.join(plug24, 'VGD_Center.rb')) == "x\n"
 check 'chuyển plugin: có sao lưu thư mục đích và nhắc mở lại SketchUp', last.call.include?('Sao lưu') && last.call.include?('mở lại bản 2024')
-log_text = File.exist?(MGR::Log.path) ? File.read(MGR::Log.path, encoding: 'UTF-8') : ''
-check 'chuyển plugin: ghi nhật ký kể cả khi thành công (để gửi cho người hỗ trợ)', log_text.include?('Chuyển plugin 2022 -> 2024') && log_text.include?('alpha_tool.rb') && log_text.include?('ghi đè: không')
+check 'chuyển plugin thành công: không tạo file manager.log', !File.exist?(MGR::Log.path)
 
 # ---- Mở thư mục ----
 opened = []
@@ -150,7 +150,7 @@ dlg.callback('mgr_import_sets').call(nil)
 check 'nhập bộ từ file', MGR::Toggle.load_sets['Render'] == %w[p1 p2]
 
 # ---- Dữ liệu nằm trong VGD_Center/data; dữ liệu cũ được chuyển về ----
-check 'dữ liệu nằm ở Plugins/VGD_Center/data', MGR::Toggle.root_dir == File.join(plug24, 'VGD_Center', 'data')
+check 'dữ liệu nằm ở Plugins/VGD_Center/data', MGR::Toggle.root_dir == File.join(plug24, 'vgd_center', 'data')
 check 'tệp bộ plugin giữ định dạng cũ (Plugin Manager cũ đọc được)', JSON.parse(File.read(File.join(fake, 'sets_out.json')))['format'] == 'vgd_plugin_sets'
 old_dir = MGR::Toggle.old_roots[0]
 toggle_msg = -> { dlg.scripts.reverse.find { |s| s.include?('renderToggle') }.to_s }  # tin trạng thái mới nhất (sau đó Ruby còn gửi initMigrate)
@@ -159,7 +159,7 @@ File.write(File.join(old_dir, 'disabled', 'mig.rb'), "m\n")
 MGR.migrate_on_start
 check 'lúc khởi động: chuyển dữ liệu cũ ngay, chưa cần mở tab', File.exist?(File.join(MGR::Toggle.disabled_dir, 'mig.rb')) && !File.exist?(old_dir)
 dlg.callback('mgr_ready').call(nil, { lang: 'en' }.to_json)
-check 'mở tab lần đầu: báo đã chuyển lúc khởi động, đúng ngôn ngữ', toggle_msg.call.include?('Moved the old enable/disable data (1 item(s))') && toggle_msg.call.include?('VGD_Center')
+check 'mở tab lần đầu: báo đã chuyển lúc khởi động, đúng ngôn ngữ', toggle_msg.call.include?('Moved the old enable/disable data (1 item(s))') && toggle_msg.call.include?('vgd_center')
 check 'plugin đã chuyển hiện trong danh sách đã tắt', toggle_msg.call.include?('"name":"mig"') && toggle_msg.call.include?('"status":"off"')
 dlg.callback('mgr_ready').call(nil, {}.to_json)
 check 'thông báo chuyển dữ liệu chỉ hiện một lần', !toggle_msg.call.include?('Đã chuyển') && !toggle_msg.call.include?('Moved the old')

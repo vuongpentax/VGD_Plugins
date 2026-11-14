@@ -9,7 +9,7 @@ const assert=(v,m)=>{if(!v)throw Error(m)};
   const page=await browser.newPage({viewport:{width:760,height:760}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{window.calls=[];window.alerts=[];window.alert=m=>alerts.push(m);window.sketchup=new Proxy({},{get:(_,action)=>payload=>calls.push({action,payload})});});
-  await page.goto(pathToFileURL(path.resolve(__dirname,'../runtime/VGD_Dim/dialog.html')).href);
+  await page.goto(pathToFileURL(path.resolve(__dirname,'../runtime/vgd_dim/dialog.html')).href);
   const last=async()=>page.evaluate(()=>calls.at(-1));
   const idle=async()=>page.evaluate(()=>VGD.onBusy(false));
   const nav=async name=>page.click('#tab-'+name);

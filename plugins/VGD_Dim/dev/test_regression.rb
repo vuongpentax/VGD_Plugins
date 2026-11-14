@@ -124,51 +124,6 @@ def run_regression_tests
   manual.send(:create_dimension, Geom::Point3d.new(0, 0, 0), Geom::Point3d.new(100.mm, 0, 0), Geom::Vector3d.new(0, 50.mm, 0))
   check.call(depths == [1] && VGD::Dim::AutoStyle.instance_variable_get(:@depth) == 0, 'Manual Dim ran without suspending Auto-Style')
 
-  # R11: the SketchUp year comes from Sketchup.version ("22.0.354"), not from version_number.
-  info = {'product_id' => 'vgd_dim', 'filename' => 'VGD_Dim_v9.9.9.rbz', 'version' => '9.9.9', 'channel' => 'stable',
-          'min_sketchup_year' => '2022', 'bytes' => 10, 'sha256' => 'a' * 64,
-          'download_url' => 'https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v9.9.9/VGD_Dim_v9.9.9.rbz'}
-  fake_client = Object.new
-  fake_client.define_singleton_method(:check) { |&callback| callback.call(200, JSON.generate(info)) }
-  results = {}
-  Sketchup.define_singleton_method(:platform) { :platform_win }
-  ['22.0.354', '21.1.332'].each do |version|
-    Sketchup.define_singleton_method(:version) { version }
-    updater = VGD::Dim::UpdateCore::Updater.new
-    updater.instance_variable_set(:@client, fake_client)
-    updater.check { |status, _value| results[version] = status }
-  end
-  Sketchup.define_singleton_method(:platform) { :platform_other }
-  check.call(results['22.0.354'] == :available, 'SketchUp 2022 was rejected by the minimum-year check')
-  check.call(results['21.1.332'] == :error, 'SketchUp 2021 passed the minimum-year check')
-
-  # R12: a refused second download must not free the running one, and a network error keeps its message.
-  Sketchup.const_set(:Http, Module.new) unless Sketchup.const_defined?(:Http)
-  Sketchup::Http.const_set(:GET, 'GET') unless Sketchup::Http.const_defined?(:GET)
-  pending_requests = []
-  http_request = Class.new do
-    attr_accessor :headers
-    define_method(:initialize) { |_url, _method| }
-    define_method(:start) { |&block| pending_requests << block }
-    define_method(:cancel) { }
-  end
-  Sketchup::Http.send(:remove_const, :Request) if Sketchup::Http.const_defined?(:Request, false)
-  Sketchup::Http.const_set(:Request, http_request)
-  client = VGD::Dim::UpdateCore::Client.new
-  body = 'x' * 10
-  package = {'download_url' => 'https://github.com/x/y', 'bytes' => 10, 'sha256' => Digest::SHA256.hexdigest(body)}
-  outcomes = []
-  client.download(package) { |status, value| outcomes << [status, value] }
-  client.download(package) { |status, value| outcomes << [status, value] }
-  check.call(outcomes == [[:error, 'Đang có yêu cầu cập nhật khác.']] && client.instance_variable_get(:@busy), 'Refused download cleared the busy flag')
-  response = Struct.new(:status_code, :body, :headers).new(200, body, {})
-  pending_requests.shift.call(nil, response)
-  check.call(outcomes.last == [:ok, body] && !client.instance_variable_get(:@busy), 'Download did not complete')
-  outcomes.clear
-  client.download(package) { |status, value| outcomes << [status, value] }
-  UI.drain
-  check.call(outcomes == [[:error, 'Hết thời gian chờ kết nối.']] && !client.instance_variable_get(:@busy), 'Timeout message was lost')
-
   # R3: changing a colour reuses one material instead of adding "#1" copies.
   m = Sketchup::FakeModel.new; Sketchup.active_model = m
   first = VGD::Dim::Engine.get_material(m, 'VGD_DIM_COLOR', '#112233')

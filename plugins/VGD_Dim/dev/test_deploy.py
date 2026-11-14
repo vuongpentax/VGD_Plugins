@@ -30,12 +30,10 @@ with tempfile.TemporaryDirectory(prefix='deploy_fixture_', dir=outputs) as direc
     assert result.returncode == 0, result.stderr
     assert not legacy.exists()
     assert other.read_bytes() == b'CABINET MUST BE PRESERVED'
-    owned = ['vgd_dim.rb'] + ['VGD_Dim/' + name for name in [
+    owned = ['vgd_dim.rb'] + ['vgd_dim/' + name for name in [
         'main.rb','defaults.rb','reload.rb','engine.rb','native_style.rb','store.rb','managed.rb',
         'core.rb','presets.rb','autostyle.rb','animation.rb','smartdim.rb','regions.rb','manual_dim.rb','probe.rb','dialog.rb',
         'dialog.html','dialog.css','dialog.js','dim.svg','smart_dim.svg','version.rb',
-        'update_core/manifest.rb','update_core/bootstrap.rb','update_core/client.rb',
-        'update_core/installer.rb','update_core/updater.rb','update_core/update_installer.ps1',
         'vgd-theme/vgd-theme.css','vgd-theme/vgd-theme.js','vgd-theme/fonts/manrope-latin-wght-normal.woff2','vgd-theme/fonts/manrope-vietnamese-wght-normal.woff2','vgd-theme/fonts/LICENSE'
     ]]
     for name in owned:

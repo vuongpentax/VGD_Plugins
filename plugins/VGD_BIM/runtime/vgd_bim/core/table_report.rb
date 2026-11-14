@@ -1,0 +1,259 @@
+require 'cgi'
+require 'tmpdir'
+require_relative 'images'
+require_relative 'xlsx'
+
+module VGD
+  module BIM
+    # Báo cáo xuất từ Bảng khối lượng, đúng như bảng đang hiện (cột, thứ tự, tiêu đề, đơn vị, nhóm, dòng tổng). Giao diện gửi lên
+    # cấu trúc bảng; ở đây kiểm tra lại rồi lấy ảnh từ file ảnh của plugin (không nhận đường dẫn từ giao diện).
+    #   payload = {'title', 'preset', 'decimal_separator', 'labels' => {'model','preset','date','print'},
+    #              'columns' => [{'label','unit','type','digits'}], 'rows' => [{'kind','pid','cells'}]}
+    # type: text | number | image | link | ordinal; kind: row | group | total. Ô số gửi dạng số (đã đổi đơn vị), chưa làm tròn.
+    module TableReport
+      MAX_ROWS = 50_000
+      MAX_COLUMNS = 60
+      MAX_TEXT = 2000
+      TYPES = %w[text number image link ordinal].freeze
+      KINDS = %w[row group total].freeze
+      LABEL_KEYS = %w[model preset date print reset hint].freeze
+      ROW_HEIGHT_MIN = 28 # độ cao hàng người dùng chỉnh trên màn hình (điểm ảnh), khớp ROW_MIN / ROW_MAX của giao diện
+      ROW_HEIGHT_MAX = 640
+      PAGE_WIDTH_MM = 277 # bề ngang vùng in A4 ngang (297 mm trừ lề 10 mm hai bên)
+      MIN_WIDTH = 20   # độ rộng cột lấy từ bảng trên màn hình (điểm ảnh)
+      MAX_WIDTH = 2000
+      DEFAULT_WEIGHT = {'ordinal' => 44, 'image' => 72, 'number' => 90, 'link' => 170, 'text' => 140}.freeze # tỉ lệ cột khi giao diện không gửi độ rộng
+      PREFIX = 'VGD_BIM_bao_cao_'.freeze
+      KEEP_SECONDS = 2 * 24 * 3600
+
+      # image_for: gọi với mã đối tượng (ảnh món) hoặc với (mã đối tượng, loại ảnh) cho cột Ảnh vị trí / Ảnh 3 / Ảnh 4; trả về nội dung PNG (hoặc nil nếu không có / mã không thuộc bảng).
+      def self.build(payload, model_name, image_for)
+        raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless payload.is_a?(Hash)
+        columns = columns!(payload['columns'])
+        rows = rows!(payload['rows'], columns.size)
+        raise ArgumentError, 'Bảng chưa có dòng nào. Hãy chọn group hoặc component trong SketchUp.' unless rows.any? { |row| row[:kind] == 'row' }
+        labels = LABEL_KEYS.each_with_object({}) { |key, hash| hash[key] = text!(payload.dig('labels', key), 60) }
+        title = text!(payload['title'], 200)
+        preset = text!(payload['preset'], 100)
+        separator = payload['decimal_separator'] == '.' ? '.' : ','
+        images = {}
+        image_columns = columns.each_index.select { |i| columns[i][:type] == 'image' }
+        rows.each do |row|
+          next if image_columns.empty? || !row[:pid]
+          image_columns.each do |i|
+            kind = columns[i][:image_kind]
+            key = image_key(row[:pid], kind)
+            images[key] = load_image(row[:pid], image_for, kind) unless images.key?(key)
+            row[:images][i] = images[key]
+            row[:image] ||= images[key] if kind == :full # tương thích: ảnh món của dòng
+          end
+        end
+        meta = ["#{labels['model']}: #{model_name}", ("#{labels['preset']}: #{preset}" unless preset.empty?), "#{labels['date']}: #{Time.now.strftime('%d/%m/%Y')}"].compact.join('  ·  ')
+        {title: title, meta: meta, preset: preset, model: model_name, labels: labels, separator: separator, columns: columns, rows: rows,
+         images: images.compact, row_height: row_height!(payload['row_height'])}
+      end
+
+      # Độ cao hàng người dùng đã chỉnh trên màn hình; nil = chưa chỉnh (giữ cách xuất mặc định).
+      def self.row_height!(value)
+        return nil if value.nil?
+        raise ArgumentError, "Độ cao hàng phải là số từ #{ROW_HEIGHT_MIN} đến #{ROW_HEIGHT_MAX}." unless value.is_a?(Numeric) && value.finite? && value.between?(ROW_HEIGHT_MIN, ROW_HEIGHT_MAX)
+        value.round
+      end
+
+      def self.columns!(list)
+        raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless list.is_a?(Array) && !list.empty? && list.size <= MAX_COLUMNS
+        list.map do |col|
+          raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless col.is_a?(Hash) && TYPES.include?(col['type'])
+          digits = col['digits'].nil? ? 0 : col['digits']
+          raise ArgumentError, 'Số lẻ không hợp lệ.' unless digits.is_a?(Integer) && digits.between?(0, 6)
+          width = col['width']
+          raise ArgumentError, "Độ rộng cột phải là số từ #{MIN_WIDTH} đến #{MAX_WIDTH}." unless width.nil? || (width.is_a?(Numeric) && width.finite? && width.between?(MIN_WIDTH, MAX_WIDTH))
+          kind = col['image_kind'].to_s
+          raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless kind.empty? || Images::KINDS.key?(kind.to_sym)
+          {label: text!(col['label'], 200), unit: text!(col['unit'], 20), type: col['type'], digits: digits, width: width, image_kind: kind.empty? ? :full : kind.to_sym}
+        end
+      end
+
+      def self.rows!(list, width)
+        raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless list.is_a?(Array) && list.size <= MAX_ROWS
+        list.map do |row|
+          raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless row.is_a?(Hash) && KINDS.include?(row['kind']) && row['cells'].is_a?(Array) && row['cells'].size == width
+          pid = row['pid'].nil? ? nil : Images.id!(row['pid'])
+          cells = row['cells'].map { |value| cell!(value) }
+          {kind: row['kind'], pid: pid, cells: cells, image: nil, images: {}}
+        end
+      end
+
+      def self.cell!(value)
+        return nil if value.nil?
+        return value if value.is_a?(Integer)
+        return value if value.is_a?(Float) && value.finite?
+        return text!(value, MAX_TEXT) if value.is_a?(String)
+        raise ArgumentError, 'Dữ liệu bảng không hợp lệ.'
+      end
+
+      def self.text!(value, limit)
+        return '' if value.nil?
+        raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless value.is_a?(String) && value.length <= limit
+        value.gsub(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/, '') # ký tự điều khiển không in được, XML cũng không cho phép
+      end
+
+      # Ảnh đầy đủ do plugin ghi (không dùng ảnh thu nhỏ của bảng): phải là PNG đọc được kích thước. Ảnh hỏng thì bỏ qua (ô để trống), không làm hỏng cả báo cáo.
+      # Khóa của ảnh trong báo cáo: ảnh món theo mã đối tượng, ảnh vị trí theo "loc<mã>" (để hai ảnh của cùng một món không trùng nhau).
+      def self.image_key(pid, kind)
+        kind == :full ? pid : "#{Images::PREFIX.fetch(kind)}#{pid}"
+      end
+
+      def self.load_image(pid, image_for, kind = :full)
+        bytes = kind == :full ? image_for.call(pid) : image_for.call(pid, kind)
+        return nil unless Images.png?(bytes) && bytes.bytesize <= Images::MAX_BYTES
+        width, height = bytes.byteslice(16, 8).unpack('NN')
+        return nil unless width.to_i.between?(1, 16_384) && height.to_i.between?(1, 16_384)
+        {bytes: bytes, width: width, height: height, mime: 'image/png', key: image_key(pid, kind)}
+      end
+
+      # Số theo định dạng của preset (dấu thập phân, nhóm hàng nghìn), dùng cho trang in PDF.
+      def self.format_number(value, digits, separator)
+        whole, frac = format("%.#{digits}f", value.round(digits, half: :up)).split('.')
+        thousands = separator == ',' ? '.' : ','
+        whole = whole.sub(/\A(-?)(\d+)\z/) { "#{$1}#{$2.reverse.scan(/\d{1,3}/).join(thousands).reverse}" }
+        frac ? "#{whole}#{separator}#{frac}" : whole
+      end
+
+      def self.html_cell(report, row, col, index)
+        value = row[:cells][index]
+        case col[:type]
+        when 'image'
+          image = row[:images][index]
+          return '<td class="img"></td>' unless image
+          %(<td class="img"><img alt="" src="data:image/png;base64,#{[image[:bytes]].pack('m0')}"></td>)
+        when 'ordinal'
+          %(<td class="ord">#{CGI.escapeHTML(value.is_a?(Numeric) ? value.to_i.to_s : value.to_s)}</td>)
+        when 'link'
+          url = value.to_s
+          text = CGI.escapeHTML(url)
+          url.match?(%r{\Ahttps?://}i) && row[:kind] == 'row' ? %(<td class="link"><a href="#{CGI.escapeHTML(url)}">#{text}</a></td>) : "<td>#{text}</td>"
+        else
+          return %(<td class="num">#{CGI.escapeHTML(format_number(value, col[:digits], report[:separator]))}</td>) if value.is_a?(Numeric)
+          "<td>#{CGI.escapeHTML(value.to_s)}</td>"
+        end
+      end
+
+      # Độ rộng mỗi cột theo phần trăm của bảng (tổng 100): theo độ rộng người dùng đã chỉnh trên màn hình, thiếu thì theo tỉ lệ mặc định.
+      def self.column_weights(columns)
+        columns.map { |col| (col[:width] || DEFAULT_WEIGHT.fetch(col[:type])).to_f }
+      end
+
+      def self.column_percents(columns)
+        weights = column_weights(columns)
+        total = weights.sum
+        weights.map { |weight| (weight / total * 100).round(3) }
+      end
+
+      # Kéo mép tiêu đề cột để chia lại độ rộng: cột bên trái rộng thêm bao nhiêu thì cột bên phải hẹp đi bấy nhiêu (tổng giữ 100%).
+      RESIZE_SCRIPT = <<~JS.freeze
+        (function(){
+          var table=document.querySelector('table'),cols=[].slice.call(table.querySelectorAll('col'));
+          var initial=cols.map(function(c){return parseFloat(c.style.width);});
+          [].slice.call(table.querySelectorAll('.rz')).forEach(function(handle,i){
+            handle.addEventListener('mousedown',function(e){
+              e.preventDefault();
+              var startX=e.clientX,total=table.getBoundingClientRect().width,a=parseFloat(cols[i].style.width),b=parseFloat(cols[i+1].style.width),min=3;
+              function move(ev){var d=(ev.clientX-startX)/total*100;d=Math.max(min-a,Math.min(b-min,d));cols[i].style.width=(a+d)+'%';cols[i+1].style.width=(b-d)+'%';}
+              function up(){document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);}
+              document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+            });
+          });
+          var reset=document.getElementById('reset-cols');
+          if(reset)reset.addEventListener('click',function(){cols.forEach(function(c,i){c.style.width=initial[i]+'%';});});
+        })();
+      JS
+
+      # Hàng cao theo độ cao người dùng chỉnh trên màn hình, thu theo cùng tỉ lệ với độ rộng cột (cả bảng vừa bề ngang trang in), nên hình dáng giống trên màn hình.
+      def self.row_height_css(report)
+        return {image: '22mm', row: ''} unless report[:row_height]
+        total = column_weights(report[:columns]).sum
+        mm = (report[:row_height] * PAGE_WIDTH_MM / total).clamp(8.0, 120.0).round(1)
+        {image: "#{(mm - 2).round(1)}mm", row: "\n          tr.row td{height:#{mm}mm}"}
+      end
+
+      # Trang HTML tự chứa (ảnh nhúng sẵn): mở bằng trình duyệt; người dùng tự bấm nút In rồi chọn Lưu thành PDF (trang không tự gọi hộp in).
+      # Khổ A4 ngang, tiêu đề cột lặp lại mỗi trang, độ rộng cột chia lại được bằng cách kéo mép tiêu đề.
+      def self.html(report)
+        percents = column_percents(report[:columns])
+        colgroup = percents.map { |percent| %(<col style="width:#{percent}%">) }.join
+        last = report[:columns].size - 1
+        row_css = row_height_css(report)
+        head = report[:columns].each_with_index.map do |c, i|
+          handle = i < last ? '<span class="rz" aria-hidden="true"></span>' : ''
+          "<th>#{CGI.escapeHTML(c[:label])}#{c[:unit].empty? ? '' : %(<span class="unit">#{CGI.escapeHTML(c[:unit])}</span>)}#{handle}</th>"
+        end.join
+        body = report[:rows].map do |row|
+          cells = report[:columns].each_with_index.map { |col, i| html_cell(report, row, col, i) }.join
+          %(<tr class="#{row[:kind]}">#{cells}</tr>)
+        end.join("\n")
+        <<~HTML
+          <!doctype html>
+          <html lang="vi"><head><meta charset="utf-8"><title>#{CGI.escapeHTML(report[:title])}</title>
+          <style>
+          @page{size:A4 landscape;margin:10mm}
+          *{box-sizing:border-box}
+          body{font:9pt/1.35 "Segoe UI",Arial,sans-serif;color:#222;margin:0;padding:12px}
+          h1{font-size:16pt;margin:0 0 2px}
+          .meta{color:#666;font-size:8.5pt;margin:0 0 10px}
+          .bar{margin:0 0 10px}
+          .bar button{font:inherit;padding:6px 14px;border:1px solid #b48963;background:#b48963;color:#fff;border-radius:4px;cursor:pointer}
+          table{border-collapse:collapse;width:100%;table-layout:fixed}
+          thead{display:table-header-group}
+          th,td{border:1px solid #c8c8c8;padding:3px 5px;vertical-align:middle;text-align:left;overflow-wrap:anywhere;word-break:break-word}
+          th{background:#e8dccb;font-weight:700;text-align:center;position:relative}
+          .rz{position:absolute;top:0;right:-4px;width:8px;height:100%;cursor:col-resize;z-index:2}
+          .rz:hover{background:rgba(180,137,99,.55)}
+          .unit{display:block;font-weight:400;font-style:italic;color:#555;font-size:8pt}
+          tr{page-break-inside:avoid}
+          td.num{text-align:right;font-variant-numeric:tabular-nums}
+          td.ord{text-align:center}
+          td.img{text-align:center;padding:2px}
+          td.img img{max-width:100%;max-height:#{row_css[:image]};display:block;margin:0 auto}#{row_css[:row]}
+          td.link a{color:#0563c1;word-break:break-all}
+          tr.group td{background:#f4eee6;font-weight:700}
+          tr.total td{background:#e8dccb;font-weight:700;border-top:2px solid #222}
+          .hint{color:#777;font-size:8.5pt;margin-left:8px}
+          .bar button+button{margin-left:6px;background:#fff;color:#8e6b4c}
+          @media print{.bar{display:none}.rz{display:none}body{padding:0}}
+          </style></head><body>
+          <div class="bar"><button type="button" onclick="window.print()">#{CGI.escapeHTML(report[:labels]['print'].empty? ? 'In / Lưu PDF' : report[:labels]['print'])}</button><button type="button" id="reset-cols">#{CGI.escapeHTML(report[:labels]['reset'].empty? ? 'Đặt lại độ rộng cột' : report[:labels]['reset'])}</button><span class="hint">#{CGI.escapeHTML(report[:labels]['hint'].empty? ? 'Kéo mép tiêu đề cột để chỉnh độ rộng.' : report[:labels]['hint'])}</span></div>
+          <h1>#{CGI.escapeHTML(report[:title])}</h1>
+          <p class="meta">#{CGI.escapeHTML(report[:meta])}</p>
+          <table><colgroup>#{colgroup}</colgroup><thead><tr>#{head}</tr></thead><tbody>
+          #{body}
+          </tbody></table>
+          <script>#{RESIZE_SCRIPT}</script>
+          </body></html>
+        HTML
+      end
+
+      # Ghi trang HTML vào thư mục tạm (xóa các trang cũ của plugin quá 2 ngày) và trả về đường dẫn.
+      def self.write_html(report, dir = Dir.tmpdir)
+        sweep(dir)
+        path = File.join(dir, "#{PREFIX}#{Time.now.strftime('%Y%m%d_%H%M%S')}.html")
+        File.write(path, html(report), encoding: 'UTF-8')
+        path
+      end
+
+      def self.sweep(dir)
+        Dir.glob(File.join(dir, "#{PREFIX}*.html")).each do |file|
+          File.delete(file) if Time.now - File.mtime(file) > KEEP_SECONDS
+        end
+      rescue StandardError
+        nil
+      end
+
+      # Địa chỉ file:/// cho UI.openURL (mã hóa mọi ký tự ngoài chữ, số và / : . _ ~ -).
+      def self.file_url(path)
+        encoded = path.tr('\\', '/').b.gsub(%r{[^A-Za-z0-9/:._~-]}n) { |c| format('%%%02X', c.ord) }
+        "file:///#{encoded.sub(%r{\A/+}, '')}"
+      end
+    end
+  end
+end

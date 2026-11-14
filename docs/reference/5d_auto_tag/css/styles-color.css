@@ -1,0 +1,125 @@
+.preview-container {
+  width: 100%;
+  text-align: center;
+}
+
+.image-container {
+  width: 100%;
+  height: calc(100vh - 488px);
+  max-height: 220px;
+  min-height: 50px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #e1e1e1;
+  border-radius: 5px;
+}
+
+.image-size {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.image-container:hover .control-buttons {
+  opacity: 1 !important;
+}
+
+.control-buttons {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  opacity: 0;
+  z-index: 1;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.image-container .image-overlay img,
+.image-container .solid-color {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.image-overlay {
+  position: relative;
+  display: inline-block;
+}
+
+.image-overlay::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  mix-blend-mode: color;
+  pointer-events: none;
+}
+
+.custom-overlay::before {
+  background-color: var(--dynamic-color);
+}
+
+.alpha-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  clip-path: polygon(0 100%, 100% 100%, 100% 0);
+}
+
+.tab-content-color {
+  border-bottom: 1px solid #e2e2e7;
+}
+
+.color-form-control {
+  width: 100% !important;
+  height: 24px !important;
+  padding: 0 !important;
+}
+
+.color-circle {
+  min-width: 32px;
+  height: 32px;
+  border: 1px solid #e1e1e1;
+  border-radius: 20px;
+}
+
+.color-container,
+.texture-container {
+  position: relative;
+}
+
+.material-title {
+  position: absolute;
+  top: -22;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.text-sm {
+  font-size: 0.75rem;
+}
+
+.color-titles {
+  margin-top: -3px;
+}
+
+.color-title {
+  margin-top: 6px;
+}
+
+.color-values {
+  margin-top: 0px;
+}
+
+.color-value {
+  width: 50px;
+}
+
+.texture-check {
+  margin: -7px -7px 0 0;
+}

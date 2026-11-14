@@ -1,0 +1,14 @@
+{
+  "fields":{"schema_version":"Data version","category":"Item group","item_type":"Item type","code":"Item code","description":"Description","unit":"Unit","quantity_method":"Quantity method","zone":"Zone / Room","floor":"Floor","include_boq":"Include in quantity table","finish_code":"Finish code","manufacturer":"Manufacturer","model_number":"Product code","note":"Note"},
+  "category":{"architecture":"Architecture","finish":"Finishes","furniture":"Furniture","electrical":"Electrical","equipment":"Equipment","plumbing":"Plumbing","hvac":"HVAC","other":"Other","wall":"Wall","floor":"Floor","ceiling":"Ceiling","door":"Door","window":"Window","column":"Column","beam":"Beam","stair":"Stair","cabinet":"Cabinet","sanitary":"Sanitary","lighting":"Lighting","generic":"Generic"},
+  "unit":{"m2":"m²","m":"m (length)","m3":"m³","pcs":"pcs","set":"set","lot":"lot","kg":"kg","none":"Not counted"},
+  "quantity_method":{"area":"Area","length":"Length","volume":"Volume","count":"Count","assembly":"Per set / assembly","manual":"Manual entry"},
+  "item_type":{"wall":"Wall","floor":"Floor","ceiling":"Ceiling","paint":"Wall paint","tile":"Floor / wall tile","stone":"Stone","wood_floor":"Wood floor","glass":"Glass","wardrobe":"Wardrobe","kitchen_base":"Kitchen base cabinet","kitchen_upper":"Kitchen upper cabinet","tv_cabinet":"TV cabinet","lavabo_cabinet":"Basin cabinet","bed":"Bed","table":"Table","chair":"Chair","light":"Light","switch":"Switch","socket":"Socket","sanitary":"Sanitary ware","appliance":"Appliance","air_conditioner":"Air conditioner"},
+  "status":{"VGD READY":"Ready","ERROR":"Error","INCOMPLETE":"Incomplete","UNCLASSIFIED":"Unclassified","LOCKED":"Locked","WARNING":"Warning","INFO":"Info","PROTECTED":"Has data / Protected","READY":"Can convert","REVIEW":"Needs review"},
+  "source":{"VGD":"VGD data","MAPPED":"Converted","RAW":"Raw data","MANUAL":"Manual entry","RULE":"Saved rule","HEURISTIC":"Name-based suggestion"},
+  "confidence":{"HIGH":"High","MEDIUM":"Medium","LOW":"Low"},
+  "source_type":{"definition_name":"Definition name","instance_name":"Object name","tag":"Tag","material":"Material"},
+  "presets":{"Wardrobe":"Wardrobe","Kitchen Base":"Kitchen base cabinet","Kitchen Upper":"Kitchen upper cabinet","Socket":"Socket","Switch":"Switch","Light":"Light","Wall Paint":"Wall paint"},
+  "modes":{"information":"Information","scan":"Scan & export","mapping":"Classify / Convert","validate_model":"Check whole model","validate_selection":"Check selection","rules":"Classification rules","tags":"Tag editor","table":"Quantity table","images":"Images","settings":"Settings"},
+  "metrics":{"groups":"Groups","components":"Components","definitions":"Definitions","materials":"Materials","tags":"Tags","vgd_objects":"With VGD data","unclassified":"Unclassified","coverage":"Data coverage (%)","raw_faces":"Geometry faces"}
+}

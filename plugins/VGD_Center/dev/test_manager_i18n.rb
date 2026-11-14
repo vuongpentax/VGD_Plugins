@@ -29,10 +29,10 @@ module UI
   def self.openpanel(title, *_args); panel_titles << title; $stub_open_path; end
 end
 
-require_relative '../VGD_Center/main'
+require_relative '../vgd_center/main'
 CENTER = VGD::Center
 MGR = VGD::Center::Manager
-ROOT = File.join(__dir__, '..', 'VGD_Center')
+ROOT = File.join(__dir__, '..', 'vgd_center')
 VIET = /[À-ỹ]/
 
 def check(label, cond, detail = nil)

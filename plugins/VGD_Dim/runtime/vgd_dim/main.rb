@@ -1,0 +1,86 @@
+# encoding: UTF-8
+require 'sketchup.rb'
+require 'json'
+require 'securerandom'
+require_relative 'version'
+require_relative 'defaults'
+require_relative 'engine'
+require_relative 'native_style'
+require_relative 'store'
+require_relative 'managed'
+require_relative 'core'
+require_relative 'presets'
+require_relative 'autostyle'
+require_relative 'animation'
+require_relative 'smartdim'
+require_relative 'regions'
+require_relative 'manual_dim'
+require_relative 'probe'
+require_relative 'dialog'
+# Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
+module VGD
+  def self.menu
+    @extensions_menu ||= ::UI.menu('Extensions').add_submenu('VGD')
+  end unless respond_to?(:menu)
+end
+
+module VGD
+  module Dim
+    extend self
+    def show_dialog; Dialog.show; end
+    def show_error(message)
+      Dialog.send_js('onError',{'message'=>message})
+      Sketchup.status_text=message unless Dialog.visible?
+    end
+    def open_model_info(page)
+      raise "Không mở được Model Info → #{page}." unless UI.show_model_info(page)
+    rescue StandardError => error
+      show_error(error.message)
+    end
+    # reload.rb kiểm tra cú pháp cả bộ file trước khi nạp nên lỗi cú pháp không làm hỏng bản đang chạy.
+    def reload_extension
+      load File.join(__dir__.dup.force_encoding(Encoding::UTF_8),'reload.rb')
+      UI.messagebox("Đã tải lại VGD Dim #{VERSION}.")
+      true
+    rescue ScriptError, StandardError => error
+      # Lỗi cú pháp bị chặn trước khi nạp (reload.rb); lỗi khác nghĩa là đã nạp dở.
+      tail = error.is_a?(SyntaxError) ? 'Bản đang chạy được giữ nguyên.' : 'Hãy mở lại SketchUp nếu giao diện báo lỗi.'
+      UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\n#{tail}")
+      false
+    end
+    def quick_smart
+      saved = SmartDim.saved
+      result = SmartDim.execute(saved['opts'],saved['settings'])
+      Dialog.send_js('onSmart',result)
+      Sketchup.status_text = "VGD Dim: #{result['total']} Dim, #{result['replaced']} bộ được thay. " + result['warnings'].join(' ')
+      result
+    rescue StandardError => error
+      show_error(error.message)
+      nil
+    end
+    unless @command
+      @command=UI::Command.new('VGD Dim') { show_dialog }
+      @command.small_icon=@command.large_icon=File.join(__dir__.dup.force_encoding(Encoding::UTF_8),'dim.svg')
+      @menu ||= ::VGD.menu.add_submenu('VGD Dim')
+      @menu.add_item(@command) unless file_loaded?(__FILE__)
+      @toolbar ||= UI::Toolbar.new('VGD DIM')
+      @toolbar.add_item(@command)
+      @menu.add_item('Hiện toolbar VGD DIM') { @toolbar.show }
+      @menu.add_item('Tải lại code') { reload_extension }
+      file_loaded(__FILE__)
+    end
+    @command.tooltip='VGD Dim'
+    @command.status_bar_text='Smart Dim, Dim/Text/Label, Model Info, preset và Animation.'
+    unless @smart_command
+      @smart_command = UI::Command.new('Smart Dim một chạm') { quick_smart }
+      @smart_command.small_icon = @smart_command.large_icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8),'smart_dim.svg')
+      @smart_command.tooltip = 'Smart Dim — dùng thiết lập đã lưu'
+      @smart_command.status_bar_text = 'Chọn tủ rồi đo ngay; cập nhật bộ Dim cùng tủ/mặt/Scene.'
+      @toolbar.add_item(@smart_command)
+      @menu.add_item(@smart_command)
+      # Lần đầu cài (SketchUp chưa từng hiện thanh này) thì hiện ngay; các lần sau giữ trạng thái người dùng đã chọn.
+      @toolbar.get_last_state == TB_NEVER_SHOWN ? @toolbar.show : @toolbar.restore
+    end
+    AutoStyle.start
+  end
+end

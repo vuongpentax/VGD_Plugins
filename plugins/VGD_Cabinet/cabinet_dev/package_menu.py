@@ -6,15 +6,15 @@ import json
 root = Path(__file__).resolve().parents[1]
 out = root / 'outputs/vgd_cabinet_modeling'
 out.mkdir(parents=True, exist_ok=True)
-version = '4.5.3'
-files = ['vgd_cabinet.rb'] + ['VGD_Cabinet/' + name for name in [
+version = '4.5.4'
+files = ['vgd_cabinet.rb'] + ['vgd_cabinet/' + name for name in [
     'main43.rb', 'geometry_engine.rb', 'modeling_rules.rb', 'modeling.rb', 'pano.rb','component_sharing.rb','frame_divisions.rb','rail_joinery.rb','preview_mesh.rb','library_store.rb', 'model_data.rb', 'box_conversion.rb', 'preset_store.rb', 'description_import.rb',
     'defaults.rb', 'draw_tool.rb', 'ui_renderer.rb', 'VGD_Cabinet_UI.html',
-    'reload.rb', 'update_notice.rb', 'cabinet.svg', 'HUONG_DAN.txt']]
-assert len(files) == 23
-runtime = (root / 'cabinet_work/VGD_Cabinet/main43.rb').read_text(encoding='utf-8')
+    'reload.rb', 'cabinet.svg', 'HUONG_DAN.txt']]
+assert len(files) == 22
+runtime = (root / 'cabinet_work/vgd_cabinet/main43.rb').read_text(encoding='utf-8')
 bootstrap = (root / 'cabinet_work/vgd_cabinet.rb').read_text(encoding='utf-8')
-ui = (root / 'cabinet_work/VGD_Cabinet/VGD_Cabinet_UI.html').read_text(encoding='utf-8')
+ui = (root / 'cabinet_work/vgd_cabinet/VGD_Cabinet_UI.html').read_text(encoding='utf-8')
 assert f"VERSION = '{version}'" in runtime
 assert f"ex.version     = '{version}'" in bootstrap
 assert f"<title>VGD Cabinet {version}</title>" in ui
@@ -37,7 +37,7 @@ with ZipFile(source, 'w', ZIP_DEFLATED) as z:
         z.write(root / 'cabinet_dev' / file, 'cabinet_dev/' + file)
     z.write(root / 'HANDOFF.md', 'HANDOFF.md')
     z.write(root / 'CLAUDE.md', 'CLAUDE.md')
-    for file in ['README.md','PANO_RESEARCH.md','UPGRADE_RESEARCH.md','VALIDATION.json','RELEASE_NOTES_v4.5.3.md']:
+    for file in ['README.md','PANO_RESEARCH.md','UPGRADE_RESEARCH.md','VALIDATION.json','RELEASE_NOTES_v4.5.4.md']:
         z.write(root/file,file)
     z.write(root / 'TESTS.txt', 'TESTS.txt')
 for path in [rbz, source]:

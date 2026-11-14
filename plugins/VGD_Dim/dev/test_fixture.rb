@@ -79,6 +79,7 @@ module Geom
     end
   end
 end
+::TB_NEVER_SHOWN = 0 unless defined?(::TB_NEVER_SHOWN)
 module UI
   @timers={}; @sequence=0; @menus=[]; @toolbars=[]
   class << self
@@ -91,6 +92,7 @@ module UI
     def stop_timer(id); @timers.delete(id); end
     def drain; 20.times { break if @timers.empty?; b=@timers.values; @timers={}; b.each(&:call) }; raise 'Timer loop' unless @timers.empty?; end
     def menu(_); self; end
+    def add_submenu(_); self; end
     def add_item(item,&b); @menus << [item,b]; end
   end
   class Command
@@ -115,6 +117,7 @@ module UI
     attr_reader :events
     def initialize(*); @events=[]; UI.toolbars << self; end
     def add_item(*); @events << :add; end
+    def get_last_state; 0; end # TB_NEVER_SHOWN: SketchUp chưa từng hiện thanh này
     def show; @events << :show; end
     def restore; @events << :restore; end
     def hide; @events << :hide; end

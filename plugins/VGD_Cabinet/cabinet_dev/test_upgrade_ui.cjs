@@ -2,7 +2,7 @@ const fs=require('fs');
 const {chromium}=require('playwright');
 (async()=>{
  const defaults=JSON.parse(fs.readFileSync('cabinet_dev/defaults.json'));
- let html=fs.readFileSync('cabinet_work/VGD_Cabinet/VGD_Cabinet_UI.html','utf8');
+ let html=fs.readFileSync('cabinet_work/vgd_cabinet/VGD_Cabinet_UI.html','utf8');
  for(const [key,data] of [['presets_json',{}],['default_json',defaults],['initial_json',defaults]])html=html.replace('#{'+key+'}',()=>JSON.stringify(JSON.stringify(data)).replace(/</g,'\\u003c'));
  const browser=await chromium.launch({headless:true,channel:'msedge'});
  try {

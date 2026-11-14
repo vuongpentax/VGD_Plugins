@@ -40,6 +40,11 @@ module VGD
         nil
       end
 
+      # Đang chỉnh sửa hoặc cắt ảnh: không được tải lại code lúc này.
+      def editing?
+        !!@current_tool
+      end
+
       def model
         @model
       end

@@ -98,36 +98,6 @@ module VGD
         callback.call(nil, e.message)
       end
 
-      def self.check_update
-        url = Catalog.read_json('update_manifest', '')
-        url = '' unless url.is_a?(String)
-        if url.empty?
-          remote = sources.find { |source| !source['local'] }
-          input = UI.inputbox(['URL HTTPS thông tin cập nhật VGD (JSON)'], [remote ? remote['url'] : 'https://'], 'Nguồn cập nhật VGD')
-          return unless input
-          url = catalog_url(input[0])
-          Catalog.save('update_manifest', url)
-        end
-        url = catalog_url(url)
-        request(url, MAX_CATALOG) do |raw, error|
-          Library.safely do
-            raise(error) if error
-            data = parse_catalog(raw)
-            info = data['extension']
-            raise 'Danh mục chưa có mục extension.version / extension.url cho cập nhật VGD.' unless info.is_a?(Hash) && info['version'].is_a?(String) && info['url']
-            download = https(info['url'])
-            # Full comparison including beta numbers (e.g. beta.7 > beta.6).
-            newer = VGD::UpdateNotice.newer?(info['version'], Library::VERSION)
-            if newer
-              answer = UI.messagebox("VGD_Library hiện tại: #{Library::VERSION}\nBản mới: #{info['version']}\n\nMở đường tải RBZ?", MB_YESNO)
-              UI.openURL(download) if answer == IDYES
-            else
-              Library.message("Nguồn cập nhật VGD báo bản #{info['version']}; đang dùng #{Library::VERSION}.")
-            end
-          end
-        end
-      end
-
       def self.refresh(&callback)
         list = sources
         update = nil

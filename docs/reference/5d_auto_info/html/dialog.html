@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8" />
+
+  <!-- <title>30/04/2018</title> -->
+  <!-- <title>06/09/2023</title> -->
+  <!-- <title>10/09/2024</title> -->
+  <!-- <title>10/09/2025</title> -->
+  <!-- <title>10/09/2026</title> -->
+  <!-- Custom styles -->
+  <link href="../css/modus.min.css" rel="stylesheet" id="theme-stylesheet" />
+  <link href="../css/modus-layout.min.css" rel="stylesheet" />
+  <link href="../css/styles.css" rel="stylesheet" />
+
+  <!-- Modus icons -->
+  <link href="../fonts/modus-icons.css" rel="stylesheet" />
+
+  <!-- Modus Bootstrap -->
+  <script src="../js/lib/jquery-3.6.0.min.js"></script>
+
+  <!-- Bootstrap Bundle -->
+  <script src="../js/lib/bootstrap.bundle.min.js"></script>
+
+  <!-- Vue -->
+  <script src="../js/lib/vue.js"></script>
+
+  <!-- Translate -->
+  <script src="../js/lib/axios.min.js"></script>
+
+  <!-- For Sortable -->
+  <script src="../js/lib/sortable.min.js"></script>
+
+  <!-- For exporting Excel -->
+  <script src="../js/lib/exceljs.min.js"></script>
+  <script src="../js/lib/file-saver.min.js"></script>
+  <script src="../js/lib/xlsx.full.min.js"></script>
+
+  <!-- For print PDF -->
+  <script src="../js/lib/jspdf.umd.min.js"></script>
+  <script src="../js/lib/jspdf.plugin.autotable.min.js"></script>
+  <script src="../js/lib/roboto-font.js"></script>
+
+  <!-- Common functions -->
+  <script src="../js/common.js"></script>
+  <script src="../js/mixins/global-mixin.js"></script>
+  <script src="../js/mixins/open-dialogs-mixin.js"></script>
+  <script src="../js/mixins/show-modals-mixin.js"></script>
+  <script src="../js/mixins/user-options-mixin.js"></script>
+  <script src="../js/mixins/validators-mixin.js"></script>
+
+  <!-- Components -->
+  <script src="../js/components/modals/modal-header.js"></script>
+  <script src="../js/components/modals/modal-footer.js"></script>
+  <script src="../js/components/modals/action-modal.js"></script>
+  <script src="../js/components/modals/message-modal.js"></script>
+  <script src="../js/components/modals/support-modal.js"></script>
+  <script src="../js/components/modals/user-options-modal.js"></script>
+  <script src="../js/components/modals/data-bridge-modal.js"></script>
+
+  <script src="../js/components/settings-container.js"></script>
+  <script src="../js/components/presets-container.js"></script>
+</head>
+
+<body>
+  <div class="modus-layout" id="app" @mouseleave="handleMouseLeave">
+    <nav class="modus-header">
+      <div class="nav nav-tabs custom-nav-tabs d-flex mx-3" role="tablist">
+        <a
+          :href="HOMEPAGE"
+          target="_blank"
+          class="navbar-brand"
+          data-toggle="tooltip"
+          :title="translated('toHomePage')"
+        >
+          <img
+            :src="themeIcon === 'moon' ? '../images/plus_icon.svg' : '../images/plus_icon_white.svg'"
+            alt=""
+            width="30"
+            height="30"
+            class="mt-1"
+          />
+        </a>
+
+        <div class="nav-settings ml-auto mt-2" id="navSettings">
+          <div class="d-flex">
+            <!-- Presets -->
+            <presets-container></presets-container>
+
+            <!-- Settings -->
+            <settings-container></settings-container>
+
+            <!-- Notification -->
+            <div
+              v-if="isNewVersion"
+              class="mr-1"
+              data-toggle="tooltip"
+              :title="translated('new')"
+            ></div>
+          </div>
+        </div>
+      </div>
+    </nav>
+    <div class="modus-body">
+      <div class="modus-content-rows px-3 pt-3">
+        <div class="d-flex justify-content-between mb-2" id="modusToolbar">
+          <div class="d-flex">
+            <!-- Columns -->
+            <div class="dropdown">
+              <button
+                type="button"
+                class="btn btn-primary dropdown-toggle"
+                data-toggle="dropdown"
+                id="columnButton"
+                :disabled="disabledButtons"
+                aria-haspopup="true"
+                aria-expanded="false"
+              >
+                {{ translated('selectColumn') }}
+              </button>
+              <div class="dropdown-menu custom-menu" id="checkList">
+                <!-- Must be a form avoid collapse keep when select -->
+                <form class="form-group mb-0">
+                  <div class="d-flex px-3 mt-2">
+                    <!-- Search -->
+                    <div class="input-with-icon-right">
+                      <input v-model="columnSearchQuery" class="form-control mr-2" :placeholder="translated('find')">
+                      <div class="input-icon cursor-pointer hover-icon">
+                        <i
+                          class="modus-icons"
+                          :class="{ 'clear-icon': columnSearchQuery }"
+                          @click="columnSearchQuery ? resetSearch() : null"
+                        >
+                          {{ columnSearchQuery ? 'close' : 'search' }}
+                        </i>
+                      </div>
+                    </div>
+
+                    <!-- Add custom column -->
+                    <button
+                      type="button"
+                      class="btn btn-sm btn-icon-only badge-pill btn-primary mt-1 ml-2"
+                      data-toggle="tooltip"
+                      :title="translated('addColumn')"
+                      @click="addNewColumn()"
+                    >
+                      <i class="modus-icons">add</i>
+                    </button>
+                  </div>
+                  <!-- Check All & Reset -->
+                  <div class="d-flex justify-content-between px-3 py-2">
+                    <div class="custom-control custom-checkbox mr-1">
+                      <input
+                        v-model="isCheckedAll"
+                        type="checkbox"
+                        class="custom-control-input"
+                        id="checkAllColumns"
+                        @change="checkAllColumns($event.target.checked)"/>
+                      <label class="custom-control-label" for="checkAllColumns">
+                        {{ isCheckedAll ? translated('uncheckAll') : translated('checkAll') }}
+                      </label>
+                    </div>
+                    <label class="badge-pill badge-dark px-2 mt-2">{{ checkedCount }} / {{ orderedColumns.length }}</label>
+                  </div>
+ 
+                  <div id="selectColumns">
+                    <ul id="columnsList" class="list-group list-group-condensed">
+                      <!-- Loop through orderedColumns to create list items -->
+                      <li
+                        v-for="(colKey, index) in filteredColumns"
+                        :key="`${colKey}-${index}`"
+                        class="list-group-item list-item-right-control pl-3 pr-0"
+                        :id="'checkbox-' + colKey"
+                      >
+                        <!-- Checkbox wrapper -->
+                        <div class="custom-control custom-checkbox checkbox-wrapper mr-auto">
+                          <input
+                            type="checkbox"
+                            class="custom-control-input"
+                            :id="`checkColumn-${index}`"
+                            v-model="columnStates[colKey]"
+                            @change="onCheckboxChange"
+                          />
+                          <label
+                            class="custom-control-label"
+                            :for="`checkColumn-${index}`"
+                          >
+                            {{ translated(colKey, true) }}
+                          </label>
+                        </div>
+
+                        <div class="d-flex">
+                          <!-- Delete button -->
+                          <button
+                            v-show="colKey.includes('dynamicAttribute') || colKey.includes('customAttribute')"
+                            type="button"
+                            class="btn btn-sm badge-pill btn-icon-only btn-text-danger mt-1 remove-column"
+                            @click.stop="removeCustomColumn(colKey)"
+                            >
+                            <i class="modus-icons">close</i>
+                          </button>
+
+                          <!-- Drag & Drop -->
+                          <button type="button" disabled class="btn btn-icon-only cursor-drag">
+                            <i class="modus-icons">drag_indicator</i>
+                          </button>
+                        </div>
+                      </li>
+                    </ul>
+                  </div>
+                </form>
+              </div>
+            </div>
+
+            <!-- Find -->
+            <div class="input-with-icon-right ml-1">
+              <input
+                v-model="findText"
+                class="form-control mr-2"
+                id="findInput"
+                :placeholder="translated('find')"
+                :disabled="disabledButtons"
+                @input="performSearch"
+              />
+              <div class="input-icon cursor-pointer hover-icon">
+                <i
+                  class="modus-icons"
+                  :class="{ 'clear-icon': findText }"
+                  @click="findText ? resetSearch() : null"
+                >
+                  {{ findText ? 'close' : 'search' }}
+                </i>
+              </div>
+            </div>
+
+            <!-- Replace -->
+            <div v-show="showReplaceInput" class="input-with-icon-right ml-1" id="replaceInput">
+              <input
+                v-model="replaceText"
+                class="form-control"
+                :placeholder="translated('replace')"
+                @keyup.enter="performReplace"
+              />
+              <div class="input-icon cursor-pointer action-icon">
+                <i class="modus-icons" @click="performReplace">arrow_next</i>
+              </div>
+            </div>
+
+            <!-- Update All images -->
+            <button
+              type="button"
+              class="btn btn-icon-only text-dark bg-gray-light ml-1"
+              data-toggle="tooltip"
+              :title="translated('updateAllImages')"
+              id="updateAllImages"
+              @click="updateAllImagesConfirm()"
+              :disabled="disabledButtons"
+            >
+              <i class="modus-icons">image_scene</i>
+            </button>
+
+          </div>
+
+          <!-- Group By -->
+          <div class="dropdown ml-1">
+            <button
+              type="button"
+              class="btn text-dark border dropdown-toggle"
+              data-toggle="dropdown"
+              id="groupByButton"
+              aria-haspopup="true"
+              aria-expanded="false"
+              :disabled="disabledButtons"
+            >
+              {{ translated('groupedBy') }}: {{ groupByLabel }}
+            </button>
+            <div class="dropdown-menu custom-menu" id="groupByMenu">
+              <ul class="list-group list-group-condensed list-group-borderless px-2">
+                <li class="dropdown-item list-group-item custom-list-group-item" :class="{ 'active': groupByColumn === 'none' }" @click="groupByColumn = 'none'">
+                  {{ translated('noGrouping') }}
+                </li>
+              </ul>
+              <div class="dropdown-divider"></div>
+              <ul class="list-group list-group-condensed list-group-borderless px-2">
+
+                <li class="dropdown-item list-group-item custom-list-group-item" :class="{ 'active': groupByColumn === 'parent' }" @click="groupByColumn = 'parent'">
+                  {{ translated('parent') }}
+                </li>
+                <li class="dropdown-item list-group-item custom-list-group-item" :class="{ 'active': groupByColumn === 'entity' }" @click="groupByColumn = 'entity'">
+                  {{ translated('entity') }}
+                </li>
+                <li class="dropdown-item list-group-item custom-list-group-item" :class="{ 'active': groupByColumn === 'definition' }" @click="groupByColumn = 'definition'">
+                  {{ translated('definition') }}
+                </li>
+                <li class="dropdown-item list-group-item custom-list-group-item" :class="{ 'active': groupByColumn === 'instance' }" @click="groupByColumn = 'instance'">
+                  {{ translated('instance') }}
+                </li>
+                <li class="dropdown-item list-group-item custom-list-group-item" :class="{ 'active': groupByColumn === 'material' }" @click="groupByColumn = 'material'">
+                  {{ translated('material') }}
+                </li>
+                <li class="dropdown-item list-group-item custom-list-group-item" :class="{ 'active': groupByColumn === 'tag' }" @click="groupByColumn = 'tag'">
+                  {{ translated('tag') }}
+                </li>
+                <li class="dropdown-item list-group-item custom-list-group-item" :class="{ 'active': groupByColumn === 'ifc' }" @click="groupByColumn = 'ifc'">
+                  {{ translated('ifc') }}
+                </li>
+                <li class="dropdown-item list-group-item custom-list-group-item" :class="{ 'active': groupByColumn === 'status' }" @click="groupByColumn = 'status'">
+                  {{ translated('status') }}
+                </li>
+                <li class="dropdown-item list-group-item custom-list-group-item" :class="{ 'active': groupByColumn === 'owner' }" @click="groupByColumn = 'owner'">
+                  {{ translated('owner') }}
+                </li>
+              </ul>
+
+              <div class="dropdown-divider"></div>
+
+              <!-- Merge Identical checkbox (independent of grouping) -->
+              <div class="px-3">
+                <div class="custom-control custom-checkbox">
+                  <input type="checkbox" class="custom-control-input" id="mergeIdenticalCheck" v-model="mergeIdentical" />
+                  <label class="custom-control-label" for="mergeIdenticalCheck">{{ translated('mergeIdentical') }}</label>
+                </div>
+              </div>
+
+              <template v-if="customColumns && Object.keys(customColumns).length">
+                <div class="dropdown-divider"></div>
+                <li class="dropdown-header">{{ translated('customColumns') }}</li>
+                  <li
+                    v-for="(colVal, colKey) in customColumns"
+                    :key="colKey"
+                    class="dropdown-item list-group-item list-item-left-control custom-list-group-item"
+                    :class="{ 'active': groupByColumn === colKey }"
+                    @click="groupByColumn = colKey"
+                  >
+                    {{ translated(colKey, true) }}
+                  </li>
+              </template>
+            </div>
+          </div>
+        </div>
+
+        <div id="tableContainer">
+          <div
+            v-if="requireObject"
+            class="message message-primary"
+            id="messageText"
+          >
+            <i class="modus-icons">info</i>
+            <span>{{ translated('messageSelect') }}</span>
+          </div>
+          <div
+            v-if="columnsHidden"
+            class="message message-primary"
+            id="messageText"
+          >
+            <i class="modus-icons">info</i>
+            <span>{{ translated('allColumnsHidden') }}</span>
+          </div>
+
+          <table
+            v-show="objects && objects.length"
+            ref="myTable"
+            id="myTable"
+            v-resize-arrow
+            class="table table-sm table-bordered table-hover"
+          >
+            <thead class="mt-0">
+              <tr id="header-row">
+                <th
+                  v-for="(colKey, index) in orderedColumns"
+                  v-show="columnStates[colKey]"
+                  :key="index"
+                  :id="colKey"
+                  :class="[
+                    'bg-gray-0 sticky-top header-cell clearfix',
+                    { 'modified': !modifiedHeaders[colKey] },
+                    { 'header-highlight': currentHighlightedHeaderCell === colKey }
+                  ]"
+                  :style="getDataCellStyle(colKey, false)"
+                  v-on:dblclick="startEditingHeader(colKey)"
+                  v-on:click="(editingHeader !== colKey && !['ordinal', 'image'].includes(colKey)) ? handleHeaderClick(colKey) : null"
+                >
+                  <input
+                    v-show="editingHeader === colKey"
+                    v-model="editedHeaderText"
+                    class="custom-input"
+                    :ref="'headerInput-' + colKey"
+                    :id="`headerInput-${colKey}`"
+                    @keydown="handleHeaderKeydown($event, colKey)"
+                    @blur="saveHeaderEdit(colKey)"
+                  />
+                  <span
+                    v-show="editingHeader !== colKey"
+                    data-toggle="tooltip"
+                    :class="requiredSavedHeaders.includes(colKey) ? 'text-danger' : null"
+                    :title="requiredSavedHeaders.includes(colKey) ? translated('requireSavePreset') : translated('doubleClickToEdit') "
+                  >
+                    {{ translated(colKey, true) }}
+                  </span>
+                </th>
+              </tr>
+
+              <!-- Extra row -->
+              <tr id="extra">
+                <td
+                  v-for="(colKey, index) in orderedColumns"
+                  v-show="columnStates[colKey]"
+                  :key="'extra-' + index"
+                  :id="'extra-' + colKey"
+                  class="extra-cell extra-sticky-top bg-gray-light"
+                  :style="getDataCellStyle(colKey, false)"
+                  @dblclick="colKey.includes('dynamic') ? editDynamic($event.target) : null"
+                >
+                  <span
+                    v-show="!(editingExtra && editingColKey === colKey)"
+                    :class="[
+                      'badge badge-pill',
+                      {
+                        'badge-dark': (colKey.includes('len') || colKey.includes('area') || colKey === 'volume' || colKey.includes('dynamic') || colKey.includes('customAttribute')),
+                        'badge-primary': (colKey === 'price' || colKey === 'quantity'),
+                        'badge-danger': colKey === 'total',
+                        'badge-dynamic': colKey.includes('dynamic')
+                      }
+                    ]"
+                    :style="{ cursor: colKey.includes('dynamic') ? 'pointer' : 'default' }"
+                  >
+                    {{ getExtraInfo(colKey) }}
+                  </span>
+
+                  <input
+                    v-if="colKey.includes('dynamic') && editingExtra && editingColKey === colKey"
+                    v-model="dynamicSearchQuery"
+                    type="text"
+                    class="form-control"
+                    ref="dynamicInput"
+                    :placeholder="translated('find')"
+                  />
+
+                  <div
+                    v-if="colKey.includes('dynamic') && editingExtra && editingColKey === colKey"
+                    class="list-container custom-menu bg-gray-light border"
+                  >
+                    <ul class="list-group list-group-borderless list-group-condensed px-2">
+                      <li
+                        v-for="(attr, index) in filteredDynamicAttributes"
+                        :key="'attr-' + index"
+                        class="list-group-item list-item-right-control custom-list-group-item"
+                        @click="selectDynamicAttribute(colKey, attr)"
+                      >
+                        {{ attr }}
+                        <i
+                          v-if="['Name', 'Summary', 'Description', 'Item Code'].includes(attr)"
+                          class="modus-icons ml-4 text-danger"
+                        >map_marker</i>
+                      </li>
+                    </ul>
+                  </div>
+                </td>
+              </tr>
+            </thead>
+
+            <tbody ref="myTableBody" id="myTableBody" class="scrollable-body">
+              <tr v-for="(row, rowIndex) in tableRows" :key="rowIndex" :class="{ 'parent-row': row._isParentRow, 'row-highlighted': !row._isParentRow && row.id && highlightedIds.includes(row.id.split('-')[0]) }" v-show="row._isParentRow || (!row.isHidden && !collapsedGroups[row._groupVal])">
+
+                <!-- Parent header row -->
+                <template v-if="row._isParentRow">
+                  <td :colspan="visibleColumnCount" class="parent-row-cell" @click="highlightGroup(row._groupVal)">
+                    <span class="d-flex align-items-center">
+                      <i class="modus-icons left-icon mr-1" style="font-size: 1.2rem; line-height: 1; cursor: pointer;" @click.stop="toggleGroup(row._groupVal)">{{ collapsedGroups[row._groupVal] ? 'caret_right' : 'caret_down' }}</i>
+                      <input v-if="isGroupEditable && editingGroupVal === row._groupVal"
+                             ref="groupEditInput"
+                             v-model="editedGroupText"
+                             class="form-control custom-form-control"
+                             @click.stop
+                             @keydown="handleGroupEditEvent($event, row._groupVal)"
+                             @blur="saveGroupEdit(row._groupVal)" />
+                      <span v-else
+                            :style="isGroupEditable ? 'cursor: text;' : ''"
+                            @dblclick.stop="startEditingGroup(row._groupVal, row._parent)">{{ row._parent }}</span>
+                    </span>
+                  </td>
+                </template>
+
+                <!-- Regular entity row -->
+                <template v-else>
+                <td
+                  v-for="(colKey, colIndex) in orderedColumns"
+                  v-show="columnStates[colKey]"
+                  :key="colKey"
+                  :id="row.id + '-' + colKey"
+                  :class="[
+                    'ellipsis-text user-select-all',
+                    { 'overflow-visible': editingCell === `${row.id}-${colKey}` }
+                  ]"
+                  :style="getDataCellStyle(colKey, true)"
+                  @click="handleDataCellClick($event, row, colKey)"
+                  @dblclick="startEditingCell($event, row, colKey)"
+                >
+                  <!-- Image handling -->
+                  <span v-if="colKey === 'ordinal'">
+                    {{ row.ordinal }}
+                  </span>
+
+                  <!-- Image handling -->
+                  <div v-else-if="colKey === 'image'" class="image-container" :style="row.imageContainerStyle">
+                    <button
+                      class="update-image"
+                      @click.stop="updateImage(row)"
+                      v-show="row.showUpdateButton"
+                    >
+                      <i class="modus-icons">update</i>
+                    </button>
+
+                    <img
+                      :src="row.imageSrc"
+                      :alt="''"
+                      class="fit-image"
+                      :class="{ 'dashed-image': row.imageSrc.includes('current') || row.imageSrc.includes('Default') }"
+                      :id="row.id + '-img'"
+                      :data-id="row.imageSrc ? 1 : 0"
+                      :style="row.imageStyle"
+                      @mouseenter="row.showUpdateButton = true"
+                      @mouseleave="row.showUpdateButton = false"
+                      @load="adjustImageSize($event, row)"
+                      @error="$event.target.src = '../images/image.png'"
+                      @blur="saveCellEdit(row, colKey)"
+                    />
+
+                    <!-- Overlay for material/color handling -->
+                    <div
+                      v-if="row.imageSrc.includes('material') && row.imageSrc.includes('color')"
+                      class="image-overlay"
+                      :style="{ background: getMaterialColor(row.imageSrc) }">
+                    </div>
+
+                    <input
+                      v-show="editingCell === `${row.id}-${colKey}`"
+                      v-model="editedCellValue"
+                      class="custom-input"
+                      :ref="'cellInput-' + row.id + '-' + colKey"
+                      :id="`cellInput-${row.id}-${colKey}`"
+                      @keydown="handleCellEvent($event, row, colKey)"
+                      @blur="saveCellEdit(row, colKey)"
+                    />
+                  </div>
+
+                  <!-- Custom Attribute Edit handling -->
+                  <input
+                    v-else-if="colKey.includes('customAttribute') && editingCell === `${row.id}-${colKey}`"
+                    v-model="editedCellValue"
+                    class="custom-input"
+                    :ref="'cellInput-' + row.id + '-' + colKey"
+                    @keydown="handleCellEvent($event, row, colKey)"
+                    @blur="saveCellEdit(row, colKey)"
+                  />
+
+                  <!-- Dynamic Attribute Edit handling: TEXTBOX -->
+                  <input
+                    v-else-if="(colKey === 'dynamic' || colKey.includes('dynamicAttribute')) && editingCell === `${row.id}-${colKey}` && editingDynamicType === 'TEXTBOX'"
+                    v-model="editedCellValue"
+                    class="custom-input"
+                    :ref="'cellInput-' + row.id + '-' + colKey"
+                    @keydown="handleCellEvent($event, row, colKey)"
+                    @blur="saveCellEdit(row, colKey)"
+                  />
+
+                  <!-- Dynamic Attribute Edit handling: LIST -->
+                  <select
+                    v-else-if="(colKey === 'dynamic' || colKey.includes('dynamicAttribute')) && editingCell === `${row.id}-${colKey}` && editingDynamicType === 'LIST'"
+                    v-model="editedCellValue"
+                    class="form-control custom-select"
+                    :ref="'cellInput-' + row.id + '-' + colKey"
+                    @change="saveCellEdit(row, colKey)"
+                    @blur="saveCellEdit(row, colKey)"
+                    @keydown="handleCellEvent($event, row, colKey)"
+                  >
+                    <option
+                      v-for="(storedVal, label) in editingDynamicOptions"
+                      :key="storedVal"
+                      :value="storedVal"
+                    >{{ label }}</option>
+                  </select>
+
+                  <!-- Textarea Edit handling -->
+                  <textarea
+                    v-else-if="['instance', 'description'].includes(colKey) && editingCell === `${row.id}-${colKey}`"
+                    v-model="editedCellValue"
+                    class="custom-textarea"
+                    :ref="'cellTextArea-' + row.id + '-' + colKey"
+                    @keydown="handleCellEvent($event, row, colKey)"
+                    @blur="saveCellEdit(row, colKey)"
+                  ></textarea>
+
+                  <!-- Item List handling -->
+                  <div
+                    v-else-if="['tag', 'material', 'ifc'].includes(colKey) && editingCell === `${row.id}-${colKey}`"
+                    @focusin="handleFocusIn"
+                    @focusout="handleFocusOut"
+                    @keydown="handleCellEvent($event, row, colKey)"
+                    class="custom-focus"
+                    tabindex="0"
+                    :ref="'itemEditor-' + row.id + '-' + colKey"
+                  >
+                    <div class="input-with-icon-right">
+                      <input
+                        :ref="'itemSearchInput-' + row.id + '-' + colKey"
+                        v-model="itemSearchQuery"
+                        class="custom-input mr-2"
+                        :placeholder="originalCellValue"
+                      >
+                      <div class="input-icon cursor-pointer hover-icon">
+                        <i
+                          class="modus-icons"
+                          :class="{ 'clear-icon': itemSearchQuery }"
+                          @click="itemSearchQuery ? resetSearch() : null"
+                        >
+                          {{ itemSearchQuery ? 'close' : 'search' }}
+                        </i>
+                      </div>
+                    </div>
+                    <div
+                      class="mt-1 custom-menu bg-gray-light floating-menu border"
+                      id="itemsList"
+                      :ref="'itemsList-' + row.id + '-' + colKey"
+                    >
+                      <ul class="list-group list-group-borderless list-group-condensed p-2" :key="editingCell">
+                        <li
+                          v-for="(item, index) in filteredItems"
+                          :key="`item-${item}`"
+                          :id="`item-${index}`"
+                          class="list-group-item list-item-right-control custom-list-group-item"
+                          @click="handleItemClick(item, row.id, colKey)">
+                          <span class="scene-name">{{ item }}</span>
+                          <i v-if="originalCellValue === item" class="modus-icons text-success">check</i>
+                        </li>
+                      </ul>
+
+                    </div>
+                  </div>
+
+                  <!-- Input Edit handling -->
+                  <input
+                    v-else-if="editingCell === `${row.id}-${colKey}`"
+                    v-model="editedCellValue"
+                    class="custom-input"
+                    :ref="'cellInput-' + row.id + '-' + colKey"
+                    @keydown="handleCellEvent($event, row, colKey)"
+                    @blur="saveCellEdit(row, colKey)"
+                  />
+
+                  <!-- URL handling -->
+                  <div v-else-if="colKey === 'url'">
+                    <a :href="row[colKey]" target="_blank">
+                      {{ row[colKey] }}
+                    </a>
+                  </div>
+
+                  <!-- Status handling -->
+                  <span v-else-if="colKey === 'status'" :class="getStatusBadgeClass(row[colKey])">
+                    {{ row[colKey] }}
+                  </span>
+
+                  <!-- Total (In Model): gray out rows after the first of each definition -->
+                  <span v-else-if="colKey === 'total' && row._totalDuplicate" class="text-muted">{{ row[colKey] }}</span>
+
+                  <span v-else v-html="isHighlighted ? row.highlightedText?.[colKey] || row[colKey] : row[colKey]"></span>
+                </td>
+                </template><!-- end regular entity row -->
+
+              </tr>
+            </tbody>
+            <tfoot v-if="totalRow">
+              <tr class="sum-row" id="totalRow">
+                <td
+                  v-for="(colKey, colIndex) in orderedColumns"
+                  v-show="columnStates[colKey]"
+                  :key="colKey"
+                  class="extra-cell font-weight-bold bg-gray-light display-3"
+                  :id="'sum-' + colKey"
+                  :style="getDataCellStyle(colKey, false)"
+                >
+                  <span v-if="columnsToTotalKeys.includes(colKey)">
+                    {{ getSumForColumn(colKey) }}
+                  </span>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="border-top px-3 pt-2" id="infoFooter">
+      <div class="d-flex buttons-container">
+        <div class="d-flex switch-container">
+          <!-- Zoom Selection -->
+          <div class="custom-control custom-switch custom-control-inline auto-hide-840 mt-1">
+            <input
+              v-model="zoomSelection"
+              type="checkbox"
+              class="custom-control-input"
+              id="zoomSelection" @change="toggleZoomSelection"
+              :disabled="disabledButtons"
+            />
+            <label class="custom-control-label" for="zoomSelection">
+               <span class="label-text">{{ translated('zoomSelection') }}</span>
+            </label>
+          </div>
+
+          <div class="custom-control custom-switch custom-control-inline auto-hide-640 mt-1 ml-3">
+            <input
+              v-model="projectedArea"
+              type="checkbox"
+              class="custom-control-input"
+              id="projectedAreaSwitch" @change="toggleProjectedArea"
+              :disabled="disabledButtons"
+            />
+            <label class="custom-control-label" for="projectedAreaSwitch">
+               <span class="label-text">{{ translated('areaProjected') }}</span>
+            </label>
+          </div>
+
+          <div class="custom-control custom-switch custom-control-inline auto-hide mt-1 ml-3">
+            <input
+              v-model="totalRow"
+              type="checkbox"
+              class="custom-control-input"
+              id="toggleTotalRowSwitch" @change="toggleTotalRow"
+              :disabled="disabledButtons"
+            />
+            <label class="custom-control-label" for="toggleTotalRowSwitch">
+               <span class="label-text">{{ translated('showTotalRow') }}</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="dropdown d-flex ml-auto">
+          <button
+            id="importExportButton"
+            class="btn btn-dark dropdown-toggle"
+            type="button"
+            data-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+          >
+            {{ translated('importExport') }}
+          </button>
+          <div class="dropdown-menu dropdown-menu-right custom-menu p-2 mb-1">
+            <!-- Data Bridge button -->
+            <button
+              id="dataBridgeButton"
+              type="button"
+              class="btn btn-block btn-dark text-left"
+              @click="showDataBridgeModal()"
+            >
+              <i class="modus-icons left-icon">sync</i>
+              {{ translated('dataBridge') }}
+            </button>
+
+            <!-- Excel Export button -->
+            <button
+              id="exportExcel"
+              type="button"
+              class="btn btn-block text-dark bg-gray-light text-left"
+              :disabled="disabledButtons"
+              onclick="exportExcel()"
+            >
+              <i class="modus-icons left-icon">file_type_xls</i>
+              {{ translated('exportExcel') }}
+            </button>
+
+            <!-- Print PDF button -->
+            <button
+              id="printPDF"
+              type="button"
+              class="btn btn-block text-dark bg-gray-light text-left"
+              :disabled="disabledButtons"
+              onclick="printPDF()"
+            >
+              <i class="modus-icons left-icon">file_type_pdf</i>
+              {{ translated('printPDF') }}
+            </button>
+
+            <!-- Draw SketchUp Table button -->
+            <button
+              v-if="hasCrtext"
+              id="drawTable"
+              type="button"
+              class="btn btn-block text-dark bg-gray-light text-left"
+              :disabled="disabledButtons"
+              onclick="drawTable()"
+            >
+              <i class="modus-icons left-icon">table</i>
+              {{ translated('drawTable') }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Options Modal -->
+      <user-options-modal
+        :user-options-message="userOptionsMessage"
+        :user-options="userOptions"
+      ></user-options-modal>
+
+      <!-- Modal Support -->
+      <support-modal></support-modal>
+
+      <!-- Action Modal -->
+      <action-modal
+        :modal-title="modalTitle"
+        :edit-title="editTitle"
+        :edit-action="editAction"
+        :modal-message="modalMessage"
+        :modal-action0="modalAction0"
+        :modal-action1="modalAction1"
+        :modal-action2="modalAction2"
+      ></action-modal>
+
+      <!-- Notice Message -->
+      <message-modal
+        :notice-type="noticeType"
+        :notice-message="noticeMessage"
+      ></message-modal>
+
+      <!-- Data Bridge Modal -->
+      <data-bridge-modal></data-bridge-modal>
+    </div>
+  </div>
+
+  <script src="../js/create-elements.js"></script>
+  <script src="../js/resize-table.js"></script>
+  <script src="../js/main.js"></script>
+  <script src="../js/export-excel.js"></script>
+  <script src="../js/print-pdf.js"></script>
+  <script src="../js/edit-table.js"></script>
+  <script src="../languages/language-status.js"></script>
+</body>
+
+</html>

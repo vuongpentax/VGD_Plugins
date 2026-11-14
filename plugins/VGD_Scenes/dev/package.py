@@ -23,5 +23,4 @@ with zipfile.ZipFile(source, 'w', zipfile.ZIP_DEFLATED) as archive:
         archive.write(root / name, name)
 with zipfile.ZipFile(source) as archive:
     assert archive.testzip() is None
-    assert 'runtime/vgd_scenes/update_notice.rb' in archive.namelist()
 print(f'Packaged and verified: {target} + {source}')

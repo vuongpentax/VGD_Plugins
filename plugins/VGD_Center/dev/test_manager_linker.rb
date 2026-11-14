@@ -9,7 +9,7 @@ ENV['APPDATA'] = fake
 ENV['TEMP'] = Dir.tmpdir
 plug = File.join(fake, 'SketchUp/SketchUp 2024/SketchUp/Plugins')
 FileUtils.mkdir_p(plug)
-require_relative '../VGD_Center/main'
+require_relative '../vgd_center/main'
 PM = VGD::Center::Manager
 T = PM::Toggle
 L = PM::Linker

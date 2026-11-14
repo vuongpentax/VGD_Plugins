@@ -44,9 +44,9 @@ module UI
   def self.start_timer(seconds, _repeat, &block); @timers << [seconds, block]; 1; end
 end
 
-require_relative '../VGD_Center/main'
+require_relative '../vgd_center/main'
 CENTER = VGD::Center
-GUIDES = File.expand_path('../VGD_Center/guides', __dir__)
+GUIDES = File.expand_path('../vgd_center/guides', __dir__)
 SHARED = File.expand_path('../../../shared/vgd-center/guides', __dir__)
 
 def check(label, cond, detail = nil)
@@ -136,8 +136,8 @@ check 'không có phản hồi (mất mạng): dùng bản đang có', UI::HtmlD
 
 reset.call
 HTTP.start_result = false
-CENTER.open_guide('bim_lite')
-check 'không bắt đầu được yêu cầu: dùng bản đang có', UI::HtmlDialog.opened == [File.join(work, 'bim_lite.html')]
+CENTER.open_guide('bim')
+check 'không bắt đầu được yêu cầu: dùng bản đang có', UI::HtmlDialog.opened == [File.join(work, 'bim.html')]
 
 reset.call
 HTTP.responses[URL.call('plugin_moi')] = ok.call(GOOD)

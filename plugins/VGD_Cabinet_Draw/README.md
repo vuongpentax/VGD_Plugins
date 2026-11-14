@@ -1,20 +1,20 @@
-# VGD Cabinet Draw 1.0.0
+# VGD Cabinet Draw 1.0.1
 
 VGD Cabinet Draw là extension SketchUp (2022 trở lên) cho quy trình dựng tủ bán tự động: người dùng chủ động chọn mặt trước, vị trí đợt/vách, cách chia cánh, hướng mở, ngăn kéo và tay nắm. Preview hiện trong viewport; mỗi công cụ chỉ ghi hình học vào model khi người dùng click hoặc nhấn Enter.
 
 Extension đăng ký độc lập với VGD_Cabinet (cũ, ở `plugins/VGD_Cabinet`): dùng dictionary model `VGD_Cabinet_Draw` và thư mục dữ liệu `%APPDATA%/VGD/SketchUp/VGD_Cabinet_Draw`, không đọc dictionary hay preset của bản cũ.
 
-**Trạng thái:** bản 1.0.0 (stable), cùng mã với beta.70; khác beta.70 ở tên extension (nay là "VGD Cabinet Draw", xem `RELEASE_NOTES_v1.0.0.md`). Kiểm thử tự động bằng giả lập SketchUp (`test/`); chưa kiểm thử thủ công đầy đủ trong SketchUp thật, chỉ có vài mục người dùng đã xác nhận (xem "Điều chưa kiểm chứng").
+**Trạng thái:** bản 1.0.1 (ổn định), kế tiếp 1.0.0 (cùng mã với beta.70, tên extension "VGD Cabinet Draw"); xem `RELEASE_NOTES_v1.0.1.md` cho thay đổi so với 1.0.0. Kiểm thử tự động bằng giả lập SketchUp (`test/`); chưa kiểm thử thủ công đầy đủ trong SketchUp thật, chỉ có vài mục người dùng đã xác nhận (xem "Điều chưa kiểm chứng").
 
 ## Cài và đóng gói
 
 - Đóng gói: `python3 dev/build_release.py` (chạy từ thư mục plugin) tạo `outputs/VGD_Cabinet_Draw_<phiên bản>.rbz` và bản source ZIP cùng phiên bản. `outputs/` bị `.gitignore` bỏ qua, không lưu trong git.
-- Cài: Extensions → Extension Manager → Install Extension, chọn file `.rbz` (ví dụ `VGD_Cabinet_Draw_1.0.0.rbz`). Gói gồm `VGD_Cabinet_Draw.rb`, `VGD_Cabinet_Draw/main.rb` và toàn bộ `runtime/`.
-- Phiên bản ghi ở ba chỗ phải khớp nhau: `VERSION` trong `runtime/VGD_Cabinet_Draw/main.rb`, `extension.version` trong `VGD_Cabinet_Draw.rb`, số trong `runtime/VGD_Cabinet_Draw/dialog.html`; thêm `VERSION` trong `dev/build_release.py`.
+- Cài: Extensions → Extension Manager → Install Extension, chọn file `.rbz` (ví dụ `VGD_Cabinet_Draw_1.0.1.rbz`). Gói gồm `vgd_cabinet_draw.rb`, `vgd_cabinet_draw/main.rb` và toàn bộ `runtime/`.
+- Phiên bản ghi ở ba chỗ phải khớp nhau: `VERSION` trong `runtime/vgd_cabinet_draw/main.rb`, `extension.version` trong `vgd_cabinet_draw.rb`, số trong `runtime/vgd_cabinet_draw/dialog.html`; thêm `VERSION` trong `dev/build_release.py`.
 
 ## Công cụ và menu
 
-Theo `TOOLBAR_BUTTONS` và menu trong `runtime/VGD_Cabinet_Draw/main.rb` (menu **Extensions → VGD Cabinet Draw** và thanh công cụ cùng tên). Mỗi nút trên thanh công cụ cũng có trong menu.
+Theo `TOOLBAR_BUTTONS` và menu trong `runtime/vgd_cabinet_draw/main.rb` (menu **Extensions → VGD → VGD Cabinet Draw** và thanh công cụ **VGD CDR**). Mỗi nút trên thanh công cụ cũng có trong menu.
 
 1. **Box → Board**: chọn box rồi click mặt trước để chuyển thành thùng tủ, hoặc chọn face để tạo ván.
 2. **Chia đợt / vách**: chia đợt (nóc/đáy) hoặc vách (hông); rê chuột xem trước, click để đặt, gõ khoảng cách hoặc `/n` để chia đều.
@@ -24,7 +24,7 @@ Theo `TOOLBAR_BUTTONS` và menu trong `runtime/VGD_Cabinet_Draw/main.rb` (menu *
 6. **Quét & dời tấm**: quét chọn nhiều tấm của tủ rồi dời cùng một khoảng (xem phần Quét & dời tấm).
 7. **VGD Chọn**: bật công cụ rồi chuột phải lên tủ, cánh hoặc mặt hộc để hiện thanh nút tròn tại con trỏ.
 8. **Setting**: mở bảng điều khiển để chỉnh, lưu, xuất và nhập setting cho từng công cụ.
-9. Chỉ có trong menu: **Đóng tất cả cánh của tủ đang chọn**, **Tìm tấm bị trùng**, **Chuẩn hóa tên ván (vai trò + số)**, **Tải lại VGD Cabinet Draw (nạp code mới)**.
+9. Chỉ có trong menu: **Đóng tất cả cánh của tủ đang chọn**, **Tìm tấm bị trùng**, **Chuẩn hóa tên ván (vai trò + số)**, **Tải lại code**.
 
 Menu chuột phải **VGD Cabinet** có thêm các lệnh theo đối tượng (chia nhanh, cánh tự động theo hồi, mở/đóng cánh, xóa tấm/cánh/ngăn kéo...). Preview chỉ hiện số (không đơn vị, không chữ), ngoại trừ góc mở cánh có dấu độ.
 
@@ -74,13 +74,13 @@ Menu chuột phải **VGD Cabinet** có thêm các lệnh theo đối tượng (
 
 ## Giao diện theo theme VGD
 
-- Dialog dùng bộ theme chung (`runtime/VGD_Cabinet_Draw/vgd-theme/`, đồng bộ bằng `tools/sync_vgd_theme.py`; khóa lưu `vgd.cabinet_draw.theme`, nút `#themeBtn`). Dialog báo chế độ sáng/tối cho Ruby nên HUD, thanh mini, khung chữ và preview trong viewport đổi theo.
+- Dialog dùng bộ theme chung (`runtime/vgd_cabinet_draw/vgd-theme/`, đồng bộ bằng `tools/sync_vgd_theme.py`; khóa lưu `vgd.cabinet_draw.theme`, nút `#themeBtn`). Dialog báo chế độ sáng/tối cho Ruby nên HUD, thanh mini, khung chữ và preview trong viewport đổi theo.
 - Chữ trong viewport dùng Manrope nếu máy đã cài, không thì Segoe UI.
 - Icon thanh công cụ: PNG 16 px (small) và 24 px (large), nét 1.8, màu than và đồng `#B48963`. Bản 24/32 px từng làm mất icon trên SketchUp 2024. `icon.svg` ở gốc plugin vẫn dùng màu cũ `#A67C58`.
 
 ## Kiểm thử
 
-- Chạy từ thư mục `test/`, mỗi file một lệnh, ví dụ `ruby test_build.rb`. Có 25 file `test_*.rb` (giả lập SketchUp trong `mock_su.rb`). Mặc định test trỏ tới `../runtime/VGD_Cabinet_Draw`; riêng `test_back_modes.rb`, `test_panel_model.rb`, `test_rails.rb` bắt buộc truyền đường dẫn: `ruby test_rails.rb ../runtime/VGD_Cabinet_Draw`.
+- Chạy từ thư mục `test/`, mỗi file một lệnh, ví dụ `ruby test_build.rb`. Có 25 file `test_*.rb` (giả lập SketchUp trong `mock_su.rb`). Mặc định test trỏ tới `../runtime/vgd_cabinet_draw`; riêng `test_back_modes.rb`, `test_panel_model.rb`, `test_rails.rb` bắt buộc truyền đường dẫn: `ruby test_rails.rb ../runtime/vgd_cabinet_draw`.
 - Công cụ chẩn đoán chỉ đọc, chạy trong Ruby Console của SketchUp thật: `dev/check_parts_solid.rb` (tấm có là khối kín không), `dev/check_feature_sizes.rb` (chi tiết nhỏ có giữ mm sau Scale), `dev/dump_part_structure.rb` (cấu trúc một tấm).
 - `dev/native_smoke.rb` chỉ chạy trong SketchUp thật; chưa đối chiếu với bản hiện tại.
 
@@ -96,6 +96,7 @@ Menu chuột phải **VGD Cabinet** có thêm các lệnh theo đối tượng (
 
 | Bản | Nội dung chính |
 |---|---|
+| 1.0.1 | Gom menu vào Extensions → VGD, toolbar VGD CDR, loader và thư mục viết thường, Tải lại code thống nhất. |
 | 1.0.0 | Phát hành ổn định từ mã beta.70; tên extension đổi từ "VGD_Cabinet Draw" thành "VGD Cabinet Draw" để khớp quy tắc catalog của VGD Center. |
 | beta.70 | Chia cánh thủ công bắt điểm đúng ở góc nhìn nghiêng (đo trên mặt trước thùng tủ). |
 | beta.69 | Preview chỉ hiện số; Quét & dời tấm: chọn xong click tiếp theo là kéo luôn. |

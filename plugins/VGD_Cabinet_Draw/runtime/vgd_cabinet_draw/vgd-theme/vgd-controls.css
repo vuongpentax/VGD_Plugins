@@ -1,0 +1,57 @@
+/* VGD UI controls: chuẩn nút gạt, ô tick, thanh cuộn, ngăn trượt và hiệu ứng cho dialog HTML của các plugin VGD.
+   Nguồn: VGD_BIM (đã chạy tốt trong bản 1.1.0-beta.19), giá trị nút gạt khớp tab Quản lý của VGD Center.
+   Dùng cùng shared/vgd-theme/vgd-theme.css (token --vgd-*) và thêm class "vgd-ui" vào <body>.
+   Quy tắc và cách dùng: shared/HUONG_DAN_THEME.md mục 9, shared/VGD_UI_DESIGN_SYSTEM.md mục "Controls and motion".
+   Nằm trong shared/vgd-theme/ nên tools/sync_vgd_theme.py chép nguyên văn vào vgd-theme/ của từng plugin; không sửa bản copy. Plugin dùng thì thêm <link> sau vgd-theme.css. */
+
+:root {
+  --vgd-ease: cubic-bezier(.4, 0, .2, 1);
+  --vgd-dur-check: 150ms;   /* ô tick, FLIP đổi chỗ trong danh sách */
+  --vgd-dur-switch: 180ms;  /* nút gạt */
+  --vgd-dur-panel: 220ms;   /* ngăn / bảng trượt ra */
+}
+
+/* ---- Thanh cuộn: ẩn thanh dọc (vẫn cuộn bằng con lăn chuột, khỏi lăn nhầm), chỉ giữ thanh ngang mảnh 10px ----
+   Không đặt scrollbar-width / scrollbar-gutter: chúng làm trình duyệt bỏ qua ::-webkit-scrollbar. */
+.vgd-ui ::-webkit-scrollbar, .vgd-ui::-webkit-scrollbar { width: 0; height: 10px; }
+.vgd-ui ::-webkit-scrollbar-track, .vgd-ui ::-webkit-scrollbar-corner { background: transparent; }
+.vgd-ui ::-webkit-scrollbar-thumb { background: var(--vgd-border); border-radius: 5px; }
+.vgd-ui ::-webkit-scrollbar-thumb:hover { background: var(--vgd-muted); }
+
+/* ---- Nút gạt: <button class="vgd-switch" role="switch" aria-checked="false" aria-label="..."> + <span class="vgd-switch-label"> ----
+   Cỡ chuẩn 40 x 22, đầu gạt 16 x 16 cách mép 2px, gạt sang phải thêm 18px. Một phần tử duy nhất: đổi aria-checked tại chỗ để hiệu ứng chạy. */
+.vgd-switch-item { display: inline-flex; align-items: center; gap: 7px; }
+.vgd-switch { position: relative; flex: none; width: 40px; height: 22px; min-width: 40px; min-height: 22px; padding: 0; border-radius: 11px; border: 1px solid var(--vgd-border); background: var(--vgd-elevated); cursor: pointer; transition: background var(--vgd-dur-switch) ease, border-color var(--vgd-dur-switch) ease; }
+.vgd-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--vgd-muted); transition: left var(--vgd-dur-switch) var(--vgd-ease), background var(--vgd-dur-switch) ease; }
+.vgd-switch:hover { border-color: var(--vgd-accent); }
+.vgd-switch[aria-checked="true"] { background: var(--vgd-accent); border-color: var(--vgd-accent); }
+.vgd-switch[aria-checked="true"]::after { left: 20px; background: var(--vgd-on-accent); }
+.vgd-switch:focus-visible { outline: 2px solid var(--vgd-accent); outline-offset: 2px; }
+.vgd-switch:disabled { opacity: .45; cursor: not-allowed; }
+.vgd-switch-label { font-size: 12px; color: var(--vgd-muted); cursor: pointer; user-select: none; }
+.vgd-switch[aria-checked="true"] + .vgd-switch-label { color: var(--vgd-text); }
+
+/* ---- Ô tick: <input type="checkbox" class="vgd-checkbox"> 15 x 15, nền và dấu tick chuyển mượt ---- */
+.vgd-checkbox { appearance: none; -webkit-appearance: none; flex: none; width: 15px; height: 15px; min-height: 0; margin: 0; padding: 0; border: 1.5px solid var(--vgd-muted); border-radius: 4px; background: transparent; display: inline-grid; place-content: center; cursor: pointer; transition: background var(--vgd-dur-check) ease, border-color var(--vgd-dur-check) ease; }
+.vgd-checkbox::after { content: ""; width: 8px; height: 4px; margin-top: -2px; border-left: 2px solid var(--vgd-on-accent); border-bottom: 2px solid var(--vgd-on-accent); transform: rotate(-45deg) scale(0); transition: transform var(--vgd-dur-check) ease; }
+.vgd-checkbox:checked { background: var(--vgd-accent); border-color: var(--vgd-accent); }
+.vgd-checkbox:checked::after { transform: rotate(-45deg) scale(1); }
+.vgd-checkbox:focus-visible { outline: 2px solid var(--vgd-accent); outline-offset: 1px; }
+
+/* ---- Ngăn trượt (drawer): đẩy nội dung sang bên chứ không đè lên, nên phần đầu của bảng không bị che ----
+   <div class="vgd-split"><aside class="vgd-drawer"><div class="vgd-drawer-in">...</div></aside><div class="vgd-split-main">...</div></div>
+   Thêm class "open" vào .vgd-drawer sau hai khung hình (requestAnimationFrame lồng nhau) để width 0 được vẽ trước khi trượt ra.
+   Bỏ "open" để đóng, rồi dọn nội dung sau --vgd-dur-panel. Đổi cỡ ngăn bằng --vgd-drawer-width (đặt trên .vgd-drawer). */
+.vgd-split { display: flex; min-height: 0; flex: 1; }
+.vgd-split-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.vgd-drawer { --vgd-drawer-width: 230px; display: flex; flex: none; width: 0; margin-right: 0; overflow: hidden; transition: width var(--vgd-dur-panel) ease, margin-right var(--vgd-dur-panel) ease; }
+.vgd-drawer.open { width: var(--vgd-drawer-width); margin-right: 8px; }
+.vgd-drawer-in { flex: none; width: var(--vgd-drawer-width); box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; padding: 6px; background: var(--vgd-surface); border: 1px solid var(--vgd-border); border-radius: 6px; }
+
+/* ---- Hàng trong danh sách kéo thả: mục đang kéo mờ đi; FLIP (xem tài liệu) làm các mục khác trượt sang chỗ mới ---- */
+.vgd-sort-item.dragging { opacity: .5; background: var(--vgd-tint); }
+
+/* Người dùng bật "giảm chuyển động" trong Windows thì tắt mọi hiệu ứng trên. */
+@media (prefers-reduced-motion: reduce) {
+  .vgd-switch, .vgd-switch::after, .vgd-checkbox, .vgd-checkbox::after, .vgd-drawer { transition: none; }
+}

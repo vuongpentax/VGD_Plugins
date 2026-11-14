@@ -1,0 +1,68 @@
+{
+  "schema_version": 1,
+  "version": "1.2.4",
+  "download": {
+    "filename": "VGD_Center_v1.2.4.rbz",
+    "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-center-v1.2.4/VGD_Center_v1.2.4.rbz",
+    "size": 363239,
+    "sha256": "7c46a92589f38021e9ef9be48b4f55d4ae318ea2cf667fba69d5a140c4b1af08"
+  },
+  "releases": [
+    {
+      "version": "1.2.4",
+      "release_channel": "stable",
+      "published_at": "2026-11-11",
+      "tag": "vgd-center-v1.2.4",
+      "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-center-v1.2.4"
+    },
+    {
+      "version": "1.2.3",
+      "release_channel": "stable",
+      "published_at": "2026-11-06",
+      "tag": "vgd-center-v1.2.3",
+      "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-center-v1.2.3"
+    },
+    {
+      "version": "1.2.2",
+      "release_channel": "stable",
+      "published_at": "2026-11-06",
+      "tag": "vgd-center-v1.2.2",
+      "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-center-v1.2.2"
+    },
+    {
+      "version": "1.2.1",
+      "release_channel": "stable",
+      "published_at": "2026-11-06",
+      "tag": "vgd-center-v1.2.1",
+      "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-center-v1.2.1"
+    },
+    {
+      "version": "1.2.0",
+      "release_channel": "stable",
+      "published_at": "2026-10-31",
+      "tag": "vgd-center-v1.2.0",
+      "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-center-v1.2.0"
+    },
+    {
+      "version": "1.1.0",
+      "release_channel": "stable",
+      "published_at": "2026-10-27",
+      "tag": "vgd-center-v1.1.0",
+      "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-center-v1.1.0"
+    },
+    {
+      "version": "1.0.11",
+      "release_channel": "stable",
+      "published_at": "2026-10-16",
+      "tag": "vgd-center-v1.0.11",
+      "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-center-v1.0.11"
+    },
+    {
+      "version": "1.0.10",
+      "release_channel": "stable",
+      "published_at": "2026-10-16",
+      "tag": "vgd-center-v1.0.10",
+      "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-center-v1.0.10"
+    }
+  ]
+}
