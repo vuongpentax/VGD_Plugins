@@ -30,6 +30,15 @@ Xem trực tiếp (bản nhúng): chạy `python3 -m http.server 8000` ở gốc
 
 Giao diện Center đổi thì chỉ cần quay lại: video lấy hình trực tiếp từ mã hiện tại của plugin.
 
+## Đăng lên GitHub Pages (hướng dẫn tương tác)
+
+Mỗi plugin có một trang hướng dẫn tương tác ở `tools/video-huong-dan/guides/<id>/index.html` (id trùng id trong `catalog.json`). Hiện có `guides/center/`: 7 chương, bấm chương nào thì hoạt ảnh chạy trực tiếp trên giao diện Center, có `?bai=<số>` để mở thẳng một chương.
+
+- Dựng thử: `python3 tools/video-huong-dan/build_site.py` tạo thư mục `_site/` (không commit). Script chỉ chép file web cần chạy và giữ nguyên đường dẫn tương đối, nên luôn khớp với mã hiện tại của Center.
+- Đăng: `.github/workflows/pages.yml` tự dựng và đăng khi có thay đổi trên `main`. Bật một lần: Settings → Pages → Source: GitHub Actions. Địa chỉ: `https://vuongpentax.github.io/VGD_Plugins/guides/<id>/`.
+- Thêm hướng dẫn cho plugin mới: tạo `guides/<id>/index.html` cùng các đoạn hoạt ảnh; không cần phát hành lại Center khi Center đã biết đọc `guide_url` trong `catalog.json` (phần này chưa làm).
+- Cần có mạng để xem. Trang chạy script, nên chỉ nên mở trong cửa sổ không nối với Ruby (như cửa sổ hướng dẫn của Center).
+
 ## Thông số
 
 - Video: 1920×1080, 30 khung/giây, H.264 (yuv420p, crf 18). Trang vẽ ở 1280×720 và quay với hệ số 1,5.

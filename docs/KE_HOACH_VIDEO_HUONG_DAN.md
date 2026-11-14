@@ -101,3 +101,12 @@ Chưa xác minh: hộp thoại chọn file, dời file thật và hành vi trong
 ## Kết quả
 
 Đã dựng đủ 7 đoạn. Mã nguồn, cách chạy lại và thông số: `tools/video-huong-dan/HUONG-DAN.md`. Chưa nhúng vào VGD Center, chưa đối chiếu với SketchUp thật.
+
+## Quyết định: đưa hoạt ảnh vào hướng dẫn của Center
+
+Ưu tiên: Center nhẹ nhất, hạn chế phát hành Center mới, thêm hướng dẫn cho plugin mới không cần cập nhật Center.
+
+- Hoạt ảnh và giao diện mô phỏng đặt trên GitHub Pages của repo, không đóng gói trong Center. Quy tắc chặn script của trang hướng dẫn chữ (`valid_guide_html?`) giữ nguyên, không nới.
+- Center (một lần, bản sau) đọc `guide_url` trong `catalog.json` và mở trang đó trong cửa sổ hướng dẫn; không có mạng hoặc lỗi thì dùng trang hướng dẫn chữ sẵn có. Cửa sổ này không đăng ký callback Ruby, nên trang trên mạng không điều khiển được SketchUp. Cần danh sách tên miền được phép trong Center.
+- Đã làm: trang `guides/center/`, `build_site.py`, workflow Pages. Chưa làm: sửa Center đọc `guide_url`, kiểm tra trong SketchUp thật (HtmlDialog SketchUp 2022 có chạy trọn đoạn mã này không).
+
