@@ -1,6 +1,6 @@
-# VGD Dim · 4.0.2-beta.6
+# VGD Dim · 4.0.2
 
-Phiên bản hiện tại 4.0.2-beta.6, chi tiết ở [RELEASE_NOTES_v4.0.2-beta.6.md](RELEASE_NOTES_v4.0.2-beta.6.md). Kiểm tra: tự động bằng mô phỏng (các test trong `dev/` chạy với SketchUp giả lập); chưa kiểm thử trong SketchUp thật. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
+Phiên bản hiện tại 4.0.2, chi tiết ở [RELEASE_NOTES_v4.0.2.md](RELEASE_NOTES_v4.0.2.md). Kiểm tra: tự động bằng mô phỏng (các test trong `dev/` chạy với SketchUp giả lập); đã được người phát hành dùng thử trong SketchUp (các test tự động chạy với SketchUp giả lập). Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
 Tiếp tục từ **VGD_Dim_6.rbz (Claude 3.2.0)** theo yêu cầu 07/10/2026. Sidebar 6 mục và scope chung; giữ palette T+ / VGD, có theme sáng/tối. Đọc [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md) cho rà soát/giới hạn/checklist native.
 

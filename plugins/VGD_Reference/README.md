@@ -1,6 +1,6 @@
-# VGD Reference 1.0.3 (beta.4)
+# VGD Reference 1.0.3
 
-Phiên bản hiện tại 1.0.2, tối thiểu SketchUp 2023; chi tiết ở [RELEASE_NOTES_v1.0.2.md](RELEASE_NOTES_v1.0.2.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
+Phiên bản hiện tại 1.0.3, tối thiểu SketchUp 2023; chi tiết ở [RELEASE_NOTES_v1.0.3.md](RELEASE_NOTES_v1.0.3.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); đã được người phát hành dùng thử trong SketchUp. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
 `VGD Reference` là tiện ích SketchUp để ghim ảnh phía trên khung nhìn mô hình. Ảnh nằm trong lớp phủ theo màn hình và chỉ được giữ trong phiên SketchUp hiện tại; tiện ích không tạo entity và không ghi dữ liệu ảnh tham chiếu vào file `.skp`.
 
@@ -22,7 +22,7 @@ Phiên bản hiện tại 1.0.2, tối thiểu SketchUp 2023; chi tiết ở [RE
 
 ## Cài đặt
 
-Trong SketchUp, mở **Extension Manager → Install Extension** và chọn file `VGD_Reference_v1.0.3-beta.6.rbz`. Khởi động lại SketchUp sau khi cài. Mở **Extensions → VGD → VGD Reference → Mở bảng quản lý** hoặc nhấn nút **VGD Reference** trên thanh công cụ.
+Trong SketchUp, mở **Extension Manager → Install Extension** và chọn file `VGD_Reference_v1.0.3.rbz`. Khởi động lại SketchUp sau khi cài. Mở **Extensions → VGD → VGD Reference → Mở bảng quản lý** hoặc nhấn nút **VGD Reference** trên thanh công cụ.
 
 ## Kéo ảnh từ Pinterest / web
 

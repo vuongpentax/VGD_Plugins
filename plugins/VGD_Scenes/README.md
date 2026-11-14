@@ -1,6 +1,6 @@
-# VGD Scenes 1.6.1 (beta.1) — SketchUp 2022–2026.2
+# VGD Scenes 1.6.1 — SketchUp 2022–2026.2
 
-Phiên bản hiện tại 1.6.1-beta.5, chi tiết ở [RELEASE_NOTES_v1.6.1.md](RELEASE_NOTES_v1.6.1.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
+Phiên bản hiện tại 1.6.1, chi tiết ở [RELEASE_NOTES_v1.6.1.md](RELEASE_NOTES_v1.6.1.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); đã được người phát hành dùng thử trong SketchUp. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
 Plugin không hiện popup cập nhật khi khởi động: VGD Center báo bản mới. Cài bản mới qua Extension Manager rồi khởi động lại.
 

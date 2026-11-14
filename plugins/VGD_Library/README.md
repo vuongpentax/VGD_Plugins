@@ -1,6 +1,6 @@
-# VGD Library 1.2.1 (beta.1)
+# VGD Library 1.2.1
 
-Phiên bản hiện tại 1.2.1-beta.4, chi tiết ở [RELEASE_NOTES_v1.2.1.md](RELEASE_NOTES_v1.2.1.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
+Phiên bản hiện tại 1.2.1, chi tiết ở [RELEASE_NOTES_v1.2.1.md](RELEASE_NOTES_v1.2.1.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); đã được người phát hành dùng thử trong SketchUp. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
 Plugin không hiện popup cập nhật khi khởi động: VGD Center báo bản mới. Cài bản mới qua Extension Manager rồi khởi động lại. Nguồn JSON cập nhật tự cấu hình vẫn độc lập.
 
@@ -8,7 +8,7 @@ Plugin SketchUp độc lập của VGD: thư viện vật liệu **ảnh/SKM**, 
 
 ## Cài đặt và nối kho của bạn
 
-1. Cài `VGD_Library_v1.2.1-beta.4.rbz` bằng **Extensions → Extension Manager → Install Extension**.
+1. Cài `VGD_Library_v1.2.1.rbz` bằng **Extensions → Extension Manager → Install Extension**.
 2. Nếu đã cài bản cũ, lưu bản vẽ, đóng tất cả cửa sổ SketchUp và mở lại sau khi cập nhật.
 3. Mở **Extensions → VGD → VGD Library → Thư viện vật liệu**; bật toolbar **VGD LIB** trong View → Toolbars nếu cần.
 4. Bấm **+ Kho vật liệu Drive 03 MTL**. Plugin dùng đường dẫn đồng bộ đã xác minh trên máy hiện tại:

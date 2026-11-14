@@ -22,7 +22,7 @@ end
 
 module VGD
   module Scenes
-    VERSION = '1.6.1-beta.5'.freeze unless const_defined?(:VERSION, false)
+    VERSION = '1.6.1'.freeze unless const_defined?(:VERSION, false)
     # Danh sách file nạp lại khi "Tải lại code" (trùng các require_relative ở đầu file, main nạp cuối).
     CODE_FILES = %w[utils dim_bridge section_set sheet_layout title_block sheet_builder geometry scenes frame export
                     transfer camera main].freeze unless const_defined?(:CODE_FILES, false)
