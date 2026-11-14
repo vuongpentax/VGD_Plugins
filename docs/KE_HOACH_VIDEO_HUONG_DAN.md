@@ -110,3 +110,46 @@ Chưa xác minh: hộp thoại chọn file, dời file thật và hành vi trong
 - Center (một lần, bản sau) đọc `guide_url` trong `catalog.json` và mở trang đó trong cửa sổ hướng dẫn; không có mạng hoặc lỗi thì dùng trang hướng dẫn chữ sẵn có. Cửa sổ này không đăng ký callback Ruby, nên trang trên mạng không điều khiển được SketchUp. Cần danh sách tên miền được phép trong Center.
 - Đã làm: trang `guides/center/`, `build_site.py`, workflow Pages. Chưa làm: sửa Center đọc `guide_url`, kiểm tra trong SketchUp thật (HtmlDialog SketchUp 2022 có chạy trọn đoạn mã này không).
 
+
+## Kế hoạch: hướng dẫn tương tác cho các plugin còn lại
+
+Phạm vi: 8 plugin có hướng dẫn chữ (Dim, Cabinet, Library, Image Importer, Scenes, BIM, Reference, Cabinet Draw), khoảng 29 chương (mỗi chương của hướng dẫn chữ là một đoạn hoạt ảnh). DC Exporter, Room, Package không có hướng dẫn chữ và không nằm trong catalog nên không làm.
+
+Đã chốt: phần diễn ra trong khung nhìn 3D chỉ thể hiện bằng chú thích kết quả trên màn hình, hoạt ảnh chạy trên hộp thoại thật của plugin; làm thử Image Importer trước.
+
+### Mức độ (ước lượng, chưa mở thử cả 8 hộp thoại trong trình duyệt)
+
+| Plugin | Hộp thoại HTML | Chương | Mức |
+|---|---|---|---|
+| Image Importer | 7 KB | 2 | Dễ |
+| Reference | bảng nhỏ | 2 | Vừa |
+| Library | 12 KB + trang map; tải dữ liệu ngoài | 3 | Vừa |
+| Dim | 18 KB | 4 | Vừa |
+| Scenes | 26 KB | 3 | Vừa |
+| BIM | bảng nhiều tab, 8.400 dòng Ruby | 3 | Khó |
+| Cabinet | 121 KB, 18 lệnh gọi Ruby | 3 | Khó |
+| Cabinet Draw | 38 KB, phần lớn là công cụ trong khung nhìn | 9 | Khó nhất |
+
+### Các giai đoạn
+
+0. **Khung dùng chung (một lần).** Tách phần riêng của Center trong `common.js` thành bộ nhúng hộp thoại cho plugin bất kỳ (mô phỏng phía Ruby bằng dữ liệu theo thời gian); mỗi plugin có `chapters.json`, `build_site.py` sinh `guides/<id>/index.html` từ một mẫu chung và chép thư mục web của plugin. → kiểm tra: hình 7 đoạn của Center giống hệt trước khi tách; build và test trình duyệt đạt.
+1. **Làm thử Image Importer** (2 chương). → kiểm tra: kịch bản được duyệt, xem khung hình, chạy trong trình duyệt theo đường dẫn con của Pages; rồi chỉnh khung dùng chung nếu cần.
+2. **Reference, Library, Dim, Scenes.**
+3. **BIM, Cabinet.**
+4. **Cabinet Draw** (chia thành 2–3 đợt vì 9 chương).
+
+### Quy trình cho mỗi plugin
+
+1. Đọc hướng dẫn chữ, README và hộp thoại; liệt kê các lệnh gọi Ruby cần mô phỏng.
+2. Viết bảng kịch bản (mục đích, thao tác, chữ trên màn hình, thời lượng) → bạn duyệt.
+3. Dựng từng chương, xem khung hình, bạn xem và phản hồi.
+4. Thêm `guides/<id>/`, dựng thử `_site`, kiểm tra trình duyệt.
+5. Sau khi Center 1.2.6 đã phát hành và Pages đã chạy: thêm `guide_url` vào mục catalog (file này có hiệu lực ngay với người dùng Center 1.2.6 trở lên, bản cũ bỏ qua).
+
+### Rủi ro và việc chưa rõ
+
+- Mỗi hộp thoại gọi Ruby theo cách riêng nên phải đọc mã từng plugin; mức khó chỉ là ước lượng.
+- Library tải dữ liệu từ ngoài: dùng dữ liệu mẫu.
+- Hoạt ảnh là bản chụp giao diện lúc đăng; plugin đổi giao diện thì phải đăng lại. Có thể thêm bước kiểm tra tự động khi plugin đổi (chưa làm).
+- Chưa kiểm tra trong SketchUp thật; phụ thuộc kết quả thử Center 1.2.6-beta.1.
+- Chưa quyết: có xuất thêm MP4 cho từng plugin không (hiện chỉ làm bản tương tác); có làm bản tiếng Anh không.
