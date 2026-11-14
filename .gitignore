@@ -29,3 +29,6 @@ __pycache__/
 
 # Thư mục đầu ra khi đóng gói
 outputs/
+
+# Thư mục dựng để đăng lên GitHub Pages (tools/video-huong-dan/build_site.py)
+_site/

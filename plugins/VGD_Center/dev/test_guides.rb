@@ -29,9 +29,11 @@ end
 # Cửa sổ giả
 module UI
   class HtmlDialog
-    class << self; attr_accessor :opened; end
+    class << self; attr_accessor :opened, :urls, :callbacks; end
     def initialize(**options); @options = options; end
     def set_file(path); (self.class.opened ||= []) << path; end
+    def set_url(url); (self.class.urls ||= []) << url; end
+    def add_action_callback(name, &_block); (self.class.callbacks ||= []) << name; end
     def set_on_closed(&_block); end
     def visible?; false; end
     def bring_to_front; end
@@ -104,7 +106,7 @@ HTTP = Sketchup::Http::Request
 URL = ->(id) { "https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/guides/#{id}.html" }
 reset = lambda do
   HTTP.responses = {}; HTTP.urls = []; HTTP.start_result = nil
-  UI::HtmlDialog.opened = []; $stub_messages.clear; UI.timers.clear
+  UI::HtmlDialog.opened = []; UI::HtmlDialog.urls = []; UI::HtmlDialog.callbacks = []; $stub_messages.clear; UI.timers.clear
   CENTER.instance_variable_set(:@guide_dialogs, {}); CENTER.instance_variable_set(:@guide_requests, {})
 end
 ok = ->(body) { Sketchup::Http::Request::Response.new(200, body) }
@@ -150,13 +152,13 @@ CENTER.open_guide('khong_co')
 check 'không có ở cả hai nơi: báo chưa có, không mở cửa sổ', UI::HtmlDialog.opened.empty? && $stub_messages.last.to_s.include?('chưa có'), $stub_messages.inspect
 
 reset.call
-HTTP.responses[URL.call('center')] = :never
-CENTER.open_guide('center')
+HTTP.responses[URL.call('cabinet')] = :never
+CENTER.open_guide('cabinet')
 check 'mạng chậm: chưa mở ngay, đợi phản hồi hoặc hết giờ', UI::HtmlDialog.opened.empty? && UI.timers.size == 1
-CENTER.open_guide('center')
+CENTER.open_guide('cabinet')
 check 'bấm lần nữa khi đang tải: không gửi yêu cầu thứ hai', HTTP.urls.size == 1
 UI.timers.first[1].call
-check 'hết giờ chờ: mở bản đang có', UI::HtmlDialog.opened == [File.join(work, 'center.html')]
+check 'hết giờ chờ: mở bản đang có', UI::HtmlDialog.opened == [File.join(work, 'cabinet.html')]
 UI.timers.first[1].call
 check 'hết giờ gọi lại không mở lần hai', UI::HtmlDialog.opened.size == 1
 
@@ -186,6 +188,100 @@ check 'plugin có trang trong gói: có nút', flags['dim'] == true, flags.inspe
 check 'plugin mới khai báo guide: true: có nút dù chưa có trang trong gói', flags['thu_a'] == true, flags.inspect
 check 'plugin mới không khai báo guide: ẩn nút', flags['thu_b'] == false, flags.inspect
 check 'guide khác true (chuỗi "true"): ẩn nút', flags['thu_c'] == false, flags.inspect
+
+# ---------- E. Hướng dẫn tương tác trên GitHub Pages (guide_url) ----------
+# Plugin khai báo "guide_url" trong catalog (chỉ nhận đúng tên miền và thư mục guides/<id>/); Center kiểm tra trang còn tải
+# được rồi mở bằng set_url trong cửa sổ không có callback Ruby. Lỗi, mạng chậm hoặc không có mạng: dùng trang chữ như cũ.
+WEB = ->(id) { "https://vuongpentax.github.io/VGD_Plugins/guides/#{id}/" }
+web_catalog = CENTER.send(:validate_catalog, 'schema_version' => 1, 'channel' => 'latest', 'products' => [
+  dim.merge('guide_url' => WEB.call('dim')),
+  extra.call('thu_web', true).merge('guide_url' => WEB.call('thu_web')),
+  extra.call('thu_sai', true).merge('guide_url' => 'http://vuongpentax.github.io/VGD_Plugins/guides/thu_sai/'),
+  extra.call('thu_chu', true).merge('guide_url' => WEB.call('khac')),
+  real['products'].find { |item| item['id'] == 'library' }
+])
+CENTER.instance_variable_set(:@catalog, web_catalog)
+check 'guide_url hợp lệ của plugin được nhận', CENTER.web_guide_url('dim') == WEB.call('dim')
+check 'plugin mới khai báo guide_url hợp lệ được nhận', CENTER.web_guide_url('thu_web') == WEB.call('thu_web')
+check 'Center có địa chỉ tương tác riêng', CENTER.web_guide_url('center') == WEB.call('center')
+check 'plugin không khai báo guide_url: không có', CENTER.web_guide_url('library').nil?
+check 'guide_url dùng http: bỏ', CENTER.web_guide_url('thu_sai').nil?
+check 'guide_url trỏ sang thư mục của plugin khác: bỏ', CENTER.web_guide_url('thu_chu').nil?
+bad_urls = {
+  'tên miền khác' => 'https://evil.example/VGD_Plugins/guides/dim/',
+  'tên miền giả giống (đuôi)' => 'https://vuongpentax.github.io.evil.example/VGD_Plugins/guides/dim/',
+  'userinfo đánh lạc hướng' => 'https://vuongpentax.github.io@evil.example/VGD_Plugins/guides/dim/',
+  'đường dẫn lên thư mục cha' => 'https://vuongpentax.github.io/VGD_Plugins/guides/../x/',
+  'id chữ hoa' => 'https://vuongpentax.github.io/VGD_Plugins/guides/Dim/',
+  'thêm đường dẫn sau id' => 'https://vuongpentax.github.io/VGD_Plugins/guides/dim/x.html',
+  'tham số lạ' => 'https://vuongpentax.github.io/VGD_Plugins/guides/dim/?url=https://evil.example',
+  'có fragment' => 'https://vuongpentax.github.io/VGD_Plugins/guides/dim/#x',
+  'xuống dòng chèn thêm' => "https://vuongpentax.github.io/VGD_Plugins/guides/dim/\nhttps://evil.example",
+  'không phải chuỗi' => 42
+}
+bad_urls.each do |label, url|
+  CENTER.instance_variable_set(:@catalog, CENTER.send(:validate_catalog, 'schema_version' => 1, 'channel' => 'latest', 'products' => [dim.merge('guide_url' => url)]))
+  check "từ chối guide_url: #{label}", CENTER.web_guide_url('dim').nil?
+end
+CENTER.instance_variable_set(:@catalog, CENTER.send(:validate_catalog, 'schema_version' => 1, 'channel' => 'latest', 'products' => [dim.merge('guide_url' => WEB.call('dim') + '?bai=3')]))
+check 'nhận guide_url có ?bai=<số>', CENTER.web_guide_url('dim') == WEB.call('dim') + '?bai=3'
+CENTER.instance_variable_set(:@catalog, web_catalog)
+
+# Luồng mở
+reset.call
+HTTP.responses[WEB.call('dim')] = ok.call('<html></html>')
+CENTER.open_guide('dim')
+check 'trang tương tác còn tải được: mở bằng set_url', UI::HtmlDialog.urls == [WEB.call('dim')] && UI::HtmlDialog.opened.empty?, UI::HtmlDialog.urls.inspect
+check 'chỉ gọi địa chỉ Pages, không tải trang chữ', HTTP.urls == [WEB.call('dim')], HTTP.urls.inspect
+check 'cửa sổ trang tương tác không đăng ký callback Ruby', UI::HtmlDialog.callbacks.empty?, UI::HtmlDialog.callbacks.inspect
+
+reset.call
+HTTP.responses[WEB.call('dim')] = Sketchup::Http::Request::Response.new(404, '')
+HTTP.responses[URL.call('dim')] = ok.call(GOOD)
+CENTER.open_guide('dim')
+check 'trang tương tác lỗi 404: quay về trang chữ', UI::HtmlDialog.urls.empty? && UI::HtmlDialog.opened == [File.join(work, 'dim.html')] && HTTP.urls == [WEB.call('dim'), URL.call('dim')], HTTP.urls.inspect
+
+reset.call
+HTTP.responses[WEB.call('dim')] = nil
+CENTER.open_guide('dim')
+check 'không có phản hồi (mất mạng): quay về trang chữ', UI::HtmlDialog.urls.empty? && UI::HtmlDialog.opened == [File.join(work, 'dim.html')]
+
+reset.call
+HTTP.start_result = false
+CENTER.open_guide('dim')
+check 'không bắt đầu được yêu cầu: quay về trang chữ', UI::HtmlDialog.urls.empty? && UI::HtmlDialog.opened == [File.join(work, 'dim.html')]
+
+reset.call
+HTTP.responses[WEB.call('dim')] = :never
+CENTER.open_guide('dim')
+check 'mạng chậm: chưa mở ngay, chờ phản hồi hoặc hết giờ', UI::HtmlDialog.urls.empty? && UI::HtmlDialog.opened.empty? && UI.timers.size == 1
+CENTER.open_guide('dim')
+check 'bấm lần nữa khi đang kiểm tra: không gửi yêu cầu thứ hai', HTTP.urls == [WEB.call('dim')], HTTP.urls.inspect
+UI.timers.first[1].call
+check 'hết giờ chờ: quay về trang chữ', UI::HtmlDialog.urls.empty? && UI::HtmlDialog.opened == [File.join(work, 'dim.html')]
+UI.timers.first[1].call
+check 'hết giờ gọi lại không mở lần hai', UI::HtmlDialog.opened.size == 1 && UI::HtmlDialog.urls.empty?
+
+reset.call
+HTTP.responses[WEB.call('thu_web')] = ok.call('<html></html>')
+CENTER.open_guide('thu_web')
+check 'plugin mới có guide_url: mở trang tương tác dù chưa có trang chữ nào', UI::HtmlDialog.urls == [WEB.call('thu_web')]
+
+reset.call
+HTTP.responses[URL.call('thu_sai')] = ok.call(GOOD)
+CENTER.open_guide('thu_sai')
+check 'guide_url sai: bỏ qua, chỉ dùng trang chữ', HTTP.urls == [URL.call('thu_sai')] && UI::HtmlDialog.urls.empty?, HTTP.urls.inspect
+
+reset.call
+HTTP.responses[URL.call('library')] = ok.call(GOOD)
+CENTER.open_guide('library')
+check 'plugin không có guide_url: hành vi cũ (trang chữ)', HTTP.urls == [URL.call('library')] && UI::HtmlDialog.urls.empty?
+
+reset.call
+HTTP.responses[WEB.call('center')] = ok.call('<html></html>')
+CENTER.open_guide('center')
+check 'nút Hướng dẫn của Center: mở trang tương tác của Center', UI::HtmlDialog.urls == [WEB.call('center')]
+CENTER.instance_variable_set(:@catalog, nil)
 FileUtils.rm_rf(work)
 
 puts($fail ? 'CÓ LỖI' : 'TẤT CẢ ĐẠT')

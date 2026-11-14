@@ -1,6 +1,6 @@
-# VGD Center 1.2.5
+# VGD Center 1.2.6-beta.1
 
-VGD Center quản lý các plugin VGD trong SketchUp. Danh mục hiển thị phiên bản mới nhất đã được chọn, bao gồm cả beta và alpha. Cài gói phát hành VGD Center 1.2.4 (bản ổn định) qua Extension Manager; RBZ không được lưu trong thư mục source này. Mở VGD Center bằng nút trên toolbar hoặc menu Extensions.
+VGD Center quản lý các plugin VGD trong SketchUp. Danh mục hiển thị phiên bản mới nhất đã được chọn, bao gồm cả beta và alpha. Cài gói phát hành VGD Center 1.2.6-beta.1 (bản thử; bản ổn định gần nhất là 1.2.5) qua Extension Manager; RBZ không được lưu trong thư mục source này. Mở VGD Center bằng nút trên toolbar hoặc menu Extensions.
 
 ## Tính năng
 
@@ -14,6 +14,7 @@ VGD Center quản lý các plugin VGD trong SketchUp. Danh mục hiển thị ph
 - Kiểm tra và tự cập nhật VGD Center từ bản stable đã phát hành; gói được xác minh bằng SHA-256.
 - Gỡ từng plugin đã cài, kèm xác nhận và nhắc khởi động lại SketchUp.
 - Mỗi thẻ plugin có nút **Hướng dẫn**; các trang HTML tiếng Việt, giao diện tối/sáng và nút in PDF. Từ 1.2.2, bấm nút sẽ tải trang mới nhất từ kho (`shared/vgd-center/guides/<id>.html`), kiểm tra rồi mở; không có mạng hoặc trang lỗi thì dùng bản đi kèm gói. Thêm hoặc sửa hướng dẫn không cần phát hành Center mới (xem "Hướng dẫn cho plugin").
+- Từ 1.2.6: hướng dẫn tương tác (hoạt ảnh chạy trực tiếp trên giao diện Center) đặt trên GitHub Pages của kho. Trang **Tổng quan** có nút **Hướng dẫn** của Center; thẻ plugin mở trang tương tác nếu catalog có `guide_url`. Không có mạng hoặc trang lỗi thì mở trang hướng dẫn chữ như cũ.
 - Tab **Quản lý** (từ 1.2.1, thay VGD Plugin Manager): bật/tắt plugin (có hiệu lực sau khi khởi động lại SketchUp; plugin vừa bật có nút **Nạp ngay** để dùng luôn mà không cần khởi động lại), bộ plugin, chuyển plugin giữa SketchUp 2022 và 2024 (từ 1.2.3 có ô tìm kiếm theo tên, hai tab Bật/tắt và Chuyển plugin cùng bố cục), xuất gói .rbz tổng (chỉ chứa file của plugin, không thêm tệp nào khác), cho mọi plugin trong thư mục Plugins. Chuyển plugin (từ 1.2.4) không chép dở: đích đã có plugin mà không tick Ghi đè thì bỏ qua cả loader lẫn thư mục; sau khi chép so lại từng file với bản gốc và báo plugin nào thiếu hoặc sai dung lượng; cảnh báo plugin có file mã hóa (.rbe), RubyEncoder hoặc thư viện nhị phân (.so/.dll) vì thường gắn với bản Ruby nên cần cài lại bản dành cho SketchUp đích; chuyển thành công không tạo file nhật ký (`manager.log` chỉ ghi khi có lỗi). Có tiếng Anh đầy đủ. VGD Center không bao giờ bị tắt hay chuyển. Plugin đã tắt và bộ plugin nằm trong `Plugins/VGD_Center/data`; dữ liệu cũ của Plugin Manager được tự chuyển sang đây. Mã nằm trong `VGD_Center/manager/`.
 - Từ 1.2.3: bấm logo ở thanh đầu để mở trang web VGD (`WEBSITE_URL` trong `main.rb`); khung Center cao bằng cửa sổ, thanh bên và mã QR đứng yên khi chuyển trang.
 - Chọn ngôn ngữ giao diện và bật/tắt tự động cập nhật VGD Center khi khởi động SketchUp.
@@ -35,7 +36,7 @@ Catalog hiển thị các phiên bản VGD hiện hành; bản beta và alpha đ
 
 ## Mã nguồn và phát hành
 
-Thư mục này chứa mã nguồn và tài nguyên VGD Center 1.2.5, không kèm RBZ hoặc source ZIP tạo sẵn. Ghi chú phát hành được giữ trong các file RELEASE_NOTES_v*.md. Đóng gói bằng `python plugins/VGD_Center/dev/package.py <phiên bản>` (từ thư mục gốc repo; nhận cả bản thử `x.y.z-beta.N`). Test (chạy từ thư mục `plugins/VGD_Center`, dùng stub SketchUp trong `dev/stub`): `ruby dev/test_center.rb` (catalog, cài/gỡ), `ruby dev/test_manager_toggle.rb`, `ruby dev/test_manager_linker.rb`, `ruby dev/test_manager_dialog.rb`, `ruby dev/test_manager_bundle.rb`, `ruby dev/test_manager_i18n.rb` (tab Quản lý, gồm tiếng Anh), `ruby dev/test_manager_load.rb` (nút Nạp ngay), `ruby dev/test_guides.rb` (tải trang hướng dẫn).
+Thư mục này chứa mã nguồn và tài nguyên VGD Center 1.2.6-beta.1, không kèm RBZ hoặc source ZIP tạo sẵn. Ghi chú phát hành được giữ trong các file RELEASE_NOTES_v*.md. Đóng gói bằng `python plugins/VGD_Center/dev/package.py <phiên bản>` (từ thư mục gốc repo; nhận cả bản thử `x.y.z-beta.N`). Test (chạy từ thư mục `plugins/VGD_Center`, dùng stub SketchUp trong `dev/stub`): `ruby dev/test_center.rb` (catalog, cài/gỡ), `ruby dev/test_manager_toggle.rb`, `ruby dev/test_manager_linker.rb`, `ruby dev/test_manager_dialog.rb`, `ruby dev/test_manager_bundle.rb`, `ruby dev/test_manager_i18n.rb` (tab Quản lý, gồm tiếng Anh), `ruby dev/test_manager_load.rb` (nút Nạp ngay), `ruby dev/test_guides.rb` (tải trang hướng dẫn).
 
 ## Thêm plugin mới vào kho
 
@@ -51,6 +52,8 @@ Từ 1.2.2, trang hướng dẫn không cần phát hành Center mới:
 4. Đưa lên `main`: người dùng thấy bản mới ngay lần bấm Hướng dẫn kế tiếp.
 
 Trang phải là tài liệu tĩnh: không `<script>`, khung nhúng, form, `<base>`, `meta refresh`, tài nguyên hay liên kết ra ngoài (`http:`, `//`, `javascript:`, `data:`); liên kết chỉ tới trang `.html` khác trong thư mục guides hoặc `#mục`; dung lượng 200 byte đến 300 KB. Trang không đạt bị bỏ qua và Center dùng bản đang có.
+
+Hướng dẫn tương tác (từ 1.2.6): thêm `"guide_url": "https://vuongpentax.github.io/VGD_Plugins/guides/<id>/"` vào mục catalog (tùy chọn `?bai=<số>` ở cuối). Chỉ nhận đúng địa chỉ này (https, đúng tên miền, đúng thư mục `guides/<id>/` của chính plugin), địa chỉ khác bị bỏ qua. Trang nằm trong `tools/video-huong-dan/guides/<id>/` và được đăng bằng workflow GitHub Pages (xem `tools/video-huong-dan/HUONG-DAN.md`). Center kiểm tra trang còn tải được rồi mở trong cửa sổ hướng dẫn không có callback Ruby, nên mã trên trang không điều khiển được SketchUp; mất mạng, lỗi hoặc quá `GUIDE_TIMEOUT` thì quay về trang hướng dẫn chữ. Thêm hướng dẫn tương tác cho plugin mới không cần phát hành Center mới. Quy tắc kiểm tra trang hướng dẫn chữ ở trên không đổi.
 
 ## Tải lại code
 

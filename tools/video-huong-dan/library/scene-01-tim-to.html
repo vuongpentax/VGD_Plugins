@@ -1,0 +1,59 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Library · Tìm và tô vật liệu</title>
+<link rel="stylesheet" href="../common.css"><style>
+#center{left:80px;top:20px;width:1120px;height:682px}#center iframe{width:1118px;height:650px}
+/* Hộp chọn thư mục gốc của Windows (không phải HTML của plugin) */
+#fp{position:absolute;left:350px;top:190px;width:580px;background:#fff;color:#000;border:1px solid #7a7a7a;box-shadow:0 16px 50px #000b;font-family:'Segoe UI',M,sans-serif;opacity:0;font-size:13px;z-index:6}
+#fp .mt{height:30px;display:flex;align-items:center;padding:0 10px;font-size:12px;border-bottom:1px solid #e5e5e5}
+#fp .bd2{padding:14px 18px;display:grid;gap:8px}#fp .fl{height:26px;border:1px solid #adadad;display:flex;align-items:center;padding:0 8px}
+#fp .ls div{padding:5px 8px}#fp .ls .sel{background:#cce8ff}
+#fp .mf{background:#f0f0f0;padding:12px 14px;display:flex;justify-content:flex-end;gap:8px}
+#fp .mbtn{min-width:104px;height:28px;border:1px solid #adadad;background:#e1e1e1;display:grid;place-items:center;font-size:12px}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD_Library</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Library"></iframe></div>
+ <div id="spot"></div>
+ <div id="fp"><div class="mt">Chọn thư mục vật liệu</div><div class="bd2"><div class="fl">C:\VatLieu\Mau</div><div class="ls"><div>▸ Model</div><div class="sel">▾ VatLieu\Mau</div><div>▸ Anh</div></div></div><div class="mf"><div class="mbtn" id="fpOk">Chọn thư mục</div><div class="mbtn">Hủy</div></div></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Thêm thư mục nguồn chứa vân vật liệu</div>
+<div class="cap" id="c2">Bấm “Làm mới” khi cần quét lại danh sách</div>
+<div class="cap" id="c3"><span>Bước 2</span>Tìm theo tên, lọc nhóm, đánh dấu yêu thích</div>
+<div class="cap" id="c4"><span>Bước 3</span>Chọn mẫu để xem trước</div>
+<div class="cap big wrap" id="c5">Nhập Rộng × Cao (mm) nếu cần chỉnh tỉ lệ vật liệu</div>
+<div class="cap" id="c6"><span>Bước 4</span>Chọn mặt hoặc đối tượng rồi bấm “Tô lên vùng chọn”</div>
+<div class="cap big wrap" id="c7">Chưa chọn gì thì plugin bật xô sơn để bạn bấm mặt trong model</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="lib.js"></script><script>
+const DUR=30;let M,Z1,rRefresh,rInsp,TAdd,TOk,TSearch,TCat,TCard,TW,TH,TApply;
+window.CENTER_READY=mountLibrary('cf');
+function S(t){return{loaded:t<5.6?0:'mtl',view:'library',search:t<10.0?'':t<10.35?'g':'go',category:t<12.8?'':'Gỗ',favorites:t>=13.4?['m0']:[],select:t>=15.0?'Gỗ sồi tự nhiên':null,
+ width:t<19.6?'':t<20.2?'1':t<20.6?'12':'1200',height:t<21.0?'':t<21.4?'6':t<21.8?'60':'600',
+ status:t<5.6?['',false]:t<24.0?['Đã đọc 11 mẫu từ 1 thư mục.',false]:['Đã tô 6 mặt trước. Ctrl+Z để hoàn tác.',false]}}
+async function init(){
+ await libApply({...S(8),search:'',category:'',select:null});
+ rRefresh=RC('#refresh');TSearch=aim(RC('#search'),.3);TCat=aim(RC('#category'),.5);
+ await libApply({...S(16)});rInsp=RC('.inspector');TW=aim(RC('#width'),.5);TH=aim(RC('#height'),.5);TApply=aim(RC('#apply'),.6);
+ const card=[...W.document.querySelectorAll('#grid .card')].find(c=>c.querySelector('h3').textContent==='Gỗ sồi tự nhiên');TCard=aim(RC(card.querySelector('.swatch')),.5);
+ await libApply({...S(0)});TAdd=aim(RC('#emptyAdd'),.6);const fp=$('fp');fp.style.opacity=1;TOk=aim(R($('fpOk')),.6);fp.style.opacity=0;
+ Z1=fitZoom(rInsp,1.6,860,380);
+ // sau khi lọc theo nhóm, mẫu "Gỗ sồi tự nhiên" nằm ở vị trí đầu; đo lại ở trạng thái đã lọc
+ await libApply(S(16));const c2=[...W.document.querySelectorAll('#grid .card')].find(c=>c.querySelector('h3').textContent==='Gỗ sồi tự nhiên');TCard=aim(RC(c2.querySelector('.swatch')),.5);
+ M=[{a:.8,b:2.2,f:{x:1010,y:690},t:TAdd,arc:-70},{a:3.5,b:5.0,f:TAdd,t:TOk,arc:40},{a:5.9,b:7.0,f:TOk,t:aim(rRefresh,.6),arc:-30},{a:8.4,b:9.0,f:aim(rRefresh,.6),t:TSearch,arc:20},{a:11.2,b:12.4,f:TSearch,t:TCat,arc:20},
+    {a:13.6,b:14.8,f:TCat,t:TCard,arc:-30},{a:17.8,b:19.2,f:TCard,t:TW,arc:20},{a:21.8,b:22.8,f:TW,t:TH,arc:10},{a:22.8,b:24.0,f:TH,t:TApply,arc:-20},{a:25.4,b:26.4,f:TApply,t:{x:250,y:560},arc:30}];
+ await render(0)}
+async function render(t){
+ const c=mix({s:1,x:0,y:0},Z1,E(P(t,17.6,18.4))*(1-E(P(t,22.4,23.2))));setWorld(c);
+ await libApply(S(t));
+ hover('#emptyAdd',t>=2.2&&t<3.0);hover('#apply',t>=24.0-1.2&&t<24.0);
+ const press=pulse(t,2.65,3.0)||pulse(t,4.95,5.3)||pulse(t,8.95,9.3)||pulse(t,14.7,15.05)||pulse(t,23.65,24.0),rp_=a=>P(t,a,a+.45);
+ const bA=W.document.getElementById('emptyAdd');if(bA)bA.style.transform=`scale(${1-.06*pulse(t,2.65,3.0)})`;
+ $('fp').style.opacity=E(P(t,3.0,3.3))*(1-E(P(t,5.2,5.5)));$('fpOk').style.borderColor=t>4.7&&t<5.3?'#0078d7':'#adadad';
+ const sp=$('spot');let rr=null,o=0;if(t>=6.1&&t<8.3){rr=rRefresh;o=E(P(t,6.1,6.6))*(1-E(P(t,7.8,8.3)))}
+ if(rr)sp.style.cssText+=`;opacity:${o};left:${rr.x-4}px;top:${rr.y-4}px;width:${rr.w+8}px;height:${rr.h+8}px`;else sp.style.opacity=0;
+ drawCursor(c,pos(M,t),t,.6,29.5,press,Math.max(rp_(2.65)*(t<4),rp_(4.95)*(t>4.5&&t<6.5),rp_(8.95)*(t>8.5&&t<10.5),rp_(14.7)*(t>14.3&&t<16.3),rp_(23.65)*(t>23.3&&t<25.5)));
+ cap($('c1'),t,.9,5.2,0);cap($('c2'),t,6.0,8.2,0);cap($('c3'),t,8.8,14.2,0);cap($('c4'),t,14.4,17.6,0);cap($('c5'),t,18.0,22.4,0);cap($('c6'),t,22.8,25.6,0);cap($('c7'),t,26.0,29.4,0);
+ for(const k of [1,2,3,4,6])$('c'+k).style.top='640px';$('c5').style.top=$('c7').style.top='38px';
+ $('stage').style.opacity=1-E(P(t,29.7,30))}
+start();
+</script></body></html>

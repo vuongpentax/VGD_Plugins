@@ -1,0 +1,47 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Đoạn 1 · Cài plugin từ Kho</title>
+<link rel="stylesheet" href="common.css"></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD Center</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Center"></iframe></div>
+ <div id="spot"></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Chọn plugin trong Kho, bấm “Cài đặt”</div>
+<div class="cap" id="c2"><span>Bước 2</span>Center tự tải gói về</div>
+<div class="cap" id="c3"><span>Bước 3</span>Center kiểm tra dung lượng và SHA-256 trước khi cài</div>
+<div class="cap big" id="c4"><span>Bước 4</span>Lưu model, rồi khởi động lại SketchUp</div>
+<div class="cap" id="c5">Plugin đã cài. Khởi động lại SketchUp để dùng.</div>
+<div class="cap" id="c6"><span>Mẹo</span>Muốn cài hết một lần? Dùng “Cài tất cả” ở mục Tổng quan</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="common.js"></script><script src="center.js"></script><script>
+const DUR=25,BTN='#catalogGrid [data-action=install_plugin][data-id=library]',DONE=['Đã hoàn tất','Đã cài hoặc cập nhật 1 plugin. Hãy lưu model và khởi động lại SketchUp để nạp phiên bản mới.'];
+let M,Z,rCard,TI,TD;
+window.CENTER_READY=mountCenter('cf','catalog');
+async function init(){
+ W.VGD.receiveState(centerState({library:'install'}));
+ rCard=RC(W.document.querySelector(BTN).closest('article'));TI=aim(RC(BTN),.72);
+ // đo hộp thoại kết quả ở trạng thái đầy đủ để đặt camera
+ centerOverlay(2,100,'library',DONE);const ov=W.document.getElementById('overlay');ov.style.opacity=1;
+ Z=fitZoom(RC('#overlay .dialog'),1.5,640,405);TD=aim(RC('#doneBtn'),.7);centerOverlay(-1);
+ M=[{a:.8,b:2.4,f:{x:1010,y:690},t:TI,arc:-90},{a:4.4,b:5.6,f:TI,t:{x:300,y:520},arc:40},{a:14.8,b:16.0,f:{x:300,y:520},t:TD,arc:30},{a:17.4,b:19.2,f:TD,t:{x:300,y:520},arc:-30}];
+ render(0)}
+function render(t){
+ const c=mix({s:1,x:0,y:0},Z,E(P(t,10.5,11.4))*(1-E(P(t,16.9,17.7))));setWorld(c);
+ // Ruby giả lập: cài xong lúc 10.2 thì thẻ Library chuyển sang "Đã cài"
+ W.VGD.receiveState(centerState({library:t>=10.2?'installed':'install'}));
+ const ph=t<3.8?-1:t<7?0:t<10?1:t<16.8?2:-1,ov=W.document.getElementById('overlay');
+ W.VGD.setStatus(t<3.8?'':'');
+ if(ph>=0){centerOverlay(ph,ph===0?lerp(4,60,P(t,3.9,7)):lerp(60,100,P(t,7,9.5)),'library',DONE);ov.style.opacity=E(P(t,3.8,4.1))*(1-E(P(t,16.8,17.1)))}
+ else{centerOverlay(-1);if(t>=16.8)W.VGD.setStatus('Hoàn tất · Cần khởi động lại SketchUp')}
+ W.document.getElementById('doneBtn').style.transform=`scale(${1-.06*pulse(t,16.5,16.85)})`;
+ hover(BTN,t>=2.4&&t<3.9);const b=W.document.querySelector(BTN);if(b)b.style.transform=`scale(${1-.06*pulse(t,3.5,3.85)})`;
+ // làm tối nền, làm nổi thẻ plugin (lúc chọn nút và lúc xem kết quả)
+ const sp=E(P(t,1.2,1.8))*(1-E(P(t,3.6,3.9)))+E(P(t,17.9,18.4))*(1-E(P(t,21.4,21.8))),s=$('spot');
+ s.style.cssText+=`;opacity:${Math.min(1,sp)};left:${rCard.x-4}px;top:${rCard.y-4}px;width:${rCard.w+8}px;height:${rCard.h+8}px`;
+ const rp_=a=>P(t,a,a+.45);
+ drawCursor(c,pos(M,t),t,.6,24.4,pulse(t,3.5,3.85)||pulse(t,16.5,16.85),Math.max(rp_(3.5)*(t<6),rp_(16.5)*(t>15&&t<18)));
+ cap($('c1'),t,.9,4.0,0);cap($('c2'),t,4.3,6.9,0);cap($('c3'),t,7.2,9.9,0);cap($('c4'),t,11.0,16.7,0);cap($('c5'),t,18.0,21.3,0);cap($('c6'),t,21.7,24.6,0);
+ for(const k of [1,2,3,5,6])$('c'+k).style.top='640px';$('c4').style.top='38px';
+ $('stage').style.opacity=1-E(P(t,24.7,25))}
+start();
+</script></body></html>

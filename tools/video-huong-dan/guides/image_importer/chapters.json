@@ -1,0 +1,11 @@
+{
+  "title": "VGD Image Importer",
+  "eyebrow": "Hướng dẫn tương tác",
+  "lead": "Chọn một phần để xem hoạt ảnh. Hoạt ảnh chạy trực tiếp trên hộp thoại của Image Importer và tự lặp lại.",
+  "note": "Hoạt ảnh minh họa dựa trên giao diện VGD Image Importer; ảnh mẫu, tên file và số liệu trong khung kết quả chỉ là ví dụ. Kết quả trong khung nhìn 3D của SketchUp được nói bằng chú thích.",
+  "web": "plugins/VGD_Image_Importer/runtime/vgd_image_importer",
+  "chapters": [
+    {"scene": "image_importer/scene-01-nhap-anh", "title": "Chọn ảnh và cách đặt", "duration": "30 giây"},
+    {"scene": "image_importer/scene-02-dinh-dang", "title": "Định dạng và vị trí", "duration": "20 giây"}
+  ]
+}

@@ -1,0 +1,39 @@
+# Đăng các trang hướng dẫn tương tác của VGD Center lên GitHub Pages khi có thay đổi trên main.
+# Bật một lần: Settings → Pages → Build and deployment → Source: GitHub Actions.
+name: Đăng hướng dẫn tương tác
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/video-huong-dan/**'
+      - 'plugins/VGD_Center/vgd_center/**'
+      - 'shared/vgd-theme/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Dựng thư mục _site
+        run: python3 tools/video-huong-dan/build_site.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -17,12 +17,16 @@ end
 
 module VGD
   module Center
-    VERSION = '1.2.5'.freeze
+    VERSION = '1.2.6-beta.1'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
     # Trang hướng dẫn mới nhất nằm trong kho; Center tải khi người dùng bấm Hướng dẫn (xem fetch_guide).
     GUIDE_BASE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/guides/'.freeze
+    # Hướng dẫn tương tác (hoạt ảnh) đặt trên GitHub Pages của kho. Plugin khai báo "guide_url" trong catalog; chỉ nhận
+    # đúng địa chỉ này (https, đúng tên miền, đường dẫn guides/<id>/), nên thêm hướng dẫn mới không cần phát hành Center mới.
+    GUIDE_WEB_PREFIX = 'https://vuongpentax.github.io/VGD_Plugins/guides/'.freeze
+    GUIDE_WEB_PATTERN = %r{\Ahttps://vuongpentax\.github\.io/VGD_Plugins/guides/[a-z][a-z0-9_]*/(?:\?bai=\d{1,2})?\z}
     # Trang web của VGD: mở khi bấm logo. Địa chỉ cố định trong mã, giao diện không được gửi địa chỉ khác.
     WEBSITE_URL = 'https://vgdtools.vercel.app/'.freeze
     MAX_GUIDE_BYTES = 300 * 1024
@@ -188,9 +192,47 @@ module VGD
         @guide_requests ||= {}
         return if @guide_requests[id]
 
-        fetch_guide(id) { show_guide(id) }
+        web_url = web_guide_url(id)
+        if web_url
+          fetch_web_guide(id, web_url) { fetch_guide(id) { show_guide(id) } }
+        else
+          fetch_guide(id) { show_guide(id) }
+        end
       rescue StandardError => error
         UI.messagebox("Không thể mở hướng dẫn.\n#{error.message}")
+      end
+
+      # Địa chỉ trang hướng dẫn tương tác của plugin (catalog "guide_url"; Center có địa chỉ riêng), hoặc nil nếu không có
+      # hay không đúng địa chỉ được phép. Địa chỉ phải nằm đúng thư mục guides/<id>/ của chính plugin đó.
+      def web_guide_url(id)
+        url = if id == 'center'
+                "#{GUIDE_WEB_PREFIX}center/"
+              else
+                product = (@catalog || read_bundled_catalog)['products'].find { |item| item['id'] == id }
+                product && product['guide_url']
+              end
+        url if url.is_a?(String) && url.match?(GUIDE_WEB_PATTERN) && url.start_with?("#{GUIDE_WEB_PREFIX}#{id}/")
+      end
+
+      # Kiểm tra trang tương tác còn tải được rồi mở; mạng chậm, lỗi hoặc không có mạng thì chạy khối dự phòng (trang hướng
+      # dẫn chữ như cũ). Gọi một trong hai đúng một lần.
+      def fetch_web_guide(id, url, &fallback)
+        finished = false
+        finish = lambda do |available|
+          next if finished
+          finished = true
+          @guide_requests.delete(id)
+          available ? show_web_guide(id, url) : fallback.call
+        end
+        request = Sketchup::Http::Request.new(url)
+        @guide_requests[id] = request
+        started = request.start { |_request, response| finish.call(response && response.status_code == 200) }
+        return finish.call(false) unless started
+
+        UI.start_timer(GUIDE_TIMEOUT, false) { finish.call(false) }
+      rescue StandardError
+        @guide_requests.delete(id)
+        fallback.call
       end
 
       # Gọi khối đúng một lần: khi tải xong, khi lỗi, hoặc khi hết giờ chờ.
@@ -262,19 +304,17 @@ module VGD
         true
       end
 
-      def show_guide(id)
-        path = guide_path(id)
-        return UI.messagebox('Tài liệu hướng dẫn chưa có trong bản VGD Center này.') unless path && File.file?(path)
-
+      # Cửa sổ hướng dẫn dùng chung cho trang chữ (set_file) và trang tương tác trên mạng (set_url).
+      def guide_dialog(id, key_suffix = '')
         product = (@catalog || read_bundled_catalog)['products'].find { |item| item['id'] == id }
         title = if product
                   product['name']
                 else
                   "VGD #{id.split('_').map(&:capitalize).join(' ')}"
                 end
-        guide = UI::HtmlDialog.new(
+        UI::HtmlDialog.new(
           dialog_title: "Hướng dẫn · #{title}",
-          preferences_key: "com.vgd.center.guide.#{id}",
+          preferences_key: "com.vgd.center.guide#{key_suffix}.#{id}",
           scrollable: true,
           resizable: true,
           width: 980,
@@ -285,8 +325,28 @@ module VGD
           # bị chìm xuống sau SketchUp khi bấm ra ngoài hoặc sau mỗi thao tác, trông như tự đóng.
           style: UI::HtmlDialog::STYLE_DIALOG
         )
+      end
+
+      def show_guide(id)
+        path = guide_path(id)
+        return UI.messagebox('Tài liệu hướng dẫn chưa có trong bản VGD Center này.') unless path && File.file?(path)
+
+        guide = guide_dialog(id)
         @guide_dialogs[id] = guide
         guide.set_file(path)
+        guide.set_on_closed { @guide_dialogs.delete(id) }
+        guide.center
+        guide.show
+      rescue StandardError => error
+        UI.messagebox("Không thể mở hướng dẫn.\n#{error.message}")
+      end
+
+      # Trang tương tác trên mạng. Cửa sổ này KHÔNG đăng ký callback Ruby nào (add_action_callback), nên mã trên trang không
+      # điều khiển được SketchUp, model hay file của người dùng; chỉ giữ địa chỉ đã qua web_guide_url.
+      def show_web_guide(id, url)
+        guide = guide_dialog(id, '.web')
+        @guide_dialogs[id] = guide
+        guide.set_url(url)
         guide.set_on_closed { @guide_dialogs.delete(id) }
         guide.center
         guide.show

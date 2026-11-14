@@ -1,0 +1,38 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Đoạn 7 · Cài đặt</title>
+<link rel="stylesheet" href="common.css"></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD Center</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Center"></iframe></div>
+ <div id="spot"></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Chọn ngôn ngữ giao diện</div>
+<div class="cap" id="c2">Đổi lại bất cứ lúc nào</div>
+<div class="cap big" id="c3"><span>Bước 2</span>Tự cập nhật VGD Center khi mở SketchUp</div>
+<div class="cap" id="c4">Mọi cài đặt nằm ngay trong Center</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="common.js"></script><script src="center.js"></script><script>
+const DUR=15;let M,Z,rLang,rAuto,TEn,TVi,TSw;
+window.CENTER_READY=mountCenter('cf','settings');
+const st=(lang,auto)=>W.VGD.receiveState(centerState({},{language:lang,auto_update:auto}));
+async function init(){
+ st('vi',true);const row=e=>RC(W.document.querySelector(e).closest('.setting-row'));
+ rLang=row('.language-row [data-language]');rAuto=row('#autoUpdateToggle');
+ TEn=aim(RC('[data-language=en]'),.55);TVi=aim(RC('[data-language=vi]'),.55);TSw=aim(RC('#autoUpdateToggle'),.7);Z=fitZoom(rAuto,1.6,640,370);
+ M=[{a:.8,b:2.0,f:{x:1010,y:690},t:TEn,arc:-80},{a:4.2,b:5.4,f:TEn,t:TVi,arc:-25},{a:6.6,b:7.8,f:TVi,t:TSw,arc:40},{a:11.5,b:12.5,f:TSw,t:{x:300,y:520},arc:30}];
+ render(0)}
+function render(t){
+ const c=mix({s:1,x:0,y:0},Z,E(P(t,7.4,8.2))*(1-E(P(t,12.2,13.0))));setWorld(c);
+ // Ruby giả lập: English lúc 2.6, về Tiếng Việt lúc 6.0; tự cập nhật tắt lúc 9.4, bật lại lúc 11.0
+ st(t>=2.6&&t<6.0?'en':'vi',!(t>=9.4&&t<11.0));W.VGD.setStatus('');
+ hover('[data-language=en]',t>=2.0&&t<3.0);hover('[data-language=vi]',t>=5.4&&t<6.4);
+ const sw=W.document.getElementById('autoUpdateToggle');sw.style.transform=`scale(${1-.08*(pulse(t,9.25,9.6)||pulse(t,10.85,11.2))})`;
+ const s=$('spot'),k1=E(P(t,1.2,1.8))*(1-E(P(t,2.4,2.7))),k2=E(P(t,6.9,7.3))*(1-E(P(t,7.8,8.1))),rr=k1>=k2?rLang:rAuto;
+ s.style.cssText+=`;opacity:${Math.max(k1,k2)};left:${rr.x-6}px;top:${rr.y-4}px;width:${rr.w+12}px;height:${rr.h+8}px`;
+ const press=pulse(t,2.45,2.8)||pulse(t,5.85,6.2)||pulse(t,9.25,9.6)||pulse(t,10.85,11.2),rp_=a=>P(t,a,a+.45);
+ drawCursor(c,pos(M,t),t,.6,14.5,press,Math.max(rp_(2.45)*(t<4),rp_(5.85)*(t>5&&t<7),rp_(9.25)*(t>9&&t<10.5),rp_(10.85)*(t>10.5&&t<12)));
+ cap($('c1'),t,.9,3.9,0);cap($('c2'),t,4.3,7.0,0);cap($('c3'),t,7.6,12.1,0);cap($('c4'),t,13.0,14.5,0);
+ for(const k of [1,2,4])$('c'+k).style.top='640px';$('c3').style.top='38px';
+ $('stage').style.opacity=1-E(P(t,14.7,15))}
+start();
+</script></body></html>

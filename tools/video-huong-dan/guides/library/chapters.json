@@ -1,0 +1,12 @@
+{
+  "title": "VGD Library",
+  "eyebrow": "Hướng dẫn tương tác",
+  "lead": "Chọn một phần để xem hoạt ảnh. Hoạt ảnh chạy trực tiếp trên hộp thoại của Library và tự lặp lại.",
+  "note": "Hoạt ảnh minh họa dựa trên giao diện VGD Library; tên vật liệu, model, thư mục và số liệu chỉ là ví dụ. Kết quả trong khung nhìn 3D của SketchUp được nói bằng chú thích; hộp lưu file của Windows và thanh trạng thái SketchUp là hình vẽ thêm.",
+  "web": "plugins/VGD_Library/runtime/vgd_library",
+  "chapters": [
+    {"scene": "library/scene-01-tim-to", "title": "Tìm và tô vật liệu", "duration": "30 giây"},
+    {"scene": "library/scene-02-dat-model", "title": "Đặt model và lưu mẫu", "duration": "25 giây"},
+    {"scene": "library/scene-03-cong-cu-map", "title": "Công cụ map", "duration": "26 giây"}
+  ]
+}
