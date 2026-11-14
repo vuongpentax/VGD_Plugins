@@ -153,3 +153,14 @@ Phạm vi: 8 plugin có hướng dẫn chữ (Dim, Cabinet, Library, Image Impor
 - Hoạt ảnh là bản chụp giao diện lúc đăng; plugin đổi giao diện thì phải đăng lại. Có thể thêm bước kiểm tra tự động khi plugin đổi (chưa làm).
 - Chưa kiểm tra trong SketchUp thật; phụ thuộc kết quả thử Center 1.2.6-beta.1.
 - Chưa quyết: có xuất thêm MP4 cho từng plugin không (hiện chỉ làm bản tương tác); có làm bản tiếng Anh không.
+
+### Image Importer: kịch bản nháp (chờ duyệt)
+
+Chữ lấy từ `dialog.html`, `dialog.js`, `main.rb`, `conversion.rb` của plugin. Hộp thoại chạy thật; phía Ruby (danh sách ảnh, kết quả nhập) mô phỏng bằng `VGDImporter.receive`. Hộp chọn thư mục của Windows và kết quả trong model được thể hiện bằng khung vẽ thêm và chú thích. Ảnh mẫu là hình đơn giản do tôi vẽ, không phải ảnh thật của bạn.
+
+| # | Chương (theo hướng dẫn chữ) | Thao tác | Chữ trên màn hình | Dài |
+|---|---|---|---|---|
+| 1 | Chọn ảnh và cách đặt | Hộp thoại trống ("Chọn ảnh để bắt đầu.") → bấm **Chọn thư mục** → hộp chọn thư mục của Windows → danh sách 5 ảnh, "5 ảnh", nút **Nhập 5 ảnh** sáng → đổi kiểu **Component 2D** / **Ảnh nằm phẳng** / **Vật liệu** → nhập **Milimét / pixel** (hoặc chiều cao cố định) → **Nhập 5 ảnh** → "Đã nhập 5 ảnh / vật liệu." | "Chọn thư mục hoặc kéo ảnh vào" / "Chọn kiểu nhập" / "Đặt kích thước thật: luôn giữ tỉ lệ ảnh" / "Ảnh được xếp theo hàng tại gốc tọa độ của vùng đang chỉnh sửa; Ctrl+Z hoàn tác cả lượt nhập" | 30 giây |
+| 2 | Định dạng và vị trí | Danh sách ảnh nhiều đuôi (JPG, PNG, WEBP, TIFF, HEIC) → **Nhập** → hộp **Kết quả nhập ảnh**: "Đã nhập 4 ảnh / vật liệu · 1 ảnh lỗi." kèm dòng lỗi HEIC | "Hỗ trợ JPG, PNG, WebP, TIFF, TGA và nhiều định dạng khác" / "Một ảnh lỗi không chặn các ảnh khác" / "HEIC cần codec HEIF của Windows" / "Muốn nhập ở cấp model: thoát Group/Component trước" | 20 giây |
+
+Giả định cần bạn xác nhận: dùng chữ "Nhập 5 ảnh" và 5 ảnh mẫu; tên file mẫu (ví dụ `cay1.png`, `nguoi2.jpg`) là minh họa. Chưa xác minh trong SketchUp thật.
