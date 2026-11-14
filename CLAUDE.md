@@ -56,6 +56,11 @@ end
 ```
 
   rồi tạo menu con: `::VGD.menu.add_submenu('VGD Tên').add_item(...)`.
+- Tải lại code (mọi plugin có menu): trong menu con của plugin phải có mục tên đúng **`Tải lại code`** (Extensions → VGD → VGD Tên → Tải lại code), để nạp lại mã sau khi cài đè bản mới mà không phải mở lại SketchUp. Plugin không có giao diện riêng mà do plugin khác điều khiển (ví dụ VGD Room) thì không cần. Yêu cầu khi viết phần tải lại:
+  - Danh sách file nạp dùng chung cho lúc khởi động và lúc tải lại (một nơi duy nhất), nạp bằng `load`, chỉ file của chính plugin, không đụng plugin khác.
+  - Không đăng ký lại menu, toolbar, observer, context menu (nhân đôi mục): phần đăng ký giao diện chạy một lần (cờ hoặc `file_loaded?`), phần tải lại chỉ nạp lại mã.
+  - Có hộp thoại đang mở thì đóng và mở lại sau khi nạp. Lỗi cú pháp hoặc thiếu file: giữ bản đang chạy, báo lỗi rõ cho người dùng, không làm hỏng giao diện. Đang vẽ hoặc đang sửa model thì không cho tải lại.
+  - Viết test trong thư mục test của plugin: tải lại nhiều lần không nhân đôi menu/toolbar, lỗi file không làm hỏng bản đang chạy (mẫu: `plugins/VGD_Cabinet/cabinet_dev/test_reload.rb`). Menu/toolbar thực tế chỉ có hiệu lực sau khi mở lại SketchUp: ghi điều này vào README của plugin.
 - Plugin mới được phát hành: thêm mục vào `shared/vgd-center/catalog.json` (id, `extension_name`, đúng hai `allowed_paths` là loader và thư mục viết thường) theo quy tắc trong `shared/VGD_CENTER_ARCHITECTURE.md`.
 - Chạy `ruby tests/test_vgd_conventions.rb` sau khi thêm hoặc đổi plugin; test báo lỗi nếu có menu VGD thứ hai, tên extension hoặc loader sai quy ước, hoặc toolbar sai dạng.
 
