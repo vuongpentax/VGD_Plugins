@@ -9,7 +9,7 @@ module VGD
 end
 
 module VGD_DC_Exporter
-  VERSION = '1.0.4'.freeze unless const_defined?(:VERSION)
+  VERSION = '1.0.5'.freeze unless const_defined?(:VERSION)
 
   # Danh sách file nạp, dùng chung cho lúc khởi động và lúc "Tải lại code".
   CODE_FILES = %w[params walker].freeze unless const_defined?(:CODE_FILES)
@@ -21,6 +21,7 @@ module VGD_DC_Exporter
   def self.reload
     files = [File.join(__dir__, 'main.rb')] + CODE_FILES.map { |name| File.join(__dir__, "#{name}.rb") }
     files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
+    loading = true # từ đây lỗi nghĩa là đã nạp dở, không còn "giữ nguyên bản đang chạy"
     old_version = VERSION
     old_files = CODE_FILES
     verbose = $VERBOSE
@@ -39,7 +40,7 @@ module VGD_DC_Exporter
     UI.messagebox("Đã tải lại VGD DC Exporter #{VERSION}.")
     true
   rescue ScriptError, StandardError => error
-    UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\nBản đang chạy được giữ nguyên.")
+    UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\n#{loading ? 'Hãy mở lại SketchUp nếu giao diện báo lỗi.' : 'Bản đang chạy được giữ nguyên.'}")
     false
   end
 

@@ -13,7 +13,6 @@ require_relative 'frame'
 require_relative 'export'
 require_relative 'transfer'
 require_relative 'camera'
-require_relative 'update_notice'
 # Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
 module VGD
   def self.menu
@@ -23,10 +22,10 @@ end
 
 module VGD
   module Scenes
-    VERSION = '1.6.1-beta.4'.freeze unless const_defined?(:VERSION, false)
+    VERSION = '1.6.1-beta.5'.freeze unless const_defined?(:VERSION, false)
     # Danh sách file nạp lại khi "Tải lại code" (trùng các require_relative ở đầu file, main nạp cuối).
     CODE_FILES = %w[utils dim_bridge section_set sheet_layout title_block sheet_builder geometry scenes frame export
-                    transfer camera update_notice main].freeze unless const_defined?(:CODE_FILES, false)
+                    transfer camera main].freeze unless const_defined?(:CODE_FILES, false)
     # Clears the section preview before SketchUp saves, so Ctrl+S never writes it.
     class SaveGuard < Sketchup::ModelObserver
       def onPreSaveModel(model)
@@ -380,6 +379,7 @@ module VGD
         dir = __dir__.dup.force_encoding(Encoding::UTF_8)
         files = [File.join(File.dirname(dir), 'vgd_scenes.rb')] + CODE_FILES.map { |name| File.join(dir, "#{name}.rb") }
         files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
+        loading = true # từ đây lỗi nghĩa là đã nạp dở, không còn "giữ nguyên bản đang chạy"
         reopen = @dialog && @dialog.visible?
         @dialog.close if reopen # set_on_closed gỡ observer và hủy việc đang chờ
         old_version = VERSION
@@ -401,7 +401,7 @@ module VGD
         ::UI.messagebox("Đã tải lại VGD Scenes #{Scenes::VERSION}.")
         true
       rescue ScriptError, StandardError => error
-        ::UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\nBản đang chạy được giữ nguyên.")
+        ::UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\n#{loading ? 'Hãy mở lại SketchUp nếu giao diện báo lỗi.' : 'Bản đang chạy được giữ nguyên.'}")
         false
       end
 
@@ -448,7 +448,6 @@ module VGD
         @toolbar.get_last_state == TB_NEVER_SHOWN ? @toolbar.show : @toolbar.restore
         menu.add_item('Hiện thanh công cụ VGD Scenes') { @toolbar.show }
         menu.add_item('Tải lại code') { reload }
-        VGD::UpdateNotice.start('vgd-scenes', 'VGD Scenes', VERSION)
         @initialized = true
       end
     end

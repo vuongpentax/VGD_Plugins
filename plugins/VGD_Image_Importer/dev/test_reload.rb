@@ -78,7 +78,7 @@ Dir.mktmpdir do |dir|
   File.write(File.join(dir, 'vgd_image_importer', 'conversion.rb'), "module VGD_ImageImporter\n  def broken(\nend\n")
   box_count = $boxes.size
   reload.call
-  check 'lỗi cú pháp: báo lỗi và giữ bản đang chạy', $boxes.size == box_count + 1 && $boxes.last.start_with?('Tải lại thất bại') && VGD_ImageImporter::VERSION == '9.9.9' && VGD_ImageImporter.respond_to?(:show_dialog)
+  check 'lỗi cú pháp: báo lỗi và giữ bản đang chạy', $boxes.size == box_count + 1 && $boxes.last.start_with?('Tải lại thất bại') && $boxes.last.include?('giữ nguyên') && VGD_ImageImporter::VERSION == '9.9.9' && VGD_ImageImporter.respond_to?(:show_dialog)
   # Đang chuẩn bị ảnh: không cho tải lại.
   VGD_ImageImporter.instance_variable_set(:@pending_import, true)
   reload.call

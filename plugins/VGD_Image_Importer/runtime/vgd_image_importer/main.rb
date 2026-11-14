@@ -8,7 +8,6 @@ require 'uri'
 require_relative 'engine'
 require_relative 'file_picker'
 require_relative 'conversion'
-require_relative 'update_notice'
 
 # Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
 module VGD
@@ -319,7 +318,7 @@ module VGD_ImageImporter
   end
 
   # Danh sách file nạp lại khi "Tải lại code" (loader nằm ngoài thư mục này, nạp riêng trong reload).
-  CODE_FILES = %w[engine file_picker conversion update_notice main].freeze unless const_defined?(:CODE_FILES)
+  CODE_FILES = %w[engine file_picker conversion main].freeze unless const_defined?(:CODE_FILES)
 
   # Nạp lại mã mà không cần mở lại SketchUp. Kiểm tra cú pháp cả bộ file trước: có lỗi thì giữ nguyên bản đang chạy.
   def self.reload
@@ -330,6 +329,7 @@ module VGD_ImageImporter
     dir = __dir__.dup.force_encoding(Encoding::UTF_8)
     files = [File.join(File.dirname(dir), 'vgd_image_importer.rb')] + CODE_FILES.map { |name| File.join(dir, "#{name}.rb") }
     files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
+    loading = true # từ đây lỗi nghĩa là đã nạp dở, không còn "giữ nguyên bản đang chạy"
     reopen = @dialog && @dialog.visible?
     @dialog.close if reopen
     old_version = VERSION
@@ -351,7 +351,7 @@ module VGD_ImageImporter
     UI.messagebox("Đã tải lại VGD Image Importer #{VERSION}.")
     true
   rescue ScriptError, StandardError => error
-    UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\nBản đang chạy được giữ nguyên.")
+    UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\n#{loading ? 'Hãy mở lại SketchUp nếu giao diện báo lỗi.' : 'Bản đang chạy được giữ nguyên.'}")
     false
   end
 
@@ -368,5 +368,4 @@ module VGD_ImageImporter
     @toolbar.restore
     file_loaded(__FILE__)
   end
-  VGD::UpdateNotice.start('vgd-image-importer', 'VGD Image Importer', VERSION)
 end

@@ -54,6 +54,7 @@ else
         end
         files = CODE_FILES.map { |name| File.join(__dir__, "#{name}.rb") }
         files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
+        loading = true # từ đây lỗi nghĩa là đã nạp dở, không còn "giữ nguyên bản đang chạy"
         reopen = Manager.visible?
         Manager.toggle if reopen
         old_files = CODE_FILES
@@ -73,7 +74,7 @@ else
         UI.messagebox("Đã tải lại VGD Reference #{VERSION}.")
         true
       rescue ScriptError, StandardError => error
-        UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\nBản đang chạy được giữ nguyên.")
+        UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\n#{loading ? 'Hãy mở lại SketchUp nếu giao diện báo lỗi.' : 'Bản đang chạy được giữ nguyên.'}")
         false
       end
 

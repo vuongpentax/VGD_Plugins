@@ -1,4 +1,4 @@
-# VGD Package 0.1.6 — Bản nghiên cứu
+# VGD Package 0.1.7 — Bản nghiên cứu
 
 Baseline nghiên cứu 0.1.3: source đã đối chiếu 15 entry trong RBZ local của repo nguồn; không suy ra phát hành công khai hoặc native validation. Layout giữ loader ở cấp trên thư mục vgd_package để bảo toàn đường dẫn builder. Không kèm RBZ/ZIP. Đợt chuyển repository chỉ đối chiếu source/checksum; chưa chạy lại test tự động hoặc kiểm thử native SketchUp. Các kết quả PASS bên dưới thuộc lịch sử workspace nguồn.
 
@@ -6,7 +6,7 @@ Plugin độc lập cho SketchUp 2022 trở lên. Phiên bản này có lớp nh
 
 ## Cài đặt
 
-Cài gói RBZ 0.1.6 qua Extension Manager (bản 0.1.3 đã xác minh riêng; 0.1.6 chưa xác minh trong SketchUp); artifact không nằm trong thư mục source này. Mở tại Extensions → VGD → VGD Package → Mở VGD Package.
+Cài gói RBZ 0.1.7 qua Extension Manager (bản 0.1.3 đã xác minh riêng; 0.1.7 chưa xác minh trong SketchUp); artifact không nằm trong thư mục source này. Mở tại Extensions → VGD → VGD Package → Mở VGD Package.
 
 ## Chức năng hiện tại
 

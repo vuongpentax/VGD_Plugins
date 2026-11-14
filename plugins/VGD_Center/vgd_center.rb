@@ -7,7 +7,7 @@ module VGD
     unless file_loaded?(__FILE__)
       extension = SketchupExtension.new('VGD Center', 'vgd_center/main')
       extension.creator = 'VGD'
-      extension.version = '1.2.5-beta.3'
+      extension.version = '1.2.5-beta.4'
       extension.description = 'Cài đặt và cập nhật các plugin VGD trong SketchUp.'
       Sketchup.register_extension(extension, true)
       file_loaded(__FILE__)

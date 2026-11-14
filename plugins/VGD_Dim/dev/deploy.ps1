@@ -32,13 +32,7 @@ $ownedFiles = @(
     'vgd_dim\vgd-theme\fonts\LICENSE',
     'vgd_dim\dim.svg',
     'vgd_dim\smart_dim.svg',
-    'vgd_dim\version.rb',
-    'vgd_dim\update_core\manifest.rb',
-    'vgd_dim\update_core\bootstrap.rb',
-    'vgd_dim\update_core\client.rb',
-    'vgd_dim\update_core\installer.rb',
-    'vgd_dim\update_core\updater.rb',
-    'vgd_dim\update_core\update_installer.ps1'
+    'vgd_dim\version.rb'
 )
 function Assert-TaskPath([string]$Path,[string]$Root) {
     $full = [IO.Path]::GetFullPath($Path)

@@ -6,7 +6,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 - Tên extension: VGD Dim. Namespace: `VGD::Dim`.
 - Loader: `runtime/vgd_dim.rb`; thư mục mã `runtime/vgd_dim/`.
-- Phiên bản: `runtime/vgd_dim/version.rb`. Khi đổi phiên bản, cập nhật cả changelog trong `VGD_UPDATE_MANIFEST.json`.
+- Phiên bản: `runtime/vgd_dim/version.rb`.
 - SketchUp tối thiểu: 2022.
 
 ## Cấu trúc
@@ -18,12 +18,12 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 - Menu và Tải lại code (mục lẻ ngoài menu, mở cửa sổ khi tải lại): `ruby dev/test_reload.rb` (chạy từ `plugins/VGD_Dim`; giả lập SketchUp, nạp mã thật).
 - Toolbar hiện lần đầu cài: `ruby dev/test_toolbar.rb` (chạy từ `plugins/VGD_Dim`; giả lập SketchUp, nạp mã thật).
-- Test nằm trong `dev/`: `test_core.rb`, `test_engine.rb`, `test_smartdim.rb`, `test_store.rb`, `test_regression.rb`, `test_fixture.rb`, `test_native_style.rb`, `test_ui.cjs`, `test_deploy.py`, `test_update_installer.ps1`, `check_ruby.cjs`. Tài liệu không ghi lệnh chạy riêng từng file; xem đầu mỗi file.
+- Test nằm trong `dev/`: `test_core.rb`, `test_engine.rb`, `test_smartdim.rb`, `test_store.rb`, `test_regression.rb`, `test_fixture.rb`, `test_native_style.rb`, `test_ui.cjs`, `test_deploy.py`, `check_ruby.cjs`. Tài liệu không ghi lệnh chạy riêng từng file; xem đầu mỗi file.
 - Trạng thái chức năng và phần chưa xác minh native: `FEATURE_STATUS.md`, `DEVELOPMENT_NOTES.md`.
 
 ## Đóng gói
 
-- `python dev/package.py` tạo RBZ, source ZIP, `outputs/PACKAGES_SHA256.json` và manifest.
+- `python dev/package.py` tạo RBZ, source ZIP, `outputs/PACKAGES_SHA256.json`.
 
 ## Tài liệu đọc trước khi sửa
 
@@ -46,4 +46,3 @@ Yêu cầu mới ngày 2026-10-07: tiếp tục VGD_Dim_6.rbz, sidebar, mặt c�
 - Không popup hoàn tất; lỗi/kết quả inline. Không nạp dev/claude_reference vào runtime.
 - Kiểm thử có ý nghĩa geometry/scopes/rebuild/error/services/UI. Deploy whitelist 34 file, backup/hash, không tác động plugin khác.
 
-- Updater pilot beta.2 chỉ áp dụng cho VGD Dim; kiểm tra manifest và RBZ qua HTTPS, cài sau khi SketchUp đóng. Pilot chỉ hỗ trợ Windows; native acceptance vẫn cần kiểm tra riêng.

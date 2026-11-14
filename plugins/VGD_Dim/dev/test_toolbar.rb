@@ -58,7 +58,7 @@ $pass = 0; $fail = []
 def check(name, cond); cond ? ($pass += 1) : ($fail << name); puts "#{cond ? 'OK  ' : 'FAIL'} #{name}"; end
 
 root = File.expand_path('../runtime', __dir__)
-%w[version defaults engine native_style store managed core presets autostyle animation smartdim regions manual_dim probe dialog update_core/manifest update_core/bootstrap update_core/client update_core/updater].each do |name|
+%w[version defaults engine native_style store managed core presets autostyle animation smartdim regions manual_dim probe dialog].each do |name|
   file = File.join(root, 'vgd_dim', "#{name}.rb")
   load file if File.file?(file)
 end

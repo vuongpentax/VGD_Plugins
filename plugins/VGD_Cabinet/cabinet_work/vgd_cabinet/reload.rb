@@ -5,7 +5,7 @@ module VGD_Cabinet
     class << self
       def ruby_files
         %w[geometry_engine.rb modeling_rules.rb component_sharing.rb frame_divisions.rb rail_joinery.rb pano.rb modeling.rb defaults.rb preset_store.rb preview_mesh.rb library_store.rb model_data.rb box_conversion.rb description_import.rb
-           ui_renderer.rb draw_tool.rb update_notice.rb main43.rb]
+           ui_renderer.rb draw_tool.rb main43.rb]
       end
 
       def runtime_root
@@ -46,7 +46,7 @@ module VGD_Cabinet
       def reload_extension
         return false if @reloading
         if VGD_Cabinet.respond_to?(:is_updating_from_ui?) && VGD_Cabinet.is_updating_from_ui?
-          UI.messagebox('Đợi thao tác dựng/cập nhật tủ hoàn tất rồi Reload.')
+          UI.messagebox('Đang dựng hoặc cập nhật tủ. Hãy chờ xong rồi tải lại code.')
           return false
         end
         @reloading = true
@@ -57,16 +57,17 @@ module VGD_Cabinet
         RubyVM::InstructionSequence.compile(File.read(reload_path, mode: 'r:BOM|UTF-8'), reload_path)
         Kernel.load(reload_path)
         validate_files(root)
+        loading = true # từ đây lỗi nghĩa là đã nạp dở, không còn "giữ nguyên bản đang chạy"
         reopen = VGD_Cabinet.respond_to?(:dialog_visible?) && VGD_Cabinet.dialog_visible?
         close_cabinet_dialog
         ruby_files.each { |name| Kernel.load(checked_path(root, name)) }
         VGD_Cabinet.show_dialog if reopen
         puts "VGD Cabinet #{VGD_Cabinet::VERSION}: đã nạp lại mã từ #{root}"
-        UI.messagebox("Đã nạp lại riêng VGD Cabinet #{VGD_Cabinet::VERSION}.\nCác plugin khác không được nạp lại.")
+        UI.messagebox("Đã tải lại VGD Cabinet #{VGD_Cabinet::VERSION}.")
         true
       rescue StandardError, SyntaxError, LoadError => error
         puts "VGD Cabinet Reload: #{error.class}: #{error.message}\n#{Array(error.backtrace).first(5).join("\n")}"
-        UI.messagebox("Không nạp lại được VGD Cabinet: #{error.message}")
+        UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\n#{loading ? 'Hãy mở lại SketchUp nếu giao diện báo lỗi.' : 'Bản đang chạy được giữ nguyên.'}")
         false
       ensure
         @reloading = false if guard_owned

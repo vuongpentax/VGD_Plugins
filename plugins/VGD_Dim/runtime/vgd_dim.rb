@@ -2,11 +2,6 @@
 require 'sketchup.rb'
 require 'extensions.rb'
 require_relative 'vgd_dim/version'
-require_relative 'vgd_dim/update_core/manifest'
-require_relative 'vgd_dim/update_core/bootstrap'
-unless VGD::Dim::UpdateCore::Bootstrap.recover
-  raise 'VGD Dim updater recovery did not complete; extension was not loaded.'
-end
 module VGD
   module Dim
     unless file_loaded?(__FILE__)

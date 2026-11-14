@@ -1,6 +1,6 @@
 # VGD Scenes 1.6.1 (beta.1) — SketchUp 2022–2026.2
 
-Phiên bản hiện tại 1.6.1-beta.4, chi tiết ở [RELEASE_NOTES_v1.6.1.md](RELEASE_NOTES_v1.6.1.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
+Phiên bản hiện tại 1.6.1-beta.5, chi tiết ở [RELEASE_NOTES_v1.6.1.md](RELEASE_NOTES_v1.6.1.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
 Plugin không hiện popup cập nhật khi khởi động: VGD Center báo bản mới. Cài bản mới qua Extension Manager rồi khởi động lại.
 
@@ -155,7 +155,7 @@ Mục tiêu Windows: SketchUp Desktop **2022, 2023, 2024, 2025 và 2026 đến 2
 
 - Kiểm tra cú pháp 9 file runtime Ruby, engine fixture trên Ruby 2.7.2 của SU22 và WASM 3.2: tính năng trước, chuyển giữa model, camera/khung, rename/ID/tên trùng, tạo/cập nhật/bỏ qua, rollback khi lỗi, FOV ngang, JSON lỗi/quá lớn và clipboard qua file.
 - Giao diện Chromium: Unicode/HTML, ID, scope xuất/nhập, xác nhận/hủy/lỗi, đổi model, token preview, sáng/tối, 640×780 và 460×540.
-- `dev/deploy.ps1` có whitelist đủ file runtime của bản 1.6.0, gồm `update_notice.rb` và bộ theme. Các báo cáo cài đặt trước đây ở outputs của repo nguồn không được chuyển vào repo này.
+- `dev/deploy.ps1` có whitelist đủ file runtime của bản 1.6.0, gồm bộ theme. Các báo cáo cài đặt trước đây ở outputs của repo nguồn không được chuyển vào repo này.
 - **Chưa hoàn tất kiểm tra engine trong SketchUp 2022 thật.** Script thử đã chạy trên SU22 22.0.316 / Ruby 2.7.2 nhưng dừng ở điều kiện bảo vệ model không rỗng, trước khi tạo hình/scene. Điều khiển máy sau đó được người dùng dừng bằng Esc. Kiểm tra WASM và Chromium không thay thế kiểm thử Ruby 2.7/CEF/LayOut thực tế trong SU22.
 
 Mã nguồn runtime nằm trong `runtime/`; kiểm tra và script cài giới hạn phạm vi nằm trong `dev/`. RBZ chỉ đóng gói runtime, không chứa bộ test hoặc thư viện ngoài.

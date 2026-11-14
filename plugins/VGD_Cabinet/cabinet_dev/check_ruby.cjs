@@ -29,9 +29,6 @@ const {RubyVM}=require('./dependencies.cjs').load('@ruby/wasm-wasi/dist/vm');
  catch(error) { vm.eval('$stdout.flush'); throw error; }
  fs.writeFileSync('outputs/preview_upgrade.json',vm.eval('JSON.generate($upgrade_preview_data)').toString());
  fs.writeFileSync('outputs/preview_draw.json',vm.eval('JSON.generate($upgrade_draw_data)').toString());
- vm.eval(fs.readFileSync(root+'update_notice.rb','utf8'));
- const updateNotice=fs.readFileSync(root+'update_notice.rb','utf8');
- vm.eval(updateNotice);
  const main=fs.readFileSync(root+'main43.rb','utf8').replace(/^require(?:_relative)? .*$/gm,'');
  vm.eval(main);
  vm.eval(fs.readFileSync(root+'draw_tool.rb','utf8').replace(/^require_relative .*$/gm,''));
@@ -54,7 +51,6 @@ const {RubyVM}=require('./dependencies.cjs').load('@ruby/wasm-wasi/dist/vm');
  vm.eval('VGD_Cabinet.presets.each { |name,p| VGD_Cabinet.normalize(p); puts "PASS preset: #{name}" }');
  vm.eval('$stdout.flush');
  const {vm:commandsVM}=await makeVM();
- commandsVM.eval(updateNotice);
  commandsVM.eval(fs.readFileSync('cabinet_dev/sketchup_ui_stub.rb','utf8'));
  commandsVM.eval(main);
  commandsVM.eval(fs.readFileSync('cabinet_dev/test_commands.rb','utf8'));

@@ -99,10 +99,10 @@ Dir.mktmpdir do |dir|
   File.write(File.join(dir, 'vgd_scenes', 'geometry.rb'), "module VGD\n  def broken(\nend\n")
   n = $boxes.size
   reload.call
-  check 'lỗi cú pháp: báo lỗi và giữ bản đang chạy', $boxes.size == n + 1 && $boxes.last.start_with?('Tải lại thất bại') && VGD::Scenes::VERSION == '9.9.9'
+  check 'lỗi cú pháp: báo lỗi và giữ bản đang chạy', $boxes.size == n + 1 && $boxes.last.start_with?('Tải lại thất bại') && $boxes.last.include?('giữ nguyên') && VGD::Scenes::VERSION == '9.9.9'
   File.write(File.join(dir, 'vgd_scenes', 'geometry.rb'), "module VGD\n  module Scenes\n    raise 'lỗi giả lập lúc nạp'\n  end\nend\n")
   reload.call
-  check 'lỗi lúc chạy: báo lỗi, khôi phục phiên bản và danh sách file', $boxes.last.start_with?('Tải lại thất bại') && VGD::Scenes.const_defined?(:VERSION) && VGD::Scenes.const_defined?(:CODE_FILES)
+  check 'lỗi lúc chạy: báo lỗi, khôi phục phiên bản và danh sách file', $boxes.last.start_with?('Tải lại thất bại') && $boxes.last.include?('Hãy mở lại SketchUp') && VGD::Scenes.const_defined?(:VERSION) && VGD::Scenes.const_defined?(:CODE_FILES)
   VGD::Scenes.instance_variable_set(:@job, Object.new)
   reload.call
   check 'đang xuất: không cho tải lại', $boxes.last.start_with?('VGD Scenes đang xử lý')

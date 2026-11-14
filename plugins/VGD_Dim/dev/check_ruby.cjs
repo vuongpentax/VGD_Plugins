@@ -4,12 +4,10 @@ const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js')
 (async()=>{
   const wasm=await WebAssembly.compile(fs.readFileSync(require.resolve(path.join(deps,'@ruby/3.2-wasm-wasi/dist/ruby+stdlib.wasm'))));
   const {vm}=await DefaultRubyVM(wasm),root=path.resolve(__dirname,'../runtime');
-  const names=['version','defaults','engine','native_style','store','managed','core','presets','autostyle','animation','smartdim','regions','manual_dim','probe','dialog','update_core/manifest','update_core/bootstrap','update_core/client','update_core/installer','update_core/updater','main','reload'];
-  const installerSource=fs.readFileSync(path.join(root,'vgd_dim/update_core/installer.rb'),'utf8');
+  const names=['version','defaults','engine','native_style','store','managed','core','presets','autostyle','animation','smartdim','regions','manual_dim','probe','dialog','main','reload'];
   const reloadSource=fs.readFileSync(path.join(root,'vgd_dim/reload.rb'),'utf8');
   const reloadFiles=reloadSource.match(/files = %w\[([^\]]+)\]/)?.[1].split(/\s+/)||[];
   if(!reloadFiles.includes('regions')||!reloadFiles.includes('manual_dim'))throw Error('Hot-reload is missing Boundary or manual Dimension modules');
-  if(!installerSource.includes(':new_pgroup => true')||installerSource.includes(':pgroup => true'))throw Error('Windows updater must use :new_pgroup, not POSIX :pgroup');
   const literal=value=>JSON.stringify(Buffer.from(value,'utf8').toString('base64'))+'.unpack1("m0")';
   for(const file of ['vgd_dim.rb',...names.map(n=>'vgd_dim/'+n+'.rb')]){
     vm.eval('RubyVM::InstructionSequence.compile('+literal(fs.readFileSync(path.join(root,file),'utf8'))+')');
@@ -18,7 +16,7 @@ const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js')
   vm.eval('RubyVM::InstructionSequence.compile('+literal(fs.readFileSync(path.join(__dirname,'native_smoke.rb'),'utf8'))+')');
   vm.eval("require 'securerandom'");
   vm.eval(fs.readFileSync(path.join(__dirname,'test_fixture.rb'),'utf8'));
-  for(const name of names.filter(n=>!['main','reload','update_core/installer'].includes(n)))vm.eval(fs.readFileSync(path.join(root,'vgd_dim',name+'.rb'),'utf8'));
+  for(const name of names.filter(n=>!['main','reload'].includes(n)))vm.eval(fs.readFileSync(path.join(root,'vgd_dim',name+'.rb'),'utf8'));
 
   for(const [file,run] of [['test_engine.rb','run_engine_tests'],['test_native_style.rb','run_native_style_tests'],['test_core.rb','run_core_tests; run_service_tests'],['test_smartdim.rb','run_smartdim_tests'],['test_store.rb','run_store_tests'],['test_regression.rb','run_regression_tests']]){
     vm.eval(fs.readFileSync(path.join(__dirname,file),'utf8'));vm.eval(run+'; $stdout.flush');
@@ -36,44 +34,6 @@ const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js')
     }
     console.log(`PASS: ${count} actual SU2022 VGD Dim fields decoded read-only; native preferences unchanged and values not logged.`);
   }
-  vm.eval(`check(VGD::Dim::UpdateCore::Updater.newer?('3.3.0-beta.3','3.3.0-beta.1'),'Beta version comparison failed'); check(VGD::Dim::UpdateCore::Updater.newer?('3.3.1','3.3.0'),'Stable version comparison failed'); check(VGD::Dim::UpdateCore::Updater.newer?('3.3.0-beta.10','3.3.0-beta.8'),'Beta.10 should be newer than beta.8'); check(!VGD::Dim::UpdateCore::Updater.newer?('3.3.0-beta.8','3.3.0-beta.10'),'Beta.8 should not be newer than beta.10'); check(VGD::Dim::UpdateCore::Updater.newer?('3.3.0','3.3.0-beta.10'),'Stable should be newer than beta.10'); info=VGD::Dim::UpdateCore::Manifest.parse(JSON.generate({'product_id'=>'vgd_dim','version'=>'3.3.0-beta.3','channel'=>'beta','min_sketchup_year'=>'2022','filename'=>'VGD_Dim_v3.3.0-beta.3.rbz','bytes'=>10,'sha256'=>'a'*64,'download_url'=>'https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0-beta.3/VGD_Dim_v3.3.0-beta.3.rbz','changelog'=>'pilot'})); check(info['version']=='3.3.0-beta.3','Manifest parse failed'); VGD::Dim::UpdateCore::Bootstrap.validate_expected!({'main.rb'=>'a'*64}); safe=VGD::Dim::UpdateCore::Bootstrap.sibling_path!('/tmp/vgd_dim.backup_'+('a'*32),'/tmp',/\\Avgd_dim\\.backup_[0-9a-f]{32}\\z/i); check(File.basename(safe).start_with?('vgd_dim.backup_'),'Backup sibling validation failed'); unsafe=false; begin; VGD::Dim::UpdateCore::Bootstrap.sibling_path!('/tmp/../outside','/tmp',/\\Avgd_dim\\.backup_[0-9a-f]{32}\\z/i); rescue StandardError; unsafe=true; end; check(unsafe,'Outside backup path was accepted');`);
-  const actualManifest=fs.readFileSync(path.resolve(root,'../VGD_UPDATE_MANIFEST.json'),'utf8');
-  vm.eval('actual_info=VGD::Dim::UpdateCore::Manifest.parse('+literal(actualManifest)+'); check(actual_info["version"]==VGD::Dim::VERSION && actual_info["download_url"].include?("/shared/vgd-center/packages/"),"Published manifest URL/version rejected")');
-  vm.eval(`
-    module Sketchup
-      module Http
-        GET = :get
-        class Request
-          @@requests=[]
-          attr_accessor :headers
-          def self.requests; @@requests; end
-          def initialize(url,method); @url=url; @method=method; @@requests << self; end
-          def start(&block); @callback=block; end
-          def complete(code,body,headers={})
-            response=Struct.new(:status_code,:body,:headers).new(code,body,headers)
-            @callback.call(self,response)
-          end
-          def cancel; @cancelled=true; true; end
-          def cancelled?; @cancelled; end
-        end
-      end
-    end
-    response=[]
-    payload='fixture'
-    digest=Digest::SHA256.hexdigest(payload)
-    info={'download_url'=>'https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-dim-v3.3.0-beta.3/VGD_Dim_v3.3.0-beta.3.rbz','bytes'=>payload.bytesize,'sha256'=>digest}
-    updater_client=VGD::Dim::UpdateCore::Client.new
-    updater_client.download(info){|status,value| response << [status,value]}
-    check(response.empty?,'Download callback fired before response')
-    Sketchup::Http::Request.requests.last.complete(200,payload)
-    check(response.length==1 && response.first==[:ok,payload],'Verified download did not complete')
-    timeout_result=[]
-    VGD::Dim::UpdateCore::Client.new.check{|status,body| timeout_result << [status,body]}
-    timeout_timer=UI.timers.keys.max
-    UI.timers.delete(timeout_timer).call
-    check(timeout_result.length==1 && timeout_result.first[0]==0,'Timeout did not complete exactly once')
-    check(Sketchup::Http::Request.requests.last.cancelled?,'Timeout did not cancel the request')
-  `);
   const main=fs.readFileSync(path.join(root,'vgd_dim/main.rb'),'utf8').replace(/^require[^\n]*\n/gm,'');
   vm.eval(main);vm.eval(main);
   vm.eval(`

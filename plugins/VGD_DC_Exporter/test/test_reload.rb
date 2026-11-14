@@ -36,12 +36,12 @@ Dir.mktmpdir do |dir|
   File.write(File.join(dir, 'vgd_dc_exporter', 'params.rb'), "module VGD_DC_Exporter\n  def broken(\nend\n")
   before = VGD_DC_Exporter::VERSION
   reload.call
-  check 'lỗi cú pháp: báo lỗi, không đổi bản đang chạy', $boxes.last.to_s.start_with?('Tải lại thất bại') && VGD_DC_Exporter::VERSION == before && VGD_DC_Exporter.respond_to?(:export_selected)
+  check 'lỗi cú pháp: báo lỗi, giữ nguyên bản đang chạy', $boxes.last.to_s.start_with?('Tải lại thất bại') && $boxes.last.include?('giữ nguyên') && VGD_DC_Exporter::VERSION == before && VGD_DC_Exporter.respond_to?(:export_selected)
   check 'lỗi cú pháp: menu vẫn nguyên', $items.size == 2
   # Lỗi lúc chạy (cú pháp đúng): vẫn khôi phục hằng, lần tải lại sau còn dùng được.
   File.write(File.join(dir, 'vgd_dc_exporter', 'params.rb'), "module VGD_DC_Exporter\n  raise 'lỗi giả lập lúc nạp'\nend\n")
   reload.call
-  check 'lỗi lúc chạy: báo lỗi, khôi phục phiên bản và danh sách file', $boxes.last.start_with?('Tải lại thất bại') && VGD_DC_Exporter::VERSION == before && VGD_DC_Exporter.const_defined?(:CODE_FILES)
+  check 'lỗi lúc chạy: báo lỗi, khôi phục phiên bản và danh sách file', $boxes.last.start_with?('Tải lại thất bại') && $boxes.last.include?('Hãy mở lại SketchUp') && VGD_DC_Exporter::VERSION == before && VGD_DC_Exporter.const_defined?(:CODE_FILES)
   File.write(File.join(dir, 'vgd_dc_exporter', 'params.rb'), "module VGD_DC_Exporter\nend\n")
   reload.call
   check 'sau lỗi, tải lại lần sau thành công', $boxes.last.start_with?('Đã tải lại')

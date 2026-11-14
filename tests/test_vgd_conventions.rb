@@ -40,5 +40,17 @@ Dir.children(File.join(ROOT, 'plugins')).sort.each do |plugin|
   check "#{plugin}: có mục menu 'Tải lại code'", has
 end
 
+# 5. Không có mã kiểm tra cập nhật trong plugin (VGD Center lo cập nhật).
+UPDATE_PATTERN = /UpdateNotice|UpdateCore|check_update|'Kiểm tra cập nhật|update_notice/
+with_update = rubies.select { |f| File.read(f, encoding: 'UTF-8').match?(UPDATE_PATTERN) }
+check 'không plugin nào có mã kiểm tra/cài cập nhật riêng', with_update.empty?, with_update.map { |f| f.sub(ROOT + '/', '') }.inspect
+
+# 6. Tải lại code dùng đúng chữ chuẩn trong hộp thoại.
+Dir.children(File.join(ROOT, 'plugins')).sort.each do |plugin|
+  next unless File.directory?(File.join(ROOT, 'plugins', plugin)) && !NO_MENU_PLUGINS.include?(plugin)
+  code = rubies.select { |f| f.start_with?(File.join(ROOT, 'plugins', plugin) + '/') }.map { |f| File.read(f, encoding: 'UTF-8') }.join("\n")
+  check "#{plugin}: tải lại báo đúng chữ chuẩn (Đã tải lại / Tải lại thất bại)", code.include?('Đã tải lại VGD') && code.include?('Tải lại thất bại')
+end
+
 puts $fails.empty? ? 'TẤT CẢ ĐẠT' : "CÓ #{$fails.size} LỖI"
 exit($fails.empty? ? 0 : 1)

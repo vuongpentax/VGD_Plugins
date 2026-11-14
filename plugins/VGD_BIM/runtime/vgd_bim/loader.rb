@@ -1,6 +1,5 @@
 require 'sketchup.rb'
 require 'json'
-require_relative 'update_notice'
 # Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
 module VGD
   def self.menu
@@ -34,7 +33,12 @@ module VGD
     end
     # Nạp lại toàn bộ code của plugin mà không cần mở lại SketchUp.
     # Dùng sau khi cài đè bản mới (.rbz). Menu và thanh công cụ giữ như cũ cho tới lần mở SketchUp sau.
+    # Kiểm tra cú pháp cả bộ file trước: có lỗi thì giữ nguyên bản đang chạy.
     def self.reload
+      files = [File.join(File.dirname(ROOT), 'vgd_bim.rb'), File.join(ROOT, 'loader.rb')] +
+              FILES.map { |file| File.join(ROOT, "#{file}.rb") }
+      files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
+      loading = true # từ đây lỗi nghĩa là đã nạp dở, không còn "giữ nguyên bản đang chạy"
       reopen = @panel && !@panel.closed?
       begin
         @panel.close if reopen
@@ -47,16 +51,16 @@ module VGD
       verbose = $VERBOSE
       $VERBOSE = nil # tránh cảnh báo "hằng số đã khai báo" khi nạp lại
       begin
-        load File.join(File.dirname(ROOT), 'vgd_bim.rb')
-        load File.join(ROOT, 'loader.rb')
-        FILES.each { |file| load File.join(ROOT, "#{file}.rb") }
+        files.each { |file| load file }
       ensure
         $VERBOSE = verbose
       end
       open_panel('table') if reopen
-      ::UI.messagebox("Đã tải lại VGD_BIM #{VERSION}.")
+      ::UI.messagebox("Đã tải lại VGD BIM #{VERSION}.")
+      true
     rescue ScriptError, StandardError => error
-      ::UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\nHãy mở lại SketchUp.")
+      ::UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\n#{loading ? 'Hãy mở lại SketchUp nếu giao diện báo lỗi.' : 'Bản đang chạy được giữ nguyên.'}")
+      false
     end
   end
 end
@@ -66,7 +70,6 @@ unless file_loaded?(__FILE__)
   vgd_menu = ::VGD.menu.add_submenu('VGD BIM')
   vgd_menu.add_item('Mở bảng khối lượng') { VGD::BIM.open_panel('table') }
   vgd_menu.add_item('Tải lại code') { VGD::BIM.reload }
-  VGD::UpdateNotice.start('vgd-bim', 'VGD_BIM', VGD::BIM::VERSION)
   ::UI.add_context_menu_handler do |context|
     if Sketchup.active_model.selection.any? { |e| VGD::BIM::Data.supported?(e) }
       context.add_item('VGD_BIM · Thông tin đối tượng') { VGD::BIM.open_panel('information') }

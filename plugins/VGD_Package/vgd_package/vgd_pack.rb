@@ -15,7 +15,7 @@ end
 
 module VGD
   module Pack
-    PLUGIN_VERSION = '0.1.6'.freeze unless const_defined?(:PLUGIN_VERSION)
+    PLUGIN_VERSION = '0.1.7'.freeze unless const_defined?(:PLUGIN_VERSION)
     ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze unless const_defined?(:ROOT)
 
     # Danh sách file nạp, dùng chung cho lúc khởi động và lúc "Tải lại code".
@@ -27,6 +27,7 @@ module VGD
     def self.reload
       files = CODE_FILES.map { |name| File.join(ROOT, "#{name}.rb") } + [File.join(ROOT, 'vgd_pack.rb')]
       files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
+      loading = true # từ đây lỗi nghĩa là đã nạp dở, không còn "giữ nguyên bản đang chạy"
       reopen = UI.dialog_open?
       UI.close_dialog if reopen
       old_version = PLUGIN_VERSION
@@ -48,7 +49,7 @@ module VGD
       ::UI.messagebox("Đã tải lại VGD Package #{PLUGIN_VERSION}.")
       true
     rescue ScriptError, StandardError => error
-      ::UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\nBản đang chạy được giữ nguyên.")
+      ::UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\n#{loading ? 'Hãy mở lại SketchUp nếu giao diện báo lỗi.' : 'Bản đang chạy được giữ nguyên.'}")
       false
     end
 

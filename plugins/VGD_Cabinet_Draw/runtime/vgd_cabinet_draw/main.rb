@@ -12,7 +12,7 @@ end
 module VGD_Cabinet_Draw
   # Nạp lại (reload!) phải lấy danh sách file và phiên bản MỚI, nên xóa hằng cũ trước khi khai báo.
   %i[VERSION RUNTIME_FILES RUNTIME_CONSTANTS].each { |name| remove_const(name) if const_defined?(name, false) }
-  VERSION = '1.0.1-beta.3'
+  VERSION = '1.0.1-beta.4'
   # Thứ tự nạp quan trọng: panel_model trước schema (schema dùng bộ tấm mặc định).
   RUNTIME_FILES = %w[keys theme panel_model split door_layout schema model_data geometry interior door_geometry preview drawer_parts drawer_slide tools rebuild auto_stretch resize scale_tool screen_pick sweep_tool links removal drawer_bay panel_tools context_menu preset_hud mini_bar preset_store tool_settings dialog].freeze
   RUNTIME_CONSTANTS = %i[Keys Theme PanelModel Split DoorLayout Schema ModelData Geometry Interior DoorFit DoorGeometry Preview DrawerParts DrawerSlide Tools Operations Rebuild AutoStretch Resize ScreenPick Links Removal DrawerBay PanelTools ContextMenu PresetHud MiniBar PresetStore ToolSettings Dialog].freeze
@@ -152,14 +152,25 @@ module VGD_Cabinet_Draw
   end
 
   # Nạp lại code mà không cần tắt SketchUp. Không đăng ký lại menu hay thanh công cụ.
+  # Kiểm tra cú pháp cả bộ file trước: có lỗi thì giữ nguyên bản đang chạy.
   def reload!
+    if vgd_tool_active?
+      UI.messagebox('Đang dùng công cụ VGD Cabinet Draw. Hãy thoát công cụ (Esc) rồi tải lại code.')
+      return false
+    end
+    files = [__FILE__] + RUNTIME_FILES.map { |name| File.join(__dir__, "#{name}.rb") }
+    files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
+    loading = true # từ đây lỗi nghĩa là đã nạp dở, không còn "giữ nguyên bản đang chạy"
+    reopen = const_defined?(:Dialog, false) && Dialog.visible?
     Dialog.close if const_defined?(:Dialog, false)
-    Sketchup.active_model.select_tool(nil)
     @active_tool = nil
     load __FILE__
-    UI.messagebox("VGD Cabinet Draw #{VERSION} đã nạp lại code mới.")
+    Dialog.show if reopen
+    UI.messagebox("Đã tải lại VGD Cabinet Draw #{VERSION}.")
+    true
   rescue StandardError, ScriptError => e
-    UI.messagebox("Nạp lại thất bại: #{e.class}: #{e.message}")
+    UI.messagebox("Tải lại thất bại:\n#{e.class}: #{e.message}\n\n#{loading ? 'Hãy mở lại SketchUp nếu giao diện báo lỗi.' : 'Bản đang chạy được giữ nguyên.'}")
+    false
   end
 
   # Nút VGD Chọn sáng khi CHẾ ĐỘ chọn đang bật (không phụ thuộc công cụ đang chạy): chỉ tắt khi bấm lại nút.

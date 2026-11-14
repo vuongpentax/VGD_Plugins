@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 $taskRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $sourceRoot = Join-Path $taskRoot 'cabinet_work'
 $pluginRoot = Join-Path $env:APPDATA 'SketchUp\SketchUp 2022\SketchUp\Plugins'
-$ownedFiles = @('vgd_cabinet.rb','vgd_cabinet\main43.rb','vgd_cabinet\geometry_engine.rb','vgd_cabinet\modeling_rules.rb','vgd_cabinet\modeling.rb','vgd_cabinet\pano.rb','vgd_cabinet\component_sharing.rb','vgd_cabinet\frame_divisions.rb','vgd_cabinet\rail_joinery.rb','vgd_cabinet\preview_mesh.rb','vgd_cabinet\library_store.rb','vgd_cabinet\model_data.rb','vgd_cabinet\box_conversion.rb','vgd_cabinet\preset_store.rb','vgd_cabinet\description_import.rb','vgd_cabinet\defaults.rb','vgd_cabinet\draw_tool.rb','vgd_cabinet\ui_renderer.rb','vgd_cabinet\VGD_Cabinet_UI.html','vgd_cabinet\reload.rb','vgd_cabinet\update_notice.rb','vgd_cabinet\cabinet.svg','vgd_cabinet\HUONG_DAN.txt')
+$ownedFiles = @('vgd_cabinet.rb','vgd_cabinet\main43.rb','vgd_cabinet\geometry_engine.rb','vgd_cabinet\modeling_rules.rb','vgd_cabinet\modeling.rb','vgd_cabinet\pano.rb','vgd_cabinet\component_sharing.rb','vgd_cabinet\frame_divisions.rb','vgd_cabinet\rail_joinery.rb','vgd_cabinet\preview_mesh.rb','vgd_cabinet\library_store.rb','vgd_cabinet\model_data.rb','vgd_cabinet\box_conversion.rb','vgd_cabinet\preset_store.rb','vgd_cabinet\description_import.rb','vgd_cabinet\defaults.rb','vgd_cabinet\draw_tool.rb','vgd_cabinet\ui_renderer.rb','vgd_cabinet\VGD_Cabinet_UI.html','vgd_cabinet\reload.rb','vgd_cabinet\cabinet.svg','vgd_cabinet\HUONG_DAN.txt')
 function Assert-TaskPath([string]$Path,[string]$Root) {
     $full = [IO.Path]::GetFullPath($Path)
     $allowed = [IO.Path]::GetFullPath($Root).TrimEnd('\')

@@ -100,10 +100,10 @@ Dir.mktmpdir do |dir|
   File.write(File.join(dir, 'vgd_reference', 'core', 'reference_store.rb'), "module VGD\n  def broken(\nend\n")
   n = $boxes.size
   reload.call
-  check 'lỗi cú pháp: báo lỗi và giữ bản đang chạy', $boxes.size == n + 1 && $boxes.last.start_with?('Tải lại thất bại') && VGD::Reference::VERSION == '9.9.9'
+  check 'lỗi cú pháp: báo lỗi và giữ bản đang chạy', $boxes.size == n + 1 && $boxes.last.start_with?('Tải lại thất bại') && $boxes.last.include?('giữ nguyên') && VGD::Reference::VERSION == '9.9.9'
   File.write(File.join(dir, 'vgd_reference', 'core', 'reference_store.rb'), "module VGD\n  module Reference\n    raise 'lỗi giả lập lúc nạp'\n  end\nend\n")
   reload.call
-  check 'lỗi lúc chạy: báo lỗi, vẫn còn danh sách file', $boxes.last.start_with?('Tải lại thất bại') && VGD::Reference.const_defined?(:CODE_FILES)
+  check 'lỗi lúc chạy: báo lỗi, vẫn còn danh sách file', $boxes.last.start_with?('Tải lại thất bại') && $boxes.last.include?('Hãy mở lại SketchUp') && VGD::Reference.const_defined?(:CODE_FILES)
   VGD::Reference::Session.instance_variable_set(:@current_tool, Object.new)
   reload.call
   check 'đang chỉnh sửa ảnh: không cho tải lại', $boxes.last.start_with?('Đang chỉnh sửa hoặc nhập ảnh')

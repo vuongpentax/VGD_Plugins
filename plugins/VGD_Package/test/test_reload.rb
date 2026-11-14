@@ -57,7 +57,7 @@ Dir.mktmpdir do |dir|
   File.write(File.join(dir, 'vgd_package', 'asset.rb'), "module VGD\n  def broken(\nend\n")
   n = $boxes.size
   reload.call
-  check 'lỗi cú pháp: báo lỗi và giữ bản đang chạy', $boxes.size == n + 1 && $boxes.last.start_with?('Tải lại thất bại') && VGD::Pack::PLUGIN_VERSION == '9.9.9'
+  check 'lỗi cú pháp: báo lỗi và giữ bản đang chạy', $boxes.size == n + 1 && $boxes.last.start_with?('Tải lại thất bại') && $boxes.last.include?('giữ nguyên') && VGD::Pack::PLUGIN_VERSION == '9.9.9'
 end
 puts $fail.empty? ? "TẤT CẢ ĐẠT (#{$pass})" : "CÓ #{$fail.size} LỖI: #{$fail.inspect}"
 exit($fail.empty? ? 0 : 1)

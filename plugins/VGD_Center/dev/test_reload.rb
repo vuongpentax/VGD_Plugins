@@ -83,10 +83,10 @@ Dir.mktmpdir do |dir|
   File.write(File.join(dir, 'vgd_center', 'manager', 'linker.rb'), "module VGD\n  def broken(\nend\n")
   n = $boxes.size
   reload.call
-  check 'lỗi cú pháp: báo lỗi và giữ bản đang chạy', $boxes.size == n + 1 && $boxes.last.start_with?('Tải lại thất bại') && VGD::Center::VERSION == '9.9.9'
+  check 'lỗi cú pháp: báo lỗi và giữ bản đang chạy', $boxes.size == n + 1 && $boxes.last.start_with?('Tải lại thất bại') && $boxes.last.include?('giữ nguyên') && VGD::Center::VERSION == '9.9.9'
   File.write(File.join(dir, 'vgd_center', 'manager', 'linker.rb'), "module VGD\n  module Center\n    raise 'lỗi giả lập lúc nạp'\n  end\nend\n")
   reload.call
-  check 'lỗi lúc chạy: báo lỗi, vẫn còn danh sách file', $boxes.last.start_with?('Tải lại thất bại') && VGD::Center.const_defined?(:CODE_FILES)
+  check 'lỗi lúc chạy: báo lỗi, vẫn còn danh sách file', $boxes.last.start_with?('Tải lại thất bại') && $boxes.last.include?('Hãy mở lại SketchUp') && VGD::Center.const_defined?(:CODE_FILES)
   VGD::Center.instance_variable_set(:@busy, true)
   reload.call
   check 'đang tải hoặc cài: không cho tải lại', $boxes.last.start_with?('VGD Center đang tải')

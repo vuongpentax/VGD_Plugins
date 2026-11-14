@@ -22,7 +22,7 @@ with tempfile.TemporaryDirectory(prefix='deploy_fixture_') as directory:
     assert legacy.read_bytes()==previous and not (plugins/'vgd_cabinet.rb').exists()
     result=deploy(); assert result.returncode==0,result.stderr
     assert not legacy.exists()
-    files=['vgd_cabinet.rb']+['vgd_cabinet/'+n for n in ['main43.rb','geometry_engine.rb','modeling_rules.rb','modeling.rb','pano.rb','component_sharing.rb','frame_divisions.rb','rail_joinery.rb','preview_mesh.rb','library_store.rb','model_data.rb','box_conversion.rb','preset_store.rb','description_import.rb','defaults.rb','draw_tool.rb','ui_renderer.rb','VGD_Cabinet_UI.html','reload.rb','update_notice.rb','cabinet.svg','HUONG_DAN.txt']]
+    files=['vgd_cabinet.rb']+['vgd_cabinet/'+n for n in ['main43.rb','geometry_engine.rb','modeling_rules.rb','modeling.rb','pano.rb','component_sharing.rb','frame_divisions.rb','rail_joinery.rb','preview_mesh.rb','library_store.rb','model_data.rb','box_conversion.rb','preset_store.rb','description_import.rb','defaults.rb','draw_tool.rb','ui_renderer.rb','VGD_Cabinet_UI.html','reload.rb','cabinet.svg','HUONG_DAN.txt']]
     for name in files: assert (plugins/name).read_bytes()==(root/'cabinet_work'/name).read_bytes(),name
     reports=[json.loads(p.read_text(encoding='utf-8-sig')) for p in outputs.glob('install_*/INSTALL_REPORT.json')]
     receipt=next(r for r in reports if r['Target']==str(plugins))

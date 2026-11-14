@@ -63,7 +63,7 @@ $pass = 0; $fail = []
 def check(name, cond, _extra = nil); cond ? ($pass += 1) : ($fail << name); puts "#{cond ? 'OK  ' : 'FAIL'} #{name}"; end
 
 root = File.expand_path('../runtime', __dir__)
-%w[version defaults engine native_style store managed core presets autostyle animation smartdim regions manual_dim probe dialog update_core/manifest update_core/bootstrap update_core/client update_core/updater].each do |name|
+%w[version defaults engine native_style store managed core presets autostyle animation smartdim regions manual_dim probe dialog].each do |name|
   file = File.join(root, 'vgd_dim', "#{name}.rb")
   load file if File.file?(file)
 end
@@ -72,11 +72,12 @@ top = $items.select { |path, _n, _b| path == 'Extensions' }
 check 'không có mục lẻ nằm thẳng trong menu Extensions', top.empty?, top.map { |x| x[1] }.inspect
 check "mọi mục nằm trong Extensions > VGD > VGD Dim", $items.all? { |path, _n, _b| path == 'Extensions > VGD > VGD Dim' }
 names = $items.map { |_p, n, _b| n }
-check "có mục 'Kiểm tra cập nhật' trong menu VGD Dim", names.include?('Kiểm tra cập nhật')
+check "không có mục kiểm tra cập nhật (VGD Center lo cập nhật)", names.none? { |n| n.to_s.include?('cập nhật') }
 check "có mục 'Tải lại code'", names.include?('Tải lại code')
 reload = $items.find { |_p, n, _b| n == 'Tải lại code' }[2]
 reload.call
 check 'tải lại khi chưa mở cửa sổ: KHÔNG tự mở cửa sổ', $dialogs.none?(&:visible?), $dialogs.size
+check 'tải lại thành công báo đã tải lại', $boxes.last.to_s.start_with?('Đã tải lại VGD Dim')
 VGD::Dim.show_dialog
 open_dialog = $dialogs.last
 check 'cửa sổ đang mở', open_dialog.visible?
@@ -92,7 +93,7 @@ Dir.mktmpdir do |dir|
   File.write(File.join(dir, 'vgd_dim', 'store.rb'), "module VGD\n  def broken(\nend\n")
   boxes = $boxes.size
   reload.call
-  check 'lỗi cú pháp: báo lỗi cho người dùng', $boxes.size == boxes + 1 && $boxes.last.start_with?('Tải lại thất bại')
+  check 'lỗi cú pháp: báo lỗi và giữ nguyên bản đang chạy', $boxes.size == boxes + 1 && $boxes.last.start_with?('Tải lại thất bại') && $boxes.last.include?('giữ nguyên')
   check 'lỗi cú pháp: vẫn gọi được hàm của bản đang chạy', VGD::Dim.respond_to?(:show_dialog)
 end
 puts $fail.empty? ? "TẤT CẢ ĐẠT (#{$pass})" : "CÓ #{$fail.size} LỖI: #{$fail.inspect}"

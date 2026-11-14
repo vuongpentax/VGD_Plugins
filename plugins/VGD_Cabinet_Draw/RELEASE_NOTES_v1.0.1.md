@@ -5,5 +5,6 @@
 - Loader và thư mục mã đổi thành chữ thường: `vgd_cabinet_draw.rb`, `vgd_cabinet_draw/`. Tên dictionary dữ liệu trong file SketchUp (`VGD_Cabinet_Draw`) và thư mục dữ liệu trên máy giữ nguyên nên file cũ và preset cũ vẫn dùng được.
 - Ngoài mục Tải lại code, không đổi chức năng khác.
 - **Tải lại code:** menu **Extensions → VGD → VGD Cabinet Draw → Tải lại code** nạp lại mã sau khi cài đè bản mới mà không cần mở lại SketchUp (đổi tên nút từ "Tải lại VGD Cabinet Draw (nạp code mới)"). Menu và toolbar mới chỉ có tác dụng sau khi mở lại SketchUp.
+- **Tải lại code thống nhất:** kiểm tra cú pháp cả bộ file trước khi nạp (lỗi thì giữ nguyên bản đang chạy), không tự bỏ chọn công cụ mà chặn khi đang dùng công cụ VGD, mở lại bảng Setting nếu đang mở.
 
 Kiểm tra: tự động (test tải lại code, test giả lập trong `test/`, đóng gói). Chưa kiểm thử thủ công trong SketchUp cho bản này.

@@ -77,6 +77,7 @@
 - **Tên extension VGD_BIM.** Menu gọn: Extensions → VGD → VGD_BIM (mở thẳng bảng khối lượng) và VGD_BIM · Tải lại code. Toolbar một nút. Cần VGD Center 1.2.4 trở lên để nhận đúng tên này.
 - **Lưu cài đặt bằng file JSON** trong `%APPDATA%\VGD\VGD_BIM\` (bộ tag, preset cột, trạng thái bảng), tránh lỗi mất preset khi chuỗi có ngoặc kép hoặc dấu tiếng Việt.
 - Quét nhanh hơn: không còn đọc cạnh (edge); báo cáo không còn số cạnh và chiều dài cạnh. Có thể tắt quét mặt khi chỉ cần group / component.
+- **Bỏ `update_notice.rb`** (không còn tự kiểm tra cập nhật): VGD Center báo và cài cập nhật. **Tải lại code** nay kiểm tra cú pháp cả bộ file trước khi nạp (lỗi thì giữ nguyên bản đang chạy).
 
 Kiểm tra: tự động bằng mô phỏng (cú pháp Ruby, test lõi, bảng, lưu cài đặt, soạn tag, menu, khung đánh dấu, giao diện HTML). Chưa kiểm thử thủ công trong SketchUp thật.
 - **Đặt lại tên theo chuẩn VGD:** tên extension là **VGD BIM** (trước đây `VGD_BIM`), menu **Extensions → VGD → VGD BIM**, toolbar **VGD BIM**. Tên dictionary dữ liệu trong file SketchUp (`VGD_BIM`, `VGD_BIM_TABLE`…) giữ nguyên nên file cũ vẫn đọc được.

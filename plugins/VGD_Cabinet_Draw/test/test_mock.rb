@@ -714,7 +714,27 @@ n_consts = V.constants.length
 V.reload!
 check 'reload no dup menu', UI.menu('Extensions').items.length == menus_before
 check 'reload no dup constants', V.constants.length == n_consts, "#{n_consts} → #{V.constants.length}"
-check 'reload message', UI.msgs.last.include?('đã nạp lại')
+check 'reload message', UI.msgs.last.start_with?('Đã tải lại')
 check 'tools after reload', V::Tools.respond_to?(:build)
+# Đang dùng công cụ VGD: không cho tải lại.
+fake_tool = Object.new
+def fake_tool.active?; true; end
+V.instance_variable_set(:@active_tool, fake_tool)
+check 'reload bị chặn khi đang dùng công cụ VGD', V.reload! == false && UI.msgs.last.start_with?('Đang dùng công cụ')
+V.instance_variable_set(:@active_tool, nil)
+# Lỗi cú pháp: kiểm tra trước khi nạp, giữ nguyên bản đang chạy (không nạp file nào).
+loaded = []
+Kernel.send(:alias_method, :__orig_load_for_test, :load)
+Kernel.send(:define_method, :load) { |*args, **kw| loaded << args.first; __orig_load_for_test(*args, **kw) }
+orig_compile = RubyVM::InstructionSequence.method(:compile_file)
+RubyVM::InstructionSequence.define_singleton_method(:compile_file) do |path, *rest|
+  raise SyntaxError, 'lỗi cú pháp giả lập' if path.end_with?('/geometry.rb')
+  orig_compile.call(path, *rest)
+end
+result = V.reload!
+RubyVM::InstructionSequence.define_singleton_method(:compile_file) { |path, *rest| orig_compile.call(path, *rest) }
+Kernel.send(:define_method, :load) { |*args, **kw| __orig_load_for_test(*args, **kw) }
+check 'lỗi cú pháp: báo lỗi và giữ nguyên bản đang chạy', result == false && UI.msgs.last.start_with?('Tải lại thất bại') && UI.msgs.last.include?('giữ nguyên') && loaded.empty?
+check 'lỗi cú pháp: công cụ vẫn dùng được', V::Tools.respond_to?(:build)
 puts "\nTHÀNH CÔNG: #{$pass}  THẤT BẠI: #{$fail.length}"
 exit($fail.empty? ? 0 : 1)

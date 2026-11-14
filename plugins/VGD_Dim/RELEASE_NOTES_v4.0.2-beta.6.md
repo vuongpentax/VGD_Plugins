@@ -1,4 +1,4 @@
-# VGD Dim 4.0.2-beta.5
+# VGD Dim 4.0.2-beta.6
 
 - Gom menu: các lệnh nằm trong **Extensions → VGD → VGD Dim** (trước đây là bốn mục lẻ trong Extensions).
 - Thanh công cụ đổi tên rút gọn thành **VGD DIM**; mục menu "Hiện toolbar" ghi theo tên mới.
@@ -8,5 +8,6 @@
 - **Sửa toolbar không hiện sau khi cài:** thanh công cụ **VGD DIM** nay tự hiện ngay lần đầu cài (trước đây bị ẩn, phải bật tay trong View → Toolbars hoặc dùng menu "Hiện toolbar"). Các lần sau giữ trạng thái bạn đã chọn.
 - **Sửa Tải lại code:** chỉ mở lại cửa sổ Dim nếu trước đó đang mở (trước đây luôn mở cửa sổ sau khi tải lại); lỗi khi tải lại hiện hộp thoại báo lỗi.
 - **Mục Kiểm tra cập nhật** chuyển vào menu **Extensions → VGD → VGD Dim** (trước đây nằm lẻ ngoài, trực tiếp trong Extensions).
+- **Bỏ bộ tự cập nhật riêng của Dim** (mục Kiểm tra cập nhật, tải gói, cài bằng PowerShell, phục hồi khi cập nhật dở, `VGD_UPDATE_MANIFEST.json`): VGD Center báo và cài cập nhật. Tải lại code nay báo "Đã tải lại" khi thành công.
 
 Kiểm tra: tự động bằng mô phỏng (`dev/check_ruby.cjs`). Chưa kiểm thử thủ công trong SketchUp cho bản này.

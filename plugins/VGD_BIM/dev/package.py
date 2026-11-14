@@ -42,7 +42,7 @@ with zipfile.ZipFile(target) as archive:
     if archive.testzip() is not None:
         fail('Gói zip bị lỗi.')
     names = archive.namelist()
-    for required in ['vgd_bim.rb', 'vgd_bim/loader.rb', 'vgd_bim/update_notice.rb']:
+    for required in ['vgd_bim.rb', 'vgd_bim/loader.rb']:
         if required not in names:
             fail(f'Gói thiếu {required}')
     for name in names:

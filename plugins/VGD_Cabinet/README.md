@@ -1,6 +1,6 @@
 # VGD Cabinet 4.5.4 (beta.1)
 
-VGD_Cabinet là plugin dựng và sửa tủ cho SketchUp, mục tiêu từ SketchUp 2022. Runtime 4.5.4-beta.3 tập trung vào hình học tủ, giao diện `HtmlDialog`, preview, preset, thư viện và chuyển hộp thành tủ. VGD_EXPLODE và VGD_UNTAG không còn nằm trong runtime, menu hay gói Cabinet 4.5.3.
+VGD_Cabinet là plugin dựng và sửa tủ cho SketchUp, mục tiêu từ SketchUp 2022. Runtime 4.5.4-beta.4 tập trung vào hình học tủ, giao diện `HtmlDialog`, preview, preset, thư viện và chuyển hộp thành tủ. VGD_EXPLODE và VGD_UNTAG không còn nằm trong runtime, menu hay gói Cabinet 4.5.3.
 
 ## Cấu trúc repository
 

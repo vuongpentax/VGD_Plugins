@@ -17,10 +17,6 @@ require_relative 'regions'
 require_relative 'manual_dim'
 require_relative 'probe'
 require_relative 'dialog'
-require_relative 'update_core/manifest'
-require_relative 'update_core/client'
-require_relative 'update_core/installer'
-require_relative 'update_core/updater'
 # Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
 module VGD
   def self.menu
@@ -44,8 +40,12 @@ module VGD
     # reload.rb kiểm tra cú pháp cả bộ file trước khi nạp nên lỗi cú pháp không làm hỏng bản đang chạy.
     def reload_extension
       load File.join(__dir__.dup.force_encoding(Encoding::UTF_8),'reload.rb')
+      UI.messagebox("Đã tải lại VGD Dim #{VERSION}.")
+      true
     rescue ScriptError, StandardError => error
-      UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\nHãy mở lại SketchUp nếu giao diện báo lỗi.")
+      # Lỗi cú pháp bị chặn trước khi nạp (reload.rb); lỗi khác nghĩa là đã nạp dở.
+      tail = error.is_a?(SyntaxError) ? 'Bản đang chạy được giữ nguyên.' : 'Hãy mở lại SketchUp nếu giao diện báo lỗi.'
+      UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\n#{tail}")
       false
     end
     def quick_smart
@@ -82,6 +82,5 @@ module VGD
       @toolbar.get_last_state == TB_NEVER_SHOWN ? @toolbar.show : @toolbar.restore
     end
     AutoStyle.start
-    UpdateCore::UIHooks.start(@menu)
   end
 end

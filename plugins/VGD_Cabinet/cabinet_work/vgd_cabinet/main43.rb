@@ -14,7 +14,6 @@ require_relative 'preview_mesh'
 require_relative 'library_store'
 require_relative 'model_data'
 require_relative 'box_conversion'
-require_relative 'update_notice'
 # Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
 module VGD
   def self.menu
@@ -24,7 +23,7 @@ end
 
 module VGD_Cabinet
   remove_const(:VERSION) if const_defined?(:VERSION, false)
-  VERSION = '4.5.4-beta.3'
+  VERSION = '4.5.4-beta.4'
   remove_const(:FRONT_SETTING_KEYS) if const_defined?(:FRONT_SETTING_KEYS, false)
   FRONT_SETTING_KEYS = %w[
     opt_door door_style auto_door_count max_door_w door_count
@@ -688,7 +687,6 @@ module VGD_Cabinet
     reload_command.tooltip='Nạp lại riêng mã Ruby và giao diện VGD Cabinet'
     reload_command.status_bar_text='Sau khi đồng bộ mã: thoát công cụ đang vẽ, bấm Reload để nhận bản cập nhật VGD Cabinet'
     menu.add_item(reload_command)
-    ::VGD::UpdateNotice.start('vgd-cabinet', 'VGD Cabinet', VERSION)
     @toolbar ||= UI::Toolbar.new('VGD CAB')
     @toolbar.add_item(command) unless existing_commands.include?(command)
     @toolbar.restore

@@ -81,6 +81,10 @@ module VGD_Cabinet_Draw
       @window.show
     end
 
+    def visible?
+      !!(@window && @window.visible?)
+    end
+
     def close
       @window.close if @window
     rescue StandardError

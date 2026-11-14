@@ -17,7 +17,7 @@ end
 
 module VGD
   module Center
-    VERSION = '1.2.5-beta.3'.freeze
+    VERSION = '1.2.5-beta.4'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
@@ -67,6 +67,7 @@ module VGD
         end
         files = CODE_FILES.map { |name| File.join(__dir__, "#{name}.rb") }
         files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
+        loading = true # từ đây lỗi nghĩa là đã nạp dở, không còn "giữ nguyên bản đang chạy"
         reopen = @dialog && @dialog.visible?
         @dialog.close if reopen # set_on_closed đặt @dialog = nil
         old_files = CODE_FILES
@@ -85,7 +86,7 @@ module VGD
         UI.messagebox("Đã tải lại VGD Center #{VERSION}.")
         true
       rescue ScriptError, StandardError => error
-        UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\nBản đang chạy được giữ nguyên.")
+        UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\n#{loading ? 'Hãy mở lại SketchUp nếu giao diện báo lỗi.' : 'Bản đang chạy được giữ nguyên.'}")
         false
       end
 

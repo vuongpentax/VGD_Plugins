@@ -12,7 +12,6 @@ require_relative 'seamless'
 require_relative 'online'
 require_relative 'drive'
 require_relative 'shell_sync'
-require_relative 'update_notice'
 
 # Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
 module VGD
@@ -200,7 +199,6 @@ module VGD
       return show if action == 'library'
       return show('models') if action == 'models'
       return show_and_refresh if action == 'refresh'
-      return Online.check_update if action == 'check_updates'
       if TOOL_ACTIONS.include?(action)
         model = Sketchup.active_model
         case action
@@ -373,12 +371,13 @@ module VGD
 
     # Danh sách file nạp lại khi "Tải lại code" (trùng các dòng require_relative ở đầu file, main nạp cuối).
     CODE_FILES = %w[catalog materials geometry storage models pixels advanced tools seamless online drive
-                    shell_sync update_notice main].freeze unless const_defined?(:CODE_FILES)
+                    shell_sync main].freeze unless const_defined?(:CODE_FILES)
 
     # Nạp lại mã mà không cần mở lại SketchUp. Kiểm tra cú pháp cả bộ file trước: có lỗi thì giữ nguyên bản đang chạy.
     def self.reload
       files = [File.join(File.dirname(ROOT), 'vgd_library.rb')] + CODE_FILES.map { |name| File.join(ROOT, "#{name}.rb") }
       files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
+      loading = true # từ đây lỗi nghĩa là đã nạp dở, không còn "giữ nguyên bản đang chạy"
       reopen = !@dialog.nil?
       @dialog.close if reopen # set_on_closed dừng quét và đặt @dialog = nil
       verbose = $VERBOSE
@@ -397,7 +396,7 @@ module VGD
       UI.messagebox("Đã tải lại VGD Library #{VERSION}.")
       true
     rescue ScriptError, StandardError => error
-      UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\nBản đang chạy được giữ nguyên.")
+      UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\n#{loading ? 'Hãy mở lại SketchUp nếu giao diện báo lỗi.' : 'Bản đang chạy được giữ nguyên.'}")
       false
     end
 
@@ -421,7 +420,6 @@ module VGD
         menu.add_item('Kết nối kho vật liệu Drive 03 MTL…') { safely { dispatch('connect_drive', '{}') } }
         menu.add_item('Mở kho Drive trong trình duyệt') { safely { Drive.open } }
         menu.add_item('Nhập danh mục online (.json)…') { safely { dispatch('import_catalog', '{}') } }
-        menu.add_item('Kiểm tra cập nhật VGD…') { safely { Online.check_update } }
         menu.add_item('Tải lại code') { reload }
         menu.add_item('Giới thiệu') { UI.messagebox("VGD_Library #{VERSION}\nThư viện vật liệu / model và bộ công cụ map, phát triển độc lập bởi VGD.\nSketchUp 2022+ — Windows / macOS") }
         toolbar.get_last_state == TB_NEVER_SHOWN ? toolbar.show : toolbar.restore
@@ -435,6 +433,5 @@ module VGD
       end
       file_loaded(__FILE__)
     end
-    VGD::UpdateNotice.start('vgd-library', 'VGD Library', VERSION)
   end
 end

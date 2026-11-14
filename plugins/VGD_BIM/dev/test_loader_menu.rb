@@ -1,7 +1,7 @@
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
-def file_loaded?(_f); false; end
-def file_loaded(_f); true; end
+def file_loaded?(f); ($loaded_files ||= {})[f]; end
+def file_loaded(f); ($loaded_files ||= {})[f] = true; end
 class SketchupExtension
   attr_accessor :description, :version, :creator
   attr_reader :name, :path
@@ -28,7 +28,7 @@ module UI
   end
   MENU_ROOT = {}
   def self.menu(n); MENU_ROOT[n] ||= MenuNode.new(n); end
-  def self.messagebox(*); end
+  def self.messagebox(text, *); ($boxes ||= []) << text; 0; end
   def self.add_context_menu_handler(&b); end
   def self.start_timer(*); 0; end
   def self.stop_timer(*); end
@@ -48,4 +48,22 @@ VGD::BIM.define_singleton_method(:open_panel) { |mode| $opened << mode }
 vgd.items.find { |n, _| n == 'Mở bảng khối lượng' }[1].call
 ok('bấm Mở bảng khối lượng mở thẳng bảng khối lượng', $opened == ['table'])
 ok('phiên bản theo chuẩn repo x.y.z hoặc x.y.z-beta.N, không có chữ v', VGD::BIM::VERSION.match?(/\A\d+\.\d+\.\d+(-beta\.\d+)?\z/))
+# Tải lại code: thành công, và lỗi cú pháp được chặn trước khi nạp (giữ nguyên bản đang chạy).
+reload_item = vgd.items.find { |n, _| n == 'Tải lại code' }
+ok('có mục Tải lại code', !reload_item.nil?)
+count_before = vgd.items.size
+ok('tải lại thành công', VGD::BIM.reload == true && $boxes.last.to_s.start_with?('Đã tải lại VGD BIM'))
+ok('tải lại không nhân đôi mục menu', vgd.items.size == count_before)
+loaded = []
+Kernel.send(:alias_method, :__orig_load_for_test, :load)
+Kernel.send(:define_method, :load) { |*args, **kw| loaded << args.first; __orig_load_for_test(*args, **kw) }
+orig_compile = RubyVM::InstructionSequence.method(:compile_file)
+RubyVM::InstructionSequence.define_singleton_method(:compile_file) do |path, *rest|
+  raise SyntaxError, 'lỗi cú pháp giả lập' if path.end_with?('/core/data.rb')
+  orig_compile.call(path, *rest)
+end
+result = VGD::BIM.reload
+RubyVM::InstructionSequence.define_singleton_method(:compile_file) { |path, *rest| orig_compile.call(path, *rest) }
+Kernel.send(:define_method, :load) { |*args, **kw| __orig_load_for_test(*args, **kw) }
+ok('lỗi cú pháp: báo lỗi, giữ nguyên bản đang chạy, không nạp file nào', result == false && $boxes.last.start_with?('Tải lại thất bại') && $boxes.last.include?('giữ nguyên') && loaded.empty?)
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
