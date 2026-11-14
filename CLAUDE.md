@@ -37,9 +37,27 @@ Tất cả plugin SketchUp dùng thực tế phải nằm trong thư mục `plug
 
 Mỗi plugin nên được tổ chức tương đối độc lập. Danh sách plugin hiện có xem trực tiếp trong `plugins/`.
 
-Mỗi plugin tự giữ test và script hỗ trợ trong thư mục riêng của nó (thường là `dev/`); `tests/` ở gốc dành cho kiểm thử dùng chung toàn repo và hiện chưa có bộ nào.
+Mỗi plugin tự giữ test và script hỗ trợ trong thư mục riêng của nó (thường là `dev/`); `tests/` ở gốc dành cho kiểm thử dùng chung toàn repo; hiện có `tests/test_vgd_conventions.rb` (kiểm tra quy ước đặt tên và menu bên dưới, chạy `ruby tests/test_vgd_conventions.rb` từ gốc repo).
 
 Không tự tạo plugin mới nếu chưa được yêu cầu hoặc chưa thực sự được chuyển vào.
+
+### Đặt tên, menu và toolbar (mọi plugin VGD)
+
+- Tên extension: `VGD Tên` (có dấu cách, không dùng gạch dưới). Loader và thư mục mã viết thường: `vgd_ten.rb`, `vgd_ten/`.
+- Toolbar: tên rút gọn `VGD XXX` (3 chữ in hoa, ví dụ `VGD CAB`). Plugin không có toolbar thì bỏ qua.
+- Menu: chỉ có **một** menu `Extensions → VGD`, bên trong mỗi plugin có menu con riêng tên đầy đủ (kể cả plugin chỉ có một lệnh). SketchUp không gộp menu trùng tên, nên plugin **không được tự gọi** `add_submenu('VGD')`; phải dùng `::VGD.menu`. Mỗi plugin tự chép đoạn sau ở đầu file nạp menu (ngoài mọi `module` khác, vì plugin độc lập không dùng chung mã):
+
+```ruby
+module VGD
+  def self.menu
+    @extensions_menu ||= ::UI.menu('Extensions').add_submenu('VGD')
+  end unless respond_to?(:menu)
+end
+```
+
+  rồi tạo menu con: `::VGD.menu.add_submenu('VGD Tên').add_item(...)`.
+- Plugin mới được phát hành: thêm mục vào `shared/vgd-center/catalog.json` (id, `extension_name`, đúng hai `allowed_paths` là loader và thư mục viết thường) theo quy tắc trong `shared/VGD_CENTER_ARCHITECTURE.md`.
+- Chạy `ruby tests/test_vgd_conventions.rb` sau khi thêm hoặc đổi plugin; test báo lỗi nếu có menu VGD thứ hai, tên extension hoặc loader sai quy ước, hoặc toolbar sai dạng.
 
 ### CLAUDE.md của từng plugin
 
