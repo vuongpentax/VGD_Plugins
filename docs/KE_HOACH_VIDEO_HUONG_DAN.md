@@ -190,3 +190,5 @@ Mỗi chương theo một mục của hướng dẫn chữ; nút và nhãn lấy
 Thứ tự dựng: Reference → Library → Dim → Scenes; mỗi plugin xong thì gửi video để bạn xem rồi mới sang plugin kế. Chưa xác minh trong SketchUp thật.
 
 Giai đoạn 2, tiến độ: Reference đã dựng 3 chương (thêm chương di chuyển, xoay, đổi kích thước ảnh theo góp ý, sửa lỗi con trỏ lệch khi bảng bị phóng to), chờ bạn xem; kế tiếp Library, Dim, Scenes.
+
+Giai đoạn 2, tiến độ: Library đã dựng 3 chương (tìm và tô vật liệu; đặt model và lưu mẫu; công cụ map), chờ bạn xem; kế tiếp Dim, Scenes.

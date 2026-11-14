@@ -23,8 +23,11 @@ Hoạt ảnh của các plugin khác nằm trong thư mục riêng, đăng cùng
 | `reference-01-them-anh.mp4` | `reference/scene-01-them-anh.html` | Reference: thêm và quản lý ảnh | 30 giây |
 | `reference-02-chinh-anh.mp4` | `reference/scene-02-chinh-anh.html` | Reference: di chuyển, xoay và đổi kích thước ảnh | 30 giây |
 | `reference-03-luu-y.mp4` | `reference/scene-03-luu-y.html` | Reference: lưu ý | 15 giây |
+| `library-01-tim-to-vat-lieu.mp4` | `library/scene-01-tim-to.html` | Library: tìm và tô vật liệu | 30 giây |
+| `library-02-dat-model.mp4` | `library/scene-02-dat-model.html` | Library: đặt model và lưu mẫu | 25 giây |
+| `library-03-cong-cu-map.mp4` | `library/scene-03-cong-cu-map.html` | Library: công cụ map | 26 giây |
 
-Ảnh mẫu là hình đơn giản dùng chung trong `samples/`; Ruby được mô phỏng qua `image_importer/ii.js` và `reference/ref.js`. Reference có thêm khung "khung nhìn SketchUp (minh họa)" vì ảnh nổi trên khung nhìn chứ không nằm trong bảng.
+Ảnh mẫu là hình đơn giản dùng chung trong `samples/`; Ruby được mô phỏng qua `image_importer/ii.js` và `reference/ref.js` và `library/lib.js` (vân vật liệu mẫu là SVG đơn giản `samples/vl_*.svg`). Reference có thêm khung "khung nhìn SketchUp (minh họa)" vì ảnh nổi trên khung nhìn chứ không nằm trong bảng.
 
 File MP4 không lưu trong git. Phần dùng chung: `common.css`, `common.js`. Script quay: `render.js`.
 
