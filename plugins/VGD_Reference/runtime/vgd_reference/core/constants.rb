@@ -1,6 +1,6 @@
 module VGD
   module Reference
-    VERSION = '1.0.3-beta.3'.freeze
+    VERSION = '1.0.3-beta.4'.freeze
     MIN_SKETCHUP_VERSION = 23
     OVERLAY_ID = 'vgd.reference.images'.freeze
     OVERLAY_NAME = 'VGD Reference'.freeze

@@ -5,8 +5,10 @@ module VGD
         super(OVERLAY_ID, OVERLAY_NAME)
       end
 
+      # Ảnh vẽ trong không gian màn hình, không có vùng 3D. Hộp rỗng để Zoom Extents chỉ tính hình học đang hiện
+      # (model.bounds gồm cả đối tượng đã ẩn).
       def getExtents
-        Sketchup.active_model.bounds
+        Geom::BoundingBox.new
       end
 
       def draw(view)

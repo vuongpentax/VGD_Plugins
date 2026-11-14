@@ -34,3 +34,4 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 - File tạm (clipboard, ảnh thả, ảnh tải, PNG đã chuyển) do plugin sở hữu và bị xóa khi mục, model hoặc phiên kết thúc. Chỉ xóa file đã theo dõi.
 - Tải web và bộ chuyển đổi chạy trên worker thread; các thread này không bao giờ gọi API SketchUp, model hay HtmlDialog. Kết quả về timer chính qua Queue.
 - Ảnh đầu vào tối đa 20 MiB và 32 triệu pixel.
+- `ReferenceOverlay#getExtents` phải trả hộp rỗng (`Geom::BoundingBox.new`), không trả `model.bounds`: hộp bao của model gồm cả đối tượng đã ẩn nên Zoom Extents sẽ tính cả chúng. Test: `ruby dev/overlay_extents_fixture.rb` (chạy từ `plugins/VGD_Reference`).
