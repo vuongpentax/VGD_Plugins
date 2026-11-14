@@ -75,7 +75,7 @@ Hỏi tôi các câu sau, chờ trả lời đầy đủ:
 
 1. Phần mềm: plugin `VGD_Center` (SketchUp, giao diện `UI::HtmlDialog`).
 2. Đầu ra: file MP4 và bản nhúng trong VGD Center. Mỗi đoạn 15–30 giây.
-3. Hình ảnh: vẽ lại giao diện từ code HTML/CSS và theme VGD (chưa đối chiếu với SketchUp thật). Chỉ có chữ trên màn hình, tiếng Việt, không giọng đọc.
+3. Hình ảnh: chạy chính giao diện VGD Center thật (`dialog.html`, trang hướng dẫn thật) trong trình duyệt, phía Ruby được mô phỏng; chưa đối chiếu với SketchUp thật. Chỉ có chữ trên màn hình, tiếng Việt, không giọng đọc.
 4. Phong cách: theme tối. Mẫu "làm tối nền, làm nổi vùng cần bấm" là chính; mẫu "phóng to, chữ lớn" dùng cho cảnh cần chú ý kỹ.
 5. Chuyển động: dùng `motion-design-skill`, cài vào `.claude/skills/motion-design/` (không commit, theo quy tắc repo về mã tải từ ngoài). Chưa cài `gsap-skills`.
 6. Cách xuất MP4: quay từng khung hình bằng Chromium/Playwright rồi ghép bằng ffmpeg. Không cài thêm công cụ.

@@ -1,28 +1,11 @@
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Đoạn 4 · Tab Quản lý: bật/tắt plugin</title>
-<link rel="stylesheet" href="common.css"><style>
-#center{width:600px;height:640px}.cbody{height:582px}.main{padding:16px 16px;overflow:hidden}
-#mb{left:410px;top:240px;width:460px}#mb .mx{white-space:pre-line}
-</style></head><body class="wide">
+<link rel="stylesheet" href="common.css"><style>#mb{left:410px;top:215px;width:460px}#mb .mx{white-space:pre-line}</style></head><body>
 <div id="stage"><div id="world">
- <div class="win dark" id="center"><div class="title"><span>VGD Center</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div>
- <div class="cbody"><div class="side"><i>VGD PLUGINS</i><div>Tổng quan</div><div>Kho plugin</div><div class="on">Quản lý</div><div>Cài đặt</div></div>
- <div class="main"><div class="eb">MỌI PLUGIN TRONG SKETCHUP</div><h2>Quản lý</h2>
- <div class="mets"><div class="met"><b id="mOn">3</b><span>Đang bật</span></div><div class="met"><b id="mOff">1</b><span>Đã tắt</span></div><div class="met"><b>0</b><span>Bộ plugin</span></div></div>
- <div class="tabs"><div class="sel">Bật/tắt</div><div>Chuyển plugin</div></div>
- <div class="tb"><div class="in">Tìm plugin...</div><div class="btn" style="min-height:28px;color:var(--danger,#E79C91)">Tắt tất cả</div><div class="btn p" style="min-height:28px">Bật tất cả</div></div>
- <div class="lst">
-  <div class="mr"><div class="ck"></div><div class="nm">VGD_Cabinet_Draw</div><div class="sw"><b></b><i style="left:20px;background:var(--oa)"></i></div></div>
-  <div class="mr" id="rDim"><div class="ck"></div><div class="nm" id="nDim">VGD_Dim</div><div class="sw" id="sDim"><b id="bDim"></b><i id="kDim"></i></div></div>
-  <div class="mr" id="rSc"><div class="ck"></div><div class="nm" id="nSc">VGD_Scenes</div><span class="pend" id="pend">Chờ nạp</span><div class="btn p" id="btnLoad" style="display:none;min-height:24px;font-size:10px">Nạp ngay</div><div class="sw" id="sSc"><b id="bSc"></b><i id="kSc"></i></div></div>
-  <div class="mr"><div class="ck"></div><div class="nm">VGD_Library</div><div class="sw"><b></b><i style="left:20px;background:var(--oa)"></i></div></div>
- </div>
- <div class="out" id="out"></div>
- </div></div>
- <div class="foot"><span><i></i><span>VGD Center</span></span><span>SketchUp extension · VGD Center</span></div></div>
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD Center</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Center"></iframe></div>
  <div id="spot"></div>
  <div id="mb"><div class="mt">SketchUp</div><div class="mx">Nạp ngay 1 plugin vào SketchUp đang chạy?
 
-VGD_Scenes
+vgd_scenes
 
 Lưu ý:
 - Plugin thiết kế để nạp lúc SketchUp khởi động có thể chạy chưa đúng.
@@ -41,37 +24,36 @@ Hộp này chỉ hiện một lần trong mỗi phiên SketchUp.</div><div class
 <svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
 </div>
 <script src="common.js"></script><script>
-const DUR=25;let M,rDim,rSc,Z1,Z2,TS1,TS2,TL,TY;
+const DUR=25;let M,Z1,Z2,SC,rDim,rSc,TS1,TS2,TL,TY;
 const MSG={off:'Đã tắt: 1 plugin.\nKhởi động lại SketchUp để thay đổi có hiệu lực.',
  on:'Đã bật: 1 plugin.\nKhởi động lại SketchUp để thay đổi có hiệu lực.\nMuốn dùng ngay plugin vừa bật mà chưa khởi động lại, bấm "Nạp ngay" ở dòng của plugin.',
  loaded:'Đã nạp: 1 plugin.\nNếu plugin chạy chưa đúng, hãy khởi động lại SketchUp.'};
-function init(){
- rDim=R($('rDim'));rSc=R($('rSc'));TS1=aim(R($('sDim')),.7);TS2=aim(R($('sSc')),.7);
- // đo nút Nạp ngay và hộp thoại khi đang hiện
- $('btnLoad').style.display='inline-flex';$('pend').style.display='inline';TL=aim(R($('btnLoad')),.72);$('btnLoad').style.display='none';$('pend').style.display='none';
- $('out').style.opacity=1;$('out').textContent=MSG.on;const mo=R($('out'));$('out').style.opacity=0;
- const mb=$('mb');mb.style.opacity=1;const mr=R(mb);TY=aim(R($('mbYes')),.7);mb.style.opacity=0;
- Z1=fitZoom(mo,1.6,640,360);Z2=fitZoom(mr,1.5,640,405);
- M=[{a:.8,b:2.2,f:{x:1010,y:690},t:TS1,arc:-80},{a:5.0,b:5.8,f:TS1,t:{x:860,y:560},arc:30},{a:8.6,b:10.0,f:{x:860,y:560},t:TS2,arc:-40},
-    {a:11.8,b:13.2,f:TS2,t:TL,arc:-30},{a:15.2,b:16.8,f:TL,t:TY,arc:50},{a:20.5,b:21.5,f:TY,t:{x:900,y:560},arc:30}];
+window.CENTER_READY=mountCenter('cf','manager');
+async function init(){
+ W.VGD.receiveState(centerState({}));mgrOpen('toggle');mgrState({scenes:false});SC=contentTop('#mgrList')-24;mgrScroll(SC);
+ rDim=RC(mgrRow('vgd_dim'));TS1=aim(RC(mgrRow('vgd_dim').querySelector('.mgr-switch')),.7);
+ mgrState({scenes:false},'vgd_scenes',MSG.on);mgrScroll(SC);
+ rSc=RC(mgrRow('vgd_scenes'));TS2=aim(RC(mgrRow('vgd_scenes').querySelector('.mgr-switch')),.7);TL=aim(RC(mgrRow('vgd_scenes').querySelector('.btn.primary')),.72);
+ Z1=fitZoom(RC('#mgrOut'),1.6,640,360);
+ const mb=$('mb');mb.style.opacity=1;const mr=R(mb);TY=aim(R($('mbYes')),.7);mb.style.opacity=0;Z2=fitZoom(mr,1.5,640,405);
+ M=[{a:.8,b:2.2,f:{x:1010,y:690},t:TS1,arc:-80},{a:5.0,b:5.8,f:TS1,t:{x:300,y:520},arc:30},{a:8.6,b:10.0,f:{x:300,y:520},t:TS2,arc:-40},
+    {a:11.8,b:13.2,f:TS2,t:TL,arc:-30},{a:15.2,b:16.8,f:TL,t:TY,arc:50},{a:20.5,b:21.5,f:TY,t:{x:300,y:520},arc:30}];
  render(0)}
-function sw(k,kn,bg,nm,v){$(kn).style.left=lerp(2,20,v)+'px';$(kn).style.background=v>.5?'var(--oa)':'var(--m)';$(bg).style.opacity=v;$(nm).style.color=v>.5?'':'var(--m)'}
 function render(t){
  const camA=E(P(t,4.0,4.8))*(1-E(P(t,7.8,8.6))),camB=E(P(t,15.0,15.8))*(1-E(P(t,20.2,21.0)));
  const c=mix(mix({s:1,x:0,y:0},Z1,camA),Z2,camB);setWorld(c);
- const vD=1-E(P(t,3.2,3.45)),vS=E(P(t,10.6,10.85));sw(vD,'kDim','bDim','nDim',vD);sw(vS,'kSc','bSc','nSc',vS);
- $('sDim').style.transform=`scale(${1-.08*pulse(t,3.05,3.4)})`;$('sSc').style.transform=`scale(${1-.08*pulse(t,10.45,10.8)})`;
- // đếm Đang bật / Đã tắt theo trạng thái công tắc
- const on=3-(t>=3.3?1:0)+(t>=10.7?1:0);$('mOn').textContent=on;$('mOff').textContent=4-on;
- // tin nhắn của Center dưới danh sách
- const m=t<3.4?'':t<10.7?MSG.off:t<20.3?MSG.on:MSG.loaded;$('out').textContent=m;
- const since=t<10.7?3.4:t<20.3?10.7:20.3;$('out').style.opacity=t<3.4?0:P(t,since,since+.25);
- const pend=t>=10.85&&t<20.3;$('pend').style.display=pend?'inline':'none';$('btnLoad').style.display=pend?'inline-flex':'none';
+ // Ruby giả lập: tắt Dim lúc 3.3, bật Scenes lúc 10.7 (chờ nạp), nạp xong lúc 20.3
+ const dimOff=t>=3.3,scOn=t>=10.7,loaded=t>=20.3;
+ const msg=t<3.4?'':t<10.7?MSG.off:t<20.3?MSG.on:MSG.loaded;
+ W.VGD.receiveState(centerState({}));mgrState({dim:!dimOff,scenes:scOn},scOn&&!loaded?'vgd_scenes':null,msg);mgrScroll(SC);
+ W.VGD.setStatus('');
+ const rowSw=n=>mgrRow(n).querySelector('.mgr-switch'),ld=mgrRow('vgd_scenes').querySelector('.btn.primary');
+ rowSw('vgd_dim').style.transform=`scale(${1-.08*pulse(t,3.05,3.4)})`;rowSw('vgd_scenes').style.transform=`scale(${1-.08*pulse(t,10.45,10.8)})`;
+ if(ld){ld.classList.toggle('fx-hover',t>=13.2&&t<14.4);ld.style.transform=`scale(${1-.06*pulse(t,14.2,14.55)})`}
  // làm tối nền, làm nổi dòng cần thao tác
  const a1=E(P(t,1.2,1.8))*(1-E(P(t,3.0,3.3))),a2=E(P(t,8.9,9.4))*(1-E(P(t,10.4,10.7))),a3=E(P(t,12.0,12.5))*(1-E(P(t,14.2,14.5)));
- const rr=a3>Math.max(a1,a2)?rSc:a2>a1?rSc:rDim,so=Math.max(a1,a2,a3),s=$('spot');
+ const so=Math.max(a1,a2,a3),rr=a1>=Math.max(a2,a3)?rDim:rSc,s=$('spot');
  s.style.cssText+=`;opacity:${so};left:${rr.x-4}px;top:${rr.y-4}px;width:${rr.w+8}px;height:${rr.h+8}px`;
- $('btnLoad').classList.toggle('hov',t>=13.2&&t<14.4);$('btnLoad').style.transform=`scale(${1-.06*pulse(t,14.2,14.55)})`;
  $('mb').style.opacity=E(P(t,14.6,14.9))*(1-E(P(t,20.2,20.4)));$('mbYes').style.borderColor=t>16.8&&t<20.2?'#0078d7':'#adadad';$('mbYes').style.transform=`scale(${1-.06*pulse(t,19.9,20.25)})`;
  const rp_=a=>P(t,a,a+.45),press=pulse(t,3.05,3.4)||pulse(t,10.45,10.8)||pulse(t,14.2,14.55)||pulse(t,19.9,20.25);
  drawCursor(c,pos(M,t),t,.6,24.4,press,Math.max(rp_(3.05)*(t<5),rp_(10.45)*(t>9&&t<12),rp_(14.2)*(t>13&&t<16),rp_(19.9)*(t>19&&t<21.5)));

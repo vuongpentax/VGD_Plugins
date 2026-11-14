@@ -1,10 +1,5 @@
 <!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Đoạn 6 · Xuất gói RBZ tổng</title>
 <link rel="stylesheet" href="common.css"><style>
-#center{width:600px;height:640px}.cbody{height:582px}.main{padding:14px 16px;overflow:hidden}
-.met{padding:5px 10px}.met b{font-size:14px}.mr{height:34px}.mets{margin-bottom:6px}.main h2{margin-bottom:6px}.tabs{margin-bottom:8px}
-.tabs .sel{color:var(--as);border-bottom:2px solid var(--a)}
-#pm{opacity:0;position:absolute;left:16px;right:16px;top:148px}#pT{position:absolute;left:16px;right:16px;top:148px}
-.out{min-height:54px;font-size:10.5px}
 /* Hộp lưu file gốc của Windows (UI.savepanel) */
 #sd{position:absolute;left:350px;top:170px;width:580px;background:#fff;color:#000;border:1px solid #7a7a7a;box-shadow:0 16px 50px #000b;font-family:'Segoe UI',M,sans-serif;opacity:0;font-size:13px}
 #sd .mt{height:30px;display:flex;align-items:center;padding:0 10px;font-size:12px;border-bottom:1px solid #e5e5e5}
@@ -12,12 +7,9 @@
 #sd .fl{height:28px;border:1px solid #adadad;display:flex;align-items:center;padding:0 8px;background:#fff}
 #sd .mf{background:#f0f0f0;padding:12px 14px;display:flex;justify-content:flex-end;gap:8px}
 #sd .mbtn{min-width:84px;height:28px;border:1px solid #adadad;background:#e1e1e1;display:grid;place-items:center;font-size:12px}
-</style></head><body class="wide">
+</style></head><body>
 <div id="stage"><div id="world">
- <div class="win dark" id="center"><div class="title"><span>VGD Center</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div>
- <div class="cbody"><div class="side"><i>VGD PLUGINS</i><div>Tổng quan</div><div>Kho plugin</div><div class="on">Quản lý</div><div>Cài đặt</div></div>
- <div class="main" style="position:relative"><div id="head"></div><div id="pT"></div><div id="pm"></div></div></div>
- <div class="foot"><span><i></i><span>VGD Center</span></span><span>SketchUp extension · VGD Center</span></div></div>
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD Center</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Center"></iframe></div>
  <div id="spot"></div>
  <div id="sd"><div class="mt">Lưu gói .rbz tổng</div><div class="bd2"><div class="fr"><span>Lưu vào:</span><div class="fl">Desktop</div></div><div class="fr"><span>Tên tệp:</span><div class="fl">VGD_Plugin_Bundle_2022.rbz</div></div><div class="fr"><span>Kiểu tệp:</span><div class="fl">Tệp RBZ (*.rbz)</div></div></div><div class="mf"><div class="mbtn" id="sdSave">Lưu</div><div class="mbtn">Hủy</div></div></div>
 </div>
@@ -30,31 +22,35 @@
 <svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
 </div>
 <script src="common.js"></script><script>
-const DUR=20;let M,Z,TTab,TCk,TExp,TSave,rExp;
+const DUR=20;let M,Z,SC,TTab,TCk,TExp,TSave,rExp;
 const OUT='Đã xuất gói: …\\Desktop\\VGD_Plugin_Bundle_2022.rbz\nTrên máy mới: cài file .rbz bằng Extension Manager rồi khởi động lại SketchUp. Gói chỉ chứa plugin; muốn mang các bộ plugin sang máy khác, dùng "Xuất các bộ ra file" ở tab Bật/tắt.';
-function init(){
- $('head').innerHTML=MGR_HEAD;$('pm').innerHTML=MIG_PANEL;
- $('pT').innerHTML='<div class="lst">'+PLUG.map(n=>`<div class="mr"><span class="ck"></span><div class="nm">${n}</div><div class="sw"><b></b><i style="left:20px;background:var(--oa)"></i></div></div>`).join('')+'</div>';
- setChecks([1,1,1,1]);$('pm').style.opacity=1;$('out').style.opacity=1;$('out').textContent=OUT;
- TTab=aim(R($('tabM')),.6);TCk=aim(R($('pc3')),.9);TExp=aim(R($('btnExp')),.72);rExp=R($('btnExp'));
- $('out').style.opacity=0;$('pm').style.opacity=0;$('out').textContent='';
- const sd=$('sd');sd.style.opacity=1;const sr=R(sd);TSave=aim(R($('sdSave')),.7);sd.style.opacity=0;
- Z=fitZoom(sr,1.5,640,400);
- M=[{a:.8,b:2.2,f:{x:1010,y:690},t:TTab,arc:-80},{a:3.8,b:5.0,f:TTab,t:TCk,arc:-40},{a:6.2,b:7.6,f:TCk,t:TExp,arc:30},{a:9.2,b:11.4,f:TExp,t:TSave,arc:60},{a:12.8,b:13.8,f:TSave,t:{x:800,y:560},arc:-30}];
+const pl=n=>[...W.document.querySelectorAll('#mgrMlist .mgr-pl')].find(c=>c.value===n);
+window.CENTER_READY=mountCenter('cf','manager');
+function setTab(m){W.document.getElementById(m?'mgr-tab-migrate':'mgr-tab-toggle').click()}
+async function init(){
+ W.VGD.receiveState(centerState({}));mgrOpen('toggle');mgrState({});W.VGDManager.initMigrate(['2022','2024']);W.VGDManager.renderMigrate({src:'2022',dst:'2024',plugins:MGR_NAMES});
+ setTab(0);SC=contentTop('.mgr-tabs')-10;mgrScroll(SC);const tabM=RC('#mgr-tab-migrate');TTab=aim(tabM,.6);
+ setTab(1);mgrScroll(SC);
+ TCk=aim(RC(pl('vgd_reference')),.5);TExp=aim(RC('#mgrExportBundle'),.72);rExp=RC('#mgrExportBundle');
+ W.VGDManager.showResult(OUT);const lo=RC('#mgrOut');W.VGDManager.showResult('');
+ const sd=$('sd');sd.style.opacity=1;const sr=R(sd);TSave=aim(R($('sdSave')),.7);sd.style.opacity=0;Z=fitZoom(sr,1.5,640,400);
+ M=[{a:.8,b:2.2,f:{x:1010,y:690},t:TTab,arc:-80},{a:3.8,b:5.0,f:TTab,t:TCk,arc:-40},{a:6.2,b:7.6,f:TCk,t:TExp,arc:30},{a:9.2,b:11.4,f:TExp,t:TSave,arc:60},{a:12.8,b:13.8,f:TSave,t:{x:300,y:520},arc:-30}];
  render(0)}
 function render(t){
  const c=mix({s:1,x:0,y:0},Z,E(P(t,9.2,10.0))*(1-E(P(t,12.5,13.3))));setWorld(c);
- // chuyển tab Bật/tắt → Chuyển plugin
- const k=E(P(t,2.45,2.75));$('pT').style.opacity=1-k;$('pm').style.opacity=k;$('tabT').className=k>.5?'':'sel';$('tabM').className=k>.5?'sel':'';
- setChecks([1,1,1,t<5.6?1:0]);
- $('btnExp').classList.toggle('hov',t>=7.6&&t<8.5);$('btnExp').style.transform=`scale(${1-.06*pulse(t,8.25,8.6)})`;
- const sp=E(P(t,6.4,6.9))*(1-E(P(t,8.5,8.8)));const s=$('spot');
+ W.VGD.receiveState(centerState({}));setTab(t>=2.45);
+ // tick: tất cả → bỏ VGD Reference (5.6)
+ for(const n of MGR_NAMES){const cb=pl(n);cb.checked=n==='vgd_reference'?t<5.6:true;cb.dispatchEvent(new W.Event('change'))}
+ W.VGDManager.showResult(t>=12.6?OUT:'');mgrScroll(SC);W.VGD.setStatus('');
+ const tab=W.document.getElementById('mgr-tab-migrate'),ex=W.document.getElementById('mgrExportBundle');
+ ex.classList.toggle('fx-hover',t>=7.6&&t<8.5);ex.style.transform=`scale(${1-.06*pulse(t,8.25,8.6)})`;
+ pl('vgd_reference').style.transform=`scale(${1-.25*pulse(t,5.25,5.6)})`;
+ const sp=E(P(t,6.4,6.9))*(1-E(P(t,8.5,8.8))),s=$('spot');
  s.style.cssText+=`;opacity:${sp};left:${rExp.x-4}px;top:${rExp.y-4}px;width:${rExp.w+8}px;height:${rExp.h+8}px`;
  $('sd').style.opacity=E(P(t,8.7,9.0))*(1-E(P(t,12.2,12.4)));$('sdSave').style.borderColor=t>11.4&&t<12.3?'#0078d7':'#adadad';$('sdSave').style.transform=`scale(${1-.06*pulse(t,11.85,12.2)})`;
- $('out').textContent=t>=12.6?OUT:'';$('out').style.opacity=P(t,12.6,12.9);
- const press=pulse(t,2.25,2.6)||pulse(t,5.4,5.75)||pulse(t,8.25,8.6)||pulse(t,11.85,12.2),rp_=a=>P(t,a,a+.45);
- drawCursor(c,pos(M,t),t,.6,19.6,press,Math.max(rp_(2.25)*(t<4),rp_(5.4)*(t>5&&t<7),rp_(8.25)*(t>8&&t<10),rp_(11.85)*(t>11.5&&t<13)));
- cap($('c1'),t,.9,3.9,0);cap($("c2"),t,4.0,6.0,0);cap($('c3'),t,6.2,8.9,0);cap($('c4'),t,9.4,12.2,0);cap($('c5'),t,13.4,19.4,0);
+ const press=pulse(t,2.25,2.6)||pulse(t,5.25,5.6)||pulse(t,8.25,8.6)||pulse(t,11.85,12.2),rp_=a=>P(t,a,a+.45);
+ drawCursor(c,pos(M,t),t,.6,19.6,press,Math.max(rp_(2.25)*(t<4),rp_(5.25)*(t>5&&t<7),rp_(8.25)*(t>8&&t<10),rp_(11.85)*(t>11.5&&t<13)));
+ cap($('c1'),t,.9,3.9,0);cap($('c2'),t,4.0,6.0,0);cap($('c3'),t,6.2,8.9,0);cap($('c4'),t,9.4,12.2,0);cap($('c5'),t,13.4,19.4,0);
  for(const q of [1,2,3,5])$('c'+q).style.top='640px';$('c4').style.top='38px';
  $('stage').style.opacity=1-E(P(t,19.7,20))}
 start();

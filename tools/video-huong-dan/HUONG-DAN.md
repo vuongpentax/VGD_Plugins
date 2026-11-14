@@ -24,21 +24,23 @@ Cần Node.js, Playwright (có Chromium) và ffmpeg. Từ gốc repo:
 node tools/video-huong-dan/render.js tools/video-huong-dan/scene-03-huong-dan.html 03-mo-huong-dan.mp4 30
 ```
 
-Tham số: file HTML, file MP4 đầu ra, số khung hình mỗi giây (mặc định 30). Mỗi đoạn mất khoảng 1–3 phút.
+Tham số: file HTML, file MP4 đầu ra, số khung hình mỗi giây (mặc định 30). Mỗi đoạn mất khoảng 1–3 phút. Script tự mở một máy chủ HTTP tạm ở gốc repo vì các trang nhúng giao diện Center thật bằng iframe (mở thẳng bằng `file://` sẽ không chạy).
 
-Xem trực tiếp (bản nhúng): mở file HTML trong trình duyệt và thêm `?play` vào đường dẫn; đoạn tự chạy lặp. Chưa nhúng vào VGD Center.
+Xem trực tiếp (bản nhúng): chạy `python3 -m http.server 8000` ở gốc repo, rồi mở `http://localhost:8000/tools/video-huong-dan/scene-03-huong-dan.html?play` trong trình duyệt; đoạn tự chạy lặp. Chưa nhúng vào VGD Center.
+
+Giao diện Center đổi thì chỉ cần quay lại: video lấy hình trực tiếp từ mã hiện tại của plugin.
 
 ## Thông số
 
 - Video: 1920×1080, 30 khung/giây, H.264 (yuv420p, crf 18). Trang vẽ ở 1280×720 và quay với hệ số 1,5.
-- Giao diện: theme tối của VGD (`shared/vgd-theme`), font Manrope bundle sẵn.
+- Giao diện: chính `plugins/VGD_Center/vgd_center/dialog.html` (chế độ xem trước, theme tối, font Manrope bundle sẵn) và trang `guides/dim.html`, danh sách plugin lấy từ `catalog.json`. Chỉ con trỏ, chú thích, hộp thoại gốc của SketchUp/Windows và phần làm tối nền là vẽ thêm.
 - Chuyển động: phong cách Corporate của `motion-design-skill`, easing `cubic-bezier(0.2, 0, 0, 1)`, không nảy.
 - Chỉ chữ trên màn hình (tiếng Việt), không giọng đọc, không nhạc.
 - Làm tối nền để làm nổi vùng cần bấm; phóng to khi cần chú ý kỹ.
 
 ## Giới hạn
 
-- Giao diện được vẽ lại từ mã nguồn plugin, chưa đối chiếu với SketchUp thật. Icon plugin là ô trống. Số liệu trong khung kết quả (ví dụ `Đã chép: 4 mục`, tên `TenPlugin`) chỉ là ví dụ.
-- Hộp thoại gốc của SketchUp và Windows (xác nhận gỡ, Nạp ngay, lưu file) vẽ gần giống; chữ nút (Có/Không, Lưu/Hủy) phụ thuộc ngôn ngữ hệ điều hành.
-- Chữ trong khung kết quả lấy từ `manager/text.rb`, `dialog.html`. Giao diện Center đổi thì phải sửa lại đoạn tương ứng.
-- Tên và phiên bản của plugin trong ví dụ (VGD Dim, VGD Scenes...) không phải dữ liệu thật của catalog.
+- Trạng thái minh họa: phía Ruby của Center được mô phỏng bằng dữ liệu theo thời gian (ví dụ plugin nào đã cài, cái nào có bản mới, danh sách plugin ở tab Quản lý, bản cũ khi cập nhật). Cài, tải, gỡ, chuyển file không chạy thật. Số liệu trong khung kết quả (ví dụ `Đã chép: 4 mục`, tên `TenPlugin`) chỉ là ví dụ.
+- Cửa sổ Center rộng 860 để vừa khung 16:9; kích thước mặc định thật là 560×700.
+- Chưa đối chiếu với SketchUp thật. Hộp thoại gốc của SketchUp và Windows (xác nhận gỡ, Nạp ngay, lưu file) vẽ gần giống; chữ nút (Có/Không, Lưu/Hủy) phụ thuộc ngôn ngữ hệ điều hành. Chữ trong các hộp này lấy từ `manager/text.rb` và `main.rb`.
+- Logo trong trang hướng dẫn hiện thiếu nét (ảnh `icon.svg` dùng làm thẻ `<img>` thiếu biến màu): đây là hành vi của chính trang hướng dẫn, chưa được sửa ở đây.
