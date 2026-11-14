@@ -1,7 +1,7 @@
 # Test chọn theo khung / theo nét quét trên màn hình (Ruby thuần, không cần SketchUp).
 # Chạy: ruby test_screen_pick.rb [thư mục runtime]
 $stdout.sync = true
-RT = File.expand_path(ARGV[0] || '../runtime/VGD_Cabinet_Draw', __dir__)
+RT = File.expand_path(ARGV[0] || '../runtime/vgd_cabinet_draw', __dir__)
 module VGD_Cabinet_Draw; end
 load File.join(RT, 'screen_pick.rb')
 SP = VGD_Cabinet_Draw::ScreenPick

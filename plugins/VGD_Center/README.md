@@ -1,4 +1,4 @@
-# VGD Center 1.2.4
+# VGD Center 1.2.5
 
 VGD Center quản lý các plugin VGD trong SketchUp. Danh mục hiển thị phiên bản mới nhất đã được chọn, bao gồm cả beta và alpha. Cài gói phát hành VGD Center 1.2.4 (bản ổn định) qua Extension Manager; RBZ không được lưu trong thư mục source này. Mở VGD Center bằng nút trên toolbar hoặc menu Extensions.
 
@@ -35,7 +35,7 @@ Catalog hiển thị các phiên bản VGD hiện hành; bản beta và alpha đ
 
 ## Mã nguồn và phát hành
 
-Thư mục này chứa mã nguồn và tài nguyên VGD Center 1.2.4, không kèm RBZ hoặc source ZIP tạo sẵn. Ghi chú phát hành được giữ trong các file RELEASE_NOTES_v*.md. Đóng gói bằng `python plugins/VGD_Center/dev/package.py <phiên bản>` (từ thư mục gốc repo; nhận cả bản thử `x.y.z-beta.N`). Test (chạy từ thư mục `plugins/VGD_Center`, dùng stub SketchUp trong `dev/stub`): `ruby dev/test_center.rb` (catalog, cài/gỡ), `ruby dev/test_manager_toggle.rb`, `ruby dev/test_manager_linker.rb`, `ruby dev/test_manager_dialog.rb`, `ruby dev/test_manager_bundle.rb`, `ruby dev/test_manager_i18n.rb` (tab Quản lý, gồm tiếng Anh), `ruby dev/test_manager_load.rb` (nút Nạp ngay), `ruby dev/test_guides.rb` (tải trang hướng dẫn).
+Thư mục này chứa mã nguồn và tài nguyên VGD Center 1.2.5, không kèm RBZ hoặc source ZIP tạo sẵn. Ghi chú phát hành được giữ trong các file RELEASE_NOTES_v*.md. Đóng gói bằng `python plugins/VGD_Center/dev/package.py <phiên bản>` (từ thư mục gốc repo; nhận cả bản thử `x.y.z-beta.N`). Test (chạy từ thư mục `plugins/VGD_Center`, dùng stub SketchUp trong `dev/stub`): `ruby dev/test_center.rb` (catalog, cài/gỡ), `ruby dev/test_manager_toggle.rb`, `ruby dev/test_manager_linker.rb`, `ruby dev/test_manager_dialog.rb`, `ruby dev/test_manager_bundle.rb`, `ruby dev/test_manager_i18n.rb` (tab Quản lý, gồm tiếng Anh), `ruby dev/test_manager_load.rb` (nút Nạp ngay), `ruby dev/test_guides.rb` (tải trang hướng dẫn).
 
 ## Thêm plugin mới vào kho
 
@@ -51,3 +51,7 @@ Từ 1.2.2, trang hướng dẫn không cần phát hành Center mới:
 4. Đưa lên `main`: người dùng thấy bản mới ngay lần bấm Hướng dẫn kế tiếp.
 
 Trang phải là tài liệu tĩnh: không `<script>`, khung nhúng, form, `<base>`, `meta refresh`, tài nguyên hay liên kết ra ngoài (`http:`, `//`, `javascript:`, `data:`); liên kết chỉ tới trang `.html` khác trong thư mục guides hoặc `#mục`; dung lượng 200 byte đến 300 KB. Trang không đạt bị bỏ qua và Center dùng bản đang có.
+
+## Tải lại code
+
+Menu **Extensions → VGD → VGD Center → Tải lại code** nạp lại mã sau khi cài đè bản mới mà không cần mở lại SketchUp (không cho tải lại khi đang tải hoặc cài plugin; lỗi file thì giữ bản đang chạy). Menu và toolbar mới chỉ có tác dụng sau khi mở lại SketchUp. Kiểm tra: `ruby dev/test_reload.rb` (chạy từ `plugins/VGD_Center`, bằng giả lập SketchUp).

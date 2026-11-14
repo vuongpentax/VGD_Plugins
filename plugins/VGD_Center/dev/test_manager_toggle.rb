@@ -21,7 +21,7 @@ File.write(File.join(plug, 'VGD_Center.rb'), "center\n")
 FileUtils.mkdir_p(File.join(plug, 'VGD_Center'))
 File.write(File.join(plug, 'vgd_center.rb'), "center lower\n")
 
-require_relative '../VGD_Center/main'
+require_relative '../vgd_center/main'
 M = VGD::Center::Manager::Toggle
 
 def check(label, cond)
@@ -113,8 +113,8 @@ check 'log không ném lỗi khi không ghi được', log.write('x') == false
 
 ENV['APPDATA'] = fake
 # Vị trí lưu trữ nằm trong thư mục của Center
-check 'dữ liệu nằm trong Plugins/VGD_Center/data', M.root_dir == File.join(plug, 'VGD_Center', 'data')
-check 'thư mục plugin tắt nằm trong data của Center', M.disabled_dir == File.join(plug, 'VGD_Center', 'data', 'disabled')
+check 'dữ liệu nằm trong Plugins/VGD_Center/data', M.root_dir == File.join(plug, 'vgd_center', 'data')
+check 'thư mục plugin tắt nằm trong data của Center', M.disabled_dir == File.join(plug, 'vgd_center', 'data', 'disabled')
 File.write(File.join(plug, 'VGD_PluginManager.rb'), "loader\n")
 File.write(File.join(plug, 'vgd_plugin_migrator.rb'), "old loader\n")
 FileUtils.mkdir_p(File.join(plug, 'vgd_plugin_migrator'))

@@ -24,8 +24,8 @@ module VGD
         WHITE_BACKGROUND = {'DrawGround' => false, 'DrawHorizon' => false}.freeze # cùng với màu nền trắng
         # Ảnh vị trí có bộ thiết lập riêng (loc_*) cùng loại với ảnh chính; khi chụp ảnh vị trí, các mục image_* được thay bằng mục loc_* tương ứng
         # để mọi hàm chụp bên dưới dùng chung một cách đọc.
-        LOCATION_SETTINGS = {'image_width' => 'loc_width', 'image_height' => 'loc_height', 'image_view' => 'loc_view', 'image_style' => 'loc_style',
-                             'image_background' => 'loc_background', 'image_margin' => 'loc_margin', 'image_yaw' => 'loc_yaw', 'image_pitch' => 'loc_pitch'}.freeze
+        # Ảnh phụ (extra1 / extra2) cũng có bộ thiết lập riêng (x1_* / x2_*) và chụp y như ảnh chính (cô lập món, camera theo góc nhìn).
+        SETTING_SUFFIXES = %w[width height view style background margin yaw pitch].freeze
 
         # record: một phần tử của Table.build (có :entity và :path). settings: thiết lập ảnh của preset.
         # Trả về {pid:, stamp:} và thêm :note khi phải chụp bằng cách thay thế (xem write).
@@ -35,7 +35,7 @@ module VGD
           settings = Preset.settings!(settings)
           Images.kind!(kind)
           location = kind == :location
-          settings = location_settings(settings) if location
+          settings = kind_settings(settings, kind)
           raise ArgumentError, 'Bên của góc Iso không hợp lệ.' unless ISO_SIDES.include?(iso_side)
           entity = record[:entity]
           raise ArgumentError, 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless entity.respond_to?(:valid?) && entity.valid?
@@ -85,11 +85,18 @@ module VGD
 
         # File tạm của ảnh nháp (xóa ngay sau khi đọc), tên bắt đầu bằng dấu chấm để không lẫn với ảnh của món.
         def self.preview_path(model, pid, kind)
-          File.join(Images.dir(model), ".preview_#{pid}#{kind == :location ? '_loc' : ''}.png")
+          File.join(Images.dir(model), ".preview_#{pid}#{kind == :full ? '' : "_#{Images::PREFIX.fetch(kind)}"}.png")
+        end
+
+        # Thay các mục image_* bằng mục của loại ảnh (loc_*, x1_*, x2_*); ảnh chính giữ nguyên.
+        def self.kind_settings(settings, kind)
+          prefix = Images::PREFIX.fetch(kind)
+          return settings if prefix == 'image'
+          SETTING_SUFFIXES.each_with_object(settings.dup) { |suffix, out| out["image_#{suffix}"] = settings.fetch("#{prefix}_#{suffix}") }
         end
 
         def self.location_settings(settings)
-          LOCATION_SETTINGS.each_with_object(settings.dup) { |(main, own), out| out[main] = settings.fetch(own) }
+          kind_settings(settings, :location)
         end
 
         # Mỗi bước khôi phục chạy độc lập: một bước lỗi không được làm hỏng các bước sau, cũng không được biến lần chụp

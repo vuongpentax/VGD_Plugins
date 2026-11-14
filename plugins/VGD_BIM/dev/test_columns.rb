@@ -86,7 +86,7 @@ ok('chưa có ảnh: không có đường dẫn ảnh', state[:has_image] == fal
 VGD::BIM::Images.write(model, 4242, "\x89PNG\r\n\x1A\n".b + 'noi dung'.b)
 state = T.image_state(model, imaged)
 ok('có ảnh: dòng bảng mang đường dẫn file ảnh gốc (file:///.../4242.png?v=mốc thời gian)', state[:has_image] && state[:image_url] == VGD::BIM::Images.file_url(model, 4242, state[:image_stamp]) && state[:image_url].start_with?('file:///') && state[:image_url].include?('/4242.png?v='))
-ok('đối tượng chưa có mã bền: không có ảnh, không có đường dẫn', T.image_state(model, Struct.new(:persistent_id).new(0)) == {pid: nil, has_image: false, image_stamp: 0, image_url: nil, has_location: false, location_stamp: 0, location_url: nil})
+ok('đối tượng chưa có mã bền: không có ảnh, không có đường dẫn', T.image_state(model, Struct.new(:persistent_id).new(0)) == {pid: nil, has_image: false, image_stamp: 0, image_url: nil, has_location: false, location_stamp: 0, location_url: nil, has_extra1: false, extra1_stamp: 0, extra1_url: nil, has_extra2: false, extra2_stamp: 0, extra2_url: nil})
 ok('cột Ảnh vị trí có trong bảng ngay sau cột Ảnh, kiểu image_location', (keys = T::COLUMNS.map { |c| c[:key] }; keys[keys.index('image') + 1] == 'image_location') && T::COLUMNS.find { |c| c[:key] == 'image_location' }[:kind] == 'image_location' && T::COLUMNS.find { |c| c[:key] == 'image_location' }[:label] == 'Ảnh vị trí')
 ok('chưa có ảnh vị trí: không có đường dẫn, ảnh món không bị ảnh hưởng', state[:has_location] == false && state[:location_url].nil? && state[:has_image])
 VGD::BIM::Images.write(model, 4242, "\x89PNG\r\n\x1A\n".b + 'vi tri'.b, :location)

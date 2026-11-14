@@ -8,7 +8,13 @@ require 'uri'
 require_relative 'engine'
 require_relative 'file_picker'
 require_relative 'conversion'
-require_relative 'update_notice'
+
+# Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
+module VGD
+  def self.menu
+    @extensions_menu ||= ::UI.menu('Extensions').add_submenu('VGD')
+  end unless respond_to?(:menu)
+end
 
 module VGD_ImageImporter
   SETTINGS = 'VGD_ImageImporter'.freeze
@@ -311,16 +317,55 @@ module VGD_ImageImporter
     @dialog.show
   end
 
+  # Danh sách file nạp lại khi "Tải lại code" (loader nằm ngoài thư mục này, nạp riêng trong reload).
+  CODE_FILES = %w[engine file_picker conversion main].freeze unless const_defined?(:CODE_FILES)
+
+  # Nạp lại mã mà không cần mở lại SketchUp. Kiểm tra cú pháp cả bộ file trước: có lỗi thì giữ nguyên bản đang chạy.
+  def self.reload
+    if @pending_import
+      UI.messagebox('Đang chuẩn bị ảnh. Hãy chờ nhập xong rồi tải lại code.')
+      return false
+    end
+    dir = __dir__.dup.force_encoding(Encoding::UTF_8)
+    files = [File.join(File.dirname(dir), 'vgd_image_importer.rb')] + CODE_FILES.map { |name| File.join(dir, "#{name}.rb") }
+    files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
+    loading = true # từ đây lỗi nghĩa là đã nạp dở, không còn "giữ nguyên bản đang chạy"
+    reopen = @dialog && @dialog.visible?
+    @dialog.close if reopen
+    old_version = VERSION
+    old_files = CODE_FILES
+    verbose = $VERBOSE
+    $VERBOSE = nil # tránh cảnh báo "hằng số đã khai báo" khi nạp lại
+    begin
+      remove_const(:VERSION)
+      remove_const(:CODE_FILES)
+      files.each { |file| load file }
+    rescue ScriptError, StandardError
+      const_set(:VERSION, old_version) unless const_defined?(:VERSION, false)
+      const_set(:CODE_FILES, old_files) unless const_defined?(:CODE_FILES, false)
+      raise
+    ensure
+      $VERBOSE = verbose
+    end
+    show_dialog if reopen
+    UI.messagebox("Đã tải lại VGD Image Importer #{VERSION}.")
+    true
+  rescue ScriptError, StandardError => error
+    UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\n#{loading ? 'Hãy mở lại SketchUp nếu giao diện báo lỗi.' : 'Bản đang chạy được giữ nguyên.'}")
+    false
+  end
+
   unless file_loaded?(__FILE__)
     command = UI::Command.new('VGD Image Importer') { show_dialog }
     command.tooltip = 'VGD Image Importer'
     command.status_bar_text = 'Nhập ảnh 2D, sắp xếp ảnh hoặc thêm vật liệu vào model.'
     command.small_icon = command.large_icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'icon.svg')
-    UI.menu('Plugins').add_submenu('VGD Tools').add_item(command)
-    @toolbar = UI::Toolbar.new('VGD Image Importer')
+    menu = ::VGD.menu.add_submenu('VGD Image Importer')
+    menu.add_item(command)
+    menu.add_item('Tải lại code') { reload }
+    @toolbar = UI::Toolbar.new('VGD IMP')
     @toolbar.add_item(command)
     @toolbar.restore
     file_loaded(__FILE__)
   end
-  VGD::UpdateNotice.start('vgd-image-importer', 'VGD Image Importer', VERSION)
 end

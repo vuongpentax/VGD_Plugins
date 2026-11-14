@@ -2,14 +2,14 @@
 
 ## Baseline và cấu trúc
 
-Baseline hiện tại là **VGD_Cabinet 4.5.2**. Runtime triển khai nằm trong `cabinet_work/`; `cabinet_dev/` chứa kiểm thử, stub, fixture, nguồn giao diện, generator và công cụ đóng gói/triển khai. Loader `cabinet_work/vgd_cabinet.rb` đăng ký `VGD_Cabinet/main43.rb`; tên `main43.rb` là tên file hiện hành dù đã cũ.
+Baseline hiện tại là **VGD_Cabinet 4.5.2**. Runtime triển khai nằm trong `cabinet_work/`; `cabinet_dev/` chứa kiểm thử, stub, fixture, nguồn giao diện, generator và công cụ đóng gói/triển khai. Loader `cabinet_work/vgd_cabinet.rb` đăng ký `vgd_cabinet/main43.rb`; tên `main43.rb` là tên file hiện hành dù đã cũ.
 
-Gói RBZ có whitelist 23 file và công cụ đồng bộ nhắm SketchUp 2022. `cabinet_work/VGD_Cabinet/VGD_Cabinet_UI.html` được sinh từ `cabinet_dev/redesign_ui.cjs`, `ui_beta1.html`, `menu.css` và `menu.js`; cần giữ các nguồn này đồng bộ khi sửa UI. Generator tạo thư mục output cục bộ, không có `outputs/` được lưu trong repository.
+Gói RBZ có whitelist 23 file và công cụ đồng bộ nhắm SketchUp 2022. `cabinet_work/vgd_cabinet/VGD_Cabinet_UI.html` được sinh từ `cabinet_dev/redesign_ui.cjs`, `ui_beta1.html`, `menu.css` và `menu.js`; cần giữ các nguồn này đồng bộ khi sửa UI. Generator tạo thư mục output cục bộ, không có `outputs/` được lưu trong repository.
 
 ## Quy tắc dữ liệu và hình học
 
 - Đọc nhận diện và tham số cũ từ dictionary `TPlus_Cabinet` để tương thích; cabinet mới/cập nhật ghi vào `VGD_Cabinet`. Không chuyển đổi đối tượng model không liên quan.
-- Preset: `%APPDATA%/VGD/SketchUp/VGD_Cabinet/presets_v1.json`. Thư viện SKP, preview và index: `%APPDATA%/VGD/SketchUp/VGD_Cabinet/library/`. Giữ backup, ghi tạm và khóa file; không reset dữ liệu khi reload/cài lại. Chỉ đọc preset T+ khi chưa có kho mới.
+- Preset: `%APPDATA%/VGD/SketchUp/vgd_cabinet/presets_v1.json`. Thư viện SKP, preview và index: `%APPDATA%/VGD/SketchUp/vgd_cabinet/library/`. Giữ backup, ghi tạm và khóa file; không reset dữ liệu khi reload/cài lại. Chỉ đọc preset T+ khi chưa có kho mới.
 - Create, update và rename preset/thư viện là thao tác riêng; chặn tên trùng không phân biệt hoa thường. `front_bevel`/`bevel_lip` dành cho cánh; `drawer_bevel`/`drawer_bevel_lip` dành riêng cho hộc.
 - Giữ quy tắc thùng, hậu và cánh hiện có. Pano khung gỗ dùng thanh khung và rãnh thẳng thật, panel phẳng có phần ngậm trừ khe co giãn; không thuộc phạm vi CNC/BOM.
 - Preview dựng vào sink trong bộ nhớ, không tạo entity tạm trong model. Batch front chỉ đổi cài đặt cánh/hộc; giữ kích thước và bố cục module từng cabinet.

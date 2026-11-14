@@ -18,6 +18,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Kiểm thử
 
+- Tải lại code: `ruby dev/test_reload.rb` (chạy từ `plugins/VGD_Scenes`; giả lập SketchUp, kiểm tra mục menu, không nhân đôi giao diện, lỗi file giữ bản đang chạy).
 - Từ `plugins/VGD_Scenes/dev`: `npm install` một lần, rồi `npm test` (cần Node 20+ và Chrome). Có thể chạy riêng `npm run test:ruby`. Thư viện Node chỉ phục vụ kiểm tra, không cần cho runtime.
 - Từ gốc repo, nếu có SketchUp 2022 và Python 3.8+: `python plugins/VGD_Scenes/dev/check_ruby27.py` để kiểm tra thêm bằng Ruby 2.7.2 của SketchUp 2022 (đường dẫn khác đặt qua biến môi trường, xem README).
 - Chưa xác minh native: tạo scene và export trong SketchUp thật, LayOut API; xem `HANDOFF.md` mục "Kiểm tra và việc cần tiếp tục".

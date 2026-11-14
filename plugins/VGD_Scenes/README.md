@@ -1,6 +1,6 @@
-# VGD Scenes 1.6.0 — SketchUp 2022–2026.2
+# VGD Scenes 1.6.1 — SketchUp 2022–2026.2
 
-Phiên bản hiện tại 1.6.0, chi tiết ở [RELEASE_NOTES_v1.6.0.md](RELEASE_NOTES_v1.6.0.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
+Phiên bản hiện tại 1.6.1, chi tiết ở [RELEASE_NOTES_v1.6.1.md](RELEASE_NOTES_v1.6.1.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); đã được người phát hành dùng thử trong SketchUp. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
 Plugin không hiện popup cập nhật khi khởi động: VGD Center báo bản mới. Cài bản mới qua Extension Manager rồi khởi động lại.
 
@@ -79,7 +79,7 @@ Kiểm thử hồi quy mới đã qua Ruby 2.7.2 DLL (API giả lập), WASM 3.2
 - Lượt cài 1.3.1 ngày 04/10/2026: 17 file khớp runtime; **19.881 file plugin khác không đổi**. Backup: `outputs/install_20261004_015555_095/`.
 - Báo cáo và bản sao loader cũ nằm trong `outputs/install_*/` trên máy đã cài, không đưa lên GitHub.
 
-Hãy lưu công việc và khởi động lại SketchUp khi thuận tiện. Mở **Extensions → VGD Scenes → VGD Scenes · Bảng điều khiển**. Nếu muốn toolbar, chọn **Hiện thanh công cụ VGD Scenes** trong menu này.
+Hãy lưu công việc và khởi động lại SketchUp khi thuận tiện. Mở **Extensions → VGD → VGD Scenes → VGD Scenes · Bảng điều khiển**. Nếu muốn toolbar, chọn **Hiện thanh công cụ VGD Scenes** trong menu này.
 
 ### Cập nhật view bằng một nút
 
@@ -108,7 +108,7 @@ Thông báo “FOV quy đổi: ngoài giới hạn” trước đây xuất hi�
 
 ### Bỏ khung xám trước khi gửi SKP (1.2.1)
 
-Trong **Xuất & Khung → Gửi file SketchUp**, bấm **Bỏ khung xám tất cả scene**, xác nhận rồi lưu SKP. Hoặc dùng **Extensions → VGD Scenes → VGD · Bỏ khung xám tất cả scene để gửi SKP** mà không mở bảng. Lệnh áp dụng toàn bộ scene trong model, kể cả scene ngoài VGD và scene không được đánh dấu xuất, cùng view hiện tại.
+Trong **Xuất & Khung → Gửi file SketchUp**, bấm **Bỏ khung xám tất cả scene**, xác nhận rồi lưu SKP. Hoặc dùng **Extensions → VGD → VGD Scenes → VGD · Bỏ khung xám tất cả scene để gửi SKP** mà không mở bảng. Lệnh áp dụng toàn bộ scene trong model, kể cả scene ngoài VGD và scene không được đánh dấu xuất, cùng view hiện tại.
 
 Lệnh đặt `camera.aspect_ratio = 0` trên camera gốc của từng scene theo [Camera API](https://ruby.sketchup.com/Sketchup/Camera.html). Người nhận không cần VGD để xem scene không còn dải xám. Khung nhìn theo tỷ lệ cửa sổ SketchUp của họ nên vùng thấy ở mép có thể rộng/hẹp hơn; kích thước xuất VGD đã lưu vẫn được giữ. Lệnh không cập nhật toàn bộ scene, không đổi vị trí/hướng camera, tên/ID/thứ tự, Tags/style/mặt cắt và không xóa geometry. Không tự lưu/ghi đè SKP.
 
@@ -155,7 +155,7 @@ Mục tiêu Windows: SketchUp Desktop **2022, 2023, 2024, 2025 và 2026 đến 2
 
 - Kiểm tra cú pháp 9 file runtime Ruby, engine fixture trên Ruby 2.7.2 của SU22 và WASM 3.2: tính năng trước, chuyển giữa model, camera/khung, rename/ID/tên trùng, tạo/cập nhật/bỏ qua, rollback khi lỗi, FOV ngang, JSON lỗi/quá lớn và clipboard qua file.
 - Giao diện Chromium: Unicode/HTML, ID, scope xuất/nhập, xác nhận/hủy/lỗi, đổi model, token preview, sáng/tối, 640×780 và 460×540.
-- `dev/deploy.ps1` có whitelist đủ file runtime của bản 1.6.0, gồm `update_notice.rb` và bộ theme. Các báo cáo cài đặt trước đây ở outputs của repo nguồn không được chuyển vào repo này.
+- `dev/deploy.ps1` có whitelist đủ file runtime của bản 1.6.0, gồm bộ theme. Các báo cáo cài đặt trước đây ở outputs của repo nguồn không được chuyển vào repo này.
 - **Chưa hoàn tất kiểm tra engine trong SketchUp 2022 thật.** Script thử đã chạy trên SU22 22.0.316 / Ruby 2.7.2 nhưng dừng ở điều kiện bảo vệ model không rỗng, trước khi tạo hình/scene. Điều khiển máy sau đó được người dùng dừng bằng Esc. Kiểm tra WASM và Chromium không thay thế kiểm thử Ruby 2.7/CEF/LayOut thực tế trong SU22.
 
 Mã nguồn runtime nằm trong `runtime/`; kiểm tra và script cài giới hạn phạm vi nằm trong `dev/`. RBZ chỉ đóng gói runtime, không chứa bộ test hoặc thư viện ngoài.
@@ -200,3 +200,7 @@ Nút toolbar với icon bốn ô tạo/cập nhật ISO, TOP, FRONT, RIGHT từ 
 - Bấm Khóa tỷ lệ để giữ tỷ lệ rộng:cao; nhập rộng hoặc cao thì chiều kia tự nhảy theo. Tắt khóa để nhập độc lập. Pixel làm tròn đến số nguyên; tỷ lệ khóa gốc được giữ khi nhập liên tiếp.
 - Scale xuất ảnh chỉ nhân độ phân giải đầu ra của từng scene, không sửa camera/frame trong model. Ví dụ 1920×1080 scale 2 thành 3840×2160; scale 0.5 thành 960×540. Áp dụng PNG/JPG và ảnh đặt trong PDF; khổ giấy PDF giữ nguyên. Cho số dương tùy ý trong giới hạn 1–12000 px mỗi chiều và tối đa 64 triệu pixel sau scale. Kiểm tra toàn bộ scene trước khi xuất.
 - Nơi lưu luôn có thư mục loại PNG/JPG/PDF. Tick Tạo thư mục ngày sẽ dùng ngày địa phương máy lúc bắt đầu xuất, ví dụ thư mục chọn/2026.10.03/PNG. PDF chọn tên ở hộp lưu như trước rồi được đặt trong thư mục PDF tương ứng. Không ghi đè file đã có.
+
+## Tải lại code
+
+Menu **Extensions → VGD → VGD Scenes → Tải lại code** nạp lại mã sau khi cài đè bản mới mà không cần mở lại SketchUp (không cho tải lại khi đang xuất; lỗi file thì giữ bản đang chạy). Menu và toolbar mới chỉ có tác dụng sau khi mở lại SketchUp. Kiểm tra: `ruby dev/test_reload.rb` (chạy từ `plugins/VGD_Scenes`, bằng giả lập SketchUp).

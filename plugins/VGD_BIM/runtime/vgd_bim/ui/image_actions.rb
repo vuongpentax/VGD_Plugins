@@ -12,7 +12,7 @@ module VGD
       module ImageActions
         MAX_CAPTURE_BATCH = 200 # số đối tượng tối đa cho một lần bấm chụp
         MAX_FULL_REQUEST = 6    # số ảnh gốc giao diện được xin mỗi lần (dự phòng; ảnh gốc nặng nên ít hơn trước)
-        PREVIEW_WIDTH = 360     # chiều rộng tối đa (điểm ảnh) của ảnh nháp khi xem trước góc chụp
+        PREVIEW_WIDTH = 180     # chiều rộng tối đa (điểm ảnh) của ảnh nháp khi xem trước góc chụp
 
         def register_image_callbacks
           @dialog.add_action_callback('settings_save') { |_ctx, payload| safely { settings_save(JSON.parse(payload)) } }
@@ -25,20 +25,23 @@ module VGD
           @dialog.add_action_callback('image_set') { |_ctx, payload| safely { image_set(JSON.parse(payload)) } }
           @dialog.add_action_callback('image_delete') { |_ctx, pid| safely { image_delete(pid) } }
           @dialog.add_action_callback('image_location_delete') { |_ctx, pid| safely { image_delete(pid, :location) } }
+          Images::EXTRA_KINDS.each { |kind| @dialog.add_action_callback("image_#{kind}_delete") { |_ctx, pid| safely { image_delete(pid, kind) } } }
           @dialog.add_action_callback('image_full') { |_ctx, payload| safely { image_full(JSON.parse(payload)) } }
         end
 
         # ---- Cài đặt ----
         def settings_payload
-          dir = Settings.image_dir
-          {settings: Settings.read, dir: dir, dir_exists: File.directory?(dir)}
+          dir = ModelSettings.image_dir(@model)
+          {settings: ModelSettings.effective(@model), dir: dir, dir_exists: File.directory?(dir)}
         end
 
         def settings_save(payload)
-          before = Settings.read
+          before = ModelSettings.effective(@model)
           language = before['language']
-          Settings.update(payload)
-          measure_changed = %w[exclude_words exclude_tags].any? { |key| Settings.read[key] != before[key] }
+          Settings.update(payload) # cài đặt chung (cũng là mẫu cho file chưa có riêng)
+          own = payload.select { |key, _| ModelSettings::MODEL_KEYS.include?(key) }
+          ModelSettings.write(@model, own.keys.to_h { |key| [key, Settings.read[key]] }) unless own.empty? # phần riêng của file này
+          measure_changed = %w[exclude_words exclude_tags].any? { |key| ModelSettings.effective(@model)[key] != before[key] }
           if Settings.read['language'] != language
             refresh # đổi ngôn ngữ: gửi lại cấu hình và từ điển, vẽ lại cả cửa sổ
           else
@@ -50,16 +53,17 @@ module VGD
 
         def settings_pick_dir
           raise 'Bản SketchUp này không có hộp chọn thư mục. Hãy gõ đường dẫn thư mục vào ô.' unless ::UI.respond_to?(:select_directory)
-          current = Settings.image_dir
+          current = ModelSettings.image_dir(@model)
           path = ::UI.select_directory(title: 'Chọn thư mục lưu ảnh', directory: File.directory?(current) ? current : Dir.home)
           return unless path
           Settings.update('image_dir' => path)
+          ModelSettings.write(@model, 'image_dir' => Settings.read['image_dir'])
           emit('settings', settings_payload)
-          emit('message', {text: 'Đã đổi thư mục lưu ảnh.'})
+          emit('message', {text: 'Đã đổi thư mục lưu ảnh của file này.'})
         end
 
         def images_open_dir
-          dir = Settings.image_dir
+          dir = ModelSettings.image_dir(@model)
           FileUtils.mkdir_p(dir)
           open_folder(dir)
         end
@@ -85,7 +89,7 @@ module VGD
         # ---- Chụp ảnh (nút trong Bảng khối lượng) ----
         # payload: {'indexes' => [dòng cần chụp] (không có = mọi dòng đang hiện), 'only_missing' => chỉ chụp dòng chưa có ảnh,
         #          'settings' => thiết lập ảnh của preset đang dùng (cỡ, góc nhìn, kiểu, nền); được kiểm tra lại ở đây,
-        #          'kind' => 'full' (ảnh món, mặc định) hoặc 'location' (ảnh vị trí trong công trình),
+        #          'kind' => 'full' (ảnh món, mặc định), 'location' (ảnh vị trí trong công trình) hoặc 'extra1' / 'extra2' (ảnh 3 / ảnh 4),
         #          'iso_side' => bên Iso của nút ◣ ◢ (thắng bên riêng của món),
         #          'force_view' => true khi bấm nút chụp một lần (Khung nhìn hiện tại / Iso): bỏ qua góc nhìn riêng của món,
         #          'item_settings' => thông số nhập trong khung ⚙ (chưa cần lưu), dùng thay cho thông số đã lưu của món}
@@ -113,7 +117,7 @@ module VGD
           inline = payload.key?('item_settings') ? PhotoSettings.sanitize!(payload['item_settings'], kind) : nil
           wanted = payload['indexes'].is_a?(Array) ? table_indexes(payload) : Array(@table_records).each_index.to_a
           jobs = wanted.map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
-          jobs.reject! { |index, _| @table_rows[index][kind == :location ? :has_location : :has_image] } if payload['only_missing']
+          jobs.reject! { |index, _| @table_rows[index][has_key_for(kind)] } if payload['only_missing']
           raise 'Không có đối tượng nào cần chụp.' if jobs.empty?
           raise "Mỗi lần chỉ chụp tối đa #{MAX_CAPTURE_BATCH} đối tượng. Hãy chọn ít hơn." if jobs.size > MAX_CAPTURE_BATCH
           queue = jobs.map do |index, record|
@@ -131,7 +135,7 @@ module VGD
           schedule_capture_step
         end
 
-        # Lưu (hoặc bỏ, khi settings rỗng) thông số ảnh riêng của một món. payload: {'index' => dòng, 'kind' => 'full' | 'location', 'settings' => {...}}.
+        # Lưu (hoặc bỏ, khi settings rỗng) thông số ảnh riêng của một món. payload: {'index' => dòng, 'kind' => 'full' | 'location' | 'extra1' | 'extra2', 'settings' => {...}}.
         # Ghi vào dictionary của đối tượng trong một thao tác (một bước hoàn tác); đối tượng bị khóa hoặc dữ liệu sai thì báo lỗi và không ghi.
         def image_item_save(payload)
           check_model!
@@ -141,7 +145,7 @@ module VGD
           raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless record[:path].all?(&:valid?)
           clean = nil
           Data.transaction(@model, 'VGD_BIM · Thông số ảnh') { clean = PhotoSettings.write(record[:entity], kind, payload.fetch('settings', {})) }
-          @table_rows[index][kind == :location ? :photo_location : :photo_full] = clean
+          @table_rows[index][:"photo_#{kind}"] = clean
           emit('photo_settings', {pid: record[:entity].persistent_id, kind: kind.to_s, settings: clean})
           emit('message', {text: clean.empty? ? 'Đã bỏ thông số ảnh riêng của món này, món theo preset.' : 'Đã lưu thông số ảnh riêng của món này.'})
         end
@@ -204,8 +208,14 @@ module VGD
         # 'full' (mặc định, ảnh món) hoặc 'location' (ảnh vị trí); giá trị khác bị từ chối.
         def capture_kind!(value)
           return :full if value.nil? || value == 'full'
-          return :location if value == 'location'
+          kind = value.to_s.to_sym
+          return kind if Images::KINDS.key?(kind)
           raise 'Loại ảnh không hợp lệ.'
+        end
+
+        # Khóa của dòng bảng cho biết món đã có ảnh loại này chưa.
+        def has_key_for(kind)
+          { full: :has_image, location: :has_location }.fetch(kind) { :"has_#{kind}" }
         end
 
         def capture_label(record)
@@ -243,7 +253,7 @@ module VGD
           pid = known_pid!(pid)
           Images.delete(@model, pid, kind)
           emit('images_changed', {items: [image_change(pid, false, 0, kind)]})
-          emit('message', {text: kind == :location ? 'Đã xóa ảnh vị trí của đối tượng.' : 'Đã xóa ảnh của đối tượng.'})
+          emit('message', {text: { location: 'Đã xóa ảnh vị trí của đối tượng.', extra1: 'Đã xóa ảnh 3 của đối tượng.', extra2: 'Đã xóa ảnh 4 của đối tượng.' }.fetch(kind, 'Đã xóa ảnh của đối tượng.')})
         end
 
         # Ảnh gốc dạng data URL cho các mã giao diện xin (dự phòng của ô ảnh hiện bằng đường dẫn file).

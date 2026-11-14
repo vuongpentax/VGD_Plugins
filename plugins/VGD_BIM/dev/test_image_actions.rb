@@ -42,13 +42,14 @@ module VGD; module BIM; def self.log(m); end
   module Table
     def self.build(model, scope, deep, **_options); {rows: $rows, records: $records}; end
     COLUMNS = [].freeze; STATUS_LABELS = {}.freeze; UNTAGGED_GROUP = 'Chưa phân loại'.freeze
+    def self.columns; COLUMNS; end
     def self.presets; []; end
-    def self.view_state; {}; end
+    def self.view_state(_model = nil); {}; end
   end
   module UI; end
 end; end
 ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
-%w[core/storage core/settings core/images core/row_order core/preset core/photo_settings core/table_report core/measure_probe].each { |f| require File.join(ROOT, f) }
+%w[core/storage core/settings core/images core/row_order core/preset core/photo_settings core/material_library core/check_rules core/snapshots core/bridge core/levels core/rooms core/table_report core/measure_probe].each { |f| require File.join(ROOT, f) }
 module VGD; module BIM; module UI
   module Capture
     ISO_SIDES = %w[right left].freeze
@@ -294,6 +295,30 @@ d = make_dialog
 d.safely { d.images_capture('indexes' => [0], 'settings' => {'image_width' => 5}) }
 ok('cỡ ảnh sai bị từ chối trước khi chụp', error_of(d).to_s.include?('Cỡ ảnh') && UI.timers.empty?)
 
+# ---- Cài đặt riêng từng file: thư mục ảnh và loại trừ số đo của file này không bị file khác đổi ----
+class OwnModel
+  def initialize; @attrs = {}; end
+  def get_attribute(dict, key, default = nil); @attrs.dig(dict, key) || default; end
+  def set_attribute(dict, key, value); (@attrs[dict] ||= {})[key] = value; end
+  def start_operation(*); true; end
+  def commit_operation; true; end
+  def abort_operation; true; end
+  def guid; 'g'; end
+end
+dir_a = File.join(Dir.tmpdir, 'anh_file_a'); dir_b = File.join(Dir.tmpdir, 'anh_file_b')
+model_a = OwnModel.new; model_b = OwnModel.new
+da = make_dialog; da.instance_variable_set(:@model, model_a); da.define_singleton_method(:refresh) { }
+db = make_dialog; db.instance_variable_set(:@model, model_b); db.define_singleton_method(:refresh) { }
+da.safely { da.settings_save('image_dir' => dir_a, 'exclude_tags' => ['Handle']) }
+db.safely { db.settings_save('image_dir' => dir_b, 'exclude_tags' => ['Door']) }
+ok('hai file: mỗi file giữ thư mục ảnh riêng dù file kia đổi sau', I.dir(model_a).start_with?(dir_a) && I.dir(model_b).start_with?(dir_b))
+ok('hai file: mỗi file giữ tag loại trừ riêng', VGD::BIM::ModelSettings.effective(model_a)['exclude_tags'] == ['Handle'] && VGD::BIM::ModelSettings.effective(model_b)['exclude_tags'] == ['Door'])
+ok('cài đặt gửi giao diện là của file đang mở', events(da, 'settings').last['dir'] == dir_a && events(da, 'settings').last['settings']['exclude_tags'] == ['Handle'])
+$picked_dir = File.join(Dir.tmpdir, 'anh_file_a2')
+da.safely { da.settings_pick_dir }
+ok('chọn lại thư mục ảnh ở file A: file A đổi, file B không', I.dir(model_a).start_with?($picked_dir) && I.dir(model_b).start_with?(dir_b))
+$picked_dir = nil
+
 # ---- Mã model cố định: bảng luôn đảm bảo mã trước khi đọc / chụp ảnh ----
 d = make_dialog
 d.instance_variable_set(:@table_scope, [])
@@ -414,7 +439,7 @@ ok('đang xem trước: yêu cầu chụp hoặc xem trước khác bị từ ch
 UI.run_timers
 shown = events(d, 'image_preview')
 ok('xem trước: gửi từng khung theo thứ tự, kèm dòng, mã, tên, loại ảnh và ảnh nháp dạng data URL', shown.map { |e| e['index'] } == [0, 2] && shown.map { |e| e['pid'] } == [901, 903] && shown.map { |e| e['name'] } == ['Tủ 1', 'Tủ 3'] && shown.all? { |e| e['kind'] == 'full' && e['image'].start_with?('data:image/png;base64,') })
-ok('xem trước: ảnh nháp có chiều rộng tối đa 360 và đúng nội dung PNG', $previews.all? { |p| p[:width] == 360 } && Base64.decode64(shown[0]['image'].split(',', 2)[1]) == PNG)
+ok('xem trước: ảnh nháp có chiều rộng tối đa 180 và đúng nội dung PNG', $previews.all? { |p| p[:width] == 180 } && Base64.decode64(shown[0]['image'].split(',', 2)[1]) == PNG)
 ok('xem trước: món có thông số riêng dùng thông số riêng như chụp thật, món khác theo preset', $previews[0][:settings].values_at('image_view', 'image_yaw') == ['front', 20] && $previews[1][:settings]['image_view'] == 'isometric')
 done_event = events(d, 'preview_done').last
 ok('xem trước xong: báo số khung, không báo ảnh đã đổi (không lưu gì), không báo chụp xong', done_event['done'] == 2 && done_event['total'] == 2 && done_event['ok'] == 2 && done_event['errors'] == [] && events(d, 'images_changed').empty? && events(d, 'images_done').empty? && d.instance_variable_get(:@capture).nil?)
@@ -470,6 +495,28 @@ d = make_dialog(3, has_image: [0, 1, 2], has_location: [1])
 d.safely { d.images_capture('only_missing' => true, 'kind' => 'location') }
 UI.run_timers
 ok('chụp thiếu ảnh vị trí: dù đã có ảnh món vẫn chụp ảnh vị trí cho dòng chưa có', $shot.map(&:first) == [901, 903])
+# Ảnh phụ (kind: extra1 / extra2): chụp, chỉ chụp dòng thiếu, dán, xóa, thông số riêng
+$kinds = []
+d = make_dialog
+d.safely { d.images_capture('indexes' => [0], 'kind' => 'extra1') }
+UI.run_timers
+ok('chụp ảnh 3: mang loại extra1 tới Capture.shoot', $kinds == [:extra1])
+x_items = events(d, 'images_changed').last['items']
+ok('chụp ảnh 3: báo ảnh đổi kèm loại extra1 và đường dẫn file _x1', x_items.size == 1 && x_items[0]['kind'] == 'extra1' && x_items[0]['url'].include?('901_x1.png?v='))
+d = make_dialog(3)
+$rows[0][:has_extra2] = true; $rows[1][:has_extra2] = true
+$kinds = []
+d.safely { d.images_capture('only_missing' => true, 'kind' => 'extra2') }
+UI.run_timers
+ok('chỉ chụp dòng chưa có ảnh 4 (theo has_extra2, không theo has_image)', $shot.map(&:first) == [903] && $kinds == [:extra2])
+d = make_dialog
+d.safely { d.image_set('pid' => 901, 'kind' => 'extra1', 'full' => [PNG].pack('m0')) }
+ok('dán ảnh 3: ghi vào file _x1 và báo ảnh đổi loại extra1', File.exist?(I.path($model, 901, :extra1)) && !File.exist?(I.path($model, 901, :extra2)) && events(d, 'images_changed').last['items'][0]['kind'] == 'extra1')
+d.safely { d.image_delete(901, :extra1) }
+ok('xóa ảnh 3: chỉ xóa file _x1, báo đúng câu', !File.exist?(I.path($model, 901, :extra1)) && events(d, 'images_changed').last['items'][0]['kind'] == 'extra1' && events(d, 'message').last['text'].include?('ảnh 3'))
+d = make_dialog
+saved.(d, 0, 'extra1', {'view' => 'current', 'yaw' => 20})
+ok('lưu thông số riêng ảnh 3: ghi khóa photo_extra1, cập nhật dòng, không đụng ảnh chính', $records[0][:entity].get_attribute('VGD_BIM_TABLE', 'photo_extra1').to_s.include?('current') && $rows[0][:photo_extra1] == {'view' => 'current', 'yaw' => 20} && $records[0][:entity].get_attribute('VGD_BIM_TABLE', 'photo_full').nil?)
 d = make_dialog
 d.safely { d.images_capture('indexes' => [0], 'kind' => 'zzz') }
 err = events(d, 'message').last

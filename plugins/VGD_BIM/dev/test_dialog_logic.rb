@@ -41,7 +41,7 @@ $transactions = []
 $writes = []
 $vgd_data = {}
 require File.join(ROOT, 'core/settings')
-%w[core/measure core/schema core/quantity].each { |f| require File.join(ROOT, f) }
+%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/material_library core/check_rules core/snapshots core/bridge core/levels core/rooms].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
@@ -432,6 +432,24 @@ ok('Đơn giá sai bị từ chối, đối tượng không đổi', bad_edit.ca
 ed.table_edit({'indexes' => [0], 'field' => 'price', 'value' => ''})
 ok('xóa Đơn giá: bỏ khỏi dictionary', !eents[0].attrs['VGD_BIM_TABLE'].key?('price'))
 
+# Cột thêm tay: thêm / đổi tên / xóa chỉ đổi danh sách trên máy; cột tự nhập sửa được, cột thuộc tính chỉ đọc
+CC = VGD::BIM::CustomColumns
+bad_column = ->(payload) { begin; ed.table_custom_column(payload); nil; rescue StandardError => e; e.message; end }
+ed.table_custom_column({'action' => 'add', 'column' => {'label' => 'Ghi chú thi công', 'kind' => 'text'}})
+ed.table_custom_column({'action' => 'add', 'column' => {'label' => 'Mã vật tư', 'kind' => 'attribute', 'dictionary' => 'vgd', 'attribute' => 'ma'}})
+text_key, attr_key = CC.keys
+ok('thêm cột thêm tay: lưu trên máy, có cột tự nhập và cột thuộc tính', CC.read.map { |c| c['kind'] } == %w[text attribute])
+ok('thêm cột sai dữ liệu bị từ chối, danh sách không đổi', bad_column.call({'action' => 'add', 'column' => {'label' => '', 'kind' => 'text'}}).to_s.include?('tên cột') && bad_column.call({'action' => 'xoa-het'}).to_s.include?('không hợp lệ') && bad_column.call('x').to_s.include?('không hợp lệ') && CC.keys.size == 2)
+ed.table_edit({'indexes' => [0, 2], 'field' => text_key, 'value' => '  Lắp sau  '})
+ok('sửa cột tự nhập: ghi vào dictionary riêng của bảng, không đụng dữ liệu VGD', eents[0].attrs['VGD_BIM_TABLE'][text_key] == 'Lắp sau' && eents[2].attrs['VGD_BIM_TABLE'][text_key] == 'Lắp sau')
+ok('đối tượng khóa không bị ghi cột tự nhập', eents[1].attrs.empty?)
+ok('cột thuộc tính tùy chọn chỉ đọc: sửa bị từ chối', bad_edit.call({'indexes' => [0], 'field' => attr_key, 'value' => 'x'}).to_s.include?('không sửa được'))
+ok('khóa cột không có trong danh sách: sửa bị từ chối', bad_edit.call({'indexes' => [0], 'field' => 'custom_99', 'value' => 'x'}).to_s.include?('không sửa được'))
+ok('giá trị cột tự nhập quá dài bị từ chối, giá trị cũ giữ nguyên', bad_edit.call({'indexes' => [0], 'field' => text_key, 'value' => 'a' * 300}).to_s.include?('tối đa') && eents[0].attrs['VGD_BIM_TABLE'][text_key] == 'Lắp sau')
+ed.table_custom_column({'action' => 'remove', 'key' => text_key})
+ok('xóa cột: bỏ khỏi danh sách, dữ liệu đã nhập trong món vẫn còn', CC.keys == [attr_key] && eents[0].attrs['VGD_BIM_TABLE'][text_key] == 'Lắp sau')
+CC.remove(attr_key)
+
 # Thay thế hàng loạt chữ trong Tên / Mô tả / Hãng / Cỡ
 rrows = eents.each_with_index.map { |e, i| {index: i, name: ['Tủ cũ', 'Tủ cũ', 'Bàn'][i], description: ['Gỗ TỦ', '', 'x'][i], owner: '', size: ['', '', ''][i]} }
 ed.instance_variable_set(:@table_rows, rrows)
@@ -587,6 +605,253 @@ locked_error = begin; cd.table_commit_calc({'indexes' => [2]}); nil; rescue Stan
 ok('chỉ chọn món khóa: báo lỗi, không ghi', locked_error.to_s.include?('khóa') && $writes.empty?)
 nothing = begin; cd.table_commit_calc({'indexes' => [9]}); nil; rescue StandardError => e; e.message; end
 ok('dòng không có trong bảng: báo bảng đã cũ', nothing.to_s.include?('Bảng đã cũ'))
+# VGD ID: gán cho món chưa có, sửa ID trùng (giữ món có mã bền nhỏ nhất), món khóa bỏ qua, một bước hoàn tác
+class IdEnt
+  attr_reader :attrs, :persistent_id
+  def initialize(pid, locked = false); @attrs = {}; @persistent_id = pid; @locked = locked; end
+  def get_attribute(dict, key, default = nil); @attrs.dig(dict, key).nil? ? default : @attrs[dict][key]; end
+  def set_attribute(dict, key, value); (@attrs[dict] ||= {})[key] = value; end
+  def delete_attribute(dict, key = nil); key ? @attrs[dict]&.delete(key) : @attrs.delete(dict); end
+  def valid?; true; end
+  def locked?; @locked; end
+end
+ids = [IdEnt.new(30), IdEnt.new(10), IdEnt.new(20, true), IdEnt.new(40)]
+irecs = ids.each_with_index.map { |e, i| {entity: e, path: [e], locked: false, index: i} }
+shared = VGD::BIM::VgdId.generate
+ids[0].set_attribute('VGD_BIM_ID', 'guid', shared); ids[1].set_attribute('VGD_BIM_ID', 'guid', shared)
+irows = lambda { ids.each_with_index.map { |e, i| {index: i, pid: e.persistent_id, vgd_id: VGD::BIM::VgdId.read(e)} } }
+idd = D.allocate
+idd.instance_variable_set(:@model, cm)
+idd.instance_variable_set(:@table_records, irecs)
+idd.define_singleton_method(:emit) { |ev, payload| (@icalls ||= []) << [ev, payload] }
+idd.define_singleton_method(:icalls) { @icalls ||= [] }
+idd.define_singleton_method(:table_build) { instance_variable_set(:@table_rows, ids.each_with_index.map { |e, i| {index: i, pid: e.persistent_id, vgd_id: VGD::BIM::VgdId.read(e)} }) }
+idd.instance_variable_set(:@table_rows, irows.call)
+$transactions.clear
+idd.table_assign_ids({'indexes' => [0, 1, 2, 3]})
+ok('gán VGD ID: món chưa có ID được gán (món 3), món đã có giữ nguyên (0, 1), món khóa (2) bỏ qua; một bước hoàn tác', $transactions == ['VGD_BIM · Gán VGD ID'] && VGD::BIM::VgdId.valid?(VGD::BIM::VgdId.read(ids[3])) && VGD::BIM::VgdId.read(ids[0]) == shared && VGD::BIM::VgdId.read(ids[2]) == '')
+ok('gán VGD ID: báo số món đã gán, đã có và bị khóa', idd.icalls.last[0] == 'message' && idd.icalls.last[1][:text].include?('1 món') && idd.icalls.last[1][:text].include?('khóa'))
+bad_id = ->(&block) { begin; block.call; nil; rescue StandardError => e; e.message; end }
+ok('gán VGD ID khi các món đã có ID: báo rõ, không mở thao tác', (idd.table_assign_ids({'indexes' => [0, 1]}); idd.icalls.last[1][:text].include?('đã có')) && $transactions.size == 1)
+ok('chỉ chọn món khóa: báo lỗi khóa', bad_id.call { idd.table_assign_ids({'indexes' => [2]}) }.to_s.include?('khóa'))
+ok('không chọn dòng: báo lỗi; dòng không có trong bảng: báo bảng đã cũ', bad_id.call { idd.table_assign_ids({'indexes' => []}) }.to_s.include?('chọn') && bad_id.call { idd.table_assign_ids({'indexes' => [9]}) }.to_s.include?('Bảng đã cũ'))
+$transactions.clear
+idd.table_fix_duplicate_ids
+ok('sửa ID trùng: món có mã bền nhỏ nhất (10) giữ ID, món 30 nhận ID mới; một bước hoàn tác', $transactions == ['VGD_BIM · Sửa VGD ID trùng'] && VGD::BIM::VgdId.read(ids[1]) == shared && VGD::BIM::VgdId.read(ids[0]) != shared && VGD::BIM::VgdId.valid?(VGD::BIM::VgdId.read(ids[0])))
+ok('sửa ID trùng: báo số món đã đổi', idd.icalls.last[1][:text].include?('1 món'))
+ok('không còn trùng: báo rõ, không mở thao tác', (idd.table_fix_duplicate_ids; idd.icalls.last[1][:text].include?('Không có') && $transactions.size == 1))
+# Mã đối tượng hàng loạt
+cde = [IdEnt.new(1), IdEnt.new(2, true), IdEnt.new(3), IdEnt.new(4)]
+ccrecs = cde.each_with_index.map { |e, i| {entity: e, path: [e], locked: false, index: i} }
+ccrows = [{index: 0, code: ''}, {index: 1, code: ''}, {index: 2, code: 'D07'}, {index: 3, code: 'D01'}]
+cdd = D.allocate
+cdd.instance_variable_set(:@model, cm)
+cdd.instance_variable_set(:@table_records, ccrecs)
+cdd.instance_variable_set(:@table_rows, ccrows)
+cdd.define_singleton_method(:emit) { |ev, payload| (@ccalls ||= []) << [ev, payload] }
+cdd.define_singleton_method(:ccalls) { @ccalls ||= [] }
+cdd.define_singleton_method(:table_build) { nil }
+bad_code = ->(payload) { begin; cdd.table_assign_codes(payload); nil; rescue StandardError => e; e.message; end }
+$writes.clear; $transactions.clear
+ok('mã trùng mã của món ngoài danh sách (D01 ở món 3): từ chối, không ghi', bad_code.call({'indexes' => [0, 1, 2], 'prefix' => 'D', 'start' => 1, 'pad' => 2}).to_s.include?('D01') && $writes.empty? && $transactions.empty?)
+ok('tham số sai (tiền tố rỗng, số bắt đầu chữ): từ chối', bad_code.call({'indexes' => [0], 'prefix' => '', 'start' => 1, 'pad' => 2}).to_s.include?('tiền tố') && bad_code.call({'indexes' => [0], 'prefix' => 'D', 'start' => 'a', 'pad' => 2}).to_s.include?('Số bắt đầu'))
+cdd.table_assign_codes({'indexes' => [0, 1, 2], 'prefix' => 'TB', 'start' => 1, 'pad' => 2})
+ok('đặt mã: món 0 được TB01; món khóa (1) bỏ qua; món có mã (2) giữ; ghi đúng trường code, một bước hoàn tác', $transactions == ['VGD_BIM · Đặt mã đối tượng'] && $writes.map { |w| [w[0].equal?(cde[0]), w[1]] } == [[true, {code: 'TB01'}]])
+ok('đặt mã: báo số món đã đặt, giữ nguyên và bị khóa', cdd.ccalls.last[1][:text].include?('1 món') && cdd.ccalls.last[1][:text].include?('giữ nguyên') && cdd.ccalls.last[1][:text].include?('khóa'))
+ok('không món nào để đặt (đã có mã / khóa): báo lỗi', bad_code.call({'indexes' => [1, 2], 'prefix' => 'TB', 'start' => 1, 'pad' => 2}).to_s.include?('Không có món nào'))
+$writes.clear
+cdd.table_assign_codes({'indexes' => [2], 'prefix' => 'X', 'start' => 5, 'pad' => 3, 'overwrite' => true})
+ok('ghi đè: món đã có mã được đặt lại', $writes.map { |w| w[1] } == [{code: 'X005'}])
+
+# Tầng: lưu danh sách trong model, gán tay (menu ô Tầng), gán theo cao độ
+class LevelModel
+  attr_reader :attrs
+  def initialize; @attrs = {}; end
+  def get_attribute(dict, key, default = nil); @attrs.dig(dict, key) || default; end
+  def set_attribute(dict, key, value); (@attrs[dict] ||= {})[key] = value; end
+  def start_operation(*); true; end
+  def commit_operation; true; end
+  def abort_operation; true; end
+end
+lm = LevelModel.new
+$model = lm
+lve = [IdEnt.new(1), IdEnt.new(2), IdEnt.new(3, true), IdEnt.new(4)]
+lrecs = lve.each_with_index.map { |e, i| {entity: e, path: [e], locked: false, index: i} }
+lrows = [{index: 0, base_z: 0.0}, {index: 1, base_z: 3350.0}, {index: 2, base_z: 100.0}, {index: 3, base_z: -900.0}]
+ld = D.allocate
+ld.instance_variable_set(:@model, lm)
+ld.instance_variable_set(:@table_records, lrecs)
+ld.instance_variable_set(:@table_rows, lrows)
+ld.define_singleton_method(:emit) { |ev, payload| (@lcalls ||= []) << [ev, payload] }
+ld.define_singleton_method(:lcalls) { @lcalls ||= [] }
+ld.define_singleton_method(:table_build) { nil }
+ld.define_singleton_method(:show_outline) { nil }
+bad_level = ->(&block) { begin; block.call; nil; rescue StandardError => e; e.message; end }
+ok('lưu tầng sai dữ liệu: từ chối, model không đổi', bad_level.call { ld.table_levels({'levels' => [{'name' => '', 'elevation' => 0, 'height' => 3000}]}) }.to_s.include?('tên tầng') && VGD::BIM::Levels.read(lm).empty? && bad_level.call { ld.table_levels('x') }.to_s.include?('không hợp lệ'))
+ld.table_levels({'levels' => [{'name' => 'Tầng 2', 'elevation' => 3300, 'height' => 3300}, {'name' => 'Tầng 1', 'elevation' => 0, 'height' => 3300}]})
+levels = VGD::BIM::Levels.read(lm)
+ok('lưu tầng: ghi vào model theo cao độ, báo số tầng', levels.map { |l| l['name'] } == ['Tầng 1', 'Tầng 2'] && ld.lcalls.last[1][:text].include?('2 tầng'))
+$transactions.clear
+ld.table_assign_levels_auto({'indexes' => [0, 1, 2, 3]})
+ok('gán tầng theo cao độ: món 0 → Tầng 1, món 1 → Tầng 2; món khóa (2) bỏ qua; món thấp hơn mọi tầng (3) không gán; một bước hoàn tác', $transactions == ['VGD_BIM · Gán tầng theo cao độ'] && VGD::BIM::Levels.entity_level(lve[0]) == levels[0]['id'] && VGD::BIM::Levels.entity_level(lve[1]) == levels[1]['id'] && VGD::BIM::Levels.entity_level(lve[2]) == '' && VGD::BIM::Levels.entity_level(lve[3]) == '')
+ok('gán theo cao độ: báo số món đã gán, món không gán được và bị khóa', ld.lcalls.last[1][:text].include?('2 món') && ld.lcalls.last[1][:text].include?('thấp hơn') && ld.lcalls.last[1][:text].include?('khóa'))
+ok('chỉ chọn món khóa hoặc thấp hơn mọi tầng: báo lỗi', bad_level.call { ld.table_assign_levels_auto({'indexes' => [2, 3]}) }.to_s.include?('Không gán được'))
+ld.table_edit({'indexes' => [3], 'field' => 'level', 'value' => levels[1]['id']})
+ok('gán tay qua ô Tầng: ghi nhãn tầng, không đụng dữ liệu VGD', VGD::BIM::Levels.entity_level(lve[3]) == levels[1]['id'] && lve[3].attrs.keys == ['VGD_BIM_LOC'])
+ld.table_edit({'indexes' => [3], 'field' => 'level', 'value' => ''})
+ok('bỏ tầng bằng giá trị rỗng', VGD::BIM::Levels.entity_level(lve[3]) == '')
+ok('tầng không có trong danh sách: từ chối', bad_level.call { ld.table_edit({'indexes' => [3], 'field' => 'level', 'value' => 'lv_deadbeef'}) }.to_s.include?('không còn trong danh sách'))
+lm2 = LevelModel.new
+ld.instance_variable_set(:@model, lm2); $model = lm2
+ok('chưa có tầng: gán theo cao độ báo cần thêm tầng', bad_level.call { ld.table_assign_levels_auto({'indexes' => [0]}) }.to_s.include?('Chưa có tầng'))
+# Phòng: tạo từ mặt đang chọn (chỉ đọc viền), lưu danh sách, gán món theo vị trí, gán tay bằng menu
+class RoomPoint; attr_reader :x, :y, :z; def initialize(x, y, z); @x = x; @y = y; @z = z; end; end
+class RoomVertex; attr_reader :position; def initialize(x, y, z); @position = RoomPoint.new(x / 25.4, y / 25.4, z / 25.4); end; end
+class RoomLoop; def initialize(points); @points = points; end; def vertices; @points.map { |x, y, z| RoomVertex.new(x, y, z) }; end; end
+class RoomFace < Sketchup::Face; def initialize(points); @points = points; end; def outer_loop; RoomLoop.new(@points); end; end
+class RoomIdentity; def *(point); point; end; end
+class RoomModel < LevelModel
+  attr_reader :selection
+  def initialize; super; @selection = FakeSel.new; end
+  def active_path; []; end
+  def edit_transform; RoomIdentity.new; end
+end
+rmm = RoomModel.new
+$model = rmm
+rme = [IdEnt.new(1), IdEnt.new(2), IdEnt.new(3, true), IdEnt.new(4)]
+rmrecs = rme.each_with_index.map { |e, i| {entity: e, path: [e], locked: false, index: i} }
+rmrows = [{index: 0, base_x: 1000.0, base_y: 1000.0, base_z: 0.0}, {index: 1, base_x: 9000.0, base_y: 1000.0, base_z: 0.0}, {index: 2, base_x: 1000.0, base_y: 1000.0, base_z: 0.0}, {index: 3, base_x: nil, base_y: nil, base_z: nil}]
+rd2 = D.allocate
+rd2.instance_variable_set(:@model, rmm)
+rd2.instance_variable_set(:@table_records, rmrecs)
+rd2.instance_variable_set(:@table_rows, rmrows)
+rd2.define_singleton_method(:emit) { |ev, payload| (@rcalls ||= []) << [ev, payload] }
+rd2.define_singleton_method(:rcalls) { @rcalls ||= [] }
+rd2.define_singleton_method(:table_build) { nil }
+rd2.define_singleton_method(:show_outline) { nil }
+bad_room = ->(&block) { begin; block.call; nil; rescue StandardError => e; e.message; end }
+ok('tạo phòng khi chưa chọn mặt: báo lỗi', bad_room.call { rd2.table_room_from_selection({}) }.to_s.include?('chọn một mặt sàn'))
+rmm.selection.items = [RoomFace.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 500]])]
+ok('mặt không nằm ngang: báo lỗi, chưa lưu phòng nào', bad_room.call { rd2.table_room_from_selection({}) }.to_s.include?('nằm ngang') && VGD::BIM::Rooms.read(rmm).empty?)
+rmm.selection.items = [RoomFace.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 0], [0, 3000, 0]])]
+rd2.table_room_from_selection({'name' => 'Phòng khách', 'number' => 'P01', 'height' => 2800})
+rooms = VGD::BIM::Rooms.read(rmm)
+ok('tạo phòng từ mặt đang chọn: lưu viền, cao độ sàn, chiều cao; báo diện tích 12 m²', rooms.size == 1 && rooms[0]['boundary'].map { |pt| pt.map(&:round) } == [[0, 0], [4000, 0], [4000, 3000], [0, 3000]] && rooms[0]['height'] == 2800.0 && rd2.rcalls.last[1][:text].include?('12.0'))
+rd2.table_room_from_selection({})
+ok('phòng thứ hai không đặt tên: tên mặc định, chiều cao mặc định 3000 khi không có tầng', VGD::BIM::Rooms.read(rmm).map { |r| r['name'] }.include?('Phòng 2') && VGD::BIM::Rooms.read(rmm).find { |r| r['name'] == 'Phòng 2' }['height'] == 3000.0)
+ok('tên phòng trùng: từ chối, không thêm', bad_room.call { rd2.table_room_from_selection({'name' => 'Phòng khách'}) }.to_s.include?('trùng') && VGD::BIM::Rooms.read(rmm).size == 2)
+ok('lưu danh sách phòng sai dữ liệu: từ chối', bad_room.call { rd2.table_rooms({'rooms' => [{'name' => ''}]}) }.to_s.include?('tên phòng') && bad_room.call { rd2.table_rooms('x') }.to_s.include?('không hợp lệ'))
+kept = VGD::BIM::Rooms.read(rmm).first(1)
+rd2.table_rooms({'rooms' => kept})
+ok('lưu danh sách phòng (xóa phòng 2): báo số phòng', VGD::BIM::Rooms.read(rmm).size == 1 && rd2.rcalls.last[1][:text].include?('1 phòng'))
+$transactions.clear
+rd2.table_assign_rooms_auto({'indexes' => [0, 1, 2, 3]})
+rid = VGD::BIM::Rooms.read(rmm)[0]['id']
+ok('gán phòng theo vị trí: món 0 trong phòng; món 1 ngoài phòng, món 3 không đo được vị trí, món 2 khóa: không gán; một bước hoàn tác', $transactions == ['VGD_BIM · Gán phòng theo vị trí'] && VGD::BIM::Rooms.entity_room(rme[0]) == rid && [1, 2, 3].all? { |i| VGD::BIM::Rooms.entity_room(rme[i]) == '' })
+ok('gán theo vị trí: báo số món đã gán, ngoài phòng và bị khóa', rd2.rcalls.last[1][:text].include?('1 món') && rd2.rcalls.last[1][:text].include?('ngoài mọi phòng') && rd2.rcalls.last[1][:text].include?('khóa'))
+ok('chỉ chọn món khóa / ngoài phòng: báo lỗi', bad_room.call { rd2.table_assign_rooms_auto({'indexes' => [1, 2]}) }.to_s.include?('Không gán được'))
+rd2.table_edit({'indexes' => [1], 'field' => 'room', 'value' => rid})
+ok('gán tay qua ô Phòng: nhãn phòng, không đụng dữ liệu VGD', VGD::BIM::Rooms.entity_room(rme[1]) == rid && rme[1].attrs.keys == ['VGD_BIM_LOC'])
+ok('phòng không có trong danh sách: từ chối', bad_room.call { rd2.table_edit({'indexes' => [1], 'field' => 'room', 'value' => 'rm_deadbeef'}) }.to_s.include?('không còn trong danh sách'))
+rd2.table_edit({'indexes' => [1], 'field' => 'room', 'value' => ''})
+ok('bỏ phòng bằng giá trị rỗng', VGD::BIM::Rooms.entity_room(rme[1]) == '')
+# Dựng khối phòng qua cầu nối (plugin VGD_Room): BIM không tự dựng hình
+rd2.instance_variable_set(:@model, rmm); $model = rmm
+VGD::BIM::Rooms.write(rmm, [{'name' => 'Khách', 'number' => 'P01', 'boundary' => [[0, 0], [4000, 0], [4000, 3000], [0, 3000]], 'height' => 2800, 'elevation' => 0}])
+room_id = VGD::BIM::Rooms.read(rmm)[0]['id']
+VGD::Bridge.providers.clear
+ok('chưa cài plugin dựng phòng: báo cần cài VGD Room, không dựng gì', bad_room.call { rd2.table_room_build({'id' => room_id}) }.to_s.include?('Chưa cài plugin VGD Room'))
+ok('phòng không có trong danh sách / dữ liệu sai: từ chối', bad_room.call { rd2.table_room_build({'id' => 'rm_deadbeef'}) }.to_s.include?('không còn trong danh sách') && bad_room.call { rd2.table_room_build('x') }.to_s.include?('không hợp lệ'))
+built = []
+volume = nil
+VGD::Bridge.register('vgd_room_fake', {bridge_version: 1, version: '0', provides: ['room_volume'], commands: {
+  'build' => ->(model, room, id) { built << [room['id'], id, room['height']]; volume = Object.new },
+  'find' => ->(_model, _room_id) { volume }
+}})
+rd2.table_room_build({'id' => room_id})
+ok('có plugin: BIM gọi lệnh build qua cầu nối với dữ liệu phòng đã kiểm tra và một VGD ID hợp lệ', built.size == 1 && built[0][0] == room_id && VGD::BIM::VgdId.valid?(built[0][1]) && built[0][2] == 2800.0 && rd2.rcalls.last[1][:text].include?('Đã dựng khối phòng Khách') && rd2.rcalls.last[1][:text].include?('33.6'))
+rd2.table_room_build({'id' => room_id})
+ok('đã có khối: báo "dựng lại"', rd2.rcalls.last[1][:text].include?('Đã dựng lại'))
+ok('lệnh của plugin lỗi: lỗi được báo ra, không nuốt', (VGD::Bridge.providers['vgd_room_fake'][:commands]['build'] = ->(*_) { raise 'SketchUp lỗi' }; bad_room.call { rd2.table_room_build({'id' => room_id}) } == 'SketchUp lỗi'))
+VGD::Bridge.providers.clear
+# Thư viện vật liệu: lưu trên máy, kiểm tra lại dữ liệu
+ok('lưu vật liệu sai dữ liệu: từ chối, thư viện không đổi', bad_room.call { rd2.material_library_save({'items' => [{'name' => '', 'unit' => 'm2'}]}) }.to_s.include?('tên vật liệu') && bad_room.call { rd2.material_library_save('x') }.to_s.include?('không hợp lệ') && VGD::BIM::MaterialLibrary.read.empty?)
+rd2.material_library_save({'items' => [{'name' => 'MFC Oak', 'code' => 'MFC01', 'unit' => 'm2', 'price' => 285_000, 'waste' => 5, 'sketchup_material' => 'Gỗ sồi'}]})
+ok('lưu vật liệu: ghi vào thư viện trên máy, báo số vật liệu', VGD::BIM::MaterialLibrary.read.map { |i| i['code'] } == ['MFC01'] && rd2.rcalls.last[1][:text].include?('1 vật liệu'))
+VGD::BIM::MaterialLibrary.write([])
+# Tab Kiểm tra: gán VGD ID cho mọi món chưa có (bỏ qua món khóa), một bước hoàn tác, rồi hiện lại kết quả
+$model = cm
+vents = [IdEnt.new(1), IdEnt.new(2), IdEnt.new(3, true), IdEnt.new(4)]
+vents[3].set_attribute('VGD_BIM_ID', 'guid', VGD::BIM::VgdId.generate)
+vd = D.allocate
+vd.instance_variable_set(:@model, cm)
+vd.instance_variable_set(:@validation, vents.map { |e| {entity: e, path: [e], locked: false} })
+vd.define_singleton_method(:emit) { |ev, payload| (@icalls ||= []) << [ev, payload] }
+vd.define_singleton_method(:icalls) { @icalls ||= [] }
+vd.define_singleton_method(:emit_validation) { (@icalls ||= []) << ['validation', nil] }
+$transactions.clear
+vd.validation_assign_ids
+ok('kiểm tra: gán ID cho món chưa có (0, 1), món khóa (2) bỏ qua, món có ID (3) giữ nguyên; một bước hoàn tác và hiện lại kết quả',
+   $transactions == ['VGD_BIM · Gán VGD ID'] && [0, 1].all? { |i| VGD::BIM::VgdId.valid?(VGD::BIM::VgdId.read(vents[i])) } && VGD::BIM::VgdId.read(vents[2]).empty? &&
+   vd.icalls.map(&:first) == ['validation', 'message'] && vd.icalls.last[1][:text].include?('2 món') && vd.icalls.last[1][:text].include?('1 món bị khóa'))
+$transactions.clear
+vd.validation_assign_ids
+ok('kiểm tra: không còn món nào cần gán thì báo rõ, không mở thao tác', $transactions.empty? && vd.icalls.last[1][:text].include?('đều đã có'))
+# Luật kiểm tra tự đặt: lưu trong model, chạy trên dòng của bảng (chỉ đọc)
+km = LevelModel.new
+$model = km
+kd = D.allocate
+kd.instance_variable_set(:@model, km)
+kd.define_singleton_method(:emit) { |ev, payload| (@kcalls ||= []) << [ev, payload] }
+kd.define_singleton_method(:kcalls) { @kcalls ||= [] }
+kd.define_singleton_method(:table_build) { @built = (@built || 0) + 1 }
+kd.instance_variable_set(:@table_rows, [{index: 0, lenX: 650, level: ''}, {index: 1, lenX: 900, level: 'T1'}])
+bad_rule = ->(&b) { begin; b.call; nil; rescue StandardError => e; e.message; end }
+ok('chạy khi chưa có luật: báo lỗi', bad_rule.call { kd.check_rules_run }.to_s.include?('Chưa có luật'))
+ok('lưu luật có cột không có trong bảng: từ chối, model không đổi', bad_rule.call { kd.check_rules_save({'rules' => [{'name' => 'X', 'column' => 'zzz', 'op' => 'empty', 'severity' => 'INFO'}]}) }.to_s.include?('không có trong bảng') && km.attrs.empty?)
+ok('lưu luật không phải Hash: từ chối', bad_rule.call { kd.check_rules_save([]) }.to_s.include?('không hợp lệ'))
+kd.check_rules_save({'rules' => [{'name' => 'Cửa hẹp', 'column' => 'lenX', 'op' => 'lt', 'value' => '700', 'severity' => 'WARNING', 'message' => ''}, {'name' => 'Thiếu tầng', 'column' => 'level', 'op' => 'empty', 'severity' => 'INFO'}]})
+ok('lưu luật: ghi vào model, dựng lại bảng, báo số luật', VGD::BIM::CheckRules.read(km).size == 2 && kd.instance_variable_get(:@built) == 1 && kd.kcalls.last[1][:text].include?('2 luật'))
+kd.check_rules_run
+res = kd.kcalls.last
+ok('chạy luật: gửi check_results với đúng dòng vi phạm', res[0] == 'check_results' && res[1][:results].map { |r| [r[:name], r[:index]] } == [['Cửa hẹp', 0], ['Thiếu tầng', 0]] && res[1][:rows] == 2 && res[1][:rules] == 2)
+# Mốc phiên bản: chụp từ bảng, lưu trong model, so sánh (chỉ đọc), xóa
+sm = LevelModel.new
+$model = sm
+sd = D.allocate
+sd.instance_variable_set(:@model, sm)
+sd.define_singleton_method(:emit) { |ev, payload| (@scalls ||= []) << [ev, payload] }
+sd.define_singleton_method(:scalls) { @scalls ||= [] }
+sd.instance_variable_set(:@table_rows, [{index: 0, pid: 11, vgd_id: '', name: 'Tu', lenX: 600.0}, {index: 1, pid: 12, vgd_id: '', name: 'Ban', lenX: 900.0}])
+bad_snap = ->(&b) { begin; b.call; nil; rescue StandardError => e; e.message; end }
+ok('chụp mốc không tên: từ chối, model không đổi', bad_snap.call { sd.snapshot_save({'name' => ' '}) }.to_s.include?('tên mốc') && sm.attrs.empty?)
+sd.snapshot_save({'name' => 'Ban dau'})
+ok('chụp mốc: lưu vào model, gửi danh sách gọn và báo số món', VGD::BIM::Snapshots.read(sm).size == 1 && sd.scalls[-2][0] == 'snapshots' && sd.scalls[-2][1][0]['count'] == 2 && sd.scalls.last[1][:text].include?('2 món'))
+sid = VGD::BIM::Snapshots.read(sm)[0]['id']
+sd.instance_variable_set(:@table_rows, [{index: 0, pid: 11, vgd_id: '', name: 'Tu', lenX: 650.0}, {index: 1, pid: 13, vgd_id: '', name: 'Ghe', lenX: 400.0}])
+sd.snapshot_compare({'id' => sid})
+diff = sd.scalls.last
+ok('so sánh: gửi snapshot_diff đúng món mới / không còn / đổi', diff[0] == 'snapshot_diff' && diff[1]['added'].map { |a| a['name'] } == ['Ghe'] && diff[1]['removed'].map { |r| r['name'] } == ['Ban'] && diff[1]['changed'].map { |c| c['name'] } == ['Tu'] && diff[1]['name'] == 'Ban dau')
+ok('so sánh mốc không có: lỗi', bad_snap.call { sd.snapshot_compare({'id' => 'sn_00000000'}) }.to_s.include?('Không tìm thấy'))
+sd.snapshot_list
+ok('danh sách mốc: gửi đúng một mốc', sd.scalls.last[0] == 'snapshots' && sd.scalls.last[1].size == 1)
+ok('xóa mốc không có: lỗi', bad_snap.call { sd.snapshot_delete({'id' => 'sn_00000000'}) }.to_s.include?('Không tìm thấy'))
+sd.snapshot_delete({'id' => sid})
+ok('xóa mốc: model hết mốc', VGD::BIM::Snapshots.read(sm).empty? && sd.scalls.last[1][:text].include?('xóa'))
+# Tab quét (Quét & xuất, Phân loại, Kiểm tra) không tự quét khi mở: chỉ quét sau khi bấm Quét ngay (scan_start); đổi tab thì chờ lại
+qd = D.allocate
+qd.instance_variable_set(:@ready, true)
+qd.instance_variable_set(:@scan_armed, false)
+refreshed = 0
+qd.define_singleton_method(:refresh) { refreshed += 1 }
+qd.switch_mode('scan')
+ok('mở tab Quét & xuất: chưa bật quét', qd.instance_variable_get(:@scan_armed) == false && refreshed == 1)
+qd.scan_start
+ok('bấm Quét ngay: bật quét và làm mới một lần', qd.instance_variable_get(:@scan_armed) == true && refreshed == 2)
+qd.switch_mode('mapping')
+ok('đổi sang tab Phân loại: tắt quét, phải bấm Quét ngay lại', qd.instance_variable_get(:@scan_armed) == false)
+qd.scan_start; qd.switch_mode('validate_model')
+ok('đổi sang tab Kiểm tra: tắt quét', qd.instance_variable_get(:@scan_armed) == false)
 $model = ORIGINAL_MODEL
 $vgd_data = {}
 

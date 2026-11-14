@@ -1,6 +1,6 @@
-# VGD Reference 1.0.2
+# VGD Reference 1.0.3
 
-Phiên bản hiện tại 1.0.2, tối thiểu SketchUp 2023; chi tiết ở [RELEASE_NOTES_v1.0.2.md](RELEASE_NOTES_v1.0.2.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
+Phiên bản hiện tại 1.0.3, tối thiểu SketchUp 2023; chi tiết ở [RELEASE_NOTES_v1.0.3.md](RELEASE_NOTES_v1.0.3.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); đã được người phát hành dùng thử trong SketchUp. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
 `VGD Reference` là tiện ích SketchUp để ghim ảnh phía trên khung nhìn mô hình. Ảnh nằm trong lớp phủ theo màn hình và chỉ được giữ trong phiên SketchUp hiện tại; tiện ích không tạo entity và không ghi dữ liệu ảnh tham chiếu vào file `.skp`.
 
@@ -22,7 +22,7 @@ Phiên bản hiện tại 1.0.2, tối thiểu SketchUp 2023; chi tiết ở [RE
 
 ## Cài đặt
 
-Trong SketchUp, mở **Extension Manager → Install Extension** và chọn file `VGD_Reference_v1.0.2.rbz`. Khởi động lại SketchUp sau khi cài. Mở **Extensions → VGD Reference → Mở bảng quản lý** hoặc nhấn nút **VGD Reference** trên thanh công cụ.
+Trong SketchUp, mở **Extension Manager → Install Extension** và chọn file `VGD_Reference_v1.0.3.rbz`. Khởi động lại SketchUp sau khi cài. Mở **Extensions → VGD → VGD Reference → Mở bảng quản lý** hoặc nhấn nút **VGD Reference** trên thanh công cụ.
 
 ## Kéo ảnh từ Pinterest / web
 
@@ -56,10 +56,14 @@ Các thao tác mới trong 1.0.1 cần được kiểm tra trực tiếp trên b
 
 ## SketchUp 2022
 
-**Bản 1.0.2 chưa hỗ trợ SketchUp 2022; minimum vẫn là SketchUp 2023.** Overlay chỉ có từ SU2023. SU2022 giới hạn texture theo vòng đời Ruby Tool, nên fallback Tool chưa giữ được ảnh thụ động khi dùng các công cụ dựng hình như bản Overlay. Bộ nạp và runtime kiểm tra phiên bản/capability trước khi nạp lớp Overlay. Chi tiết và probe phát triển độc lập nằm trong [đánh giá SU2022](dev/SU2022_COMPATIBILITY.md).
+**Bản 1.0.3 chưa hỗ trợ SketchUp 2022; minimum vẫn là SketchUp 2023.** Overlay chỉ có từ SU2023. SU2022 giới hạn texture theo vòng đời Ruby Tool, nên fallback Tool chưa giữ được ảnh thụ động khi dùng các công cụ dựng hình như bản Overlay. Bộ nạp và runtime kiểm tra phiên bản/capability trước khi nạp lớp Overlay. Chi tiết và probe phát triển độc lập nằm trong [đánh giá SU2022](dev/SU2022_COMPATIBILITY.md).
 
 ## Chẩn đoán hiển thị
 
 `dev/diagnose_rendering.rb` vẽ tám ô thử trong SketchUp và ghi báo cáo vào `outputs/render-diagnostics/`. Báo cáo kiểm tra dữ liệu ảnh đã giải mã, texture ID, View, UV, phiên bản và bộ máy đồ họa. Trên máy đã kiểm tra, `View#write_image` không chứa Ruby overlay; kết quả ảnh xuất được đánh dấu chưa đủ để kết luận và cần đối chiếu ảnh chụp màn hình.
 
 `dev/apply_render_fix.rb` nạp bản sửa UV beta.5 vào phiên SketchUp đang chạy để kiểm tra, giữ danh sách ảnh hiện tại và gỡ các ô thử. Script này không nâng cấp toàn bộ luồng nhập ảnh. Để dùng đầy đủ bản mới, cài gói beta.7 trở lên và khởi động lại SketchUp.
+
+## Tải lại code
+
+Menu **Extensions → VGD → VGD Reference → Tải lại code** nạp lại mã sau khi cài đè bản mới mà không cần mở lại SketchUp (không cho tải lại khi đang chỉnh sửa hoặc nhập ảnh; giữ nguyên ảnh đang có). Menu và toolbar mới chỉ có tác dụng sau khi mở lại SketchUp. Kiểm tra: `ruby dev/test_reload.rb` (chạy từ `plugins/VGD_Reference`, bằng giả lập SketchUp).

@@ -1,3 +1,5 @@
+require_relative 'images'
+
 module VGD
   module BIM
     # Thông số chụp ảnh riêng của từng món (nút ⚙ trên ô ảnh): góc nhìn, bên Iso, góc lệch, góc cao, lề, vùng nhìn. Món không đặt thì dùng thiết lập của preset.
@@ -5,7 +7,7 @@ module VGD
     # (photo_full: ảnh chính, photo_location: ảnh vị trí). Chỉ lưu các mục người dùng đã đặt; mục trống nghĩa là theo preset.
     module PhotoSettings
       DICTIONARY = 'VGD_BIM_TABLE'.freeze
-      KEYS = {full: 'photo_full', location: 'photo_location'}.freeze
+      KEYS = {full: 'photo_full', location: 'photo_location', extra1: 'photo_extra1', extra2: 'photo_extra2'}.freeze
       COMMON = %w[view side yaw pitch margin].freeze
 
       # Dữ liệu từ giao diện: khóa lạ hoặc giá trị sai thì báo lỗi; giá trị rỗng / nil bỏ đi (nghĩa là theo preset). Trả về Hash chữ => giá trị đã làm sạch.
@@ -56,7 +58,7 @@ module VGD
       # Ghép thông số riêng vào thiết lập của preset: trả về [thiết lập mới, bên Iso hoặc nil]. Không sửa thiết lập gốc.
       # force_view: người dùng bấm nút chụp một lần (Khung nhìn hiện tại, Iso trái / phải) nên bỏ qua góc nhìn và bên Iso riêng của món.
       def self.apply(settings, overrides, kind, force_view: false)
-        prefix = kind == :location ? 'loc' : 'image'
+        prefix = Images::PREFIX.fetch(kind)
         names = {'view' => "#{prefix}_view", 'yaw' => "#{prefix}_yaw", 'pitch' => "#{prefix}_pitch", 'margin' => "#{prefix}_margin", 'scale' => 'image_location_scale'}
         merged = settings.dup
         overrides.each do |key, value|

@@ -1,7 +1,7 @@
 # Test theme viewport (beta.62): màu HUD theo token VGD sáng/tối, font Manrope→Segoe UI, đồng bộ từ dialog, không còn màu teal cũ.
 # Chạy: ruby test_theme.rb [thư mục runtime]
 $stdout.sync = true
-RT = File.expand_path(ARGV[0] || '../runtime/VGD_Cabinet_Draw', __dir__)
+RT = File.expand_path(ARGV[0] || '../runtime/vgd_cabinet_draw', __dir__)
 require 'tmpdir'
 require_relative 'mock_su'
 $LOAD_PATH.unshift(__dir__)

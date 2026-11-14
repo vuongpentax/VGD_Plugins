@@ -30,6 +30,7 @@ module VGD
           @targets = []
           @generation = 0
           @scan_options = {scope: 'model', faces: nil}
+          @scan_armed = false # các tab quét (Quét & xuất, Phân loại, Kiểm tra) chỉ quét khi người dùng bấm Quét ngay, không tự quét lúc mở tab
           @table_rows = []
           @table_records = []
           @table_scope = []
@@ -59,6 +60,7 @@ module VGD
           end
           @dialog.add_action_callback('apply') { |_ctx, payload| safely { apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('clear') { |_ctx| safely { clear } }
+          @dialog.add_action_callback('validation_assign_ids') { |_ctx| safely { validation_assign_ids } }
           @dialog.add_action_callback('select_entity') { |_ctx, index| safely { select_entity(index.to_i) } }
           @dialog.add_action_callback('preview_convert') { |_ctx, payload| safely { preview_convert(JSON.parse(payload)) } }
           @dialog.add_action_callback('confirm_convert') { |_ctx| safely { confirm_convert } }
@@ -67,6 +69,7 @@ module VGD
           @dialog.add_action_callback('import_rules') { |_ctx| safely { check_model!; path = ::UI.openpanel('Nhập quy tắc phân loại', '', 'JSON|*.json||'); if path; MappingRules.import_file(path); refresh; end } }
           @dialog.add_action_callback('save_tags') { |_ctx, payload| safely { Tags.save(JSON.parse(payload)); refresh; emit('message', {text: 'Đã lưu bộ tag trên máy này.'}) } }
           @dialog.add_action_callback('assign_tag') { |_ctx, payload| safely { assign_tag(JSON.parse(payload)) } }
+          @dialog.add_action_callback('scan_start') { |_ctx| safely { scan_start } }
           @dialog.add_action_callback('scan_options') { |_ctx, payload| safely { set_scan_options(JSON.parse(payload)) } }
           @dialog.add_action_callback('export_tags') { |_ctx, kind| safely { export_tags(kind) } }
           @dialog.add_action_callback('import_tags') { |_ctx, kind| safely { import_tags(kind) } }
@@ -81,7 +84,24 @@ module VGD
           @dialog.add_action_callback('table_clear') { |_ctx| safely { table_clear } }
           @dialog.add_action_callback('rename_preview') { |_ctx, payload| safely { rename_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { rename_apply(JSON.parse(payload)) } }
-          @dialog.add_action_callback('table_view') { |_ctx, payload| safely { Table.save_view_state(JSON.parse(payload)) } }
+          @dialog.add_action_callback('material_library_save') { |_ctx, payload| safely { material_library_save(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_room_build') { |_ctx, payload| safely { table_room_build(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_rooms') { |_ctx, payload| safely { table_rooms(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_room_from_selection') { |_ctx, payload| safely { table_room_from_selection(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_assign_rooms_auto') { |_ctx, payload| safely { table_assign_rooms_auto(JSON.parse(payload)) } }
+          @dialog.add_action_callback('snapshot_list') { |_ctx| safely { snapshot_list } }
+          @dialog.add_action_callback('snapshot_save') { |_ctx, payload| safely { snapshot_save(JSON.parse(payload)) } }
+          @dialog.add_action_callback('snapshot_delete') { |_ctx, payload| safely { snapshot_delete(JSON.parse(payload)) } }
+          @dialog.add_action_callback('snapshot_compare') { |_ctx, payload| safely { snapshot_compare(JSON.parse(payload)) } }
+          @dialog.add_action_callback('check_rules_save') { |_ctx, payload| safely { check_rules_save(JSON.parse(payload)) } }
+          @dialog.add_action_callback('check_rules_run') { |_ctx| safely { check_rules_run } }
+          @dialog.add_action_callback('table_levels') { |_ctx, payload| safely { table_levels(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_assign_levels_auto') { |_ctx, payload| safely { table_assign_levels_auto(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_assign_codes') { |_ctx, payload| safely { table_assign_codes(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_assign_ids') { |_ctx, payload| safely { table_assign_ids(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_fix_duplicate_ids') { |_ctx| safely { table_fix_duplicate_ids } }
+          @dialog.add_action_callback('table_custom_column') { |_ctx, payload| safely { table_custom_column(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_view') { |_ctx, payload| safely { Table.save_view_state(JSON.parse(payload), @model) } }
           @dialog.add_action_callback('table_order') { |_ctx, payload| safely { table_order(JSON.parse(payload)) } }
           register_image_callbacks
           register_front_callbacks
@@ -97,6 +117,7 @@ module VGD
           mode = ALIASES.fetch(mode, mode)
           raise ArgumentError, 'Tính năng không hợp lệ.' unless MODES.include?(mode)
           @mode = mode
+          @scan_armed = false
           refresh if @ready
         end
         def safely
@@ -143,7 +164,7 @@ module VGD
           @model = Sketchup.active_model
           language = Settings.read['language']
           emit('config', {mode: @mode, version: BIM::VERSION, language: language, app: settings_payload, preset_info: {defaults: Preset::DEFAULT_SETTINGS, choices: Preset.choices},
-                         table: {columns: Table::COLUMNS, presets: Table.presets, view: Table.view_state}, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.ui_dictionary(language), vi_en: (language == 'en' ? Locale.vi_en_names : nil), scan_options: {scope: @scan_options[:scope], faces: faces?}})
+                         table: {columns: Table.columns, presets: Table.presets, view: Table.view_state(@model)}, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.ui_dictionary(language), vi_en: (language == 'en' ? Locale.vi_en_names : nil), scan_options: {scope: @scan_options[:scope], faces: faces?}})
           if %w[information tags table].include?(@mode)
             @observer = SelectionObserver.new(self)
             @model.selection.add_observer(@observer)
@@ -167,8 +188,13 @@ module VGD
           when 'rules'
             emit('rules', MappingRules.read(@model))
           else
-            scan_now
+            @scan_armed ? scan_now : emit('scan_pending', {mode: @mode}) # model lớn: quét cả file có thể treo máy, nên chờ người dùng bấm
           end
+        end
+        # Bấm Quét ngay ở tab quét: từ đây tab quét (và các lần làm mới sau) chạy bình thường cho tới khi đổi tab.
+        def scan_start
+          @scan_armed = true
+          refresh
         end
         # Quét một mạch, không dùng bộ hẹn giờ, nên không bị ngắt khi di chuột hoặc thao tác khác.
         def scan_now
@@ -201,14 +227,30 @@ module VGD
           @scan_options[:faces] = payload['faces'] ? true : false
           refresh
         end
+        def emit_validation
+          @validation = Validator.validate(@records)
+          rows = @validation.each_with_index.map do |r, index|
+            RawScanner.identity(r[:entity]).merge(index: index, status: r[:status], issues: r[:issues], path: r[:path].select { |e| Data.supported?(e) }.map { |e| e.name.to_s.empty? ? Geometry.definition(e).name : e.name }.join(' / '))
+          end
+          emit('validation', rows)
+        end
+        # Tab Kiểm tra: gán VGD ID cho mọi món đang liệt kê mà chưa có ID (bỏ qua món khóa), một bước hoàn tác, rồi hiện lại kết quả.
+        def validation_assign_ids
+          check_model!
+          raise 'Hãy chạy kiểm tra trước.' if @validation.nil? || @validation.empty?
+          raise 'Đối tượng không còn tồn tại. Hãy chạy kiểm tra lại.' unless @validation.all? { |record| record[:path].all?(&:valid?) }
+          items = @validation.each_with_index.map { |record, index| {index: index, guid: VgdId.read(record[:entity]), locked: record[:locked] || record[:entity].locked? ? true : false} }
+          plan = VgdId.assign_plan(items)
+          note = plan[:locked].empty? ? '' : " Bỏ qua #{plan[:locked].size} món bị khóa."
+          return emit('message', {text: "Mọi món đều đã có VGD ID.#{note}"}) if plan[:assign].empty?
+          Data.transaction(@model, 'VGD_BIM · Gán VGD ID') { plan[:assign].each { |index| VgdId.assign(@validation.fetch(index)[:entity]) } }
+          emit_validation
+          emit('message', {text: "Đã gán VGD ID cho #{plan[:assign].size} món.#{note}"})
+        end
         def finish_scan
           @scan_complete = true
           if @mode.start_with?('validate')
-            @validation = Validator.validate(@records)
-            rows = @validation.each_with_index.map do |r, index|
-              RawScanner.identity(r[:entity]).merge(index: index, status: r[:status], issues: r[:issues], path: r[:path].select { |e| Data.supported?(e) }.map { |e| e.name.to_s.empty? ? Geometry.definition(e).name : e.name }.join(' / '))
-            end
-            emit('validation', rows)
+            emit_validation
           else
             report = RawScanner.report(@records, @model)
             if @mode == 'mapping'
@@ -330,9 +372,10 @@ module VGD
         end
         def table_build
           @model = Sketchup.active_model
+          ModelSettings.pin(@model, Table.view_state) # file chưa có cài đặt riêng thì ghi lại cài đặt chung đang dùng, để mở file khác không làm đổi theo
           Images.ensure_model_id(@model) # mã model cố định trong file, để ảnh còn sau khi tắt mở lại (trước mọi thao tác khác)
           scope = @table_scope.select(&:valid?)
-          built = Table.build(@model, scope, @table_options[:deep] ? true : false, projected: @table_options[:projected], measure: MeasureProbe.context, context: scan_context)
+          built = Table.build(@model, scope, @table_options[:deep] ? true : false, projected: @table_options[:projected], measure: MeasureProbe.context(ModelSettings.effective(@model)), context: scan_context)
           @table_rows = built[:rows]
           @table_records = built[:records]
           hint = if scope.empty?
@@ -340,9 +383,9 @@ module VGD
                  elsif built[:hidden].to_i.positive?
                    "Đã ẩn #{built[:hidden]} đối tượng thuộc tag loại trừ."
                  end
-          emit('table', {columns: Table::COLUMNS, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
+          emit('table', {check_rules: CheckRules.read(@model), material_library: MaterialLibrary.read, sketchup_materials: (@model.respond_to?(:materials) ? @model.materials.to_a.map { |m| m.display_name.to_s }.sort_by(&:downcase) : []), bridge: {room_volume: !Bridge.provider_for('room_volume').nil?}, rooms: rooms_view, levels: Levels.read(@model), columns: Table.columns, presets: Table.presets, groups: Tags::GROUPS + [Table::UNTAGGED_GROUP],
                          statuses: Table::STATUS_LABELS, options: @table_options.merge(isolating: !@isolated.empty?),
-                         rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state, choices: table_choices,
+                         rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state(@model), choices: table_choices,
                          row_order: RowOrder.read(@model)})
         end
         # Thứ tự dòng người dùng kéo tay: chỉ ghi danh sách mã món vào model (RowOrder), không đổi gì trên đối tượng; bảng đã tự xếp lại ở giao diện.
@@ -398,12 +441,15 @@ module VGD
         # Sửa ô bằng nhấp đúp. payload: {'indexes' => [các dòng], 'field' => name|description|status|tag|material, 'value' => giá trị}.
         # Áp cho mọi dòng gửi lên, bỏ qua đối tượng khóa; cả đợt là một bước hoàn tác. ('index' => một dòng vẫn được nhận.)
         EDIT_LABELS = {'name' => 'tên', 'description' => 'mô tả', 'status' => 'tình trạng', 'tag' => 'tag', 'material' => 'vật liệu',
-                       'owner' => 'hãng', 'url' => 'link', 'size' => 'cỡ', 'price' => 'đơn giá', 'calc_method' => 'cách tính'}.freeze
+                       'owner' => 'hãng', 'url' => 'link', 'size' => 'cỡ', 'price' => 'đơn giá', 'calc_method' => 'cách tính', 'code' => 'mã đối tượng', 'level' => 'tầng', 'room' => 'phòng'}.freeze
         def table_edit(payload)
           check_model!
           field = payload.fetch('field')
-          raise ArgumentError, 'Ô này không sửa được trong bảng.' unless EDIT_LABELS.key?(field)
+          custom = CustomColumns.find(field)
+          raise ArgumentError, 'Ô này không sửa được trong bảng.' unless EDIT_LABELS.key?(field) || (custom && custom['kind'] == 'text')
           value = payload.fetch('value').to_s.strip
+          raise 'Phòng này không còn trong danh sách. Hãy mở lại Quản lý phòng.' if field == 'room' && !value.empty? && Rooms.read(@model).none? { |room| room['id'] == value }
+          raise 'Tầng này không còn trong danh sách. Hãy mở lại Quản lý tầng.' if field == 'level' && !value.empty? && Levels.read(@model).none? { |level| level['id'] == value }
           indexes = payload.key?('indexes') ? table_indexes(payload) : table_indexes('indexes' => [payload.fetch('index')])
           records = indexes.map { |index| @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' } }
           raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |record| record[:path].all?(&:valid?) }
@@ -417,8 +463,225 @@ module VGD
           end
           table_build
           show_outline
-          text = "Đã sửa #{EDIT_LABELS[field]} cho #{editable.size} đối tượng."
+          text = "Đã sửa #{custom ? custom['label'] : EDIT_LABELS[field]} cho #{editable.size} đối tượng."
           text += " Bỏ qua #{records.size - editable.size} đối tượng bị khóa." if records.size > editable.size
+          emit('message', {text: text})
+        end
+        # Gán VGD ID (mã định danh ổn định, xem core/vgd_id.rb) cho các dòng đã chọn: chỉ món chưa có ID, bỏ qua món khóa, một bước hoàn tác.
+        def table_assign_ids(payload)
+          check_model!
+          records = table_indexes(payload).map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |_index, record| record[:path].all?(&:valid?) }
+          items = records.map { |index, record| {index: index, guid: @table_rows.fetch(index)[:vgd_id].to_s, locked: record[:locked] || record[:entity].locked? ? true : false} }
+          plan = VgdId.assign_plan(items)
+          raise 'Đối tượng đang bị khóa nên không gán được VGD ID.' if plan[:assign].empty? && plan[:keep].empty?
+          note = plan[:locked].empty? ? '' : " Bỏ qua #{plan[:locked].size} món bị khóa."
+          if plan[:assign].empty?
+            return emit('message', {text: "Các món đã chọn đều đã có VGD ID.#{note}"})
+          end
+          Data.transaction(@model, 'VGD_BIM · Gán VGD ID') { plan[:assign].each { |index| VgdId.assign(@table_records.fetch(index)[:entity]) } }
+          table_build
+          have = plan[:keep].empty? ? '' : " #{plan[:keep].size} món đã có ID từ trước."
+          emit('message', {text: "Đã gán VGD ID cho #{plan[:assign].size} món.#{have}#{note}"})
+        end
+        # Phòng kèm số đo (diện tích, chu vi, thể tích, tường, trần) để giao diện hiện; tính lại mỗi lần dựng bảng.
+        def rooms_view
+          provider = Bridge.provider_for('room_volume')
+          Rooms.read(@model).map { |room| room.merge('metrics' => Rooms.metrics(room), 'has_volume' => provider ? !Bridge.call('room_volume', 'find', @model, room['id']).nil? : false) }
+        end
+        # Lưu thư viện vật liệu (trên máy, dùng cho mọi model). payload: {'items' => [...]}. Không đụng gì trong model.
+        def material_library_save(payload)
+          raise ArgumentError, 'Dữ liệu vật liệu không hợp lệ.' unless payload.is_a?(Hash)
+          items = MaterialLibrary.sanitize!(payload['items'])
+          MaterialLibrary.write(items)
+          table_build
+          emit('message', {text: "Đã lưu #{items.size} vật liệu."})
+        end
+        # Dựng (hoặc dựng lại) khối 3D của phòng bằng plugin VGD_Room qua cầu nối. VGD_BIM không tự dựng hình. payload: {'id' => mã phòng}.
+        # VGD ID của khối do BIM cấp (dựng lại thì plugin giữ ID cũ). Plugin tự mở một thao tác (một bước hoàn tác).
+        def table_room_build(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless payload.is_a?(Hash) && payload['id'].is_a?(String)
+          room = Rooms.read(@model).find { |item| item['id'] == payload['id'] }
+          raise 'Phòng này không còn trong danh sách. Hãy mở lại Quản lý phòng.' unless room
+          raise 'Chưa cài plugin VGD Room để dựng khối phòng. Hãy cài qua VGD Center rồi khởi động lại SketchUp.' unless Bridge.provider_for('room_volume')
+          existed = !Bridge.call('room_volume', 'find', @model, room['id']).nil?
+          Bridge.call('room_volume', 'build', @model, room, VgdId.generate)
+          table_build
+          emit('message', {text: "Đã #{existed ? 'dựng lại' : 'dựng'} khối phòng #{room['name']} (thể tích #{Rooms.metrics(room)[:volume]} m³)."})
+        end
+        # Lưu danh sách phòng. payload: {'rooms' => [...]}. Chỉ ghi vào model (không đụng đối tượng, không dựng hình; khối phòng do VGD_Room dựng).
+        def table_rooms(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless payload.is_a?(Hash)
+          list = Rooms.sanitize!(payload['rooms'])
+          Rooms.write(@model, list)
+          table_build
+          emit('message', {text: "Đã lưu #{list.size} phòng."})
+        end
+        # Tạo phòng từ mặt sàn đang chọn trong SketchUp: chỉ ĐỌC viền (vòng ngoài của mặt nằm ngang), lưu dữ liệu phòng. Không dựng hình.
+        # payload: {'name'?, 'number'?, 'level'? (id tầng), 'height'? (mm)}; thiếu thì tên "Phòng N", chiều cao theo tầng hoặc 3000.
+        def table_room_from_selection(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless payload.is_a?(Hash)
+          face = @model.selection.to_a.find { |entity| entity.is_a?(Sketchup::Face) }
+          raise 'Hãy chọn một mặt sàn (Face) trong SketchUp rồi bấm lại.' unless face
+          context = context_transform
+          points = face.outer_loop.vertices.map { |vertex| p = context * vertex.position; [p.x.to_f * Geometry::INCH_MM, p.y.to_f * Geometry::INCH_MM, p.z.to_f * Geometry::INCH_MM] }
+          shape = Rooms.boundary_from_points(points)
+          rooms = Rooms.read(@model)
+          level = payload['level'].to_s
+          level_data = Levels.read(@model).find { |l| l['id'] == level }
+          name = payload['name'].to_s.strip
+          name = "Phòng #{rooms.size + 1}" if name.empty?
+          height = payload['height'].is_a?(Numeric) ? payload['height'] : (level_data ? level_data['height'] : 3000)
+          created = {'name' => name, 'number' => payload['number'].to_s, 'level' => level_data ? level : '', 'height' => height, 'elevation' => shape[:elevation], 'boundary' => shape[:boundary]}
+          Rooms.write(@model, rooms + [created])
+          table_build
+          area = Rooms.metrics(Rooms.sanitize!([created]).first)[:area]
+          emit('message', {text: "Đã tạo phòng #{name} từ mặt đang chọn (diện tích #{area} m²). Hình khối phòng do plugin VGD_Room dựng."})
+        end
+        # Gán món vào phòng theo vị trí (tâm đáy món trong viền và trong khoảng cao của phòng). Nhãn, không dời hình. Một bước hoàn tác.
+        def table_assign_rooms_auto(payload)
+          check_model!
+          rooms = Rooms.read(@model)
+          raise 'Chưa có phòng nào. Hãy tạo phòng trong Quản lý phòng trước.' if rooms.empty?
+          records = table_indexes(payload).map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |_index, record| record[:path].all?(&:valid?) }
+          items = records.map { |index, record| row = @table_rows.fetch(index); {index: index, x: row[:base_x], y: row[:base_y], z: row[:base_z], locked: record[:locked] || record[:entity].locked? ? true : false} }
+          plan = Rooms.plan_auto(items, rooms)
+          raise 'Không gán được phòng nào (món bị khóa hoặc nằm ngoài mọi phòng).' if plan[:assign].empty?
+          Data.transaction(@model, 'VGD_BIM · Gán phòng theo vị trí') { plan[:assign].each { |index, id| Rooms.assign(@table_records.fetch(index)[:entity], id) } }
+          table_build
+          notes = ''
+          notes += " #{plan[:none].size} món nằm ngoài mọi phòng hoặc không đo được vị trí." unless plan[:none].empty?
+          notes += " Bỏ qua #{plan[:locked].size} món bị khóa." unless plan[:locked].empty?
+          emit('message', {text: "Đã gán phòng cho #{plan[:assign].size} món theo vị trí.#{notes}"})
+        end
+        # Mốc phiên bản của bảng (core/snapshots.rb): danh sách đọc theo yêu cầu (không đọc mỗi lần dựng bảng vì có thể lớn).
+        def snapshot_list
+          check_model!
+          emit('snapshots', Snapshots.summary(Snapshots.read(@model)))
+        end
+        # Chụp mốc từ các dòng hiện có của bảng. payload: {'name' => tên}. Chỉ ghi dictionary của model, không đụng đối tượng.
+        def snapshot_save(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu mốc không hợp lệ.' unless payload.is_a?(Hash)
+          raise 'Bảng chưa có dữ liệu. Hãy làm mới bảng.' if @table_rows.nil?
+          list = Snapshots.add(Snapshots.read(@model), Snapshots.capture(payload['name'], @table_rows))
+          Snapshots.write(@model, list)
+          emit('snapshots', Snapshots.summary(list))
+          emit('message', {text: "Đã chụp mốc #{list.last['name']} (#{list.last['items'].size} món)."})
+        end
+        def snapshot_delete(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu mốc không hợp lệ.' unless payload.is_a?(Hash)
+          list = Snapshots.read(@model)
+          kept = list.reject { |snap| snap['id'] == payload['id'] }
+          raise 'Không tìm thấy mốc này.' if kept.size == list.size
+          Snapshots.write(@model, kept)
+          emit('snapshots', Snapshots.summary(kept))
+          emit('message', {text: 'Đã xóa mốc.'})
+        end
+        # So mốc với bảng hiện tại (chỉ đọc), gửi kết quả cho giao diện. payload: {'id' => mã mốc}.
+        def snapshot_compare(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu mốc không hợp lệ.' unless payload.is_a?(Hash)
+          raise 'Bảng chưa có dữ liệu. Hãy làm mới bảng.' if @table_rows.nil?
+          snap = Snapshots.read(@model).find { |item| item['id'] == payload['id'] }
+          raise 'Không tìm thấy mốc này.' unless snap
+          emit('snapshot_diff', Snapshots.compare(snap, @table_rows).merge('name' => snap['name'], 'created' => snap['created']))
+        end
+        # Lưu luật kiểm tra tự đặt (lưu trong model, chỉ ghi dictionary của model, không đụng đối tượng). payload: {'rules' => [...]}.
+        def check_rules_save(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu luật không hợp lệ.' unless payload.is_a?(Hash)
+          list = CheckRules.sanitize!(payload['rules'], Table.column_keys)
+          CheckRules.write(@model, list)
+          table_build
+          emit('message', {text: "Đã lưu #{list.size} luật kiểm tra."})
+        end
+        # Chạy các luật đã lưu trên các dòng đang có của bảng (chỉ đọc), gửi kết quả cho giao diện.
+        def check_rules_run
+          check_model!
+          rules = CheckRules.read(@model)
+          raise 'Chưa có luật nào. Hãy thêm luật kiểm tra trước.' if rules.empty?
+          raise 'Bảng chưa có dữ liệu. Hãy làm mới bảng.' if @table_rows.nil?
+          outcome = CheckRules.evaluate(rules, @table_rows)
+          emit('check_results', outcome.merge(rows: @table_rows.size, rules: rules.size))
+        end
+        # Lưu danh sách tầng của công trình (Quản lý tầng). payload: {'levels' => [{id?, name, elevation, height}]}. Chỉ ghi vào model (không đụng đối tượng).
+        def table_levels(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu tầng không hợp lệ.' unless payload.is_a?(Hash)
+          list = Levels.sanitize!(payload['levels'])
+          Levels.write(@model, list)
+          table_build
+          emit('message', {text: "Đã lưu #{list.size} tầng."})
+        end
+        # Gán tầng cho các dòng đã chọn theo cao độ đáy món (gợi ý, nhãn): món khóa bỏ qua, món thấp hơn mọi tầng không gán. Một bước hoàn tác.
+        def table_assign_levels_auto(payload)
+          check_model!
+          levels = Levels.read(@model)
+          raise 'Chưa có tầng nào. Hãy thêm tầng trong Quản lý tầng trước.' if levels.empty?
+          records = table_indexes(payload).map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |_index, record| record[:path].all?(&:valid?) }
+          items = records.map { |index, record| {index: index, z: @table_rows.fetch(index)[:base_z], locked: record[:locked] || record[:entity].locked? ? true : false} }
+          plan = Levels.plan_auto(items, levels)
+          raise 'Không gán được tầng nào (món bị khóa hoặc thấp hơn mọi tầng).' if plan[:assign].empty?
+          Data.transaction(@model, 'VGD_BIM · Gán tầng theo cao độ') { plan[:assign].each { |index, id| Levels.assign(@table_records.fetch(index)[:entity], id) } }
+          table_build
+          notes = ''
+          notes += " #{plan[:none].size} món thấp hơn mọi tầng hoặc không đo được cao độ." unless plan[:none].empty?
+          notes += " Bỏ qua #{plan[:locked].size} món bị khóa." unless plan[:locked].empty?
+          emit('message', {text: "Đã gán tầng cho #{plan[:assign].size} món theo cao độ.#{notes}"})
+        end
+        # Đặt Mã đối tượng hàng loạt (tiền tố + số, theo thứ tự các dòng gửi lên): chỉ món chưa có mã (trừ khi ghi đè), bỏ qua món khóa, không trùng mã món khác, một bước hoàn tác.
+        def table_assign_codes(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu không hợp lệ.' unless payload.is_a?(Hash)
+          indexes = table_indexes(payload)
+          records = indexes.map { |index| [index, @table_records.fetch(index) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }] }
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless records.all? { |_index, record| record[:path].all?(&:valid?) }
+          items = records.map { |index, record| {index: index, code: @table_rows.fetch(index)[:code].to_s, locked: record[:locked] || record[:entity].locked? ? true : false} }
+          others = @table_rows.reject { |row| indexes.include?(row[:index]) }.map { |row| row[:code].to_s }
+          plan = ObjectCode.plan(items, prefix: payload['prefix'], start: payload['start'], pad: payload['pad'], overwrite: payload['overwrite'] == true, others: others)
+          note = plan[:locked].empty? ? '' : " Bỏ qua #{plan[:locked].size} món bị khóa."
+          raise "Không có món nào để đặt mã (món đã có mã hoặc bị khóa).#{note}" if plan[:assign].empty?
+          Data.transaction(@model, 'VGD_BIM · Đặt mã đối tượng') do
+            plan[:assign].each do |index, code|
+              entity = @table_records.fetch(index)[:entity]
+              Data.write(entity, {code: code}, Data.source(entity) == 'RAW' ? 'MANUAL' : Data.source(entity))
+            end
+          end
+          table_build
+          kept = plan[:kept].empty? ? '' : " #{plan[:kept].size} món đã có mã giữ nguyên."
+          emit('message', {text: "Đã đặt mã cho #{plan[:assign].size} món.#{kept}#{note}"})
+        end
+        # Sửa VGD ID trùng (do copy món): trong các món của bảng dùng chung một ID, món có mã bền nhỏ nhất giữ ID, các món khác nhận ID mới. Một bước hoàn tác.
+        def table_fix_duplicate_ids
+          check_model!
+          items = @table_rows.map { |row| record = @table_records.fetch(row[:index]); {index: row[:index], pid: row[:pid], guid: row[:vgd_id].to_s, locked: record[:locked] || record[:entity].locked? ? true : false} }
+          raise 'Có đối tượng không còn tồn tại. Hãy làm mới bảng.' unless @table_records.all? { |record| record[:path].all?(&:valid?) }
+          plan = VgdId.fix_plan(items)
+          note = plan[:locked].empty? ? '' : " #{plan[:locked].size} món bị khóa nên chưa đổi được."
+          return emit('message', {text: "Không có VGD ID trùng trong bảng.#{note}"}) if plan[:renew].empty? && plan[:locked].empty?
+          return emit('message', {text: "Không đổi được ID nào.#{note}"}) if plan[:renew].empty?
+          Data.transaction(@model, 'VGD_BIM · Sửa VGD ID trùng') { plan[:renew].each { |index| VgdId.renew(@table_records.fetch(index)[:entity]) } }
+          table_build
+          emit('message', {text: "Đã cấp VGD ID mới cho #{plan[:renew].size} món bị trùng (món cũ nhất giữ ID).#{note}"})
+        end
+        # Thêm / xóa cột thêm tay (nút + ở ngăn Chọn cột). Chỉ đổi danh sách cột trên máy, không đụng gì trong model;
+        # xóa cột không xóa dữ liệu đã nhập trong món. Đổi tên cột dùng tiêu đề cột của preset (nhấp đúp tiêu đề). payload: {'action' => 'add' | 'remove', ...}.
+        def table_custom_column(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu cột không hợp lệ.' unless payload.is_a?(Hash)
+          text = case payload['action']
+                 when 'add' then "Đã thêm cột #{CustomColumns.add(payload['column'])['label']}."
+                 when 'remove' then (CustomColumns.remove(payload['key']); 'Đã xóa cột. Dữ liệu đã nhập trong các món vẫn còn.')
+                 else raise ArgumentError, 'Dữ liệu cột không hợp lệ.'
+                 end
+          table_build
           emit('message', {text: text})
         end
         # Đổi cách tính theo TAG của các dòng đã chọn (lưu trên máy, mọi món cùng tag đổi theo); không ghi vào món nên cả món bị khóa cũng đổi được.
@@ -466,6 +729,9 @@ module VGD
           when 'tag' then entity.layer = layer
           when 'material' then entity.material = material
           when 'url', 'size', 'price' then Table::Extras.write(entity, field, value) # dữ liệu riêng của bảng, không thuộc schema VGD
+          when 'room' then Rooms.assign(entity, value) # nhãn phòng, không đổi hình học
+          when 'level' then Levels.assign(entity, value) # nhãn tầng, không đổi hình học
+          when CustomColumns::KEY_PATTERN then CustomColumns.write(entity, field, value) # cột tự nhập do người dùng thêm
           when 'owner' then Data.write(entity, {manufacturer: value}, Data.source(entity) == 'RAW' ? 'MANUAL' : Data.source(entity))
           else Data.write(entity, {field.to_sym => value}, Data.source(entity) == 'RAW' ? 'MANUAL' : Data.source(entity))
           end
@@ -482,7 +748,9 @@ module VGD
           tags = @model.layers.to_a.map { |layer| layer.name.to_s }.reject(&untagged) | Tags.load.map { |tag| tag['name'].to_s }
           materials = @model.materials.to_a.map { |material| material.display_name.to_s }
           model_tags = @model.layers.to_a.map { |layer| layer.name.to_s }.reject(&untagged).sort_by { |name| name.downcase } # chỉ tag có trong model (bảng Loại trừ tag)
-          {tags: tags.sort_by { |name| name.downcase }, materials: materials.sort_by { |name| name.downcase }, model_tags: model_tags}
+          {tags: tags.sort_by { |name| name.downcase }, materials: materials.sort_by { |name| name.downcase }, model_tags: model_tags,
+           levels: Levels.read(@model).map { |level| {value: level['id'], label: level['name']} },
+           rooms: Rooms.read(@model).map { |room| {value: room['id'], label: room['number'].empty? ? room['name'] : "#{room['number']} · #{room['name']}"} }}
         end
         # Cột chữ cho phép thay hàng loạt, và cách đọc giá trị hiện tại của dòng.
         REPLACE_FIELDS = {'name' => :name, 'description' => :description, 'owner' => :owner, 'size' => :size}.freeze
@@ -755,7 +1023,7 @@ module VGD
         end
         # Kích thước trong nhãn khung đánh dấu theo đơn vị và số lẻ của preset đang dùng, như bảng hiện (số liệu gốc luôn là mm).
         LENGTH_FACTORS = {'mm' => 1.0, 'cm' => 0.1, 'm' => 0.001, 'in' => 1 / 25.4, 'ft' => 1 / 304.8}.freeze
-        def table_settings; Preset.settings(Table.view_state['settings']); end
+        def table_settings; Preset.settings(Table.view_state(@model)['settings']); end
         def length_unit; table_settings['length_unit']; end
         def length_num(mm)
           return '' if mm.nil?

@@ -50,7 +50,7 @@ check 'bản dễ tính: tiêu đề sai bị bỏ, không báo lỗi', P.header
 
 # ---- Preset có sẵn ----
 names = T::BUILT_IN_PRESETS.map { |p| p['name'] }
-check '11 preset có sẵn: 4 của BIM rồi 7 từ JSON, tên không trùng', names == ['Tất cả', 'Phần thô', 'Hoàn thiện', 'Đồ rời', 'Mặc định', 'Phòng & Khu vực', 'Cửa & Cửa sổ', 'Nội thất', 'Thiết bị & Phụ kiện', 'Chiếu sáng', 'Vật liệu'] && names.uniq.size == 11
+check '12 preset có sẵn: 4 của BIM, 7 từ JSON và Tủ, tên không trùng', names == ['Tất cả', 'Phần thô', 'Hoàn thiện', 'Đồ rời', 'Mặc định', 'Phòng & Khu vực', 'Cửa & Cửa sổ', 'Nội thất', 'Tủ', 'Thiết bị & Phụ kiện', 'Chiếu sáng', 'Vật liệu'] && names.uniq.size == 12
 check 'mọi preset có sẵn hợp lệ: cột, tiêu đề, thiết lập, nhóm', T::BUILT_IN_PRESETS.all? { |p| T.sanitize_preset(p) && (p['headers'] || {}).keys.all? { |k| keys.include?(k) } && P.settings!(p['settings']) == p['settings'] }
 check 'mọi preset có sẵn có đủ thiết lập (không thiếu mục)', T::BUILT_IN_PRESETS.all? { |p| p['settings'].keys.sort == d.keys.sort }
 check 'tiêu đề của preset có sẵn chỉ nói về cột đang hiện', T::BUILT_IN_PRESETS.all? { |p| (p['headers'] || {}).keys.all? { |k| p['columns'].include?(k) } }
@@ -63,7 +63,12 @@ check '4 preset BIM cũ giữ nguyên cột và nhóm', T::BUILT_IN_PRESETS[1]['
 
 # ---- Cột mới ----
 %w[areaProjected ifc owner url size price total].each { |k| check "có cột #{k}", keys.include?(k) }
-check 'có 37 cột, không trùng', keys.size == 37 && keys.uniq.size == 37
+# Ảnh phụ (Ảnh 3 / Ảnh 4): bộ thiết lập x1_* / x2_*
+check 'ảnh phụ: mặc định 512x512, Ảnh 3 nhìn chính diện, Ảnh 4 nhìn Iso, kiểu màu, nền trong suốt, lề 20, không lệch', d.values_at('x1_width', 'x1_height', 'x1_view', 'x1_style', 'x1_background', 'x1_margin', 'x1_yaw', 'x1_pitch') == [512, 512, 'front', 'color', 'transparent', 20, 0, 0] && d.values_at('x2_width', 'x2_height', 'x2_view') == [512, 512, 'isometric']
+%w[x1_view x1_style x1_background x2_view x2_style x2_background].each { |k| check "#{k} lạ bị từ chối", raises? { P.settings!(k => 'zzz') } }
+check 'ảnh phụ: cỡ, lề, góc lệch, góc cao ngoài khoảng bị từ chối; giá trị hợp lệ được giữ', raises?('cỡ ảnh') { P.settings!('x1_width' => 10) } && raises?('lề') { P.settings!('x2_margin' => 500) } && raises?('góc lệch') { P.settings!('x1_yaw' => 200) } && raises?('góc cao') { P.settings!('x2_pitch' => 200) } && (r = P.settings!('x1_width' => 1024, 'x1_view' => 'current', 'x2_yaw' => -30); r.values_at('x1_width', 'x1_view', 'x2_yaw') == [1024, 'current', -30])
+check 'preset cũ thiếu thiết lập ảnh phụ: cỡ / kiểu / nền / lề theo ảnh chính, góc nhìn mặc định', (r = P.settings({'image_width' => 800, 'image_height' => 600, 'image_style' => 'current', 'image_background' => 'white', 'image_margin' => 30}); r.values_at('x1_width', 'x1_height', 'x2_style', 'x2_background', 'x2_margin', 'x1_view', 'x2_view') == [800, 600, 'current', 'white', 30, 'front', 'isometric'])
+check 'có 48 cột, không trùng', keys.size == 48 && keys.uniq.size == 48
 check 'cột sửa được: owner, url, size, price', %w[owner url size price].all? { |k| T::COLUMNS.find { |c| c[:key] == k }[:editable] == k }
 check 'cột tính tổng: diện tích chiếu và thành tiền', %w[areaProjected total].all? { |k| T::COLUMNS.find { |c| c[:key] == k }[:kind] == 'sum' }
 

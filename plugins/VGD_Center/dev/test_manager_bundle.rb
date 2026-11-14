@@ -22,7 +22,7 @@ FileUtils.mkdir_p(File.join(plug, 'VGD_Center'))
 File.write(File.join(plug, 'VGD_Center/main.rb'), "center main\n")
 FileUtils.mkdir_p(File.join(fake, 'SketchUp/SketchUp 2024/SketchUp/Plugins'))
 
-require_relative '../VGD_Center/main'
+require_relative '../vgd_center/main'
 MGR = VGD::Center::Manager
 
 def check(label, cond)

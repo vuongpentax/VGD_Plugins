@@ -1,9 +1,16 @@
 require 'json'
 require_relative 'storage'
+require_relative 'model_settings'
 require_relative 'images'
 require_relative 'preset'
 require_relative 'front'
 require_relative 'measure'
+require_relative 'custom_columns'
+require_relative 'vgd_id'
+require_relative 'object_code'
+require_relative 'levels'
+require_relative 'rooms'
+require_relative 'material_library'
 
 module VGD
   module BIM
@@ -22,9 +29,15 @@ module VGD
         {key: 'ordinal', label: '#', kind: 'text'},
         {key: 'image', label: 'Ảnh', kind: 'image'},
         {key: 'image_location', label: 'Ảnh vị trí', kind: 'image_location'},
+        {key: 'image_extra1', label: 'Ảnh 3', kind: 'image_extra1'},
+        {key: 'image_extra2', label: 'Ảnh 4', kind: 'image_extra2'},
         {key: 'entity', label: 'Loại', kind: 'text'},
         {key: 'definition', label: 'Họ', kind: 'text'},
         {key: 'instance', label: 'Tên', kind: 'text', editable: 'name'},
+        {key: 'code', label: 'Mã đối tượng', kind: 'text', editable: 'code'},
+        {key: 'vgd_id', label: 'VGD ID', kind: 'text'},
+        {key: 'level', label: 'Tầng', kind: 'text', editable: 'level'},
+        {key: 'room', label: 'Phòng', kind: 'text', editable: 'room'},
         {key: 'description', label: 'Mô tả', kind: 'text', editable: 'description'},
         {key: 'lenX', label: 'Rộng (X) mm', kind: 'number'},
         {key: 'lenY', label: 'Dài (Y) mm', kind: 'number'},
@@ -53,11 +66,25 @@ module VGD
         {key: 'calc_qty', label: 'Khối lượng tính', kind: 'calc'},
         {key: 'calc_unit', label: 'Đơn vị tính', kind: 'text'},
         {key: 'calc_total', label: 'Thành tiền (theo khối lượng tính)', kind: 'sum'},
+        {key: 'mat_code', label: 'Mã vật liệu', kind: 'text'},
+        {key: 'mat_price', label: 'Đơn giá vật liệu', kind: 'number'},
+        {key: 'mat_waste', label: 'Hao hụt vật liệu %', kind: 'number'},
+        {key: 'mat_qty', label: 'Khối lượng có hao hụt', kind: 'number'},
+        {key: 'mat_cost', label: 'Thành tiền (theo vật liệu)', kind: 'sum'},
         {key: 'front', label: 'Mặt trước', kind: 'text'},
         {key: 'front_state', label: 'Độ tin cậy mặt trước', kind: 'text'},
         {key: 'measure_note', label: 'Ghi chú số đo', kind: 'text'}
       ].freeze
       COLUMN_KEYS = COLUMNS.map { |column| column[:key] }.freeze
+
+      # Cột chuẩn + cột người dùng thêm tay (CustomColumns, lưu trên máy). Dùng khi kiểm tra tên cột của preset / trạng thái bảng.
+      def self.columns
+        COLUMNS + CustomColumns.columns
+      end
+
+      def self.column_keys
+        COLUMN_KEYS + CustomColumns.keys
+      end
 
       STATUS_LABELS = {'new' => 'Mới', 'existing' => 'Hiện hữu', 'reuse' => 'Dùng lại', 'temporary' => 'Tạm thời', 'removed' => 'Loại bỏ'}.freeze
 
@@ -83,7 +110,7 @@ module VGD
       # Preset đã lưu / nhập từ bản cũ có thể dùng 5 nhóm cũ: đổi sang nhóm mới tương ứng trước khi kiểm tra.
       def self.sanitize_preset(item)
         item = item.merge('group' => Tags.migrate_group(item['group'])) if item.is_a?(Hash) && item.key?('group')
-        Preset.sanitize(item, COLUMN_KEYS, Tags::GROUPS)
+        Preset.sanitize(item, column_keys, Tags::GROUPS)
       end
 
       def self.save_preset(name, group, columns, headers = nil, settings = nil)
@@ -103,7 +130,7 @@ module VGD
       # Nhập preset từ file JSON (định dạng riêng hoặc của plugin tham khảo). Trùng tên preset đã lưu thì ghi đè.
       def self.import_presets(obj)
         obj = obj.merge('presets' => obj['presets'].map { |item| item.is_a?(Hash) && item.key?('group') ? item.merge('group' => Tags.migrate_group(item['group'])) : item }) if obj.is_a?(Hash) && obj['presets'].is_a?(Array)
-        incoming = Preset.import(obj, COLUMN_KEYS, Tags::GROUPS, BUILT_IN_NAMES)
+        incoming = Preset.import(obj, column_keys, Tags::GROUPS, BUILT_IN_NAMES)
         kept = custom_presets.reject { |p| incoming.any? { |i| i['name'] == p['name'] } }
         raise ArgumentError, "Quá nhiều preset (tối đa #{Preset::MAX_PRESETS})." if kept.size + incoming.size > Preset::MAX_PRESETS
         Storage.write('table_presets', kept + incoming)
@@ -120,28 +147,32 @@ module VGD
       VIEW_KEYS = %w[preset group order visible widths density showTotals onlyTop headers settings rowHeight].freeze
       ROW_HEIGHT_MIN = 28 # độ cao hàng (điểm ảnh) khi người dùng Ctrl + lăn chuột; 0 = theo mật độ hàng
       ROW_HEIGHT_MAX = 640
-      def self.view_state
-        raw = Storage.read('table_view')
+      # model: trạng thái bảng riêng của file SketchUp (nếu có) thay cho trạng thái chung trên máy.
+      def self.view_state(model = nil)
+        raw = ModelSettings.read(model)[ModelSettings::VIEW_KEY] if model
+        raw = Storage.read('table_view') if raw.nil?
         return {} unless raw.is_a?(Hash)
         state = raw.select { |k, _| VIEW_KEYS.include?(k) }
         state['group'] = Tags.migrate_group(state['group']) if state['group'].is_a?(String) # trạng thái cũ dùng nhóm cũ
         state['rowHeight'] = row_height(state['rowHeight']) if state.key?('rowHeight') # file sửa tay: giá trị lạ bị bỏ
         state.delete('rowHeight') if state['rowHeight'].nil?
-        state['headers'] = Preset.headers(state['headers'], COLUMN_KEYS) if state.key?('headers')
+        state['headers'] = Preset.headers(state['headers'], column_keys) if state.key?('headers')
         state['settings'] = Preset.settings(state['settings']) if state.key?('settings')
         state
       end
 
-      def self.save_view_state(state)
+      # Ghi vào file SketchUp (nếu có model) và vào trạng thái chung (làm mẫu cho file chưa có riêng).
+      def self.save_view_state(state, model = nil)
         raise ArgumentError, 'Trạng thái bảng không hợp lệ.' unless state.is_a?(Hash)
         clean = state.select { |k, _| VIEW_KEYS.include?(k) }
-        %w[order visible].each { |k| clean[k] = Array(clean[k]).map(&:to_s).select { |key| COLUMN_KEYS.include?(key) } if clean.key?(k) }
-        clean['widths'] = (clean['widths'].is_a?(Hash) ? clean['widths'] : {}).select { |k, v| COLUMN_KEYS.include?(k) && v.is_a?(Numeric) } if clean.key?('widths')
+        %w[order visible].each { |k| clean[k] = Array(clean[k]).map(&:to_s).select { |key| column_keys.include?(key) } if clean.key?(k) }
+        clean['widths'] = (clean['widths'].is_a?(Hash) ? clean['widths'] : {}).select { |k, v| column_keys.include?(k) && v.is_a?(Numeric) } if clean.key?('widths')
         clean['rowHeight'] = row_height(clean['rowHeight']) if clean.key?('rowHeight')
         clean.delete('rowHeight') if clean['rowHeight'].nil?
-        clean['headers'] = Preset.headers(clean['headers'], COLUMN_KEYS) if clean.key?('headers')
+        clean['headers'] = Preset.headers(clean['headers'], column_keys) if clean.key?('headers')
         clean['settings'] = Preset.settings(clean['settings']) if clean.key?('settings')
         Storage.write('table_view', clean)
+        ModelSettings.write(model, ModelSettings::VIEW_KEY => clean) if model
       end
 
       # 0 (theo mật độ hàng) hoặc số điểm ảnh làm tròn, kẹp trong giới hạn; không phải số thì nil (bỏ).
@@ -182,18 +213,55 @@ module VGD
           end
         end
         records, hidden = drop_excluded_tags(records, path.size, measure ? measure.tags : [])
+        records = records.reject { |record| Rooms.volume_entity?(record[:entity]) } # khối phòng do VGD_Room dựng: không phải món, không tính khối lượng
         groups = tag_groups
         index_of = {}
         records.each_with_index { |record, i| index_of[path_key(record[:path])] = i }
         image_folder = model.respond_to?(:guid) ? Images.dir(model) : nil # một lần cho cả bảng
         overrides = Quantity.overrides # cách tính ghi đè theo tag, đọc một lần cho cả bảng
-        rows = records.each_with_index.map { |record, i| row_for(record, i, groups, projected: projected, measure: measure, overrides: overrides).merge(image_state(model, record[:entity], image_folder)) }
+        custom = CustomColumns.read # cột thêm tay, đọc một lần cho cả bảng
+        rows = records.each_with_index.map { |record, i| row_for(record, i, groups, projected: projected, measure: measure, overrides: overrides, custom: custom).merge(image_state(model, record[:entity], image_folder)) }
+        library = MaterialLibrary.read # thư viện vật liệu (trên máy), đọc một lần cho cả bảng
+        levels = Levels.read(model) # tầng của công trình (lưu trong model); đọc một lần cho cả bảng
+        level_names = levels.to_h { |level| [level['id'], level['name']] }
+        room_names = Rooms.read(model).to_h { |room| [room['id'], room['number'].empty? ? room['name'] : "#{room['number']} · #{room['name']}"] }
+        records.each_with_index do |record, i|
+          lid = Levels.entity_level(record[:entity])
+          entry = MaterialLibrary.find(library, rows[i][:material])
+          priced = MaterialLibrary.cost(entry, rows[i][:calc_method], rows[i][:calc_qty])
+          rows[i].merge!(mat_code: entry ? entry['code'] : '', mat_price: entry ? entry['price'] : nil, mat_waste: entry ? entry['waste'] : nil, mat_qty: priced[:qty], mat_cost: priced[:cost], mat_note: priced[:note].to_s)
+          rows[i][:level_id] = lid
+          rows[i][:level] = lid.empty? ? '' : level_names.fetch(lid, '(tầng đã xóa)')
+          rows[i][:base_z] = base_z(record) # cao độ đáy món (mm, thế giới) để gợi ý tầng
+          rows[i][:base_x], rows[i][:base_y] = base_xy(record) # tâm đáy món (mm, thế giới) để gợi ý phòng
+          rid = Rooms.entity_room(record[:entity])
+          rows[i][:room_id] = rid
+          rows[i][:room] = rid.empty? ? '' : room_names.fetch(rid, '(phòng đã xóa)')
+        end
+        VgdId.duplicates(rows.map { |row| {index: row[:index], pid: row[:pid], guid: row[:vgd_id]} }).flatten.each { |i| rows[i][:vgd_dup] = true } # ID dùng chung giữa các dòng (do copy)
         # Đối tượng cha đang có trong bảng: dùng để tránh cộng trùng khi tính tổng.
         records.each_with_index do |record, i|
           rows[i][:parents] = (1...record[:path].size).map { |n| index_of[path_key(record[:path][0...n])] }.compact
           rows[i][:parent] = parent_label(record)
         end
         {rows: rows, records: records, hidden: hidden}
+      end
+
+      # Cao độ Z (mm) của đáy hộp bao thế giới của món; không đo được thì nil.
+      def self.base_z(record)
+        box = bounding_box(record)
+        box.empty? ? nil : (box.min.z.to_f * Geometry::INCH_MM).round(1)
+      rescue StandardError
+        nil
+      end
+
+      # Tâm X, Y (mm, thế giới) của hộp bao món; không đo được thì [nil, nil].
+      def self.base_xy(record)
+        box = bounding_box(record)
+        return [nil, nil] if box.empty?
+        [((box.min.x.to_f + box.max.x.to_f) / 2 * Geometry::INCH_MM).round(1), ((box.min.y.to_f + box.max.y.to_f) / 2 * Geometry::INCH_MM).round(1)]
+      rescue StandardError
+        [nil, nil]
       end
 
       # Bỏ dòng gắn tag loại trừ (tên tag đã chuẩn hóa) và mọi món nằm trong nó. Chỉ xét các đối tượng được đọc (từ path[skip..]),
@@ -209,14 +277,21 @@ module VGD
       # Mã bền (persistent_id) và tình trạng ảnh của đối tượng. Ảnh nằm ngoài file SketchUp (xem Images).
       def self.image_state(model, entity, folder = nil)
         pid = entity.respond_to?(:persistent_id) ? entity.persistent_id : nil
-        none = {pid: nil, has_image: false, image_stamp: 0, image_url: nil, has_location: false, location_stamp: 0, location_url: nil}
+        none = {pid: nil, has_image: false, image_stamp: 0, image_url: nil, has_location: false, location_stamp: 0, location_url: nil,
+                has_extra1: false, extra1_stamp: 0, extra1_url: nil, has_extra2: false, extra2_stamp: 0, extra2_url: nil}
         return none unless pid.is_a?(Integer) && pid > 0 && model.respond_to?(:guid)
         folder ||= Images.dir(model)
         info = Images.info(model, pid, folder)
         place = Images.info(model, pid, folder, :location)
+        extras = Images::EXTRA_KINDS.each_with_object({}) do |kind, out|
+          extra = Images.info(model, pid, folder, kind)
+          out[:"has_#{kind}"] = extra[:has]
+          out[:"#{kind}_stamp"] = extra[:stamp]
+          out[:"#{kind}_url"] = extra[:has] ? Images.file_url(model, pid, extra[:stamp], folder, kind) : nil
+        end
         # image_url / location_url: giao diện hiện ảnh gốc trực tiếp từ file (không chuyển qua Ruby); chưa có ảnh thì nil.
         {pid: pid, has_image: info[:has], image_stamp: info[:stamp], image_url: info[:has] ? Images.file_url(model, pid, info[:stamp], folder) : nil,
-         has_location: place[:has], location_stamp: place[:stamp], location_url: place[:has] ? Images.file_url(model, pid, place[:stamp], folder, :location) : nil}
+         has_location: place[:has], location_stamp: place[:stamp], location_url: place[:has] ? Images.file_url(model, pid, place[:stamp], folder, :location) : nil}.merge(extras)
       end
 
       # Tên của đối tượng cha trực tiếp (để nhóm theo cha); cấp gốc của model thì để trống.
@@ -227,7 +302,7 @@ module VGD
         name.empty? ? Geometry.definition(parent).name.to_s : name
       end
 
-      def self.row_for(record, index, groups, projected: false, measure: nil, overrides: {})
+      def self.row_for(record, index, groups, projected: false, measure: nil, overrides: {}, custom: [])
         entity = record[:entity]
         transform = record[:transform]
         dims = Geometry.dimensions(entity, transform, measure: measure)
@@ -247,6 +322,7 @@ module VGD
           definition: Geometry.definition(entity).name.to_s,
           name: entity.name.to_s,
           description: data[:description].to_s,
+          code: data[:code].to_s,
           lenX: width, lenY: depth, lenZ: height,
           areaXZ: (width * height / 1_000_000.0).round(3),
           areaXY: (width * depth / 1_000_000.0).round(3),
@@ -259,8 +335,9 @@ module VGD
           status: status,
           locked: record[:locked] ? true : false,
           quantity: 1,
+          vgd_id: VgdId.read(entity),
           parents: []
-        }.merge(extra_columns(entity, data)).merge(measure_note: body ? body[:note].to_s : '')
+        }.merge(extra_columns(entity, data)).merge(measure_note: body ? body[:note].to_s : '').merge(CustomColumns.values(entity, custom))
         row.merge(Quantity.row_fields(row, tag, row[:tag_group], data, overrides)) # hạng mục / cách tính / khối lượng suy ra từ tag (tính ảo, không ghi vào món)
       end
 
@@ -268,7 +345,8 @@ module VGD
       def self.extra_columns(entity, data)
         extras = Extras.read(entity)
         {owner: data[:manufacturer].to_s, url: extras[:url], size: extras[:size], price: extras[:price],
-         total: extras[:price], ifc: ifc_class(entity), photo_full: PhotoSettings.read(entity, :full), photo_location: PhotoSettings.read(entity, :location)}.merge(front_columns(entity))
+         total: extras[:price], ifc: ifc_class(entity), photo_full: PhotoSettings.read(entity, :full), photo_location: PhotoSettings.read(entity, :location),
+         photo_extra1: PhotoSettings.read(entity, :extra1), photo_extra2: PhotoSettings.read(entity, :extra2)}.merge(front_columns(entity))
       end
 
       # Mặt trước (lưu ở định nghĩa): hướng cục bộ, nhãn trạng thái, ghi chú lý do.

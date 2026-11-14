@@ -120,7 +120,7 @@ const VGD_I18N=(()=>{
 'Chụp lại':'Retake','Chọn ảnh…':'Choose image…','Xóa ảnh':'Delete photo',
 
     // --- Thông báo từ Ruby ---
-    'Đã lưu cài đặt.':'Settings saved.','Đã đổi thư mục lưu ảnh.':'Image folder changed.','Đã lưu ảnh cho đối tượng.':'Photo saved for the object.','Đã xóa ảnh của đối tượng.':'Photo deleted for the object.',
+    'Đã lưu cài đặt.':'Settings saved.','Đã đổi thư mục lưu ảnh.':'Image folder changed.','Đã đổi thư mục lưu ảnh của file này.':'Image folder of this file changed.','Đã lưu ảnh cho đối tượng.':'Photo saved for the object.','Đã xóa ảnh của đối tượng.':'Photo deleted for the object.',
     'Bản SketchUp này không có hộp chọn thư mục. Hãy gõ đường dẫn thư mục vào ô.':'This SketchUp version has no folder picker. Type the folder path into the box.',
     'Đang chụp ảnh. Hãy đợi xong hoặc bấm Dừng.':'A capture is running. Wait for it to finish or press Stop.','Bảng đã cũ. Hãy làm mới bảng.':'The table is out of date. Refresh the table.',
     'Không có đối tượng nào cần chụp.':'No objects need photographing.','Danh sách ảnh không hợp lệ.':'Invalid image list.','Đối tượng không còn trong bảng. Hãy làm mới bảng.':'The object is no longer in the table. Refresh the table.',
@@ -162,7 +162,7 @@ const VGD_I18N=(()=>{
     'Chiều dài: số lẻ':'Length: decimals','Chiều dài: đơn vị':'Length: unit','Diện tích: số lẻ':'Area: decimals','Diện tích: đơn vị':'Area: unit','Thể tích: số lẻ':'Volume: decimals','Thể tích: đơn vị':'Volume: unit',
     'Chiều rộng ảnh':'Image width','Chiều cao ảnh':'Image height','Góc nhìn ảnh':'Image view','Kiểu hiển thị ảnh':'Image style',
     'Khung nhìn hiện tại':'Current view','Phối cảnh iso':'Isometric view','Chính diện':'Front view','Màu (có texture)':'Color (textured)','Kiểu hiện tại':'Current style','Nền trong suốt':'Transparent background','Nền trắng':'White background',
-    'Thư mục lưu ảnh (dùng chung mọi preset). Để trống để dùng thư mục mặc định.':'Image folder (shared by all presets). Leave empty to use the default folder.',
+    'Thư mục lưu ảnh của file SketchUp này (lưu trong file, mở file khác không bị đổi theo). Để trống để dùng thư mục mặc định.':'Image folder of this SketchUp file (saved in the file, so opening another file does not change it). Leave empty to use the default folder.',
     'Chọn thư mục lưu ảnh':'Choose image folder','Tạo preset từ bảng hiện tại':'Create a preset from the current table',
     'Khôi phục cột, tiêu đề và thiết lập gốc của preset':'Restore the preset\'s original columns, headers and settings',
     'Preset lưu cột hiển thị, thứ tự, tiêu đề cột, đơn vị và cách chụp ảnh, trên máy này. Đang dùng preset tự tạo thì mọi thay đổi tự cập nhật vào preset đó.':'A preset stores the visible columns, their order, column headers, units and photo settings, on this computer. While a custom preset is active, every change updates it automatically.',
@@ -249,6 +249,98 @@ const VGD_I18N=(()=>{
     'Nếu tag đang tắt hiển thị, các đối tượng gán vào sẽ bị ẩn.':'If the tag is hidden, the objects assigned to it will be hidden.',
     'Giữ Ctrl và lăn chuột giữa trên bảng để đổi độ cao hàng (ảnh to ra theo).':'Hold Ctrl and scroll the mouse wheel over the table to change the row height (images grow with it).','Đặt lại độ rộng cột':'Reset column widths','Kéo mép tiêu đề cột để chỉnh độ rộng.':'Drag the edge of a column header to resize it.','Độ rộng cột phải là số từ 20 đến 2000.':'Column width must be a number from 20 to 2000.','Loại trừ tag':'Exclude tags','Chọn các tag không tính vào Rộng / Dài / Cao':'Pick the tags that are not counted in Width / Length / Height','Tìm tag...':'Find tag...','Tìm tag':'Find tag','Ẩn danh sách tag':'Hide tag list','Chọn tất cả tag':'Select all tags','Phần nằm trên tag được tick không tính vào Rộng / Dài / Cao của Bảng khối lượng.':'Parts on a ticked tag are not counted in Width / Length / Height of the quantity table.','(không có trong model)':'(not in this model)','Không có tag nào khớp.':'No tag matches.','Không có tag nào trong model.':'There are no tags in this model.','Danh sách tag loại trừ không hợp lệ.':'Invalid list of excluded tags.','Tối đa 300 tag loại trừ, mỗi tên không quá 100 ký tự.':'At most 300 excluded tags, each name at most 100 characters.','Số đo thân':'Body size','Ghi chú số đo':'Measurement note','Bỏ khỏi Rộng / Dài / Cao các phần có tên hoặc tag chứa từ khóa (xem cột Ghi chú số đo).':'Leaves out of Width / Length / Height the parts whose name or tag contains a keyword (see the Measurement note column).','Từ khóa loại trừ khỏi số đo':'Keywords left out of measurements','Group, component hoặc tag có tên chứa một trong các từ này (cách nhau dấu phẩy, không phân biệt hoa thường và dấu) không được tính vào Rộng / Dài / Cao.':'Groups, components or tags whose name contains one of these words (separated by commas, case and accent insensitive) are not counted in Width / Length / Height.','Danh sách từ khóa tối đa 200 ký tự.':'The keyword list is at most 200 characters.','Tối đa 12 từ khóa, mỗi từ không quá 40 ký tự.':'At most 12 keywords, each at most 40 characters.','Sửa trục theo mặt trước':'Fix axes by front','Xem trước sửa trục':'Preview axis fix','Áp dụng sửa trục':'Apply axis fix','Xoay nội dung của món (bội của 90°) để mặt trước thành hướng -Y và bù cho mọi bản sao, nên hình trong model không đổi chỗ. Đây là thay đổi hình học; Ctrl+Z hoàn tác một lần. Chỉ áp dụng cho các dòng đang chọn.':'Rotates the contents of the item (in multiples of 90°) so the front becomes the -Y direction, and compensates every copy, so the geometry in the model does not move. This changes geometry; Ctrl+Z undoes it in one step. Applies only to the selected rows.','Không có món nào cần sửa trục.':'No item needs an axis fix.','chưa có mặt trước':'no front set','là ảnh':'is an image','không có hình bên trong':'has no geometry inside','không có bản sao nào trong model':'has no copies in the model','có bản sao bị khóa':'a copy is locked','có bản sao bị lật gương':'a copy is mirrored','nằm trong đối tượng bị khóa':'is inside a locked object','Hãy chọn các món cần sửa trục trong bảng.':'Select the items to fix in the table.','Không có món nào cần sửa trục. Bấm Xem trước để biết lý do.':'No item needs an axis fix. Click Preview to see why.','Cách đặt mặt trước không hợp lệ.':'Invalid way to set the front.','Hướng mặt trước không hợp lệ.':'Invalid front direction.','Đối tượng đang bị khóa nên không đặt được mặt trước.':'The objects are locked, so the front cannot be set.','Đối tượng đang bị khóa nên không xóa được mặt trước.':'The objects are locked, so the front cannot be cleared.','Các bản sao của cùng một component đang cho hướng khác nhau. Hãy chọn từng bản sao.':'Copies of the same component give different directions. Select the copies one by one.','Không xác định được hướng nhìn ngang của camera. Hãy xoay camera nhìn vào mặt trước của món (không nhìn thẳng từ trên xuống).':'Could not determine the camera horizontal direction. Orbit the camera to look at the front of the item (not straight down).','Chưa có mặt trước để xoay / đảo. Hãy phát hiện hoặc đặt tay trước.':'There is no front to rotate or reverse yet. Detect or set it by hand first.','Chưa có đối tượng nào trong bảng.':'There are no objects in the table.','ở góc tường (hai mặt kề sát tường)':'in a wall corner (two adjacent sides against walls)','kẹp giữa hai tường, không dùng được bằng chứng tường':'between two walls, wall evidence is not usable','mặt có nhiều chi tiết nhất':'side with the most detail','chưa đủ bằng chứng, cần duyệt':'not enough evidence, needs review','món không đứng thẳng (trục Z không hướng lên)':'item is not upright (Z axis does not point up)','món bị lật gương':'item is mirrored','component động':'dynamic component','món lệch góc so với trục, mặt trước chỉ gần đúng':'item is rotated off its axes, the front is only approximate','các bản sao cho kết quả khác nhau: cần duyệt':'copies gave different results: needs review','Mặt trước':'Front','Bảng tên trên model':'Name label in the model','món chưa có mặt trước nên chụp theo trục thế giới':'item has no front set, so it was shot along the world axes','Độ tin cậy mặt trước':'Front confidence','Mặt trước (độ tin cậy)':'Front (confidence)','(Chưa có mặt trước)':'(No front set)','Thủ công':'Manual','Tự động · cao':'Auto · high','Tự động · trung bình':'Auto · medium','Cần duyệt':'Needs review','Phát hiện tự động':'Detect automatically','Theo hướng nhìn hiện tại':'Use current view direction','Xoay 90°':'Rotate 90°','Đảo chiều':'Reverse','Xóa mặt trước':'Clear front','Ghi đè cả món đã đặt tay':'Also overwrite manually set items','Hãy chọn đối tượng trong bảng trước.':'Select objects in the table first.','Mặt trước là hướng ra của món theo trục riêng của nó. Khi chọn món, mũi tên trong SketchUp chỉ hướng này.':'The front is the direction the item faces, along its own axes. When an item is selected, an arrow in SketchUp shows this direction.','Xoay camera nhìn thẳng vào mặt trước của món rồi bấm nút này':'Orbit the camera to look straight at the front of the item, then click this button','Món tin cậy "Cần duyệt" nên được xem lại: chọn dòng, nhìn mũi tên trong SketchUp, đúng thì giữ, sai thì xoay hoặc đảo.':'Items marked "Needs review" should be checked: select the row, look at the arrow in SketchUp, keep it if right, rotate or reverse it if wrong.','Định dạng xuất không hợp lệ.':'Invalid export format.','Dữ liệu bảng không hợp lệ.':'Invalid table data.','Bảng chưa có dòng nào. Hãy chọn group hoặc component trong SketchUp.':'The table has no rows yet. Select groups or components in SketchUp.','Số lẻ không hợp lệ.':'Invalid number of decimals.','Sắp có':'Coming soon','Xuất Excel':'Export Excel','In PDF':'Print PDF','Mô hình':'Model','Ngày':'Date','In / Lưu PDF':'Print / Save PDF','Nhập preset (JSON)':'Import presets (JSON)','Xuất preset (JSON)':'Export presets (JSON)',
     'Diện tích chiếu bằng m²':'Projected area m²','Loại IFC':'IFC type','Xuất xứ':'Origin','Liên kết':'Link','Quy cách':'Specification','Đơn giá':'Unit price','Thành tiền':'Total',
+    'Đặt mã đối tượng hàng loạt...':'Set object codes in bulk...','Đặt mã đối tượng':'Set object codes','Tiền tố':'Prefix','Số bắt đầu':'Start number','Số chữ số':'Digits','Đặt lại cả món đã có mã':'Also reset items that already have a code','Hãy chọn các dòng cần đặt mã (Ctrl+A chọn hết các dòng đang hiện).':'Select the rows to set a code (Ctrl+A selects all visible rows).','Hãy chọn các dòng cần đặt mã.':'Select the rows to set a code.','Đặt Mã đối tượng (D01, D02...) cho các món đang chọn theo thứ tự trong bảng':'Set object codes (D01, D02...) for the selected items in table order','Mã':'Code','Mã đối tượng':'Object code',
+    'Tường':'Wall','Sàn':'Floor','Trần':'Ceiling','Cửa đi':'Door','Cửa sổ':'Window','Cột':'Column','Dầm':'Beam','Cầu thang':'Stair','Tủ':'Cabinet','Thiết bị vệ sinh':'Sanitary','Chiếu sáng':'Lighting','Chung':'Generic',
+    'Quản lý tầng...':'Manage levels...','Quản lý tầng':'Manage levels','Thêm / sửa tầng của công trình và gán tầng cho món (chỉ là nhãn, không dời hình)':'Add / edit the building levels and assign levels to items (labels only, nothing is moved)','Tầng':'Level','Tên tầng':'Level name','Cao độ sàn (mm)':'Floor elevation (mm)','Chiều cao tầng (mm)':'Level height (mm)','Cao độ (mm)':'Elevation (mm)','Cao (mm)':'Height (mm)','+ Thêm tầng':'+ Add level','Chưa có tầng nào. Bấm Thêm tầng.':'No levels yet. Click Add level.','(Không có tầng)':'(No level)','(Chưa gán tầng)':'(No level assigned)','(tầng đã xóa)':'(deleted level)',
+    'Gán tầng theo cao độ cho món đang chọn':'Assign levels by elevation to selected items','Hãy chọn các dòng cần gán tầng (Ctrl+A chọn hết các dòng đang hiện).':'Select the rows to assign a level (Ctrl+A selects all visible rows).','Chọn dòng để gán tầng theo cao độ; hoặc nhấp đúp ô Tầng để gán tay.':'Select rows to assign levels by elevation, or double-click a Level cell to assign by hand.','Xóa tầng này (món đã gán chỉ hiện "tầng đã xóa", không mất dữ liệu khác)':'Delete this level (assigned items just show "deleted level", no other data is lost)','Mỗi món nhận tầng cao nhất có cao độ sàn bằng hoặc thấp hơn đáy món (dung sai 50 mm). Chỉ là nhãn, không dời hình.':'Each item gets the highest level whose floor elevation is at or below the item base (tolerance 50 mm). Labels only, nothing is moved.',
+    'Dựng khối':'Build volume','Dựng lại khối':'Rebuild volume','Dựng (hoặc dựng lại) khối 3D của phòng bằng plugin VGD Room: một khối trên tag VGD_ROOMS, một bước hoàn tác.':'Builds (or rebuilds) the 3D room volume with the VGD Room plugin: one volume on the VGD_ROOMS tag, one undo step.','Cần cài plugin VGD Room (qua VGD Center) để dựng khối phòng.':'The VGD Room plugin (install it via VGD Center) is needed to build room volumes.',
+    'Thư viện vật liệu...':'Material library...','Thư viện vật liệu':'Material library','Mã vật liệu':'Material code','Tên vật liệu':'Material name','Đơn vị vật liệu':'Material unit','Đơn giá':'Unit price','Hao hụt (%)':'Waste (%)','Độ dày (mm)':'Thickness (mm)','Vật liệu SketchUp được nối':'Linked SketchUp material','(Chưa nối vật liệu SketchUp)':'(No SketchUp material linked)','Hãng':'Manufacturer','Sản phẩm':'Product','Quy cách':'Specification','Dày mm':'Thick mm','Hao hụt %':'Waste %','+ Thêm vật liệu':'+ Add material','Chưa có vật liệu nào. Bấm Thêm vật liệu.':'No materials yet. Click Add material.','Xóa vật liệu này khỏi thư viện':'Remove this material from the library','cái':'pcs','bộ':'set','lô':'lot','không':'none',
+    'Nối với vật liệu SketchUp theo tên. Khối lượng có hao hụt = khối lượng tính x (1 + hao hụt %). Thành tiền chỉ tính khi đơn vị vật liệu trùng đơn vị tính của dòng (m², m, m³, cái).':'Linked to SketchUp materials by name. Quantity with waste = calculated quantity x (1 + waste %). The cost is only calculated when the material unit matches the row calculation unit (m², m, m³, piece).','Thư viện vật liệu (mã, hãng, đơn giá, hao hụt...) nối với vật liệu SketchUp theo tên để tính khối lượng có hao hụt và thành tiền theo vật liệu':'Material library (code, manufacturer, price, waste...) linked to SketchUp materials by name to calculate quantities with waste and cost by material',
+    'Hao hụt vật liệu %':'Material waste %','Đơn giá vật liệu':'Material unit price','Khối lượng có hao hụt':'Quantity with waste','Thành tiền (theo vật liệu)':'Cost (by material)',
+    'Quản lý phòng...':'Manage rooms...','Quản lý phòng':'Manage rooms','Phòng':'Room','Tên phòng':'Room name','Mã phòng':'Room code','Mã':'Code','Tầng của phòng':'Room level','Chiều cao phòng (mm)':'Room height (mm)','Cao độ sàn (mm)':'Floor elevation (mm)','Hoàn thiện sàn':'Floor finish','Hoàn thiện tường':'Wall finish','Hoàn thiện trần':'Ceiling finish','Tên phòng mới':'New room name','Mã phòng mới':'New room code','Tầng của phòng mới':'New room level','(Không có phòng)':'(No room)','(Chưa gán phòng)':'(No room assigned)','(phòng đã xóa)':'(deleted room)',
+    'Tạo phòng từ mặt đang chọn':'Create room from selected face','Gán món vào phòng theo vị trí':'Assign items to rooms by position','Chưa có phòng nào. Chọn một mặt sàn trong SketchUp rồi bấm Tạo phòng từ mặt đang chọn.':'No rooms yet. Select a floor face in SketchUp, then click Create room from selected face.','Chọn dòng để gán phòng theo vị trí; hoặc nhấp đúp ô Phòng để gán tay.':'Select rows to assign rooms by position, or double-click a Room cell to assign by hand.','Hãy chọn các dòng cần gán phòng (Ctrl+A chọn hết các dòng đang hiện).':'Select the rows to assign a room (Ctrl+A selects all visible rows).',
+    'Xóa phòng này (món đã gán chỉ hiện "phòng đã xóa", không mất dữ liệu khác)':'Delete this room (assigned items just show "deleted room", no other data is lost)','Đọc viền của mặt sàn (Face nằm ngang) đang chọn trong SketchUp và lưu thành phòng. Chỉ lưu dữ liệu, không dựng hình.':'Reads the outline of the selected horizontal floor face in SketchUp and saves it as a room. Data only, no geometry is built.','Mỗi món nhận phòng chứa tâm đáy của nó (trong viền và trong khoảng cao của phòng). Chỉ là nhãn, không dời hình.':'Each item gets the room that contains the centre of its base (inside the outline and the room height). Labels only, nothing is moved.','Tạo phòng từ mặt sàn đang chọn, sửa tên / mã / tầng / chiều cao / hoàn thiện, xem diện tích, thể tích và gán món vào phòng (chỉ là dữ liệu, hình khối do VGD_Room dựng)':'Create rooms from the selected floor face, edit name / code / level / height / finishes, see area and volume and assign items to rooms (data only, the 3D volume is built by VGD_Room)',
+    'Chưa có VGD ID, hãy bấm Gán VGD ID cho tất cả món chưa có':'No VGD ID yet. Press Assign VGD ID to all items without one','Mọi món đều đã có VGD ID.':'All items already have a VGD ID.',
+    'Luật kiểm tra...':'Check rules...',
+    'Đặt luật kiểm tra riêng cho bảng (ví dụ Rộng nhỏ hơn 700 thì cảnh báo, Tầng để trống thì thông tin) rồi chạy và bấm vào kết quả để chọn món':'Define your own check rules for the table (for example Width less than 700 gives a warning, empty Level gives info), run them and click a result to select the item',
+    'Luật kiểm tra':'Check rules',
+    'Mỗi luật kiểm tra một cột của bảng (số đo tính bằng mm). Luật lưu trong file SketchUp, chỉ đọc bảng, không đổi gì trong model.':'Each rule checks one table column (measurements are in mm). Rules are saved in the SketchUp file; they only read the table and change nothing in the model.',
+    'nhỏ hơn':'less than',
+    'nhỏ hơn hoặc bằng':'less than or equal to',
+    'lớn hơn':'greater than',
+    'lớn hơn hoặc bằng':'greater than or equal to',
+    'bằng':'equals',
+    'khác':'not equal to',
+    'chứa':'contains',
+    'để trống':'is empty',
+    'không để trống':'is not empty',
+    'Lỗi':'Error',
+    '+ Thêm luật':'+ Add rule',
+    'Chạy kiểm tra':'Run check',
+    'Tên luật':'Rule name',
+    'Xóa luật này':'Delete this rule',
+    'Phép so sánh':'Comparison',
+    'Giá trị so sánh':'Compare to value',
+    'Mức độ':'Severity',
+    'Lời nhắn (để trống thì dùng tên luật)':'Message (leave empty to use the rule name)',
+    'Chưa có luật nào. Bấm Thêm luật.':'No rules yet. Press Add rule.',
+    'So sánh phiên bản...':'Compare versions...',
+    'So sánh phiên bản':'Compare versions',
+    'Chụp mốc giá trị các món rồi so với bảng hiện tại để biết món nào thêm, xóa hoặc đổi':'Take a snapshot of item values, then compare it with the current table to see which items were added, removed or changed',
+    'Chụp mốc để nhớ giá trị của các món ở thời điểm này, sau đó so với bảng hiện tại để biết món nào thêm, xóa hoặc đổi. Mốc lưu trong file SketchUp (tối đa 5 mốc), chỉ đọc bảng.':'Take a snapshot to remember item values at this moment, then compare it with the current table to see which items were added, removed or changed. Snapshots are saved in the SketchUp file (up to 5) and only read the table.',
+    'Tên mốc':'Snapshot name',
+    'Tên mốc (ví dụ Bản gửi khách 12/11)':'Snapshot name (e.g. Version sent to client)',
+    'Chụp mốc hiện tại':'Take snapshot now',
+    'So sánh':'Compare',
+    'Xóa mốc này':'Delete this snapshot',
+    'Chưa có mốc nào. Nhập tên rồi bấm Chụp mốc hiện tại.':'No snapshots yet. Enter a name and press Take snapshot now.',
+    'Đã xóa mốc.':'Snapshot deleted.',
+    'Hãy nhập tên mốc.':'Enter a snapshot name.',
+    'Thay đổi':'Changed','Không còn':'Removed',
+    'Ảnh 3':'Photo 3',
+    'Chiều rộng ảnh 3':'Photo 3 width',
+    'Chiều cao ảnh 3':'Photo 3 height',
+    'Góc nhìn ảnh 3':'Photo 3 view',
+    'Kiểu hiển thị ảnh 3':'Photo 3 display style',
+    'Chừa lề ảnh 3 (%)':'Photo 3 margin (%)',
+    'Nền ảnh 3':'Photo 3 background',
+    'Lệch trái / phải ảnh 3 (độ)':'Photo 3 left / right turn (degrees)',
+    'Góc cao ảnh 3 (độ)':'Photo 3 elevation angle (degrees)',
+    'Kéo thả ảnh vào đây để dùng làm ảnh 3':'Drop an image here to use it as photo 3',
+    'Xóa ảnh 3':'Delete photo 3',
+    'Thông số ảnh 3 của món này':'Photo 3 settings of this item',
+    'Đã xóa ảnh 3 của đối tượng.':'Deleted photo 3 of the object.',
+    'Góc nhìn của ảnh 3 không hợp lệ.':'The view of photo 3 is not valid.',
+    'Kiểu hiển thị của ảnh 3 không hợp lệ.':'The display style of photo 3 is not valid.',
+    'Nền ảnh 3 không hợp lệ.':'The photo 3 background is not valid.',
+    'Ảnh 4':'Photo 4',
+    'Chiều rộng ảnh 4':'Photo 4 width',
+    'Chiều cao ảnh 4':'Photo 4 height',
+    'Góc nhìn ảnh 4':'Photo 4 view',
+    'Kiểu hiển thị ảnh 4':'Photo 4 display style',
+    'Chừa lề ảnh 4 (%)':'Photo 4 margin (%)',
+    'Nền ảnh 4':'Photo 4 background',
+    'Lệch trái / phải ảnh 4 (độ)':'Photo 4 left / right turn (degrees)',
+    'Góc cao ảnh 4 (độ)':'Photo 4 elevation angle (degrees)',
+    'Kéo thả ảnh vào đây để dùng làm ảnh 4':'Drop an image here to use it as photo 4',
+    'Xóa ảnh 4':'Delete photo 4',
+    'Thông số ảnh 4 của món này':'Photo 4 settings of this item',
+    'Đã xóa ảnh 4 của đối tượng.':'Deleted photo 4 of the object.',
+    'Góc nhìn của ảnh 4 không hợp lệ.':'The view of photo 4 is not valid.',
+    'Kiểu hiển thị của ảnh 4 không hợp lệ.':'The display style of photo 4 is not valid.',
+    'Nền ảnh 4 không hợp lệ.':'The photo 4 background is not valid.',
+    'Chụp thêm góc khác của món (cô lập như ảnh chính), lưu vào cột Ảnh 3 theo thiết lập Ảnh 3 của preset (góc nhìn, góc lệch, cỡ ảnh...)':'Captures another angle of the item (isolated like the main photo) and saves it to the Photo 3 column using the Photo 3 settings of the preset (view, left / right turn, image size...)',
+    'Chụp thêm góc khác của món (cô lập như ảnh chính), lưu vào cột Ảnh 4 theo thiết lập Ảnh 4 của preset (góc nhìn, góc lệch, cỡ ảnh...)':'Captures another angle of the item (isolated like the main photo) and saves it to the Photo 4 column using the Photo 4 settings of the preset (view, left / right turn, image size...)',
+    'Lề %':'Margin %','Lệch °':'Turn °','Cao °':'Tilt °','Vùng nhìn (lần)':'View area (times)',
+    'Quét ngay':'Scan now','Quét':'Scan','Chưa quét. Quét toàn bộ model có thể mất vài phút và làm SketchUp đứng hình với model lớn. Chọn phạm vi rồi bấm Quét ngay khi bạn sẵn sàng.':'Not scanned yet. Scanning the whole model can take minutes and freeze SketchUp on large models. Choose the scope and press Scan now when you are ready.',
+    'Hao hụt %':'Waste %','Dày mm':'Thick. mm','Cao mm':'Height mm','Cao độ sàn':'Floor level',
+    'Công cụ ▾':'Tools ▾','Tùy chọn ▾':'Options ▾','Nhóm theo ▾':'Group by ▾','Xuất':'Export','Mã và dữ liệu món':'Codes and item data','Công trình':'Building','Vật liệu và kiểm tra':'Materials and checks','Khi chọn dòng trong bảng':'When selecting rows','Dòng tính tổng':'Total row',
+    'Thu phóng, cô lập, chọn sâu, diện tích chiếu, bảng tên trên model, dòng tính tổng':'Zoom, isolate, deep select, projected area, model label, total row','Xuất Excel / PDF, mã và VGD ID, tầng, phòng, vật liệu, luật kiểm tra, so sánh phiên bản':'Export Excel / PDF, codes and VGD ID, levels, rooms, materials, check rules, compare versions',
+    'Gán VGD ID cho món đang chọn':'Assign VGD ID to selected items','Sửa VGD ID trùng':'Fix duplicate VGD IDs','Hãy chọn các dòng cần gán VGD ID (Ctrl+A chọn hết các dòng đang hiện).':'Select the rows to assign a VGD ID (Ctrl+A selects all visible rows).','Gán mã định danh VGD ID cho các món đang chọn chưa có ID (món đã có ID giữ nguyên, món bị khóa bỏ qua; một bước hoàn tác)':'Assign a VGD ID to the selected items that have none (items that already have one are kept, locked items are skipped; one undo step)','Các món do copy mà dùng chung VGD ID: món cũ nhất giữ ID, các món còn lại nhận ID mới (một bước hoàn tác)':'Items that share a VGD ID because of copying: the oldest keeps the ID, the others get a new one (one undo step)','VGD ID':'VGD ID',
+    'Thêm cột mới: thuộc tính tùy chọn, thuộc tính động hoặc cột tự nhập':'Add a column: custom attribute, dynamic attribute or free-text column','Thêm cột':'Add column','Kiểu cột':'Column type','Thuộc tính tùy chọn':'Custom attribute','Thuộc tính động (Dynamic Components)':'Dynamic attribute (Dynamic Components)','Cột tự nhập':'Free-text column',
+    'Tên cột':'Column name','Tên dictionary':'Dictionary name','Tên thuộc tính':'Attribute name','Ví dụ: Mã vật tư':'e.g. Material code','Ví dụ: vgd':'e.g. vgd','Ví dụ: ma_vat_tu':'e.g. material_code','Ví dụ: price':'e.g. price','Thêm':'Add',
+    'Hãy nhập tên cột.':'Enter a column name.','Hãy nhập tên dictionary.':'Enter a dictionary name.','Hãy nhập tên thuộc tính.':'Enter an attribute name.','Xóa cột này (dữ liệu đã nhập trong các món vẫn còn)':'Delete this column (data already entered in the items is kept)',
+    'Đã xóa cột. Dữ liệu đã nhập trong các món vẫn còn.':'Column deleted. Data already entered in the items is kept.',
     'Bảng quá lớn để xuất.':'The table is too large to export.','Dữ liệu bảng không hợp lệ.':'Invalid table data.',
     'Link không hợp lệ.':'Invalid link.','Tệp preset không đúng định dạng.':'The preset file is not in a valid format.','Phiên bản tệp preset chưa được hỗ trợ.':'This preset file version is not supported.','Tệp không có preset hợp lệ nào.':'The file has no valid presets.',
     'File preset quá lớn.':'The preset file is too large.','File không phải JSON hợp lệ.':'The file is not valid JSON.','Thiết lập của preset không hợp lệ.':'Invalid preset settings.',
@@ -277,6 +369,37 @@ const VGD_I18N=(()=>{
   const plural=(n,one,many)=>`${n} ${Number(String(n).replace(/\D/g,''))===1?one:many}`;
   const SKIPPED=/ Bỏ qua (\d+) đối tượng bị khóa\./;
   // ---- Mẫu cho chuỗi có số / tên xen vào ----
+  rule(/^(VGD-[0-9A-F]{6}) \(trùng\)$/,(m,id)=>`${id} (duplicate)`);
+  rule(/^(\d+) dòng đang chọn\.$/,(m,n)=>`${plural(n,'row','rows')} selected.`);
+  rule(/^Đã lưu (\d+) tầng\.$/,(m,n)=>`Saved ${plural(n,'level','levels')}.`);
+  rule(/^Đã gán tầng cho (\d+) món theo cao độ\.(?: (\d+) món thấp hơn mọi tầng hoặc không đo được cao độ\.)?(?: Bỏ qua (\d+) món bị khóa\.)?$/,(m,n,none,locked)=>`Assigned levels to ${plural(n,'item','items')} by elevation.${none?` ${plural(none,'item is','items are')} below every level or has no elevation.`:''}${locked?` Skipped ${locked} locked.`:''}`);
+  rule(/^Đặt mã cho (\d+) dòng đang chọn, theo thứ tự trong bảng\.$/,(m,n)=>`Set codes for ${plural(n,'selected row','selected rows')}, in table order.`);
+  rule(/^Ví dụ: (.*)$/,(m,rest)=>`e.g. ${rest}`);
+  rule(/^Đã đặt mã cho (\d+) món\.(?: (\d+) món đã có mã giữ nguyên\.)?(?: Bỏ qua (\d+) món bị khóa\.)?$/,(m,n,kept,locked)=>`Set codes for ${plural(n,'item','items')}.${kept?` ${plural(kept,'item with a code kept','items with a code kept')}.`:''}${locked?` Skipped ${locked} locked.`:''}`);
+  rule(/^Đã gán VGD ID cho (\d+) món\.(?: (\d+) món đã có ID từ trước\.)?(?: Bỏ qua (\d+) món bị khóa\.)?$/,(m,n,have,locked)=>`Assigned a VGD ID to ${plural(n,'item','items')}.${have?` ${plural(have,'item already had','items already had')} an ID.`:''}${locked?` Skipped ${locked} locked.`:''}`);
+  rule(/^Các món đã chọn đều đã có VGD ID\.(?: Bỏ qua (\d+) món bị khóa\.)?$/,(m,locked)=>`All selected items already have a VGD ID.${locked?` Skipped ${locked} locked.`:''}`);
+  rule(/^Đã cấp VGD ID mới cho (\d+) món bị trùng \(món cũ nhất giữ ID\)\.(?: (\d+) món bị khóa nên chưa đổi được\.)?$/,(m,n,locked)=>`Issued a new VGD ID to ${plural(n,'duplicated item','duplicated items')} (the oldest keeps the ID).${locked?` ${locked} locked not changed.`:''}`);
+  rule(/^Không có VGD ID trùng trong bảng\.(?: (\d+) món bị khóa nên chưa đổi được\.)?$/,(m,locked)=>`No duplicate VGD IDs in the table.${locked?` ${locked} locked not changed.`:''}`);
+  rule(/^Đã (dựng|dựng lại) khối phòng (.+) \(thể tích ([\d.,]+) m³\)\.$/,(m,a,name,v)=>`${a==='dựng'?'Built':'Rebuilt'} the volume of room ${name} (volume ${v} m³).`);
+  rule(/^Đã lưu (\d+) vật liệu\.$/,(m,n)=>`Saved ${plural(n,'material','materials')}.`);
+  rule(/^Xóa phòng (.+)$/,(m,name)=>`Delete room ${name}`);
+  rule(/^Sàn ([\d.,]+) m² · Chu vi ([\d.,]+) m · Thể tích ([\d.,]+) m³ · Tường ([\d.,]+) m² · Trần ([\d.,]+) m²$/,(m,a,p,v,w,c)=>`Floor ${a} m² · Perimeter ${p} m · Volume ${v} m³ · Walls ${w} m² · Ceiling ${c} m²`);
+  rule(/^Đã lưu (\d+) phòng\.$/,(m,n)=>`Saved ${plural(n,'room','rooms')}.`);
+  rule(/^Đã gán phòng cho (\d+) món theo vị trí\.(?: (\d+) món nằm ngoài mọi phòng hoặc không đo được vị trí\.)?(?: Bỏ qua (\d+) món bị khóa\.)?$/,(m,n,none,locked)=>`Assigned rooms to ${plural(n,'item','items')} by position.${none?` ${plural(none,'item is','items are')} outside every room or has no position.`:''}${locked?` Skipped ${locked} locked.`:''}`);
+  rule(/^Đã tạo phòng (.+) từ mặt đang chọn \(diện tích ([\d.,]+) m²\)\. Hình khối phòng do plugin VGD_Room dựng\.$/,(m,name,area)=>`Created room ${name} from the selected face (area ${area} m²). The room volume is built by the VGD_Room plugin.`);
+  rule(/^Xóa tầng (.+)$/,(m,name)=>`Delete level ${name}`);
+  rule(/^Đã thêm cột (.+)\.$/,(m,name)=>`Added column ${name}.`);
+  rule(/^Xóa cột (.+)$/,(m,name)=>`Delete column ${name}`);
+  rule(/^Gán VGD ID cho tất cả món chưa có \((\d+)\)$/,(m,n)=>`Assign VGD ID to all items without one (${n})`);
+  rule(/^Xóa luật (.+)$/,(m,name)=>`Delete rule ${name}`);
+  rule(/^(\d+) vi phạm trên (\d+) dòng \((\d+) luật\)\.( Chỉ hiện một phần\.)? Bấm vào dòng để chọn món trong bảng\.$/,(m,n,rows,rules,part)=>`${n} violations in ${rows} rows (${rules} rules).${part?' Showing only part.':''} Click a row to select the item in the table.`);
+  rule(/^Không có vi phạm nào \((\d+) dòng, (\d+) luật\)\.$/,(m,rows,rules)=>`No violations (${rows} rows, ${rules} rules).`);
+  rule(/^Đã lưu (\d+) luật kiểm tra\.$/,(m,n)=>`Saved ${n} check rules.`);
+  rule(/^Xóa mốc (.+)$/,(m,name)=>`Delete snapshot ${name}`);
+  rule(/^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}) · (\d+) món$/,(m,when,n)=>`${when} · ${n} items`);
+  rule(/^So với mốc (.+): (\d+) món mới, (\d+) món không còn, (\d+) món đổi, (\d+) món giữ nguyên\.$/,(m,name,a,r,c,u)=>`Compared with snapshot ${name}: ${a} new, ${r} removed, ${c} changed, ${u} unchanged.`);
+  rule(/^Đã chụp mốc (.+) \((\d+) món\)\.$/,(m,name,n)=>`Snapshot ${name} taken (${n} items).`);
+  rule(/^Xóa vật liệu (.+)$/,(m,name)=>`Delete material ${name}`);
   rule(/^Đang chọn ([\d.,]+) đối tượng trong SketchUp\.$/,(m,n)=>`${plural(n,'object','objects')} selected in SketchUp.`);
   rule(/^Đang chọn ([\d.,]+) đối tượng hoặc mặt trong SketchUp\.$/,(m,n)=>`${plural(n,'object or face','objects or faces')} selected in SketchUp.`);
   rule(/\((\d+) biến thể\)/,(m,n)=>`(${n} variants)`);
@@ -303,6 +426,7 @@ const VGD_I18N=(()=>{
   rule(/^(.*) \((vật liệu|đối tượng)\)$/,(m,n,k)=>`${T(n)} (${k==='vật liệu'?'material':'object'})`);
   rule(/^Đã chọn (\d+) \/ (\d+) dòng$/,(m,a,b)=>`Selected ${a} / ${b} rows`);
   rule(/^Nhóm theo: (.*) ▾$/,(m,g)=>`Group by: ${T(g)} ▾`);
+  rule(/^Nhóm: (.*) ▾$/,(m,g)=>`Group: ${T(g)} ▾`);
   rule(/^(.+) ▾$/,(m,g)=>lookup(g)===undefined?m:`${T(g)} ▾`);
   rule(/^Cập nhật (.+)$/,(m,f)=>`Update ${f}`);
   rule(/^Tổng cộng · (\d+) đối tượng$/,(m,n)=>`Total · ${plural(n,'object','objects')}`);
@@ -329,7 +453,7 @@ const VGD_I18N=(()=>{
   rule(/^Ảnh quá lớn \(tối đa (\d+) MB\)\.$/,(m,n)=>`Image too large (${n} MB maximum).`);
   rule(/^Cỡ ảnh phải từ (\d+) đến (\d+) điểm ảnh\.$/,(m,a,b)=>`Image size must be between ${a} and ${b} pixels.`);
   rule(/^Đã cập nhật (\d+) đối tượng; bỏ qua (\d+) đối tượng bị khóa\.$/,(m,a,b)=>`Updated ${plural(a,'object','objects')}; skipped ${b} locked.`);
-  rule(/^Đã sửa (tên|mô tả|tình trạng|tag|vật liệu) cho (\d+) đối tượng\.(.*)$/,(m,f,n,rest)=>`Changed ${({'tên':'name','mô tả':'description','tình trạng':'status','tag':'tag','vật liệu':'material'})[f]} for ${plural(n,'object','objects')}.${rest.replace(SKIPPED,' Skipped $1 locked.')}`);
+  rule(/^Đã sửa (.+?) cho (\d+) đối tượng\.(.*)$/,(m,f,n,rest)=>`Changed ${({'tên':'name','mô tả':'description','tình trạng':'status','tag':'tag','vật liệu':'material'})[f]||f} for ${plural(n,'object','objects')}.${rest.replace(SKIPPED,' Skipped $1 locked.')}`);
   rule(/^Đã lưu preset "(.*)"\.$/,(m,n)=>`Saved preset "${n}".`);
   rule(/^Đã đổi tên (\d+) đối tượng\.(.*)$/,(m,n,rest)=>`Renamed ${plural(n,'object','objects')}.${rest.replace(SKIPPED,' Skipped $1 locked.').replace(/ Có (\d+) dòng trùng tên\./,' $1 rows have duplicate names.')}`);
   rule(/^Đã gán tag "(.*)" cho (\d+) đối tượng\.(.*)$/,(m,t,n,rest)=>`Assigned tag "${t}" to ${plural(n,'object','objects')}.${rest.replace(SKIPPED,' Skipped $1 locked.').replace(' Tag này đang tắt hiển thị nên các đối tượng gán vào sẽ bị ẩn.',' This tag is hidden, so the assigned objects will be hidden.')}`);

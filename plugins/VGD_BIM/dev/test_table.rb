@@ -23,10 +23,10 @@ def check(label, cond); puts "#{cond ? 'PASS' : 'FAIL'}  #{label}"; end
 def raises?(msg = nil); yield; false; rescue ArgumentError => e; msg ? e.message.include?(msg) : true; end
 
 keys = T::COLUMN_KEYS
-check 'có đủ cột kiểu Auto Info, cột Ảnh, cột Ảnh vị trí, 7 cột mới và 2 cột Mặt trước, 1 cột Ghi chú số đo, 5 cột Khối lượng tính (37 cột, không trùng)', keys.size == 37 && keys.uniq.size == keys.size && %w[calc_category calc_method calc_qty calc_unit calc_total].all? { |k| keys.include?(k) }
+check 'có đủ cột kiểu Auto Info, cột Ảnh, cột Ảnh vị trí, 7 cột mới và 2 cột Mặt trước, 1 cột Ghi chú số đo, 5 cột Khối lượng tính, 2 cột Ảnh phụ (48 cột, không trùng)', keys.size == 48 && keys.uniq.size == keys.size && %w[calc_category calc_method calc_qty calc_unit calc_total].all? { |k| keys.include?(k) }
 check 'mọi cột của preset có sẵn đều hợp lệ', T::BUILT_IN_PRESETS.all? { |p| p['columns'].all? { |c| keys.include?(c) } }
 check 'preset có sẵn có nhóm hợp lệ', T::BUILT_IN_PRESETS.all? { |p| p['group'].empty? || VGD::BIM::Tags::GROUPS.include?(p['group']) }
-check 'có 11 preset có sẵn, 4 preset BIM đứng đầu', T::BUILT_IN_PRESETS.size == 11 && T::BUILT_IN_PRESETS.first(4).map { |p| p['name'] } == ['Tất cả', 'Phần thô', 'Hoàn thiện', 'Đồ rời']
+check 'có 12 preset có sẵn, 4 preset BIM đứng đầu', T::BUILT_IN_PRESETS.size == 12 && T::BUILT_IN_PRESETS.first(4).map { |p| p['name'] } == ['Tất cả', 'Phần thô', 'Hoàn thiện', 'Đồ rời']
 check 'Phần thô, Hoàn thiện, Đồ rời lọc đúng nhóm mới S. STRUCTURAL, A. ARCHITECTURAL, I. INTERIOR (nhóm cũ đã bỏ)', T::BUILT_IN_PRESETS[1..3].map { |p| p['group'] } == ['S. STRUCTURAL', 'A. ARCHITECTURAL', 'I. INTERIOR']
 check 'cột giữ đúng thứ tự người dùng sắp xếp khi lưu preset', T.sanitize_preset('name' => 'x', 'group' => '', 'columns' => %w[quantity lenX ordinal])['columns'] == %w[quantity lenX ordinal]
 check 'bỏ cột lạ khi lưu preset', T.sanitize_preset('name' => 'x', 'group' => '', 'columns' => %w[lenX abc])['columns'] == %w[lenX]
@@ -37,7 +37,7 @@ check 'từ chối nhóm preset lạ', raises? { T.sanitize_preset('name' => 'x'
 check 'không lưu được preset trùng tên có sẵn', raises?('trùng') { T.save_preset('Phần thô', 'Phần thô', %w[lenX]) }
 T.save_preset('Vách kính', 'Hoàn thiện', %w[instance areaFace quantity])
 check 'lưu preset riêng rồi đọc lại được', T.custom_presets.map { |p| p['name'] } == ['Vách kính']
-check 'danh sách preset có cả preset có sẵn và preset đã lưu', T.presets.size == 12 && T.presets.last['builtin'] == false
+check 'danh sách preset có cả preset có sẵn và preset đã lưu', T.presets.size == 13 && T.presets.last['builtin'] == false
 T.save_preset('Vách kính', 'Đồ rời', %w[instance quantity])
 check 'lưu trùng tên thì ghi đè, không nhân đôi', T.custom_presets.size == 1 && T.custom_presets.first['group'] == 'I. INTERIOR'
 T.delete_preset('Vách kính')
@@ -114,4 +114,32 @@ check 'tô khung: tổng diện tích bằng diện tích 6 mặt của hộp (4
 check 'tô khung: mọi điểm là góc của hộp', tris.all? { |pt| [[10.0, 14.0], [20.0, 23.0], [30.0, 32.0]].each_with_index.all? { |pair, i| pair.include?(pt.to_a[i]) } }
 box_empty = Class.new { def bounds; Class.new { def empty?; true; end }.new; end }.new
 check 'đối tượng rỗng: không có khung và không có tam giác', T.world_corners(entity: box_empty, transform: [0, 0, 0]).empty? && T.box_triangles(entity: box_empty, transform: [0, 0, 0]).empty?
+# ---- Cột thêm tay (CustomColumns) trong preset và trạng thái bảng ----
+cc = VGD::BIM::CustomColumns
+custom_col = cc.add('label' => 'Mã vật tư', 'kind' => 'attribute', 'dictionary' => 'vgd', 'attribute' => 'ma')
+check 'cột thêm tay: có trong danh sách cột gửi giao diện, khóa hợp lệ, không lẫn vào cột chuẩn', T.columns.last[:key] == custom_col['key'] && T.column_keys.include?(custom_col['key']) && !T::COLUMN_KEYS.include?(custom_col['key']) && T.columns.size == T::COLUMNS.size + 1
+T.save_preset('Có cột tay', '', ['instance', custom_col['key']])
+check 'preset lưu được cột thêm tay', T.custom_presets.find { |preset| preset['name'] == 'Có cột tay' }['columns'] == ['instance', custom_col['key']]
+T.save_view_state('order' => ['instance', custom_col['key'], 'khong_co'], 'visible' => [custom_col['key']], 'widths' => {custom_col['key'] => 150, 'khong_co' => 9}, 'headers' => {custom_col['key'] => 'Mã VT'})
+view = T.view_state
+check 'trạng thái bảng giữ cột thêm tay (thứ tự, hiện, độ rộng, tiêu đề), bỏ khóa lạ', view['order'] == ['instance', custom_col['key']] && view['visible'] == [custom_col['key']] && view['widths'] == {custom_col['key'] => 150} && view['headers'][custom_col['key']] == 'Mã VT'
+cc.remove(custom_col['key'])
+check 'xóa cột thêm tay: preset và trạng thái bảng tự bỏ khóa đó, không lỗi', T.custom_presets.find { |preset| preset['name'] == 'Có cột tay' }.nil? || !T.custom_presets.find { |preset| preset['name'] == 'Có cột tay' }['columns'].include?(custom_col['key'])
+check 'cột VGD ID có trong danh sách cột chuẩn, đứng sau cột Tên', T::COLUMN_KEYS.include?('vgd_id') && T::COLUMN_KEYS.index('vgd_id') == T::COLUMN_KEYS.index('instance') + 2 && T::COLUMN_KEYS.index('code') == T::COLUMN_KEYS.index('instance') + 1
+# Trạng thái bảng riêng từng file SketchUp: file đã lưu riêng giữ nguyên dù trạng thái chung đổi sau đó
+class ViewModel
+  def initialize; @attrs = {}; end
+  def get_attribute(d, k, default = nil); @attrs.dig(d, k) || default; end
+  def set_attribute(d, k, v); (@attrs[d] ||= {})[k] = v; end
+  def start_operation(*); true; end
+  def commit_operation; true; end
+  def abort_operation; true; end
+end
+view_a = ViewModel.new; view_b = ViewModel.new
+T.save_view_state({'preset' => 'Đồ rời', 'visible' => %w[instance], 'rowHeight' => 90}, view_a)
+T.save_view_state({'preset' => 'Phần thô', 'visible' => %w[quantity], 'rowHeight' => 40}, view_b)
+check 'trạng thái bảng: mỗi file giữ riêng (preset, cột hiện, độ cao hàng)', T.view_state(view_a).values_at('preset', 'visible', 'rowHeight') == ['Đồ rời', %w[instance], 90] && T.view_state(view_b).values_at('preset', 'visible', 'rowHeight') == ['Phần thô', %w[quantity], 40]
+check 'trạng thái chung (mẫu cho file mới) là lần lưu gần nhất', T.view_state['preset'] == 'Phần thô'
+check 'file chưa lưu riêng thì theo trạng thái chung', T.view_state(ViewModel.new)['preset'] == 'Phần thô'
+check 'trạng thái riêng cũng được kiểm tra khi đọc (cột lạ, độ cao quá lớn)', (view_a.set_attribute('VGD_BIM_MODEL', 'settings', JSON.generate('table_view' => {'rowHeight' => 99999, 'preset' => 'x'})); T.view_state(view_a)['rowHeight'] == T::ROW_HEIGHT_MAX)
 puts 'Done'

@@ -40,6 +40,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   });
   const cellText=(row,key)=>page.locator('.grid tbody tr').nth(row).locator(`td[data-key="${key}"]`).innerText();
   const headText=()=>page.locator('.grid thead tr:first-child').innerText();
+  const openOptions=async()=>{if(!(await page.locator('.opts-panel').count()))await page.click('#opts-btn');}; // công tắc nằm trong bảng Tùy chọn
   const openPresets=async()=>{if(!(await page.locator('#preset-panel').isVisible()))await page.click('#preset-btn');};
   const usePreset=async name=>{await openPresets();await page.locator('#preset-panel .pp-pick',{hasText:new RegExp('^'+name.replace(/[.*+?^${}()|[\]\\&]/g,'\\$&')+'$')}).click();};
   const choose=(label,value)=>page.selectOption(`#preset-panel select[aria-label="${label}"]`,String(value));
@@ -220,6 +221,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(Math.abs(lay.footGap)<=1,'cuộn xuống: dòng tổng cộng vẫn dính ở đáy khung bảng');
   ok(lay.fillGap<=14,'khung bảng kéo dài tới sát chân trang (không để trống khoảng lớn bên dưới)');
   ok(lay.barInside,'chân trang (các nút gạt) nằm cố định dưới khung bảng, không bị cuộn mất');
+  await openOptions();
   const sw=await page.locator('.bottombar .sw').first().evaluate(el=>({w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height}));
   ok(Math.round(sw.w)===40 && Math.round(sw.h)===22,'nút gạt cùng kích thước với tab Quản lý của Center (40 x 22)');
   await receive('table',table());
@@ -246,8 +248,8 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   // ---- Bảng preset ----
   await receive('table',table());await clear();
   await page.click('#preset-btn');
-  ok(await page.locator('#preset-panel').isVisible() && (await page.locator('#preset-panel h3').allInnerTexts()).join('|')==='Đơn vị|Hình ảnh|Ảnh vị trí|Số đo thân','bấm nút preset: mở bảng có bốn phần Đơn vị, Hình ảnh, Ảnh vị trí và Số đo thân');
-  ok(await page.locator('#preset-panel .pp-pick').count()===11 && (await page.locator('#preset-panel .pp-pick.active').innerText())==='Tất cả','bảng preset liệt kê 11 preset, preset đang dùng được tô nổi bật');
+  ok(await page.locator('#preset-panel').isVisible() && (await page.locator('#preset-panel h3').allInnerTexts()).join('|')==='Đơn vị|Số đo thân' && (await page.locator('#preset-panel details.pp-group > summary').allInnerTexts()).join('|')==='Hình ảnh|Ảnh vị trí|Ảnh 3|Ảnh 4','bấm nút preset: mở bảng có phần Đơn vị, bốn nhóm ảnh gập được (Hình ảnh, Ảnh vị trí, Ảnh 3, Ảnh 4) và Số đo thân');
+  ok(await page.locator('#preset-panel .pp-pick').count()===12 && (await page.locator('#preset-panel .pp-pick.active').innerText())==='Tất cả','bảng preset liệt kê 12 preset, preset đang dùng được tô nổi bật');
   ok(await page.locator('#preset-panel select[aria-label="Chiều dài: đơn vị"]').inputValue()==='mm' && await page.locator('#preset-panel select[aria-label="Chiều dài: số lẻ"]').inputValue()==='0','thiết lập đang dùng hiện đúng trong bảng (mm, 0 số lẻ)');
   ok((await page.locator('#preset-panel select[aria-label="Chiều dài: số lẻ"] option').allInnerTexts()).join(',')==='0,0.0,0.00,0.000,0.0000','số lẻ hiện dạng 0, 0.0, 0.00, ...');
   await page.keyboard.press('Escape');
@@ -277,6 +279,10 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   view=await viewJson();
   ok(view.settings.length_unit==='mm' && view.settings.area_unit==='m2','mọi thay đổi thiết lập được lưu vào trạng thái bảng');
   await clear();await choose('Góc nhìn ảnh','front');await choose('Kiểu hiển thị ảnh','current');await choose('Chiều rộng ảnh',1024);await choose('Chiều cao ảnh',768);await choose('Nền ảnh','white');
+  await page.locator('#preset-panel details.pp-group').nth(1).locator('summary').click();
+  ok(!(await page.locator('#preset-panel details.pp-group').nth(1).evaluate(d=>d.open)) && await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').isHidden(),'gập nhóm Ảnh vị trí: các ô trong nhóm ẩn đi');
+  await page.locator('#preset-panel details.pp-group').nth(1).locator('summary').click();
+  ok(await page.locator('#preset-panel details.pp-group').nth(1).evaluate(d=>d.open) && await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').isVisible(),'mở lại nhóm Ảnh vị trí: các ô hiện lại');
   const marginBox=page.locator('#preset-panel input[aria-label="Chừa lề (%)"]');
   ok(await marginBox.inputValue()==='20','ô Chừa lề (%) trong thiết lập ảnh: mặc định 20');
   await marginBox.fill('150');await page.keyboard.press('Tab');
@@ -304,7 +310,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(saved.action==='save' && saved.name==='KL THO' && saved.columns.includes('definition') && saved.headers.definition==='Mã phòng' && saved.settings.image_view==='front' && saved.settings.length_unit==='mm','dấu +: lưu preset mới kèm cột, tiêu đề tự đặt và thiết lập hiện tại');
   const custom={name:'KL THO',group:'',columns:saved.columns,headers:saved.headers,settings:saved.settings,builtin:false};
   await receive('presets',[...F.presets,custom]);
-  ok(await page.locator('#preset-panel .pp-pick').count()===12 && (await page.locator('#preset-panel .pp-pick.active').innerText())==='KL THO' && (await page.locator('#preset-btn').innerText()).includes('KL THO'),'danh sách preset có thêm preset mới và nó đang được dùng');
+  ok(await page.locator('#preset-panel .pp-pick').count()===13 && (await page.locator('#preset-panel .pp-pick.active').innerText())==='KL THO' && (await page.locator('#preset-btn').innerText()).includes('KL THO'),'danh sách preset có thêm preset mới và nó đang được dùng');
   await clear();
   await choose('Chiều dài: đơn vị','m');
   saved=await json('table_preset');
@@ -374,29 +380,38 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
 
   // ---- Chân trang ----
   await clear();
+  await openOptions();
   ok((await page.locator('.bottombar .sw-label').allInnerTexts()).join('|')==='Thu phóng đối tượng|Cô lập đối tượng chọn|Chọn sâu bên trong|Diện tích chiếu|Bảng tên trên model|Hiển thị dòng tính tổng|Tổng chỉ cấp cao nhất' && await page.locator('.bottombar button[role="switch"]').count()===7,'chân trang: 7 nút gạt (role switch), có Diện tích chiếu và Bảng tên trên model');
 
   await clear();
+  await openOptions();
   ok((await page.locator('.bottombar .sw').nth(4).getAttribute('aria-checked'))==='true','công tắc Bảng tên trên model: mặc định bật');
+  await openOptions();
   await page.getByRole('switch',{name:'Bảng tên trên model'}).click();
   ok(JSON.stringify(await json('table_option'))==='{"label":false}','tắt Bảng tên trên model: gửi label = false cho Ruby');
   await receive('options',{zoom:true,isolate:false,deep:false,projected:false,label:false,isolating:false});
+  await openOptions();
   ok((await page.locator('.bottombar .sw').nth(4).getAttribute('aria-checked'))==='false','Ruby báo tắt: công tắc chuyển sang tắt');
+  await openOptions();
   await clear();await page.getByRole('switch',{name:'Bảng tên trên model'}).click();
   ok(JSON.stringify(await json('table_option'))==='{"label":true}','bật lại: gửi label = true');
+  await openOptions();
   await receive('options',{zoom:true,isolate:false,deep:false,projected:false,label:true,isolating:false});  await page.getByRole('switch',{name:'Diện tích chiếu',exact:true}).click();
   ok(JSON.stringify(await json('table_option'))==='{"projected":true}','công tắc Diện tích chiếu: gửi tuỳ chọn');
-  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();
-  ok((await page.locator('.io-panel button').allInnerTexts()).map(x=>x.replace(/\s+/g,' ').trim()).join('|')==='Cầu nối dữ liệu Sắp có|Xuất Excel|In PDF|Ghi cách tính vào món đang chọn|Nhập preset (JSON)|Xuất preset (JSON)','menu Nhập / Xuất: Cầu nối dữ liệu (để sẵn, chưa dùng được), Xuất Excel, In PDF, Ghi cách tính vào món, nhập / xuất preset');
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();
+  ok((await page.locator('.io-panel button').allInnerTexts()).map(x=>x.replace(/\s+/g,' ').trim()).join('|')==='Cầu nối dữ liệu Sắp có|Xuất Excel|In PDF|Ghi cách tính vào món đang chọn|Gán VGD ID cho món đang chọn|Sửa VGD ID trùng|Đặt mã đối tượng hàng loạt...|Quản lý tầng...|Quản lý phòng...|Thư viện vật liệu...|Luật kiểm tra...|So sánh phiên bản...','menu Nhập / Xuất: Cầu nối dữ liệu (để sẵn, chưa dùng được), Xuất Excel, In PDF, Ghi cách tính vào món, nhập / xuất preset');
   const ioBox=await page.locator('.io-panel').boundingBox(),vp=page.viewportSize();
   ok(ioBox.x>=0 && ioBox.x+ioBox.width<=vp.width && ioBox.y>=0,'menu Nhập / Xuất nằm trọn trong cửa sổ (không bị cắt mép phải)');
   ok(await page.getByRole('button',{name:/Cầu nối dữ liệu/}).isDisabled(),'Cầu nối dữ liệu: để sẵn chỗ, nút chưa bấm được');
+  ok(await page.getByRole('button',{name:'Nhập preset (JSON)'}).count()===0,'menu Nhập / Xuất không còn nút nhập / xuất preset JSON');
+  await page.click('#preset-btn');
   await clear();await page.getByRole('button',{name:'Nhập preset (JSON)'}).click();
-  ok(JSON.stringify(await json('table_preset'))==='{"action":"import"}' && await page.locator('.io-panel').count()===0,'Nhập preset: gửi lệnh và đóng menu');
-  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất preset (JSON)'}).click();
-  ok(JSON.stringify(await json('table_preset'))==='{"action":"export"}','Xuất preset: gửi lệnh');
+  ok(JSON.stringify(await json('table_preset'))==='{"action":"import"}','Nhập preset (JSON) nằm trong bảng Preset: gửi lệnh');
+  await clear();await page.getByRole('button',{name:'Xuất preset (JSON)'}).click();
+  ok(JSON.stringify(await json('table_preset'))==='{"action":"export"}','Xuất preset (JSON) nằm trong bảng Preset: gửi lệnh');
+  await page.click('#preset-btn');
   await usePreset('Nội thất');await page.keyboard.press('Escape');
-  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
   const exp=await json('table_export');
   ok(exp.format==='xlsx' && exp.title==='Bảng khối lượng' && exp.preset==='Nội thất' && exp.decimal_separator===',','xuất Excel: gửi định dạng, tiêu đề, preset và dấu thập phân');
   ok(JSON.stringify(exp.columns.map(c=>c.label))==='["STT","Ảnh","Mã hạng mục","Loại","Mô tả","Kích thước (R x S x C)","Thương hiệu","Số lượng"]' && JSON.stringify(exp.columns.map(c=>c.type))==='["ordinal","image","text","text","text","text","text","number"]','xuất Excel: tiêu đề cột theo preset (kể cả tên tự đặt) và kiểu cột');
@@ -405,21 +420,28 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(JSON.stringify(dataRows[0].cells)==='[1,null,"Cabinet","Cab 0","","1.200 × 600 × 800","Hafele",1]' && dataRows[0].pid===900 && dataRows[1].pid===901,'xuất Excel: ô đúng như đang hiện (cột Ảnh gửi kèm mã đối tượng, số quantity là số)');
   ok(exp.columns.every(c=>Number.isInteger(c.width)&&c.width>=20&&c.width<=2000) && exp.columns[1].width===72 && exp.labels.reset==='Đặt lại độ rộng cột' && exp.labels.hint.includes('Kéo mép'),'xuất: gửi kèm độ rộng từng cột đang chỉnh trên màn hình (cột Ảnh 72) và nhãn nút chỉnh độ rộng')
   ok(totalRow[0].cells[3]==='Tổng cộng · 3 đối tượng' && totalRow[0].cells[7]===3,'xuất Excel: dòng tổng có nhãn và tổng số lượng');
+  await page.evaluate(()=>{tableState.rowHeight=0;});
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
+  ok(!('row_height' in await json('table_export')),'xuất: chưa chỉnh độ cao hàng thì không gửi row_height (giữ cách xuất mặc định)');
+  await page.evaluate(()=>{tableState.rowHeight=140;});
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
+  ok((await json('table_export')).row_height===140,'xuất: đã chỉnh độ cao hàng (140 px) thì gửi row_height để Excel / PDF to đúng như trên màn hình');
+  await page.evaluate(()=>{tableState.rowHeight=0;});
   await usePreset('Tất cả');await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Chọn cột'}).click();
   for(const label of ['Rộng (X) mm','Đơn giá'])await page.locator('.pop-col',{hasText:new RegExp('^\\s*'+label.replace(/[()]/g,'\\$&')+'\\s*⠿?$')}).locator('input').check();
   await page.getByRole('button',{name:'Chọn cột'}).click();
-  await page.getByRole('button',{name:'Nhóm theo: Không nhóm ▾'}).click();
-  const gb=await page.getByRole('button',{name:'Nhóm theo: Không nhóm ▾'}).boundingBox(),gp=await page.locator('.group-panel').boundingBox();
+  await page.getByRole('button',{name:'Nhóm theo ▾'}).click();
+  const gb=await page.getByRole('button',{name:'Nhóm theo ▾'}).boundingBox(),gp=await page.locator('.group-panel').boundingBox();
   ok(Math.abs((gp.x+gp.width)-(gb.x+gb.width))<=1 && gp.y>=gb.y+gb.height-1 && gp.x>=0,'popup Nhóm theo nằm ngay dưới nút Nhóm theo, canh phải theo nút (không lệch sang cạnh nút Chọn cột)');
   await page.getByRole('button',{name:'Tên họ (Definition)'}).click();
-  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await clear();await page.getByRole('button',{name:'In PDF'}).click();
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();await clear();await page.getByRole('button',{name:'In PDF'}).click();
   const pdf=await json('table_export');
   const lenCol=pdf.columns.findIndex(c=>c.label.startsWith('Rộng')),priceCol=pdf.columns.findIndex(c=>c.label==='Đơn giá');
   ok(pdf.format==='pdf' && pdf.rows[0].kind==='group' && pdf.rows[0].cells.some(c=>typeof c==='string' && c.includes('Cabinet · 3')),'In PDF với nhóm theo: dòng nhóm đứng đầu, có tên nhóm và số đối tượng');
   ok(pdf.rows.filter(r=>r.kind==='row').length===3 && pdf.rows[1].cells[lenCol]===1200 && pdf.rows[1].cells[priceCol]===2500000 && pdf.rows[2].cells[priceCol]===null,'xuất theo nhóm: số gửi dạng số đã đổi đơn vị, ô không có giá trị là rỗng');
   ok(pdf.columns[lenCol].unit==='mm' && pdf.columns[lenCol].digits===0 && pdf.columns[priceCol].unit==='VND','xuất: gửi kèm đơn vị và số lẻ của từng cột');
-  await page.getByRole('button',{name:'Nhóm theo: Tên họ (Definition) ▾'}).click();await page.getByRole('button',{name:'Không nhóm'}).click();
+  await page.getByRole('button',{name:'Nhóm: Tên họ (Definition) ▾'}).click();await page.getByRole('button',{name:'Không nhóm'}).click();
 
   // ---- Cột mới ----
   await receive('config',config('table'));await receive('table',table());await usePreset('Tất cả');await page.keyboard.press('Escape');await clear();
@@ -442,6 +464,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await page.locator('.grid tfoot td').allInnerTexts().then(t=>t.some(x=>x==='2.500.000')),'dòng tổng cộng: cộng Thành tiền');
   await usePreset('Tất cả').catch(()=>{});await page.keyboard.press('Escape');
   await receive('table',table({options:{zoom:true,isolate:false,deep:false,projected:true,isolating:false}}));
+  await openOptions();
   ok(await page.locator('.bottombar .sw[aria-checked="true"][aria-label="Diện tích chiếu"]').count()===1,'công tắc Diện tích chiếu phản ánh tuỳ chọn Ruby gửi về');
 
   // ---- Thông tin theo đơn vị của preset ----
@@ -519,10 +542,10 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.evaluate(()=>{tableState.visible.add('front');tableState.visible.add('front_state');tableState.order=tableState.data.columns.map(c=>c.key);tableView(tableState.data);});
   ok(await cellText(0,'front')==='+Y' && await cellText(0,'front_state')==='Tự động · cao' && await cellText(2,'front')==='','cột Mặt trước và Độ tin cậy: hiện hướng và trạng thái, món chưa có thì để trống');
   ok((await page.locator('.grid tbody tr').nth(1).locator('td[data-key="front_state"]').getAttribute('title')).includes('cần duyệt') && !(await page.locator('.grid tbody tr').nth(0).locator('td[data-key="front_state"]').getAttribute('title')),'ô Độ tin cậy: rê chuột hiện lý do tự động chọn (chỉ khi có ghi chú)');
-  await page.getByRole('button',{name:'Nhóm theo: Không nhóm ▾'}).click();await page.getByRole('button',{name:'Mặt trước (độ tin cậy)'}).click();
+  await page.getByRole('button',{name:'Nhóm theo ▾'}).click();await page.getByRole('button',{name:'Mặt trước (độ tin cậy)'}).click();
   const groups=await page.locator('.grid tbody tr.group-row').allInnerTexts();
   ok(groups.some(g=>g.includes('Cần duyệt')) && groups.some(g=>g.includes('(Chưa có mặt trước)')) && groups.some(g=>g.includes('Tự động · cao')),'nhóm theo Mặt trước (độ tin cậy): có nhóm Cần duyệt, Tự động · cao, Chưa có mặt trước');
-  await page.getByRole('button',{name:/Nhóm theo: Mặt trước/}).click();await page.getByRole('button',{name:'Không nhóm'}).click();
+  await page.getByRole('button',{name:/Nhóm: Mặt trước/}).click();await page.getByRole('button',{name:'Không nhóm'}).click();
   await clear();
   await page.click('#front-btn');
   ok((await page.locator('.front-panel').innerText()).includes('Chưa chọn dòng nào: phát hiện tự động cho tất cả 3 đối tượng đang hiện.'),'bảng Mặt trước: chưa chọn dòng thì nói rõ phát hiện cho tất cả');
@@ -607,12 +630,15 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.waitForTimeout(400);
   ok((await sideBox()).width===0 && (await gridLeft())===left0 && (await page.locator('.col-side').evaluate(el=>el.childElementCount))===0,'đóng: ngăn thu lại hết, bảng về chỗ cũ');
   // Nút gạt chân trang: cùng một nút, trượt từ từ
+  await openOptions();
   const totalsSwitch=page.locator('.bottombar .sw').nth(5); // Hiển thị dòng tính tổng
   const swBefore=await totalsSwitch.getAttribute('aria-checked');
+  await openOptions();
   await page.evaluate(()=>{window.__sw=document.querySelectorAll('.bottombar .sw')[5];});
   await totalsSwitch.click();
   await page.waitForTimeout(60);
   const thumb=await page.evaluate(()=>parseFloat(getComputedStyle(window.__sw,'::after').left));
+  await openOptions();
   ok((await totalsSwitch.getAttribute('aria-checked'))!==swBefore && thumb>2 && thumb<20 && await page.evaluate(()=>window.__sw===document.querySelectorAll('.bottombar .sw')[5]),'nút gạt: cùng một phần tử, đầu gạt đang trượt (không nhảy), trạng thái đổi');
   await page.waitForTimeout(250);
   await totalsSwitch.click();await page.waitForTimeout(250);
@@ -1032,26 +1058,53 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await clear();await dropFile('.grid tbody tr:nth-child(3) td[data-key="image_location"]',{});await page.waitForTimeout(300);
   const dropped=await json('image_set');
   ok(dropped && dropped.pid===502 && dropped.kind==='location' && dropped.full.length>20,'kéo thả file ảnh vào ô ảnh vị trí: gửi ảnh với loại location');
+  // ---- Cột Ảnh 3 / Ảnh 4: chụp thêm góc khác của cùng món ----
+  const xRows=rows.map((r,i)=>({...r,pid:500+i,has_image:false,image_url:null,has_location:false,has_extra1:i===0,extra1_stamp:i===0?5:0,extra1_url:i===0?PNG1:null,has_extra2:false,extra2_stamp:0,extra2_url:null}));
+  await receive('table',table({rows:xRows}));
+  await page.evaluate(()=>{tableState.visible.add('image_extra1');tableState.visible.add('image_extra2');tableState.order=tableState.data.columns.map(c=>c.key);tableView(tableState.data);});
+  const exCell=(i,key)=>page.locator('.grid tbody tr').nth(i).locator(`td[data-key="${key}"]`);
+  ok((await page.locator('.grid thead th[data-key="image_extra1"]').innerText()).includes('Ảnh 3') && (await page.locator('.grid thead th[data-key="image_extra2"]').innerText()).includes('Ảnh 4'),'cột Ảnh 3 và Ảnh 4 có trong bảng (bật bằng Chọn cột)');
+  ok(await exCell(0,'image_extra1').locator('img.cell-img[data-kind="extra1"]').count()===1 && await exCell(1,'image_extra1').locator('.cell-empty').count()===1 && await exCell(0,'image_extra2').locator('.cell-empty').count()===1,'ô ảnh 3 hiện ảnh của dòng có ảnh, dòng chưa có hiện dấu +, ảnh 4 độc lập');
+  await clear();await exCell(1,'image_extra1').hover();await exCell(1,'image_extra1').getByRole('button',{name:'Chụp ảnh'}).click();
+  let xc=await json('images_capture');
+  ok(xc && xc.kind==='extra1' && !('iso_side' in xc) && JSON.stringify(xc.indexes)==='[1]' && xc.settings.x1_view==='front' && xc.settings.x2_view==='isometric','nút ↻ trên ô ảnh 3: chụp loại extra1 theo thiết lập x1_* của preset');
+  await clear();await exCell(1,'image_extra2').hover();await exCell(1,'image_extra2').getByRole('button',{name:'Chụp Iso từ bên trái'}).click();
+  xc=await json('images_capture');
+  ok(xc && xc.kind==='extra2' && xc.iso_side==='left' && xc.settings.x2_view==='isometric','nút ◣ trên ô ảnh 4: chụp Iso trái, loại extra2');
+  await clear();await exCell(0,'image_extra1').hover();await exCell(0,'image_extra1').getByRole('button',{name:'Xóa ảnh 3'}).click();
+  ok((await calls('image_extra1_delete')).length===1 && (await last('image_extra1_delete')).args[0]===500 && (await calls('image_delete')).length===0,'nút × trên ô ảnh 3: xóa ảnh 3, không xóa ảnh món');
+  await receive('images_changed',{items:[{pid:501,kind:'extra2',has:true,stamp:3,url:PNG1}]});
+  ok(await exCell(1,'image_extra2').locator('img.cell-img[data-kind="extra2"]').count()===1 && await exCell(1,'image_extra1').locator('img').count()===0,'Ruby báo chụp xong ảnh 4: chỉ ô ảnh 4 hiện ảnh');
+  await clear();await dropFile('.grid tbody tr:nth-child(3) td[data-key="image_extra1"]',{});await page.waitForTimeout(300);
+  const droppedX=await json('image_set');
+  ok(droppedX && droppedX.pid===502 && droppedX.kind==='extra1' && droppedX.full.length>20,'kéo thả file ảnh vào ô ảnh 3: gửi ảnh với loại extra1');
+  await exCell(1,'image_extra1').hover();await exCell(1,'image_extra1').locator('.cell-tool[title="Thông số ảnh riêng của món này"]').first().click();
+  ok((await page.locator('.photo-pop .pop-title').innerText()).includes('ảnh 3'),'khung ⚙ của ô ảnh 3: tiêu đề nói rõ ảnh 3');
+  await page.locator('.photo-pop').getByRole('button',{name:'Đóng'}).click();
+  await receive('photo_settings',{pid:500,kind:'extra1',settings:{view:'front',yaw:10}});
+  ok((await page.evaluate(()=>tableState.data.rows.find(r=>r.pid===500).photo_extra1)).yaw===10,'Ruby báo thông số riêng ảnh 3: lưu vào photo_extra1 của dòng');
+  await receive('table',table({rows:locRows}));await page.evaluate(()=>{tableState.visible.delete('image_extra1');tableState.visible.delete('image_extra2');tableView(tableState.data);}); // trả bảng về như trước khối ảnh phụ
+  await page.locator('.grid tbody tr').nth(0).locator('td[data-key="ordinal"]').click(); // chọn lại dòng 0 như trước khối ảnh phụ
   await clear();await dropFile('.grid tbody tr:nth-child(3) td[data-key="image"]',{});await page.waitForTimeout(300);
   const droppedMain=await json('image_set');
   ok(droppedMain && droppedMain.pid===502 && !('kind' in droppedMain),'kéo thả vào ô Ảnh món: như cũ, không có loại ảnh (mặc định ảnh món)');
   await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});
-  ok(await page.locator('.capture-panel .cap-place').count()===1 && (await page.locator('.capture-panel .cap-place').innerText()).includes('Ảnh vị trí'),'hộp Cập nhật ảnh có thêm hàng chụp ảnh vị trí trái / phải');
+  ok(await page.locator('.capture-panel .cap-place').count()===3 && (await page.locator('.capture-panel .cap-place').first().innerText()).includes('Ảnh vị trí') && (await page.locator('.capture-panel .cap-place').nth(1).innerText()).includes('Ảnh 3') && (await page.locator('.capture-panel .cap-place').nth(2).innerText()).includes('Ảnh 4'),'hộp Cập nhật ảnh có thêm hàng chụp ảnh vị trí trái / phải và hai hàng ảnh 3, ảnh 4');
   await page.locator('#cap-only').uncheck();
-  await clear();await page.locator('.capture-panel .cap-place').getByRole('button',{name:'◢ Phải'}).click();
+  await clear();await page.locator('.capture-panel .cap-place').first().getByRole('button',{name:'◢ Phải'}).click();
   lc=await json('images_capture');
   ok(lc && lc.kind==='location' && lc.iso_side==='right' && JSON.stringify(lc.indexes)==='[0]' && lc.only_missing===false,'hộp Cập nhật ảnh: nút ◢ Phải chụp ảnh vị trí cho các đối tượng đang chọn (dòng 0)');
   await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});
-  await page.locator('#cap-only').check();await clear();await page.locator('.capture-panel .cap-place').getByRole('button',{name:'◣ Trái'}).click();
+  await page.locator('#cap-only').check();await clear();await page.locator('.capture-panel .cap-place').first().getByRole('button',{name:'◣ Trái'}).click();
   lc=await json('images_capture');
   ok(lc && lc.kind==='location' && lc.iso_side==='left' && lc.only_missing===true,'tùy chọn "Chỉ chụp đối tượng chưa có ảnh" cũng áp cho ảnh vị trí');
   await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});
-  await clear();await page.locator('.capture-panel .cap-place').getByRole('button',{name:'● Theo preset'}).click();
+  await clear();await page.locator('.capture-panel .cap-place').first().getByRole('button',{name:'● Theo preset'}).click();
   lc=await json('images_capture');
   ok(lc && lc.kind==='location' && !('iso_side' in lc) && lc.settings.loc_view==='isometric' && lc.settings.loc_width===512 && lc.settings.loc_yaw===0,'hộp Cập nhật ảnh: nút ● Theo preset chụp ảnh vị trí theo thiết lập ảnh vị trí của preset (không gửi bên Iso)');
   // Xuất Excel / PDF mang theo cột Ảnh vị trí với loại ảnh riêng
   await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
-  await page.getByRole('button',{name:'Nhập / Xuất ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();await clear();await page.getByRole('button',{name:'Xuất Excel'}).click();
   const expLoc=await json('table_export');
   const locCol=expLoc.columns.find(c=>c.label==='Ảnh vị trí'),mainCol=expLoc.columns.find(c=>c.label==='Ảnh');
   ok(locCol && locCol.type==='image' && locCol.image_kind==='location' && (!mainCol || !('image_kind' in mainCol)),'xuất Excel: cột Ảnh vị trí gửi type image kèm image_kind location, cột Ảnh món không có image_kind');
@@ -1200,7 +1253,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await prevBoard.count()===0&&(await calls('images_cancel')).length===1,'Esc đóng bảng khi đang vẽ dở: dừng việc vẽ');
   // Ảnh vị trí
   await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});
-  await page.locator('#cap-only').uncheck();await clear();await page.locator('.capture-panel .cap-place').getByRole('button',{name:'Xem trước'}).click();
+  await page.locator('#cap-only').uncheck();await clear();await page.locator('.capture-panel .cap-place').first().getByRole('button',{name:'Xem trước'}).click();
   pvw=await json('images_preview');
   ok(pvw&&pvw.kind==='location'&&!('iso_side' in pvw)&&pvw.settings.loc_view!==undefined&&(await prevBoard.locator('.pb-kind').innerText())==='Ảnh vị trí','hộp Cập nhật ảnh, hàng Ảnh vị trí: Xem trước theo thiết lập ảnh vị trí của preset');
   await clear();await prevBoard.getByRole('button',{name:'Đóng'}).click();

@@ -9,7 +9,7 @@ import re
 
 root = Path(__file__).resolve().parents[1]
 runtime = root / 'cabinet_work'
-RUNTIME_DIR = 'VGD_Cabinet'
+RUNTIME_DIR = 'vgd_cabinet'
 
 
 def quoted(text):
@@ -22,7 +22,7 @@ def statement(source, start, end):
 
 
 def with_prefix(tokens):
-    """Ghép tiền tố VGD_Cabinet/ cho các tên chỉ có phần tên file, giữ nguyên loader vgd_cabinet.rb."""
+    """Ghép tiền tố vgd_cabinet/ cho các tên chỉ có phần tên file, giữ nguyên loader vgd_cabinet.rb."""
     names = [token for token in tokens if token != RUNTIME_DIR + '/']
     return [name if name == 'vgd_cabinet.rb' else RUNTIME_DIR + '/' + name for name in names]
 
@@ -36,7 +36,7 @@ reload_list = re.search(r'%w\[(.*?)\]', reload_text, re.S).group(1).split()
 
 for label, files in (('package_menu.py', package), ('test_deploy.py', deploy_test), ('sync_sketchup_2022.ps1', ps1)):
     assert len(files) == len(set(files)), f'{label}: có file bị trùng trong danh sách'
-    assert len(files) == 23, f'{label}: cần 23 file, đang có {len(files)}'
+    assert len(files) == 22, f'{label}: cần 22 file, đang có {len(files)}'
 
 assert set(package) == set(deploy_test), f'package_menu.py khác test_deploy.py: {sorted(set(package) ^ set(deploy_test))}'
 assert set(package) == set(ps1), f'package_menu.py khác sync_sketchup_2022.ps1: {sorted(set(package) ^ set(ps1))}'

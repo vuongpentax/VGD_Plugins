@@ -1,6 +1,6 @@
-# VGD_Cabinet 4.5.3
+# VGD Cabinet 4.5.4
 
-VGD_Cabinet là plugin dựng và sửa tủ cho SketchUp, mục tiêu từ SketchUp 2022. Runtime 4.5.3 tập trung vào hình học tủ, giao diện `HtmlDialog`, preview, preset, thư viện và chuyển hộp thành tủ. VGD_EXPLODE và VGD_UNTAG không còn nằm trong runtime, menu hay gói Cabinet 4.5.3.
+VGD_Cabinet là plugin dựng và sửa tủ cho SketchUp, mục tiêu từ SketchUp 2022. Runtime 4.5.4 tập trung vào hình học tủ, giao diện `HtmlDialog`, preview, preset, thư viện và chuyển hộp thành tủ. VGD_EXPLODE và VGD_UNTAG không còn nằm trong runtime, menu hay gói Cabinet 4.5.3.
 
 ## Cấu trúc repository
 
@@ -14,7 +14,7 @@ VGD_Plugins/
     └── cabinet_dev/   # test, fixture, nguồn UI, generator và công cụ
 ```
 
-`cabinet_work/vgd_cabinet.rb` là loader; runtime chính là `cabinet_work/VGD_Cabinet/main43.rb`. `cabinet_dev/` không thuộc runtime. HTML được đóng gói tại `cabinet_work/VGD_Cabinet/VGD_Cabinet_UI.html`, sinh từ generator/template và `menu.css`/`menu.js`. Repository hiện không lưu thư mục `outputs/`; `cabinet_dev/package_menu.py` tạo output cục bộ tại `outputs/vgd_cabinet_modeling/` khi được chạy.
+`cabinet_work/vgd_cabinet.rb` là loader; runtime chính là `cabinet_work/vgd_cabinet/main43.rb`. `cabinet_dev/` không thuộc runtime. HTML được đóng gói tại `cabinet_work/vgd_cabinet/VGD_Cabinet_UI.html`, sinh từ generator/template và `menu.css`/`menu.js`. Repository hiện không lưu thư mục `outputs/`; `cabinet_dev/package_menu.py` tạo output cục bộ tại `outputs/vgd_cabinet_modeling/` khi được chạy.
 
 ## Tính năng
 
@@ -25,7 +25,7 @@ VGD_Plugins/
 - Lưu preset thông số và thư viện cabinet riêng. Thư viện giữ hình học SKP đã lưu, kể cả chỉnh sửa thủ công.
 - Chuyển group/component thành cabinet theo trục cục bộ của đối tượng.
 
-Cabinet T+ cũ được nhận diện qua dictionary `TPlus_Cabinet`; cabinet mới/cập nhật ghi dữ liệu VGD. Preset nằm tại `%APPDATA%/VGD/SketchUp/VGD_Cabinet/presets_v1.json`; thư viện nằm trong thư mục `library` cùng đường dẫn. Sao lưu dữ liệu người dùng trước khi chuyển máy hoặc bảo trì thủ công.
+Cabinet T+ cũ được nhận diện qua dictionary `TPlus_Cabinet`; cabinet mới/cập nhật ghi dữ liệu VGD. Preset nằm tại `%APPDATA%/VGD/SketchUp/vgd_cabinet/presets_v1.json`; thư viện nằm trong thư mục `library` cùng đường dẫn. Sao lưu dữ liệu người dùng trước khi chuyển máy hoặc bảo trì thủ công.
 
 ## Tạo gói và kiểm tra
 

@@ -17,13 +17,16 @@ module VGD
       TYPES = %w[text number image link ordinal].freeze
       KINDS = %w[row group total].freeze
       LABEL_KEYS = %w[model preset date print reset hint].freeze
+      ROW_HEIGHT_MIN = 28 # độ cao hàng người dùng chỉnh trên màn hình (điểm ảnh), khớp ROW_MIN / ROW_MAX của giao diện
+      ROW_HEIGHT_MAX = 640
+      PAGE_WIDTH_MM = 277 # bề ngang vùng in A4 ngang (297 mm trừ lề 10 mm hai bên)
       MIN_WIDTH = 20   # độ rộng cột lấy từ bảng trên màn hình (điểm ảnh)
       MAX_WIDTH = 2000
       DEFAULT_WEIGHT = {'ordinal' => 44, 'image' => 72, 'number' => 90, 'link' => 170, 'text' => 140}.freeze # tỉ lệ cột khi giao diện không gửi độ rộng
       PREFIX = 'VGD_BIM_bao_cao_'.freeze
       KEEP_SECONDS = 2 * 24 * 3600
 
-      # image_for: gọi với mã đối tượng (ảnh món) hoặc với (mã đối tượng, :location) cho cột Ảnh vị trí; trả về nội dung PNG (hoặc nil nếu không có / mã không thuộc bảng).
+      # image_for: gọi với mã đối tượng (ảnh món) hoặc với (mã đối tượng, loại ảnh) cho cột Ảnh vị trí / Ảnh 3 / Ảnh 4; trả về nội dung PNG (hoặc nil nếu không có / mã không thuộc bảng).
       def self.build(payload, model_name, image_for)
         raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless payload.is_a?(Hash)
         columns = columns!(payload['columns'])
@@ -47,7 +50,14 @@ module VGD
         end
         meta = ["#{labels['model']}: #{model_name}", ("#{labels['preset']}: #{preset}" unless preset.empty?), "#{labels['date']}: #{Time.now.strftime('%d/%m/%Y')}"].compact.join('  ·  ')
         {title: title, meta: meta, preset: preset, model: model_name, labels: labels, separator: separator, columns: columns, rows: rows,
-         images: images.compact}
+         images: images.compact, row_height: row_height!(payload['row_height'])}
+      end
+
+      # Độ cao hàng người dùng đã chỉnh trên màn hình; nil = chưa chỉnh (giữ cách xuất mặc định).
+      def self.row_height!(value)
+        return nil if value.nil?
+        raise ArgumentError, "Độ cao hàng phải là số từ #{ROW_HEIGHT_MIN} đến #{ROW_HEIGHT_MAX}." unless value.is_a?(Numeric) && value.finite? && value.between?(ROW_HEIGHT_MIN, ROW_HEIGHT_MAX)
+        value.round
       end
 
       def self.columns!(list)
@@ -59,8 +69,8 @@ module VGD
           width = col['width']
           raise ArgumentError, "Độ rộng cột phải là số từ #{MIN_WIDTH} đến #{MAX_WIDTH}." unless width.nil? || (width.is_a?(Numeric) && width.finite? && width.between?(MIN_WIDTH, MAX_WIDTH))
           kind = col['image_kind'].to_s
-          raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless kind.empty? || %w[full location].include?(kind)
-          {label: text!(col['label'], 200), unit: text!(col['unit'], 20), type: col['type'], digits: digits, width: width, image_kind: kind == 'location' ? :location : :full}
+          raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless kind.empty? || Images::KINDS.key?(kind.to_sym)
+          {label: text!(col['label'], 200), unit: text!(col['unit'], 20), type: col['type'], digits: digits, width: width, image_kind: kind.empty? ? :full : kind.to_sym}
         end
       end
 
@@ -91,11 +101,11 @@ module VGD
       # Ảnh đầy đủ do plugin ghi (không dùng ảnh thu nhỏ của bảng): phải là PNG đọc được kích thước. Ảnh hỏng thì bỏ qua (ô để trống), không làm hỏng cả báo cáo.
       # Khóa của ảnh trong báo cáo: ảnh món theo mã đối tượng, ảnh vị trí theo "loc<mã>" (để hai ảnh của cùng một món không trùng nhau).
       def self.image_key(pid, kind)
-        kind == :location ? "loc#{pid}" : pid
+        kind == :full ? pid : "#{Images::PREFIX.fetch(kind)}#{pid}"
       end
 
       def self.load_image(pid, image_for, kind = :full)
-        bytes = kind == :location ? image_for.call(pid, :location) : image_for.call(pid)
+        bytes = kind == :full ? image_for.call(pid) : image_for.call(pid, kind)
         return nil unless Images.png?(bytes) && bytes.bytesize <= Images::MAX_BYTES
         width, height = bytes.byteslice(16, 8).unpack('NN')
         return nil unless width.to_i.between?(1, 16_384) && height.to_i.between?(1, 16_384)
@@ -130,8 +140,12 @@ module VGD
       end
 
       # Độ rộng mỗi cột theo phần trăm của bảng (tổng 100): theo độ rộng người dùng đã chỉnh trên màn hình, thiếu thì theo tỉ lệ mặc định.
+      def self.column_weights(columns)
+        columns.map { |col| (col[:width] || DEFAULT_WEIGHT.fetch(col[:type])).to_f }
+      end
+
       def self.column_percents(columns)
-        weights = columns.map { |col| (col[:width] || DEFAULT_WEIGHT.fetch(col[:type])).to_f }
+        weights = column_weights(columns)
         total = weights.sum
         weights.map { |weight| (weight / total * 100).round(3) }
       end
@@ -155,12 +169,21 @@ module VGD
         })();
       JS
 
+      # Hàng cao theo độ cao người dùng chỉnh trên màn hình, thu theo cùng tỉ lệ với độ rộng cột (cả bảng vừa bề ngang trang in), nên hình dáng giống trên màn hình.
+      def self.row_height_css(report)
+        return {image: '22mm', row: ''} unless report[:row_height]
+        total = column_weights(report[:columns]).sum
+        mm = (report[:row_height] * PAGE_WIDTH_MM / total).clamp(8.0, 120.0).round(1)
+        {image: "#{(mm - 2).round(1)}mm", row: "\n          tr.row td{height:#{mm}mm}"}
+      end
+
       # Trang HTML tự chứa (ảnh nhúng sẵn): mở bằng trình duyệt; người dùng tự bấm nút In rồi chọn Lưu thành PDF (trang không tự gọi hộp in).
       # Khổ A4 ngang, tiêu đề cột lặp lại mỗi trang, độ rộng cột chia lại được bằng cách kéo mép tiêu đề.
       def self.html(report)
         percents = column_percents(report[:columns])
         colgroup = percents.map { |percent| %(<col style="width:#{percent}%">) }.join
         last = report[:columns].size - 1
+        row_css = row_height_css(report)
         head = report[:columns].each_with_index.map do |c, i|
           handle = i < last ? '<span class="rz" aria-hidden="true"></span>' : ''
           "<th>#{CGI.escapeHTML(c[:label])}#{c[:unit].empty? ? '' : %(<span class="unit">#{CGI.escapeHTML(c[:unit])}</span>)}#{handle}</th>"
@@ -191,7 +214,7 @@ module VGD
           td.num{text-align:right;font-variant-numeric:tabular-nums}
           td.ord{text-align:center}
           td.img{text-align:center;padding:2px}
-          td.img img{max-width:100%;max-height:22mm;display:block;margin:0 auto}
+          td.img img{max-width:100%;max-height:#{row_css[:image]};display:block;margin:0 auto}#{row_css[:row]}
           td.link a{color:#0563c1;word-break:break-all}
           tr.group td{background:#f4eee6;font-weight:700}
           tr.total td{background:#e8dccb;font-weight:700;border-top:2px solid #222}

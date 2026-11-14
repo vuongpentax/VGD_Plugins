@@ -1,7 +1,7 @@
 # Test minitoolbar tròn (beta.20): bố cục, hit-test, click, công cụ VGD Chọn, chuột phải trong công cụ Cánh.
 # Chạy: ruby test_minibar.rb [thư mục runtime]
 $stdout.sync = true
-RT = File.expand_path(ARGV[0] || '../runtime/VGD_Cabinet_Draw', __dir__)
+RT = File.expand_path(ARGV[0] || '../runtime/vgd_cabinet_draw', __dir__)
 require 'tmpdir'
 require_relative 'mock_su'
 $LOAD_PATH.unshift(__dir__)
