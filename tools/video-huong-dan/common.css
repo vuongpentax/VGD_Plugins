@@ -22,3 +22,5 @@ html,body{background:#0b0b0b}
 #mb .mbtn{min-width:78px;height:26px;border:1px solid #adadad;background:#e1e1e1;color:#000;display:grid;place-items:center;font-size:12px}
 /* --- Giao diện Center thật (dialog.html nhúng bằng iframe) --- */
 .cwin .title{height:30px}.cwin iframe{display:block;width:858px;height:608px;border:0;background:#121212}
+/* Chú thích dài tự xuống dòng, không tràn khung hình */
+.cap.wrap{white-space:normal;max-width:1000px;text-align:left}

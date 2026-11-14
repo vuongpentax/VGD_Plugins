@@ -14,6 +14,15 @@ Bảy đoạn animation ngắn hướng dẫn dùng VGD Center. Mỗi đoạn l�
 | `06-xuat-rbz.mp4` | `scene-06-xuat-rbz.html` | Xuất gói .rbz tổng | 20 giây |
 | `07-cai-dat.mp4` | `scene-07-cai-dat.html` | Cài đặt: ngôn ngữ, tự cập nhật | 15 giây |
 
+Hoạt ảnh của các plugin khác nằm trong thư mục riêng, đăng cùng trang `guides/<id>/`:
+
+| File xuất | Mã nguồn | Nội dung | Dài |
+|---|---|---|---|
+| `image_importer-01-chon-anh.mp4` | `image_importer/scene-01-nhap-anh.html` | Image Importer: chọn ảnh và cách đặt | 30 giây |
+| `image_importer-02-dinh-dang.mp4` | `image_importer/scene-02-dinh-dang.html` | Image Importer: định dạng và vị trí | 20 giây |
+
+Ảnh trong danh sách là hình mẫu đơn giản trong `image_importer/samples/`; Ruby được mô phỏng qua `image_importer/ii.js`.
+
 File MP4 không lưu trong git. Phần dùng chung: `common.css`, `common.js`. Script quay: `render.js`.
 
 ## Chạy lại

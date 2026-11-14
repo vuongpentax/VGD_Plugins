@@ -42,7 +42,7 @@ def main():
     # Hoạt ảnh và phần dùng chung (không chép render.js, build_site.py, tài liệu)
     copy_files(VIDEO, OUT / 'tools' / 'video-huong-dan', ['common.css', 'common.js', 'center.js', 'scene-*.html'])
     for sub in sorted(p for p in VIDEO.iterdir() if p.is_dir() and p.name not in ('guides', '__pycache__')):
-        copy_files(sub, OUT / 'tools' / 'video-huong-dan' / sub.name, ['*.html', '*.js', '*.css', '*.svg', '*.png', '*.json'])
+        copy_web_dir(sub, OUT / 'tools' / 'video-huong-dan' / sub.name)
     # Font của hoạt ảnh
     shutil.copytree(ROOT / 'shared' / 'vgd-theme' / 'fonts', OUT / 'shared' / 'vgd-theme' / 'fonts')
     # Giao diện Center thật mà hoạt ảnh nhúng (chỉ file web, không chép mã Ruby)

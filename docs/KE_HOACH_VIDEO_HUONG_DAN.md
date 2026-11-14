@@ -154,7 +154,7 @@ Phạm vi: 8 plugin có hướng dẫn chữ (Dim, Cabinet, Library, Image Impor
 - Chưa kiểm tra trong SketchUp thật; phụ thuộc kết quả thử Center 1.2.6-beta.1.
 - Chưa quyết: có xuất thêm MP4 cho từng plugin không (hiện chỉ làm bản tương tác); có làm bản tiếng Anh không.
 
-### Image Importer: kịch bản nháp (chờ duyệt)
+### Image Importer: kịch bản (đã duyệt, đã dựng)
 
 Chữ lấy từ `dialog.html`, `dialog.js`, `main.rb`, `conversion.rb` của plugin. Hộp thoại chạy thật; phía Ruby (danh sách ảnh, kết quả nhập) mô phỏng bằng `VGDImporter.receive`. Hộp chọn thư mục của Windows và kết quả trong model được thể hiện bằng khung vẽ thêm và chú thích. Ảnh mẫu là hình đơn giản do tôi vẽ, không phải ảnh thật của bạn.
 
@@ -164,3 +164,6 @@ Chữ lấy từ `dialog.html`, `dialog.js`, `main.rb`, `conversion.rb` của pl
 | 2 | Định dạng và vị trí | Danh sách ảnh nhiều đuôi (JPG, PNG, WEBP, TIFF, HEIC) → **Nhập** → hộp **Kết quả nhập ảnh**: "Đã nhập 4 ảnh / vật liệu · 1 ảnh lỗi." kèm dòng lỗi HEIC | "Hỗ trợ JPG, PNG, WebP, TIFF, TGA và nhiều định dạng khác" / "Một ảnh lỗi không chặn các ảnh khác" / "HEIC cần codec HEIF của Windows" / "Muốn nhập ở cấp model: thoát Group/Component trước" | 20 giây |
 
 Giả định cần bạn xác nhận: dùng chữ "Nhập 5 ảnh" và 5 ảnh mẫu; tên file mẫu (ví dụ `cay1.png`, `nguoi2.jpg`) là minh họa. Chưa xác minh trong SketchUp thật.
+
+Trạng thái: giai đoạn 0 xong (tách `center.js`, trang sinh từ mẫu chung; hình 7 đoạn Center giống hệt trước khi tách). Giai đoạn 1: đã dựng 2 chương Image Importer, trang `guides/image_importer/` chạy trên site dựng thử. Chưa thêm `guide_url` vào catalog (chờ Center 1.2.6 phát hành và Pages chạy). Chờ bạn xem video và phản hồi trước khi sang giai đoạn 2.
+
