@@ -14,7 +14,7 @@ async function iiApply(s){
  const list=s.files.map((f,i)=>({id:i,name:f.name,path:'C:\\Anh\\tham_khao\\'+f.name})),sig=JSON.stringify(list);
  if(sig!==iiSig){iiSig=sig;W.VGDImporter.receive('files',list);
   const rows=[...W.document.querySelectorAll('#fileList .file-row')],imgs=[];
-  rows.forEach((row,i)=>{const im=row.querySelector('img.thumb');if(im&&s.files[i].sample){im.onerror=null;im.src=new URL('samples/'+s.files[i].sample+'.svg',location.href).href;imgs.push(im)}});
+  rows.forEach((row,i)=>{const im=row.querySelector('img.thumb');if(im&&s.files[i].sample){im.onerror=null;im.src=new URL('../samples/'+s.files[i].sample+'.svg',location.href).href;imgs.push(im)}});
   await Promise.all(imgs.map(im=>im.decode().catch(()=>{})))}
  const dlg=W.document.getElementById('resultDialog');
  if(s.result){if(!dlg.open)W.VGDImporter.receive('result',s.result)}else{if(dlg.open)dlg.close();W.VGDImporter.receive('status',{message:s.status,error:false})}

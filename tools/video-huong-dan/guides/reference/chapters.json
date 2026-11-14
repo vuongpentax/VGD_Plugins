@@ -1,0 +1,11 @@
+{
+  "title": "VGD Reference",
+  "eyebrow": "Hướng dẫn tương tác",
+  "lead": "Chọn một phần để xem hoạt ảnh. Hoạt ảnh chạy trực tiếp trên bảng quản lý của Reference (bên phải) và tự lặp lại.",
+  "note": "Hoạt ảnh minh họa dựa trên bảng VGD Reference; ảnh mẫu và tên file chỉ là ví dụ. Khung bên trái chỉ minh họa khung nhìn SketchUp, không phải ảnh chụp thật.",
+  "web": "plugins/VGD_Reference/runtime/vgd_reference",
+  "chapters": [
+    {"scene": "reference/scene-01-them-anh", "title": "Thêm và quản lý ảnh", "duration": "30 giây"},
+    {"scene": "reference/scene-02-luu-y", "title": "Lưu ý", "duration": "15 giây"}
+  ]
+}

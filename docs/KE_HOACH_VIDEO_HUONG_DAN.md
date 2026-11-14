@@ -188,3 +188,5 @@ Mỗi chương theo một mục của hướng dẫn chữ; nút và nhãn lấy
 | Scenes | 3 | Xuất ảnh hoặc PDF | Tab **Xuất file**: chọn scene, PNG/JPG hoặc PDF, khổ giấy, nền trong suốt → xuất | 25 giây |
 
 Thứ tự dựng: Reference → Library → Dim → Scenes; mỗi plugin xong thì gửi video để bạn xem rồi mới sang plugin kế. Chưa xác minh trong SketchUp thật.
+
+Giai đoạn 2, tiến độ: Reference đã dựng (2 chương), chờ bạn xem; kế tiếp Library, Dim, Scenes.
