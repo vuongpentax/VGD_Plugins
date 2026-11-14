@@ -72,6 +72,8 @@ module VGD
       @smart_command.status_bar_text = 'Chọn tủ rồi đo ngay; cập nhật bộ Dim cùng tủ/mặt/Scene.'
       @toolbar.add_item(@smart_command)
       @menu.add_item(@smart_command)
+      # Lần đầu cài (SketchUp chưa từng hiện thanh này) thì hiện ngay; các lần sau giữ trạng thái người dùng đã chọn.
+      @toolbar.get_last_state == TB_NEVER_SHOWN ? @toolbar.show : @toolbar.restore
     end
     AutoStyle.start
     UpdateCore::UIHooks.start

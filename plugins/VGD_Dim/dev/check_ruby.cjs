@@ -77,7 +77,7 @@ const {DefaultRubyVM}=require(path.join(deps,'@ruby/wasm-wasi/dist/cjs/node.js')
   const main=fs.readFileSync(path.join(root,'vgd_dim/main.rb'),'utf8').replace(/^require[^\n]*\n/gm,'');
   vm.eval(main);vm.eval(main);
   vm.eval(`
-    check(UI.toolbars.length==1 && UI.toolbars.first.events==[:add,:add],'Toolbar duplicated')
+    check(UI.toolbars.length==1 && UI.toolbars.first.events==[:add,:add,:show],'Toolbar duplicated or not shown on first install')
     VGD::Dim.show_dialog
     dialog=VGD::Dim::Dialog.instance_variable_get(:@dlg)
     expected=%w[ready scan run rebuild smart_dim save_preset delete_preset set_auto anim_set dim_info text_info native_apply units_apply set_boundary set_detail set_region delete_region manual_dim]

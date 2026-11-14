@@ -4,7 +4,7 @@ require 'fileutils'
 require 'tmpdir'
 require 'json'
 $LOADED_FEATURES << 'sketchup.rb' << 'extensions.rb'
-$items = []; $boxes = []; $dialogs = []; $toolbars = 0
+$items = []; $boxes = []; $dialogs = []; $toolbars = 0; $toolbar_shown = 0; $toolbar_restored = 0
 TB_NEVER_SHOWN = 0
 module Sketchup
   def self.const_missing(name); const_set(name, Class.new); end
@@ -36,9 +36,9 @@ module UI
   class Toolbar
     def initialize(*); $toolbars += 1; end
     def add_item(*); end
-    def get_last_state; 0; end
-    def show; end
-    def restore; end
+    def get_last_state; 0; end # TB_NEVER_SHOWN: SketchUp chưa từng hiện thanh này
+    def show; $toolbar_shown += 1; end
+    def restore; $toolbar_restored += 1; end
   end
   class Menu
     def add_submenu(_n); self; end
@@ -79,11 +79,12 @@ Dir.mktmpdir do |dir|
   check 'CODE_FILES trùng các require_relative của main.rb', required.sort == listed.sort
   load File.join(dir, 'vgd_scenes.rb')
   load main
+  check 'khởi động: toolbar tự hiện ngay lần đầu cài (chưa từng hiện)', $toolbar_shown == 1 && $toolbar_restored == 0
   check 'khởi động: có mục Tải lại code', $items.map(&:first).include?('Tải lại code')
   reload = $items.find { |n, _| n == 'Tải lại code' }[1]
   count = $items.size; toolbars = $toolbars
   2.times { reload.call }
-  check 'tải lại 2 lần: không nhân đôi menu và toolbar', $items.size == count && $toolbars == toolbars
+  check 'tải lại 2 lần: không nhân đôi menu và toolbar, không hiện lại toolbar', $items.size == count && $toolbars == toolbars && $toolbar_shown == 1
   check 'tải lại thành công báo đã tải lại', $boxes.last.to_s.start_with?('Đã tải lại')
   VGD::Scenes.open
   first = $dialogs.last

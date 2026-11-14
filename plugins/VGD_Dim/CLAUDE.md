@@ -16,6 +16,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Kiểm thử
 
+- Toolbar hiện lần đầu cài: `ruby dev/test_toolbar.rb` (chạy từ `plugins/VGD_Dim`; giả lập SketchUp, nạp mã thật).
 - Test nằm trong `dev/`: `test_core.rb`, `test_engine.rb`, `test_smartdim.rb`, `test_store.rb`, `test_regression.rb`, `test_fixture.rb`, `test_native_style.rb`, `test_ui.cjs`, `test_deploy.py`, `test_update_installer.ps1`, `check_ruby.cjs`. Tài liệu không ghi lệnh chạy riêng từng file; xem đầu mỗi file.
 - Trạng thái chức năng và phần chưa xác minh native: `FEATURE_STATUS.md`, `DEVELOPMENT_NOTES.md`.
 

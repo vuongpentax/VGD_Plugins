@@ -23,7 +23,7 @@ end
 
 module VGD
   module Scenes
-    VERSION = '1.6.1-beta.3'.freeze unless const_defined?(:VERSION, false)
+    VERSION = '1.6.1-beta.4'.freeze unless const_defined?(:VERSION, false)
     # Danh sách file nạp lại khi "Tải lại code" (trùng các require_relative ở đầu file, main nạp cuối).
     CODE_FILES = %w[utils dim_bridge section_set sheet_layout title_block sheet_builder geometry scenes frame export
                     transfer camera update_notice main].freeze unless const_defined?(:CODE_FILES, false)
@@ -444,6 +444,8 @@ module VGD
         menu.add_item('VGD · Nhập góc scene từ JSON') { transfer_command('loadScenes') }
         menu.add_item('VGD · Bỏ khung xám tất cả scene để gửi SKP') { cleanup_frames_command }
         menu.add_item('VGD · Khôi phục khung scene đã bỏ') { cleanup_frames_command(true) }
+        # Lần đầu cài (SketchUp chưa từng hiện thanh này) thì hiện ngay; các lần sau giữ trạng thái người dùng đã chọn.
+        @toolbar.get_last_state == TB_NEVER_SHOWN ? @toolbar.show : @toolbar.restore
         menu.add_item('Hiện thanh công cụ VGD Scenes') { @toolbar.show }
         menu.add_item('Tải lại code') { reload }
         VGD::UpdateNotice.start('vgd-scenes', 'VGD Scenes', VERSION)
