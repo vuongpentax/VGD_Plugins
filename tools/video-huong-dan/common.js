@@ -31,9 +31,14 @@ const fitZoom=(r,maxS,tx,ty,pad=80)=>zoomTo(r.x+r.w/2,r.y+r.h/2,Math.min(maxS,(1
 // phía Ruby bằng dữ liệu theo thời gian. W là cửa sổ của giao diện đang nhúng.
 let W=null;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-async function mountApp(url,frameId='cf',themeKey=null){
+// opts.stub: giao diện gọi sketchup.* mà không kiểm tra (ví dụ VGD Dim) nên cấp sẵn một đối tượng sketchup rỗng (mọi lệnh không làm gì)
+async function mountApp(url,frameId='cf',themeKey=null,opts={}){
  if(themeKey){try{localStorage.setItem(themeKey,'dark')}catch(_){}}
- const f=$(frameId);await new Promise(res=>{f.onload=res;f.src=url});
+ const f=$(frameId);
+ if(opts.stub){const abs=new URL(url,location.href).href;let html=await (await fetch(abs)).text();
+  html=html.replace('<head>',`<head><base href="${abs.slice(0,abs.lastIndexOf('/')+1)}"><script>window.sketchup=new Proxy({},{get:()=>()=>{}})<\/script>`);
+  await new Promise(res=>{f.onload=res;f.srcdoc=html})}
+ else await new Promise(res=>{f.onload=res;f.src=url});
  W=f.contentWindow;await sleep(500);
  const d=W.document,st=d.createElement('style');
  // tắt hiệu ứng chuyển động CSS để điều khiển từng khung hình

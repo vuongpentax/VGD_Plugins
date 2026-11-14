@@ -192,3 +192,5 @@ Thứ tự dựng: Reference → Library → Dim → Scenes; mỗi plugin xong t
 Giai đoạn 2, tiến độ: Reference đã dựng 3 chương (thêm chương di chuyển, xoay, đổi kích thước ảnh theo góp ý, sửa lỗi con trỏ lệch khi bảng bị phóng to), chờ bạn xem; kế tiếp Library, Dim, Scenes.
 
 Giai đoạn 2, tiến độ: Library đã dựng 3 chương (tìm và tô vật liệu; đặt model và lưu mẫu; công cụ map), chờ bạn xem; kế tiếp Dim, Scenes.
+
+Giai đoạn 2, tiến độ: Dim đã dựng 4 chương (tạo Smart Dim; chỉnh kiểu dáng; font, cỡ chữ và preset; đơn vị và animation), chờ bạn xem; kế tiếp Scenes.

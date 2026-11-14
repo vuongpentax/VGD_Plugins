@@ -1,0 +1,49 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Dim · Đơn vị và Animation</title>
+<link rel="stylesheet" href="../common.css"><style>
+#center{left:261px;top:20px;width:760px;height:682px}#center iframe{width:758px;height:650px}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD Dim</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Dim"></iframe></div>
+ <div id="spot"></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Tab Đơn vị: chọn đơn vị, số lẻ và có hiện ký hiệu hay không</div>
+<div class="cap" id="c2"><span>Bước 2</span>Bấm “Áp đơn vị cho toàn model”</div>
+<div class="cap" id="c3"><span>Bước 3</span>Tab Animation: đặt thời gian chuyển cảnh, dừng mỗi cảnh, lặp</div>
+<div class="cap" id="c4"><span>Bước 4</span>Bấm “Bật animation” để chạy chuyển cảnh trong SketchUp</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="dim.js"></script><script>
+const DUR=20;let M;
+window.CENTER_READY=mountDim('cf','smart');
+const $b=(t,p)=>[...W.document.querySelectorAll('#panel-'+p+' button')].find(b=>b.textContent.trim()===t);
+
+let TTabU,TUnit,TPrec,TShow,TApply,TTabA,TTrans,TLoop,TOn;
+async function init(){
+ W.VGD.nav('units');TTabU=aim(RC('#tab-units'),.5);TUnit=aim(RC(dimEl('units.unit')),.5);TPrec=aim(RC(dimEl('units.precision')),.5);TShow=aim(RC(dimEl('units.show_unit')),.5);TApply=aim(RC($b('Áp đơn vị cho toàn model','units')),.6);
+ W.VGD.nav('animation');TTabA=aim(RC('#tab-animation'),.5);TTrans=aim(RC(dimEl('anim.transition')),.5);TLoop=aim(RC(dimEl('anim.loop')),.5);TOn=aim(RC($b('Bật animation','animation')),.6);
+ W.VGD.nav('smart');
+ M=[{a:.6,b:1.6,f:{x:1010,y:690},t:TTabU,arc:-60},{a:2.6,b:3.4,f:TTabU,t:TUnit,arc:25},{a:4.6,b:5.2,f:TUnit,t:TPrec,arc:20},{a:6.0,b:6.6,f:TPrec,t:TShow,arc:20},{a:7.4,b:8.2,f:TShow,t:TApply,arc:20},
+    {a:10.4,b:11.4,f:TApply,t:TTabA,arc:-40},{a:12.4,b:13.2,f:TTabA,t:TTrans,arc:25},{a:14.4,b:15.0,f:TTrans,t:TLoop,arc:20},{a:15.8,b:16.6,f:TLoop,t:TOn,arc:20},{a:18.0,b:19.0,f:TOn,t:{x:180,y:540},arc:30}];
+ await render(0)}
+async function render(t){
+ setWorld({s:1,x:0,y:0});
+ const tab=t<1.7?'smart':t<11.5?'units':'animation';W.VGD.nav(tab);
+ if(tab==='units'){dimEl('units.unit').value=t>=3.6?'3':'2';dimEl('units.precision').value=t>=5.3?'1':'0';dimEl('units.show_unit').checked=t>=6.7;
+  const busy=t>=8.4&&t<9.2;W.VGD.onBusy(busy);
+  if(t<8.4)W.VGD.log('',false);else if(t<9.2)W.VGD.log('Đang áp đơn vị…',false);else W.VGD.onUnits({unit:3,precision:1,show_unit:true,reset:0});
+  W.VGD.onBusy(busy);
+  const b=$b('Áp đơn vị cho toàn model','units');b.classList.toggle('fx-hover',t>=8.2&&t<9.4);b.style.transform=`scale(${1-.05*pulse(t,8.3,8.6)})`}
+ if(tab==='animation'){const on=t>=17.0;dimEl('anim.transition').value=t>=13.6?'2':'1';dimEl('anim.delay').value=t>=13.6?'3':'2';dimEl('anim.loop').checked=t>=15.2;
+  if(on)W.VGD.log('Đã bật chuyển cảnh.',false);else W.VGD.log('',false);
+  W.VGD.onAnim({enabled:on,transition:t>=13.6?2:1,delay:t>=13.6?3:2,loop:t>=15.2});
+  const b=$b('Bật animation','animation');b.classList.toggle('fx-hover',t>=16.6&&t<17.6);b.style.transform=`scale(${1-.05*pulse(t,16.8,17.1)})`}
+ $('spot').style.opacity=0;
+ const pr=[[1.6,1.9],[3.4,3.7],[5.2,5.5],[6.6,6.9],[8.3,8.6],[11.4,11.7],[13.2,13.5],[15.0,15.3],[16.7,17.0]];
+ drawCursor({s:1,x:0,y:0},pos(M,t),t,.6,19.5,pr.some(([a,b])=>pulse(t,a,b))?1:0,Math.max(...pr.map(([a,b])=>P(t,a,a+.4)*(t>a-.2&&t<b+1.0?1:0))));
+ cap($('c1'),t,.6,8.0,0);cap($('c2'),t,8.0,11.0,0);cap($('c3'),t,11.4,16.0,0);cap($('c4'),t,16.2,19.2,0);
+ for(const k of [1,2,3,4])$('c'+k).style.top='38px';
+ $('stage').style.opacity=1-E(P(t,19.6,20))}
+
+start();
+</script></body></html>

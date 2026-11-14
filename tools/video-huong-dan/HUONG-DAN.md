@@ -26,8 +26,12 @@ Hoạt ảnh của các plugin khác nằm trong thư mục riêng, đăng cùng
 | `library-01-tim-to-vat-lieu.mp4` | `library/scene-01-tim-to.html` | Library: tìm và tô vật liệu | 30 giây |
 | `library-02-dat-model.mp4` | `library/scene-02-dat-model.html` | Library: đặt model và lưu mẫu | 25 giây |
 | `library-03-cong-cu-map.mp4` | `library/scene-03-cong-cu-map.html` | Library: công cụ map | 26 giây |
+| `dim-01-smart-dim.mp4` | `dim/scene-01-smart-dim.html` | Dim: tạo Smart Dim | 30 giây |
+| `dim-02-kieu-dang.mp4` | `dim/scene-02-kieu-dang.html` | Dim: chỉnh kiểu dáng | 20 giây |
+| `dim-03-font-preset.mp4` | `dim/scene-03-font-preset.html` | Dim: font, cỡ chữ và preset | 20 giây |
+| `dim-04-don-vi-animation.mp4` | `dim/scene-04-don-vi-animation.html` | Dim: đơn vị và animation | 20 giây |
 
-Ảnh mẫu là hình đơn giản dùng chung trong `samples/`; Ruby được mô phỏng qua `image_importer/ii.js` và `reference/ref.js` và `library/lib.js` (vân vật liệu mẫu là SVG đơn giản `samples/vl_*.svg`). Reference có thêm khung "khung nhìn SketchUp (minh họa)" vì ảnh nổi trên khung nhìn chứ không nằm trong bảng.
+Ảnh mẫu là hình đơn giản dùng chung trong `samples/`; Ruby được mô phỏng qua `image_importer/ii.js` và `reference/ref.js` và `library/lib.js` (vân vật liệu mẫu là SVG đơn giản `samples/vl_*.svg`) và `dim/dim.js` (Dim cần chặn `sketchup.*` bằng `mountApp(..., {stub:true})` vì `window.onload` gọi `sketchup.ready()`). Reference có thêm khung "khung nhìn SketchUp (minh họa)" vì ảnh nổi trên khung nhìn chứ không nằm trong bảng.
 
 File MP4 không lưu trong git. Phần dùng chung: `common.css`, `common.js`. Script quay: `render.js`.
 

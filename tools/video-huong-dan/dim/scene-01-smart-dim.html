@@ -1,0 +1,56 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Dim · Tạo Smart Dim</title>
+<link rel="stylesheet" href="../common.css"><style>
+#center{left:261px;top:20px;width:760px;height:682px}#center iframe{width:758px;height:650px}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD Dim</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Dim"></iframe></div>
+ <div id="spot"></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Chọn Group hoặc Component đại diện cho tủ trong model</div>
+<div class="cap" id="c2"><span>Bước 2</span>Chọn mặt đo, phía đo và khoảng cách tới tủ</div>
+<div class="cap" id="c3"><span>Bước 3</span>Bấm “Smart Dim cho tủ đang chọn”</div>
+<div class="cap big wrap" id="c4">Kiểm tra kết quả: Tag, các đoạn Ngang/Đứng và tổng</div>
+<div class="cap" id="c5"><span>Bước 4</span>Sửa thông số rồi chạy lại để cập nhật</div>
+<div class="cap" id="c6">Bộ Dim cũ chỉ được thay khi bộ mới tạo thành công</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="dim.js"></script><script>
+const DUR=30,SC1=190,SC2=292;let M,Z1,rBadge,rOpts,rLog,TFace,TOff,TSmart;
+window.CENTER_READY=mountDim('cf','smart');
+const R1={replaced:false,total:8,section:false,face:'-y',tag:'000 DIM',scene:null,h:[600,600],v:[720,1680],warnings:[]};
+const R2={...R1,replaced:true,h:[600,600],v:[720,1680]};
+const smartBtn=()=>[...W.document.querySelectorAll('#panel-smart button')].find(b=>b.textContent.trim()==='Smart Dim cho tủ đang chọn');
+let lastLog='',lastBusy=null;
+function setLog(fn){const k=fn.toString();if(k!==lastLog){lastLog=k;fn()}}
+async function init(){
+ const mn=W.document.querySelector('main');
+ mn.scrollTop=0;rBadge=RC('#badge-smart');
+ mn.scrollTop=SC1;TFace=aim(RC(dimEl('sd.face')),.6);TOff=aim(RC(dimEl('sd.off1')),.5);{const a=RC(dimEl('sd.face')),b=RC(dimEl('sd.off1')),c=RC(dimEl('sd.face').closest('section'));rOpts={x:c.x+4,y:a.y-10,w:c.w-8,h:b.y+b.h-a.y+20}}
+ mn.scrollTop=SC2;TSmart=aim(RC(smartBtn()),.6);mn.scrollTop=0;
+ W.VGD.onSmart(R1);rLog=RC('#log');W.VGD.log('',false);
+ Z1=fitZoom(rLog,1.6,640,380);
+ M=[{a:.8,b:2.0,f:{x:1010,y:690},t:aim(rBadge,.5),arc:-60},{a:5.0,b:6.4,f:aim(rBadge,.5),t:TFace,arc:-30},{a:8.6,b:9.6,f:TFace,t:TOff,arc:20},{a:12.4,b:14.4,f:TOff,t:TSmart,arc:-30},
+    {a:18.2,b:19.6,f:TSmart,t:TOff,arc:30},{a:24.2,b:25.4,f:TOff,t:TSmart,arc:-20},{a:27.2,b:28.2,f:TSmart,t:{x:180,y:540},arc:30}];
+ await render(0)}
+async function render(t){
+ const c=mix({s:1,x:0,y:0},Z1,E(P(t,17.4,18.2))*(1-E(P(t,22.8,23.6))));setWorld(c);
+ W.document.querySelector('main').scrollTop=SC1*E(P(t,4.6,5.6))+(SC2-SC1)*E(P(t,12.0,12.8))-SC2*E(P(t,28.4,29.2));
+ // trường nhập: mặt đo, Cách tủ (mm): gõ 100 → 150 (lần chạy đầu) rồi → 200 (lần chạy lại)
+ dimEl('sd.face').value='-y';dimEl('sd.off1').value=t<9.4?'100':t<10.2?'15':t<10.6?'150':t<24.6?'150':t<25.0?'20':'200';
+ // trạng thái chạy: dựng (15.0–17.0), kết quả lần 1 (17.0), dựng lại (26.0–27.4), kết quả lần 2 (27.4)
+ const busy=(t>=15.0&&t<17.0)||(t>=26.0&&t<27.4);W.VGD.onBusy(busy);
+ if(t<15.0)W.VGD.log('',false);else if(t<17.0)W.VGD.log('Đang dựng Dimension…',false);else if(t<26.0)W.VGD.onSmart(R1);else if(t<27.4)W.VGD.log('Đang dựng Dimension…',false);else W.VGD.onSmart(R2);
+ W.VGD.onBusy(busy);
+ const sb=smartBtn();sb.classList.toggle('fx-hover',(t>=14.4&&t<15.2)||(t>=25.4&&t<26.2));sb.style.transform=`scale(${1-.05*(pulse(t,14.7,15.05)||pulse(t,25.65,26.0))})`;
+ hover('#tab-smart',false);
+ const sp=$('spot');let rr=null,o=0;
+ if(t<4.8){rr=rBadge;o=E(P(t,1.2,1.7))*(1-E(P(t,4.2,4.7)))}else if(t<13.0){rr=rOpts;o=E(P(t,5.2,5.7))*(1-E(P(t,12.0,12.6)))}
+ if(rr)sp.style.cssText+=`;opacity:${o};left:${rr.x-4}px;top:${rr.y-4}px;width:${rr.w+8}px;height:${rr.h+8}px`;else sp.style.opacity=0;
+ const pr=[[14.7,15.05],[25.65,26.0]];
+ drawCursor(c,pos(M,t),t,.6,29.5,pr.some(([a,b])=>pulse(t,a,b))?1:0,Math.max(...pr.map(([a,b])=>P(t,a,a+.45)*(t>a-.2&&t<b+1.2?1:0))));
+ cap($('c1'),t,.9,4.6,0);cap($('c2'),t,5.0,12.8,0);cap($('c3'),t,13.2,17.0,0);cap($('c4'),t,17.6,23.2,0);cap($('c5'),t,23.6,27.0,0);cap($('c6'),t,27.6,29.4,0);
+ for(const k of [1,2,3,5])$('c'+k).style.top='640px';$('c4').style.top='38px';$('c6').style.top='38px';
+ $('stage').style.opacity=1-E(P(t,29.7,30))}
+start();
+</script></body></html>
