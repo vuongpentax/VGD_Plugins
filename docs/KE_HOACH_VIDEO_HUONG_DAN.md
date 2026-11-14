@@ -167,3 +167,24 @@ Giả định cần bạn xác nhận: dùng chữ "Nhập 5 ảnh" và 5 ảnh 
 
 Trạng thái: giai đoạn 0 xong (tách `center.js`, trang sinh từ mẫu chung; hình 7 đoạn Center giống hệt trước khi tách). Giai đoạn 1: đã dựng 2 chương Image Importer, trang `guides/image_importer/` chạy trên site dựng thử. Chưa thêm `guide_url` vào catalog (chờ Center 1.2.6 phát hành và Pages chạy). Chờ bạn xem video và phản hồi trước khi sang giai đoạn 2.
 
+
+### Giai đoạn 2: kịch bản nháp Reference, Library, Dim, Scenes (chờ duyệt)
+
+Mỗi chương theo một mục của hướng dẫn chữ; nút và nhãn lấy từ hộp thoại thật. Ruby được mô phỏng qua hàm thật của từng hộp thoại (`VGDReference.render`, `VGD.begin/append/model`, `VGD.<hàm>`, `VGDScenes.receive`); phần diễn ra trong khung nhìn 3D chỉ có chú thích. Tên vật liệu, ảnh và scene mẫu là minh họa; chữ trạng thái/kết quả sẽ đọc từ mã Ruby của từng plugin khi dựng.
+
+| Plugin | # | Chương | Thao tác chính (nút thật) | Dài |
+|---|---|---|---|---|
+| Reference | 1 | Thêm và quản lý ảnh | **Thêm** / **Dán** / kéo file vào bảng → chọn ảnh, chỉnh mức hiển thị, **Cắt ảnh**, khóa → **Ẩn tất cả**, **Xóa tất cả** | 25 giây |
+| Reference | 2 | Lưu ý | Chú thích: ảnh là lớp phủ theo màn hình, không tạo hình học, không lưu vào model; đóng hoặc đổi model thì mất danh sách | 15 giây |
+| Library | 1 | Tìm và tô vật liệu | **Thêm thư mục vật liệu** → tìm, lọc, yêu thích → chọn mẫu xem trước → nhập Rộng × Cao (mm) → **Tô lên vùng chọn** | 30 giây |
+| Library | 2 | Đặt model và lưu mẫu | Tab **Thư viện model** → chọn SKP (đặt bằng chuột, mũi tên xoay 90°, Esc hủy) → **Lưu model vào thư viện** | 25 giây |
+| Library | 3 | Công cụ map | **Chỉnh map & tô từng mặt**: **Xoay 90°**, **Dịch vân**, **Fit map**, **AUTO SCALE**, **Phục hồi cỡ thật**; mục **Bộ công cụ** | 25 giây |
+| Dim | 1 | Tạo Smart Dim | Tab **Smart Dim** → phạm vi → **Mặt theo trục tủ**, Dim ngang/đứng, **Cách tủ (mm)** → **Smart Dim cho tủ đang chọn** → dòng trạng thái | 30 giây |
+| Dim | 2 | Chỉnh kiểu dáng | Tab **Kiểu dáng**: phạm vi, màu, mũi tên, hướng chữ → **Áp style theo phạm vi** | 20 giây |
+| Dim | 3 | Font, cỡ chữ và preset | **Font & cỡ chữ** (Model Info) → **Làm mới Dimension theo phạm vi** → **Preset**: **Lưu** | 20 giây |
+| Dim | 4 | Đơn vị và Animation | **Bật animation** / **Tắt animation**; **Áp đơn vị cho toàn model**; chú thích: không có Undo, kiểm tra trước khi xác nhận | 20 giây |
+| Scenes | 1 | Tạo bộ view | **Tạo view**: ISO/TOP/FRONT/RIGHT, mẫu tên → **Tạo / cập nhật scene** → tab **Scenes** (danh sách, chuyển camera, lưu camera) | 30 giây |
+| Scenes | 2 | Mặt cắt và khung hình | Tab **Mặt cắt**: trục, vị trí %, **Xem trước**, **Tắt xem trước** → tab **Canh view** | 25 giây |
+| Scenes | 3 | Xuất ảnh hoặc PDF | Tab **Xuất file**: chọn scene, PNG/JPG hoặc PDF, khổ giấy, nền trong suốt → xuất | 25 giây |
+
+Thứ tự dựng: Reference → Library → Dim → Scenes; mỗi plugin xong thì gửi video để bạn xem rồi mới sang plugin kế. Chưa xác minh trong SketchUp thật.
