@@ -21,7 +21,8 @@ Hoạt ảnh của các plugin khác nằm trong thư mục riêng, đăng cùng
 | `image_importer-01-chon-anh.mp4` | `image_importer/scene-01-nhap-anh.html` | Image Importer: chọn ảnh và cách đặt | 30 giây |
 | `image_importer-02-dinh-dang.mp4` | `image_importer/scene-02-dinh-dang.html` | Image Importer: định dạng và vị trí | 20 giây |
 | `reference-01-them-anh.mp4` | `reference/scene-01-them-anh.html` | Reference: thêm và quản lý ảnh | 30 giây |
-| `reference-02-luu-y.mp4` | `reference/scene-02-luu-y.html` | Reference: lưu ý | 15 giây |
+| `reference-02-chinh-anh.mp4` | `reference/scene-02-chinh-anh.html` | Reference: di chuyển, xoay và đổi kích thước ảnh | 30 giây |
+| `reference-03-luu-y.mp4` | `reference/scene-03-luu-y.html` | Reference: lưu ý | 15 giây |
 
 Ảnh mẫu là hình đơn giản dùng chung trong `samples/`; Ruby được mô phỏng qua `image_importer/ii.js` và `reference/ref.js`. Reference có thêm khung "khung nhìn SketchUp (minh họa)" vì ảnh nổi trên khung nhìn chứ không nằm trong bảng.
 

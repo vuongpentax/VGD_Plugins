@@ -1,0 +1,78 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Reference · Di chuyển, xoay và đổi kích thước ảnh</title>
+<link rel="stylesheet" href="../common.css"><style>
+#vp{position:absolute;left:40px;top:40px;width:760px;height:640px;border:1px solid #444;border-radius:8px;overflow:hidden;background:linear-gradient(#1c2128,#14181d);box-shadow:0 24px 60px #000a}
+#vp::before{content:"";position:absolute;inset:0;background-image:linear-gradient(#ffffff0d 1px,transparent 1px),linear-gradient(90deg,#ffffff0d 1px,transparent 1px);background-size:48px 48px}
+#vp .lbl{position:absolute;left:14px;top:10px;font-size:11px;color:#8d96a3;letter-spacing:.06em}
+.rimg{position:absolute;background-size:cover;background-position:center;border:2px solid #ffffff33;border-radius:2px;opacity:0}
+#panel{left:820px;top:20px;width:312px;height:487px;transform:scale(1.4);transform-origin:0 0}#panel .title{height:30px}#panel iframe{display:block;width:310px;height:455px;border:0}
+/* Hộp mở file gốc của Windows (không phải HTML của plugin) */
+#od{position:absolute;left:190px;top:200px;width:480px;background:#fff;color:#000;border:1px solid #7a7a7a;box-shadow:0 16px 50px #000b;font-family:'Segoe UI',M,sans-serif;opacity:0;font-size:13px;z-index:6}
+#od .mt{height:30px;display:flex;align-items:center;padding:0 10px;font-size:12px;border-bottom:1px solid #e5e5e5}#od .bd2{padding:12px 16px}
+#od .ls div{padding:5px 8px}#od .ls .sel{background:#cce8ff}#od .mf{background:#f0f0f0;padding:12px 14px;display:flex;justify-content:flex-end;gap:8px}
+#od .mbtn{min-width:84px;height:28px;border:1px solid #adadad;background:#e1e1e1;display:grid;place-items:center;font-size:12px}
+.hc{position:absolute;width:12px;height:12px;background:#fff;border:2px solid #B48963;border-radius:2px;display:none}
+.hr{position:absolute;left:50%;top:-34px;width:14px;height:14px;margin-left:-7px;background:#B48963;border:2px solid #fff;border-radius:50%;display:none}
+.hl{position:absolute;left:50%;top:-24px;width:2px;height:24px;margin-left:-1px;background:#B48963;display:none}
+#kb{position:absolute;z-index:18;padding:4px 10px;border-radius:12px;background:#B48963;color:#121212;font-weight:700;font-size:13px;opacity:0}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div id="vp"><span class="lbl">KHUNG NHÌN SKETCHUP (MINH HỌA)</span><div class="rimg" id="ra" style="left:70px;top:90px;width:380px;height:214px;background-image:url(../samples/sofa.svg)"></div><div class="rimg" id="rb" style="left:430px;top:300px;width:260px;height:260px;background-image:url(../samples/cay.svg)"></div></div>
+ <div class="win dark" id="panel"><div class="title"><span>VGD Reference | Ảnh tham chiếu</span><span>—&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Reference"></iframe></div>
+ <div id="spot"></div>
+ <div class="cap" id="c1"><span>Bước 1</span>Chọn ảnh rồi bấm nút “Chỉnh sửa ảnh đang chọn”</div>
+<div class="cap" id="c2"><span>Bước 2</span>Kéo bằng chuột trái để di chuyển ảnh</div>
+<div class="cap" id="c3">Hoặc giữ chuột phải trên ảnh rồi kéo</div>
+<div class="cap" id="c4"><span>Bước 3</span>Kéo chấm tròn phía trên ảnh để xoay</div>
+<div class="cap" id="c5">Giữ Shift để bắt góc 90°</div>
+<div class="cap" id="c6"><span>Bước 4</span>Kéo góc để đổi kích thước, giữ nguyên tỉ lệ</div>
+<div class="cap big wrap" id="c7">Con lăn phóng to tại con trỏ · Space + kéo để lia nội dung · Nhấp đúp để khôi phục · Esc để thoát</div>
+<div id="kb"></div><div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="ref.js"></script><script>
+const DUR=30,VP={x:40,y:40},W0=260,P0={x:560,y:430},P1={x:420,y:360},P2={x:520,y:470};
+let M,TEdit;
+window.CENTER_READY=mountReference('cf');
+const A={id:1,name:'phoi_canh.jpg',width:1600,height:900,sample:'sofa',visible:true,locked:false,opacity:100},B={id:2,name:'cay_tham_khao.png',width:1000,height:1000,sample:'cay',visible:true,locked:false,opacity:100};
+const rot=(a,x,y)=>{const r=a*Math.PI/180;return{x:x*Math.cos(r)-y*Math.sin(r),y:x*Math.sin(r)+y*Math.cos(r)}};
+// hình học của ảnh đang chỉnh trên khung nhìn minh họa (toạ độ khung hình), thay đổi theo thời gian
+function geom(t){
+ let c={...P0},ang=0,w=W0;
+ if(t>=7.0)c={x:lerp(P0.x,P1.x,E(P(t,7.0,9.0))),y:lerp(P0.y,P1.y,E(P(t,7.0,9.0)))};
+ if(t>=10.6)c={x:lerp(P1.x,P2.x,E(P(t,10.6,12.4))),y:lerp(P1.y,P2.y,E(P(t,10.6,12.4)))};
+ if(t>=14.4)ang=lerp(0,30,E(P(t,14.4,16.0)));
+ if(t>=16.8)ang=lerp(30,84,E(P(t,16.8,17.5)));
+ if(t>=17.6)ang=90;
+ if(t>=19.8){const k=E(P(t,19.8,21.8)),a0=rot(ang,-W0/2,-W0/2),anchor={x:c.x+a0.x,y:c.y+a0.y};w=lerp(W0,340,k);const d=rot(ang,w/2,w/2);c={x:anchor.x+d.x,y:anchor.y+d.y}}
+ return{c,ang,w}}
+const handle=g=>{const d=rot(g.ang,0,-(g.w/2+34));return{x:g.c.x+d.x,y:g.c.y+d.y}};
+const corner=g=>{const d=rot(g.ang,g.w/2,g.w/2);return{x:g.c.x+d.x,y:g.c.y+d.y}};
+function curAt(t){const g=geom(t);
+ if(t>=7.0&&t<12.4)return g.c;if(t>=14.2&&t<19.0)return handle(g);if(t>=19.8&&t<22.4)return corner(g);return pos(M,t)}
+async function init(){
+ await refApply({items:[{...A,selected:false},{...B,selected:true}],selected_id:2,hidden_all:false,message:'',confirm:false});
+ TEdit=aim(RC('#editSelected'),.6);
+ const rb=$('rb');for(const k of ['tl','tr','bl','br']){const d=document.createElement('div');d.className='hc';d.dataset.k=k;rb.appendChild(d)}
+ const ln=document.createElement('div');ln.className='hl';rb.appendChild(ln);const hr=document.createElement('div');hr.className='hr';rb.appendChild(hr);
+ M=[{a:.8,b:2.2,f:{x:1010,y:690},t:TEdit,arc:-70},{a:3.4,b:3.4,f:TEdit,t:TEdit,arc:0},{a:5.6,b:6.8,f:TEdit,t:geom(7.0).c,arc:-40},{a:12.8,b:14.0,f:geom(12.4).c,t:handle(geom(14.2)),arc:-30},
+    {a:18.6,b:19.6,f:handle(geom(19.0)),t:corner(geom(19.8)),arc:30},{a:22.6,b:23.6,f:corner(geom(22.4)),t:{x:160,y:560},arc:-30}];
+ await render(0)}
+async function render(t){
+ await refApply({items:[{...A,selected:false},{...B,selected:true}],selected_id:2,hidden_all:false,message:'',confirm:false});
+ const g=geom(t),edit=t>=2.8&&t<28.5,rb=$('rb'),h=g.w;
+ rb.style.cssText+=`;opacity:1;left:${g.c.x-VP.x-h/2}px;top:${g.c.y-VP.y-h/2}px;width:${h}px;height:${h}px;transform:rotate(${g.ang}deg);border-color:${edit?'#B48963':'#ffffff33'}`;
+ const hs={tl:[0,0],tr:[h,0],bl:[0,h],br:[h,h]};rb.querySelectorAll('.hc').forEach(e=>{const p=hs[e.dataset.k];e.style.cssText+=`;display:${edit?'block':'none'};left:${p[0]-8}px;top:${p[1]-8}px`});
+ rb.querySelector('.hr').style.display=rb.querySelector('.hl').style.display=edit?'block':'none';
+ $('ra').style.opacity=1;$('ra').style.borderColor='#ffffff33';
+ hover('#editSelected',t>=2.2&&t<3.0);const be=W.document.getElementById('editSelected');be.style.transform=`scale(${1-.08*pulse(t,2.4,2.75)})`;
+ if(be)be.setAttribute('aria-pressed',String(edit));
+ const p=curAt(t),drag=(t>=7.0&&t<9.0)||(t>=10.6&&t<12.4)||(t>=14.4&&t<17.6)||(t>=19.8&&t<21.8);
+ const press=drag||pulse(t,2.4,2.75)?1:0,ripple=Math.max(P(t,2.4,2.85)*(t<3.6?1:0),P(t,7.0,7.45)*(t<8?1:0),P(t,10.6,11.05)*(t<11.6?1:0),P(t,14.4,14.85)*(t<15.4?1:0),P(t,19.8,20.25)*(t<20.8?1:0));
+ const cam={s:1,x:0,y:0};drawCursor(cam,p,t,.6,29.5,press,ripple);
+ const kb=$('kb'),txt=t>=7.0&&t<9.0?'Chuột trái':t>=10.6&&t<12.4?'Chuột phải':t>=16.8&&t<17.8?'Shift':'';
+ kb.textContent=txt;kb.style.opacity=txt?1:0;kb.style.left=(p.x+22)+'px';kb.style.top=(p.y-40)+'px';
+ cap($('c1'),t,.9,5.4,0);cap($('c2'),t,5.8,9.8,0);cap($('c3'),t,10.0,13.0,0);cap($('c4'),t,13.4,16.6,0);cap($('c5'),t,16.8,19.0,0);cap($('c6'),t,19.2,22.4,0);cap($('c7'),t,23.0,29.2,0);
+ for(const k of [1,2,3,4,5,6])$('c'+k).style.top='640px';$('c7').style.top='38px';
+ $('stage').style.opacity=1-E(P(t,29.7,30))}
+start();
+</script></body></html>

@@ -44,5 +44,6 @@ async function mountApp(url,frameId='cf',themeKey=null){
  return W;
 }
 // Vị trí phần tử trong iframe, tính theo toạ độ khung hình (chỉ đo khi world chưa phóng to)
-function RC(sel,frameId='cf'){const el=typeof sel==='string'?W.document.querySelector(sel):sel,f=$(frameId).getBoundingClientRect(),r=el.getBoundingClientRect();return{x:f.x+r.x,y:f.y+r.y,w:r.width,h:r.height}}
+// Nếu khung (iframe) bị phóng to bằng CSS (transform), hệ số phóng được nhân vào toạ độ phần tử bên trong.
+function RC(sel,frameId='cf'){const el=typeof sel==='string'?W.document.querySelector(sel):sel,fr=$(frameId),f=fr.getBoundingClientRect(),r=el.getBoundingClientRect(),sx=f.width/(fr.offsetWidth||f.width),sy=f.height/(fr.offsetHeight||f.height);return{x:f.x+r.x*sx,y:f.y+r.y*sy,w:r.width*sx,h:r.height*sy}}
 function hover(sel,on){const e=W.document.querySelector(sel);if(e)e.classList.toggle('fx-hover',!!on)}
