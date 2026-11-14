@@ -70,12 +70,13 @@ module VGD
       end
       module UIHooks
         extend self
-        def start
+        # menu: menu con của VGD Dim (Extensions > VGD > VGD Dim); mục cập nhật nằm trong đó, không đứng lẻ.
+        def start(menu)
           return if @started
           @started = true
           @updater ||= Updater.new
           unless @menu_added
-            UI.menu('Extensions').add_item('Kiểm tra cập nhật VGD Dim') { check(true) }
+            menu.add_item('Kiểm tra cập nhật') { check(true) }
             @menu_added = true
           end
           # No automatic check at startup: VGD Center reports updates when the user opens it.

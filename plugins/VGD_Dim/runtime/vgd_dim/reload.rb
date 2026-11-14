@@ -4,6 +4,7 @@ files = %w[version defaults engine native_style store managed core presets autos
   File.join(__dir__.dup.force_encoding(Encoding::UTF_8), name + '.rb')
 end
 files.each { |path| RubyVM::InstructionSequence.compile_file(path) }
+reopen = defined?(VGD::Dim::Dialog) && VGD::Dim::Dialog.visible?
 if defined?(VGD::Dim)
   VGD::Dim::NativeStyle.cancel if defined?(VGD::Dim::NativeStyle)
   VGD::Dim::AutoStyle.shutdown if defined?(VGD::Dim::AutoStyle)
@@ -17,4 +18,4 @@ end
 files[0] && load(files[0])
 files[1..-2].each { |path| load path }
 load files.last
-VGD::Dim.show_dialog
+VGD::Dim.show_dialog if reopen

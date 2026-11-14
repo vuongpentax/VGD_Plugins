@@ -41,7 +41,13 @@ module VGD
     rescue StandardError => error
       show_error(error.message)
     end
-    def reload_extension; load File.join(__dir__.dup.force_encoding(Encoding::UTF_8),'reload.rb'); end
+    # reload.rb kiểm tra cú pháp cả bộ file trước khi nạp nên lỗi cú pháp không làm hỏng bản đang chạy.
+    def reload_extension
+      load File.join(__dir__.dup.force_encoding(Encoding::UTF_8),'reload.rb')
+    rescue ScriptError, StandardError => error
+      UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\nHãy mở lại SketchUp nếu giao diện báo lỗi.")
+      false
+    end
     def quick_smart
       saved = SmartDim.saved
       result = SmartDim.execute(saved['opts'],saved['settings'])
@@ -76,6 +82,6 @@ module VGD
       @toolbar.get_last_state == TB_NEVER_SHOWN ? @toolbar.show : @toolbar.restore
     end
     AutoStyle.start
-    UpdateCore::UIHooks.start
+    UpdateCore::UIHooks.start(@menu)
   end
 end
