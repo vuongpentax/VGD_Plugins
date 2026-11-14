@@ -1,6 +1,6 @@
 # VGD Scenes 1.6.1 (beta.1) — SketchUp 2022–2026.2
 
-Phiên bản hiện tại 1.6.1-beta.2, chi tiết ở [RELEASE_NOTES_v1.6.1.md](RELEASE_NOTES_v1.6.1.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
+Phiên bản hiện tại 1.6.1-beta.3, chi tiết ở [RELEASE_NOTES_v1.6.1.md](RELEASE_NOTES_v1.6.1.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
 Plugin không hiện popup cập nhật khi khởi động: VGD Center báo bản mới. Cài bản mới qua Extension Manager rồi khởi động lại.
 
@@ -200,3 +200,7 @@ Nút toolbar với icon bốn ô tạo/cập nhật ISO, TOP, FRONT, RIGHT từ 
 - Bấm Khóa tỷ lệ để giữ tỷ lệ rộng:cao; nhập rộng hoặc cao thì chiều kia tự nhảy theo. Tắt khóa để nhập độc lập. Pixel làm tròn đến số nguyên; tỷ lệ khóa gốc được giữ khi nhập liên tiếp.
 - Scale xuất ảnh chỉ nhân độ phân giải đầu ra của từng scene, không sửa camera/frame trong model. Ví dụ 1920×1080 scale 2 thành 3840×2160; scale 0.5 thành 960×540. Áp dụng PNG/JPG và ảnh đặt trong PDF; khổ giấy PDF giữ nguyên. Cho số dương tùy ý trong giới hạn 1–12000 px mỗi chiều và tối đa 64 triệu pixel sau scale. Kiểm tra toàn bộ scene trước khi xuất.
 - Nơi lưu luôn có thư mục loại PNG/JPG/PDF. Tick Tạo thư mục ngày sẽ dùng ngày địa phương máy lúc bắt đầu xuất, ví dụ thư mục chọn/2026.10.03/PNG. PDF chọn tên ở hộp lưu như trước rồi được đặt trong thư mục PDF tương ứng. Không ghi đè file đã có.
+
+## Tải lại code
+
+Menu **Extensions → VGD → VGD Scenes → Tải lại code** nạp lại mã sau khi cài đè bản mới mà không cần mở lại SketchUp (không cho tải lại khi đang xuất; lỗi file thì giữ bản đang chạy). Menu và toolbar mới chỉ có tác dụng sau khi mở lại SketchUp. Kiểm tra: `ruby dev/test_reload.rb` (chạy từ `plugins/VGD_Scenes`, bằng giả lập SketchUp).

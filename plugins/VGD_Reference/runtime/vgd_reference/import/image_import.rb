@@ -278,6 +278,11 @@ module VGD
         Manager.import_status(false, '')
       end
 
+      # Đang tải hoặc chuyển đổi ảnh: không được tải lại code lúc này.
+      def busy?
+        !!(@active || Array(@queue).any?)
+      end
+
       def cancel_all
         Array(@queue).each { |job| Array(job[:owned]).each { |path| TempFiles.release(path) } }
         @queue = []

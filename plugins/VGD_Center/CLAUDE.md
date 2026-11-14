@@ -18,6 +18,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Kiểm thử
 
+- Tải lại code: `ruby dev/test_reload.rb` (chạy từ `plugins/VGD_Center`; giả lập SketchUp, kiểm tra mục menu, không nhân đôi giao diện, lỗi file giữ bản đang chạy).
 - Chạy từ `plugins/VGD_Center`: `ruby dev/test_center.rb`, `ruby dev/test_manager_toggle.rb`, `ruby dev/test_manager_linker.rb`, `ruby dev/test_manager_dialog.rb`, `ruby dev/test_manager_bundle.rb`, `ruby dev/test_manager_i18n.rb`, `ruby dev/test_manager_load.rb`, `ruby dev/test_guides.rb`.
 - Test dùng giả lập SketchUp trong `dev/stub`. Dời file plugin thật, hộp thoại và hộp chọn file chưa được xác minh trong SketchUp thật.
 

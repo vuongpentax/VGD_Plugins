@@ -23,7 +23,10 @@ end
 
 module VGD
   module Scenes
-    VERSION = '1.6.1-beta.2'.freeze unless const_defined?(:VERSION, false)
+    VERSION = '1.6.1-beta.3'.freeze unless const_defined?(:VERSION, false)
+    # Danh sách file nạp lại khi "Tải lại code" (trùng các require_relative ở đầu file, main nạp cuối).
+    CODE_FILES = %w[utils dim_bridge section_set sheet_layout title_block sheet_builder geometry scenes frame export
+                    transfer camera update_notice main].freeze unless const_defined?(:CODE_FILES, false)
     # Clears the section preview before SketchUp saves, so Ctrl+S never writes it.
     class SaveGuard < Sketchup::ModelObserver
       def onPreSaveModel(model)
@@ -368,6 +371,40 @@ module VGD
         { success: false, message: error.message }
       end
 
+      # Nạp lại mã mà không cần mở lại SketchUp. Kiểm tra cú pháp cả bộ file trước: có lỗi thì giữ nguyên bản đang chạy.
+      def reload
+        if @job
+          ::UI.messagebox('VGD Scenes đang xử lý (xuất hoặc tạo trang). Hãy chờ xong rồi tải lại code.')
+          return false
+        end
+        dir = __dir__.dup.force_encoding(Encoding::UTF_8)
+        files = [File.join(File.dirname(dir), 'vgd_scenes.rb')] + CODE_FILES.map { |name| File.join(dir, "#{name}.rb") }
+        files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
+        reopen = @dialog && @dialog.visible?
+        @dialog.close if reopen # set_on_closed gỡ observer và hủy việc đang chờ
+        old_version = VERSION
+        old_files = CODE_FILES
+        verbose = $VERBOSE
+        $VERBOSE = nil # tránh cảnh báo "hằng số đã khai báo" khi nạp lại
+        begin
+          Scenes.send(:remove_const, :VERSION)
+          Scenes.send(:remove_const, :CODE_FILES)
+          files.each { |file| load file }
+        rescue ScriptError, StandardError
+          Scenes.const_set(:VERSION, old_version) unless Scenes.const_defined?(:VERSION, false)
+          Scenes.const_set(:CODE_FILES, old_files) unless Scenes.const_defined?(:CODE_FILES, false)
+          raise
+        ensure
+          $VERBOSE = verbose
+        end
+        Scenes.open if reopen
+        ::UI.messagebox("Đã tải lại VGD Scenes #{Scenes::VERSION}.")
+        true
+      rescue ScriptError, StandardError => error
+        ::UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\nBản đang chạy được giữ nguyên.")
+        false
+      end
+
       def initialize_ui
         return if @initialized
         menu = ::VGD.menu.add_submenu('VGD Scenes')
@@ -408,6 +445,7 @@ module VGD
         menu.add_item('VGD · Bỏ khung xám tất cả scene để gửi SKP') { cleanup_frames_command }
         menu.add_item('VGD · Khôi phục khung scene đã bỏ') { cleanup_frames_command(true) }
         menu.add_item('Hiện thanh công cụ VGD Scenes') { @toolbar.show }
+        menu.add_item('Tải lại code') { reload }
         VGD::UpdateNotice.start('vgd-scenes', 'VGD Scenes', VERSION)
         @initialized = true
       end

@@ -1,10 +1,10 @@
-# VGD DC Exporter 1.0.3
+# VGD DC Exporter 1.0.4
 
 Công cụ chỉ đọc: xuất thuộc tính, công thức DC và cấu trúc component đang chọn thành file JSON để gửi cho VGD đối chiếu.
 Viết lại từ tplus_dc_exporter để sửa lỗi đệ quy dictionary, tách tham số DC thành nhóm riêng và giữ giá trị mặc định/giá trị instance tách bạch.
 
 ## Cài và dùng
-1. Extensions > Extension Manager > Install Extension: chọn `VGD_DC_Exporter_1.0.3.rbz`.
+1. Extensions > Extension Manager > Install Extension: chọn `VGD_DC_Exporter_1.0.4.rbz`.
 2. Chọn component hoặc group tủ (có thể nhiều mẫu cùng lúc).
 3. Extensions > VGD > VGD DC Exporter > Xuất JSON đối tượng đang chọn. Chọn nơi lưu file.
 4. Gửi file JSON lại trong cuộc trò chuyện, kèm ảnh tổng thể tủ nếu có.
@@ -23,3 +23,7 @@ Viết lại từ tplus_dc_exporter để sửa lỗi đệ quy dictionary, tác
 
 ## Kiểm thử
 `ruby test/test_exporter.rb` (18 kiểm tra).
+
+## Tải lại code
+
+Menu **Extensions → VGD → VGD DC Exporter → Tải lại code** nạp lại mã sau khi cài đè bản mới mà không cần mở lại SketchUp (lỗi file thì giữ bản đang chạy). Menu mới chỉ có tác dụng sau khi mở lại SketchUp. Kiểm tra: `ruby test/test_reload.rb`.

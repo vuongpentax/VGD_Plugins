@@ -22,7 +22,7 @@ Phiên bản hiện tại 1.0.2, tối thiểu SketchUp 2023; chi tiết ở [RE
 
 ## Cài đặt
 
-Trong SketchUp, mở **Extension Manager → Install Extension** và chọn file `VGD_Reference_v1.0.3-beta.4.rbz`. Khởi động lại SketchUp sau khi cài. Mở **Extensions → VGD → VGD Reference → Mở bảng quản lý** hoặc nhấn nút **VGD Reference** trên thanh công cụ.
+Trong SketchUp, mở **Extension Manager → Install Extension** và chọn file `VGD_Reference_v1.0.3-beta.5.rbz`. Khởi động lại SketchUp sau khi cài. Mở **Extensions → VGD → VGD Reference → Mở bảng quản lý** hoặc nhấn nút **VGD Reference** trên thanh công cụ.
 
 ## Kéo ảnh từ Pinterest / web
 
@@ -63,3 +63,7 @@ Các thao tác mới trong 1.0.1 cần được kiểm tra trực tiếp trên b
 `dev/diagnose_rendering.rb` vẽ tám ô thử trong SketchUp và ghi báo cáo vào `outputs/render-diagnostics/`. Báo cáo kiểm tra dữ liệu ảnh đã giải mã, texture ID, View, UV, phiên bản và bộ máy đồ họa. Trên máy đã kiểm tra, `View#write_image` không chứa Ruby overlay; kết quả ảnh xuất được đánh dấu chưa đủ để kết luận và cần đối chiếu ảnh chụp màn hình.
 
 `dev/apply_render_fix.rb` nạp bản sửa UV beta.5 vào phiên SketchUp đang chạy để kiểm tra, giữ danh sách ảnh hiện tại và gỡ các ô thử. Script này không nâng cấp toàn bộ luồng nhập ảnh. Để dùng đầy đủ bản mới, cài gói beta.7 trở lên và khởi động lại SketchUp.
+
+## Tải lại code
+
+Menu **Extensions → VGD → VGD Reference → Tải lại code** nạp lại mã sau khi cài đè bản mới mà không cần mở lại SketchUp (không cho tải lại khi đang chỉnh sửa hoặc nhập ảnh; giữ nguyên ảnh đang có). Menu và toolbar mới chỉ có tác dụng sau khi mở lại SketchUp. Kiểm tra: `ruby dev/test_reload.rb` (chạy từ `plugins/VGD_Reference`, bằng giả lập SketchUp).

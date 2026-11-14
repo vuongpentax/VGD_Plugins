@@ -1,6 +1,6 @@
-# VGD Dim · 4.0.2-beta.2
+# VGD Dim · 4.0.2-beta.3
 
-Phiên bản hiện tại 4.0.2-beta.2, chi tiết ở [RELEASE_NOTES_v4.0.2-beta.2.md](RELEASE_NOTES_v4.0.2-beta.2.md). Kiểm tra: tự động bằng mô phỏng (các test trong `dev/` chạy với SketchUp giả lập); chưa kiểm thử trong SketchUp thật. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
+Phiên bản hiện tại 4.0.2-beta.3, chi tiết ở [RELEASE_NOTES_v4.0.2-beta.3.md](RELEASE_NOTES_v4.0.2-beta.3.md). Kiểm tra: tự động bằng mô phỏng (các test trong `dev/` chạy với SketchUp giả lập); chưa kiểm thử trong SketchUp thật. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
 Tiếp tục từ **VGD_Dim_6.rbz (Claude 3.2.0)** theo yêu cầu 07/10/2026. Sidebar 6 mục và scope chung; giữ palette T+ / VGD, có theme sáng/tối. Đọc [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md) cho rà soát/giới hạn/checklist native.
 
@@ -27,7 +27,7 @@ Lịch sử files.zip 3.0 và các snapshot runtime V6 được giữ ở repo n
 
 Gói tạo theo version trong runtime/vgd_dim/version.rb; source ZIP cùng phiên bản. Extension/toolbar tên **VGD Dim**, loader vgd_dim.rb và namespace VGD::Dim tiếp tục dùng để tránh tạo plugin thứ hai. Cài bằng Extension Manager → Install Extension, rồi khởi động lại SketchUp để nhận toolbar mới.
 
-dev/deploy.ps1 chỉ cài whitelist 34 file vào SU2022, sao lưu và kiểm tra SHA256. Trong app đang mở có thể dùng Extensions → VGD → VGD Dim → Nạp lại VGD Dim. Khởi động lại SketchUp để tên extension/toolbar cập nhật hoàn toàn.
+dev/deploy.ps1 chỉ cài whitelist 34 file vào SU2022, sao lưu và kiểm tra SHA256. Trong app đang mở có thể dùng Extensions → VGD → VGD Dim → Tải lại code. Khởi động lại SketchUp để tên extension/toolbar cập nhật hoàn toàn.
 
 Ruby Console:
 

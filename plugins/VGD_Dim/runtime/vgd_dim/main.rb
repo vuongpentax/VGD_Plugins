@@ -60,7 +60,7 @@ module VGD
       @toolbar ||= UI::Toolbar.new('VGD DIM')
       @toolbar.add_item(@command)
       @menu.add_item('Hiện toolbar VGD DIM') { @toolbar.show }
-      @menu.add_item('Nạp lại VGD Dim') { reload_extension }
+      @menu.add_item('Tải lại code') { reload_extension }
       file_loaded(__FILE__)
     end
     @command.tooltip='VGD Dim'

@@ -4,12 +4,12 @@ VGD Cabinet Draw là extension SketchUp (2022 trở lên) cho quy trình dựng 
 
 Extension đăng ký độc lập với VGD_Cabinet (cũ, ở `plugins/VGD_Cabinet`): dùng dictionary model `VGD_Cabinet_Draw` và thư mục dữ liệu `%APPDATA%/VGD/SketchUp/VGD_Cabinet_Draw`, không đọc dictionary hay preset của bản cũ.
 
-**Trạng thái:** bản 1.0.1-beta.2 (thử; bản ổn định gần nhất 1.0.0), cùng mã với beta.70; khác beta.70 ở tên extension (nay là "VGD Cabinet Draw", xem `RELEASE_NOTES_v1.0.0.md`). Kiểm thử tự động bằng giả lập SketchUp (`test/`); chưa kiểm thử thủ công đầy đủ trong SketchUp thật, chỉ có vài mục người dùng đã xác nhận (xem "Điều chưa kiểm chứng").
+**Trạng thái:** bản 1.0.1-beta.3 (thử; bản ổn định gần nhất 1.0.0), cùng mã với beta.70; khác beta.70 ở tên extension (nay là "VGD Cabinet Draw", xem `RELEASE_NOTES_v1.0.0.md`). Kiểm thử tự động bằng giả lập SketchUp (`test/`); chưa kiểm thử thủ công đầy đủ trong SketchUp thật, chỉ có vài mục người dùng đã xác nhận (xem "Điều chưa kiểm chứng").
 
 ## Cài và đóng gói
 
 - Đóng gói: `python3 dev/build_release.py` (chạy từ thư mục plugin) tạo `outputs/VGD_Cabinet_Draw_<phiên bản>.rbz` và bản source ZIP cùng phiên bản. `outputs/` bị `.gitignore` bỏ qua, không lưu trong git.
-- Cài: Extensions → Extension Manager → Install Extension, chọn file `.rbz` (ví dụ `VGD_Cabinet_Draw_1.0.1-beta.2.rbz`). Gói gồm `vgd_cabinet_draw.rb`, `vgd_cabinet_draw/main.rb` và toàn bộ `runtime/`.
+- Cài: Extensions → Extension Manager → Install Extension, chọn file `.rbz` (ví dụ `VGD_Cabinet_Draw_1.0.1-beta.3.rbz`). Gói gồm `vgd_cabinet_draw.rb`, `vgd_cabinet_draw/main.rb` và toàn bộ `runtime/`.
 - Phiên bản ghi ở ba chỗ phải khớp nhau: `VERSION` trong `runtime/vgd_cabinet_draw/main.rb`, `extension.version` trong `vgd_cabinet_draw.rb`, số trong `runtime/vgd_cabinet_draw/dialog.html`; thêm `VERSION` trong `dev/build_release.py`.
 
 ## Công cụ và menu
@@ -24,7 +24,7 @@ Theo `TOOLBAR_BUTTONS` và menu trong `runtime/vgd_cabinet_draw/main.rb` (menu *
 6. **Quét & dời tấm**: quét chọn nhiều tấm của tủ rồi dời cùng một khoảng (xem phần Quét & dời tấm).
 7. **VGD Chọn**: bật công cụ rồi chuột phải lên tủ, cánh hoặc mặt hộc để hiện thanh nút tròn tại con trỏ.
 8. **Setting**: mở bảng điều khiển để chỉnh, lưu, xuất và nhập setting cho từng công cụ.
-9. Chỉ có trong menu: **Đóng tất cả cánh của tủ đang chọn**, **Tìm tấm bị trùng**, **Chuẩn hóa tên ván (vai trò + số)**, **Tải lại VGD Cabinet Draw (nạp code mới)**.
+9. Chỉ có trong menu: **Đóng tất cả cánh của tủ đang chọn**, **Tìm tấm bị trùng**, **Chuẩn hóa tên ván (vai trò + số)**, **Tải lại code**.
 
 Menu chuột phải **VGD Cabinet** có thêm các lệnh theo đối tượng (chia nhanh, cánh tự động theo hồi, mở/đóng cánh, xóa tấm/cánh/ngăn kéo...). Preview chỉ hiện số (không đơn vị, không chữ), ngoại trừ góc mở cánh có dấu độ.
 

@@ -1,6 +1,6 @@
 # VGD Image Importer 1.1.2 (beta.1)
 
-Phiên bản hiện tại 1.1.2-beta.2, chi tiết ở [RELEASE_NOTES_v1.1.2.md](RELEASE_NOTES_v1.1.2.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
+Phiên bản hiện tại 1.1.2-beta.3, chi tiết ở [RELEASE_NOTES_v1.1.2.md](RELEASE_NOTES_v1.1.2.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); chưa kiểm thử thủ công trong SketchUp cho bản này. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
 
 Thành viên bộ plugin VGD cho SketchUp 2022+ trên Windows, nâng cấp từ folder `vgd_image_importer` trên máy. Phiên bản `1.1.1` giữ namespace và đường dẫn extension cũ để cập nhật tại chỗ. Plugin không hiện popup cập nhật khi khởi động: VGD Center báo bản mới; cài RBZ qua Extension Manager.
 
@@ -18,7 +18,7 @@ Thành viên bộ plugin VGD cho SketchUp 2022+ trên Windows, nâng cấp từ 
 
 ## Cài đặt
 
-Trong SketchUp: **Extension Manager → Install Extension**, chọn `VGD_Image_Importer_v1.1.2-beta.2.rbz`. Thoát và mở lại SketchUp để bản mới được nạp đầy đủ; không nạp chồng main.rb lên bản cũ trong Ruby Console vì bản cũ không có chặn đăng ký toolbar lặp.
+Trong SketchUp: **Extension Manager → Install Extension**, chọn `VGD_Image_Importer_v1.1.2-beta.3.rbz`. Thoát và mở lại SketchUp để bản mới được nạp đầy đủ; không nạp chồng main.rb lên bản cũ trong Ruby Console vì bản cũ không có chặn đăng ký toolbar lặp.
 
 Mở bằng **Extensions → VGD → VGD Image Importer** hoặc toolbar **VGD IMP**. Nếu toolbar chưa hiện, bật ở **View → Toolbars**.
 
@@ -51,3 +51,7 @@ Kiểm tra thực tế sau khi mở lại SketchUp: chọn nhiều file bằng C
 `dev/make_images.py` tạo ảnh thật bằng Pillow chỉ cho phát triển, không phải dependency của plugin. Sau đó `dev/test_ui.cjs` tạo PNG từ sáu định dạng mở rộng; `dev/check_native_codec.py` kiểm tra trực tiếp bộ đọc ảnh SketchUp 2022 và lưu `outputs/native_codec_report.json`. `dev/make_native_fixture.py` tạo SKP trống qua SketchUp C API trên máy. `dev/native_smoke.rb` dành cho `-RubyStartup` trong tiến trình thử riêng, tuyệt đối không load vào model người dùng.
 
 API dùng theo tài liệu SketchUp: [ImageRep](https://ruby.sketchup.com/Sketchup/ImageRep.html), [Texture](https://ruby.sketchup.com/Sketchup/Texture.html), [HtmlDialog](https://ruby.sketchup.com/UI/HtmlDialog.html). Hộp thoại nhiều file theo [OPENFILENAMEW](https://learn.microsoft.com/en-us/windows/win32/api/commdlg/ns-commdlg-openfilenamew).
+
+## Tải lại code
+
+Menu **Extensions → VGD → VGD Image Importer → Tải lại code** nạp lại mã sau khi cài đè bản mới mà không cần mở lại SketchUp (không cho tải lại khi đang chuẩn bị ảnh; lỗi file thì giữ bản đang chạy). Menu và toolbar mới chỉ có tác dụng sau khi mở lại SketchUp. Kiểm tra: `ruby dev/test_reload.rb` (chạy từ `plugins/VGD_Image_Importer`, bằng giả lập SketchUp).

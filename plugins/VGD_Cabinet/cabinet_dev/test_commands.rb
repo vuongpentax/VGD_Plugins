@@ -5,7 +5,7 @@ menu = vgd_menu.items.last
 toolbar = UI.toolbars.last
 assert(extensions.items.size == 1 && vgd_menu.name == 'VGD' && vgd_menu.items.size == 1, 'Cabinet should only add the VGD menu to Extensions')
 assert(menu.name == 'VGD Cabinet' && menu.items.size == 2, 'Cabinet submenu should hold the modeling command and Reload')
-assert(menu.items[1].name.include?('Reload'), 'Reload command missing')
+assert(menu.items[1].name == 'Tải lại code', 'Reload command missing')
 assert(toolbar.items.size == 1, 'Cabinet toolbar should only contain the modeling command')
 command = menu.items[0]
 assert(command.name.include?('Dựng hình'), 'Cabinet command missing')

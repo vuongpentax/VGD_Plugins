@@ -17,7 +17,7 @@ end
 
 module VGD
   module Center
-    VERSION = '1.2.5-beta.2'.freeze
+    VERSION = '1.2.5-beta.3'.freeze
     SETTINGS_KEY = 'VGD Center'.freeze
     CATALOG_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/catalog.json'.freeze
     CENTER_UPDATE_URL = 'https://raw.githubusercontent.com/vuongpentax/VGD_Plugins/main/shared/vgd-center/center-update.json'.freeze
@@ -53,8 +53,42 @@ module VGD
     MAX_UNINSTALL_NOTE = 400
     MAX_PACKAGE_BYTES = 100 * 1024 * 1024
     MAX_ARCHIVE_FILES = 5000
+    # Danh sách file nạp lại khi "Tải lại code" (tab Quản lý nạp theo manager/core.rb, main nạp cuối).
+    CODE_FILES = %w[manager/text manager/zip_writer manager/logger manager/linker manager/core manager/toggle
+                    manager/callbacks main].freeze unless const_defined?(:CODE_FILES, false)
 
     class << self
+      # Nạp lại mã mà không cần mở lại SketchUp. Kiểm tra cú pháp cả bộ file trước: có lỗi thì giữ nguyên bản đang chạy.
+      # Không đụng tới plugin khác (khác với "Nạp ngay" trong tab Quản lý).
+      def reload
+        if @busy
+          UI.messagebox('VGD Center đang tải hoặc cài plugin. Hãy chờ xong rồi tải lại code.')
+          return false
+        end
+        files = CODE_FILES.map { |name| File.join(__dir__, "#{name}.rb") }
+        files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
+        reopen = @dialog && @dialog.visible?
+        @dialog.close if reopen # set_on_closed đặt @dialog = nil
+        old_files = CODE_FILES
+        verbose = $VERBOSE
+        $VERBOSE = nil # tránh cảnh báo "hằng số đã khai báo" khi nạp lại
+        begin
+          Center.send(:remove_const, :CODE_FILES)
+          files.each { |file| load file }
+        rescue ScriptError, StandardError
+          Center.const_set(:CODE_FILES, old_files) unless Center.const_defined?(:CODE_FILES, false)
+          raise
+        ensure
+          $VERBOSE = verbose
+        end
+        show_dialog if reopen
+        UI.messagebox("Đã tải lại VGD Center #{VERSION}.")
+        true
+      rescue ScriptError, StandardError => error
+        UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\nBản đang chạy được giữ nguyên.")
+        false
+      end
+
       def show_dialog
         if @dialog && @dialog.visible?
           @dialog.bring_to_front
@@ -1017,7 +1051,9 @@ module VGD
         icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'icon.svg')
         command.small_icon = icon
         command.large_icon = icon
-        ::VGD.menu.add_submenu('VGD Center').add_item(command)
+        menu = ::VGD.menu.add_submenu('VGD Center')
+        menu.add_item(command)
+        menu.add_item('Tải lại code') { VGD::Center.reload }
         toolbar = UI::Toolbar.new('VGD CEN')
         toolbar.add_item(command)
         toolbar.restore

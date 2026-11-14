@@ -24,7 +24,7 @@ end
 
 module VGD_Cabinet
   remove_const(:VERSION) if const_defined?(:VERSION, false)
-  VERSION = '4.5.4-beta.2'
+  VERSION = '4.5.4-beta.3'
   remove_const(:FRONT_SETTING_KEYS) if const_defined?(:FRONT_SETTING_KEYS, false)
   FRONT_SETTING_KEYS = %w[
     opt_door door_style auto_door_count max_door_w door_count
@@ -684,7 +684,7 @@ module VGD_Cabinet
     icon=File.join(__dir__.dup.force_encoding(Encoding::UTF_8),'cabinet.svg')
     command.small_icon=icon; command.large_icon=icon
     command.tooltip="VGD Cabinet #{VERSION} — Dựng hình kỹ thuật"
-    reload_command=UI::Command.new('VGD — Nạp lại mã (Reload)') { reload_extension }
+    reload_command=UI::Command.new('Tải lại code') { reload_extension }
     reload_command.tooltip='Nạp lại riêng mã Ruby và giao diện VGD Cabinet'
     reload_command.status_bar_text='Sau khi đồng bộ mã: thoát công cụ đang vẽ, bấm Reload để nhận bản cập nhật VGD Cabinet'
     menu.add_item(reload_command)

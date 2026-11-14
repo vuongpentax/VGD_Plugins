@@ -17,6 +17,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Kiểm thử
 
+- Tải lại code: `ruby dev/test_reload.rb` (chạy từ `plugins/VGD_Library`; giả lập SketchUp, kiểm tra mục menu, không nhân đôi giao diện, lỗi file giữ bản đang chạy).
 - Từ `plugins/VGD_Library/dev`: `npm test` (chạy `node check_ruby.cjs && node test_ui.cjs`).
 - Test khác trong `dev/`: `test_engine.rb`, `test_advanced.rb`, `test_online_errors.rb`, `test_preferences_timers.rb`.
 - Việc còn cần kiểm tra trong SketchUp thật: xem `HANDOFF.md` mục "Native checklist còn cần".

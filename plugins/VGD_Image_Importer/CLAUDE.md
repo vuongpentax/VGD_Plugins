@@ -16,6 +16,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Kiểm thử
 
+- Tải lại code: `ruby dev/test_reload.rb` (chạy từ `plugins/VGD_Image_Importer`; giả lập SketchUp, kiểm tra mục menu, không nhân đôi giao diện, lỗi file giữ bản đang chạy).
 - Từ `plugins/VGD_Image_Importer/dev`: `npm test` (chạy `node check_ruby.cjs && node test_ui.cjs`).
 - Test khác trong `dev/`: `test_engine.rb`, `test_drop.rb`, `check_native_codec.py`.
 - Không thay model hay selection để kiểm tra tự động trên file của người dùng.

@@ -25,6 +25,14 @@ module VGD
         ::UI.messagebox("VGD Package không thể mở giao diện.\n#{e.message}")
       end
 
+      def dialog_open?
+        !!(@dialog && @dialog.visible?)
+      end
+
+      def close_dialog
+        @dialog.close if dialog_open?
+      end
+
       def scan_project
         model = Sketchup.active_model
         data = Scanner.new.report(model)

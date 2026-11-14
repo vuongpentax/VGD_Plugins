@@ -16,6 +16,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Kiểm thử
 
+- Tải lại code: `ruby test/test_reload.rb` (chạy từ `plugins/VGD_DC_Exporter`; giả lập SketchUp, kiểm tra mục menu, không nhân đôi giao diện, lỗi file giữ bản đang chạy).
 - Chạy từ thư mục gốc plugin: `ruby test/test_exporter.rb`.
 - Test dùng đối tượng giả lập, không phải SketchUp thật. Không ghi là đã test trong SketchUp khi chỉ chạy test này.
 

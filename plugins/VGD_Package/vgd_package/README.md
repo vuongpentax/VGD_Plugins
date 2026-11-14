@@ -1,4 +1,4 @@
-# VGD Package 0.1.5 — Bản nghiên cứu
+# VGD Package 0.1.6 — Bản nghiên cứu
 
 Baseline nghiên cứu 0.1.3: source đã đối chiếu 15 entry trong RBZ local của repo nguồn; không suy ra phát hành công khai hoặc native validation. Layout giữ loader ở cấp trên thư mục vgd_package để bảo toàn đường dẫn builder. Không kèm RBZ/ZIP. Đợt chuyển repository chỉ đối chiếu source/checksum; chưa chạy lại test tự động hoặc kiểm thử native SketchUp. Các kết quả PASS bên dưới thuộc lịch sử workspace nguồn.
 
@@ -6,7 +6,7 @@ Plugin độc lập cho SketchUp 2022 trở lên. Phiên bản này có lớp nh
 
 ## Cài đặt
 
-Cài gói RBZ 0.1.5 qua Extension Manager (bản 0.1.3 đã xác minh riêng; 0.1.5 chưa xác minh trong SketchUp); artifact không nằm trong thư mục source này. Mở tại Extensions → VGD → VGD Package → Mở VGD Package.
+Cài gói RBZ 0.1.6 qua Extension Manager (bản 0.1.3 đã xác minh riêng; 0.1.6 chưa xác minh trong SketchUp); artifact không nằm trong thư mục source này. Mở tại Extensions → VGD → VGD Package → Mở VGD Package.
 
 ## Chức năng hiện tại
 
@@ -24,3 +24,7 @@ Enscape hiện chỉ được kiểm tra ở chế độ đọc. Cần báo cáo
 ## Kiểm thử
 
 Đã kiểm tra cú pháp JavaScript, cấu trúc RBZ, tài nguyên giao diện và SHA-256. Chưa chạy smoke test bên trong SketchUp 2022 hoặc phiên bản mới hơn trong môi trường tạo gói này.
+
+## Tải lại code
+
+Menu **Extensions → VGD → VGD Package → Tải lại code** nạp lại mã sau khi cài đè bản mới mà không cần mở lại SketchUp (đóng và mở lại cửa sổ đang mở; lỗi file thì giữ bản đang chạy). Menu mới chỉ có tác dụng sau khi mở lại SketchUp. Kiểm tra: `ruby test/test_reload.rb` (chạy từ `plugins/VGD_Package`).

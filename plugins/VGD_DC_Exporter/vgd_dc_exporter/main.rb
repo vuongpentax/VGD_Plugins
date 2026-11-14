@@ -9,11 +9,39 @@ module VGD
 end
 
 module VGD_DC_Exporter
-  VERSION = '1.0.3'.freeze unless const_defined?(:VERSION)
+  VERSION = '1.0.4'.freeze unless const_defined?(:VERSION)
+
+  # Danh sách file nạp, dùng chung cho lúc khởi động và lúc "Tải lại code".
+  CODE_FILES = %w[params walker].freeze unless const_defined?(:CODE_FILES)
 
   # Nạp đủ phần xử lý (chỉ đọc file, không sửa mô hình).
-  load File.join(__dir__, 'params.rb')
-  load File.join(__dir__, 'walker.rb')
+  CODE_FILES.each { |name| load File.join(__dir__, "#{name}.rb") }
+
+  # Nạp lại mã mà không cần mở lại SketchUp. Kiểm tra cú pháp cả bộ file trước: có lỗi thì giữ nguyên bản đang chạy.
+  def self.reload
+    files = [File.join(__dir__, 'main.rb')] + CODE_FILES.map { |name| File.join(__dir__, "#{name}.rb") }
+    files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
+    old_version = VERSION
+    old_files = CODE_FILES
+    verbose = $VERBOSE
+    $VERBOSE = nil # tránh cảnh báo "hằng số đã khai báo" khi nạp lại
+    begin
+      remove_const(:VERSION)
+      remove_const(:CODE_FILES)
+      load File.join(__dir__, 'main.rb')
+    rescue ScriptError, StandardError
+      const_set(:VERSION, old_version) unless const_defined?(:VERSION, false)
+      const_set(:CODE_FILES, old_files) unless const_defined?(:CODE_FILES, false)
+      raise
+    ensure
+      $VERBOSE = verbose
+    end
+    UI.messagebox("Đã tải lại VGD DC Exporter #{VERSION}.")
+    true
+  rescue ScriptError, StandardError => error
+    UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\nBản đang chạy được giữ nguyên.")
+    false
+  end
 
   # Xuất các đối tượng đang chọn ra file JSON. Lệnh này không sửa mô hình và không lưu SKP.
   def self.export_selected
@@ -45,7 +73,9 @@ module VGD_DC_Exporter
   end
 
   unless file_loaded?(__FILE__)
-    ::VGD.menu.add_submenu('VGD DC Exporter').add_item('Xuất JSON đối tượng đang chọn') { export_selected }
+    menu = ::VGD.menu.add_submenu('VGD DC Exporter')
+    menu.add_item('Xuất JSON đối tượng đang chọn') { export_selected }
+    menu.add_item('Tải lại code') { reload }
     file_loaded(__FILE__)
   end
 end

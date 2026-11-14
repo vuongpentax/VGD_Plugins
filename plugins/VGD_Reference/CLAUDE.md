@@ -17,6 +17,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Kiểm thử
 
+- Tải lại code: `ruby dev/test_reload.rb` (chạy từ `plugins/VGD_Reference`; giả lập SketchUp, kiểm tra mục menu, không nhân đôi giao diện, lỗi file giữ bản đang chạy).
 - Test trong `dev/`: `check_ruby.cjs`, `test_manager.cjs`, `test_icons.cjs` và các `*_fixture.rb`. README không ghi lệnh chạy từng file; xem đầu mỗi file.
 - Kiểm tra thủ công trong SketchUp: `dev/MANUAL_VERIFICATION.md`. Phần chưa xác minh trong SketchUp thật: xem `HANDOFF.md` mục "Current limitations".
 
