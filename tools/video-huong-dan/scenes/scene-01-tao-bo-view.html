@@ -1,0 +1,61 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Scenes · Tạo bộ view</title>
+<link rel="stylesheet" href="../common.css"><style>
+#center{left:240px;top:10px;width:800px;height:700px}#center iframe{width:798px;height:668px}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD Scenes</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Scenes"></iframe></div>
+ <div id="spot"></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Chọn Group hoặc Component của tủ trong SketchUp</div>
+<div class="cap" id="c2"><span>Bước 2</span>Bấm chọn các góc nhìn cần tạo scene</div>
+<div class="cap" id="c3"><span>Bước 3</span>Mở “Đối tượng &amp; cách đặt tên” để xem mẫu tên scene</div>
+<div class="cap" id="c4"><span>Bước 4</span>Bấm “Tạo / cập nhật scene”</div>
+<div class="cap" id="c5"><span>Bước 5</span>Trong tab Scenes, bấm tên scene để chuyển camera tới góc đó</div>
+<div class="cap" id="c6">Chỉnh camera rồi bấm “Lưu view” để lưu lại góc nhìn</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="sc.js"></script><script>
+const DUR=30,SCR=148;let M,rSel,TTop,TFront,TRight,TDet,rDet,TGen,TRowTop,TRowFront,TSave,TTabS;
+const NAMES=['ISO','TOP','FRONT','RIGHT'];
+const sc4=(sel)=>NAMES.map((n,i)=>scScene(i+1,'TuBep_'+n,i===sel));
+window.CENTER_READY=mountScenes('cf',{scenes:[]});
+let sig='';
+function apply(key,fn){if(sig!==key){sig=key;fn()}}
+const viewBtn=n=>W.document.querySelector('[data-view="'+n+'"]');
+async function init(){
+ rSel=RC('#selection');TTop=aim(RC(viewBtn('TOP')),.5);TFront=aim(RC(viewBtn('FRONT')),.5);TRight=aim(RC(viewBtn('RIGHT')),.5);
+ TDet=aim(RC('#sourceOptions summary'),.4);TGen=aim(RC('#generate'),.6);TTabS=aim(RC('[data-tab="scenes"]'),.4);
+ const mn=W.document.querySelector('main');W.document.getElementById('sourceOptions').open=true;mn.scrollTop=SCR;{const a=RC('#project'),b=RC('#namePreview'),c=RC('#sourceOptions');rDet={x:c.x+6,y:a.y-26,w:c.w-12,h:b.y+b.h-a.y+40}}mn.scrollTop=0;W.document.getElementById('sourceOptions').open=false;
+ // vị trí hàng scene khi ở tab Scenes
+ scEl('scenes')&&0;W.VGDScenes.receive('state',scState({scenes:sc4(0)}));scTab('scenes');
+ const rows=[...W.document.querySelectorAll('#sceneList > *')];TRowTop=aim(RC(rows[1]),.18);TRowFront=aim(RC(rows[2]),.18);TSave=aim(RC(rows[2].querySelector('.row-capture')||rows[2].querySelector('button')),.5);
+ scTab('views');W.VGDScenes.receive('state',scState({scenes:[]}));
+ M=[{a:.6,b:1.6,f:{x:1010,y:690},t:aim(rSel,.5),arc:-60},{a:3.2,b:4.2,f:aim(rSel,.5),t:TTop,arc:25},{a:5.0,b:5.8,f:TTop,t:TFront,arc:20},{a:6.6,b:7.4,f:TFront,t:TRight,arc:20},
+    {a:9.0,b:10.0,f:TRight,t:TDet,arc:-25},{a:14.0,b:15.4,f:TDet,t:TGen,arc:25},{a:18.8,b:19.6,f:TGen,t:TRowTop,arc:30},{a:21.0,b:21.8,f:TRowTop,t:TRowFront,arc:20},{a:24.6,b:25.8,f:TRowFront,t:TSave,arc:-20},{a:28.0,b:29.0,f:TSave,t:{x:180,y:540},arc:30}];
+ await render(0)}
+async function render(t){
+ setWorld({s:1,x:0,y:0});
+ const n=t<4.6?1:t<5.5?2:t<6.9?3:4; // số góc nhìn đã bật
+ const gen=t>=15.4;
+ apply('v'+n+'g'+gen+'s'+(t<20.7?0:t<24.2?1:2)+'d'+(t>=9.6&&t<17),()=>{
+  NAMES.forEach((v,i)=>viewBtn(v).setAttribute('aria-pressed',String(i<n)));
+  W.document.getElementById('generate').textContent='Tạo / cập nhật '+n+' scene';
+  W.document.getElementById('sourceOptions').open=t>=9.6&&t<17;
+  const idx=t<20.7?0:t<24.2?1:2;
+  if(!gen){W.VGDScenes.receive('state',scState({scenes:[]}));scTab('views')}
+  else{W.VGDScenes.receive('state',scState({scenes:sc4(idx)}));
+   if(t<18.2){W.VGDScenes.receive('result',{success:true,message:'Đã tạo/cập nhật 4 scene.',ids:['1','2','3','4']})}
+   else scTab('scenes')}});
+ W.document.querySelector('main').scrollTop=(gen?0:SCR*E(P(t,10.2,11.0))*(1-E(P(t,16.0,16.6))));
+ const hb=W.document.getElementById('generate');hb.classList.toggle('fx-hover',t>=15.2&&t<16.2);hb.style.transform=`scale(${1-.04*pulse(t,15.5,15.8)})`;
+ const sp=$('spot');let rr=null,o=0;
+ if(t<3.0){rr=rSel;o=E(P(t,1.0,1.4))*(1-E(P(t,2.6,3.0)))}else if(t>=9.4&&t<14.2){rr=rDet;o=E(P(t,9.6,10.0))*(1-E(P(t,13.6,14.2)))}
+ if(rr)sp.style.cssText+=`;opacity:${o};left:${rr.x-4}px;top:${rr.y-4}px;width:${rr.w+8}px;height:${rr.h+8}px`;else sp.style.opacity=0;
+ const pr=[[3.9,4.2],[5.6,5.9],[7.2,7.5],[9.8,10.1],[15.5,15.8],[19.4,19.7],[21.6,21.9],[25.6,25.9]];
+ drawCursor({s:1,x:0,y:0},pos(M,t),t,.6,29.5,pr.some(([a,b])=>pulse(t,a,b))?1:0,Math.max(...pr.map(([a,b])=>P(t,a,a+.4)*(t>a-.2&&t<b+1.0?1:0))));
+ cap($('c1'),t,.8,3.0,0);cap($('c2'),t,3.2,8.0,0);cap($('c3'),t,9.0,14.0,0);cap($('c4'),t,14.2,18.0,0);cap($('c5'),t,18.6,24.2,0);cap($('c6'),t,24.6,29.2,0);
+ for(const k of [1,2,3,4,5,6])$('c'+k).style.top='38px';
+ $('stage').style.opacity=1-E(P(t,29.7,30))}
+start();
+</script></body></html>

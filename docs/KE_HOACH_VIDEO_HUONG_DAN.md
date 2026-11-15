@@ -194,3 +194,5 @@ Giai đoạn 2, tiến độ: Reference đã dựng 3 chương (thêm chương d
 Giai đoạn 2, tiến độ: Library đã dựng 3 chương (tìm và tô vật liệu; đặt model và lưu mẫu; công cụ map), chờ bạn xem; kế tiếp Dim, Scenes.
 
 Giai đoạn 2, tiến độ: Dim đã dựng 4 chương (tạo Smart Dim; chỉnh kiểu dáng; font, cỡ chữ và preset; đơn vị và animation), chờ bạn xem; kế tiếp Scenes.
+
+Giai đoạn 2, tiến độ: Scenes đã dựng 3 chương (tạo bộ view; mặt cắt và khung hình; xuất ảnh hoặc PDF), chờ bạn xem. Giai đoạn 2 (12 chương) hoàn tất; kế tiếp giai đoạn 3: BIM, Cabinet, Cabinet Draw.

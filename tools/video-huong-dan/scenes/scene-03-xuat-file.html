@@ -1,0 +1,59 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Scenes · Xuất ảnh hoặc PDF</title>
+<link rel="stylesheet" href="../common.css"><style>
+#center{left:240px;top:10px;width:800px;height:700px}#center iframe{width:798px;height:668px}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD Scenes</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Scenes"></iframe></div>
+ <div id="spot"></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Đánh dấu các scene cần xuất ở tab Scenes, rồi mở tab Xuất file</div>
+<div class="cap" id="c2"><span>Bước 2</span>PDF gộp các scene thành một tệp; chọn khổ giấy</div>
+<div class="cap" id="c3"><span>Bước 3</span>PNG hoặc JPG xuất từng scene; PNG có thể để nền trong suốt</div>
+<div class="cap" id="c4"><span>Bước 4</span>Bấm “Chọn nơi lưu &amp; Xuất scene”, chọn thư mục lưu</div>
+<div class="cap" id="c5">Thanh tiến độ chạy theo từng scene; xong thì mở thư mục kết quả</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="sc.js"></script><script>
+const DUR=25;let M,T={},rSum;
+const NAMES=['ISO','TOP','FRONT','RIGHT'];
+const sc4=()=>NAMES.map((n,i)=>scScene(i+1,'TuBep_'+n,i===2));
+window.CENTER_READY=mountScenes('cf',{scenes:sc4()});
+let sig='';function apply(key,fn){if(sig!==key){sig=key;fn()}}
+const mainEl=()=>W.document.querySelector('main');
+const fmt=f=>W.document.querySelector('[data-fmt="'+f+'"]');
+const ST=t=>t<2.0?'scenes':'export';
+async function init(){
+ W.VGDScenes.receive('result',{success:true,message:'Đã tạo/cập nhật 4 scene.',ids:['1','3']});W.VGDScenes.receive('state',scState({scenes:sc4()}));
+ T.tabE=aim(RC('[data-tab="export"]'),.4);
+ scTab('export');mainEl().scrollTop=0;
+ T.pdf=aim(RC(fmt('pdf')),.5);T.png=aim(RC(fmt('png')),.5);T.tr=aim(RC('#transparent'),.7);T.exp=aim(RC('#exportButton'),.6);
+ fmt('pdf').click();T.paper=aim(RC('#paper'),.6);{const a=RC('#formatSeg'),b=RC('#paper');rSum={x:a.x-6,y:a.y-8,w:a.w+12,h:b.y+b.h-a.y+20}}
+ fmt('png').click();scTab('scenes');
+ M=[{a:.6,b:1.6,f:{x:1010,y:690},t:T.tabE,arc:-60},{a:3.6,b:4.6,f:T.tabE,t:T.pdf,arc:25},{a:6.0,b:6.8,f:T.pdf,t:T.paper,arc:20},{a:8.2,b:9.0,f:T.paper,t:T.png,arc:20},{a:10.0,b:10.8,f:T.png,t:T.tr,arc:20},
+    {a:12.2,b:13.4,f:T.tr,t:T.exp,arc:25},{a:20.2,b:21.2,f:T.exp,t:{x:180,y:540},arc:30}];
+ await render(0)}
+async function render(t){
+ setWorld({s:1,x:0,y:0});
+ const f=t<4.9?'png':t<8.6?'pdf':'png';
+ const tr=t>=10.6;
+ const ph=t<13.6?0:t<14.4?1:t<19.0?2:3; // 0 chưa xuất, 1 bắt đầu, 2 đang xuất, 3 xong
+ apply(ST(t)+f+tr+ph+(t>=6.6?'A3':'A4')+(t<16.6?0:1),()=>{
+  scTab(ST(t));
+  if(ST(t)==='export'){fmt(f).click();scEl('transparent').checked=tr;scEl('paper').value=t>=6.6?'A3_L':'A4_L';
+   if(ph===1)W.VGDScenes.receive('started',{total:2});
+   if(ph===2){W.VGDScenes.receive('started',{total:2});W.VGDScenes.receive('progress',{current:t<16.6?1:2,total:2,name:t<16.6?'TuBep_ISO':'TuBep_FRONT'})}
+   if(ph===3)W.VGDScenes.receive('exported',{success:true,message:'Đã xuất 2 scene.',path:'C:\\VGD\\Anh xuat'})}});
+ mainEl().scrollTop=0;
+ const pg=scEl('progress');if(pg&&ph===2){pg.value=t<16.6?1:1+E(P(t,16.6,18.8))}
+ const eb=scEl('exportButton');if(eb){eb.classList.toggle('fx-hover',t>=13.4&&t<14.6);eb.style.transform=`scale(${1-.04*pulse(t,13.6,13.9)})`}
+ const sp=$('spot');let rr=null,o=0;
+ if(t>=3.2&&t<9.6){rr=rSum;o=E(P(t,3.4,3.9))*(1-E(P(t,9.0,9.6)))}
+ if(rr)sp.style.cssText+=`;opacity:${o};left:${rr.x}px;top:${rr.y}px;width:${rr.w}px;height:${rr.h}px`;else sp.style.opacity=0;
+ const pr=[[1.6,1.9],[4.6,4.9],[6.8,7.1],[8.8,9.1],[10.6,10.9],[13.6,13.9]];
+ drawCursor({s:1,x:0,y:0},pos(M,t),t,.6,24.5,pr.some(([a,b])=>pulse(t,a,b))?1:0,Math.max(...pr.map(([a,b])=>P(t,a,a+.4)*(t>a-.2&&t<b+1.0?1:0))));
+ cap($('c1'),t,.6,3.2,0);cap($('c2'),t,3.4,8.0,0);cap($('c3'),t,8.2,12.0,0);cap($('c4'),t,12.2,15.6,0);cap($('c5'),t,16.0,24.0,0);
+ for(const k of [1,2,3,4,5])$('c'+k).style.top='38px';
+ $('stage').style.opacity=1-E(P(t,24.7,25))}
+start();
+</script></body></html>

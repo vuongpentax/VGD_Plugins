@@ -30,8 +30,11 @@ Hoạt ảnh của các plugin khác nằm trong thư mục riêng, đăng cùng
 | `dim-02-kieu-dang.mp4` | `dim/scene-02-kieu-dang.html` | Dim: chỉnh kiểu dáng | 20 giây |
 | `dim-03-font-preset.mp4` | `dim/scene-03-font-preset.html` | Dim: font, cỡ chữ và preset | 20 giây |
 | `dim-04-don-vi-animation.mp4` | `dim/scene-04-don-vi-animation.html` | Dim: đơn vị và animation | 20 giây |
+| `scenes-01-tao-bo-view.mp4` | `scenes/scene-01-tao-bo-view.html` | Scenes: tạo bộ view | 30 giây |
+| `scenes-02-mat-cat-khung.mp4` | `scenes/scene-02-mat-cat-khung.html` | Scenes: mặt cắt và khung hình | 25 giây |
+| `scenes-03-xuat-file.mp4` | `scenes/scene-03-xuat-file.html` | Scenes: xuất ảnh hoặc PDF | 25 giây |
 
-Ảnh mẫu là hình đơn giản dùng chung trong `samples/`; Ruby được mô phỏng qua `image_importer/ii.js` và `reference/ref.js` và `library/lib.js` (vân vật liệu mẫu là SVG đơn giản `samples/vl_*.svg`) và `dim/dim.js` (Dim cần chặn `sketchup.*` bằng `mountApp(..., {stub:true})` vì `window.onload` gọi `sketchup.ready()`). Reference có thêm khung "khung nhìn SketchUp (minh họa)" vì ảnh nổi trên khung nhìn chứ không nằm trong bảng.
+Ảnh mẫu là hình đơn giản dùng chung trong `samples/`; Ruby được mô phỏng qua `image_importer/ii.js` và `reference/ref.js` và `library/lib.js` (vân vật liệu mẫu là SVG đơn giản `samples/vl_*.svg`) và `scenes/sc.js` (Scenes nhận trạng thái qua `VGDScenes.receive`, cũng cần `stub:true`) và `dim/dim.js` (Dim cần chặn `sketchup.*` bằng `mountApp(..., {stub:true})` vì `window.onload` gọi `sketchup.ready()`). Reference có thêm khung "khung nhìn SketchUp (minh họa)" vì ảnh nổi trên khung nhìn chứ không nằm trong bảng.
 
 File MP4 không lưu trong git. Phần dùng chung: `common.css`, `common.js`. Script quay: `render.js`.
 
