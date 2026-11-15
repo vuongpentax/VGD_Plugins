@@ -240,9 +240,12 @@ module UI
     attr_reader :events,:commands
     def initialize(*);@events=[];@commands=[];UI.toolbars << self;end
     def add_item(command);@events << :add;@commands << command;end
+    def get_last_state;0;end # TB_NEVER_SHOWN: SketchUp chưa từng hiện thanh này
     def show;@events << :show;end
+    def restore;@events << :restore;end
   end
 end
+::TB_NEVER_SHOWN=0 unless defined?(::TB_NEVER_SHOWN)
 module Layout
   @documents=[]
   class << self;attr_accessor :documents;end

@@ -40,13 +40,13 @@ with zipfile.ZipFile(rbz) as archive:
             raise SystemExit(f'RBZ content differs from runtime: {name}')
 dev_files = [
     'check_ruby.cjs', 'test_fixture.rb', 'test_engine.rb', 'test_native_style.rb',
-    'test_core.rb', 'test_smartdim.rb', 'test_ui.cjs', 'import_claude_ui.py',
+    'test_core.rb', 'test_smartdim.rb', 'test_ui.cjs',
     'build_ui.py', 'native_smoke.rb', 'deploy.ps1', 'test_deploy.py',
     'test_store.rb', 'package.py'
 ]
 doc_files = [
     'README.md', 'CLAUDE.md', 'ANNOTATION_REQUIREMENTS.md', 'SELECTION_REQUIREMENTS.md',
-    'FEATURE_STATUS.md', 'UI_DESIGN.md', 'DEVELOPMENT_NOTES.md',
+    'FEATURE_STATUS.md', 'DEVELOPMENT_NOTES.md',
     f'RELEASE_NOTES_v{version}.md'
 ]
 with zipfile.ZipFile(source_zip, 'w', zipfile.ZIP_DEFLATED) as archive:

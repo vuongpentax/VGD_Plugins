@@ -135,7 +135,7 @@ doc=Layout.documents.last;assert(events.last[1][:success] && doc.pages.length==2
 image=doc.pages.first.images.first;assert(near(image.bounds.width/image.bounds.height,1920.0/1080),'PDF image stretched')
 events=[];job=s::ExportJob.new(model,export_pages,opts,'/tmp/vgd-tests',lambda { |event,payload| events << [event,payload] });job.start;job.cancel;UI.drain
 assert(events.last[1][:cancelled] && events.last[1][:count]==0 && !s::FrameTool.suspended,'Cancel failed cleanup')
-assert(UI.toolbars.length==1 && UI.toolbars.first.events==[:add,:add,:add,:add,:add],'Startup changed toolbar visibility')
+assert(UI.toolbars.length==1 && UI.toolbars.first.events==[:add,:add,:add,:add,:add,:show],'Toolbar must be created once and shown on first install (never shown before)')
 puts 'PASS: selected-scene PNG/JPG alpha rules, failure reporting, cancelled cleanup, state restoration, mock PDF pages/aspect, own toolbar only'
 
 model.selection.clear;model.selection.add(target)
