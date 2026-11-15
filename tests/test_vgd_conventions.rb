@@ -52,5 +52,18 @@ Dir.children(File.join(ROOT, 'plugins')).sort.each do |plugin|
   check "#{plugin}: tải lại báo đúng chữ chuẩn (Đã tải lại / Tải lại thất bại)", code.include?('Đã tải lại VGD') && code.include?('Tải lại thất bại')
 end
 
+# 7. Không có mục menu lẻ gắn thẳng vào Extensions/Plugins (phải đi qua ::VGD.menu).
+# Cho phép đúng một dạng: Extensions > add_submenu('VGD') (dòng định nghĩa ::VGD.menu). Chỉ bắt được dạng viết trên một dòng.
+ROOT_MENU = /UI\.menu\(\s*['"](?:Extensions|Plugins)['"]\s*\)/
+STRAY_MENU = [
+  /UI\.menu\(\s*['"]Extensions['"]\s*\)\s*\.\s*(?:add_item\b|add_separator\b|add_submenu\(\s*['"](?!VGD['"])[^'"]*['"])/,
+  /UI\.menu\(\s*['"]Plugins['"]\s*\)\s*\.\s*add_/,
+  /#{ROOT_MENU.source}\s*$/ # gán menu gốc vào biến rồi thêm mục sau đó
+].freeze
+stray = rubies.select do |f|
+  File.read(f, encoding: 'UTF-8').lines.any? { |l| STRAY_MENU.any? { |re| l =~ re } }
+end
+check 'không plugin nào gắn mục lẻ thẳng vào menu Extensions/Plugins (dùng ::VGD.menu)', stray.empty?, stray.map { |f| f.sub(ROOT + '/', '') }.inspect
+
 puts $fails.empty? ? 'TẤT CẢ ĐẠT' : "CÓ #{$fails.size} LỖI"
 exit($fails.empty? ? 0 : 1)
