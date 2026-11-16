@@ -85,6 +85,7 @@ const VGD_I18N=(()=>{
     'Thêm sheet':'Add sheet','Thêm sheet (sao chép cài đặt của sheet đang mở)':'Add sheet (copies the settings of the open sheet)','Bấm để mở · bấm đúp hoặc F2 để đổi tên · bấm phải để nhân đôi hoặc xóa':'Click to open · double-click or F2 to rename · right-click to duplicate or delete',
     'Tên sheet':'Sheet name','Nhân đôi':'Duplicate','Xóa sheet':'Delete sheet','Bấm lần nữa để xóa':'Click again to delete','Tối đa 20 sheet.':'At most 20 sheets.',
     'Tên sheet không được để trống.':'The sheet name cannot be empty.','Đã có sheet tên này. Hãy đặt tên khác.':'A sheet with this name already exists. Choose another name.','Phải còn ít nhất một sheet.':'At least one sheet must remain.',
+    'Đang chuẩn bị xuất, hãy đợi xong.':'Preparing the export, please wait.',
     'Đang tính lại số đo theo tag loại trừ của sheet…':'Recalculating measurements for this sheet’s excluded tags…',
     'Chọn cột':'Choose columns','Tìm kiếm...':'Search...','Tìm trong bảng':'Search in table','Tất cả nhóm':'All groups','Đổi tên':'Rename','Chụp ảnh':'Take photo',
 
@@ -386,6 +387,9 @@ const VGD_I18N=(()=>{
   const SKIPPED=/ Bỏ qua (\d+) đối tượng bị khóa\./;
   // ---- Mẫu cho chuỗi có số / tên xen vào ----
   rule(/^(VGD-[0-9A-F]{6}) \(trùng\)$/,(m,id)=>`${id} (duplicate)`);
+  rule(/^Đang chuẩn bị (\d+) sheet để xuất…$/,(m,n)=>`Preparing ${plural(n,'sheet','sheets')} for export…`);
+  rule(/^Hết thời gian chờ tính lại số đo cho sheet “(.*)”\. Hãy thử xuất lại\.$/,(m,name)=>`Timed out waiting for the measurements of sheet “${name}” to be recalculated. Try exporting again.`);
+  rule(/^Đã tạo trang báo cáo (\d+) dòng trong (\d+) sheet và mở trong trình duyệt\..*$/,(m,n,k)=>`Created a report page with ${plural(n,'row','rows')} in ${plural(k,'sheet','sheets')} and opened it in the browser. To print, press In / Lưu PDF on the page and choose Save as PDF.`);
   rule(/^(\d+) dòng đang chọn\.$/,(m,n)=>`${plural(n,'row','rows')} selected.`);
   rule(/^Đã lưu (\d+) tầng\.$/,(m,n)=>`Saved ${plural(n,'level','levels')}.`);
   rule(/^Đã gán tầng cho (\d+) món theo cao độ\.(?: (\d+) món thấp hơn mọi tầng hoặc không đo được cao độ\.)?(?: Bỏ qua (\d+) món bị khóa\.)?$/,(m,n,none,locked)=>`Assigned levels to ${plural(n,'item','items')} by elevation.${none?` ${plural(none,'item is','items are')} below every level or has no elevation.`:''}${locked?` Skipped ${locked} locked.`:''}`);

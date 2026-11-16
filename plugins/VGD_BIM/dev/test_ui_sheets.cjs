@@ -160,6 +160,45 @@ const table=(o={})=>({columns:F.columns,presets:F.presets,groups:F.groups,status
   const savedC=await json('table_view');
   ok(savedC.file==='C:\\data\\c_VGD_BIM' && savedC.sheets.length===2,'lưu trạng thái của file C kèm mã file C');
 
+  // ---- Xuất Excel / PDF: mọi sheet, mỗi sheet đúng cột và tag loại trừ của nó ----
+  await receive('config',config('table'));await receive('table',table());await settle(300);
+  ok(JSON.stringify(await tabs())==='["Sheet1"]','chuẩn bị xuất: một sheet');
+  await clear();
+  await page.evaluate(()=>{window.__exp=exportTable('xlsx');});
+  const one=await json('table_export');
+  ok(one && !('sheets' in one) && one.columns.length>3 && one.rows.length>0 && one.format==='xlsx','một sheet: xuất như trước (columns / rows, không có sheets)');
+  await page.click('.sheetbar .sheet-add');await settle(300);
+  await toggleColumn('Mô tả');await settle(200);
+  await page.locator('.sheetbar .sheet-tab',{hasText:'Sheet2'}).dblclick();await page.locator('.sheet-rename').fill('Tủ bếp');await page.keyboard.press('Enter');await settle();
+  await page.locator('.sheetbar .sheet-tab',{hasText:'Sheet1'}).click();await settle(300);
+  await page.evaluate(()=>{tableState.sheets[1].exclude_tags=['Tường'];}); // sheet Tủ bếp loại trừ tag Tường, sheet 1 thì không
+  await receive('config',config('table'));await receive('table',table());await settle(200); // Ruby tính lại theo tag loại trừ của Sheet1 (rỗng)
+  await clear();
+  await page.evaluate(()=>{window.__exp=exportTable('pdf');});
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='settings_save'),null,{timeout:5000});
+  ok(JSON.stringify(await json('settings_save'))==='{"exclude_tags":["Tường"]}' && (await calls('table_export')).length===0,'xuất nhiều sheet: chuyển sang sheet 2, gửi tag loại trừ của sheet đó cho Ruby và ĐỢI tính lại (chưa xuất)');
+  ok((await message()).includes('Đang '),'có thông báo đang chuẩn bị / tính lại');
+  await receive('config',config('table',{},['Tường']));await receive('table',table());
+  await page.waitForFunction(()=>window.calls.filter(c=>c.name==='settings_save').length===2,null,{timeout:5000});
+  ok(JSON.stringify(await json('settings_save'))==='{"exclude_tags":[]}' && (await calls('table_export')).length===0,'xong sheet 2: trả về sheet đang mở, gửi lại tag loại trừ rỗng của sheet 1 và đợi tính lại');
+  await receive('config',config('table',{},[]));await receive('table',table());
+  await page.evaluate(()=>window.__exp);
+  const multi=await json('table_export');
+  ok(multi && multi.format==='pdf' && Array.isArray(multi.sheets) && multi.sheets.length===2 && multi.sheets[0].name==='Sheet1' && multi.sheets[1].name==='Tủ bếp' && !('columns' in multi),'xuất xong: một lệnh table_export có 2 sheet theo đúng tên, không còn columns / rows ở ngoài');
+  const lab=sh=>sh.columns.map(c=>c.label);
+  ok(lab(multi.sheets[0]).includes('Mô tả') && !lab(multi.sheets[1]).includes('Mô tả'),'mỗi sheet xuất đúng cột của nó (sheet Tủ bếp đã ẩn Mô tả)');
+  ok(multi.sheets.every(sh=>sh.rows.some(r=>r.kind==='row')&&sh.rows.every(r=>r.cells.length===sh.columns.length)),'mỗi sheet có dòng dữ liệu, số ô khớp số cột');
+  ok((await activeTab())==='Sheet1' && !(await page.evaluate(()=>exporting)) && (await heads()).includes('Mô tả'),'sau khi xuất: về lại Sheet1, cột như cũ, hết trạng thái đang xuất');
+  const stateAfter=await page.evaluate(()=>({sheet:tableState.sheet,names:tableState.sheets.map(s=>s.name),ex:tableState.sheets.map(s=>s.exclude_tags)}));
+  ok(stateAfter.sheet===0 && JSON.stringify(stateAfter.names)==='["Sheet1","Tủ bếp"]' && JSON.stringify(stateAfter.ex)==='[[],["Tường"]]','sheet và tag loại trừ riêng của từng sheet không bị đổi sau khi xuất');
+  // hết thời gian chờ Ruby: không xuất nửa chừng, trả về sheet cũ
+  await clear();
+  await page.evaluate(()=>{window.tableWaitMs=300;tableState.sheets[1].exclude_tags=['Tường'];window.__exp=exportTable('xlsx');});
+  await page.evaluate(()=>window.__exp);
+  ok((await calls('table_export')).length===0 && (await message()).includes('Hết thời gian chờ') && (await activeTab())==='Sheet1','Ruby không trả bảng mới kịp: báo lỗi, không xuất, về lại sheet đang mở');
+  await page.evaluate(()=>{window.tableWaitMs=0;});
+  await receive('config',config('table'));await receive('table',table());await settle(200);
+
   // ---- Gợi ý nhập kiểu Excel ----
   const cell=(row,key)=>page.locator('.grid tbody tr').nth(row).locator(`td[data-key="${key}"]`);
   const ghost=()=>page.locator('.ac-rest').innerText().catch(()=>'');

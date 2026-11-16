@@ -121,10 +121,46 @@ module VGD
         File.binwrite(path, build(report))
       end
 
-      # Trả về nội dung file .xlsx (chuỗi nhị phân).
+      MAX_SHEET_NAME = 31 # Excel không cho tên sheet dài hơn 31 ký tự
+
+      # Trả về nội dung file .xlsx (chuỗi nhị phân). report[:sheets] (mỗi phần tử {name, columns, rows, row_height}) cho nhiều sheet; không có thì một sheet
+      # từ report[:columns] / report[:rows] như trước. Ảnh dùng chung một kho trong file; mỗi sheet có bản vẽ (drawing) riêng.
       def self.build(report)
-        columns = report[:columns]
+        sheets = report[:sheets] || [{name: sheet_name(report[:title]), columns: report[:columns], rows: report[:rows], row_height: report[:row_height]}]
+        names = unique_sheet_names(sheets.map { |sheet| sheet[:name] })
         styles = Styles.new
+        media = {} # khóa ảnh => số thứ tự ảnh (dùng chung mọi sheet)
+        built = sheets.each_with_index.map do |sheet, index|
+          title = sheets.size > 1 ? "#{report[:title]} · #{sheet[:name]}" : report[:title]
+          build_sheet(report.merge(columns: sheet[:columns], rows: sheet[:rows], row_height: sheet[:row_height], title: title), styles, media)
+        end
+        zip = Zip.new
+        zip.add('[Content_Types].xml', content_types_xml(built.map { |sheet| !sheet[:pictures].empty? }))
+        zip.add('_rels/.rels', rels_xml([['rId1', 'officeDocument', 'xl/workbook.xml']]))
+        zip.add('xl/workbook.xml', workbook_xml(names, built.map { |sheet| [sheet[:header_row], sheet[:title_last]] }))
+        workbook_rels = built.each_index.map { |i| ["rId#{i + 1}", 'worksheet', "worksheets/sheet#{i + 1}.xml"] } << ["rId#{built.size + 1}", 'styles', 'styles.xml']
+        zip.add('xl/_rels/workbook.xml.rels', rels_xml(workbook_rels))
+        zip.add('xl/styles.xml', styles.to_xml)
+        built.each_with_index do |sheet, i|
+          n = i + 1
+          has_pictures = !sheet[:pictures].empty?
+          zip.add("xl/worksheets/sheet#{n}.xml", sheet[:xml])
+          sheet_rels = []
+          sheet[:hyperlinks].each_with_index { |h, k| sheet_rels << ["rId#{k + 1}", 'hyperlink', h[:url], true] }
+          sheet_rels << ["rId#{sheet[:hyperlinks].size + 1}", 'drawing', "../drawings/drawing#{n}.xml"] if has_pictures
+          zip.add("xl/worksheets/_rels/sheet#{n}.xml.rels", rels_xml(sheet_rels)) unless sheet_rels.empty?
+          next unless has_pictures
+          used = sheet[:pictures].map { |pic| pic[:pid] }.uniq
+          zip.add("xl/drawings/drawing#{n}.xml", drawing_xml(sheet[:pictures], used.each_with_index.to_h { |key, k| [key, k + 1] }))
+          zip.add("xl/drawings/_rels/drawing#{n}.xml.rels", rels_xml(used.each_with_index.map { |key, k| ["rId#{k + 1}", 'image', "../media/image#{media.fetch(key)}.png"] }))
+        end
+        media.each { |key, n| zip.add("xl/media/image#{n}.png", report[:images].fetch(key)[:bytes], compress: false) }
+        zip.to_s
+      end
+
+      # Một sheet: các dòng XML, ảnh (pictures), liên kết và vị trí hàng tiêu đề. media (chung) được bổ sung ảnh mới.
+      def self.build_sheet(report, styles, media)
+        columns = report[:columns]
         image_col = columns.index { |c| c[:type] == 'image' }
         units_row = columns.any? { |c| !c[:unit].to_s.empty? }
         header_row = META_ROW + 2 # sau tiêu đề, ghi chú và một dòng trống
@@ -140,7 +176,6 @@ module VGD
           sheet_rows << row_xml(header_row + 1, columns.each_with_index.map { |c, i| text_cell(header_row + 1, i, c[:unit], unit_style) })
         end
 
-        media = {}      # pid => số thứ tự ảnh
         pictures = []   # {pid, col, row, w, h, dx, dy} (px)
         hyperlinks = []
         row_points = image_row_points(report)
@@ -176,26 +211,25 @@ module VGD
           sheet_rows << row_xml(row_number, cells, height)
         end
         last_row = [row_number, first_data].max
+        {xml: sheet_xml(report, columns, sheet_rows, header_row, first_data, last_row, hyperlinks, !pictures.empty?), header_row: header_row, title_last: header_row + (units_row ? 1 : 0),
+         pictures: pictures, hyperlinks: hyperlinks}
+      end
 
-        zip = Zip.new
-        sheet_name = sheet_name(report[:title])
-        has_pictures = !pictures.empty?
-        zip.add('[Content_Types].xml', content_types_xml(has_pictures))
-        zip.add('_rels/.rels', rels_xml([['rId1', 'officeDocument', 'xl/workbook.xml']]))
-        zip.add('xl/workbook.xml', workbook_xml(sheet_name, header_row, header_row + (units_row ? 1 : 0)))
-        zip.add('xl/_rels/workbook.xml.rels', rels_xml([['rId1', 'worksheet', 'worksheets/sheet1.xml'], ['rId2', 'styles', 'styles.xml']]))
-        zip.add('xl/styles.xml', styles.to_xml)
-        zip.add('xl/worksheets/sheet1.xml', sheet_xml(report, columns, sheet_rows, header_row, first_data, last_row, hyperlinks, has_pictures))
-        sheet_rels = []
-        hyperlinks.each_with_index { |h, i| sheet_rels << ["rId#{i + 1}", 'hyperlink', h[:url], true] }
-        sheet_rels << ["rId#{hyperlinks.size + 1}", 'drawing', '../drawings/drawing1.xml'] if has_pictures
-        zip.add('xl/worksheets/_rels/sheet1.xml.rels', rels_xml(sheet_rels)) unless sheet_rels.empty?
-        if has_pictures
-          zip.add('xl/drawings/drawing1.xml', drawing_xml(pictures, media))
-          zip.add('xl/drawings/_rels/drawing1.xml.rels', rels_xml(media.map { |pid, n| ["rId#{n}", 'image', "../media/image#{n}.png"] }))
-          media.each { |pid, n| zip.add("xl/media/image#{n}.png", report[:images].fetch(pid)[:bytes], compress: false) }
+      # Tên sheet hợp lệ cho Excel (bỏ ký tự cấm, tối đa 31 ký tự), không trùng nhau (không phân biệt hoa thường): trùng thì thêm " (2)", " (3)".
+      def self.unique_sheet_names(names)
+        used = {}
+        names.each_with_index.map do |raw, index|
+          base = sheet_name(raw.to_s.empty? ? "Sheet#{index + 1}" : raw)
+          name = base
+          counter = 1
+          while used[name.downcase]
+            counter += 1
+            suffix = " (#{counter})"
+            name = "#{base[0, MAX_SHEET_NAME - suffix.size]}#{suffix}"
+          end
+          used[name.downcase] = true
+          name
         end
-        zip.to_s
       end
 
       # Người dùng đã chỉnh độ cao hàng trên màn hình (report[:row_height], điểm ảnh): hàng Excel cao đúng bằng đó (tối đa 409 point).
@@ -255,7 +289,7 @@ module VGD
       end
 
       def self.sheet_name(title)
-        name = title.to_s.gsub(%r{[\[\]:*?/\\]}, ' ').strip[0, 31].to_s
+        name = title.to_s.gsub(%r{[\[\]:*?/\\]}, ' ').strip[0, MAX_SHEET_NAME].to_s
         name.empty? ? 'Bang khoi luong' : name
       end
 
@@ -293,22 +327,27 @@ module VGD
           %(<pageMargins left="0.4" right="0.4" top="0.5" bottom="0.5" header="0.3" footer="0.3"/><pageSetup paperSize="9" orientation="landscape" fitToWidth="1" fitToHeight="0"/>#{drawing}</worksheet>)
       end
 
-      def self.workbook_xml(sheet_name, title_first_row, title_last_row)
-        quoted = "'#{sheet_name.gsub("'", "''")}'"
+      def self.workbook_xml(names, title_rows)
+        sheets = names.each_with_index.map { |name, i| %(<sheet name="#{xml_text(name)}" sheetId="#{i + 1}" r:id="rId#{i + 1}"/>) }.join
+        titles = names.each_with_index.map do |name, i|
+          quoted = "'#{name.gsub("'", "''")}'"
+          %(<definedName name="_xlnm.Print_Titles" localSheetId="#{i}">#{xml_text(quoted)}!$#{title_rows[i][0]}:$#{title_rows[i][1]}</definedName>)
+        end.join
         %(<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="#{NS_MAIN}" xmlns:r="#{NS_REL}"><bookViews><workbookView/></bookViews>) +
-          %(<sheets><sheet name="#{xml_text(sheet_name)}" sheetId="1" r:id="rId1"/></sheets>) +
-          %(<definedNames><definedName name="_xlnm.Print_Titles" localSheetId="0">#{xml_text(quoted)}!$#{title_first_row}:$#{title_last_row}</definedName></definedNames></workbook>)
+          %(<sheets>#{sheets}</sheets><definedNames>#{titles}</definedNames></workbook>)
       end
 
+      # has_pictures: mảng theo từng sheet, true nếu sheet đó có bản vẽ ảnh.
       def self.content_types_xml(has_pictures)
-        overrides = [['/xl/workbook.xml', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml'],
-                     ['/xl/worksheets/sheet1.xml', 'application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml'],
-                     ['/xl/styles.xml', 'application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml']]
-        overrides << ['/xl/drawings/drawing1.xml', 'application/vnd.openxmlformats-officedocument.drawing+xml'] if has_pictures
+        overrides = [['/xl/workbook.xml', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml']]
+        has_pictures.each_index { |i| overrides << ["/xl/worksheets/sheet#{i + 1}.xml", 'application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml'] }
+        overrides << ['/xl/styles.xml', 'application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml']
+        has_pictures.each_with_index { |pictured, i| overrides << ["/xl/drawings/drawing#{i + 1}.xml", 'application/vnd.openxmlformats-officedocument.drawing+xml'] if pictured }
         %(<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">) +
           %(<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/>) +
           overrides.map { |part, type| %(<Override PartName="#{part}" ContentType="#{type}"/>) }.join + '</Types>'
       end
+
 
       # relations: [id, loại, đích, (true nếu đích nằm ngoài file)]
       def self.rels_xml(relations)

@@ -1608,10 +1608,48 @@ function exportRows(model){
   if(tableState.showTotals)out.push({kind:'total',cells:summary(rows,exportText(`Tổng cộng · ${countOf(rows)} đối tượng`))});
   return out;
 }
-function exportTable(format){
+// Xuất Excel / PDF: mỗi sheet là một worksheet (Excel) hoặc một phần của trang in (PDF), mỗi sheet đúng cột, sắp xếp, nhóm, bộ lọc của nó. Chỉ một sheet thì như trước.
+// Số đo thân phụ thuộc tag loại trừ của từng sheet nên chuyển qua từng sheet (Ruby tính lại khi tag loại trừ khác) rồi trả về sheet đang mở.
+const tableWaiters=[];
+const nextTableEvent=(ms=window.tableWaitMs||20000)=>new Promise(resolve=>{let done=false;const finish=arrived=>{if(!done){done=true;resolve(arrived===true);}};tableWaiters.push(()=>finish(true));setTimeout(finish,ms);}); // true khi bảng mới tới, false khi hết thời gian chờ
+function exportLabels(){return {model:exportText('Mô hình'),preset:'Preset',date:exportText('Ngày'),print:exportText('In / Lưu PDF'),reset:exportText('Đặt lại độ rộng cột'),hint:exportText('Kéo mép tiêu đề cột để chỉnh độ rộng.')};}
+function exportSheetData(name){
   const model=viewModel();
-  call('table_export',JSON.stringify({format,...(tableState.rowHeight>0?{row_height:tableState.rowHeight}:{}),title:exportText('Bảng khối lượng'),preset:tableState.preset||'',decimal_separator:workSettings().decimal_separator,
-    labels:{model:exportText('Mô hình'),preset:'Preset',date:exportText('Ngày'),print:exportText('In / Lưu PDF'),reset:exportText('Đặt lại độ rộng cột'),hint:exportText('Kéo mép tiêu đề cột để chỉnh độ rộng.')},columns:model.cols.map(exportColumn),rows:exportRows(model)}));
+  return {name,columns:model.cols.map(exportColumn),rows:exportRows(model),...(tableState.rowHeight>0?{row_height:tableState.rowHeight}:{})};
+}
+let exporting=false;
+async function exportTable(format){
+  if(exporting)return message('Đang chuẩn bị xuất, hãy đợi xong.',true);
+  ensureSheets();stashSheet();
+  const base={format,title:exportText('Bảng khối lượng'),preset:tableState.preset||'',decimal_separator:workSettings().decimal_separator,labels:exportLabels()};
+  if(tableState.sheets.length<2){
+    const one=exportSheetData(null);
+    return call('table_export',JSON.stringify({...base,...(one.row_height?{row_height:one.row_height}:{}),columns:one.columns,rows:one.rows}));
+  }
+  exporting=true;
+  const original=tableState.sheet,sheets=tableState.sheets.map(sheet=>({...sheet})),out=[];let failure='';
+  try{
+    message(`Đang chuẩn bị ${sheets.length} sheet để xuất…`);
+    for(let i=0;i<sheets.length;i++){
+      tableState.sheet=i;loadSheet(sheets[i]);
+      const needsProjected=tableState.visible.has('areaProjected')&&tableState.data.options&&!tableState.data.options.projected;
+      const changed=applySheetExclude(sheets[i]);
+      if(needsProjected)ensureProjected();
+      if((changed||needsProjected)&&!(await nextTableEvent()))throw new Error(`Hết thời gian chờ tính lại số đo cho sheet “${sheets[i].name}”. Hãy thử xuất lại.`); // Ruby tính lại số đo / diện tích chiếu rồi gửi bảng mới
+      out.push(exportSheetData(sheets[i].name));
+    }
+  }catch(error){
+    failure=error.message;
+    out.length=0;
+  }finally{
+    tableState.sheet=original;loadSheet(sheets[original]);
+    const changed=applySheetExclude(sheets[original]);
+    if(changed)await nextTableEvent();
+    exporting=false;
+    tableState.sheets=sheets;persistView();tableView(tableState.data);
+  }
+  if(failure)message(failure,true);
+  if(out.length)call('table_export',JSON.stringify({...base,sheets:out}));
 }
 // Biểu tượng nhỏ cho menu (SVG, dùng màu chữ hiện tại).
 function menuIcon(shapes){
@@ -1783,6 +1821,7 @@ window.VGD={receive(event,data){
   if(event==='settings'){config.app=data;if(!tableState.excludePending){tableState.excludeTags=null;refreshExcludeUi();}if(openPanel==='preset-panel')presetPanel($('preset-panel'));if(openPanel==='gear-panel')languagePanel($('gear-panel'));}
   if(event==='front_align_plan'){tableState.alignPlan=data&&!data.cleared?data:null;if(tableState.panel==='front'&&tableState.data)tableView(tableState.data);return;}
   if(event==='rename_preview'){tableState.rename.preview=data;if(tableState.panel==='rename'&&tableState.data)tableView(tableState.data);}
+  if(event==='table'){tableWaiters.splice(0).forEach(done=>done());}
   if(event==='images_progress')imagesProgress(data);
   if(event==='images_done')imagesDone(data);
   if(event==='images_changed')imagesChanged(data.items);

@@ -9,9 +9,12 @@ module VGD
     # cấu trúc bảng; ở đây kiểm tra lại rồi lấy ảnh từ file ảnh của plugin (không nhận đường dẫn từ giao diện).
     #   payload = {'title', 'preset', 'decimal_separator', 'labels' => {'model','preset','date','print'},
     #              'columns' => [{'label','unit','type','digits'}], 'rows' => [{'kind','pid','cells'}]}
+    # Nhiều sheet: thay 'columns' / 'rows' / 'row_height' bằng 'sheets' => [{'name','columns','rows','row_height'}] (tối đa 20; mỗi sheet là một worksheet Excel
+    # hoặc một phần của trang in). Báo cáo trả về luôn có :sheets; :columns, :rows, :row_height là của sheet đầu (tương thích).
     # type: text | number | image | link | ordinal; kind: row | group | total. Ô số gửi dạng số (đã đổi đơn vị), chưa làm tròn.
     module TableReport
       MAX_ROWS = 50_000
+      MAX_SHEETS = 20
       MAX_COLUMNS = 60
       MAX_TEXT = 2000
       TYPES = %w[text number image link ordinal].freeze
@@ -29,28 +32,37 @@ module VGD
       # image_for: gọi với mã đối tượng (ảnh món) hoặc với (mã đối tượng, loại ảnh) cho cột Ảnh vị trí / Ảnh 3 / Ảnh 4; trả về nội dung PNG (hoặc nil nếu không có / mã không thuộc bảng).
       def self.build(payload, model_name, image_for)
         raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless payload.is_a?(Hash)
-        columns = columns!(payload['columns'])
-        rows = rows!(payload['rows'], columns.size)
-        raise ArgumentError, 'Bảng chưa có dòng nào. Hãy chọn group hoặc component trong SketchUp.' unless rows.any? { |row| row[:kind] == 'row' }
+        raw_sheets = payload['sheets']
+        raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless raw_sheets.nil? || (raw_sheets.is_a?(Array) && raw_sheets.size.between?(1, MAX_SHEETS))
+        raw_sheets ||= [{'name' => payload['title'].to_s.strip.empty? ? nil : payload['title'], 'columns' => payload['columns'], 'rows' => payload['rows'], 'row_height' => payload['row_height']}] # một bảng: tên sheet theo tiêu đề
+        sheets = raw_sheets.each_with_index.map do |raw, index|
+          raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless raw.is_a?(Hash)
+          columns = columns!(raw['columns'])
+          {name: raw['name'].nil? ? "Sheet#{index + 1}" : text!(raw['name'], 60), columns: columns, rows: rows!(raw['rows'], columns.size), row_height: row_height!(raw['row_height'])}
+        end
+        raise ArgumentError, 'Bảng chưa có dòng nào. Hãy chọn group hoặc component trong SketchUp.' unless sheets.any? { |sheet| sheet[:rows].any? { |row| row[:kind] == 'row' } }
         labels = LABEL_KEYS.each_with_object({}) { |key, hash| hash[key] = text!(payload.dig('labels', key), 60) }
         title = text!(payload['title'], 200)
         preset = text!(payload['preset'], 100)
         separator = payload['decimal_separator'] == '.' ? '.' : ','
         images = {}
-        image_columns = columns.each_index.select { |i| columns[i][:type] == 'image' }
-        rows.each do |row|
-          next if image_columns.empty? || !row[:pid]
-          image_columns.each do |i|
-            kind = columns[i][:image_kind]
-            key = image_key(row[:pid], kind)
-            images[key] = load_image(row[:pid], image_for, kind) unless images.key?(key)
-            row[:images][i] = images[key]
-            row[:image] ||= images[key] if kind == :full # tương thích: ảnh món của dòng
+        sheets.each do |sheet|
+          columns = sheet[:columns]
+          image_columns = columns.each_index.select { |i| columns[i][:type] == 'image' }
+          sheet[:rows].each do |row|
+            next if image_columns.empty? || !row[:pid]
+            image_columns.each do |i|
+              kind = columns[i][:image_kind]
+              key = image_key(row[:pid], kind)
+              images[key] = load_image(row[:pid], image_for, kind) unless images.key?(key)
+              row[:images][i] = images[key]
+              row[:image] ||= images[key] if kind == :full # tương thích: ảnh món của dòng
+            end
           end
         end
         meta = ["#{labels['model']}: #{model_name}", ("#{labels['preset']}: #{preset}" unless preset.empty?), "#{labels['date']}: #{Time.now.strftime('%d/%m/%Y')}"].compact.join('  ·  ')
-        {title: title, meta: meta, preset: preset, model: model_name, labels: labels, separator: separator, columns: columns, rows: rows,
-         images: images.compact, row_height: row_height!(payload['row_height'])}
+        {title: title, meta: meta, preset: preset, model: model_name, labels: labels, separator: separator, sheets: sheets, columns: sheets.first[:columns], rows: sheets.first[:rows],
+         images: images.compact, row_height: sheets.first[:row_height]}
       end
 
       # Độ cao hàng người dùng đã chỉnh trên màn hình; nil = chưa chỉnh (giữ cách xuất mặc định).
@@ -153,45 +165,43 @@ module VGD
       # Kéo mép tiêu đề cột để chia lại độ rộng: cột bên trái rộng thêm bao nhiêu thì cột bên phải hẹp đi bấy nhiêu (tổng giữ 100%).
       RESIZE_SCRIPT = <<~JS.freeze
         (function(){
-          var table=document.querySelector('table'),cols=[].slice.call(table.querySelectorAll('col'));
-          var initial=cols.map(function(c){return parseFloat(c.style.width);});
-          [].slice.call(table.querySelectorAll('.rz')).forEach(function(handle,i){
-            handle.addEventListener('mousedown',function(e){
-              e.preventDefault();
-              var startX=e.clientX,total=table.getBoundingClientRect().width,a=parseFloat(cols[i].style.width),b=parseFloat(cols[i+1].style.width),min=3;
-              function move(ev){var d=(ev.clientX-startX)/total*100;d=Math.max(min-a,Math.min(b-min,d));cols[i].style.width=(a+d)+'%';cols[i+1].style.width=(b-d)+'%';}
-              function up(){document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);}
-              document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+          var tables=[].slice.call(document.querySelectorAll('table.sheet-table')),resets=[];
+          tables.forEach(function(table){
+            var cols=[].slice.call(table.querySelectorAll('col'));
+            var initial=cols.map(function(c){return parseFloat(c.style.width);});
+            resets.push(function(){cols.forEach(function(c,i){c.style.width=initial[i]+'%';});});
+            [].slice.call(table.querySelectorAll('.rz')).forEach(function(handle,i){
+              handle.addEventListener('mousedown',function(e){
+                e.preventDefault();
+                var startX=e.clientX,total=table.getBoundingClientRect().width,a=parseFloat(cols[i].style.width),b=parseFloat(cols[i+1].style.width),min=3;
+                function move(ev){var d=(ev.clientX-startX)/total*100;d=Math.max(min-a,Math.min(b-min,d));cols[i].style.width=(a+d)+'%';cols[i+1].style.width=(b-d)+'%';}
+                function up(){document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);}
+                document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+              });
             });
           });
           var reset=document.getElementById('reset-cols');
-          if(reset)reset.addEventListener('click',function(){cols.forEach(function(c,i){c.style.width=initial[i]+'%';});});
+          if(reset)reset.addEventListener('click',function(){resets.forEach(function(fn){fn();});});
         })();
       JS
 
       # Hàng cao theo độ cao người dùng chỉnh trên màn hình, thu theo cùng tỉ lệ với độ rộng cột (cả bảng vừa bề ngang trang in), nên hình dáng giống trên màn hình.
-      def self.row_height_css(report)
-        return {image: '22mm', row: ''} unless report[:row_height]
-        total = column_weights(report[:columns]).sum
-        mm = (report[:row_height] * PAGE_WIDTH_MM / total).clamp(8.0, 120.0).round(1)
-        {image: "#{(mm - 2).round(1)}mm", row: "\n          tr.row td{height:#{mm}mm}"}
+      def self.row_height_css(sheet)
+        return nil unless sheet[:row_height]
+        total = column_weights(sheet[:columns]).sum
+        (sheet[:row_height] * PAGE_WIDTH_MM / total).clamp(8.0, 120.0).round(1)
       end
 
       # Trang HTML tự chứa (ảnh nhúng sẵn): mở bằng trình duyệt; người dùng tự bấm nút In rồi chọn Lưu thành PDF (trang không tự gọi hộp in).
       # Khổ A4 ngang, tiêu đề cột lặp lại mỗi trang, độ rộng cột chia lại được bằng cách kéo mép tiêu đề.
       def self.html(report)
-        percents = column_percents(report[:columns])
-        colgroup = percents.map { |percent| %(<col style="width:#{percent}%">) }.join
-        last = report[:columns].size - 1
-        row_css = row_height_css(report)
-        head = report[:columns].each_with_index.map do |c, i|
-          handle = i < last ? '<span class="rz" aria-hidden="true"></span>' : ''
-          "<th>#{CGI.escapeHTML(c[:label])}#{c[:unit].empty? ? '' : %(<span class="unit">#{CGI.escapeHTML(c[:unit])}</span>)}#{handle}</th>"
-        end.join
-        body = report[:rows].map do |row|
-          cells = report[:columns].each_with_index.map { |col, i| html_cell(report, row, col, i) }.join
-          %(<tr class="#{row[:kind]}">#{cells}</tr>)
-        end.join("\n")
+        sheets = report[:sheets]
+        sections = sheets.each_with_index.map { |sheet, index| html_sheet(report, sheet, index) }.join("\n")
+        overrides = sheets.each_with_index.filter_map do |sheet, index|
+          mm = row_height_css(sheet)
+          next unless mm
+          "#sheet#{index} td.img img{max-height:#{(mm - 2).round(1)}mm}\n          #sheet#{index} tr.row td{height:#{mm}mm}"
+        end.join("\n          ")
         <<~HTML
           <!doctype html>
           <html lang="vi"><head><meta charset="utf-8"><title>#{CGI.escapeHTML(report[:title])}</title>
@@ -214,7 +224,10 @@ module VGD
           td.num{text-align:right;font-variant-numeric:tabular-nums}
           td.ord{text-align:center}
           td.img{text-align:center;padding:2px}
-          td.img img{max-width:100%;max-height:#{row_css[:image]};display:block;margin:0 auto}#{row_css[:row]}
+          td.img img{max-width:100%;max-height:22mm;display:block;margin:0 auto}
+          #{overrides}
+          h2.sheet-title{font-size:12pt;margin:14px 0 6px}
+          section.sheet+section.sheet{page-break-before:always}
           td.link a{color:#0563c1;word-break:break-all}
           tr.group td{background:#f4eee6;font-weight:700}
           tr.total td{background:#e8dccb;font-weight:700;border-top:2px solid #222}
@@ -225,12 +238,28 @@ module VGD
           <div class="bar"><button type="button" onclick="window.print()">#{CGI.escapeHTML(report[:labels]['print'].empty? ? 'In / Lưu PDF' : report[:labels]['print'])}</button><button type="button" id="reset-cols">#{CGI.escapeHTML(report[:labels]['reset'].empty? ? 'Đặt lại độ rộng cột' : report[:labels]['reset'])}</button><span class="hint">#{CGI.escapeHTML(report[:labels]['hint'].empty? ? 'Kéo mép tiêu đề cột để chỉnh độ rộng.' : report[:labels]['hint'])}</span></div>
           <h1>#{CGI.escapeHTML(report[:title])}</h1>
           <p class="meta">#{CGI.escapeHTML(report[:meta])}</p>
-          <table><colgroup>#{colgroup}</colgroup><thead><tr>#{head}</tr></thead><tbody>
-          #{body}
-          </tbody></table>
+          #{sections}
           <script>#{RESIZE_SCRIPT}</script>
           </body></html>
         HTML
+      end
+
+      # Một sheet của trang in: tiêu đề sheet (khi có nhiều sheet) và bảng có tiêu đề cột, thân bảng riêng.
+      def self.html_sheet(report, sheet, index)
+        columns = sheet[:columns]
+        percents = column_percents(columns)
+        colgroup = percents.map { |percent| %(<col style="width:#{percent}%">) }.join
+        last = columns.size - 1
+        head = columns.each_with_index.map do |c, i|
+          handle = i < last ? '<span class="rz" aria-hidden="true"></span>' : ''
+          "<th>#{CGI.escapeHTML(c[:label])}#{c[:unit].empty? ? '' : %(<span class="unit">#{CGI.escapeHTML(c[:unit])}</span>)}#{handle}</th>"
+        end.join
+        body = sheet[:rows].map do |row|
+          cells = columns.each_with_index.map { |col, i| html_cell(report, row, col, i) }.join
+          %(<tr class="#{row[:kind]}">#{cells}</tr>)
+        end.join("\n")
+        title = report[:sheets].size > 1 ? %(<h2 class="sheet-title">#{CGI.escapeHTML(sheet[:name])}</h2>) : ''
+        %(<section class="sheet" id="sheet#{index}">#{title}<table class="sheet-table"><colgroup>#{colgroup}</colgroup><thead><tr>#{head}</tr></thead><tbody>\n#{body}\n</tbody></table></section>)
       end
 
       # Ghi trang HTML vào thư mục tạm (xóa các trang cũ của plugin quá 2 ngày) và trả về đường dẫn.

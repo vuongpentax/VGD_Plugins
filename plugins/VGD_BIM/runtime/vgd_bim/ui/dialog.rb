@@ -965,23 +965,24 @@ module VGD
           emit('presets', Table.presets)
           emit('message', {text: "Đã nhập #{imported.size} preset."})
         end
-        # Xuất bảng đang hiện, đúng như trên màn hình: payload['format'] là 'xlsx' (file Excel có ảnh) hoặc 'pdf' (trang báo cáo mở bằng
+        # Xuất bảng đúng như trên màn hình (một sheet đang hiện, hoặc mọi sheet nếu payload có 'sheets'): payload['format'] là 'xlsx' (file Excel có ảnh) hoặc 'pdf' (trang báo cáo mở bằng
         # trình duyệt để In > Lưu PDF). Cấu trúc payload xem TableReport.
         def table_export(payload)
           raise 'Dữ liệu bảng không hợp lệ.' unless payload.is_a?(Hash)
           format = payload['format']
           raise 'Định dạng xuất không hợp lệ.' unless %w[xlsx pdf].include?(format)
           report = TableReport.build(payload, model_name, ->(pid, kind = :full) { table_image(pid, kind) })
-          count = report[:rows].count { |row| row[:kind] == 'row' }
+          count = report[:sheets].sum { |sheet| sheet[:rows].count { |row| row[:kind] == 'row' } }
+          sheets_note = report[:sheets].size > 1 ? " trong #{report[:sheets].size} sheet" : ''
           if format == 'pdf'
             ::UI.openURL(TableReport.file_url(TableReport.write_html(report)))
-            return emit('message', {text: "Đã tạo trang báo cáo #{count} dòng và mở trong trình duyệt. Khi cần in, bấm nút In / Lưu PDF trên trang rồi chọn Lưu thành PDF."})
+            return emit('message', {text: "Đã tạo trang báo cáo #{count} dòng#{sheets_note} và mở trong trình duyệt. Khi cần in, bấm nút In / Lưu PDF trên trang rồi chọn Lưu thành PDF."})
           end
           path = ::UI.savepanel('Xuất bảng khối lượng ra Excel', '', 'VGD_Bang_khoi_luong.xlsx')
           return unless path
           path += '.xlsx' unless File.extname(path).downcase == '.xlsx'
           Xlsx.write(path, report)
-          emit('message', {text: "Đã xuất #{count} dòng#{report[:images].empty? ? '' : " và #{report[:images].size} ảnh"} ra Excel: #{path}"})
+          emit('message', {text: "Đã xuất #{count} dòng#{sheets_note}#{report[:images].empty? ? '' : " và #{report[:images].size} ảnh"} ra Excel: #{path}"})
         end
         def model_name
           title = @model.title.to_s.strip
