@@ -1132,22 +1132,25 @@ function roomsPanel(){
     const hasPlugin=!!(tableState.data.bridge&&tableState.data.bridge.room_volume);
     const build=button(room.has_volume?'Dựng lại khối':'Dựng khối',()=>call('table_room_build',JSON.stringify({id:room.id})));build.className='rm-build';
     build.disabled=!hasPlugin;build.title=hasPlugin?'Dựng (hoặc dựng lại) khối 3D của phòng bằng plugin VGD Room: một khối trên tag VGD_ROOMS, một bước hoàn tác.':'Cần cài plugin VGD Room (qua VGD Center) để dựng khối phòng.';
-    box.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường ${m.wall_area} m² · Trần ${m.ceiling_area} m²`,'muted rm-metrics'),build);
+    box.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường ${m.wall_area} m² · Trần ${m.ceiling_area} m²`+(room.holes&&room.holes.length?` · ${room.holes.length} lỗ (cột, hộp kỹ thuật)`:''),'muted rm-metrics'),build);
     p.append(box);
   });
-  if(!rooms.length)p.append(node('p','Chưa có phòng nào. Chọn một mặt sàn trong SketchUp rồi bấm Tạo phòng từ mặt đang chọn.','muted'));
-  const newName=node('input');newName.type='text';newName.placeholder='Tên phòng mới';newName.maxLength=60;newName.setAttribute('aria-label','Tên phòng mới');
+  if(!rooms.length)p.append(node('p','Chưa có phòng nào. Chọn một hoặc nhiều mặt sàn trong SketchUp rồi bấm Tạo phòng từ các mặt đang chọn.','muted'));
+  const newName=node('input');newName.type='text';newName.placeholder='Tên phòng mới (nhiều mặt: tiền tố, vd Phòng)';newName.maxLength=60;newName.setAttribute('aria-label','Tên phòng mới');
   const newNumber=node('input');newNumber.type='text';newNumber.placeholder='Mã';newNumber.maxLength=60;newNumber.setAttribute('aria-label','Mã phòng mới');
   const newLevel=node('select');newLevel.setAttribute('aria-label','Tầng của phòng mới');newLevel.append(new Option('(Không có tầng)',''));levels.forEach(l=>newLevel.append(new Option(l.name,l.id)));
   const create=node('div',undefined,'rm-new');create.append(newName,newNumber,newLevel);
-  const make=button('Tạo phòng từ mặt đang chọn',()=>call('table_room_from_selection',JSON.stringify({name:newName.value,number:newNumber.value,level:newLevel.value})),'primary');make.id='rm-make';
-  make.title='Đọc viền của mặt sàn (Face nằm ngang) đang chọn trong SketchUp và lưu thành phòng. Chỉ lưu dữ liệu, không dựng hình.';
+  const make=button('Tạo phòng từ các mặt đang chọn',()=>call('table_room_from_selection',JSON.stringify({name:newName.value,number:newNumber.value,level:newLevel.value})),'primary');make.id='rm-make';
+  make.title='Đọc viền (và các lỗ, vd cột) của các mặt sàn nằm ngang đang chọn trong SketchUp, mỗi mặt thành một phòng. Một mặt: tên và mã như đã nhập. Nhiều mặt: tên là tiền tố (Phòng 1, Phòng 2...), không đặt mã. Chỉ lưu dữ liệu, không dựng hình.';
   const picked=tableState.displayed.filter(r=>r.members.some(m=>tableState.sel.has(m)));
   const auto=button('Gán món vào phòng theo vị trí',()=>{
     if(!picked.length)throw Error('Hãy chọn các dòng cần gán phòng (Ctrl+A chọn hết các dòng đang hiện).');
     call('table_assign_rooms_auto',JSON.stringify({indexes:picked.flatMap(r=>r.members.filter(m=>tableState.sel.has(m)).slice(0,1))}));
   });auto.id='rm-auto';auto.title='Mỗi món nhận phòng chứa tâm đáy của nó (trong viền và trong khoảng cao của phòng). Chỉ là nhãn, không dời hình.';
-  const actions=node('div',undefined,'rename-actions');actions.append(make,auto,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
+  const hasPluginAll=!!(tableState.data.bridge&&tableState.data.bridge.room_volume);
+  const buildAll=button(`Dựng khối tất cả phòng${rooms.length?` (${rooms.length})`:''}`,()=>call('table_room_build_all',JSON.stringify({})));buildAll.id='rm-build-all';
+  buildAll.disabled=!hasPluginAll||!rooms.length;buildAll.title=hasPluginAll?'Dựng (hoặc dựng lại) khối 3D của mọi phòng bằng plugin VGD Room, một bước hoàn tác cho cả đợt.':'Cần cài plugin VGD Room (qua VGD Center) để dựng khối phòng.';
+  const actions=node('div',undefined,'rename-actions');actions.append(make,buildAll,auto,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
   p.append(create,node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán phòng theo vị trí; hoặc nhấp đúp ô Phòng để gán tay.','muted'),actions);
   return p;
 }

@@ -5,6 +5,7 @@
 - **Cài đặt và ảnh theo từng file SketchUp:** thư mục `<tên file>_VGD_BIM` nằm cạnh file SketchUp, chứa `settings.json` (cột, sheet, tag và từ khóa loại trừ, gợi ý nhập) và ảnh. Gửi file SketchUp kèm thư mục này là người nhận có đủ ảnh, cột và tag loại trừ. File mới bắt đầu từ mặc định (đường dẫn ảnh trống, cột và tag loại trừ mặc định), không lẫn với file khác. Sửa lỗi tag loại trừ của file này hiện sang file khác.
 - **Phải lưu file SketchUp trước khi chụp ảnh** (báo "Chưa lưu file SketchUp" nếu chưa lưu). Thư mục ảnh tự tạo khi chụp ảnh đầu tiên; ô Thư mục ảnh chỉ hiện đường dẫn.
 - **File cũ:** lần đầu mở, BIM hỏi một lần có chuyển ảnh và cài đặt về thư mục cạnh file không (ảnh cũ ở thư mục chung không bị xóa).
+- **Phòng nhiều mặt và phòng có lỗ:** chọn nhiều mặt sàn rồi tạo tất cả phòng một lần (tên theo tiền tố + số); cột và hộp kỹ thuật trong mặt sàn thành lỗ của phòng (diện tích, thể tích, chu vi tính đúng); nút **Dựng khối tất cả phòng** (một bước hoàn tác, cần VGD Room 0.1.0-beta.2 trở lên).
 - Chưa có: gợi ý ở tab Thông tin và hộp Đổi tên hàng loạt; chưa quét sẵn giá trị của đối tượng cũ trong model.
 
 Kiểm tra: tự động (test Ruby mới `dev/test_sheets.rb`, test giao diện mới `dev/test_ui_sheets.cjs`, các test cũ vẫn đạt). Chưa kiểm tra trong SketchUp thật: cần thử trên model có nhiều đối tượng (thời gian tính lại số đo khi chuyển sheet) và trên SketchUp 2022.
