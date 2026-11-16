@@ -198,3 +198,5 @@ Giai đoạn 2, tiến độ: Dim đã dựng 4 chương (tạo Smart Dim; chỉ
 Giai đoạn 2, tiến độ: Scenes đã dựng 3 chương (tạo bộ view; mặt cắt và khung hình; xuất ảnh hoặc PDF), chờ bạn xem. Giai đoạn 2 (12 chương) hoàn tất; kế tiếp giai đoạn 3: BIM, Cabinet, Cabinet Draw.
 
 Giai đoạn 3, tiến độ: BIM đã dựng 3 chương (bảng khối lượng; thông tin, quét và xuất báo cáo; phân loại và soạn tag), chờ bạn xem; kế tiếp Cabinet, rồi Cabinet Draw.
+
+Nhúng vào Center: đã thêm `guide_url` vào `shared/vgd-center/catalog.json` cho 6 plugin có hoạt ảnh (Dim, Library, Image Importer, Scenes, BIM, Reference). Cabinet và Cabinet Draw chưa có hoạt ảnh nên vẫn dùng trang chữ. Hiệu lực khi: (1) PR được merge vào `main` (catalog trên `main` có hiệu lực ngay), (2) Pages bật nguồn "GitHub Actions" và đã chạy, (3) người dùng có Center từ 1.2.6 trở lên (bản cũ bỏ qua `guide_url`). Trang chưa tải được thì Center tự dùng trang chữ như cũ.

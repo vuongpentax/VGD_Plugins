@@ -198,7 +198,7 @@ web_catalog = CENTER.send(:validate_catalog, 'schema_version' => 1, 'channel' =>
   extra.call('thu_web', true).merge('guide_url' => WEB.call('thu_web')),
   extra.call('thu_sai', true).merge('guide_url' => 'http://vuongpentax.github.io/VGD_Plugins/guides/thu_sai/'),
   extra.call('thu_chu', true).merge('guide_url' => WEB.call('khac')),
-  real['products'].find { |item| item['id'] == 'library' }
+  real['products'].find { |item| item['id'] == 'library' }.reject { |key, _| key == 'guide_url' } # catalog thật đã có guide_url; ở đây cần mục không khai báo
 ])
 CENTER.instance_variable_set(:@catalog, web_catalog)
 check 'guide_url hợp lệ của plugin được nhận', CENTER.web_guide_url('dim') == WEB.call('dim')
