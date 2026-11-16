@@ -111,6 +111,8 @@ reset = lambda do
 end
 ok = ->(body) { Sketchup::Http::Request::Response.new(200, body) }
 
+# Các phần A–D kiểm hành vi trang chữ: dùng catalog không có guide_url (catalog thật đã khai báo guide_url cho dim)
+CENTER.instance_variable_set(:@catalog, CENTER.send(:validate_catalog, JSON.parse(File.read(File.join(__dir__, '..', '..', '..', 'shared', 'vgd-center', 'catalog.json'), encoding: 'UTF-8')).tap { |c| c['products'].each { |p| p.delete('guide_url') } }))
 reset.call
 HTTP.responses[URL.call('dim')] = ok.call(GOOD)
 CENTER.open_guide('dim')
