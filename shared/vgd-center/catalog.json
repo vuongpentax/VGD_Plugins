@@ -10,6 +10,7 @@
       "release_channel": "stable",
       "description": "Đo Dim thủ công và Smart Dim trong Boundary, có vùng chi tiết riêng.",
       "icon": "dim",
+      "guide_url": "https://vuongpentax.github.io/VGD_Plugins/guides/dim/",
       "minimum_sketchup": "22.0.0",
       "download": {
         "filename": "VGD_Dim_v4.0.2.rbz",
@@ -103,6 +104,7 @@
       "release_channel": "stable",
       "description": "Tìm kiếm và quản lý thư viện vật liệu, model VGD.",
       "icon": "library",
+      "guide_url": "https://vuongpentax.github.io/VGD_Plugins/guides/library/",
       "minimum_sketchup": "22.0.0",
       "download": {
         "filename": "VGD_Library_v1.2.1.rbz",
@@ -146,6 +148,7 @@
       "release_channel": "stable",
       "description": "Nhập ảnh vào SketchUp dưới dạng component, mặt phẳng hoặc vật liệu.",
       "icon": "image_importer",
+      "guide_url": "https://vuongpentax.github.io/VGD_Plugins/guides/image_importer/",
       "minimum_sketchup": "22.0.0",
       "download": {
         "filename": "VGD_Image_Importer_v1.1.2.rbz",
@@ -196,6 +199,7 @@
       "release_channel": "stable",
       "description": "Quản lý góc nhìn, mặt cắt và xuất hồ sơ.",
       "icon": "scenes",
+      "guide_url": "https://vuongpentax.github.io/VGD_Plugins/guides/scenes/",
       "minimum_sketchup": "22.0.0",
       "download": {
         "filename": "VGD_Scenes_v1.6.1.rbz",
@@ -240,6 +244,7 @@
       "description": "Bảng khối lượng, ảnh món, đổi tên và quản lý tag cho dữ liệu mô hình nội thất.",
       "guide": true,
       "icon": "bim",
+      "guide_url": "https://vuongpentax.github.io/VGD_Plugins/guides/bim/",
       "minimum_sketchup": "22.0.0",
       "download": {
         "filename": "VGD_BIM_v1.1.0.rbz",
@@ -276,6 +281,7 @@
       "release_channel": "stable",
       "description": "Ghim và chỉnh sửa ảnh tham chiếu ngay trên khung nhìn SketchUp.",
       "icon": "reference",
+      "guide_url": "https://vuongpentax.github.io/VGD_Plugins/guides/reference/",
       "minimum_sketchup": "23.0.0",
       "download": {
         "filename": "VGD_Reference_v1.0.3.rbz",

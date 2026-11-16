@@ -1,0 +1,58 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Library · Đặt model và lưu mẫu</title>
+<link rel="stylesheet" href="../common.css"><style>
+#center{left:80px;top:20px;width:1120px;height:682px}#center iframe{width:1118px;height:650px}
+/* Hộp chọn thư mục gốc của Windows (không phải HTML của plugin) */
+#sv{position:absolute;left:350px;top:190px;width:580px;background:#fff;color:#000;border:1px solid #7a7a7a;box-shadow:0 16px 50px #000b;font-family:'Segoe UI',M,sans-serif;opacity:0;font-size:13px;z-index:6}
+#sv .mt{height:30px;display:flex;align-items:center;padding:0 10px;font-size:12px;border-bottom:1px solid #e5e5e5}
+#sv .bd2{padding:14px 18px;display:grid;gap:8px}#sv .fl{height:26px;border:1px solid #adadad;display:flex;align-items:center;padding:0 8px}
+#sv .ls div{padding:5px 8px}#sv .ls .sel{background:#cce8ff}
+#sv .mf{background:#f0f0f0;padding:12px 14px;display:flex;justify-content:flex-end;gap:8px}
+#sv .mbtn{min-width:104px;height:28px;border:1px solid #adadad;background:#e1e1e1;display:grid;place-items:center;font-size:12px}
+#sb{position:absolute;left:80px;top:698px;width:1120px;height:22px;background:#202020;color:#e6e6e6;font:12px "Segoe UI",sans-serif;padding:3px 10px;border-top:1px solid #444;opacity:0;z-index:7}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD_Library</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Library"></iframe></div>
+ <div id="spot"></div>
+ <div id="sv"><div class="mt">Lưu model vào thư viện</div><div class="bd2"><div class="fl">C:\Model\NoiThat</div><div class="fl">Sofa_3_cho.skp</div></div><div class="mf"><div class="mbtn" id="svOk">Lưu</div><div class="mbtn">Hủy</div></div></div>
+ <div id="sb">VGD: bấm để đặt model; ←/→ xoay 90°; Esc thoát.</div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Mở “Thư viện model” rồi chọn file SKP</div>
+<div class="cap big wrap" id="c2">Bấm “Đưa model vào bản vẽ” rồi đặt bằng chuột. Mũi tên ←/→ xoay 90°, Esc để hủy.</div>
+<div class="cap" id="c3"><span>Bước 2</span>Lưu Group/Component đã chọn thành SKP vào thư viện</div>
+<div class="cap big wrap" id="c4">Cũng có thể lưu vật liệu từ khay Materials thành SKM vào nguồn thư viện</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="lib.js"></script><script>
+const DUR=25;let M,Z1,TNav,TCard,TApply,TSave,TSvOk,rSave,rIn;
+window.CENTER_READY=mountLibrary('cf');
+const sidebar=()=>W.document.querySelector('.sidebar');
+function S(t){return{loaded:'both',view:t<2.6?'library':'models',select:t>=5.0?'Sofa 3 chỗ':null,
+ status:t<18.8?['',false]:['Đã lưu SKP và thumbnail. Bấm Làm mới để cập nhật thư viện.',false]}}
+async function init(){
+ await libApply(S(1));TNav=aim(RC('.nav[data-view=models]'),.5);
+ await libApply(S(8));rIn=RC('.inspector');TApply=aim(RC('#apply'),.6);
+ const card=[...W.document.querySelectorAll('#grid .card')].find(c=>c.querySelector('h3').textContent==='Sofa 3 chỗ');TCard=aim(RC(card.querySelector('.swatch')),.5);
+ sidebar().scrollTop=9999;const sb=W.document.querySelector('[data-action=save_model]');TSave=aim(RC(sb),.5);rSave=RC(sb);sidebar().scrollTop=0;
+ const sv=$('sv');sv.style.opacity=1;TSvOk=aim(R($('svOk')),.6);sv.style.opacity=0;
+ Z1=fitZoom(rIn,1.6,860,380);
+ M=[{a:.8,b:2.2,f:{x:1010,y:690},t:TNav,arc:-60},{a:3.6,b:4.8,f:TNav,t:TCard,arc:30},{a:7.2,b:8.6,f:TCard,t:TApply,arc:-20},{a:11.0,b:12.0,f:TApply,t:{x:600,y:520},arc:20},
+    {a:13.4,b:15.4,f:{x:600,y:520},t:TSave,arc:-40},{a:16.4,b:17.8,f:TSave,t:TSvOk,arc:30},{a:19.4,b:20.4,f:TSvOk,t:{x:600,y:520},arc:20}];
+ await render(0)}
+async function render(t){
+ const c=mix({s:1,x:0,y:0},Z1,E(P(t,6.0,6.8))*(1-E(P(t,12.4,13.0))));setWorld(c);
+ sidebar().scrollTop=t>=13.0?9999:0;
+ await libApply(S(t));
+ hover('.nav[data-view=models]',t>=2.0&&t<2.7);hover('#apply',t>=8.6&&t<9.2);hover('[data-action=save_model]',t>=15.4&&t<16.0);
+ const bA=W.document.getElementById('apply');bA.style.transform=`scale(${1-.06*pulse(t,8.85,9.2)})`;
+ $('sb').style.opacity=E(P(t,9.2,9.5))*(1-E(P(t,12.2,12.5)));
+ $('sv').style.opacity=E(P(t,16.0,16.3))*(1-E(P(t,18.2,18.5)));$('svOk').style.borderColor=t>17.6&&t<18.3?'#0078d7':'#adadad';
+ const sp=$('spot');let rr=null,o=0;if(t>=13.4&&t<15.8){rr=rSave;o=E(P(t,13.4,13.9))*(1-E(P(t,15.4,15.8)))}
+ if(rr)sp.style.cssText+=`;opacity:${o};left:${rr.x-4}px;top:${rr.y-4}px;width:${rr.w+8}px;height:${rr.h+8}px`;else sp.style.opacity=0;
+ const pr=[[2.05,2.4],[4.65,5.0],[8.85,9.2],[15.65,16.0],[17.65,18.0]];
+ drawCursor(c,pos(M,t),t,.6,24.5,pr.some(([a,b])=>pulse(t,a,b))?1:0,Math.max(...pr.map(([a,b])=>P(t,a,a+.45)*(t>a-.2&&t<b+1.2?1:0))));
+ cap($('c1'),t,.9,5.2,0);cap($('c2'),t,6.2,12.4,0);cap($('c3'),t,13.4,18.8,0);cap($('c4'),t,19.2,24.2,0);
+ $('c1').style.top=$('c3').style.top='640px';$('c2').style.top=$('c4').style.top='38px';
+ $('stage').style.opacity=1-E(P(t,24.7,25))}
+start();
+</script></body></html>

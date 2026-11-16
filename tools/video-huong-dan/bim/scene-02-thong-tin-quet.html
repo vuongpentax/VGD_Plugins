@@ -1,0 +1,56 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>BIM · Thông tin và quét</title>
+<link rel="stylesheet" href="../common.css"><style>
+#center{left:200px;top:10px;width:880px;height:700px}#center iframe{width:878px;height:668px}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD_BIM</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD_BIM"></iframe></div>
+ <div id="spot"></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Chọn Group/Component trong SketchUp rồi mở tab Thông tin</div>
+<div class="cap" id="c2"><span>Bước 2</span>Tích ô bên trái trường muốn sửa, rồi nhập giá trị</div>
+<div class="cap" id="c3"><span>Bước 3</span>Bấm “Áp dụng thông tin”; trường không tích được giữ nguyên</div>
+<div class="cap" id="c4"><span>Bước 4</span>Tab Quét &amp; xuất: chọn phạm vi rồi bấm “Quét ngay”</div>
+<div class="cap" id="c5">Sau khi quét, chọn loại báo cáo cần xuất (CSV mở được bằng Excel)</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="bim.js"></script><script>
+const DUR=25;let M,T={},rExp;
+window.CENTER_READY=mountBim('cf','table');
+const SCAN={summary:{raw_faces:210},components:[{definition_name:'Cabinet',names:['Tủ bếp dưới','Tủ bếp trên'],instances:2,tags:['Tủ bếp'],material:'Gỗ sồi',dimensions:{width:1200,depth:600,height:800},dimension_variants:1},{definition_name:'Chair',names:['Ghế ăn'],instances:4,tags:['Bàn ghế'],material:'Vải',dimensions:{width:450,depth:450,height:900},dimension_variants:1}],materials:[{material:'Gỗ sồi',area:6.42,back_area:1.2,faces:96},{material:'Vải',area:3.1,back_area:0,faces:58}],export:{objects:6,faces:210}};
+const mainEl=()=>W.document.querySelector('main');let SCR=0;
+let sig='';const q=s=>W.document.querySelector(s);
+const SEQ=t=>t<1.8?'table':t<14.6?'info':'scan';
+async function view(t){
+ const ph=t<1.8?'table':t<14.6?'info':t<17.4?'scanwait':t<18.2?'scanning':'scanned';
+ const tk=t>=5.2,txt='Bếp'.slice(0,t<6.4?0:t<6.9?1:t<7.4?2:3),applied=t>=11.4&&t<14.6;
+ const k=[ph,tk,txt,applied].join('|');if(k===sig)return;sig=k;
+ if(ph==='table')bimGo('table','table',bimTable());
+ else if(ph==='info'){bimGo('information','information',BIM_INFO());await sleep(150);
+  const c=q('#update-zone');if(c&&c.checked!==tk)c.click();const f=q('#field-zone');if(f){f.value=txt}
+  if(applied)W.VGD.receive('message',{text:'Đã cập nhật 2 đối tượng; bỏ qua 0 đối tượng bị khóa.'})}
+ else if(ph==='scanwait')bimGo('scan','scan_pending',{mode:'scan'});
+ else if(ph==='scanning'){bimGo('scan','scan_pending',{mode:'scan'});W.VGD.receive('progress',{count:120})}
+ else bimGo('scan','scan',SCAN);
+ await sleep(300)}
+async function init(){
+ T.tabI=aim(RC('[data-mode="information"]'),.4);T.tabS=aim(RC('[data-mode="scan"]'),.4);
+ bimGo('information','information',BIM_INFO());await sleep(200);
+ T.tick=aim(RC('#update-zone'),.5);T.field=aim(RC('#field-zone'),.5);T.apply=aim(RC(bimBtn('Áp dụng thông tin')),.6);{const a=RC('#update-zone'),b=RC('#field-zone');T.rZone={x:a.x-10,y:b.y-26,w:b.x+b.w-a.x+22,h:b.h+36}}
+ bimGo('scan','scan_pending',{mode:'scan'});await sleep(200);T.go=aim(RC('#scan-start'),.5);
+ bimGo('scan','scan',SCAN);await sleep(200);mainEl().scrollTop=99999;SCR=mainEl().scrollTop;{const a=RC('.export-list');rExp={x:a.x-8,y:a.y-8,w:a.w+16,h:a.h+16}}mainEl().scrollTop=0;bimGo('table','table',bimTable());
+ M=[{a:.6,b:1.6,f:{x:1060,y:690},t:T.tabI,arc:-40},{a:4.0,b:5.0,f:T.tabI,t:T.tick,arc:25},{a:5.8,b:6.4,f:T.tick,t:T.field,arc:20},{a:9.6,b:10.8,f:T.field,t:T.apply,arc:25},
+    {a:12.8,b:14.4,f:T.apply,t:T.tabS,arc:-30},{a:15.4,b:16.8,f:T.tabS,t:T.go,arc:25},{a:20.4,b:21.4,f:T.go,t:{x:640,y:560},arc:20},{a:23.6,b:24.6,f:{x:640,y:560},t:{x:150,y:540},arc:30}];
+ await render(0)}
+async function render(t){
+ setWorld({s:1,x:0,y:0});await view(t);if(t>=18.4)mainEl().scrollTop=SCR*E(P(t,18.6,19.4));
+ const sp=$('spot');let rr=null,o=0;
+ if(t>=3.8&&t<9.4){rr=T.rZone;o=E(P(t,4.0,4.5))*(1-E(P(t,8.8,9.4)))}else if(t>=19.2&&t<24.2&&rExp){rr=rExp;o=E(P(t,19.4,19.9))*(1-E(P(t,23.6,24.2)))}
+ if(rr)sp.style.cssText+=`;opacity:${o};left:${rr.x}px;top:${rr.y}px;width:${rr.w}px;height:${rr.h}px`;else sp.style.opacity=0;
+ const pr=[[1.6,1.9],[5.0,5.3],[10.8,11.1],[14.4,14.7],[16.8,17.1]];
+ drawCursor({s:1,x:0,y:0},pos(M,t),t,.6,24.5,pr.some(([a,b])=>pulse(t,a,b))?1:0,Math.max(...pr.map(([a,b])=>P(t,a,a+.4)*(t>a-.2&&t<b+1.0?1:0))));
+ cap($('c1'),t,.6,3.6,0);cap($('c2'),t,3.8,9.4,0);cap($('c3'),t,9.6,13.8,0);cap($('c4'),t,14.4,19.0,0);cap($('c5'),t,19.4,24.2,0);
+ for(const k of [1,2,3,4,5])$('c'+k).style.top='38px';
+ $('stage').style.opacity=1-E(P(t,24.7,25))}
+start();
+</script></body></html>

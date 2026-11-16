@@ -235,7 +235,7 @@
         <section class="page active" id="page-overview" data-view="overview">
           <div class="page-head">
             <div><p class="eyebrow">WORKSPACE · VGD</p><h1>Tổng quan</h1><p class="page-intro">Cài plugin VGD còn thiếu, cập nhật bản đã cài và quản lý mọi plugin ngay trong SketchUp.</p></div>
-            <div class="button-row"><button class="btn primary" id="installAllBtn" data-action="install_all_plugins"><svg><use href="#i-box"/></svg><span>Cài tất cả</span></button><button class="btn" data-page="manager"><svg><use href="#i-manage"/></svg><span>Quản lý plugin</span></button><button class="btn" id="syncBtn"><svg><use href="#i-sync"/></svg><span>Kiểm tra cập nhật</span></button></div>
+            <div class="button-row"><button class="btn primary" id="installAllBtn" data-action="install_all_plugins"><svg><use href="#i-box"/></svg><span>Cài tất cả</span></button><button class="btn" data-page="manager"><svg><use href="#i-manage"/></svg><span>Quản lý plugin</span></button><button class="btn" id="syncBtn"><svg><use href="#i-sync"/></svg><span>Kiểm tra cập nhật</span></button><button class="btn" data-action="open_guide" data-id="center"><svg><use href="#i-book"/></svg><span>Hướng dẫn</span></button></div>
           </div>
           <div class="welcome-grid">
             <section class="card welcome">
@@ -382,7 +382,7 @@
       let activePluginId = null;
       let activeLanguage = 'vi';
       const originalTextNodes = new WeakMap();
-      const englishText = {
+      const englishText = {'Hướng dẫn':'Guide',
         'Ủng hộ VGD':'Support VGD',
         'Trung tâm plugin SketchUp':'SketchUp Plugin Center','Tổng quan':'Overview','Kho plugin':'Plugin catalog','Quản lý':'Manage','Cài đặt':'Settings',
         'Quản lý mọi plugin':'Manage every plugin','Quản lý plugin':'Manage plugins','MỌI PLUGIN TRONG SKETCHUP':'ALL SKETCHUP PLUGINS','Mở thư mục Plugins':'Open Plugins folder','Mở thư mục đã tắt':'Open disabled folder','Đang bật':'Enabled','Đã tắt':'Disabled','Bộ plugin':'Plugin sets','Thư mục Plugins đang quản lý':'Managed Plugins folder','Bật/tắt':'Enable/disable','Chuyển plugin':'Migrate','Chọn hết đang hiện':'Select all shown','Bỏ chọn hết':'Clear selection','Lưu mục đã chọn thành bộ':'Save selection as a set','Xuất các bộ ra file':'Export sets to file','Nhập bộ từ file':'Import sets from file','Từ bản':'From version','Sang bản':'To version','Ghi đè nếu plugin đã tồn tại ở bản đích':'Overwrite if the plugin already exists in the destination version','Xuất gói .rbz tổng':'Export bundle .rbz',

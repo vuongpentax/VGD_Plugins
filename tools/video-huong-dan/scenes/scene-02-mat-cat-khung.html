@@ -1,0 +1,63 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Scenes · Mặt cắt và khung hình</title>
+<link rel="stylesheet" href="../common.css"><style>
+#center{left:240px;top:10px;width:800px;height:700px}#center iframe{width:798px;height:668px}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD Scenes</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Scenes"></iframe></div>
+ <div id="spot"></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Mở tab Mặt cắt, chọn đối tượng trong SketchUp</div>
+<div class="cap" id="c2"><span>Bước 2</span>Chọn trục cắt (X rộng, Y sâu, Z cao) và vị trí cắt theo %</div>
+<div class="cap" id="c3"><span>Bước 3</span>Bấm “Xem trước” để thấy mặt cắt trực tiếp trong model</div>
+<div class="cap" id="c4"><span>Bước 4</span>Bấm “Tắt xem trước” khi không cần nữa</div>
+<div class="cap" id="c5"><span>Bước 5</span>Tab Canh view: chọn scene, tỷ lệ khung và kích thước ảnh</div>
+<div class="cap" id="c6">Bật khung để canh bố cục đúng tỷ lệ ảnh sẽ xuất</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="sc.js"></script><script>
+const DUR=25,SA=370,SB=160;let M,rSec,rFrame,T={};
+const NAMES=['ISO','TOP','FRONT','RIGHT'];
+const sc4=()=>NAMES.map((n,i)=>scScene(i+1,'TuBep_'+n,i===2));
+window.CENTER_READY=mountScenes('cf',{scenes:sc4()});
+let sig='';function apply(key,fn){if(sig!==key){sig=key;fn()}}
+const mainEl=()=>W.document.querySelector('main');
+async function init(){
+ T.tabS=aim(RC('[data-tab="sections"]'),.4);T.tabC=aim(RC('[data-tab="compose"]'),.4);
+ scTab('sections');mainEl().scrollTop=SA;
+ T.axis=aim(RC('#section_axis'),.6);T.pct=aim(RC('#section_percent'),.5);T.prev=aim(RC('#sectionPreview'),.5);T.cancel=aim(RC('#sectionCancel'),.5);
+ {const a=RC('#section_axis'),b=RC('#sectionSlider'),c=RC('#setCard');rSec={x:c.x+4,y:a.y-12,w:c.w-8,h:b.y+b.h-a.y+26}}
+ scTab('compose');mainEl().scrollTop=SB;
+ T.ratio=aim(RC('#ratio'),.6);T.wid=aim(RC('#width'),.5);T.frame=aim(RC('#toggleFrame'),.5);
+ {const a=RC('#ratio'),b=RC('#margin'),c=RC('#width');rFrame={x:a.x-12,y:a.y-24,w:620,h:b.y+b.h-a.y+78}}
+ mainEl().scrollTop=0;scTab('views');
+ M=[{a:.6,b:1.7,f:{x:1010,y:690},t:T.tabS,arc:-60},{a:4.2,b:5.0,f:T.tabS,t:T.axis,arc:25},{a:6.4,b:7.2,f:T.axis,t:T.pct,arc:20},{a:9.8,b:11.0,f:T.pct,t:T.prev,arc:25},{a:13.6,b:14.8,f:T.prev,t:T.cancel,arc:20},
+    {a:16.0,b:17.4,f:T.cancel,t:T.tabC,arc:-40},{a:18.6,b:19.6,f:T.tabC,t:T.ratio,arc:25},{a:21.0,b:21.8,f:T.ratio,t:T.wid,arc:20},{a:22.6,b:23.6,f:T.wid,t:T.frame,arc:20},{a:24.2,b:24.9,f:T.frame,t:{x:180,y:540},arc:30}];
+ await render(0)}
+async function render(t){
+ setWorld({s:1,x:0,y:0});
+ const tab=t<1.8?'views':t<17.6?'sections':'compose';
+ const pct=t<7.6?50:t<8.4?Math.round(50-15*E(P(t,7.6,8.4))):35;
+ const axis=t>=5.0?'X':'Y';
+ const prevOn=t>=11.0&&t<15.2;
+ const frameOn=t>=23.6;
+ const msg=t<11.0?'':t<15.2?'p':t<17.6?'c':'';
+ apply(tab+axis+pct+msg+frameOn,()=>{
+  W.VGDScenes.receive('state',scState({scenes:sc4(),frame_active:frameOn}));
+  scTab(tab);
+  if(tab==='sections'){scEl('section_axis').value=axis;scEl('section_percent').value=pct;scEl('sectionSlider').value=pct;
+   if(msg==='p')W.VGDScenes.receive('preview',{success:true,message:'Mặt cắt: 35% · xem trước, chưa tạo scene.'});
+   if(msg==='c')W.VGDScenes.receive('preview',{success:true,message:'Đã tắt xem trước mặt cắt.'})}
+  if(tab==='compose'){if(frameOn)W.VGDScenes.receive('preview',{success:true,message:'Đã xem trước trên view hiện tại. Bấm Lưu view để lưu camera.'});else scEl('status').textContent='\u00a0';scEl('ratio').value=t>=20.8?'4:3':'16:9';scEl('ratioInput').value=t>=20.8?'4:3':'16:9';scEl('width').value=t>=20.8?1440:1920;scEl('height').value=1080}});
+ mainEl().scrollTop=tab==='sections'?SA*E(P(t,2.4,3.4)):tab==='compose'?SB*E(P(t,17.8,18.6)):0;
+ for(const [id,a,b] of [['sectionPreview',11.0,12.0],['sectionCancel',15.0,16.0]]){const e=scEl(id);if(e){e.classList.toggle('fx-hover',t>=a-.2&&t<b);e.style.transform=`scale(${1-.05*pulse(t,a,a+.3)})`}}
+ const sp=$('spot');let rr=null,o=0;
+ if(t>=3.8&&t<9.4){rr=rSec;o=E(P(t,4.0,4.5))*(1-E(P(t,8.8,9.4)))}else if(t>=19.0&&t<22.6){rr=rFrame;o=E(P(t,19.2,19.7))*(1-E(P(t,22.0,22.6)))}
+ if(rr)sp.style.cssText+=`;opacity:${o};left:${rr.x}px;top:${rr.y}px;width:${rr.w}px;height:${rr.h}px`;else sp.style.opacity=0;
+ const pr=[[1.7,2.0],[5.0,5.3],[7.2,7.5],[11.0,11.3],[15.0,15.3],[17.4,17.7],[20.8,21.1],[23.6,23.9]];
+ drawCursor({s:1,x:0,y:0},pos(M,t),t,.6,24.5,pr.some(([a,b])=>pulse(t,a,b))?1:0,Math.max(...pr.map(([a,b])=>P(t,a,a+.4)*(t>a-.2&&t<b+1.0?1:0))));
+ cap($('c1'),t,.6,3.0,0);cap($('c2'),t,3.4,9.2,0);cap($('c3'),t,9.6,13.4,0);cap($('c4'),t,13.8,17.0,0);cap($('c5'),t,17.8,22.8,0);cap($('c6'),t,23.0,24.4,0);
+ for(const k of [1,2,3,4,5,6])$('c'+k).style.top='38px';
+ $('stage').style.opacity=1-E(P(t,24.7,25))}
+start();
+</script></body></html>

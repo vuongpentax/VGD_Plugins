@@ -1,0 +1,51 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Library · Công cụ map</title>
+<link rel="stylesheet" href="../common.css"><style>
+#center{left:80px;top:20px;width:1120px;height:682px}#center iframe{width:1118px;height:650px}
+/* Hộp chọn thư mục gốc của Windows (không phải HTML của plugin) */
+#sv{position:absolute;left:350px;top:190px;width:580px;background:#fff;color:#000;border:1px solid #7a7a7a;box-shadow:0 16px 50px #000b;font-family:'Segoe UI',M,sans-serif;opacity:0;font-size:13px;z-index:6}
+#sv .mt{height:30px;display:flex;align-items:center;padding:0 10px;font-size:12px;border-bottom:1px solid #e5e5e5}
+#sv .bd2{padding:14px 18px;display:grid;gap:8px}#sv .fl{height:26px;border:1px solid #adadad;display:flex;align-items:center;padding:0 8px}
+#sv .ls div{padding:5px 8px}#sv .ls .sel{background:#cce8ff}
+#sv .mf{background:#f0f0f0;padding:12px 14px;display:flex;justify-content:flex-end;gap:8px}
+#sv .mbtn{min-width:104px;height:28px;border:1px solid #adadad;background:#e1e1e1;display:grid;place-items:center;font-size:12px}
+#sb{position:absolute;left:80px;top:698px;width:1120px;height:22px;background:#202020;color:#e6e6e6;font:12px "Segoe UI",sans-serif;padding:3px 10px;border-top:1px solid #444;opacity:0;z-index:7}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD_Library</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Library"></iframe></div>
+ <div id="spot"></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Chọn mặt, group hoặc component cần chỉnh trong model</div>
+<div class="cap" id="c2"><b>Xoay 90°</b>&nbsp;Xoay vân trên các mặt được chọn</div>
+<div class="cap" id="c3"><b>Random đoạn vân</b>&nbsp;Đổi đoạn vân, giữ hướng vân</div>
+<div class="cap" id="c4"><b>AUTO SCALE</b>&nbsp;Fit một ô ảnh theo khung mặt, dọc cạnh dài nhất</div>
+<div class="cap" id="c5"><b>Phục hồi cỡ thật</b>&nbsp;Trả map về cỡ thật, hướng vân dọc cạnh dài nhất</div>
+<div class="cap" id="c6"><b>Xoay từng mặt</b>&nbsp;Bấm mặt trong group để xoay; Ctrl+bấm nhập góc</div>
+<div class="cap big wrap" id="c7">Đổi kích thước vật liệu có thể ảnh hưởng mọi mặt đang dùng vật liệu đó. SKM giữ kích thước gốc.</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="lib.js"></script><script>
+const DUR=26;let M,rSec,T={};
+window.CENTER_READY=mountLibrary('cf');
+const tb=text=>[...W.document.querySelectorAll('#toolsPanel button')].find(b=>b.textContent.replace(/\s+/g,' ').trim()===text);
+const STEPS=[['Xoay 90°','c2',5.4,8.2],['Random đoạn vân','c3',8.6,11.4],['AUTO SCALE','c4',11.8,14.6],['Phục hồi cỡ thật','c5',15.0,17.8],['Xoay từng mặt','c6',18.2,21.0]];
+async function init(){
+ await libApply({loaded:'mtl',view:'tools'});
+ rSec=RC(tb('AUTO SCALE').closest('section')||tb('AUTO SCALE').parentElement.parentElement);
+ for(const [n] of STEPS)T[n]=aim(RC(tb(n)),.5);
+ let f={x:1010,y:690};M=[];
+ STEPS.forEach(([n,,a,b],i)=>{M.push({a:a-1.2,b:a-.2,f,t:T[n],arc:i%2?30:-30});f=T[n]});
+ M.push({a:21.4,b:22.6,f,t:{x:250,y:560},arc:30});
+ await render(0)}
+async function render(t){
+ setWorld({s:1,x:0,y:0});await libApply({loaded:'mtl',view:'tools'});
+ let active=null;STEPS.forEach(([n,c,a,b])=>{const e=tb(n);const on=t>=a-.2&&t<b;e.classList.toggle('fx-hover',on);e.style.transform=`scale(${1-.06*pulse(t,a+.3,a+.7)})`;if(on)active=n});
+ const sp=$('spot'),o=E(P(t,1.2,1.7))*(1-E(P(t,4.6,5.0)));
+ sp.style.cssText+=`;opacity:${o};left:${rSec.x-4}px;top:${rSec.y-4}px;width:${rSec.w+8}px;height:${rSec.h+8}px`;
+ const pr=STEPS.map(([,,a])=>[a+.3,a+.7]);
+ drawCursor({s:1,x:0,y:0},pos(M,t),t,.6,25.5,pr.some(([a,b])=>pulse(t,a,b))?1:0,Math.max(...pr.map(([a,b])=>P(t,a,a+.45)*(t>a-.2&&t<b+1.2?1:0))));
+ cap($('c1'),t,.9,5.0,0);STEPS.forEach(([,c,a,b])=>cap($(c),t,a,b,0));cap($('c7'),t,21.6,25.4,0);
+ for(const k of [1,2,3,4,5,6])$('c'+k).style.top='640px';$('c7').style.top='38px';
+ $('stage').style.opacity=1-E(P(t,25.7,26))}
+start();
+</script></body></html>

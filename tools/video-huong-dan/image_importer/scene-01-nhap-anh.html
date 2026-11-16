@@ -1,0 +1,59 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Image Importer · Chọn ảnh và cách đặt</title>
+<link rel="stylesheet" href="../common.css"><style>
+#center{top:20px;height:682px}#center iframe{height:650px}
+/* Hộp chọn thư mục gốc của Windows (không phải HTML của plugin) */
+#fp{position:absolute;left:350px;top:170px;width:580px;background:#fff;color:#000;border:1px solid #7a7a7a;box-shadow:0 16px 50px #000b;font-family:'Segoe UI',M,sans-serif;opacity:0;font-size:13px}
+#fp .mt{height:30px;display:flex;align-items:center;padding:0 10px;font-size:12px;border-bottom:1px solid #e5e5e5}
+#fp .bd2{padding:14px 18px;display:grid;gap:8px}#fp .fl{height:26px;border:1px solid #adadad;display:flex;align-items:center;padding:0 8px}
+#fp .ls div{padding:5px 8px}#fp .ls .sel{background:#cce8ff}
+#fp .mf{background:#f0f0f0;padding:12px 14px;display:flex;justify-content:flex-end;gap:8px}
+#fp .mbtn{min-width:104px;height:28px;border:1px solid #adadad;background:#e1e1e1;display:grid;place-items:center;font-size:12px}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD Image Importer</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Image Importer"></iframe></div>
+ <div id="spot"></div>
+ <div id="fp"><div class="mt">Chọn thư mục</div><div class="bd2"><div class="fl">C:\Anh\tham_khao</div><div class="ls"><div>▸ ban_ve</div><div class="sel">▾ tham_khao</div><div>▸ vat_lieu</div></div></div><div class="mf"><div class="mbtn" id="fpOk">Chọn thư mục</div><div class="mbtn">Hủy</div></div></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Chọn thư mục, hoặc kéo ảnh vào danh sách</div>
+<div class="cap" id="c2">Ảnh được sắp theo tên, file trùng bị loại</div>
+<div class="cap" id="c3"><span>Bước 2</span>Chọn kiểu nhập</div>
+<div class="cap big" id="c4"><span>Bước 3</span>Kích thước thật luôn giữ tỉ lệ gốc của ảnh</div>
+<div class="cap" id="c5"><span>Bước 4</span>Kiểm tra số lượng rồi bấm “Nhập”</div>
+<div class="cap big wrap" id="c6">Ảnh xếp theo hàng trong model. Ctrl+Z hoàn tác cả lượt nhập.</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="ii.js"></script><script>
+const DUR=30,FILES=[{name:'cay_01.png',sample:'cay'},{name:'cay_02.png',sample:'cay'},{name:'nguoi_01.png',sample:'nguoi'},{name:'ghe_sofa.png',sample:'sofa'},{name:'chau_cay.png',sample:'chau'}];
+let M,Z1,Z2,rModes,rSize,TFolder,TOk,TFlat,TMat,T2D,TMm,TImp,TDone,rImp;
+window.CENTER_READY=mountImporter('cf');
+async function init(){
+ await iiApply({files:FILES,settings:{},status:'Đã thêm 5 ảnh vào danh sách.'});
+ rModes=RC('.modes');rSize=RC('#config fieldset:nth-of-type(2)');rImp=RC('#import');
+ TFolder=aim(RC('#chooseFolder'),.6);T2D=aim(RC('[data-type=comp_2d]'),.5);TFlat=aim(RC('[data-type=flat]'),.5);TMat=aim(RC('[data-type=texture_only]'),.5);TMm=aim(RC('#mmPerPixel'),.5);TImp=aim(rImp,.6);
+ const fp=$('fp');fp.style.opacity=1;TOk=aim(R($('fpOk')),.6);fp.style.opacity=0;
+ await iiApply({files:FILES,settings:{},status:'',result:{imported:5,failed:0,errors:[]}});const dr=RC('#resultDialog');TDone=aim(RC('#closeResult'),.5);Z2=fitZoom(dr,1.6,640,360);
+ Z1=fitZoom(rSize,1.6,640,380);
+ M=[{a:.8,b:2.2,f:{x:1010,y:690},t:TFolder,arc:-80},{a:3.8,b:5.8,f:TFolder,t:TOk,arc:50},{a:6.8,b:7.8,f:TOk,t:{x:480,y:420},arc:30},{a:9.6,b:10.8,f:{x:480,y:420},t:T2D,arc:-40},{a:11.0,b:11.5,f:T2D,t:TFlat,arc:10},
+    {a:12.6,b:13.2,f:TFlat,t:TMat,arc:10},{a:14.2,b:14.8,f:TMat,t:T2D,arc:-10},{a:15.4,b:16.4,f:T2D,t:TMm,arc:30},{a:20.4,b:22.0,f:TMm,t:TImp,arc:-40},{a:26.6,b:27.6,f:TImp,t:{x:480,y:430},arc:30}];
+ await render(0)}
+async function render(t){
+ const c=mix(mix({s:1,x:0,y:0},Z1,E(P(t,15.4,16.2))*(1-E(P(t,20.0,20.8))),),Z2,E(P(t,24.9,25.7))*(1-E(P(t,29.0,29.6))));setWorld(c);
+ const loaded=t>=6.4,type=t<11.3?'comp_2d':t<12.9?'flat':t<14.5?'texture_only':'comp_2d',busy=t>=22.6&&t<24.6,done=t>=24.6;
+ await iiApply({files:loaded?FILES:[],settings:{importType:type},
+  status:!loaded?'Chọn ảnh để bắt đầu.':busy?'Đang nhập ảnh. Lượt nhập lớn có thể mất một lúc…':'Đã thêm 5 ảnh vào danh sách.',
+  result:done?{imported:5,failed:0,errors:[]}:null});
+ W.document.getElementById('resultDialog').style.opacity=1;
+ hover('#chooseFolder',t>=2.2&&t<3.6);hover('#import',t>=22.0&&t<22.8);
+ const press=pulse(t,3.25,3.6)||pulse(t,5.65,6.0)||pulse(t,11.0,11.3)||pulse(t,12.6,12.9)||pulse(t,14.2,14.5)||pulse(t,22.45,22.8),rp_=a=>P(t,a,a+.45);
+ const bF=W.document.getElementById('chooseFolder');bF.style.transform=`scale(${1-.06*pulse(t,3.25,3.6)})`;
+ $('fp').style.opacity=E(P(t,3.6,3.9))*(1-E(P(t,6.0,6.3)));$('fpOk').style.borderColor=t>5.4&&t<6.1?'#0078d7':'#adadad';
+ // làm tối nền, làm nổi vùng đang nói đến
+ const rr=t<9.6?null:t<15.4?rModes:t<21?rSize:rImp,s=$('spot'),o=t<9.6?0:E(P(t,9.6,10.1))*(1-E(P(t,t<15.4?15.0:t<21?20.4:22.5,t<15.4?15.4:t<21?20.8:22.9)));
+ if(rr)s.style.cssText+=`;opacity:${o};left:${rr.x-4}px;top:${rr.y-4}px;width:${rr.w+8}px;height:${rr.h+8}px`;else s.style.opacity=0;
+ drawCursor(c,pos(M,t),t,.6,29.5,press,Math.max(rp_(3.25)*(t<5),rp_(5.65)*(t>5&&t<7),rp_(11.0)*(t>10.5&&t<12),rp_(12.6)*(t>12&&t<14),rp_(14.2)*(t>13.8&&t<15.5),rp_(22.45)*(t>22&&t<24)));
+ cap($('c1'),t,.9,6.2,0);cap($('c2'),t,6.6,9.5,0);cap($('c3'),t,9.8,15.0,0);cap($('c4'),t,15.8,20.4,0);cap($('c5'),t,20.6,24.4,0);cap($('c6'),t,25.4,29.2,0);
+ for(const k of [1,2,3,5])$('c'+k).style.top='640px';$('c4').style.top=$('c6').style.top='38px';
+ $('stage').style.opacity=1-E(P(t,29.7,30))}
+start();
+</script></body></html>

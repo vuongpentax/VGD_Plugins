@@ -1,0 +1,55 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Image Importer · Định dạng và vị trí</title>
+<link rel="stylesheet" href="../common.css"><style>
+#center{top:20px;height:682px}#center iframe{height:650px}
+/* Hộp chọn thư mục gốc của Windows (không phải HTML của plugin) */
+#fp{position:absolute;left:350px;top:170px;width:580px;background:#fff;color:#000;border:1px solid #7a7a7a;box-shadow:0 16px 50px #000b;font-family:'Segoe UI',M,sans-serif;opacity:0;font-size:13px}
+#fp .mt{height:30px;display:flex;align-items:center;padding:0 10px;font-size:12px;border-bottom:1px solid #e5e5e5}
+#fp .bd2{padding:14px 18px;display:grid;gap:8px}#fp .fl{height:26px;border:1px solid #adadad;display:flex;align-items:center;padding:0 8px}
+#fp .ls div{padding:5px 8px}#fp .ls .sel{background:#cce8ff}
+#fp .mf{background:#f0f0f0;padding:12px 14px;display:flex;justify-content:flex-end;gap:8px}
+#fp .mbtn{min-width:104px;height:28px;border:1px solid #adadad;background:#e1e1e1;display:grid;place-items:center;font-size:12px}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD Image Importer</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Image Importer"></iframe></div>
+ <div id="spot"></div>
+ <div id="fp"><div class="mt">Chọn thư mục</div><div class="bd2"><div class="fl">C:\Anh\tham_khao</div><div class="ls"><div>▸ ban_ve</div><div class="sel">▾ tham_khao</div><div>▸ vat_lieu</div></div></div><div class="mf"><div class="mbtn" id="fpOk">Chọn thư mục</div><div class="mbtn">Hủy</div></div></div>
+</div>
+<div class="cap" id="c1">Hỗ trợ JPG, PNG, WebP, GIF, TIFF, TGA, SVG và nhiều định dạng khác</div>
+<div class="cap" id="c2"><span>Lưu ý</span>HEIC/HEIF cần codec HEIF của Windows có sẵn</div>
+<div class="cap big wrap" id="c3">Ảnh nhập vào vùng đang chỉnh sửa. Muốn nhập ở cấp model: thoát Group/Component trước.</div>
+<div class="cap" id="c4"><span>Nhập</span>Bấm “Nhập” khi danh sách đã đúng</div>
+<div class="cap big wrap" id="c5">Một ảnh lỗi không chặn các ảnh khác. Đọc thông báo để thử lại.</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="ii.js"></script><script>
+const DUR=20,FILES=[{name:'cay_01.jpg',sample:'cay'},{name:'ghe_sofa.webp',sample:'sofa'},{name:'cay_05.heic'},{name:'mat_bang.tif'},{name:'nguoi_01.png',sample:'nguoi'}];
+const FAIL={imported:4,failed:1,errors:[{name:'cay_05.heic',message:'Không đọc được HEIC/HEIF. Cần codec HEIF của Windows hoặc chuyển ảnh sang PNG/WebP.'}]};
+let M,Z1,Z2,rFmt,rHeic,rLayout,TImp,TClose,rImp;
+window.CENTER_READY=mountImporter('cf');
+const pane=()=>W.document.querySelector('.settings-pane');
+async function init(){
+ await iiApply({files:FILES,settings:{},status:'Đã thêm 5 ảnh vào danh sách.'});
+ rFmt=RC('.list-heading span');rHeic=RC('#fileList .file-row:nth-child(3)');rImp=RC('#import');TImp=aim(rImp,.6);
+ pane().scrollTop=9999;rLayout=RC('#layoutCard');pane().scrollTop=0;
+ await iiApply({files:FILES,settings:{},status:'',result:FAIL});TClose=aim(RC('#closeResult'),.5);Z2=fitZoom(RC('#resultDialog'),1.6,640,370);
+ Z1=fitZoom(rLayout,1.5,640,380);
+ M=[{a:.8,b:2.2,f:{x:1010,y:690},t:{x:520,y:318},arc:-60},{a:5.0,b:6.2,f:{x:520,y:318},t:{x:480,y:440},arc:30},{a:13.4,b:14.8,f:{x:480,y:440},t:TImp,arc:-40},{a:19.0,b:19.6,f:TImp,t:{x:480,y:430},arc:10}];
+ await render(0)}
+async function render(t){
+ const c=mix(mix({s:1,x:0,y:0},Z1,E(P(t,9.8,10.6))*(1-E(P(t,13.2,13.9))),),Z2,E(P(t,16.2,17.0))*(1-E(P(t,19.2,19.8))));setWorld(c);
+ pane().scrollTop=t>=9.6&&t<14.0?9999:0;
+ const busy=t>=14.8&&t<16.0,done=t>=16.0;
+ await iiApply({files:FILES,settings:{},status:busy?'Đang nhập ảnh. Lượt nhập lớn có thể mất một lúc…':'Đã thêm 5 ảnh vào danh sách.',result:done?FAIL:null});
+ hover('#import',t>=13.8&&t<14.8);
+ // làm tối nền: dòng định dạng, dòng HEIC (cố định theo vị trí khi chưa cuộn), thẻ Bố trí
+ const sp=$('spot');let rr=null,o=0;
+ if(t<5.2){rr=rFmt;o=E(P(t,1.2,1.7))*(1-E(P(t,4.6,5.0)))}else if(t<9.4){rr=rHeic;o=E(P(t,5.6,6.1))*(1-E(P(t,8.8,9.2)))}
+ if(rr)sp.style.cssText+=`;opacity:${o};left:${rr.x-4}px;top:${rr.y-4}px;width:${rr.w+8}px;height:${rr.h+8}px`;else sp.style.opacity=0;
+ const press=pulse(t,14.45,14.8),rp_=a=>P(t,a,a+.45);
+ drawCursor(c,pos(M,t),t,.6,19.5,press,rp_(14.45)*(t>14&&t<16.5));
+ cap($('c1'),t,.9,5.0,0);cap($('c2'),t,5.4,9.2,0);cap($('c3'),t,10.0,13.6,0);cap($('c4'),t,13.8,16.0,0);cap($('c5'),t,16.6,19.4,0);
+ for(const k of [1,2,4])$('c'+k).style.top='640px';$('c3').style.top=$('c5').style.top='38px';
+ $('stage').style.opacity=1-E(P(t,19.7,20))}
+start();
+</script></body></html>

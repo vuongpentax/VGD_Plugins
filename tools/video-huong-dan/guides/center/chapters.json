@@ -1,0 +1,43 @@
+{
+  "title": "VGD Center",
+  "eyebrow": "Hướng dẫn tương tác",
+  "lead": "Chọn một phần để xem hoạt ảnh. Hoạt ảnh chạy trực tiếp trên giao diện Center và tự lặp lại.",
+  "note": "Hoạt ảnh minh họa dựa trên giao diện VGD Center; số liệu trong khung kết quả chỉ là ví dụ.",
+  "chapters": [
+    {
+      "scene": "scene-01-cai-plugin",
+      "title": "Cài plugin từ Kho",
+      "duration": "25 giây"
+    },
+    {
+      "scene": "scene-02-cap-nhat-go",
+      "title": "Cập nhật và gỡ plugin",
+      "duration": "25 giây"
+    },
+    {
+      "scene": "scene-03-huong-dan",
+      "title": "Mở Hướng dẫn",
+      "duration": "15 giây"
+    },
+    {
+      "scene": "scene-04-quan-ly-bat-tat",
+      "title": "Tab Quản lý: bật/tắt",
+      "duration": "25 giây"
+    },
+    {
+      "scene": "scene-05-chuyen-plugin",
+      "title": "Chuyển plugin giữa hai bản SketchUp",
+      "duration": "30 giây"
+    },
+    {
+      "scene": "scene-06-xuat-rbz",
+      "title": "Xuất gói .rbz tổng",
+      "duration": "20 giây"
+    },
+    {
+      "scene": "scene-07-cai-dat",
+      "title": "Cài đặt: ngôn ngữ, tự cập nhật",
+      "duration": "15 giây"
+    }
+  ]
+}

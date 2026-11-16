@@ -1,0 +1,57 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>BIM · Phân loại và tag</title>
+<link rel="stylesheet" href="../common.css"><style>
+#center{left:200px;top:10px;width:880px;height:700px}#center iframe{width:878px;height:668px}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD_BIM</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD_BIM"></iframe></div>
+ <div id="spot"></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Tab Phân loại: quét mô hình để xem gợi ý hạng mục (chưa ghi vào model)</div>
+<div class="cap" id="c2"><span>Bước 2</span>Bấm “Chỉnh thông tin” ở dòng cần phân loại</div>
+<div class="cap" id="c3"><span>Bước 3</span>Bấm “Xem trước chuyển đổi”, đọc kỹ rồi mới xác nhận</div>
+<div class="cap" id="c4"><span>Bước 4</span>Tab Soạn tag: chọn tag rồi bấm “Gán tag” cho đối tượng đang chọn</div>
+<div class="cap" id="c5">Các tab Bộ tag, Tự động, Thư viện mẫu giúp gắn tag hàng loạt</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="bim.js"></script><script>
+const DUR=25;let M,T={},SC3=0;
+window.CENTER_READY=mountBim('cf','table');
+let sig='';const q=s=>W.document.querySelector(s);
+const mainEl=()=>W.document.querySelector('main');
+async function view(t){
+ const ph=t<1.8?'table':t<4.0?'wait':t<7.2?'map':t<12.2?'edit':t<16.0?'prev':t<17.8?'mapafter':t<21.4?'tags':'tagsauto';
+ if(ph===sig)return;sig=ph;
+ if(ph==='table')bimGo('table','table',bimTable());
+ else if(ph==='wait')bimGo('mapping','scan_pending',{mode:'mapping'});
+ else if(ph==='map'||ph==='mapafter')bimGo('mapping','mapping',BIM_MAP());
+ else if(ph==='edit'||ph==='prev'){bimGo('mapping','mapping',BIM_MAP());await sleep(150);const b=bimBtn('Chỉnh thông tin');if(b)b.click();await sleep(150);
+  if(ph==='prev')W.VGD.receive('preview',{objects:2,occurrences:2,skipped:0,data:BIM_MAP()[0].suggestion.data,rule:false,shared:false})}
+ else{bimGo('tags','tags',BIM_TAGS());W.VGD.receive('tag_tree',BIM_TREE());await sleep(150);
+  if(ph==='tagsauto'){const b=bimBtn('Tự động');if(b)b.click()}}
+ await sleep(300)}
+async function init(){
+ T.tabM=aim(RC('[data-mode="mapping"]'),.4);T.tabT=aim(RC('[data-mode="tags"]'),.4);
+ bimGo('mapping','scan_pending',{mode:'mapping'});await sleep(200);T.go=aim(RC('#scan-start'),.5);
+ bimGo('mapping','mapping',BIM_MAP());await sleep(200);T.edit=aim(RC(bimBtn('Chỉnh thông tin')),.5);{const a=RC('table'||'.card');}
+ T.rRow=null;{const r=W.document.querySelector('table tbody tr');if(r){const a=RC(r);T.rRow={x:a.x-6,y:a.y-4,w:a.w+12,h:a.h+8}}}
+ bimBtn('Chỉnh thông tin').click();await sleep(200);mainEl().scrollTop=99999;SC3=mainEl().scrollTop;T.prev=aim(RC(bimBtn('Xem trước chuyển đổi')),.6);W.VGD.receive('preview',{objects:2,occurrences:2,skipped:0,data:BIM_MAP()[0].suggestion.data,rule:false,shared:false});await sleep(200);T.conf=aim(RC('#confirm-preview'),.5);W.document.getElementById('preview').close();
+ bimGo('tags','tags',BIM_TAGS());W.VGD.receive('tag_tree',BIM_TREE());await sleep(200);T.assign=aim(RC('#tag-assign'),.5);T.sel=aim(RC('#tag-assign'),.5);
+ T.sub={};{const b=bimBtn('Tự động');T.subAuto=b?aim(RC(b),.5):T.assign}
+ T.cancel=null;
+ bimGo('table','table',bimTable());
+ M=[{a:.6,b:1.6,f:{x:1060,y:690},t:T.tabM,arc:-40},{a:2.8,b:3.6,f:T.tabM,t:T.go,arc:25},{a:5.6,b:6.8,f:T.go,t:T.edit,arc:25},{a:10.4,b:11.8,f:T.edit,t:T.prev,arc:25},{a:13.6,b:14.8,f:T.prev,t:T.conf,arc:20},{a:16.2,b:17.6,f:T.conf,t:T.tabT,arc:-40},
+    {a:18.6,b:20.0,f:T.tabT,t:T.assign,arc:25},{a:21.0,b:22.2,f:T.assign,t:T.subAuto,arc:20},{a:23.2,b:24.4,f:T.subAuto,t:{x:150,y:540},arc:30}];
+ await render(0)}
+async function render(t){
+ setWorld({s:1,x:0,y:0});await view(t);if(t>=7.2&&t<16.0)mainEl().scrollTop=SC3*E(P(t,10.0,11.2));
+ const sp=$('spot');let rr=null,o=0;
+ if(t>=7.4&&t<10.2&&T.rRow){rr=T.rRow;o=E(P(t,7.6,8.0))*(1-E(P(t,9.6,10.2)))}
+ if(rr)sp.style.cssText+=`;opacity:${o};left:${rr.x}px;top:${rr.y}px;width:${rr.w}px;height:${rr.h}px`;else sp.style.opacity=0;
+ const pr=[[1.6,1.9],[3.4,3.7],[6.8,7.1],[11.8,12.1],[15.0,15.3],[17.6,17.9],[20.8,21.1],[22.4,22.7]];
+ drawCursor({s:1,x:0,y:0},pos(M,t),t,.6,24.5,pr.some(([a,b])=>pulse(t,a,b))?1:0,Math.max(...pr.map(([a,b])=>P(t,a,a+.4)*(t>a-.2&&t<b+1.0?1:0))));
+ cap($('c1'),t,.6,5.6,0);cap($('c2'),t,6.0,10.2,0);cap($('c3'),t,10.4,16.0,0);cap($('c4'),t,17.8,22.0,0);cap($('c5'),t,22.4,24.4,0);
+ for(const k of [1,2,3,4,5])$('c'+k).style.top='38px';
+ $('stage').style.opacity=1-E(P(t,24.7,25))}
+start();
+</script></body></html>

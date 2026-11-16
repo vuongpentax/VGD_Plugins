@@ -1,0 +1,51 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>BIM · Bảng khối lượng</title>
+<link rel="stylesheet" href="../common.css"><style>
+#center{left:200px;top:10px;width:880px;height:700px}#center iframe{width:878px;height:668px}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD_BIM</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD_BIM"></iframe></div>
+ <div id="spot"></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Tab Bảng khối lượng liệt kê Group/Component trong model</div>
+<div class="cap" id="c2"><span>Bước 2</span>Bấm “Chọn cột”, tích hoặc bỏ tích để hiện hoặc ẩn cột</div>
+<div class="cap" id="c3"><span>Bước 3</span>Gõ vào ô tìm kiếm để lọc nhanh các dòng</div>
+<div class="cap" id="c4"><span>Bước 4</span>Bấm dấu + ở cột Ảnh để thêm ảnh cho món</div>
+<div class="cap" id="c5">Dòng Tổng cộng cho biết số đối tượng đang hiển thị</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="bim.js"></script><script>
+const DUR=30;let M,T={},rTab,rTot;
+window.CENTER_READY=mountBim('cf','table');
+let sig='';
+const q=s=>W.document.querySelector(s);
+const colsOpen=()=>!!q('input[placeholder^="Tìm cột"]');
+const posBox=()=>[...W.document.querySelectorAll('input[type=checkbox]')].find(c=>c.parentElement.textContent.trim()==='Mô tả');
+const search=()=>q('input[placeholder^="Tìm kiếm"]');
+async function setState(open,tick,txt){
+ if(colsOpen()!==open){q('#cols-btn').click();await sleep(250)}
+ if(open){const b=posBox();if(b&&b.checked===tick){b.click();await sleep(250)}}
+ const s=search();if(s&&s.value!==txt){s.value=txt;s.dispatchEvent(new Event('input',{bubbles:true}));await sleep(250)}}
+async function init(){
+ T.cols=aim(RC('#cols-btn'),.5);T.search=aim(RC('input[placeholder^="Tìm kiếm"]'),.5);T.plus=aim(RC('.grid tbody tr:first-child td:nth-child(2) button,.grid tbody tr:first-child td:nth-child(2)'),.5);
+ rTab=RC('.grid');rTot=RC('.grid tfoot,.grid tr:last-child');
+ q('#cols-btn').click();T.tick=aim(RC(posBox()),.5);q('#cols-btn').click();
+ M=[{a:.6,b:1.6,f:{x:1060,y:690},t:T.cols,arc:-40},{a:5.0,b:6.2,f:T.cols,t:T.cols,arc:0},{a:7.0,b:8.2,f:T.cols,t:T.tick,arc:25},{a:11.4,b:12.8,f:T.tick,t:T.search,arc:-25},{a:18.4,b:19.8,f:T.search,t:T.plus,arc:25},{a:24.0,b:25.4,f:T.plus,t:{x:640,y:540},arc:20},{a:28.0,b:29.0,f:{x:640,y:540},t:{x:150,y:540},arc:30}];
+ await render(0)}
+async function render(t){
+ setWorld({s:1,x:0,y:0});
+ const open=t>=6.0&&t<10.6,tick=t>=8.6;
+ const full='tủ';const n=t<13.0?0:t<13.6?1:t<14.2?2:full.length;
+ const txt=t>=17.4?'':full.slice(0,Math.min(n,2));
+ const k=[open,tick,txt].join('|');if(k!==sig){sig=k;await setState(open,tick,txt);await setState(open,tick,txt)}
+ const hp=q('.grid tbody tr:first-child td:nth-child(2) button');if(hp)hp.classList.toggle('fx-hover',t>=19.8&&t<22);
+ const sp=$('spot');let rr=null,o=0;
+ if(t<4.6){rr=RC('.grid');o=E(P(t,1.0,1.5))*(1-E(P(t,4.0,4.6)))}else if(t>=26.0&&t<29.4){rr=RC('.grid');o=E(P(t,26.2,26.7))*(1-E(P(t,28.8,29.4)))}
+ if(rr)sp.style.cssText+=`;opacity:${o};left:${rr.x-4}px;top:${rr.y-4}px;width:${rr.w+8}px;height:${rr.h+8}px`;else sp.style.opacity=0;
+ const pr=[[6.0,6.3],[8.4,8.7],[12.8,13.1],[19.6,19.9]];
+ drawCursor({s:1,x:0,y:0},pos(M,t),t,.6,29.5,pr.some(([a,b])=>pulse(t,a,b))?1:0,Math.max(...pr.map(([a,b])=>P(t,a,a+.4)*(t>a-.2&&t<b+1.0?1:0))));
+ cap($('c1'),t,.8,4.8,0);cap($('c2'),t,5.2,11.4,0);cap($('c3'),t,11.8,17.6,0);cap($('c4'),t,18.2,24.0,0);cap($('c5'),t,25.0,29.2,0);
+ for(const k of [1,2,3,4,5])$('c'+k).style.top='38px';
+ $('stage').style.opacity=1-E(P(t,29.7,30))}
+start();
+</script></body></html>

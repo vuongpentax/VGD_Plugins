@@ -1,0 +1,13 @@
+{
+  "title": "VGD Dim",
+  "eyebrow": "Hướng dẫn tương tác",
+  "lead": "Chọn một phần để xem hoạt ảnh. Hoạt ảnh chạy trực tiếp trên hộp thoại của Dim và tự lặp lại.",
+  "note": "Hoạt ảnh minh họa dựa trên giao diện VGD Dim; số liệu kích thước chỉ là ví dụ. Kết quả trong khung nhìn 3D của SketchUp và cửa sổ Model Info được nói bằng chú thích.",
+  "web": "plugins/VGD_Dim/runtime/vgd_dim",
+  "chapters": [
+    {"scene": "dim/scene-01-smart-dim", "title": "Tạo Smart Dim", "duration": "30 giây"},
+    {"scene": "dim/scene-02-kieu-dang", "title": "Chỉnh kiểu dáng", "duration": "20 giây"},
+    {"scene": "dim/scene-03-font-preset", "title": "Font, cỡ chữ và preset", "duration": "20 giây"},
+    {"scene": "dim/scene-04-don-vi-animation", "title": "Đơn vị và Animation", "duration": "20 giây"}
+  ]
+}

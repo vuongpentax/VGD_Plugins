@@ -1,0 +1,26 @@
+@font-face{font-family:M;src:url(../../shared/vgd-theme/fonts/manrope-latin-wght-normal.woff2);font-weight:200 800;unicode-range:U+0000-00FF}
+@font-face{font-family:M;src:url(../../shared/vgd-theme/fonts/manrope-vietnamese-wght-normal.woff2);font-weight:200 800;unicode-range:U+0102-0103,U+0110-0111,U+0128-0129,U+0168-0169,U+01A0-01A1,U+01AF-01B0,U+1EA0-1EF9}
+*{box-sizing:border-box;margin:0}
+.dark{--bg:#121212;--s:#1E1E1E;--e:#2B2B2B;--b:#3A3A3A;--t:#E2E8F0;--m:#A7B0BD;--a:#B48963;--as:#C8A98A;--tint:#372C24;--oa:#121212}
+html,body{background:#0b0b0b}
+#stage{position:relative;width:1280px;height:720px;overflow:hidden;font-family:M,sans-serif;background:radial-gradient(ellipse at 30% 20%,#1d1b19,#0b0b0b 70%)}
+#world{position:absolute;left:0;top:0;width:1280px;height:720px;transform-origin:0 0}
+.win{position:absolute;border:1px solid #444;border-radius:8px;overflow:hidden;background:var(--bg);color:var(--t);box-shadow:0 24px 60px #000a}
+.title{height:30px;background:#202020;color:#c9c9c9;font-size:11px;display:flex;align-items:center;padding:0 12px;justify-content:space-between;border-bottom:1px solid #333}
+#center{left:210px;top:40px;width:860px;height:640px}
+#spot{position:absolute;border-radius:8px;box-shadow:0 0 0 2000px rgba(0,0,0,.66),0 0 0 3px #B48963;opacity:0;pointer-events:none}
+#cur{position:absolute;left:0;top:0;width:27px;height:27px;opacity:0;z-index:20;filter:drop-shadow(0 2px 3px #000a)}
+#rip{position:absolute;left:0;top:0;width:10px;height:10px;border-radius:50%;border:2px solid #fff;opacity:0;z-index:19}
+.cap{position:absolute;left:50%;z-index:15;opacity:0;white-space:nowrap;background:#2B2B2B;color:#E2E8F0;border:1px solid #3A3A3A;border-radius:8px;padding:13px 20px;font-weight:700;font-size:17px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 30px #0008}
+.cap span{background:#B48963;color:#121212;border-radius:20px;padding:3px 11px;font-size:12px}
+.cap.big{font-size:30px;padding:18px 28px;border-color:#B48963;background:#1E1E1E}.cap.big span{font-size:16px}
+/* Hộp xác nhận gốc của SketchUp (UI.messagebox), kiểu Windows */
+#mb{position:absolute;background:#fff;color:#000;border:1px solid #7a7a7a;box-shadow:0 16px 50px #000b;font-family:'Segoe UI',M,sans-serif;opacity:0}
+#mb .mt{height:30px;display:flex;align-items:center;padding:0 10px;font-size:12px;background:#fff;border-bottom:1px solid #e5e5e5}
+#mb .mx{padding:18px 18px 16px;font-size:13px;line-height:1.5;background:#fff}
+#mb .mf{background:#f0f0f0;padding:12px 14px;display:flex;justify-content:flex-end;gap:8px}
+#mb .mbtn{min-width:78px;height:26px;border:1px solid #adadad;background:#e1e1e1;color:#000;display:grid;place-items:center;font-size:12px}
+/* --- Giao diện Center thật (dialog.html nhúng bằng iframe) --- */
+.cwin .title{height:30px}.cwin iframe{display:block;width:858px;height:608px;border:0;background:#121212}
+/* Chú thích dài tự xuống dòng, không tràn khung hình */
+.cap.wrap{white-space:normal;max-width:1000px;text-align:left}

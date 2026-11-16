@@ -1,0 +1,50 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Dim · Font và preset</title>
+<link rel="stylesheet" href="../common.css"><style>
+#center{left:261px;top:20px;width:760px;height:682px}#center iframe{width:758px;height:650px}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD Dim</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Dim"></iframe></div>
+ <div id="spot"></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Tab Font &amp; cỡ chữ: mở Model Info để chỉnh font, rồi làm mới Dimension</div>
+<div class="cap" id="c2"><span>Bước 2</span>Bấm “Làm mới Dimension theo phạm vi” để áp font và cỡ mới</div>
+<div class="cap" id="c3"><span>Bước 3</span>Tab Preset: đặt tên rồi bấm Lưu để dùng lại kiểu dáng này</div>
+<div class="cap" id="c4">Preset đã lưu có trong danh sách, chọn là áp ngay</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="dim.js"></script><script>
+const DUR=20;let M;
+window.CENTER_READY=mountDim('cf','smart');
+const $b=(t,p)=>[...W.document.querySelectorAll('#panel-'+p+' button')].find(b=>b.textContent.trim()===t);
+
+let TTabF,TInfo,TReb,TTabP,TName,TSave,Z;
+const PRE={'VGD mặc định':{},'Bản vẽ thi công':{},'Bản vẽ nhà bếp':{}};
+async function init(){
+ W.VGD.nav('font');TTabF=aim(RC('#tab-font'),.5);TInfo=aim(RC($b('Model Info › Dimensions','font')),.5);TReb=aim(RC($b('Làm mới Dimension theo phạm vi','font')),.6);
+ W.VGD.nav('presets');TTabP=aim(RC('#tab-presets'),.5);TName=aim(RC(dimEl('pname')),.5);TSave=aim(RC($b('Lưu','presets')),.5);
+ W.VGD.nav('smart');
+ M=[{a:.8,b:1.8,f:{x:1010,y:690},t:TTabF,arc:-60},{a:3.0,b:4.0,f:TTabF,t:TInfo,arc:25},{a:6.6,b:7.8,f:TInfo,t:TReb,arc:25},{a:10.6,b:11.8,f:TReb,t:TTabP,arc:-40},{a:12.8,b:13.6,f:TTabP,t:TName,arc:25},{a:15.0,b:15.8,f:TName,t:TSave,arc:25},{a:17.4,b:18.4,f:TSave,t:{x:180,y:540},arc:30}];
+ await render(0)}
+async function render(t){
+ setWorld({s:1,x:0,y:0});
+ const tab=t<1.9?'smart':t<11.9?'font':'presets';W.VGD.nav(tab);
+ const busy=t>=7.9&&t<9.0;W.VGD.onBusy(busy);
+ if(t<7.9)W.VGD.log('',false);else if(t<9.0)W.VGD.log('Đang làm mới Dimension…',false);else if(t<11.9)W.VGD.onRebuild({rebuilt:8,custom:0,failed:0,skipped:0});else W.VGD.log('',false);
+ W.VGD.onBusy(busy);
+ const saved=t>=16.0;
+ if(tab==='presets'){W.VGD.onState({version:'4.0.2',presets:saved?PRE:{'VGD mặc định':{},'Bản vẽ thi công':{}},builtin:['VGD mặc định'],select:saved?'Bản vẽ nhà bếp':'VGD mặc định',auto:{enabled:false},anim:{enabled:false,transition:2,delay:2,loop:false},smart:{face:'-y',do_h:true,do_v:true,off1:100,off2:200,min_seg:10,min_part:20,depth:3},units:{unit:2,precision:0,show_unit:false}});W.VGD.nav('presets');
+  dimEl('pname').value=t<13.6?'':(saved?'Bản vẽ nhà bếp':'Bản vẽ nhà bếp'.slice(0,Math.max(0,Math.round((t-13.6)/.1))));
+  if(t>=16.0&&t<19.5)W.VGD.log('Đã lưu preset “Bản vẽ nhà bếp”.',false)}
+ const hb=$b('Làm mới Dimension theo phạm vi','font');if(hb){hb.classList.toggle('fx-hover',t>=7.8&&t<9.0);hb.style.transform=`scale(${1-.05*pulse(t,7.9,8.2)})`}
+ const hi=$b('Model Info › Dimensions','font');if(hi)hi.classList.toggle('fx-hover',t>=4.0&&t<6.4);
+ const sb=$b('Lưu','presets');if(sb){sb.classList.toggle('fx-hover',t>=15.8&&t<16.8);sb.style.transform=`scale(${1-.05*pulse(t,15.9,16.2)})`}
+ $('spot').style.opacity=0;
+ const pr=[[1.8,2.1],[7.9,8.2],[11.8,12.1],[15.9,16.2]];
+ drawCursor({s:1,x:0,y:0},pos(M,t),t,.6,19.5,pr.some(([a,b])=>pulse(t,a,b))?1:0,Math.max(...pr.map(([a,b])=>P(t,a,a+.4)*(t>a-.2&&t<b+1.0?1:0))));
+ cap($('c1'),t,.8,6.4,0);cap($('c2'),t,6.6,10.4,0);cap($('c3'),t,10.8,16.8,0);cap($('c4'),t,17.0,19.2,0);
+ for(const k of [1,2,3,4])$('c'+k).style.top='38px';
+ $('stage').style.opacity=1-E(P(t,19.6,20))}
+
+start();
+</script></body></html>

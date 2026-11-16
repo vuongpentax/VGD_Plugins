@@ -1,0 +1,12 @@
+{
+  "title": "VGD Scenes",
+  "eyebrow": "Hướng dẫn tương tác",
+  "lead": "Chọn một phần để xem hoạt ảnh. Hoạt ảnh chạy trực tiếp trên hộp thoại của Scenes và tự lặp lại.",
+  "note": "Hoạt ảnh minh họa dựa trên giao diện VGD Scenes; tên scene và kích thước chỉ là ví dụ. Kết quả trong khung nhìn 3D của SketchUp và hộp chọn thư mục của Windows được nói bằng chú thích.",
+  "web": "plugins/VGD_Scenes/runtime/vgd_scenes",
+  "chapters": [
+    {"scene": "scenes/scene-01-tao-bo-view", "title": "Tạo bộ view", "duration": "30 giây"},
+    {"scene": "scenes/scene-02-mat-cat-khung", "title": "Mặt cắt và khung hình", "duration": "25 giây"},
+    {"scene": "scenes/scene-03-xuat-file", "title": "Xuất ảnh hoặc PDF", "duration": "25 giây"}
+  ]
+}

@@ -1,0 +1,54 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><title>Dim · Kiểu dáng</title>
+<link rel="stylesheet" href="../common.css"><style>
+#center{left:261px;top:20px;width:760px;height:682px}#center iframe{width:758px;height:650px}
+</style></head><body>
+<div id="stage"><div id="world">
+ <div class="win dark cwin" id="center"><div class="title"><span>VGD Dim</span><span>—&nbsp;&nbsp;☐&nbsp;&nbsp;✕</span></div><iframe id="cf" title="VGD Dim"></iframe></div>
+ <div id="spot"></div>
+</div>
+<div class="cap" id="c1"><span>Bước 1</span>Mở tab Kiểu dáng</div>
+<div class="cap" id="c2"><span>Bước 2</span>Chọn loại đối tượng sẽ áp style: Dimension, Text, Label</div>
+<div class="cap" id="c3"><span>Bước 3</span>Tích ô Dim để đổi màu, chọn kiểu mũi tên và vị trí chữ</div>
+<div class="cap" id="c4"><span>Bước 4</span>Bấm “Áp style theo phạm vi”</div>
+<div class="cap" id="c5">Kết quả hiện ở thanh trạng thái · Ctrl+Z để hoàn tác</div>
+<div id="rip"></div>
+<svg id="cur" viewBox="0 0 24 24"><path d="M4 2l16 9-7 2-3 7z" fill="#fff" stroke="#000" stroke-width="1.5" stroke-linejoin="round"/></svg>
+</div>
+<script src="../common.js"></script><script src="dim.js"></script><script>
+const DUR=20;let M;
+window.CENTER_READY=mountDim('cf','smart');
+const $b=(t,p)=>[...W.document.querySelectorAll('#panel-'+p+' button')].find(b=>b.textContent.trim()===t);
+const tabEl=n=>W.document.getElementById('tab-'+n);
+const CLK=[];const clickAt=(t,tt=.35)=>pulse(t,tt-.0,tt+.3);
+
+let rKind,TTab,TKind,TCol,TArrow,TAlign,TRun,rLog,Z1;
+async function init(){
+ W.VGD.nav('style');const mn=W.document.querySelector('main');mn.scrollTop=0;
+ TTab=aim(RC('#tab-style'),.5);
+ const k=RC(dimEl('kind.dim').closest('.row,.chips,div'));rKind={x:k.x-6,y:k.y-6,w:k.w+12,h:k.h+12};TKind=aim(RC(dimEl('kind.dim')),.5);
+ TCol=aim(RC(dimEl('dim.setcolor')),.5);TArrow=aim(RC(dimEl('dim.arrow')),.5);TAlign=aim(RC(dimEl('dim.align')),.5);
+ TRun=aim(RC($b('Áp style theo phạm vi','style')),.6);rLog=RC('#log');
+ W.VGD.nav('smart');W.VGD.log('',false);
+ M=[{a:.8,b:1.9,f:{x:1010,y:690},t:TTab,arc:-60},{a:4.2,b:5.0,f:TTab,t:TKind,arc:25},{a:7.6,b:8.6,f:TKind,t:TCol,arc:25},{a:10.0,b:11.0,f:TCol,t:TArrow,arc:25},{a:11.8,b:12.6,f:TArrow,t:TAlign,arc:25},
+    {a:13.6,b:14.8,f:TAlign,t:TRun,arc:-30},{a:17.0,b:18.4,f:TRun,t:{x:180,y:540},arc:30}];
+ await render(0)}
+async function render(t){
+ setWorld({s:1,x:0,y:0});
+ W.VGD.nav(t<2.0?'smart':'style');
+ const col=t>=8.8,arr=t>=11.0?(t>=12.8?'slash':'slash'):'keep',al=t>=12.7?'above':'keep';
+ if(t>=2.0){dimEl('dim.setcolor').checked=col;dimEl('dim.color').value=col?'#e0a040':'#000000';dimEl('dim.arrow').value=arr;dimEl('dim.textorient').value='keep';dimEl('dim.align').value=al}
+ const busy=t>=14.8&&t<15.9;W.VGD.onBusy(busy);
+ if(t<14.8)W.VGD.log('',false);else if(t<15.9)W.VGD.log('Đang áp style…',false);else W.VGD.onResult({count:{dim:8,text:0,label:0},report:{}});
+ W.VGD.onBusy(busy);
+ const rb=$b('Áp style theo phạm vi','style');if(rb){rb.classList.toggle('fx-hover',t>=14.8&&t<15.9);rb.style.transform=`scale(${1-.05*pulse(t,14.9,15.2)})`}
+ const sp=$('spot');let rr=null,o=0;
+ if(t>=3.6&&t<6.8){rr=rKind;o=E(P(t,3.8,4.3))*(1-E(P(t,6.2,6.7)))}
+ if(rr)sp.style.cssText+=`;opacity:${o};left:${rr.x}px;top:${rr.y}px;width:${rr.w}px;height:${rr.h}px`;else sp.style.opacity=0;
+ const pr=[[1.8,2.1],[8.6,8.9],[14.9,15.2]];
+ drawCursor({s:1,x:0,y:0},pos(M,t),t,.6,19.5,pr.some(([a,b])=>pulse(t,a,b))?1:0,Math.max(...pr.map(([a,b])=>P(t,a,a+.4)*(t>a-.2&&t<b+1.0?1:0))));
+ cap($('c1'),t,.8,3.4,0);cap($('c2'),t,3.8,7.2,0);cap($('c3'),t,7.6,13.2,0);cap($('c4'),t,13.6,16.0,0);cap($('c5'),t,16.4,19.2,0);
+ for(const k of [1,2,3,4])$('c'+k).style.top='640px';$('c5').style.top='38px';
+ $('stage').style.opacity=1-E(P(t,19.6,20))}
+
+start();
+</script></body></html>
