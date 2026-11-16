@@ -22,7 +22,14 @@ function drawCursor(c,p,t,fadeIn,fadeOut,press,rip){const sx=c.x+c.s*p.x,sy=c.y+
 function start(){
  // chờ font và (nếu có) giao diện Center thật tải xong rồi mới dựng; window.__ready báo cho render.js
  Promise.all([document.fonts.ready,window.CENTER_READY||Promise.resolve()]).then(async()=>{await init();window.__ready=true;
- if(location.search.includes('play')){const t0=performance.now();(function f(){render(((performance.now()-t0)/1000)%DUR);requestAnimationFrame(f)})()}})}
+ if(location.search.includes('play')){
+  // Phát lặp; trang hướng dẫn điều khiển qua window.__ctl (tạm dừng, tua tới thời điểm t, đọc thời gian hiện tại)
+  let T=0,paused=false,last=performance.now(),shown=-1,busy=false;
+  window.__ctl={dur:DUR,get t(){return T},get paused(){return paused},
+   seek(x){T=Math.min(Math.max(+x||0,0),DUR-.001)},pause(){paused=true},play(){paused=false;last=performance.now()}};
+  (async function f(){const now=performance.now();if(!paused)T=(T+(now-last)/1000)%DUR;last=now;
+   if(!busy&&T!==shown){busy=true;const t=T;try{await render(t)}catch(_){}shown=t;busy=false}
+   requestAnimationFrame(f)})()}})}
 // Zoom vừa đủ để cả vùng r nằm trọn trong khung hình (chừa lề pad mỗi bên); maxS là mức zoom tối đa
 const fitZoom=(r,maxS,tx,ty,pad=80)=>zoomTo(r.x+r.w/2,r.y+r.h/2,Math.min(maxS,(1280-2*pad)/r.w),tx,ty);
 
