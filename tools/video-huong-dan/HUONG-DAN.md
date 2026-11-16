@@ -80,3 +80,7 @@ Mã dùng chung: `common.js` (sân khấu, camera, con trỏ, chú thích, nhún
 - Cửa sổ Center rộng 860 để vừa khung 16:9; kích thước mặc định thật là 560×700.
 - Chưa đối chiếu với SketchUp thật. Hộp thoại gốc của SketchUp và Windows (xác nhận gỡ, Nạp ngay, lưu file) vẽ gần giống; chữ nút (Có/Không, Lưu/Hủy) phụ thuộc ngôn ngữ hệ điều hành. Chữ trong các hộp này lấy từ `manager/text.rb` và `main.rb`.
 - Logo trong trang hướng dẫn hiện thiếu nét (ảnh `icon.svg` dùng làm thẻ `<img>` thiếu biến màu): đây là hành vi của chính trang hướng dẫn, chưa được sửa ở đây.
+
+## Trang hướng dẫn (Pages)
+
+Trang `guides/<id>/` hiển thị khung xem rộng tới 1280 px (danh sách chương nằm ngang phía trên), có nút tạm dừng/phát, thanh tua thời gian và phím tắt (Dấu cách: tạm dừng/phát; mũi tên trái/phải: lùi/tiến 3 giây). Mã điều khiển nằm ở `window.__ctl` trong `common.js` (chỉ bật khi mở với `?play`); quay MP4 (`render.js`) không dùng đoạn này.
