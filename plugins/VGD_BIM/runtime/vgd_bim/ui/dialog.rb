@@ -461,6 +461,7 @@ module VGD
             layer = field == 'tag' ? (value.empty? ? untagged_layer : Tags.layer_for(@model, value)) : nil
             editable.each { |record| apply_edit(record[:entity], field, value, material, layer) }
           end
+          ModelSettings.remember(@model, field, value) # gợi ý nhập: nhớ giá trị chữ vừa sửa
           table_build
           show_outline
           text = "Đã sửa #{custom ? custom['label'] : EDIT_LABELS[field]} cho #{editable.size} đối tượng."
@@ -750,7 +751,8 @@ module VGD
           model_tags = @model.layers.to_a.map { |layer| layer.name.to_s }.reject(&untagged).sort_by { |name| name.downcase } # chỉ tag có trong model (bảng Loại trừ tag)
           {tags: tags.sort_by { |name| name.downcase }, materials: materials.sort_by { |name| name.downcase }, model_tags: model_tags,
            levels: Levels.read(@model).map { |level| {value: level['id'], label: level['name']} },
-           rooms: Rooms.read(@model).map { |room| {value: room['id'], label: room['number'].empty? ? room['name'] : "#{room['number']} · #{room['name']}"} }}
+           rooms: Rooms.read(@model).map { |room| {value: room['id'], label: room['number'].empty? ? room['name'] : "#{room['number']} · #{room['name']}"} },
+           suggest: ModelSettings.read(@model)[ModelSettings::SUGGEST_KEY] || {}}
         end
         # Cột chữ cho phép thay hàng loạt, và cách đọc giá trị hiện tại của dòng.
         REPLACE_FIELDS = {'name' => :name, 'description' => :description, 'owner' => :owner, 'size' => :size}.freeze

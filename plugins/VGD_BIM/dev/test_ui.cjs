@@ -67,7 +67,7 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   await page.locator('.grid tr[data-index="1"] td[data-key="quantity"]').click();last=await page.evaluate(()=>window.calls.at(-1));
   assert(last.name==='table_select'&&JSON.stringify(JSON.parse(last.args[0]).indexes)==='[1]'&&JSON.parse(last.args[0]).field==='quantity','Clicking a table cell did not select that row and column');
   // Chọn nhiều dòng kiểu Excel
-  const lastCall=async()=>{const c=await page.evaluate(()=>window.calls.at(-1));return {name:c.name,data:c.args[0]?JSON.parse(c.args[0]):null};};
+  const lastCall=async()=>{const c=await page.evaluate(()=>window.calls.filter(x=>x.name!=='table_view').at(-1));return {name:c.name,data:c.args[0]?JSON.parse(c.args[0]):null};};
   const selectedRows=()=>page.locator('.grid tbody tr.selected').evaluateAll(rows=>rows.map(r=>Number(r.dataset.index)));
   const cell=index=>page.locator(`.grid tr[data-index="${index}"] td[data-key="quantity"]`);
   await cell(3).click({modifiers:['Control']});

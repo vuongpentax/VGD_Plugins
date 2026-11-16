@@ -74,6 +74,10 @@ const VGD_I18N=(()=>{
     
     'Nhóm hạng mục':'Item group','Phần thô':'Rough work','Hoàn thiện':'Finishing','Đồ rời':'Loose furniture','Thiết bị':'Equipment','Khác':'Other',
     // --- Bảng khối lượng ---
+    'Thêm sheet':'Add sheet','Thêm sheet (sao chép cài đặt của sheet đang mở)':'Add sheet (copies the settings of the open sheet)','Bấm để mở · bấm đúp hoặc F2 để đổi tên · bấm phải để nhân đôi hoặc xóa':'Click to open · double-click or F2 to rename · right-click to duplicate or delete',
+    'Tên sheet':'Sheet name','Nhân đôi':'Duplicate','Xóa sheet':'Delete sheet','Bấm lần nữa để xóa':'Click again to delete','Tối đa 20 sheet.':'At most 20 sheets.',
+    'Tên sheet không được để trống.':'The sheet name cannot be empty.','Đã có sheet tên này. Hãy đặt tên khác.':'A sheet with this name already exists. Choose another name.','Phải còn ít nhất một sheet.':'At least one sheet must remain.',
+    'Đang tính lại số đo theo tag loại trừ của sheet…':'Recalculating measurements for this sheet’s excluded tags…',
     'Chọn cột':'Choose columns','Tìm kiếm...':'Search...','Tìm trong bảng':'Search in table','Tất cả nhóm':'All groups','Đổi tên':'Rename','Chụp ảnh':'Take photo',
 
     'Chọn tất cả cột':'Select all columns','Chọn tất cả':'Select all','Tìm cột':'Search columns','Ẩn danh sách cột':'Hide column list','Bỏ chọn tất cả':'Deselect all','Tìm cột...':'Search columns...','Tạo mới...':'Create new...',
@@ -453,6 +457,7 @@ const VGD_I18N=(()=>{
   rule(/^Ảnh quá lớn \(tối đa (\d+) MB\)\.$/,(m,n)=>`Image too large (${n} MB maximum).`);
   rule(/^Cỡ ảnh phải từ (\d+) đến (\d+) điểm ảnh\.$/,(m,a,b)=>`Image size must be between ${a} and ${b} pixels.`);
   rule(/^Đã cập nhật (\d+) đối tượng; bỏ qua (\d+) đối tượng bị khóa\.$/,(m,a,b)=>`Updated ${plural(a,'object','objects')}; skipped ${b} locked.`);
+  rule(/^Đã xóa sheet “(.+)”\.$/,(m,n)=>`Deleted sheet “${n}”.`),
   rule(/^Đã sửa (.+?) cho (\d+) đối tượng\.(.*)$/,(m,f,n,rest)=>`Changed ${({'tên':'name','mô tả':'description','tình trạng':'status','tag':'tag','vật liệu':'material'})[f]||f} for ${plural(n,'object','objects')}.${rest.replace(SKIPPED,' Skipped $1 locked.')}`);
   rule(/^Đã lưu preset "(.*)"\.$/,(m,n)=>`Saved preset "${n}".`);
   rule(/^Đã đổi tên (\d+) đối tượng\.(.*)$/,(m,n,rest)=>`Renamed ${plural(n,'object','objects')}.${rest.replace(SKIPPED,' Skipped $1 locked.').replace(/ Có (\d+) dòng trùng tên\./,' $1 rows have duplicate names.')}`);
