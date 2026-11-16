@@ -45,7 +45,7 @@ async function mountApp(url,frameId='cf',themeKey=null,opts={}){
  st.textContent='*,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}';d.head.appendChild(st);
  // mô phỏng :hover bằng lớp .fx-hover (rê chuột thật không có khi quay khung hình)
  for(const sh of d.styleSheets){let rules;try{rules=sh.cssRules}catch(_){continue}
-  for(const r of [...rules]){if(r.selectorText&&r.selectorText.includes(':hover'))sh.insertRule(r.selectorText.replace(/:hover/g,'.fx-hover')+'{'+r.style.cssText+'}',sh.cssRules.length)}}
+  for(const r of [...rules]){if(r.selectorText&&r.selectorText.includes(':hover')){try{sh.insertRule(r.selectorText.replace(/:hover/g,'.fx-hover')+'{'+r.style.cssText+'}',sh.cssRules.length)}catch(_){}}}}
  return W;
 }
 // Vị trí phần tử trong iframe, tính theo toạ độ khung hình (chỉ đo khi world chưa phóng to)

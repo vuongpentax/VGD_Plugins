@@ -33,8 +33,11 @@ Hoạt ảnh của các plugin khác nằm trong thư mục riêng, đăng cùng
 | `scenes-01-tao-bo-view.mp4` | `scenes/scene-01-tao-bo-view.html` | Scenes: tạo bộ view | 30 giây |
 | `scenes-02-mat-cat-khung.mp4` | `scenes/scene-02-mat-cat-khung.html` | Scenes: mặt cắt và khung hình | 25 giây |
 | `scenes-03-xuat-file.mp4` | `scenes/scene-03-xuat-file.html` | Scenes: xuất ảnh hoặc PDF | 25 giây |
+| `bim-01-bang-khoi-luong.mp4` | `bim/scene-01-bang-khoi-luong.html` | BIM: bảng khối lượng | 30 giây |
+| `bim-02-thong-tin-quet.mp4` | `bim/scene-02-thong-tin-quet.html` | BIM: thông tin, quét và xuất báo cáo | 25 giây |
+| `bim-03-phan-loai-tag.mp4` | `bim/scene-03-phan-loai-tag.html` | BIM: phân loại và soạn tag | 25 giây |
 
-Ảnh mẫu là hình đơn giản dùng chung trong `samples/`; Ruby được mô phỏng qua `image_importer/ii.js` và `reference/ref.js` và `library/lib.js` (vân vật liệu mẫu là SVG đơn giản `samples/vl_*.svg`) và `scenes/sc.js` (Scenes nhận trạng thái qua `VGDScenes.receive`, cũng cần `stub:true`) và `dim/dim.js` (Dim cần chặn `sketchup.*` bằng `mountApp(..., {stub:true})` vì `window.onload` gọi `sketchup.ready()`). Reference có thêm khung "khung nhìn SketchUp (minh họa)" vì ảnh nổi trên khung nhìn chứ không nằm trong bảng.
+Ảnh mẫu là hình đơn giản dùng chung trong `samples/`; Ruby được mô phỏng qua `image_importer/ii.js` và `reference/ref.js` và `library/lib.js` (vân vật liệu mẫu là SVG đơn giản `samples/vl_*.svg`) và `bim/bim.js` (BIM nhận dữ liệu qua `VGD.receive`; cột, preset, nhãn dịch là dữ liệu thật do Ruby sinh ra, lưu trong `bim/fixture.json`, tạo lại bằng `ruby plugins/VGD_BIM/dev/ui_fixture.rb`) và `scenes/sc.js` (Scenes nhận trạng thái qua `VGDScenes.receive`, cũng cần `stub:true`) và `dim/dim.js` (Dim cần chặn `sketchup.*` bằng `mountApp(..., {stub:true})` vì `window.onload` gọi `sketchup.ready()`). Reference có thêm khung "khung nhìn SketchUp (minh họa)" vì ảnh nổi trên khung nhìn chứ không nằm trong bảng.
 
 File MP4 không lưu trong git. Phần dùng chung: `common.css`, `common.js`. Script quay: `render.js`.
 

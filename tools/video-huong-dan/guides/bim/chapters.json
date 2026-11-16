@@ -1,0 +1,12 @@
+{
+  "title": "VGD BIM",
+  "eyebrow": "Hướng dẫn tương tác",
+  "lead": "Chọn một phần để xem hoạt ảnh. Hoạt ảnh chạy trực tiếp trên hộp thoại của BIM và tự lặp lại.",
+  "note": "Hoạt ảnh minh họa dựa trên giao diện VGD BIM; tên món, số lượng và kích thước chỉ là ví dụ. Kết quả trong khung nhìn 3D của SketchUp và hộp lưu file CSV của Windows được nói bằng chú thích.",
+  "web": "plugins/VGD_BIM/runtime/vgd_bim",
+  "chapters": [
+    {"scene": "bim/scene-01-bang-khoi-luong", "title": "Bảng khối lượng", "duration": "30 giây"},
+    {"scene": "bim/scene-02-thong-tin-quet", "title": "Thông tin, quét và xuất báo cáo", "duration": "25 giây"},
+    {"scene": "bim/scene-03-phan-loai-tag", "title": "Phân loại và soạn tag", "duration": "25 giây"}
+  ]
+}
