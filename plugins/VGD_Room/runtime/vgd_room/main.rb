@@ -8,6 +8,7 @@ module VGD
       bridge_version: 1, version: VERSION, provides: ['room_volume'],
       commands: {
         'build' => ->(model, room, vgd_id) { Builder.build(model, room, vgd_id) },
+        'build_many' => ->(model, items) { Builder.build_many(model, items) },
         'find' => ->(model, room_id) { Builder.find(model, room_id) }
       }
     })

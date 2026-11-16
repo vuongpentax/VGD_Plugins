@@ -17,6 +17,8 @@ module VGD
       MAX_NAME = 60
       MAX_TEXT = 60
       MAX_POINTS = 200
+      MAX_HOLES = 50 # lỗ trong phòng (cột, hộp kỹ thuật)
+      MIN_HOLE_AREA = 2_500.0 # mm2 (50 x 50 mm): nhỏ hơn coi như lỗ suy biến
       MAX_HEIGHT = 100_000
       MIN_AREA = 10_000.0 # mm2 (0,01 m2): nhỏ hơn coi như viền suy biến
       LEVEL_FLAT = 1.0    # mm: các điểm của mặt sàn phải cùng cao độ
@@ -93,9 +95,13 @@ module VGD
           raise ArgumentError, "Giá trị chiều cao của #{name} phải là số lớn hơn 0 và không quá #{MAX_HEIGHT} mm." unless height.is_a?(Numeric) && height.finite? && height.positive? && height <= MAX_HEIGHT
           elevation = item['elevation']
           raise ArgumentError, "Giá trị cao độ sàn của #{name} phải là số từ #{Levels::ELEVATION_RANGE.first} đến #{Levels::ELEVATION_RANGE.last} mm." unless elevation.is_a?(Numeric) && elevation.finite? && Levels::ELEVATION_RANGE.cover?(elevation)
-          {'id' => id || "rm_#{SecureRandom.hex(4)}", 'name' => name, 'number' => number, 'level' => level, 'height' => height.round(1).to_f, 'elevation' => elevation.round(1).to_f,
-           'boundary' => boundary!(item['boundary'], name), 'finish_floor' => finish!(item['finish_floor'], name), 'finish_wall' => finish!(item['finish_wall'], name),
-           'finish_ceiling' => finish!(item['finish_ceiling'], name)}
+          outline = boundary!(item['boundary'], name)
+          holes = holes!(item['holes'], outline, name)
+          room = {'id' => id || "rm_#{SecureRandom.hex(4)}", 'name' => name, 'number' => number, 'level' => level, 'height' => height.round(1).to_f, 'elevation' => elevation.round(1).to_f,
+                  'boundary' => outline, 'finish_floor' => finish!(item['finish_floor'], name), 'finish_wall' => finish!(item['finish_wall'], name),
+                  'finish_ceiling' => finish!(item['finish_ceiling'], name)}
+          room['holes'] = holes unless holes.empty? # chỉ ghi khi có lỗ: dữ liệu phòng không lỗ giữ nguyên như trước
+          room
         end
       end
 
@@ -121,6 +127,39 @@ module VGD
         fail_boundary.call('diện tích quá nhỏ hoặc các điểm thẳng hàng') if polygon_area(clean) < MIN_AREA
         fail_boundary.call('các cạnh tự cắt nhau') if self_intersecting?(clean)
         clean
+      end
+
+      # Lỗ trong phòng (cột, hộp kỹ thuật ở giữa phòng): mỗi lỗ là một đa giác phẳng nằm hẳn trong viền ngoài, không tự cắt, không chạm viền ngoài
+      # hay lỗ khác. nil hoặc [] là không có lỗ. Trả về mảng viền lỗ đã làm tròn.
+      def self.holes!(value, outline, name)
+        return [] if value.nil?
+        fail_holes = ->(why) { raise ArgumentError, "Giá trị lỗ của #{name} không hợp lệ: #{why}." }
+        fail_holes.call("tối đa #{MAX_HOLES} lỗ") unless value.is_a?(Array) && value.size <= MAX_HOLES
+        rings = value.map do |ring|
+          fail_holes.call('mỗi lỗ cần từ 3 đến %d điểm' % MAX_POINTS) unless ring.is_a?(Array) && ring.size.between?(3, MAX_POINTS)
+          clean = ring.map do |point|
+            fail_holes.call('mỗi điểm gồm hai số X, Y (mm)') unless point.is_a?(Array) && point.size == 2 && point.all? { |v| v.is_a?(Numeric) && v.finite? && v.abs <= 1.0e8 }
+            [point[0].round(1).to_f, point[1].round(1).to_f]
+          end
+          fail_holes.call('một lỗ quá nhỏ hoặc các điểm thẳng hàng') if polygon_area(clean) < MIN_HOLE_AREA
+          fail_holes.call('cạnh của một lỗ tự cắt nhau') if self_intersecting?(clean)
+          clean
+        end
+        rings.each_with_index do |ring, i|
+          fail_holes.call('lỗ nằm ngoài hoặc chạm viền phòng') unless ring.all? { |x, y| contains?(outline, x, y) } && !rings_touch?(ring, outline)
+          rings.each_with_index { |other, j| fail_holes.call('hai lỗ chồng hoặc chạm nhau') if j > i && (rings_touch?(ring, other) || contains?(other, *ring.first) || contains?(ring, *other.first)) }
+        end
+        rings
+      end
+
+      # Hai đa giác có cạnh cắt hoặc chạm nhau.
+      def self.rings_touch?(a, b)
+        a.each_with_index.any? { |p, i| q = a[(i + 1) % a.size]; b.each_with_index.any? { |r, j| segments_cross?(p, q, r, b[(j + 1) % b.size]) } }
+      end
+
+      # Điểm (x, y) nằm trong phòng: trong viền ngoài và không nằm trong lỗ nào.
+      def self.inside?(room, x, y)
+        contains?(room['boundary'], x, y) && Array(room['holes']).none? { |ring| contains?(ring, x, y) }
       end
 
       # ---- Lưu trong model ----
@@ -150,8 +189,9 @@ module VGD
 
       # ---- Số đo ----
       def self.metrics(room)
-        area = polygon_area(room['boundary'])
-        perimeter = polygon_perimeter(room['boundary'])
+        holes = Array(room['holes'])
+        area = polygon_area(room['boundary']) - holes.sum { |ring| polygon_area(ring) } # diện tích sàn trừ cột / hộp kỹ thuật
+        perimeter = polygon_perimeter(room['boundary']) + holes.sum { |ring| polygon_perimeter(ring) } # chu vi gồm cả chu vi lỗ (tường quanh cột)
         {area: (area / 1.0e6).round(3), perimeter: (perimeter / 1000.0).round(3), volume: (area * room['height'] / 1.0e9).round(3),
          wall_area: (perimeter * room['height'] / 1.0e6).round(3), ceiling_area: (area / 1.0e6).round(3)}
       end
@@ -184,11 +224,20 @@ module VGD
         items.each do |item|
           if item[:locked] then plan[:locked] << item[:index]; next end
           found = %i[x y z].all? { |k| item[k].is_a?(Numeric) && item[k].finite? } && rooms.find do |room|
-            item[:z] >= room['elevation'] - TOLERANCE && item[:z] <= room['elevation'] + room['height'] && contains?(room['boundary'], item[:x], item[:y])
+            item[:z] >= room['elevation'] - TOLERANCE && item[:z] <= room['elevation'] + room['height'] && inside?(room, item[:x], item[:y])
           end
           found ? plan[:assign][item[:index]] = found['id'] : plan[:none] << item[:index]
         end
         plan
+      end
+
+      # Các lỗ (vòng trong) của một mặt nằm ngang: mỗi vòng là mảng điểm 3D (mm); làm sạch như viền ngoài, bỏ vòng suy biến. Trả về mảng viền lỗ [[x, y], ...].
+      def self.holes_from_loops(loops3)
+        Array(loops3).filter_map do |points3|
+          boundary_from_points(points3)[:boundary]
+        rescue ArgumentError
+          nil
+        end
       end
 
       # Viền từ các điểm 3D (mm) của một mặt nằm ngang: bỏ Z (lấy làm cao độ sàn), bỏ điểm trùng và điểm thẳng hàng thừa.

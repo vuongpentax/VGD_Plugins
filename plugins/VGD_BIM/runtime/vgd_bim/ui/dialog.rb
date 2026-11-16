@@ -88,6 +88,7 @@ module VGD
           @dialog.add_action_callback('table_room_build') { |_ctx, payload| safely { table_room_build(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_rooms') { |_ctx, payload| safely { table_rooms(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_from_selection') { |_ctx, payload| safely { table_room_from_selection(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_room_build_all') { |_ctx, payload| safely { table_room_build_all(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_assign_rooms_auto') { |_ctx, payload| safely { table_assign_rooms_auto(JSON.parse(payload)) } }
           @dialog.add_action_callback('snapshot_list') { |_ctx| safely { snapshot_list } }
           @dialog.add_action_callback('snapshot_save') { |_ctx, payload| safely { snapshot_save(JSON.parse(payload)) } }
@@ -559,27 +560,93 @@ module VGD
           table_build
           emit('message', {text: "Đã lưu #{list.size} phòng."})
         end
-        # Tạo phòng từ mặt sàn đang chọn trong SketchUp: chỉ ĐỌC viền (vòng ngoài của mặt nằm ngang), lưu dữ liệu phòng. Không dựng hình.
-        # payload: {'name'?, 'number'?, 'level'? (id tầng), 'height'? (mm)}; thiếu thì tên "Phòng N", chiều cao theo tầng hoặc 3000.
+        # Tạo phòng từ MỘT HOẶC NHIỀU mặt sàn đang chọn trong SketchUp (các mặt trong vùng đang mở): chỉ ĐỌC viền ngoài và các lỗ (vòng trong, vd cột) của
+        # mặt nằm ngang, lưu dữ liệu phòng. Không dựng hình. Mặt không nằm ngang bị bỏ qua (báo số lượng); không có mặt nào dùng được thì báo lỗi.
+        # payload: {'name'?, 'number'?, 'level'? (id tầng), 'height'? (mm)}. Một mặt: tên như nhập (thiếu thì "Phòng N"), mã phòng như nhập.
+        # Nhiều mặt: 'name' là tiền tố ("Phòng" -> Phòng 1, Phòng 2...), không đặt mã phòng. Chiều cao theo tầng hoặc 3000.
         def table_room_from_selection(payload)
           check_model!
           raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless payload.is_a?(Hash)
-          face = @model.selection.to_a.find { |entity| entity.is_a?(Sketchup::Face) }
-          raise 'Hãy chọn một mặt sàn (Face) trong SketchUp rồi bấm lại.' unless face
+          faces = @model.selection.to_a.select { |entity| entity.is_a?(Sketchup::Face) }
+          raise 'Hãy chọn một hoặc nhiều mặt sàn (Face) trong SketchUp rồi bấm lại.' if faces.empty?
           context = context_transform
-          points = face.outer_loop.vertices.map { |vertex| p = context * vertex.position; [p.x.to_f * Geometry::INCH_MM, p.y.to_f * Geometry::INCH_MM, p.z.to_f * Geometry::INCH_MM] }
-          shape = Rooms.boundary_from_points(points)
+          to_mm = lambda do |loop_|
+            loop_.vertices.map { |vertex| p = context * vertex.position; [p.x.to_f * Geometry::INCH_MM, p.y.to_f * Geometry::INCH_MM, p.z.to_f * Geometry::INCH_MM] }
+          end
+          shapes = []
+          skipped = 0
+          first_error = nil
+          faces.each do |face|
+            begin
+              shape = Rooms.boundary_from_points(to_mm.call(face.outer_loop))
+              inner = face.respond_to?(:loops) ? face.loops.reject { |loop_| loop_.respond_to?(:outer?) && loop_.outer? }.map { |loop_| to_mm.call(loop_) } : []
+              shapes << shape.merge(holes: Rooms.holes_from_loops(inner))
+            rescue ArgumentError => error
+              first_error ||= error
+              skipped += 1
+            end
+          end
+          raise first_error if shapes.empty?
+          shapes.sort_by! { |shape| [shape[:boundary].map(&:first).min, shape[:boundary].map(&:last).min] } # đặt tên theo thứ tự từ trái sang phải
           rooms = Rooms.read(@model)
           level = payload['level'].to_s
           level_data = Levels.read(@model).find { |l| l['id'] == level }
-          name = payload['name'].to_s.strip
-          name = "Phòng #{rooms.size + 1}" if name.empty?
           height = payload['height'].is_a?(Numeric) ? payload['height'] : (level_data ? level_data['height'] : 3000)
-          created = {'name' => name, 'number' => payload['number'].to_s, 'level' => level_data ? level : '', 'height' => height, 'elevation' => shape[:elevation], 'boundary' => shape[:boundary]}
-          Rooms.write(@model, rooms + [created])
+          typed = payload['name'].to_s.strip
+          used = rooms.map { |room| room['name'].downcase }
+          counter = typed.empty? || shapes.size == 1 ? rooms.size : 0
+          created = shapes.map do |shape|
+            if shapes.size == 1 && !typed.empty?
+              name = typed
+            else
+              prefix = typed.empty? ? 'Phòng' : typed
+              begin
+                counter += 1
+                name = "#{prefix} #{counter}"
+              end while used.include?(name.downcase)
+            end
+            used << name.downcase
+            room = {'name' => name, 'number' => shapes.size == 1 ? payload['number'].to_s : '', 'level' => level_data ? level : '', 'height' => height, 'elevation' => shape[:elevation], 'boundary' => shape[:boundary]}
+            room['holes'] = shape[:holes] unless shape[:holes].empty?
+            room
+          end
+          clean = Rooms.sanitize!(rooms + created)
+          Rooms.write(@model, clean)
           table_build
-          area = Rooms.metrics(Rooms.sanitize!([created]).first)[:area]
-          emit('message', {text: "Đã tạo phòng #{name} từ mặt đang chọn (diện tích #{area} m²). Hình khối phòng do plugin VGD_Room dựng."})
+          fresh = clean.last(created.size)
+          area = fresh.sum { |room| Rooms.metrics(room)[:area] }.round(3)
+          notes = []
+          notes << "bỏ qua #{skipped} mặt không dùng được (không nằm ngang)" if skipped.positive?
+          holed = fresh.count { |room| room['holes'] }
+          notes << "#{holed} phòng có lỗ" if holed.positive?
+          note = notes.empty? ? '' : " (#{notes.join('; ')})"
+          text = fresh.size == 1 ? "Đã tạo phòng #{fresh.first['name']} từ mặt đang chọn (diện tích #{area} m²).#{note}" : "Đã tạo #{fresh.size} phòng từ #{faces.size} mặt đang chọn (tổng diện tích #{area} m²).#{note}"
+          emit('message', {text: "#{text} Hình khối phòng do plugin VGD_Room dựng: bấm Dựng khối."})
+        end
+        # Dựng khối 3D cho nhiều phòng (mặc định tất cả) bằng plugin VGD_Room qua cầu nối, MỘT bước hoàn tác cho cả đợt (lệnh build_many).
+        # Plugin Room cũ chưa có build_many thì dựng từng phòng (mỗi phòng một bước hoàn tác) và báo rõ. payload: {'ids' => [mã phòng]} (không có thì mọi phòng).
+        def table_room_build_all(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless payload.is_a?(Hash)
+          rooms = Rooms.read(@model)
+          ids = payload['ids']
+          raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless ids.nil? || (ids.is_a?(Array) && ids.all? { |id| id.is_a?(String) })
+          rooms = rooms.select { |room| ids.include?(room['id']) } if ids
+          raise 'Chưa có phòng nào để dựng. Hãy tạo phòng trước.' if rooms.empty?
+          provider = Bridge.provider_for('room_volume')
+          raise 'Chưa cài plugin VGD Room để dựng khối phòng. Hãy cài qua VGD Center rồi khởi động lại SketchUp.' unless provider
+          rebuilt = rooms.count { |room| !Bridge.call('room_volume', 'find', @model, room['id']).nil? }
+          items = rooms.map { |room| [room, VgdId.generate] }
+          single_step = provider[:info][:commands].key?('build_many')
+          if single_step
+            Bridge.call('room_volume', 'build_many', @model, items)
+          else
+            items.each { |room, id| Bridge.call('room_volume', 'build', @model, room, id) }
+          end
+          table_build
+          text = "Đã dựng #{rooms.size} khối phòng#{rebuilt.positive? ? " (#{rebuilt} dựng lại)" : ''}"
+          text += single_step ? ', một bước hoàn tác cho cả đợt.' : ". Plugin VGD Room cũ chưa có dựng nhiều phòng nên mỗi phòng là một bước hoàn tác: hãy cập nhật VGD Room."
+          emit('message', {text: text})
         end
         # Gán món vào phòng theo vị trí (tâm đáy món trong viền và trong khoảng cao của phòng). Nhãn, không dời hình. Một bước hoàn tác.
         def table_assign_rooms_auto(payload)

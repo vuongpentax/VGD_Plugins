@@ -733,7 +733,7 @@ rd2.define_singleton_method(:rcalls) { @rcalls ||= [] }
 rd2.define_singleton_method(:table_build) { nil }
 rd2.define_singleton_method(:show_outline) { nil }
 bad_room = ->(&block) { begin; block.call; nil; rescue StandardError => e; e.message; end }
-ok('tạo phòng khi chưa chọn mặt: báo lỗi', bad_room.call { rd2.table_room_from_selection({}) }.to_s.include?('chọn một mặt sàn'))
+ok('tạo phòng khi chưa chọn mặt: báo lỗi', bad_room.call { rd2.table_room_from_selection({}) }.to_s.include?('mặt sàn'))
 rmm.selection.items = [RoomFace.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 500]])]
 ok('mặt không nằm ngang: báo lỗi, chưa lưu phòng nào', bad_room.call { rd2.table_room_from_selection({}) }.to_s.include?('nằm ngang') && VGD::BIM::Rooms.read(rmm).empty?)
 rmm.selection.items = [RoomFace.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 0], [0, 3000, 0]])]
@@ -777,6 +777,65 @@ rd2.table_room_build({'id' => room_id})
 ok('đã có khối: báo "dựng lại"', rd2.rcalls.last[1][:text].include?('Đã dựng lại'))
 ok('lệnh của plugin lỗi: lỗi được báo ra, không nuốt', (VGD::Bridge.providers['vgd_room_fake'][:commands]['build'] = ->(*_) { raise 'SketchUp lỗi' }; bad_room.call { rd2.table_room_build({'id' => room_id}) } == 'SketchUp lỗi'))
 VGD::Bridge.providers.clear
+# Nhiều phòng một lần: tạo từ nhiều mặt sàn đang chọn (có lỗ), dựng khối tất cả phòng một bước hoàn tác
+class RoomLoopH < RoomLoop; def initialize(points, outer); super(points); @outer = outer; end; def outer?; @outer; end; end
+class RoomFaceH < RoomFace
+  def initialize(outer, holes = []); super(outer); @holes = holes; end
+  def loops; [RoomLoopH.new(@points, true)] + @holes.map { |h| RoomLoopH.new(h, false) }; end
+end
+sq = ->(x, y, w, h, z = 0) { [[x, y, z], [x + w, y, z], [x + w, y + h, z], [x, y + h, z]] }
+mm = RoomModel.new; $model = mm
+md = D.allocate
+md.instance_variable_set(:@model, mm)
+md.define_singleton_method(:emit) { |ev, payload| (@mcalls ||= []) << [ev, payload] }
+md.define_singleton_method(:mcalls) { @mcalls ||= [] }
+md.define_singleton_method(:table_build) { nil }
+mm.selection.items = [RoomFaceH.new(sq.(5000, 0, 4000, 3000)), RoomFaceH.new(sq.(0, 0, 4000, 3000), [sq.(1000, 1000, 400, 400)]), RoomFaceH.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 500]]), RoomFaceH.new(sq.(0, 4000, 3000, 3000, 2800))]
+md.table_room_from_selection({'name' => 'Phòng', 'number' => 'KHONGDUNG', 'height' => 2800})
+made = VGD::BIM::Rooms.read(mm)
+ok('nhiều mặt: tạo một phòng cho mỗi mặt nằm ngang (3 phòng), bỏ qua mặt nghiêng', made.size == 3 && md.mcalls.last[1][:text].include?('3 phòng') && md.mcalls.last[1][:text].include?('bỏ qua 1 mặt'))
+ok('nhiều mặt: đặt tên tiền tố + số thứ tự, theo thứ tự từ trái sang phải; không đặt mã phòng', made.map { |r| r['name'] } == ['Phòng 1', 'Phòng 2', 'Phòng 3'] && made.map { |r| r['boundary'].map(&:first).min.round } == [0, 0, 5000] && made.all? { |r| r['number'] == '' })
+ok('nhiều mặt: mỗi phòng lấy cao độ sàn của mặt của nó và chiều cao đã nhập', made.map { |r| r['elevation'] } .sort == [0.0, 0.0, 2800.0] && made.all? { |r| r['height'] == 2800.0 })
+holed = made.find { |r| r['holes'] }
+ok('mặt có lỗ (cột): lỗ được lưu, diện tích trừ lỗ (12 m² - 0,16 m²), báo số phòng có lỗ', holed && holed['holes'].size == 1 && VGD::BIM::Rooms.metrics(holed)[:area] == 11.84 && md.mcalls.last[1][:text].include?('1 phòng có lỗ') && made.count { |r| r['holes'] } == 1)
+ok('chu vi gồm cả chu vi lỗ (14 m + 1,6 m)', VGD::BIM::Rooms.metrics(holed)[:perimeter] == 15.6)
+md.table_room_from_selection({'name' => 'Phòng'})
+ok('tạo tiếp với cùng tiền tố: số thứ tự tiếp theo không trùng tên cũ', VGD::BIM::Rooms.read(mm).map { |r| r['name'] }.count('Phòng 1') == 1 && VGD::BIM::Rooms.read(mm).size == 6 && VGD::BIM::Rooms.read(mm).last(3).map { |r| r['name'] } == ['Phòng 4', 'Phòng 5', 'Phòng 6'])
+mm.selection.items = [RoomFaceH.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 500]]), RoomFaceH.new([[0, 0, 0], [0, 0, 100], [0, 50, 0]])]
+ok('toàn mặt không nằm ngang: báo lỗi, không lưu thêm phòng', bad_room.call { md.table_room_from_selection({}) }.to_s.include?('nằm ngang') && VGD::BIM::Rooms.read(mm).size == 6)
+mm.selection.items = [RoomFaceH.new(sq.(0, 0, 4000, 3000), [sq.(-500, 1000, 400, 400)])]
+ok('lỗ nằm ngoài viền: bỏ lỗ hỏng hoặc báo lỗi rõ, không lưu phòng sai', (bad_room.call { md.table_room_from_selection({'name' => 'Hỏng'}) }.to_s.include?('lỗ') && VGD::BIM::Rooms.read(mm).none? { |r| r['name'] == 'Hỏng' }))
+mm.selection.items = [RoomFaceH.new(sq.(0, 0, 4000, 3000))]
+md.table_room_from_selection({'name' => 'Riêng', 'number' => 'P09'})
+ok('một mặt: tên và mã phòng như nhập (giữ hành vi cũ)', VGD::BIM::Rooms.read(mm).last.values_at('name', 'number') == ['Riêng', 'P09'])
+VGD::BIM::Rooms.write(mm, VGD::BIM::Rooms.read(mm).first(3))
+built_many = []
+VGD::Bridge.providers.clear
+ok('dựng tất cả khi chưa cài plugin: báo cần cài', bad_room.call { md.table_room_build_all({}) }.to_s.include?('Chưa cài plugin VGD Room'))
+VGD::Bridge.register('vgd_room_fake', {bridge_version: 1, version: '0', provides: ['room_volume'], commands: {
+  'build' => ->(_m, room, id) { built_many << [:one, room['id']]; Object.new },
+  'build_many' => ->(_m, items) { built_many << [:many, items.map { |room, id| [room['id'], id, room['holes']&.size] }]; items.map { Object.new } },
+  'find' => ->(_m, room_id) { room_id == VGD::BIM::Rooms.read(mm).first['id'] ? Object.new : nil }
+}})
+md.table_room_build_all({})
+ids_all = VGD::BIM::Rooms.read(mm).map { |r| r['id'] }
+ok('dựng tất cả: một lệnh build_many cho mọi phòng, mỗi phòng một VGD ID hợp lệ, kèm lỗ', built_many.size == 1 && built_many[0][0] == :many && built_many[0][1].map(&:first) == ids_all && built_many[0][1].all? { |_, id, _| VGD::BIM::VgdId.valid?(id) } && built_many[0][1].map(&:last).compact == [1])
+ok('dựng tất cả: báo số khối, số dựng lại, một bước hoàn tác', md.mcalls.last[1][:text].include?('3 khối phòng') && md.mcalls.last[1][:text].include?('1 dựng lại') && md.mcalls.last[1][:text].include?('một bước hoàn tác'))
+built_many.clear
+md.table_room_build_all({'ids' => [ids_all[1]]})
+ok('dựng một số phòng (theo mã): chỉ phòng đó', built_many[0][1].map(&:first) == [ids_all[1]])
+ok('mã phòng / dữ liệu sai: từ chối', bad_room.call { md.table_room_build_all({'ids' => 'x'}) }.to_s.include?('không hợp lệ') && bad_room.call { md.table_room_build_all({'ids' => ['rm_deadbeef']}) }.to_s.include?('Chưa có phòng') && bad_room.call { md.table_room_build_all('x') }.to_s.include?('không hợp lệ'))
+VGD::Bridge.providers.clear
+built_many.clear
+VGD::Bridge.register('vgd_room_old', {bridge_version: 1, version: '0', provides: ['room_volume'], commands: {
+  'build' => ->(_m, room, id) { built_many << [:one, room['id']]; Object.new },
+  'find' => ->(_m, _room_id) { nil }
+}})
+md.table_room_build_all({})
+ok('plugin Room cũ chưa có build_many: dựng từng phòng và báo cần cập nhật VGD Room', built_many.map(&:first) == [:one, :one, :one] && md.mcalls.last[1][:text].include?('cập nhật VGD Room'))
+VGD::Bridge.providers.clear
+VGD::BIM::Rooms.write(mm, [])
+ok('chưa có phòng nào: báo cần tạo phòng trước', bad_room.call { md.table_room_build_all({}) }.to_s.include?('Chưa có phòng'))
 # Thư viện vật liệu: lưu trên máy, kiểm tra lại dữ liệu
 ok('lưu vật liệu sai dữ liệu: từ chối, thư viện không đổi', bad_room.call { rd2.material_library_save({'items' => [{'name' => '', 'unit' => 'm2'}]}) }.to_s.include?('tên vật liệu') && bad_room.call { rd2.material_library_save('x') }.to_s.include?('không hợp lệ') && VGD::BIM::MaterialLibrary.read.empty?)
 rd2.material_library_save({'items' => [{'name' => 'MFC Oak', 'code' => 'MFC01', 'unit' => 'm2', 'price' => 285_000, 'waste' => 5, 'sketchup_material' => 'Gỗ sồi'}]})

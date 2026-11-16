@@ -10,6 +10,8 @@ module VGD
       SOURCE_DICTIONARY = 'VGD_BIM_SOURCE'.freeze
       MM_PER_INCH = 25.4
       MAX_POINTS = 200
+      MAX_HOLES = 50 # lỗ trong phòng (cột, hộp kỹ thuật)
+      MAX_BATCH = 500
       MAX_HEIGHT = 100_000
       MAX_NAME = 60
       ROOM_ID = /\Arm_[0-9a-f]{8}\z/
@@ -31,6 +33,10 @@ module VGD
         raise ArgumentError, 'Giá trị cao độ sàn phải là một số.' unless number?(room['elevation'])
         name = room['name'].to_s
         raise ArgumentError, "Tên phòng không hợp lệ (tối đa #{MAX_NAME} ký tự)." if name.empty? || name.length > MAX_NAME
+        holes = room['holes']
+        return if holes.nil?
+        valid_ring = ->(ring) { ring.is_a?(Array) && ring.size.between?(3, MAX_POINTS) && ring.all? { |p| p.is_a?(Array) && p.size == 2 && p.all? { |v| number?(v) } } }
+        raise ArgumentError, "Giá trị lỗ của phòng không hợp lệ: tối đa #{MAX_HOLES} lỗ, mỗi lỗ từ 3 đến #{MAX_POINTS} điểm, mỗi điểm là hai số X, Y (mm)." unless holes.is_a?(Array) && holes.size <= MAX_HOLES && holes.all?(&valid_ring)
       end
 
       def self.label(room)
@@ -55,34 +61,58 @@ module VGD
         material
       end
 
+      # Dựng một khối phòng BÊN TRONG thao tác đang mở (không tự mở / đóng thao tác). Dữ liệu đã được kiểm tra. Trả về Group.
+      def self.create_volume(model, room, vgd_id)
+        old = find(model, room['id'])
+        kept_id = ''
+        if old
+          raise 'Khối phòng cũ đang bị khóa. Hãy mở khóa rồi dựng lại.' if old.locked?
+          kept_id = old.get_attribute(ID_DICTIONARY, 'guid').to_s
+          old.erase!
+        end
+        group = model.entities.add_group
+        z = room['elevation'] / MM_PER_INCH
+        to_points = ->(ring) { ring.map { |x, y| Geom::Point3d.new(x / MM_PER_INCH, y / MM_PER_INCH, z) } }
+        face = group.entities.add_face(to_points.call(room['boundary']))
+        Array(room['holes']).each { |ring| group.entities.add_face(to_points.call(ring)).erase! } # mặt trong viền lỗ bị xóa: để lại lỗ trên mặt sàn
+        face.reverse! if face.normal.z < 0 # đùn theo pháp tuyến: mặt phải hướng lên
+        face.pushpull(room['height'] / MM_PER_INCH)
+        group.name = label(room)
+        group.layer = model.layers.add(TAG)
+        group.material = material_for(model)
+        group.set_attribute(ID_DICTIONARY, 'guid', kept_id.match?(GUID) ? kept_id : vgd_id)
+        group.set_attribute(SOURCE_DICTIONARY, 'plugin', 'vgd_room')
+        group.set_attribute(SOURCE_DICTIONARY, 'plugin_version', VGD::Room::VERSION)
+        group.set_attribute(SOURCE_DICTIONARY, 'kind', 'room')
+        group.set_attribute(SOURCE_DICTIONARY, 'ref', room['id'])
+        group
+      end
+
       # Tạo hoặc dựng lại khối phòng trong MỘT thao tác (một bước hoàn tác); lỗi thì hủy hết. Trả về Group.
       def self.build(model, room, vgd_id)
         validate!(room, vgd_id)
         model.start_operation('VGD_Room · Dựng khối phòng', true)
         begin
-          old = find(model, room['id'])
-          kept_id = ''
-          if old
-            raise 'Khối phòng cũ đang bị khóa. Hãy mở khóa rồi dựng lại.' if old.locked?
-            kept_id = old.get_attribute(ID_DICTIONARY, 'guid').to_s
-            old.erase!
-          end
-          group = model.entities.add_group
-          z = room['elevation'] / MM_PER_INCH
-          points = room['boundary'].map { |x, y| Geom::Point3d.new(x / MM_PER_INCH, y / MM_PER_INCH, z) }
-          face = group.entities.add_face(points)
-          face.reverse! if face.normal.z < 0 # đùn theo pháp tuyến: mặt phải hướng lên
-          face.pushpull(room['height'] / MM_PER_INCH)
-          group.name = label(room)
-          group.layer = model.layers.add(TAG)
-          group.material = material_for(model)
-          group.set_attribute(ID_DICTIONARY, 'guid', kept_id.match?(GUID) ? kept_id : vgd_id)
-          group.set_attribute(SOURCE_DICTIONARY, 'plugin', 'vgd_room')
-          group.set_attribute(SOURCE_DICTIONARY, 'plugin_version', VGD::Room::VERSION)
-          group.set_attribute(SOURCE_DICTIONARY, 'kind', 'room')
-          group.set_attribute(SOURCE_DICTIONARY, 'ref', room['id'])
+          group = create_volume(model, room, vgd_id)
           model.commit_operation
           group
+        rescue StandardError
+          model.abort_operation
+          raise
+        end
+      end
+
+      # Dựng nhiều khối phòng trong MỘT thao tác (một bước hoàn tác cho cả đợt). items: [[room, vgd_id], ...]. Kiểm tra hết trước khi đụng model;
+      # lỗi ở phòng nào thì hủy cả đợt (không để lại nửa chừng). Trả về mảng Group theo thứ tự items.
+      def self.build_many(model, items)
+        raise ArgumentError, "Danh sách phòng cần dựng không hợp lệ (1 đến #{MAX_BATCH} phòng)." unless items.is_a?(Array) && items.size.between?(1, MAX_BATCH) && items.all? { |item| item.is_a?(Array) && item.size == 2 }
+        items.each { |room, vgd_id| validate!(room, vgd_id) }
+        raise ArgumentError, 'Có hai phòng trùng mã trong cùng một đợt dựng.' if items.map { |room, _| room['id'] }.uniq.size != items.size
+        model.start_operation('VGD_Room · Dựng khối nhiều phòng', true)
+        begin
+          groups = items.map { |room, vgd_id| create_volume(model, room, vgd_id) }
+          model.commit_operation
+          groups
         rescue StandardError
           model.abort_operation
           raise
