@@ -44,7 +44,7 @@ module VGD
           isolate = !location && ISOLATING_VIEWS.include?(settings['image_view'])
           framed = isolate || (location && ISOLATING_VIEWS.include?(settings['image_view'])) # có đặt camera (Iso / Chính diện); Khung nhìn hiện tại thì chụp nguyên khung
           saved = {camera: copy_camera(view), selection: model.selection.to_a, options: nil}
-          ensure_writable(Images.dir(model))
+          ensure_writable(Images.dir!(model))
           temp = preview ? preview_path(model, pid, kind) : Images.temp_path(model, pid, kind)
           png = nil
           operation = false
@@ -85,7 +85,7 @@ module VGD
 
         # File tạm của ảnh nháp (xóa ngay sau khi đọc), tên bắt đầu bằng dấu chấm để không lẫn với ảnh của món.
         def self.preview_path(model, pid, kind)
-          File.join(Images.dir(model), ".preview_#{pid}#{kind == :full ? '' : "_#{Images::PREFIX.fetch(kind)}"}.png")
+          File.join(Images.dir!(model), ".preview_#{pid}#{kind == :full ? '' : "_#{Images::PREFIX.fetch(kind)}"}.png")
         end
 
         # Thay các mục image_* bằng mục của loại ảnh (loc_*, x1_*, x2_*); ảnh chính giữ nguyên.
@@ -133,7 +133,7 @@ module VGD
           File.delete(probe)
         rescue SystemCallError => error
           log("Thư mục ảnh không ghi được: #{dir} (#{error.class}: #{error.message})")
-          raise "Không ghi được vào thư mục ảnh #{dir}. Hãy chọn thư mục khác trong bảng Preset."
+          raise "Không ghi được vào thư mục ảnh #{dir}. Kiểm tra quyền ghi của thư mục chứa file SketchUp."
         end
 
         # Các cách gọi write_image, thử lần lượt đến khi được: đúng như xin trước, rồi bỏ nền trong suốt, rồi bỏ cả khử răng cưa.

@@ -33,8 +33,9 @@ module UI
     def run_timers; (@timers.shift.call) until @timers.empty?; end
   end
 end
-FakeModel = Struct.new(:guid) { def title; 'Nhà mẫu'; end }
-$model = FakeModel.new('MODEL-A')
+SK = Dir.mktmpdir('vgd_bim_skp_actions') # nơi đặt các file SketchUp giả; ảnh và settings.json nằm trong thư mục cạnh file
+FakeModel = Struct.new(:guid, :path) { def title; 'Nhà mẫu'; end }
+$model = FakeModel.new('MODEL-A', File.join(SK, 'nha.skp'))
 module VGD; module BIM; def self.log(m); end
   module Data; def self.supported?(e); true; end; def self.transaction(_model, name = nil); ($transactions ||= []) << name; yield; end; end
   module Scanner; end; module Geometry; def self.definition(e); Struct.new(:name).new('Họ'); end; end
@@ -171,12 +172,12 @@ ok('đóng cửa sổ giữa chừng: dừng chụp, không gửi gì về cửa
 d = make_dialog(3)
 d.safely { d.images_capture('indexes' => [0, 1, 2]) }
 UI.timers.shift.call # chụp xong đối tượng đầu
-$model = FakeModel.new('MODEL-B')
+$model = FakeModel.new('MODEL-B', File.join(SK, 'nha.skp'))
 UI.run_timers
 done = events(d, 'images_done').last
 ok('đổi model giữa chừng: dừng ngay, chỉ chụp đối tượng đã chụp trước đó', $shot.size == 1 && done['done'] == 1 && done['ok'] == 1 && done['errors'].size == 1 && done['errors'][0].include?('Mô hình đã thay đổi'))
 ok('đổi model giữa chừng: không còn trạng thái đang chụp', d.instance_variable_get(:@capture).nil?)
-$model = FakeModel.new('MODEL-A')
+$model = FakeModel.new('MODEL-A', File.join(SK, 'nha.skp'))
 
 # Chỉ chụp dòng chưa có ảnh, giới hạn lô, dữ liệu sai
 d = make_dialog(3, has_image: [1])
@@ -237,37 +238,50 @@ many.safely { many.image_full($records.map { |r| r[:entity].persistent_id }) }
 ok("mỗi lần chỉ trả tối đa #{D::MAX_FULL_REQUEST} ảnh (ảnh gốc nặng hơn ảnh nhỏ)", events(many, 'image_data').last['items'].size == D::MAX_FULL_REQUEST)
 ok('không còn lệnh xin ảnh nhỏ', !d.respond_to?(:image_thumbs) && !defined?(D::MAX_THUMB_REQUEST))
 
-# ---- Cài đặt chung (ngôn ngữ, thư mục ảnh) ----
+# ---- Cài đặt: ngôn ngữ (chung của máy), từ khóa và tag loại trừ (riêng từng file, ghi vào settings.json cạnh file SketchUp) ----
 d = make_dialog
 refreshed = 0
 d.define_singleton_method(:refresh) { refreshed += 1 }
-d.safely { d.settings_save('image_dir' => File.join(Dir.tmpdir, 'anh_moi')) }
-ok('lưu thư mục ảnh: ghi vào settings.json và gửi lại cho giao diện, không vẽ lại cả cửa sổ', S.read['image_dir'] == File.join(Dir.tmpdir, 'anh_moi') && events(d, 'settings').last['settings']['image_dir'] == File.join(Dir.tmpdir, 'anh_moi') && refreshed == 0)
+settings_file = File.join(SK, 'nha_VGD_BIM', 'settings.json')
+def global_settings_text; f = File.join(VGD::BIM::Storage.dir, 'settings.json'); File.file?(f) ? File.read(f) : ''; end
+d.safely { d.settings_save('exclude_tags' => ['Handle'], 'exclude_words' => 'knob') }
+saved_json = File.file?(settings_file) ? JSON.parse(File.read(settings_file)) : {}
+ok('lưu tag và từ khóa loại trừ: ghi vào settings.json trong thư mục cạnh file SketchUp, gửi lại cho giao diện, không vẽ lại cả cửa sổ', saved_json['exclude_tags'] == ['Handle'] && saved_json['exclude_words'] == 'knob' && events(d, 'settings').last['settings']['exclude_tags'] == ['Handle'] && refreshed == 0)
+ok('tag loại trừ của file không rò vào cài đặt chung của máy', !global_settings_text.include?('Handle') && S.read['exclude_tags'] == [])
+ok('cài đặt gửi giao diện có thư mục ảnh cạnh file SketchUp và cờ đã lưu', events(d, 'settings').last['dir'] == File.join(SK, 'nha_VGD_BIM') && events(d, 'settings').last['saved'] == true && !events(d, 'settings').last['settings'].key?('image_dir'))
 d.safely { d.settings_save('language' => 'en') }
 ok('đổi ngôn ngữ: vẽ lại toàn bộ cửa sổ (gửi lại từ điển)', refreshed == 1 && S.read['language'] == 'en')
 d.safely { d.settings_save('language' => 'fr') }
 ok('cài đặt sai bị từ chối, giữ nguyên giá trị cũ', error_of(d).to_s.include?('Ngôn ngữ không hợp lệ') && S.read['language'] == 'en')
-d.safely { d.settings_save('language' => 'vi', 'image_dir' => 'khong/tuyet/doi') }
-ok('một mục sai làm cả lần lưu bị từ chối (không lưu nửa chừng)', S.read['language'] == 'en')
+d.safely { d.settings_save('language' => 'vi', 'exclude_tags' => 'khong phai mang') }
+ok('một mục sai làm cả lần lưu bị từ chối (không lưu nửa chừng)', S.read['language'] == 'en' && JSON.parse(File.read(settings_file))['exclude_tags'] == ['Handle'])
 d.safely { d.settings_save('length_unit' => 'cm', 'image_size' => 1024) }
-ok('mục đã chuyển sang preset (đơn vị, cỡ ảnh) không còn lưu ở cài đặt chung', !File.read(File.join(VGD::BIM::Storage.dir, 'settings.json')).include?('length_unit'))
-$picked_dir = File.join(Dir.tmpdir, 'anh_chon')
-d.safely { d.settings_pick_dir }
-ok('chọn thư mục ảnh bằng hộp chọn: lưu và báo lại', S.read['image_dir'] == $picked_dir && events(d, 'settings').last['dir'] == $picked_dir)
-$picked_dir = nil
-d.safely { d.settings_pick_dir }
-ok('hủy hộp chọn thư mục: giữ nguyên', S.read['image_dir'] == File.join(Dir.tmpdir, 'anh_chon'))
+ok('mục đã chuyển sang preset (đơn vị, cỡ ảnh) không còn lưu ở cài đặt chung', !global_settings_text.include?('length_unit'))
+d.safely { d.settings_save('image_dir' => File.join(Dir.tmpdir, 'anh_khac')) }
+ok('thư mục ảnh không còn đổi tay được: bỏ qua, ảnh vẫn nằm cạnh file SketchUp', I.dir($model).start_with?(File.join(SK, 'nha_VGD_BIM')) && !global_settings_text.include?('anh_khac'))
+FileUtils.rm_rf(File.join(SK, 'nha_VGD_BIM'))
 d.safely { d.images_open_dir }
-ok('mở thư mục ảnh (không phải Windows): tạo thư mục nếu chưa có rồi mở bằng địa chỉ file:///', File.directory?(S.image_dir) && UI.opened.last.start_with?('file:///'))
+ok('mở thư mục ảnh khi thư mục chưa có: báo chưa có, không tạo, không mở', error_of(d).to_s.include?('Chưa có thư mục ảnh') && !File.directory?(File.join(SK, 'nha_VGD_BIM')))
+FileUtils.mkdir_p(File.join(SK, 'nha_VGD_BIM'))
+d.safely { d.images_open_dir }
+ok('mở thư mục ảnh (không phải Windows): mở thư mục cạnh file SketchUp bằng địa chỉ file:///', UI.opened.last.start_with?('file:///') && UI.opened.last.include?('nha_VGD_BIM'))
 launched = []
 d.define_singleton_method(:windows?) { true }
 d.define_singleton_method(:launch_process) { |*args| launched << args }
 opened_before = UI.opened.size
 d.safely { d.images_open_dir }
-ok('Windows: mở bằng explorer.exe với đường dẫn Windows (dấu gạch ngược), không qua UI.openURL (tránh cửa sổ Explorer bị dẹp lép)', launched == [['explorer.exe', File.expand_path(S.image_dir).tr('/', '\\')]] && UI.opened.size == opened_before)
+ok('Windows: mở bằng explorer.exe với đường dẫn Windows (dấu gạch ngược), không qua UI.openURL (tránh cửa sổ Explorer bị dẹp lép)', launched == [['explorer.exe', File.expand_path(File.join(SK, 'nha_VGD_BIM')).tr('/', '\\')]] && UI.opened.size == opened_before)
 d.define_singleton_method(:windows?) { false }
 d.safely { d.images_open_dir }
 ok('không phải Windows: vẫn dùng UI.openURL, không chạy explorer', launched.size == 1 && UI.opened.size == opened_before + 1)
+unsaved_dialog = make_dialog
+unsaved_dialog.instance_variable_set(:@model, FakeModel.new('MODEL-CHUA-LUU', ''))
+unsaved_dialog.define_singleton_method(:refresh) { }
+unsaved_dialog.safely { unsaved_dialog.images_open_dir }
+ok('file chưa lưu: mở thư mục ảnh báo "Chưa lưu file SketchUp"', error_of(unsaved_dialog).to_s.include?('Chưa lưu file SketchUp'))
+unsaved_dialog.safely { unsaved_dialog.settings_save('exclude_tags' => ['Door']) }
+ok('file chưa lưu: đổi cài đặt vẫn được (giữ trong phiên), báo rõ file chưa lưu, không tạo thư mục', VGD::BIM::ModelSettings.effective(unsaved_dialog.instance_variable_get(:@model))['exclude_tags'] == ['Door'] && events(unsaved_dialog, 'settings').last['saved'] == false && events(unsaved_dialog, 'settings').last['dir'].nil? && events(unsaved_dialog, 'message').last['text'].include?('chưa lưu'))
+unsaved_dialog.safely { unsaved_dialog.image_paste('pid' => 901, 'full' => Base64.strict_encode64(PNG)) } if unsaved_dialog.respond_to?(:image_paste)
 
 # ---- Iso bên trái / phải (nút ◣ ◢ trong ô ảnh) đi cùng lệnh chụp ----
 d = make_dialog
@@ -295,29 +309,22 @@ d = make_dialog
 d.safely { d.images_capture('indexes' => [0], 'settings' => {'image_width' => 5}) }
 ok('cỡ ảnh sai bị từ chối trước khi chụp', error_of(d).to_s.include?('Cỡ ảnh') && UI.timers.empty?)
 
-# ---- Cài đặt riêng từng file: thư mục ảnh và loại trừ số đo của file này không bị file khác đổi ----
-class OwnModel
-  def initialize; @attrs = {}; end
-  def get_attribute(dict, key, default = nil); @attrs.dig(dict, key) || default; end
-  def set_attribute(dict, key, value); (@attrs[dict] ||= {})[key] = value; end
-  def start_operation(*); true; end
-  def commit_operation; true; end
-  def abort_operation; true; end
-  def guid; 'g'; end
-end
-dir_a = File.join(Dir.tmpdir, 'anh_file_a'); dir_b = File.join(Dir.tmpdir, 'anh_file_b')
-model_a = OwnModel.new; model_b = OwnModel.new
+# ---- Cài đặt riêng từng file SketchUp: tag loại trừ lưu trong settings.json cạnh từng file, không lẫn nhau ----
+model_a = FakeModel.new('g', File.join(SK, 'phong_a.skp'))
+model_b = FakeModel.new('g', File.join(SK, 'phong_b.skp'))
+model_new = FakeModel.new('g', File.join(SK, 'phong_moi.skp'))
 da = make_dialog; da.instance_variable_set(:@model, model_a); da.define_singleton_method(:refresh) { }
 db = make_dialog; db.instance_variable_set(:@model, model_b); db.define_singleton_method(:refresh) { }
-da.safely { da.settings_save('image_dir' => dir_a, 'exclude_tags' => ['Handle']) }
-db.safely { db.settings_save('image_dir' => dir_b, 'exclude_tags' => ['Door']) }
-ok('hai file: mỗi file giữ thư mục ảnh riêng dù file kia đổi sau', I.dir(model_a).start_with?(dir_a) && I.dir(model_b).start_with?(dir_b))
+dn = make_dialog; dn.instance_variable_set(:@model, model_new); dn.define_singleton_method(:refresh) { }
+da.safely { da.settings_save('exclude_tags' => ['Handle']) }
+db.safely { db.settings_save('exclude_tags' => ['Door']) }
+ok('hai file: mỗi file có thư mục và settings.json riêng cạnh file của nó', File.file?(File.join(SK, 'phong_a_VGD_BIM', 'settings.json')) && File.file?(File.join(SK, 'phong_b_VGD_BIM', 'settings.json')) && I.dir(model_a).start_with?(File.join(SK, 'phong_a_VGD_BIM')) && I.dir(model_b).start_with?(File.join(SK, 'phong_b_VGD_BIM')))
 ok('hai file: mỗi file giữ tag loại trừ riêng', VGD::BIM::ModelSettings.effective(model_a)['exclude_tags'] == ['Handle'] && VGD::BIM::ModelSettings.effective(model_b)['exclude_tags'] == ['Door'])
-ok('cài đặt gửi giao diện là của file đang mở', events(da, 'settings').last['dir'] == dir_a && events(da, 'settings').last['settings']['exclude_tags'] == ['Handle'])
-$picked_dir = File.join(Dir.tmpdir, 'anh_file_a2')
-da.safely { da.settings_pick_dir }
-ok('chọn lại thư mục ảnh ở file A: file A đổi, file B không', I.dir(model_a).start_with?($picked_dir) && I.dir(model_b).start_with?(dir_b))
-$picked_dir = nil
+ok('file mới (chưa có settings.json): tag loại trừ về mặc định, không lấy của file đã dùng gần nhất', VGD::BIM::ModelSettings.effective(model_new)['exclude_tags'] == [] && VGD::BIM::ModelSettings.effective(model_new)['exclude_words'] == S::DEFAULTS['exclude_words'] && VGD::BIM::Table.view_state(model_new) == {})
+ok('cài đặt gửi giao diện là của file đang mở', events(da, 'settings').last['settings']['exclude_tags'] == ['Handle'] && events(da, 'settings').last['dir'] == File.join(SK, 'phong_a_VGD_BIM'))
+FileUtils.cp_r(File.join(SK, 'phong_a_VGD_BIM'), File.join(SK, 'may_khac_phong_a_VGD_BIM'))
+other_machine = FakeModel.new('g-khac', File.join(SK, 'may_khac_phong_a.skp'))
+ok('gửi file kèm thư mục sang máy khác (chép thư mục, đổi tên theo file): mở ra vẫn có tag loại trừ', VGD::BIM::ModelSettings.effective(other_machine)['exclude_tags'] == ['Handle'])
 
 # ---- Mã model cố định: bảng luôn đảm bảo mã trước khi đọc / chụp ảnh ----
 d = make_dialog

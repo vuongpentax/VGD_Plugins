@@ -53,7 +53,10 @@ D = VGD::BIM::UI::Dialog
 row = {index: 0, entity_type: 'Nhóm', definition: 'Tủ', name: 'Tủ bếp A', description: 'Gỗ sồi',
        lenX: 1200.0, lenY: 600.0, lenZ: 800.0, areaXZ: 0.96, areaXY: 0.72, areaFace: 2.1,
        volume: 0.576, tag: 'Tủ', tag_group: 'Đồ rời', material: 'Gỗ', status: 'new', quantity: 1}
+LogicModel = Struct.new(:path) # file SketchUp giả: trạng thái bảng nằm trong settings.json cạnh file
+logic_model = LogicModel.new(File.join(Dir.mktmpdir('vgd_bim_skp_logic'), 'nha.skp'))
 d = D.allocate
+d.instance_variable_set(:@model, logic_model)
 d.instance_variable_set(:@table_rows, [row])
 d.instance_variable_set(:@table_records, [{path: [], entity: :e}])
 d.instance_variable_set(:@outline_field, 'instance')
@@ -62,13 +65,13 @@ ok('ô Tên: chỉ hiện tên', lbl.('instance') == 'Tủ bếp A')
 ok('ô Mô tả: chỉ hiện mô tả', lbl.('description') == 'Gỗ sồi')
 ok('ô Rộng: có đơn vị mm', lbl.('lenX') == '1200 mm')
 ok('ô (X)x(Z): ghép hai cạnh', lbl.('lenXZ') == '1200 x 800 mm')
-VGD::BIM::Table.save_view_state('settings' => {'length_unit' => 'cm', 'length_digits' => 1})
+VGD::BIM::Table.save_view_state({'settings' => {'length_unit' => 'cm', 'length_digits' => 1}}, logic_model)
 ok('đơn vị cm trong preset: nhãn khung đổi theo (120 x 80 cm)', lbl.('lenXZ') == '120 x 80 cm' && lbl.('lenX') == '120 cm' && lbl.('lenXYZ') == '120 x 60 x 80 cm')
-VGD::BIM::Table.save_view_state('settings' => {'length_unit' => 'm', 'length_digits' => 2})
+VGD::BIM::Table.save_view_state({'settings' => {'length_unit' => 'm', 'length_digits' => 2}}, logic_model)
 ok('đơn vị m, 2 số lẻ: 1.2 x 0.8 m', lbl.('lenXZ') == '1.2 x 0.8 m')
-VGD::BIM::Table.save_view_state('settings' => {'length_unit' => 'ft', 'length_digits' => 2})
+VGD::BIM::Table.save_view_state({'settings' => {'length_unit' => 'ft', 'length_digits' => 2}}, logic_model)
 ok('đơn vị ft: 3.94 x 2.62 ft', lbl.('lenXZ') == '3.94 x 2.62 ft')
-VGD::BIM::Table.save_view_state('preset' => 'x')
+VGD::BIM::Table.save_view_state({'preset' => 'x'}, logic_model)
 ok('ô thể tích: m³', lbl.('volume') == '0.576 m³')
 ok('ô tình trạng: nhãn tiếng Việt', lbl.('status') == 'Mới')
 ok('không chọn ô: hiện cả dòng', lbl.(nil) == 'Tủ bếp A · Gỗ sồi · Mới · Tủ')

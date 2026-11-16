@@ -370,9 +370,24 @@ module VGD
           context = @table_context
           context && context[:path].all?(&:valid?) ? context : nil
         end
+        # Hỏi người dùng có chuyển ảnh và cài đặt theo cách cũ về thư mục cạnh file SketchUp không (xem LegacyMigration). Từ chối thì không đụng gì.
+        def offer_legacy_migration
+          return if @legacy_asked.equal?(@model)
+          @legacy_asked = @model
+          plan = LegacyMigration.plan(@model)
+          return unless plan
+          text = "File này còn cài đặt và ảnh theo cách cũ (lưu trong file SketchUp / thư mục ảnh chung của máy).\n\nChuyển về thư mục cạnh file SketchUp?\n#{plan[:folder]}\n\n" \
+                 "Ảnh cũ trong thư mục chung KHÔNG bị xóa. Khi gửi file đi, hãy gửi kèm thư mục này."
+          return unless ::UI.messagebox(text, ::MB_YESNO) == ::IDYES
+          result = LegacyMigration.run(@model, plan)
+          emit('message', {text: "Đã chuyển #{result[:images]} ảnh và cài đặt về #{plan[:folder]}."})
+        rescue StandardError => error
+          emit('message', {error: "Không chuyển được dữ liệu cũ: #{error.message}"})
+        end
+
         def table_build
           @model = Sketchup.active_model
-          ModelSettings.pin(@model, Table.view_state) # file chưa có cài đặt riêng thì ghi lại cài đặt chung đang dùng, để mở file khác không làm đổi theo
+          offer_legacy_migration # file cũ còn cài đặt trong SKP / ảnh ở thư mục chung: hỏi chuyển về thư mục cạnh file (một lần mỗi file, mỗi phiên)
           Images.ensure_model_id(@model) # mã model cố định trong file, để ảnh còn sau khi tắt mở lại (trước mọi thao tác khác)
           scope = @table_scope.select(&:valid?)
           built = Table.build(@model, scope, @table_options[:deep] ? true : false, projected: @table_options[:projected], measure: MeasureProbe.context(ModelSettings.effective(@model)), context: scan_context)

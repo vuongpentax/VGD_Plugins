@@ -87,10 +87,12 @@ check 'preset cũ (chỉ có cột) vẫn đọc được, thêm thiết lập m
 check 'preset tự tạo trùng tên preset có sẵn thì ẩn đi (không hiện hai preset cùng tên)', old.map { |p| p['name'] } == ['Cũ'] && T.presets.map { |p| p['name'] }.count('Mặc định') == 1
 
 # ---- Trạng thái bảng ----
-T.save_view_state('preset' => 'Cũ', 'order' => %w[instance lenX], 'visible' => %w[instance], 'headers' => {'instance' => 'Tên', 'zzz' => 'x'}, 'settings' => {'length_unit' => 'm', 'area_unit' => 'zzz'})
-st = T.view_state
+PresetModel = Struct.new(:path) # file SketchUp giả: trạng thái bảng nằm trong settings.json cạnh file
+pm = PresetModel.new(File.join(Dir.mktmpdir('vgd_bim_skp_preset'), 'nha.skp'))
+T.save_view_state({'preset' => 'Cũ', 'order' => %w[instance lenX], 'visible' => %w[instance], 'headers' => {'instance' => 'Tên', 'zzz' => 'x'}, 'settings' => {'length_unit' => 'm', 'area_unit' => 'zzz'}}, pm)
+st = T.view_state(pm)
 check 'lưu trạng thái bảng kèm tiêu đề và thiết lập (mục sai bị bỏ, không báo lỗi)', st['headers'] == {'instance' => 'Tên'} && st['settings']['length_unit'] == 'm' && st['settings']['area_unit'] == 'm2'
-check 'trạng thái cũ không có thiết lập: đọc ra không có mục settings để giao diện lấy từ preset', (T.save_view_state('preset' => 'Cũ'); !T.view_state.key?('settings') && !T.view_state.key?('headers'))
+check 'trạng thái cũ không có thiết lập: đọc ra không có mục settings để giao diện lấy từ preset', (T.save_view_state({'preset' => 'Cũ'}, pm); !T.view_state(pm).key?('settings') && !T.view_state(pm).key?('headers'))
 
 # ---- Nhập preset từ định dạng của plugin tham khảo ----
 ref = {

@@ -5,10 +5,10 @@ require_relative 'model_settings'
 
 module VGD
   module BIM
-    # Ảnh của từng món đồ, lưu thành file PNG trong thư mục ảnh của cài đặt:
-    #   <thư mục ảnh>/<mã model>/<mã đối tượng>.png      ảnh đầy đủ, cũng là ảnh hiện trong bảng (không còn ảnh nhỏ)
-    #   <thư mục ảnh>/<mã model>/<mã đối tượng>_loc.png  ảnh vị trí của món trong công trình (cột Ảnh vị trí)
-    # Mã đối tượng là persistent_id của group / component. Không ghi gì vào file SketchUp.
+    # Ảnh của từng món đồ, lưu thành file PNG trong thư mục cạnh file SketchUp (ModelSettings.folder, vd bep.skp -> bep_VGD_BIM):
+    #   <thư mục>/<mã model>/<mã đối tượng>.png      ảnh đầy đủ, cũng là ảnh hiện trong bảng (không còn ảnh nhỏ)
+    #   <thư mục>/<mã model>/<mã đối tượng>_loc.png  ảnh vị trí của món trong công trình (cột Ảnh vị trí)
+    # Mã đối tượng là persistent_id của group / component. File SketchUp chưa lưu thì chưa có thư mục: đọc ảnh cho kết quả rỗng, ghi ảnh báo lỗi.
     module Images
       MAX_BYTES = 8 * 1024 * 1024 # ảnh dán / kéo thả quá lớn thì từ chối
       PNG_SIGNATURE = "\x89PNG\r\n\x1A\n".b.freeze
@@ -66,15 +66,24 @@ module VGD
 
       # Ảnh đã chụp trong phiên này nằm ở thư mục theo guid: đổi tên thành thư mục theo mã mới (không đè nếu đã có).
       def self.adopt_legacy_folder(model, id)
-        old = File.join(ModelSettings.image_dir(model), legacy_key(model))
-        new = File.join(ModelSettings.image_dir(model), id)
+        base = ModelSettings.folder(model)
+        return unless base
+        old = File.join(base, legacy_key(model))
+        new = File.join(base, id)
         File.rename(old, new) if File.directory?(old) && !File.exist?(new)
       rescue SystemCallError => error
         BIM.log("Không chuyển được thư mục ảnh cũ: #{error.message}")
       end
 
+      # Thư mục ảnh của model, hoặc nil nếu file SketchUp chưa lưu (chưa có thư mục cạnh file).
       def self.dir(model)
-        File.join(ModelSettings.image_dir(model), model_key(model))
+        base = ModelSettings.folder(model)
+        base && File.join(base, model_key(model))
+      end
+
+      # Như dir nhưng dùng khi GHI ảnh: file chưa lưu thì báo lỗi rõ ràng.
+      def self.dir!(model)
+        dir(model) || raise(ArgumentError, ModelSettings::NOT_SAVED)
       end
 
       def self.kind!(kind)
@@ -83,11 +92,11 @@ module VGD
       end
 
       def self.path(model, pid, kind = :full)
-        File.join(dir(model), "#{id!(pid)}#{KINDS.fetch(kind!(kind))}")
+        File.join(dir!(model), "#{id!(pid)}#{KINDS.fetch(kind!(kind))}")
       end
 
       def self.temp_path(model, pid, kind = :full)
-        File.join(dir(model), "#{id!(pid)}#{TEMP_KINDS.fetch(kind!(kind))}")
+        File.join(dir!(model), "#{id!(pid)}#{TEMP_KINDS.fetch(kind!(kind))}")
       end
 
       def self.id!(pid)
@@ -98,6 +107,7 @@ module VGD
 
       # {has: có ảnh không, stamp: giây sửa đổi cuối} để giao diện biết khi nào cần tải lại.
       def self.info(model, pid, folder = dir(model), kind = :full)
+        return {has: false, stamp: 0} unless folder
         file = File.join(folder, "#{id!(pid)}#{KINDS.fetch(kind!(kind))}")
         File.file?(file) ? {has: true, stamp: File.mtime(file).to_i} : {has: false, stamp: 0}
       end
@@ -128,7 +138,7 @@ module VGD
       # Ghi ảnh (kiểm tra PNG trước khi ghi nên không để lại ảnh dở).
       def self.write(model, pid, full, kind = :full)
         check_png!(full)
-        FileUtils.mkdir_p(dir(model))
+        FileUtils.mkdir_p(dir!(model))
         temp = temp_path(model, pid, kind)
         File.binwrite(temp, full)
         replace_file(temp, path(model, pid, kind))
@@ -137,7 +147,7 @@ module VGD
       # Đổi file tạm do SketchUp chụp (write_image) thành ảnh chính. Không phải PNG hoặc chưa có file thì giữ ảnh cũ.
       def self.commit(model, pid, kind = :full)
         temp = temp_path(model, pid, kind)
-        raise ArgumentError, 'SketchUp không tạo được ảnh. Kiểm tra thư mục lưu ảnh trong bảng Preset.' unless File.file?(temp)
+        raise ArgumentError, 'SketchUp không tạo được ảnh. Kiểm tra thư mục ảnh cạnh file SketchUp có ghi được không.' unless File.file?(temp)
         begin
           check_png!(File.binread(temp))
         rescue ArgumentError
@@ -149,7 +159,7 @@ module VGD
 
       def self.delete(model, pid, kind = :full)
         FileUtils.rm_f(path(model, pid, kind))
-        FileUtils.rm_f(File.join(dir(model), "#{id!(pid)}#{LEGACY_THUMB}")) if kind == :full
+        FileUtils.rm_f(File.join(dir!(model), "#{id!(pid)}#{LEGACY_THUMB}")) if kind == :full
       end
 
       # Đường dẫn file để giao diện hiện ảnh trực tiếp (<img src>), không phải chuyển cả ảnh qua Ruby. stamp (giờ sửa file) đi kèm

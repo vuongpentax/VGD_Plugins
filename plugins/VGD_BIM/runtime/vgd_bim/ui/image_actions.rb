@@ -16,7 +16,6 @@ module VGD
 
         def register_image_callbacks
           @dialog.add_action_callback('settings_save') { |_ctx, payload| safely { settings_save(JSON.parse(payload)) } }
-          @dialog.add_action_callback('settings_pick_dir') { |_ctx| safely { settings_pick_dir } }
           @dialog.add_action_callback('images_open_dir') { |_ctx| safely { images_open_dir } }
           @dialog.add_action_callback('images_capture') { |_ctx, payload| safely { images_capture(JSON.parse(payload)) } }
           @dialog.add_action_callback('images_preview') { |_ctx, payload| safely { images_preview(JSON.parse(payload)) } }
@@ -30,17 +29,21 @@ module VGD
         end
 
         # ---- Cài đặt ----
+        # Cài đặt gửi cho giao diện: cài đặt đang dùng của file, thư mục ảnh (cạnh file SketchUp) và file đã lưu chưa.
         def settings_payload
-          dir = ModelSettings.image_dir(@model)
-          {settings: ModelSettings.effective(@model), dir: dir, dir_exists: File.directory?(dir)}
+          dir = ModelSettings.folder(@model)
+          {settings: ModelSettings.effective(@model), dir: dir, dir_exists: !dir.nil? && File.directory?(dir), saved: !dir.nil?}
         end
 
+        # payload: ngôn ngữ, tag ghim / gần đây (cài đặt chung của máy) và từ khóa / tag loại trừ (riêng từng file, ghi vào settings.json cạnh file).
         def settings_save(payload)
           before = ModelSettings.effective(@model)
           language = before['language']
-          Settings.update(payload) # cài đặt chung (cũng là mẫu cho file chưa có riêng)
+          shared = payload.reject { |key, _| ModelSettings::MODEL_KEYS.include?(key) || key == 'image_dir' }
           own = payload.select { |key, _| ModelSettings::MODEL_KEYS.include?(key) }
-          ModelSettings.write(@model, own.keys.to_h { |key| [key, Settings.read[key]] }) unless own.empty? # phần riêng của file này
+          own.each { |key, value| Settings.clean(key, value) } # kiểm tra trước: một mục sai thì không ghi gì cả
+          Settings.update(shared) unless shared.empty?
+          ModelSettings.write(@model, own) unless own.empty?
           measure_changed = %w[exclude_words exclude_tags].any? { |key| ModelSettings.effective(@model)[key] != before[key] }
           if Settings.read['language'] != language
             refresh # đổi ngôn ngữ: gửi lại cấu hình và từ điển, vẽ lại cả cửa sổ
@@ -48,23 +51,13 @@ module VGD
             emit('settings', settings_payload)
           end
           table_build if measure_changed && @mode == 'table' # đổi cách đo thân: tính lại số đo của bảng ngay
-          emit('message', {text: 'Đã lưu cài đặt.'})
-        end
-
-        def settings_pick_dir
-          raise 'Bản SketchUp này không có hộp chọn thư mục. Hãy gõ đường dẫn thư mục vào ô.' unless ::UI.respond_to?(:select_directory)
-          current = ModelSettings.image_dir(@model)
-          path = ::UI.select_directory(title: 'Chọn thư mục lưu ảnh', directory: File.directory?(current) ? current : Dir.home)
-          return unless path
-          Settings.update('image_dir' => path)
-          ModelSettings.write(@model, 'image_dir' => Settings.read['image_dir'])
-          emit('settings', settings_payload)
-          emit('message', {text: 'Đã đổi thư mục lưu ảnh của file này.'})
+          emit('message', {text: ModelSettings.saved?(@model) ? 'Đã lưu cài đặt.' : 'Đã đổi cài đặt (file SketchUp chưa lưu nên cài đặt chỉ giữ trong phiên này; hãy lưu file).'})
         end
 
         def images_open_dir
-          dir = ModelSettings.image_dir(@model)
-          FileUtils.mkdir_p(dir)
+          raise ModelSettings::NOT_SAVED unless ModelSettings.saved?(@model)
+          dir = ModelSettings.folder(@model)
+          raise 'Chưa có thư mục ảnh. Thư mục sẽ được tạo khi bạn chụp ảnh đầu tiên hoặc đổi cài đặt.' unless File.directory?(dir)
           open_folder(dir)
         end
 

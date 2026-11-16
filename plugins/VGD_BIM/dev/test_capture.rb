@@ -82,8 +82,10 @@ class FakeView
   end
 end
 ORIGINAL_OPTIONS = {'BackgroundColor' => 'sky', 'DrawGround' => true, 'DrawHorizon' => true, 'RenderMode' => 2, 'DisplayColorByLayer' => true}.freeze
+SKETCHES = Dir.mktmpdir('vgd_bim_skp_capture') # file SketchUp giả: ảnh được ghi vào thư mục cạnh file (nha_VGD_BIM)
 class FakeModel
   attr_reader :all, :selection, :rendering_options, :active_view, :ops, :guid
+  def path; File.join(SKETCHES, 'nha.skp'); end
   attr_accessor :active_path
   def initialize(all); @active_path = []; @all = all; @selection = FakeSelection.new; @rendering_options = FakeOptions.new(ORIGINAL_OPTIONS.dup); @active_view = FakeView.new(self); @ops = []; @guid = 'MODEL-1'; end
   def start_operation(name, disable_ui = false); @snapshot = @all.map { |e| [e, e.hidden] }; @ops << :start; true; end
@@ -102,7 +104,7 @@ module VGD; module BIM; module Table
     hidden
   end
 end; end; end
-%w[storage settings images preset front front_probe view_fit].each { |f| require File.expand_path("../runtime/vgd_bim/core/#{f}.rb", __dir__) }
+%w[storage settings model_settings images preset front front_probe view_fit].each { |f| require File.expand_path("../runtime/vgd_bim/core/#{f}.rb", __dir__) }
 require File.expand_path('../runtime/vgd_bim/ui/capture.rb', __dir__)
 C = VGD::BIM::UI::Capture
 I = VGD::BIM::Images
@@ -468,3 +470,15 @@ _, _, v, r = shoot_preview({'x1_view' => 'front', 'x1_width' => 1000, 'x1_height
 check 'xem trước ảnh phụ: theo thiết lập x1_*, ảnh nhỏ đúng tỉ lệ, không lưu file _x1', v.writes[0].values_at(:width, :height) == [360, 180] && r[:png] == PNG_BYTES && r[:kind] == :extra1 && Dir[File.join(I.dir(v.instance_variable_get(:@model)), '*_x1*')].empty?
 model.active_view.fail_next = false
 check 'ảnh vị trí và ảnh món là hai file riêng', (C.shoot(model, {entity: items[0], path: [items[0]]}, D); C.shoot(model, {entity: items[0], path: [items[0]]}, D, kind: :location); File.exist?(I.path(model, 11)) && File.exist?(I.path(model, 11, :location)))
+
+# ---- File SketchUp chưa lưu: không có thư mục ảnh, chụp phải báo lỗi rõ và không đụng gì vào model ----
+class UnsavedModel < FakeModel
+  def path; ''; end
+end
+unsaved_items = [Sketchup::Entity.new(21), Sketchup::Entity.new(22)]
+unsaved = UnsavedModel.new(unsaved_items)
+unsaved.selection.add(unsaved_items[0])
+before_selection = unsaved.selection.to_a.dup
+error = begin; C.shoot(unsaved, {entity: unsaved_items[0], path: [unsaved_items[0]]}, D); nil; rescue ArgumentError, RuntimeError => e; e.message; end
+check 'chụp ảnh khi file SketchUp chưa lưu: báo "Chưa lưu file SketchUp"', error.to_s.downcase.include?('chưa lưu file sketchup')
+check 'chụp lỗi vì chưa lưu: không mở thao tác, không đổi vùng chọn, không tạo thư mục nào', unsaved.ops.empty? && unsaved.selection.to_a == before_selection && Dir.children(SKETCHES).none? { |name| name.include?('chua') }

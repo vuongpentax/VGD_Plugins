@@ -147,10 +147,9 @@ module VGD
       VIEW_KEYS = %w[preset group order visible widths density showTotals onlyTop headers settings rowHeight].freeze
       ROW_HEIGHT_MIN = 28 # độ cao hàng (điểm ảnh) khi người dùng Ctrl + lăn chuột; 0 = theo mật độ hàng
       ROW_HEIGHT_MAX = 640
-      # model: trạng thái bảng riêng của file SketchUp (nếu có) thay cho trạng thái chung trên máy.
+      # model: trạng thái bảng riêng của file SketchUp (settings.json cạnh file). Không có thì {} (mặc định).
       def self.view_state(model = nil)
-        raw = ModelSettings.read(model)[ModelSettings::VIEW_KEY] if model
-        raw = Storage.read('table_view') if raw.nil?
+        raw = ModelSettings.read(model)[ModelSettings::VIEW_KEY] if model # trạng thái bảng chỉ lấy từ settings.json của file; file mới thì để mặc định
         return {} unless raw.is_a?(Hash)
         state = raw.select { |k, _| VIEW_KEYS.include?(k) }
         state['group'] = Tags.migrate_group(state['group']) if state['group'].is_a?(String) # trạng thái cũ dùng nhóm cũ
@@ -161,7 +160,7 @@ module VGD
         state
       end
 
-      # Ghi vào file SketchUp (nếu có model) và vào trạng thái chung (làm mẫu cho file chưa có riêng).
+      # Ghi vào settings.json của file SketchUp (hoặc giữ trong phiên nếu file chưa lưu). Không còn trạng thái chung trên máy.
       def self.save_view_state(state, model = nil)
         raise ArgumentError, 'Trạng thái bảng không hợp lệ.' unless state.is_a?(Hash)
         clean = state.select { |k, _| VIEW_KEYS.include?(k) }
@@ -171,7 +170,6 @@ module VGD
         clean.delete('rowHeight') if clean['rowHeight'].nil?
         clean['headers'] = Preset.headers(clean['headers'], column_keys) if clean.key?('headers')
         clean['settings'] = Preset.settings(clean['settings']) if clean.key?('settings')
-        Storage.write('table_view', clean)
         ModelSettings.write(model, ModelSettings::VIEW_KEY => clean) if model
       end
 
