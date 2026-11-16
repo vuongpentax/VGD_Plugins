@@ -103,7 +103,7 @@ function imageGroup(left,title,id,build){
 }
 function presetPanel(panel){
   panel.replaceChildren();
-  const s=workSettings(),c=presetChoices(),app=config.app||{settings:{image_dir:''},dir:''};
+  const s=workSettings(),c=presetChoices(),app=config.app||{settings:{},dir:'',saved:false};
   const grid=node('div',undefined,'pp-grid');
   // ---- Cột trái: thiết lập theo preset ----
   const left=node('div',undefined,'pp-left');
@@ -120,14 +120,13 @@ function presetPanel(panel){
   ['x1','x2'].forEach((p,i)=>{
     imageGroup(left,'Ảnh '+(i+3),p,body=>imageSettingsRows(body,s,c,{width:p+'_width',height:p+'_height',view:p+'_view',style:p+'_style',background:p+'_background',margin:p+'_margin',yaw:p+'_yaw',pitch:p+'_pitch'},' '+(i+3)));
   });
+  // Thư mục ảnh và settings.json nằm cạnh file SketchUp (bep.skp -> bep_VGD_BIM): không chọn tay; gửi file SketchUp kèm thư mục này khi chia sẻ.
   const folder=node('div',undefined,'pp-row pp-folder');
-  const dir=node('input');dir.type='text';dir.value=app.settings.image_dir;dir.placeholder=app.dir||'Thư mục lưu ảnh…';dir.maxLength=240;dir.setAttribute('aria-label','Thư mục lưu ảnh');dir.title='Thư mục lưu ảnh của file SketchUp này (lưu trong file, mở file khác không bị đổi theo). Để trống để dùng thư mục mặc định.';
-  const commit=()=>{if(dir.value.trim()!==app.settings.image_dir)call('settings_save',JSON.stringify({image_dir:dir.value.trim()}));};
-  dir.onchange=commit;dir.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commit();}};
-  const pick=button('📁',()=>call('settings_pick_dir'));pick.title='Chọn thư mục lưu ảnh';pick.setAttribute('aria-label','Chọn thư mục lưu ảnh');
-  const open=button('↗',()=>call('images_open_dir'));open.title='Mở thư mục ảnh';open.setAttribute('aria-label','Mở thư mục ảnh');
-  folder.append(dir,pick,open);left.append(folder);
-  if(app.dir)left.append(node('p',`Đang dùng: ${app.dir}`+(app.dir_exists?'':' (chưa có, sẽ được tạo khi chụp ảnh đầu tiên)'),'muted pp-dir'));
+  const dir=node('input');dir.type='text';dir.readOnly=true;dir.value=app.dir||'';dir.placeholder='Chưa lưu file SketchUp';dir.setAttribute('aria-label','Thư mục ảnh và cài đặt');
+  dir.title='Thư mục ảnh và cài đặt của file SketchUp này, nằm cạnh file SketchUp. Khi gửi file đi, hãy gửi kèm thư mục này.';
+  const open=button('↗',()=>call('images_open_dir'));open.title='Mở thư mục ảnh';open.setAttribute('aria-label','Mở thư mục ảnh');open.disabled=!app.dir_exists;
+  folder.append(dir,open);left.append(folder);
+  left.append(node('p',app.saved?(app.dir_exists?'Ảnh và cài đặt của file này nằm trong thư mục trên. Khi gửi file SketchUp đi, hãy gửi kèm thư mục này để giữ ảnh, cột và tag loại trừ.':'Thư mục chưa có: sẽ được tạo khi bạn chụp ảnh hoặc đổi cài đặt.'):'Chưa lưu file SketchUp. Hãy lưu file (Ctrl+S): ảnh và cài đặt sẽ nằm trong thư mục cạnh file.','muted pp-dir'));
   // ---- Số đo thân: bỏ tay nắm / phần nhô khỏi Rộng, Dài, Cao (dùng chung mọi preset, chỉ cho Bảng khối lượng) ----
   left.append(node('h3','Số đo thân'));
   const words=node('input');words.type='text';words.id='exclude-words';words.value=app.settings.exclude_words||'';words.maxLength=200;words.placeholder='tay nam, handle, knob';words.setAttribute('aria-label','Từ khóa loại trừ khỏi số đo');

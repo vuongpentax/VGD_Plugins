@@ -101,6 +101,7 @@ module VGD
 
         # Kiểm tra payload và dựng hàng đợi [dòng, bản ghi, thiết lập riêng của món, bên Iso] (dùng chung cho chụp và xem trước).
         def capture_queue(payload)
+          raise ModelSettings::NOT_SAVED unless ModelSettings.saved?(@model) # ảnh nằm trong thư mục cạnh file SketchUp: phải lưu file trước
           check_model!
           raise 'Đang chụp ảnh. Hãy đợi xong hoặc bấm Dừng.' if @capture
           settings = Preset.settings!(payload.fetch('settings', {}))

@@ -7,7 +7,7 @@ let failed=0;
 const ok=(cond,msg)=>{console.log((cond?'PASS  ':'FAIL  ')+msg);if(!cond){failed++;process.exitCode=1;}};
 const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')],{encoding:'utf8'}));
 const presets=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../runtime/vgd_bim/config/presets.json'),'utf8'));
-const config=(mode,o={})=>({mode,version:'1.1.0',language:'vi',app:{settings:{language:'vi',image_dir:'',exclude_words:'tay nắm, handle'},dir:'C:\\data\\images',dir_exists:true},preset_info:F.preset_info,table:{columns:F.columns,presets:F.presets,view:{}},fields:F.fields,categories:F.categories,units:F.units,methods:F.methods,presets,locale:F.vi,vi_en:null,scan_options:{scope:'model',faces:true},...o});
+const config=(mode,o={})=>({mode,version:'1.1.0',language:'vi',file:'C:\\data\\images',app:{settings:{language:'vi',exclude_words:'tay nắm, handle'},dir:'C:\\data\\images',dir_exists:true,saved:true},preset_info:F.preset_info,table:{columns:F.columns,presets:F.presets,view:{}},fields:F.fields,categories:F.categories,units:F.units,methods:F.methods,presets,locale:F.vi,vi_en:null,scan_options:{scope:'model',faces:true},...o});
 const rows=[0,1,2].map(i=>({index:i,entity_type:'Nhóm',definition:'Cabinet',name:'Cab '+i,description:i===1?'cab nhỏ':'',lenX:1200,lenY:600,lenZ:800,areaXZ:0.96,areaXY:0.72,areaFace:2.1,areaProjected:1.5,volume:0.5,ifc:i?'':'IfcFurniture',tag:'',tag_group:'Phần thô',material:'',status:'new',owner:i?'':'Hafele',url:i?'':'https://vgd.vn/tu',size:'',price:i?null:2500000,total:i?null:2500000,locked:false,quantity:1,parents:[],parent:'',pid:900+i,has_image:i!==1,image_stamp:7,image_url:i!==1?`file:///C:/khong/co/${900+i}.png?v=7`:null}));
 const table=(o={})=>({columns:F.columns,presets:F.presets,groups:F.groups,statuses:F.statuses,options:{zoom:true,isolate:false,deep:false,projected:false,isolating:false},rows,selected:[],hint:null,view:{},choices:{tags:[],materials:[]},...o});
 const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
@@ -336,15 +336,18 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.click('#preset-btn');await page.locator('#preset-panel .pp-line',{hasText:'Nội thất'}).locator('.pp-tail').click();
   ok(!(await headText()).includes('Cột tạm') && (await headText()).includes('Thương hiệu'),'nút ↻ của preset có sẵn: khôi phục tiêu đề và cột gốc');
 
-  // ---- Thư mục lưu ảnh và ngôn ngữ ----
+  // ---- Thư mục ảnh (cạnh file SketchUp, chỉ xem) và ngôn ngữ ----
   await clear();
-  const dir=page.locator('#preset-panel input[aria-label="Thư mục lưu ảnh"]');
-  await dir.fill('D:\\Anh');await dir.press('Enter');
-  ok(JSON.stringify(await json('settings_save'))==='{"image_dir":"D:\\\\Anh"}','gõ đường dẫn thư mục rồi Enter: lưu thư mục ảnh (dùng chung mọi preset)');
-  await page.click('#preset-panel .pp-folder button[aria-label="Chọn thư mục lưu ảnh"]');await page.click('#preset-panel .pp-folder button[aria-label="Mở thư mục ảnh"]');
-  ok((await calls('settings_pick_dir')).length===1 && (await calls('images_open_dir')).length===1,'nút chọn thư mục và nút mở thư mục gọi đúng lệnh');
-  await receive('settings',{settings:{language:'vi',image_dir:'D:\\Anh'},dir:'D:\\Anh',dir_exists:false});
-  ok((await page.locator('#preset-panel .pp-dir').innerText()).includes('chưa có') && await dir.inputValue()==='D:\\Anh','nhận cài đặt mới: hiện thư mục đang dùng và báo nếu chưa có');
+  const dir=page.locator('#preset-panel input[aria-label="Thư mục ảnh và cài đặt"]');
+  ok(await dir.inputValue()==='C:\\data\\images' && await dir.evaluate(e=>e.readOnly),'thư mục ảnh hiện đường dẫn cạnh file SketchUp, chỉ đọc (không gõ tay)');
+  ok(await page.locator('#preset-panel .pp-folder button[aria-label="Chọn thư mục lưu ảnh"]').count()===0,'không còn nút chọn thư mục ảnh');
+  await page.click('#preset-panel .pp-folder button[aria-label="Mở thư mục ảnh"]');
+  ok((await calls('images_open_dir')).length===1 && (await calls('settings_save')).length===0,'nút mở thư mục gọi đúng lệnh, không lưu gì');
+  await receive('settings',{settings:{language:'vi'},dir:'D:\\Nha\\bep_VGD_BIM',dir_exists:false,saved:true});
+  ok((await page.locator('#preset-panel .pp-dir').innerText()).includes('chưa có') && await dir.inputValue()==='D:\\Nha\\bep_VGD_BIM' && await page.locator('#preset-panel .pp-folder button[aria-label="Mở thư mục ảnh"]').isDisabled(),'thư mục chưa có: báo sẽ tạo khi chụp ảnh, nút mở bị khóa');
+  await receive('settings',{settings:{language:'vi'},dir:null,dir_exists:false,saved:false});
+  ok((await page.locator('#preset-panel .pp-dir').innerText()).includes('Chưa lưu file SketchUp') && (await dir.inputValue())==='','file chưa lưu: báo phải lưu file, ô đường dẫn trống');
+  await receive('settings',{settings:{language:'vi'},dir:'C:\\data\\images',dir_exists:true,saved:true});
   await page.keyboard.press('Escape');await clear();
   await page.click('#gear');
   ok(await page.locator('#gear-panel').isVisible() && await page.locator('#gear-panel select').count()===1 && await page.locator('#preset-panel').isHidden(),'bánh răng: chỉ có một mục chọn ngôn ngữ, và đóng bảng preset');
@@ -476,7 +479,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
 
   // ---- Loại trừ tag: ngăn tick các tag của model, lưu sau khi ngừng tick ----
   const tagRows=table({choices:{tags:['Đá bếp','Tay nắm','Cánh tủ','Phụ kiện'],materials:[],model_tags:['Cánh tủ','Đá bếp','Phụ kiện','Tay nắm']}});
-  await receive('config',{...config('table'),app:{settings:{language:'vi',image_dir:'',exclude_words:'tay nắm, handle',exclude_tags:['Đá bếp']},dir:'C:\\data\\images',dir_exists:true}});await receive('table',tagRows);
+  await receive('config',{...config('table'),app:{settings:{language:'vi',exclude_words:'tay nắm, handle',exclude_tags:['Đá bếp']},dir:'C:\\data\\images',dir_exists:true}});await receive('table',tagRows);
   await clear();
   ok((await page.locator('#exclude-btn').innerText())==='Loại trừ tag (1)','nút Loại trừ tag hiện số tag đang được loại trừ');
   await page.click('#exclude-btn');await page.waitForTimeout(350);
@@ -495,7 +498,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await clear();await page.locator('.col-side .cs-all input').click();await page.waitForTimeout(700);
   ok(JSON.stringify(await json('settings_save'))==='{"exclude_tags":["Phụ kiện"]}','Chọn tất cả chỉ tác động tag đang lọc (Phụ kiện)');
   await page.locator('.col-side .pop-search').fill('');
-  await receive('settings',{settings:{language:'vi',image_dir:'',exclude_words:'tay nắm, handle',exclude_tags:['Phụ kiện','Tag cũ']},dir:'C:\\data\\images',dir_exists:true});
+  await receive('settings',{settings:{language:'vi',exclude_words:'tay nắm, handle',exclude_tags:['Phụ kiện','Tag cũ']},dir:'C:\\data\\images',dir_exists:true});
   ok((await page.locator('.col-side .pop-col').last().innerText()).includes('Tag cũ (không có trong model)'),'tag đã lưu nhưng không có trong model này vẫn hiện (kèm ghi chú) để bỏ tick được');
   await page.click('#cols-btn');await page.waitForTimeout(100);
   ok((await page.locator('#col-side').getAttribute('data-kind'))==='columns' && (await page.locator('.col-side .pop-col').count())>20 && (await page.locator('#col-side').evaluate(el=>el.classList.contains('open'))),'bấm Chọn cột khi ngăn Loại trừ đang mở: đổi nội dung sang Chọn cột, ngăn vẫn mở');

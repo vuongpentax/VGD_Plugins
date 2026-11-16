@@ -144,7 +144,37 @@ module VGD
       end
 
       # Trạng thái bảng (preset đang dùng, cột, thứ tự, độ rộng, ...) để mở lại vẫn giữ như lần trước.
-      VIEW_KEYS = %w[preset group order visible widths density showTotals onlyTop headers settings rowHeight].freeze
+      VIEW_KEYS = %w[preset group order visible widths density showTotals onlyTop headers settings rowHeight sheets sheet].freeze
+      # Sheet của bảng (như sheet của Excel): mỗi sheet nhớ cột hiện / thứ tự / độ rộng, sắp xếp, nhóm theo, bộ lọc và tag loại trừ riêng.
+      SHEET_LIMIT = 20
+      SHEET_NAME_MAX = 40
+      # value: mảng sheet gửi từ giao diện hoặc đọc từ file; mục sai bị bỏ (cột lạ, kiểu lạ), tối đa SHEET_LIMIT sheet. Không còn sheet hợp lệ thì [].
+      def self.clean_sheets(value)
+        return [] unless value.is_a?(Array)
+        keys = column_keys
+        value.first(SHEET_LIMIT).each_with_index.filter_map do |raw, index|
+          next unless raw.is_a?(Hash)
+          name = raw['name'].to_s.strip[0, SHEET_NAME_MAX]
+          name = "Sheet#{index + 1}" if name.empty?
+          sheet = {'name' => name}
+          %w[order visible].each { |k| sheet[k] = Array(raw[k]).map(&:to_s).select { |key| keys.include?(key) }.uniq if raw[k].is_a?(Array) }
+          sheet['widths'] = raw['widths'].select { |k, v| keys.include?(k) && v.is_a?(Numeric) && v.finite? } if raw['widths'].is_a?(Hash)
+          sort = raw['sort']
+          sheet['sort'] = {'key' => sort['key'], 'dir' => sort['dir'] == -1 ? -1 : 1} if sort.is_a?(Hash) && keys.include?(sort['key'])
+          sheet['groupBy'] = raw['groupBy'].to_s[0, 40] if raw['groupBy'].is_a?(String)
+          sheet['group'] = raw['group'].to_s[0, 100] if raw['group'].is_a?(String)
+          sheet['search'] = raw['search'].to_s[0, 200] if raw['search'].is_a?(String)
+          sheet['merge'] = raw['merge'] == true if raw.key?('merge')
+          if raw['exclude_tags'].is_a?(Array)
+            begin
+              sheet['exclude_tags'] = Measure.parse_tags(raw['exclude_tags'])
+            rescue ArgumentError
+              nil # danh sách tag loại trừ sai: bỏ mục này, sheet dùng loại trừ chung
+            end
+          end
+          sheet
+        end
+      end
       ROW_HEIGHT_MIN = 28 # độ cao hàng (điểm ảnh) khi người dùng Ctrl + lăn chuột; 0 = theo mật độ hàng
       ROW_HEIGHT_MAX = 640
       # model: trạng thái bảng riêng của file SketchUp (settings.json cạnh file). Không có thì {} (mặc định).
@@ -157,6 +187,7 @@ module VGD
         state.delete('rowHeight') if state['rowHeight'].nil?
         state['headers'] = Preset.headers(state['headers'], column_keys) if state.key?('headers')
         state['settings'] = Preset.settings(state['settings']) if state.key?('settings')
+        clean_sheet_state(state)
         state
       end
 
@@ -170,7 +201,22 @@ module VGD
         clean.delete('rowHeight') if clean['rowHeight'].nil?
         clean['headers'] = Preset.headers(clean['headers'], column_keys) if clean.key?('headers')
         clean['settings'] = Preset.settings(clean['settings']) if clean.key?('settings')
+        clean_sheet_state(clean)
         ModelSettings.write(model, ModelSettings::VIEW_KEY => clean) if model
+      end
+
+      # Làm sạch 'sheets' và 'sheet' (chỉ số sheet đang mở) trong trạng thái bảng: không có sheet hợp lệ thì bỏ cả hai.
+      def self.clean_sheet_state(state)
+        sheets = state.key?('sheets') ? clean_sheets(state['sheets']) : []
+        if sheets.empty?
+          state.delete('sheets')
+          state.delete('sheet')
+        else
+          state['sheets'] = sheets
+          index = state['sheet']
+          state['sheet'] = index.is_a?(Integer) && index >= 0 && index < sheets.size ? index : 0
+        end
+        state
       end
 
       # 0 (theo mật độ hàng) hoặc số điểm ảnh làm tròn, kẹp trong giới hạn; không phải số thì nil (bỏ).

@@ -101,7 +101,7 @@ module VGD
           @dialog.add_action_callback('table_assign_ids') { |_ctx, payload| safely { table_assign_ids(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_fix_duplicate_ids') { |_ctx| safely { table_fix_duplicate_ids } }
           @dialog.add_action_callback('table_custom_column') { |_ctx, payload| safely { table_custom_column(JSON.parse(payload)) } }
-          @dialog.add_action_callback('table_view') { |_ctx, payload| safely { Table.save_view_state(JSON.parse(payload), @model) } }
+          @dialog.add_action_callback('table_view') { |_ctx, payload| safely { table_view_save(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_order') { |_ctx, payload| safely { table_order(JSON.parse(payload)) } }
           register_image_callbacks
           register_front_callbacks
@@ -163,7 +163,7 @@ module VGD
           cleanup_table_view unless @mode == 'table'
           @model = Sketchup.active_model
           language = Settings.read['language']
-          emit('config', {mode: @mode, version: BIM::VERSION, language: language, app: settings_payload, preset_info: {defaults: Preset::DEFAULT_SETTINGS, choices: Preset.choices},
+          emit('config', {mode: @mode, version: BIM::VERSION, language: language, file: file_identity, app: settings_payload, preset_info: {defaults: Preset::DEFAULT_SETTINGS, choices: Preset.choices},
                          table: {columns: Table.columns, presets: Table.presets, view: Table.view_state(@model)}, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.ui_dictionary(language), vi_en: (language == 'en' ? Locale.vi_en_names : nil), scan_options: {scope: @scan_options[:scope], faces: faces?}})
           if %w[information tags table].include?(@mode)
             @observer = SelectionObserver.new(self)
@@ -385,7 +385,31 @@ module VGD
           emit('message', {error: "Không chuyển được dữ liệu cũ: #{error.message}"})
         end
 
+        # Nhận diện file SketchUp đang mở (thư mục cạnh file nếu đã lưu, không thì mã model), để giao diện biết khi sang file khác mà nạp lại cột, sheet, tag loại trừ của file đó.
+        def file_identity
+          ModelSettings.folder(@model) || "chua-luu:#{@model.respond_to?(:guid) ? Images.model_key(@model) : ''}"
+        end
+
+        # Lưu trạng thái bảng do giao diện gửi lên vào settings.json của file đang mở. Trạng thái của file khác (vừa đổi file, giao diện chưa nạp lại) thì bỏ.
+        def table_view_save(state)
+          file = state.delete('file')
+          return if file && file != file_identity
+          Table.save_view_state(state, @model)
+          @view_save_error = nil
+        rescue ArgumentError => error # thư mục cạnh file SketchUp không ghi được: báo một lần (mỗi nội dung lỗi), không báo lại sau từng thay đổi
+          return if error.message == @view_save_error
+          raise unless error.message.start_with?('Không ghi được')
+          @view_save_error = error.message
+          emit('message', {error: error.message})
+        end
+
         def table_build
+          current_model = Sketchup.active_model
+          if @table_model && !@table_model.equal?(current_model)
+            @table_model = current_model
+            return refresh # sang file SketchUp khác: nạp lại cài đặt, cột, sheet và tag loại trừ của file đó (file mới thì về mặc định)
+          end
+          @table_model = current_model
           @model = Sketchup.active_model
           offer_legacy_migration # file cũ còn cài đặt trong SKP / ảnh ở thư mục chung: hỏi chuyển về thư mục cạnh file (một lần mỗi file, mỗi phiên)
           Images.ensure_model_id(@model) # mã model cố định trong file, để ảnh còn sau khi tắt mở lại (trước mọi thao tác khác)
@@ -476,6 +500,7 @@ module VGD
             layer = field == 'tag' ? (value.empty? ? untagged_layer : Tags.layer_for(@model, value)) : nil
             editable.each { |record| apply_edit(record[:entity], field, value, material, layer) }
           end
+          ModelSettings.remember(@model, field, value) # gợi ý nhập: nhớ giá trị chữ vừa sửa
           table_build
           show_outline
           text = "Đã sửa #{custom ? custom['label'] : EDIT_LABELS[field]} cho #{editable.size} đối tượng."
@@ -765,7 +790,8 @@ module VGD
           model_tags = @model.layers.to_a.map { |layer| layer.name.to_s }.reject(&untagged).sort_by { |name| name.downcase } # chỉ tag có trong model (bảng Loại trừ tag)
           {tags: tags.sort_by { |name| name.downcase }, materials: materials.sort_by { |name| name.downcase }, model_tags: model_tags,
            levels: Levels.read(@model).map { |level| {value: level['id'], label: level['name']} },
-           rooms: Rooms.read(@model).map { |room| {value: room['id'], label: room['number'].empty? ? room['name'] : "#{room['number']} · #{room['name']}"} }}
+           rooms: Rooms.read(@model).map { |room| {value: room['id'], label: room['number'].empty? ? room['name'] : "#{room['number']} · #{room['name']}"} },
+           suggest: ModelSettings.read(@model)[ModelSettings::SUGGEST_KEY] || {}}
         end
         # Cột chữ cho phép thay hàng loạt, và cách đọc giá trị hiện tại của dòng.
         REPLACE_FIELDS = {'name' => :name, 'description' => :description, 'owner' => :owner, 'size' => :size}.freeze

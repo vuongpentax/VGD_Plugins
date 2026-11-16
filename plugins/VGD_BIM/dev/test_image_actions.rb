@@ -46,6 +46,7 @@ module VGD; module BIM; def self.log(m); end
     def self.columns; COLUMNS; end
     def self.presets; []; end
     def self.view_state(_model = nil); {}; end
+    def self.save_view_state(state, model = nil); ($saved_views ||= []) << [state, model]; end
   end
   module UI; end
 end; end
@@ -281,7 +282,10 @@ unsaved_dialog.safely { unsaved_dialog.images_open_dir }
 ok('file chưa lưu: mở thư mục ảnh báo "Chưa lưu file SketchUp"', error_of(unsaved_dialog).to_s.include?('Chưa lưu file SketchUp'))
 unsaved_dialog.safely { unsaved_dialog.settings_save('exclude_tags' => ['Door']) }
 ok('file chưa lưu: đổi cài đặt vẫn được (giữ trong phiên), báo rõ file chưa lưu, không tạo thư mục', VGD::BIM::ModelSettings.effective(unsaved_dialog.instance_variable_get(:@model))['exclude_tags'] == ['Door'] && events(unsaved_dialog, 'settings').last['saved'] == false && events(unsaved_dialog, 'settings').last['dir'].nil? && events(unsaved_dialog, 'message').last['text'].include?('chưa lưu'))
-unsaved_dialog.safely { unsaved_dialog.image_paste('pid' => 901, 'full' => Base64.strict_encode64(PNG)) } if unsaved_dialog.respond_to?(:image_paste)
+unsaved_dialog.safely { unsaved_dialog.images_capture('indexes' => [0], 'settings' => {'image_view' => 'isometric'}) }
+ok('file chưa lưu: bấm chụp ảnh báo "Chưa lưu file SketchUp", không hẹn giờ, không ẩn khung', error_of(unsaved_dialog).to_s.include?('Chưa lưu file SketchUp') && UI.timers.empty? && unsaved_dialog.instance_variable_get(:@capture).nil?)
+unsaved_dialog.safely { unsaved_dialog.images_preview('indexes' => [0], 'settings' => {'image_view' => 'isometric'}) }
+ok('file chưa lưu: xem trước góc chụp cũng báo chưa lưu', error_of(unsaved_dialog).to_s.include?('Chưa lưu file SketchUp') && UI.timers.empty?)
 
 # ---- Iso bên trái / phải (nút ◣ ◢ trong ô ảnh) đi cùng lệnh chụp ----
 d = make_dialog
@@ -325,6 +329,37 @@ ok('cài đặt gửi giao diện là của file đang mở', events(da, 'settin
 FileUtils.cp_r(File.join(SK, 'phong_a_VGD_BIM'), File.join(SK, 'may_khac_phong_a_VGD_BIM'))
 other_machine = FakeModel.new('g-khac', File.join(SK, 'may_khac_phong_a.skp'))
 ok('gửi file kèm thư mục sang máy khác (chép thư mục, đổi tên theo file): mở ra vẫn có tag loại trừ', VGD::BIM::ModelSettings.effective(other_machine)['exclude_tags'] == ['Handle'])
+
+# ---- Đổi file SketchUp khi cửa sổ đang mở: nạp lại cài đặt của file mới; trạng thái của file cũ không ghi nhầm vào file mới ----
+dv = make_dialog; dv.instance_variable_set(:@model, model_a); dv.define_singleton_method(:refresh) { }
+current_id = dv.file_identity
+ok('mã file là thư mục cạnh file SketchUp (file chưa lưu: mã model)', current_id == File.join(SK, 'phong_a_VGD_BIM') && make_dialog.tap { |x| x.instance_variable_set(:@model, FakeModel.new('M-LUU', '')) }.file_identity == 'chua-luu:M-LUU')
+$saved_views = []
+dv.table_view_save({'preset' => 'Tất cả', 'rowHeight' => 70, 'file' => current_id})
+ok('trạng thái bảng kèm đúng mã file: ghi cho file đang mở (không kèm mã file)', $saved_views == [[{'preset' => 'Tất cả', 'rowHeight' => 70}, model_a]])
+dv.table_view_save({'preset' => 'Tất cả', 'rowHeight' => 99, 'file' => File.join(SK, 'phong_b_VGD_BIM')})
+ok('trạng thái bảng của file khác (mã không khớp): bỏ, không ghi nhầm', $saved_views.size == 1)
+VGD::BIM::Table.define_singleton_method(:save_view_state) { |state, model = nil| raise ArgumentError, 'Không ghi được settings.json: Permission denied' }
+dv.instance_variable_set(:@events, nil)
+dv.table_view_save({'rowHeight' => 1, 'file' => current_id}); dv.table_view_save({'rowHeight' => 2, 'file' => current_id})
+ok('thư mục cạnh file không ghi được: báo một lần, không báo lại sau từng thay đổi', events(dv, 'message').count { |m| m['error'].to_s.include?('Không ghi được settings.json') } == 1)
+VGD::BIM::Table.define_singleton_method(:save_view_state) { |state, model = nil| ($saved_views ||= []) << [state, model] }
+refreshes = 0
+dm = make_dialog
+dm.instance_variable_set(:@table_options, {zoom: true, isolate: false, deep: false, projected: false, label: true})
+dm.instance_variable_set(:@table_scope, []); dm.instance_variable_set(:@isolated, [])
+dm.define_singleton_method(:refresh) { refreshes += 1 }
+dm.define_singleton_method(:selected_indexes) { [] }
+dm.define_singleton_method(:table_choices) { {} }
+$model = model_a
+dm.table_build
+ok('dựng bảng lần đầu: không nạp lại', refreshes == 0)
+$model = model_b
+dm.table_build
+ok('model đang mở đổi sang file khác: nạp lại toàn bộ (cài đặt, cột, sheet, tag loại trừ của file mới)', refreshes == 1)
+dm.table_build
+ok('dựng tiếp trên cùng file mới: không nạp lại nữa', refreshes == 1)
+$model = FakeModel.new('MODEL-A', File.join(SK, 'nha.skp'))
 
 # ---- Mã model cố định: bảng luôn đảm bảo mã trước khi đọc / chụp ảnh ----
 d = make_dialog
