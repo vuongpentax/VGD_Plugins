@@ -129,6 +129,12 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await page.click('#gear');await scan('Bánh răng');await page.keyboard.press('Escape');
   await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});await scan('Hộp xác nhận chụp ảnh');
   await page.evaluate(()=>{tableState.panel='io';tableView(tableState.data);});await scan('Menu Công cụ');
+  await page.evaluate(()=>{tableState.panel='bridge';tableView(tableState.data);});await scan('Cầu nối dữ liệu (chưa có file)');
+  await receive('bridge_file',{name:'a.xlsx',headers:['VGD ID','Tên','Extra'],count:3,sample:[],fields:[{key:'name',label:'Tên'}],match:[{key:'vgd_id',label:'VGD ID'}],suggest:{match_by:'vgd_id',match_column:'VGD ID',mapping:{'Tên':'name'}}});
+  await scan('Cầu nối dữ liệu (có file)');
+  await receive('bridge_preview',{counts:{rows:4,ok:1,unchanged:0,unmatched:1,ambiguous:1,file_duplicate:1,locked:1,blank:0,changes:1,errors:1},rows:[{row:2,key:'a',index:0,name:'Cabinet',status:'ok',changes:[{field:'name',label:'Tên',old:'Cabinet',new:'X'}]},{row:3,key:'z',index:null,name:'',status:'unmatched',changes:[]},{row:4,key:'q',index:null,name:'',status:'ambiguous',changes:[]},{row:5,key:'r',index:null,name:'',status:'file_duplicate',changes:[]},{row:6,key:'s',index:2,name:'',status:'locked',changes:[]}]});
+  await scan('Cầu nối dữ liệu (xem trước)');
+  await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
   await page.evaluate(()=>{tableState.panel='opts';tableView(tableState.data);});await scan('Bảng Tùy chọn');
   await page.evaluate(()=>{tableState.headers={};tableState.panel=null;toggleColumns();});await page.locator('.cs-add').click();await scan('Ngăn Chọn cột (form thêm cột)');
   await page.getByLabel((lang==='en')?'Column type':'Kiểu cột').selectOption('dynamic');await scan('Form thêm cột (thuộc tính động)');

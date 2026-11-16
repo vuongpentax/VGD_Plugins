@@ -85,6 +85,11 @@ const VGD_I18N=(()=>{
     'Thêm sheet':'Add sheet','Thêm sheet (sao chép cài đặt của sheet đang mở)':'Add sheet (copies the settings of the open sheet)','Bấm để mở · bấm đúp hoặc F2 để đổi tên · bấm phải để nhân đôi hoặc xóa':'Click to open · double-click or F2 to rename · right-click to duplicate or delete',
     'Tên sheet':'Sheet name','Nhân đôi':'Duplicate','Xóa sheet':'Delete sheet','Bấm lần nữa để xóa':'Click again to delete','Tối đa 20 sheet.':'At most 20 sheets.',
     'Tên sheet không được để trống.':'The sheet name cannot be empty.','Đã có sheet tên này. Hãy đặt tên khác.':'A sheet with this name already exists. Choose another name.','Phải còn ít nhất một sheet.':'At least one sheet must remain.',
+    'Cầu nối dữ liệu':'Data bridge','Cầu nối dữ liệu · nhập từ Excel / CSV':'Data bridge · import from Excel / CSV','Chọn file Excel / CSV…':'Choose Excel / CSV file…','Chọn file khác…':'Choose another file…',
+    'Đọc file Excel (.xlsx, trang tính đầu) hoặc CSV rồi cập nhật dữ liệu chữ của các món đang có trong bảng (tên, mô tả, xuất xứ, liên kết, quy cách, đơn giá, cột chữ tự thêm). Không đổi tag, vật liệu, tầng, phòng. File Excel xuất từ BIM nhập lại được nếu có cột VGD ID hoặc Mã đối tượng.':'Reads an Excel file (.xlsx, first sheet) or CSV and updates the text data of the items in the table (name, description, origin, link, size, unit price, custom text columns). Tags, materials, levels and rooms are not changed. An Excel file exported from BIM can be imported back if it has a VGD ID or Object code column.',
+    'Khớp theo':'Match by','Cột của file dùng để khớp':'File column used for matching','(chọn cột)':'(choose column)','(bỏ qua)':'(skip)','Cột của file → trường cần nhập (để trống = bỏ qua)':'File column → field to import (blank = skip)',
+    'Không có trong bảng':'Not in the table','Trùng khóa trong bảng, bỏ qua':'Duplicate key in the table, skipped','Khóa lặp trong file, bỏ qua':'Key repeated in the file, skipped','Bị khóa, bỏ qua':'Locked, skipped',
+    'Hãy chọn cột của file dùng để khớp.':'Choose the file column used for matching.','Hãy chọn ít nhất một cột để nhập.':'Choose at least one column to import.',
     'Đang chuẩn bị xuất, hãy đợi xong.':'Preparing the export, please wait.',
     'Đang tính lại số đo theo tag loại trừ của sheet…':'Recalculating measurements for this sheet’s excluded tags…',
     'Chọn cột':'Choose columns','Tìm kiếm...':'Search...','Tìm trong bảng':'Search in table','Tất cả nhóm':'All groups','Đổi tên':'Rename','Chụp ảnh':'Take photo',
@@ -390,6 +395,12 @@ const VGD_I18N=(()=>{
   rule(/^Đang chuẩn bị (\d+) sheet để xuất…$/,(m,n)=>`Preparing ${plural(n,'sheet','sheets')} for export…`);
   rule(/^Hết thời gian chờ tính lại số đo cho sheet “(.*)”\. Hãy thử xuất lại\.$/,(m,name)=>`Timed out waiting for the measurements of sheet “${name}” to be recalculated. Try exporting again.`);
   rule(/^Đã tạo trang báo cáo (\d+) dòng trong (\d+) sheet và mở trong trình duyệt\..*$/,(m,n,k)=>`Created a report page with ${plural(n,'row','rows')} in ${plural(k,'sheet','sheets')} and opened it in the browser. To print, press In / Lưu PDF on the page and choose Save as PDF.`);
+  rule(/^(.*) · (\d+) dòng dữ liệu$/,(m,name,n)=>`${name} · ${plural(n,'data row','data rows')}`);
+  rule(/^Dòng (\d+) · (.*)$/,(m,n,rest)=>`Row ${n} · ${rest}`);
+  rule(/^Dòng (\d+)$/,(m,n)=>`Row ${n}`);
+  rule(/^Hiện thêm \((\d+) dòng nữa\)$/,(m,n)=>`Show more (${n} more rows)`);
+  rule(/^Sẽ nhập (\d+) giá trị cho (\d+) đối tượng · không đổi (\d+) · không khớp (\d+)(?: · giá trị sai (\d+))?(?: · khóa trùng trong bảng (\d+))?(?: · khóa lặp trong file (\d+))?(?: · bị khóa (\d+))?\. Chỉ đọc món đang có trong bảng; ô trống trong file nghĩa là không đổi\.$/,(m,c,o,u,x,e,a,f,l)=>`Will import ${plural(c,'value','values')} for ${plural(o,'object','objects')} · unchanged ${u} · not matched ${x}`+(e?` · invalid values ${e}`:'')+(a?` · duplicate keys in table ${a}`:'')+(f?` · repeated keys in file ${f}`:'')+(l?` · locked ${l}`:'')+'. Only items already in the table are read; an empty cell in the file means no change.');
+  rule(/^Đã nhập (\d+) giá trị cho (\d+) đối tượng\.(?: Bỏ qua (\d+) đối tượng bị khóa\.)?$/,(m,v,o,l)=>`Imported ${plural(v,'value','values')} for ${plural(o,'object','objects')}.${l?` Skipped ${l} locked.`:''}`);
   rule(/^(\d+) dòng đang chọn\.$/,(m,n)=>`${plural(n,'row','rows')} selected.`);
   rule(/^Đã lưu (\d+) tầng\.$/,(m,n)=>`Saved ${plural(n,'level','levels')}.`);
   rule(/^Đã gán tầng cho (\d+) món theo cao độ\.(?: (\d+) món thấp hơn mọi tầng hoặc không đo được cao độ\.)?(?: Bỏ qua (\d+) món bị khóa\.)?$/,(m,n,none,locked)=>`Assigned levels to ${plural(n,'item','items')} by elevation.${none?` ${plural(none,'item is','items are')} below every level or has no elevation.`:''}${locked?` Skipped ${locked} locked.`:''}`);

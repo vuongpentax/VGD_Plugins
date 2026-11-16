@@ -199,6 +199,45 @@ const table=(o={})=>({columns:F.columns,presets:F.presets,groups:F.groups,status
   await page.evaluate(()=>{window.tableWaitMs=0;});
   await receive('config',config('table'));await receive('table',table());await settle(200);
 
+  // ---- Cầu nối dữ liệu: nhập Excel / CSV ----
+  await receive('config',config('table'));await receive('table',table());await settle(200);await clear();
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();
+  await page.getByRole('button',{name:/Cầu nối dữ liệu/}).click();
+  ok(await page.locator('.popover.bridge').count()===1 && (await page.locator('.popover.bridge').innerText()).includes('Chọn file Excel / CSV'),'Cầu nối: hộp mở, chưa có file thì chỉ có nút chọn file');
+  await page.getByRole('button',{name:'Chọn file Excel / CSV…'}).click();
+  ok((await calls('bridge_open')).length===1,'bấm chọn file: gọi Ruby mở hộp chọn file (không đọc file trong giao diện)');
+  await receive('bridge_file',{name:'a.xlsx',headers:['VGD ID','Tên','Đơn giá','Cột lạ'],count:3,sample:[],fields:[{key:'name',label:'Tên'},{key:'price',label:'Đơn giá'},{key:'description',label:'Mô tả'}],match:[{key:'vgd_id',label:'VGD ID'},{key:'code',label:'Mã đối tượng'}],suggest:{match_by:'vgd_id',match_column:'VGD ID',mapping:{'Tên':'name','Đơn giá':'price'}}});
+  await settle(150);
+  const bridgeText=await page.locator('.popover.bridge').innerText();
+  ok(bridgeText.includes('a.xlsx · 3 dòng dữ liệu') && (await page.locator('.popover.bridge select').count())===5,'có file: hiện tên, số dòng, 2 ô khớp và 3 ô ánh xạ (trừ cột khớp)');
+  await page.getByRole('button',{name:'Xem trước',exact:true}).click();
+  const bp=await json('bridge_preview');
+  ok(bp && bp.match_by==='vgd_id' && bp.match_column==='VGD ID' && JSON.stringify(bp.mapping)==='{"Tên":"name","Đơn giá":"price"}','xem trước: gửi khóa khớp và ánh xạ gợi ý');
+  await clear();
+  await receive('bridge_preview',{counts:{rows:4,ok:2,unchanged:0,unmatched:1,ambiguous:0,file_duplicate:0,locked:0,blank:0,changes:2,errors:1},rows:[
+    {row:2,key:'vgd-a',index:0,name:'Tủ',status:'ok',changes:[{field:'name',label:'Tên',old:'Tủ',new:'Tủ mới'},{field:'price',label:'Đơn giá',old:'',new:'',error:'Đơn giá phải là số không âm'}]},
+    {row:3,key:'vgd-b',index:1,name:'Bàn',status:'ok',changes:[{field:'price',label:'Đơn giá',old:'',new:'900000'}]},
+    {row:4,key:'zzz',index:null,name:'',status:'unmatched',changes:[]}]});
+  await settle(150);
+  const boxes=page.locator('.popover.bridge .rename-table input[type=checkbox]');
+  ok((await boxes.count())===3 && (await boxes.nth(1).isDisabled()) && (await boxes.nth(0).isChecked()) && (await page.locator('.popover.bridge').innerText()).includes('Không có trong bảng'),'xem trước: mỗi giá trị một ô tick, giá trị sai bị khóa không tick được, dòng không khớp hiện lý do');
+  await boxes.nth(2).uncheck();
+  await page.getByRole('button',{name:'Áp dụng',exact:true}).click();
+  const ap=await json('bridge_apply');
+  ok(ap && JSON.stringify(ap.skip)==='[[3,"price"]]' && ap.match_column==='VGD ID' && !(await page.locator('.popover.bridge').count()),'áp dụng: gửi cấu hình và các giá trị đã bỏ tick (dòng, trường); hộp đóng lại');
+  // đổi cấu hình thì bản xem trước cũ mất (không áp dụng nhầm)
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();await page.getByRole('button',{name:/Cầu nối dữ liệu/}).click();
+  await receive('bridge_file',{name:'a.xlsx',headers:['VGD ID','Tên'],count:1,sample:[],fields:[{key:'name',label:'Tên'}],match:[{key:'vgd_id',label:'VGD ID'}],suggest:{match_by:'vgd_id',match_column:'VGD ID',mapping:{'Tên':'name'}}});
+  await receive('bridge_preview',{counts:{rows:1,ok:1,unchanged:0,unmatched:0,ambiguous:0,file_duplicate:0,locked:0,blank:0,changes:1,errors:0},rows:[{row:2,key:'a',index:0,name:'Tủ',status:'ok',changes:[{field:'name',label:'Tên',old:'Tủ',new:'X'}]}]});
+  await settle(150);
+  ok(await page.getByRole('button',{name:'Áp dụng',exact:true}).isEnabled(),'có thay đổi: nút Áp dụng bật');
+  await page.locator('.popover.bridge select').nth(1).selectOption('');
+  ok(await page.getByRole('button',{name:'Áp dụng',exact:true}).isDisabled() && (await page.locator('.popover.bridge .rename-table').count())===0,'đổi cột khớp: xem trước cũ biến mất, Áp dụng tắt');
+  await page.getByRole('button',{name:'Xem trước',exact:true}).click();
+  ok((await message()).includes('chọn cột của file dùng để khớp'),'chưa chọn cột khớp: báo lỗi, không gửi Ruby');
+  await page.getByRole('button',{name:'Đóng',exact:true}).click();
+  await clear();
+
   // ---- Gợi ý nhập kiểu Excel ----
   const cell=(row,key)=>page.locator('.grid tbody tr').nth(row).locator(`td[data-key="${key}"]`);
   const ghost=()=>page.locator('.ac-rest').innerText().catch(()=>'');

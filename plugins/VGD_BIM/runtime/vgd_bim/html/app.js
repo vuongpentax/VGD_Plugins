@@ -1558,7 +1558,7 @@ function closeTablePanel(){
   document.querySelectorAll('.popover').forEach(p=>p.remove());
   document.querySelectorAll('button[aria-expanded="true"]').forEach(b=>{if(!b.closest('header'))b.setAttribute('aria-expanded','false');});
 }
-const PANELS_KEEP_ON_ROW_CLICK=['rename','front','capture','codes','levels','rooms','materials','checks','snapshots']; // ba bảng này dùng các dòng đang chọn: bấm chọn dòng không đóng
+const PANELS_KEEP_ON_ROW_CLICK=['rename','bridge','front','capture','codes','levels','rooms','materials','checks','snapshots']; // ba bảng này dùng các dòng đang chọn: bấm chọn dòng không đóng
 document.addEventListener('mousedown',e=>{
   if(!tableState.panel||!(e.target instanceof Element))return;
   const t=e.target;
@@ -1666,6 +1666,72 @@ const IO_ICONS={
   id:[['rect',{x:3,y:5,width:18,height:14,rx:2}],['path',{d:'M7 10h4M7 14h2M14 10h3M14 14h3'}]],
   calc:[['rect',{x:5,y:3,width:14,height:18,rx:2}],['path',{d:'M8 7h8M8 12h2M12 12h2M8 16h2M12 16h2'}]]
 };
+// Cầu nối dữ liệu: nhập Excel / CSV vào dữ liệu chữ của món (xem docs/vgd_bim/BRIDGE.md, mẫu 5D Auto Info). Chọn file → chọn cột khớp và cột nhập → xem trước → áp dụng.
+tableState.bridge={file:null,match_by:'vgd_id',match_column:'',mapping:{},preview:null,skip:new Set(),shown:200};
+const BRIDGE_STATUS={unmatched:'Không có trong bảng',ambiguous:'Trùng khóa trong bảng, bỏ qua',file_duplicate:'Khóa lặp trong file, bỏ qua',locked:'Bị khóa, bỏ qua',unchanged:'Không đổi'};
+function bridgeOptions(){const b=tableState.bridge;return {match_by:b.match_by,match_column:b.match_column,mapping:b.mapping};}
+function bridgePreview(box,apply){
+  const b=tableState.bridge,pv=b.preview;if(!pv)return;
+  const c=pv.counts;
+  box.append(node('p',`Sẽ nhập ${c.changes} giá trị cho ${c.ok} đối tượng · không đổi ${c.unchanged} · không khớp ${c.unmatched}`+(c.errors?` · giá trị sai ${c.errors}`:'')+(c.ambiguous?` · khóa trùng trong bảng ${c.ambiguous}`:'')+(c.file_duplicate?` · khóa lặp trong file ${c.file_duplicate}`:'')+(c.locked?` · bị khóa ${c.locked}`:'')+'. Chỉ đọc món đang có trong bảng; ô trống trong file nghĩa là không đổi.'));
+  const table=node('table',undefined,'rename-table');
+  const rows=pv.rows.filter(r=>r.status!=='blank'&&r.status!=='unchanged');
+  rows.slice(0,b.shown).forEach(row=>{
+    if(row.status!=='ok'){
+      const tr=node('tr');tr.className='st-locked';const why=node('td',BRIDGE_STATUS[row.status]||row.status);why.colSpan=3;tr.append(node('td'),node('td',`Dòng ${row.row} · ${row.key||'(trống)'}`),why);table.append(tr);return;
+    }
+    row.changes.forEach((ch,i)=>{
+      const tr=node('tr');if(ch.error)tr.className='st-locked';
+      const id=`${row.row}|${ch.field}`;
+      const box2=node('input');box2.type='checkbox';box2.checked=!ch.error&&!b.skip.has(id);box2.disabled=!!ch.error;
+      box2.onchange=()=>{if(box2.checked)b.skip.delete(id);else b.skip.add(id);};
+      const cell=node('td');cell.append(box2);
+      tr.append(cell,node('td',i===0?`Dòng ${row.row} · ${row.name||row.key}`:''),node('td',ch.label),node('td',ch.old||'(trống)'),node('td',ch.error?ch.error:'→ '+ch.new));
+      table.append(tr);
+    });
+  });
+  box.append(table);
+  if(rows.length>b.shown){const more=button(`Hiện thêm (${rows.length-b.shown} dòng nữa)`,()=>{b.shown+=200;tableView(tableState.data);});box.append(more);}
+}
+function bridgePanel(){
+  const b=tableState.bridge,f=b.file;
+  const p=node('div',undefined,'popover right rename bridge');
+  p.append(node('div','Cầu nối dữ liệu · nhập từ Excel / CSV','pop-title'));
+  p.append(node('p','Đọc file Excel (.xlsx, trang tính đầu) hoặc CSV rồi cập nhật dữ liệu chữ của các món đang có trong bảng (tên, mô tả, xuất xứ, liên kết, quy cách, đơn giá, cột chữ tự thêm). Không đổi tag, vật liệu, tầng, phòng. File Excel xuất từ BIM nhập lại được nếu có cột VGD ID hoặc Mã đối tượng.'));
+  const box=node('div');
+  const apply=button('Áp dụng',()=>{call('bridge_apply',JSON.stringify({...bridgeOptions(),skip:[...b.skip].map(id=>{const [row,field]=id.split('|');return [Number(row),field];})}));b.preview=null;tableState.panel=null;tableView(tableState.data);},'primary');
+  apply.disabled=!(b.preview&&b.preview.counts.changes>0);
+  const stale=()=>{b.preview=null;b.skip=new Set();b.shown=200;apply.disabled=true;box.replaceChildren();};
+  const open=button(f?'Chọn file khác…':'Chọn file Excel / CSV…',()=>call('bridge_open'),f?'':'primary');
+  p.append(open);
+  if(f){
+    p.append(node('p',`${f.name} · ${f.count} dòng dữ liệu`));
+    const pick=(label,value,options,onchange)=>{
+      const wrap=node('label',undefined,'rename-field');wrap.append(node('span',label));
+      const select=node('select');options.forEach(([v,t])=>select.append(new Option(t,v)));select.value=value;select.onchange=()=>{onchange(select.value);stale();};
+      wrap.append(select);return wrap;
+    };
+    const row=node('div',undefined,'rename-row');
+    row.append(pick('Khớp theo',b.match_by,f.match.map(m=>[m.key,m.label]),v=>{b.match_by=v;}),
+      pick('Cột của file dùng để khớp',b.match_column,[['','(chọn cột)'],...f.headers.filter(h=>h).map(h=>[h,h])],v=>{b.match_column=v;if(v)delete b.mapping[v];}));
+    p.append(row);
+    p.append(node('div','Cột của file → trường cần nhập (để trống = bỏ qua)','pop-title'));
+    const list=node('div');
+    f.headers.filter(h=>h&&h!==b.match_column).forEach(h=>{
+      list.append(pick(h,b.mapping[h]||'',[['','(bỏ qua)'],...f.fields.map(x=>[x.key,x.label])],v=>{if(v)b.mapping[h]=v;else delete b.mapping[h];}));
+    });
+    p.append(list);
+  }
+  const actions=node('div',undefined,'rename-actions');
+  actions.append(button('Xem trước',()=>{
+    if(!b.match_column)return message('Hãy chọn cột của file dùng để khớp.',true);
+    if(!Object.keys(b.mapping).length)return message('Hãy chọn ít nhất một cột để nhập.',true);
+    call('bridge_preview',JSON.stringify(bridgeOptions()));
+  },'primary'),apply,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
+  p.append(box,actions);
+  if(f)bridgePreview(box,apply);
+  return p;
+}
 function ioPanel(){
   const p=node('div',undefined,'popover up right io-panel');
   const item=(icon,text,handler,disabledNote)=>{
@@ -1675,7 +1741,7 @@ function ioPanel(){
     else b.onclick=()=>{tableState.panel=null;tableView(tableState.data);handler();};
     return b;
   };
-  p.append(node('div','Xuất','io-head'),item('bridge','Cầu nối dữ liệu',()=>{},'Sắp có'),item('excel','Xuất Excel',()=>exportTable('xlsx')),item('pdf','In PDF',()=>exportTable('pdf')));
+  p.append(node('div','Xuất','io-head'),item('bridge','Cầu nối dữ liệu',()=>{tableState.panel='bridge';tableView(tableState.data);}),item('excel','Xuất Excel',()=>exportTable('xlsx')),item('pdf','In PDF',()=>exportTable('pdf')));
   p.append(node('div','Mã và dữ liệu món','io-head'));
   // Ghi cách tính suy ra từ tag vào các món đang chọn (chỉ điền mục còn trống; một bước hoàn tác). Phải chọn dòng rõ ràng để không ghi hàng loạt nhầm.
   const calc=item('calc','Ghi cách tính vào món đang chọn',()=>{if(!tableState.sel.size)return message('Hãy chọn các dòng cần ghi cách tính (Ctrl+A chọn hết các dòng đang hiện).',true);call('table_commit_calc',JSON.stringify({indexes:[...tableState.sel]}));});
@@ -1787,6 +1853,7 @@ function tableView(data){
   if(tableState.panel==='snapshots')bar.append(snapshotsPanel());
   if(tableState.panel==='front')bar.append(frontPanel());
   if(tableState.panel==='rename')bar.append(renamePanel());
+  if(tableState.panel==='bridge')bar.append(bridgePanel());
   const side=$('col-side'),host=$('grid-host');
   const kind=sideKind();
   if(kind){
@@ -1820,6 +1887,8 @@ window.VGD={receive(event,data){
   }
   if(event==='settings'){config.app=data;if(!tableState.excludePending){tableState.excludeTags=null;refreshExcludeUi();}if(openPanel==='preset-panel')presetPanel($('preset-panel'));if(openPanel==='gear-panel')languagePanel($('gear-panel'));}
   if(event==='front_align_plan'){tableState.alignPlan=data&&!data.cleared?data:null;if(tableState.panel==='front'&&tableState.data)tableView(tableState.data);return;}
+  if(event==='bridge_file'){const b=tableState.bridge;b.file=data;b.match_by=data.suggest.match_by;b.match_column=data.suggest.match_column||'';b.mapping={...data.suggest.mapping};b.preview=null;b.skip=new Set();b.shown=200;if(tableState.panel==='bridge'&&tableState.data)tableView(tableState.data);}
+  if(event==='bridge_preview'){const b=tableState.bridge;b.preview=data;b.skip=new Set();b.shown=200;if(tableState.panel==='bridge'&&tableState.data)tableView(tableState.data);}
   if(event==='rename_preview'){tableState.rename.preview=data;if(tableState.panel==='rename'&&tableState.data)tableView(tableState.data);}
   if(event==='table'){tableWaiters.splice(0).forEach(done=>done());}
   if(event==='images_progress')imagesProgress(data);

@@ -78,6 +78,9 @@ module VGD
           @dialog.add_action_callback('table_commit_calc') { |_ctx, payload| safely { table_commit_calc(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_option') { |_ctx, payload| safely { table_option(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_export') { |_ctx, payload| safely { table_export(JSON.parse(payload)) } }
+          @dialog.add_action_callback('bridge_open') { |_ctx| safely { bridge_open } }
+          @dialog.add_action_callback('bridge_preview') { |_ctx, payload| safely { bridge_preview(JSON.parse(payload)) } }
+          @dialog.add_action_callback('bridge_apply') { |_ctx, payload| safely { bridge_apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_replace') { |_ctx, payload| safely { table_replace(JSON.parse(payload)) } }
           @dialog.add_action_callback('open_url') { |_ctx, url| safely { open_url(url) } }
           @dialog.add_action_callback('table_preset') { |_ctx, payload| safely { table_preset(JSON.parse(payload)) } }
@@ -865,6 +868,48 @@ module VGD
         MAX_FIND = 200
         # Thay chữ trong Tên / Mô tả / Hãng / Cỡ của các dòng gửi lên (không có 'indexes' thì mọi dòng trong bảng).
         # Không phân biệt hoa thường; chuỗi thay được hiểu nguyên văn. Bỏ qua đối tượng khóa. Cả đợt là một bước hoàn tác.
+        # Cầu nối dữ liệu: nhập Excel / CSV vào dữ liệu chữ của món (logic ở core/data_bridge.rb). Ba bước: mở file (chỉ đọc), xem trước, áp dụng.
+        def bridge_open
+          check_model!
+          path = ::UI.openpanel('Nhập dữ liệu (Excel / CSV)', '', 'Excel / CSV|*.xlsx;*.csv||')
+          return unless path
+          @bridge_file = DataBridge.read_file(path)
+          fields = DataBridge.fields(CustomColumns.read)
+          emit('bridge_file', {name: @bridge_file[:name], headers: @bridge_file[:headers], count: @bridge_file[:rows].size, sample: @bridge_file[:rows].first(3),
+                               fields: fields, match: DataBridge::MATCH.map { |key, label| {key: key, label: label} }, suggest: DataBridge.suggest(@bridge_file[:headers], fields)})
+        end
+        def bridge_plan(options)
+          check_model!
+          raise 'Chưa mở file. Hãy chọn file Excel / CSV trước.' unless @bridge_file
+          raise 'Bảng chưa có dòng nào. Chọn group hoặc component trong SketchUp để bảng đọc rồi nhập lại.' if @table_rows.to_a.empty?
+          fields = DataBridge.fields(CustomColumns.read)
+          targets = @table_rows.each_with_index.map do |row, i|
+            record = @table_records.fetch(i)
+            {index: i, ids: {'vgd_id' => row[:vgd_id].to_s, 'code' => row[:code].to_s}, name: row[:name].to_s,
+             locked: record[:locked] || record[:entity].locked? ? true : false, current: fields.each_with_object({}) { |f, h| h[f[:key]] = row[f[:key].to_sym] }}
+          end
+          DataBridge.plan(@bridge_file, options, targets, fields)
+        end
+        def bridge_preview(payload)
+          emit('bridge_preview', bridge_plan(payload))
+        end
+        def bridge_apply(payload)
+          plan = bridge_plan(payload)
+          skip = payload['skip'].is_a?(Array) ? payload['skip'].map { |pair| pair.is_a?(Array) ? [pair[0].to_i, pair[1].to_s] : nil }.compact : []
+          jobs = plan[:rows].select { |row| row[:status] == 'ok' }.flat_map do |row|
+            row[:changes].reject { |change| change[:error] || skip.include?([row[:row], change[:field]]) }.map { |change| [row, change] }
+          end
+          raise 'Không có thay đổi nào để áp dụng.' if jobs.empty?
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng và nhập lại.' unless jobs.all? { |row, _change| @table_records.fetch(row[:index])[:path].all?(&:valid?) }
+          Data.transaction(@model, 'VGD_BIM · Nhập dữ liệu từ file') do
+            jobs.each { |row, change| apply_edit(@table_records.fetch(row[:index])[:entity], change[:field], change[:new], nil, nil) }
+          end
+          table_build
+          show_outline
+          text = "Đã nhập #{jobs.size} giá trị cho #{jobs.map { |row, _change| row[:row] }.uniq.size} đối tượng."
+          text += " Bỏ qua #{plan[:counts][:locked]} đối tượng bị khóa." if plan[:counts][:locked] > 0
+          emit('message', {text: text})
+        end
         def table_replace(payload)
           check_model!
           find = payload['find'].to_s

@@ -46,6 +46,7 @@ require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
 require File.join(ROOT, 'core/table')
+require File.join(ROOT, 'core/data_bridge')
 require File.join(ROOT, 'core/rename')
 require File.join(ROOT, 'ui/dialog')
 D = VGD::BIM::UI::Dialog
@@ -916,5 +917,41 @@ qd.scan_start; qd.switch_mode('validate_model')
 ok('đổi sang tab Kiểm tra: tắt quét', qd.instance_variable_get(:@scan_armed) == false)
 $model = ORIGINAL_MODEL
 $vgd_data = {}
+
+# Cầu nối dữ liệu: mở file (chỉ đọc), xem trước, áp dụng vào món (một bước hoàn tác, bỏ qua món khóa, giá trị sai và ô bỏ tick)
+require 'tmpdir'
+bdir = Dir.mktmpdir('bridge_dialog')
+bpath = File.join(bdir, 'in.csv')
+File.write(bpath, "VGD ID,Tên,Xuất xứ,Đơn giá\nvgd-1,Cửa chính,Hafele,1500000\nvgd-2,Cửa phụ,,abc\nvgd-3,Khóa,X,5\nvgd-9,Không có,,\n")
+bents = [EditEnt.new('A'), EditEnt.new('B'), EditEnt.new('C', true)]
+brecs = bents.map { |e| {entity: e, path: [e], locked: false} }
+brows = bents.each_with_index.map { |e, i| {index: i, name: e.name, vgd_id: "VGD-#{i + 1}", code: '', owner: '', price: nil, description: '', url: '', size: ''} }
+bd = D.allocate
+$model = EditModel.new
+bd.instance_variable_set(:@model, $model)
+bd.instance_variable_set(:@table_rows, brows)
+bd.instance_variable_set(:@table_records, brecs)
+bcalls = []
+bd.define_singleton_method(:emit) { |ev, payload| bcalls << [ev, payload] }
+bd.define_singleton_method(:table_build) { bcalls << [:build] }
+bd.define_singleton_method(:show_outline) { bcalls << [:outline] }
+$picked = bpath
+bd.bridge_open
+opened = bcalls.find { |c| c[0] == 'bridge_file' }[1]
+ok('cầu nối: mở file trả tiêu đề, số dòng, gợi ý khớp VGD ID và ánh xạ cột', opened[:headers] == ['VGD ID', 'Tên', 'Xuất xứ', 'Đơn giá'] && opened[:count] == 4 && opened[:suggest][:match_column] == 'VGD ID' && opened[:suggest][:mapping] == {'Tên' => 'name', 'Xuất xứ' => 'owner', 'Đơn giá' => 'price'})
+bopts = {'match_by' => 'vgd_id', 'match_column' => 'VGD ID', 'mapping' => opened[:suggest][:mapping]}
+bd.bridge_preview(bopts)
+bplan = bcalls.find { |c| c[0] == 'bridge_preview' }[1]
+ok('cầu nối: xem trước không đổi gì trong model', bents.map(&:name) == %w[A B C] && bplan[:counts][:ok] == 2 && bplan[:counts][:locked] == 1 && bplan[:counts][:unmatched] == 1 && bplan[:counts][:errors] == 1)
+$transactions.clear
+bd.bridge_apply(bopts.merge('skip' => [[2, 'owner']]))
+ok('cầu nối: áp dụng đổi tên đúng món, bỏ món khóa, giá trị sai và ô bỏ tick; một bước hoàn tác', bents.map(&:name) == ['Cửa chính', 'Cửa phụ', 'C'] && $transactions == ['VGD_BIM · Nhập dữ liệu từ file'] && bents[0].attrs.dig('VGD_BIM_TABLE', 'price').nil? == false)
+ok('cầu nối: áp dụng đọc lại bảng và báo số giá trị', bcalls.any? { |c| c[0] == :build } && bcalls.last[1][:text].include?('3 giá trị cho 2 đối tượng'))
+berr = ->(payload) { begin; bd.bridge_apply(payload); nil; rescue StandardError => e; e.message; end }
+ok('cầu nối: không còn thay đổi nào để áp dụng thì báo lỗi, không ghi', berr.call(bopts.merge('skip' => [[2, 'name'], [2, 'owner'], [2, 'price'], [3, 'name']])).to_s.include?('Không có thay đổi'))
+bd.instance_variable_set(:@bridge_file, nil)
+ok('cầu nối: chưa mở file thì báo lỗi', berr.call(bopts).to_s.include?('Chưa mở file'))
+$picked = nil
+$model = ORIGINAL_MODEL
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

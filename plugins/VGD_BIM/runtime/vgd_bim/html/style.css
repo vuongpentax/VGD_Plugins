@@ -16,7 +16,7 @@ main{flex:1;min-height:0;overflow:auto;padding:14px 16px}.card{background:var(--
 .subtabs{margin-bottom:14px}
 
 /* Panel đổi tên: cố định giữa cửa sổ, cao gần hết cửa sổ, tự cuộn; hàng nút ghim ở đáy nên luôn thấy */
-.popover.rename{position:fixed;top:12px;bottom:12px;left:50%;right:auto;transform:translateX(-50%);width:min(520px,94vw);max-height:none}
+.popover.rename,.popover.bridge{position:fixed;top:12px;bottom:12px;left:50%;right:auto;transform:translateX(-50%);width:min(520px,94vw);max-height:none}
 .rename-field{display:flex;flex-direction:column;gap:2px;font-size:11px;margin-bottom:8px}
 .rename-field input,.rename-field select{height:28px}
 .rename-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
