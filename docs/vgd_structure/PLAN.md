@@ -1,6 +1,6 @@
 # Kế hoạch plugin VGD Structure (dựng phần thô theo lưới trục)
 
-Trạng thái: **bản kế hoạch để chủ dự án duyệt, chưa có mã.** Soạn 17/11/2026.
+Trạng thái: **kế hoạch đã chốt các câu hỏi mở (17/11/2026), chưa có mã.** Chờ chủ dự án cho bắt đầu cột mốc 0.
 Các lựa chọn dưới đây đã được chủ dự án chốt ở phiên trao đổi: trục nhập ngay trong plugin; nội suy **bán tự động có xem trước**; plugin mới lo phần thô, **VGD Room giữ nguyên**; bản đầu dựng **khối thô theo lưới, chưa khoét cửa**.
 
 ## 1. Mục tiêu
@@ -31,15 +31,24 @@ Cho mỗi tầng i có cao độ mặt sàn `Ei`, tầng trên `Ei+1`, dày sàn
 | Đối tượng | Vị trí | Ghi chú |
 |---|---|---|
 | Sàn | phủ cả ô, mặt trên tại `Ei`, dày `t` xuống dưới | sàn phủ trên cột và dầm |
-| Cột | tại giao điểm trục, từ `Ei` lên **đáy sàn tầng trên** (`Ei+1 - t`) | đặt tâm lên trục, có độ lệch tâm tùy chọn |
-| Dầm | dọc nhịp, **giữa hai mặt cột** (không chui vào cột), đỉnh dầm = đáy sàn, dầm treo dưới sàn | không chồng sàn |
-| Tường | dọc nhịp, giữa hai mặt cột, từ `Ei` lên đáy dầm (hoặc đáy sàn nếu nhịp không có dầm) | dày, lệch tâm so với trục tùy chọn |
+| Cột | tại giao điểm trục, từ `Ei` lên **đáy sàn tầng trên** (`Ei+1 - t`) | **luôn nằm lọt trong khung lưới**: cột giữa đặt tâm trên giao điểm; cột biên có mặt ngoài **tiếp giáp trục biên** (tâm dời vào trong nửa kích thước); cột góc tiếp giáp cả hai trục biên (xem 4.1) |
+| Dầm | dọc nhịp, **giữa hai mặt cột** (không chui vào cột), đỉnh dầm = đáy sàn, dầm treo dưới sàn | không chồng sàn; dầm biên cũng tiếp giáp trục biên như cột biên |
+| Tường | dọc nhịp, giữa hai mặt cột, từ `Ei` lên đáy dầm (hoặc đáy sàn nếu nhịp không có dầm) | tường biên: mặt ngoài tiếp giáp trục biên, dày vào trong; tường giữa: tâm trên trục |
 | Trần | trong ô, ở cao độ nhập, mỏng (tấm), tag riêng | chưa nối với treo / khung trần |
+
+### 4.1. Quy ước vị trí cột (chủ dự án chốt 17/11/2026)
+
+Lưới trục quyết định cột nằm đâu và **cột không bao giờ nhô ra ngoài khung lưới**:
+- cột **giữa** (không nằm trên trục biên): tâm đúng giao điểm trục;
+- cột **biên** (nằm trên một trục biên): mặt ngoài tiếp giáp trục biên, tâm dời vào trong nửa kích thước cột theo phương vuông góc với trục biên đó;
+- cột **góc**: tiếp giáp cả hai trục biên.
+Mỗi cột vẫn có thể được đổi tay sang "tâm trên trục" ở bước xem trước nếu cần. Tường và dầm ở biên theo cùng quy ước (mặt ngoài tiếp giáp trục biên).
 
 Mặc định không có chồng khối nên cộng khối lượng trong VGD BIM là đúng. Quy tắc này nằm ở một chỗ duy nhất trong mã (bảng hằng số có giải thích) để dễ đổi khi bạn muốn quy ước khác (ví dụ dầm nằm trong chiều dày sàn).
 
 ## 5. Dữ liệu và cầu nối với VGD BIM
 
+- **Tầng:** mỗi tầng là **riêng** (cao độ sàn khác nhau, quy cách và phần đề xuất riêng từng tầng, không có "gom tầng giống nhau"). Danh sách tầng là của plugin (không phụ thuộc danh sách tầng của BIM); BIM **đọc** tầng và thông số của từng khối (qua `VGD_BIM_SOURCE.ref` và dictionary `VGD_STRUCT` của khối) để lập bảng khối lượng đúng và gán tầng, không sửa danh sách của plugin.
 - **Dữ liệu của plugin** ở dictionary riêng `VGD_STRUCT` của model (JSON: lưới, tầng, quy cách mặc định, danh sách đối tượng được chọn): đây là "nguồn đúng", không lẫn với dữ liệu BIM.
 - **Mỗi khối dựng ra** là Group hoặc ComponentInstance: nhóm theo loại, tên có nghĩa (ví dụ `C-B2-T1` = cột tại B-2 tầng 1), tag riêng theo loại (Cột, Dầm, Tường, Sàn, Trần), ghi `VGD_BIM_SOURCE` (`plugin = vgd_structure`, `kind = column | beam | wall | slab | ceiling`, `ref` = mã nhịp / ô / giao điểm) và nhận **VGD ID từ BIM** theo đúng hợp đồng trong `docs/vgd_bim/BRIDGE.md`.
 - **Cột cùng quy cách và cùng chiều cao dùng chung một component definition** (nhẹ model, bảng BIM đếm được số lượng).
@@ -87,12 +96,14 @@ Gợi ý làm theo thứ tự 0 → 1 → 2 và dừng cho bạn thử trong Ske
 | Làm quá to ở bản đầu | mỗi cột mốc là một bản phát hành nhỏ, dừng sau cột mốc 2 để duyệt |
 | Chưa thử được trong SketchUp thật trong môi trường này | chỉ kiểm bằng giả lập; mọi cột mốc gửi RBZ để bạn thử, ghi rõ phần chưa xác minh |
 
-## 9. Câu hỏi còn mở (cần bạn chốt trước cột mốc 0)
+## 9. Các quyết định đã chốt (17/11/2026)
 
-1. **Tên plugin:** "VGD Structure" (đề xuất), hay tên khác (VGD Frame, VGD Core...)?
-2. **Quy ước dầm so với sàn:** dầm treo dưới sàn, không chồng (đề xuất), hay dầm nằm trong chiều dày sàn (theo cách vẽ phổ biến ở Việt Nam)? Ảnh hưởng cách tính khối lượng bê tông.
-3. **Tầng:** dùng danh sách tầng riêng của plugin có gợi ý từ BIM (đề xuất), hay BIM là nguồn duy nhất?
-4. **Trục cột có lệch tâm** (cột hoặc tường không đặt giữa trục) có cần ngay từ bản đầu không, hay để sau?
-5. **Mặt bằng đề xuất:** gom theo tầng giống nhau ("tầng 2 đến 5 như nhau") có cần sớm không?
+1. **Tên:** VGD Structure.
+2. **Dầm** treo dưới sàn, không chồng khối.
+3. **Tầng:** plugin có danh sách tầng riêng; BIM đọc thông số từ khối để lập bảng khối lượng đúng.
+4. **Vị trí cột:** theo 4.1 (lọt trong khung lưới; cột biên tiếp giáp trục biên, cột giữa ở giữa). Hướng 4.1 là cách hiểu của tôi về lời chốt; sẽ chỉnh nếu chưa đúng ý.
+5. **Mỗi tầng riêng**, không gom tầng.
+
+Còn mở (không chặn cột mốc 0): kích thước cột mặc định theo tầng (ví dụ cột tầng trệt lớn hơn tầng trên) và cách đặt lại tay vị trí từng cột; sẽ hỏi khi tới cột mốc 2.
 
 Không có việc nào trong kế hoạch này tự động chạy hay sửa model; mọi thứ đều xem trước rồi mới dựng.
