@@ -686,6 +686,8 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.click('#pv-guide-clear');ok((await dbg()).guides===0,'nút Xóa đường gióng: xóa hết của tầng');
   await page.keyboard.press('Escape');await page.keyboard.press('Escape');
   // Phím tắt kiểu Revit
+  await page.mouse.move(box.x+5,box.y+5);await page.mouse.click(box.x+5,box.y+5);await page.mouse.move(box.x+6,box.y+6);await wait(40);
+  ok(/ZE = vừa khung, KS = bảng phím tắt/.test(await page.locator('#pv-hint').innerText()) && !/H = kéo|F = vừa/.test(await page.locator('#pv-hint').innerText()),'gợi ý mặc định nhắc phím Revit (ZE, KS), không còn phím cũ H / F');
   const type=async s=>{for(const ch of s)await page.keyboard.press(ch.toLowerCase());};
   ok((await page.locator('[data-tool=measure] kbd').innerText())==='ME' && (await page.locator('[data-tool=measure]').getAttribute('title')).includes('(ME)') && (await page.locator('[data-tool=wall] kbd').innerText())==='WA' && (await page.locator('#pv-fit kbd').innerText())==='ZE','nút công cụ hiện phím tắt Revit (ME, WA, ZE) ở góc và trong gợi ý');
   await type('me');ok((await dbg()).tool==='measure','gõ ME: công cụ Đo');

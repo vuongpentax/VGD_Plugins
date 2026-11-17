@@ -445,7 +445,7 @@
   function updateStatus() {
     var shown = snap && snapOn && usesSnap() ? snap.p : cursor, sel = visibleSelection();
     status.xy.textContent = shown ? 'X ' + Math.round(shown[0]) + '   Y ' + Math.round(shown[1]) + ' mm' : '';
-    status.hint.textContent = note || toolHint() || (hover ? hover.text + (hoverCount > 1 ? ' · Tab: đổi sang phần tử chồng (' + hoverCount + ')' : '') : sel.length === 1 ? sel[0].text : sel.length ? 'Đã chọn ' + sel.length + ' phần tử.' : (data && data.ok ? 'Bấm một phần tử để xem thuộc tính. Cuộn = thu phóng, chuột giữa hoặc H = kéo, F = vừa khung.' : ''));
+    status.hint.textContent = note || toolHint() || (hover ? hover.text + (hoverCount > 1 ? ' · Tab: đổi sang phần tử chồng (' + hoverCount + ')' : '') : sel.length === 1 ? sel[0].text : sel.length ? 'Đã chọn ' + sel.length + ' phần tử.' : (data && data.ok ? 'Bấm một phần tử để xem thuộc tính. Cuộn = thu phóng, chuột giữa = kéo' + (keyOf('fit') ? ', ' + keyOf('fit') + ' = vừa khung' : '') + (keyOf('keys') ? ', ' + keyOf('keys') + ' = bảng phím tắt' : '') + '.' : ''));
     status.zoom.textContent = '1 px = ' + (1 / view.s).toFixed(1) + ' mm';
   }
 
