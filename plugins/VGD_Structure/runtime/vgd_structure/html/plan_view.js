@@ -17,11 +17,12 @@
     line: 'M4 20L20 4', polyline: 'M3 18l6-10 5 7 7-11', rect: 'M3 6h18v12H3Z', circle: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z', arc: 'M4 18a10 10 0 0 1 16 0',
     dim: 'M3 8v8M21 8v8M3 12h18M6 10l-3 2 3 2M18 10l3 2-3 2', text: 'M5 5h14M12 5v14M9 19h6', level: 'M12 3l5 8h-10ZM4 18h16M4 21h16',
     undo: 'M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3', redo: 'M15 14l5-5-5-5M20 9H9a5 5 0 0 0 0 10h3', fit: 'M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5M14 14l3 3M15 11a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
+    snap: 'M6 3v8a6 6 0 0 0 12 0V3M6 7h4M14 7h4', guideclr: 'M3 3l18 9M6 16l12 5M15 3l6 6M21 3l-6 6',
     props: 'M3 4h18v16H3ZM9 4v16M12 8h6M12 12h6M12 16h4', eye: 'M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6'
   };
   // [id, tên, phím, gợi ý, dùng được ở cột mốc này?]
   var TOP_GROUPS = [
-    ['Chọn & đo', [['select', 'Chọn', '', 'Chọn / xem thông tin (Space)', 1], ['pan', 'Kéo', 'H', 'Kéo mặt bằng (H). Chuột giữa luôn kéo được', 1], ['guide', 'Đường gióng', 'G'], ['measure', 'Đo', '']]],
+    ['Chọn & đo', [['select', 'Chọn', '', 'Chọn (Space): bấm = chọn một, Shift = thêm / bớt, kéo trái→phải = khung trong (nét liền xanh), phải→trái = khung cắt (nét đứt xanh lá), Ctrl+A = chọn tất cả', 1], ['pan', 'Kéo', 'H', 'Kéo mặt bằng (H). Chuột giữa luôn kéo được', 1], ['guide', 'Đường gióng', 'G', 'Đường gióng (G): bấm một nét rồi bấm điểm = gióng song song qua điểm đó (gõ khoảng cách + Enter); bấm điểm đầu mút / giao điểm rồi điểm thứ hai = gióng qua hai điểm. Esc hủy', 1], ['measure', 'Đo', '', 'Đo: bấm hai điểm, hiện khoảng cách, Δx, Δy, góc (Shift = khóa ngang / dọc; gõ số + Enter = đo theo độ dài)', 1]]],
     ['Sửa', [['move', 'Move', 'M'], ['rotate', 'Rotate', 'Q'], ['mirror', 'Mirror', ''], ['offset', 'Offset', 'O'], ['trim', 'Trim', 'T'], ['eraser', 'Tẩy', 'E'], ['delete', 'Xóa', 'Del']]]
   ];
   var SIDE_GROUPS = [
@@ -30,7 +31,9 @@
     ['Ghi chú', [['dim', 'Kích thước', 'K'], ['text', 'Chữ', ''], ['level', 'Cốt cao độ', '']]]
   ];
   var MIN_SCALE = 0.001, MAX_SCALE = 5; // px trên mm
-  var opts, root, canvas, ctx, status = {}, levelList = [], currentId = null, selected = null, propsOpen = true;
+  var opts, root, canvas, ctx, status = {}, levelList = [], currentId = null, selection = [], propsOpen = true;
+  var guides = {}, measure = null, draft = null, snap = null, snapOn = true, note = '', press = null, box = null, shiftKey = false;
+  var SNAP_PX = 10, DRAG_PX = 4;
   var view = {cx: 0, cy: 0, s: 0.05}, data = null, boundsKey = '', fitted = false, tool = 'select', shapes = [], hover = null, cursor = null, drag = null;
   var visible = {grid: true, slab: true, ceiling: false, beam: true, wall: true, opening: true, column: true};
   var size = {w: 300, h: 200, dpr: 1};
@@ -61,6 +64,11 @@
       var box = el('span', {class: 'pv-grp', role: 'group', 'aria-label': g[0], title: g[0]}, bar);
       g[1].forEach(function (t) { iconButton(box, t); });
     });
+    el('span', {class: 'pv-sep'}, bar);
+    var sn = el('button', {type: 'button', class: 'pv-ic on', id: 'pv-snap', title: 'Bắt điểm: đầu mút, trung điểm, giao điểm, trên cạnh (bật / tắt)', 'aria-pressed': 'true'}, bar); sn.innerHTML = svg('snap');
+    sn.onclick = function () { snapOn = !snapOn; sn.classList.toggle('on', snapOn); sn.setAttribute('aria-pressed', String(snapOn)); snap = null; draw(); };
+    var gc = el('button', {type: 'button', class: 'pv-ic', id: 'pv-guide-clear', title: 'Xóa mọi đường gióng của tầng này'}, bar); gc.innerHTML = svg('guideclr');
+    gc.onclick = function () { guides[currentId] = []; draft = null; note = 'Đã xóa đường gióng của tầng này.'; draw(); };
     el('span', {class: 'pv-grow'}, bar);
     var disp = el('span', {class: 'pv-drop'}, bar), eye = el('button', {type: 'button', class: 'pv-ic', id: 'pv-layers-btn', 'aria-haspopup': 'true', 'aria-expanded': 'false', title: 'Hiển thị: bật / tắt từng lớp'}, disp);
     eye.innerHTML = svg('eye') + '<b>▾</b>';
@@ -92,8 +100,11 @@
   // Bảng thuộc tính: phần tử đang chọn, không thì phần tử đang rê chuột, không thì thông tin tầng.
   function renderProps() {
     var box = $('pv-props'); if (!box) return; box.replaceChildren();
-    var shape = (selected && visible[selected.layer]) ? selected : (hover && visible[hover.layer] ? hover : null), rows, title;
-    if (shape) { title = shape.title; rows = shape.rows; }
+    var sel = visibleSelection(), shape = sel.length === 1 ? sel[0] : (!sel.length && hover && visible[hover.layer] ? hover : null), rows, title;
+    if (sel.length > 1) {
+      var by = {}; sel.forEach(function (x) { by[x.layer] = (by[x.layer] || 0) + 1; });
+      title = 'Đã chọn ' + sel.length + ' phần tử'; rows = LAYERS.filter(function (l) { return by[l[0]]; }).map(function (l) { return [l[1], String(by[l[0]])]; });
+    } else if (shape) { title = shape.title; rows = shape.rows; }
     else {
       var lv = levelList.filter(function (l) { return l.id === currentId; })[0];
       title = lv ? lv.name : 'Mặt bằng';
@@ -105,9 +116,10 @@
     var t = el('table', {class: 'pv-ptable'}, box);
     rows.forEach(function (r) { var tr = el('tr', {}, t); el('th', {text: r[0]}, tr); el('td', {text: r[1]}, tr); });
   }
+  function visibleSelection() { return selection.filter(function (x) { return visible[x.layer]; }); }
   function setTool(t) {
-    tool = t; root.querySelectorAll('.pv-ic[data-tool]').forEach(function (b) { var on = b.getAttribute('data-tool') === t; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
-    canvas.style.cursor = t === 'pan' ? 'grab' : 'default';
+    tool = t; draft = null; note = ''; if (t !== 'measure') measure = null; press = null; box = null; snap = null; draw(); root.querySelectorAll('.pv-ic[data-tool]').forEach(function (b) { var on = b.getAttribute('data-tool') === t; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+    canvas.style.cursor = t === 'pan' ? 'grab' : (t === 'select' ? 'default' : 'crosshair');
   }
 
   // ---- Dữ liệu ----
@@ -143,6 +155,67 @@
   function pick(x, y) {
     for (var i = shapes.length - 1; i >= 0; i--) { var s = shapes[i]; if (visible[s.layer] && inside(s.poly, x, y)) return s; }
     return null;
+  }
+
+  function bboxOf(poly) {
+    var x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    poly.forEach(function (p) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); });
+    return [x0, y0, x1, y1];
+  }
+  function segsCross(a, b, c, d) {
+    function o(p, q, r) { return (q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]); }
+    var d1 = o(a, b, c), d2 = o(a, b, d), d3 = o(c, d, a), d4 = o(c, d, b);
+    return ((d1 > 0) !== (d2 > 0)) && ((d3 > 0) !== (d4 > 0));
+  }
+  // Khung kéo [x0, y0, x1, y1] (thế giới): "trong" = cả hình nằm trong khung; "cắt" = hình chạm khung (đỉnh trong khung, khung trong hình, hoặc cạnh cắt cạnh).
+  function inWindow(poly, r) { var b = bboxOf(poly); return b[0] >= r[0] && b[1] >= r[1] && b[2] <= r[2] && b[3] <= r[3]; }
+  function crossesRect(poly, r) {
+    var b = bboxOf(poly); if (b[2] < r[0] || b[0] > r[2] || b[3] < r[1] || b[1] > r[3]) return false;
+    var rect = rectPoly([r[0], r[1]], [r[2], r[3]]);
+    if (poly.some(function (p) { return p[0] >= r[0] && p[0] <= r[2] && p[1] >= r[1] && p[1] <= r[3]; })) return true;
+    if (rect.some(function (p) { return inside(poly, p[0], p[1]); })) return true;
+    for (var i = 0; i < poly.length; i++) for (var j = 0; j < 4; j++) if (segsCross(poly[i], poly[(i + 1) % poly.length], rect[j], rect[(j + 1) % 4])) return true;
+    return false;
+  }
+
+  // ---- Bắt điểm ----
+  function levelGuides() { return guides[currentId] || (guides[currentId] = []); }
+  function axisLines() { return visible.grid && data && data.ok ? data.axes.map(function (a) { var d = unit([a.line[1][0] - a.line[0][0], a.line[1][1] - a.line[0][1]]); return {p: a.line[0], d: d, kind: 'axis', name: a.name}; }) : []; }
+  function unit(v) { var l = Math.hypot(v[0], v[1]) || 1; return [v[0] / l, v[1] / l]; }
+  function lineHit(a, b) { // giao hai đường thẳng vô hạn {p, d}; null nếu song song
+    var cr = a.d[0] * b.d[1] - a.d[1] * b.d[0]; if (Math.abs(cr) < 1e-9) return null;
+    var t = ((b.p[0] - a.p[0]) * b.d[1] - (b.p[1] - a.p[1]) * b.d[0]) / cr;
+    return [a.p[0] + a.d[0] * t, a.p[1] + a.d[1] * t];
+  }
+  function nearOnSegment(p, a, b) {
+    var dx = b[0] - a[0], dy = b[1] - a[1], l2 = dx * dx + dy * dy, t = l2 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l2)) : 0;
+    return [a[0] + dx * t, a[1] + dy * t];
+  }
+  function nearOnLine(p, l) { var t = (p[0] - l.p[0]) * l.d[0] + (p[1] - l.p[1]) * l.d[1]; return [l.p[0] + l.d[0] * t, l.p[1] + l.d[1] * t]; }
+  // Điểm bắt gần (wx, wy) trong 10 px màn hình. Thứ tự ưu tiên: đầu mút, giao điểm, trung điểm, trên cạnh / trục / đường gióng.
+  function snapAt(wx, wy) {
+    if (!data || !data.ok) return null;
+    var tol = SNAP_PX / view.s, best = null, here = [wx, wy];
+    function cand(pt, rank, text, line) {
+      var d = Math.hypot(pt[0] - wx, pt[1] - wy); if (d > tol) return;
+      if (!best || rank < best.rank || (rank === best.rank && d < best.d)) best = {p: pt, rank: rank, d: d, text: text, line: line || null};
+    }
+    shapes.forEach(function (s) {
+      if (!visible[s.layer]) return;
+      var n = s.poly.length;
+      for (var i = 0; i < n; i++) {
+        var a = s.poly[i], b = s.poly[(i + 1) % n];
+        cand(a, 0, 'Đầu mút');
+        cand([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], 2, 'Trung điểm');
+        if (Math.hypot(b[0] - a[0], b[1] - a[1]) > 1e-6) cand(nearOnSegment(here, a, b), 3, 'Trên cạnh', {p: a, d: unit([b[0] - a[0], b[1] - a[1]])});
+      }
+    });
+    var lines = axisLines().concat(levelGuides().map(function (g) { return {p: g.p, d: g.d, kind: 'guide'}; }));
+    for (var i = 0; i < lines.length; i++) {
+      cand(nearOnLine(here, lines[i]), 3, lines[i].kind === 'axis' ? 'Trên trục ' + lines[i].name : 'Trên đường gióng', lines[i]);
+      for (var j = i + 1; j < lines.length; j++) { var h = lineHit(lines[i], lines[j]); if (h) cand(h, 1, 'Giao điểm'); }
+    }
+    return best;
   }
 
   // ---- Xem ----
@@ -186,8 +259,50 @@
     if (visible.column) section('columns').forEach(function (i) { fillStroke(rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), COLORS.column, 0.9, null, 1.5); });
     if (visible.grid) drawGrid(ink);
     if (hover && visible[hover.layer]) { path(hover.poly); ctx.lineWidth = 2; ctx.strokeStyle = css('--vgd-accent', '#1e88e5'); ctx.stroke(); }
-    if (selected && visible[selected.layer]) { path(selected.poly); ctx.lineWidth = 3; ctx.setLineDash([6, 3]); ctx.strokeStyle = css('--vgd-accent', '#1e88e5'); ctx.stroke(); ctx.setLineDash([]); }
+    visibleSelection().forEach(function (x) { path(x.poly); ctx.lineWidth = 3; ctx.setLineDash([6, 3]); ctx.strokeStyle = css('--vgd-accent', '#1e88e5'); ctx.stroke(); ctx.setLineDash([]); });
+    drawOverlay(bg, ink);
     updateStatus();
+  }
+  var GUIDE_COLOR = '#00A6D6', MEASURE_COLOR = '#E5484D';
+  function screenLine(l) { var r = Math.hypot(size.w, size.h) / view.s * 1.5, a = toScreen(l.p[0] - l.d[0] * r, l.p[1] - l.d[1] * r), b = toScreen(l.p[0] + l.d[0] * r, l.p[1] + l.d[1] * r); return [a, b]; }
+  function strokeLine(l, color, dash) { var q = screenLine(l); ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1]); ctx.lineTo(q[1][0], q[1][1]); ctx.lineWidth = 1; ctx.strokeStyle = color; ctx.setLineDash(dash || []); ctx.stroke(); ctx.setLineDash([]); }
+  function tag(text, x, y, bg, ink, color) {
+    ctx.font = '12px sans-serif'; var w = ctx.measureText(text).width + 8;
+    ctx.fillStyle = bg; ctx.globalAlpha = 0.92; ctx.fillRect(x, y - 9, w, 18); ctx.globalAlpha = 1; ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.strokeRect(x + 0.5, y - 8.5, w - 1, 17);
+    ctx.fillStyle = ink; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText(text, x + 4, y);
+  }
+  function measureBox(a, b) { var dx = b[0] - a[0], dy = b[1] - a[1], ang = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360; return {len: Math.hypot(dx, dy), dx: dx, dy: dy, angle: ang}; }
+  function measureText(m) { return Math.round(m.len) + ' mm  (Δx ' + Math.round(m.dx) + ', Δy ' + Math.round(m.dy) + ', góc ' + (Math.round(m.angle * 10) / 10) + '°)'; }
+  function drawOverlay(bg, ink) {
+    levelGuides().forEach(function (g) { strokeLine(g, GUIDE_COLOR, [6, 4]); });
+    // đường gióng đang đặt
+    var cur = snap ? snap.p : cursor;
+    if (draft && cur) {
+      if (draft.ref) { var nrm = [-draft.ref.d[1], draft.ref.d[0]]; strokeLine({p: draft.ref.p, d: draft.ref.d}, GUIDE_COLOR, [2, 3]); strokeLine({p: cur, d: draft.ref.d}, GUIDE_COLOR, [6, 4]); }
+      else if (draft.first && Math.hypot(cur[0] - draft.first[0], cur[1] - draft.first[1]) > 1e-6) strokeLine({p: draft.first, d: unit([cur[0] - draft.first[0], cur[1] - draft.first[1]])}, GUIDE_COLOR, [6, 4]);
+    }
+    if (measure) {
+      var a = measure.a, b = measure.b || (cur ? constrain(a, cur) : null);
+      var sa = toScreen(a[0], a[1]); ctx.fillStyle = MEASURE_COLOR; ctx.beginPath(); ctx.arc(sa[0], sa[1], 3.5, 0, Math.PI * 2); ctx.fill();
+      if (b) {
+        var sb = toScreen(b[0], b[1]); ctx.beginPath(); ctx.moveTo(sa[0], sa[1]); ctx.lineTo(sb[0], sb[1]); ctx.lineWidth = 1.5; ctx.strokeStyle = MEASURE_COLOR; ctx.stroke();
+        ctx.beginPath(); ctx.arc(sb[0], sb[1], 3.5, 0, Math.PI * 2); ctx.fill();
+        tag(Math.round(measureBox(a, b).len) + ' mm', (sa[0] + sb[0]) / 2 + 6, (sa[1] + sb[1]) / 2 - 12, bg, ink, MEASURE_COLOR);
+      }
+    }
+    if (box) {
+      var x = Math.min(box.x0, box.x1), y = Math.min(box.y0, box.y1), w = Math.abs(box.x1 - box.x0), h = Math.abs(box.y1 - box.y0), win = box.x1 >= box.x0, col = win ? '#2F7BFF' : '#1FA84F';
+      ctx.globalAlpha = 0.12; ctx.fillStyle = col; ctx.fillRect(x, y, w, h); ctx.globalAlpha = 1; ctx.setLineDash(win ? [] : [6, 4]); ctx.lineWidth = 1; ctx.strokeStyle = col; ctx.strokeRect(x + 0.5, y + 0.5, w, h); ctx.setLineDash([]);
+    }
+    if (snap && snapOn && usesSnap()) {
+      var c = toScreen(snap.p[0], snap.p[1]); ctx.lineWidth = 1.8; ctx.strokeStyle = snap.rank === 0 ? '#1FA84F' : snap.rank === 1 ? '#E5484D' : snap.rank === 2 ? '#F5A524' : '#2F7BFF';
+      ctx.beginPath();
+      if (snap.rank === 0) ctx.rect(c[0] - 5, c[1] - 5, 10, 10);
+      else if (snap.rank === 1) { ctx.moveTo(c[0] - 5, c[1] - 5); ctx.lineTo(c[0] + 5, c[1] + 5); ctx.moveTo(c[0] + 5, c[1] - 5); ctx.lineTo(c[0] - 5, c[1] + 5); }
+      else if (snap.rank === 2) { ctx.moveTo(c[0], c[1] - 6); ctx.lineTo(c[0] + 6, c[1] + 5); ctx.lineTo(c[0] - 6, c[1] + 5); ctx.closePath(); }
+      else ctx.arc(c[0], c[1], 4, 0, Math.PI * 2);
+      ctx.stroke(); tag(snap.text, c[0] + 10, c[1] + 16, bg, ink, ctx.strokeStyle);
+    }
   }
   function drawGrid(ink) {
     ctx.save(); ctx.strokeStyle = COLORS.grid; ctx.lineWidth = 1; ctx.globalAlpha = 0.7; ctx.setLineDash([14, 3, 2, 3]);
@@ -217,33 +332,109 @@
     for (var k = 0; k <= 12; k++) { var t = k / 12 * Math.PI / 2, p = pt(a0 + w * Math.cos(t), mid + dir * w * Math.sin(t)), q = toScreen(p[0], p[1]); if (k) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }
     ctx.lineWidth = 1; ctx.strokeStyle = color; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
   }
+  function usesSnap() { return tool === 'measure' || tool === 'guide'; }
+  function toolHint() {
+    if (tool === 'measure') {
+      if (!measure || measure.done) return measure ? 'Đo: ' + measureText(measureBox(measure.a, measure.b)) + '. Bấm điểm mới để đo tiếp, Esc thoát.' : 'Đo: bấm điểm đầu (bắt điểm đang bật).';
+      var cur = snap ? snap.p : cursor; return cur ? 'Đo: ' + measureText(measureBox(measure.a, constrain(measure.a, cur))) + '. Bấm điểm cuối hoặc gõ số + Enter.' : 'Đo: bấm điểm cuối.';
+    }
+    if (tool === 'guide') return !draft ? 'Đường gióng: bấm một nét (song song) hoặc bấm một điểm (gióng qua hai điểm).' : draft.ref ? 'Gióng song song: bấm điểm đi qua hoặc gõ khoảng cách + Enter. Esc hủy.' : 'Gióng qua hai điểm: bấm điểm thứ hai. Esc hủy.';
+    return '';
+  }
   function updateStatus() {
-    status.xy.textContent = cursor ? 'X ' + Math.round(cursor[0]) + '   Y ' + Math.round(cursor[1]) + ' mm' : '';
-    status.hint.textContent = hover ? hover.text : selected && visible[selected.layer] ? selected.text : (data && data.ok ? 'Bấm một phần tử để xem thuộc tính. Cuộn = thu phóng, chuột giữa hoặc H = kéo, F = vừa khung.' : '');
+    var shown = snap && snapOn && usesSnap() ? snap.p : cursor, sel = visibleSelection();
+    status.xy.textContent = shown ? 'X ' + Math.round(shown[0]) + '   Y ' + Math.round(shown[1]) + ' mm' : '';
+    status.hint.textContent = note || toolHint() || (hover ? hover.text : sel.length === 1 ? sel[0].text : sel.length ? 'Đã chọn ' + sel.length + ' phần tử.' : (data && data.ok ? 'Bấm một phần tử để xem thuộc tính. Cuộn = thu phóng, chuột giữa hoặc H = kéo, F = vừa khung.' : ''));
     status.zoom.textContent = '1 px = ' + (1 / view.s).toFixed(1) + ' mm';
   }
 
   // ---- Chuột và bàn phím ----
   function point(e) { var r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
+  function world(e) { var p = point(e); return toWorld(p[0], p[1]); }
+  function pointer(e) { // điểm thế giới có bắt điểm (nếu công cụ cần và đang bật)
+    var w = world(e); snap = usesSnap() && snapOn ? snapAt(w[0], w[1]) : null; return snap ? snap.p : w;
+  }
+  // Shift khóa hướng đo về ngang hoặc dọc.
+  function constrain(a, b) { if (!shiftKey) return b; return Math.abs(b[0] - a[0]) >= Math.abs(b[1] - a[1]) ? [b[0], a[1]] : [a[0], b[1]]; }
+  function selectAt(w, add) {
+    var hit = pick(w[0], w[1]);
+    if (!hit) { if (!add) selection = []; }
+    else if (add) { var i = selection.indexOf(hit); if (i >= 0) selection.splice(i, 1); else selection.push(hit); }
+    else selection = [hit];
+  }
+  function selectBox(b, add) {
+    var win = b.x1 >= b.x0, p0 = toWorld(Math.min(b.x0, b.x1), Math.max(b.y0, b.y1)), p1 = toWorld(Math.max(b.x0, b.x1), Math.min(b.y0, b.y1)), r = [p0[0], p0[1], p1[0], p1[1]];
+    var hit = shapes.filter(function (x) { return visible[x.layer] && (win ? inWindow(x.poly, r) : crossesRect(x.poly, r)); });
+    if (add) hit.forEach(function (x) { var i = selection.indexOf(x); if (i >= 0) selection.splice(i, 1); else selection.push(x); }); else selection = hit;
+  }
+  function guideClick(pt) {
+    if (!draft) {
+      if (snap && snap.line && snap.rank === 3) draft = {ref: {p: snap.line.p, d: snap.line.d}}; // bấm vào nét: song song với nét đó
+      else draft = {first: pt};
+      return;
+    }
+    if (draft.ref) addGuide(pt, draft.ref.d);
+    else if (Math.hypot(pt[0] - draft.first[0], pt[1] - draft.first[1]) < 1e-6) { note = 'Hai điểm trùng nhau, hãy chọn điểm khác.'; return; }
+    else addGuide(draft.first, unit([pt[0] - draft.first[0], pt[1] - draft.first[1]]));
+  }
+  function addGuide(p, d) { levelGuides().push({p: [p[0], p[1]], d: d}); draft = null; note = ''; }
   function onDown(e) {
-    canvas.focus();
-    if (e.button === 0 && tool === 'select') { var w = toWorld(point(e)[0], point(e)[1]); selected = pick(w[0], w[1]); draw(); renderProps(); return; }
-    if (e.button === 1 || (e.button === 0 && tool === 'pan')) { drag = {x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy}; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; e.preventDefault(); }
+    canvas.focus(); note = ''; shiftKey = e.shiftKey;
+    if (e.button === 1 || (e.button === 0 && tool === 'pan')) { drag = {x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy}; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; e.preventDefault(); return; }
+    if (e.button !== 0) return;
+    var pt = pointer(e);
+    if (tool === 'select') { var sp = point(e); press = {x: sp[0], y: sp[1], shift: e.shiftKey}; canvas.setPointerCapture(e.pointerId); }
+    else if (tool === 'measure') { if (!measure || measure.done) measure = {a: pt, b: null, done: false}; else { measure.b = constrain(measure.a, pt); measure.done = true; } }
+    else if (tool === 'guide') guideClick(pt);
+    draw(); renderProps();
   }
   function onMove(e) {
-    var p = point(e); cursor = toWorld(p[0], p[1]);
+    var p = point(e); cursor = toWorld(p[0], p[1]); shiftKey = e.shiftKey;
     if (drag) { view.cx = drag.cx - (e.clientX - drag.x) / view.s; view.cy = drag.cy + (e.clientY - drag.y) / view.s; draw(); return; }
-    var h = pick(cursor[0], cursor[1]);
+    if (press) {
+      if (!box && Math.hypot(p[0] - press.x, p[1] - press.y) > DRAG_PX) box = {x0: press.x, y0: press.y, x1: p[0], y1: p[1]};
+      if (box) { box.x1 = p[0]; box.y1 = p[1]; draw(); return; }
+    }
+    pointer(e);
+    var h = tool === 'select' ? pick(cursor[0], cursor[1]) : null;
     if (h !== hover) { hover = h; renderProps(); }
     draw();
   }
-  function onUp(e) { if (drag) { drag = null; try { canvas.releasePointerCapture(e.pointerId); } catch (x) { /* đã thả */ } canvas.style.cursor = tool === 'pan' ? 'grab' : 'default'; } }
+  function onUp(e) {
+    if (drag) { drag = null; try { canvas.releasePointerCapture(e.pointerId); } catch (x) { /* đã thả */ } canvas.style.cursor = tool === 'pan' ? 'grab' : 'default'; return; }
+    if (press) {
+      var add = press.shift; press = null;
+      if (box) { selectBox(box, add); box = null; } else selectAt(world(e), add);
+      try { canvas.releasePointerCapture(e.pointerId); } catch (x) { /* đã thả */ }
+      draw(); renderProps();
+    }
+  }
   function onWheel(e) { e.preventDefault(); var p = point(e); zoomAt(p[0], p[1], Math.exp(-e.deltaY * 0.0015)); }
+  // Gõ số + Enter: gióng song song cách nét đã chọn một khoảng (về phía con trỏ), hoặc đo điểm cuối theo độ dài (hướng về phía con trỏ).
+  function vcb(text) {
+    var n = Number(String(text).trim().replace(',', '.'));
+    if (!isFinite(n) || n <= 0 || n > 1e6) { note = 'Hãy gõ một số dương (mm).'; return false; }
+    var cur = snap ? snap.p : cursor;
+    if (tool === 'guide' && draft && draft.ref) {
+      var nrm = [-draft.ref.d[1], draft.ref.d[0]], side = cur && ((cur[0] - draft.ref.p[0]) * nrm[0] + (cur[1] - draft.ref.p[1]) * nrm[1]) < 0 ? -1 : 1;
+      addGuide([draft.ref.p[0] + nrm[0] * side * n, draft.ref.p[1] + nrm[1] * side * n], draft.ref.d); note = 'Đã gióng song song cách ' + n + ' mm.'; draw(); return true;
+    }
+    if (tool === 'measure' && measure && !measure.done && cur) {
+      var u = unit([constrain(measure.a, cur)[0] - measure.a[0], constrain(measure.a, cur)[1] - measure.a[1]]);
+      measure.b = [measure.a[0] + u[0] * n, measure.a[1] + u[1] * n]; measure.done = true; draw(); return true;
+    }
+    note = tool === 'guide' ? 'Hãy bấm một nét trước rồi gõ khoảng cách.' : tool === 'measure' ? 'Hãy bấm điểm đầu trước rồi gõ độ dài.' : 'Ô nhập số dùng cho công cụ Đo và Đường gióng (các lệnh vẽ ở cột mốc sau).';
+    draw(); return false;
+  }
   function onKey(e) {
-    if (root.hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (root.hidden) return;
     var t = e.target; if (t && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) return;
     var k = e.key.toLowerCase();
-    if (k === 'f') { fitView(); e.preventDefault(); } else if (k === 'h') { setTool('pan'); e.preventDefault(); } else if (k === ' ') { setTool('select'); e.preventDefault(); } else if (k === 'escape') { setTool('select'); selected = null; renderProps(); draw(); }
+    if (e.ctrlKey || e.metaKey) { if (k === 'a') { selection = shapes.filter(function (x) { return visible[x.layer]; }); draw(); renderProps(); e.preventDefault(); } return; }
+    if (e.altKey) return;
+    if (k === 'f') { fitView(); e.preventDefault(); } else if (k === 'h') { setTool('pan'); e.preventDefault(); } else if (k === 'g') { setTool('guide'); e.preventDefault(); }
+    else if (k === ' ') { setTool('select'); e.preventDefault(); }
+    else if (k === 'escape') { if (draft || measure || box) { draft = null; measure = null; box = null; press = null; note = ''; draw(); } else { setTool('select'); selection = []; renderProps(); draw(); } }
   }
 
   var api = {
@@ -251,8 +442,10 @@
       opts = options; root = $('tab-plan'); canvas = $('pv-canvas'); ctx = canvas.getContext('2d');
       status = {xy: $('pv-xy'), hint: $('pv-hint'), zoom: $('pv-zoom')};
       buildTop($('pv-top')); buildSide($('pv-side')); setTool('select'); renderProps();
+      var box2 = $('pv-vcb'); box2.disabled = false; box2.placeholder = 'Gõ số + Enter';
+      box2.onkeydown = function (e) { if (e.key === 'Enter') { if (vcb(box2.value)) { box2.value = ''; canvas.focus(); } e.preventDefault(); } else if (e.key === 'Escape') { box2.value = ''; canvas.focus(); } e.stopPropagation(); };
       canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointermove', onMove); canvas.addEventListener('pointerup', onUp); canvas.addEventListener('pointercancel', onUp);
-      canvas.addEventListener('pointerleave', function () { cursor = null; hover = null; renderProps(); draw(); });
+      canvas.addEventListener('pointerleave', function () { cursor = null; hover = null; snap = null; renderProps(); draw(); });
       canvas.addEventListener('wheel', onWheel, {passive: false});
       document.addEventListener('keydown', onKey);
       window.addEventListener('resize', resize);
@@ -265,7 +458,7 @@
       levelList = levels.map(function (l) { return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab}; }); currentId = current; renderTabs(); renderProps();
     },
     update: function (preview) {
-      data = preview; hover = null; selected = null;
+      data = preview; hover = null; selection = []; snap = null; draft = null; box = null; press = null;
       var b = worldBounds(data), key = b ? b.join(',') : '';
       buildShapes(); renderProps();
       if (key !== boundsKey) { boundsKey = key; fitted = false; }
@@ -276,7 +469,7 @@
     // Dùng cho test: trạng thái xem và số phần tử đang vẽ.
     debug: function () {
       var counts = {}; shapes.forEach(function (s) { counts[s.layer] = (counts[s.layer] || 0) + 1; });
-      return {view: {cx: view.cx, cy: view.cy, s: view.s}, size: size, tool: tool, counts: counts, hover: hover && hover.text, selected: selected && selected.title, level: currentId, tabs: levelList.length, visible: Object.assign({}, visible), axes: data && data.ok ? data.axes.length : 0};
+      return {view: {cx: view.cx, cy: view.cy, s: view.s}, size: size, tool: tool, counts: counts, hover: hover && hover.text, selected: selection.length === 1 ? selection[0].title : (selection.length ? selection.length + ' phần tử' : null), selection: selection.map(function (x) { return x.title; }), snap: snap && {p: snap.p, text: snap.text, rank: snap.rank}, guides: levelGuides().length, guideLines: levelGuides().map(function (g) { return {p: g.p, d: g.d}; }), measure: measure && {a: measure.a, b: measure.b, done: measure.done}, draft: draft && (draft.ref ? 'ref' : 'first'), snapOn: snapOn, level: currentId, tabs: levelList.length, visible: Object.assign({}, visible), axes: data && data.ok ? data.axes.length : 0};
     },
     toScreen: toScreen, toWorld: toWorld
   };

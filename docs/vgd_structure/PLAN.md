@@ -159,7 +159,7 @@ Tài liệu tham khảo: `docs/reference/vtbim/` (phần Ruby mã hóa, JS của
 | # | Cột mốc | Nội dung | Kiểm tra |
 |---|---|---|---|
 | P1 | Khung mặt bằng | Tab Mặt bằng dùng canvas, pan/zoom/fit, thanh công cụ nhóm, thanh nhập số (VCB), Undo/Redo, chọn tầng; hiển thị lưới, cột, dầm, tường, cửa, sàn từ dữ liệu | test UI vẽ đúng, zoom/pan |
-| P2 | Chọn, bắt điểm, đo, đường gióng | Chọn đơn/khung/Shift, bắt điểm, đo khoảng cách và góc, đường gióng song song | test UI, test bắt điểm |
+| P2 (ĐÃ LÀM, 0.10.0-beta.3; đường gióng chưa lưu vào dữ liệu, thành trục phụ ở P3) | Chọn, bắt điểm, đo, đường gióng | Chọn đơn/khung/Shift, bắt điểm, đo khoảng cách và góc, đường gióng song song | test UI, test bắt điểm |
 | P3 | Vẽ kết cấu | Lưới, cột, dầm, tường, sàn, cửa bằng bấm điểm, bảng Properties; ghi thẳng vào dữ liệu tầng | test dữ liệu sau khi vẽ khớp thao tác bằng tay |
 | P4 | Sửa kiểu CAD | Move, Copy, Rotate, Mirror, Offset, Trim, Stretch, mảng, copy/paste, ống hút/nhả | test từng lệnh trên dữ liệu |
 | P5 | Nét 2D tự do và ghi chú | Line, Polyline, Rect, Circle, Arc, chữ, kích thước, cốt cao độ (lớp ghi chú theo tầng) | test lưu và nạp lại |

@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.10.0-beta.2','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.10.0-beta.3','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -605,8 +605,88 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok((await dbg()).selected===null,'Esc bỏ chọn');
   await page.click('#pv-props-btn');ok(await page.locator('#pv-props').isHidden(),'nút Thuộc tính ẩn bảng');await page.click('#pv-props-btn');
   await page.click('#pv-layers-btn');ok(await page.locator('#pv-layers').isVisible(),'nút Hiển thị mở danh sách lớp');
+  // P2: chọn bằng khung, Shift, Ctrl+A
+  const G=F.state.grid,gx=G.x_axes.map(a=>G.origin[0]+a.offset),gy=G.y_axes.map(a=>G.origin[1]+a.offset);
+  const scr=async(x,y)=>{const q=await page.evaluate(([a,b])=>window.VGDPlan.toScreen(a,b),[x,y]);return [box.x+q[0],box.y+q[1]];};
+  const colAt=ref=>F.preview_all_cells.columns.items.filter(c=>c.ref===ref)[0];
+  const k1=colAt("1-A"),k2=colAt("2-A");
+  const dragBox=async(a,b)=>{const p0=await scr(a[0],a[1]),p1=await scr(b[0],b[1]);await page.mouse.move(p0[0],p0[1]);await page.mouse.down();await page.mouse.move((p0[0]+p1[0])/2,(p0[1]+p1[1])/2,{steps:3});await page.mouse.move(p1[0],p1[1],{steps:3});await page.mouse.up();};
+  const m=250;
+  await dragBox([k1.center[0]-k1.w/2-m,k1.center[1]+k1.d/2+m],[k1.center[0]+k1.w/2+m,k1.center[1]-k1.d/2-m]);
+  ok(JSON.stringify((await dbg()).selection)==='["Cột 1-A"]','kéo khung trái→phải (khung trong): chỉ chọn cột nằm trọn trong khung, không chọn sàn lớn hơn khung');
+  await dragBox([k1.center[0]+k1.w/2+m,k1.center[1]-k1.d/2-m],[k1.center[0]-k1.w/2-m,k1.center[1]+k1.d/2+m]);
+  let sel=(await dbg()).selection;
+  ok(sel.includes('Cột 1-A') && sel.includes('Sàn 1-2/A-B') && sel.length>=2,'kéo khung phải→trái (khung cắt): chọn cả hình chạm khung (cột và sàn)');
+  ok((await page.locator('#pv-props').innerText()).includes('Đã chọn '+sel.length+' phần tử'),'chọn nhiều: bảng Thuộc tính hiện số phần tử đã chọn');
+  await page.mouse.click(box.x+5,box.y+5);
+  const p1c=await scr(k1.center[0],k1.center[1]),p2c=await scr(k2.center[0],k2.center[1]);
+  await page.mouse.click(p1c[0],p1c[1]);await page.keyboard.down('Shift');await page.mouse.click(p2c[0],p2c[1]);await page.keyboard.up('Shift');
+  ok(JSON.stringify((await dbg()).selection)==='["Cột 1-A","Cột 2-A"]','Shift + bấm: thêm vào lựa chọn');
+  await page.keyboard.down('Shift');await page.mouse.click(p2c[0],p2c[1]);await page.keyboard.up('Shift');
+  ok(JSON.stringify((await dbg()).selection)==='["Cột 1-A"]','Shift + bấm phần tử đã chọn: bỏ khỏi lựa chọn');
+  await page.mouse.click(box.x+5,box.y+5);
+  await page.keyboard.press('Control+a');
+  const dAll=await dbg(),total=Object.keys(dAll.counts).filter(k=>dAll.visible[k==='opening'?'opening':k]).reduce((n,k)=>n+dAll.counts[k],0);
+  ok(dAll.selection.length===total && total>20,'Ctrl+A: chọn mọi phần tử đang hiện (không gồm lớp đang tắt)');
+  await page.keyboard.press('Escape');ok((await dbg()).selection.length===0,'Esc bỏ chọn tất cả');
+
+  // P2: bắt điểm
+  await page.click('[data-tool=measure]');
+  const snapAtW=async(x,y)=>{const q=await scr(x,y);await page.mouse.move(q[0]+3,q[1]+2);await wait(30);return dbg();};
+  let sd=await snapAtW(k1.center[0]-k1.w/2,k1.center[1]-k1.d/2);
+  ok(sd.snap && sd.snap.text==='Đầu mút' && sd.snap.rank===0 && Math.hypot(sd.snap.p[0]-(k1.center[0]-k1.w/2),sd.snap.p[1]-(k1.center[1]-k1.d/2))<1,'bắt điểm: gần góc cột hiện "Đầu mút" và hít đúng tọa độ góc');
+  sd=await snapAtW(gx[2],gy[1]);
+  ok(sd.snap && sd.snap.rank<=1 && Math.abs(sd.snap.p[0]-gx[2])<1 && Math.abs(sd.snap.p[1]-gy[1])<1,'bắt điểm: giao hai trục (trùng góc sàn) hít đúng tọa độ giao trục');
+  const slabTop=F.preview_all_cells.slabs.items.filter(i=>i.ref==='1-2/B-C')[0];
+  sd=await snapAtW((slabTop.min[0]+slabTop.max[0])/2,slabTop.max[1]);
+  ok(sd.snap && sd.snap.text==='Trung điểm' && Math.abs(sd.snap.p[0]-(slabTop.min[0]+slabTop.max[0])/2)<1,'bắt điểm: giữa cạnh sàn hiện "Trung điểm"');
+  sd=await snapAtW(gx[1]+700,gy[0]);
+  ok(sd.snap && sd.snap.rank===3 && /Trên (trục|cạnh)/.test(sd.snap.text) && Math.abs(sd.snap.p[1]-gy[0])<1,'bắt điểm: trên trục / cạnh khi không gần điểm đặc biệt');
+  const far=await scr((gx[1]+gx[2])/2,(gy[1]+gy[2])/2);await page.mouse.move(far[0],far[1]);await wait(30);
+  ok((await dbg()).snap===null,'xa mọi điểm: không bắt (không hít bừa)');
+  await page.click('#pv-snap');sd=await snapAtW(gx[2],gy[1]);
+  ok(sd.snap===null && sd.snapOn===false,'tắt Bắt điểm: không hít nữa');
+  await page.click('#pv-snap');
+
+  // P2: đo
+  await page.keyboard.press('Escape');await page.click('[data-tool=measure]');
+  const click=async(x,y)=>{const q=await scr(x,y);await page.mouse.move(q[0],q[1]);await page.mouse.click(q[0],q[1]);};
+  await click(gx[0],gy[0]);ok((await dbg()).measure && !(await dbg()).measure.done,'đo: bấm điểm đầu');
+  await click(gx[1],gy[0]);let ms=await dbg();
+  ok(ms.measure.done && Math.abs(ms.measure.b[0]-gx[1])<1 && /4200 mm/.test(await page.locator('#pv-hint').innerText()) && /Δx 4200, Δy 0, góc 0°/.test(await page.locator('#pv-hint').innerText()),'đo hai giao trục: 4200 mm, Δx 4200, Δy 0, góc 0°');
+  await click(gx[0],gy[0]);await click(gx[1],gy[1]);
+  const diag=Math.hypot(gx[1]-gx[0],gy[1]-gy[0]),ang=Math.round(Math.atan2(gy[1]-gy[0],gx[1]-gx[0])*1800/Math.PI)/10;
+  ok(new RegExp(Math.round(diag)+' mm.*góc '+ang+'°').test(await page.locator('#pv-hint').innerText()),'đo đường chéo: độ dài và góc đúng ('+Math.round(diag)+' mm, '+ang+'°)');
+  await click(gx[0],gy[0]);
+  const tq=await scr(gx[1],gy[1]);await page.keyboard.down('Shift');await page.mouse.move(tq[0],tq[1]);await wait(30);
+  ok(/4200 mm/.test(await page.locator('#pv-hint').innerText()) && /góc 0°/.test(await page.locator('#pv-hint').innerText()),'Shift khóa hướng đo theo trục gần nhất (ngang)');
+  await page.keyboard.up('Shift');
+  const rq=await scr(gx[0]+2000,gy[0]);await page.mouse.move(rq[0],rq[1]);await page.fill('#pv-vcb','1500');await page.press('#pv-vcb','Enter');ms=await dbg();
+  ok(ms.measure.done && Math.abs(ms.measure.b[0]-(gx[0]+1500))<1 && Math.abs(ms.measure.b[1]-gy[0])<1 && (await page.locator('#pv-vcb').inputValue())==='','gõ 1500 + Enter khi đo: điểm cuối cách 1500 mm theo hướng con trỏ');
+  await page.keyboard.press('Escape');ok((await dbg()).measure===null,'Esc hủy phép đo');
+
+  // P2: đường gióng
+  await page.click('[data-tool=guide]');ok((await dbg()).tool==='guide','bấm nút Đường gióng');
+  await click(gx[0],gy[0]+1000);ok((await dbg()).draft==='ref','bấm vào một nét: chờ gióng song song');
+  const rt=await scr(gx[0]+900,gy[0]+1000);await page.mouse.move(rt[0],rt[1]);await page.fill('#pv-vcb','500');await page.press('#pv-vcb','Enter');
+  let gd=await dbg();
+  ok(gd.guides===1 && Math.abs(gd.guideLines[0].p[0]-(gx[0]+500))<1 && Math.abs(gd.guideLines[0].d[1])>0.99,'gõ 500 + Enter: gióng song song với trục đứng, cách 500 mm về phía con trỏ');
+  await click(gx[0],gy[0]+1000);const lt=await scr(gx[0]-900,gy[0]+1000);await page.mouse.move(lt[0],lt[1]);await page.fill('#pv-vcb','300');await page.press('#pv-vcb','Enter');
+  gd=await dbg();ok(gd.guides===2 && Math.abs(gd.guideLines[1].p[0]-(gx[0]-300))<1,'cùng nét, con trỏ ở phía trái: gióng cách 300 mm về bên trái (đúng phía con trỏ)');
+  await page.keyboard.press('Escape');await page.click('[data-tool=guide]');
+  await click(k1.center[0]-k1.w/2,k1.center[1]-k1.d/2);ok((await dbg()).draft==='first','bấm đầu mút: chờ điểm thứ hai (gióng qua hai điểm)');
+  await click(k2.center[0]+k2.w/2,k2.center[1]+k2.d/2);gd=await dbg();
+  ok(gd.guides===3 && gd.draft===null,'bấm điểm thứ hai: tạo đường gióng qua hai điểm');
+  sd=await snapAtW(gx[0]+500,gy[0]);
+  ok(sd.snap && sd.snap.text==='Giao điểm' && Math.abs(sd.snap.p[0]-(gx[0]+500))<1,'đường gióng cũng được bắt điểm: giao với trục A');
+  await page.click('[data-tab=plan]');
+  await page.click('#pv-tabs .pv-tab:nth-child(2)');await wait(300);ok((await dbg()).guides===0,'đường gióng riêng từng tầng: tầng 2 chưa có');
+  await receive('preview',F.preview_all_cells);await page.click('#pv-tabs .pv-tab:nth-child(1)');await wait(300);await receive('preview',F.preview_all_cells);
+  ok((await dbg()).guides===3,'quay lại tầng 1: đường gióng còn (kể cả khi xem trước được tính lại)');
+  await page.click('#pv-guide-clear');ok((await dbg()).guides===0,'nút Xóa đường gióng: xóa hết của tầng');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await page.keyboard.press(' ');
   // Tắt lớp
-  await page.uncheck('[data-layer=column]');await page.mouse.click(box.x+5,box.y+5);await page.mouse.move(box.x+csp[0]+1,box.y+csp[1]);await wait(50);
+  await page.click('#pv-layers-btn');await page.uncheck('[data-layer=column]');await page.mouse.click(box.x+5,box.y+5);await page.mouse.move(box.x+csp[0]+1,box.y+csp[1]);await wait(50);
   const c1=await pix(col[0],col[1]);
   ok(!(c1[1]>c1[0] && c1[1]>c1[2] && c1[1]>150) && !/Cột/.test(await page.locator('#pv-hint').innerText()),'tắt lớp Cột: không vẽ và không bắt cột nữa');
   await page.click('#pv-layers-btn');await page.check('[data-layer=column]');await page.check('[data-layer=ceiling]');await wait(30);
