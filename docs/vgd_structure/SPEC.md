@@ -24,7 +24,10 @@
 - `symbol`: `{"scale": 100, "both_ends": false}`; `scale` là tỉ lệ bản vẽ 1:n (n nguyên từ 10 đến 1000), `both_ends` đặt ký hiệu trục ở cả hai đầu.
 - `x_axes` / `y_axes`: tên trục (chuỗi không rỗng, không trùng trong cùng phương) và khoảng cách từ gốc, **tăng dần**, tối thiểu 2 trục mỗi phương; hạn chế: tối đa 60 trục mỗi phương, mọi số trong khoảng hợp lý (không âm vô lý, không NaN).
 - `levels`: mỗi tầng RIÊNG (cao độ sàn khác nhau, không gom tầng). Cao độ sàn tăng dần theo thứ tự tầng; tầng trên cùng chỉ có sàn và trần (không cột, tường lên tầng khác).
-- `picks`: các phần tử được chọn dựng ở tầng đó: cột theo giao điểm `"<trục x>-<trục y>"`, dầm và tường theo nhịp `"<x|y>:<tên trục chứa nhịp>:<tên hai trục chặn>"`, sàn và trần theo ô `"<x1>-<x2>/<y1>-<y2>"`. Mã này là `ref` ghi vào `VGD_BIM_SOURCE.ref`.
+- `types` (cột mốc 2): `[{"id": "ct_xxxxxxxx", "name": "C30x30", "w": 300, "d": 300}]`, 1 đến 50 loại, tên tối đa 20 ký tự không trùng, `w`/`d` 100 đến 3000 mm; bản đầu chỉ cột chữ nhật.
+- Mỗi tầng: `id` `sl_xxxxxxxx`, `name` (tối đa 30, không trùng), `elevation` (mm, tăng dần, cách tầng dưới tối thiểu 500), `slab_thickness` (50 đến 1000), `column_type` (mã loại hoặc null = loại đầu danh sách), `picks`. Tối đa 40 tầng. **Tầng trên cùng chỉ có sàn** (không cột).
+- `picks.columns` là bảng `{"1-A": {"type": "ct_...", "x": "center", "y": "min"}}`; chỉ ghi khóa khác mặc định: `type` (mặc định = loại của tầng), `x`/`y` ∈ `center` / `min` / `max` (mặc định auto theo quy ước mục 4: `min` cạnh nhỏ tại trục, cột lùi về phía tăng; `max` cạnh lớn tại trục). Giao điểm không còn trên lưới thì bị bỏ khi đọc.
+- `picks.beams`, `picks.walls`, `picks.slabs`, `picks.ceilings` (dầm, tường, sàn, trần) làm ở các cột mốc sau; mã nhịp / ô như sau: cột theo giao điểm `"<trục x>-<trục y>"`, dầm và tường theo nhịp `"<x|y>:<tên trục chứa nhịp>:<tên hai trục chặn>"`, sàn và trần theo ô `"<x1>-<x2>/<y1>-<y2>"`. Mã này là `ref` ghi vào `VGD_BIM_SOURCE.ref`.
 - Dữ liệu được kiểm tra lại mỗi lần đọc từ model và mỗi lần nhận từ giao diện (ranh giới tin cậy).
 
 ## 2. Dữ liệu trên khối dựng ra

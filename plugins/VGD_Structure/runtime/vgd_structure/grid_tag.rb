@@ -11,14 +11,7 @@ module VGD
 
       # Trả về [layer, ghi chú về kiểu nét]. Tag đã có thì giữ màu và thư mục; chỉ đặt nét gạch chấm khi tag đang là nét liền.
       def self.ensure(model)
-        spec = Schema::GRID_TAG
-        layer = model.layers[spec[:name]]
-        created = layer.nil?
-        layer ||= model.layers.add(spec[:name])
-        if created
-          layer.color = Sketchup::Color.new(*spec[:color])
-          place_in_folder(model, layer, spec[:folder])
-        end
+        layer = TagStore.ensure(model, Schema::GRID_TAG)
         [layer, apply_style(model, layer)]
       end
 
@@ -34,13 +27,6 @@ module VGD
         "Đã đặt nét #{picked} cho tag !grid."
       end
 
-      def self.place_in_folder(model, layer, folder_name)
-        return unless model.layers.respond_to?(:add_folder) && layer.respond_to?(:folder=)
-        folder = model.layers.folders.find { |f| f.name == folder_name } || model.layers.add_folder(folder_name)
-        layer.folder = folder
-      rescue StandardError
-        nil
-      end
     end
   end
 end

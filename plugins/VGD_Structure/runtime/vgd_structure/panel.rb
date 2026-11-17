@@ -5,7 +5,8 @@ module VGD
     # Cửa sổ "Lưới trục" (HtmlDialog). Giao diện chỉ gửi dữ liệu thô; Ruby kiểm tra lại mọi thứ (Grid.normalize!, AxisSymbol.options!)
     # trước khi vẽ. Xem trước (preview) cũng do Ruby tính để giao diện và model dùng cùng một nguồn.
     class Panel
-      TITLE = 'VGD Structure · Lưới trục'.freeze
+      TITLE = 'VGD Structure'.freeze
+      CONFIRM_COLUMNS = 500 # dựng nhiều hơn số này thì hỏi xác nhận
 
       def initialize
         @dialog = ::UI::HtmlDialog.new(dialog_title: TITLE, preferences_key: 'vgd_structure_panel', scrollable: true, resizable: true,
@@ -16,6 +17,9 @@ module VGD
         @dialog.add_action_callback('grid_build') { |_ctx, payload| safely { grid_build(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_remove') { |_ctx| safely { grid_remove } }
         @dialog.add_action_callback('grid_axes') { |_ctx, payload| safely { grid_axes(JSON.parse(payload)) } }
+        @dialog.add_action_callback('columns_build') { |_ctx, payload| safely { columns_build(JSON.parse(payload)) } }
+        @dialog.add_action_callback('columns_remove') { |_ctx, payload| safely { columns_remove(JSON.parse(payload)) } }
+        @dialog.add_action_callback('picks_copy') { |_ctx, payload| safely { picks_copy(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_reset') { |_ctx| safely { send_state(reset: true) } }
       end
 
@@ -42,17 +46,62 @@ module VGD
       # Trạng thái ban đầu: lưới và thiết lập đã lưu trong model (hoặc mặc định), và model đã có lưới vẽ chưa.
       def send_state(reset: false)
         model = Sketchup.active_model
-        state = reset ? {'grid' => Grid.default, 'symbol' => AxisSymbol.options!(nil), 'saved' => false} : ModelStore.read(model)
-        emit('state', {grid: state['grid'], symbol: state['symbol'], saved: state['saved'], drawn: !GridBuilder.find(model).nil?, version: VERSION})
-        grid_preview(state)
+        state = reset ? State.default.merge('saved' => false, 'removed' => 0) : ModelStore.read(model)
+        emit('state', {grid: state['grid'], symbol: state['symbol'], types: state['types'], levels: state['levels'], saved: state['saved'],
+                       drawn: !GridBuilder.find(model).nil?, drawn_levels: drawn_levels(model), version: VERSION})
+        grid_preview(state.merge('level' => state['levels'].first['id']))
       end
 
       def grid_preview(payload)
+        emit('preview', Preview.build(payload))
+      end
+
+      def drawn_levels(model)
+        ColumnBuilder.groups(model).map { |g| g.get_attribute(Schema::DICTIONARY, 'level') }
+      end
+
+      # Dựng cột các tầng đã chọn (ids) từ trạng thái giao diện gửi lên; Ruby kiểm tra lại và lập kế hoạch trước khi đụng model.
+      def columns_build(payload)
+        model = Sketchup.active_model
+        ids = payload['levels']
+        state = payload['state']
+        if ids.is_a?(Array) && state.is_a?(Hash)
+          clean = State.normalize!(state)
+          total = ids.uniq.sum { |id| (level = Levels.find(clean['levels'], id)) ? level['picks']['columns'].size : 0 }
+          if total > CONFIRM_COLUMNS && ::UI.messagebox("Sẽ dựng #{total} cột. Tiếp tục?", MB_YESNO) != IDYES
+            return emit('message', {text: 'Đã hủy, chưa dựng cột.'})
+          end
+        end
+        result = ColumnBuilder.build(model, state, ids)
+        names = result.levels.map { |l| "#{l[:name]} (#{l[:count]} cột, cao #{l[:height].round}mm)" }.join(', ')
+        note = result.issues.empty? ? '' : " Có #{result.issues.size} cảnh báo: #{result.issues.first(3).join(' ')}"
+        note += " Đã dọn #{result.removed_orphans} nhóm cột của tầng không còn." if result.removed_orphans.positive?
+        emit('columns_built', {message: "Đã dựng #{result.total} cột: #{names}.#{note}", drawn_levels: drawn_levels(model)})
+      rescue Grid::Error, AxisSymbol::Error, ColumnTypes::Error, Levels::Error, ColumnPlan::Error => error
+        emit('message', {text: error.message, error: true})
+      end
+
+      def columns_remove(payload)
+        model = Sketchup.active_model
+        id = payload['level']
+        count = ColumnBuilder.remove(model, id.is_a?(String) ? id : nil)
+        message = count.zero? ? 'Model chưa có cột do VGD Structure dựng.' : 'Đã xóa cột khỏi model. Dữ liệu cột đã chọn vẫn được giữ.'
+        emit('columns_built', {message: message, drawn_levels: drawn_levels(model), error: count.zero?})
+      rescue ColumnPlan::Error => error
+        emit('message', {text: error.message, error: true})
+      end
+
+      # Sao chép lựa chọn cột từ tầng này sang tầng khác (thay lựa chọn của tầng đích); gửi lại danh sách tầng mới cho giao diện.
+      def picks_copy(payload)
         grid = Grid.normalize!(payload['grid'])
-        options = AxisSymbol.options!(payload['symbol'])
-        emit('preview', {ok: true, summary: summary(grid), bounds: Grid.bounds(grid), axes: AxisSymbol.plan(grid, options)})
-      rescue Grid::Error, AxisSymbol::Error => error
-        emit('preview', {ok: false, error: error.message})
+        types = ColumnTypes.normalize!(payload['types'])
+        levels, = Levels.normalize!(payload['levels'], grid, types)
+        copied = Levels.copy_picks(levels, payload['from'], payload['to'], grid, types)
+        from = Levels.find(levels, payload['from'])['name']
+        to = Levels.find(levels, payload['to'])['name']
+        emit('levels', {levels: copied, message: "Đã sao chép lựa chọn cột từ “#{from}” sang “#{to}”."})
+      rescue Grid::Error, ColumnTypes::Error, Levels::Error => error
+        emit('message', {text: error.message, error: true})
       end
 
       # Tạo danh sách trục từ chuỗi nhịp ("4200, 3600*2"); tên mặc định số (trục đứng) hoặc chữ (trục ngang).
@@ -79,12 +128,6 @@ module VGD
         emit('built', {message: 'Đã xóa lưới trục khỏi model. Dữ liệu lưới vẫn được giữ.', drawn: false})
       rescue Grid::Error => error
         emit('message', {text: error.message, error: true})
-      end
-
-      def summary(grid)
-        x0, y0, x1, y1 = Grid.bounds(grid)
-        {x_axes: grid['x_axes'].size, y_axes: grid['y_axes'].size, intersections: Grid.intersections(grid).size, spans: Grid.spans(grid).size,
-         cells: Grid.cells(grid).size, width: (x1 - x0).round(1), depth: (y1 - y0).round(1)}
       end
 
       def safely

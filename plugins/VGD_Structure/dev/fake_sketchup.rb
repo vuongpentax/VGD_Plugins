@@ -16,6 +16,7 @@ module Geom
   class Transformation
     attr_reader :vector
     def self.translation(vector); new(vector); end
+    # Transformation.new(Point3d) dời tới điểm đó (như SketchUp); translation(Vector3d) dời theo vector.
     def initialize(vector = Vector3d.new(0, 0, 0)); @vector = vector; end
   end
 end
@@ -52,10 +53,39 @@ module Sketchup
     end
     def texts; entities.items.select { |i| i.is_a?(Array) && i.first == :text }; end
   end
+  class Face < Entity
+    attr_reader :points, :height
+    def initialize(points); @points = points; @reversed = false; end
+    def normal
+      a, b, c = points
+      z = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x)
+      Struct.new(:z).new(@reversed ? -z : z)
+    end
+    def reverse!; @reversed = !@reversed; end
+    def pushpull(distance); @height = distance; end
+  end
+  class ComponentDefinition < Entity
+    attr_reader :name, :entities
+    def initialize(name); @name = name; @entities = FakeEntities.new; end
+    def valid?; true; end
+  end
+  class Instance < Entity
+    attr_accessor :name, :layer
+    attr_reader :definition, :transformation
+    def initialize(definition, transformation); @definition = definition; @transformation = transformation; end
+  end
+  class Definitions
+    attr_reader :list
+    def initialize; @list = []; end
+    def [](name); @list.find { |d| d.name == name }; end
+    def add(name); d = ComponentDefinition.new(name); @list << d; d; end
+  end
   class FakeEntities
     attr_reader :items
     def initialize; @items = []; end
     def add_group; g = Group.new(self); @items << g; g; end
+    def add_face(points); f = Face.new(points); @items << f; f; end
+    def add_instance(definition, transformation); i = Instance.new(definition, transformation); @items << i; i; end
     def add_line(a, b); e = Edge.new(a, b); @items << e; e; end
     def add_circle(center, normal, radius, segments); (0...segments).map { |i| e = Edge.new(center, radius); @items << e; e }.tap { |l| (@circles ||= []) << [center, radius, segments] }
     end
@@ -90,9 +120,9 @@ module Sketchup
     def add_folder(name); f = Folder.new(name); @folders << f; f; end
   end
   class Model
-    attr_reader :entities, :layers, :operations, :line_styles
+    attr_reader :entities, :layers, :operations, :line_styles, :definitions
     def initialize(styles: ['Solid Line', 'Dotted Line', 'Short Dashes Line', 'Dash Dot Line'])
-      @entities = FakeEntities.new; @layers = Layers.new; @operations = []; @attrs = {}
+      @entities = FakeEntities.new; @definitions = Definitions.new; @layers = Layers.new; @operations = []; @attrs = {}
       @line_styles = styles.map { |n| LineStyle.new(n) }
     end
     def start_operation(name, disable); @operations << [:start, name]; end

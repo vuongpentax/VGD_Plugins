@@ -10,11 +10,16 @@
 </head>
 <body class="vgd-ui">
 <header>
-  <h1>Lưới trục</h1>
+  <h1>VGD Structure</h1>
   <span id="version" class="muted"></span>
   <button class="vgd-theme-btn" id="theme" type="button" aria-pressed="false" title="Đổi giao diện sáng / tối"></button>
 </header>
-<main>
+<nav class="tabs" role="tablist" aria-label="Chức năng">
+  <button type="button" role="tab" data-tab="grid" aria-selected="true">Lưới trục</button>
+  <button type="button" role="tab" data-tab="levels" aria-selected="false">Tầng và loại cột</button>
+  <button type="button" role="tab" data-tab="columns" aria-selected="false">Cột</button>
+</nav>
+<main id="tab-grid" class="tab">
   <section class="form" aria-label="Khai báo lưới trục">
     <fieldset>
       <legend>Gốc lưới (mm)</legend>
@@ -58,6 +63,59 @@
       <button type="button" id="build" class="primary">Vẽ lưới trục</button>
       <button type="button" id="remove" class="danger">Xóa lưới khỏi model</button>
       <button type="button" id="reset">Lưới mặc định</button>
+    </div>
+  </section>
+</main>
+<main id="tab-levels" class="tab" hidden>
+  <section class="form wide" aria-label="Loại cột và tầng">
+    <fieldset>
+      <legend>Loại cột (hình chữ nhật)</legend>
+      <table class="axes" id="types-table"></table>
+      <button type="button" class="add" id="add-type">+ Thêm loại cột</button>
+    </fieldset>
+    <fieldset>
+      <legend>Tầng (mỗi tầng riêng, cao độ tuyệt đối theo trục Z của model)</legend>
+      <table class="axes" id="levels-table"></table>
+      <button type="button" class="add" id="add-level">+ Thêm tầng</button>
+      <p class="muted small">Cao độ là mặt trên sàn của tầng. Cột tầng này chạy từ mặt sàn lên đáy sàn tầng kế trên. Tầng trên cùng (đỉnh nhà, mái) chỉ có sàn, không có cột.</p>
+    </fieldset>
+  </section>
+</main>
+<main id="tab-columns" class="tab" hidden>
+  <section class="form" aria-label="Chọn cột">
+    <fieldset>
+      <legend>Tầng</legend>
+      <label>Tầng đang xem <select id="level-select"></select></label>
+      <p id="level-note" class="muted small"></p>
+    </fieldset>
+    <fieldset>
+      <legend>Chọn cột</legend>
+      <div class="actions">
+        <button type="button" id="pick-all">Chọn mọi giao điểm</button>
+        <button type="button" id="pick-none">Bỏ chọn hết</button>
+      </div>
+      <div class="quick">
+        <label>Sao chép từ <select id="copy-from" aria-label="Tầng nguồn"></select></label>
+        <button type="button" id="copy-picks">Sao chép vào tầng này</button>
+      </div>
+      <p class="muted small">Bấm một giao điểm trên mặt bằng để chọn cột. Bấm cột đã chọn để đổi loại hoặc kiểu đặt.</p>
+    </fieldset>
+    <fieldset id="col-editor" hidden>
+      <legend>Cột <span id="col-ref"></span></legend>
+      <label>Loại cột <select id="col-type"></select></label>
+      <label>Vị trí theo X <select id="col-x"></select></label>
+      <label>Vị trí theo Y <select id="col-y"></select></label>
+      <div class="actions"><button type="button" id="col-remove" class="danger">Bỏ cột này</button></div>
+    </fieldset>
+  </section>
+  <section class="preview" aria-label="Mặt bằng cột">
+    <svg id="plan2" role="img" aria-label="Mặt bằng chọn cột" preserveAspectRatio="xMidYMid meet"></svg>
+    <p id="col-summary" class="summary" aria-live="polite"></p>
+    <ul id="col-issues" class="issues"></ul>
+    <div class="actions">
+      <button type="button" id="build-cols" class="primary">Dựng cột tầng này</button>
+      <button type="button" id="build-all-cols">Dựng cột mọi tầng</button>
+      <button type="button" id="remove-cols" class="danger">Xóa cột tầng này</button>
     </div>
   </section>
 </main>

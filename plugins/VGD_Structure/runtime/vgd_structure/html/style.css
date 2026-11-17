@@ -7,6 +7,24 @@ header .vgd-theme-btn { margin-left: auto; }
 .muted { color: var(--vgd-muted); }
 .small { font-size: 11px; margin: 6px 0 0; }
 main { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(340px, 420px) 1fr; gap: 14px; padding: 14px 16px; }
+main[hidden] { display: none; }
+main .form.wide { grid-column: 1 / -1; max-width: 900px; }
+.tabs { display: flex; gap: 4px; padding: 6px 16px 0; border-bottom: 1px solid var(--vgd-border); background: var(--vgd-surface); }
+.tabs button { height: 32px; border-radius: 4px 4px 0 0; border-bottom: none; background: transparent; }
+.tabs button[aria-selected=true] { background: var(--vgd-tint); color: var(--vgd-accent-strong); font-weight: 700; border-color: var(--vgd-accent); }
+.issues { margin: 0 0 8px; padding-left: 18px; color: var(--vgd-danger); font-size: 12px; max-height: 90px; overflow-y: auto; }
+.issues:empty { display: none; }
+svg#plan2 { flex: 1; min-height: 220px; width: 100%; background: var(--vgd-surface); border: 1px solid var(--vgd-border); border-radius: 6px; }
+svg#plan2 .axis { stroke: #BA00CC; stroke-width: 1; stroke-dasharray: 14 3 2 3; fill: none; vector-effect: non-scaling-stroke; opacity: .6; }
+svg#plan2 .ghost { fill: transparent; stroke: var(--vgd-muted); stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; cursor: pointer; }
+svg#plan2 .ghost:hover { stroke: var(--vgd-accent); fill: var(--vgd-tint); }
+svg#plan2 .col { fill: #66DD00; stroke: var(--vgd-text); vector-effect: non-scaling-stroke; cursor: pointer; fill-opacity: .85; }
+svg#plan2 .col.sel { stroke: var(--vgd-accent); stroke-width: 3; }
+svg#plan2 text { fill: var(--vgd-muted); font-size: 11px; text-anchor: middle; pointer-events: none; }
+table.axes select { width: 100%; height: 28px; }
+table.axes td.note { color: var(--vgd-muted); font-size: 11px; white-space: nowrap; }
+#col-editor label { display: flex; margin: 6px 0; }
+#col-editor select { flex: 1; }
 .form { overflow-y: auto; scrollbar-width: thin; padding-right: 4px; }
 .preview { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 fieldset { border: 1px solid var(--vgd-border); border-radius: 6px; background: var(--vgd-surface); margin: 0 0 12px; padding: 8px 12px 12px; }

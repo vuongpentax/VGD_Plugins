@@ -21,7 +21,7 @@ module UI
 end
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
 module VGD; module Structure; VERSION = '9.9.9'; end; end
-%w[core/schema core/grid core/axis_symbol model_store grid_tag grid_builder panel].each { |f| require File.join(ROOT, f) }
+%w[core/schema core/grid core/axis_symbol core/column_types core/levels core/column_plan core/state core/preview model_store tag_store grid_tag grid_builder column_builder panel].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 $model = Sketchup::Model.new
 panel = S::Panel.new
@@ -57,6 +57,66 @@ m = last_event(dlg, 'message')
 ok('vẽ với dữ liệu giao diện sai: báo lỗi, model giữ lưới cũ', m && m['error'] == true && $model.entities.grep(Sketchup::Group).size == 1)
 call(dlg, 'grid_build', {'grid' => st['grid'].merge('x_axes' => [{'name' => 'A', 'offset' => 0}, {'name' => '2', 'offset' => 4200}]), 'symbol' => {}})
 ok('tên trục trùng giữa hai phương bị từ chối khi vẽ', last_event(dlg, 'message')['text'].include?('trùng'))
+
+# Loại cột, tầng và cột
+call(dlg, 'ready')
+st = last_event(dlg, 'state')
+ok('trạng thái có loại cột mặc định C30x30 và hai tầng, chưa dựng cột nào', st['types'].map { |t| t['name'] } == ['C30x30'] && st['levels'].map { |l| l['name'] } == ['Tầng 1', 'Tầng 2'] && st['drawn_levels'] == [])
+pv = last_event(dlg, 'preview')
+ok('xem trước mở cửa sổ có phần cột: tầng 1 chưa chọn cột nào, cao 3480', pv['levels_ok'] && pv['columns']['level_name'] == 'Tầng 1' && pv['columns']['count'] == 0 && pv['columns']['height'] == 3480.0)
+refs = S::Grid.intersections(S::Grid.normalize!(st['grid'])).map { |i| i[:ref] }
+levels = st['levels'].map(&:dup)
+levels[0] = levels[0].merge('picks' => {'columns' => refs.each_with_object({}) { |r, h| h[r] = {} }})
+full = {'grid' => st['grid'], 'symbol' => st['symbol'], 'types' => st['types'], 'levels' => levels, 'level' => levels[0]['id']}
+call(dlg, 'grid_preview', full)
+pv = last_event(dlg, 'preview')
+ok('chọn cả 12 giao điểm: xem trước có 12 cột, đủ trường để vẽ, không cảnh báo', pv['columns']['count'] == 12 && pv['columns']['items'].first.keys.sort == %w[center d modes placement ref type_name w] && pv['columns']['issues'].empty?)
+call(dlg, 'grid_preview', full.merge('level' => levels[1]['id']))
+pv = last_event(dlg, 'preview')
+ok('xem tầng trên cùng: báo "chỉ có sàn", lưới vẫn xem trước được', pv['ok'] && pv['columns_error'].include?('tầng trên cùng') && !pv.key?('columns') && pv['axes'].size == 7)
+call(dlg, 'grid_preview', full.merge('types' => [{'id' => 'ct_00000001', 'name' => 'A', 'w' => 5, 'd' => 300}]))
+pv = last_event(dlg, 'preview')
+ok('loại cột sai: báo lỗi riêng, lưới vẫn xem trước (không chặn nút vẽ lưới)', pv['ok'] == true && pv['levels_ok'] == false && pv['levels_error'].include?('rộng') && pv['axes'].size == 7)
+call(dlg, 'grid_preview', full.merge('levels' => [levels[0].merge('elevation' => 'x')]))
+ok('tầng sai: báo lỗi riêng', last_event(dlg, 'preview')['levels_ok'] == false)
+call(dlg, 'grid_preview', {'grid' => st['grid'], 'symbol' => st['symbol']})
+ok('gửi không có loại cột / tầng (như cột mốc 1): chỉ có phần lưới', !last_event(dlg, 'preview').key?('levels_ok'))
+
+# Dựng cột
+call(dlg, 'columns_build', {'state' => full, 'levels' => [levels[0]['id']]})
+b = last_event(dlg, 'columns_built')
+ok('dựng cột tầng 1: 12 cột, thông báo có chiều cao, drawn_levels có tầng 1, nhóm trong model', b['message'].include?('12 cột') && b['message'].include?('3480') && b['drawn_levels'] == [levels[0]['id']] && $model.entities.grep(Sketchup::Group).any? { |g| g.name == 'Cột - Tầng 1' })
+call(dlg, 'ready')
+ok('mở lại cửa sổ: đọc tầng, cột đã chọn và tầng đã dựng từ model', (s2 = last_event(dlg, 'state')) && s2['saved'] == true && s2['levels'][0]['picks']['columns'].size == 12 && s2['drawn_levels'] == [levels[0]['id']])
+call(dlg, 'columns_build', {'state' => full, 'levels' => [levels[1]['id']]})
+ok('dựng tầng trên cùng: báo lỗi, không đụng model', last_event(dlg, 'message')['error'] == true && last_event(dlg, 'message')['text'].include?('tầng trên cùng'))
+call(dlg, 'columns_build', {'state' => full, 'levels' => []})
+ok('không chọn tầng: báo lỗi', last_event(dlg, 'message')['error'] == true)
+call(dlg, 'columns_build', {'state' => 'x', 'levels' => ['sl_00000001']})
+ok('dữ liệu dựng sai kiểu: báo lỗi, không văng', last_event(dlg, 'message')['error'] == true)
+many = full.merge('grid' => S::Grid.normalize!('origin' => [0, 0], 'x_axes' => S::Grid.axes_from_spacings('4000*29', :number), 'y_axes' => S::Grid.axes_from_spacings('4000*29', :letter)))
+many['levels'] = [levels[0].merge('picks' => {'columns' => S::Grid.intersections(many['grid']).each_with_object({}) { |i, h| h[i[:ref]] = {} }}), levels[1]]
+$answer = 7
+call(dlg, 'columns_build', {'state' => many, 'levels' => [levels[0]['id']]})
+ok('dựng hơn 500 cột: hỏi xác nhận, chọn Không thì hủy, không dựng', last_event(dlg, 'message')['text'].include?('chưa dựng') && $boxes.last.include?('900 cột'))
+$answer = IDYES
+count_before = $model.entities.grep(Sketchup::Group).size
+call(dlg, 'columns_build', {'state' => many, 'levels' => [levels[0]['id']]})
+ok('chọn Có thì dựng 900 cột', last_event(dlg, 'columns_built')['message'].include?('900 cột'))
+
+# Sao chép lựa chọn giữa tầng
+three = levels + [levels[1].merge('id' => 'sl_00000003', 'name' => 'Tầng 3', 'elevation' => 7200.0)]
+call(dlg, 'picks_copy', {'grid' => st['grid'], 'types' => st['types'], 'levels' => three, 'from' => levels[0]['id'], 'to' => 'sl_00000003'})
+cp = last_event(dlg, 'levels')
+ok('sao chép lựa chọn: trả danh sách tầng mới, tầng đích có 12 cột, thông báo nêu tên hai tầng', cp['levels'].last['picks']['columns'].size == 12 && cp['message'].include?('Tầng 1') && cp['message'].include?('Tầng 3'))
+call(dlg, 'picks_copy', {'grid' => st['grid'], 'types' => st['types'], 'levels' => three, 'from' => levels[0]['id'], 'to' => levels[0]['id']})
+ok('sao chép sang chính tầng đó: báo lỗi', last_event(dlg, 'message')['error'] == true)
+
+# Xóa cột
+call(dlg, 'columns_remove', {'level' => levels[0]['id']})
+ok('xóa cột tầng 1: drawn_levels rỗng, nhóm biến mất', last_event(dlg, 'columns_built')['drawn_levels'] == [] && $model.entities.grep(Sketchup::Group).none? { |g| g.name == 'Cột - Tầng 1' })
+call(dlg, 'columns_remove', {'level' => levels[0]['id']})
+ok('xóa khi chưa có: báo, không lỗi', last_event(dlg, 'columns_built')['error'] == true)
 
 # Tạo trục từ chuỗi nhịp
 call(dlg, 'grid_axes', {'dir' => 'x', 'text' => '4200, 3600*2'})

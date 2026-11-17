@@ -27,7 +27,7 @@ module VGD
           group.set_attribute(Schema::DICTIONARY, 'kind', Schema::GRID_KIND)
           group.set_attribute(Schema::DICTIONARY, 'plugin_version', VERSION)
           draw(group, plan, tag)
-          ModelStore.write(model, grid, options)
+          ModelStore.write_grid(model, grid, options)
           model.commit_operation
         rescue StandardError, ScriptError
           model.abort_operation

@@ -11,6 +11,7 @@ module VGD
       MIN_SPACING = 100.0     # nhịp nhỏ hơn 100 mm là nhập nhầm
       MAX_COORD = 1_000_000.0 # 1 km: giới hạn chống số vô lý
       CONTROL = /[\u0000-\u001f\u007f]/
+      REF_CHARS = /[-\/:]/ # dùng để ghép mã giao điểm, nhịp, ô nên không được có trong tên trục
       LETTERS = (('A'..'Z').to_a - %w[I O]).freeze # bỏ I và O (dễ nhầm với 1 và 0), chủ dự án chốt 17/11/2026
 
       Error = Class.new(ArgumentError)
@@ -72,6 +73,7 @@ module VGD
           raise Error, "Trục #{label} thứ #{i + 1} không hợp lệ." unless axis.is_a?(Hash)
           name = axis['name'].is_a?(String) ? axis['name'].strip : ''
           raise Error, "Trục #{label} thứ #{i + 1}: tên từ 1 đến #{MAX_NAME} ký tự, không có ký tự điều khiển." if name.empty? || name.length > MAX_NAME || name.match?(CONTROL)
+          raise Error, "Trục #{label} thứ #{i + 1}: tên không được chứa dấu - / hoặc :." if name.match?(REF_CHARS)
           offset = axis['offset']
           raise Error, "Trục “#{name}”: vị trí phải là số (mm), không quá #{MAX_COORD.to_i}." unless finite?(offset) && offset.abs <= MAX_COORD
           offset = offset.to_f.round(1)
@@ -100,7 +102,7 @@ module VGD
         grid['x_axes'].each_with_index.flat_map do |ax, xi|
           grid['y_axes'].each_with_index.map do |ay, yi|
             edges = [xi.zero? || xi == last_x, yi.zero? || yi == last_y].count(true)
-            {ref: "#{ax['name']}-#{ay['name']}", x: ox + ax['offset'], y: oy + ay['offset'], placement: %w[middle edge corner][edges]}
+            {ref: "#{ax['name']}-#{ay['name']}", xn: ax['name'], yn: ay['name'], x: ox + ax['offset'], y: oy + ay['offset'], placement: %w[middle edge corner][edges]}
           end
         end
       end
