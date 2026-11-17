@@ -1,6 +1,6 @@
 # Kế hoạch plugin VGD Structure (dựng phần thô theo lưới trục)
 
-Trạng thái: **kế hoạch đã chốt các câu hỏi mở (17/11/2026), chưa có mã.** Cột mốc 0 (khung), 1 (lưới trục) và 2 (tầng và cột, kèm loại cột và sao chép lựa chọn giữa tầng) đã làm xong ở `plugins/VGD_Structure`; các cột mốc 3 (dầm), 4 (tường), 5 (sàn và trần) 6 (đề xuất bán tự động, kiểm tra, dựng tất cả; không làm overlay xem trước trong model theo quyết định chủ dự án) và 7 (nối VGD BIM: VGD ID, khối lượng chính xác, sửa từ BIM) đã làm xong, chờ chủ dự án thử rồi làm cột mốc 8 (phát hành: catalog Center, hướng dẫn, bản ổn định).
+Trạng thái: **kế hoạch đã chốt các câu hỏi mở (17/11/2026), chưa có mã.** Cột mốc 0 (khung), 1 (lưới trục) và 2 (tầng và cột, kèm loại cột và sao chép lựa chọn giữa tầng) đã làm xong ở `plugins/VGD_Structure`; các cột mốc 3 (dầm), 4 (tường), 5 (sàn và trần) 6 (đề xuất bán tự động, kiểm tra, dựng tất cả; không làm overlay xem trước trong model theo quyết định chủ dự án) và 7 (nối VGD BIM: VGD ID, khối lượng chính xác, sửa từ BIM) đã làm xong, chủ dự án quyết định (17/11/2026) **chưa phát hành**: còn nhiều phần phải làm (mục 11). Cột mốc phát hành dời xuống cuối giai đoạn 2.
 Các lựa chọn dưới đây đã được chủ dự án chốt ở phiên trao đổi: trục nhập ngay trong plugin; nội suy **bán tự động có xem trước**; plugin mới lo phần thô, **VGD Room giữ nguyên**; bản đầu dựng **khối thô theo lưới, chưa khoét cửa**.
 
 ## 1. Mục tiêu
@@ -127,3 +127,20 @@ Nguồn: README công khai của `github.com/mencom95/vtbim`. Repo đó **chỉ 
 | Mặt bằng, mặt đứng, mặt cắt, trình bày, xuất PDF/DWG, thang, mái, cửa, thiết bị vệ sinh, MCP | Không thuộc phần thô; nếu cần sẽ là plugin / hệ khác | ngoài phạm vi |
 
 Việc cần chủ dự án duyệt trước cột mốc 2: có nhận hai bổ sung "loại phần tử" và "sao chép lựa chọn từ tầng khác" hay không.
+
+
+## 11. Giai đoạn 2 (chủ dự án chốt 17/11/2026): hoàn thiện công trình theo cấu trúc tính năng của VTBim
+
+Cấu trúc tính năng lấy từ README công khai của VTBim (chỉ ý tưởng, không dùng mã). Các câu hỏi đã chốt: **làm cửa đi, cửa sổ trước rồi tới hoàn thiện**; cửa ở mức **lỗ mở + khung và cánh đơn giản theo tham số**; tất cả **nằm trong VGD Structure** (thêm tab), vì cửa phải sửa hình học tường và lớp hoàn thiện bám theo tường, sàn.
+
+| # | Cột mốc | Nội dung chính | Kiểm tra |
+|---|---|---|---|
+| 8 | **Cửa đi và cửa sổ** | Loại cửa (đi / sổ: rộng, cao, cao ngưỡng); đặt cửa lên tường theo vị trí trên tường; tường **tự khoét lỗ**; khung và cánh đơn giản theo tham số; tag A. DOOR / A. WINDOW; BIM đếm theo loại và trừ lỗ mở khỏi diện tích tường | test kế hoạch (lỗ nằm trong tường, không chồng nhau, dưới dầm), test dựng, test BIM |
+| 9 | Tường nhiều lớp và nối góc | Loại tường có lớp cấu tạo (gạch, vữa, ốp); nối góc L / T (tường dừng ở mặt tường vuông góc thay vì mặt cột khi không có cột) | test hình học nối góc |
+| 10 | **Hoàn thiện** | Sàn hoàn thiện (lát), tường hoàn thiện (ốp, sơn) bám mặt tường kể cả quanh lỗ cửa, trần hoàn thiện; tag A. FINISHING FLOOR / WALL / CEILING; khối lượng theo vật liệu | test diện tích trừ lỗ, không chồng khối |
+| 11 | Cầu thang và lan can | Thang theo tham số (vế, chiếu nghỉ), lỗ mở sàn cho thang, lan can liên tục | test bậc, lỗ sàn |
+| 12 | Mái | Mái dốc / mái bằng từ viền tường, ban đầu mái phẳng và dốc đơn giản | test độ dốc, viền |
+| 13 | Khác | Vách kính, thiết bị vệ sinh, nhập lưới từ CAD, nối phòng (VGD Room tự dò viền từ tường) | theo từng việc |
+| 14 | Phát hành | Catalog Center, hướng dẫn, chốt bản ổn định cho Structure, BIM, Room | quy trình trong `CLAUDE.md` gốc |
+
+Mỗi cột mốc có test và RBZ như trước; phần chỉ kiểm được trong SketchUp thật ghi rõ "chưa xác minh". Cột mốc 8 xong thì dừng cho chủ dự án thử trước khi làm cột mốc 9.
