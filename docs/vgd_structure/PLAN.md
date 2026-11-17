@@ -144,3 +144,25 @@ Cấu trúc tính năng lấy từ README công khai của VTBim (chỉ ý tư�
 | 14 | Phát hành | Catalog Center, hướng dẫn, chốt bản ổn định cho Structure, BIM, Room | quy trình trong `CLAUDE.md` gốc |
 
 Mỗi cột mốc có test và RBZ như trước; phần chỉ kiểm được trong SketchUp thật ghi rõ "chưa xác minh". Cột mốc 8 xong thì dừng cho chủ dự án thử trước khi làm cột mốc 9.
+
+
+## 12. Cửa sổ vẽ mặt bằng (chủ dự án yêu cầu 17/11/2026, tham khảo giao diện VTBim)
+
+Tài liệu tham khảo: `docs/reference/vtbim/` (phần Ruby mã hóa, JS của cửa sổ mặt bằng bị làm rối mã; chỉ đọc được HTML thanh công cụ, dòng gợi ý và file mẫu). Chỉ lấy **cách bố trí giao diện và cách thao tác**, không dùng mã.
+
+**Đã chốt:** thêm tab **Mặt bằng** trong VGD Structure; vẽ là **sửa dữ liệu Structure** (rồi mới bấm Dựng); làm cả bốn nhóm công cụ: vẽ kết cấu, sửa kiểu CAD, bắt điểm/đo/đường gióng, nét 2D tự do. Làm xong phần cửa sổ rồi mới làm phần tương tác vẽ giữa SketchUp và cửa sổ.
+
+**Cách thao tác học từ VTBim:** thanh công cụ nhóm (Chọn và đo, Sửa, Vẽ kết cấu, Vẽ nét, Kích thước); phím tắt một chữ (M, Q, O, T, E, W, D, L, R, C…); gõ số rồi Enter để nhập chính xác (độ dài, góc, "5x" = mảng, "/5" = chia đều); kéo khung trái→phải = chọn trọn, phải→trái = chọn cắt; Shift thêm/bớt chọn hoặc khóa hướng; Esc hủy; Space = công cụ Chọn; ống hút/ống nhả thuộc tính; bảng Properties theo công cụ hoặc đối tượng đang chọn; Undo/Redo; Zoom Extents (F); bắt điểm (đầu mút, giữa, giao, trục).
+
+**Rủi ro cần biết trước:** dữ liệu Structure hiện gắn theo **lưới trục** (cột ở giao trục, dầm và tường theo nhịp giữa hai trục, sàn theo ô). Vẽ tường hay dầm đi xiên hoặc lệch trục chưa biểu diễn được. Hướng đề xuất: công cụ vẽ **bắt vào lưới**; thêm trục phụ (đường gióng thành trục) khi cần vị trí lệch; tường xiên để cột mốc sau. "Nét 2D tự do" (line, polyline, chữ, kích thước) lưu thành lớp **ghi chú theo tầng**, không phải phần tử dựng, để dữ liệu dựng vẫn sạch.
+
+| # | Cột mốc | Nội dung | Kiểm tra |
+|---|---|---|---|
+| P1 | Khung mặt bằng | Tab Mặt bằng dùng canvas, pan/zoom/fit, thanh công cụ nhóm, thanh nhập số (VCB), Undo/Redo, chọn tầng; hiển thị lưới, cột, dầm, tường, cửa, sàn từ dữ liệu | test UI vẽ đúng, zoom/pan |
+| P2 | Chọn, bắt điểm, đo, đường gióng | Chọn đơn/khung/Shift, bắt điểm, đo khoảng cách và góc, đường gióng song song | test UI, test bắt điểm |
+| P3 | Vẽ kết cấu | Lưới, cột, dầm, tường, sàn, cửa bằng bấm điểm, bảng Properties; ghi thẳng vào dữ liệu tầng | test dữ liệu sau khi vẽ khớp thao tác bằng tay |
+| P4 | Sửa kiểu CAD | Move, Copy, Rotate, Mirror, Offset, Trim, Stretch, mảng, copy/paste, ống hút/nhả | test từng lệnh trên dữ liệu |
+| P5 | Nét 2D tự do và ghi chú | Line, Polyline, Rect, Circle, Arc, chữ, kích thước, cốt cao độ (lớp ghi chú theo tầng) | test lưu và nạp lại |
+| P6 | Tương tác SketchUp ↔ cửa sổ | Chọn trong SketchUp thì sáng trên mặt bằng và ngược lại; chọn điểm bằng công cụ trong SketchUp | chỉ kiểm được trong SketchUp thật |
+
+Mỗi cột mốc có test và RBZ beta để thử. Chưa phát hành.
