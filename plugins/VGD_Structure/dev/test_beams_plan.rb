@@ -4,7 +4,7 @@ $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 def error_of; yield; nil; rescue StandardError => e; e.message; end
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
-%w[schema grid axis_symbol column_types beam_types levels column_plan beam_plan state].each { |f| require File.join(ROOT, 'core', f) }
+%w[schema grid axis_symbol column_types beam_types wall_types levels column_plan beam_plan wall_plan state].each { |f| require File.join(ROOT, 'core', f) }
 S = VGD::Structure
 BT = S::BeamTypes
 L = S::Levels
@@ -112,7 +112,7 @@ cp = L.copy_picks(three, 'sl_00000001', 'sl_00000002', grid, types, 'beams', bty
 ok('sao chép lựa chọn dầm: thay dầm của tầng đích, giữ nguyên cột của tầng đích', cp[1]['picks']['beams'] == {'x:A:1-2' => {'p' => 'center'}} && cp[1]['picks']['columns'] == {'3-C' => {}})
 cp2 = L.copy_picks(three, 'sl_00000001', 'sl_00000002', grid, types, 'columns', btypes)
 ok('sao chép lựa chọn cột: giữ nguyên dầm của tầng đích', cp2[1]['picks']['columns'] == {'1-A' => {}} && cp2[1]['picks']['beams'] == {'x:B:2-3' => {}})
-ok('loại lựa chọn lạ bị từ chối', !error_of { L.copy_picks(three, 'sl_00000001', 'sl_00000002', grid, types, 'walls', btypes) }.nil?)
+ok('loại lựa chọn lạ bị từ chối', !error_of { L.copy_picks(three, 'sl_00000001', 'sl_00000002', grid, types, 'ceilings', btypes) }.nil?)
 
 # Trạng thái gộp, dữ liệu cũ
 st = S::State.normalize!('grid' => grid, 'symbol' => {}, 'types' => types, 'levels' => [{'id' => 'sl_00000001', 'name' => 'A', 'elevation' => 0, 'slab_thickness' => 120, 'column_type' => nil, 'picks' => {'columns' => {'1-A' => {}}}}, {'id' => 'sl_00000002', 'name' => 'B', 'elevation' => 3600}])

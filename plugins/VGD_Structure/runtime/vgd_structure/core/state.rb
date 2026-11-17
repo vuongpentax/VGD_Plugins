@@ -3,7 +3,7 @@ module VGD
     # Toàn bộ dữ liệu nguồn của plugin (SPEC mục 1): lưới, thiết lập ký hiệu, loại cột, tầng. Kiểm tra gộp một chỗ.
     module State
       def self.default
-        {'grid' => Grid.default, 'symbol' => AxisSymbol.options!(nil), 'types' => ColumnTypes.default, 'beam_types' => BeamTypes.default, 'levels' => Levels.default}
+        {'grid' => Grid.default, 'symbol' => AxisSymbol.options!(nil), 'types' => ColumnTypes.default, 'beam_types' => BeamTypes.default, 'wall_types' => WallTypes.default, 'levels' => Levels.default}
       end
 
       # raw: dữ liệu chưa kiểm tra (từ giao diện hoặc từ model). Thiếu loại cột / tầng (dữ liệu cột mốc 1) thì dùng mặc định.
@@ -15,8 +15,9 @@ module VGD
         symbol = AxisSymbol.options!(raw['symbol'])
         types = raw['types'].nil? ? ColumnTypes.default : ColumnTypes.normalize!(raw['types'])
         beam_types = raw['beam_types'].nil? ? BeamTypes.default : BeamTypes.normalize!(raw['beam_types'])
-        levels, removed = Levels.normalize!(raw['levels'].nil? ? Levels.default : raw['levels'], grid, types, beam_types)
-        {'grid' => grid, 'symbol' => symbol, 'types' => types, 'beam_types' => beam_types, 'levels' => levels, 'removed' => removed}
+        wall_types = raw['wall_types'].nil? ? WallTypes.default : WallTypes.normalize!(raw['wall_types'])
+        levels, removed = Levels.normalize!(raw['levels'].nil? ? Levels.default : raw['levels'], grid, types, beam_types, wall_types)
+        {'grid' => grid, 'symbol' => symbol, 'types' => types, 'beam_types' => beam_types, 'wall_types' => wall_types, 'levels' => levels, 'removed' => removed}
       end
     end
   end

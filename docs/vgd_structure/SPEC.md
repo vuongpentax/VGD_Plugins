@@ -29,7 +29,8 @@
 - `picks.columns` là bảng `{"1-A": {"type": "ct_...", "x": "center", "y": "min"}}`; chỉ ghi khóa khác mặc định: `type` (mặc định = loại của tầng), `x`/`y` ∈ `center` / `min` / `max` (mặc định auto theo quy ước mục 4: `min` cạnh nhỏ tại trục, cột lùi về phía tăng; `max` cạnh lớn tại trục). Giao điểm không còn trên lưới thì bị bỏ khi đọc.
 - `beam_types` (cột mốc 3): `[{"id": "bt_xxxxxxxx", "name": "D20x40", "w": 200, "h": 400}]`, `w` 100 đến 1500, `h` 100 đến 2000 mm. Tầng có thêm `beam_type` (mã hoặc null = loại đầu danh sách).
 - `picks.beams` là bảng `{"x:A:1-2": {"type": "bt_...", "p": "center"}}`; `p` ∈ `center` / `min` / `max` (mặc định auto: dầm trên trục biên đầu `min`, biên cuối `max`, giữa `center`; `min` cạnh nhỏ tại trục).
-- `picks.walls`, `picks.slabs`, `picks.ceilings` (tường, sàn, trần) làm ở các cột mốc sau; mã nhịp / ô như sau: cột theo giao điểm `"<trục x>-<trục y>"`, dầm và tường theo nhịp `"<x|y>:<tên trục chứa nhịp>:<tên hai trục chặn>"`, sàn và trần theo ô `"<x1>-<x2>/<y1>-<y2>"`. Mã này là `ref` ghi vào `VGD_BIM_SOURCE.ref`.
+- `wall_types` (cột mốc 4): `[{"id": "wt_xxxxxxxx", "name": "T200", "t": 200}]`, `t` 50 đến 1000 mm; tầng có thêm `wall_type`. `picks.walls` giống `picks.beams`: `{"x:A:1-2": {"type": "wt_...", "p": "center"}}`. Tường cao từ `Ei` lên đáy dầm của nhịp (nếu nhịp có dầm được chọn cùng tầng) hoặc đáy sàn tầng trên; đặc, chưa khoét cửa.
+- `picks.slabs`, `picks.ceilings` (sàn, trần) làm ở các cột mốc sau; mã nhịp / ô như sau: cột theo giao điểm `"<trục x>-<trục y>"`, dầm và tường theo nhịp `"<x|y>:<tên trục chứa nhịp>:<tên hai trục chặn>"`, sàn và trần theo ô `"<x1>-<x2>/<y1>-<y2>"`. Mã này là `ref` ghi vào `VGD_BIM_SOURCE.ref`.
 - Dữ liệu được kiểm tra lại mỗi lần đọc từ model và mỗi lần nhận từ giao diện (ranh giới tin cậy).
 
 ## 2. Dữ liệu trên khối dựng ra

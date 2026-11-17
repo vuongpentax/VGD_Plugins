@@ -19,10 +19,11 @@ module VGD
 
       # Phần xem trước loại cột, tầng và cột của tầng đang xem. Lỗi dữ liệu tầng / loại cột báo riêng, không chặn xem trước lưới.
       def self.columns(grid, payload)
-        return {} unless payload.key?('levels') || payload.key?('types') || payload.key?('beam_types')
+        return {} unless payload.key?('levels') || payload.key?('types') || payload.key?('beam_types') || payload.key?('wall_types')
         types = payload['types'].nil? ? ColumnTypes.default : ColumnTypes.normalize!(payload['types'])
         beam_types = payload['beam_types'].nil? ? BeamTypes.default : BeamTypes.normalize!(payload['beam_types'])
-        levels, removed = Levels.normalize!(payload['levels'].nil? ? Levels.default : payload['levels'], grid, types, beam_types)
+        wall_types = payload['wall_types'].nil? ? WallTypes.default : WallTypes.normalize!(payload['wall_types'])
+        levels, removed = Levels.normalize!(payload['levels'].nil? ? Levels.default : payload['levels'], grid, types, beam_types, wall_types)
         out = {levels_ok: true, removed: removed}
         begin
           plan = ColumnPlan.plan(grid, types, levels, payload['level'] || levels.first['id'])
@@ -38,8 +39,15 @@ module VGD
         rescue BeamPlan::Error, ColumnPlan::Error => error
           out[:beams_error] = error.message
         end
+        begin
+          plan = WallPlan.plan(grid, types, beam_types, wall_types, levels, payload['level'] || levels.first['id'])
+          out[:walls] = {level: plan[:level]['id'], level_name: plan[:level]['name'], z0: plan[:z0], z_slab: plan[:z_slab], issues: plan[:issues], count: plan[:items].size,
+                         items: plan[:items].map { |i| i.slice(:ref, :dir, :type_name, :t, :length, :height, :min, :max, :mode, :placement, :z_bottom, :z_top, :under_beam) }}
+        rescue WallPlan::Error, BeamPlan::Error, ColumnPlan::Error => error
+          out[:walls_error] = error.message
+        end
         out
-      rescue ColumnTypes::Error, BeamTypes::Error, Levels::Error => error
+      rescue ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, Levels::Error => error
         {levels_ok: false, levels_error: error.message}
       end
     end

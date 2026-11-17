@@ -21,7 +21,7 @@ module UI
 end
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
 module VGD; module Structure; VERSION = '9.9.9'; end; end
-%w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/levels core/column_plan core/beam_plan core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder panel].each { |f| require File.join(ROOT, f) }
+%w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/levels core/column_plan core/beam_plan core/wall_plan core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder panel].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 $model = Sketchup::Model.new
 panel = S::Panel.new
@@ -152,6 +152,38 @@ call(dlg, 'beams_remove', {'level' => blevels[0]['id']})
 ok('xóa dầm tầng 1: drawn_beam_levels rỗng, nhóm biến mất', last_event(dlg, 'beams_built')['drawn_beam_levels'] == [] && $model.entities.grep(Sketchup::Group).none? { |g| g.name == 'Dầm - Tầng 1' })
 call(dlg, 'beams_remove', {'level' => blevels[0]['id']})
 ok('xóa dầm khi chưa có: báo, không lỗi', last_event(dlg, 'beams_built')['error'] == true)
+
+# Tường
+call(dlg, 'grid_reset')
+st = last_event(dlg, 'state')
+ok('trạng thái có loại tường mặc định T200, chưa dựng tường nào, tầng có wall_type và picks.walls', st['wall_types'].map { |t| t['name'] } == ['T200'] && st['drawn_wall_levels'] == [] && st['levels'][0].key?('wall_type') && st['levels'][0]['picks'].key?('walls'))
+wspans = S::Grid.spans(S::Grid.normalize!(st['grid'])).map { |sp| sp[:ref] }
+wlevels = st['levels'].map { |l| JSON.parse(JSON.generate(l)) }
+wlevels[0]['picks'] = {'columns' => refs.each_with_object({}) { |r, h| h[r] = {} }, 'beams' => {}, 'walls' => wspans.each_with_object({}) { |r, h| h[r] = {} }}
+wfull = {'grid' => st['grid'], 'symbol' => st['symbol'], 'types' => st['types'], 'beam_types' => st['beam_types'], 'wall_types' => st['wall_types'], 'levels' => wlevels, 'level' => wlevels[0]['id']}
+call(dlg, 'grid_preview', wfull)
+pv = last_event(dlg, 'preview')
+ok('xem trước có phần tường: 17 tường, cao 3480, đủ trường để vẽ, không cảnh báo', pv['walls']['count'] == 17 && pv['walls']['z_slab'] == 3480.0 && pv['walls']['items'].first.keys.sort == %w[dir height length max min mode placement ref t type_name under_beam z_bottom z_top] && pv['walls']['issues'].empty?)
+call(dlg, 'grid_preview', wfull.merge('level' => wlevels[1]['id']))
+ok('tầng trên cùng: báo không có tường, lưới vẫn xem trước', last_event(dlg, 'preview')['walls_error'].include?('tầng trên cùng') && last_event(dlg, 'preview')['axes'].size == 7)
+call(dlg, 'grid_preview', wfull.merge('wall_types' => [{'id' => 'wt_00000001', 'name' => 'X', 't' => 5}]))
+ok('loại tường sai: báo lỗi riêng, lưới vẫn xem trước', last_event(dlg, 'preview')['ok'] && last_event(dlg, 'preview')['levels_ok'] == false)
+call(dlg, 'walls_build', {'state' => wfull, 'levels' => [wlevels[0]['id']]})
+wb = last_event(dlg, 'walls_built')
+ok('dựng tường tầng 1: 17 tường, drawn_wall_levels có tầng 1, nhóm trong model', wb['message'].include?('17 tường') && wb['drawn_wall_levels'] == [wlevels[0]['id']] && $model.entities.grep(Sketchup::Group).any? { |g| g.name == 'Tường - Tầng 1' })
+call(dlg, 'ready')
+ok('mở lại: đọc lựa chọn tường và tầng đã dựng tường từ model', (s2 = last_event(dlg, 'state')) && s2['levels'][0]['picks']['walls'].size == 17 && s2['drawn_wall_levels'] == [wlevels[0]['id']])
+call(dlg, 'walls_build', {'state' => wfull, 'levels' => [wlevels[1]['id']]})
+ok('dựng tường tầng trên cùng: báo lỗi', last_event(dlg, 'message')['error'] == true)
+call(dlg, 'walls_build', {'state' => 'x', 'levels' => ['sl_00000001']})
+ok('dữ liệu dựng tường sai kiểu: báo lỗi, không văng', last_event(dlg, 'message')['error'] == true)
+call(dlg, 'picks_copy', {'grid' => st['grid'], 'types' => st['types'], 'beam_types' => st['beam_types'], 'wall_types' => st['wall_types'], 'levels' => wlevels + [wlevels[1].merge('id' => 'sl_00000003', 'name' => 'Tầng 3', 'elevation' => 7200.0)], 'from' => wlevels[0]['id'], 'to' => wlevels[1]['id'], 'kind' => 'walls'})
+cp = last_event(dlg, 'levels')
+ok('sao chép lựa chọn tường: tầng đích có 17 tường, thông báo ghi "tường"', cp['levels'][1]['picks']['walls'].size == 17 && cp['message'].include?('tường'))
+call(dlg, 'walls_remove', {'level' => wlevels[0]['id']})
+ok('xóa tường tầng 1: drawn_wall_levels rỗng, nhóm biến mất', last_event(dlg, 'walls_built')['drawn_wall_levels'] == [] && $model.entities.grep(Sketchup::Group).none? { |g| g.name == 'Tường - Tầng 1' })
+call(dlg, 'walls_remove', {'level' => wlevels[0]['id']})
+ok('xóa tường khi chưa có: báo, không lỗi', last_event(dlg, 'walls_built')['error'] == true)
 
 # Tạo trục từ chuỗi nhịp
 call(dlg, 'grid_axes', {'dir' => 'x', 'text' => '4200, 3600*2'})

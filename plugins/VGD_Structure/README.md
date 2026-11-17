@@ -1,10 +1,10 @@
-# VGD Structure 0.4.0-beta.1
+# VGD Structure 0.5.0-beta.1
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
 
-**Cột mốc 3: dầm** (trên nền lưới trục, tầng và cột). Chưa dựng tường, sàn, trần (các cột mốc sau, xem kế hoạch).
+**Cột mốc 4: tường** (trên nền lưới trục, tầng, cột và dầm). Chưa dựng sàn, trần (các cột mốc sau, xem kế hoạch).
 
 **Lưới trục** (menu Extensions → VGD → VGD Structure → Lưới trục, hoặc nút trên thanh công cụ VGD STR):
 - Nhập **trục đứng** (đánh số 1, 2, 3...) và **trục ngang** (đánh chữ A, B, C...; bỏ I và O) với khoảng cách giữa các trục, từng trục sửa được tên và nhịp. Gõ nhanh "4200, 3600*2" rồi bấm Tạo trục từ nhịp (dấu phẩy hoặc khoảng trắng ngăn cách, số lẻ dùng dấu chấm, `*` hoặc `x` là lặp). 2 đến 60 trục mỗi phương, tên tối đa 4 ký tự, nhịp tối thiểu 100 mm.
@@ -26,13 +26,20 @@ Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) th
 - Quy ước vị trí ngang: dầm trên trục biên có **mặt ngoài tiếp giáp trục biên** (tâm dời vào nửa bề rộng), dầm nhịp giữa tâm trên trục. Cảnh báo dầm nhô ra ngoài khung lưới, chồng nhau hoặc chồng cột; nhịp có khoảng hở nhỏ hơn 100 mm giữa hai cột thì bỏ và báo.
 - **Dựng dầm tầng này / mọi tầng**: mỗi tầng một nhóm "Dầm - <tên tầng>" trên tag **S. BEAM** (theo bộ tag mẫu BIM), mỗi dầm là ComponentInstance dùng chung định nghĩa theo (phương, rộng, cao, dài), kèm dữ liệu cho VGD BIM. Một bước hoàn tác; dựng lại thay nhóm cũ; có xóa dầm; hỏi xác nhận khi dựng hơn 500 dầm, tối đa 8000.
 
+**Tường** (tab "Tường"; loại tường trong tab "Tầng và loại cột": tên, bề dày 50 đến 1000 mm; mỗi tầng có loại tường mặc định). Bản đầu là tường đặc, **chưa khoét cửa**, chưa nối góc L / T, chưa có lớp cấu tạo:
+- Chọn tầng, bấm các nhịp trên mặt bằng để chọn tường (như dầm): Chọn mọi nhịp, Chọn nhịp biên, sao chép lựa chọn tường từ tầng khác; bấm tường đã chọn để đổi loại và vị trí ngang.
+- **Cao từ mặt sàn tầng này lên đáy dầm** của nhịp đó nếu nhịp có dầm được chọn cùng tầng (dầm thấp hơn thì tường thấp theo), không có dầm thì lên **đáy sàn tầng trên**. Nên tường, dầm, sàn không chồng nhau.
+- Hai đầu tường dừng ở mặt cột; nút không có cột thì tường X chạy tới trục, tường Y dừng ở mặt tường X. Tường trên trục biên có mặt ngoài tiếp giáp trục biên, nhịp giữa tâm trên trục. Cảnh báo tường nhô ra ngoài khung lưới, chồng nhau hoặc chồng cột.
+- **Dựng tường tầng này / mọi tầng**: mỗi tầng một nhóm "Tường - <tên tầng>" trên tag **A. WALL** (theo bộ tag mẫu BIM, thư mục A. ARCHITECTURAL), tường dùng chung định nghĩa theo (phương, dày, cao, dài), kèm dữ liệu cho VGD BIM (kể cả tường dưới dầm). Một bước hoàn tác; dựng lại thay nhóm cũ; có xóa tường; hỏi xác nhận khi dựng hơn 500 tường.
+- Nếu sửa dầm của một nhịp sau khi đã dựng tường thì cần **dựng lại tường** để tường theo chiều cao mới.
+
 Dữ liệu lưu trong model (dictionary `VGD_STRUCT`). VGD BIM chưa đọc cột mốc này (cột mốc 7): cột vẫn hiện trong bảng khối lượng như đối tượng thường.
 
 Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **Tải lại code** nạp lại mã mà không cần mở lại (đóng và mở lại cửa sổ nếu đang mở).
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.4.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.5.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

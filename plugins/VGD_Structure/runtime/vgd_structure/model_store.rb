@@ -19,7 +19,7 @@ module VGD
       # Ghi trạng thái (kiểm tra lại toàn bộ). Gọi trong một thao tác hoàn tác (start_operation) của người gọi. Trả về trạng thái sạch đã ghi.
       def self.write(model, state)
         clean = State.normalize!(state)
-        json = JSON.generate('schema_version' => 1, 'grid' => clean['grid'], 'symbol' => clean['symbol'], 'types' => clean['types'], 'beam_types' => clean['beam_types'], 'levels' => clean['levels'])
+        json = JSON.generate('schema_version' => 1, 'grid' => clean['grid'], 'symbol' => clean['symbol'], 'types' => clean['types'], 'beam_types' => clean['beam_types'], 'wall_types' => clean['wall_types'], 'levels' => clean['levels'])
         raise ArgumentError, 'Dữ liệu quá lớn.' if json.bytesize > MAX_BYTES
         model.set_attribute(Schema::DICTIONARY, KEY, json)
         clean

@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.4.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.5.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -113,7 +113,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const lp2=await last('grid_preview');
   ok(lp2.types.length===2 && lp2.types[1].name==='C40x60' && lp2.types[1].w===400 && lp2.types[1].d===600 && /^ct_[0-9a-f]{8}$/.test(lp2.types[1].id) && /^sl_[0-9a-f]{8}$/.test(lp2.levels[2].id),'loại mới có mã ct_xxxxxxxx, tầng mới có mã sl_xxxxxxxx, kích thước gửi đúng');
   // loại mặc định cho tầng 1
-  await page.locator('#levels-table tr:nth-child(2) select:not(.beam-default)').selectOption({label:'C40x60'});await wait();
+  await page.locator('#levels-table tr:nth-child(2) select:not(.beam-default):not(.wall-default)').selectOption({label:'C40x60'});await wait();
   ok((await last('grid_preview')).levels[0].column_type===lp2.types[1].id,'chọn loại cột mặc định của tầng 1: gửi mã loại');
   // xóa loại đang dùng: tầng quay về mặc định
   await page.locator('#types-table button.del').nth(1).click();await wait();
@@ -265,6 +265,72 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok((await message())==='Đã dựng 2 dầm.' && await page.locator('#remove-beams').isEnabled(),'sau khi dựng: Xóa dầm tầng này bấm được');
   await page.click('#remove-beams');
   ok((await last('beams_remove')).level==='sl_00000001','Xóa dầm gửi mã tầng');
+  await page.click('[data-tab=grid]');
+
+
+  // ===== Loại tường và tab Tường =====
+  await receive('state',F.state);await receive('preview',F.preview);
+  await page.click('[data-tab=levels]');
+  const wtNames=()=>page.locator('#wall-types-table tr td:nth-child(1) input').evaluateAll(l=>l.map(i=>i.value));
+  ok(JSON.stringify(await wtNames())==='["T200"]' && await page.locator('#wall-types-table button.del').first().isDisabled(),'bảng loại tường: T200, còn một loại thì không xóa được');
+  await clear();
+  await page.click('#add-wall-type');
+  ok(JSON.stringify(await wtNames())==='["T200","Tường dày 2"]','thêm loại tường');
+  await page.locator('#wall-types-table tr:nth-child(3) td:nth-child(1) input').fill('T100');
+  await page.locator('#wall-types-table tr:nth-child(3) td:nth-child(2) input').fill('100');await wait();
+  const wp1=await last('grid_preview');
+  ok(wp1.wall_types.length===2 && wp1.wall_types[1].name==='T100' && wp1.wall_types[1].t===100 && /^wt_[0-9a-f]{8}$/.test(wp1.wall_types[1].id),'loại tường mới có mã wt_xxxxxxxx, gửi đúng độ dày');
+  await page.locator('#levels-table tr:nth-child(2) select.wall-default').selectOption({label:'T100'});await wait();
+  ok((await last('grid_preview')).levels[0].wall_type===wp1.wall_types[1].id && (await last('grid_preview')).levels[0].beam_type===null,'chọn loại tường mặc định của tầng 1: gửi wall_type (không đổi loại dầm)');
+  await page.locator('#wall-types-table button.del').nth(1).click();await wait();
+  ok((await last('grid_preview')).wall_types.length===1 && (await last('grid_preview')).levels[0].wall_type===null,'xóa loại tường đang dùng: tầng quay về loại đầu danh sách');
+  await receive('state',F.state);await receive('preview',F.preview);
+  await page.click('[data-tab=walls]');
+  ok(await page.locator('#tab-walls').isVisible() && !(await page.locator('#tab-beams').isVisible()),'chuyển sang tab Tường');
+  ok(await page.locator('#plan4 rect.wall').count()===2 && await page.locator('#plan4 rect.span').count()===15,'mặt bằng tường: 2 tường đã chọn, 15 nhịp còn lại để bấm chọn');
+  ok(/Tầng 1: 2 tường, từ cao độ 0 mm/.test(await page.locator('#wall-summary').innerText()),'tóm tắt tường: số tường, cao độ chân');
+  ok(await page.locator('#build-walls').isEnabled() && await page.locator('#remove-walls').isDisabled(),'Dựng bấm được, Xóa khóa khi chưa dựng');
+  await clear();
+  await page.locator('#plan4 rect.span[data-ref="x:A:2-3"]').dispatchEvent('click');await wait();
+  ok(Object.keys((await last('grid_preview')).levels[0].picks.walls).sort().join()==='x:A:2-3,x:B:1-2,y:2:A-B' && (await page.locator('#wall-ref').innerText())==='x:A:2-3' && await page.locator('#wall-editor').isVisible(),'bấm nhịp trống: chọn tường, mở khung sửa, gửi lại xem trước');
+  await page.locator('#wall-p').selectOption('center');await wait();
+  ok(JSON.stringify((await last('grid_preview')).levels[0].picks.walls['x:A:2-3'])==='{"p":"center"}','đổi vị trí ngang: gửi p = center');
+  await page.locator('#wall-remove').click();await wait();
+  ok(!('x:A:2-3' in (await last('grid_preview')).levels[0].picks.walls) && await page.locator('#wall-editor').isHidden(),'bỏ tường này');
+  await page.click('#wall-pick-edge');await wait();
+  ok(Object.keys((await last('grid_preview')).levels[0].picks.walls).length===12,'chọn nhịp biên: thêm 10 nhịp biên cùng 2 đã chọn');
+  await page.click('#wall-pick-all');await wait();
+  ok(Object.keys((await last('grid_preview')).levels[0].picks.walls).length===17 && JSON.stringify((await last('grid_preview')).levels[0].picks.walls['y:2:A-B'])==='{"p":"center"}','chọn mọi nhịp: 17 tường, giữ kiểu đặt riêng');
+  await page.click('#wall-pick-none');await wait();
+  ok(Object.keys((await last('grid_preview')).levels[0].picks.walls).length===0 && await page.locator('#build-walls').isDisabled(),'bỏ chọn hết: Dựng bị khóa');
+  await receive('state',F.state);await receive('preview',F.preview_all_walls);
+  ok(await page.locator('#plan4 rect.wall').count()===17 && await page.locator('#plan4 rect.span').count()===0,'xem trước 17 tường: vẽ đủ');
+  const rw=await page.locator('#plan4 rect.wall').evaluateAll(l=>l.map(r=>({ref:r.getAttribute('data-ref'),x:Number(r.getAttribute('x')),y:Number(r.getAttribute('y')),w:Number(r.getAttribute('width')),h:Number(r.getAttribute('height'))})));
+  const wx=rw.find(r=>r.ref==='x:B:2-3'),wy=rw.find(r=>r.ref==='y:1:A-B');
+  ok(wx.x===4350 && wx.w===3900 && wx.h===200 && wx.y===-3700 && wy.x===0 && wy.w===200 && wy.y===-3450 && wy.h===3150,'tường vẽ đúng: x:B:2-3 từ mặt cột (4350) dài 3900; tường biên y:1:A-B mặt ngoài tại x = 0, từ mặt cột đến mặt cột');
+  await page.locator('#wall-level-select').selectOption('sl_00000002');
+  await receive('preview',F.preview_top);
+  ok(/tầng trên cùng/.test(await page.locator('#wall-summary').innerText()) && await page.locator('#build-walls').isDisabled(),'tầng trên cùng: báo chỉ có sàn, khóa nút tường');
+  await page.locator('#wall-level-select').selectOption('sl_00000001');
+  await receive('preview',F.preview_bad_types);
+  ok(await page.locator('#wall-summary.error').count()===1,'lỗi loại / tầng hiện ở tab Tường');
+  await receive('state',F.state);await receive('preview',F.preview);
+  await page.click('[data-tab=levels]');await page.click('#add-level');await page.click('[data-tab=walls]');
+  await page.locator('#wall-level-select').selectOption({index:1});await clear();
+  await page.locator('#wall-copy-from').selectOption({label:'Tầng 1'});await page.click('#wall-copy-picks');
+  const wcp=await last('picks_copy');
+  ok(wcp && wcp.kind==='walls' && wcp.wall_types.length===1 && wcp.levels[0].picks.walls['x:B:1-2'],'sao chép tường: gửi kind = walls cùng loại tường');
+  await receive('state',F.state);await receive('preview',F.preview);await clear();
+  await page.click('[data-tab=walls]');
+  await page.click('#build-walls');
+  const wb=await last('walls_build');
+  ok(wb && JSON.stringify(wb.levels)==='["sl_00000001"]' && wb.state.wall_types.length===1 && wb.state.levels[0].picks.walls['y:2:A-B'].p==='center','Dựng tường tầng này: gửi toàn bộ dữ liệu (kể cả loại tường)');
+  await clear();await page.click('#build-all-walls');
+  ok(JSON.stringify((await last('walls_build')).levels)==='["sl_00000001"]','Dựng tường mọi tầng: chỉ tầng có tường và không phải tầng trên cùng');
+  await receive('walls_built',{message:'Đã dựng 2 tường.',drawn_wall_levels:['sl_00000001']});
+  ok((await message())==='Đã dựng 2 tường.' && await page.locator('#remove-walls').isEnabled(),'sau khi dựng: Xóa tường tầng này bấm được');
+  await page.click('#remove-walls');
+  ok((await last('walls_remove')).level==='sl_00000001','Xóa tường gửi mã tầng');
   await page.click('[data-tab=grid]');
 
   // Lỗi xem trước
