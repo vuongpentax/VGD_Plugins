@@ -773,7 +773,7 @@
   // Đổi tầng từ tab Mặt bằng: giống các ô chọn tầng ở tab khác.
   function setLevelFromPlan(id) {
     state.level = id; state.selected = null; state.selectedBeam = null; state.selectedWall = null; state.openWall = null;
-    renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); changed();
+    renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); syncPlanLevels(); changed();
   }
 
   function switchTab(tab) {

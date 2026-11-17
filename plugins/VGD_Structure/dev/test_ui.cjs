@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.10.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.10.0-beta.2','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -568,8 +568,10 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(d0.view.s>0.01 && d0.size.w>300 && d0.size.h>200,'tự vừa khung lần đầu, canvas có kích thước');
   const col=F.preview_all_cells.columns.items[0].center,c0=await pix(col[0],col[1]);
   ok(c0[1]>c0[0] && c0[1]>c0[2] && c0[1]>150,'pixel tại tâm cột có màu xanh lá (cột được vẽ trên canvas)');
-  ok(await page.locator('#pv-bar select option').count()===F.state.levels.length && (await page.locator('#pv-bar select').inputValue())===F.state.levels[0].id,'ô chọn tầng liệt kê đủ tầng, đang chọn tầng hiện hành');
-  ok(await page.locator('#pv-bar .pv-tool:disabled').count()>=10 && await page.locator('#pv-bar .pv-tool[data-tool=select]').isEnabled(),'công cụ vẽ / sửa hiện nhưng khóa (làm ở cột mốc sau); Chọn và Kéo dùng được');
+  ok(await page.locator('#pv-tabs .pv-tab').count()===F.state.levels.length && (await page.locator('#pv-tabs [aria-selected=true]').getAttribute('data-level'))===F.state.levels[0].id,'tab theo tầng: đủ số tầng, đang chọn tầng hiện hành');
+  ok(await page.locator('#pv-top .pv-ic[data-tool=select]').isEnabled() && await page.locator('#pv-top .pv-ic[data-tool=pan]').isEnabled() && await page.locator('#pv-side .pv-ic:disabled').count()===16 && await page.locator('#pv-side .pv-ic:not(:disabled)').count()===0,'cột công cụ bên trái: 16 nút vẽ khóa (làm ở cột mốc sau); thanh trên có Chọn và Kéo dùng được');
+  ok(await page.locator('#pv-side .pv-side-grp > i').allInnerTexts().then(a=>a.join('|'))==='Thiết kế|Vẽ 2D|Ghi chú','cột công cụ chia nhóm Thiết kế, Vẽ 2D, Ghi chú');
+  ok((await page.locator('#pv-props').innerText()).includes('Tầng 1') && (await page.locator('#pv-props').innerText()).includes('Cao độ sàn'),'bảng Thuộc tính chưa chọn gì: hiện thông tin tầng');
   // Thu phóng quanh con trỏ: điểm dưới con trỏ đứng yên
   const box=await page.locator('#pv-canvas').boundingBox(),px=box.x+300,py=box.y+200,wBefore=await page.evaluate(([x,y])=>window.VGDPlan.toWorld(x,y),[300,200]);
   await page.mouse.move(px,py);await page.mouse.wheel(0,-300);await wait(80);
@@ -594,16 +596,25 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const csp=await page.evaluate(([x,y])=>window.VGDPlan.toScreen(x,y),[col[0],col[1]]);
   await page.mouse.move(box.x+csp[0],box.y+csp[1]);await wait(50);
   ok(/Cột 1-A/.test(await page.locator('#pv-hint').innerText()) && /X -?\d+\s+Y -?\d+ mm/.test(await page.locator('#pv-xy').innerText()),'rê lên cột: hiện mã, loại, kích thước và tọa độ con trỏ');
+  // Chọn bằng bấm: bảng Thuộc tính hiện phần tử
+  await page.mouse.click(box.x+csp[0],box.y+csp[1]);await wait(50);
+  ok((await dbg()).selected==='Cột 1-A' && /Rộng × sâu/.test(await page.locator('#pv-props').innerText()),'bấm cột: chọn, bảng Thuộc tính hiện loại và kích thước');
+  await page.mouse.move(box.x+5,box.y+5);await page.mouse.click(box.x+5,box.y+5);await wait(50);
+  ok((await dbg()).selected===null && (await page.locator('#pv-props').innerText()).includes('Cao độ sàn'),'bấm chỗ trống: bỏ chọn, bảng về thông tin tầng');
+  await page.mouse.click(box.x+csp[0],box.y+csp[1]);await page.keyboard.press('Escape');
+  ok((await dbg()).selected===null,'Esc bỏ chọn');
+  await page.click('#pv-props-btn');ok(await page.locator('#pv-props').isHidden(),'nút Thuộc tính ẩn bảng');await page.click('#pv-props-btn');
+  await page.click('#pv-layers-btn');ok(await page.locator('#pv-layers').isVisible(),'nút Hiển thị mở danh sách lớp');
   // Tắt lớp
-  await page.uncheck('[data-layer=column]');await page.mouse.move(box.x+csp[0]+1,box.y+csp[1]);await wait(50);
+  await page.uncheck('[data-layer=column]');await page.mouse.click(box.x+5,box.y+5);await page.mouse.move(box.x+csp[0]+1,box.y+csp[1]);await wait(50);
   const c1=await pix(col[0],col[1]);
   ok(!(c1[1]>c1[0] && c1[1]>c1[2] && c1[1]>150) && !/Cột/.test(await page.locator('#pv-hint').innerText()),'tắt lớp Cột: không vẽ và không bắt cột nữa');
-  await page.check('[data-layer=column]');await page.check('[data-layer=ceiling]');await wait(30);
+  await page.click('#pv-layers-btn');await page.check('[data-layer=column]');await page.check('[data-layer=ceiling]');await wait(30);
   ok((await dbg()).visible.ceiling===true,'bật lớp Trần');
-  await page.uncheck('[data-layer=ceiling]');
+  await page.uncheck('[data-layer=ceiling]');await page.mouse.click(box.x+5,box.y+5);
   // Đổi tầng từ mặt bằng: gửi xem trước mới và đồng bộ ô chọn tầng tab khác
   await clear();
-  await page.selectOption('#pv-bar select',F.state.levels[1].id);await wait(300);
+  await page.click('#pv-tabs .pv-tab:nth-child(2)');await wait(300);
   ok((await last('grid_preview')).level===F.state.levels[1].id,'đổi tầng trên mặt bằng: gửi xem trước cho tầng mới');
   await receive('preview',F.preview_top);
   ok((await dbg()).counts.column===undefined,'tầng trên cùng: không có cột trên mặt bằng');
