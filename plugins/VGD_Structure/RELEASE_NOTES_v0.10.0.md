@@ -7,4 +7,5 @@ Cột mốc P1: tab **Mặt bằng** (cửa sổ vẽ mặt bằng kiểu CAD, g
 - Thao tác: cuộn để thu phóng quanh con trỏ, chuột giữa hoặc H để kéo, F vừa khung, Space về công cụ Chọn; bật / tắt từng lớp; đổi tầng bằng tab (đồng bộ với các tab khác); rê chuột để xem thông tin phần tử và tọa độ.
 - Công cụ vẽ kết cấu và sửa kiểu CAD đã bố trí sẵn nhưng khóa; làm ở các cột mốc sau. Chưa sửa dữ liệu từ mặt bằng.
 - P2: **chọn** bằng khung (trong / cắt), Shift, Ctrl+A; **bắt điểm** (đầu mút, giao điểm, trung điểm, trên cạnh / trục / đường gióng); **đo** khoảng cách, Δx, Δy, góc (Shift khóa ngang / dọc, gõ số + Enter); **đường gióng** song song hoặc qua hai điểm (riêng từng tầng, chỉ để xem, không lưu).
+- **Phím tắt kiểu Revit** (gõ liên tiếp các chữ: WA, DR, WN, CL, BM, GR, ZE, ME, RP, MV, CO, RO...), bảng Phím tắt sửa được và lưu theo máy; **quy ước chọn của Revit** (Ctrl thêm, Shift bớt, Tab chuyển phần tử chồng nhau). Phím Revit ghi theo trí nhớ, chưa đối chiếu với Revit thật.
 - Chưa xác minh trong SketchUp thật (cửa sổ HtmlDialog thật, hiệu năng canvas với nhiều phần tử).

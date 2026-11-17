@@ -1,15 +1,16 @@
-# VGD Structure 0.10.0-beta.3
+# VGD Structure 0.10.0-beta.4
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
 
 **Cột mốc P1 và P2: tab Mặt bằng** (cửa sổ vẽ mặt bằng, giai đoạn 2, `docs/vgd_structure/PLAN.md` mục 12). Hiện mới **xem, chọn, bắt điểm, đo, đường gióng**; chưa sửa dữ liệu từ mặt bằng. Bố cục theo cửa sổ mặt bằng của VTBim: thanh trên (hoàn tác, Chọn và đo, Sửa, Bắt điểm, Xóa đường gióng, Hiển thị lớp, Vừa khung, ẩn / hiện Thuộc tính), **tab theo từng tầng**, cột công cụ bên trái chia nhóm (Thiết kế, Vẽ 2D, Ghi chú), bảng **Thuộc tính**, thanh trạng thái (gợi ý, tọa độ mm, tỉ lệ, ô gõ số). Canvas vẽ lưới trục, sàn, trần (mặc định ẩn), dầm, tường, cửa (có cánh mở), cột.
-- **Xem:** cuộn = thu phóng quanh con trỏ, chuột giữa hoặc H = kéo, F = vừa khung, Space = công cụ Chọn.
-- **Chọn:** bấm = chọn một, Shift + bấm = thêm / bớt, kéo trái→phải = khung trong (chỉ hình nằm trọn trong khung, nét liền xanh), kéo phải→trái = khung cắt (hình chạm khung, nét đứt xanh lá), Ctrl+A = chọn mọi phần tử đang hiện, Esc = bỏ chọn. Chọn nhiều thì bảng Thuộc tính đếm theo loại.
+- **Phím tắt kiểu Revit:** gõ **liên tiếp các chữ, không giữ phím** (ví dụ WA = Tường, ZE = vừa khung, ME = đo, RP = đường gióng, SO = bật / tắt bắt điểm, PP = bảng Thuộc tính, VG = hiển thị lớp, KS = bảng phím tắt; lệnh vẽ và sửa như WA, DR, WN, CL, BM, GR, MV, CO, RO, MM, OF, TR, DE, LI, DI, TX, EL đã có phím nhưng chưa chạy, báo rõ). Gõ sai chữ thứ hai thì chữ đó được tính là chữ đầu của phím mới; phím là phần đầu của phím khác (ví dụ M và MV) thì chờ khoảng 1 giây rồi chạy. **Bảng phím tắt (nút bàn phím hoặc KS) sửa được**, không cho trùng phím, nút "Đặt lại mặc định"; phím lưu theo máy (localStorage của cửa sổ, chưa xác minh trong SketchUp thật). Cột "Nguồn": "Revit" là phím mặc định của Revit **theo trí nhớ, chưa đối chiếu với Revit cài trên máy** (sai thì sửa trong bảng), "Tự đặt" là lệnh Revit không có phím mặc định (sàn, trần, polyline, chữ nhật, đường tròn, cung).
+- **Xem:** cuộn = thu phóng quanh con trỏ, chuột giữa hoặc nút Kéo = kéo, ZE = vừa khung, Esc = về công cụ Chọn (Esc lần nữa bỏ chọn).
+- **Chọn (quy ước Revit):** bấm = chọn một, **Ctrl + bấm = thêm**, **Shift + bấm = bớt**, kéo trái→phải = khung trong (chỉ hình nằm trọn trong khung, nét liền xanh), kéo phải→trái = khung cắt (hình chạm khung, nét đứt xanh lá), Ctrl / Shift + kéo khung = thêm / bớt, **Tab = chuyển giữa các phần tử chồng nhau** dưới con trỏ (Shift+Tab ngược lại), Ctrl+A = chọn mọi phần tử đang hiện. Chọn nhiều thì bảng Thuộc tính đếm theo loại.
 - **Bắt điểm** (khi dùng Đo và Đường gióng, nút nam châm bật / tắt): trong 10 px màn hình, ưu tiên đầu mút (ô vuông xanh lá), giao điểm (dấu X đỏ), trung điểm (tam giác cam), trên cạnh / trục / đường gióng (vòng tròn xanh dương); hiện tên điểm bắt và hít đúng tọa độ.
 - **Đo:** bấm hai điểm, hiện khoảng cách, Δx, Δy, góc (độ, ngược chiều kim đồng hồ từ trục X); Shift = khóa ngang / dọc; gõ độ dài + Enter ở ô gõ số = đo theo độ dài về phía con trỏ.
-- **Đường gióng (G):** bấm một nét (cạnh, trục hoặc đường gióng khác) rồi bấm điểm hoặc gõ khoảng cách + Enter (về phía con trỏ) = gióng song song; bấm một điểm đầu mút / giao điểm rồi điểm thứ hai = gióng qua hai điểm. Đường gióng riêng từng tầng, bắt điểm được, chỉ để xem (không in, không ghi vào model, mất khi đóng cửa sổ); nút Xóa đường gióng xóa hết của tầng.
+- **Đường gióng (RP):** bấm một nét (cạnh, trục hoặc đường gióng khác) rồi bấm điểm hoặc gõ khoảng cách + Enter (về phía con trỏ) = gióng song song; bấm một điểm đầu mút / giao điểm rồi điểm thứ hai = gióng qua hai điểm. Đường gióng riêng từng tầng, bắt điểm được, chỉ để xem (không in, không ghi vào model, mất khi đóng cửa sổ); nút Xóa đường gióng xóa hết của tầng.
 Các công cụ vẽ kết cấu, vẽ 2D, ghi chú, sửa và hoàn tác đã bố trí sẵn nhưng khóa, làm ở cột mốc P3 đến P5.
 
 **Cột mốc 8: cửa đi và cửa sổ** (trên nền lưới trục, tầng, cột, dầm, tường, sàn, trần, đề xuất, dựng tất cả và nối VGD BIM). Còn phải làm trước khi phát hành: tường nhiều lớp và nối góc, hoàn thiện, cầu thang, mái... (kế hoạch giai đoạn 2, `docs/vgd_structure/PLAN.md` mục 11).
@@ -68,7 +69,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.10.0-beta.3.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.10.0-beta.4.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.10.0-beta.3','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.10.0-beta.4','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -585,13 +585,13 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const dp=await dbg();
   ok(Math.abs((dp.view.cx-dv.view.cx)+80/dv.view.s)<1 && Math.abs((dp.view.cy-dv.view.cy)-40/dv.view.s)<1,'kéo chuột giữa: mặt bằng dời đúng theo chuột');
   // Công cụ Kéo bằng phím H và nút
-  await page.keyboard.press('h');ok((await dbg()).tool==='pan' && (await page.locator('[data-tool=pan]').getAttribute('aria-pressed'))==='true','phím H chọn công cụ Kéo');
+  await page.click('[data-tool=pan]');ok((await dbg()).tool==='pan' && (await page.locator('[data-tool=pan]').getAttribute('aria-pressed'))==='true','nút Kéo chọn công cụ Kéo');
   await page.mouse.move(px,py);await page.mouse.down();await page.mouse.move(px-50,py,{steps:3});await page.mouse.up();
   ok(Math.abs((await dbg()).view.cx-(dp.view.cx+50/dp.view.s))<1,'công cụ Kéo: kéo chuột trái dời mặt bằng');
-  await page.keyboard.press(' ');ok((await dbg()).tool==='select','Space về công cụ Chọn');
+  await page.keyboard.press('Escape');ok((await dbg()).tool==='select','Esc về công cụ Chọn (Modify)');
   // Vừa khung
-  await page.keyboard.press('f');await wait(50);
-  const df=await dbg();ok(Math.abs(df.view.s-d0.view.s)<1e-9,'phím F vừa khung: về đúng khung ban đầu');
+  await page.keyboard.press('z');await page.keyboard.press('e');await wait(50);
+  const df=await dbg();ok(Math.abs(df.view.s-d0.view.s)<1e-9,'gõ ZE (Zoom to Fit): về đúng khung ban đầu');
   // Rê chuột lên cột: hiện thông tin
   const csp=await page.evaluate(([x,y])=>window.VGDPlan.toScreen(x,y),[col[0],col[1]]);
   await page.mouse.move(box.x+csp[0],box.y+csp[1]);await wait(50);
@@ -620,10 +620,10 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok((await page.locator('#pv-props').innerText()).includes('Đã chọn '+sel.length+' phần tử'),'chọn nhiều: bảng Thuộc tính hiện số phần tử đã chọn');
   await page.mouse.click(box.x+5,box.y+5);
   const p1c=await scr(k1.center[0],k1.center[1]),p2c=await scr(k2.center[0],k2.center[1]);
-  await page.mouse.click(p1c[0],p1c[1]);await page.keyboard.down('Shift');await page.mouse.click(p2c[0],p2c[1]);await page.keyboard.up('Shift');
-  ok(JSON.stringify((await dbg()).selection)==='["Cột 1-A","Cột 2-A"]','Shift + bấm: thêm vào lựa chọn');
+  await page.mouse.click(p1c[0],p1c[1]);await page.keyboard.down('Control');await page.mouse.click(p2c[0],p2c[1]);await page.keyboard.up('Control');
+  ok(JSON.stringify((await dbg()).selection)==='["Cột 1-A","Cột 2-A"]','Ctrl + bấm: thêm vào lựa chọn (quy ước Revit)');
   await page.keyboard.down('Shift');await page.mouse.click(p2c[0],p2c[1]);await page.keyboard.up('Shift');
-  ok(JSON.stringify((await dbg()).selection)==='["Cột 1-A"]','Shift + bấm phần tử đã chọn: bỏ khỏi lựa chọn');
+  ok(JSON.stringify((await dbg()).selection)==='["Cột 1-A"]','Shift + bấm phần tử đã chọn: bớt khỏi lựa chọn (quy ước Revit)');
   await page.mouse.click(box.x+5,box.y+5);
   await page.keyboard.press('Control+a');
   const dAll=await dbg(),total=Object.keys(dAll.counts).filter(k=>dAll.visible[k==='opening'?'opening':k]).reduce((n,k)=>n+dAll.counts[k],0);
@@ -684,7 +684,62 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await receive('preview',F.preview_all_cells);await page.click('#pv-tabs .pv-tab:nth-child(1)');await wait(300);await receive('preview',F.preview_all_cells);
   ok((await dbg()).guides===3,'quay lại tầng 1: đường gióng còn (kể cả khi xem trước được tính lại)');
   await page.click('#pv-guide-clear');ok((await dbg()).guides===0,'nút Xóa đường gióng: xóa hết của tầng');
-  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await page.keyboard.press(' ');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  // Phím tắt kiểu Revit
+  const type=async s=>{for(const ch of s)await page.keyboard.press(ch.toLowerCase());};
+  ok((await page.locator('[data-tool=measure] kbd').innerText())==='ME' && (await page.locator('[data-tool=measure]').getAttribute('title')).includes('(ME)') && (await page.locator('[data-tool=wall] kbd').innerText())==='WA' && (await page.locator('#pv-fit kbd').innerText())==='ZE','nút công cụ hiện phím tắt Revit (ME, WA, ZE) ở góc và trong gợi ý');
+  await type('me');ok((await dbg()).tool==='measure','gõ ME: công cụ Đo');
+  await type('rp');ok((await dbg()).tool==='guide','gõ RP: công cụ Đường gióng (Reference Plane)');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  await type('so');ok((await dbg()).snapOn===false,'gõ SO: tắt bắt điểm');await type('so');ok((await dbg()).snapOn===true,'gõ SO lần nữa: bật lại');
+  await type('pp');ok(await page.locator('#pv-props').isHidden(),'gõ PP: ẩn bảng Thuộc tính');await type('pp');ok(await page.locator('#pv-props').isVisible(),'gõ PP lần nữa: hiện lại');
+  await type('vg');ok(await page.locator('#pv-layers').isVisible(),'gõ VG: mở danh sách lớp hiển thị');await type('vg');ok(await page.locator('#pv-layers').isHidden(),'gõ VG lần nữa: đóng');
+  await type('wa');ok(/Tường \(Wall\) \(WA\).*cột mốc sau/.test(await page.locator('#pv-hint').innerText()) && (await dbg()).tool==='select','gõ WA: lệnh Tường chưa làm, báo rõ và không đổi công cụ');
+  await page.mouse.move(box.x+300,box.y+200);await page.mouse.wheel(0,-600);await wait(60);const zoomed=(await dbg()).view.s;
+  await type('wze');await wait(60);
+  ok(Math.abs((await dbg()).view.s-d0.view.s)<1e-9 && zoomed>d0.view.s,'gõ sai chữ thứ hai (W, Z, E): bỏ phím sai và vẫn nhận ZE (vừa khung)');
+  await type('q');ok((await dbg()).chord==='' ,'chữ đầu không thuộc phím nào: bỏ qua');
+  // Bảng phím tắt chỉnh được
+  await type('ks');ok(await page.locator('#pv-keys').isVisible() && await page.locator('#pv-keys input.pv-key').count()>=30,'gõ KS: mở bảng Phím tắt, liệt kê đủ lệnh');
+  const keyInput=id=>page.locator(`#pv-keys input[data-cmd=${id}]`);
+  await keyInput('fit').fill('WA');
+  ok((await dbg()).keymap.fit==='ZE' && /Trùng với .Tường/.test(await page.locator('#pv-keys tr:has(input[data-cmd=fit]) .pv-key-msg').innerText()),'đặt phím trùng WA: báo trùng với Tường và KHÔNG áp dụng');
+  await keyInput('fit').fill('1z!');ok((await dbg()).keymap.fit==='Z' && (await keyInput('fit').inputValue())==='Z','gõ ký tự lạ: chỉ giữ chữ A–Z');
+  await keyInput('fit').fill('ZE');
+  await keyInput('measure').fill('MX');
+  ok((await dbg()).keymap.measure==='MX' && (await page.locator('[data-tool=measure] kbd').innerText())==='MX','đổi phím Đo thành MX: áp dụng ngay và nút đổi nhãn');
+  await page.evaluate(()=>window.VGDPlan.reloadKeys());
+  ok((await dbg()).keymap.measure==='MX' && (await keyInput('measure').inputValue())==='MX','phím đã đổi được lưu và nạp lại sau khi mở lại');
+  await page.keyboard.press('Escape');ok(await page.locator('#pv-keys').isHidden(),'Esc đóng bảng phím tắt (khi đang gõ trong ô)');
+  await type('mx');ok((await dbg()).tool==='measure','phím mới MX chạy lệnh Đo');await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  await type('me');ok((await dbg()).tool==='select','phím cũ ME không còn chạy Đo sau khi đổi');
+  // Phím trùng đầu: chờ thêm chữ
+  await page.click('#pv-keys-btn');await keyInput('pan').fill('M');
+  ok(/Trùng đầu/.test(await page.locator('#pv-keys tr:has(input[data-cmd=pan]) .pv-key-msg').innerText()),'phím M trùng đầu với MV / MX: có cảnh báo (không cấm)');
+  await page.keyboard.press('Escape');await type('m');ok((await dbg()).chord==='M' && (await dbg()).tool==='select','gõ M: chờ chữ tiếp theo (còn phím dài hơn bắt đầu bằng M)');
+  await page.waitForTimeout(1100);ok((await dbg()).tool==='pan' && (await dbg()).chord==='','hết thời gian chờ: chạy phím M (Kéo)');
+  await page.keyboard.press('Escape');
+  await page.click('#pv-keys-btn');await page.click('#pv-keys-reset');
+  ok((await dbg()).keymap.measure==='ME' && (await dbg()).keymap.pan==='' && (await keyInput('measure').inputValue())==='ME','Đặt lại mặc định: trả về phím gốc');
+  await page.keyboard.press('Escape');
+  // Quy ước chọn Revit: Ctrl thêm, Shift bớt, kéo khung; Tab chuyển phần tử chồng nhau
+  await page.keyboard.press('Control+a');const allN=(await dbg()).selection.length;
+  await page.keyboard.down('Shift');await dragBox([k1.center[0]-k1.w/2-m,k1.center[1]+k1.d/2+m],[k1.center[0]+k1.w/2+m,k1.center[1]-k1.d/2-m]);await page.keyboard.up('Shift');
+  sel=(await dbg()).selection;ok(sel.length===allN-1 && !sel.includes('Cột 1-A') && sel.includes('Cột 2-A'),'Shift + kéo khung: bớt cột 1-A khỏi lựa chọn đang có');
+  await page.keyboard.press('Escape');await page.mouse.click(box.x+5,box.y+5);
+  await dragBox([k1.center[0]-k1.w/2-m,k1.center[1]+k1.d/2+m],[k1.center[0]+k1.w/2+m,k1.center[1]-k1.d/2-m]);
+  await page.keyboard.down('Control');await dragBox([k2.center[0]-k2.w/2-m,k2.center[1]+k2.d/2+m],[k2.center[0]+k2.w/2+m,k2.center[1]-k2.d/2-m]);await page.keyboard.up('Control');
+  ok(JSON.stringify((await dbg()).selection)==='["Cột 1-A","Cột 2-A"]','Ctrl + kéo khung: thêm vào lựa chọn đang có');
+  await page.mouse.click(box.x+5,box.y+5);
+  await page.mouse.move(p1c[0]+2,p1c[1]+1);await wait(40);
+  ok((await dbg()).hoverCount>=2 && /^Cột 1-A/.test((await dbg()).hover),'rê lên cột đè trên sàn: nhận ra nhiều phần tử chồng nhau, phần tử trên cùng là cột');
+  await page.keyboard.press('Tab');await wait(30);
+  ok(/^Sàn/.test((await dbg()).hover) && /Tab/.test(await page.locator('#pv-hint').innerText()),'Tab: chuyển sang phần tử bên dưới (sàn), gợi ý hiện số phần tử chồng');
+  await page.mouse.click(p1c[0]+2,p1c[1]+1);
+  ok((await dbg()).selection.length===1 && /^Sàn/.test((await dbg()).selection[0]),'bấm khi đang chọn bằng Tab: chọn đúng phần tử đã chuyển tới');
+  await page.keyboard.press('Shift+Tab');await page.mouse.move(p1c[0]+3,p1c[1]+1);await wait(30);
+  ok(/^Cột 1-A/.test((await dbg()).hover),'rê sang vị trí khác: Tab quay lại mặc định (phần tử trên cùng)');
+  await page.mouse.click(box.x+5,box.y+5);await page.keyboard.press('Escape');
   // Tắt lớp
   await page.click('#pv-layers-btn');await page.uncheck('[data-layer=column]');await page.mouse.click(box.x+5,box.y+5);await page.mouse.move(box.x+csp[0]+1,box.y+csp[1]);await wait(50);
   const c1=await pix(col[0],col[1]);

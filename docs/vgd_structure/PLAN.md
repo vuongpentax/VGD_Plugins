@@ -154,15 +154,18 @@ Tài liệu tham khảo: `docs/reference/vtbim/` (phần Ruby mã hóa, JS của
 
 **Cách thao tác học từ VTBim:** thanh công cụ nhóm (Chọn và đo, Sửa, Vẽ kết cấu, Vẽ nét, Kích thước); phím tắt một chữ (M, Q, O, T, E, W, D, L, R, C…); gõ số rồi Enter để nhập chính xác (độ dài, góc, "5x" = mảng, "/5" = chia đều); kéo khung trái→phải = chọn trọn, phải→trái = chọn cắt; Shift thêm/bớt chọn hoặc khóa hướng; Esc hủy; Space = công cụ Chọn; ống hút/ống nhả thuộc tính; bảng Properties theo công cụ hoặc đối tượng đang chọn; Undo/Redo; Zoom Extents (F); bắt điểm (đầu mút, giữa, giao, trục).
 
+**Hướng Revit (chủ dự án chốt 17/11/2026):** cửa sổ mặt bằng xây theo cách làm của Revit. Đã chốt: (1) phím tắt kiểu Revit, gõ liên tiếp các chữ, thay hẳn phím cũ, có bảng phím tắt chỉnh được (ĐÃ LÀM, 0.10.0-beta.4; phím Revit ghi theo trí nhớ, chưa đối chiếu với Revit thật); (2) quy ước chọn của Revit: Ctrl thêm, Shift bớt, Tab chuyển phần tử chồng nhau (ĐÃ LÀM); (3) **thanh tùy chọn** (Options Bar) hiện khi chọn công cụ vẽ: loại, cao, đường tim, vẽ chuỗi; (4) bảng **Thuộc tính có chọn Loại** và sửa thông số riêng của phần tử đang chọn; (5) **kích thước tạm thời**: chọn phần tử thì hiện số đo tới trục / phần tử gần nhất, bấm vào số để gõ giá trị mới; (6) **cây dự án** (Project Browser): tầng, mặt bằng, loại cột / dầm / tường / cửa dạng cây.
+
 **Rủi ro cần biết trước:** dữ liệu Structure hiện gắn theo **lưới trục** (cột ở giao trục, dầm và tường theo nhịp giữa hai trục, sàn theo ô). Vẽ tường hay dầm đi xiên hoặc lệch trục chưa biểu diễn được. Hướng đề xuất: công cụ vẽ **bắt vào lưới**; thêm trục phụ (đường gióng thành trục) khi cần vị trí lệch; tường xiên để cột mốc sau. "Nét 2D tự do" (line, polyline, chữ, kích thước) lưu thành lớp **ghi chú theo tầng**, không phải phần tử dựng, để dữ liệu dựng vẫn sạch.
 
 | # | Cột mốc | Nội dung | Kiểm tra |
 |---|---|---|---|
 | P1 | Khung mặt bằng | Tab Mặt bằng dùng canvas, pan/zoom/fit, thanh công cụ nhóm, thanh nhập số (VCB), Undo/Redo, chọn tầng; hiển thị lưới, cột, dầm, tường, cửa, sàn từ dữ liệu | test UI vẽ đúng, zoom/pan |
 | P2 (ĐÃ LÀM, 0.10.0-beta.3; đường gióng chưa lưu vào dữ liệu, thành trục phụ ở P3) | Chọn, bắt điểm, đo, đường gióng | Chọn đơn/khung/Shift, bắt điểm, đo khoảng cách và góc, đường gióng song song | test UI, test bắt điểm |
-| P3 | Vẽ kết cấu | Lưới, cột, dầm, tường, sàn, cửa bằng bấm điểm, bảng Properties; ghi thẳng vào dữ liệu tầng | test dữ liệu sau khi vẽ khớp thao tác bằng tay |
-| P4 | Sửa kiểu CAD | Move, Copy, Rotate, Mirror, Offset, Trim, Stretch, mảng, copy/paste, ống hút/nhả | test từng lệnh trên dữ liệu |
-| P5 | Nét 2D tự do và ghi chú | Line, Polyline, Rect, Circle, Arc, chữ, kích thước, cốt cao độ (lớp ghi chú theo tầng) | test lưu và nạp lại |
+| P3 | Vẽ kết cấu kiểu Revit | Lưới, cột, dầm, tường, sàn, cửa bằng bấm điểm; **thanh tùy chọn**; bảng Thuộc tính sửa được (chọn Loại, thông số riêng); hoàn tác / làm lại; ghi thẳng vào dữ liệu tầng; đường gióng đổi thành trục phụ | test dữ liệu sau khi vẽ khớp thao tác bằng tay |
+| P4 | Sửa kiểu Revit | Move, Copy, Rotate, Mirror, Offset, Trim, Align, Delete, mảng, ống hút (Match); **kích thước tạm thời** | test từng lệnh trên dữ liệu |
+| P5 | Cây dự án | Project Browser: tầng, mặt bằng, loại cột / dầm / tường / cửa; thay các tab lẻ khi đủ chức năng | test UI |
+| P5b | Nét 2D và ghi chú | Line, Polyline, Rect, Circle, Arc, chữ, kích thước, cốt cao độ (lớp ghi chú theo tầng) | test lưu và nạp lại |
 | P6 | Tương tác SketchUp ↔ cửa sổ | Chọn trong SketchUp thì sáng trên mặt bằng và ngược lại; chọn điểm bằng công cụ trong SketchUp | chỉ kiểm được trong SketchUp thật |
 
 Mỗi cột mốc có test và RBZ beta để thử. Chưa phát hành.

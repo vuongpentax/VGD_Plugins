@@ -16,23 +16,39 @@
     ceiling: 'M2 6h20M2 16h20M6 6v10M12 6v10M18 6v10', door: 'M7 3l11-2v21H7ZM10 12h1', window: 'M4 4l16-2v18L4 22ZM12 3v18M4 12l16-2',
     line: 'M4 20L20 4', polyline: 'M3 18l6-10 5 7 7-11', rect: 'M3 6h18v12H3Z', circle: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z', arc: 'M4 18a10 10 0 0 1 16 0',
     dim: 'M3 8v8M21 8v8M3 12h18M6 10l-3 2 3 2M18 10l3 2-3 2', text: 'M5 5h14M12 5v14M9 19h6', level: 'M12 3l5 8h-10ZM4 18h16M4 21h16',
+    copy: 'M3 3h11v11H3ZM8 8h13v13H8', keys: 'M2 6h20v12H2ZM6 10h1M10 10h1M14 10h1M18 10h1M7 14h10',
     undo: 'M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3', redo: 'M15 14l5-5-5-5M20 9H9a5 5 0 0 0 0 10h3', fit: 'M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5M14 14l3 3M15 11a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
     snap: 'M6 3v8a6 6 0 0 0 12 0V3M6 7h4M14 7h4', guideclr: 'M3 3l18 9M6 16l12 5M15 3l6 6M21 3l-6 6',
     props: 'M3 4h18v16H3ZM9 4v16M12 8h6M12 12h6M12 16h4', eye: 'M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6'
   };
   // [id, tên, phím, gợi ý, dùng được ở cột mốc này?]
   var TOP_GROUPS = [
-    ['Chọn & đo', [['select', 'Chọn', '', 'Chọn (Space): bấm = chọn một, Shift = thêm / bớt, kéo trái→phải = khung trong (nét liền xanh), phải→trái = khung cắt (nét đứt xanh lá), Ctrl+A = chọn tất cả', 1], ['pan', 'Kéo', 'H', 'Kéo mặt bằng (H). Chuột giữa luôn kéo được', 1], ['guide', 'Đường gióng', 'G', 'Đường gióng (G): bấm một nét rồi bấm điểm = gióng song song qua điểm đó (gõ khoảng cách + Enter); bấm điểm đầu mút / giao điểm rồi điểm thứ hai = gióng qua hai điểm. Esc hủy', 1], ['measure', 'Đo', '', 'Đo: bấm hai điểm, hiện khoảng cách, Δx, Δy, góc (Shift = khóa ngang / dọc; gõ số + Enter = đo theo độ dài)', 1]]],
-    ['Sửa', [['move', 'Move', 'M'], ['rotate', 'Rotate', 'Q'], ['mirror', 'Mirror', ''], ['offset', 'Offset', 'O'], ['trim', 'Trim', 'T'], ['eraser', 'Tẩy', 'E'], ['delete', 'Xóa', 'Del']]]
+    ['Chọn & đo', [['select', 'Chọn', '', 'Chọn (Modify): bấm = chọn một, Ctrl + bấm = thêm, Shift + bấm = bớt, kéo trái→phải = khung trong (nét liền xanh), phải→trái = khung cắt (nét đứt xanh lá), Tab = chuyển giữa các phần tử chồng nhau, Ctrl+A = chọn tất cả, Esc = hủy / bỏ chọn', 1],
+      ['pan', 'Kéo', '', 'Kéo mặt bằng. Chuột giữa luôn kéo được', 1],
+      ['guide', 'Đường gióng (Reference Plane)', '', 'Đường gióng: bấm một nét rồi bấm điểm = gióng song song qua điểm đó (gõ khoảng cách + Enter); bấm điểm đầu mút / giao điểm rồi điểm thứ hai = gióng qua hai điểm. Esc hủy', 1],
+      ['measure', 'Đo (Measure)', '', 'Đo: bấm hai điểm, hiện khoảng cách, Δx, Δy, góc (Shift = khóa ngang / dọc; gõ số + Enter = đo theo độ dài)', 1]]],
+    ['Sửa', [['move', 'Move', ''], ['copy', 'Copy', ''], ['rotate', 'Rotate', ''], ['mirror', 'Mirror', ''], ['offset', 'Offset', ''], ['trim', 'Trim', ''], ['delete', 'Xóa', '']]]
   ];
   var SIDE_GROUPS = [
-    ['Thiết kế', [['grid', 'Lưới trục', ''], ['column', 'Cột', 'C'], ['beam', 'Dầm', 'B'], ['wall', 'Tường', 'W'], ['slab', 'Sàn', ''], ['ceiling', 'Trần', ''], ['door', 'Cửa đi', 'D'], ['window', 'Cửa sổ', 'N']]],
-    ['Vẽ 2D', [['line', 'Line', 'L'], ['polyline', 'Polyline', ''], ['rect', 'Chữ nhật', 'R'], ['circle', 'Đường tròn', ''], ['arc', 'Cung', 'A']]],
-    ['Ghi chú', [['dim', 'Kích thước', 'K'], ['text', 'Chữ', ''], ['level', 'Cốt cao độ', '']]]
+    ['Thiết kế', [['grid', 'Lưới trục', ''], ['column', 'Cột', ''], ['beam', 'Dầm', ''], ['wall', 'Tường', ''], ['slab', 'Sàn', ''], ['ceiling', 'Trần', ''], ['door', 'Cửa đi', ''], ['window', 'Cửa sổ', '']]],
+    ['Vẽ 2D', [['line', 'Line', ''], ['polyline', 'Polyline', ''], ['rect', 'Chữ nhật', ''], ['circle', 'Đường tròn', ''], ['arc', 'Cung', '']]],
+    ['Ghi chú', [['dim', 'Kích thước', ''], ['text', 'Chữ', ''], ['level', 'Cốt cao độ', '']]]
   ];
+  // Bảng phím tắt kiểu Revit: gõ liên tiếp các chữ (không giữ phím), ví dụ WA = Tường. [id, tên lệnh, phím mặc định, nguồn]
+  // Nguồn "Revit" = phím mặc định của Revit theo trí nhớ (chưa đối chiếu với bản Revit cài trên máy); "Tự đặt" = Revit không có phím mặc định cho lệnh này. Sửa được trong bảng Phím tắt.
+  var COMMANDS = [
+    ['fit', 'Vừa khung (Zoom to Fit)', 'ZE', 'Revit'], ['pan', 'Kéo mặt bằng', '', ''], ['guide', 'Đường gióng (Reference Plane)', 'RP', 'Revit'], ['measure', 'Đo (Measure)', 'ME', 'Revit'],
+    ['snap', 'Bật / tắt bắt điểm (Snaps Off)', 'SO', 'Revit'], ['props', 'Bảng Thuộc tính', 'PP', 'Revit'], ['vis', 'Hiển thị lớp (Visibility / Graphics)', 'VG', 'Revit'], ['keys', 'Bảng phím tắt', 'KS', 'Revit'],
+    ['wall', 'Tường (Wall)', 'WA', 'Revit'], ['door', 'Cửa đi (Door)', 'DR', 'Revit'], ['window', 'Cửa sổ (Window)', 'WN', 'Revit'], ['column', 'Cột (Column)', 'CL', 'Revit'], ['beam', 'Dầm (Beam)', 'BM', 'Revit'],
+    ['grid', 'Lưới trục (Grid)', 'GR', 'Revit'], ['slab', 'Sàn (Floor)', 'FL', 'Tự đặt'], ['ceiling', 'Trần (Ceiling)', 'CE', 'Tự đặt'],
+    ['move', 'Move', 'MV', 'Revit'], ['copy', 'Copy', 'CO', 'Revit'], ['rotate', 'Rotate', 'RO', 'Revit'], ['mirror', 'Mirror (chọn trục)', 'MM', 'Revit'], ['offset', 'Offset', 'OF', 'Revit'], ['trim', 'Trim / Extend', 'TR', 'Revit'], ['delete', 'Xóa (Delete)', 'DE', 'Revit'],
+    ['line', 'Line', 'LI', 'Revit'], ['polyline', 'Polyline', 'PL', 'Tự đặt'], ['rect', 'Chữ nhật', 'RC', 'Tự đặt'], ['circle', 'Đường tròn', 'CC', 'Tự đặt'], ['arc', 'Cung', 'AC', 'Tự đặt'],
+    ['dim', 'Kích thước (Dimension)', 'DI', 'Revit'], ['text', 'Chữ (Text)', 'TX', 'Revit'], ['level', 'Cốt cao độ (Spot Elevation)', 'EL', 'Revit']
+  ];
+  var KEYS_STORE = 'vgd_structure_plan_keys', CHORD_MS = 900;
   var MIN_SCALE = 0.001, MAX_SCALE = 5; // px trên mm
   var opts, root, canvas, ctx, status = {}, levelList = [], currentId = null, selection = [], propsOpen = true;
-  var guides = {}, measure = null, draft = null, snap = null, snapOn = true, note = '', press = null, box = null, shiftKey = false;
+  var hoverCount = 0, keymap = {}, chord = '', chordTimer = null, tabIdx = 0, hoverSig = '', guides = {}, measure = null, draft = null, snap = null, snapOn = true, note = '', press = null, box = null, shiftKey = false;
   var SNAP_PX = 10, DRAG_PX = 4;
   var view = {cx: 0, cy: 0, s: 0.05}, data = null, boundsKey = '', fitted = false, tool = 'select', shapes = [], hover = null, cursor = null, drag = null;
   var visible = {grid: true, slab: true, ceiling: false, beam: true, wall: true, opening: true, column: true};
@@ -50,8 +66,8 @@
   }
   function svg(name) { return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + ICON[name] + '"/></svg>'; }
   function iconButton(parent, t, extra) {
-    var live = !!t[4], b = el('button', {type: 'button', class: 'pv-ic' + (extra || ''), 'data-tool': t[0], 'aria-label': t[1], title: live ? t[3] : t[1] + (t[2] ? ' (' + t[2] + ')' : '') + ' — có ở cột mốc sau, chưa dùng được'}, parent);
-    b.innerHTML = svg(t[0]); if (t[2]) el('kbd', {text: t[2]}, b);
+    var live = !!t[4], b = el('button', {type: 'button', class: 'pv-ic' + (extra || ''), 'data-tool': t[0], 'aria-label': t[1], title: live ? t[3] : t[1] + ' — có ở cột mốc sau, chưa dùng được'}, parent);
+    b.innerHTML = svg(t[0]); el('kbd', {}, b); b.setAttribute('data-title', b.title);
     if (live) b.onclick = function () { setTool(t[0]); }; else b.disabled = true;
     return b;
   }
@@ -80,7 +96,8 @@
     });
     eye.onclick = function (e) { e.stopPropagation(); var open = menu.hidden; menu.hidden = !open; eye.setAttribute('aria-expanded', String(open)); };
     document.addEventListener('click', function (e) { if (!menu.hidden && !menu.contains(e.target)) { menu.hidden = true; eye.setAttribute('aria-expanded', 'false'); } });
-    var fit = el('button', {type: 'button', class: 'pv-ic', id: 'pv-fit', title: 'Vừa khung (F)'}, bar); fit.innerHTML = svg('fit') + '<kbd>F</kbd>'; fit.onclick = fitView;
+    var fit = el('button', {type: 'button', class: 'pv-ic', id: 'pv-fit', title: 'Vừa khung'}, bar); fit.innerHTML = svg('fit') + '<kbd></kbd>'; fit.onclick = fitView;
+    var kb = el('button', {type: 'button', class: 'pv-ic', id: 'pv-keys-btn', title: 'Bảng phím tắt'}, bar); kb.innerHTML = svg('keys') + '<kbd></kbd>'; kb.onclick = toggleKeys;
     var pr = el('button', {type: 'button', class: 'pv-ic on', id: 'pv-props-btn', title: 'Thuộc tính: ẩn / hiện bảng bên trái', 'aria-pressed': 'true'}, bar); pr.innerHTML = svg('props');
     pr.onclick = function () { propsOpen = !propsOpen; pr.classList.toggle('on', propsOpen); pr.setAttribute('aria-pressed', String(propsOpen)); $('pv-props').hidden = !propsOpen; resize(); };
   }
@@ -122,6 +139,82 @@
     canvas.style.cursor = t === 'pan' ? 'grab' : (t === 'select' ? 'default' : 'crosshair');
   }
 
+  // ---- Phím tắt kiểu Revit ----
+  function defaultKeymap() { var m = {}; COMMANDS.forEach(function (c) { m[c[0]] = c[2]; }); return m; }
+  function validKey(k) { return typeof k === 'string' && /^[A-Z]{0,3}$/.test(k); }
+  function owner(key, except) { var o = null; COMMANDS.forEach(function (c) { if (key && c[0] !== except && keymap[c[0]] === key) o = c; }); return o; }
+  function prefixOf(key, except) { // lệnh khác có phím trùng đầu với `key` (một phím là phần đầu của phím kia)
+    var o = null; COMMANDS.forEach(function (c) { var k = keymap[c[0]]; if (key && k && c[0] !== except && k !== key && (k.indexOf(key) === 0 || key.indexOf(k) === 0)) o = c; }); return o;
+  }
+  function loadKeys() {
+    keymap = defaultKeymap();
+    try {
+      var saved = JSON.parse(localStorage.getItem(KEYS_STORE) || '{}'), seen = {}, next = Object.assign({}, keymap);
+      Object.keys(saved).forEach(function (id) { if (id in next && validKey(saved[id])) next[id] = saved[id]; });
+      Object.keys(next).forEach(function (id) { if (next[id]) seen[next[id]] = (seen[next[id]] || 0) + 1; });
+      if (Object.keys(seen).every(function (k) { return seen[k] === 1; })) keymap = next; // bảng lưu bị hỏng (trùng phím): dùng mặc định
+    } catch (x) { /* không có localStorage: dùng phím mặc định */ }
+  }
+  function saveKeys() { try { localStorage.setItem(KEYS_STORE, JSON.stringify(keymap)); } catch (x) { /* không lưu được: chỉ giữ trong phiên này */ } }
+  function keyOf(id) { return keymap[id] || ''; }
+  function refreshBadges() {
+    root.querySelectorAll('.pv-ic[data-tool]').forEach(function (b) {
+      var k = keyOf(b.getAttribute('data-tool')), kbd = b.querySelector('kbd'); if (kbd) kbd.textContent = k; b.title = b.getAttribute('data-title') + (k ? ' (' + k + ')' : '');
+    });
+    [['pv-fit', 'fit', 'Vừa khung'], ['pv-snap', 'snap', 'Bắt điểm (bật / tắt)'], ['pv-props-btn', 'props', 'Thuộc tính: ẩn / hiện bảng bên trái'], ['pv-layers-btn', 'vis', 'Hiển thị: bật / tắt từng lớp'], ['pv-keys-btn', 'keys', 'Bảng phím tắt']].forEach(function (x) {
+      var b = $(x[0]); if (!b) return; var k = keyOf(x[1]), kbd = b.querySelector('kbd'); if (kbd) kbd.textContent = k; b.title = x[2] + (k ? ' (' + k + ')' : '');
+    });
+  }
+  function runCommand(id) {
+    var c = COMMANDS.filter(function (x) { return x[0] === id; })[0]; if (!c) return;
+    if (id === 'fit') fitView(); else if (id === 'snap') $('pv-snap').click(); else if (id === 'props') $('pv-props-btn').click(); else if (id === 'keys') toggleKeys();
+    else if (id === 'vis') { var m = $('pv-layers'); if (m.hidden) $('pv-layers-btn').click(); else m.hidden = true; }
+    else {
+      var b = root.querySelector('.pv-ic[data-tool="' + id + '"]');
+      if (b && !b.disabled) setTool(id); else { note = c[1] + (keyOf(id) ? ' (' + keyOf(id) + ')' : '') + ': làm ở cột mốc sau, chưa dùng được.'; draw(); }
+    }
+  }
+  function resetChord() { chord = ''; clearTimeout(chordTimer); }
+  function commandForKey(k) { var o = null; COMMANDS.forEach(function (c) { if (k && keymap[c[0]] === k) o = c[0]; }); return o; }
+  // Gõ liên tiếp các chữ: khớp đúng một phím và không còn phím nào dài hơn bắt đầu bằng nó thì chạy ngay; còn có thể dài hơn thì chờ thêm chữ (CHORD_MS).
+  function onLetter(ch) {
+    clearTimeout(chordTimer);
+    var before = chord.length; chord += ch;
+    var exact = commandForKey(chord), longer = COMMANDS.some(function (c) { var k = keymap[c[0]]; return k && k.length > chord.length && k.indexOf(chord) === 0; });
+    if (exact && !longer) { resetChord(); note = ''; runCommand(exact); draw(); return; }
+    if (longer) { note = 'Phím tắt: ' + chord + '…'; draw(); chordTimer = setTimeout(function () { var ex = commandForKey(chord); resetChord(); note = ''; if (ex) runCommand(ex); draw(); }, CHORD_MS); return; }
+    resetChord(); note = '';
+    if (before > 0) onLetter(ch); else draw(); // chữ đầu không thuộc phím nào: bỏ qua
+  }
+  function toggleKeys() {
+    var d = $('pv-keys'); d.hidden = !d.hidden; resetChord();
+    if (!d.hidden) { var first = d.querySelector('input'); if (first) first.focus(); } else canvas.focus();
+  }
+  function buildKeys() {
+    var box = $('pv-keys'); if (box) box.remove();
+    box = el('div', {id: 'pv-keys', class: 'pv-keys', role: 'dialog', 'aria-label': 'Phím tắt', hidden: ''}, root);
+    var head = el('div', {class: 'pv-keys-head'}, box); el('h3', {text: 'Phím tắt (kiểu Revit)'}, head);
+    var close = el('button', {type: 'button', 'aria-label': 'Đóng'}, head); close.textContent = '×'; close.onclick = toggleKeys;
+    el('p', {class: 'pv-keys-note', text: 'Gõ liên tiếp các chữ, không giữ phím: ví dụ WA = Tường. Phím lưu theo máy này. Nguồn "Revit" là phím mặc định của Revit theo trí nhớ, chưa đối chiếu với Revit cài trên máy: nếu sai thì sửa ở đây. Chữ A–Z, tối đa 3 chữ, không trùng nhau.'}, box);
+    var table = el('table', {class: 'pv-keys-table'}, box);
+    COMMANDS.forEach(function (c) {
+      var tr = el('tr', {}, table); el('td', {text: c[1]}, tr);
+      var cell = el('td', {}, tr), inp = el('input', {type: 'text', maxlength: '3', class: 'pv-key', 'data-cmd': c[0], 'aria-label': 'Phím tắt ' + c[1], spellcheck: 'false', autocomplete: 'off'}, cell);
+      inp.value = keyOf(c[0]); var msg = el('span', {class: 'pv-key-msg'}, cell);
+      el('td', {text: c[3] || '—', class: 'pv-key-src'}, tr);
+      inp.oninput = function () {
+        var v = inp.value.toUpperCase().replace(/[^A-Z]/g, ''); inp.value = v; msg.className = 'pv-key-msg'; msg.textContent = ''; inp.classList.remove('bad');
+        var dup = owner(v, c[0]);
+        if (dup) { inp.classList.add('bad'); msg.className = 'pv-key-msg bad'; msg.textContent = 'Trùng với “' + dup[1] + '”, chưa áp dụng'; return; }
+        keymap[c[0]] = v; saveKeys(); refreshBadges();
+        var pre = prefixOf(v, c[0]); if (pre) { msg.className = 'pv-key-msg warn'; msg.textContent = 'Trùng đầu với ' + keyOf(pre[0]) + ' (' + pre[1] + '): phải chờ thêm một chút'; }
+      };
+      inp.onkeydown = function (e) { if (e.key === 'Escape') { toggleKeys(); e.preventDefault(); } e.stopPropagation(); };
+    });
+    var foot = el('div', {class: 'pv-keys-foot'}, box), reset = el('button', {type: 'button', id: 'pv-keys-reset'}, foot); reset.textContent = 'Đặt lại mặc định';
+    reset.onclick = function () { keymap = defaultKeymap(); saveKeys(); refreshBadges(); box.querySelectorAll('input.pv-key').forEach(function (i) { i.value = keyOf(i.getAttribute('data-cmd')); i.classList.remove('bad'); i.nextSibling.textContent = ''; }); };
+  }
+
   // ---- Dữ liệu ----
   function worldBounds(d) {
     var xs = [], ys = [];
@@ -152,9 +245,17 @@
     }
     return c;
   }
-  function pick(x, y) {
-    for (var i = shapes.length - 1; i >= 0; i--) { var s = shapes[i]; if (visible[s.layer] && inside(s.poly, x, y)) return s; }
-    return null;
+  // Mọi phần tử đang hiện chứa điểm (x, y), trên cùng trước. Tab chuyển giữa các phần tử chồng nhau (như Revit).
+  function pickAll(x, y) {
+    var out = [];
+    for (var i = shapes.length - 1; i >= 0; i--) { var s = shapes[i]; if (visible[s.layer] && inside(s.poly, x, y)) out.push(s); }
+    return out;
+  }
+  function pickAt(x, y) {
+    var list = pickAll(x, y), sig = list.map(function (v) { return v.title; }).join('|');
+    if (sig !== hoverSig) { hoverSig = sig; tabIdx = 0; }
+    hoverCount = list.length;
+    return list.length ? list[tabIdx % list.length] : null;
   }
 
   function bboxOf(poly) {
@@ -344,7 +445,7 @@
   function updateStatus() {
     var shown = snap && snapOn && usesSnap() ? snap.p : cursor, sel = visibleSelection();
     status.xy.textContent = shown ? 'X ' + Math.round(shown[0]) + '   Y ' + Math.round(shown[1]) + ' mm' : '';
-    status.hint.textContent = note || toolHint() || (hover ? hover.text : sel.length === 1 ? sel[0].text : sel.length ? 'Đã chọn ' + sel.length + ' phần tử.' : (data && data.ok ? 'Bấm một phần tử để xem thuộc tính. Cuộn = thu phóng, chuột giữa hoặc H = kéo, F = vừa khung.' : ''));
+    status.hint.textContent = note || toolHint() || (hover ? hover.text + (hoverCount > 1 ? ' · Tab: đổi sang phần tử chồng (' + hoverCount + ')' : '') : sel.length === 1 ? sel[0].text : sel.length ? 'Đã chọn ' + sel.length + ' phần tử.' : (data && data.ok ? 'Bấm một phần tử để xem thuộc tính. Cuộn = thu phóng, chuột giữa hoặc H = kéo, F = vừa khung.' : ''));
     status.zoom.textContent = '1 px = ' + (1 / view.s).toFixed(1) + ' mm';
   }
 
@@ -356,16 +457,20 @@
   }
   // Shift khóa hướng đo về ngang hoặc dọc.
   function constrain(a, b) { if (!shiftKey) return b; return Math.abs(b[0] - a[0]) >= Math.abs(b[1] - a[1]) ? [b[0], a[1]] : [a[0], b[1]]; }
-  function selectAt(w, add) {
-    var hit = pick(w[0], w[1]);
-    if (!hit) { if (!add) selection = []; }
-    else if (add) { var i = selection.indexOf(hit); if (i >= 0) selection.splice(i, 1); else selection.push(hit); }
-    else selection = [hit];
+  // Quy ước chọn của Revit: Ctrl + bấm / kéo = thêm, Shift + bấm / kéo = bớt, không phím = chọn lại.
+  function selMode(e) { return e.ctrlKey || e.metaKey ? 'add' : e.shiftKey ? 'remove' : ''; }
+  function applySel(hits, mode) {
+    if (mode === 'add') hits.forEach(function (x) { if (selection.indexOf(x) < 0) selection.push(x); });
+    else if (mode === 'remove') selection = selection.filter(function (x) { return hits.indexOf(x) < 0; });
+    else selection = hits.slice();
   }
-  function selectBox(b, add) {
+  function selectAt(w, mode) {
+    var hit = pickAt(w[0], w[1]);
+    if (!hit) { if (!mode) selection = []; } else applySel([hit], mode);
+  }
+  function selectBox(b, mode) {
     var win = b.x1 >= b.x0, p0 = toWorld(Math.min(b.x0, b.x1), Math.max(b.y0, b.y1)), p1 = toWorld(Math.max(b.x0, b.x1), Math.min(b.y0, b.y1)), r = [p0[0], p0[1], p1[0], p1[1]];
-    var hit = shapes.filter(function (x) { return visible[x.layer] && (win ? inWindow(x.poly, r) : crossesRect(x.poly, r)); });
-    if (add) hit.forEach(function (x) { var i = selection.indexOf(x); if (i >= 0) selection.splice(i, 1); else selection.push(x); }); else selection = hit;
+    applySel(shapes.filter(function (x) { return visible[x.layer] && (win ? inWindow(x.poly, r) : crossesRect(x.poly, r)); }), mode);
   }
   function guideClick(pt) {
     if (!draft) {
@@ -383,7 +488,7 @@
     if (e.button === 1 || (e.button === 0 && tool === 'pan')) { drag = {x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy}; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; e.preventDefault(); return; }
     if (e.button !== 0) return;
     var pt = pointer(e);
-    if (tool === 'select') { var sp = point(e); press = {x: sp[0], y: sp[1], shift: e.shiftKey}; canvas.setPointerCapture(e.pointerId); }
+    if (tool === 'select') { var sp = point(e); press = {x: sp[0], y: sp[1], mode: selMode(e)}; canvas.setPointerCapture(e.pointerId); }
     else if (tool === 'measure') { if (!measure || measure.done) measure = {a: pt, b: null, done: false}; else { measure.b = constrain(measure.a, pt); measure.done = true; } }
     else if (tool === 'guide') guideClick(pt);
     draw(); renderProps();
@@ -396,15 +501,15 @@
       if (box) { box.x1 = p[0]; box.y1 = p[1]; draw(); return; }
     }
     pointer(e);
-    var h = tool === 'select' ? pick(cursor[0], cursor[1]) : null;
+    var h = tool === 'select' ? pickAt(cursor[0], cursor[1]) : null;
     if (h !== hover) { hover = h; renderProps(); }
     draw();
   }
   function onUp(e) {
     if (drag) { drag = null; try { canvas.releasePointerCapture(e.pointerId); } catch (x) { /* đã thả */ } canvas.style.cursor = tool === 'pan' ? 'grab' : 'default'; return; }
     if (press) {
-      var add = press.shift; press = null;
-      if (box) { selectBox(box, add); box = null; } else selectAt(world(e), add);
+      var mode = press.mode; press = null;
+      if (box) { selectBox(box, mode); box = null; } else selectAt(world(e), mode);
       try { canvas.releasePointerCapture(e.pointerId); } catch (x) { /* đã thả */ }
       draw(); renderProps();
     }
@@ -429,19 +534,25 @@
   function onKey(e) {
     if (root.hidden) return;
     var t = e.target; if (t && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) return;
-    var k = e.key.toLowerCase();
-    if (e.ctrlKey || e.metaKey) { if (k === 'a') { selection = shapes.filter(function (x) { return visible[x.layer]; }); draw(); renderProps(); e.preventDefault(); } return; }
+    if (!$('pv-keys').hidden) { if (e.key === 'Escape') toggleKeys(); return; }
+    var k = e.key;
+    if (e.ctrlKey || e.metaKey) { if (k.toLowerCase() === 'a') { selection = shapes.filter(function (x) { return visible[x.layer]; }); draw(); renderProps(); e.preventDefault(); } return; }
     if (e.altKey) return;
-    if (k === 'f') { fitView(); e.preventDefault(); } else if (k === 'h') { setTool('pan'); e.preventDefault(); } else if (k === 'g') { setTool('guide'); e.preventDefault(); }
-    else if (k === ' ') { setTool('select'); e.preventDefault(); }
-    else if (k === 'escape') { if (draft || measure || box) { draft = null; measure = null; box = null; press = null; note = ''; draw(); } else { setTool('select'); selection = []; renderProps(); draw(); } }
+    if (k === 'Escape') {
+      resetChord(); note = '';
+      if (draft || measure || box) { draft = null; measure = null; box = null; press = null; draw(); } else { setTool('select'); selection = []; renderProps(); draw(); }
+    } else if (k === 'Tab') {
+      if (tool === 'select' && cursor) {
+        var n = pickAll(cursor[0], cursor[1]).length; if (n > 1) { tabIdx = (tabIdx + (e.shiftKey ? -1 : 1) + n) % n; hover = pickAt(cursor[0], cursor[1]); renderProps(); draw(); e.preventDefault(); }
+      }
+    } else if (/^[a-z]$/i.test(k)) { onLetter(k.toUpperCase()); e.preventDefault(); }
   }
 
   var api = {
     init: function (options) {
       opts = options; root = $('tab-plan'); canvas = $('pv-canvas'); ctx = canvas.getContext('2d');
       status = {xy: $('pv-xy'), hint: $('pv-hint'), zoom: $('pv-zoom')};
-      buildTop($('pv-top')); buildSide($('pv-side')); setTool('select'); renderProps();
+      loadKeys(); buildTop($('pv-top')); buildSide($('pv-side')); buildKeys(); refreshBadges(); setTool('select'); renderProps();
       var box2 = $('pv-vcb'); box2.disabled = false; box2.placeholder = 'Gõ số + Enter';
       box2.onkeydown = function (e) { if (e.key === 'Enter') { if (vcb(box2.value)) { box2.value = ''; canvas.focus(); } e.preventDefault(); } else if (e.key === 'Escape') { box2.value = ''; canvas.focus(); } e.stopPropagation(); };
       canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointermove', onMove); canvas.addEventListener('pointerup', onUp); canvas.addEventListener('pointercancel', onUp);
@@ -465,11 +576,12 @@
       if (!fitted && !root.hidden) { resize(); } else draw();
     },
     show: function () { resize(); },
+    reloadKeys: function () { loadKeys(); buildKeys(); refreshBadges(); },
     fit: fitView,
     // Dùng cho test: trạng thái xem và số phần tử đang vẽ.
     debug: function () {
       var counts = {}; shapes.forEach(function (s) { counts[s.layer] = (counts[s.layer] || 0) + 1; });
-      return {view: {cx: view.cx, cy: view.cy, s: view.s}, size: size, tool: tool, counts: counts, hover: hover && hover.text, selected: selection.length === 1 ? selection[0].title : (selection.length ? selection.length + ' phần tử' : null), selection: selection.map(function (x) { return x.title; }), snap: snap && {p: snap.p, text: snap.text, rank: snap.rank}, guides: levelGuides().length, guideLines: levelGuides().map(function (g) { return {p: g.p, d: g.d}; }), measure: measure && {a: measure.a, b: measure.b, done: measure.done}, draft: draft && (draft.ref ? 'ref' : 'first'), snapOn: snapOn, level: currentId, tabs: levelList.length, visible: Object.assign({}, visible), axes: data && data.ok ? data.axes.length : 0};
+      return {view: {cx: view.cx, cy: view.cy, s: view.s}, size: size, tool: tool, counts: counts, hover: hover && hover.text, selected: selection.length === 1 ? selection[0].title : (selection.length ? selection.length + ' phần tử' : null), selection: selection.map(function (x) { return x.title; }), snap: snap && {p: snap.p, text: snap.text, rank: snap.rank}, guides: levelGuides().length, guideLines: levelGuides().map(function (g) { return {p: g.p, d: g.d}; }), measure: measure && {a: measure.a, b: measure.b, done: measure.done}, draft: draft && (draft.ref ? 'ref' : 'first'), snapOn: snapOn, chord: chord, keymap: Object.assign({}, keymap), tabIdx: tabIdx, hoverCount: hoverCount, level: currentId, tabs: levelList.length, visible: Object.assign({}, visible), axes: data && data.ok ? data.axes.length : 0};
     },
     toScreen: toScreen, toWorld: toWorld
   };

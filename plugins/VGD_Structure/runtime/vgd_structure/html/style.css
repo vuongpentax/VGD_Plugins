@@ -153,3 +153,20 @@ main.plan-tab[hidden] { display: none; }
 .pv-status #pv-hint { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vgd-text); }
 .pv-status #pv-xy { min-width: 170px; font-variant-numeric: tabular-nums; }
 .pv-status #pv-vcb { width: 150px; height: 22px; }
+.plan-tab { position: relative; }
+.pv-keys { position: absolute; top: 44px; right: 10px; z-index: 30; width: 470px; max-width: calc(100% - 20px); max-height: calc(100% - 60px); overflow-y: auto; padding: 8px 12px 10px; background: var(--vgd-elevated); border: 1px solid var(--vgd-border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.28); }
+.pv-keys[hidden] { display: none; }
+.pv-keys-head { display: flex; align-items: center; justify-content: space-between; }
+.pv-keys-head h3 { margin: 0; font-size: 13px; }
+.pv-keys-head button { width: 26px; height: 26px; padding: 0; }
+.pv-keys-note { margin: 6px 0; font-size: 11px; color: var(--vgd-muted); }
+.pv-keys-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.pv-keys-table td { padding: 2px 4px; border-bottom: 1px solid var(--vgd-border); vertical-align: middle; }
+.pv-keys-table td:first-child { width: 52%; }
+.pv-key { width: 52px; height: 24px; text-transform: uppercase; text-align: center; font-weight: 700; }
+.pv-key.bad { border-color: var(--vgd-danger); }
+.pv-key-msg { display: block; font-size: 10px; }
+.pv-key-msg.bad { color: var(--vgd-danger); }
+.pv-key-msg.warn { color: var(--vgd-muted); }
+.pv-key-src { color: var(--vgd-muted); font-size: 11px; white-space: nowrap; }
+.pv-keys-foot { margin-top: 8px; text-align: right; }
