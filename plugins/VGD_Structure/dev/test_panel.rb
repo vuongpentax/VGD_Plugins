@@ -21,7 +21,7 @@ module UI
 end
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
 module VGD; module Structure; VERSION = '9.9.9'; end; end
-%w[core/schema core/grid core/axis_symbol core/column_types core/levels core/column_plan core/state core/preview model_store tag_store grid_tag grid_builder column_builder panel].each { |f| require File.join(ROOT, f) }
+%w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/levels core/column_plan core/beam_plan core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder panel].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 $model = Sketchup::Model.new
 panel = S::Panel.new
@@ -117,6 +117,41 @@ call(dlg, 'columns_remove', {'level' => levels[0]['id']})
 ok('xóa cột tầng 1: drawn_levels rỗng, nhóm biến mất', last_event(dlg, 'columns_built')['drawn_levels'] == [] && $model.entities.grep(Sketchup::Group).none? { |g| g.name == 'Cột - Tầng 1' })
 call(dlg, 'columns_remove', {'level' => levels[0]['id']})
 ok('xóa khi chưa có: báo, không lỗi', last_event(dlg, 'columns_built')['error'] == true)
+
+# Dầm (bắt đầu từ lưới mặc định, vì các thử nghiệm trước đã lưu lưới lớn vào model)
+call(dlg, 'grid_reset')
+st = last_event(dlg, 'state')
+ok('trạng thái có loại dầm mặc định D20x40 và danh sách tầng dầm đã dựng rỗng', st['beam_types'].map { |t| t['name'] } == ['D20x40'] && st['drawn_beam_levels'] == [] && st['levels'][0].key?('beam_type') && st['levels'][0]['picks'].key?('beams'))
+spans = S::Grid.spans(S::Grid.normalize!(st['grid'])).map { |sp| sp[:ref] }
+blevels = st['levels'].map { |l| JSON.parse(JSON.generate(l)) }
+blevels[0]['picks'] = {'columns' => refs.each_with_object({}) { |r, h| h[r] = {} }, 'beams' => spans.each_with_object({}) { |r, h| h[r] = {} }}
+bfull = {'grid' => st['grid'], 'symbol' => st['symbol'], 'types' => st['types'], 'beam_types' => st['beam_types'], 'levels' => blevels, 'level' => blevels[0]['id']}
+call(dlg, 'grid_preview', bfull)
+pv = last_event(dlg, 'preview')
+ok('xem trước có phần dầm: 17 dầm, đỉnh 3480, đủ trường để vẽ, không cảnh báo', pv['beams']['count'] == 17 && pv['beams']['z_top'] == 3480.0 && pv['beams']['items'].first.keys.sort == %w[dir h length max min mode placement ref type_name w z_bottom z_top] && pv['beams']['issues'].empty?)
+call(dlg, 'grid_preview', bfull.merge('level' => blevels[1]['id']))
+pv = last_event(dlg, 'preview')
+ok('tầng trên cùng: báo không có dầm, lưới vẫn xem trước', pv['beams_error'].include?('tầng trên cùng') && !pv.key?('beams') && pv['axes'].size == 7)
+call(dlg, 'grid_preview', bfull.merge('beam_types' => [{'id' => 'bt_00000001', 'name' => 'X', 'w' => 5, 'h' => 400}]))
+pv = last_event(dlg, 'preview')
+ok('loại dầm sai: báo lỗi riêng, lưới vẫn xem trước', pv['ok'] && pv['levels_ok'] == false && pv['levels_error'].include?('rộng'))
+call(dlg, 'beams_build', {'state' => bfull, 'levels' => [blevels[0]['id']]})
+bb = last_event(dlg, 'beams_built')
+ok('dựng dầm tầng 1: 17 dầm, drawn_beam_levels có tầng 1, nhóm trong model', bb['message'].include?('17 dầm') && bb['drawn_beam_levels'] == [blevels[0]['id']] && $model.entities.grep(Sketchup::Group).any? { |g| g.name == 'Dầm - Tầng 1' })
+call(dlg, 'ready')
+ok('mở lại: đọc lựa chọn dầm và tầng đã dựng dầm từ model', (s2 = last_event(dlg, 'state')) && s2['levels'][0]['picks']['beams'].size == 17 && s2['drawn_beam_levels'] == [blevels[0]['id']])
+call(dlg, 'beams_build', {'state' => bfull, 'levels' => [blevels[1]['id']]})
+ok('dựng dầm tầng trên cùng: báo lỗi, không đụng model', last_event(dlg, 'message')['error'] == true)
+call(dlg, 'beams_build', {'state' => 'x', 'levels' => ['sl_00000001']})
+ok('dữ liệu dựng dầm sai kiểu: báo lỗi, không văng', last_event(dlg, 'message')['error'] == true)
+three_b = blevels + [blevels[1].merge('id' => 'sl_00000003', 'name' => 'Tầng 3', 'elevation' => 7200.0)]
+call(dlg, 'picks_copy', {'grid' => st['grid'], 'types' => st['types'], 'beam_types' => st['beam_types'], 'levels' => three_b, 'from' => blevels[0]['id'], 'to' => blevels[1]['id'], 'kind' => 'beams'})
+cp = last_event(dlg, 'levels')
+ok('sao chép lựa chọn dầm: tầng đích có 17 dầm, thông báo ghi "dầm"', cp['levels'][1]['picks']['beams'].size == 17 && cp['levels'][1]['picks']['columns'].empty? && cp['message'].include?('dầm'))
+call(dlg, 'beams_remove', {'level' => blevels[0]['id']})
+ok('xóa dầm tầng 1: drawn_beam_levels rỗng, nhóm biến mất', last_event(dlg, 'beams_built')['drawn_beam_levels'] == [] && $model.entities.grep(Sketchup::Group).none? { |g| g.name == 'Dầm - Tầng 1' })
+call(dlg, 'beams_remove', {'level' => blevels[0]['id']})
+ok('xóa dầm khi chưa có: báo, không lỗi', last_event(dlg, 'beams_built')['error'] == true)
 
 # Tạo trục từ chuỗi nhịp
 call(dlg, 'grid_axes', {'dir' => 'x', 'text' => '4200, 3600*2'})

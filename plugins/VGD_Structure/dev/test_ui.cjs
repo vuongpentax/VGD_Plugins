@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.3.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.4.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -113,7 +113,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const lp2=await last('grid_preview');
   ok(lp2.types.length===2 && lp2.types[1].name==='C40x60' && lp2.types[1].w===400 && lp2.types[1].d===600 && /^ct_[0-9a-f]{8}$/.test(lp2.types[1].id) && /^sl_[0-9a-f]{8}$/.test(lp2.levels[2].id),'loại mới có mã ct_xxxxxxxx, tầng mới có mã sl_xxxxxxxx, kích thước gửi đúng');
   // loại mặc định cho tầng 1
-  await page.locator('#levels-table tr:nth-child(2) select').selectOption({label:'C40x60'});await wait();
+  await page.locator('#levels-table tr:nth-child(2) select:not(.beam-default)').selectOption({label:'C40x60'});await wait();
   ok((await last('grid_preview')).levels[0].column_type===lp2.types[1].id,'chọn loại cột mặc định của tầng 1: gửi mã loại');
   // xóa loại đang dùng: tầng quay về mặc định
   await page.locator('#types-table button.del').nth(1).click();await wait();
@@ -192,6 +192,80 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok((await last('columns_remove')).level==='sl_00000001','Xóa cột gửi mã tầng');
   await page.click('[data-tab=grid]');
   ok(await page.locator('#tab-grid').isVisible(),'quay về tab Lưới trục');
+
+
+  // ===== Loại dầm và tab Dầm =====
+  await receive('state',F.state);await receive('preview',F.preview);
+  await page.click('[data-tab=levels]');
+  const btNames=()=>page.locator('#beam-types-table tr td:nth-child(1) input').evaluateAll(l=>l.map(i=>i.value));
+  ok(JSON.stringify(await btNames())==='["D20x40"]' && await page.locator('#beam-types-table button.del').first().isDisabled(),'bảng loại dầm: D20x40, còn một loại thì không xóa được');
+  await clear();
+  await page.click('#add-beam-type');
+  ok(JSON.stringify(await btNames())==='["D20x40","Dầm 2"]','thêm loại dầm: tên Dầm 2');
+  await page.locator('#beam-types-table tr:nth-child(3) td:nth-child(1) input').fill('D30x60');
+  await page.locator('#beam-types-table tr:nth-child(3) td:nth-child(2) input').fill('300');
+  await page.locator('#beam-types-table tr:nth-child(3) td:nth-child(3) input').fill('600');await wait();
+  const bp1=await last('grid_preview');
+  ok(bp1.beam_types.length===2 && bp1.beam_types[1].name==='D30x60' && bp1.beam_types[1].w===300 && bp1.beam_types[1].h===600 && /^bt_[0-9a-f]{8}$/.test(bp1.beam_types[1].id),'loại dầm mới có mã bt_xxxxxxxx, gửi đúng kích thước');
+  await page.locator('#levels-table tr:nth-child(2) select.beam-default').selectOption({label:'D30x60'});await wait();
+  ok((await last('grid_preview')).levels[0].beam_type===bp1.beam_types[1].id && (await last('grid_preview')).levels[0].column_type===null,'chọn loại dầm mặc định của tầng 1: gửi beam_type (không đổi loại cột)');
+  await page.locator('#beam-types-table button.del').nth(1).click();await wait();
+  ok((await last('grid_preview')).beam_types.length===1 && (await last('grid_preview')).levels[0].beam_type===null,'xóa loại dầm đang dùng: tầng quay về loại đầu danh sách');
+  // Tab Dầm
+  await receive('state',F.state);await receive('preview',F.preview);
+  await page.click('[data-tab=beams]');
+  ok(await page.locator('#tab-beams').isVisible() && !(await page.locator('#tab-columns').isVisible()),'chuyển sang tab Dầm');
+  ok(await page.locator('#plan3 rect.beam').count()===2 && await page.locator('#plan3 rect.span').count()===15 && await page.locator('#plan3 rect.colref').count()===2,'mặt bằng dầm: 2 dầm đã chọn, 15 nhịp còn lại để bấm chọn, cột hiện mờ làm nền');
+  ok(/Tầng 1: 2 dầm, đỉnh dầm tại cao độ 3480 mm/.test(await page.locator('#beam-summary').innerText()),'tóm tắt dầm: số dầm, cao độ đỉnh');
+  ok((await page.locator('#beam-level-note').innerText()).includes('3480') && await page.locator('#build-beams').isEnabled() && await page.locator('#remove-beams').isDisabled(),'ghi chú đỉnh dầm; Dựng bấm được, Xóa khóa khi chưa dựng');
+  await clear();
+  await page.locator('#plan3 rect.span[data-ref="x:A:2-3"]').dispatchEvent('click');await wait();
+  const bk=await last('grid_preview');
+  ok(Object.keys(bk.levels[0].picks.beams).sort().join()==='x:A:2-3,x:B:1-2,y:2:A-B' && (await page.locator('#beam-ref').innerText())==='x:A:2-3' && await page.locator('#beam-editor').isVisible(),'bấm nhịp trống: chọn dầm, mở khung sửa, gửi lại xem trước');
+  await page.locator('#beam-p').selectOption('center');await wait();
+  ok(JSON.stringify((await last('grid_preview')).levels[0].picks.beams['x:A:2-3'])==='{"p":"center"}','đổi vị trí ngang thành tâm trên trục: gửi p = center');
+  await page.locator('#beam-p').selectOption('auto');await wait();
+  ok(JSON.stringify((await last('grid_preview')).levels[0].picks.beams['x:A:2-3'])==='{}','trả về theo quy ước: bỏ khóa p');
+  await page.locator('#beam-remove').click();await wait();
+  ok(!('x:A:2-3' in (await last('grid_preview')).levels[0].picks.beams) && await page.locator('#beam-editor').isHidden(),'bỏ dầm này: xóa khỏi lựa chọn');
+  await page.click('#beam-pick-edge');await wait();
+  const edgeKeys=Object.keys((await last('grid_preview')).levels[0].picks.beams);
+  ok(edgeKeys.length===2+10 && edgeKeys.includes('x:A:1-2') && edgeKeys.includes('y:4:B-C') && !edgeKeys.includes('x:B:2-3'),'chọn nhịp biên: thêm 10 nhịp biên (6 theo X trên trục A, C + 4 theo Y trên trục 1, 4) cùng 2 nhịp đã chọn');
+  await page.click('#beam-pick-all');await wait();
+  ok(Object.keys((await last('grid_preview')).levels[0].picks.beams).length===17 && JSON.stringify((await last('grid_preview')).levels[0].picks.beams['y:2:A-B'])==='{"p":"center"}','chọn mọi nhịp: 17 dầm, giữ kiểu đặt riêng đã đặt');
+  await page.click('#beam-pick-none');await wait();
+  ok(Object.keys((await last('grid_preview')).levels[0].picks.beams).length===0 && await page.locator('#build-beams').isDisabled(),'bỏ chọn hết: Dựng bị khóa');
+  await receive('state',F.state);await receive('preview',F.preview_all_beams);
+  ok(await page.locator('#plan3 rect.beam').count()===17 && await page.locator('#plan3 rect.span').count()===0,'xem trước 17 dầm: vẽ đủ 17 hình chữ nhật dầm');
+  const rb=await page.locator('#plan3 rect.beam').evaluateAll(l=>l.map(r=>({ref:r.getAttribute('data-ref'),x:Number(r.getAttribute('x')),y:Number(r.getAttribute('y')),w:Number(r.getAttribute('width')),h:Number(r.getAttribute('height'))})));
+  const bx=rb.find(r=>r.ref==='x:B:2-3'),by=rb.find(r=>r.ref==='y:1:A-B');
+  ok(bx.x===4350 && bx.w===3900 && bx.h===200 && bx.y===-3700,'dầm x:B:2-3 vẽ từ mặt cột (x = 4350) dài 3900, rộng 200, tâm y = 3600 (y SVG = -3700 cho mép trên)');
+  ok(by.x===0 && by.w===200 && by.y===-3450 && by.h===3150,'dầm biên y:1:A-B: mặt ngoài tại x = 0, từ mặt cột (y = 300) đến mặt cột (3450)');
+  await page.locator('#beam-level-select').selectOption('sl_00000002');
+  await receive('preview',F.preview_top);
+  ok(/tầng trên cùng/.test(await page.locator('#beam-summary').innerText()) && await page.locator('#build-beams').isDisabled() && await page.locator('#beam-pick-all').isDisabled(),'tầng trên cùng: báo chỉ có sàn, khóa nút dầm');
+  await page.locator('#beam-level-select').selectOption('sl_00000001');
+  await receive('preview',F.preview_bad_types);
+  ok(await page.locator('#beam-summary.error').count()===1,'lỗi loại / tầng hiện ở tab Dầm');
+  // Sao chép lựa chọn dầm, dựng, xóa
+  await receive('state',F.state);await receive('preview',F.preview);
+  await page.click('[data-tab=levels]');await page.click('#add-level');await page.click('[data-tab=beams]');
+  await page.locator('#beam-level-select').selectOption({index:1});await clear();
+  await page.locator('#beam-copy-from').selectOption({label:'Tầng 1'});await page.click('#beam-copy-picks');
+  const bcp=await last('picks_copy');
+  ok(bcp && bcp.kind==='beams' && bcp.from==='sl_00000001' && bcp.to==='sl_00000002' && bcp.beam_types.length===1 && bcp.levels[0].picks.beams['x:B:1-2'],'sao chép dầm: gửi kind = beams cùng loại dầm và tầng');
+  await receive('state',F.state);await receive('preview',F.preview);await clear();
+  await page.click('[data-tab=beams]');
+  await page.click('#build-beams');
+  const bb=await last('beams_build');
+  ok(bb && JSON.stringify(bb.levels)==='["sl_00000001"]' && bb.state.beam_types.length===1 && bb.state.levels[0].picks.beams['y:2:A-B'].p==='center','Dựng dầm tầng này: gửi toàn bộ dữ liệu (kể cả loại dầm)');
+  await clear();await page.click('#build-all-beams');
+  ok(JSON.stringify((await last('beams_build')).levels)==='["sl_00000001"]','Dựng dầm mọi tầng: chỉ tầng có dầm được chọn và không phải tầng trên cùng');
+  await receive('beams_built',{message:'Đã dựng 2 dầm.',drawn_beam_levels:['sl_00000001']});
+  ok((await message())==='Đã dựng 2 dầm.' && await page.locator('#remove-beams').isEnabled(),'sau khi dựng: Xóa dầm tầng này bấm được');
+  await page.click('#remove-beams');
+  ok((await last('beams_remove')).level==='sl_00000001','Xóa dầm gửi mã tầng');
+  await page.click('[data-tab=grid]');
 
   // Lỗi xem trước
   await receive('preview',F.error);

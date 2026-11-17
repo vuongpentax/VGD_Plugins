@@ -19,6 +19,8 @@ module VGD
         @dialog.add_action_callback('grid_axes') { |_ctx, payload| safely { grid_axes(JSON.parse(payload)) } }
         @dialog.add_action_callback('columns_build') { |_ctx, payload| safely { columns_build(JSON.parse(payload)) } }
         @dialog.add_action_callback('columns_remove') { |_ctx, payload| safely { columns_remove(JSON.parse(payload)) } }
+        @dialog.add_action_callback('beams_build') { |_ctx, payload| safely { beams_build(JSON.parse(payload)) } }
+        @dialog.add_action_callback('beams_remove') { |_ctx, payload| safely { beams_remove(JSON.parse(payload)) } }
         @dialog.add_action_callback('picks_copy') { |_ctx, payload| safely { picks_copy(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_reset') { |_ctx| safely { send_state(reset: true) } }
       end
@@ -47,8 +49,8 @@ module VGD
       def send_state(reset: false)
         model = Sketchup.active_model
         state = reset ? State.default.merge('saved' => false, 'removed' => 0) : ModelStore.read(model)
-        emit('state', {grid: state['grid'], symbol: state['symbol'], types: state['types'], levels: state['levels'], saved: state['saved'],
-                       drawn: !GridBuilder.find(model).nil?, drawn_levels: drawn_levels(model), version: VERSION})
+        emit('state', {grid: state['grid'], symbol: state['symbol'], types: state['types'], beam_types: state['beam_types'], levels: state['levels'], saved: state['saved'],
+                       drawn: !GridBuilder.find(model).nil?, drawn_levels: drawn_levels(model), drawn_beam_levels: drawn_beam_levels(model), version: VERSION})
         grid_preview(state.merge('level' => state['levels'].first['id']))
       end
 
@@ -58,6 +60,41 @@ module VGD
 
       def drawn_levels(model)
         ColumnBuilder.groups(model).map { |g| g.get_attribute(Schema::DICTIONARY, 'level') }
+      end
+
+      def drawn_beam_levels(model)
+        BeamBuilder.groups(model).map { |g| g.get_attribute(Schema::DICTIONARY, 'level') }
+      end
+
+      # Dựng dầm các tầng đã chọn (xem columns_build).
+      def beams_build(payload)
+        model = Sketchup.active_model
+        ids = payload['levels']
+        state = payload['state']
+        if ids.is_a?(Array) && state.is_a?(Hash)
+          clean = State.normalize!(state)
+          total = ids.uniq.sum { |id| (level = Levels.find(clean['levels'], id)) ? level['picks']['beams'].size : 0 }
+          if total > CONFIRM_COLUMNS && ::UI.messagebox("Sẽ dựng #{total} dầm. Tiếp tục?", MB_YESNO) != IDYES
+            return emit('message', {text: 'Đã hủy, chưa dựng dầm.'})
+          end
+        end
+        result = BeamBuilder.build(model, state, ids)
+        names = result.levels.map { |l| "#{l[:name]} (#{l[:count]} dầm)" }.join(', ')
+        note = result.issues.empty? ? '' : " Có #{result.issues.size} cảnh báo: #{result.issues.first(3).join(' ')}"
+        note += " Đã dọn #{result.removed_orphans} nhóm dầm của tầng không còn." if result.removed_orphans.positive?
+        emit('beams_built', {message: "Đã dựng #{result.total} dầm: #{names}.#{note}", drawn_beam_levels: drawn_beam_levels(model)})
+      rescue Grid::Error, AxisSymbol::Error, ColumnTypes::Error, BeamTypes::Error, Levels::Error, ColumnPlan::Error, BeamPlan::Error => error
+        emit('message', {text: error.message, error: true})
+      end
+
+      def beams_remove(payload)
+        model = Sketchup.active_model
+        id = payload['level']
+        count = BeamBuilder.remove(model, id.is_a?(String) ? id : nil)
+        message = count.zero? ? 'Model chưa có dầm do VGD Structure dựng.' : 'Đã xóa dầm khỏi model. Dữ liệu dầm đã chọn vẫn được giữ.'
+        emit('beams_built', {message: message, drawn_beam_levels: drawn_beam_levels(model), error: count.zero?})
+      rescue BeamPlan::Error => error
+        emit('message', {text: error.message, error: true})
       end
 
       # Dựng cột các tầng đã chọn (ids) từ trạng thái giao diện gửi lên; Ruby kiểm tra lại và lập kế hoạch trước khi đụng model.
@@ -77,7 +114,7 @@ module VGD
         note = result.issues.empty? ? '' : " Có #{result.issues.size} cảnh báo: #{result.issues.first(3).join(' ')}"
         note += " Đã dọn #{result.removed_orphans} nhóm cột của tầng không còn." if result.removed_orphans.positive?
         emit('columns_built', {message: "Đã dựng #{result.total} cột: #{names}.#{note}", drawn_levels: drawn_levels(model)})
-      rescue Grid::Error, AxisSymbol::Error, ColumnTypes::Error, Levels::Error, ColumnPlan::Error => error
+      rescue Grid::Error, AxisSymbol::Error, ColumnTypes::Error, BeamTypes::Error, Levels::Error, ColumnPlan::Error => error
         emit('message', {text: error.message, error: true})
       end
 
@@ -95,12 +132,14 @@ module VGD
       def picks_copy(payload)
         grid = Grid.normalize!(payload['grid'])
         types = ColumnTypes.normalize!(payload['types'])
-        levels, = Levels.normalize!(payload['levels'], grid, types)
-        copied = Levels.copy_picks(levels, payload['from'], payload['to'], grid, types)
+        beam_types = payload['beam_types'].nil? ? BeamTypes.default : BeamTypes.normalize!(payload['beam_types'])
+        levels, = Levels.normalize!(payload['levels'], grid, types, beam_types)
+        kind = payload['kind'] == 'beams' ? 'beams' : 'columns'
+        copied = Levels.copy_picks(levels, payload['from'], payload['to'], grid, types, kind, beam_types)
         from = Levels.find(levels, payload['from'])['name']
         to = Levels.find(levels, payload['to'])['name']
-        emit('levels', {levels: copied, message: "Đã sao chép lựa chọn cột từ “#{from}” sang “#{to}”."})
-      rescue Grid::Error, ColumnTypes::Error, Levels::Error => error
+        emit('levels', {levels: copied, message: "Đã sao chép lựa chọn #{kind == 'beams' ? 'dầm' : 'cột'} từ “#{from}” sang “#{to}”."})
+      rescue Grid::Error, ColumnTypes::Error, BeamTypes::Error, Levels::Error => error
         emit('message', {text: error.message, error: true})
       end
 

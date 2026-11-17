@@ -19,9 +19,10 @@ module VGD
 
       # Phần xem trước loại cột, tầng và cột của tầng đang xem. Lỗi dữ liệu tầng / loại cột báo riêng, không chặn xem trước lưới.
       def self.columns(grid, payload)
-        return {} unless payload.key?('levels') || payload.key?('types')
+        return {} unless payload.key?('levels') || payload.key?('types') || payload.key?('beam_types')
         types = payload['types'].nil? ? ColumnTypes.default : ColumnTypes.normalize!(payload['types'])
-        levels, removed = Levels.normalize!(payload['levels'].nil? ? Levels.default : payload['levels'], grid, types)
+        beam_types = payload['beam_types'].nil? ? BeamTypes.default : BeamTypes.normalize!(payload['beam_types'])
+        levels, removed = Levels.normalize!(payload['levels'].nil? ? Levels.default : payload['levels'], grid, types, beam_types)
         out = {levels_ok: true, removed: removed}
         begin
           plan = ColumnPlan.plan(grid, types, levels, payload['level'] || levels.first['id'])
@@ -30,8 +31,15 @@ module VGD
         rescue ColumnPlan::Error => error
           out[:columns_error] = error.message
         end
+        begin
+          plan = BeamPlan.plan(grid, types, beam_types, levels, payload['level'] || levels.first['id'])
+          out[:beams] = {level: plan[:level]['id'], level_name: plan[:level]['name'], z_top: plan[:z_top], issues: plan[:issues], count: plan[:items].size,
+                         items: plan[:items].map { |i| i.slice(:ref, :dir, :type_name, :w, :h, :length, :min, :max, :mode, :placement, :z_top, :z_bottom) }}
+        rescue BeamPlan::Error, ColumnPlan::Error => error
+          out[:beams_error] = error.message
+        end
         out
-      rescue ColumnTypes::Error, Levels::Error => error
+      rescue ColumnTypes::Error, BeamTypes::Error, Levels::Error => error
         {levels_ok: false, levels_error: error.message}
       end
     end

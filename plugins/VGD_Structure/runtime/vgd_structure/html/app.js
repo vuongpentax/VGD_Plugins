@@ -3,7 +3,8 @@
   'use strict';
   var LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'.split(''); // bỏ I và O, giống Grid::LETTERS ở Ruby
   var state = {origin: [0, 0], x: {first: 0, axes: []}, y: {first: 0, axes: []}, scale: 100, both: false, drawn: false, previewOk: false,
-               types: [], levels: [], level: null, selected: null, drawnLevels: [], preview: null, tab: 'grid'};
+               types: [], beamTypes: [], levels: [], level: null, selected: null, drawnLevels: [], drawnBeamLevels: [], selectedBeam: null, preview: null, tab: 'grid'};
+  var MODE_P = [['auto', 'Theo quy ước'], ['center', 'Tâm trên trục'], ['min', 'Cạnh nhỏ (nam / tây) tại trục'], ['max', 'Cạnh lớn (bắc / đông) tại trục']];
   var MODE_X = [['auto', 'Theo quy ước'], ['center', 'Tâm trên trục'], ['min', 'Cạnh tây tại trục (cột lùi sang đông)'], ['max', 'Cạnh đông tại trục (cột lùi sang tây)']];
   var MODE_Y = [['auto', 'Theo quy ước'], ['center', 'Tâm trên trục'], ['min', 'Cạnh nam tại trục (cột lùi lên bắc)'], ['max', 'Cạnh bắc tại trục (cột lùi xuống nam)']];
   var timer = null;
@@ -34,14 +35,17 @@
   }
   function payload() {
     return {grid: {origin: state.origin, x_axes: toAxes('x'), y_axes: toAxes('y')}, symbol: {scale: state.scale, both_ends: state.both},
-            types: state.types.map(function (t) { return {id: t.id, name: t.name, w: t.w, d: t.d}; }), levels: state.levels.map(toRubyLevel), level: state.level};
+            types: state.types.map(function (t) { return {id: t.id, name: t.name, w: t.w, d: t.d}; }),
+            beam_types: state.beamTypes.map(function (t) { return {id: t.id, name: t.name, w: t.w, h: t.h}; }), levels: state.levels.map(toRubyLevel), level: state.level};
   }
   function toRubyLevel(l) {
-    return {id: l.id, name: l.name, elevation: l.elevation, slab_thickness: l.slab, column_type: l.columnType || null, picks: {columns: clonePicks(l.picks)}};
+    return {id: l.id, name: l.name, elevation: l.elevation, slab_thickness: l.slab, column_type: l.columnType || null, beam_type: l.beamType || null,
+            picks: {columns: clonePicks(l.picks), beams: clonePicks(l.beamPicks)}};
   }
   function clonePicks(picks) { var out = {}; Object.keys(picks).forEach(function (k) { out[k] = Object.assign({}, picks[k]); }); return out; }
   function fromRubyLevel(l) {
-    return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab_thickness, columnType: l.column_type, picks: clonePicks((l.picks && l.picks.columns) || {})};
+    return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab_thickness, columnType: l.column_type, beamType: l.beam_type || null,
+            picks: clonePicks((l.picks && l.picks.columns) || {}), beamPicks: clonePicks((l.picks && l.picks.beams) || {})};
   }
   function rid(prefix) {
     var a = new Uint8Array(4); (window.crypto || {getRandomValues: function (x) { for (var i = 0; i < x.length; i++) x[i] = Math.floor(Math.random() * 256); }}).getRandomValues(a);
@@ -157,10 +161,11 @@
   }
   // Cập nhật danh sách loại cột trong ô chọn loại mặc định của từng tầng (khi đổi tên loại), giữ giá trị đang chọn.
   function refreshTypeSelects() {
-    $('levels-table').querySelectorAll('select').forEach(function (sel, i) {
-      var keep = state.levels[i] && state.levels[i].columnType || '';
+    $('levels-table').querySelectorAll('select').forEach(function (sel, k) {
+      var i = Math.floor(k / 2), beam = k % 2 === 1, list = beam ? state.beamTypes : state.types;
+      var keep = (state.levels[i] && (beam ? state.levels[i].beamType : state.levels[i].columnType)) || '';
       sel.replaceChildren(); sel.append(new Option('Loại đầu danh sách', ''));
-      state.types.forEach(function (t) { sel.append(new Option(t.name, t.id)); });
+      list.forEach(function (t) { sel.append(new Option(t.name, t.id)); });
       sel.value = keep;
     });
   }
@@ -172,7 +177,7 @@
   }
   function renderLevels() {
     var table = $('levels-table'); table.replaceChildren();
-    heads(table, ['Tên tầng', 'Cao độ sàn (mm)', 'Dày sàn (mm)', 'Loại cột mặc định', 'Ghi chú', '']);
+    heads(table, ['Tên tầng', 'Cao độ sàn (mm)', 'Dày sàn (mm)', 'Loại cột mặc định', 'Loại dầm mặc định', 'Ghi chú', '']);
     state.levels.forEach(function (l, i) {
       var row = table.insertRow(), sel = document.createElement('select'), del = document.createElement('button');
       row.insertCell().appendChild(textCell(l.name, function (v) { l.name = v; renderLevelSelects(); }, 'Tên tầng ' + (i + 1)));
@@ -184,12 +189,19 @@
       sel.value = l.columnType || '';
       sel.onchange = function () { l.columnType = sel.value || null; changed(); };
       row.insertCell().appendChild(sel);
+      var bsel = document.createElement('select');
+      bsel.setAttribute('aria-label', 'Loại dầm mặc định ' + l.name); bsel.className = 'beam-default';
+      bsel.append(new Option('Loại đầu danh sách', ''));
+      state.beamTypes.forEach(function (t) { bsel.append(new Option(t.name, t.id)); });
+      bsel.value = l.beamType || '';
+      bsel.onchange = function () { l.beamType = bsel.value || null; changed(); };
+      row.insertCell().appendChild(bsel);
       var note = row.insertCell(); note.className = 'note'; note.textContent = levelNote(i);
       del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.title = 'Xóa tầng này'; del.disabled = state.levels.length <= 1;
       del.onclick = function () { removeLevel(l.id); };
       row.insertCell().appendChild(del);
     });
-    renderTypes();
+    renderTypes(); renderBeamTypes();
   }
   function refreshLevelNotes() {
     $('levels-table').querySelectorAll('td.note').forEach(function (cell, i) { cell.textContent = levelNote(i); });
@@ -197,13 +209,13 @@
   function removeLevel(id) {
     state.levels = state.levels.filter(function (l) { return l.id !== id; });
     if (state.level === id) state.level = state.levels[0].id;
-    state.selected = null; renderLevels(); renderColumnsTab(); changed();
+    state.selected = null; state.selectedBeam = null; renderLevels(); renderColumnsTab(); renderBeamsTab(); changed();
   }
   function addLevel() {
     var last = state.levels[state.levels.length - 1], n = state.levels.length + 1, name = 'Tầng ' + n, taken = state.levels.map(function (l) { return l.name.toLowerCase(); });
     while (taken.indexOf(name.toLowerCase()) >= 0) name += '*';
-    state.levels.push({id: rid('sl_'), name: name, elevation: Number.isFinite(last.elevation) ? last.elevation + 3600 : 0, slab: 120, columnType: null, picks: {}});
-    renderLevels(); renderColumnsTab(); changed();
+    state.levels.push({id: rid('sl_'), name: name, elevation: Number.isFinite(last.elevation) ? last.elevation + 3600 : 0, slab: 120, columnType: null, beamType: null, picks: {}, beamPicks: {}});
+    renderLevels(); renderColumnsTab(); renderBeamsTab(); changed();
   }
   function addType() {
     var base = state.types[state.types.length - 1], n = state.types.length + 1, name = 'Loại ' + n, taken = state.types.map(function (t) { return t.name.toLowerCase(); });
@@ -291,11 +303,123 @@
       data.columns.issues.forEach(function (m) { var li = document.createElement('li'); li.textContent = m; issues.appendChild(li); });
     } else { summary.textContent = ''; }
   }
+
+  // ---- Loại dầm ----
+  function renderBeamTypes() {
+    var table = $('beam-types-table'); table.replaceChildren();
+    heads(table, ['Tên', 'Rộng (mm)', 'Cao (mm)', '']);
+    state.beamTypes.forEach(function (t, i) {
+      var row = table.insertRow(), del = document.createElement('button');
+      row.insertCell().appendChild(textCell(t.name, function (v) { t.name = v; refreshTypeSelects(); }, 'Tên loại dầm ' + (i + 1)));
+      row.insertCell().appendChild(numCell(t.w, function (v) { t.w = v; }, 'Rộng loại dầm ' + t.name));
+      row.insertCell().appendChild(numCell(t.h, function (v) { t.h = v; }, 'Cao loại dầm ' + t.name));
+      del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.title = 'Xóa loại dầm này'; del.disabled = state.beamTypes.length <= 1;
+      del.onclick = function () { removeBeamType(t.id); };
+      row.insertCell().appendChild(del);
+    });
+  }
+  function removeBeamType(id) {
+    state.beamTypes = state.beamTypes.filter(function (t) { return t.id !== id; });
+    state.levels.forEach(function (l) {
+      if (l.beamType === id) l.beamType = null;
+      Object.keys(l.beamPicks).forEach(function (ref) { if (l.beamPicks[ref].type === id) delete l.beamPicks[ref].type; });
+    });
+    renderLevels(); renderBeamsTab(); changed();
+  }
+  function addBeamType() {
+    var base = state.beamTypes[state.beamTypes.length - 1], n = state.beamTypes.length + 1, name = 'Dầm ' + n, taken = state.beamTypes.map(function (t) { return t.name.toLowerCase(); });
+    while (taken.indexOf(name.toLowerCase()) >= 0) name += '*';
+    state.beamTypes.push({id: rid('bt_'), name: name, w: base ? base.w : 200, h: base ? base.h : 400});
+    renderLevels(); changed();
+  }
+
+  // ---- Tab Dầm ----
+  // Các nhịp (đoạn trục giữa hai giao điểm) theo cùng quy ước mã với Ruby: 'x:<trục ngang>:<trục đứng a>-<trục đứng b>' chạy theo X, 'y:<trục đứng>:<a>-<b>' chạy theo Y.
+  function allSpans() {
+    var gx = toAxes('x'), gy = toAxes('y'), ox = state.origin[0], oy = state.origin[1], out = [];
+    gy.forEach(function (ay, yi) {
+      for (var i = 0; i + 1 < gx.length; i++) out.push({ref: 'x:' + ay.name + ':' + gx[i].name + '-' + gx[i + 1].name, dir: 'x', a: ox + gx[i].offset, b: ox + gx[i + 1].offset, axis: oy + ay.offset, edge: yi === 0 || yi === gy.length - 1});
+    });
+    gx.forEach(function (ax, xi) {
+      for (var i = 0; i + 1 < gy.length; i++) out.push({ref: 'y:' + ax.name + ':' + gy[i].name + '-' + gy[i + 1].name, dir: 'y', a: oy + gy[i].offset, b: oy + gy[i + 1].offset, axis: ox + ax.offset, edge: xi === 0 || xi === gx.length - 1});
+    });
+    return out;
+  }
+  function renderBeamsTab() { renderBeamLevelSelects(); renderBeamHeaderOnly(); renderBeamEditor(); renderBeamsButtons(); renderBeamsPlan(); }
+  function renderBeamLevelSelects() {
+    var sel = $('beam-level-select'), from = $('beam-copy-from');
+    sel.replaceChildren(); from.replaceChildren();
+    state.levels.forEach(function (l) { sel.append(new Option(l.name, l.id)); if (l.id !== state.level) from.append(new Option(l.name, l.id)); });
+    sel.value = state.level;
+  }
+  function renderBeamHeaderOnly() {
+    var i = state.levels.indexOf(currentLevel());
+    if (i < 0) return;
+    var l = state.levels[i], above = state.levels[i + 1];
+    $('beam-level-note').textContent = above ? 'Đỉnh dầm tại đáy sàn tầng trên: cao độ ' + Math.round((above.elevation - above.slab) * 10) / 10 + ' mm' : 'Tầng trên cùng: chỉ có sàn';
+  }
+  function renderBeamsButtons() {
+    var l = currentLevel(), top = state.levels.indexOf(l) === state.levels.length - 1;
+    $('build-beams').disabled = top || !state.previewOk || !Object.keys(l.beamPicks).length;
+    $('build-all-beams').disabled = !state.previewOk;
+    $('remove-beams').disabled = state.drawnBeamLevels.indexOf(l.id) < 0;
+    $('beam-pick-all').disabled = $('beam-pick-edge').disabled = $('beam-pick-none').disabled = top;
+    $('beam-copy-picks').disabled = top || !$('beam-copy-from').options.length;
+  }
+  function renderBeamEditor() {
+    var l = currentLevel(), pick = state.selectedBeam && l.beamPicks[state.selectedBeam];
+    $('beam-editor').hidden = !pick;
+    if (!pick) return;
+    $('beam-ref').textContent = state.selectedBeam;
+    var t = $('beam-type'); t.replaceChildren(); t.append(new Option('Theo loại mặc định của tầng', ''));
+    state.beamTypes.forEach(function (ty) { t.append(new Option(ty.name + ' (' + ty.w + '×' + ty.h + ')', ty.id)); });
+    t.value = pick.type || '';
+    modeSelect('beam-p', MODE_P, pick.p);
+  }
+  function renderBeamsPlan() {
+    var svg = $('plan3'), ns = 'http://www.w3.org/2000/svg', data = state.preview;
+    svg.replaceChildren();
+    if (!data || !data.ok) return;
+    var xs = [], ys = [];
+    data.axes.forEach(function (a) { a.line.forEach(function (p) { xs.push(p[0]); ys.push(p[1]); }); });
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys), pad = Math.max(x1 - x0, y1 - y0) * 0.05;
+    svg.setAttribute('viewBox', [x0 - pad, -(y1 + pad), x1 - x0 + 2 * pad, y1 - y0 + 2 * pad].join(' '));
+    function el(tag, attrs, text) { var e = document.createElementNS(ns, tag); Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); }); if (text !== undefined) e.textContent = text; svg.appendChild(e); return e; }
+    data.axes.forEach(function (a) { el('line', {class: 'axis', x1: a.line[0][0], y1: -a.line[0][1], x2: a.line[1][0], y2: -a.line[1][1]}); });
+    data.axes.forEach(function (a) { var b = a.bubbles[0]; el('text', {x: b.center[0], y: -b.center[1], 'font-size': Math.max(x1 - x0, y1 - y0) * 0.022}, a.name); });
+    ((data.columns && data.columns.items) || []).forEach(function (c) { el('rect', {class: 'colref', x: c.center[0] - c.w / 2, y: -(c.center[1] + c.d / 2), width: c.w, height: c.d}); });
+    var l = currentLevel(), top = state.levels.indexOf(l) === state.levels.length - 1, beams = (data.beams && data.beams.items) || [], byRef = {};
+    beams.forEach(function (b) { byRef[b.ref] = b; });
+    var def = state.beamTypes.filter(function (t) { return t.id === l.beamType; })[0] || state.beamTypes[0] || {w: 200}, ghost = Math.max(def.w, (x1 - x0) * 0.012);
+    if (!top) allSpans().forEach(function (sp) {
+      var b = byRef[sp.ref];
+      if (b) {
+        var r = el('rect', {class: 'beam' + (state.selectedBeam === sp.ref ? ' sel' : ''), x: b.min[0], y: -b.max[1], width: b.max[0] - b.min[0], height: b.max[1] - b.min[1], 'data-ref': sp.ref});
+        r.onclick = function () { state.selectedBeam = sp.ref; renderBeamEditor(); renderBeamsPlan(); };
+        var tip = document.createElementNS(ns, 'title'); tip.textContent = sp.ref + ' · ' + b.type_name + ' · dài ' + b.length + ' mm'; r.appendChild(tip);
+      } else {
+        var rect = sp.dir === 'x' ? {x: sp.a, y: -(sp.axis + ghost / 2), width: sp.b - sp.a, height: ghost} : {x: sp.axis - ghost / 2, y: -sp.b, width: ghost, height: sp.b - sp.a};
+        var g = el('rect', Object.assign({class: 'span', 'data-ref': sp.ref}, rect));
+        g.onclick = function () { pickBeam(sp.ref); };
+      }
+    });
+    var summary = $('beam-summary'), issues = $('beam-issues'); issues.replaceChildren();
+    if (data.levels_ok === false) { summary.className = 'summary error'; summary.textContent = data.levels_error; return; }
+    if (data.beams_error) { summary.className = 'summary'; summary.textContent = data.beams_error; return; }
+    if (data.beams) {
+      summary.className = 'summary';
+      summary.textContent = data.beams.level_name + ': ' + data.beams.count + ' dầm, đỉnh dầm tại cao độ ' + data.beams.z_top + ' mm (đáy sàn tầng trên).' + (data.removed ? ' Đã bỏ ' + data.removed + ' lựa chọn không còn trên lưới.' : '');
+      data.beams.issues.forEach(function (m) { var li = document.createElement('li'); li.textContent = m; issues.appendChild(li); });
+    } else { summary.textContent = ''; }
+  }
+  function pickBeam(ref) { var l = currentLevel(); if (!l.beamPicks[ref]) l.beamPicks[ref] = {}; state.selectedBeam = ref; renderBeamEditor(); changed(); }
+
   function switchTab(tab) {
     state.tab = tab;
     document.querySelectorAll('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-tab') === tab)); });
-    ['grid', 'levels', 'columns'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
+    ['grid', 'levels', 'columns', 'beams'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
     if (tab === 'columns') renderColumnsTab();
+    if (tab === 'beams') renderBeamsTab();
   }
 
   function receive(event, data) {
@@ -304,9 +428,11 @@
       var x = fromAxes(data.grid.x_axes), y = fromAxes(data.grid.y_axes);
       state.x = x; state.y = y; state.scale = data.symbol.scale; state.both = data.symbol.both_ends; state.drawn = data.drawn;
       state.types = data.types.map(function (t) { return {id: t.id, name: t.name, w: t.w, d: t.d}; });
-      state.levels = data.levels.map(fromRubyLevel); state.level = state.levels[0].id; state.selected = null; state.drawnLevels = data.drawn_levels || [];
+      state.beamTypes = (data.beam_types || []).map(function (t) { return {id: t.id, name: t.name, w: t.w, h: t.h}; });
+      state.levels = data.levels.map(fromRubyLevel); state.level = state.levels[0].id; state.selected = null; state.selectedBeam = null;
+      state.drawnLevels = data.drawn_levels || []; state.drawnBeamLevels = data.drawn_beam_levels || [];
       $('version').textContent = 'v' + data.version;
-      renderAll(); renderLevels(); renderColumnsTab();
+      renderAll(); renderLevels(); renderColumnsTab(); renderBeamsTab();
       message(data.saved ? 'Đã nạp lưới trục lưu trong model.' : 'Lưới mặc định: sửa các số rồi bấm Vẽ lưới trục.');
     } else if (event === 'preview') {
       state.previewOk = !!data.ok;
@@ -316,13 +442,15 @@
         s.className = 'summary';
         s.textContent = m.x_axes + ' trục đứng × ' + m.y_axes + ' trục ngang: ' + m.intersections + ' giao điểm, ' + m.spans + ' nhịp, ' + m.cells + ' ô. Khung lưới ' + m.width + ' × ' + m.depth + ' mm.';
       } else { s.className = 'summary error'; s.textContent = data.error; }
-      state.preview = data; drawPlan(data); renderButtons(); renderColumnsButtons(); renderColumnsPlan();
+      state.preview = data; drawPlan(data); renderButtons(); renderColumnsButtons(); renderColumnsPlan(); renderBeamsButtons(); renderBeamsPlan();
     } else if (event === 'axes') {
       var set = fromAxes(data.axes); state[data.dir] = set; renderAxes(data.dir); changed();
     } else if (event === 'levels') {
-      state.levels = data.levels.map(fromRubyLevel); renderLevels(); renderColumnsTab(); changed(); message(data.message);
+      state.levels = data.levels.map(fromRubyLevel); renderLevels(); renderColumnsTab(); renderBeamsTab(); changed(); message(data.message);
     } else if (event === 'columns_built') {
       state.drawnLevels = data.drawn_levels || []; renderColumnsButtons(); message(data.message, data.error);
+    } else if (event === 'beams_built') {
+      state.drawnBeamLevels = data.drawn_beam_levels || []; renderBeamsButtons(); message(data.message, data.error);
     } else if (event === 'built') {
       state.drawn = data.drawn; renderButtons(); message(data.message);
     } else if (event === 'message') {
@@ -348,7 +476,6 @@
 
   document.querySelectorAll('.tabs button').forEach(function (b) { b.onclick = function () { switchTab(b.getAttribute('data-tab')); }; });
   $('add-type').onclick = addType; $('add-level').onclick = addLevel;
-  $('level-select').onchange = function () { state.level = $('level-select').value; state.selected = null; renderColumnsTab(); changed(); };
   $('pick-all').onclick = function () { var l = currentLevel(); allRefs().forEach(function (pt) { if (!l.picks[pt.ref]) l.picks[pt.ref] = {}; }); changed(); renderColumnsButtons(); };
   $('pick-none').onclick = function () { currentLevel().picks = {}; state.selected = null; renderEditor(); changed(); renderColumnsButtons(); };
   $('col-remove').onclick = function () { delete currentLevel().picks[state.selected]; state.selected = null; renderEditor(); changed(); renderColumnsButtons(); };
@@ -362,6 +489,22 @@
     call('columns_build', {state: payload(), levels: ids});
   };
   $('remove-cols').onclick = function () { call('columns_remove', {level: state.level}); };
+  $('add-beam-type').onclick = addBeamType;
+  $('beam-level-select').onchange = function () { state.level = $('beam-level-select').value; state.selectedBeam = null; state.selected = null; renderBeamsTab(); renderColumnsTab(); changed(); };
+  $('level-select').onchange = function () { state.level = $('level-select').value; state.selected = null; state.selectedBeam = null; renderColumnsTab(); renderBeamsTab(); changed(); };
+  $('beam-pick-all').onclick = function () { var l = currentLevel(); allSpans().forEach(function (sp) { if (!l.beamPicks[sp.ref]) l.beamPicks[sp.ref] = {}; }); changed(); renderBeamsButtons(); };
+  $('beam-pick-edge').onclick = function () { var l = currentLevel(); allSpans().forEach(function (sp) { if (sp.edge && !l.beamPicks[sp.ref]) l.beamPicks[sp.ref] = {}; }); changed(); renderBeamsButtons(); };
+  $('beam-pick-none').onclick = function () { currentLevel().beamPicks = {}; state.selectedBeam = null; renderBeamEditor(); changed(); renderBeamsButtons(); };
+  $('beam-remove').onclick = function () { delete currentLevel().beamPicks[state.selectedBeam]; state.selectedBeam = null; renderBeamEditor(); changed(); renderBeamsButtons(); };
+  $('beam-type').onchange = function () { var p = currentLevel().beamPicks[state.selectedBeam]; if ($('beam-type').value) p.type = $('beam-type').value; else delete p.type; changed(); };
+  $('beam-p').onchange = function () { var p = currentLevel().beamPicks[state.selectedBeam]; if ($('beam-p').value === 'auto') delete p.p; else p.p = $('beam-p').value; changed(); };
+  $('beam-copy-picks').onclick = function () { var p = payload(); p.from = $('beam-copy-from').value; p.to = state.level; p.kind = 'beams'; call('picks_copy', p); };
+  $('build-beams').onclick = function () { call('beams_build', {state: payload(), levels: [state.level]}); };
+  $('build-all-beams').onclick = function () {
+    var ids = state.levels.slice(0, -1).filter(function (l) { return Object.keys(l.beamPicks).length; }).map(function (l) { return l.id; });
+    call('beams_build', {state: payload(), levels: ids});
+  };
+  $('remove-beams').onclick = function () { call('beams_remove', {level: state.level}); };
   $('build').onclick = function () { call('grid_build', payload()); };
   $('remove').onclick = function () { call('grid_remove'); };
   $('reset').onclick = function () { call('grid_reset'); };

@@ -10,7 +10,7 @@ module VGD
   module Structure
     ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze unless defined?(ROOT)
     # Thứ tự nạp code. Dùng chung cho lúc mở SketchUp và lúc "Tải lại code".
-    FILES = %w[core/schema core/grid core/axis_symbol core/column_types core/levels core/column_plan core/state core/preview model_store tag_store grid_tag grid_builder column_builder panel].freeze
+    FILES = %w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/levels core/column_plan core/beam_plan core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder panel].freeze
 
     # Lý do đang bận (không cho tải lại code), hoặc nil. Chưa có thao tác vẽ / dựng nào ở cột mốc 0; cột mốc sau cập nhật khi có.
     def self.busy_reason

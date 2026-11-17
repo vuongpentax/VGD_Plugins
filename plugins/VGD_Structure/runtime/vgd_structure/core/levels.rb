@@ -18,15 +18,16 @@ module VGD
 
       # Hai tầng mặc định: Tầng 1 (cao độ 0) và tầng trên cùng cao 3600 mm.
       def self.default
-        [{'id' => 'sl_00000001', 'name' => 'Tầng 1', 'elevation' => 0.0, 'slab_thickness' => DEFAULT_SLAB, 'column_type' => nil, 'picks' => {'columns' => {}}},
-         {'id' => 'sl_00000002', 'name' => 'Tầng 2', 'elevation' => 3600.0, 'slab_thickness' => DEFAULT_SLAB, 'column_type' => nil, 'picks' => {'columns' => {}}}]
+        [{'id' => 'sl_00000001', 'name' => 'Tầng 1', 'elevation' => 0.0, 'slab_thickness' => DEFAULT_SLAB, 'column_type' => nil, 'beam_type' => nil, 'picks' => {'columns' => {}, 'beams' => {}}},
+         {'id' => 'sl_00000002', 'name' => 'Tầng 2', 'elevation' => 3600.0, 'slab_thickness' => DEFAULT_SLAB, 'column_type' => nil, 'beam_type' => nil, 'picks' => {'columns' => {}, 'beams' => {}}}]
       end
 
       # Kiểm tra danh sách tầng với lưới và loại cột. Trả về [danh sách sạch, số lựa chọn cột bị bỏ vì giao điểm không còn trên lưới].
-      def self.normalize!(list, grid, types)
+      def self.normalize!(list, grid, types, beam_types = BeamTypes.default)
         raise Error, 'Danh sách tầng không hợp lệ.' unless list.is_a?(Array)
         raise Error, "Cần từ 1 đến #{MAX_LEVELS} tầng." unless list.size.between?(1, MAX_LEVELS)
         refs = Grid.intersections(grid).map { |i| i[:ref] }
+        span_refs = Grid.spans(grid).map { |sp| sp[:ref] }
         removed = 0
         previous = nil
         out = list.each_with_index.map do |level, i|
@@ -44,9 +45,15 @@ module VGD
           raise Error, "Tầng “#{name}”: dày sàn từ #{SLAB_RANGE.min.to_i} đến #{SLAB_RANGE.max.to_i} mm." unless number?(slab) && SLAB_RANGE.cover?(slab.to_f)
           type_id = level['column_type']
           raise Error, "Tầng “#{name}”: loại cột mặc định không tồn tại." unless type_id.nil? || ColumnTypes.find(types, type_id)
-          picks, dropped = picks!(level['picks'], refs, types, name)
-          removed += dropped
-          {'id' => id, 'name' => name, 'elevation' => elevation, 'slab_thickness' => slab.to_f.round(1), 'column_type' => type_id, 'picks' => {'columns' => picks}}
+          beam_type = level['beam_type']
+          raise Error, "Tầng “#{name}”: loại dầm mặc định không tồn tại." unless beam_type.nil? || BeamTypes.find(beam_types, beam_type)
+          raw = level['picks']
+          raise Error, "Tầng “#{name}”: dữ liệu cột và dầm được chọn không hợp lệ." unless raw.nil? || (raw.is_a?(Hash) && %w[columns beams].all? { |k| raw[k].nil? || raw[k].is_a?(Hash) })
+          columns, dropped_c = picks!((raw || {})['columns'], refs, types, name, 'cột', ColumnTypes)
+          beams, dropped_b = picks!((raw || {})['beams'], span_refs, beam_types, name, 'dầm', BeamTypes)
+          removed += dropped_c + dropped_b
+          {'id' => id, 'name' => name, 'elevation' => elevation, 'slab_thickness' => slab.to_f.round(1), 'column_type' => type_id, 'beam_type' => beam_type,
+           'picks' => {'columns' => columns, 'beams' => beams}}
         end
         names = out.map { |l| l['name'].downcase }
         dup = out.find { |l| names.count(l['name'].downcase) > 1 }
@@ -59,25 +66,26 @@ module VGD
         value.is_a?(Numeric) && value.to_f.finite?
       end
 
-      # picks.columns: {mã giao điểm => {type?, x?, y?}}; chỉ giữ giá trị khác mặc định. Giao điểm không còn trong lưới thì bỏ (đếm).
-      def self.picks!(raw, refs, types, level_name)
+      # picks.columns / picks.beams: {mã giao điểm hoặc nhịp => {type?, x? / y? hoặc p?}}; chỉ giữ giá trị khác mặc định.
+      # Cột có kiểu đặt x, y; dầm có kiểu đặt p (theo phương vuông góc với dầm). Mã không còn trên lưới thì bỏ (đếm).
+      def self.picks!(raw, refs, types, level_name, label, type_module)
         return [{}, 0] if raw.nil?
-        raise Error, "Tầng “#{level_name}”: dữ liệu cột được chọn không hợp lệ." unless raw.is_a?(Hash) && (raw['columns'].nil? || raw['columns'].is_a?(Hash))
+        axes = label == 'cột' ? %w[x y] : %w[p]
         picks = {}
         dropped = 0
-        (raw['columns'] || {}).each do |ref, pick|
-          raise Error, "Tầng “#{level_name}”: cột #{ref} không hợp lệ." unless ref.is_a?(String) && pick.is_a?(Hash)
+        raw.each do |ref, pick|
+          raise Error, "Tầng “#{level_name}”: #{label} #{ref} không hợp lệ." unless ref.is_a?(String) && pick.is_a?(Hash)
           unless refs.include?(ref)
             dropped += 1
             next
           end
           entry = {}
           type = pick['type']
-          raise Error, "Tầng “#{level_name}”: cột #{ref} dùng loại cột không tồn tại." unless type.nil? || ColumnTypes.find(types, type)
+          raise Error, "Tầng “#{level_name}”: #{label} #{ref} dùng loại #{label} không tồn tại." unless type.nil? || type_module.find(types, type)
           entry['type'] = type if type
-          %w[x y].each do |axis|
+          axes.each do |axis|
             mode = pick.key?(axis) ? pick[axis] : 'auto'
-            raise Error, "Tầng “#{level_name}”: cột #{ref} có kiểu đặt #{axis.upcase} không hợp lệ." unless MODES.include?(mode)
+            raise Error, "Tầng “#{level_name}”: #{label} #{ref} có kiểu đặt #{axis.upcase} không hợp lệ." unless MODES.include?(mode)
             entry[axis] = mode unless mode == 'auto'
           end
           picks[ref] = entry
@@ -95,15 +103,16 @@ module VGD
         index && levels[index + 1]
       end
 
-      # Sao chép lựa chọn cột từ tầng này sang tầng khác (thay hoàn toàn lựa chọn cột của tầng đích; không đổi loại cột mặc định, cao độ,
-      # dày sàn). Mỗi tầng vẫn sửa riêng được sau đó. Trả về danh sách tầng mới (đã kiểm tra), không đổi dữ liệu vào.
-      def self.copy_picks(levels, from_id, to_id, grid, types)
+      # Sao chép lựa chọn (kind = 'columns' hoặc 'beams') từ tầng này sang tầng khác: thay hoàn toàn lựa chọn cùng loại của tầng đích; không đổi
+      # loại mặc định, cao độ, dày sàn, lựa chọn loại kia. Mỗi tầng vẫn sửa riêng được sau đó. Trả về danh sách tầng mới (đã kiểm tra), không đổi dữ liệu vào.
+      def self.copy_picks(levels, from_id, to_id, grid, types, kind = 'columns', beam_types = BeamTypes.default)
         raise Error, 'Hãy chọn hai tầng khác nhau.' if from_id == to_id
+        raise Error, 'Loại lựa chọn không hợp lệ.' unless %w[columns beams].include?(kind)
         from = find(levels, from_id) or raise Error, 'Tầng nguồn không tồn tại.'
         find(levels, to_id) or raise Error, 'Tầng đích không tồn tại.'
         copied = Marshal.load(Marshal.dump(levels))
-        find(copied, to_id)['picks'] = {'columns' => Marshal.load(Marshal.dump(from['picks']['columns']))}
-        normalize!(copied, grid, types).first
+        find(copied, to_id)['picks'][kind] = Marshal.load(Marshal.dump(from['picks'][kind]))
+        normalize!(copied, grid, types, beam_types).first
       end
     end
   end

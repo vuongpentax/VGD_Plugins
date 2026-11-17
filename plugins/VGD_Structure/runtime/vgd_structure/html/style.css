@@ -61,3 +61,12 @@ svg#plan .node { fill: var(--vgd-accent); }
 footer { padding: 6px 16px; border-top: 1px solid var(--vgd-border); background: var(--vgd-surface); min-height: 30px; }
 #message.error { color: var(--vgd-danger); }
 @media (max-width: 800px) { main { grid-template-columns: 1fr; overflow-y: auto; } }
+
+svg#plan3 { flex: 1; min-height: 220px; width: 100%; background: var(--vgd-surface); border: 1px solid var(--vgd-border); border-radius: 6px; }
+svg#plan3 .axis { stroke: #BA00CC; stroke-width: 1; stroke-dasharray: 14 3 2 3; fill: none; vector-effect: non-scaling-stroke; opacity: .45; }
+svg#plan3 .span { fill: transparent; stroke: var(--vgd-muted); stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; cursor: pointer; }
+svg#plan3 .span:hover { stroke: var(--vgd-accent); fill: var(--vgd-tint); }
+svg#plan3 .beam { fill: #00AABA; fill-opacity: .8; stroke: var(--vgd-text); vector-effect: non-scaling-stroke; cursor: pointer; }
+svg#plan3 .beam.sel { stroke: var(--vgd-accent); stroke-width: 3; }
+svg#plan3 .colref { fill: #66DD00; fill-opacity: .7; stroke: var(--vgd-muted); vector-effect: non-scaling-stroke; pointer-events: none; }
+svg#plan3 text { fill: var(--vgd-muted); font-size: 11px; text-anchor: middle; pointer-events: none; }

@@ -114,14 +114,18 @@ module VGD
         out = []
         grid['y_axes'].each_with_index do |ay, yi|
           edge = yi.zero? || yi == grid['y_axes'].size - 1
+          side = yi.zero? ? 'min' : (edge ? 'max' : nil)
           grid['x_axes'].each_cons(2) do |a, b|
-            out << {ref: "x:#{ay['name']}:#{a['name']}-#{b['name']}", dir: 'x', from: [ox + a['offset'], oy + ay['offset']], to: [ox + b['offset'], oy + ay['offset']], length: (b['offset'] - a['offset']).round(1), placement: edge ? 'edge' : 'inner'}
+            out << {ref: "x:#{ay['name']}:#{a['name']}-#{b['name']}", dir: 'x', from: [ox + a['offset'], oy + ay['offset']], to: [ox + b['offset'], oy + ay['offset']], length: (b['offset'] - a['offset']).round(1),
+                    placement: edge ? 'edge' : 'inner', side: side, from_ref: "#{a['name']}-#{ay['name']}", to_ref: "#{b['name']}-#{ay['name']}"}
           end
         end
         grid['x_axes'].each_with_index do |ax, xi|
           edge = xi.zero? || xi == grid['x_axes'].size - 1
+          side = xi.zero? ? 'min' : (edge ? 'max' : nil)
           grid['y_axes'].each_cons(2) do |a, b|
-            out << {ref: "y:#{ax['name']}:#{a['name']}-#{b['name']}", dir: 'y', from: [ox + ax['offset'], oy + a['offset']], to: [ox + ax['offset'], oy + b['offset']], length: (b['offset'] - a['offset']).round(1), placement: edge ? 'edge' : 'inner'}
+            out << {ref: "y:#{ax['name']}:#{a['name']}-#{b['name']}", dir: 'y', from: [ox + ax['offset'], oy + a['offset']], to: [ox + ax['offset'], oy + b['offset']], length: (b['offset'] - a['offset']).round(1),
+                    placement: edge ? 'edge' : 'inner', side: side, from_ref: "#{ax['name']}-#{a['name']}", to_ref: "#{ax['name']}-#{b['name']}"}
           end
         end
         out

@@ -18,6 +18,7 @@
   <button type="button" role="tab" data-tab="grid" aria-selected="true">Lưới trục</button>
   <button type="button" role="tab" data-tab="levels" aria-selected="false">Tầng và loại cột</button>
   <button type="button" role="tab" data-tab="columns" aria-selected="false">Cột</button>
+  <button type="button" role="tab" data-tab="beams" aria-selected="false">Dầm</button>
 </nav>
 <main id="tab-grid" class="tab">
   <section class="form" aria-label="Khai báo lưới trục">
@@ -74,6 +75,11 @@
       <button type="button" class="add" id="add-type">+ Thêm loại cột</button>
     </fieldset>
     <fieldset>
+      <legend>Loại dầm (dầm treo dưới sàn, cao tính từ đáy sàn xuống)</legend>
+      <table class="axes" id="beam-types-table"></table>
+      <button type="button" class="add" id="add-beam-type">+ Thêm loại dầm</button>
+    </fieldset>
+    <fieldset>
       <legend>Tầng (mỗi tầng riêng, cao độ tuyệt đối theo trục Z của model)</legend>
       <table class="axes" id="levels-table"></table>
       <button type="button" class="add" id="add-level">+ Thêm tầng</button>
@@ -116,6 +122,44 @@
       <button type="button" id="build-cols" class="primary">Dựng cột tầng này</button>
       <button type="button" id="build-all-cols">Dựng cột mọi tầng</button>
       <button type="button" id="remove-cols" class="danger">Xóa cột tầng này</button>
+    </div>
+  </section>
+</main>
+<main id="tab-beams" class="tab" hidden>
+  <section class="form" aria-label="Chọn dầm">
+    <fieldset>
+      <legend>Tầng</legend>
+      <label>Tầng đang xem <select id="beam-level-select"></select></label>
+      <p id="beam-level-note" class="muted small"></p>
+    </fieldset>
+    <fieldset>
+      <legend>Chọn dầm</legend>
+      <div class="actions">
+        <button type="button" id="beam-pick-all">Chọn mọi nhịp</button>
+        <button type="button" id="beam-pick-edge">Chọn nhịp biên</button>
+        <button type="button" id="beam-pick-none">Bỏ chọn hết</button>
+      </div>
+      <div class="quick">
+        <label>Sao chép từ <select id="beam-copy-from" aria-label="Tầng nguồn"></select></label>
+        <button type="button" id="beam-copy-picks">Sao chép vào tầng này</button>
+      </div>
+      <p class="muted small">Bấm một nhịp trên mặt bằng để chọn dầm. Bấm dầm đã chọn để đổi loại hoặc vị trí. Dầm dừng ở mặt cột; nút không có cột thì dầm theo X chạy tới trục, dầm theo Y dừng ở mặt dầm X.</p>
+    </fieldset>
+    <fieldset id="beam-editor" hidden>
+      <legend>Dầm <span id="beam-ref"></span></legend>
+      <label>Loại dầm <select id="beam-type"></select></label>
+      <label>Vị trí ngang <select id="beam-p"></select></label>
+      <div class="actions"><button type="button" id="beam-remove" class="danger">Bỏ dầm này</button></div>
+    </fieldset>
+  </section>
+  <section class="preview" aria-label="Mặt bằng dầm">
+    <svg id="plan3" role="img" aria-label="Mặt bằng chọn dầm" preserveAspectRatio="xMidYMid meet"></svg>
+    <p id="beam-summary" class="summary" aria-live="polite"></p>
+    <ul id="beam-issues" class="issues"></ul>
+    <div class="actions">
+      <button type="button" id="build-beams" class="primary">Dựng dầm tầng này</button>
+      <button type="button" id="build-all-beams">Dựng dầm mọi tầng</button>
+      <button type="button" id="remove-beams" class="danger">Xóa dầm tầng này</button>
     </div>
   </section>
 </main>
