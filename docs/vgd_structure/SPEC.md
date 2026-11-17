@@ -21,6 +21,7 @@
 }
 ```
 
+- `symbol`: `{"scale": 100, "both_ends": false}`; `scale` là tỉ lệ bản vẽ 1:n (n nguyên từ 10 đến 1000), `both_ends` đặt ký hiệu trục ở cả hai đầu.
 - `x_axes` / `y_axes`: tên trục (chuỗi không rỗng, không trùng trong cùng phương) và khoảng cách từ gốc, **tăng dần**, tối thiểu 2 trục mỗi phương; hạn chế: tối đa 60 trục mỗi phương, mọi số trong khoảng hợp lý (không âm vô lý, không NaN).
 - `levels`: mỗi tầng RIÊNG (cao độ sàn khác nhau, không gom tầng). Cao độ sàn tăng dần theo thứ tự tầng; tầng trên cùng chỉ có sàn và trần (không cột, tường lên tầng khác).
 - `picks`: các phần tử được chọn dựng ở tầng đó: cột theo giao điểm `"<trục x>-<trục y>"`, dầm và tường theo nhịp `"<x|y>:<tên trục chứa nhịp>:<tên hai trục chặn>"`, sàn và trần theo ô `"<x1>-<x2>/<y1>-<y2>"`. Mã này là `ref` ghi vào `VGD_BIM_SOURCE.ref`.
@@ -69,6 +70,13 @@ Tầng i: mặt sàn `Ei`, tầng kế `E(i+1)`, dày sàn `t(i+1)` của tầng
 | Trần | cao độ `Ei + height` của tầng, mỏng `thickness`, trong ô |
 
 Tầng trên cùng chưa có tầng kế: cột, dầm, tường của tầng đó cần nhập chiều cao tầng; chi tiết chốt ở cột mốc 2.
+
+## 5b. Lưới trục trong model (cột mốc 1)
+
+- Một Group tên `Lưới trục` trên tag **`!grid`** (tên, màu tím (186, 0, 204) và thư mục `! INFORMATION` theo bộ tag mẫu của VGD BIM; IFC IfcGrid), ghi `VGD_STRUCT.kind = grid` và phiên bản plugin; chứa các đường trục và mỗi ký hiệu trục là nhóm con.
+- Đường trục: nét **gạch dài - chấm** (kiểu nét của tag; chỉ đặt khi tag còn nét liền, không đè kiểu người dùng đã chọn), kéo dài quá trục biên `1,5 x` đường kính vòng tròn.
+- Ký hiệu trục (thông lệ bản vẽ quốc tế): vòng tròn đường kính **10 mm trên giấy x tỉ lệ**, tên trục ở giữa (chữ cao `0,4 x` đường kính; từ 3 ký tự thu nhỏ). Trục đứng (số) có ký hiệu ở đầu dưới, trục ngang (chữ) ở đầu trái; tùy chọn cả hai đầu.
+- Chữ trục: số 1, 2, 3... cho trục đứng; chữ A, B, C... cho trục ngang, bỏ **I và O** (dễ nhầm với 1 và 0); hết 24 chữ thì AA, AB.... Người dùng đổi tên tay được.
 
 ## 6. Chưa có trong bản 0
 

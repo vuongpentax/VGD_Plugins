@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VGD Structure · Lưới trục</title>
+<link rel="stylesheet" href="vgd-theme/vgd-theme.css">
+<link rel="stylesheet" href="style.css">
+<script src="vgd-theme/vgd-theme.js"></script>
+</head>
+<body class="vgd-ui">
+<header>
+  <h1>Lưới trục</h1>
+  <span id="version" class="muted"></span>
+  <button class="vgd-theme-btn" id="theme" type="button" aria-pressed="false" title="Đổi giao diện sáng / tối"></button>
+</header>
+<main>
+  <section class="form" aria-label="Khai báo lưới trục">
+    <fieldset>
+      <legend>Gốc lưới (mm)</legend>
+      <label>X <input id="origin-x" type="number" step="any"></label>
+      <label>Y <input id="origin-y" type="number" step="any"></label>
+    </fieldset>
+    <fieldset data-dir="x">
+      <legend>Trục đứng (đánh số 1, 2, 3...)</legend>
+      <div class="quick">
+        <input id="quick-x" type="text" placeholder="Nhịp (mm), ví dụ 4200, 3600*2" aria-label="Khoảng cách các nhịp trục đứng">
+        <button type="button" data-quick="x">Tạo trục từ nhịp</button>
+      </div>
+      <table class="axes" id="axes-x"></table>
+      <button type="button" class="add" data-add="x">+ Thêm trục</button>
+    </fieldset>
+    <fieldset data-dir="y">
+      <legend>Trục ngang (đánh chữ A, B, C...)</legend>
+      <div class="quick">
+        <input id="quick-y" type="text" placeholder="Nhịp (mm), ví dụ 5000, 3000*2" aria-label="Khoảng cách các nhịp trục ngang">
+        <button type="button" data-quick="y">Tạo trục từ nhịp</button>
+      </div>
+      <table class="axes" id="axes-y"></table>
+      <button type="button" class="add" data-add="y">+ Thêm trục</button>
+    </fieldset>
+    <fieldset>
+      <legend>Ký hiệu trục</legend>
+      <label>Tỉ lệ bản vẽ
+        <select id="scale">
+          <option value="20">1:20</option><option value="50">1:50</option><option value="100">1:100</option>
+          <option value="200">1:200</option><option value="500">1:500</option>
+        </select>
+      </label>
+      <label class="check"><input id="both" type="checkbox"> Ký hiệu ở cả hai đầu trục</label>
+      <p class="muted small">Vòng tròn 10 mm trên giấy theo tỉ lệ đã chọn (1:100 = 1000 mm trong model). Trục là nét gạch dài - chấm, tag <b>!grid</b> theo bộ tag mẫu của VGD BIM.</p>
+    </fieldset>
+  </section>
+  <section class="preview" aria-label="Xem trước mặt bằng">
+    <svg id="plan" role="img" aria-label="Mặt bằng lưới trục" preserveAspectRatio="xMidYMid meet"></svg>
+    <p id="summary" class="summary" aria-live="polite"></p>
+    <div class="actions">
+      <button type="button" id="build" class="primary">Vẽ lưới trục</button>
+      <button type="button" id="remove" class="danger">Xóa lưới khỏi model</button>
+      <button type="button" id="reset">Lưới mặc định</button>
+    </div>
+  </section>
+</main>
+<footer><div id="message" role="status" aria-live="polite">Sẵn sàng.</div></footer>
+<script src="app.js"></script>
+</body>
+</html>

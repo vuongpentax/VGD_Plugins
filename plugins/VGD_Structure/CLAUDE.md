@@ -12,13 +12,13 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Cấu trúc
 
-- `runtime/vgd_structure/loader.rb` giữ danh sách `FILES` (thứ tự nạp, dùng chung cho lúc mở SketchUp và `VGD::Structure.reload`); `core/` logic thuần (hiện có `schema.rb`).
-- `dev/`: `run_tests.rb`, `test_reload.rb`, `package.py`, `stubs/` (bản giả `sketchup.rb`, `extensions.rb`).
+- `runtime/vgd_structure/loader.rb` giữ danh sách `FILES` (thứ tự nạp, dùng chung cho lúc mở SketchUp và `VGD::Structure.reload`); `core/` logic thuần (`schema.rb` hằng số hợp đồng, `grid.rb` lưới / giao điểm / nhịp / ô, `axis_symbol.rb` kế hoạch ký hiệu trục); `model_store.rb` đọc / ghi `VGD_STRUCT` trong model; `grid_tag.rb` tag `!grid` và nét; `grid_builder.rb` vẽ lưới; `panel.rb` cửa sổ HtmlDialog; `html/` giao diện (`vgd-theme/` là bản sao của `shared/vgd-theme`, đồng bộ bằng `tools/sync_vgd_theme.py`); `assets/icons/`.
+- `dev/`: `run_tests.rb` (chạy các test Ruby), `test_reload.rb`, `test_grid.rb`, `test_grid_builder.rb`, `test_panel.rb`, `test_ui.cjs` (Playwright), `fake_sketchup.rb` (SketchUp giả lập), `ui_fixture.rb`, `package.py`, `stubs/` (bản giả `sketchup.rb`, `extensions.rb`).
 - Kế hoạch và đặc tả: `docs/vgd_structure/PLAN.md`, `docs/vgd_structure/SPEC.md`.
 
 ## Kiểm thử
 
-Từ `plugins/VGD_Structure`: `ruby dev/run_tests.rb`. Test dùng SketchUp giả lập; phần dựng hình thật chưa xác minh trong SketchUp.
+Từ `plugins/VGD_Structure`: `ruby dev/run_tests.rb`, và `node dev/test_ui.cjs` (Playwright, đặt `VGD_PLAYWRIGHT_MODULE` nếu cần). Test dùng SketchUp giả lập; phần dựng hình thật chưa xác minh trong SketchUp.
 
 ## Đóng gói
 
@@ -34,3 +34,6 @@ Từ gốc repo: `python plugins/VGD_Structure/dev/package.py <phiên bản>`. F
 - Mỗi tầng là riêng (cao độ, quy cách, phần đề xuất); không gom tầng giống nhau.
 - Mỗi lần dựng là MỘT thao tác hoàn tác; kiểm tra lại mọi dữ liệu người dùng trước khi ghi vào model; không đụng dictionary của plugin khác; VGD ID do VGD_BIM cấp, plugin không tự sinh.
 - Dữ liệu `VGD_STRUCT` là nguồn đúng; dựng lại thì hình theo dữ liệu, giữ VGD ID cũ.
+- Lưới trục: `x_axes` là trục có VỊ TRÍ theo X (đường thẳng đứng trên mặt bằng, đánh số), `y_axes` theo Y (đường ngang, đánh chữ). Tên trục tối đa 4 ký tự, không trùng giữa cả hai phương (không phân biệt hoa thường). Giao diện chỉ gom dữ liệu; mọi dữ liệu qua `Grid.normalize!` / `AxisSymbol.options!` trước khi đụng model, tính xem trước cũng ở Ruby (một nguồn).
+- Tag lưới là `!grid` theo bộ tag mẫu của VGD BIM (`Schema::GRID_TAG`: tên, màu, thư mục `! INFORMATION`); nét gạch dài - chấm chỉ đặt khi tag còn nét liền, không ghi đè nét người dùng đã chọn. Không dùng tag khác cho lưới nếu chưa được yêu cầu.
+- Ký hiệu trục: vòng tròn 10 mm trên giấy nhân tỉ lệ (`AxisSymbol`), chữ 3D phẳng căn giữa theo hộp bao. Phần vẽ trong SketchUp (`GridBuilder`, `GridTag`) chưa xác minh trong SketchUp thật: `add_3d_text`, `Layer#line_style=`, `layers.add_folder` cần thử thật.

@@ -10,11 +10,21 @@ module VGD
   module Structure
     ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze unless defined?(ROOT)
     # Thứ tự nạp code. Dùng chung cho lúc mở SketchUp và lúc "Tải lại code".
-    FILES = %w[core/schema].freeze
+    FILES = %w[core/schema core/grid core/axis_symbol model_store grid_tag grid_builder panel].freeze
 
     # Lý do đang bận (không cho tải lại code), hoặc nil. Chưa có thao tác vẽ / dựng nào ở cột mốc 0; cột mốc sau cập nhật khi có.
     def self.busy_reason
       nil
+    end
+
+    def self.open_panel
+      if @panel && !@panel.closed?
+        @panel.show
+      else
+        @panel = Panel.new
+        @panel.show
+      end
+      @panel
     end
 
     # Nạp lại toàn bộ code của plugin mà không cần mở lại SketchUp (dùng sau khi cài đè bản mới).
@@ -28,6 +38,13 @@ module VGD
       files = [File.join(File.dirname(ROOT), 'vgd_structure.rb'), File.join(ROOT, 'loader.rb')] +
               FILES.map { |file| File.join(ROOT, "#{file}.rb") }
       files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
+      reopen = @panel && !@panel.closed?
+      begin
+        @panel.close if reopen
+      rescue StandardError
+        nil
+      end
+      @panel = nil
       loading = true # từ đây lỗi nghĩa là đã nạp dở, không còn "giữ nguyên bản đang chạy"
       verbose = $VERBOSE
       $VERBOSE = nil # tránh cảnh báo "hằng số đã khai báo" khi nạp lại
@@ -36,6 +53,7 @@ module VGD
       ensure
         $VERBOSE = verbose
       end
+      open_panel if reopen # chỉ mở lại cửa sổ nếu trước đó đang mở
       ::UI.messagebox("Đã tải lại VGD Structure #{VERSION}.")
       true
     rescue ScriptError, StandardError => error
@@ -46,7 +64,16 @@ module VGD
 end
 VGD::Structure::FILES.each { |file| require File.join(VGD::Structure::ROOT, file) }
 unless file_loaded?(__FILE__)
-  # Menu Extensions > VGD > VGD Structure. Chỉ đăng ký một lần; tải lại code không đăng ký lại.
-  ::VGD.menu.add_submenu('VGD Structure').add_item('Tải lại code') { VGD::Structure.reload }
+  # Menu Extensions > VGD > VGD Structure và thanh công cụ VGD STR. Chỉ đăng ký một lần; tải lại code không đăng ký lại.
+  menu = ::VGD.menu.add_submenu('VGD Structure')
+  menu.add_item('Lưới trục') { VGD::Structure.open_panel }
+  menu.add_item('Tải lại code') { VGD::Structure.reload }
+  toolbar = ::UI::Toolbar.new('VGD STR')
+  command = ::UI::Command.new('VGD Structure · Lưới trục') { VGD::Structure.open_panel }
+  command.tooltip = 'VGD Structure · Lưới trục'
+  command.status_bar_text = 'VGD Structure: khai báo và vẽ lưới trục'
+  command.small_icon = command.large_icon = File.join(VGD::Structure::ROOT, 'assets', 'icons', 'grid.svg')
+  toolbar.add_item(command)
+  toolbar.restore
   file_loaded(__FILE__)
 end
