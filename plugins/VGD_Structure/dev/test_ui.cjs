@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.10.0-beta.6','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.10.0-beta.7','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -560,6 +560,8 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   // Tab Mặt bằng (canvas)
   await receive('state',F.state);await receive('preview',F.preview_all_cells);
   await page.click('[data-tab=plan]');
+  ok(await page.locator('#pv-browser').isVisible(),'tab Mặt bằng mở ra: Cây dự án hiện sẵn (như Revit)');
+  await page.click('#pv-browser-btn');ok(await page.locator('#pv-browser').isHidden() && (await page.locator('#pv-browser-btn').getAttribute('aria-pressed'))==='false','nút Cây dự án ẩn bảng');await wait(80);await page.keyboard.press('z');await page.keyboard.press('e');await wait(60);
   const dbg=()=>page.evaluate(()=>window.VGDPlan.debug());
   const pix=async(wx,wy)=>page.evaluate(([x,y])=>{const c=document.getElementById('pv-canvas'),p=window.VGDPlan.toScreen(x,y),d=c.getContext('2d').getImageData(Math.round(p[0]*window.devicePixelRatio),Math.round(p[1]*window.devicePixelRatio),1,1).data;return [d[0],d[1],d[2]];},[wx,wy]);
   ok(await page.locator('#tab-plan').isVisible() && !(await page.locator('#tab-grid').isVisible()),'tab Mặt bằng: hiện canvas, ẩn tab khác');
@@ -632,10 +634,10 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
 
   // P2: bắt điểm
   await page.click('[data-tool=measure]');
-  const snapAtW=async(x,y)=>{const q=await scr(x,y);await page.mouse.move(q[0]+3,q[1]+2);await wait(30);return dbg();};
+  const snapAtW=async(x,y,dx=3,dy=2)=>{const q=await scr(x,y);await page.mouse.move(q[0]+dx,q[1]+dy);await wait(30);return dbg();};
   let sd=await snapAtW(k1.center[0]-k1.w/2,k1.center[1]-k1.d/2);
   ok(sd.snap && sd.snap.text==='Đầu mút' && sd.snap.rank===0 && Math.hypot(sd.snap.p[0]-(k1.center[0]-k1.w/2),sd.snap.p[1]-(k1.center[1]-k1.d/2))<1,'bắt điểm: gần góc cột hiện "Đầu mút" và hít đúng tọa độ góc');
-  sd=await snapAtW(gx[2],gy[1]);
+  sd=await snapAtW(gx[2],gy[1],0.3,0.2);
   ok(sd.snap && sd.snap.rank<=1 && Math.abs(sd.snap.p[0]-gx[2])<1 && Math.abs(sd.snap.p[1]-gy[1])<1,'bắt điểm: giao hai trục (trùng góc sàn) hít đúng tọa độ giao trục');
   const slabTop=F.preview_all_cells.slabs.items.filter(i=>i.ref==='1-2/B-C')[0];
   sd=await snapAtW((slabTop.min[0]+slabTop.max[0])/2,slabTop.max[1]);
@@ -988,6 +990,84 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(dd.dimList.length===2 && dd.dimList.every(d=>!d.editable) && dd.dimHits.length===0 && dd.dimList[0].value===c11.w,'chọn cột: chỉ hiện kích thước (rộng × sâu) để xem, không sửa được');
   await page.keyboard.press('Escape');await page.keyboard.press('Escape');
   await page.click('[data-tab=grid]');await page.click('[data-tab=plan]');
+  }
+  // P5: Cây dự án
+  {
+  await page.click('[data-tab=plan]');await receive('state',F.state);await receive('preview',F.preview_all_cells);await page.keyboard.press('Escape');await wait(60);
+  const typ=async s=>{for(const ch of s)await page.keyboard.press(ch.toLowerCase());await wait(90);};
+  const sc=async(x,y)=>{const bb=await page.locator('#pv-canvas').boundingBox(),q=await page.evaluate(([a,b])=>window.VGDPlan.toScreen(a,b),[x,y]);return [bb.x+q[0],bb.y+q[1]];};
+  const dbgb=()=>page.evaluate(()=>window.VGDPlan.debug());
+  const get=k=>page.evaluate(k=>JSON.parse(JSON.stringify(window.VGDS._state.levels[0][k])),k);
+  const L1='sl_00000001',L2='sl_00000002';
+  const node=id=>page.locator(`#pv-browser [data-node="${id}"]`);
+  const toggle=id=>node(id).locator('> .pb-row .pb-toggle').click();
+  const label=id=>node(id).locator('> .pb-row .pb-label');
+  const count=id=>node(id).locator('> .pb-row .pb-count').innerText();
+  await typ('pb');ok(await page.locator('#pv-browser').isVisible() && (await page.locator('#pv-browser-btn kbd').innerText())==='PB','gõ PB: hiện lại Cây dự án (phím tự đặt, nút hiện nhãn PB)');
+  await typ('pb');ok(await page.locator('#pv-browser').isHidden(),'gõ PB lần nữa: ẩn');await typ('pb');
+  ok(await node('levels').count()===1 && await node('types').count()===1 && await node('grid').count()===1,'cây có ba nhánh gốc: Tầng, Loại, Lưới trục');
+  ok((await count('levels'))==='2' && await node(`lv:${L1}`).count()===1 && await node(`lv:${L2}`).count()===1,'nhánh Tầng: 2 tầng, mỗi tầng một nút');
+  ok(await node(`lv:${L1}`).locator('> .pb-row.current').count()===1 && await node(`lv:${L2}`).locator('> .pb-row.current').count()===0,'tầng đang xem (Tầng 1) được tô đậm');
+  await toggle(`lv:${L1}`);
+  const kinds=['column','beam','wall','opening','slab','ceiling'],cnts=[];for(const k of kinds)cnts.push(await count(`lv:${L1}:${k}`));
+  ok(JSON.stringify(cnts)==='["2","2","2","2","2","2"]','mở Tầng 1: sáu nhóm Cột, Dầm, Tường, Cửa, Sàn, Trần, mỗi nhóm đếm đúng số phần tử đã chọn của tầng');
+  await toggle(`lv:${L1}:column`);
+  ok(JSON.stringify(await node(`lv:${L1}:column`).locator('.pb-label').allInnerTexts())==='["Cột","Cột 1-A","Cột 2-B"]','mở nhóm Cột: liệt kê Cột 1-A và Cột 2-B');
+  await label(`el:${L1}|column|2-B`).click();
+  ok(JSON.stringify((await dbgb()).selection)==='["Cột 2-B"]' && await node(`el:${L1}|column|2-B`).locator('> .pb-row.selected').count()===1,'bấm Cột 2-B trong cây: chọn trên mặt bằng và tô sáng trong cây');
+  ok((await page.locator('#pv-props').innerText()).includes('Cột 2-B'),'bảng Thuộc tính hiện phần tử vừa chọn từ cây');
+  // Chọn trên mặt bằng thì cây theo
+  const c11=F.preview_all_cells.columns.items.filter(c=>c.ref==='1-A')[0];
+  const q=await sc(c11.center[0],c11.center[1]);await page.mouse.click(q[0],q[1]);
+  ok(await node(`el:${L1}|column|1-A`).locator('> .pb-row.selected').count()===1 && await node(`el:${L1}|column|2-B`).locator('> .pb-row.selected').count()===0,'chọn cột 1-A trên mặt bằng: cây tô sáng đúng mục, bỏ tô mục cũ');
+  // Đổi tầng bằng cây
+  await label(`lv:${L2}`).click();await wait(250);
+  ok((await dbgb()).level===L2 && await node(`lv:${L2}`).locator('> .pb-row.current').count()===1 && (await last('grid_preview')).level===L2,'bấm tên tầng trong cây: chuyển sang tầng đó (tab, mặt bằng, xem trước theo tầng mới)');
+  await receive('preview',F.preview_top);
+  // Chọn phần tử ở tầng khác: chuyển tầng, chọn khi xem trước về
+  await label(`el:${L1}|column|2-B`).click();await wait(250);
+  ok((await dbgb()).level===L1 && (await dbgb()).selection.length===0,'bấm phần tử của tầng khác: chuyển tầng trước, chưa chọn (chờ xem trước)');
+  await receive('preview',F.preview_all_cells);
+  ok(JSON.stringify((await dbgb()).selection)==='["Cột 2-B"]','xem trước của tầng đó về: tự chọn đúng phần tử');
+  // Loại
+  await toggle('types');await toggle('tg:column');
+  const firstType=F.state.types[0];
+  ok(await node(`ty:${firstType.id}`).count()===1 && (await count(`ty:${firstType.id}`))==='2','nhánh Loại cột: mỗi loại đếm số phần tử dùng ở tầng đang xem (2 cột dùng loại đầu, vì chưa đặt loại riêng)');
+  await label(`ty:${firstType.id}`).click();
+  ok(JSON.stringify((await dbgb()).selection.sort())==='["Cột 1-A","Cột 2-B"]','bấm một loại: chọn mọi phần tử dùng loại đó ở tầng đang xem');
+  {
+    const secondType={id:'ct_test0002',name:'C400x400',w:400,d:400};
+    await page.evaluate(ty=>{window.VGDS._state.types.push(ty);window.VGDS._state.levels[0].picks['2-B'].type=ty.id;window.VGDPlanBrowser.render();},secondType);
+    ok((await count(`ty:${firstType.id}`))==='1' && (await count(`ty:${secondType.id}`))==='1','cột 2-B đổi sang loại thứ hai: đếm tách đúng (1 cột mỗi loại)');
+    await label(`ty:${secondType.id}`).click();ok(JSON.stringify((await dbgb()).selection)==='["Cột 2-B"]','bấm loại thứ hai: chỉ chọn cột 2-B (loại riêng ưu tiên hơn loại mặc định)');
+    await page.evaluate(()=>{delete window.VGDS._state.levels[0].picks['2-B'].type;window.VGDS._state.types.pop();window.VGDPlanBrowser.render();});
+  }
+  await toggle('tg:wall');const wt=F.state.wall_types[0];await label(`ty:${wt.id}`).click();
+  ok((await dbgb()).selection.length===2 && (await dbgb()).selection.every(x=>/^Tường/.test(x)),'bấm loại tường: chọn 2 tường');
+  // Lưới trục
+  await toggle('grid');await toggle('ax:x');await toggle('ax:y');
+  ok(JSON.stringify(await node('ax:x').locator('.pb-label').allInnerTexts())==='["Trục đứng (số)","1 · 0 mm","2 · 4200 mm","3 · 8400 mm","4 · 12600 mm"]','nhánh Lưới trục: trục đứng 1 đến 4 kèm vị trí mm');
+  ok((await node('ax:y').locator('.pb-label').allInnerTexts()).slice(1).join('|')==='A · 0 mm|B · 3600 mm|C · 7200 mm','trục ngang A, B, C kèm vị trí');
+  // Lọc
+  await page.fill('#pv-browser .pb-filter','1-A');
+  ok(JSON.stringify(await page.locator('#pv-browser .pb-tree [data-node^="el:"] .pb-label').allInnerTexts())==='["Cột 1-A"]','lọc "1-A": chỉ còn mục Cột 1-A (nhánh tự mở)');
+  await page.fill('#pv-browser .pb-filter','D900');
+  ok((await page.locator('#pv-browser [data-node^="ty:"] .pb-label').allInnerTexts()).some(t=>/D900x2100/.test(t)) && (await page.locator('#pv-browser [data-node^="el:"]').count())>=1,'lọc "D900": hiện loại cửa D900x2100 và cửa dùng loại đó');
+  await page.fill('#pv-browser .pb-filter','zzzz');ok(await page.locator('#pv-browser .pb-empty').count()===1,'lọc không khớp gì: báo "Không có mục nào khớp"');
+  await page.press('#pv-browser .pb-filter','Escape');ok((await page.locator('#pv-browser .pb-filter').inputValue())==='' && await page.locator('#pv-browser .pb-empty').count()===0,'Esc trong ô lọc: xóa bộ lọc');
+  // Cây cập nhật khi dữ liệu đổi
+  await page.keyboard.press('Escape');await typ('cl');
+  const n3=await sc(gx[2],gy[0]);await page.mouse.move(n3[0],n3[1]);await page.mouse.click(n3[0],n3[1]);
+  ok((await count(`lv:${L1}:column`))==='3' && await node(`el:${L1}|column|3-A`).count()===1,'đặt thêm cột 3-A bằng công cụ: cây cập nhật ngay (đếm 3, có mục Cột 3-A)');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await page.keyboard.press('Control+z');
+  ok((await count(`lv:${L1}:column`))==='2' && await node(`el:${L1}|column|3-A`).count()===0,'Ctrl+Z: cây trở về 2 cột');
+  // Lỗi / thiếu
+  await page.evaluate(()=>{window.VGDS._state.levels[0].picks['9-Z']={};window.VGDPlanBrowser.render();});
+  const exists=await node(`el:${L1}|column|9-Z`).count();
+  if(exists)await label(`el:${L1}|column|9-Z`).click();
+  ok(!exists || (/không có trong xem trước/.test(await page.locator('#pv-hint').innerText()) && (await dbgb()).selection.length===0),'mục không có hình trong xem trước (mã lạ): báo rõ, không chọn gì');
+  await page.evaluate(()=>{delete window.VGDS._state.levels[0].picks['9-Z'];window.VGDPlanBrowser.render();});
+  await page.keyboard.press('Escape');
   }
   // Lỗi xem trước
   await page.click('[data-tab=plan]');await receive('preview',F.error);

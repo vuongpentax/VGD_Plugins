@@ -165,8 +165,23 @@ Tài liệu tham khảo: `docs/reference/vtbim/` (phần Ruby mã hóa, JS của
 | P3 (ĐÃ LÀM, 0.10.0-beta.5; đường gióng dùng làm vị trí trục khi vẽ lưới, trục phụ lệch lưới và tường xiên để sau) | Vẽ kết cấu kiểu Revit | Lưới, cột, dầm, tường, sàn, cửa bằng bấm điểm; **thanh tùy chọn**; bảng Thuộc tính sửa được (chọn Loại, thông số riêng); hoàn tác / làm lại; ghi thẳng vào dữ liệu tầng; đường gióng đổi thành trục phụ | test dữ liệu sau khi vẽ khớp thao tác bằng tay |
 | P4 (ĐÃ LÀM, 0.10.0-beta.6: Move, Copy, Array, Mirror, Match theo lưới; kích thước tạm thời, cửa sửa được) | Sửa kiểu Revit | Move, Copy, Rotate, Mirror, Offset, Trim, Align, Delete, mảng, ống hút (Match); **kích thước tạm thời** | test từng lệnh trên dữ liệu |
 | P4b | Phần tử tự do ngoài lưới | **Chờ chủ dự án duyệt thiết kế.** Cho tường, dầm đi xiên hoặc lệch trục, cột lệch trục theo mm (dữ liệu có thêm đầu mút và độ lệch thay cho mã nhịp / giao điểm; `Wall/Beam/ColumnPlan`, dựng hình, BIM đọc phải theo). Khi đó mới có Rotate, Offset, Trim (cắt / kéo dài tới góc), Align, và kích thước tạm thời sửa được cho mọi phần tử. Rủi ro: đổi mô hình dữ liệu và nhiều Ruby; dữ liệu cũ (theo lưới) phải đọc được | test hình học, tương thích dữ liệu cũ |
-| P5 | Cây dự án | Project Browser: tầng, mặt bằng, loại cột / dầm / tường / cửa; thay các tab lẻ khi đủ chức năng | test UI |
+| P5 (ĐÃ LÀM, 0.10.0-beta.7; chưa thay các tab lẻ) | Cây dự án | Project Browser: tầng, nhóm phần tử, loại cột / dầm / tường / cửa, lưới trục; lọc, chọn từ cây, tô sáng theo lựa chọn | test UI |
 | P5b | Nét 2D và ghi chú | Line, Polyline, Rect, Circle, Arc, chữ, kích thước, cốt cao độ (lớp ghi chú theo tầng) | test lưu và nạp lại |
 | P6 | Tương tác SketchUp ↔ cửa sổ | Chọn trong SketchUp thì sáng trên mặt bằng và ngược lại; chọn điểm bằng công cụ trong SketchUp | chỉ kiểm được trong SketchUp thật |
 
 Mỗi cột mốc có test và RBZ beta để thử. Chưa phát hành.
+
+
+### 12.1. Đề xuất thiết kế P4b: phần tử tự do ngoài lưới (CHỜ CHỦ DỰ ÁN DUYỆT, chưa làm)
+
+**Vấn đề:** dữ liệu hiện gắn theo lưới (cột ở giao điểm, dầm / tường theo nhịp, sàn / trần theo ô). Vì vậy chưa có tường xiên, cột lệch trục, tường nằm giữa hai trục; và các lệnh Rotate, Offset, Trim, Align của Revit không có nghĩa.
+
+**Đề xuất (làm từng bước, mỗi bước một RBZ):**
+1. **P4b-1, phần tử tự do vuông góc:** mỗi tầng có thêm danh sách **phần tử tự do** `free` song song với `picks` (không đổi, không xóa dữ liệu theo lưới nên dữ liệu cũ đọc được y nguyên): cột `{id, x, y, type}`, dầm và tường `{id, a:[x,y], b:[x,y], type, tim}` (a, b là đầu mút tính bằng mm theo gốc lưới; bước này chỉ cho ngang hoặc dọc), cửa gắn vào tường tự do. Công cụ vẽ cho bấm điểm **tự do** (có bắt điểm, gõ độ dài + Enter) thay vì chỉ giao điểm. Mở khóa: **Offset** (dời / nhân tường, dầm song song một khoảng), **Align** (kéo mặt tường, cột về một đường), **Trim / Extend** (cắt, kéo dài tới giao điểm hai tường, nối góc L / T), **Rotate 90°**, **Move / Copy / Mirror tự do** theo khoảng bất kỳ, kích thước tạm thời **sửa được** cho mọi phần tử, "Mở khóa lưới" (chuyển một phần tử theo lưới thành phần tử tự do).
+2. **P4b-2, xiên và đa giác:** tường, dầm, cột xoay **góc bất kỳ**, sàn và trần **đa giác tự do** (nhập theo đường bao), cửa trên tường xiên.
+
+**Việc phải sửa:** `State` / `Levels` (thêm `free`, tương thích dữ liệu cũ), thêm kế hoạch cho phần tử tự do (`FreeColumnPlan`, `FreeWallPlan`…) dùng lại quy tắc cao độ, cửa, chống chồng của kế hoạch theo lưới; `ColumnBuilder`, `BeamBuilder`, `WallBuilder`, `OpeningBuilder`, `PlateBuilder` (P4b-2: dựng đa giác xiên, lỗ cửa trên tường xiên); `Checker`, đề xuất, sao chép tầng; hợp đồng với VGD BIM (`dims`, ref) để BIM vẫn đọc đúng khối lượng; giao diện mặt bằng (vẽ, bắt điểm, thuộc tính, cây dự án) và test.
+
+**Rủi ro:** thay đổi lớn, chạm nhiều Ruby đã chạy ổn; mọi phần dựng hình xiên, đùn đa giác, lỗ cửa xiên **chưa kiểm được trong SketchUp thật**; dữ liệu đã lưu phải mở lại đúng sau khi nâng cấp; số mã phần tử tự do (id) cần ổn định để VGD ID và BIM không đổi khi dựng lại.
+
+**Câu hỏi cần chủ dự án quyết định trước khi làm:** (a) có làm theo hai bước (vuông góc rồi xiên) hay một lần; (b) cột lệch trục có cần xoay không; (c) sàn, trần đa giác có nằm trong P4b hay để sau; (d) phần tử tự do và theo lưới có được trộn trong một tầng không (đề xuất: có).

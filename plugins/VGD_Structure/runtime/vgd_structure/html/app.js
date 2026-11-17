@@ -816,7 +816,7 @@
     } else if (event === 'axes') {
       var set = fromAxes(data.axes); state[data.dir] = set; renderAxes(data.dir); changed();
     } else if (event === 'levels') {
-      state.levels = data.levels.map(fromRubyLevel); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab(); changed(); message(data.message);
+      state.levels = data.levels.map(fromRubyLevel); syncPlanLevels(); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab(); changed(); message(data.message);
     } else if (event === 'columns_built') {
       state.drawnLevels = data.drawn_levels || []; renderColumnsButtons(); message(data.message, data.error);
     } else if (event === 'beams_built') {
@@ -888,7 +888,16 @@
     api: {level: currentLevel, isTop: isTop, rid: rid, toAxes: toAxes, allSpans: allSpans, allCells: allCells, allRefs: allRefs, wallOpenings: wallOpenings, addAxis: addAxis, modes: {x: MODE_X, y: MODE_Y, p: MODE_P}}};
   window.VGDPlanEdit.init({state: state, api: window.VGDS.api, mutate: mutate, scale: function () { return window.VGDPlan.scale(); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, bounds: function () { return window.VGDPlan.bounds(); }});
   window.VGDPlanModify.init({state: state, api: window.VGDS.api, mutate: mutate, scale: function () { return window.VGDPlan.scale(); }, bounds: function () { return window.VGDPlan.bounds(); }, shapeAt: function (w) { return window.VGDPlan.shapeAt(w); }, finish: function () { window.VGDPlan.finish(); }});
-  window.VGDPlan.init({onLevel: setLevelFromPlan, undo: undo, redo: redo, history: window.VGDS.history, edit: window.VGDPlanEdit, modify: window.VGDPlanModify});
+  window.VGDPlan.init({onLevel: setLevelFromPlan, undo: undo, redo: redo, history: window.VGDS.history, edit: window.VGDPlanEdit, modify: window.VGDPlanModify, browser: window.VGDPlanBrowser});
+  var BROWSER_PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', opening: 'openingPicks'};
+  window.VGDPlanBrowser.init({state: state, currentLevel: function () { return state.level; }, axes: toAxes,
+    openLevel: function (id) { if (id !== state.level) setLevelFromPlan(id); },
+    selectElement: function (levelId, kind, ref) { window.VGDPlan.selectKeys(levelId, [{kind: kind, ref: ref}]); },
+    selectType: function (kind, typeId) {
+      var l = currentLevel(), box = l[BROWSER_PICKS[kind]] || {};
+      var keys = Object.keys(box).filter(function (ref) { return window.VGDPlanBrowser.effectiveType(kind, l, box[ref]) === typeId; }).map(function (ref) { return {kind: kind, ref: ref}; });
+      window.VGDPlan.selectKeys(state.level, keys);
+    }});
 
   $('origin-x').oninput = function () { state.origin[0] = Number($('origin-x').value); changed(); };
   $('origin-y').oninput = function () { state.origin[1] = Number($('origin-y').value); changed(); };
