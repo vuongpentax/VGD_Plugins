@@ -56,9 +56,9 @@ module Sketchup
   class Face < Entity
     attr_reader :points, :height
     def initialize(points); @points = points; @reversed = false; end
+    # Chiều pháp tuyến theo diện tích có dấu (shoelace) của cả đa giác: đúng cả khi có đỉnh lõm. Ngược chiều kim đồng hồ nhìn từ trên = hướng lên.
     def normal
-      a, b, c = points
-      z = (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x)
+      z = points.each_with_index.sum { |p, i| q = points[(i + 1) % points.size]; p.x * q.y - q.x * p.y }
       Struct.new(:z).new(@reversed ? -z : z)
     end
     def reverse!; @reversed = !@reversed; end

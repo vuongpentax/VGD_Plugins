@@ -80,3 +80,21 @@ svg#plan4 .wall { fill: #FF9966; fill-opacity: .85; stroke: var(--vgd-text); vec
 svg#plan4 .wall.sel { stroke: var(--vgd-accent); stroke-width: 3; }
 svg#plan4 .colref { fill: #66DD00; fill-opacity: .7; stroke: var(--vgd-muted); vector-effect: non-scaling-stroke; pointer-events: none; }
 svg#plan4 text { fill: var(--vgd-muted); font-size: 11px; text-anchor: middle; pointer-events: none; }
+
+svg#plan5 { flex: 1; min-height: 220px; width: 100%; background: var(--vgd-surface); border: 1px solid var(--vgd-border); border-radius: 6px; }
+svg#plan5 .axis { stroke: #BA00CC; stroke-width: 1; stroke-dasharray: 14 3 2 3; fill: none; vector-effect: non-scaling-stroke; opacity: .45; }
+svg#plan5 .cellghost { fill: transparent; stroke: var(--vgd-muted); stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; cursor: pointer; }
+svg#plan5 .cellghost:hover { stroke: var(--vgd-accent); fill: var(--vgd-tint); }
+svg#plan5 .cell { stroke: var(--vgd-text); vector-effect: non-scaling-stroke; cursor: pointer; fill-opacity: .55; }
+svg#plan5 .cell.slab { fill: #BA3300; }
+svg#plan5 .cell.ceiling { fill: #9900FF; }
+svg#plan5 text { fill: var(--vgd-muted); font-size: 11px; text-anchor: middle; pointer-events: none; }
+
+svg#plan6 { flex: 1; min-height: 220px; width: 100%; background: var(--vgd-surface); border: 1px solid var(--vgd-border); border-radius: 6px; }
+svg#plan6 .axis { stroke: #BA00CC; stroke-width: 1; stroke-dasharray: 14 3 2 3; fill: none; vector-effect: non-scaling-stroke; opacity: .45; }
+svg#plan6 .cellghost { fill: transparent; stroke: var(--vgd-muted); stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; cursor: pointer; }
+svg#plan6 .cellghost:hover { stroke: var(--vgd-accent); fill: var(--vgd-tint); }
+svg#plan6 .cell { stroke: var(--vgd-text); vector-effect: non-scaling-stroke; cursor: pointer; fill-opacity: .55; }
+svg#plan6 .cell.slab { fill: #BA3300; }
+svg#plan6 .cell.ceiling { fill: #9900FF; }
+svg#plan6 text { fill: var(--vgd-muted); font-size: 11px; text-anchor: middle; pointer-events: none; }

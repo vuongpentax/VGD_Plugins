@@ -23,6 +23,8 @@ module VGD
         @dialog.add_action_callback('beams_remove') { |_ctx, payload| safely { beams_remove(JSON.parse(payload)) } }
         @dialog.add_action_callback('walls_build') { |_ctx, payload| safely { walls_build(JSON.parse(payload)) } }
         @dialog.add_action_callback('walls_remove') { |_ctx, payload| safely { walls_remove(JSON.parse(payload)) } }
+        @dialog.add_action_callback('plates_build') { |_ctx, payload| safely { plates_build(JSON.parse(payload)) } }
+        @dialog.add_action_callback('plates_remove') { |_ctx, payload| safely { plates_remove(JSON.parse(payload)) } }
         @dialog.add_action_callback('picks_copy') { |_ctx, payload| safely { picks_copy(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_reset') { |_ctx| safely { send_state(reset: true) } }
       end
@@ -52,7 +54,7 @@ module VGD
         model = Sketchup.active_model
         state = reset ? State.default.merge('saved' => false, 'removed' => 0) : ModelStore.read(model)
         emit('state', {grid: state['grid'], symbol: state['symbol'], types: state['types'], beam_types: state['beam_types'], wall_types: state['wall_types'], levels: state['levels'], saved: state['saved'],
-                       drawn: !GridBuilder.find(model).nil?, drawn_levels: drawn_levels(model), drawn_beam_levels: drawn_beam_levels(model), drawn_wall_levels: drawn_wall_levels(model), version: VERSION})
+                       drawn: !GridBuilder.find(model).nil?, drawn_levels: drawn_levels(model), drawn_beam_levels: drawn_beam_levels(model), drawn_wall_levels: drawn_wall_levels(model), drawn_slab_levels: drawn_plate_levels(model, 'slabs'), drawn_ceiling_levels: drawn_plate_levels(model, 'ceilings'), version: VERSION})
         grid_preview(state.merge('level' => state['levels'].first['id']))
       end
 
@@ -70,6 +72,47 @@ module VGD
 
       def drawn_wall_levels(model)
         WallBuilder.groups(model).map { |g| g.get_attribute(Schema::DICTIONARY, 'level') }
+      end
+
+      def drawn_plate_levels(model, kind)
+        PlateBuilder.groups(model, kind).map { |g| g.get_attribute(Schema::DICTIONARY, 'level') }
+      end
+
+      PLATE_LABELS = {'slabs' => 'sàn', 'ceilings' => 'trần'}.freeze
+
+      # Dựng sàn hoặc trần các tầng đã chọn (payload['kind'] = slabs | ceilings; xem columns_build).
+      def plates_build(payload)
+        kind = payload['kind']
+        label = PLATE_LABELS.fetch(kind) { raise ArgumentError, 'Loại tấm không hợp lệ.' }
+        model = Sketchup.active_model
+        ids = payload['levels']
+        state = payload['state']
+        if ids.is_a?(Array) && state.is_a?(Hash)
+          clean = State.normalize!(state)
+          total = ids.uniq.sum { |id| (level = Levels.find(clean['levels'], id)) ? level['picks'][kind].size : 0 }
+          if total > CONFIRM_COLUMNS && ::UI.messagebox("Sẽ dựng #{total} #{label}. Tiếp tục?", MB_YESNO) != IDYES
+            return emit('message', {text: "Đã hủy, chưa dựng #{label}."})
+          end
+        end
+        result = PlateBuilder.build(model, state, ids, kind)
+        names = result.levels.map { |l| "#{l[:name]} (#{l[:count]} #{label})" }.join(', ')
+        note = result.issues.empty? ? '' : " Có #{result.issues.size} cảnh báo: #{result.issues.first(3).join(' ')}"
+        note += " Đã dọn #{result.removed_orphans} nhóm #{label} của tầng không còn." if result.removed_orphans.positive?
+        emit('plates_built', {kind: kind, message: "Đã dựng #{result.total} #{label}: #{names}.#{note}", drawn_levels: drawn_plate_levels(model, kind)})
+      rescue Grid::Error, AxisSymbol::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, Levels::Error, ColumnPlan::Error, BeamPlan::Error, WallPlan::Error, SlabPlan::Error, CeilingPlan::Error, ArgumentError => error
+        emit('message', {text: error.message, error: true})
+      end
+
+      def plates_remove(payload)
+        kind = payload['kind']
+        label = PLATE_LABELS.fetch(kind) { raise ArgumentError, 'Loại tấm không hợp lệ.' }
+        model = Sketchup.active_model
+        id = payload['level']
+        count = PlateBuilder.remove(model, kind, id.is_a?(String) ? id : nil)
+        message = count.zero? ? "Model chưa có #{label} do VGD Structure dựng." : "Đã xóa #{label} khỏi model. Dữ liệu #{label} đã chọn vẫn được giữ."
+        emit('plates_built', {kind: kind, message: message, drawn_levels: drawn_plate_levels(model, kind), error: count.zero?})
+      rescue ArgumentError => error
+        emit('message', {text: error.message, error: true})
       end
 
       # Dựng tường các tầng đã chọn (xem columns_build).
@@ -172,11 +215,11 @@ module VGD
         beam_types = payload['beam_types'].nil? ? BeamTypes.default : BeamTypes.normalize!(payload['beam_types'])
         wall_types = payload['wall_types'].nil? ? WallTypes.default : WallTypes.normalize!(payload['wall_types'])
         levels, = Levels.normalize!(payload['levels'], grid, types, beam_types, wall_types)
-        kind = %w[beams walls].include?(payload['kind']) ? payload['kind'] : 'columns'
+        kind = %w[beams walls slabs ceilings].include?(payload['kind']) ? payload['kind'] : 'columns'
         copied = Levels.copy_picks(levels, payload['from'], payload['to'], grid, types, kind, beam_types, wall_types)
         from = Levels.find(levels, payload['from'])['name']
         to = Levels.find(levels, payload['to'])['name']
-        emit('levels', {levels: copied, message: "Đã sao chép lựa chọn #{{'beams' => 'dầm', 'walls' => 'tường'}.fetch(kind, 'cột')} từ “#{from}” sang “#{to}”."})
+        emit('levels', {levels: copied, message: "Đã sao chép lựa chọn #{{'beams' => 'dầm', 'walls' => 'tường', 'slabs' => 'sàn', 'ceilings' => 'trần'}.fetch(kind, 'cột')} từ “#{from}” sang “#{to}”."})
       rescue Grid::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, Levels::Error => error
         emit('message', {text: error.message, error: true})
       end

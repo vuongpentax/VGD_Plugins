@@ -1,10 +1,10 @@
-# VGD Structure 0.5.0-beta.1
+# VGD Structure 0.6.0-beta.1
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
 
-**Cột mốc 4: tường** (trên nền lưới trục, tầng, cột và dầm). Chưa dựng sàn, trần (các cột mốc sau, xem kế hoạch).
+**Cột mốc 5: sàn và trần** (trên nền lưới trục, tầng, cột, dầm, tường). Phần còn lại của kế hoạch: nối với VGD BIM (cột mốc 7) và phát hành.
 
 **Lưới trục** (menu Extensions → VGD → VGD Structure → Lưới trục, hoặc nút trên thanh công cụ VGD STR):
 - Nhập **trục đứng** (đánh số 1, 2, 3...) và **trục ngang** (đánh chữ A, B, C...; bỏ I và O) với khoảng cách giữa các trục, từng trục sửa được tên và nhịp. Gõ nhanh "4200, 3600*2" rồi bấm Tạo trục từ nhịp (dấu phẩy hoặc khoảng trắng ngăn cách, số lẻ dùng dấu chấm, `*` hoặc `x` là lặp). 2 đến 60 trục mỗi phương, tên tối đa 4 ký tự, nhịp tối thiểu 100 mm.
@@ -33,13 +33,19 @@ Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) th
 - **Dựng tường tầng này / mọi tầng**: mỗi tầng một nhóm "Tường - <tên tầng>" trên tag **A. WALL** (theo bộ tag mẫu BIM, thư mục A. ARCHITECTURAL), tường dùng chung định nghĩa theo (phương, dày, cao, dài), kèm dữ liệu cho VGD BIM (kể cả tường dưới dầm). Một bước hoàn tác; dựng lại thay nhóm cũ; có xóa tường; hỏi xác nhận khi dựng hơn 500 tường.
 - Nếu sửa dầm của một nhịp sau khi đã dựng tường thì cần **dựng lại tường** để tường theo chiều cao mới.
 
+**Sàn** (tab "Sàn"; dày sàn nhập ở bảng tầng): bấm các **ô** (vùng giữa hai trục đứng và hai trục ngang liền nhau) để chọn sàn; Chọn mọi ô, Bỏ chọn hết, sao chép lựa chọn sàn từ tầng khác. Sàn phủ trọn ô (từ trục tới trục, kể cả phía trên cột và dầm tầng dưới), **mặt trên tại cao độ sàn của tầng, dày xuống dưới**; cột và dầm tầng dưới dừng ở đáy sàn nên không chồng khối. **Tầng trên cùng cũng có sàn** (sàn mái). Mỗi tầng một nhóm "Sàn - <tên tầng>" trên tag **S. SLAB**.
+
+**Trần** (tab "Trần"; **cao trần** và **dày trần** nhập ở bảng tầng, mặc định 2800 và 9 mm): chọn ô như sàn. Trần là tấm mỏng, **mặt dưới ở cao độ sàn + cao trần**; **lùi tới mặt tường** ở cạnh ô có tường được chọn cùng tầng (cạnh không có tường tới trục), **khoét góc theo cột** (đa giác chữ L / U...) nên không chồng cột. Báo lỗi nếu mặt trên trần vượt đáy sàn tầng trên; cảnh báo trần chạm đáy dầm; ô bị tường hoặc cột chiếm hết thì bỏ và báo. Tầng trên cùng không có trần. Mỗi tầng một nhóm "Trần - <tên tầng>" trên tag **A. FINISHING CEILING** (thư mục A. ARCHITECTURAL).
+
+Sàn và trần cũng: một bước hoàn tác, dựng lại thay nhóm cũ, có xóa, hỏi xác nhận khi dựng hơn 500 ô, dựng chung định nghĩa theo (đa giác, dày), dữ liệu cho VGD BIM (kind slab / ceiling, dày, diện tích). Chưa có lỗ mở trên sàn (cầu thang, giếng trời), chưa có dốc, chưa có sàn lệch cao độ riêng từng ô; trần phẳng, chưa có khung treo.
+
 Dữ liệu lưu trong model (dictionary `VGD_STRUCT`). VGD BIM chưa đọc cột mốc này (cột mốc 7): cột vẫn hiện trong bảng khối lượng như đối tượng thường.
 
 Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **Tải lại code** nạp lại mã mà không cần mở lại (đóng và mở lại cửa sổ nếu đang mở).
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.5.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.6.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

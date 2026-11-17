@@ -9,6 +9,10 @@ module VGD
       MAX_ELEVATION = 200_000.0
       SLAB_RANGE = (50.0..1000.0)
       DEFAULT_SLAB = 120.0
+      DEFAULT_CEILING_HEIGHT = 2800.0
+      CEILING_HEIGHT_RANGE = (1500.0..20_000.0)
+      DEFAULT_CEILING_THICKNESS = 9.0
+      CEILING_THICKNESS_RANGE = (5.0..100.0)
       MIN_COLUMN_HEIGHT = 300.0 # chiều cao cột (đến đáy sàn tầng trên) tối thiểu
       ID_PATTERN = /\Asl_[0-9a-f]{8}\z/
       MODES = %w[auto center min max].freeze
@@ -18,8 +22,10 @@ module VGD
 
       # Hai tầng mặc định: Tầng 1 (cao độ 0) và tầng trên cùng cao 3600 mm.
       def self.default
-        [{'id' => 'sl_00000001', 'name' => 'Tầng 1', 'elevation' => 0.0, 'slab_thickness' => DEFAULT_SLAB, 'column_type' => nil, 'beam_type' => nil, 'wall_type' => nil, 'picks' => {'columns' => {}, 'beams' => {}, 'walls' => {}}},
-         {'id' => 'sl_00000002', 'name' => 'Tầng 2', 'elevation' => 3600.0, 'slab_thickness' => DEFAULT_SLAB, 'column_type' => nil, 'beam_type' => nil, 'wall_type' => nil, 'picks' => {'columns' => {}, 'beams' => {}, 'walls' => {}}}]
+        [{'id' => 'sl_00000001', 'name' => 'Tầng 1', 'elevation' => 0.0, 'slab_thickness' => DEFAULT_SLAB, 'ceiling_height' => DEFAULT_CEILING_HEIGHT, 'ceiling_thickness' => DEFAULT_CEILING_THICKNESS, 'column_type' => nil, 'beam_type' => nil, 'wall_type' => nil,
+         'picks' => {'columns' => {}, 'beams' => {}, 'walls' => {}, 'slabs' => {}, 'ceilings' => {}}},
+         {'id' => 'sl_00000002', 'name' => 'Tầng 2', 'elevation' => 3600.0, 'slab_thickness' => DEFAULT_SLAB, 'ceiling_height' => DEFAULT_CEILING_HEIGHT, 'ceiling_thickness' => DEFAULT_CEILING_THICKNESS, 'column_type' => nil, 'beam_type' => nil, 'wall_type' => nil,
+         'picks' => {'columns' => {}, 'beams' => {}, 'walls' => {}, 'slabs' => {}, 'ceilings' => {}}}]
       end
 
       # Kiểm tra danh sách tầng với lưới và loại cột. Trả về [danh sách sạch, số lựa chọn cột bị bỏ vì giao điểm không còn trên lưới].
@@ -28,6 +34,7 @@ module VGD
         raise Error, "Cần từ 1 đến #{MAX_LEVELS} tầng." unless list.size.between?(1, MAX_LEVELS)
         refs = Grid.intersections(grid).map { |i| i[:ref] }
         span_refs = Grid.spans(grid).map { |sp| sp[:ref] }
+        cell_refs = Grid.cells(grid).map { |c| c[:ref] }
         removed = 0
         previous = nil
         out = list.each_with_index.map do |level, i|
@@ -43,6 +50,10 @@ module VGD
           previous = elevation
           slab = level.key?('slab_thickness') ? level['slab_thickness'] : DEFAULT_SLAB
           raise Error, "Tầng “#{name}”: dày sàn từ #{SLAB_RANGE.min.to_i} đến #{SLAB_RANGE.max.to_i} mm." unless number?(slab) && SLAB_RANGE.cover?(slab.to_f)
+          ceiling_height = level.key?('ceiling_height') ? level['ceiling_height'] : DEFAULT_CEILING_HEIGHT
+          raise Error, "Tầng “#{name}”: cao trần từ #{CEILING_HEIGHT_RANGE.min.to_i} đến #{CEILING_HEIGHT_RANGE.max.to_i} mm." unless number?(ceiling_height) && CEILING_HEIGHT_RANGE.cover?(ceiling_height.to_f)
+          ceiling_thickness = level.key?('ceiling_thickness') ? level['ceiling_thickness'] : DEFAULT_CEILING_THICKNESS
+          raise Error, "Tầng “#{name}”: dày trần từ #{CEILING_THICKNESS_RANGE.min.to_i} đến #{CEILING_THICKNESS_RANGE.max.to_i} mm." unless number?(ceiling_thickness) && CEILING_THICKNESS_RANGE.cover?(ceiling_thickness.to_f)
           type_id = level['column_type']
           raise Error, "Tầng “#{name}”: loại cột mặc định không tồn tại." unless type_id.nil? || ColumnTypes.find(types, type_id)
           beam_type = level['beam_type']
@@ -50,13 +61,15 @@ module VGD
           wall_type = level['wall_type']
           raise Error, "Tầng “#{name}”: loại tường mặc định không tồn tại." unless wall_type.nil? || WallTypes.find(wall_types, wall_type)
           raw = level['picks']
-          raise Error, "Tầng “#{name}”: dữ liệu cột, dầm, tường được chọn không hợp lệ." unless raw.nil? || (raw.is_a?(Hash) && %w[columns beams walls].all? { |k| raw[k].nil? || raw[k].is_a?(Hash) })
+          raise Error, "Tầng “#{name}”: dữ liệu cột, dầm, tường, sàn, trần được chọn không hợp lệ." unless raw.nil? || (raw.is_a?(Hash) && %w[columns beams walls slabs ceilings].all? { |k| raw[k].nil? || raw[k].is_a?(Hash) })
           columns, dropped_c = picks!((raw || {})['columns'], refs, types, name, 'cột', ColumnTypes)
           beams, dropped_b = picks!((raw || {})['beams'], span_refs, beam_types, name, 'dầm', BeamTypes)
           walls, dropped_w = picks!((raw || {})['walls'], span_refs, wall_types, name, 'tường', WallTypes)
-          removed += dropped_c + dropped_b + dropped_w
-          {'id' => id, 'name' => name, 'elevation' => elevation, 'slab_thickness' => slab.to_f.round(1), 'column_type' => type_id, 'beam_type' => beam_type, 'wall_type' => wall_type,
-           'picks' => {'columns' => columns, 'beams' => beams, 'walls' => walls}}
+          slabs, dropped_s = cell_picks!((raw || {})['slabs'], cell_refs, name, 'sàn')
+          ceilings, dropped_k = cell_picks!((raw || {})['ceilings'], cell_refs, name, 'trần')
+          removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k
+          {'id' => id, 'name' => name, 'elevation' => elevation, 'slab_thickness' => slab.to_f.round(1), 'ceiling_height' => ceiling_height.to_f.round(1), 'ceiling_thickness' => ceiling_thickness.to_f.round(1),
+           'column_type' => type_id, 'beam_type' => beam_type, 'wall_type' => wall_type, 'picks' => {'columns' => columns, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings}}
         end
         names = out.map { |l| l['name'].downcase }
         dup = out.find { |l| names.count(l['name'].downcase) > 1 }
@@ -96,6 +109,18 @@ module VGD
         [picks, dropped]
       end
 
+      # picks.slabs / picks.ceilings: {mã ô => {}} (chưa có thuộc tính riêng từng ô). Mã ô không còn trên lưới thì bỏ (đếm).
+      def self.cell_picks!(raw, refs, level_name, label)
+        return [{}, 0] if raw.nil?
+        picks = {}
+        dropped = 0
+        raw.each do |ref, pick|
+          raise Error, "Tầng “#{level_name}”: #{label} #{ref} không hợp lệ." unless ref.is_a?(String) && pick.is_a?(Hash)
+          refs.include?(ref) ? picks[ref] = {} : dropped += 1
+        end
+        [picks, dropped]
+      end
+
       def self.find(levels, id)
         levels.find { |l| l['id'] == id }
       end
@@ -106,11 +131,11 @@ module VGD
         index && levels[index + 1]
       end
 
-      # Sao chép lựa chọn (kind = 'columns', 'beams' hoặc 'walls') từ tầng này sang tầng khác: thay hoàn toàn lựa chọn cùng loại của tầng đích; không đổi
+      # Sao chép lựa chọn (kind = 'columns', 'beams', 'walls', 'slabs' hoặc 'ceilings') từ tầng này sang tầng khác: thay hoàn toàn lựa chọn cùng loại của tầng đích; không đổi
       # loại mặc định, cao độ, dày sàn, lựa chọn loại kia. Mỗi tầng vẫn sửa riêng được sau đó. Trả về danh sách tầng mới (đã kiểm tra), không đổi dữ liệu vào.
       def self.copy_picks(levels, from_id, to_id, grid, types, kind = 'columns', beam_types = BeamTypes.default, wall_types = WallTypes.default)
         raise Error, 'Hãy chọn hai tầng khác nhau.' if from_id == to_id
-        raise Error, 'Loại lựa chọn không hợp lệ.' unless %w[columns beams walls].include?(kind)
+        raise Error, 'Loại lựa chọn không hợp lệ.' unless %w[columns beams walls slabs ceilings].include?(kind)
         from = find(levels, from_id) or raise Error, 'Tầng nguồn không tồn tại.'
         find(levels, to_id) or raise Error, 'Tầng đích không tồn tại.'
         copied = Marshal.load(Marshal.dump(levels))

@@ -21,7 +21,7 @@ module UI
 end
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
 module VGD; module Structure; VERSION = '9.9.9'; end; end
-%w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/levels core/column_plan core/beam_plan core/wall_plan core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder panel].each { |f| require File.join(ROOT, f) }
+%w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/levels core/column_plan core/beam_plan core/wall_plan core/slab_plan core/ceiling_plan core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder plate_builder panel].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 $model = Sketchup::Model.new
 panel = S::Panel.new
@@ -184,6 +184,44 @@ call(dlg, 'walls_remove', {'level' => wlevels[0]['id']})
 ok('xóa tường tầng 1: drawn_wall_levels rỗng, nhóm biến mất', last_event(dlg, 'walls_built')['drawn_wall_levels'] == [] && $model.entities.grep(Sketchup::Group).none? { |g| g.name == 'Tường - Tầng 1' })
 call(dlg, 'walls_remove', {'level' => wlevels[0]['id']})
 ok('xóa tường khi chưa có: báo, không lỗi', last_event(dlg, 'walls_built')['error'] == true)
+
+# Sàn và trần
+call(dlg, 'grid_reset')
+st = last_event(dlg, 'state')
+cells = S::Grid.cells(S::Grid.normalize!(st['grid'])).map { |c| c[:ref] }
+ok('trạng thái có cao trần, dày trần, picks.slabs / ceilings, chưa dựng sàn và trần', st['levels'][0]['ceiling_height'] == 2800.0 && st['levels'][0]['ceiling_thickness'] == 9.0 && st['levels'][0]['picks'].key?('slabs') && st['drawn_slab_levels'] == [] && st['drawn_ceiling_levels'] == [])
+plv = st['levels'].map { |l| JSON.parse(JSON.generate(l)) }
+plv[0]['picks'] = {'columns' => {}, 'beams' => {}, 'walls' => {}, 'slabs' => cells.each_with_object({}) { |r, h| h[r] = {} }, 'ceilings' => cells.each_with_object({}) { |r, h| h[r] = {} }}
+pfull = {'grid' => st['grid'], 'symbol' => st['symbol'], 'types' => st['types'], 'beam_types' => st['beam_types'], 'wall_types' => st['wall_types'], 'levels' => plv, 'level' => plv[0]['id']}
+call(dlg, 'grid_preview', pfull)
+pv = last_event(dlg, 'preview')
+ok('xem trước có phần sàn: 6 sàn, mặt trên 0, dày 120, đủ trường để vẽ', pv['slabs']['count'] == 6 && pv['slabs']['z_top'] == 0.0 && pv['slabs']['items'].first.keys.sort == %w[area max min thickness z_bottom z_top ref].sort)
+ok('xem trước có phần trần: 6 trần, mặt dưới 2800, mỗi trần có đa giác', pv['ceilings']['count'] == 6 && pv['ceilings']['z_bottom'] == 2800.0 && pv['ceilings']['items'].all? { |i| i['polygon'].size >= 4 })
+call(dlg, 'grid_preview', pfull.merge('level' => plv[1]['id']))
+pv = last_event(dlg, 'preview')
+ok('tầng trên cùng: có sàn (xem trước), không có trần (báo lỗi riêng)', pv['slabs']['count'] == 0 && pv['ceilings_error'].include?('tầng trên cùng') && !pv.key?('ceilings'))
+call(dlg, 'plates_build', {'kind' => 'slabs', 'state' => pfull, 'levels' => [plv[0]['id']]})
+pb = last_event(dlg, 'plates_built')
+ok('dựng sàn tầng 1: 6 sàn, drawn_levels có tầng 1, nhóm trong model', pb['kind'] == 'slabs' && pb['message'].include?('6 sàn') && pb['drawn_levels'] == [plv[0]['id']] && $model.entities.grep(Sketchup::Group).any? { |g| g.name == 'Sàn - Tầng 1' })
+call(dlg, 'plates_build', {'kind' => 'ceilings', 'state' => pfull, 'levels' => [plv[0]['id']]})
+pb = last_event(dlg, 'plates_built')
+ok('dựng trần tầng 1: 6 trần, nhóm riêng', pb['kind'] == 'ceilings' && pb['message'].include?('6 trần') && $model.entities.grep(Sketchup::Group).any? { |g| g.name == 'Trần - Tầng 1' } && $model.entities.grep(Sketchup::Group).any? { |g| g.name == 'Sàn - Tầng 1' })
+call(dlg, 'ready')
+ok('mở lại: đọc lựa chọn và tầng đã dựng sàn / trần từ model', (s2 = last_event(dlg, 'state')) && s2['drawn_slab_levels'] == [plv[0]['id']] && s2['drawn_ceiling_levels'] == [plv[0]['id']] && s2['levels'][0]['picks']['slabs'].size == 6)
+call(dlg, 'plates_build', {'kind' => 'ceilings', 'state' => pfull, 'levels' => [plv[1]['id']]})
+ok('dựng trần tầng trên cùng: báo lỗi', last_event(dlg, 'message')['error'] == true)
+call(dlg, 'plates_build', {'kind' => 'floors', 'state' => pfull, 'levels' => [plv[0]['id']]})
+ok('loại tấm lạ: báo lỗi, không văng', last_event(dlg, 'message')['error'] == true)
+call(dlg, 'plates_build', {'kind' => 'slabs', 'state' => 'x', 'levels' => ['sl_00000001']})
+ok('dữ liệu dựng sàn sai kiểu: báo lỗi', last_event(dlg, 'message')['error'] == true)
+call(dlg, 'picks_copy', {'grid' => st['grid'], 'types' => st['types'], 'beam_types' => st['beam_types'], 'wall_types' => st['wall_types'], 'levels' => plv + [plv[1].merge('id' => 'sl_00000003', 'name' => 'Tầng 3', 'elevation' => 7200.0)], 'from' => plv[0]['id'], 'to' => plv[1]['id'], 'kind' => 'slabs'})
+cp = last_event(dlg, 'levels')
+ok('sao chép lựa chọn sàn: tầng đích có 6 sàn, thông báo ghi "sàn"', cp['levels'][1]['picks']['slabs'].size == 6 && cp['message'].include?('sàn'))
+call(dlg, 'plates_remove', {'kind' => 'slabs', 'level' => plv[0]['id']})
+ok('xóa sàn: drawn_levels rỗng, trần còn nguyên', last_event(dlg, 'plates_built')['drawn_levels'] == [] && $model.entities.grep(Sketchup::Group).none? { |g| g.name == 'Sàn - Tầng 1' } && $model.entities.grep(Sketchup::Group).any? { |g| g.name == 'Trần - Tầng 1' })
+call(dlg, 'plates_remove', {'kind' => 'ceilings', 'level' => plv[0]['id']})
+call(dlg, 'plates_remove', {'kind' => 'ceilings', 'level' => plv[0]['id']})
+ok('xóa khi chưa có: báo, không lỗi', last_event(dlg, 'plates_built')['error'] == true)
 
 # Tạo trục từ chuỗi nhịp
 call(dlg, 'grid_axes', {'dir' => 'x', 'text' => '4200, 3600*2'})

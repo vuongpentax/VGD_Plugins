@@ -20,6 +20,8 @@
   <button type="button" role="tab" data-tab="columns" aria-selected="false">Cột</button>
   <button type="button" role="tab" data-tab="beams" aria-selected="false">Dầm</button>
   <button type="button" role="tab" data-tab="walls" aria-selected="false">Tường</button>
+  <button type="button" role="tab" data-tab="slabs" aria-selected="false">Sàn</button>
+  <button type="button" role="tab" data-tab="ceilings" aria-selected="false">Trần</button>
 </nav>
 <main id="tab-grid" class="tab">
   <section class="form" aria-label="Khai báo lưới trục">
@@ -204,6 +206,68 @@
       <button type="button" id="build-walls" class="primary">Dựng tường tầng này</button>
       <button type="button" id="build-all-walls">Dựng tường mọi tầng</button>
       <button type="button" id="remove-walls" class="danger">Xóa tường tầng này</button>
+    </div>
+  </section>
+</main>
+<main id="tab-slabs" class="tab" hidden>
+  <section class="form" aria-label="Chọn sàn">
+    <fieldset>
+      <legend>Tầng</legend>
+      <label>Tầng đang xem <select id="slab-level-select"></select></label>
+      <p id="slab-level-note" class="muted small"></p>
+    </fieldset>
+    <fieldset>
+      <legend>Chọn ô sàn</legend>
+      <div class="actions">
+        <button type="button" id="slab-pick-all">Chọn mọi ô</button>
+        <button type="button" id="slab-pick-none">Bỏ chọn hết</button>
+      </div>
+      <div class="quick">
+        <label>Sao chép từ <select id="slab-copy-from" aria-label="Tầng nguồn"></select></label>
+        <button type="button" id="slab-copy-picks">Sao chép vào tầng này</button>
+      </div>
+      <p class="muted small">Bấm một ô để chọn sàn, bấm ô đã chọn để bỏ. Sàn phủ trọn ô (từ trục tới trục), mặt trên tại cao độ tầng, dày xuống dưới; cột và dầm tầng dưới dừng ở đáy sàn. Tầng trên cùng cũng có sàn (sàn mái).</p>
+    </fieldset>
+  </section>
+  <section class="preview" aria-label="Mặt bằng sàn">
+    <svg id="plan5" role="img" aria-label="Mặt bằng chọn sàn" preserveAspectRatio="xMidYMid meet"></svg>
+    <p id="slab-summary" class="summary" aria-live="polite"></p>
+    <ul id="slab-issues" class="issues"></ul>
+    <div class="actions">
+      <button type="button" id="build-slabs" class="primary">Dựng sàn tầng này</button>
+      <button type="button" id="build-all-slabs">Dựng sàn mọi tầng</button>
+      <button type="button" id="remove-slabs" class="danger">Xóa sàn tầng này</button>
+    </div>
+  </section>
+</main>
+<main id="tab-ceilings" class="tab" hidden>
+  <section class="form" aria-label="Chọn trần">
+    <fieldset>
+      <legend>Tầng</legend>
+      <label>Tầng đang xem <select id="ceiling-level-select"></select></label>
+      <p id="ceiling-level-note" class="muted small"></p>
+    </fieldset>
+    <fieldset>
+      <legend>Chọn ô trần</legend>
+      <div class="actions">
+        <button type="button" id="ceiling-pick-all">Chọn mọi ô</button>
+        <button type="button" id="ceiling-pick-none">Bỏ chọn hết</button>
+      </div>
+      <div class="quick">
+        <label>Sao chép từ <select id="ceiling-copy-from" aria-label="Tầng nguồn"></select></label>
+        <button type="button" id="ceiling-copy-picks">Sao chép vào tầng này</button>
+      </div>
+      <p class="muted small">Bấm một ô để chọn trần, bấm ô đã chọn để bỏ. Trần lùi tới mặt tường (nếu ô có tường được chọn), khoét góc theo cột, mặt dưới tại cao độ sàn + cao trần. Tầng trên cùng chỉ có sàn nên không có trần.</p>
+    </fieldset>
+  </section>
+  <section class="preview" aria-label="Mặt bằng trần">
+    <svg id="plan6" role="img" aria-label="Mặt bằng chọn trần" preserveAspectRatio="xMidYMid meet"></svg>
+    <p id="ceiling-summary" class="summary" aria-live="polite"></p>
+    <ul id="ceiling-issues" class="issues"></ul>
+    <div class="actions">
+      <button type="button" id="build-ceilings" class="primary">Dựng trần tầng này</button>
+      <button type="button" id="build-all-ceilings">Dựng trần mọi tầng</button>
+      <button type="button" id="remove-ceilings" class="danger">Xóa trần tầng này</button>
     </div>
   </section>
 </main>

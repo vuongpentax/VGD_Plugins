@@ -8,7 +8,7 @@ def error_of; yield; nil; rescue StandardError => e; e.message; end
 require_relative 'fake_sketchup'
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
 module VGD; module Structure; VERSION = '9.9.9'; end; end
-%w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/levels core/column_plan core/beam_plan core/wall_plan core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder].each { |f| require File.join(ROOT, f) }
+%w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/levels core/column_plan core/beam_plan core/wall_plan core/slab_plan core/ceiling_plan core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder plate_builder].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 B = S::GridBuilder
 D = S::Schema::DICTIONARY

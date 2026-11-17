@@ -136,7 +136,7 @@ module VGD
         ox, oy = grid['origin']
         grid['x_axes'].each_cons(2).flat_map do |x1, x2|
           grid['y_axes'].each_cons(2).map do |y1, y2|
-            {ref: "#{x1['name']}-#{x2['name']}/#{y1['name']}-#{y2['name']}", min: [ox + x1['offset'], oy + y1['offset']], max: [ox + x2['offset'], oy + y2['offset']],
+            {ref: "#{x1['name']}-#{x2['name']}/#{y1['name']}-#{y2['name']}", xa: x1['name'], xb: x2['name'], ya: y1['name'], yb: y2['name'], min: [ox + x1['offset'], oy + y1['offset']], max: [ox + x2['offset'], oy + y2['offset']],
              width: (x2['offset'] - x1['offset']).round(1), depth: (y2['offset'] - y1['offset']).round(1)}
           end
         end

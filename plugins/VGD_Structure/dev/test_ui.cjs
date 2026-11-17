@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.5.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.6.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -93,12 +93,12 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const levelRows=()=>page.locator('#levels-table tr').evaluateAll(rs=>rs.slice(1).map(r=>[...r.querySelectorAll('input')].map(i=>i.value).concat([r.querySelector('td.note').textContent])));
   ok(JSON.stringify(await typeNames())==='["C30x30"]','bảng loại cột: C30x30');
   const lr=await levelRows();
-  ok(lr.length===2 && lr[0][0]==='Tầng 1' && lr[0][1]==='0' && lr[0][2]==='120' && lr[0][3]==='Cột cao 3480 mm' && lr[1][3]==='Tầng trên cùng: chỉ có sàn','bảng tầng: 2 tầng, tầng 1 cột cao 3480 (3600 - 120), tầng trên cùng chỉ có sàn');
+  ok(lr.length===2 && lr[0][0]==='Tầng 1' && lr[0][1]==='0' && lr[0][2]==='120' && lr[0][5]==='Cột cao 3480 mm' && lr[1][5]==='Tầng trên cùng: chỉ có sàn','bảng tầng: 2 tầng, tầng 1 cột cao 3480 (3600 - 120), tầng trên cùng chỉ có sàn');
   ok(await page.locator('#types-table button.del').first().isDisabled(),'còn một loại cột thì không xóa được');
   // sửa cao độ tầng 2
   await clear();
   await page.locator('#levels-table tr:nth-child(3) td:nth-child(2) input').fill('4000');await wait();
-  ok((await levelRows())[0][3]==='Cột cao 3880 mm','đổi cao độ tầng 2 thành 4000: ghi chú cột tầng 1 cập nhật ngay (3880)');
+  ok((await levelRows())[0][5]==='Cột cao 3880 mm','đổi cao độ tầng 2 thành 4000: ghi chú cột tầng 1 cập nhật ngay (3880)');
   const lp=await last('grid_preview');
   ok(lp.levels[1].elevation===4000 && lp.levels[0].id==='sl_00000001' && lp.levels[0].slab_thickness===120 && lp.level==='sl_00000001' && lp.types[0].name==='C30x30','xem trước gửi Ruby đúng định dạng tầng (elevation, slab_thickness, picks) và loại cột');
   // thêm tầng, thêm loại
@@ -331,6 +331,83 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok((await message())==='Đã dựng 2 tường.' && await page.locator('#remove-walls').isEnabled(),'sau khi dựng: Xóa tường tầng này bấm được');
   await page.click('#remove-walls');
   ok((await last('walls_remove')).level==='sl_00000001','Xóa tường gửi mã tầng');
+  await page.click('[data-tab=grid]');
+
+
+  // ===== Cao trần và tab Sàn, Trần =====
+  await receive('state',F.state);await receive('preview',F.preview);
+  await page.click('[data-tab=levels]');
+  const lr3=await levelRows();
+  ok(lr3[0][3]==='2800' && lr3[0][4]==='9','bảng tầng có cao trần 2800 và dày trần 9');
+  await clear();
+  await page.locator('#levels-table tr:nth-child(2) td:nth-child(4) input').fill('3000');
+  await page.locator('#levels-table tr:nth-child(2) td:nth-child(5) input').fill('12');await wait();
+  const lc=await last('grid_preview');
+  ok(lc.levels[0].ceiling_height===3000 && lc.levels[0].ceiling_thickness===12 && lc.levels[0].picks.slabs!==undefined,'đổi cao trần và dày trần: gửi ceiling_height / ceiling_thickness');
+  await receive('state',F.state);await receive('preview',F.preview);
+  await page.click('[data-tab=slabs]');
+  ok(await page.locator('#tab-slabs').isVisible() && !(await page.locator('#tab-walls').isVisible()),'chuyển sang tab Sàn');
+  ok(await page.locator('#plan5 polygon.cell.slab').count()===2 && await page.locator('#plan5 rect.cellghost').count()===4,'mặt bằng sàn: 2 sàn đã chọn, 4 ô còn lại để bấm chọn');
+  ok(/Tầng 1: 2 sàn \(tổng 29\.64 m²\)/.test(await page.locator('#slab-summary').innerText()) || /2 sàn/.test(await page.locator('#slab-summary').innerText()),'tóm tắt sàn: số sàn, tổng diện tích');
+  ok((await page.locator('#slab-level-note').innerText()).includes('dày 120') && await page.locator('#build-slabs').isEnabled() && await page.locator('#remove-slabs').isDisabled(),'ghi chú dày sàn; Dựng bấm được, Xóa khóa khi chưa dựng');
+  await clear();
+  await page.locator('#plan5 rect.cellghost[data-ref="3-4/A-B"]').dispatchEvent('click');await wait();
+  ok(Object.keys((await last('grid_preview')).levels[0].picks.slabs).sort().join()==='1-2/A-B,2-3/B-C,3-4/A-B','bấm ô trống: chọn sàn, gửi lại xem trước');
+  await receive('state',F.state);await receive('preview',F.preview);await clear();
+  await page.locator('#plan5 polygon.cell[data-ref="1-2/A-B"]').dispatchEvent('click');await wait();
+  ok(!('1-2/A-B' in (await last('grid_preview')).levels[0].picks.slabs) && '2-3/B-C' in (await last('grid_preview')).levels[0].picks.slabs,'bấm ô đã chọn: bỏ sàn của ô đó');
+  await page.click('#slab-pick-all');await wait();
+  ok(Object.keys((await last('grid_preview')).levels[0].picks.slabs).length===6,'chọn mọi ô: 6 sàn');
+  await page.click('#slab-pick-none');await wait();
+  ok(Object.keys((await last('grid_preview')).levels[0].picks.slabs).length===0 && await page.locator('#build-slabs').isDisabled(),'bỏ chọn hết: Dựng bị khóa');
+  await receive('state',F.state);await receive('preview',F.preview_all_cells);
+  ok(await page.locator('#plan5 polygon.cell.slab').count()===6 && await page.locator('#plan5 rect.cellghost').count()===0,'xem trước 6 sàn: vẽ đủ');
+  const sp=await page.locator('#plan5 polygon.cell.slab[data-ref="1-2/A-B"]').getAttribute('points');
+  ok(sp==='0,0 4200,0 4200,-3600 0,-3600','sàn ô 1-2/A-B vẽ đúng từ trục tới trục (y SVG đảo dấu)');
+  // dựng / xóa sàn
+  await receive('state',F.state);await receive('preview',F.preview);await clear();
+  await page.click('[data-tab=slabs]');await page.click('#build-slabs');
+  const sb=await last('plates_build');
+  ok(sb && sb.kind==='slabs' && JSON.stringify(sb.levels)==='["sl_00000001"]' && Object.keys(sb.state.levels[0].picks.slabs).length===2,'Dựng sàn tầng này: gửi kind = slabs, mã tầng, toàn bộ dữ liệu');
+  await clear();await page.click('#build-all-slabs');
+  ok(JSON.stringify((await last('plates_build')).levels)==='["sl_00000001"]','Dựng sàn mọi tầng: chỉ tầng có sàn được chọn');
+  await receive('plates_built',{kind:'slabs',message:'Đã dựng 2 sàn.',drawn_levels:['sl_00000001']});
+  ok((await message())==='Đã dựng 2 sàn.' && await page.locator('#remove-slabs').isEnabled(),'sau khi dựng: Xóa sàn tầng này bấm được');
+  await page.click('#remove-slabs');
+  const sr=await last('plates_remove');
+  ok(sr.kind==='slabs' && sr.level==='sl_00000001','Xóa sàn gửi kind và mã tầng');
+  // tầng trên cùng có sàn
+  await page.locator('#slab-level-select').selectOption('sl_00000002');
+  ok(await page.locator('#slab-pick-all').isEnabled() && (await page.locator('#slab-level-note').innerText()).includes('sàn mái'),'tầng trên cùng vẫn chọn được sàn (sàn mái)');
+  await page.locator('#slab-level-select').selectOption('sl_00000001');
+  // sao chép sàn
+  await page.click('[data-tab=levels]');await page.click('#add-level');await page.click('[data-tab=slabs]');
+  await page.locator('#slab-level-select').selectOption({index:1});await clear();
+  await page.locator('#slab-copy-from').selectOption({label:'Tầng 1'});await page.click('#slab-copy-picks');
+  const sc=await last('picks_copy');
+  ok(sc && sc.kind==='slabs' && sc.from==='sl_00000001' && sc.to==='sl_00000002' && sc.levels[0].picks.slabs['1-2/A-B'],'sao chép sàn: gửi kind = slabs');
+  // Tab Trần
+  await receive('state',F.state);await receive('preview',F.preview);
+  await page.click('[data-tab=ceilings]');
+  ok(await page.locator('#tab-ceilings').isVisible() && await page.locator('#plan6 polygon.cell.ceiling').count()===2 && await page.locator('#plan6 rect.cellghost').count()===4,'tab Trần: 2 trần đã chọn, 4 ô còn lại');
+  ok((await page.locator('#ceiling-level-note').innerText()).includes('2800') && /2 trần/.test(await page.locator('#ceiling-summary').innerText()),'ghi chú cao độ mặt dưới trần và tóm tắt');
+  await clear();
+  await page.locator('#plan6 rect.cellghost[data-ref="3-4/A-B"]').dispatchEvent('click');await wait();
+  ok(Object.keys((await last('grid_preview')).levels[0].picks.ceilings).length===3 && Object.keys((await last('grid_preview')).levels[0].picks.slabs).length===2,'chọn ô trần chỉ đổi lựa chọn trần, không đổi sàn');
+  await page.click('#ceiling-pick-all');await wait();
+  ok(Object.keys((await last('grid_preview')).levels[0].picks.ceilings).length===6,'chọn mọi ô: 6 trần');
+  await receive('state',F.state);await receive('preview',F.preview_all_cells);
+  ok(await page.locator('#plan6 polygon.cell.ceiling').count()===6,'xem trước 6 trần: vẽ đủ (đa giác có thể khoét góc)');
+  await page.locator('#ceiling-level-select').selectOption('sl_00000002');
+  await receive('preview',F.preview_top);
+  ok(/tầng trên cùng/.test(await page.locator('#ceiling-summary').innerText()) && await page.locator('#build-ceilings').isDisabled() && await page.locator('#ceiling-pick-all').isDisabled() && await page.locator('#plan6 polygon').count()===0,'tầng trên cùng: không có trần, khóa nút, không vẽ ô để bấm');
+  await page.locator('#ceiling-level-select').selectOption('sl_00000001');
+  await receive('state',F.state);await receive('preview',F.preview);await clear();
+  await page.click('[data-tab=ceilings]');await page.click('#build-ceilings');
+  const cb=await last('plates_build');
+  ok(cb && cb.kind==='ceilings' && JSON.stringify(cb.levels)==='["sl_00000001"]' && cb.state.levels[0].ceiling_height===2800,'Dựng trần: gửi kind = ceilings, tầng, cao trần');
+  await receive('plates_built',{kind:'ceilings',message:'Đã dựng 2 trần.',drawn_levels:['sl_00000001']});
+  ok(await page.locator('#remove-ceilings').isEnabled() && await page.locator('#remove-slabs').count()===1,'sau khi dựng trần: Xóa trần bấm được');
   await page.click('[data-tab=grid]');
 
   // Lỗi xem trước
