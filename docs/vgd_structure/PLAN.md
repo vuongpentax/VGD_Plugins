@@ -107,3 +107,23 @@ Gợi ý làm theo thứ tự 0 → 1 → 2 và dừng cho bạn thử trong Ske
 Còn mở (không chặn cột mốc 0): kích thước cột mặc định theo tầng (ví dụ cột tầng trệt lớn hơn tầng trên) và cách đặt lại tay vị trí từng cột; sẽ hỏi khi tới cột mốc 2.
 
 Không có việc nào trong kế hoạch này tự động chạy hay sửa model; mọi thứ đều xem trước rồi mới dựng.
+
+## 10. Đối chiếu với VTBim (17/11/2026)
+
+Nguồn: README công khai của `github.com/mencom95/vtbim`. Repo đó **chỉ có README và link tải bản .rbz đã đóng gói, không có mã nguồn, không có giấy phép mở**, nên VGD **không dùng mã hay file của VTBim**; chỉ tham khảo ý tưởng từ phần mô tả tính năng, tự thiết kế theo hệ VGD. Chủ dự án chốt hướng này.
+
+| Tính năng VTBim (theo mô tả) | Quyết định cho VGD Structure | Ở đâu |
+|---|---|---|
+| Lưới trục có ký hiệu, tự động | Đã làm (nhập tay, ký hiệu theo chuẩn); "lưới tự động" từ cột có sẵn để sau | cột mốc 1 (xong) |
+| Cột, dầm, sàn tham số, đổi tham số thì dựng lại | Trùng hướng đã chốt: dữ liệu là nguồn đúng, dựng lại theo dữ liệu | mục 3, 7 |
+| **Loại phần tử** (định nghĩa dùng lại, ví dụ cột C30x30, dầm D20x40) | **Nên thêm**: thư viện loại có tên, mỗi tầng chọn loại thay vì nhập số lại; dùng chung component | đề xuất đưa vào cột mốc 2 |
+| Tầng, sao chép phần tử giữa các tầng | Giữ "mỗi tầng riêng"; thêm nút **sao chép lựa chọn từ tầng khác** (không gom, vẫn sửa riêng được) | đề xuất cột mốc 2 hoặc 6 |
+| Tường nhiều lớp, nối tường chữ L, T tự động | Tường nhiều lớp để sau; **nối L / T** làm sau cột mốc 4 (bản đầu tường dừng ở mặt cột) | sau cột mốc 4 |
+| Tự khoét ô cửa trên tường | Ngoài phạm vi bản đầu (đã chốt); làm khi có plugin cửa | sau cột mốc 8 |
+| Bảng thống kê cột, dầm tự cập nhật | VGD BIM đã làm bảng khối lượng; chỉ cần BIM đọc đúng dữ liệu (cột mốc 7); thêm tóm tắt số lượng theo loại trong cửa sổ plugin | cột mốc 7 |
+| Kiểm tra tài liệu (chồng, thiếu) | Thêm **kiểm tra kết cấu** (nhịp ngắn hơn cột, cột lệch lưới, tầng thiếu cao độ) trong xem trước | cột mốc 6 |
+| Nhập DWG / DXF | Đã hoãn (nhập lưới từ CAD) | sau cột mốc 8 |
+| Phòng / vùng | Là việc của VGD Room (có thể dò viền từ tường của plugin này) | ngoài plugin |
+| Mặt bằng, mặt đứng, mặt cắt, trình bày, xuất PDF/DWG, thang, mái, cửa, thiết bị vệ sinh, MCP | Không thuộc phần thô; nếu cần sẽ là plugin / hệ khác | ngoài phạm vi |
+
+Việc cần chủ dự án duyệt trước cột mốc 2: có nhận hai bổ sung "loại phần tử" và "sao chép lựa chọn từ tầng khác" hay không.
