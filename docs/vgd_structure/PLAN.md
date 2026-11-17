@@ -1,6 +1,6 @@
 # Kế hoạch plugin VGD Structure (dựng phần thô theo lưới trục)
 
-Trạng thái: **kế hoạch đã chốt các câu hỏi mở (17/11/2026), chưa có mã.** Chờ chủ dự án cho bắt đầu cột mốc 0.
+Trạng thái: **kế hoạch đã chốt các câu hỏi mở (17/11/2026), chưa có mã.** Cột mốc 0 (khung plugin và đặc tả `SPEC.md`) đã làm xong ở `plugins/VGD_Structure`; chờ chủ dự án thử rồi làm cột mốc 1.
 Các lựa chọn dưới đây đã được chủ dự án chốt ở phiên trao đổi: trục nhập ngay trong plugin; nội suy **bán tự động có xem trước**; plugin mới lo phần thô, **VGD Room giữ nguyên**; bản đầu dựng **khối thô theo lưới, chưa khoét cửa**.
 
 ## 1. Mục tiêu
