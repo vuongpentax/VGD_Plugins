@@ -1,8 +1,10 @@
-# VGD Structure 0.9.0-beta.1
+# VGD Structure 0.10.0-beta.1
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
+
+**Cột mốc P1: tab Mặt bằng** (cửa sổ vẽ mặt bằng, giai đoạn 2, `docs/vgd_structure/PLAN.md` mục 12). Hiện mới **xem**: canvas vẽ lưới trục, sàn, trần (mặc định ẩn), dầm, tường, cửa (có cánh mở), cột của tầng đang chọn; chọn tầng ngay trên thanh công cụ; **cuộn = thu phóng quanh con trỏ**, **chuột giữa hoặc H = kéo**, **F = vừa khung**, Space = công cụ Chọn; bật / tắt từng lớp; rê chuột lên phần tử để xem thông tin, thanh trạng thái hiện tọa độ con trỏ (mm). Các công cụ vẽ kết cấu và sửa kiểu CAD đã bố trí sẵn nhưng khóa, làm ở cột mốc P2 đến P5. Chưa sửa được dữ liệu từ mặt bằng.
 
 **Cột mốc 8: cửa đi và cửa sổ** (trên nền lưới trục, tầng, cột, dầm, tường, sàn, trần, đề xuất, dựng tất cả và nối VGD BIM). Còn phải làm trước khi phát hành: tường nhiều lớp và nối góc, hoàn thiện, cầu thang, mái... (kế hoạch giai đoạn 2, `docs/vgd_structure/PLAN.md` mục 11).
 
@@ -60,7 +62,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.9.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.10.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

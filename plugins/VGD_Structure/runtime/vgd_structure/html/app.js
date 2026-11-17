@@ -769,10 +769,18 @@
     } else { summary.textContent = ''; }
   }
 
+  function syncPlanLevels() { window.VGDPlan.setLevels(state.levels, state.level); }
+  // Đổi tầng từ tab Mặt bằng: giống các ô chọn tầng ở tab khác.
+  function setLevelFromPlan(id) {
+    state.level = id; state.selected = null; state.selectedBeam = null; state.selectedWall = null; state.openWall = null;
+    renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); changed();
+  }
+
   function switchTab(tab) {
     state.tab = tab;
     document.querySelectorAll('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-tab') === tab)); });
-    ['grid', 'levels', 'columns', 'beams', 'walls', 'openings', 'slabs', 'ceilings', 'all'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
+    ['grid', 'levels', 'plan', 'columns', 'beams', 'walls', 'openings', 'slabs', 'ceilings', 'all'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
+    if (tab === 'plan') { syncPlanLevels(); window.VGDPlan.show(); }
     if (tab === 'columns') renderColumnsTab();
     if (tab === 'beams') renderBeamsTab();
     if (tab === 'walls') renderWallsTab();
@@ -793,7 +801,7 @@
       state.drawnOpeningLevels = data.drawn_opening_levels || []; state.openWall = null;
       state.levels = data.levels.map(fromRubyLevel); state.level = state.levels[0].id; state.selected = null; state.selectedBeam = null; state.selectedWall = null;
       state.drawnLevels = data.drawn_levels || []; state.drawnBeamLevels = data.drawn_beam_levels || []; state.drawnWallLevels = data.drawn_wall_levels || []; state.drawnSlabLevels = data.drawn_slab_levels || []; state.drawnCeilingLevels = data.drawn_ceiling_levels || [];
-      $('version').textContent = 'v' + data.version;
+      $('version').textContent = 'v' + data.version; syncPlanLevels();
       renderAll(); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab();
       message(data.saved ? 'Đã nạp lưới trục lưu trong model.' : 'Lưới mặc định: sửa các số rồi bấm Vẽ lưới trục.');
     } else if (event === 'preview') {
@@ -804,7 +812,7 @@
         s.className = 'summary';
         s.textContent = m.x_axes + ' trục đứng × ' + m.y_axes + ' trục ngang: ' + m.intersections + ' giao điểm, ' + m.spans + ' nhịp, ' + m.cells + ' ô. Khung lưới ' + m.width + ' × ' + m.depth + ' mm.';
       } else { s.className = 'summary error'; s.textContent = data.error; }
-      state.preview = data; drawPlan(data); renderButtons(); renderColumnsButtons(); renderColumnsPlan(); renderBeamsButtons(); renderBeamsPlan(); renderWallsButtons(); renderWallsPlan(); renderOpeningsButtons(); renderOpeningsPlan(); CELL_TABS.forEach(function (c) { renderCellButtons(c); renderCellPlan(c); });
+      state.preview = data; window.VGDPlan.update(data); drawPlan(data); renderButtons(); renderColumnsButtons(); renderColumnsPlan(); renderBeamsButtons(); renderBeamsPlan(); renderWallsButtons(); renderWallsPlan(); renderOpeningsButtons(); renderOpeningsPlan(); CELL_TABS.forEach(function (c) { renderCellButtons(c); renderCellPlan(c); });
     } else if (event === 'axes') {
       var set = fromAxes(data.axes); state[data.dir] = set; renderAxes(data.dir); changed();
     } else if (event === 'levels') {
@@ -848,6 +856,7 @@
     }
   }
   window.VGDS = {receive: receive, _state: state};
+  window.VGDPlan.init({onLevel: setLevelFromPlan});
 
   $('origin-x').oninput = function () { state.origin[0] = Number($('origin-x').value); changed(); };
   $('origin-y').oninput = function () { state.origin[1] = Number($('origin-y').value); changed(); };

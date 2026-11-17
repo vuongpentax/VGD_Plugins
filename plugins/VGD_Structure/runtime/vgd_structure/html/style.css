@@ -114,3 +114,24 @@ svg#plan7 .colref { fill: #66DD00; fill-opacity: .7; stroke: var(--vgd-muted); v
 svg#plan7 text { fill: var(--vgd-muted); font-size: 11px; text-anchor: middle; pointer-events: none; }
 #opening-list .oprow { display: grid; grid-template-columns: 1fr 110px auto auto; gap: 6px; align-items: center; margin-bottom: 6px; }
 #opening-list .oprow select, #opening-list .oprow input[type=number] { width: 100%; }
+
+/* Tab Mặt bằng */
+main.plan-tab { display: flex; flex-direction: column; gap: 0; padding: 0; }
+main.plan-tab[hidden] { display: none; }
+.pv-bar { display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-bottom: 1px solid var(--vgd-border); background: var(--vgd-surface); overflow-x: auto; scrollbar-width: thin; }
+.pv-bar select { min-width: 110px; }
+.pv-sep { width: 1px; align-self: stretch; background: var(--vgd-border); margin: 0 4px; }
+.pv-grow { flex: 1; }
+.pv-group { display: inline-flex; align-items: center; gap: 4px; }
+.pv-group > i { font-style: normal; font-size: 11px; color: var(--vgd-muted); margin-right: 2px; white-space: nowrap; }
+.pv-tool { display: inline-flex; align-items: center; gap: 4px; padding: 0 8px; white-space: nowrap; }
+.pv-tool kbd { font: 10px monospace; color: var(--vgd-muted); }
+.pv-tool[aria-pressed=true] { background: var(--vgd-tint); border-color: var(--vgd-accent); color: var(--vgd-accent-strong); }
+.pv-tool:disabled { opacity: .45; cursor: not-allowed; }
+.pv-level { margin: 0; gap: 4px; }
+label.pv-layer { margin: 0 4px 0 0; gap: 3px; font-size: 12px; white-space: nowrap; }
+.pv-body { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+.pv-body canvas { position: absolute; inset: 0; display: block; outline: none; touch-action: none; }
+.pv-status { display: flex; gap: 16px; padding: 4px 12px; border-top: 1px solid var(--vgd-border); background: var(--vgd-surface); font-size: 12px; color: var(--vgd-muted); }
+.pv-status #pv-hint { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vgd-text); }
+.pv-status #pv-xy { min-width: 190px; font-variant-numeric: tabular-nums; }

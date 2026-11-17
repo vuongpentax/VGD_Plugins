@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.9.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.10.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -555,6 +555,64 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#column-level-select, #level-select').first().inputValue()==='sl_00000002' && await page.locator('#tab-columns').isVisible() && await page.locator('#col-editor').isHidden(),'focus tầng khác: chuyển tầng; cột không nằm trong lựa chọn thì không mở khung sửa');
   await receive('focus',{kind:'room',level:'sl_00000001',ref:'x'});
   ok(await page.locator('#tab-columns').isVisible(),'focus loại lạ: bỏ qua, không đổi tab, không lỗi');
+  await page.click('[data-tab=grid]');
+
+  // Tab Mặt bằng (canvas)
+  await receive('state',F.state);await receive('preview',F.preview_all_cells);
+  await page.click('[data-tab=plan]');
+  const dbg=()=>page.evaluate(()=>window.VGDPlan.debug());
+  const pix=async(wx,wy)=>page.evaluate(([x,y])=>{const c=document.getElementById('pv-canvas'),p=window.VGDPlan.toScreen(x,y),d=c.getContext('2d').getImageData(Math.round(p[0]*window.devicePixelRatio),Math.round(p[1]*window.devicePixelRatio),1,1).data;return [d[0],d[1],d[2]];},[wx,wy]);
+  ok(await page.locator('#tab-plan').isVisible() && !(await page.locator('#tab-grid').isVisible()),'tab Mặt bằng: hiện canvas, ẩn tab khác');
+  let d0=await dbg();
+  ok(d0.axes===7 && d0.counts.column===12 && d0.counts.slab===6 && d0.counts.wall>0 && d0.counts.beam>0 && d0.counts.ceiling===6,'mặt bằng nhận đủ phần tử từ xem trước: 7 trục, 12 cột, 6 sàn, tường, dầm, 6 trần');
+  ok(d0.view.s>0.01 && d0.size.w>300 && d0.size.h>200,'tự vừa khung lần đầu, canvas có kích thước');
+  const col=F.preview_all_cells.columns.items[0].center,c0=await pix(col[0],col[1]);
+  ok(c0[1]>c0[0] && c0[1]>c0[2] && c0[1]>150,'pixel tại tâm cột có màu xanh lá (cột được vẽ trên canvas)');
+  ok(await page.locator('#pv-bar select option').count()===F.state.levels.length && (await page.locator('#pv-bar select').inputValue())===F.state.levels[0].id,'ô chọn tầng liệt kê đủ tầng, đang chọn tầng hiện hành');
+  ok(await page.locator('#pv-bar .pv-tool:disabled').count()>=10 && await page.locator('#pv-bar .pv-tool[data-tool=select]').isEnabled(),'công cụ vẽ / sửa hiện nhưng khóa (làm ở cột mốc sau); Chọn và Kéo dùng được');
+  // Thu phóng quanh con trỏ: điểm dưới con trỏ đứng yên
+  const box=await page.locator('#pv-canvas').boundingBox(),px=box.x+300,py=box.y+200,wBefore=await page.evaluate(([x,y])=>window.VGDPlan.toWorld(x,y),[300,200]);
+  await page.mouse.move(px,py);await page.mouse.wheel(0,-300);await wait(80);
+  const d1=await dbg(),wAfter=await page.evaluate(([x,y])=>window.VGDPlan.toWorld(x,y),[300,200]);
+  ok(d1.view.s>d0.view.s*1.3 && Math.abs(wAfter[0]-wBefore[0])<1 && Math.abs(wAfter[1]-wBefore[1])<1,'cuộn lên: phóng to và giữ nguyên điểm dưới con trỏ');
+  await page.mouse.wheel(0,600);await wait(80);
+  ok((await dbg()).view.s<d1.view.s,'cuộn xuống: thu nhỏ');
+  // Kéo bằng chuột giữa
+  const dv=await dbg();
+  await page.mouse.move(px,py);await page.mouse.down({button:'middle'});await page.mouse.move(px+80,py+40,{steps:4});await page.mouse.up({button:'middle'});
+  const dp=await dbg();
+  ok(Math.abs((dp.view.cx-dv.view.cx)+80/dv.view.s)<1 && Math.abs((dp.view.cy-dv.view.cy)-40/dv.view.s)<1,'kéo chuột giữa: mặt bằng dời đúng theo chuột');
+  // Công cụ Kéo bằng phím H và nút
+  await page.keyboard.press('h');ok((await dbg()).tool==='pan' && (await page.locator('[data-tool=pan]').getAttribute('aria-pressed'))==='true','phím H chọn công cụ Kéo');
+  await page.mouse.move(px,py);await page.mouse.down();await page.mouse.move(px-50,py,{steps:3});await page.mouse.up();
+  ok(Math.abs((await dbg()).view.cx-(dp.view.cx+50/dp.view.s))<1,'công cụ Kéo: kéo chuột trái dời mặt bằng');
+  await page.keyboard.press(' ');ok((await dbg()).tool==='select','Space về công cụ Chọn');
+  // Vừa khung
+  await page.keyboard.press('f');await wait(50);
+  const df=await dbg();ok(Math.abs(df.view.s-d0.view.s)<1e-9,'phím F vừa khung: về đúng khung ban đầu');
+  // Rê chuột lên cột: hiện thông tin
+  const csp=await page.evaluate(([x,y])=>window.VGDPlan.toScreen(x,y),[col[0],col[1]]);
+  await page.mouse.move(box.x+csp[0],box.y+csp[1]);await wait(50);
+  ok(/Cột 1-A/.test(await page.locator('#pv-hint').innerText()) && /X -?\d+\s+Y -?\d+ mm/.test(await page.locator('#pv-xy').innerText()),'rê lên cột: hiện mã, loại, kích thước và tọa độ con trỏ');
+  // Tắt lớp
+  await page.uncheck('[data-layer=column]');await page.mouse.move(box.x+csp[0]+1,box.y+csp[1]);await wait(50);
+  const c1=await pix(col[0],col[1]);
+  ok(!(c1[1]>c1[0] && c1[1]>c1[2] && c1[1]>150) && !/Cột/.test(await page.locator('#pv-hint').innerText()),'tắt lớp Cột: không vẽ và không bắt cột nữa');
+  await page.check('[data-layer=column]');await page.check('[data-layer=ceiling]');await wait(30);
+  ok((await dbg()).visible.ceiling===true,'bật lớp Trần');
+  await page.uncheck('[data-layer=ceiling]');
+  // Đổi tầng từ mặt bằng: gửi xem trước mới và đồng bộ ô chọn tầng tab khác
+  await clear();
+  await page.selectOption('#pv-bar select',F.state.levels[1].id);await wait(300);
+  ok((await last('grid_preview')).level===F.state.levels[1].id,'đổi tầng trên mặt bằng: gửi xem trước cho tầng mới');
+  await receive('preview',F.preview_top);
+  ok((await dbg()).counts.column===undefined,'tầng trên cùng: không có cột trên mặt bằng');
+  await page.click('[data-tab=columns]');
+  ok((await page.locator('#level-select').inputValue())===F.state.levels[1].id,'ô chọn tầng của tab Cột theo tầng đã đổi ở mặt bằng');
+  // Lỗi xem trước
+  await page.click('[data-tab=plan]');await receive('preview',F.error);
+  ok((await dbg()).axes===0 && (await dbg()).counts.column===undefined,'xem trước lỗi: mặt bằng không vẽ phần tử');
+  await receive('state',F.state);await receive('preview',F.preview);
   await page.click('[data-tab=grid]');
 
   // Lỗi xem trước
