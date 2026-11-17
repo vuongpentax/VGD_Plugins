@@ -7,6 +7,7 @@ require_relative 'front'
 require_relative 'measure'
 require_relative 'custom_columns'
 require_relative 'vgd_id'
+require_relative 'structure_source'
 require_relative 'object_code'
 require_relative 'levels'
 require_relative 'rooms'
@@ -252,12 +253,21 @@ module VGD
           context_locked = path.any? { |e| e.respond_to?(:locked?) && e.locked? }
           entities.each do |entity|
             next unless Data.supported?(entity) && entity.valid?
+            next if StructureSource.grid?(entity) # lưới trục của VGD Structure chỉ là bản vẽ, không phải món
+            if StructureSource.container?(entity) # chọn nhóm chứa cột / dầm / tường / sàn / trần của VGD Structure thì lấy các phần tử bên trong làm dòng
+              inner = transform * entity.transformation
+              entity.entities.each do |child|
+                next unless Data.supported?(child) && child.valid?
+                records << {entity: child, path: path + [entity, child], transform: inner * child.transformation, locked: context_locked || entity.locked? || child.locked?}
+              end
+              next
+            end
             records << {entity: entity, path: path + [entity], transform: transform * entity.transformation,
                         locked: context_locked || entity.locked?}
           end
         end
         records, hidden = drop_excluded_tags(records, path.size, measure ? measure.tags : [])
-        records = records.reject { |record| Rooms.volume_entity?(record[:entity]) } # khối phòng do VGD_Room dựng: không phải món, không tính khối lượng
+        records = records.reject { |record| Rooms.volume_entity?(record[:entity]) || StructureSource.container?(record[:entity]) || record[:path].any? { |e| StructureSource.grid?(e) } } # khối phòng của VGD_Room, nhóm chứa và lưới trục (kể cả ký hiệu bên trong) của VGD Structure: không phải món, không tính khối lượng
         groups = tag_groups
         index_of = {}
         records.each_with_index { |record, i| index_of[path_key(record[:path])] = i }
@@ -275,7 +285,7 @@ module VGD
           priced = MaterialLibrary.cost(entry, rows[i][:calc_method], rows[i][:calc_qty])
           rows[i].merge!(mat_code: entry ? entry['code'] : '', mat_price: entry ? entry['price'] : nil, mat_waste: entry ? entry['waste'] : nil, mat_qty: priced[:qty], mat_cost: priced[:cost], mat_note: priced[:note].to_s)
           rows[i][:level_id] = lid
-          rows[i][:level] = lid.empty? ? '' : level_names.fetch(lid, '(tầng đã xóa)')
+          rows[i][:level] = lid.empty? ? rows[i][:struct_level].to_s : level_names.fetch(lid, '(tầng đã xóa)') # món chưa gán tầng BIM thì hiện tầng của VGD Structure
           rows[i][:base_z] = base_z(record) # cao độ đáy món (mm, thế giới) để gợi ý tầng
           rows[i][:base_x], rows[i][:base_y] = base_xy(record) # tâm đáy món (mm, thế giới) để gợi ý phòng
           rid = Rooms.entity_room(record[:entity])
@@ -381,8 +391,13 @@ module VGD
           quantity: 1,
           vgd_id: VgdId.read(entity),
           parents: []
-        }.merge(extra_columns(entity, data)).merge(measure_note: body ? body[:note].to_s : '').merge(CustomColumns.values(entity, custom))
+        }.merge(extra_columns(entity, data)).merge(measure_note: body ? body[:note].to_s : '').merge(CustomColumns.values(entity, custom)).merge(StructureSource.row_fields(entity)).merge(source_plugin: source_plugin(entity))
         row.merge(Quantity.row_fields(row, tag, row[:tag_group], data, overrides)) # hạng mục / cách tính / khối lượng suy ra từ tag (tính ảo, không ghi vào món)
+      end
+
+      # Mã plugin dựng hình đã tạo món (VGD_BIM_SOURCE.plugin), để nút "Sửa bằng plugin dựng hình" biết gọi ai; rỗng nếu không có.
+      def self.source_plugin(entity)
+        entity.respond_to?(:get_attribute) ? entity.get_attribute('VGD_BIM_SOURCE', 'plugin').to_s : ''
       end
 
       # Xuất xứ (trường manufacturer của dữ liệu VGD), Liên kết / Quy cách / Đơn giá (dictionary riêng của bảng), Loại IFC, Thành tiền.

@@ -10,7 +10,7 @@ module VGD
   module Structure
     ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze unless defined?(ROOT)
     # Thứ tự nạp code. Dùng chung cho lúc mở SketchUp và lúc "Tải lại code".
-    FILES = %w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/levels core/column_plan core/beam_plan core/wall_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder plate_builder all_builder panel].freeze
+    FILES = %w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/levels core/column_plan core/beam_plan core/wall_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder plate_builder all_builder panel].freeze
 
     # Lý do đang bận (không cho tải lại code), hoặc nil. Chưa có thao tác vẽ / dựng nào ở cột mốc 0; cột mốc sau cập nhật khi có.
     def self.busy_reason
@@ -25,6 +25,18 @@ module VGD
         @panel.show
       end
       @panel
+    end
+
+    # VGD_BIM gọi lệnh `edit` của cầu nối khi người dùng chọn một phần tử do plugin dựng: mở cửa sổ ở đúng tab, tầng và phần tử đó.
+    # Trả về true nếu đã mở; lỗi (không phải phần tử của plugin) thì raise để BIM báo.
+    def self.edit(entity)
+      source = entity.respond_to?(:get_attribute) ? entity.get_attribute('VGD_BIM_SOURCE', 'plugin') : nil
+      raise ArgumentError, 'Đối tượng không do VGD Structure dựng.' unless source == Schema::PLUGIN_ID
+      kind = entity.get_attribute('VGD_BIM_SOURCE', 'kind').to_s
+      raise ArgumentError, 'Loại phần tử không hợp lệ.' unless Schema::KINDS.include?(kind)
+      level_id, ref = entity.get_attribute('VGD_BIM_SOURCE', 'ref').to_s.split(':', 2)
+      open_panel.focus(kind, level_id.to_s, ref.to_s)
+      true
     end
 
     # Nạp lại toàn bộ code của plugin mà không cần mở lại SketchUp (dùng sau khi cài đè bản mới).
@@ -63,6 +75,9 @@ module VGD
   end
 end
 VGD::Structure::FILES.each { |file| require File.join(VGD::Structure::ROOT, file) }
+# Đăng ký vào danh bạ cầu nối (bridge_version 1): loại structure_element, lệnh edit (VGD_BIM gọi). Tải lại code thì ghi đè mục cũ.
+::VGD::Bridge.register('vgd_structure', {bridge_version: ::VGD::Bridge::VERSION, version: VGD::Structure::VERSION, provides: ['structure_element'],
+                                         commands: {'edit' => ->(_model, entity) { VGD::Structure.edit(entity) }}})
 unless file_loaded?(__FILE__)
   # Menu Extensions > VGD > VGD Structure và thanh công cụ VGD STR. Chỉ đăng ký một lần; tải lại code không đăng ký lại.
   menu = ::VGD.menu.add_submenu('VGD Structure')

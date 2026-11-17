@@ -954,4 +954,37 @@ ok('cầu nối: chưa mở file thì báo lỗi', berr.call(bopts).to_s.include
 $picked = nil
 $model = ORIGINAL_MODEL
 
+# Sửa món bằng plugin dựng hình (cầu nối, lệnh edit)
+class SrcEnt < Sketchup::Group
+  attr_reader :attrs
+  def initialize(plugin); @attrs = plugin ? {'VGD_BIM_SOURCE' => {'plugin' => plugin}} : {}; end
+  def valid?; true; end
+  def locked?; false; end
+  def get_attribute(d, k, default = nil); (@attrs[d] || {}).fetch(k, default); end
+end
+se = [SrcEnt.new(nil), SrcEnt.new('vgd_structure'), SrcEnt.new('vgd_structure'), SrcEnt.new('vgd_structure')]
+sd = D.allocate
+sd.instance_variable_set(:@model, $model)
+sd.instance_variable_set(:@table_rows, se.each_with_index.map { |_e, i| {index: i} })
+sd.instance_variable_set(:@table_records, se.map { |e| {entity: e, path: [e], locked: false} })
+scalls = []
+sd.define_singleton_method(:emit) { |ev, payload| scalls << [ev, payload] }
+src_err = ->(payload) { begin; sd.table_edit_source(payload); nil; rescue StandardError => e; e.message; end }
+VGD::Bridge.providers.clear
+ok('sửa bằng plugin: món không do plugin tạo ra bị từ chối', src_err.call({'index' => 0}).to_s.include?('không do plugin dựng hình'))
+ok('sửa bằng plugin: plugin chưa cài thì báo cài qua VGD Center', src_err.call({'index' => 1}).to_s.include?('Chưa cài plugin vgd_structure'))
+VGD::Bridge.register('vgd_structure', {bridge_version: 1, version: '0', provides: ['structure_element'], commands: {}})
+ok('sửa bằng plugin: plugin chưa có lệnh edit thì báo rõ, không đoán', src_err.call({'index' => 1}).to_s.include?('chưa hỗ trợ sửa'))
+edited = []
+VGD::Bridge.register('vgd_structure', {bridge_version: 1, version: '0', provides: ['structure_element'], commands: {'edit' => ->(model, entity) { edited << [model, entity] }}})
+sd.table_edit_source({'index' => 2})
+ok('sửa bằng plugin: gọi lệnh edit của plugin nguồn với model và đúng đối tượng của dòng, báo đã mở', edited.size == 1 && edited[0][0].equal?($model) && edited[0][1].equal?(se[2]) && scalls.last[0] == 'message' && scalls.last[1][:text].include?('vgd_structure'))
+VGD::Bridge.register('vgd_structure', {bridge_version: 2, version: '0', provides: ['structure_element'], commands: {'edit' => ->(*) { edited << :sai }}})
+ok('sửa bằng plugin: khác phiên bản cầu nối thì không gọi', src_err.call({'index' => 2}).to_s.include?('chưa hỗ trợ') && edited.size == 1)
+VGD::Bridge.register('vgd_structure', {bridge_version: 1, version: '0', provides: ['structure_element'], commands: {'edit' => ->(*) { raise 'plugin lỗi' }}})
+ok('sửa bằng plugin: lỗi của plugin được báo ra, không nuốt', src_err.call({'index' => 3}) == 'plugin lỗi')
+ok('sửa bằng plugin: chỉ số dòng sai hoặc không phải số bị từ chối', !src_err.call({'index' => 99}).nil? && !src_err.call({'index' => 'abc'}).nil?)
+ok('dòng của bảng có mã plugin nguồn (Table.source_plugin)', VGD::BIM::Table.source_plugin(se[1]) == 'vgd_structure' && VGD::BIM::Table.source_plugin(se[0]) == '' && VGD::BIM::Table.source_plugin(Object.new) == '')
+VGD::Bridge.providers.clear
+
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

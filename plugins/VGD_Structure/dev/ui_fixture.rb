@@ -17,7 +17,7 @@ all = refs.each_with_object({}) { |r, h| h[r] = {} }
 with = ->(picks, level, beams = beams_two, walls = walls_two, slabs = cells_two, ceilings = cells_two) { state.merge('levels' => state['levels'].each_with_index.map { |l, i| i.zero? ? l.merge('picks' => {'columns' => picks, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings}) : l }, 'level' => level) }
 state_two = with.call(two, 'sl_00000001')
 puts JSON.generate(
-  state: {grid: state['grid'], symbol: state['symbol'], types: state['types'], beam_types: state['beam_types'], wall_types: state['wall_types'], levels: state_two['levels'], saved: false, drawn: false, drawn_levels: [], drawn_beam_levels: [], drawn_wall_levels: [], drawn_slab_levels: [], drawn_ceiling_levels: [], version: '0.7.0-beta.1'},
+  state: {grid: state['grid'], symbol: state['symbol'], types: state['types'], beam_types: state['beam_types'], wall_types: state['wall_types'], levels: state_two['levels'], saved: false, drawn: false, drawn_levels: [], drawn_beam_levels: [], drawn_wall_levels: [], drawn_slab_levels: [], drawn_ceiling_levels: [], version: '0.8.0-beta.1'},
   preview: S::Preview.build(state_two),
   preview_all: S::Preview.build(with.call(all, 'sl_00000001')),
   preview_all_beams: S::Preview.build(with.call(all, 'sl_00000001', all_beams)),

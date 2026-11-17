@@ -28,9 +28,10 @@ module VGD
         definitions = {}
         plans.each do |plan|
           old = find(model, plan[:level]['id'])
+          kept = IdKeeper.harvest(old)
           old.erase! if old
           next if plan[:items].empty?
-          draw_level(model, plan, layer, definitions)
+          draw_level(model, plan, layer, definitions, kept)
         end
         orphans = remove_orphans(model, state['levels'].map { |l| l['id'] })
         Result.new(plans.map { |plan| {name: plan[:level]['name'], count: plan[:items].size, height: plan[:height]} }, ctx[:total], orphans[:removed], orphans[:locked], plans.flat_map { |plan| plan[:issues] })
@@ -83,7 +84,7 @@ module VGD
         {removed: free.size, locked: locked.size}
       end
 
-      def self.draw_level(model, plan, layer, definitions)
+      def self.draw_level(model, plan, layer, definitions, kept = {})
         group = model.entities.add_group
         group.name = "Cột - #{plan[:level]['name']}"
         group.layer = layer
@@ -96,6 +97,7 @@ module VGD
           instance.name = "Cột #{item[:ref]} (#{plan[:level]['name']})"
           instance.layer = layer
           tag_instance(instance, plan, item)
+          IdKeeper.assign(instance, instance.get_attribute('VGD_BIM_SOURCE', 'ref'), kept)
         end
       end
 
@@ -106,6 +108,8 @@ module VGD
         instance.set_attribute('VGD_BIM_SOURCE', 'kind', 'column')
         instance.set_attribute('VGD_BIM_SOURCE', 'ref', "#{plan[:level]['id']}:#{item[:ref]}")
         instance.set_attribute(Schema::DICTIONARY, 'level', plan[:level]['id'])
+        instance.set_attribute(Schema::DICTIONARY, 'level_name', plan[:level]['name'])
+        instance.set_attribute(Schema::DICTIONARY, 'level_elevation', plan[:level]['elevation'])
         instance.set_attribute(Schema::DICTIONARY, 'type', item[:type_name])
         instance.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('w' => item[:w], 'd' => item[:d], 'height' => item[:height]))
         instance.set_attribute(Schema::DICTIONARY, 'placement', JSON.generate('position' => item[:placement], 'x' => item[:modes]['x'], 'y' => item[:modes]['y']))

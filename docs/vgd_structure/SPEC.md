@@ -37,16 +37,18 @@
 
 | Dictionary | Khóa | Giá trị |
 |---|---|---|
-| `VGD_BIM_ID` | `guid` | VGD ID do VGD BIM cấp; dựng lại giữ ID cũ |
+| `VGD_BIM_ID` | `guid` | VGD ID xin từ VGD BIM qua cầu nối `vgd_id` (không có BIM thì trống); dựng lại giữ ID cũ của đúng phần tử |
 | `VGD_BIM_SOURCE` | `plugin` | `vgd_structure` |
 | | `plugin_version` | phiên bản lúc dựng |
 | | `kind` | `column` / `beam` / `wall` / `slab` / `ceiling` |
 | | `ref` | mã phần tử ở mục 1 kèm tầng, ví dụ `sl_xxxxxxxx:1-A` |
 | `VGD_STRUCT` | `level` | id tầng |
-| | `dims` | kích thước đã dùng (mm): cột `w`,`d` hoặc `r`; dầm `w`,`h`,`length`; tường `thickness`,`height`,`length`; sàn / trần `thickness`, diện tích |
+| | `level_name`, `level_elevation` | tên và cao độ mặt sàn của tầng (mm) để BIM hiển thị |
+| | `type` | tên loại (C30x30, D20x40, T200); sàn / trần không có |
+| | `dims` | JSON, mm: cột `w`,`d`,`height`; dầm `w`,`h`,`length`; tường `thickness`,`height`,`length`,`under_beam`; sàn / trần `thickness`,`area` (m²),`z_top` |
 | | `placement` | cột: `middle` / `edge` / `corner`; dầm, tường: `inner` / `edge` |
 
-VGD BIM đọc `kind`, `level`, `dims` để lập bảng khối lượng và gán tầng; **không sửa** dữ liệu này.
+VGD BIM đọc `kind`, `level`, `level_name`, `dims` để lập bảng khối lượng chính xác và hiện tầng (từ VGD BIM 1.1.1-beta.6); **không sửa** dữ liệu này. Cầu nối: `docs/vgd_bim/BRIDGE.md`.
 
 ## 3. Quy ước đặt tên và tag
 

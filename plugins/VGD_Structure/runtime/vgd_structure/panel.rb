@@ -12,7 +12,7 @@ module VGD
         @dialog = ::UI::HtmlDialog.new(dialog_title: TITLE, preferences_key: 'vgd_structure_panel', scrollable: true, resizable: true,
                                        width: 1040, height: 700, min_width: 760, min_height: 520, style: ::UI::HtmlDialog::STYLE_DIALOG)
         @dialog.set_file(File.join(ROOT, 'html', 'index.html'))
-        @dialog.add_action_callback('ready') { |_ctx| safely { send_state } }
+        @dialog.add_action_callback('ready') { |_ctx| safely { @ready = true; send_state; flush_focus } }
         @dialog.add_action_callback('grid_preview') { |_ctx, payload| safely { grid_preview(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_build') { |_ctx, payload| safely { grid_build(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_remove') { |_ctx| safely { grid_remove } }
@@ -30,6 +30,18 @@ module VGD
         @dialog.add_action_callback('build_all') { |_ctx, payload| safely { build_all(JSON.parse(payload)) } }
         @dialog.add_action_callback('picks_copy') { |_ctx, payload| safely { picks_copy(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_reset') { |_ctx| safely { send_state(reset: true) } }
+      end
+
+      # Chuyển tới phần tử (do VGD_BIM yêu cầu sửa): gửi sự kiện focus khi cửa sổ đã sẵn sàng, chưa sẵn sàng thì giữ lại gửi sau.
+      def focus(kind, level_id, ref)
+        @pending_focus = {kind: kind, level: level_id, ref: ref}
+        flush_focus if @ready
+      end
+
+      def flush_focus
+        return unless @pending_focus
+        emit('focus', @pending_focus)
+        @pending_focus = nil
       end
 
       def show

@@ -428,6 +428,16 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   await page.getByRole('button',{name:'Công cụ ▾'}).click();await page.getByRole('button',{name:'Sửa VGD ID trùng'}).click();
   last=await lastCall();
   assert(last.name==='table_fix_duplicate_ids','sửa VGD ID trùng: gửi lệnh (áp cho cả bảng)');
+  // Sửa bằng plugin dựng hình
+  const srcCalls=()=>page.evaluate(()=>window.calls.filter(c=>c.name==='table_edit_source').length);
+  const srcBefore=await srcCalls();
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();await page.getByRole('button',{name:'Sửa bằng plugin dựng hình'}).click();
+  assert(await srcCalls()===srcBefore && (await page.locator('#message').innerText()).includes('không do plugin dựng hình tạo ra'),'sửa bằng plugin: món không do plugin tạo ra thì báo, không gửi lệnh');
+  await page.evaluate(()=>{const r=tableState.data.rows.find(x=>x.index===0);if(r)r.source_plugin='vgd_structure';});
+  await page.getByRole('button',{name:'Công cụ ▾'}).click();await page.getByRole('button',{name:'Sửa bằng plugin dựng hình'}).click();
+  last=await lastCall();
+  assert(last.name==='table_edit_source' && last.data.index===0,'sửa bằng plugin: món do plugin tạo ra thì gửi chỉ số dòng cho Ruby (Ruby gọi cầu nối)');
+  await page.evaluate(()=>{const r=tableState.data.rows.find(x=>x.index===0);if(r)r.source_plugin='';});
   await page.evaluate(()=>{tableState.sel=new Set();tableState.panel=null;});
   // Mã đối tượng hàng loạt: hộp riêng giữ khi chọn dòng, gửi tiền tố / số bắt đầu / số chữ số / ghi đè, kiểm tra ở giao diện
   await receive('table',{...tablePayload,rows:tableRows});

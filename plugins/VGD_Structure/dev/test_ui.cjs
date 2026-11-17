@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.7.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.8.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -457,6 +457,26 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok((await message()).includes('một bước hoàn tác') && ar3[0][6]==='Cột, Dầm, Sàn' && ar3[1][6]==='—','sau khi dựng: cột Đã dựng liệt kê các loại đã dựng của tầng');
   await page.click('[data-tab=columns]');
   ok(await page.locator('#remove-cols').isEnabled() && await page.locator('#remove-walls').isDisabled(),'các tab riêng nhận trạng thái đã dựng (xóa cột bấm được, xóa tường khóa)');
+  await page.click('[data-tab=grid]');
+
+
+  // ===== Sửa từ VGD BIM (sự kiện focus) =====
+  await receive('state',F.state);await receive('preview',F.preview);
+  await page.click('[data-tab=grid]');
+  await receive('focus',{kind:'beam',level:'sl_00000001',ref:'x:B:1-2'});
+  ok(await page.locator('#tab-beams').isVisible() && (await page.locator('#beam-ref').innerText())==='x:B:1-2' && await page.locator('#beam-editor').isVisible() && (await message()).includes('x:B:1-2'),'focus dầm: mở tab Dầm, chọn đúng nhịp, mở khung sửa, báo đang sửa');
+  await receive('focus',{kind:'column',level:'sl_00000001',ref:'2-B'});
+  ok(await page.locator('#tab-columns').isVisible() && (await page.locator('#col-ref').innerText())==='2-B','focus cột: mở tab Cột, chọn cột 2-B');
+  await receive('focus',{kind:'wall',level:'sl_00000001',ref:'y:2:A-B'});
+  ok(await page.locator('#tab-walls').isVisible() && (await page.locator('#wall-ref').innerText())==='y:2:A-B','focus tường: mở tab Tường (nhịp có dấu hai chấm)');
+  await receive('focus',{kind:'slab',level:'sl_00000001',ref:'1-2/A-B'});
+  ok(await page.locator('#tab-slabs').isVisible(),'focus sàn: mở tab Sàn');
+  await receive('focus',{kind:'ceiling',level:'sl_00000001',ref:'1-2/A-B'});
+  ok(await page.locator('#tab-ceilings').isVisible(),'focus trần: mở tab Trần');
+  await receive('focus',{kind:'column',level:'sl_00000002',ref:'1-A'});
+  ok(await page.locator('#column-level-select, #level-select').first().inputValue()==='sl_00000002' && await page.locator('#tab-columns').isVisible() && await page.locator('#col-editor').isHidden(),'focus tầng khác: chuyển tầng; cột không nằm trong lựa chọn thì không mở khung sửa');
+  await receive('focus',{kind:'room',level:'sl_00000001',ref:'x'});
+  ok(await page.locator('#tab-columns').isVisible(),'focus loại lạ: bỏ qua, không đổi tab, không lỗi');
   await page.click('[data-tab=grid]');
 
   // Lỗi xem trước

@@ -78,6 +78,7 @@ module VGD
           @dialog.add_action_callback('table_commit_calc') { |_ctx, payload| safely { table_commit_calc(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_option') { |_ctx, payload| safely { table_option(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_export') { |_ctx, payload| safely { table_export(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_edit_source') { |_ctx, payload| safely { table_edit_source(JSON.parse(payload)) } }
           @dialog.add_action_callback('bridge_open') { |_ctx| safely { bridge_open } }
           @dialog.add_action_callback('bridge_preview') { |_ctx, payload| safely { bridge_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('bridge_apply') { |_ctx, payload| safely { bridge_apply(JSON.parse(payload)) } }
@@ -868,6 +869,21 @@ module VGD
         MAX_FIND = 200
         # Thay chữ trong Tên / Mô tả / Hãng / Cỡ của các dòng gửi lên (không có 'indexes' thì mọi dòng trong bảng).
         # Không phân biệt hoa thường; chuỗi thay được hiểu nguyên văn. Bỏ qua đối tượng khóa. Cả đợt là một bước hoàn tác.
+        # Sửa món bằng plugin đã dựng ra nó (cầu nối, docs/vgd_bim/BRIDGE.md): BIM gọi lệnh `edit` của plugin nguồn; plugin tự mở giao diện của nó.
+        # BIM không sửa hình hay tham số của plugin khác. Chưa cài plugin hoặc plugin chưa hỗ trợ thì báo rõ, không đoán.
+        def table_edit_source(payload)
+          check_model!
+          record = @table_records.fetch(Integer(payload.fetch('index'))) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }
+          entity = record[:entity]
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless entity.valid?
+          plugin = Table.source_plugin(entity)
+          raise 'Món này không do plugin dựng hình tạo ra nên không có gì để sửa bằng plugin.' if plugin.empty?
+          info = Bridge.providers[plugin]
+          raise "Chưa cài plugin #{plugin}. Hãy cài qua VGD Center." unless info
+          raise "Plugin #{plugin} chưa hỗ trợ sửa từ VGD_BIM (cần cầu nối phiên bản #{Bridge::VERSION} có lệnh edit)." unless info[:bridge_version] == Bridge::VERSION && info[:commands]['edit']
+          info[:commands]['edit'].call(@model, entity)
+          emit('message', {text: "Đã mở #{plugin} để sửa món này."})
+        end
         # Cầu nối dữ liệu: nhập Excel / CSV vào dữ liệu chữ của món (logic ở core/data_bridge.rb). Ba bước: mở file (chỉ đọc), xem trước, áp dụng.
         def bridge_open
           check_model!

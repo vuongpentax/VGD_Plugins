@@ -1752,6 +1752,13 @@ function ioPanel(){
   const codesBtn=item('id','Đặt mã đối tượng hàng loạt...',()=>{tableState.panel='codes';tableView(tableState.data);});
   codesBtn.id='codes-open';codesBtn.title='Đặt Mã đối tượng (D01, D02...) cho các món đang chọn theo thứ tự trong bảng';
   assignIds.id='ids-assign';assignIds.title='Gán mã định danh VGD ID cho các món đang chọn chưa có ID (món đã có ID giữ nguyên, món bị khóa bỏ qua; một bước hoàn tác)';
+  const editSource=item('id','Sửa bằng plugin dựng hình',()=>{
+    if(tableState.sel.size!==1)return message('Hãy chọn đúng một dòng (món do plugin dựng hình tạo ra) để sửa bằng plugin.',true);
+    const index=[...tableState.sel][0],row=tableState.data.rows.find(r=>r.index===index);
+    if(!row||!row.source_plugin)return message('Món này không do plugin dựng hình tạo ra nên không có gì để sửa bằng plugin.',true);
+    call('table_edit_source',JSON.stringify({index}));
+  });
+  editSource.id='edit-source';editSource.title='Mở plugin đã dựng ra món đang chọn (ví dụ VGD Structure) ở đúng phần tử để sửa. VGD_BIM chỉ gọi plugin, không tự sửa hình của plugin khác';
   const fixIds=item('id','Sửa VGD ID trùng',()=>call('table_fix_duplicate_ids'));
   fixIds.id='ids-fix';fixIds.title='Các món do copy mà dùng chung VGD ID: món cũ nhất giữ ID, các món còn lại nhận ID mới (một bước hoàn tác)';
   const levelsBtn=item('id','Quản lý tầng...',()=>{tableState.panel='levels';tableView(tableState.data);});
@@ -1764,7 +1771,7 @@ function ioPanel(){
   checksBtn.id='checks-open';checksBtn.title='Đặt luật kiểm tra riêng cho bảng (ví dụ Rộng nhỏ hơn 700 thì cảnh báo, Tầng để trống thì thông tin) rồi chạy và bấm vào kết quả để chọn món';
   const snapBtn=item('id','So sánh phiên bản...',()=>{tableState.panel='snapshots';tableState.snapshotDiff=null;call('snapshot_list');tableView(tableState.data);});
   snapBtn.id='snapshots-open';snapBtn.title='Chụp mốc giá trị các món rồi so với bảng hiện tại để biết món nào thêm, xóa hoặc đổi';
-  p.append(assignIds,fixIds,codesBtn,node('div','Công trình','io-head'),levelsBtn,roomsBtn,node('div','Vật liệu và kiểm tra','io-head'),materialsBtn,checksBtn,snapBtn);
+  p.append(assignIds,fixIds,editSource,codesBtn,node('div','Công trình','io-head'),levelsBtn,roomsBtn,node('div','Vật liệu và kiểm tra','io-head'),materialsBtn,checksBtn,snapBtn);
   return p;
 }
 // Các công tắc gom vào bảng "Tùy chọn" (thay cho hai hàng công tắc luôn hiện); bảng "Công cụ" là menu nhập / xuất và các hộp dữ liệu.

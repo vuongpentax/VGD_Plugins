@@ -43,9 +43,10 @@ module VGD
         definitions = {}
         ctx[:plans].each do |plan|
           old = find(model, kind, plan[:level]['id'])
+          kept = IdKeeper.harvest(old)
           old.erase! if old
           next if plan[:items].empty?
-          draw_level(model, kind, plan, layer, definitions)
+          draw_level(model, kind, plan, layer, definitions, kept)
         end
         orphans = remove_orphans(model, kind, ctx[:state]['levels'].map { |l| l['id'] })
         Result.new(ctx[:plans].map { |plan| {name: plan[:level]['name'], count: plan[:items].size} }, ctx[:total], orphans[:removed], orphans[:locked], ctx[:plans].flat_map { |plan| plan[:issues] })
@@ -97,7 +98,7 @@ module VGD
         {removed: free.size, locked: locked.size}
       end
 
-      def self.draw_level(model, kind, plan, layer, definitions)
+      def self.draw_level(model, kind, plan, layer, definitions, kept = {})
         spec = spec(kind)
         group = model.entities.add_group
         group.name = "#{spec[:name]} - #{plan[:level]['name']}"
@@ -112,6 +113,7 @@ module VGD
           instance.name = "#{spec[:name]} #{item[:ref]} (#{plan[:level]['name']})"
           instance.layer = layer
           tag_instance(instance, spec, plan, item)
+          IdKeeper.assign(instance, instance.get_attribute('VGD_BIM_SOURCE', 'ref'), kept)
         end
       end
 
@@ -128,6 +130,8 @@ module VGD
         instance.set_attribute('VGD_BIM_SOURCE', 'kind', spec[:kind])
         instance.set_attribute('VGD_BIM_SOURCE', 'ref', "#{plan[:level]['id']}:#{item[:ref]}")
         instance.set_attribute(Schema::DICTIONARY, 'level', plan[:level]['id'])
+        instance.set_attribute(Schema::DICTIONARY, 'level_name', plan[:level]['name'])
+        instance.set_attribute(Schema::DICTIONARY, 'level_elevation', plan[:level]['elevation'])
         instance.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('thickness' => item[:thickness], 'area' => item[:area], 'z_top' => item[:z_top]))
       end
 

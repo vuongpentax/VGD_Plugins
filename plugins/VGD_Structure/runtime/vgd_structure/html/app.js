@@ -673,6 +673,19 @@
       state.drawnLevels = data.drawn_levels || []; renderColumnsButtons(); message(data.message, data.error);
     } else if (event === 'beams_built') {
       state.drawnBeamLevels = data.drawn_beam_levels || []; renderBeamsButtons(); message(data.message, data.error);
+    } else if (event === 'focus') {
+      var tabOf = {column: 'columns', beam: 'beams', wall: 'walls', slab: 'slabs', ceiling: 'ceilings'}[data.kind];
+      if (tabOf) {
+        if (state.levels.some(function (l) { return l.id === data.level; })) state.level = data.level;
+        state.selected = null; state.selectedBeam = null; state.selectedWall = null;
+        var lv = currentLevel();
+        if (data.kind === 'column' && lv.picks[data.ref]) state.selected = data.ref;
+        if (data.kind === 'beam' && lv.beamPicks[data.ref]) state.selectedBeam = data.ref;
+        if (data.kind === 'wall' && lv.wallPicks[data.ref]) state.selectedWall = data.ref;
+        renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab();
+        switchTab(tabOf);
+        message('Đang sửa ' + data.ref + ' ở ' + lv.name + '.');
+      }
     } else if (event === 'check') {
       renderCheck(data);
     } else if (event === 'all_built') {
