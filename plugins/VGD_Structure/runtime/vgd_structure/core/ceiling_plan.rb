@@ -10,7 +10,7 @@ module VGD
 
       Error = Class.new(ArgumentError)
 
-      def self.plan(grid, types, beam_types, wall_types, levels, level_id)
+      def self.plan(grid, types, beam_types, wall_types, levels, level_id, opening_types = OpeningTypes.default)
         level = Levels.find(levels, level_id) or raise Error, 'Tầng không tồn tại.'
         above = Levels.next_of(levels, level_id)
         raise Error, "Tầng “#{level['name']}” là tầng trên cùng, chỉ có sàn nên không có trần." unless above
@@ -18,7 +18,7 @@ module VGD
         z_bottom = (level['elevation'] + level['ceiling_height']).round(1)
         z_top = (z_bottom + level['ceiling_thickness']).round(1)
         raise Error, "Trần tầng “#{level['name']}” (mặt trên #{z_top} mm) cao hơn đáy sàn tầng trên (#{column_plan[:z1]} mm). Hãy giảm cao trần." if z_top > column_plan[:z1] + EPS
-        walls = level['picks']['walls'].empty? ? {} : WallPlan.plan(grid, types, beam_types, wall_types, levels, level_id)[:items].each_with_object({}) { |w, h| h[w[:ref]] = w }
+        walls = level['picks']['walls'].empty? ? {} : WallPlan.plan(grid, types, beam_types, wall_types, levels, level_id, opening_types)[:items].each_with_object({}) { |w, h| h[w[:ref]] = w }
         beams = level['picks']['beams'].empty? ? {} : BeamPlan.plan(grid, types, beam_types, levels, level_id)[:items]
         columns = column_plan[:items].each_with_object({}) { |c, h| h[c[:ref]] = c }
         cells = Grid.cells(grid).each_with_object({}) { |c, h| h[c[:ref]] = c }

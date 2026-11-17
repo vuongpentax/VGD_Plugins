@@ -1,7 +1,7 @@
 # Dữ liệu thật từ Ruby cho test giao diện (trạng thái, xem trước lưới / cột, kết quả tạo trục từ nhịp). In JSON ra stdout.
 require 'json'
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
-%w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/levels core/column_plan core/beam_plan core/wall_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview].each { |f| require File.join(ROOT, f) }
+%w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/opening_types core/levels core/column_plan core/beam_plan core/wall_plan core/opening_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 state = S::State.default
 refs = S::Grid.intersections(state['grid']).map { |i| i[:ref] }
@@ -13,11 +13,12 @@ walls_two = {'x:B:1-2' => {}, 'y:2:A-B' => {'p' => 'center'}}
 cells = S::Grid.cells(state['grid']).map { |c| c[:ref] }
 cells_two = {'1-2/A-B' => {}, '2-3/B-C' => {}}
 all_cells = cells.each_with_object({}) { |r, h| h[r] = {} }
+openings_two = {'op_00000001' => {'wall' => 'x:B:1-2', 'type' => 'ot_00000001', 'pos' => 1000, 'flip' => false}, 'op_00000002' => {'wall' => 'x:B:1-2', 'type' => 'ot_00000002', 'pos' => 2800, 'flip' => false}}
 all = refs.each_with_object({}) { |r, h| h[r] = {} }
-with = ->(picks, level, beams = beams_two, walls = walls_two, slabs = cells_two, ceilings = cells_two) { state.merge('levels' => state['levels'].each_with_index.map { |l, i| i.zero? ? l.merge('picks' => {'columns' => picks, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings}) : l }, 'level' => level) }
+with = ->(picks, level, beams = beams_two, walls = walls_two, slabs = cells_two, ceilings = cells_two, openings = openings_two) { state.merge('levels' => state['levels'].each_with_index.map { |l, i| i.zero? ? l.merge('picks' => {'columns' => picks, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings, 'openings' => openings}) : l }, 'level' => level) }
 state_two = with.call(two, 'sl_00000001')
 puts JSON.generate(
-  state: {grid: state['grid'], symbol: state['symbol'], types: state['types'], beam_types: state['beam_types'], wall_types: state['wall_types'], levels: state_two['levels'], saved: false, drawn: false, drawn_levels: [], drawn_beam_levels: [], drawn_wall_levels: [], drawn_slab_levels: [], drawn_ceiling_levels: [], version: '0.8.0-beta.1'},
+  state: {grid: state['grid'], symbol: state['symbol'], types: state['types'], beam_types: state['beam_types'], wall_types: state['wall_types'], opening_types: state['opening_types'], levels: state_two['levels'], saved: false, drawn: false, drawn_levels: [], drawn_beam_levels: [], drawn_wall_levels: [], drawn_slab_levels: [], drawn_ceiling_levels: [], drawn_opening_levels: [], version: '0.9.0-beta.1'},
   preview: S::Preview.build(state_two),
   preview_all: S::Preview.build(with.call(all, 'sl_00000001')),
   preview_all_beams: S::Preview.build(with.call(all, 'sl_00000001', all_beams)),

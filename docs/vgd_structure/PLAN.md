@@ -135,7 +135,7 @@ Cấu trúc tính năng lấy từ README công khai của VTBim (chỉ ý tư�
 
 | # | Cột mốc | Nội dung chính | Kiểm tra |
 |---|---|---|---|
-| 8 | **Cửa đi và cửa sổ** | Loại cửa (đi / sổ: rộng, cao, cao ngưỡng); đặt cửa lên tường theo vị trí trên tường; tường **tự khoét lỗ**; khung và cánh đơn giản theo tham số; tag A. DOOR / A. WINDOW; BIM đếm theo loại và trừ lỗ mở khỏi diện tích tường | test kế hoạch (lỗ nằm trong tường, không chồng nhau, dưới dầm), test dựng, test BIM |
+| 8 | **Cửa đi và cửa sổ** (ĐÃ LÀM, 0.9.0-beta.1) | Loại cửa (đi / sổ: rộng, cao, cao ngưỡng); đặt cửa lên tường theo vị trí trên tường; tường **tự khoét lỗ**; khung và cánh đơn giản theo tham số; tag A. DOOR / A. WINDOW; BIM đếm theo loại và trừ lỗ mở khỏi diện tích tường | test kế hoạch (lỗ nằm trong tường, không chồng nhau, dưới dầm), test dựng, test BIM |
 | 9 | Tường nhiều lớp và nối góc | Loại tường có lớp cấu tạo (gạch, vữa, ốp); nối góc L / T (tường dừng ở mặt tường vuông góc thay vì mặt cột khi không có cột) | test hình học nối góc |
 | 10 | **Hoàn thiện** | Sàn hoàn thiện (lát), tường hoàn thiện (ốp, sơn) bám mặt tường kể cả quanh lỗ cửa, trần hoàn thiện; tag A. FINISHING FLOOR / WALL / CEILING; khối lượng theo vật liệu | test diện tích trừ lỗ, không chồng khối |
 | 11 | Cầu thang và lan can | Thang theo tham số (vế, chiếu nghỉ), lỗ mở sàn cho thang, lan can liên tục | test bậc, lỗ sàn |

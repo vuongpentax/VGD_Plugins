@@ -11,7 +11,7 @@ module VGD
       def self.prepare(model, raw_state, level_ids)
         state = State.normalize!(raw_state)
         raise WallPlan::Error, 'Hãy chọn ít nhất một tầng để dựng tường.' unless level_ids.is_a?(Array) && !level_ids.empty?
-        plans = level_ids.uniq.map { |id| WallPlan.plan(state['grid'], state['types'], state['beam_types'], state['wall_types'], state['levels'], id) }
+        plans = level_ids.uniq.map { |id| WallPlan.plan(state['grid'], state['types'], state['beam_types'], state['wall_types'], state['levels'], id, state['opening_types']) }
         raise WallPlan::Error, 'Các tầng đã chọn chưa có tường nào được chọn.' if plans.all? { |plan| plan[:items].empty? }
         total = plans.sum { |plan| plan[:items].size }
         raise WallPlan::Error, "Quá nhiều tường (#{total}); tối đa #{MAX_WALLS} mỗi lần dựng." if total > MAX_WALLS
@@ -110,22 +110,24 @@ module VGD
         instance.set_attribute(Schema::DICTIONARY, 'level_name', plan[:level]['name'])
         instance.set_attribute(Schema::DICTIONARY, 'level_elevation', plan[:level]['elevation'])
         instance.set_attribute(Schema::DICTIONARY, 'type', item[:type_name])
-        instance.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('thickness' => item[:t], 'height' => item[:height], 'length' => item[:length], 'under_beam' => item[:under_beam]))
+        instance.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('thickness' => item[:t], 'height' => item[:height], 'length' => item[:length], 'under_beam' => item[:under_beam], 'openings' => item[:openings].size, 'openings_area' => item[:openings_area]))
         instance.set_attribute(Schema::DICTIONARY, 'placement', JSON.generate('position' => item[:placement], 'p' => item[:mode], 'dir' => item[:dir]))
       end
 
       # Định nghĩa dùng chung cho mọi tường cùng phương, dày, cao, dài: lăng trụ có mặt đáy tại z = 0, dài theo +X (tường X) hoặc +Y (tường Y),
       # gốc ở tâm đầu tường.
       def self.definition_for(model, item, definitions)
-        key = [item[:dir], item[:t], item[:height], item[:length]]
+        holes = item[:openings].map { |o| [o[:x0], o[:x1], o[:z0], o[:z1]] }
+        key = [item[:dir], item[:t], item[:height], item[:length], holes]
         definitions[key] ||= begin
-          name = "VGD Tường #{item[:dir].upcase} #{fmt(item[:t])}x#{fmt(item[:height])}x#{fmt(item[:length])}"
+          name = "VGD Tường #{item[:dir].upcase} #{fmt(item[:t])}x#{fmt(item[:height])}x#{fmt(item[:length])}#{holes.empty? ? '' : " lỗ #{holes.flatten.map { |v| fmt(v) }.join('_')}"}"
           existing = model.definitions[name]
           existing && existing.valid? ? existing : make_definition(model, name, item)
         end
       end
 
       def self.make_definition(model, name, item)
+        return make_definition_with_holes(model, name, item) unless item[:openings].empty?
         definition = model.definitions.add(name)
         half = (item[:t] / 2.0).mm
         long = item[:length].mm
@@ -137,6 +139,25 @@ module VGD
         face = definition.entities.add_face(points)
         face.reverse! if face.normal.z < 0
         face.pushpull(item[:height].mm)
+        definition.set_attribute(Schema::DICTIONARY, 'kind', 'wall_definition')
+        definition
+      end
+
+      # Tường có lỗ cửa: mặt đứng (dài x cao) có các lỗ chữ nhật rồi đùn theo bề dày; lỗ tạo bằng cách thêm mặt nhỏ bên trong rồi xóa mặt đó.
+      # Chưa xác minh trong SketchUp thật (đùn mặt có lỗ).
+      def self.make_definition_with_holes(model, name, item)
+        definition = model.definitions.add(name)
+        half = (item[:t] / 2.0).mm
+        plane = ->(u, z) { item[:dir] == 'x' ? Geom::Point3d.new(u.mm, -half, z.mm) : Geom::Point3d.new(-half, u.mm, z.mm) }
+        rect = ->(u0, u1, z0, z1) { [plane.call(u0, z0), plane.call(u1, z0), plane.call(u1, z1), plane.call(u0, z1)] }
+        face = definition.entities.add_face(rect.call(0, item[:length], 0, item[:height]))
+        item[:openings].each do |o|
+          inner = definition.entities.add_face(rect.call(o[:x0], o[:x1], o[:z0], o[:z1]))
+          inner.erase! if inner
+        end
+        axis = item[:dir] == 'x' ? :y : :x
+        face.reverse! if face.normal.send(axis) < 0
+        face.pushpull(item[:t].mm)
         definition.set_attribute(Schema::DICTIONARY, 'kind', 'wall_definition')
         definition
       end

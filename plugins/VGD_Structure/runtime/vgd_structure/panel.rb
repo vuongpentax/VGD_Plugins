@@ -23,6 +23,8 @@ module VGD
         @dialog.add_action_callback('beams_remove') { |_ctx, payload| safely { beams_remove(JSON.parse(payload)) } }
         @dialog.add_action_callback('walls_build') { |_ctx, payload| safely { walls_build(JSON.parse(payload)) } }
         @dialog.add_action_callback('walls_remove') { |_ctx, payload| safely { walls_remove(JSON.parse(payload)) } }
+        @dialog.add_action_callback('openings_build') { |_ctx, payload| safely { openings_build(JSON.parse(payload)) } }
+        @dialog.add_action_callback('openings_remove') { |_ctx, payload| safely { openings_remove(JSON.parse(payload)) } }
         @dialog.add_action_callback('plates_build') { |_ctx, payload| safely { plates_build(JSON.parse(payload)) } }
         @dialog.add_action_callback('plates_remove') { |_ctx, payload| safely { plates_remove(JSON.parse(payload)) } }
         @dialog.add_action_callback('propose') { |_ctx, payload| safely { propose(JSON.parse(payload)) } }
@@ -68,8 +70,8 @@ module VGD
       def send_state(reset: false)
         model = Sketchup.active_model
         state = reset ? State.default.merge('saved' => false, 'removed' => 0) : ModelStore.read(model)
-        emit('state', {grid: state['grid'], symbol: state['symbol'], types: state['types'], beam_types: state['beam_types'], wall_types: state['wall_types'], levels: state['levels'], saved: state['saved'],
-                       drawn: !GridBuilder.find(model).nil?, drawn_levels: drawn_levels(model), drawn_beam_levels: drawn_beam_levels(model), drawn_wall_levels: drawn_wall_levels(model), drawn_slab_levels: drawn_plate_levels(model, 'slabs'), drawn_ceiling_levels: drawn_plate_levels(model, 'ceilings'), version: VERSION})
+        emit('state', {grid: state['grid'], symbol: state['symbol'], types: state['types'], beam_types: state['beam_types'], wall_types: state['wall_types'], opening_types: state['opening_types'], levels: state['levels'], saved: state['saved'],
+                       drawn: !GridBuilder.find(model).nil?, drawn_levels: drawn_levels(model), drawn_beam_levels: drawn_beam_levels(model), drawn_wall_levels: drawn_wall_levels(model), drawn_opening_levels: drawn_opening_levels(model), drawn_slab_levels: drawn_plate_levels(model, 'slabs'), drawn_ceiling_levels: drawn_plate_levels(model, 'ceilings'), version: VERSION})
         grid_preview(state.merge('level' => state['levels'].first['id']))
       end
 
@@ -95,25 +97,26 @@ module VGD
         types = ColumnTypes.normalize!(payload['types'])
         beam_types = BeamTypes.normalize!(payload['beam_types'])
         wall_types = WallTypes.normalize!(payload['wall_types'])
-        levels, = Levels.normalize!(payload['levels'], grid, types, beam_types, wall_types)
+        opening_types = payload['opening_types'].nil? ? OpeningTypes.default : OpeningTypes.normalize!(payload['opening_types'])
+        levels, = Levels.normalize!(payload['levels'], grid, types, beam_types, wall_types, opening_types)
         ids = payload['scope'] == 'all' ? levels.map { |l| l['id'] } : [payload['level']]
         proposed, added = Proposal.propose(grid, levels, ids)
-        clean, = Levels.normalize!(proposed, grid, types, beam_types, wall_types)
+        clean, = Levels.normalize!(proposed, grid, types, beam_types, wall_types, opening_types)
         parts = Checker::KIND_LABELS.map { |kind, label| "#{added[kind]} #{label.downcase}" }.join(', ')
         emit('levels', {levels: clean, message: "Đã đề xuất cho #{ids.size} tầng: thêm #{parts}. Hãy xem lại từng tab, bỏ bớt hoặc thêm rồi dựng.", proposed: added})
-      rescue Grid::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, Levels::Error => error
+      rescue Grid::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, OpeningTypes::Error, Levels::Error => error
         emit('message', {text: error.message, error: true})
       end
 
       # Kiểm tra kết cấu mọi tầng (chỉ đọc): lỗi và cảnh báo của các kế hoạch.
       def check(payload)
         emit('check', Checker.run(State.normalize!(payload)))
-      rescue Grid::Error, AxisSymbol::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, Levels::Error => error
+      rescue Grid::Error, AxisSymbol::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, OpeningTypes::Error, Levels::Error => error
         emit('message', {text: error.message, error: true})
       end
 
       def drawn_all(model)
-        {columns: drawn_levels(model), beams: drawn_beam_levels(model), walls: drawn_wall_levels(model), slabs: drawn_plate_levels(model, 'slabs'), ceilings: drawn_plate_levels(model, 'ceilings')}
+        {columns: drawn_levels(model), beams: drawn_beam_levels(model), walls: drawn_wall_levels(model), openings: drawn_opening_levels(model), slabs: drawn_plate_levels(model, 'slabs'), ceilings: drawn_plate_levels(model, 'ceilings')}
       end
 
       # Dựng tất cả (cột, dầm, tường, sàn, trần) của các tầng đã chọn trong MỘT bước hoàn tác; có lỗi thì không dựng gì cả.
@@ -132,7 +135,35 @@ module VGD
         parts = result[:kinds].map { |kind, r| "#{r.total} #{Checker::KIND_LABELS[kind].downcase}" }.join(', ')
         note = result[:issues].empty? ? '' : " Có #{result[:issues].size} cảnh báo: #{result[:issues].first(3).join(' ')}"
         emit('all_built', {message: "Đã dựng #{result[:total]} đối tượng trong một bước hoàn tác: #{parts}.#{note}", drawn: drawn_all(model)})
-      rescue Grid::Error, AxisSymbol::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, Levels::Error, ColumnPlan::Error, BeamPlan::Error, WallPlan::Error, SlabPlan::Error, CeilingPlan::Error, ArgumentError => error
+      rescue Grid::Error, AxisSymbol::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, OpeningTypes::Error, Levels::Error, ColumnPlan::Error, BeamPlan::Error, WallPlan::Error, SlabPlan::Error, CeilingPlan::Error, ArgumentError => error
+        emit('message', {text: error.message, error: true})
+      end
+
+      def drawn_opening_levels(model)
+        OpeningBuilder.groups(model).map { |g| g.get_attribute(Schema::DICTIONARY, 'level') }
+      end
+
+      # Dựng cửa các tầng đã chọn (xem columns_build). Tường được khoét lỗ khi dựng tường (cùng dữ liệu cửa), nên nên dựng lại tường sau khi đặt hoặc sửa cửa.
+      def openings_build(payload)
+        model = Sketchup.active_model
+        ids = payload['levels']
+        state = payload['state']
+        result = OpeningBuilder.build(model, state, ids)
+        names = result.levels.map { |l| "#{l[:name]} (#{l[:count]} cửa)" }.join(', ')
+        note = result.issues.empty? ? '' : " Có #{result.issues.size} cảnh báo: #{result.issues.first(3).join(' ')}"
+        note += ' Nhớ dựng lại tường để tường có lỗ cửa.'
+        emit('openings_built', {message: "Đã dựng #{result.total} cửa: #{names}.#{note}", drawn_opening_levels: drawn_opening_levels(model)})
+      rescue Grid::Error, AxisSymbol::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, OpeningTypes::Error, Levels::Error, ColumnPlan::Error, BeamPlan::Error, WallPlan::Error, OpeningPlan::Error => error
+        emit('message', {text: error.message, error: true})
+      end
+
+      def openings_remove(payload)
+        model = Sketchup.active_model
+        id = payload['level']
+        count = OpeningBuilder.remove(model, id.is_a?(String) ? id : nil)
+        message = count.zero? ? 'Model chưa có cửa do VGD Structure dựng.' : 'Đã xóa cửa khỏi model. Dữ liệu cửa đã đặt vẫn được giữ; dựng lại tường để bỏ lỗ cửa nếu cần.'
+        emit('openings_built', {message: message, drawn_opening_levels: drawn_opening_levels(model), error: count.zero?})
+      rescue OpeningPlan::Error => error
         emit('message', {text: error.message, error: true})
       end
 
@@ -161,7 +192,7 @@ module VGD
         note = result.issues.empty? ? '' : " Có #{result.issues.size} cảnh báo: #{result.issues.first(3).join(' ')}"
         note += " Đã dọn #{result.removed_orphans} nhóm #{label} của tầng không còn." if result.removed_orphans.positive?
         emit('plates_built', {kind: kind, message: "Đã dựng #{result.total} #{label}: #{names}.#{note}", drawn_levels: drawn_plate_levels(model, kind)})
-      rescue Grid::Error, AxisSymbol::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, Levels::Error, ColumnPlan::Error, BeamPlan::Error, WallPlan::Error, SlabPlan::Error, CeilingPlan::Error, ArgumentError => error
+      rescue Grid::Error, AxisSymbol::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, OpeningTypes::Error, Levels::Error, ColumnPlan::Error, BeamPlan::Error, WallPlan::Error, SlabPlan::Error, CeilingPlan::Error, ArgumentError => error
         emit('message', {text: error.message, error: true})
       end
 
@@ -276,13 +307,14 @@ module VGD
         types = ColumnTypes.normalize!(payload['types'])
         beam_types = payload['beam_types'].nil? ? BeamTypes.default : BeamTypes.normalize!(payload['beam_types'])
         wall_types = payload['wall_types'].nil? ? WallTypes.default : WallTypes.normalize!(payload['wall_types'])
-        levels, = Levels.normalize!(payload['levels'], grid, types, beam_types, wall_types)
-        kind = %w[beams walls slabs ceilings].include?(payload['kind']) ? payload['kind'] : 'columns'
-        copied = Levels.copy_picks(levels, payload['from'], payload['to'], grid, types, kind, beam_types, wall_types)
+        opening_types = payload['opening_types'].nil? ? OpeningTypes.default : OpeningTypes.normalize!(payload['opening_types'])
+        levels, = Levels.normalize!(payload['levels'], grid, types, beam_types, wall_types, opening_types)
+        kind = %w[beams walls openings slabs ceilings].include?(payload['kind']) ? payload['kind'] : 'columns'
+        copied = Levels.copy_picks(levels, payload['from'], payload['to'], grid, types, kind, beam_types, wall_types, opening_types)
         from = Levels.find(levels, payload['from'])['name']
         to = Levels.find(levels, payload['to'])['name']
-        emit('levels', {levels: copied, message: "Đã sao chép lựa chọn #{{'beams' => 'dầm', 'walls' => 'tường', 'slabs' => 'sàn', 'ceilings' => 'trần'}.fetch(kind, 'cột')} từ “#{from}” sang “#{to}”."})
-      rescue Grid::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, Levels::Error => error
+        emit('levels', {levels: copied, message: "Đã sao chép lựa chọn #{{'beams' => 'dầm', 'walls' => 'tường', 'openings' => 'cửa', 'slabs' => 'sàn', 'ceilings' => 'trần'}.fetch(kind, 'cột')} từ “#{from}” sang “#{to}”."})
+      rescue Grid::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, OpeningTypes::Error, Levels::Error => error
         emit('message', {text: error.message, error: true})
       end
 

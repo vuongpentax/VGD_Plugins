@@ -55,14 +55,23 @@ module Sketchup
   end
   class Face < Entity
     attr_reader :points, :height
-    def initialize(points); @points = points; @reversed = false; end
-    # Chiều pháp tuyến theo diện tích có dấu (shoelace) của cả đa giác: đúng cả khi có đỉnh lõm. Ngược chiều kim đồng hồ nhìn từ trên = hướng lên.
+    attr_accessor :erased
+    def initialize(points); @points = points; @reversed = false; @erased = false; end
+    # Pháp tuyến theo phương pháp Newell (đúng cho đa giác phẳng bất kỳ, kể cả có đỉnh lõm và mặt đứng). Ngược chiều kim đồng hồ nhìn từ phía pháp tuyến.
     def normal
-      z = points.each_with_index.sum { |p, i| q = points[(i + 1) % points.size]; p.x * q.y - q.x * p.y }
-      Struct.new(:z).new(@reversed ? -z : z)
+      nx = ny = nz = 0.0
+      points.each_with_index do |p, i|
+        q = points[(i + 1) % points.size]
+        nx += (p.y - q.y) * (p.z + q.z)
+        ny += (p.z - q.z) * (p.x + q.x)
+        nz += (p.x - q.x) * (p.y + q.y)
+      end
+      sign = @reversed ? -1 : 1
+      Struct.new(:x, :y, :z).new(sign * nx, sign * ny, sign * nz)
     end
     def reverse!; @reversed = !@reversed; end
     def pushpull(distance); @height = distance; end
+    def erase!; @erased = true; end
   end
   class ComponentDefinition < Entity
     attr_reader :name, :entities

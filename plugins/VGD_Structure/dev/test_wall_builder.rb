@@ -8,7 +8,7 @@ def error_of; yield; nil; rescue StandardError => e; e.message; end
 require_relative 'fake_sketchup'
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
 module VGD; module Structure; VERSION = '9.9.9'; end; end
-%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/levels core/column_plan core/beam_plan core/wall_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder plate_builder all_builder].each { |f| require File.join(ROOT, f) }
+%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/opening_types core/levels core/column_plan core/beam_plan core/wall_plan core/opening_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder opening_builder plate_builder all_builder].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 B = S::WallBuilder
 D = S::Schema::DICTIONARY
@@ -39,7 +39,7 @@ ok('tường biên x:A:1-2 đặt tại (300, 100, 0): mặt ngoài tiếp giáp
 ok('tường Y y:2:A-B đặt tại (4200, 300, 0)', mmv.call(inst.find { |i| i.name.include?('y:2:A-B') }) == [4200.0, 300.0, 0.0])
 face = bx.definition.entities.grep(Sketchup::Face).first
 ok('định nghĩa tường X: mặt đáy hướng lên, đùn cao 3480, dài 3900 theo +X, dày 200 theo Y', face.normal.z > 0 && (face.height * MM - 3480).abs < 1e-6 && face.points.map(&:x).minmax.map { |v| (v * MM).round(3) } == [0.0, 3900.0] && face.points.map(&:y).minmax.map { |v| (v * MM).round(3) } == [-100.0, 100.0])
-ok('dữ liệu BIM đọc: nguồn plugin, kind wall, ref kèm mã tầng; kích thước, loại, vị trí, dưới dầm ở VGD_STRUCT', bx.get_attribute('VGD_BIM_SOURCE', 'kind') == 'wall' && bx.get_attribute('VGD_BIM_SOURCE', 'ref') == 'sl_00000001:x:B:2-3' && JSON.parse(bx.get_attribute(D, 'dims')) == {'thickness' => 200.0, 'height' => 3480.0, 'length' => 3900.0, 'under_beam' => false} && bx.get_attribute(D, 'type') == 'T200' && JSON.parse(bx.get_attribute(D, 'placement')) == {'position' => 'inner', 'p' => 'center', 'dir' => 'x'})
+ok('dữ liệu BIM đọc: nguồn plugin, kind wall, ref kèm mã tầng; kích thước, loại, vị trí, dưới dầm ở VGD_STRUCT', bx.get_attribute('VGD_BIM_SOURCE', 'kind') == 'wall' && bx.get_attribute('VGD_BIM_SOURCE', 'ref') == 'sl_00000001:x:B:2-3' && JSON.parse(bx.get_attribute(D, 'dims')) == {'thickness' => 200.0, 'height' => 3480.0, 'length' => 3900.0, 'under_beam' => false, 'openings' => 0, 'openings_area' => 0.0} && bx.get_attribute(D, 'type') == 'T200' && JSON.parse(bx.get_attribute(D, 'placement')) == {'position' => 'inner', 'p' => 'center', 'dir' => 'x'})
 tag = m.layers['A. WALL']
 ok('tag A. WALL theo bộ tag mẫu: màu (255, 153, 102), thư mục A. ARCHITECTURAL; nhóm và tường trên tag', tag && tag.color.rgb == [255, 153, 102] && tag.folder.name == 'A. ARCHITECTURAL' && g[0].layer.equal?(tag) && inst.all? { |i| i.layer.equal?(tag) })
 ok('kết quả: 17 tường, không cảnh báo', res.total == 17 && res.levels == [{name: 'Tầng 1', count: 17, top: 3480.0}] && res.issues.empty?)

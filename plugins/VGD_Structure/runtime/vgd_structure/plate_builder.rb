@@ -17,7 +17,7 @@ module VGD
       def self.plan_for(kind, state, id)
         case kind
         when 'slabs' then SlabPlan.plan(state['grid'], state['levels'], id)
-        else CeilingPlan.plan(state['grid'], state['types'], state['beam_types'], state['wall_types'], state['levels'], id)
+        else CeilingPlan.plan(state['grid'], state['types'], state['beam_types'], state['wall_types'], state['levels'], id, state['opening_types'])
         end
       end
 

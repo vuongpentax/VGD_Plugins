@@ -9,12 +9,12 @@ module VGD
       SOURCE_DICTIONARY = 'VGD_BIM_SOURCE'.freeze
       STRUCT_DICTIONARY = 'VGD_STRUCT'.freeze
       PLUGIN = 'vgd_structure'.freeze
-      KINDS = %w[column beam wall slab ceiling].freeze
+      KINDS = %w[column beam wall slab ceiling door window].freeze
       # Nhóm chứa các phần tử (mỗi tầng một nhóm theo loại) và nhóm lưới trục: không phải món, không tính khối lượng.
       CONTAINER_KINDS = %w[columns beams walls slabs ceilings grid].freeze
       MAX_VALUE = 1.0e9
       # Cách tính khi món không có tag cho biết (tag S. COLUMN, A. WALL... đã có cách tính theo từ khóa của tên tag).
-      DEFAULT_METHOD = {'column' => 'volume', 'beam' => 'volume', 'wall' => 'area', 'slab' => 'volume', 'ceiling' => 'area'}.freeze
+      DEFAULT_METHOD = {'column' => 'volume', 'beam' => 'volume', 'wall' => 'area', 'slab' => 'volume', 'ceiling' => 'area', 'door' => 'count', 'window' => 'count'}.freeze
 
       def self.element?(entity)
         entity.respond_to?(:get_attribute) && entity.get_attribute(SOURCE_DICTIONARY, 'plugin') == PLUGIN && KINDS.include?(entity.get_attribute(SOURCE_DICTIONARY, 'kind'))
@@ -49,7 +49,8 @@ module VGD
       end
 
       # [diện tích m², thể tích m³, chiều dài m] theo loại; thiếu hoặc sai số liệu thì nil.
-      # Cột: tiết diện x cao; dầm: rộng x cao x dài; tường: diện tích mặt = dài x cao, bề dày; sàn / trần: diện tích mặt bằng, bề dày.
+      # Cột: tiết diện x cao; dầm: rộng x cao x dài; tường: diện tích mặt = dài x cao TRỪ lỗ cửa (openings_area), bề dày; cửa: diện tích lỗ = rộng x cao (đếm theo cái);
+      # sàn / trần: diện tích mặt bằng, bề dày.
       def self.quantities(kind, dims)
         n = ->(key) { v = dims[key]; v.is_a?(Numeric) && v.to_f.finite? && v.to_f.positive? && v.to_f < MAX_VALUE ? v.to_f : nil }
         case kind
@@ -61,7 +62,13 @@ module VGD
           [w && l ? round(w * l / 1.0e6) : nil, w && h && l ? round(w * h * l / 1.0e9) : nil, l ? round(l / 1000.0) : nil]
         when 'wall'
           t, h, l = n.call('thickness'), n.call('height'), n.call('length')
-          [h && l ? round(h * l / 1.0e6) : nil, t && h && l ? round(t * h * l / 1.0e9) : nil, l ? round(l / 1000.0) : nil]
+          open_area = dims['openings_area'].is_a?(Numeric) && dims['openings_area'].to_f.finite? && dims['openings_area'].to_f >= 0 ? dims['openings_area'].to_f : 0.0 # lỗ cửa: trừ khỏi diện tích và thể tích tường
+          gross = h && l ? h * l / 1.0e6 : nil
+          net = gross && gross > open_area ? gross - open_area : gross
+          [net ? round(net) : nil, t && net ? round(t * net / 1000.0) : nil, l ? round(l / 1000.0) : nil]
+        when 'door', 'window'
+          w, h = n.call('w'), n.call('h')
+          [w && h ? round(w * h / 1.0e6) : nil, nil, w ? round(w / 1000.0) : nil]
         else
           t, a = n.call('thickness'), n.call('area')
           [a ? round(a) : nil, t && a ? round(t * a / 1000.0) : nil, nil]

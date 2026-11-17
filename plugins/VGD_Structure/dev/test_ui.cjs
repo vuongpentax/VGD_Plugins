@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.8.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.9.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -411,15 +411,93 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.click('[data-tab=grid]');
 
 
+
+  // ===== Loại cửa và tab Cửa =====
+  await receive('state',F.state);await receive('preview',F.preview);
+  await page.click('[data-tab=levels]');
+  const otNames=()=>page.locator('#opening-types-table tr td:nth-child(1) input').evaluateAll(l=>l.map(i=>i.value));
+  ok(JSON.stringify(await otNames())==='["D900x2100","W1200x1200"]' && await page.locator('#opening-types-table select').first().inputValue()==='door','bảng loại cửa: D900x2100 (cửa đi), W1200x1200 (cửa sổ)');
+  await clear();
+  await page.click('#add-opening-type');
+  ok(JSON.stringify(await otNames())==='["D900x2100","W1200x1200","Cửa 3"]','thêm loại cửa');
+  await page.locator('#opening-types-table tr:nth-child(4) td:nth-child(1) input').fill('D800');
+  await page.locator('#opening-types-table tr:nth-child(4) td:nth-child(3) input').fill('800');
+  await page.locator('#opening-types-table tr:nth-child(4) td:nth-child(5) input').fill('50');await wait();
+  const ot1=await last('grid_preview');
+  ok(ot1.opening_types.length===3 && ot1.opening_types[2].name==='D800' && ot1.opening_types[2].w===800 && ot1.opening_types[2].sill===50 && ot1.opening_types[2].kind==='door' && /^ot_[0-9a-f]{8}$/.test(ot1.opening_types[2].id),'loại cửa mới có mã ot_xxxxxxxx, gửi đúng kích thước, ngưỡng, kiểu');
+  await page.locator('#opening-types-table select').nth(2).selectOption('window');await wait();
+  ok((await last('grid_preview')).opening_types[2].kind==='window','đổi kiểu thành cửa sổ');
+  await page.locator('#opening-types-table button.del').nth(2).click();await wait();
+  ok((await last('grid_preview')).opening_types.length===2,'xóa loại cửa');
+  await receive('state',F.state);await receive('preview',F.preview);
+  await page.click('[data-tab=openings]');
+  ok(await page.locator('#tab-openings').isVisible() && !(await page.locator('#tab-walls').isVisible()),'chuyển sang tab Cửa');
+  ok(await page.locator('#plan7 rect.wallbase').count()===2 && await page.locator('#plan7 rect.door').count()===1 && await page.locator('#plan7 rect.window').count()===1,'mặt bằng cửa: 2 tường đã chọn, 1 cửa đi và 1 cửa sổ');
+  ok(/2 cửa trên 2 tường/.test(await page.locator('#opening-summary').innerText()) && (await page.locator('#opening-level-note').innerText()).includes('2 cửa đã đặt'),'tóm tắt: số cửa, số tường; ghi chú số cửa đã đặt');
+  ok(await page.locator('#opening-editor').isHidden() && await page.locator('#build-openings').isEnabled() && await page.locator('#remove-openings').isDisabled(),'chưa chọn tường: khung sửa ẩn; Dựng bấm được, Xóa khóa khi chưa dựng');
+  await page.locator('#plan7 rect.wallbase[data-ref="x:B:1-2"]').dispatchEvent('click');
+  ok(await page.locator('#opening-editor').isVisible() && (await page.locator('#opening-wall-ref').innerText())==='x:B:1-2' && await page.locator('#opening-list .oprow').count()===2,'bấm tường: mở khung sửa với 2 cửa đã đặt');
+  ok((await page.locator('#opening-wall-note').innerText()).includes('Dài 4050'),'ghi chú chiều dài tường');
+  await clear();
+  await page.locator('#opening-list .oprow input[type=number]').first().fill('1200');await wait();
+  const mv=await last('grid_preview');
+  ok(mv.levels[0].picks.openings.op_00000001.pos===1200 && mv.levels[0].picks.openings.op_00000001.wall==='x:B:1-2' && mv.levels[0].picks.openings.op_00000001.type==='ot_00000001','sửa vị trí cửa: gửi pos mới (mã cửa, tường, loại giữ nguyên)');
+  await page.locator('#opening-list .oprow input[type=checkbox]').first().check();await wait();
+  ok((await last('grid_preview')).levels[0].picks.openings.op_00000001.flip===true,'đổi mặt cánh: gửi flip = true');
+  await page.locator('#opening-list .oprow select').first().selectOption({label:'Cửa sổ W1200x1200 (1200×1200)'});await wait();
+  ok((await last('grid_preview')).levels[0].picks.openings.op_00000001.type==='ot_00000002','đổi loại cửa');
+  await page.locator('#opening-list .oprow button.del').first().click();await wait();
+  const after1=await last('grid_preview');
+  ok(!('op_00000001' in after1.levels[0].picks.openings) && 'op_00000002' in after1.levels[0].picks.openings && await page.locator('#opening-list .oprow').count()===1,'xóa cửa: gỡ khỏi lựa chọn, danh sách còn 1 cửa');
+  await clear();
+  await page.click('#add-door');await wait();
+  const added=await last('grid_preview');
+  const newIds=Object.keys(added.levels[0].picks.openings).filter(k=>k!=='op_00000002');
+  ok(newIds.length===1 && /^op_[0-9a-f]{8}$/.test(newIds[0]) && added.levels[0].picks.openings[newIds[0]].wall==='x:B:1-2' && added.levels[0].picks.openings[newIds[0]].type==='ot_00000001' && added.levels[0].picks.openings[newIds[0]].flip===false,'+ Cửa đi: thêm cửa mới với mã op_xxxxxxxx, loại cửa đi đầu tiên, trên đúng tường');
+  const np=added.levels[0].picks.openings[newIds[0]].pos;
+  ok(np===1012.5 && Math.abs(np-2800)>=900/2+1200/2+50,'vị trí cửa mới: giữa tường (2025) bị cửa sổ chiếm chỗ nên lấy vị trí kế (1012,5), cách cửa sổ ít nhất 50 mm');
+  await page.click('#add-window');await page.click('#add-window');await page.click('#add-window');await page.click('#add-window');await wait();
+  ok((await message()).includes('không còn chỗ') || Object.keys((await last('grid_preview')).levels[0].picks.openings).length<=6,'thêm nhiều cửa: hết chỗ trống thì báo, không chồng cửa');
+  // xem trước từ Ruby và dựng
+  await receive('state',F.state);await receive('preview',F.preview);await clear();
+  await page.click('[data-tab=openings]');await page.click('#build-openings');
+  const ob=await last('openings_build');
+  ok(ob && JSON.stringify(ob.levels)==='["sl_00000001"]' && Object.keys(ob.state.levels[0].picks.openings).length===2 && ob.state.opening_types.length===2,'Dựng cửa tầng này: gửi tầng và toàn bộ dữ liệu (kể cả loại cửa)');
+  await clear();await page.click('#build-all-openings');
+  ok(JSON.stringify((await last('openings_build')).levels)==='["sl_00000001"]','Dựng cửa mọi tầng: chỉ tầng có cửa và không phải tầng trên cùng');
+  await receive('openings_built',{message:'Đã dựng 2 cửa.',drawn_opening_levels:['sl_00000001']});
+  ok((await message())==='Đã dựng 2 cửa.' && await page.locator('#remove-openings').isEnabled(),'sau khi dựng: Xóa cửa bấm được');
+  await page.click('#remove-openings');
+  ok((await last('openings_remove')).level==='sl_00000001','Xóa cửa gửi mã tầng');
+  await page.locator('#opening-level-select').selectOption('sl_00000002');
+  await receive('preview',F.preview_top);
+  ok(/tầng trên cùng/.test(await page.locator('#opening-summary').innerText()) && await page.locator('#build-openings').isDisabled() && await page.locator('#plan7 rect.wallbase').count()===0,'tầng trên cùng: báo không có cửa, không vẽ tường để bấm, khóa nút');
+  await page.locator('#opening-level-select').selectOption('sl_00000001');
+  await receive('preview',F.preview_bad_types);
+  ok(await page.locator('#opening-summary.error').count()===1,'lỗi loại / tầng hiện ở tab Cửa');
+  await receive('state',F.state);await receive('preview',F.preview);
+  await page.click('[data-tab=levels]');await page.click('#add-level');await page.click('[data-tab=openings]');
+  await page.locator('#opening-level-select').selectOption({index:1});await clear();
+  await page.locator('#opening-copy-from').selectOption({label:'Tầng 1'});await page.click('#opening-copy-picks');
+  const oc=await last('picks_copy');
+  ok(oc && oc.kind==='openings' && oc.opening_types.length===2 && oc.from==='sl_00000001' && oc.to==='sl_00000002','sao chép cửa: gửi kind = openings cùng loại cửa');
+  await receive('state',F.state);await receive('preview',F.preview);
+  await receive('focus',{kind:'door',level:'sl_00000001',ref:'op_00000001'});
+  ok(await page.locator('#tab-openings').isVisible() && (await page.locator('#opening-wall-ref').innerText())==='x:B:1-2','focus cửa (từ BIM): mở tab Cửa và chọn tường chứa cửa đó');
+  await page.click('[data-tab=all]');
+  const arr=await page.locator('#all-table tr').evaluateAll(rs=>[...rs[0].querySelectorAll('th')].map(c=>c.textContent));
+  ok(arr.join('|')==='Tầng|Cột|Dầm|Tường|Cửa|Sàn|Trần|Đã dựng','bảng tổng hợp có cột Cửa');
+  await page.click('[data-tab=grid]');
+
   // ===== Tab Tổng hợp và dựng =====
   await receive('state',F.state);await receive('preview',F.preview);
   await page.click('[data-tab=all]');
   ok(await page.locator('#tab-all').isVisible() && !(await page.locator('#tab-ceilings').isVisible()),'chuyển sang tab Tổng hợp và dựng');
   const allRows=()=>page.locator('#all-table tr').evaluateAll(rs=>rs.slice(1).map(r=>[...r.querySelectorAll('td')].map(c=>c.textContent)));
   const ar=await allRows();
-  ok(ar.length===2 && ar[0][0]==='Tầng 1' && JSON.stringify(ar[0].slice(1,6))==='["2","2","2","2","2"]','bảng tổng hợp: tầng 1 có 2 cột, 2 dầm, 2 tường, 2 sàn, 2 trần theo lựa chọn');
-  ok(ar[1][0]==='Tầng 2 (trên cùng: chỉ sàn)' && ar[1][1]==='—' && ar[1][2]==='—' && ar[1][3]==='—' && ar[1][5]==='—' && ar[1][4]==='0','tầng trên cùng: chỉ hiện số sàn, các loại khác là —');
-  ok(ar[0][6]==='—' && await page.locator('#build-all-level').isEnabled() && await page.locator('#build-all-levels').isEnabled(),'chưa dựng gì: cột Đã dựng là —; nút Dựng tất cả bấm được');
+  ok(ar.length===2 && ar[0][0]==='Tầng 1' && JSON.stringify(ar[0].slice(1,7))==='["2","2","2","2","2","2"]','bảng tổng hợp: tầng 1 có 2 cột, 2 dầm, 2 tường, 2 cửa, 2 sàn, 2 trần theo lựa chọn');
+  ok(ar[1][0]==='Tầng 2 (trên cùng: chỉ sàn)' && ar[1][1]==='—' && ar[1][2]==='—' && ar[1][3]==='—' && ar[1][4]==='—' && ar[1][6]==='—' && ar[1][5]==='0','tầng trên cùng: chỉ hiện số sàn, các loại khác là —');
+  ok(ar[0][7]==='—' && await page.locator('#build-all-level').isEnabled() && await page.locator('#build-all-levels').isEnabled(),'chưa dựng gì: cột Đã dựng là —; nút Dựng tất cả bấm được');
   await clear();
   await page.click('#propose-level');
   const pl=await last('propose');
@@ -431,7 +509,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   full[0].picks={columns:Object.fromEntries(['1-A','1-B','1-C','2-A','2-B','2-C','3-A','3-B','3-C','4-A','4-B','4-C'].map(r=>[r,{}])),beams:{'x:A:1-2':{}},walls:{'x:A:1-2':{}},slabs:{'1-2/A-B':{}},ceilings:{}};
   await receive('levels',{levels:full,message:'Đã đề xuất cho 1 tầng: thêm 12 cột.',proposed:{}});await wait();
   const ar2=await allRows();
-  ok((await message()).includes('Đã đề xuất') && ar2[0][1]==='12' && ar2[0][2]==='1' && ar2[0][5]==='0','nhận danh sách tầng đề xuất từ Ruby: bảng tổng hợp cập nhật (12 cột)');
+  ok((await message()).includes('Đã đề xuất') && ar2[0][1]==='12' && ar2[0][2]==='1' && ar2[0][6]==='0','nhận danh sách tầng đề xuất từ Ruby: bảng tổng hợp cập nhật (12 cột)');
   // Kiểm tra
   await clear();
   await page.click('#run-check');
@@ -454,7 +532,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(JSON.stringify((await last('build_all')).levels)==='["sl_00000001","sl_00000002"]','Dựng tất cả các tầng: gửi mọi tầng');
   await receive('all_built',{message:'Đã dựng 10 đối tượng trong một bước hoàn tác: 2 cột.',drawn:{columns:['sl_00000001'],beams:['sl_00000001'],walls:[],slabs:['sl_00000001'],ceilings:[]}});
   const ar3=await allRows();
-  ok((await message()).includes('một bước hoàn tác') && ar3[0][6]==='Cột, Dầm, Sàn' && ar3[1][6]==='—','sau khi dựng: cột Đã dựng liệt kê các loại đã dựng của tầng');
+  ok((await message()).includes('một bước hoàn tác') && ar3[0][7]==='Cột, Dầm, Sàn' && ar3[1][7]==='—','sau khi dựng: cột Đã dựng liệt kê các loại đã dựng của tầng');
   await page.click('[data-tab=columns]');
   ok(await page.locator('#remove-cols').isEnabled() && await page.locator('#remove-walls').isDisabled(),'các tab riêng nhận trạng thái đã dựng (xóa cột bấm được, xóa tường khóa)');
   await page.click('[data-tab=grid]');

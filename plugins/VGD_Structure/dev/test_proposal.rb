@@ -7,7 +7,7 @@ def error_of; yield; nil; rescue StandardError => e; e.message; end
 require_relative 'fake_sketchup'
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
 module VGD; module Structure; VERSION = '9.9.9'; end; end
-%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/levels core/column_plan core/beam_plan core/wall_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder plate_builder all_builder].each { |f| require File.join(ROOT, f) }
+%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/opening_types core/levels core/column_plan core/beam_plan core/wall_plan core/opening_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder opening_builder plate_builder all_builder].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 def deep(x); Marshal.load(Marshal.dump(x)); end
 st = S::State.default
@@ -40,7 +40,7 @@ ok('tầng không tồn tại hoặc danh sách rỗng bị từ chối', !error
 full = deep(st)
 full['levels'] = S::Levels.normalize!(S::Proposal.propose(grid, full['levels'], full['levels'].map { |l| l['id'] }).first, grid, full['types'], full['beam_types'], full['wall_types']).first
 rep = S::Checker.run(full)
-ok('đề xuất đầy đủ: không lỗi; tầng mái chỉ báo không có cảnh báo; số lượng từng loại đúng', rep[:errors] == 0 && rep[:levels].map { |r| r[:id] } == %w[sl_00000001 sl_00000002 sl_00000003] && rep[:levels][0][:counts] == {'columns' => 12, 'beams' => 17, 'walls' => 10, 'slabs' => 6, 'ceilings' => 6} && rep[:levels][2][:top] && rep[:levels][2][:warnings].empty?)
+ok('đề xuất đầy đủ: không lỗi; tầng mái chỉ báo không có cảnh báo; số lượng từng loại đúng', rep[:errors] == 0 && rep[:levels].map { |r| r[:id] } == %w[sl_00000001 sl_00000002 sl_00000003] && rep[:levels][0][:counts] == {'columns' => 12, 'beams' => 17, 'walls' => 10, 'openings' => 0, 'slabs' => 6, 'ceilings' => 6} && rep[:levels][2][:top] && rep[:levels][2][:warnings].empty?)
 ok('đề xuất đầy đủ: không có cảnh báo nào (không nhô ra, không chồng, dầm đều gối cột)', rep[:warnings] == 0)
 nocol = deep(full); nocol['levels'][0]['picks']['columns'].delete('2-B')
 nr = S::Checker.run(nocol)

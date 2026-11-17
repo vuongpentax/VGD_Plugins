@@ -20,6 +20,7 @@
   <button type="button" role="tab" data-tab="columns" aria-selected="false">Cột</button>
   <button type="button" role="tab" data-tab="beams" aria-selected="false">Dầm</button>
   <button type="button" role="tab" data-tab="walls" aria-selected="false">Tường</button>
+  <button type="button" role="tab" data-tab="openings" aria-selected="false">Cửa</button>
   <button type="button" role="tab" data-tab="slabs" aria-selected="false">Sàn</button>
   <button type="button" role="tab" data-tab="ceilings" aria-selected="false">Trần</button>
   <button type="button" role="tab" data-tab="all" aria-selected="false">Tổng hợp và dựng</button>
@@ -87,6 +88,11 @@
       <legend>Loại tường (tường đặc, chưa khoét cửa)</legend>
       <table class="axes" id="wall-types-table"></table>
       <button type="button" class="add" id="add-wall-type">+ Thêm loại tường</button>
+    </fieldset>
+    <fieldset>
+      <legend>Loại cửa (cửa đi / cửa sổ; khung và cánh đơn giản theo tham số)</legend>
+      <table class="axes" id="opening-types-table"></table>
+      <button type="button" class="add" id="add-opening-type">+ Thêm loại cửa</button>
     </fieldset>
     <fieldset>
       <legend>Tầng (mỗi tầng riêng, cao độ tuyệt đối theo trục Z của model)</legend>
@@ -207,6 +213,42 @@
       <button type="button" id="build-walls" class="primary">Dựng tường tầng này</button>
       <button type="button" id="build-all-walls">Dựng tường mọi tầng</button>
       <button type="button" id="remove-walls" class="danger">Xóa tường tầng này</button>
+    </div>
+  </section>
+</main>
+<main id="tab-openings" class="tab" hidden>
+  <section class="form" aria-label="Đặt cửa">
+    <fieldset>
+      <legend>Tầng</legend>
+      <label>Tầng đang xem <select id="opening-level-select"></select></label>
+      <p id="opening-level-note" class="muted small"></p>
+    </fieldset>
+    <fieldset>
+      <legend>Chọn tường để đặt cửa</legend>
+      <div class="quick">
+        <label>Sao chép cửa từ <select id="opening-copy-from" aria-label="Tầng nguồn"></select></label>
+        <button type="button" id="opening-copy-picks">Sao chép vào tầng này</button>
+      </div>
+      <p class="muted small">Bấm một tường trên mặt bằng (tường phải đã được chọn ở tab Tường). Cửa đặt theo <b>vị trí tâm cách đầu tường</b>. Tường tự khoét lỗ khi <b>dựng lại tường</b>; cửa (khung và cánh) dựng ở đây.</p>
+    </fieldset>
+    <fieldset id="opening-editor" hidden>
+      <legend>Cửa trên tường <span id="opening-wall-ref"></span></legend>
+      <p id="opening-wall-note" class="muted small"></p>
+      <div id="opening-list"></div>
+      <div class="actions">
+        <button type="button" id="add-door">+ Cửa đi</button>
+        <button type="button" id="add-window">+ Cửa sổ</button>
+      </div>
+    </fieldset>
+  </section>
+  <section class="preview" aria-label="Mặt bằng cửa">
+    <svg id="plan7" role="img" aria-label="Mặt bằng đặt cửa" preserveAspectRatio="xMidYMid meet"></svg>
+    <p id="opening-summary" class="summary" aria-live="polite"></p>
+    <ul id="opening-issues" class="issues"></ul>
+    <div class="actions">
+      <button type="button" id="build-openings" class="primary">Dựng cửa tầng này</button>
+      <button type="button" id="build-all-openings">Dựng cửa mọi tầng</button>
+      <button type="button" id="remove-openings" class="danger">Xóa cửa tầng này</button>
     </div>
   </section>
 </main>

@@ -102,3 +102,15 @@ svg#plan6 text { fill: var(--vgd-muted); font-size: 11px; text-anchor: middle; p
 table.axes td.num { text-align: right; padding-right: 12px; }
 .issues li.warn { color: var(--vgd-muted); }
 #all-table { max-width: 720px; }
+
+svg#plan7 { flex: 1; min-height: 220px; width: 100%; background: var(--vgd-surface); border: 1px solid var(--vgd-border); border-radius: 6px; }
+svg#plan7 .axis { stroke: #BA00CC; stroke-width: 1; stroke-dasharray: 14 3 2 3; fill: none; vector-effect: non-scaling-stroke; opacity: .4; }
+svg#plan7 .wallbase { fill: #FF9966; fill-opacity: .55; stroke: var(--vgd-text); vector-effect: non-scaling-stroke; cursor: pointer; }
+svg#plan7 .wallbase:hover { fill-opacity: .85; }
+svg#plan7 .wallbase.sel { stroke: var(--vgd-accent); stroke-width: 3; }
+svg#plan7 .door { fill: #FF7766; stroke: var(--vgd-text); vector-effect: non-scaling-stroke; cursor: pointer; }
+svg#plan7 .window { fill: #CCBAED; stroke: var(--vgd-text); vector-effect: non-scaling-stroke; cursor: pointer; }
+svg#plan7 .colref { fill: #66DD00; fill-opacity: .7; stroke: var(--vgd-muted); vector-effect: non-scaling-stroke; pointer-events: none; }
+svg#plan7 text { fill: var(--vgd-muted); font-size: 11px; text-anchor: middle; pointer-events: none; }
+#opening-list .oprow { display: grid; grid-template-columns: 1fr 110px auto auto; gap: 6px; align-items: center; margin-bottom: 6px; }
+#opening-list .oprow select, #opening-list .oprow input[type=number] { width: 100%; }

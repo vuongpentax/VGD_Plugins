@@ -11,7 +11,9 @@ module VGD
 
       Error = Class.new(ArgumentError)
 
-      def self.plan(grid, types, beam_types, wall_types, levels, level_id)
+      MIN_OPENING_GAP = 50.0 # khoảng hở tối thiểu giữa hai cửa liền nhau trên một tường
+
+      def self.plan(grid, types, beam_types, wall_types, levels, level_id, opening_types = OpeningTypes.default)
         level = Levels.find(levels, level_id) or raise Error, 'Tầng không tồn tại.'
         above = Levels.next_of(levels, level_id)
         raise Error, "Tầng “#{level['name']}” là tầng trên cùng, chỉ có sàn nên không có tường." unless above
@@ -59,6 +61,7 @@ module VGD
           items << {ref: w[:ref], dir: dir, type_id: w[:type]['id'], type_name: w[:type]['name'], t: w[:w], length: length, height: height, start: start.round(2), finish: finish.round(2),
                     center: w[:center], min: min.map { |v| v.round(2) }, max: max.map { |v| v.round(2) }, mode: w[:mode], placement: span[:placement], z_bottom: z0, z_top: w[:z_top], under_beam: w[:under_beam]}
         end
+        opening_issues = place_openings(level, items, opening_types)
         x0, y0, x1, y1 = Grid.bounds(grid)
         items.each do |i|
           issues << "Tường #{i[:ref]} nhô ra ngoài khung lưới (tâm đặt trên trục biên)." if i[:min][0] < x0 - EPS || i[:max][0] > x1 + EPS || i[:min][1] < y0 - EPS || i[:max][1] > y1 + EPS
@@ -69,7 +72,42 @@ module VGD
           cb = [[c[:center][0] - c[:w] / 2.0, c[:center][1] - c[:d] / 2.0], [c[:center][0] + c[:w] / 2.0, c[:center][1] + c[:d] / 2.0]]
           boxes.each { |wb| issues << "Tường #{wb[2][:ref]} chồng lên cột #{c[:ref]}." if BeamPlan.rects_overlap?(wb, cb) }
         end
-        {level: level, next_level: above, z0: z0, z_slab: z_slab, items: items, issues: issues}
+        {level: level, next_level: above, z0: z0, z_slab: z_slab, items: items, issues: issues, opening_issues: opening_issues}
+      end
+
+      # Đặt cửa lên tường: mỗi cửa nằm trọn trong chiều dài và chiều cao tường, không chồng cửa khác; cửa sai thì bỏ và báo. Tính theo hệ trục của tường:
+      # x từ đầu tường (mặt cột hoặc trục ở đầu đó), z từ mặt sàn tầng. Gán item[:openings] (cửa hợp lệ, sắp theo vị trí) và item[:openings_area] (m²).
+      def self.place_openings(level, items, opening_types)
+        issues = []
+        by_wall = items.each_with_object({}) { |i, h| h[i[:ref]] = i }
+        level['picks']['openings'].each { |id, e| issues << "Cửa #{id}: tường #{e['wall']} chưa được chọn hoặc bị bỏ qua, nên cửa không được dựng." unless by_wall.key?(e['wall']) }
+        items.each do |item|
+          list = level['picks']['openings'].select { |_id, e| e['wall'] == item[:ref] }.map { |id, e| [id, e, OpeningTypes.find(opening_types, e['type'])] }.sort_by { |_id, e, _t| [e['pos'], e['type'].to_s] }
+          valid = []
+          list.each do |id, e, type|
+            unless type
+              issues << "Cửa #{id} trên tường #{item[:ref]}: loại cửa không tồn tại, bỏ qua."
+              next
+            end
+            x0 = e['pos'] - type['w'] / 2.0
+            x1 = e['pos'] + type['w'] / 2.0
+            z0 = type['sill']
+            z1 = z0 + type['h']
+            label = "Cửa #{type['name']} (#{id}) trên tường #{item[:ref]}"
+            if x0 < -EPS || x1 > item[:length] + EPS
+              issues << "#{label}: vượt ra ngoài chiều dài tường (#{item[:length]} mm), bỏ qua."
+            elsif z1 > item[:height] + EPS
+              issues << "#{label}: cao #{z1.round} mm (tính cả cao ngưỡng) hơn tường (#{item[:height]} mm), bỏ qua."
+            elsif valid.last && x0 < valid.last[:x1] + MIN_OPENING_GAP - EPS
+              issues << "#{label}: chồng hoặc sát cửa #{valid.last[:id]} (cần cách nhau ít nhất #{MIN_OPENING_GAP.to_i} mm), bỏ qua."
+            else
+              valid << {id: id, kind: type['kind'], type_id: type['id'], type_name: type['name'], w: type['w'], h: type['h'], sill: z0, pos: e['pos'], flip: e['flip'], x0: x0.round(2), x1: x1.round(2), z0: z0, z1: z1.round(2)}
+            end
+          end
+          item[:openings] = valid
+          item[:openings_area] = valid.sum { |o| o[:w] * o[:h] / 1_000_000.0 }.round(4)
+        end
+        issues
       end
     end
   end

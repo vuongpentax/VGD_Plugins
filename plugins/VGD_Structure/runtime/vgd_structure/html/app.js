@@ -3,7 +3,7 @@
   'use strict';
   var LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'.split(''); // bỏ I và O, giống Grid::LETTERS ở Ruby
   var state = {origin: [0, 0], x: {first: 0, axes: []}, y: {first: 0, axes: []}, scale: 100, both: false, drawn: false, previewOk: false,
-               types: [], beamTypes: [], wallTypes: [], levels: [], level: null, selected: null, drawnLevels: [], drawnBeamLevels: [], selectedBeam: null, drawnWallLevels: [], selectedWall: null, drawnSlabLevels: [], drawnCeilingLevels: [], preview: null, tab: 'grid'};
+               types: [], beamTypes: [], wallTypes: [], levels: [], level: null, selected: null, drawnLevels: [], drawnBeamLevels: [], selectedBeam: null, drawnWallLevels: [], selectedWall: null, drawnSlabLevels: [], drawnCeilingLevels: [], openingTypes: [], drawnOpeningLevels: [], openWall: null, preview: null, tab: 'grid'};
   var MODE_P = [['auto', 'Theo quy ước'], ['center', 'Tâm trên trục'], ['min', 'Cạnh nhỏ (nam / tây) tại trục'], ['max', 'Cạnh lớn (bắc / đông) tại trục']];
   var MODE_X = [['auto', 'Theo quy ước'], ['center', 'Tâm trên trục'], ['min', 'Cạnh tây tại trục (cột lùi sang đông)'], ['max', 'Cạnh đông tại trục (cột lùi sang tây)']];
   var MODE_Y = [['auto', 'Theo quy ước'], ['center', 'Tâm trên trục'], ['min', 'Cạnh nam tại trục (cột lùi lên bắc)'], ['max', 'Cạnh bắc tại trục (cột lùi xuống nam)']];
@@ -37,17 +37,19 @@
     return {grid: {origin: state.origin, x_axes: toAxes('x'), y_axes: toAxes('y')}, symbol: {scale: state.scale, both_ends: state.both},
             types: state.types.map(function (t) { return {id: t.id, name: t.name, w: t.w, d: t.d}; }),
             beam_types: state.beamTypes.map(function (t) { return {id: t.id, name: t.name, w: t.w, h: t.h}; }),
-            wall_types: state.wallTypes.map(function (t) { return {id: t.id, name: t.name, t: t.t}; }), levels: state.levels.map(toRubyLevel), level: state.level};
+            wall_types: state.wallTypes.map(function (t) { return {id: t.id, name: t.name, t: t.t}; }),
+            opening_types: state.openingTypes.map(function (t) { return {id: t.id, name: t.name, kind: t.kind, w: t.w, h: t.h, sill: t.sill}; }), levels: state.levels.map(toRubyLevel), level: state.level};
   }
   function toRubyLevel(l) {
     return {id: l.id, name: l.name, elevation: l.elevation, slab_thickness: l.slab, column_type: l.columnType || null, beam_type: l.beamType || null, wall_type: l.wallType || null, ceiling_height: l.ceilingHeight, ceiling_thickness: l.ceilingThickness,
-            picks: {columns: clonePicks(l.picks), beams: clonePicks(l.beamPicks), walls: clonePicks(l.wallPicks), slabs: clonePicks(l.slabPicks), ceilings: clonePicks(l.ceilingPicks)}};
+            picks: {columns: clonePicks(l.picks), beams: clonePicks(l.beamPicks), walls: clonePicks(l.wallPicks), slabs: clonePicks(l.slabPicks), ceilings: clonePicks(l.ceilingPicks), openings: clonePicks(l.openingPicks)}};
   }
   function clonePicks(picks) { var out = {}; Object.keys(picks).forEach(function (k) { out[k] = Object.assign({}, picks[k]); }); return out; }
   function fromRubyLevel(l) {
     return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab_thickness, columnType: l.column_type, beamType: l.beam_type || null, wallType: l.wall_type || null, ceilingHeight: l.ceiling_height, ceilingThickness: l.ceiling_thickness,
             picks: clonePicks((l.picks && l.picks.columns) || {}), beamPicks: clonePicks((l.picks && l.picks.beams) || {}), wallPicks: clonePicks((l.picks && l.picks.walls) || {}),
-            slabPicks: clonePicks((l.picks && l.picks.slabs) || {}), ceilingPicks: clonePicks((l.picks && l.picks.ceilings) || {})};
+            slabPicks: clonePicks((l.picks && l.picks.slabs) || {}), ceilingPicks: clonePicks((l.picks && l.picks.ceilings) || {}),
+            openingPicks: clonePicks((l.picks && l.picks.openings) || {})};
   }
   function rid(prefix) {
     var a = new Uint8Array(4); (window.crypto || {getRandomValues: function (x) { for (var i = 0; i < x.length; i++) x[i] = Math.floor(Math.random() * 256); }}).getRandomValues(a);
@@ -213,7 +215,7 @@
       del.onclick = function () { removeLevel(l.id); };
       row.insertCell().appendChild(del);
     });
-    renderTypes(); renderBeamTypes(); renderWallTypes();
+    renderTypes(); renderBeamTypes(); renderWallTypes(); renderOpeningTypes();
   }
   function refreshLevelNotes() {
     $('levels-table').querySelectorAll('td.note').forEach(function (cell, i) { cell.textContent = levelNote(i); });
@@ -221,12 +223,12 @@
   function removeLevel(id) {
     state.levels = state.levels.filter(function (l) { return l.id !== id; });
     if (state.level === id) state.level = state.levels[0].id;
-    state.selected = null; state.selectedBeam = null; state.selectedWall = null; renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); changed();
+    state.selected = null; state.selectedBeam = null; state.selectedWall = null; renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); changed();
   }
   function addLevel() {
     var last = state.levels[state.levels.length - 1], n = state.levels.length + 1, name = 'Tầng ' + n, taken = state.levels.map(function (l) { return l.name.toLowerCase(); });
     while (taken.indexOf(name.toLowerCase()) >= 0) name += '*';
-    state.levels.push({id: rid('sl_'), name: name, elevation: Number.isFinite(last.elevation) ? last.elevation + 3600 : 0, slab: 120, columnType: null, beamType: null, wallType: null, ceilingHeight: 2800, ceilingThickness: 9, picks: {}, beamPicks: {}, wallPicks: {}, slabPicks: {}, ceilingPicks: {}});
+    state.levels.push({id: rid('sl_'), name: name, elevation: Number.isFinite(last.elevation) ? last.elevation + 3600 : 0, slab: 120, columnType: null, beamType: null, wallType: null, ceilingHeight: 2800, ceilingThickness: 9, picks: {}, beamPicks: {}, wallPicks: {}, slabPicks: {}, ceilingPicks: {}, openingPicks: {}});
     renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); changed();
   }
   function addType() {
@@ -597,7 +599,7 @@
 
 
   // ---- Tab Tổng hợp và dựng ----
-  var ALL_KINDS = [['columns', 'picks', 'Cột'], ['beams', 'beamPicks', 'Dầm'], ['walls', 'wallPicks', 'Tường'], ['slabs', 'slabPicks', 'Sàn'], ['ceilings', 'ceilingPicks', 'Trần']];
+  var ALL_KINDS = [['columns', 'picks', 'Cột'], ['beams', 'beamPicks', 'Dầm'], ['walls', 'wallPicks', 'Tường'], ['openings', 'openingPicks', 'Cửa'], ['slabs', 'slabPicks', 'Sàn'], ['ceilings', 'ceilingPicks', 'Trần']];
   function renderAllTab() {
     var sel = $('all-level-select'); sel.replaceChildren();
     state.levels.forEach(function (l) { sel.append(new Option(l.name, l.id)); });
@@ -615,7 +617,7 @@
     });
     renderAllButtons();
   }
-  function drawnList(kind) { return {columns: state.drawnLevels, beams: state.drawnBeamLevels, walls: state.drawnWallLevels, slabs: state.drawnSlabLevels, ceilings: state.drawnCeilingLevels}[kind]; }
+  function drawnList(kind) { return {columns: state.drawnLevels, beams: state.drawnBeamLevels, walls: state.drawnWallLevels, openings: state.drawnOpeningLevels, slabs: state.drawnSlabLevels, ceilings: state.drawnCeilingLevels}[kind]; }
   function renderAllButtons() {
     var l = currentLevel();
     var has = function (lv) { return ALL_KINDS.some(function (k) { return Object.keys(lv[k[1]]).length; }); };
@@ -632,13 +634,149 @@
     });
   }
 
+
+  // ---- Loại cửa và tab Cửa ----
+  function renderOpeningTypes() {
+    var table = $('opening-types-table'); table.replaceChildren();
+    heads(table, ['Tên', 'Kiểu', 'Rộng (mm)', 'Cao (mm)', 'Cao ngưỡng (mm)', '']);
+    state.openingTypes.forEach(function (t, i) {
+      var row = table.insertRow(), del = document.createElement('button'), kind = document.createElement('select');
+      row.insertCell().appendChild(textCell(t.name, function (v) { t.name = v; }, 'Tên loại cửa ' + (i + 1)));
+      kind.setAttribute('aria-label', 'Kiểu loại cửa ' + t.name); kind.append(new Option('Cửa đi', 'door'), new Option('Cửa sổ', 'window')); kind.value = t.kind;
+      kind.onchange = function () { t.kind = kind.value; changed(); renderOpeningsTab(); };
+      row.insertCell().appendChild(kind);
+      row.insertCell().appendChild(numCell(t.w, function (v) { t.w = v; }, 'Rộng loại cửa ' + t.name));
+      row.insertCell().appendChild(numCell(t.h, function (v) { t.h = v; }, 'Cao loại cửa ' + t.name));
+      row.insertCell().appendChild(numCell(t.sill, function (v) { t.sill = v; }, 'Cao ngưỡng loại cửa ' + t.name));
+      del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.title = 'Xóa loại cửa này'; del.disabled = state.openingTypes.length <= 1;
+      del.onclick = function () { removeOpeningType(t.id); };
+      row.insertCell().appendChild(del);
+    });
+  }
+  // Xóa loại cửa: các cửa đang dùng loại đó bị gỡ khỏi tường (không còn loại để dựng).
+  function removeOpeningType(id) {
+    state.openingTypes = state.openingTypes.filter(function (t) { return t.id !== id; });
+    state.levels.forEach(function (l) { Object.keys(l.openingPicks).forEach(function (k) { if (l.openingPicks[k].type === id) delete l.openingPicks[k]; }); });
+    renderLevels(); renderOpeningsTab(); changed();
+  }
+  function addOpeningType() {
+    var n = state.openingTypes.length + 1, name = 'Cửa ' + n, taken = state.openingTypes.map(function (t) { return t.name.toLowerCase(); });
+    while (taken.indexOf(name.toLowerCase()) >= 0) name += '*';
+    state.openingTypes.push({id: rid('ot_'), name: name, kind: 'door', w: 900, h: 2100, sill: 0});
+    renderLevels(); changed();
+  }
+  function wallItems() { return (state.preview && state.preview.walls && state.preview.walls.items) || []; }
+  function renderOpeningsTab() { renderOpeningLevelSelects(); renderOpeningsButtons(); renderOpeningEditor(); renderOpeningsPlan(); }
+  function renderOpeningLevelSelects() {
+    var sel = $('opening-level-select'), from = $('opening-copy-from');
+    sel.replaceChildren(); from.replaceChildren();
+    state.levels.forEach(function (l) { sel.append(new Option(l.name, l.id)); if (l.id !== state.level) from.append(new Option(l.name, l.id)); });
+    sel.value = state.level;
+    var l = currentLevel();
+    $('opening-level-note').textContent = isTop(l) ? 'Tầng trên cùng: chỉ có sàn, không có tường nên không có cửa' : Object.keys(l.openingPicks).length + ' cửa đã đặt ở tầng này';
+  }
+  function renderOpeningsButtons() {
+    var l = currentLevel(), top = isTop(l);
+    $('build-openings').disabled = top || !state.previewOk || !Object.keys(l.openingPicks).length;
+    $('build-all-openings').disabled = !state.previewOk;
+    $('remove-openings').disabled = state.drawnOpeningLevels.indexOf(l.id) < 0;
+    $('opening-copy-picks').disabled = top || !$('opening-copy-from').options.length;
+  }
+  // Vị trí tâm còn trống đầu tiên trên tường (cách đầu tường), ưu tiên giữa tường; không còn chỗ thì null.
+  function freeCenter(wall, width, existing) {
+    var gap = 50, tries = [0.5, 0.25, 0.75, 0.125, 0.375, 0.625, 0.875];
+    for (var i = 0; i < tries.length; i++) {
+      var c = Math.round(wall.length * tries[i] * 10) / 10, x0 = c - width / 2, x1 = c + width / 2;
+      if (x0 < 0 || x1 > wall.length) continue;
+      if (existing.every(function (e) { return x1 + gap <= e.x0 || x0 >= e.x1 + gap; })) return c;
+    }
+    return null;
+  }
+  function wallOpenings(wallRef) {
+    var l = currentLevel(), t = {};
+    state.openingTypes.forEach(function (x) { t[x.id] = x; });
+    return Object.keys(l.openingPicks).filter(function (id) { return l.openingPicks[id].wall === wallRef; }).map(function (id) {
+      var e = l.openingPicks[id], ty = t[e.type] || {w: 0};
+      return {id: id, x0: e.pos - ty.w / 2, x1: e.pos + ty.w / 2};
+    });
+  }
+  function addOpening(kind) {
+    var l = currentLevel(), wall = wallItems().filter(function (w) { return w.ref === state.openWall; })[0];
+    var type = state.openingTypes.filter(function (t) { return t.kind === kind; })[0];
+    if (!wall) return message('Hãy chọn một tường trên mặt bằng.', true);
+    if (!type) return message('Chưa có loại ' + (kind === 'door' ? 'cửa đi' : 'cửa sổ') + '. Hãy thêm ở tab Tầng và loại cột.', true);
+    var pos = freeCenter(wall, type.w, wallOpenings(wall.ref));
+    if (pos === null) return message('Tường này không còn chỗ trống cho cửa rộng ' + type.w + ' mm.', true);
+    l.openingPicks[rid('op_')] = {wall: wall.ref, type: type.id, pos: pos, flip: false};
+    renderOpeningEditor(); renderOpeningsButtons(); renderOpeningLevelSelects(); changed();
+  }
+  function renderOpeningEditor() {
+    var l = currentLevel(), wall = state.openWall && wallItems().filter(function (w) { return w.ref === state.openWall; })[0];
+    $('opening-editor').hidden = !wall;
+    if (!wall) return;
+    $('opening-wall-ref').textContent = wall.ref;
+    $('opening-wall-note').textContent = 'Dài ' + wall.length + ' mm, cao ' + wall.height + ' mm. Vị trí là tâm cửa tính từ đầu tường (0 đến ' + wall.length + ').';
+    var list = $('opening-list'); list.replaceChildren();
+    Object.keys(l.openingPicks).filter(function (id) { return l.openingPicks[id].wall === wall.ref; }).forEach(function (id) {
+      var e = l.openingPicks[id], row = document.createElement('div'), sel = document.createElement('select'), pos = document.createElement('input'), flip = document.createElement('label'), box = document.createElement('input'), del = document.createElement('button');
+      row.className = 'oprow';
+      state.openingTypes.forEach(function (t) { sel.append(new Option((t.kind === 'door' ? 'Cửa đi ' : 'Cửa sổ ') + t.name + ' (' + t.w + '×' + t.h + ')', t.id)); });
+      sel.value = e.type; sel.setAttribute('aria-label', 'Loại cửa ' + id);
+      sel.onchange = function () { e.type = sel.value; changed(); };
+      pos.type = 'number'; pos.step = 'any'; pos.value = e.pos; pos.setAttribute('aria-label', 'Vị trí tâm cửa ' + id);
+      pos.oninput = function () { e.pos = pos.value === '' ? NaN : Number(pos.value); changed(); };
+      box.type = 'checkbox'; box.checked = !!e.flip; box.setAttribute('aria-label', 'Đổi mặt cánh ' + id);
+      box.onchange = function () { e.flip = box.checked; changed(); };
+      flip.append(box, document.createTextNode(' Đổi mặt'));
+      del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.title = 'Xóa cửa này';
+      del.onclick = function () { delete l.openingPicks[id]; renderOpeningEditor(); renderOpeningsButtons(); renderOpeningLevelSelects(); changed(); };
+      row.append(sel, pos, flip, del); list.appendChild(row);
+    });
+    if (!list.children.length) { var p = document.createElement('p'); p.className = 'muted small'; p.textContent = 'Tường chưa có cửa. Bấm + Cửa đi hoặc + Cửa sổ.'; list.appendChild(p); }
+  }
+  function renderOpeningsPlan() {
+    var svg = $('plan7'), ns = 'http://www.w3.org/2000/svg', data = state.preview;
+    svg.replaceChildren();
+    if (!data || !data.ok) return;
+    var xs = [], ys = [];
+    data.axes.forEach(function (a) { a.line.forEach(function (p) { xs.push(p[0]); ys.push(p[1]); }); });
+    var x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys), pad = Math.max(x1 - x0, y1 - y0) * 0.05;
+    svg.setAttribute('viewBox', [x0 - pad, -(y1 + pad), x1 - x0 + 2 * pad, y1 - y0 + 2 * pad].join(' '));
+    function el(tag, attrs, text) { var e = document.createElementNS(ns, tag); Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); }); if (text !== undefined) e.textContent = text; svg.appendChild(e); return e; }
+    data.axes.forEach(function (a) { el('line', {class: 'axis', x1: a.line[0][0], y1: -a.line[0][1], x2: a.line[1][0], y2: -a.line[1][1]}); });
+    data.axes.forEach(function (a) { var b = a.bubbles[0]; el('text', {x: b.center[0], y: -b.center[1], 'font-size': Math.max(x1 - x0, y1 - y0) * 0.022}, a.name); });
+    var l = currentLevel(), top = isTop(l), grow = Math.max(x1 - x0, y1 - y0) * 0.004;
+    ((data.columns && data.columns.items) || []).forEach(function (c) { el('rect', {class: 'colref', x: c.center[0] - c.w / 2, y: -(c.center[1] + c.d / 2), width: c.w, height: c.d}); });
+    if (!top) wallItems().forEach(function (w) {
+      var r = el('rect', {class: 'wallbase' + (state.openWall === w.ref ? ' sel' : ''), x: w.min[0] - grow, y: -(w.max[1] + grow), width: w.max[0] - w.min[0] + 2 * grow, height: w.max[1] - w.min[1] + 2 * grow, 'data-ref': w.ref});
+      var tip = document.createElementNS(ns, 'title'); tip.textContent = w.ref + ' · dài ' + w.length + ' mm · ' + w.openings.length + ' cửa'; r.appendChild(tip);
+      r.onclick = function () { state.openWall = w.ref; renderOpeningEditor(); renderOpeningsPlan(); };
+    });
+    var open = (data.openings && data.openings.items) || [];
+    open.forEach(function (o) {
+      var long = o.dir === 'x';
+      var r = el('rect', {class: o.kind, x: o.min[0] - (long ? 0 : grow * 1.5), y: -(o.max[1] + (long ? grow * 1.5 : 0)), width: o.max[0] - o.min[0] + (long ? 0 : 3 * grow), height: o.max[1] - o.min[1] + (long ? 3 * grow : 0), 'data-ref': o.ref});
+      var tip = document.createElementNS(ns, 'title'); tip.textContent = (o.kind === 'door' ? 'Cửa đi ' : 'Cửa sổ ') + o.type_name + ' · tâm ' + o.pos + ' mm · cao ngưỡng ' + o.sill + ' mm'; r.appendChild(tip);
+      r.onclick = function () { state.openWall = o.wall; renderOpeningEditor(); renderOpeningsPlan(); };
+    });
+    var summary = $('opening-summary'), issues = $('opening-issues'); issues.replaceChildren();
+    if (data.levels_ok === false) { summary.className = 'summary error'; summary.textContent = data.levels_error; return; }
+    if (data.openings_error) { summary.className = 'summary'; summary.textContent = data.openings_error; return; }
+    if (data.openings) {
+      summary.className = 'summary';
+      summary.textContent = data.openings.level_name + ': ' + data.openings.count + ' cửa trên ' + wallItems().length + ' tường đã chọn.' + (wallItems().length ? '' : ' Hãy chọn tường ở tab Tường trước.');
+      data.openings.issues.forEach(function (m) { var li = document.createElement('li'); li.textContent = m; issues.appendChild(li); });
+    } else { summary.textContent = ''; }
+  }
+
   function switchTab(tab) {
     state.tab = tab;
     document.querySelectorAll('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-tab') === tab)); });
-    ['grid', 'levels', 'columns', 'beams', 'walls', 'slabs', 'ceilings', 'all'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
+    ['grid', 'levels', 'columns', 'beams', 'walls', 'openings', 'slabs', 'ceilings', 'all'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
     if (tab === 'columns') renderColumnsTab();
     if (tab === 'beams') renderBeamsTab();
     if (tab === 'walls') renderWallsTab();
+    if (tab === 'openings') renderOpeningsTab();
     CELL_TABS.forEach(function (c) { if (tab === c.kind) renderCellTab(c); });
     if (tab === 'all') renderAllTab();
   }
@@ -651,10 +789,12 @@
       state.types = data.types.map(function (t) { return {id: t.id, name: t.name, w: t.w, d: t.d}; });
       state.beamTypes = (data.beam_types || []).map(function (t) { return {id: t.id, name: t.name, w: t.w, h: t.h}; });
       state.wallTypes = (data.wall_types || []).map(function (t) { return {id: t.id, name: t.name, t: t.t}; });
+      state.openingTypes = (data.opening_types || []).map(function (t) { return {id: t.id, name: t.name, kind: t.kind, w: t.w, h: t.h, sill: t.sill}; });
+      state.drawnOpeningLevels = data.drawn_opening_levels || []; state.openWall = null;
       state.levels = data.levels.map(fromRubyLevel); state.level = state.levels[0].id; state.selected = null; state.selectedBeam = null; state.selectedWall = null;
       state.drawnLevels = data.drawn_levels || []; state.drawnBeamLevels = data.drawn_beam_levels || []; state.drawnWallLevels = data.drawn_wall_levels || []; state.drawnSlabLevels = data.drawn_slab_levels || []; state.drawnCeilingLevels = data.drawn_ceiling_levels || [];
       $('version').textContent = 'v' + data.version;
-      renderAll(); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab();
+      renderAll(); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab();
       message(data.saved ? 'Đã nạp lưới trục lưu trong model.' : 'Lưới mặc định: sửa các số rồi bấm Vẽ lưới trục.');
     } else if (event === 'preview') {
       state.previewOk = !!data.ok;
@@ -664,17 +804,17 @@
         s.className = 'summary';
         s.textContent = m.x_axes + ' trục đứng × ' + m.y_axes + ' trục ngang: ' + m.intersections + ' giao điểm, ' + m.spans + ' nhịp, ' + m.cells + ' ô. Khung lưới ' + m.width + ' × ' + m.depth + ' mm.';
       } else { s.className = 'summary error'; s.textContent = data.error; }
-      state.preview = data; drawPlan(data); renderButtons(); renderColumnsButtons(); renderColumnsPlan(); renderBeamsButtons(); renderBeamsPlan(); renderWallsButtons(); renderWallsPlan(); CELL_TABS.forEach(function (c) { renderCellButtons(c); renderCellPlan(c); });
+      state.preview = data; drawPlan(data); renderButtons(); renderColumnsButtons(); renderColumnsPlan(); renderBeamsButtons(); renderBeamsPlan(); renderWallsButtons(); renderWallsPlan(); renderOpeningsButtons(); renderOpeningsPlan(); CELL_TABS.forEach(function (c) { renderCellButtons(c); renderCellPlan(c); });
     } else if (event === 'axes') {
       var set = fromAxes(data.axes); state[data.dir] = set; renderAxes(data.dir); changed();
     } else if (event === 'levels') {
-      state.levels = data.levels.map(fromRubyLevel); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab(); changed(); message(data.message);
+      state.levels = data.levels.map(fromRubyLevel); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab(); changed(); message(data.message);
     } else if (event === 'columns_built') {
       state.drawnLevels = data.drawn_levels || []; renderColumnsButtons(); message(data.message, data.error);
     } else if (event === 'beams_built') {
       state.drawnBeamLevels = data.drawn_beam_levels || []; renderBeamsButtons(); message(data.message, data.error);
     } else if (event === 'focus') {
-      var tabOf = {column: 'columns', beam: 'beams', wall: 'walls', slab: 'slabs', ceiling: 'ceilings'}[data.kind];
+      var tabOf = {column: 'columns', beam: 'beams', wall: 'walls', door: 'openings', window: 'openings', slab: 'slabs', ceiling: 'ceilings'}[data.kind];
       if (tabOf) {
         if (state.levels.some(function (l) { return l.id === data.level; })) state.level = data.level;
         state.selected = null; state.selectedBeam = null; state.selectedWall = null;
@@ -682,7 +822,8 @@
         if (data.kind === 'column' && lv.picks[data.ref]) state.selected = data.ref;
         if (data.kind === 'beam' && lv.beamPicks[data.ref]) state.selectedBeam = data.ref;
         if (data.kind === 'wall' && lv.wallPicks[data.ref]) state.selectedWall = data.ref;
-        renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab();
+        if ((data.kind === 'door' || data.kind === 'window') && lv.openingPicks[data.ref]) state.openWall = lv.openingPicks[data.ref].wall;
+        renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab();
         switchTab(tabOf);
         message('Đang sửa ' + data.ref + ' ở ' + lv.name + '.');
       }
@@ -690,12 +831,14 @@
       renderCheck(data);
     } else if (event === 'all_built') {
       state.drawnLevels = data.drawn.columns || []; state.drawnBeamLevels = data.drawn.beams || []; state.drawnWallLevels = data.drawn.walls || [];
-      state.drawnSlabLevels = data.drawn.slabs || []; state.drawnCeilingLevels = data.drawn.ceilings || [];
+      state.drawnSlabLevels = data.drawn.slabs || []; state.drawnCeilingLevels = data.drawn.ceilings || []; state.drawnOpeningLevels = data.drawn.openings || [];
       renderAllTab(); message(data.message);
     } else if (event === 'plates_built') {
       var cfg = CELL_TABS.filter(function (c) { return c.kind === data.kind; })[0];
       if (cfg) { state[cfg.drawn] = data.drawn_levels || []; renderCellButtons(cfg); }
       message(data.message, data.error);
+    } else if (event === 'openings_built') {
+      state.drawnOpeningLevels = data.drawn_opening_levels || []; renderOpeningsButtons(); renderAllTab(); message(data.message, data.error);
     } else if (event === 'walls_built') {
       state.drawnWallLevels = data.drawn_wall_levels || []; state.drawnSlabLevels = data.drawn_slab_levels || []; state.drawnCeilingLevels = data.drawn_ceiling_levels || []; renderWallsButtons(); message(data.message, data.error);
     } else if (event === 'built') {
@@ -737,9 +880,9 @@
   };
   $('remove-cols').onclick = function () { call('columns_remove', {level: state.level}); };
   $('add-beam-type').onclick = addBeamType;
-  $('beam-level-select').onchange = function () { state.level = $('beam-level-select').value; state.selectedBeam = null; state.selectedWall = null; state.selected = null; renderBeamsTab(); renderColumnsTab(); renderWallsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); changed(); };
-  $('wall-level-select').onchange = function () { state.level = $('wall-level-select').value; state.selectedBeam = null; state.selectedWall = null; state.selected = null; renderBeamsTab(); renderColumnsTab(); renderWallsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); changed(); };
-  $('level-select').onchange = function () { state.level = $('level-select').value; state.selected = null; state.selectedBeam = null; state.selectedWall = null; renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); changed(); };
+  $('beam-level-select').onchange = function () { state.level = $('beam-level-select').value; state.selectedBeam = null; state.selectedWall = null; state.selected = null; renderBeamsTab(); renderColumnsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); changed(); };
+  $('wall-level-select').onchange = function () { state.level = $('wall-level-select').value; state.selectedBeam = null; state.selectedWall = null; state.selected = null; renderBeamsTab(); renderColumnsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); changed(); };
+  $('level-select').onchange = function () { state.level = $('level-select').value; state.selected = null; state.selectedBeam = null; state.selectedWall = null; renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); changed(); };
   $('beam-pick-all').onclick = function () { var l = currentLevel(); allSpans().forEach(function (sp) { if (!l.beamPicks[sp.ref]) l.beamPicks[sp.ref] = {}; }); changed(); renderBeamsButtons(); };
   $('beam-pick-edge').onclick = function () { var l = currentLevel(); allSpans().forEach(function (sp) { if (sp.edge && !l.beamPicks[sp.ref]) l.beamPicks[sp.ref] = {}; }); changed(); renderBeamsButtons(); };
   $('beam-pick-none').onclick = function () { currentLevel().beamPicks = {}; state.selectedBeam = null; renderBeamEditor(); changed(); renderBeamsButtons(); };
@@ -770,7 +913,7 @@
 
   CELL_TABS.forEach(function (c) {
     var p = c.prefix;
-    $(p + '-level-select').onchange = function () { state.level = $(p + '-level-select').value; state.selected = null; state.selectedBeam = null; state.selectedWall = null; renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); changed(); };
+    $(p + '-level-select').onchange = function () { state.level = $(p + '-level-select').value; state.selected = null; state.selectedBeam = null; state.selectedWall = null; renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); changed(); };
     $(p + '-pick-all').onclick = function () { var l = currentLevel(); allCells().forEach(function (cell) { l[c.picks][cell.ref] = {}; }); changed(); renderCellButtons(c); };
     $(p + '-pick-none').onclick = function () { currentLevel()[c.picks] = {}; changed(); renderCellButtons(c); };
     $(p + '-copy-picks').onclick = function () { var q = payload(); q.from = $(p + '-copy-from').value; q.to = state.level; q.kind = c.kind; call('picks_copy', q); };
@@ -787,6 +930,17 @@
   $('run-check').onclick = function () { call('check', payload()); };
   $('build-all-level').onclick = function () { call('build_all', {state: payload(), levels: [state.level]}); };
   $('build-all-levels').onclick = function () { call('build_all', {state: payload(), levels: state.levels.map(function (l) { return l.id; })}); };
+  $('add-opening-type').onclick = addOpeningType;
+  $('opening-level-select').onchange = function () { state.level = $('opening-level-select').value; state.selected = null; state.selectedBeam = null; state.selectedWall = null; state.openWall = null; renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); changed(); };
+  $('add-door').onclick = function () { addOpening('door'); };
+  $('add-window').onclick = function () { addOpening('window'); };
+  $('opening-copy-picks').onclick = function () { var q = payload(); q.from = $('opening-copy-from').value; q.to = state.level; q.kind = 'openings'; call('picks_copy', q); };
+  $('build-openings').onclick = function () { call('openings_build', {state: payload(), levels: [state.level]}); };
+  $('build-all-openings').onclick = function () {
+    var ids = state.levels.filter(function (l) { return !isTop(l) && Object.keys(l.openingPicks).length; }).map(function (l) { return l.id; });
+    call('openings_build', {state: payload(), levels: ids});
+  };
+  $('remove-openings').onclick = function () { call('openings_remove', {level: state.level}); };
   $('build').onclick = function () { call('grid_build', payload()); };
   $('remove').onclick = function () { call('grid_remove'); };
   $('reset').onclick = function () { call('grid_reset'); };

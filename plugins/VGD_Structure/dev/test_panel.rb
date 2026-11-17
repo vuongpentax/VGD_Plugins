@@ -21,7 +21,7 @@ module UI
 end
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
 module VGD; module Structure; VERSION = '9.9.9'; end; end
-%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/levels core/column_plan core/beam_plan core/wall_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder plate_builder all_builder panel].each { |f| require File.join(ROOT, f) }
+%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/opening_types core/levels core/column_plan core/beam_plan core/wall_plan core/opening_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder opening_builder plate_builder all_builder panel].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 $model = Sketchup::Model.new
 panel = S::Panel.new
@@ -163,7 +163,7 @@ wlevels[0]['picks'] = {'columns' => refs.each_with_object({}) { |r, h| h[r] = {}
 wfull = {'grid' => st['grid'], 'symbol' => st['symbol'], 'types' => st['types'], 'beam_types' => st['beam_types'], 'wall_types' => st['wall_types'], 'levels' => wlevels, 'level' => wlevels[0]['id']}
 call(dlg, 'grid_preview', wfull)
 pv = last_event(dlg, 'preview')
-ok('xem trước có phần tường: 17 tường, cao 3480, đủ trường để vẽ, không cảnh báo', pv['walls']['count'] == 17 && pv['walls']['z_slab'] == 3480.0 && pv['walls']['items'].first.keys.sort == %w[dir height length max min mode placement ref t type_name under_beam z_bottom z_top] && pv['walls']['issues'].empty?)
+ok('xem trước có phần tường: 17 tường, cao 3480, đủ trường để vẽ, không cảnh báo', pv['walls']['count'] == 17 && pv['walls']['z_slab'] == 3480.0 && pv['walls']['items'].first.keys.sort == %w[center dir finish height length max min mode openings openings_area placement ref start t type_name under_beam z_bottom z_top] && pv['walls']['issues'].empty?)
 call(dlg, 'grid_preview', wfull.merge('level' => wlevels[1]['id']))
 ok('tầng trên cùng: báo không có tường, lưới vẫn xem trước', last_event(dlg, 'preview')['walls_error'].include?('tầng trên cùng') && last_event(dlg, 'preview')['axes'].size == 7)
 call(dlg, 'grid_preview', wfull.merge('wall_types' => [{'id' => 'wt_00000001', 'name' => 'X', 't' => 5}]))
@@ -258,6 +258,44 @@ call(dlg, 'build_all', {'state' => big.merge('levels' => bigl), 'levels' => ['sl
 ok('dựng tất cả hơn 500 đối tượng: hỏi xác nhận, chọn Không thì hủy', last_event(dlg, 'message')['text'].include?('chưa dựng gì') && $boxes.last.include?('đối tượng'))
 $answer = IDYES
 [S::ColumnBuilder, S::BeamBuilder, S::WallBuilder].each { |b| b.remove($model) }
+%w[slabs ceilings].each { |k| S::PlateBuilder.remove($model, k) }
+
+# Cửa
+call(dlg, 'grid_reset')
+st = last_event(dlg, 'state')
+ok('trạng thái có loại cửa mặc định (cửa đi D900x2100, cửa sổ W1200x1200), picks.openings rỗng, chưa dựng cửa', st['opening_types'].map { |t| t['name'] } == ['D900x2100', 'W1200x1200'] && st['drawn_opening_levels'] == [] && st['levels'][0]['picks']['openings'] == {} && st['levels'][0]['picks']['walls'] == {})
+olv = st['levels'].map { |l| JSON.parse(JSON.generate(l)) }
+ocols = S::Grid.intersections(S::Grid.normalize!(st['grid'])).each_with_object({}) { |i, h| h[i[:ref]] = {} }
+olv[0]['picks'] = {'columns' => ocols, 'beams' => {}, 'walls' => {'x:B:2-3' => {}}, 'slabs' => {}, 'ceilings' => {}, 'openings' => {'op_00000001' => {'wall' => 'x:B:2-3', 'type' => 'ot_00000001', 'pos' => 1950, 'flip' => false}, 'op_00000002' => {'wall' => 'x:B:2-3', 'type' => 'ot_00000002', 'pos' => 3200, 'flip' => false}}}
+ofull = {'grid' => st['grid'], 'symbol' => st['symbol'], 'types' => st['types'], 'beam_types' => st['beam_types'], 'wall_types' => st['wall_types'], 'opening_types' => st['opening_types'], 'levels' => olv, 'level' => olv[0]['id']}
+call(dlg, 'grid_preview', ofull)
+pv = last_event(dlg, 'preview')
+ok('xem trước: tường có 2 cửa (danh sách lỗ trong tường) và phần cửa có 2 cửa đủ trường để vẽ', pv['walls']['items'][0]['openings'].size == 2 && pv['walls']['items'][0]['openings_area'] == 3.33 && pv['openings']['count'] == 2 && pv['openings']['items'].first.keys.sort == %w[dir flip h kind max min pos ref sill type_name w wall z_bottom z_top])
+call(dlg, 'grid_preview', ofull.merge('level' => olv[1]['id']))
+ok('tầng trên cùng: báo không có cửa, lưới vẫn xem trước', last_event(dlg, 'preview')['openings_error'].include?('tầng trên cùng') && last_event(dlg, 'preview')['axes'].size == 7)
+call(dlg, 'grid_preview', ofull.merge('opening_types' => [{'id' => 'ot_00000001', 'name' => 'X', 'kind' => 'door', 'w' => 10, 'h' => 2100, 'sill' => 0}]))
+ok('loại cửa sai: báo lỗi riêng, lưới vẫn xem trước', last_event(dlg, 'preview')['ok'] && last_event(dlg, 'preview')['levels_ok'] == false)
+call(dlg, 'openings_build', {'state' => ofull, 'levels' => [olv[0]['id']]})
+ob = last_event(dlg, 'openings_built')
+ok('dựng cửa tầng 1: 2 cửa, nhắc dựng lại tường, drawn_opening_levels có tầng 1, nhóm trong model', ob['message'].include?('2 cửa') && ob['message'].include?('dựng lại tường') && ob['drawn_opening_levels'] == [olv[0]['id']] && $model.entities.grep(Sketchup::Group).any? { |g| g.name == 'Cửa - Tầng 1' })
+call(dlg, 'ready')
+ok('mở lại: đọc cửa đã đặt và loại cửa từ model, tầng đã dựng cửa', (s2 = last_event(dlg, 'state')) && s2['levels'][0]['picks']['openings'].size == 2 && s2['drawn_opening_levels'] == [olv[0]['id']])
+call(dlg, 'openings_build', {'state' => ofull, 'levels' => [olv[1]['id']]})
+ok('dựng cửa tầng trên cùng: báo lỗi', last_event(dlg, 'message')['error'] == true)
+call(dlg, 'openings_build', {'state' => 'x', 'levels' => ['sl_00000001']})
+ok('dữ liệu dựng cửa sai kiểu: báo lỗi, không văng', last_event(dlg, 'message')['error'] == true)
+call(dlg, 'picks_copy', {'grid' => st['grid'], 'types' => st['types'], 'beam_types' => st['beam_types'], 'wall_types' => st['wall_types'], 'opening_types' => st['opening_types'], 'levels' => olv + [olv[1].merge('id' => 'sl_00000003', 'name' => 'Tầng 3', 'elevation' => 7200.0)], 'from' => olv[0]['id'], 'to' => olv[1]['id'], 'kind' => 'openings'})
+ok('sao chép cửa: tầng đích có 2 cửa với mã mới, thông báo ghi "cửa"', last_event(dlg, 'levels')['levels'][1]['picks']['openings'].size == 2 && !last_event(dlg, 'levels')['levels'][1]['picks']['openings'].key?('op_00000001') && last_event(dlg, 'levels')['message'].include?('cửa'))
+call(dlg, 'openings_remove', {'level' => olv[0]['id']})
+ok('xóa cửa: drawn_opening_levels rỗng, nhóm biến mất', last_event(dlg, 'openings_built')['drawn_opening_levels'] == [] && $model.entities.grep(Sketchup::Group).none? { |g| g.name == 'Cửa - Tầng 1' })
+call(dlg, 'openings_remove', {'level' => olv[0]['id']})
+ok('xóa cửa khi chưa có: báo, không lỗi', last_event(dlg, 'openings_built')['error'] == true)
+call(dlg, 'build_all', {'state' => ofull, 'levels' => [olv[0]['id']]})
+ba = last_event(dlg, 'all_built')
+ok('dựng tất cả gồm cả cửa: danh sách đã dựng có cửa tầng 1', ba['drawn']['openings'] == [olv[0]['id']] && ba['message'].include?('cửa'))
+call(dlg, 'check', ofull.merge('levels' => olv))
+ok('kiểm tra kết cấu đếm cửa', last_event(dlg, 'check')['levels'][0]['counts']['openings'] == 2)
+[S::ColumnBuilder, S::BeamBuilder, S::WallBuilder, S::OpeningBuilder].each { |b| b.remove($model) }
 %w[slabs ceilings].each { |k| S::PlateBuilder.remove($model, k) }
 
 # Tạo trục từ chuỗi nhịp

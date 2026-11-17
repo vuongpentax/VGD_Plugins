@@ -1,10 +1,10 @@
-# VGD Structure 0.8.0-beta.1
+# VGD Structure 0.9.0-beta.1
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
 
-**Cột mốc 7: nối với VGD BIM** (trên nền lưới trục, tầng, cột, dầm, tường, sàn, trần, đề xuất và dựng tất cả). Phần còn lại của kế hoạch: phát hành (catalog Center, hướng dẫn, bản ổn định).
+**Cột mốc 8: cửa đi và cửa sổ** (trên nền lưới trục, tầng, cột, dầm, tường, sàn, trần, đề xuất, dựng tất cả và nối VGD BIM). Còn phải làm trước khi phát hành: tường nhiều lớp và nối góc, hoàn thiện, cầu thang, mái... (kế hoạch giai đoạn 2, `docs/vgd_structure/PLAN.md` mục 11).
 
 **Lưới trục** (menu Extensions → VGD → VGD Structure → Lưới trục, hoặc nút trên thanh công cụ VGD STR):
 - Nhập **trục đứng** (đánh số 1, 2, 3...) và **trục ngang** (đánh chữ A, B, C...; bỏ I và O) với khoảng cách giữa các trục, từng trục sửa được tên và nhịp. Gõ nhanh "4200, 3600*2" rồi bấm Tạo trục từ nhịp (dấu phẩy hoặc khoảng trắng ngăn cách, số lẻ dùng dấu chấm, `*` hoặc `x` là lặp). 2 đến 60 trục mỗi phương, tên tối đa 4 ký tự, nhịp tối thiểu 100 mm.
@@ -33,6 +33,12 @@ Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) th
 - **Dựng tường tầng này / mọi tầng**: mỗi tầng một nhóm "Tường - <tên tầng>" trên tag **A. WALL** (theo bộ tag mẫu BIM, thư mục A. ARCHITECTURAL), tường dùng chung định nghĩa theo (phương, dày, cao, dài), kèm dữ liệu cho VGD BIM (kể cả tường dưới dầm). Một bước hoàn tác; dựng lại thay nhóm cũ; có xóa tường; hỏi xác nhận khi dựng hơn 500 tường.
 - Nếu sửa dầm của một nhịp sau khi đã dựng tường thì cần **dựng lại tường** để tường theo chiều cao mới.
 
+**Cửa đi và cửa sổ** (tab "Cửa"; loại cửa trong tab "Tầng và loại cột": tên, kiểu cửa đi / cửa sổ, rộng 300 đến 5000, cao 300 đến 4000, cao ngưỡng 0 đến 3000 mm; mặc định D900x2100 và W1200x1200 cao ngưỡng 900):
+- Chọn tầng, **bấm một tường** (tường đã chọn ở tab Tường) rồi **+ Cửa đi / + Cửa sổ**: cửa mới đặt ở giữa tường hoặc chỗ trống gần nhất (cách cửa khác ít nhất 50 mm). Mỗi cửa có loại, **vị trí tâm cách đầu tường** (mm), **đổi mặt** (cánh cửa đi ở mặt kia của tường) và nút xóa. Đầu tường là mặt cột hoặc trục ở đầu nhịp.
+- Cửa phải nằm trọn trong chiều dài và chiều cao tường (tính cả cao ngưỡng, và tường dưới dầm thì thấp hơn) và không chồng cửa khác: cửa sai bị **bỏ và báo** (cửa còn lại vẫn dựng), không làm hỏng việc dựng.
+- **Tường tự khoét lỗ cửa khi dựng tường** (mặt đứng có lỗ chữ nhật rồi đùn theo bề dày): **sau khi đặt, sửa hay xóa cửa phải dựng lại tường** (dựng tất cả làm cả hai). **Cửa** (khung và cánh) dựng ở tab Cửa: cửa đi có khung chữ U (khung 50 mm, không có ngưỡng) và cánh đặc 40 mm thụt 20 mm so với mặt tường; cửa sổ có khung vòng kín 50 mm và kính 6 mm giữa bề dày tường. Mỗi tầng một nhóm "Cửa - <tên tầng>", cửa đi trên tag **A. DOOR**, cửa sổ trên tag **A. WINDOW** (theo bộ tag mẫu BIM). Cũng có sao chép cửa từ tầng khác (cửa nhận mã mới), một bước hoàn tác, dựng lại thay nhóm cũ (giữ ID), xóa cửa. Đề xuất bán tự động chưa đặt cửa.
+- VGD BIM (1.1.1-beta.7 trở lên): cửa đếm theo cái, **diện tích và thể tích tường đã trừ lỗ cửa**.
+
 **Sàn** (tab "Sàn"; dày sàn nhập ở bảng tầng): bấm các **ô** (vùng giữa hai trục đứng và hai trục ngang liền nhau) để chọn sàn; Chọn mọi ô, Bỏ chọn hết, sao chép lựa chọn sàn từ tầng khác. Sàn phủ trọn ô (từ trục tới trục, kể cả phía trên cột và dầm tầng dưới), **mặt trên tại cao độ sàn của tầng, dày xuống dưới**; cột và dầm tầng dưới dừng ở đáy sàn nên không chồng khối. **Tầng trên cùng cũng có sàn** (sàn mái). Mỗi tầng một nhóm "Sàn - <tên tầng>" trên tag **S. SLAB**.
 
 **Trần** (tab "Trần"; **cao trần** và **dày trần** nhập ở bảng tầng, mặc định 2800 và 9 mm): chọn ô như sàn. Trần là tấm mỏng, **mặt dưới ở cao độ sàn + cao trần**; **lùi tới mặt tường** ở cạnh ô có tường được chọn cùng tầng (cạnh không có tường tới trục), **khoét góc theo cột** (đa giác chữ L / U...) nên không chồng cột. Báo lỗi nếu mặt trên trần vượt đáy sàn tầng trên; cảnh báo trần chạm đáy dầm; ô bị tường hoặc cột chiếm hết thì bỏ và báo. Tầng trên cùng không có trần. Mỗi tầng một nhóm "Trần - <tên tầng>" trên tag **A. FINISHING CEILING** (thư mục A. ARCHITECTURAL).
@@ -54,7 +60,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.8.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.9.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

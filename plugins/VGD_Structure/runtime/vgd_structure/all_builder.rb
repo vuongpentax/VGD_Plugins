@@ -4,7 +4,7 @@ module VGD
     # có bất kỳ lỗi nào thì không dựng gì cả và báo rõ loại nào, tầng nào lỗi. Chưa xác minh trong SketchUp thật.
     module AllBuilder
       MAX_TOTAL = 20_000
-      KINDS = %w[columns beams walls slabs ceilings].freeze
+      KINDS = %w[columns beams walls openings slabs ceilings].freeze
       LABELS = Checker::KIND_LABELS
       Error = Class.new(ArgumentError)
 
@@ -23,8 +23,13 @@ module VGD
         targets = targets(state, level_ids)
         raise Error, 'Các tầng đã chọn chưa có cột, dầm, tường, sàn hay trần nào được chọn.' if targets.empty?
         contexts = targets.map do |kind, ids|
-          [kind, kind == 'columns' ? ColumnBuilder.prepare(model, raw_state, ids) : kind == 'beams' ? BeamBuilder.prepare(model, raw_state, ids) :
-                 kind == 'walls' ? WallBuilder.prepare(model, raw_state, ids) : PlateBuilder.prepare(model, raw_state, ids, kind)]
+          [kind, case kind
+                 when 'columns' then ColumnBuilder.prepare(model, raw_state, ids)
+                 when 'beams' then BeamBuilder.prepare(model, raw_state, ids)
+                 when 'walls' then WallBuilder.prepare(model, raw_state, ids)
+                 when 'openings' then OpeningBuilder.prepare(model, raw_state, ids)
+                 else PlateBuilder.prepare(model, raw_state, ids, kind)
+                 end]
         rescue ArgumentError => error
           raise Error, "#{LABELS[kind]}: #{error.message}"
         end
@@ -43,6 +48,7 @@ module VGD
                         when 'columns' then ColumnBuilder.apply(model, c)
                         when 'beams' then BeamBuilder.apply(model, c)
                         when 'walls' then WallBuilder.apply(model, c)
+                        when 'openings' then OpeningBuilder.apply(model, c)
                         else PlateBuilder.apply(model, c)
                         end
           end
