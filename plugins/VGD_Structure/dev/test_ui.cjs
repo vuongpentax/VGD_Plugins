@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.11.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.12.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -1190,6 +1190,99 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const vr2=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
   ok(vr2.ok && vr2.free===4 && vr2.free_items===4,'sau Move: Ruby chấp nhận và tính đủ 4 phần tử tự do (cột, dầm, 2 tường)');
   await reset();
+  }
+  // P6: liên kết với SketchUp
+  {
+  const typ=async s=>{for(const ch of s)await page.keyboard.press(ch.toLowerCase());await wait(90);};
+  const sc=async(x,y)=>{const bb=await page.locator('#pv-canvas').boundingBox(),q=await page.evaluate(([a,b])=>window.VGDPlan.toScreen(a,b),[x,y]);return [bb.x+q[0],bb.y+q[1]];};
+  const cl=async(x,y)=>{const q=await sc(x,y);await page.mouse.move(q[0],q[1]);await page.mouse.click(q[0],q[1]);};
+  const drag=async(a,b)=>{const p0=await sc(a[0],a[1]),p1=await sc(b[0],b[1]);await page.mouse.move(p0[0],p0[1]);await page.mouse.down();await page.mouse.move((p0[0]+p1[0])/2,(p0[1]+p1[1])/2,{steps:3});await page.mouse.move(p1[0],p1[1],{steps:3});await page.mouse.up();};
+  const dbg6=()=>page.evaluate(()=>window.VGDPlan.debug());
+  const get=k=>page.evaluate(k=>JSON.parse(JSON.stringify(window.VGDS._state.levels[0][k])),k);
+  const hint6=()=>page.locator('#pv-hint').innerText();
+  const reset=async()=>{await page.keyboard.press('Escape');await page.keyboard.press('Escape');await receive('state',F.state_free);await receive('preview',F.preview_free);await clear();await wait(80);};
+  await page.click('[data-tab=plan]');
+  if(await page.locator('#pv-browser').isVisible())await page.click('#pv-browser-btn');
+  await reset();await page.keyboard.press('z');await page.keyboard.press('e');await wait(80);
+  const L1='sl_00000001',L2='sl_00000002',cF6=F.preview_free.columns.items.find(i=>i.ref==='fc_00000001'),gw6=F.preview_free.walls.items.find(i=>i.ref==='x:B:1-2'),fw16=F.preview_free.walls.items.find(i=>i.ref==='fw_00000001');
+  ok(await page.locator('#pv-sync-btn').getAttribute('aria-pressed')==='true' && await page.locator('#pv-status-btn').getAttribute('aria-pressed')==='true' && await page.locator('#pv-build-btn').isVisible() && await page.locator('#pv-supick-btn').isVisible(),'thanh trên có 4 nút liên kết SketchUp: đồng bộ chọn (bật), trạng thái model (bật), dựng tầng, chọn điểm trong SketchUp');
+  // --- Chọn trên mặt bằng -> SketchUp ---
+  await cl(cF6.center[0],cF6.center[1]);let c=await calls('plan_select');
+  ok(c.length===1 && c[0].level===L1 && JSON.stringify(c[0].items)===JSON.stringify([{kind:'column',ref:'fc_00000001'}]),'chọn cột tự do trên mặt bằng: gửi plan_select {tầng, [cột fc_00000001]} cho SketchUp');
+  await cl(cF6.center[0],cF6.center[1]);ok((await calls('plan_select')).length===1,'chọn lại đúng phần tử đang chọn: không gửi lại');
+  await page.mouse.click(...(await sc(11500,6500)));c=await calls('plan_select');
+  ok(c.length===2 && c[1].items.length===0,'bấm chỗ trống (bỏ chọn): gửi plan_select rỗng để SketchUp bỏ chọn');
+  await page.keyboard.press('Control+a');c=await calls('plan_select');const total=Object.values((await dbg6()).counts).reduce((a,b)=>a+b,0);
+  ok(c[c.length-1].items.length===total-((await dbg6()).counts.ceiling||0) && c[c.length-1].items.length>5,'Ctrl+A: gửi mọi phần tử đang hiện');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');c=await calls('plan_select');ok(c[c.length-1].items.length===0,'Esc bỏ chọn: gửi rỗng');
+  await page.click('#pv-sync-btn');ok((await dbg6()).sync===false && await page.locator('#pv-sync-btn').getAttribute('aria-pressed')==='false','nút đồng bộ chọn: tắt');
+  await clear();await cl(cF6.center[0],cF6.center[1]);ok((await calls('plan_select')).length===0,'đồng bộ tắt: chọn trên mặt bằng KHÔNG gửi gì cho SketchUp');
+  await receive('model_selection',{items:[{level:L1,kind:'wall',ref:'x:B:1-2'}],groups:[]});ok(JSON.stringify((await dbg6()).selection)==='["Cột tự do fc_00000001"]','đồng bộ tắt: chọn từ SketchUp bị bỏ qua');
+  await page.click('#pv-sync-btn');await page.keyboard.press('Escape');await clear();
+  // --- SketchUp -> mặt bằng ---
+  await receive('model_selection',{items:[{level:L1,kind:'wall',ref:'x:B:1-2'},{level:L1,kind:'wall',ref:'fw_00000001'}],groups:[]});
+  ok(JSON.stringify((await dbg6()).selection.sort())===JSON.stringify(['Tường tự do fw_00000001','Tường x:B:1-2']),'SketchUp chọn 2 tường: mặt bằng chọn đúng 2 tường tương ứng (cả theo lưới và tự do)');
+  ok((await calls('plan_select')).length===0,'chọn do SketchUp đẩy sang KHÔNG dội ngược lại cho SketchUp (không vòng lặp)');
+  await receive('model_selection',{items:[{level:L1,kind:'opening',ref:'op_00000001'}],groups:[]});ok((await dbg6()).selection.length===1 && /^Cửa/.test((await dbg6()).selection[0]),'SketchUp chọn một cửa: mặt bằng chọn cửa đó');
+  await receive('model_selection',{items:[],groups:[]});ok((await dbg6()).selection.length===0,'SketchUp bỏ chọn: mặt bằng bỏ chọn (vì lần chọn trước do SketchUp đẩy sang)');
+  await receive('model_selection',{items:[],groups:[{level:L1,kind:'column'}]});ok((await dbg6()).selection.length===2 && (await dbg6()).selection.every(x=>/^Cột/.test(x)),'SketchUp chọn nguyên nhóm cột: mặt bằng chọn mọi cột của tầng đó');
+  ok((await calls('plan_select')).length===0,'chọn nhóm cũng không dội ngược');
+  await receive('model_selection',{items:[{level:L2,kind:'slab',ref:'1-2/A-B'}],groups:[]});await wait(200);
+  ok((await last('grid_preview')).level===L2,'SketchUp chọn phần tử của tầng khác: mặt bằng chuyển tầng (gửi xem trước tầng mới)');
+  await receive('preview',F.preview_top);await wait(60);ok((await dbg6()).level===L2 && (await calls('plan_select')).length===0,'chuyển tầng theo SketchUp không gửi plan_select (kể cả khi xem trước về)');
+  await page.click('#pv-tabs .pv-tab:nth-child(1)');await wait(250);await receive('preview',F.preview_free);await wait(60);await reset();
+  await receive('model_selection',{items:[{level:L1,kind:'column',ref:'9-Z'}],groups:[]});ok(JSON.stringify((await dbg6()).selection)==='[]' && /không có trong xem trước/.test(await hint6()),'SketchUp chọn phần tử không có trong xem trước: không chọn gì, báo rõ');
+  await page.click('[data-tab=grid]');await receive('model_selection',{items:[{level:L1,kind:'wall',ref:'x:B:1-2'}],groups:[]});ok((await dbg6()).selection.length===0,'đang ở tab khác (mặt bằng ẩn): bỏ qua sự kiện chọn từ SketchUp');await page.click('[data-tab=plan]');await wait(60);
+  // --- kết quả chọn trong SketchUp ---
+  await receive('select_result',{found:0,missing:[{kind:'column',ref:'fc_00000001'}],mode:'none',requested:1});ok(/Chưa dựng trong model/.test(await hint6()),'chọn phần tử chưa dựng: báo "Chưa dựng trong model", gợi ý bấm Dựng tầng');
+  await receive('select_result',{found:1,missing:[{kind:'column',ref:'x'}],mode:'groups',requested:2});ok(/1\/2/.test(await hint6()),'chọn được một phần: báo 1/2');
+  // --- Trạng thái model ---
+  const base=F.preview_free;
+  const st1={level:L1,items:{'column|1-A':'ok','column|fc_00000001':'stale','wall|x:B:1-2':'missing','wall|fw_00000001':'unbuilt','wall|fw_00000002':'ok','beam|fb_00000001':'ok'},extras:[{kind:'column',ref:'9-Z'}],counts:{ok:3,stale:1,missing:1,unbuilt:1,extra:1}};
+  await receive('model_status',st1);let bd=(await dbg6()).badges;
+  ok(bd.stale===1 && bd.missing===1 && bd.unbuilt===1 && (await dbg6()).badgesDrawn===3,'nhận trạng thái model: mặt bằng đánh dấu 1 phần tử lệch, 1 thiếu, 1 chưa dựng và chỉ vẽ 3 chấm (phần tử ok không có chấm)');
+  const px=async(x,y,dx,dy)=>page.evaluate(([x,y,dx,dy])=>{const c=document.getElementById('pv-canvas'),p=window.VGDPlan.toScreen(x,y),d=c.getContext('2d').getImageData(Math.round((p[0]+dx)*window.devicePixelRatio),Math.round((p[1]+dy)*window.devicePixelRatio),1,1).data;return [d[0],d[1],d[2]];},[x,y,dx,dy]);
+  const cb=[cF6.center[0]+cF6.w/2,cF6.center[1]+cF6.d/2],pxl=await px(cb[0],cb[1],2,-2);
+  ok(pxl[0]>220 && pxl[1]>140 && pxl[1]<190 && pxl[2]<80,'chấm cam đặc nằm ở góc trên bên phải của cột tự do đang lệch (pixel màu cam)');
+  await cl(cF6.center[0],cF6.center[1]);ok((await page.locator('#pv-props').innerText()).includes('Lệch dữ liệu'),'chọn phần tử lệch: bảng Thuộc tính ghi "Lệch dữ liệu (cần dựng lại)"');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await page.mouse.click(...(await sc(11500,6500)));
+  const pt=await page.locator('#pv-props').innerText();ok(/Model: khớp\s+3/.test(pt) && /Model: lệch\s+1/.test(pt) && /Model: thiếu\s+1/.test(pt) && /Model: chưa dựng\s+1/.test(pt) && /Model: thừa\s+1/.test(pt),'chưa chọn gì: bảng Thuộc tính tóm tắt số phần tử khớp / lệch / thiếu / chưa dựng / thừa so với model');
+  await receive('model_status',{...st1,level:L2});ok((await dbg6()).badges.stale===0,'trạng thái của tầng khác: không đánh dấu trên tầng đang xem');
+  await receive('model_status',st1);await page.click('#pv-status-btn');ok((await dbg6()).statusOn===false && (await dbg6()).badges.stale===0,'tắt "Hiện trạng thái": hết chấm');
+  await clear();await receive('state',F.state_free);await page.evaluate(()=>document.getElementById('origin-x').dispatchEvent(new Event('input')));await wait(300);
+  ok((await last('grid_preview')).status===false,'trạng thái tắt: xem trước gửi cờ status = false (Ruby không so khớp)');
+  await clear();await page.click('#pv-status-btn');await wait(300);ok((await last('grid_preview')).status===true,'bật lại: yêu cầu Ruby so khớp ngay (xem trước gửi cờ status = true)');
+  // --- Dựng tầng ---
+  await clear();await page.click('#pv-build-btn');let bc=await calls('build_all');
+  ok(bc.length===1 && JSON.stringify(bc[0].levels)==='["sl_00000001"]' && bc[0].state.levels.length===2 && bc[0].state.levels[0].picks.columns.fc_00000001.free.x===2000,'nút Dựng tầng: gửi build_all cho tầng đang xem kèm toàn bộ dữ liệu (kể cả phần tử tự do)');
+  await clear();await receive('all_built',{message:'Đã dựng 7 đối tượng.',drawn:{columns:[L1],beams:[],walls:[],slabs:[],ceilings:[],openings:[]}});await wait(300);
+  ok((await calls('grid_preview')).length>=1 && (await last('grid_preview')).status===true,'dựng xong: tự yêu cầu xem trước và trạng thái model mới');
+  await typ('bd');ok((await calls('build_all')).length===1,'gõ BD: cũng dựng tầng (phím tự đặt)');
+  ok((await page.locator('#pv-build-btn kbd').innerText())==='BD' && (await page.locator('#pv-supick-btn kbd').innerText())==='PK' && (await page.locator('#pv-sync-btn kbd').innerText())==='SY' && (await page.locator('#pv-status-btn kbd').innerText())==='ST','nút hiện phím tắt BD, PK, SY, ST');
+  // --- Chọn điểm trong SketchUp ---
+  await reset();await clear();await typ('cl');await page.selectOption('#pv-options select[data-opt=mode]','free');await wait(40);
+  await page.click('#pv-supick-btn');ok((await calls('su_pick_start')).length===1,'bấm "Chọn điểm trong SketchUp": gửi su_pick_start');
+  await receive('su_pick_state',{active:true});ok((await dbg6()).suPicking===true && /Đang nhận điểm từ SketchUp/.test(await hint6()) && await page.locator('#pv-supick-btn').getAttribute('aria-pressed')==='true','SketchUp báo đã vào công cụ: nút sáng, gợi ý "Đang nhận điểm từ SketchUp"');
+  await receive('su_move',{x:7000,y:6500});ok(Math.abs((await dbg6()).edit.freeTarget[0]-7000)<1 && Math.abs((await dbg6()).edit.freeTarget[1]-6500)<1,'SketchUp rê chuột: mặt bằng hiện xem trước (ghost cột) đúng tọa độ');
+  await receive('su_point',{x:7000,y:6500});let pk=await get('picks');const nc=Object.keys(pk).filter(k=>k.startsWith('fc_')&&k!=='fc_00000001');
+  ok(nc.length===1 && pk[nc[0]].free.x===7000 && pk[nc[0]].free.y===6500,'SketchUp bấm điểm (7000, 6500): tạo cột tự do đúng tọa độ như bấm trên mặt bằng (không qua bắt điểm của cửa sổ)');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await typ('wa');await page.selectOption('#pv-options select[data-opt=mode]','free');await wait(40);
+  await receive('su_point',{x:6000,y:4800});ok((await dbg6()).edit.chainPoint && Math.abs((await dbg6()).edit.chainPoint[1]-4800)<1,'tường tự do: điểm đầu từ SketchUp');
+  await receive('su_point',{x:9000,y:4800});let wp=await get('wallPicks');ok(Object.values(wp).some(w=>w.free && JSON.stringify(w.free)===JSON.stringify({a:[6000,4800],b:[9000,4800]})),'điểm thứ hai từ SketchUp: thêm tường tự do 6000–9000 (chuỗi từ SketchUp, như bấm trên mặt bằng)');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await typ('me');await receive('su_point',{x:1000,y:1000});await receive('su_point',{x:4000,y:5000});
+  ok((await dbg6()).measure && (await dbg6()).measure.done && Math.abs((await dbg6()).measure.b[0]-4000)<1,'công cụ Đo nhận hai điểm từ SketchUp');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await typ('rp');await receive('su_point',{x:2000,y:2500});ok((await dbg6()).draft==='first','công cụ Đường gióng nhận điểm từ SketchUp');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  const nBefore=Object.keys(await get('picks')).length;await receive('su_point',{x:3000,y:3000});ok(Object.keys(await get('picks')).length===nBefore,'điểm từ SketchUp khi công cụ là Chọn: không làm gì');
+  await receive('su_pick_state',{active:false});ok((await dbg6()).suPicking===false && await page.locator('#pv-supick-btn').getAttribute('aria-pressed')==='false' && !/Đang nhận điểm/.test(await hint6()),'SketchUp thoát công cụ (Esc): nút tắt, hết gợi ý');
+  await typ('cl');await receive('su_point',{x:7500,y:6500});ok(Object.keys(await get('picks')).length===nBefore,'không còn ở chế độ nhận điểm: su_point trễ bị bỏ qua');
+  await clear();await page.keyboard.press('Escape');await page.keyboard.press('Escape');await typ('cl');await receive('su_pick_state',{active:true});await clear();await page.keyboard.press('Escape');
+  ok((await calls('su_pick_stop')).length>=1,'Esc trong cửa sổ khi đang nhận điểm: gửi su_pick_stop để SketchUp thoát công cụ');
+  await receive('su_pick_state',{active:false});await clear();
+  await typ('cl');await page.click('#pv-supick-btn');await receive('su_pick_state',{active:true});await clear();await page.click('#pv-supick-btn');ok((await calls('su_pick_stop')).length===1,'bấm nút lần nữa khi đang nhận điểm: dừng (su_pick_stop)');
+  await receive('su_pick_state',{active:false});await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  await clear();await typ('cl');await typ('pk');ok((await calls('su_pick_start')).length===1,'gõ PK: cùng nút chọn điểm (phím tự đặt)');
+  await receive('su_pick_state',{active:false});await reset();
   }
   // Lỗi xem trước
   await page.click('[data-tab=plan]');await receive('preview',F.error);

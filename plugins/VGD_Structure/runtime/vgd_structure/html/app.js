@@ -35,6 +35,7 @@
   }
   function payload() {
     return {grid: {origin: state.origin, x_axes: toAxes('x'), y_axes: toAxes('y')}, symbol: {scale: state.scale, both_ends: state.both},
+            status: !!(window.VGDPlan && window.VGDPlan.statusOn && window.VGDPlan.statusOn()),
             types: state.types.map(function (t) { return {id: t.id, name: t.name, w: t.w, d: t.d}; }),
             beam_types: state.beamTypes.map(function (t) { return {id: t.id, name: t.name, w: t.w, h: t.h}; }),
             wall_types: state.wallTypes.map(function (t) { return {id: t.id, name: t.name, t: t.t}; }),
@@ -818,9 +819,9 @@
     } else if (event === 'levels') {
       state.levels = data.levels.map(fromRubyLevel); syncPlanLevels(); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab(); changed(); message(data.message);
     } else if (event === 'columns_built') {
-      state.drawnLevels = data.drawn_levels || []; renderColumnsButtons(); message(data.message, data.error);
+      state.drawnLevels = data.drawn_levels || []; renderColumnsButtons(); message(data.message, data.error); changed();
     } else if (event === 'beams_built') {
-      state.drawnBeamLevels = data.drawn_beam_levels || []; renderBeamsButtons(); message(data.message, data.error);
+      state.drawnBeamLevels = data.drawn_beam_levels || []; renderBeamsButtons(); message(data.message, data.error); changed();
     } else if (event === 'focus') {
       var tabOf = {column: 'columns', beam: 'beams', wall: 'walls', door: 'openings', window: 'openings', slab: 'slabs', ceiling: 'ceilings'}[data.kind];
       if (tabOf) {
@@ -840,19 +841,25 @@
     } else if (event === 'all_built') {
       state.drawnLevels = data.drawn.columns || []; state.drawnBeamLevels = data.drawn.beams || []; state.drawnWallLevels = data.drawn.walls || [];
       state.drawnSlabLevels = data.drawn.slabs || []; state.drawnCeilingLevels = data.drawn.ceilings || []; state.drawnOpeningLevels = data.drawn.openings || [];
-      renderAllTab(); message(data.message);
+      renderAllTab(); message(data.message); changed();
     } else if (event === 'plates_built') {
       var cfg = CELL_TABS.filter(function (c) { return c.kind === data.kind; })[0];
       if (cfg) { state[cfg.drawn] = data.drawn_levels || []; renderCellButtons(cfg); }
-      message(data.message, data.error);
+      message(data.message, data.error); changed();
     } else if (event === 'openings_built') {
-      state.drawnOpeningLevels = data.drawn_opening_levels || []; renderOpeningsButtons(); renderAllTab(); message(data.message, data.error);
+      state.drawnOpeningLevels = data.drawn_opening_levels || []; renderOpeningsButtons(); renderAllTab(); message(data.message, data.error); changed();
     } else if (event === 'walls_built') {
-      state.drawnWallLevels = data.drawn_wall_levels || []; state.drawnSlabLevels = data.drawn_slab_levels || []; state.drawnCeilingLevels = data.drawn_ceiling_levels || []; renderWallsButtons(); message(data.message, data.error);
+      state.drawnWallLevels = data.drawn_wall_levels || []; state.drawnSlabLevels = data.drawn_slab_levels || []; state.drawnCeilingLevels = data.drawn_ceiling_levels || []; renderWallsButtons(); message(data.message, data.error); changed();
     } else if (event === 'built') {
       state.drawn = data.drawn; renderButtons(); message(data.message);
     } else if (event === 'message') {
       message(data.text, data.error);
+    } else if (event === 'model_selection') { window.VGDPlan.modelSelection(data);
+    } else if (event === 'model_status') { window.VGDPlan.modelStatus(data);
+    } else if (event === 'select_result') { window.VGDPlan.selectResult(data);
+    } else if (event === 'su_point') { window.VGDPlan.suPoint(data);
+    } else if (event === 'su_move') { window.VGDPlan.suMove(data);
+    } else if (event === 'su_pick_state') { window.VGDPlan.suState(data.active);
     }
   }
   // ---- Thao tác từ tab Mặt bằng: có hoàn tác / làm lại (chỉ các thay đổi làm trên mặt bằng) ----
@@ -889,7 +896,10 @@
   window.VGDPlanEdit.init({state: state, api: window.VGDS.api, mutate: mutate, say: function (t) { window.VGDPlan.say(t); }, scale: function () { return window.VGDPlan.scale(); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, bounds: function () { return window.VGDPlan.bounds(); }});
   window.VGDPlanModify.init({state: state, api: window.VGDS.api, mutate: mutate, scale: function () { return window.VGDPlan.scale(); }, bounds: function () { return window.VGDPlan.bounds(); }, shapeAt: function (w) { return window.VGDPlan.shapeAt(w); }, finish: function () { window.VGDPlan.finish(); },
     snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, lineAt: function (w) { return window.VGDPlan.lineAt(w); }, guides: function () { return window.VGDPlan.guides(); }});
-  window.VGDPlan.init({onLevel: setLevelFromPlan, undo: undo, redo: redo, history: window.VGDS.history, edit: window.VGDPlanEdit, modify: window.VGDPlanModify, browser: window.VGDPlanBrowser});
+  window.VGDPlan.init({onLevel: setLevelFromPlan, undo: undo, redo: redo, history: window.VGDS.history, edit: window.VGDPlanEdit, modify: window.VGDPlanModify, browser: window.VGDPlanBrowser,
+    callSU: call, refresh: function () { changed(); },
+    buildLevel: function () { message('Đang dựng tầng này vào model...'); call('build_all', {state: payload(), levels: [state.level]}); },
+    allKeys: function (levelId, kind) { var box = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', opening: 'openingPicks', slab: 'slabPicks', ceiling: 'ceilingPicks'}[kind], l = state.levels.filter(function (x) { return x.id === levelId; })[0]; return l && box ? Object.keys(l[box]) : []; }});
   var BROWSER_PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', opening: 'openingPicks'};
   window.VGDPlanBrowser.init({state: state, currentLevel: function () { return state.level; }, axes: toAxes,
     openLevel: function (id) { if (id !== state.level) setLevelFromPlan(id); },

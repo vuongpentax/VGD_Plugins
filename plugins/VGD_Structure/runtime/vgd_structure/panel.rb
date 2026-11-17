@@ -7,6 +7,10 @@ module VGD
     class Panel
       TITLE = 'VGD Structure'.freeze
       CONFIRM_COLUMNS = 500 # dựng nhiều hơn số này thì hỏi xác nhận
+      SELECTION_DELAY = 0.12     # giây: gom các sự kiện đổi vùng chọn của SketchUp thành một lần gửi
+      SELECTION_ECHO = 0.6       # giây: sau khi tự chọn phần tử trong SketchUp theo yêu cầu của cửa sổ thì bỏ qua sự kiện do chính việc đó gây ra
+      MAX_SELECT_ITEMS = 5000
+      SELECT_KINDS = %w[column beam wall opening slab ceiling].freeze
 
       def initialize
         @dialog = ::UI::HtmlDialog.new(dialog_title: TITLE, preferences_key: 'vgd_structure_panel', scrollable: true, resizable: true,
@@ -32,7 +36,101 @@ module VGD
         @dialog.add_action_callback('build_all') { |_ctx, payload| safely { build_all(JSON.parse(payload)) } }
         @dialog.add_action_callback('picks_copy') { |_ctx, payload| safely { picks_copy(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_reset') { |_ctx| safely { send_state(reset: true) } }
+        @dialog.add_action_callback('plan_select') { |_ctx, payload| safely { plan_select(JSON.parse(payload)) } }
+        @dialog.add_action_callback('su_pick_start') { |_ctx| safely { su_pick_start } }
+        @dialog.add_action_callback('su_pick_stop') { |_ctx| safely { su_pick_stop } }
+        @dialog.set_on_closed { detach_observer; su_pick_stop } if @dialog.respond_to?(:set_on_closed)
       end
+
+      # ---- Liên kết với SketchUp (cột mốc P6) ----
+
+      # Theo dõi vùng chọn của SketchUp để cửa sổ sáng đúng phần tử (chỉ khi cửa sổ đang mở).
+      def attach_observer
+        model = Sketchup.active_model
+        return if @watcher && @observed_model.equal?(model)
+        detach_observer
+        @watcher = SelectionWatcher.new(self)
+        model.selection.add_observer(@watcher)
+        @observed_model = model
+      rescue StandardError => error # không theo dõi được vùng chọn thì cửa sổ vẫn dùng bình thường
+        puts "[VGD Structure] không gắn được theo dõi vùng chọn: #{error.message}"
+        @watcher = nil
+        @observed_model = nil
+      end
+
+      def detach_observer
+        @observed_model.selection.remove_observer(@watcher) if @watcher && @observed_model
+      rescue StandardError
+        nil
+      ensure
+        @watcher = nil
+        @observed_model = nil
+      end
+
+      # Gọi từ SelectionWatcher mỗi khi vùng chọn trong SketchUp đổi (có thể rất dồn dập): gom lại rồi gửi một lần.
+      def model_selection_changed
+        return unless @ready
+        return if @ignore_selection_until && Time.now.to_f < @ignore_selection_until
+        return if @selection_timer
+        @selection_timer = ::UI.start_timer(SELECTION_DELAY, false) { @selection_timer = nil; send_model_selection }
+      end
+
+      def send_model_selection
+        return if @ignore_selection_until && Time.now.to_f < @ignore_selection_until
+        emit('model_selection', ModelSync.selection_items(Sketchup.active_model))
+      rescue StandardError => error
+        puts "[VGD Structure] model_selection: #{error.message}"
+      end
+
+      # Cửa sổ chọn phần tử: chọn tương ứng trong SketchUp. payload {level:, items: [{kind:, ref:}]}; items rỗng thì bỏ chọn.
+      def plan_select(payload)
+        level = payload['level']
+        items = payload['items']
+        raise ArgumentError, 'Dữ liệu chọn không hợp lệ.' unless level.is_a?(String) && items.is_a?(Array) && items.size <= MAX_SELECT_ITEMS
+        clean = items.map do |it|
+          raise ArgumentError, 'Dữ liệu chọn không hợp lệ.' unless it.is_a?(Hash) && it['ref'].is_a?(String) && SELECT_KINDS.include?(it['kind'])
+          {'kind' => it['kind'], 'ref' => it['ref']}
+        end
+        model = Sketchup.active_model
+        @ignore_selection_until = Time.now.to_f + SELECTION_ECHO
+        if clean.empty?
+          model.selection.clear
+          return
+        end
+        emit('select_result', ModelSync.select(model, level, clean).merge(requested: clean.size))
+      end
+
+      # Công cụ chọn điểm trong khung nhìn SketchUp: mỗi lần bấm gửi tọa độ (mm) về cửa sổ ('su_point'), rê chuột gửi 'su_move'.
+      def su_pick_start
+        model = Sketchup.active_model
+        su_pick_stop if @pick_tool
+        @pick_tool = PickTool.new(self)
+        model.select_tool(@pick_tool)
+        emit('su_pick_state', {active: true})
+      end
+
+      def su_pick_stop
+        return unless @pick_tool
+        @pick_tool = nil
+        Sketchup.active_model.select_tool(nil)
+        emit('su_pick_state', {active: false})
+      end
+
+      def pick_point(point)
+        emit('su_point', {x: point[0], y: point[1]})
+      end
+
+      def pick_move(point)
+        emit('su_move', {x: point[0], y: point[1]})
+      end
+
+      # Công cụ kết thúc không do cửa sổ (Esc, hoặc người dùng chọn công cụ khác của SketchUp).
+      def pick_ended(tool)
+        return unless @pick_tool.equal?(tool)
+        @pick_tool = nil
+        emit('su_pick_state', {active: false})
+      end
+
 
       # Chuyển tới phần tử (do VGD_BIM yêu cầu sửa): gửi sự kiện focus khi cửa sổ đã sẵn sàng, chưa sẵn sàng thì giữ lại gửi sau.
       def focus(kind, level_id, ref)
@@ -48,6 +146,7 @@ module VGD
 
       def show
         @dialog.visible? ? @dialog.bring_to_front : @dialog.show
+        attach_observer
       end
 
       def visible?
@@ -55,6 +154,8 @@ module VGD
       end
 
       def close
+        detach_observer
+        su_pick_stop
         @dialog.close
       end
 
@@ -72,11 +173,22 @@ module VGD
         state = reset ? State.default.merge('saved' => false, 'removed' => 0) : ModelStore.read(model)
         emit('state', {grid: state['grid'], symbol: state['symbol'], types: state['types'], beam_types: state['beam_types'], wall_types: state['wall_types'], opening_types: state['opening_types'], levels: state['levels'], saved: state['saved'],
                        drawn: !GridBuilder.find(model).nil?, drawn_levels: drawn_levels(model), drawn_beam_levels: drawn_beam_levels(model), drawn_wall_levels: drawn_wall_levels(model), drawn_opening_levels: drawn_opening_levels(model), drawn_slab_levels: drawn_plate_levels(model, 'slabs'), drawn_ceiling_levels: drawn_plate_levels(model, 'ceilings'), version: VERSION})
-        grid_preview(state.merge('level' => state['levels'].first['id']))
+        grid_preview(state.merge('level' => state['levels'].first['id'], 'status' => true))
       end
 
+      # Xem trước do Ruby tính; nếu giao diện bật "trạng thái model" (payload['status']) thì gửi kèm so khớp với model của tầng đang xem.
       def grid_preview(payload)
-        emit('preview', Preview.build(payload))
+        preview = Preview.build(payload)
+        emit('preview', preview)
+        emit_status(payload) if payload['status'] && preview[:ok] && preview[:levels_ok] != false
+      end
+
+      def emit_status(payload)
+        state = State.normalize!(payload)
+        level = payload['level'] || state['levels'].first['id']
+        emit('model_status', ModelSync.status(Sketchup.active_model, state, level))
+      rescue ArgumentError
+        nil # dữ liệu đang sai: xem trước đã báo lỗi, không so khớp
       end
 
       def drawn_levels(model)

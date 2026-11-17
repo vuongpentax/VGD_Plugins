@@ -109,6 +109,7 @@ module VGD
         instance.set_attribute(Schema::DICTIONARY, 'level', plan[:level]['id'])
         instance.set_attribute(Schema::DICTIONARY, 'level_name', plan[:level]['name'])
         instance.set_attribute(Schema::DICTIONARY, 'level_elevation', plan[:level]['elevation'])
+        instance.set_attribute(Schema::DICTIONARY, 'fp', ModelSync.fingerprint('beam', item))
         instance.set_attribute(Schema::DICTIONARY, 'type', item[:type_name])
         instance.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('w' => item[:w], 'h' => item[:h], 'length' => item[:length]))
         instance.set_attribute(Schema::DICTIONARY, 'placement', JSON.generate('position' => item[:placement], 'p' => item[:mode], 'dir' => item[:dir]))

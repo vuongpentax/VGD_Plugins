@@ -1,4 +1,4 @@
-# VGD Structure 0.11.0 (beta)
+# VGD Structure 0.12.0 (beta)
 
 Tab **Mặt bằng** (cột mốc P1 đến P5, P4b-1; bản beta 0.10.0 gộp vào đây): tab **Mặt bằng** (cửa sổ vẽ mặt bằng kiểu CAD, giai đoạn 2).
 
@@ -12,4 +12,5 @@ Tab **Mặt bằng** (cột mốc P1 đến P5, P4b-1; bản beta 0.10.0 gộp v
 - P4: **sửa kiểu Revit trên lưới**: Move (MV), Copy (CO), Array (AR), Mirror (MM qua một trục), Match (MA); bước dịch theo ô lưới, tường đi kèm cửa; **kích thước tạm thời** (cửa sửa được: bấm số, gõ giá trị). Rotate, Offset, Trim, Align để cột mốc P4b (cần phần tử tự do ngoài lưới).
 - P5: **Cây dự án** (Project Browser) trong tab Mặt bằng: tầng → nhóm → phần tử, loại, lưới trục; lọc; bấm để chuyển tầng và chọn phần tử (kể cả ở tầng khác); tô sáng theo lựa chọn trên mặt bằng.
 - **P4b-1: phần tử TỰ DO ngoài lưới (vuông góc)**: cột (xoay 0 / 90°), dầm, tường nằm ngang / dọc đặt ở tọa độ bất kỳ (khóa `free` trong lựa chọn của tầng; dữ liệu cũ theo lưới đọc y nguyên; mã fc_ / fb_ / fw_). Vẽ tự do (thanh tùy chọn "Vị trí: Tự do", bắt điểm, gõ độ dài), **Mở khóa lưới** (UL), Move / Copy / Array / Mirror bằng điểm bất kỳ, **Offset, Align, Trim (nối góc L), Rotate 90 / 180 / 270°**, thuộc tính và kích thước tạm thời sửa được; Ruby có kế hoạch, kiểm tra chồng và dựng cho phần tử tự do (BIM đọc như phần tử thường).
+- **P6: liên kết với SketchUp**: chọn phần tử trong SketchUp thì sáng trên mặt bằng (tự chuyển tầng) và ngược lại; **trạng thái so với model** (chấm cam = lệch dữ liệu, đỏ = thiếu, xám = chưa dựng, kèm tóm tắt) nhờ dấu vân tay ghi trên mọi phần tử dựng ra; nút **Dựng tầng này** ngay trên mặt bằng; **Chọn điểm trong SketchUp** (công cụ SketchUp, bắt điểm của SketchUp) dùng cho các công cụ vẽ, sửa, Đo, Đường gióng. Phần chạy thật trong SketchUp chưa xác minh.
 - Chưa xác minh trong SketchUp thật (cửa sổ HtmlDialog thật, dựng cột / dầm / tường tự do trong model thật, hiệu năng canvas với nhiều phần tử).

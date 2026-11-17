@@ -83,6 +83,37 @@ module Sketchup
     attr_reader :definition, :transformation
     def initialize(definition, transformation); @definition = definition; @transformation = transformation; end
   end
+  class SelectionObserver; end
+  # Vùng chọn giả lập: danh sách entity, có thể gắn observer (gọi lại khi đổi).
+  class Selection
+    include Enumerable
+    attr_reader :observers
+    def initialize; @items = []; @observers = []; end
+    def add_observer(o); @observers << o; true; end
+    def remove_observer(o); @observers.delete(o); true; end
+    def each(&b); @items.each(&b); end
+    def clear; @items.clear; notify(:onSelectionCleared); end
+    def add(e); @items << e unless @items.include?(e); notify(:onSelectionAdded, e); end
+    def to_a; @items.dup; end
+    def include?(e); @items.include?(e); end
+    def notify(name, *args); @observers.each { |o| o.public_send(name, self, *args) if o.respond_to?(name) }; end
+  end
+  # Điểm nhập giả lập: kiểm tra đặt vị trí rồi gọi pick.
+  class InputPoint
+    attr_accessor :fake_position
+    def initialize; @pos = nil; end
+    def pick(view, x, y); @pos = view.fake_points ? view.fake_points[[x, y]] : nil; end
+    def valid?; !@pos.nil?; end
+    def position; @pos; end
+    def tooltip; 'Đầu mút'; end
+    def draw(view); view.drawn = true; end
+  end
+  class FakeView
+    attr_accessor :fake_points, :tooltip, :drawn
+    attr_reader :invalidated
+    def initialize(points = {}); @fake_points = points; @invalidated = 0; end
+    def invalidate; @invalidated += 1; end
+  end
   class Definitions
     attr_reader :list
     def initialize; @list = []; end
@@ -129,9 +160,11 @@ module Sketchup
     def add_folder(name); f = Folder.new(name); @folders << f; f; end
   end
   class Model
-    attr_reader :entities, :layers, :operations, :line_styles, :definitions
+    attr_reader :entities, :layers, :operations, :line_styles, :definitions, :selection, :active_path, :tool
+    def active_path=(path); @active_path = path; end
+    def select_tool(t); @tool.deactivate(FakeView.new) if @tool && @tool.respond_to?(:deactivate); @tool = t; t.activate if t && t.respond_to?(:activate); end
     def initialize(styles: ['Solid Line', 'Dotted Line', 'Short Dashes Line', 'Dash Dot Line'])
-      @entities = FakeEntities.new; @definitions = Definitions.new; @layers = Layers.new; @operations = []; @attrs = {}
+      @entities = FakeEntities.new; @selection = Selection.new; @definitions = Definitions.new; @layers = Layers.new; @operations = []; @attrs = {}
       @line_styles = styles.map { |n| LineStyle.new(n) }
     end
     def start_operation(name, disable); @operations << [:start, name]; end
@@ -142,4 +175,5 @@ module Sketchup
     def active_model; self; end
   end
   def self.active_model; $model; end
+  def self.status_text=(t); $status_text = t; end
 end
