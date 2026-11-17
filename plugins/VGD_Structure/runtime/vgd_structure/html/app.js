@@ -801,7 +801,7 @@
       state.drawnOpeningLevels = data.drawn_opening_levels || []; state.openWall = null;
       state.levels = data.levels.map(fromRubyLevel); state.level = state.levels[0].id; state.selected = null; state.selectedBeam = null; state.selectedWall = null;
       state.drawnLevels = data.drawn_levels || []; state.drawnBeamLevels = data.drawn_beam_levels || []; state.drawnWallLevels = data.drawn_wall_levels || []; state.drawnSlabLevels = data.drawn_slab_levels || []; state.drawnCeilingLevels = data.drawn_ceiling_levels || [];
-      $('version').textContent = 'v' + data.version; syncPlanLevels();
+      $('version').textContent = 'v' + data.version; syncPlanLevels(); undoStack = []; redoStack = []; historyChanged();
       renderAll(); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab();
       message(data.saved ? 'Đã nạp lưới trục lưu trong model.' : 'Lưới mặc định: sửa các số rồi bấm Vẽ lưới trục.');
     } else if (event === 'preview') {
@@ -855,8 +855,39 @@
       message(data.text, data.error);
     }
   }
-  window.VGDS = {receive: receive, _state: state};
-  window.VGDPlan.init({onLevel: setLevelFromPlan});
+  // ---- Thao tác từ tab Mặt bằng: có hoàn tác / làm lại (chỉ các thay đổi làm trên mặt bằng) ----
+  var undoStack = [], redoStack = [], HISTORY_MAX = 100;
+  function snapshot() { return JSON.stringify({origin: state.origin, x: state.x, y: state.y, levels: state.levels, types: state.types, beamTypes: state.beamTypes, wallTypes: state.wallTypes, openingTypes: state.openingTypes}); }
+  function restore(text) {
+    var s = JSON.parse(text);
+    state.origin = s.origin; state.x = s.x; state.y = s.y; state.levels = s.levels; state.types = s.types; state.beamTypes = s.beamTypes; state.wallTypes = s.wallTypes; state.openingTypes = s.openingTypes;
+    if (!state.levels.some(function (l) { return l.id === state.level; })) state.level = state.levels[0].id;
+    state.selected = null; state.selectedBeam = null; state.selectedWall = null; state.openWall = null;
+    rerenderAll(); changed();
+  }
+  function rerenderAll() {
+    renderAll(); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab(); syncPlanLevels();
+  }
+  function historyChanged() { window.VGDPlan.refreshHistory(); }
+  function mutate(fn) {
+    undoStack.push(snapshot()); if (undoStack.length > HISTORY_MAX) undoStack.shift(); redoStack = [];
+    fn(); rerenderAll(); changed(); historyChanged();
+  }
+  function undo() { if (!undoStack.length) return false; redoStack.push(snapshot()); restore(undoStack.pop()); historyChanged(); message('Đã hoàn tác.'); return true; }
+  function redo() { if (!redoStack.length) return false; undoStack.push(snapshot()); restore(redoStack.pop()); historyChanged(); message('Đã làm lại.'); return true; }
+  // Thêm trục tại vị trí tuyệt đối (mm); apply = false chỉ kiểm tra. Trả về lỗi (chuỗi) hoặc null.
+  function addAxis(dir, pos, apply) {
+    var list = toAxes(dir), off = Math.round((pos - state.origin[dir === 'x' ? 0 : 1]) * 10) / 10;
+    if (!isFinite(off)) return 'Vị trí trục không hợp lệ.';
+    if (list.length >= 60) return 'Tối đa 60 trục mỗi phương.';
+    if (list.some(function (a) { return Math.abs(a.offset - off) < 100; })) return 'Trục mới phải cách các trục có sẵn ít nhất 100 mm.';
+    if (apply) { list.push({name: freeName(dir, list.length), offset: off}); list.sort(function (a, b) { return a.offset - b.offset; }); state[dir] = fromAxes(list); }
+    return null;
+  }
+  window.VGDS = {receive: receive, _state: state, mutate: mutate, undo: undo, redo: redo, history: function () { return {undo: undoStack.length, redo: redoStack.length}; },
+    api: {level: currentLevel, isTop: isTop, rid: rid, toAxes: toAxes, allSpans: allSpans, allCells: allCells, allRefs: allRefs, wallOpenings: wallOpenings, addAxis: addAxis, modes: {x: MODE_X, y: MODE_Y, p: MODE_P}}};
+  window.VGDPlanEdit.init({state: state, api: window.VGDS.api, mutate: mutate, scale: function () { return window.VGDPlan.scale(); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, bounds: function () { return window.VGDPlan.bounds(); }});
+  window.VGDPlan.init({onLevel: setLevelFromPlan, undo: undo, redo: redo, history: window.VGDS.history, edit: window.VGDPlanEdit});
 
   $('origin-x').oninput = function () { state.origin[0] = Number($('origin-x').value); changed(); };
   $('origin-y').oninput = function () { state.origin[1] = Number($('origin-y').value); changed(); };

@@ -48,8 +48,8 @@
   var KEYS_STORE = 'vgd_structure_plan_keys', CHORD_MS = 900;
   var MIN_SCALE = 0.001, MAX_SCALE = 5; // px trên mm
   var opts, root, canvas, ctx, status = {}, levelList = [], currentId = null, selection = [], propsOpen = true;
-  var hoverCount = 0, keymap = {}, chord = '', chordTimer = null, tabIdx = 0, hoverSig = '', guides = {}, measure = null, draft = null, snap = null, snapOn = true, note = '', press = null, box = null, shiftKey = false;
-  var SNAP_PX = 10, DRAG_PX = 4;
+  var edit = null, selLevel = null, opts2 = null, hoverCount = 0, keymap = {}, chord = '', chordTimer = null, tabIdx = 0, hoverSig = '', guides = {}, measure = null, draft = null, snap = null, snapOn = true, note = '', press = null, box = null, shiftKey = false;
+  var SNAP_PX = 10, DRAG_PX = 4, LIVE_EDIT = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'door', 'window', 'delete'];
   var view = {cx: 0, cy: 0, s: 0.05}, data = null, boundsKey = '', fitted = false, tool = 'select', shapes = [], hover = null, cursor = null, drag = null;
   var visible = {grid: true, slab: true, ceiling: false, beam: true, wall: true, opening: true, column: true};
   var size = {w: 300, h: 200, dpr: 1};
@@ -66,14 +66,15 @@
   }
   function svg(name) { return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + ICON[name] + '"/></svg>'; }
   function iconButton(parent, t, extra) {
-    var live = !!t[4], b = el('button', {type: 'button', class: 'pv-ic' + (extra || ''), 'data-tool': t[0], 'aria-label': t[1], title: live ? t[3] : t[1] + ' — có ở cột mốc sau, chưa dùng được'}, parent);
+    var live = !!t[4] || LIVE_EDIT.indexOf(t[0]) >= 0, b = el('button', {type: 'button', class: 'pv-ic' + (extra || ''), 'data-tool': t[0], 'aria-label': t[1], title: live ? (t[3] || t[1]) : t[1] + ' — có ở cột mốc sau, chưa dùng được'}, parent);
     b.innerHTML = svg(t[0]); el('kbd', {}, b); b.setAttribute('data-title', b.title);
-    if (live) b.onclick = function () { setTool(t[0]); }; else b.disabled = true;
+    if (live) b.onclick = function () { if (t[0] === 'delete') deleteSelection(); else setTool(t[0]); }; else b.disabled = true;
     return b;
   }
   function buildTop(bar) {
-    [['undo', 'Hoàn tác (Ctrl+Z) — có ở cột mốc P3'], ['redo', 'Làm lại (Ctrl+Y) — có ở cột mốc P3']].forEach(function (u) {
-      var b = el('button', {type: 'button', class: 'pv-ic', 'aria-label': u[1], title: u[1]}, bar); b.innerHTML = svg(u[0]); b.disabled = true;
+    [['undo', 'Hoàn tác (Ctrl+Z): chỉ các thay đổi làm trên tab Mặt bằng'], ['redo', 'Làm lại (Ctrl+Y)']].forEach(function (u) {
+      var b = el('button', {type: 'button', class: 'pv-ic', id: 'pv-' + u[0], 'aria-label': u[1], title: u[1]}, bar); b.innerHTML = svg(u[0]); b.disabled = true;
+      b.onclick = function () { (u[0] === 'undo' ? opts.undo : opts.redo)(); };
     });
     TOP_GROUPS.forEach(function (g) {
       el('span', {class: 'pv-sep'}, bar);
@@ -132,10 +133,50 @@
     el('h3', {text: 'Thuộc tính'}, box); el('p', {class: 'pv-ptitle', text: title}, box);
     var t = el('table', {class: 'pv-ptable'}, box);
     rows.forEach(function (r) { var tr = el('tr', {}, t); el('th', {text: r[0]}, tr); el('td', {text: r[1]}, tr); });
+    if (sel.length === 1 && edit) {
+      var fields = edit.propsFor(sel[0]);
+      if (fields.length) {
+        el('h3', {text: 'Sửa', class: 'pv-edit-h'}, box);
+        fields.forEach(function (f) {
+          var lab = el('label', {class: 'pv-field'}, box); el('span', {text: f.label}, lab); var c;
+          if (f.kind === 'select') { c = el('select', {'data-field': f.id}, lab); f.values.forEach(function (v) { c.append(new Option(v[1], v[0])); }); c.value = f.value; c.onchange = function () { f.apply(c.value); }; }
+          else if (f.kind === 'number') { c = el('input', {type: 'number', step: 'any', 'data-field': f.id}, lab); c.value = f.value; c.onchange = function () { if (c.value !== '') f.apply(Number(c.value)); }; }
+          else { c = el('input', {type: 'checkbox', 'data-field': f.id}, lab); c.checked = !!f.value; c.onchange = function () { f.apply(c.checked); }; }
+        });
+      }
+    }
+    if (!shape) {
+      var issues = []; ['columns', 'beams', 'walls', 'openings', 'slabs', 'ceilings'].forEach(function (k) { if (data && data[k] && data[k].issues) issues = issues.concat(data[k].issues); });
+      if (issues.length) { el('h3', {text: 'Cảnh báo (' + issues.length + ')', class: 'pv-edit-h'}, box); var ul = el('ul', {class: 'pv-issues'}, box); issues.slice(0, 8).forEach(function (m) { el('li', {text: m}, ul); }); }
+    }
+  }
+  // ---- Thanh tùy chọn (Options Bar): hiện khi chọn công cụ vẽ ----
+  var TOOL_NAMES = {grid: 'Lưới trục', column: 'Cột', beam: 'Dầm', wall: 'Tường', slab: 'Sàn', ceiling: 'Trần', door: 'Cửa đi', window: 'Cửa sổ'};
+  function renderOptions() {
+    var bar = $('pv-options'); if (!bar) return; bar.replaceChildren();
+    if (!edit || !edit.handles(tool)) { bar.hidden = true; return; }
+    bar.hidden = false; el('b', {text: TOOL_NAMES[tool]}, bar);
+    edit.options(tool).forEach(function (o) {
+      var lab = el('label', {}, bar); el('span', {text: o.label}, lab);
+      var sel = el('select', {'data-opt': o.id, 'aria-label': o.label}, lab);
+      o.values.forEach(function (v) { sel.append(new Option(v[1], v[0])); }); sel.value = o.value;
+      sel.onchange = function () { edit.setOption(tool, o.id, sel.value); canvas.focus(); };
+    });
+    if (!edit.options(tool).length) el('span', {class: 'pv-opt-note', text: 'Bấm vào một ô của lưới.'}, bar);
+  }
+  function deleteSelection() {
+    if (!edit) return;
+    var n = edit.remove(visibleSelection()); selection = [];
+    note = n ? 'Đã xóa ' + n + ' phần tử khỏi lựa chọn của tầng (dựng lại để cập nhật model).' : 'Chưa chọn phần tử nào để xóa.';
+    renderProps(); draw();
+  }
+  function refreshHistory() {
+    var h = opts && opts.history ? opts.history() : {undo: 0, redo: 0}, u = $('pv-undo'), r = $('pv-redo');
+    if (u) u.disabled = !h.undo; if (r) r.disabled = !h.redo;
   }
   function visibleSelection() { return selection.filter(function (x) { return visible[x.layer]; }); }
   function setTool(t) {
-    tool = t; draft = null; note = ''; if (t !== 'measure') measure = null; press = null; box = null; snap = null; draw(); root.querySelectorAll('.pv-ic[data-tool]').forEach(function (b) { var on = b.getAttribute('data-tool') === t; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+    tool = t; draft = null; note = ''; if (t !== 'measure') measure = null; press = null; box = null; snap = null; if (edit) edit.activate(t); renderOptions(); draw(); root.querySelectorAll('.pv-ic[data-tool]').forEach(function (b) { var on = b.getAttribute('data-tool') === t; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
     canvas.style.cursor = t === 'pan' ? 'grab' : (t === 'select' ? 'default' : 'crosshair');
   }
 
@@ -169,6 +210,7 @@
     var c = COMMANDS.filter(function (x) { return x[0] === id; })[0]; if (!c) return;
     if (id === 'fit') fitView(); else if (id === 'snap') $('pv-snap').click(); else if (id === 'props') $('pv-props-btn').click(); else if (id === 'keys') toggleKeys();
     else if (id === 'vis') { var m = $('pv-layers'); if (m.hidden) $('pv-layers-btn').click(); else m.hidden = true; }
+    else if (id === 'delete') deleteSelection();
     else {
       var b = root.querySelector('.pv-ic[data-tool="' + id + '"]');
       if (b && !b.disabled) setTool(id); else { note = c[1] + (keyOf(id) ? ' (' + keyOf(id) + ')' : '') + ': làm ở cột mốc sau, chưa dùng được.'; draw(); }
@@ -229,13 +271,14 @@
   function mm(v) { return v + ' mm'; }
   function buildShapes() {
     shapes = [];
-    function add(layer, poly, title, rows, text) { shapes.push({layer: layer, poly: poly, title: title, rows: rows, text: text}); }
-    section('slabs').forEach(function (i) { add('slab', rectPoly(i.min, i.max), 'Sàn ' + i.ref, [['Dày', mm(i.thickness)], ['Mặt trên', mm(i.z_top)], ['Diện tích', i.area + ' m²']], 'Sàn ' + i.ref + ' · dày ' + i.thickness + ' mm · ' + i.area + ' m²'); });
-    section('ceilings').forEach(function (i) { add('ceiling', i.polygon, 'Trần ' + i.ref, [['Dày', mm(i.thickness)], ['Mặt dưới', mm(i.z_bottom)], ['Diện tích', i.area + ' m²']], 'Trần ' + i.ref + ' · ' + i.area + ' m²'); });
-    section('beams').forEach(function (i) { add('beam', rectPoly(i.min, i.max), 'Dầm ' + i.ref, [['Loại', i.type_name], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Dài', mm(i.length)], ['Đỉnh', mm(i.z_top)]], 'Dầm ' + i.ref + ' · ' + i.type_name + ' · dài ' + i.length + ' mm'); });
-    section('walls').forEach(function (i) { add('wall', rectPoly(i.min, i.max), 'Tường ' + i.ref, [['Loại', i.type_name], ['Dày', mm(i.t)], ['Dài', mm(i.length)], ['Cao', mm(i.height)], ['Số cửa', String((i.openings || []).length)]], 'Tường ' + i.ref + ' · ' + i.type_name + ' · dày ' + i.t + ' · dài ' + i.length + ' · cao ' + i.height + ' mm'); });
-    section('openings').forEach(function (i) { var k = i.kind === 'door' ? 'Cửa đi' : 'Cửa sổ'; add('opening', rectPoly(i.min, i.max), k + ' ' + i.type_name, [['Loại', k], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Cao ngưỡng', mm(i.sill)], ['Tường', i.wall]], k + ' ' + i.type_name + ' · ' + i.w + ' × ' + i.h + ' mm · ngưỡng ' + i.sill); });
-    section('columns').forEach(function (i) { add('column', rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), 'Cột ' + i.ref, [['Loại', i.type_name], ['Rộng × sâu', i.w + ' × ' + i.d + ' mm'], ['Tâm', Math.round(i.center[0]) + ', ' + Math.round(i.center[1])]], 'Cột ' + i.ref + ' · ' + i.type_name + ' · ' + i.w + ' × ' + i.d + ' mm'); });
+    var cur = null;
+    function add(layer, poly, title, rows, text) { shapes.push({layer: layer, kind: layer, ref: cur.ref, poly: poly, title: title, rows: rows, text: text}); }
+    section('slabs').forEach(function (i) { cur = i; add('slab', rectPoly(i.min, i.max), 'Sàn ' + i.ref, [['Dày', mm(i.thickness)], ['Mặt trên', mm(i.z_top)], ['Diện tích', i.area + ' m²']], 'Sàn ' + i.ref + ' · dày ' + i.thickness + ' mm · ' + i.area + ' m²'); });
+    section('ceilings').forEach(function (i) { cur = i; add('ceiling', i.polygon, 'Trần ' + i.ref, [['Dày', mm(i.thickness)], ['Mặt dưới', mm(i.z_bottom)], ['Diện tích', i.area + ' m²']], 'Trần ' + i.ref + ' · ' + i.area + ' m²'); });
+    section('beams').forEach(function (i) { cur = i; add('beam', rectPoly(i.min, i.max), 'Dầm ' + i.ref, [['Loại', i.type_name], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Dài', mm(i.length)], ['Đỉnh', mm(i.z_top)]], 'Dầm ' + i.ref + ' · ' + i.type_name + ' · dài ' + i.length + ' mm'); });
+    section('walls').forEach(function (i) { cur = i; add('wall', rectPoly(i.min, i.max), 'Tường ' + i.ref, [['Loại', i.type_name], ['Dày', mm(i.t)], ['Dài', mm(i.length)], ['Cao', mm(i.height)], ['Số cửa', String((i.openings || []).length)]], 'Tường ' + i.ref + ' · ' + i.type_name + ' · dày ' + i.t + ' · dài ' + i.length + ' · cao ' + i.height + ' mm'); });
+    section('openings').forEach(function (i) { var k = i.kind === 'door' ? 'Cửa đi' : 'Cửa sổ'; cur = i; add('opening', rectPoly(i.min, i.max), k + ' ' + i.type_name, [['Loại', k], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Cao ngưỡng', mm(i.sill)], ['Tường', i.wall]], k + ' ' + i.type_name + ' · ' + i.w + ' × ' + i.h + ' mm · ngưỡng ' + i.sill); });
+    section('columns').forEach(function (i) { cur = i; add('column', rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), 'Cột ' + i.ref, [['Loại', i.type_name], ['Rộng × sâu', i.w + ' × ' + i.d + ' mm'], ['Tâm', Math.round(i.center[0]) + ', ' + Math.round(i.center[1])]], 'Cột ' + i.ref + ' · ' + i.type_name + ' · ' + i.w + ' × ' + i.d + ' mm'); });
   }
   function inside(poly, x, y) {
     var c = false;
@@ -376,6 +419,14 @@
   function measureText(m) { return Math.round(m.len) + ' mm  (Δx ' + Math.round(m.dx) + ', Δy ' + Math.round(m.dy) + ', góc ' + (Math.round(m.angle * 10) / 10) + '°)'; }
   function drawOverlay(bg, ink) {
     levelGuides().forEach(function (g) { strokeLine(g, GUIDE_COLOR, [6, 4]); });
+    if (edit && edit.handles(tool)) edit.ghost().forEach(function (g) {
+      ctx.save(); ctx.globalAlpha = g.alpha || 1; ctx.strokeStyle = g.color; ctx.fillStyle = g.color; ctx.lineWidth = g.width || 1.5; ctx.setLineDash(g.dash || []);
+      if (g.t === 'poly') { path(g.poly); ctx.fill(); ctx.globalAlpha = 1; ctx.stroke(); }
+      else if (g.t === 'line') { var a = toScreen(g.a[0], g.a[1]), b = toScreen(g.b[0], g.b[1]); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+      else if (g.t === 'dot') { var c0 = toScreen(g.p[0], g.p[1]); ctx.beginPath(); ctx.arc(c0[0], c0[1], g.r || 4, 0, Math.PI * 2); ctx.fill(); }
+      ctx.restore();
+      if (g.t === 'text') { var q = toScreen(g.p[0], g.p[1]); tag(g.text, q[0] + 10, q[1] - 14, bg, ink, g.color || GUIDE_COLOR); }
+    });
     // đường gióng đang đặt
     var cur = snap ? snap.p : cursor;
     if (draft && cur) {
@@ -433,8 +484,9 @@
     for (var k = 0; k <= 12; k++) { var t = k / 12 * Math.PI / 2, p = pt(a0 + w * Math.cos(t), mid + dir * w * Math.sin(t)), q = toScreen(p[0], p[1]); if (k) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }
     ctx.lineWidth = 1; ctx.strokeStyle = color; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
   }
-  function usesSnap() { return tool === 'measure' || tool === 'guide'; }
+  function usesSnap() { return tool === 'measure' || tool === 'guide' || tool === 'grid'; }
   function toolHint() {
+    if (edit && edit.handles(tool)) return edit.hint();
     if (tool === 'measure') {
       if (!measure || measure.done) return measure ? 'Đo: ' + measureText(measureBox(measure.a, measure.b)) + '. Bấm điểm mới để đo tiếp, Esc thoát.' : 'Đo: bấm điểm đầu (bắt điểm đang bật).';
       var cur = snap ? snap.p : cursor; return cur ? 'Đo: ' + measureText(measureBox(measure.a, constrain(measure.a, cur))) + '. Bấm điểm cuối hoặc gõ số + Enter.' : 'Đo: bấm điểm cuối.';
@@ -460,6 +512,7 @@
   // Quy ước chọn của Revit: Ctrl + bấm / kéo = thêm, Shift + bấm / kéo = bớt, không phím = chọn lại.
   function selMode(e) { return e.ctrlKey || e.metaKey ? 'add' : e.shiftKey ? 'remove' : ''; }
   function applySel(hits, mode) {
+    selLevel = currentId;
     if (mode === 'add') hits.forEach(function (x) { if (selection.indexOf(x) < 0) selection.push(x); });
     else if (mode === 'remove') selection = selection.filter(function (x) { return hits.indexOf(x) < 0; });
     else selection = hits.slice();
@@ -488,6 +541,7 @@
     if (e.button === 1 || (e.button === 0 && tool === 'pan')) { drag = {x: e.clientX, y: e.clientY, cx: view.cx, cy: view.cy}; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; e.preventDefault(); return; }
     if (e.button !== 0) return;
     var pt = pointer(e);
+    if (edit && edit.handles(tool)) { edit.click(pt); draw(); renderProps(); return; }
     if (tool === 'select') { var sp = point(e); press = {x: sp[0], y: sp[1], mode: selMode(e)}; canvas.setPointerCapture(e.pointerId); }
     else if (tool === 'measure') { if (!measure || measure.done) measure = {a: pt, b: null, done: false}; else { measure.b = constrain(measure.a, pt); measure.done = true; } }
     else if (tool === 'guide') guideClick(pt);
@@ -500,9 +554,10 @@
       if (!box && Math.hypot(p[0] - press.x, p[1] - press.y) > DRAG_PX) box = {x0: press.x, y0: press.y, x1: p[0], y1: p[1]};
       if (box) { box.x1 = p[0]; box.y1 = p[1]; draw(); return; }
     }
-    pointer(e);
+    var pt = pointer(e);
+    if (edit && edit.handles(tool)) edit.move(pt);
     var h = tool === 'select' ? pickAt(cursor[0], cursor[1]) : null;
-    if (h !== hover) { hover = h; renderProps(); }
+    if (h !== hover) { hover = h; if (!visibleSelection().length) renderProps(); }
     draw();
   }
   function onUp(e) {
@@ -536,11 +591,16 @@
     var t = e.target; if (t && /^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName)) return;
     if (!$('pv-keys').hidden) { if (e.key === 'Escape') toggleKeys(); return; }
     var k = e.key;
-    if (e.ctrlKey || e.metaKey) { if (k.toLowerCase() === 'a') { selection = shapes.filter(function (x) { return visible[x.layer]; }); draw(); renderProps(); e.preventDefault(); } return; }
+    if (e.ctrlKey || e.metaKey) {
+      var kl = k.toLowerCase();
+      if (kl === 'z' && !e.shiftKey) { opts.undo(); e.preventDefault(); return; }
+      if (kl === 'y' || (kl === 'z' && e.shiftKey)) { opts.redo(); e.preventDefault(); return; }
+      if (kl === 'a') { selLevel = currentId; selection = shapes.filter(function (x) { return visible[x.layer]; }); draw(); renderProps(); e.preventDefault(); } return; }
     if (e.altKey) return;
+    if (k === 'Delete' || k === 'Backspace') { deleteSelection(); e.preventDefault(); return; }
     if (k === 'Escape') {
       resetChord(); note = '';
-      if (draft || measure || box) { draft = null; measure = null; box = null; press = null; draw(); } else { setTool('select'); selection = []; renderProps(); draw(); }
+      if (draft || measure || box || (edit && edit.busy())) { draft = null; measure = null; box = null; press = null; if (edit) edit.cancel(); draw(); } else { setTool('select'); selection = []; renderProps(); draw(); }
     } else if (k === 'Tab') {
       if (tool === 'select' && cursor) {
         var n = pickAll(cursor[0], cursor[1]).length; if (n > 1) { tabIdx = (tabIdx + (e.shiftKey ? -1 : 1) + n) % n; hover = pickAt(cursor[0], cursor[1]); renderProps(); draw(); e.preventDefault(); }
@@ -550,7 +610,7 @@
 
   var api = {
     init: function (options) {
-      opts = options; root = $('tab-plan'); canvas = $('pv-canvas'); ctx = canvas.getContext('2d');
+      opts = options; edit = options.edit || null; root = $('tab-plan'); canvas = $('pv-canvas'); ctx = canvas.getContext('2d');
       status = {xy: $('pv-xy'), hint: $('pv-hint'), zoom: $('pv-zoom')};
       loadKeys(); buildTop($('pv-top')); buildSide($('pv-side')); buildKeys(); refreshBadges(); setTool('select'); renderProps();
       var box2 = $('pv-vcb'); box2.disabled = false; box2.placeholder = 'Gõ số + Enter';
@@ -566,22 +626,25 @@
     },
     // Danh sách tầng và tầng đang xem (đồng bộ với các tab khác).
     setLevels: function (levels, current) {
-      levelList = levels.map(function (l) { return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab}; }); currentId = current; renderTabs(); renderProps();
+      levelList = levels.map(function (l) { return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab}; }); if (currentId !== current && edit) edit.cancel(); currentId = current; renderTabs(); renderProps(); renderOptions();
     },
     update: function (preview) {
-      data = preview; hover = null; selection = []; snap = null; draft = null; box = null; press = null;
+      var keep = selLevel === currentId ? selection.map(function (x) { return x.kind + '|' + x.ref; }) : [];
+      data = preview; hover = null; snap = null; draft = null; box = null; press = null;
       var b = worldBounds(data), key = b ? b.join(',') : '';
-      buildShapes(); renderProps();
+      buildShapes(); selection = shapes.filter(function (x) { return keep.indexOf(x.kind + '|' + x.ref) >= 0; }); renderProps(); renderOptions();
       if (key !== boundsKey) { boundsKey = key; fitted = false; }
       if (!fitted && !root.hidden) { resize(); } else draw();
     },
     show: function () { resize(); },
+    refreshHistory: refreshHistory, scale: function () { return view.s; }, bounds: function () { return worldBounds(data) || [0, 0, 1000, 1000]; },
+    snapPoint: function (w) { var r = snapOn ? snapAt(w[0], w[1]) : null; return r ? r.p : null; },
     reloadKeys: function () { loadKeys(); buildKeys(); refreshBadges(); },
     fit: fitView,
     // Dùng cho test: trạng thái xem và số phần tử đang vẽ.
     debug: function () {
       var counts = {}; shapes.forEach(function (s) { counts[s.layer] = (counts[s.layer] || 0) + 1; });
-      return {view: {cx: view.cx, cy: view.cy, s: view.s}, size: size, tool: tool, counts: counts, hover: hover && hover.text, selected: selection.length === 1 ? selection[0].title : (selection.length ? selection.length + ' phần tử' : null), selection: selection.map(function (x) { return x.title; }), snap: snap && {p: snap.p, text: snap.text, rank: snap.rank}, guides: levelGuides().length, guideLines: levelGuides().map(function (g) { return {p: g.p, d: g.d}; }), measure: measure && {a: measure.a, b: measure.b, done: measure.done}, draft: draft && (draft.ref ? 'ref' : 'first'), snapOn: snapOn, chord: chord, keymap: Object.assign({}, keymap), tabIdx: tabIdx, hoverCount: hoverCount, level: currentId, tabs: levelList.length, visible: Object.assign({}, visible), axes: data && data.ok ? data.axes.length : 0};
+      return {view: {cx: view.cx, cy: view.cy, s: view.s}, size: size, tool: tool, counts: counts, hover: hover && hover.text, selected: selection.length === 1 ? selection[0].title : (selection.length ? selection.length + ' phần tử' : null), selection: selection.map(function (x) { return x.title; }), snap: snap && {p: snap.p, text: snap.text, rank: snap.rank}, guides: levelGuides().length, guideLines: levelGuides().map(function (g) { return {p: g.p, d: g.d}; }), measure: measure && {a: measure.a, b: measure.b, done: measure.done}, draft: draft && (draft.ref ? 'ref' : 'first'), snapOn: snapOn, edit: edit && edit.debug(), chord: chord, keymap: Object.assign({}, keymap), tabIdx: tabIdx, hoverCount: hoverCount, level: currentId, tabs: levelList.length, visible: Object.assign({}, visible), axes: data && data.ok ? data.axes.length : 0};
     },
     toScreen: toScreen, toWorld: toWorld
   };

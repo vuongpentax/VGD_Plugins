@@ -170,3 +170,14 @@ main.plan-tab[hidden] { display: none; }
 .pv-key-msg.warn { color: var(--vgd-muted); }
 .pv-key-src { color: var(--vgd-muted); font-size: 11px; white-space: nowrap; }
 .pv-keys-foot { margin-top: 8px; text-align: right; }
+.pv-options { display: flex; align-items: center; gap: 12px; padding: 4px 12px; border-bottom: 1px solid var(--vgd-border); background: var(--vgd-tint); overflow-x: auto; scrollbar-width: none; }
+.pv-options[hidden] { display: none; }
+.pv-options b { color: var(--vgd-accent-strong); white-space: nowrap; }
+.pv-options label { margin: 0; gap: 4px; white-space: nowrap; font-size: 12px; }
+.pv-options select { height: 26px; max-width: 240px; }
+.pv-opt-note { font-size: 12px; color: var(--vgd-muted); }
+.pv-edit-h { margin: 10px 0 4px; font-size: 12px; color: var(--vgd-muted); font-weight: 600; }
+.pv-field { display: flex; flex-direction: column; align-items: stretch; gap: 2px; margin: 4px 0; font-size: 12px; }
+.pv-field select, .pv-field input[type=number] { width: 100%; height: 26px; }
+.pv-field input[type=checkbox] { align-self: flex-start; }
+.pv-issues { margin: 0; padding-left: 16px; font-size: 11px; color: var(--vgd-danger); }

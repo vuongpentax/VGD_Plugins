@@ -162,7 +162,7 @@ Tài liệu tham khảo: `docs/reference/vtbim/` (phần Ruby mã hóa, JS của
 |---|---|---|---|
 | P1 | Khung mặt bằng | Tab Mặt bằng dùng canvas, pan/zoom/fit, thanh công cụ nhóm, thanh nhập số (VCB), Undo/Redo, chọn tầng; hiển thị lưới, cột, dầm, tường, cửa, sàn từ dữ liệu | test UI vẽ đúng, zoom/pan |
 | P2 (ĐÃ LÀM, 0.10.0-beta.3; đường gióng chưa lưu vào dữ liệu, thành trục phụ ở P3) | Chọn, bắt điểm, đo, đường gióng | Chọn đơn/khung/Shift, bắt điểm, đo khoảng cách và góc, đường gióng song song | test UI, test bắt điểm |
-| P3 | Vẽ kết cấu kiểu Revit | Lưới, cột, dầm, tường, sàn, cửa bằng bấm điểm; **thanh tùy chọn**; bảng Thuộc tính sửa được (chọn Loại, thông số riêng); hoàn tác / làm lại; ghi thẳng vào dữ liệu tầng; đường gióng đổi thành trục phụ | test dữ liệu sau khi vẽ khớp thao tác bằng tay |
+| P3 (ĐÃ LÀM, 0.10.0-beta.5; đường gióng dùng làm vị trí trục khi vẽ lưới, trục phụ lệch lưới và tường xiên để sau) | Vẽ kết cấu kiểu Revit | Lưới, cột, dầm, tường, sàn, cửa bằng bấm điểm; **thanh tùy chọn**; bảng Thuộc tính sửa được (chọn Loại, thông số riêng); hoàn tác / làm lại; ghi thẳng vào dữ liệu tầng; đường gióng đổi thành trục phụ | test dữ liệu sau khi vẽ khớp thao tác bằng tay |
 | P4 | Sửa kiểu Revit | Move, Copy, Rotate, Mirror, Offset, Trim, Align, Delete, mảng, ống hút (Match); **kích thước tạm thời** | test từng lệnh trên dữ liệu |
 | P5 | Cây dự án | Project Browser: tầng, mặt bằng, loại cột / dầm / tường / cửa; thay các tab lẻ khi đủ chức năng | test UI |
 | P5b | Nét 2D và ghi chú | Line, Polyline, Rect, Circle, Arc, chữ, kích thước, cốt cao độ (lớp ghi chú theo tầng) | test lưu và nạp lại |
