@@ -4,5 +4,6 @@ Chỉ để đọc, **không** nạp vào SketchUp và **không** đóng vào RB
 
 - `5d_auto_info/`: bảng thông tin đối tượng. Dùng để đối chiếu tên cột và quy ước Chọn cột (`languages/resources/vi-VN.json`, `en-US.json`, `html/dialog.html`, `assets/presets/default_presets.json`).
 - `5d_auto_tag/`: quản lý và gắn tag. Dùng khi phát triển phần quản lý / gắn tag tự động cho BIM (`html/main.html`, `js/`, `assets/default_settings.json`).
+- `vtbim/`: tài liệu của VTBim do người dùng tải lên, dùng làm ý tưởng cấu trúc tính năng cho VGD Structure.
 
 Quyền sở hữu thuộc 5D+. Cần bỏ khỏi repo nếu repo công khai hoặc khi phát hành; không sao chép nguyên mã sang plugin VGD.
