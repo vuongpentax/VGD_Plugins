@@ -21,6 +21,10 @@ module VGD
       MIN_COLUMN_HEIGHT = 300.0 # chiều cao cột (đến đáy sàn tầng trên) tối thiểu
       ID_PATTERN = /\Asl_[0-9a-f]{8}\z/
       MODES = %w[auto center min max].freeze
+      FREE_ID = {'cột' => /\Afc_[0-9a-f]{8}\z/, 'dầm' => /\Afb_[0-9a-f]{8}\z/, 'tường' => /\Afw_[0-9a-f]{8}\z/}.freeze
+      FREE_LIMIT = 1_000_000.0  # tọa độ phần tử tự do (mm)
+      FREE_MIN_LENGTH = 100.0
+      FREE_ORTHO_TOLERANCE = 0.05 # đầu mút lệch dưới mức này (mm) thì coi là ngang hoặc dọc và làm thẳng
       CONTROL = /[\u0000-\u001f\u007f]/
 
       Error = Class.new(ArgumentError)
@@ -72,7 +76,8 @@ module VGD
           walls, dropped_w = picks!((raw || {})['walls'], span_refs, wall_types, name, 'tường', WallTypes)
           slabs, dropped_s = cell_picks!((raw || {})['slabs'], cell_refs, name, 'sàn')
           ceilings, dropped_k = cell_picks!((raw || {})['ceilings'], cell_refs, name, 'trần')
-          openings, dropped_o = openings!((raw || {})['openings'], span_refs, opening_types, name)
+          free_walls = walls.select { |_ref, w| w.key?('free') }.keys
+          openings, dropped_o = openings!((raw || {})['openings'], span_refs + free_walls, opening_types, name)
           removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k + dropped_o
           {'id' => id, 'name' => name, 'elevation' => elevation, 'slab_thickness' => slab.to_f.round(1), 'ceiling_height' => ceiling_height.to_f.round(1), 'ceiling_thickness' => ceiling_thickness.to_f.round(1),
            'column_type' => type_id, 'beam_type' => beam_type, 'wall_type' => wall_type, 'picks' => {'columns' => columns, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings, 'openings' => openings}}
@@ -88,8 +93,10 @@ module VGD
         value.is_a?(Numeric) && value.to_f.finite?
       end
 
-      # picks.columns / picks.beams: {mã giao điểm hoặc nhịp => {type?, x? / y? hoặc p?}}; chỉ giữ giá trị khác mặc định.
-      # Cột có kiểu đặt x, y; dầm có kiểu đặt p (theo phương vuông góc với dầm). Mã không còn trên lưới thì bỏ (đếm).
+      # picks.columns / picks.beams / picks.walls: {mã giao điểm hoặc nhịp => {type?, x? / y? hoặc p?}}; chỉ giữ giá trị khác mặc định.
+      # Cột có kiểu đặt x, y; dầm, tường có kiểu đặt p (theo phương vuông góc). Mã không còn trên lưới thì bỏ (đếm).
+      # Phần tử TỰ DO (không theo lưới, cột mốc P4b-1) nằm cùng chỗ nhưng theo mã riêng fc_ / fb_ / fw_ + 8 chữ số 16 và có khóa 'free':
+      #   cột {'free' => {'x', 'y', 'rot' (0 hoặc 90)}}, dầm và tường {'free' => {'a' => [x, y], 'b' => [x, y]}} chỉ ngang hoặc dọc. Không bị bỏ khi lưới đổi.
       def self.picks!(raw, refs, types, level_name, label, type_module)
         return [{}, 0] if raw.nil?
         axes = label == 'cột' ? %w[x y] : %w[p]
@@ -97,14 +104,20 @@ module VGD
         dropped = 0
         raw.each do |ref, pick|
           raise Error, "Tầng “#{level_name}”: #{label} #{ref} không hợp lệ." unless ref.is_a?(String) && pick.is_a?(Hash)
+          type = pick['type']
+          raise Error, "Tầng “#{level_name}”: #{label} #{ref} dùng loại #{label} không tồn tại." unless type.nil? || type_module.find(types, type)
+          entry = {}
+          entry['type'] = type if type
+          if pick.key?('free')
+            raise Error, "Tầng “#{level_name}”: #{label} tự do có mã #{ref} không hợp lệ." unless ref.match?(FREE_ID.fetch(label))
+            entry['free'] = free_pick!(pick['free'], label, ref, level_name)
+            picks[ref] = entry
+            next
+          end
           unless refs.include?(ref)
             dropped += 1
             next
           end
-          entry = {}
-          type = pick['type']
-          raise Error, "Tầng “#{level_name}”: #{label} #{ref} dùng loại #{label} không tồn tại." unless type.nil? || type_module.find(types, type)
-          entry['type'] = type if type
           axes.each do |axis|
             mode = pick.key?(axis) ? pick[axis] : 'auto'
             raise Error, "Tầng “#{level_name}”: #{label} #{ref} có kiểu đặt #{axis.upcase} không hợp lệ." unless MODES.include?(mode)
@@ -113,6 +126,31 @@ module VGD
           picks[ref] = entry
         end
         [picks, dropped]
+      end
+
+      def self.free_pick!(free, label, ref, level_name)
+        raise Error, "Tầng “#{level_name}”: #{label} tự do #{ref} thiếu dữ liệu vị trí." unless free.is_a?(Hash)
+        coord = lambda do |v|
+          raise Error, "Tầng “#{level_name}”: tọa độ của #{label} tự do #{ref} phải là số (mm), không quá #{FREE_LIMIT.to_i}." unless number?(v) && v.abs <= FREE_LIMIT
+          v.to_f.round(1)
+        end
+        if label == 'cột'
+          rot = free.key?('rot') ? free['rot'] : 0
+          raise Error, "Tầng “#{level_name}”: góc xoay của cột tự do #{ref} chỉ là 0 hoặc 90 độ (góc khác làm ở bước sau)." unless [0, 90].include?(rot)
+          return {'x' => coord.call(free['x']), 'y' => coord.call(free['y']), 'rot' => rot}
+        end
+        a, b = %w[a b].map do |k|
+          pt = free[k]
+          raise Error, "Tầng “#{level_name}”: #{label} tự do #{ref} thiếu đầu mút #{k}." unless pt.is_a?(Array) && pt.size == 2
+          pt.map { |v| coord.call(v) }
+        end
+        if (a[0] - b[0]).abs <= FREE_ORTHO_TOLERANCE then b[0] = a[0]
+        elsif (a[1] - b[1]).abs <= FREE_ORTHO_TOLERANCE then b[1] = a[1]
+        else raise Error, "Tầng “#{level_name}”: #{label} tự do #{ref} phải nằm ngang hoặc dọc (đi xiên làm ở bước sau)."
+        end
+        a, b = b, a if (b[0] - a[0]) + (b[1] - a[1]) < 0 # đầu a luôn là đầu có tọa độ nhỏ hơn
+        raise Error, "Tầng “#{level_name}”: #{label} tự do #{ref} dài #{((b[0] - a[0]).abs + (b[1] - a[1]).abs).round(1)} mm, cần ít nhất #{FREE_MIN_LENGTH.to_i} mm." if (b[0] - a[0]).abs + (b[1] - a[1]).abs < FREE_MIN_LENGTH
+        {'a' => a, 'b' => b}
       end
 
       # picks.slabs / picks.ceilings: {mã ô => {}} (chưa có thuộc tính riêng từng ô). Mã ô không còn trên lưới thì bỏ (đếm).

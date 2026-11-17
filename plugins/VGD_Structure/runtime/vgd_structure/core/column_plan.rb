@@ -37,9 +37,17 @@ module VGD
           items << {ref: ref, type_id: type['id'], type_name: type['name'], w: type['w'], d: type['d'], center: [cx.round(2), cy.round(2)], modes: modes,
                     placement: point[:placement], z0: z0, z1: z1, height: height}
         end
+        # Cột TỰ DO (không theo lưới): đặt đúng tọa độ, xoay 0 hoặc 90 độ (xoay 90 thì đổi chỗ rộng và sâu).
+        level['picks']['columns'].each do |ref, pick|
+          free = pick['free'] or next
+          type = pick['type'] ? ColumnTypes.find(types, pick['type']) : default_type
+          w, d = free['rot'] == 90 ? [type['d'], type['w']] : [type['w'], type['d']]
+          items << {ref: ref, type_id: type['id'], type_name: type['name'], w: w, d: d, center: [free['x'], free['y']], modes: {'x' => 'free', 'y' => 'free'}, placement: 'free', z0: z0, z1: z1, height: height}
+        end
         raise Error, "Quá nhiều cột (#{items.size}); tối đa #{MAX_COLUMNS} mỗi lần dựng." if items.size > MAX_COLUMNS
         x0, y0, x1, y1 = Grid.bounds(grid)
         items.each do |item|
+          next if item[:placement] == 'free' # cột tự do được phép nằm ngoài khung lưới
           min_x = item[:center][0] - item[:w] / 2.0
           max_x = item[:center][0] + item[:w] / 2.0
           min_y = item[:center][1] - item[:d] / 2.0

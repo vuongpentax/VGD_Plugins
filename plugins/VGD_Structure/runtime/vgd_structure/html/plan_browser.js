@@ -19,7 +19,7 @@
   function elementLabel(kind, ref, pick) {
     if (kind === 'opening') { var t = S().openingTypes.filter(function (x) { return x.id === pick.type; })[0]; return (t ? (t.kind === 'door' ? 'Cửa đi ' : 'Cửa sổ ') + t.name : 'Cửa') + ' · ' + pick.wall; }
     var name = {column: 'Cột', beam: 'Dầm', wall: 'Tường', slab: 'Sàn', ceiling: 'Trần'}[kind];
-    return name + ' ' + ref;
+    return name + (pick && pick.free ? ' tự do ' : ' ') + ref;
   }
   // Loại thực sự của một phần tử: loại riêng, không thì loại mặc định của tầng, không thì loại đầu danh sách.
   function effectiveType(kind, level, pick) {

@@ -61,9 +61,29 @@ module VGD
           items << {ref: w[:ref], dir: dir, type_id: w[:type]['id'], type_name: w[:type]['name'], t: w[:w], length: length, height: height, start: start.round(2), finish: finish.round(2),
                     center: w[:center], min: min.map { |v| v.round(2) }, max: max.map { |v| v.round(2) }, mode: w[:mode], placement: span[:placement], z_bottom: z0, z_top: w[:z_top], under_beam: w[:under_beam]}
         end
+        # Tường TỰ DO (ngang hoặc dọc): đầu mút đúng tọa độ nhập; cao tới đáy dầm nào nằm trên tường (cùng tim, chồng lên) hoặc tới đáy sàn tầng trên.
+        beam_items = level['picks']['beams'].empty? ? [] : BeamPlan.plan(grid, types, beam_types, levels, level_id)[:items]
+        level['picks']['walls'].each do |ref, pick|
+          free = pick['free'] or next
+          type = pick['type'] ? WallTypes.find(wall_types, pick['type']) : default_type
+          item = BeamPlan.free_item(ref, free, type['t'], type, z_slab, z0, :t)
+          cover = beam_items.select { |b| b[:dir] == item[:dir] && (b[:center] - item[:center]).abs < 1.0 && b[:start] < item[:finish] - EPS && item[:start] < b[:finish] - EPS }
+          z_top = cover.empty? ? z_slab : cover.map { |b| b[:z_bottom] }.min
+          height = (z_top - z0).round(1)
+          if item[:length] < MIN_LENGTH
+            issues << "Tường #{ref}: dài chỉ #{item[:length]} mm, bỏ qua."
+            next
+          end
+          if height < MIN_HEIGHT
+            issues << "Tường #{ref}: chiều cao chỉ #{height} mm (dầm quá thấp), bỏ qua."
+            next
+          end
+          items << item.merge(height: height, z_top: z_top, under_beam: !cover.empty?)
+        end
         opening_issues = place_openings(level, items, opening_types)
         x0, y0, x1, y1 = Grid.bounds(grid)
         items.each do |i|
+          next if i[:placement] == 'free'
           issues << "Tường #{i[:ref]} nhô ra ngoài khung lưới (tâm đặt trên trục biên)." if i[:min][0] < x0 - EPS || i[:max][0] > x1 + EPS || i[:min][1] < y0 - EPS || i[:max][1] > y1 + EPS
         end
         boxes = items.map { |i| [i[:min], i[:max], i] }

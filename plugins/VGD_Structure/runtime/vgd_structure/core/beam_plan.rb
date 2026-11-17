@@ -57,8 +57,18 @@ module VGD
           items << {ref: b[:ref], dir: dir, type_id: b[:type]['id'], type_name: b[:type]['name'], w: b[:w], h: b[:h], length: length, start: start.round(2), finish: finish.round(2), center: b[:center],
                     min: min.map { |v| v.round(2) }, max: max.map { |v| v.round(2) }, mode: b[:mode], placement: span[:placement], z_top: b[:z_top], z_bottom: b[:z_bottom]}
         end
+        # Dầm TỰ DO (ngang hoặc dọc, đầu mút đúng tọa độ nhập; không dừng ở mặt cột).
+        z_bottom_free = ->(type) { (z_top - type['h']).round(1) }
+        picks.each do |ref, pick|
+          free = pick['free'] or next
+          type = pick['type'] ? BeamTypes.find(beam_types, pick['type']) : default_type
+          bottom = z_bottom_free.call(type)
+          raise Error, "Dầm #{type['name']} cao #{type['h'].round} mm không lọt dưới chiều cao tầng “#{level['name']}” (#{column_plan[:height]} mm)." if bottom <= level['elevation'] + EPS
+          items << free_item(ref, free, type['w'], type, z_top, bottom, :h)
+        end
         x0, y0, x1, y1 = Grid.bounds(grid)
         items.each do |i|
+          next if i[:placement] == 'free'
           issues << "Dầm #{label(i)} nhô ra ngoài khung lưới (tâm đặt trên trục biên)." if i[:min][0] < x0 - EPS || i[:max][0] > x1 + EPS || i[:min][1] < y0 - EPS || i[:max][1] > y1 + EPS
         end
         overlaps(items.map { |i| [i[:min], i[:max], i] }).each { |a, c| issues << "Dầm #{label(a)} và #{label(c)} chồng lên nhau." }
@@ -70,6 +80,18 @@ module VGD
           end
         end
         {level: level, next_level: above, z_top: z_top, items: items, issues: issues, columns_height: column_plan[:height]}
+      end
+
+      # Phần tử tuyến tính TỰ DO (dầm hoặc tường): free = {'a' => [x, y], 'b' => [x, y]} đã chuẩn hóa (ngang hoặc dọc, a < b).
+      def self.free_item(ref, free, width, type, z_top, z_bottom, height_key)
+        a, b = free['a'], free['b']
+        dir = a[1] == b[1] ? 'x' : 'y'
+        start, finish = dir == 'x' ? [a[0], b[0]] : [a[1], b[1]]
+        center = dir == 'x' ? a[1] : a[0]
+        min, max = dir == 'x' ? [[start, center - width / 2.0], [finish, center + width / 2.0]] : [[center - width / 2.0, start], [center + width / 2.0, finish]]
+        item = {ref: ref, dir: dir, type_id: type['id'], type_name: type['name'], length: (finish - start).round(2), start: start.round(2), finish: finish.round(2), center: center.round(2),
+                min: min.map { |v| v.round(2) }, max: max.map { |v| v.round(2) }, mode: 'free', placement: 'free', z_top: z_top, z_bottom: z_bottom}
+        height_key == :h ? item.merge(w: width, h: type['h']) : item.merge(t: width)
       end
 
       def self.mode(chosen, side)

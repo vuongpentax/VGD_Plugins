@@ -17,6 +17,7 @@
     line: 'M4 20L20 4', polyline: 'M3 18l6-10 5 7 7-11', rect: 'M3 6h18v12H3Z', circle: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z', arc: 'M4 18a10 10 0 0 1 16 0',
     dim: 'M3 8v8M21 8v8M3 12h18M6 10l-3 2 3 2M18 10l3 2-3 2', text: 'M5 5h14M12 5v14M9 19h6', level: 'M12 3l5 8h-10ZM4 18h16M4 21h16',
     copy: 'M3 3h11v11H3ZM8 8h13v13H8', keys: 'M2 6h20v12H2ZM6 10h1M10 10h1M14 10h1M18 10h1M7 14h10',
+    unlock: 'M7 11V8a5 5 0 0 1 9-3M5 11h14v10H5ZM12 15v3',
     array: 'M3 3h6v6H3ZM15 3h6v6h-6ZM3 15h6v6H3ZM15 15h6v6h-6Z', match: 'M14 4l6 6M12 6l6 6M17 3a2.8 2.8 0 0 1 4 4l-3 3M15 9L6 18l-3 1 1-3 9-9', align: 'M4 3v18M8 7h12M8 13h8M8 19h10',
     undo: 'M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-3', redo: 'M15 14l5-5-5-5M20 9H9a5 5 0 0 0 0 10h3', fit: 'M3 8V3h5M16 3h5v5M21 16v5h-5M8 21H3v-5M14 14l3 3M15 11a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
     snap: 'M6 3v8a6 6 0 0 0 12 0V3M6 7h4M14 7h4', guideclr: 'M3 3l18 9M6 16l12 5M15 3l6 6M21 3l-6 6',
@@ -29,7 +30,7 @@
       ['pan', 'Kéo', '', 'Kéo mặt bằng. Chuột giữa luôn kéo được', 1],
       ['guide', 'Đường gióng (Reference Plane)', '', 'Đường gióng: bấm một nét rồi bấm điểm = gióng song song qua điểm đó (gõ khoảng cách + Enter); bấm điểm đầu mút / giao điểm rồi điểm thứ hai = gióng qua hai điểm. Esc hủy', 1],
       ['measure', 'Đo (Measure)', '', 'Đo: bấm hai điểm, hiện khoảng cách, Δx, Δy, góc (Shift = khóa ngang / dọc; gõ số + Enter = đo theo độ dài)', 1]]],
-    ['Sửa', [['move', 'Move (chọn phần tử trước, bấm giao điểm gốc rồi đích)', ''], ['copy', 'Copy (chọn phần tử trước, bấm giao điểm gốc rồi đích)', ''], ['array', 'Array (nhân bản liên tiếp theo bước đã bấm)', ''], ['rotate', 'Rotate', ''], ['mirror', 'Mirror (chọn phần tử trước, bấm một trục làm trục đối xứng)', ''], ['offset', 'Offset', ''], ['trim', 'Trim', ''], ['align', 'Align', ''], ['match', 'Match (bấm phần tử mẫu rồi các phần tử cùng loại)', ''], ['delete', 'Xóa', '']]]
+    ['Sửa', [['move', 'Move (chọn phần tử trước, bấm điểm gốc rồi điểm đích; hai giao điểm lưới thì dịch theo ô)', ''], ['copy', 'Copy (chọn phần tử trước, bấm điểm gốc rồi điểm đích)', ''], ['array', 'Array (nhân bản liên tiếp theo bước đã bấm)', ''], ['rotate', 'Rotate (chọn phần tử trước, bấm tâm xoay; góc 90 / 180 / 270 ở thanh tùy chọn)', ''], ['mirror', 'Mirror (chọn phần tử trước, bấm một trục hoặc đường gióng làm trục đối xứng)', ''], ['offset', 'Offset (chọn dầm / tường trước, bấm phía cần dời; khoảng cách ở thanh tùy chọn hoặc gõ số + Enter)', ''], ['trim', 'Trim (nối góc L: bấm tường 1 rồi tường 2, đúng phần muốn giữ)', ''], ['align', 'Align (bấm đường chuẩn rồi các phần tử cần căn)', ''], ['match', 'Match (bấm phần tử mẫu rồi các phần tử cùng loại)', ''], ['unlock', 'Mở khóa lưới (đổi cột, dầm, tường theo lưới thành phần tử tự do)', ''], ['delete', 'Xóa', '']]]
   ];
   var SIDE_GROUPS = [
     ['Thiết kế', [['grid', 'Lưới trục', ''], ['column', 'Cột', ''], ['beam', 'Dầm', ''], ['wall', 'Tường', ''], ['slab', 'Sàn', ''], ['ceiling', 'Trần', ''], ['door', 'Cửa đi', ''], ['window', 'Cửa sổ', '']]],
@@ -43,7 +44,7 @@
     ['snap', 'Bật / tắt bắt điểm (Snaps Off)', 'SO', 'Revit'], ['props', 'Bảng Thuộc tính', 'PP', 'Revit'], ['browser', 'Cây dự án (Project Browser)', 'PB', 'Tự đặt'], ['vis', 'Hiển thị lớp (Visibility / Graphics)', 'VG', 'Revit'], ['keys', 'Bảng phím tắt', 'KS', 'Revit'],
     ['wall', 'Tường (Wall)', 'WA', 'Revit'], ['door', 'Cửa đi (Door)', 'DR', 'Revit'], ['window', 'Cửa sổ (Window)', 'WN', 'Revit'], ['column', 'Cột (Column)', 'CL', 'Revit'], ['beam', 'Dầm (Beam)', 'BM', 'Revit'],
     ['grid', 'Lưới trục (Grid)', 'GR', 'Revit'], ['slab', 'Sàn (Floor)', 'FL', 'Tự đặt'], ['ceiling', 'Trần (Ceiling)', 'CE', 'Tự đặt'],
-    ['move', 'Move', 'MV', 'Revit'], ['copy', 'Copy', 'CO', 'Revit'], ['array', 'Array (nhân bản liên tiếp)', 'AR', 'Revit'], ['match', 'Match (khớp loại)', 'MA', 'Revit'], ['align', 'Align', 'AL', 'Revit'], ['rotate', 'Rotate', 'RO', 'Revit'], ['mirror', 'Mirror (chọn trục)', 'MM', 'Revit'], ['offset', 'Offset', 'OF', 'Revit'], ['trim', 'Trim / Extend', 'TR', 'Revit'], ['delete', 'Xóa (Delete)', 'DE', 'Revit'],
+    ['move', 'Move', 'MV', 'Revit'], ['copy', 'Copy', 'CO', 'Revit'], ['array', 'Array (nhân bản liên tiếp)', 'AR', 'Revit'], ['match', 'Match (khớp loại)', 'MA', 'Revit'], ['align', 'Align', 'AL', 'Revit'], ['unlock', 'Mở khóa lưới (thành phần tử tự do)', 'UL', 'Tự đặt'], ['rotate', 'Rotate', 'RO', 'Revit'], ['mirror', 'Mirror (chọn trục)', 'MM', 'Revit'], ['offset', 'Offset', 'OF', 'Revit'], ['trim', 'Trim / Extend', 'TR', 'Revit'], ['delete', 'Xóa (Delete)', 'DE', 'Revit'],
     ['line', 'Line', 'LI', 'Revit'], ['polyline', 'Polyline', 'PL', 'Tự đặt'], ['rect', 'Chữ nhật', 'RC', 'Tự đặt'], ['circle', 'Đường tròn', 'CC', 'Tự đặt'], ['arc', 'Cung', 'AC', 'Tự đặt'],
     ['dim', 'Kích thước (Dimension)', 'DI', 'Revit'], ['text', 'Chữ (Text)', 'TX', 'Revit'], ['level', 'Cốt cao độ (Spot Elevation)', 'EL', 'Revit']
   ];
@@ -51,7 +52,7 @@
   var MIN_SCALE = 0.001, MAX_SCALE = 5; // px trên mm
   var opts, root, canvas, ctx, status = {}, levelList = [], currentId = null, selection = [], propsOpen = true;
   var pendingSelect = null, pendingDim = null, edit = null, modify = null, lastDims = [], dimHits = [], dimInput = null, selLevel = null, opts2 = null, hoverCount = 0, keymap = {}, chord = '', chordTimer = null, tabIdx = 0, hoverSig = '', guides = {}, measure = null, draft = null, snap = null, snapOn = true, note = '', press = null, box = null, shiftKey = false;
-  var SNAP_PX = 10, DRAG_PX = 4, LIVE_EDIT = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'door', 'window', 'delete', 'move', 'copy', 'array', 'mirror', 'match'];
+  var SNAP_PX = 10, DRAG_PX = 4, LIVE_EDIT = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'door', 'window', 'delete', 'move', 'copy', 'array', 'mirror', 'match', 'offset', 'align', 'trim', 'rotate', 'unlock'];
   var view = {cx: 0, cy: 0, s: 0.05}, data = null, boundsKey = '', fitted = false, tool = 'select', shapes = [], hover = null, cursor = null, drag = null;
   var visible = {grid: true, slab: true, ceiling: false, beam: true, wall: true, opening: true, column: true};
   var size = {w: 300, h: 200, dpr: 1};
@@ -156,8 +157,8 @@
     }
   }
   // ---- Thanh tùy chọn (Options Bar): hiện khi chọn công cụ vẽ ----
-  var NOTES = {grid: '', column: 'Bấm vào một giao điểm của lưới.', slab: 'Bấm vào một ô của lưới.', ceiling: 'Bấm vào một ô của lưới.', move: 'Bấm giao điểm gốc rồi giao điểm đích.', copy: 'Bấm giao điểm gốc rồi giao điểm đích.', match: 'Bấm phần tử mẫu rồi các phần tử cùng loại.'};
-  var TOOL_NAMES = {move: 'Move', copy: 'Copy', array: 'Array', mirror: 'Mirror', match: 'Match', grid: 'Lưới trục', column: 'Cột', beam: 'Dầm', wall: 'Tường', slab: 'Sàn', ceiling: 'Trần', door: 'Cửa đi', window: 'Cửa sổ'};
+  var NOTES = {grid: '', column: 'Bấm vào một giao điểm của lưới.', slab: 'Bấm vào một ô của lưới.', ceiling: 'Bấm vào một ô của lưới.', move: 'Bấm điểm gốc rồi điểm đích.', copy: 'Bấm điểm gốc rồi điểm đích.', match: 'Bấm phần tử mẫu rồi các phần tử cùng loại.', align: 'Bấm đường chuẩn rồi các phần tử cần căn.', trim: 'Bấm tường / dầm 1 rồi 2, đúng phần muốn giữ.'};
+  var TOOL_NAMES = {offset: 'Offset', align: 'Align', trim: 'Trim', rotate: 'Rotate', unlock: 'Mở khóa lưới', move: 'Move', copy: 'Copy', array: 'Array', mirror: 'Mirror', match: 'Match', grid: 'Lưới trục', column: 'Cột', beam: 'Dầm', wall: 'Tường', slab: 'Sàn', ceiling: 'Trần', door: 'Cửa đi', window: 'Cửa sổ'};
   function renderOptions() {
     var bar = $('pv-options'); if (!bar) return; bar.replaceChildren();
     var h = ed(); if (!h) { bar.hidden = true; return; }
@@ -166,7 +167,7 @@
       var lab = el('label', {}, bar); el('span', {text: o.label}, lab); var c;
       if (o.kind === 'number') { c = el('input', {type: 'number', 'data-opt': o.id, min: String(o.min), max: String(o.max), step: '1', 'aria-label': o.label}, lab); c.value = o.value; c.onchange = function () { h.setOption(tool, o.id, c.value); renderOptions(); }; }
       else if (o.kind === 'checkbox') { c = el('input', {type: 'checkbox', 'data-opt': o.id, 'aria-label': o.label}, lab); c.checked = !!o.value; c.onchange = function () { h.setOption(tool, o.id, c.checked); canvas.focus(); }; }
-      else { c = el('select', {'data-opt': o.id, 'aria-label': o.label}, lab); o.values.forEach(function (v) { c.append(new Option(v[1], v[0])); }); c.value = o.value; c.onchange = function () { h.setOption(tool, o.id, c.value); canvas.focus(); }; }
+      else { c = el('select', {'data-opt': o.id, 'aria-label': o.label}, lab); o.values.forEach(function (v) { c.append(new Option(v[1], v[0])); }); c.value = o.value; c.onchange = function () { h.setOption(tool, o.id, c.value); renderOptions(); canvas.focus(); }; }
     });
     if (!h.options(tool).length) el('span', {class: 'pv-opt-note', text: NOTES[tool] || ''}, bar);
   }
@@ -299,10 +300,10 @@
     function add(layer, poly, title, rows, text) { shapes.push({layer: layer, kind: layer, ref: cur.ref, poly: poly, title: title, rows: rows, text: text}); }
     section('slabs').forEach(function (i) { cur = i; add('slab', rectPoly(i.min, i.max), 'Sàn ' + i.ref, [['Dày', mm(i.thickness)], ['Mặt trên', mm(i.z_top)], ['Diện tích', i.area + ' m²']], 'Sàn ' + i.ref + ' · dày ' + i.thickness + ' mm · ' + i.area + ' m²'); });
     section('ceilings').forEach(function (i) { cur = i; add('ceiling', i.polygon, 'Trần ' + i.ref, [['Dày', mm(i.thickness)], ['Mặt dưới', mm(i.z_bottom)], ['Diện tích', i.area + ' m²']], 'Trần ' + i.ref + ' · ' + i.area + ' m²'); });
-    section('beams').forEach(function (i) { cur = i; add('beam', rectPoly(i.min, i.max), 'Dầm ' + i.ref, [['Loại', i.type_name], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Dài', mm(i.length)], ['Đỉnh', mm(i.z_top)]], 'Dầm ' + i.ref + ' · ' + i.type_name + ' · dài ' + i.length + ' mm'); });
-    section('walls').forEach(function (i) { cur = i; add('wall', rectPoly(i.min, i.max), 'Tường ' + i.ref, [['Loại', i.type_name], ['Dày', mm(i.t)], ['Dài', mm(i.length)], ['Cao', mm(i.height)], ['Số cửa', String((i.openings || []).length)]], 'Tường ' + i.ref + ' · ' + i.type_name + ' · dày ' + i.t + ' · dài ' + i.length + ' · cao ' + i.height + ' mm'); });
+    section('beams').forEach(function (i) { cur = i; add('beam', rectPoly(i.min, i.max), (i.placement === 'free' ? 'Dầm tự do ' : 'Dầm ') + i.ref, [['Loại', i.type_name], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Dài', mm(i.length)], ['Đỉnh', mm(i.z_top)]], 'Dầm ' + i.ref + ' · ' + i.type_name + ' · dài ' + i.length + ' mm'); });
+    section('walls').forEach(function (i) { cur = i; add('wall', rectPoly(i.min, i.max), (i.placement === 'free' ? 'Tường tự do ' : 'Tường ') + i.ref, [['Loại', i.type_name], ['Dày', mm(i.t)], ['Dài', mm(i.length)], ['Cao', mm(i.height)], ['Số cửa', String((i.openings || []).length)]], 'Tường ' + i.ref + ' · ' + i.type_name + ' · dày ' + i.t + ' · dài ' + i.length + ' · cao ' + i.height + ' mm'); });
     section('openings').forEach(function (i) { var k = i.kind === 'door' ? 'Cửa đi' : 'Cửa sổ'; cur = i; add('opening', rectPoly(i.min, i.max), k + ' ' + i.type_name, [['Loại', k], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Cao ngưỡng', mm(i.sill)], ['Tường', i.wall]], k + ' ' + i.type_name + ' · ' + i.w + ' × ' + i.h + ' mm · ngưỡng ' + i.sill); });
-    section('columns').forEach(function (i) { cur = i; add('column', rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), 'Cột ' + i.ref, [['Loại', i.type_name], ['Rộng × sâu', i.w + ' × ' + i.d + ' mm'], ['Tâm', Math.round(i.center[0]) + ', ' + Math.round(i.center[1])]], 'Cột ' + i.ref + ' · ' + i.type_name + ' · ' + i.w + ' × ' + i.d + ' mm'); });
+    section('columns').forEach(function (i) { cur = i; add('column', rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), (i.placement === 'free' ? 'Cột tự do ' : 'Cột ') + i.ref, [['Loại', i.type_name], ['Rộng × sâu', i.w + ' × ' + i.d + ' mm'], ['Tâm', Math.round(i.center[0]) + ', ' + Math.round(i.center[1])]], 'Cột ' + i.ref + ' · ' + i.type_name + ' · ' + i.w + ' × ' + i.d + ' mm'); });
   }
   function inside(poly, x, y) {
     var c = false;
@@ -370,7 +371,8 @@
     }
     shapes.forEach(function (s) {
       if (!visible[s.layer]) return;
-      var n = s.poly.length;
+      var n = s.poly.length, bb = bboxOf(s.poly);
+      if (s.layer !== 'slab' && s.layer !== 'ceiling') cand([(bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2], 2, 'Tâm'); // tâm cột, dầm, tường, cửa (như SC của Revit)
       for (var i = 0; i < n; i++) {
         var a = s.poly[i], b = s.poly[(i + 1) % n];
         cand(a, 0, 'Đầu mút');
@@ -542,7 +544,7 @@
     for (var k = 0; k <= 12; k++) { var t = k / 12 * Math.PI / 2, p = pt(a0 + w * Math.cos(t), mid + dir * w * Math.sin(t)), q = toScreen(p[0], p[1]); if (k) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }
     ctx.lineWidth = 1; ctx.strokeStyle = color; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
   }
-  function usesSnap() { return tool === 'measure' || tool === 'guide' || tool === 'grid'; }
+  function usesSnap() { return tool === 'measure' || tool === 'guide' || tool === 'grid' || (edit && edit.handles(tool) && edit.freeMode && edit.freeMode(tool)) || (modify && modify.handles(tool) && ['move', 'copy', 'array', 'rotate'].indexOf(tool) >= 0); }
   function toolHint() {
     if (ed()) return ed().hint();
     if (tool === 'measure') {
@@ -638,6 +640,8 @@
       var nrm = [-draft.ref.d[1], draft.ref.d[0]], side = cur && ((cur[0] - draft.ref.p[0]) * nrm[0] + (cur[1] - draft.ref.p[1]) * nrm[1]) < 0 ? -1 : 1;
       addGuide([draft.ref.p[0] + nrm[0] * side * n, draft.ref.p[1] + nrm[1] * side * n], draft.ref.d); note = 'Đã gióng song song cách ' + n + ' mm.'; draw(); return true;
     }
+    if (edit && edit.handles(tool) && edit.typed) { var okTyped = edit.typed(n, cur); draw(); renderProps(); return okTyped; }
+    if (modify && modify.handles(tool) && modify.typed) { var okM = modify.typed(n); draw(); renderProps(); return okM; }
     if (tool === 'measure' && measure && !measure.done && cur) {
       var u = unit([constrain(measure.a, cur)[0] - measure.a[0], constrain(measure.a, cur)[1] - measure.a[1]]);
       measure.b = [measure.a[0] + u[0] * n, measure.a[1] + u[1] * n]; measure.done = true; draw(); return true;
@@ -703,6 +707,23 @@
       if (levelId !== currentId) { pendingSelect = {level: levelId, keys: keys}; opts.onLevel(levelId); return; }
       applyKeys(keys); renderProps(); draw();
     },
+    guides: function () { return levelGuides(); },
+    // Đường (cạnh phần tử, trục, đường gióng) gần điểm w trong 10 px màn hình, kèm hướng: {p, d}; null nếu không có.
+    lineAt: function (w) {
+      var tolW = SNAP_PX / view.s, best = null;
+      function distLine(l) { var t = (w[0] - l.p[0]) * l.d[0] + (w[1] - l.p[1]) * l.d[1]; return Math.hypot(w[0] - (l.p[0] + l.d[0] * t), w[1] - (l.p[1] + l.d[1] * t)); }
+      axisLines().concat(levelGuides().map(function (g) { return {p: g.p, d: g.d}; })).forEach(function (l) { var d = distLine(l); if (d <= tolW && (!best || d < best.dist)) best = {p: l.p, d: l.d, dist: d}; });
+      shapes.forEach(function (sh) {
+        if (!visible[sh.layer]) return;
+        for (var i = 0; i < sh.poly.length; i++) {
+          var a = sh.poly[i], b = sh.poly[(i + 1) % sh.poly.length], len = Math.hypot(b[0] - a[0], b[1] - a[1]); if (len < 1e-6) continue;
+          var l = {p: a, d: [(b[0] - a[0]) / len, (b[1] - a[1]) / len]}, near = nearOnSegment(w, a, b), d = Math.hypot(near[0] - w[0], near[1] - w[1]);
+          if (d <= tolW && (!best || d < best.dist)) best = {p: l.p, d: l.d, dist: d};
+        }
+      });
+      return best;
+    },
+    say: function (text) { note = text; draw(); },
     shapeAt: function (w) { return pickAll(w[0], w[1])[0] || null; }, finish: function () { var m = modify ? modify.hint() : ''; setTool('select'); note = m; draw(); },
     refreshHistory: refreshHistory, scale: function () { return view.s; }, bounds: function () { return worldBounds(data) || [0, 0, 1000, 1000]; },
     snapPoint: function (w) { var r = snapOn ? snapAt(w[0], w[1]) : null; return r ? r.p : null; },

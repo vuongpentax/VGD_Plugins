@@ -44,7 +44,7 @@
     return {id: l.id, name: l.name, elevation: l.elevation, slab_thickness: l.slab, column_type: l.columnType || null, beam_type: l.beamType || null, wall_type: l.wallType || null, ceiling_height: l.ceilingHeight, ceiling_thickness: l.ceilingThickness,
             picks: {columns: clonePicks(l.picks), beams: clonePicks(l.beamPicks), walls: clonePicks(l.wallPicks), slabs: clonePicks(l.slabPicks), ceilings: clonePicks(l.ceilingPicks), openings: clonePicks(l.openingPicks)}};
   }
-  function clonePicks(picks) { var out = {}; Object.keys(picks).forEach(function (k) { out[k] = Object.assign({}, picks[k]); }); return out; }
+  function clonePicks(picks) { var out = {}; Object.keys(picks).forEach(function (k) { out[k] = JSON.parse(JSON.stringify(picks[k])); }); return out; } // sao sâu: phần tử tự do có khóa 'free' lồng nhau
   function fromRubyLevel(l) {
     return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab_thickness, columnType: l.column_type, beamType: l.beam_type || null, wallType: l.wall_type || null, ceilingHeight: l.ceiling_height, ceilingThickness: l.ceiling_thickness,
             picks: clonePicks((l.picks && l.picks.columns) || {}), beamPicks: clonePicks((l.picks && l.picks.beams) || {}), wallPicks: clonePicks((l.picks && l.picks.walls) || {}),
@@ -886,8 +886,9 @@
   }
   window.VGDS = {receive: receive, _state: state, mutate: mutate, undo: undo, redo: redo, history: function () { return {undo: undoStack.length, redo: redoStack.length}; },
     api: {level: currentLevel, isTop: isTop, rid: rid, toAxes: toAxes, allSpans: allSpans, allCells: allCells, allRefs: allRefs, wallOpenings: wallOpenings, addAxis: addAxis, modes: {x: MODE_X, y: MODE_Y, p: MODE_P}}};
-  window.VGDPlanEdit.init({state: state, api: window.VGDS.api, mutate: mutate, scale: function () { return window.VGDPlan.scale(); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, bounds: function () { return window.VGDPlan.bounds(); }});
-  window.VGDPlanModify.init({state: state, api: window.VGDS.api, mutate: mutate, scale: function () { return window.VGDPlan.scale(); }, bounds: function () { return window.VGDPlan.bounds(); }, shapeAt: function (w) { return window.VGDPlan.shapeAt(w); }, finish: function () { window.VGDPlan.finish(); }});
+  window.VGDPlanEdit.init({state: state, api: window.VGDS.api, mutate: mutate, say: function (t) { window.VGDPlan.say(t); }, scale: function () { return window.VGDPlan.scale(); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, bounds: function () { return window.VGDPlan.bounds(); }});
+  window.VGDPlanModify.init({state: state, api: window.VGDS.api, mutate: mutate, scale: function () { return window.VGDPlan.scale(); }, bounds: function () { return window.VGDPlan.bounds(); }, shapeAt: function (w) { return window.VGDPlan.shapeAt(w); }, finish: function () { window.VGDPlan.finish(); },
+    snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, lineAt: function (w) { return window.VGDPlan.lineAt(w); }, guides: function () { return window.VGDPlan.guides(); }});
   window.VGDPlan.init({onLevel: setLevelFromPlan, undo: undo, redo: redo, history: window.VGDS.history, edit: window.VGDPlanEdit, modify: window.VGDPlanModify, browser: window.VGDPlanBrowser});
   var BROWSER_PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', opening: 'openingPicks'};
   window.VGDPlanBrowser.init({state: state, currentLevel: function () { return state.level; }, axes: toAxes,

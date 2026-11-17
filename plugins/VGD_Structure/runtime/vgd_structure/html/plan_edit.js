@@ -6,7 +6,7 @@
   var GOOD = '#2F7BFF', BAD = '#E5484D', TOL_NODE = 14, TOL_COLUMN = 28, TOL_SPAN = 12, OPENING_GAP = 50;
   var DESIGN = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'door', 'window'];
   var PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', opening: 'openingPicks'};
-  var opt = {column: {type: '', x: 'auto', y: 'auto'}, beam: {type: '', p: 'auto'}, wall: {type: '', p: 'auto'}, door: {type: '', flip: '0'}, window: {type: '', flip: '0'}, grid: {dir: 'x'}};
+  var opt = {column: {type: '', x: 'auto', y: 'auto', mode: 'grid', rot: '0'}, beam: {type: '', p: 'auto', mode: 'grid'}, wall: {type: '', p: 'auto', mode: 'grid'}, door: {type: '', flip: '0'}, window: {type: '', flip: '0'}, grid: {dir: 'x'}};
   var tool = null, chain = null, target = null, note = '';
 
   function lvl() { return A.level(); }
@@ -50,7 +50,18 @@
     var v = tool === 'door' || tool === 'window' ? [] : [['', 'Theo loại mặc định của tầng']];
     return v.concat(typesFor(tool).map(function (t) { return [t.id, typeLabel(t, tool)]; }));
   }
+  var MODE_VALUES = [['grid', 'Theo lưới (giao điểm / nhịp)'], ['free', 'Tự do (bắt điểm bất kỳ)']];
+  function freeMode(t) { return !!(opt[t] && opt[t].mode === 'free' && (t === 'column' || t === 'beam' || t === 'wall')); }
+  function r1(v) { return Math.round(v * 10) / 10; }
   function options(t) {
+    if (freeMode(t)) {
+      var head = [{id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'free'}, {id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}];
+      return t === 'column' ? head.concat([{id: 'rot', label: 'Xoay', values: [['0', '0°'], ['90', '90° (đổi rộng và sâu)']], value: opt.column.rot}]) : head;
+    }
+    if (t === 'column' || t === 'beam' || t === 'wall') { var m = {id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'grid'}, rest = optionsGrid(t); return [m].concat(rest); }
+    return optionsGrid(t);
+  }
+  function optionsGrid(t) {
     if (t === 'column') return [{id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}, {id: 'x', label: 'Vị trí X', values: modeList('x'), value: opt.column.x}, {id: 'y', label: 'Vị trí Y', values: modeList('y'), value: opt.column.y}];
     if (t === 'beam' || t === 'wall') return [{id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}, {id: 'p', label: 'Vị trí ngang', values: modeList('p'), value: opt[t].p}];
     if (t === 'door' || t === 'window') return [{id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}, {id: 'flip', label: 'Cánh', values: [['0', 'Mặc định'], ['1', 'Đổi mặt']], value: opt[t].flip}];
@@ -105,6 +116,49 @@
   }
   function openingPos(wall, w) { var along = (wall.dir === 'x' ? w[0] : w[1]) - wall.start; return Math.round(along / 10) * 10; }
 
+  // ---- Vẽ TỰ DO (P4b-1): cột đặt tại điểm bất kỳ; dầm, tường chỉ ngang / dọc, đầu mút đúng điểm bấm ----
+  function freePoint(w) { var s2 = host.snapPoint(w) || w; return [r1(s2[0]), r1(s2[1])]; }
+  function orthoEnd(from, w) { // điểm cuối cùng hàng hoặc cùng cột với điểm đầu (theo phương con trỏ lệch nhiều hơn)
+    var p = freePoint(w), horizontal = Math.abs(p[0] - from[0]) >= Math.abs(p[1] - from[1]);
+    return horizontal ? [p[0], from[1]] : [from[0], p[1]];
+  }
+  function lengthOf(a, b) { return Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]); }
+  function addFreeColumn(p) {
+    var id = A.rid('fc_'), type = currentType('column'), pick = {free: {x: p[0], y: p[1], rot: Number(opt.column.rot) || 0}};
+    if (type) pick.type = type;
+    host.mutate(function () { lvl().picks[id] = pick; });
+    return id;
+  }
+  function addFreeLinear(t, a, b) {
+    if ((b[0] - a[0]) + (b[1] - a[1]) < 0) { var sw = a; a = b; b = sw; } // đầu a luôn là đầu có tọa độ nhỏ hơn (cùng quy ước với Ruby)
+    var id = A.rid(t === 'beam' ? 'fb_' : 'fw_'), type = currentType(t), pick = {free: {a: a.slice(), b: b.slice()}};
+    if (type) pick.type = type;
+    host.mutate(function () { lvl()[PICKS[t]][id] = pick; });
+    return id;
+  }
+  function freeMove(w) {
+    if (tool === 'column') { target = {free: freePoint(w)}; return; }
+    if (!chain) { target = {free: freePoint(w), start: true}; return; }
+    var end = orthoEnd(chain.p, w); target = lengthOf(chain.p, end) >= 100 ? {free: end, end: true} : {free: end, tooShort: true};
+  }
+  function freeClick(w) {
+    freeMove(w); if (!target) return;
+    if (tool === 'column') { var id = addFreeColumn(target.free); note = 'Đã đặt cột tự do tại ' + target.free[0] + ', ' + target.free[1] + ' mm.'; return id; }
+    if (!chain) { chain = {free: true, p: target.free, ref: 'tự do'}; return; }
+    if (target.tooShort) { note = 'Đoạn quá ngắn (tối thiểu 100 mm).'; return; }
+    var a = chain.p, b = target.free, label = tool === 'beam' ? 'dầm' : 'tường';
+    addFreeLinear(tool, a, b); note = 'Đã thêm ' + label + ' tự do dài ' + lengthOf(a, b) + ' mm.'; chain = {free: true, p: b, ref: 'tự do'};
+  }
+  // Gõ số + Enter khi đang kéo dầm / tường tự do: đoạn dài đúng n mm theo hướng con trỏ.
+  function typed(n, cursor) {
+    if (!freeMode(tool) || tool === 'column') { note = 'Ô nhập số dùng khi vẽ dầm / tường TỰ DO (sau khi bấm điểm đầu).'; return false; }
+    if (!chain) { note = 'Hãy bấm điểm đầu trước rồi gõ độ dài.'; return false; }
+    if (n < 100) { note = 'Độ dài tối thiểu 100 mm.'; return false; }
+    var c = cursor || chain.p, horizontal = Math.abs(c[0] - chain.p[0]) >= Math.abs(c[1] - chain.p[1]), sign = (horizontal ? c[0] - chain.p[0] : c[1] - chain.p[1]) >= 0 ? 1 : -1;
+    var b = horizontal ? [r1(chain.p[0] + sign * n), chain.p[1]] : [chain.p[0], r1(chain.p[1] + sign * n)];
+    addFreeLinear(tool, chain.p, b); note = 'Đã thêm ' + (tool === 'beam' ? 'dầm' : 'tường') + ' tự do dài ' + n + ' mm.'; chain = {free: true, p: b, ref: 'tự do'};
+    return true;
+  }
   function activate(t) { tool = DESIGN.indexOf(t) >= 0 ? t : null; chain = null; target = null; note = ''; }
   function cancel() { chain = null; target = null; note = ''; }
   function busy() { return !!chain; }
@@ -113,6 +167,7 @@
   function move(w) {
     target = null; if (!tool) return;
     if (blocked(tool)) return;
+    if (freeMode(tool)) { freeMove(w); return; }
     if (tool === 'grid') { var s = host.snapPoint(w) || w; target = {pos: S && opt.grid.dir === 'x' ? Math.round(s[0]) : Math.round(s[1])}; return; }
     if (tool === 'column') { var n = nearestNode(w, TOL_COLUMN); if (n) target = {node: n, exists: !!lvl().picks[n.ref]}; return; }
     if (tool === 'beam' || tool === 'wall') {
@@ -134,6 +189,7 @@
   function click(w) {
     note = ''; if (!tool) return;
     var why = blocked(tool); if (why) { note = why; return; }
+    if (freeMode(tool)) { freeClick(w); return; }
     move(w);
     if (tool === 'grid') {
       if (!target) return;
@@ -175,6 +231,12 @@
     if (!tool) return '';
     if (note) return note;
     var why = blocked(tool); if (why) return why;
+    if (freeMode(tool)) {
+      if (tool === 'column') return target && target.free ? 'Bấm để đặt cột tự do tại ' + target.free[0] + ', ' + target.free[1] + ' mm (bắt điểm đang bật). Esc kết thúc.' : 'Cột tự do: bấm một điểm bất kỳ. Esc kết thúc.';
+      var nm = tool === 'beam' ? 'Dầm' : 'Tường';
+      if (!chain) return nm + ' tự do: bấm điểm đầu (bắt điểm). Esc kết thúc.';
+      return nm + ' tự do: bấm điểm cuối (tự giữ ngang / dọc)' + (target && target.end ? ', dài ' + lengthOf(chain.p, target.free) + ' mm' : '') + ' hoặc gõ độ dài + Enter; bấm tiếp để nối chuỗi. Esc kết thúc.';
+    }
     if (tool === 'grid') return 'Trục mới: bấm vị trí (bắt được đường gióng và điểm). Chọn trục đứng / ngang ở thanh tùy chọn. Esc kết thúc.';
     if (tool === 'column') return target ? (target.exists ? 'Cột ' + target.node.ref + ' đã có.' : 'Bấm để đặt cột ' + target.node.ref + '.') : 'Cột: bấm một giao điểm của lưới. Esc kết thúc.';
     if (tool === 'beam' || tool === 'wall') {
@@ -190,6 +252,19 @@
   // Hình xem trước theo tọa độ thế giới.
   function ghost() {
     var g = [];
+    if (tool && freeMode(tool) && !blocked(tool)) {
+      if (tool === 'column') {
+        if (target && target.free) { var ty = typeById('column', currentType('column')) || S.types[0], sw = Number(opt.column.rot) === 90 ? [ty.d, ty.w] : [ty.w, ty.d], c = target.free;
+          g.push({t: 'poly', poly: [[c[0] - sw[0] / 2, c[1] - sw[1] / 2], [c[0] + sw[0] / 2, c[1] - sw[1] / 2], [c[0] + sw[0] / 2, c[1] + sw[1] / 2], [c[0] - sw[0] / 2, c[1] + sw[1] / 2]], color: GOOD, alpha: 0.3}); g.push({t: 'dot', p: c, color: GOOD, r: 5}); }
+        return g;
+      }
+      if (chain) { g.push({t: 'dot', p: chain.p, color: GOOD, r: 5}); }
+      if (target && target.free) {
+        if (chain) { g.push({t: 'line', a: chain.p, b: target.free, color: target.tooShort ? BAD : GOOD, width: 5, alpha: 0.5}); if (target.end) g.push({t: 'text', p: target.free, text: lengthOf(chain.p, target.free) + ' mm'}); }
+        g.push({t: 'dot', p: target.free, color: target.tooShort ? BAD : GOOD, r: 5});
+      }
+      return g;
+    }
     if (!tool || !target || blocked(tool)) return g;
     if (tool === 'grid') {
       var b = host.bounds(), pos = target.pos, dirx = opt.grid.dir === 'x';
@@ -230,11 +305,34 @@
   // ---- Thuộc tính của phần tử đang chọn (sửa ngay, như bảng Properties của Revit) ----
   function field(id, label, kind, values, value, apply) { return {id: id, label: label, kind: kind, values: values, value: value, apply: apply}; }
   function edit(fn) { host.mutate(fn); }
+  // Thuộc tính của phần tử TỰ DO: tọa độ nhập trực tiếp (mm). Giá trị sai (đoạn ngắn hơn 100 mm, đầu 'từ' >= đầu 'đến') thì không áp dụng và báo.
+  function freeProps(shape, pick, setType) {
+    var f = pick.free, kind = shape.kind;
+    var out = [field('type', 'Loại', 'select', typeValues(kind), pick.type || '', setType)];
+    function setFree(next) { edit(function () { pick.free = next; }); }
+    if (kind === 'column') {
+      return out.concat([field('x', 'X tâm (mm)', 'number', null, f.x, function (v) { if (isFinite(v)) setFree({x: r1(v), y: f.y, rot: f.rot}); }),
+                         field('y', 'Y tâm (mm)', 'number', null, f.y, function (v) { if (isFinite(v)) setFree({x: f.x, y: r1(v), rot: f.rot}); }),
+                         field('rot', 'Xoay', 'select', [['0', '0°'], ['90', '90° (đổi rộng và sâu)']], String(f.rot || 0), function (v) { setFree({x: f.x, y: f.y, rot: Number(v)}); })]);
+    }
+    var h = f.a[1] === f.b[1], key = h ? 0 : 1, cross = h ? 1 : 0;
+    function put(valueKey, v) { // valueKey: 'tim' | 'from' | 'to'
+      if (!isFinite(v)) return; v = r1(v);
+      var a = f.a.slice(), b = f.b.slice();
+      if (valueKey === 'tim') { a[cross] = v; b[cross] = v; } else if (valueKey === 'from') a[key] = v; else b[key] = v;
+      if (b[key] - a[key] < 100) { host.say('Đoạn phải dài ít nhất 100 mm và đầu "Đến" lớn hơn đầu "Từ".'); return; }
+      setFree({a: a, b: b});
+    }
+    return out.concat([field('tim', h ? 'Tim Y (mm)' : 'Tim X (mm)', 'number', null, f.a[cross], function (v) { put('tim', v); }),
+                       field('from', h ? 'Từ X (mm)' : 'Từ Y (mm)', 'number', null, f.a[key], function (v) { put('from', v); }),
+                       field('to', h ? 'Đến X (mm)' : 'Đến Y (mm)', 'number', null, f.b[key], function (v) { put('to', v); })]);
+  }
   function propsFor(shape) {
     var l = lvl(), pick = PICKS[shape.kind] && l[PICKS[shape.kind]][shape.ref], out = [];
     if (!pick) return out;
     function setMode(key) { return function (v) { edit(function () { if (v === 'auto') delete pick[key]; else pick[key] = v; }); }; }
     function setType(v) { edit(function () { if (v) pick.type = v; else delete pick.type; }); }
+    if (pick.free) return freeProps(shape, pick, setType);
     if (shape.kind === 'column') out.push(field('type', 'Loại', 'select', typeValues('column'), pick.type || '', setType), field('x', 'Vị trí X', 'select', modeList('x'), pick.x || 'auto', setMode('x')), field('y', 'Vị trí Y', 'select', modeList('y'), pick.y || 'auto', setMode('y')));
     if (shape.kind === 'beam') out.push(field('type', 'Loại', 'select', typeValues('beam'), pick.type || '', setType), field('p', 'Vị trí ngang', 'select', modeList('p'), pick.p || 'auto', setMode('p')));
     if (shape.kind === 'wall') out.push(field('type', 'Loại', 'select', typeValues('wall'), pick.type || '', setType), field('p', 'Vị trí ngang', 'select', modeList('p'), pick.p || 'auto', setMode('p')));
@@ -249,8 +347,8 @@
 
   window.VGDPlanEdit = {
     init: function (h) { host = h; S = h.state; A = h.api; },
-    handles: handles, activate: activate, cancel: cancel, busy: busy, options: options, setOption: setOption,
+    handles: handles, activate: activate, cancel: cancel, busy: busy, options: options, setOption: setOption, freeMode: freeMode, typed: typed,
     move: move, click: click, hint: hint, ghost: ghost, remove: remove, propsFor: propsFor,
-    debug: function () { return {tool: tool, chain: chain && chain.ref, target: target && {ref: target.node && target.node.ref, end: target.end && target.end.ref, refs: target.refs, span: target.span && target.span.ref, cell: target.cell && target.cell.ref, exists: target.exists, error: target.error, pos: target.pos}, note: note, opt: JSON.parse(JSON.stringify(opt))}; }
+    debug: function () { return {tool: tool, chain: chain && chain.ref, chainPoint: chain && chain.p, freeTarget: target && target.free, target: target && {ref: target.node && target.node.ref, end: target.end && target.end.ref, refs: target.refs, span: target.span && target.span.ref, cell: target.cell && target.cell.ref, exists: target.exists, error: target.error, pos: target.pos}, note: note, opt: JSON.parse(JSON.stringify(opt))}; }
   };
 })();

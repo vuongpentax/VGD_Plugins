@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.10.0-beta.7','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.11.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -698,7 +698,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await type('so');ok((await dbg()).snapOn===false,'gõ SO: tắt bắt điểm');await type('so');ok((await dbg()).snapOn===true,'gõ SO lần nữa: bật lại');
   await type('pp');ok(await page.locator('#pv-props').isHidden(),'gõ PP: ẩn bảng Thuộc tính');await type('pp');ok(await page.locator('#pv-props').isVisible(),'gõ PP lần nữa: hiện lại');
   await type('vg');ok(await page.locator('#pv-layers').isVisible(),'gõ VG: mở danh sách lớp hiển thị');await type('vg');ok(await page.locator('#pv-layers').isHidden(),'gõ VG lần nữa: đóng');
-  await type('wa');ok((await dbg()).tool==='wall' && await page.locator('#pv-options').isVisible(),'gõ WA: công cụ Tường, hiện thanh tùy chọn');await type('ro');ok(/Rotate \(RO\).*cột mốc sau/.test(await page.locator('#pv-hint').innerText()),'gõ RO (chưa làm): báo rõ, không đổi công cụ');await page.keyboard.press('Escape');ok((await dbg()).tool==='select' && await page.locator('#pv-options').isHidden(),'Esc về công cụ Chọn, thanh tùy chọn ẩn');
+  await type('wa');ok((await dbg()).tool==='wall' && await page.locator('#pv-options').isVisible(),'gõ WA: công cụ Tường, hiện thanh tùy chọn');await type('li');ok(/Line \(LI\).*cột mốc sau/.test(await page.locator('#pv-hint').innerText()),'gõ LI (Line, chưa làm): báo rõ, không đổi công cụ');await page.keyboard.press('Escape');ok((await dbg()).tool==='select' && await page.locator('#pv-options').isHidden(),'Esc về công cụ Chọn, thanh tùy chọn ẩn');
   await page.mouse.move(box.x+300,box.y+200);await page.mouse.wheel(0,-600);await wait(60);const zoomed=(await dbg()).view.s;
   await type('wze');await wait(60);
   ok(Math.abs((await dbg()).view.s-d0.view.s)<1e-9 && zoomed>d0.view.s,'gõ sai chữ thứ hai (W, Z, E): bỏ phím sai và vẫn nhận ZE (vừa khung)');
@@ -875,15 +875,15 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   // Không chọn gì rồi gõ lệnh
   await typ('mv');ok((await dbgm()).tool==='select' && /chọn phần tử trước/.test(await hintText()),'gõ MV khi chưa chọn gì: báo phải chọn phần tử trước, không vào lệnh');
   await typ('ma');ok((await dbgm()).tool==='match','gõ MA: công cụ Match (không cần chọn trước)');await page.keyboard.press('Escape');await page.keyboard.press('Escape');
-  ok(await page.locator('#pv-top .pv-ic[data-tool=move]').isEnabled() && await page.locator('#pv-top .pv-ic[data-tool=rotate]').isDisabled() && await page.locator('#pv-top .pv-ic[data-tool=offset]').isDisabled() && await page.locator('#pv-top .pv-ic[data-tool=align]').isDisabled(),'nhóm Sửa: Move, Copy, Array, Mirror, Match dùng được; Rotate, Offset, Trim, Align còn khóa (làm ở P4b)');
+  ok((await page.locator('#pv-top .pv-grp:nth-of-type(2) .pv-ic:disabled').count())===0 && (await page.locator('#pv-top .pv-ic[data-tool=unlock]').count())===1,'nhóm Sửa: mọi lệnh dùng được (Move, Copy, Array, Rotate, Mirror, Offset, Trim, Align, Match, Mở khóa lưới, Xóa)');
   // Chọn nhịp x:B:1-2 (dầm + tường + 2 cửa)
   await winSpan(wB);let sel=(await dbgm()).selection;
   ok(sel.length===4 && sel.some(x=>/^Dầm x:B:1-2/.test(x)) && sel.some(x=>/^Tường x:B:1-2/.test(x)) && sel.filter(x=>/^Cửa/.test(x)).length===2,'khung trong quanh nhịp x:B:1-2: chọn dầm, tường và 2 cửa');
   // Copy: dịch lên một hàng trục (B -> C)
-  await typ('co');ok((await dbgm()).modify.phase==='base' && /giao điểm GỐC/.test(await hintText()),'gõ CO: chờ điểm gốc');
-  await cl(...node(0,1));let md=(await dbgm()).modify;ok(md.phase==='target' && md.base[0]===0 && md.base[1]===1,'bấm giao điểm 1-B làm gốc');
+  await typ('co');ok((await dbgm()).modify.phase==='base' && /điểm GỐC/.test(await hintText()),'gõ CO: chờ điểm gốc');
+  await cl(...node(0,1));let md=(await dbgm()).modify;ok(md.phase==='target' && Math.abs(md.base[0]-gx[0])<1 && Math.abs(md.base[1]-gy[1])<1,'bấm giao điểm 1-B làm gốc');
   const q=await sc(...node(0,2));await page.mouse.move(q[0],q[1]);await wait(40);
-  ok((await dbgm()).modify.target && (await dbgm()).modify.target[1]===2,'rê tới 1-C: nhận điểm đích (xem trước ở hình đích)');
+  ok((await dbgm()).modify.target && Math.abs((await dbgm()).modify.target[1]-gy[2])<1,'rê tới 1-C: nhận điểm đích (xem trước ở hình đích)');
   await clear();await page.mouse.click(q[0],q[1]);await wait(300);
   let bp=await get('beamPicks'),wp=await get('wallPicks'),op=await get('openingPicks');
   ok(bp['x:B:1-2'] && bp['x:C:1-2'] && wp['x:B:1-2'] && wp['x:C:1-2'],'Copy: dầm và tường có thêm ở hàng C, bản gốc còn nguyên');
@@ -944,7 +944,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   wp=await get('wallPicks');op=await get('openingPicks');
   ok(!wp['x:C:1-2'] && wp['x:A:1-2'],'Mirror (bỏ bản gốc) qua trục B: tường x:C:1-2 lật thành x:A:1-2');
   const onA=Object.keys(op).filter(k=>op[k].wall==='x:A:1-2').map(k=>op[k]).sort((a,b)=>a.pos-b.pos);
-  ok(onA.length===2 && Math.abs(onA[0].pos-(wC.length-2800))<=1 && Math.abs(onA[1].pos-(wC.length-1000))<=1 && onA.every(o=>o.flip===true),'cửa lật theo: vị trí = dài tường - vị trí cũ; lật qua trục song song với tường nên đổi mặt cánh');
+  ok(onA.length===2 && Math.abs(onA[0].pos-1000)<=1 && Math.abs(onA[1].pos-2800)<=1 && onA.every(o=>o.flip===true),'cửa lật qua trục SONG SONG với tường: vị trí dọc tường giữ nguyên (tường không đổi chiều), đổi mặt cánh');
   await receive('state',F.state);await receive('preview',F.preview_all_cells);await wait(80);
   // Mirror qua trục đứng, giữ bản gốc
   await winSpan(wB);await typ('mm');await page.check('#pv-options input[data-opt=keep]');const av=await sc(gx[1],gy[1]+800);await page.mouse.move(av[0],av[1]);await page.mouse.click(av[0],av[1]);await wait(250);
@@ -1068,6 +1068,128 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(!exists || (/không có trong xem trước/.test(await page.locator('#pv-hint').innerText()) && (await dbgb()).selection.length===0),'mục không có hình trong xem trước (mã lạ): báo rõ, không chọn gì');
   await page.evaluate(()=>{delete window.VGDS._state.levels[0].picks['9-Z'];window.VGDPlanBrowser.render();});
   await page.keyboard.press('Escape');
+  }
+  // P4b-1: phần tử tự do ngoài lưới
+  {
+  const typ=async s=>{for(const ch of s)await page.keyboard.press(ch.toLowerCase());await wait(90);};
+  const sc=async(x,y)=>{const bb=await page.locator('#pv-canvas').boundingBox(),q=await page.evaluate(([a,b])=>window.VGDPlan.toScreen(a,b),[x,y]);return [bb.x+q[0],bb.y+q[1]];};
+  const cl=async(x,y)=>{const q=await sc(x,y);await page.mouse.move(q[0],q[1]);await page.mouse.click(q[0],q[1]);};
+  const hv=async(x,y)=>{const q=await sc(x,y);await page.mouse.move(q[0],q[1]);await wait(40);};
+  const drag=async(a,b)=>{const p0=await sc(a[0],a[1]),p1=await sc(b[0],b[1]);await page.mouse.move(p0[0],p0[1]);await page.mouse.down();await page.mouse.move((p0[0]+p1[0])/2,(p0[1]+p1[1])/2,{steps:3});await page.mouse.move(p1[0],p1[1],{steps:3});await page.mouse.up();};
+  const get=k=>page.evaluate(k=>JSON.parse(JSON.stringify(window.VGDS._state.levels[0][k])),k);
+  const dbg4=()=>page.evaluate(()=>window.VGDPlan.debug());
+  const hintT=()=>page.locator('#pv-hint').innerText();
+  const reset=async()=>{await page.keyboard.press('Escape');await page.keyboard.press('Escape');await receive('state',F.state_free);await receive('preview',F.preview_free);await wait(80);};
+  const freeKeys=(o,p)=>Object.keys(o).filter(k=>k.startsWith(p));
+  const wallsF=F.preview_free.walls.items,fw1=wallsF.find(i=>i.ref==='fw_00000001'),fw2=wallsF.find(i=>i.ref==='fw_00000002'),gw=wallsF.find(i=>i.ref==='x:B:1-2');
+  const selWall=async w=>{await drag([w.min[0]-60,w.max[1]+60],[w.max[0]+60,w.min[1]-60]);};
+  await page.click('[data-tab=plan]');
+  if(await page.locator('#pv-browser').isVisible())await page.click('#pv-browser-btn');
+  await reset();await page.keyboard.press('z');await page.keyboard.press('e');await wait(80);
+  ok((await get('picks'))['fc_00000001'].free.x===2000 && (await dbg4()).counts.column===2 && (await dbg4()).counts.wall===3,'xem trước có cả phần tử tự do: 2 cột (1 theo lưới, 1 tự do), 3 tường (1 theo lưới, 2 tự do)');
+  ok(F.preview_free.columns.items.some(i=>i.ref==='fc_00000001' && i.placement==='free') && (await page.evaluate(()=>window.VGDPlan.debug().counts.beam))===1,'phần tử tự do được vẽ cùng phần tử theo lưới');
+  // --- Vẽ cột tự do ---
+  await typ('cl');ok(await page.locator('#pv-options select[data-opt=mode]').isVisible() && (await page.locator('#pv-options select[data-opt=mode]').inputValue())==='grid','công cụ Cột: thanh tùy chọn có "Vị trí: Theo lưới" mặc định');
+  await page.selectOption('#pv-options select[data-opt=mode]','free');await wait(40);
+  ok(await page.locator('#pv-options select[data-opt=rot]').isVisible() && await page.locator('#pv-options select[data-opt=x]').count()===0,'chọn "Tự do": thanh tùy chọn đổi (có Xoay, bỏ kiểu đặt X, Y theo lưới)');
+  await cl(10500,6000);let pk=await get('picks'),nk=freeKeys(pk,'fc_').filter(k=>k!=='fc_00000001');
+  ok(nk.length===1 && Math.abs(pk[nk[0]].free.x-10500)<1 && Math.abs(pk[nk[0]].free.y-6000)<1 && pk[nk[0]].free.rot===0 && !('x' in pk[nk[0]]),'bấm điểm bất kỳ: thêm cột tự do đúng tọa độ (không theo lưới), xoay 0');
+  await page.selectOption('#pv-options select[data-opt=rot]','90');await cl(6000,6000);pk=await get('picks');
+  ok(freeKeys(pk,'fc_').filter(k=>pk[k].free.rot===90).length===1,'chọn xoay 90 rồi bấm: cột tự do có rot = 90');
+  await page.keyboard.press('Control+z');await page.keyboard.press('Control+z');ok(freeKeys(await get('picks'),'fc_').length===1,'hoàn tác hai lần: bỏ hai cột tự do vừa đặt');
+  // --- Vẽ tường tự do theo chuỗi ---
+  await reset();await typ('wa');await page.selectOption('#pv-options select[data-opt=mode]','free');await wait(40);
+  await cl(6000,5000);ok((await dbg4()).edit.chainPoint && Math.abs((await dbg4()).edit.chainPoint[0]-6000)<1 && /điểm cuối/.test(await hintT()),'tường tự do: bấm điểm đầu, chờ điểm cuối');
+  await hv(9000,5300);ok(Math.abs((await dbg4()).edit.freeTarget[1]-5000)<1 && Math.abs((await dbg4()).edit.freeTarget[0]-9000)<1,'rê lệch: điểm cuối tự giữ ngang (y = 5000) theo phương con trỏ lệch nhiều hơn');
+  await page.mouse.click(...(await sc(9000,5300)));let wp=await get('wallPicks'),nw=freeKeys(wp,'fw_').filter(k=>!['fw_00000001','fw_00000002'].includes(k));
+  ok(nw.length===1 && JSON.stringify(wp[nw[0]].free)===JSON.stringify({a:[6000,5000],b:[9000,5000]}),'bấm điểm cuối: thêm tường tự do a = (6000, 5000), b = (9000, 5000)');
+  await hv(10500,5000);await page.fill('#pv-vcb','1500');await page.press('#pv-vcb','Enter');wp=await get('wallPicks');nw=freeKeys(wp,'fw_').filter(k=>!['fw_00000001','fw_00000002'].includes(k));
+  ok(nw.length===2 && nw.some(k=>JSON.stringify(wp[k].free)===JSON.stringify({a:[9000,5000],b:[10500,5000]})),'chuỗi tiếp tục từ điểm cuối; gõ 1500 + Enter: đoạn kế dài đúng 1500 mm theo hướng con trỏ');
+  await page.keyboard.press('Escape');ok((await dbg4()).edit.chainPoint===null,'Esc kết thúc chuỗi');
+  await cl(9500,4000);await cl(7000,4000);wp=await get('wallPicks');
+  ok(Object.values(wp).some(w=>w.free && JSON.stringify(w.free)===JSON.stringify({a:[7000,4000],b:[9500,4000]})),'vẽ từ phải sang trái: đầu a vẫn là đầu nhỏ hơn (cùng quy ước với Ruby)');
+  await page.keyboard.press('Escape');await cl(6000,3000);await cl(6050,3000);ok(/ngắn/.test(await hintT()) && freeKeys(await get('wallPicks'),'fw_').length===nw.length+3,'đoạn ngắn hơn 100 mm: báo và không thêm');
+  // --- Gửi Ruby: dữ liệu tự do hợp lệ ---
+  await clear();await cl(6000,3000);await cl(8000,3000);await wait(300);
+  const payload=await last('grid_preview');
+  const vr=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(payload),encoding:'utf8'}));
+  ok(vr.ok && vr.error===null && vr.free>=5 && vr.free_items>=5 && vr.removed===0,'dữ liệu giao diện vẽ ra được Ruby chấp nhận: chuẩn hóa không lỗi, các phần tử tự do thành mục kế hoạch ('+vr.free+' tự do)');
+  // --- Mở khóa lưới ---
+  await reset();await selWall(gw);ok((await dbg4()).selection.length===1 && /^Tường x:B:1-2/.test((await dbg4()).selection[0]),'chọn tường theo lưới x:B:1-2');
+  await typ('ul');wp=await get('wallPicks');nw=freeKeys(wp,'fw_').filter(k=>!['fw_00000001','fw_00000002'].includes(k));
+  ok(!wp['x:B:1-2'] && nw.length===1 && JSON.stringify(wp[nw[0]].free)===JSON.stringify({a:[gw.start,gw.center],b:[gw.finish,gw.center]}) && /Đã mở khóa lưới cho 1/.test(await hintT()),'UL: tường theo lưới thành tường tự do đúng hình đang thấy (đầu mút, tim), mã lưới biến mất');
+  ok(wp[nw[0]].type===gw.type_id,'giữ loại thực của tường khi mở khóa');
+  await page.keyboard.press('Control+z');ok((await get('wallPicks'))['x:B:1-2'] && freeKeys(await get('wallPicks'),'fw_').length===2,'Ctrl+Z: tường trở lại theo lưới');
+  await page.keyboard.press('Escape');await typ('ul');ok(/hãy chọn phần tử trước/.test(await hintT()),'UL khi chưa chọn gì: báo phải chọn trước');
+  // --- Move / Copy theo véc-tơ ---
+  await reset();await selWall(fw1);ok((await dbg4()).selection.length===2,'chọn tường tự do fw_00000001 cùng cửa của nó');
+  await typ('mv');await cl(7000,4500);await cl(7000,5700);wp=await get('wallPicks');let op=await get('openingPicks');
+  ok(JSON.stringify(wp['fw_00000001'].free)===JSON.stringify({a:[5000,3200],b:[8000,3200]}) && op['op_00000001'].wall==='fw_00000001' && op['op_00000001'].pos===1000,'Move bằng hai điểm bất kỳ (dy = +1200): tường tự do dời tại chỗ (giữ mã), cửa đi theo, vị trí cửa không đổi');
+  await reset();await selWall(fw1);await typ('co');await cl(7000,4500);await cl(7500,4500);wp=await get('wallPicks');op=await get('openingPicks');
+  nw=freeKeys(wp,'fw_').filter(k=>!['fw_00000001','fw_00000002'].includes(k));
+  ok(nw.length===1 && JSON.stringify(wp[nw[0]].free)===JSON.stringify({a:[5500,2000],b:[8500,2000]}) && JSON.stringify(wp['fw_00000001'].free)===JSON.stringify({a:[5000,2000],b:[8000,2000]}),'Copy (dx = +500): tường mới mã riêng, bản gốc còn nguyên');
+  ok(Object.keys(op).length===2 && Object.values(op).filter(o=>o.wall===nw[0]).length===1,'Copy tường tự do: cửa được nhân sang tường mới (mã cửa mới), cửa cũ còn ở tường gốc');
+  await reset();await selWall(gw);await typ('mv');await cl(11000,4500);await cl(11500,4500);wp=await get('wallPicks');nw=freeKeys(wp,'fw_').filter(k=>!['fw_00000001','fw_00000002'].includes(k));
+  ok(!wp['x:B:1-2'] && nw.length===1 && wp[nw[0]].free.a[0]===gw.start+500 && wp[nw[0]].free.a[1]===gw.center,'Move tường THEO LƯỚI tới điểm không phải giao điểm: tự mở khóa rồi dịch tự do (dx = +500)');
+  await reset();await selWall(gw);await typ('mv');await cl(gx[0],gy[1]);await cl(gx[1],gy[1]);wp=await get('wallPicks');
+  ok(!wp['x:B:1-2'] && wp['x:B:2-3'] && freeKeys(wp,'fw_').length===2,'Move bằng hai GIAO ĐIỂM lưới vẫn theo ô: x:B:1-2 → x:B:2-3 (không mở khóa)');
+  // --- Offset ---
+  await reset();await selWall(fw1);await typ('of');ok(await page.locator('#pv-options input[data-opt=distance]').isVisible() && await page.locator('#pv-options input[data-opt=copy]').isChecked(),'gõ OF: thanh tùy chọn có Khoảng cách và Sao chép (mặc định bật)');
+  await page.fill('#pv-options input[data-opt=distance]','700');await page.press('#pv-options input[data-opt=distance]','Tab');
+  await cl(6000,2600);wp=await get('wallPicks');nw=freeKeys(wp,'fw_').filter(k=>!['fw_00000001','fw_00000002'].includes(k));
+  ok(nw.length===1 && JSON.stringify(wp[nw[0]].free)===JSON.stringify({a:[5000,2700],b:[8000,2700]}) && wp['fw_00000001'].free.a[1]===2000,'Offset 700 về phía trên con trỏ: tường mới cách 700 mm (y = 2700), bản gốc còn');
+  await reset();await selWall(fw1);await typ('of');await hv(6000,1500);await page.fill('#pv-vcb','500');await page.press('#pv-vcb','Enter');wp=await get('wallPicks');nw=freeKeys(wp,'fw_').filter(k=>!['fw_00000001','fw_00000002'].includes(k));
+  ok(nw.length===1 && wp[nw[0]].free.a[1]===1500,'gõ 500 + Enter, con trỏ phía dưới: dời xuống 500 mm (y = 1500)');
+  await reset();await selWall(fw2);await typ('of');await page.fill('#pv-options input[data-opt=distance]','300');await page.press('#pv-options input[data-opt=distance]','Tab');await page.uncheck('#pv-options input[data-opt=copy]');await cl(9600,2500);wp=await get('wallPicks');
+  ok(wp['fw_00000002'].free.a[0]===9300 && wp['fw_00000002'].free.b[0]===9300 && freeKeys(wp,'fw_').length===2,'Offset tắt "Sao chép": dời tại chỗ (tường dọc sang phải 300 mm), không tạo thêm phần tử');
+  await reset();await selWall(gw);await typ('of');await page.check('#pv-options input[data-opt=copy]');await page.fill('#pv-options input[data-opt=distance]','400');await page.press('#pv-options input[data-opt=distance]','Tab');await cl(2000,4200);wp=await get('wallPicks');
+  ok(wp['x:B:1-2'] && freeKeys(wp,'fw_').length===3,'Offset tường theo lưới (có Sao chép): bản gốc theo lưới còn, bản mới là tường tự do');
+  // --- Rotate ---
+  await reset();const bF=F.preview_free.beams.items.find(i=>i.ref==='fb_00000001');
+  await drag([bF.min[0]-60,bF.max[1]+60],[bF.max[0]+60,bF.min[1]-60]);await typ('ro');await page.uncheck('#pv-options input[data-opt=copy]');await cl(2000,6000);let bp=await get('beamPicks');
+  ok(JSON.stringify(bp['fb_00000001'].free)===JSON.stringify({a:[2000,5000],b:[2000,7000]}) && Object.keys(bp).length===1,'Rotate 90° quanh tâm dầm (tắt Sao chép): dầm ngang 1000–3000 thành dầm dọc 5000–7000 tại x = 2000 (đầu a vẫn nhỏ hơn)');
+  await reset();await selWall(fw1);await typ('ro');await page.selectOption('#pv-options select[data-opt=angle]','180');await page.uncheck('#pv-options input[data-opt=copy]');await cl(7000,4000);wp=await get('wallPicks');op=await get('openingPicks');
+  ok(JSON.stringify(wp['fw_00000001'].free)===JSON.stringify({a:[6000,6000],b:[9000,6000]}) && op['op_00000001'].pos===2000 && op['op_00000001'].flip===true,'Rotate 180° quanh điểm (7000, 4000): tường sang (6000–9000, y = 6000), đầu tường đổi chỗ nên cửa đổi vị trí (dài - 1000 = 2000) và đổi mặt cánh');
+  await reset();const cF=F.preview_free.columns.items.find(i=>i.ref==='fc_00000001');await cl(cF.center[0],cF.center[1]);await typ('ro');await page.selectOption('#pv-options select[data-opt=angle]','90');await page.uncheck('#pv-options input[data-opt=copy]');await cl(cF.center[0]+1000,cF.center[1]);pk=await get('picks');
+  ok(Math.abs(pk['fc_00000001'].free.x-3000)<1 && Math.abs(pk['fc_00000001'].free.y-4000)<1 && pk['fc_00000001'].free.rot===90,'Rotate 90° (ngược chiều kim đồng hồ) cột quanh điểm (3000, 5000): tâm (2000, 5000) → (3000, 4000) và cột xoay 90° (đổi rộng sâu)');
+  // --- Mirror ---
+  await reset();await selWall(fw1);await typ('mm');await page.uncheck('#pv-options input[data-opt=keep]');await cl(gx[1],4500);wp=await get('wallPicks');op=await get('openingPicks');
+  ok(JSON.stringify(wp['fw_00000001'].free)===JSON.stringify({a:[400,2000],b:[3400,2000]}) && op['op_00000001'].pos===2000 && op['op_00000001'].flip===false,'Mirror tường tự do qua trục 2 (x = 4200): x → 8400 - x; vuông góc với tường nên đổi chiều đầu tường (cửa dài - vị trí), không đổi mặt cánh');
+  // --- Align ---
+  await reset();await typ('al');await cl(gx[2],5000);ok((await dbg4()).modify.alignRef && (await dbg4()).modify.alignRef.dir==='x' && Math.abs((await dbg4()).modify.alignRef.pos-gx[2])<1,'Align: bấm trục 3 (x = 8400) làm đường chuẩn dọc');
+  await cl(9000,2800);wp=await get('wallPicks');
+  ok(wp['fw_00000002'].free.a[0]===8500 && wp['fw_00000002'].free.b[0]===8500,'Align tường dọc dày 200 (mặt 8900–9100): mặt gần nhất (8900) căn vào 8400, tường dời 500 mm (tim = 8500)');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  // --- Trim nối góc L ---
+  await reset();await typ('tr');await cl(7500,2000);await cl(9000,1500);wp=await get('wallPicks');
+  ok(JSON.stringify(wp['fw_00000001'].free)===JSON.stringify({a:[5000,2000],b:[9100,2000]}) && JSON.stringify(wp['fw_00000002'].free)===JSON.stringify({a:[9000,1000],b:[9000,1900]}),'Trim nối góc L: tường 1 chạy tới mặt NGOÀI tường 2 (9100), tường 2 dừng ở mặt tường 1 (y = 1900): hai tường khít, không chồng');
+  op=await get('openingPicks');ok(op['op_00000001'].wall==='fw_00000001' && op['op_00000001'].pos===1000,'Trim: cửa trên tường 1 giữ nguyên chỗ (đầu tường không đổi)');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await page.keyboard.press('Control+z');
+  await typ('tr');await cl(7500,2000);await cl(7600,2000);ok(/khác phần tử đầu|vuông góc/.test(await hintT()),'Trim hai tường song song / cùng phần tử: từ chối, báo lý do');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  // --- Thuộc tính, kích thước tạm thời, xóa của phần tử tự do ---
+  await reset();await cl(cF.center[0],cF.center[1]);
+  ok(await page.locator('#pv-props input[data-field=x]').isVisible() && (await page.locator('#pv-props input[data-field=x]').inputValue())==='2000' && await page.locator('#pv-props select[data-field=rot]').isVisible(),'chọn cột tự do: bảng Thuộc tính có X, Y (nhập số), Xoay');
+  await page.fill('#pv-props input[data-field=x]','2500');await page.press('#pv-props input[data-field=x]','Tab');ok((await get('picks'))['fc_00000001'].free.x===2500,'sửa X trong bảng Thuộc tính: cột tự do dời');
+  await reset();await drag([bF.min[0]-60,bF.max[1]+60],[bF.max[0]+60,bF.min[1]-60]);
+  ok(await page.locator('#pv-props input[data-field=tim]').isVisible() && (await page.locator('#pv-props input[data-field=from]').inputValue())==='1000' && (await page.locator('#pv-props input[data-field=to]').inputValue())==='3000','chọn dầm tự do: Thuộc tính có Tim, Từ, Đến');
+  await page.fill('#pv-props input[data-field=to]','4000');await page.press('#pv-props input[data-field=to]','Tab');ok((await get('beamPicks'))['fb_00000001'].free.b[0]===4000,'sửa "Đến" = 4000: dầm dài ra');
+  await page.fill('#pv-props input[data-field=to]','1050');await page.press('#pv-props input[data-field=to]','Tab');ok((await get('beamPicks'))['fb_00000001'].free.b[0]===4000 && /ít nhất 100/.test(await hintT()),'"Đến" làm đoạn ngắn hơn 100 mm: không áp dụng, báo lý do');
+  await reset();await drag([fw2.min[0]-60,fw2.max[1]+60],[fw2.max[0]+60,fw2.min[1]-60]);let dd=await dbg4();
+  ok(dd.dimList.some(d=>d.id==='length' && d.editable && d.value===2500),'chọn tường tự do: kích thước tạm thời "chiều dài" 2500 sửa được');
+  const bb4=await page.locator('#pv-canvas').boundingBox(),hl=dd.dimHits.find(h=>h.id==='length');await page.mouse.click(bb4.x+hl.x+hl.w/2,bb4.y+hl.y+hl.h/2);await page.fill('.pv-dim-input','4000');await page.press('.pv-dim-input','Enter');
+  ok(JSON.stringify((await get('wallPicks'))['fw_00000002'].free)===JSON.stringify({a:[9000,1000],b:[9000,5000]}),'gõ 4000 vào kích thước: tường tự do dài 4000 (giữ đầu a)');
+  await reset();await selWall(fw1);await page.keyboard.press('Delete');wp=await get('wallPicks');
+  ok(!wp['fw_00000001'] && Object.keys(await get('openingPicks')).length===0 && freeKeys(wp,'fw_').length===1,'Delete tường tự do: xóa cả cửa trên tường');
+  // --- Cây dự án, đề xuất, Ruby ---
+  await reset();await page.click('#pv-browser-btn');
+  const lbl=await page.evaluate(()=>Array.from(document.querySelectorAll('#pv-browser .pb-label')).map(x=>x.textContent));
+  ok(lbl.includes('Cột tự do fc_00000001') && lbl.includes('Tường tự do fw_00000001') && lbl.includes('Dầm tự do fb_00000001') && lbl.includes('Tường x:B:1-2'),'Cây dự án liệt kê phần tử tự do kèm nhãn "tự do", cạnh phần tử theo lưới');
+  await page.click('#pv-browser-btn');
+  await reset();await selWall(fw1);await typ('mv');await cl(7000,4500);await cl(7000,5200);await wait(300);
+  const vr2=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vr2.ok && vr2.free===4 && vr2.free_items===4,'sau Move: Ruby chấp nhận và tính đủ 4 phần tử tự do (cột, dầm, 2 tường)');
+  await reset();
   }
   // Lỗi xem trước
   await page.click('[data-tab=plan]');await receive('preview',F.error);
