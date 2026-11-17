@@ -7,8 +7,8 @@ module VGD
       GROUP_KIND = 'columns'.freeze
       Result = Struct.new(:levels, :total, :removed_orphans, :locked_orphans, :issues)
 
-      # raw_state: dữ liệu CHƯA kiểm tra (từ giao diện); level_ids: mảng mã tầng cần dựng. Kiểm tra lại và lập kế hoạch TRƯỚC khi đụng model.
-      def self.build(model, raw_state, level_ids)
+      # Kiểm tra dữ liệu và lập kế hoạch TRƯỚC khi đụng model (không đổi model). raw_state: dữ liệu CHƯA kiểm tra (từ giao diện).
+      def self.prepare(model, raw_state, level_ids)
         state = State.normalize!(raw_state)
         raise ColumnPlan::Error, 'Hãy chọn ít nhất một tầng để dựng cột.' unless level_ids.is_a?(Array) && !level_ids.empty?
         plans = level_ids.uniq.map { |id| ColumnPlan.plan(state['grid'], state['types'], state['levels'], id) }
@@ -17,25 +17,38 @@ module VGD
         raise ColumnPlan::Error, "Quá nhiều cột (#{total}); tối đa #{ColumnPlan::MAX_COLUMNS} mỗi lần dựng." if total > ColumnPlan::MAX_COLUMNS
         locked = plans.map { |plan| find(model, plan[:level]['id']) }.compact.find(&:locked?)
         raise ColumnPlan::Error, "Nhóm “#{locked.name}” đang bị khóa. Hãy mở khóa rồi dựng lại." if locked
+        {state: state, plans: plans, total: total}
+      end
+
+      # Dựng theo kế hoạch đã chuẩn bị. KHÔNG mở thao tác hoàn tác (người gọi lo, để gộp nhiều loại vào một bước).
+      def self.apply(model, ctx)
+        state = ctx[:state]
+        plans = ctx[:plans]
+        layer = TagStore.ensure(model, Schema::TAGS['column'])
+        definitions = {}
+        plans.each do |plan|
+          old = find(model, plan[:level]['id'])
+          old.erase! if old
+          next if plan[:items].empty?
+          draw_level(model, plan, layer, definitions)
+        end
+        orphans = remove_orphans(model, state['levels'].map { |l| l['id'] })
+        Result.new(plans.map { |plan| {name: plan[:level]['name'], count: plan[:items].size, height: plan[:height]} }, ctx[:total], orphans[:removed], orphans[:locked], plans.flat_map { |plan| plan[:issues] })
+      end
+
+      # Dựng và lưu dữ liệu nguồn trong MỘT bước hoàn tác; lỗi thì hủy cả thao tác.
+      def self.build(model, raw_state, level_ids)
+        ctx = prepare(model, raw_state, level_ids)
         model.start_operation('VGD Structure · Dựng cột', true)
         begin
-          layer = TagStore.ensure(model, Schema::TAGS['column'])
-          definitions = {}
-          plans.each do |plan|
-            old = find(model, plan[:level]['id'])
-            old.erase! if old
-            next if plan[:items].empty?
-            draw_level(model, plan, layer, definitions)
-          end
-          orphans = remove_orphans(model, state['levels'].map { |l| l['id'] })
+          result = apply(model, ctx)
           ModelStore.write(model, raw_state)
           model.commit_operation
         rescue StandardError, ScriptError
           model.abort_operation
           raise
         end
-        Result.new(plans.map { |plan| {name: plan[:level]['name'], count: plan[:items].size, height: plan[:height]} }, total, orphans[:removed], orphans[:locked],
-                   plans.flat_map { |plan| plan[:issues] })
+        result
       end
 
       # Xóa cột của một tầng (hoặc mọi tầng nếu level_id là nil). Trả về số nhóm đã xóa.

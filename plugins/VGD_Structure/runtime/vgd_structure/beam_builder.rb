@@ -7,7 +7,8 @@ module VGD
       MAX_BEAMS = 8000
       Result = Struct.new(:levels, :total, :removed_orphans, :locked_orphans, :issues)
 
-      def self.build(model, raw_state, level_ids)
+      # Kiểm tra dữ liệu và lập kế hoạch TRƯỚC khi đụng model (không đổi model). raw_state: dữ liệu CHƯA kiểm tra (từ giao diện).
+      def self.prepare(model, raw_state, level_ids)
         state = State.normalize!(raw_state)
         raise BeamPlan::Error, 'Hãy chọn ít nhất một tầng để dựng dầm.' unless level_ids.is_a?(Array) && !level_ids.empty?
         plans = level_ids.uniq.map { |id| BeamPlan.plan(state['grid'], state['types'], state['beam_types'], state['levels'], id) }
@@ -16,24 +17,38 @@ module VGD
         raise BeamPlan::Error, "Quá nhiều dầm (#{total}); tối đa #{MAX_BEAMS} mỗi lần dựng." if total > MAX_BEAMS
         locked = plans.map { |plan| find(model, plan[:level]['id']) }.compact.find(&:locked?)
         raise BeamPlan::Error, "Nhóm “#{locked.name}” đang bị khóa. Hãy mở khóa rồi dựng lại." if locked
+        {state: state, plans: plans, total: total}
+      end
+
+      # Dựng theo kế hoạch đã chuẩn bị. KHÔNG mở thao tác hoàn tác (người gọi lo, để gộp nhiều loại vào một bước).
+      def self.apply(model, ctx)
+        state = ctx[:state]
+        plans = ctx[:plans]
+        layer = TagStore.ensure(model, Schema::TAGS['beam'])
+        definitions = {}
+        plans.each do |plan|
+          old = find(model, plan[:level]['id'])
+          old.erase! if old
+          next if plan[:items].empty?
+          draw_level(model, plan, layer, definitions)
+        end
+        orphans = remove_orphans(model, state['levels'].map { |l| l['id'] })
+        Result.new(plans.map { |plan| {name: plan[:level]['name'], count: plan[:items].size, top: plan[:z_top]} }, ctx[:total], orphans[:removed], orphans[:locked], plans.flat_map { |plan| plan[:issues] })
+      end
+
+      # Dựng và lưu dữ liệu nguồn trong MỘT bước hoàn tác; lỗi thì hủy cả thao tác.
+      def self.build(model, raw_state, level_ids)
+        ctx = prepare(model, raw_state, level_ids)
         model.start_operation('VGD Structure · Dựng dầm', true)
         begin
-          layer = TagStore.ensure(model, Schema::TAGS['beam'])
-          definitions = {}
-          plans.each do |plan|
-            old = find(model, plan[:level]['id'])
-            old.erase! if old
-            next if plan[:items].empty?
-            draw_level(model, plan, layer, definitions)
-          end
-          orphans = remove_orphans(model, state['levels'].map { |l| l['id'] })
+          result = apply(model, ctx)
           ModelStore.write(model, raw_state)
           model.commit_operation
         rescue StandardError, ScriptError
           model.abort_operation
           raise
         end
-        Result.new(plans.map { |plan| {name: plan[:level]['name'], count: plan[:items].size, top: plan[:z_top]} }, total, orphans[:removed], orphans[:locked], plans.flat_map { |plan| plan[:issues] })
+        result
       end
 
       def self.remove(model, level_id = nil)

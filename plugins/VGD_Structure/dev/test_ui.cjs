@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.6.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.7.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -408,6 +408,55 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(cb && cb.kind==='ceilings' && JSON.stringify(cb.levels)==='["sl_00000001"]' && cb.state.levels[0].ceiling_height===2800,'Dựng trần: gửi kind = ceilings, tầng, cao trần');
   await receive('plates_built',{kind:'ceilings',message:'Đã dựng 2 trần.',drawn_levels:['sl_00000001']});
   ok(await page.locator('#remove-ceilings').isEnabled() && await page.locator('#remove-slabs').count()===1,'sau khi dựng trần: Xóa trần bấm được');
+  await page.click('[data-tab=grid]');
+
+
+  // ===== Tab Tổng hợp và dựng =====
+  await receive('state',F.state);await receive('preview',F.preview);
+  await page.click('[data-tab=all]');
+  ok(await page.locator('#tab-all').isVisible() && !(await page.locator('#tab-ceilings').isVisible()),'chuyển sang tab Tổng hợp và dựng');
+  const allRows=()=>page.locator('#all-table tr').evaluateAll(rs=>rs.slice(1).map(r=>[...r.querySelectorAll('td')].map(c=>c.textContent)));
+  const ar=await allRows();
+  ok(ar.length===2 && ar[0][0]==='Tầng 1' && JSON.stringify(ar[0].slice(1,6))==='["2","2","2","2","2"]','bảng tổng hợp: tầng 1 có 2 cột, 2 dầm, 2 tường, 2 sàn, 2 trần theo lựa chọn');
+  ok(ar[1][0]==='Tầng 2 (trên cùng: chỉ sàn)' && ar[1][1]==='—' && ar[1][2]==='—' && ar[1][3]==='—' && ar[1][5]==='—' && ar[1][4]==='0','tầng trên cùng: chỉ hiện số sàn, các loại khác là —');
+  ok(ar[0][6]==='—' && await page.locator('#build-all-level').isEnabled() && await page.locator('#build-all-levels').isEnabled(),'chưa dựng gì: cột Đã dựng là —; nút Dựng tất cả bấm được');
+  await clear();
+  await page.click('#propose-level');
+  const pl=await last('propose');
+  ok(pl && pl.scope==='level' && pl.level==='sl_00000001' && pl.levels.length===2 && pl.types.length===1 && pl.beam_types.length===1 && pl.wall_types.length===1 && pl.grid.x_axes.length===4,'Đề xuất cho tầng này: gửi phạm vi, tầng và toàn bộ dữ liệu (Ruby tính đề xuất)');
+  await clear();
+  await page.click('#propose-all');
+  ok((await last('propose')).scope==='all','Đề xuất cho mọi tầng: scope = all');
+  const full=JSON.parse(JSON.stringify(F.state.levels));
+  full[0].picks={columns:Object.fromEntries(['1-A','1-B','1-C','2-A','2-B','2-C','3-A','3-B','3-C','4-A','4-B','4-C'].map(r=>[r,{}])),beams:{'x:A:1-2':{}},walls:{'x:A:1-2':{}},slabs:{'1-2/A-B':{}},ceilings:{}};
+  await receive('levels',{levels:full,message:'Đã đề xuất cho 1 tầng: thêm 12 cột.',proposed:{}});await wait();
+  const ar2=await allRows();
+  ok((await message()).includes('Đã đề xuất') && ar2[0][1]==='12' && ar2[0][2]==='1' && ar2[0][5]==='0','nhận danh sách tầng đề xuất từ Ruby: bảng tổng hợp cập nhật (12 cột)');
+  // Kiểm tra
+  await clear();
+  await page.click('#run-check');
+  ok((await last('check')) && (await last('check')).levels[0].picks.columns && (await last('check')).grid,'Kiểm tra: gửi toàn bộ dữ liệu cho Ruby');
+  await receive('check',F.check_ok);
+  ok((await page.locator('#check-summary').innerText())==='Không có lỗi hay cảnh báo nào.' && await page.locator('#check-list li').count()===0,'báo cáo sạch: không lỗi, không cảnh báo');
+  await receive('check',F.check_warn);
+  const warns=await page.locator('#check-list li').allInnerTexts();
+  ok(/0 lỗi, \d+ cảnh báo\./.test(await page.locator('#check-summary').innerText()) && warns.length>=4 && warns.some(w=>w.startsWith('Tầng 1 · Dầm x:B:1-2') && w.includes('2-B')),'báo cáo có cảnh báo (thiếu cột 2-B): liệt kê theo tầng, dầm không có cột để gối');
+  await page.locator('#tab-all #all-level-select').selectOption('sl_00000002');
+  ok(await page.locator('#check-list li').count()===0,'đổi dữ liệu / tầng làm báo cáo cũ biến mất (không hiện kết quả cũ)');
+  await page.locator('#all-level-select').selectOption('sl_00000001');
+  // Dựng tất cả
+  await receive('state',F.state);await receive('preview',F.preview);await clear();
+  await page.click('[data-tab=all]');
+  await page.click('#build-all-level');
+  const bl=await last('build_all');
+  ok(bl && JSON.stringify(bl.levels)==='["sl_00000001"]' && bl.state.levels[0].picks.walls['x:B:1-2'] && bl.state.wall_types.length===1,'Dựng tất cả tầng đang chọn: gửi tầng và toàn bộ dữ liệu');
+  await clear();await page.click('#build-all-levels');
+  ok(JSON.stringify((await last('build_all')).levels)==='["sl_00000001","sl_00000002"]','Dựng tất cả các tầng: gửi mọi tầng');
+  await receive('all_built',{message:'Đã dựng 10 đối tượng trong một bước hoàn tác: 2 cột.',drawn:{columns:['sl_00000001'],beams:['sl_00000001'],walls:[],slabs:['sl_00000001'],ceilings:[]}});
+  const ar3=await allRows();
+  ok((await message()).includes('một bước hoàn tác') && ar3[0][6]==='Cột, Dầm, Sàn' && ar3[1][6]==='—','sau khi dựng: cột Đã dựng liệt kê các loại đã dựng của tầng');
+  await page.click('[data-tab=columns]');
+  ok(await page.locator('#remove-cols').isEnabled() && await page.locator('#remove-walls').isDisabled(),'các tab riêng nhận trạng thái đã dựng (xóa cột bấm được, xóa tường khóa)');
   await page.click('[data-tab=grid]');
 
   // Lỗi xem trước

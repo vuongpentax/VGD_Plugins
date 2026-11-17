@@ -22,6 +22,7 @@
   <button type="button" role="tab" data-tab="walls" aria-selected="false">Tường</button>
   <button type="button" role="tab" data-tab="slabs" aria-selected="false">Sàn</button>
   <button type="button" role="tab" data-tab="ceilings" aria-selected="false">Trần</button>
+  <button type="button" role="tab" data-tab="all" aria-selected="false">Tổng hợp và dựng</button>
 </nav>
 <main id="tab-grid" class="tab">
   <section class="form" aria-label="Khai báo lưới trục">
@@ -269,6 +270,37 @@
       <button type="button" id="build-all-ceilings">Dựng trần mọi tầng</button>
       <button type="button" id="remove-ceilings" class="danger">Xóa trần tầng này</button>
     </div>
+  </section>
+</main>
+<main id="tab-all" class="tab" hidden>
+  <section class="form wide" aria-label="Tổng hợp và dựng">
+    <fieldset>
+      <legend>Đề xuất bán tự động</legend>
+      <p class="muted small">Chọn sẵn <b>cột ở mọi giao điểm, dầm ở mọi nhịp, tường ở các nhịp biên, sàn và trần ở mọi ô</b>. Tầng trên cùng chỉ đề xuất sàn. Chỉ <b>thêm phần còn thiếu</b>, không đổi lựa chọn bạn đã có (kể cả loại và vị trí riêng). Sau đó xem lại ở từng tab, bỏ bớt hoặc thêm rồi dựng.</p>
+      <div class="actions">
+        <label>Tầng <select id="all-level-select"></select></label>
+        <button type="button" id="propose-level">Đề xuất cho tầng này</button>
+        <button type="button" id="propose-all">Đề xuất cho mọi tầng</button>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Tổng hợp theo tầng (số lựa chọn)</legend>
+      <table class="axes" id="all-table"></table>
+    </fieldset>
+    <fieldset>
+      <legend>Kiểm tra kết cấu</legend>
+      <div class="actions"><button type="button" id="run-check">Kiểm tra</button></div>
+      <p id="check-summary" class="summary" aria-live="polite"></p>
+      <ul id="check-list" class="issues"></ul>
+    </fieldset>
+    <fieldset>
+      <legend>Dựng tất cả (cột, dầm, tường, sàn, trần trong một bước hoàn tác)</legend>
+      <p class="muted small">Kiểm tra mọi thứ trước; có lỗi ở bất kỳ loại nào thì không dựng gì cả và báo rõ. Dựng lại thì thay nhóm cũ của từng loại.</p>
+      <div class="actions">
+        <button type="button" id="build-all-level" class="primary">Dựng tất cả tầng đang chọn</button>
+        <button type="button" id="build-all-levels">Dựng tất cả các tầng</button>
+      </div>
+    </fieldset>
   </section>
 </main>
 <footer><div id="message" role="status" aria-live="polite">Sẵn sàng.</div></footer>

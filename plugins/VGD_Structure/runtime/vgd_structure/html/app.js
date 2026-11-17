@@ -86,6 +86,7 @@
   }
 
   function changed(positionsOnly) {
+    if ($('check-list')) { $('check-list').replaceChildren(); $('check-summary').textContent = ''; }
     if (positionsOnly) refreshPositions();
     clearTimeout(timer);
     timer = setTimeout(function () { call('grid_preview', payload()); }, 150);
@@ -594,14 +595,52 @@
     } else { summary.textContent = ''; }
   }
 
+
+  // ---- Tab Tổng hợp và dựng ----
+  var ALL_KINDS = [['columns', 'picks', 'Cột'], ['beams', 'beamPicks', 'Dầm'], ['walls', 'wallPicks', 'Tường'], ['slabs', 'slabPicks', 'Sàn'], ['ceilings', 'ceilingPicks', 'Trần']];
+  function renderAllTab() {
+    var sel = $('all-level-select'); sel.replaceChildren();
+    state.levels.forEach(function (l) { sel.append(new Option(l.name, l.id)); });
+    sel.value = state.level;
+    var table = $('all-table'); table.replaceChildren();
+    heads(table, ['Tầng'].concat(ALL_KINDS.map(function (k) { return k[2]; })).concat(['Đã dựng']));
+    state.levels.forEach(function (l) {
+      var row = table.insertRow(), top = isTop(l);
+      var name = row.insertCell(); name.textContent = l.name + (top ? ' (trên cùng: chỉ sàn)' : '');
+      ALL_KINDS.forEach(function (k) {
+        var cell = row.insertCell(); cell.className = 'num'; cell.textContent = (top && k[0] !== 'slabs') ? '—' : Object.keys(l[k[1]]).length;
+      });
+      var built = ALL_KINDS.filter(function (k) { return drawnList(k[0]).indexOf(l.id) >= 0; }).map(function (k) { return k[2]; });
+      var d = row.insertCell(); d.className = 'note'; d.textContent = built.length ? built.join(', ') : '—';
+    });
+    renderAllButtons();
+  }
+  function drawnList(kind) { return {columns: state.drawnLevels, beams: state.drawnBeamLevels, walls: state.drawnWallLevels, slabs: state.drawnSlabLevels, ceilings: state.drawnCeilingLevels}[kind]; }
+  function renderAllButtons() {
+    var l = currentLevel();
+    var has = function (lv) { return ALL_KINDS.some(function (k) { return Object.keys(lv[k[1]]).length; }); };
+    $('build-all-level').disabled = !state.previewOk || !has(l);
+    $('build-all-levels').disabled = !state.previewOk || !state.levels.some(has);
+  }
+  function renderCheck(data) {
+    var summary = $('check-summary'), list = $('check-list'); list.replaceChildren();
+    summary.className = data.errors ? 'summary error' : 'summary';
+    summary.textContent = data.errors || data.warnings ? data.errors + ' lỗi, ' + data.warnings + ' cảnh báo.' : 'Không có lỗi hay cảnh báo nào.';
+    data.levels.forEach(function (l) {
+      l.errors.forEach(function (m) { var li = document.createElement('li'); li.textContent = l.name + ' · LỖI · ' + m; list.appendChild(li); });
+      l.warnings.forEach(function (m) { var li = document.createElement('li'); li.className = 'warn'; li.textContent = l.name + ' · ' + m; list.appendChild(li); });
+    });
+  }
+
   function switchTab(tab) {
     state.tab = tab;
     document.querySelectorAll('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-tab') === tab)); });
-    ['grid', 'levels', 'columns', 'beams', 'walls', 'slabs', 'ceilings'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
+    ['grid', 'levels', 'columns', 'beams', 'walls', 'slabs', 'ceilings', 'all'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
     if (tab === 'columns') renderColumnsTab();
     if (tab === 'beams') renderBeamsTab();
     if (tab === 'walls') renderWallsTab();
     CELL_TABS.forEach(function (c) { if (tab === c.kind) renderCellTab(c); });
+    if (tab === 'all') renderAllTab();
   }
 
   function receive(event, data) {
@@ -615,7 +654,7 @@
       state.levels = data.levels.map(fromRubyLevel); state.level = state.levels[0].id; state.selected = null; state.selectedBeam = null; state.selectedWall = null;
       state.drawnLevels = data.drawn_levels || []; state.drawnBeamLevels = data.drawn_beam_levels || []; state.drawnWallLevels = data.drawn_wall_levels || []; state.drawnSlabLevels = data.drawn_slab_levels || []; state.drawnCeilingLevels = data.drawn_ceiling_levels || [];
       $('version').textContent = 'v' + data.version;
-      renderAll(); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); });
+      renderAll(); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab();
       message(data.saved ? 'Đã nạp lưới trục lưu trong model.' : 'Lưới mặc định: sửa các số rồi bấm Vẽ lưới trục.');
     } else if (event === 'preview') {
       state.previewOk = !!data.ok;
@@ -629,11 +668,17 @@
     } else if (event === 'axes') {
       var set = fromAxes(data.axes); state[data.dir] = set; renderAxes(data.dir); changed();
     } else if (event === 'levels') {
-      state.levels = data.levels.map(fromRubyLevel); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); changed(); message(data.message);
+      state.levels = data.levels.map(fromRubyLevel); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab(); changed(); message(data.message);
     } else if (event === 'columns_built') {
       state.drawnLevels = data.drawn_levels || []; renderColumnsButtons(); message(data.message, data.error);
     } else if (event === 'beams_built') {
       state.drawnBeamLevels = data.drawn_beam_levels || []; renderBeamsButtons(); message(data.message, data.error);
+    } else if (event === 'check') {
+      renderCheck(data);
+    } else if (event === 'all_built') {
+      state.drawnLevels = data.drawn.columns || []; state.drawnBeamLevels = data.drawn.beams || []; state.drawnWallLevels = data.drawn.walls || [];
+      state.drawnSlabLevels = data.drawn.slabs || []; state.drawnCeilingLevels = data.drawn.ceilings || [];
+      renderAllTab(); message(data.message);
     } else if (event === 'plates_built') {
       var cfg = CELL_TABS.filter(function (c) { return c.kind === data.kind; })[0];
       if (cfg) { state[cfg.drawn] = data.drawn_levels || []; renderCellButtons(cfg); }
@@ -723,6 +768,12 @@
     };
     $('remove-' + p + 's').onclick = function () { call('plates_remove', {kind: c.kind, level: state.level}); };
   });
+  $('all-level-select').onchange = function () { state.level = $('all-level-select').value; state.selected = null; state.selectedBeam = null; state.selectedWall = null; renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); changed(); renderAllButtons(); };
+  $('propose-level').onclick = function () { var p = payload(); p.scope = 'level'; call('propose', p); };
+  $('propose-all').onclick = function () { var p = payload(); p.scope = 'all'; call('propose', p); };
+  $('run-check').onclick = function () { call('check', payload()); };
+  $('build-all-level').onclick = function () { call('build_all', {state: payload(), levels: [state.level]}); };
+  $('build-all-levels').onclick = function () { call('build_all', {state: payload(), levels: state.levels.map(function (l) { return l.id; })}); };
   $('build').onclick = function () { call('grid_build', payload()); };
   $('remove').onclick = function () { call('grid_remove'); };
   $('reset').onclick = function () { call('grid_reset'); };

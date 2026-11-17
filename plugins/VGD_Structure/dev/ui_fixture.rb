@@ -1,7 +1,7 @@
 # Dữ liệu thật từ Ruby cho test giao diện (trạng thái, xem trước lưới / cột, kết quả tạo trục từ nhịp). In JSON ra stdout.
 require 'json'
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
-%w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/levels core/column_plan core/beam_plan core/wall_plan core/slab_plan core/ceiling_plan core/state core/preview].each { |f| require File.join(ROOT, f) }
+%w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/levels core/column_plan core/beam_plan core/wall_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 state = S::State.default
 refs = S::Grid.intersections(state['grid']).map { |i| i[:ref] }
@@ -17,12 +17,14 @@ all = refs.each_with_object({}) { |r, h| h[r] = {} }
 with = ->(picks, level, beams = beams_two, walls = walls_two, slabs = cells_two, ceilings = cells_two) { state.merge('levels' => state['levels'].each_with_index.map { |l, i| i.zero? ? l.merge('picks' => {'columns' => picks, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings}) : l }, 'level' => level) }
 state_two = with.call(two, 'sl_00000001')
 puts JSON.generate(
-  state: {grid: state['grid'], symbol: state['symbol'], types: state['types'], beam_types: state['beam_types'], wall_types: state['wall_types'], levels: state_two['levels'], saved: false, drawn: false, drawn_levels: [], drawn_beam_levels: [], drawn_wall_levels: [], drawn_slab_levels: [], drawn_ceiling_levels: [], version: '0.6.0-beta.1'},
+  state: {grid: state['grid'], symbol: state['symbol'], types: state['types'], beam_types: state['beam_types'], wall_types: state['wall_types'], levels: state_two['levels'], saved: false, drawn: false, drawn_levels: [], drawn_beam_levels: [], drawn_wall_levels: [], drawn_slab_levels: [], drawn_ceiling_levels: [], version: '0.7.0-beta.1'},
   preview: S::Preview.build(state_two),
   preview_all: S::Preview.build(with.call(all, 'sl_00000001')),
   preview_all_beams: S::Preview.build(with.call(all, 'sl_00000001', all_beams)),
   preview_all_walls: S::Preview.build(with.call(all, 'sl_00000001', beams_two, all_beams)),
   preview_all_cells: S::Preview.build(with.call(all, 'sl_00000001', beams_two, walls_two, all_cells, all_cells)),
+  check_ok: S::Checker.run(S::State.normalize!(with.call(all, 'sl_00000001', all_beams, walls_two, all_cells, all_cells))),
+  check_warn: S::Checker.run(S::State.normalize!(with.call(all.reject { |k, _| k == '2-B' }, 'sl_00000001', all_beams, walls_two, all_cells, all_cells))),
   preview_top: S::Preview.build(state_two.merge('level' => 'sl_00000002')),
   preview_bad_types: S::Preview.build(state_two.merge('types' => [{'id' => 'ct_00000001', 'name' => 'A', 'w' => 5, 'd' => 300}])),
   quick_x: S::Grid.axes_from_spacings('4200, 3600*2', :number), quick_y: S::Grid.axes_from_spacings('5000', :letter),

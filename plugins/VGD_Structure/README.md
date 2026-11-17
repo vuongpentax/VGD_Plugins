@@ -1,10 +1,10 @@
-# VGD Structure 0.6.0-beta.1
+# VGD Structure 0.7.0-beta.1
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
 
-**Cột mốc 5: sàn và trần** (trên nền lưới trục, tầng, cột, dầm, tường). Phần còn lại của kế hoạch: nối với VGD BIM (cột mốc 7) và phát hành.
+**Cột mốc 6: đề xuất bán tự động, kiểm tra và dựng tất cả** (trên nền lưới trục, tầng, cột, dầm, tường, sàn, trần). Phần còn lại của kế hoạch: nối với VGD BIM (cột mốc 7) và phát hành.
 
 **Lưới trục** (menu Extensions → VGD → VGD Structure → Lưới trục, hoặc nút trên thanh công cụ VGD STR):
 - Nhập **trục đứng** (đánh số 1, 2, 3...) và **trục ngang** (đánh chữ A, B, C...; bỏ I và O) với khoảng cách giữa các trục, từng trục sửa được tên và nhịp. Gõ nhanh "4200, 3600*2" rồi bấm Tạo trục từ nhịp (dấu phẩy hoặc khoảng trắng ngăn cách, số lẻ dùng dấu chấm, `*` hoặc `x` là lặp). 2 đến 60 trục mỗi phương, tên tối đa 4 ký tự, nhịp tối thiểu 100 mm.
@@ -39,13 +39,19 @@ Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) th
 
 Sàn và trần cũng: một bước hoàn tác, dựng lại thay nhóm cũ, có xóa, hỏi xác nhận khi dựng hơn 500 ô, dựng chung định nghĩa theo (đa giác, dày), dữ liệu cho VGD BIM (kind slab / ceiling, dày, diện tích). Chưa có lỗ mở trên sàn (cầu thang, giếng trời), chưa có dốc, chưa có sàn lệch cao độ riêng từng ô; trần phẳng, chưa có khung treo.
 
+**Tổng hợp và dựng** (tab "Tổng hợp và dựng"):
+- **Đề xuất bán tự động** cho một tầng hoặc mọi tầng: chọn sẵn **cột ở mọi giao điểm, dầm ở mọi nhịp, tường ở các nhịp biên, sàn và trần ở mọi ô**; tầng trên cùng chỉ đề xuất sàn. Chỉ **thêm phần còn thiếu**, không bao giờ đổi hay xóa lựa chọn bạn đã có (kể cả loại và vị trí riêng), nên bấm lại không thêm gì nữa. Sau đó xem lại ở từng tab (mặt bằng xem trước), bỏ bớt hoặc thêm rồi dựng. Xem trước trong model (overlay) chưa làm: mặt bằng trong cửa sổ là bản xem trước.
+- **Bảng tổng hợp** số lựa chọn từng loại của mỗi tầng, kèm các loại đã dựng trong model.
+- **Kiểm tra kết cấu** (chỉ đọc, không đổi model): gom lỗi (ví dụ cột cao dưới 300 mm, trần cao hơn đáy sàn tầng trên) và cảnh báo (nhô ra ngoài khung lưới, chồng khối, trần chạm dầm, **dầm có đầu không có cột để gối**, tầng trên cùng có lựa chọn sẽ bị bỏ qua) của mọi tầng. Kết quả cũ biến mất khi bạn sửa dữ liệu.
+- **Dựng tất cả tầng đang chọn / mọi tầng**: cột, dầm, tường, sàn, trần trong **một bước hoàn tác duy nhất**. Kiểm tra và lập kế hoạch cho cả năm loại trước khi đụng model: có lỗi ở bất kỳ loại nào thì không dựng gì cả và báo loại nào bị lỗi; nhóm đang bị khóa cũng chặn từ đầu. Hỏi xác nhận khi dựng hơn 500 đối tượng, tối đa 20000 mỗi lần.
+
 Dữ liệu lưu trong model (dictionary `VGD_STRUCT`). VGD BIM chưa đọc cột mốc này (cột mốc 7): cột vẫn hiện trong bảng khối lượng như đối tượng thường.
 
 Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **Tải lại code** nạp lại mã mà không cần mở lại (đóng và mở lại cửa sổ nếu đang mở).
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.6.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.7.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

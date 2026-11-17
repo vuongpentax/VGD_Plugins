@@ -21,7 +21,7 @@ module UI
 end
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
 module VGD; module Structure; VERSION = '9.9.9'; end; end
-%w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/levels core/column_plan core/beam_plan core/wall_plan core/slab_plan core/ceiling_plan core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder plate_builder panel].each { |f| require File.join(ROOT, f) }
+%w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/levels core/column_plan core/beam_plan core/wall_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder plate_builder all_builder panel].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 $model = Sketchup::Model.new
 panel = S::Panel.new
@@ -222,6 +222,43 @@ ok('xóa sàn: drawn_levels rỗng, trần còn nguyên', last_event(dlg, 'plate
 call(dlg, 'plates_remove', {'kind' => 'ceilings', 'level' => plv[0]['id']})
 call(dlg, 'plates_remove', {'kind' => 'ceilings', 'level' => plv[0]['id']})
 ok('xóa khi chưa có: báo, không lỗi', last_event(dlg, 'plates_built')['error'] == true)
+
+# Đề xuất, kiểm tra, dựng tất cả
+call(dlg, 'grid_reset')
+st = last_event(dlg, 'state')
+base = {'grid' => st['grid'], 'types' => st['types'], 'beam_types' => st['beam_types'], 'wall_types' => st['wall_types'], 'levels' => st['levels']}
+call(dlg, 'propose', base.merge('scope' => 'level', 'level' => 'sl_00000001'))
+pr = last_event(dlg, 'levels')
+ok('đề xuất tầng 1: trả danh sách tầng mới (12 cột, 17 dầm, 10 tường, 6 sàn, 6 trần), thông báo nêu số lượng', pr['levels'][0]['picks']['columns'].size == 12 && pr['levels'][0]['picks']['walls'].size == 10 && pr['levels'][1]['picks']['columns'].empty? && pr['message'].include?('12 cột') && pr['proposed']['beams'] == 17)
+call(dlg, 'propose', base.merge('scope' => 'all'))
+pa = last_event(dlg, 'levels')
+ok('đề xuất mọi tầng: tầng 2 là tầng trên cùng (chỉ sàn)', pa['levels'][0]['picks']['columns'].size == 12 && pa['levels'][1]['picks']['columns'].empty? && pa['levels'][1]['picks']['slabs'].size == 6)
+call(dlg, 'propose', base.merge('scope' => 'level', 'level' => 'sl_deadbeef'))
+ok('đề xuất tầng không tồn tại: báo lỗi', last_event(dlg, 'message')['error'] == true)
+call(dlg, 'propose', base.merge('types' => []))
+ok('đề xuất với dữ liệu sai: báo lỗi, không văng', last_event(dlg, 'message')['error'] == true)
+full_state = base.merge('levels' => pr['levels'], 'symbol' => st['symbol'])
+call(dlg, 'check', full_state)
+ck = last_event(dlg, 'check')
+ok('kiểm tra kết cấu: trả báo cáo từng tầng với số lượng và không lỗi', ck['errors'] == 0 && ck['levels'].map { |l| l['name'] } == ['Tầng 1', 'Tầng 2'] && ck['levels'][0]['counts']['columns'] == 12 && ck['levels'][1]['top'] == true)
+call(dlg, 'check', {'grid' => 5})
+ok('kiểm tra với dữ liệu sai: báo lỗi', last_event(dlg, 'message')['error'] == true)
+call(dlg, 'build_all', {'state' => full_state, 'levels' => ['sl_00000001', 'sl_00000002']})
+ba = last_event(dlg, 'all_built')
+names = $model.entities.grep(Sketchup::Group).map(&:name)
+ok('dựng tất cả: thông báo một bước hoàn tác, đủ nhóm cột / dầm / tường / sàn / trần tầng 1, danh sách đã dựng', ba['message'].include?('một bước hoàn tác') && ba['message'].include?('12 cột') && ba['drawn']['columns'] == ['sl_00000001'] && ba['drawn']['slabs'].sort == ['sl_00000001'] && ['Cột - Tầng 1', 'Dầm - Tầng 1', 'Tường - Tầng 1', 'Sàn - Tầng 1', 'Trần - Tầng 1'].all? { |n| names.include?(n) })
+call(dlg, 'build_all', {'state' => full_state, 'levels' => []})
+ok('dựng tất cả không chọn tầng: báo lỗi', last_event(dlg, 'message')['error'] == true)
+call(dlg, 'build_all', {'state' => 'x', 'levels' => ['sl_00000001']})
+ok('dựng tất cả dữ liệu sai kiểu: báo lỗi, không văng', last_event(dlg, 'message')['error'] == true)
+big = full_state.merge('grid' => S::Grid.normalize!('origin' => [0, 0], 'x_axes' => S::Grid.axes_from_spacings('4000*29', :number), 'y_axes' => S::Grid.axes_from_spacings('4000*29', :letter)))
+bigl = S::Proposal.propose(big['grid'], big['levels'], ['sl_00000001']).first
+$answer = 7
+call(dlg, 'build_all', {'state' => big.merge('levels' => bigl), 'levels' => ['sl_00000001']})
+ok('dựng tất cả hơn 500 đối tượng: hỏi xác nhận, chọn Không thì hủy', last_event(dlg, 'message')['text'].include?('chưa dựng gì') && $boxes.last.include?('đối tượng'))
+$answer = IDYES
+[S::ColumnBuilder, S::BeamBuilder, S::WallBuilder].each { |b| b.remove($model) }
+%w[slabs ceilings].each { |k| S::PlateBuilder.remove($model, k) }
 
 # Tạo trục từ chuỗi nhịp
 call(dlg, 'grid_axes', {'dir' => 'x', 'text' => '4200, 3600*2'})

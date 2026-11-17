@@ -98,3 +98,7 @@ svg#plan6 .cell { stroke: var(--vgd-text); vector-effect: non-scaling-stroke; cu
 svg#plan6 .cell.slab { fill: #BA3300; }
 svg#plan6 .cell.ceiling { fill: #9900FF; }
 svg#plan6 text { fill: var(--vgd-muted); font-size: 11px; text-anchor: middle; pointer-events: none; }
+
+table.axes td.num { text-align: right; padding-right: 12px; }
+.issues li.warn { color: var(--vgd-muted); }
+#all-table { max-width: 720px; }

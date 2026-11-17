@@ -10,7 +10,7 @@ rescue ScriptError => error
   failed << "cú pháp #{file}: #{error.message.lines.first}"
 end
 puts "Cú pháp: #{syntax.size - failed.size}/#{syntax.size} file đạt"
-%w[reload grid columns_plan beams_plan walls_plan plates_plan grid_builder column_builder beam_builder wall_builder plate_builder panel].each do |name|
+%w[reload grid columns_plan beams_plan walls_plan plates_plan proposal grid_builder column_builder beam_builder wall_builder plate_builder panel].each do |name|
   output = IO.popen([RbConfig.ruby, File.join(DEV, "test_#{name}.rb")], err: %i[child out], &:read).force_encoding('UTF-8')
   ok = $?.success? && output !~ /^FAIL\b/
   failed << "test_#{name}.rb" unless ok

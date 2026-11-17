@@ -25,6 +25,9 @@ module VGD
         @dialog.add_action_callback('walls_remove') { |_ctx, payload| safely { walls_remove(JSON.parse(payload)) } }
         @dialog.add_action_callback('plates_build') { |_ctx, payload| safely { plates_build(JSON.parse(payload)) } }
         @dialog.add_action_callback('plates_remove') { |_ctx, payload| safely { plates_remove(JSON.parse(payload)) } }
+        @dialog.add_action_callback('propose') { |_ctx, payload| safely { propose(JSON.parse(payload)) } }
+        @dialog.add_action_callback('check') { |_ctx, payload| safely { check(JSON.parse(payload)) } }
+        @dialog.add_action_callback('build_all') { |_ctx, payload| safely { build_all(JSON.parse(payload)) } }
         @dialog.add_action_callback('picks_copy') { |_ctx, payload| safely { picks_copy(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_reset') { |_ctx| safely { send_state(reset: true) } }
       end
@@ -72,6 +75,53 @@ module VGD
 
       def drawn_wall_levels(model)
         WallBuilder.groups(model).map { |g| g.get_attribute(Schema::DICTIONARY, 'level') }
+      end
+
+      # Đề xuất bán tự động cho một tầng (scope 'level', mã trong 'level') hoặc mọi tầng (scope 'all'): chỉ THÊM phần còn thiếu, giữ lựa chọn đã có.
+      def propose(payload)
+        grid = Grid.normalize!(payload['grid'])
+        types = ColumnTypes.normalize!(payload['types'])
+        beam_types = BeamTypes.normalize!(payload['beam_types'])
+        wall_types = WallTypes.normalize!(payload['wall_types'])
+        levels, = Levels.normalize!(payload['levels'], grid, types, beam_types, wall_types)
+        ids = payload['scope'] == 'all' ? levels.map { |l| l['id'] } : [payload['level']]
+        proposed, added = Proposal.propose(grid, levels, ids)
+        clean, = Levels.normalize!(proposed, grid, types, beam_types, wall_types)
+        parts = Checker::KIND_LABELS.map { |kind, label| "#{added[kind]} #{label.downcase}" }.join(', ')
+        emit('levels', {levels: clean, message: "Đã đề xuất cho #{ids.size} tầng: thêm #{parts}. Hãy xem lại từng tab, bỏ bớt hoặc thêm rồi dựng.", proposed: added})
+      rescue Grid::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, Levels::Error => error
+        emit('message', {text: error.message, error: true})
+      end
+
+      # Kiểm tra kết cấu mọi tầng (chỉ đọc): lỗi và cảnh báo của các kế hoạch.
+      def check(payload)
+        emit('check', Checker.run(State.normalize!(payload)))
+      rescue Grid::Error, AxisSymbol::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, Levels::Error => error
+        emit('message', {text: error.message, error: true})
+      end
+
+      def drawn_all(model)
+        {columns: drawn_levels(model), beams: drawn_beam_levels(model), walls: drawn_wall_levels(model), slabs: drawn_plate_levels(model, 'slabs'), ceilings: drawn_plate_levels(model, 'ceilings')}
+      end
+
+      # Dựng tất cả (cột, dầm, tường, sàn, trần) của các tầng đã chọn trong MỘT bước hoàn tác; có lỗi thì không dựng gì cả.
+      def build_all(payload)
+        model = Sketchup.active_model
+        ids = payload['levels']
+        state = payload['state']
+        if ids.is_a?(Array) && state.is_a?(Hash)
+          clean = State.normalize!(state)
+          total = AllBuilder.targets(clean, ids).sum { |kind, level_ids| level_ids.sum { |id| Levels.find(clean['levels'], id)['picks'][kind].size } }
+          if total > CONFIRM_COLUMNS && ::UI.messagebox("Sẽ dựng khoảng #{total} đối tượng (cột, dầm, tường, sàn, trần). Tiếp tục?", MB_YESNO) != IDYES
+            return emit('message', {text: 'Đã hủy, chưa dựng gì.'})
+          end
+        end
+        result = AllBuilder.build(model, state, ids)
+        parts = result[:kinds].map { |kind, r| "#{r.total} #{Checker::KIND_LABELS[kind].downcase}" }.join(', ')
+        note = result[:issues].empty? ? '' : " Có #{result[:issues].size} cảnh báo: #{result[:issues].first(3).join(' ')}"
+        emit('all_built', {message: "Đã dựng #{result[:total]} đối tượng trong một bước hoàn tác: #{parts}.#{note}", drawn: drawn_all(model)})
+      rescue Grid::Error, AxisSymbol::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, Levels::Error, ColumnPlan::Error, BeamPlan::Error, WallPlan::Error, SlabPlan::Error, CeilingPlan::Error, ArgumentError => error
+        emit('message', {text: error.message, error: true})
       end
 
       def drawn_plate_levels(model, kind)

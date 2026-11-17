@@ -21,8 +21,8 @@ module VGD
         end
       end
 
-      # raw_state: dữ liệu CHƯA kiểm tra (từ giao diện); level_ids: mảng mã tầng. Kiểm tra lại và lập kế hoạch TRƯỚC khi đụng model.
-      def self.build(model, raw_state, level_ids, kind)
+      # Kiểm tra dữ liệu và lập kế hoạch TRƯỚC khi đụng model (không đổi model). raw_state: dữ liệu CHƯA kiểm tra (từ giao diện).
+      def self.prepare(model, raw_state, level_ids, kind)
         spec = spec(kind)
         state = State.normalize!(raw_state)
         raise SlabPlan::Error, "Hãy chọn ít nhất một tầng để dựng #{spec[:name].downcase}." unless level_ids.is_a?(Array) && !level_ids.empty?
@@ -32,24 +32,38 @@ module VGD
         raise SlabPlan::Error, "Quá nhiều ô (#{total}); tối đa #{MAX_ITEMS} mỗi lần dựng." if total > MAX_ITEMS
         locked = plans.map { |plan| find(model, kind, plan[:level]['id']) }.compact.find(&:locked?)
         raise SlabPlan::Error, "Nhóm “#{locked.name}” đang bị khóa. Hãy mở khóa rồi dựng lại." if locked
-        model.start_operation("VGD Structure · #{spec[:operation]}", true)
+        {state: state, plans: plans, total: total, kind: kind}
+      end
+
+      # Dựng theo kế hoạch đã chuẩn bị. KHÔNG mở thao tác hoàn tác (người gọi lo, để gộp nhiều loại vào một bước).
+      def self.apply(model, ctx)
+        kind = ctx[:kind]
+        spec = spec(kind)
+        layer = TagStore.ensure(model, Schema::TAGS[spec[:tag]])
+        definitions = {}
+        ctx[:plans].each do |plan|
+          old = find(model, kind, plan[:level]['id'])
+          old.erase! if old
+          next if plan[:items].empty?
+          draw_level(model, kind, plan, layer, definitions)
+        end
+        orphans = remove_orphans(model, kind, ctx[:state]['levels'].map { |l| l['id'] })
+        Result.new(ctx[:plans].map { |plan| {name: plan[:level]['name'], count: plan[:items].size} }, ctx[:total], orphans[:removed], orphans[:locked], ctx[:plans].flat_map { |plan| plan[:issues] })
+      end
+
+      # Dựng và lưu dữ liệu nguồn trong MỘT bước hoàn tác; lỗi thì hủy cả thao tác.
+      def self.build(model, raw_state, level_ids, kind)
+        ctx = prepare(model, raw_state, level_ids, kind)
+        model.start_operation("VGD Structure · #{spec(kind)[:operation]}", true)
         begin
-          layer = TagStore.ensure(model, Schema::TAGS[spec[:tag]])
-          definitions = {}
-          plans.each do |plan|
-            old = find(model, kind, plan[:level]['id'])
-            old.erase! if old
-            next if plan[:items].empty?
-            draw_level(model, kind, plan, layer, definitions)
-          end
-          orphans = remove_orphans(model, kind, state['levels'].map { |l| l['id'] })
+          result = apply(model, ctx)
           ModelStore.write(model, raw_state)
           model.commit_operation
         rescue StandardError, ScriptError
           model.abort_operation
           raise
         end
-        Result.new(plans.map { |plan| {name: plan[:level]['name'], count: plan[:items].size} }, total, orphans[:removed], orphans[:locked], plans.flat_map { |plan| plan[:issues] })
+        result
       end
 
       def self.remove(model, kind, level_id = nil)
