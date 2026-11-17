@@ -1,10 +1,10 @@
-# VGD Structure 0.10.0-beta.5
+# VGD Structure 0.10.0-beta.6
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
 
-**Cột mốc P1 đến P3: tab Mặt bằng** (cửa sổ vẽ mặt bằng, giai đoạn 2, `docs/vgd_structure/PLAN.md` mục 12). **Xem, chọn, bắt điểm, đo, đường gióng và VẼ KẾT CẤU** (P3, kiểu Revit); dữ liệu ghi vào lựa chọn của tầng, muốn ra model vẫn bấm Dựng. Bố cục theo cửa sổ mặt bằng của VTBim: thanh trên (hoàn tác, Chọn và đo, Sửa, Bắt điểm, Xóa đường gióng, Hiển thị lớp, Vừa khung, ẩn / hiện Thuộc tính), **tab theo từng tầng**, cột công cụ bên trái chia nhóm (Thiết kế, Vẽ 2D, Ghi chú), bảng **Thuộc tính**, thanh trạng thái (gợi ý, tọa độ mm, tỉ lệ, ô gõ số). Canvas vẽ lưới trục, sàn, trần (mặc định ẩn), dầm, tường, cửa (có cánh mở), cột.
+**Cột mốc P1 đến P4: tab Mặt bằng** (cửa sổ vẽ mặt bằng, giai đoạn 2, `docs/vgd_structure/PLAN.md` mục 12). **Xem, chọn, bắt điểm, đo, đường gióng và VẼ KẾT CẤU** (P3, kiểu Revit); dữ liệu ghi vào lựa chọn của tầng, muốn ra model vẫn bấm Dựng. Bố cục theo cửa sổ mặt bằng của VTBim: thanh trên (hoàn tác, Chọn và đo, Sửa, Bắt điểm, Xóa đường gióng, Hiển thị lớp, Vừa khung, ẩn / hiện Thuộc tính), **tab theo từng tầng**, cột công cụ bên trái chia nhóm (Thiết kế, Vẽ 2D, Ghi chú), bảng **Thuộc tính**, thanh trạng thái (gợi ý, tọa độ mm, tỉ lệ, ô gõ số). Canvas vẽ lưới trục, sàn, trần (mặc định ẩn), dầm, tường, cửa (có cánh mở), cột.
 - **Phím tắt kiểu Revit:** gõ **liên tiếp các chữ, không giữ phím** (ví dụ WA = Tường, ZE = vừa khung, ME = đo, RP = đường gióng, SO = bật / tắt bắt điểm, PP = bảng Thuộc tính, VG = hiển thị lớp, KS = bảng phím tắt; lệnh vẽ và sửa như WA, DR, WN, CL, BM, GR, MV, CO, RO, MM, OF, TR, DE, LI, DI, TX, EL đã có phím nhưng chưa chạy, báo rõ). Gõ sai chữ thứ hai thì chữ đó được tính là chữ đầu của phím mới; phím là phần đầu của phím khác (ví dụ M và MV) thì chờ khoảng 1 giây rồi chạy. **Bảng phím tắt (nút bàn phím hoặc KS) sửa được**, không cho trùng phím, nút "Đặt lại mặc định"; phím lưu theo máy (localStorage của cửa sổ, chưa xác minh trong SketchUp thật). Cột "Nguồn": "Revit" là phím mặc định của Revit **theo trí nhớ, chưa đối chiếu với Revit cài trên máy** (sai thì sửa trong bảng), "Tự đặt" là lệnh Revit không có phím mặc định (sàn, trần, polyline, chữ nhật, đường tròn, cung).
 - **Xem:** cuộn = thu phóng quanh con trỏ, chuột giữa hoặc nút Kéo = kéo, ZE = vừa khung, Esc = về công cụ Chọn (Esc lần nữa bỏ chọn).
 - **Chọn (quy ước Revit):** bấm = chọn một, **Ctrl + bấm = thêm**, **Shift + bấm = bớt**, kéo trái→phải = khung trong (chỉ hình nằm trọn trong khung, nét liền xanh), kéo phải→trái = khung cắt (hình chạm khung, nét đứt xanh lá), Ctrl / Shift + kéo khung = thêm / bớt, **Tab = chuyển giữa các phần tử chồng nhau** dưới con trỏ (Shift+Tab ngược lại), Ctrl+A = chọn mọi phần tử đang hiện. Chọn nhiều thì bảng Thuộc tính đếm theo loại.
@@ -17,7 +17,14 @@ Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) th
   - **Xóa:** Delete / Backspace / DE xóa phần tử đang chọn khỏi lựa chọn của tầng (xóa tường thì xóa luôn cửa trên tường đó).
   - **Hoàn tác / làm lại:** Ctrl+Z, Ctrl+Y hoặc nút trên thanh trên, tối đa 100 bước. **Chỉ hoàn tác các thay đổi làm trên tab Mặt bằng**, chưa gồm sửa ở các tab khác.
   - Tầng trên cùng chỉ có sàn: các công cụ cột, dầm, tường, cửa, trần báo rõ và không đặt. Ruby vẫn kiểm tra lại mọi dữ liệu; mặt bằng chỉ là cách nhập thay cho các tab riêng.
-Các công cụ sửa (Move, Copy, Rotate, Mirror, Offset, Trim), vẽ 2D và ghi chú đã bố trí sẵn nhưng khóa, làm ở cột mốc P4 đến P5b.
+- **Sửa (P4, kiểu Revit, theo lưới):** chọn phần tử trước (bấm hoặc kéo khung) rồi gõ lệnh; chưa chọn thì báo "hãy chọn phần tử trước". Vì dữ liệu gắn theo lưới trục, **bước dịch là số nguyên ô lưới** và **trục đối xứng là một trục của lưới**.
+  - **Move (MV), Copy (CO):** bấm giao điểm GỐC rồi giao điểm ĐÍCH: cả nhóm dịch theo số ô giữa hai điểm; xem trước ở vị trí đích (xanh = được, đỏ = bị bỏ qua). Phần tử ra ngoài lưới, hoặc rơi vào chỗ đã có phần tử, bị bỏ qua và báo rõ lý do. **Tường dịch / nhân thì cửa trên tường đi theo** (Copy tạo cửa mới cùng vị trí). Chọn riêng một cửa thì nhắc "cửa đi theo tường, hãy chọn cả tường".
+  - **Array (AR):** như Copy, lặp theo bước đã bấm; ô "Số bản" ở thanh tùy chọn (1 đến 50).
+  - **Mirror (MM):** bấm một trục làm trục đối xứng; ô "Giữ bản gốc" (mặc định bật, tắt = lật hẳn). Cột và dầm / tường đổi vị trí "cạnh nhỏ" ↔ "cạnh lớn" theo phương bị lật; cửa đổi vị trí thành "dài tường − vị trí cũ" và **đổi mặt cánh khi lật qua trục song song với tường**. Bản lề luôn ở đầu tường (chưa có tùy chọn bản lề). Phần tử nằm đúng trên trục bị bỏ qua ("trùng vị trí cũ").
+  - **Match (MA):** bấm phần tử mẫu rồi các phần tử CÙNG LOẠI: nhận loại và vị trí ngang của mẫu (cửa: loại và mặt cánh).
+  - Mỗi lệnh sửa là MỘT bước hoàn tác.
+  - **Kích thước tạm thời:** chọn đúng một phần tử thì hiện số đo. **Cửa:** khoảng cách tới đầu tường, tới cuối tường (số có viền xanh: bấm vào, gõ giá trị mới, Enter; sai thì báo lý do và giữ ô nhập, Esc đóng) và bề rộng. Cột, dầm, tường, sàn, trần: kích thước chỉ để xem (vị trí do quy ước lưới quyết định).
+- **Chưa làm (cột mốc P4b):** Rotate (RO), Offset (OF), Trim (TR), Align (AL) cần cho phép phần tử nằm TỰ DO ngoài lưới (tường xiên, cột lệch trục), tức là đổi mô hình dữ liệu và cả Ruby; xem `docs/vgd_structure/PLAN.md` mục 12. Vẽ 2D và ghi chú làm ở P5b.
 
 **Cột mốc 8: cửa đi và cửa sổ** (trên nền lưới trục, tầng, cột, dầm, tường, sàn, trần, đề xuất, dựng tất cả và nối VGD BIM). Còn phải làm trước khi phát hành: tường nhiều lớp và nối góc, hoàn thiện, cầu thang, mái... (kế hoạch giai đoạn 2, `docs/vgd_structure/PLAN.md` mục 11).
 
@@ -75,7 +82,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.10.0-beta.5.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.10.0-beta.6.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

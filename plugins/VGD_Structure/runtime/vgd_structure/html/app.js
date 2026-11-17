@@ -887,7 +887,8 @@
   window.VGDS = {receive: receive, _state: state, mutate: mutate, undo: undo, redo: redo, history: function () { return {undo: undoStack.length, redo: redoStack.length}; },
     api: {level: currentLevel, isTop: isTop, rid: rid, toAxes: toAxes, allSpans: allSpans, allCells: allCells, allRefs: allRefs, wallOpenings: wallOpenings, addAxis: addAxis, modes: {x: MODE_X, y: MODE_Y, p: MODE_P}}};
   window.VGDPlanEdit.init({state: state, api: window.VGDS.api, mutate: mutate, scale: function () { return window.VGDPlan.scale(); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, bounds: function () { return window.VGDPlan.bounds(); }});
-  window.VGDPlan.init({onLevel: setLevelFromPlan, undo: undo, redo: redo, history: window.VGDS.history, edit: window.VGDPlanEdit});
+  window.VGDPlanModify.init({state: state, api: window.VGDS.api, mutate: mutate, scale: function () { return window.VGDPlan.scale(); }, bounds: function () { return window.VGDPlan.bounds(); }, shapeAt: function (w) { return window.VGDPlan.shapeAt(w); }, finish: function () { window.VGDPlan.finish(); }});
+  window.VGDPlan.init({onLevel: setLevelFromPlan, undo: undo, redo: redo, history: window.VGDS.history, edit: window.VGDPlanEdit, modify: window.VGDPlanModify});
 
   $('origin-x').oninput = function () { state.origin[0] = Number($('origin-x').value); changed(); };
   $('origin-y').oninput = function () { state.origin[1] = Number($('origin-y').value); changed(); };
