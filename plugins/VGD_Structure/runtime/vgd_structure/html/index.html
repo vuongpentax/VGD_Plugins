@@ -18,6 +18,7 @@
   <button type="button" role="tab" data-tab="grid" aria-selected="true">Lưới trục</button>
   <button type="button" role="tab" data-tab="levels" aria-selected="false">Tầng và loại cột</button>
   <button type="button" role="tab" data-tab="plan" aria-selected="false">Mặt bằng</button>
+  <button type="button" role="tab" data-tab="section" aria-selected="false">Mặt cắt</button>
   <button type="button" role="tab" data-tab="columns" aria-selected="false">Cột</button>
   <button type="button" role="tab" data-tab="beams" aria-selected="false">Dầm</button>
   <button type="button" role="tab" data-tab="walls" aria-selected="false">Tường</button>
@@ -363,6 +364,15 @@
   </section>
 </main>
 <footer><div id="message" role="status" aria-live="polite">Sẵn sàng.</div></footer>
+<main id="tab-section" class="tab sec-tab" hidden>
+  <div class="sec-bar">
+    <label>Mặt cắt <select id="sec-select" aria-label="Chọn mặt cắt"></select></label>
+    <button type="button" id="sec-refresh" title="Dựng lại mặt cắt từ hình hiện tại trong SketchUp">Làm mới</button>
+    <button type="button" id="sec-fit" title="Vừa khung">Vừa khung</button>
+    <span id="sec-status" class="muted small" aria-live="polite">Chọn một mặt cắt.</span>
+  </div>
+  <div class="sec-body"><canvas id="sec-canvas" tabindex="0" role="img" aria-label="Mặt cắt 2D"></canvas></div>
+</main>
 <main id="tab-schedule" class="tab" hidden>
   <section class="form wide" aria-label="Bảng thống kê">
     <fieldset>
@@ -382,8 +392,10 @@
 <script src="plan_edit.js"></script>
 <script src="plan_notes.js"></script>
 <script src="plan_modify.js"></script>
+<script src="plan_section.js"></script>
 <script src="plan_browser.js"></script>
 <script src="plan_view.js"></script>
+<script src="section_view.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

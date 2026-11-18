@@ -46,6 +46,7 @@ module Sketchup
   end
   class Entity
     def entityID; @entity_id ||= (Entity.next_id += 1); end
+    def valid?; true; end
     class << self; attr_accessor :next_id; end
     self.next_id = 1000
     def attrs; @attrs ||= {}; end
@@ -56,6 +57,10 @@ module Sketchup
     attr_accessor :layer
     attr_reader :from, :to
     def initialize(from, to); @from = from; @to = to; end
+    def soft?; false; end
+    def smooth?; false; end
+    def hidden?; false; end
+    def valid?; true; end
   end
   class Group < Entity
     attr_accessor :name, :layer, :material
@@ -99,6 +104,8 @@ module Sketchup
   class FakeBounds
     attr_reader :width, :height, :depth, :center
     def initialize(w, h, d, center); @width = w; @height = h; @depth = d; @center = center; end
+    def min; Geom::Point3d.new(@center.x - @width / 2.0, @center.y - @height / 2.0, @center.z - @depth / 2.0); end
+    def max; Geom::Point3d.new(@center.x + @width / 2.0, @center.y + @height / 2.0, @center.z + @depth / 2.0); end
   end
   class ComponentDefinition < Entity
     attr_accessor :fake_bounds

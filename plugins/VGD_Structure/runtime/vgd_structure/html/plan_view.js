@@ -3,8 +3,8 @@
 (function () {
   'use strict';
   // Màu theo bộ tag mẫu của VGD BIM.
-  var COLORS = {column: '#66DD00', beam: '#00AABA', wall: '#FF9966', slab: '#BA3300', ceiling: '#9900FF', door: '#FF7766', window: '#CCBAED', grid: '#BA00CC', suobj: '#8A93A0'};
-  var LAYERS = [['grid', 'Lưới trục'], ['slab', 'Sàn'], ['ceiling', 'Trần'], ['beam', 'Dầm'], ['wall', 'Tường'], ['opening', 'Cửa'], ['column', 'Cột'], ['suobj', 'Đối tượng SketchUp chưa nhận'], ['note', 'Ghi chú và nét 2D']];
+  var COLORS = {column: '#66DD00', beam: '#00AABA', wall: '#FF9966', slab: '#BA3300', ceiling: '#9900FF', door: '#FF7766', window: '#CCBAED', grid: '#BA00CC', suobj: '#8A93A0', section: '#D9534F'};
+  var LAYERS = [['grid', 'Lưới trục'], ['slab', 'Sàn'], ['ceiling', 'Trần'], ['beam', 'Dầm'], ['wall', 'Tường'], ['opening', 'Cửa'], ['column', 'Cột'], ['suobj', 'Đối tượng SketchUp chưa nhận'], ['section', 'Mặt cắt'], ['note', 'Ghi chú và nét 2D']];
   // Biểu tượng tự vẽ (nét 24 × 24). Bố cục theo cửa sổ mặt bằng của VTBim: thanh trên (chọn, sửa), cột công cụ bên trái, tab theo tầng, bảng thuộc tính, thanh trạng thái.
   var ICON = {
     hide: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12ZM3 3l18 18', isolate: 'M12 2l9 5v10l-9 5-9-5V7ZM12 8v8M8 12h8',
@@ -27,7 +27,7 @@
     status: 'M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7ZM8 12l3 3 5-6',
     build: 'M3 21h18M5 21V10l7-6 7 6v11M10 21v-6h4v6',
     supick: 'M4 3v15l4-4 3 7 3-1-3-7 6-1ZM17 3v4M15 5h4', sudraw: 'M4 3v15l4-4 3 7 3-1-3-7 6-1ZM14 14l7-7 2 2-7 7-3 1Z',
-    props: 'M3 4h18v16H3ZM9 4v16M12 8h6M12 12h6M12 16h4', eye: 'M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6'
+    section: 'M3 12h4M17 12h4M12 3v18M12 3l-3 4M12 3l3 4M7 8h10v8H7Z', props: 'M3 4h18v16H3ZM9 4v16M12 8h6M12 12h6M12 16h4', eye: 'M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6'
   };
   // [id, tên, phím, gợi ý, dùng được ở cột mốc này?]
   var TOP_GROUPS = [
@@ -40,13 +40,14 @@
   var SIDE_GROUPS = [
     ['Thiết kế', [['grid', 'Lưới trục', ''], ['column', 'Cột', ''], ['beam', 'Dầm', ''], ['wall', 'Tường', ''], ['slab', 'Sàn', ''], ['ceiling', 'Trần', ''], ['door', 'Cửa đi', ''], ['window', 'Cửa sổ', '']]],
     ['Vẽ 2D', [['line', 'Line', ''], ['polyline', 'Polyline', ''], ['rect', 'Chữ nhật', ''], ['circle', 'Đường tròn', ''], ['arc', 'Cung', '']]],
-    ['Ghi chú', [['dim', 'Kích thước', ''], ['text', 'Chữ', ''], ['level', 'Cốt cao độ', '']]]
+    ['Ghi chú', [['dim', 'Kích thước', ''], ['text', 'Chữ', ''], ['level', 'Cốt cao độ', '']]],
+    ['Mặt cắt', [['section', 'Mặt cắt (Section): bấm hai điểm của đường cắt rồi bấm về phía muốn nhìn', '']]]
   ];
   // Bảng phím tắt kiểu Revit: gõ liên tiếp các chữ (không giữ phím), ví dụ WA = Tường. [id, tên lệnh, phím mặc định, nguồn]
   // Nguồn "Revit" = phím mặc định của Revit theo trí nhớ (chưa đối chiếu với bản Revit cài trên máy); "Tự đặt" = Revit không có phím mặc định cho lệnh này. Sửa được trong bảng Phím tắt.
   var COMMANDS = [
     ['fit', 'Vừa khung (Zoom to Fit)', 'ZE', 'Revit'], ['hide', 'Ẩn phần tử đang chọn (Hide Element)', 'EH', 'Revit'], ['isolate', 'Cô lập phần tử đang chọn (Isolate Element)', 'HI', 'Revit'], ['unhide', 'Bỏ ẩn / cô lập (Reset Temporary Hide/Isolate)', 'HR', 'Revit'], ['pan', 'Kéo mặt bằng', '', ''], ['guide', 'Đường gióng (Reference Plane)', 'RP', 'Revit'], ['measure', 'Đo (Measure)', 'ME', 'Revit'],
-    ['suscan', 'Quét đối tượng SketchUp (theo tag BIM)', 'SS', 'Tự đặt'], ['suadopt', 'Nhận đối tượng SketchUp về Structure', 'SA', 'Tự đặt'],
+    ['section', 'Mặt cắt (Section)', 'SE', 'Tự đặt'], ['suscan', 'Quét đối tượng SketchUp (theo tag BIM)', 'SS', 'Tự đặt'], ['suadopt', 'Nhận đối tượng SketchUp về Structure', 'SA', 'Tự đặt'],
     ['snap', 'Bật / tắt bắt điểm (Snaps Off)', 'SO', 'Revit'], ['props', 'Bảng Thuộc tính', 'PP', 'Revit'], ['browser', 'Cây dự án (Project Browser)', 'PB', 'Tự đặt'], ['sudraw', 'Vẽ trong SketchUp (công cụ vẽ nhận điểm bấm trong SketchUp, tự dựng)', 'SD', 'Tự đặt'], ['sync', 'Đồng bộ chọn với SketchUp', 'SY', 'Tự đặt'], ['status', 'Hiện trạng thái so với model', 'ST', 'Tự đặt'], ['build', 'Dựng tầng này vào model', 'BD', 'Tự đặt'], ['supick', 'Chọn điểm trong SketchUp', 'PK', 'Tự đặt'], ['vis', 'Hiển thị lớp (Visibility / Graphics)', 'VG', 'Revit'], ['keys', 'Bảng phím tắt', 'KS', 'Revit'],
     ['wall', 'Tường (Wall)', 'WA', 'Revit'], ['door', 'Cửa đi (Door)', 'DR', 'Revit'], ['window', 'Cửa sổ (Window)', 'WN', 'Revit'], ['column', 'Cột (Column)', 'CL', 'Revit'], ['beam', 'Dầm (Beam)', 'BM', 'Revit'],
     ['grid', 'Lưới trục (Grid)', 'GR', 'Revit'], ['slab', 'Sàn (Floor)', 'FL', 'Tự đặt'], ['ceiling', 'Trần (Ceiling)', 'CE', 'Tự đặt'],
@@ -58,11 +59,12 @@
   var MIN_SCALE = 0.001, MAX_SCALE = 5; // px trên mm
   var opts, root, canvas, ctx, status = {}, levelList = [], currentId = null, selection = [], propsOpen = true;
   var suObjs = [], tagNames = {column: 'S. COLUMN', beam: 'S. BEAM', wall: 'A. WALL', slab: 'S. SLAB', ceiling: 'A. FINISHING CEILING', door: 'A. DOOR', window: 'A. WINDOW'}, tagMode = 'type'; // đối tượng SketchUp thường đã quét; tên tag theo bộ mẫu BIM; nhãn: type / tag / both
+  var sections = null; // mô-đun mặt cắt (plan_section.js)
   var detail = 'medium', vstyle = 'color', tagsOn = false, tagsDrawn = 0, PX_MM = 25.4 / 96; // mức chi tiết (low / medium / high), kiểu hiển thị (color / mono / wire), nhãn loại; 1 px màn hình = PX_MM mm trên giấy
   var badgesDrawn = 0, syncOn = true, statusOn = true, suPicking = false, lastSent = '', lastFromSU = false, modelStatus = null, pendingSelect = null, pendingDim = null, edit = null, notes = null, modify = null, lastDims = [], dimHits = [], dimInput = null, selLevel = null, opts2 = null, hoverCount = 0, keymap = {}, chord = '', chordTimer = null, tabIdx = 0, hoverSig = '', guides = {}, measure = null, draft = null, snap = null, snapOn = true, note = '', press = null, box = null, shiftKey = false;
-  var SNAP_PX = 10, DRAG_PX = 4, LIVE_EDIT = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'door', 'window', 'delete', 'move', 'copy', 'array', 'mirror', 'match', 'offset', 'align', 'trim', 'rotate', 'unlock', 'line', 'polyline', 'rect', 'circle', 'arc', 'dim', 'text', 'level'];
+  var SNAP_PX = 10, DRAG_PX = 4, LIVE_EDIT = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'door', 'window', 'delete', 'move', 'copy', 'array', 'mirror', 'match', 'offset', 'align', 'trim', 'rotate', 'unlock', 'section', 'line', 'polyline', 'rect', 'circle', 'arc', 'dim', 'text', 'level'];
   var view = {cx: 0, cy: 0, s: 0.05}, data = null, boundsKey = '', fitted = false, tool = 'select', shapes = [], hover = null, cursor = null, drag = null;
-  var visible = {grid: true, slab: true, ceiling: false, beam: true, wall: true, opening: true, column: true, suobj: true, note: true};
+  var visible = {grid: true, slab: true, ceiling: false, beam: true, wall: true, opening: true, column: true, suobj: true, section: true, note: true};
   var size = {w: 300, h: 200, dpr: 1};
 
   function $(id) { return document.getElementById(id); }
@@ -86,9 +88,9 @@
   var RIBBON_TABS = [['structure', 'Kết cấu'], ['arch', 'Kiến trúc'], ['annotate', 'Chú thích'], ['modify', 'Sửa'], ['view', 'Xem'], ['sketchup', 'SketchUp']], ribbonTab = 'structure', ribbon = {panels: {}, groups: {}};
   // Công cụ nào thuộc tab / nhóm nào; chọn công cụ (bằng phím hay bấm) thì tab của nó tự mở (như tab ngữ cảnh của Revit).
   var TOOL_TAB = {grid: 'structure', column: 'structure', beam: 'structure', wall: 'structure', slab: 'structure', ceiling: 'structure', door: 'arch', window: 'arch',
-    line: 'annotate', polyline: 'annotate', rect: 'annotate', circle: 'annotate', arc: 'annotate', dim: 'annotate', text: 'annotate', level: 'annotate',
+    line: 'annotate', polyline: 'annotate', rect: 'annotate', circle: 'annotate', arc: 'annotate', dim: 'annotate', text: 'annotate', level: 'annotate', section: 'annotate',
     select: 'modify', pan: 'modify', guide: 'modify', measure: 'modify', move: 'modify', copy: 'modify', array: 'modify', mirror: 'modify', match: 'modify', offset: 'modify', align: 'modify', trim: 'modify', rotate: 'modify', unlock: 'modify', 'delete': 'modify'};
-  var TOOL_PANEL = {grid: 'Lưới trục', column: 'Kết cấu', beam: 'Kết cấu', wall: 'Kết cấu', slab: 'Kết cấu', ceiling: 'Kết cấu', door: 'Cửa', window: 'Cửa', line: 'Vẽ 2D', polyline: 'Vẽ 2D', rect: 'Vẽ 2D', circle: 'Vẽ 2D', arc: 'Vẽ 2D', dim: 'Ghi chú', text: 'Ghi chú', level: 'Ghi chú'};
+  var TOOL_PANEL = {grid: 'Lưới trục', column: 'Kết cấu', beam: 'Kết cấu', wall: 'Kết cấu', slab: 'Kết cấu', ceiling: 'Kết cấu', door: 'Cửa', window: 'Cửa', line: 'Vẽ 2D', polyline: 'Vẽ 2D', rect: 'Vẽ 2D', circle: 'Vẽ 2D', arc: 'Vẽ 2D', dim: 'Ghi chú', text: 'Ghi chú', level: 'Ghi chú', section: 'Mặt cắt'};
   function buildRibbon(qat) {
     var rb = el('div', {class: 'pv-ribbon', id: 'pv-ribbon'}), tabs = el('div', {class: 'pv-rb-tabs', role: 'tablist', 'aria-label': 'Ribbon'}, rb), body = el('div', {class: 'pv-rb-body'}, rb);
     qat.parentNode.insertBefore(rb, qat.nextSibling);
@@ -257,6 +259,7 @@
         fields.forEach(function (f) {
           if (f.kind === 'heading') { el('h3', {text: f.label, class: 'pv-edit-h'}, box); return; }
           if (f.kind === 'info') { el('p', {text: f.label, class: 'pv-ptitle'}, box); return; }
+          if (f.kind === 'button') { var fb = el('button', {type: 'button', class: 'pv-vb-btn', id: 'pv-act-' + f.id}, box); fb.textContent = f.label; fb.onclick = f.apply; return; }
           var lab = el('label', {class: 'pv-field'}, box); el('span', {text: f.label}, lab); var c;
           if (f.kind === 'select') { c = el('select', {'data-field': f.id}, lab); f.values.forEach(function (v) { c.append(new Option(v[1], v[0])); }); c.value = f.value; c.onchange = function () { f.apply(c.value); }; }
           else if (f.kind === 'text') { c = el('input', {type: 'text', maxlength: '200', 'data-field': f.id}, lab); c.value = f.value; c.onchange = function () { f.apply(c.value); }; }
@@ -308,7 +311,7 @@
   // Gửi vùng chọn của mặt bằng cho SketchUp (chỉ khi người dùng chọn trên mặt bằng, không gửi lại khi vùng chọn do chính SketchUp đẩy sang).
   function notifySelection() {
     if (!syncOn || !opts || !opts.callSU) return;
-    var items = visibleSelection().filter(function (x) { return x.kind !== 'note'; }).map(function (x) { return {kind: x.kind, ref: x.ref}; }), key = currentId + '|' + JSON.stringify(items);
+    var items = visibleSelection().filter(function (x) { return x.kind !== 'note' && x.kind !== 'section'; }).map(function (x) { return {kind: x.kind, ref: x.ref}; }), key = currentId + '|' + JSON.stringify(items);
     if (key === lastSent) return; lastSent = key; lastFromSU = false;
     opts.callSU('plan_select', {level: currentId, items: items});
   }
@@ -534,7 +537,7 @@
     addNoteShapes();
   }
   var SU_KIND = {column: 'Cột', beam: 'Dầm', wall: 'Tường', slab: 'Sàn', ceiling: 'Trần', door: 'Cửa đi', window: 'Cửa sổ'};
-  function addNoteShapes() { if (notes) shapes = shapes.concat(notes.shapes()); } // ghi chú, nét 2D của tầng đang xem (dữ liệu, không qua xem trước của Ruby)
+  function addNoteShapes() { if (sections) shapes = shapes.concat(sections.shapes()); if (notes) shapes = shapes.concat(notes.shapes()); } // ghi chú, nét 2D của tầng đang xem (dữ liệu, không qua xem trước của Ruby)
   function inside(poly, x, y) {
     var c = false;
     for (var i = 0, j = poly.length - 1; i < poly.length; j = i++) {
@@ -730,6 +733,7 @@
     if (visible.column) section('columns').forEach(function (i) { if (hid('column', i.ref)) return; fillStroke(i.poly || rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), COLORS.column, 0.9, null, 1.5); });
     if (visible.grid) drawGrid(ink);
     drawTags(ink);
+    if (visible.section && sections) sections.draw({ctx: ctx, toScreen: toScreen, scale: view.s, hidden: function (id) { return hid('section', id); }});
     if (visible.note && notes) notes.draw({ctx: ctx, toScreen: toScreen, scale: view.s, hidden: function (id) { return hid('note', id); }});
     if (hover && vis(hover)) { path(hover.poly); ctx.lineWidth = 2; ctx.strokeStyle = css('--vgd-accent', '#1e88e5'); ctx.stroke(); }
     visibleSelection().forEach(function (x) { path(x.poly); ctx.lineWidth = 3; ctx.setLineDash([6, 3]); ctx.strokeStyle = css('--vgd-accent', '#1e88e5'); ctx.stroke(); ctx.setLineDash([]); });
@@ -1021,7 +1025,7 @@
 
   var api = {
     init: function (options) {
-      opts = options; if (!opts.payload) opts.payload = function () { return {}; }; edit = options.edit || null; notes = options.notes || null; modify = options.modify || null; root = $('tab-plan'); canvas = $('pv-canvas'); ctx = canvas.getContext('2d');
+      opts = options; sections = options.sections || null; if (!opts.payload) opts.payload = function () { return {}; }; edit = options.edit || null; notes = options.notes || null; modify = options.modify || null; root = $('tab-plan'); canvas = $('pv-canvas'); ctx = canvas.getContext('2d');
       status = {xy: $('pv-xy'), hint: $('pv-hint'), zoom: $('pv-zoom')};
       loadKeys(); buildTop($('pv-top')); $('pv-side').hidden = true; buildViewBar($('pv-viewbar')); buildKeys(); refreshBadges(); setTool('select'); renderProps();
       var box2 = $('pv-vcb'); box2.disabled = false; box2.placeholder = 'Gõ số + Enter';

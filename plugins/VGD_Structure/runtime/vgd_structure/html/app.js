@@ -44,7 +44,7 @@
   function toRubyLevel(l) {
     return {id: l.id, name: l.name, elevation: l.elevation, screed: l.screed, slab_thickness: l.slab, column_type: l.columnType || null, beam_type: l.beamType || null, wall_type: l.wallType || null, ceiling_height: l.ceilingHeight, ceiling_thickness: l.ceilingThickness,
             floor_layers: (l.floorLayers || []).map(cleanLayer), ceiling_layers: (l.ceilingLayers || []).map(cleanLayer),
-            picks: {columns: clonePicks(l.picks), beams: clonePicks(l.beamPicks), walls: clonePicks(l.wallPicks), slabs: clonePicks(l.slabPicks), ceilings: clonePicks(l.ceilingPicks), openings: clonePicks(l.openingPicks)}, notes: JSON.parse(JSON.stringify(l.notes || {}))};
+            picks: {columns: clonePicks(l.picks), beams: clonePicks(l.beamPicks), walls: clonePicks(l.wallPicks), slabs: clonePicks(l.slabPicks), ceilings: clonePicks(l.ceilingPicks), openings: clonePicks(l.openingPicks)}, notes: JSON.parse(JSON.stringify(l.notes || {})), sections: JSON.parse(JSON.stringify(l.sections || {}))};
   }
   function cleanLayer(l) { var o = {fn: l.fn, t: l.t, material: l.material || ''}; if (l.color) o.color = l.color; return o; }
   function clonePicks(picks) { var out = {}; Object.keys(picks).forEach(function (k) { out[k] = JSON.parse(JSON.stringify(picks[k])); }); return out; } // sao sâu: phần tử tự do có khóa 'free' lồng nhau
@@ -53,7 +53,7 @@
             floorLayers: (l.floor_layers || []).map(function (x) { return {fn: x.fn, t: x.t, material: x.material || '', color: x.color || null}; }), ceilingLayers: (l.ceiling_layers || []).map(function (x) { return {fn: x.fn, t: x.t, material: x.material || '', color: x.color || null}; }),
             picks: clonePicks((l.picks && l.picks.columns) || {}), beamPicks: clonePicks((l.picks && l.picks.beams) || {}), wallPicks: clonePicks((l.picks && l.picks.walls) || {}),
             slabPicks: clonePicks((l.picks && l.picks.slabs) || {}), ceilingPicks: clonePicks((l.picks && l.picks.ceilings) || {}),
-            openingPicks: clonePicks((l.picks && l.picks.openings) || {}), notes: JSON.parse(JSON.stringify(l.notes || {}))};
+            openingPicks: clonePicks((l.picks && l.picks.openings) || {}), notes: JSON.parse(JSON.stringify(l.notes || {})), sections: JSON.parse(JSON.stringify(l.sections || {}))};
   }
   function rid(prefix) {
     var a = new Uint8Array(4); (window.crypto || {getRandomValues: function (x) { for (var i = 0; i < x.length; i++) x[i] = Math.floor(Math.random() * 256); }}).getRandomValues(a);
@@ -937,7 +937,7 @@
   function switchTab(tab) {
     state.tab = tab;
     document.querySelectorAll('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-tab') === tab)); });
-    ['grid', 'levels', 'plan', 'columns', 'beams', 'walls', 'openings', 'slabs', 'ceilings', 'schedule', 'all'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
+    ['grid', 'levels', 'plan', 'section', 'columns', 'beams', 'walls', 'openings', 'slabs', 'ceilings', 'schedule', 'all'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
     if (tab === 'plan') { syncPlanLevels(); window.VGDPlan.show(); }
     if (tab === 'columns') renderColumnsTab();
     if (tab === 'beams') renderBeamsTab();
@@ -945,12 +945,13 @@
     if (tab === 'openings') renderOpeningsTab();
     CELL_TABS.forEach(function (c) { if (tab === c.kind) renderCellTab(c); });
     if (tab === 'all') renderAllTab();
+    if (tab === 'section') window.VGDSection.show();
     if (tab === 'schedule') { renderScheduleControls(); requestSchedule(); }
   }
 
   function receive(event, data) {
     if (event === 'state') {
-      if (data.tag_names && window.VGDPlan && window.VGDPlan.setTagNames) window.VGDPlan.setTagNames(data.tag_names);
+      if (data.tag_names && window.VGDPlan && window.VGDPlan.setTagNames) { window.VGDPlan.setTagNames(data.tag_names); window.VGDSection.setTagNames(data.tag_names); }
       state.origin = data.grid.origin.slice();
       var x = fromAxes(data.grid.x_axes), y = fromAxes(data.grid.y_axes);
       state.x = x; state.y = y; state.scale = data.symbol.scale; state.both = data.symbol.both_ends; state.drawn = data.drawn;
@@ -1015,7 +1016,7 @@
       state.drawn = data.drawn; renderButtons(); message(data.message);
     } else if (event === 'message') {
       message(data.text, data.error);
-    } else if (event === 'model_selection') { window.VGDPlan.modelSelection(data);
+    } else if (event === 'model_selection') { window.VGDPlan.modelSelection(data); window.VGDSection.modelSelection(data);
     } else if (event === 'model_status') { window.VGDPlan.modelStatus(data);
     } else if (event === 'select_result') { window.VGDPlan.selectResult(data);
     } else if (event === 'su_point') { window.VGDPlan.suPoint(data);
@@ -1029,6 +1030,7 @@
       message('Quét SketchUp: ' + n + ' đối tượng có tag nhận diện (' + onLevel + ' ở tầng đang xem), ' + (data.untagged || 0) + ' đối tượng chưa có tag' + ((data.skipped || []).length ? '; bỏ qua ' + data.skipped.length + ' (nghiêng)' : '') + '.');
     } else if (event === 'su_import') { applySuImport(data);
     } else if (event === 'su_tagged') { window.VGDPlan.scanSu();
+    } else if (event === 'section_view') { window.VGDSection.receive(data);
     } else if (event === 'su_edit') { applySuEdit(data);
     } else if (event === 'schedule') { schedData = data; renderSchedule();
     } else if (event === 'plate_probe') { probeCache[data.key] = data.polygon || false; if (window.VGDPlan && window.VGDPlan.ghostChanged) window.VGDPlan.ghostChanged();
@@ -1045,6 +1047,7 @@
     rerenderAll(); changed();
   }
   function rerenderAll() {
+    if (window.VGDSection && window.VGDSection.refreshList) window.VGDSection.refreshList();
     renderAll(); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab(); syncPlanLevels();
   }
   function historyChanged() { window.VGDPlan.refreshHistory(); }
@@ -1128,6 +1131,7 @@
     });
     message('Đã nhận ' + (data.adopted || []).length + ' đối tượng SketchUp về Structure; đang dựng bản chuẩn thay đối tượng gốc.' + ((data.skipped || []).length ? ' Lưu ý: ' + data.skipped.slice(0, 3).join(' ') : ''));
   }
+  function openSectionView(levelId, id) { switchTab('section'); window.VGDSection.open(levelId, id); }
   function startDrawTool(tool) {
     switchTab('plan'); window.VGDPlan.startDrawTool(tool);
   }
@@ -1154,7 +1158,7 @@
   window.VGDPlanNotes.init({state: state, api: window.VGDS.api, mutate: mutate, say: function (t) { window.VGDPlan.say(t); }, scale: function () { return window.VGDPlan.scale(); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); },
     promptText: function (w, initial, done) { window.VGDPlan.promptText(w, initial, done); }});
   // Công cụ vẽ kết cấu (plan_edit) và vẽ 2D / ghi chú (plan_notes) dùng chung một cổng vào cửa sổ mặt bằng: công cụ nào đang chọn thì nhận lệnh.
-  var drawParts = [window.VGDPlanEdit, window.VGDPlanNotes], drawCur = null;
+  var drawParts = [window.VGDPlanEdit, window.VGDPlanNotes, window.VGDPlanSection], drawCur = null;
   var drawTools = {
     handles: function (t) { return drawParts.some(function (x) { return x.handles(t); }); },
     activate: function (t) { drawCur = null; drawParts.forEach(function (x) { x.activate(t); if (!drawCur && x.handles(t)) drawCur = x; }); },
@@ -1168,15 +1172,19 @@
     typed: function (n, cur) { return drawCur && drawCur.typed ? drawCur.typed(n, cur) : false; },
     flipDoor: function (t, ref, shift) { return window.VGDPlanEdit.flipDoor(t, ref, shift); },
     finish: function () { return drawCur && drawCur.finish ? drawCur.finish() : false; }, undoPoint: function () { return drawCur && drawCur.undoPoint ? drawCur.undoPoint() : false; },
-    typeSelector: function (shape) { return shape.kind === 'note' ? null : window.VGDPlanEdit.typeSelector(shape); },
-    propsFor: function (shape) { return shape.kind === 'note' ? window.VGDPlanNotes.propsFor(shape) : window.VGDPlanEdit.propsFor(shape); },
-    remove: function (list) { return window.VGDPlanEdit.remove(list) + window.VGDPlanNotes.remove(list); },
+    typeSelector: function (shape) { return shape.kind === 'note' || shape.kind === 'section' ? null : window.VGDPlanEdit.typeSelector(shape); },
+    propsFor: function (shape) { return shape.kind === 'section' ? window.VGDPlanSection.propsFor(shape) : shape.kind === 'note' ? window.VGDPlanNotes.propsFor(shape) : window.VGDPlanEdit.propsFor(shape); },
+    remove: function (list) { return window.VGDPlanEdit.remove(list) + window.VGDPlanNotes.remove(list) + window.VGDPlanSection.remove(list); },
     debug: function () { var d = window.VGDPlanEdit.debug(); d.notes = window.VGDPlanNotes.debug(); return d; }
   };
+  window.VGDSection.init({state: state, call: call, callSU: call, axes: function () { return {x: toAxes('x').map(function (a) { return {name: a.name, pos: state.origin[0] + a.offset}; }), y: toAxes('y').map(function (a) { return {name: a.name, pos: state.origin[1] + a.offset}; })}; }});
+  window.VGDPlanSection.init({state: state, api: window.VGDS.api, mutate: mutate, say: function (t) { window.VGDPlan.say(t); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); },
+    allSections: function () { var out = []; state.levels.forEach(function (l) { Object.keys(l.sections || {}).forEach(function (id) { out.push({id: id, level: l.id, name: l.sections[id].name}); }); }); return out; },
+    openSection: function (levelId, id) { openSectionView(levelId, id); }, sectionAdded: function () {}});
   window.VGDPlanModify.init({state: state, api: window.VGDS.api, mutate: mutate, scale: function () { return window.VGDPlan.scale(); }, bounds: function () { return window.VGDPlan.bounds(); }, shapeAt: function (w) { return window.VGDPlan.shapeAt(w); }, finish: function () { window.VGDPlan.finish(); },
     snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, lineAt: function (w) { return window.VGDPlan.lineAt(w); }, guides: function () { return window.VGDPlan.guides(); }});
   window.VGDPlan.init({onLevel: setLevelFromPlan, undo: undo, redo: redo, history: window.VGDS.history, edit: drawTools, notes: window.VGDPlanNotes, modify: window.VGDPlanModify, browser: window.VGDPlanBrowser,
-    callSU: call, payload: payload, refresh: function () { changed(); },
+    callSU: call, sections: window.VGDPlanSection, payload: payload, refresh: function () { changed(); },
     buildLevel: function () { message('Đang dựng tầng này vào model...'); call('build_all', {state: payload(), levels: [state.level]}); },
     allKeys: function (levelId, kind) { var box = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', opening: 'openingPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', note: 'notes'}[kind], l = state.levels.filter(function (x) { return x.id === levelId; })[0]; return l && box ? Object.keys(l[box]) : []; }});
   var BROWSER_PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', opening: 'openingPicks'};

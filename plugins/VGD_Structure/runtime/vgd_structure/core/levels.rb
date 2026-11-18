@@ -31,6 +31,11 @@ module VGD
       MAX_HOLES = 20   # số lỗ tối đa của một sàn / trần
       NOTE_ID = /\Aan_[0-9a-f]{8}\z/ # mã nét 2D, chữ, kích thước, cốt cao độ (P5b)
       NOTE_TYPES = %w[line poly circle arc text dim mark].freeze
+      SECTION_ID = /\Asc_[0-9a-f]{8}\z/ # mã mặt cắt
+      MAX_SECTIONS = 30
+      SECTION_DEPTH = (100.0..100_000.0)
+      DEFAULT_SECTION_DEPTH = 6000.0
+      MIN_SECTION_LENGTH = 100.0
       MAX_NOTES = 2000    # số ghi chú tối đa mỗi tầng
       MAX_NOTE_POINTS = 500
       MAX_NOTE_TEXT = 200
@@ -99,9 +104,11 @@ module VGD
           free_walls = walls.select { |_ref, w| w.key?('free') }.keys
           openings, dropped_o = openings!((raw || {})['openings'], span_refs + free_walls, opening_types, name)
           notes = notes!(level['notes'], name)
+          sections = sections!(level['sections'], name)
           removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k + dropped_o
           entry = {'id' => id, 'name' => name, 'elevation' => elevation, 'screed' => screed.to_f.round(1), 'slab_thickness' => slab.to_f.round(1), 'ceiling_height' => ceiling_height.to_f.round(1), 'ceiling_thickness' => ceiling_thickness.to_f.round(1),
            'column_type' => type_id, 'beam_type' => beam_type, 'wall_type' => wall_type, 'picks' => {'columns' => columns, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings, 'openings' => openings}, 'notes' => notes}
+          entry['sections'] = sections unless sections.empty?
           entry['floor_layers'] = floor_layers unless floor_layers.empty?
           entry['ceiling_layers'] = ceiling_layers unless ceiling_layers.empty?
           entry
@@ -247,6 +254,34 @@ module VGD
         raw.each_with_object({}) do |(id, note), out|
           raise Error, "Tầng “#{level_name}”: mã ghi chú #{id.inspect} không hợp lệ." unless id.is_a?(String) && id.match?(NOTE_ID) && note.is_a?(Hash)
           out[id] = note!(note, id, level_name)
+        end
+      end
+
+      # Mặt cắt của tầng: {mã 'sc_' + 8 chữ số 16 => {name, a: [x, y], b: [x, y], dir: 1 | -1 (phía nhìn: 1 là phía pháp tuyến trái của a->b), depth: tầm nhìn mm}}.
+      # Chỉ là ĐỊNH NGHĨA đường cắt (mặt cắt thật được dựng từ hình trong SketchUp), không có kế hoạch và không dựng vào model.
+      def self.sections!(raw, level_name)
+        return {} if raw.nil?
+        raise Error, "Tầng “#{level_name}”: dữ liệu mặt cắt không hợp lệ." unless raw.is_a?(Hash)
+        raise Error, "Tầng “#{level_name}”: quá nhiều mặt cắt (tối đa #{MAX_SECTIONS})." if raw.size > MAX_SECTIONS
+        names = []
+        raw.each_with_object({}) do |(id, sec), out|
+          raise Error, "Tầng “#{level_name}”: mã mặt cắt #{id.inspect} không hợp lệ." unless id.is_a?(String) && id.match?(SECTION_ID) && sec.is_a?(Hash)
+          who = "Tầng “#{level_name}”: mặt cắt #{id}"
+          name = sec['name'].is_a?(String) ? sec['name'].strip : ''
+          raise Error, "#{who}: tên từ 1 đến #{MAX_NAME} ký tự, không có ký tự điều khiển." if name.empty? || name.length > MAX_NAME || name.match?(CONTROL)
+          raise Error, "#{who}: tên “#{name}” bị trùng." if names.include?(name.downcase)
+          names << name.downcase
+          pts = %w[a b].map do |k|
+            p = sec[k]
+            raise Error, "#{who}: điểm #{k} phải là [x, y] (mm)." unless p.is_a?(Array) && p.size == 2 && p.all? { |v| number?(v) && v.to_f.abs <= MAX_ELEVATION * 10 }
+            p.map { |v| v.to_f.round(1) }
+          end
+          raise Error, "#{who}: đường cắt ngắn hơn #{MIN_SECTION_LENGTH.to_i} mm." if Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]) < MIN_SECTION_LENGTH
+          dir = sec.key?('dir') ? sec['dir'] : 1
+          raise Error, "#{who}: phía nhìn phải là 1 hoặc -1." unless dir == 1 || dir == -1
+          depth = sec.key?('depth') ? sec['depth'] : DEFAULT_SECTION_DEPTH
+          raise Error, "#{who}: tầm nhìn từ #{SECTION_DEPTH.min.to_i} đến #{SECTION_DEPTH.max.to_i} mm." unless number?(depth) && SECTION_DEPTH.cover?(depth.to_f)
+          out[id] = {'name' => name, 'a' => pts[0], 'b' => pts[1], 'dir' => dir, 'depth' => depth.to_f.round(1)}
         end
       end
 

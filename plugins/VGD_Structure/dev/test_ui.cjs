@@ -624,10 +624,10 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const col=F.preview_all_cells.columns.items[0].center,c0=await pix(col[0],col[1]);
   ok(c0[1]>c0[0] && c0[1]>c0[2] && c0[1]>150,'pixel tại tâm cột có màu xanh lá (cột được vẽ trên canvas)');
   ok(await page.locator('#pv-tabs .pv-tab').count()===F.state.levels.length && (await page.locator('#pv-tabs [aria-selected=true]').getAttribute('data-level'))===F.state.levels[0].id,'tab theo tầng: đủ số tầng, đang chọn tầng hiện hành');
-  ok(await page.locator('#pv-ribbon .pv-ic[data-tool=select]').isEnabled() && await page.locator('#pv-ribbon .pv-ic[data-tool=pan]').isEnabled() && await page.locator('#pv-ribbon .pv-ic:disabled').count()===0 && await page.locator('#pv-ribbon .pv-ic[data-tool]').count()===31,'ribbon: mọi công cụ (8 thiết kế, 8 vẽ 2D / ghi chú, Chọn, Kéo, Gióng, Đo và nhóm Sửa) đều dùng được');
+  ok(await page.locator('#pv-ribbon .pv-ic[data-tool=select]').isEnabled() && await page.locator('#pv-ribbon .pv-ic[data-tool=pan]').isEnabled() && await page.locator('#pv-ribbon .pv-ic:disabled').count()===0 && await page.locator('#pv-ribbon .pv-ic[data-tool]').count()===32,'ribbon: mọi công cụ (8 thiết kế, 8 vẽ 2D / ghi chú, Mặt cắt, Chọn, Kéo, Gióng, Đo và nhóm Sửa) đều dùng được');
   ok(await page.locator('.pv-rb-tab').allInnerTexts().then(a=>a.join('|'))==='Kết cấu|Kiến trúc|Chú thích|Sửa|Xem|SketchUp' && (await page.locator('#pv-side').isHidden()),'ribbon có 6 tab Kết cấu, Kiến trúc, Chú thích, Sửa, Xem, SketchUp; cột công cụ cũ đã ẩn');
   const panelOf=async tab=>{await page.evaluate(t=>window.VGDPlan.ribbonTab(t),tab);return page.locator('.pv-rb-panel[data-tab='+tab+'] .pv-rb-grp > i').allInnerTexts().then(a=>a.join('|'));};
-  ok((await panelOf('structure'))==='Lưới trục|Kết cấu' && (await panelOf('arch'))==='Cửa' && (await panelOf('annotate'))==='Vẽ 2D|Ghi chú' && (await panelOf('modify'))==='Chọn & đo|Sửa' && (await panelOf('view'))==='Đường gióng|Ẩn và cô lập' && (await panelOf('sketchup'))==='Liên kết|Dựng và vẽ trong SketchUp|Đối tượng SketchUp|Tag SketchUp','mỗi tab chia nhóm có tên (nhãn dưới nút) đúng như Revit');
+  ok((await panelOf('structure'))==='Lưới trục|Kết cấu' && (await panelOf('arch'))==='Cửa' && (await panelOf('annotate'))==='Vẽ 2D|Ghi chú|Mặt cắt' && (await panelOf('modify'))==='Chọn & đo|Sửa' && (await panelOf('view'))==='Đường gióng|Ẩn và cô lập' && (await panelOf('sketchup'))==='Liên kết|Dựng và vẽ trong SketchUp|Đối tượng SketchUp|Tag SketchUp','mỗi tab chia nhóm có tên (nhãn dưới nút) đúng như Revit');
   await page.evaluate(()=>window.VGDPlan.ribbonTab('structure'));
   await page.keyboard.press('d');await page.keyboard.press('r');await wait(100);
   ok((await page.evaluate(()=>window.VGDPlan.ribbonCurrent()))==='arch' && (await page.locator('.pv-rb-tab[aria-selected=true]').innerText())==='Kiến trúc','chọn công cụ Cửa (phím DR): tab Kiến trúc tự mở (tab ngữ cảnh)');
@@ -1707,6 +1707,53 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.selectOption('#pv-vb-tagtext','both');await wait(80);
   ok((await dbg8()).tagMode==='both','Nhãn "Loại + Tag" chọn được');
   await page.click('#pv-vb-tags');await page.selectOption('#pv-vb-tagtext','type');
+  // --- Mặt cắt: đặt đường cắt trên mặt bằng, xem mặt cắt dựng từ hình trong SketchUp ---
+  await reset();await page.evaluate(()=>window.VGDPlan.ribbonTab('annotate'));
+  ok(await page.locator('.pv-rb-grp[aria-label="Mặt cắt"] .pv-ic[data-tool=section]').isVisible(),'tab Chú thích có nhóm Mặt cắt với công cụ Mặt cắt');
+  await typ('se');await wait(150);
+  ok((await dbg8()).tool==='section' && /Mặt cắt: bấm điểm đầu/.test(await hintT()),'gõ SE: chọn công cụ Mặt cắt, gợi ý bấm điểm đầu');
+  await cl(2000,500);await cl(6000,500);
+  ok(/bấm về PHÍA/.test(await hintT()),'sau hai điểm: gợi ý bấm về phía muốn nhìn');
+  await cl(4000,2500); // phía trên (+Y) của đường cắt nằm ngang từ trái sang phải: pháp tuyến trái của a->b là +Y
+  const secs=await page.evaluate(()=>window.VGDS._state.levels[0].sections),sid=Object.keys(secs)[0];
+  ok(Object.keys(secs).length===1 && /^sc_[0-9a-f]{8}$/.test(sid) && secs[sid].name==='Mặt cắt 1' && secs[sid].dir===1 && secs[sid].depth===6000 && Math.abs(secs[sid].b[0]-secs[sid].a[0])>3000,'bấm điểm thứ ba phía +Y: tạo Mặt cắt 1, dir = 1, tầm nhìn 6000');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await wait(80);await cl(4000,500);await wait(150); // chọn đường cắt
+  ok(/Mặt cắt 1/.test(await props()) && await page.locator('#pv-act-open_section').isVisible() && await page.locator('#pv-props input[data-field=sdepth]').isVisible(),'chọn đường cắt: Thuộc tính có nút Mở mặt cắt, tầm nhìn, đổi phía nhìn');
+  await page.fill('#pv-props input[data-field=sname]','A-A');await page.press('#pv-props input[data-field=sname]','Tab');await wait(120);
+  ok((await page.evaluate(()=>window.VGDS._state.levels[0].sections))[sid].name==='A-A','đổi tên mặt cắt trong Thuộc tính');
+  await page.locator('#pv-props input[data-field=sdir]').check();await wait(120);
+  ok((await page.evaluate(()=>window.VGDS._state.levels[0].sections))[sid].dir===-1,'tick Đổi phía nhìn: dir = -1');
+  const vrsec=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vrsec.ok,'dữ liệu mặt cắt được Ruby chấp nhận');
+  await clear();await page.click('#pv-act-open_section');await wait(150);
+  const sreq=await last('section_build');
+  ok(await page.locator('#tab-section').isVisible() && sreq && sreq.id===sid && sreq.section.name==='A-A' && sreq.section.dir===-1 && sreq.section.depth===6000,'bấm Mở mặt cắt: chuyển sang tab Mặt cắt và gửi Ruby định nghĩa đường cắt để dựng từ hình SketchUp');
+  const L=Math.hypot(secs[sid].b[0]-secs[sid].a[0],secs[sid].b[1]-secs[sid].a[1]);
+  await receive('section_view',{id:sid,name:'A-A',length:L,truncated:false,cut:[{pts:[[900,0],[1100,0],[1100,3000],[900,3000]],closed:true,src:{kind:'wall',level:'sl_00000001',ref:'x:B:1-2',tag:'A. WALL'}},{pts:[[2000,0],[2300,0],[2300,3000],[2000,3000]],closed:true,src:{kind:'suobj',level:null,ref:'2001',tag:'S. COLUMN'}},{pts:[[3000,100],[3500,100]],closed:false,src:{kind:'geom',level:null,ref:null,tag:null}}],beyond:[[[0,0],[500,500]],[[600,0],[600,3000]]]});await wait(150);
+  let sd=await page.evaluate(()=>window.VGDSection.debug());
+  ok(sd.cut===3 && sd.beyond===2 && /3 đường viền, 2 cạnh phía sau/.test(sd.status),'tab Mặt cắt nhận kết quả: 3 đường viền, 2 cạnh phía sau, báo trên thanh trạng thái');
+  ok((await page.locator('#sec-select option').count())>=2,'danh sách mặt cắt có mặt cắt vừa đặt');
+  const scr=await page.evaluate(()=>{const d=window.VGDSection.debug();return d.toScreen(1000,1500);});const bbs=await page.locator('#sec-canvas').boundingBox();
+  await clear();await page.mouse.click(bbs.x+scr[0],bbs.y+scr[1]);await wait(120);
+  const sp=await last('plan_select');
+  ok(sp && sp.items.length===1 && sp.items[0].kind==='wall' && sp.items[0].ref==='x:B:1-2' && sp.level==='sl_00000001' && (await page.evaluate(()=>window.VGDSection.debug())).selected.length===1,'bấm vào phần bị cắt của tường: chọn đúng phần tử tường trong SketchUp và sáng đường viền');
+  const scr2=await page.evaluate(()=>window.VGDSection.debug().toScreen(2150,1500));
+  await clear();await page.mouse.click(bbs.x+scr2[0],bbs.y+scr2[1]);await wait(120);
+  const sp2=await last('plan_select');
+  ok(sp2 && sp2.items[0].kind==='suobj' && sp2.items[0].ref==='2001','bấm vào cột SketchUp thường (suobj): chọn đúng đối tượng theo id SketchUp');
+  const scr3=await page.evaluate(()=>window.VGDSection.debug().toScreen(3250,100));
+  await clear();await page.mouse.click(bbs.x+scr3[0],bbs.y+scr3[1]);await wait(100);
+  ok((await calls('plan_select')).length===0,'bấm vào hình rời (kind geom): không chọn gì trong SketchUp');
+  await receive('model_selection',{items:[{level:null,kind:'suobj',ref:'2001'}],groups:[]});await wait(100);
+  ok((await page.evaluate(()=>window.VGDSection.debug())).selected.some(k=>k.indexOf('suobj')===0),'chọn đối tượng trong SketchUp: đường viền của nó sáng lên trên mặt cắt');
+  const axn=(await page.evaluate(()=>window.VGDSection.debug())).axes;
+  ok(Array.isArray(axn),'trục lưới cắt qua đường cắt được tính để vẽ (danh sách có thể rỗng nếu không cắt qua)');
+  await clear();await page.click('#sec-refresh');await wait(100);
+  ok((await calls('section_build')).length===1,'bấm Làm mới: dựng lại từ SketchUp');
+  await page.click('[data-tab=plan]');await wait(100);
+  await page.evaluate(id=>window.VGDPlan.selectKeys('sl_00000001',[{kind:'section',ref:id}],false),sid);await wait(80);
+  await page.keyboard.press('Delete');await wait(150);
+  ok(Object.keys(await page.evaluate(()=>window.VGDS._state.levels[0].sections)).length===0,'xóa đường cắt trên mặt bằng: dữ liệu mặt cắt mất');
   await receive('su_objects',{objects:[],untagged:0,skipped:[]});
   await reset();
   // --- Ẩn / Cô lập ---

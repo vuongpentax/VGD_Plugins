@@ -40,6 +40,7 @@ module VGD
         @dialog.add_action_callback('build_all') { |_ctx, payload| safely(true) { build_all(JSON.parse(payload)) } }
         @dialog.add_action_callback('picks_copy') { |_ctx, payload| safely { picks_copy(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_reset') { |_ctx| safely { send_state(reset: true) } }
+        @dialog.add_action_callback('section_build') { |_ctx, payload| safely { section_build(JSON.parse(payload)) } }
         @dialog.add_action_callback('su_scan') { |_ctx, payload| safely { su_scan(JSON.parse(payload)) } }
         @dialog.add_action_callback('su_adopt') { |_ctx, payload| safely { su_adopt(JSON.parse(payload)) } }
         @dialog.add_action_callback('su_tag') { |_ctx, payload| safely { su_tag(JSON.parse(payload)) } }
@@ -313,6 +314,13 @@ module VGD
       def plate_probe(payload)
         result = Preview.probe(payload)
         emit('plate_probe', {kind: payload['kind'], level: payload['level'], ref: payload['ref'], key: payload['key'], polygon: result && result[:polygon], holes: result && result[:holes]})
+      end
+
+      # Mặt cắt từ HÌNH THẬT trong model (xem SuSection): payload {id:, section: {name, a, b, dir, depth}}. Dữ liệu qua Levels.sections! trước khi đụng model.
+      def section_build(payload)
+        section = Levels.sections!({'sc_00000000' => payload['section']}, 'mặt cắt').values.first
+        result = SuSection.build(Sketchup.active_model, section)
+        emit('section_view', result.merge(id: payload['id'], name: section['name']))
       end
 
       # ---- Đối tượng SketchUp thường (chưa do plugin dựng): quét theo tag BIM, nhận về làm dữ liệu Structure, gán tag ----
