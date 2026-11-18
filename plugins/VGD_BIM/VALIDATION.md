@@ -2,6 +2,18 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.10: đã kiểm tra tự động
+
+Gỡ plugin VGD_Room và các nút Dựng khối (theo quyết định ngày 18/11/2026: việc xác định phòng do VGD Structure làm).
+
+- `test_dialog_logic.rb`: bỏ bộ kiểm tra dựng khối qua cầu nối (`table_room_build`, `table_room_build_all`). Các kiểm tra còn lại (phòng, tầng, vật liệu, VGD ID, Structure) vẫn đạt.
+- `test_ui.cjs`: bỏ các kiểm tra nút Dựng khối / Dựng khối tất cả phòng. Các kiểm tra phòng khác (sửa, xóa, tạo từ mặt đang chọn, gán theo vị trí) vẫn đạt.
+- `test_ui_en.cjs`: đổi thông báo tạo phòng (không còn câu về VGD_Room).
+- `tests/test_vgd_conventions.rb`: danh sách ngoại lệ "không có mục menu" để rỗng (VGD_Room đã bỏ).
+- `plugins/VGD_Structure/dev/test_bridge.rb`: chỉ so sánh bản sao cầu nối với VGD_BIM (không còn VGD_Room).
+
+**Chưa xác minh trong SketchUp thật:** model cũ có khối phòng do VGD_Room dựng vẫn mở được, không tính khối lượng và không gây lỗi bảng.
+
 ## Bản 1.1.1-beta.9: đã kiểm tra tự động
 
 Chạy từ `plugins/VGD_BIM`: `ruby dev/run_tests.rb` (cú pháp `ui/dialog.rb` và các test Ruby) và các bộ Playwright `dev/test_ui.cjs`, `dev/test_ui_images.cjs`, `dev/test_ui_en.cjs`, `dev/test_ui_sheets.cjs`, `dev/test_report_page.cjs`. Đã chạy đủ và đạt.

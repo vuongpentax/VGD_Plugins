@@ -196,7 +196,7 @@ module VGD
          wall_area: (perimeter * room['height'] / 1.0e6).round(3), ceiling_area: (area / 1.0e6).round(3)}
       end
 
-      # ---- Khối phòng do plugin VGD_Room dựng (cầu nối room_volume, docs/vgd_bim/BRIDGE.md) ----
+      # ---- Khối phòng do plugin dựng từ bản trước (cầu nối room_volume đã gỡ ở 1.1.1-beta.10): không tính khối lượng; giữ để file cũ vẫn đúng ----
       SOURCE_DICTIONARY = 'VGD_BIM_SOURCE'.freeze
 
       # Đối tượng là khối phòng do plugin dựng: không tính khối lượng.

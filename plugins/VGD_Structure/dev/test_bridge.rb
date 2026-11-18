@@ -138,7 +138,6 @@ bad_kind = Sketchup::Instance.new(nil, nil); bad_kind.set_attribute('VGD_BIM_SOU
 ok('đối tượng không do plugin dựng, loại lạ hoặc không phải đối tượng: từ chối', !error_of { S.edit(foreign) }.nil? && !error_of { S.edit(bad_kind) }.nil? && !error_of { S.edit(Object.new) }.nil?)
 # Bản sao cầu nối giống BIM
 bim = File.expand_path('../../VGD_BIM/runtime/vgd_bim/core/bridge.rb', __dir__)
-room = File.expand_path('../../VGD_Room/runtime/vgd_room/bridge_registry.rb', __dir__)
-ok('bridge_registry.rb GIỐNG HỆT bản của VGD_BIM (và VGD_Room) trong repo', (!File.exist?(bim) || File.read(bim) == File.read(File.join(ROOT, 'bridge_registry.rb'))) && (!File.exist?(room) || File.read(room) == File.read(File.join(ROOT, 'bridge_registry.rb'))))
+ok('bridge_registry.rb GIỐNG HỆT bản của VGD_BIM trong repo', !File.exist?(bim) || File.read(bim) == File.read(File.join(ROOT, 'bridge_registry.rb')))
 puts $fails.zero? ? "\nTẤT CẢ ĐẠT" : "\n#{$fails} LỖI"
 exit($fails.zero? ? 0 : 1)

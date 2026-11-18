@@ -9,7 +9,7 @@ Hai dictionary riêng, không đụng `VGD_BIM` (có dictionary đó là món "�
 | Dictionary | Khóa | Ý nghĩa |
 |---|---|---|
 | `VGD_BIM_ID` | `guid` | VGD ID (UUID chữ thường). Plugin dựng hình **nhận ID từ BIM** khi được gọi; dựng lại thì **giữ ID cũ** của đối tượng. |
-| `VGD_BIM_SOURCE` | `plugin` | mã plugin dựng (ví dụ `vgd_room`) |
+| `VGD_BIM_SOURCE` | `plugin` | mã plugin dựng (ví dụ `vgd_structure`) |
 | | `plugin_version` | phiên bản plugin lúc dựng |
 | | `kind` | loại đối tượng (`room`...) |
 | | `ref` | mã dữ liệu bên BIM mà hình này thể hiện (ví dụ mã phòng `rm_xxxxxxxx`) |
@@ -18,22 +18,20 @@ Tham số hình riêng của plugin (nếu có) nằm trong dictionary riêng c�
 
 ## 2. Danh bạ và lệnh (để BIM GỌI)
 
-Mỗi plugin dựng hình đăng ký lúc nạp vào danh bạ chung `VGD::Bridge` (file `bridge_registry.rb`/`core/bridge.rb`, **bản sao giống hệt ở mỗi plugin**: VGD_BIM, VGD_Room, VGD_Structure để không phụ thuộc thứ tự nạp):
+Mỗi plugin dựng hình đăng ký lúc nạp vào danh bạ chung `VGD::Bridge` (file `bridge_registry.rb`/`core/bridge.rb`, **bản sao giống hệt ở mỗi plugin**: VGD_BIM, VGD_Structure để không phụ thuộc thứ tự nạp):
 
 ```ruby
-VGD::Bridge.register('vgd_room', {
+VGD::Bridge.register('ten_plugin', {
   bridge_version: 1, version: '0.1.0',
-  provides: ['room_volume'],
-  commands: {'build' => ->(model, room, vgd_id) { ... }, 'find' => ->(model, room_id) { ... }}
+  provides: ['ten_loai'],
+  commands: {'lenh' => ->(model, ...) { ... }}
 })
 ```
 
-BIM gọi `VGD::Bridge.call('room_volume', 'build', model, room, vgd_id)`. Chưa cài plugin thì `provider_for` trả nil và BIM báo cần cài qua VGD Center. Khác `bridge_version` thì không dùng (không đoán).
+Chưa cài plugin thì `provider_for` trả nil và BIM báo cần cài qua VGD Center. Khác `bridge_version` thì không dùng (không đoán).
 
-### Loại `room_volume` (VGD_Room)
-- `build(model, room, vgd_id)`: tạo hoặc dựng lại khối phòng. `room` là bảng băm của BIM (`id`, `name`, `number`, `boundary` [[x, y] mm], `holes` (tùy chọn: mảng viền lỗ [[x, y] mm], tối đa 50, nằm hẳn trong `boundary`), `elevation` mm, `height` mm). Plugin tự mở **một thao tác** (một bước hoàn tác) và hủy nếu lỗi. Trả về Group.
-- `build_many(model, items)` (từ VGD_Room 0.1.0-beta.2): `items` là mảng `[room, vgd_id]`. Dựng hoặc dựng lại cả đợt trong **một thao tác** (một bước hoàn tác); kiểm tra hết trước khi đụng model; lỗi ở phòng nào thì hủy cả đợt. Trả về mảng Group. Plugin cũ không có lệnh này: BIM tự gọi `build` từng phòng.
-- `find(model, room_id)`: Group đã dựng cho phòng đó (theo `VGD_BIM_SOURCE.ref`) hoặc nil.
+### Loại `room_volume` (đã gỡ ở VGD_BIM 1.1.1-beta.10)
+Plugin VGD_Room đã bị xóa khỏi repo, nên không còn plugin nào cung cấp loại này. Tên loại được giữ để không dùng lại cho nghĩa khác. Khối phòng cũ (nếu còn trong file SketchUp) vẫn được nhận diện qua `VGD_BIM_SOURCE.kind = room` và không tính khối lượng.
 
 ### Loại `vgd_id` (VGD_BIM cung cấp, từ VGD_BIM 1.1.1-beta.6)
 - `generate()`: trả VGD ID mới (UUID chữ thường). Plugin dựng hình (VGD Structure...) xin ID cho phần tử mới dựng; chưa cài BIM thì để trống, BIM gán sau bằng nút "Gán VGD ID". Plugin **không tự sinh** ID. Dựng lại thì plugin **giữ ID cũ** của đúng phần tử (theo `VGD_BIM_SOURCE.ref`), không xin ID mới.

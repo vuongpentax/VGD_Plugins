@@ -32,7 +32,7 @@ toolbars = rubies.flat_map { |f| File.read(f, encoding: 'UTF-8').scan(/Toolbar\.
 toolbars.each { |f, n| check "toolbar '#{n}' (#{File.basename(f)}): dạng VGD + 3 chữ in hoa", n.match?(/\AVGD [A-Z]{3}\z/) }
 
 # 4. Mỗi plugin có menu phải có mục 'Tải lại code' (plugin không có giao diện riêng thì không cần).
-NO_MENU_PLUGINS = %w[VGD_Room].freeze
+NO_MENU_PLUGINS = %w[].freeze
 Dir.children(File.join(ROOT, 'plugins')).sort.each do |plugin|
   next unless File.directory?(File.join(ROOT, 'plugins', plugin)) && !NO_MENU_PLUGINS.include?(plugin)
   code = rubies.select { |f| f.start_with?(File.join(ROOT, 'plugins', plugin) + '/') }
