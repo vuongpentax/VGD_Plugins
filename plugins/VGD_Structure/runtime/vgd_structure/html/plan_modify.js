@@ -115,6 +115,12 @@
   function transformSelection(sel, fn, keep, fix) {
     var moved = 0, skipped = [], map = {};
     sel.forEach(function (s) {
+      if (s.kind === 'note') { // ghi chú 2D: biến đổi trực tiếp (không có "mở khóa lưới")
+        var nb = lvl().notes || (lvl().notes = {}), cur = nb[s.ref]; if (!cur) { skipped.push([s.title, 'ghi chú không còn']); return; }
+        var moved2 = window.VGDPlanNotes.transform(cur, fn);
+        if (keep) nb[A.rid('an_')] = moved2; else nb[s.ref] = moved2;
+        moved++; return;
+      }
       if (!ITEMS[s.kind]) { if (s.kind !== 'opening') skipped.push([s.title, 'loại này chưa dịch tự do được']); return; }
       var pick = pickOf(s), free = pick && geomOf(s);
       if (!free) { skipped.push([s.title, 'chưa có hình trong xem trước']); return; }
@@ -147,7 +153,7 @@
     var g = grid(), l = lvl(), moves = [], skipped = [], movingOut = {};
     selection.forEach(function (s) {
       var d = describe(g, s);
-      if (!d) { if (s.kind === 'opening' || isFree(pickOf(s))) return; skipped.push({shape: s, why: 'không thuộc lưới'}); return; }
+      if (!d) { if (s.kind === 'opening' || s.kind === 'note' || isFree(pickOf(s))) return; skipped.push({shape: s, why: 'không thuộc lưới'}); return; }
       var m = mapped(g, d, op);
       if (!m.ref) { skipped.push({shape: s, why: 'ra ngoài lưới'}); return; }
       if (m.ref === s.ref) { skipped.push({shape: s, why: 'trùng vị trí cũ'}); return; }
@@ -270,10 +276,10 @@
       if (nodeMode) { // hai giao điểm của lưới: phần tử theo lưới dịch theo số ô; phần tử tự do dịch đúng véc-tơ
         var step = {type: 'shift', di: (tn.i - bn.i) * k, dj: (tn.j - bn.j) * k}, p = plan(sel, step, keep);
         applyPlan(p, step, keep); moved += p.moves.length; p.skipped.forEach(function (s) { skipped.push([s.shape.title, s.why]); });
-        var fr = transformSelection(sel.filter(function (s) { return ITEMS[s.kind] && isFree(pickOf(s)); }), translate(v[0] * k, v[1] * k), keep);
+        var fr = transformSelection(sel.filter(function (s) { return s.kind === 'note' || (ITEMS[s.kind] && isFree(pickOf(s))); }), translate(v[0] * k, v[1] * k), keep);
         moved += fr.moved; skipped = skipped.concat(fr.skipped);
       } else { // điểm tự do: mọi cột, dầm, tường (theo lưới thì mở khóa) dịch đúng véc-tơ; sàn, trần theo ô được mở khóa thành đa giác rồi dịch
-        var fr2 = transformSelection(sel.filter(function (s) { return ITEMS[s.kind]; }), translate(v[0] * k, v[1] * k), keep);
+        var fr2 = transformSelection(sel.filter(function (s) { return s.kind === 'note' || ITEMS[s.kind]; }), translate(v[0] * k, v[1] * k), keep);
         moved += fr2.moved; skipped = skipped.concat(fr2.skipped);
       }
     }
@@ -284,10 +290,10 @@
     if (axis.index !== null) { // trục của lưới: phần tử theo lưới lật theo chỉ số, phần tử tự do lật theo tọa độ
       var op = {type: 'mirror', dir: axis.dir, index: axis.index}, p = plan(sel, op, keep);
       applyPlan(p, op, keep); moved += p.moves.length; p.skipped.forEach(function (s) { skipped.push([s.shape.title, s.why]); });
-      var fr = transformSelection(sel.filter(function (s) { return ITEMS[s.kind] && isFree(pickOf(s)); }), reflect(axis), keep, fix);
+      var fr = transformSelection(sel.filter(function (s) { return s.kind === 'note' || (ITEMS[s.kind] && isFree(pickOf(s))); }), reflect(axis), keep, fix);
       moved += fr.moved; skipped = skipped.concat(fr.skipped);
     } else { // đường gióng: mọi cột, dầm, tường (theo lưới thì mở khóa) lật theo tọa độ
-      var fr2 = transformSelection(sel.filter(function (s) { return ITEMS[s.kind]; }), reflect(axis), keep, fix);
+      var fr2 = transformSelection(sel.filter(function (s) { return s.kind === 'note' || ITEMS[s.kind]; }), reflect(axis), keep, fix);
       moved += fr2.moved; skipped = skipped.concat(fr2.skipped);
     }
     return summary(verb, moved, skipped);
@@ -462,7 +468,7 @@
     if (cls === 'yspan') return {t: 'line', a: [x(i), y(j)], b: [x(i), y(j + 1)], width: 6};
     return {t: 'poly', poly: [[x(i), y(j)], [x(i + 1), y(j)], [x(i + 1), y(j + 1)], [x(i), y(j + 1)]], alpha: 0.18};
   }
-  function ghostPolys(fn) { return input.filter(function (s) { return ITEMS[s.kind]; }).map(function (s) { return {t: 'poly', poly: movePoly(s.poly, fn), color: OK, alpha: 0.35}; }); }
+  function ghostPolys(fn) { return input.filter(function (s) { return ITEMS[s.kind] || s.kind === 'note'; }).map(function (s) { return {t: 'poly', poly: movePoly(s.poly, fn), color: OK, alpha: 0.35}; }); }
   function refLine(r, bounds) { return r.dir === 'x' ? {t: 'line', a: [r.pos, bounds[1] - 500], b: [r.pos, bounds[3] + 500], color: OK, dash: [10, 5], width: 2} : {t: 'line', a: [bounds[0] - 500, r.pos], b: [bounds[2] + 500, r.pos], color: OK, dash: [10, 5], width: 2}; }
   function ghost() {
     var out = []; if (!tool) return out;
@@ -483,7 +489,7 @@
           var step = {type: 'shift', di: (tn.i - bn.i) * k, dj: (tn.j - bn.j) * k}, pl = plan(input, step, tool !== 'move');
           pl.moves.forEach(function (mv) { var m = mapped(g, mv.d, step), geo = geometry(g, m.cls, m.i, m.j); geo.color = OK; geo.alpha = geo.alpha || 0.6; out.push(geo); });
           pl.skipped.forEach(function (s) { var d = describe(g, s.shape); if (!d) return; var m = mapped(g, d, step); if (inRange(g, m.cls, m.i, m.j)) { var geo = geometry(g, m.cls, m.i, m.j); geo.color = BAD; geo.alpha = 0.5; out.push(geo); } });
-          input.filter(function (s) { return isFree(pickOf(s)); }).forEach(function (s) { out.push({t: 'poly', poly: movePoly(s.poly, translate(v[0] * k, v[1] * k)), color: OK, alpha: 0.35}); });
+          input.filter(function (s) { return s.kind === 'note' || isFree(pickOf(s)); }).forEach(function (s) { out.push({t: 'poly', poly: movePoly(s.poly, translate(v[0] * k, v[1] * k)), color: OK, alpha: 0.35}); });
         } else out = out.concat(ghostPolys(translate(v[0] * k, v[1] * k)));
       }
     }
@@ -503,7 +509,7 @@
   // Kích thước tạm thời cho MỘT phần tử đang chọn. Cửa: tới hai đầu tường, sửa được. Dầm / tường TỰ DO: chiều dài sửa được (đổi đầu b). Còn lại chỉ xem.
   function freeGeom(shape) { var pk = PICKS[shape.kind] ? pickOf(shape) : null; return pk && pk.free ? pk.free : null; }
   function tempDims(shape) {
-    if (!shape) return [];
+    if (!shape || shape.kind === 'note') return [];
     if (shape.kind === 'opening') {
       var o = items('openings').filter(function (i) { return i.ref === shape.ref; })[0], w = o && items('walls').filter(function (i) { return i.ref === o.wall; })[0];
       if (!o || !w) return [];

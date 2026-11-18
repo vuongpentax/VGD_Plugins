@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.14.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.15.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -571,7 +571,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const col=F.preview_all_cells.columns.items[0].center,c0=await pix(col[0],col[1]);
   ok(c0[1]>c0[0] && c0[1]>c0[2] && c0[1]>150,'pixel tại tâm cột có màu xanh lá (cột được vẽ trên canvas)');
   ok(await page.locator('#pv-tabs .pv-tab').count()===F.state.levels.length && (await page.locator('#pv-tabs [aria-selected=true]').getAttribute('data-level'))===F.state.levels[0].id,'tab theo tầng: đủ số tầng, đang chọn tầng hiện hành');
-  ok(await page.locator('#pv-top .pv-ic[data-tool=select]').isEnabled() && await page.locator('#pv-top .pv-ic[data-tool=pan]').isEnabled() && await page.locator('#pv-side .pv-ic:disabled').count()===8 && await page.locator('#pv-side .pv-ic:not(:disabled)').count()===8,'cột công cụ bên trái: 8 công cụ thiết kế dùng được, 8 nút vẽ 2D / ghi chú còn khóa; thanh trên có Chọn và Kéo dùng được');
+  ok(await page.locator('#pv-top .pv-ic[data-tool=select]').isEnabled() && await page.locator('#pv-top .pv-ic[data-tool=pan]').isEnabled() && await page.locator('#pv-side .pv-ic:disabled').count()===0 && await page.locator('#pv-side .pv-ic:not(:disabled)').count()===16,'cột công cụ bên trái: 8 công cụ thiết kế và 8 nút vẽ 2D / ghi chú đều dùng được; thanh trên có Chọn và Kéo dùng được');
   ok(await page.locator('#pv-side .pv-side-grp > i').allInnerTexts().then(a=>a.join('|'))==='Thiết kế|Vẽ 2D|Ghi chú','cột công cụ chia nhóm Thiết kế, Vẽ 2D, Ghi chú');
   ok((await page.locator('#pv-props').innerText()).includes('Tầng 1') && (await page.locator('#pv-props').innerText()).includes('Cao độ sàn'),'bảng Thuộc tính chưa chọn gì: hiện thông tin tầng');
   // Thu phóng quanh con trỏ: điểm dưới con trỏ đứng yên
@@ -698,7 +698,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await type('so');ok((await dbg()).snapOn===false,'gõ SO: tắt bắt điểm');await type('so');ok((await dbg()).snapOn===true,'gõ SO lần nữa: bật lại');
   await type('pp');ok(await page.locator('#pv-props').isHidden(),'gõ PP: ẩn bảng Thuộc tính');await type('pp');ok(await page.locator('#pv-props').isVisible(),'gõ PP lần nữa: hiện lại');
   await type('vg');ok(await page.locator('#pv-layers').isVisible(),'gõ VG: mở danh sách lớp hiển thị');await type('vg');ok(await page.locator('#pv-layers').isHidden(),'gõ VG lần nữa: đóng');
-  await type('wa');ok((await dbg()).tool==='wall' && await page.locator('#pv-options').isVisible(),'gõ WA: công cụ Tường, hiện thanh tùy chọn');await type('li');ok(/Line \(LI\).*cột mốc sau/.test(await page.locator('#pv-hint').innerText()),'gõ LI (Line, chưa làm): báo rõ, không đổi công cụ');await page.keyboard.press('Escape');ok((await dbg()).tool==='select' && await page.locator('#pv-options').isHidden(),'Esc về công cụ Chọn, thanh tùy chọn ẩn');
+  await type('wa');ok((await dbg()).tool==='wall' && await page.locator('#pv-options').isVisible(),'gõ WA: công cụ Tường, hiện thanh tùy chọn');await type('li');ok((await dbg()).tool==='line' && /Line: bấm điểm đầu/.test(await page.locator('#pv-hint').innerText()),'gõ LI: công cụ Line (P5b), gợi ý bấm điểm đầu');await page.keyboard.press('Escape');ok((await dbg()).tool==='select' && await page.locator('#pv-options').isHidden(),'Esc về công cụ Chọn, thanh tùy chọn ẩn');
   await page.mouse.move(box.x+300,box.y+200);await page.mouse.wheel(0,-600);await wait(60);const zoomed=(await dbg()).view.s;
   await type('wze');await wait(60);
   ok(Math.abs((await dbg()).view.s-d0.view.s)<1e-9 && zoomed>d0.view.s,'gõ sai chữ thứ hai (W, Z, E): bỏ phím sai và vẫn nhận ZE (vừa khung)');
@@ -1352,6 +1352,147 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const vr4=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
   ok(vr4.ok && vr4.free_plates===2,'sau Move: Ruby chấp nhận và tính đủ 2 phần tử đa giác (sàn, trần)');
   await reset();await page.click('#pv-layers-btn');await page.uncheck('[data-layer=ceiling]');await page.click('#pv-layers-btn'); // trả lớp Trần về tắt như mặc định cho các phần sau
+  }
+  // P5b: nét 2D và ghi chú (Line, Polyline, Chữ nhật, Tròn, Cung, Kích thước, Chữ, Cốt cao độ)
+  {
+  const typ=async s=>{for(const ch of s)await page.keyboard.press(ch.toLowerCase());await wait(90);};
+  const sc=async(x,y)=>{const bb=await page.locator('#pv-canvas').boundingBox(),q=await page.evaluate(([a,b])=>window.VGDPlan.toScreen(a,b),[x,y]);return [bb.x+q[0],bb.y+q[1]];};
+  const cl=async(x,y)=>{const q=await sc(x,y);await page.mouse.move(q[0],q[1]);await page.mouse.click(q[0],q[1]);};
+  const hv=async(x,y)=>{const q=await sc(x,y);await page.mouse.move(q[0],q[1]);await wait(40);};
+  const get=()=>page.evaluate(()=>JSON.parse(JSON.stringify(window.VGDS._state.levels[0].notes)));
+  const dbg7=()=>page.evaluate(()=>window.VGDPlan.debug());
+  const hintT=()=>page.locator('#pv-hint').innerText();
+  const reset=async()=>{await page.keyboard.press('Escape');await page.keyboard.press('Escape');await receive('state',F.state_notes);await receive('preview',F.preview_notes);await wait(80);};
+  const fresh=(n,ex)=>Object.keys(n).filter(k=>!ex.includes(k));
+  const SEED=['an_00000001','an_00000002','an_00000003','an_00000004','an_00000005','an_00000006','an_00000007'];
+  await page.click('[data-tab=plan]');
+  if(await page.locator('#pv-browser').isVisible())await page.click('#pv-browser-btn');
+  await reset();
+  const tools=['line','polyline','rect','circle','arc','dim','text','level'];
+  ok((await Promise.all(tools.map(t=>page.locator('#pv-side .pv-ic[data-tool='+t+']').isEnabled()))).every(Boolean),'8 nút vẽ 2D / ghi chú đều bật');
+  ok((await dbg7()).counts.note===7,'ghi chú của tầng hiện trên mặt bằng: 7 hình (nét, đa tuyến, tròn, cung, chữ, kích thước, cốt cao độ)');
+  // Vẽ lên canvas: đếm điểm ảnh khác nền quanh một điểm thế giới
+  const inkAt=(x,y)=>page.evaluate(([x,y])=>{const c=document.getElementById('pv-canvas'),q=window.VGDPlan.toScreen(x,y),d=window.devicePixelRatio||1,ctx=c.getContext('2d'),cx=Math.round(q[0]*d),cy=Math.round(q[1]*d),im=ctx.getImageData(cx-3,cy-3,7,7).data,ref=ctx.getImageData(cx-3,cy-3,1,1).data;let n=0;for(let i=0;i<im.length;i+=4){if(Math.abs(im[i]-ref[0])+Math.abs(im[i+1]-ref[1])+Math.abs(im[i+2]-ref[2])>30)n++;}return n;},[x,y]);
+  await reset();await page.evaluate(()=>window.VGDPlan.say(''));
+  ok((await inkAt(2000,1500))>0 && (await inkAt(6000,2500))>0 && (await inkAt(10800,1800))>0 && (await inkAt(2000,6900))>0 && (await inkAt(10000,5000))>0,'canvas vẽ ghi chú: có nét tại nét, đỉnh đa tuyến, chu vi đường tròn, đường kích thước, đầu cốt cao độ');
+  ok((await inkAt(6000,5800))===0 && (await inkAt(10000,1800))===0,'chỗ trống và giữa tâm đường tròn: không có nét');
+  await page.click('#pv-layers-btn');await page.uncheck('[data-layer=note]');await page.click('#pv-layers-btn');await wait(40);ok((await inkAt(2000,1500))===0,'tắt lớp ghi chú: nét biến mất khỏi canvas');
+  await page.click('#pv-layers-btn');await page.check('[data-layer=note]');await page.click('#pv-layers-btn');await wait(40);
+  // Chọn
+  const pickT=async(x,y)=>{await reset();await cl(x,y);return (await dbg7()).selected;};
+  ok((await pickT(2000,1500))==='Nét an_00000001','bấm trên nét: chọn nét');
+  ok((await pickT(2000,2300))===null,'bấm cách nét 800 mm: không chọn (chọn theo khoảng cách tới nét, không theo hộp bao)');
+  ok((await pickT(6000,2500))==='Đa tuyến an_00000002','bấm trên đỉnh đa tuyến: chọn đa tuyến');
+  ok((await pickT(10000+800,1800))==='Đường tròn an_00000003' && (await pickT(10000,1800))===null,'đường tròn chọn trên chu vi, bấm giữa tâm thì không chọn');
+  ok((await pickT(2000+1000*Math.cos(Math.PI/4),5500+1000*Math.sin(Math.PI/4)))==='Cung an_00000004' && (await pickT(2000-1000,5500))===null && (await pickT(2000,5500-1000))===null,'cung chỉ chọn trong góc quét (0°-90°), cung đối diện không chọn');
+  ok((await pickT(5300,5100))==='Chữ “Ghi chú A”','bấm vào chữ: chọn chữ');
+  ok((await pickT(2000,6900))==='Kích thước 2000 mm','bấm trên đường kích thước: chọn (tên có số đo 2000 mm)');
+  ok(/^Cốt cao độ \+3\.600/.test(await pickT(10400,5200)),'bấm vào cốt cao độ: chọn');
+  // Lớp hiển thị
+  await reset();await page.click('#pv-layers-btn');await page.uncheck('[data-layer=note]');await page.click('#pv-layers-btn');await cl(2000,1500);
+  ok((await dbg7()).selected===null,'tắt lớp "Ghi chú và nét 2D": không chọn được ghi chú');
+  await page.click('#pv-layers-btn');await page.check('[data-layer=note]');await page.click('#pv-layers-btn');
+  // Vẽ Line
+  await reset();await typ('li');ok(/Line: bấm điểm đầu/.test(await hintT()),'gõ LI: công cụ Line');
+  await cl(6000,3000);await cl(8000,3000);let n=await get(),nk=fresh(n,SEED);
+  ok(nk.length===1 && JSON.stringify(n[nk[0]])===JSON.stringify({t:'line',a:[6000,3000],b:[8000,3000]}),'bấm hai điểm: thêm nét (6000, 3000) - (8000, 3000)');
+  await hv(8000,4500);await page.fill('#pv-vcb','1500');await page.press('#pv-vcb','Enter');n=await get();nk=fresh(n,SEED);
+  ok(nk.length===2 && nk.some(k=>n[k].a[0]===8000 && n[k].a[1]===3000 && Math.abs(Math.hypot(n[k].b[0]-8000,n[k].b[1]-3000)-1500)<0.2),'chuỗi nối tiếp từ điểm cuối; gõ 1500 + Enter: nét dài đúng 1500 mm theo hướng con trỏ');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  await typ('li');await page.check('#pv-options input[data-opt=ortho]');await cl(6000,4000);await hv(8000,4300);
+  ok(Math.abs((await dbg7()).edit.notes.target[1]-4000)<1,'bật "Giữ ngang / dọc": điểm cuối bị giữ thẳng (y = 4000)');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  // Polyline
+  await reset();await typ('pl');await cl(5000,3000);await cl(6000,3300);await cl(7000,3000);await cl(7000,4000);
+  ok(/4 điểm/.test(await hintT()),'Polyline: 4 điểm đã bấm');
+  await page.keyboard.press('Backspace');ok(/3 điểm/.test(await hintT()),'Backspace bỏ điểm cuối (còn 3)');
+  await page.keyboard.press('Enter');n=await get();nk=fresh(n,SEED);
+  ok(nk.length===1 && n[nk[0]].t==='poly' && n[nk[0]].closed===false && n[nk[0]].pts.length===3,'Enter: thêm đa tuyến hở 3 điểm');
+  await cl(9000,3000);await cl(11000,3000);await cl(10000,4200);await cl(9000,3000);n=await get();nk=fresh(n,SEED);
+  ok(nk.length===2 && nk.some(k=>n[k].closed===true && n[k].pts.length===3),'bấm lại điểm đầu: đa tuyến KHÉP KÍN');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  await typ('pl');await cl(5000,3000);await page.keyboard.press('Enter');ok(/ít nhất 2/.test(await hintT()) && fresh(await get(),SEED).length===2,'Enter khi mới 1 điểm: báo cần ít nhất 2 điểm');
+  // Chữ nhật, tròn, cung
+  await reset();await typ('rc');await cl(5000,3000);await cl(7000,4500);n=await get();nk=fresh(n,SEED);
+  ok(nk.length===1 && n[nk[0]].closed===true && JSON.stringify(n[nk[0]].pts)===JSON.stringify([[5000,3000],[7000,3000],[7000,4500],[5000,4500]]),'Chữ nhật: hai góc đối diện thành đa tuyến khép kín 4 điểm');
+  await reset();await typ('cc');await cl(8000,6000);await cl(9000,6000);n=await get();nk=fresh(n,SEED);
+  ok(nk.length===1 && n[nk[0]].t==='circle' && n[nk[0]].r===1000 && n[nk[0]].c[0]===8000,'Đường tròn: tâm rồi điểm trên đường tròn, bán kính 1000');
+  await cl(11000,6000);await hv(11000,6800);await page.fill('#pv-vcb','600');await page.press('#pv-vcb','Enter');n=await get();
+  ok(fresh(n,SEED).some(k=>n[k].t==='circle' && n[k].r===600 && n[k].c[0]===11000),'gõ 600 + Enter sau khi bấm tâm: đường tròn bán kính 600');
+  await reset();await typ('ac');await cl(8000,6000);await cl(9000,6000);await cl(8000,5000);n=await get();nk=fresh(n,SEED);
+  ok(nk.length===1 && n[nk[0]].t==='arc' && n[nk[0]].r===1000 && n[nk[0]].a0===0 && n[nk[0]].a1===270,'Cung: tâm, điểm đầu (0°), điểm cuối (270°): quay ngược chiều kim đồng hồ từ 0° tới 270°');
+  // Kích thước
+  await reset();await typ('di');await cl(5000,4000);await cl(7000,4000);ok(/độ lệch/.test(await hintT()),'Kích thước: sau hai điểm chờ bấm chọn phía và độ lệch');
+  await cl(6000,4500);n=await get();nk=fresh(n,SEED);
+  ok(nk.length===1 && n[nk[0]].t==='dim' && n[nk[0]].off===500 && JSON.stringify(n[nk[0]].a)===JSON.stringify([5000,4000]),'bấm điểm thứ ba: kích thước lệch 500 mm');
+  await reset();await typ('di');await cl(5000,6000);await cl(7000,6000);await cl(6000,5500);n=await get();nk=fresh(n,SEED);
+  ok(n[nk[0]].off===-500,'bấm phía dưới đường: độ lệch âm (-500)');
+  // Chữ
+  await reset();await typ('tx');await page.fill('#pv-options input[data-opt=h]','400');await page.press('#pv-options input[data-opt=h]','Tab');await cl(11000,2800);
+  ok(await page.locator('.pv-dim-input').isVisible(),'Chữ: bấm vị trí thì hiện ô nhập nội dung');
+  await page.fill('.pv-dim-input','Hello');await page.press('.pv-dim-input','Enter');n=await get();nk=fresh(n,SEED);
+  ok(nk.length===1 && n[nk[0]].text==='Hello' && n[nk[0]].h===400 && n[nk[0]].p[0]===11000,'nhập "Hello" + Enter: thêm chữ cao 400 mm tại điểm bấm');
+  await cl(11000,3500);await page.keyboard.press('Escape');ok((await page.locator('.pv-dim-input').count())===0 && fresh(await get(),SEED).length===1,'Esc ở ô nhập chữ: hủy, không thêm');
+  await cl(11000,3500);await page.fill('.pv-dim-input','   ');await page.press('.pv-dim-input','Enter');ok(/Chưa nhập/.test(await hintT()) && fresh(await get(),SEED).length===1,'nội dung rỗng: báo, không thêm');
+  // Cốt cao độ
+  await reset();await typ('el');ok(Number(await page.locator('#pv-options input[data-opt=z]').inputValue())===0,'Cốt cao độ: ô "Cao độ" mặc định là cao độ tầng (0)');
+  await cl(12000,500);await page.fill('#pv-options input[data-opt=z]','3600');await page.press('#pv-options input[data-opt=z]','Tab');await cl(12000,1500);n=await get();nk=fresh(n,SEED);
+  ok(nk.length===2 && nk.some(k=>n[k].z===0) && nk.some(k=>n[k].z===3600),'đặt hai cốt cao độ: một theo cao độ tầng (0), một đặt tay (3600)');
+  // Bắt điểm vào ghi chú
+  await reset();await typ('li');await hv(3000,2000);let sn=(await dbg7()).snap;
+  ok(sn && sn.text==='Đầu mút' && Math.abs(sn.p[0]-3000)<1 && Math.abs(sn.p[1]-2000)<1,'bắt điểm vào đầu mút của nét ghi chú');
+  await hv(10000,1800+0);await hv(10000+800,1800+10);sn=(await dbg7()).snap;ok(sn && /Góc phần tư|Đầu mút/.test(sn.text),'bắt điểm vào góc phần tư của đường tròn');
+  await page.keyboard.press('Escape');
+  // Thuộc tính
+  await reset();await cl(10800,1800);
+  ok(await page.locator('#pv-props input[data-field=r]').isVisible() && (await page.locator('#pv-props input[data-field=r]').inputValue())==='800','chọn đường tròn: Thuộc tính có Tâm X, Y, Bán kính');
+  await page.fill('#pv-props input[data-field=r]','900');await page.press('#pv-props input[data-field=r]','Tab');ok((await get())['an_00000003'].r===900,'sửa bán kính = 900');
+  await page.fill('#pv-props input[data-field=r]','0');await page.press('#pv-props input[data-field=r]','Tab');ok((await get())['an_00000003'].r===900 && /Bán kính tối thiểu/.test(await hintT()),'bán kính 0: không áp dụng, báo lý do');
+  await reset();await cl(5300,5100);await page.fill('#pv-props input[data-field=text]','Nội dung mới');await page.press('#pv-props input[data-field=text]','Tab');
+  ok((await get())['an_00000005'].text==='Nội dung mới','sửa nội dung chữ ở Thuộc tính');
+  await page.fill('#pv-props input[data-field=h]','10');await page.press('#pv-props input[data-field=h]','Tab');ok((await get())['an_00000005'].h===250 && /50 đến 5000/.test(await hintT()),'cao chữ 10 mm: không áp dụng, báo khoảng cho phép');
+  await reset();await cl(2000,1500);await page.fill('#pv-props input[data-field=bx]','1000');await page.press('#pv-props input[data-field=bx]','Tab');await page.fill('#pv-props input[data-field=by]','1000');await page.press('#pv-props input[data-field=by]','Tab');
+  ok(JSON.stringify((await get())['an_00000001'].b)===JSON.stringify([1000,2000]) && /không được trùng/.test(await hintT()),'đầu nét trùng đầu kia: không áp dụng, báo');
+  await reset();await cl(10400,5200);await page.fill('#pv-props input[data-field=z]','4500');await page.press('#pv-props input[data-field=z]','Tab');ok((await get())['an_00000007'].z===4500,'sửa cao độ của cốt cao độ = 4500');
+  // Sửa: Move, Copy, Rotate, Mirror
+  await reset();await cl(2000,1500);await typ('mv');await cl(1000,1000);await cl(1000,2000);let l1=(await get())['an_00000001'];
+  ok(JSON.stringify(l1)===JSON.stringify({t:'line',a:[1000,2000],b:[3000,3000]}),'Move (0, +1000): nét dời, giữ nguyên mã');
+  await reset();await cl(10800,1800);await typ('co');await cl(10000,1800);await cl(10000,3000);n=await get();
+  ok(Object.keys(n).length===8 && n['an_00000003'].c[1]===1800 && Object.values(n).some(x=>x.t==='circle' && x.c[1]===3000),'Copy đường tròn: bản gốc còn, bản mới dời (0, +1200), có mã mới');
+  await reset();await cl(2000+1000*Math.cos(Math.PI/4),5500+1000*Math.sin(Math.PI/4));await typ('ro');await page.uncheck('#pv-options input[data-opt=copy]');await page.fill('#pv-options input[data-opt=angle]','90');await page.press('#pv-options input[data-opt=angle]','Tab');await cl(2000,5500);
+  let ar=(await get())['an_00000004'];ok(ar.a0===90 && ar.a1===180 && ar.c[0]===2000,'Rotate 90° quanh tâm cung: góc 0°-90° thành 90°-180°');
+  await reset();await cl(2000+1000*Math.cos(Math.PI/4),5500+1000*Math.sin(Math.PI/4));await typ('mm');await page.uncheck('#pv-options input[data-opt=keep]');await cl(4200,6000);ar=(await get())['an_00000004'];
+  ok(ar.c[0]===6400 && ar.a0===90 && ar.a1===180,'Mirror cung qua trục x = 4200: tâm sang 6400, góc 0°-90° thành 90°-180° (đảo chiều quay)');
+  await reset();await cl(5300,5100);await typ('mm');await page.uncheck('#pv-options input[data-opt=keep]');await cl(4200,6000);let tx=(await get())['an_00000005'];
+  ok(tx.p[0]===3400 && tx.rot===0,'Mirror chữ: vị trí lật nhưng chữ không bị đảo (xoay vẫn 0)');
+  await reset();await cl(5300,5100);await typ('ro');await page.uncheck('#pv-options input[data-opt=copy]');await page.fill('#pv-options input[data-opt=angle]','90');await page.press('#pv-options input[data-opt=angle]','Tab');await cl(5000,5000);tx=(await get())['an_00000005'];
+  ok(tx.rot===90 && tx.p[0]===5000,'Rotate 90° chữ quanh điểm đặt chữ: góc xoay 90°');
+  await reset();await cl(2000,6900);await typ('mv');await cl(1000,6500);await cl(1000,5900);let dm=(await get())['an_00000006'];
+  ok(dm.a[1]===5900 && dm.b[1]===5900 && dm.off===400,'Move kích thước (0, -600): hai điểm dời, độ lệch giữ nguyên');
+  await reset();await cl(2000,6900);await typ('mm');await page.uncheck('#pv-options input[data-opt=keep]');await cl(4200,6000);dm=(await get())['an_00000006'];
+  ok(dm.a[0]===7400 && dm.b[0]===5400 && dm.off===-400,'Mirror kích thước qua trục đứng: hai điểm lật, độ lệch đổi dấu (-400) để đường kích thước vẫn nằm cùng phía thật');
+  // Xóa và hoàn tác
+  await reset();await cl(2000,1500);await page.keyboard.press('Delete');ok(!(await get())['an_00000001'],'Delete: xóa nét');
+  await page.keyboard.press('Control+z');ok(!!(await get())['an_00000001'],'Ctrl+Z: nét trở lại');
+  // Tầng riêng
+  await reset();await page.click('[data-level=sl_00000002]');await wait(80);ok((await dbg7()).counts.note===undefined || (await dbg7()).counts.note===0,'tầng khác không có ghi chú của tầng này');
+  await typ('li');await cl(1000,1000);await cl(2000,1000);
+  ok(Object.keys(await page.evaluate(()=>window.VGDS._state.levels[1].notes)).length===1 && Object.keys(await get()).length===7,'vẽ ở tầng 2: ghi chú thuộc tầng 2, tầng 1 không đổi');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await page.click('[data-level=sl_00000001]');await wait(80);
+  // Cây dự án
+  await reset();await page.click('#pv-browser-btn');
+  const lb=await page.evaluate(()=>Array.from(document.querySelectorAll('#pv-browser .pb-label')).map(x=>x.textContent));
+  ok(lb.includes('Ghi chú') && lb.includes('Nét an_00000001') && lb.includes('Chữ “Ghi chú A” an_00000005') && lb.includes('Cốt cao độ an_00000007'),'Cây dự án: nhóm "Ghi chú" và nhãn từng ghi chú');
+  await page.click('#pv-browser-btn');
+  // Gửi Ruby, lưu và nạp lại
+  await reset();await typ('li');await cl(6000,3000);await cl(8000,3000);await page.keyboard.press('Escape');await page.keyboard.press('Escape');await typ('cc');await cl(8000,6000);await cl(9000,6000);await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  await typ('tx');await cl(11000,2800);await page.fill('.pv-dim-input','Ghi chú “lưu”');await page.press('.pv-dim-input','Enter');await wait(300);
+  const sent=await last('grid_preview'),vr5=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(sent),encoding:'utf8'}));
+  ok(vr5.ok && vr5.notes[0] && Object.keys(vr5.notes[0]).length===10,'Ruby chấp nhận dữ liệu ghi chú do giao diện tạo (10 ghi chú) và giữ đủ');
+  ok(JSON.stringify(vr5.notes[0])===JSON.stringify(await get()),'ghi chú qua Ruby (chuẩn hóa) giống hệt ghi chú đang có trong giao diện: lưu không làm đổi dữ liệu');
+  await receive('state',Object.assign({},F.state_notes,{levels:F.state_notes.levels.map((l,i)=>i===0?Object.assign({},l,{notes:vr5.notes[0]}):l)}));await wait(80);
+  ok((await dbg7()).counts.note===10,'nạp lại dữ liệu đã lưu: 10 hình ghi chú hiện đúng');
+  await reset();
   }
   // P6: liên kết với SketchUp
   {

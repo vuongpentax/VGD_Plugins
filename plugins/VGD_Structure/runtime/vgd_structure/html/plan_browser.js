@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   var host = null, root = null, filterText = '', open = {};
-  var GROUPS = [['column', 'Cột', 'picks'], ['beam', 'Dầm', 'beamPicks'], ['wall', 'Tường', 'wallPicks'], ['opening', 'Cửa', 'openingPicks'], ['slab', 'Sàn', 'slabPicks'], ['ceiling', 'Trần', 'ceilingPicks']];
+  var GROUPS = [['column', 'Cột', 'picks'], ['beam', 'Dầm', 'beamPicks'], ['wall', 'Tường', 'wallPicks'], ['opening', 'Cửa', 'openingPicks'], ['slab', 'Sàn', 'slabPicks'], ['ceiling', 'Trần', 'ceilingPicks'], ['note', 'Ghi chú', 'notes']];
   var TYPE_GROUPS = [['column', 'Loại cột', 'types', 'columnType', 'picks'], ['beam', 'Loại dầm', 'beamTypes', 'beamType', 'beamPicks'], ['wall', 'Loại tường', 'wallTypes', 'wallType', 'wallPicks'], ['opening', 'Loại cửa', 'openingTypes', null, 'openingPicks']];
   var selectedKeys = {};
 
@@ -17,6 +17,10 @@
   function typeLabel(kind, t) { return t.name + ' (' + (kind === 'column' ? t.w + '×' + t.d : kind === 'beam' ? t.w + '×' + t.h : kind === 'wall' ? 'dày ' + t.t : t.w + '×' + t.h) + ')'; }
   function typeOf(kind) { return {column: S().types, beam: S().beamTypes, wall: S().wallTypes, opening: S().openingTypes}[kind] || []; }
   function elementLabel(kind, ref, pick) {
+    if (kind === 'note') {
+      var NN = {line: 'Nét', poly: pick.closed ? 'Đường khép kín' : 'Đa tuyến', circle: 'Đường tròn', arc: 'Cung', text: 'Chữ “' + pick.text + '”', dim: 'Kích thước', mark: 'Cốt cao độ'};
+      return (NN[pick.t] || 'Ghi chú') + ' ' + ref;
+    }
     if (kind === 'opening') { var t = S().openingTypes.filter(function (x) { return x.id === pick.type; })[0]; return (t ? (t.kind === 'door' ? 'Cửa đi ' : 'Cửa sổ ') + t.name : 'Cửa') + ' · ' + pick.wall; }
     var name = {column: 'Cột', beam: 'Dầm', wall: 'Tường', slab: 'Sàn', ceiling: 'Trần'}[kind];
     return name + (pick && pick.free ? (kind === 'slab' || kind === 'ceiling' ? ' đa giác ' : ' tự do ') : ' ') + ref;
