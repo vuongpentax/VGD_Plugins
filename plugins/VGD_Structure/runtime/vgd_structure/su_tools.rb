@@ -23,6 +23,7 @@ module VGD
 
       def onTransactionUndo(_model); @panel.model_history_changed; end
       def onTransactionRedo(_model); @panel.model_history_changed; end
+      def onTransactionCommit(_model); @panel.model_committed; end
     end
 
     # Công cụ SketchUp: bấm một điểm trong khung nhìn (có bắt điểm của SketchUp: đầu mút, giữa, giao, trên cạnh...). Mỗi lần bấm gửi tọa độ (mm, theo trục X Y của model)

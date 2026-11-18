@@ -158,6 +158,7 @@ module VGD
         end
         item[:length] = item[:dir] == 'o' ? item[:finish] : (item[:finish] - item[:start]).round(2)
         item[:join_shift] = shift
+        item[:join_shift_end] = ((nq[0] - g[:q][0]) * g[:u][0] + (nq[1] - g[:q][1]) * g[:u][1]).round(2) # mức đầu cuối dịch dọc theo tường (dương = kéo dài)
         item[:joined] = ends.keys.map { |w| w == :p ? :start : :finish }
       end
     end

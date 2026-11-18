@@ -1662,6 +1662,21 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.evaluate(()=>{window.VGDS.mutate(()=>{window.VGDS._state.levels[0].picks['3-A']={};});});ok((await page.evaluate(()=>window.VGDS.history().undo))>=1,'(chuẩn bị) có lịch sử hoàn tác trên mặt bằng');
   await receive('state',Object.assign({},F.state,{reload:true}));await wait(80);
   ok((await page.evaluate(()=>window.VGDS._state.level))==='sl_00000002' && (await page.evaluate(()=>window.VGDS.history().undo))===0 && !(await get('picks'))['3-A'],'nạp lại do Hoàn tác trong SketchUp: giữ tầng đang xem, xóa lịch sử hoàn tác, dữ liệu theo model');
+  // Sửa trong SketchUp thì dữ liệu cập nhật theo (P7b): bản vá su_edit áp vào dữ liệu, tự dựng lại, giữ ID theo mã mới
+  await reset();await page.click('[data-level=sl_00000001]');await wait(80);
+  await page.evaluate(()=>{window.VGDS.mutate(()=>{const l=window.VGDS._state.levels[0];l.picks={'1-A':{}};l.wallPicks={};l.openingPicks={};});});await wait(500);await clear();
+  await receive('su_edit',{patches:[{level:'sl_00000001',set:{columns:{fc_0000abcd:{free:{x:650,y:150,rot:0}}}},remove:{columns:['1-A']},retag:{'1-A':'fc_0000abcd'},kinds:['columns']}],skipped:[]});await wait(600);
+  let pkE=await get('picks');
+  ok(!!pkE.fc_0000abcd && pkE.fc_0000abcd.free.x===650 && !pkE['1-A'],'su_edit: bản vá cột áp vào dữ liệu (cột tự do mới, bỏ mã lưới cũ)');
+  let ebE=await calls('build_all');
+  ok(ebE.length===1 && JSON.stringify(ebE[0].kinds)==='["columns"]' && ebE[0].retag['sl_00000001:1-A']==='sl_00000001:fc_0000abcd' && !!ebE[0].state.levels[0].picks.columns.fc_0000abcd,'su_edit: tự dựng lại đúng loại cột, gửi kèm đổi mã để giữ VGD ID');
+  ok((await page.evaluate(()=>window.VGDS.undo())) && !!(await get('picks'))['1-A'],'su_edit: Hoàn tác trên mặt bằng trả lại cột theo lưới');
+  await clear();await receive('su_edit',{patches:[],skipped:['không đổi']});await wait(400);
+  ok((await calls('build_all')).length===0 && !!(await get('picks'))['1-A'],'su_edit chỉ có phần bỏ qua: không đổi dữ liệu, không dựng');
+  await receive('su_edit',{patches:[{level:'sl_không_có',set:{columns:{fc_00000001:{free:{x:0,y:0,rot:0}}}},remove:{},retag:{},kinds:['columns']}],skipped:[]});await wait(400);
+  ok((await calls('build_all')).length===0,'su_edit của tầng không còn: bỏ qua, không dựng');
+  await clear();await page.click('#pv-suedit-btn');ok((await page.locator('#pv-suedit-btn').getAttribute('aria-pressed'))==='false' && (await calls('su_sync_edit')).pop()===false,'nút đồng bộ sửa từ SketchUp: tắt thì báo Ruby false');
+  await page.click('#pv-suedit-btn');ok((await page.locator('#pv-suedit-btn').getAttribute('aria-pressed'))==='true' && (await calls('su_sync_edit')).pop()===true,'bật lại thì báo Ruby true');
   if((await dbg10()).suDraw)await page.click('#pv-sudraw-btn');await receive('su_pick_state',{active:false});await page.click('[data-level=sl_00000001]');await reset();await clear(); // trả về trạng thái ban đầu cho các phần sau
   }
   // P6: liên kết với SketchUp

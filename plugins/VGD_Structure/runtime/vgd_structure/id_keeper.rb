@@ -8,6 +8,14 @@ module VGD
       KEY = 'guid'.freeze
       PATTERN = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/
 
+      # Phần tử bị đổi mã vị trí do sửa trong SketchUp (mã cũ => mã mới, cả hai dạng 'mã tầng:mã'): `harvest` khai ID dưới mã mới để dựng lại giữ ID.
+      def self.renaming(map)
+        @renames = map.is_a?(Hash) ? map : {}
+        yield
+      ensure
+        @renames = {}
+      end
+
       # {mã vị trí (VGD_BIM_SOURCE.ref) => VGD ID} của các phần tử trong nhóm sắp bị thay.
       def self.harvest(group)
         return {} unless group
@@ -15,6 +23,7 @@ module VGD
           next unless entity.respond_to?(:get_attribute)
           ref = entity.get_attribute('VGD_BIM_SOURCE', 'ref')
           id = entity.get_attribute(DICTIONARY, KEY)
+          ref = (@renames || {}).fetch(ref, ref)
           out[ref] = id if ref.is_a?(String) && id.is_a?(String) && id.match?(PATTERN)
         end
       end

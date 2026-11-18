@@ -10,33 +10,36 @@ module VGD
       SELECTION_DELAY = 0.12     # giây: gom các sự kiện đổi vùng chọn của SketchUp thành một lần gửi
       SELECTION_ECHO = 0.6       # giây: sau khi tự chọn phần tử trong SketchUp theo yêu cầu của cửa sổ thì bỏ qua sự kiện do chính việc đó gây ra
       MAX_SELECT_ITEMS = 5000
+      EDIT_DELAY = 0.35          # giây: gom các lần sửa liên tiếp trong SketchUp (Move đang kéo, nhiều phần tử) thành một lần cập nhật
       SELECT_KINDS = %w[column beam wall opening slab ceiling].freeze
 
       def initialize
+        @sync_edit = true
         @dialog = ::UI::HtmlDialog.new(dialog_title: TITLE, preferences_key: 'vgd_structure_panel', scrollable: true, resizable: true,
                                        width: 1040, height: 700, min_width: 760, min_height: 520, style: ::UI::HtmlDialog::STYLE_DIALOG)
         @dialog.set_file(File.join(ROOT, 'html', 'index.html'))
         @dialog.add_action_callback('ready') { |_ctx| safely { @ready = true; send_state; flush_focus; flush_tool } }
         @dialog.add_action_callback('grid_preview') { |_ctx, payload| safely { grid_preview(JSON.parse(payload)) } }
-        @dialog.add_action_callback('grid_build') { |_ctx, payload| safely { grid_build(JSON.parse(payload)) } }
-        @dialog.add_action_callback('grid_remove') { |_ctx| safely { grid_remove } }
-        @dialog.add_action_callback('grid_axes') { |_ctx, payload| safely { grid_axes(JSON.parse(payload)) } }
-        @dialog.add_action_callback('columns_build') { |_ctx, payload| safely { columns_build(JSON.parse(payload)) } }
-        @dialog.add_action_callback('columns_remove') { |_ctx, payload| safely { columns_remove(JSON.parse(payload)) } }
-        @dialog.add_action_callback('beams_build') { |_ctx, payload| safely { beams_build(JSON.parse(payload)) } }
-        @dialog.add_action_callback('beams_remove') { |_ctx, payload| safely { beams_remove(JSON.parse(payload)) } }
-        @dialog.add_action_callback('walls_build') { |_ctx, payload| safely { walls_build(JSON.parse(payload)) } }
-        @dialog.add_action_callback('walls_remove') { |_ctx, payload| safely { walls_remove(JSON.parse(payload)) } }
-        @dialog.add_action_callback('openings_build') { |_ctx, payload| safely { openings_build(JSON.parse(payload)) } }
-        @dialog.add_action_callback('openings_remove') { |_ctx, payload| safely { openings_remove(JSON.parse(payload)) } }
-        @dialog.add_action_callback('plates_build') { |_ctx, payload| safely { plates_build(JSON.parse(payload)) } }
-        @dialog.add_action_callback('plates_remove') { |_ctx, payload| safely { plates_remove(JSON.parse(payload)) } }
+        @dialog.add_action_callback('grid_build') { |_ctx, payload| safely(true) { grid_build(JSON.parse(payload)) } }
+        @dialog.add_action_callback('grid_remove') { |_ctx| safely(true) { grid_remove } }
+        @dialog.add_action_callback('grid_axes') { |_ctx, payload| safely(true) { grid_axes(JSON.parse(payload)) } }
+        @dialog.add_action_callback('columns_build') { |_ctx, payload| safely(true) { columns_build(JSON.parse(payload)) } }
+        @dialog.add_action_callback('columns_remove') { |_ctx, payload| safely(true) { columns_remove(JSON.parse(payload)) } }
+        @dialog.add_action_callback('beams_build') { |_ctx, payload| safely(true) { beams_build(JSON.parse(payload)) } }
+        @dialog.add_action_callback('beams_remove') { |_ctx, payload| safely(true) { beams_remove(JSON.parse(payload)) } }
+        @dialog.add_action_callback('walls_build') { |_ctx, payload| safely(true) { walls_build(JSON.parse(payload)) } }
+        @dialog.add_action_callback('walls_remove') { |_ctx, payload| safely(true) { walls_remove(JSON.parse(payload)) } }
+        @dialog.add_action_callback('openings_build') { |_ctx, payload| safely(true) { openings_build(JSON.parse(payload)) } }
+        @dialog.add_action_callback('openings_remove') { |_ctx, payload| safely(true) { openings_remove(JSON.parse(payload)) } }
+        @dialog.add_action_callback('plates_build') { |_ctx, payload| safely(true) { plates_build(JSON.parse(payload)) } }
+        @dialog.add_action_callback('plates_remove') { |_ctx, payload| safely(true) { plates_remove(JSON.parse(payload)) } }
         @dialog.add_action_callback('propose') { |_ctx, payload| safely { propose(JSON.parse(payload)) } }
         @dialog.add_action_callback('check') { |_ctx, payload| safely { check(JSON.parse(payload)) } }
-        @dialog.add_action_callback('build_all') { |_ctx, payload| safely { build_all(JSON.parse(payload)) } }
+        @dialog.add_action_callback('build_all') { |_ctx, payload| safely(true) { build_all(JSON.parse(payload)) } }
         @dialog.add_action_callback('picks_copy') { |_ctx, payload| safely { picks_copy(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_reset') { |_ctx| safely { send_state(reset: true) } }
         @dialog.add_action_callback('plan_select') { |_ctx, payload| safely { plan_select(JSON.parse(payload)) } }
+        @dialog.add_action_callback('su_sync_edit') { |_ctx, payload| safely { @sync_edit = JSON.parse(payload) == true; remember_edit_state } }
         @dialog.add_action_callback('su_pick_start') { |_ctx| safely { su_pick_start } }
         @dialog.add_action_callback('su_pick_stop') { |_ctx| safely { su_pick_stop } }
         @dialog.add_action_callback('su_ghost') { |_ctx, payload| safely { su_ghost(JSON.parse(payload)) } }
@@ -56,6 +59,7 @@ module VGD
         model.add_observer(@model_watcher)
         @observed_model = model
         remember_saved(model)
+        remember_edit_state
       rescue StandardError => error # không theo dõi được vùng chọn thì cửa sổ vẫn dùng bình thường
         puts "[VGD Structure] không gắn được theo dõi vùng chọn: #{error.message}"
         @watcher = nil
@@ -78,12 +82,38 @@ module VGD
         @saved_json = model.get_attribute(Schema::DICTIONARY, ModelStore::KEY)
       end
 
+      # Chụp vị trí phần tử đã dựng để biết sau này người dùng sửa gì trong SketchUp (xem EditSync). Tắt đồng bộ thì không chụp.
+      def remember_edit_state
+        @edit_snapshot = @sync_edit ? EditSync.snapshot(Sketchup.active_model) : nil
+      rescue StandardError => error
+        puts "[VGD Structure] remember_edit_state: #{error.message}"
+        @edit_snapshot = nil
+      end
+
+      # Người dùng vừa hoàn tất một thao tác trong SketchUp: nếu có phần tử đã dựng bị dời, xoay, xóa thì cập nhật dữ liệu (sau một khoảng gom).
+      def model_committed
+        return unless @ready && @sync_edit && @edit_snapshot && @last_state
+        return if @edit_timer
+        @edit_timer = ::UI.start_timer(EDIT_DELAY, false) { @edit_timer = nil; safely { process_edits } }
+      end
+
+      def process_edits
+        return unless @ready && @sync_edit && @edit_snapshot && @last_state
+        changes = EditSync.changes(@edit_snapshot)
+        remember_edit_state # luôn chụp lại: nhóm bị dời cả khối hoặc thay đổi nhỏ cũng đổi vị trí gốc
+        return if changes.empty?
+        result = EditSync.patches(@last_state, changes)
+        return if result[:patches].empty? && result[:skipped].empty?
+        emit('su_edit', {patches: result[:patches], skipped: result[:skipped].uniq})
+      end
+
       # Người dùng Hoàn tác / Làm lại trong SketchUp: nếu dữ liệu plugin trong model đổi (ví dụ hoàn tác một lần vẽ) thì nạp lại cửa sổ cho khớp;
       # không đổi thì giữ nguyên (không làm mất phần sửa chưa lưu trên mặt bằng chỉ vì hoàn tác một việc khác trong SketchUp).
       def model_history_changed
         return unless @ready
         model = Sketchup.active_model
         now = model.get_attribute(Schema::DICTIONARY, ModelStore::KEY)
+        remember_edit_state # sau Hoàn tác / Làm lại, vị trí phần tử trong model đã khác: chụp lại để không coi đó là sửa của người dùng
         return if now == @saved_json
         @saved_json = now
         send_state(reload: true)
@@ -243,9 +273,17 @@ module VGD
 
       # Xem trước do Ruby tính; nếu giao diện bật "trạng thái model" (payload['status']) thì gửi kèm so khớp với model của tầng đang xem.
       def grid_preview(payload)
+        remember_last_state(payload)
         preview = Preview.build(payload)
         emit('preview', preview)
         emit_status(payload) if payload['status'] && preview[:ok] && preview[:levels_ok] != false
+      end
+
+      # Dữ liệu hiện tại của cửa sổ (đã chuẩn hóa), để tính cập nhật khi người dùng sửa trong SketchUp. Dữ liệu đang sai thì giữ bản cũ.
+      def remember_last_state(payload)
+        @last_state = State.normalize!(JSON.parse(payload.to_json))
+      rescue ArgumentError
+        nil
       end
 
       def emit_status(payload)
@@ -310,7 +348,7 @@ module VGD
             return emit('message', {text: 'Đã hủy, chưa dựng gì.'})
           end
         end
-        result = AllBuilder.build(model, state, ids, only)
+        result = AllBuilder.build(model, state, ids, only, payload['retag'])
         remember_saved(model)
         parts = result[:kinds].map { |kind, r| "#{r.total} #{Checker::KIND_LABELS[kind].downcase}" }.join(', ')
         note = result[:issues].empty? ? '' : " Có #{result[:issues].size} cảnh báo: #{result[:issues].first(3).join(' ')}"
@@ -524,8 +562,9 @@ module VGD
         emit('message', {text: error.message, error: true})
       end
 
-      def safely
+      def safely(resnap = false)
         yield
+        remember_edit_state if resnap
       rescue StandardError, ScriptError => error
         puts "[VGD Structure] #{error.class}: #{error.message}"
         emit('message', {text: "Lỗi: #{error.message}", error: true})

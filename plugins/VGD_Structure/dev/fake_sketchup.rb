@@ -1,6 +1,6 @@
 # SketchUp giả lập tối thiểu cho test VGD Structure (không thay SketchUp thật): chỉ mô phỏng phần API mà mã dùng.
 # Đơn vị: Numeric#mm trả về inch như SketchUp thật; hộp bao của chữ 3D giả lập là hình chữ nhật căn giữa theo ngang, đáy ở gốc.
-class Numeric; def mm; self / 25.4; end; end
+class Numeric; def mm; self / 25.4; end; def to_mm; self * 25.4; end; end
 TextAlignCenter = 1
 MB_YESNO = 4
 IDYES = 6
@@ -20,7 +20,14 @@ module Geom
     def self.rotation(_point, _axis, radians); new(Vector3d.new(0, 0, 0), radians); end
     # Transformation.new(Point3d) dời tới điểm đó (như SketchUp); translation(Vector3d) dời theo vector.
     def initialize(vector = Vector3d.new(0, 0, 0), angle = 0.0); @vector = vector; @angle = angle; end
-    def *(other); Transformation.new(@vector, @angle + other.angle); end
+    # Ghép như SketchUp: áp `other` trước (xoay quanh gốc rồi dời), sau đó áp phép này.
+    def *(other)
+      cs = Math.cos(@angle); sn = Math.sin(@angle)
+      ov = other.vector
+      Transformation.new(Vector3d.new(@vector.x + ov.x * cs - ov.y * sn, @vector.y + ov.x * sn + ov.y * cs, @vector.z + ov.z), @angle + other.angle)
+    end
+    def origin; Point3d.new(@vector.x, @vector.y, @vector.z); end
+    def xaxis; Vector3d.new(Math.cos(@angle), Math.sin(@angle), 0); end
     def rotation_degrees; @angle * 180.0 / Math::PI; end
   end
 end
@@ -47,6 +54,7 @@ module Sketchup
     def locked?; @locked; end
     def lock!; @locked = true; end
     def erase!; @valid = false; @parent.items.delete(self); end
+    def transformation; Geom::Transformation.new(Geom::Vector3d.new(@offset[0], @offset[1], 0)); end
     def transform!(t); @offset = [@offset[0] + t.vector.x, @offset[1] + t.vector.y]; self; end
     # Hộp bao của nhóm chữ: giả lập chữ rộng 0,6 x cao, đáy ở y = 0, căn giữa theo ngang, rồi cộng phần dời của nhóm.
     def bounds
@@ -85,7 +93,14 @@ module Sketchup
   class Instance < Entity
     attr_accessor :name, :layer
     attr_reader :definition, :transformation
-    def initialize(definition, transformation); @definition = definition; @transformation = transformation; end
+    def initialize(definition, transformation, parent = nil); @definition = definition; @transformation = transformation; @parent = parent; @valid = true; end
+    def valid?; @valid; end
+    def erase!; @valid = false; @parent.items.delete(self) if @parent; end
+    # Giả lập người dùng dời / xoay thể hiện (Move, Rotate): dời thêm (dx, dy) mm và xoay thêm `deg` quanh gốc của nó.
+    def fake_move(dx, dy, deg = 0)
+      v = @transformation.vector
+      @transformation = Geom::Transformation.new(Geom::Vector3d.new(v.x + dx.mm, v.y + dy.mm, v.z), @transformation.angle + deg * Math::PI / 180.0)
+    end
   end
   class SelectionObserver; end
   # Vùng chọn giả lập: danh sách entity, có thể gắn observer (gọi lại khi đổi).
@@ -131,7 +146,7 @@ module Sketchup
     def initialize; @items = []; end
     def add_group; g = Group.new(self); @items << g; g; end
     def add_face(points); f = Face.new(points); @items << f; f; end
-    def add_instance(definition, transformation); i = Instance.new(definition, transformation); @items << i; i; end
+    def add_instance(definition, transformation); i = Instance.new(definition, transformation, self); @items << i; i; end
     def add_line(a, b); e = Edge.new(a, b); @items << e; e; end
     def add_circle(center, normal, radius, segments); (0...segments).map { |i| e = Edge.new(center, radius); @items << e; e }.tap { |l| (@circles ||= []) << [center, radius, segments] }
     end
@@ -171,6 +186,7 @@ module Sketchup
     def remove_observer(o); (@observers ||= []).delete(o); true; end
     def active_view; @view ||= FakeView.new; end
     # Mô phỏng người dùng Hoàn tác / Làm lại trong SketchUp: gọi các observer của model.
+    def fire_commit; (@observers || []).each { |o| o.onTransactionCommit(self) if o.respond_to?(:onTransactionCommit) }; end
     def fire_undo; (@observers || []).each { |o| o.onTransactionUndo(self) if o.respond_to?(:onTransactionUndo) }; end
     def fire_redo; (@observers || []).each { |o| o.onTransactionRedo(self) if o.respond_to?(:onTransactionRedo) }; end
     def active_path=(path); @active_path = path; end
@@ -179,7 +195,7 @@ module Sketchup
       @entities = FakeEntities.new; @selection = Selection.new; @definitions = Definitions.new; @layers = Layers.new; @operations = []; @attrs = {}
       @line_styles = styles.map { |n| LineStyle.new(n) }
     end
-    def start_operation(name, disable); @operations << [:start, name]; end
+    def start_operation(name, disable, *_rest); @operations << [:start, name]; end
     def commit_operation; @operations << [:commit]; end
     def abort_operation; @operations << [:abort]; end
     def set_attribute(dict, key, value); (@attrs[dict] ||= {})[key] = value; end

@@ -866,6 +866,7 @@
     } else if (event === 'su_key') { window.VGDPlan.suKey(data.key);
     } else if (event === 'su_text') { window.VGDPlan.suText(data.text);
     } else if (event === 'start_tool') { startDrawTool(data.tool);
+    } else if (event === 'su_edit') { applySuEdit(data);
     }
   }
   // ---- Thao tác từ tab Mặt bằng: có hoàn tác / làm lại (chỉ các thay đổi làm trên mặt bằng) ----
@@ -895,21 +896,47 @@
     if (set.walls && Object.keys(l.openingPicks).length) set.openings = true;   // tường đổi chỗ thì cửa đổi theo
     return Object.keys(set);
   }
-  function scheduleAutoBuild(kinds) {
+  var autoRetag = {};
+  function scheduleAutoBuild(kinds, levelId, retag) {
     if (!kinds.length) return;
-    kinds.forEach(function (k) { autoKinds[k] = state.level; });
+    kinds.forEach(function (k) { autoKinds[k + '@' + (levelId || state.level)] = levelId || state.level; });
+    if (retag) Object.keys(retag).forEach(function (k) { autoRetag[k] = retag[k]; });
     clearTimeout(autoTimer);
     autoTimer = setTimeout(function () {
-      var byLevel = {}; Object.keys(autoKinds).forEach(function (k) { (byLevel[autoKinds[k]] = byLevel[autoKinds[k]] || []).push(k); }); autoKinds = {};
+      var byLevel = {}; Object.keys(autoKinds).forEach(function (k) { (byLevel[autoKinds[k]] = byLevel[autoKinds[k]] || []).push(k.split('@')[0]); }); autoKinds = {}; var retag = autoRetag; autoRetag = {};
       Object.keys(byLevel).forEach(function (levelId) {
         var lv = state.levels.filter(function (x) { return x.id === levelId; })[0]; if (!lv) return;
         var build = byLevel[levelId].filter(function (k) { return Object.keys(lv[KIND_BOX[k]] || {}).length; }), gone = byLevel[levelId].filter(function (k) { return !Object.keys(lv[KIND_BOX[k]] || {}).length; });
         gone.forEach(function (k) { // đã xóa hết phần tử loại này: bỏ nhóm tương ứng trong model
           if (k === 'slabs' || k === 'ceilings') call('plates_remove', {kind: k, level: levelId}); else call(k + '_remove', {level: levelId});
         });
-        if (build.length) { message('Đang dựng ' + build.join(', ') + '...'); call('build_all', {state: payload(), levels: [levelId], kinds: build}); }
+        if (build.length) { message('Đang dựng ' + build.join(', ') + '...'); call('build_all', {state: payload(), levels: [levelId], kinds: build, retag: retag}); }
       });
     }, AUTO_BUILD_MS);
+  }
+  // Bản vá dữ liệu do sửa trong SketchUp (dời, xoay, xóa phần tử đã dựng): áp vào dữ liệu rồi tự dựng lại các loại đổi, giữ VGD ID theo mã mới.
+  var SU_BOX = {columns: 'picks', beams: 'beamPicks', walls: 'wallPicks', openings: 'openingPicks', slabs: 'slabPicks', ceilings: 'ceilingPicks'};
+  function applySuEdit(data) {
+    var patches = (data && data.patches) || [], retag = {}, byLevel = {};
+    if (patches.length) {
+      mutate(function () {
+        patches.forEach(function (p) {
+          var lv = state.levels.filter(function (x) { return x.id === p.level; })[0]; if (!lv) return;
+          Object.keys(p.remove || {}).forEach(function (box) { (p.remove[box] || []).forEach(function (ref) { delete lv[SU_BOX[box]][ref]; }); });
+          Object.keys(p.set || {}).forEach(function (box) { Object.keys(p.set[box]).forEach(function (ref) { lv[SU_BOX[box]][ref] = p.set[box][ref]; }); });
+          Object.keys(p.retag || {}).forEach(function (old) { retag[p.level + ':' + old] = p.level + ':' + p.retag[old]; });
+          (byLevel[p.level] = byLevel[p.level] || {}); (p.kinds || []).forEach(function (k) { byLevel[p.level][k] = true; });
+        });
+      });
+      Object.keys(byLevel).forEach(function (id) {
+        var lv = state.levels.filter(function (x) { return x.id === id; })[0], set = byLevel[id];
+        if (set.openings && Object.keys(lv.wallPicks).length) set.walls = true;
+        if (set.walls && Object.keys(lv.openingPicks).length) set.openings = true;
+        scheduleAutoBuild(Object.keys(set), id, retag);
+      });
+      message('Đã cập nhật dữ liệu theo sửa trong SketchUp (' + patches.length + ' phần tử); đang dựng lại.');
+    }
+    if (data && data.skipped && data.skipped.length) message('Bỏ qua: ' + data.skipped.join('; ') + '.');
   }
   function startDrawTool(tool) {
     switchTab('plan'); window.VGDPlan.startDrawTool(tool);

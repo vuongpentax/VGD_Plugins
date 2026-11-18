@@ -168,7 +168,7 @@ Tài liệu tham khảo: `docs/reference/vtbim/` (phần Ruby mã hóa, JS của
 | P5 (ĐÃ LÀM, 0.10.0-beta.7; chưa thay các tab lẻ) | Cây dự án | Project Browser: tầng, nhóm phần tử, loại cột / dầm / tường / cửa, lưới trục; lọc, chọn từ cây, tô sáng theo lựa chọn | test UI |
 | P5b (ĐÃ LÀM, 0.15.0-beta.1; ghi chú lưu trong dữ liệu plugin, không dựng vào model) | Nét 2D và ghi chú | Line, Polyline, Rect, Circle, Arc, chữ, kích thước, cốt cao độ (lớp ghi chú theo tầng) | test lưu và nạp lại |
 | P7a (ĐÃ LÀM, 0.19.0-beta.1; chỉ kiểm bằng giả lập) | Vẽ trực tiếp trong SketchUp | Công cụ nhận điểm của SketchUp cho mọi công cụ vẽ, xem trước trong khung nhìn, phím và ô giá trị, tự dựng loại đã đổi, Hoàn tác nạp lại dữ liệu, menu Vẽ trong SketchUp | chỉ kiểm được trong SketchUp thật |
-| P7b (chưa làm) | Sửa trong SketchUp thì dữ liệu cập nhật | Nhận ra dời / xóa phần tử đã dựng trong SketchUp và tự cập nhật dữ liệu nguồn (chủ dự án chọn: tự cập nhật không hỏi) | chỉ kiểm được trong SketchUp thật |
+| P7b (đã làm, chưa thử trong SketchUp thật) | Sửa trong SketchUp thì dữ liệu cập nhật | Nhận ra dời / xóa phần tử đã dựng trong SketchUp và tự cập nhật dữ liệu nguồn (chủ dự án chọn: tự cập nhật không hỏi) | chỉ kiểm được trong SketchUp thật |
 | P6 (ĐÃ LÀM, 0.12.0-beta.1: chọn hai chiều, trạng thái model, dựng tầng, chọn điểm trong SketchUp; chỉ kiểm bằng giả lập) | Tương tác SketchUp ↔ cửa sổ | Chọn trong SketchUp thì sáng trên mặt bằng và ngược lại; chọn điểm bằng công cụ trong SketchUp | chỉ kiểm được trong SketchUp thật |
 
 Mỗi cột mốc có test và RBZ beta để thử. Chưa phát hành.

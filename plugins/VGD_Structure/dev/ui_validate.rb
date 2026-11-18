@@ -1,7 +1,7 @@
 # Kiểm tra dữ liệu giao diện gửi Ruby (đọc JSON từ stdin): chuẩn hóa như khi dựng thật, in {ok, error, free: số phần tử tự do, issues} ra stdout.
 require 'json'
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
-%w[core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/levels core/column_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview].each { |f| require File.join(ROOT, f) }
+%w[core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/levels core/column_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/slab_plan core/ceiling_plan core/proposal core/checker core/model_edit core/state core/preview].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 raw = JSON.parse($stdin.read)
 begin

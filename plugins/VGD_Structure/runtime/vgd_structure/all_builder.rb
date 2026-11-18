@@ -41,19 +41,12 @@ module VGD
       end
 
       # Trả về {kinds: {loại => Result}, total:, issues: [...]}.
-      def self.build(model, raw_state, level_ids, only = nil)
+      # retag: {'mã tầng:mã cũ' => 'mã tầng:mã mới'} khi phần tử đổi mã do sửa trong SketchUp (giữ VGD ID).
+      def self.build(model, raw_state, level_ids, only = nil, retag = nil)
         ctx = prepare(model, raw_state, level_ids, only)
         model.start_operation('VGD Structure · Dựng kết cấu', true)
         begin
-          results = ctx[:contexts].each_with_object({}) do |(kind, c), out|
-            out[kind] = case kind
-                        when 'columns' then ColumnBuilder.apply(model, c)
-                        when 'beams' then BeamBuilder.apply(model, c)
-                        when 'walls' then WallBuilder.apply(model, c)
-                        when 'openings' then OpeningBuilder.apply(model, c)
-                        else PlateBuilder.apply(model, c)
-                        end
-          end
+          results = IdKeeper.renaming(retag) { apply_all(model, ctx) }
           ModelStore.write(model, raw_state)
           model.commit_operation
         rescue StandardError, ScriptError
@@ -61,6 +54,18 @@ module VGD
           raise
         end
         {kinds: results, total: ctx[:total], issues: results.flat_map { |kind, r| r.issues.map { |m| "#{LABELS[kind]}: #{m}" } }}
+      end
+
+      def self.apply_all(model, ctx)
+        ctx[:contexts].each_with_object({}) do |(kind, c), out|
+          out[kind] = case kind
+                      when 'columns' then ColumnBuilder.apply(model, c)
+                      when 'beams' then BeamBuilder.apply(model, c)
+                      when 'walls' then WallBuilder.apply(model, c)
+                      when 'openings' then OpeningBuilder.apply(model, c)
+                      else PlateBuilder.apply(model, c)
+                      end
+        end
       end
     end
   end

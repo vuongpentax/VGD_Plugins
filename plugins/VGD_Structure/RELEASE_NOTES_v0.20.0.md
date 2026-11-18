@@ -1,4 +1,4 @@
-# VGD Structure 0.19.0 (beta)
+# VGD Structure 0.20.0 (beta)
 
 Tab **Mặt bằng** (cột mốc P1 đến P6, P4b-1, P4b-2, P4b-3, P5b; bản beta 0.10.0 gộp vào đây): tab **Mặt bằng** (cửa sổ vẽ mặt bằng kiểu CAD, giai đoạn 2).
 
@@ -20,4 +20,5 @@ Tab **Mặt bằng** (cột mốc P1 đến P6, P4b-1, P4b-2, P4b-3, P5b; bản 
 - Thuộc tính của loại ngay trong bảng Thuộc tính (sửa tên và kích thước loại, báo số phần tử bị ảnh hưởng) và Ẩn / Cô lập tạm thời (EH, HI, HR). Chỉ kiểm bằng SketchUp giả lập.
 - Nối góc tường tự động (góc L, T, chữ thập; tường theo lưới, tự do, xiên), có ô tắt từng tường; cửa giữ đúng chỗ. Chỉ kiểm bằng SketchUp giả lập; tường dựng bằng bản trước cần dựng lại.
 - **Đổi quy tắc cốt:** thêm "cán nền" (mặc định 50 mm); mặt sàn kết cấu = cao độ tầng trừ cán nền; đỉnh dầm bằng đỉnh sàn (h là tổng chiều cao); sàn lọt lòng giữa dầm và cột tầng dưới; cột, tường tính từ cốt kết cấu; ngưỡng cửa và cao trần tính từ cốt hoàn thiện. Dữ liệu cũ nhận cán nền 50 nên hình dựng đổi, cần dựng lại.
-- **Vẽ trực tiếp trong SketchUp (bản 1):** menu Vẽ trong SketchUp (cột, dầm, tường, cửa, sàn, trần) và nút / phím SD: bấm điểm trong khung nhìn SketchUp (bắt điểm của SketchUp), xem trước vẽ trong SketchUp, Enter / Backspace / ô giá trị / Esc từ SketchUp, tự dựng loại đã đổi của tầng đang xem, Hoàn tác trong SketchUp nạp lại dữ liệu. Chỉ kiểm bằng SketchUp giả lập. Bản 2 (sửa trong SketchUp thì dữ liệu cập nhật) chưa làm.
+- **Vẽ trực tiếp trong SketchUp (bản 1):** menu Vẽ trong SketchUp (cột, dầm, tường, cửa, sàn, trần) và nút / phím SD: bấm điểm trong khung nhìn SketchUp (bắt điểm của SketchUp), xem trước vẽ trong SketchUp, Enter / Backspace / ô giá trị / Esc từ SketchUp, tự dựng loại đã đổi của tầng đang xem, Hoàn tác trong SketchUp nạp lại dữ liệu. Chỉ kiểm bằng SketchUp giả lập. 
+- **Sửa trong SketchUp thì dữ liệu cập nhật (bản 2):** dời, xoay quanh trục đứng hoặc xóa phần tử đã dựng trong SketchUp thì dữ liệu nguồn tự cập nhật (không hỏi), tự dựng lại và giữ VGD ID; nút ⇄ tắt / bật. Dời cả nhóm, đổi cao độ, co giãn thì bỏ qua. Chỉ kiểm bằng SketchUp giả lập.
