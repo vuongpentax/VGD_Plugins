@@ -2,6 +2,12 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.8: đã kiểm tra tự động
+
+Chạy từ `plugins/VGD_BIM`: `node dev/test_ui.cjs` (có kiểm tra mới: xuất khi đang gộp dòng và khi thu gọn nhóm vẫn đủ mọi món; Mở / Thu gọn tất cả), `dev/test_ui_en.cjs`, `dev/test_ui_sheets.cjs`, `dev/test_report_page.cjs`. Đã chạy cả bốn bộ và đạt. Bản sửa cũ bị bắt: chạy `test_ui.cjs` với `app.js` của bản beta.7 thì dừng đúng ở kiểm tra xuất khi đang gộp dòng.
+
+**Chưa xác minh trong SketchUp thật:** file .xlsx / PDF xuất từ bảng đang gộp dòng và thu gọn nhóm có đủ mọi món và tổng đúng; popover Nhóm theo hiển thị đúng trong cửa sổ SketchUp.
+
 ## Bản 1.1.0-beta.77: đã kiểm tra tự động
 
 Chạy từ `plugins/VGD_BIM`: `ruby dev/run_tests.rb` (cú pháp mọi file Ruby và 35 bộ test) và các bộ Playwright `dev/test_ui.cjs`, `dev/test_ui_images.cjs`, `dev/test_ui_en.cjs`, `dev/test_report_page.cjs`.

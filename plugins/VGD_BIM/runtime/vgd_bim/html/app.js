@@ -612,11 +612,12 @@ function mergeRows(rows){
   return [...map.values()];
 }
 // Dòng, nhóm và tổng đúng như bảng đang hiện (lọc, gộp, sắp xếp, nhóm theo, cộng tổng chỉ cấp cao nhất). Dùng cho vẽ bảng và xuất Excel / PDF.
-function viewModel(){
+// full = true (xuất): luôn từng món, không gộp dòng; nhóm thu gọn vẫn đủ món (xem exportRows).
+function viewModel(full=false){
   const cols=orderedKeys().map(colByKey).filter(Boolean);
   const filtered=filteredRows();
   const shown=new Set(filtered.map(r=>r.index));
-  const rows=tableState.merge?mergeRows(filtered):filtered;
+  const rows=tableState.merge&&!full?mergeRows(filtered):filtered;
   const placed=manualSorted(rows); // sắp theo cột là sắp ổn định trên thứ tự này nên các dòng bằng nhau giữ thứ tự tay (không có thứ tự tay thì là thứ tự quét)
   const ordered=tableState.sort?[...placed].sort((a,b)=>{const va=sortValue(a,tableState.sort.key),vb=sortValue(b,tableState.sort.key);if(va<vb)return -tableState.sort.dir;if(va>vb)return tableState.sort.dir;return 0;}):placed;
   // Cộng tổng: mặc định chỉ cộng đối tượng cấp cao nhất để không đếm trùng group lồng nhau.
@@ -927,7 +928,10 @@ function groupPanel(){
   const box=node('input');box.type='checkbox';box.checked=tableState.merge;
   box.onchange=()=>{tableState.merge=box.checked;renderGrid($('grid-host'));};
   merge.append(box,document.createTextNode(' Gộp dòng giống nhau'));
-  p.append(list,merge,node('p','Chỉ đổi cách hiển thị. Dòng gộp: Số lượng, diện tích, thể tích là tổng của các dòng gộp.','muted'));
+  // Mở / thu gọn mọi nhóm một lượt, khỏi bấm từng nhóm khi có nhiều nhóm.
+  const toggles=node('div');
+  if(tableState.groupBy)toggles.append(button('Mở tất cả nhóm',()=>setAllGroupsClosed(false),'pop-pick'),button('Thu gọn tất cả',()=>setAllGroupsClosed(true),'pop-pick'));
+  p.append(list,toggles,merge,node('p','Chỉ đổi cách hiển thị. Dòng gộp: Số lượng, diện tích, thể tích là tổng của các dòng gộp.','muted'));
   return p;
 }
 // Thay thế hàng loạt: chữ cần tìm là ô Tìm; áp cho các cột Tên, Mô tả, Xuất xứ, Quy cách đang hiện, trong các dòng đang lọc.
@@ -1000,6 +1004,15 @@ function toolbar(){
   if(placed)bar.append(unplace);
   bar.append(groupAnchor);
   return bar;
+}
+// Thu gọn (closed = true) hoặc mở (false) mọi nhóm đang hiện. Chỉ đổi cách xem, không đổi dữ liệu.
+function setAllGroupsClosed(closed){
+  viewModel().sections.forEach(section=>{
+    if(section.label===null)return;
+    const key=`${tableState.groupBy}:${section.label}`;
+    if(closed)tableState.collapsed.add(key);else tableState.collapsed.delete(key);
+  });
+  renderGrid($('grid-host'));
 }
 // Mặt trước: phát hiện tự động (tường + hình học), đặt tay theo hướng nhìn / xoay / đảo, xóa. Chỉ ghi dữ liệu, không đổi hình học.
 tableState.frontOverwrite=false;
@@ -1592,6 +1605,7 @@ function exportCell(row,col,position){
   if(NUMERIC.has(col.key)){const value=scaledValue(col.key,row[col.key]);return value==null||value===''?null:Number(value);}
   return String(cellText(row,col.key)||'');
 }
+// Xuất luôn đủ mọi món, kể cả nhóm đang thu gọn (thu gọn chỉ là cách xem trên màn hình).
 function exportRows(model){
   const {cols,rows,sections,sumOf,countOf}=model;
   const labelKey=['instance','definition','entity'].find(k=>cols.some(c=>c.key===k));
@@ -1601,7 +1615,6 @@ function exportRows(model){
   sections.forEach(section=>{
     if(section.label!==null){
       out.push({kind:'group',cells:summary(section.rows,exportText(`${section.label} · ${countOf(section.rows)}`))});
-      if(tableState.collapsed.has(`${tableState.groupBy}:${section.label}`))return;
     }
     section.rows.forEach(row=>{position++;out.push({kind:'row',pid:row.pid||null,cells:cols.map(col=>exportCell(row,col,position))});});
   });
@@ -1614,7 +1627,7 @@ const tableWaiters=[];
 const nextTableEvent=(ms=window.tableWaitMs||20000)=>new Promise(resolve=>{let done=false;const finish=arrived=>{if(!done){done=true;resolve(arrived===true);}};tableWaiters.push(()=>finish(true));setTimeout(finish,ms);}); // true khi bảng mới tới, false khi hết thời gian chờ
 function exportLabels(){return {model:exportText('Mô hình'),preset:'Preset',date:exportText('Ngày'),print:exportText('In / Lưu PDF'),reset:exportText('Đặt lại độ rộng cột'),hint:exportText('Kéo mép tiêu đề cột để chỉnh độ rộng.')};}
 function exportSheetData(name){
-  const model=viewModel();
+  const model=viewModel(true);
   return {name,columns:model.cols.map(exportColumn),rows:exportRows(model),...(tableState.rowHeight>0?{row_height:tableState.rowHeight}:{})};
 }
 let exporting=false;

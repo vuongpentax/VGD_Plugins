@@ -199,6 +199,17 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   last=await lastCall();assert(JSON.stringify(last.data.indexes.sort())==='[1,4]','Selecting a merged row must select all its objects');
   await merged.locator('td[data-key="material"]').dblclick();await page.locator('.cell-item',{hasText:'Gỗ sồi'}).click();
   edits=await editCalls();assert(JSON.stringify(edits.at(-1).indexes.sort())==='[1,4]'&&edits.at(-1).value==='Gỗ sồi','Editing a merged row must edit all its objects');
+  // Xuất Excel luôn đủ mọi món, kể cả khi đang gộp dòng hoặc thu gọn nhóm
+  const exportedItems=()=>page.evaluate(()=>exportSheetData('Test').rows.filter(r=>r.kind==='row').length);
+  const allItems=await page.evaluate(()=>filteredRows().length);
+  assert(await exportedItems()===allItems,'Export while merged rows must list every object');
+  await page.getByRole('button',{name:/^Nhóm(:| theo).*▾$/}).click();
+  await page.getByRole('button',{name:'Thu gọn tất cả',exact:true}).click();
+  assert(await page.locator('.grid tbody tr[data-members]').count()===0,'Collapse all did not hide the group rows');
+  assert(await exportedItems()===allItems,'Export of collapsed groups must still list every object');
+  await page.getByRole('button',{name:'Mở tất cả nhóm',exact:true}).click();
+  assert(await page.locator('.grid tbody tr[data-members]').count()===4,'Expand all did not show the merged rows again');
+  await page.getByRole('button',{name:/^Nhóm(:| theo).*▾$/}).click();
   await page.getByRole('button',{name:/^Nhóm(:| theo).*▾$/}).click();
   await page.getByLabel('Gộp dòng giống nhau').uncheck();
   await page.getByRole('button',{name:'Không nhóm',exact:true}).click();
