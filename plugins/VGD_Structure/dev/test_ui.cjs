@@ -8,8 +8,12 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
 (async()=>{
  const browser=await chromium.launch({headless:true,channel:process.env.VGD_BROWSER_CHANNEL||undefined});
  try{
-  const page=await browser.newPage({viewport:{width:1100,height:760}}),errors=[];
+  const page=await browser.newPage({viewport:{width:1100,height:880}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
+  // Nút trong ribbon chỉ bấm được khi tab của nó đang mở: tự mở tab trước khi bấm (như người dùng phải làm).
+  const RB={'#pv-guide-clear':'view','#pv-hide-btn':'view','#pv-isolate-btn':'view','#pv-unhide-btn':'view','#pv-build-btn':'sketchup','#pv-sync-btn':'sketchup','#pv-status-btn':'sketchup','#pv-supick-btn':'sketchup','#pv-sudraw-btn':'sketchup','#pv-suedit-btn':'sketchup'};
+  const TT={select:'modify',pan:'modify',guide:'modify',measure:'modify',wall:'structure',column:'structure',door:'arch'};
+  const _click=page.click.bind(page);page.click=async(sel,...a)=>{const m=/^\[data-tool=(\w+)\]/.exec(sel),tab=RB[sel]||(m&&TT[m[1]]);if(tab)await page.evaluate(t=>window.VGDPlan.ribbonTab(t),tab);return _click(sel,...a);};
   await page.addInitScript(()=>{window.calls=[];window.sketchup=new Proxy({}, {get:(_,name)=>(arg)=>window.calls.push({name,arg})})});
   await page.goto(pathToFileURL(path.resolve(__dirname,'../runtime/vgd_structure/html/index.html')).href);
   const receive=(event,data)=>page.evaluate(([e,d])=>window.VGDS.receive(e,d),[event,data]);
@@ -620,8 +624,14 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const col=F.preview_all_cells.columns.items[0].center,c0=await pix(col[0],col[1]);
   ok(c0[1]>c0[0] && c0[1]>c0[2] && c0[1]>150,'pixel tại tâm cột có màu xanh lá (cột được vẽ trên canvas)');
   ok(await page.locator('#pv-tabs .pv-tab').count()===F.state.levels.length && (await page.locator('#pv-tabs [aria-selected=true]').getAttribute('data-level'))===F.state.levels[0].id,'tab theo tầng: đủ số tầng, đang chọn tầng hiện hành');
-  ok(await page.locator('#pv-top .pv-ic[data-tool=select]').isEnabled() && await page.locator('#pv-top .pv-ic[data-tool=pan]').isEnabled() && await page.locator('#pv-side .pv-ic:disabled').count()===0 && await page.locator('#pv-side .pv-ic:not(:disabled)').count()===16,'cột công cụ bên trái: 8 công cụ thiết kế và 8 nút vẽ 2D / ghi chú đều dùng được; thanh trên có Chọn và Kéo dùng được');
-  ok(await page.locator('#pv-side .pv-side-grp > i').allInnerTexts().then(a=>a.join('|'))==='Thiết kế|Vẽ 2D|Ghi chú','cột công cụ chia nhóm Thiết kế, Vẽ 2D, Ghi chú');
+  ok(await page.locator('#pv-ribbon .pv-ic[data-tool=select]').isEnabled() && await page.locator('#pv-ribbon .pv-ic[data-tool=pan]').isEnabled() && await page.locator('#pv-ribbon .pv-ic:disabled').count()===0 && await page.locator('#pv-ribbon .pv-ic[data-tool]').count()===31,'ribbon: mọi công cụ (8 thiết kế, 8 vẽ 2D / ghi chú, Chọn, Kéo, Gióng, Đo và nhóm Sửa) đều dùng được');
+  ok(await page.locator('.pv-rb-tab').allInnerTexts().then(a=>a.join('|'))==='Kết cấu|Kiến trúc|Chú thích|Sửa|Xem|SketchUp' && (await page.locator('#pv-side').isHidden()),'ribbon có 6 tab Kết cấu, Kiến trúc, Chú thích, Sửa, Xem, SketchUp; cột công cụ cũ đã ẩn');
+  const panelOf=async tab=>{await page.evaluate(t=>window.VGDPlan.ribbonTab(t),tab);return page.locator('.pv-rb-panel[data-tab='+tab+'] .pv-rb-grp > i').allInnerTexts().then(a=>a.join('|'));};
+  ok((await panelOf('structure'))==='Lưới trục|Kết cấu' && (await panelOf('arch'))==='Cửa' && (await panelOf('annotate'))==='Vẽ 2D|Ghi chú' && (await panelOf('modify'))==='Chọn & đo|Sửa' && (await panelOf('view'))==='Đường gióng|Ẩn và cô lập' && (await panelOf('sketchup'))==='Liên kết|Dựng và vẽ trong SketchUp','mỗi tab chia nhóm có tên (nhãn dưới nút) đúng như Revit');
+  await page.evaluate(()=>window.VGDPlan.ribbonTab('structure'));
+  await page.keyboard.press('d');await page.keyboard.press('r');await wait(100);
+  ok((await page.evaluate(()=>window.VGDPlan.ribbonCurrent()))==='arch' && (await page.locator('.pv-rb-tab[aria-selected=true]').innerText())==='Kiến trúc','chọn công cụ Cửa (phím DR): tab Kiến trúc tự mở (tab ngữ cảnh)');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await page.evaluate(()=>window.VGDPlan.ribbonTab('structure'));
   ok((await page.locator('#pv-props').innerText()).includes('Tầng 1') && (await page.locator('#pv-props').innerText()).includes('Cao độ sàn'),'bảng Thuộc tính chưa chọn gì: hiện thông tin tầng');
   // Thu phóng quanh con trỏ: điểm dưới con trỏ đứng yên
   const box=await page.locator('#pv-canvas').boundingBox(),px=box.x+300,py=box.y+200,wBefore=await page.evaluate(([x,y])=>window.VGDPlan.toWorld(x,y),[300,200]);
@@ -833,7 +843,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.keyboard.press('Control+z');pk=await PK('picks');ok(!pk['3-A'] && (await hist()).undo===0,'Ctrl+Z lần nữa: hoàn tác cột 3-A');
   await page.keyboard.press('Control+y');await page.keyboard.press('Control+y');pk=await PK('picks');ok(pk['3-A'] && pk['4-A'] && pk['4-A'].x==='center','Ctrl+Y hai lần: làm lại cả hai cột');
   await page.click('#pv-undo');ok(!(await PK('picks'))['4-A'],'nút Hoàn tác trên thanh trên hoạt động');
-  await page.keyboard.press('Escape');await type('bm');
+  await page.keyboard.press('Escape');await type('bm');await wait(300); // chờ khung vẽ đổi cỡ khi thanh tùy chọn hiện ra
   await clickW(...nodeAt(0,0));ed=(await dbg()).edit;ok(ed.chain==='1-A','dầm: bấm giao điểm đầu 1-A, chờ điểm cuối');
   await hoverW(...nodeAt(2,0));ed=(await dbg()).edit;ok(ed.target && ed.target.end==='3-A' && JSON.stringify(ed.target.refs)==='["x:A:1-2","x:A:2-3"]','rê tới 3-A (cùng hàng): xem trước 2 nhịp x:A:1-2, x:A:2-3');
   await clickW(...nodeAt(2,0));let bp=await PK('beamPicks');
@@ -924,7 +934,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   // Không chọn gì rồi gõ lệnh
   await typ('mv');ok((await dbgm()).tool==='select' && /chọn phần tử trước/.test(await hintText()),'gõ MV khi chưa chọn gì: báo phải chọn phần tử trước, không vào lệnh');
   await typ('ma');ok((await dbgm()).tool==='match','gõ MA: công cụ Match (không cần chọn trước)');await page.keyboard.press('Escape');await page.keyboard.press('Escape');
-  ok((await page.locator('#pv-top .pv-grp:nth-of-type(2) .pv-ic:disabled').count())===0 && (await page.locator('#pv-top .pv-ic[data-tool=unlock]').count())===1,'nhóm Sửa: mọi lệnh dùng được (Move, Copy, Array, Rotate, Mirror, Offset, Trim, Align, Match, Mở khóa lưới, Xóa)');
+  ok((await page.locator('#pv-ribbon .pv-rb-grp[aria-label=Sửa] .pv-ic:disabled').count())===0 && (await page.locator('#pv-ribbon .pv-ic[data-tool=unlock]').count())===1,'nhóm Sửa: mọi lệnh dùng được (Move, Copy, Array, Rotate, Mirror, Offset, Trim, Align, Match, Mở khóa lưới, Xóa)');
   // Chọn nhịp x:B:1-2 (dầm + tường + 2 cửa)
   await winSpan(wB);let sel=(await dbgm()).selection;
   ok(sel.length===4 && sel.some(x=>/^Dầm x:B:1-2/.test(x)) && sel.some(x=>/^Tường x:B:1-2/.test(x)) && sel.filter(x=>/^Cửa/.test(x)).length===2,'khung trong quanh nhịp x:B:1-2: chọn dầm, tường và 2 cửa');
@@ -1418,7 +1428,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   if(await page.locator('#pv-browser').isVisible())await page.click('#pv-browser-btn');
   await reset();
   const tools=['line','polyline','rect','circle','arc','dim','text','level'];
-  ok((await Promise.all(tools.map(t=>page.locator('#pv-side .pv-ic[data-tool='+t+']').isEnabled()))).every(Boolean),'8 nút vẽ 2D / ghi chú đều bật');
+  ok((await Promise.all(tools.map(t=>page.locator('#pv-ribbon .pv-ic[data-tool='+t+']').isEnabled()))).every(Boolean),'8 nút vẽ 2D / ghi chú đều bật');
   ok((await dbg7()).counts.note===7,'ghi chú của tầng hiện trên mặt bằng: 7 hình (nét, đa tuyến, tròn, cung, chữ, kích thước, cốt cao độ)');
   // Vẽ lên canvas: đếm điểm ảnh khác nền quanh một điểm thế giới
   const inkAt=(x,y)=>page.evaluate(([x,y])=>{const c=document.getElementById('pv-canvas'),q=window.VGDPlan.toScreen(x,y),d=window.devicePixelRatio||1,ctx=c.getContext('2d'),cx=Math.round(q[0]*d),cy=Math.round(q[1]*d),im=ctx.getImageData(cx-3,cy-3,7,7).data,ref=ctx.getImageData(cx-3,cy-3,1,1).data;let n=0;for(let i=0;i<im.length;i+=4){if(Math.abs(im[i]-ref[0])+Math.abs(im[i+1]-ref[1])+Math.abs(im[i+2]-ref[2])>30)n++;}return n;},[x,y]);
@@ -1588,6 +1598,76 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await reset();await cl(150,150);await page.fill('#pv-props input[data-field=type_d]','450');await page.press('#pv-props input[data-field=type_d]','Tab');await wait(300);
   const vr6=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
   ok(vr6.ok,'dữ liệu loại sau khi sửa được Ruby chấp nhận');
+  // --- Type Selector, Nhân đôi loại, Selection Filter ---
+  await reset();await cl(150,150);await wait(100); // cột 1-A
+  ok(await page.locator('#pv-type-select').isVisible() && (await page.locator('#pv-type-select option').count())>=1 && await page.locator('#pv-type-edit').isVisible() && await page.locator('#pv-type-dup').isVisible(),'chọn cột: đầu bảng Thuộc tính có ô chọn loại (Type Selector), nút Sửa loại và Nhân đôi loại');
+  const nTypes0=(await st()).types.length,nm0=(await st()).types[0].name;
+  await page.click('#pv-type-dup');await wait(150);
+  const afterDup=await st(),colPick=afterDup.levels[0].picks['1-A'];
+  ok(afterDup.types.length===nTypes0+1 && afterDup.types[nTypes0].name===nm0.slice(0,16)+' (2)' && /^ct_[0-9a-f]{8}$/.test(afterDup.types[nTypes0].id) && colPick.type===afterDup.types[nTypes0].id && afterDup.types[nTypes0].w===afterDup.types[0].w,'Nhân đôi loại: tạo loại mới "(2)" cùng kích thước, mã ct_xxxxxxxx, gán cho cột đang chọn');
+  await page.click('#pv-type-dup');await wait(150);
+  ok((await st()).types.length===nTypes0+2 && (await st()).types[nTypes0+1].name===nm0.slice(0,16)+' (3)','nhân đôi lần nữa (nhân đôi một bản sao): đánh số tiếp (3), không chồng hậu tố');
+  const vrd=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vrd.ok,'loại nhân đôi được Ruby chấp nhận');
+  await page.selectOption('#pv-type-select',(await st()).types[0].id);await wait(150);
+  ok((await st()).levels[0].picks['1-A'].type===(await st()).types[0].id,'đổi loại bằng Type Selector: phần tử đổi sang loại đã chọn');
+  await reset();await cl(1800,3600);await wait(100); // tường
+  ok((await page.locator('#pv-type-select option').allInnerTexts().then(a=>a.every(t=>/dày/.test(t)))),'tường: các loại trong Type Selector ghi bề dày');
+  await reset();await cl(1000,3600);await wait(100); // cửa đi
+  const doorTypes=await page.locator('#pv-type-select option').allInnerTexts();
+  ok(doorTypes.length>=1 && doorTypes.every(t=>/\d+×\d+/.test(t)),'cửa: Type Selector liệt kê loại cửa kèm rộng × cao');
+  await reset();await page.keyboard.press('Control+a');await wait(100);
+  ok(await page.locator('#pv-filter').isVisible() && (await page.locator('#pv-filter input[data-filter]').count())>=3,'chọn tất cả: có mục Lọc vùng chọn, mỗi loại phần tử một ô tick');
+  const sel0=(await dbg8()).selection.length;
+  await page.locator('#pv-filter input[data-filter=wall]').uncheck();await wait(100);
+  ok((await dbg8()).selection.length<sel0 && !(await page.locator('#pv-filter input[data-filter=wall]').isChecked()),'bỏ tick Tường: vùng chọn bớt các tường');
+  await page.locator('#pv-filter input[data-filter=wall]').check();await wait(100);
+  ok((await dbg8()).selection.length===sel0,'tick lại Tường: chọn lại đủ như cũ');
+  await reset();
+  // --- View Control Bar ---
+  ok(await page.locator('#pv-viewbar').isVisible() && await page.locator('#pv-vb-scale').isVisible() && await page.locator('#pv-vb-detail').isVisible() && await page.locator('#pv-vb-style').isVisible() && await page.locator('#pv-vb-tags').isVisible(),'View Control Bar dưới khung vẽ: tỉ lệ, chi tiết, kiểu hiển thị, nhãn loại');
+  await page.selectOption('#pv-vb-scale','100');await wait(80);
+  let vb=await dbg8();
+  ok(vb.scaleN===100 && Math.abs(vb.view.s-1/(100*25.4/96))<1e-6,'chọn tỉ lệ 1 : 100: khung vẽ đúng 1 px = 26,46 mm (96 dpi)');
+  await page.selectOption('#pv-vb-scale','50');await wait(80);
+  ok((await dbg8()).scaleN===50,'chọn 1 : 50: phóng to theo tỉ lệ');
+  await page.evaluate(()=>window.VGDPlan.zoomBy&&window.VGDPlan.zoomBy(1.3));await page.mouse.move(500,400);await page.mouse.wheel(0,-300);await wait(150);
+  ok((await page.locator('#pv-vb-scale').inputValue())==='custom','cuộn chuột đổi zoom: ô tỉ lệ về "Tùy chỉnh"');
+  ok((await dbg8()).detail==='medium' && (await dbg8()).vstyle==='color' && (await dbg8()).tagsOn===false,'mặc định: chi tiết Vừa, màu theo loại, nhãn tắt');
+  await page.selectOption('#pv-vb-detail','low');ok((await dbg8()).detail==='low','chi tiết Thấp');
+  await page.selectOption('#pv-vb-style','mono');ok((await dbg8()).vstyle==='mono','kiểu Đơn sắc');
+  await page.selectOption('#pv-vb-style','wire');ok((await dbg8()).vstyle==='wire','kiểu Khung dây');
+  await page.selectOption('#pv-vb-style','color');await page.selectOption('#pv-vb-detail','medium');
+  await page.evaluate(()=>window.VGDPlan.fit&&window.VGDPlan.fit());await page.keyboard.press('z');await page.keyboard.press('e');await wait(150);
+  ok((await dbg8()).tagsDrawn===0,'nhãn tắt: không vẽ nhãn nào');
+  await page.click('#pv-vb-tags');await wait(100);
+  vb=await dbg8();
+  ok(vb.tagsOn===true && vb.tagsDrawn>=4 && (await page.locator('#pv-vb-tags').getAttribute('aria-pressed'))==='true','bật Nhãn loại: vẽ nhãn tên loại cho cột, dầm, tường, cửa đang hiện (>= 4)');
+  await page.click('#pv-layers-btn');await page.locator('#pv-layers input[data-layer=column]').uncheck();await wait(80);
+  const tagsNoCol=(await dbg8()).tagsDrawn;await page.locator('#pv-layers input[data-layer=column]').check();await page.click('#pv-layers-btn');await wait(80);
+  ok(tagsNoCol<vb.tagsDrawn,'tắt lớp Cột: nhãn của cột cũng không vẽ');
+  await page.click('#pv-vb-tags');await page.selectOption('#pv-vb-detail','high');await wait(100);
+  ok((await dbg8()).tagsDrawn>=4,'chi tiết Cao: tự hiện nhãn (kèm mã vị trí) dù nút Nhãn tắt');
+  await page.selectOption('#pv-vb-detail','medium');await reset();
+  // --- Bảng thống kê (Schedule) ---
+  await page.click('[data-tab=schedule]');await wait(100);
+  ok(await page.locator('#tab-schedule').isVisible() && (await calls('schedule')).length>=1 && !!(await last('schedule')).grid,'tab Thống kê: mở thì gửi Ruby dữ liệu hiện tại để tính bảng');
+  await receive('schedule',F.schedule);await wait(80);
+  ok((await page.locator('#sched-kind option').allInnerTexts()).join('|')==='Cột|Dầm|Tường|Cửa|Sàn|Trần','có đủ 6 loại để xem bảng');
+  ok((await page.locator('#sched-table tr').count())===3 && /Tổng/.test(await page.locator('#sched-table tr.total').innerText()) && /Tầng 1/.test(await page.locator('#sched-table tr:nth-child(2)').innerText()),'bảng Cột: dòng tiêu đề, dòng theo tầng và loại, dòng Tổng');
+  await page.selectOption('#sched-kind','openings');await wait(60);
+  ok((await page.locator('#sched-table tr').count())===4 && /Cửa đi|Cửa sổ/.test(await page.locator('#sched-table').innerText()),'bảng Cửa: 2 dòng (cửa đi, cửa sổ) và dòng Tổng');
+  await page.selectOption('#sched-level','sl_00000002');await wait(60);
+  ok((await page.locator('#sched-table tr').count())===1 && /Chưa có cửa/.test(await page.locator('#sched-note').innerText()),'lọc tầng 2 (không có cửa): bảng rỗng và báo "Chưa có cửa nào được chọn"');
+  await page.selectOption('#sched-level','');await page.selectOption('#sched-kind','walls');await wait(60);
+  const csv=await page.evaluate(()=>window.VGDS.scheduleCsv()),lines=csv.split('\n');
+  ok(lines.length===3 && lines[0].split('\t')[0]==='Tầng' && lines[0].includes('Diện tích (trừ cửa) (m²)') && lines[2].startsWith('Tổng'),'CSV (dán Excel): tiêu đề, một dòng tường, dòng Tổng; cột cách nhau bằng Tab');
+  await page.click('#sched-copy');await wait(150);
+  ok((await page.locator('#sched-note').innerText()).length>0,'bấm Sao chép: có thông báo kết quả');
+  await page.click('#sched-refresh');await wait(60);
+  const nsch=(await calls('schedule')).length;
+  ok(nsch>=2,'bấm Làm mới: hỏi Ruby tính lại');
+  await page.click('[data-tab=plan]');await wait(80);
   // --- Ẩn / Cô lập ---
   await reset();const hist0=await page.evaluate(()=>window.VGDS.history().undo),data0=JSON.stringify((await st()).levels);
   await typ('eh');ok(/Hãy chọn phần tử cần ẩn/.test(await hintT()) && (await dbg8()).hidden===0,'EH khi chưa chọn gì: báo, không ẩn');
@@ -1701,7 +1781,8 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok((await calls('plate_probe')).length===0,'cùng ô, dữ liệu không đổi: không hỏi lại Ruby (dùng bộ nhớ đệm)');
   await reset();
   // Bật / tắt
-  ok(await page.locator('#pv-sudraw-btn').isVisible() && (await page.locator('#pv-sudraw-btn').getAttribute('aria-pressed'))==='false','nút "Vẽ trong SketchUp" có trên thanh trên, mặc định tắt');
+  await page.evaluate(()=>window.VGDPlan.ribbonTab('sketchup'));
+  ok(await page.locator('#pv-sudraw-btn').isVisible() && (await page.locator('#pv-sudraw-btn').getAttribute('aria-pressed'))==='false','nút "Vẽ trong SketchUp" có trong tab SketchUp của ribbon, mặc định tắt');
   await typ('cl');ok((await calls('su_pick_start')).length===0,'chưa bật chế độ SD: chọn công cụ Cột không tự bật công cụ nhận điểm của SketchUp');
   await page.keyboard.press('Escape');await page.keyboard.press('Escape');await clear();
   await typ('sd');ok((await dbg10()).suDraw===true && (await page.locator('#pv-sudraw-btn').getAttribute('aria-pressed'))==='true' && (await calls('su_pick_start')).length===0,'gõ SD: bật chế độ; đang ở công cụ Chọn nên chưa nhận điểm từ SketchUp');

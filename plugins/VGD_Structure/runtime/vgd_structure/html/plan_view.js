@@ -56,6 +56,7 @@
   var KEYS_STORE = 'vgd_structure_plan_keys', CHORD_MS = 900;
   var MIN_SCALE = 0.001, MAX_SCALE = 5; // px trên mm
   var opts, root, canvas, ctx, status = {}, levelList = [], currentId = null, selection = [], propsOpen = true;
+  var detail = 'medium', vstyle = 'color', tagsOn = false, tagsDrawn = 0, PX_MM = 25.4 / 96; // mức chi tiết (low / medium / high), kiểu hiển thị (color / mono / wire), nhãn loại; 1 px màn hình = PX_MM mm trên giấy
   var badgesDrawn = 0, syncOn = true, statusOn = true, suPicking = false, lastSent = '', lastFromSU = false, modelStatus = null, pendingSelect = null, pendingDim = null, edit = null, notes = null, modify = null, lastDims = [], dimHits = [], dimInput = null, selLevel = null, opts2 = null, hoverCount = 0, keymap = {}, chord = '', chordTimer = null, tabIdx = 0, hoverSig = '', guides = {}, measure = null, draft = null, snap = null, snapOn = true, note = '', press = null, box = null, shiftKey = false;
   var SNAP_PX = 10, DRAG_PX = 4, LIVE_EDIT = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'door', 'window', 'delete', 'move', 'copy', 'array', 'mirror', 'match', 'offset', 'align', 'trim', 'rotate', 'unlock', 'line', 'polyline', 'rect', 'circle', 'arc', 'dim', 'text', 'level'];
   var view = {cx: 0, cy: 0, s: 0.05}, data = null, boundsKey = '', fitted = false, tool = 'select', shapes = [], hover = null, cursor = null, drag = null;
@@ -79,38 +80,78 @@
     if (live) b.onclick = function () { if (t[0] === 'delete') deleteSelection(); else setTool(t[0]); }; else b.disabled = true;
     return b;
   }
+  // ---- Ribbon ----
+  var RIBBON_TABS = [['structure', 'Kết cấu'], ['arch', 'Kiến trúc'], ['annotate', 'Chú thích'], ['modify', 'Sửa'], ['view', 'Xem'], ['sketchup', 'SketchUp']], ribbonTab = 'structure', ribbon = {panels: {}, groups: {}};
+  // Công cụ nào thuộc tab / nhóm nào; chọn công cụ (bằng phím hay bấm) thì tab của nó tự mở (như tab ngữ cảnh của Revit).
+  var TOOL_TAB = {grid: 'structure', column: 'structure', beam: 'structure', wall: 'structure', slab: 'structure', ceiling: 'structure', door: 'arch', window: 'arch',
+    line: 'annotate', polyline: 'annotate', rect: 'annotate', circle: 'annotate', arc: 'annotate', dim: 'annotate', text: 'annotate', level: 'annotate',
+    select: 'modify', pan: 'modify', guide: 'modify', measure: 'modify', move: 'modify', copy: 'modify', array: 'modify', mirror: 'modify', match: 'modify', offset: 'modify', align: 'modify', trim: 'modify', rotate: 'modify', unlock: 'modify', 'delete': 'modify'};
+  var TOOL_PANEL = {grid: 'Lưới trục', column: 'Kết cấu', beam: 'Kết cấu', wall: 'Kết cấu', slab: 'Kết cấu', ceiling: 'Kết cấu', door: 'Cửa', window: 'Cửa', line: 'Vẽ 2D', polyline: 'Vẽ 2D', rect: 'Vẽ 2D', circle: 'Vẽ 2D', arc: 'Vẽ 2D', dim: 'Ghi chú', text: 'Ghi chú', level: 'Ghi chú'};
+  function buildRibbon(qat) {
+    var rb = el('div', {class: 'pv-ribbon', id: 'pv-ribbon'}), tabs = el('div', {class: 'pv-rb-tabs', role: 'tablist', 'aria-label': 'Ribbon'}, rb), body = el('div', {class: 'pv-rb-body'}, rb);
+    qat.parentNode.insertBefore(rb, qat.nextSibling);
+    RIBBON_TABS.forEach(function (t) {
+      var b = el('button', {type: 'button', role: 'tab', class: 'pv-rb-tab', 'data-ribbon': t[0], 'aria-selected': String(t[0] === ribbonTab)}, tabs); b.textContent = t[1];
+      b.onclick = function () { setRibbonTab(t[0]); };
+      ribbon.panels[t[0]] = el('div', {class: 'pv-rb-panel', 'data-tab': t[0], role: 'toolbar', 'aria-label': t[1]}, body);
+      ribbon.panels[t[0]].hidden = t[0] !== ribbonTab;
+    });
+  }
+  // Nhóm có tên (nhãn dưới các nút, như panel của Revit) trong một tab; tạo khi cần.
+  function rbGroup(tab, title) {
+    var key = tab + '|' + title;
+    if (!ribbon.groups[key]) {
+      var g = el('div', {class: 'pv-rb-grp', role: 'group', 'aria-label': title}, ribbon.panels[tab]);
+      ribbon.groups[key] = el('div', {class: 'pv-rb-btns'}, g); el('i', {text: title}, g);
+    }
+    return ribbon.groups[key];
+  }
+  function setRibbonTab(id) {
+    if (!ribbon.panels[id]) return;
+    ribbonTab = id;
+    Object.keys(ribbon.panels).forEach(function (k) { ribbon.panels[k].hidden = k !== id; });
+    root.querySelectorAll('.pv-rb-tab').forEach(function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-ribbon') === id)); });
+  }
   function buildTop(bar) {
     [['undo', 'Hoàn tác (Ctrl+Z): chỉ các thay đổi làm trên tab Mặt bằng'], ['redo', 'Làm lại (Ctrl+Y)']].forEach(function (u) {
       var b = el('button', {type: 'button', class: 'pv-ic', id: 'pv-' + u[0], 'aria-label': u[1], title: u[1]}, bar); b.innerHTML = svg(u[0]); b.disabled = true;
       b.onclick = function () { (u[0] === 'undo' ? opts.undo : opts.redo)(); };
     });
+    // Ribbon theo tab (như Revit): mỗi tab gồm các nhóm có tên; thanh nhanh (hoàn tác, bắt điểm, lớp hiển thị, vừa khung, bảng) nằm phía trên và luôn hiện.
+    buildRibbon(bar);
     TOP_GROUPS.forEach(function (g) {
-      el('span', {class: 'pv-sep'}, bar);
-      var box = el('span', {class: 'pv-grp', role: 'group', 'aria-label': g[0], title: g[0]}, bar);
+      var box = rbGroup('modify', g[0]);
       g[1].forEach(function (t) { iconButton(box, t); });
+    });
+    SIDE_GROUPS.forEach(function (g) {
+      g[1].forEach(function (t) { iconButton(rbGroup(TOOL_TAB[t[0]], TOOL_PANEL[t[0]]), t); });
     });
     el('span', {class: 'pv-sep'}, bar);
     var sn = el('button', {type: 'button', class: 'pv-ic on', id: 'pv-snap', title: 'Bắt điểm: đầu mút, trung điểm, giao điểm, trên cạnh (bật / tắt)', 'aria-pressed': 'true'}, bar); sn.innerHTML = svg('snap');
     sn.onclick = function () { snapOn = !snapOn; sn.classList.toggle('on', snapOn); sn.setAttribute('aria-pressed', String(snapOn)); snap = null; draw(); };
-    var gc = el('button', {type: 'button', class: 'pv-ic', id: 'pv-guide-clear', title: 'Xóa mọi đường gióng của tầng này'}, bar); gc.innerHTML = svg('guideclr');
+    var gc = el('button', {type: 'button', class: 'pv-ic', id: 'pv-guide-clear', title: 'Xóa mọi đường gióng của tầng này'}, rbGroup('view', 'Đường gióng')); gc.innerHTML = svg('guideclr');
     gc.onclick = function () { guides[currentId] = []; draft = null; note = 'Đã xóa đường gióng của tầng này.'; draw(); };
     el('span', {class: 'pv-sep'}, bar);
+    var cur = rbGroup('sketchup', 'Liên kết');
     function toggle(id, icon, title, get, set) {
-      var b = el('button', {type: 'button', class: 'pv-ic' + (get() ? ' on' : ''), id: id, title: title, 'aria-pressed': String(get())}, bar); b.innerHTML = svg(icon) + '<kbd></kbd>';
+      var b = el('button', {type: 'button', class: 'pv-ic' + (get() ? ' on' : ''), id: id, title: title, 'aria-pressed': String(get())}, cur); b.innerHTML = svg(icon) + '<kbd></kbd>';
       b.onclick = function () { set(!get()); b.classList.toggle('on', get()); b.setAttribute('aria-pressed', String(get())); };
       return b;
     }
     toggle('pv-sync-btn', 'link', 'Đồng bộ chọn với SketchUp: chọn trên mặt bằng thì chọn trong SketchUp và ngược lại', function () { return syncOn; }, function (v) { syncOn = v; lastSent = ''; if (v) notifySelection(); });
     toggle('pv-status-btn', 'status', 'Hiện trạng thái so với model (chấm màu: lệch, thiếu, chưa dựng)', function () { return statusOn; }, function (v) { statusOn = v; if (v && opts.refresh) opts.refresh(); draw(); renderProps(); });
-    var bd = el('button', {type: 'button', class: 'pv-ic', id: 'pv-build-btn', title: 'Dựng tầng này vào model (một bước hoàn tác)'}, bar); bd.innerHTML = svg('build') + '<kbd></kbd>'; bd.onclick = function () { if (opts.buildLevel) opts.buildLevel(); };
-    var sp = el('button', {type: 'button', class: 'pv-ic', id: 'pv-supick-btn', title: 'Chọn điểm trong SketchUp: dùng điểm bắt của SketchUp cho công cụ đang chọn', 'aria-pressed': 'false'}, bar); sp.innerHTML = svg('supick') + '<kbd></kbd>'; sp.onclick = toggleSuPick;
-    var sd = el('button', {type: 'button', class: 'pv-ic', id: 'pv-sudraw-btn', title: 'Vẽ trong SketchUp: công cụ vẽ nhận điểm bấm trong khung nhìn SketchUp, mỗi lần vẽ xong tự dựng vào model', 'aria-pressed': 'false'}, bar); sd.innerHTML = svg('sudraw') + '<kbd></kbd>'; sd.onclick = function () { setSuDraw(!suDraw); };
-    var se = el('button', {type: 'button', class: 'pv-ic on', id: 'pv-suedit-btn', title: 'Đồng bộ sửa từ SketchUp: dời, xoay, xóa phần tử đã dựng trong SketchUp thì dữ liệu tự cập nhật theo (đang bật)', 'aria-pressed': 'true'}, bar); se.textContent = '\u21C4';
+    cur = rbGroup('sketchup', 'Dựng và vẽ trong SketchUp');
+    var bd = el('button', {type: 'button', class: 'pv-ic', id: 'pv-build-btn', title: 'Dựng tầng này vào model (một bước hoàn tác)'}, cur); bd.innerHTML = svg('build') + '<kbd></kbd>'; bd.onclick = function () { if (opts.buildLevel) opts.buildLevel(); };
+    var sp = el('button', {type: 'button', class: 'pv-ic', id: 'pv-supick-btn', title: 'Chọn điểm trong SketchUp: dùng điểm bắt của SketchUp cho công cụ đang chọn', 'aria-pressed': 'false'}, cur); sp.innerHTML = svg('supick') + '<kbd></kbd>'; sp.onclick = toggleSuPick;
+    var sd = el('button', {type: 'button', class: 'pv-ic', id: 'pv-sudraw-btn', title: 'Vẽ trong SketchUp: công cụ vẽ nhận điểm bấm trong khung nhìn SketchUp, mỗi lần vẽ xong tự dựng vào model', 'aria-pressed': 'false'}, cur); sd.innerHTML = svg('sudraw') + '<kbd></kbd>'; sd.onclick = function () { setSuDraw(!suDraw); };
+    var se = el('button', {type: 'button', class: 'pv-ic on', id: 'pv-suedit-btn', title: 'Đồng bộ sửa từ SketchUp: dời, xoay, xóa phần tử đã dựng trong SketchUp thì dữ liệu tự cập nhật theo (đang bật)', 'aria-pressed': 'true'}, cur); se.textContent = '\u21C4';
     se.onclick = function () { var on = se.getAttribute('aria-pressed') !== 'true'; se.setAttribute('aria-pressed', String(on)); se.classList.toggle('on', on); se.title = 'Đồng bộ sửa từ SketchUp: dời, xoay, xóa phần tử đã dựng trong SketchUp thì dữ liệu tự cập nhật theo (' + (on ? 'đang bật' : 'đang tắt') + ')'; if (opts.callSU) opts.callSU('su_sync_edit', on); };
     el('span', {class: 'pv-grow'}, bar);
+    cur = rbGroup('view', 'Ẩn và cô lập');
     [['pv-hide-btn', 'hide', 'Ẩn phần tử đang chọn (tạm thời)'], ['pv-isolate-btn', 'isolate', 'Cô lập phần tử đang chọn: ẩn mọi phần tử khác (tạm thời)']].forEach(function (x) {
-      var hb = el('button', {type: 'button', class: 'pv-ic', id: x[0], title: x[2]}, bar); hb.innerHTML = svg(x[1]) + '<kbd></kbd>'; hb.onclick = function () { runCommand(x[1]); };
+      var hb = el('button', {type: 'button', class: 'pv-ic', id: x[0], title: x[2]}, cur); hb.innerHTML = svg(x[1]) + '<kbd></kbd>'; hb.onclick = function () { runCommand(x[1]); };
     });
+    // chip báo đang ẩn: luôn hiện ở thanh nhanh, không phụ thuộc tab ribbon
     var chip = el('span', {id: 'pv-hidden', class: 'pv-opt-note', hidden: ''}, bar); el('span', {}, chip); var un = el('button', {type: 'button', id: 'pv-unhide-btn', title: 'Bỏ ẩn / cô lập, hiện lại mọi phần tử'}, chip); un.textContent = 'Bỏ ẩn'; un.onclick = resetHidden;
     var disp = el('span', {class: 'pv-drop'}, bar), eye = el('button', {type: 'button', class: 'pv-ic', id: 'pv-layers-btn', 'aria-haspopup': 'true', 'aria-expanded': 'false', title: 'Hiển thị: bật / tắt từng lớp'}, disp);
     eye.innerHTML = svg('eye') + '<b>▾</b>';
@@ -143,13 +184,35 @@
     });
   }
   // Bảng thuộc tính: phần tử đang chọn, không thì phần tử đang rê chuột, không thì thông tin tầng.
+  // Nhóm thông tin trong bảng Thuộc tính (như Constraints / Dimensions / Identity Data của Revit).
+  function propGroup(label) {
+    if (/^(Loại|Mã|Trạng thái|Model)/.test(label)) return 'Nhận dạng';
+    if (/^(Dày|Dài|Cao|Rộng|Sâu|Tiết|Diện|Thể|Lớp|Tổng|Số|Chiều)/.test(label)) return 'Kích thước';
+    return 'Ràng buộc';
+  }
+  // Selection Filter (như Revit): khi chọn nhiều phần tử, bỏ tick một loại thì bỏ loại đó khỏi vùng chọn; tick lại để chọn lại.
+  var filterBase = null, filterOff = {};
+  function renderSelectionFilter(box, sel) {
+    if (!filterBase || !sel.every(function (x) { return filterBase.indexOf(x) >= 0; })) { filterBase = sel.slice(); filterOff = {}; } // vùng chọn đổi từ bên ngoài: lập lại danh sách
+    var by = {}; filterBase.forEach(function (x) { by[x.layer] = (by[x.layer] || 0) + 1; });
+    var f = el('div', {class: 'pv-filter', id: 'pv-filter', role: 'group', 'aria-label': 'Lọc vùng chọn'}, box); el('h3', {text: 'Lọc vùng chọn', class: 'pv-edit-h'}, f);
+    var kinds = LAYERS.filter(function (l) { return by[l[0]]; });
+    kinds.forEach(function (l) {
+      var lab = el('label', {class: 'pv-filter-row'}, f), cb = el('input', {type: 'checkbox', 'data-filter': l[0]}, lab); cb.checked = !filterOff[l[0]];
+      el('span', {text: l[1] + ' (' + by[l[0]] + ')'}, lab);
+      cb.disabled = !filterOff[l[0]] && kinds.filter(function (k) { return !filterOff[k[0]]; }).length <= 1; // luôn còn ít nhất một loại được chọn
+      cb.onchange = function () {
+        if (cb.checked) delete filterOff[l[0]]; else filterOff[l[0]] = true;
+        selection = filterBase.filter(function (x) { return !filterOff[x.layer]; }); selLevel = currentId; hover = null; draw(); notifySelection(); renderProps();
+      };
+    });
+  }
   function renderProps() {
     var box = $('pv-props'); if (!box) return; box.replaceChildren();
     if (opts && opts.browser) opts.browser.highlight(visibleSelection().map(function (x) { return currentId + '|' + x.kind + '|' + x.ref; }));
     var sel = visibleSelection(), shape = sel.length === 1 ? sel[0] : (!sel.length && hover && vis(hover) ? hover : null), rows, title;
     if (sel.length > 1) {
-      var by = {}; sel.forEach(function (x) { by[x.layer] = (by[x.layer] || 0) + 1; });
-      title = 'Đã chọn ' + sel.length + ' phần tử'; rows = LAYERS.filter(function (l) { return by[l[0]]; }).map(function (l) { return [l[1], String(by[l[0]])]; });
+      title = 'Đã chọn ' + sel.length + ' phần tử'; rows = [];
     } else if (shape) { title = shape.title; rows = shape.rows; }
     else {
       var lv = levelList.filter(function (l) { return l.id === currentId; })[0];
@@ -162,9 +225,19 @@
       if (sel.length === 1) { var stt = statusKey(sel[0]); if (stt) rows = rows.concat([['Trạng thái model', STATUS_TEXT[stt]]]); }
       else if (!shape && !sel.length) { var cn = modelStatus.counts || {}; rows = rows.concat([['Model: khớp', String(cn.ok || 0)], ['Model: lệch', String(cn.stale || 0)], ['Model: thiếu', String(cn.missing || 0)], ['Model: chưa dựng', String(cn.unbuilt || 0)], ['Model: thừa', String(cn.extra || 0)]]); }
     }
-    el('h3', {text: 'Thuộc tính'}, box); el('p', {class: 'pv-ptitle', text: title}, box);
-    var t = el('table', {class: 'pv-ptable'}, box);
-    rows.forEach(function (r) { var tr = el('tr', {}, t); el('th', {text: r[0]}, tr); el('td', {text: r[1]}, tr); });
+    el('h3', {text: 'Thuộc tính'}, box);
+    var tsel = sel.length === 1 && edit && edit.typeSelector ? edit.typeSelector(sel[0]) : null;
+    if (tsel) { // Type Selector (như Revit): ô chọn loại ngay đầu bảng, kèm Sửa loại và Nhân đôi
+      var tbox = el('div', {class: 'pv-typesel'}, box), ts = el('select', {id: 'pv-type-select', 'aria-label': 'Loại của phần tử'}, tbox);
+      tsel.values.forEach(function (v) { ts.append(new Option(v[1], v[0])); }); ts.value = tsel.value; ts.onchange = function () { tsel.apply(ts.value); };
+      var row2 = el('div', {class: 'pv-typesel-btns'}, tbox), et = el('button', {type: 'button', id: 'pv-type-edit', title: 'Sửa kích thước của loại này (mục Thuộc tính của loại bên dưới)'}, row2); et.textContent = 'Sửa loại';
+      et.onclick = function () { var f = box.querySelector('[data-field=type_name]'); if (f) { f.scrollIntoView({block: 'nearest'}); f.focus(); } };
+      var dp = el('button', {type: 'button', id: 'pv-type-dup', title: 'Tạo loại mới giống loại này rồi gán cho phần tử đang chọn'}, row2); dp.textContent = 'Nhân đôi loại'; dp.disabled = !tsel.canDuplicate; dp.onclick = tsel.duplicate;
+    }
+    el('p', {class: 'pv-ptitle', text: title}, box);
+    if (sel.length > 1) renderSelectionFilter(box, sel);
+    var t = el('table', {class: 'pv-ptable'}, box), lastGroup = '';
+    rows.forEach(function (r) { var g = propGroup(r[0]); if (g !== lastGroup && rows.length > 3) { lastGroup = g; var gr = el('tr', {class: 'pv-pgroup'}, t), gh = el('th', {text: g, colspan: '2'}, gr); } var tr = el('tr', {}, t); el('th', {text: r[0]}, tr); el('td', {text: r[1]}, tr); });
     if (sel.length === 1 && edit) {
       var fields = edit.propsFor(sel[0]);
       if (fields.length) {
@@ -323,7 +396,7 @@
       modify.activate(t, visibleSelection());
       if (!modify.active()) { keepNote = modify.hint(); t = 'select'; }
     } else if (modify) modify.activate(t, []);
-    tool = t; draft = null; note = keepNote; if (t !== 'measure') measure = null; press = null; box = null; snap = null; closeDimInput();
+    tool = t; if (TOOL_TAB[t] && t !== 'select' && t !== 'pan') setRibbonTab(TOOL_TAB[t]); draft = null; note = keepNote; if (t !== 'measure') measure = null; press = null; box = null; snap = null; closeDimInput();
     if (edit) edit.activate(t);
     if (modify && modify.handles(t)) { var sel = visibleSelection(); if (t !== 'match') modify.activate(t, sel); }
     root.querySelectorAll('.pv-ic[data-tool]').forEach(function (b) { var on = b.getAttribute('data-tool') === t; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
@@ -527,6 +600,51 @@
   }
 
   // ---- Xem ----
+  // Nhãn loại (Tag by Category của Revit) trên mặt bằng: tên loại ở tâm cột, dầm, tường, cửa; mức chi tiết Cao thêm mã vị trí. Chỉ hiển thị, không lưu.
+  function drawTags(ink) {
+    tagsDrawn = 0;
+    if (!tagsOn && detail !== 'high') return;
+    var fs = Math.max(9, Math.min(13, 12 * Math.sqrt(view.s / 0.04)));
+    if (view.s < 0.012) return; // quá nhỏ: không đọc được
+    ctx.save(); ctx.font = fs + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = ink; ctx.globalAlpha = 0.9;
+    [['column', 'columns', function (i) { return i.center; }], ['beam', 'beams', mid2], ['wall', 'walls', mid2], ['opening', 'openings', mid2]].forEach(function (k) {
+      if (!visible[k[0]]) return;
+      section(k[1]).forEach(function (i) {
+        if (hid(k[0], i.ref)) return;
+        var c = k[2](i); if (!c) return;
+        var q = toScreen(c[0], c[1]); if (q[0] < -40 || q[1] < -20 || q[0] > size.w + 40 || q[1] > size.h + 20) return;
+        var text = (i.type_name || '') + (detail === 'high' ? ' · ' + i.ref : '');
+        if (!text) return;
+        ctx.fillText(text, q[0], q[1]); tagsDrawn++;
+      });
+    });
+    ctx.restore();
+  }
+  function mid2(i) { // tâm hình bao của phần tử (dầm, tường, cửa)
+    var pts = i.poly || (i.min && i.max ? rectPoly(i.min, i.max) : null); if (!pts) return null;
+    var xs = pts.map(function (p) { return p[0]; }), ys = pts.map(function (p) { return p[1]; });
+    return [(Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2, (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2];
+  }
+  // ---- View Control Bar (thanh dưới khung vẽ như Revit): tỉ lệ, mức chi tiết, kiểu hiển thị, nhãn loại ----
+  var SCALES = [20, 50, 100, 200, 500];
+  function currentScaleN() { return 1 / (view.s * PX_MM); }
+  function scaleLabelFor() { var n = currentScaleN(), near = SCALES.filter(function (x) { return Math.abs(x - n) / x < 0.03; })[0]; return near ? String(near) : 'custom'; }
+  function setScale(n) { view.s = Math.min(MAX_SCALE, Math.max(MIN_SCALE, 1 / (n * PX_MM))); fitted = true; draw(); }
+  function buildViewBar(bar) {
+    function sel(id, label, options, get, set, title) {
+      var w = el('label', {class: 'pv-vb-item', title: title}, bar); el('span', {text: label}, w);
+      var s = el('select', {id: id, 'aria-label': label}, w);
+      options.forEach(function (o) { s.append(new Option(o[1], o[0])); }); s.value = get();
+      s.onchange = function () { set(s.value); };
+      return s;
+    }
+    var sc = sel('pv-vb-scale', 'Tỉ lệ', SCALES.map(function (n) { return [String(n), '1 : ' + n]; }).concat([['custom', 'Tùy chỉnh']]), scaleLabelFor, function (v) { if (v !== 'custom') setScale(Number(v)); }, 'Tỉ lệ hiển thị: 1 mm trên giấy (96 dpi) ứng với bao nhiêu mm công trình');
+    sel('pv-vb-detail', 'Chi tiết', [['low', 'Thấp'], ['medium', 'Vừa'], ['high', 'Cao']], function () { return detail; }, function (v) { detail = v; draw(); }, 'Mức chi tiết: Thấp bỏ lớp tường và cánh cửa; Cao thêm nhãn loại kèm mã vị trí');
+    sel('pv-vb-style', 'Kiểu', [['color', 'Màu theo loại'], ['mono', 'Đơn sắc'], ['wire', 'Khung dây']], function () { return vstyle; }, function (v) { vstyle = v; draw(); }, 'Kiểu hiển thị: tô màu theo loại, đơn sắc chỉ nét, hoặc khung dây mảnh');
+    var tg = el('button', {type: 'button', class: 'pv-vb-btn', id: 'pv-vb-tags', 'aria-pressed': 'false', title: 'Nhãn loại: hiện tên loại trên cột, dầm, tường, cửa'}, bar); tg.textContent = 'Nhãn loại';
+    tg.onclick = function () { tagsOn = !tagsOn; tg.classList.toggle('on', tagsOn); tg.setAttribute('aria-pressed', String(tagsOn)); draw(); };
+    bar.syncScale = function () { var v = scaleLabelFor(), s = $('pv-vb-scale'); if (s && s.value !== v && document.activeElement !== s) s.value = v; };
+  }
   function fitView() {
     var b = worldBounds(data); if (!b) return;
     var w = Math.max(b[2] - b[0], 1), h = Math.max(b[3] - b[1], 1), pad = 40;
@@ -562,6 +680,7 @@
     i.layers.forEach(function (l) { var f1 = f + l.t / total; fillStroke(wallBand(i, f, f1), l.color, 0.85, null, 0.6); f = f1; });
   }
   function fillStroke(poly, color, alpha, dash, width, holes) {
+    if (vstyle !== 'color') { color = css('--vgd-text', '#222'); alpha = 0; width = vstyle === 'wire' ? 0.7 : (width || 1); } // đơn sắc / khung dây: chỉ nét, không tô
     path(poly); (holes || []).forEach(function (h) { h.forEach(function (p, i) { var q = toScreen(p[0], p[1]); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.closePath(); }); // lỗ là vòng con, tô theo quy tắc chẵn lẻ
     ctx.globalAlpha = alpha; ctx.fillStyle = color; if (alpha > 0) ctx.fill('evenodd'); ctx.globalAlpha = 1;
     ctx.setLineDash(dash || []); ctx.lineWidth = width || 1; ctx.strokeStyle = color; ctx.stroke(); ctx.setLineDash([]);
@@ -575,16 +694,18 @@
     if (visible.slab) section('slabs').forEach(function (i) { if (hid('slab', i.ref)) return; fillStroke(i.polygon || rectPoly(i.min, i.max), COLORS.slab, 0.12, null, 1, i.holes); });
     if (visible.ceiling) section('ceilings').forEach(function (i) { if (hid('ceiling', i.ref)) return; fillStroke(i.polygon, COLORS.ceiling, 0.08, [5, 4], 1, i.holes); });
     if (visible.beam) section('beams').forEach(function (i) { if (hid('beam', i.ref)) return; fillStroke(i.poly || rectPoly(i.min, i.max), COLORS.beam, 0.25, [6, 3], 1); });
-    if (visible.wall) section('walls').forEach(function (i) { if (hid('wall', i.ref)) return; fillStroke(i.poly || rectPoly(i.min, i.max), COLORS.wall, 0.8, null, 1); drawWallLayers(i); });
+    if (visible.wall) section('walls').forEach(function (i) { if (hid('wall', i.ref)) return; fillStroke(i.poly || rectPoly(i.min, i.max), COLORS.wall, 0.8, null, 1); if (detail !== 'low' && vstyle === 'color') drawWallLayers(i); });
     if (visible.opening) section('openings').forEach(function (i) { if (!hid('opening', i.ref)) drawOpening(i, bg); });
     if (visible.column) section('columns').forEach(function (i) { if (hid('column', i.ref)) return; fillStroke(i.poly || rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), COLORS.column, 0.9, null, 1.5); });
     if (visible.grid) drawGrid(ink);
+    drawTags(ink);
     if (visible.note && notes) notes.draw({ctx: ctx, toScreen: toScreen, scale: view.s, hidden: function (id) { return hid('note', id); }});
     if (hover && vis(hover)) { path(hover.poly); ctx.lineWidth = 2; ctx.strokeStyle = css('--vgd-accent', '#1e88e5'); ctx.stroke(); }
     visibleSelection().forEach(function (x) { path(x.poly); ctx.lineWidth = 3; ctx.setLineDash([6, 3]); ctx.strokeStyle = css('--vgd-accent', '#1e88e5'); ctx.stroke(); ctx.setLineDash([]); });
     drawBadges();
     drawOverlay(bg, ink);
     drawDims(bg, ink);
+    var vbar = $('pv-viewbar'); if (vbar && vbar.syncScale) vbar.syncScale();
     updateStatus();
     scheduleGhost();
   }
@@ -723,6 +844,7 @@
     }
     function line(p, q, width) { var s = toScreen(p[0], p[1]), e = toScreen(q[0], q[1]); ctx.beginPath(); ctx.moveTo(s[0], s[1]); ctx.lineTo(e[0], e[1]); ctx.lineWidth = width; ctx.strokeStyle = color; ctx.stroke(); }
     if (i.kind === 'window') { line(pt(a0, mid), pt(a1, mid), 1.5); return; }
+    if (detail === 'low') return; // mức chi tiết thấp: cửa đi chỉ là chỗ hở, không vẽ cánh và cung quay
     // Hướng mở: flip false = cánh mở về phía +v của tường, true = phía -v; bản lề ở đầu đầu cửa, mirror = ở đầu cuối (như bản lề trái / phải của Revit).
     var w = a1 - a0, dir = i.flip ? -1 : 1, hu = i.mirror ? a1 : a0, su = i.mirror ? -1 : 1, hinge = pt(hu, mid), leaf = pt(hu, mid + dir * w);
     line(hinge, leaf, 2);
@@ -870,7 +992,7 @@
     init: function (options) {
       opts = options; edit = options.edit || null; notes = options.notes || null; modify = options.modify || null; root = $('tab-plan'); canvas = $('pv-canvas'); ctx = canvas.getContext('2d');
       status = {xy: $('pv-xy'), hint: $('pv-hint'), zoom: $('pv-zoom')};
-      loadKeys(); buildTop($('pv-top')); buildSide($('pv-side')); buildKeys(); refreshBadges(); setTool('select'); renderProps();
+      loadKeys(); buildTop($('pv-top')); $('pv-side').hidden = true; buildViewBar($('pv-viewbar')); buildKeys(); refreshBadges(); setTool('select'); renderProps();
       var box2 = $('pv-vcb'); box2.disabled = false; box2.placeholder = 'Gõ số + Enter';
       box2.onkeydown = function (e) { if (e.key === 'Enter') { if (vcb(box2.value)) { box2.value = ''; canvas.focus(); } e.preventDefault(); } else if (e.key === 'Escape') { box2.value = ''; canvas.focus(); } e.stopPropagation(); };
       canvas.addEventListener('pointerdown', onDown); canvas.addEventListener('pointermove', onMove); canvas.addEventListener('pointerup', onUp); canvas.addEventListener('pointercancel', onUp);
@@ -948,6 +1070,7 @@
     },
     say: function (text) { note = text; draw(); },
     shapeAt: function (w) { return pickAll(w[0], w[1])[0] || null; }, finish: function () { var m = modify ? modify.hint() : ''; setTool('select'); note = m; draw(); },
+    ribbonTab: setRibbonTab, ribbonCurrent: function () { return ribbonTab; },
     ghostChanged: function () { draw(); scheduleGhost(); },     refreshHistory: refreshHistory, scale: function () { return view.s; }, bounds: function () { return worldBounds(data) || [0, 0, 1000, 1000]; },
     snapPoint: function (w) { var r = snapOn ? snapAt(w[0], w[1]) : null; return r ? r.p : null; },
     reloadKeys: function () { loadKeys(); buildKeys(); refreshBadges(); },
@@ -955,7 +1078,7 @@
     // Dùng cho test: trạng thái xem và số phần tử đang vẽ.
     debug: function () {
       var counts = {}; shapes.forEach(function (s) { counts[s.layer] = (counts[s.layer] || 0) + 1; });
-      return {view: {cx: view.cx, cy: view.cy, s: view.s}, size: size, tool: tool, counts: counts, hover: hover && hover.text, selected: selection.length === 1 ? selection[0].title : (selection.length ? selection.length + ' phần tử' : null), selection: selection.map(function (x) { return x.title; }), snap: snap && {p: snap.p, text: snap.text, rank: snap.rank}, guides: levelGuides().length, guideLines: levelGuides().map(function (g) { return {p: g.p, d: g.d}; }), measure: measure && {a: measure.a, b: measure.b, done: measure.done}, draft: draft && (draft.ref ? 'ref' : 'first'), browserOpen: !$('pv-browser').hidden, hidden: hiddenCount, hiddenMode: hiddenMode, suDraw: suDraw, snapOn: snapOn, sync: syncOn, statusOn: statusOn, suPicking: suPicking, badges: badgeCounts(), badgesDrawn: badgesDrawn, modelStatusLevel: modelStatus && modelStatus.level, lastSent: lastSent, edit: edit && edit.debug(), modify: modify && modify.debug(), dims: dimHits.length, dimHits: dimHits.map(function (h) { return {x: h.x, y: h.y, w: h.w, h: h.h, id: h.dim.id, value: h.dim.value}; }), dimList: lastDims.map(function (d) { return {id: d.id, value: d.value, editable: d.editable}; }), chord: chord, keymap: Object.assign({}, keymap), tabIdx: tabIdx, hoverCount: hoverCount, level: currentId, tabs: levelList.length, visible: Object.assign({}, visible), axes: data && data.ok ? data.axes.length : 0};
+      return {view: {cx: view.cx, cy: view.cy, s: view.s}, size: size, tool: tool, counts: counts, hover: hover && hover.text, selected: selection.length === 1 ? selection[0].title : (selection.length ? selection.length + ' phần tử' : null), selection: selection.map(function (x) { return x.title; }), snap: snap && {p: snap.p, text: snap.text, rank: snap.rank}, guides: levelGuides().length, guideLines: levelGuides().map(function (g) { return {p: g.p, d: g.d}; }), measure: measure && {a: measure.a, b: measure.b, done: measure.done}, draft: draft && (draft.ref ? 'ref' : 'first'), browserOpen: !$('pv-browser').hidden, hidden: hiddenCount, hiddenMode: hiddenMode, suDraw: suDraw, snapOn: snapOn, sync: syncOn, statusOn: statusOn, suPicking: suPicking, detail: detail, vstyle: vstyle, tagsOn: tagsOn, tagsDrawn: tagsDrawn, scaleN: Math.round(currentScaleN()), badges: badgeCounts(), badgesDrawn: badgesDrawn, modelStatusLevel: modelStatus && modelStatus.level, lastSent: lastSent, edit: edit && edit.debug(), modify: modify && modify.debug(), dims: dimHits.length, dimHits: dimHits.map(function (h) { return {x: h.x, y: h.y, w: h.w, h: h.h, id: h.dim.id, value: h.dim.value}; }), dimList: lastDims.map(function (d) { return {id: d.id, value: d.value, editable: d.editable}; }), chord: chord, keymap: Object.assign({}, keymap), tabIdx: tabIdx, hoverCount: hoverCount, level: currentId, tabs: levelList.length, visible: Object.assign({}, visible), axes: data && data.ok ? data.axes.length : 0};
     },
     toScreen: toScreen, toWorld: toWorld, promptText: promptText
   };

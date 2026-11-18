@@ -35,6 +35,7 @@ module VGD
         @dialog.add_action_callback('plates_build') { |_ctx, payload| safely(true) { plates_build(JSON.parse(payload)) } }
         @dialog.add_action_callback('plates_remove') { |_ctx, payload| safely(true) { plates_remove(JSON.parse(payload)) } }
         @dialog.add_action_callback('propose') { |_ctx, payload| safely { propose(JSON.parse(payload)) } }
+        @dialog.add_action_callback('schedule') { |_ctx, payload| safely { emit('schedule', Schedule.build(State.normalize!(JSON.parse(payload)))) } }
         @dialog.add_action_callback('check') { |_ctx, payload| safely { check(JSON.parse(payload)) } }
         @dialog.add_action_callback('build_all') { |_ctx, payload| safely(true) { build_all(JSON.parse(payload)) } }
         @dialog.add_action_callback('picks_copy') { |_ctx, payload| safely { picks_copy(JSON.parse(payload)) } }

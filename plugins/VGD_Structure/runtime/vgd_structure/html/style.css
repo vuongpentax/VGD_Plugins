@@ -206,3 +206,31 @@ main.plan-tab[hidden] { display: none; }
 .layers-sum { margin-top: 6px; color: var(--vgd-muted, #666); }
 .layers-sum.error { color: var(--vgd-danger, #c0392b); }
 button.layers-btn { white-space: nowrap; }
+
+/* Ribbon theo tab (kiểu Revit): hàng tab, rồi các nhóm có tên với nhãn dưới nút */
+.pv-ribbon { background: var(--vgd-surface); border-bottom: 1px solid var(--vgd-border); }
+.pv-rb-tabs { display: flex; gap: 2px; padding: 2px 8px 0; border-bottom: 1px solid var(--vgd-border); overflow-x: auto; scrollbar-width: none; }
+.pv-rb-tab { padding: 3px 12px; border: 1px solid transparent; border-bottom: 0; border-radius: 5px 5px 0 0; background: transparent; color: var(--vgd-muted); cursor: pointer; font: inherit; font-size: 12px; transition: background-color 150ms, color 150ms; }
+.pv-rb-tab[aria-selected="true"] { background: var(--vgd-elevated); color: var(--vgd-text); border-color: var(--vgd-border); font-weight: 600; }
+.pv-rb-body { background: var(--vgd-elevated); }
+.pv-rb-panel { display: flex; align-items: stretch; gap: 0; padding: 3px 8px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; height: 54px; box-sizing: border-box; }
+.pv-rb-panel[hidden] { display: none; }
+.pv-rb-grp { display: flex; flex-direction: column; align-items: center; padding: 0 8px; border-right: 1px solid var(--vgd-border); }
+.pv-rb-btns { display: flex; flex-wrap: wrap; gap: 1px; align-items: center; justify-content: center; flex: 1; }
+.pv-rb-grp > i { font: 10px sans-serif; font-style: normal; color: var(--vgd-muted); padding-top: 1px; white-space: nowrap; }
+.pv-side[hidden] { display: none; }
+
+/* View Control Bar: thanh nhỏ ngay dưới khung vẽ mặt bằng */
+.pv-viewbar { display: flex; align-items: center; gap: 12px; padding: 2px 8px; border-top: 1px solid var(--vgd-border); background: var(--vgd-surface); font-size: 12px; overflow-x: auto; scrollbar-width: none; }
+.pv-vb-item { display: inline-flex; align-items: center; gap: 4px; color: var(--vgd-muted); white-space: nowrap; }
+.pv-vb-item select { height: 22px; font-size: 12px; }
+.pv-vb-btn { height: 22px; padding: 0 8px; border: 1px solid var(--vgd-border); border-radius: 4px; background: transparent; color: var(--vgd-text); cursor: pointer; font: inherit; font-size: 12px; transition: background-color 150ms, border-color 150ms; }
+.pv-vb-btn.on { background: var(--vgd-tint); border-color: var(--vgd-accent); color: var(--vgd-accent-strong); }
+
+.pv-typesel { display: flex; flex-direction: column; gap: 4px; margin: 4px 0 8px; }
+.pv-typesel select { width: 100%; height: 26px; }
+.pv-typesel-btns { display: flex; gap: 4px; }
+.pv-typesel-btns button { flex: 1; height: 24px; font-size: 12px; }
+.pv-pgroup th { text-align: left; font-size: 11px; color: var(--vgd-accent-strong); background: var(--vgd-tint); padding: 2px 6px; }
+.pv-filter { margin-top: 6px; }
+.pv-filter-row { display: flex; align-items: center; gap: 6px; padding: 1px 0; font-size: 12px; }

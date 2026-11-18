@@ -902,10 +902,42 @@
     renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); syncPlanLevels(); changed();
   }
 
+  // ---- Bảng thống kê (Schedule) ----
+  var schedData = null, SCHED_KINDS = [['columns', 'Cột'], ['beams', 'Dầm'], ['walls', 'Tường'], ['openings', 'Cửa'], ['slabs', 'Sàn'], ['ceilings', 'Trần']];
+  function requestSchedule() { $('sched-note').textContent = 'Đang tính...'; call('schedule', payload()); }
+  function renderScheduleControls() {
+    var ks = $('sched-kind'), ls = $('sched-level'), kv = ks.value || 'columns', lv = ls.value || '';
+    ks.replaceChildren(); SCHED_KINDS.forEach(function (k) { ks.append(new Option(k[1], k[0])); }); ks.value = kv;
+    ls.replaceChildren(); ls.append(new Option('Tất cả các tầng', '')); state.levels.forEach(function (l) { ls.append(new Option(l.name, l.id)); }); ls.value = state.levels.some(function (l) { return l.id === lv; }) ? lv : '';
+  }
+  function schedRows() { // dòng theo loại và tầng đang lọc, kèm dòng tổng
+    if (!schedData) return null;
+    var sec = schedData.sections.filter(function (s) { return s.kind === $('sched-kind').value; })[0]; if (!sec) return null;
+    var lv = $('sched-level').value, rows = sec.rows.filter(function (r) { return !lv || r.level === lv; });
+    var head = ['Tầng', 'Loại', 'Số lượng'].concat(sec.columns.map(function (c) { return c.label + (c.unit ? ' (' + c.unit + ')' : ''); }));
+    var body = rows.map(function (r) { return [r.level_name, r.type, String(r.count)].concat(sec.columns.map(function (c) { var v = r.values[c.id]; return v === undefined ? '' : String(v); })); });
+    var total = ['Tổng', '', String(rows.reduce(function (a, r) { return a + r.count; }, 0))].concat(sec.columns.map(function (c) { return c.sum ? String(Math.round(rows.reduce(function (a, r) { return a + (Number(r.values[c.id]) || 0); }, 0) * 1000) / 1000) : ''; }));
+    return {head: head, body: body, total: total};
+  }
+  function renderSchedule() {
+    var t = $('sched-table'); t.replaceChildren();
+    var d = schedRows(); if (!d) return;
+    var hr = t.insertRow(); d.head.forEach(function (h) { var th = document.createElement('th'); th.textContent = h; hr.appendChild(th); });
+    d.body.forEach(function (r) { var row = t.insertRow(); r.forEach(function (v) { row.insertCell().textContent = v; }); });
+    if (d.body.length) { var tr = t.insertRow(); tr.className = 'total'; d.total.forEach(function (v) { var c = tr.insertCell(); c.textContent = v; c.style.fontWeight = '600'; }); }
+    var issues = (schedData && schedData.issues) || [];
+    $('sched-note').textContent = d.body.length ? d.body.length + ' dòng.' + (issues.length ? ' Lưu ý: ' + issues.join(' ') : '') : 'Chưa có ' + SCHED_KINDS.filter(function (k) { return k[0] === $('sched-kind').value; })[0][1].toLowerCase() + ' nào được chọn' + (issues.length ? '. ' + issues.join(' ') : '.');
+  }
+  function schedCsv() { var d = schedRows(); if (!d) return ''; return [d.head].concat(d.body, d.body.length ? [d.total] : []).map(function (r) { return r.map(function (v) { return /[\t\n"]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join('\t'); }).join('\n'); }
+  function copySchedule() {
+    var text = schedCsv(), done = function (ok) { $('sched-note').textContent = ok ? 'Đã sao chép bảng (cột cách nhau bằng Tab): dán vào Excel.' : 'Không sao chép được: hãy chọn bảng và sao chép tay.'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(fallbackCopy(text)); }); } else done(fallbackCopy(text));
+  }
+  function fallbackCopy(text) { var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); var ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; } ta.remove(); return ok; }
   function switchTab(tab) {
     state.tab = tab;
     document.querySelectorAll('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-tab') === tab)); });
-    ['grid', 'levels', 'plan', 'columns', 'beams', 'walls', 'openings', 'slabs', 'ceilings', 'all'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
+    ['grid', 'levels', 'plan', 'columns', 'beams', 'walls', 'openings', 'slabs', 'ceilings', 'schedule', 'all'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
     if (tab === 'plan') { syncPlanLevels(); window.VGDPlan.show(); }
     if (tab === 'columns') renderColumnsTab();
     if (tab === 'beams') renderBeamsTab();
@@ -913,6 +945,7 @@
     if (tab === 'openings') renderOpeningsTab();
     CELL_TABS.forEach(function (c) { if (tab === c.kind) renderCellTab(c); });
     if (tab === 'all') renderAllTab();
+    if (tab === 'schedule') { renderScheduleControls(); requestSchedule(); }
   }
 
   function receive(event, data) {
@@ -991,6 +1024,7 @@
     } else if (event === 'su_text') { window.VGDPlan.suText(data.text);
     } else if (event === 'start_tool') { startDrawTool(data.tool);
     } else if (event === 'su_edit') { applySuEdit(data);
+    } else if (event === 'schedule') { schedData = data; renderSchedule();
     } else if (event === 'plate_probe') { probeCache[data.key] = data.polygon || false; if (window.VGDPlan && window.VGDPlan.ghostChanged) window.VGDPlan.ghostChanged();
     }
   }
@@ -1083,7 +1117,7 @@
     if (apply) { list.push({name: freeName(dir, list.length), offset: off}); list.sort(function (a, b) { return a.offset - b.offset; }); state[dir] = fromAxes(list); }
     return null;
   }
-  window.VGDS = {startTool: startDrawTool, receive: receive, _state: state, mutate: mutate, undo: undo, redo: redo, history: function () { return {undo: undoStack.length, redo: redoStack.length}; },
+  window.VGDS = {scheduleCsv: schedCsv, startTool: startDrawTool, receive: receive, _state: state, mutate: mutate, undo: undo, redo: redo, history: function () { return {undo: undoStack.length, redo: redoStack.length}; },
     api: {level: currentLevel, isTop: isTop, rid: rid, toAxes: toAxes, allSpans: allSpans, allCells: allCells, allRefs: allRefs, wallOpenings: wallOpenings, addAxis: addAxis, modes: {x: MODE_X, y: MODE_Y, p: MODE_P}}};
   window.VGDPlanEdit.init({state: state, api: window.VGDS.api, mutate: mutate, probe: plateProbe, say: function (t) { window.VGDPlan.say(t); }, scale: function () { return window.VGDPlan.scale(); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, bounds: function () { return window.VGDPlan.bounds(); }});
   window.VGDPlanNotes.init({state: state, api: window.VGDS.api, mutate: mutate, say: function (t) { window.VGDPlan.say(t); }, scale: function () { return window.VGDPlan.scale(); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); },
@@ -1103,6 +1137,7 @@
     typed: function (n, cur) { return drawCur && drawCur.typed ? drawCur.typed(n, cur) : false; },
     flipDoor: function (t, ref, shift) { return window.VGDPlanEdit.flipDoor(t, ref, shift); },
     finish: function () { return drawCur && drawCur.finish ? drawCur.finish() : false; }, undoPoint: function () { return drawCur && drawCur.undoPoint ? drawCur.undoPoint() : false; },
+    typeSelector: function (shape) { return shape.kind === 'note' ? null : window.VGDPlanEdit.typeSelector(shape); },
     propsFor: function (shape) { return shape.kind === 'note' ? window.VGDPlanNotes.propsFor(shape) : window.VGDPlanEdit.propsFor(shape); },
     remove: function (list) { return window.VGDPlanEdit.remove(list) + window.VGDPlanNotes.remove(list); },
     debug: function () { var d = window.VGDPlanEdit.debug(); d.notes = window.VGDPlanNotes.debug(); return d; }
@@ -1200,6 +1235,7 @@
   });
   $('all-level-select').onchange = function () { state.level = $('all-level-select').value; state.selected = null; state.selectedBeam = null; state.selectedWall = null; renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); changed(); renderAllButtons(); };
   $('propose-level').onclick = function () { var p = payload(); p.scope = 'level'; call('propose', p); };
+  $('sched-kind').onchange = renderSchedule; $('sched-level').onchange = renderSchedule; $('sched-refresh').onclick = requestSchedule; $('sched-copy').onclick = copySchedule;
   $('propose-all').onclick = function () { var p = payload(); p.scope = 'all'; call('propose', p); };
   $('run-check').onclick = function () { call('check', payload()); };
   $('build-all-level').onclick = function () { call('build_all', {state: payload(), levels: [state.level]}); };

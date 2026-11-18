@@ -551,6 +551,29 @@
     });
     return [n, floors];
   }
+  // Type Selector kiểu Revit (ô chọn loại ở đầu bảng Thuộc tính): đổi loại của phần tử đang chọn, nhân đôi loại. null nếu phần tử không có loại.
+  var TYPE_PREFIX = {column: 'ct_', beam: 'bt_', wall: 'wt_', opening: 'ot_'}, TYPE_MAX = 50, NAME_MAX = 20;
+  function typeSelector(shape) {
+    var spec = TYPE_SPECS[shape.kind], l = lvl(), box = PICKS[shape.kind] && l[PICKS[shape.kind]], pick = box && box[shape.ref];
+    if (!spec || !pick) return null;
+    var id = shape.kind === 'opening' ? pick.type : window.VGDPlanBrowser.effectiveType(shape.kind, l, pick), list = spec.list(), type = list.filter(function (t) { return t.id === id; })[0];
+    if (!type) return null;
+    var sameKind = function (t) { return shape.kind !== 'opening' || t.kind === type.kind; };
+    var label = function (t) { return t.name + (shape.kind === 'column' ? ' (' + t.w + '×' + t.d + ')' : shape.kind === 'beam' ? ' (' + t.w + '×' + t.h + ')' : shape.kind === 'wall' ? ' (dày ' + t.t + ')' : ' (' + t.w + '×' + t.h + ')'); };
+    return {
+      value: id, values: list.filter(sameKind).map(function (t) { return [t.id, label(t)]; }),
+      apply: function (v) { if (v !== id) edit(function () { pick.type = v; }); },
+      canDuplicate: list.length < TYPE_MAX,
+      duplicate: function () {
+        if (list.length >= TYPE_MAX) { host.say('Tối đa ' + TYPE_MAX + ' loại.'); return; }
+        var names = list.map(function (t) { return t.name.toLowerCase(); }), n = 2, name, base = type.name.replace(/ \(\d+\)$/, ''); // nhân đôi một bản sao thì đánh số tiếp, không chồng thêm hậu tố
+        do { var suffix = ' (' + n + ')'; name = base.slice(0, NAME_MAX - suffix.length) + suffix; n++; } while (names.indexOf(name.toLowerCase()) >= 0);
+        var copy = JSON.parse(JSON.stringify(type)); copy.id = A.rid(TYPE_PREFIX[shape.kind]); copy.name = name;
+        edit(function () { list.push(copy); pick.type = copy.id; });
+        host.say('Đã nhân đôi loại thành “' + name + '” và gán cho phần tử này; sửa kích thước ở mục Thuộc tính của loại.');
+      }
+    };
+  }
   function typeFields(shape, pick) {
     var spec = TYPE_SPECS[shape.kind]; if (!spec || !pick) return [];
     var id = shape.kind === 'opening' ? pick.type : window.VGDPlanBrowser.effectiveType(shape.kind, lvl(), pick), type = spec.list().filter(function (t) { return t.id === id; })[0];
@@ -600,7 +623,7 @@
   window.VGDPlanEdit = {
     init: function (h) { host = h; S = h.state; A = h.api; },
     handles: handles, activate: activate, cancel: cancel, busy: busy, options: options, setOption: setOption, freeMode: freeMode, typed: typed, finish: finish, undoPoint: undoPoint,
-    flipDoor: flipDoor, move: move, click: click, hint: hint, ghost: ghost, remove: remove, propsFor: propsFor,
+    typeSelector: typeSelector, flipDoor: flipDoor, move: move, click: click, hint: hint, ghost: ghost, remove: remove, propsFor: propsFor,
     debug: function () { return {tool: tool, chain: chain && chain.ref, chainPoint: chain && chain.p, freeTarget: target && target.free, target: target && {ref: target.node && target.node.ref, end: target.end && target.end.ref, refs: target.refs, span: target.span && target.span.ref, cell: target.cell && target.cell.ref, exists: target.exists, error: target.error, pos: target.pos}, note: note, opt: JSON.parse(JSON.stringify(opt))}; }
   };
 })();

@@ -1,7 +1,7 @@
 # Dữ liệu thật từ Ruby cho test giao diện (trạng thái, xem trước lưới / cột, kết quả tạo trục từ nhịp). In JSON ra stdout.
 require 'json'
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
-%w[core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/layer_list core/levels core/column_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/slab_plan core/ceiling_plan core/proposal core/checker core/model_edit core/state core/preview].each { |f| require File.join(ROOT, f) }
+%w[core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/layer_list core/levels core/column_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/slab_plan core/ceiling_plan core/proposal core/checker core/schedule core/model_edit core/state core/preview].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 state = S::State.default
 refs = S::Grid.intersections(state['grid']).map { |i| i[:ref] }
@@ -63,6 +63,7 @@ puts JSON.generate(
                levels: with.call({}, 'sl_00000001', {}, join_walls, {}, {}, join_openings)['levels']},
   preview_join: S::Preview.build(with.call({}, 'sl_00000001', {}, join_walls, {}, {}, join_openings)),
   preview_all_cells: S::Preview.build(with.call(all, 'sl_00000001', beams_two, walls_two, all_cells, all_cells)),
+  schedule: S::Schedule.build(S::State.normalize!(with.call(all, 'sl_00000001', all_beams, walls_two, all_cells, all_cells))),
   check_ok: S::Checker.run(S::State.normalize!(with.call(all, 'sl_00000001', all_beams, walls_two, all_cells, all_cells))),
   check_warn: S::Checker.run(S::State.normalize!(with.call(all.reject { |k, _| k == '2-B' }, 'sl_00000001', all_beams, walls_two, all_cells, all_cells))),
   preview_top: S::Preview.build(state_two.merge('level' => 'sl_00000002')),
