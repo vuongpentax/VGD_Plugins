@@ -471,7 +471,7 @@
                        field('from', h ? 'Từ X (mm)' : 'Từ Y (mm)', 'number', null, f.a[key], function (v) { put('from', v); }),
                        field('to', h ? 'Đến X (mm)' : 'Đến Y (mm)', 'number', null, f.b[key], function (v) { put('to', v); })]);
   }
-  function propsFor(shape) {
+  function propsOwn(shape) {
     var l = lvl(), pick = PICKS[shape.kind] && l[PICKS[shape.kind]][shape.ref], out = [];
     if (!pick) return out;
     function setMode(key) { return function (v) { edit(function () { if (v === 'auto') delete pick[key]; else pick[key] = v; }); }; }
@@ -487,6 +487,51 @@
                field('flip', 'Đổi mặt cánh', 'checkbox', null, !!pick.flip, function (v) { edit(function () { pick.flip = !!v; }); }));
     }
     return out;
+  }
+
+  // ---- Thuộc tính của LOẠI (Type Properties, như Revit): sửa kích thước loại của phần tử đang chọn; đổi thì mọi phần tử cùng loại đổi theo ----
+  var TYPE_SPECS = {
+    column: {list: function () { return S.types; }, label: 'cột', fields: [['w', 'Rộng (mm)', 100, 3000], ['d', 'Sâu (mm)', 100, 3000]]},
+    beam: {list: function () { return S.beamTypes; }, label: 'dầm', fields: [['w', 'Rộng (mm)', 100, 1500], ['h', 'Cao (mm)', 100, 2000]]},
+    wall: {list: function () { return S.wallTypes; }, label: 'tường', fields: [['t', 'Bề dày (mm)', 50, 1000]]},
+    opening: {list: function () { return S.openingTypes; }, label: 'cửa', fields: [['w', 'Rộng (mm)', 300, 5000], ['h', 'Cao (mm)', 300, 4000], ['sill', 'Cao ngưỡng (mm)', 0, 3000]]}
+  };
+  var USERS = [['column', 'picks'], ['beam', 'beamPicks'], ['wall', 'wallPicks'], ['opening', 'openingPicks']];
+  function typeUsage(kind, id) { // số phần tử (mọi tầng) dùng loại này và số tầng có dùng
+    var n = 0, floors = 0;
+    S.levels.forEach(function (l) {
+      var here = 0, box = l[USERS.filter(function (u) { return u[0] === kind; })[0][1]] || {};
+      Object.keys(box).forEach(function (ref) {
+        var t = kind === 'opening' ? box[ref].type : window.VGDPlanBrowser.effectiveType(kind, l, box[ref]);
+        if (t === id) here++;
+      });
+      n += here; if (here) floors++;
+    });
+    return [n, floors];
+  }
+  function typeFields(shape, pick) {
+    var spec = TYPE_SPECS[shape.kind]; if (!spec || !pick) return [];
+    var id = shape.kind === 'opening' ? pick.type : window.VGDPlanBrowser.effectiveType(shape.kind, lvl(), pick), type = spec.list().filter(function (t) { return t.id === id; })[0];
+    if (!type) return [];
+    var use = typeUsage(shape.kind, id), out = [{kind: 'heading', label: 'Thuộc tính của loại “' + type.name + '”'}];
+    out.push({kind: 'info', label: 'Đổi ở đây áp dụng cho ' + use[0] + ' ' + spec.label + ' (' + use[1] + ' tầng) dùng loại này.'});
+    out.push(field('type_name', 'Tên loại', 'text', null, type.name, function (v) {
+      v = String(v).trim();
+      if (!v || v.length > 20 || /[\u0000-\u001f\u007f]/.test(v)) { host.say('Tên loại từ 1 đến 20 ký tự.'); return; }
+      if (spec.list().some(function (t) { return t.id !== type.id && t.name.toLowerCase() === v.toLowerCase(); })) { host.say('Tên loại “' + v + '” đã có.'); return; }
+      edit(function () { type.name = v; });
+    }));
+    spec.fields.forEach(function (f) {
+      out.push(field('type_' + f[0], f[1], 'number', null, type[f[0]], function (v) {
+        if (!isFinite(v) || v < f[2] || v > f[3]) { host.say(f[1].replace(' (mm)', '') + ' của loại phải từ ' + f[2] + ' đến ' + f[3] + ' mm.'); return; }
+        edit(function () { type[f[0]] = r1(v); });
+      }));
+    });
+    return out;
+  }
+  function propsFor(shape) {
+    var own = propsOwn(shape), l = lvl(), box = PICKS[shape.kind] && l[PICKS[shape.kind]];
+    return own.concat(typeFields(shape, box && box[shape.ref]));
   }
 
   window.VGDPlanEdit = {

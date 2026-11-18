@@ -100,6 +100,7 @@
       ctx.font = Math.round(px) + 'px sans-serif'; ctx.textAlign = align || 'left'; ctx.textBaseline = base || 'alphabetic'; ctx.fillStyle = INK; ctx.fillText(text, 0, 0); ctx.restore();
     }
     Object.keys(b).forEach(function (id) {
+      if (g.hidden && g.hidden(id)) return;
       var n = b[id]; ctx.save(); ctx.strokeStyle = INK; ctx.fillStyle = INK; ctx.lineWidth = 1.3; ctx.beginPath();
       if (n.t === 'line') { line(n.a, n.b); ctx.stroke(); }
       else if (n.t === 'poly') { n.pts.forEach(function (p, i) { var q = ts(p[0], p[1]); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); if (n.closed) ctx.closePath(); ctx.stroke(); }

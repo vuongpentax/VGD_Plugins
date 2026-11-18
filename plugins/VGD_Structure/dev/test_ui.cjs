@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.15.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.16.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -1493,6 +1493,71 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await receive('state',Object.assign({},F.state_notes,{levels:F.state_notes.levels.map((l,i)=>i===0?Object.assign({},l,{notes:vr5.notes[0]}):l)}));await wait(80);
   ok((await dbg7()).counts.note===10,'nạp lại dữ liệu đã lưu: 10 hình ghi chú hiện đúng');
   await reset();
+  }
+  // Thuộc tính của LOẠI (Type Properties) và Ẩn / Cô lập tạm thời
+  {
+  const typ=async s=>{for(const ch of s)await page.keyboard.press(ch.toLowerCase());await wait(90);};
+  const sc=async(x,y)=>{const bb=await page.locator('#pv-canvas').boundingBox(),q=await page.evaluate(([a,b])=>window.VGDPlan.toScreen(a,b),[x,y]);return [bb.x+q[0],bb.y+q[1]];};
+  const cl=async(x,y)=>{const q=await sc(x,y);await page.mouse.move(q[0],q[1]);await page.mouse.click(q[0],q[1]);};
+  const dbg8=()=>page.evaluate(()=>window.VGDPlan.debug());
+  const hintT=()=>page.locator('#pv-hint').innerText();
+  const st=()=>page.evaluate(()=>JSON.parse(JSON.stringify(window.VGDS._state)));
+  const reset=async()=>{await page.keyboard.press('Escape');await page.keyboard.press('Escape');await receive('state',F.state);await receive('preview',F.preview);await wait(80);};
+  const props=()=>page.locator('#pv-props').innerText();
+  await page.click('[data-tab=plan]');
+  if(await page.locator('#pv-browser').isVisible())await page.click('#pv-browser-btn');
+  await reset();
+  // --- Type Properties ---
+  await cl(150,150);let ptxt=await props();
+  ok(/Thuộc tính của loại “C30x30”/.test(ptxt) && await page.locator('#pv-props input[data-field=type_w]').isVisible() && await page.locator('#pv-props input[data-field=type_d]').isVisible(),'chọn cột: Thuộc tính có mục "Thuộc tính của loại" với Rộng, Sâu');
+  ok(/áp dụng cho 2 cột \(1 tầng\)/.test(ptxt),'ghi rõ đổi loại áp dụng cho 2 cột (1 tầng)');
+  await page.fill('#pv-props input[data-field=type_w]','400');await page.press('#pv-props input[data-field=type_w]','Tab');await wait(400);
+  let s0=await st();ok(s0.types[0].w===400 && s0.types[0].d===300,'sửa Rộng của loại = 400: dữ liệu loại đổi');
+  let gp=await last('grid_preview');ok(gp.types[0].w===400,'gửi Ruby tính lại xem trước với loại mới');
+  await page.fill('#pv-props input[data-field=type_w]','50');await page.press('#pv-props input[data-field=type_w]','Tab');
+  ok((await st()).types[0].w===400 && /từ 100 đến 3000/.test(await hintT()),'Rộng 50 mm: không áp dụng, báo khoảng cho phép');
+  await page.focus('#pv-canvas');await page.keyboard.press('Control+z');ok((await st()).types[0].w===300,'Ctrl+Z hoàn tác việc sửa loại');
+  await page.evaluate(()=>{window.VGDS._state.types.push({id:'ct_00000009',name:'Khac',w:500,d:500});});
+  await page.evaluate(()=>{window.VGDS._state.levels[0].picks['2-B'].type='ct_00000009';});await cl(150,150);ok(/áp dụng cho 1 cột/.test(await props()),'số phần tử bị ảnh hưởng chỉ tính cột cùng loại (2-B dùng loại khác nên còn 1 cột)');
+  await cl(150,150);await page.fill('#pv-props input[data-field=type_name]','khac');await page.press('#pv-props input[data-field=type_name]','Tab');
+  ok((await st()).types[0].name==='C30x30' && /đã có/.test(await hintT()),'đổi tên loại trùng tên loại khác (không phân biệt hoa thường): không áp dụng, báo');
+  await page.fill('#pv-props input[data-field=type_name]','C35x30');await page.press('#pv-props input[data-field=type_name]','Tab');ok((await st()).types[0].name==='C35x30','đổi tên loại hợp lệ');
+  await reset();
+  ptxt='';await cl(2000,3600+0);// tường theo lưới x:B:1-2 (đi qua cửa: bấm ngoài cửa)
+  await page.keyboard.press('Escape');await cl(1800,3600);ptxt=await props();
+  ok(/Tường/.test(ptxt) && await page.locator('#pv-props input[data-field=type_t]').isVisible(),'chọn tường: mục loại có Bề dày');
+  await page.fill('#pv-props input[data-field=type_t]','2000');await page.press('#pv-props input[data-field=type_t]','Tab');ok(/từ 50 đến 1000/.test(await hintT()),'bề dày 2000: báo khoảng 50-1000');
+  await reset();await cl(1000,3600);ptxt=await props();
+  ok(/Cửa/.test(ptxt) && await page.locator('#pv-props input[data-field=type_sill]').isVisible() && await page.locator('#pv-props input[data-field=type_w]').isVisible(),'chọn cửa: mục loại có Rộng, Cao, Cao ngưỡng');
+  await page.fill('#pv-props input[data-field=type_sill]','3500');await page.press('#pv-props input[data-field=type_sill]','Tab');ok(/từ 0 đến 3000/.test(await hintT()),'cao ngưỡng 3500: báo khoảng 0-3000');
+  await reset();await cl(150,150);await page.fill('#pv-props input[data-field=type_d]','450');await page.press('#pv-props input[data-field=type_d]','Tab');await wait(300);
+  const vr6=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vr6.ok,'dữ liệu loại sau khi sửa được Ruby chấp nhận');
+  // --- Ẩn / Cô lập ---
+  await reset();const hist0=await page.evaluate(()=>window.VGDS.history().undo),data0=JSON.stringify((await st()).levels);
+  await typ('eh');ok(/Hãy chọn phần tử cần ẩn/.test(await hintT()) && (await dbg8()).hidden===0,'EH khi chưa chọn gì: báo, không ẩn');
+  await cl(150,150);await typ('eh');ok((await dbg8()).hidden===1 && await page.locator('#pv-hidden').isVisible() && /Đang ẩn tạm thời 1 phần tử/.test(await page.locator('#pv-hidden').innerText()),'EH: ẩn cột đang chọn, hiện chip "Đang ẩn tạm thời 1 phần tử"');
+  ok((await dbg8()).selection.length===0,'ẩn xong thì bỏ chọn');
+  await cl(150,150);ok((await dbg8()).selected!=='Cột 1-A','phần tử đã ẩn không chọn được (bấm vào chỗ đó chọn thứ nằm dưới, không phải cột)');
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Control+a');const all1=(await dbg8()).selection.length;ok(all1>0 && !(await dbg8()).selection.some(t=>/Cột 1-A/.test(t)),'Ctrl+A không chọn phần tử đã ẩn');
+  await page.keyboard.press('Escape');
+  await typ('hr');ok((await dbg8()).hidden===0 && await page.locator('#pv-hidden').isHidden(),'HR: bỏ ẩn, chip biến mất');
+  await cl(150,150);ok((await dbg8()).selected==='Cột 1-A','sau khi bỏ ẩn: chọn lại được cột');
+  ok(JSON.stringify((await st()).levels)===data0 && (await page.evaluate(()=>window.VGDS.history().undo))===hist0,'ẩn / bỏ ẩn không đổi dữ liệu và không vào lịch sử hoàn tác');
+  await typ('hi');ok(/Đang cô lập: ẩn/.test(await page.locator('#pv-hidden').innerText()) && (await dbg8()).hiddenMode==='isolate' && (await dbg8()).hidden>3,'HI: cô lập cột đang chọn, ẩn mọi phần tử khác');
+  await cl(4200,3600);ok((await dbg8()).selected===null,'khi cô lập: phần tử khác (cột 2-B) không chọn được');
+  await cl(150,150);ok((await dbg8()).selected==='Cột 1-A','phần tử được cô lập vẫn chọn được');
+  await page.click('#pv-unhide-btn');ok((await dbg8()).hidden===0,'nút "Bỏ ẩn" trên chip: hiện lại mọi phần tử');
+  await cl(150,150);await page.click('#pv-hide-btn');ok((await dbg8()).hidden===1,'nút Ẩn trên thanh trên hoạt động');
+  await page.click('[data-level=sl_00000002]');await wait(80);ok((await dbg8()).hidden===0 && await page.locator('#pv-hidden').isHidden(),'đổi tầng: tự bỏ ẩn');
+  await page.click('[data-level=sl_00000001]');await wait(80);
+  // vẽ lên canvas: phần tử ẩn không còn nét
+  await reset();const inkAt=(x,y)=>page.evaluate(([x,y])=>{const c=document.getElementById('pv-canvas'),q=window.VGDPlan.toScreen(x,y),d=window.devicePixelRatio||1,ctx=c.getContext('2d'),cx=Math.round(q[0]*d),cy=Math.round(q[1]*d),im=ctx.getImageData(cx-2,cy-2,5,5).data,ref=ctx.getImageData(cx-40,cy-40,1,1).data;let n=0;for(let i=0;i<im.length;i+=4){if(Math.abs(im[i]-ref[0])+Math.abs(im[i+1]-ref[1])+Math.abs(im[i+2]-ref[2])>30)n++;}return n;},[x,y]);
+  const rgb=(x,y)=>page.evaluate(([x,y])=>{const c=document.getElementById('pv-canvas'),q=window.VGDPlan.toScreen(x,y),d=window.devicePixelRatio||1,im=c.getContext('2d').getImageData(Math.round(q[0]*d),Math.round(q[1]*d),1,1).data;return [im[0],im[1],im[2]];},[x,y]);
+  const before=await rgb(150,100);await cl(150,150);await typ('eh');await page.mouse.move(5,5);await wait(40);const after=await rgb(150,100);
+  ok(Math.abs(before[0]-after[0])+Math.abs(before[1]-after[1])+Math.abs(before[2]-after[2])>40,'cột ẩn không còn được vẽ trên canvas (màu tại thân cột đổi: '+before+' -> '+after+')');
+  await typ('hr');await reset();
   }
   // P6: liên kết với SketchUp
   {

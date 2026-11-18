@@ -1,4 +1,4 @@
-# VGD Structure 0.15.0-beta.1
+# VGD Structure 0.16.0-beta.1
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
@@ -56,6 +56,9 @@ Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) th
   - **Trộn với sàn / trần theo ô:** cùng tầng được; chồng nhau chỉ **cảnh báo** (so theo miền thật, không theo hộp bao; hai hình trùng khít nhau hoàn toàn thì chưa phát hiện). Trần đa giác **không lùi theo tường, cột**: chỉ cảnh báo chồng.
   - **Sửa:** Move, Copy, Array, Mirror, Rotate (góc bất kỳ) dùng được; **Mở khóa lưới (UL)** đổi sàn, trần theo ô thành đa giác đúng hình ô; bảng Thuộc tính nhập X, Y từng đỉnh (đa giác tối đa 12 đỉnh; lỗ sửa bằng cách xóa rồi vẽ lại). Offset, Align, Trim chưa dùng cho đa giác.
   - **Dựng:** đùn mặt có lỗ (thêm mặt nhỏ rồi xóa), một thể hiện cho mỗi sàn / trần, tên định nghĩa theo mã băm của hình. **Chưa kiểm trong SketchUp thật.**
+- **Thuộc tính của loại (như Type Properties của Revit):** chọn cột, dầm, tường hoặc cửa thì bảng Thuộc tính có thêm mục "Thuộc tính của loại “…”": sửa tên loại và kích thước loại (cột rộng, sâu; dầm rộng, cao; tường bề dày; cửa rộng, cao, cao ngưỡng) ngay tại chỗ. Có dòng ghi rõ đổi ở đây áp dụng cho bao nhiêu phần tử (bao nhiêu tầng). Giá trị ngoài khoảng cho phép (cùng khoảng với tab loại) hoặc tên trùng thì không áp dụng và báo; hoàn tác được. Sửa xong cần dựng lại để model cập nhật.
+- **Ẩn / Cô lập tạm thời (Hide / Isolate của Revit):** chọn phần tử rồi **EH** (hoặc nút mắt gạch) để ẩn, **HI** (hoặc nút cô lập) để chỉ hiện phần tử đang chọn, **HR** hoặc nút "Bỏ ẩn" trên chip để hiện lại. Chỉ ảnh hưởng hiển thị, chọn, bắt điểm của tầng đang xem; không đổi dữ liệu, không vào hoàn tác, đổi tầng thì tự bỏ ẩn.
+- **Hoàn tác / Làm lại:** nút ở đầu thanh trên (và Ctrl+Z, Ctrl+Y) đã có từ trước; chỉ gồm thay đổi làm trên tab Mặt bằng.
 - **Nét 2D và ghi chú (P5b):**
   - **Công cụ** (cột Vẽ 2D và Ghi chú bên trái; phím LI = Line, DI = Kích thước, TX = Chữ, EL = Cốt cao độ theo trí nhớ về Revit; PL, RC, CC, AC tự đặt): **Line** (bấm hai điểm, nối chuỗi, gõ độ dài + Enter), **Polyline** (bấm bấm lại điểm đầu để khép kín, Enter kết thúc hở, Backspace bỏ điểm cuối), **Chữ nhật**, **Đường tròn** (tâm + bán kính hoặc gõ số), **Cung** (tâm, điểm đầu, điểm cuối, quay ngược chiều kim đồng hồ), **Kích thước** (hai điểm rồi bấm chọn phía và độ lệch, hiện số mm), **Chữ** (bấm vị trí rồi gõ nội dung ngay trên mặt bằng; cao chữ ở thanh tùy chọn), **Cốt cao độ** (ký hiệu và số +3.600 m; cao độ mặc định là cao độ tầng, sửa ở thanh tùy chọn). Có bắt điểm, kể cả vào các nét ghi chú.
   - **Sửa:** chọn (theo khoảng cách tới nét, không theo hộp bao; tròn chọn trên chu vi, cung chỉ trong góc quét), Move, Copy, Array, Mirror, Rotate (góc bất kỳ), Delete, hoàn tác; bảng Thuộc tính nhập tọa độ, bán kính, góc, nội dung chữ, cao chữ, độ lệch, cao độ; Cây dự án có nhóm "Ghi chú"; lớp "Ghi chú và nét 2D" bật / tắt được. Lật gương giữ chữ không bị đảo.
@@ -118,7 +121,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.15.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.16.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 
