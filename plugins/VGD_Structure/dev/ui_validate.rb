@@ -9,7 +9,7 @@ begin
   preview = S::Preview.build(raw)
   free = state['levels'].sum { |l| %w[columns beams walls].sum { |k| l['picks'][k].count { |_r, v| v.key?('free') } } }
   issues = %w[columns beams walls openings].flat_map { |k| (preview[k.to_sym] && preview[k.to_sym][:issues]) || [] }
-  puts JSON.generate(ok: preview[:ok] != false, error: preview[:error], free: free, removed: state['removed'], issues: issues, free_items: %w[columns beams walls].sum { |k| ((preview[k.to_sym] || {})[:items] || []).count { |i| i[:placement] == 'free' } })
+  puts JSON.generate(ok: preview[:ok] != false, error: preview[:error], free: free, removed: state['removed'], issues: issues, free_plates: %w[slabs ceilings].sum { |k| ((preview[k.to_sym] || {})[:items] || []).count { |i| i[:placement] == 'free' } }, free_items: %w[columns beams walls].sum { |k| ((preview[k.to_sym] || {})[:items] || []).count { |i| i[:placement] == 'free' } })
 rescue ArgumentError => e
   puts JSON.generate(ok: false, error: e.message)
 end

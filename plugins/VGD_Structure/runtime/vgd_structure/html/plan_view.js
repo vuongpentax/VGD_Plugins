@@ -342,9 +342,10 @@
   function buildShapes() {
     shapes = [];
     var cur = null;
-    function add(layer, poly, title, rows, text) { shapes.push({layer: layer, kind: layer, ref: cur.ref, poly: poly, title: title, rows: rows, text: text}); }
-    section('slabs').forEach(function (i) { cur = i; add('slab', rectPoly(i.min, i.max), 'Sàn ' + i.ref, [['Dày', mm(i.thickness)], ['Mặt trên', mm(i.z_top)], ['Diện tích', i.area + ' m²']], 'Sàn ' + i.ref + ' · dày ' + i.thickness + ' mm · ' + i.area + ' m²'); });
-    section('ceilings').forEach(function (i) { cur = i; add('ceiling', i.polygon, 'Trần ' + i.ref, [['Dày', mm(i.thickness)], ['Mặt dưới', mm(i.z_bottom)], ['Diện tích', i.area + ' m²']], 'Trần ' + i.ref + ' · ' + i.area + ' m²'); });
+    function add(layer, poly, title, rows, text) { shapes.push({layer: layer, kind: layer, ref: cur.ref, poly: poly, holes: cur.holes && cur.holes.length ? cur.holes : null, title: title, rows: rows, text: text}); }
+    function ring(i) { return i.placement === 'free' ? [['Số đỉnh', String(i.polygon.length)], ['Số lỗ', String((i.holes || []).length)]] : []; }
+    section('slabs').forEach(function (i) { cur = i; add('slab', i.polygon || rectPoly(i.min, i.max), (i.placement === 'free' ? 'Sàn đa giác ' : 'Sàn ') + i.ref, [['Dày', mm(i.thickness)], ['Mặt trên', mm(i.z_top)], ['Diện tích', i.area + ' m²']].concat(ring(i)), 'Sàn ' + i.ref + ' · dày ' + i.thickness + ' mm · ' + i.area + ' m²'); });
+    section('ceilings').forEach(function (i) { cur = i; add('ceiling', i.polygon, (i.placement === 'free' ? 'Trần đa giác ' : 'Trần ') + i.ref, [['Dày', mm(i.thickness)], ['Mặt dưới', mm(i.z_bottom)], ['Diện tích', i.area + ' m²']].concat(ring(i)), 'Trần ' + i.ref + ' · ' + i.area + ' m²'); });
     section('beams').forEach(function (i) { cur = i; add('beam', i.poly || rectPoly(i.min, i.max), (i.placement === 'free' ? 'Dầm tự do ' : 'Dầm ') + i.ref, [['Loại', i.type_name], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Dài', mm(i.length)], ['Đỉnh', mm(i.z_top)]].concat(i.dir === 'o' ? [['Góc', Math.round(i.angle * 100) / 100 + '°']] : []), 'Dầm ' + i.ref + ' · ' + i.type_name + ' · dài ' + i.length + ' mm'); });
     section('walls').forEach(function (i) { cur = i; add('wall', i.poly || rectPoly(i.min, i.max), (i.placement === 'free' ? 'Tường tự do ' : 'Tường ') + i.ref, [['Loại', i.type_name], ['Dày', mm(i.t)], ['Dài', mm(i.length)], ['Cao', mm(i.height)], ['Số cửa', String((i.openings || []).length)]].concat(i.dir === 'o' ? [['Góc', Math.round(i.angle * 100) / 100 + '°']] : []), 'Tường ' + i.ref + ' · ' + i.type_name + ' · dày ' + i.t + ' · dài ' + i.length + ' · cao ' + i.height + ' mm'); });
     section('openings').forEach(function (i) { var k = i.kind === 'door' ? 'Cửa đi' : 'Cửa sổ'; cur = i; add('opening', i.poly || rectPoly(i.min, i.max), k + ' ' + i.type_name, [['Loại', k], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Cao ngưỡng', mm(i.sill)], ['Tường', i.wall]], k + ' ' + i.type_name + ' · ' + i.w + ' × ' + i.h + ' mm · ngưỡng ' + i.sill); });
@@ -361,7 +362,7 @@
   // Mọi phần tử đang hiện chứa điểm (x, y), trên cùng trước. Tab chuyển giữa các phần tử chồng nhau (như Revit).
   function pickAll(x, y) {
     var out = [];
-    for (var i = shapes.length - 1; i >= 0; i--) { var s = shapes[i]; if (visible[s.layer] && inside(s.poly, x, y)) out.push(s); }
+    for (var i = shapes.length - 1; i >= 0; i--) { var s = shapes[i]; if (visible[s.layer] && inside(s.poly, x, y) && !(s.holes && s.holes.some(function (h) { return inside(h, x, y); }))) out.push(s); }
     return out;
   }
   function pickAt(x, y) {
@@ -416,14 +417,17 @@
     }
     shapes.forEach(function (s) {
       if (!visible[s.layer]) return;
-      var n = s.poly.length, bb = bboxOf(s.poly);
+      var bb = bboxOf(s.poly);
       if (s.layer !== 'slab' && s.layer !== 'ceiling') cand([(bb[0] + bb[2]) / 2, (bb[1] + bb[3]) / 2], 2, 'Tâm'); // tâm cột, dầm, tường, cửa (như SC của Revit)
-      for (var i = 0; i < n; i++) {
-        var a = s.poly[i], b = s.poly[(i + 1) % n];
-        cand(a, 0, 'Đầu mút');
-        cand([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], 2, 'Trung điểm');
-        if (Math.hypot(b[0] - a[0], b[1] - a[1]) > 1e-6) cand(nearOnSegment(here, a, b), 3, 'Trên cạnh', {p: a, d: unit([b[0] - a[0], b[1] - a[1]])});
-      }
+      [s.poly].concat(s.holes || []).forEach(function (ringPts) { // đường bao và lỗ của sàn / trần đa giác
+        var n = ringPts.length;
+        for (var i = 0; i < n; i++) {
+          var a = ringPts[i], b = ringPts[(i + 1) % n];
+          cand(a, 0, 'Đầu mút');
+          cand([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], 2, 'Trung điểm');
+          if (Math.hypot(b[0] - a[0], b[1] - a[1]) > 1e-6) cand(nearOnSegment(here, a, b), 3, 'Trên cạnh', {p: a, d: unit([b[0] - a[0], b[1] - a[1]])});
+        }
+      });
     });
     var lines = axisLines().concat(levelGuides().map(function (g) { return {p: g.p, d: g.d, kind: 'guide'}; }));
     for (var i = 0; i < lines.length; i++) {
@@ -456,8 +460,9 @@
 
   // ---- Vẽ ----
   function path(poly) { ctx.beginPath(); poly.forEach(function (p, i) { var q = toScreen(p[0], p[1]); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.closePath(); }
-  function fillStroke(poly, color, alpha, dash, width) {
-    path(poly); ctx.globalAlpha = alpha; ctx.fillStyle = color; if (alpha > 0) ctx.fill(); ctx.globalAlpha = 1;
+  function fillStroke(poly, color, alpha, dash, width, holes) {
+    path(poly); (holes || []).forEach(function (h) { h.forEach(function (p, i) { var q = toScreen(p[0], p[1]); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.closePath(); }); // lỗ là vòng con, tô theo quy tắc chẵn lẻ
+    ctx.globalAlpha = alpha; ctx.fillStyle = color; if (alpha > 0) ctx.fill('evenodd'); ctx.globalAlpha = 1;
     ctx.setLineDash(dash || []); ctx.lineWidth = width || 1; ctx.strokeStyle = color; ctx.stroke(); ctx.setLineDash([]);
   }
   function draw() {
@@ -466,8 +471,8 @@
     var bg = css('--vgd-surface', '#fff'), ink = css('--vgd-text', '#222'), muted = css('--vgd-muted', '#777');
     ctx.fillStyle = bg; ctx.fillRect(0, 0, size.w, size.h);
     if (!data || !data.ok) { ctx.fillStyle = muted; ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText((data && data.error) || 'Chưa có lưới trục hợp lệ.', size.w / 2, size.h / 2); updateStatus(); return; }
-    if (visible.slab) section('slabs').forEach(function (i) { fillStroke(rectPoly(i.min, i.max), COLORS.slab, 0.12, null, 1); });
-    if (visible.ceiling) section('ceilings').forEach(function (i) { fillStroke(i.polygon, COLORS.ceiling, 0.08, [5, 4], 1); });
+    if (visible.slab) section('slabs').forEach(function (i) { fillStroke(i.polygon || rectPoly(i.min, i.max), COLORS.slab, 0.12, null, 1, i.holes); });
+    if (visible.ceiling) section('ceilings').forEach(function (i) { fillStroke(i.polygon, COLORS.ceiling, 0.08, [5, 4], 1, i.holes); });
     if (visible.beam) section('beams').forEach(function (i) { fillStroke(i.poly || rectPoly(i.min, i.max), COLORS.beam, 0.25, [6, 3], 1); });
     if (visible.wall) section('walls').forEach(function (i) { fillStroke(i.poly || rectPoly(i.min, i.max), COLORS.wall, 0.8, null, 1); });
     if (visible.opening) section('openings').forEach(function (i) { drawOpening(i, bg); });
@@ -723,6 +728,8 @@
       if (kl === 'y' || (kl === 'z' && e.shiftKey)) { opts.redo(); e.preventDefault(); return; }
       if (kl === 'a') { selLevel = currentId; selection = shapes.filter(function (x) { return visible[x.layer]; }); draw(); renderProps(); notifySelection(); e.preventDefault(); } return; }
     if (e.altKey) return;
+    if (k === 'Enter' && edit && edit.handles(tool) && edit.finish) { edit.finish(); draw(); renderProps(); e.preventDefault(); return; } // khép sàn / trần đa giác đang vẽ
+    if (k === 'Backspace' && edit && edit.handles(tool) && edit.undoPoint && edit.undoPoint()) { draw(); e.preventDefault(); return; } // bỏ đỉnh cuối khi đang vẽ đa giác
     if (k === 'Delete' || k === 'Backspace') { deleteSelection(); e.preventDefault(); return; }
     if (k === 'Escape') {
       resetChord(); note = '';

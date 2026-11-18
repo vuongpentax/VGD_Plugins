@@ -11,7 +11,8 @@
   var TOOLS = ['move', 'copy', 'array', 'mirror', 'match', 'offset', 'align', 'trim', 'rotate', 'unlock'];
   var ONE_SHOT_KEEP = ['match', 'align', 'trim']; // công cụ giữ nguyên sau mỗi lần bấm (Esc mới kết thúc)
   var PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', slab: 'slabPicks', ceiling: 'ceilingPicks'};
-  var LINEAR = {beam: 'beams', wall: 'walls'}, ITEMS = {column: 'columns', beam: 'beams', wall: 'walls'}, PREFIX = {column: 'fc_', beam: 'fb_', wall: 'fw_'};
+  var LINEAR = {beam: 'beams', wall: 'walls'}, ITEMS = {column: 'columns', beam: 'beams', wall: 'walls', slab: 'slabs', ceiling: 'ceilings'}, PREFIX = {column: 'fc_', beam: 'fb_', wall: 'fw_', slab: 'fs_', ceiling: 'fk_'};
+  function isPlate(kind) { return kind === 'slab' || kind === 'ceiling'; } // sàn, trần: hình học dạng {poly, holes} (đa giác tự do, P4b-3)
   var NAMES = {move: 'Move', copy: 'Copy', array: 'Array', mirror: 'Mirror', match: 'Match', offset: 'Offset', align: 'Align', trim: 'Trim', rotate: 'Rotate', unlock: 'Mở khóa lưới'};
   var tool = null, phase = '', input = [], base = null, axis = null, source = null, note = '', target = null, cursorW = null, trimA = null, alignRef = null;
   var opt = {keep: true, count: 2, distance: 1000, copy: true, angle: '90'};
@@ -69,6 +70,7 @@
     if (pick.free) return clone(pick.free);
     var it = previewItem(shape); if (!it) return null;
     if (shape.kind === 'column') return {x: round(it.center[0]), y: round(it.center[1]), rot: 0};
+    if (isPlate(shape.kind)) { var ringPts = it.polygon || [[it.min[0], it.min[1]], [it.max[0], it.min[1]], [it.max[0], it.max[1]], [it.min[0], it.max[1]]]; return {poly: ringPts.map(function (q) { return [round(q[0]), round(q[1])]; }), holes: []}; }
     return it.dir === 'x' ? {a: [round(it.start), round(it.center)], b: [round(it.finish), round(it.center)]} : {a: [round(it.center), round(it.start)], b: [round(it.center), round(it.finish)]};
   }
   function typeOfPick(shape) { // loại cần giữ khi mở khóa / sao chép: loại riêng, không thì loại thực của phần tử đang tính
@@ -91,6 +93,7 @@
   }
   function applyMap(kind, free, fn) { // fn: điểm -> điểm; trả về hình học mới
     if (kind === 'column') { var c = fn([free.x, free.y]); return {x: round(c[0]), y: round(c[1]), rot: columnRot(free, fn)}; }
+    if (isPlate(kind)) { var mapRing = function (r) { return r.map(function (q) { var m = fn(q); return [round(m[0]), round(m[1])]; }); }; return {poly: mapRing(free.poly), holes: (free.holes || []).map(mapRing)}; }
     return normLinear({a: fn(free.a), b: fn(free.b)});
   }
   function movePoly(poly, fn) { return poly.map(function (p) { return fn(p); }); }
@@ -112,7 +115,7 @@
   function transformSelection(sel, fn, keep, fix) {
     var moved = 0, skipped = [], map = {};
     sel.forEach(function (s) {
-      if (!ITEMS[s.kind]) { if (s.kind !== 'opening') skipped.push([s.title, 'sàn, trần theo ô chỉ dịch hoặc lật theo lưới']); return; }
+      if (!ITEMS[s.kind]) { if (s.kind !== 'opening') skipped.push([s.title, 'loại này chưa dịch tự do được']); return; }
       var pick = pickOf(s), free = pick && geomOf(s);
       if (!free) { skipped.push([s.title, 'chưa có hình trong xem trước']); return; }
       var next = applyMap(s.kind, free, fn), b = box(s.kind), to = s.ref, ty = typeOfPick(s);
@@ -269,10 +272,9 @@
         applyPlan(p, step, keep); moved += p.moves.length; p.skipped.forEach(function (s) { skipped.push([s.shape.title, s.why]); });
         var fr = transformSelection(sel.filter(function (s) { return ITEMS[s.kind] && isFree(pickOf(s)); }), translate(v[0] * k, v[1] * k), keep);
         moved += fr.moved; skipped = skipped.concat(fr.skipped);
-      } else { // điểm tự do: mọi cột, dầm, tường (theo lưới thì mở khóa) dịch đúng véc-tơ; sàn, trần theo ô không dịch tự do được
+      } else { // điểm tự do: mọi cột, dầm, tường (theo lưới thì mở khóa) dịch đúng véc-tơ; sàn, trần theo ô được mở khóa thành đa giác rồi dịch
         var fr2 = transformSelection(sel.filter(function (s) { return ITEMS[s.kind]; }), translate(v[0] * k, v[1] * k), keep);
         moved += fr2.moved; skipped = skipped.concat(fr2.skipped);
-        if (k === 1) sel.forEach(function (s) { if (s.kind === 'slab' || s.kind === 'ceiling') skipped.push([s.title, 'sàn, trần theo ô: bấm hai giao điểm của lưới để dịch theo ô']); });
       }
     }
     return summary(verb, moved, skipped);
@@ -287,7 +289,6 @@
     } else { // đường gióng: mọi cột, dầm, tường (theo lưới thì mở khóa) lật theo tọa độ
       var fr2 = transformSelection(sel.filter(function (s) { return ITEMS[s.kind]; }), reflect(axis), keep, fix);
       moved += fr2.moved; skipped = skipped.concat(fr2.skipped);
-      sel.forEach(function (s) { if (s.kind === 'slab' || s.kind === 'ceiling') skipped.push([s.title, 'sàn, trần chỉ lật qua trục của lưới']); });
     }
     return summary(verb, moved, skipped);
   }
@@ -295,7 +296,7 @@
     var l = lvl(), moved = 0, skipped = [];
     host.mutate(function () {
       input.forEach(function (s) {
-        if (!ITEMS[s.kind]) { if (s.kind !== 'opening') skipped.push([s.title, 'sàn, trần chưa có dạng tự do']); return; }
+        if (!ITEMS[s.kind]) { if (s.kind !== 'opening') skipped.push([s.title, 'loại này chưa có dạng tự do']); return; }
         var pick = pickOf(s); if (!pick) return;
         if (isFree(pick)) { skipped.push([s.title, 'đã là phần tử tự do']); return; }
         var free = geomOf(s); if (!free) { skipped.push([s.title, 'chưa có hình trong xem trước']); return; }

@@ -6,8 +6,8 @@
   var GOOD = '#2F7BFF', BAD = '#E5484D', TOL_NODE = 14, TOL_COLUMN = 28, TOL_SPAN = 12, OPENING_GAP = 50;
   var DESIGN = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'door', 'window'];
   var PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', opening: 'openingPicks'};
-  var opt = {column: {type: '', x: 'auto', y: 'auto', mode: 'grid', rot: '0'}, beam: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, wall: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, door: {type: '', flip: '0'}, window: {type: '', flip: '0'}, grid: {dir: 'x'}};
-  var tool = null, chain = null, target = null, note = '';
+  var opt = {column: {type: '', x: 'auto', y: 'auto', mode: 'grid', rot: '0'}, beam: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, wall: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, door: {type: '', flip: '0'}, window: {type: '', flip: '0'}, grid: {dir: 'x'}, slab: {mode: 'grid', edges: 'free', part: 'outer'}, ceiling: {mode: 'grid', edges: 'free', part: 'outer'}};
+  var tool = null, chain = null, target = null, note = '', ring = null; // ring: đường bao / lỗ đang vẽ của sàn, trần đa giác {pts, part, host}
 
   function lvl() { return A.level(); }
   function top() { return A.isTop(lvl()); }
@@ -37,7 +37,7 @@
   }
   function typeLabel(t, tool) { return t.name + ' (' + (tool === 'column' ? t.w + '×' + t.d : tool === 'beam' ? t.w + '×' + t.h : tool === 'wall' ? 'dày ' + t.t : t.w + '×' + t.h) + ')'; }
   function currentType(tool) { // loại đang chọn ở thanh tùy chọn (cửa luôn có loại; cột, dầm, tường '' = theo loại mặc định của tầng)
-    if (!opt[tool]) return ''; // sàn, trần không có loại
+    if (!opt[tool] || tool === 'slab' || tool === 'ceiling') return ''; // sàn, trần không có loại
     var id = opt[tool].type, list = typesFor(tool);
     if (id && list.some(function (t) { return t.id === id; })) return id;
     return tool === 'door' || tool === 'window' ? (list[0] ? list[0].id : '') : '';
@@ -52,18 +52,20 @@
   }
   var MODE_VALUES = [['grid', 'Theo lưới (giao điểm / nhịp)'], ['free', 'Tự do (bắt điểm bất kỳ)']];
   var ROT_VALUES = [['0', '0°'], ['15', '15°'], ['30', '30°'], ['45', '45°'], ['60', '60°'], ['75', '75°'], ['90', '90°'], ['105', '105°'], ['120', '120°'], ['135', '135°'], ['150', '150°'], ['165', '165°']];
-  function freeMode(t) { return !!(opt[t] && opt[t].mode === 'free' && (t === 'column' || t === 'beam' || t === 'wall')); }
+  function isPlate(t) { return t === 'slab' || t === 'ceiling'; }
+  function freeMode(t) { return !!(opt[t] && opt[t].mode === 'free' && (t === 'column' || t === 'beam' || t === 'wall' || isPlate(t))); }
   function rotRect(c, w, d, deg) { // hình chữ nhật w × d quanh tâm c, xoay deg độ ngược chiều kim đồng hồ
     var r = deg * Math.PI / 180, cs = Math.cos(r), sn = Math.sin(r);
     return [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]].map(function (p) { return [c[0] + p[0] * cs - p[1] * sn, c[1] + p[0] * sn + p[1] * cs]; });
   }
   function r1(v) { return Math.round(v * 10) / 10; }
   function options(t) {
+    if (isPlate(t) && freeMode(t)) return [{id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'free'}, {id: 'part', label: 'Vẽ', values: [['outer', 'Đường bao'], ['hole', 'Lỗ khoét (điểm đầu nằm trong một ' + (t === 'slab' ? 'sàn' : 'trần') + ' đa giác)']], value: opt[t].part}, {id: 'edges', label: 'Cạnh', values: [['free', 'Tự do'], ['ortho', 'Ngang / dọc']], value: opt[t].edges}];
     if (freeMode(t)) {
       var head = [{id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'free'}, {id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}];
       return t === 'column' ? head.concat([{id: 'rot', label: 'Xoay', values: ROT_VALUES, value: String(opt.column.rot)}]) : head.concat([{id: 'angle', label: 'Hướng', values: [['ortho', 'Ngang / dọc (tự giữ thẳng)'], ['free', 'Góc bất kỳ (xiên)']], value: opt[t].angle}]);
     }
-    if (t === 'column' || t === 'beam' || t === 'wall') { var m = {id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'grid'}, rest = optionsGrid(t); return [m].concat(rest); }
+    if (t === 'column' || t === 'beam' || t === 'wall' || isPlate(t)) { var m = {id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'grid'}, rest = optionsGrid(t); return [m].concat(rest); }
     return optionsGrid(t);
   }
   function optionsGrid(t) {
@@ -73,7 +75,7 @@
     if (t === 'grid') return [{id: 'dir', label: 'Loại trục', values: [['x', 'Trục đứng (đánh số)'], ['y', 'Trục ngang (đánh chữ)']], value: opt.grid.dir}];
     return [];
   }
-  function setOption(t, id, value) { if (opt[t]) opt[t][id] = value; }
+  function setOption(t, id, value) { if (opt[t]) { opt[t][id] = value; if (id === 'mode' || id === 'part') ring = null; } }
 
   // ---- Đặt phần tử ----
   function newPick(t) {
@@ -154,12 +156,87 @@
     host.mutate(function () { lvl()[PICKS[t]][id] = pick; });
     return id;
   }
+  // ---- Sàn, trần ĐA GIÁC (P4b-3): bấm từng đỉnh; bấm lại đỉnh đầu hoặc Enter để khép; Backspace bỏ đỉnh cuối ----
+  function inRing(ringPts, p) {
+    var c = false;
+    for (var i = 0, j = ringPts.length - 1; i < ringPts.length; j = i++) {
+      var a = ringPts[i], b = ringPts[j];
+      if ((a[1] > p[1]) !== (b[1] > p[1]) && p[0] < (b[0] - a[0]) * (p[1] - a[1]) / (b[1] - a[1]) + a[0]) c = !c;
+    }
+    return c;
+  }
+  function orient(a, b, c) { return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]); }
+  function segTouch(a, b, c, d) { // hai đoạn chạm hoặc cắt nhau
+    var d1 = orient(a, b, c), d2 = orient(a, b, d), d3 = orient(c, d, a), d4 = orient(c, d, b);
+    if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) return true;
+    function on(p, q, r) { return Math.abs(orient(p, q, r)) < 1e-6 && r[0] >= Math.min(p[0], q[0]) - 0.05 && r[0] <= Math.max(p[0], q[0]) + 0.05 && r[1] >= Math.min(p[1], q[1]) - 0.05 && r[1] <= Math.max(p[1], q[1]) + 0.05; }
+    return on(a, b, c) || on(a, b, d) || on(c, d, a) || on(c, d, b);
+  }
+  // Báo sớm (Ruby kiểm tra lại): vòng phải có >= 3 đỉnh, không tự cắt; lỗ phải nằm hẳn trong đường bao (hostPts), không chạm các lỗ khác.
+  function ringProblem(pts, hostPts, otherHoles) {
+    var n = pts.length; if (n < 3) return 'Cần ít nhất 3 đỉnh.';
+    for (var i = 0; i < n; i++) for (var j = i + 1; j < n; j++) { if (j === i + 1 || (i === 0 && j === n - 1)) continue; if (segTouch(pts[i], pts[(i + 1) % n], pts[j], pts[(j + 1) % n])) return 'Đường bao tự cắt: hãy bấm lại các đỉnh để các cạnh không cắt nhau.'; }
+    var area = 0; pts.forEach(function (p, i) { var q = pts[(i + 1) % n]; area += p[0] * q[1] - q[0] * p[1]; }); if (Math.abs(area) / 2 < 1) return 'Diện tích quá nhỏ.';
+    if (hostPts) {
+      if (!pts.every(function (p) { return inRing(hostPts, p); })) return 'Lỗ phải nằm hẳn bên trong đường bao.';
+      for (var a = 0; a < n; a++) for (var b = 0; b < hostPts.length; b++) if (segTouch(pts[a], pts[(a + 1) % n], hostPts[b], hostPts[(b + 1) % hostPts.length])) return 'Lỗ không được chạm cạnh ngoài.';
+      var clash = (otherHoles || []).some(function (h) { return pts.some(function (p) { return inRing(h, p); }) || h.some(function (p) { return inRing(pts, p); }) || pts.some(function (p, a2) { return h.some(function (q, b2) { return segTouch(p, pts[(a2 + 1) % n], q, h[(b2 + 1) % h.length]); }); }); });
+      if (clash) return 'Lỗ chạm hoặc chồng lên lỗ khác.';
+    }
+    return '';
+  }
+  function plateAt(p) { // sàn / trần đa giác (của công cụ hiện tại) chứa điểm p, không kể trong lỗ
+    var items = (S.preview && S.preview[tool === 'slab' ? 'slabs' : 'ceilings'] && S.preview[tool === 'slab' ? 'slabs' : 'ceilings'].items) || [], hit = null;
+    items.forEach(function (it) { if (it.placement === 'free' && inRing(it.polygon, p) && !(it.holes || []).some(function (h) { return inRing(h, p); })) hit = it; });
+    return hit;
+  }
+  function plateMove(w) {
+    var p = freePoint(w), last = ring && ring.pts[ring.pts.length - 1];
+    if (last && opt[tool].edges === 'ortho') p = orthoEnd(last, w);
+    var close = !!(ring && ring.pts.length >= 3 && dist(w, ring.pts[0]) <= tol(10));
+    target = {free: close ? ring.pts[0].slice() : p, close: close, plate: true};
+  }
+  function finishRing() {
+    if (!ring || ring.pts.length < 3) { note = 'Cần ít nhất 3 đỉnh để khép vòng.'; return false; }
+    var l = lvl(), box = l[PICKS[tool]], pts = ring.pts.map(function (p) { return p.slice(); }), name = tool === 'slab' ? 'sàn' : 'trần';
+    if (ring.part === 'hole') {
+      var h = box[ring.host]; if (!h || !h.free) { note = 'Không còn ' + name + ' đa giác chứa lỗ này.'; ring = null; return false; }
+      var why = ringProblem(pts, h.free.poly, h.free.holes); if (why) { note = why; return false; }
+      host.mutate(function () { h.free.holes = (h.free.holes || []).concat([pts]); });
+      note = 'Đã khoét lỗ ' + pts.length + ' đỉnh trong ' + name + ' ' + ring.host + '.';
+    } else {
+      var why2 = ringProblem(pts); if (why2) { note = why2; return false; }
+      var id = A.rid(tool === 'slab' ? 'fs_' : 'fk_');
+      host.mutate(function () { box[id] = {free: {poly: pts, holes: []}}; });
+      note = 'Đã thêm ' + name + ' đa giác ' + pts.length + ' đỉnh.';
+    }
+    ring = null; target = null; return true;
+  }
+  function plateClick(w) {
+    plateMove(w); if (!target) return;
+    if (target.close) { finishRing(); return; }
+    var p = target.free;
+    if (!ring) {
+      ring = {pts: [], part: opt[tool].part, host: null};
+      if (ring.part === 'hole') {
+        var it = plateAt(p); if (!it) { note = 'Lỗ khoét: điểm đầu phải nằm trong một ' + (tool === 'slab' ? 'sàn' : 'trần') + ' đa giác (không phải sàn theo ô).'; ring = null; return; }
+        ring.host = it.ref;
+      }
+    }
+    if (ring.pts.length && dist(p, ring.pts[ring.pts.length - 1]) < 1) return;
+    ring.pts.push(p.slice());
+  }
+  function undoPoint() { if (!ring || !ring.pts.length) return false; ring.pts.pop(); if (!ring.pts.length) ring = null; return true; }
+  function finish() { return isPlate(tool) && freeMode(tool) && !!ring && finishRing(); }
+
   function freeMove(w) {
+    if (isPlate(tool)) { plateMove(w); return; }
     if (tool === 'column') { target = {free: freePoint(w)}; return; }
     if (!chain) { target = {free: freePoint(w), start: true}; return; }
     var end = freeEnd(chain.p, w); target = lengthOf(chain.p, end) >= 100 ? {free: end, end: true} : {free: end, tooShort: true};
   }
   function freeClick(w) {
+    if (isPlate(tool)) { plateClick(w); return; }
     freeMove(w); if (!target) return;
     if (tool === 'column') { var id = addFreeColumn(target.free); note = 'Đã đặt cột tự do tại ' + target.free[0] + ', ' + target.free[1] + ' mm.'; return id; }
     if (!chain) { chain = {free: true, p: target.free, ref: 'tự do'}; return; }
@@ -169,7 +246,7 @@
   }
   // Gõ số + Enter khi đang kéo dầm / tường tự do: đoạn dài đúng n mm theo hướng con trỏ.
   function typed(n, cursor) {
-    if (!freeMode(tool) || tool === 'column') { note = 'Ô nhập số dùng khi vẽ dầm / tường TỰ DO (sau khi bấm điểm đầu).'; return false; }
+    if (!freeMode(tool) || tool === 'column' || isPlate(tool)) { note = 'Ô nhập số dùng khi vẽ dầm / tường TỰ DO (sau khi bấm điểm đầu).'; return false; }
     if (!chain) { note = 'Hãy bấm điểm đầu trước rồi gõ độ dài.'; return false; }
     if (n < 100) { note = 'Độ dài tối thiểu 100 mm.'; return false; }
     var c = cursor || chain.p, horizontal = Math.abs(c[0] - chain.p[0]) >= Math.abs(c[1] - chain.p[1]), sign = (horizontal ? c[0] - chain.p[0] : c[1] - chain.p[1]) >= 0 ? 1 : -1;
@@ -178,9 +255,9 @@
     addFreeLinear(tool, chain.p, b); note = 'Đã thêm ' + (tool === 'beam' ? 'dầm' : 'tường') + ' tự do dài ' + n + ' mm.'; chain = {free: true, p: b, ref: 'tự do'};
     return true;
   }
-  function activate(t) { tool = DESIGN.indexOf(t) >= 0 ? t : null; chain = null; target = null; note = ''; }
-  function cancel() { chain = null; target = null; note = ''; }
-  function busy() { return !!chain; }
+  function activate(t) { tool = DESIGN.indexOf(t) >= 0 ? t : null; chain = null; ring = null; target = null; note = ''; }
+  function cancel() { chain = null; ring = null; target = null; note = ''; }
+  function busy() { return !!chain || !!(ring && ring.pts.length); }
   function handles(t) { return DESIGN.indexOf(t) >= 0; }
 
   function move(w) {
@@ -251,6 +328,11 @@
     if (note) return note;
     var why = blocked(tool); if (why) return why;
     if (freeMode(tool)) {
+      if (isPlate(tool)) {
+        var pn = tool === 'slab' ? 'Sàn' : 'Trần';
+        if (!ring) return pn + ' đa giác: bấm từng đỉnh của ' + (opt[tool].part === 'hole' ? 'LỖ (đỉnh đầu nằm trong một ' + pn.toLowerCase() + ' đa giác)' : 'đường bao') + '; bấm lại đỉnh đầu hoặc Enter để khép; Backspace bỏ đỉnh cuối; Esc hủy.';
+        return pn + ' đa giác: ' + ring.pts.length + ' đỉnh' + (target && target.close ? ' (bấm để KHÉP vòng)' : '') + '. Enter khép vòng, Backspace bỏ đỉnh cuối, Esc hủy.';
+      }
       if (tool === 'column') return target && target.free ? 'Bấm để đặt cột tự do tại ' + target.free[0] + ', ' + target.free[1] + ' mm (bắt điểm đang bật). Esc kết thúc.' : 'Cột tự do: bấm một điểm bất kỳ. Esc kết thúc.';
       var nm = tool === 'beam' ? 'Dầm' : 'Tường';
       if (!chain) return nm + ' tự do: bấm điểm đầu (bắt điểm). Esc kết thúc.';
@@ -272,6 +354,16 @@
   function ghost() {
     var g = [];
     if (tool && freeMode(tool) && !blocked(tool)) {
+      if (isPlate(tool)) {
+        var pts = (ring ? ring.pts : []).slice();
+        if (target && target.free && !target.close) pts.push(target.free);
+        if (pts.length >= 3) g.push({t: 'poly', poly: pts, color: GOOD, alpha: 0.18});
+        for (var q = 0; q + 1 < pts.length; q++) g.push({t: 'line', a: pts[q], b: pts[q + 1], color: GOOD, width: 3});
+        if (target && target.close && ring) g.push({t: 'line', a: ring.pts[ring.pts.length - 1], b: ring.pts[0], color: GOOD, width: 3});
+        (ring ? ring.pts : []).forEach(function (pp) { g.push({t: 'dot', p: pp, color: GOOD, r: 4}); });
+        if (target && target.free) g.push({t: 'dot', p: target.free, color: target.close ? '#2FA84F' : GOOD, r: target.close ? 7 : 5});
+        return g;
+      }
       if (tool === 'column') {
         if (target && target.free) { var ty = typeById('column', currentType('column')) || S.types[0], c = target.free;
           g.push({t: 'poly', poly: rotRect(c, ty.w, ty.d, Number(opt.column.rot) || 0), color: GOOD, alpha: 0.3}); g.push({t: 'dot', p: c, color: GOOD, r: 5}); }
@@ -331,8 +423,26 @@
   function field(id, label, kind, values, value, apply) { return {id: id, label: label, kind: kind, values: values, value: value, apply: apply}; }
   function edit(fn) { host.mutate(fn); }
   // Thuộc tính của phần tử TỰ DO: tọa độ nhập trực tiếp (mm). Giá trị sai (đoạn ngắn hơn 100 mm, đầu 'từ' >= đầu 'đến') thì không áp dụng và báo.
+  // Sàn, trần đa giác: nhập từng đỉnh (tối đa 12 đỉnh); nhiều đỉnh hơn thì dùng Move / Rotate / Mirror hoặc vẽ lại.
+  function plateProps(pick) {
+    var f = pick.free, out = [];
+    if (f.poly.length > 12) return out;
+    f.poly.forEach(function (p, i) {
+      [0, 1].forEach(function (k) {
+        out.push(field('v' + i + (k ? 'y' : 'x'), 'Đỉnh ' + (i + 1) + ' · ' + (k ? 'Y' : 'X') + ' (mm)', 'number', null, p[k], function (v) {
+          if (!isFinite(v)) return;
+          var poly = f.poly.map(function (q) { return q.slice(); }); poly[i][k] = r1(v);
+          var why = ringProblem(poly, null); if (why) { host.say(why); return; }
+          if ((f.holes || []).some(function (h) { return ringProblem(h, poly, []); })) { host.say('Lỗ sẽ ra ngoài đường bao.'); return; }
+          edit(function () { pick.free = {poly: poly, holes: f.holes || []}; });
+        }));
+      });
+    });
+    return out;
+  }
   function freeProps(shape, pick, setType) {
     var f = pick.free, kind = shape.kind;
+    if (kind === 'slab' || kind === 'ceiling') return plateProps(pick);
     var out = [field('type', 'Loại', 'select', typeValues(kind), pick.type || '', setType)];
     function setFree(next) { edit(function () { pick.free = next; }); }
     if (kind === 'column') {
@@ -381,7 +491,7 @@
 
   window.VGDPlanEdit = {
     init: function (h) { host = h; S = h.state; A = h.api; },
-    handles: handles, activate: activate, cancel: cancel, busy: busy, options: options, setOption: setOption, freeMode: freeMode, typed: typed,
+    handles: handles, activate: activate, cancel: cancel, busy: busy, options: options, setOption: setOption, freeMode: freeMode, typed: typed, finish: finish, undoPoint: undoPoint,
     move: move, click: click, hint: hint, ghost: ghost, remove: remove, propsFor: propsFor,
     debug: function () { return {tool: tool, chain: chain && chain.ref, chainPoint: chain && chain.p, freeTarget: target && target.free, target: target && {ref: target.node && target.node.ref, end: target.end && target.end.ref, refs: target.refs, span: target.span && target.span.ref, cell: target.cell && target.cell.ref, exists: target.exists, error: target.error, pos: target.pos}, note: note, opt: JSON.parse(JSON.stringify(opt))}; }
   };

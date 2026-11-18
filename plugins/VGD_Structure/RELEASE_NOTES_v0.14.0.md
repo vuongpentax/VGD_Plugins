@@ -1,6 +1,6 @@
-# VGD Structure 0.13.0 (beta)
+# VGD Structure 0.14.0 (beta)
 
-Tab **Mặt bằng** (cột mốc P1 đến P6, P4b-1, P4b-2; bản beta 0.10.0 gộp vào đây): tab **Mặt bằng** (cửa sổ vẽ mặt bằng kiểu CAD, giai đoạn 2).
+Tab **Mặt bằng** (cột mốc P1 đến P6, P4b-1, P4b-2, P4b-3; bản beta 0.10.0 gộp vào đây): tab **Mặt bằng** (cửa sổ vẽ mặt bằng kiểu CAD, giai đoạn 2).
 
 - Bố cục theo cửa sổ mặt bằng của VTBim: thanh trên, tab theo tầng, cột công cụ bên trái chia nhóm, bảng Thuộc tính (bấm phần tử để xem), thanh trạng thái.
 - Canvas hiển thị mặt bằng tầng đang chọn: lưới trục, sàn, trần, dầm, tường, cửa đi (cánh mở và cung quay) / cửa sổ, cột; màu theo bộ tag mẫu BIM.
@@ -15,3 +15,4 @@ Tab **Mặt bằng** (cột mốc P1 đến P6, P4b-1, P4b-2; bản beta 0.10.0 
 - **P6: liên kết với SketchUp**: chọn phần tử trong SketchUp thì sáng trên mặt bằng (tự chuyển tầng) và ngược lại; **trạng thái so với model** (chấm cam = lệch dữ liệu, đỏ = thiếu, xám = chưa dựng, kèm tóm tắt) nhờ dấu vân tay ghi trên mọi phần tử dựng ra; nút **Dựng tầng này** ngay trên mặt bằng; **Chọn điểm trong SketchUp** (công cụ SketchUp, bắt điểm của SketchUp) dùng cho các công cụ vẽ, sửa, Đo, Đường gióng. Phần chạy thật trong SketchUp chưa xác minh.
 - Chưa xác minh trong SketchUp thật (cửa sổ HtmlDialog thật, dựng cột / dầm / tường tự do trong model thật, hiệu năng canvas với nhiều phần tử).
 - P4b-2: **phần tử xiên**: dầm và tường góc bất kỳ, cột xoay góc bất kỳ, cửa trên tường xiên; vẽ bằng tùy chọn "Hướng: Góc bất kỳ", Rotate gõ số độ, Offset vuông góc, kích thước tạm thời dọc theo đoạn xiên. Đầu cắt vuông, chưa nối góc xiên; Align / Trim chưa dùng cho phần tử xiên. Chỉ kiểm bằng SketchUp giả lập.
+- P4b-3: **sàn, trần đa giác tự do có lỗ khoét**: bấm từng đỉnh (Enter khép, Backspace bỏ đỉnh), vẽ lỗ bên trong, trộn với sàn / trần theo ô (chồng nhau chỉ cảnh báo), sửa bằng Move / Copy / Array / Mirror / Rotate / Mở khóa lưới. Trần đa giác không lùi theo tường, cột. Chỉ kiểm bằng SketchUp giả lập.

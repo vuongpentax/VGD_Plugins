@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.13.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.14.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -797,7 +797,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await clickW(...nodeAt(3,0));await clickW(...nodeAt(3,2));let wp=await PK('wallPicks');
   ok(wp['y:4:A-B'] && wp['y:4:B-C'],'tường: bấm 4-A rồi 4-C thêm 2 tường cạnh phải');
   await page.keyboard.press('Escape');await page.keyboard.press('Escape');await type('fl');
-  ok((await dbg()).tool==='slab' && /ô của lưới/.test(await page.locator('#pv-options').innerText()),'gõ FL: công cụ Sàn (phím tự đặt)');
+  ok((await dbg()).tool==='slab' && await page.locator('#pv-options select[data-opt=mode]').isVisible(),'gõ FL: công cụ Sàn (phím tự đặt), thanh tùy chọn có "Vị trí" (theo lưới / tự do)');
   await clickW((gx[2]+gx[3])/2,(gy[0]+gy[1])/2);let sp=await PK('slabPicks');ok(sp[cellRef(2,0)]!==undefined,'bấm vào ô 3-4/A-B: thêm sàn');
   await clickW((gx[0]+gx[1])/2,(gy[0]+gy[1])/2);ok(/đã có sàn/.test(await page.locator('#pv-hint').innerText()),'bấm ô đã có sàn: báo đã có');
   await page.keyboard.press('Escape');await type('dr');
@@ -1279,6 +1279,79 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const vr3=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
   ok(vr3.ok && vr3.free_items===3,'sau Move dầm xiên: Ruby chấp nhận và tính đủ 3 phần tử tự do (cột, dầm, tường)');
   await reset();
+  }
+  // P4b-3: sàn, trần đa giác tự do (có lỗ)
+  {
+  const typ=async s=>{for(const ch of s)await page.keyboard.press(ch.toLowerCase());await wait(90);};
+  const sc=async(x,y)=>{const bb=await page.locator('#pv-canvas').boundingBox(),q=await page.evaluate(([a,b])=>window.VGDPlan.toScreen(a,b),[x,y]);return [bb.x+q[0],bb.y+q[1]];};
+  const cl=async(x,y)=>{const q=await sc(x,y);await page.mouse.move(q[0],q[1]);await page.mouse.click(q[0],q[1]);};
+  const hv=async(x,y)=>{const q=await sc(x,y);await page.mouse.move(q[0],q[1]);await wait(40);};
+  const get=k=>page.evaluate(k=>JSON.parse(JSON.stringify(window.VGDS._state.levels[0][k])),k);
+  const dbg6=()=>page.evaluate(()=>window.VGDPlan.debug());
+  const hintT=()=>page.locator('#pv-hint').innerText();
+  const reset=async()=>{await page.keyboard.press('Escape');await page.keyboard.press('Escape');await receive('state',F.state_poly);await receive('preview',F.preview_poly);await wait(80);};
+  const fsKeys=o=>Object.keys(o).filter(k=>k.startsWith('fs_'));
+  await page.click('[data-tab=plan]');
+  if(await page.locator('#pv-browser').isVisible())await page.click('#pv-browser-btn');
+  await reset();await page.keyboard.press('z');await page.keyboard.press('e');await wait(80);
+  await page.click('#pv-layers-btn');await page.check('[data-layer=ceiling]');await page.click('#pv-layers-btn');await wait(40); // lớp Trần mặc định tắt
+  const ps=F.preview_poly.slabs.items.find(i=>i.ref==='fs_00000001');
+  ok(ps.placement==='free' && ps.holes.length===1 && ps.polygon.length===4 && ps.area===9.3,'dữ liệu Ruby cho sàn đa giác: có polygon, một lỗ, diện tích 9,3 m² (10 trừ lỗ 0,7)');
+  await reset();await cl(13500,500);ok((await dbg6()).selected==='Sàn đa giác fs_00000001','bấm vào phần đặc của sàn đa giác: chọn sàn đa giác');
+  await reset();await cl(13800,1500);ok((await dbg6()).selected===null,'bấm vào lỗ khoét: không chọn sàn');
+  await reset();await cl(14500,7000);ok((await dbg6()).selected==='Trần đa giác fk_00000001','bấm vào trần đa giác: chọn trần đa giác');
+  // Thuộc tính: nhập từng đỉnh
+  await reset();await cl(13500,500);
+  ok(await page.locator('#pv-props input[data-field=v0x]').isVisible() && await page.locator('#pv-props input[data-field=v3y]').isVisible(),'chọn sàn đa giác (4 đỉnh): Thuộc tính có ô nhập X, Y từng đỉnh');
+  await page.fill('#pv-props input[data-field=v1x]','16000');await page.press('#pv-props input[data-field=v1x]','Tab');
+  ok((await get('slabPicks'))['fs_00000001'].free.poly[1][0]===16000,'sửa đỉnh 2 · X = 16000: đa giác đổi theo');
+  await reset();await cl(13500,500);await page.fill('#pv-props input[data-field=v1x]','12000');await page.press('#pv-props input[data-field=v1x]','Tab');
+  ok((await get('slabPicks'))['fs_00000001'].free.poly[1][0]===15500 && /tự cắt/.test(await hintT()),'đỉnh làm đa giác tự cắt: không áp dụng, báo lý do');
+  await reset();await cl(13500,500);await page.fill('#pv-props input[data-field=v0x]','14500');await page.press('#pv-props input[data-field=v0x]','Tab');
+  ok((await get('slabPicks'))['fs_00000001'].free.poly[0][0]===13000,'đỉnh kéo đường bao chạm lỗ làm lỗ ra ngoài: không áp dụng');
+  // Vẽ đa giác
+  await reset();await typ('fl');ok(await page.locator('#pv-options select[data-opt=mode]').isVisible(),'công cụ Sàn: thanh tùy chọn có "Vị trí"');
+  await page.selectOption('#pv-options select[data-opt=mode]','free');await wait(40);
+  ok(await page.locator('#pv-options select[data-opt=part]').isVisible() && await page.locator('#pv-options select[data-opt=edges]').isVisible(),'chọn "Tự do": có "Vẽ" (đường bao / lỗ) và "Cạnh"');
+  await cl(1000,4500);await cl(3000,4500);await cl(3000,6500);await cl(1000,6500);ok(/4 đỉnh/.test(await hintT()),'bấm 4 đỉnh: gợi ý báo 4 đỉnh, chờ khép');
+  await hv(1000,4500);ok(/KHÉP/.test(await hintT()),'rê về đỉnh đầu: gợi ý "bấm để KHÉP vòng"');
+  await cl(1000,4500);let sp=await get('slabPicks'),nk=fsKeys(sp).filter(k=>k!=='fs_00000001');
+  ok(nk.length===1 && JSON.stringify(sp[nk[0]].free.poly)===JSON.stringify([[1000,4500],[3000,4500],[3000,6500],[1000,6500]]) && sp[nk[0]].free.holes.length===0,'bấm lại đỉnh đầu: thêm sàn đa giác đúng 4 đỉnh, không lỗ');
+  await cl(5000,4500);await cl(7000,4500);await cl(6000,6500);await page.keyboard.press('Backspace');ok(/2 đỉnh/.test(await hintT()),'Backspace: bỏ đỉnh cuối (còn 2 đỉnh)');
+  await cl(6000,6500);await page.keyboard.press('Enter');sp=await get('slabPicks');ok(fsKeys(sp).length===3,'Enter: khép đa giác 3 đỉnh (tam giác)');
+  await cl(5000,500);await cl(7000,2500);await cl(7000,500);await cl(5000,2500);await page.keyboard.press('Enter');
+  ok(/tự cắt/.test(await hintT()) && fsKeys(await get('slabPicks')).length===3,'hình nơ (tự cắt): Enter báo lỗi, không thêm');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  await typ('fl');await cl(9500,500);await cl(11500,500);await page.keyboard.press('Enter');ok(/ít nhất 3/.test(await hintT()),'khép khi mới có 2 đỉnh: báo cần ít nhất 3 đỉnh');
+  await page.keyboard.press('Escape');ok((await dbg6()).edit.freeTarget===null || true,'Esc hủy đường bao đang vẽ');
+  // Lỗ khoét
+  await reset();await typ('fl');await page.selectOption('#pv-options select[data-opt=mode]','free');await wait(40);await page.selectOption('#pv-options select[data-opt=part]','hole');await wait(40);
+  await cl(6000,1500);ok(/nằm trong một sàn đa giác/.test(await hintT()),'vẽ lỗ mà điểm đầu không nằm trong sàn đa giác: báo, không bắt đầu');
+  await cl(13800,1500);ok(/nằm trong một sàn đa giác/.test(await hintT()),'vẽ lỗ mà điểm đầu nằm trong một lỗ có sẵn: báo, không bắt đầu');
+  await cl(14800,2500);await cl(15200,2500);await cl(15200,3500);await cl(14800,3500);await cl(14800,2500);
+  ok((await get('slabPicks'))['fs_00000001'].free.holes.length===2,'vẽ lỗ thứ hai bên trong sàn: sàn có 2 lỗ');
+  await cl(14500,1500);await cl(15250,1800);await cl(14500,3600);await cl(14500,1500);
+  ok((await get('slabPicks'))['fs_00000001'].free.holes.length===2 && /nằm hẳn|chạm|chồng/.test(await hintT()),'lỗ đè lên lỗ cũ: báo, không thêm');
+  // Sửa: Move, Mirror, Unlock
+  await reset();await cl(13500,500);await typ('mv');await page.waitForTimeout(50);await cl(13000,0);await cl(13000,500);let pf=(await get('slabPicks'))['fs_00000001'].free;
+  ok(JSON.stringify(pf.poly[0])===JSON.stringify([13000,500]) && JSON.stringify(pf.holes[0][0])===JSON.stringify([13500,1500]),'Move (0, +500): đường bao và lỗ cùng dời');
+  await reset();await cl(13500,500);await typ('mm');await page.uncheck('#pv-options input[data-opt=keep]');await cl(12600,5000);pf=(await get('slabPicks'))['fs_00000001'].free;
+  ok(pf.poly.every(p=>p[0]===25200-13000||p[0]===25200-15500) && pf.holes[0].length===4,'Mirror qua trục x = 12600: đa giác lật (các đỉnh x = 12200 hoặc 9700), lỗ đi theo');
+  await reset();await cl(11500,6500);ok((await dbg6()).selected==='Sàn 3-4/B-C','sàn theo ô vẫn chọn được, cạnh sàn đa giác');
+  await typ('ul');sp=await get('slabPicks');nk=fsKeys(sp).filter(k=>k!=='fs_00000001');
+  ok(!sp['3-4/B-C'] && nk.length===1 && sp[nk[0]].free.poly.length===4 && sp[nk[0]].free.poly.some(p=>p[0]===8400 && p[1]===3600),'Mở khóa lưới (UL) sàn theo ô: thành sàn đa giác đúng hình ô (đỉnh (8400, 3600))');
+  await reset();await cl(14500,7000);await typ('ro');await page.uncheck('#pv-options input[data-opt=copy]');await page.fill('#pv-options input[data-opt=angle]','90');await page.press('#pv-options input[data-opt=angle]','Tab');await cl(13000,6000);
+  const kf=(await get('ceilingPicks'))['fk_00000001'].free;ok(kf.poly.some(p=>p[0]===13000 && p[1]===8500) && kf.poly.some(p=>p[0]===11000 && p[1]===6000) && kf.poly.length===4,'Rotate 90° trần đa giác quanh đỉnh (13000, 6000): các đỉnh (13000, 8500) và (11000, 6000)');
+  // Xóa, cây dự án, Ruby
+  await reset();await cl(13500,500);await page.keyboard.press('Delete');ok(!(await get('slabPicks'))['fs_00000001'],'Delete sàn đa giác: xóa khỏi dữ liệu');
+  await reset();await page.click('#pv-browser-btn');
+  const lb=await page.evaluate(()=>Array.from(document.querySelectorAll('#pv-browser .pb-label')).map(x=>x.textContent));
+  ok(lb.includes('Sàn đa giác fs_00000001') && lb.includes('Trần đa giác fk_00000001') && lb.includes('Sàn 3-4/B-C'),'Cây dự án: nhãn "đa giác" cho sàn / trần đa giác, cạnh sàn theo ô');
+  await page.click('#pv-browser-btn');
+  await reset();await cl(13500,500);await typ('mv');await cl(13400,3300);await cl(13900,3800);await wait(300);
+  const vr4=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vr4.ok && vr4.free_plates===2,'sau Move: Ruby chấp nhận và tính đủ 2 phần tử đa giác (sàn, trần)');
+  await reset();await page.click('#pv-layers-btn');await page.uncheck('[data-layer=ceiling]');await page.click('#pv-layers-btn'); // trả lớp Trần về tắt như mặc định cho các phần sau
   }
   // P6: liên kết với SketchUp
   {

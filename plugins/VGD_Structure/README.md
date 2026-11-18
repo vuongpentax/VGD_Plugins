@@ -1,10 +1,10 @@
-# VGD Structure 0.13.0-beta.1
+# VGD Structure 0.14.0-beta.1
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
 
-**Cột mốc P1 đến P6, P4b-1 và P4b-2: tab Mặt bằng, phần tử tự do (kể cả xiên), liên kết SketchUp** (cửa sổ vẽ mặt bằng, giai đoạn 2, `docs/vgd_structure/PLAN.md` mục 12). **Xem, chọn, bắt điểm, đo, đường gióng và VẼ KẾT CẤU** (P3, kiểu Revit); dữ liệu ghi vào lựa chọn của tầng, muốn ra model vẫn bấm Dựng. Bố cục theo cửa sổ mặt bằng của VTBim: thanh trên (hoàn tác, Chọn và đo, Sửa, Bắt điểm, Xóa đường gióng, Hiển thị lớp, Vừa khung, ẩn / hiện Thuộc tính), **tab theo từng tầng**, cột công cụ bên trái chia nhóm (Thiết kế, Vẽ 2D, Ghi chú), bảng **Thuộc tính**, thanh trạng thái (gợi ý, tọa độ mm, tỉ lệ, ô gõ số). Canvas vẽ lưới trục, sàn, trần (mặc định ẩn), dầm, tường, cửa (có cánh mở), cột.
+**Cột mốc P1 đến P6, P4b-1, P4b-2 và P4b-3: tab Mặt bằng, phần tử tự do (kể cả xiên), liên kết SketchUp** (cửa sổ vẽ mặt bằng, giai đoạn 2, `docs/vgd_structure/PLAN.md` mục 12). **Xem, chọn, bắt điểm, đo, đường gióng và VẼ KẾT CẤU** (P3, kiểu Revit); dữ liệu ghi vào lựa chọn của tầng, muốn ra model vẫn bấm Dựng. Bố cục theo cửa sổ mặt bằng của VTBim: thanh trên (hoàn tác, Chọn và đo, Sửa, Bắt điểm, Xóa đường gióng, Hiển thị lớp, Vừa khung, ẩn / hiện Thuộc tính), **tab theo từng tầng**, cột công cụ bên trái chia nhóm (Thiết kế, Vẽ 2D, Ghi chú), bảng **Thuộc tính**, thanh trạng thái (gợi ý, tọa độ mm, tỉ lệ, ô gõ số). Canvas vẽ lưới trục, sàn, trần (mặc định ẩn), dầm, tường, cửa (có cánh mở), cột.
 - **Phím tắt kiểu Revit:** gõ **liên tiếp các chữ, không giữ phím** (ví dụ WA = Tường, ZE = vừa khung, ME = đo, RP = đường gióng, SO = bật / tắt bắt điểm, PP = bảng Thuộc tính, VG = hiển thị lớp, KS = bảng phím tắt; lệnh vẽ và sửa như WA, DR, WN, CL, BM, GR, MV, CO, RO, MM, OF, TR, DE, LI, DI, TX, EL đã có phím nhưng chưa chạy, báo rõ). Gõ sai chữ thứ hai thì chữ đó được tính là chữ đầu của phím mới; phím là phần đầu của phím khác (ví dụ M và MV) thì chờ khoảng 1 giây rồi chạy. **Bảng phím tắt (nút bàn phím hoặc KS) sửa được**, không cho trùng phím, nút "Đặt lại mặc định"; phím lưu theo máy (localStorage của cửa sổ, chưa xác minh trong SketchUp thật). Cột "Nguồn": "Revit" là phím mặc định của Revit **theo trí nhớ, chưa đối chiếu với Revit cài trên máy** (sai thì sửa trong bảng), "Tự đặt" là lệnh Revit không có phím mặc định (sàn, trần, polyline, chữ nhật, đường tròn, cung).
 - **Xem:** cuộn = thu phóng quanh con trỏ, chuột giữa hoặc nút Kéo = kéo, ZE = vừa khung, Esc = về công cụ Chọn (Esc lần nữa bỏ chọn).
 - **Chọn (quy ước Revit):** bấm = chọn một, **Ctrl + bấm = thêm**, **Shift + bấm = bớt**, kéo trái→phải = khung trong (chỉ hình nằm trọn trong khung, nét liền xanh), kéo phải→trái = khung cắt (hình chạm khung, nét đứt xanh lá), Ctrl / Shift + kéo khung = thêm / bớt, **Tab = chuyển giữa các phần tử chồng nhau** dưới con trỏ (Shift+Tab ngược lại), Ctrl+A = chọn mọi phần tử đang hiện. Chọn nhiều thì bảng Thuộc tính đếm theo loại.
@@ -49,7 +49,14 @@ Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) th
   - **Cửa trên tường xiên:** đặt như tường thường; vị trí tính dọc theo tường từ đầu a; cửa xoay cùng góc tường.
   - **Ruby / hình dựng:** dải xiên 4 đỉnh; chồng nhau kiểm bằng đa giác (không bằng hộp bao); tường xiên dưới dầm xiên cùng tim thì cao tới đáy dầm; dầm, tường, cửa xiên dùng chung định nghĩa với loại ngang rồi **xoay quanh trục đứng** trên thể hiện. **Đầu dầm / tường cắt vuông, không xử lý chỗ nối giữa hai phần tử xiên hoặc với cột** (có thể hở hoặc chồng nhẹ). Vân tay trạng thái model tính thêm đầu mút và góc.
   - **Chưa kiểm trong SketchUp thật:** phép xoay trên thể hiện (`Transformation#*`, `rotation`), đùn tường có lỗ rồi xoay, khớp hình cột xoay với nét 2D.
-- **Chưa làm:** sàn, trần đa giác (P4b-3); vẽ 2D và ghi chú (P5b); nối góc xiên.
+- **Sàn, trần ĐA GIÁC có lỗ (P4b-3):**
+  - **Vẽ:** công cụ Sàn (FL) hoặc Trần (CE), đặt "Vị trí: Tự do". Bấm từng đỉnh; bấm lại đỉnh đầu hoặc **Enter** để khép; **Backspace** bỏ đỉnh cuối; Esc hủy. Tùy chọn **Cạnh**: Tự do hoặc Ngang / dọc.
+  - **Lỗ khoét:** đặt "Vẽ: Lỗ khoét", bấm đỉnh đầu bên trong một sàn / trần đa giác rồi vẽ vòng lỗ như trên. Lỗ phải nằm hẳn trong đường bao, không chạm cạnh ngoài và không chạm lỗ khác (báo ngay khi vẽ sai).
+  - **Dữ liệu:** `picks.slabs` / `picks.ceilings` có thêm mục mã `fs_` / `fk_` + 8 chữ số 16, `free: {poly, holes}`; đường bao tự cắt, ít hơn 3 đỉnh, quá 200 đỉnh, tối đa 20 lỗ bị Ruby từ chối. Ruby tự đổi đường bao về ngược chiều kim đồng hồ.
+  - **Trộn với sàn / trần theo ô:** cùng tầng được; chồng nhau chỉ **cảnh báo** (so theo miền thật, không theo hộp bao; hai hình trùng khít nhau hoàn toàn thì chưa phát hiện). Trần đa giác **không lùi theo tường, cột**: chỉ cảnh báo chồng.
+  - **Sửa:** Move, Copy, Array, Mirror, Rotate (góc bất kỳ) dùng được; **Mở khóa lưới (UL)** đổi sàn, trần theo ô thành đa giác đúng hình ô; bảng Thuộc tính nhập X, Y từng đỉnh (đa giác tối đa 12 đỉnh; lỗ sửa bằng cách xóa rồi vẽ lại). Offset, Align, Trim chưa dùng cho đa giác.
+  - **Dựng:** đùn mặt có lỗ (thêm mặt nhỏ rồi xóa), một thể hiện cho mỗi sàn / trần, tên định nghĩa theo mã băm của hình. **Chưa kiểm trong SketchUp thật.**
+- **Chưa làm:** vẽ 2D và ghi chú (P5b); nối góc xiên.
 
 **Cột mốc 8: cửa đi và cửa sổ** (trên nền lưới trục, tầng, cột, dầm, tường, sàn, trần, đề xuất, dựng tất cả và nối VGD BIM). Còn phải làm trước khi phát hành: tường nhiều lớp và nối góc, hoàn thiện, cầu thang, mái... (kế hoạch giai đoạn 2, `docs/vgd_structure/PLAN.md` mục 11).
 
@@ -107,7 +114,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.13.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.14.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 
