@@ -36,6 +36,10 @@ module VGD
           free = pick['free'] or next
           items << Plates.free_item(ref, free, thickness: thickness, z_top: z_top, z_bottom: z_bottom)
         end
+        unless (level['floor_layers'] || []).empty? # sàn kết cấu rồi các lớp hoàn thiện xếp LÊN trên (danh sách của tầng đi từ trên xuống nên đảo lại)
+          layers = [{fn: 'structure', t: thickness, material: '', color: WallTypes::DEFAULT_COLORS['structure']}] + LayerList.for_plan(level['floor_layers']).reverse
+          items.each { |i| i[:layers] = layers }
+        end
         issues.concat(Plates.overlap_issues(items, 'Sàn'))
         issues.concat(free_overlaps(items, columns, beams))
         {level: level, z_top: z_top, thickness: thickness, items: items, issues: issues.uniq}

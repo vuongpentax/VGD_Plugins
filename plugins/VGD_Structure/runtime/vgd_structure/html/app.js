@@ -43,11 +43,14 @@
   }
   function toRubyLevel(l) {
     return {id: l.id, name: l.name, elevation: l.elevation, screed: l.screed, slab_thickness: l.slab, column_type: l.columnType || null, beam_type: l.beamType || null, wall_type: l.wallType || null, ceiling_height: l.ceilingHeight, ceiling_thickness: l.ceilingThickness,
+            floor_layers: (l.floorLayers || []).map(cleanLayer), ceiling_layers: (l.ceilingLayers || []).map(cleanLayer),
             picks: {columns: clonePicks(l.picks), beams: clonePicks(l.beamPicks), walls: clonePicks(l.wallPicks), slabs: clonePicks(l.slabPicks), ceilings: clonePicks(l.ceilingPicks), openings: clonePicks(l.openingPicks)}, notes: JSON.parse(JSON.stringify(l.notes || {}))};
   }
+  function cleanLayer(l) { var o = {fn: l.fn, t: l.t, material: l.material || ''}; if (l.color) o.color = l.color; return o; }
   function clonePicks(picks) { var out = {}; Object.keys(picks).forEach(function (k) { out[k] = JSON.parse(JSON.stringify(picks[k])); }); return out; } // sao sâu: phần tử tự do có khóa 'free' lồng nhau
   function fromRubyLevel(l) {
     return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab_thickness, screed: l.screed === undefined ? 50 : l.screed, columnType: l.column_type, beamType: l.beam_type || null, wallType: l.wall_type || null, ceilingHeight: l.ceiling_height, ceilingThickness: l.ceiling_thickness,
+            floorLayers: (l.floor_layers || []).map(function (x) { return {fn: x.fn, t: x.t, material: x.material || '', color: x.color || null}; }), ceilingLayers: (l.ceiling_layers || []).map(function (x) { return {fn: x.fn, t: x.t, material: x.material || '', color: x.color || null}; }),
             picks: clonePicks((l.picks && l.picks.columns) || {}), beamPicks: clonePicks((l.picks && l.picks.beams) || {}), wallPicks: clonePicks((l.picks && l.picks.walls) || {}),
             slabPicks: clonePicks((l.picks && l.picks.slabs) || {}), ceilingPicks: clonePicks((l.picks && l.picks.ceilings) || {}),
             openingPicks: clonePicks((l.picks && l.picks.openings) || {}), notes: JSON.parse(JSON.stringify(l.notes || {}))};
@@ -192,15 +195,17 @@
   }
   function renderLevels() {
     var table = $('levels-table'); table.replaceChildren();
-    heads(table, ['Tên tầng', 'Cao độ sàn hoàn thiện (mm)', 'Cán nền (mm)', 'Dày sàn (mm)', 'Cao trần (mm)', 'Dày trần (mm)', 'Loại cột mặc định', 'Loại dầm mặc định', 'Loại tường mặc định', 'Ghi chú', '']);
+    heads(table, ['Tên tầng', 'Cao độ sàn hoàn thiện (mm)', 'Cán nền (mm)', 'Dày sàn (mm)', 'Cao trần (mm)', 'Dày trần (mm)', 'Loại cột mặc định', 'Loại dầm mặc định', 'Loại tường mặc định', 'Lớp sàn', 'Lớp trần', 'Ghi chú', '']);
     state.levels.forEach(function (l, i) {
       var row = table.insertRow(), sel = document.createElement('select'), del = document.createElement('button');
       row.insertCell().appendChild(textCell(l.name, function (v) { l.name = v; renderLevelSelects(); }, 'Tên tầng ' + (i + 1)));
       row.insertCell().appendChild(numCell(l.elevation, function (v) { l.elevation = v; refreshLevelNotes(); }, 'Cao độ ' + l.name));
-      row.insertCell().appendChild(numCell(l.screed, function (v) { l.screed = v; refreshLevelNotes(); }, 'Cán nền ' + l.name));
+      var scr = numCell(l.screed, function (v) { l.screed = v; refreshLevelNotes(); }, 'Cán nền ' + l.name); scr.disabled = (l.floorLayers || []).length > 0; if (scr.disabled) scr.title = 'Tổng các lớp sàn (sửa ở nút Lớp sàn)';
+      row.insertCell().appendChild(scr);
       row.insertCell().appendChild(numCell(l.slab, function (v) { l.slab = v; refreshLevelNotes(); }, 'Dày sàn ' + l.name));
       row.insertCell().appendChild(numCell(l.ceilingHeight, function (v) { l.ceilingHeight = v; }, 'Cao trần ' + l.name));
-      row.insertCell().appendChild(numCell(l.ceilingThickness, function (v) { l.ceilingThickness = v; }, 'Dày trần ' + l.name));
+      var cth = numCell(l.ceilingThickness, function (v) { l.ceilingThickness = v; }, 'Dày trần ' + l.name); cth.disabled = (l.ceilingLayers || []).length > 0; if (cth.disabled) cth.title = 'Tổng các lớp trần (sửa ở nút Lớp trần)';
+      row.insertCell().appendChild(cth);
       sel.setAttribute('aria-label', 'Loại cột mặc định ' + l.name);
       sel.append(new Option('Loại đầu danh sách', ''));
       state.types.forEach(function (t) { sel.append(new Option(t.name, t.id)); });
@@ -221,12 +226,70 @@
       wsel.value = l.wallType || '';
       wsel.onchange = function () { l.wallType = wsel.value || null; changed(); };
       row.insertCell().appendChild(wsel);
+      ['floorLayers', 'ceilingLayers'].forEach(function (key) {
+        var btn = document.createElement('button'), list = l[key] || [], total = layersSum(list);
+        btn.type = 'button'; btn.className = 'layers-btn ' + (key === 'floorLayers' ? 'floor-layers' : 'ceiling-layers');
+        btn.textContent = list.length ? list.length + ' lớp · ' + total + ' mm' : 'Thêm lớp';
+        btn.title = key === 'floorLayers' ? 'Lớp hoàn thiện trên sàn kết cấu (gạch lát, vữa cán...): tổng = cán nền' : 'Lớp cấu tạo trần (thạch cao, cách nhiệt...): tổng = dày trần';
+        btn.setAttribute('aria-expanded', String(openLayers && openLayers.id === l.id && openLayers.key === key));
+        btn.onclick = function () { openLayers = openLayers && openLayers.id === l.id && openLayers.key === key ? null : {id: l.id, key: key}; renderLevels(); };
+        row.insertCell().appendChild(btn);
+      });
       var note = row.insertCell(); note.className = 'note'; note.textContent = levelNote(i);
       del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.title = 'Xóa tầng này'; del.disabled = state.levels.length <= 1;
       del.onclick = function () { removeLevel(l.id); };
       row.insertCell().appendChild(del);
     });
-    renderTypes(); renderBeamTypes(); renderWallTypes(); renderOpeningTypes();
+    renderTypes(); renderBeamTypes(); renderWallTypes(); renderOpeningTypes(); renderLevelLayers();
+  }
+  // ---- Lớp hoàn thiện của sàn (trên sàn kết cấu, từ trên xuống) và của trần (từ mặt dưới lên) ----
+  var openLayers = null, FINISH_FN = [['substrate', 'Lớp nền', '#d6cfc0'], ['insulation', 'Cách nhiệt', '#e6d96b'], ['finish', 'Hoàn thiện', '#f1eee6']];
+  function layersSum(list) { return Math.round((list || []).reduce(function (a, l) { return a + (Number(l.t) || 0); }, 0) * 10) / 10; }
+  function syncLevelLayers(l) { // tổng các lớp ĐÈ lên cán nền / dày trần (Ruby cũng làm vậy khi chuẩn hóa)
+    if ((l.floorLayers || []).length) l.screed = layersSum(l.floorLayers);
+    if ((l.ceilingLayers || []).length) l.ceilingThickness = layersSum(l.ceilingLayers);
+  }
+  function refreshLayerButtons(l) {
+    var i = state.levels.indexOf(l), tb = $('levels-table'), f = tb.querySelectorAll('.floor-layers')[i], c = tb.querySelectorAll('.ceiling-layers')[i];
+    if (f) f.textContent = (l.floorLayers || []).length ? l.floorLayers.length + ' lớp · ' + layersSum(l.floorLayers) + ' mm' : 'Thêm lớp';
+    if (c) c.textContent = (l.ceilingLayers || []).length ? l.ceilingLayers.length + ' lớp · ' + layersSum(l.ceilingLayers) + ' mm' : 'Thêm lớp';
+  }
+  function renderLevelLayers() {
+    var box = $('level-layers-editor'); box.replaceChildren();
+    var l = openLayers && state.levels.filter(function (x) { return x.id === openLayers.id; })[0];
+    box.hidden = !l; if (!l) return;
+    var key = openLayers.key, isFloor = key === 'floorLayers', list = l[key] = l[key] || [], head = document.createElement('div'); head.className = 'layers-head';
+    head.textContent = (isFloor ? 'Lớp hoàn thiện sàn của “' : 'Lớp cấu tạo trần của “') + l.name + (isFloor ? '” (từ trên cùng xuống sàn kết cấu; tổng = cán nền)' : '” (từ mặt dưới nhìn thấy lên trên; tổng = dày trần)'); box.appendChild(head);
+    var tbl = document.createElement('table'); tbl.className = 'axes'; box.appendChild(tbl);
+    heads(tbl, ['#', 'Chức năng', 'Dày (mm)', 'Vật liệu', 'Màu', '', '']);
+    list.forEach(function (it, i) {
+      var row = tbl.insertRow(), sel = document.createElement('select'), col = document.createElement('input'), up = document.createElement('button'), del = document.createElement('button');
+      row.insertCell().textContent = String(i + 1);
+      FINISH_FN.forEach(function (f) { sel.append(new Option(f[1], f[0])); }); sel.value = it.fn; sel.setAttribute('aria-label', 'Chức năng lớp ' + (i + 1));
+      sel.onchange = function () { it.fn = sel.value; changed(); renderLevelLayers(); };
+      row.insertCell().appendChild(sel);
+      row.insertCell().appendChild(numCell(it.t, function (v) { it.t = v; syncLevelLayers(l); refreshLayerButtons(l); updateLevelLayerSummary(l, key); }, 'Dày lớp ' + (i + 1)));
+      row.insertCell().appendChild(textCell(it.material || '', function (v) { it.material = v; }, 'Vật liệu lớp ' + (i + 1)));
+      col.type = 'color'; col.value = it.color || (FINISH_FN.filter(function (f) { return f[0] === it.fn; })[0] || FINISH_FN[2])[2]; col.setAttribute('aria-label', 'Màu lớp ' + (i + 1)); col.oninput = function () { it.color = col.value; changed(); };
+      row.insertCell().appendChild(col);
+      up.type = 'button'; up.textContent = '↑'; up.title = 'Chuyển lớp lên'; up.disabled = i === 0;
+      up.onclick = function () { list.splice(i - 1, 0, list.splice(i, 1)[0]); changed(); renderLevelLayers(); };
+      row.insertCell().appendChild(up);
+      del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.title = 'Xóa lớp';
+      del.onclick = function () { list.splice(i, 1); syncLevelLayers(l); if (!list.length) openLayers = null; renderLevels(); changed(); };
+      row.insertCell().appendChild(del);
+    });
+    var add = document.createElement('button'); add.type = 'button'; add.className = 'add'; add.textContent = '+ Thêm lớp'; add.disabled = list.length >= MAX_WALL_LAYERS; add.title = 'Tối đa ' + MAX_WALL_LAYERS + ' lớp';
+    add.onclick = function () { list.push({fn: 'finish', t: isFloor ? 10 : 9, material: '', color: null}); syncLevelLayers(l); renderLevels(); changed(); };
+    box.appendChild(add);
+    var sum = document.createElement('div'); sum.className = 'layers-sum'; sum.id = 'level-layers-sum'; box.appendChild(sum); updateLevelLayerSummary(l, key);
+  }
+  function updateLevelLayerSummary(l, key) {
+    var sum = $('level-layers-sum'); if (!sum) return;
+    var total = layersSum(l[key]), range = key === 'floorLayers' ? [0, 300] : [5, 100], bad = total < range[0] || total > range[1];
+    sum.textContent = 'Tổng bề dày: ' + total + ' mm (' + (key === 'floorLayers' ? 'thành lớp cán nền' : 'thành dày trần') + ', phải từ ' + range[0] + ' đến ' + range[1] + ' mm).'; sum.className = 'layers-sum' + (bad ? ' error' : '');
+    var scr = $('levels-table').querySelectorAll('tr')[state.levels.indexOf(l) + 1];
+    if (scr) { var inputs = scr.querySelectorAll('input[type=number]'); if (inputs[1] && (l.floorLayers || []).length) inputs[1].value = l.screed; if (inputs[4] && (l.ceilingLayers || []).length) inputs[4].value = l.ceilingThickness; }
   }
   function refreshLevelNotes() {
     $('levels-table').querySelectorAll('td.note').forEach(function (cell, i) { cell.textContent = levelNote(i); });
@@ -239,7 +302,7 @@
   function addLevel() {
     var last = state.levels[state.levels.length - 1], n = state.levels.length + 1, name = 'Tầng ' + n, taken = state.levels.map(function (l) { return l.name.toLowerCase(); });
     while (taken.indexOf(name.toLowerCase()) >= 0) name += '*';
-    state.levels.push({id: rid('sl_'), name: name, elevation: Number.isFinite(last.elevation) ? last.elevation + 3600 : 0, screed: 50, slab: 120, columnType: null, beamType: null, wallType: null, ceilingHeight: 2800, ceilingThickness: 9, picks: {}, beamPicks: {}, wallPicks: {}, slabPicks: {}, ceilingPicks: {}, notes: {}, openingPicks: {}});
+    state.levels.push({id: rid('sl_'), name: name, elevation: Number.isFinite(last.elevation) ? last.elevation + 3600 : 0, screed: 50, floorLayers: [], ceilingLayers: [], slab: 120, columnType: null, beamType: null, wallType: null, ceilingHeight: 2800, ceilingThickness: 9, picks: {}, beamPicks: {}, wallPicks: {}, slabPicks: {}, ceilingPicks: {}, notes: {}, openingPicks: {}});
     renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); changed();
   }
   function addType() {

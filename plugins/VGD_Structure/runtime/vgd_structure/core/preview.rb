@@ -77,14 +77,14 @@ module VGD
         begin
           slab = SlabPlan.plan(grid, levels, level_id, types, beam_types)
           out[:slabs] = {level: slab[:level]['id'], level_name: slab[:level]['name'], z_top: slab[:z_top], thickness: slab[:thickness], count: slab[:items].size, issues: slab[:issues],
-                         items: slab[:items].map { |i| i.slice(:ref, :min, :max, :thickness, :z_top, :z_bottom, :area, :polygon, :holes, :placement) }}
+                         items: slab[:items].map { |i| i.slice(:ref, :min, :max, :thickness, :z_top, :z_bottom, :area, :polygon, :holes, :placement, :layers) }}
         rescue SlabPlan::Error => error
           out[:slabs_error] = error.message
         end
         begin
           plan = CeilingPlan.plan(grid, types, beam_types, wall_types, levels, level_id, opening_types)
           out[:ceilings] = {level: plan[:level]['id'], level_name: plan[:level]['name'], z_bottom: plan[:z_bottom], z_top: plan[:z_top], count: plan[:items].size, issues: plan[:issues],
-                            items: plan[:items].map { |i| i.slice(:ref, :polygon, :min, :max, :thickness, :z_bottom, :z_top, :area, :holes, :placement) }}
+                            items: plan[:items].map { |i| i.slice(:ref, :polygon, :min, :max, :thickness, :z_bottom, :z_top, :area, :holes, :placement, :layers) }}
         rescue CeilingPlan::Error, WallPlan::Error, BeamPlan::Error, ColumnPlan::Error => error
           out[:ceilings_error] = error.message
         end

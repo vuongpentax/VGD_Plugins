@@ -67,6 +67,14 @@ module VGD
           elevation = elevation.to_f.round(1)
           raise Error, "Tầng “#{name}” phải cao hơn tầng dưới ít nhất #{MIN_GAP.to_i} mm (cao độ tăng dần)." if previous && elevation - previous < MIN_GAP
           previous = elevation
+          # Lớp hoàn thiện sàn (từ trên xuống, nằm trên sàn kết cấu: tổng = lớp cán nền) và lớp trần (từ dưới lên: tổng = dày trần). Có lớp thì tổng ĐÈ lên số nhập.
+          floor_layers, ceiling_layers = begin
+            [LayerList.normalize!(level['floor_layers'], 'sàn', SCREED_RANGE), LayerList.normalize!(level['ceiling_layers'], 'trần', CEILING_THICKNESS_RANGE)]
+          rescue Error => error
+            raise Error, "Tầng “#{name}”: #{error.message}"
+          end
+          level = level.merge('screed' => LayerList.total(floor_layers)) unless floor_layers.empty?
+          level = level.merge('ceiling_thickness' => LayerList.total(ceiling_layers)) unless ceiling_layers.empty?
           slab = level.key?('slab_thickness') ? level['slab_thickness'] : DEFAULT_SLAB
           raise Error, "Tầng “#{name}”: dày sàn từ #{SLAB_RANGE.min.to_i} đến #{SLAB_RANGE.max.to_i} mm." unless number?(slab) && SLAB_RANGE.cover?(slab.to_f)
           ceiling_height = level.key?('ceiling_height') ? level['ceiling_height'] : DEFAULT_CEILING_HEIGHT
@@ -92,8 +100,11 @@ module VGD
           openings, dropped_o = openings!((raw || {})['openings'], span_refs + free_walls, opening_types, name)
           notes = notes!(level['notes'], name)
           removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k + dropped_o
-          {'id' => id, 'name' => name, 'elevation' => elevation, 'screed' => screed.to_f.round(1), 'slab_thickness' => slab.to_f.round(1), 'ceiling_height' => ceiling_height.to_f.round(1), 'ceiling_thickness' => ceiling_thickness.to_f.round(1),
+          entry = {'id' => id, 'name' => name, 'elevation' => elevation, 'screed' => screed.to_f.round(1), 'slab_thickness' => slab.to_f.round(1), 'ceiling_height' => ceiling_height.to_f.round(1), 'ceiling_thickness' => ceiling_thickness.to_f.round(1),
            'column_type' => type_id, 'beam_type' => beam_type, 'wall_type' => wall_type, 'picks' => {'columns' => columns, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings, 'openings' => openings}, 'notes' => notes}
+          entry['floor_layers'] = floor_layers unless floor_layers.empty?
+          entry['ceiling_layers'] = ceiling_layers unless ceiling_layers.empty?
+          entry
         end
         names = out.map { |l| l['name'].downcase }
         dup = out.find { |l| names.count(l['name'].downcase) > 1 }
