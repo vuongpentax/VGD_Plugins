@@ -113,10 +113,12 @@ module Sketchup
     def draw(view); view.drawn = true; end
   end
   class FakeView
-    attr_accessor :fake_points, :tooltip, :drawn
-    attr_reader :invalidated
-    def initialize(points = {}); @fake_points = points; @invalidated = 0; end
+    attr_accessor :fake_points, :tooltip, :drawn, :drawing_color, :line_width
+    attr_reader :invalidated, :draw_calls
+    def initialize(points = {}); @fake_points = points; @invalidated = 0; @draw_calls = []; end
     def invalidate; @invalidated += 1; end
+    def draw_polyline(pts); @draw_calls << [:polyline, pts]; end
+    def draw_points(pts, *rest); @draw_calls << [:points, pts]; end
   end
   class Definitions
     attr_reader :list
@@ -164,7 +166,13 @@ module Sketchup
     def add_folder(name); f = Folder.new(name); @folders << f; f; end
   end
   class Model
-    attr_reader :entities, :layers, :operations, :line_styles, :definitions, :selection, :active_path, :tool
+    attr_reader :entities, :layers, :operations, :line_styles, :definitions, :selection, :active_path, :tool, :observers
+    def add_observer(o); (@observers ||= []) << o; true; end
+    def remove_observer(o); (@observers ||= []).delete(o); true; end
+    def active_view; @view ||= FakeView.new; end
+    # Mô phỏng người dùng Hoàn tác / Làm lại trong SketchUp: gọi các observer của model.
+    def fire_undo; (@observers || []).each { |o| o.onTransactionUndo(self) if o.respond_to?(:onTransactionUndo) }; end
+    def fire_redo; (@observers || []).each { |o| o.onTransactionRedo(self) if o.respond_to?(:onTransactionRedo) }; end
     def active_path=(path); @active_path = path; end
     def select_tool(t); @tool.deactivate(FakeView.new) if @tool && @tool.respond_to?(:deactivate); @tool = t; t.activate if t && t.respond_to?(:activate); end
     def initialize(styles: ['Solid Line', 'Dotted Line', 'Short Dashes Line', 'Dash Dot Line'])

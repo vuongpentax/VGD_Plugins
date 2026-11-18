@@ -1,4 +1,4 @@
-# VGD Structure 0.18.0-beta.1
+# VGD Structure 0.19.0-beta.1
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
@@ -63,6 +63,14 @@ Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) th
   - **Nút tắt:** bảng Thuộc tính của tường có ô "Nối góc tự động" (mặc định bật). Tường tắt nối giữ đúng hình nhập và không làm đối tác của tường khác. Thuộc tính tường ghi "Đã nối N đầu".
   - Cửa vẫn đứng đúng chỗ thật khi đầu tường dịch (vị trí lưu tính từ đầu chưa nối); cửa rơi vào đoạn tường bị rút ngắn bị bỏ kèm cảnh báo. Trần lùi theo mặt tường sau khi nối.
   - **Dữ liệu cũ:** tường dựng bằng bản trước sẽ hiện "lệch" ở chấm trạng thái nếu hình đổi do nối góc; dựng lại tường để cập nhật. Tường nhiều lớp (gạch, vữa, ốp) chưa làm.
+- **Vẽ trực tiếp trong SketchUp (bản 1):**
+  - **Cách dùng:** menu **Extensions → VGD → VGD Structure → Vẽ trong SketchUp → Cột / Dầm / Tường / Cửa đi / Cửa sổ / Sàn / Trần** (hoặc bật nút "Vẽ trong SketchUp", phím **SD**, ở thanh trên của tab Mặt bằng rồi chọn công cụ). Cửa sổ plugin vẫn mở cạnh SketchUp như Revit / VTBim: **thanh Tùy chọn** (loại, theo lưới hay tự do, hướng, xoay, cạnh...) và **Thuộc tính** đặt ở cửa sổ; điểm bấm lấy từ khung nhìn SketchUp.
+  - **Điểm bấm:** bắt điểm của SketchUp (đầu mút, giữa, giao, trên cạnh, cả trên mô hình 3D); chỉ lấy X, Y. Gần giao điểm / nhịp lưới thì theo lưới (khi chọn "Theo lưới"), không thì tự do kể cả xiên.
+  - **Xem trước ngay trong khung nhìn SketchUp** (đường, đa giác, chấm xanh) ở cao độ tầng đang xem, như xem trước trên mặt bằng.
+  - **Phím trong SketchUp:** Enter (khép / kết thúc), Backspace (bỏ điểm cuối), **ô giá trị của SketchUp** gõ số + Enter (độ dài, bán kính, khoảng cách như ô nhập số trên mặt bằng), Esc (hủy chuỗi đang vẽ; Esc lần nữa thoát về công cụ Chọn và trả SketchUp về công cụ thường).
+  - **Tầng:** tầng đang xem trong cửa sổ (đổi bằng tab tầng, như chọn mặt bằng tầng trong Revit). **Tự dựng:** mỗi lần vẽ xong, các loại phần tử đã đổi của tầng đó được dựng lại ngay (gom các lần liên tiếp trong 250 ms) trong một bước hoàn tác của SketchUp; vẽ cửa thì dựng cả cửa và tường (tường khoét lỗ). Xóa hết một loại thì bỏ nhóm loại đó trong model. Nét 2D, ghi chú không dựng gì.
+  - **Hoàn tác (Ctrl+Z) trong SketchUp:** nếu việc hoàn tác làm đổi dữ liệu plugin lưu trong model thì cửa sổ nạp lại dữ liệu (giữ tầng đang xem, xóa lịch sử hoàn tác của mặt bằng). Hoàn tác việc khác trong SketchUp không đụng tới phần sửa chưa lưu trên mặt bằng.
+  - **Lưu ý:** chỉ dựng loại đã đổi, nên phần tử kề cận phụ thuộc (ví dụ cột mới làm dầm, tường, sàn khoét góc đổi) hiện chấm "lệch" ở trạng thái model cho tới khi bấm **Dựng tầng này (BD)**. Cần cửa sổ plugin đang mở (dữ liệu và tùy chọn nằm ở cửa sổ). **Chưa kiểm trong SketchUp thật:** công cụ nhận điểm, xem trước vẽ trong khung nhìn, phím Enter / Backspace / ô giá trị, model observer Hoàn tác. **Chưa làm (bản 2):** sửa ngay trong SketchUp (dời, xóa phần tử đã dựng) thì dữ liệu tự cập nhật.
 - **Cốt sàn kết cấu và sàn lọt lòng (đổi quy tắc 18/11/2026, theo chủ dự án):**
   - **Cán nền:** mỗi tầng có thông số "Cán nền" (mặc định 50 mm). Cao độ tầng là cốt sàn HOÀN THIỆN; mặt trên sàn kết cấu = cao độ tầng trừ cán nền. Cột, dầm, tường kết cấu tính từ cốt kết cấu; **ngưỡng cửa và cao trần vẫn tính từ cốt hoàn thiện**.
   - **Dầm:** đỉnh dầm bằng mặt trên sàn kết cấu tầng trên; chiều cao h là tổng chiều cao (trước đây dầm treo dưới sàn nên sâu hơn thực tế đúng bằng dày sàn).
@@ -135,7 +143,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.18.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.19.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

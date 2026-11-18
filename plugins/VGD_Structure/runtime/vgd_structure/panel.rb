@@ -16,7 +16,7 @@ module VGD
         @dialog = ::UI::HtmlDialog.new(dialog_title: TITLE, preferences_key: 'vgd_structure_panel', scrollable: true, resizable: true,
                                        width: 1040, height: 700, min_width: 760, min_height: 520, style: ::UI::HtmlDialog::STYLE_DIALOG)
         @dialog.set_file(File.join(ROOT, 'html', 'index.html'))
-        @dialog.add_action_callback('ready') { |_ctx| safely { @ready = true; send_state; flush_focus } }
+        @dialog.add_action_callback('ready') { |_ctx| safely { @ready = true; send_state; flush_focus; flush_tool } }
         @dialog.add_action_callback('grid_preview') { |_ctx, payload| safely { grid_preview(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_build') { |_ctx, payload| safely { grid_build(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_remove') { |_ctx| safely { grid_remove } }
@@ -39,6 +39,7 @@ module VGD
         @dialog.add_action_callback('plan_select') { |_ctx, payload| safely { plan_select(JSON.parse(payload)) } }
         @dialog.add_action_callback('su_pick_start') { |_ctx| safely { su_pick_start } }
         @dialog.add_action_callback('su_pick_stop') { |_ctx| safely { su_pick_stop } }
+        @dialog.add_action_callback('su_ghost') { |_ctx, payload| safely { su_ghost(JSON.parse(payload)) } }
         @dialog.set_on_closed { detach_observer; su_pick_stop } if @dialog.respond_to?(:set_on_closed)
       end
 
@@ -51,7 +52,10 @@ module VGD
         detach_observer
         @watcher = SelectionWatcher.new(self)
         model.selection.add_observer(@watcher)
+        @model_watcher = ModelWatcher.new(self)
+        model.add_observer(@model_watcher)
         @observed_model = model
+        remember_saved(model)
       rescue StandardError => error # không theo dõi được vùng chọn thì cửa sổ vẫn dùng bình thường
         puts "[VGD Structure] không gắn được theo dõi vùng chọn: #{error.message}"
         @watcher = nil
@@ -60,11 +64,31 @@ module VGD
 
       def detach_observer
         @observed_model.selection.remove_observer(@watcher) if @watcher && @observed_model
+        @observed_model.remove_observer(@model_watcher) if @model_watcher && @observed_model
       rescue StandardError
         nil
       ensure
         @watcher = nil
+        @model_watcher = nil
         @observed_model = nil
+      end
+
+      # Dữ liệu plugin đang lưu trong model (chuỗi JSON), để biết Hoàn tác / Làm lại có đổi dữ liệu của plugin hay không.
+      def remember_saved(model)
+        @saved_json = model.get_attribute(Schema::DICTIONARY, ModelStore::KEY)
+      end
+
+      # Người dùng Hoàn tác / Làm lại trong SketchUp: nếu dữ liệu plugin trong model đổi (ví dụ hoàn tác một lần vẽ) thì nạp lại cửa sổ cho khớp;
+      # không đổi thì giữ nguyên (không làm mất phần sửa chưa lưu trên mặt bằng chỉ vì hoàn tác một việc khác trong SketchUp).
+      def model_history_changed
+        return unless @ready
+        model = Sketchup.active_model
+        now = model.get_attribute(Schema::DICTIONARY, ModelStore::KEY)
+        return if now == @saved_json
+        @saved_json = now
+        send_state(reload: true)
+      rescue StandardError => error
+        puts "[VGD Structure] model_history_changed: #{error.message}"
       end
 
       # Gọi từ SelectionWatcher mỗi khi vùng chọn trong SketchUp đổi (có thể rất dồn dập): gom lại rồi gửi một lần.
@@ -112,8 +136,35 @@ module VGD
       def su_pick_stop
         return unless @pick_tool
         @pick_tool = nil
+        @ghost = nil
         Sketchup.active_model.select_tool(nil)
         emit('su_pick_state', {active: false})
+      end
+
+      # Phím và ô giá trị trong SketchUp chuyển về cửa sổ như bàn phím / ô nhập trên mặt bằng.
+      def pick_key(name)
+        emit('su_key', {key: name})
+      end
+
+      def pick_text(text)
+        emit('su_text', {text: text})
+      end
+
+      # Xem trước cửa sổ gửi để vẽ trong khung nhìn SketchUp: {z: cao độ tầng (mm), items: [{t: 'line' | 'poly' | 'dot', pts: [[x, y], ...]}]}.
+      MAX_GHOST = 400
+      def su_ghost(payload)
+        items = payload['items']
+        @ghost = items.is_a?(Array) ? items.first(MAX_GHOST).select { |g| g.is_a?(Hash) && %w[line poly dot].include?(g['t']) && g['pts'].is_a?(Array) && g['pts'].all? { |p| p.is_a?(Array) && p.size == 2 && p.all?(Numeric) } } : []
+        @ghost_z = payload['z'].is_a?(Numeric) ? payload['z'].to_f : 0.0
+        Sketchup.active_model.active_view.invalidate
+      end
+
+      def ghost_items
+        @ghost || []
+      end
+
+      def ghost_z
+        @ghost_z || 0.0
       end
 
       def pick_point(point)
@@ -136,6 +187,20 @@ module VGD
       def focus(kind, level_id, ref)
         @pending_focus = {kind: kind, level: level_id, ref: ref}
         flush_focus if @ready
+      end
+
+      # Menu SketchUp "Vẽ trong SketchUp": mở cửa sổ ở tab Mặt bằng, chọn công cụ vẽ và bật chế độ vẽ trong SketchUp (chờ cửa sổ sẵn sàng nếu mới mở).
+      DRAW_TOOLS = %w[column beam wall door window slab ceiling].freeze
+      def start_tool(tool)
+        raise ArgumentError, 'Công cụ vẽ không hợp lệ.' unless DRAW_TOOLS.include?(tool)
+        @pending_tool = tool
+        flush_tool if @ready
+      end
+
+      def flush_tool
+        return unless @pending_tool
+        emit('start_tool', {tool: @pending_tool})
+        @pending_tool = nil
       end
 
       def flush_focus
@@ -168,11 +233,11 @@ module VGD
       end
 
       # Trạng thái ban đầu: lưới và thiết lập đã lưu trong model (hoặc mặc định), và model đã có lưới vẽ chưa.
-      def send_state(reset: false)
+      def send_state(reset: false, reload: false)
         model = Sketchup.active_model
         state = reset ? State.default.merge('saved' => false, 'removed' => 0) : ModelStore.read(model)
         emit('state', {grid: state['grid'], symbol: state['symbol'], types: state['types'], beam_types: state['beam_types'], wall_types: state['wall_types'], opening_types: state['opening_types'], levels: state['levels'], saved: state['saved'],
-                       drawn: !GridBuilder.find(model).nil?, drawn_levels: drawn_levels(model), drawn_beam_levels: drawn_beam_levels(model), drawn_wall_levels: drawn_wall_levels(model), drawn_opening_levels: drawn_opening_levels(model), drawn_slab_levels: drawn_plate_levels(model, 'slabs'), drawn_ceiling_levels: drawn_plate_levels(model, 'ceilings'), version: VERSION})
+                       drawn: !GridBuilder.find(model).nil?, drawn_levels: drawn_levels(model), drawn_beam_levels: drawn_beam_levels(model), drawn_wall_levels: drawn_wall_levels(model), drawn_opening_levels: drawn_opening_levels(model), drawn_slab_levels: drawn_plate_levels(model, 'slabs'), drawn_ceiling_levels: drawn_plate_levels(model, 'ceilings'), version: VERSION, reload: reload})
         grid_preview(state.merge('level' => state['levels'].first['id'], 'status' => true))
       end
 
@@ -236,14 +301,17 @@ module VGD
         model = Sketchup.active_model
         ids = payload['levels']
         state = payload['state']
+        only = payload['kinds']
+        raise ArgumentError, 'Danh sách loại cần dựng không hợp lệ.' unless only.nil? || (only.is_a?(Array) && only.all? { |k| AllBuilder::KINDS.include?(k) })
         if ids.is_a?(Array) && state.is_a?(Hash)
           clean = State.normalize!(state)
-          total = AllBuilder.targets(clean, ids).sum { |kind, level_ids| level_ids.sum { |id| Levels.find(clean['levels'], id)['picks'][kind].size } }
+          total = AllBuilder.targets(clean, ids, only).sum { |kind, level_ids| level_ids.sum { |id| Levels.find(clean['levels'], id)['picks'][kind].size } }
           if total > CONFIRM_COLUMNS && ::UI.messagebox("Sẽ dựng khoảng #{total} đối tượng (cột, dầm, tường, sàn, trần). Tiếp tục?", MB_YESNO) != IDYES
             return emit('message', {text: 'Đã hủy, chưa dựng gì.'})
           end
         end
-        result = AllBuilder.build(model, state, ids)
+        result = AllBuilder.build(model, state, ids, only)
+        remember_saved(model)
         parts = result[:kinds].map { |kind, r| "#{r.total} #{Checker::KIND_LABELS[kind].downcase}" }.join(', ')
         note = result[:issues].empty? ? '' : " Có #{result[:issues].size} cảnh báo: #{result[:issues].first(3).join(' ')}"
         emit('all_built', {message: "Đã dựng #{result[:total]} đối tượng trong một bước hoàn tác: #{parts}.#{note}", drawn: drawn_all(model)})

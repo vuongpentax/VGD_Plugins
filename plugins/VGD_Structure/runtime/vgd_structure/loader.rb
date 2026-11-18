@@ -39,6 +39,12 @@ module VGD
       true
     end
 
+    # Menu "Vẽ trong SketchUp": mở cửa sổ ở tab Mặt bằng và bật công cụ vẽ ngay trong khung nhìn SketchUp.
+    def self.start_draw(tool)
+      open_panel.start_tool(tool)
+      true
+    end
+
     # Nạp lại toàn bộ code của plugin mà không cần mở lại SketchUp (dùng sau khi cài đè bản mới).
     # Menu giữ như cũ cho tới lần mở SketchUp sau. Kiểm tra cú pháp cả bộ file trước: có lỗi thì giữ nguyên bản đang chạy.
     def self.reload
@@ -82,6 +88,10 @@ unless file_loaded?(__FILE__)
   # Menu Extensions > VGD > VGD Structure và thanh công cụ VGD STR. Chỉ đăng ký một lần; tải lại code không đăng ký lại.
   menu = ::VGD.menu.add_submenu('VGD Structure')
   menu.add_item('Lưới trục') { VGD::Structure.open_panel }
+  draw_menu = menu.add_submenu('Vẽ trong SketchUp')
+  [['Cột', 'column'], ['Dầm', 'beam'], ['Tường', 'wall'], ['Cửa đi', 'door'], ['Cửa sổ', 'window'], ['Sàn', 'slab'], ['Trần', 'ceiling']].each do |label, tool|
+    draw_menu.add_item(label) { VGD::Structure.start_draw(tool) }
+  end
   menu.add_item('Tải lại code') { VGD::Structure.reload }
   toolbar = ::UI::Toolbar.new('VGD STR')
   command = ::UI::Command.new('VGD Structure · Lưới trục') { VGD::Structure.open_panel }

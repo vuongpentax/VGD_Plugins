@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.18.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.19.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -1594,6 +1594,75 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await reset();await typ('dr');await cl(8500,1000);let op=await page.evaluate(()=>window.VGDS._state.levels[0].openingPicks),nk=Object.keys(op).filter(k=>k!=='op_00000001');
   ok(nk.length===1 && op[nk[0]].wall==='fw_00000001' && op[nk[0]].pos===2500,'đặt cửa mới tại x = 8500 trên tường đã dịch đầu: vị trí lưu 2500 (tính từ đầu chưa nối 6000)');
   await reset();
+  }
+  // Vẽ trực tiếp trong SketchUp (chế độ SD): công cụ nhận điểm bấm từ SketchUp, xem trước vẽ trong SketchUp, tự dựng phần đã đổi
+  {
+  const typ=async s=>{for(const ch of s)await page.keyboard.press(ch.toLowerCase());await wait(90);};
+  const get=k=>page.evaluate(k=>JSON.parse(JSON.stringify(window.VGDS._state.levels[0][k])),k);
+  const dbg10=()=>page.evaluate(()=>window.VGDPlan.debug());
+  const reset=async()=>{await page.keyboard.press('Escape');await page.keyboard.press('Escape');await receive('state',F.state);await receive('preview',F.preview);await receive('su_pick_state',{active:false});await clear();await wait(80);};
+  const sdOn=async()=>{if(!(await dbg10()).suDraw)await typ('sd');};
+  const su=async(x,y)=>{await receive('su_move',{x,y});await receive('su_point',{x,y});};
+  await page.click('[data-tab=plan]');
+  if(await page.locator('#pv-browser').isVisible())await page.click('#pv-browser-btn');
+  await reset();
+  // Bật / tắt
+  ok(await page.locator('#pv-sudraw-btn').isVisible() && (await page.locator('#pv-sudraw-btn').getAttribute('aria-pressed'))==='false','nút "Vẽ trong SketchUp" có trên thanh trên, mặc định tắt');
+  await typ('cl');ok((await calls('su_pick_start')).length===0,'chưa bật chế độ SD: chọn công cụ Cột không tự bật công cụ nhận điểm của SketchUp');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await clear();
+  await typ('sd');ok((await dbg10()).suDraw===true && (await page.locator('#pv-sudraw-btn').getAttribute('aria-pressed'))==='true' && (await calls('su_pick_start')).length===0,'gõ SD: bật chế độ; đang ở công cụ Chọn nên chưa nhận điểm từ SketchUp');
+  await typ('cl');await page.selectOption('#pv-options select[data-opt=mode]','grid');ok((await calls('su_pick_start')).length===1,'chọn công cụ Cột khi SD bật: tự bật công cụ nhận điểm trong SketchUp');
+  await receive('su_pick_state',{active:true});await clear();
+  // Xem trước vẽ trong SketchUp
+  await receive('su_move',{x:8400,y:3600});await wait(200);
+  let gh=await last('su_ghost');
+  ok(gh && gh.z===0 && gh.items.some(i=>i.t==='poly' && i.pts.length>=3) && gh.items.some(i=>i.t==='dot'),'rê chuột trong SketchUp: cửa sổ gửi xem trước (đa giác cột và chấm) kèm cao độ tầng 0');
+  await clear();await receive('su_move',{x:8400,y:3600});await wait(200);ok((await calls('su_ghost')).length===0,'xem trước không đổi: không gửi lại (tránh gửi dồn)');
+  // Bấm điểm và tự dựng
+  await clear();await su(8400,3600);await wait(500);
+  const pk=await get('picks');
+  ok(!!pk['3-B'],'bấm trong SketchUp tại giao điểm 3-B: thêm cột 3-B vào dữ liệu');
+  let ba=await calls('build_all');
+  ok(ba.length===1 && JSON.stringify(ba[0].kinds)==='["columns"]' && ba[0].levels[0]==='sl_00000001' && ba[0].state.levels[0].picks.columns,'tự dựng: gọi build_all CHỈ cho loại đã đổi (cột) của tầng đang xem, gửi kèm dữ liệu mới');
+  // Gom nhiều lần đổi liên tiếp
+  await clear();await su(12600,3600);await su(8400,7200);await wait(500);ba=await calls('build_all');
+  ok(ba.length===1,'hai lần đặt liên tiếp trong 250 ms: gom thành một lần dựng');
+  // Cửa: dựng cửa kéo theo tường
+  await reset();await sdOn();await typ('dr');await receive('su_pick_state',{active:true});await clear();await su(4200,1700);await wait(500);
+  ba=await calls('build_all');
+  ok(ba.length===1 && ba[0].kinds.slice().sort().join()==='openings,walls','đặt cửa: dựng cả cửa và tường (tường khoét lỗ), không dựng loại khác');
+  // Ghi chú 2D không dựng gì
+  await reset();await sdOn();await typ('li');await receive('su_pick_state',{active:true});await clear();await su(6000,3000);await receive('su_move',{x:7000,y:3000});await receive('su_text',{text:'1500'});await wait(500);
+  const nts=await page.evaluate(()=>window.VGDS._state.levels[0].notes);
+  ok(Object.keys(nts).length===1 && Math.abs(Math.hypot(Object.values(nts)[0].b[0]-6000,Object.values(nts)[0].b[1]-3000)-1500)<0.2,'gõ 1500 vào ô giá trị của SketchUp: nét dài đúng 1500 mm');
+  ok((await calls('build_all')).length===0,'vẽ nét ghi chú 2D: không dựng gì vào model');
+  // Phím từ SketchUp
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await reset();await sdOn();await typ('pl');await receive('su_pick_state',{active:true});
+  await su(5000,3000);await su(6000,3300);await su(7000,3000);await receive('su_key',{key:'Backspace'});ok(/2 điểm/.test(await page.locator('#pv-hint').innerText()),'Backspace từ SketchUp: bỏ điểm cuối của đa tuyến (còn 2)');
+  await su(7000,3000);await receive('su_key',{key:'Enter'});const n2=await page.evaluate(()=>Object.values(window.VGDS._state.levels[0].notes));
+  ok(n2.length===1 && n2[0].t==='poly' && n2[0].pts.length===3 && n2[0].closed===false,'Enter từ SketchUp: kết thúc đa tuyến hở 3 điểm');
+  await typ('li');await su(6000,3000);await receive('su_key',{key:'Escape'});
+  ok((await dbg10()).tool==='line' && (await dbg10()).edit.notes.points.length===0,'Esc từ SketchUp khi đang vẽ dở: hủy chuỗi nhưng vẫn ở công cụ');
+  await receive('su_key',{key:'Escape'});await wait(80);
+  ok((await dbg10()).tool==='select' && (await calls('su_pick_stop')).length>=1,'Esc từ SketchUp khi không còn gì đang vẽ: về công cụ Chọn và dừng công cụ nhận điểm trong SketchUp');
+  // Tắt chế độ
+  await reset();await sdOn();await typ('cl');await receive('su_pick_state',{active:true});await clear();
+  await page.click('#pv-sudraw-btn');ok((await dbg10()).suDraw===false && (await calls('su_pick_stop')).length===1,'tắt SD khi đang nhận điểm: dừng công cụ trong SketchUp');
+  await receive('su_pick_state',{active:false});await clear();await typ('cl');await page.selectOption('#pv-options select[data-opt=mode]','grid');{const bb=await page.locator('#pv-canvas').boundingBox(),q=await page.evaluate(()=>window.VGDPlan.toScreen(8400,3600));await page.mouse.move(bb.x+q[0],bb.y+q[1]);await page.mouse.click(bb.x+q[0],bb.y+q[1]);}await wait(500);
+  ok(!!(await get('picks'))['3-B'] && (await calls('build_all')).length===0,'SD tắt: bấm trên mặt bằng vẫn thêm cột nhưng không tự dựng');
+  // Xóa hết thì bỏ nhóm
+  await reset();await sdOn();await page.evaluate(()=>{const l=window.VGDS._state.levels[0];l.picks={'1-A':{}};});await receive('preview',F.preview);
+  await page.evaluate(()=>window.VGDPlan.selectKeys('sl_00000001',[{kind:'column',ref:'1-A'}],false));await clear();await page.keyboard.press('Delete');await wait(500);
+  ok((await calls('columns_remove')).length===1 && (await calls('build_all')).length===0,'xóa cột cuối cùng của tầng: bỏ nhóm cột trong model (columns_remove), không dựng');
+  // Bắt đầu từ menu SketchUp
+  await reset();await page.click('[data-tab=grid]');await receive('start_tool',{tool:'wall'});await wait(120);
+  ok(await page.locator('#tab-plan').isVisible() && (await dbg10()).tool==='wall' && (await dbg10()).suDraw===true && (await calls('su_pick_start')).length===1,'start_tool từ menu SketchUp: chuyển tab Mặt bằng, chọn Tường, bật chế độ SD và công cụ nhận điểm');
+  // Nạp lại khi hoàn tác trong SketchUp
+  await reset();await page.click('[data-level=sl_00000002]');await wait(80);
+  await page.evaluate(()=>{window.VGDS.mutate(()=>{window.VGDS._state.levels[0].picks['3-A']={};});});ok((await page.evaluate(()=>window.VGDS.history().undo))>=1,'(chuẩn bị) có lịch sử hoàn tác trên mặt bằng');
+  await receive('state',Object.assign({},F.state,{reload:true}));await wait(80);
+  ok((await page.evaluate(()=>window.VGDS._state.level))==='sl_00000002' && (await page.evaluate(()=>window.VGDS.history().undo))===0 && !(await get('picks'))['3-A'],'nạp lại do Hoàn tác trong SketchUp: giữ tầng đang xem, xóa lịch sử hoàn tác, dữ liệu theo model');
+  if((await dbg10()).suDraw)await page.click('#pv-sudraw-btn');await receive('su_pick_state',{active:false});await page.click('[data-level=sl_00000001]');await reset();await clear(); // trả về trạng thái ban đầu cho các phần sau
   }
   // P6: liên kết với SketchUp
   {

@@ -26,7 +26,7 @@
     link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',
     status: 'M12 3l9 4v6c0 5-4 8-9 9-5-1-9-4-9-9V7ZM8 12l3 3 5-6',
     build: 'M3 21h18M5 21V10l7-6 7 6v11M10 21v-6h4v6',
-    supick: 'M4 3v15l4-4 3 7 3-1-3-7 6-1ZM17 3v4M15 5h4',
+    supick: 'M4 3v15l4-4 3 7 3-1-3-7 6-1ZM17 3v4M15 5h4', sudraw: 'M4 3v15l4-4 3 7 3-1-3-7 6-1ZM14 14l7-7 2 2-7 7-3 1Z',
     props: 'M3 4h18v16H3ZM9 4v16M12 8h6M12 12h6M12 16h4', eye: 'M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6'
   };
   // [id, tên, phím, gợi ý, dùng được ở cột mốc này?]
@@ -46,7 +46,7 @@
   // Nguồn "Revit" = phím mặc định của Revit theo trí nhớ (chưa đối chiếu với bản Revit cài trên máy); "Tự đặt" = Revit không có phím mặc định cho lệnh này. Sửa được trong bảng Phím tắt.
   var COMMANDS = [
     ['fit', 'Vừa khung (Zoom to Fit)', 'ZE', 'Revit'], ['hide', 'Ẩn phần tử đang chọn (Hide Element)', 'EH', 'Revit'], ['isolate', 'Cô lập phần tử đang chọn (Isolate Element)', 'HI', 'Revit'], ['unhide', 'Bỏ ẩn / cô lập (Reset Temporary Hide/Isolate)', 'HR', 'Revit'], ['pan', 'Kéo mặt bằng', '', ''], ['guide', 'Đường gióng (Reference Plane)', 'RP', 'Revit'], ['measure', 'Đo (Measure)', 'ME', 'Revit'],
-    ['snap', 'Bật / tắt bắt điểm (Snaps Off)', 'SO', 'Revit'], ['props', 'Bảng Thuộc tính', 'PP', 'Revit'], ['browser', 'Cây dự án (Project Browser)', 'PB', 'Tự đặt'], ['sync', 'Đồng bộ chọn với SketchUp', 'SY', 'Tự đặt'], ['status', 'Hiện trạng thái so với model', 'ST', 'Tự đặt'], ['build', 'Dựng tầng này vào model', 'BD', 'Tự đặt'], ['supick', 'Chọn điểm trong SketchUp', 'PK', 'Tự đặt'], ['vis', 'Hiển thị lớp (Visibility / Graphics)', 'VG', 'Revit'], ['keys', 'Bảng phím tắt', 'KS', 'Revit'],
+    ['snap', 'Bật / tắt bắt điểm (Snaps Off)', 'SO', 'Revit'], ['props', 'Bảng Thuộc tính', 'PP', 'Revit'], ['browser', 'Cây dự án (Project Browser)', 'PB', 'Tự đặt'], ['sudraw', 'Vẽ trong SketchUp (công cụ vẽ nhận điểm bấm trong SketchUp, tự dựng)', 'SD', 'Tự đặt'], ['sync', 'Đồng bộ chọn với SketchUp', 'SY', 'Tự đặt'], ['status', 'Hiện trạng thái so với model', 'ST', 'Tự đặt'], ['build', 'Dựng tầng này vào model', 'BD', 'Tự đặt'], ['supick', 'Chọn điểm trong SketchUp', 'PK', 'Tự đặt'], ['vis', 'Hiển thị lớp (Visibility / Graphics)', 'VG', 'Revit'], ['keys', 'Bảng phím tắt', 'KS', 'Revit'],
     ['wall', 'Tường (Wall)', 'WA', 'Revit'], ['door', 'Cửa đi (Door)', 'DR', 'Revit'], ['window', 'Cửa sổ (Window)', 'WN', 'Revit'], ['column', 'Cột (Column)', 'CL', 'Revit'], ['beam', 'Dầm (Beam)', 'BM', 'Revit'],
     ['grid', 'Lưới trục (Grid)', 'GR', 'Revit'], ['slab', 'Sàn (Floor)', 'FL', 'Tự đặt'], ['ceiling', 'Trần (Ceiling)', 'CE', 'Tự đặt'],
     ['move', 'Move', 'MV', 'Revit'], ['copy', 'Copy', 'CO', 'Revit'], ['array', 'Array (nhân bản liên tiếp)', 'AR', 'Revit'], ['match', 'Match (khớp loại)', 'MA', 'Revit'], ['align', 'Align', 'AL', 'Revit'], ['unlock', 'Mở khóa lưới (thành phần tử tự do)', 'UL', 'Tự đặt'], ['rotate', 'Rotate', 'RO', 'Revit'], ['mirror', 'Mirror (chọn trục)', 'MM', 'Revit'], ['offset', 'Offset', 'OF', 'Revit'], ['trim', 'Trim / Extend', 'TR', 'Revit'], ['delete', 'Xóa (Delete)', 'DE', 'Revit'],
@@ -104,6 +104,7 @@
     toggle('pv-status-btn', 'status', 'Hiện trạng thái so với model (chấm màu: lệch, thiếu, chưa dựng)', function () { return statusOn; }, function (v) { statusOn = v; if (v && opts.refresh) opts.refresh(); draw(); renderProps(); });
     var bd = el('button', {type: 'button', class: 'pv-ic', id: 'pv-build-btn', title: 'Dựng tầng này vào model (một bước hoàn tác)'}, bar); bd.innerHTML = svg('build') + '<kbd></kbd>'; bd.onclick = function () { if (opts.buildLevel) opts.buildLevel(); };
     var sp = el('button', {type: 'button', class: 'pv-ic', id: 'pv-supick-btn', title: 'Chọn điểm trong SketchUp: dùng điểm bắt của SketchUp cho công cụ đang chọn', 'aria-pressed': 'false'}, bar); sp.innerHTML = svg('supick') + '<kbd></kbd>'; sp.onclick = toggleSuPick;
+    var sd = el('button', {type: 'button', class: 'pv-ic', id: 'pv-sudraw-btn', title: 'Vẽ trong SketchUp: công cụ vẽ nhận điểm bấm trong khung nhìn SketchUp, mỗi lần vẽ xong tự dựng vào model', 'aria-pressed': 'false'}, bar); sd.innerHTML = svg('sudraw') + '<kbd></kbd>'; sd.onclick = function () { setSuDraw(!suDraw); };
     el('span', {class: 'pv-grow'}, bar);
     [['pv-hide-btn', 'hide', 'Ẩn phần tử đang chọn (tạm thời)'], ['pv-isolate-btn', 'isolate', 'Cô lập phần tử đang chọn: ẩn mọi phần tử khác (tạm thời)']].forEach(function (x) {
       var hb = el('button', {type: 'button', class: 'pv-ic', id: x[0], title: x[2]}, bar); hb.innerHTML = svg(x[1]) + '<kbd></kbd>'; hb.onclick = function () { runCommand(x[1]); };
@@ -224,6 +225,39 @@
     if (key === lastSent) return; lastSent = key; lastFromSU = false;
     opts.callSU('plan_select', {level: currentId, items: items});
   }
+  // ---- Vẽ trực tiếp trong SketchUp: khi bật, công cụ vẽ / sửa (hoặc Đo, Đường gióng) tự nhận điểm bấm trong khung nhìn SketchUp ----
+  var suDraw = false, lastGhostKey = '', ghostTimer = null, lastGhostAt = 0, GHOST_MS = 60;
+  function wantsSuTool() { return !!ed() || tool === 'measure' || tool === 'guide'; }
+  function syncSuTool() {
+    if (!suDraw || !opts || !opts.callSU) return;
+    var want = wantsSuTool();
+    if (want && !suPicking) opts.callSU('su_pick_start', ''); else if (!want && suPicking) opts.callSU('su_pick_stop', '');
+  }
+  function setSuDraw(on) {
+    suDraw = !!on; var b = $('pv-sudraw-btn'); if (b) { b.classList.toggle('on', suDraw); b.setAttribute('aria-pressed', String(suDraw)); }
+    if (suDraw) { note = 'Vẽ trong SketchUp: chọn công cụ vẽ rồi bấm trong khung nhìn SketchUp; mỗi lần vẽ xong tự dựng vào model.'; syncSuTool(); }
+    else { if (suPicking && opts && opts.callSU) opts.callSU('su_pick_stop', ''); sendGhost(true); }
+    draw();
+  }
+  // Xem trước đang hiện trên mặt bằng cũng được vẽ trong khung nhìn SketchUp (đường, đa giác, chấm) ở cao độ tầng đang xem.
+  function sendGhost(force) {
+    if (!suPicking && !force) return;
+    if (!opts || !opts.callSU) return;
+    var items = [];
+    if (suPicking && ed()) ed().ghost().forEach(function (g) {
+      if (g.t === 'line') items.push({t: 'line', pts: [g.a, g.b]});
+      else if (g.t === 'poly') items.push({t: 'poly', pts: g.poly});
+      else if (g.t === 'dot') items.push({t: 'dot', pts: [g.p]});
+    });
+    var lv = levelList.filter(function (l) { return l.id === currentId; })[0], payloadG = {z: lv ? lv.elevation : 0, items: items}, key = JSON.stringify(payloadG);
+    if (key === lastGhostKey) return; lastGhostKey = key; opts.callSU('su_ghost', payloadG);
+  }
+  function scheduleGhost() {
+    if (!suPicking) return;
+    var now = Date.now();
+    if (now - lastGhostAt >= GHOST_MS) { lastGhostAt = now; sendGhost(); return; }
+    if (!ghostTimer) ghostTimer = setTimeout(function () { ghostTimer = null; lastGhostAt = Date.now(); sendGhost(); }, GHOST_MS);
+  }
   function toggleSuPick() {
     if (!opts || !opts.callSU) return;
     if (suPicking) { opts.callSU('su_pick_stop', ''); return; }
@@ -273,7 +307,7 @@
     if (edit) edit.activate(t);
     if (modify && modify.handles(t)) { var sel = visibleSelection(); if (t !== 'match') modify.activate(t, sel); }
     root.querySelectorAll('.pv-ic[data-tool]').forEach(function (b) { var on = b.getAttribute('data-tool') === t; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
-    renderOptions(); draw();
+    renderOptions(); draw(); syncSuTool();
     canvas.style.cursor = t === 'pan' ? 'grab' : (t === 'select' ? 'default' : 'crosshair');
   }
 
@@ -299,13 +333,13 @@
     root.querySelectorAll('.pv-ic[data-tool]').forEach(function (b) {
       var k = keyOf(b.getAttribute('data-tool')), kbd = b.querySelector('kbd'); if (kbd) kbd.textContent = k; b.title = b.getAttribute('data-title') + (k ? ' (' + k + ')' : '');
     });
-    [['pv-hide-btn', 'hide', 'Ẩn phần tử đang chọn (tạm thời)'], ['pv-isolate-btn', 'isolate', 'Cô lập phần tử đang chọn (tạm thời)'], ['pv-sync-btn', 'sync', 'Đồng bộ chọn với SketchUp'], ['pv-status-btn', 'status', 'Hiện trạng thái so với model'], ['pv-build-btn', 'build', 'Dựng tầng này vào model (một bước hoàn tác)'], ['pv-supick-btn', 'supick', 'Chọn điểm trong SketchUp'], ['pv-browser-btn', 'browser', 'Cây dự án: ẩn / hiện'], ['pv-fit', 'fit', 'Vừa khung'], ['pv-snap', 'snap', 'Bắt điểm (bật / tắt)'], ['pv-props-btn', 'props', 'Thuộc tính: ẩn / hiện bảng bên trái'], ['pv-layers-btn', 'vis', 'Hiển thị: bật / tắt từng lớp'], ['pv-keys-btn', 'keys', 'Bảng phím tắt']].forEach(function (x) {
+    [['pv-hide-btn', 'hide', 'Ẩn phần tử đang chọn (tạm thời)'], ['pv-isolate-btn', 'isolate', 'Cô lập phần tử đang chọn (tạm thời)'], ['pv-sudraw-btn', 'sudraw', 'Vẽ trong SketchUp'], ['pv-sync-btn', 'sync', 'Đồng bộ chọn với SketchUp'], ['pv-status-btn', 'status', 'Hiện trạng thái so với model'], ['pv-build-btn', 'build', 'Dựng tầng này vào model (một bước hoàn tác)'], ['pv-supick-btn', 'supick', 'Chọn điểm trong SketchUp'], ['pv-browser-btn', 'browser', 'Cây dự án: ẩn / hiện'], ['pv-fit', 'fit', 'Vừa khung'], ['pv-snap', 'snap', 'Bắt điểm (bật / tắt)'], ['pv-props-btn', 'props', 'Thuộc tính: ẩn / hiện bảng bên trái'], ['pv-layers-btn', 'vis', 'Hiển thị: bật / tắt từng lớp'], ['pv-keys-btn', 'keys', 'Bảng phím tắt']].forEach(function (x) {
       var b = $(x[0]); if (!b) return; var k = keyOf(x[1]), kbd = b.querySelector('kbd'); if (kbd) kbd.textContent = k; b.title = x[2] + (k ? ' (' + k + ')' : '');
     });
   }
   function runCommand(id) {
     var c = COMMANDS.filter(function (x) { return x[0] === id; })[0]; if (!c) return;
-    if (id === 'fit') fitView(); else if (id === 'snap') $('pv-snap').click(); else if (id === 'props') $('pv-props-btn').click(); else if (id === 'sync') $('pv-sync-btn').click(); else if (id === 'status') $('pv-status-btn').click(); else if (id === 'build') $('pv-build-btn').click(); else if (id === 'supick') $('pv-supick-btn').click(); else if (id === 'browser') $('pv-browser-btn').click(); else if (id === 'keys') toggleKeys();
+    if (id === 'fit') fitView(); else if (id === 'snap') $('pv-snap').click(); else if (id === 'props') $('pv-props-btn').click(); else if (id === 'sudraw') $('pv-sudraw-btn').click(); else if (id === 'sync') $('pv-sync-btn').click(); else if (id === 'status') $('pv-status-btn').click(); else if (id === 'build') $('pv-build-btn').click(); else if (id === 'supick') $('pv-supick-btn').click(); else if (id === 'browser') $('pv-browser-btn').click(); else if (id === 'keys') toggleKeys();
     else if (id === 'vis') { var m = $('pv-layers'); if (m.hidden) $('pv-layers-btn').click(); else m.hidden = true; }
     else if (id === 'hide') hideSelection(); else if (id === 'isolate') isolateSelection(); else if (id === 'unhide') resetHidden();
     else if (id === 'delete') deleteSelection();
@@ -520,6 +554,7 @@
     drawOverlay(bg, ink);
     drawDims(bg, ink);
     updateStatus();
+    scheduleGhost();
   }
   var GUIDE_COLOR = '#00A6D6', MEASURE_COLOR = '#E5484D';
   function screenLine(l) { var r = Math.hypot(size.w, size.h) / view.s * 1.5, a = toScreen(l.p[0] - l.d[0] * r, l.p[1] - l.d[1] * r), b = toScreen(l.p[0] + l.d[0] * r, l.p[1] + l.d[1] * r); return [a, b]; }
@@ -845,10 +880,15 @@
       else if (d && d.mode === 'groups') { note = 'Đã chọn nguyên nhóm trong SketchUp (các phần tử thuộc nhiều nhóm).'; draw(); }
     },
     suState: function (active) {
-      suPicking = !!active; var b = $('pv-supick-btn'); if (b) { b.classList.toggle('on', suPicking); b.setAttribute('aria-pressed', String(suPicking)); }
+      suPicking = !!active; if (!active) lastGhostKey = ''; var b = $('pv-supick-btn'); if (b) { b.classList.toggle('on', suPicking); b.setAttribute('aria-pressed', String(suPicking)); }
       if (!active && note.indexOf('SketchUp') === 0) note = ''; draw();
     },
     suPoint: function (p) { injectClick([Number(p.x), Number(p.y)]); },
+    // Phím và ô giá trị của SketchUp (Enter, Backspace, Esc, số) đi như bàn phím / ô nhập trên mặt bằng.
+    suKey: function (k) { if (root.hidden) return; onKey({key: String(k), ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, target: document.body, preventDefault: function () {}}); },
+    suText: function (text) { if (root.hidden) return; var okT = vcb(String(text)); draw(); renderProps(); return okT; },
+    startDrawTool: function (t) { setSuDraw(true); setTool(t); },
+    suDrawOn: function () { return suDraw; },
     suMove: function (p) { injectMove([Number(p.x), Number(p.y)]); },
     statusOn: function () { return statusOn; },
     guides: function () { return levelGuides(); },
@@ -876,7 +916,7 @@
     // Dùng cho test: trạng thái xem và số phần tử đang vẽ.
     debug: function () {
       var counts = {}; shapes.forEach(function (s) { counts[s.layer] = (counts[s.layer] || 0) + 1; });
-      return {view: {cx: view.cx, cy: view.cy, s: view.s}, size: size, tool: tool, counts: counts, hover: hover && hover.text, selected: selection.length === 1 ? selection[0].title : (selection.length ? selection.length + ' phần tử' : null), selection: selection.map(function (x) { return x.title; }), snap: snap && {p: snap.p, text: snap.text, rank: snap.rank}, guides: levelGuides().length, guideLines: levelGuides().map(function (g) { return {p: g.p, d: g.d}; }), measure: measure && {a: measure.a, b: measure.b, done: measure.done}, draft: draft && (draft.ref ? 'ref' : 'first'), browserOpen: !$('pv-browser').hidden, hidden: hiddenCount, hiddenMode: hiddenMode, snapOn: snapOn, sync: syncOn, statusOn: statusOn, suPicking: suPicking, badges: badgeCounts(), badgesDrawn: badgesDrawn, modelStatusLevel: modelStatus && modelStatus.level, lastSent: lastSent, edit: edit && edit.debug(), modify: modify && modify.debug(), dims: dimHits.length, dimHits: dimHits.map(function (h) { return {x: h.x, y: h.y, w: h.w, h: h.h, id: h.dim.id, value: h.dim.value}; }), dimList: lastDims.map(function (d) { return {id: d.id, value: d.value, editable: d.editable}; }), chord: chord, keymap: Object.assign({}, keymap), tabIdx: tabIdx, hoverCount: hoverCount, level: currentId, tabs: levelList.length, visible: Object.assign({}, visible), axes: data && data.ok ? data.axes.length : 0};
+      return {view: {cx: view.cx, cy: view.cy, s: view.s}, size: size, tool: tool, counts: counts, hover: hover && hover.text, selected: selection.length === 1 ? selection[0].title : (selection.length ? selection.length + ' phần tử' : null), selection: selection.map(function (x) { return x.title; }), snap: snap && {p: snap.p, text: snap.text, rank: snap.rank}, guides: levelGuides().length, guideLines: levelGuides().map(function (g) { return {p: g.p, d: g.d}; }), measure: measure && {a: measure.a, b: measure.b, done: measure.done}, draft: draft && (draft.ref ? 'ref' : 'first'), browserOpen: !$('pv-browser').hidden, hidden: hiddenCount, hiddenMode: hiddenMode, suDraw: suDraw, snapOn: snapOn, sync: syncOn, statusOn: statusOn, suPicking: suPicking, badges: badgeCounts(), badgesDrawn: badgesDrawn, modelStatusLevel: modelStatus && modelStatus.level, lastSent: lastSent, edit: edit && edit.debug(), modify: modify && modify.debug(), dims: dimHits.length, dimHits: dimHits.map(function (h) { return {x: h.x, y: h.y, w: h.w, h: h.h, id: h.dim.id, value: h.dim.value}; }), dimList: lastDims.map(function (d) { return {id: d.id, value: d.value, editable: d.editable}; }), chord: chord, keymap: Object.assign({}, keymap), tabIdx: tabIdx, hoverCount: hoverCount, level: currentId, tabs: levelList.length, visible: Object.assign({}, visible), axes: data && data.ok ? data.axes.length : 0};
     },
     toScreen: toScreen, toWorld: toWorld, promptText: promptText
   };

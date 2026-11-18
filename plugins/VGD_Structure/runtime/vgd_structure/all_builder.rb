@@ -9,18 +9,20 @@ module VGD
       Error = Class.new(ArgumentError)
 
       # Mã tầng cần dựng của từng loại: tầng có lựa chọn loại đó; tầng trên cùng chỉ có sàn.
-      def self.targets(state, level_ids)
+      # only: nếu có thì chỉ dựng các loại này (dựng nhanh khi vẽ trực tiếp trong SketchUp).
+      def self.targets(state, level_ids, only = nil)
         last = state['levels'].last['id']
         KINDS.each_with_object({}) do |kind, out|
+          next if only && !only.include?(kind)
           ids = state['levels'].select { |l| level_ids.include?(l['id']) && !l['picks'][kind].empty? && (kind == 'slabs' || l['id'] != last) }.map { |l| l['id'] }
           out[kind] = ids unless ids.empty?
         end
       end
 
-      def self.prepare(model, raw_state, level_ids)
+      def self.prepare(model, raw_state, level_ids, only = nil)
         state = State.normalize!(raw_state)
         raise Error, 'Hãy chọn ít nhất một tầng để dựng.' unless level_ids.is_a?(Array) && !level_ids.empty?
-        targets = targets(state, level_ids)
+        targets = targets(state, level_ids, only)
         raise Error, 'Các tầng đã chọn chưa có cột, dầm, tường, sàn hay trần nào được chọn.' if targets.empty?
         contexts = targets.map do |kind, ids|
           [kind, case kind
@@ -39,8 +41,8 @@ module VGD
       end
 
       # Trả về {kinds: {loại => Result}, total:, issues: [...]}.
-      def self.build(model, raw_state, level_ids)
-        ctx = prepare(model, raw_state, level_ids)
+      def self.build(model, raw_state, level_ids, only = nil)
+        ctx = prepare(model, raw_state, level_ids, only)
         model.start_operation('VGD Structure · Dựng kết cấu', true)
         begin
           results = ctx[:contexts].each_with_object({}) do |(kind, c), out|
