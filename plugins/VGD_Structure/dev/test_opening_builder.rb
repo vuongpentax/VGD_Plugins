@@ -59,7 +59,7 @@ w1 = inst.find { |i| i.get_attribute('VGD_BIM_SOURCE', 'kind') == 'window' }
 ok('cửa đi trên tường X đặt tại (5850, 3600, 0); cửa sổ tại (6950, 3600, 900); cửa trên tường Y tại (4200, 850, 0)', mmv.call(d1) == [5850.0, 3600.0, 0.0] && mmv.call(w1) == [6950.0, 3600.0, 900.0] && mmv.call(d2) == [4200.0, 850.0, 0.0])
 ok('định nghĩa riêng theo phương và mặt cánh: cửa đi X, cửa đi Y lật, cửa sổ X', mo.definitions.list.map(&:name).sort == ['VGD Cửa sổ X 1200x1200x200', 'VGD Cửa đi X 900x2100x200', 'VGD Cửa đi Y 900x2100x200 lật'])
 dd = d1.definition.entities.grep(Sketchup::Face)
-ok('cửa đi: khung chữ U (8 đỉnh) đùn 200 theo bề dày tường và cánh đặc đùn 40', dd.size == 2 && dd.map { |f| f.points.size }.sort == [4, 8] && dd.map { |f| (f.height * MM).round(3) }.sort == [40.0, 200.0])
+ok('cửa đi: khung chữ U (8 đỉnh) đùn 200 theo bề dày tường, cánh đặc đùn 40, tay nắm đùn 30', dd.size == 3 && dd.map { |f| f.points.size }.sort == [4, 4, 8] && dd.map { |f| (f.height * MM).round(3) }.sort == [30.0, 40.0, 200.0])
 frame = dd.find { |f| f.points.size == 8 }
 ok('khung cửa đi chữ U đúng đa giác: thanh 50 hai bên và trên, không có thanh ngưỡng', frame.points.map { |p| [(p.x * MM).round(3), (p.z * MM).round(3)] } == [[0.0, 0.0], [50.0, 0.0], [50.0, 2050.0], [850.0, 2050.0], [850.0, 0.0], [900.0, 0.0], [900.0, 2100.0], [0.0, 2100.0]])
 leaf = dd.find { |f| f.points.size == 4 }

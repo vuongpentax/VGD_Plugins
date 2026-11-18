@@ -11,6 +11,11 @@ module VGD
       GLASS_THICKNESS = 6.0 # bề dày kính cửa sổ (mm)
       LEAF_GAP = 5.0        # khe giữa cánh và khung (mm)
       LEAF_RECESS = 20.0    # cánh thụt vào so với mặt tường (mm)
+      HANDLE_OFFSET = 90.0  # tay nắm cách mép cánh phía tự do (mm)
+      HANDLE_WIDTH = 60.0   # kích thước tay nắm (mm)
+      HANDLE_HEIGHT = 120.0
+      HANDLE_DEPTH = 30.0   # tay nắm nhô khỏi mặt cánh (mm)
+      HANDLE_Z = 950.0      # chân tay nắm tính từ đáy cửa (mm)
       Result = Struct.new(:levels, :total, :removed_orphans, :locked_orphans, :issues)
 
       def self.prepare(model, raw_state, level_ids)
@@ -113,14 +118,14 @@ module VGD
         instance.set_attribute(Schema::DICTIONARY, 'fp', ModelSync.fingerprint('opening', item))
         instance.set_attribute(Schema::DICTIONARY, 'type', item[:type_name])
         instance.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('w' => item[:w], 'h' => item[:h], 'sill' => item[:sill], 'thickness' => item[:thickness], 'wall' => item[:wall]))
-        instance.set_attribute(Schema::DICTIONARY, 'placement', JSON.generate('dir' => item[:dir], 'pos' => item[:pos], 'flip' => item[:flip]))
+        instance.set_attribute(Schema::DICTIONARY, 'placement', JSON.generate({'dir' => item[:dir], 'pos' => item[:pos], 'flip' => item[:flip]}.merge(item[:mirror] ? {'mirror' => true} : {})))
       end
 
       def self.definition_for(model, item, definitions)
         item = item.merge(dir: Placement.frame_dir(item)) # cửa trên tường xiên dùng định nghĩa cửa X rồi xoay
-        key = [item[:kind], item[:dir], item[:w], item[:h], item[:thickness], item[:flip]]
+        key = [item[:kind], item[:dir], item[:w], item[:h], item[:thickness], item[:flip], item[:mirror]]
         definitions[key] ||= begin
-          name = "VGD #{item[:kind] == 'door' ? 'Cửa đi' : 'Cửa sổ'} #{item[:dir].upcase} #{fmt(item[:w])}x#{fmt(item[:h])}x#{fmt(item[:thickness])}#{item[:flip] ? ' lật' : ''}"
+          name = "VGD #{item[:kind] == 'door' ? 'Cửa đi' : 'Cửa sổ'} #{item[:dir].upcase} #{fmt(item[:w])}x#{fmt(item[:h])}x#{fmt(item[:thickness])}#{item[:flip] ? ' lật' : ''}#{item[:mirror] && item[:kind] == 'door' ? ' bản lề cuối' : ''}"
           existing = model.definitions[name]
           existing && existing.valid? ? existing : make_definition(model, name, item)
         end
@@ -136,6 +141,10 @@ module VGD
           recess = item[:flip] ? t / 2.0 - LEAF_RECESS - LEAF_THICKNESS : -t / 2.0 + LEAF_RECESS
           g = LEAF_GAP
           extrude(definition, rect(f + g, w - f - g, g, h - f - g), recess, LEAF_THICKNESS, item[:dir])
+          # Tay nắm ở đầu tự do của cánh, nhô ra mặt cánh phía cánh mở (đối diện bản lề): nhìn trong 3D biết bản lề bên nào và cánh mở về phía nào.
+          u0 = item[:mirror] ? f + g + HANDLE_OFFSET : w - f - g - HANDLE_OFFSET - HANDLE_WIDTH
+          depth_from = item[:flip] ? recess - HANDLE_DEPTH : recess + LEAF_THICKNESS
+          extrude(definition, rect(u0, u0 + HANDLE_WIDTH, HANDLE_Z, HANDLE_Z + HANDLE_HEIGHT), depth_from, HANDLE_DEPTH, item[:dir])
         else
           extrude(definition, rect(0, w, 0, h), -t / 2.0, t, item[:dir], holes: [rect(f, w - f, f, h - f)])
           extrude(definition, rect(f, w - f, f, h - f), -GLASS_THICKNESS / 2.0, GLASS_THICKNESS, item[:dir])

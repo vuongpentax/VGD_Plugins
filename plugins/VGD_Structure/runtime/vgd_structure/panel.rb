@@ -39,6 +39,7 @@ module VGD
         @dialog.add_action_callback('build_all') { |_ctx, payload| safely(true) { build_all(JSON.parse(payload)) } }
         @dialog.add_action_callback('picks_copy') { |_ctx, payload| safely { picks_copy(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_reset') { |_ctx| safely { send_state(reset: true) } }
+        @dialog.add_action_callback('plate_probe') { |_ctx, payload| safely { plate_probe(JSON.parse(payload)) } }
         @dialog.add_action_callback('plan_select') { |_ctx, payload| safely { plan_select(JSON.parse(payload)) } }
         @dialog.add_action_callback('su_sync_edit') { |_ctx, payload| safely { @sync_edit = JSON.parse(payload) == true; remember_edit_state } }
         @dialog.add_action_callback('su_pick_start') { |_ctx| safely { su_pick_start } }
@@ -296,6 +297,12 @@ module VGD
         @last_state = State.normalize!(JSON.parse(payload.to_json))
       rescue ArgumentError
         nil
+      end
+
+      # Hình sàn / trần thực tế của một ô chưa chọn (xem trước khi rê chuột): cửa sổ hỏi, Ruby tính bằng cùng kế hoạch lúc dựng.
+      def plate_probe(payload)
+        result = Preview.probe(payload)
+        emit('plate_probe', {kind: payload['kind'], level: payload['level'], ref: payload['ref'], key: payload['key'], polygon: result && result[:polygon], holes: result && result[:holes]})
       end
 
       def emit_status(payload)

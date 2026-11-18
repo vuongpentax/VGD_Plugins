@@ -32,7 +32,9 @@ module VGD
       MOVE_INTERVAL = 0.06 # giây: gửi vị trí con trỏ cho cửa sổ (để hiện xem trước) không dày hơn mức này
       VK_BACK = 8
       VK_RETURN = 13
-      GHOST_COLOR = [47, 123, 255].freeze # xanh như xem trước trên mặt bằng
+      # Màu xem trước theo theme chung (shared/vgd-theme/vgd-theme.css): --vgd-accent #B48963 (hợp lệ) và --vgd-danger #A73D36 (sai, ví dụ cửa chồng hoặc ngoài tường).
+      GHOST_COLOR = [180, 137, 99].freeze
+      GHOST_BAD_COLOR = [167, 61, 54].freeze
       GHOST_ALPHA = 70                    # độ đục (0-255) của mặt bên khối xem trước
 
       def initialize(panel)
@@ -96,9 +98,9 @@ module VGD
         ghost = @panel.ghost_items
         return if ghost.empty?
         z = @panel.ghost_z.mm
-        view.drawing_color = Sketchup::Color.new(*GHOST_COLOR)
         view.line_width = 2
         ghost.each do |g|
+          view.drawing_color = Sketchup::Color.new(*(g['bad'] ? GHOST_BAD_COLOR : GHOST_COLOR))
           next draw_box(view, g) if g['t'] == 'box'
           pts = Array(g['pts']).map { |x, y| Geom::Point3d.new(x.mm, y.mm, z) }
           next if pts.empty?
@@ -112,14 +114,15 @@ module VGD
 
       # Khối 3D xem trước (khung dây + mặt bên mờ) đúng cao độ của phần tử sắp đặt; không tạo hình vào model.
       def draw_box(view, g)
+        color = g['bad'] ? GHOST_BAD_COLOR : GHOST_COLOR
         pts = g['pts'].map { |x, y| [x, y] }
         low = pts.map { |x, y| Geom::Point3d.new(x.mm, y.mm, g['z0'].mm) }
         high = pts.map { |x, y| Geom::Point3d.new(x.mm, y.mm, g['z1'].mm) }
         if view.respond_to?(:draw)
-          view.drawing_color = Sketchup::Color.new(*GHOST_COLOR, GHOST_ALPHA)
+          view.drawing_color = Sketchup::Color.new(*color, GHOST_ALPHA)
           low.each_index { |i| j = (i + 1) % low.size; view.draw(GL_QUADS, [low[i], low[j], high[j], high[i]]) }
         end
-        view.drawing_color = Sketchup::Color.new(*GHOST_COLOR)
+        view.drawing_color = Sketchup::Color.new(*color)
         view.line_width = 2
         view.draw_polyline(low + [low.first])
         view.draw_polyline(high + [high.first])

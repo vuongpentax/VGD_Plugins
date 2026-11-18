@@ -289,7 +289,7 @@ module VGD
         end
       end
 
-      # picks.openings: {mã cửa 'op_xxxxxxxx' => {wall: mã nhịp của tường, type: mã loại cửa, pos: vị trí TÂM cửa tính từ đầu tường (mm), flip: đổi mặt cánh}}.
+      # picks.openings: {mã cửa 'op_xxxxxxxx' => {wall: mã nhịp của tường, type: mã loại cửa, pos: vị trí TÂM cửa tính từ đầu tường (mm), flip: đổi mặt cánh (cánh mở về phía -v / +v của tường), mirror: bản lề ở đầu CUỐI cửa thay vì đầu đầu (chỉ lưu khi true)}}.
       # Cửa trên tường không còn trên lưới thì bỏ (đếm); loại cửa không tồn tại là lỗi.
       def self.openings!(raw, wall_refs, opening_types, level_name)
         return [{}, 0] if raw.nil?
@@ -307,7 +307,10 @@ module VGD
           raise Error, "Tầng “#{level_name}”: vị trí cửa #{id} phải là số (mm) từ 0 đến #{MAX_POS.to_i}." unless number?(pos) && pos.to_f.between?(0, MAX_POS)
           flip = entry.key?('flip') ? entry['flip'] : false
           raise Error, "Tầng “#{level_name}”: mục đổi mặt cánh của cửa #{id} phải là Có hoặc Không." unless flip == true || flip == false
+          mirror = entry.key?('mirror') ? entry['mirror'] : false
+          raise Error, "Tầng “#{level_name}”: mục bản lề của cửa #{id} phải là Có hoặc Không." unless mirror == true || mirror == false
           out[id] = {'wall' => entry['wall'], 'type' => entry['type'], 'pos' => pos.to_f.round(1), 'flip' => flip}
+          out[id]['mirror'] = true if mirror
         end
         [out, dropped]
       end

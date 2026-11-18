@@ -88,7 +88,16 @@
     $('remove').disabled = !state.drawn;
   }
 
+  // Hình sàn / trần thực tế của một ô chưa chọn (lùi theo dầm, cột, tường như lúc dựng) do Ruby tính; cache theo lần đổi dữ liệu để xem trước đúng hình sẽ dựng.
+  var probeCache = {}, probePending = {}, stateRev = 0;
+  function plateProbe(kind, levelId, ref) {
+    var key = kind + '|' + levelId + '|' + ref + '|' + stateRev;
+    if (key in probeCache) return probeCache[key];
+    if (!probePending[key]) { probePending[key] = true; call('plate_probe', {state: payload(), level: levelId, kind: kind, ref: ref, key: key}); }
+    return undefined;
+  }
   function changed(positionsOnly) {
+    stateRev++; probeCache = {}; probePending = {};
     if ($('check-list')) { $('check-list').replaceChildren(); $('check-summary').textContent = ''; }
     if (positionsOnly) refreshPositions();
     clearTimeout(timer);
@@ -772,15 +781,19 @@
       row.className = 'oprow';
       state.openingTypes.forEach(function (t) { sel.append(new Option((t.kind === 'door' ? 'Cửa đi ' : 'Cửa sổ ') + t.name + ' (' + t.w + '×' + t.h + ')', t.id)); });
       sel.value = e.type; sel.setAttribute('aria-label', 'Loại cửa ' + id);
-      sel.onchange = function () { e.type = sel.value; changed(); };
+      sel.onchange = function () { e.type = sel.value; changed(); renderOpeningEditor(); };
       pos.type = 'number'; pos.step = 'any'; pos.value = e.pos; pos.setAttribute('aria-label', 'Vị trí tâm cửa ' + id);
       pos.oninput = function () { e.pos = pos.value === '' ? NaN : Number(pos.value); changed(); };
       box.type = 'checkbox'; box.checked = !!e.flip; box.setAttribute('aria-label', 'Đổi mặt cánh ' + id);
       box.onchange = function () { e.flip = box.checked; changed(); };
       flip.append(box, document.createTextNode(' Đổi mặt'));
+      var hinge = document.createElement('label'), hbox = document.createElement('input'), isDoor = (state.openingTypes.filter(function (t) { return t.id === e.type; })[0] || {}).kind === 'door';
+      hbox.type = 'checkbox'; hbox.checked = !!e.mirror; hbox.setAttribute('aria-label', 'Bản lề ở cuối cửa ' + id);
+      hbox.onchange = function () { if (hbox.checked) e.mirror = true; else delete e.mirror; changed(); };
+      hinge.append(hbox, document.createTextNode(' Bản lề cuối')); hinge.hidden = !isDoor;
       del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.title = 'Xóa cửa này';
       del.onclick = function () { delete l.openingPicks[id]; renderOpeningEditor(); renderOpeningsButtons(); renderOpeningLevelSelects(); changed(); };
-      row.append(sel, pos, flip, del); list.appendChild(row);
+      row.append(sel, pos, flip, hinge, del); list.appendChild(row);
     });
     if (!list.children.length) { var p = document.createElement('p'); p.className = 'muted small'; p.textContent = 'Tường chưa có cửa. Bấm + Cửa đi hoặc + Cửa sổ.'; list.appendChild(p); }
   }
@@ -915,6 +928,7 @@
     } else if (event === 'su_text') { window.VGDPlan.suText(data.text);
     } else if (event === 'start_tool') { startDrawTool(data.tool);
     } else if (event === 'su_edit') { applySuEdit(data);
+    } else if (event === 'plate_probe') { probeCache[data.key] = data.polygon || false; if (window.VGDPlan && window.VGDPlan.ghostChanged) window.VGDPlan.ghostChanged();
     }
   }
   // ---- Thao tác từ tab Mặt bằng: có hoàn tác / làm lại (chỉ các thay đổi làm trên mặt bằng) ----
@@ -1008,7 +1022,7 @@
   }
   window.VGDS = {startTool: startDrawTool, receive: receive, _state: state, mutate: mutate, undo: undo, redo: redo, history: function () { return {undo: undoStack.length, redo: redoStack.length}; },
     api: {level: currentLevel, isTop: isTop, rid: rid, toAxes: toAxes, allSpans: allSpans, allCells: allCells, allRefs: allRefs, wallOpenings: wallOpenings, addAxis: addAxis, modes: {x: MODE_X, y: MODE_Y, p: MODE_P}}};
-  window.VGDPlanEdit.init({state: state, api: window.VGDS.api, mutate: mutate, say: function (t) { window.VGDPlan.say(t); }, scale: function () { return window.VGDPlan.scale(); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, bounds: function () { return window.VGDPlan.bounds(); }});
+  window.VGDPlanEdit.init({state: state, api: window.VGDS.api, mutate: mutate, probe: plateProbe, say: function (t) { window.VGDPlan.say(t); }, scale: function () { return window.VGDPlan.scale(); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, bounds: function () { return window.VGDPlan.bounds(); }});
   window.VGDPlanNotes.init({state: state, api: window.VGDS.api, mutate: mutate, say: function (t) { window.VGDPlan.say(t); }, scale: function () { return window.VGDPlan.scale(); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); },
     promptText: function (w, initial, done) { window.VGDPlan.promptText(w, initial, done); }});
   // Công cụ vẽ kết cấu (plan_edit) và vẽ 2D / ghi chú (plan_notes) dùng chung một cổng vào cửa sổ mặt bằng: công cụ nào đang chọn thì nhận lệnh.
@@ -1024,6 +1038,7 @@
     move: function (w) { if (drawCur) drawCur.move(w); }, click: function (w) { if (drawCur) return drawCur.click(w); },
     hint: function () { return drawCur ? drawCur.hint() : ''; }, ghost: function () { return drawCur ? drawCur.ghost() : []; },
     typed: function (n, cur) { return drawCur && drawCur.typed ? drawCur.typed(n, cur) : false; },
+    flipDoor: function (t, ref, shift) { return window.VGDPlanEdit.flipDoor(t, ref, shift); },
     finish: function () { return drawCur && drawCur.finish ? drawCur.finish() : false; }, undoPoint: function () { return drawCur && drawCur.undoPoint ? drawCur.undoPoint() : false; },
     propsFor: function (shape) { return shape.kind === 'note' ? window.VGDPlanNotes.propsFor(shape) : window.VGDPlanEdit.propsFor(shape); },
     remove: function (list) { return window.VGDPlanEdit.remove(list) + window.VGDPlanNotes.remove(list); },

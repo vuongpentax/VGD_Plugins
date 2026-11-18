@@ -102,11 +102,12 @@
   function wallLength(free) { return Math.hypot(free.b[0] - free.a[0], free.b[1] - free.a[1]); }
 
   // Cửa theo tường khi tường bị lật / xoay (fn là phép biến đổi điểm): nếu đầu tường a bị đổi sang đầu kia thì vị trí tính từ đầu tường đổi (dài - cũ);
-  // lật mặt cánh: phép LẬT giữ chiều tường thì đổi mặt, phép XOAY đổi chiều tường thì đổi mặt (bản lề luôn ở đầu tường, chưa có tùy chọn bản lề).
+  // lật mặt cánh: phép LẬT giữ chiều tường thì đổi mặt, phép XOAY đổi chiều tường thì đổi mặt; bản lề (mirror) ở đầu nào của cửa thì giữ nguyên đầu vật lý đó nên đổi cờ khi hai đầu tường đổi chỗ.
+  function toggleMirror(e) { if (e.mirror) delete e.mirror; else e.mirror = true; }
   function openingFixer(kind, fn) {
     return function (e, oldF, newF) {
       var m = fn(oldF.a), reversed = dist(m, newF.b) < dist(m, newF.a), L = wallLength(oldF);
-      if (reversed) e.pos = round(L - e.pos);
+      if (reversed) { e.pos = round(L - e.pos); toggleMirror(e); }
       if (kind === 'mirror' ? !reversed : reversed) e.flip = !e.flip;
     };
   }
@@ -136,7 +137,7 @@
     var o = lvl().openingPicks;
     Object.keys(o).slice().forEach(function (id) {
       var e = o[id], m = map[e.wall]; if (!m || m.kind !== 'wall') return;
-      var out = {wall: m.to, type: e.type, pos: e.pos, flip: !!e.flip};
+      var out = {wall: m.to, type: e.type, pos: e.pos, flip: !!e.flip}; if (e.mirror) out.mirror = true;
       if (fix) fix(out, m.old, m.next);
       if (keep) o[A.rid('op_')] = out; else o[id] = out;
     });
@@ -184,10 +185,10 @@
     var walls = (S.preview && S.preview.walls && S.preview.walls.items) || [], len = {}; walls.forEach(function (w) { len[w.ref] = w.length; });
     Object.keys(openings).slice().forEach(function (id) {
       var e = openings[id], to = moved[e.wall]; if (!to) return;
-      var out = {wall: to, type: e.type, pos: e.pos, flip: !!e.flip};
+      var out = {wall: to, type: e.type, pos: e.pos, flip: !!e.flip}; if (e.mirror) out.mirror = true;
       if (op.type === 'mirror') {
         var wallDir = e.wall.charAt(0);
-        if (len[e.wall] && op.dir === wallDir) out.pos = Math.round((len[e.wall] - e.pos) * 10) / 10; // lật qua trục VUÔNG GÓC với tường: đổi chiều dọc tường
+        if (len[e.wall] && op.dir === wallDir) { out.pos = Math.round((len[e.wall] - e.pos) * 10) / 10; toggleMirror(out); } // lật qua trục VUÔNG GÓC với tường: đổi chiều dọc tường, bản lề sang đầu kia
         if (op.dir !== wallDir) out.flip = !out.flip; // lật qua trục SONG SONG với tường: cánh sang mặt kia
       }
       if (keep) openings[A.rid('op_')] = out; else { delete openings[id]; openings[id] = out; }
@@ -420,7 +421,7 @@
     if (hit.ref === source.ref) { note = 'Đây là phần tử mẫu.'; return; }
     var src = source.pick, either = isFree(pick) || isFree(src);
     host.mutate(function () {
-      if (hit.kind === 'opening') { pick.type = src.type; pick.flip = !!src.flip; return; }
+      if (hit.kind === 'opening') { pick.type = src.type; pick.flip = !!src.flip; if (src.mirror) pick.mirror = true; else delete pick.mirror; return; }
       (either ? ['type'] : ['type', 'x', 'y', 'p']).forEach(function (k) { if (k in src) pick[k] = src[k]; else delete pick[k]; }); // phần tử tự do không có "vị trí theo quy ước lưới"
     });
     note = 'Đã áp dụng loại' + (either ? '' : ' và vị trí') + ' của ' + source.title + ' cho ' + hit.title + '.';

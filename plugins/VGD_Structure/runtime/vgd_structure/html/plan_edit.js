@@ -6,7 +6,7 @@
   var GOOD = '#2F7BFF', BAD = '#E5484D', TOL_NODE = 14, TOL_COLUMN = 28, TOL_SPAN = 12, OPENING_GAP = 50;
   var DESIGN = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'door', 'window'];
   var PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', opening: 'openingPicks'};
-  var opt = {column: {type: '', x: 'auto', y: 'auto', mode: 'grid', rot: '0'}, beam: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, wall: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, door: {type: '', flip: '0'}, window: {type: '', flip: '0'}, grid: {dir: 'x'}, slab: {mode: 'grid', edges: 'free', part: 'outer'}, ceiling: {mode: 'grid', edges: 'free', part: 'outer'}};
+  var opt = {column: {type: '', x: 'auto', y: 'auto', mode: 'grid', rot: '0'}, beam: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, wall: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, door: {type: '', hand: '0'}, window: {type: '', flip: '0'}, grid: {dir: 'x'}, slab: {mode: 'grid', edges: 'free', part: 'outer'}, ceiling: {mode: 'grid', edges: 'free', part: 'outer'}};
   var tool = null, chain = null, target = null, note = '', ring = null; // ring: đường bao / lỗ đang vẽ của sàn, trần đa giác {pts, part, host}
 
   function lvl() { return A.level(); }
@@ -71,7 +71,7 @@
   function optionsGrid(t) {
     if (t === 'column') return [{id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}, {id: 'x', label: 'Vị trí X', values: modeList('x'), value: opt.column.x}, {id: 'y', label: 'Vị trí Y', values: modeList('y'), value: opt.column.y}];
     if (t === 'beam' || t === 'wall') return [{id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}, {id: 'p', label: 'Vị trí ngang', values: modeList('p'), value: opt[t].p}];
-    if (t === 'door' || t === 'window') return [{id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}, {id: 'flip', label: 'Cánh', values: [['0', 'Mặc định'], ['1', 'Đổi mặt']], value: opt[t].flip}];
+    if (t === 'door' || t === 'window') return [{id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}, t === 'door' ? {id: 'hand', label: 'Bản lề (Space đổi)', values: [['0', 'Đầu tường'], ['1', 'Cuối tường']], value: opt.door.hand} : {id: 'flip', label: 'Cánh', values: [['0', 'Mặc định'], ['1', 'Đổi mặt']], value: opt[t].flip}];
     if (t === 'grid') return [{id: 'dir', label: 'Loại trục', values: [['x', 'Trục đứng (đánh số)'], ['y', 'Trục ngang (đánh chữ)']], value: opt.grid.dir}];
     return [];
   }
@@ -117,6 +117,33 @@
       if (w[0] >= it.min[0] - e && w[0] <= it.max[0] + e && w[1] >= it.min[1] - e && w[1] <= it.max[1] + e) best = it;
     });
     return best;
+  }
+  // Phía của con trỏ so với tim tường: > 0 là phía +v (tường ngang: +Y, tường dọc: +X, tường xiên: pháp tuyến trái), < 0 là phía -v. Cửa đi mở về phía con trỏ như Revit.
+  function sideOf(wall, w) {
+    if (wall.dir === 'x') return w[1] - wall.center;
+    if (wall.dir === 'y') return w[0] - wall.center;
+    var len = wall.length, ux = (wall.b[0] - wall.a[0]) / len, uy = (wall.b[1] - wall.a[1]) / len;
+    return -(w[0] - wall.a[0]) * uy + (w[1] - wall.a[1]) * ux;
+  }
+  // Điểm theo (u dọc tường tính từ đầu tường, v vuông góc tim tường) trong tọa độ thế giới, cùng hệ với vẽ cửa trên mặt bằng.
+  function wallPoint(wall, u, v) {
+    if (wall.dir === 'x') return [wall.start + u, wall.center + v];
+    if (wall.dir === 'y') return [wall.center + v, wall.start + u];
+    var len = wall.length, ux = (wall.b[0] - wall.a[0]) / len, uy = (wall.b[1] - wall.a[1]) / len;
+    return [wall.a[0] + ux * u - uy * v, wall.a[1] + uy * u + ux * v];
+  }
+  // Cánh và cung quay của cửa đi (xem trước đúng hướng mở và bản lề sẽ dựng).
+  function swingGhost(wall, type, pos, flip, mirror, color) {
+    var w = type.w, dir = flip ? -1 : 1, hu = mirror ? pos + w / 2 : pos - w / 2, su = mirror ? -1 : 1, g = [], prev = null;
+    g.push({t: 'line', a: wallPoint(wall, hu, 0), b: wallPoint(wall, hu, dir * w), color: color, width: 2.5});
+    for (var k = 0; k <= 12; k++) { var a = k / 12 * Math.PI / 2, p = wallPoint(wall, hu + su * w * Math.cos(a), dir * w * Math.sin(a)); if (prev) g.push({t: 'line', a: prev, b: p, color: color, width: 1, dash: [3, 3]}); prev = p; }
+    return g;
+  }
+  // Space: đặt cửa đi thì đổi bản lề trái / phải; đang chọn một cửa thì đổi bản lề của cửa đó (Shift: đổi hướng mở). Trả về true nếu đã xử lý.
+  function flipDoor(currentTool, ref, shift) {
+    if (ref && lvl().openingPicks[ref]) { edit(function () { var e = lvl().openingPicks[ref]; if (shift) e.flip = !e.flip; else if (e.mirror) delete e.mirror; else e.mirror = true; }); return true; }
+    if (currentTool === 'door') { opt.door.hand = opt.door.hand === '1' ? '0' : '1'; note = 'Bản lề ở ' + (opt.door.hand === '1' ? 'cuối' : 'đầu') + ' tường.'; return true; }
+    return false;
   }
   // Cửa: tâm cách đầu tường; kiểm tra như WallPlan.place_openings (trong tường, không quá cao, cách cửa khác >= 50 mm).
   function openingCheck(wall, type, pos) {
@@ -275,7 +302,7 @@
     if (tool === 'slab' || tool === 'ceiling') { var c = cellAt(w); if (c) target = {cell: c, exists: !!lvl()[PICKS[tool]][c.ref]}; return; }
     if (tool === 'door' || tool === 'window') {
       var wall = wallAt(w), type = typeById(tool, currentType(tool));
-      if (wall) { var pos = openingPos(wall, w); target = {wall: wall, type: type, pos: pos, error: openingCheck(wall, type, pos)}; }
+      if (wall) { var pos = openingPos(wall, w); target = {wall: wall, type: type, pos: pos, flip: tool === 'door' ? sideOf(wall, w) < 0 : opt[tool].flip === '1', error: openingCheck(wall, type, pos)}; }
     }
   }
 
@@ -318,7 +345,7 @@
     if (tool === 'door' || tool === 'window') {
       if (target.error) { note = target.error; return; }
       var id = A.rid('op_');
-      host.mutate(function () { lvl().openingPicks[id] = {wall: target.wall.ref, type: target.type.id, pos: target.pos + (target.wall.join_shift || 0), flip: opt[tool].flip === '1'}; });
+      host.mutate(function () { lvl().openingPicks[id] = {wall: target.wall.ref, type: target.type.id, pos: target.pos + (target.wall.join_shift || 0), flip: !!target.flip}; if (tool === 'door' && opt.door.hand === '1') lvl().openingPicks[id].mirror = true; });
       note = 'Đã đặt ' + (tool === 'door' ? 'cửa đi' : 'cửa sổ') + ' ' + target.type.name + ' trên tường ' + target.wall.ref + ', tâm cách đầu tường ' + target.pos + ' mm.';
     }
   }
@@ -398,17 +425,24 @@
       else if (target.node) g.push({t: 'dot', p: [target.node.x, target.node.y], color: GOOD, r: 6});
       else if (target.span) { var sp = target.span; g.push(solid({t: 'line', a: sp.dir === 'x' ? [sp.a, sp.axis] : [sp.axis, sp.a], b: sp.dir === 'x' ? [sp.b, sp.axis] : [sp.axis, sp.b], color: target.exists ? BAD : GOOD, width: 5, alpha: 0.5}, tool)); }
     } else if (tool === 'slab' || tool === 'ceiling') {
-      var c = target.cell; g.push({t: 'poly', poly: [[c.x0, c.y0], [c.x1, c.y0], [c.x1, c.y1], [c.x0, c.y1]], color: target.exists ? BAD : GOOD, alpha: 0.2});
+      var c = target.cell, key = tool + 's', real, sec = S.preview && S.preview[key];
+      // Hình THỰC TẾ sẽ dựng (lùi theo dầm, cột, tường): ô đã chọn lấy từ kết quả xem trước; ô chưa chọn nhờ Ruby tính (có thể chưa kịp: tạm hiện cả ô nét đứt).
+      if (target.exists) { var it = sec && sec.items.filter(function (x) { return x.ref === c.ref; })[0]; real = it && it.polygon; }
+      else if (host.probe) real = host.probe(key, lvl().id, c.ref);
+      var full = [[c.x0, c.y0], [c.x1, c.y0], [c.x1, c.y1], [c.x0, c.y1]], unknown = !real && real !== false;
+      g.push({t: 'poly', poly: real || full, color: target.exists || real === false ? BAD : GOOD, alpha: unknown ? 0.08 : 0.2, dash: unknown ? [6, 4] : undefined});
     } else if (target.wall && target.type) {
       var wl = target.wall, along = wl.start + target.pos - target.type.w / 2, h = wl.dir === 'x';
       if (wl.dir === 'o') {
         var ux = (wl.b[0] - wl.a[0]) / wl.length, uy = (wl.b[1] - wl.a[1]) / wl.length, u0 = target.pos - target.type.w / 2, u1 = target.pos + target.type.w / 2, hv = wl.t / 2;
         var at = function (u, v) { return [wl.a[0] + ux * u - uy * v, wl.a[1] + uy * u + ux * v]; };
         g.push({t: 'poly', poly: [at(u0, -hv), at(u1, -hv), at(u1, hv), at(u0, hv)], color: target.error ? BAD : GOOD, alpha: 0.35});
+        if (tool === 'door') g = g.concat(swingGhost(wl, target.type, target.pos, target.flip, opt.door.hand === '1', target.error ? BAD : GOOD));
         return g;
       }
       var min = h ? [along, wl.min[1]] : [wl.min[0], along], max = h ? [along + target.type.w, wl.max[1]] : [wl.max[0], along + target.type.w];
       g.push({t: 'poly', poly: [[min[0], min[1]], [max[0], min[1]], [max[0], max[1]], [min[0], max[1]]], color: target.error ? BAD : GOOD, alpha: 0.35});
+      if (tool === 'door') g = g.concat(swingGhost(wl, target.type, target.pos, target.flip, opt.door.hand === '1', target.error ? BAD : GOOD));
     }
     return g;
   }
@@ -491,7 +525,8 @@
       var kind = (typeById('door', pick.type) ? 'door' : 'window');
       out.push(field('type', 'Loại', 'select', typeValues(kind), pick.type, function (v) { edit(function () { pick.type = v; }); }),
                field('pos', 'Tâm cách đầu tường (mm)', 'number', null, pick.pos, function (v) { if (isFinite(v)) edit(function () { pick.pos = v; }); }),
-               field('flip', 'Đổi mặt cánh', 'checkbox', null, !!pick.flip, function (v) { edit(function () { pick.flip = !!v; }); }));
+               field('flip', kind === 'door' ? 'Đổi hướng mở (sang phía kia của tường)' : 'Đổi mặt cánh', 'checkbox', null, !!pick.flip, function (v) { edit(function () { pick.flip = !!v; }); }));
+      if (kind === 'door') out.push(field('mirror', 'Bản lề ở cuối cửa (trái ↔ phải)', 'checkbox', null, !!pick.mirror, function (v) { edit(function () { if (v) pick.mirror = true; else delete pick.mirror; }); }));
     }
     return out;
   }
@@ -565,7 +600,7 @@
   window.VGDPlanEdit = {
     init: function (h) { host = h; S = h.state; A = h.api; },
     handles: handles, activate: activate, cancel: cancel, busy: busy, options: options, setOption: setOption, freeMode: freeMode, typed: typed, finish: finish, undoPoint: undoPoint,
-    move: move, click: click, hint: hint, ghost: ghost, remove: remove, propsFor: propsFor,
+    flipDoor: flipDoor, move: move, click: click, hint: hint, ghost: ghost, remove: remove, propsFor: propsFor,
     debug: function () { return {tool: tool, chain: chain && chain.ref, chainPoint: chain && chain.p, freeTarget: target && target.free, target: target && {ref: target.node && target.node.ref, end: target.end && target.end.ref, refs: target.refs, span: target.span && target.span.ref, cell: target.cell && target.cell.ref, exists: target.exists, error: target.error, pos: target.pos}, note: note, opt: JSON.parse(JSON.stringify(opt))}; }
   };
 })();

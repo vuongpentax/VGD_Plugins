@@ -264,8 +264,9 @@
     var items = [];
     if (suPicking && ed()) ed().ghost().forEach(function (g) {
       var z = ghostZ(g);
-      if (g.t === 'line') { items.push({t: 'line', pts: [g.a, g.b]}); var q = z && g.thick ? ghostStrip(g.a, g.b, g.thick) : null; if (q) items.push({t: 'box', pts: q, z0: z[0], z1: z[1]}); }
-      else if (g.t === 'poly') { if (z && g.poly.length >= 3) items.push({t: 'box', pts: g.poly, z0: z[0], z1: z[1]}); else items.push({t: 'poly', pts: g.poly}); }
+      var bad = g.color === GHOST_BAD;
+      if (g.t === 'line') { items.push({t: 'line', pts: [g.a, g.b], bad: bad}); var q = z && g.thick ? ghostStrip(g.a, g.b, g.thick) : null; if (q) items.push({t: 'box', pts: q, z0: z[0], z1: z[1], bad: bad}); }
+      else if (g.t === 'poly') { if (z && g.poly.length >= 3) items.push({t: 'box', pts: g.poly, z0: z[0], z1: z[1], bad: bad}); else items.push({t: 'poly', pts: g.poly, bad: bad}); }
       else if (g.t === 'dot') items.push({t: 'dot', pts: [g.p]});
     });
     var lv = levelList.filter(function (l) { return l.id === currentId; })[0], payloadG = {z: lv ? lv.elevation : 0, items: items}, key = JSON.stringify(payloadG);
@@ -587,7 +588,9 @@
     updateStatus();
     scheduleGhost();
   }
-  var GUIDE_COLOR = '#00A6D6', MEASURE_COLOR = '#E5484D';
+  var GUIDE_COLOR = '#00A6D6', MEASURE_COLOR = '#E5484D', GHOST_GOOD = '#2F7BFF', GHOST_BAD = '#E5484D';
+  // Màu xem trước (hợp lệ / sai) lấy từ theme chung (shared/vgd-theme): màu nhấn và màu cảnh báo; các công cụ vẽ vẫn khai báo hai màu cũ, đổi tại đây một nơi.
+  function themeColor(c) { return c === GHOST_GOOD ? css('--vgd-accent', '#B48963') : c === GHOST_BAD ? css('--vgd-danger', '#A73D36') : c; }
   function screenLine(l) { var r = Math.hypot(size.w, size.h) / view.s * 1.5, a = toScreen(l.p[0] - l.d[0] * r, l.p[1] - l.d[1] * r), b = toScreen(l.p[0] + l.d[0] * r, l.p[1] + l.d[1] * r); return [a, b]; }
   function strokeLine(l, color, dash) { var q = screenLine(l); ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1]); ctx.lineTo(q[1][0], q[1][1]); ctx.lineWidth = 1; ctx.strokeStyle = color; ctx.setLineDash(dash || []); ctx.stroke(); ctx.setLineDash([]); }
   function tag(text, x, y, bg, ink, color) {
@@ -600,12 +603,12 @@
   function drawOverlay(bg, ink) {
     levelGuides().forEach(function (g) { strokeLine(g, GUIDE_COLOR, [6, 4]); });
     if (ed()) ed().ghost().forEach(function (g) {
-      ctx.save(); ctx.globalAlpha = g.alpha || 1; ctx.strokeStyle = g.color; ctx.fillStyle = g.color; ctx.lineWidth = g.width || 1.5; ctx.setLineDash(g.dash || []);
+      ctx.save(); ctx.globalAlpha = g.alpha || 1; ctx.strokeStyle = themeColor(g.color); ctx.fillStyle = themeColor(g.color); ctx.lineWidth = g.width || 1.5; ctx.setLineDash(g.dash || []);
       if (g.t === 'poly') { path(g.poly); ctx.fill(); ctx.globalAlpha = 1; ctx.stroke(); }
       else if (g.t === 'line') { var a = toScreen(g.a[0], g.a[1]), b = toScreen(g.b[0], g.b[1]); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
       else if (g.t === 'dot') { var c0 = toScreen(g.p[0], g.p[1]); ctx.beginPath(); ctx.arc(c0[0], c0[1], g.r || 4, 0, Math.PI * 2); ctx.fill(); }
       ctx.restore();
-      if (g.t === 'text') { var q = toScreen(g.p[0], g.p[1]); tag(g.text, q[0] + 10, q[1] - 14, bg, ink, g.color || GUIDE_COLOR); }
+      if (g.t === 'text') { var q = toScreen(g.p[0], g.p[1]); tag(g.text, q[0] + 10, q[1] - 14, bg, ink, themeColor(g.color) || GUIDE_COLOR); }
     });
     // đường gióng đang đặt
     var cur = snap ? snap.p : cursor;
@@ -615,7 +618,7 @@
     }
     if (measure) {
       var a = measure.a, b = measure.b || (cur ? constrain(a, cur) : null);
-      var sa = toScreen(a[0], a[1]); ctx.fillStyle = MEASURE_COLOR; ctx.beginPath(); ctx.arc(sa[0], sa[1], 3.5, 0, Math.PI * 2); ctx.fill();
+      var sa = toScreen(a[0], a[1]); ctx.fillStyle = themeColor(MEASURE_COLOR); ctx.beginPath(); ctx.arc(sa[0], sa[1], 3.5, 0, Math.PI * 2); ctx.fill();
       if (b) {
         var sb = toScreen(b[0], b[1]); ctx.beginPath(); ctx.moveTo(sa[0], sa[1]); ctx.lineTo(sb[0], sb[1]); ctx.lineWidth = 1.5; ctx.strokeStyle = MEASURE_COLOR; ctx.stroke();
         ctx.beginPath(); ctx.arc(sb[0], sb[1], 3.5, 0, Math.PI * 2); ctx.fill();
@@ -720,10 +723,11 @@
     }
     function line(p, q, width) { var s = toScreen(p[0], p[1]), e = toScreen(q[0], q[1]); ctx.beginPath(); ctx.moveTo(s[0], s[1]); ctx.lineTo(e[0], e[1]); ctx.lineWidth = width; ctx.strokeStyle = color; ctx.stroke(); }
     if (i.kind === 'window') { line(pt(a0, mid), pt(a1, mid), 1.5); return; }
-    var w = a1 - a0, dir = i.flip ? -1 : 1, hinge = pt(a0, mid), leaf = pt(a0, mid + dir * w);
+    // Hướng mở: flip false = cánh mở về phía +v của tường, true = phía -v; bản lề ở đầu đầu cửa, mirror = ở đầu cuối (như bản lề trái / phải của Revit).
+    var w = a1 - a0, dir = i.flip ? -1 : 1, hu = i.mirror ? a1 : a0, su = i.mirror ? -1 : 1, hinge = pt(hu, mid), leaf = pt(hu, mid + dir * w);
     line(hinge, leaf, 2);
     ctx.beginPath();
-    for (var k = 0; k <= 12; k++) { var t = k / 12 * Math.PI / 2, p = pt(a0 + w * Math.cos(t), mid + dir * w * Math.sin(t)), q = toScreen(p[0], p[1]); if (k) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }
+    for (var k = 0; k <= 12; k++) { var t = k / 12 * Math.PI / 2, p = pt(hu + su * w * Math.cos(t), mid + dir * w * Math.sin(t)), q = toScreen(p[0], p[1]); if (k) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }
     ctx.lineWidth = 1; ctx.strokeStyle = color; ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
   }
   function usesSnap() { return tool === 'measure' || tool === 'guide' || tool === 'grid' || (edit && edit.handles(tool) && edit.freeMode && edit.freeMode(tool)) || (modify && modify.handles(tool) && ['move', 'copy', 'array', 'rotate'].indexOf(tool) >= 0); }
@@ -845,6 +849,10 @@
       if (kl === 'y' || (kl === 'z' && e.shiftKey)) { opts.redo(); e.preventDefault(); return; }
       if (kl === 'a') { selLevel = currentId; selection = shapes.filter(function (x) { return vis(x); }); draw(); renderProps(); notifySelection(); e.preventDefault(); } return; }
     if (e.altKey) return;
+    if (k === ' ' && edit && edit.flipDoor) { // Space như Revit: đặt cửa đi thì đổi bản lề trái / phải; đang chọn một cửa thì đổi bản lề (Shift: đổi hướng mở)
+      var one = selection.length === 1 && selection[0].kind === 'opening' ? selection[0] : null;
+      if (edit.flipDoor(tool, one && one.ref, e.shiftKey)) { draw(); renderProps(); e.preventDefault(); return; }
+    }
     if (k === 'Enter' && edit && edit.handles(tool) && edit.finish) { edit.finish(); draw(); renderProps(); e.preventDefault(); return; } // khép sàn / trần đa giác đang vẽ
     if (k === 'Backspace' && edit && edit.handles(tool) && edit.undoPoint && edit.undoPoint()) { draw(); e.preventDefault(); return; } // bỏ đỉnh cuối khi đang vẽ đa giác
     if (k === 'Delete' || k === 'Backspace') { deleteSelection(); e.preventDefault(); return; }
@@ -940,7 +948,7 @@
     },
     say: function (text) { note = text; draw(); },
     shapeAt: function (w) { return pickAll(w[0], w[1])[0] || null; }, finish: function () { var m = modify ? modify.hint() : ''; setTool('select'); note = m; draw(); },
-    refreshHistory: refreshHistory, scale: function () { return view.s; }, bounds: function () { return worldBounds(data) || [0, 0, 1000, 1000]; },
+    ghostChanged: function () { draw(); scheduleGhost(); },     refreshHistory: refreshHistory, scale: function () { return view.s; }, bounds: function () { return worldBounds(data) || [0, 0, 1000, 1000]; },
     snapPoint: function (w) { var r = snapOn ? snapAt(w[0], w[1]) : null; return r ? r.p : null; },
     reloadKeys: function () { loadKeys(); buildKeys(); refreshBadges(); },
     fit: fitView,
