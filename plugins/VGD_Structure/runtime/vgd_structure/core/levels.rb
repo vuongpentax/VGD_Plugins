@@ -24,6 +24,9 @@ module VGD
       FREE_ID = {'cột' => /\Afc_[0-9a-f]{8}\z/, 'dầm' => /\Afb_[0-9a-f]{8}\z/, 'tường' => /\Afw_[0-9a-f]{8}\z/}.freeze
       FREE_LIMIT = 1_000_000.0  # tọa độ phần tử tự do (mm)
       FREE_MIN_LENGTH = 100.0
+      PLATE_ID = {'sàn' => /\Afs_[0-9a-f]{8}\z/, 'trần' => /\Afk_[0-9a-f]{8}\z/}.freeze # sàn / trần đa giác tự do (P4b-3)
+      MAX_RING = 200   # số đỉnh tối đa của một vòng
+      MAX_HOLES = 20   # số lỗ tối đa của một sàn / trần
       FREE_ORTHO_TOLERANCE = 0.05 # đầu mút lệch dưới mức này (mm) thì coi là ngang hoặc dọc và làm thẳng
       CONTROL = /[\u0000-\u001f\u007f]/
 
@@ -159,15 +162,54 @@ module VGD
       end
 
       # picks.slabs / picks.ceilings: {mã ô => {}} (chưa có thuộc tính riêng từng ô). Mã ô không còn trên lưới thì bỏ (đếm).
+      # Sàn / trần ĐA GIÁC TỰ DO (P4b-3): mã fs_ / fk_ + 8 chữ số 16, có khóa 'free' => {'poly' => [[x, y], ...], 'holes' => [[[x, y], ...], ...]}:
+      # vòng ngoài đơn (không tự cắt, ngược chiều kim đồng hồ sau khi chuẩn hóa), các lỗ nằm hẳn trong vòng ngoài và không chạm nhau. Không bị bỏ khi lưới đổi.
       def self.cell_picks!(raw, refs, level_name, label)
         return [{}, 0] if raw.nil?
         picks = {}
         dropped = 0
         raw.each do |ref, pick|
           raise Error, "Tầng “#{level_name}”: #{label} #{ref} không hợp lệ." unless ref.is_a?(String) && pick.is_a?(Hash)
+          if pick.key?('free')
+            raise Error, "Tầng “#{level_name}”: #{label} đa giác có mã #{ref} không hợp lệ." unless ref.match?(PLATE_ID.fetch(label))
+            picks[ref] = {'free' => plate_free!(pick['free'], label, ref, level_name)}
+            next
+          end
           refs.include?(ref) ? picks[ref] = {} : dropped += 1
         end
         [picks, dropped]
+      end
+
+      def self.plate_free!(free, label, ref, level_name)
+        who = "Tầng “#{level_name}”: #{label} đa giác #{ref}"
+        raise Error, "#{who} thiếu dữ liệu hình." unless free.is_a?(Hash)
+        ring = lambda do |points, name|
+          raise Error, "#{who}: #{name} phải là danh sách đỉnh [x, y]." unless points.is_a?(Array) && points.all? { |p| p.is_a?(Array) && p.size == 2 }
+          raise Error, "#{who}: #{name} có quá nhiều đỉnh (tối đa #{MAX_RING})." if points.size > MAX_RING + 1
+          pts = points.map do |p|
+            raise Error, "#{who}: tọa độ phải là số (mm), không quá #{FREE_LIMIT.to_i}." unless p.all? { |v| number?(v) && v.abs <= FREE_LIMIT }
+            p.map { |v| v.to_f.round(1) }
+          end
+          pts = Geometry.clean_ring(pts)
+          raise Error, "#{who}: #{name} cần ít nhất 3 đỉnh khác nhau." if pts.size < 3
+          raise Error, "#{who}: #{name} tự cắt hoặc có diện tích quá nhỏ (cần một đường khép kín không tự cắt)." unless Geometry.simple_ring?(pts)
+          Geometry.area2(pts) < 0 ? pts.reverse : pts
+        end
+        outer = ring.call(free['poly'], 'đường bao')
+        raw_holes = free.key?('holes') ? free['holes'] : []
+        raise Error, "#{who}: danh sách lỗ không hợp lệ." unless raw_holes.is_a?(Array)
+        raise Error, "#{who}: quá nhiều lỗ (tối đa #{MAX_HOLES})." if raw_holes.size > MAX_HOLES
+        holes = raw_holes.each_with_index.map { |h, i| ring.call(h, "lỗ #{i + 1}") }
+        holes.each_with_index do |h, i|
+          inside = h.all? { |v| Geometry.inside_ring?(v, outer) } && outer.each_with_index.none? { |a, k| h.each_with_index.any? { |c, m| Geometry.segments_touch?(a, outer[(k + 1) % outer.size], c, h[(m + 1) % h.size]) } }
+          raise Error, "#{who}: lỗ #{i + 1} phải nằm hẳn trong đường bao (không chạm cạnh)." unless inside
+          holes.each_with_index do |o, j|
+            next unless j > i
+            touch = h.each_with_index.any? { |a, k| o.each_with_index.any? { |c, m| Geometry.segments_touch?(a, h[(k + 1) % h.size], c, o[(m + 1) % o.size]) } }
+            raise Error, "#{who}: lỗ #{i + 1} và lỗ #{j + 1} chạm hoặc chồng nhau." if touch || h.any? { |v| Geometry.inside_ring?(v, o) } || o.any? { |v| Geometry.inside_ring?(v, h) }
+          end
+        end
+        {'poly' => outer, 'holes' => holes}
       end
 
       # picks.openings: {mã cửa 'op_xxxxxxxx' => {wall: mã nhịp của tường, type: mã loại cửa, pos: vị trí TÂM cửa tính từ đầu tường (mm), flip: đổi mặt cánh}}.

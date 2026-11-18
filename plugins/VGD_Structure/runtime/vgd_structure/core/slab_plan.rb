@@ -11,7 +11,7 @@ module VGD
         cells = Grid.cells(grid).each_with_object({}) { |c, h| h[c[:ref]] = c }
         z_top = level['elevation']
         thickness = level['slab_thickness']
-        items = level['picks']['slabs'].keys.map do |ref|
+        items = level['picks']['slabs'].keys.reject { |ref| level['picks']['slabs'][ref]['free'] }.map do |ref|
           cell = cells.fetch(ref)
           {ref: ref, min: cell[:min], max: cell[:max], width: cell[:width], depth: cell[:depth], thickness: thickness, z_top: z_top, z_bottom: (z_top - thickness).round(1),
            area: (cell[:width] * cell[:depth] / 1_000_000.0).round(3)}
@@ -19,7 +19,12 @@ module VGD
         # theo thứ tự ô của lưới
         order = cells.keys
         items.sort_by! { |i| order.index(i[:ref]) }
-        {level: level, z_top: z_top, thickness: thickness, items: items, issues: []}
+        # Sàn ĐA GIÁC tự do (P4b-3): đúng hình đã vẽ, có thể có lỗ; trộn được với sàn theo ô, chồng nhau thì chỉ cảnh báo.
+        level['picks']['slabs'].each do |ref, pick|
+          free = pick['free'] or next
+          items << Plates.free_item(ref, free, thickness: thickness, z_top: z_top, z_bottom: (z_top - thickness).round(1))
+        end
+        {level: level, z_top: z_top, thickness: thickness, items: items, issues: Plates.overlap_issues(items, 'Sàn')}
       end
     end
   end

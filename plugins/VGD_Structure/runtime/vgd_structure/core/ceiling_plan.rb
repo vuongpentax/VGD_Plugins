@@ -70,6 +70,16 @@ module VGD
           items << {ref: ref, polygon: polygon.map { |p| p.map { |v| v.round(2) } }, min: [rx0.round(2), ry0.round(2)], max: [rx1.round(2), ry1.round(2)], z_bottom: z_bottom, z_top: z_top,
                     thickness: level['ceiling_thickness'], area: area.round(3)}
         end
+        # Trần ĐA GIÁC tự do (P4b-3): đúng hình đã vẽ (có thể có lỗ); không lùi theo tường / cột, chồng nhau thì chỉ cảnh báo.
+        free_ceilings = level['picks']['ceilings'].select { |_ref, pick| pick['free'] }.map do |ref, pick|
+          Plates.free_item(ref, pick['free'], thickness: level['ceiling_thickness'], z_bottom: z_bottom, z_top: z_top)
+        end
+        items.concat(free_ceilings)
+        issues.concat(Plates.overlap_issues(items, 'Trần'))
+        solids = column_plan[:items].map { |c| [ColumnPlan.polygon(c), "cột #{c[:ref]}"] } + walls.values.map { |w| [Plates.ring_of(w), "tường #{w[:ref]}"] }
+        free_ceilings.each do |fc|
+          solids.each { |ring, name| issues << "Trần #{fc[:ref]} chồng lên #{name} (trần đa giác không lùi theo tường, cột)." if Geometry.regions_overlap?(fc[:polygon], fc[:holes], ring, []) }
+        end
         # Trần chưa tính tường / cột TỰ DO (chỉ lùi theo tường và cột theo lưới): báo nếu chúng chồng lên trần.
         free_boxes = column_plan[:items].select { |c| c[:placement] == 'free' }.map { |c| ColumnPlan.box(c) + ["cột #{c[:ref]}"] }
         free_boxes += walls.values.select { |w| w[:placement] == 'free' }.map { |w| [w[:min], w[:max], "tường #{w[:ref]}"] }

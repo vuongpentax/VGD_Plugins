@@ -108,7 +108,7 @@ module VGD
         group.set_attribute(Schema::DICTIONARY, 'plugin_version', VERSION)
         plan[:items].each do |item|
           relative = relative_polygon(item)
-          definition = definition_for(model, spec, relative, item[:thickness], definitions)
+          definition = definition_for(model, spec, relative, item[:thickness], definitions, relative_holes(item))
           instance = group.entities.add_instance(definition, Geom::Transformation.new(Geom::Point3d.new(item[:min][0].mm, item[:min][1].mm, item[:z_bottom].mm)))
           instance.name = "#{spec[:name]} #{item[:ref]} (#{plan[:level]['name']})"
           instance.layer = layer
@@ -121,6 +121,11 @@ module VGD
       def self.relative_polygon(item)
         points = item[:polygon] || [[item[:min][0], item[:min][1]], [item[:max][0], item[:min][1]], [item[:max][0], item[:max][1]], [item[:min][0], item[:max][1]]]
         points.map { |x, y| [(x - item[:min][0]).round(2), (y - item[:min][1]).round(2)] }
+      end
+
+      # Các lỗ của sàn / trần đa giác tính từ cùng góc gốc với đa giác ngoài.
+      def self.relative_holes(item)
+        (item[:holes] || []).map { |ring| ring.map { |x, y| [(x - item[:min][0]).round(2), (y - item[:min][1]).round(2)] } }
       end
 
       # Dữ liệu trên tấm để VGD BIM đọc (SPEC mục 2).
@@ -136,18 +141,27 @@ module VGD
         instance.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('thickness' => item[:thickness], 'area' => item[:area], 'z_top' => item[:z_top]))
       end
 
-      def self.definition_for(model, spec, relative, thickness, definitions)
-        key = [relative, thickness]
+      def self.definition_for(model, spec, relative, thickness, definitions, holes = [])
+        key = [relative, thickness, holes]
         definitions[key] ||= begin
-          name = "VGD #{spec[:definition]} #{relative.flatten.map { |v| fmt(v) }.join('_')}x#{fmt(thickness)}"
+          name = if holes.empty? && relative.size <= 12
+                   "VGD #{spec[:definition]} #{relative.flatten.map { |v| fmt(v) }.join('_')}x#{fmt(thickness)}"
+                 else # hình nhiều đỉnh hoặc có lỗ: tên ngắn theo mã băm của hình
+                   "VGD #{spec[:definition]} #{Digest::SHA1.hexdigest(JSON.generate([relative, holes, thickness]))[0, 12]}"
+                 end
           existing = model.definitions[name]
-          existing && existing.valid? ? existing : make_definition(model, spec, name, relative, thickness)
+          existing && existing.valid? ? existing : make_definition(model, spec, name, relative, thickness, holes)
         end
       end
 
-      def self.make_definition(model, spec, name, relative, thickness)
+      # Mặt đáy (đa giác ngoài), lỗ tạo bằng cách thêm mặt nhỏ bên trong rồi xóa mặt đó, rồi đùn lên theo bề dày. Chưa xác minh trong SketchUp thật (đùn mặt có lỗ).
+      def self.make_definition(model, spec, name, relative, thickness, holes = [])
         definition = model.definitions.add(name)
         face = definition.entities.add_face(relative.map { |x, y| Geom::Point3d.new(x.mm, y.mm, 0) })
+        holes.each do |ring|
+          inner = definition.entities.add_face(ring.map { |x, y| Geom::Point3d.new(x.mm, y.mm, 0) })
+          inner.erase! if inner
+        end
         face.reverse! if face.normal.z < 0
         face.pushpull(thickness.mm)
         definition.set_attribute(Schema::DICTIONARY, 'kind', "#{spec[:kind]}_definition")
