@@ -172,13 +172,13 @@ Tài liệu tham khảo: `docs/reference/vtbim/` (phần Ruby mã hóa, JS của
 Mỗi cột mốc có test và RBZ beta để thử. Chưa phát hành.
 
 
-### 12.1. Đề xuất thiết kế P4b: phần tử tự do ngoài lưới (CHỜ CHỦ DỰ ÁN DUYỆT, chưa làm)
+### 12.1. Thiết kế P4b: phần tử tự do ngoài lưới (P4b-1 và P4b-2 xiên ĐÃ LÀM; sàn, trần đa giác để P4b-3)
 
 **Vấn đề:** dữ liệu hiện gắn theo lưới (cột ở giao điểm, dầm / tường theo nhịp, sàn / trần theo ô). Vì vậy chưa có tường xiên, cột lệch trục, tường nằm giữa hai trục; và các lệnh Rotate, Offset, Trim, Align của Revit không có nghĩa.
 
 **Đề xuất (làm từng bước, mỗi bước một RBZ):**
 1. **P4b-1, phần tử tự do vuông góc:** mỗi tầng có thêm danh sách **phần tử tự do** `free` song song với `picks` (không đổi, không xóa dữ liệu theo lưới nên dữ liệu cũ đọc được y nguyên): cột `{id, x, y, type}`, dầm và tường `{id, a:[x,y], b:[x,y], type, tim}` (a, b là đầu mút tính bằng mm theo gốc lưới; bước này chỉ cho ngang hoặc dọc), cửa gắn vào tường tự do. Công cụ vẽ cho bấm điểm **tự do** (có bắt điểm, gõ độ dài + Enter) thay vì chỉ giao điểm. Mở khóa: **Offset** (dời / nhân tường, dầm song song một khoảng), **Align** (kéo mặt tường, cột về một đường), **Trim / Extend** (cắt, kéo dài tới giao điểm hai tường, nối góc L / T), **Rotate 90°**, **Move / Copy / Mirror tự do** theo khoảng bất kỳ, kích thước tạm thời **sửa được** cho mọi phần tử, "Mở khóa lưới" (chuyển một phần tử theo lưới thành phần tử tự do).
-2. **P4b-2, xiên và đa giác:** tường, dầm, cột xoay **góc bất kỳ**, sàn và trần **đa giác tự do** (nhập theo đường bao), cửa trên tường xiên.
+2. **P4b-2, xiên (ĐÃ LÀM, 0.13.0-beta.1):** tường, dầm, cột xoay **góc bất kỳ**, cửa trên tường xiên; đầu cắt vuông, chưa nối góc xiên (chủ dự án chọn). **P4b-3 (chưa làm):** sàn và trần **đa giác tự do** (bấm từng đỉnh).
 
 **Việc phải sửa:** `State` / `Levels` (thêm `free`, tương thích dữ liệu cũ), thêm kế hoạch cho phần tử tự do (`FreeColumnPlan`, `FreeWallPlan`…) dùng lại quy tắc cao độ, cửa, chống chồng của kế hoạch theo lưới; `ColumnBuilder`, `BeamBuilder`, `WallBuilder`, `OpeningBuilder`, `PlateBuilder` (P4b-2: dựng đa giác xiên, lỗ cửa trên tường xiên); `Checker`, đề xuất, sao chép tầng; hợp đồng với VGD BIM (`dims`, ref) để BIM vẫn đọc đúng khối lượng; giao diện mặt bằng (vẽ, bắt điểm, thuộc tính, cây dự án) và test.
 

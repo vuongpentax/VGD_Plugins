@@ -345,10 +345,10 @@
     function add(layer, poly, title, rows, text) { shapes.push({layer: layer, kind: layer, ref: cur.ref, poly: poly, title: title, rows: rows, text: text}); }
     section('slabs').forEach(function (i) { cur = i; add('slab', rectPoly(i.min, i.max), 'Sàn ' + i.ref, [['Dày', mm(i.thickness)], ['Mặt trên', mm(i.z_top)], ['Diện tích', i.area + ' m²']], 'Sàn ' + i.ref + ' · dày ' + i.thickness + ' mm · ' + i.area + ' m²'); });
     section('ceilings').forEach(function (i) { cur = i; add('ceiling', i.polygon, 'Trần ' + i.ref, [['Dày', mm(i.thickness)], ['Mặt dưới', mm(i.z_bottom)], ['Diện tích', i.area + ' m²']], 'Trần ' + i.ref + ' · ' + i.area + ' m²'); });
-    section('beams').forEach(function (i) { cur = i; add('beam', rectPoly(i.min, i.max), (i.placement === 'free' ? 'Dầm tự do ' : 'Dầm ') + i.ref, [['Loại', i.type_name], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Dài', mm(i.length)], ['Đỉnh', mm(i.z_top)]], 'Dầm ' + i.ref + ' · ' + i.type_name + ' · dài ' + i.length + ' mm'); });
-    section('walls').forEach(function (i) { cur = i; add('wall', rectPoly(i.min, i.max), (i.placement === 'free' ? 'Tường tự do ' : 'Tường ') + i.ref, [['Loại', i.type_name], ['Dày', mm(i.t)], ['Dài', mm(i.length)], ['Cao', mm(i.height)], ['Số cửa', String((i.openings || []).length)]], 'Tường ' + i.ref + ' · ' + i.type_name + ' · dày ' + i.t + ' · dài ' + i.length + ' · cao ' + i.height + ' mm'); });
-    section('openings').forEach(function (i) { var k = i.kind === 'door' ? 'Cửa đi' : 'Cửa sổ'; cur = i; add('opening', rectPoly(i.min, i.max), k + ' ' + i.type_name, [['Loại', k], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Cao ngưỡng', mm(i.sill)], ['Tường', i.wall]], k + ' ' + i.type_name + ' · ' + i.w + ' × ' + i.h + ' mm · ngưỡng ' + i.sill); });
-    section('columns').forEach(function (i) { cur = i; add('column', rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), (i.placement === 'free' ? 'Cột tự do ' : 'Cột ') + i.ref, [['Loại', i.type_name], ['Rộng × sâu', i.w + ' × ' + i.d + ' mm'], ['Tâm', Math.round(i.center[0]) + ', ' + Math.round(i.center[1])]], 'Cột ' + i.ref + ' · ' + i.type_name + ' · ' + i.w + ' × ' + i.d + ' mm'); });
+    section('beams').forEach(function (i) { cur = i; add('beam', i.poly || rectPoly(i.min, i.max), (i.placement === 'free' ? 'Dầm tự do ' : 'Dầm ') + i.ref, [['Loại', i.type_name], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Dài', mm(i.length)], ['Đỉnh', mm(i.z_top)]].concat(i.dir === 'o' ? [['Góc', Math.round(i.angle * 100) / 100 + '°']] : []), 'Dầm ' + i.ref + ' · ' + i.type_name + ' · dài ' + i.length + ' mm'); });
+    section('walls').forEach(function (i) { cur = i; add('wall', i.poly || rectPoly(i.min, i.max), (i.placement === 'free' ? 'Tường tự do ' : 'Tường ') + i.ref, [['Loại', i.type_name], ['Dày', mm(i.t)], ['Dài', mm(i.length)], ['Cao', mm(i.height)], ['Số cửa', String((i.openings || []).length)]].concat(i.dir === 'o' ? [['Góc', Math.round(i.angle * 100) / 100 + '°']] : []), 'Tường ' + i.ref + ' · ' + i.type_name + ' · dày ' + i.t + ' · dài ' + i.length + ' · cao ' + i.height + ' mm'); });
+    section('openings').forEach(function (i) { var k = i.kind === 'door' ? 'Cửa đi' : 'Cửa sổ'; cur = i; add('opening', i.poly || rectPoly(i.min, i.max), k + ' ' + i.type_name, [['Loại', k], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Cao ngưỡng', mm(i.sill)], ['Tường', i.wall]], k + ' ' + i.type_name + ' · ' + i.w + ' × ' + i.h + ' mm · ngưỡng ' + i.sill); });
+    section('columns').forEach(function (i) { cur = i; add('column', i.poly || rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), (i.placement === 'free' ? 'Cột tự do ' : 'Cột ') + i.ref, [['Loại', i.type_name], ['Rộng × sâu', i.w + ' × ' + i.d + ' mm'], ['Tâm', Math.round(i.center[0]) + ', ' + Math.round(i.center[1])]].concat(i.rot ? [['Xoay', Math.round(i.rot * 100) / 100 + '°']] : []), 'Cột ' + i.ref + ' · ' + i.type_name + ' · ' + i.w + ' × ' + i.d + ' mm'); });
   }
   function inside(poly, x, y) {
     var c = false;
@@ -468,10 +468,10 @@
     if (!data || !data.ok) { ctx.fillStyle = muted; ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText((data && data.error) || 'Chưa có lưới trục hợp lệ.', size.w / 2, size.h / 2); updateStatus(); return; }
     if (visible.slab) section('slabs').forEach(function (i) { fillStroke(rectPoly(i.min, i.max), COLORS.slab, 0.12, null, 1); });
     if (visible.ceiling) section('ceilings').forEach(function (i) { fillStroke(i.polygon, COLORS.ceiling, 0.08, [5, 4], 1); });
-    if (visible.beam) section('beams').forEach(function (i) { fillStroke(rectPoly(i.min, i.max), COLORS.beam, 0.25, [6, 3], 1); });
-    if (visible.wall) section('walls').forEach(function (i) { fillStroke(rectPoly(i.min, i.max), COLORS.wall, 0.8, null, 1); });
+    if (visible.beam) section('beams').forEach(function (i) { fillStroke(i.poly || rectPoly(i.min, i.max), COLORS.beam, 0.25, [6, 3], 1); });
+    if (visible.wall) section('walls').forEach(function (i) { fillStroke(i.poly || rectPoly(i.min, i.max), COLORS.wall, 0.8, null, 1); });
     if (visible.opening) section('openings').forEach(function (i) { drawOpening(i, bg); });
-    if (visible.column) section('columns').forEach(function (i) { fillStroke(rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), COLORS.column, 0.9, null, 1.5); });
+    if (visible.column) section('columns').forEach(function (i) { fillStroke(i.poly || rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), COLORS.column, 0.9, null, 1.5); });
     if (visible.grid) drawGrid(ink);
     if (hover && visible[hover.layer]) { path(hover.poly); ctx.lineWidth = 2; ctx.strokeStyle = css('--vgd-accent', '#1e88e5'); ctx.stroke(); }
     visibleSelection().forEach(function (x) { path(x.poly); ctx.lineWidth = 3; ctx.setLineDash([6, 3]); ctx.strokeStyle = css('--vgd-accent', '#1e88e5'); ctx.stroke(); ctx.setLineDash([]); });
@@ -591,10 +591,14 @@
   }
   // Cửa: khoét lỗ trên nét tường; cửa đi có cánh mở 90° và cung quay, cửa sổ có hai nét kính.
   function drawOpening(i, bg) {
-    var poly = rectPoly(i.min, i.max), color = i.kind === 'door' ? COLORS.door : COLORS.window, along = i.dir === 'x' ? 0 : 1, across = 1 - along;
+    var poly = i.poly || rectPoly(i.min, i.max), color = i.kind === 'door' ? COLORS.door : COLORS.window, oblique = i.dir === 'o', along = i.dir === 'x' ? 0 : 1, across = 1 - along;
     path(poly); ctx.fillStyle = bg; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = color; ctx.stroke();
-    var mid = (i.min[across] + i.max[across]) / 2, a0 = i.min[along], a1 = i.max[along];
-    function pt(u, v) { var p = [0, 0]; p[along] = u; p[across] = v; return p; }
+    // Hệ tọa độ của cửa: (u, v) = dọc theo tường / vuông góc tường, gốc ở đầu cửa, tâm bề dày. Tường xiên: xoay theo góc tường; ngang / dọc: trục song song với trục thế giới.
+    var rad = oblique ? i.angle * Math.PI / 180 : 0, cs = Math.cos(rad), sn = Math.sin(rad), a0 = oblique ? 0 : i.min[along], a1 = oblique ? i.w : i.max[along], mid = oblique ? 0 : (i.min[across] + i.max[across]) / 2;
+    function pt(u, v) {
+      if (oblique) return [i.origin[0] + u * cs - v * sn, i.origin[1] + u * sn + v * cs];
+      var p = [0, 0]; p[along] = u; p[across] = v; return p;
+    }
     function line(p, q, width) { var s = toScreen(p[0], p[1]), e = toScreen(q[0], q[1]); ctx.beginPath(); ctx.moveTo(s[0], s[1]); ctx.lineTo(e[0], e[1]); ctx.lineWidth = width; ctx.strokeStyle = color; ctx.stroke(); }
     if (i.kind === 'window') { line(pt(a0, mid), pt(a1, mid), 1.5); return; }
     var w = a1 - a0, dir = i.flip ? -1 : 1, hinge = pt(a0, mid), leaf = pt(a0, mid + dir * w);

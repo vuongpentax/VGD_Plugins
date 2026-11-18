@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.12.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.13.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -979,6 +979,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.fill('.pv-dim-input','300');await page.press('.pv-dim-input','Enter');
   ok((await page.locator('.pv-dim-input').count())===0 && (await get('openingPicks'))[o1.ref].pos===300+o1.w/2,'gõ 300: cửa dịch sao cho cách đầu tường 300 mm (tâm = 300 + rộng/2)');
   await page.keyboard.press('Control+z');ok((await get('openingPicks'))[o1.ref].pos===1000,'Ctrl+Z hoàn tác việc sửa kích thước');
+  await wait(150); // chờ vẽ lại sau hoàn tác xong, nếu không ô nhập vừa mở có thể mất tiêu điểm
   dd=await dbgm();const hr=dd.dimHits[1];await page.mouse.click(hb.x+hr.x+hr.w/2,hb.y+hr.y+hr.h/2);await page.fill('.pv-dim-input','2000');await page.press('.pv-dim-input','Enter');
   ok((await get('openingPicks'))[o1.ref].pos===L-2000-o1.w/2,'sửa kích thước phía cuối tường: gõ 2000 thì cửa cách cuối tường 2000 mm (tâm = dài - 2000 - rộng/2)');
   await page.keyboard.press('Control+z');
@@ -1148,9 +1149,9 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await reset();const bF=F.preview_free.beams.items.find(i=>i.ref==='fb_00000001');
   await drag([bF.min[0]-60,bF.max[1]+60],[bF.max[0]+60,bF.min[1]-60]);await typ('ro');await page.uncheck('#pv-options input[data-opt=copy]');await cl(2000,6000);let bp=await get('beamPicks');
   ok(JSON.stringify(bp['fb_00000001'].free)===JSON.stringify({a:[2000,5000],b:[2000,7000]}) && Object.keys(bp).length===1,'Rotate 90° quanh tâm dầm (tắt Sao chép): dầm ngang 1000–3000 thành dầm dọc 5000–7000 tại x = 2000 (đầu a vẫn nhỏ hơn)');
-  await reset();await selWall(fw1);await typ('ro');await page.selectOption('#pv-options select[data-opt=angle]','180');await page.uncheck('#pv-options input[data-opt=copy]');await cl(7000,4000);wp=await get('wallPicks');op=await get('openingPicks');
+  await reset();await selWall(fw1);await typ('ro');await page.fill('#pv-options input[data-opt=angle]','180');await page.press('#pv-options input[data-opt=angle]','Tab');await page.uncheck('#pv-options input[data-opt=copy]');await cl(7000,4000);wp=await get('wallPicks');op=await get('openingPicks');
   ok(JSON.stringify(wp['fw_00000001'].free)===JSON.stringify({a:[6000,6000],b:[9000,6000]}) && op['op_00000001'].pos===2000 && op['op_00000001'].flip===true,'Rotate 180° quanh điểm (7000, 4000): tường sang (6000–9000, y = 6000), đầu tường đổi chỗ nên cửa đổi vị trí (dài - 1000 = 2000) và đổi mặt cánh');
-  await reset();const cF=F.preview_free.columns.items.find(i=>i.ref==='fc_00000001');await cl(cF.center[0],cF.center[1]);await typ('ro');await page.selectOption('#pv-options select[data-opt=angle]','90');await page.uncheck('#pv-options input[data-opt=copy]');await cl(cF.center[0]+1000,cF.center[1]);pk=await get('picks');
+  await reset();const cF=F.preview_free.columns.items.find(i=>i.ref==='fc_00000001');await cl(cF.center[0],cF.center[1]);await typ('ro');await page.fill('#pv-options input[data-opt=angle]','90');await page.press('#pv-options input[data-opt=angle]','Tab');await page.uncheck('#pv-options input[data-opt=copy]');await cl(cF.center[0]+1000,cF.center[1]);pk=await get('picks');
   ok(Math.abs(pk['fc_00000001'].free.x-3000)<1 && Math.abs(pk['fc_00000001'].free.y-4000)<1 && pk['fc_00000001'].free.rot===90,'Rotate 90° (ngược chiều kim đồng hồ) cột quanh điểm (3000, 5000): tâm (2000, 5000) → (3000, 4000) và cột xoay 90° (đổi rộng sâu)');
   // --- Mirror ---
   await reset();await selWall(fw1);await typ('mm');await page.uncheck('#pv-options input[data-opt=keep]');await cl(gx[1],4500);wp=await get('wallPicks');op=await get('openingPicks');
@@ -1169,7 +1170,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.keyboard.press('Escape');await page.keyboard.press('Escape');
   // --- Thuộc tính, kích thước tạm thời, xóa của phần tử tự do ---
   await reset();await cl(cF.center[0],cF.center[1]);
-  ok(await page.locator('#pv-props input[data-field=x]').isVisible() && (await page.locator('#pv-props input[data-field=x]').inputValue())==='2000' && await page.locator('#pv-props select[data-field=rot]').isVisible(),'chọn cột tự do: bảng Thuộc tính có X, Y (nhập số), Xoay');
+  ok(await page.locator('#pv-props input[data-field=x]').isVisible() && (await page.locator('#pv-props input[data-field=x]').inputValue())==='2000' && await page.locator('#pv-props input[data-field=rot]').isVisible(),'chọn cột tự do: bảng Thuộc tính có X, Y, Xoay (nhập số)');
   await page.fill('#pv-props input[data-field=x]','2500');await page.press('#pv-props input[data-field=x]','Tab');ok((await get('picks'))['fc_00000001'].free.x===2500,'sửa X trong bảng Thuộc tính: cột tự do dời');
   await reset();await drag([bF.min[0]-60,bF.max[1]+60],[bF.max[0]+60,bF.min[1]-60]);
   ok(await page.locator('#pv-props input[data-field=tim]').isVisible() && (await page.locator('#pv-props input[data-field=from]').inputValue())==='1000' && (await page.locator('#pv-props input[data-field=to]').inputValue())==='3000','chọn dầm tự do: Thuộc tính có Tim, Từ, Đến');
@@ -1189,6 +1190,94 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await reset();await selWall(fw1);await typ('mv');await cl(7000,4500);await cl(7000,5200);await wait(300);
   const vr2=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
   ok(vr2.ok && vr2.free===4 && vr2.free_items===4,'sau Move: Ruby chấp nhận và tính đủ 4 phần tử tự do (cột, dầm, 2 tường)');
+  await reset();
+  }
+  // P4b-2: phần tử xiên (dầm / tường góc bất kỳ, cột xoay, cửa trên tường xiên)
+  {
+  const typ=async s=>{for(const ch of s)await page.keyboard.press(ch.toLowerCase());await wait(90);};
+  const sc=async(x,y)=>{const bb=await page.locator('#pv-canvas').boundingBox(),q=await page.evaluate(([a,b])=>window.VGDPlan.toScreen(a,b),[x,y]);return [bb.x+q[0],bb.y+q[1]];};
+  const cl=async(x,y)=>{const q=await sc(x,y);await page.mouse.move(q[0],q[1]);await page.mouse.click(q[0],q[1]);};
+  const hv=async(x,y)=>{const q=await sc(x,y);await page.mouse.move(q[0],q[1]);await wait(40);};
+  const drag=async(a,b)=>{const p0=await sc(a[0],a[1]),p1=await sc(b[0],b[1]);await page.mouse.move(p0[0],p0[1]);await page.mouse.down();await page.mouse.move((p0[0]+p1[0])/2,(p0[1]+p1[1])/2,{steps:3});await page.mouse.move(p1[0],p1[1],{steps:3});await page.mouse.up();};
+  const get=k=>page.evaluate(k=>JSON.parse(JSON.stringify(window.VGDS._state.levels[0][k])),k);
+  const dbg5=()=>page.evaluate(()=>window.VGDPlan.debug());
+  const hintT=()=>page.locator('#pv-hint').innerText();
+  const reset=async()=>{await page.keyboard.press('Escape');await page.keyboard.press('Escape');await receive('state',F.state_obl);await receive('preview',F.preview_obl);await wait(80);};
+  const freeKeys=(o,p)=>Object.keys(o).filter(k=>k.startsWith(p));
+  const selBeam=async()=>{await reset();await cl(2500,3000);};
+  await page.click('[data-tab=plan]');
+  if(await page.locator('#pv-browser').isVisible())await page.click('#pv-browser-btn');
+  await reset();
+  const ob=F.preview_obl.beams.items[0],ow=F.preview_obl.walls.items[0],oc=F.preview_obl.columns.items.find(i=>i.ref==='fc_00000001'),oo=F.preview_obl.openings.items[0];
+  ok(ob.dir==='o' && ow.dir==='o' && oc.rot===30 && oo.dir==='o' && Array.isArray(ob.poly) && ob.poly.length===4,'dữ liệu Ruby cho phần tử xiên: dầm, tường, cửa dir "o" có đa giác; cột xoay 30°');
+  // Chọn theo ĐA GIÁC (không theo hộp bao)
+  await reset();await cl(1100,4900);ok((await dbg5()).selected===null,'bấm trong hộp bao nhưng ngoài dải dầm xiên: không chọn gì');
+  await cl(2500,3000);ok((await dbg5()).selected==='Dầm tự do fb_00000001','bấm đúng trên dải dầm xiên: chọn dầm tự do');
+  await reset();await cl(8000,8000);ok((await dbg5()).selected==='Cột tự do fc_00000001','bấm vào cột xoay 30° (theo đa giác) thì chọn cột');
+  // Thuộc tính
+  await selBeam();
+  ok(await page.locator('#pv-props input[data-field=ax]').isVisible() && await page.locator('#pv-props input[data-field=by]').isVisible() && await page.locator('#pv-props input[data-field=tim]').count()===0,'chọn dầm xiên: Thuộc tính nhập từng đầu mút (Đầu 1, Đầu 2), không có Tim / Từ / Đến');
+  await page.fill('#pv-props input[data-field=by]','6000');await page.press('#pv-props input[data-field=by]','Tab');
+  ok(JSON.stringify((await get('beamPicks'))['fb_00000001'].free)===JSON.stringify({a:[1000,1000],b:[4000,6000]}),'sửa Đầu 2 · Y = 6000: dầm đổi đầu mút, vẫn xiên');
+  await page.fill('#pv-props input[data-field=bx]','500');await page.press('#pv-props input[data-field=bx]','Tab');
+  ok(JSON.stringify((await get('beamPicks'))['fb_00000001'].free)===JSON.stringify({a:[500,6000],b:[1000,1000]}),'Đầu 2 chạy sang trái đầu 1: hai đầu đổi chỗ (đầu a luôn là đầu bên trái)');
+  await selBeam();await page.fill('#pv-props input[data-field=ax]','3990');await page.press('#pv-props input[data-field=ax]','Tab');await page.fill('#pv-props input[data-field=ay]','4990');await page.press('#pv-props input[data-field=ay]','Tab');
+  ok(JSON.stringify((await get('beamPicks'))['fb_00000001'].free)===JSON.stringify({a:[3990,1000],b:[4000,5000]}) && /ít nhất 100/.test(await hintT()),'đoạn xiên ngắn hơn 100 mm: không áp dụng, báo lý do');
+  // Cột xoay: Thuộc tính
+  await reset();await cl(8000,8000);
+  ok((await page.locator('#pv-props input[data-field=rot]').inputValue())==='30','chọn cột xoay: Thuộc tính có Xoay (độ) = 30');
+  await page.fill('#pv-props input[data-field=rot]','75');await page.press('#pv-props input[data-field=rot]','Tab');ok((await get('picks'))['fc_00000001'].free.rot===75,'sửa Xoay = 75: cột tự do xoay 75°');
+  await page.fill('#pv-props input[data-field=rot]','500');await page.press('#pv-props input[data-field=rot]','Tab');ok((await get('picks'))['fc_00000001'].free.rot===75,'góc quá 360: không áp dụng');
+  // Kích thước tạm thời: chiều dài dọc theo đoạn
+  await selBeam();let dd=await dbg5();
+  ok(dd.dimList.some(d=>d.id==='length' && d.editable && d.value===5000),'chọn dầm xiên: kích thước tạm thời chiều dài 5000 (dọc theo dầm) sửa được');
+  const bbx=await page.locator('#pv-canvas').boundingBox(),hl=dd.dimHits.find(h=>h.id==='length');await page.mouse.click(bbx.x+hl.x+hl.w/2,bbx.y+hl.y+hl.h/2);await page.fill('.pv-dim-input','2500');await page.press('.pv-dim-input','Enter');
+  ok(JSON.stringify((await get('beamPicks'))['fb_00000001'].free)===JSON.stringify({a:[1000,1000],b:[2500,3000]}),'gõ 2500 vào kích thước: dầm xiên ngắn lại còn 2500 theo đúng hướng cũ (đầu b = (2500, 3000))');
+  // Kích thước tạm thời của cửa trên tường xiên
+  await reset();await cl(7500,3000);dd=await dbg5();
+  ok(dd.selected && /^Cửa/.test(dd.selected) && dd.dimList.filter(d=>d.editable).length===2,'chọn cửa trên tường xiên: hai kích thước tạm thời sửa được (tới hai đầu tường)');
+  const dl=dd.dimList.find(d=>d.id==='left');ok(dl && Math.abs(dl.value-(2500-oo.w/2))<0.2,'kích thước "trái" đo dọc theo tường xiên: tâm cửa cách đầu 2500 trừ nửa rộng cửa');
+  // Vẽ dầm / tường xiên
+  await reset();await typ('wa');await page.selectOption('#pv-options select[data-opt=mode]','free');await wait(40);
+  ok((await page.locator('#pv-options select[data-opt=angle]').inputValue())==='ortho','vẽ tường tự do: thanh tùy chọn có "Hướng", mặc định ngang / dọc (như trước)');
+  await cl(1000,5500);await hv(3600,6500);ok(Math.abs((await dbg5()).edit.freeTarget[1]-5500)<1,'hướng ngang / dọc: rê lệch thì điểm cuối vẫn bị giữ thẳng');
+  await page.selectOption('#pv-options select[data-opt=angle]','free');await wait(40);await hv(3600,6500);
+  ok(Math.abs((await dbg5()).edit.freeTarget[1]-6500)<1 && Math.abs((await dbg5()).edit.freeTarget[0]-3600)<1 && /góc bất kỳ/.test(await hintT()),'hướng "Góc bất kỳ": điểm cuối đúng điểm con trỏ (3600, 6500), không bị giữ thẳng');
+  await cl(3600,6500);let wp=await get('wallPicks'),nw=freeKeys(wp,'fw_').filter(k=>k!=='fw_00000001');
+  ok(nw.length===1 && JSON.stringify(wp[nw[0]].free)===JSON.stringify({a:[1000,5500],b:[3600,6500]}),'bấm điểm cuối: thêm tường xiên a = (1000, 5500), b = (3600, 6500)');
+  await hv(3600,9000);await page.fill('#pv-vcb','2000');await page.press('#pv-vcb','Enter');wp=await get('wallPicks');nw=freeKeys(wp,'fw_').filter(k=>k!=='fw_00000001');
+  ok(nw.length===2,'gõ độ dài khi ở hướng bất kỳ: thêm đoạn nữa');
+  const lenOf=f=>Math.hypot(f.b[0]-f.a[0],f.b[1]-f.a[1]);
+  ok(nw.some(k=>Math.abs(lenOf(wp[k].free)-2000)<0.2),'đoạn gõ 2000: dài đúng 2000 mm theo hướng con trỏ (xiên)');
+  // Cửa lên tường xiên
+  await reset();await typ('dr');await cl(8400,4200);
+  ok(Object.keys(await get('openingPicks')).length===2 && Object.values(await get('openingPicks')).filter(o=>o.wall==='fw_00000001').length===2,'đặt cửa đi lên tường xiên bằng công cụ: có thêm một cửa gắn đúng tường xiên');
+  const nop=Object.values(await get('openingPicks')).find(o=>o.pos!==2500);ok(nop && nop.pos>0 && nop.pos<5000 && nop.pos%10===0,'vị trí cửa tính dọc theo tường xiên (0..5000, làm tròn 10 mm): '+(nop&&nop.pos));
+  // Move xiên
+  await reset();await drag([5700,900],[9300,5100]);ok((await dbg5()).selection.some(t=>/Tường tự do fw_00000001/.test(t)),'quét khung chọn tường xiên');
+  await typ('mv');await cl(7000,6500);await cl(7500,6000);let wf=(await get('wallPicks'))['fw_00000001'].free;
+  ok(JSON.stringify(wf)===JSON.stringify({a:[6500,500],b:[9500,4500]}),'Move (+500, -500): tường xiên dời đúng, vẫn xiên (a = (6500, 500), b = (9500, 4500))');
+  // Offset xiên
+  await reset();await drag([5700,900],[9300,5100]);await typ('of');await page.fill('#pv-options input[data-opt=distance]','1000');await page.press('#pv-options input[data-opt=distance]','Tab');await page.uncheck('#pv-options input[data-opt=copy]');
+  await cl(10000,2000);wf=(await get('wallPicks'))['fw_00000001'].free;
+  ok(Math.abs(wf.a[0]-6800)<0.2 && Math.abs(wf.a[1]-400)<0.2 && Math.abs(wf.b[0]-9800)<0.2 && Math.abs(wf.b[1]-4400)<0.2,'Offset 1000 mm vuông góc với tường xiên về phía con trỏ: dời (+800, -600) (pháp tuyến của hướng 3-4-5)');
+  // Rotate tùy ý
+  await selBeam();await typ('ro');await page.uncheck('#pv-options input[data-opt=copy]');await page.fill('#pv-options input[data-opt=angle]','90');await page.press('#pv-options input[data-opt=angle]','Tab');await cl(2500,6000);
+  ok(JSON.stringify((await get('beamPicks'))['fb_00000001'].free)===JSON.stringify({a:[3500,7500],b:[7500,4500]}),'Rotate 90° dầm xiên quanh điểm (2500, 6000): hai đầu sang (7500, 4500) và (3500, 7500), đổi chỗ để đầu a ở bên trái');
+  await reset();await cl(8000,8000);await typ('ro');await page.uncheck('#pv-options input[data-opt=copy]');await page.fill('#pv-options input[data-opt=angle]','45');await page.press('#pv-options input[data-opt=angle]','Tab');await cl(8000,8000);
+  ok((await get('picks'))['fc_00000001'].free.rot===75,'Rotate 45° cột đang xoay 30° quanh tâm cột: góc mới 75°');
+  await reset();await cl(8000,8000);await typ('ro');await page.uncheck('#pv-options input[data-opt=copy]');await page.fill('#pv-options input[data-opt=angle]','0');await page.press('#pv-options input[data-opt=angle]','Tab');await cl(8000,8000);
+  ok(/khác 0/.test(await hintT()) && (await get('picks'))['fc_00000001'].free.rot===30,'góc xoay 0: báo, không đổi dữ liệu');
+  // Mirror cột xoay
+  await reset();await cl(8000,8000);await typ('mm');await page.uncheck('#pv-options input[data-opt=keep]');await cl(8400,6000);let cf=(await get('picks'))['fc_00000001'].free;
+  ok(Math.abs(cf.x-8800)<0.2 && cf.rot===150,'Mirror cột xoay 30° qua trục đứng x = 8400: tâm sang 8800 và góc thành 150° (đối xứng gương)');
+  // Align / Trim từ chối phần tử xiên
+  await reset();await typ('tr');await cl(2500,3000);await cl(8280,4040);
+  ok(/ngang hoặc dọc/.test(await hintT()),'Trim với dầm xiên: báo chỉ làm với đoạn ngang / dọc');
+  // Gửi Ruby
+  await reset();await cl(2500,3000);await typ('mv');await cl(2500,3000);await cl(2600,3100);await wait(300);
+  const vr3=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vr3.ok && vr3.free_items===3,'sau Move dầm xiên: Ruby chấp nhận và tính đủ 3 phần tử tự do (cột, dầm, tường)');
   await reset();
   }
   // P6: liên kết với SketchUp

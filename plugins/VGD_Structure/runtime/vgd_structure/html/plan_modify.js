@@ -1,7 +1,7 @@
 // Công cụ sửa trên tab Mặt bằng (kiểu Revit): Move, Copy, Array, Mirror, Match (P4) và, từ P4b-1, Offset, Align, Trim, Rotate, Mở khóa lưới
 // cùng kích thước tạm thời. Có hai chế độ:
 //  - THEO LƯỚI (P4): bấm hai giao điểm của lưới thì phần tử theo lưới dịch theo số ô, qua một trục của lưới thì lật theo chỉ số.
-//  - TỰ DO (P4b-1): mọi lệnh khác tác động lên phần tử TỰ DO (cột, dầm, tường có khóa 'free': tọa độ tùy ý, chỉ ngang / dọc). Cột, dầm, tường theo lưới được
+//  - TỰ DO (P4b-1, xiên từ P4b-2): mọi lệnh khác tác động lên phần tử TỰ DO (cột, dầm, tường có khóa 'free': tọa độ tùy ý, dầm / tường ngang, dọc hoặc xiên, cột xoay góc bất kỳ). Cột, dầm, tường theo lưới được
 //    "mở khóa" (đổi thành phần tử tự do đúng hình đang thấy) rồi mới dịch / xoay / lật / dời. Sàn, trần theo ô chỉ dịch và lật theo lưới (đa giác tự do ở P4b-2).
 // Mọi thay đổi đi qua host.mutate (có hoàn tác); Ruby vẫn kiểm tra lại.
 (function () {
@@ -75,20 +75,28 @@
     var pick = pickOf(shape); if (pick && pick.type) return pick.type;
     var it = previewItem(shape); return it ? it.type_id : undefined;
   }
+  function isOrtho(f) { return f.a[0] === f.b[0] || f.a[1] === f.b[1]; }
+  // Chuẩn hóa đoạn: lệch dưới 0,05 mm theo một phương thì làm thẳng (khớp Ruby); đầu a là đầu bên trái (đứng dọc thì đầu thấp).
   function normLinear(f) {
     var a = f.a.map(round), b = f.b.map(round);
-    if (a[0] !== b[0] && a[1] !== b[1]) { if (Math.abs(a[0] - b[0]) < Math.abs(a[1] - b[1])) b[0] = a[0]; else b[1] = a[1]; }
-    if ((b[0] - a[0]) + (b[1] - a[1]) < 0) { var t = a; a = b; b = t; }
-    return {a: a, b: b};
+    if (Math.abs(a[0] - b[0]) <= 0.05) b[0] = a[0]; else if (Math.abs(a[1] - b[1]) <= 0.05) b[1] = a[1];
+    var swap = isOrtho({a: a, b: b}) ? (b[0] - a[0]) + (b[1] - a[1]) < 0 : b[0] < a[0];
+    return swap ? {a: b, b: a} : {a: a, b: b};
   }
-  function applyMap(kind, free, fn, rotToggle) { // fn: điểm -> điểm; trả về hình học mới
-    if (kind === 'column') { var c = fn([free.x, free.y]); return {x: round(c[0]), y: round(c[1]), rot: rotToggle ? (free.rot === 90 ? 0 : 90) : (free.rot || 0)}; }
+  // Góc (độ, 0 <= góc < 180) của trục "rộng" của cột sau phép biến đổi fn: ảnh của hướng cũ qua fn. Hình chữ nhật đối xứng 180 độ nên chỉ cần tới 180.
+  function columnRot(free, fn) {
+    var c = [free.x, free.y], r = (free.rot || 0) * Math.PI / 180, p = fn(c), q = fn([c[0] + Math.cos(r), c[1] + Math.sin(r)]);
+    var deg = Math.round((((Math.atan2(q[1] - p[1], q[0] - p[0]) * 180 / Math.PI) % 180) + 180) % 180 * 100) / 100;
+    return deg >= 180 ? 0 : deg;
+  }
+  function applyMap(kind, free, fn) { // fn: điểm -> điểm; trả về hình học mới
+    if (kind === 'column') { var c = fn([free.x, free.y]); return {x: round(c[0]), y: round(c[1]), rot: columnRot(free, fn)}; }
     return normLinear({a: fn(free.a), b: fn(free.b)});
   }
   function movePoly(poly, fn) { return poly.map(function (p) { return fn(p); }); }
   function newId(kind) { return A.rid(PREFIX[kind]); }
   function wallStart(free) { return free.a[0] === free.b[0] ? free.a[1] : free.a[0]; } // tọa độ đầu tường dọc phương của nó
-  function wallLength(free) { return Math.abs(free.b[0] - free.a[0]) + Math.abs(free.b[1] - free.a[1]); }
+  function wallLength(free) { return Math.hypot(free.b[0] - free.a[0], free.b[1] - free.a[1]); }
 
   // Cửa theo tường khi tường bị lật / xoay (fn là phép biến đổi điểm): nếu đầu tường a bị đổi sang đầu kia thì vị trí tính từ đầu tường đổi (dài - cũ);
   // lật mặt cánh: phép LẬT giữ chiều tường thì đổi mặt, phép XOAY đổi chiều tường thì đổi mặt (bản lề luôn ở đầu tường, chưa có tùy chọn bản lề).
@@ -101,13 +109,13 @@
   }
   // Biến đổi hình học các phần tử chọn bằng điểm-ánh-xạ fn. keep = giữ bản gốc (tạo phần tử mới), ngược lại dời tại chỗ (phần tử theo lưới thì mở khóa).
   // fix(cửa, hình cũ, hình mới) chỉnh cửa theo tường. Trả về {moved, skipped: [[tên, lý do]]}.
-  function transformSelection(sel, fn, keep, rotToggle, fix) {
+  function transformSelection(sel, fn, keep, fix) {
     var moved = 0, skipped = [], map = {};
     sel.forEach(function (s) {
       if (!ITEMS[s.kind]) { if (s.kind !== 'opening') skipped.push([s.title, 'sàn, trần theo ô chỉ dịch hoặc lật theo lưới']); return; }
       var pick = pickOf(s), free = pick && geomOf(s);
       if (!free) { skipped.push([s.title, 'chưa có hình trong xem trước']); return; }
-      var next = applyMap(s.kind, free, fn, rotToggle), b = box(s.kind), to = s.ref, ty = typeOfPick(s);
+      var next = applyMap(s.kind, free, fn), b = box(s.kind), to = s.ref, ty = typeOfPick(s);
       if (keep || !isFree(pick)) {
         var np = {free: next}; if (ty) np.type = ty;
         if (!keep) delete b[s.ref];
@@ -197,8 +205,10 @@
     return best;
   }
   function reflect(ax) { return function (p) { return ax.dir === 'x' ? [2 * ax.pos - p[0], p[1]] : [p[0], 2 * ax.pos - p[1]]; }; }
-  function rotateAbout(c, deg) {
-    return function (p) { var dx = p[0] - c[0], dy = p[1] - c[1]; if (deg === 90) return [c[0] - dy, c[1] + dx]; if (deg === 180) return [c[0] - dx, c[1] - dy]; return [c[0] + dy, c[1] - dx]; };
+  function rotateAbout(c, deg) { // quay ngược chiều kim đồng hồ; bội của 90 độ tính đúng, không sai số
+    if (deg % 90 === 0) { var q = ((deg % 360) + 360) % 360; return function (p) { var dx = p[0] - c[0], dy = p[1] - c[1]; if (q === 90) return [c[0] - dy, c[1] + dx]; if (q === 180) return [c[0] - dx, c[1] - dy]; if (q === 270) return [c[0] + dy, c[1] - dx]; return [p[0], p[1]]; }; }
+    var r = deg * Math.PI / 180, cs = Math.cos(r), sn = Math.sin(r);
+    return function (p) { var dx = p[0] - c[0], dy = p[1] - c[1]; return [c[0] + dx * cs - dy * sn, c[1] + dx * sn + dy * cs]; };
   }
   function translate(dx, dy) { return function (p) { return [p[0] + dx, p[1] + dy]; }; }
 
@@ -257,10 +267,10 @@
       if (nodeMode) { // hai giao điểm của lưới: phần tử theo lưới dịch theo số ô; phần tử tự do dịch đúng véc-tơ
         var step = {type: 'shift', di: (tn.i - bn.i) * k, dj: (tn.j - bn.j) * k}, p = plan(sel, step, keep);
         applyPlan(p, step, keep); moved += p.moves.length; p.skipped.forEach(function (s) { skipped.push([s.shape.title, s.why]); });
-        var fr = transformSelection(sel.filter(function (s) { return ITEMS[s.kind] && isFree(pickOf(s)); }), translate(v[0] * k, v[1] * k), keep, false);
+        var fr = transformSelection(sel.filter(function (s) { return ITEMS[s.kind] && isFree(pickOf(s)); }), translate(v[0] * k, v[1] * k), keep);
         moved += fr.moved; skipped = skipped.concat(fr.skipped);
       } else { // điểm tự do: mọi cột, dầm, tường (theo lưới thì mở khóa) dịch đúng véc-tơ; sàn, trần theo ô không dịch tự do được
-        var fr2 = transformSelection(sel.filter(function (s) { return ITEMS[s.kind]; }), translate(v[0] * k, v[1] * k), keep, false);
+        var fr2 = transformSelection(sel.filter(function (s) { return ITEMS[s.kind]; }), translate(v[0] * k, v[1] * k), keep);
         moved += fr2.moved; skipped = skipped.concat(fr2.skipped);
         if (k === 1) sel.forEach(function (s) { if (s.kind === 'slab' || s.kind === 'ceiling') skipped.push([s.title, 'sàn, trần theo ô: bấm hai giao điểm của lưới để dịch theo ô']); });
       }
@@ -272,10 +282,10 @@
     if (axis.index !== null) { // trục của lưới: phần tử theo lưới lật theo chỉ số, phần tử tự do lật theo tọa độ
       var op = {type: 'mirror', dir: axis.dir, index: axis.index}, p = plan(sel, op, keep);
       applyPlan(p, op, keep); moved += p.moves.length; p.skipped.forEach(function (s) { skipped.push([s.shape.title, s.why]); });
-      var fr = transformSelection(sel.filter(function (s) { return ITEMS[s.kind] && isFree(pickOf(s)); }), reflect(axis), keep, false, fix);
+      var fr = transformSelection(sel.filter(function (s) { return ITEMS[s.kind] && isFree(pickOf(s)); }), reflect(axis), keep, fix);
       moved += fr.moved; skipped = skipped.concat(fr.skipped);
     } else { // đường gióng: mọi cột, dầm, tường (theo lưới thì mở khóa) lật theo tọa độ
-      var fr2 = transformSelection(sel.filter(function (s) { return ITEMS[s.kind]; }), reflect(axis), keep, false, fix);
+      var fr2 = transformSelection(sel.filter(function (s) { return ITEMS[s.kind]; }), reflect(axis), keep, fix);
       moved += fr2.moved; skipped = skipped.concat(fr2.skipped);
       sel.forEach(function (s) { if (s.kind === 'slab' || s.kind === 'ceiling') skipped.push([s.title, 'sàn, trần chỉ lật qua trục của lưới']); });
     }
@@ -301,9 +311,10 @@
 
   // ---- Offset ----
   function linearShapes(sel) { return sel.filter(function (s) { return LINEAR[s.kind]; }); }
-  function offsetFn(free, w, d) { // dời về phía điểm w (ngang: lên / xuống; dọc: sang phải / trái)
-    var horizontal = free.a[1] === free.b[1], side = (horizontal ? w[1] - free.a[1] : w[0] - free.a[0]) >= 0 ? 1 : -1;
-    return translate(horizontal ? 0 : side * d, horizontal ? side * d : 0);
+  function offsetFn(free, w, d) { // dời vuông góc với phần tử về phía điểm w
+    var len = wallLength(free), n = [-(free.b[1] - free.a[1]) / len, (free.b[0] - free.a[0]) / len];
+    var side = ((w[0] - free.a[0]) * n[0] + (w[1] - free.a[1]) * n[1]) >= 0 ? 1 : -1;
+    return translate(side * d * n[0], side * d * n[1]);
   }
   function applyOffset(distance, w) {
     if (!isFinite(distance) || distance <= 0 || distance > 1e5) { note = 'Khoảng cách phải là số dương (mm).'; return false; }
@@ -312,7 +323,7 @@
     host.mutate(function () {
       sel.forEach(function (s) {
         var free = geomOf(s); if (!free) { skipped.push([s.title, 'chưa có hình trong xem trước']); return; }
-        var one = transformSelection([s], offsetFn(free, w, distance), keep, false); moved += one.moved; skipped = skipped.concat(one.skipped);
+        var one = transformSelection([s], offsetFn(free, w, distance), keep); moved += one.moved; skipped = skipped.concat(one.skipped);
       });
     });
     input.forEach(function (s) { if (!LINEAR[s.kind] && s.kind !== 'opening') skipped.push([s.title, 'Offset chỉ dùng cho dầm và tường']); });
@@ -323,9 +334,9 @@
   // ---- Rotate ----
   function runRotate() {
     var deg = Number(opt.angle), keep = !!opt.copy, c = base.p;
-    if ([90, 180, 270].indexOf(deg) < 0) { note = 'Góc xoay chỉ là 90, 180 hoặc 270 độ (góc bất kỳ làm ở bước sau).'; return; }
+    if (!isFinite(deg) || Math.abs(deg) > 360 || deg % 360 === 0) { note = 'Góc xoay phải là số độ khác 0, trong khoảng -360 đến 360.'; return; }
     var r = {moved: 0, skipped: []}, fn = rotateAbout(c, deg);
-    host.mutate(function () { r = transformSelection(input, fn, keep, deg === 90 || deg === 270, openingFixer('rotate', fn)); });
+    host.mutate(function () { r = transformSelection(input, fn, keep, openingFixer('rotate', fn)); });
     note = summary('xoay ' + deg + '°' + (keep ? ' (sao chép)' : ''), r.moved, r.skipped);
     finishRun();
   }
@@ -346,10 +357,11 @@
       alignRef = ref; phase = 'element'; return;
     }
     var hit = host.shapeAt(w); if (!hit || !ITEMS[hit.kind]) { note = 'Bấm vào một cột, dầm hoặc tường để căn.'; return; }
+    var hg = geomOf(hit); if (hg && (hg.a ? !isOrtho(hg) : (hg.rot || 0) % 90 !== 0)) { note = hit.title + ': đang xiên / xoay góc bất kỳ, Align chỉ căn phần tử ngang hoặc dọc.'; return; }
     var b = shapeBox(hit.poly), faces = alignRef.dir === 'x' ? [b[0], b[2]] : [b[1], b[3]], d = faces.map(function (f) { return alignRef.pos - f; }), delta = Math.abs(d[0]) <= Math.abs(d[1]) ? d[0] : d[1];
     if (Math.abs(delta) < 0.05) { note = hit.title + ' đã nằm trên đường chuẩn.'; return; }
     var fn = alignRef.dir === 'x' ? translate(delta, 0) : translate(0, delta), r;
-    host.mutate(function () { r = transformSelection([hit], fn, false, false); });
+    host.mutate(function () { r = transformSelection([hit], fn, false); });
     note = r.moved ? 'Đã căn ' + hit.title + ' (dời ' + round(delta) + ' mm). Bấm phần tử khác để căn tiếp, Esc kết thúc.' : summary('căn', 0, r.skipped);
   }
 
@@ -360,6 +372,7 @@
     if (phase === 'first') { trimA = {shape: hit, free: free, w: w}; phase = 'second'; return; }
     if (hit.kind === trimA.shape.kind && hit.ref === trimA.shape.ref) { note = 'Hãy bấm phần tử thứ hai (khác phần tử đầu).'; return; }
     var a = trimA, ha = a.free.a[1] === a.free.b[1], hb = free.a[1] === free.b[1];
+    if (!isOrtho(a.free) || !isOrtho(free)) { note = 'Trim nối góc chỉ làm với dầm / tường ngang hoặc dọc (đầu xiên cắt vuông, chưa có nối góc xiên).'; return; }
     if (ha === hb) { note = 'Trim nối góc cần hai phần tử vuông góc nhau (một ngang, một dọc).'; return; }
     var widthOf = function (s) { var it = previewItem(s); return it ? (it.t || it.w) : 0; }, ta = widthOf(a.shape), tb = widthOf(hit);
     if (!ta || !tb) { note = 'Không đọc được bề dày của phần tử (chưa có xem trước).'; return; }
@@ -410,7 +423,7 @@
     if (t === 'array') return [{id: 'count', label: 'Số bản', kind: 'number', value: opt.count, min: 1, max: 50}];
     if (t === 'mirror') return [{id: 'keep', label: 'Giữ bản gốc', kind: 'checkbox', value: opt.keep}];
     if (t === 'offset') return [{id: 'distance', label: 'Khoảng cách (mm)', kind: 'number', value: opt.distance, min: 1, max: 100000}, {id: 'copy', label: 'Sao chép', kind: 'checkbox', value: opt.copy}];
-    if (t === 'rotate') return [{id: 'angle', label: 'Góc (ngược chiều kim đồng hồ)', values: [['90', '90°'], ['180', '180°'], ['270', '270° (= -90°)']], value: opt.angle}, {id: 'copy', label: 'Sao chép', kind: 'checkbox', value: opt.copy}];
+    if (t === 'rotate') return [{id: 'angle', label: 'Góc (độ, ngược chiều kim đồng hồ)', kind: 'number', value: Number(opt.angle), min: -360, max: 360}, {id: 'copy', label: 'Sao chép', kind: 'checkbox', value: opt.copy}];
     return [];
   }
   function setOption(t, id, value) {
@@ -487,11 +500,21 @@
     return Object.assign(item, extra || {});
   }
   // Kích thước tạm thời cho MỘT phần tử đang chọn. Cửa: tới hai đầu tường, sửa được. Dầm / tường TỰ DO: chiều dài sửa được (đổi đầu b). Còn lại chỉ xem.
+  function freeGeom(shape) { var pk = PICKS[shape.kind] ? pickOf(shape) : null; return pk && pk.free ? pk.free : null; }
   function tempDims(shape) {
     if (!shape) return [];
     if (shape.kind === 'opening') {
       var o = items('openings').filter(function (i) { return i.ref === shape.ref; })[0], w = o && items('walls').filter(function (i) { return i.ref === o.wall; })[0];
       if (!o || !w) return [];
+      if (w.dir === 'o') { // tường xiên: kích thước đo dọc theo tường, đặt lệch về phía pháp tuyến
+        var len = w.length, ux = (w.b[0] - w.a[0]) / len, uy = (w.b[1] - w.a[1]) / len, nrm = [-uy, ux], at = function (t) { return [w.a[0] + ux * t, w.a[1] + uy * t]; };
+        var l0 = o.pos - o.w / 2, l1 = o.pos + o.w / 2, offO = 450 + w.t / 2;
+        return [
+          dimOf(at(0), at(l0), nrm, offO, true, {id: 'left', opening: o.ref, value: round(l0)}),
+          dimOf(at(l1), at(len), nrm, offO, true, {id: 'right', opening: o.ref, value: round(len - l1)}),
+          dimOf(at(l0), at(l1), nrm, offO + 350, false, {id: 'width', value: round(o.w)})
+        ];
+      }
       var h = w.dir === 'x', key = h ? 0 : 1, cross = h ? 1 : 0, side = h ? [0, 1] : [1, 0], off = 450 + w.t / 2;
       var pt = function (u) { var p = [0, 0]; p[key] = u; p[cross] = w.center; return p; };
       var a0 = o.min[key], a1 = o.max[key];
@@ -501,6 +524,12 @@
         dimOf(pt(a0), pt(a1), side, off + 350, false, {id: 'width', value: round(o.w)})
       ];
     }
+    var sp = freeGeom(shape);
+    if (sp && sp.a && !isOrtho(sp)) { // dầm / tường xiên: chiều dài dọc theo đoạn (sửa được, đổi đầu b)
+      var ln = wallLength(sp), nn = [-(sp.b[1] - sp.a[1]) / ln, (sp.b[0] - sp.a[0]) / ln];
+      return [dimOf(sp.a, sp.b, nn, 350, true, {id: 'length', value: round(ln), shape: {kind: shape.kind, ref: shape.ref}})];
+    }
+    if (sp && sp.x !== undefined && (sp.rot || 0) % 90 !== 0) return []; // cột xoay góc bất kỳ: hộp bao không phản ánh kích thước thật, xem ở bảng Thuộc tính
     var b = shapeBox(shape.poly), w2 = b[2] - b[0], h2 = b[3] - b[1], out = [], freeLinear = !!(LINEAR[shape.kind] && isFree(pickOf(shape))), tag = freeLinear ? {kind: shape.kind, ref: shape.ref} : null;
     if (w2 >= h2 * 0.25) out.push(dimOf([b[0], b[1]], [b[2], b[1]], [0, -1], 350, freeLinear && w2 >= h2, {id: freeLinear && w2 >= h2 ? 'length' : 'w', value: round(w2), shape: tag}));
     if (h2 >= w2 * 0.25) out.push(dimOf([b[2], b[1]], [b[2], b[3]], [1, 0], 350, freeLinear && h2 > w2, {id: freeLinear && h2 > w2 ? 'length' : 'h', value: round(h2), shape: tag}));
@@ -512,9 +541,9 @@
     if (dim.id === 'length') { // dầm / tường tự do: đổi chiều dài, giữ đầu a
       if (v < 100) return 'Chiều dài tối thiểu 100 mm.';
       var pick = box(dim.shape.kind)[dim.shape.ref]; if (!pick || !pick.free) return 'Phần tử không còn.';
-      var f = pick.free, horizontal = f.a[1] === f.b[1];
-      if (Math.abs(wallLength(f) - v) < 0.05) return null;
-      host.mutate(function () { pick.free = {a: f.a, b: horizontal ? [round(f.a[0] + v), f.a[1]] : [f.a[0], round(f.a[1] + v)]}; });
+      var f = pick.free, cur = wallLength(f), k = v / cur;
+      if (Math.abs(cur - v) < 0.05) return null;
+      host.mutate(function () { pick.free = {a: f.a, b: [round(f.a[0] + (f.b[0] - f.a[0]) * k), round(f.a[1] + (f.b[1] - f.a[1]) * k)]}; });
       return null;
     }
     var o = items('openings').filter(function (i) { return i.ref === dim.opening; })[0], w = o && items('walls').filter(function (i) { return i.ref === o.wall; })[0];

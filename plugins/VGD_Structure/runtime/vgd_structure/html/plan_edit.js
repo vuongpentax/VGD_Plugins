@@ -6,7 +6,7 @@
   var GOOD = '#2F7BFF', BAD = '#E5484D', TOL_NODE = 14, TOL_COLUMN = 28, TOL_SPAN = 12, OPENING_GAP = 50;
   var DESIGN = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'door', 'window'];
   var PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', opening: 'openingPicks'};
-  var opt = {column: {type: '', x: 'auto', y: 'auto', mode: 'grid', rot: '0'}, beam: {type: '', p: 'auto', mode: 'grid'}, wall: {type: '', p: 'auto', mode: 'grid'}, door: {type: '', flip: '0'}, window: {type: '', flip: '0'}, grid: {dir: 'x'}};
+  var opt = {column: {type: '', x: 'auto', y: 'auto', mode: 'grid', rot: '0'}, beam: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, wall: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, door: {type: '', flip: '0'}, window: {type: '', flip: '0'}, grid: {dir: 'x'}};
   var tool = null, chain = null, target = null, note = '';
 
   function lvl() { return A.level(); }
@@ -51,12 +51,17 @@
     return v.concat(typesFor(tool).map(function (t) { return [t.id, typeLabel(t, tool)]; }));
   }
   var MODE_VALUES = [['grid', 'Theo lưới (giao điểm / nhịp)'], ['free', 'Tự do (bắt điểm bất kỳ)']];
+  var ROT_VALUES = [['0', '0°'], ['15', '15°'], ['30', '30°'], ['45', '45°'], ['60', '60°'], ['75', '75°'], ['90', '90°'], ['105', '105°'], ['120', '120°'], ['135', '135°'], ['150', '150°'], ['165', '165°']];
   function freeMode(t) { return !!(opt[t] && opt[t].mode === 'free' && (t === 'column' || t === 'beam' || t === 'wall')); }
+  function rotRect(c, w, d, deg) { // hình chữ nhật w × d quanh tâm c, xoay deg độ ngược chiều kim đồng hồ
+    var r = deg * Math.PI / 180, cs = Math.cos(r), sn = Math.sin(r);
+    return [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]].map(function (p) { return [c[0] + p[0] * cs - p[1] * sn, c[1] + p[0] * sn + p[1] * cs]; });
+  }
   function r1(v) { return Math.round(v * 10) / 10; }
   function options(t) {
     if (freeMode(t)) {
       var head = [{id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'free'}, {id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}];
-      return t === 'column' ? head.concat([{id: 'rot', label: 'Xoay', values: [['0', '0°'], ['90', '90° (đổi rộng và sâu)']], value: opt.column.rot}]) : head;
+      return t === 'column' ? head.concat([{id: 'rot', label: 'Xoay', values: ROT_VALUES, value: String(opt.column.rot)}]) : head.concat([{id: 'angle', label: 'Hướng', values: [['ortho', 'Ngang / dọc (tự giữ thẳng)'], ['free', 'Góc bất kỳ (xiên)']], value: opt[t].angle}]);
     }
     if (t === 'column' || t === 'beam' || t === 'wall') { var m = {id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'grid'}, rest = optionsGrid(t); return [m].concat(rest); }
     return optionsGrid(t);
@@ -102,7 +107,13 @@
   }
   function wallAt(w) {
     var best = null, e = tol(6);
-    ((S.preview && S.preview.walls && S.preview.walls.items) || []).forEach(function (it) { if (w[0] >= it.min[0] - e && w[0] <= it.max[0] + e && w[1] >= it.min[1] - e && w[1] <= it.max[1] + e) best = it; });
+    ((S.preview && S.preview.walls && S.preview.walls.items) || []).forEach(function (it) {
+      if (it.dir === 'o') { // tường xiên: đổi điểm sang hệ (dọc, ngang) của tường
+        var len = it.length, ux = (it.b[0] - it.a[0]) / len, uy = (it.b[1] - it.a[1]) / len, t = (w[0] - it.a[0]) * ux + (w[1] - it.a[1]) * uy, n = Math.abs(-(w[0] - it.a[0]) * uy + (w[1] - it.a[1]) * ux);
+        if (t >= -e && t <= len + e && n <= it.t / 2 + e) best = it; return;
+      }
+      if (w[0] >= it.min[0] - e && w[0] <= it.max[0] + e && w[1] >= it.min[1] - e && w[1] <= it.max[1] + e) best = it;
+    });
     return best;
   }
   // Cửa: tâm cách đầu tường; kiểm tra như WallPlan.place_openings (trong tường, không quá cao, cách cửa khác >= 50 mm).
@@ -114,15 +125,20 @@
     var clash = A.wallOpenings(wall.ref).some(function (o) { return !(x1 + OPENING_GAP <= o.x0 || x0 >= o.x1 + OPENING_GAP); });
     return clash ? 'Chồng hoặc sát cửa khác (cần cách nhau ít nhất ' + OPENING_GAP + ' mm).' : '';
   }
-  function openingPos(wall, w) { var along = (wall.dir === 'x' ? w[0] : w[1]) - wall.start; return Math.round(along / 10) * 10; }
+  function openingPos(wall, w) {
+    var along = wall.dir === 'o' ? ((w[0] - wall.a[0]) * (wall.b[0] - wall.a[0]) + (w[1] - wall.a[1]) * (wall.b[1] - wall.a[1])) / wall.length : (wall.dir === 'x' ? w[0] : w[1]) - wall.start;
+    return Math.round(along / 10) * 10;
+  }
 
   // ---- Vẽ TỰ DO (P4b-1): cột đặt tại điểm bất kỳ; dầm, tường chỉ ngang / dọc, đầu mút đúng điểm bấm ----
   function freePoint(w) { var s2 = host.snapPoint(w) || w; return [r1(s2[0]), r1(s2[1])]; }
+  // Điểm cuối của dầm / tường tự do: tùy chọn "Hướng": thẳng ngang / dọc, hoặc đúng điểm bắt (xiên).
+  function freeEnd(from, w) { return opt[tool] && opt[tool].angle === 'free' ? freePoint(w) : orthoEnd(from, w); }
   function orthoEnd(from, w) { // điểm cuối cùng hàng hoặc cùng cột với điểm đầu (theo phương con trỏ lệch nhiều hơn)
     var p = freePoint(w), horizontal = Math.abs(p[0] - from[0]) >= Math.abs(p[1] - from[1]);
     return horizontal ? [p[0], from[1]] : [from[0], p[1]];
   }
-  function lengthOf(a, b) { return Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]); }
+  function lengthOf(a, b) { return r1(Math.hypot(b[0] - a[0], b[1] - a[1])); }
   function addFreeColumn(p) {
     var id = A.rid('fc_'), type = currentType('column'), pick = {free: {x: p[0], y: p[1], rot: Number(opt.column.rot) || 0}};
     if (type) pick.type = type;
@@ -130,7 +146,9 @@
     return id;
   }
   function addFreeLinear(t, a, b) {
-    if ((b[0] - a[0]) + (b[1] - a[1]) < 0) { var sw = a; a = b; b = sw; } // đầu a luôn là đầu có tọa độ nhỏ hơn (cùng quy ước với Ruby)
+    // đầu a luôn là đầu bên trái, đứng dọc thì đầu thấp (cùng quy ước với Ruby)
+    var ortho = a[0] === b[0] || a[1] === b[1];
+    if (ortho ? (b[0] - a[0]) + (b[1] - a[1]) < 0 : b[0] < a[0]) { var sw = a; a = b; b = sw; }
     var id = A.rid(t === 'beam' ? 'fb_' : 'fw_'), type = currentType(t), pick = {free: {a: a.slice(), b: b.slice()}};
     if (type) pick.type = type;
     host.mutate(function () { lvl()[PICKS[t]][id] = pick; });
@@ -139,7 +157,7 @@
   function freeMove(w) {
     if (tool === 'column') { target = {free: freePoint(w)}; return; }
     if (!chain) { target = {free: freePoint(w), start: true}; return; }
-    var end = orthoEnd(chain.p, w); target = lengthOf(chain.p, end) >= 100 ? {free: end, end: true} : {free: end, tooShort: true};
+    var end = freeEnd(chain.p, w); target = lengthOf(chain.p, end) >= 100 ? {free: end, end: true} : {free: end, tooShort: true};
   }
   function freeClick(w) {
     freeMove(w); if (!target) return;
@@ -156,6 +174,7 @@
     if (n < 100) { note = 'Độ dài tối thiểu 100 mm.'; return false; }
     var c = cursor || chain.p, horizontal = Math.abs(c[0] - chain.p[0]) >= Math.abs(c[1] - chain.p[1]), sign = (horizontal ? c[0] - chain.p[0] : c[1] - chain.p[1]) >= 0 ? 1 : -1;
     var b = horizontal ? [r1(chain.p[0] + sign * n), chain.p[1]] : [chain.p[0], r1(chain.p[1] + sign * n)];
+    if (opt[tool].angle === 'free') { var dx = c[0] - chain.p[0], dy = c[1] - chain.p[1], dl = Math.hypot(dx, dy) || 1; b = [r1(chain.p[0] + dx / dl * n), r1(chain.p[1] + dy / dl * n)]; } // xiên: đúng hướng con trỏ
     addFreeLinear(tool, chain.p, b); note = 'Đã thêm ' + (tool === 'beam' ? 'dầm' : 'tường') + ' tự do dài ' + n + ' mm.'; chain = {free: true, p: b, ref: 'tự do'};
     return true;
   }
@@ -235,7 +254,7 @@
       if (tool === 'column') return target && target.free ? 'Bấm để đặt cột tự do tại ' + target.free[0] + ', ' + target.free[1] + ' mm (bắt điểm đang bật). Esc kết thúc.' : 'Cột tự do: bấm một điểm bất kỳ. Esc kết thúc.';
       var nm = tool === 'beam' ? 'Dầm' : 'Tường';
       if (!chain) return nm + ' tự do: bấm điểm đầu (bắt điểm). Esc kết thúc.';
-      return nm + ' tự do: bấm điểm cuối (tự giữ ngang / dọc)' + (target && target.end ? ', dài ' + lengthOf(chain.p, target.free) + ' mm' : '') + ' hoặc gõ độ dài + Enter; bấm tiếp để nối chuỗi. Esc kết thúc.';
+      return nm + ' tự do: bấm điểm cuối ' + (opt[tool].angle === 'free' ? '(góc bất kỳ)' : '(tự giữ ngang / dọc)') + '' + (target && target.end ? ', dài ' + lengthOf(chain.p, target.free) + ' mm' : '') + ' hoặc gõ độ dài + Enter; bấm tiếp để nối chuỗi. Esc kết thúc.';
     }
     if (tool === 'grid') return 'Trục mới: bấm vị trí (bắt được đường gióng và điểm). Chọn trục đứng / ngang ở thanh tùy chọn. Esc kết thúc.';
     if (tool === 'column') return target ? (target.exists ? 'Cột ' + target.node.ref + ' đã có.' : 'Bấm để đặt cột ' + target.node.ref + '.') : 'Cột: bấm một giao điểm của lưới. Esc kết thúc.';
@@ -254,8 +273,8 @@
     var g = [];
     if (tool && freeMode(tool) && !blocked(tool)) {
       if (tool === 'column') {
-        if (target && target.free) { var ty = typeById('column', currentType('column')) || S.types[0], sw = Number(opt.column.rot) === 90 ? [ty.d, ty.w] : [ty.w, ty.d], c = target.free;
-          g.push({t: 'poly', poly: [[c[0] - sw[0] / 2, c[1] - sw[1] / 2], [c[0] + sw[0] / 2, c[1] - sw[1] / 2], [c[0] + sw[0] / 2, c[1] + sw[1] / 2], [c[0] - sw[0] / 2, c[1] + sw[1] / 2]], color: GOOD, alpha: 0.3}); g.push({t: 'dot', p: c, color: GOOD, r: 5}); }
+        if (target && target.free) { var ty = typeById('column', currentType('column')) || S.types[0], c = target.free;
+          g.push({t: 'poly', poly: rotRect(c, ty.w, ty.d, Number(opt.column.rot) || 0), color: GOOD, alpha: 0.3}); g.push({t: 'dot', p: c, color: GOOD, r: 5}); }
         return g;
       }
       if (chain) { g.push({t: 'dot', p: chain.p, color: GOOD, r: 5}); }
@@ -283,6 +302,12 @@
       var c = target.cell; g.push({t: 'poly', poly: [[c.x0, c.y0], [c.x1, c.y0], [c.x1, c.y1], [c.x0, c.y1]], color: target.exists ? BAD : GOOD, alpha: 0.2});
     } else if (target.wall && target.type) {
       var wl = target.wall, along = wl.start + target.pos - target.type.w / 2, h = wl.dir === 'x';
+      if (wl.dir === 'o') {
+        var ux = (wl.b[0] - wl.a[0]) / wl.length, uy = (wl.b[1] - wl.a[1]) / wl.length, u0 = target.pos - target.type.w / 2, u1 = target.pos + target.type.w / 2, hv = wl.t / 2;
+        var at = function (u, v) { return [wl.a[0] + ux * u - uy * v, wl.a[1] + uy * u + ux * v]; };
+        g.push({t: 'poly', poly: [at(u0, -hv), at(u1, -hv), at(u1, hv), at(u0, hv)], color: target.error ? BAD : GOOD, alpha: 0.35});
+        return g;
+      }
       var min = h ? [along, wl.min[1]] : [wl.min[0], along], max = h ? [along + target.type.w, wl.max[1]] : [wl.max[0], along + target.type.w];
       g.push({t: 'poly', poly: [[min[0], min[1]], [max[0], min[1]], [max[0], max[1]], [min[0], max[1]]], color: target.error ? BAD : GOOD, alpha: 0.35});
     }
@@ -313,7 +338,16 @@
     if (kind === 'column') {
       return out.concat([field('x', 'X tâm (mm)', 'number', null, f.x, function (v) { if (isFinite(v)) setFree({x: r1(v), y: f.y, rot: f.rot}); }),
                          field('y', 'Y tâm (mm)', 'number', null, f.y, function (v) { if (isFinite(v)) setFree({x: f.x, y: r1(v), rot: f.rot}); }),
-                         field('rot', 'Xoay', 'select', [['0', '0°'], ['90', '90° (đổi rộng và sâu)']], String(f.rot || 0), function (v) { setFree({x: f.x, y: f.y, rot: Number(v)}); })]);
+                         field('rot', 'Xoay (độ)', 'number', null, f.rot || 0, function (v) { if (isFinite(v) && Math.abs(v) <= 360) setFree({x: f.x, y: f.y, rot: v}); })]);
+    }
+    if (f.a[0] !== f.b[0] && f.a[1] !== f.b[1]) { // dầm / tường xiên: nhập từng đầu mút
+      function putEnd(which, axis, v) {
+        if (!isFinite(v)) return; var a = f.a.slice(), b = f.b.slice(), t = which === 'a' ? a : b; t[axis] = r1(v);
+        if (Math.hypot(b[0] - a[0], b[1] - a[1]) < 100) { host.say('Đoạn phải dài ít nhất 100 mm.'); return; }
+        setFree(b[0] < a[0] ? {a: b, b: a} : {a: a, b: b}); // đầu a luôn là đầu bên trái
+      }
+      return out.concat([field('ax', 'Đầu 1 · X (mm)', 'number', null, f.a[0], function (v) { putEnd('a', 0, v); }), field('ay', 'Đầu 1 · Y (mm)', 'number', null, f.a[1], function (v) { putEnd('a', 1, v); }),
+                         field('bx', 'Đầu 2 · X (mm)', 'number', null, f.b[0], function (v) { putEnd('b', 0, v); }), field('by', 'Đầu 2 · Y (mm)', 'number', null, f.b[1], function (v) { putEnd('b', 1, v); })]);
     }
     var h = f.a[1] === f.b[1], key = h ? 0 : 1, cross = h ? 1 : 0;
     function put(valueKey, v) { // valueKey: 'tim' | 'from' | 'to'
