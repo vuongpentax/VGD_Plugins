@@ -103,6 +103,9 @@ ok('tường xiên dịch đầu: cửa trên tường xiên vẫn đứng đún
 
 # ---- Dữ liệu ----
 ok('khóa join: chỉ nhận true / false, true bị bỏ (mặc định), false được giữ', error_of { state_with(walls: {W1 => fw([0, 0], [4000, 0], 'join' => 'no')}) } && !lv(state_with(walls: {W1 => fw([0, 0], [4000, 0], 'join' => true)}))[0]['picks']['walls'][W1].key?('join') && lv(state_with(walls: {W1 => fw([0, 0], [4000, 0], 'join' => false)}))[0]['picks']['walls'][W1]['join'] == false)
+gj = state_with(cols: {}, walls: {'x:A:1-2' => {'p' => 'center', 'join' => false}, 'y:1:A-B' => {'p' => 'center'}})
+gjp = S::WallPlan.plan(gj['grid'], gj['types'], gj['beam_types'], gj['wall_types'], gj['levels'], lvl, gj['opening_types'])
+ok('tường theo lưới tắt nối (join false) giữ nguyên hình (X không chạy suốt: start 0; Y vẫn dừng ở mặt X theo quy tắc lưới cũ: 100)', gjp[:items].find { |i| i[:ref] == 'x:A:1-2' }[:start] == 0.0 && gjp[:items].find { |i| i[:ref] == 'y:1:A-B' }[:start] == 100.0)
 ok('join áp cho tường theo lưới cũng được lưu', lv(state_with(walls: {'x:B:1-2' => {'join' => false}}))[0]['picks']['walls']['x:B:1-2']['join'] == false)
 ok('join không áp cho dầm (bị bỏ qua khi chuẩn hóa)', !lv(state_with(beams: {'x:B:1-2' => {'join' => false}}))[0]['picks']['beams']['x:B:1-2'].key?('join'))
 m = Sketchup::Model.new

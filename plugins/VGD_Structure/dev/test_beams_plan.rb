@@ -45,7 +45,7 @@ ok('kiểu đặt dầm chỉ nhận p (x / y của dầm bị bỏ qua, p lạ 
 # Kế hoạch
 plan = BP.plan(grid, types, btypes, levels, 'sl_00000001')
 b = ->(ref) { plan[:items].find { |i| i[:ref] == ref } }
-ok('17 dầm, đỉnh dầm = đáy sàn tầng trên (3480), đáy dầm 3480 - 400 = 3080', plan[:items].size == 17 && plan[:z_top] == 3480.0 && plan[:items].all? { |i| i[:z_top] == 3480.0 && i[:z_bottom] == 3080.0 })
+ok('17 dầm, đỉnh dầm = mặt sàn kết cấu tầng trên (3550), đáy dầm 3550 - 400 = 3150', plan[:items].size == 17 && plan[:z_top] == 3550.0 && plan[:items].all? { |i| i[:z_top] == 3550.0 && i[:z_bottom] == 3150.0 })
 ok('dầm biên x:A:1-2 (trục A là trục biên đầu): mặt ngoài tiếp giáp trục: tâm y = 100 (nửa rộng), p = min', b['x:A:1-2'][:center] == 100.0 && b['x:A:1-2'][:mode] == 'min' && b['x:A:1-2'][:min][1] == 0.0 && b['x:A:1-2'][:max][1] == 200.0)
 ok('dầm biên cuối x:C:1-2 (trục C): tâm y = 7200 - 100, p = max', b['x:C:1-2'][:center] == 7100.0 && b['x:C:1-2'][:mode] == 'max' && b['x:C:1-2'][:max][1] == 7200.0)
 ok('dầm giữa x:B:1-2 tâm đúng trục (y = 3600), p = center', b['x:B:1-2'][:center] == 3600.0 && b['x:B:1-2'][:mode] == 'center')
@@ -61,7 +61,7 @@ bt2 = btypes + [{'id' => 'bt_00000002', 'name' => 'D30x60', 'w' => 300.0, 'h' =>
 lv2 = mk(grid, types, bt2, all_cols, {'x:B:1-2' => {'type' => 'bt_00000002', 'p' => 'min'}, 'x:B:2-3' => {}}, 'beam_type' => nil)
 p2 = BP.plan(grid, types, bt2, lv2, 'sl_00000001')
 c = ->(ref) { p2[:items].find { |i| i[:ref] == ref } }
-ok('dầm có loại riêng D30x60, p = min: cạnh nhỏ tại trục (y từ 3600 đến 3900), cao 600 => đáy 2880', c['x:B:1-2'][:min][1] == 3600.0 && c['x:B:1-2'][:max][1] == 3900.0 && c['x:B:1-2'][:z_bottom] == 2880.0)
+ok('dầm có loại riêng D30x60, p = min: cạnh nhỏ tại trục (y từ 3600 đến 3900), cao 600 => đáy 3550 - 600 = 2950', c['x:B:1-2'][:min][1] == 3600.0 && c['x:B:1-2'][:max][1] == 3900.0 && c['x:B:1-2'][:z_bottom] == 2950.0)
 ok('dầm không ghi loại dùng loại đầu danh sách (D20x40)', c['x:B:2-3'][:type_name] == 'D20x40' && c['x:B:2-3'][:w] == 200.0)
 lv2b = mk(grid, types, bt2, all_cols, {'x:B:2-3' => {}}, 'beam_type' => 'bt_00000002')
 ok('loại dầm mặc định của tầng áp cho dầm không ghi riêng', BP.plan(grid, types, bt2, lv2b, 'sl_00000001')[:items].first[:type_name] == 'D30x60')

@@ -45,9 +45,9 @@ ok('đề xuất đầy đủ: không có cảnh báo nào (không nhô ra, khô
 nocol = deep(full); nocol['levels'][0]['picks']['columns'].delete('2-B')
 nr = S::Checker.run(nocol)
 ok('thiếu cột 2-B: cảnh báo các dầm tại 2-B không có cột để gối (4 dầm)', nr[:levels][0][:warnings].count { |m| m.include?('2-B') && m.include?('không có cột để gối') } == 4)
-bad = deep(full); bad['levels'][2]['elevation'] = 4100.0; bad['levels'][2]['slab_thickness'] = 250.0
+bad = deep(full); bad['levels'][2]['elevation'] = 4100.0; bad['levels'][2]['screed'] = 300.0
 brep = S::Checker.run(S::State.normalize!(bad))
-ok('tầng cách nhau quá sát (cao 500, trừ dày sàn 250 còn 250 < 300): báo lỗi ở tầng đó, không dừng cả kiểm tra', brep[:errors] > 0 && brep[:levels][1][:errors].any? { |m| m.include?('Chiều cao cột') } && brep[:levels][0][:errors].empty?)
+ok('tầng cách nhau quá sát (cột cao 250 < 300 do cán nền tầng trên 300): báo lỗi ở tầng đó, không dừng cả kiểm tra', brep[:errors] > 0 && brep[:levels][1][:errors].any? { |m| m.include?('Chiều cao cột') } && brep[:levels][0][:errors].empty?)
 ok('tầng không chọn gì: cảnh báo "chưa chọn"', S::Checker.run(st)[:levels][0][:warnings].first.include?('chưa chọn'))
 topbad = deep(st); topbad['levels'][2]['picks']['columns'] = {'1-A' => {}}
 ok('tầng trên cùng có cột đã chọn: cảnh báo sẽ bị bỏ qua', S::Checker.run(topbad)[:levels][2][:warnings].any? { |m| m.include?('bị bỏ qua') })
@@ -72,7 +72,7 @@ r2 = S::AllBuilder.build(m2, only, ['sl_00000001'])
 ok('loại không có lựa chọn thì bỏ qua (không có nhóm tường, trần)', r2[:kinds].keys.sort == %w[beams columns slabs] && m2.entities.grep(Sketchup::Group).none? { |g| g.name.start_with?('Tường') || g.name.start_with?('Trần') })
 # Có lỗi thì không dựng gì
 m3 = Sketchup::Model.new
-broken = deep(full); broken['levels'][2]['elevation'] = 4100.0; broken['levels'][2]['slab_thickness'] = 250.0
+broken = deep(full); broken['levels'][2]['elevation'] = 4100.0; broken['levels'][2]['screed'] = 300.0
 msg = error_of { S::AllBuilder.build(m3, broken, ids) }
 ok('một loại có lỗi kế hoạch: không dựng gì cả, model và thao tác không đổi, báo rõ loại nào', msg.to_s.start_with?('Cột:') && m3.operations.empty? && m3.entities.grep(Sketchup::Group).empty? && m3.layers.to_a.empty?)
 lm = Sketchup::Model.new

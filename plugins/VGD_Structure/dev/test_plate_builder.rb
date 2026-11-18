@@ -35,12 +35,12 @@ ok('6 sàn là ComponentInstance tên "Sàn <ô> (<tầng>)"', inst.size == 6 &&
 names = m.definitions.list.map(&:name)
 ok('định nghĩa dùng chung theo (đa giác, dày): các ô cùng kích thước dùng chung (ít hơn 6 định nghĩa)', m.definitions.list.size < 6 && names.all? { |n| n.start_with?('VGD Sàn ') })
 s1 = inst.find { |i| i.name.include?('1-2/A-B') }
-ok('sàn ô 1-2/A-B đặt tại (0, 0) với đáy ở -120 (mặt trên tại cao độ tầng 0)', mmv.call(s1) == [0.0, 0.0, -120.0])
+ok('sàn ô 1-2/A-B đặt tại (0, 0) với đáy ở -170 (mặt trên sàn kết cấu = 0 - 50 cán nền = -50, dày 120)', mmv.call(s1) == [0.0, 0.0, -170.0])
 s2 = inst.find { |i| i.name.include?('2-3/B-C') }
-ok('sàn ô 2-3/B-C đặt tại (4200, 3600, -120)', mmv.call(s2) == [4200.0, 3600.0, -120.0])
+ok('sàn ô 2-3/B-C đặt tại (4200, 3600, -170)', mmv.call(s2) == [4200.0, 3600.0, -170.0])
 face = s1.definition.entities.grep(Sketchup::Face).first
 ok('định nghĩa sàn: hình chữ nhật 4200 x 3600, mặt đáy hướng lên, đùn 120', face.normal.z > 0 && (face.height * MM - 120).abs < 1e-6 && face.points.map(&:x).minmax.map { |v| (v * MM).round(3) } == [0.0, 4200.0] && face.points.map(&:y).minmax.map { |v| (v * MM).round(3) } == [0.0, 3600.0])
-ok('dữ liệu BIM đọc: kind slab, ref kèm mã tầng, dày và diện tích', s1.get_attribute('VGD_BIM_SOURCE', 'kind') == 'slab' && s1.get_attribute('VGD_BIM_SOURCE', 'ref') == 'sl_00000001:1-2/A-B' && JSON.parse(s1.get_attribute(D, 'dims')) == {'thickness' => 120.0, 'area' => 15.12, 'z_top' => 0.0})
+ok('dữ liệu BIM đọc: kind slab, ref kèm mã tầng, dày và diện tích', s1.get_attribute('VGD_BIM_SOURCE', 'kind') == 'slab' && s1.get_attribute('VGD_BIM_SOURCE', 'ref') == 'sl_00000001:1-2/A-B' && JSON.parse(s1.get_attribute(D, 'dims')) == {'thickness' => 120.0, 'area' => 15.12, 'z_top' => -50.0})
 tag = m.layers['S. SLAB']
 ok('tag S. SLAB theo bộ tag mẫu: màu (186, 51, 0), thư mục S. STRUCTURAL; nhóm và sàn trên tag', tag && tag.color.rgb == [186, 51, 0] && tag.folder.name == 'S. STRUCTURAL' && g[0].layer.equal?(tag) && inst.all? { |i| i.layer.equal?(tag) })
 ok('kết quả: 6 sàn', res.total == 6 && res.levels == [{name: 'Tầng 1', count: 6}])
@@ -51,7 +51,7 @@ tm = Sketchup::Model.new
 st = state_with({})
 st['levels'][1]['picks'] = {'columns' => {}, 'beams' => {}, 'walls' => {}, 'slabs' => cellmap(%w[1-2/A-B]), 'ceilings' => {}}
 P.build(tm, st, ['sl_00000002'], 'slabs')
-ok('dựng sàn tầng trên cùng: đặt ở đáy 3480 (mặt trên 3600)', mmv.call(groups(tm, 'slabs')[0].entities.grep(Sketchup::Instance).first) == [0.0, 0.0, 3480.0])
+ok('dựng sàn tầng trên cùng: đặt ở đáy 3430 (mặt trên kết cấu 3550)', mmv.call(groups(tm, 'slabs')[0].entities.grep(Sketchup::Instance).first) == [0.0, 0.0, 3430.0])
 
 # Trần
 cm = Sketchup::Model.new

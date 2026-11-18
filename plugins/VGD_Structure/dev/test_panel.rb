@@ -63,7 +63,7 @@ call(dlg, 'ready')
 st = last_event(dlg, 'state')
 ok('trạng thái có loại cột mặc định C30x30 và hai tầng, chưa dựng cột nào', st['types'].map { |t| t['name'] } == ['C30x30'] && st['levels'].map { |l| l['name'] } == ['Tầng 1', 'Tầng 2'] && st['drawn_levels'] == [])
 pv = last_event(dlg, 'preview')
-ok('xem trước mở cửa sổ có phần cột: tầng 1 chưa chọn cột nào, cao 3480', pv['levels_ok'] && pv['columns']['level_name'] == 'Tầng 1' && pv['columns']['count'] == 0 && pv['columns']['height'] == 3480.0)
+ok('xem trước mở cửa sổ có phần cột: tầng 1 chưa chọn cột nào, cao 3600', pv['levels_ok'] && pv['columns']['level_name'] == 'Tầng 1' && pv['columns']['count'] == 0 && pv['columns']['height'] == 3600.0)
 refs = S::Grid.intersections(S::Grid.normalize!(st['grid'])).map { |i| i[:ref] }
 levels = st['levels'].map(&:dup)
 levels[0] = levels[0].merge('picks' => {'columns' => refs.each_with_object({}) { |r, h| h[r] = {} }})
@@ -85,7 +85,7 @@ ok('gửi không có loại cột / tầng (như cột mốc 1): chỉ có phầ
 # Dựng cột
 call(dlg, 'columns_build', {'state' => full, 'levels' => [levels[0]['id']]})
 b = last_event(dlg, 'columns_built')
-ok('dựng cột tầng 1: 12 cột, thông báo có chiều cao, drawn_levels có tầng 1, nhóm trong model', b['message'].include?('12 cột') && b['message'].include?('3480') && b['drawn_levels'] == [levels[0]['id']] && $model.entities.grep(Sketchup::Group).any? { |g| g.name == 'Cột - Tầng 1' })
+ok('dựng cột tầng 1: 12 cột, thông báo có chiều cao, drawn_levels có tầng 1, nhóm trong model', b['message'].include?('12 cột') && b['message'].include?('3600') && b['drawn_levels'] == [levels[0]['id']] && $model.entities.grep(Sketchup::Group).any? { |g| g.name == 'Cột - Tầng 1' })
 call(dlg, 'ready')
 ok('mở lại cửa sổ: đọc tầng, cột đã chọn và tầng đã dựng từ model', (s2 = last_event(dlg, 'state')) && s2['saved'] == true && s2['levels'][0]['picks']['columns'].size == 12 && s2['drawn_levels'] == [levels[0]['id']])
 call(dlg, 'columns_build', {'state' => full, 'levels' => [levels[1]['id']]})
@@ -128,7 +128,7 @@ blevels[0]['picks'] = {'columns' => refs.each_with_object({}) { |r, h| h[r] = {}
 bfull = {'grid' => st['grid'], 'symbol' => st['symbol'], 'types' => st['types'], 'beam_types' => st['beam_types'], 'levels' => blevels, 'level' => blevels[0]['id']}
 call(dlg, 'grid_preview', bfull)
 pv = last_event(dlg, 'preview')
-ok('xem trước có phần dầm: 17 dầm, đỉnh 3480, đủ trường để vẽ, không cảnh báo', pv['beams']['count'] == 17 && pv['beams']['z_top'] == 3480.0 && pv['beams']['items'].first.keys.sort == %w[dir h length max min mode placement ref type_name w z_bottom z_top] && pv['beams']['issues'].empty?)
+ok('xem trước có phần dầm: 17 dầm, đỉnh 3550, đủ trường để vẽ, không cảnh báo', pv['beams']['count'] == 17 && pv['beams']['z_top'] == 3550.0 && pv['beams']['items'].first.keys.sort == %w[dir h length max min mode placement ref type_name w z_bottom z_top] && pv['beams']['issues'].empty?)
 call(dlg, 'grid_preview', bfull.merge('level' => blevels[1]['id']))
 pv = last_event(dlg, 'preview')
 ok('tầng trên cùng: báo không có dầm, lưới vẫn xem trước', pv['beams_error'].include?('tầng trên cùng') && !pv.key?('beams') && pv['axes'].size == 7)
@@ -163,7 +163,7 @@ wlevels[0]['picks'] = {'columns' => refs.each_with_object({}) { |r, h| h[r] = {}
 wfull = {'grid' => st['grid'], 'symbol' => st['symbol'], 'types' => st['types'], 'beam_types' => st['beam_types'], 'wall_types' => st['wall_types'], 'levels' => wlevels, 'level' => wlevels[0]['id']}
 call(dlg, 'grid_preview', wfull)
 pv = last_event(dlg, 'preview')
-ok('xem trước có phần tường: 17 tường, cao 3480, đủ trường để vẽ, không cảnh báo', pv['walls']['count'] == 17 && pv['walls']['z_slab'] == 3480.0 && pv['walls']['items'].first.keys.sort == %w[center dir finish height length max min mode openings openings_area placement ref start t type_name under_beam z_bottom z_top] && pv['walls']['issues'].empty?)
+ok('xem trước có phần tường: 17 tường, cao 3480, đủ trường để vẽ, không cảnh báo', pv['walls']['count'] == 17 && pv['walls']['z_slab'] == 3430.0 && pv['walls']['items'].first.keys.sort == %w[center dir finish height join length max min mode openings openings_area placement ref start t type_name under_beam z_bottom z_top] && pv['walls']['issues'].empty?)
 call(dlg, 'grid_preview', wfull.merge('level' => wlevels[1]['id']))
 ok('tầng trên cùng: báo không có tường, lưới vẫn xem trước', last_event(dlg, 'preview')['walls_error'].include?('tầng trên cùng') && last_event(dlg, 'preview')['axes'].size == 7)
 call(dlg, 'grid_preview', wfull.merge('wall_types' => [{'id' => 'wt_00000001', 'name' => 'X', 't' => 5}]))
@@ -195,7 +195,7 @@ plv[0]['picks'] = {'columns' => {}, 'beams' => {}, 'walls' => {}, 'slabs' => cel
 pfull = {'grid' => st['grid'], 'symbol' => st['symbol'], 'types' => st['types'], 'beam_types' => st['beam_types'], 'wall_types' => st['wall_types'], 'levels' => plv, 'level' => plv[0]['id']}
 call(dlg, 'grid_preview', pfull)
 pv = last_event(dlg, 'preview')
-ok('xem trước có phần sàn: 6 sàn, mặt trên 0, dày 120, đủ trường để vẽ', pv['slabs']['count'] == 6 && pv['slabs']['z_top'] == 0.0 && pv['slabs']['items'].first.keys.sort == %w[area max min thickness z_bottom z_top ref].sort)
+ok('xem trước có phần sàn: 6 sàn, mặt trên -50, dày 120, đủ trường để vẽ', pv['slabs']['count'] == 6 && pv['slabs']['z_top'] == -50.0 && pv['slabs']['items'].first.keys.sort == %w[area max min polygon thickness z_bottom z_top ref].sort)
 ok('xem trước có phần trần: 6 trần, mặt dưới 2800, mỗi trần có đa giác', pv['ceilings']['count'] == 6 && pv['ceilings']['z_bottom'] == 2800.0 && pv['ceilings']['items'].all? { |i| i['polygon'].size >= 4 })
 call(dlg, 'grid_preview', pfull.merge('level' => plv[1]['id']))
 pv = last_event(dlg, 'preview')

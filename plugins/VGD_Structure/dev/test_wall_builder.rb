@@ -34,22 +34,22 @@ ok('17 tường là ComponentInstance tên "Tường <nhịp> (<tầng>)"', inst
 names = m.definitions.list.map(&:name)
 ok('định nghĩa dùng chung theo (phương, dày, cao, dài): tường X 3900 dùng chung, có cả tường Y; ít định nghĩa hơn số tường', names.include?('VGD Tường X 200x3480x3900') && names.any? { |n| n.start_with?('VGD Tường Y 200x3480x') } && m.definitions.list.size < 17)
 bx = inst.find { |i| i.name.include?('x:B:2-3') }
-ok('tường x:B:2-3 đặt tại (4350, 3600, 0): từ mặt sàn tầng 1, gốc ở tâm đầu tường', mmv.call(bx) == [4350.0, 3600.0, 0.0])
-ok('tường biên x:A:1-2 đặt tại (300, 100, 0): mặt ngoài tiếp giáp trục A', mmv.call(inst.find { |i| i.name.include?('x:A:1-2') }) == [300.0, 100.0, 0.0])
-ok('tường Y y:2:A-B đặt tại (4200, 300, 0)', mmv.call(inst.find { |i| i.name.include?('y:2:A-B') }) == [4200.0, 300.0, 0.0])
+ok('tường x:B:2-3 đặt tại (4350, 3600, -50): từ mặt sàn kết cấu tầng 1, gốc ở tâm đầu tường', mmv.call(bx) == [4350.0, 3600.0, -50.0])
+ok('tường biên x:A:1-2 đặt tại (300, 100, -50): mặt ngoài tiếp giáp trục A', mmv.call(inst.find { |i| i.name.include?('x:A:1-2') }) == [300.0, 100.0, -50.0])
+ok('tường Y y:2:A-B đặt tại (4200, 300, -50)', mmv.call(inst.find { |i| i.name.include?('y:2:A-B') }) == [4200.0, 300.0, -50.0])
 face = bx.definition.entities.grep(Sketchup::Face).first
 ok('định nghĩa tường X: mặt đáy hướng lên, đùn cao 3480, dài 3900 theo +X, dày 200 theo Y', face.normal.z > 0 && (face.height * MM - 3480).abs < 1e-6 && face.points.map(&:x).minmax.map { |v| (v * MM).round(3) } == [0.0, 3900.0] && face.points.map(&:y).minmax.map { |v| (v * MM).round(3) } == [-100.0, 100.0])
 ok('dữ liệu BIM đọc: nguồn plugin, kind wall, ref kèm mã tầng; kích thước, loại, vị trí, dưới dầm ở VGD_STRUCT', bx.get_attribute('VGD_BIM_SOURCE', 'kind') == 'wall' && bx.get_attribute('VGD_BIM_SOURCE', 'ref') == 'sl_00000001:x:B:2-3' && JSON.parse(bx.get_attribute(D, 'dims')) == {'thickness' => 200.0, 'height' => 3480.0, 'length' => 3900.0, 'under_beam' => false, 'openings' => 0, 'openings_area' => 0.0} && bx.get_attribute(D, 'type') == 'T200' && JSON.parse(bx.get_attribute(D, 'placement')) == {'position' => 'inner', 'p' => 'center', 'dir' => 'x'})
 tag = m.layers['A. WALL']
 ok('tag A. WALL theo bộ tag mẫu: màu (255, 153, 102), thư mục A. ARCHITECTURAL; nhóm và tường trên tag', tag && tag.color.rgb == [255, 153, 102] && tag.folder.name == 'A. ARCHITECTURAL' && g[0].layer.equal?(tag) && inst.all? { |i| i.layer.equal?(tag) })
-ok('kết quả: 17 tường, không cảnh báo', res.total == 17 && res.levels == [{name: 'Tầng 1', count: 17, top: 3480.0}] && res.issues.empty?)
+ok('kết quả: 17 tường, không cảnh báo', res.total == 17 && res.levels == [{name: 'Tầng 1', count: 17, top: 3430.0}] && res.issues.empty?)
 ok('dựng tường lưu dữ liệu nguồn (loại tường, lựa chọn) vào model', S::ModelStore.read(m)['levels'][0]['picks']['walls'].size == 17 && S::ModelStore.read(m)['wall_types'] == S::WallTypes.default)
 
 # Có dầm: tường cao tới đáy dầm
 bm = Sketchup::Model.new
 B.build(bm, state_with(%w[x:B:2-3 x:B:3-4], %w[x:B:2-3]), ['sl_00000001'])
 bi = groups(bm)[0].entities.grep(Sketchup::Instance)
-ok('nhịp có dầm: tường cao 3080 (đáy dầm); nhịp không dầm: cao 3480; định nghĩa riêng theo chiều cao', bm.definitions.list.map(&:name).sort == ['VGD Tường X 200x3080x3900', 'VGD Tường X 200x3480x3750'] && JSON.parse(bi.find { |i| i.name.include?('x:B:2-3') }.get_attribute(D, 'dims'))['under_beam'] == true)
+ok('nhịp có dầm: tường cao 3200 (đáy dầm 3150, từ -50); nhịp không dầm: cao 3480; định nghĩa riêng theo chiều cao', bm.definitions.list.map(&:name).sort == ['VGD Tường X 200x3200x3900', 'VGD Tường X 200x3480x3750'] && JSON.parse(bi.find { |i| i.name.include?('x:B:2-3') }.get_attribute(D, 'dims'))['under_beam'] == true)
 
 # Dựng lại, không đụng cột và dầm
 old = g[0]
@@ -72,7 +72,7 @@ mk = ->(id, name, elev, walls) { {'id' => id, 'name' => name, 'elevation' => ele
 st2 = S::State.default
 st2['levels'] = [mk.call('sl_00000001', 'Tầng 1', 0, {'x:B:1-2' => {}}), mk.call('sl_00000002', 'Tầng 2', 3600, {'x:B:1-2' => {}}), mk.call('sl_00000003', 'Mái', 7200, {})]
 r = B.build(om, st2, %w[sl_00000001 sl_00000002])
-ok('hai tầng: hai nhóm, một thao tác hoàn tác; tường tầng 2 đặt ở cao độ 3600', groups(om).map(&:name).sort == ['Tường - Tầng 1', 'Tường - Tầng 2'] && r.total == 2 && om.operations.count { |o| o[0] == :start } == 1 && (groups(om).find { |x| x.name == 'Tường - Tầng 2' }.entities.grep(Sketchup::Instance).first.transformation.vector.z * MM - 3600).abs < 1e-6)
+ok('hai tầng: hai nhóm, một thao tác hoàn tác; tường tầng 2 đặt ở mặt sàn kết cấu 3550', groups(om).map(&:name).sort == ['Tường - Tầng 1', 'Tường - Tầng 2'] && r.total == 2 && om.operations.count { |o| o[0] == :start } == 1 && (groups(om).find { |x| x.name == 'Tường - Tầng 2' }.entities.grep(Sketchup::Instance).first.transformation.vector.z * MM - 3550).abs < 1e-6)
 st3 = deep(st2); st3['levels'].delete_at(1); st3['levels'][1]['elevation'] = 7200
 r = B.build(om, st3, ['sl_00000001'])
 ok('tầng 2 bị xóa khỏi danh sách: nhóm tường tầng 2 được dọn', groups(om).map(&:name) == ['Tường - Tầng 1'] && r.removed_orphans == 1)

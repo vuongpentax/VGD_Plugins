@@ -57,7 +57,7 @@ ok('Tầng trên cùng được nhận diện, tầng dưới có tầng kế', 
 
 # Kế hoạch cột
 plan = P.plan(grid, types, levels, 'sl_00000001')
-ok('12 cột, cao từ 0 đến đáy sàn tầng trên (3600 - 120 = 3480)', plan[:items].size == 12 && plan[:z0] == 0.0 && plan[:z1] == 3480.0 && plan[:height] == 3480.0 && plan[:items].all? { |i| i[:height] == 3480.0 })
+ok('12 cột, cao từ mặt sàn kết cấu tầng này (0 - 50 = -50) đến mặt sàn kết cấu tầng trên (3600 - 50 = 3550): cao 3600', plan[:items].size == 12 && plan[:z0] == -50.0 && plan[:z1] == 3550.0 && plan[:height] == 3600.0 && plan[:items].all? { |i| i[:height] == 3600.0 } && plan[:slab_bottom] == 3430.0)
 c = ->(ref) { plan[:items].find { |i| i[:ref] == ref } }
 ok('cột góc 1-A tiếp giáp cả hai trục biên: tâm (150, 150), kiểu đặt min / min', c['1-A'][:center] == [150.0, 150.0] && c['1-A'][:modes] == {'x' => 'min', 'y' => 'min'} && c['1-A'][:placement] == 'corner')
 ok('cột góc đối diện 4-C: tâm (12450, 7050) (lùi vào trong nửa kích thước)', c['4-C'][:center] == [12_450.0, 7050.0] && c['4-C'][:modes] == {'x' => 'max', 'y' => 'max'})
@@ -96,8 +96,8 @@ ok('cột 3000 x 3000 ở nhịp 3600 và 4200: các cột sát nhau chồng nha
 # Lỗi kế hoạch
 ok('tầng trên cùng không có cột: báo rõ', error_of { P.plan(grid, types, levels, 'sl_00000002') }.to_s.include?('tầng trên cùng'))
 ok('tầng không tồn tại: báo lỗi', !error_of { P.plan(grid, types, levels, 'sl_deadbeef') }.nil?)
-low = L.normalize!([lv('sl_00000001', 'A', 0), lv('sl_00000002', 'B', 500, 'slab_thickness' => 250)], grid, types).first
-ok('tầng kế quá sát (cao 500, sàn dày 250 -> cột cao 250 < 300): báo lỗi chiều cao', error_of { P.plan(grid, types, low, 'sl_00000001') }.to_s.include?('Chiều cao cột'))
+low = L.normalize!([lv('sl_00000001', 'A', 0), lv('sl_00000002', 'B', 500, 'screed' => 300)], grid, types).first
+ok('tầng kế quá sát (cách 500 nhưng cán nền tầng trên 300: cột cao 250 < 300): báo lỗi chiều cao', error_of { P.plan(grid, types, low, 'sl_00000001') }.to_s.include?('Chiều cao cột'))
 big = S::Grid.normalize!('origin' => [0, 0], 'x_axes' => S::Grid.axes_from_spacings('4000*59', :number), 'y_axes' => S::Grid.axes_from_spacings('4000*59', :letter))
 refs = S::Grid.intersections(big).map { |i| i[:ref] }
 lb = L.normalize!([lv('sl_00000001', 'A', 0, 'picks' => {'columns' => refs.each_with_object({}) { |r, h| h[r] = {} }}), lv('sl_00000002', 'B', 3600)], big, types).first

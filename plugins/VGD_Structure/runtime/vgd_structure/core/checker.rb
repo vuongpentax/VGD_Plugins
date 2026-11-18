@@ -54,7 +54,7 @@ module VGD
         when 'beams' then BeamPlan.plan(state['grid'], state['types'], state['beam_types'], state['levels'], level_id)
         when 'walls' then WallPlan.plan(state['grid'], state['types'], state['beam_types'], state['wall_types'], state['levels'], level_id, state['opening_types'])
         when 'openings' then OpeningPlan.plan(state['grid'], state['types'], state['beam_types'], state['wall_types'], state['opening_types'], state['levels'], level_id)
-        when 'slabs' then SlabPlan.plan(state['grid'], state['levels'], level_id)
+        when 'slabs' then SlabPlan.plan(state['grid'], state['levels'], level_id, state['types'], state['beam_types'])
         else CeilingPlan.plan(state['grid'], state['types'], state['beam_types'], state['wall_types'], state['levels'], level_id, state['opening_types'])
         end
       end

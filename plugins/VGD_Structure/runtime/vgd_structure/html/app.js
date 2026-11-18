@@ -42,12 +42,12 @@
             opening_types: state.openingTypes.map(function (t) { return {id: t.id, name: t.name, kind: t.kind, w: t.w, h: t.h, sill: t.sill}; }), levels: state.levels.map(toRubyLevel), level: state.level};
   }
   function toRubyLevel(l) {
-    return {id: l.id, name: l.name, elevation: l.elevation, slab_thickness: l.slab, column_type: l.columnType || null, beam_type: l.beamType || null, wall_type: l.wallType || null, ceiling_height: l.ceilingHeight, ceiling_thickness: l.ceilingThickness,
+    return {id: l.id, name: l.name, elevation: l.elevation, screed: l.screed, slab_thickness: l.slab, column_type: l.columnType || null, beam_type: l.beamType || null, wall_type: l.wallType || null, ceiling_height: l.ceilingHeight, ceiling_thickness: l.ceilingThickness,
             picks: {columns: clonePicks(l.picks), beams: clonePicks(l.beamPicks), walls: clonePicks(l.wallPicks), slabs: clonePicks(l.slabPicks), ceilings: clonePicks(l.ceilingPicks), openings: clonePicks(l.openingPicks)}, notes: JSON.parse(JSON.stringify(l.notes || {}))};
   }
   function clonePicks(picks) { var out = {}; Object.keys(picks).forEach(function (k) { out[k] = JSON.parse(JSON.stringify(picks[k])); }); return out; } // sao sâu: phần tử tự do có khóa 'free' lồng nhau
   function fromRubyLevel(l) {
-    return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab_thickness, columnType: l.column_type, beamType: l.beam_type || null, wallType: l.wall_type || null, ceilingHeight: l.ceiling_height, ceilingThickness: l.ceiling_thickness,
+    return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab_thickness, screed: l.screed === undefined ? 50 : l.screed, columnType: l.column_type, beamType: l.beam_type || null, wallType: l.wall_type || null, ceilingHeight: l.ceiling_height, ceilingThickness: l.ceiling_thickness,
             picks: clonePicks((l.picks && l.picks.columns) || {}), beamPicks: clonePicks((l.picks && l.picks.beams) || {}), wallPicks: clonePicks((l.picks && l.picks.walls) || {}),
             slabPicks: clonePicks((l.picks && l.picks.slabs) || {}), ceilingPicks: clonePicks((l.picks && l.picks.ceilings) || {}),
             openingPicks: clonePicks((l.picks && l.picks.openings) || {}), notes: JSON.parse(JSON.stringify(l.notes || {}))};
@@ -178,16 +178,17 @@
   function levelNote(i) {
     var l = state.levels[i], above = state.levels[i + 1];
     if (!above) return 'Tầng trên cùng: chỉ có sàn';
-    var h = Math.round((above.elevation - above.slab - l.elevation) * 10) / 10;
+    var h = Math.round(((above.elevation - above.screed) - (l.elevation - l.screed)) * 10) / 10; // cột từ mặt sàn kết cấu tầng này tới mặt sàn kết cấu tầng trên
     return Number.isFinite(h) ? 'Cột cao ' + h + ' mm' : '?';
   }
   function renderLevels() {
     var table = $('levels-table'); table.replaceChildren();
-    heads(table, ['Tên tầng', 'Cao độ sàn (mm)', 'Dày sàn (mm)', 'Cao trần (mm)', 'Dày trần (mm)', 'Loại cột mặc định', 'Loại dầm mặc định', 'Loại tường mặc định', 'Ghi chú', '']);
+    heads(table, ['Tên tầng', 'Cao độ sàn hoàn thiện (mm)', 'Cán nền (mm)', 'Dày sàn (mm)', 'Cao trần (mm)', 'Dày trần (mm)', 'Loại cột mặc định', 'Loại dầm mặc định', 'Loại tường mặc định', 'Ghi chú', '']);
     state.levels.forEach(function (l, i) {
       var row = table.insertRow(), sel = document.createElement('select'), del = document.createElement('button');
       row.insertCell().appendChild(textCell(l.name, function (v) { l.name = v; renderLevelSelects(); }, 'Tên tầng ' + (i + 1)));
       row.insertCell().appendChild(numCell(l.elevation, function (v) { l.elevation = v; refreshLevelNotes(); }, 'Cao độ ' + l.name));
+      row.insertCell().appendChild(numCell(l.screed, function (v) { l.screed = v; refreshLevelNotes(); }, 'Cán nền ' + l.name));
       row.insertCell().appendChild(numCell(l.slab, function (v) { l.slab = v; refreshLevelNotes(); }, 'Dày sàn ' + l.name));
       row.insertCell().appendChild(numCell(l.ceilingHeight, function (v) { l.ceilingHeight = v; }, 'Cao trần ' + l.name));
       row.insertCell().appendChild(numCell(l.ceilingThickness, function (v) { l.ceilingThickness = v; }, 'Dày trần ' + l.name));
@@ -229,7 +230,7 @@
   function addLevel() {
     var last = state.levels[state.levels.length - 1], n = state.levels.length + 1, name = 'Tầng ' + n, taken = state.levels.map(function (l) { return l.name.toLowerCase(); });
     while (taken.indexOf(name.toLowerCase()) >= 0) name += '*';
-    state.levels.push({id: rid('sl_'), name: name, elevation: Number.isFinite(last.elevation) ? last.elevation + 3600 : 0, slab: 120, columnType: null, beamType: null, wallType: null, ceilingHeight: 2800, ceilingThickness: 9, picks: {}, beamPicks: {}, wallPicks: {}, slabPicks: {}, ceilingPicks: {}, notes: {}, openingPicks: {}});
+    state.levels.push({id: rid('sl_'), name: name, elevation: Number.isFinite(last.elevation) ? last.elevation + 3600 : 0, screed: 50, slab: 120, columnType: null, beamType: null, wallType: null, ceilingHeight: 2800, ceilingThickness: 9, picks: {}, beamPicks: {}, wallPicks: {}, slabPicks: {}, ceilingPicks: {}, notes: {}, openingPicks: {}});
     renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); changed();
   }
   function addType() {
@@ -371,7 +372,7 @@
     var i = state.levels.indexOf(currentLevel());
     if (i < 0) return;
     var l = state.levels[i], above = state.levels[i + 1];
-    $('beam-level-note').textContent = above ? 'Đỉnh dầm tại đáy sàn tầng trên: cao độ ' + Math.round((above.elevation - above.slab) * 10) / 10 + ' mm' : 'Tầng trên cùng: chỉ có sàn';
+    $('beam-level-note').textContent = above ? 'Đỉnh dầm bằng mặt sàn kết cấu tầng trên: cốt ' + Math.round((above.elevation - above.screed) * 10) / 10 + ' mm (dầm cao h là tổng chiều cao, tính từ đỉnh sàn)' : 'Tầng trên cùng: chỉ có sàn';
   }
   function renderBeamsButtons() {
     var l = currentLevel(), top = state.levels.indexOf(l) === state.levels.length - 1;
@@ -469,7 +470,7 @@
     var i = state.levels.indexOf(currentLevel());
     if (i < 0) return;
     var l = state.levels[i], above = state.levels[i + 1];
-    $('wall-level-note').textContent = above ? 'Chân tường tại mặt sàn: cao độ ' + l.elevation + ' mm; đỉnh tại đáy dầm hoặc đáy sàn tầng trên (' + Math.round((above.elevation - above.slab) * 10) / 10 + ' mm)' : 'Tầng trên cùng: chỉ có sàn';
+    $('wall-level-note').textContent = above ? 'Chân tường trên sàn kết cấu: cốt ' + Math.round((l.elevation - l.screed) * 10) / 10 + ' mm; đỉnh tại đáy dầm hoặc đáy sàn tầng trên (' + Math.round((above.elevation - above.screed - above.slab) * 10) / 10 + ' mm)' : 'Tầng trên cùng: chỉ có sàn';
   }
   function renderWallsButtons() {
     var l = currentLevel(), top = state.levels.indexOf(l) === state.levels.length - 1;
@@ -549,7 +550,7 @@
     sel.value = state.level;
     var l = currentLevel(), i = state.levels.indexOf(l), above = state.levels[i + 1];
     $(c.prefix + '-level-note').textContent = c.kind === 'slabs'
-      ? 'Mặt trên sàn tại cao độ ' + l.elevation + ' mm, dày ' + l.slab + ' mm xuống dưới' + (isTop(l) ? ' (tầng trên cùng: sàn mái)' : '')
+      ? 'Mặt trên sàn KẾT CẤU tại cốt ' + Math.round((l.elevation - l.screed) * 10) / 10 + ' mm (cao độ tầng ' + l.elevation + ' trừ cán nền ' + l.screed + '), dày ' + l.slab + ' mm xuống dưới; sàn lọt lòng giữa các dầm tầng dưới' + (isTop(l) ? ' (tầng trên cùng: sàn mái)' : '')
       : (above ? 'Mặt dưới trần tại cao độ ' + (l.elevation + l.ceilingHeight) + ' mm, dày ' + l.ceilingThickness + ' mm' : 'Tầng trên cùng: chỉ có sàn, không có trần');
     renderCellButtons(c); renderCellPlan(c);
   }

@@ -48,9 +48,9 @@ wp = S::WallPlan.plan(grid, types, bt, wt, lv, 'sl_00000001', ot)
 w = wp[:items].find { |i| i[:ref] == 'x:B:2-3' }
 ok('tường x:B:2-3 (dài 3900, cao 3480) có 2 cửa hợp lệ sắp theo vị trí: cửa đi tâm 1950 và cửa sổ tâm 3200', w[:openings].map { |o| [o[:id], o[:kind]] } == [['op_00000001', 'door'], ['op_00000002', 'window']] && wp[:opening_issues].empty?)
 d = w[:openings][0]
-ok('cửa đi tâm 1950 rộng 900: từ x = 1500 đến 2400 (tính từ đầu tường), z từ 0 đến 2100', d.values_at(:x0, :x1, :z0, :z1) == [1500.0, 2400.0, 0.0, 2100.0])
+ok('cửa đi tâm 1950 rộng 900: từ x = 1500 đến 2400 (tính từ đầu tường), z từ 50 đến 2150 so với đáy tường (tính từ cốt hoàn thiện: ngưỡng 0 + cán nền 50)', d.values_at(:x0, :x1, :z0, :z1) == [1500.0, 2400.0, 50.0, 2150.0])
 wn = w[:openings][1]
-ok('cửa sổ tâm 3200 rộng 1200 cao ngưỡng 900: x từ 2600 đến 3800, z từ 900 đến 2100', wn.values_at(:x0, :x1, :z0, :z1) == [2600.0, 3800.0, 900.0, 2100.0])
+ok('cửa sổ tâm 3200 rộng 1200 cao ngưỡng 900: x từ 2600 đến 3800, z từ 950 đến 2150 so với đáy tường', wn.values_at(:x0, :x1, :z0, :z1) == [2600.0, 3800.0, 950.0, 2150.0])
 ok('diện tích lỗ mở của tường = 0,9 x 2,1 + 1,2 x 1,2 = 3,33 m²', w[:openings_area] == 3.33)
 ok('tường không có cửa: danh sách rỗng, diện tích 0', wp[:items].find { |i| i[:ref] == 'x:B:3-4' }.then { |i| i[:openings].empty? && i[:openings_area] == 0.0 })
 op_plan = S::OpeningPlan.plan(grid, types, bt, wt, ot, lv, 'sl_00000001')

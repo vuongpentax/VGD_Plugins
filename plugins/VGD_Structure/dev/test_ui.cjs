@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.17.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.18.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -93,12 +93,17 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const levelRows=()=>page.locator('#levels-table tr').evaluateAll(rs=>rs.slice(1).map(r=>[...r.querySelectorAll('input')].map(i=>i.value).concat([r.querySelector('td.note').textContent])));
   ok(JSON.stringify(await typeNames())==='["C30x30"]','bảng loại cột: C30x30');
   const lr=await levelRows();
-  ok(lr.length===2 && lr[0][0]==='Tầng 1' && lr[0][1]==='0' && lr[0][2]==='120' && lr[0][5]==='Cột cao 3480 mm' && lr[1][5]==='Tầng trên cùng: chỉ có sàn','bảng tầng: 2 tầng, tầng 1 cột cao 3480 (3600 - 120), tầng trên cùng chỉ có sàn');
+  ok(lr.length===2 && lr[0][0]==='Tầng 1' && lr[0][1]==='0' && lr[0][2]==='50' && lr[0][3]==='120' && lr[0][6]==='Cột cao 3600 mm' && lr[1][6]==='Tầng trên cùng: chỉ có sàn','bảng tầng: 2 tầng, cán nền 50, tầng 1 cột cao 3600 (mặt sàn kết cấu 3550 - (-50)), tầng trên cùng chỉ có sàn');
   ok(await page.locator('#types-table button.del').first().isDisabled(),'còn một loại cột thì không xóa được');
   // sửa cao độ tầng 2
   await clear();
   await page.locator('#levels-table tr:nth-child(3) td:nth-child(2) input').fill('4000');await wait();
-  ok((await levelRows())[0][5]==='Cột cao 3880 mm','đổi cao độ tầng 2 thành 4000: ghi chú cột tầng 1 cập nhật ngay (3880)');
+  ok((await levelRows())[0][6]==='Cột cao 4000 mm','đổi cao độ tầng 2 thành 4000: ghi chú cột tầng 1 cập nhật ngay (4000)');
+  await clear();await page.locator('#levels-table tr:nth-child(2) td:nth-child(3) input').fill('80');await wait();
+  ok((await levelRows())[0][2]==='80' && (await levelRows())[0][6]==='Cột cao 4030 mm','đổi cán nền tầng 1 thành 80: ghi chú cột cập nhật (từ -80 tới 3950 = 4030)');
+  const lcs=await last('grid_preview');ok(lcs.levels[0].screed===80 && lcs.levels[1].screed===50,'cán nền gửi sang Ruby theo từng tầng (80 và 50)');
+  await page.locator('#levels-table tr:nth-child(2) td:nth-child(3) input').fill('500');await wait();
+  await page.locator('#levels-table tr:nth-child(2) td:nth-child(3) input').fill('50');await wait();
   const lp=await last('grid_preview');
   ok(lp.levels[1].elevation===4000 && lp.levels[0].id==='sl_00000001' && lp.levels[0].slab_thickness===120 && lp.level==='sl_00000001' && lp.types[0].name==='C30x30','xem trước gửi Ruby đúng định dạng tầng (elevation, slab_thickness, picks) và loại cột');
   // thêm tầng, thêm loại
@@ -127,9 +132,9 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await receive('state',F.state);await receive('preview',F.preview);
   await page.click('[data-tab=columns]');
   ok(await page.locator('#tab-columns').isVisible(),'chuyển sang tab Cột');
-  ok(JSON.stringify(await page.locator('#level-select option').allInnerTexts())==='["Tầng 1","Tầng 2"]' && (await page.locator('#level-note').innerText())==='Cột cao 3480 mm','chọn tầng đang xem; ghi chú chiều cao cột');
+  ok(JSON.stringify(await page.locator('#level-select option').allInnerTexts())==='["Tầng 1","Tầng 2"]' && (await page.locator('#level-note').innerText())==='Cột cao 3600 mm','chọn tầng đang xem; ghi chú chiều cao cột');
   ok(await page.locator('#plan2 rect.col').count()===2 && await page.locator('#plan2 rect.ghost').count()===10,'mặt bằng: 2 cột đã chọn và 10 giao điểm còn lại (khung chấm để bấm chọn)');
-  ok(/Tầng 1: 2 cột, cao 3480 mm/.test(await page.locator('#col-summary').innerText()),'tóm tắt cột của tầng');
+  ok(/Tầng 1: 2 cột, cao 3600 mm/.test(await page.locator('#col-summary').innerText()),'tóm tắt cột của tầng');
   ok(await page.locator('#build-cols').isEnabled() && await page.locator('#remove-cols').isDisabled(),'có cột chọn: Dựng bấm được; chưa dựng: Xóa bị khóa');
   // chọn thêm một giao điểm
   await clear();
@@ -216,8 +221,8 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.click('[data-tab=beams]');
   ok(await page.locator('#tab-beams').isVisible() && !(await page.locator('#tab-columns').isVisible()),'chuyển sang tab Dầm');
   ok(await page.locator('#plan3 rect.beam').count()===2 && await page.locator('#plan3 rect.span').count()===15 && await page.locator('#plan3 rect.colref').count()===2,'mặt bằng dầm: 2 dầm đã chọn, 15 nhịp còn lại để bấm chọn, cột hiện mờ làm nền');
-  ok(/Tầng 1: 2 dầm, đỉnh dầm tại cao độ 3480 mm/.test(await page.locator('#beam-summary').innerText()),'tóm tắt dầm: số dầm, cao độ đỉnh');
-  ok((await page.locator('#beam-level-note').innerText()).includes('3480') && await page.locator('#build-beams').isEnabled() && await page.locator('#remove-beams').isDisabled(),'ghi chú đỉnh dầm; Dựng bấm được, Xóa khóa khi chưa dựng');
+  ok(/Tầng 1: 2 dầm, đỉnh dầm tại cao độ 3550 mm/.test(await page.locator('#beam-summary').innerText()),'tóm tắt dầm: số dầm, cao độ đỉnh');
+  ok((await page.locator('#beam-level-note').innerText()).includes('3550') && await page.locator('#build-beams').isEnabled() && await page.locator('#remove-beams').isDisabled(),'ghi chú đỉnh dầm; Dựng bấm được, Xóa khóa khi chưa dựng');
   await clear();
   await page.locator('#plan3 rect.span[data-ref="x:A:2-3"]').dispatchEvent('click');await wait();
   const bk=await last('grid_preview');
@@ -288,7 +293,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.click('[data-tab=walls]');
   ok(await page.locator('#tab-walls').isVisible() && !(await page.locator('#tab-beams').isVisible()),'chuyển sang tab Tường');
   ok(await page.locator('#plan4 rect.wall').count()===2 && await page.locator('#plan4 rect.span').count()===15,'mặt bằng tường: 2 tường đã chọn, 15 nhịp còn lại để bấm chọn');
-  ok(/Tầng 1: 2 tường, từ cao độ 0 mm/.test(await page.locator('#wall-summary').innerText()),'tóm tắt tường: số tường, cao độ chân');
+  ok(/Tầng 1: 2 tường, từ cao độ -50 mm/.test(await page.locator('#wall-summary').innerText()),'tóm tắt tường: số tường, cao độ chân');
   ok(await page.locator('#build-walls').isEnabled() && await page.locator('#remove-walls').isDisabled(),'Dựng bấm được, Xóa khóa khi chưa dựng');
   await clear();
   await page.locator('#plan4 rect.span[data-ref="x:A:2-3"]').dispatchEvent('click');await wait();
@@ -338,10 +343,10 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await receive('state',F.state);await receive('preview',F.preview);
   await page.click('[data-tab=levels]');
   const lr3=await levelRows();
-  ok(lr3[0][3]==='2800' && lr3[0][4]==='9','bảng tầng có cao trần 2800 và dày trần 9');
+  ok(lr3[0][4]==='2800' && lr3[0][5]==='9','bảng tầng có cao trần 2800 và dày trần 9');
   await clear();
-  await page.locator('#levels-table tr:nth-child(2) td:nth-child(4) input').fill('3000');
-  await page.locator('#levels-table tr:nth-child(2) td:nth-child(5) input').fill('12');await wait();
+  await page.locator('#levels-table tr:nth-child(2) td:nth-child(5) input').fill('3000');
+  await page.locator('#levels-table tr:nth-child(2) td:nth-child(6) input').fill('12');await wait();
   const lc=await last('grid_preview');
   ok(lc.levels[0].ceiling_height===3000 && lc.levels[0].ceiling_thickness===12 && lc.levels[0].picks.slabs!==undefined,'đổi cao trần và dày trần: gửi ceiling_height / ceiling_thickness');
   await receive('state',F.state);await receive('preview',F.preview);

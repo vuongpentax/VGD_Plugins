@@ -19,8 +19,8 @@ module VGD
         raise Error, "Tầng “#{level['name']}” là tầng trên cùng, chỉ có sàn nên không có tường." unless above
         column_plan = ColumnPlan.plan(grid, types, levels, level_id)
         beams = level['picks']['beams'].empty? ? {} : BeamPlan.plan(grid, types, beam_types, levels, level_id)[:items].each_with_object({}) { |b, h| h[b[:ref]] = b }
-        z0 = level['elevation']
-        z_slab = column_plan[:z1]
+        z0 = column_plan[:z0]               # tường đặt trên sàn kết cấu
+        z_slab = column_plan[:slab_bottom]  # không có dầm thì tường lên đáy sàn tầng trên
         default_type = WallTypes.find(wall_types, level['wall_type']) || wall_types.first
         spans = Grid.spans(grid).each_with_object({}) { |sp, h| h[sp[:ref]] = sp }
         columns = column_plan[:items].each_with_object({}) { |c, h| h[c[:ref]] = c }
@@ -59,7 +59,7 @@ module VGD
           end
           min, max = dir == 'x' ? [[start, w[:center] - w[:w] / 2.0], [finish, w[:center] + w[:w] / 2.0]] : [[w[:center] - w[:w] / 2.0, start], [w[:center] + w[:w] / 2.0, finish]]
           items << {ref: w[:ref], dir: dir, type_id: w[:type]['id'], type_name: w[:type]['name'], t: w[:w], length: length, height: height, start: start.round(2), finish: finish.round(2),
-                    center: w[:center], min: min.map { |v| v.round(2) }, max: max.map { |v| v.round(2) }, mode: w[:mode], placement: span[:placement], z_bottom: z0, z_top: w[:z_top], under_beam: w[:under_beam]}
+                    center: w[:center], min: min.map { |v| v.round(2) }, max: max.map { |v| v.round(2) }, mode: w[:mode], placement: span[:placement], z_bottom: z0, z_top: w[:z_top], under_beam: w[:under_beam], join: w[:join]}
         end
         # Tường TỰ DO (ngang hoặc dọc): đầu mút đúng tọa độ nhập; cao tới đáy dầm nào nằm trên tường (cùng tim, chồng lên) hoặc tới đáy sàn tầng trên.
         beam_items = level['picks']['beams'].empty? ? [] : BeamPlan.plan(grid, types, beam_types, levels, level_id)[:items]
@@ -113,7 +113,7 @@ module VGD
             shift = item[:join_shift] || 0.0 # đầu tường đã dịch do nối góc: vị trí cửa tính từ đầu tường cũ
             x0 = e['pos'] - type['w'] / 2.0 - shift
             x1 = e['pos'] + type['w'] / 2.0 - shift
-            z0 = type['sill']
+            z0 = type['sill'] + level['screed'] # cao ngưỡng tính từ cốt sàn HOÀN THIỆN; tường tính từ sàn kết cấu thấp hơn `screed`
             z1 = z0 + type['h']
             label = "Cửa #{type['name']} (#{id}) trên tường #{item[:ref]}"
             if x0 < -EPS || x1 > item[:length] + EPS
@@ -123,7 +123,7 @@ module VGD
             elsif valid.last && x0 < valid.last[:x1] + MIN_OPENING_GAP - EPS
               issues << "#{label}: chồng hoặc sát cửa #{valid.last[:id]} (cần cách nhau ít nhất #{MIN_OPENING_GAP.to_i} mm), bỏ qua."
             else
-              valid << {id: id, kind: type['kind'], type_id: type['id'], type_name: type['name'], w: type['w'], h: type['h'], sill: z0, pos: e['pos'], flip: e['flip'], x0: x0.round(2), x1: x1.round(2), z0: z0, z1: z1.round(2)}
+              valid << {id: id, kind: type['kind'], type_id: type['id'], type_name: type['name'], w: type['w'], h: type['h'], sill: type['sill'], pos: e['pos'], flip: e['flip'], x0: x0.round(2), x1: x1.round(2), z0: z0, z1: z1.round(2)}
             end
           end
           item[:openings] = valid

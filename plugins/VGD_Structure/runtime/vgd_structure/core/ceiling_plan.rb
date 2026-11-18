@@ -17,7 +17,7 @@ module VGD
         column_plan = ColumnPlan.plan(grid, types, levels, level_id)
         z_bottom = (level['elevation'] + level['ceiling_height']).round(1)
         z_top = (z_bottom + level['ceiling_thickness']).round(1)
-        raise Error, "Trần tầng “#{level['name']}” (mặt trên #{z_top} mm) cao hơn đáy sàn tầng trên (#{column_plan[:z1]} mm). Hãy giảm cao trần." if z_top > column_plan[:z1] + EPS
+        raise Error, "Trần tầng “#{level['name']}” (mặt trên #{z_top} mm) cao hơn đáy sàn tầng trên (#{column_plan[:slab_bottom]} mm). Hãy giảm cao trần." if z_top > column_plan[:slab_bottom] + EPS
         walls = level['picks']['walls'].empty? ? {} : WallPlan.plan(grid, types, beam_types, wall_types, levels, level_id, opening_types)[:items].each_with_object({}) { |w, h| h[w[:ref]] = w }
         beams = level['picks']['beams'].empty? ? {} : BeamPlan.plan(grid, types, beam_types, levels, level_id)[:items]
         columns = column_plan[:items].each_with_object({}) { |c, h| h[c[:ref]] = c }
@@ -26,49 +26,16 @@ module VGD
         issues = []
         cells.each do |ref, cell|
           level['picks']['ceilings'].key?(ref) or next
-          x0, y0 = cell[:min]
-          x1, y1 = cell[:max]
-          wall = ->(span_ref) { walls[span_ref] }
-          bottom = wall.call("x:#{cell[:ya]}:#{cell[:xa]}-#{cell[:xb]}")
-          top = wall.call("x:#{cell[:yb]}:#{cell[:xa]}-#{cell[:xb]}")
-          left = wall.call("y:#{cell[:xa]}:#{cell[:ya]}-#{cell[:yb]}")
-          right = wall.call("y:#{cell[:xb]}:#{cell[:ya]}-#{cell[:yb]}")
-          rx0 = left ? [x0, left[:max][0]].max : x0
-          rx1 = right ? [x1, right[:min][0]].min : x1
-          ry0 = bottom ? [y0, bottom[:max][1]].max : y0
-          ry1 = top ? [y1, top[:min][1]].min : y1
-          if rx1 - rx0 < MIN_SIZE || ry1 - ry0 < MIN_SIZE
+          shape = Plates.recess_cell(cell, Plates.edge_items(cell, walls), columns)
+          if shape[:error] == :narrow
             issues << "Trần ô #{ref}: khoảng hở giữa các tường nhỏ hơn #{MIN_SIZE.to_i} mm, bỏ qua."
             next
-          end
-          notch = lambda do |node, cx, cy|
-            col = columns[node] or return nil
-            cmin = [col[:center][0] - col[:w] / 2.0, col[:center][1] - col[:d] / 2.0]
-            cmax = [col[:center][0] + col[:w] / 2.0, col[:center][1] + col[:d] / 2.0]
-            return nil unless cmin[0] < cx + EPS && cx - EPS < cmax[0] && cmin[1] < cy + EPS && cy - EPS < cmax[1] # cột phải chứa góc của hình chữ nhật trần
-            [cmax[0] - cx, cmax[1] - cy, cmin[0] - cx, cmin[1] - cy]
-          end
-          n_bl = notch.call("#{cell[:xa]}-#{cell[:ya]}", rx0, ry0)
-          n_br = notch.call("#{cell[:xb]}-#{cell[:ya]}", rx1, ry0)
-          n_tr = notch.call("#{cell[:xb]}-#{cell[:yb]}", rx1, ry1)
-          n_tl = notch.call("#{cell[:xa]}-#{cell[:yb]}", rx0, ry1)
-          sizes = {
-            bl: n_bl && [[n_bl[0], 0].max, [n_bl[1], 0].max], br: n_br && [[-n_br[2], 0].max, [n_br[1], 0].max],
-            tr: n_tr && [[-n_tr[2], 0].max, [-n_tr[3], 0].max], tl: n_tl && [[n_tl[0], 0].max, [-n_tl[3], 0].max]
-          }
-          sizes.each { |k, v| sizes[k] = nil if v && (v[0] <= EPS || v[1] <= EPS) }
-          w = rx1 - rx0
-          h = ry1 - ry0
-          widths = ->(a, b) { (sizes[a]&.first || 0) + (sizes[b]&.first || 0) }
-          heights = ->(a, b) { (sizes[a]&.last || 0) + (sizes[b]&.last || 0) }
-          if widths.call(:bl, :br) >= w - EPS || widths.call(:tl, :tr) >= w - EPS || heights.call(:bl, :tl) >= h - EPS || heights.call(:br, :tr) >= h - EPS
+          elsif shape[:error]
             issues << "Trần ô #{ref}: cột chiếm hết một cạnh của ô, bỏ qua."
             next
           end
-          polygon = polygon_for(rx0, ry0, rx1, ry1, sizes)
-          area = ((rx1 - rx0) * (ry1 - ry0) - sizes.values.compact.sum { |v| v[0] * v[1] }) / 1_000_000.0
-          items << {ref: ref, polygon: polygon.map { |p| p.map { |v| v.round(2) } }, min: [rx0.round(2), ry0.round(2)], max: [rx1.round(2), ry1.round(2)], z_bottom: z_bottom, z_top: z_top,
-                    thickness: level['ceiling_thickness'], area: area.round(3)}
+          items << {ref: ref, polygon: shape[:polygon], min: shape[:min], max: shape[:max], z_bottom: z_bottom, z_top: z_top,
+                    thickness: level['ceiling_thickness'], area: shape[:area]}
         end
         # Trần ĐA GIÁC tự do (P4b-3): đúng hình đã vẽ (có thể có lỗ); không lùi theo tường / cột, chồng nhau thì chỉ cảnh báo.
         free_ceilings = level['picks']['ceilings'].select { |_ref, pick| pick['free'] }.map do |ref, pick|

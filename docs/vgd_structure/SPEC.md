@@ -68,15 +68,16 @@ Lưới quyết định vị trí và **không phần tử nào nhô ra ngoài k
 
 ## 5. Quy tắc cao độ (không chồng khối)
 
-Tầng i: mặt sàn `Ei`, tầng kế `E(i+1)`, dày sàn `t(i+1)` của tầng kế.
+Tầng i: cao độ `Ei` là cốt sàn HOÀN THIỆN; cán nền `c(i)` (mặc định 50 mm, 0 đến 300, sửa từng tầng) nên **mặt trên sàn kết cấu** là `Si = Ei - c(i)`. Dày sàn `t(i)`. Cột, dầm, tường kết cấu tính từ `Si`; ngưỡng cửa và cao trần tính từ `Ei` (cốt hoàn thiện).
 
 | Loại | Cao độ |
 |---|---|
-| Sàn tầng i | mặt trên `Ei`, dày `t(i)` xuống dưới; phủ cả ô (kể cả phía trên cột và dầm) |
-| Cột | từ `Ei` lên đáy sàn tầng trên `E(i+1) - t(i+1)` |
-| Dầm | đỉnh tại đáy sàn tầng trên, treo xuống `h` |
-| Tường | từ `Ei` lên đáy dầm của nhịp (nếu nhịp có dầm), không thì lên đáy sàn tầng trên |
-| Trần | cao độ `Ei + height` của tầng, mỏng `thickness`, trong ô |
+| Sàn tầng i | mặt trên `Si`, dày `t(i)` xuống dưới; nằm **lọt lòng** giữa các dầm và cột của tầng dưới (lùi tới mặt dầm, khoét góc theo cột), nên không chồng khối |
+| Cột | từ `Si` lên `S(i+1)` (mặt trên sàn kết cấu tầng trên) |
+| Dầm | **đỉnh bằng `S(i+1)`**, chiều cao `h` là TỔNG chiều cao tính từ đỉnh sàn xuống (phần nhô dưới sàn là `h - t(i+1)`) |
+| Tường | từ `Si` lên đáy dầm của nhịp (nếu có dầm), không thì lên đáy sàn tầng trên `S(i+1) - t(i+1)` |
+| Cửa | ngưỡng `sill` tính từ `Ei` (cốt hoàn thiện) |
+| Trần | cao độ `Ei + height` của tầng, mỏng `thickness`, trong ô; mặt trên không vượt đáy sàn tầng trên |
 
 Tầng trên cùng chưa có tầng kế: cột, dầm, tường của tầng đó cần nhập chiều cao tầng; chi tiết chốt ở cột mốc 2.
 

@@ -76,10 +76,10 @@ st = state_with(walls: wall, beams: {FB1 => {'free' => {'a' => [1500, 2000], 'b'
 wp = S::WallPlan.plan(st['grid'], st['types'], st['beam_types'], st['wall_types'], st['levels'], 'sl_00000001', st['opening_types'])
 w = wp[:items].find { |i| i[:ref] == FW1 }
 ok('tường tự do ngang: đầu mút, dài, tim, hộp theo bề dày; kiểu đặt free', w[:dir] == 'x' && w[:start] == 1000.0 && w[:finish] == 5000.0 && w[:length] == 4000.0 && w[:center] == 2000.0 && w[:min][0] == 1000.0 && w[:placement] == 'free')
-ok('tường tự do có dầm tự do cùng tim nằm trên: cao tới ĐÁY DẦM, đánh dấu dưới dầm', w[:under_beam] && w[:z_top] < wp[:z_slab] && w[:height] == w[:z_top])
+ok('tường tự do có dầm tự do cùng tim nằm trên: cao tới ĐÁY DẦM, đánh dấu dưới dầm', w[:under_beam] && w[:z_top] < wp[:z_slab] && w[:height] == w[:z_top] + 50)
 no_beam = state_with(walls: wall)
 w0 = S::WallPlan.plan(no_beam['grid'], no_beam['types'], no_beam['beam_types'], no_beam['wall_types'], no_beam['levels'], 'sl_00000001', no_beam['opening_types'])[:items][0]
-ok('không có dầm: tường tự do cao tới đáy sàn tầng trên', !w0[:under_beam] && w0[:z_top] == 3480.0 && w0[:height] == 3480.0)
+ok('không có dầm: tường tự do cao tới đáy sàn tầng trên', !w0[:under_beam] && w0[:z_top] == 3430.0 && w0[:height] == 3480.0)
 off = state_with(walls: wall, beams: {FB1 => {'free' => {'a' => [1500, 2500], 'b' => [4500, 2500]}}})
 ok('dầm tự do KHÔNG cùng tim với tường: không coi là nằm trên tường', !S::WallPlan.plan(off['grid'], off['types'], off['beam_types'], off['wall_types'], off['levels'], 'sl_00000001', off['opening_types'])[:items][0][:under_beam])
 ok('cửa đặt trên tường tự do hợp lệ: nằm trong tường, có trong danh sách của tường', w[:openings].size == 1 && w[:openings][0][:pos] == 1500.0 && wp[:opening_issues].empty?)

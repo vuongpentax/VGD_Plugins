@@ -15,6 +15,8 @@ module VGD
       CEILING_HEIGHT_RANGE = (1500.0..20_000.0)
       DEFAULT_CEILING_THICKNESS = 9.0
       CEILING_THICKNESS_RANGE = (5.0..100.0)
+      DEFAULT_SCREED = 50.0       # lớp cán nền: cốt sàn kết cấu thấp hơn cốt sàn hoàn thiện (cao độ tầng `Ei`) mức này
+      SCREED_RANGE = (0.0..300.0)
       MAX_OPENINGS = 2000
       MAX_POS = 100_000.0
       OPENING_ID = /\Aop_[0-9a-f]{8}\z/
@@ -39,9 +41,9 @@ module VGD
 
       # Hai tầng mặc định: Tầng 1 (cao độ 0) và tầng trên cùng cao 3600 mm.
       def self.default
-        [{'id' => 'sl_00000001', 'name' => 'Tầng 1', 'elevation' => 0.0, 'slab_thickness' => DEFAULT_SLAB, 'ceiling_height' => DEFAULT_CEILING_HEIGHT, 'ceiling_thickness' => DEFAULT_CEILING_THICKNESS, 'column_type' => nil, 'beam_type' => nil, 'wall_type' => nil,
+        [{'id' => 'sl_00000001', 'name' => 'Tầng 1', 'elevation' => 0.0, 'screed' => DEFAULT_SCREED, 'slab_thickness' => DEFAULT_SLAB, 'ceiling_height' => DEFAULT_CEILING_HEIGHT, 'ceiling_thickness' => DEFAULT_CEILING_THICKNESS, 'column_type' => nil, 'beam_type' => nil, 'wall_type' => nil,
          'picks' => {'columns' => {}, 'beams' => {}, 'walls' => {}, 'slabs' => {}, 'ceilings' => {}, 'openings' => {}}},
-         {'id' => 'sl_00000002', 'name' => 'Tầng 2', 'elevation' => 3600.0, 'slab_thickness' => DEFAULT_SLAB, 'ceiling_height' => DEFAULT_CEILING_HEIGHT, 'ceiling_thickness' => DEFAULT_CEILING_THICKNESS, 'column_type' => nil, 'beam_type' => nil, 'wall_type' => nil,
+         {'id' => 'sl_00000002', 'name' => 'Tầng 2', 'elevation' => 3600.0, 'screed' => DEFAULT_SCREED, 'slab_thickness' => DEFAULT_SLAB, 'ceiling_height' => DEFAULT_CEILING_HEIGHT, 'ceiling_thickness' => DEFAULT_CEILING_THICKNESS, 'column_type' => nil, 'beam_type' => nil, 'wall_type' => nil,
          'picks' => {'columns' => {}, 'beams' => {}, 'walls' => {}, 'slabs' => {}, 'ceilings' => {}, 'openings' => {}}}]
       end
 
@@ -69,6 +71,8 @@ module VGD
           raise Error, "Tầng “#{name}”: dày sàn từ #{SLAB_RANGE.min.to_i} đến #{SLAB_RANGE.max.to_i} mm." unless number?(slab) && SLAB_RANGE.cover?(slab.to_f)
           ceiling_height = level.key?('ceiling_height') ? level['ceiling_height'] : DEFAULT_CEILING_HEIGHT
           raise Error, "Tầng “#{name}”: cao trần từ #{CEILING_HEIGHT_RANGE.min.to_i} đến #{CEILING_HEIGHT_RANGE.max.to_i} mm." unless number?(ceiling_height) && CEILING_HEIGHT_RANGE.cover?(ceiling_height.to_f)
+          screed = level.key?('screed') ? level['screed'] : DEFAULT_SCREED
+          raise Error, "Tầng “#{name}”: lớp cán nền từ #{SCREED_RANGE.min.to_i} đến #{SCREED_RANGE.max.to_i} mm." unless number?(screed) && SCREED_RANGE.cover?(screed.to_f)
           ceiling_thickness = level.key?('ceiling_thickness') ? level['ceiling_thickness'] : DEFAULT_CEILING_THICKNESS
           raise Error, "Tầng “#{name}”: dày trần từ #{CEILING_THICKNESS_RANGE.min.to_i} đến #{CEILING_THICKNESS_RANGE.max.to_i} mm." unless number?(ceiling_thickness) && CEILING_THICKNESS_RANGE.cover?(ceiling_thickness.to_f)
           type_id = level['column_type']
@@ -88,7 +92,7 @@ module VGD
           openings, dropped_o = openings!((raw || {})['openings'], span_refs + free_walls, opening_types, name)
           notes = notes!(level['notes'], name)
           removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k + dropped_o
-          {'id' => id, 'name' => name, 'elevation' => elevation, 'slab_thickness' => slab.to_f.round(1), 'ceiling_height' => ceiling_height.to_f.round(1), 'ceiling_thickness' => ceiling_thickness.to_f.round(1),
+          {'id' => id, 'name' => name, 'elevation' => elevation, 'screed' => screed.to_f.round(1), 'slab_thickness' => slab.to_f.round(1), 'ceiling_height' => ceiling_height.to_f.round(1), 'ceiling_thickness' => ceiling_thickness.to_f.round(1),
            'column_type' => type_id, 'beam_type' => beam_type, 'wall_type' => wall_type, 'picks' => {'columns' => columns, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings, 'openings' => openings}, 'notes' => notes}
         end
         names = out.map { |l| l['name'].downcase }
@@ -306,6 +310,11 @@ module VGD
           out[id] = {'wall' => entry['wall'], 'type' => entry['type'], 'pos' => pos.to_f.round(1), 'flip' => flip}
         end
         [out, dropped]
+      end
+
+      # Cốt MẶT TRÊN SÀN KẾT CẤU của tầng: cao độ tầng (sàn hoàn thiện) trừ lớp cán nền. Cột, dầm, tường kết cấu tính từ cốt này.
+      def self.structure_top(level)
+        (level['elevation'] - level['screed']).round(1)
       end
 
       def self.find(levels, id)

@@ -34,7 +34,7 @@ ok('loại tường mặc định hoặc loại của tường không tồn tạ
 levels = mk(grid, types, bt, wt, cols, {}, all_walls)
 plan = WP.plan(grid, types, bt, wt, levels, 'sl_00000001')
 w = ->(ref) { plan[:items].find { |i| i[:ref] == ref } }
-ok('17 tường, từ mặt sàn (0) lên đáy sàn tầng trên (3480) khi không có dầm: cao 3480', plan[:items].size == 17 && plan[:items].all? { |i| i[:z_bottom] == 0.0 && i[:z_top] == 3480.0 && i[:height] == 3480.0 && !i[:under_beam] })
+ok('17 tường, từ mặt sàn kết cấu (-50) lên đáy sàn tầng trên (3550 - 120 = 3430) khi không có dầm: cao 3480', plan[:items].size == 17 && plan[:items].all? { |i| i[:z_bottom] == -50.0 && i[:z_top] == 3430.0 && i[:height] == 3480.0 && !i[:under_beam] })
 ok('tường biên x:A:1-2: mặt ngoài tiếp giáp trục A (y từ 0 đến 200), tâm 100; tường biên cuối x:C:1-2: y từ 7000 đến 7200; tường giữa x:B:1-2 tâm 3600', w['x:A:1-2'][:min][1] == 0.0 && w['x:A:1-2'][:max][1] == 200.0 && w['x:C:1-2'][:max][1] == 7200.0 && w['x:B:1-2'][:center] == 3600.0)
 ok('tường dừng ở mặt cột: x:B:2-3 từ 4350 đến 8250; y:1:A-B từ 300 đến 3450', w['x:B:2-3'][:start] == 4350.0 && w['x:B:2-3'][:finish] == 8250.0 && w['y:1:A-B'][:start] == 300.0 && w['y:1:A-B'][:finish] == 3450.0)
 ok('đủ cột, tường theo quy ước: không có cảnh báo', plan[:issues].empty?)
@@ -43,13 +43,13 @@ ok('đủ cột, tường theo quy ước: không có cảnh báo', plan[:issues
 beams = spans.each_with_object({}) { |r, h| h[r] = {} }
 lb = mk(grid, types, bt, wt, cols, beams, {'x:B:2-3' => {}, 'x:A:1-2' => {}})
 pb = WP.plan(grid, types, bt, wt, lb, 'sl_00000001')
-ok('nhịp có dầm D20x40 (đáy dầm 3080): tường cao 3080, đánh dấu dưới dầm; mọi nhịp có dầm nên đều 3080', pb[:items].all? { |i| i[:z_top] == 3080.0 && i[:height] == 3080.0 && i[:under_beam] })
+ok('nhịp có dầm D20x40 (đáy dầm 3550 - 400 = 3150): tường cao 3150 + 50 = 3200, đánh dấu dưới dầm', pb[:items].all? { |i| i[:z_top] == 3150.0 && i[:height] == 3200.0 && i[:under_beam] })
 lp = mk(grid, types, bt, wt, cols, {'x:B:2-3' => {}}, {'x:B:2-3' => {}, 'x:B:3-4' => {}})
 pp = WP.plan(grid, types, bt, wt, lp, 'sl_00000001')
-ok('chỉ nhịp x:B:2-3 có dầm: tường đó cao 3080, tường x:B:3-4 (không dầm) cao 3480', pp[:items].find { |i| i[:ref] == 'x:B:2-3' }[:height] == 3080.0 && pp[:items].find { |i| i[:ref] == 'x:B:3-4' }[:height] == 3480.0)
+ok('chỉ nhịp x:B:2-3 có dầm: tường đó cao 3200 (tới đáy dầm), tường x:B:3-4 (không dầm) cao 3480', pp[:items].find { |i| i[:ref] == 'x:B:2-3' }[:height] == 3200.0 && pp[:items].find { |i| i[:ref] == 'x:B:3-4' }[:height] == 3480.0)
 bt2 = bt + [{'id' => 'bt_00000002', 'name' => 'D30x60', 'w' => 300.0, 'h' => 600.0}]
 lbt = mk(grid, types, bt2, wt, cols, {'x:B:2-3' => {'type' => 'bt_00000002'}}, {'x:B:2-3' => {}})
-ok('dầm cao 600: tường cao tới đáy dầm (3480 - 600 = 2880)', WP.plan(grid, types, bt2, wt, lbt, 'sl_00000001')[:items][0][:height] == 2880.0)
+ok('dầm cao 600: tường cao tới đáy dầm (3550 - 600 = 2950, từ -50: 3000)', WP.plan(grid, types, bt2, wt, lbt, 'sl_00000001')[:items][0][:height] == 3000.0)
 
 # Loại tường
 wt2 = wt + [{'id' => 'wt_00000002', 'name' => 'T100', 't' => 100.0}]

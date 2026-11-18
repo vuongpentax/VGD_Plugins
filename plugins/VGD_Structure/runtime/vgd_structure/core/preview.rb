@@ -56,7 +56,7 @@ module VGD
           out[:openings_error] = error.message
         end
         begin
-          slab = SlabPlan.plan(grid, levels, level_id)
+          slab = SlabPlan.plan(grid, levels, level_id, types, beam_types)
           out[:slabs] = {level: slab[:level]['id'], level_name: slab[:level]['name'], z_top: slab[:z_top], thickness: slab[:thickness], count: slab[:items].size, issues: slab[:issues],
                          items: slab[:items].map { |i| i.slice(:ref, :min, :max, :thickness, :z_top, :z_bottom, :area, :polygon, :holes, :placement) }}
         rescue SlabPlan::Error => error

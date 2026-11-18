@@ -16,10 +16,11 @@ module VGD
         level = Levels.find(levels, level_id) or raise Error, 'Tầng không tồn tại.'
         above = Levels.next_of(levels, level_id)
         raise Error, "Tầng “#{level['name']}” là tầng trên cùng, chỉ có sàn nên không có cột." unless above
-        z0 = level['elevation']
-        z1 = (above['elevation'] - above['slab_thickness']).round(1)
+        z0 = Levels.structure_top(level)     # mặt trên sàn kết cấu tầng này
+        z1 = Levels.structure_top(above)     # mặt trên sàn kết cấu tầng trên = đỉnh cột = đỉnh dầm
+        slab_bottom = (z1 - above['slab_thickness']).round(1)
         height = (z1 - z0).round(1)
-        raise Error, "Chiều cao cột tầng “#{level['name']}” chỉ #{height} mm (từ mặt sàn đến đáy sàn tầng “#{above['name']}”), cần ít nhất #{Levels::MIN_COLUMN_HEIGHT.to_i} mm." if height < Levels::MIN_COLUMN_HEIGHT
+        raise Error, "Chiều cao cột tầng “#{level['name']}” chỉ #{height} mm (từ mặt sàn kết cấu tầng này đến mặt sàn kết cấu tầng “#{above['name']}”), cần ít nhất #{Levels::MIN_COLUMN_HEIGHT.to_i} mm." if height < Levels::MIN_COLUMN_HEIGHT
         default_type = ColumnTypes.find(types, level['column_type']) || types.first
         points = Grid.intersections(grid).each_with_object({}) { |i, h| h[i[:ref]] = i }
         x_last = grid['x_axes'].last['name']
@@ -58,7 +59,7 @@ module VGD
           issues << "Cột #{item[:ref]} nhô ra ngoài khung lưới (tâm đặt trên trục biên)." if min_x < x0 - EPS || max_x > x1 + EPS || min_y < y0 - EPS || max_y > y1 + EPS
         end
         overlaps(items).each { |a, b| issues << "Cột #{a[:ref]} và #{b[:ref]} chồng lên nhau." }
-        {level: level, next_level: above, z0: z0, z1: z1, height: height, items: items, issues: issues}
+        {level: level, next_level: above, z0: z0, z1: z1, slab_bottom: slab_bottom, height: height, items: items, issues: issues}
       end
 
       def self.mode(chosen, first, last)

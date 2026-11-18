@@ -38,16 +38,16 @@ ok('mã ô có tên trục thành phần (xa, xb, ya, yb) khớp mã', S::Grid.c
 # Sàn
 levels = mk(grid, types, bt, wt, {'slabs' => all_cells})
 sp = S::SlabPlan.plan(grid, levels, 'sl_00000001')
-ok('6 sàn phủ 6 ô, mặt trên tại cao độ tầng 0, dày 120 xuống dưới (đáy -120)', sp[:items].size == 6 && sp[:items].all? { |i| i[:z_top] == 0.0 && i[:z_bottom] == -120.0 && i[:thickness] == 120.0 })
+ok('6 sàn phủ 6 ô, mặt trên sàn kết cấu = cao độ tầng 0 trừ cán nền 50 = -50, dày 120 xuống dưới (đáy -170)', sp[:items].size == 6 && sp[:items].all? { |i| i[:z_top] == -50.0 && i[:z_bottom] == -170.0 && i[:thickness] == 120.0 })
 s12 = sp[:items].find { |i| i[:ref] == '1-2/A-B' }
 ok('sàn ô 1-2/A-B phủ từ trục tới trục (0,0)-(4200,3600), diện tích 15,12 m²', s12[:min] == [0.0, 0.0] && s12[:max] == [4200.0, 3600.0] && s12[:area] == 15.12)
 ok('sàn theo thứ tự ô của lưới', sp[:items].map { |i| i[:ref] } == cells)
 top = SlabTop = S::SlabPlan.plan(grid, levels, 'sl_00000002')
-ok('tầng trên cùng cũng có sàn (chưa chọn ô nào thì rỗng)', top[:items].empty? && top[:z_top] == 3600.0)
+ok('tầng trên cùng cũng có sàn (chưa chọn ô nào thì rỗng)', top[:items].empty? && top[:z_top] == 3550.0)
 l2 = mk(grid, types, bt, wt, {}, {}, 'picks' => {'slabs' => {'1-2/A-B' => {}}})
-ok('sàn tầng trên cùng: mặt trên tại 3600, đáy 3480', S::SlabPlan.plan(grid, l2, 'sl_00000002')[:items][0].values_at(:z_top, :z_bottom) == [3600.0, 3480.0])
+ok('sàn tầng trên cùng: mặt trên kết cấu 3600 - 50 = 3550, đáy 3430', S::SlabPlan.plan(grid, l2, 'sl_00000002')[:items][0].values_at(:z_top, :z_bottom) == [3550.0, 3430.0])
 lt = mk(grid, types, bt, wt, {'columns' => cols, 'slabs' => all_cells}, {}, 'slab_thickness' => 200)
-ok('cột tầng dưới dừng ở đáy sàn tầng trên: đáy sàn 3600 - 200 = 3400 = đỉnh cột (không chồng)', S::ColumnPlan.plan(grid, types, lt, 'sl_00000001')[:z1] == 3400.0 && S::SlabPlan.plan(grid, lt, 'sl_00000002')[:items].empty? && true)
+ok('cột tầng dưới lên tới mặt sàn kết cấu tầng trên (3550), đáy sàn 3550 - 200 = 3350; sàn lọt lòng nên không chồng cột', S::ColumnPlan.plan(grid, types, lt, 'sl_00000001')[:z1] == 3550.0 && S::ColumnPlan.plan(grid, types, lt, 'sl_00000001')[:slab_bottom] == 3350.0 && S::SlabPlan.plan(grid, lt, 'sl_00000002')[:items].empty? && true)
 ok('tầng không tồn tại: báo lỗi', !error_of { S::SlabPlan.plan(grid, levels, 'sl_deadbeef') }.nil?)
 
 # Trần
@@ -78,9 +78,9 @@ pa = S::CeilingPlan.plan(grid, types, bt, wt, ca, 'sl_00000001')[:items][0]
 ok('cột 2-A đặt cạnh lớn tại trục X (cột nằm hết trong ô, rộng 300): khoét dưới phải rộng 300 sâu 300; cột 1-A tâm trên giao điểm: khoét 150 x 150', pa[:polygon].include?([3900.0, 0.0]) && pa[:polygon].include?([3900.0, 300.0]) && pa[:polygon].include?([150.0, 0.0]) && pa[:polygon].include?([0.0, 150.0]))
 # Cao độ trần
 ok('cao trần làm mặt trên vượt đáy sàn tầng trên (3480): báo lỗi', error_of { S::CeilingPlan.plan(grid, types, bt, wt, mk(grid, types, bt, wt, {'ceilings' => all_cells}, 'ceiling_height' => 3475), 'sl_00000001') }.to_s.include?('cao hơn đáy sàn'))
-ok('cao trần vừa đủ (3480 - 9 = 3471): hợp lệ', error_of { S::CeilingPlan.plan(grid, types, bt, wt, mk(grid, types, bt, wt, {'ceilings' => all_cells}, 'ceiling_height' => 3471), 'sl_00000001') }.nil?)
+ok('cao trần vừa đủ (đáy sàn 3430 - 9 = 3421): hợp lệ', error_of { S::CeilingPlan.plan(grid, types, bt, wt, mk(grid, types, bt, wt, {'ceilings' => all_cells}, 'ceiling_height' => 3421), 'sl_00000001') }.nil?)
 cb = mk(grid, types, bt, wt, {'beams' => spans.each_with_object({}) { |r, h| h[r] = {} }, 'ceilings' => {'1-2/A-B' => {}}}, 'ceiling_height' => 3200)
-ok('trần cao 3200 chạm đáy dầm 3080: cảnh báo', S::CeilingPlan.plan(grid, types, bt, wt, cb, 'sl_00000001')[:issues].any? { |m| m.include?('chạm dầm') })
+ok('trần cao 3200 chạm đáy dầm 3150: cảnh báo', S::CeilingPlan.plan(grid, types, bt, wt, cb, 'sl_00000001')[:issues].any? { |m| m.include?('chạm dầm') })
 ok('trần cao 2800 thấp hơn đáy dầm: không cảnh báo', S::CeilingPlan.plan(grid, types, bt, wt, mk(grid, types, bt, wt, {'beams' => spans.each_with_object({}) { |r, h| h[r] = {} }, 'ceilings' => {'1-2/A-B' => {}}}), 'sl_00000001')[:issues].empty?)
 ok('tầng trên cùng không có trần, tầng không tồn tại báo lỗi', error_of { S::CeilingPlan.plan(grid, types, bt, wt, cp, 'sl_00000002') }.to_s.include?('tầng trên cùng') && !error_of { S::CeilingPlan.plan(grid, types, bt, wt, cp, 'sl_deadbeef') }.nil?)
 # Khoảng hở quá nhỏ

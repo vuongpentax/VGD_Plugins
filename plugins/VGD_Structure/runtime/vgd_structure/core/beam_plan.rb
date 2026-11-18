@@ -1,7 +1,7 @@
 module VGD
   module Structure
     # Kế hoạch dầm của một tầng (đặc tả: SPEC mục 4 và 5). Logic thuần.
-    # - Dầm treo dưới sàn tầng kế trên: đỉnh dầm = đáy sàn (cùng cao độ đỉnh cột), xuống `h`. Tầng trên cùng chỉ có sàn nên không có dầm.
+    # - Dầm cùng cốt với sàn tầng kế trên: ĐỈNH DẦM = mặt trên sàn kết cấu (= đỉnh cột), xuống tổng chiều cao `h` (phần nhô dưới sàn là h - dày sàn); sàn nằm lọt lòng giữa các dầm nên khối không chồng nhau. Tầng trên cùng chỉ có sàn nên không có dầm.
     # - Dọc nhịp, hai đầu dầm dừng ở MẶT CỘT (cột được chọn ở giao điểm đó cùng tầng); chỗ không có cột thì dầm theo phương X chạy tới trục,
     #   dầm theo phương Y dừng ở mặt dầm X nếu có dầm X được chọn chạm giao điểm đó, nếu không thì tới trục.
     # - Vị trí theo phương vuông góc: auto (dầm trên trục biên đầu "min", biên cuối "max": mặt ngoài tiếp giáp trục biên; nhịp giữa "center"),
@@ -34,7 +34,7 @@ module VGD
                    else axis
                    end
           bottom = (z_top - type['h']).round(1)
-          raise Error, "Dầm #{type['name']} cao #{type['h'].round} mm không lọt dưới chiều cao tầng “#{level['name']}” (#{column_plan[:height]} mm)." if bottom <= level['elevation'] + EPS
+          raise Error, "Dầm #{type['name']} cao #{type['h'].round} mm không lọt dưới chiều cao tầng “#{level['name']}” (#{column_plan[:height]} mm)." if bottom <= column_plan[:z0] + EPS
           out << {ref: ref, span: span, type: type, mode: mode, center: center.round(2), w: type['w'], h: type['h'], z_top: z_top, z_bottom: bottom}
         end
         x_beams_at = Hash.new { |h, k| h[k] = [] } # nút -> các dầm X chạm nút
@@ -63,7 +63,7 @@ module VGD
           free = pick['free'] or next
           type = pick['type'] ? BeamTypes.find(beam_types, pick['type']) : default_type
           bottom = z_bottom_free.call(type)
-          raise Error, "Dầm #{type['name']} cao #{type['h'].round} mm không lọt dưới chiều cao tầng “#{level['name']}” (#{column_plan[:height]} mm)." if bottom <= level['elevation'] + EPS
+          raise Error, "Dầm #{type['name']} cao #{type['h'].round} mm không lọt dưới chiều cao tầng “#{level['name']}” (#{column_plan[:height]} mm)." if bottom <= column_plan[:z0] + EPS
           items << free_item(ref, free, type['w'], type, z_top, bottom, :h)
         end
         x0, y0, x1, y1 = Grid.bounds(grid)
@@ -79,6 +79,7 @@ module VGD
             issues << "Dầm #{label(bb[2])} chồng lên cột #{cb[2][:ref]}." if rects_overlap?(bb, cb)
           end
         end
+        items.each { |i| issues << "Dầm #{label(i)} cao #{i[:h].round} mm không lớn hơn dày sàn tầng trên (#{above['slab_thickness'].round} mm): không có phần nhô xuống dưới sàn." if i[:h] <= above['slab_thickness'] + EPS }
         {level: level, next_level: above, z_top: z_top, items: items, issues: issues, columns_height: column_plan[:height]}
       end
 

@@ -151,7 +151,7 @@
     else {
       var lv = levelList.filter(function (l) { return l.id === currentId; })[0];
       title = lv ? lv.name : 'Mặt bằng';
-      rows = lv ? [['Cao độ sàn', lv.elevation + ' mm'], ['Dày sàn', lv.slab + ' mm']] : [];
+      rows = lv ? [['Cao độ sàn hoàn thiện', lv.elevation + ' mm'], ['Cán nền', lv.screed + ' mm'], ['Mặt sàn kết cấu', Math.round((lv.elevation - lv.screed) * 10) / 10 + ' mm'], ['Dày sàn', lv.slab + ' mm']] : [];
       var counts = {}; shapes.forEach(function (x) { counts[x.layer] = (counts[x.layer] || 0) + 1; });
       LAYERS.forEach(function (l) { if (l[0] !== 'grid') rows.push([l[1], String(counts[l[0]] || 0)]); });
     }
@@ -810,7 +810,7 @@
     },
     // Danh sách tầng và tầng đang xem (đồng bộ với các tab khác).
     setLevels: function (levels, current) {
-      levelList = levels.map(function (l) { return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab}; }); if (currentId !== current) { if (edit) edit.cancel(); if (modify) modify.cancel(); } if (currentId !== current && hiddenCount) { hiddenKeys = {}; hiddenCount = 0; hiddenMode = ''; refreshHiddenBar(); } currentId = current; if (data) { var keepSel = selLevel === currentId ? selection.map(function (x) { return x.kind + '|' + x.ref; }) : []; hover = null; buildShapes(); selection = shapes.filter(function (x) { return keepSel.indexOf(x.kind + '|' + x.ref) >= 0; }); draw(); } renderTabs(); renderProps(); renderOptions(); if (opts && opts.browser) opts.browser.render();
+      levelList = levels.map(function (l) { return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab, screed: l.screed}; }); if (currentId !== current) { if (edit) edit.cancel(); if (modify) modify.cancel(); } if (currentId !== current && hiddenCount) { hiddenKeys = {}; hiddenCount = 0; hiddenMode = ''; refreshHiddenBar(); } currentId = current; if (data) { var keepSel = selLevel === currentId ? selection.map(function (x) { return x.kind + '|' + x.ref; }) : []; hover = null; buildShapes(); selection = shapes.filter(function (x) { return keepSel.indexOf(x.kind + '|' + x.ref) >= 0; }); draw(); } renderTabs(); renderProps(); renderOptions(); if (opts && opts.browser) opts.browser.render();
     },
     update: function (preview) {
       var keep = selLevel === currentId ? selection.map(function (x) { return x.kind + '|' + x.ref; }) : [];

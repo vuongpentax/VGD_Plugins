@@ -35,11 +35,11 @@ shared = inst.select { |i| i.definition.name == 'VGD Dầm X 200x400x3900' }
 ok('nhiều dầm cùng kích thước thật sự dùng chung một định nghĩa', shared.size >= 2 && shared.map(&:definition).uniq.size == 1)
 bx = inst.find { |i| i.name.include?('x:B:2-3') }
 mmv = ->(i) { [i.transformation.vector.x * MM, i.transformation.vector.y * MM, i.transformation.vector.z * MM].map { |v| v.round(3) } }
-ok('dầm x:B:2-3 đặt tại (4350, 3600, đáy 3080): gốc ở tâm đầu dầm', mmv.call(bx) == [4350.0, 3600.0, 3080.0])
+ok('dầm x:B:2-3 đặt tại (4350, 3600, đáy 3150): gốc ở tâm đầu dầm', mmv.call(bx) == [4350.0, 3600.0, 3150.0])
 by = inst.find { |i| i.name.include?('y:2:A-B') }
-ok('dầm Y y:2:A-B đặt tại (4200, 300, 3080)', mmv.call(by) == [4200.0, 300.0, 3080.0])
+ok('dầm Y y:2:A-B đặt tại (4200, 300, 3150)', mmv.call(by) == [4200.0, 300.0, 3150.0])
 ba = inst.find { |i| i.name.include?('x:A:1-2') }
-ok('dầm biên x:A:1-2 đặt tại (300, 100, 3080): mặt ngoài tiếp giáp trục A (y từ 0 đến 200)', mmv.call(ba) == [300.0, 100.0, 3080.0])
+ok('dầm biên x:A:1-2 đặt tại (300, 100, 3150): mặt ngoài tiếp giáp trục A (y từ 0 đến 200)', mmv.call(ba) == [300.0, 100.0, 3150.0])
 defn = bx.definition
 face = defn.entities.grep(Sketchup::Face).first
 ok('định nghĩa dầm X: mặt đáy hướng lên, đùn cao 400 mm, dài 3900 theo +X, rộng 200 theo Y', face.normal.z > 0 && (face.height * MM - 400).abs < 1e-6 && face.points.map(&:x).minmax.map { |v| (v * MM).round(3) } == [0.0, 3900.0] && face.points.map(&:y).minmax.map { |v| (v * MM).round(3) } == [-100.0, 100.0])
@@ -48,7 +48,7 @@ ok('định nghĩa dầm Y: dài theo +Y (từ 0 đến 3150), rộng 200 theo X
 ok('dữ liệu BIM đọc: nguồn plugin, kind beam, ref kèm mã tầng; kích thước, loại, vị trí ở VGD_STRUCT', bx.get_attribute('VGD_BIM_SOURCE', 'kind') == 'beam' && bx.get_attribute('VGD_BIM_SOURCE', 'ref') == 'sl_00000001:x:B:2-3' && JSON.parse(bx.get_attribute(D, 'dims')) == {'w' => 200.0, 'h' => 400.0, 'length' => 3900.0} && bx.get_attribute(D, 'type') == 'D20x40' && JSON.parse(bx.get_attribute(D, 'placement')) == {'position' => 'inner', 'p' => 'center', 'dir' => 'x'})
 tag = m.layers['S. BEAM']
 ok('tag S. BEAM theo bộ tag mẫu: màu (0, 170, 186), thư mục S. STRUCTURAL; nhóm và dầm trên tag', tag && tag.color.rgb == [0, 170, 186] && tag.folder.name == 'S. STRUCTURAL' && g[0].layer.equal?(tag) && inst.all? { |i| i.layer.equal?(tag) })
-ok('kết quả: 1 tầng, 17 dầm, không cảnh báo', res.levels == [{name: 'Tầng 1', count: 17, top: 3480.0}] && res.total == 17 && res.issues.empty?)
+ok('kết quả: 1 tầng, 17 dầm, không cảnh báo', res.levels == [{name: 'Tầng 1', count: 17, top: 3550.0}] && res.total == 17 && res.issues.empty?)
 ok('dựng dầm lưu dữ liệu nguồn (loại dầm, lựa chọn) vào model', S::ModelStore.read(m)['levels'][0]['picks']['beams'].size == 17 && S::ModelStore.read(m)['beam_types'] == S::BeamTypes.default)
 
 # Dựng lại

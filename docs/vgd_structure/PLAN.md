@@ -26,13 +26,13 @@ Không làm trong bản đầu: ô cửa / ô trống trên tường, giao cắt
 
 ## 4. Quy tắc hình học (tránh khối chồng nhau để khối lượng không bị tính đôi)
 
-Cho mỗi tầng i có cao độ mặt sàn `Ei`, tầng trên `Ei+1`, dày sàn `t`:
+Cho mỗi tầng i có cao độ sàn hoàn thiện `Ei`, cán nền `c` (mặc định 50 mm; mặt trên sàn kết cấu `Si = Ei - c`), tầng trên `Ei+1`, dày sàn `t` (quy tắc sàn lọt lòng giữa dầm, đỉnh dầm = đỉnh sàn: chủ dự án chốt lại 18/11/2026, thay quy tắc dầm treo dưới sàn):
 
 | Đối tượng | Vị trí | Ghi chú |
 |---|---|---|
-| Sàn | phủ cả ô, mặt trên tại `Ei`, dày `t` xuống dưới | sàn phủ trên cột và dầm |
-| Cột | tại giao điểm trục, từ `Ei` lên **đáy sàn tầng trên** (`Ei+1 - t`) | **luôn nằm lọt trong khung lưới**: cột giữa đặt tâm trên giao điểm; cột biên có mặt ngoài **tiếp giáp trục biên** (tâm dời vào trong nửa kích thước); cột góc tiếp giáp cả hai trục biên (xem 4.1) |
-| Dầm | dọc nhịp, **giữa hai mặt cột** (không chui vào cột), đỉnh dầm = đáy sàn, dầm treo dưới sàn | không chồng sàn; dầm biên cũng tiếp giáp trục biên như cột biên |
+| Sàn | mặt trên tại `Si`, dày `t` xuống dưới, **lọt lòng giữa dầm và cột của tầng dưới** | không chồng khối dầm, cột |
+| Cột | tại giao điểm trục, từ `Si` lên **mặt sàn kết cấu tầng trên** (`Si+1`) | **luôn nằm lọt trong khung lưới**: cột giữa đặt tâm trên giao điểm; cột biên có mặt ngoài **tiếp giáp trục biên** (tâm dời vào trong nửa kích thước); cột góc tiếp giáp cả hai trục biên (xem 4.1) |
+| Dầm | dọc nhịp, **giữa hai mặt cột** (không chui vào cột), **đỉnh dầm = mặt trên sàn kết cấu** (`Si+1`), `h` là tổng chiều cao | không chồng sàn; dầm biên cũng tiếp giáp trục biên như cột biên |
 | Tường | dọc nhịp, giữa hai mặt cột, từ `Ei` lên đáy dầm (hoặc đáy sàn nếu nhịp không có dầm) | tường biên: mặt ngoài tiếp giáp trục biên, dày vào trong; tường giữa: tâm trên trục |
 | Trần | trong ô, ở cao độ nhập, mỏng (tấm), tag riêng | chưa nối với treo / khung trần |
 

@@ -30,19 +30,19 @@ ok('dựng tầng 1: một nhóm "Cột - Tầng 1" ghi kind = columns và mã t
 ok('một bước hoàn tác (start rồi commit)', m.operations == [[:start, 'VGD Structure · Dựng cột'], [:commit]])
 inst = g[0].entities.grep(Sketchup::Instance)
 ok('12 cột là ComponentInstance, tên "Cột <ref> (<tầng>)"', inst.size == 12 && inst.map(&:name).include?('Cột 2-B (Tầng 1)'))
-ok('mọi cột dùng chung MỘT định nghĩa 300x300x3480 (nhẹ model)', m.definitions.list.size == 1 && m.definitions.list[0].name == 'VGD Cột 300x300x3480' && inst.map(&:definition).uniq.size == 1)
+ok('mọi cột dùng chung MỘT định nghĩa 300x300x3600 (nhẹ model)', m.definitions.list.size == 1 && m.definitions.list[0].name == 'VGD Cột 300x300x3600' && inst.map(&:definition).uniq.size == 1)
 defn = m.definitions.list[0]
 face = defn.entities.grep(Sketchup::Face).first
-ok('định nghĩa là lăng trụ: mặt đáy hướng lên, đùn cao 3480 mm, tâm đáy ở gốc', face.normal.z > 0 && (face.height * MM - 3480).abs < 1e-6 && face.points.map(&:x).minmax.map { |v| (v * MM).round(3) } == [-150.0, 150.0])
+ok('định nghĩa là lăng trụ: mặt đáy hướng lên, đùn cao 3600 mm, tâm đáy ở gốc', face.normal.z > 0 && (face.height * MM - 3600).abs < 1e-6 && face.points.map(&:x).minmax.map { |v| (v * MM).round(3) } == [-150.0, 150.0])
 c2b = inst.find { |i| i.name.include?('2-B') }
-ok('cột giữa 2-B đặt tại (4200, 3600, 0)', ((c2b.transformation.vector.x * MM) - 4200).abs < 1e-6 && ((c2b.transformation.vector.y * MM) - 3600).abs < 1e-6 && c2b.transformation.vector.z.abs < 1e-9)
+ok('cột giữa 2-B đặt tại (4200, 3600, -50: mặt sàn kết cấu)', ((c2b.transformation.vector.x * MM) - 4200).abs < 1e-6 && ((c2b.transformation.vector.y * MM) - 3600).abs < 1e-6 && (c2b.transformation.vector.z * MM + 50).abs < 1e-6)
 c1a = inst.find { |i| i.name.include?('1-A') }
 ok('cột góc 1-A tiếp giáp trục biên: tâm (150, 150)', ((c1a.transformation.vector.x * MM) - 150).abs < 1e-6 && ((c1a.transformation.vector.y * MM) - 150).abs < 1e-6)
 ok('dữ liệu BIM đọc: nguồn plugin, kind column, ref kèm mã tầng', c2b.get_attribute('VGD_BIM_SOURCE', 'plugin') == 'vgd_structure' && c2b.get_attribute('VGD_BIM_SOURCE', 'kind') == 'column' && c2b.get_attribute('VGD_BIM_SOURCE', 'ref') == 'sl_00000001:2-B' && c2b.get_attribute('VGD_BIM_SOURCE', 'plugin_version') == '9.9.9')
-ok('kích thước, loại, vị trí ghi ở VGD_STRUCT để BIM lập bảng', JSON.parse(c2b.get_attribute(D, 'dims')) == {'w' => 300.0, 'd' => 300.0, 'height' => 3480.0} && c2b.get_attribute(D, 'type') == 'C30x30' && JSON.parse(c2b.get_attribute(D, 'placement'))['position'] == 'middle' && c2b.get_attribute(D, 'level') == 'sl_00000001')
+ok('kích thước, loại, vị trí ghi ở VGD_STRUCT để BIM lập bảng', JSON.parse(c2b.get_attribute(D, 'dims')) == {'w' => 300.0, 'd' => 300.0, 'height' => 3600.0} && c2b.get_attribute(D, 'type') == 'C30x30' && JSON.parse(c2b.get_attribute(D, 'placement'))['position'] == 'middle' && c2b.get_attribute(D, 'level') == 'sl_00000001')
 tag = m.layers['S. COLUMN']
 ok('tag S. COLUMN theo bộ tag mẫu: màu (102, 221, 0), thư mục S. STRUCTURAL; nhóm và cột nằm trên tag', tag && tag.color.rgb == [102, 221, 0] && tag.folder.name == 'S. STRUCTURAL' && g[0].layer.equal?(tag) && inst.all? { |i| i.layer.equal?(tag) })
-ok('kết quả: tầng, số cột, chiều cao', res.levels == [{name: 'Tầng 1', count: 12, height: 3480.0}] && res.total == 12 && res.issues.empty?)
+ok('kết quả: tầng, số cột, chiều cao', res.levels == [{name: 'Tầng 1', count: 12, height: 3600.0}] && res.total == 12 && res.issues.empty?)
 ok('dựng cột lưu luôn dữ liệu nguồn (loại cột, tầng) vào model', S::ModelStore.read(m)['saved'] == true && S::ModelStore.read(m)['levels'][0]['picks']['columns'].size == 12)
 
 # Dựng lại thay nhóm cũ
@@ -60,9 +60,9 @@ st3['levels'] = [{'id' => 'sl_00000001', 'name' => 'Tầng 1', 'elevation' => 0,
                  {'id' => 'sl_00000003', 'name' => 'Mái', 'elevation' => 6900, 'slab_thickness' => 100, 'column_type' => nil, 'picks' => {'columns' => {}}}]
 r = B.build(m2, st3, %w[sl_00000001 sl_00000002])
 ok('hai tầng: hai nhóm, 2 + 3 cột, một thao tác hoàn tác duy nhất', groups(m2).map(&:name).sort == ['Cột - Tầng 1', 'Cột - Tầng 2'] && r.total == 5 && m2.operations.count { |o| o[0] == :start } == 1)
-ok('chiều cao khác nhau cho hai định nghĩa riêng: 3480 (tầng 1) và 3200 (tầng 2: 6900 - 100 - 3600)', m2.definitions.list.map(&:name).sort == ['VGD Cột 300x300x3200', 'VGD Cột 300x300x3480'])
+ok('chiều cao khác nhau cho hai định nghĩa riêng: 3600 (tầng 1) và 3300 (tầng 2: (6900 - 50) - (3600 - 50))', m2.definitions.list.map(&:name).sort == ['VGD Cột 300x300x3300', 'VGD Cột 300x300x3600'])
 z2 = groups(m2).find { |x| x.name == 'Cột - Tầng 2' }.entities.grep(Sketchup::Instance).first
-ok('cột tầng 2 đặt ở cao độ 3600 mm', (z2.transformation.vector.z * MM - 3600).abs < 1e-6)
+ok('cột tầng 2 đặt ở mặt sàn kết cấu tầng 2 (3600 - 50 = 3550 mm)', (z2.transformation.vector.z * MM - 3550).abs < 1e-6)
 
 # Dọn nhóm mồ côi (tầng đã xóa khỏi danh sách)
 st4 = deep(st3); st4['levels'].delete_at(1)
@@ -80,7 +80,7 @@ checks = {
   'tầng trên cùng' => [st3, ['sl_00000003']], 'không chọn tầng' => [st3, []], 'mã tầng không phải mảng' => [st3, 'sl_00000001'],
   'tầng không tồn tại' => [st3, ['sl_deadbeef']], 'chưa chọn cột nào' => [S::State.default, ['sl_00000001']],
   'dữ liệu sai' => [{'grid' => 5}, ['sl_00000001']], 'loại cột sai' => [st3.merge('types' => [{'id' => 'x'}]), ['sl_00000001']],
-  'chiều cao cột âm' => [deep(st3).tap { |s| s['levels'][1]['elevation'] = 600; s['levels'][1]['slab_thickness'] = 500 }, ['sl_00000001']]
+  'chiều cao cột âm' => [deep(st3).tap { |s| s['levels'][1]['elevation'] = 100 }, ['sl_00000001']]
 }
 checks.each { |label, (s, ids)| ok("dữ liệu sai bị từ chối, model không đổi: #{label}", !error_of { B.build(bad, s, ids) }.nil? && bad.operations.empty? && groups(bad).empty? && bad.layers.to_a.empty?) }
 many = deep(st3); many['grid'] = S::Grid.normalize!('origin' => [0, 0], 'x_axes' => S::Grid.axes_from_spacings('4000*59', :number), 'y_axes' => S::Grid.axes_from_spacings('4000*59', :letter))

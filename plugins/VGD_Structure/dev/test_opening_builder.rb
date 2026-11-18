@@ -38,7 +38,7 @@ ok('định nghĩa tường có lỗ: một mặt đứng ngoài (đùn 200 theo
 outer = faces.find { |f| !f.erased }
 ok('mặt ngoài nằm trong mặt phẳng đứng y = -100, dài 3900 cao 3480; chiều đùn hướng +Y', outer.points.map { |p| (p.y * MM).round(3) }.uniq == [-100.0] && outer.points.map { |p| (p.x * MM).round(3) }.minmax == [0.0, 3900.0] && outer.points.map { |p| (p.z * MM).round(3) }.minmax == [0.0, 3480.0] && outer.normal.y > 0)
 holes = faces.select(&:erased).map { |f| [f.points.map { |p| (p.x * MM).round(3) }.minmax, f.points.map { |p| (p.z * MM).round(3) }.minmax] }
-ok('hai lỗ đúng vị trí: cửa đi x 1500..2400 z 0..2100; cửa sổ x 2600..3800 z 900..2100', holes == [[[1500.0, 2400.0], [0.0, 2100.0]], [[2600.0, 3800.0], [900.0, 2100.0]]])
+ok('hai lỗ đúng vị trí (z tính từ đáy tường = sàn kết cấu, đã cộng cán nền 50): cửa đi x 1500..2400 z 50..2150; cửa sổ x 2600..3800 z 950..2150', holes == [[[1500.0, 2400.0], [50.0, 2150.0]], [[2600.0, 3800.0], [950.0, 2150.0]]])
 wy = wi.find { |i| i.name.include?('y:2:A-B') }
 fy = wy.definition.entities.grep(Sketchup::Face).find { |f| !f.erased }
 ok('tường theo Y: mặt đứng trong mặt phẳng x = -100, đùn theo +X', fy.points.map { |p| (p.x * MM).round(3) }.uniq == [-100.0] && fy.normal.x > 0 && (fy.height * MM - 200).abs < 1e-6)

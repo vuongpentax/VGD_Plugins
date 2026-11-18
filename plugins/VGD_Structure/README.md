@@ -1,4 +1,4 @@
-# VGD Structure 0.17.0-beta.1
+# VGD Structure 0.18.0-beta.1
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
@@ -63,6 +63,13 @@ Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) th
   - **Nút tắt:** bảng Thuộc tính của tường có ô "Nối góc tự động" (mặc định bật). Tường tắt nối giữ đúng hình nhập và không làm đối tác của tường khác. Thuộc tính tường ghi "Đã nối N đầu".
   - Cửa vẫn đứng đúng chỗ thật khi đầu tường dịch (vị trí lưu tính từ đầu chưa nối); cửa rơi vào đoạn tường bị rút ngắn bị bỏ kèm cảnh báo. Trần lùi theo mặt tường sau khi nối.
   - **Dữ liệu cũ:** tường dựng bằng bản trước sẽ hiện "lệch" ở chấm trạng thái nếu hình đổi do nối góc; dựng lại tường để cập nhật. Tường nhiều lớp (gạch, vữa, ốp) chưa làm.
+- **Cốt sàn kết cấu và sàn lọt lòng (đổi quy tắc 18/11/2026, theo chủ dự án):**
+  - **Cán nền:** mỗi tầng có thông số "Cán nền" (mặc định 50 mm). Cao độ tầng là cốt sàn HOÀN THIỆN; mặt trên sàn kết cấu = cao độ tầng trừ cán nền. Cột, dầm, tường kết cấu tính từ cốt kết cấu; **ngưỡng cửa và cao trần vẫn tính từ cốt hoàn thiện**.
+  - **Dầm:** đỉnh dầm bằng mặt trên sàn kết cấu tầng trên; chiều cao h là tổng chiều cao (trước đây dầm treo dưới sàn nên sâu hơn thực tế đúng bằng dày sàn).
+  - **Cột** cao từ mặt sàn kết cấu tầng này tới mặt sàn kết cấu tầng trên (cao hơn trước đúng bằng dày sàn tầng trên).
+  - **Sàn** lọt lòng giữa dầm và cột tầng dưới (xem mục Sàn).
+  - **Dữ liệu cũ:** tầng chưa có cán nền được đặt 50 mm, nên khi dựng lại mọi phần tử kết cấu hạ thấp 50 mm; cột cao hơn, dầm nhô dưới sàn ít hơn, sàn lùi theo dầm. Model dựng bằng bản trước hiện "lệch" ở chấm trạng thái cho tới khi dựng lại.
+  - **Giới hạn:** sàn chỉ lùi theo dầm và cột theo LƯỚI của tầng dưới; dầm / cột tự do chỉ có cảnh báo. Sàn đa giác tự do vẽ đúng hình, không lùi.
 - **Thuộc tính của loại (như Type Properties của Revit):** chọn cột, dầm, tường hoặc cửa thì bảng Thuộc tính có thêm mục "Thuộc tính của loại “…”": sửa tên loại và kích thước loại (cột rộng, sâu; dầm rộng, cao; tường bề dày; cửa rộng, cao, cao ngưỡng) ngay tại chỗ. Có dòng ghi rõ đổi ở đây áp dụng cho bao nhiêu phần tử (bao nhiêu tầng). Giá trị ngoài khoảng cho phép (cùng khoảng với tab loại) hoặc tên trùng thì không áp dụng và báo; hoàn tác được. Sửa xong cần dựng lại để model cập nhật.
 - **Ẩn / Cô lập tạm thời (Hide / Isolate của Revit):** chọn phần tử rồi **EH** (hoặc nút mắt gạch) để ẩn, **HI** (hoặc nút cô lập) để chỉ hiện phần tử đang chọn, **HR** hoặc nút "Bỏ ẩn" trên chip để hiện lại. Chỉ ảnh hưởng hiển thị, chọn, bắt điểm của tầng đang xem; không đổi dữ liệu, không vào hoàn tác, đổi tầng thì tự bỏ ẩn.
 - **Hoàn tác / Làm lại:** nút ở đầu thanh trên (và Ctrl+Z, Ctrl+Y) đã có từ trước; chỉ gồm thay đổi làm trên tab Mặt bằng.
@@ -83,20 +90,20 @@ Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) th
 
 **Tầng và loại cột** (tab "Tầng và loại cột"):
 - **Loại cột** dùng lại (ví dụ C30x30, C40x60): tên, rộng theo X, sâu theo Y (100 đến 3000 mm); bản đầu chỉ có cột chữ nhật.
-- **Tầng** (mỗi tầng riêng): tên, **cao độ mặt sàn** (mm tuyệt đối theo trục Z của model), dày sàn, loại cột mặc định. Cột tầng này chạy từ mặt sàn lên **đáy sàn tầng kế trên**; ô ghi chú hiện chiều cao cột. **Tầng trên cùng** (đỉnh nhà, mái) chỉ có sàn, không có cột. Tầng sau phải cao hơn tầng dưới ít nhất 500 mm.
+- **Tầng** (mỗi tầng riêng): tên, **cao độ sàn hoàn thiện** (mm tuyệt đối theo trục Z của model), **cán nền** (mặc định 50 mm, sửa từng tầng; mặt trên sàn KẾT CẤU = cao độ tầng trừ cán nền), dày sàn, loại cột mặc định. Cột tầng này chạy từ mặt sàn kết cấu lên **mặt sàn kết cấu tầng kế trên** (cùng đỉnh dầm); ô ghi chú hiện chiều cao cột. **Tầng trên cùng** (đỉnh nhà, mái) chỉ có sàn, không có cột. Tầng sau phải cao hơn tầng dưới ít nhất 500 mm.
 
 **Cột** (tab "Cột"): chọn tầng, bấm các giao điểm trên mặt bằng để chọn cột (hoặc **Chọn mọi giao điểm**). Quy ước vị trí (đã chốt): cột giữa tâm đúng giao điểm; cột biên có mặt ngoài tiếp giáp trục biên; cột góc tiếp giáp hai trục biên, nên cột luôn lọt trong khung lưới. Bấm một cột đã chọn để đổi **loại cột** riêng và **vị trí theo X / Y** (theo quy ước, tâm trên trục, hoặc một cạnh tại trục). Cột đặt tâm trên trục biên (nhô ra ngoài) hoặc chồng nhau được cảnh báo. **Sao chép lựa chọn từ tầng khác** (thay lựa chọn cột của tầng đích; vẫn sửa riêng được). **Dựng cột tầng này / mọi tầng**: mỗi tầng một nhóm "Cột - <tên tầng>" trên tag **S. COLUMN** (theo bộ tag mẫu của VGD BIM: tên, màu, thư mục S. STRUCTURAL), mỗi cột là một ComponentInstance dùng chung định nghĩa theo rộng × sâu × cao, mang dữ liệu để VGD BIM đọc (nguồn plugin, loại, kích thước, tầng). Một bước hoàn tác; dựng lại thì thay nhóm cũ; dựng hơn 500 cột thì hỏi xác nhận, tối đa 5000. Xóa tầng khỏi danh sách rồi dựng lại thì nhóm cột của tầng đó được dọn (nhóm bị khóa thì giữ). **Xóa cột tầng này** có sẵn.
 
 **Dầm** (tab "Dầm"; loại dầm trong tab "Tầng và loại cột": tên, rộng 100 đến 1500, cao 100 đến 2000 mm; mỗi tầng có loại dầm mặc định):
 - Chọn tầng, bấm các **nhịp** (đoạn trục giữa hai giao điểm) trên mặt bằng để chọn dầm; có **Chọn mọi nhịp**, **Chọn nhịp biên**, **Sao chép lựa chọn dầm từ tầng khác**. Bấm dầm đã chọn để đổi loại và vị trí ngang (theo quy ước, tâm trên trục, hoặc một cạnh tại trục).
-- **Dầm treo dưới sàn tầng trên**: đỉnh dầm bằng đáy sàn (cùng cao độ đỉnh cột), cao `h` xuống dưới, nên không chồng sàn. Tầng trên cùng chỉ có sàn nên không có dầm.
+- **Dầm cùng cốt với sàn tầng trên**: đỉnh dầm bằng mặt trên sàn kết cấu (cùng đỉnh cột), `h` là **tổng chiều cao** tính từ đỉnh sàn xuống (phần nhô dưới sàn là h trừ dày sàn; dầm cao không hơn dày sàn thì có cảnh báo). Sàn nằm lọt lòng giữa dầm nên không chồng khối. Tầng trên cùng chỉ có sàn nên không có dầm.
 - **Hai đầu dầm dừng ở mặt cột** (cột được chọn ở giao điểm đó, cùng tầng). Nút không có cột: dầm theo X chạy tới trục, dầm theo Y dừng ở mặt dầm X chạm nút đó (không chồng nhau); không có dầm X thì tới trục.
 - Quy ước vị trí ngang: dầm trên trục biên có **mặt ngoài tiếp giáp trục biên** (tâm dời vào nửa bề rộng), dầm nhịp giữa tâm trên trục. Cảnh báo dầm nhô ra ngoài khung lưới, chồng nhau hoặc chồng cột; nhịp có khoảng hở nhỏ hơn 100 mm giữa hai cột thì bỏ và báo.
 - **Dựng dầm tầng này / mọi tầng**: mỗi tầng một nhóm "Dầm - <tên tầng>" trên tag **S. BEAM** (theo bộ tag mẫu BIM), mỗi dầm là ComponentInstance dùng chung định nghĩa theo (phương, rộng, cao, dài), kèm dữ liệu cho VGD BIM. Một bước hoàn tác; dựng lại thay nhóm cũ; có xóa dầm; hỏi xác nhận khi dựng hơn 500 dầm, tối đa 8000.
 
 **Tường** (tab "Tường"; loại tường trong tab "Tầng và loại cột": tên, bề dày 50 đến 1000 mm; mỗi tầng có loại tường mặc định). Bản đầu là tường đặc, **chưa khoét cửa**, chưa nối góc L / T, chưa có lớp cấu tạo:
 - Chọn tầng, bấm các nhịp trên mặt bằng để chọn tường (như dầm): Chọn mọi nhịp, Chọn nhịp biên, sao chép lựa chọn tường từ tầng khác; bấm tường đã chọn để đổi loại và vị trí ngang.
-- **Cao từ mặt sàn tầng này lên đáy dầm** của nhịp đó nếu nhịp có dầm được chọn cùng tầng (dầm thấp hơn thì tường thấp theo), không có dầm thì lên **đáy sàn tầng trên**. Nên tường, dầm, sàn không chồng nhau.
+- **Cao từ mặt sàn kết cấu tầng này lên đáy dầm** của nhịp đó nếu nhịp có dầm được chọn cùng tầng (dầm thấp hơn thì tường thấp theo), không có dầm thì lên **đáy sàn tầng trên**. Nên tường, dầm, sàn không chồng nhau.
 - Hai đầu tường dừng ở mặt cột; nút không có cột thì tường X chạy tới trục, tường Y dừng ở mặt tường X. Tường trên trục biên có mặt ngoài tiếp giáp trục biên, nhịp giữa tâm trên trục. Cảnh báo tường nhô ra ngoài khung lưới, chồng nhau hoặc chồng cột.
 - **Dựng tường tầng này / mọi tầng**: mỗi tầng một nhóm "Tường - <tên tầng>" trên tag **A. WALL** (theo bộ tag mẫu BIM, thư mục A. ARCHITECTURAL), tường dùng chung định nghĩa theo (phương, dày, cao, dài), kèm dữ liệu cho VGD BIM (kể cả tường dưới dầm). Một bước hoàn tác; dựng lại thay nhóm cũ; có xóa tường; hỏi xác nhận khi dựng hơn 500 tường.
 - Nếu sửa dầm của một nhịp sau khi đã dựng tường thì cần **dựng lại tường** để tường theo chiều cao mới.
@@ -107,7 +114,7 @@ Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) th
 - **Tường tự khoét lỗ cửa khi dựng tường** (mặt đứng có lỗ chữ nhật rồi đùn theo bề dày): **sau khi đặt, sửa hay xóa cửa phải dựng lại tường** (dựng tất cả làm cả hai). **Cửa** (khung và cánh) dựng ở tab Cửa: cửa đi có khung chữ U (khung 50 mm, không có ngưỡng) và cánh đặc 40 mm thụt 20 mm so với mặt tường; cửa sổ có khung vòng kín 50 mm và kính 6 mm giữa bề dày tường. Mỗi tầng một nhóm "Cửa - <tên tầng>", cửa đi trên tag **A. DOOR**, cửa sổ trên tag **A. WINDOW** (theo bộ tag mẫu BIM). Cũng có sao chép cửa từ tầng khác (cửa nhận mã mới), một bước hoàn tác, dựng lại thay nhóm cũ (giữ ID), xóa cửa. Đề xuất bán tự động chưa đặt cửa.
 - VGD BIM (1.1.1-beta.7 trở lên): cửa đếm theo cái, **diện tích và thể tích tường đã trừ lỗ cửa**.
 
-**Sàn** (tab "Sàn"; dày sàn nhập ở bảng tầng): bấm các **ô** (vùng giữa hai trục đứng và hai trục ngang liền nhau) để chọn sàn; Chọn mọi ô, Bỏ chọn hết, sao chép lựa chọn sàn từ tầng khác. Sàn phủ trọn ô (từ trục tới trục, kể cả phía trên cột và dầm tầng dưới), **mặt trên tại cao độ sàn của tầng, dày xuống dưới**; cột và dầm tầng dưới dừng ở đáy sàn nên không chồng khối. **Tầng trên cùng cũng có sàn** (sàn mái). Mỗi tầng một nhóm "Sàn - <tên tầng>" trên tag **S. SLAB**.
+**Sàn** (tab "Sàn"; dày sàn và cán nền nhập ở bảng tầng): bấm các **ô** (vùng giữa hai trục đứng và hai trục ngang liền nhau) để chọn sàn; Chọn mọi ô, Bỏ chọn hết, sao chép lựa chọn sàn từ tầng khác. **Mặt trên sàn kết cấu = cao độ tầng trừ cán nền (mặc định 50 mm), dày xuống dưới.** Sàn nằm **lọt lòng** giữa các dầm và cột của **tầng dưới** (đỉnh dầm bằng đỉnh sàn): mỗi ô lùi tới mặt dầm theo cạnh ô và khoét góc theo cột, nên khối sàn, dầm, cột không chồng nhau và khối lượng bóc tách đúng. Dầm hoặc cột TỰ DO (không theo lưới) nằm trong ô chưa được tính để lùi: chỉ có cảnh báo chồng. Tầng thấp nhất không có tầng dưới nên sàn phủ trọn ô. **Tầng trên cùng cũng có sàn** (sàn mái). Mỗi tầng một nhóm "Sàn - <tên tầng>" trên tag **S. SLAB**.
 
 **Trần** (tab "Trần"; **cao trần** và **dày trần** nhập ở bảng tầng, mặc định 2800 và 9 mm): chọn ô như sàn. Trần là tấm mỏng, **mặt dưới ở cao độ sàn + cao trần**; **lùi tới mặt tường** ở cạnh ô có tường được chọn cùng tầng (cạnh không có tường tới trục), **khoét góc theo cột** (đa giác chữ L / U...) nên không chồng cột. Báo lỗi nếu mặt trên trần vượt đáy sàn tầng trên; cảnh báo trần chạm đáy dầm; ô bị tường hoặc cột chiếm hết thì bỏ và báo. Tầng trên cùng không có trần. Mỗi tầng một nhóm "Trần - <tên tầng>" trên tag **A. FINISHING CEILING** (thư mục A. ARCHITECTURAL).
 
@@ -128,7 +135,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.17.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.18.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 
