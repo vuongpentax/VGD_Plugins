@@ -8,7 +8,7 @@ const presets=JSON.parse(fs.readFileSync(path.resolve(__dirname,'../runtime/vgd_
 const VIET=/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
 // Chữ tiếng Việt được phép còn lại: mã mẫu đổi tên (là cú pháp), tên ngôn ngữ, ví dụ tên cột trong thông báo nhập tag.
 const ALLOWED=new Set(['{tên}','{họ}','{phân loại}','{nhóm}','{số}','Tiếng Việt']);
-const config=(lang,mode)=>({mode,version:'1.1.0',language:lang,app:{settings:{language:lang,image_dir:'',exclude_words:'tay nam, handle'},dir:'C:\\data\\images',dir_exists:false},preset_info:F.preset_info,table:{columns:F.columns,presets:F.presets,view:{}},fields:F.fields,categories:F.categories,units:F.units,methods:F.methods,presets,locale:lang==='en'?F.en:F.vi,vi_en:lang==='en'?F.vi_en:null,scan_options:{scope:'model',faces:true}});
+const config=(lang,mode)=>({mode,version:'1.1.0',language:lang,file:'C:\\data\\images',app:{settings:{language:lang,exclude_words:'tay nam, handle'},dir:'C:\\data\\images',dir_exists:false,saved:true},preset_info:F.preset_info,table:{columns:F.columns,presets:F.presets,view:{}},fields:F.fields,categories:F.categories,units:F.units,methods:F.methods,presets,locale:lang==='en'?F.en:F.vi,vi_en:lang==='en'?F.vi_en:null,scan_options:{scope:'model',faces:true}});
 const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',definition:'Cabinet',name:'Cab '+i,description:'Oak',lenX:1200,lenY:600,lenZ:800,areaXZ:0.96,areaXY:0.72,areaFace:2.1,volume:0.5,tag:'Tag'+i,tag_group:'Phần thô',material:'Oak',status:['new','existing','reuse'][i],locked:i===2,quantity:1,parents:[],parent:i?'Parent A':'',pid:900+i,has_image:i===0,image_stamp:5,areaProjected:1.5,ifc:'IfcWall',owner:'Hafele',url:'https://a.vn',size:'1x2',price:1000,total:1000,calc_category:'furniture',calc_method:['count','area','none'][i],calc_source:['tag','keyword','group'][i],calc_qty:[1,0.96,null][i],calc_total:[1000,960,null][i],calc_note:i===1?'ước tính theo khối bao':''}));
 (async()=>{
  const browser=await chromium.launch({headless:true,channel:process.env.VGD_BROWSER_CHANNEL||undefined});
@@ -129,6 +129,12 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await page.click('#gear');await scan('Bánh răng');await page.keyboard.press('Escape');
   await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});await scan('Hộp xác nhận chụp ảnh');
   await page.evaluate(()=>{tableState.panel='io';tableView(tableState.data);});await scan('Menu Công cụ');
+  await page.evaluate(()=>{tableState.panel='bridge';tableView(tableState.data);});await scan('Cầu nối dữ liệu (chưa có file)');
+  await receive('bridge_file',{name:'a.xlsx',headers:['VGD ID','Tên','Extra'],count:3,sample:[],fields:[{key:'name',label:'Tên'}],match:[{key:'vgd_id',label:'VGD ID'}],suggest:{match_by:'vgd_id',match_column:'VGD ID',mapping:{'Tên':'name'}}});
+  await scan('Cầu nối dữ liệu (có file)');
+  await receive('bridge_preview',{counts:{rows:4,ok:1,unchanged:0,unmatched:1,ambiguous:1,file_duplicate:1,locked:1,blank:0,changes:1,errors:1},rows:[{row:2,key:'a',index:0,name:'Cabinet',status:'ok',changes:[{field:'name',label:'Tên',old:'Cabinet',new:'X'}]},{row:3,key:'z',index:null,name:'',status:'unmatched',changes:[]},{row:4,key:'q',index:null,name:'',status:'ambiguous',changes:[]},{row:5,key:'r',index:null,name:'',status:'file_duplicate',changes:[]},{row:6,key:'s',index:2,name:'',status:'locked',changes:[]}]});
+  await scan('Cầu nối dữ liệu (xem trước)');
+  await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);});
   await page.evaluate(()=>{tableState.panel='opts';tableView(tableState.data);});await scan('Bảng Tùy chọn');
   await page.evaluate(()=>{tableState.headers={};tableState.panel=null;toggleColumns();});await page.locator('.cs-add').click();await scan('Ngăn Chọn cột (form thêm cột)');
   await page.getByLabel((lang==='en')?'Column type':'Kiểu cột').selectOption('dynamic');await scan('Form thêm cột (thuộc tính động)');

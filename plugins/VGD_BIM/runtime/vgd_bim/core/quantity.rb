@@ -65,9 +65,13 @@ module VGD
       def self.amount(method, row)
         case method
         when 'count' then [1.0, nil]
-        when 'area' then [number(row[:areaXZ]), nil]
-        when 'length' then [number(row[:lenX]) && (row[:lenX] / 1000.0).round(3), nil]
+        when 'area' then [number(row[:struct_area]) || number(row[:areaXZ]), nil]
+        when 'length'
+          return [number(row[:struct_length]), nil] if number(row[:struct_length])
+          [number(row[:lenX]) && (row[:lenX] / 1000.0).round(3), nil]
         when 'volume'
+          exact = number(row[:struct_volume]) # phần tử của VGD Structure: thể tích chính xác từ kích thước plugin ghi, không đoán từ khối bao
+          return [exact, nil] if exact && exact.positive?
           solid = number(row[:volume])
           return [solid, nil] if solid && solid.positive?
           sizes = %i[lenX lenY lenZ].map { |key| number(row[key]) }
@@ -83,6 +87,8 @@ module VGD
       # Các trường tính thêm cho một dòng của bảng.
       def self.row_fields(row, tag, group, item, overrides)
         found = resolve(tag, group, item, overrides)
+        kind_method = StructureSource.default_method(row[:struct_kind]) if defined?(StructureSource)
+        found = found.merge(method: kind_method, source: 'structure') if kind_method && found[:source] == 'default' # phần tử của VGD Structure không có tag cho biết cách tính
         qty, note = amount(found[:method], row)
         price = number(row[:price])
         {calc_category: found[:category], calc_method: found[:method], calc_source: found[:source], calc_qty: qty,

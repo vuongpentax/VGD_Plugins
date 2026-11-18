@@ -1,0 +1,386 @@
+{
+  "dimension": {
+    "Mặc định": {
+      "text_height_paper_mm": 2.5,
+      "arrow_size_paper_mm": 2,
+      "pen": 2,
+      "extension_paper_mm": 1.5,
+      "gap_paper_mm": 1,
+      "marker": "tick",
+      "unit": "mm",
+      "text_style": "Ký hiệu số",
+      "line_style": "solid"
+    }
+  },
+  "text": {
+    "Mặc định": {
+      "font": "Vnsimli.shx",
+      "bold": false,
+      "italic": false,
+      "underline": false,
+      "strike": false,
+      "text_height_paper_mm": 2.5,
+      "width_factor": 0.7,
+      "line_spacing_pct": 100,
+      "char_spacing_pct": 100,
+      "anchor": "mc",
+      "pen": 2,
+      "color": ""
+    },
+    "Tiêu đề": {
+      "font": "Arial",
+      "bold": true,
+      "italic": false,
+      "underline": false,
+      "strike": false,
+      "text_height_paper_mm": 5,
+      "width_factor": 1,
+      "line_spacing_pct": 100,
+      "char_spacing_pct": 100,
+      "anchor": "mc",
+      "pen": 3,
+      "color": ""
+    },
+    "Chữ lớn": {
+      "font": "Arial",
+      "bold": false,
+      "italic": false,
+      "underline": false,
+      "strike": false,
+      "text_height_paper_mm": 3,
+      "width_factor": 1,
+      "line_spacing_pct": 100,
+      "char_spacing_pct": 100,
+      "anchor": "mc",
+      "pen": 3,
+      "color": ""
+    },
+    "Ghi chú": {
+      "font": "Arial",
+      "bold": false,
+      "italic": false,
+      "underline": false,
+      "strike": false,
+      "text_height_paper_mm": 2.5,
+      "width_factor": 1,
+      "line_spacing_pct": 100,
+      "char_spacing_pct": 100,
+      "anchor": "mc",
+      "pen": 3,
+      "color": ""
+    },
+    "Ký hiệu số": {
+      "font": "Vnsimli.shx",
+      "bold": false,
+      "italic": false,
+      "underline": false,
+      "strike": false,
+      "text_height_paper_mm": 2.5,
+      "width_factor": 0.7,
+      "line_spacing_pct": 100,
+      "char_spacing_pct": 100,
+      "anchor": "mc",
+      "pen": 2,
+      "color": ""
+    }
+  },
+  "fill": {
+    "Mặc định": {
+      "pattern": {
+        "kind": "empty",
+        "scale": 1
+      },
+      "style": {
+        "hatch_pen": 2,
+        "boundary_pen": 2,
+        "boundary_visible": true,
+        "background_enabled": false,
+        "background_color": "#FFFFFF",
+        "boundary_line_style": "dashed",
+        "hatch_color": "#F6F6F6"
+      },
+      "fill_type": "drafting",
+      "show_area": false,
+      "area_text_mm": 2.5,
+      "area_text_style": "",
+      "building_material_id": ""
+    },
+    "Tường gạch (cắt)": {
+      "pattern": {
+        "kind": "pat",
+        "pat_name": "VL_GACH",
+        "pat_source": "VTBIM",
+        "scale": 1,
+        "scale_mode": "paper",
+        "angle_deg": 0
+      },
+      "style": {
+        "hatch_pen": 2,
+        "boundary_pen": 3,
+        "boundary_visible": true,
+        "background_enabled": true,
+        "background_color": "#FFFFFF"
+      },
+      "fill_type": "cut",
+      "show_area": false,
+      "area_text_mm": 2.5,
+      "area_text_style": ""
+    },
+    "Gạch block": {
+      "pattern": {
+        "kind": "pat",
+        "pat_name": "BLOCK_390",
+        "pat_source": "VTBIM",
+        "scale": 1,
+        "scale_mode": "model",
+        "angle_deg": 0
+      },
+      "style": {
+        "hatch_pen": 2,
+        "boundary_pen": 3,
+        "boundary_visible": true,
+        "background_enabled": true,
+        "background_color": "#FFFFFF"
+      },
+      "fill_type": "cut",
+      "show_area": false,
+      "area_text_mm": 2.5,
+      "area_text_style": ""
+    },
+    "Bê tông": {
+      "pattern": {
+        "kind": "pat",
+        "pat_name": "BETONG",
+        "pat_source": "VTBIM",
+        "scale": 1,
+        "scale_mode": "model",
+        "angle_deg": 0
+      },
+      "style": {
+        "hatch_pen": 2,
+        "boundary_pen": 3,
+        "boundary_visible": true,
+        "background_enabled": true,
+        "background_color": "#FFFFFF"
+      },
+      "fill_type": "cut",
+      "show_area": false,
+      "area_text_mm": 2.5,
+      "area_text_style": ""
+    },
+    "Bê tông cốt thép": {
+      "pattern": {
+        "kind": "pat",
+        "pat_name": "VL_BTCT",
+        "pat_source": "VTBIM",
+        "scale": 1,
+        "scale_mode": "model",
+        "angle_deg": 0
+      },
+      "style": {
+        "hatch_pen": 2,
+        "boundary_pen": 3,
+        "boundary_visible": true,
+        "background_enabled": true,
+        "background_color": "#FFFFFF"
+      },
+      "fill_type": "cut",
+      "show_area": false,
+      "area_text_mm": 2.5,
+      "area_text_style": ""
+    },
+    "Đất tự nhiên": {
+      "pattern": {
+        "kind": "pat",
+        "pat_name": "VL_DAT",
+        "pat_source": "VTBIM",
+        "scale": 1,
+        "scale_mode": "model",
+        "angle_deg": 0
+      },
+      "style": {
+        "hatch_pen": 2,
+        "boundary_pen": 3,
+        "boundary_visible": true,
+        "background_enabled": true,
+        "background_color": "#FFFFFF"
+      },
+      "fill_type": "cut",
+      "show_area": false,
+      "area_text_mm": 2.5,
+      "area_text_style": ""
+    },
+    "Cát đệm": {
+      "pattern": {
+        "kind": "pat",
+        "pat_name": "CAT",
+        "pat_source": "VTBIM",
+        "scale": 1,
+        "scale_mode": "model",
+        "angle_deg": 0
+      },
+      "style": {
+        "hatch_pen": 2,
+        "boundary_pen": 3,
+        "boundary_visible": true,
+        "background_enabled": true,
+        "background_color": "#FFFFFF"
+      },
+      "fill_type": "cut",
+      "show_area": false,
+      "area_text_mm": 2.5,
+      "area_text_style": ""
+    },
+    "Đá dăm": {
+      "pattern": {
+        "kind": "pat",
+        "pat_name": "DA_DAM",
+        "pat_source": "VTBIM",
+        "scale": 1,
+        "scale_mode": "model",
+        "angle_deg": 0
+      },
+      "style": {
+        "hatch_pen": 2,
+        "boundary_pen": 3,
+        "boundary_visible": true,
+        "background_enabled": true,
+        "background_color": "#FFFFFF"
+      },
+      "fill_type": "cut",
+      "show_area": false,
+      "area_text_mm": 2.5,
+      "area_text_style": ""
+    },
+    "Gỗ": {
+      "pattern": {
+        "kind": "pat",
+        "pat_name": "GO",
+        "pat_source": "VTBIM",
+        "scale": 1,
+        "scale_mode": "model",
+        "angle_deg": 0
+      },
+      "style": {
+        "hatch_pen": 2,
+        "boundary_pen": 3,
+        "boundary_visible": true,
+        "background_enabled": true,
+        "background_color": "#FFFFFF"
+      },
+      "fill_type": "cut",
+      "show_area": false,
+      "area_text_mm": 2.5,
+      "area_text_style": ""
+    },
+    "Cách nhiệt": {
+      "pattern": {
+        "kind": "pat",
+        "pat_name": "CACH_NHIET",
+        "pat_source": "VTBIM",
+        "scale": 1,
+        "scale_mode": "model",
+        "angle_deg": 0
+      },
+      "style": {
+        "hatch_pen": 2,
+        "boundary_pen": 3,
+        "boundary_visible": true,
+        "background_enabled": true,
+        "background_color": "#FFFFFF"
+      },
+      "fill_type": "cut",
+      "show_area": false,
+      "area_text_mm": 2.5,
+      "area_text_style": ""
+    },
+    "Lát gạch 600x600": {
+      "pattern": {
+        "kind": "pat",
+        "pat_name": "LAT_600",
+        "pat_source": "VTBIM",
+        "scale": 1,
+        "scale_mode": "model",
+        "angle_deg": 0
+      },
+      "style": {
+        "hatch_pen": 2,
+        "boundary_pen": 3,
+        "boundary_visible": false,
+        "background_enabled": false,
+        "background_color": "#FFFFFF"
+      },
+      "fill_type": "cover",
+      "show_area": false,
+      "area_text_mm": 2.5,
+      "area_text_style": ""
+    },
+    "Sàn gỗ": {
+      "pattern": {
+        "kind": "pat",
+        "pat_name": "LAT_GO",
+        "pat_source": "VTBIM",
+        "scale": 1,
+        "scale_mode": "model",
+        "angle_deg": 0
+      },
+      "style": {
+        "hatch_pen": 2,
+        "boundary_pen": 3,
+        "boundary_visible": false,
+        "background_enabled": false,
+        "background_color": "#FFFFFF"
+      },
+      "fill_type": "cover",
+      "show_area": false,
+      "area_text_mm": 2.5,
+      "area_text_style": ""
+    },
+    "Tô đặc xám": {
+      "pattern": {
+        "kind": "solid"
+      },
+      "style": {
+        "hatch_pen": 2,
+        "boundary_pen": 3,
+        "boundary_visible": true,
+        "background_enabled": false,
+        "background_color": "#FFFFFF",
+        "hatch_color": "#BFBFBF"
+      },
+      "fill_type": "drafting",
+      "show_area": false,
+      "area_text_mm": 2.5,
+      "area_text_style": ""
+    },
+    "Nước (gradient)": {
+      "pattern": {
+        "kind": "gradient",
+        "gradient": "linear",
+        "color1": "#9CC9EE",
+        "color2": "#FFFFFF",
+        "angle_deg": 90
+      },
+      "style": {
+        "hatch_pen": 2,
+        "boundary_pen": 3,
+        "boundary_visible": false,
+        "background_enabled": false,
+        "background_color": "#FFFFFF"
+      },
+      "fill_type": "cover",
+      "show_area": false,
+      "area_text_mm": 2.5,
+      "area_text_style": ""
+    }
+  },
+  "default": {
+    "dimension": "Mặc định",
+    "text": "Mặc định",
+    "fill": "Mặc định"
+  },
+  "seeded": [
+    "text_presets_v1",
+    "num_style_v1"
+  ]
+}

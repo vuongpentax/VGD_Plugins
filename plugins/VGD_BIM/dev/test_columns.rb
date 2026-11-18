@@ -76,7 +76,7 @@ VGD::BIM::Geometry.module_eval(fa)
 %w[core/schema core/storage core/measure core/preset core/photo_settings core/quantity core/table].each { |f| require File.join(ROOT, f) }
 T = VGD::BIM::Table
 X = T::Extras
-class Model; def edit_transform; Identity.new; end; def active_path; []; end; def guid; 'M'; end; end
+class Model; def edit_transform; Identity.new; end; def active_path; []; end; def guid; 'M'; end; def path; @path ||= File.join(Dir.mktmpdir('vgd_bim_skp_columns'), 'nha.skp'); end; end
 model = Model.new
 # Ảnh hiện trực tiếp từ file: dòng bảng mang đường dẫn file ảnh gốc (không còn ảnh nhỏ), kèm mốc thời gian để làm mới
 require File.join(ROOT, 'core/images')

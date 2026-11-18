@@ -78,6 +78,10 @@ module VGD
           @dialog.add_action_callback('table_commit_calc') { |_ctx, payload| safely { table_commit_calc(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_option') { |_ctx, payload| safely { table_option(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_export') { |_ctx, payload| safely { table_export(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_edit_source') { |_ctx, payload| safely { table_edit_source(JSON.parse(payload)) } }
+          @dialog.add_action_callback('bridge_open') { |_ctx| safely { bridge_open } }
+          @dialog.add_action_callback('bridge_preview') { |_ctx, payload| safely { bridge_preview(JSON.parse(payload)) } }
+          @dialog.add_action_callback('bridge_apply') { |_ctx, payload| safely { bridge_apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_replace') { |_ctx, payload| safely { table_replace(JSON.parse(payload)) } }
           @dialog.add_action_callback('open_url') { |_ctx, url| safely { open_url(url) } }
           @dialog.add_action_callback('table_preset') { |_ctx, payload| safely { table_preset(JSON.parse(payload)) } }
@@ -88,6 +92,7 @@ module VGD
           @dialog.add_action_callback('table_room_build') { |_ctx, payload| safely { table_room_build(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_rooms') { |_ctx, payload| safely { table_rooms(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_from_selection') { |_ctx, payload| safely { table_room_from_selection(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_room_build_all') { |_ctx, payload| safely { table_room_build_all(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_assign_rooms_auto') { |_ctx, payload| safely { table_assign_rooms_auto(JSON.parse(payload)) } }
           @dialog.add_action_callback('snapshot_list') { |_ctx| safely { snapshot_list } }
           @dialog.add_action_callback('snapshot_save') { |_ctx, payload| safely { snapshot_save(JSON.parse(payload)) } }
@@ -101,7 +106,7 @@ module VGD
           @dialog.add_action_callback('table_assign_ids') { |_ctx, payload| safely { table_assign_ids(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_fix_duplicate_ids') { |_ctx| safely { table_fix_duplicate_ids } }
           @dialog.add_action_callback('table_custom_column') { |_ctx, payload| safely { table_custom_column(JSON.parse(payload)) } }
-          @dialog.add_action_callback('table_view') { |_ctx, payload| safely { Table.save_view_state(JSON.parse(payload), @model) } }
+          @dialog.add_action_callback('table_view') { |_ctx, payload| safely { table_view_save(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_order') { |_ctx, payload| safely { table_order(JSON.parse(payload)) } }
           register_image_callbacks
           register_front_callbacks
@@ -163,7 +168,7 @@ module VGD
           cleanup_table_view unless @mode == 'table'
           @model = Sketchup.active_model
           language = Settings.read['language']
-          emit('config', {mode: @mode, version: BIM::VERSION, language: language, app: settings_payload, preset_info: {defaults: Preset::DEFAULT_SETTINGS, choices: Preset.choices},
+          emit('config', {mode: @mode, version: BIM::VERSION, language: language, file: file_identity, app: settings_payload, preset_info: {defaults: Preset::DEFAULT_SETTINGS, choices: Preset.choices},
                          table: {columns: Table.columns, presets: Table.presets, view: Table.view_state(@model)}, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.ui_dictionary(language), vi_en: (language == 'en' ? Locale.vi_en_names : nil), scan_options: {scope: @scan_options[:scope], faces: faces?}})
           if %w[information tags table].include?(@mode)
             @observer = SelectionObserver.new(self)
@@ -370,9 +375,48 @@ module VGD
           context = @table_context
           context && context[:path].all?(&:valid?) ? context : nil
         end
+        # Hỏi người dùng có chuyển ảnh và cài đặt theo cách cũ về thư mục cạnh file SketchUp không (xem LegacyMigration). Từ chối thì không đụng gì.
+        def offer_legacy_migration
+          return if @legacy_asked.equal?(@model)
+          @legacy_asked = @model
+          plan = LegacyMigration.plan(@model)
+          return unless plan
+          text = "File này còn cài đặt và ảnh theo cách cũ (lưu trong file SketchUp / thư mục ảnh chung của máy).\n\nChuyển về thư mục cạnh file SketchUp?\n#{plan[:folder]}\n\n" \
+                 "Ảnh cũ trong thư mục chung KHÔNG bị xóa. Khi gửi file đi, hãy gửi kèm thư mục này."
+          return unless ::UI.messagebox(text, ::MB_YESNO) == ::IDYES
+          result = LegacyMigration.run(@model, plan)
+          emit('message', {text: "Đã chuyển #{result[:images]} ảnh và cài đặt về #{plan[:folder]}."})
+        rescue StandardError => error
+          emit('message', {error: "Không chuyển được dữ liệu cũ: #{error.message}"})
+        end
+
+        # Nhận diện file SketchUp đang mở (thư mục cạnh file nếu đã lưu, không thì mã model), để giao diện biết khi sang file khác mà nạp lại cột, sheet, tag loại trừ của file đó.
+        def file_identity
+          ModelSettings.folder(@model) || "chua-luu:#{@model.respond_to?(:guid) ? Images.model_key(@model) : ''}"
+        end
+
+        # Lưu trạng thái bảng do giao diện gửi lên vào settings.json của file đang mở. Trạng thái của file khác (vừa đổi file, giao diện chưa nạp lại) thì bỏ.
+        def table_view_save(state)
+          file = state.delete('file')
+          return if file && file != file_identity
+          Table.save_view_state(state, @model)
+          @view_save_error = nil
+        rescue ArgumentError => error # thư mục cạnh file SketchUp không ghi được: báo một lần (mỗi nội dung lỗi), không báo lại sau từng thay đổi
+          return if error.message == @view_save_error
+          raise unless error.message.start_with?('Không ghi được')
+          @view_save_error = error.message
+          emit('message', {error: error.message})
+        end
+
         def table_build
+          current_model = Sketchup.active_model
+          if @table_model && !@table_model.equal?(current_model)
+            @table_model = current_model
+            return refresh # sang file SketchUp khác: nạp lại cài đặt, cột, sheet và tag loại trừ của file đó (file mới thì về mặc định)
+          end
+          @table_model = current_model
           @model = Sketchup.active_model
-          ModelSettings.pin(@model, Table.view_state) # file chưa có cài đặt riêng thì ghi lại cài đặt chung đang dùng, để mở file khác không làm đổi theo
+          offer_legacy_migration # file cũ còn cài đặt trong SKP / ảnh ở thư mục chung: hỏi chuyển về thư mục cạnh file (một lần mỗi file, mỗi phiên)
           Images.ensure_model_id(@model) # mã model cố định trong file, để ảnh còn sau khi tắt mở lại (trước mọi thao tác khác)
           scope = @table_scope.select(&:valid?)
           built = Table.build(@model, scope, @table_options[:deep] ? true : false, projected: @table_options[:projected], measure: MeasureProbe.context(ModelSettings.effective(@model)), context: scan_context)
@@ -461,6 +505,7 @@ module VGD
             layer = field == 'tag' ? (value.empty? ? untagged_layer : Tags.layer_for(@model, value)) : nil
             editable.each { |record| apply_edit(record[:entity], field, value, material, layer) }
           end
+          ModelSettings.remember(@model, field, value) # gợi ý nhập: nhớ giá trị chữ vừa sửa
           table_build
           show_outline
           text = "Đã sửa #{custom ? custom['label'] : EDIT_LABELS[field]} cho #{editable.size} đối tượng."
@@ -519,27 +564,93 @@ module VGD
           table_build
           emit('message', {text: "Đã lưu #{list.size} phòng."})
         end
-        # Tạo phòng từ mặt sàn đang chọn trong SketchUp: chỉ ĐỌC viền (vòng ngoài của mặt nằm ngang), lưu dữ liệu phòng. Không dựng hình.
-        # payload: {'name'?, 'number'?, 'level'? (id tầng), 'height'? (mm)}; thiếu thì tên "Phòng N", chiều cao theo tầng hoặc 3000.
+        # Tạo phòng từ MỘT HOẶC NHIỀU mặt sàn đang chọn trong SketchUp (các mặt trong vùng đang mở): chỉ ĐỌC viền ngoài và các lỗ (vòng trong, vd cột) của
+        # mặt nằm ngang, lưu dữ liệu phòng. Không dựng hình. Mặt không nằm ngang bị bỏ qua (báo số lượng); không có mặt nào dùng được thì báo lỗi.
+        # payload: {'name'?, 'number'?, 'level'? (id tầng), 'height'? (mm)}. Một mặt: tên như nhập (thiếu thì "Phòng N"), mã phòng như nhập.
+        # Nhiều mặt: 'name' là tiền tố ("Phòng" -> Phòng 1, Phòng 2...), không đặt mã phòng. Chiều cao theo tầng hoặc 3000.
         def table_room_from_selection(payload)
           check_model!
           raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless payload.is_a?(Hash)
-          face = @model.selection.to_a.find { |entity| entity.is_a?(Sketchup::Face) }
-          raise 'Hãy chọn một mặt sàn (Face) trong SketchUp rồi bấm lại.' unless face
+          faces = @model.selection.to_a.select { |entity| entity.is_a?(Sketchup::Face) }
+          raise 'Hãy chọn một hoặc nhiều mặt sàn (Face) trong SketchUp rồi bấm lại.' if faces.empty?
           context = context_transform
-          points = face.outer_loop.vertices.map { |vertex| p = context * vertex.position; [p.x.to_f * Geometry::INCH_MM, p.y.to_f * Geometry::INCH_MM, p.z.to_f * Geometry::INCH_MM] }
-          shape = Rooms.boundary_from_points(points)
+          to_mm = lambda do |loop_|
+            loop_.vertices.map { |vertex| p = context * vertex.position; [p.x.to_f * Geometry::INCH_MM, p.y.to_f * Geometry::INCH_MM, p.z.to_f * Geometry::INCH_MM] }
+          end
+          shapes = []
+          skipped = 0
+          first_error = nil
+          faces.each do |face|
+            begin
+              shape = Rooms.boundary_from_points(to_mm.call(face.outer_loop))
+              inner = face.respond_to?(:loops) ? face.loops.reject { |loop_| loop_.respond_to?(:outer?) && loop_.outer? }.map { |loop_| to_mm.call(loop_) } : []
+              shapes << shape.merge(holes: Rooms.holes_from_loops(inner))
+            rescue ArgumentError => error
+              first_error ||= error
+              skipped += 1
+            end
+          end
+          raise first_error if shapes.empty?
+          shapes.sort_by! { |shape| [shape[:boundary].map(&:first).min, shape[:boundary].map(&:last).min] } # đặt tên theo thứ tự từ trái sang phải
           rooms = Rooms.read(@model)
           level = payload['level'].to_s
           level_data = Levels.read(@model).find { |l| l['id'] == level }
-          name = payload['name'].to_s.strip
-          name = "Phòng #{rooms.size + 1}" if name.empty?
           height = payload['height'].is_a?(Numeric) ? payload['height'] : (level_data ? level_data['height'] : 3000)
-          created = {'name' => name, 'number' => payload['number'].to_s, 'level' => level_data ? level : '', 'height' => height, 'elevation' => shape[:elevation], 'boundary' => shape[:boundary]}
-          Rooms.write(@model, rooms + [created])
+          typed = payload['name'].to_s.strip
+          used = rooms.map { |room| room['name'].downcase }
+          counter = typed.empty? || shapes.size == 1 ? rooms.size : 0
+          created = shapes.map do |shape|
+            if shapes.size == 1 && !typed.empty?
+              name = typed
+            else
+              prefix = typed.empty? ? 'Phòng' : typed
+              begin
+                counter += 1
+                name = "#{prefix} #{counter}"
+              end while used.include?(name.downcase)
+            end
+            used << name.downcase
+            room = {'name' => name, 'number' => shapes.size == 1 ? payload['number'].to_s : '', 'level' => level_data ? level : '', 'height' => height, 'elevation' => shape[:elevation], 'boundary' => shape[:boundary]}
+            room['holes'] = shape[:holes] unless shape[:holes].empty?
+            room
+          end
+          clean = Rooms.sanitize!(rooms + created)
+          Rooms.write(@model, clean)
           table_build
-          area = Rooms.metrics(Rooms.sanitize!([created]).first)[:area]
-          emit('message', {text: "Đã tạo phòng #{name} từ mặt đang chọn (diện tích #{area} m²). Hình khối phòng do plugin VGD_Room dựng."})
+          fresh = clean.last(created.size)
+          area = fresh.sum { |room| Rooms.metrics(room)[:area] }.round(3)
+          notes = []
+          notes << "bỏ qua #{skipped} mặt không dùng được (không nằm ngang)" if skipped.positive?
+          holed = fresh.count { |room| room['holes'] }
+          notes << "#{holed} phòng có lỗ" if holed.positive?
+          note = notes.empty? ? '' : " (#{notes.join('; ')})"
+          text = fresh.size == 1 ? "Đã tạo phòng #{fresh.first['name']} từ mặt đang chọn (diện tích #{area} m²).#{note}" : "Đã tạo #{fresh.size} phòng từ #{faces.size} mặt đang chọn (tổng diện tích #{area} m²).#{note}"
+          emit('message', {text: "#{text} Hình khối phòng do plugin VGD_Room dựng: bấm Dựng khối."})
+        end
+        # Dựng khối 3D cho nhiều phòng (mặc định tất cả) bằng plugin VGD_Room qua cầu nối, MỘT bước hoàn tác cho cả đợt (lệnh build_many).
+        # Plugin Room cũ chưa có build_many thì dựng từng phòng (mỗi phòng một bước hoàn tác) và báo rõ. payload: {'ids' => [mã phòng]} (không có thì mọi phòng).
+        def table_room_build_all(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless payload.is_a?(Hash)
+          rooms = Rooms.read(@model)
+          ids = payload['ids']
+          raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless ids.nil? || (ids.is_a?(Array) && ids.all? { |id| id.is_a?(String) })
+          rooms = rooms.select { |room| ids.include?(room['id']) } if ids
+          raise 'Chưa có phòng nào để dựng. Hãy tạo phòng trước.' if rooms.empty?
+          provider = Bridge.provider_for('room_volume')
+          raise 'Chưa cài plugin VGD Room để dựng khối phòng. Hãy cài qua VGD Center rồi khởi động lại SketchUp.' unless provider
+          rebuilt = rooms.count { |room| !Bridge.call('room_volume', 'find', @model, room['id']).nil? }
+          items = rooms.map { |room| [room, VgdId.generate] }
+          single_step = provider[:info][:commands].key?('build_many')
+          if single_step
+            Bridge.call('room_volume', 'build_many', @model, items)
+          else
+            items.each { |room, id| Bridge.call('room_volume', 'build', @model, room, id) }
+          end
+          table_build
+          text = "Đã dựng #{rooms.size} khối phòng#{rebuilt.positive? ? " (#{rebuilt} dựng lại)" : ''}"
+          text += single_step ? ', một bước hoàn tác cho cả đợt.' : ". Plugin VGD Room cũ chưa có dựng nhiều phòng nên mỗi phòng là một bước hoàn tác: hãy cập nhật VGD Room."
+          emit('message', {text: text})
         end
         # Gán món vào phòng theo vị trí (tâm đáy món trong viền và trong khoảng cao của phòng). Nhãn, không dời hình. Một bước hoàn tác.
         def table_assign_rooms_auto(payload)
@@ -750,13 +861,71 @@ module VGD
           model_tags = @model.layers.to_a.map { |layer| layer.name.to_s }.reject(&untagged).sort_by { |name| name.downcase } # chỉ tag có trong model (bảng Loại trừ tag)
           {tags: tags.sort_by { |name| name.downcase }, materials: materials.sort_by { |name| name.downcase }, model_tags: model_tags,
            levels: Levels.read(@model).map { |level| {value: level['id'], label: level['name']} },
-           rooms: Rooms.read(@model).map { |room| {value: room['id'], label: room['number'].empty? ? room['name'] : "#{room['number']} · #{room['name']}"} }}
+           rooms: Rooms.read(@model).map { |room| {value: room['id'], label: room['number'].empty? ? room['name'] : "#{room['number']} · #{room['name']}"} },
+           suggest: ModelSettings.read(@model)[ModelSettings::SUGGEST_KEY] || {}}
         end
         # Cột chữ cho phép thay hàng loạt, và cách đọc giá trị hiện tại của dòng.
         REPLACE_FIELDS = {'name' => :name, 'description' => :description, 'owner' => :owner, 'size' => :size}.freeze
         MAX_FIND = 200
         # Thay chữ trong Tên / Mô tả / Hãng / Cỡ của các dòng gửi lên (không có 'indexes' thì mọi dòng trong bảng).
         # Không phân biệt hoa thường; chuỗi thay được hiểu nguyên văn. Bỏ qua đối tượng khóa. Cả đợt là một bước hoàn tác.
+        # Sửa món bằng plugin đã dựng ra nó (cầu nối, docs/vgd_bim/BRIDGE.md): BIM gọi lệnh `edit` của plugin nguồn; plugin tự mở giao diện của nó.
+        # BIM không sửa hình hay tham số của plugin khác. Chưa cài plugin hoặc plugin chưa hỗ trợ thì báo rõ, không đoán.
+        def table_edit_source(payload)
+          check_model!
+          record = @table_records.fetch(Integer(payload.fetch('index'))) { raise 'Bảng đã cũ. Hãy làm mới bảng.' }
+          entity = record[:entity]
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng.' unless entity.valid?
+          plugin = Table.source_plugin(entity)
+          raise 'Món này không do plugin dựng hình tạo ra nên không có gì để sửa bằng plugin.' if plugin.empty?
+          info = Bridge.providers[plugin]
+          raise "Chưa cài plugin #{plugin}. Hãy cài qua VGD Center." unless info
+          raise "Plugin #{plugin} chưa hỗ trợ sửa từ VGD_BIM (cần cầu nối phiên bản #{Bridge::VERSION} có lệnh edit)." unless info[:bridge_version] == Bridge::VERSION && info[:commands]['edit']
+          info[:commands]['edit'].call(@model, entity)
+          emit('message', {text: "Đã mở #{plugin} để sửa món này."})
+        end
+        # Cầu nối dữ liệu: nhập Excel / CSV vào dữ liệu chữ của món (logic ở core/data_bridge.rb). Ba bước: mở file (chỉ đọc), xem trước, áp dụng.
+        def bridge_open
+          check_model!
+          path = ::UI.openpanel('Nhập dữ liệu (Excel / CSV)', '', 'Excel / CSV|*.xlsx;*.csv||')
+          return unless path
+          @bridge_file = DataBridge.read_file(path)
+          fields = DataBridge.fields(CustomColumns.read)
+          emit('bridge_file', {name: @bridge_file[:name], headers: @bridge_file[:headers], count: @bridge_file[:rows].size, sample: @bridge_file[:rows].first(3),
+                               fields: fields, match: DataBridge::MATCH.map { |key, label| {key: key, label: label} }, suggest: DataBridge.suggest(@bridge_file[:headers], fields)})
+        end
+        def bridge_plan(options)
+          check_model!
+          raise 'Chưa mở file. Hãy chọn file Excel / CSV trước.' unless @bridge_file
+          raise 'Bảng chưa có dòng nào. Chọn group hoặc component trong SketchUp để bảng đọc rồi nhập lại.' if @table_rows.to_a.empty?
+          fields = DataBridge.fields(CustomColumns.read)
+          targets = @table_rows.each_with_index.map do |row, i|
+            record = @table_records.fetch(i)
+            {index: i, ids: {'vgd_id' => row[:vgd_id].to_s, 'code' => row[:code].to_s}, name: row[:name].to_s,
+             locked: record[:locked] || record[:entity].locked? ? true : false, current: fields.each_with_object({}) { |f, h| h[f[:key]] = row[f[:key].to_sym] }}
+          end
+          DataBridge.plan(@bridge_file, options, targets, fields)
+        end
+        def bridge_preview(payload)
+          emit('bridge_preview', bridge_plan(payload))
+        end
+        def bridge_apply(payload)
+          plan = bridge_plan(payload)
+          skip = payload['skip'].is_a?(Array) ? payload['skip'].map { |pair| pair.is_a?(Array) ? [pair[0].to_i, pair[1].to_s] : nil }.compact : []
+          jobs = plan[:rows].select { |row| row[:status] == 'ok' }.flat_map do |row|
+            row[:changes].reject { |change| change[:error] || skip.include?([row[:row], change[:field]]) }.map { |change| [row, change] }
+          end
+          raise 'Không có thay đổi nào để áp dụng.' if jobs.empty?
+          raise 'Đối tượng không còn tồn tại. Hãy làm mới bảng và nhập lại.' unless jobs.all? { |row, _change| @table_records.fetch(row[:index])[:path].all?(&:valid?) }
+          Data.transaction(@model, 'VGD_BIM · Nhập dữ liệu từ file') do
+            jobs.each { |row, change| apply_edit(@table_records.fetch(row[:index])[:entity], change[:field], change[:new], nil, nil) }
+          end
+          table_build
+          show_outline
+          text = "Đã nhập #{jobs.size} giá trị cho #{jobs.map { |row, _change| row[:row] }.uniq.size} đối tượng."
+          text += " Bỏ qua #{plan[:counts][:locked]} đối tượng bị khóa." if plan[:counts][:locked] > 0
+          emit('message', {text: text})
+        end
         def table_replace(payload)
           check_model!
           find = payload['find'].to_s
@@ -857,23 +1026,24 @@ module VGD
           emit('presets', Table.presets)
           emit('message', {text: "Đã nhập #{imported.size} preset."})
         end
-        # Xuất bảng đang hiện, đúng như trên màn hình: payload['format'] là 'xlsx' (file Excel có ảnh) hoặc 'pdf' (trang báo cáo mở bằng
+        # Xuất bảng đúng như trên màn hình (một sheet đang hiện, hoặc mọi sheet nếu payload có 'sheets'): payload['format'] là 'xlsx' (file Excel có ảnh) hoặc 'pdf' (trang báo cáo mở bằng
         # trình duyệt để In > Lưu PDF). Cấu trúc payload xem TableReport.
         def table_export(payload)
           raise 'Dữ liệu bảng không hợp lệ.' unless payload.is_a?(Hash)
           format = payload['format']
           raise 'Định dạng xuất không hợp lệ.' unless %w[xlsx pdf].include?(format)
           report = TableReport.build(payload, model_name, ->(pid, kind = :full) { table_image(pid, kind) })
-          count = report[:rows].count { |row| row[:kind] == 'row' }
+          count = report[:sheets].sum { |sheet| sheet[:rows].count { |row| row[:kind] == 'row' } }
+          sheets_note = report[:sheets].size > 1 ? " trong #{report[:sheets].size} sheet" : ''
           if format == 'pdf'
             ::UI.openURL(TableReport.file_url(TableReport.write_html(report)))
-            return emit('message', {text: "Đã tạo trang báo cáo #{count} dòng và mở trong trình duyệt. Khi cần in, bấm nút In / Lưu PDF trên trang rồi chọn Lưu thành PDF."})
+            return emit('message', {text: "Đã tạo trang báo cáo #{count} dòng#{sheets_note} và mở trong trình duyệt. Khi cần in, bấm nút In / Lưu PDF trên trang rồi chọn Lưu thành PDF."})
           end
           path = ::UI.savepanel('Xuất bảng khối lượng ra Excel', '', 'VGD_Bang_khoi_luong.xlsx')
           return unless path
           path += '.xlsx' unless File.extname(path).downcase == '.xlsx'
           Xlsx.write(path, report)
-          emit('message', {text: "Đã xuất #{count} dòng#{report[:images].empty? ? '' : " và #{report[:images].size} ảnh"} ra Excel: #{path}"})
+          emit('message', {text: "Đã xuất #{count} dòng#{sheets_note}#{report[:images].empty? ? '' : " và #{report[:images].size} ảnh"} ra Excel: #{path}"})
         end
         def model_name
           title = @model.title.to_s.strip

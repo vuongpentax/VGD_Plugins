@@ -106,5 +106,23 @@ vol = FakeEntity.new; vol.set_attribute('VGD_BIM_SOURCE', 'kind', 'room')
 plain = FakeEntity.new; plain.set_attribute('VGD_BIM_SOURCE', 'kind', 'stair')
 ok('nhận ra khối phòng do plugin dựng (VGD_BIM_SOURCE.kind = room); đối tượng khác thì không', RM.volume_entity?(vol) && !RM.volume_entity?(plain) && !RM.volume_entity?(FakeEntity.new) && !RM.volume_entity?(Object.new))
 
+# ---- Phòng có lỗ (cột, hộp kỹ thuật) ----
+COL1 = [[1000, 1000], [1400, 1000], [1400, 1400], [1000, 1400]].freeze # 0,4 x 0,4 m = 0,16 m2
+COL2 = [[2500, 1500], [2900, 1500], [2900, 1900], [2500, 1900]].freeze
+holed = RM.sanitize!([room.merge('holes' => [COL1, COL2])]).first
+ok('phòng có lỗ: lỗ được giữ (làm tròn), phòng không lỗ không có khóa holes', holed['holes'] == [COL1.map { |p| p.map(&:to_f) }, COL2.map { |p| p.map(&:to_f) }] && !RM.sanitize!([room]).first.key?('holes') && !RM.sanitize!([room.merge('holes' => [])]).first.key?('holes') && !RM.sanitize!([room.merge('holes' => nil)]).first.key?('holes'))
+hole_error = ->(holes) { error_of { RM.sanitize!([room.merge('holes' => holes)]) }.to_s }
+ok('lỗ sai kiểu / quá nhiều / ít hơn 3 điểm / điểm không phải số: từ chối', hole_error.call('x').include?('lỗ') && hole_error.call(Array.new(RM::MAX_HOLES + 1) { COL1 }).include?('lỗ') && hole_error.call([[[1000, 1000], [1400, 1000]]]).include?('lỗ') && hole_error.call([[[1000, 1000], [1400, 'a'], [1400, 1400]]]).include?('lỗ') && hole_error.call(['abc']).include?('lỗ'))
+ok('lỗ quá nhỏ hoặc tự cắt: từ chối', hole_error.call([[[1000, 1000], [1010, 1000], [1010, 1010], [1000, 1010]]]).include?('quá nhỏ') && hole_error.call([[[1000, 1000], [1600, 1400], [1600, 1000], [1000, 1500]]]).include?('tự cắt'))
+ok('lỗ ngoài viền / chạm viền / cắt viền: từ chối', hole_error.call([[[-500, 1000], [-100, 1000], [-100, 1400], [-500, 1400]]]).include?('ngoài hoặc chạm') && hole_error.call([[[0, 1000], [400, 1000], [400, 1400], [0, 1400]]]).include?('ngoài hoặc chạm') && hole_error.call([[[3800, 1000], [4200, 1000], [4200, 1400], [3800, 1400]]]).include?('ngoài hoặc chạm'))
+ok('hai lỗ chồng hoặc chạm nhau, hoặc lỗ này nằm trong lỗ kia: từ chối', hole_error.call([COL1, [[1200, 1200], [1600, 1200], [1600, 1600], [1200, 1600]]]).include?('chồng') && hole_error.call([COL1, [[1400, 1000], [1800, 1000], [1800, 1400], [1400, 1400]]]).include?('chồng') && hole_error.call([[[1000, 1000], [2000, 1000], [2000, 2000], [1000, 2000]], [[1300, 1300], [1700, 1300], [1700, 1700], [1300, 1700]]]).include?('chồng'))
+m_holed = RM.metrics(holed)
+ok('số đo phòng có lỗ: diện tích trừ lỗ (12 - 0,32 = 11,68 m2), chu vi gồm chu vi lỗ (14 + 3,2 m), thể tích và tường theo đó', m_holed[:area] == 11.68 && m_holed[:perimeter] == 17.2 && m_holed[:volume] == 35.04 && m_holed[:wall_area] == 51.6 && m_holed[:ceiling_area] == 11.68)
+ok('số đo phòng không lỗ không đổi', RM.metrics(RM.sanitize!([room]).first)[:area] == 12.0)
+ok('điểm trong phòng có lỗ: trong lỗ thì không thuộc phòng', RM.inside?(holed, 500, 500) && !RM.inside?(holed, 1200, 1200) && !RM.inside?(holed, 2700, 1700) && !RM.inside?(holed, 5000, 500) && RM.inside?(RM.sanitize!([room]).first, 1200, 1200))
+plan_holed = RM.plan_auto([{index: 0, x: 1200.0, y: 1200.0, z: 0.0}, {index: 1, x: 500.0, y: 500.0, z: 0.0}], [holed.merge('id' => 'rm_aaaaaaaa')])
+ok('gán món theo vị trí: món đặt trong lỗ (cột) không thuộc phòng, món cạnh đó thì có', plan_holed[:assign] == {1 => 'rm_aaaaaaaa'} && plan_holed[:none] == [0])
+ok('lỗ từ vòng trong của mặt: bỏ Z, làm sạch, bỏ vòng không nằm ngang', RM.holes_from_loops([[[1000, 1000, 100], [1400, 1000, 100], [1400, 1400, 100], [1000, 1400, 100]], [[0, 0, 0], [10, 0, 500], [0, 10, 0]]]) == [[[1000.0, 1000.0], [1400.0, 1000.0], [1400.0, 1400.0], [1000.0, 1400.0]]] && RM.holes_from_loops(nil) == [])
+
 puts($fails.zero? ? "\nTẤT CẢ ĐẠT" : "\n#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

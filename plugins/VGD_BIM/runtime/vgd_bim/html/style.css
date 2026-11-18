@@ -16,7 +16,7 @@ main{flex:1;min-height:0;overflow:auto;padding:14px 16px}.card{background:var(--
 .subtabs{margin-bottom:14px}
 
 /* Panel đổi tên: cố định giữa cửa sổ, cao gần hết cửa sổ, tự cuộn; hàng nút ghim ở đáy nên luôn thấy */
-.popover.rename{position:fixed;top:12px;bottom:12px;left:50%;right:auto;transform:translateX(-50%);width:min(520px,94vw);max-height:none}
+.popover.rename,.popover.bridge{position:fixed;top:12px;bottom:12px;left:50%;right:auto;transform:translateX(-50%);width:min(520px,94vw);max-height:none}
 .rename-field{display:flex;flex-direction:column;gap:2px;font-size:11px;margin-bottom:8px}
 .rename-field input,.rename-field select{height:28px}
 .rename-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
@@ -39,6 +39,7 @@ main{flex:1;min-height:0;overflow:auto;padding:14px 16px}.card{background:var(--
 .grid td.editable{cursor:cell}
 .grid td.editing{padding:0}
 .grid td.editing input{width:100%;height:100%;box-sizing:border-box}
+.ac-wrap{position:relative;width:100%;height:100%}.ac-ghost{position:absolute;inset:0;display:flex;align-items:center;pointer-events:none;overflow:hidden;white-space:pre;color:transparent}.ac-ghost .ac-rest{color:var(--muted);opacity:.9}
 .cell-menu{position:fixed;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 30px #0005;padding:6px;max-height:min(320px,60vh);display:flex;flex-direction:column}
 .cell-menu input{width:100%;margin-bottom:6px;height:30px;box-sizing:border-box}
 .cell-menu-list{overflow:auto}
@@ -296,3 +297,13 @@ button.danger{background:var(--danger,#b3412d);border-color:var(--danger,#b3412d
 .toolbar select[aria-label="Nhóm hạng mục"]{flex:0 1 150px;min-width:100px}
 .io-panel{max-height:calc(100vh - 170px)}.io-panel>*{flex:none}
 .opts-panel .switches{align-items:flex-start}.opts-panel .io-head{align-self:stretch;text-align:left}.opts-panel .sw-item{justify-content:flex-start}
+
+/* Sheet của bảng (dưới chân trang, như Excel) */
+.sheetbar{flex:none;display:flex;align-items:flex-end;gap:2px;overflow-x:auto;overflow-y:hidden;padding:0 0 4px;border-top:1px solid var(--border);scrollbar-width:thin}
+.sheet-tab,.sheet-add{flex:none;min-height:28px;padding:4px 14px;border:1px solid transparent;border-top:0;border-radius:0 0 6px 6px;background:transparent;color:var(--muted);font-size:12px;cursor:pointer}
+.sheet-tab:hover,.sheet-add:hover{background:var(--tile);color:var(--text)}
+.sheet-tab[aria-selected=true]{background:var(--surface);color:var(--accent);border-color:var(--border);font-weight:700;box-shadow:inset 0 -2px 0 var(--accent)}
+.sheet-add{padding:4px 10px;font-size:15px;line-height:1}
+.sheet-tab:focus-visible,.sheet-add:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.sheet-rename{flex:none;width:150px;height:26px;margin-top:2px;box-sizing:border-box;font-size:12px}
+.sheet-menu button.danger{color:var(--danger,#d9534f)}

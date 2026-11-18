@@ -1,6 +1,6 @@
 # Plugin SketchUp
 
-Thư mục chứa các plugin SketchUp của VGD: VGD_BIM, VGD_Cabinet, VGD_Cabinet_Draw, VGD_Center, VGD_Dim, VGD_Image_Importer, VGD_Library, VGD_Package, VGD_Reference, VGD_Scenes.
+Thư mục chứa các plugin SketchUp của VGD: VGD_BIM, VGD_Cabinet, VGD_Cabinet_Draw, VGD_Center, VGD_Dim, VGD_Image_Importer, VGD_Library, VGD_Package, VGD_Reference, VGD_Scenes, VGD_Structure.
 
 Chuyển từng plugin vào kho mã riêng lẻ và giữ mỗi plugin tương đối độc lập. Không tạo trước các module chưa được phát triển hoặc chuyển vào.
 

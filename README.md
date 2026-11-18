@@ -11,6 +11,7 @@ Mỗi plugin nằm trong `plugins/` và có README, ghi chú phát hành và b�
 | VGD Center | `plugins/VGD_Center/` | Quản lý các plugin VGD: kho plugin để cài và cập nhật, tab Quản lý để bật/tắt plugin. |
 | VGD BIM | `plugins/VGD_BIM/` | Bóc khối lượng từ group/component, gắn dữ liệu hạng mục, quét và xuất báo cáo. |
 | VGD Room | `plugins/VGD_Room/` | Dựng khối 3D của phòng từ dữ liệu phòng của VGD BIM; không có giao diện riêng, VGD BIM điều khiển. |
+| VGD Structure | `plugins/VGD_Structure/` | Dựng phần thô (cột, dầm, tường, sàn, trần) theo lưới trục và tầng, nối VGD BIM để tính khối lượng. Mới có khung plugin (cột mốc 0), xem `docs/vgd_structure/PLAN.md`. |
 | VGD Cabinet | `plugins/VGD_Cabinet/` | Dựng và sửa tủ, có preview, preset, thư viện và chuyển hộp thành tủ. |
 | VGD Cabinet Draw | `plugins/VGD_Cabinet_Draw/` | Dựng tủ bán tự động bằng thao tác trực tiếp trong viewport; đăng ký độc lập với VGD Cabinet. |
 | VGD Dim | `plugins/VGD_Dim/` | Smart Dim cho tủ, Dim thủ công, vùng đo và áp mẫu Model Info. |

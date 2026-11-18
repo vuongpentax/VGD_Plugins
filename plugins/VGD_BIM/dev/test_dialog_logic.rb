@@ -46,6 +46,7 @@ require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
 require File.join(ROOT, 'core/table')
+require File.join(ROOT, 'core/data_bridge')
 require File.join(ROOT, 'core/rename')
 require File.join(ROOT, 'ui/dialog')
 D = VGD::BIM::UI::Dialog
@@ -53,7 +54,10 @@ D = VGD::BIM::UI::Dialog
 row = {index: 0, entity_type: 'Nhóm', definition: 'Tủ', name: 'Tủ bếp A', description: 'Gỗ sồi',
        lenX: 1200.0, lenY: 600.0, lenZ: 800.0, areaXZ: 0.96, areaXY: 0.72, areaFace: 2.1,
        volume: 0.576, tag: 'Tủ', tag_group: 'Đồ rời', material: 'Gỗ', status: 'new', quantity: 1}
+LogicModel = Struct.new(:path) # file SketchUp giả: trạng thái bảng nằm trong settings.json cạnh file
+logic_model = LogicModel.new(File.join(Dir.mktmpdir('vgd_bim_skp_logic'), 'nha.skp'))
 d = D.allocate
+d.instance_variable_set(:@model, logic_model)
 d.instance_variable_set(:@table_rows, [row])
 d.instance_variable_set(:@table_records, [{path: [], entity: :e}])
 d.instance_variable_set(:@outline_field, 'instance')
@@ -62,13 +66,13 @@ ok('ô Tên: chỉ hiện tên', lbl.('instance') == 'Tủ bếp A')
 ok('ô Mô tả: chỉ hiện mô tả', lbl.('description') == 'Gỗ sồi')
 ok('ô Rộng: có đơn vị mm', lbl.('lenX') == '1200 mm')
 ok('ô (X)x(Z): ghép hai cạnh', lbl.('lenXZ') == '1200 x 800 mm')
-VGD::BIM::Table.save_view_state('settings' => {'length_unit' => 'cm', 'length_digits' => 1})
+VGD::BIM::Table.save_view_state({'settings' => {'length_unit' => 'cm', 'length_digits' => 1}}, logic_model)
 ok('đơn vị cm trong preset: nhãn khung đổi theo (120 x 80 cm)', lbl.('lenXZ') == '120 x 80 cm' && lbl.('lenX') == '120 cm' && lbl.('lenXYZ') == '120 x 60 x 80 cm')
-VGD::BIM::Table.save_view_state('settings' => {'length_unit' => 'm', 'length_digits' => 2})
+VGD::BIM::Table.save_view_state({'settings' => {'length_unit' => 'm', 'length_digits' => 2}}, logic_model)
 ok('đơn vị m, 2 số lẻ: 1.2 x 0.8 m', lbl.('lenXZ') == '1.2 x 0.8 m')
-VGD::BIM::Table.save_view_state('settings' => {'length_unit' => 'ft', 'length_digits' => 2})
+VGD::BIM::Table.save_view_state({'settings' => {'length_unit' => 'ft', 'length_digits' => 2}}, logic_model)
 ok('đơn vị ft: 3.94 x 2.62 ft', lbl.('lenXZ') == '3.94 x 2.62 ft')
-VGD::BIM::Table.save_view_state('preset' => 'x')
+VGD::BIM::Table.save_view_state({'preset' => 'x'}, logic_model)
 ok('ô thể tích: m³', lbl.('volume') == '0.576 m³')
 ok('ô tình trạng: nhãn tiếng Việt', lbl.('status') == 'Mới')
 ok('không chọn ô: hiện cả dòng', lbl.(nil) == 'Tủ bếp A · Gỗ sồi · Mới · Tủ')
@@ -730,7 +734,7 @@ rd2.define_singleton_method(:rcalls) { @rcalls ||= [] }
 rd2.define_singleton_method(:table_build) { nil }
 rd2.define_singleton_method(:show_outline) { nil }
 bad_room = ->(&block) { begin; block.call; nil; rescue StandardError => e; e.message; end }
-ok('tạo phòng khi chưa chọn mặt: báo lỗi', bad_room.call { rd2.table_room_from_selection({}) }.to_s.include?('chọn một mặt sàn'))
+ok('tạo phòng khi chưa chọn mặt: báo lỗi', bad_room.call { rd2.table_room_from_selection({}) }.to_s.include?('mặt sàn'))
 rmm.selection.items = [RoomFace.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 500]])]
 ok('mặt không nằm ngang: báo lỗi, chưa lưu phòng nào', bad_room.call { rd2.table_room_from_selection({}) }.to_s.include?('nằm ngang') && VGD::BIM::Rooms.read(rmm).empty?)
 rmm.selection.items = [RoomFace.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 0], [0, 3000, 0]])]
@@ -774,6 +778,65 @@ rd2.table_room_build({'id' => room_id})
 ok('đã có khối: báo "dựng lại"', rd2.rcalls.last[1][:text].include?('Đã dựng lại'))
 ok('lệnh của plugin lỗi: lỗi được báo ra, không nuốt', (VGD::Bridge.providers['vgd_room_fake'][:commands]['build'] = ->(*_) { raise 'SketchUp lỗi' }; bad_room.call { rd2.table_room_build({'id' => room_id}) } == 'SketchUp lỗi'))
 VGD::Bridge.providers.clear
+# Nhiều phòng một lần: tạo từ nhiều mặt sàn đang chọn (có lỗ), dựng khối tất cả phòng một bước hoàn tác
+class RoomLoopH < RoomLoop; def initialize(points, outer); super(points); @outer = outer; end; def outer?; @outer; end; end
+class RoomFaceH < RoomFace
+  def initialize(outer, holes = []); super(outer); @holes = holes; end
+  def loops; [RoomLoopH.new(@points, true)] + @holes.map { |h| RoomLoopH.new(h, false) }; end
+end
+sq = ->(x, y, w, h, z = 0) { [[x, y, z], [x + w, y, z], [x + w, y + h, z], [x, y + h, z]] }
+mm = RoomModel.new; $model = mm
+md = D.allocate
+md.instance_variable_set(:@model, mm)
+md.define_singleton_method(:emit) { |ev, payload| (@mcalls ||= []) << [ev, payload] }
+md.define_singleton_method(:mcalls) { @mcalls ||= [] }
+md.define_singleton_method(:table_build) { nil }
+mm.selection.items = [RoomFaceH.new(sq.(5000, 0, 4000, 3000)), RoomFaceH.new(sq.(0, 0, 4000, 3000), [sq.(1000, 1000, 400, 400)]), RoomFaceH.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 500]]), RoomFaceH.new(sq.(0, 4000, 3000, 3000, 2800))]
+md.table_room_from_selection({'name' => 'Phòng', 'number' => 'KHONGDUNG', 'height' => 2800})
+made = VGD::BIM::Rooms.read(mm)
+ok('nhiều mặt: tạo một phòng cho mỗi mặt nằm ngang (3 phòng), bỏ qua mặt nghiêng', made.size == 3 && md.mcalls.last[1][:text].include?('3 phòng') && md.mcalls.last[1][:text].include?('bỏ qua 1 mặt'))
+ok('nhiều mặt: đặt tên tiền tố + số thứ tự, theo thứ tự từ trái sang phải; không đặt mã phòng', made.map { |r| r['name'] } == ['Phòng 1', 'Phòng 2', 'Phòng 3'] && made.map { |r| r['boundary'].map(&:first).min.round } == [0, 0, 5000] && made.all? { |r| r['number'] == '' })
+ok('nhiều mặt: mỗi phòng lấy cao độ sàn của mặt của nó và chiều cao đã nhập', made.map { |r| r['elevation'] } .sort == [0.0, 0.0, 2800.0] && made.all? { |r| r['height'] == 2800.0 })
+holed = made.find { |r| r['holes'] }
+ok('mặt có lỗ (cột): lỗ được lưu, diện tích trừ lỗ (12 m² - 0,16 m²), báo số phòng có lỗ', holed && holed['holes'].size == 1 && VGD::BIM::Rooms.metrics(holed)[:area] == 11.84 && md.mcalls.last[1][:text].include?('1 phòng có lỗ') && made.count { |r| r['holes'] } == 1)
+ok('chu vi gồm cả chu vi lỗ (14 m + 1,6 m)', VGD::BIM::Rooms.metrics(holed)[:perimeter] == 15.6)
+md.table_room_from_selection({'name' => 'Phòng'})
+ok('tạo tiếp với cùng tiền tố: số thứ tự tiếp theo không trùng tên cũ', VGD::BIM::Rooms.read(mm).map { |r| r['name'] }.count('Phòng 1') == 1 && VGD::BIM::Rooms.read(mm).size == 6 && VGD::BIM::Rooms.read(mm).last(3).map { |r| r['name'] } == ['Phòng 4', 'Phòng 5', 'Phòng 6'])
+mm.selection.items = [RoomFaceH.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 500]]), RoomFaceH.new([[0, 0, 0], [0, 0, 100], [0, 50, 0]])]
+ok('toàn mặt không nằm ngang: báo lỗi, không lưu thêm phòng', bad_room.call { md.table_room_from_selection({}) }.to_s.include?('nằm ngang') && VGD::BIM::Rooms.read(mm).size == 6)
+mm.selection.items = [RoomFaceH.new(sq.(0, 0, 4000, 3000), [sq.(-500, 1000, 400, 400)])]
+ok('lỗ nằm ngoài viền: bỏ lỗ hỏng hoặc báo lỗi rõ, không lưu phòng sai', (bad_room.call { md.table_room_from_selection({'name' => 'Hỏng'}) }.to_s.include?('lỗ') && VGD::BIM::Rooms.read(mm).none? { |r| r['name'] == 'Hỏng' }))
+mm.selection.items = [RoomFaceH.new(sq.(0, 0, 4000, 3000))]
+md.table_room_from_selection({'name' => 'Riêng', 'number' => 'P09'})
+ok('một mặt: tên và mã phòng như nhập (giữ hành vi cũ)', VGD::BIM::Rooms.read(mm).last.values_at('name', 'number') == ['Riêng', 'P09'])
+VGD::BIM::Rooms.write(mm, VGD::BIM::Rooms.read(mm).first(3))
+built_many = []
+VGD::Bridge.providers.clear
+ok('dựng tất cả khi chưa cài plugin: báo cần cài', bad_room.call { md.table_room_build_all({}) }.to_s.include?('Chưa cài plugin VGD Room'))
+VGD::Bridge.register('vgd_room_fake', {bridge_version: 1, version: '0', provides: ['room_volume'], commands: {
+  'build' => ->(_m, room, id) { built_many << [:one, room['id']]; Object.new },
+  'build_many' => ->(_m, items) { built_many << [:many, items.map { |room, id| [room['id'], id, room['holes']&.size] }]; items.map { Object.new } },
+  'find' => ->(_m, room_id) { room_id == VGD::BIM::Rooms.read(mm).first['id'] ? Object.new : nil }
+}})
+md.table_room_build_all({})
+ids_all = VGD::BIM::Rooms.read(mm).map { |r| r['id'] }
+ok('dựng tất cả: một lệnh build_many cho mọi phòng, mỗi phòng một VGD ID hợp lệ, kèm lỗ', built_many.size == 1 && built_many[0][0] == :many && built_many[0][1].map(&:first) == ids_all && built_many[0][1].all? { |_, id, _| VGD::BIM::VgdId.valid?(id) } && built_many[0][1].map(&:last).compact == [1])
+ok('dựng tất cả: báo số khối, số dựng lại, một bước hoàn tác', md.mcalls.last[1][:text].include?('3 khối phòng') && md.mcalls.last[1][:text].include?('1 dựng lại') && md.mcalls.last[1][:text].include?('một bước hoàn tác'))
+built_many.clear
+md.table_room_build_all({'ids' => [ids_all[1]]})
+ok('dựng một số phòng (theo mã): chỉ phòng đó', built_many[0][1].map(&:first) == [ids_all[1]])
+ok('mã phòng / dữ liệu sai: từ chối', bad_room.call { md.table_room_build_all({'ids' => 'x'}) }.to_s.include?('không hợp lệ') && bad_room.call { md.table_room_build_all({'ids' => ['rm_deadbeef']}) }.to_s.include?('Chưa có phòng') && bad_room.call { md.table_room_build_all('x') }.to_s.include?('không hợp lệ'))
+VGD::Bridge.providers.clear
+built_many.clear
+VGD::Bridge.register('vgd_room_old', {bridge_version: 1, version: '0', provides: ['room_volume'], commands: {
+  'build' => ->(_m, room, id) { built_many << [:one, room['id']]; Object.new },
+  'find' => ->(_m, _room_id) { nil }
+}})
+md.table_room_build_all({})
+ok('plugin Room cũ chưa có build_many: dựng từng phòng và báo cần cập nhật VGD Room', built_many.map(&:first) == [:one, :one, :one] && md.mcalls.last[1][:text].include?('cập nhật VGD Room'))
+VGD::Bridge.providers.clear
+VGD::BIM::Rooms.write(mm, [])
+ok('chưa có phòng nào: báo cần tạo phòng trước', bad_room.call { md.table_room_build_all({}) }.to_s.include?('Chưa có phòng'))
 # Thư viện vật liệu: lưu trên máy, kiểm tra lại dữ liệu
 ok('lưu vật liệu sai dữ liệu: từ chối, thư viện không đổi', bad_room.call { rd2.material_library_save({'items' => [{'name' => '', 'unit' => 'm2'}]}) }.to_s.include?('tên vật liệu') && bad_room.call { rd2.material_library_save('x') }.to_s.include?('không hợp lệ') && VGD::BIM::MaterialLibrary.read.empty?)
 rd2.material_library_save({'items' => [{'name' => 'MFC Oak', 'code' => 'MFC01', 'unit' => 'm2', 'price' => 285_000, 'waste' => 5, 'sketchup_material' => 'Gỗ sồi'}]})
@@ -854,5 +917,74 @@ qd.scan_start; qd.switch_mode('validate_model')
 ok('đổi sang tab Kiểm tra: tắt quét', qd.instance_variable_get(:@scan_armed) == false)
 $model = ORIGINAL_MODEL
 $vgd_data = {}
+
+# Cầu nối dữ liệu: mở file (chỉ đọc), xem trước, áp dụng vào món (một bước hoàn tác, bỏ qua món khóa, giá trị sai và ô bỏ tick)
+require 'tmpdir'
+bdir = Dir.mktmpdir('bridge_dialog')
+bpath = File.join(bdir, 'in.csv')
+File.write(bpath, "VGD ID,Tên,Xuất xứ,Đơn giá\nvgd-1,Cửa chính,Hafele,1500000\nvgd-2,Cửa phụ,,abc\nvgd-3,Khóa,X,5\nvgd-9,Không có,,\n")
+bents = [EditEnt.new('A'), EditEnt.new('B'), EditEnt.new('C', true)]
+brecs = bents.map { |e| {entity: e, path: [e], locked: false} }
+brows = bents.each_with_index.map { |e, i| {index: i, name: e.name, vgd_id: "VGD-#{i + 1}", code: '', owner: '', price: nil, description: '', url: '', size: ''} }
+bd = D.allocate
+$model = EditModel.new
+bd.instance_variable_set(:@model, $model)
+bd.instance_variable_set(:@table_rows, brows)
+bd.instance_variable_set(:@table_records, brecs)
+bcalls = []
+bd.define_singleton_method(:emit) { |ev, payload| bcalls << [ev, payload] }
+bd.define_singleton_method(:table_build) { bcalls << [:build] }
+bd.define_singleton_method(:show_outline) { bcalls << [:outline] }
+$picked = bpath
+bd.bridge_open
+opened = bcalls.find { |c| c[0] == 'bridge_file' }[1]
+ok('cầu nối: mở file trả tiêu đề, số dòng, gợi ý khớp VGD ID và ánh xạ cột', opened[:headers] == ['VGD ID', 'Tên', 'Xuất xứ', 'Đơn giá'] && opened[:count] == 4 && opened[:suggest][:match_column] == 'VGD ID' && opened[:suggest][:mapping] == {'Tên' => 'name', 'Xuất xứ' => 'owner', 'Đơn giá' => 'price'})
+bopts = {'match_by' => 'vgd_id', 'match_column' => 'VGD ID', 'mapping' => opened[:suggest][:mapping]}
+bd.bridge_preview(bopts)
+bplan = bcalls.find { |c| c[0] == 'bridge_preview' }[1]
+ok('cầu nối: xem trước không đổi gì trong model', bents.map(&:name) == %w[A B C] && bplan[:counts][:ok] == 2 && bplan[:counts][:locked] == 1 && bplan[:counts][:unmatched] == 1 && bplan[:counts][:errors] == 1)
+$transactions.clear
+bd.bridge_apply(bopts.merge('skip' => [[2, 'owner']]))
+ok('cầu nối: áp dụng đổi tên đúng món, bỏ món khóa, giá trị sai và ô bỏ tick; một bước hoàn tác', bents.map(&:name) == ['Cửa chính', 'Cửa phụ', 'C'] && $transactions == ['VGD_BIM · Nhập dữ liệu từ file'] && bents[0].attrs.dig('VGD_BIM_TABLE', 'price').nil? == false)
+ok('cầu nối: áp dụng đọc lại bảng và báo số giá trị', bcalls.any? { |c| c[0] == :build } && bcalls.last[1][:text].include?('3 giá trị cho 2 đối tượng'))
+berr = ->(payload) { begin; bd.bridge_apply(payload); nil; rescue StandardError => e; e.message; end }
+ok('cầu nối: không còn thay đổi nào để áp dụng thì báo lỗi, không ghi', berr.call(bopts.merge('skip' => [[2, 'name'], [2, 'owner'], [2, 'price'], [3, 'name']])).to_s.include?('Không có thay đổi'))
+bd.instance_variable_set(:@bridge_file, nil)
+ok('cầu nối: chưa mở file thì báo lỗi', berr.call(bopts).to_s.include?('Chưa mở file'))
+$picked = nil
+$model = ORIGINAL_MODEL
+
+# Sửa món bằng plugin dựng hình (cầu nối, lệnh edit)
+class SrcEnt < Sketchup::Group
+  attr_reader :attrs
+  def initialize(plugin); @attrs = plugin ? {'VGD_BIM_SOURCE' => {'plugin' => plugin}} : {}; end
+  def valid?; true; end
+  def locked?; false; end
+  def get_attribute(d, k, default = nil); (@attrs[d] || {}).fetch(k, default); end
+end
+se = [SrcEnt.new(nil), SrcEnt.new('vgd_structure'), SrcEnt.new('vgd_structure'), SrcEnt.new('vgd_structure')]
+sd = D.allocate
+sd.instance_variable_set(:@model, $model)
+sd.instance_variable_set(:@table_rows, se.each_with_index.map { |_e, i| {index: i} })
+sd.instance_variable_set(:@table_records, se.map { |e| {entity: e, path: [e], locked: false} })
+scalls = []
+sd.define_singleton_method(:emit) { |ev, payload| scalls << [ev, payload] }
+src_err = ->(payload) { begin; sd.table_edit_source(payload); nil; rescue StandardError => e; e.message; end }
+VGD::Bridge.providers.clear
+ok('sửa bằng plugin: món không do plugin tạo ra bị từ chối', src_err.call({'index' => 0}).to_s.include?('không do plugin dựng hình'))
+ok('sửa bằng plugin: plugin chưa cài thì báo cài qua VGD Center', src_err.call({'index' => 1}).to_s.include?('Chưa cài plugin vgd_structure'))
+VGD::Bridge.register('vgd_structure', {bridge_version: 1, version: '0', provides: ['structure_element'], commands: {}})
+ok('sửa bằng plugin: plugin chưa có lệnh edit thì báo rõ, không đoán', src_err.call({'index' => 1}).to_s.include?('chưa hỗ trợ sửa'))
+edited = []
+VGD::Bridge.register('vgd_structure', {bridge_version: 1, version: '0', provides: ['structure_element'], commands: {'edit' => ->(model, entity) { edited << [model, entity] }}})
+sd.table_edit_source({'index' => 2})
+ok('sửa bằng plugin: gọi lệnh edit của plugin nguồn với model và đúng đối tượng của dòng, báo đã mở', edited.size == 1 && edited[0][0].equal?($model) && edited[0][1].equal?(se[2]) && scalls.last[0] == 'message' && scalls.last[1][:text].include?('vgd_structure'))
+VGD::Bridge.register('vgd_structure', {bridge_version: 2, version: '0', provides: ['structure_element'], commands: {'edit' => ->(*) { edited << :sai }}})
+ok('sửa bằng plugin: khác phiên bản cầu nối thì không gọi', src_err.call({'index' => 2}).to_s.include?('chưa hỗ trợ') && edited.size == 1)
+VGD::Bridge.register('vgd_structure', {bridge_version: 1, version: '0', provides: ['structure_element'], commands: {'edit' => ->(*) { raise 'plugin lỗi' }}})
+ok('sửa bằng plugin: lỗi của plugin được báo ra, không nuốt', src_err.call({'index' => 3}) == 'plugin lỗi')
+ok('sửa bằng plugin: chỉ số dòng sai hoặc không phải số bị từ chối', !src_err.call({'index' => 99}).nil? && !src_err.call({'index' => 'abc'}).nil?)
+ok('dòng của bảng có mã plugin nguồn (Table.source_plugin)', VGD::BIM::Table.source_plugin(se[1]) == 'vgd_structure' && VGD::BIM::Table.source_plugin(se[0]) == '' && VGD::BIM::Table.source_plugin(Object.new) == '')
+VGD::Bridge.providers.clear
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

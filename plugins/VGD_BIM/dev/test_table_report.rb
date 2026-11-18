@@ -285,8 +285,61 @@ default_rows = REXML::XPath.match(xml(read_zip(VGD::BIM::Xlsx.build(build))['xl/
 ok('không chỉnh độ cao hàng: xlsx vẫn như cũ (84 point)', default_rows[7] == '84')
 tall_page = TR.html(tall)
 expected_mm = (200 * 277 / 884.0).round(1)
-ok('PDF theo độ cao hàng: hàng cao tỉ lệ cùng độ rộng cột, ảnh vừa ô', tall_page.include?("tr.row td{height:#{expected_mm}mm}") && tall_page.include?("max-height:#{(expected_mm - 2).round(1)}mm") && !tall_page.include?('max-height:22mm'))
+ok('PDF theo độ cao hàng: hàng cao tỉ lệ cùng độ rộng cột, ảnh vừa ô', tall_page.include?("#sheet0 tr.row td{height:#{expected_mm}mm}") && tall_page.include?("#sheet0 td.img img{max-height:#{(expected_mm - 2).round(1)}mm}"))
 ok('PDF không chỉnh độ cao hàng: giữ ảnh cao tối đa 22 mm, không thêm luật chiều cao hàng', !TR.html(build).include?('tr.row td{height'))
+
+# ---- Nhiều sheet: mỗi sheet một worksheet Excel / một phần của trang in ----
+TEXT_NUM = [COLUMNS[2], COLUMNS[3]].freeze
+IMG_TEXT_NUM = [COLUMNS[1], COLUMNS[2], COLUMNS[3]].freeze # sheet có cột Ảnh
+def sheet_rows(names, image: false) = names.each_with_index.map { |n, i| {'kind' => 'row', 'pid' => 900 + i, 'cells' => (image ? [nil] : []) + [n, 1000 + i]} } + [{'kind' => 'total', 'cells' => (image ? [nil] : []) + ['Tổng', 3000]}]
+SHEETS = [
+  {'name' => 'Tất cả', 'columns' => COLUMNS, 'rows' => ROWS},
+  {'name' => 'Tủ [bếp]: A/B?', 'columns' => IMG_TEXT_NUM, 'rows' => sheet_rows(%w[Tủ1 Tủ2], image: true), 'row_height' => 90},
+  {'name' => 'tất cả', 'columns' => TEXT_NUM, 'rows' => [{'kind' => 'total', 'cells' => ['Tổng', 0]}]},
+  {'name' => 'Một tên sheet rất dài vượt quá ba mươi mốt ký tự của Excel', 'columns' => TEXT_NUM, 'rows' => sheet_rows(%w[X])}
+].freeze
+def multi(over = {}) = TR.build({'title' => 'Bảng khối lượng', 'preset' => 'Nội thất', 'decimal_separator' => ',', 'labels' => LABELS, 'sheets' => SHEETS}.merge(over), 'Nhà mẫu', FINDER)
+mr = multi
+ok('nhiều sheet: dựng báo cáo có 4 sheet, tên và số dòng đúng; :columns / :rows là của sheet đầu', mr[:sheets].size == 4 && mr[:sheets].map { |sh| sh[:name] } == SHEETS.map { |sh| sh['name'] } && mr[:sheets][0][:rows].size == 5 && mr[:sheets][1][:rows].size == 3 && mr[:columns].equal?(mr[:sheets][0][:columns]) && mr[:rows].equal?(mr[:sheets][0][:rows]))
+single_report = build
+ok('một bảng (không có sheets): vẫn thành một sheet tên theo tiêu đề', single_report[:sheets].size == 1 && single_report[:sheets][0][:name] == 'Bảng khối lượng' && single_report[:sheets][0][:rows].equal?(single_report[:rows]))
+ok('độ cao hàng riêng từng sheet', mr[:sheets][1][:row_height] == 90 && mr[:sheets][0][:row_height].nil?)
+ok('ảnh nạp một lần cho mọi sheet (khóa theo mã đối tượng)', mr[:images].keys.sort == [900, 901])
+bad_multi = {
+  'sheets không phải mảng' => {'sheets' => 'x'}, 'sheets rỗng' => {'sheets' => []}, 'quá 20 sheet' => {'sheets' => Array.new(21) { SHEETS[1] }},
+  'sheet không phải bảng băm' => {'sheets' => [1]}, 'sheet thiếu cột' => {'sheets' => [{'name' => 'A', 'rows' => ROWS}]},
+  'sheet dòng sai số ô' => {'sheets' => [{'name' => 'A', 'columns' => TEXT_NUM, 'rows' => [{'kind' => 'row', 'cells' => ['a']}]}]},
+  'tên sheet quá dài' => {'sheets' => [SHEETS[1].merge('name' => 'x' * 61)]}, 'tên sheet sai kiểu' => {'sheets' => [SHEETS[1].merge('name' => 5)]},
+  'mọi sheet không có dòng dữ liệu' => {'sheets' => [SHEETS[2], SHEETS[2]]}
+}
+bad_multi.each { |label, over| ok("nhiều sheet, dữ liệu sai: #{label}", !error_of { multi(over) }.nil?) }
+ok('sheet rỗng (chỉ dòng tổng) cạnh sheet có dữ liệu: vẫn được', !multi.nil? && mr[:sheets][2][:rows].none? { |r| r[:kind] == 'row' })
+files = read_zip(VGD::BIM::Xlsx.build(mr))
+wb = xml(files['xl/workbook.xml'])
+names = REXML::XPath.match(wb, '//m:sheet', NS).map { |n| n.attributes['name'] }
+ok('Excel: một worksheet cho mỗi sheet, tên làm sạch (bỏ [ ] : / ?), không trùng không phân biệt hoa thường, tối đa 31 ký tự', files.keys.grep(%r{\Axl/worksheets/sheet\d+\.xml\z}).size == 4 && names.size == 4 && names[0] == 'Tất cả' && names[1] == 'Tủ  bếp   A B' && names[2] == 'tất cả (2)' && names[3].length <= 31 && names.map(&:downcase).uniq.size == 4)
+dn = REXML::XPath.match(wb, '//m:definedName', NS)
+ok('Excel: mỗi sheet có tiêu đề lặp khi in riêng (localSheetId 0..3) trỏ đúng tên sheet', dn.size == 4 && dn.map { |d| d.attributes['localSheetId'] } == %w[0 1 2 3] && dn[1].text.include?("'Tủ  bếp   A B'!") )
+utf = ->(text) { text.to_s.dup.force_encoding('UTF-8') }
+rels = utf.call(files['xl/_rels/workbook.xml.rels'])
+ok('Excel: quan hệ workbook có đủ 4 worksheet và styles', rels.scan('worksheets/sheet').size == 4 && rels.include?('styles.xml'))
+ctypes = utf.call(files['[Content_Types].xml'])
+ok('Excel: loại nội dung khai báo đủ 4 worksheet; bản vẽ ảnh chỉ cho sheet có ảnh (1 và 2)', ctypes.scan('/xl/worksheets/sheet').size == 4 && ctypes.include?('/xl/drawings/drawing1.xml') && ctypes.include?('/xl/drawings/drawing2.xml') && !ctypes.include?('/xl/drawings/drawing3.xml'))
+s1 = xml(files['xl/worksheets/sheet1.xml']); s2 = xml(files['xl/worksheets/sheet2.xml']); s3 = xml(files['xl/worksheets/sheet3.xml'])
+ok('Excel: ô tiêu đề mỗi sheet ghi "tiêu đề · tên sheet"; dữ liệu mỗi sheet đúng cột của sheet đó', cell_value(s2, 'A1') == 'Bảng khối lượng · Tủ [bếp]: A/B?' && cell_value(s1, 'A1') == 'Bảng khối lượng · Tất cả' && cell_value(s2, 'A2').to_s.include?('Nhà mẫu') && cell_value(s2, 'B4') == 'Tên' && cell_value(s2, 'C4') == 'Rộng (X) mm' && cell_value(s3, 'A4') == 'Tên')
+ok('Excel: dòng dữ liệu sheet 2 (hai dòng + tổng) và sheet rỗng chỉ có dòng tổng', cell_value(s2, 'B6') == 'Tủ1' && cell_value(s2, 'C6') == 1000.0 && cell_value(s2, 'B7') == 'Tủ2' && cell_value(s2, 'B8') == 'Tổng' && cell_value(s3, 'A6') == 'Tổng' && cell_value(s3, 'A7').nil?)
+media = files.keys.grep(%r{\Axl/media/image\d+\.png\z})
+ok('Excel: ảnh dùng chung một kho (mỗi ảnh một file dù nằm ở nhiều sheet)', media.size == 2)
+d1 = utf.call(files['xl/drawings/_rels/drawing1.xml.rels']); d2 = utf.call(files['xl/drawings/_rels/drawing2.xml.rels'])
+ok('Excel: mỗi bản vẽ trỏ tới ảnh của sheet mình trong kho chung, không sót liên kết', !d1.nil? && !d2.nil? && d1.scan('../media/image').size >= 1 && d2.scan('../media/image').size >= 1 && !files.key?('xl/drawings/drawing3.xml'))
+ok('Excel: tên sheet có dấu nháy trong tiêu đề in vẫn đúng XML (file mở được, không lỗi)', (xml(files['xl/workbook.xml']); true))
+one = read_zip(VGD::BIM::Xlsx.build(build))
+ok('Excel một bảng: vẫn một worksheet, tên sheet theo tiêu đề, tiêu đề ô A1 không thêm tên sheet', one.keys.grep(%r{\Axl/worksheets/sheet\d+\.xml\z}) == ['xl/worksheets/sheet1.xml'] && utf.call(one['xl/workbook.xml']).include?('name="Bảng khối lượng"') && cell_value(xml(one['xl/worksheets/sheet1.xml']), 'A1') == 'Bảng khối lượng')
+page = TR.html(mr)
+ok('PDF: mỗi sheet một phần có tên sheet, sheet sau ngắt trang mới', page.scan('<section class="sheet"').size == 4 && page.scan('<h2 class="sheet-title">').size == 4 && page.include?('section.sheet+section.sheet{page-break-before:always}') && page.include?('Tủ [bếp]: A/B?'.gsub('&', '&amp;')))
+ok('PDF: độ cao hàng riêng áp đúng sheet có chỉnh (sheet 2), sheet khác giữ mặc định', page.include?('#sheet1 tr.row td{height') && !page.include?('#sheet0 tr.row td{height') && !page.include?('#sheet2 tr.row td{height'))
+ok('PDF: kéo độ rộng cột chạy cho mọi bảng; nút đặt lại độ rộng đặt lại tất cả', page.include?("querySelectorAll('table.sheet-table')") && page.include?('resets.forEach'))
+ok('PDF một bảng: không có tiêu đề sheet, vẫn một phần', TR.html(build).scan('<section class="sheet"').size == 1 && !TR.html(build).include?('sheet-title">'))
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)

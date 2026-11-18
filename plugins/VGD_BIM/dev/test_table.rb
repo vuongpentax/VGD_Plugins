@@ -65,24 +65,31 @@ T.save_preset('Tủ "bếp" trên', 'Đồ rời', %w[instance quantity])
 check 'preset có dấu và ngoặc kép lưu rồi đọc lại đúng', T.custom_presets.map { |p| p['name'] } == ['Tủ "bếp" trên']
 check 'preset nằm trong file JSON trên máy', File.exist?(File.join(ENV['VGD_BIM_DATA_DIR'], 'table_presets.json'))
 T.delete_preset('Tủ "bếp" trên')
-T.save_view_state('preset' => 'Đồ rời', 'order' => %w[quantity abc lenX], 'visible' => %w[quantity], 'widths' => {'lenX' => 90, 'zzz' => 5}, 'hack' => 1)
-v = T.view_state
+# Trạng thái bảng nằm trong settings.json cạnh file SketchUp (xem ModelSettings): mỗi file một thư mục, không có trạng thái chung trên máy.
+SKT = Dir.mktmpdir('vgd_bim_skp_table')
+class ViewModel
+  attr_reader :path
+  def initialize(path = nil); @path = path || ''; end
+end
+vm = ViewModel.new(File.join(SKT, 'chinh.skp'))
+T.save_view_state({'preset' => 'Đồ rời', 'order' => %w[quantity abc lenX], 'visible' => %w[quantity], 'widths' => {'lenX' => 90, 'zzz' => 5}, 'hack' => 1}, vm)
+v = T.view_state(vm)
 check 'trạng thái bảng lưu và đọc lại, bỏ cột lạ', v['preset'] == 'Đồ rời' && v['order'] == %w[quantity lenX] && v['widths'] == {'lenX' => 90} && !v.key?('hack')
-T.save_view_state('group' => 'Đồ rời')
-check 'trạng thái bảng cũ lưu nhóm cũ: đọc ra nhóm mới (Đồ rời -> I. INTERIOR); nhóm mới giữ nguyên', T.view_state['group'] == 'I. INTERIOR' && (T.save_view_state('group' => 'S. BEAM'); T.view_state['group'] == 'S. BEAM')
+T.save_view_state({'group' => 'Đồ rời'}, vm)
+check 'trạng thái bảng cũ lưu nhóm cũ: đọc ra nhóm mới (Đồ rời -> I. INTERIOR); nhóm mới giữ nguyên', T.view_state(vm)['group'] == 'I. INTERIOR' && (T.save_view_state({'group' => 'S. BEAM'}, vm); T.view_state(vm)['group'] == 'S. BEAM')
 legacy_file = {'format' => 'VGD_BIM_PRESETS', 'version' => 1, 'presets' => [{'name' => 'Bản xuất cũ', 'group' => 'Thiết bị', 'columns' => %w[instance quantity]}]}
 check 'nhập file preset xuất từ bản cũ (nhóm cũ Thiết bị): được nhận và đổi sang Q. EQUIPMENT', T.import_presets(legacy_file).first['group'] == 'Q. EQUIPMENT'
 # Độ cao hàng (Ctrl + lăn chuột): số điểm ảnh trong giới hạn; giá trị lạ bị bỏ để không làm hỏng bảng
-T.save_view_state('rowHeight' => 120.4)
-check 'độ cao hàng lưu và đọc lại (làm tròn)', T.view_state['rowHeight'] == 120
-T.save_view_state('rowHeight' => 99_999)
-check 'độ cao hàng quá lớn bị kẹp về giới hạn trên', T.view_state['rowHeight'] == T::ROW_HEIGHT_MAX
-T.save_view_state('rowHeight' => 3)
-check 'độ cao hàng quá nhỏ bị kẹp về giới hạn dưới', T.view_state['rowHeight'] == T::ROW_HEIGHT_MIN
-T.save_view_state('rowHeight' => 'cao', 'preset' => 'x')
-check 'độ cao hàng không phải số bị bỏ (về mặc định), không lỗi', !T.view_state.key?('rowHeight') && T.view_state['preset'] == 'x'
-T.save_view_state('rowHeight' => 0)
-check 'độ cao hàng 0 = theo mật độ hàng mặc định (lưu 0)', T.view_state['rowHeight'] == 0
+T.save_view_state({'rowHeight' => 120.4}, vm)
+check 'độ cao hàng lưu và đọc lại (làm tròn)', T.view_state(vm)['rowHeight'] == 120
+T.save_view_state({'rowHeight' => 99_999}, vm)
+check 'độ cao hàng quá lớn bị kẹp về giới hạn trên', T.view_state(vm)['rowHeight'] == T::ROW_HEIGHT_MAX
+T.save_view_state({'rowHeight' => 3}, vm)
+check 'độ cao hàng quá nhỏ bị kẹp về giới hạn dưới', T.view_state(vm)['rowHeight'] == T::ROW_HEIGHT_MIN
+T.save_view_state({'rowHeight' => 'cao', 'preset' => 'x'}, vm)
+check 'độ cao hàng không phải số bị bỏ (về mặc định), không lỗi', !T.view_state(vm).key?('rowHeight') && T.view_state(vm)['preset'] == 'x'
+T.save_view_state({'rowHeight' => 0}, vm)
+check 'độ cao hàng 0 = theo mật độ hàng mặc định (lưu 0)', T.view_state(vm)['rowHeight'] == 0
 # Khung bao quanh đối tượng (chỉ 8 góc của hộp, không duyệt mặt của đối tượng nên nhẹ khi chọn nhiều)
 class BoxPoint
   attr_reader :x, :y, :z
@@ -120,26 +127,27 @@ custom_col = cc.add('label' => 'Mã vật tư', 'kind' => 'attribute', 'dictiona
 check 'cột thêm tay: có trong danh sách cột gửi giao diện, khóa hợp lệ, không lẫn vào cột chuẩn', T.columns.last[:key] == custom_col['key'] && T.column_keys.include?(custom_col['key']) && !T::COLUMN_KEYS.include?(custom_col['key']) && T.columns.size == T::COLUMNS.size + 1
 T.save_preset('Có cột tay', '', ['instance', custom_col['key']])
 check 'preset lưu được cột thêm tay', T.custom_presets.find { |preset| preset['name'] == 'Có cột tay' }['columns'] == ['instance', custom_col['key']]
-T.save_view_state('order' => ['instance', custom_col['key'], 'khong_co'], 'visible' => [custom_col['key']], 'widths' => {custom_col['key'] => 150, 'khong_co' => 9}, 'headers' => {custom_col['key'] => 'Mã VT'})
-view = T.view_state
+T.save_view_state({'order' => ['instance', custom_col['key'], 'khong_co'], 'visible' => [custom_col['key']], 'widths' => {custom_col['key'] => 150, 'khong_co' => 9}, 'headers' => {custom_col['key'] => 'Mã VT'}}, vm)
+view = T.view_state(vm)
 check 'trạng thái bảng giữ cột thêm tay (thứ tự, hiện, độ rộng, tiêu đề), bỏ khóa lạ', view['order'] == ['instance', custom_col['key']] && view['visible'] == [custom_col['key']] && view['widths'] == {custom_col['key'] => 150} && view['headers'][custom_col['key']] == 'Mã VT'
 cc.remove(custom_col['key'])
 check 'xóa cột thêm tay: preset và trạng thái bảng tự bỏ khóa đó, không lỗi', T.custom_presets.find { |preset| preset['name'] == 'Có cột tay' }.nil? || !T.custom_presets.find { |preset| preset['name'] == 'Có cột tay' }['columns'].include?(custom_col['key'])
 check 'cột VGD ID có trong danh sách cột chuẩn, đứng sau cột Tên', T::COLUMN_KEYS.include?('vgd_id') && T::COLUMN_KEYS.index('vgd_id') == T::COLUMN_KEYS.index('instance') + 2 && T::COLUMN_KEYS.index('code') == T::COLUMN_KEYS.index('instance') + 1
-# Trạng thái bảng riêng từng file SketchUp: file đã lưu riêng giữ nguyên dù trạng thái chung đổi sau đó
-class ViewModel
-  def initialize; @attrs = {}; end
-  def get_attribute(d, k, default = nil); @attrs.dig(d, k) || default; end
-  def set_attribute(d, k, v); (@attrs[d] ||= {})[k] = v; end
-  def start_operation(*); true; end
-  def commit_operation; true; end
-  def abort_operation; true; end
-end
-view_a = ViewModel.new; view_b = ViewModel.new
+# Trạng thái bảng riêng từng file SketchUp: mỗi file có settings.json riêng, file mới bắt đầu từ mặc định
+view_a = ViewModel.new(File.join(SKT, 'a.skp')); view_b = ViewModel.new(File.join(SKT, 'b.skp'))
 T.save_view_state({'preset' => 'Đồ rời', 'visible' => %w[instance], 'rowHeight' => 90}, view_a)
 T.save_view_state({'preset' => 'Phần thô', 'visible' => %w[quantity], 'rowHeight' => 40}, view_b)
 check 'trạng thái bảng: mỗi file giữ riêng (preset, cột hiện, độ cao hàng)', T.view_state(view_a).values_at('preset', 'visible', 'rowHeight') == ['Đồ rời', %w[instance], 90] && T.view_state(view_b).values_at('preset', 'visible', 'rowHeight') == ['Phần thô', %w[quantity], 40]
-check 'trạng thái chung (mẫu cho file mới) là lần lưu gần nhất', T.view_state['preset'] == 'Phần thô'
-check 'file chưa lưu riêng thì theo trạng thái chung', T.view_state(ViewModel.new)['preset'] == 'Phần thô'
-check 'trạng thái riêng cũng được kiểm tra khi đọc (cột lạ, độ cao quá lớn)', (view_a.set_attribute('VGD_BIM_MODEL', 'settings', JSON.generate('table_view' => {'rowHeight' => 99999, 'preset' => 'x'})); T.view_state(view_a)['rowHeight'] == T::ROW_HEIGHT_MAX)
+check 'trạng thái bảng nằm trong settings.json cạnh file SketchUp (a_VGD_BIM)', File.file?(File.join(SKT, 'a_VGD_BIM', 'settings.json')) && JSON.parse(File.read(File.join(SKT, 'a_VGD_BIM', 'settings.json')))['table_view']['preset'] == 'Đồ rời'
+check 'file mới (chưa có settings.json) bắt đầu từ mặc định, không theo file dùng gần nhất', T.view_state(ViewModel.new(File.join(SKT, 'moi.skp'))) == {} && T.view_state(nil) == {}
+check 'không còn trạng thái chung trên máy (table_view.json)', !File.exist?(File.join(ENV['VGD_BIM_DATA_DIR'], 'table_view.json'))
+unsaved_view = ViewModel.new
+T.save_view_state({'preset' => 'Đồ rời', 'rowHeight' => 77}, unsaved_view)
+check 'file chưa lưu: trạng thái giữ trong phiên (chưa có thư mục), đọc lại được', T.view_state(unsaved_view).values_at('preset', 'rowHeight') == ['Đồ rời', 77]
+unsaved_view.instance_variable_set(:@path, File.join(SKT, 'vua_luu.skp'))
+check 'lưu file lần đầu: trạng thái trong phiên được ghi ra settings.json cạnh file', T.view_state(unsaved_view)['preset'] == 'Đồ rời' && File.file?(File.join(SKT, 'vua_luu_VGD_BIM', 'settings.json'))
+File.write(File.join(SKT, 'a_VGD_BIM', 'settings.json'), JSON.generate('table_view' => {'rowHeight' => 99999, 'preset' => 'x'}))
+check 'trạng thái đọc từ settings.json cũng được kiểm tra (cột lạ, độ cao quá lớn)', T.view_state(view_a)['rowHeight'] == T::ROW_HEIGHT_MAX
+File.write(File.join(SKT, 'b_VGD_BIM', 'settings.json'), '{ không phải json')
+check 'settings.json hỏng: bỏ qua, về mặc định, không lỗi', T.view_state(view_b) == {}
 puts 'Done'

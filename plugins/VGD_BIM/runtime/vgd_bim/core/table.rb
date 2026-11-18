@@ -7,6 +7,7 @@ require_relative 'front'
 require_relative 'measure'
 require_relative 'custom_columns'
 require_relative 'vgd_id'
+require_relative 'structure_source'
 require_relative 'object_code'
 require_relative 'levels'
 require_relative 'rooms'
@@ -144,13 +145,42 @@ module VGD
       end
 
       # Trạng thái bảng (preset đang dùng, cột, thứ tự, độ rộng, ...) để mở lại vẫn giữ như lần trước.
-      VIEW_KEYS = %w[preset group order visible widths density showTotals onlyTop headers settings rowHeight].freeze
+      VIEW_KEYS = %w[preset group order visible widths density showTotals onlyTop headers settings rowHeight sheets sheet].freeze
+      # Sheet của bảng (như sheet của Excel): mỗi sheet nhớ cột hiện / thứ tự / độ rộng, sắp xếp, nhóm theo, bộ lọc và tag loại trừ riêng.
+      SHEET_LIMIT = 20
+      SHEET_NAME_MAX = 40
+      # value: mảng sheet gửi từ giao diện hoặc đọc từ file; mục sai bị bỏ (cột lạ, kiểu lạ), tối đa SHEET_LIMIT sheet. Không còn sheet hợp lệ thì [].
+      def self.clean_sheets(value)
+        return [] unless value.is_a?(Array)
+        keys = column_keys
+        value.first(SHEET_LIMIT).each_with_index.filter_map do |raw, index|
+          next unless raw.is_a?(Hash)
+          name = raw['name'].to_s.strip[0, SHEET_NAME_MAX]
+          name = "Sheet#{index + 1}" if name.empty?
+          sheet = {'name' => name}
+          %w[order visible].each { |k| sheet[k] = Array(raw[k]).map(&:to_s).select { |key| keys.include?(key) }.uniq if raw[k].is_a?(Array) }
+          sheet['widths'] = raw['widths'].select { |k, v| keys.include?(k) && v.is_a?(Numeric) && v.finite? } if raw['widths'].is_a?(Hash)
+          sort = raw['sort']
+          sheet['sort'] = {'key' => sort['key'], 'dir' => sort['dir'] == -1 ? -1 : 1} if sort.is_a?(Hash) && keys.include?(sort['key'])
+          sheet['groupBy'] = raw['groupBy'].to_s[0, 40] if raw['groupBy'].is_a?(String)
+          sheet['group'] = raw['group'].to_s[0, 100] if raw['group'].is_a?(String)
+          sheet['search'] = raw['search'].to_s[0, 200] if raw['search'].is_a?(String)
+          sheet['merge'] = raw['merge'] == true if raw.key?('merge')
+          if raw['exclude_tags'].is_a?(Array)
+            begin
+              sheet['exclude_tags'] = Measure.parse_tags(raw['exclude_tags'])
+            rescue ArgumentError
+              nil # danh sách tag loại trừ sai: bỏ mục này, sheet dùng loại trừ chung
+            end
+          end
+          sheet
+        end
+      end
       ROW_HEIGHT_MIN = 28 # độ cao hàng (điểm ảnh) khi người dùng Ctrl + lăn chuột; 0 = theo mật độ hàng
       ROW_HEIGHT_MAX = 640
-      # model: trạng thái bảng riêng của file SketchUp (nếu có) thay cho trạng thái chung trên máy.
+      # model: trạng thái bảng riêng của file SketchUp (settings.json cạnh file). Không có thì {} (mặc định).
       def self.view_state(model = nil)
-        raw = ModelSettings.read(model)[ModelSettings::VIEW_KEY] if model
-        raw = Storage.read('table_view') if raw.nil?
+        raw = ModelSettings.read(model)[ModelSettings::VIEW_KEY] if model # trạng thái bảng chỉ lấy từ settings.json của file; file mới thì để mặc định
         return {} unless raw.is_a?(Hash)
         state = raw.select { |k, _| VIEW_KEYS.include?(k) }
         state['group'] = Tags.migrate_group(state['group']) if state['group'].is_a?(String) # trạng thái cũ dùng nhóm cũ
@@ -158,10 +188,11 @@ module VGD
         state.delete('rowHeight') if state['rowHeight'].nil?
         state['headers'] = Preset.headers(state['headers'], column_keys) if state.key?('headers')
         state['settings'] = Preset.settings(state['settings']) if state.key?('settings')
+        clean_sheet_state(state)
         state
       end
 
-      # Ghi vào file SketchUp (nếu có model) và vào trạng thái chung (làm mẫu cho file chưa có riêng).
+      # Ghi vào settings.json của file SketchUp (hoặc giữ trong phiên nếu file chưa lưu). Không còn trạng thái chung trên máy.
       def self.save_view_state(state, model = nil)
         raise ArgumentError, 'Trạng thái bảng không hợp lệ.' unless state.is_a?(Hash)
         clean = state.select { |k, _| VIEW_KEYS.include?(k) }
@@ -171,8 +202,22 @@ module VGD
         clean.delete('rowHeight') if clean['rowHeight'].nil?
         clean['headers'] = Preset.headers(clean['headers'], column_keys) if clean.key?('headers')
         clean['settings'] = Preset.settings(clean['settings']) if clean.key?('settings')
-        Storage.write('table_view', clean)
+        clean_sheet_state(clean)
         ModelSettings.write(model, ModelSettings::VIEW_KEY => clean) if model
+      end
+
+      # Làm sạch 'sheets' và 'sheet' (chỉ số sheet đang mở) trong trạng thái bảng: không có sheet hợp lệ thì bỏ cả hai.
+      def self.clean_sheet_state(state)
+        sheets = state.key?('sheets') ? clean_sheets(state['sheets']) : []
+        if sheets.empty?
+          state.delete('sheets')
+          state.delete('sheet')
+        else
+          state['sheets'] = sheets
+          index = state['sheet']
+          state['sheet'] = index.is_a?(Integer) && index >= 0 && index < sheets.size ? index : 0
+        end
+        state
       end
 
       # 0 (theo mật độ hàng) hoặc số điểm ảnh làm tròn, kẹp trong giới hạn; không phải số thì nil (bỏ).
@@ -208,12 +253,21 @@ module VGD
           context_locked = path.any? { |e| e.respond_to?(:locked?) && e.locked? }
           entities.each do |entity|
             next unless Data.supported?(entity) && entity.valid?
+            next if StructureSource.grid?(entity) # lưới trục của VGD Structure chỉ là bản vẽ, không phải món
+            if StructureSource.container?(entity) # chọn nhóm chứa cột / dầm / tường / sàn / trần của VGD Structure thì lấy các phần tử bên trong làm dòng
+              inner = transform * entity.transformation
+              entity.entities.each do |child|
+                next unless Data.supported?(child) && child.valid?
+                records << {entity: child, path: path + [entity, child], transform: inner * child.transformation, locked: context_locked || entity.locked? || child.locked?}
+              end
+              next
+            end
             records << {entity: entity, path: path + [entity], transform: transform * entity.transformation,
                         locked: context_locked || entity.locked?}
           end
         end
         records, hidden = drop_excluded_tags(records, path.size, measure ? measure.tags : [])
-        records = records.reject { |record| Rooms.volume_entity?(record[:entity]) } # khối phòng do VGD_Room dựng: không phải món, không tính khối lượng
+        records = records.reject { |record| Rooms.volume_entity?(record[:entity]) || StructureSource.container?(record[:entity]) || record[:path].any? { |e| StructureSource.grid?(e) } } # khối phòng của VGD_Room, nhóm chứa và lưới trục (kể cả ký hiệu bên trong) của VGD Structure: không phải món, không tính khối lượng
         groups = tag_groups
         index_of = {}
         records.each_with_index { |record, i| index_of[path_key(record[:path])] = i }
@@ -231,7 +285,7 @@ module VGD
           priced = MaterialLibrary.cost(entry, rows[i][:calc_method], rows[i][:calc_qty])
           rows[i].merge!(mat_code: entry ? entry['code'] : '', mat_price: entry ? entry['price'] : nil, mat_waste: entry ? entry['waste'] : nil, mat_qty: priced[:qty], mat_cost: priced[:cost], mat_note: priced[:note].to_s)
           rows[i][:level_id] = lid
-          rows[i][:level] = lid.empty? ? '' : level_names.fetch(lid, '(tầng đã xóa)')
+          rows[i][:level] = lid.empty? ? rows[i][:struct_level].to_s : level_names.fetch(lid, '(tầng đã xóa)') # món chưa gán tầng BIM thì hiện tầng của VGD Structure
           rows[i][:base_z] = base_z(record) # cao độ đáy món (mm, thế giới) để gợi ý tầng
           rows[i][:base_x], rows[i][:base_y] = base_xy(record) # tâm đáy món (mm, thế giới) để gợi ý phòng
           rid = Rooms.entity_room(record[:entity])
@@ -337,8 +391,13 @@ module VGD
           quantity: 1,
           vgd_id: VgdId.read(entity),
           parents: []
-        }.merge(extra_columns(entity, data)).merge(measure_note: body ? body[:note].to_s : '').merge(CustomColumns.values(entity, custom))
+        }.merge(extra_columns(entity, data)).merge(measure_note: body ? body[:note].to_s : '').merge(CustomColumns.values(entity, custom)).merge(StructureSource.row_fields(entity)).merge(source_plugin: source_plugin(entity))
         row.merge(Quantity.row_fields(row, tag, row[:tag_group], data, overrides)) # hạng mục / cách tính / khối lượng suy ra từ tag (tính ảo, không ghi vào món)
+      end
+
+      # Mã plugin dựng hình đã tạo món (VGD_BIM_SOURCE.plugin), để nút "Sửa bằng plugin dựng hình" biết gọi ai; rỗng nếu không có.
+      def self.source_plugin(entity)
+        entity.respond_to?(:get_attribute) ? entity.get_attribute('VGD_BIM_SOURCE', 'plugin').to_s : ''
       end
 
       # Xuất xứ (trường manufacturer của dữ liệu VGD), Liên kết / Quy cách / Đơn giá (dictionary riêng của bảng), Loại IFC, Thành tiền.

@@ -1,0 +1,174 @@
+module VGD
+  module Structure
+    # Kế hoạch dầm của một tầng (đặc tả: SPEC mục 4 và 5). Logic thuần.
+    # - Dầm cùng cốt với sàn tầng kế trên: ĐỈNH DẦM = mặt trên sàn kết cấu (= đỉnh cột), xuống tổng chiều cao `h` (phần nhô dưới sàn là h - dày sàn); sàn nằm lọt lòng giữa các dầm nên khối không chồng nhau. Tầng trên cùng chỉ có sàn nên không có dầm.
+    # - Dọc nhịp, hai đầu dầm dừng ở MẶT CỘT (cột được chọn ở giao điểm đó cùng tầng); chỗ không có cột thì dầm theo phương X chạy tới trục,
+    #   dầm theo phương Y dừng ở mặt dầm X nếu có dầm X được chọn chạm giao điểm đó, nếu không thì tới trục.
+    # - Vị trí theo phương vuông góc: auto (dầm trên trục biên đầu "min", biên cuối "max": mặt ngoài tiếp giáp trục biên; nhịp giữa "center"),
+    #   center (tâm trên trục), min (cạnh nhỏ tại trục), max (cạnh lớn tại trục).
+    module BeamPlan
+      EPS = 1e-6
+      MIN_LENGTH = 100.0
+
+      Error = Class.new(ArgumentError)
+
+      def self.plan(grid, types, beam_types, levels, level_id)
+        level = Levels.find(levels, level_id) or raise Error, 'Tầng không tồn tại.'
+        above = Levels.next_of(levels, level_id)
+        raise Error, "Tầng “#{level['name']}” là tầng trên cùng, chỉ có sàn nên không có dầm." unless above
+        column_plan = ColumnPlan.plan(grid, types, levels, level_id)
+        z_top = column_plan[:z1]
+        default_type = BeamTypes.find(beam_types, level['beam_type']) || beam_types.first
+        spans = Grid.spans(grid).each_with_object({}) { |sp, h| h[sp[:ref]] = sp }
+        columns = column_plan[:items].each_with_object({}) { |c, h| h[c[:ref]] = c }
+        picks = level['picks']['beams']
+        # Lượt 1: kích thước và vị trí vuông góc của từng dầm.
+        beams = spans.each_with_object([]) do |(ref, span), out|
+          pick = picks[ref] or next
+          type = pick['type'] ? BeamTypes.find(beam_types, pick['type']) : default_type
+          mode = mode(pick['p'], span[:side])
+          axis = span[:dir] == 'x' ? span[:from][1] : span[:from][0]
+          center = case mode
+                   when 'min' then axis + type['w'] / 2.0
+                   when 'max' then axis - type['w'] / 2.0
+                   else axis
+                   end
+          bottom = (z_top - type['h']).round(1)
+          raise Error, "Dầm #{type['name']} cao #{type['h'].round} mm không lọt dưới chiều cao tầng “#{level['name']}” (#{column_plan[:height]} mm)." if bottom <= column_plan[:z0] + EPS
+          out << {ref: ref, span: span, type: type, mode: mode, center: center.round(2), w: type['w'], h: type['h'], z_top: z_top, z_bottom: bottom}
+        end
+        x_beams_at = Hash.new { |h, k| h[k] = [] } # nút -> các dầm X chạm nút
+        beams.select { |b| b[:span][:dir] == 'x' }.each { |b| [b[:span][:from_ref], b[:span][:to_ref]].each { |n| x_beams_at[n] << b } }
+        items = []
+        issues = []
+        beams.each do |b|
+          span = b[:span]
+          dir = span[:dir]
+          a = dir == 'x' ? span[:from][0] : span[:from][1]
+          z = dir == 'x' ? span[:to][0] : span[:to][1]
+          start = end_of(span[:from_ref], dir, true, a, columns, x_beams_at)
+          finish = end_of(span[:to_ref], dir, false, z, columns, x_beams_at)
+          length = (finish - start).round(2)
+          if length < MIN_LENGTH
+            issues << "Dầm #{ref_label(span)}: khoảng hở giữa hai đầu chỉ #{length} mm, bỏ qua."
+            next
+          end
+          min, max = dir == 'x' ? [[start, b[:center] - b[:w] / 2.0], [finish, b[:center] + b[:w] / 2.0]] : [[b[:center] - b[:w] / 2.0, start], [b[:center] + b[:w] / 2.0, finish]]
+          items << {ref: b[:ref], dir: dir, type_id: b[:type]['id'], type_name: b[:type]['name'], w: b[:w], h: b[:h], length: length, start: start.round(2), finish: finish.round(2), center: b[:center],
+                    min: min.map { |v| v.round(2) }, max: max.map { |v| v.round(2) }, mode: b[:mode], placement: span[:placement], z_top: b[:z_top], z_bottom: b[:z_bottom]}
+        end
+        # Dầm TỰ DO (ngang hoặc dọc, đầu mút đúng tọa độ nhập; không dừng ở mặt cột).
+        z_bottom_free = ->(type) { (z_top - type['h']).round(1) }
+        picks.each do |ref, pick|
+          free = pick['free'] or next
+          type = pick['type'] ? BeamTypes.find(beam_types, pick['type']) : default_type
+          bottom = z_bottom_free.call(type)
+          raise Error, "Dầm #{type['name']} cao #{type['h'].round} mm không lọt dưới chiều cao tầng “#{level['name']}” (#{column_plan[:height]} mm)." if bottom <= column_plan[:z0] + EPS
+          items << free_item(ref, free, type['w'], type, z_top, bottom, :h)
+        end
+        x0, y0, x1, y1 = Grid.bounds(grid)
+        items.each do |i|
+          next if i[:placement] == 'free'
+          issues << "Dầm #{label(i)} nhô ra ngoài khung lưới (tâm đặt trên trục biên)." if i[:min][0] < x0 - EPS || i[:max][0] > x1 + EPS || i[:min][1] < y0 - EPS || i[:max][1] > y1 + EPS
+        end
+        overlaps(items.map { |i| [i[:min], i[:max], i] }).each { |a, c| issues << "Dầm #{label(a)} và #{label(c)} chồng lên nhau." }
+        column_boxes = column_plan[:items].map { |c| b = ColumnPlan.box(c); [b[0], b[1], c] }
+        beam_boxes = items.map { |i| [i[:min], i[:max], i] }
+        beam_boxes.each do |bb|
+          column_boxes.each do |cb|
+            issues << "Dầm #{label(bb[2])} chồng lên cột #{cb[2][:ref]}." if rects_overlap?(bb, cb)
+          end
+        end
+        items.each { |i| issues << "Dầm #{label(i)} cao #{i[:h].round} mm không lớn hơn dày sàn tầng trên (#{above['slab_thickness'].round} mm): không có phần nhô xuống dưới sàn." if i[:h] <= above['slab_thickness'] + EPS }
+        {level: level, next_level: above, z_top: z_top, items: items, issues: issues, columns_height: column_plan[:height]}
+      end
+
+      # Phần tử tuyến tính TỰ DO (dầm hoặc tường): free = {'a' => [x, y], 'b' => [x, y]} đã chuẩn hóa (a bên trái / thấp hơn).
+      # Ngang hoặc dọc: dir 'x' / 'y' như phần tử theo lưới. XIÊN (P4b-2): dir 'o', có a, b, angle (độ), poly (4 đỉnh), min / max là hộp bao;
+      # start = 0, finish = length (tọa độ dọc theo phần tử tính từ a), center = 0. Đầu cắt vuông góc với trục, không xử lý chỗ nối.
+      def self.free_item(ref, free, width, type, z_top, z_bottom, height_key)
+        a, b = free['a'], free['b']
+        if a[0] != b[0] && a[1] != b[1]
+          length = Math.hypot(b[0] - a[0], b[1] - a[1]).round(2)
+          poly = Geometry.round_poly(Geometry.strip(a, b, width))
+          min, max = Geometry.bounds(poly)
+          item = {ref: ref, dir: 'o', a: a.dup, b: b.dup, angle: Geometry.angle(a, b), poly: poly, type_id: type['id'], type_name: type['name'], length: length, start: 0.0, finish: length, center: 0.0,
+                  min: min, max: max, mode: 'free', placement: 'free', z_top: z_top, z_bottom: z_bottom}
+          return height_key == :h ? item.merge(w: width, h: type['h']) : item.merge(t: width)
+        end
+        dir = a[1] == b[1] ? 'x' : 'y'
+        start, finish = dir == 'x' ? [a[0], b[0]] : [a[1], b[1]]
+        center = dir == 'x' ? a[1] : a[0]
+        min, max = dir == 'x' ? [[start, center - width / 2.0], [finish, center + width / 2.0]] : [[center - width / 2.0, start], [center + width / 2.0, finish]]
+        item = {ref: ref, dir: dir, type_id: type['id'], type_name: type['name'], length: (finish - start).round(2), start: start.round(2), finish: finish.round(2), center: center.round(2),
+                min: min.map { |v| v.round(2) }, max: max.map { |v| v.round(2) }, mode: 'free', placement: 'free', z_top: z_top, z_bottom: z_bottom}
+        height_key == :h ? item.merge(w: width, h: type['h']) : item.merge(t: width)
+      end
+
+      # Dầm `beam` nằm trên tim tường TỰ DO `wall` (cùng tim, chồng nhau dọc theo tường): để tường cao tới đáy dầm.
+      def self.covers?(beam, wall)
+        return false unless beam[:dir] == wall[:dir]
+        return beam[:start] < wall[:finish] - EPS && wall[:start] < beam[:finish] - EPS && (beam[:center] - wall[:center]).abs < 1.0 unless wall[:dir] == 'o'
+        ux = (wall[:b][0] - wall[:a][0]) / wall[:length]
+        uy = (wall[:b][1] - wall[:a][1]) / wall[:length]
+        along = ->(p) { (p[0] - wall[:a][0]) * ux + (p[1] - wall[:a][1]) * uy }
+        across = ->(p) { ((p[0] - wall[:a][0]) * -uy + (p[1] - wall[:a][1]) * ux).abs }
+        return false if across.call(beam[:a]) >= 1.0 || across.call(beam[:b]) >= 1.0
+        lo, hi = [along.call(beam[:a]), along.call(beam[:b])].minmax
+        lo < wall[:length] - EPS && 0 < hi - EPS
+      end
+
+      def self.mode(chosen, side)
+        return chosen if chosen && chosen != 'auto'
+        side || 'center'
+      end
+
+      # Tọa độ đầu dầm dọc phương dầm: mặt cột nếu có cột ở nút; nếu không: dầm X tới trục; dầm Y dừng ở mặt dầm X chạm nút (nếu có), không thì tới trục.
+      def self.end_of(node, dir, is_start, axis_coord, columns, x_beams_at)
+        col = columns[node]
+        if col
+          center = dir == 'x' ? col[:center][0] : col[:center][1]
+          half = (dir == 'x' ? col[:w] : col[:d]) / 2.0
+          return is_start ? center + half : center - half
+        end
+        return axis_coord if dir == 'x' || x_beams_at[node].empty?
+        faces = x_beams_at[node].map { |xb| is_start ? xb[:center] + xb[:w] / 2.0 : xb[:center] - xb[:w] / 2.0 }
+        is_start ? faces.max : faces.min
+      end
+
+      def self.ref_label(span)
+        span[:ref]
+      end
+
+      def self.label(item)
+        item[:ref]
+      end
+
+      # Hai hộp [min, max, mục] chồng nhau; có mục xiên / xoay (có :poly) thì so tiếp theo đa giác.
+      def self.rects_overlap?(a, b)
+        return false unless a[0][0] < b[1][0] - EPS && b[0][0] < a[1][0] - EPS && a[0][1] < b[1][1] - EPS && b[0][1] < a[1][1] - EPS
+        pa = a[2].is_a?(Hash) && a[2][:poly]
+        pb = b[2].is_a?(Hash) && b[2][:poly]
+        return true unless pa || pb
+        Geometry.overlap?(pa || rect_poly(a), pb || rect_poly(b))
+      end
+
+      def self.rect_poly(box)
+        [[box[0][0], box[0][1]], [box[1][0], box[0][1]], [box[1][0], box[1][1]], [box[0][0], box[1][1]]]
+      end
+
+      def self.overlaps(boxes)
+        sorted = boxes.sort_by { |b| b[0][0] }
+        pairs = []
+        sorted.each_with_index do |a, ai|
+          (ai + 1...sorted.size).each do |bi|
+            b = sorted[bi]
+            break if b[0][0] >= a[1][0] - EPS
+            pairs << [a[2], b[2]] if rects_overlap?(a, b)
+          end
+        end
+        pairs
+      end
+    end
+  end
+end
