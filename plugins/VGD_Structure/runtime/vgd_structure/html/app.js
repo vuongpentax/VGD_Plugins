@@ -38,7 +38,7 @@
             status: !!(window.VGDPlan && window.VGDPlan.statusOn && window.VGDPlan.statusOn()),
             types: state.types.map(function (t) { return {id: t.id, name: t.name, w: t.w, d: t.d}; }),
             beam_types: state.beamTypes.map(function (t) { return {id: t.id, name: t.name, w: t.w, h: t.h}; }),
-            wall_types: state.wallTypes.map(function (t) { return {id: t.id, name: t.name, t: t.t}; }),
+            wall_types: state.wallTypes.map(function (t) { return {id: t.id, name: t.name, t: t.t, layers: wallLayers(t).map(function (l) { var o = {fn: l.fn, t: l.t, material: l.material || ''}; if (l.color) o.color = l.color; return o; })}; }),
             opening_types: state.openingTypes.map(function (t) { return {id: t.id, name: t.name, kind: t.kind, w: t.w, h: t.h, sill: t.sill}; }), levels: state.levels.map(toRubyLevel), level: state.level};
   }
   function toRubyLevel(l) {
@@ -430,18 +430,65 @@
   }
   function pickBeam(ref) { var l = currentLevel(); if (!l.beamPicks[ref]) l.beamPicks[ref] = {}; state.selectedBeam = ref; renderBeamEditor(); changed(); }
 
-  // ---- Loại tường ----
+  // ---- Loại tường (nhiều lớp như Compound Structure của Revit) ----
+  var WALL_FN = [['structure', 'Kết cấu', '#b8b0a2'], ['substrate', 'Lớp nền', '#d6cfc0'], ['insulation', 'Cách nhiệt', '#e6d96b'], ['finish', 'Hoàn thiện', '#f1eee6']], MAX_WALL_LAYERS = 5;
+  function wallLayers(t) { if (!t.layers || !t.layers.length) t.layers = [{fn: 'structure', t: t.t, material: '', color: null}]; return t.layers; }
+  function fnColor(fn) { return WALL_FN.filter(function (f) { return f[0] === fn; })[0][2]; }
+  function layersTotal(t) { return Math.round(wallLayers(t).reduce(function (a, l) { return a + (Number(l.t) || 0); }, 0) * 10) / 10; }
+  function syncWallT(t) { t.t = layersTotal(t); }
+  var openWallType = null;
   function renderWallTypes() {
     var table = $('wall-types-table'); table.replaceChildren();
-    heads(table, ['Tên', 'Dày (mm)', '']);
+    heads(table, ['Tên', 'Lớp (tổng dày)', '']);
     state.wallTypes.forEach(function (t, i) {
-      var row = table.insertRow(), del = document.createElement('button');
+      var row = table.insertRow(), del = document.createElement('button'), edit = document.createElement('button');
       row.insertCell().appendChild(textCell(t.name, function (v) { t.name = v; refreshTypeSelects(); }, 'Tên loại tường ' + (i + 1)));
-      row.insertCell().appendChild(numCell(t.t, function (v) { t.t = v; }, 'Dày loại tường ' + t.name));
+      edit.type = 'button'; edit.className = 'layers-btn'; edit.textContent = wallLayers(t).length + ' lớp · ' + layersTotal(t) + ' mm'; edit.title = 'Sửa các lớp của loại tường này';
+      edit.setAttribute('aria-expanded', String(openWallType === t.id));
+      edit.onclick = function () { openWallType = openWallType === t.id ? null : t.id; renderWallTypes(); };
+      row.insertCell().appendChild(edit);
       del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.title = 'Xóa loại tường này'; del.disabled = state.wallTypes.length <= 1;
       del.onclick = function () { removeWallType(t.id); };
       row.insertCell().appendChild(del);
     });
+    renderLayerEditor();
+  }
+  function renderLayerEditor() {
+    var box = $('wall-layers-editor'); box.replaceChildren();
+    var t = state.wallTypes.filter(function (x) { return x.id === openWallType; })[0];
+    box.hidden = !t; if (!t) return;
+    var layers = wallLayers(t), head = document.createElement('div'); head.className = 'layers-head';
+    head.textContent = 'Các lớp của “' + t.name + '” (lớp 1 ở phía -Y của tường ngang, -X của tường dọc)'; box.appendChild(head);
+    var tbl = document.createElement('table'); tbl.className = 'axes'; box.appendChild(tbl);
+    heads(tbl, ['#', 'Chức năng', 'Dày (mm)', 'Vật liệu', 'Màu', '', '']);
+    layers.forEach(function (l, i) {
+      var row = tbl.insertRow(), sel = document.createElement('select'), col = document.createElement('input'), up = document.createElement('button'), del = document.createElement('button');
+      row.insertCell().textContent = String(i + 1);
+      WALL_FN.forEach(function (f) { sel.append(new Option(f[1], f[0])); }); sel.value = l.fn; sel.setAttribute('aria-label', 'Chức năng lớp ' + (i + 1));
+      sel.onchange = function () { l.fn = sel.value; changed(); renderLayerEditor(); };
+      row.insertCell().appendChild(sel);
+      row.insertCell().appendChild(numCell(l.t, function (v) { l.t = v; syncWallT(t); updateLayerSummary(t); }, 'Dày lớp ' + (i + 1)));
+      row.insertCell().appendChild(textCell(l.material || '', function (v) { l.material = v; }, 'Vật liệu lớp ' + (i + 1)));
+      col.type = 'color'; col.value = l.color || fnColor(l.fn); col.setAttribute('aria-label', 'Màu lớp ' + (i + 1)); col.oninput = function () { l.color = col.value; changed(); };
+      row.insertCell().appendChild(col);
+      up.type = 'button'; up.textContent = '↑'; up.title = 'Chuyển lớp lên'; up.disabled = i === 0;
+      up.onclick = function () { layers.splice(i - 1, 0, layers.splice(i, 1)[0]); changed(); renderLayerEditor(); };
+      row.insertCell().appendChild(up);
+      del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.title = 'Xóa lớp'; del.disabled = layers.length <= 1;
+      del.onclick = function () { layers.splice(i, 1); syncWallT(t); renderWallTypes(); changed(); };
+      row.insertCell().appendChild(del);
+    });
+    var add = document.createElement('button'); add.type = 'button'; add.className = 'add'; add.textContent = '+ Thêm lớp'; add.disabled = layers.length >= MAX_WALL_LAYERS;
+    add.title = 'Tối đa ' + MAX_WALL_LAYERS + ' lớp';
+    add.onclick = function () { layers.push({fn: 'finish', t: 15, material: '', color: null}); syncWallT(t); renderWallTypes(); changed(); };
+    box.appendChild(add);
+    var sum = document.createElement('div'); sum.className = 'layers-sum'; sum.id = 'wall-layers-sum'; box.appendChild(sum); updateLayerSummary(t);
+  }
+  function updateLayerSummary(t) {
+    var sum = $('wall-layers-sum'); if (!sum) return;
+    var total = layersTotal(t), hasCore = wallLayers(t).some(function (l) { return l.fn === 'structure'; }), msg = 'Tổng bề dày: ' + total + ' mm.';
+    if (!hasCore) msg += ' Cần ít nhất một lớp kết cấu.'; if (total < 50 || total > 1000) msg += ' Tổng bề dày phải từ 50 đến 1000 mm.';
+    sum.textContent = msg; sum.className = 'layers-sum' + (!hasCore || total < 50 || total > 1000 ? ' error' : '');
   }
   function removeWallType(id) {
     state.wallTypes = state.wallTypes.filter(function (t) { return t.id !== id; });
@@ -454,7 +501,8 @@
   function addWallType() {
     var base = state.wallTypes[state.wallTypes.length - 1], n = state.wallTypes.length + 1, name = 'Tường dày ' + n, taken = state.wallTypes.map(function (t) { return t.name.toLowerCase(); });
     while (taken.indexOf(name.toLowerCase()) >= 0) name += '*';
-    state.wallTypes.push({id: rid('wt_'), name: name, t: base ? base.t : 200});
+    var layers = base ? wallLayers(base).map(function (l) { return {fn: l.fn, t: l.t, material: l.material, color: l.color}; }) : [{fn: 'structure', t: 200, material: '', color: null}];
+    state.wallTypes.push({id: rid('wt_'), name: name, t: layers.reduce(function (a, l) { return a + l.t; }, 0), layers: layers});
     renderLevels(); changed();
   }
 
@@ -798,7 +846,7 @@
       state.x = x; state.y = y; state.scale = data.symbol.scale; state.both = data.symbol.both_ends; state.drawn = data.drawn;
       state.types = data.types.map(function (t) { return {id: t.id, name: t.name, w: t.w, d: t.d}; });
       state.beamTypes = (data.beam_types || []).map(function (t) { return {id: t.id, name: t.name, w: t.w, h: t.h}; });
-      state.wallTypes = (data.wall_types || []).map(function (t) { return {id: t.id, name: t.name, t: t.t}; });
+      state.wallTypes = (data.wall_types || []).map(function (t) { return {id: t.id, name: t.name, t: t.t, layers: (t.layers || [{fn: 'structure', t: t.t, material: ''}]).map(function (l) { return {fn: l.fn, t: l.t, material: l.material || '', color: l.color || null}; })}; });
       state.openingTypes = (data.opening_types || []).map(function (t) { return {id: t.id, name: t.name, kind: t.kind, w: t.w, h: t.h, sill: t.sill}; });
       state.drawnOpeningLevels = data.drawn_opening_levels || []; state.openWall = null;
       var keepLevel = data.reload ? state.level : null; // nạp lại do Hoàn tác / Làm lại trong SketchUp: giữ tầng đang xem

@@ -521,6 +521,23 @@
       if (spec.list().some(function (t) { return t.id !== type.id && t.name.toLowerCase() === v.toLowerCase(); })) { host.say('Tên loại “' + v + '” đã có.'); return; }
       edit(function () { type.name = v; });
     }));
+    if (shape.kind === 'wall') { // tường: bề dày là tổng các lớp; sửa từng lớp ở đây (thêm, xóa, đổi chức năng và màu ở tab Tường)
+      var layers = type.layers && type.layers.length ? type.layers : [{fn: 'structure', t: type.t, material: ''}], names = {structure: 'Kết cấu', substrate: 'Lớp nền', insulation: 'Cách nhiệt', finish: 'Hoàn thiện'};
+      out.push({kind: 'info', label: 'Tổng bề dày ' + type.t + ' mm (' + layers.length + ' lớp). Thêm, xóa lớp, đổi chức năng và màu ở tab Tường.'});
+      layers.forEach(function (l, i) {
+        out.push(field('layer_t' + i, 'Lớp ' + (i + 1) + ' · ' + names[l.fn] + ' · dày (mm)', 'number', null, l.t, function (v) {
+          var total = layers.reduce(function (a, x, k) { return a + (k === i ? v : x.t); }, 0);
+          if (!isFinite(v) || v < 1 || v > 1000 || total < 50 || total > 1000) { host.say('Bề dày lớp từ 1 đến 1000 mm và tổng các lớp từ 50 đến 1000 mm.'); return; }
+          edit(function () { if (!type.layers) type.layers = layers; layers[i].t = r1(v); type.t = r1(layers.reduce(function (a, x) { return a + x.t; }, 0)); });
+        }));
+        out.push(field('layer_m' + i, 'Lớp ' + (i + 1) + ' · vật liệu', 'text', null, l.material || '', function (v) {
+          v = String(v).trim();
+          if (v.length > 24 || /[\u0000-\u001f\u007f]/.test(v)) { host.say('Tên vật liệu tối đa 24 ký tự.'); return; }
+          edit(function () { if (!type.layers) type.layers = layers; layers[i].material = v; });
+        }));
+      });
+      return out;
+    }
     spec.fields.forEach(function (f) {
       out.push(field('type_' + f[0], f[1], 'number', null, type[f[0]], function (v) {
         if (!isFinite(v) || v < f[2] || v > f[3]) { host.say(f[1].replace(' (mm)', '') + ' của loại phải từ ' + f[2] + ' đến ' + f[3] + ' mm.'); return; }

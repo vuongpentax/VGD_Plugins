@@ -12,7 +12,7 @@ module VGD
         'opening' => %i[kind min max z_bottom z_top type_id flip], 'slab' => %i[min max thickness z_top z_bottom], 'ceiling' => %i[polygon min max thickness z_bottom z_top]
       }.freeze
       # Trường chỉ tính khi mục kế hoạch có (phần tử xiên / xoay, P4b-2): mục cũ không có thì vân tay giữ nguyên như bản trước.
-      FP_OPTIONAL = %i[a b rot origin angle polygon holes].freeze
+      FP_OPTIONAL = %i[a b rot origin angle polygon holes layers].freeze
       # Loại nhóm trong model <-> kế hoạch (Checker.plan_for) <-> loại trong giao diện (cột, dầm, tường, cửa gộp thành 'opening', sàn, trần).
       PLAN_KINDS = {'columns' => 'column', 'beams' => 'beam', 'walls' => 'wall', 'openings' => 'opening', 'slabs' => 'slab', 'ceilings' => 'ceiling'}.freeze
       UI_KIND = {'column' => 'column', 'beam' => 'beam', 'wall' => 'wall', 'door' => 'opening', 'window' => 'opening', 'slab' => 'slab', 'ceiling' => 'ceiling'}.freeze

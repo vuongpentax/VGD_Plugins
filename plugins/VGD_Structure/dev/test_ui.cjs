@@ -282,9 +282,30 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.click('#add-wall-type');
   ok(JSON.stringify(await wtNames())==='["T200","Tường dày 2"]','thêm loại tường');
   await page.locator('#wall-types-table tr:nth-child(3) td:nth-child(1) input').fill('T100');
-  await page.locator('#wall-types-table tr:nth-child(3) td:nth-child(2) input').fill('100');await wait();
+  await page.locator('#wall-types-table tr:nth-child(3) td:nth-child(2) button').click();
+  ok(await page.locator('#wall-layers-editor').isVisible() && (await page.locator('#wall-layers-editor tr').count())===2,'bấm nút lớp của loại tường: hiện trình sửa lớp, loại mới có đúng một lớp');
+  await page.locator('#wall-layers-editor tr:nth-child(2) td:nth-child(3) input').fill('100');await wait();
   const wp1=await last('grid_preview');
-  ok(wp1.wall_types.length===2 && wp1.wall_types[1].name==='T100' && wp1.wall_types[1].t===100 && /^wt_[0-9a-f]{8}$/.test(wp1.wall_types[1].id),'loại tường mới có mã wt_xxxxxxxx, gửi đúng độ dày');
+  ok(wp1.wall_types.length===2 && wp1.wall_types[1].name==='T100' && wp1.wall_types[1].t===100 && /^wt_[0-9a-f]{8}$/.test(wp1.wall_types[1].id) && wp1.wall_types[1].layers.length===1,'loại tường mới có mã wt_xxxxxxxx, gửi đúng độ dày (tổng các lớp) và danh sách lớp');
+  // Tường nhiều lớp: thêm, đổi chức năng, vật liệu, màu, thứ tự, xóa; giới hạn 5 lớp
+  await page.click('#wall-layers-editor button.add');await wait();
+  ok((await page.locator('#wall-layers-editor tr').count())===3 && /115/.test(await page.locator('#wall-layers-sum').innerText()),'thêm lớp: có 2 lớp, tổng dày 115 mm (lớp mới hoàn thiện 15 mm)');
+  await page.locator('#wall-layers-editor tr:nth-child(3) td:nth-child(4) input').fill('Vữa trát');
+  await page.locator('#wall-layers-editor tr:nth-child(3) td:nth-child(5) input').evaluate(i=>{i.value='#ff0000';i.dispatchEvent(new Event('input',{bubbles:true}));});await wait();
+  let wl=(await last('grid_preview')).wall_types[1];
+  ok(wl.t===115 && wl.layers[1].fn==='finish' && wl.layers[1].t===15 && wl.layers[1].material==='Vữa trát' && wl.layers[1].color==='#ff0000' && !('color' in wl.layers[0]),'gửi Ruby: tổng 115, lớp 2 hoàn thiện 15 mm, vật liệu và màu; lớp chưa chọn màu thì không gửi màu');
+  await page.locator('#wall-layers-editor tr:nth-child(3) td:nth-child(6) button').click();await wait();
+  wl=(await last('grid_preview')).wall_types[1];
+  ok(wl.layers[0].fn==='finish' && wl.layers[1].fn==='structure','nút ↑: đổi thứ tự lớp (hoàn thiện lên đầu)');
+  await page.locator('#wall-layers-editor tr:nth-child(2) td:nth-child(2) select').selectOption('substrate');await wait();
+  ok((await last('grid_preview')).wall_types[1].layers[0].fn==='substrate','đổi chức năng lớp sang Lớp nền');
+  for(let k=0;k<3;k++){await page.click('#wall-layers-editor button.add');await wait(120);}
+  ok((await page.locator('#wall-layers-editor tr').count())===6 && await page.locator('#wall-layers-editor button.add').isDisabled(),'đủ 5 lớp: nút Thêm lớp bị khóa');
+  await page.locator('#wall-layers-editor tr:nth-child(2) td:nth-child(7) button').click();await wait();
+  ok((await page.locator('#wall-layers-editor tr').count())===5 && (await last('grid_preview')).wall_types[1].layers.length===4,'xóa một lớp: còn 4 lớp');
+  await page.locator('#wall-layers-editor tr:nth-child(2) td:nth-child(2) select').selectOption('finish');await wait(); // bỏ hết lớp kết cấu → Ruby sẽ từ chối
+  ok(/Cần ít nhất một lớp kết cấu/.test(await page.locator('#wall-layers-sum').innerText()) && await page.locator('#wall-layers-sum.error').count()===1,'không còn lớp kết cấu nào: trình sửa lớp báo lỗi (Ruby cũng từ chối)');
+  await page.locator('#wall-layers-editor tr:nth-child(2) td:nth-child(2) select').selectOption('structure');await wait();
   await page.locator('#levels-table tr:nth-child(2) select.wall-default').selectOption({label:'T100'});await wait();
   ok((await last('grid_preview')).levels[0].wall_type===wp1.wall_types[1].id && (await last('grid_preview')).levels[0].beam_type===null,'chọn loại tường mặc định của tầng 1: gửi wall_type (không đổi loại dầm)');
   await page.locator('#wall-types-table button.del').nth(1).click();await wait();
@@ -1530,8 +1551,14 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await reset();
   ptxt='';await cl(2000,3600+0);// tường theo lưới x:B:1-2 (đi qua cửa: bấm ngoài cửa)
   await page.keyboard.press('Escape');await cl(1800,3600);ptxt=await props();
-  ok(/Tường/.test(ptxt) && await page.locator('#pv-props input[data-field=type_t]').isVisible(),'chọn tường: mục loại có Bề dày');
-  await page.fill('#pv-props input[data-field=type_t]','2000');await page.press('#pv-props input[data-field=type_t]','Tab');ok(/từ 50 đến 1000/.test(await hintT()),'bề dày 2000: báo khoảng 50-1000');
+  ok(/Tường/.test(ptxt) && await page.locator('#pv-props input[data-field=layer_t0]').isVisible() && await page.locator('#pv-props input[data-field=layer_m0]').isVisible() && !(await page.locator('#pv-props input[data-field=type_t]').count()),'chọn tường: mục loại có dày và vật liệu từng lớp (bề dày là tổng các lớp)');
+  await page.fill('#pv-props input[data-field=layer_t0]','2000');await page.press('#pv-props input[data-field=layer_t0]','Tab');ok(/từ 50 đến 1000/.test(await hintT()) && (await st()).wallTypes[0].t===200,'bề dày lớp 2000: báo khoảng, dữ liệu không đổi');
+  await page.fill('#pv-props input[data-field=layer_t0]','150');await page.press('#pv-props input[data-field=layer_t0]','Tab');await wait(300);
+  ok((await st()).wallTypes[0].t===150 && (await st()).wallTypes[0].layers[0].t===150,'sửa bề dày lớp trong Thuộc tính: tổng cũng đổi (150)');
+  await page.fill('#pv-props input[data-field=layer_m0]','Gạch ống');await page.press('#pv-props input[data-field=layer_m0]','Tab');await wait(300);
+  ok((await st()).wallTypes[0].layers[0].material==='Gạch ống','sửa vật liệu lớp trong Thuộc tính');
+  const vr6w=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vr6w.ok,'loại tường có lớp sau khi sửa được Ruby chấp nhận');
   await reset();await cl(1000,3600);ptxt=await props();
   ok(/Cửa/.test(ptxt) && await page.locator('#pv-props input[data-field=type_sill]').isVisible() && await page.locator('#pv-props input[data-field=type_w]').isVisible(),'chọn cửa: mục loại có Rộng, Cao, Cao ngưỡng');
   await page.fill('#pv-props input[data-field=type_sill]','3500');await page.press('#pv-props input[data-field=type_sill]','Tab');ok(/từ 0 đến 3000/.test(await hintT()),'cao ngưỡng 3500: báo khoảng 0-3000');

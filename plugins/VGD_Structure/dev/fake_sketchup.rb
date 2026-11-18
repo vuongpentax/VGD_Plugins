@@ -47,7 +47,7 @@ module Sketchup
     def initialize(from, to); @from = from; @to = to; end
   end
   class Group < Entity
-    attr_accessor :name, :layer
+    attr_accessor :name, :layer, :material
     attr_reader :entities, :offset
     def initialize(parent); @parent = parent; @entities = FakeEntities.new; @valid = true; @locked = false; @offset = [0.0, 0.0]; end
     def valid?; @valid; end
@@ -158,6 +158,19 @@ module Sketchup
     def grep(klass); @items.select { |i| i.is_a?(klass) }; end
     def to_a; @items.dup; end
   end
+  class Material
+    attr_reader :name
+    attr_accessor :color
+    def initialize(name); @name = name; end
+    def valid?; true; end
+  end
+  class Materials
+    def initialize; @list = []; end
+    def [](name); @list.find { |m| m.name == name }; end
+    def add(name); m = Material.new(name); @list << m; m; end
+    def each(&b); @list.each(&b); end
+    def to_a; @list.dup; end
+  end
   class Layer
     attr_reader :name
     attr_accessor :color, :line_style, :folder
@@ -181,7 +194,7 @@ module Sketchup
     def add_folder(name); f = Folder.new(name); @folders << f; f; end
   end
   class Model
-    attr_reader :entities, :layers, :operations, :line_styles, :definitions, :selection, :active_path, :tool, :observers
+    attr_reader :entities, :layers, :materials, :operations, :line_styles, :definitions, :selection, :active_path, :tool, :observers
     def add_observer(o); (@observers ||= []) << o; true; end
     def remove_observer(o); (@observers ||= []).delete(o); true; end
     def active_view; @view ||= FakeView.new; end
@@ -192,7 +205,7 @@ module Sketchup
     def active_path=(path); @active_path = path; end
     def select_tool(t); @tool.deactivate(FakeView.new) if @tool && @tool.respond_to?(:deactivate); @tool = t; t.activate if t && t.respond_to?(:activate); end
     def initialize(styles: ['Solid Line', 'Dotted Line', 'Short Dashes Line', 'Dash Dot Line'])
-      @entities = FakeEntities.new; @selection = Selection.new; @definitions = Definitions.new; @layers = Layers.new; @operations = []; @attrs = {}
+      @entities = FakeEntities.new; @selection = Selection.new; @definitions = Definitions.new; @layers = Layers.new; @materials = Materials.new; @operations = []; @attrs = {}
       @line_styles = styles.map { |n| LineStyle.new(n) }
     end
     def start_operation(name, disable, *_rest); @operations << [:start, name]; end

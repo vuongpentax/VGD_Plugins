@@ -80,6 +80,10 @@ module VGD
           end
           items << item.merge(height: height, z_top: z_top, under_beam: !cover.empty?, join: pick['join'] != false)
         end
+        items.each do |item| # lớp cấu tạo của loại (nil nếu tường đặc đơn giản)
+          layers = WallTypes.layers_for(WallTypes.find(wall_types, item[:type_id]))
+          item[:layers] = layers if layers
+        end
         WallJoins.apply(items, column_plan[:items])
         opening_issues = place_openings(level, items, opening_types)
         x0, y0, x1, y1 = Grid.bounds(grid)

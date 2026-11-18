@@ -111,57 +111,98 @@ module VGD
         instance.set_attribute(Schema::DICTIONARY, 'level_elevation', plan[:level]['elevation'])
         instance.set_attribute(Schema::DICTIONARY, 'fp', ModelSync.fingerprint('wall', item))
         instance.set_attribute(Schema::DICTIONARY, 'type', item[:type_name])
-        instance.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('thickness' => item[:t], 'height' => item[:height], 'length' => item[:length], 'under_beam' => item[:under_beam], 'openings' => item[:openings].size, 'openings_area' => item[:openings_area]))
+        instance.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('thickness' => item[:t], 'height' => item[:height], 'length' => item[:length], 'under_beam' => item[:under_beam], 'openings' => item[:openings].size, 'openings_area' => item[:openings_area], **layer_dims(item)))
         instance.set_attribute(Schema::DICTIONARY, 'placement', JSON.generate('position' => item[:placement], 'p' => item[:mode], 'dir' => item[:dir]))
       end
 
-      # Định nghĩa dùng chung cho mọi tường cùng phương, dày, cao, dài: lăng trụ có mặt đáy tại z = 0, dài theo +X (tường X) hoặc +Y (tường Y),
-      # gốc ở tâm đầu tường.
+      # Khối lượng từng lớp (VGD BIM đọc để bóc): diện tích mặt trừ lỗ cửa (m²) và thể tích (m³) = diện tích x bề dày lớp.
+      def self.layer_dims(item)
+        return {} unless item[:layers]
+        area = [item[:length] * item[:height] / 1_000_000.0 - item[:openings_area].to_f, 0.0].max
+        {'layers' => item[:layers].each_with_index.map do |l, i|
+          {'index' => i + 1, 'fn' => l[:fn], 'material' => l[:material], 'thickness' => l[:t], 'area' => area.round(4), 'volume' => (area * l[:t] / 1000.0).round(4)}
+        end}
+      end
+
+      # Định nghĩa dùng chung cho mọi tường cùng phương, dày, cao, dài, lỗ và lớp: lăng trụ có mặt đáy tại z = 0, dài theo +X (tường X) hoặc +Y (tường Y),
+      # gốc ở tâm đầu tường. Tường nhiều lớp: mỗi lớp là một Group con (kèm chức năng, vật liệu, màu), xếp từ phía -Y (tường X) / -X (tường Y).
       def self.definition_for(model, item, definitions)
         item = item.merge(dir: Placement.frame_dir(item)) # tường xiên dùng định nghĩa tường X rồi xoay
         holes = item[:openings].map { |o| [o[:x0], o[:x1], o[:z0], o[:z1]] }
-        key = [item[:dir], item[:t], item[:height], item[:length], holes]
+        layers = item[:layers]
+        key = [item[:dir], item[:t], item[:height], item[:length], holes, layers]
         definitions[key] ||= begin
           name = "VGD Tường #{item[:dir].upcase} #{fmt(item[:t])}x#{fmt(item[:height])}x#{fmt(item[:length])}#{holes.empty? ? '' : " lỗ #{holes.flatten.map { |v| fmt(v) }.join('_')}"}"
+          name += " lớp #{layers.map { |l| fmt(l[:t]) }.join('_')} #{Digest::SHA1.hexdigest(JSON.generate(layers))[0, 8]}" if layers
+          name = "VGD Tường #{item[:dir].upcase} #{Digest::SHA1.hexdigest(name)[0, 12]}" if name.length > 90
           existing = model.definitions[name]
           existing && existing.valid? ? existing : make_definition(model, name, item)
         end
       end
 
       def self.make_definition(model, name, item)
-        return make_definition_with_holes(model, name, item) unless item[:openings].empty?
         definition = model.definitions.add(name)
-        half = (item[:t] / 2.0).mm
-        long = item[:length].mm
-        points = if item[:dir] == 'x'
-                   [Geom::Point3d.new(0, -half, 0), Geom::Point3d.new(long, -half, 0), Geom::Point3d.new(long, half, 0), Geom::Point3d.new(0, half, 0)]
-                 else
-                   [Geom::Point3d.new(-half, 0, 0), Geom::Point3d.new(half, 0, 0), Geom::Point3d.new(half, long, 0), Geom::Point3d.new(-half, long, 0)]
-                 end
-        face = definition.entities.add_face(points)
-        face.reverse! if face.normal.z < 0
-        face.pushpull(item[:height].mm)
+        half = item[:t] / 2.0
+        if item[:layers]
+          from = -half
+          item[:layers].each_with_index do |layer, i|
+            group = definition.entities.add_group
+            group.name = "Lớp #{i + 1} - #{WallTypes::FUNCTIONS[layer[:fn]]}#{layer[:material].empty? ? '' : " (#{layer[:material]})"}"
+            group.set_attribute(Schema::DICTIONARY, 'layer', JSON.generate('index' => i + 1, 'fn' => layer[:fn], 'thickness' => layer[:t], 'material' => layer[:material]))
+            group.material = layer_material(model, layer)
+            fill(group.entities, item, from, from + layer[:t])
+            from += layer[:t]
+          end
+        else
+          fill(definition.entities, item, -half, half)
+        end
         definition.set_attribute(Schema::DICTIONARY, 'kind', 'wall_definition')
         definition
       end
 
+      # Vật liệu của lớp theo màu (dùng lại nếu đã có).
+      def self.layer_material(model, layer)
+        name = "VGD Tường #{layer[:fn]} #{layer[:color]}"
+        material = model.materials[name]
+        return material if material
+        material = model.materials.add(name)
+        hex = layer[:color].delete('#').scan(/../).map { |h| h.to_i(16) }
+        material.color = Sketchup::Color.new(*hex)
+        material
+      end
+
+      # Khối lăng trụ giữa hai mặt song song theo bề dày (lo..hi, tính từ tim tường), có khoét lỗ cửa nếu có.
+      def self.fill(entities, item, lo, hi)
+        item[:openings].empty? ? fill_solid(entities, item, lo, hi) : fill_with_holes(entities, item, lo, hi)
+      end
+
+      def self.fill_solid(entities, item, lo, hi)
+        long = item[:length].mm
+        a = lo.mm
+        b = hi.mm
+        points = if item[:dir] == 'x'
+                   [Geom::Point3d.new(0, a, 0), Geom::Point3d.new(long, a, 0), Geom::Point3d.new(long, b, 0), Geom::Point3d.new(0, b, 0)]
+                 else
+                   [Geom::Point3d.new(a, 0, 0), Geom::Point3d.new(b, 0, 0), Geom::Point3d.new(b, long, 0), Geom::Point3d.new(a, long, 0)]
+                 end
+        face = entities.add_face(points)
+        face.reverse! if face.normal.z < 0
+        face.pushpull(item[:height].mm)
+      end
+
       # Tường có lỗ cửa: mặt đứng (dài x cao) có các lỗ chữ nhật rồi đùn theo bề dày; lỗ tạo bằng cách thêm mặt nhỏ bên trong rồi xóa mặt đó.
       # Chưa xác minh trong SketchUp thật (đùn mặt có lỗ).
-      def self.make_definition_with_holes(model, name, item)
-        definition = model.definitions.add(name)
-        half = (item[:t] / 2.0).mm
-        plane = ->(u, z) { item[:dir] == 'x' ? Geom::Point3d.new(u.mm, -half, z.mm) : Geom::Point3d.new(-half, u.mm, z.mm) }
+      def self.fill_with_holes(entities, item, lo, hi)
+        plane = ->(u, z) { item[:dir] == 'x' ? Geom::Point3d.new(u.mm, lo.mm, z.mm) : Geom::Point3d.new(lo.mm, u.mm, z.mm) }
         rect = ->(u0, u1, z0, z1) { [plane.call(u0, z0), plane.call(u1, z0), plane.call(u1, z1), plane.call(u0, z1)] }
-        face = definition.entities.add_face(rect.call(0, item[:length], 0, item[:height]))
+        face = entities.add_face(rect.call(0, item[:length], 0, item[:height]))
         item[:openings].each do |o|
-          inner = definition.entities.add_face(rect.call(o[:x0], o[:x1], o[:z0], o[:z1]))
+          inner = entities.add_face(rect.call(o[:x0], o[:x1], o[:z0], o[:z1]))
           inner.erase! if inner
         end
         axis = item[:dir] == 'x' ? :y : :x
         face.reverse! if face.normal.send(axis) < 0
-        face.pushpull(item[:t].mm)
-        definition.set_attribute(Schema::DICTIONARY, 'kind', 'wall_definition')
-        definition
+        face.pushpull((hi - lo).mm)
       end
 
       def self.fmt(value)

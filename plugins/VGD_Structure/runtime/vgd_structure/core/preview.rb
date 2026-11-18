@@ -43,7 +43,7 @@ module VGD
         begin
           plan = WallPlan.plan(grid, types, beam_types, wall_types, levels, payload['level'] || levels.first['id'], opening_types)
           out[:walls] = {level: plan[:level]['id'], level_name: plan[:level]['name'], z0: plan[:z0], z_slab: plan[:z_slab], issues: plan[:issues], count: plan[:items].size,
-                         items: plan[:items].map { |i| i.slice(:ref, :dir, :type_name, :t, :length, :height, :min, :max, :mode, :placement, :z_bottom, :z_top, :under_beam, :start, :finish, :center, :openings, :openings_area, :a, :b, :angle, :poly, :join, :join_shift, :join_shift_end, :joined) }}
+                         items: plan[:items].map { |i| i.slice(:ref, :dir, :type_name, :t, :layers, :length, :height, :min, :max, :mode, :placement, :z_bottom, :z_top, :under_beam, :start, :finish, :center, :openings, :openings_area, :a, :b, :angle, :poly, :join, :join_shift, :join_shift_end, :joined) }}
         rescue WallPlan::Error, BeamPlan::Error, ColumnPlan::Error => error
           out[:walls_error] = error.message
         end

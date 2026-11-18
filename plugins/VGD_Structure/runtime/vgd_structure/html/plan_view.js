@@ -411,7 +411,7 @@
     section('slabs').forEach(function (i) { cur = i; add('slab', i.polygon || rectPoly(i.min, i.max), (i.placement === 'free' ? 'Sàn đa giác ' : 'Sàn ') + i.ref, [['Dày', mm(i.thickness)], ['Mặt trên', mm(i.z_top)], ['Diện tích', i.area + ' m²']].concat(ring(i)), 'Sàn ' + i.ref + ' · dày ' + i.thickness + ' mm · ' + i.area + ' m²'); });
     section('ceilings').forEach(function (i) { cur = i; add('ceiling', i.polygon, (i.placement === 'free' ? 'Trần đa giác ' : 'Trần ') + i.ref, [['Dày', mm(i.thickness)], ['Mặt dưới', mm(i.z_bottom)], ['Diện tích', i.area + ' m²']].concat(ring(i)), 'Trần ' + i.ref + ' · ' + i.area + ' m²'); });
     section('beams').forEach(function (i) { cur = i; add('beam', i.poly || rectPoly(i.min, i.max), (i.placement === 'free' ? 'Dầm tự do ' : 'Dầm ') + i.ref, [['Loại', i.type_name], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Dài', mm(i.length)], ['Đỉnh', mm(i.z_top)]].concat(i.dir === 'o' ? [['Góc', Math.round(i.angle * 100) / 100 + '°']] : []), 'Dầm ' + i.ref + ' · ' + i.type_name + ' · dài ' + i.length + ' mm'); });
-    section('walls').forEach(function (i) { cur = i; add('wall', i.poly || rectPoly(i.min, i.max), (i.placement === 'free' ? 'Tường tự do ' : 'Tường ') + i.ref, [['Loại', i.type_name], ['Dày', mm(i.t)], ['Dài', mm(i.length)], ['Cao', mm(i.height)], ['Số cửa', String((i.openings || []).length)], ['Nối góc', i.join === false ? 'Tắt' : ((i.joined || []).length ? 'Đã nối ' + i.joined.length + ' đầu' : 'Không có chỗ nối')]].concat(i.dir === 'o' ? [['Góc', Math.round(i.angle * 100) / 100 + '°']] : []), 'Tường ' + i.ref + ' · ' + i.type_name + ' · dày ' + i.t + ' · dài ' + i.length + ' · cao ' + i.height + ' mm'); });
+    section('walls').forEach(function (i) { cur = i; add('wall', i.poly || rectPoly(i.min, i.max), (i.placement === 'free' ? 'Tường tự do ' : 'Tường ') + i.ref, [['Loại', i.type_name], ['Dày', mm(i.t)]].concat(i.layers ? [['Lớp', i.layers.map(function (l) { return l.t; }).join(' + ')]] : []).concat([['Dài', mm(i.length)], ['Cao', mm(i.height)], ['Số cửa', String((i.openings || []).length)], ['Nối góc', i.join === false ? 'Tắt' : ((i.joined || []).length ? 'Đã nối ' + i.joined.length + ' đầu' : 'Không có chỗ nối')]]).concat(i.dir === 'o' ? [['Góc', Math.round(i.angle * 100) / 100 + '°']] : []), 'Tường ' + i.ref + ' · ' + i.type_name + ' · dày ' + i.t + ' · dài ' + i.length + ' · cao ' + i.height + ' mm'); });
     section('openings').forEach(function (i) { var k = i.kind === 'door' ? 'Cửa đi' : 'Cửa sổ'; cur = i; add('opening', i.poly || rectPoly(i.min, i.max), k + ' ' + i.type_name, [['Loại', k], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Cao ngưỡng', mm(i.sill)], ['Tường', i.wall]], k + ' ' + i.type_name + ' · ' + i.w + ' × ' + i.h + ' mm · ngưỡng ' + i.sill); });
     section('columns').forEach(function (i) { cur = i; add('column', i.poly || rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), (i.placement === 'free' ? 'Cột tự do ' : 'Cột ') + i.ref, [['Loại', i.type_name], ['Rộng × sâu', i.w + ' × ' + i.d + ' mm'], ['Tâm', Math.round(i.center[0]) + ', ' + Math.round(i.center[1])]].concat(i.rot ? [['Xoay', Math.round(i.rot * 100) / 100 + '°']] : []), 'Cột ' + i.ref + ' · ' + i.type_name + ' · ' + i.w + ' × ' + i.d + ' mm'); });
     addNoteShapes();
@@ -531,6 +531,18 @@
 
   // ---- Vẽ ----
   function path(poly) { ctx.beginPath(); poly.forEach(function (p, i) { var q = toScreen(p[0], p[1]); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.closePath(); }
+  // Tường nhiều lớp: tô từng lớp theo màu của lớp (lớp đầu ở phía -Y của tường X, -X của tường Y, phía phải của tường xiên đi từ a tới b), như mặt cắt tường của Revit.
+  function wallBand(i, f0, f1) {
+    var q = i.poly || rectPoly(i.min, i.max), at = function (p, r, f) { return [p[0] + (r[0] - p[0]) * f, p[1] + (r[1] - p[1]) * f]; };
+    if (i.dir === 'o' && i.poly) return [at(q[0], q[3], f0), at(q[1], q[2], f0), at(q[1], q[2], f1), at(q[0], q[3], f1)];
+    var xs = q.map(function (p) { return p[0]; }), ys = q.map(function (p) { return p[1]; }), x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs), y0 = Math.min.apply(null, ys), y1 = Math.max.apply(null, ys);
+    return i.dir === 'y' ? [[x0 + (x1 - x0) * f0, y0], [x0 + (x1 - x0) * f1, y0], [x0 + (x1 - x0) * f1, y1], [x0 + (x1 - x0) * f0, y1]] : [[x0, y0 + (y1 - y0) * f0], [x1, y0 + (y1 - y0) * f0], [x1, y0 + (y1 - y0) * f1], [x0, y0 + (y1 - y0) * f1]];
+  }
+  function drawWallLayers(i) {
+    if (!i.layers || !i.layers.length) return;
+    var total = i.layers.reduce(function (a, l) { return a + l.t; }, 0), f = 0;
+    i.layers.forEach(function (l) { var f1 = f + l.t / total; fillStroke(wallBand(i, f, f1), l.color, 0.85, null, 0.6); f = f1; });
+  }
   function fillStroke(poly, color, alpha, dash, width, holes) {
     path(poly); (holes || []).forEach(function (h) { h.forEach(function (p, i) { var q = toScreen(p[0], p[1]); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); ctx.closePath(); }); // lỗ là vòng con, tô theo quy tắc chẵn lẻ
     ctx.globalAlpha = alpha; ctx.fillStyle = color; if (alpha > 0) ctx.fill('evenodd'); ctx.globalAlpha = 1;
@@ -545,7 +557,7 @@
     if (visible.slab) section('slabs').forEach(function (i) { if (hid('slab', i.ref)) return; fillStroke(i.polygon || rectPoly(i.min, i.max), COLORS.slab, 0.12, null, 1, i.holes); });
     if (visible.ceiling) section('ceilings').forEach(function (i) { if (hid('ceiling', i.ref)) return; fillStroke(i.polygon, COLORS.ceiling, 0.08, [5, 4], 1, i.holes); });
     if (visible.beam) section('beams').forEach(function (i) { if (hid('beam', i.ref)) return; fillStroke(i.poly || rectPoly(i.min, i.max), COLORS.beam, 0.25, [6, 3], 1); });
-    if (visible.wall) section('walls').forEach(function (i) { if (hid('wall', i.ref)) return; fillStroke(i.poly || rectPoly(i.min, i.max), COLORS.wall, 0.8, null, 1); });
+    if (visible.wall) section('walls').forEach(function (i) { if (hid('wall', i.ref)) return; fillStroke(i.poly || rectPoly(i.min, i.max), COLORS.wall, 0.8, null, 1); drawWallLayers(i); });
     if (visible.opening) section('openings').forEach(function (i) { if (!hid('opening', i.ref)) drawOpening(i, bg); });
     if (visible.column) section('columns').forEach(function (i) { if (hid('column', i.ref)) return; fillStroke(i.poly || rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), COLORS.column, 0.9, null, 1.5); });
     if (visible.grid) drawGrid(ink);
