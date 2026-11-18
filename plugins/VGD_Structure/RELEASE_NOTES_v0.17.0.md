@@ -1,4 +1,4 @@
-# VGD Structure 0.16.0 (beta)
+# VGD Structure 0.17.0 (beta)
 
 Tab **Mặt bằng** (cột mốc P1 đến P6, P4b-1, P4b-2, P4b-3, P5b; bản beta 0.10.0 gộp vào đây): tab **Mặt bằng** (cửa sổ vẽ mặt bằng kiểu CAD, giai đoạn 2).
 
@@ -18,3 +18,4 @@ Tab **Mặt bằng** (cột mốc P1 đến P6, P4b-1, P4b-2, P4b-3, P5b; bản 
 - P4b-3: **sàn, trần đa giác tự do có lỗ khoét**: bấm từng đỉnh (Enter khép, Backspace bỏ đỉnh), vẽ lỗ bên trong, trộn với sàn / trần theo ô (chồng nhau chỉ cảnh báo), sửa bằng Move / Copy / Array / Mirror / Rotate / Mở khóa lưới. Trần đa giác không lùi theo tường, cột. Chỉ kiểm bằng SketchUp giả lập.
 - P5b: **nét 2D và ghi chú**: Line, Polyline, chữ nhật, đường tròn, cung, chữ, kích thước, cốt cao độ; lưu theo tầng trong dữ liệu plugin (không dựng vào model); chọn, Move / Copy / Array / Mirror / Rotate / Delete, Thuộc tính, Cây dự án. Kích thước không tự cập nhật khi phần tử dời. Chỉ kiểm bằng SketchUp giả lập.
 - Thuộc tính của loại ngay trong bảng Thuộc tính (sửa tên và kích thước loại, báo số phần tử bị ảnh hưởng) và Ẩn / Cô lập tạm thời (EH, HI, HR). Chỉ kiểm bằng SketchUp giả lập.
+- Nối góc tường tự động (góc L, T, chữ thập; tường theo lưới, tự do, xiên), có ô tắt từng tường; cửa giữ đúng chỗ. Chỉ kiểm bằng SketchUp giả lập; tường dựng bằng bản trước cần dựng lại.

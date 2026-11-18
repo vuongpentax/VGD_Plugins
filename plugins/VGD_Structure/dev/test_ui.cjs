@@ -31,7 +31,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#plan line.axis').count()===7 && await page.locator('#plan circle.bubble').count()===7 && await page.locator('#plan circle.node').count()===12,'xem trước SVG: 7 đường trục, 7 vòng tròn ký hiệu, 12 giao điểm');
   ok(JSON.stringify(await page.locator('#plan text').evaluateAll(l=>l.map(t=>t.textContent)))==='["1","2","3","4","A","B","C"]','tên trục nằm trong vòng tròn');
   ok((await page.locator('#build').innerText())==='Vẽ lưới trục' && await page.locator('#build').isEnabled() && await page.locator('#remove').isDisabled(),'chưa có lưới trong model: nút Vẽ bấm được, Xóa bị khóa');
-  ok((await page.locator('#version').innerText())==='v0.16.0-beta.1','hiện phiên bản plugin');
+  ok((await page.locator('#version').innerText())==='v0.17.0-beta.1','hiện phiên bản plugin');
 
   // Sửa nhịp
   await clear();
@@ -1558,6 +1558,37 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const before=await rgb(150,100);await cl(150,150);await typ('eh');await page.mouse.move(5,5);await wait(40);const after=await rgb(150,100);
   ok(Math.abs(before[0]-after[0])+Math.abs(before[1]-after[1])+Math.abs(before[2]-after[2])>40,'cột ẩn không còn được vẽ trên canvas (màu tại thân cột đổi: '+before+' -> '+after+')');
   await typ('hr');await reset();
+  }
+  // Nối góc tường (cột mốc 9)
+  {
+  const typ=async s=>{for(const ch of s)await page.keyboard.press(ch.toLowerCase());await wait(90);};
+  const sc=async(x,y)=>{const bb=await page.locator('#pv-canvas').boundingBox(),q=await page.evaluate(([a,b])=>window.VGDPlan.toScreen(a,b),[x,y]);return [bb.x+q[0],bb.y+q[1]];};
+  const cl=async(x,y)=>{const q=await sc(x,y);await page.mouse.move(q[0],q[1]);await page.mouse.click(q[0],q[1]);};
+  const dbg9=()=>page.evaluate(()=>window.VGDPlan.debug());
+  const props=()=>page.locator('#pv-props').innerText();
+  const reset=async()=>{await page.keyboard.press('Escape');await page.keyboard.press('Escape');await receive('state',F.state_join);await receive('preview',F.preview_join);await wait(80);};
+  await page.click('[data-tab=plan]');
+  if(await page.locator('#pv-browser').isVisible())await page.click('#pv-browser-btn');
+  await reset();
+  const wj=F.preview_join.walls.items,w1=wj.find(i=>i.ref==='fw_00000001'),w2=wj.find(i=>i.ref==='fw_00000002');
+  ok(w1.start===5900 && w1.join_shift===-100 && w2.min[1]===1100 && w2.join_shift===100,'dữ liệu Ruby: góc L giữa hai tường tự do: tường ngang chạy suốt (start 5900), tường dọc dừng ở mặt (y từ 1100)');
+  await cl(7000,1000);ok(/Nối góc\s+Đã nối 1 đầu/.test(await props()),'chọn tường đã nối: Thuộc tính ghi "Nối góc: Đã nối 1 đầu"');
+  await cl(10000,2500);ok(/Nối góc\s+Không có chỗ nối/.test(await props()),'tường không chạm tường nào: "Không có chỗ nối"');
+  ok(await page.locator('#pv-props input[data-field=join]').isChecked(),'ô "Nối góc tự động" mặc định bật');
+  await cl(6000,3000);await page.uncheck('#pv-props input[data-field=join]');
+  ok((await page.evaluate(()=>window.VGDS._state.levels[0].wallPicks['fw_00000002'])).join===false,'bỏ tick "Nối góc tự động": ghi join = false vào tường');
+  await wait(300);const vr7=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  const vw=ref=>vr7.walls.find(x=>x[0]===ref);
+  ok(vr7.ok && vw('fw_00000002')[1]===1000 && vw('fw_00000002')[4]===false && vw('fw_00000001')[1]===6000,'Ruby nhận cờ: tường dọc giữ nguyên hình (y từ 1000) và tường ngang không bị kéo (start 6000)');
+  await page.focus('#pv-canvas');await page.keyboard.press('Control+z');ok((await page.evaluate(()=>window.VGDS._state.levels[0].wallPicks['fw_00000002'])).join===undefined,'Ctrl+Z hoàn tác việc tắt nối');
+  // Cửa trên tường đã dịch đầu
+  await reset();await cl(7500,1000);let dd=await dbg9();const dl=dd.dimList.find(d=>d.id==='left');
+  ok(dl && dl.value===1150,'kích thước tạm thời của cửa đo từ đầu tường THẬT (5900): mép trái cửa cách 1150');
+  const bb9=await page.locator('#pv-canvas').boundingBox(),hl=dd.dimHits.find(h=>h.id==='left');await page.mouse.click(bb9.x+hl.x+hl.w/2,bb9.y+hl.y+hl.h/2);await page.fill('.pv-dim-input','700');await page.press('.pv-dim-input','Enter');
+  ok((await page.evaluate(()=>window.VGDS._state.levels[0].openingPicks['op_00000001'])).pos===1050,'gõ 700: mép trái cách đầu tường thật 700, vị trí LƯU tính từ đầu tường chưa nối (1050 = 700 + 450 - 100)');
+  await reset();await typ('dr');await cl(8500,1000);let op=await page.evaluate(()=>window.VGDS._state.levels[0].openingPicks),nk=Object.keys(op).filter(k=>k!=='op_00000001');
+  ok(nk.length===1 && op[nk[0]].wall==='fw_00000001' && op[nk[0]].pos===2500,'đặt cửa mới tại x = 8500 trên tường đã dịch đầu: vị trí lưu 2500 (tính từ đầu chưa nối 6000)');
+  await reset();
   }
   // P6: liên kết với SketchUp
   {

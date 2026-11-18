@@ -126,7 +126,7 @@
       if (!free) { skipped.push([s.title, 'chưa có hình trong xem trước']); return; }
       var next = applyMap(s.kind, free, fn), b = box(s.kind), to = s.ref, ty = typeOfPick(s);
       if (keep || !isFree(pick)) {
-        var np = {free: next}; if (ty) np.type = ty;
+        var np = {free: next}; if (ty) np.type = ty; if (pick && pick.join === false) np.join = false;
         if (!keep) delete b[s.ref];
         to = newId(s.kind); b[to] = np;
       } else pick.free = next;
@@ -306,7 +306,7 @@
         var pick = pickOf(s); if (!pick) return;
         if (isFree(pick)) { skipped.push([s.title, 'đã là phần tử tự do']); return; }
         var free = geomOf(s); if (!free) { skipped.push([s.title, 'chưa có hình trong xem trước']); return; }
-        var ty = typeOfPick(s), np = {free: free}; if (ty) np.type = ty;
+        var ty = typeOfPick(s), np = {free: free}; if (ty) np.type = ty; if (pick.join === false) np.join = false;
         var id = newId(s.kind); delete l[PICKS[s.kind]][s.ref]; l[PICKS[s.kind]][id] = np;
         if (s.kind === 'wall') Object.keys(l.openingPicks).forEach(function (oid) { if (l.openingPicks[oid].wall === s.ref) l.openingPicks[oid].wall = id; });
         moved++;
@@ -403,7 +403,7 @@
     var l = lvl(), b = box(shape.kind), pick = b[shape.ref], cross = horizontal ? oldFree.a[1] : oldFree.a[0];
     var nf = horizontal ? {a: [round(seg.lo), cross], b: [round(seg.hi), cross]} : {a: [cross, round(seg.lo)], b: [cross, round(seg.hi)]};
     var oldStart = wallStart(oldFree), newStart = wallStart(nf), ty = typeOfPick(shape), ref = shape.ref;
-    if (!isFree(pick)) { var np = {free: nf}; if (ty) np.type = ty; delete b[shape.ref]; ref = newId(shape.kind); b[ref] = np; } else pick.free = nf;
+    if (!isFree(pick)) { var np = {free: nf}; if (ty) np.type = ty; if (pick.join === false) np.join = false; delete b[shape.ref]; ref = newId(shape.kind); b[ref] = np; } else pick.free = nf;
     if (shape.kind === 'wall') Object.keys(l.openingPicks).forEach(function (id) {
       var e = l.openingPicks[id]; if (e.wall !== shape.ref) return;
       e.wall = ref; e.pos = round(e.pos + (oldStart - newStart)); // đầu tường đổi chỗ: giữ cửa đúng chỗ cũ
@@ -515,7 +515,7 @@
       if (!o || !w) return [];
       if (w.dir === 'o') { // tường xiên: kích thước đo dọc theo tường, đặt lệch về phía pháp tuyến
         var len = w.length, ux = (w.b[0] - w.a[0]) / len, uy = (w.b[1] - w.a[1]) / len, nrm = [-uy, ux], at = function (t) { return [w.a[0] + ux * t, w.a[1] + uy * t]; };
-        var l0 = o.pos - o.w / 2, l1 = o.pos + o.w / 2, offO = 450 + w.t / 2;
+        var l0 = dist(w.a, o.origin), l1 = l0 + o.w, offO = 450 + w.t / 2; // tính theo vị trí thật (đầu tường có thể đã dịch do nối góc)
         return [
           dimOf(at(0), at(l0), nrm, offO, true, {id: 'left', opening: o.ref, value: round(l0)}),
           dimOf(at(l1), at(len), nrm, offO, true, {id: 'right', opening: o.ref, value: round(len - l1)}),
@@ -559,7 +559,7 @@
     if (pos - o.w / 2 < 0 || pos + o.w / 2 > w.length) return 'Cửa rộng ' + o.w + ' mm không nằm trọn trong tường dài ' + w.length + ' mm.';
     var clash = A.wallOpenings(w.ref).some(function (e) { return e.id !== dim.opening && !(pos + o.w / 2 + GAP <= e.x0 || pos - o.w / 2 >= e.x1 + GAP); });
     if (clash) return 'Chồng hoặc sát cửa khác (cần cách nhau ít nhất ' + GAP + ' mm).';
-    host.mutate(function () { op.pos = pos; });
+    host.mutate(function () { op.pos = round(pos + (w.join_shift || 0)); }); // pos lưu tính từ đầu tường CHƯA nối góc
     return null;
   }
 

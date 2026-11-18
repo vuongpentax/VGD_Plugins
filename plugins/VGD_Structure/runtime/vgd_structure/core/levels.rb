@@ -117,6 +117,10 @@ module VGD
           raise Error, "Tầng “#{level_name}”: #{label} #{ref} dùng loại #{label} không tồn tại." unless type.nil? || type_module.find(types, type)
           entry = {}
           entry['type'] = type if type
+          if label == 'tường' && pick.key?('join') # nối góc tự động (mặc định có); chỉ lưu khi tắt
+            raise Error, "Tầng “#{level_name}”: mục nối góc của tường #{ref} phải là Có hoặc Không." unless pick['join'] == true || pick['join'] == false
+            entry['join'] = false if pick['join'] == false
+          end
           if pick.key?('free')
             raise Error, "Tầng “#{level_name}”: #{label} tự do có mã #{ref} không hợp lệ." unless ref.match?(FREE_ID.fetch(label))
             entry['free'] = free_pick!(pick['free'], label, ref, level_name)

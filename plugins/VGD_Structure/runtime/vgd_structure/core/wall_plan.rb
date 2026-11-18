@@ -34,7 +34,7 @@ module VGD
                    when 'max' then axis - type['t'] / 2.0
                    else axis
                    end
-          out << {ref: ref, span: span, type: type, mode: mode, center: center.round(2), w: type['t'], under_beam: beams.key?(ref), z_top: beams.key?(ref) ? beams[ref][:z_bottom] : z_slab}
+          out << {ref: ref, span: span, type: type, mode: mode, center: center.round(2), w: type['t'], join: pick['join'] != false, under_beam: beams.key?(ref), z_top: beams.key?(ref) ? beams[ref][:z_bottom] : z_slab}
         end
         x_walls_at = Hash.new { |h, k| h[k] = [] }
         walls.select { |w| w[:span][:dir] == 'x' }.each { |w| [w[:span][:from_ref], w[:span][:to_ref]].each { |n| x_walls_at[n] << w } }
@@ -78,8 +78,9 @@ module VGD
             issues << "Tường #{ref}: chiều cao chỉ #{height} mm (dầm quá thấp), bỏ qua."
             next
           end
-          items << item.merge(height: height, z_top: z_top, under_beam: !cover.empty?)
+          items << item.merge(height: height, z_top: z_top, under_beam: !cover.empty?, join: pick['join'] != false)
         end
+        WallJoins.apply(items, column_plan[:items])
         opening_issues = place_openings(level, items, opening_types)
         x0, y0, x1, y1 = Grid.bounds(grid)
         items.each do |i|
@@ -109,8 +110,9 @@ module VGD
               issues << "Cửa #{id} trên tường #{item[:ref]}: loại cửa không tồn tại, bỏ qua."
               next
             end
-            x0 = e['pos'] - type['w'] / 2.0
-            x1 = e['pos'] + type['w'] / 2.0
+            shift = item[:join_shift] || 0.0 # đầu tường đã dịch do nối góc: vị trí cửa tính từ đầu tường cũ
+            x0 = e['pos'] - type['w'] / 2.0 - shift
+            x1 = e['pos'] + type['w'] / 2.0 - shift
             z0 = type['sill']
             z1 = z0 + type['h']
             label = "Cửa #{type['name']} (#{id}) trên tường #{item[:ref]}"

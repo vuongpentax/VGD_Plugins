@@ -318,7 +318,7 @@
     if (tool === 'door' || tool === 'window') {
       if (target.error) { note = target.error; return; }
       var id = A.rid('op_');
-      host.mutate(function () { lvl().openingPicks[id] = {wall: target.wall.ref, type: target.type.id, pos: target.pos, flip: opt[tool].flip === '1'}; });
+      host.mutate(function () { lvl().openingPicks[id] = {wall: target.wall.ref, type: target.type.id, pos: target.pos + (target.wall.join_shift || 0), flip: opt[tool].flip === '1'}; });
       note = 'Đã đặt ' + (tool === 'door' ? 'cửa đi' : 'cửa sổ') + ' ' + target.type.name + ' trên tường ' + target.wall.ref + ', tâm cách đầu tường ' + target.pos + ' mm.';
     }
   }
@@ -529,9 +529,13 @@
     });
     return out;
   }
+  function joinField(pick) { // nối góc tự động của tường (mặc định bật; tắt thì tường giữ đúng hình nhập)
+    return field('join', 'Nối góc tự động', 'checkbox', null, pick.join !== false, function (v) { edit(function () { if (v) delete pick.join; else pick.join = false; }); });
+  }
   function propsFor(shape) {
-    var own = propsOwn(shape), l = lvl(), box = PICKS[shape.kind] && l[PICKS[shape.kind]];
-    return own.concat(typeFields(shape, box && box[shape.ref]));
+    var own = propsOwn(shape), l = lvl(), box = PICKS[shape.kind] && l[PICKS[shape.kind]], pick = box && box[shape.ref];
+    if (shape.kind === 'wall' && pick) own = own.concat([joinField(pick)]);
+    return own.concat(typeFields(shape, pick));
   }
 
   window.VGDPlanEdit = {
