@@ -96,7 +96,7 @@ module VGD
       # picks.columns / picks.beams / picks.walls: {mã giao điểm hoặc nhịp => {type?, x? / y? hoặc p?}}; chỉ giữ giá trị khác mặc định.
       # Cột có kiểu đặt x, y; dầm, tường có kiểu đặt p (theo phương vuông góc). Mã không còn trên lưới thì bỏ (đếm).
       # Phần tử TỰ DO (không theo lưới, cột mốc P4b-1) nằm cùng chỗ nhưng theo mã riêng fc_ / fb_ / fw_ + 8 chữ số 16 và có khóa 'free':
-      #   cột {'free' => {'x', 'y', 'rot' (0 hoặc 90)}}, dầm và tường {'free' => {'a' => [x, y], 'b' => [x, y]}} chỉ ngang hoặc dọc. Không bị bỏ khi lưới đổi.
+      #   cột {'free' => {'x', 'y', 'rot' (độ, 0 <= rot < 360)}}, dầm và tường {'free' => {'a' => [x, y], 'b' => [x, y]}} ngang, dọc hoặc xiên (a ở bên trái; đứng dọc thì a thấp hơn). Không bị bỏ khi lưới đổi.
       def self.picks!(raw, refs, types, level_name, label, type_module)
         return [{}, 0] if raw.nil?
         axes = label == 'cột' ? %w[x y] : %w[p]
@@ -136,7 +136,9 @@ module VGD
         end
         if label == 'cột'
           rot = free.key?('rot') ? free['rot'] : 0
-          raise Error, "Tầng “#{level_name}”: góc xoay của cột tự do #{ref} chỉ là 0 hoặc 90 độ (góc khác làm ở bước sau)." unless [0, 90].include?(rot)
+          raise Error, "Tầng “#{level_name}”: góc xoay của cột tự do #{ref} phải là số độ (từ -360 đến 360)." unless number?(rot) && rot.abs <= 360
+          rot = (rot.to_f % 360).round(2)
+          rot = rot.to_i if rot == rot.to_i # 0 và 90 giữ nguyên là số nguyên như dữ liệu cũ
           return {'x' => coord.call(free['x']), 'y' => coord.call(free['y']), 'rot' => rot}
         end
         a, b = %w[a b].map do |k|
@@ -144,12 +146,15 @@ module VGD
           raise Error, "Tầng “#{level_name}”: #{label} tự do #{ref} thiếu đầu mút #{k}." unless pt.is_a?(Array) && pt.size == 2
           pt.map { |v| coord.call(v) }
         end
+        # Đầu mút lệch nhau rất ít theo một phương thì làm thẳng thành ngang / dọc; còn lại là đoạn XIÊN (góc bất kỳ).
         if (a[0] - b[0]).abs <= FREE_ORTHO_TOLERANCE then b[0] = a[0]
         elsif (a[1] - b[1]).abs <= FREE_ORTHO_TOLERANCE then b[1] = a[1]
-        else raise Error, "Tầng “#{level_name}”: #{label} tự do #{ref} phải nằm ngang hoặc dọc (đi xiên làm ở bước sau)."
         end
-        a, b = b, a if (b[0] - a[0]) + (b[1] - a[1]) < 0 # đầu a luôn là đầu có tọa độ nhỏ hơn
-        raise Error, "Tầng “#{level_name}”: #{label} tự do #{ref} dài #{((b[0] - a[0]).abs + (b[1] - a[1]).abs).round(1)} mm, cần ít nhất #{FREE_MIN_LENGTH.to_i} mm." if (b[0] - a[0]).abs + (b[1] - a[1]).abs < FREE_MIN_LENGTH
+        if a[0] == b[0] || a[1] == b[1] then a, b = b, a if (b[0] - a[0]) + (b[1] - a[1]) < 0 # ngang / dọc: đầu a có tọa độ nhỏ hơn
+        elsif b[0] < a[0] then a, b = b, a # xiên: đầu a là đầu bên trái
+        end
+        length = Math.hypot(b[0] - a[0], b[1] - a[1])
+        raise Error, "Tầng “#{level_name}”: #{label} tự do #{ref} dài #{length.round(1)} mm, cần ít nhất #{FREE_MIN_LENGTH.to_i} mm." if length < FREE_MIN_LENGTH
         {'a' => a, 'b' => b}
       end
 

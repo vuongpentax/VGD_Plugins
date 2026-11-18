@@ -7,7 +7,7 @@ def error_of; yield; nil; rescue StandardError => e; e.message; end
 require_relative 'fake_sketchup'
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
 module VGD; module Structure; VERSION = '9.9.9'; end; end
-%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/opening_types core/levels core/column_plan core/beam_plan core/wall_plan core/opening_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview model_sync model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder opening_builder plate_builder all_builder].each { |f| require File.join(ROOT, f) }
+%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/levels core/column_plan core/beam_plan core/wall_plan core/opening_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview model_sync model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder opening_builder plate_builder all_builder].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 L = S::Levels
 D = S::Schema::DICTIONARY
@@ -38,8 +38,6 @@ bad = {
   'mã không đủ 8 chữ số' => {cols: {'fc_00a' => {'free' => {'x' => 1, 'y' => 1}}}},
   'tọa độ cột là chuỗi' => {cols: {FC1 => {'free' => {'x' => '1', 'y' => 1}}}},
   'tọa độ cột quá lớn' => {cols: {FC1 => {'free' => {'x' => 2_000_000, 'y' => 1}}}},
-  'góc xoay 45' => {cols: {FC1 => {'free' => {'x' => 1, 'y' => 1, 'rot' => 45}}}},
-  'dầm xiên' => {beams: {FB1 => {'free' => {'a' => [0, 0], 'b' => [1000, 500]}}}},
   'dầm ngắn dưới 100' => {beams: {FB1 => {'free' => {'a' => [0, 0], 'b' => [50, 0]}}}},
   'tường thiếu đầu mút' => {walls: {FW1 => {'free' => {'a' => [0, 0]}}}},
   'tường mã dầm' => {walls: {FB1 => {'free' => {'a' => [0, 0], 'b' => [1000, 0]}}}},

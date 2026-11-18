@@ -11,6 +11,8 @@ module VGD
         'column' => %i[center w d z0 z1 type_id], 'beam' => %i[dir min max z_top z_bottom type_id], 'wall' => %i[dir min max z_bottom z_top type_id openings],
         'opening' => %i[kind min max z_bottom z_top type_id flip], 'slab' => %i[min max thickness z_top z_bottom], 'ceiling' => %i[polygon min max thickness z_bottom z_top]
       }.freeze
+      # Trường chỉ tính khi mục kế hoạch có (phần tử xiên / xoay, P4b-2): mục cũ không có thì vân tay giữ nguyên như bản trước.
+      FP_OPTIONAL = %i[a b rot origin angle].freeze
       # Loại nhóm trong model <-> kế hoạch (Checker.plan_for) <-> loại trong giao diện (cột, dầm, tường, cửa gộp thành 'opening', sàn, trần).
       PLAN_KINDS = {'columns' => 'column', 'beams' => 'beam', 'walls' => 'wall', 'openings' => 'opening', 'slabs' => 'slab', 'ceilings' => 'ceiling'}.freeze
       UI_KIND = {'column' => 'column', 'beam' => 'beam', 'wall' => 'wall', 'door' => 'opening', 'window' => 'opening', 'slab' => 'slab', 'ceiling' => 'ceiling'}.freeze
@@ -19,7 +21,7 @@ module VGD
 
       # Dấu vân tay (12 ký tự 16) của một mục kế hoạch; builder ghi vào từng phần tử dựng ra (VGD_STRUCT.fp), so khớp dữ liệu hiện tại với model.
       def self.fingerprint(kind, item)
-        fields = FP_FIELDS.fetch(kind).map { |key| [key, normalize(item[key])] }
+        fields = (FP_FIELDS.fetch(kind) + FP_OPTIONAL.select { |key| item.key?(key) }).map { |key| [key, normalize(item[key])] }
         Digest::SHA1.hexdigest(JSON.generate(fields))[0, 12]
       end
 

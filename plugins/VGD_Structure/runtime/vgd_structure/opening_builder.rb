@@ -92,8 +92,8 @@ module VGD
         group.set_attribute(Schema::DICTIONARY, 'plugin_version', VERSION)
         plan[:items].each do |item|
           definition = definition_for(model, item, definitions)
-          origin = item[:dir] == 'x' ? [item[:along], item[:center]] : [item[:center], item[:along]]
-          instance = group.entities.add_instance(definition, Geom::Transformation.new(Geom::Point3d.new(origin[0].mm, origin[1].mm, item[:z_bottom].mm)))
+          origin = item[:dir] == 'o' ? item[:origin] : item[:dir] == 'x' ? [item[:along], item[:center]] : [item[:center], item[:along]]
+          instance = group.entities.add_instance(definition, Placement.transformation(item, origin[0], origin[1], item[:z_bottom]))
           instance.name = "#{item[:kind] == 'door' ? 'Cửa đi' : 'Cửa sổ'} #{item[:type_name]} (#{plan[:level]['name']})"
           instance.layer = layers[item[:kind]]
           tag_instance(instance, plan, item)
@@ -117,6 +117,7 @@ module VGD
       end
 
       def self.definition_for(model, item, definitions)
+        item = item.merge(dir: Placement.frame_dir(item)) # cửa trên tường xiên dùng định nghĩa cửa X rồi xoay
         key = [item[:kind], item[:dir], item[:w], item[:h], item[:thickness], item[:flip]]
         definitions[key] ||= begin
           name = "VGD #{item[:kind] == 'door' ? 'Cửa đi' : 'Cửa sổ'} #{item[:dir].upcase} #{fmt(item[:w])}x#{fmt(item[:h])}x#{fmt(item[:thickness])}#{item[:flip] ? ' lật' : ''}"

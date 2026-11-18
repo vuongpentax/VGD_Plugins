@@ -91,8 +91,8 @@ module VGD
         group.set_attribute(Schema::DICTIONARY, 'plugin_version', VERSION)
         plan[:items].each do |item|
           definition = definition_for(model, item, definitions)
-          origin = item[:dir] == 'x' ? [item[:start], item[:center]] : [item[:center], item[:start]]
-          instance = group.entities.add_instance(definition, Geom::Transformation.new(Geom::Point3d.new(origin[0].mm, origin[1].mm, item[:z_bottom].mm)))
+          origin = item[:dir] == 'o' ? item[:a] : item[:dir] == 'x' ? [item[:start], item[:center]] : [item[:center], item[:start]]
+          instance = group.entities.add_instance(definition, Placement.transformation(item, origin[0], origin[1], item[:z_bottom]))
           instance.name = "Dầm #{item[:ref]} (#{plan[:level]['name']})"
           instance.layer = layer
           tag_instance(instance, plan, item)
@@ -118,6 +118,7 @@ module VGD
       # Định nghĩa dùng chung cho mọi dầm cùng phương, rộng, cao, dài: lăng trụ có mặt đáy tại z = 0, dài theo +X (dầm X) hoặc +Y (dầm Y),
       # gốc ở tâm đầu dầm.
       def self.definition_for(model, item, definitions)
+        item = item.merge(dir: Placement.frame_dir(item)) # dầm xiên dùng định nghĩa dầm X rồi xoay
         key = [item[:dir], item[:w], item[:h], item[:length]]
         definitions[key] ||= begin
           name = "VGD Dầm #{item[:dir].upcase} #{fmt(item[:w])}x#{fmt(item[:h])}x#{fmt(item[:length])}"

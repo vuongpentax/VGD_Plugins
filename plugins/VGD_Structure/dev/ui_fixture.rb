@@ -1,7 +1,7 @@
 # Dữ liệu thật từ Ruby cho test giao diện (trạng thái, xem trước lưới / cột, kết quả tạo trục từ nhịp). In JSON ra stdout.
 require 'json'
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
-%w[core/schema core/grid core/axis_symbol core/column_types core/beam_types core/wall_types core/opening_types core/levels core/column_plan core/beam_plan core/wall_plan core/opening_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview].each { |f| require File.join(ROOT, f) }
+%w[core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/levels core/column_plan core/beam_plan core/wall_plan core/opening_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/state core/preview].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 state = S::State.default
 refs = S::Grid.intersections(state['grid']).map { |i| i[:ref] }

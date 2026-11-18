@@ -91,8 +91,8 @@ module VGD
         group.set_attribute(Schema::DICTIONARY, 'plugin_version', VERSION)
         plan[:items].each do |item|
           definition = definition_for(model, item, definitions)
-          origin = item[:dir] == 'x' ? [item[:start], item[:center]] : [item[:center], item[:start]]
-          instance = group.entities.add_instance(definition, Geom::Transformation.new(Geom::Point3d.new(origin[0].mm, origin[1].mm, item[:z_bottom].mm)))
+          origin = item[:dir] == 'o' ? item[:a] : item[:dir] == 'x' ? [item[:start], item[:center]] : [item[:center], item[:start]]
+          instance = group.entities.add_instance(definition, Placement.transformation(item, origin[0], origin[1], item[:z_bottom]))
           instance.name = "Tường #{item[:ref]} (#{plan[:level]['name']})"
           instance.layer = layer
           tag_instance(instance, plan, item)
@@ -118,6 +118,7 @@ module VGD
       # Định nghĩa dùng chung cho mọi tường cùng phương, dày, cao, dài: lăng trụ có mặt đáy tại z = 0, dài theo +X (tường X) hoặc +Y (tường Y),
       # gốc ở tâm đầu tường.
       def self.definition_for(model, item, definitions)
+        item = item.merge(dir: Placement.frame_dir(item)) # tường xiên dùng định nghĩa tường X rồi xoay
         holes = item[:openings].map { |o| [o[:x0], o[:x1], o[:z0], o[:z1]] }
         key = [item[:dir], item[:t], item[:height], item[:length], holes]
         definitions[key] ||= begin

@@ -14,10 +14,14 @@ module Geom
     def initialize(x, y, z); @x = x.to_f; @y = y.to_f; @z = z.to_f; end
   end
   class Transformation
-    attr_reader :vector
+    attr_reader :vector, :angle
     def self.translation(vector); new(vector); end
+    # Phép xoay quanh trục đứng qua gốc (giả lập chỉ cần góc, radian); `*` ghép dời với xoay như SketchUp (xoay trước rồi dời).
+    def self.rotation(_point, _axis, radians); new(Vector3d.new(0, 0, 0), radians); end
     # Transformation.new(Point3d) dời tới điểm đó (như SketchUp); translation(Vector3d) dời theo vector.
-    def initialize(vector = Vector3d.new(0, 0, 0)); @vector = vector; end
+    def initialize(vector = Vector3d.new(0, 0, 0), angle = 0.0); @vector = vector; @angle = angle; end
+    def *(other); Transformation.new(@vector, @angle + other.angle); end
+    def rotation_degrees; @angle * 180.0 / Math::PI; end
   end
 end
 module Sketchup

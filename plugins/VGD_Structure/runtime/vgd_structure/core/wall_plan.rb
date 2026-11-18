@@ -67,7 +67,7 @@ module VGD
           free = pick['free'] or next
           type = pick['type'] ? WallTypes.find(wall_types, pick['type']) : default_type
           item = BeamPlan.free_item(ref, free, type['t'], type, z_slab, z0, :t)
-          cover = beam_items.select { |b| b[:dir] == item[:dir] && (b[:center] - item[:center]).abs < 1.0 && b[:start] < item[:finish] - EPS && item[:start] < b[:finish] - EPS }
+          cover = beam_items.select { |b| BeamPlan.covers?(b, item) }
           z_top = cover.empty? ? z_slab : cover.map { |b| b[:z_bottom] }.min
           height = (z_top - z0).round(1)
           if item[:length] < MIN_LENGTH
@@ -89,7 +89,7 @@ module VGD
         boxes = items.map { |i| [i[:min], i[:max], i] }
         BeamPlan.overlaps(boxes).each { |a, c| issues << "Tường #{a[:ref]} và #{c[:ref]} chồng lên nhau." }
         column_plan[:items].each do |c|
-          cb = [[c[:center][0] - c[:w] / 2.0, c[:center][1] - c[:d] / 2.0], [c[:center][0] + c[:w] / 2.0, c[:center][1] + c[:d] / 2.0]]
+          cb = ColumnPlan.box(c) + [c]
           boxes.each { |wb| issues << "Tường #{wb[2][:ref]} chồng lên cột #{c[:ref]}." if BeamPlan.rects_overlap?(wb, cb) }
         end
         {level: level, next_level: above, z0: z0, z_slab: z_slab, items: items, issues: issues, opening_issues: opening_issues}

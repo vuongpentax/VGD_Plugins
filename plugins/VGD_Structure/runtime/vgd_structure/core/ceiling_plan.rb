@@ -71,7 +71,7 @@ module VGD
                     thickness: level['ceiling_thickness'], area: area.round(3)}
         end
         # Trần chưa tính tường / cột TỰ DO (chỉ lùi theo tường và cột theo lưới): báo nếu chúng chồng lên trần.
-        free_boxes = column_plan[:items].select { |c| c[:placement] == 'free' }.map { |c| [[c[:center][0] - c[:w] / 2.0, c[:center][1] - c[:d] / 2.0], [c[:center][0] + c[:w] / 2.0, c[:center][1] + c[:d] / 2.0], "cột #{c[:ref]}"] }
+        free_boxes = column_plan[:items].select { |c| c[:placement] == 'free' }.map { |c| ColumnPlan.box(c) + ["cột #{c[:ref]}"] }
         free_boxes += walls.values.select { |w| w[:placement] == 'free' }.map { |w| [w[:min], w[:max], "tường #{w[:ref]}"] }
         items.each do |i|
           free_boxes.each { |fb| issues << "Trần ô #{i[:ref]} chồng lên #{fb[2]} (trần chưa lùi theo phần tử tự do)." if i[:min][0] < fb[1][0] - EPS && fb[0][0] < i[:max][0] - EPS && i[:min][1] < fb[1][1] - EPS && fb[0][1] < i[:max][1] - EPS }

@@ -37,21 +37,24 @@ module VGD
           items << {ref: ref, type_id: type['id'], type_name: type['name'], w: type['w'], d: type['d'], center: [cx.round(2), cy.round(2)], modes: modes,
                     placement: point[:placement], z0: z0, z1: z1, height: height}
         end
-        # Cột TỰ DO (không theo lưới): đặt đúng tọa độ, xoay 0 hoặc 90 độ (xoay 90 thì đổi chỗ rộng và sâu).
+        # Cột TỰ DO (không theo lưới): đặt đúng tọa độ. Xoay bội của 90 độ thì đổi chỗ rộng và sâu; góc khác thì giữ rộng, sâu và ghi góc `rot` cùng đa giác `poly` (P4b-2).
         level['picks']['columns'].each do |ref, pick|
           free = pick['free'] or next
           type = pick['type'] ? ColumnTypes.find(types, pick['type']) : default_type
-          w, d = free['rot'] == 90 ? [type['d'], type['w']] : [type['w'], type['d']]
-          items << {ref: ref, type_id: type['id'], type_name: type['name'], w: w, d: d, center: [free['x'], free['y']], modes: {'x' => 'free', 'y' => 'free'}, placement: 'free', z0: z0, z1: z1, height: height}
+          rot = free['rot'] || 0
+          item = {ref: ref, type_id: type['id'], type_name: type['name'], center: [free['x'], free['y']], modes: {'x' => 'free', 'y' => 'free'}, placement: 'free', z0: z0, z1: z1, height: height}
+          if (rot % 90).zero?
+            w, d = (rot % 180) == 90 ? [type['d'], type['w']] : [type['w'], type['d']]
+            items << item.merge(w: w, d: d)
+          else
+            items << item.merge(w: type['w'], d: type['d'], rot: rot, poly: Geometry.round_poly(Geometry.rotated_rect(item[:center], type['w'], type['d'], rot)))
+          end
         end
         raise Error, "Quá nhiều cột (#{items.size}); tối đa #{MAX_COLUMNS} mỗi lần dựng." if items.size > MAX_COLUMNS
         x0, y0, x1, y1 = Grid.bounds(grid)
         items.each do |item|
           next if item[:placement] == 'free' # cột tự do được phép nằm ngoài khung lưới
-          min_x = item[:center][0] - item[:w] / 2.0
-          max_x = item[:center][0] + item[:w] / 2.0
-          min_y = item[:center][1] - item[:d] / 2.0
-          max_y = item[:center][1] + item[:d] / 2.0
+          (min_x, min_y), (max_x, max_y) = box(item)
           issues << "Cột #{item[:ref]} nhô ra ngoài khung lưới (tâm đặt trên trục biên)." if min_x < x0 - EPS || max_x > x1 + EPS || min_y < y0 - EPS || max_y > y1 + EPS
         end
         overlaps(items).each { |a, b| issues << "Cột #{a[:ref]} và #{b[:ref]} chồng lên nhau." }
@@ -73,18 +76,32 @@ module VGD
         end
       end
 
-      # Các cặp cột chồng nhau (quét theo cạnh trái, không so mọi cặp).
+      # Hộp bao [[x0, y0], [x1, y1]] của cột (cột xoay góc bất kỳ: hộp bao của đa giác).
+      def self.box(item)
+        return Geometry.bounds(item[:poly]) if item[:poly]
+        [[item[:center][0] - item[:w] / 2.0, item[:center][1] - item[:d] / 2.0], [item[:center][0] + item[:w] / 2.0, item[:center][1] + item[:d] / 2.0]]
+      end
+
+      # Các cặp cột chồng nhau (quét theo cạnh trái, không so mọi cặp); cột xoay góc bất kỳ so theo đa giác.
       def self.overlaps(items)
-        boxes = items.map { |i| [i[:center][0] - i[:w] / 2.0, i[:center][0] + i[:w] / 2.0, i[:center][1] - i[:d] / 2.0, i[:center][1] + i[:d] / 2.0, i] }.sort_by(&:first)
+        boxes = items.map { |i| b = box(i); [b[0][0], b[1][0], b[0][1], b[1][1], i] }.sort_by(&:first)
         pairs = []
         boxes.each_with_index do |a, ai|
           (ai + 1...boxes.size).each do |bi|
             b = boxes[bi]
             break if b[0] >= a[1] - EPS
-            pairs << [a[4], b[4]] if b[2] < a[3] - EPS && a[2] < b[3] - EPS
+            next unless b[2] < a[3] - EPS && a[2] < b[3] - EPS
+            pairs << [a[4], b[4]] if (!a[4][:poly] && !b[4][:poly]) || Geometry.overlap?(polygon(a[4]), polygon(b[4]))
           end
         end
         pairs
+      end
+
+      def self.polygon(item)
+        item[:poly] || begin
+          (x0, y0), (x1, y1) = box(item)
+          [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
+        end
       end
     end
   end

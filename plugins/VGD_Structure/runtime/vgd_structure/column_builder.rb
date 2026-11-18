@@ -93,7 +93,7 @@ module VGD
         group.set_attribute(Schema::DICTIONARY, 'plugin_version', VERSION)
         plan[:items].each do |item|
           definition = definition_for(model, item, definitions)
-          instance = group.entities.add_instance(definition, Geom::Transformation.new(Geom::Point3d.new(item[:center][0].mm, item[:center][1].mm, plan[:z0].mm)))
+          instance = group.entities.add_instance(definition, Placement.transformation(item, item[:center][0], item[:center][1], plan[:z0]))
           instance.name = "Cột #{item[:ref]} (#{plan[:level]['name']})"
           instance.layer = layer
           tag_instance(instance, plan, item)
@@ -118,7 +118,7 @@ module VGD
 
       # Định nghĩa dùng chung cho mọi cột cùng rộng x sâu x cao: lăng trụ có tâm đáy ở gốc, cao theo +Z.
       def self.definition_for(model, item, definitions)
-        key = [item[:w], item[:d], item[:height]]
+        key = [item[:w], item[:d], item[:height]] # góc xoay không vào khóa: định nghĩa không xoay, phép xoay nằm ở thể hiện
         definitions[key] ||= begin
           name = "VGD Cột #{fmt(item[:w])}x#{fmt(item[:d])}x#{fmt(item[:height])}"
           existing = model.definitions[name]

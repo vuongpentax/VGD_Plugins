@@ -29,21 +29,21 @@ module VGD
         begin
           plan = ColumnPlan.plan(grid, types, levels, payload['level'] || levels.first['id'])
           out[:columns] = {level: plan[:level]['id'], level_name: plan[:level]['name'], height: plan[:height], z0: plan[:z0], z1: plan[:z1], issues: plan[:issues], count: plan[:items].size,
-                           items: plan[:items].map { |i| i.slice(:ref, :center, :w, :d, :type_name, :modes, :placement) }}
+                           items: plan[:items].map { |i| i.slice(:ref, :center, :w, :d, :type_name, :modes, :placement, :rot, :poly) }}
         rescue ColumnPlan::Error => error
           out[:columns_error] = error.message
         end
         begin
           plan = BeamPlan.plan(grid, types, beam_types, levels, payload['level'] || levels.first['id'])
           out[:beams] = {level: plan[:level]['id'], level_name: plan[:level]['name'], z_top: plan[:z_top], issues: plan[:issues], count: plan[:items].size,
-                         items: plan[:items].map { |i| i.slice(:ref, :dir, :type_name, :w, :h, :length, :min, :max, :mode, :placement, :z_top, :z_bottom) }}
+                         items: plan[:items].map { |i| i.slice(:ref, :dir, :type_name, :w, :h, :length, :min, :max, :mode, :placement, :z_top, :z_bottom, :a, :b, :angle, :poly) }}
         rescue BeamPlan::Error, ColumnPlan::Error => error
           out[:beams_error] = error.message
         end
         begin
           plan = WallPlan.plan(grid, types, beam_types, wall_types, levels, payload['level'] || levels.first['id'], opening_types)
           out[:walls] = {level: plan[:level]['id'], level_name: plan[:level]['name'], z0: plan[:z0], z_slab: plan[:z_slab], issues: plan[:issues], count: plan[:items].size,
-                         items: plan[:items].map { |i| i.slice(:ref, :dir, :type_name, :t, :length, :height, :min, :max, :mode, :placement, :z_bottom, :z_top, :under_beam, :start, :finish, :center, :openings, :openings_area) }}
+                         items: plan[:items].map { |i| i.slice(:ref, :dir, :type_name, :t, :length, :height, :min, :max, :mode, :placement, :z_bottom, :z_top, :under_beam, :start, :finish, :center, :openings, :openings_area, :a, :b, :angle, :poly) }}
         rescue WallPlan::Error, BeamPlan::Error, ColumnPlan::Error => error
           out[:walls_error] = error.message
         end
@@ -51,7 +51,7 @@ module VGD
         begin
           op = OpeningPlan.plan(grid, types, beam_types, wall_types, opening_types, levels, payload['level'] || levels.first['id'])
           out[:openings] = {level: op[:level]['id'], level_name: op[:level]['name'], count: op[:items].size, issues: op[:issues],
-                            items: op[:items].map { |i| i.slice(:ref, :wall, :dir, :kind, :type_name, :w, :h, :sill, :pos, :flip, :min, :max, :z_bottom, :z_top) }}
+                            items: op[:items].map { |i| i.slice(:ref, :wall, :dir, :kind, :type_name, :w, :h, :sill, :pos, :flip, :min, :max, :z_bottom, :z_top, :origin, :angle, :poly) }}
         rescue OpeningPlan::Error, WallPlan::Error, BeamPlan::Error, ColumnPlan::Error => error
           out[:openings_error] = error.message
         end
