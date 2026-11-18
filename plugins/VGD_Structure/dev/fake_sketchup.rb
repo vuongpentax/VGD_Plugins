@@ -2,6 +2,8 @@
 # Đơn vị: Numeric#mm trả về inch như SketchUp thật; hộp bao của chữ 3D giả lập là hình chữ nhật căn giữa theo ngang, đáy ở gốc.
 class Numeric; def mm; self / 25.4; end; def to_mm; self * 25.4; end; end
 TextAlignCenter = 1
+GL_LINES = 1
+GL_QUADS = 7
 MB_YESNO = 4
 IDYES = 6
 module Geom
@@ -35,6 +37,7 @@ module Sketchup
   class Color
     attr_reader :rgb
     def initialize(*rgb); @rgb = rgb; end
+    def alpha; @rgb[3] || 255; end
   end
   class Entity
     def attrs; @attrs ||= {}; end
@@ -134,6 +137,7 @@ module Sketchup
     def invalidate; @invalidated += 1; end
     def draw_polyline(pts); @draw_calls << [:polyline, pts]; end
     def draw_points(pts, *rest); @draw_calls << [:points, pts]; end
+    def draw(mode, pts); @draw_calls << [:draw, pts, mode, drawing_color]; end
   end
   class Definitions
     attr_reader :list

@@ -351,6 +351,13 @@
   }
 
   // Hình xem trước theo tọa độ thế giới.
+  // Kích thước loại đang vẽ (dầm, tường) kèm theo mục xem trước để cửa sổ mặt bằng dựng khối 3D trong khung nhìn SketchUp.
+  function solid(g, tool) {
+    if (tool !== 'beam' && tool !== 'wall') return g;
+    var ty = typeById(tool, currentType(tool) || (tool === 'beam' ? lvl().beamType : lvl().wallType)) || typesFor(tool)[0];
+    if (ty) { g.thick = tool === 'wall' ? ty.t : ty.w; if (tool === 'beam') g.h = ty.h; }
+    return g;
+  }
   function ghost() {
     var g = [];
     if (tool && freeMode(tool) && !blocked(tool)) {
@@ -371,7 +378,7 @@
       }
       if (chain) { g.push({t: 'dot', p: chain.p, color: GOOD, r: 5}); }
       if (target && target.free) {
-        if (chain) { g.push({t: 'line', a: chain.p, b: target.free, color: target.tooShort ? BAD : GOOD, width: 5, alpha: 0.5}); if (target.end) g.push({t: 'text', p: target.free, text: lengthOf(chain.p, target.free) + ' mm'}); }
+        if (chain) { g.push(solid({t: 'line', a: chain.p, b: target.free, color: target.tooShort ? BAD : GOOD, width: 5, alpha: 0.5}, tool)); if (target.end) g.push({t: 'text', p: target.free, text: lengthOf(chain.p, target.free) + ' mm'}); }
         g.push({t: 'dot', p: target.free, color: target.tooShort ? BAD : GOOD, r: 5});
       }
       return g;
@@ -387,9 +394,9 @@
       g.push({t: 'dot', p: [n.x, n.y], color: target.exists ? BAD : GOOD, r: 5}); g.push({t: 'text', p: [n.x, n.y], text: 'Cột ' + n.ref});
     } else if (tool === 'beam' || tool === 'wall') {
       if (chain) g.push({t: 'dot', p: [chain.x, chain.y], color: GOOD, r: 5});
-      if (target.end) { g.push({t: 'line', a: [chain.x, chain.y], b: [target.end.x, target.end.y], color: GOOD, width: 5, alpha: 0.5}); g.push({t: 'dot', p: [target.end.x, target.end.y], color: GOOD, r: 5}); g.push({t: 'text', p: [target.end.x, target.end.y], text: target.refs.length + ' nhịp'}); }
+      if (target.end) { g.push(solid({t: 'line', a: [chain.x, chain.y], b: [target.end.x, target.end.y], color: GOOD, width: 5, alpha: 0.5}, tool)); g.push({t: 'dot', p: [target.end.x, target.end.y], color: GOOD, r: 5}); g.push({t: 'text', p: [target.end.x, target.end.y], text: target.refs.length + ' nhịp'}); }
       else if (target.node) g.push({t: 'dot', p: [target.node.x, target.node.y], color: GOOD, r: 6});
-      else if (target.span) { var sp = target.span; g.push({t: 'line', a: sp.dir === 'x' ? [sp.a, sp.axis] : [sp.axis, sp.a], b: sp.dir === 'x' ? [sp.b, sp.axis] : [sp.axis, sp.b], color: target.exists ? BAD : GOOD, width: 5, alpha: 0.5}); }
+      else if (target.span) { var sp = target.span; g.push(solid({t: 'line', a: sp.dir === 'x' ? [sp.a, sp.axis] : [sp.axis, sp.a], b: sp.dir === 'x' ? [sp.b, sp.axis] : [sp.axis, sp.b], color: target.exists ? BAD : GOOD, width: 5, alpha: 0.5}, tool)); }
     } else if (tool === 'slab' || tool === 'ceiling') {
       var c = target.cell; g.push({t: 'poly', poly: [[c.x0, c.y0], [c.x1, c.y0], [c.x1, c.y1], [c.x0, c.y1]], color: target.exists ? BAD : GOOD, alpha: 0.2});
     } else if (target.wall && target.type) {

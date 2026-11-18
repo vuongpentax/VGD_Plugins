@@ -33,6 +33,7 @@ module VGD
       VK_BACK = 8
       VK_RETURN = 13
       GHOST_COLOR = [47, 123, 255].freeze # xanh như xem trước trên mặt bằng
+      GHOST_ALPHA = 70                    # độ đục (0-255) của mặt bên khối xem trước
 
       def initialize(panel)
         @panel = panel
@@ -98,6 +99,7 @@ module VGD
         view.drawing_color = Sketchup::Color.new(*GHOST_COLOR)
         view.line_width = 2
         ghost.each do |g|
+          next draw_box(view, g) if g['t'] == 'box'
           pts = Array(g['pts']).map { |x, y| Geom::Point3d.new(x.mm, y.mm, z) }
           next if pts.empty?
           case g['t']
@@ -106,6 +108,22 @@ module VGD
           when 'dot' then view.draw_points(pts, 8, 2, view.drawing_color) if view.respond_to?(:draw_points)
           end
         end
+      end
+
+      # Khối 3D xem trước (khung dây + mặt bên mờ) đúng cao độ của phần tử sắp đặt; không tạo hình vào model.
+      def draw_box(view, g)
+        pts = g['pts'].map { |x, y| [x, y] }
+        low = pts.map { |x, y| Geom::Point3d.new(x.mm, y.mm, g['z0'].mm) }
+        high = pts.map { |x, y| Geom::Point3d.new(x.mm, y.mm, g['z1'].mm) }
+        if view.respond_to?(:draw)
+          view.drawing_color = Sketchup::Color.new(*GHOST_COLOR, GHOST_ALPHA)
+          low.each_index { |i| j = (i + 1) % low.size; view.draw(GL_QUADS, [low[i], low[j], high[j], high[i]]) }
+        end
+        view.drawing_color = Sketchup::Color.new(*GHOST_COLOR)
+        view.line_width = 2
+        view.draw_polyline(low + [low.first])
+        view.draw_polyline(high + [high.first])
+        low.each_index { |i| view.draw_polyline([low[i], high[i]]) }
       end
 
       def point_mm

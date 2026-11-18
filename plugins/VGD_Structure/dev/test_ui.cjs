@@ -1351,7 +1351,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await typ('fl');await cl(9500,500);await cl(11500,500);await page.keyboard.press('Enter');ok(/ít nhất 3/.test(await hintT()),'khép khi mới có 2 đỉnh: báo cần ít nhất 3 đỉnh');
   await page.keyboard.press('Escape');ok((await dbg6()).edit.freeTarget===null || true,'Esc hủy đường bao đang vẽ');
   // Lỗ khoét
-  await reset();await typ('fl');await page.selectOption('#pv-options select[data-opt=mode]','free');await wait(40);await page.selectOption('#pv-options select[data-opt=part]','hole');await wait(40);
+  await reset();await typ('fl');await page.selectOption('#pv-options select[data-opt=mode]','free');await page.selectOption('#pv-options select[data-opt=part]','outer');await wait(40);await page.selectOption('#pv-options select[data-opt=part]','hole');await wait(40);
   await cl(6000,1500);ok(/nằm trong một sàn đa giác/.test(await hintT()),'vẽ lỗ mà điểm đầu không nằm trong sàn đa giác: báo, không bắt đầu');
   await cl(13800,1500);ok(/nằm trong một sàn đa giác/.test(await hintT()),'vẽ lỗ mà điểm đầu nằm trong một lỗ có sẵn: báo, không bắt đầu');
   await cl(14800,2500);await cl(15200,2500);await cl(15200,3500);await cl(14800,3500);await cl(14800,2500);
@@ -1643,7 +1643,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   // Xem trước vẽ trong SketchUp
   await receive('su_move',{x:8400,y:3600});await wait(200);
   let gh=await last('su_ghost');
-  ok(gh && gh.z===0 && gh.items.some(i=>i.t==='poly' && i.pts.length>=3) && gh.items.some(i=>i.t==='dot'),'rê chuột trong SketchUp: cửa sổ gửi xem trước (đa giác cột và chấm) kèm cao độ tầng 0');
+  ok(gh && gh.z===0 && gh.items.some(i=>i.t==='box' && i.pts.length>=3 && i.z0===F.preview.columns.z0 && i.z1===F.preview.columns.z1) && gh.items.some(i=>i.t==='dot') && !gh.items.some(i=>i.t==='poly'),'rê chuột trong SketchUp: xem trước là KHỐI 3D của cột (đáy, đỉnh đúng cao độ cột trong dữ liệu) và chấm, không còn đa giác phẳng');
   await clear();await receive('su_move',{x:8400,y:3600});await wait(200);ok((await calls('su_ghost')).length===0,'xem trước không đổi: không gửi lại (tránh gửi dồn)');
   // Bấm điểm và tự dựng
   await clear();await su(8400,3600);await wait(500);
@@ -1681,6 +1681,24 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await reset();await sdOn();await page.evaluate(()=>{const l=window.VGDS._state.levels[0];l.picks={'1-A':{}};});await receive('preview',F.preview);
   await page.evaluate(()=>window.VGDPlan.selectKeys('sl_00000001',[{kind:'column',ref:'1-A'}],false));await clear();await page.keyboard.press('Delete');await wait(500);
   ok((await calls('columns_remove')).length===1 && (await calls('build_all')).length===0,'xóa cột cuối cùng của tầng: bỏ nhóm cột trong model (columns_remove), không dựng');
+  // Xem trước khối 3D khi vẽ tường, dầm, sàn
+  await reset();if(!(await dbg10()).suDraw)await page.click('#pv-sudraw-btn');await receive('su_pick_state',{active:true});
+  await typ('wa');await page.selectOption('#pv-options select[data-opt=mode]','free');await receive('su_pick_state',{active:true});await clear();
+  await su(3000,3000);await receive('su_move',{x:6000,y:3000});await wait(250);
+  gh=await last('su_ghost');
+  const wbox=gh&&gh.items.find(i=>i.t==='box');
+  ok(wbox && wbox.z0===F.preview.walls.z0 && wbox.z1===F.preview.walls.z_slab && wbox.pts.length===4 && Math.abs(Math.max(...wbox.pts.map(p=>p[1]))-Math.min(...wbox.pts.map(p=>p[1]))-F.state.wall_types[0].t)<0.5 && Math.abs(Math.max(...wbox.pts.map(p=>p[0]))-3000)>=2999,'vẽ tường: xem trước là khối 3D dài từ điểm đầu tới con trỏ, dày đúng loại tường, cao từ chân tường tới đáy sàn');
+  await page.keyboard.press('Escape');await receive('su_key',{key:'Escape'});await wait(80);
+  await typ('fl');await page.selectOption('#pv-options select[data-opt=mode]','grid');await receive('su_pick_state',{active:true});await clear();
+  await receive('su_move',{x:3000,y:1800});await wait(250);
+  gh=await last('su_ghost');
+  const sbox=gh&&gh.items.find(i=>i.t==='box');
+  ok(sbox && Math.abs((sbox.z1-sbox.z0)-F.preview.slabs.thickness)<0.01 && sbox.z1===F.preview.slabs.z_top,'vẽ sàn theo ô: xem trước là khối đúng chiều dày sàn, mặt trên tại cốt sàn kết cấu');
+  await page.keyboard.press('Escape');await receive('su_key',{key:'Escape'});await wait(80);
+  await typ('dr');await receive('su_pick_state',{active:true});await clear();await receive('su_move',{x:3000,y:3600});await wait(250);
+  gh=await last('su_ghost');
+  ok(!gh || !gh.items.some(i=>i.t==='box'),'công cụ cửa: không dựng khối xem trước (không có cao độ riêng)');
+  await page.keyboard.press('Escape');await wait(80);
   // Bắt đầu từ menu SketchUp
   await reset();await page.click('[data-tab=grid]');await receive('start_tool',{tool:'wall'});await wait(120);
   ok(await page.locator('#tab-plan').isVisible() && (await dbg10()).tool==='wall' && (await dbg10()).suDraw===true && (await calls('su_pick_start')).length===1,'start_tool từ menu SketchUp: chuyển tab Mặt bằng, chọn Tường, bật chế độ SD và công cụ nhận điểm');

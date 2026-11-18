@@ -82,6 +82,21 @@ view2 = Sketchup::FakeView.new; panel2_empty = panel.ghost_items.size
 call(dlg, 'su_pick_stop')
 ok('dừng công cụ: xóa xem trước', panel.ghost_items.empty?)
 
+# ---- Khối 3D xem trước (overlay) ----
+box = {'t' => 'box', 'pts' => [[0, 0], [2000, 0], [2000, 200], [0, 200]], 'z0' => 0, 'z1' => 3600}
+call(dlg, 'su_ghost', {'z' => 3600, 'items' => [box]})
+ok('khối xem trước hợp lệ được giữ', panel.ghost_items.size == 1 && panel.ghost_items[0]['t'] == 'box')
+vb = Sketchup::FakeView.new; tool.draw(vb)
+quads = vb.draw_calls.select { |c| c[0] == :draw }; lines = vb.draw_calls.select { |c| c[0] == :polyline }
+ok('vẽ khối: 4 mặt bên (GL_QUADS), 2 vòng khép kín 5 điểm (đáy, đỉnh), 4 cạnh đứng 2 điểm', quads.size == 4 && quads.all? { |c| c[2] == GL_QUADS && c[1].size == 4 } && lines.count { |c| c[1].size == 5 } == 2 && lines.count { |c| c[1].size == 2 } == 4)
+zs = vb.draw_calls.flat_map { |c| c[1].map { |p| (p.z * 25.4).round(1) } }.uniq.sort
+ok('khối vẽ đúng cao độ tuyệt đối: đáy 0 và đỉnh 3600 mm, không dùng cao độ tầng', zs == [0.0, 3600.0])
+ok('mặt bên mờ (độ đục thấp) vẽ trước, nét khung đậm (đục hẳn)', quads.all? { |c| c[3].alpha < 128 } && vb.drawing_color.alpha == 255 && vb.draw_calls.first[0] == :draw)
+bad_boxes = [box.merge('z1' => 0), box.merge('z0' => 3600, 'z1' => 100), box.merge('z1' => 'x'), box.merge('z0' => nil), box.merge('pts' => [[0, 0], [1, 1]]), box.merge('pts' => Array.new(201) { [0, 0] }), box.merge('pts' => [[0, 'a'], [1, 1], [2, 2]]), box.merge('z1' => Float::INFINITY.to_s)]
+call(dlg, 'su_ghost', {'z' => 0, 'items' => bad_boxes + [box]})
+ok('khối sai (đỉnh không cao hơn đáy, thiếu / sai cao độ, dưới 3 đỉnh, quá 200 đỉnh, tọa độ chữ) bị bỏ, khối đúng giữ', panel.ghost_items.size == 1)
+call(dlg, 'su_ghost', {'z' => 0, 'items' => []})
+
 # ---- Dựng chỉ loại đã đổi ----
 m = Sketchup::Model.new
 st = state_with

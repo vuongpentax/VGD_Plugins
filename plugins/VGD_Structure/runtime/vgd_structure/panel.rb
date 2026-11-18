@@ -10,6 +10,7 @@ module VGD
       SELECTION_DELAY = 0.12     # giây: gom các sự kiện đổi vùng chọn của SketchUp thành một lần gửi
       SELECTION_ECHO = 0.6       # giây: sau khi tự chọn phần tử trong SketchUp theo yêu cầu của cửa sổ thì bỏ qua sự kiện do chính việc đó gây ra
       MAX_SELECT_ITEMS = 5000
+      MAX_GHOST_POINTS = 200 # đỉnh tối đa của một mục xem trước
       EDIT_DELAY = 0.35          # giây: gom các lần sửa liên tiếp trong SketchUp (Move đang kéo, nhiều phần tử) thành một lần cập nhật
       SELECT_KINDS = %w[column beam wall opening slab ceiling].freeze
 
@@ -184,9 +185,20 @@ module VGD
       MAX_GHOST = 400
       def su_ghost(payload)
         items = payload['items']
-        @ghost = items.is_a?(Array) ? items.first(MAX_GHOST).select { |g| g.is_a?(Hash) && %w[line poly dot].include?(g['t']) && g['pts'].is_a?(Array) && g['pts'].all? { |p| p.is_a?(Array) && p.size == 2 && p.all?(Numeric) } } : []
+        @ghost = items.is_a?(Array) ? items.first(MAX_GHOST).select { |g| ghost_item?(g) } : []
         @ghost_z = payload['z'].is_a?(Numeric) ? payload['z'].to_f : 0.0
         Sketchup.active_model.active_view.invalidate
+      end
+
+      # Mục xem trước hợp lệ: đường, đa giác, chấm (ở cao độ tầng) hoặc khối 'box' (đáy z0, đỉnh z1 tuyệt đối, mm).
+      def ghost_item?(g)
+        return false unless g.is_a?(Hash) && g['pts'].is_a?(Array) && g['pts'].size <= MAX_GHOST_POINTS
+        return false unless g['pts'].all? { |p| p.is_a?(Array) && p.size == 2 && p.all? { |v| v.is_a?(Numeric) && v.to_f.finite? } }
+        case g['t']
+        when 'line', 'poly', 'dot' then true
+        when 'box' then g['pts'].size >= 3 && [g['z0'], g['z1']].all? { |v| v.is_a?(Numeric) && v.to_f.finite? } && g['z1'] > g['z0']
+        else false
+        end
       end
 
       def ghost_items

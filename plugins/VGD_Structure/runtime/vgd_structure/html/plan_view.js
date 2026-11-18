@@ -241,14 +241,31 @@
     else { if (suPicking && opts && opts.callSU) opts.callSU('su_pick_stop', ''); sendGhost(true); }
     draw();
   }
+  // Cao độ [đáy, đỉnh] (mm) của phần tử sắp đặt theo công cụ đang chọn, lấy từ kết quả xem trước của Ruby (cùng nguồn với lúc dựng); null nếu chưa biết.
+  function ghostZ(g) {
+    var d = data, a, b;
+    if (!d || !tool) return null;
+    if (tool === 'column' && g.t === 'poly' && d.columns) { a = d.columns.z0; b = d.columns.z1; }
+    else if (tool === 'beam' && g.t === 'line' && d.beams && g.h) { b = d.beams.z_top; a = b - g.h; }
+    else if (tool === 'wall' && g.t === 'line' && d.walls) { a = d.walls.z0; b = d.walls.z_slab; }
+    else if (tool === 'slab' && g.t === 'poly' && d.slabs) { b = d.slabs.z_top; a = b - d.slabs.thickness; }
+    else if (tool === 'ceiling' && g.t === 'poly' && d.ceilings) { a = d.ceilings.z_bottom; b = d.ceilings.z_top; }
+    return isFinite(a) && isFinite(b) && b > a ? [a, b] : null;
+  }
+  function ghostStrip(a, b, w) { // dải rộng w quanh đoạn a-b (như Geometry.strip của Ruby)
+    var len = Math.hypot(b[0] - a[0], b[1] - a[1]); if (!(len > 1)) return null;
+    var ux = (b[0] - a[0]) / len, uy = (b[1] - a[1]) / len, h = w / 2;
+    return [[a[0] + uy * h, a[1] - ux * h], [b[0] + uy * h, b[1] - ux * h], [b[0] - uy * h, b[1] + ux * h], [a[0] - uy * h, a[1] + ux * h]];
+  }
   // Xem trước đang hiện trên mặt bằng cũng được vẽ trong khung nhìn SketchUp (đường, đa giác, chấm) ở cao độ tầng đang xem.
   function sendGhost(force) {
     if (!suPicking && !force) return;
     if (!opts || !opts.callSU) return;
     var items = [];
     if (suPicking && ed()) ed().ghost().forEach(function (g) {
-      if (g.t === 'line') items.push({t: 'line', pts: [g.a, g.b]});
-      else if (g.t === 'poly') items.push({t: 'poly', pts: g.poly});
+      var z = ghostZ(g);
+      if (g.t === 'line') { items.push({t: 'line', pts: [g.a, g.b]}); var q = z && g.thick ? ghostStrip(g.a, g.b, g.thick) : null; if (q) items.push({t: 'box', pts: q, z0: z[0], z1: z[1]}); }
+      else if (g.t === 'poly') { if (z && g.poly.length >= 3) items.push({t: 'box', pts: g.poly, z0: z[0], z1: z[1]}); else items.push({t: 'poly', pts: g.poly}); }
       else if (g.t === 'dot') items.push({t: 'dot', pts: [g.p]});
     });
     var lv = levelList.filter(function (l) { return l.id === currentId; })[0], payloadG = {z: lv ? lv.elevation : 0, items: items}, key = JSON.stringify(payloadG);
