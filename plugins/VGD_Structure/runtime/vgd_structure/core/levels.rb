@@ -27,6 +27,11 @@ module VGD
       PLATE_ID = {'sàn' => /\Afs_[0-9a-f]{8}\z/, 'trần' => /\Afk_[0-9a-f]{8}\z/}.freeze # sàn / trần đa giác tự do (P4b-3)
       MAX_RING = 200   # số đỉnh tối đa của một vòng
       MAX_HOLES = 20   # số lỗ tối đa của một sàn / trần
+      NOTE_ID = /\Aan_[0-9a-f]{8}\z/ # mã nét 2D, chữ, kích thước, cốt cao độ (P5b)
+      NOTE_TYPES = %w[line poly circle arc text dim mark].freeze
+      MAX_NOTES = 2000    # số ghi chú tối đa mỗi tầng
+      MAX_NOTE_POINTS = 500
+      MAX_NOTE_TEXT = 200
       FREE_ORTHO_TOLERANCE = 0.05 # đầu mút lệch dưới mức này (mm) thì coi là ngang hoặc dọc và làm thẳng
       CONTROL = /[\u0000-\u001f\u007f]/
 
@@ -81,9 +86,10 @@ module VGD
           ceilings, dropped_k = cell_picks!((raw || {})['ceilings'], cell_refs, name, 'trần')
           free_walls = walls.select { |_ref, w| w.key?('free') }.keys
           openings, dropped_o = openings!((raw || {})['openings'], span_refs + free_walls, opening_types, name)
+          notes = notes!(level['notes'], name)
           removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k + dropped_o
           {'id' => id, 'name' => name, 'elevation' => elevation, 'slab_thickness' => slab.to_f.round(1), 'ceiling_height' => ceiling_height.to_f.round(1), 'ceiling_thickness' => ceiling_thickness.to_f.round(1),
-           'column_type' => type_id, 'beam_type' => beam_type, 'wall_type' => wall_type, 'picks' => {'columns' => columns, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings, 'openings' => openings}}
+           'column_type' => type_id, 'beam_type' => beam_type, 'wall_type' => wall_type, 'picks' => {'columns' => columns, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings, 'openings' => openings}, 'notes' => notes}
         end
         names = out.map { |l| l['name'].downcase }
         dup = out.find { |l| names.count(l['name'].downcase) > 1 }
@@ -210,6 +216,69 @@ module VGD
           end
         end
         {'poly' => outer, 'holes' => holes}
+      end
+
+      # notes: {mã 'an_xxxxxxxx' => ghi chú trên mặt bằng của tầng (P5b)}. Chỉ là chú thích 2D lưu trong dữ liệu plugin, KHÔNG dựng vào model SketchUp. Mỗi loại 't':
+      #   line {a, b} · poly {pts (2..500 điểm), closed} · circle {c, r} · arc {c, r, a0, a1 (độ, vẽ ngược chiều kim đồng hồ từ a0 tới a1)} ·
+      #   text {p, text (1..200 ký tự), h (cao chữ 50..5000 mm), rot (độ)} · dim {a, b, off (độ lệch đường kích thước, mm)} · mark {p, z (cao độ, mm)}.
+      def self.notes!(raw, level_name)
+        return {} if raw.nil?
+        raise Error, "Tầng “#{level_name}”: dữ liệu ghi chú không hợp lệ." unless raw.is_a?(Hash)
+        raise Error, "Tầng “#{level_name}”: quá nhiều ghi chú (tối đa #{MAX_NOTES})." if raw.size > MAX_NOTES
+        raw.each_with_object({}) do |(id, note), out|
+          raise Error, "Tầng “#{level_name}”: mã ghi chú #{id.inspect} không hợp lệ." unless id.is_a?(String) && id.match?(NOTE_ID) && note.is_a?(Hash)
+          out[id] = note!(note, id, level_name)
+        end
+      end
+
+      def self.note!(note, id, level_name)
+        who = "Tầng “#{level_name}”: ghi chú #{id}"
+        type = note['t']
+        raise Error, "#{who} có loại không hợp lệ." unless NOTE_TYPES.include?(type)
+        point = lambda do |p, name|
+          raise Error, "#{who}: #{name} phải là điểm [x, y] (mm), mỗi số không quá #{FREE_LIMIT.to_i}." unless p.is_a?(Array) && p.size == 2 && p.all? { |v| number?(v) && v.abs <= FREE_LIMIT }
+          p.map { |v| v.to_f.round(1) }
+        end
+        num = lambda do |v, name, range|
+          raise Error, "#{who}: #{name} phải là số từ #{range.min} đến #{range.max}." unless number?(v) && range.cover?(v.to_f)
+          v.to_f.round(2)
+        end
+        far = ->(a, b) { Math.hypot(a[0] - b[0], a[1] - b[1]) }
+        case type
+        when 'line'
+          a = point.call(note['a'], 'đầu a')
+          b = point.call(note['b'], 'đầu b')
+          raise Error, "#{who}: hai đầu trùng nhau." if far.call(a, b) < 1.0
+          {'t' => type, 'a' => a, 'b' => b}
+        when 'poly'
+          pts = note['pts']
+          raise Error, "#{who}: cần 2 đến #{MAX_NOTE_POINTS} điểm." unless pts.is_a?(Array) && pts.size.between?(2, MAX_NOTE_POINTS)
+          closed = note.key?('closed') ? note['closed'] : false
+          raise Error, "#{who}: 'closed' phải là Có hoặc Không." unless closed == true || closed == false
+          raise Error, "#{who}: đường khép kín cần ít nhất 3 điểm." if closed && pts.size < 3
+          {'t' => type, 'pts' => pts.map { |p| point.call(p, 'điểm') }, 'closed' => closed}
+        when 'circle'
+          {'t' => type, 'c' => point.call(note['c'], 'tâm'), 'r' => num.call(note['r'], 'bán kính', 1.0..FREE_LIMIT)}
+        when 'arc'
+          a0 = num.call(note['a0'], 'góc đầu', -720.0..720.0) % 360
+          a1 = num.call(note['a1'], 'góc cuối', -720.0..720.0) % 360
+          raise Error, "#{who}: góc đầu và góc cuối trùng nhau." if (a1 - a0).abs < 0.01
+          {'t' => type, 'c' => point.call(note['c'], 'tâm'), 'r' => num.call(note['r'], 'bán kính', 1.0..FREE_LIMIT), 'a0' => a0.round(2), 'a1' => a1.round(2)}
+        when 'text'
+          text = note['text']
+          raise Error, "#{who}: nội dung chữ phải là chuỗi." unless text.is_a?(String)
+          text = text.gsub(CONTROL, ' ').strip
+          raise Error, "#{who}: nội dung chữ từ 1 đến #{MAX_NOTE_TEXT} ký tự." if text.empty? || text.length > MAX_NOTE_TEXT
+          {'t' => type, 'p' => point.call(note['p'], 'vị trí'), 'text' => text, 'h' => note.key?('h') ? num.call(note['h'], 'cao chữ (mm)', 50.0..5000.0) : 250.0,
+           'rot' => note.key?('rot') ? num.call(note['rot'], 'góc xoay', -360.0..360.0) % 360 : 0.0}
+        when 'dim'
+          a = point.call(note['a'], 'điểm đầu')
+          b = point.call(note['b'], 'điểm cuối')
+          raise Error, "#{who}: hai điểm trùng nhau." if far.call(a, b) < 1.0
+          {'t' => type, 'a' => a, 'b' => b, 'off' => note.key?('off') ? num.call(note['off'], 'độ lệch', -100_000.0..100_000.0) : 300.0}
+        else # mark
+          {'t' => type, 'p' => point.call(note['p'], 'vị trí'), 'z' => num.call(note['z'], 'cao độ (mm)', -1_000_000.0..1_000_000.0)}
+        end
       end
 
       # picks.openings: {mã cửa 'op_xxxxxxxx' => {wall: mã nhịp của tường, type: mã loại cửa, pos: vị trí TÂM cửa tính từ đầu tường (mm), flip: đổi mặt cánh}}.
