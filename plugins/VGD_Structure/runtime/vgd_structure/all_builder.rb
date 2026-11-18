@@ -42,11 +42,14 @@ module VGD
 
       # Trả về {kinds: {loại => Result}, total:, issues: [...]}.
       # retag: {'mã tầng:mã cũ' => 'mã tầng:mã mới'} khi phần tử đổi mã do sửa trong SketchUp (giữ VGD ID).
-      def self.build(model, raw_state, level_ids, only = nil, retag = nil)
+      # adopt: {'erase' => [entityID đối tượng SketchUp đã nhận], 'refs' => {'mã tầng:mã' => entityID}}: xóa đối tượng gốc trong CÙNG thao tác và dựng bản chuẩn giữ VGD ID của nó.
+      def self.build(model, raw_state, level_ids, only = nil, retag = nil, adopt = nil)
         ctx = prepare(model, raw_state, level_ids, only)
         model.start_operation('VGD Structure · Dựng kết cấu', true)
         begin
-          results = IdKeeper.renaming(retag) { apply_all(model, ctx) }
+          taken = adopt ? SuScan.take(model, adopt['erase']) : {}
+          adopted_ids = adopt ? (adopt['refs'] || {}).each_with_object({}) { |(ref, su_id), h| h[ref] = taken[su_id] } : {}
+          results = IdKeeper.renaming(retag, adopted_ids) { apply_all(model, ctx) }
           ModelStore.write(model, raw_state)
           model.commit_operation
         rescue StandardError, ScriptError

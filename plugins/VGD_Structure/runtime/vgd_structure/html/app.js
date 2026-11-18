@@ -950,6 +950,7 @@
 
   function receive(event, data) {
     if (event === 'state') {
+      if (data.tag_names && window.VGDPlan && window.VGDPlan.setTagNames) window.VGDPlan.setTagNames(data.tag_names);
       state.origin = data.grid.origin.slice();
       var x = fromAxes(data.grid.x_axes), y = fromAxes(data.grid.y_axes);
       state.x = x; state.y = y; state.scale = data.symbol.scale; state.both = data.symbol.both_ends; state.drawn = data.drawn;
@@ -1023,6 +1024,11 @@
     } else if (event === 'su_key') { window.VGDPlan.suKey(data.key);
     } else if (event === 'su_text') { window.VGDPlan.suText(data.text);
     } else if (event === 'start_tool') { startDrawTool(data.tool);
+    } else if (event === 'su_objects') {
+      var n = window.VGDPlan.setSuObjects(data), onLevel = (data.objects || []).filter(function (o) { return o.level === state.level; }).length;
+      message('Quét SketchUp: ' + n + ' đối tượng có tag nhận diện (' + onLevel + ' ở tầng đang xem), ' + (data.untagged || 0) + ' đối tượng chưa có tag' + ((data.skipped || []).length ? '; bỏ qua ' + data.skipped.length + ' (nghiêng)' : '') + '.');
+    } else if (event === 'su_import') { applySuImport(data);
+    } else if (event === 'su_tagged') { window.VGDPlan.scanSu();
     } else if (event === 'su_edit') { applySuEdit(data);
     } else if (event === 'schedule') { schedData = data; renderSchedule();
     } else if (event === 'plate_probe') { probeCache[data.key] = data.polygon || false; if (window.VGDPlan && window.VGDPlan.ghostChanged) window.VGDPlan.ghostChanged();
@@ -1056,20 +1062,22 @@
     return Object.keys(set);
   }
   var autoRetag = {};
-  function scheduleAutoBuild(kinds, levelId, retag) {
+  var autoAdopt = null;
+  function scheduleAutoBuild(kinds, levelId, retag, adopt) {
+    if (adopt) autoAdopt = autoAdopt ? {erase: autoAdopt.erase.concat(adopt.erase), refs: Object.assign({}, autoAdopt.refs, adopt.refs)} : adopt;
     if (!kinds.length) return;
     kinds.forEach(function (k) { autoKinds[k + '@' + (levelId || state.level)] = levelId || state.level; });
     if (retag) Object.keys(retag).forEach(function (k) { autoRetag[k] = retag[k]; });
     clearTimeout(autoTimer);
     autoTimer = setTimeout(function () {
-      var byLevel = {}; Object.keys(autoKinds).forEach(function (k) { (byLevel[autoKinds[k]] = byLevel[autoKinds[k]] || []).push(k.split('@')[0]); }); autoKinds = {}; var retag = autoRetag; autoRetag = {};
+      var byLevel = {}; Object.keys(autoKinds).forEach(function (k) { (byLevel[autoKinds[k]] = byLevel[autoKinds[k]] || []).push(k.split('@')[0]); }); autoKinds = {}; var retag = autoRetag, adoptNow = autoAdopt; autoRetag = {}; autoAdopt = null;
       Object.keys(byLevel).forEach(function (levelId) {
         var lv = state.levels.filter(function (x) { return x.id === levelId; })[0]; if (!lv) return;
         var build = byLevel[levelId].filter(function (k) { return Object.keys(lv[KIND_BOX[k]] || {}).length; }), gone = byLevel[levelId].filter(function (k) { return !Object.keys(lv[KIND_BOX[k]] || {}).length; });
         gone.forEach(function (k) { // đã xóa hết phần tử loại này: bỏ nhóm tương ứng trong model
           if (k === 'slabs' || k === 'ceilings') call('plates_remove', {kind: k, level: levelId}); else call(k + '_remove', {level: levelId});
         });
-        if (build.length) { message('Đang dựng ' + build.join(', ') + '...'); call('build_all', {state: payload(), levels: [levelId], kinds: build, retag: retag}); }
+        if (build.length) { message('Đang dựng ' + build.join(', ') + '...'); call('build_all', Object.assign({state: payload(), levels: [levelId], kinds: build, retag: retag}, adoptNow ? {adopt: adoptNow} : {})); adoptNow = null; }
       });
     }, AUTO_BUILD_MS);
   }
@@ -1096,6 +1104,29 @@
       message('Đã cập nhật dữ liệu theo sửa trong SketchUp (' + patches.length + ' phần tử); đang dựng lại.');
     }
     if (data && data.skipped && data.skipped.length) message('Bỏ qua: ' + data.skipped.join('; ') + '.');
+  }
+  // Nhận đối tượng SketchUp thường (bản vá do Ruby tính): thêm loại mới, áp phần tử tự do vào dữ liệu, rồi dựng thay đối tượng gốc trong MỘT thao tác (giữ VGD ID).
+  function applySuImport(data) {
+    var patches = (data && data.patches) || [], adoptedByLevel = {}, adopt = {erase: [], refs: {}};
+    (data.adopted || []).forEach(function (a) { adopt.erase.push(a.su_id); adopt.refs[a.level + ':' + a.ref] = a.su_id; (adoptedByLevel[a.level] = adoptedByLevel[a.level] || {})[a.box] = true; });
+    mutate(function () {
+      var t = data.types || {};
+      (t.types || []).forEach(function (x) { state.types.push({id: x.id, name: x.name, w: x.w, d: x.d}); });
+      (t.beam_types || []).forEach(function (x) { state.beamTypes.push({id: x.id, name: x.name, w: x.w, h: x.h}); });
+      (t.wall_types || []).forEach(function (x) { state.wallTypes.push({id: x.id, name: x.name, t: x.t, layers: (x.layers || []).map(function (l) { return {fn: l.fn, t: l.t, material: l.material || '', color: l.color || null}; })}); });
+      (t.opening_types || []).forEach(function (x) { state.openingTypes.push({id: x.id, name: x.name, kind: x.kind, w: x.w, h: x.h, sill: x.sill}); });
+      patches.forEach(function (p) {
+        var lv = state.levels.filter(function (x) { return x.id === p.level; })[0]; if (!lv) return;
+        Object.keys(p.set || {}).forEach(function (box) { Object.keys(p.set[box]).forEach(function (ref) { lv[SU_BOX[box]][ref] = p.set[box][ref]; }); });
+      });
+    });
+    Object.keys(adoptedByLevel).forEach(function (id, idx) {
+      var lv = state.levels.filter(function (x) { return x.id === id; })[0], set = adoptedByLevel[id];
+      if (set.openings && Object.keys(lv.wallPicks).length) set.walls = true;
+      if (set.walls && Object.keys(lv.openingPicks).length) set.openings = true;
+      scheduleAutoBuild(Object.keys(set), id, null, idx === 0 ? adopt : null);
+    });
+    message('Đã nhận ' + (data.adopted || []).length + ' đối tượng SketchUp về Structure; đang dựng bản chuẩn thay đối tượng gốc.' + ((data.skipped || []).length ? ' Lưu ý: ' + data.skipped.slice(0, 3).join(' ') : ''));
   }
   function startDrawTool(tool) {
     switchTab('plan'); window.VGDPlan.startDrawTool(tool);
@@ -1145,7 +1176,7 @@
   window.VGDPlanModify.init({state: state, api: window.VGDS.api, mutate: mutate, scale: function () { return window.VGDPlan.scale(); }, bounds: function () { return window.VGDPlan.bounds(); }, shapeAt: function (w) { return window.VGDPlan.shapeAt(w); }, finish: function () { window.VGDPlan.finish(); },
     snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, lineAt: function (w) { return window.VGDPlan.lineAt(w); }, guides: function () { return window.VGDPlan.guides(); }});
   window.VGDPlan.init({onLevel: setLevelFromPlan, undo: undo, redo: redo, history: window.VGDS.history, edit: drawTools, notes: window.VGDPlanNotes, modify: window.VGDPlanModify, browser: window.VGDPlanBrowser,
-    callSU: call, refresh: function () { changed(); },
+    callSU: call, payload: payload, refresh: function () { changed(); },
     buildLevel: function () { message('Đang dựng tầng này vào model...'); call('build_all', {state: payload(), levels: [state.level]}); },
     allKeys: function (levelId, kind) { var box = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', opening: 'openingPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', note: 'notes'}[kind], l = state.levels.filter(function (x) { return x.id === levelId; })[0]; return l && box ? Object.keys(l[box]) : []; }});
   var BROWSER_PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', opening: 'openingPicks'};

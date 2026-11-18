@@ -12,7 +12,7 @@ module VGD
       MAX_SELECT_ITEMS = 5000
       MAX_GHOST_POINTS = 200 # đỉnh tối đa của một mục xem trước
       EDIT_DELAY = 0.35          # giây: gom các lần sửa liên tiếp trong SketchUp (Move đang kéo, nhiều phần tử) thành một lần cập nhật
-      SELECT_KINDS = %w[column beam wall opening slab ceiling].freeze
+      SELECT_KINDS = %w[column beam wall opening slab ceiling suobj].freeze
 
       def initialize
         @sync_edit = true
@@ -40,6 +40,9 @@ module VGD
         @dialog.add_action_callback('build_all') { |_ctx, payload| safely(true) { build_all(JSON.parse(payload)) } }
         @dialog.add_action_callback('picks_copy') { |_ctx, payload| safely { picks_copy(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_reset') { |_ctx| safely { send_state(reset: true) } }
+        @dialog.add_action_callback('su_scan') { |_ctx, payload| safely { su_scan(JSON.parse(payload)) } }
+        @dialog.add_action_callback('su_adopt') { |_ctx, payload| safely { su_adopt(JSON.parse(payload)) } }
+        @dialog.add_action_callback('su_tag') { |_ctx, payload| safely { su_tag(JSON.parse(payload)) } }
         @dialog.add_action_callback('plate_probe') { |_ctx, payload| safely { plate_probe(JSON.parse(payload)) } }
         @dialog.add_action_callback('plan_select') { |_ctx, payload| safely { plan_select(JSON.parse(payload)) } }
         @dialog.add_action_callback('su_sync_edit') { |_ctx, payload| safely { @sync_edit = JSON.parse(payload) == true; remember_edit_state } }
@@ -134,7 +137,8 @@ module VGD
 
       def send_model_selection
         return if @ignore_selection_until && Time.now.to_f < @ignore_selection_until
-        emit('model_selection', ModelSync.selection_items(Sketchup.active_model))
+        sel = ModelSync.selection_items(Sketchup.active_model)
+        emit('model_selection', sel.merge(items: sel[:items] + SuScan.selection_items(Sketchup.active_model)))
       rescue StandardError => error
         puts "[VGD Structure] model_selection: #{error.message}"
       end
@@ -154,7 +158,12 @@ module VGD
           model.selection.clear
           return
         end
-        emit('select_result', ModelSync.select(model, level, clean).merge(requested: clean.size))
+        su_items, own = clean.partition { |it| it['kind'] == 'suobj' }
+        result = own.empty? ? {found: 0, missing: [], mode: 'none'} : ModelSync.select(model, level, own)
+        model.selection.clear if own.empty?
+        su_found = su_items.map { |it| SuScan.find(model, it['ref'].to_i) }.compact
+        su_found.each { |e| model.selection.add(e) }
+        emit('select_result', result.merge(requested: clean.size, found: result[:found] + su_found.size))
       end
 
       # Công cụ chọn điểm trong khung nhìn SketchUp: mỗi lần bấm gửi tọa độ (mm) về cửa sổ ('su_point'), rê chuột gửi 'su_move'.
@@ -280,7 +289,7 @@ module VGD
       def send_state(reset: false, reload: false)
         model = Sketchup.active_model
         state = reset ? State.default.merge('saved' => false, 'removed' => 0) : ModelStore.read(model)
-        emit('state', {grid: state['grid'], symbol: state['symbol'], types: state['types'], beam_types: state['beam_types'], wall_types: state['wall_types'], opening_types: state['opening_types'], levels: state['levels'], saved: state['saved'],
+        emit('state', {tag_names: Schema::TAGS.transform_values { |t| t[:name] }, grid: state['grid'], symbol: state['symbol'], types: state['types'], beam_types: state['beam_types'], wall_types: state['wall_types'], opening_types: state['opening_types'], levels: state['levels'], saved: state['saved'],
                        drawn: !GridBuilder.find(model).nil?, drawn_levels: drawn_levels(model), drawn_beam_levels: drawn_beam_levels(model), drawn_wall_levels: drawn_wall_levels(model), drawn_opening_levels: drawn_opening_levels(model), drawn_slab_levels: drawn_plate_levels(model, 'slabs'), drawn_ceiling_levels: drawn_plate_levels(model, 'ceilings'), version: VERSION, reload: reload})
         grid_preview(state.merge('level' => state['levels'].first['id'], 'status' => true))
       end
@@ -304,6 +313,50 @@ module VGD
       def plate_probe(payload)
         result = Preview.probe(payload)
         emit('plate_probe', {kind: payload['kind'], level: payload['level'], ref: payload['ref'], key: payload['key'], polygon: result && result[:polygon], holes: result && result[:holes]})
+      end
+
+      # ---- Đối tượng SketchUp thường (chưa do plugin dựng): quét theo tag BIM, nhận về làm dữ liệu Structure, gán tag ----
+      def su_scan(payload)
+        state = begin
+          State.normalize!(payload)
+        rescue ArgumentError
+          nil # dữ liệu đang sai: vẫn quét, chỉ chưa biết tầng
+        end
+        result = SuScan.scan(Sketchup.active_model)
+        objects = result[:objects].map do |o|
+          level = state && !%w[door window].include?(o['kind']) ? SketchupImport.level_for(state, o) : nil
+          o.merge('level' => level && level['id'], 'footprint' => SketchupImport.rect_poly(o))
+        end
+        emit('su_objects', {objects: objects, untagged: result[:untagged], skipped: result[:skipped]})
+      end
+
+      # payload: {state:, ids: [entityID]}. Tính bản vá dữ liệu, hỏi xác nhận (đối tượng gốc sẽ được thay bằng bản dựng chuẩn), rồi gửi cho cửa sổ áp dụng và dựng.
+      def su_adopt(payload)
+        ids = payload['ids']
+        raise ArgumentError, 'Danh sách đối tượng không hợp lệ.' unless ids.is_a?(Array) && ids.size <= 2000 && ids.all? { |i| i.is_a?(Integer) }
+        state = State.normalize!(payload['state'])
+        objects = SuScan.scan(Sketchup.active_model)[:objects].select { |o| ids.include?(o['id']) && !o['locked'] }
+        raise ArgumentError, 'Không có đối tượng nào để nhận (đã bị xóa, bị khóa hoặc chưa có tag nhận diện).' if objects.empty?
+        plan = SketchupImport.plan(state, objects)
+        if plan[:adopted].empty?
+          return emit('message', {text: "Không nhận được đối tượng nào. #{plan[:skipped].first(3).join(' ')}", error: true})
+        end
+        note = plan[:skipped].empty? ? '' : " Có #{plan[:skipped].size} lưu ý: #{plan[:skipped].first(3).join(' ')}"
+        if ::UI.messagebox("Nhận #{plan[:adopted].size} đối tượng SketchUp về làm phần tử Structure?\nĐối tượng gốc sẽ được thay bằng bản dựng chuẩn của plugin (hoàn tác được bằng Ctrl+Z).#{note}", MB_YESNO) != IDYES
+          return emit('message', {text: 'Đã hủy, chưa nhận gì.'})
+        end
+        emit('su_import', {patches: plan[:patches], types: plan[:types], adopted: plan[:adopted], skipped: plan[:skipped]})
+      end
+
+      # payload: {kind:}: gán tag của loại đó (theo bộ mẫu BIM) cho các đối tượng đang chọn trong SketchUp.
+      def su_tag(payload)
+        kind = payload['kind']
+        count = SuScan.tag_selection(Sketchup.active_model, kind)
+        text = count.zero? ? 'Chưa chọn nhóm hoặc component nào trong SketchUp để gán tag (đối tượng do plugin dựng hoặc bị khóa không gán được).' : "Đã gán tag #{Schema::TAGS[kind][:name]} cho #{count} đối tượng."
+        emit('message', {text: text, error: count.zero?})
+        emit('su_tagged', {count: count}) unless count.zero?
+      rescue ArgumentError => error
+        emit('message', {text: error.message, error: true})
       end
 
       def emit_status(payload)
@@ -368,7 +421,9 @@ module VGD
             return emit('message', {text: 'Đã hủy, chưa dựng gì.'})
           end
         end
-        result = AllBuilder.build(model, state, ids, only, payload['retag'])
+        adopt = payload['adopt']
+        raise ArgumentError, 'Dữ liệu nhận đối tượng không hợp lệ.' unless adopt.nil? || (adopt.is_a?(Hash) && adopt['erase'].is_a?(Array) && adopt['erase'].all? { |i| i.is_a?(Integer) } && (adopt['refs'].nil? || adopt['refs'].is_a?(Hash)))
+        result = AllBuilder.build(model, state, ids, only, payload['retag'], adopt)
         remember_saved(model)
         parts = result[:kinds].map { |kind, r| "#{r.total} #{Checker::KIND_LABELS[kind].downcase}" }.join(', ')
         note = result[:issues].empty? ? '' : " Có #{result[:issues].size} cảnh báo: #{result[:issues].first(3).join(' ')}"
