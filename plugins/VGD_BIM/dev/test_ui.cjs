@@ -633,6 +633,21 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   await page.setViewportSize({width:600,height:800});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Compact layout overflows');
   const applyBox=await page.getByRole('button',{name:'Áp dụng thông tin',exact:true}).boundingBox();assert(applyBox && applyBox.y+applyBox.height<=800,'Primary apply action below visible viewport');
   assert(errors.length===0,errors.join('\n'));
+  // Hộp thông báo sau khi xuất Excel: Xem ngay, Mở thư mục chứa file; nền lấy từ token theme chung
+  await receive('export_done',{text:'Đã xuất 5 dòng ra Excel.',path:'C:\\Xuat\\VGD_Bang_khoi_luong.xlsx'});
+  assert(await page.locator('#export-done').evaluate(d=>d.open),'Export notice did not open');
+  assert((await page.locator('#export-done-path').innerText()).includes('VGD_Bang_khoi_luong.xlsx'),'Export notice must show the file path');
+  const themed=await page.evaluate(()=>{const probe=document.createElement('div');probe.style.background='var(--surface)';document.body.append(probe);const expected=getComputedStyle(probe).backgroundColor;probe.remove();return {expected,actual:getComputedStyle(document.getElementById('export-done')).backgroundColor};});
+  assert(themed.expected===themed.actual,'Export notice background must use the shared theme token');
+  await page.click('#export-done-open');
+  last=await lastCall();assert(last.name==='export_open','Xem ngay must call export_open');
+  assert(!(await page.locator('#export-done').evaluate(d=>d.open)),'Export notice must close after Xem ngay');
+  await receive('export_done',{text:'x',path:'y'});
+  await page.click('#export-done-folder');
+  last=await lastCall();assert(last.name==='export_open_folder','Mở thư mục chứa file must call export_open_folder');
+  await receive('export_done',{text:'x',path:'y'});
+  await page.click('#export-done-close');
+  assert(!(await page.locator('#export-done').evaluate(d=>d.open)),'Đóng must close the export notice');
   console.log('PASS: Vietnamese labels and canonical schema, multi-edit, preview/convert, validation, friendly rule editor, scan and export options, measurement table select, multi-row selection, double-click editing, grouping and merging, batch rename panel, theme, compact layout');
  }finally{await browser.close()}
 })().catch(error=>{console.error(error);process.exitCode=1});

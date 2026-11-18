@@ -78,6 +78,8 @@ module VGD
           @dialog.add_action_callback('table_commit_calc') { |_ctx, payload| safely { table_commit_calc(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_option') { |_ctx, payload| safely { table_option(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_export') { |_ctx, payload| safely { table_export(JSON.parse(payload)) } }
+          @dialog.add_action_callback('export_open') { |_ctx| safely { export_open(false) } }
+          @dialog.add_action_callback('export_open_folder') { |_ctx| safely { export_open(true) } }
           @dialog.add_action_callback('table_edit_source') { |_ctx, payload| safely { table_edit_source(JSON.parse(payload)) } }
           @dialog.add_action_callback('bridge_open') { |_ctx| safely { bridge_open } }
           @dialog.add_action_callback('bridge_preview') { |_ctx, payload| safely { bridge_preview(JSON.parse(payload)) } }
@@ -1043,7 +1045,15 @@ module VGD
           return unless path
           path += '.xlsx' unless File.extname(path).downcase == '.xlsx'
           Xlsx.write(path, report)
-          emit('message', {text: "Đã xuất #{count} dòng#{sheets_note}#{report[:images].empty? ? '' : " và #{report[:images].size} ảnh"} ra Excel: #{path}"})
+          images_note = report[:images].empty? ? '' : " và #{report[:images].size} ảnh"
+          @export_path = path
+          emit('message', {text: "Đã xuất #{count} dòng#{sheets_note}#{images_note} ra Excel: #{path}"})
+          emit('export_done', {text: "Đã xuất #{count} dòng#{sheets_note}#{images_note} ra Excel.", path: path})
+        end
+        # Mở file Excel vừa xuất, hoặc thư mục chứa nó. Chỉ dùng đường dẫn Ruby đã ghi, không nhận đường dẫn từ giao diện.
+        def export_open(folder)
+          raise 'Không còn file xuất để mở. Hãy xuất lại.' unless @export_path && File.file?(@export_path)
+          ::UI.openURL(TableReport.file_url(folder ? File.dirname(@export_path) : @export_path))
         end
         def model_name
           title = @model.title.to_s.strip

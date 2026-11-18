@@ -2,11 +2,20 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.8: đã kiểm tra tự động
+## Bản 1.1.1-beta.9: đã kiểm tra tự động
 
-Chạy từ `plugins/VGD_BIM`: `node dev/test_ui.cjs` (có kiểm tra mới: xuất khi đang gộp dòng và khi thu gọn nhóm vẫn đủ mọi món; Mở / Thu gọn tất cả), `dev/test_ui_en.cjs`, `dev/test_ui_sheets.cjs`, `dev/test_report_page.cjs`. Đã chạy cả bốn bộ và đạt. Bản sửa cũ bị bắt: chạy `test_ui.cjs` với `app.js` của bản beta.7 thì dừng đúng ở kiểm tra xuất khi đang gộp dòng.
+Chạy từ `plugins/VGD_BIM`: `ruby dev/run_tests.rb` (cú pháp `ui/dialog.rb` và các test Ruby) và các bộ Playwright `dev/test_ui.cjs`, `dev/test_ui_images.cjs`, `dev/test_ui_en.cjs`, `dev/test_ui_sheets.cjs`, `dev/test_report_page.cjs`. Đã chạy đủ và đạt.
 
-**Chưa xác minh trong SketchUp thật:** file .xlsx / PDF xuất từ bảng đang gộp dòng và thu gọn nhóm có đủ mọi món và tổng đúng; popover Nhóm theo hiển thị đúng trong cửa sổ SketchUp.
+- `test_ui.cjs` (mới ở beta.9): hộp thông báo sau khi xuất hiện đúng đường dẫn; nền hộp lấy từ token `--surface` của theme chung; Xem ngay gọi `export_open`, Mở thư mục gọi `export_open_folder`, Đóng tắt hộp.
+- `test_ui.cjs` (mới ở beta.8): xuất khi đang gộp dòng và thu gọn nhóm vẫn đủ mọi món; Mở / Thu gọn tất cả.
+- Bản sửa beta.8 đã được bắt bằng test: chạy `test_ui.cjs` với `app.js` của beta.7 dừng đúng ở kiểm tra xuất khi đang gộp dòng.
+
+**Chưa xác minh trong SketchUp thật:**
+- File .xlsx xuất từ bảng đang gộp dòng và thu gọn nhóm có đủ mọi món và tổng đúng.
+- Popover Nhóm theo hiển thị đúng.
+- Hộp thông báo sau khi xuất hiện đúng trong cửa sổ SketchUp, cả hai theme.
+- Nút **Xem ngay** và **Mở thư mục chứa file** (`UI.openURL` với file và thư mục trên Windows) mở đúng file và thư mục.
+- Lệnh `export_open` không nhận đường dẫn từ giao diện; chỉ mở file Ruby đã ghi (chưa có test Ruby riêng cho nhánh này, chỉ kiểm tra bằng đọc mã và cú pháp).
 
 ## Bản 1.1.0-beta.77: đã kiểm tra tự động
 

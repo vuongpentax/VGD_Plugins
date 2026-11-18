@@ -120,6 +120,12 @@ function preview(data) {
   if(data.rule)p.append(node('p','Quy tắc phân loại sẽ được lưu để dùng lại.'));
   const dl=node('dl',undefined,'preview-values');Object.entries(data.data).forEach(([key,value])=>dl.append(node('dt',label(key)),node('dd',displayValue(key,value))));p.append(dl,node('p','Giữ nguyên hình học, tên, thẻ và vật liệu.'));$('confirm-preview').disabled=false;$('preview').showModal();
 }
+// Hộp thông báo sau khi xuất Excel. Giao diện chỉ hiện chữ; đường dẫn file do Ruby giữ, các nút chỉ gọi lệnh không kèm đường dẫn.
+function showExportDone(data){
+  $('export-done-text').textContent=data.text||'';
+  $('export-done-path').textContent=data.path||'';
+  $('export-done').showModal();
+}
 // ---- Bảng đối tượng kiểu Auto Info ----
 const tableState={replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null,manual:[],dragRow:null,dragCol:null,sheets:null,sheet:0};
 // Mỗi file SketchUp có cài đặt riêng (settings.json cạnh file): sang file khác thì bỏ trạng thái bảng của file trước, nạp lại của file mới (file mới: mặc định).
@@ -1930,8 +1936,10 @@ window.VGD={receive(event,data){
   if(event==='progress')message(`Đang quét… ${number(data.count,0)} đối tượng hình học.`);
   if(event==='message')message(data.error||data.text,!!data.error);
   if(event==='preview')preview(data);
+  if(event==='export_done')showExportDone(data);
   if(event==='selection'){const text=$('tag-selection-text'),go=$('tag-assign');if(text)text.textContent=`Đang chọn ${data.count} đối tượng hoặc mặt trong SketchUp.`;if(go){go.dataset.count=String(data.count);go.disabled=!data.count;}}
 }};
+$('export-done-close').onclick=()=>$('export-done').close();$('export-done-open').onclick=()=>{$('export-done').close();call('export_open')};$('export-done-folder').onclick=()=>{$('export-done').close();call('export_open_folder')};
 $('cancel-preview').onclick=()=>$('preview').close();$('confirm-preview').onclick=()=>{$('confirm-preview').disabled=true;$('preview').close();call('confirm_convert')};document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>call('open_panel',b.dataset.mode));
 document.addEventListener('vgdtheme',e=>{const dark=e.detail.theme==='dark';document.body.classList.toggle('dark',dark);document.body.classList.toggle('light',!dark);$('brand-logo').src=dark?'../assets/icons/vgd_primary_dark.svg':'../assets/icons/vgd_primary_light.svg';});
 VGDTheme.start({key:'VGD_BIM_theme',button:$('theme')});
