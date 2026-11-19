@@ -3,8 +3,8 @@
 (function () {
   'use strict';
   // Màu theo bộ tag mẫu của VGD BIM.
-  var COLORS = {column: '#66DD00', beam: '#00AABA', wall: '#FF9966', slab: '#BA3300', ceiling: '#9900FF', door: '#FF7766', window: '#CCBAED', grid: '#BA00CC', suobj: '#8A93A0', section: '#D9534F'};
-  var LAYERS = [['grid', 'Lưới trục'], ['slab', 'Sàn'], ['ceiling', 'Trần'], ['beam', 'Dầm'], ['wall', 'Tường'], ['opening', 'Cửa'], ['column', 'Cột'], ['suobj', 'Đối tượng SketchUp chưa nhận'], ['section', 'Mặt cắt'], ['note', 'Ghi chú và nét 2D']];
+  var COLORS = {column: '#66DD00', beam: '#00AABA', wall: '#FF9966', slab: '#BA3300', ceiling: '#9900FF', stair: '#FFBA00', door: '#FF7766', window: '#CCBAED', grid: '#BA00CC', suobj: '#8A93A0', section: '#D9534F'};
+  var LAYERS = [['grid', 'Lưới trục'], ['slab', 'Sàn'], ['ceiling', 'Trần'], ['stair', 'Cầu thang'], ['beam', 'Dầm'], ['wall', 'Tường'], ['opening', 'Cửa'], ['column', 'Cột'], ['suobj', 'Đối tượng SketchUp chưa nhận'], ['section', 'Mặt cắt'], ['note', 'Ghi chú và nét 2D']];
   // Biểu tượng tự vẽ (nét 24 × 24). Bố cục theo cửa sổ mặt bằng của VTBim: thanh trên (chọn, sửa), cột công cụ bên trái, tab theo tầng, bảng thuộc tính, thanh trạng thái.
   var ICON = {
     hide: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12ZM3 3l18 18', isolate: 'M12 2l9 5v10l-9 5-9-5V7ZM12 8v8M8 12h8',
@@ -38,7 +38,7 @@
     ['Sửa', [['move', 'Move (chọn phần tử trước, bấm điểm gốc rồi điểm đích; hai giao điểm lưới thì dịch theo ô)', ''], ['copy', 'Copy (chọn phần tử trước, bấm điểm gốc rồi điểm đích)', ''], ['array', 'Array (nhân bản liên tiếp theo bước đã bấm)', ''], ['rotate', 'Rotate (chọn phần tử trước, bấm tâm xoay; góc 90 / 180 / 270 ở thanh tùy chọn)', ''], ['mirror', 'Mirror (chọn phần tử trước, bấm một trục hoặc đường gióng làm trục đối xứng)', ''], ['offset', 'Offset (chọn dầm / tường trước, bấm phía cần dời; khoảng cách ở thanh tùy chọn hoặc gõ số + Enter)', ''], ['trim', 'Trim (nối góc L: bấm tường 1 rồi tường 2, đúng phần muốn giữ)', ''], ['align', 'Align (bấm đường chuẩn rồi các phần tử cần căn)', ''], ['match', 'Match (bấm phần tử mẫu rồi các phần tử cùng loại)', ''], ['unlock', 'Mở khóa lưới (đổi cột, dầm, tường theo lưới thành phần tử tự do)', ''], ['delete', 'Xóa', '']]]
   ];
   var SIDE_GROUPS = [
-    ['Thiết kế', [['grid', 'Lưới trục', ''], ['column', 'Cột', ''], ['beam', 'Dầm', ''], ['wall', 'Tường', ''], ['slab', 'Sàn', ''], ['ceiling', 'Trần', ''], ['door', 'Cửa đi', ''], ['window', 'Cửa sổ', '']]],
+    ['Thiết kế', [['grid', 'Lưới trục', ''], ['column', 'Cột', ''], ['beam', 'Dầm', ''], ['wall', 'Tường', ''], ['slab', 'Sàn', ''], ['ceiling', 'Trần', ''], ['stair', 'Cầu thang', ''], ['door', 'Cửa đi', ''], ['window', 'Cửa sổ', '']]],
     ['Vẽ 2D', [['line', 'Line', ''], ['polyline', 'Polyline', ''], ['rect', 'Chữ nhật', ''], ['circle', 'Đường tròn', ''], ['arc', 'Cung', '']]],
     ['Ghi chú', [['dim', 'Kích thước', ''], ['text', 'Chữ', ''], ['level', 'Cốt cao độ', '']]],
     ['Mặt cắt', [['section', 'Mặt cắt (Section): bấm hai điểm của đường cắt rồi bấm về phía muốn nhìn', '']]]
@@ -50,7 +50,7 @@
     ['section', 'Mặt cắt (Section)', 'SE', 'Tự đặt'], ['suscan', 'Quét đối tượng SketchUp (theo tag BIM)', 'SS', 'Tự đặt'], ['suadopt', 'Nhận đối tượng SketchUp về Structure', 'SA', 'Tự đặt'],
     ['snap', 'Bật / tắt bắt điểm (Snaps Off)', 'SO', 'Revit'], ['props', 'Bảng Thuộc tính', 'PP', 'Revit'], ['browser', 'Cây dự án (Project Browser)', 'PB', 'Tự đặt'], ['sudraw', 'Vẽ trong SketchUp (công cụ vẽ nhận điểm bấm trong SketchUp, tự dựng)', 'SD', 'Tự đặt'], ['sync', 'Đồng bộ chọn với SketchUp', 'SY', 'Tự đặt'], ['status', 'Hiện trạng thái so với model', 'ST', 'Tự đặt'], ['build', 'Dựng tầng này vào model', 'BD', 'Tự đặt'], ['supick', 'Chọn điểm trong SketchUp', 'PK', 'Tự đặt'], ['vis', 'Hiển thị lớp (Visibility / Graphics)', 'VG', 'Revit'], ['keys', 'Bảng phím tắt', 'KS', 'Revit'],
     ['wall', 'Tường (Wall)', 'WA', 'Revit'], ['door', 'Cửa đi (Door)', 'DR', 'Revit'], ['window', 'Cửa sổ (Window)', 'WN', 'Revit'], ['column', 'Cột (Column)', 'CL', 'Revit'], ['beam', 'Dầm (Beam)', 'BM', 'Revit'],
-    ['grid', 'Lưới trục (Grid)', 'GR', 'Revit'], ['slab', 'Sàn (Floor)', 'FL', 'Tự đặt'], ['ceiling', 'Trần (Ceiling)', 'CE', 'Tự đặt'],
+    ['grid', 'Lưới trục (Grid)', 'GR', 'Revit'], ['slab', 'Sàn (Floor)', 'FL', 'Tự đặt'], ['ceiling', 'Trần (Ceiling)', 'CE', 'Tự đặt'], ['stair', 'Cầu thang (Stair)', 'SR', 'Tự đặt'],
     ['move', 'Move', 'MV', 'Revit'], ['copy', 'Copy', 'CO', 'Revit'], ['array', 'Array (nhân bản liên tiếp)', 'AR', 'Revit'], ['match', 'Match (khớp loại)', 'MA', 'Revit'], ['align', 'Align', 'AL', 'Revit'], ['unlock', 'Mở khóa lưới (thành phần tử tự do)', 'UL', 'Tự đặt'], ['rotate', 'Rotate', 'RO', 'Revit'], ['mirror', 'Mirror (chọn trục)', 'MM', 'Revit'], ['offset', 'Offset', 'OF', 'Revit'], ['trim', 'Trim / Extend', 'TR', 'Revit'], ['delete', 'Xóa (Delete)', 'DE', 'Revit'],
     ['line', 'Line', 'LI', 'Revit'], ['polyline', 'Polyline', 'PL', 'Tự đặt'], ['rect', 'Chữ nhật', 'RC', 'Tự đặt'], ['circle', 'Đường tròn', 'CC', 'Tự đặt'], ['arc', 'Cung', 'AC', 'Tự đặt'],
     ['dim', 'Kích thước (Dimension)', 'DI', 'Revit'], ['text', 'Chữ (Text)', 'TX', 'Revit'], ['level', 'Cốt cao độ (Spot Elevation)', 'EL', 'Revit']
@@ -62,9 +62,9 @@
   var sections = null; // mô-đun mặt cắt (plan_section.js)
   var detail = 'medium', vstyle = 'color', tagsOn = false, tagsDrawn = 0, PX_MM = 25.4 / 96; // mức chi tiết (low / medium / high), kiểu hiển thị (color / mono / wire), nhãn loại; 1 px màn hình = PX_MM mm trên giấy
   var badgesDrawn = 0, syncOn = true, statusOn = true, suPicking = false, lastSent = '', lastFromSU = false, modelStatus = null, pendingSelect = null, pendingDim = null, edit = null, notes = null, modify = null, lastDims = [], dimHits = [], dimInput = null, selLevel = null, opts2 = null, hoverCount = 0, keymap = {}, chord = '', chordTimer = null, tabIdx = 0, hoverSig = '', guides = {}, measure = null, draft = null, snap = null, snapOn = true, note = '', press = null, box = null, shiftKey = false;
-  var SNAP_PX = 10, DRAG_PX = 4, LIVE_EDIT = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'door', 'window', 'delete', 'move', 'copy', 'array', 'mirror', 'match', 'offset', 'align', 'trim', 'rotate', 'unlock', 'section', 'line', 'polyline', 'rect', 'circle', 'arc', 'dim', 'text', 'level'];
+  var SNAP_PX = 10, DRAG_PX = 4, LIVE_EDIT = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'stair', 'door', 'window', 'delete', 'move', 'copy', 'array', 'mirror', 'match', 'offset', 'align', 'trim', 'rotate', 'unlock', 'section', 'line', 'polyline', 'rect', 'circle', 'arc', 'dim', 'text', 'level'];
   var view = {cx: 0, cy: 0, s: 0.05}, data = null, boundsKey = '', fitted = false, tool = 'select', shapes = [], hover = null, cursor = null, drag = null;
-  var visible = {grid: true, slab: true, ceiling: false, beam: true, wall: true, opening: true, column: true, suobj: true, section: true, note: true};
+  var visible = {grid: true, slab: true, ceiling: false, stair: true, beam: true, wall: true, opening: true, column: true, suobj: true, section: true, note: true};
   var size = {w: 300, h: 200, dpr: 1};
 
   function $(id) { return document.getElementById(id); }
@@ -87,10 +87,10 @@
   // ---- Ribbon ----
   var RIBBON_TABS = [['structure', 'Kết cấu'], ['arch', 'Kiến trúc'], ['annotate', 'Chú thích'], ['modify', 'Sửa'], ['view', 'Xem'], ['sketchup', 'SketchUp']], ribbonTab = 'structure', ribbon = {panels: {}, groups: {}};
   // Công cụ nào thuộc tab / nhóm nào; chọn công cụ (bằng phím hay bấm) thì tab của nó tự mở (như tab ngữ cảnh của Revit).
-  var TOOL_TAB = {grid: 'structure', column: 'structure', beam: 'structure', wall: 'structure', slab: 'structure', ceiling: 'structure', door: 'arch', window: 'arch',
+  var TOOL_TAB = {grid: 'structure', column: 'structure', beam: 'structure', wall: 'structure', slab: 'structure', ceiling: 'structure', stair: 'structure', door: 'arch', window: 'arch',
     line: 'annotate', polyline: 'annotate', rect: 'annotate', circle: 'annotate', arc: 'annotate', dim: 'annotate', text: 'annotate', level: 'annotate', section: 'annotate',
     select: 'modify', pan: 'modify', guide: 'modify', measure: 'modify', move: 'modify', copy: 'modify', array: 'modify', mirror: 'modify', match: 'modify', offset: 'modify', align: 'modify', trim: 'modify', rotate: 'modify', unlock: 'modify', 'delete': 'modify'};
-  var TOOL_PANEL = {grid: 'Lưới trục', column: 'Kết cấu', beam: 'Kết cấu', wall: 'Kết cấu', slab: 'Kết cấu', ceiling: 'Kết cấu', door: 'Cửa', window: 'Cửa', line: 'Vẽ 2D', polyline: 'Vẽ 2D', rect: 'Vẽ 2D', circle: 'Vẽ 2D', arc: 'Vẽ 2D', dim: 'Ghi chú', text: 'Ghi chú', level: 'Ghi chú', section: 'Mặt cắt'};
+  var TOOL_PANEL = {grid: 'Lưới trục', column: 'Kết cấu', beam: 'Kết cấu', wall: 'Kết cấu', slab: 'Kết cấu', ceiling: 'Kết cấu', stair: 'Kết cấu', door: 'Cửa', window: 'Cửa', line: 'Vẽ 2D', polyline: 'Vẽ 2D', rect: 'Vẽ 2D', circle: 'Vẽ 2D', arc: 'Vẽ 2D', dim: 'Ghi chú', text: 'Ghi chú', level: 'Ghi chú', section: 'Mặt cắt'};
   function buildRibbon(qat) {
     var rb = el('div', {class: 'pv-ribbon', id: 'pv-ribbon'}), tabs = el('div', {class: 'pv-rb-tabs', role: 'tablist', 'aria-label': 'Ribbon'}, rb), body = el('div', {class: 'pv-rb-body'}, rb);
     qat.parentNode.insertBefore(rb, qat.nextSibling);
@@ -269,7 +269,7 @@
       }
     }
     if (!shape) {
-      var issues = []; ['columns', 'beams', 'walls', 'openings', 'slabs', 'ceilings'].forEach(function (k) { if (data && data[k] && data[k].issues) issues = issues.concat(data[k].issues); });
+      var issues = []; ['columns', 'beams', 'walls', 'openings', 'slabs', 'ceilings', 'stairs'].forEach(function (k) { if (data && data[k] && data[k].issues) issues = issues.concat(data[k].issues); });
       if (issues.length) { el('h3', {text: 'Cảnh báo (' + issues.length + ')', class: 'pv-edit-h'}, box); var ul = el('ul', {class: 'pv-issues'}, box); issues.slice(0, 8).forEach(function (m) { el('li', {text: m}, ul); }); }
     }
   }
@@ -530,6 +530,7 @@
     function ring(i) { return i.placement === 'free' ? [['Số đỉnh', String(i.polygon.length)], ['Số lỗ', String((i.holes || []).length)]] : []; }
     section('slabs').forEach(function (i) { cur = i; add('slab', i.polygon || rectPoly(i.min, i.max), (i.placement === 'free' ? 'Sàn đa giác ' : 'Sàn ') + i.ref, [['Dày', mm(i.thickness)], ['Mặt trên', mm(i.z_top)], ['Diện tích', i.area + ' m²']].concat(ring(i)), 'Sàn ' + i.ref + ' · dày ' + i.thickness + ' mm · ' + i.area + ' m²'); });
     section('ceilings').forEach(function (i) { cur = i; add('ceiling', i.polygon, (i.placement === 'free' ? 'Trần đa giác ' : 'Trần ') + i.ref, [['Dày', mm(i.thickness)], ['Mặt dưới', mm(i.z_bottom)], ['Diện tích', i.area + ' m²']].concat(ring(i)), 'Trần ' + i.ref + ' · ' + i.area + ' m²'); });
+    section('stairs').forEach(function (i) { cur = i; add('stair', i.polygon, 'Cầu thang ' + i.ref, [['Loại', i.type_name], ['Số bậc', String(i.count)], ['Cao bậc', mm(i.riser)], ['Bản bậc', mm(i.tread)], ['Va chạm', i.conflicts && i.conflicts.length ? i.conflicts.join(', ') : 'không']], 'Cầu thang ' + i.ref + ' · ' + i.count + ' bậc'); });
     section('beams').forEach(function (i) { cur = i; add('beam', i.poly || rectPoly(i.min, i.max), (i.placement === 'free' ? 'Dầm tự do ' : 'Dầm ') + i.ref, [['Loại', i.type_name], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Dài', mm(i.length)], ['Đỉnh', mm(i.z_top)]].concat(i.dir === 'o' ? [['Góc', Math.round(i.angle * 100) / 100 + '°']] : []), 'Dầm ' + i.ref + ' · ' + i.type_name + ' · dài ' + i.length + ' mm'); });
     section('walls').forEach(function (i) { cur = i; add('wall', i.poly || rectPoly(i.min, i.max), (i.placement === 'free' ? 'Tường tự do ' : 'Tường ') + i.ref, [['Loại', i.type_name], ['Dày', mm(i.t)]].concat(i.layers ? [['Lớp', i.layers.map(function (l) { return l.t; }).join(' + ')]] : []).concat([['Dài', mm(i.length)], ['Cao', mm(i.height)], ['Số cửa', String((i.openings || []).length)], ['Nối góc', i.join === false ? 'Tắt' : ((i.joined || []).length ? 'Đã nối ' + i.joined.length + ' đầu' : 'Không có chỗ nối')]]).concat(i.dir === 'o' ? [['Góc', Math.round(i.angle * 100) / 100 + '°']] : []), 'Tường ' + i.ref + ' · ' + i.type_name + ' · dày ' + i.t + ' · dài ' + i.length + ' · cao ' + i.height + ' mm'); });
     section('openings').forEach(function (i) { var k = i.kind === 'door' ? 'Cửa đi' : 'Cửa sổ'; cur = i; add('opening', i.poly || rectPoly(i.min, i.max), k + ' ' + i.type_name, [['Loại', k], ['Rộng × cao', i.w + ' × ' + i.h + ' mm'], ['Cao ngưỡng', mm(i.sill)], ['Tường', i.wall]], k + ' ' + i.type_name + ' · ' + i.w + ' × ' + i.h + ' mm · ngưỡng ' + i.sill); });
@@ -731,6 +732,7 @@
     if (!data || !data.ok) { ctx.fillStyle = muted; ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText((data && data.error) || 'Chưa có lưới trục hợp lệ.', size.w / 2, size.h / 2); updateStatus(); return; }
     if (visible.suobj) suObjs.filter(function (o) { return o.level === currentId && !hid('suobj', String(o.id)); }).forEach(function (o) { fillStroke(o.footprint, COLORS[o.kind === 'door' || o.kind === 'window' ? o.kind : o.kind] || COLORS.suobj, 0.1, [4, 3], 1.2); });
     if (visible.slab) section('slabs').forEach(function (i) { if (hid('slab', i.ref)) return; fillStroke(i.polygon || rectPoly(i.min, i.max), COLORS.slab, 0.12, null, 1, i.holes); });
+    if (visible.stair) section('stairs').forEach(function (i) { if (hid('stair', i.ref)) return; var bad = !!(i.conflicts && i.conflicts.length); fillStroke(i.polygon, bad ? themeColor(GHOST_BAD) : COLORS.stair, bad ? 0.22 : 0.12, bad ? null : [5, 4], bad ? 2 : 1, null); (i.steps || []).forEach(function (st) { fillStroke(st.poly, COLORS.stair, 0.05, null, 0.5, null); }); });
     if (visible.ceiling) section('ceilings').forEach(function (i) { if (hid('ceiling', i.ref)) return; fillStroke(i.polygon, COLORS.ceiling, 0.08, [5, 4], 1, i.holes); });
     if (visible.beam) section('beams').forEach(function (i) { if (hid('beam', i.ref)) return; fillStroke(i.poly || rectPoly(i.min, i.max), COLORS.beam, 0.25, [6, 3], 1); });
     if (visible.wall) section('walls').forEach(function (i) { if (hid('wall', i.ref)) return; fillStroke(i.poly || rectPoly(i.min, i.max), COLORS.wall, 0.8, null, 1); if (detail !== 'low' && vstyle === 'color') drawWallLayers(i); });

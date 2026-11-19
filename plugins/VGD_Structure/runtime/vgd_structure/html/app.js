@@ -3,7 +3,7 @@
   'use strict';
   var LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'.split(''); // bỏ I và O, giống Grid::LETTERS ở Ruby
   var state = {origin: [0, 0], x: {first: 0, axes: []}, y: {first: 0, axes: []}, scale: 100, both: false, drawn: false, previewOk: false,
-               types: [], beamTypes: [], wallTypes: [], levels: [], level: null, selected: null, drawnLevels: [], drawnBeamLevels: [], selectedBeam: null, drawnWallLevels: [], selectedWall: null, drawnSlabLevels: [], drawnCeilingLevels: [], openingTypes: [], drawnOpeningLevels: [], openWall: null, preview: null, tab: 'grid'};
+               types: [], beamTypes: [], wallTypes: [], levels: [], level: null, selected: null, drawnLevels: [], drawnBeamLevels: [], drawnStairLevels: [], selectedBeam: null, drawnWallLevels: [], selectedWall: null, drawnSlabLevels: [], drawnCeilingLevels: [], openingTypes: [], drawnOpeningLevels: [], openWall: null, preview: null, tab: 'grid'};
   var MODE_P = [['auto', 'Theo quy ước'], ['center', 'Tâm trên trục'], ['min', 'Cạnh nhỏ (nam / tây) tại trục'], ['max', 'Cạnh lớn (bắc / đông) tại trục']];
   var MODE_X = [['auto', 'Theo quy ước'], ['center', 'Tâm trên trục'], ['min', 'Cạnh tây tại trục (cột lùi sang đông)'], ['max', 'Cạnh đông tại trục (cột lùi sang tây)']];
   var MODE_Y = [['auto', 'Theo quy ước'], ['center', 'Tâm trên trục'], ['min', 'Cạnh nam tại trục (cột lùi lên bắc)'], ['max', 'Cạnh bắc tại trục (cột lùi xuống nam)']];
@@ -38,13 +38,14 @@
             status: !!(window.VGDPlan && window.VGDPlan.statusOn && window.VGDPlan.statusOn()),
             types: state.types.map(function (t) { return {id: t.id, name: t.name, w: t.w, d: t.d}; }),
             beam_types: state.beamTypes.map(function (t) { return {id: t.id, name: t.name, w: t.w, h: t.h}; }),
+            stair_types: state.stairTypes && state.stairTypes.length ? state.stairTypes.map(function (t) { return {id: t.id, name: t.name, width: t.width, riser: t.riser, tread: t.tread, rail: t.rail}; }) : undefined, // chưa có loại (trạng thái cũ): Ruby dùng mặc định
             wall_types: state.wallTypes.map(function (t) { return {id: t.id, name: t.name, t: t.t, layers: wallLayers(t).map(function (l) { var o = {fn: l.fn, t: l.t, material: l.material || ''}; if (l.color) o.color = l.color; return o; })}; }),
             opening_types: state.openingTypes.map(function (t) { return {id: t.id, name: t.name, kind: t.kind, w: t.w, h: t.h, sill: t.sill}; }), levels: state.levels.map(toRubyLevel), level: state.level};
   }
   function toRubyLevel(l) {
     return {id: l.id, name: l.name, elevation: l.elevation, screed: l.screed, slab_thickness: l.slab, column_type: l.columnType || null, beam_type: l.beamType || null, wall_type: l.wallType || null, ceiling_height: l.ceilingHeight, ceiling_thickness: l.ceilingThickness,
             floor_layers: (l.floorLayers || []).map(cleanLayer), ceiling_layers: (l.ceilingLayers || []).map(cleanLayer),
-            picks: {columns: clonePicks(l.picks), beams: clonePicks(l.beamPicks), walls: clonePicks(l.wallPicks), slabs: clonePicks(l.slabPicks), ceilings: clonePicks(l.ceilingPicks), openings: clonePicks(l.openingPicks)}, notes: JSON.parse(JSON.stringify(l.notes || {})), sections: JSON.parse(JSON.stringify(l.sections || {}))};
+            picks: {columns: clonePicks(l.picks), beams: clonePicks(l.beamPicks), walls: clonePicks(l.wallPicks), slabs: clonePicks(l.slabPicks), ceilings: clonePicks(l.ceilingPicks), openings: clonePicks(l.openingPicks), stairs: clonePicks(l.stairPicks || {})}, notes: JSON.parse(JSON.stringify(l.notes || {})), sections: JSON.parse(JSON.stringify(l.sections || {}))};
   }
   function cleanLayer(l) { var o = {fn: l.fn, t: l.t, material: l.material || ''}; if (l.color) o.color = l.color; return o; }
   function clonePicks(picks) { var out = {}; Object.keys(picks).forEach(function (k) { out[k] = JSON.parse(JSON.stringify(picks[k])); }); return out; } // sao sâu: phần tử tự do có khóa 'free' lồng nhau
@@ -52,7 +53,7 @@
     return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab_thickness, screed: l.screed === undefined ? 50 : l.screed, columnType: l.column_type, beamType: l.beam_type || null, wallType: l.wall_type || null, ceilingHeight: l.ceiling_height, ceilingThickness: l.ceiling_thickness,
             floorLayers: (l.floor_layers || []).map(function (x) { return {fn: x.fn, t: x.t, material: x.material || '', color: x.color || null}; }), ceilingLayers: (l.ceiling_layers || []).map(function (x) { return {fn: x.fn, t: x.t, material: x.material || '', color: x.color || null}; }),
             picks: clonePicks((l.picks && l.picks.columns) || {}), beamPicks: clonePicks((l.picks && l.picks.beams) || {}), wallPicks: clonePicks((l.picks && l.picks.walls) || {}),
-            slabPicks: clonePicks((l.picks && l.picks.slabs) || {}), ceilingPicks: clonePicks((l.picks && l.picks.ceilings) || {}),
+            stairPicks: clonePicks((l.picks && l.picks.stairs) || {}), slabPicks: clonePicks((l.picks && l.picks.slabs) || {}), ceilingPicks: clonePicks((l.picks && l.picks.ceilings) || {}),
             openingPicks: clonePicks((l.picks && l.picks.openings) || {}), notes: JSON.parse(JSON.stringify(l.notes || {})), sections: JSON.parse(JSON.stringify(l.sections || {}))};
   }
   function rid(prefix) {
@@ -302,7 +303,7 @@
   function addLevel() {
     var last = state.levels[state.levels.length - 1], n = state.levels.length + 1, name = 'Tầng ' + n, taken = state.levels.map(function (l) { return l.name.toLowerCase(); });
     while (taken.indexOf(name.toLowerCase()) >= 0) name += '*';
-    state.levels.push({id: rid('sl_'), name: name, elevation: Number.isFinite(last.elevation) ? last.elevation + 3600 : 0, screed: 50, floorLayers: [], ceilingLayers: [], slab: 120, columnType: null, beamType: null, wallType: null, ceilingHeight: 2800, ceilingThickness: 9, picks: {}, beamPicks: {}, wallPicks: {}, slabPicks: {}, ceilingPicks: {}, notes: {}, openingPicks: {}});
+    state.levels.push({id: rid('sl_'), name: name, elevation: Number.isFinite(last.elevation) ? last.elevation + 3600 : 0, screed: 50, floorLayers: [], ceilingLayers: [], slab: 120, columnType: null, beamType: null, wallType: null, ceilingHeight: 2800, ceilingThickness: 9, picks: {}, beamPicks: {}, wallPicks: {}, stairPicks: {}, slabPicks: {}, ceilingPicks: {}, notes: {}, openingPicks: {}});
     renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); changed();
   }
   function addType() {
@@ -721,7 +722,7 @@
 
 
   // ---- Tab Tổng hợp và dựng ----
-  var ALL_KINDS = [['columns', 'picks', 'Cột'], ['beams', 'beamPicks', 'Dầm'], ['walls', 'wallPicks', 'Tường'], ['openings', 'openingPicks', 'Cửa'], ['slabs', 'slabPicks', 'Sàn'], ['ceilings', 'ceilingPicks', 'Trần']];
+  var ALL_KINDS = [['columns', 'picks', 'Cột'], ['beams', 'beamPicks', 'Dầm'], ['walls', 'wallPicks', 'Tường'], ['openings', 'openingPicks', 'Cửa'], ['slabs', 'slabPicks', 'Sàn'], ['ceilings', 'ceilingPicks', 'Trần'], ['stairs', 'stairPicks', 'Cầu thang']];
   function renderAllTab() {
     var sel = $('all-level-select'); sel.replaceChildren();
     state.levels.forEach(function (l) { sel.append(new Option(l.name, l.id)); });
@@ -739,7 +740,7 @@
     });
     renderAllButtons();
   }
-  function drawnList(kind) { return {columns: state.drawnLevels, beams: state.drawnBeamLevels, walls: state.drawnWallLevels, openings: state.drawnOpeningLevels, slabs: state.drawnSlabLevels, ceilings: state.drawnCeilingLevels}[kind]; }
+  function drawnList(kind) { return {columns: state.drawnLevels, beams: state.drawnBeamLevels, walls: state.drawnWallLevels, openings: state.drawnOpeningLevels, slabs: state.drawnSlabLevels, ceilings: state.drawnCeilingLevels, stairs: state.drawnStairLevels}[kind] || []; }
   function renderAllButtons() {
     var l = currentLevel();
     var has = function (lv) { return ALL_KINDS.some(function (k) { return Object.keys(lv[k[1]]).length; }); };
@@ -958,13 +959,14 @@
       state.x = x; state.y = y; state.scale = data.symbol.scale; state.both = data.symbol.both_ends; state.drawn = data.drawn;
       state.types = data.types.map(function (t) { return {id: t.id, name: t.name, w: t.w, d: t.d}; });
       state.beamTypes = (data.beam_types || []).map(function (t) { return {id: t.id, name: t.name, w: t.w, h: t.h}; });
+      state.stairTypes = (data.stair_types || []).map(function (t) { return {id: t.id, name: t.name, width: t.width, riser: t.riser, tread: t.tread, rail: t.rail}; });
       state.wallTypes = (data.wall_types || []).map(function (t) { return {id: t.id, name: t.name, t: t.t, layers: (t.layers || [{fn: 'structure', t: t.t, material: ''}]).map(function (l) { return {fn: l.fn, t: l.t, material: l.material || '', color: l.color || null}; })}; });
       state.openingTypes = (data.opening_types || []).map(function (t) { return {id: t.id, name: t.name, kind: t.kind, w: t.w, h: t.h, sill: t.sill}; });
       state.drawnOpeningLevels = data.drawn_opening_levels || []; state.openWall = null;
       var keepLevel = data.reload ? state.level : null; // nạp lại do Hoàn tác / Làm lại trong SketchUp: giữ tầng đang xem
       state.levels = data.levels.map(fromRubyLevel); state.level = state.levels[0].id; state.selected = null; state.selectedBeam = null; state.selectedWall = null;
       if (keepLevel && state.levels.some(function (l) { return l.id === keepLevel; })) state.level = keepLevel;
-      state.drawnLevels = data.drawn_levels || []; state.drawnBeamLevels = data.drawn_beam_levels || []; state.drawnWallLevels = data.drawn_wall_levels || []; state.drawnSlabLevels = data.drawn_slab_levels || []; state.drawnCeilingLevels = data.drawn_ceiling_levels || [];
+      state.drawnLevels = data.drawn_levels || []; state.drawnBeamLevels = data.drawn_beam_levels || []; state.drawnStairLevels = data.drawn_stair_levels || []; state.drawnWallLevels = data.drawn_wall_levels || []; state.drawnSlabLevels = data.drawn_slab_levels || []; state.drawnCeilingLevels = data.drawn_ceiling_levels || [];
       $('version').textContent = 'v' + data.version; syncPlanLevels(); undoStack = []; redoStack = []; historyChanged();
       renderAll(); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab();
       message(data.reload ? 'Đã nạp lại dữ liệu theo Hoàn tác / Làm lại trong SketchUp.' : (data.saved ? 'Đã nạp lưới trục lưu trong model.' : 'Lưới mặc định: sửa các số rồi bấm Vẽ lưới trục.'));
@@ -1055,7 +1057,7 @@
   function historyChanged() { window.VGDPlan.refreshHistory(); }
   // ---- Vẽ trực tiếp trong SketchUp: mỗi lần vẽ / sửa xong thì tự dựng lại các loại phần tử đã đổi của tầng đang xem (gom các lần liên tiếp) ----
   var AUTO_BUILD_MS = 250, autoKinds = {}, autoTimer = null;
-  var KIND_BOX = {columns: 'picks', beams: 'beamPicks', walls: 'wallPicks', openings: 'openingPicks', slabs: 'slabPicks', ceilings: 'ceilingPicks'};
+  var KIND_BOX = {columns: 'picks', beams: 'beamPicks', walls: 'wallPicks', openings: 'openingPicks', slabs: 'slabPicks', ceilings: 'ceilingPicks', stairs: 'stairPicks'};
   function levelSig() {
     var l = currentLevel(), out = {}; Object.keys(KIND_BOX).forEach(function (k) { out[k] = JSON.stringify(l[KIND_BOX[k]] || {}); }); return out;
   }
@@ -1190,7 +1192,7 @@
   window.VGDPlan.init({onLevel: setLevelFromPlan, undo: undo, redo: redo, history: window.VGDS.history, edit: drawTools, notes: window.VGDPlanNotes, modify: window.VGDPlanModify, browser: window.VGDPlanBrowser,
     callSU: call, sections: window.VGDPlanSection, payload: payload, refresh: function () { changed(); },
     buildLevel: function () { message('Đang dựng tầng này vào model...'); call('build_all', {state: payload(), levels: [state.level]}); },
-    allKeys: function (levelId, kind) { var box = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', opening: 'openingPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', note: 'notes'}[kind], l = state.levels.filter(function (x) { return x.id === levelId; })[0]; return l && box ? Object.keys(l[box]) : []; }});
+    allKeys: function (levelId, kind) { var box = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', opening: 'openingPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', stair: 'stairPicks', note: 'notes'}[kind], l = state.levels.filter(function (x) { return x.id === levelId; })[0]; return l && box ? Object.keys(l[box]) : []; }});
   var BROWSER_PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', opening: 'openingPicks'};
   window.VGDPlanBrowser.init({state: state, currentLevel: function () { return state.level; }, axes: toAxes,
     openLevel: function (id) { if (id !== state.level) setLevelFromPlan(id); },

@@ -4,6 +4,7 @@ module VGD
     # tầng thiếu dữ liệu. Chỉ ĐỌC dữ liệu, không đổi gì. Logic thuần.
     module Checker
       KIND_LABELS = {'columns' => 'Cột', 'beams' => 'Dầm', 'walls' => 'Tường', 'openings' => 'Cửa', 'slabs' => 'Sàn', 'ceilings' => 'Trần'}.freeze
+      KIND_LABELS_ALL = KIND_LABELS.merge('stairs' => 'Cầu thang').freeze # mọi loại có thể dựng (kể cả cầu thang)
 
       # state đã chuẩn hóa. Trả về {levels: [{id, name, top, counts: {loại => số}, errors: [...], warnings: [...]}], errors: số, warnings: số}.
       def self.run(state)

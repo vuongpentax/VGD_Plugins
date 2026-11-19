@@ -292,7 +292,7 @@ module VGD
         model = Sketchup.active_model
         state = reset ? State.default.merge('saved' => false, 'removed' => 0) : ModelStore.read(model)
         emit('state', {tag_names: Schema::TAGS.transform_values { |t| t[:name] }, grid: state['grid'], symbol: state['symbol'], types: state['types'], beam_types: state['beam_types'], wall_types: state['wall_types'], opening_types: state['opening_types'], levels: state['levels'], saved: state['saved'],
-                       drawn: !GridBuilder.find(model).nil?, drawn_levels: drawn_levels(model), drawn_beam_levels: drawn_beam_levels(model), drawn_wall_levels: drawn_wall_levels(model), drawn_opening_levels: drawn_opening_levels(model), drawn_slab_levels: drawn_plate_levels(model, 'slabs'), drawn_ceiling_levels: drawn_plate_levels(model, 'ceilings'), version: VERSION, reload: reload})
+                       drawn: !GridBuilder.find(model).nil?, drawn_levels: drawn_levels(model), drawn_beam_levels: drawn_beam_levels(model), drawn_wall_levels: drawn_wall_levels(model), drawn_opening_levels: drawn_opening_levels(model), drawn_slab_levels: drawn_plate_levels(model, 'slabs'), drawn_ceiling_levels: drawn_plate_levels(model, 'ceilings'), drawn_stair_levels: drawn_stair_levels(model), version: VERSION, reload: reload})
         grid_preview(state.merge('level' => state['levels'].first['id'], 'status' => true))
       end
 
@@ -387,6 +387,10 @@ module VGD
         ColumnBuilder.groups(model).map { |g| g.get_attribute(Schema::DICTIONARY, 'level') }
       end
 
+      def drawn_stair_levels(model)
+        StairBuilder.groups(model).map { |g| g.get_attribute(Schema::DICTIONARY, 'level') }
+      end
+
       def drawn_beam_levels(model)
         BeamBuilder.groups(model).map { |g| g.get_attribute(Schema::DICTIONARY, 'level') }
       end
@@ -421,7 +425,7 @@ module VGD
       end
 
       def drawn_all(model)
-        {columns: drawn_levels(model), beams: drawn_beam_levels(model), walls: drawn_wall_levels(model), openings: drawn_opening_levels(model), slabs: drawn_plate_levels(model, 'slabs'), ceilings: drawn_plate_levels(model, 'ceilings')}
+        {columns: drawn_levels(model), beams: drawn_beam_levels(model), walls: drawn_wall_levels(model), openings: drawn_opening_levels(model), slabs: drawn_plate_levels(model, 'slabs'), ceilings: drawn_plate_levels(model, 'ceilings'), stairs: drawn_stair_levels(model)}
       end
 
       # Dựng tất cả (cột, dầm, tường, sàn, trần) của các tầng đã chọn trong MỘT bước hoàn tác; có lỗi thì không dựng gì cả.
@@ -442,7 +446,7 @@ module VGD
         raise ArgumentError, 'Dữ liệu nhận đối tượng không hợp lệ.' unless adopt.nil? || (adopt.is_a?(Hash) && adopt['erase'].is_a?(Array) && adopt['erase'].all? { |i| i.is_a?(Integer) } && (adopt['refs'].nil? || adopt['refs'].is_a?(Hash)))
         result = AllBuilder.build(model, state, ids, only, payload['retag'], adopt)
         remember_saved(model)
-        parts = result[:kinds].map { |kind, r| "#{r.total} #{Checker::KIND_LABELS[kind].downcase}" }.join(', ')
+        parts = result[:kinds].map { |kind, r| "#{r.total} #{Checker::KIND_LABELS_ALL[kind].downcase}" }.join(', ')
         note = result[:issues].empty? ? '' : " Có #{result[:issues].size} cảnh báo: #{result[:issues].first(3).join(' ')}"
         emit('all_built', {message: "Đã dựng #{result[:total]} đối tượng trong một bước hoàn tác: #{parts}.#{note}", drawn: drawn_all(model)})
       rescue Grid::Error, AxisSymbol::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, OpeningTypes::Error, Levels::Error, ColumnPlan::Error, BeamPlan::Error, WallPlan::Error, SlabPlan::Error, CeilingPlan::Error, ArgumentError => error

@@ -55,7 +55,7 @@ ok('chỉ một menu VGD, bên trong menu con VGD Structure có Lưới trục v
 ok("toolbar 'VGD STR' (dạng VGD + 3 chữ in hoa) có Lưới trục và 7 nút vẽ, icon SVG tồn tại", $toolbars == ['VGD STR'] && $commands.size == 8 && File.exist?(File.join(VGD::Structure::ROOT, 'assets', 'icons', 'grid.svg')) && %w[column beam wall door window slab ceiling].all? { |t| File.exist?(File.join(VGD::Structure::ROOT, 'assets', 'icons', "draw_#{t}.svg")) })
 mine.items[0][1].call
 ok('menu Lưới trục và nút toolbar mở cùng một cửa sổ, gọi lại không mở thêm', $dialogs.size == 1 && $dialogs[0].visible? && ($commands[0][1].call; $dialogs.size == 1))
-ok('Schema nạp được: dictionary, đủ 5 loại, mỗi loại có tag', VGD::Structure::Schema::DICTIONARY == 'VGD_STRUCT' && VGD::Structure::Schema::KINDS.sort == VGD::Structure::Schema::TAGS.keys.sort)
+ok('Schema nạp được: dictionary, đủ các loại (kể cả cầu thang, lan can), mỗi loại có tag', VGD::Structure::Schema::DICTIONARY == 'VGD_STRUCT' && VGD::Structure::Schema::KINDS.sort == VGD::Structure::Schema::TAGS.keys.sort)
 mine.items.last[1].call
 ok('bấm Tải lại code: báo đúng chữ chuẩn kèm phiên bản', $boxes.last == "Đã tải lại VGD Structure #{VGD::Structure::VERSION}.")
 3.times { VGD::Structure.reload }

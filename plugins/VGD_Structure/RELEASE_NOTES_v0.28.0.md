@@ -1,5 +1,7 @@
 # VGD Structure 0.28.0 (beta)
 
+- **Cầu thang thẳng một vế (beta.7, bản thử):** công cụ Cầu thang (phím SR) vẽ bằng hai điểm; số bậc tự tính theo cao tầng; kiểm tra không đâm vào cột, dầm, tường (không dựng nếu đâm). Nút Dựng tất cả dựng cầu thang và lan can (tag A. STAIR, A. RAILING). Chưa làm: khoét sàn tầng trên, kiểm va chạm lan can, chọn từ SketchUp, trạng thái lệch/khớp. Chưa xác minh trong SketchUp thật.
+
 - **Icon vẽ trên thanh công cụ SketchUp (beta.4, beta.5):** thanh **VGD STR** có thêm 7 nút vẽ trực tiếp trong SketchUp: Cột, Dầm, Tường, Cửa đi, Cửa sổ, Sàn, Trần (cùng lệnh với menu Vẽ trong SketchUp). Beta.5 đổi sang **icon SVG**; beta.6 vẽ lại theo **khối 3D isometric** kiểu Revit (hình mới của VGD, không sao chép icon Autodesk), đúng quy tắc `shared/VGD_ICON_SYSTEM_RULES.md`; sinh bằng `dev/make_draw_icons.py`. Chưa kiểm tra SVG trên thanh công cụ SketchUp thật; nếu SketchUp không hiện, báo lại để chuyển về PNG.
 
 - **Vẽ sàn trong SketchUp kiểu X-ray (beta.3):** khối xem trước của sàn đang vẽ (theo ô và đa giác) mờ gần như trong suốt, viền mặt trên và đáy bằng **nét đứt**, không vẽ cạnh đứng để đỡ rối. Trần và tường giữ kiểu cũ. Chỉ kiểm bằng SketchUp giả lập; độ mượt khi di chuột trong SketchUp thật chưa đo.

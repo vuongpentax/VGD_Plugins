@@ -539,7 +539,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#tab-openings').isVisible() && (await page.locator('#opening-wall-ref').innerText())==='x:B:1-2','focus cửa (từ BIM): mở tab Cửa và chọn tường chứa cửa đó');
   await page.click('[data-tab=all]');
   const arr=await page.locator('#all-table tr').evaluateAll(rs=>[...rs[0].querySelectorAll('th')].map(c=>c.textContent));
-  ok(arr.join('|')==='Tầng|Cột|Dầm|Tường|Cửa|Sàn|Trần|Đã dựng','bảng tổng hợp có cột Cửa');
+  ok(arr.join('|')==='Tầng|Cột|Dầm|Tường|Cửa|Sàn|Trần|Cầu thang|Đã dựng','bảng tổng hợp có cột Cửa và Cầu thang');
   await page.click('[data-tab=grid]');
 
   // ===== Tab Tổng hợp và dựng =====
@@ -550,7 +550,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const ar=await allRows();
   ok(ar.length===2 && ar[0][0]==='Tầng 1' && JSON.stringify(ar[0].slice(1,7))==='["2","2","2","2","2","2"]','bảng tổng hợp: tầng 1 có 2 cột, 2 dầm, 2 tường, 2 cửa, 2 sàn, 2 trần theo lựa chọn');
   ok(ar[1][0]==='Tầng 2 (trên cùng: chỉ sàn)' && ar[1][1]==='—' && ar[1][2]==='—' && ar[1][3]==='—' && ar[1][4]==='—' && ar[1][6]==='—' && ar[1][5]==='0','tầng trên cùng: chỉ hiện số sàn, các loại khác là —');
-  ok(ar[0][7]==='—' && await page.locator('#build-all-level').isEnabled() && await page.locator('#build-all-levels').isEnabled(),'chưa dựng gì: cột Đã dựng là —; nút Dựng tất cả bấm được');
+  ok(ar[0][8]==='—' && await page.locator('#build-all-level').isEnabled() && await page.locator('#build-all-levels').isEnabled(),'chưa dựng gì: cột Đã dựng là —; nút Dựng tất cả bấm được');
   await clear();
   await page.click('#propose-level');
   const pl=await last('propose');
@@ -585,7 +585,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(JSON.stringify((await last('build_all')).levels)==='["sl_00000001","sl_00000002"]','Dựng tất cả các tầng: gửi mọi tầng');
   await receive('all_built',{message:'Đã dựng 10 đối tượng trong một bước hoàn tác: 2 cột.',drawn:{columns:['sl_00000001'],beams:['sl_00000001'],walls:[],slabs:['sl_00000001'],ceilings:[]}});
   const ar3=await allRows();
-  ok((await message()).includes('một bước hoàn tác') && ar3[0][7]==='Cột, Dầm, Sàn' && ar3[1][7]==='—','sau khi dựng: cột Đã dựng liệt kê các loại đã dựng của tầng');
+  ok((await message()).includes('một bước hoàn tác') && ar3[0][8]==='Cột, Dầm, Sàn' && ar3[1][8]==='—','sau khi dựng: cột Đã dựng liệt kê các loại đã dựng của tầng');
   await page.click('[data-tab=columns]');
   ok(await page.locator('#remove-cols').isEnabled() && await page.locator('#remove-walls').isDisabled(),'các tab riêng nhận trạng thái đã dựng (xóa cột bấm được, xóa tường khóa)');
   await page.click('[data-tab=grid]');
@@ -624,7 +624,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const col=F.preview_all_cells.columns.items[0].center,c0=await pix(col[0],col[1]);
   ok(c0[1]>c0[0] && c0[1]>c0[2] && c0[1]>150,'pixel tại tâm cột có màu xanh lá (cột được vẽ trên canvas)');
   ok(await page.locator('#pv-tabs .pv-tab').count()===F.state.levels.length && (await page.locator('#pv-tabs [aria-selected=true]').getAttribute('data-level'))===F.state.levels[0].id,'tab theo tầng: đủ số tầng, đang chọn tầng hiện hành');
-  ok(await page.locator('#pv-ribbon .pv-ic[data-tool=select]').isEnabled() && await page.locator('#pv-ribbon .pv-ic[data-tool=pan]').isEnabled() && await page.locator('#pv-ribbon .pv-ic:disabled').count()===0 && await page.locator('#pv-ribbon .pv-ic[data-tool]').count()===32,'ribbon: mọi công cụ (8 thiết kế, 8 vẽ 2D / ghi chú, Mặt cắt, Chọn, Kéo, Gióng, Đo và nhóm Sửa) đều dùng được');
+  ok(await page.locator('#pv-ribbon .pv-ic[data-tool=select]').isEnabled() && await page.locator('#pv-ribbon .pv-ic[data-tool=pan]').isEnabled() && await page.locator('#pv-ribbon .pv-ic:disabled').count()===0 && await page.locator('#pv-ribbon .pv-ic[data-tool]').count()===33,'ribbon: mọi công cụ (9 thiết kế kể cả Cầu thang, 8 vẽ 2D / ghi chú, Mặt cắt, Chọn, Kéo, Gióng, Đo và nhóm Sửa) đều dùng được');
   ok(await page.locator('.pv-rb-tab').allInnerTexts().then(a=>a.join('|'))==='Kết cấu|Kiến trúc|Chú thích|Sửa|Xem|SketchUp' && (await page.locator('#pv-side').isHidden()),'ribbon có 6 tab Kết cấu, Kiến trúc, Chú thích, Sửa, Xem, SketchUp; cột công cụ cũ đã ẩn');
   const panelOf=async tab=>{await page.evaluate(t=>window.VGDPlan.ribbonTab(t),tab);return page.locator('.pv-rb-panel[data-tab='+tab+'] .pv-rb-grp > i').allInnerTexts().then(a=>a.join('|'));};
   ok((await panelOf('structure'))==='Lưới trục|Kết cấu' && (await panelOf('arch'))==='Cửa' && (await panelOf('annotate'))==='Vẽ 2D|Ghi chú|Mặt cắt' && (await panelOf('modify'))==='Chọn & đo|Sửa' && (await panelOf('view'))==='Đường gióng|Ẩn và cô lập' && (await panelOf('sketchup'))==='Liên kết|Dựng và vẽ trong SketchUp|Đối tượng SketchUp|Tag SketchUp','mỗi tab chia nhóm có tên (nhãn dưới nút) đúng như Revit');
@@ -1773,6 +1773,21 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const sr=await page.evaluate(id=>window.VGDS._state.levels[0].sections[id],idX);
   ok(sr && Math.abs(sr.a[0]-9750)<1 && Math.abs(sr.a[1]-2250)<1 && Math.abs(sr.b[0]-6250)<1 && Math.abs(sr.b[1]-2250)<1,'Rotate 90° quanh tâm: đường cắt xoay đúng, độ dài giữ nguyên (3500 mm)');
   await reset();
+  // --- Cầu thang: vẽ đáy và đỉnh vế, tối thiểu 600 mm, xem trước, cảnh báo đâm vào tường, xóa ---
+  await reset();await typ('sr');await wait(120);
+  ok((await dbg8()).tool==='stair' && /đáy vế/.test(await hintT()),'gõ SR: chọn công cụ Cầu thang, gợi ý bấm đáy vế');
+  await cl(2000,500);await cl(2000,700);await wait(120);
+  ok(/tối thiểu 600/.test(await hintT()) && Object.keys(await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks)).length===0,'vế dưới 600 mm: báo tối thiểu 600 mm, không thêm cầu thang');
+  await cl(2000,500);await cl(2000,5800);await wait(200);
+  const stx_stP=await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks);
+  ok(Object.keys(stx_stP).length===1 && Object.values(stx_stP)[0].type==='sj_00000001' && Math.abs(Object.values(stx_stP)[0].free.a[0]-2000)<1 && Math.abs(Object.values(stx_stP)[0].free.b[1]-5800)<1,'bấm đáy và đỉnh vế: thêm cầu thang (loại mặc định) với hai đầu đúng chỗ bấm');
+  await reset();await receive('state',F.state_stairs);await receive('preview',F.preview_stairs);await wait(150);
+  const stx_sd=await dbg8();
+  ok(stx_sd.counts.stair===2 && Object.keys(await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks)).length===2,'xem trước cầu thang: 2 cầu thang trên mặt bằng (một sạch, một đâm vào tường)');
+  await page.evaluate(()=>window.VGDPlan.selectKeys('sl_00000001',[{kind:'stair',ref:'st_00000001'}],false));await wait(80);
+  await page.keyboard.press('Delete');await wait(120);
+  ok(!(await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks))['st_00000001'] && (await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks))['st_00000002'],'Delete cầu thang đang chọn: chỉ xóa cầu thang đó');
+  await reset();await receive('state',F.state);await receive('preview',F.preview);await wait(120);
   // --- Mặt đứng: chọn hướng, dựng từ hình trong SketchUp, bấm chọn đối tượng, nhận chọn từ SketchUp ---
   await reset();await page.click('.tabs button[data-tab=elevation]');await wait(150);
   ok(await page.locator('#tab-elevation').isVisible() && /Chọn hướng/.test(await page.locator('#elv-status').innerText()),'tab Mặt đứng: chưa chọn hướng thì yêu cầu chọn hướng nhìn');

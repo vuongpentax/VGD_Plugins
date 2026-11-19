@@ -4,8 +4,8 @@
   'use strict';
   var host = null, S = null, A = null;
   var GOOD = '#2F7BFF', BAD = '#E5484D', TOL_NODE = 14, TOL_COLUMN = 28, TOL_SPAN = 12, OPENING_GAP = 50;
-  var DESIGN = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'door', 'window'];
-  var PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', opening: 'openingPicks'};
+  var DESIGN = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'stair', 'door', 'window'];
+  var PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', opening: 'openingPicks', stair: 'stairPicks'};
   var opt = {column: {type: '', x: 'auto', y: 'auto', mode: 'grid', rot: '0'}, beam: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, wall: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, door: {type: '', hand: '0'}, window: {type: '', flip: '0'}, grid: {dir: 'x'}, slab: {mode: 'grid', edges: 'free', part: 'outer'}, ceiling: {mode: 'grid', edges: 'free', part: 'outer'}};
   var tool = null, chain = null, target = null, note = '', ring = null; // ring: đường bao / lỗ đang vẽ của sàn, trần đa giác {pts, part, host}
 
@@ -53,13 +53,14 @@
   var MODE_VALUES = [['grid', 'Theo lưới (giao điểm / nhịp)'], ['free', 'Tự do (bắt điểm bất kỳ)']];
   var ROT_VALUES = [['0', '0°'], ['15', '15°'], ['30', '30°'], ['45', '45°'], ['60', '60°'], ['75', '75°'], ['90', '90°'], ['105', '105°'], ['120', '120°'], ['135', '135°'], ['150', '150°'], ['165', '165°']];
   function isPlate(t) { return t === 'slab' || t === 'ceiling'; }
-  function freeMode(t) { return !!(opt[t] && opt[t].mode === 'free' && (t === 'column' || t === 'beam' || t === 'wall' || isPlate(t))); }
+  function freeMode(t) { if (t === 'stair') return true; return !!(opt[t] && opt[t].mode === 'free' && (t === 'column' || t === 'beam' || t === 'wall' || isPlate(t))); }
   function rotRect(c, w, d, deg) { // hình chữ nhật w × d quanh tâm c, xoay deg độ ngược chiều kim đồng hồ
     var r = deg * Math.PI / 180, cs = Math.cos(r), sn = Math.sin(r);
     return [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]].map(function (p) { return [c[0] + p[0] * cs - p[1] * sn, c[1] + p[0] * sn + p[1] * cs]; });
   }
   function r1(v) { return Math.round(v * 10) / 10; }
   function options(t) {
+    if (t === 'stair') return [];
     if (isPlate(t) && freeMode(t)) return [{id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'free'}, {id: 'part', label: 'Vẽ', values: [['outer', 'Đường bao'], ['hole', 'Lỗ khoét (điểm đầu nằm trong một ' + (t === 'slab' ? 'sàn' : 'trần') + ' đa giác)']], value: opt[t].part}, {id: 'edges', label: 'Cạnh', values: [['free', 'Tự do'], ['ortho', 'Ngang / dọc']], value: opt[t].edges}];
     if (freeMode(t)) {
       var head = [{id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'free'}, {id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}];
@@ -87,7 +88,7 @@
   }
   function blocked(t) {
     if (t === 'slab' || t === 'grid') return '';
-    if (top()) return t === 'ceiling' ? 'Tầng trên cùng chỉ có sàn, không có trần.' : 'Tầng trên cùng chỉ có sàn (không có cột, dầm, tường, cửa).';
+    if (top()) return t === 'ceiling' ? 'Tầng trên cùng chỉ có sàn, không có trần.' : t === 'stair' ? 'Tầng trên cùng không có tầng trên để cầu thang đi lên.' : 'Tầng trên cùng chỉ có sàn (không có cột, dầm, tường, cửa).';
     return '';
   }
   function spansBetween(a, b) {
@@ -162,7 +163,7 @@
   // ---- Vẽ TỰ DO (P4b-1): cột đặt tại điểm bất kỳ; dầm, tường chỉ ngang / dọc, đầu mút đúng điểm bấm ----
   function freePoint(w) { var s2 = host.snapPoint(w) || w; return [r1(s2[0]), r1(s2[1])]; }
   // Điểm cuối của dầm / tường tự do: tùy chọn "Hướng": thẳng ngang / dọc, hoặc đúng điểm bắt (xiên).
-  function freeEnd(from, w) { return opt[tool] && opt[tool].angle === 'free' ? freePoint(w) : orthoEnd(from, w); }
+  function freeEnd(from, w) { return tool === 'stair' || (opt[tool] && opt[tool].angle === 'free') ? freePoint(w) : orthoEnd(from, w); }
   function orthoEnd(from, w) { // điểm cuối cùng hàng hoặc cùng cột với điểm đầu (theo phương con trỏ lệch nhiều hơn)
     var p = freePoint(w), horizontal = Math.abs(p[0] - from[0]) >= Math.abs(p[1] - from[1]);
     return horizontal ? [p[0], from[1]] : [from[0], p[1]];
@@ -262,7 +263,30 @@
     if (!chain) { target = {free: freePoint(w), start: true}; return; }
     var end = freeEnd(chain.p, w); target = lengthOf(chain.p, end) >= 100 ? {free: end, end: true} : {free: end, tooShort: true};
   }
+  // Cầu thang thẳng một vế: bấm đáy vế, rồi đỉnh vế (tối thiểu 600 mm). Số bậc, va chạm do Ruby tính (StairPlace).
+  function stairType() { return (S.stairTypes && S.stairTypes[0]) || null; }
+  function stairClick(w) {
+    freeMove(w); if (!target) return;
+    if (!chain) { chain = {free: true, p: target.free, ref: 'tự do'}; return; }
+    var a = chain.p, b = target.free;
+    if (lengthOf(a, b) < 600) { note = 'Cầu thang tối thiểu 600 mm.'; return; }
+    addStair(a, b); note = 'Đã thêm cầu thang dài ' + lengthOf(a, b) + ' mm (Ruby kiểm tra không đâm vào dầm, tường, cột).'; chain = null;
+  }
+  function addStair(a, b) {
+    var id = A.rid('st_'), type = stairType(), pick = {free: {a: a.slice(), b: b.slice()}};
+    if (type) pick.type = type.id;
+    host.mutate(function () { lvl()[PICKS.stair][id] = pick; });
+    return id;
+  }
+  // Dải bề rộng vế theo loại cầu thang đang dùng (xem trước trên mặt bằng).
+  function stairFootprint(a, b) {
+    var t = stairType(), width = t ? t.width : 1000, L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (L < 1) return null;
+    var ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = -uy * width / 2, ny = ux * width / 2;
+    return [[a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny], [b[0] - nx, b[1] - ny], [a[0] - nx, a[1] - ny]];
+  }
   function freeClick(w) {
+    if (tool === 'stair') { stairClick(w); return; }
     if (isPlate(tool)) { plateClick(w); return; }
     freeMove(w); if (!target) return;
     if (tool === 'column') { var id = addFreeColumn(target.free); note = 'Đã đặt cột tự do tại ' + target.free[0] + ', ' + target.free[1] + ' mm.'; return id; }
@@ -355,6 +379,7 @@
     if (note) return note;
     var why = blocked(tool); if (why) return why;
     if (freeMode(tool)) {
+      if (tool === 'stair') return chain ? 'Cầu thang: bấm đỉnh vế (tối thiểu 600 mm). Esc hủy.' : 'Cầu thang: bấm đáy vế (điểm đầu).';
       if (isPlate(tool)) {
         var pn = tool === 'slab' ? 'Sàn' : 'Trần';
         if (!ring) return pn + ' đa giác: bấm từng đỉnh của ' + (opt[tool].part === 'hole' ? 'LỖ (đỉnh đầu nằm trong một ' + pn.toLowerCase() + ' đa giác)' : 'đường bao') + '; bấm lại đỉnh đầu hoặc Enter để khép; Backspace bỏ đỉnh cuối; Esc hủy.';
@@ -403,6 +428,7 @@
           g.push({t: 'poly', poly: rotRect(c, ty.w, ty.d, Number(opt.column.rot) || 0), color: GOOD, alpha: 0.3}); g.push({t: 'dot', p: c, color: GOOD, r: 5}); }
         return g;
       }
+      if (tool === 'stair' && chain && target && target.free) { var fp = stairFootprint(chain.p, target.free); if (fp) g.push({t: 'poly', poly: fp, color: GOOD, alpha: 0.2}); }
       if (chain) { g.push({t: 'dot', p: chain.p, color: GOOD, r: 5}); }
       if (target && target.free) {
         if (chain) { g.push(solid({t: 'line', a: chain.p, b: target.free, color: target.tooShort ? BAD : GOOD, width: 5, alpha: 0.5}, tool)); if (target.end) g.push({t: 'text', p: target.free, text: lengthOf(chain.p, target.free) + ' mm'}); }
