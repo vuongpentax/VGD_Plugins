@@ -17,8 +17,9 @@ module VGD
         beam_types = raw['beam_types'].nil? ? BeamTypes.default : BeamTypes.normalize!(raw['beam_types'])
         wall_types = raw['wall_types'].nil? ? WallTypes.default : WallTypes.normalize!(raw['wall_types'])
         opening_types = raw['opening_types'].nil? ? OpeningTypes.default : OpeningTypes.normalize!(raw['opening_types'])
-        levels, removed = Levels.normalize!(raw['levels'].nil? ? Levels.default : raw['levels'], grid, types, beam_types, wall_types, opening_types)
-        {'grid' => grid, 'symbol' => symbol, 'types' => types, 'beam_types' => beam_types, 'wall_types' => wall_types, 'opening_types' => opening_types, 'levels' => levels, 'removed' => removed}
+        stair_types = raw['stair_types'].nil? ? StairTypes.default : StairTypes.normalize!(raw['stair_types'])
+        levels, removed = Levels.normalize!(raw['levels'].nil? ? Levels.default : raw['levels'], grid, types, beam_types, wall_types, opening_types, stair_types)
+        {'grid' => grid, 'symbol' => symbol, 'types' => types, 'beam_types' => beam_types, 'wall_types' => wall_types, 'opening_types' => opening_types, 'stair_types' => stair_types, 'levels' => levels, 'removed' => removed}
       end
     end
   end

@@ -402,10 +402,11 @@ module VGD
         beam_types = BeamTypes.normalize!(payload['beam_types'])
         wall_types = WallTypes.normalize!(payload['wall_types'])
         opening_types = payload['opening_types'].nil? ? OpeningTypes.default : OpeningTypes.normalize!(payload['opening_types'])
-        levels, = Levels.normalize!(payload['levels'], grid, types, beam_types, wall_types, opening_types)
+        stair_types = payload['stair_types'].nil? ? StairTypes.default : StairTypes.normalize!(payload['stair_types'])
+        levels, = Levels.normalize!(payload['levels'], grid, types, beam_types, wall_types, opening_types, stair_types)
         ids = payload['scope'] == 'all' ? levels.map { |l| l['id'] } : [payload['level']]
         proposed, added = Proposal.propose(grid, levels, ids)
-        clean, = Levels.normalize!(proposed, grid, types, beam_types, wall_types, opening_types)
+        clean, = Levels.normalize!(proposed, grid, types, beam_types, wall_types, opening_types, stair_types)
         parts = Checker::KIND_LABELS.map { |kind, label| "#{added[kind]} #{label.downcase}" }.join(', ')
         emit('levels', {levels: clean, message: "Đã đề xuất cho #{ids.size} tầng: thêm #{parts}. Hãy xem lại từng tab, bỏ bớt hoặc thêm rồi dựng.", proposed: added})
       rescue Grid::Error, ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, OpeningTypes::Error, Levels::Error => error
@@ -617,7 +618,8 @@ module VGD
         beam_types = payload['beam_types'].nil? ? BeamTypes.default : BeamTypes.normalize!(payload['beam_types'])
         wall_types = payload['wall_types'].nil? ? WallTypes.default : WallTypes.normalize!(payload['wall_types'])
         opening_types = payload['opening_types'].nil? ? OpeningTypes.default : OpeningTypes.normalize!(payload['opening_types'])
-        levels, = Levels.normalize!(payload['levels'], grid, types, beam_types, wall_types, opening_types)
+        stair_types = payload['stair_types'].nil? ? StairTypes.default : StairTypes.normalize!(payload['stair_types'])
+        levels, = Levels.normalize!(payload['levels'], grid, types, beam_types, wall_types, opening_types, stair_types)
         kind = %w[beams walls openings slabs ceilings].include?(payload['kind']) ? payload['kind'] : 'columns'
         copied = Levels.copy_picks(levels, payload['from'], payload['to'], grid, types, kind, beam_types, wall_types, opening_types)
         from = Levels.find(levels, payload['from'])['name']

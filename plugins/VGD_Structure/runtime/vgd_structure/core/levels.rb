@@ -33,6 +33,8 @@ module VGD
       NOTE_TYPES = %w[line poly circle arc text dim mark].freeze
       SECTION_ID = /\Asc_[0-9a-f]{8}\z/ # mã mặt cắt
       MAX_SECTIONS = 30
+      STAIR_ID = /\Ast_[0-9a-f]{8}\z/ # mã cầu thang (cầu thang tự do)
+      MAX_STAIRS = 50
       SECTION_DEPTH = (100.0..100_000.0)
       DEFAULT_SECTION_DEPTH = 6000.0
       MIN_SECTION_LENGTH = 100.0
@@ -47,13 +49,13 @@ module VGD
       # Hai tầng mặc định: Tầng 1 (cao độ 0) và tầng trên cùng cao 3600 mm.
       def self.default
         [{'id' => 'sl_00000001', 'name' => 'Tầng 1', 'elevation' => 0.0, 'screed' => DEFAULT_SCREED, 'slab_thickness' => DEFAULT_SLAB, 'ceiling_height' => DEFAULT_CEILING_HEIGHT, 'ceiling_thickness' => DEFAULT_CEILING_THICKNESS, 'column_type' => nil, 'beam_type' => nil, 'wall_type' => nil,
-         'picks' => {'columns' => {}, 'beams' => {}, 'walls' => {}, 'slabs' => {}, 'ceilings' => {}, 'openings' => {}}},
+         'picks' => {'columns' => {}, 'beams' => {}, 'walls' => {}, 'slabs' => {}, 'ceilings' => {}, 'openings' => {}, 'stairs' => {}}},
          {'id' => 'sl_00000002', 'name' => 'Tầng 2', 'elevation' => 3600.0, 'screed' => DEFAULT_SCREED, 'slab_thickness' => DEFAULT_SLAB, 'ceiling_height' => DEFAULT_CEILING_HEIGHT, 'ceiling_thickness' => DEFAULT_CEILING_THICKNESS, 'column_type' => nil, 'beam_type' => nil, 'wall_type' => nil,
-         'picks' => {'columns' => {}, 'beams' => {}, 'walls' => {}, 'slabs' => {}, 'ceilings' => {}, 'openings' => {}}}]
+         'picks' => {'columns' => {}, 'beams' => {}, 'walls' => {}, 'slabs' => {}, 'ceilings' => {}, 'openings' => {}, 'stairs' => {}}}]
       end
 
       # Kiểm tra danh sách tầng với lưới và loại cột. Trả về [danh sách sạch, số lựa chọn cột bị bỏ vì giao điểm không còn trên lưới].
-      def self.normalize!(list, grid, types, beam_types = BeamTypes.default, wall_types = WallTypes.default, opening_types = OpeningTypes.default)
+      def self.normalize!(list, grid, types, beam_types = BeamTypes.default, wall_types = WallTypes.default, opening_types = OpeningTypes.default, stair_types = StairTypes.default)
         raise Error, 'Danh sách tầng không hợp lệ.' unless list.is_a?(Array)
         raise Error, "Cần từ 1 đến #{MAX_LEVELS} tầng." unless list.size.between?(1, MAX_LEVELS)
         refs = Grid.intersections(grid).map { |i| i[:ref] }
@@ -105,9 +107,10 @@ module VGD
           openings, dropped_o = openings!((raw || {})['openings'], span_refs + free_walls, opening_types, name)
           notes = notes!(level['notes'], name)
           sections = sections!(level['sections'], name)
+          stairs = stairs!((raw || {})['stairs'], stair_types, name)
           removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k + dropped_o
           entry = {'id' => id, 'name' => name, 'elevation' => elevation, 'screed' => screed.to_f.round(1), 'slab_thickness' => slab.to_f.round(1), 'ceiling_height' => ceiling_height.to_f.round(1), 'ceiling_thickness' => ceiling_thickness.to_f.round(1),
-           'column_type' => type_id, 'beam_type' => beam_type, 'wall_type' => wall_type, 'picks' => {'columns' => columns, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings, 'openings' => openings}, 'notes' => notes}
+           'column_type' => type_id, 'beam_type' => beam_type, 'wall_type' => wall_type, 'picks' => {'columns' => columns, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings, 'openings' => openings, 'stairs' => stairs}, 'notes' => notes}
           entry['sections'] = sections unless sections.empty?
           entry['floor_layers'] = floor_layers unless floor_layers.empty?
           entry['ceiling_layers'] = ceiling_layers unless ceiling_layers.empty?
@@ -259,6 +262,23 @@ module VGD
 
       # Mặt cắt của tầng: {mã 'sc_' + 8 chữ số 16 => {name, a: [x, y], b: [x, y], dir: 1 | -1 (phía nhìn: 1 là phía pháp tuyến trái của a->b), depth: tầm nhìn mm}}.
       # Chỉ là ĐỊNH NGHĨA đường cắt (mặt cắt thật được dựng từ hình trong SketchUp), không có kế hoạch và không dựng vào model.
+      # Cầu thang tự do (picks.stairs): {mã 'st_' + 8 chữ số 16 => {'type' => mã loại, 'free' => {'a' => [x, y], 'b' => [x, y]}}}. Chỉ kiểm dữ liệu;
+      # hình, số bậc và va chạm do StairPlan / StairPlace tính.
+      def self.stairs!(raw, stair_types, level_name)
+        return {} if raw.nil?
+        raise Error, "Tầng “#{level_name}”: cầu thang không hợp lệ." unless raw.is_a?(Hash) && raw.size <= MAX_STAIRS
+        raw.each_with_object({}) do |(ref, pick), out|
+          raise Error, "Tầng “#{level_name}”: mã cầu thang không hợp lệ." unless ref.is_a?(String) && ref.match?(STAIR_ID)
+          raise Error, "Tầng “#{level_name}”: cầu thang #{ref} không hợp lệ." unless pick.is_a?(Hash) && pick['free'].is_a?(Hash)
+          type = pick['type'] || stair_types.first['id']
+          raise Error, "Tầng “#{level_name}”: cầu thang #{ref} dùng loại không tồn tại." unless StairTypes.find(stair_types, type)
+          a = pick['free']['a']
+          b = pick['free']['b']
+          raise Error, "Tầng “#{level_name}”: cầu thang #{ref} có điểm đầu hoặc điểm cuối không hợp lệ." unless StairPlan.point?(a) && StairPlan.point?(b)
+          out[ref] = {'type' => type, 'free' => {'a' => [a[0].to_f.round(1), a[1].to_f.round(1)], 'b' => [b[0].to_f.round(1), b[1].to_f.round(1)]}}
+        end
+      end
+
       def self.sections!(raw, level_name)
         return {} if raw.nil?
         raise Error, "Tầng “#{level_name}”: dữ liệu mặt cắt không hợp lệ." unless raw.is_a?(Hash)

@@ -37,6 +37,10 @@ module VGD
         out
       end
 
+      def self.find(list, id)
+        list.find { |t| t['id'] == id }
+      end
+
       def self.number!(value, name, label, range)
         ok = value.is_a?(Numeric) && value.to_f.finite? && range.cover?(value.to_f)
         raise Error, "Loại cầu thang “#{name}”: #{label} phải từ #{range.min.to_i} đến #{range.max.to_i} mm." unless ok

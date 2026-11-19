@@ -38,12 +38,13 @@ module VGD
 
       # Phần xem trước loại cột, tầng và cột của tầng đang xem. Lỗi dữ liệu tầng / loại cột báo riêng, không chặn xem trước lưới.
       def self.columns(grid, payload)
-        return {} unless payload.key?('levels') || payload.key?('types') || payload.key?('beam_types') || payload.key?('wall_types') || payload.key?('opening_types')
+        return {} unless payload.key?('levels') || payload.key?('types') || payload.key?('beam_types') || payload.key?('wall_types') || payload.key?('opening_types') || payload.key?('stair_types')
         types = payload['types'].nil? ? ColumnTypes.default : ColumnTypes.normalize!(payload['types'])
         beam_types = payload['beam_types'].nil? ? BeamTypes.default : BeamTypes.normalize!(payload['beam_types'])
         wall_types = payload['wall_types'].nil? ? WallTypes.default : WallTypes.normalize!(payload['wall_types'])
         opening_types = payload['opening_types'].nil? ? OpeningTypes.default : OpeningTypes.normalize!(payload['opening_types'])
-        levels, removed = Levels.normalize!(payload['levels'].nil? ? Levels.default : payload['levels'], grid, types, beam_types, wall_types, opening_types)
+        stair_types = payload['stair_types'].nil? ? StairTypes.default : StairTypes.normalize!(payload['stair_types'])
+        levels, removed = Levels.normalize!(payload['levels'].nil? ? Levels.default : payload['levels'], grid, types, beam_types, wall_types, opening_types, stair_types)
         out = {levels_ok: true, removed: removed}
         begin
           plan = ColumnPlan.plan(grid, types, levels, payload['level'] || levels.first['id'])
@@ -75,6 +76,13 @@ module VGD
           out[:openings_error] = error.message
         end
         begin
+          stairs = StairPlace.plan(grid, types, beam_types, wall_types, stair_types, levels, payload['level'] || levels.first['id'], opening_types)
+          out[:stairs] = {level: stairs[:level]['id'], level_name: stairs[:level]['name'], count: stairs[:items].size, issues: stairs[:issues],
+                          items: stairs[:items].map { |i| i.slice(:ref, :type, :type_name, :a, :b, :polygon, :min, :max, :z0, :z1, :placement, :conflicts).merge(steps: i[:plan][:steps], rails: i[:plan][:rails], count: i[:plan][:count], riser: i[:plan][:riser], tread: i[:plan][:tread]) }}
+        rescue StairPlace::Error, StairPlan::Error, WallPlan::Error, BeamPlan::Error, ColumnPlan::Error => error
+          out[:stairs_error] = error.message
+        end
+        begin
           slab = SlabPlan.plan(grid, levels, level_id, types, beam_types, wall_types, opening_types)
           out[:slabs] = {level: slab[:level]['id'], level_name: slab[:level]['name'], z_top: slab[:z_top], thickness: slab[:thickness], count: slab[:items].size, issues: slab[:issues],
                          items: slab[:items].map { |i| i.slice(:ref, :min, :max, :thickness, :z_top, :z_bottom, :area, :polygon, :holes, :placement, :layers) }}
@@ -89,7 +97,7 @@ module VGD
           out[:ceilings_error] = error.message
         end
         out
-      rescue ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, OpeningTypes::Error, Levels::Error => error
+      rescue ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, OpeningTypes::Error, StairTypes::Error, Levels::Error => error
         {levels_ok: false, levels_error: error.message}
       end
     end
