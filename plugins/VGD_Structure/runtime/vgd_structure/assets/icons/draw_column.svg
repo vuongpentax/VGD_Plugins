@@ -1,9 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="t">
   <title id="t">VGD Structure · Cột</title>
   <g stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="7" y="7" width="10" height="10" rx="0.5"/>
+    <path d="M12.0 2.0 L15.22 3.86 L12.0 5.72 L8.78 3.86 Z" fill="none"/>
+    <path d="M15.22 20.14 L12.0 22.0 L12.0 5.72 L15.22 3.86 Z" fill="none"/>
+    <path d="M8.78 20.14 L12.0 22.0 L12.0 5.72 L8.78 3.86 Z" fill="none"/>
   </g>
   <g stroke="#B48963" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M7 12h10M12 7v10"/>
+    <path d="M12.0 2.0 L15.22 3.86 L12.0 5.72 L8.78 3.86 Z" fill="#B48963" fill-opacity="0.35"/>
   </g>
 </svg>

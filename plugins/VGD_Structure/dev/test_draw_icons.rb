@@ -13,7 +13,8 @@ TOOLS.each do |tool|
   svg = File.read(file, encoding: 'UTF-8')
   ok("#{tool}: viewBox 0 0 24 24 và kích thước 24", svg.include?('viewBox="0 0 24 24"') && svg.include?('width="24"') && svg.include?('height="24"'))
   ok("#{tool}: nét 1.8, đầu nét và góc nối bo tròn", svg.scan('stroke-width="1.8"').size >= 2 && svg.scan('stroke-linecap="round"').size >= 2 && svg.scan('stroke-linejoin="round"').size >= 2)
-  ok("#{tool}: không nền (không có hình chữ nhật phủ toàn bộ viewBox, không fill)", !svg.match?(/<rect[^>]*width="24"/) && svg.scan(/fill="(?!none)[^"]*"/).empty?)
+  fills = svg.scan(/fill="([^"]*)"/).flatten.uniq
+  ok("#{tool}: không nền (không có hình chữ nhật phủ viewBox); fill chỉ là none hoặc màu nhấn tô nhạt", !svg.match?(/<rect[^>]*width="24"/) && fills.all? { |f| f == 'none' || f == '#B48963' })
   ok("#{tool}: chỉ dùng hai màu của bộ icon (nét chính #292B2D, điểm nhấn #B48963)", svg.scan(/stroke="(#[0-9A-Fa-f]{6})"/).flatten.uniq.sort.all? { |c| %w[#292B2D #B48963].include?(c) })
 end
 ok('loader dùng SVG cho cả hai cỡ (không còn PNG)', LOADER.include?("draw_\#{tool}.svg") && !LOADER.include?('.png'))

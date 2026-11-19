@@ -1,9 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="t">
   <title id="t">VGD Structure · Dầm</title>
   <g stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="2" y="8.5" width="20" height="7" rx="0.5"/>
+    <path d="M5.33 4.3 L22.0 13.92 L18.67 15.85 L2.0 6.23 Z" fill="none"/>
+    <path d="M22.0 17.77 L18.67 19.7 L18.67 15.85 L22.0 13.92 Z" fill="none"/>
+    <path d="M2.0 10.08 L18.67 19.7 L18.67 15.85 L2.0 6.23 Z" fill="none"/>
   </g>
   <g stroke="#B48963" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M8 12h8"/>
+    <path d="M2.0 10.08 L18.67 19.7 L18.67 15.85 L2.0 6.23 Z" fill="#B48963" fill-opacity="0.35"/>
   </g>
 </svg>

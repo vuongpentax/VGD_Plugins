@@ -1,9 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="t">
   <title id="t">VGD Structure · Sàn</title>
   <g stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M2 13h20v5H2z"/>
+    <path d="M10.57 5.24 L22.0 11.84 L13.43 16.78 L2.0 10.19 Z" fill="none"/>
+    <path d="M22.0 13.81 L13.43 18.76 L13.43 16.78 L22.0 11.84 Z" fill="none"/>
+    <path d="M2.0 12.16 L13.43 18.76 L13.43 16.78 L2.0 10.19 Z" fill="none"/>
   </g>
   <g stroke="#B48963" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M2 9.5h20"/>
+    <path d="M10.57 5.24 L22.0 11.84 L13.43 16.78 L2.0 10.19 Z" fill="#B48963" fill-opacity="0.35"/>
   </g>
 </svg>

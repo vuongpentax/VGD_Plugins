@@ -1,9 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="t">
   <title id="t">VGD Structure · Cửa sổ</title>
   <g stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M2 12h6M16 12h6"/>
+    <path d="M5.5 2.0 L19.94 10.33 L18.5 11.17 L4.06 2.83 Z" fill="none"/>
+    <path d="M19.94 21.17 L18.5 22.0 L18.5 11.17 L19.94 10.33 Z" fill="none"/>
+    <path d="M4.06 13.67 L18.5 22.0 L18.5 11.17 L4.06 2.83 Z" fill="none"/>
   </g>
   <g stroke="#B48963" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M8 10h8M8 14h8"/><path d="M8 12h8"/>
+    <path d="M8.75 13.04 L13.8 15.96 L13.8 11.38 L8.75 8.46 Z" fill="none"/>
+    <path d="M11.28 14.5 L11.28 9.92" fill="none"/>
+    <path d="M8.75 10.75 L13.8 13.67" fill="none"/>
   </g>
 </svg>
