@@ -36,7 +36,7 @@ module VGD
           @table_scope = []
           @table_picks = nil      # đối tượng bảng đã chọn và SketchUp đang chọn theo
           @picked_entities = []   # mọi đối tượng đã chọn trong bảng (có thể nhiều hơn SketchUp chọn khi khác cấp lồng)
-          @table_options = {zoom: true, isolate: false, deep: false, projected: false, label: true}
+          @table_options = TABLE_DEFAULTS.dup
           @isolated = []
           @preview = nil
           @ready = false
@@ -140,6 +140,10 @@ module VGD
         def check_model!
           raise 'Mô hình đã thay đổi. Hãy làm mới trước khi tiếp tục.' unless @model == Sketchup.active_model
         end
+        # Đang mở file SketchUp khác mà cửa sổ chưa nạp lại: nạp lại trước khi đọc hay ghi mốc, để không đọc nhầm mốc của file cũ.
+        def follow_active_model!
+          refresh unless @model.equal?(Sketchup.active_model)
+        end
         def detach
           @model.selection.remove_observer(@observer) if @model && @observer
           @observer = nil
@@ -157,7 +161,19 @@ module VGD
           ::UI.stop_timer(@selection_timer) if @selection_timer
           @selection_timer = ::UI.start_timer(0.05, false) { safely { handler.call if @dialog.visible? } }
         end
+        # Tùy chọn bảng mặc định; mở file SketchUp khác thì quay về đúng mức này.
+        TABLE_DEFAULTS = {zoom: true, isolate: false, deep: false, projected: false, label: true}.freeze
+
         def refresh
+          switched = @model && !@model.equal?(Sketchup.active_model)
+          if switched # file khác: bỏ mọi thứ còn lại của file cũ (tùy chọn, mục đã chọn, luật bảng Excel, bảng dựng cũ)
+            @table_options = TABLE_DEFAULTS.dup
+            @table_picks = nil
+            @picked_entities = []
+            @bridge_file = nil
+            @table_rows = nil
+            @table_records = nil
+          end
           @generation += 1
           @pending = nil
           @scan_complete = false
@@ -632,12 +648,12 @@ module VGD
         end
         # Mốc phiên bản của bảng (core/snapshots.rb): danh sách đọc theo yêu cầu (không đọc mỗi lần dựng bảng vì có thể lớn).
         def snapshot_list
-          check_model!
+          follow_active_model!
           emit('snapshots', Snapshots.summary(Snapshots.read(@model)))
         end
         # Chụp mốc từ các dòng hiện có của bảng. payload: {'name' => tên}. Chỉ ghi dictionary của model, không đụng đối tượng.
         def snapshot_save(payload)
-          check_model!
+          follow_active_model!
           raise ArgumentError, 'Dữ liệu mốc không hợp lệ.' unless payload.is_a?(Hash)
           raise 'Bảng chưa có dữ liệu. Hãy làm mới bảng.' if @table_rows.nil?
           list = Snapshots.add(Snapshots.read(@model), Snapshots.capture(payload['name'], @table_rows))
@@ -646,7 +662,7 @@ module VGD
           emit('message', {text: "Đã chụp mốc #{list.last['name']} (#{list.last['items'].size} món)."})
         end
         def snapshot_delete(payload)
-          check_model!
+          follow_active_model!
           raise ArgumentError, 'Dữ liệu mốc không hợp lệ.' unless payload.is_a?(Hash)
           list = Snapshots.read(@model)
           kept = list.reject { |snap| snap['id'] == payload['id'] }
@@ -657,7 +673,7 @@ module VGD
         end
         # So mốc với bảng hiện tại (chỉ đọc), gửi kết quả cho giao diện. payload: {'id' => mã mốc}.
         def snapshot_compare(payload)
-          check_model!
+          follow_active_model!
           raise ArgumentError, 'Dữ liệu mốc không hợp lệ.' unless payload.is_a?(Hash)
           raise 'Bảng chưa có dữ liệu. Hãy làm mới bảng.' if @table_rows.nil?
           snap = Snapshots.read(@model).find { |item| item['id'] == payload['id'] }

@@ -820,6 +820,20 @@ ok('so sánh: gửi snapshot_diff đúng món mới / không còn / đổi', dif
 ok('so sánh mốc không có: lỗi', bad_snap.call { sd.snapshot_compare({'id' => 'sn_00000000'}) }.to_s.include?('Không tìm thấy'))
 sd.snapshot_list
 ok('danh sách mốc: gửi đúng một mốc', sd.scalls.last[0] == 'snapshots' && sd.scalls.last[1].size == 1)
+# Mở file khác: thao tác mốc phải theo file đang mở (không đọc nhầm mốc file cũ)
+refreshed = []
+sd.define_singleton_method(:refresh) { refreshed << :yes }
+sd.snapshot_list
+$model = LevelModel.new
+sd.snapshot_list
+ok('model đang mở khác với model của cửa sổ: nạp lại cửa sổ trước khi đọc mốc', refreshed == [:yes])
+refreshed.clear
+sd.instance_variable_set(:@model, $model)
+sd.snapshot_list
+ok('cùng file: không nạp lại', refreshed.empty?)
+$model = sm
+sd.instance_variable_set(:@model, sm)
+sd.singleton_class.send(:remove_method, :refresh)
 ok('xóa mốc không có: lỗi', bad_snap.call { sd.snapshot_delete({'id' => 'sn_00000000'}) }.to_s.include?('Không tìm thấy'))
 sd.snapshot_delete({'id' => sid})
 ok('xóa mốc: model hết mốc', VGD::BIM::Snapshots.read(sm).empty? && sd.scalls.last[1][:text].include?('xóa'))

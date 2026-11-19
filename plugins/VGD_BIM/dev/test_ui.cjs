@@ -615,6 +615,11 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   await page.locator('.sn-item .cs-del').dispatchEvent('click');
   last=await lastCall();assert(last.name==='snapshot_delete' && last.data.id==='sn_aaaaaaaa','xóa mốc gửi mã');
   await page.evaluate(()=>{tableState.panel=null;tableState.snapshotDiff=null;tableView(tableState.data);});
+  // Đổi file SketchUp: mốc và kết quả so sánh của file cũ không còn trong giao diện
+  await receive('config',{...config,mode:'information',file:'file-a'});
+  await page.evaluate(()=>{tableState.snapshots=[{id:'sn_cccccccc',name:'Mốc file cũ',count:3}];tableState.snapshotDiff={name:'Mốc file cũ',added:[],removed:[],changed:[]};});
+  await receive('config',{...config,mode:'information',file:'file-b'});
+  assert(await page.evaluate(()=>tableState.snapshots===null && tableState.snapshotDiff===null),'đổi file: xóa mốc và kết quả so sánh của file cũ');
   await receive('config',{...config,mode:'information'});await receive('information',{count:0,fields:{},objects:[]});assert(await page.getByRole('button',{name:'Áp dụng thông tin',exact:true}).isDisabled(),'Empty selection can apply');
   await receive('information',{count:10,fields:{category:'electrical',item_type:'socket',description:'Ổ cắm đôi',unit:'pcs',quantity_method:'count',zone:'MASTER',include_boq:true},objects:[]});
   const output=path.resolve(__dirname,'../outputs');fs.mkdirSync(output,{recursive:true});await page.screenshot({path:path.join(output,'information_light.png'),fullPage:true});

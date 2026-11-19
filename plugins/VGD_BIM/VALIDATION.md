@@ -2,6 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.12: đã kiểm tra tự động
+
+Sửa: so sánh phiên bản vẫn dùng mốc / kết quả của file cũ sau khi mở file khác.
+
+- `test_dialog_logic.rb`: thao tác mốc khi model đang mở khác với model của cửa sổ thì nạp lại cửa sổ trước; cùng file thì không nạp lại.
+- `test_ui.cjs`: đổi file (nhận `config` với mã file khác) thì xóa danh sách mốc và kết quả so sánh; bấm So sánh phiên bản xóa danh sách cũ trước khi xin danh sách mới. Đã kiểm: bỏ phần reset thì test báo lỗi.
+
+**Chưa xác minh trong SketchUp thật:** mở file thứ hai trong cùng phiên SketchUp, mở panel So sánh phiên bản: chỉ thấy mốc của file thứ hai.
+
 ## Bản 1.1.1-beta.11: đã kiểm tra tự động
 
 Cột mốc 4 (phần): điều kiện lọc theo nhóm hạng mục cho luật kiểm tra.
