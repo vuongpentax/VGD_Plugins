@@ -1,6 +1,6 @@
 # VGD Structure 0.28.0 (beta)
 
-- **Icon vẽ trên thanh công cụ SketchUp (beta.4):** thanh **VGD STR** có thêm 7 nút vẽ trực tiếp trong SketchUp: Cột, Dầm, Tường, Cửa đi, Cửa sổ, Sàn, Trần (cùng lệnh với menu Vẽ trong SketchUp). Icon 16 và 24 px sinh bằng `dev/make_draw_icons.py`. Chỉ kiểm bằng test file icon và loader; chưa thấy trên thanh công cụ SketchUp thật.
+- **Icon vẽ trên thanh công cụ SketchUp (beta.4, beta.5):** thanh **VGD STR** có thêm 7 nút vẽ trực tiếp trong SketchUp: Cột, Dầm, Tường, Cửa đi, Cửa sổ, Sàn, Trần (cùng lệnh với menu Vẽ trong SketchUp). Beta.5 đổi sang **icon SVG** vẽ theo ngôn ngữ Revit (hình mới của VGD, không sao chép icon Autodesk), đúng quy tắc `shared/VGD_ICON_SYSTEM_RULES.md`. Chưa kiểm tra SVG trên thanh công cụ SketchUp thật; nếu SketchUp không hiện, báo lại để chuyển về PNG.
 
 - **Vẽ sàn trong SketchUp kiểu X-ray (beta.3):** khối xem trước của sàn đang vẽ (theo ô và đa giác) mờ gần như trong suốt, viền mặt trên và đáy bằng **nét đứt**, không vẽ cạnh đứng để đỡ rối. Trần và tường giữ kiểu cũ. Chỉ kiểm bằng SketchUp giả lập; độ mượt khi di chuột trong SketchUp thật chưa đo.
 
