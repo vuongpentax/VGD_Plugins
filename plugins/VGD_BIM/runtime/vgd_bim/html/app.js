@@ -1148,7 +1148,9 @@ function roomsPanel(){
     const fin=node('div',undefined,'rm-fin');
     [['finish_floor','Sàn'],['finish_wall','Tường'],['finish_ceiling','Trần']].forEach(([k,t])=>{const i=fieldInput(room,k,'Hoàn thiện '+t.toLowerCase(),'text');i.placeholder='Hoàn thiện '+t.toLowerCase();i.maxLength=60;fin.append(i);});
     const m=room.metrics||{};
-    box.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường ${m.wall_area} m² · Trần ${m.ceiling_area} m²`+(room.holes&&room.holes.length?` · ${room.holes.length} lỗ (cột, hộp kỹ thuật)`:''),'muted rm-metrics'));
+    const build=button(room.has_volume?'Dựng lại khối':'Dựng khối',()=>call('table_room_build',JSON.stringify({id:room.id})));build.className='rm-build';
+    build.title='Dựng (hoặc dựng lại) khối 3D của phòng: một khối trên tag VGD_ROOMS, một bước hoàn tác.';
+    box.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường ${m.wall_area} m² · Trần ${m.ceiling_area} m²`+(room.holes&&room.holes.length?` · ${room.holes.length} lỗ (cột, hộp kỹ thuật)`:''),'muted rm-metrics'),build);
     p.append(box);
   });
   if(!rooms.length)p.append(node('p','Chưa có phòng nào. Chọn một hoặc nhiều mặt sàn trong SketchUp rồi bấm Tạo phòng từ các mặt đang chọn.','muted'));
@@ -1163,7 +1165,9 @@ function roomsPanel(){
     if(!picked.length)throw Error('Hãy chọn các dòng cần gán phòng (Ctrl+A chọn hết các dòng đang hiện).');
     call('table_assign_rooms_auto',JSON.stringify({indexes:picked.flatMap(r=>r.members.filter(m=>tableState.sel.has(m)).slice(0,1))}));
   });auto.id='rm-auto';auto.title='Mỗi món nhận phòng chứa tâm đáy của nó (trong viền và trong khoảng cao của phòng). Chỉ là nhãn, không dời hình.';
-  const actions=node('div',undefined,'rename-actions');actions.append(make,auto,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
+  const buildAll=button(`Dựng khối tất cả phòng${rooms.length?` (${rooms.length})`:''}`,()=>call('table_room_build_all',JSON.stringify({})));buildAll.id='rm-build-all';
+  buildAll.disabled=!rooms.length;buildAll.title='Dựng (hoặc dựng lại) khối 3D của mọi phòng, một bước hoàn tác cho cả đợt.';
+  const actions=node('div',undefined,'rename-actions');actions.append(make,buildAll,auto,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
   p.append(create,node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán phòng theo vị trí; hoặc nhấp đúp ô Phòng để gán tay.','muted'),actions);
   return p;
 }
@@ -1777,7 +1781,7 @@ function ioPanel(){
   const levelsBtn=item('id','Quản lý tầng...',()=>{tableState.panel='levels';tableView(tableState.data);});
   levelsBtn.id='levels-open';levelsBtn.title='Thêm / sửa tầng của công trình và gán tầng cho món (chỉ là nhãn, không dời hình)';
   const roomsBtn=item('id','Quản lý phòng...',()=>{tableState.panel='rooms';tableView(tableState.data);});
-  roomsBtn.id='rooms-open';roomsBtn.title='Tạo phòng từ mặt sàn đang chọn, sửa tên / mã / tầng / chiều cao / hoàn thiện, xem diện tích, thể tích và gán món vào phòng (chỉ là dữ liệu, không dựng hình)';
+  roomsBtn.id='rooms-open';roomsBtn.title='Tạo phòng từ mặt sàn đang chọn, sửa tên / mã / tầng / chiều cao / hoàn thiện, xem diện tích, thể tích và gán món vào phòng (dữ liệu và khối 3D của phòng)';
   const materialsBtn=item('id','Thư viện vật liệu...',()=>{tableState.panel='materials';tableView(tableState.data);});
   materialsBtn.id='materials-open';materialsBtn.title='Thư viện vật liệu (mã, hãng, đơn giá, hao hụt...) nối với vật liệu SketchUp theo tên để tính khối lượng có hao hụt và thành tiền theo vật liệu';
   const checksBtn=item('id','Luật kiểm tra...',()=>{tableState.panel='checks';tableView(tableState.data);});

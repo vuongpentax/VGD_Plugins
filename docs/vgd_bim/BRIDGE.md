@@ -30,8 +30,8 @@ VGD::Bridge.register('ten_plugin', {
 
 Chưa cài plugin thì `provider_for` trả nil và BIM báo cần cài qua VGD Center. Khác `bridge_version` thì không dùng (không đoán).
 
-### Loại `room_volume` (đã gỡ ở VGD_BIM 1.1.1-beta.10)
-Plugin VGD_Room đã bị xóa khỏi repo, nên không còn plugin nào cung cấp loại này. Tên loại được giữ để không dùng lại cho nghĩa khác. Khối phòng cũ (nếu còn trong file SketchUp) vẫn được nhận diện qua `VGD_BIM_SOURCE.kind = room` và không tính khối lượng.
+### Loại `room_volume` (không còn cầu nối từ VGD_BIM 1.1.1-beta.13)
+VGD_Room được nhập vào VGD_BIM: khối 3D của phòng do `core/room_volume.rb` dựng trực tiếp, không qua cầu nối. Mục này chỉ còn để ghi lịch sử. Tên loại được giữ để không dùng lại cho nghĩa khác. Khối phòng cũ (nếu còn trong file SketchUp) vẫn được nhận diện qua `VGD_BIM_SOURCE.kind = room` và không tính khối lượng.
 
 ### Loại `vgd_id` (VGD_BIM cung cấp, từ VGD_BIM 1.1.1-beta.6)
 - `generate()`: trả VGD ID mới (UUID chữ thường). Plugin dựng hình (VGD Structure...) xin ID cho phần tử mới dựng; chưa cài BIM thì để trống, BIM gán sau bằng nút "Gán VGD ID". Plugin **không tự sinh** ID. Dựng lại thì plugin **giữ ID cũ** của đúng phần tử (theo `VGD_BIM_SOURCE.ref`), không xin ID mới.

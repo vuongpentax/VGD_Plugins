@@ -2,6 +2,18 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.13: đã kiểm tra tự động
+
+Nhập VGD Room vào VGD_BIM (dựng khối 3D của phòng) và đổi nút Dựng khối sang gọi trực tiếp `core/room_volume.rb`.
+
+- `test_room_volume.rb` (khôi phục từ bản VGD_Room, đổi sang module của BIM): dữ liệu sai bị từ chối, khối đúng viền / cao độ / chiều cao / hướng, lỗ, tag / vật liệu / tên, VGD ID giữ khi dựng lại, khối khóa, một thao tác cho một và cho cả đợt, hủy khi lỗi.
+- `test_ui.cjs`: nút Dựng khối (đổi thành Dựng lại khối khi đã có khối) và Dựng khối tất cả phòng gửi đúng lệnh.
+- `test_ui_en.cjs`: nhãn tiếng Anh của hai nút.
+
+**Chưa làm:** dò vùng phòng từ tường (đặc tả `docs/vgd_bim/ROOM_FROM_WALLS.md`, còn các điểm D1–D4 cần chốt).
+
+**Chưa xác minh trong SketchUp thật:** khối 3D dựng trên model thật, hoàn tác, khối cũ của VGD_Room bản trước được nhận diện qua `kind = room`.
+
 ## Bản 1.1.1-beta.12: đã kiểm tra tự động
 
 Sửa: so sánh phiên bản vẫn dùng mốc / kết quả của file cũ sau khi mở file khác.

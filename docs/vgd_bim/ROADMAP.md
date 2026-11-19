@@ -1,8 +1,10 @@
-# VGD_BIM — Lộ trình phát triển (duyệt 12/11/2026, cập nhật 18/11/2026)
+# VGD_BIM — Lộ trình phát triển (duyệt 12/11/2026, cập nhật 19/11/2026)
 
 Tài liệu này là kế hoạch làm việc của plugin `plugins/VGD_BIM`, lập từ bản kế hoạch tổng hợp do chủ dự án soạn (`MASTER_PLAN.md` cùng thư mục, giữ nguyên bản gốc). Mỗi lần làm xong một cột mốc phải cập nhật phần "Trạng thái" bên dưới trong cùng commit. Tài liệu viết cho người không chuyên mã nguồn; thuật ngữ khó có giải thích ngay chỗ dùng.
 
-**Phạm vi (chủ dự án, 18/11/2026) — thay thế tầm nhìn bên dưới:** VGD_BIM chỉ làm ba việc: **định danh** (VGD ID, mã đối tượng), **tag** (gắn và xếp tag), và **bóc khối lượng cho bảng thống kê** (schedule, kiểm tra, so sánh, xuất). VGD_BIM **không dựng 3D**. Việc dựng hình và xác định không gian (phòng, dò viền từ tường) do **VGD Structure** làm; VGD_BIM đọc dữ liệu đó qua cầu nối và chỉ gọi lệnh sửa của plugin nguồn. **Không liên kết VGD_Cabinet** (bỏ mục 5d). Tầm nhìn cũ được giữ nguyên trong lịch sử và trong `MASTER_PLAN.md`.
+**Đảo quyết định (chủ dự án, 19/11/2026):** VGD Room được nhập lại vào VGD_BIM (không còn plugin riêng), để BIM dựng khối 3D của phòng và khoanh vùng phòng (từ mặt sàn đã chọn và từ tường). BIM tự làm việc dò vùng phòng từ tường; không giao cho VGD Structure và không cần báo Structure. Đặc tả: `docs/vgd_bim/ROOM_FROM_WALLS.md`.
+
+**Phạm vi trước đó (chủ dự án, 18/11/2026) — đã đảo một phần:** VGD_BIM chỉ làm ba việc: **định danh** (VGD ID, mã đối tượng), **tag** (gắn và xếp tag), và **bóc khối lượng cho bảng thống kê** (schedule, kiểm tra, so sánh, xuất). VGD_BIM **không dựng 3D**. Việc dựng hình và xác định không gian (phòng, dò viền từ tường) do **VGD Structure** làm; VGD_BIM đọc dữ liệu đó qua cầu nối và chỉ gọi lệnh sửa của plugin nguồn. **Không liên kết VGD_Cabinet** (bỏ mục 5d). Tầm nhìn cũ được giữ nguyên trong lịch sử và trong `MASTER_PLAN.md`.
 
 **Tầm nhìn cũ (chủ dự án, 12/11/2026, đã thay thế một phần):** biến SketchUp thành phần mềm **dựng hình và BIM đối tượng**, như Archicad hay Revit: dựng hình bằng các plugin nhỏ, còn VGD_BIM định nghĩa, quản lý và điều khiển thông tin của mọi đối tượng.
 
@@ -11,11 +13,11 @@ Tài liệu này là kế hoạch làm việc của plugin `plugins/VGD_BIM`, l�
 | Việc | Quyết định |
 |---|---|
 | Thứ tự làm | Danh tính (ID) → Tầng và Phòng → Vật liệu và luật khối lượng → Schedule mẫu và Audit → Type, Classification mở, so sánh hai phiên bản. |
-| Phòng | Có nhãn **và có vùng, có diện tích** (số đo). Không dựng khối 3D (quyết định 18/11/2026). |
+| Phòng | Có nhãn, **vùng phòng** (viền), diện tích và **khối 3D** của phòng. Vùng phòng lấy từ mặt sàn đã chọn hoặc dò từ tường (quyết định 19/11/2026). |
 | Người dùng | Nội thất **và** kiến trúc ngay từ đầu. |
 | Tầm nhìn | Về sau làm đủ các tính năng BIM (IFC, Clash, Documentation, 4D, 5D...). Mỗi tính năng lớn có đặc tả riêng trước khi code. |
 | Cách ghi ID | Theo chuẩn của BIM (xem mục 3), không tự bịa kiểu mới. |
-| Giữ một plugin | VGD_BIM vẫn là một plugin, chia module trong `core/`. Không liên kết VGD_Cabinet (quyết định 18/11/2026). |
+| Giữ một plugin | VGD_BIM vẫn là một plugin, chia module trong `core/`. VGD Room nhập vào VGD_BIM (19/11/2026). Không liên kết VGD_Cabinet (18/11/2026). |
 | Dựng hình | **BIM không tự dựng hình** (giữ lõi nhẹ). Việc dựng do các plugin nhỏ riêng đảm nhận (tủ, cầu thang, cửa, sàn, tường, phòng... tên plugin chỉ là ví dụ, chưa sản xuất), nối với BIM qua "cầu nối" (mục 1b). **BIM đọc dữ liệu và khi cần sửa thì BIM gọi đúng plugin đã dựng ra đối tượng đó để sửa mô hình**, như Revit / Archicad. Kế hoạch triển khai từng plugin viết khi tới phase của nó. Hiện VGD Structure là plugin dựng hình duy nhất đã có. |
 | ID | **VGD ID** (xem mục 3). |
 | Nơi giữ danh bạ plugin | Trong repo (toàn bộ plugin đã nằm trong repo); VGD Center đã giữ danh mục plugin (`shared/vgd-center/catalog.json`) nên mở rộng danh mục đó để khai báo cầu nối. |
@@ -110,10 +112,10 @@ Làm: VGD ID, Mã đối tượng, phát hiện và sửa trùng, mở rộng Ca
 - 1c: Category mở rộng + bảng ánh xạ 8 nhóm cũ sang nhóm mới (không mất dữ liệu cũ); migration `schema_version`.
 - Kiểm tra: dữ liệu sai, copy trùng, file cũ không có `guid`, hoàn tác một bước, món khóa.
 
-### Cột mốc 2 — Tầng và Phòng (không dựng 3D)
+### Cột mốc 2 — Tầng và Phòng (có khối 3D và khoanh vùng)
 
 - 2a **Tầng (Level):** danh sách tầng lưu trong model (tên, cao độ, chiều cao). Gán món vào tầng (nhãn, **không dời hình học**). Cột Tầng, nhóm theo tầng, ẩn / hiện theo tầng.
-- 2b **Phòng (Room):** phòng trong BIM là **khoảng không gian (thể tích) được bao bởi sàn, tường, trần**, không phải bản thân tường / sàn / trần (như Room của Revit, Zone của Archicad). Dữ liệu phòng do VGD_BIM quản lý: viền (đa giác), tên, mã, tầng, cao độ trần, vật liệu hoàn thiện của sàn / tường / trần, trạng thái. VGD_BIM tính **diện tích sàn, chu vi, thể tích, diện tích trần, diện tích tường hoàn thiện** (chu vi x cao, trừ ô cửa khi đã có dữ liệu cửa). **Phòng không có khối 3D trong BIM** (quyết định 18/11/2026: plugin VGD_Room đã gỡ). Việc xác định vùng phòng, kể cả dò viền từ tường, do VGD Structure làm; BIM đọc phòng đó qua cầu nối khi có hợp đồng.
+- 2b **Phòng (Room):** phòng trong BIM là **khoảng không gian (thể tích) được bao bởi sàn, tường, trần**, không phải bản thân tường / sàn / trần (như Room của Revit, Zone của Archicad). Dữ liệu phòng do VGD_BIM quản lý: viền (đa giác), tên, mã, tầng, cao độ trần, vật liệu hoàn thiện của sàn / tường / trần, trạng thái. VGD_BIM tính **diện tích sàn, chu vi, thể tích, diện tích trần, diện tích tường hoàn thiện** (chu vi x cao, trừ ô cửa khi đã có dữ liệu cửa). **Khối 3D của phòng và khoanh vùng phòng do VGD_BIM làm** (quyết định 19/11/2026): khối là một Group trên tag riêng, đùn từ viền lên chiều cao phòng, dựng lại được và có một bước hoàn tác; vùng phòng lấy từ mặt sàn đã chọn hoặc dò từ tường (đặc tả `docs/vgd_bim/ROOM_FROM_WALLS.md`).
 - 2c **Món thuộc phòng:** tự gợi ý theo vị trí (tâm đáy của món nằm trong viền phòng), người dùng xác nhận, có thể gán tay. Cột Phòng, tổng khối lượng theo phòng, Finish Schedule.
 
 ### Cột mốc 3 — Vật liệu có dữ liệu và luật khối lượng
@@ -157,7 +159,7 @@ Relationship đầy đủ (Object → Object / Room / Level / Type / Material), 
 1. Cột mốc 1: quy tắc chọn đối tượng giữ ID khi trùng (đề xuất: `persistent_id` nhỏ nhất) có hợp lý không.
 2. Cột mốc 2: viền phòng lấy bằng cách nào là chính: chọn mặt sàn có sẵn, vẽ đa giác, hay tự dò từ các tường vây quanh.
 3. Cột mốc 2: tầng có tự gợi ý theo cao độ Z của món không, hay chỉ gán tay.
-4. ~~Phòng 3D~~ **Đã thay đổi (18/11/2026):** BIM không dựng khối phòng; việc dựng và xác định phòng do VGD Structure làm (xem cột mốc 2b).
+4. ~~Phòng 3D~~ **Đảo (19/11/2026):** BIM dựng khối phòng và dò vùng phòng từ tường (xem cột mốc 2b).
 5. Cầu nối: ai gán VGD ID khi plugin dựng hình tạo đối tượng (đề xuất mục 1b điểm 3); danh bạ mở rộng từ `shared/vgd-center/catalog.json` (đã chốt hướng, còn thiết kế chi tiết).
 
 ## 8. Trạng thái

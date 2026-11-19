@@ -79,6 +79,8 @@ module VGD
           @dialog.add_action_callback('table_option') { |_ctx, payload| safely { table_option(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_export') { |_ctx, payload| safely { table_export(JSON.parse(payload)) } }
           @dialog.add_action_callback('export_open') { |_ctx| safely { export_open(false) } }
+          @dialog.add_action_callback('table_room_build') { |_ctx, payload| safely { table_room_build(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_room_build_all') { |_ctx, payload| safely { table_room_build_all(JSON.parse(payload)) } }
           @dialog.add_action_callback('export_open_folder') { |_ctx| safely { export_open(true) } }
           @dialog.add_action_callback('table_edit_source') { |_ctx, payload| safely { table_edit_source(JSON.parse(payload)) } }
           @dialog.add_action_callback('bridge_open') { |_ctx| safely { bridge_open } }
@@ -547,7 +549,7 @@ module VGD
         end
         # Phòng kèm số đo (diện tích, chu vi, thể tích, tường, trần) để giao diện hiện; tính lại mỗi lần dựng bảng.
         def rooms_view
-          Rooms.read(@model).map { |room| room.merge('metrics' => Rooms.metrics(room)) }
+          Rooms.read(@model).map { |room| room.merge('metrics' => Rooms.metrics(room), 'has_volume' => !RoomVolume.find(@model, room['id']).nil?) }
         end
         # Lưu thư viện vật liệu (trên máy, dùng cho mọi model). payload: {'items' => [...]}. Không đụng gì trong model.
         def material_library_save(payload)
@@ -556,6 +558,31 @@ module VGD
           MaterialLibrary.write(items)
           table_build
           emit('message', {text: "Đã lưu #{items.size} vật liệu."})
+        end
+        # Dựng (hoặc dựng lại) khối 3D của một phòng (core/room_volume.rb). payload: {'id' => mã phòng}. Một bước hoàn tác.
+        def table_room_build(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless payload.is_a?(Hash) && payload['id'].is_a?(String)
+          room = Rooms.read(@model).find { |item| item['id'] == payload['id'] }
+          raise 'Phòng này không còn trong danh sách. Hãy mở lại Quản lý phòng.' unless room
+          existed = !RoomVolume.find(@model, room['id']).nil?
+          RoomVolume.build(@model, room, VgdId.generate)
+          table_build
+          emit('message', {text: "Đã #{existed ? 'dựng lại' : 'dựng'} khối phòng #{room['name']} (thể tích #{Rooms.metrics(room)[:volume]} m³)."})
+        end
+        # Dựng khối 3D cho nhiều phòng (mặc định tất cả) trong MỘT bước hoàn tác (RoomVolume.build_many). payload: {'ids' => [mã phòng]} (không có thì mọi phòng).
+        def table_room_build_all(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless payload.is_a?(Hash)
+          rooms = Rooms.read(@model)
+          ids = payload['ids']
+          raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless ids.nil? || (ids.is_a?(Array) && ids.all? { |id| id.is_a?(String) })
+          rooms = rooms.select { |room| ids.include?(room['id']) } if ids
+          raise 'Chưa có phòng nào để dựng. Hãy tạo phòng trước.' if rooms.empty?
+          rebuilt = rooms.count { |room| !RoomVolume.find(@model, room['id']).nil? }
+          RoomVolume.build_many(@model, rooms.map { |room| [room, VgdId.generate] })
+          table_build
+          emit('message', {text: "Đã dựng #{rooms.size} khối phòng#{rebuilt.positive? ? " (#{rebuilt} dựng lại)" : ''}, một bước hoàn tác cho cả đợt."})
         end
         # Lưu danh sách phòng. payload: {'rooms' => [...]}. Chỉ ghi vào model (không đụng đối tượng, không dựng hình).
         def table_rooms(payload)
