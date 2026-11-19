@@ -2,6 +2,14 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.15: đã kiểm tra tự động
+
+Sửa: sửa tên, cập nhật ảnh hay sửa một ô làm bảng nhảy lên đầu, mất dấu món đang làm.
+
+- `test_ui.cjs`: đặt bảng cuộn xuống dòng 60 px, vẽ lại bảng, vị trí cuộn vẫn là 60 px. Đã kiểm: bỏ phần giữ vị trí trong `renderGrid` thì test báo lỗi (về 0 px).
+
+**Chưa xác minh trong SketchUp thật:** sửa tên / cập nhật ảnh ở món cuối bảng (món 100) trên model thật; bảng có giữ vị trí.
+
 ## Bản 1.1.1-beta.14: đã kiểm tra tự động
 
 Cập nhật viền phòng từ đúng một mặt đang chọn (không cần vẽ lại phòng).

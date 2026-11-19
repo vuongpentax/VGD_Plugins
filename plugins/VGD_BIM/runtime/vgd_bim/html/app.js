@@ -746,6 +746,7 @@ function renderGrid(host){
   tableState.displayed=visibleRows.map(row=>({index:row.index,members:membersOf(row)})); // thứ tự dòng đang hiện, dùng cho chọn dãy bằng Shift
   closeMenu();
   const hadFocus=!!document.activeElement&&document.activeElement.classList&&document.activeElement.classList.contains('grid-wrap'); // vẽ lại bảng không được làm mất phím mũi tên
+  const oldWrap=host.querySelector('.grid-wrap'),scroll=oldWrap?{top:oldWrap.scrollTop,left:oldWrap.scrollLeft}:null; // giữ vị trí cuộn: sửa tên / ảnh / ô ở dòng dưới không được nhảy về đầu bảng
   host.replaceChildren();
   const wrap=node('div',undefined,'grid-wrap');
   wrap.tabIndex=0;
@@ -863,6 +864,7 @@ function renderGrid(host){
     const tfoot=node('tfoot');tfoot.append(foot);t.append(tfoot);
   }
   wrap.append(t);host.append(wrap);
+  if(scroll){wrap.scrollTop=scroll.top;wrap.scrollLeft=scroll.left;}
   if(hadFocus)wrap.focus({preventScroll:true});
   if(!rows.length)host.append(node('p','Không có đối tượng nào khớp bộ lọc.','empty'));
   fillImages();

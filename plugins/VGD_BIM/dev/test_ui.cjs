@@ -629,6 +629,9 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   await page.locator('.sn-item .cs-del').dispatchEvent('click');
   last=await lastCall();assert(last.name==='snapshot_delete' && last.data.id==='sn_aaaaaaaa','xóa mốc gửi mã');
   await page.evaluate(()=>{tableState.panel=null;tableState.snapshotDiff=null;tableView(tableState.data);});
+  // Sửa ô / đổi tên / cập nhật ảnh vẽ lại bảng: vị trí cuộn không được nhảy về đầu
+  await page.evaluate(()=>{const st=document.createElement('style');st.id='scroll-test';st.textContent='.grid-wrap{flex:none!important;min-height:0!important;height:40px!important}';document.head.append(st);const w=document.querySelector('.grid-wrap');w.scrollTop=60;renderGrid($('grid-host'));});
+  assert(await page.evaluate(()=>{const w=document.querySelector('.grid-wrap');const top=w.scrollTop;document.getElementById('scroll-test').remove();return top;})===60,'vẽ lại bảng (sửa ô, đổi tên, cập nhật ảnh): giữ vị trí cuộn, không nhảy về đầu');
   // Đổi file SketchUp: mốc và kết quả so sánh của file cũ không còn trong giao diện
   await receive('config',{...config,mode:'information',file:'file-a'});
   await page.evaluate(()=>{tableState.snapshots=[{id:'sn_cccccccc',name:'Mốc file cũ',count:3}];tableState.snapshotDiff={name:'Mốc file cũ',added:[],removed:[],changed:[]};});
