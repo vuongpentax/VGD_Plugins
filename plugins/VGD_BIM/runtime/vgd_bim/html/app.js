@@ -282,15 +282,41 @@ function renameInline(tab,i){
   input.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();finish(true);}else if(e.key==='Escape'){e.preventDefault();finish(false);}};
   input.onblur=()=>finish(true);
 }
+// Kéo đổi chỗ sheet: kéo thả HTML5, đổi chỗ trực tiếp khi kéo, các tab khác trượt bằng FLIP (150 ms), chốt thứ tự khi thả (dragend).
+let dragSheet=null;
+const tabIndex=tab=>Number(tab.dataset.index);
+function moveSheetTab(bar,from,to){
+  const tabs=[...bar.querySelectorAll('.sheet-tab')],moved=tabs[from],active=tableState.sheets[tableState.sheet];
+  const before=new Map(tabs.map(t=>[t,t.getBoundingClientRect().left]));
+  const [sheet]=tableState.sheets.splice(from,1);tableState.sheets.splice(to,0,sheet);
+  tableState.sheet=tableState.sheets.indexOf(active);
+  const order=tabs.filter(t=>t!==moved);order.splice(to,0,moved);
+  const add=bar.querySelector('.sheet-add');
+  order.forEach((t,i)=>{bar.insertBefore(t,add);t.dataset.index=String(i);t.setAttribute('aria-selected',String(i===tableState.sheet));});
+  order.forEach(t=>{
+    const dx=before.get(t)-t.getBoundingClientRect().left;if(!dx)return;
+    t.style.transition='none';t.style.transform=`translateX(${dx}px)`;void t.offsetWidth;
+    t.style.transition='';t.style.transform='';
+  });
+}
+function bindSheetDrag(b){
+  b.draggable=true;
+  b.ondragstart=e=>{dragSheet=tabIndex(b);e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',b.textContent);b.classList.add('dragging');};
+  b.ondragover=e=>{if(dragSheet===null)return;e.preventDefault();e.dataTransfer.dropEffect='move';const to=tabIndex(b);if(to!==dragSheet){moveSheetTab(b.parentNode,dragSheet,to);dragSheet=to;}};
+  b.ondrop=e=>e.preventDefault();
+  b.ondragend=()=>{if(dragSheet===null)return;dragSheet=null;b.classList.remove('dragging');persistView();};
+}
 function sheetBar(){
   ensureSheets();
   const bar=node('div',undefined,'sheetbar');bar.setAttribute('role','tablist');bar.setAttribute('aria-label','Sheet');
   tableState.sheets.forEach((s,i)=>{
     const b=node('button',s.name,'sheet-tab');b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',String(i===tableState.sheet));
-    b.title='Bấm để mở · bấm đúp hoặc F2 để đổi tên · bấm phải để nhân đôi hoặc xóa';
-    b.onclick=()=>switchSheet(i);b.ondblclick=()=>renameInline(b,i);
-    b.oncontextmenu=e=>{e.preventDefault();sheetMenu(e,i,b);};
-    b.onkeydown=e=>{if(e.key==='F2'){e.preventDefault();renameInline(b,i);}};
+    b.dataset.index=String(i);
+    b.title='Bấm để mở · kéo để đổi chỗ · bấm đúp hoặc F2 để đổi tên · bấm phải để nhân đôi hoặc xóa';
+    b.onclick=()=>switchSheet(tabIndex(b));b.ondblclick=()=>renameInline(b,tabIndex(b));
+    b.oncontextmenu=e=>{e.preventDefault();sheetMenu(e,tabIndex(b),b);};
+    b.onkeydown=e=>{if(e.key==='F2'){e.preventDefault();renameInline(b,tabIndex(b));}};
+    bindSheetDrag(b);
     bar.append(b);
   });
   const add=node('button','+','sheet-add');add.type='button';add.title='Thêm sheet (sao chép cài đặt của sheet đang mở)';add.setAttribute('aria-label','Thêm sheet');add.onclick=()=>addSheet();

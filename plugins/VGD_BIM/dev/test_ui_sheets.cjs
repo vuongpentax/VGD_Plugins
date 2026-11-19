@@ -287,6 +287,24 @@ const table=(o={})=>({columns:F.columns,presets:F.presets,groups:F.groups,status
   await cell(0,'instance').dblclick();await page.keyboard.type('Tủ b');
   ok((await ghost())==='ếp dưới','không có lịch sử: vẫn gợi ý từ tên đang có trong bảng');
   await page.keyboard.press('Escape');
+  // ---- Kéo đổi chỗ sheet: đổi chỗ khi kéo, tab khác trượt (FLIP), giữ sheet đang mở, lưu thứ tự ----
+  while((await tabs()).length<3){await page.locator('.sheetbar .sheet-add').click();await settle(50);}
+  await page.locator('.sheetbar .sheet-tab').nth(0).click();await settle(50);
+  const before=await tabs(),first=before[0];
+  await clear();
+  await page.evaluate(()=>{const tabs=[...document.querySelectorAll('.sheetbar .sheet-tab')];window.draggedTab=tabs[0];const dt=new DataTransfer();tabs[0].dispatchEvent(new DragEvent('dragstart',{bubbles:true,dataTransfer:dt}));tabs[2].dispatchEvent(new DragEvent('dragover',{bubbles:true,cancelable:true,dataTransfer:dt}));});
+  const moving=await page.evaluate(()=>[...document.querySelectorAll('.sheetbar .sheet-tab')].some(t=>getComputedStyle(t).transform!=='none'));
+  await page.evaluate(()=>window.draggedTab.dispatchEvent(new DragEvent('dragend',{bubbles:true})));
+  await settle(500);
+  const after=await tabs();
+  ok(moving,'kéo: các tab khác đang trượt bằng hiệu ứng (chưa về vị trí cuối)');
+  ok(JSON.stringify(after)===JSON.stringify([before[1],before[2],first]),'thả: tab kéo xuống vị trí đích, các tab còn lại giữ thứ tự');
+  ok((await activeTab())===first,'sheet đang mở vẫn là sheet vừa kéo, không đổi sang sheet khác');
+  ok(await page.evaluate(()=>[...document.querySelectorAll('.sheetbar .sheet-tab')].every(t=>getComputedStyle(t).transform==='none')),'sau khi trượt xong: không còn lệch vị trí');
+  const viewSaved=await json('table_view');
+  ok(viewSaved && viewSaved.sheets.map(x=>x.name).join('|')===after.join('|'),'thứ tự sheet mới được lưu (table_view)');
+  await page.locator('.sheetbar .sheet-tab').nth(0).click();await settle(50);
+  ok((await activeTab())===after[0],'bấm tab sau khi kéo: mở đúng sheet tại vị trí mới');
   ok(errors.length===0,'không có lỗi JavaScript'+(errors.length?': '+errors.join(' | '):''));
  }finally{await browser.close();}
  console.log(failed?`${failed} lỗi`:'Done');

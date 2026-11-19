@@ -2,6 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.20: đã kiểm tra tự động
+
+Kéo đổi chỗ tab sheet (HTML5 kéo thả, đổi chỗ khi kéo, tab khác trượt bằng FLIP 150 ms, chốt khi thả).
+
+- `test_ui_sheets.cjs`: kéo tab đầu xuống cuối: các tab khác đang trượt giữa chừng, thứ tự đúng, sheet đang mở không đổi, thứ tự được lưu vào `table_view`, sau đó bấm tab mở đúng sheet.
+- `test_ui_en.cjs`: tooltip sheet có bản dịch EN mới.
+
+**Chưa xác minh trong SketchUp thật:** kéo thả tab sheet trong cửa sổ HtmlDialog thật (CEF).
+
 ## Bản 1.1.1-beta.19: đã kiểm tra tự động
 
 Nút **Cập nhật từ bảng hiện tại** và **Xóa preset này** trong khối Đang chọn của bảng Preset (chỉ với preset tự tạo; preset có sẵn chỉ hiện ghi chú).
