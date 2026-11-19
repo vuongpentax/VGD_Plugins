@@ -24,7 +24,7 @@ module VGD
           type = StairTypes.find(stair_types, pick['type'])
           raise Error, "Cầu thang #{ref}: loại không tồn tại." unless type
           begin
-            plan = StairPlan.plan(pick['free']['a'], pick['free']['b'], type, z0, z1)
+            plan = StairPlan.plan(pick['free']['a'], pick['free']['b'], type, z0, z1, [], shape: pick['shape'] || 'straight', mid: pick['free']['c'])
           rescue StairPlan::Error => e
             issues << "Cầu thang #{ref}: #{e.message}"
             next

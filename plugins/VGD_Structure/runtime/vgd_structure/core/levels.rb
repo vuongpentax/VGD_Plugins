@@ -272,10 +272,18 @@ module VGD
           raise Error, "Tầng “#{level_name}”: cầu thang #{ref} không hợp lệ." unless pick.is_a?(Hash) && pick['free'].is_a?(Hash)
           type = pick['type'] || stair_types.first['id']
           raise Error, "Tầng “#{level_name}”: cầu thang #{ref} dùng loại không tồn tại." unless StairTypes.find(stair_types, type)
+          shape = pick['shape'] || 'straight'
+          raise Error, "Tầng “#{level_name}”: cầu thang #{ref} có dạng không hợp lệ." unless StairPlan::SHAPES.include?(shape)
           a = pick['free']['a']
           b = pick['free']['b']
           raise Error, "Tầng “#{level_name}”: cầu thang #{ref} có điểm đầu hoặc điểm cuối không hợp lệ." unless StairPlan.point?(a) && StairPlan.point?(b)
-          out[ref] = {'type' => type, 'free' => {'a' => [a[0].to_f.round(1), a[1].to_f.round(1)], 'b' => [b[0].to_f.round(1), b[1].to_f.round(1)]}}
+          free = {'a' => [a[0].to_f.round(1), a[1].to_f.round(1)], 'b' => [b[0].to_f.round(1), b[1].to_f.round(1)]}
+          if shape != 'straight'
+            c = pick['free']['c']
+            raise Error, "Tầng “#{level_name}”: cầu thang #{ref} chữ #{shape} thiếu đầu chiếu nghỉ." unless StairPlan.point?(c)
+            free['c'] = [c[0].to_f.round(1), c[1].to_f.round(1)]
+          end
+          out[ref] = {'type' => type, 'shape' => shape, 'free' => free}
         end
       end
 

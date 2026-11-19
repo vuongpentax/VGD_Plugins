@@ -245,7 +245,7 @@ module VGD
       end
 
       # Menu SketchUp "Vẽ trong SketchUp": mở cửa sổ ở tab Mặt bằng, chọn công cụ vẽ và bật chế độ vẽ trong SketchUp (chờ cửa sổ sẵn sàng nếu mới mở).
-      DRAW_TOOLS = %w[column beam wall door window slab ceiling].freeze
+      DRAW_TOOLS = %w[column beam wall door window slab ceiling stair].freeze
       def start_tool(tool)
         raise ArgumentError, 'Công cụ vẽ không hợp lệ.' unless DRAW_TOOLS.include?(tool)
         @pending_tool = tool

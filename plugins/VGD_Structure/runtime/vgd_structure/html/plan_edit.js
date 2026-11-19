@@ -6,7 +6,7 @@
   var GOOD = '#2F7BFF', BAD = '#E5484D', TOL_NODE = 14, TOL_COLUMN = 28, TOL_SPAN = 12, OPENING_GAP = 50;
   var DESIGN = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'stair', 'door', 'window'];
   var PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', opening: 'openingPicks', stair: 'stairPicks'};
-  var opt = {column: {type: '', x: 'auto', y: 'auto', mode: 'grid', rot: '0'}, beam: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, wall: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, door: {type: '', hand: '0'}, window: {type: '', flip: '0'}, grid: {dir: 'x'}, slab: {mode: 'grid', edges: 'free', part: 'outer'}, ceiling: {mode: 'grid', edges: 'free', part: 'outer'}};
+  var opt = {stair: {shape: 'L'}, column: {type: '', x: 'auto', y: 'auto', mode: 'grid', rot: '0'}, beam: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, wall: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, door: {type: '', hand: '0'}, window: {type: '', flip: '0'}, grid: {dir: 'x'}, slab: {mode: 'grid', edges: 'free', part: 'outer'}, ceiling: {mode: 'grid', edges: 'free', part: 'outer'}};
   var tool = null, chain = null, target = null, note = '', ring = null; // ring: đường bao / lỗ đang vẽ của sàn, trần đa giác {pts, part, host}
 
   function lvl() { return A.level(); }
@@ -60,7 +60,7 @@
   }
   function r1(v) { return Math.round(v * 10) / 10; }
   function options(t) {
-    if (t === 'stair') return [];
+    if (t === 'stair') return [{id: 'shape', label: 'Dạng', values: [['straight', 'Thẳng'], ['L', 'Chữ L (có chiếu nghỉ)'], ['U', 'Chữ U (có chiếu nghỉ)']], value: stairShape()}];
     if (isPlate(t) && freeMode(t)) return [{id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'free'}, {id: 'part', label: 'Vẽ', values: [['outer', 'Đường bao'], ['hole', 'Lỗ khoét (điểm đầu nằm trong một ' + (t === 'slab' ? 'sàn' : 'trần') + ' đa giác)']], value: opt[t].part}, {id: 'edges', label: 'Cạnh', values: [['free', 'Tự do'], ['ortho', 'Ngang / dọc']], value: opt[t].edges}];
     if (freeMode(t)) {
       var head = [{id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'free'}, {id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}];
@@ -263,20 +263,45 @@
     if (!chain) { target = {free: freePoint(w), start: true}; return; }
     var end = freeEnd(chain.p, w); target = lengthOf(chain.p, end) >= 100 ? {free: end, end: true} : {free: end, tooShort: true};
   }
-  // Cầu thang thẳng một vế: bấm đáy vế, rồi đỉnh vế (tối thiểu 600 mm). Số bậc, va chạm do Ruby tính (StairPlace).
+  // Cầu thang (thẳng, chữ L, chữ U có chiếu nghỉ). Dạng thẳng: bấm đáy vế rồi đỉnh vế. Dạng L / U: bấm đáy vế 1, đầu chiếu nghỉ (cuối vế 1), rồi điểm cuối
+  // (phía rẽ). Số bậc, va chạm do Ruby tính (StairPlan / StairPlace). Tối thiểu 600 mm mỗi vế.
   function stairType() { return (S.stairTypes && S.stairTypes[0]) || null; }
+  function stairShape() { return (opt.stair && opt.stair.shape) || 'straight'; }
   function stairClick(w) {
     freeMove(w); if (!target) return;
     if (!chain) { chain = {free: true, p: target.free, ref: 'tự do'}; return; }
-    var a = chain.p, b = target.free;
-    if (lengthOf(a, b) < 600) { note = 'Cầu thang tối thiểu 600 mm.'; return; }
-    addStair(a, b); note = 'Đã thêm cầu thang dài ' + lengthOf(a, b) + ' mm (Ruby kiểm tra không đâm vào dầm, tường, cột).'; chain = null;
+    var a = chain.p, b = target.free, shape = stairShape();
+    if (shape === 'straight') {
+      if (lengthOf(a, b) < 600) { note = 'Cầu thang tối thiểu 600 mm.'; return; }
+      addStair(a, null, b, shape); note = 'Đã thêm cầu thang thẳng dài ' + lengthOf(a, b) + ' mm (Ruby kiểm tra không đâm vào dầm, tường, cột).'; chain = null; return;
+    }
+    if (!chain.mid) {
+      if (lengthOf(a, b) < 600) { note = 'Vế 1 tối thiểu 600 mm.'; return; }
+      chain.mid = b; note = 'Bấm điểm cuối (phía rẽ) của cầu thang chữ ' + shape + '.'; return;
+    }
+    var mid = chain.mid;
+    if (stairOutline(a, mid, b, shape) === null) { note = 'Điểm cuối phải nằm về một phía, không thẳng hàng với vế 1.'; return; }
+    addStair(a, mid, b, shape); note = 'Đã thêm cầu thang chữ ' + shape + ' (Ruby kiểm tra số bậc và va chạm).'; chain = null;
   }
-  function addStair(a, b) {
-    var id = A.rid('st_'), type = stairType(), pick = {free: {a: a.slice(), b: b.slice()}};
+  function addStair(a, mid, b, shape) {
+    var id = A.rid('st_'), type = stairType(), pick = {shape: shape, free: {a: a.slice(), b: b.slice()}};
+    if (mid) pick.free.c = mid.slice();
     if (type) pick.type = type.id;
     host.mutate(function () { lvl()[PICKS.stair][id] = pick; });
     return id;
+  }
+  // Mặt bằng (đa giác) của cầu thang đang vẽ, cùng quy ước với StairPlan (Ruby). null nếu không đủ kích thước.
+  function stairOutline(a, mid, b, shape) {
+    var t = stairType(), w = t ? t.width : 1000, half = w / 2;
+    var L1 = Math.hypot(mid[0] - a[0], mid[1] - a[1]); if (L1 < 1) return null;
+    var ux = (mid[0] - a[0]) / L1, uy = (mid[1] - a[1]) / L1, nx = -uy, ny = ux;
+    var tSide = (b[0] - a[0]) * nx + (b[1] - a[1]) * ny;
+    if (Math.abs(tSide) < half + 600) return null;
+    var sign = tSide > 0 ? 1 : -1, L2 = shape === 'L' ? Math.abs(tSide) - half : L1;
+    if (L2 < 600) return null;
+    var pt = function (s, tt) { tt = sign * tt; return [a[0] + ux * s + nx * tt, a[1] + uy * s + ny * tt]; };
+    if (shape === 'L') return [pt(0, -half), pt(L1 + w, -half), pt(L1 + w, half + L2), pt(L1, half + L2), pt(L1, half), pt(0, half)];
+    return [pt(0, -half), pt(L1 + w, -half), pt(L1 + w, 3 * half), pt(0, 3 * half)];
   }
   // Dải bề rộng vế theo loại cầu thang đang dùng (xem trước trên mặt bằng).
   function stairFootprint(a, b) {
@@ -379,7 +404,7 @@
     if (note) return note;
     var why = blocked(tool); if (why) return why;
     if (freeMode(tool)) {
-      if (tool === 'stair') return chain ? 'Cầu thang: bấm đỉnh vế (tối thiểu 600 mm). Esc hủy.' : 'Cầu thang: bấm đáy vế (điểm đầu).';
+      if (tool === 'stair') return !chain ? 'Cầu thang: bấm đáy vế (điểm đầu).' : chain.mid ? 'Cầu thang chữ ' + stairShape() + ': bấm điểm cuối (phía rẽ). Esc hủy.' : stairShape() === 'straight' ? 'Cầu thang thẳng: bấm đỉnh vế (tối thiểu 600 mm). Esc hủy.' : 'Cầu thang chữ ' + stairShape() + ': bấm đầu chiếu nghỉ (cuối vế 1). Esc hủy.';
       if (isPlate(tool)) {
         var pn = tool === 'slab' ? 'Sàn' : 'Trần';
         if (!ring) return pn + ' đa giác: bấm từng đỉnh của ' + (opt[tool].part === 'hole' ? 'LỖ (đỉnh đầu nằm trong một ' + pn.toLowerCase() + ' đa giác)' : 'đường bao') + '; bấm lại đỉnh đầu hoặc Enter để khép; Backspace bỏ đỉnh cuối; Esc hủy.';
@@ -428,7 +453,7 @@
           g.push({t: 'poly', poly: rotRect(c, ty.w, ty.d, Number(opt.column.rot) || 0), color: GOOD, alpha: 0.3}); g.push({t: 'dot', p: c, color: GOOD, r: 5}); }
         return g;
       }
-      if (tool === 'stair' && chain && target && target.free) { var fp = stairFootprint(chain.p, target.free); if (fp) g.push({t: 'poly', poly: fp, color: GOOD, alpha: 0.2}); }
+      if (tool === 'stair' && chain && target && target.free) { var fp = chain.mid ? stairOutline(chain.p, chain.mid, target.free, stairShape()) : (stairShape() === 'straight' ? stairFootprint(chain.p, target.free) : null); if (fp) g.push({t: 'poly', poly: fp, color: GOOD, alpha: 0.2}); }
       if (chain) { g.push({t: 'dot', p: chain.p, color: GOOD, r: 5}); }
       if (target && target.free) {
         if (chain) { g.push(solid({t: 'line', a: chain.p, b: target.free, color: target.tooShort ? BAD : GOOD, width: 5, alpha: 0.5}, tool)); if (target.end) g.push({t: 'text', p: target.free, text: lengthOf(chain.p, target.free) + ' mm'}); }

@@ -59,6 +59,9 @@ lv = build('stairs' => {})
 lv[1]['picks']['stairs'] = stair([6000, 300], [6000, 5800])
 ok('tầng trên cùng không có cầu thang đi lên: báo lỗi', !error_of { S::StairPlace.plan(GRID, TYPES, BT, WT, ST, lv, 'sl_00000002', OT) }.nil?)
 
+lv = build('walls' => {'x:B:1-2' => {}}, 'stairs' => {'st_00000001' => {'type' => TYPE['id'], 'shape' => 'L', 'free' => {'a' => [500, 300], 'b' => [-3000, 3300], 'c' => [500, 3300]}}})
+r = plan_of(lv)
+ok('chữ L có chiếu nghỉ chạm tường trục B (vế 1 không chạm): báo đâm vào “tường x:B:1-2”', r[:items][0][:conflicts] == ['tường x:B:1-2'])
 lv = build('stairs' => {})
 ok('không có cầu thang: kết quả rỗng, không lỗi', plan_of(lv)[:items].empty? && plan_of(lv)[:issues].empty?)
 

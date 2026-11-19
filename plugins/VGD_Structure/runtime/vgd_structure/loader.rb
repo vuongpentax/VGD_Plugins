@@ -89,7 +89,7 @@ unless file_loaded?(__FILE__)
   menu = ::VGD.menu.add_submenu('VGD Structure')
   menu.add_item('Lưới trục') { VGD::Structure.open_panel }
   draw_menu = menu.add_submenu('Vẽ trong SketchUp')
-  [['Cột', 'column'], ['Dầm', 'beam'], ['Tường', 'wall'], ['Cửa đi', 'door'], ['Cửa sổ', 'window'], ['Sàn', 'slab'], ['Trần', 'ceiling']].each do |label, tool|
+  [['Cột', 'column'], ['Dầm', 'beam'], ['Tường', 'wall'], ['Cửa đi', 'door'], ['Cửa sổ', 'window'], ['Sàn', 'slab'], ['Trần', 'ceiling'], ['Cầu thang', 'stair']].each do |label, tool|
     draw_menu.add_item(label) { VGD::Structure.start_draw(tool) }
   end
   menu.add_item('Tải lại code') { VGD::Structure.reload }
@@ -100,7 +100,7 @@ unless file_loaded?(__FILE__)
   command.small_icon = command.large_icon = File.join(VGD::Structure::ROOT, 'assets', 'icons', 'grid.svg')
   toolbar.add_item(command)
   # Nút vẽ trực tiếp trong SketchUp (cùng lệnh với menu Vẽ trong SketchUp): icon SVG theo bộ icon VGD (xem shared/VGD_ICON_SYSTEM_RULES.md).
-  [['column', 'Cột'], ['beam', 'Dầm'], ['wall', 'Tường'], ['door', 'Cửa đi'], ['window', 'Cửa sổ'], ['slab', 'Sàn'], ['ceiling', 'Trần']].each do |tool, label|
+  [['column', 'Cột'], ['beam', 'Dầm'], ['wall', 'Tường'], ['door', 'Cửa đi'], ['window', 'Cửa sổ'], ['slab', 'Sàn'], ['ceiling', 'Trần'], ['stair', 'Cầu thang']].each do |tool, label|
     draw_command = ::UI::Command.new("VGD Structure · Vẽ #{label.downcase}") { VGD::Structure.start_draw(tool) }
     draw_command.tooltip = "VGD Structure · Vẽ #{label.downcase}"
     draw_command.status_bar_text = "VGD Structure: vẽ #{label.downcase} trực tiếp trong SketchUp"

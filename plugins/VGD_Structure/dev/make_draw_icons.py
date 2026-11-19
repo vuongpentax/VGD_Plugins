@@ -77,6 +77,14 @@ def icon(key):
         grid.append([(0, 3, 0.8), (8, 3, 0.8)])
         for seg in grid:
             accent.append((seg, False))
+    elif key == 'stair':
+        # Vế thẳng ba bậc: biên dạng bậc ở hai mặt đầu (y = 0 và y = 6), nối các đỉnh; mép mặt bậc được nhấn.
+        profile = [(0, 0), (7.5, 0), (7.5, 4.8), (5, 4.8), (5, 3.2), (2.5, 3.2), (2.5, 1.6), (0, 1.6)]
+        front = [(x, 6, z) for x, z in profile]
+        back = [(x, 0, z) for x, z in profile]
+        main += [front, back]
+        main += [[(x, 0, z), (x, 6, z)] for x, z in profile]
+        accent += [([(0, 6, 1.6), (2.5, 6, 1.6)], False), ([(2.5, 6, 3.2), (5, 6, 3.2)], False), ([(5, 6, 4.8), (7.5, 6, 4.8)], False)]
     else:
         raise KeyError(key)
     return main, accent
@@ -119,7 +127,7 @@ def svg_of(key, title):
             '  </g>\n</svg>\n')
 
 
-TITLES = {'column': 'Cột', 'beam': 'Dầm', 'wall': 'Tường', 'door': 'Cửa đi', 'window': 'Cửa sổ', 'slab': 'Sàn', 'ceiling': 'Trần'}
+TITLES = {'column': 'Cột', 'beam': 'Dầm', 'wall': 'Tường', 'door': 'Cửa đi', 'window': 'Cửa sổ', 'slab': 'Sàn', 'ceiling': 'Trần', 'stair': 'Cầu thang'}
 
 
 def main():

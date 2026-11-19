@@ -1774,7 +1774,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(sr && Math.abs(sr.a[0]-9750)<1 && Math.abs(sr.a[1]-2250)<1 && Math.abs(sr.b[0]-6250)<1 && Math.abs(sr.b[1]-2250)<1,'Rotate 90° quanh tâm: đường cắt xoay đúng, độ dài giữ nguyên (3500 mm)');
   await reset();
   // --- Cầu thang: vẽ đáy và đỉnh vế, tối thiểu 600 mm, xem trước, cảnh báo đâm vào tường, xóa ---
-  await reset();await typ('sr');await wait(120);
+  await reset();await typ('sr');await wait(120);await page.selectOption('#pv-options select[data-opt=shape]','straight');
   ok((await dbg8()).tool==='stair' && /đáy vế/.test(await hintT()),'gõ SR: chọn công cụ Cầu thang, gợi ý bấm đáy vế');
   await cl(2000,500);await cl(2000,700);await wait(120);
   ok(/tối thiểu 600/.test(await hintT()) && Object.keys(await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks)).length===0,'vế dưới 600 mm: báo tối thiểu 600 mm, không thêm cầu thang');
@@ -1788,7 +1788,17 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.keyboard.press('Delete');await wait(120);
   ok(!(await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks))['st_00000001'] && (await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks))['st_00000002'],'Delete cầu thang đang chọn: chỉ xóa cầu thang đó');
   await reset();await receive('state',F.state);await receive('preview',F.preview);await wait(120);
-  // --- Mặt đứng: chọn hướng, dựng từ hình trong SketchUp, bấm chọn đối tượng, nhận chọn từ SketchUp ---
+  
+  // Chữ L: bấm đáy vế, đầu chiếu nghỉ, điểm cuối (phía rẽ) -> lưu shape L, a, c (chiếu nghỉ), b
+  await reset();await typ('sr');await wait(120);
+  await page.selectOption('#pv-options select[data-opt=shape]','L');
+  ok(await page.locator('#pv-options select[data-opt=shape]').inputValue()==='L','chọn dạng Chữ L trong thanh tùy chọn');
+  await cl(2000,500);await cl(5000,500);await wait(100);
+  ok(/điểm cuối/.test(await hintT()),'chữ L: sau đầu chiếu nghỉ, gợi ý bấm điểm cuối (phía rẽ)');
+  await cl(3500,4000);await wait(200);
+  const stL=await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks);
+  ok(Object.values(stL).some(p=>p.shape==='L' && Math.abs(p.free.a[0]-2000)<1 && Math.abs(p.free.c[0]-5000)<1 && Math.abs(p.free.b[1]-4000)<1),'chữ L: lưu dạng L với đáy vế, đầu chiếu nghỉ (c) và điểm cuối (b)');
+// --- Mặt đứng: chọn hướng, dựng từ hình trong SketchUp, bấm chọn đối tượng, nhận chọn từ SketchUp ---
   await reset();await page.click('.tabs button[data-tab=elevation]');await wait(150);
   ok(await page.locator('#tab-elevation').isVisible() && /Chọn hướng/.test(await page.locator('#elv-status').innerText()),'tab Mặt đứng: chưa chọn hướng thì yêu cầu chọn hướng nhìn');
   await page.click('#elv-dirs button[data-dir=south]');await wait(150);

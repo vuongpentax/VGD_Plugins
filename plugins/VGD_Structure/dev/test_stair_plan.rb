@@ -47,5 +47,27 @@ ok('cao dưới 120 mm: từ chối (không phải cầu thang)', !error_of { SP
 ok('bản bậc dưới mức tối thiểu (vế 4000 cho 21 bậc = 190 mm): từ chối', !error_of { SP.plan([0, 0], [4000, 0], TYPE, 0, 3600) }.nil?)
 ok('điểm không phải số: từ chối', !error_of { SP.plan(['x', 0], [6000, 0], TYPE, 0, 3600) }.nil?)
 ok('phía lan can không hợp lệ: từ chối', !error_of { SP.plan([0, 0], [6000, 0], TYPE, 0, 3600, %w[top]) }.nil?)
+# ---- Chữ L và chữ U có chiếu nghỉ ----
+L = SP.plan([0, 0], [2500, 4000], TYPE, 0, 3600, [], shape: 'L', mid: [3000, 0])
+ok('L: 21 bậc chia 11 (vế 1) + 10 (vế 2), có đúng 1 chiếu nghỉ, tổng 22 khối', L[:count] == 21 && L[:steps].size == 22 && L[:steps].count { |x| x[:landing] } == 1)
+land = L[:steps].find { |x| x[:landing] }
+ok('L: chiếu nghỉ vuông (cạnh 1000) đặt sau vế 1 (x 3000..4000, y -500..500), mặt trên đúng cao 11 bậc', land[:poly].map(&:first).minmax == [3000.0, 4000.0] && land[:poly].map(&:last).minmax == [-500.0, 500.0] && (land[:z1] - 11 * L[:riser]).abs < 0.2)
+ok('L: vế 2 rẽ về phía trái (y dương), dài 3500 (4000 - 500), tới đỉnh 3600', L[:run2] == 3500.0 && L[:footprint].map(&:last).max == 4000.0)
+top = L[:steps].max_by { |x| x[:z1] }
+ok('L: bậc cao nhất (cuối vế 2) đỉnh đúng 3600 mm và nằm trong x 3000..4000', (top[:z1] - 3600).abs < 0.2 && top[:poly].map(&:first).min >= 2999.0)
+ok('L: bản bậc hai vế đều không nhỏ hơn 260 (vế 1: 272,7; vế 2: 350)', L[:tread] >= 260.0)
+Lr = SP.plan([0, 0], [2500, -4000], TYPE, 0, 3600, [], shape: 'L', mid: [3000, 0])
+ok('L: điểm cuối phía phải (y âm) thì vế 2 rẽ về phía phải', Lr[:footprint].map(&:last).min <= -4000.0 + 500.0 + 1.0)
+U = SP.plan([0, 0], [1500, 2000], TYPE, 0, 3600, [], shape: 'U', mid: [3000, 0])
+ok('U: vế 2 song song vế 1 ngược chiều, cùng 11 bậc (vế 1) và 10 bậc (vế 2), có chiếu nghỉ', U[:count] == 21 && U[:steps].count { |x| x[:landing] } == 1 && U[:run2] == 3000.0)
+ok('U: mặt bằng là hình chữ nhật x 0..4000, y -500..1500 (hai vế cạnh nhau, không khe)', U[:footprint].map(&:first).minmax == [0.0, 4000.0] && U[:footprint].map(&:last).minmax == [-500.0, 1500.0] && U[:footprint].size == 4)
+u2 = U[:steps].select { |x| !x[:landing] && x[:poly].map(&:last).min >= 499.0 }
+ok('U: các bậc của vế 2 nằm trong x 0..3000, y 500..1500 (phía rẽ)', u2.size == 10 && u2.all? { |x| x[:poly].map(&:first).min >= -1.0 && x[:poly].map(&:first).max <= 3001.0 })
+ok('U: bậc vế 2 cao dần từ chiếu nghỉ (11 bậc đã có) lên 3600', (u2.map { |x| x[:z1] }.max - 3600).abs < 0.2)
+ok('L/U thiếu đầu chiếu nghỉ: báo lỗi', !error_of { SP.plan([0, 0], [2500, 4000], TYPE, 0, 3600, [], shape: 'L') }.nil?)
+ok('L: vế 1 quá ngắn (mid 400 mm): báo lỗi', !error_of { SP.plan([0, 0], [2500, 4000], TYPE, 0, 3600, [], shape: 'L', mid: [400, 0]) }.nil?)
+ok('L: điểm cuối thẳng hàng vế 1 (không rẽ được): báo lỗi', !error_of { SP.plan([0, 0], [6000, 50], TYPE, 0, 3600, [], shape: 'L', mid: [3000, 0]) }.nil?)
+ok('chữ L: cao quá thấp chỉ 1 bậc (không đủ 2 bậc để rẽ): báo lỗi', !error_of { SP.plan([0, 0], [2500, 4000], TYPE, 0, 150, [], shape: 'L', mid: [3000, 0]) }.nil?)
+ok('dạng không hợp lệ: báo lỗi', !error_of { SP.plan([0, 0], [6000, 0], TYPE, 0, 3600, [], shape: 'Z') }.nil?)
 puts($fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

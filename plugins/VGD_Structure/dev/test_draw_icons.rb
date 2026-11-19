@@ -4,7 +4,7 @@
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 ICONS = File.expand_path('../runtime/vgd_structure/assets/icons', __dir__)
-TOOLS = %w[column beam wall door window slab ceiling]
+TOOLS = %w[column beam wall door window slab ceiling stair]
 LOADER = File.read(File.expand_path('../runtime/vgd_structure/loader.rb', __dir__), encoding: 'UTF-8')
 TOOLS.each do |tool|
   file = File.join(ICONS, "draw_#{tool}.svg")
