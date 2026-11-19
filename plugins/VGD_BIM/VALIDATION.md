@@ -2,6 +2,17 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.21: đã kiểm tra tự động
+
+Khóa sheet: sheet khóa giữ các món đã khóa, không đổi theo lựa chọn; mở khóa thì theo lựa chọn; xuất nhiều sheet dựng đúng món của từng sheet khóa.
+
+- `dev/test_sheet_lock.rb`: chuỗi mã bền của món lồng, chụp lựa chọn (từ chối rỗng, mã 0, quá nhiều), tìm lại trong model (hai bản sao cùng định nghĩa cho hai món khác nhau), món đã xóa được đếm là thiếu, dữ liệu khóa sai bị từ chối.
+- `dev/test_dialog_logic.rb`: khóa sheet thường theo lựa chọn; mở sheet khóa dùng đúng món đã khóa; chọn món khác không đổi bảng; mở khóa trả về lựa chọn; thao tác sai bị từ chối.
+- `dev/test_sheets.rb`: sheet khóa hợp lệ giữ `lock`, sheet có khóa sai bỏ `lock` nhưng giữ sheet.
+- `dev/test_ui_sheets.cjs`: nút khóa gửi lệnh khóa; Ruby xác nhận thì nút bật, tab có dấu khóa, tên tab không đổi, khóa được lưu; chuyển sang sheet thường gửi bỏ khóa, quay lại gửi lại khóa; bấm mở khóa; sheet mới không kế thừa khóa; xuất nhiều sheet có sheet khóa (Ruby mô phỏng) đủ mọi sheet và dựng lại đúng khóa.
+
+**Chưa xác minh trong SketchUp thật:** `Model#entities` / `definition.entities` khi tìm lại món trong model lớn (thời gian quét một lần khi mở khóa hoặc mở sheet khóa); `persistent_id` giữ nguyên sau khi lưu và mở lại file; kiểm tra khóa và xuất bằng cửa sổ HtmlDialog thật.
+
 ## Bản 1.1.1-beta.20: đã kiểm tra tự động
 
 Kéo đổi chỗ tab sheet (HTML5 kéo thả, đổi chỗ khi kéo, tab khác trượt bằng FLIP 150 ms, chốt khi thả).

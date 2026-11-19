@@ -305,6 +305,53 @@ const table=(o={})=>({columns:F.columns,presets:F.presets,groups:F.groups,status
   ok(viewSaved && viewSaved.sheets.map(x=>x.name).join('|')===after.join('|'),'thứ tự sheet mới được lưu (table_view)');
   await page.locator('.sheetbar .sheet-tab').nth(0).click();await settle(50);
   ok((await activeTab())===after[0],'bấm tab sau khi kéo: mở đúng sheet tại vị trí mới');
+  // ---- Khóa sheet: sheet khóa giữ các món đã khóa, không đổi theo lựa chọn; sheet thường theo lựa chọn ----
+  const lockBtn=()=>page.locator('.sheetbar .sheet-lock');
+  const activeIndex=()=>page.locator('.sheetbar .sheet-tab[aria-selected=true]').evaluate(el=>Number(el.dataset.index));
+  const beforeLock=await tabs();
+  await clear();
+  await lockBtn().click();
+  ok(JSON.stringify(await json('table_lock'))==='{"action":"on"}','nút Khóa sheet này: gửi lệnh khóa cho Ruby');
+  await receive('sheet_lock',{lock:{items:[['11','21'],['12']]}});
+  await settle(500);
+  const locked=await activeIndex();
+  ok((await lockBtn().getAttribute('aria-pressed'))==='true' && (await page.locator('.sheetbar .sheet-tab').nth(locked).getAttribute('class')).includes('locked'),'Ruby xác nhận khóa: nút bật, tab đang mở có dấu khóa');
+  ok(JSON.stringify(await tabs())===JSON.stringify(beforeLock),'dấu khóa không làm đổi tên tab');
+  const viewLocked=await json('table_view');
+  ok(viewLocked.sheets[locked].lock && viewLocked.sheets[locked].lock.items.length===2,'sheet khóa được lưu cùng file (table_view)');
+  const other=locked===0?1:0;
+  await clear();
+  await page.locator('.sheetbar .sheet-tab').nth(other).click();await settle(50);
+  ok(JSON.stringify(await json('table_lock_apply'))==='{"lock":null}' && (await lockBtn().getAttribute('aria-pressed'))==='false','chuyển sang sheet thường: bảng theo lựa chọn (gửi lệnh bỏ khóa), nút tắt');
+  await clear();
+  await page.locator('.sheetbar .sheet-tab').nth(locked).click();await settle(50);
+  const back=await json('table_lock_apply');
+  ok(back && back.lock && back.lock.items.length===2,'quay lại sheet khóa: Ruby nhận đúng các món đã khóa');
+  await clear();
+  await lockBtn().click();
+  ok(JSON.stringify(await json('table_lock_apply'))==='{"lock":null}' && (await lockBtn().getAttribute('aria-pressed'))==='false','bấm nút đang khóa: mở khóa, gửi lệnh bỏ khóa');
+  await lockBtn().click();
+  await receive('sheet_lock',{lock:{items:[['11','21']]}});
+  await clear();
+  await page.locator('.sheetbar .sheet-add').click();await settle(50);
+  ok((await lockBtn().getAttribute('aria-pressed'))==='false','thêm sheet khi đang khóa: sheet mới không kế thừa khóa');
+  await settle(500);
+  const viewAdded=await json('table_view');
+  ok(!viewAdded.sheets[viewAdded.sheet].lock,'sheet mới không có khóa trong table_view');
+  // ---- Xuất nhiều sheet có sheet khóa: Ruby dựng lại đúng các món của sheet khóa rồi trả về sheet đang mở (mô phỏng Ruby trả bảng) ----
+  await page.evaluate(d=>{
+    window.__tableReply=d;
+    window.sketchup=new Proxy({},{get:(_,name)=>(...args)=>{window.calls.push({name,args});if(name==='table_lock_apply'||name==='settings_save')setTimeout(()=>window.VGD.receive('table',window.__tableReply),0);}});
+  },table());
+  await clear();
+  const sheetTotal=(await tabs()).length;
+  await page.evaluate(()=>exportTable('xlsx'));
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='table_export'),null,{timeout:60000});
+  const exported=await json('table_export');
+  const applied=(await calls('table_lock_apply')).map(c=>JSON.parse(c.args[0]).lock);
+  const lockedApplied=applied.find(l=>l&&l.items);
+  ok(exported.sheets && exported.sheets.length===sheetTotal,'xuất nhiều sheet: đủ mọi sheet trong file xuất');
+  ok(!!lockedApplied && lockedApplied.items.length===1 && applied.some(l=>l===null),'sheet khóa được dựng lại đúng món của nó khi xuất, rồi trả về sheet đang mở');
   ok(errors.length===0,'không có lỗi JavaScript'+(errors.length?': '+errors.join(' | '):''));
  }finally{await browser.close();}
  console.log(failed?`${failed} lỗi`:'Done');

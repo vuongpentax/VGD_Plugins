@@ -168,6 +168,8 @@ module VGD
           sheet['group'] = raw['group'].to_s[0, 100] if raw['group'].is_a?(String)
           sheet['search'] = raw['search'].to_s[0, 200] if raw['search'].is_a?(String)
           sheet['merge'] = raw['merge'] == true if raw.key?('merge')
+          lock = SheetLock.clean(raw['lock'])
+          sheet['lock'] = lock if lock # sheet khóa: chuỗi mã bền của các món đã khóa (xem SheetLock)
           if raw['exclude_tags'].is_a?(Array)
             begin
               sheet['exclude_tags'] = Measure.parse_tags(raw['exclude_tags'])

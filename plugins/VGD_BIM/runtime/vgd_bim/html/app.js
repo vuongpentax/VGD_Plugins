@@ -139,7 +139,7 @@ function syncFile(data){
 }
 function resetTableState(){
   clearTimeout(viewTimer);clearTimeout(excludeTimer);
-  Object.assign(tableState,{replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',manual:[],sheets:null,sheet:0,excludeTags:null,excludePending:false,projectedChecked:false,snapshots:null,snapshotDiff:null,checkResults:null,bridge:{file:null,match_by:'vgd_id',match_column:'',mapping:{},preview:null,skip:new Set(),shown:200}});
+  Object.assign(tableState,{lockKey:null,replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',manual:[],sheets:null,sheet:0,excludeTags:null,excludePending:false,projectedChecked:false,snapshots:null,snapshotDiff:null,checkResults:null,bridge:{file:null,match_by:'vgd_id',match_column:'',mapping:{},preview:null,skip:new Set(),shown:200}});
   const view=document.querySelector('.table-view');if(view)view.remove();
 }
 const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total','calc_qty','calc_total','mat_price','mat_waste','mat_qty','mat_cost']);
@@ -233,7 +233,22 @@ function applySheetExclude(s){
 }
 function activateSheet(i){
   const s=tableState.sheets[i];tableState.sheet=i;loadSheet(s);ensureProjected();applySheetExclude(s);
+  applyRowsLock(s.lock||null);
   persistView();tableView(tableState.data);
+}
+// Khóa sheet: khi sheet đang khóa được mở, Ruby giữ đúng các món đã khóa (không theo lựa chọn). tableState.lockKey là khóa đang có trong Ruby (null = theo lựa chọn).
+const lockKeyOf=lock=>lock?JSON.stringify(lock):null;
+function applyRowsLock(lock){
+  const key=lockKeyOf(lock);
+  if(key===tableState.lockKey)return false;
+  tableState.lockKey=key;call('table_lock_apply',JSON.stringify({lock:lock||null}));
+  return true; // Ruby sẽ gửi bảng mới
+}
+function toggleSheetLock(){
+  ensureSheets();const s=tableState.sheets[tableState.sheet];
+  if(!s)return;
+  if(s.lock){s.lock=null;persistView();applyRowsLock(null);if(tableState.data)tableView(tableState.data);return;} // vẽ lại ngay để nút khóa đổi trạng thái
+  call('table_lock',JSON.stringify({action:'on'})); // Ruby trả khóa qua sự kiện sheet_lock
 }
 function switchSheet(i){if(i===tableState.sheet||!tableState.sheets||!tableState.sheets[i])return;stashSheet();activateSheet(i);}
 function uniqueSheetName(base,skip){const used=new Set(tableState.sheets.map((s,i)=>i===skip?'':s.name.toLowerCase()));let name=base,n=2;while(used.has(name.toLowerCase()))name=`${base.slice(0,SHEET_NAME_MAX-6)} (${n++})`;return name;}
@@ -242,7 +257,7 @@ function addSheet(copyOf){
   if(tableState.sheets.length>=SHEET_LIMIT){message(`Tối đa ${SHEET_LIMIT} sheet.`,true);return;}
   const src=copyOf===undefined?tableState.sheets[tableState.sheet]:tableState.sheets[copyOf];
   const base=copyOf===undefined?`Sheet${tableState.sheets.length+1}`:`${src.name} (2)`;
-  tableState.sheets.push({...JSON.parse(JSON.stringify(src)),name:uniqueSheetName(base.slice(0,SHEET_NAME_MAX))});
+  tableState.sheets.push({...JSON.parse(JSON.stringify(src)),lock:null,name:uniqueSheetName(base.slice(0,SHEET_NAME_MAX))});
   activateSheet(tableState.sheets.length-1);
 }
 function renameSheet(i,raw){
@@ -312,6 +327,7 @@ function sheetBar(){
   tableState.sheets.forEach((s,i)=>{
     const b=node('button',s.name,'sheet-tab');b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',String(i===tableState.sheet));
     b.dataset.index=String(i);
+    if(s.lock)b.classList.add('locked');
     b.title='Bấm để mở · kéo để đổi chỗ · bấm đúp hoặc F2 để đổi tên · bấm phải để nhân đôi hoặc xóa';
     b.onclick=()=>switchSheet(tabIndex(b));b.ondblclick=()=>renameInline(b,tabIndex(b));
     b.oncontextmenu=e=>{e.preventDefault();sheetMenu(e,tabIndex(b),b);};
@@ -320,7 +336,11 @@ function sheetBar(){
     bar.append(b);
   });
   const add=node('button','+','sheet-add');add.type='button';add.title='Thêm sheet (sao chép cài đặt của sheet đang mở)';add.setAttribute('aria-label','Thêm sheet');add.onclick=()=>addSheet();
-  bar.append(add);
+  const active=tableState.sheets[tableState.sheet],locked=!!(active&&active.lock);
+  const lock=node('button',locked?'🔒':'🔓','sheet-lock');lock.type='button';lock.setAttribute('aria-pressed',String(locked));
+  lock.title=locked?'Đang khóa: sheet giữ các món đã khóa, không đổi theo lựa chọn. Bấm để mở khóa.':'Khóa sheet này: giữ các món đang có trong bảng, không đổi khi chọn món khác trong SketchUp.';
+  lock.setAttribute('aria-label',locked?'Mở khóa sheet này':'Khóa sheet này');lock.onclick=()=>toggleSheetLock();
+  bar.append(add,lock);
   return bar;
 }
 function syncSheetBar(view){
@@ -345,6 +365,7 @@ function restoreView(data){
   if(Array.isArray(v.sheets)&&v.sheets.length){
     tableState.sheets=v.sheets.map(s=>({...s}));tableState.sheet=Number.isInteger(v.sheet)&&v.sheet>=0&&v.sheet<tableState.sheets.length?v.sheet:0;
     loadSheet(tableState.sheets[tableState.sheet],data.columns);applySheetExclude(tableState.sheets[tableState.sheet]);
+    applyRowsLock(tableState.sheets[tableState.sheet].lock||null);
   }
   tableState.savedView=JSON.stringify(viewState());return true;
 }
@@ -1684,10 +1705,11 @@ async function exportTable(format){
     message(`Đang chuẩn bị ${sheets.length} sheet để xuất…`);
     for(let i=0;i<sheets.length;i++){
       tableState.sheet=i;loadSheet(sheets[i]);
+      const relocked=applyRowsLock(sheets[i].lock||null); // sheet khóa cần đúng các món đã khóa
       const needsProjected=tableState.visible.has('areaProjected')&&tableState.data.options&&!tableState.data.options.projected;
       const changed=applySheetExclude(sheets[i]);
       if(needsProjected)ensureProjected();
-      if((changed||needsProjected)&&!(await nextTableEvent()))throw new Error(`Hết thời gian chờ tính lại số đo cho sheet “${sheets[i].name}”. Hãy thử xuất lại.`); // Ruby tính lại số đo / diện tích chiếu rồi gửi bảng mới
+      if((changed||needsProjected||relocked)&&!(await nextTableEvent()))throw new Error(`Hết thời gian chờ tính lại số đo cho sheet “${sheets[i].name}”. Hãy thử xuất lại.`); // Ruby tính lại số đo / diện tích chiếu rồi gửi bảng mới
       out.push(exportSheetData(sheets[i].name));
     }
   }catch(error){
@@ -1695,8 +1717,9 @@ async function exportTable(format){
     out.length=0;
   }finally{
     tableState.sheet=original;loadSheet(sheets[original]);
+    const relocked=applyRowsLock(sheets[original].lock||null);
     const changed=applySheetExclude(sheets[original]);
-    if(changed)await nextTableEvent();
+    if(changed||relocked)await nextTableEvent();
     exporting=false;
     tableState.sheets=sheets;persistView();tableView(tableState.data);
   }
@@ -1938,6 +1961,7 @@ window.VGD={receive(event,data){
   if(event==='snapshot_diff'){tableState.snapshotDiff=data;tableState.panel='snapshots';if(tableState.data)tableView(tableState.data);}
   if(event==='check_results'){tableState.checkResults=data;tableState.panel='checks';if(tableState.data)tableView(tableState.data);}
   if(event==='highlight')highlightRows(data.indexes);
+  if(event==='sheet_lock'){const s=tableState.sheets&&tableState.sheets[tableState.sheet];if(s&&data&&data.lock){s.lock=data.lock;tableState.lockKey=lockKeyOf(data.lock);persistView();if(tableState.data)tableView(tableState.data);}}
   if(event==='options'&&tableState.data){tableState.data.options=data;tableView(tableState.data);}
   if(event==='presets'){
     if(config.table)config.table.presets=data;

@@ -90,6 +90,8 @@ module VGD
           @dialog.add_action_callback('table_replace') { |_ctx, payload| safely { table_replace(JSON.parse(payload)) } }
           @dialog.add_action_callback('open_url') { |_ctx, url| safely { open_url(url) } }
           @dialog.add_action_callback('table_preset') { |_ctx, payload| safely { table_preset(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_lock') { |_ctx, payload| safely { table_lock(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_lock_apply') { |_ctx, payload| safely { table_lock_apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_clear') { |_ctx| safely { table_clear } }
           @dialog.add_action_callback('rename_preview') { |_ctx, payload| safely { rename_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { rename_apply(JSON.parse(payload)) } }
@@ -176,6 +178,8 @@ module VGD
             @bridge_file = nil
             @table_rows = nil
             @table_records = nil
+            @table_lock = nil # sheet khóa của file cũ không áp dụng cho file mới
+            @table_missing = 0
           end
           @generation += 1
           @pending = nil
@@ -366,6 +370,7 @@ module VGD
         end
         def table_selection_changed
           @model = Sketchup.active_model
+          return if @table_lock # sheet đã khóa giữ các món đã khóa, không đổi theo lựa chọn trong SketchUp
           current = @model.selection.to_a.select { |e| Data.supported?(e) && e.valid? }
           if current.empty?
             # Bấm vùng trống trong SketchUp: giữ nguyên bảng, chỉ bỏ đánh dấu.
@@ -441,7 +446,10 @@ module VGD
           built = Table.build(@model, scope, @table_options[:deep] ? true : false, projected: @table_options[:projected], measure: MeasureProbe.context(ModelSettings.effective(@model)), context: scan_context)
           @table_rows = built[:rows]
           @table_records = built[:records]
-          hint = if scope.empty?
+          hint = if @table_lock
+                   text = "Sheet đã khóa: #{scope.size} đối tượng, không đổi theo lựa chọn trong SketchUp."
+                   @table_missing.to_i.positive? ? "#{text} Có #{@table_missing} đối tượng đã khóa không còn trong model." : text
+                 elsif scope.empty?
                    'Chưa chọn đối tượng nào. Chọn group hoặc component trong SketchUp, bảng sẽ tự đọc.'
                  elsif built[:hidden].to_i.positive?
                    "Đã ẩn #{built[:hidden]} đối tượng thuộc tag loại trừ."
@@ -450,6 +458,41 @@ module VGD
                          statuses: Table::STATUS_LABELS, options: @table_options.merge(isolating: !@isolated.empty?),
                          rows: @table_rows, selected: selected_indexes, hint: hint, view: Table.view_state(@model), choices: table_choices,
                          row_order: RowOrder.read(@model)})
+        end
+        # Khóa sheet đang mở: lưu các món đang có trong bảng (chuỗi mã bền, xem SheetLock) để giao diện ghi vào sheet. Bảng không đổi.
+        def table_lock(payload)
+          check_model!
+          raise 'Thao tác khóa không hợp lệ.' unless payload['action'] == 'on'
+          context = @table_context ? @table_context[:path] : []
+          items = SheetLock.snapshot(Array(@table_scope).select(&:valid?), context)
+          @table_lock = items
+          @table_missing = 0
+          emit('sheet_lock', {lock: {'items' => items}})
+        end
+        # Giao diện đổi sheet: sheet khóa thì bảng hiện đúng các món đã khóa; sheet thường (lock nil) thì bảng theo lựa chọn như trước.
+        def table_lock_apply(payload)
+          check_model!
+          lock = payload['lock']
+          if lock.nil?
+            @table_lock = nil
+            @table_missing = 0
+            table_scan_selection!
+          else
+            apply_sheet_lock((SheetLock.clean(lock) || raise(ArgumentError, 'Khóa sheet không hợp lệ.'))['items'])
+          end
+          table_build
+        end
+        # Tìm lại các món đã khóa trong model. Món thuộc ngữ cảnh khác (không cùng group cha) không hiện được và được tính là thiếu.
+        def apply_sheet_lock(items)
+          paths = SheetLock.resolve(@model, items)[:paths]
+          context = paths.empty? ? [] : paths.first[0...-1]
+          members = paths.select { |path| path[0...-1] == context }
+          @table_scope = members.map(&:last)
+          @table_context = {path: context, transform: context.inject(Geom::Transformation.new) { |total, entity| total * entity.transformation }}
+          @table_picks = nil
+          @picked_entities = []
+          @table_lock = items
+          @table_missing = items.size - members.size
         end
         # Thứ tự dòng người dùng kéo tay: chỉ ghi danh sách mã món vào model (RowOrder), không đổi gì trên đối tượng; bảng đã tự xếp lại ở giao diện.
         def table_order(payload)

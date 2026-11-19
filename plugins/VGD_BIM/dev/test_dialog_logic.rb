@@ -41,7 +41,7 @@ $transactions = []
 $writes = []
 $vgd_data = {}
 require File.join(ROOT, 'core/settings')
-%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/material_library core/check_rules core/snapshots core/bridge core/levels core/rooms core/room_volume].each { |f| require File.join(ROOT, f) }
+%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/material_library core/check_rules core/snapshots core/bridge core/levels core/rooms core/room_volume core/sheet_lock].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
@@ -936,5 +936,52 @@ ok('sửa bằng plugin: lỗi của plugin được báo ra, không nuốt', sr
 ok('sửa bằng plugin: chỉ số dòng sai hoặc không phải số bị từ chối', !src_err.call({'index' => 99}).nil? && !src_err.call({'index' => 'abc'}).nil?)
 ok('dòng của bảng có mã plugin nguồn (Table.source_plugin)', VGD::BIM::Table.source_plugin(se[1]) == 'vgd_structure' && VGD::BIM::Table.source_plugin(se[0]) == '' && VGD::BIM::Table.source_plugin(Object.new) == '')
 VGD::Bridge.providers.clear
+
+# ---- Khóa sheet (ui/dialog.rb: table_lock, table_lock_apply, table_selection_changed; core/sheet_lock.rb) ----
+# Sheet khóa giữ đúng các món đã khóa, bỏ qua lựa chọn trong SketchUp; mở sheet thường thì bảng theo lựa chọn như trước.
+def lock_group(pid, children = [])
+  g = Sketchup::Group.allocate
+  defn = Struct.new(:entities).new(children)
+  g.define_singleton_method(:persistent_id) { pid }
+  g.define_singleton_method(:valid?) { true }
+  g.define_singleton_method(:transformation) { Geom::Transformation.new }
+  g.define_singleton_method(:definition) { defn }
+  g
+end
+class LockModel
+  attr_accessor :active_path
+  attr_reader :entities, :selection
+  def initialize(entities); @entities = entities; @active_path = []; @selection = FakeSel.new; end
+  def edit_transform; Geom::Transformation.new; end
+end
+$lock_builds = 0
+$lock_emits = []
+lock_kid = lock_group(21)
+lock_grp = lock_group(11, [lock_kid])
+lock_loose = lock_group(12)
+lock_model = LockModel.new([lock_grp, lock_loose])
+$model = lock_model
+ld = D.allocate
+ld.instance_variable_set(:@model, lock_model)
+ld.define_singleton_method(:table_build) { $lock_builds += 1 }
+ld.define_singleton_method(:emit) { |event, payload| $lock_emits << [event, payload] }
+lock_model.selection.items.replace([lock_loose])
+ld.table_scan_selection!
+ok('khóa: sheet thường theo lựa chọn (món đứng riêng)', ld.instance_variable_get(:@table_scope) == [lock_loose])
+ld.table_lock('action' => 'on')
+ok('khóa: lưu đúng chuỗi mã bền của lựa chọn', $lock_emits.last[0] == 'sheet_lock' && $lock_emits.last[1][:lock]['items'] == [%w[12]])
+ld.table_lock_apply('lock' => {'items' => [%w[11 21]]})
+ok('mở sheet khóa: bảng là món lồng đã khóa, không theo lựa chọn', ld.instance_variable_get(:@table_scope) == [lock_kid] && ld.instance_variable_get(:@table_missing) == 0 && $lock_builds >= 1)
+ld.table_lock_apply('lock' => {'items' => [%w[11 21], %w[99]]})
+ok('món đã khóa không còn trong model: đếm thiếu, món còn lại vẫn hiện', ld.instance_variable_get(:@table_missing) == 1 && ld.instance_variable_get(:@table_scope) == [lock_kid])
+lock_model.selection.items.replace([lock_grp])
+before_builds = $lock_builds
+ld.table_lock_apply('lock' => {'items' => [%w[11 21]]})
+ld.table_selection_changed
+ok('sheet khóa: chọn món khác trong SketchUp không đổi bảng', ld.instance_variable_get(:@table_scope) == [lock_kid] && $lock_builds == before_builds + 1)
+ld.table_lock_apply('lock' => nil)
+ok('mở khóa: bảng quay về lựa chọn hiện tại', ld.instance_variable_get(:@table_lock).nil? && ld.instance_variable_get(:@table_scope) == [lock_grp])
+ok('thao tác khóa lạ bị từ chối', (begin; ld.table_lock('action' => 'off'); false; rescue StandardError => e; e.message.include?('không hợp lệ'); end))
+ok('khóa sai định dạng bị từ chối, bảng không đổi', (begin; ld.table_lock_apply('lock' => {'items' => [['x']]}); false; rescue StandardError => e; e.message.include?('không hợp lệ'); end) && ld.instance_variable_get(:@table_scope) == [lock_grp])
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"

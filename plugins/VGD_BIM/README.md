@@ -1,4 +1,4 @@
-# VGD BIM 1.1.1-beta.20
+# VGD BIM 1.1.1-beta.21
 
 Bản thử của 1.1.1 (bản ổn định gần nhất là 1.1.0). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -37,6 +37,8 @@ Cửa sổ có 5 tab (nút **Preset** cạnh nút Sáng/Tối ở thanh đầu d
 **Sửa preset đang chọn** (từ 1.1.1-beta.19): khi đang dùng preset tự tạo, khối **Đang chọn** ở bảng Preset có hai nút: **Cập nhật từ bảng hiện tại** lưu lại cột, tiêu đề, thứ tự và thiết lập đang hiện vào đúng preset đó (tên giữ nguyên); **Xóa preset này** xóa preset đó trên máy này, không xóa đối tượng hay ảnh trong model. Preset có sẵn không sửa hay xóa được, chỉ khôi phục bằng ↻. Lưu ý: preset tự tạo vốn đã tự cập nhật khi đổi cột, nên nút Cập nhật chủ yếu để chủ động lưu lại.
 
 **Kéo đổi chỗ sheet** (từ 1.1.1-beta.20): kéo tab sheet sang trái / phải để đổi chỗ. Các tab khác trượt nhẹ cho thấy thay đổi; sheet đang mở vẫn giữ nguyên, và thứ tự mới được lưu cùng file. Hiệu ứng tắt khi Windows bật chế độ giảm chuyển động.
+
+**Khóa sheet** (từ 1.1.1-beta.21): nút **🔓 / 🔒** cạnh nút + trên thanh sheet khóa sheet đang mở. Sheet khóa giữ đúng các món đang có trong bảng lúc khóa, không đổi khi bạn chọn món khác trong SketchUp; tab có dấu 🔒. Bấm lại để mở khóa: sheet trở về theo lựa chọn như trước. Danh sách khóa lưu trong `settings.json` cạnh file SketchUp, cùng thứ tự sheet. Món đã xóa khỏi model không hiện được và bảng báo số món còn thiếu. Xuất Excel / PDF nhiều sheet cũng lấy đúng món của từng sheet khóa.
 
 **Nút dán ảnh từ clipboard báo rõ lỗi** (từ 1.1.1-beta.16): khi không đọc được clipboard bằng nút, thông báo ghi kèm lỗi của trình duyệt (ví dụ NotAllowedError) để biết nguyên nhân. Ctrl+V sau khi chọn ô ảnh vẫn dùng được như trước. Nguyên nhân gốc chưa xác định; cần xem thông báo trong SketchUp.
 
