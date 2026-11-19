@@ -1,4 +1,4 @@
-# VGD Structure 0.28.0-beta.3
+# VGD Structure 0.28.0-beta.4
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
@@ -141,11 +141,13 @@ Sàn và trần cũng: một bước hoàn tác, dựng lại thay nhóm cũ, c�
 - **Mặt cắt 2D từ HÌNH THẬT trong SketchUp (0.27):** công cụ **Mặt cắt** (SE, tab Chú thích): bấm hai điểm của đường cắt rồi bấm phía nhìn. Ruby cắt các mặt thật trong model (nhóm và component lồng nhau, phần tử plugin và đối tượng SketchUp thường), tô phần bị cắt theo loại, vẽ cạnh phía sau trong tầm nhìn, hiện cốt tầng và trục lưới. Bấm một phần để chọn đúng đối tượng trong SketchUp, và ngược lại. Chưa có hatch, che khuất nét, kích thước trên mặt cắt. Chỉ kiểm bằng SketchUp giả lập.
 - **Mặt đứng 2D từ HÌNH THẬT trong SketchUp (0.28):** tab **Mặt đứng**, chọn một trong bốn hướng **Nam, Bắc, Đông, Tây** (nhìn từ phía -Y, +Y, +X, -X của model; giả định hướng Bắc của model là +Y, mặc định của SketchUp). Không cắt, không giới hạn độ sâu. Các mặt được tô từ xa đến gần nên mặt phía trước che mặt phía sau, nhưng không che từng nét riêng. Cốt tầng và trục lưới hiện như mặt cắt; bấm để chọn đối tượng trong SketchUp, và chọn trong SketchUp thì mặt sáng lên. Không lưu dữ liệu: mỗi lần chọn hướng hoặc bấm **Làm mới** là đọc lại model. Chưa làm: che khuất từng nét, hatch, kích thước. Quá 40 000 mặt thì chỉ giữ các mặt gần nhất và báo cắt bớt. Chỉ kiểm bằng SketchUp giả lập.
 
+Thanh công cụ **VGD STR** có nút Lưới trục và 7 nút vẽ trực tiếp trong SketchUp (Cột, Dầm, Tường, Cửa đi, Cửa sổ, Sàn, Trần). Icon sinh bằng `python3 dev/make_draw_icons.py` (cần Pillow).
+
 Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **Tải lại code** nạp lại mã mà không cần mở lại (đóng và mở lại cửa sổ nếu đang mở).
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.28.0-beta.3.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.28.0-beta.4.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

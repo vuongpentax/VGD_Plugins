@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img">
+  <title>VGD Structure · Cửa đi</title>
+  <line x1="3" y1="21" x2="3" y2="3" stroke="#292B2D" stroke-width="1.8"/>
+  <line x1="3" y1="21" x2="21" y2="21" stroke="#292B2D" stroke-width="1.8"/>
+  <line x1="21" y1="3" x2="21" y2="21" stroke="#292B2D" stroke-width="1.2"/>
+  <path d="M3.00 3.00 A18 18 0 0 1 21.00 21.00" fill="none" stroke="#B48963" stroke-width="1.2"/>
+</svg>

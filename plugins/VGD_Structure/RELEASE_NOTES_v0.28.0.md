@@ -1,5 +1,7 @@
 # VGD Structure 0.28.0 (beta)
 
+- **Icon vẽ trên thanh công cụ SketchUp (beta.4):** thanh **VGD STR** có thêm 7 nút vẽ trực tiếp trong SketchUp: Cột, Dầm, Tường, Cửa đi, Cửa sổ, Sàn, Trần (cùng lệnh với menu Vẽ trong SketchUp). Icon 16 và 24 px sinh bằng `dev/make_draw_icons.py`. Chỉ kiểm bằng test file icon và loader; chưa thấy trên thanh công cụ SketchUp thật.
+
 - **Vẽ sàn trong SketchUp kiểu X-ray (beta.3):** khối xem trước của sàn đang vẽ (theo ô và đa giác) mờ gần như trong suốt, viền mặt trên và đáy bằng **nét đứt**, không vẽ cạnh đứng để đỡ rối. Trần và tường giữ kiểu cũ. Chỉ kiểm bằng SketchUp giả lập; độ mượt khi di chuột trong SketchUp thật chưa đo.
 
 - **Sửa theo phản hồi (beta.2):** (1) trần chọn được từ cây dự án và từ SketchUp: lớp Trần mặc định tắt nên chọn bị bỏ qua, nay chọn phần tử nào thì tự bật lớp đó. (2) sàn **lọt lòng trong tường** tầng dưới như trong cột và dầm (mục trong với cạnh ô; dầm và tường cùng cạnh thì lấy mục sâu hơn; tường tự do chỉ cảnh báo). Model đã dựng: sàn sẽ báo "lệch", cần dựng lại sàn. (3) **Mặt cắt khóa trục:** đầu thứ hai của đường cắt chỉ ngang hoặc dọc; cắt xéo: vẽ xong rồi chọn đường cắt và dùng lệnh **Rotate** (Copy đường cắt chưa làm). Chưa xác minh trong SketchUp thật. Chưa kiểm chứng: bấm trực tiếp trên canvas để chọn đường cắt (test chọn qua API); tường nhảy ra ngoài chưa tái hiện được.

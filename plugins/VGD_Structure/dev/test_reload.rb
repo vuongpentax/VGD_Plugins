@@ -52,14 +52,14 @@ ok('phiên bản theo chuẩn repo x.y.z hoặc x.y.z-beta.N, không có chữ v
 vgd = UI::MENU_ROOT['Extensions'].subs['VGD']
 mine = vgd && vgd.subs['VGD Structure']
 ok('chỉ một menu VGD, bên trong menu con VGD Structure có Lưới trục và Tải lại code', UI::MENU_ROOT['Extensions'].subs.keys == ['VGD'] && mine && mine.items.map(&:first) == ['Lưới trục', 'Tải lại code'])
-ok("toolbar 'VGD STR' (dạng VGD + 3 chữ in hoa) có một lệnh, icon tồn tại", $toolbars == ['VGD STR'] && $commands.size == 1 && File.exist?(File.join(VGD::Structure::ROOT, 'assets', 'icons', 'grid.svg')))
+ok("toolbar 'VGD STR' (dạng VGD + 3 chữ in hoa) có Lưới trục và 7 nút vẽ, icon tồn tại", $toolbars == ['VGD STR'] && $commands.size == 8 && File.exist?(File.join(VGD::Structure::ROOT, 'assets', 'icons', 'grid.svg')) && %w[column beam wall door window slab ceiling].all? { |t| File.exist?(File.join(VGD::Structure::ROOT, 'assets', 'icons', "draw_#{t}_16.png")) && File.exist?(File.join(VGD::Structure::ROOT, 'assets', 'icons', "draw_#{t}_24.png")) })
 mine.items[0][1].call
 ok('menu Lưới trục và nút toolbar mở cùng một cửa sổ, gọi lại không mở thêm', $dialogs.size == 1 && $dialogs[0].visible? && ($commands[0][1].call; $dialogs.size == 1))
 ok('Schema nạp được: dictionary, đủ 5 loại, mỗi loại có tag', VGD::Structure::Schema::DICTIONARY == 'VGD_STRUCT' && VGD::Structure::Schema::KINDS.sort == VGD::Structure::Schema::TAGS.keys.sort)
 mine.items.last[1].call
 ok('bấm Tải lại code: báo đúng chữ chuẩn kèm phiên bản', $boxes.last == "Đã tải lại VGD Structure #{VGD::Structure::VERSION}.")
 3.times { VGD::Structure.reload }
-ok('tải lại nhiều lần không nhân đôi menu, toolbar, extension', mine.items.size == 2 && vgd.subs.size == 1 && $extensions.size == 1 && $toolbars.size == 1 && $commands.size == 1)
+ok('tải lại nhiều lần không nhân đôi menu, toolbar, extension', mine.items.size == 2 && vgd.subs.size == 1 && $extensions.size == 1 && $toolbars.size == 1 && $commands.size == 8)
 ok('tải lại khi cửa sổ đang mở: đóng rồi mở lại một cửa sổ mới (đang mở)', $closed.to_i >= 1 && $dialogs.size >= 2 && $dialogs.last.visible?)
 VGD::Structure.instance_variable_get(:@panel).close
 count = $dialogs.size

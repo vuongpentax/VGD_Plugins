@@ -99,6 +99,15 @@ unless file_loaded?(__FILE__)
   command.status_bar_text = 'VGD Structure: khai báo và vẽ lưới trục'
   command.small_icon = command.large_icon = File.join(VGD::Structure::ROOT, 'assets', 'icons', 'grid.svg')
   toolbar.add_item(command)
+  # Nút vẽ trực tiếp trong SketchUp (cùng lệnh với menu Vẽ trong SketchUp): mỗi nút có icon 16 và 24 px.
+  [['column', 'Cột'], ['beam', 'Dầm'], ['wall', 'Tường'], ['door', 'Cửa đi'], ['window', 'Cửa sổ'], ['slab', 'Sàn'], ['ceiling', 'Trần']].each do |tool, label|
+    draw_command = ::UI::Command.new("VGD Structure · Vẽ #{label.downcase}") { VGD::Structure.start_draw(tool) }
+    draw_command.tooltip = "VGD Structure · Vẽ #{label.downcase}"
+    draw_command.status_bar_text = "VGD Structure: vẽ #{label.downcase} trực tiếp trong SketchUp"
+    draw_command.small_icon = File.join(VGD::Structure::ROOT, 'assets', 'icons', "draw_#{tool}_16.png")
+    draw_command.large_icon = File.join(VGD::Structure::ROOT, 'assets', 'icons', "draw_#{tool}_24.png")
+    toolbar.add_item(draw_command)
+  end
   toolbar.restore
   file_loaded(__FILE__)
 end
