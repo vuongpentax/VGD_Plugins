@@ -7,6 +7,7 @@ module VGD
       MAX_FACES = 150_000   # quá mức này thì dừng và báo cắt bớt (mặt cắt vẫn dựng với phần đã đọc)
       MAX_EDGES = 120_000
       MAX_BEYOND = 40_000   # số đoạn cạnh phía sau gửi cho cửa sổ
+      MAX_POLYS = 40_000    # số mặt gửi cho cửa sổ mặt đứng (giữ các mặt gần nhất khi quá nhiều)
 
       # section: {'a' => [x, y], 'b' => [x, y], 'dir' => 1 | -1, 'depth' => mm}. Trả về {length:, cut: [{pts:, closed:, src:}], beyond: [[[s,z],[s,z]]...], truncated: bool, faces:, edges:}.
       def self.build(model, section)
@@ -22,7 +23,18 @@ module VGD
         {length: plane.length.round(1), cut: cut, beyond: beyond, truncated: sources[:truncated] || beyond.size >= MAX_BEYOND, faces: sources[:faces], edges: sources[:edges]}
       end
 
+      # Mặt đứng từ hình thật: mọi mặt của model (không cắt, không giới hạn độ sâu) nhìn từ hướng `view` (xem ElevationGeometry). Mặt xa đến gần, MAX_POLYS mặt gần nhất nếu quá nhiều.
+      def self.elevation(model, view)
+        sources = collect(model, nil)
+        faces = sources[:items].flat_map { |src| src[:faces].map { |f| f.merge(src: src[:meta]) } }
+        result = ElevationGeometry.project(view, faces)
+        polys = result[:polys]
+        truncated = sources[:truncated] || polys.size > MAX_POLYS
+        {polys: polys.last(MAX_POLYS), bounds: result[:bounds], truncated: truncated, faces: sources[:faces], edges: sources[:edges]}
+      end
+
       # Gom mặt và cạnh theo "nguồn": phần tử do plugin dựng (mỗi phần tử một nguồn), đối tượng SketchUp thường cấp cao nhất (một nguồn), hình rời (một nguồn chung).
+      # plane = nil: không lọc theo mặt cắt (mặt đứng cần mọi đối tượng).
       def self.collect(model, plane)
         state = {items: [], faces: 0, edges: 0, truncated: false}
         walk(model.entities, Geom::Transformation.new, nil, plane, state)
@@ -69,6 +81,7 @@ module VGD
 
       # Hộp bao thế giới (xấp xỉ theo 8 góc của hộp bao cục bộ) có chạm vùng cắt + tầm nhìn không (để bỏ qua sớm các đối tượng xa).
       def self.reaches?(e, t, plane)
+        return true if plane.nil?
         b = e.respond_to?(:definition) ? e.definition.bounds : nil
         return true unless b && b.respond_to?(:min)
         corners = [b.min, b.max].then { |lo, hi| [lo.x, hi.x].product([lo.y, hi.y], [lo.z, hi.z]) }

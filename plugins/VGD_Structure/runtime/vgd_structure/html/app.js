@@ -937,7 +937,7 @@
   function switchTab(tab) {
     state.tab = tab;
     document.querySelectorAll('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-tab') === tab)); });
-    ['grid', 'levels', 'plan', 'section', 'columns', 'beams', 'walls', 'openings', 'slabs', 'ceilings', 'schedule', 'all'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
+    ['grid', 'levels', 'plan', 'section', 'elevation', 'columns', 'beams', 'walls', 'openings', 'slabs', 'ceilings', 'schedule', 'all'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
     if (tab === 'plan') { syncPlanLevels(); window.VGDPlan.show(); }
     if (tab === 'columns') renderColumnsTab();
     if (tab === 'beams') renderBeamsTab();
@@ -946,12 +946,13 @@
     CELL_TABS.forEach(function (c) { if (tab === c.kind) renderCellTab(c); });
     if (tab === 'all') renderAllTab();
     if (tab === 'section') window.VGDSection.show();
+    if (tab === 'elevation') window.VGDElevation.show();
     if (tab === 'schedule') { renderScheduleControls(); requestSchedule(); }
   }
 
   function receive(event, data) {
     if (event === 'state') {
-      if (data.tag_names && window.VGDPlan && window.VGDPlan.setTagNames) { window.VGDPlan.setTagNames(data.tag_names); window.VGDSection.setTagNames(data.tag_names); }
+      if (data.tag_names && window.VGDPlan && window.VGDPlan.setTagNames) { window.VGDPlan.setTagNames(data.tag_names); window.VGDSection.setTagNames(data.tag_names); window.VGDElevation.setTagNames(data.tag_names); }
       state.origin = data.grid.origin.slice();
       var x = fromAxes(data.grid.x_axes), y = fromAxes(data.grid.y_axes);
       state.x = x; state.y = y; state.scale = data.symbol.scale; state.both = data.symbol.both_ends; state.drawn = data.drawn;
@@ -1016,7 +1017,7 @@
       state.drawn = data.drawn; renderButtons(); message(data.message);
     } else if (event === 'message') {
       message(data.text, data.error);
-    } else if (event === 'model_selection') { window.VGDPlan.modelSelection(data); window.VGDSection.modelSelection(data);
+    } else if (event === 'model_selection') { window.VGDPlan.modelSelection(data); window.VGDSection.modelSelection(data); window.VGDElevation.modelSelection(data);
     } else if (event === 'model_status') { window.VGDPlan.modelStatus(data);
     } else if (event === 'select_result') { window.VGDPlan.selectResult(data);
     } else if (event === 'su_point') { window.VGDPlan.suPoint(data);
@@ -1031,6 +1032,7 @@
     } else if (event === 'su_import') { applySuImport(data);
     } else if (event === 'su_tagged') { window.VGDPlan.scanSu();
     } else if (event === 'section_view') { window.VGDSection.receive(data);
+    } else if (event === 'elevation_view') { window.VGDElevation.receive(data);
     } else if (event === 'su_edit') { applySuEdit(data);
     } else if (event === 'schedule') { schedData = data; renderSchedule();
     } else if (event === 'plate_probe') { probeCache[data.key] = data.polygon || false; if (window.VGDPlan && window.VGDPlan.ghostChanged) window.VGDPlan.ghostChanged();
@@ -1177,7 +1179,9 @@
     remove: function (list) { return window.VGDPlanEdit.remove(list) + window.VGDPlanNotes.remove(list) + window.VGDPlanSection.remove(list); },
     debug: function () { var d = window.VGDPlanEdit.debug(); d.notes = window.VGDPlanNotes.debug(); return d; }
   };
-  window.VGDSection.init({state: state, call: call, callSU: call, axes: function () { return {x: toAxes('x').map(function (a) { return {name: a.name, pos: state.origin[0] + a.offset}; }), y: toAxes('y').map(function (a) { return {name: a.name, pos: state.origin[1] + a.offset}; })}; }});
+  var axesOf = function () { return {x: toAxes('x').map(function (a) { return {name: a.name, pos: state.origin[0] + a.offset}; }), y: toAxes('y').map(function (a) { return {name: a.name, pos: state.origin[1] + a.offset}; })}; };
+  window.VGDSection.init({state: state, call: call, callSU: call, axes: axesOf});
+  window.VGDElevation.init({state: state, call: call, callSU: call, axes: axesOf});
   window.VGDPlanSection.init({state: state, api: window.VGDS.api, mutate: mutate, say: function (t) { window.VGDPlan.say(t); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); },
     allSections: function () { var out = []; state.levels.forEach(function (l) { Object.keys(l.sections || {}).forEach(function (id) { out.push({id: id, level: l.id, name: l.sections[id].name}); }); }); return out; },
     openSection: function (levelId, id) { openSectionView(levelId, id); }, sectionAdded: function () {}});

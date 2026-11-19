@@ -1756,6 +1756,24 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(Object.keys(await page.evaluate(()=>window.VGDS._state.levels[0].sections)).length===0,'xóa đường cắt trên mặt bằng: dữ liệu mặt cắt mất');
   await receive('su_objects',{objects:[],untagged:0,skipped:[]});
   await reset();
+  // --- Mặt đứng: chọn hướng, dựng từ hình trong SketchUp, bấm chọn đối tượng, nhận chọn từ SketchUp ---
+  await reset();await page.click('.tabs button[data-tab=elevation]');await wait(150);
+  ok(await page.locator('#tab-elevation').isVisible() && /Chọn hướng/.test(await page.locator('#elv-status').innerText()),'tab Mặt đứng: chưa chọn hướng thì yêu cầu chọn hướng nhìn');
+  await page.click('#elv-dirs button[data-dir=south]');await wait(150);
+  const erq=await last('elevation_build');
+  ok(erq && erq.dir==='south' && await page.locator('#elv-dirs button[data-dir=south]').getAttribute('aria-pressed')==='true','bấm Nam: gửi Ruby elevation_build hướng south và đánh dấu nút');
+  await receive('elevation_view',{dir:'south',truncated:false,bounds:{s0:0,s1:4000,z0:0,z1:3000},polys:[{pts:[[0,0],[4000,0],[4000,3000],[0,3000]],holes:[],depth:2000,src:{kind:'wall',level:'sl_00000001',ref:'x:B:1-2',tag:'A. WALL'}},{pts:[[2000,0],[2300,0],[2300,3000],[2000,3000]],holes:[],depth:500,src:{kind:'suobj',level:null,ref:'2001',tag:'S. COLUMN'}}]});await wait(150);
+  ok(/Mặt đứng Nam: 2 mặt/.test(await page.locator('#elv-status').innerText()),'nhận kết quả: báo số mặt');
+  const ecv=await page.locator('#elv-canvas').boundingBox();const ep=await page.evaluate(()=>window.VGDElevation.debug().toScreen(2150,1500));
+  await page.mouse.click(ecv.x+ep[0],ecv.y+ep[1]);await wait(150);
+  const psel=await last('plan_select');
+  ok(psel && psel.items[0].kind==='suobj' && psel.items[0].ref==='2001','bấm cột trên mặt đứng (mặt gần): chọn đúng đối tượng trong SketchUp');
+  await receive('model_selection',{items:[{kind:'suobj',ref:'2001'}]});await wait(100);
+  ok((await page.evaluate(()=>window.VGDElevation.debug().selected)).includes('suobj||2001'),'chọn cột trong SketchUp: mặt cột sáng lên trên mặt đứng');
+  await page.click('#elv-refresh');await wait(150);
+  ok((await calls('elevation_build')).length===2,'bấm Làm mới: dựng lại mặt đứng từ hình hiện tại');
+  await receive('model_selection',{items:[]});await wait(100);
+  await page.click('[data-tab=plan]');await wait(150);
   // --- Ẩn / Cô lập ---
   await reset();const hist0=await page.evaluate(()=>window.VGDS.history().undo),data0=JSON.stringify((await st()).levels);
   await typ('eh');ok(/Hãy chọn phần tử cần ẩn/.test(await hintT()) && (await dbg8()).hidden===0,'EH khi chưa chọn gì: báo, không ẩn');

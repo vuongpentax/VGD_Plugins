@@ -41,6 +41,7 @@ module VGD
         @dialog.add_action_callback('picks_copy') { |_ctx, payload| safely { picks_copy(JSON.parse(payload)) } }
         @dialog.add_action_callback('grid_reset') { |_ctx| safely { send_state(reset: true) } }
         @dialog.add_action_callback('section_build') { |_ctx, payload| safely { section_build(JSON.parse(payload)) } }
+        @dialog.add_action_callback('elevation_build') { |_ctx, payload| safely { elevation_build(JSON.parse(payload)) } }
         @dialog.add_action_callback('su_scan') { |_ctx, payload| safely { su_scan(JSON.parse(payload)) } }
         @dialog.add_action_callback('su_adopt') { |_ctx, payload| safely { su_adopt(JSON.parse(payload)) } }
         @dialog.add_action_callback('su_tag') { |_ctx, payload| safely { su_tag(JSON.parse(payload)) } }
@@ -321,6 +322,13 @@ module VGD
         section = Levels.sections!({'sc_00000000' => payload['section']}, 'mặt cắt').values.first
         result = SuSection.build(Sketchup.active_model, section)
         emit('section_view', result.merge(id: payload['id'], name: section['name']))
+      end
+
+      # Mặt đứng từ HÌNH THẬT trong model (xem SuSection.elevation): payload {dir: 'south' | 'north' | 'west' | 'east'}. Không lưu dữ liệu, chỉ đọc model.
+      def elevation_build(payload)
+        dir = payload['dir'].to_s
+        result = SuSection.elevation(Sketchup.active_model, ElevationGeometry.view!(dir))
+        emit('elevation_view', result.merge(dir: dir))
       end
 
       # ---- Đối tượng SketchUp thường (chưa do plugin dựng): quét theo tag BIM, nhận về làm dữ liệu Structure, gán tag ----

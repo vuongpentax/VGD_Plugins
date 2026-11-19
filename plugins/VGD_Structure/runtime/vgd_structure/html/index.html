@@ -19,6 +19,7 @@
   <button type="button" role="tab" data-tab="levels" aria-selected="false">Tầng và loại cột</button>
   <button type="button" role="tab" data-tab="plan" aria-selected="false">Mặt bằng</button>
   <button type="button" role="tab" data-tab="section" aria-selected="false">Mặt cắt</button>
+  <button type="button" role="tab" data-tab="elevation" aria-selected="false">Mặt đứng</button>
   <button type="button" role="tab" data-tab="columns" aria-selected="false">Cột</button>
   <button type="button" role="tab" data-tab="beams" aria-selected="false">Dầm</button>
   <button type="button" role="tab" data-tab="walls" aria-selected="false">Tường</button>
@@ -373,6 +374,20 @@
   </div>
   <div class="sec-body"><canvas id="sec-canvas" tabindex="0" role="img" aria-label="Mặt cắt 2D"></canvas></div>
 </main>
+<main id="tab-elevation" class="tab sec-tab" hidden>
+  <div class="sec-bar">
+    <span id="elv-dirs" class="elv-dirs" role="group" aria-label="Hướng nhìn mặt đứng">
+      <button type="button" data-dir="south" aria-pressed="false" title="Nhìn từ phía Nam (từ -Y)">Nam</button>
+      <button type="button" data-dir="north" aria-pressed="false" title="Nhìn từ phía Bắc (từ +Y)">Bắc</button>
+      <button type="button" data-dir="east" aria-pressed="false" title="Nhìn từ phía Đông (từ +X)">Đông</button>
+      <button type="button" data-dir="west" aria-pressed="false" title="Nhìn từ phía Tây (từ -X)">Tây</button>
+    </span>
+    <button type="button" id="elv-refresh" title="Dựng lại mặt đứng từ hình hiện tại trong SketchUp">Làm mới</button>
+    <button type="button" id="elv-fit" title="Vừa khung">Vừa khung</button>
+    <span id="elv-status" class="muted small" aria-live="polite">Chọn hướng nhìn: Nam, Bắc, Đông hoặc Tây.</span>
+  </div>
+  <div class="sec-body"><canvas id="elv-canvas" tabindex="0" role="img" aria-label="Mặt đứng 2D"></canvas></div>
+</main>
 <main id="tab-schedule" class="tab" hidden>
   <section class="form wide" aria-label="Bảng thống kê">
     <fieldset>
@@ -396,6 +411,7 @@
 <script src="plan_browser.js"></script>
 <script src="plan_view.js"></script>
 <script src="section_view.js"></script>
+<script src="elevation_view.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
