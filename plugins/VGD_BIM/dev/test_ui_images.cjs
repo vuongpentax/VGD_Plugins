@@ -1300,10 +1300,12 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
   await page.waitForFunction(()=>document.querySelector('#message').innerText.includes('Ctrl+V'));
   ok(!(await calls('image_set')).length,'không đọc được clipboard bằng nút (từ chối quyền): hướng dẫn nhấn Ctrl+V, không lưu gì');
+  ok((await page.locator('#message').innerText()).includes('NotAllowedError'),'từ chối quyền: thông báo ghi rõ lỗi của trình duyệt (NotAllowedError)');
   await fakeClipboard('missing');
   await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
   await page.waitForFunction(()=>document.querySelector('#message').innerText.includes('Ctrl+V'));
   ok(!(await calls('image_set')).length,'cửa sổ không có API clipboard: hướng dẫn nhấn Ctrl+V');
+  ok((await page.locator('#message').innerText()).includes('không có chức năng đọc clipboard'),'không có API clipboard: thông báo nói rõ nguyên nhân');
   // Ctrl+V: ô ảnh vị trí vừa bấm là nơi nhận; bấm chỗ khác thì về món đang chọn
   const firePaste=()=>page.evaluate(async()=>{
     const blob=await (await fetch('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')).blob();

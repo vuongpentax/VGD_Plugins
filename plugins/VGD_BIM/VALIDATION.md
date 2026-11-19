@@ -2,6 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.16: đã kiểm tra tự động
+
+Nút dán ảnh từ clipboard không đọc được clipboard trong SketchUp (đã có từ trước, nguyên nhân chưa rõ). Bản này chỉ làm thông báo rõ hơn để chẩn đoán; chưa sửa nguyên nhân.
+
+- `test_ui_images.cjs`: khi clipboard bị từ chối, thông báo ghi `NotAllowedError`; khi trình duyệt không có API clipboard, thông báo nói rõ nguyên nhân.
+- `test_ui_en.cjs`: câu thông báo mới có bản dịch tiếng Anh.
+
+**Chưa xác minh trong SketchUp thật:** nút dán và thông báo mới trong SketchUp; nguyên nhân gốc vẫn cần xác định từ thông báo đó.
+
 ## Bản 1.1.1-beta.15: đã kiểm tra tự động
 
 Sửa: sửa tên, cập nhật ảnh hay sửa một ô làm bảng nhảy lên đầu, mất dấu món đang làm.
