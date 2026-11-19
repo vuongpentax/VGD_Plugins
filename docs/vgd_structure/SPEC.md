@@ -31,7 +31,7 @@
 - `picks.beams` là bảng `{"x:A:1-2": {"type": "bt_...", "p": "center"}}`; `p` ∈ `center` / `min` / `max` (mặc định auto: dầm trên trục biên đầu `min`, biên cuối `max`, giữa `center`; `min` cạnh nhỏ tại trục).
 - `wall_types` (cột mốc 4): `[{"id": "wt_xxxxxxxx", "name": "T200", "t": 200}]`, `t` 50 đến 1000 mm; tầng có thêm `wall_type`. `picks.walls` giống `picks.beams`: `{"x:A:1-2": {"type": "wt_...", "p": "center"}}`. Tường cao từ `Ei` lên đáy dầm của nhịp (nếu nhịp có dầm được chọn cùng tầng) hoặc đáy sàn tầng trên; đặc, chưa khoét cửa.
 - `opening_types` (cột mốc 8): `[{"id": "ot_xxxxxxxx", "name": "D900x2100", "kind": "door|window", "w": 900, "h": 2100, "sill": 0}]`; `w` 300 đến 5000, `h` 300 đến 4000, `sill` 0 đến 3000 mm. `picks.openings` là `{"op_xxxxxxxx": {"wall": "x:B:2-3", "type": "ot_...", "pos": 1950, "flip": false}}`: `pos` là tâm cửa tính từ đầu tường (mm). Cửa nằm trọn trong chiều dài và chiều cao tường, cách cửa khác >= 50 mm; tường khoét lỗ chữ nhật; kind `door` / `window` ở `VGD_BIM_SOURCE`, `dims` của cửa: `w`,`h`,`sill`,`thickness`,`wall`; `dims` của tường thêm `openings` (số lỗ) và `openings_area` (m²).
-- Tầng có thêm `ceiling_height` (1500 đến 20000, mặc định 2800) và `ceiling_thickness` (5 đến 100, mặc định 9). `picks.slabs` / `picks.ceilings` là `{"1-2/A-B": {}}` (mã ô). Sàn: mặt trên tại `Ei`, dày `slab_thickness` xuống dưới, phủ trọn ô, kể cả tầng trên cùng. Trần: mặt dưới tại `Ei + ceiling_height`, dày `ceiling_thickness` lên trên, lùi tới mặt tường (nếu có), khoét góc theo cột; tầng trên cùng không có trần. Mã nhịp / ô như sau: cột theo giao điểm `"<trục x>-<trục y>"`, dầm và tường theo nhịp `"<x|y>:<tên trục chứa nhịp>:<tên hai trục chặn>"`, sàn và trần theo ô `"<x1>-<x2>/<y1>-<y2>"`. Mã này là `ref` ghi vào `VGD_BIM_SOURCE.ref`.
+- Tầng có thêm `ceiling_height` (1500 đến 20000, mặc định 2800) và `ceiling_thickness` (5 đến 100, mặc định 9). `picks.slabs` / `picks.ceilings` là `{"1-2/A-B": {}}` (mã ô). Sàn: mặt trên tại `Ei`, dày `slab_thickness` xuống dưới, lùi theo dầm, tường và cột của tầng dưới (tầng thấp nhất phủ trọn ô), kể cả tầng trên cùng. Trần: mặt dưới tại `Ei + ceiling_height`, dày `ceiling_thickness` lên trên, lùi tới mặt tường (nếu có), khoét góc theo cột; tầng trên cùng không có trần. Mã nhịp / ô như sau: cột theo giao điểm `"<trục x>-<trục y>"`, dầm và tường theo nhịp `"<x|y>:<tên trục chứa nhịp>:<tên hai trục chặn>"`, sàn và trần theo ô `"<x1>-<x2>/<y1>-<y2>"`. Mã này là `ref` ghi vào `VGD_BIM_SOURCE.ref`.
 - Dữ liệu được kiểm tra lại mỗi lần đọc từ model và mỗi lần nhận từ giao diện (ranh giới tin cậy).
 
 ## 2. Dữ liệu trên khối dựng ra
@@ -72,7 +72,7 @@ Tầng i: cao độ `Ei` là cốt sàn HOÀN THIỆN; cán nền `c(i)` (mặc 
 
 | Loại | Cao độ |
 |---|---|
-| Sàn tầng i | mặt trên `Si`, dày `t(i)` xuống dưới; nằm **lọt lòng** giữa các dầm và cột của tầng dưới (lùi tới mặt dầm, khoét góc theo cột), nên không chồng khối |
+| Sàn tầng i | mặt trên `Si`, dày `t(i)` xuống dưới; nằm **lọt lòng** giữa các dầm, tường và cột của tầng dưới (lùi tới mặt trong dầm và tường, khoét góc theo cột), nên không chồng khối |
 | Cột | từ `Si` lên `S(i+1)` (mặt trên sàn kết cấu tầng trên) |
 | Dầm | **đỉnh bằng `S(i+1)`**, chiều cao `h` là TỔNG chiều cao tính từ đỉnh sàn xuống (phần nhô dưới sàn là `h - t(i+1)`) |
 | Tường | từ `Si` lên đáy dầm của nhịp (nếu có dầm), không thì lên đáy sàn tầng trên `S(i+1) - t(i+1)` |

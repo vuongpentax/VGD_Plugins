@@ -302,7 +302,12 @@
   function ed() { return edit && edit.handles(tool) ? edit : (modify && modify.handles(tool) ? modify : null); }
   // Chọn các hình có (kind, ref) trong danh sách; trả về số hình chọn được, báo nếu thiếu (phần tử chưa có trong xem trước, ví dụ lỗi dữ liệu).
   function applyKeys(keys) {
-    var want = {}; keys.forEach(function (k) { want[k.kind + '|' + k.ref] = true; });
+    var want = {};
+    keys.forEach(function (k) { want[k.kind + '|' + k.ref] = true; });
+    // Chọn từ cây dự án hoặc SketchUp: lớp đang tắt của phần tử được chọn được bật lên, nếu không sẽ không chọn được (trần mặc định tắt).
+    keys.forEach(function (k) {
+      if (visible.hasOwnProperty(k.kind) && !visible[k.kind]) { visible[k.kind] = true; var box = document.querySelector('#pv-layers input[data-layer="' + k.kind + '"]'); if (box) box.checked = true; }
+    });
     selLevel = currentId; selection = shapes.filter(function (x) { return want[x.kind + '|' + x.ref] && vis(x); });
     note = selection.length === keys.length ? '' : (selection.length ? 'Chọn được ' + selection.length + '/' + keys.length + ' phần tử (số còn lại không có trong xem trước hoặc đang ẩn).' : 'Phần tử không có trong xem trước của tầng này (có thể đang ẩn lớp hoặc bị bỏ do lỗi dữ liệu).');
     return selection.length;

@@ -26,7 +26,9 @@
   function options() { return []; }
   function setOption() {}
   function point(w) { var q = host.snapPoint(w) || w; return [r1(q[0]), r1(q[1])]; }
-  function move(w) { target = {p: point(w)}; }
+  // Khóa trục: đầu thứ hai chỉ nằm ngang hoặc dọc so với đầu thứ nhất (theo trục lưới). Cắt xéo: vẽ xong rồi dùng lệnh Rotate.
+  function lockOrtho(a, p) { return Math.abs(p[0] - a[0]) >= Math.abs(p[1] - a[1]) ? [p[0], a[1]] : [a[0], p[1]]; }
+  function move(w) { var p = point(w); target = {p: pts.length === 1 ? lockOrtho(pts[0], p) : p}; }
   function click(w) {
     note = ''; if (!tool) return;
     move(w); var p = target.p;

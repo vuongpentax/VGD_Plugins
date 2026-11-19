@@ -48,6 +48,23 @@ module VGD
          left: by_ref["y:#{cell[:xa]}:#{cell[:ya]}-#{cell[:yb]}"], right: by_ref["y:#{cell[:xb]}:#{cell[:ya]}-#{cell[:yb]}"]}
       end
 
+      # Cạnh của ô theo các nguồn (dầm, tường): mỗi phía lấy mục NẰM SÂU VÀO trong ô nhất, nên sàn lọt lòng trong cả dầm lẫn tường.
+      def self.recess_edges(cell, *by_refs)
+        by_refs.map { |by_ref| edge_items(cell, by_ref) }.reduce do |a, b|
+          a.merge(b) { |side, x, y| x.nil? ? y : (y.nil? ? x : (inset(side, x) >= inset(side, y) ? x : y)) }
+        end
+      end
+
+      # Độ sâu của mục vào trong ô, tính từ mép ô (mm): càng lớn càng sâu.
+      def self.inset(side, item)
+        case side
+        when :left then item[:max][0]
+        when :right then -item[:min][0]
+        when :bottom then item[:max][1]
+        else -item[:min][1]
+        end
+      end
+
       # free: {'poly' => vòng ngoài, 'holes' => [vòng lỗ]} đã chuẩn hóa. Trả về mục kế hoạch có polygon, holes, min, max, area (m2, đã trừ lỗ), placement 'free'.
       def self.free_item(ref, free, extra)
         poly = free['poly']

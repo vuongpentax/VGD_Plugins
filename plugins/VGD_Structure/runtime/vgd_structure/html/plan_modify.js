@@ -122,6 +122,13 @@
         if (keep) nb[A.rid('an_')] = moved2; else nb[s.ref] = moved2;
         moved++; return;
       }
+      if (s.kind === 'section') { // đường cắt mặt: chỉ Rotate (quay hai đầu quanh tâm, độ dài giữ nguyên); Copy / Move chưa làm cho đường cắt
+        var sec = lvl().sections && lvl().sections[s.ref];
+        if (!sec) { skipped.push([s.title, 'mặt cắt không còn']); return; }
+        if (keep) { skipped.push([s.title, 'sao chép mặt cắt chưa làm']); return; }
+        sec.a = fn(sec.a).map(function (v) { return Math.round(v * 10) / 10; }); sec.b = fn(sec.b).map(function (v) { return Math.round(v * 10) / 10; });
+        moved++; return;
+      }
       if (!ITEMS[s.kind]) { if (s.kind !== 'opening') skipped.push([s.title, 'loại này chưa dịch tự do được']); return; }
       var pick = pickOf(s), free = pick && geomOf(s);
       if (!free) { skipped.push([s.title, 'chưa có hình trong xem trước']); return; }

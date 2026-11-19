@@ -1359,6 +1359,9 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await reset();await cl(13500,500);ok((await dbg6()).selected==='Sàn đa giác fs_00000001','bấm vào phần đặc của sàn đa giác: chọn sàn đa giác');
   await reset();await cl(13800,1500);ok((await dbg6()).selected===null,'bấm vào lỗ khoét: không chọn sàn');
   await reset();await cl(14500,7000);ok((await dbg6()).selected==='Trần đa giác fk_00000001','bấm vào trần đa giác: chọn trần đa giác');
+  await reset();await page.evaluate(()=>{const b=document.querySelector('#pv-layers input[data-layer=ceiling]');if(b.checked)b.click();});await wait(80);
+  await page.evaluate(()=>window.VGDPlan.selectKeys('sl_00000001',[{kind:'ceiling',ref:'fk_00000001'}]));await wait(80);
+  ok((await dbg6()).selected==='Trần đa giác fk_00000001' && await page.evaluate(()=>document.querySelector('#pv-layers input[data-layer=ceiling]').checked),'lớp Trần đang tắt: chọn trần từ cây dự án vẫn được (tự bật lớp Trần)');
   // Thuộc tính: nhập từng đỉnh
   await reset();await cl(13500,500);
   ok(await page.locator('#pv-props input[data-field=v0x]').isVisible() && await page.locator('#pv-props input[data-field=v3y]').isVisible(),'chọn sàn đa giác (4 đỉnh): Thuộc tính có ô nhập X, Y từng đỉnh');
@@ -1755,6 +1758,20 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.keyboard.press('Delete');await wait(150);
   ok(Object.keys(await page.evaluate(()=>window.VGDS._state.levels[0].sections)).length===0,'xóa đường cắt trên mặt bằng: dữ liệu mặt cắt mất');
   await receive('su_objects',{objects:[],untagged:0,skipped:[]});
+  await reset();
+  // --- Mặt cắt: khóa trục (đầu thứ hai chỉ ngang / dọc) và xoay đường cắt bằng Rotate ---
+  await reset();await typ('se');await wait(120);
+  await cl(8000,500);await cl(8500,4000);await cl(8200,2000);await wait(120);
+  const secsX=await page.evaluate(()=>window.VGDS._state.levels[0].sections),idX=Object.keys(secsX).find(k=>secsX[k].a[0]===8000&&secsX[k].a[1]===500);
+  ok(idX && secsX[idX].b[0]===8000 && secsX[idX].b[1]===4000,'khóa trục: kéo đầu thứ hai lệch nhiều theo dọc thì đường cắt thành dọc (b cùng x với a)');
+  // Chọn đường cắt bằng API (bấm trên canvas chưa chọn được đường cắt: ghi nhận là việc còn lại), rồi đưa tiêu điểm vào canvas như khi bấm.
+  // Không gọi reset() ở đây: reset nạp lại trạng thái mẫu (không có đường cắt vừa tạo). Chỉ Esc, rồi gửi xem trước như Ruby sau mỗi thay đổi.
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await receive('preview',F.preview_poly);await wait(80);
+  await page.evaluate(id=>window.VGDPlan.selectKeys('sl_00000001',[{kind:'section',ref:id}],false),idX);await page.evaluate(()=>document.getElementById('pv-canvas').focus());await wait(80);
+  await typ('ro');
+  await page.fill('#pv-options input[data-opt=angle]','90');await page.press('#pv-options input[data-opt=angle]','Tab');await cl(8000,2250);await wait(120);
+  const sr=await page.evaluate(id=>window.VGDS._state.levels[0].sections[id],idX);
+  ok(sr && Math.abs(sr.a[0]-9750)<1 && Math.abs(sr.a[1]-2250)<1 && Math.abs(sr.b[0]-6250)<1 && Math.abs(sr.b[1]-2250)<1,'Rotate 90° quanh tâm: đường cắt xoay đúng, độ dài giữ nguyên (3500 mm)');
   await reset();
   // --- Mặt đứng: chọn hướng, dựng từ hình trong SketchUp, bấm chọn đối tượng, nhận chọn từ SketchUp ---
   await reset();await page.click('.tabs button[data-tab=elevation]');await wait(150);
