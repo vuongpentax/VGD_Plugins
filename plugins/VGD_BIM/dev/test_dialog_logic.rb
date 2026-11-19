@@ -41,7 +41,7 @@ $transactions = []
 $writes = []
 $vgd_data = {}
 require File.join(ROOT, 'core/settings')
-%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/material_library core/check_rules core/snapshots core/bridge core/levels core/rooms].each { |f| require File.join(ROOT, f) }
+%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/material_library core/check_rules core/snapshots core/bridge core/levels core/rooms core/room_volume].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
@@ -748,6 +748,20 @@ ok('lưu danh sách phòng sai dữ liệu: từ chối', bad_room.call { rd2.ta
 kept = VGD::BIM::Rooms.read(rmm).first(1)
 rd2.table_rooms({'rooms' => kept})
 ok('lưu danh sách phòng (xóa phòng 2): báo số phòng', VGD::BIM::Rooms.read(rmm).size == 1 && rd2.rcalls.last[1][:text].include?('1 phòng'))
+# Cập nhật viền từ đúng một mặt đang chọn: giữ tên / mã / tầng / chiều cao, theo viền và cao độ mới
+upd_id = VGD::BIM::Rooms.read(rmm)[0]['id']
+rmm.selection.items = [RoomFace.new([[0, 0, 500], [6000, 0, 500], [6000, 3000, 500], [0, 3000, 500]])]
+rd2.table_room_update_boundary({'id' => upd_id})
+upd = VGD::BIM::Rooms.read(rmm)[0]
+ok('cập nhật viền: viền và cao độ theo mặt mới; tên, mã, chiều cao giữ nguyên', upd['boundary'].map { |pt| pt.map(&:round) } == [[0, 0], [6000, 0], [6000, 3000], [0, 3000]] && upd['elevation'].round == 500 && upd['name'] == 'Phòng khách' && upd['number'] == 'P01' && upd['height'] == 2800)
+ok('cập nhật viền: có thông báo diện tích mới (18 m²)', rd2.rcalls.last[1][:text].include?('18'))
+rmm.selection.items = [RoomFace.new([[0, 0, 0], [1000, 0, 0], [1000, 1000, 0], [0, 1000, 0]]), RoomFace.new([[2000, 0, 0], [3000, 0, 0], [3000, 1000, 0], [2000, 1000, 0]])]
+ok('cập nhật viền: chọn nhiều mặt thì từ chối, viền không đổi', bad_room.call { rd2.table_room_update_boundary({'id' => upd_id}) }.to_s.include?('đúng một mặt') && VGD::BIM::Rooms.read(rmm)[0]['boundary'].map { |pt| pt.map(&:round) } == [[0, 0], [6000, 0], [6000, 3000], [0, 3000]])
+rmm.selection.items = [RoomFace.new([[0, 0, 0], [1000, 0, 0], [1000, 1000, 0], [0, 1000, 0]])]
+ok('cập nhật viền: mã phòng không còn trong danh sách thì báo lỗi', bad_room.call { rd2.table_room_update_boundary({'id' => 'rm_deadbeef'}) }.to_s.include?('không còn trong danh sách'))
+ok('cập nhật viền: dữ liệu gửi lên sai thì từ chối', bad_room.call { rd2.table_room_update_boundary({}) }.to_s.include?('không hợp lệ'))
+rmm.selection.items = [RoomFace.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 0], [0, 3000, 0]])]
+rd2.table_room_update_boundary({'id' => upd_id}) # trả lại viền 4 x 3 m cho các kiểm tra gán món phía sau
 $transactions.clear
 rd2.table_assign_rooms_auto({'indexes' => [0, 1, 2, 3]})
 rid = VGD::BIM::Rooms.read(rmm)[0]['id']

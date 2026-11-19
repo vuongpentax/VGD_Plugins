@@ -2,6 +2,16 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.14: đã kiểm tra tự động
+
+Cập nhật viền phòng từ đúng một mặt đang chọn (không cần vẽ lại phòng).
+
+- `test_dialog_logic.rb`: viền và cao độ theo mặt mới; tên, mã, chiều cao giữ nguyên; chọn nhiều mặt bị từ chối và viền không đổi; mã phòng không có thì báo lỗi; dữ liệu gửi lên sai bị từ chối. Viền 4 x 3 m được khôi phục cho các kiểm tra gán món phía sau.
+- `test_ui.cjs`: nút Cập nhật viền gửi đúng mã phòng.
+- Lỗi tìm được khi viết test: file test không nạp `core/room_volume.rb` nên `RoomVolume` không có; đã thêm vào danh sách nạp của test.
+
+**Chưa xác minh trong SketchUp thật:** chọn mặt rồi bấm cập nhật trên model thật; khối 3D cũ không đổi cho đến khi Dựng lại; hoàn tác.
+
 ## Bản 1.1.1-beta.13: đã kiểm tra tự động
 
 Nhập VGD Room vào VGD_BIM (dựng khối 3D của phòng) và đổi nút Dựng khối sang gọi trực tiếp `core/room_volume.rb`.

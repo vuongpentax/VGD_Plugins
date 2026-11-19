@@ -80,6 +80,7 @@ module VGD
           @dialog.add_action_callback('table_export') { |_ctx, payload| safely { table_export(JSON.parse(payload)) } }
           @dialog.add_action_callback('export_open') { |_ctx| safely { export_open(false) } }
           @dialog.add_action_callback('table_room_build') { |_ctx, payload| safely { table_room_build(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_room_update_boundary') { |_ctx, payload| safely { table_room_update_boundary(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_build_all') { |_ctx, payload| safely { table_room_build_all(JSON.parse(payload)) } }
           @dialog.add_action_callback('export_open_folder') { |_ctx| safely { export_open(true) } }
           @dialog.add_action_callback('table_edit_source') { |_ctx, payload| safely { table_edit_source(JSON.parse(payload)) } }
@@ -559,6 +560,52 @@ module VGD
           table_build
           emit('message', {text: "Đã lưu #{items.size} vật liệu."})
         end
+        # Cập nhật viền (và lỗ) của một phòng có sẵn từ đúng MỘT mặt sàn đang chọn. Tên, mã, tầng, chiều cao, hoàn thiện giữ nguyên;
+        # cao độ sàn theo mặt mới. Khối 3D đã dựng không tự đổi: bấm Dựng lại khối. Một bước hoàn tác (Rooms.write).
+        def table_room_update_boundary(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless payload.is_a?(Hash) && payload['id'].is_a?(String)
+          faces = selected_faces
+          raise 'Hãy chọn đúng một mặt sàn (Face) trong SketchUp rồi bấm lại.' unless faces.size == 1
+          shapes, _skipped, first_error = face_shapes(faces)
+          raise first_error if shapes.empty?
+          list = Rooms.read(@model)
+          index = list.index { |room| room['id'] == payload['id'] }
+          raise 'Phòng này không còn trong danh sách. Hãy mở lại Quản lý phòng.' unless index
+          shape = shapes.first
+          room = list[index].merge('boundary' => shape[:boundary], 'elevation' => shape[:elevation])
+          room.delete('holes')
+          room['holes'] = shape[:holes] unless shape[:holes].empty?
+          clean = Rooms.sanitize!(list.each_with_index.map { |item, i| i == index ? room : item })
+          Rooms.write(@model, clean)
+          table_build
+          note = RoomVolume.find(@model, room['id']).nil? ? '' : ' Khối 3D đã dựng chưa đổi: bấm Dựng lại khối.'
+          emit('message', {text: "Đã cập nhật viền phòng #{room['name']} (diện tích #{Rooms.metrics(room)[:area]} m²).#{note}"})
+        end
+        def selected_faces
+          @model.selection.to_a.select { |entity| entity.is_a?(Sketchup::Face) }
+        end
+        # Viền ngoài và các lỗ (mm, tọa độ thế giới) của từng mặt; mặt không dùng được thì bỏ và báo. Trả về [shapes, số mặt bỏ, lỗi đầu tiên].
+        def face_shapes(faces)
+          context = context_transform
+          to_mm = lambda do |loop_|
+            loop_.vertices.map { |vertex| p = context * vertex.position; [p.x.to_f * Geometry::INCH_MM, p.y.to_f * Geometry::INCH_MM, p.z.to_f * Geometry::INCH_MM] }
+          end
+          shapes = []
+          skipped = 0
+          first_error = nil
+          faces.each do |face|
+            begin
+              shape = Rooms.boundary_from_points(to_mm.call(face.outer_loop))
+              inner = face.respond_to?(:loops) ? face.loops.reject { |loop_| loop_.respond_to?(:outer?) && loop_.outer? }.map { |loop_| to_mm.call(loop_) } : []
+              shapes << shape.merge(holes: Rooms.holes_from_loops(inner))
+            rescue ArgumentError => error
+              first_error ||= error
+              skipped += 1
+            end
+          end
+          [shapes, skipped, first_error]
+        end
         # Dựng (hoặc dựng lại) khối 3D của một phòng (core/room_volume.rb). payload: {'id' => mã phòng}. Một bước hoàn tác.
         def table_room_build(payload)
           check_model!
@@ -600,25 +647,9 @@ module VGD
         def table_room_from_selection(payload)
           check_model!
           raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless payload.is_a?(Hash)
-          faces = @model.selection.to_a.select { |entity| entity.is_a?(Sketchup::Face) }
+          faces = selected_faces
           raise 'Hãy chọn một hoặc nhiều mặt sàn (Face) trong SketchUp rồi bấm lại.' if faces.empty?
-          context = context_transform
-          to_mm = lambda do |loop_|
-            loop_.vertices.map { |vertex| p = context * vertex.position; [p.x.to_f * Geometry::INCH_MM, p.y.to_f * Geometry::INCH_MM, p.z.to_f * Geometry::INCH_MM] }
-          end
-          shapes = []
-          skipped = 0
-          first_error = nil
-          faces.each do |face|
-            begin
-              shape = Rooms.boundary_from_points(to_mm.call(face.outer_loop))
-              inner = face.respond_to?(:loops) ? face.loops.reject { |loop_| loop_.respond_to?(:outer?) && loop_.outer? }.map { |loop_| to_mm.call(loop_) } : []
-              shapes << shape.merge(holes: Rooms.holes_from_loops(inner))
-            rescue ArgumentError => error
-              first_error ||= error
-              skipped += 1
-            end
-          end
+          shapes, skipped, first_error = face_shapes(faces)
           raise first_error if shapes.empty?
           shapes.sort_by! { |shape| [shape[:boundary].map(&:first).min, shape[:boundary].map(&:last).min] } # đặt tên theo thứ tự từ trái sang phải
           rooms = Rooms.read(@model)
