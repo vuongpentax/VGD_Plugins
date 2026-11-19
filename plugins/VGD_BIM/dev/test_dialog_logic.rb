@@ -231,7 +231,11 @@ module Geom
   class Transformation
     attr_reader :shift
     def initialize(shift = [0.0, 0.0, 0.0]); @shift = shift.map(&:to_f); end
-    def *(other); Transformation.new(@shift.zip(other.shift).map { |a, b| a + b }); end
+    # Như SketchUp: biến đổi nhân biến đổi cho biến đổi, nhân điểm cho điểm đã dịch
+    def *(other)
+      return other.class.new(other.x + @shift[0], other.y + @shift[1], other.z + @shift[2]) if other.respond_to?(:x)
+      Transformation.new(@shift.zip(other.shift).map { |a, b| a + b })
+    end
     def to_a; [1.0, 0, 0, 0, 0, 1.0, 0, 0, 0, 0, 1.0, 0, *@shift, 1.0]; end
   end
 end
@@ -302,7 +306,7 @@ ok('quét lại cùng ngữ cảnh: không báo lặp', pcalls.count { |c| c[0] 
 pm.define_singleton_method(:edit_transform) { Geom::Transformation.new }
 pm.active_path = []
 D.instance_method(:table_scan_selection!).bind(pd).call
-ok('không mở group nào: giữ edit_transform của SketchUp (đơn vị)', pd.instance_variable_get(:@table_context)[:transform].to_a == Geom::Transformation.new.to_a)
+ok('không mở group nào: vị trí là đơn vị (không dùng edit_transform)', pd.instance_variable_get(:@table_context)[:transform].to_a == Geom::Transformation.new.to_a)
 pm.define_singleton_method(:edit_transform) { Geom::Transformation.new([5, 0, 0]) }
 pm.active_path = [parent]
 D.instance_method(:table_scan_selection!).bind(pd).call # lại ngữ cảnh [parent] như trước đoạn kiểm tra trên
@@ -398,6 +402,12 @@ $transactions.clear
 ed.table_edit({'indexes' => [0, 1, 2], 'field' => 'name', 'value' => '  Cửa  '})
 ok('sửa tên nhiều dòng: đổi các đối tượng không khóa, bỏ qua đối tượng khóa', eents.map(&:name) == ['Cửa', 'E1', 'Cửa'])
 ok('sửa nhiều dòng: một bước hoàn tác', $transactions == ['VGD_BIM · Sửa bảng'])
+# Sửa tay ô Mã đối tượng: trùng mã món khác trong bảng thì báo lỗi, không ghi gì, không mở bước hoàn tác (ObjectCode.check_edit!)
+ed.instance_variable_get(:@table_rows).each_with_index { |r, i| r[:code] = i == 0 ? 'XK01' : (i == 1 ? 'XK02' : '') }
+$transactions.clear
+clash_msg = begin; ed.table_edit({'indexes' => [2], 'field' => 'code', 'value' => 'xk01'}); nil; rescue StandardError => e; e.message; end
+ok('sửa mã trùng món khác (khác hoa thường): báo lỗi, không mở bước hoàn tác', clash_msg.to_s.include?('đã có ở món khác') && $transactions.empty?)
+ok('sửa mã mới: được ghi, một bước hoàn tác', (begin; ed.table_edit({'indexes' => [2], 'field' => 'code', 'value' => 'XK03'}); true; rescue StandardError; false; end) && $transactions == ['VGD_BIM · Sửa bảng'])
 ok('sửa nhiều dòng: bảng đọc lại và báo kết quả có số đối tượng bị khóa', ecalls.any? { |c| c[0] == :build } && ecalls.any? { |c| c[0] == 'message' && c[1][:text].include?('2') && c[1][:text].include?('khóa') })
 ed.table_edit({'indexes' => [0, 2], 'field' => 'tag', 'value' => '000 CUA'})
 ok('đổi tag sang tag có sẵn: dùng đúng tag đó', eents[0].layer.name == '000 CUA' && eents[2].layer.equal?(em.layers[1]))

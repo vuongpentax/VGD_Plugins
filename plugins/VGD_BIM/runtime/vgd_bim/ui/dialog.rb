@@ -122,6 +122,12 @@ module VGD
         def show; @dialog.visible? ? @dialog.bring_to_front : @dialog.show; end
         def visible?; @dialog.visible?; end
         def closed?; @closed; end
+        # Việc đang làm khiến chưa nên nạp lại code (chụp ảnh, đang vẽ khung xem trước); nil nếu rảnh.
+        def busy_reason
+          return 'đang chụp ảnh' if @capture
+          return 'đang vẽ khung xem trước' if @preview
+          nil
+        end
         def close; @dialog.close; end
         def switch_mode(mode)
           mode = ALIASES.fetch(mode, mode)
@@ -201,7 +207,8 @@ module VGD
           when 'information'
             @targets = @model.selection.to_a.select { |e| Data.supported?(e) && e.valid? }
             ancestor_locked = (@model.active_path || []).any? { |e| e.locked? }
-            @records = @targets.map { |e| {entity: e, path: (@model.active_path || []) + [e], transform: @model.edit_transform * e.transformation, locked: ancestor_locked || e.locked?} }
+            context = context_transform
+            @records = @targets.map { |e| {entity: e, path: (@model.active_path || []) + [e], transform: context * e.transformation, locked: ancestor_locked || e.locked?} }
             fields = Schema::FIELDS.each_with_object({}) do |key, h|
               values = @targets.map { |e| Data.has_data?(e) ? Data.read(e)[key] : Schema::DEFAULTS[key] }.uniq
               h[key] = values.size == 1 ? values.first : nil
@@ -233,8 +240,8 @@ module VGD
             emit('message', {error: 'Hãy chọn group hoặc đối tượng cần quét trong SketchUp.'})
             return
           end
-          transform = selection ? @model.edit_transform : Geom::Transformation.new
           path = selection ? (@model.active_path || []) : []
+          transform = selection ? Geometry.path_transform(path) : Geom::Transformation.new
           begin
             Sketchup.status_text = 'VGD BIM · Đang quét mô hình…'
             Scanner.walk(roots, transform, path, [], nil, false, faces: faces?) { |r| @records << r }
@@ -338,9 +345,9 @@ module VGD
         # thiếu biến đổi của group cha. Hai cách trùng nhau thì không đổi gì; khác nhau thì dùng tích của path và báo một lần để biết.
         def context_transform
           path = @model.active_path || []
+          composed = Geometry.path_transform(path)
           reported = @model.edit_transform
-          return reported if path.empty?
-          composed = path.inject(Geom::Transformation.new) { |total, entity| total * entity.transformation }
+          return composed if path.empty?
           unless same_transform?(composed, reported)
             key = [path.map(&:object_id), composed.to_a, reported.to_a]
             unless @context_mismatch == key
@@ -562,6 +569,7 @@ module VGD
           return table_calc_method(indexes, value) if field == 'calc_method'
           editable = records.reject { |record| record[:locked] || record[:entity].locked? }
           raise 'Đối tượng đang bị khóa nên không sửa được.' if editable.empty?
+          ObjectCode.check_edit!(value, indexes, @table_rows) if field == 'code'
           material = field == 'material' && !value.empty? ? find_material(value) : nil
           Data.transaction(@model, 'VGD_BIM · Sửa bảng') do
             layer = field == 'tag' ? (value.empty? ? untagged_layer : Tags.layer_for(@model, value)) : nil

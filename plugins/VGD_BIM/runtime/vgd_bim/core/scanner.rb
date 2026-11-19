@@ -42,7 +42,7 @@ module VGD
         records = []
         path = model.active_path || []
         inherited = path.reverse.find { |e| e.material }
-        walk(model.selection.to_a, model.edit_transform, path, [], inherited && inherited.material, path.any?(&:locked?)) { |record| records << record }
+        walk(model.selection.to_a, Geometry.path_transform(path), path, [], inherited && inherited.material, path.any?(&:locked?)) { |record| records << record }
         records
       end
       def self.all_entities; scan_model.map { |r| r[:entity] }.select { |e| Data.supported?(e) }.uniq; end

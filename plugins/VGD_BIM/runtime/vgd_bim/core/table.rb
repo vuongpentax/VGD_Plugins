@@ -248,7 +248,7 @@ module VGD
       def self.build(model, entities, deep = false, projected: false, measure: nil, context: nil)
         records = []
         path = context ? context[:path] : (model.active_path || [])
-        transform = context ? context[:transform] : model.edit_transform
+        transform = context ? context[:transform] : Geometry.path_transform(path)
         if deep
           Scanner.walk(entities, transform, path, [], nil, false, faces: false) do |record|
             records << record if Data.supported?(record[:entity]) && record[:entity].valid?

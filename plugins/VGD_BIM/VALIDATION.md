@@ -2,6 +2,19 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.22: đã kiểm tra tự động
+
+Sửa ba lỗi rà soát: vị trí món trong group đang mở, mã đối tượng sửa tay trùng, tải lại code khi đang bận.
+
+- `dev/test_open_group.rb` (mới, đưa vào `run_tests.rb`): tích biến đổi của đường dẫn; quét lựa chọn trong group đang mở cho đúng vị trí (không theo `edit_transform` sai).
+- `dev/test_object_code.rb`: `check_edit!` từ chối mã trùng (khác hoa thường), mã của chính món được giữ, xóa mã luôn được, một mã cho nhiều món bị từ chối.
+- `dev/test_dialog_logic.rb`: sửa tay mã trùng báo lỗi và không mở bước hoàn tác; sửa mã mới được ghi.
+- `dev/test_loader_menu.rb`: tải lại khi đang chụp hoặc đang vẽ không nạp file nào, báo việc đang làm.
+- Các test cũ dùng stub `Geometry` / `Geom::Transformation` đã thêm `path_transform` và phép nhân điểm (đúng như SketchUp thật).
+- Playwright (`test_ui`, `test_ui_images`, `test_ui_sheets`, `test_ui_en`): xem kết quả trong báo cáo cuối lượt.
+
+**Chưa xác minh trong SketchUp thật:** vị trí món trong group đang mở trên SketchUp 2024 / 2025; hộp tải lại khi đang chụp thật; `layers.add` khi tag đã tồn tại.
+
 ## Bản 1.1.1-beta.21: đã kiểm tra tự động
 
 Khóa sheet: sheet khóa giữ các món đã khóa, không đổi theo lựa chọn; mở khóa thì theo lựa chọn; xuất nhiều sheet dựng đúng món của từng sheet khóa.

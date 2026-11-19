@@ -35,6 +35,11 @@ module VGD
     # Dùng sau khi cài đè bản mới (.rbz). Menu và thanh công cụ giữ như cũ cho tới lần mở SketchUp sau.
     # Kiểm tra cú pháp cả bộ file trước: có lỗi thì giữ nguyên bản đang chạy.
     def self.reload
+      busy = @panel && !@panel.closed? && @panel.busy_reason # đang chụp ảnh / vẽ khung: không nạp lại, để người dùng chờ xong
+      if busy
+        ::UI.messagebox("Tải lại thất bại: VGD BIM #{busy}.\n\nHãy chờ xong rồi tải lại code.")
+        return false
+      end
       files = [File.join(File.dirname(ROOT), 'vgd_bim.rb'), File.join(ROOT, 'loader.rb')] +
               FILES.map { |file| File.join(ROOT, "#{file}.rb") }
       files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
