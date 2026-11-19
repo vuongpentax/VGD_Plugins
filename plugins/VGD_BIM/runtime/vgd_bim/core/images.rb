@@ -2,6 +2,7 @@ require 'fileutils'
 require 'securerandom'
 require_relative 'settings'
 require_relative 'model_settings'
+require_relative 'storage'
 
 module VGD
   module BIM
@@ -141,7 +142,7 @@ module VGD
         FileUtils.mkdir_p(dir!(model))
         temp = temp_path(model, pid, kind)
         File.binwrite(temp, full)
-        replace_file(temp, path(model, pid, kind))
+        Storage.replace_file(temp, path(model, pid, kind))
       end
 
       # Đổi file tạm do SketchUp chụp (write_image) thành ảnh chính. Không phải PNG hoặc chưa có file thì giữ ảnh cũ.
@@ -154,7 +155,7 @@ module VGD
           File.delete(temp)
           raise
         end
-        replace_file(temp, path(model, pid, kind))
+        Storage.replace_file(temp, path(model, pid, kind))
       end
 
       def self.delete(model, pid, kind = :full)
@@ -174,11 +175,6 @@ module VGD
       def self.data_url(file)
         return nil unless File.file?(file)
         "data:image/png;base64,#{[File.binread(file)].pack('m0')}"
-      end
-
-      def self.replace_file(temp, final)
-        File.delete(final) if File.exist?(final)
-        File.rename(temp, final)
       end
     end
   end

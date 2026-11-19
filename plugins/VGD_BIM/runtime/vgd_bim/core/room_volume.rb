@@ -48,9 +48,18 @@ module VGD
       # Khối đã dựng cho phòng này (theo VGD_BIM_SOURCE.ref, kind = room) ở cấp gốc của model; không có thì nil.
       def self.find(model, room_id)
         return nil unless model.respond_to?(:entities)
-        model.entities.to_a.find do |entity|
-          entity.is_a?(Sketchup::Group) && entity.valid? && entity.get_attribute(SOURCE_DICTIONARY, 'kind') == 'room' && entity.get_attribute(SOURCE_DICTIONARY, 'ref') == room_id
+        find_in(model.entities.to_a, room_id)
+      end
+
+      # Tìm trong cả các group lồng nhau (người dùng có thể đưa khối vào group khác, dựng lại mà không thấy thì sẽ tạo bản trùng). Chỉ đi vào group.
+      def self.find_in(entities, room_id)
+        entities.each do |entity|
+          next unless entity.is_a?(Sketchup::Group) && entity.valid?
+          return entity if entity.get_attribute(SOURCE_DICTIONARY, 'kind') == 'room' && entity.get_attribute(SOURCE_DICTIONARY, 'ref') == room_id
+          found = find_in(entity.entities.to_a, room_id)
+          return found if found
         end
+        nil
       end
 
       def self.material_for(model)

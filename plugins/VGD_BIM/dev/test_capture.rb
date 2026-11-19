@@ -139,6 +139,9 @@ need = radius / Math.sin(half_narrow)
 dist = ->(s) { Math.sqrt(s[:eye].zip(s[:target]).sum { |e, t| (e - t)**2 }) }
 wide_half = Math.atan(Math.tan(half_narrow) / 2.0) # khung nhìn 1000 x 500 (tỉ lệ 2:1) với fov ngang 35 độ: góc dọc hẹp hơn nên phải lùi xa hơn
 need_wide = radius / Math.sin(wide_half)
+empty_view = FakeView.new(Object.new)
+VGD::BIM::UI::Capture.frame(empty_view, {entity: Struct.new(:bounds).new(Class.new { def empty?; true; end }.new), transform: nil}, [800, 600], 0)
+check 'món không đo được hộp bao: không gọi View#zoom (giữ khung đã đặt)', empty_view.zoomed.empty?
 check 'Iso: lùi xa thêm một bước (extend) theo hộp bao thật của món cao 200 và tỉ lệ khung nhìn 2:1 (dọc hẹp hơn): cả hình cầu bao món lọt trong góc nhìn có chừa lề 20%, nên không bị cắt', view.states.all? { |s| dist.(s) >= need_wide * 1.15 && dist.(s) <= need_wide * 1.25 } && view.zoomed.empty?
 sq_model, sq_items = world
 sq_model.active_view.vpwidth = 500

@@ -2,6 +2,19 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.23: đã kiểm tra tự động
+
+Nhóm lỗi vừa của đợt rà soát: tô màu tag là thao tác hoàn tác; ghi file an toàn; khối phòng tìm trong group lồng; diện tích ước tính; chụp không zoom khi thiếu hộp bao.
+
+- `dev/test_storage_replace.rb` (mới): thay file cũ, không còn `.bak`, đổi tên lỗi giữ nguyên file cũ, khôi phục `.bak` dở.
+- `dev/test_tag_tree.rb`: tô màu tag là bước hoàn tác.
+- `dev/test_quantity.rb`, `dev/test_structure_source.rb`: diện tích khung bao có ghi chú ước tính; diện tích mặt thật không có ghi chú.
+- `dev/test_room_volume.rb`: tìm khối trong group lồng nhau.
+- `dev/test_capture.rb`: món không đo được hộp bao không gọi `View#zoom`.
+- Playwright: `test_ui_en.cjs` (nhãn tường phòng có bản dịch mới).
+
+**Chưa xác minh trong SketchUp thật:** thao tác hoàn tác của tô màu tag; ghi file khi file đang bị phần mềm khác giữ (đổi tên thật trên Windows); chụp món không có hộp bao.
+
 ## Bản 1.1.1-beta.22: đã kiểm tra tự động
 
 Sửa ba lỗi rà soát: vị trí món trong group đang mở, mã đối tượng sửa tay trùng, tải lại code khi đang bận.

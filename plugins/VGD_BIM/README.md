@@ -1,4 +1,4 @@
-# VGD BIM 1.1.1-beta.22
+# VGD BIM 1.1.1-beta.23
 
 Bản thử của 1.1.1 (bản ổn định gần nhất là 1.1.0). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -41,6 +41,8 @@ Cửa sổ có 5 tab (nút **Preset** cạnh nút Sáng/Tối ở thanh đầu d
 **Khóa sheet** (từ 1.1.1-beta.21): nút **🔓 / 🔒** cạnh nút + trên thanh sheet khóa sheet đang mở. Sheet khóa giữ đúng các món đang có trong bảng lúc khóa, không đổi khi bạn chọn món khác trong SketchUp; tab có dấu 🔒. Bấm lại để mở khóa: sheet trở về theo lựa chọn như trước. Danh sách khóa lưu trong `settings.json` cạnh file SketchUp, cùng thứ tự sheet. Món đã xóa khỏi model không hiện được và bảng báo số món còn thiếu. Xuất Excel / PDF nhiều sheet cũng lấy đúng món của từng sheet khóa.
 
 **Sửa lỗi** (từ 1.1.1-beta.22): (1) tab Thông tin, Kiểm tra và Quét & xuất theo lựa chọn tính vị trí món trong group đang mở bằng tích các group cha, đúng như bảng khối lượng; (2) sửa tay ô **Mã đối tượng** không còn cho trùng mã món khác trong bảng (không phân biệt hoa thường); (3) **Tải lại code** không chạy khi đang chụp ảnh hoặc đang vẽ khung xem trước, báo rõ việc đang làm: hãy chờ xong rồi tải lại.
+
+**Sửa lỗi rà soát, nhóm 2** (từ 1.1.1-beta.23): (1) tô màu theo tag (SketchUp) là một bước hoàn tác; (2) diện tích không có mặt thật (VGD Structure) ghi chú "ước tính theo khối bao"; dòng diện tích tường của phòng ghi rõ "chưa trừ cửa"; (3) ghi file (cài đặt, ảnh, luật) an toàn hơn: file cũ không mất nếu đổi tên lỗi; (4) khối phòng được tìm cả trong group lồng nhau, tránh dựng trùng; (5) món không đo được hộp bao khi chụp không còn gọi View#zoom.
 
 **Nút dán ảnh từ clipboard báo rõ lỗi** (từ 1.1.1-beta.16): khi không đọc được clipboard bằng nút, thông báo ghi kèm lỗi của trình duyệt (ví dụ NotAllowedError) để biết nguyên nhân. Ctrl+V sau khi chọn ô ảnh vẫn dùng được như trước. Nguyên nhân gốc chưa xác định; cần xem thông báo trong SketchUp.
 

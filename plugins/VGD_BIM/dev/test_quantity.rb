@@ -28,7 +28,8 @@ ok('món đã đặt không đưa vào BOQ: không tính, nguồn món', Q.resol
 ok('ghi đè theo tag bị hỏng (giá trị lạ) bị bỏ qua', Q.resolve('A. WALL', 'A. ARCHITECTURAL', {}, {Q.key('A. WALL') => 'zzz'})[:source] == 'keyword')
 # ---- Khối lượng tính ----
 row = {lenX: 1200.0, lenY: 600.0, lenZ: 2400.0, areaXZ: 2.88, volume: 1.234, price: 1_500_000.0}
-ok('theo cái: 1; theo diện tích: Rộng x Cao (m²); theo mét dài: Rộng (m); theo thể tích: khối (m³)', Q.amount('count', row) == [1.0, nil] && Q.amount('area', row) == [2.88, nil] && Q.amount('length', row) == [1.2, nil] && Q.amount('volume', row) == [1.234, nil])
+ok('diện tích không có diện tích mặt thật: Rộng x Cao (khung bao) và ghi chú ước tính', Q.amount('area', row) == [2.88, 'ước tính theo khối bao'] && Q.amount('area', row.merge(struct_area: 2.5)) == [2.5, nil])
+ok('theo cái: 1; theo diện tích: Rộng x Cao (m²); theo mét dài: Rộng (m); theo thể tích: khối (m³)', Q.amount('count', row) == [1.0, nil] && (Q.amount('area', row)[0] == 2.88) &&  Q.amount('length', row) == [1.2, nil] && Q.amount('volume', row) == [1.234, nil])
 ok('không tính: không có số lượng', Q.amount('none', row) == [nil, nil])
 ok('thể tích: khối không kín (không có thể tích khối) thì ước tính theo khung bao và ghi chú', Q.amount('volume', row.merge(volume: nil)) == [1.728, 'ước tính theo khối bao'])
 ok('thiếu số đo: không có số lượng', Q.amount('area', {}) == [nil, nil] && Q.amount('length', {lenX: nil}) == [nil, nil])

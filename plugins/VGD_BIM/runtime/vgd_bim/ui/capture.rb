@@ -209,7 +209,7 @@ module VGD
         def self.frame(view, record, size, margin, scale: 1)
           entity = record[:entity]
           bounds = record[:transform] ? Geometry.world_bounds([record]) : entity.bounds
-          return view.zoom(entity) if bounds.empty? # không tính được hộp bao: về cách cũ
+          return if bounds.empty? # không tính được hộp bao: giữ khung đã đặt theo hướng nhìn (không dùng View#zoom: tính theo tọa độ cục bộ)
           low = bounds.min.to_a
           high = bounds.max.to_a
           if scale != 1

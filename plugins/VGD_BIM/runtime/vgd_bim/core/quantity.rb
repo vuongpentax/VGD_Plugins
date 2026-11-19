@@ -65,7 +65,11 @@ module VGD
       def self.amount(method, row)
         case method
         when 'count' then [1.0, nil]
-        when 'area' then [number(row[:struct_area]) || number(row[:areaXZ]), nil]
+        when 'area'
+          face = number(row[:struct_area]) # diện tích mặt thật của phần tử VGD Structure
+          return [face, nil] if face
+          box = number(row[:areaXZ]) # không có mặt thật: Rộng x Cao của khung bao, có thể lớn hơn diện tích thật (tường xiên, hình lạ)
+          [box, box ? 'ước tính theo khối bao' : nil]
         when 'length'
           return [number(row[:struct_length]), nil] if number(row[:struct_length])
           [number(row[:lenX]) && (row[:lenX] / 1000.0).round(3), nil]

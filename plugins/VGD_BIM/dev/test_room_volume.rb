@@ -89,6 +89,10 @@ ok('vật liệu chỉ tạo một lần', (m.materials.items.size == 1))
 ok('dữ liệu cầu nối: VGD ID, plugin, phiên bản, loại phòng, mã phòng BIM', group.get_attribute('VGD_BIM_ID', 'guid') == ID && group.get_attribute('VGD_BIM_SOURCE', 'plugin') == 'vgd_bim' && group.get_attribute('VGD_BIM_SOURCE', 'kind') == 'room' && group.get_attribute('VGD_BIM_SOURCE', 'ref') == 'rm_aaaaaaaa' && !group.get_attribute('VGD_BIM_SOURCE', 'plugin_version').to_s.empty? && !group.attrs.key?('VGD_BIM'))
 ok('một thao tác có commit', m.ops == [[:start, 'VGD_BIM · Dựng khối phòng'], [:commit]])
 ok('find: tìm khối theo mã phòng; phòng khác thì nil', B.find(m, 'rm_aaaaaaaa').equal?(group) && B.find(m, 'rm_bbbbbbbb').nil? && B.find(Object.new, 'rm_aaaaaaaa').nil?)
+nested_host = Sketchup::Group.new(m); m.entities.items << nested_host
+nested_vol = Sketchup::Group.new(m); nested_vol.set_attribute('VGD_BIM_SOURCE', 'kind', 'room'); nested_vol.set_attribute('VGD_BIM_SOURCE', 'ref', 'rm_cccccccc'); nested_host.entities.items << nested_vol
+ok('find: khối nằm trong group khác vẫn tìm thấy (không dựng trùng)', B.find(m, 'rm_cccccccc').equal?(nested_vol))
+m.entities.items.delete(nested_host) # dọn: các kiểm tra sau đếm khối trong model
 
 # ---- Dựng lại ----
 m.ops.clear

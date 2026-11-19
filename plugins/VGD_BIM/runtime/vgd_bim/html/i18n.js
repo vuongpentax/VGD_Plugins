@@ -422,7 +422,7 @@ const VGD_I18N=(()=>{
   rule(/^Đã (dựng|dựng lại) khối phòng (.+) \(thể tích ([\d.,]+) m³\)\.$/,(m,a,name,v)=>`${a==='dựng'?'Built':'Rebuilt'} the volume of room ${name} (volume ${v} m³).`);
   rule(/^Đã lưu (\d+) vật liệu\.$/,(m,n)=>`Saved ${plural(n,'material','materials')}.`);
   rule(/^Xóa phòng (.+)$/,(m,name)=>`Delete room ${name}`);
-  rule(/^Sàn ([\d.,]+) m² · Chu vi ([\d.,]+) m · Thể tích ([\d.,]+) m³ · Tường ([\d.,]+) m² · Trần ([\d.,]+) m²$/,(m,a,p,v,w,c)=>`Floor ${a} m² · Perimeter ${p} m · Volume ${v} m³ · Walls ${w} m² · Ceiling ${c} m²`);
+  rule(/^Sàn ([\d.,]+) m² · Chu vi ([\d.,]+) m · Thể tích ([\d.,]+) m³ · Tường \(chưa trừ cửa\) ([\d.,]+) m² · Trần ([\d.,]+) m²$/,(m,a,p,v,w,c)=>`Floor ${a} m² · Perimeter ${p} m · Volume ${v} m³ · Walls (excl. doors) ${w} m² · Ceiling ${c} m²`);
   rule(/^Đã lưu (\d+) phòng\.$/,(m,n)=>`Saved ${plural(n,'room','rooms')}.`);
   rule(/^Đã gán phòng cho (\d+) món theo vị trí\.(?: (\d+) món nằm ngoài mọi phòng hoặc không đo được vị trí\.)?(?: Bỏ qua (\d+) món bị khóa\.)?$/,(m,n,none,locked)=>`Assigned rooms to ${plural(n,'item','items')} by position.${none?` ${plural(none,'item is','items are')} outside every room or has no position.`:''}${locked?` Skipped ${locked} locked.`:''}`);
   rule(/^Không đọc được clipboard bằng nút\. Hãy bấm vào ô ảnh rồi nhấn Ctrl\+V\. Chi tiết: (.+)$/,(m,detail)=>`Could not read the clipboard with the button. Click the image cell, then press Ctrl+V. Details: ${detail}`),
