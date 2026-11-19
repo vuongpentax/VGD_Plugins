@@ -126,6 +126,10 @@ main{flex:1;min-height:0;overflow:auto;padding:14px 16px}.card{background:var(--
 .pp-pick{flex:1 1 auto;min-width:0;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pp-pick.active{background:var(--accent);border-color:var(--accent);color:var(--bg)}
 .pp-tail{flex:0 0 32px;padding:0}
+.pp-edit{flex-wrap:wrap;align-items:center;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.pp-edit-name{flex:1 0 100%;font-weight:600}
+.pp-edit .pp-note{flex:1 0 100%;margin:0}
+.pp-edit button{flex:0 0 auto}
 @media(max-width:640px){.pp-grid{grid-template-columns:1fr}.pp-right{border-left:0;padding-left:0;border-top:1px solid var(--border);padding-top:10px}}
 .bottombar select{height:28px;font-size:12px}
 .bottombar>button,.footer-menu>button{min-height:28px;padding:4px 10px;font-size:12px}

@@ -329,6 +329,19 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.locator('#preset-panel .pp-line',{hasText:'KL THO'}).locator('.pp-tail').click();
   ok(JSON.stringify(await json('table_preset'))==='{"action":"delete","name":"KL THO"}','nút × bên cạnh preset tự tạo: gửi lệnh xóa');
   await receive('presets',F.presets);
+  // ---- Sửa preset đang chọn: cập nhật từ bảng hiện tại, xóa; preset có sẵn chỉ xem ----
+  await receive('presets',[...F.presets,custom]);
+  await usePreset('KL THO');
+  await clear();await openPresets();
+  await page.locator('#preset-panel .pp-edit button',{hasText:'Cập nhật từ bảng hiện tại'}).click();
+  saved=await json('table_preset');
+  ok(saved.action==='save' && saved.name==='KL THO' && saved.columns.includes('definition') && saved.settings.length_unit==='mm','nút Cập nhật từ bảng hiện tại: lưu lại đúng preset đang chọn theo bảng hiện tại');
+  await clear();
+  await page.locator('#preset-panel .pp-edit button',{hasText:'Xóa preset này'}).click();
+  ok(JSON.stringify(await json('table_preset'))==='{"action":"delete","name":"KL THO"}','nút Xóa preset này: gửi lệnh xóa đúng preset đang chọn');
+  await receive('presets',F.presets);
+  await usePreset('Nội thất');
+  ok(await page.locator('#preset-panel .pp-edit button').count()===0 && (await page.locator('#preset-panel .pp-edit').innerText()).includes('không sửa hay xóa được'),'preset có sẵn đang chọn: không hiện nút Cập nhật / Xóa, chỉ ghi chú');
   ok((await page.locator('#preset-panel .pp-pick.active').innerText())==='Tất cả' || true,'xóa preset đang dùng: chuyển về preset đầu tiên');
   await usePreset('Nội thất');await page.keyboard.press('Escape');
   await page.locator('.grid thead th').nth(2).dblclick();await page.locator('.header-input').fill('Cột tạm');await page.keyboard.press('Enter');

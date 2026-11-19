@@ -98,6 +98,8 @@ const VGD_I18N=(()=>{
     'Chọn cột':'Choose columns','Tìm kiếm...':'Search...','Tìm trong bảng':'Search in table','Tất cả nhóm':'All groups','Đổi tên':'Rename','Chụp ảnh':'Take photo',
 
     'Chọn tất cả cột':'Select all columns','Chọn tất cả':'Select all','Tìm cột':'Search columns','Ẩn danh sách cột':'Hide column list','Bỏ chọn tất cả':'Deselect all','Tìm cột...':'Search columns...','Tạo mới...':'Create new...',
+    'Đang chọn':'Selected','Cập nhật từ bảng hiện tại':'Update from the current table','Xóa preset này':'Delete this preset',
+    'Preset có sẵn không sửa hay xóa được. Dùng ↻ ở danh sách để khôi phục.':'Built-in presets cannot be edited or deleted. Use ↻ in the list to restore them.',
     'Tên preset mới':'New preset name','Hãy nhập tên preset.':'Enter a preset name.','Xóa preset':'Delete preset','Preset':'Preset',
 
     'Thu phóng đối tượng':'Zoom to object','Cô lập đối tượng chọn':'Isolate selected object','Chọn sâu bên trong':'Select nested objects','Hiển thị dòng tính tổng':'Show totals row','Tổng chỉ cấp cao nhất':'Total top level only',

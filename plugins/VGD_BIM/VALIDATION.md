@@ -2,6 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.19: đã kiểm tra tự động
+
+Nút **Cập nhật từ bảng hiện tại** và **Xóa preset này** trong khối Đang chọn của bảng Preset (chỉ với preset tự tạo; preset có sẵn chỉ hiện ghi chú).
+
+- `test_ui_images.cjs`: chọn preset tự tạo, bấm Cập nhật thì gửi `save` đúng tên và đúng cột / thiết lập đang hiện; bấm Xóa thì gửi `delete` đúng tên; chọn preset có sẵn thì không có nút nào trong khối và có ghi chú.
+- `test_ui_en.cjs`: chuỗi tiếng Việt mới có bản dịch EN.
+
+**Chưa xác minh trong SketchUp thật:** lưu và xóa preset qua cửa sổ SketchUp thật (lệnh Ruby `table_preset` đã có từ trước, không đổi).
+
 ## Bản 1.1.1-beta.18: đã kiểm tra tự động
 
 Các ô tìm chỉ khớp đúng chữ hoa / thường và có dấu. Bản này dùng chung `foldText` (bỏ dấu, đ thành d, chữ thường) cho mọi ô tìm và lọc, kể cả gợi ý khi sửa ô.
