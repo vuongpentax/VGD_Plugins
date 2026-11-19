@@ -668,7 +668,7 @@ module VGD
         def check_rules_save(payload)
           check_model!
           raise ArgumentError, 'Dữ liệu luật không hợp lệ.' unless payload.is_a?(Hash)
-          list = CheckRules.sanitize!(payload['rules'], Table.column_keys)
+          list = CheckRules.sanitize!(payload['rules'], Table.column_keys, Tags::GROUPS + [Table::UNTAGGED_GROUP])
           CheckRules.write(@model, list)
           table_build
           emit('message', {text: "Đã lưu #{list.size} luật kiểm tra."})

@@ -576,6 +576,7 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   await receive('table',{...tablePayload,columns:[...tablePayload.columns,{key:'lenX',label:'Rộng (X) mm',kind:'number'}],check_rules:ckRules});
   await page.getByRole('button',{name:'Công cụ ▾'}).click();await page.getByRole('button',{name:'Luật kiểm tra...'}).click();
   assert(await page.locator('.checks-panel').isVisible() && await page.locator('.checks-panel .ck-item').count()===1 && await page.locator('.ck-col').inputValue()==='lenX','hộp Luật kiểm tra hiện đủ luật');
+  assert(await page.locator('.checks-panel .ck-group').count()===1 && (await page.locator('.ck-group').inputValue())==='','mỗi luật có ô Nhóm hạng mục, mặc định Tất cả nhóm');
   await page.locator('.ck-op').selectOption('empty');
   last=await lastCall();
   assert(last.name==='check_rules_save' && last.data.rules.length===1 && last.data.rules[0].id==='ck_aaaaaaaa' && last.data.rules[0].op==='empty' && last.data.rules[0].message==='Too narrow','đổi phép so sánh: gửi cả danh sách, giữ id');

@@ -2,6 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.11: đã kiểm tra tự động
+
+Cột mốc 4 (phần): điều kiện lọc theo nhóm hạng mục cho luật kiểm tra.
+
+- `test_check_rules.rb`: luật có nhóm được giữ; nhóm rỗng nghĩa là mọi nhóm; nhóm không có trong danh sách và nhóm sai kiểu bị từ chối; luật chỉ xét dòng đúng nhóm; luật cũ (không có trường nhóm) vẫn áp cho mọi nhóm.
+- `test_ui.cjs`: mỗi luật có ô Nhóm hạng mục, mặc định Tất cả nhóm.
+
+**Chưa xác minh trong SketchUp thật:** ô Nhóm hạng mục trong hộp Luật kiểm tra hiển thị đúng, và kết quả kiểm tra chỉ gồm món đúng nhóm.
+
 ## Bản 1.1.1-beta.10: đã kiểm tra tự động
 
 Gỡ plugin VGD_Room và các nút Dựng khối (theo quyết định ngày 18/11/2026: việc xác định phòng do VGD Structure làm).

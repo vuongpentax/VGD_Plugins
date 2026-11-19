@@ -1240,7 +1240,7 @@ function checksPanel(){
   const columns=((tableState.data&&tableState.data.columns)||[]).filter(c=>!['image','image_location','image_extra1','image_extra2'].includes(c.kind));
   p.append(node('div','Luật kiểm tra','pop-title'),node('p','Mỗi luật kiểm tra một cột của bảng (số đo tính bằng mm). Luật lưu trong file SketchUp, chỉ đọc bảng, không đổi gì trong model.','muted'));
   const rows=node('div',undefined,'ck-rows');
-  const collect=()=>[...rows.querySelectorAll('.ck-item')].map(r=>{const o={name:r.querySelector('.ck-name').value,column:r.querySelector('.ck-col').value,op:r.querySelector('.ck-op').value,value:r.querySelector('.ck-val').value,severity:r.querySelector('.ck-sev').value,message:r.querySelector('.ck-msg').value};if(r.dataset.id)o.id=r.dataset.id;return o;});
+  const collect=()=>[...rows.querySelectorAll('.ck-item')].map(r=>{const o={name:r.querySelector('.ck-name').value,column:r.querySelector('.ck-col').value,op:r.querySelector('.ck-op').value,value:r.querySelector('.ck-val').value,group:r.querySelector('.ck-group').value,severity:r.querySelector('.ck-sev').value,message:r.querySelector('.ck-msg').value};if(r.dataset.id)o.id=r.dataset.id;return o;});
   const save=()=>call('check_rules_save',JSON.stringify({rules:collect()}));
   const select=(cls,options,value,label)=>{const s=node('select',undefined,cls);options.forEach(([v,t])=>s.append(new Option(t,v)));s.value=value;s.setAttribute('aria-label',label);s.onchange=save;return s;};
   const input=(cls,value,label,max)=>{const i=node('input',undefined,cls);i.type='text';i.value=value;i.maxLength=max;i.setAttribute('aria-label',label);i.onchange=save;return i;};
@@ -1251,7 +1251,7 @@ function checksPanel(){
     const sync=()=>{val.hidden=['empty','not_empty'].includes(op.value);};op.addEventListener('change',sync);sync();
     const del=button('×',()=>{r.remove();save();},'cs-del');del.title='Xóa luật này';del.setAttribute('aria-label','Xóa luật '+rule.name);
     const top=node('div',undefined,'ck-top');top.append(input('ck-name',rule.name,'Tên luật',60),del);
-    const mid=node('div',undefined,'ck-mid');mid.append(select('ck-col',columns.map(c=>[c.key,c.label]),rule.column,'Cột'),op,val);
+    const mid=node('div',undefined,'ck-mid');const group=select('ck-group',[['','Tất cả nhóm'],...(tableState.data.groups||[]).map(g=>[g,g])],rule.group||'','Nhóm hạng mục');mid.append(select('ck-col',columns.map(c=>[c.key,c.label]),rule.column,'Cột'),op,val,group);
     const low=node('div',undefined,'ck-low');low.append(select('ck-sev',CHECK_SEVERITIES,rule.severity,'Mức độ'),input('ck-msg',rule.message||'','Lời nhắn (để trống thì dùng tên luật)',120));
     r.append(top,mid,low);rows.append(r);
   };
@@ -1260,7 +1260,7 @@ function checksPanel(){
   const add=button('+ Thêm luật',()=>{
     const first=columns.find(c=>c.kind==='number')||columns[0];
     if(!first)throw Error('Bảng chưa có cột nào để kiểm tra.');
-    call('check_rules_save',JSON.stringify({rules:[...collect(),{name:`Luật ${rules.length+1}`,column:first.key,op:'lt',value:'0',severity:'WARNING',message:''}]}));
+    call('check_rules_save',JSON.stringify({rules:[...collect(),{name:`Luật ${rules.length+1}`,column:first.key,op:'lt',value:'0',group:'',severity:'WARNING',message:''}]}));
   });add.id='ck-add';
   const run=button('Chạy kiểm tra',()=>call('check_rules_run'),'primary');run.id='ck-run';
   const actions=node('div',undefined,'rename-actions');actions.append(add,run,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
