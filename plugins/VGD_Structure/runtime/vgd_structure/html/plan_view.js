@@ -359,7 +359,7 @@
       var z = ghostZ(g);
       var bad = g.color === GHOST_BAD;
       if (g.t === 'line') { items.push({t: 'line', pts: [g.a, g.b], bad: bad}); var q = z && g.thick ? ghostStrip(g.a, g.b, g.thick) : null; if (q) items.push({t: 'box', pts: q, z0: z[0], z1: z[1], bad: bad}); }
-      else if (g.t === 'poly') { if (z && g.poly.length >= 3) items.push({t: 'box', pts: g.poly, z0: z[0], z1: z[1], bad: bad}); else items.push({t: 'poly', pts: g.poly, bad: bad}); }
+      else if (g.t === 'poly') { if (z && g.poly.length >= 3) items.push({t: 'box', pts: g.poly, z0: z[0], z1: z[1], bad: bad, xray: !!g.xray}); else items.push({t: 'poly', pts: g.poly, bad: bad}); }
       else if (g.t === 'dot') items.push({t: 'dot', pts: [g.p]});
     });
     var lv = levelList.filter(function (l) { return l.id === currentId; })[0], payloadG = {z: lv ? lv.elevation : 0, items: items}, key = JSON.stringify(payloadG);

@@ -36,6 +36,7 @@ module VGD
       GHOST_COLOR = [180, 137, 99].freeze
       GHOST_BAD_COLOR = [167, 61, 54].freeze
       GHOST_ALPHA = 70                    # độ đục (0-255) của mặt bên khối xem trước
+      XRAY_ALPHA = 25                     # độ đục của mặt bên khối X-ray (sàn đang vẽ): gần như trong suốt
 
       def initialize(panel)
         @panel = panel
@@ -118,6 +119,7 @@ module VGD
         pts = g['pts'].map { |x, y| [x, y] }
         low = pts.map { |x, y| Geom::Point3d.new(x.mm, y.mm, g['z0'].mm) }
         high = pts.map { |x, y| Geom::Point3d.new(x.mm, y.mm, g['z1'].mm) }
+        return draw_xray(view, low, high, color) if g['xray']
         if view.respond_to?(:draw)
           view.drawing_color = Sketchup::Color.new(*color, GHOST_ALPHA)
           low.each_index { |i| j = (i + 1) % low.size; view.draw(GL_QUADS, [low[i], low[j], high[j], high[i]]) }
@@ -127,6 +129,20 @@ module VGD
         view.draw_polyline(low + [low.first])
         view.draw_polyline(high + [high.first])
         low.each_index { |i| view.draw_polyline([low[i], high[i]]) }
+      end
+
+      # Sàn đang vẽ kiểu X-ray: mặt bên gần như trong suốt, chỉ viền mặt trên và đáy bằng NÉT ĐỨT, không vẽ cạnh đứng (đỡ rối khi vẽ nhiều cạnh).
+      def draw_xray(view, low, high, color)
+        if view.respond_to?(:draw)
+          view.drawing_color = Sketchup::Color.new(*color, XRAY_ALPHA)
+          low.each_index { |i| j = (i + 1) % low.size; view.draw(GL_QUADS, [low[i], low[j], high[j], high[i]]) }
+        end
+        view.drawing_color = Sketchup::Color.new(*color)
+        view.line_width = 1
+        view.line_stipple = '-'
+        view.draw_polyline(low + [low.first])
+        view.draw_polyline(high + [high.first])
+        view.line_stipple = ''
       end
 
       def point_mm

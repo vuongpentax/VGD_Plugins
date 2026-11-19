@@ -1965,6 +1965,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   gh=await last('su_ghost');
   const sbox=gh&&gh.items.find(i=>i.t==='box');
   ok(sbox && Math.abs((sbox.z1-sbox.z0)-F.preview.slabs.thickness)<0.01 && sbox.z1===F.preview.slabs.z_top,'vẽ sàn theo ô: xem trước là khối đúng chiều dày sàn, mặt trên tại cốt sàn kết cấu');
+  ok(sbox && sbox.xray===true,'vẽ sàn: xem trước gửi kiểu X-ray (cờ xray) để SketchUp vẽ mặt mờ, viền nét đứt');
   await page.keyboard.press('Escape');await receive('su_key',{key:'Escape'});await wait(80);
   await typ('dr');await receive('su_pick_state',{active:true});await clear();await receive('su_move',{x:3000,y:3600});await wait(250);
   gh=await last('su_ghost');

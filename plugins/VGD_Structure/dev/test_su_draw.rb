@@ -180,5 +180,16 @@ ok('cửa sổ đã sẵn sàng: gửi ngay start_tool door', last_ev(d5, 'start
 call(d5, 'ready')
 ok('ready lần nữa không gửi lại công cụ đã giao', count_ev(d5, 'start_tool') == 2)
 ok('công cụ không hợp lệ bị từ chối', error_of { p5.start_tool('blob') } && error_of { p5.start_tool("wall'); alert(1);//") } && S::Panel::DRAW_TOOLS == %w[column beam wall door window slab ceiling])
+# ---- Sàn kiểu X-ray: mặt rất mờ, viền NÉT ĐỨT (mặt trên, đáy), không vẽ cạnh đứng ----
+xbox = {'t' => 'box', 'pts' => [[0, 0], [2000, 0], [2000, 200], [0, 200]], 'z0' => 0, 'z1' => 120, 'xray' => true}
+call(dlg, 'su_ghost', {'z' => 3600, 'items' => [xbox]})
+vx = Sketchup::FakeView.new; tool.draw(vx)
+xquads = vx.draw_calls.select { |c| c[0] == :draw }; xlines = vx.draw_calls.select { |c| c[0] == :polyline }
+ok('X-ray: mặt bên vẫn tô nhưng mờ hơn khối thường (độ đục thấp hơn GHOST_ALPHA)', xquads.size == 4 && xquads.all? { |c| c[3].alpha < S::PickTool::GHOST_ALPHA })
+ok('X-ray: chỉ vẽ mặt trên và đáy (2 vòng khép kín), KHÔNG vẽ 4 cạnh đứng', xlines.size == 2 && xlines.all? { |c| c[1].size == 5 })
+ok('X-ray: viền là nét đứt (line_stipple "-") khi vẽ, trả về nét liền sau đó', vx.line_stipple_log == ['-', ''])
+ok('khối thường không đổi: vẫn 4 cạnh đứng và nét liền', begin; vb2 = Sketchup::FakeView.new; call(dlg, 'su_ghost', {'z' => 3600, 'items' => [box]}); tool.draw(vb2); vb2.line_stipple_log.empty? && vb2.draw_calls.count { |c| c[0] == :polyline && c[1].size == 2 } == 4; end)
+call(dlg, 'su_ghost', {'z' => 0, 'items' => []})
+
 puts($fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

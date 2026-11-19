@@ -1,5 +1,7 @@
 # VGD Structure 0.28.0 (beta)
 
+- **Vẽ sàn trong SketchUp kiểu X-ray (beta.3):** khối xem trước của sàn đang vẽ (theo ô và đa giác) mờ gần như trong suốt, viền mặt trên và đáy bằng **nét đứt**, không vẽ cạnh đứng để đỡ rối. Trần và tường giữ kiểu cũ. Chỉ kiểm bằng SketchUp giả lập; độ mượt khi di chuột trong SketchUp thật chưa đo.
+
 - **Sửa theo phản hồi (beta.2):** (1) trần chọn được từ cây dự án và từ SketchUp: lớp Trần mặc định tắt nên chọn bị bỏ qua, nay chọn phần tử nào thì tự bật lớp đó. (2) sàn **lọt lòng trong tường** tầng dưới như trong cột và dầm (mục trong với cạnh ô; dầm và tường cùng cạnh thì lấy mục sâu hơn; tường tự do chỉ cảnh báo). Model đã dựng: sàn sẽ báo "lệch", cần dựng lại sàn. (3) **Mặt cắt khóa trục:** đầu thứ hai của đường cắt chỉ ngang hoặc dọc; cắt xéo: vẽ xong rồi chọn đường cắt và dùng lệnh **Rotate** (Copy đường cắt chưa làm). Chưa xác minh trong SketchUp thật. Chưa kiểm chứng: bấm trực tiếp trên canvas để chọn đường cắt (test chọn qua API); tường nhảy ra ngoài chưa tái hiện được.
 
 - **Mặt đứng 2D từ HÌNH THẬT trong SketchUp:** tab **Mặt đứng**, chọn hướng Nam, Bắc, Đông hoặc Tây. Ruby đọc mặt thật trong model (không cắt, không giới hạn độ sâu), tô các mặt từ xa đến gần để mặt phía trước che mặt phía sau; cốt tầng và trục lưới hiện như mặt cắt; bấm để chọn đối tượng trong SketchUp, và chọn trong SketchUp thì mặt sáng lên. Không lưu dữ liệu, bấm Làm mới để đọc lại model. Giả định hướng Bắc của model là +Y. Chưa làm: che khuất từng nét, hatch, kích thước. Chỉ kiểm bằng SketchUp giả lập.

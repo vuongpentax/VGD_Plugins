@@ -162,6 +162,10 @@ module Sketchup
     def draw_polyline(pts); @draw_calls << [:polyline, pts]; end
     def draw_points(pts, *rest); @draw_calls << [:points, pts]; end
     def draw(mode, pts); @draw_calls << [:draw, pts, mode, drawing_color]; end
+    # Kiểu nét (nét đứt "-", nét liền ""): ghi lại mọi lần đặt để test kiểm tra thứ tự.
+    def line_stipple=(value); @line_stipple = value; (@line_stipple_log ||= []) << value; end
+    def line_stipple; @line_stipple; end
+    def line_stipple_log; @line_stipple_log || []; end
   end
   class Definitions
     attr_reader :list

@@ -391,7 +391,7 @@
       if (isPlate(tool)) {
         var pts = (ring ? ring.pts : []).slice();
         if (target && target.free && !target.close) pts.push(target.free);
-        if (pts.length >= 3) g.push({t: 'poly', poly: pts, color: GOOD, alpha: 0.18});
+        if (pts.length >= 3) g.push({t: 'poly', poly: pts, color: GOOD, alpha: 0.18, xray: tool === 'slab'});
         for (var q = 0; q + 1 < pts.length; q++) g.push({t: 'line', a: pts[q], b: pts[q + 1], color: GOOD, width: 3});
         if (target && target.close && ring) g.push({t: 'line', a: ring.pts[ring.pts.length - 1], b: ring.pts[0], color: GOOD, width: 3});
         (ring ? ring.pts : []).forEach(function (pp) { g.push({t: 'dot', p: pp, color: GOOD, r: 4}); });
@@ -430,7 +430,7 @@
       if (target.exists) { var it = sec && sec.items.filter(function (x) { return x.ref === c.ref; })[0]; real = it && it.polygon; }
       else if (host.probe) real = host.probe(key, lvl().id, c.ref);
       var full = [[c.x0, c.y0], [c.x1, c.y0], [c.x1, c.y1], [c.x0, c.y1]], unknown = !real && real !== false;
-      g.push({t: 'poly', poly: real || full, color: target.exists || real === false ? BAD : GOOD, alpha: unknown ? 0.08 : 0.2, dash: unknown ? [6, 4] : undefined});
+      g.push({t: 'poly', poly: real || full, color: target.exists || real === false ? BAD : GOOD, alpha: unknown ? 0.08 : 0.2, dash: unknown ? [6, 4] : undefined, xray: tool === 'slab'});
     } else if (target.wall && target.type) {
       var wl = target.wall, along = wl.start + target.pos - target.type.w / 2, h = wl.dir === 'x';
       if (wl.dir === 'o') {
