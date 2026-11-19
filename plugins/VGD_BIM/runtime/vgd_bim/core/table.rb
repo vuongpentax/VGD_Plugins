@@ -131,9 +131,11 @@ module VGD
       # Nhập preset từ file JSON (định dạng riêng hoặc của plugin tham khảo). Trùng tên preset đã lưu thì ghi đè.
       def self.import_presets(obj)
         obj = obj.merge('presets' => obj['presets'].map { |item| item.is_a?(Hash) && item.key?('group') ? item.merge('group' => Tags.migrate_group(item['group'])) : item }) if obj.is_a?(Hash) && obj['presets'].is_a?(Array)
-        incoming = Preset.import(obj, column_keys, Tags::GROUPS, BUILT_IN_NAMES)
+        obj, custom_list, custom_next = CustomColumns.adopt_from_preset(obj)
+        incoming = Preset.import(obj, COLUMN_KEYS + custom_list.map { |column| column['key'] }, Tags::GROUPS, BUILT_IN_NAMES)
         kept = custom_presets.reject { |p| incoming.any? { |i| i['name'] == p['name'] } }
         raise ArgumentError, "Quá nhiều preset (tối đa #{Preset::MAX_PRESETS})." if kept.size + incoming.size > Preset::MAX_PRESETS
+        CustomColumns.save(custom_list, custom_next) unless custom_list.empty? && custom_next == 1
         Storage.write('table_presets', kept + incoming)
         incoming
       end
@@ -141,7 +143,7 @@ module VGD
       def self.export_presets
         list = custom_presets
         raise ArgumentError, 'Chưa có preset tự tạo để xuất. Bấm + trong bảng preset để lưu một preset.' if list.empty?
-        Preset.export(list)
+        Preset.export(list, CustomColumns.read)
       end
 
       # Trạng thái bảng (preset đang dùng, cột, thứ tự, độ rộng, ...) để mở lại vẫn giữ như lần trước.

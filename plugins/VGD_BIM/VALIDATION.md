@@ -2,6 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.17: đã kiểm tra tự động
+
+Preset JSON không mang định nghĩa cột thêm tay nên file khác không nhận được kiểu cột; khóa `custom_N` khác nghĩa giữa các máy có thể gán nhầm cột.
+
+- `test_preset_custom.rb` (mới): xuất có định nghĩa; nhập vào máy chưa có cột (tạo mới, đổi khóa, giữ tiêu đề); máy đã có đúng định nghĩa (dùng lại); máy có cùng khóa nhưng khác định nghĩa (không gán nhầm); tệp cũ không có định nghĩa (bỏ khóa lạ); định nghĩa sai (từ chối, không lưu gì).
+- Toàn bộ `ruby dev/run_tests.rb` đạt (gồm test preset cũ).
+
+**Chưa xác minh trong SketchUp thật:** xuất / nhập preset giữa hai file SketchUp và hai máy; hộp chọn file trong SketchUp.
+
 ## Bản 1.1.1-beta.16: đã kiểm tra tự động
 
 Nút dán ảnh từ clipboard không đọc được clipboard trong SketchUp (đã có từ trước, nguyên nhân chưa rõ). Bản này chỉ làm thông báo rõ hơn để chẩn đoán; chưa sửa nguyên nhân.

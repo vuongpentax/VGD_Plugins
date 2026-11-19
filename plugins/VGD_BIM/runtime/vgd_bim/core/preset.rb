@@ -228,9 +228,18 @@ module VGD
         list.map { |preset| builtin_names.include?(preset['name']) ? preset.merge('name' => "#{preset['name']} (nhập)"[0, MAX_NAME]) : preset }
       end
 
-      def self.export(presets)
+      # definitions: định nghĩa cột thêm tay (CustomColumns.read). Preset dùng cột nào thì mang định nghĩa của cột đó để máy khác tạo lại.
+      def self.export(presets, definitions = [])
         {'format' => FORMAT, 'version' => 1,
-         'presets' => presets.map { |p| p.slice('name', 'group', 'columns', 'headers', 'settings') }}
+         'presets' => presets.map { |p| exported_preset(p, definitions) }}
+      end
+
+      def self.exported_preset(preset, definitions)
+        item = preset.slice('name', 'group', 'columns', 'headers', 'settings')
+        used = Array(preset['columns']).map(&:to_s)
+        custom = Array(definitions).select { |d| used.include?(d['key']) }.map { |d| d.slice('key', 'label', 'kind', 'dictionary', 'attribute') }
+        item['custom'] = custom unless custom.empty?
+        item
       end
 
       LENGTH_FACTORS = {1 => 'm', 1000 => 'mm', 100 => 'cm'}.freeze
