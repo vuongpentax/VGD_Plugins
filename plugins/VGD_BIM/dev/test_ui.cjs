@@ -632,6 +632,21 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   // Sửa ô / đổi tên / cập nhật ảnh vẽ lại bảng: vị trí cuộn không được nhảy về đầu
   await page.evaluate(()=>{const st=document.createElement('style');st.id='scroll-test';st.textContent='.grid-wrap{flex:none!important;min-height:0!important;height:40px!important}';document.head.append(st);const w=document.querySelector('.grid-wrap');w.scrollTop=60;renderGrid($('grid-host'));});
   assert(await page.evaluate(()=>{const w=document.querySelector('.grid-wrap');const top=w.scrollTop;document.getElementById('scroll-test').remove();return top;})===60,'vẽ lại bảng (sửa ô, đổi tên, cập nhật ảnh): giữ vị trí cuộn, không nhảy về đầu');
+  // Tìm không phân biệt hoa thường và dấu tiếng Việt (ô tìm bảng, tìm cột, và hàm bỏ dấu dùng chung)
+  assert(await page.evaluate(()=>foldText('Bàn ĐÔI Ắ')==='ban doi a'),'foldText: bỏ dấu, đ thành d, chữ thường');
+  await page.evaluate(()=>{tableState.data.rows[0].name='Bàn Đôi';tableState.search='';tableState.panel=null;tableView(tableState.data);});
+  await page.getByLabel('Tìm trong bảng').fill('BAN DOI');await page.waitForTimeout(250);
+  assert(await page.locator('.grid tbody tr').count()===1 && (await page.locator('.grid tbody').innerText()).includes('Bàn Đôi'),'tìm "BAN DOI" (không dấu, chữ hoa) thấy đúng dòng "Bàn Đôi"');
+  await page.getByLabel('Tìm trong bảng').fill('ban');await page.waitForTimeout(250);
+  assert(await page.locator('.grid tbody').innerText().then(t=>t.includes('Bàn Đôi')),'tìm "ban" (không dấu) vẫn thấy "Bàn Đôi"');
+  await page.getByLabel('Tìm trong bảng').fill('');await page.waitForTimeout(250);
+  await page.evaluate(()=>{tableState.colSearch='MO TA';tableState.panel=null;toggleColumns();});
+  const sideText=await page.locator('#col-side').innerText();
+  assert(sideText.includes('Mô tả') && !sideText.includes('Số lượng'),'tìm cột "MO TA" (không dấu, chữ hoa) chỉ thấy cột "Mô tả"');
+  await page.evaluate(()=>{tableState.colSearch='';tableState.panel=null;tableView(tableState.data);});
+  {const hit=await page.evaluate(()=>{const old=tableState.data.choices;tableState.data.choices={...(old||{}),model_tags:['000 TUONG','000 CUA']};tableState.excludeSearch='tuong';const r=excludeNames().map(i=>i.name);tableState.excludeSearch='';tableState.data.choices=old;return r;});
+  assert(hit.includes('000 TUONG')&&!hit.includes('000 CUA'),'Loại trừ tag: tìm "tuong" (chữ thường, không dấu) thấy "000 TUONG" và không thấy "000 CUA"');}
+
   // Đổi file SketchUp: mốc và kết quả so sánh của file cũ không còn trong giao diện
   await receive('config',{...config,mode:'information',file:'file-a'});
   await page.evaluate(()=>{tableState.snapshots=[{id:'sn_cccccccc',name:'Mốc file cũ',count:3}];tableState.snapshotDiff={name:'Mốc file cũ',added:[],removed:[],changed:[]};});

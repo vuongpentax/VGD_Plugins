@@ -1,5 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
+// Bỏ dấu và chữ hoa / thường để tìm và lọc: "bàn", "BAN", "Ban" đều khớp nhau (đ / Đ thành d). Dùng cho mọi ô tìm.
+const foldText = text => String(text ?? '').normalize('NFD').replace(/\p{Mn}/gu, '').replace(/[đĐ]/g, 'd').toLowerCase();
 let config = {}, locale = {}, appliedLanguage = null;
 const fieldKeys = ['category','item_type','code','description','unit','quantity_method','zone','floor','include_boq','finish_code','manufacturer','model_number','note'];
 const advancedKeys = ['finish_code','manufacturer','model_number','note'];
@@ -86,7 +88,7 @@ function mapping(data) {
   $('content').replaceChildren();subTabs();scanOptionsBar($('content'));const c=card('Phân loại / Chuyển đổi mô hình');c.append(node('p','Chọn một dòng → sửa thông tin → xem trước → xác nhận. Dữ liệu VGD đã có được giữ nguyên. Với vật liệu, chỉ lưu quy tắc phân loại.','hint'));
   const search=node('input');search.type='search';search.placeholder='Tìm tên đối tượng hoặc vật liệu…';search.className='search';c.append(search);
   const body=table(c,['Nguồn','Số lượng / Có thể ghi','Gợi ý hạng mục','Độ tin cậy / Căn cứ','Trạng thái','Thao tác'],data,(r,tr)=>{cell(tr,`${r.source_value||'Chưa đặt tên'} (${r.kind==='material'?'vật liệu':'đối tượng'})`);cell(tr,`${r.instances} / ${r.eligible}`);cell(tr,[translated('category',r.suggestion.data.category),translated('item_type',r.suggestion.data.item_type),translated('quantity_method',r.suggestion.data.quantity_method)].filter(Boolean).join(' / ')||'Chưa có gợi ý');cell(tr,`${translated('confidence',r.suggestion.confidence)} / ${translated('source',r.suggestion.source)}`);cell(tr,badge(r.status||'REVIEW'));const actions=node('div',undefined,'actions');actions.append(button('Chỉnh thông tin',()=>editMapping(r)),button('Bỏ qua',()=>{tr.classList.toggle('ignored')}));cell(tr,actions);});
-  search.oninput=()=>Array.from(body.children).forEach((tr,i)=>{tr.hidden=!data[i].source_value.toLocaleLowerCase('vi').includes(search.value.toLocaleLowerCase('vi'))});
+  search.oninput=()=>Array.from(body.children).forEach((tr,i)=>{tr.hidden=!foldText(data[i].source_value).includes(foldText(search.value))});
 }
 function validation(data) {
   $('content').replaceChildren();subTabs();scope([['Toàn bộ mô hình','validate_model'],['Đối tượng đang chọn','validate_selection']]);const count=s=>data.filter(r=>r.issues.some(i=>i.severity===s)).length;
@@ -365,8 +367,8 @@ function manualSorted(rows){
   return rows.map(row=>({row,rank:rankOf(row)})).sort((a,b)=>a.rank===b.rank?a.row.index-b.row.index:(a.rank<b.rank?-1:1)).map(k=>k.row);
 }
 function filteredRows(){
-  const q=tableState.search.trim().toLocaleLowerCase('vi');
-  return tableState.data.rows.filter(r=>(!tableState.group||r.tag_group===tableState.group)&&(!q||[r.name,r.definition,r.description,r.tag,r.material].some(v=>String(v||'').toLocaleLowerCase('vi').includes(q))));
+  const q=foldText(tableState.search.trim());
+  return tableState.data.rows.filter(r=>(!tableState.group||r.tag_group===tableState.group)&&(!q||[r.name,r.definition,r.description,r.tag,r.material].some(v=>foldText(v).includes(q))));
 }
 // Chọn dòng kiểu Excel: bấm = một dòng; Ctrl (hoặc Cmd) = thêm / bớt một dòng; Shift = cả dãy từ dòng gốc; Ctrl+Shift = thêm cả dãy;
 // Ctrl+A = chọn hết các dòng đang hiện; Esc = bỏ chọn. SketchUp chọn theo các đối tượng đó (xem table_select trong dialog.rb).
@@ -476,10 +478,13 @@ function suggestBox(input,list){
     hit='';ghost.replaceChildren();
     const v=input.value;
     if(!typing||!v||input.selectionStart!==v.length||input.selectionEnd!==v.length)return;
-    const low=v.toLowerCase(),found=list.find(t=>t.length>v.length&&t.toLowerCase().startsWith(low));
+    // Gợi ý theo chữ đã gõ, không phân biệt hoa thường và dấu; phần còn lại cắt theo chữ gốc (vị trí có thể khác vì bỏ dấu).
+    const low=foldText(v),found=list.find(t=>foldText(t).length>low.length&&foldText(t).startsWith(low));
     if(!found)return;
+    let cut=0;while(cut<found.length&&foldText(found.slice(0,cut))!==low)cut++;
+    if(cut>=found.length)return;
     hit=found;styleGhost();
-    const typed=node('span',v);typed.style.visibility='hidden';ghost.append(typed,node('span',found.slice(v.length),'ac-rest'));
+    const typed=node('span',v);typed.style.visibility='hidden';ghost.append(typed,node('span',found.slice(cut),'ac-rest'));
   };
   input.addEventListener('input',e=>refresh(!/^delete/.test(e.inputType||'')));
   input.addEventListener('blur',()=>{hit='';ghost.replaceChildren();});
@@ -523,9 +528,9 @@ function menuEdit(td,row,col){
   const list=node('div',undefined,'cell-menu-list');
   const pick=value=>{closeMenu();commitEdit(row,field,value);};
   const draw=()=>{
-    const q=search.value.trim().toLocaleLowerCase('vi');
-    const shown=all.filter(item=>!q||item.label.toLocaleLowerCase('vi').includes(q));
-    if(field==='tag'&&q&&!all.some(item=>item.label.toLocaleLowerCase('vi')===q))shown.push({value:search.value.trim(),label:`Tạo tag "${search.value.trim()}"`});
+    const q=foldText(search.value.trim());
+    const shown=all.filter(item=>!q||foldText(item.label).includes(q));
+    if(field==='tag'&&q&&!all.some(item=>foldText(item.label)===q))shown.push({value:search.value.trim(),label:`Tạo tag "${search.value.trim()}"`});
     list.replaceChildren();
     shown.forEach(item=>{
       const line=node('div',undefined,'cell-item'+(item.value===current?' current':''));line.setAttribute('role','option');
@@ -946,9 +951,9 @@ function groupPanel(){
 const REPLACE_COLUMNS={instance:'name',description:'description',owner:'owner',size:'size'};
 const replaceFields=()=>orderedKeys().filter(k=>REPLACE_COLUMNS[k]).map(k=>REPLACE_COLUMNS[k]);
 function replaceMatches(){
-  const q=tableState.search.trim().toLocaleLowerCase('vi');if(!q)return 0;
+  const q=foldText(tableState.search.trim());if(!q)return 0;
   const fields=replaceFields();let count=0;
-  filteredRows().forEach(r=>fields.forEach(f=>{if(String(r[f==='name'?'name':f]||'').toLocaleLowerCase('vi').includes(q))count++;}));
+  filteredRows().forEach(r=>fields.forEach(f=>{if(foldText(r[f==='name'?'name':f]).includes(q))count++;}));
   return count;
 }
 function updateReplaceUi(){
@@ -1372,14 +1377,14 @@ function sortableList(list){
   });
 }
 function renderColumnList(list){
-  const q=tableState.colSearch.trim().toLocaleLowerCase('vi');
+  const q=foldText(tableState.colSearch.trim());
   list.replaceChildren();
   tableState.order.forEach(key=>{
     const col=colByKey(key);if(!col)return;
     // Danh sách chọn cột luôn ghi tên chuẩn của cột; tiêu đề riêng của preset (nếu có) chỉ ghi chú thêm, để hai cột không trông trùng tên.
     const standard=withUnit(col.label),custom=tableState.headers&&tableState.headers[col.key];
     const alias=custom&&custom!==standard?custom:'';
-    if(q&&!`${standard} ${alias}`.toLocaleLowerCase('vi').includes(q))return;
+    if(q&&!foldText(`${standard} ${alias}`).includes(q))return;
     const item=node('div',undefined,'pop-col');item.dataset.key=key;
     const box=node('input',undefined,'cb');box.type='checkbox';box.checked=tableState.visible.has(key);
     box.onchange=()=>{if(box.checked)tableState.visible.add(key);else tableState.visible.delete(key);if(box.checked&&key==='areaProjected')ensureProjected();refreshColumns();};
@@ -1477,9 +1482,9 @@ function saveExcluded(){
   updateExcludeCounts();persistView();
 }
 function excludeNames(){
-  const q=tableState.excludeSearch.trim().toLocaleLowerCase('vi');
+  const q=foldText(tableState.excludeSearch.trim());
   const inModel=modelTags(),missing=[...excludedTags()].filter(name=>!inModel.includes(name)).sort((a,b)=>a.localeCompare(b,'vi'));
-  return [...inModel.map(name=>({name,missing:false})),...missing.map(name=>({name,missing:true}))].filter(item=>!q||item.name.toLocaleLowerCase('vi').includes(q));
+  return [...inModel.map(name=>({name,missing:false})),...missing.map(name=>({name,missing:true}))].filter(item=>!q||foldText(item.name).includes(q));
 }
 function renderExcludeList(list){
   list.replaceChildren();

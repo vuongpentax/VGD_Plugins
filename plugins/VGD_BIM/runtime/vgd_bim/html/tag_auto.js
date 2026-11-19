@@ -171,7 +171,6 @@ const receiveFolderAutoPlan=data=>receiveRulePlan('folder',data),receiveFolderRu
 const tagTab={active:'model'};               // tab nhỏ đang mở, giữ khi tab vẽ lại (sau khi lưu, nhập, gán...)
 const tagSetState={open:new Set(),query:'',group:''}; // nhóm đang mở, ô tìm và nhóm đang lọc, giữ khi vẽ lại
 const TAG_TABS=[['model','Trong model'],['set','Bộ tag'],['auto','Tự động'],['lib','Thư viện mẫu']];
-const foldText=text=>String(text||'').normalize('NFD').replace(/\p{Mn}/gu,'').replace(/[đĐ]/g,'d').toLowerCase();
 
 function selectTagTab(name){
   const changed=tagTab.active!==name;

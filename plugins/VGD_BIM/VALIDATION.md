@@ -2,6 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.18: đã kiểm tra tự động
+
+Các ô tìm chỉ khớp đúng chữ hoa / thường và có dấu. Bản này dùng chung `foldText` (bỏ dấu, đ thành d, chữ thường) cho mọi ô tìm và lọc, kể cả gợi ý khi sửa ô.
+
+- `test_ui.cjs`: `foldText('Bàn ĐÔI Ắ') = 'ban doi a'`; tìm "BAN DOI" thấy đúng dòng "Bàn Đôi"; tìm "ban" vẫn thấy; tìm cột "MO TA" chỉ thấy "Mô tả"; Loại trừ tag tìm "tuong" thấy "000 TUONG" và không thấy "000 CUA". Đã kiểm: trên code trước bản này test báo lỗi.
+- `test_ui_en.cjs`, `test_ui_images.cjs`, `test_ui_sheets.cjs`, `test_report_page.cjs`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** các ô tìm với tiếng Việt có dấu trong cửa sổ SketchUp; gợi ý tự điền khi sửa ô với chữ không dấu.
+
 ## Bản 1.1.1-beta.17: đã kiểm tra tự động
 
 Preset JSON không mang định nghĩa cột thêm tay nên file khác không nhận được kiểu cột; khóa `custom_N` khác nghĩa giữa các máy có thể gán nhầm cột.
