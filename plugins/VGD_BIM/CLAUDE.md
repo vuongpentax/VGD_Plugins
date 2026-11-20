@@ -19,6 +19,8 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Kiểm thử
 
+CI (`.github/workflows/vgd-bim-tests.yml`) tự chạy các lệnh dưới đây khi đẩy code có thay đổi trong plugin hoặc `tests/` (Ruby 3.3 và Playwright 1.63.0). CI không thay thế kiểm tra trong SketchUp thật.
+
 Chạy từ `plugins/VGD_BIM`:
 - `ruby dev/run_tests.rb`: kiểm tra cú pháp mọi file Ruby và chạy các `dev/test_*.rb` bằng Ruby thường (mô phỏng, không thay SketchUp). Mỗi test cũng chạy riêng được, ví dụ `ruby dev/test_table.rb`.
 - `dev/test_ui.cjs`, `dev/test_ui_images.cjs`, `dev/test_ui_sheets.cjs`, `dev/test_ui_en.cjs`, `dev/test_report_page.cjs`: Playwright + trình duyệt headless (cần `ruby` trong PATH cho hai bộ sau); đặt `VGD_PLAYWRIGHT_MODULE` nếu Playwright không cài local, `VGD_BROWSER_CHANNEL=msedge` để dùng Edge.

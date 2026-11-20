@@ -1,0 +1,61 @@
+# Chạy test của VGD BIM (Ruby và giao diện Playwright) khi có thay đổi trong plugin BIM hoặc test chung.
+# Chưa thay thế kiểm tra trong SketchUp thật: xem VALIDATION.md của plugin.
+name: Test VGD BIM
+
+on:
+  push:
+    paths:
+      - 'plugins/VGD_BIM/**'
+      - 'tests/**'
+      - '.github/workflows/vgd-bim-tests.yml'
+  pull_request:
+    paths:
+      - 'plugins/VGD_BIM/**'
+      - 'tests/**'
+      - '.github/workflows/vgd-bim-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ruby:
+    name: Test Ruby và quy ước repo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - name: Test BIM (cú pháp, test Ruby)
+        working-directory: plugins/VGD_BIM
+        run: ruby dev/run_tests.rb
+      - name: Test quy ước đặt tên và menu
+        run: ruby tests/test_vgd_conventions.rb
+
+  giao-dien:
+    name: Test giao diện (Playwright)
+    runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_VERSION: '1.63.0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Cài Playwright và trình duyệt
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pw" "playwright@$PLAYWRIGHT_VERSION"
+          npx --prefix "$RUNNER_TEMP/pw" playwright install --with-deps chromium
+      - name: Chạy các bộ test giao diện
+        working-directory: plugins/VGD_BIM
+        env:
+          VGD_PLAYWRIGHT_MODULE: ${{ runner.temp }}/pw/node_modules/playwright
+        run: |
+          for test in test_ui test_ui_images test_ui_sheets test_ui_en test_report_page; do
+            echo "== $test"
+            node "dev/$test.cjs"
+          done
