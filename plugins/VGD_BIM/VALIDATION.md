@@ -2,6 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.24: đã kiểm tra tự động
+
+Dọn code thừa và gộp tính hộp bao (`Table.base_point`, một lần cho mỗi món).
+
+- `dev/test_table.rb`: tâm đáy X, Y và cao độ đáy Z đúng mm; chỉ tính hộp bao một lần cho món.
+- Bộ test Ruby đầy đủ (`run_tests.rb`), test quy ước repo, và năm bộ Playwright đều đạt.
+
+**Chưa xác minh trong SketchUp thật:** dựng bảng và gợi ý tầng / phòng trên model thật (kết quả không đổi về logic).
+
 ## Bản 1.1.1-beta.23: đã kiểm tra tự động
 
 Nhóm lỗi vừa của đợt rà soát: tô màu tag là thao tác hoàn tác; ghi file an toàn; khối phòng tìm trong group lồng; diện tích ước tính; chụp không zoom khi thiếu hộp bao.
@@ -253,7 +262,7 @@ Các điểm sau chỉ kiểm được trong SketchUp thật:
 56. **Thư viện vật liệu** (beta.67): đã kiểm bằng mô phỏng (`test_material_library.rb`, `test_table.rb`, `test_dialog_logic.rb`) và Playwright (hộp Thư viện vật liệu, 5 cột vật liệu, tiếng Anh). Chưa xác minh trong SketchUp thật: danh sách vật liệu SketchUp trong ô chọn, nối vật liệu theo tên với món thật, số lượng có hao hụt và thành tiền khớp tay, xuất Excel / PDF có các cột vật liệu.
 55. **Cầu nối và dựng khối phòng bằng VGD Room** (beta.66; plugin `VGD_Room` 0.1.0-beta.1): đã kiểm bằng mô phỏng (`test_dialog_logic.rb`, `test_rooms.rb`, và `plugins/VGD_Room/dev/test_builder.rb` với SketchUp giả lập) và Playwright. Chưa xác minh trong SketchUp thật: hai plugin cùng nạp thì BIM thấy VGD Room qua `VGD::Bridge` (không phụ thuộc thứ tự nạp), `add_face` + `pushpull` dựng đúng khối từ viền thẳng và lõm, mặt hướng lên, tag `VGD_ROOMS` và vật liệu trong suốt, dựng lại thay khối cũ và giữ VGD ID, một bước hoàn tác, khối phòng không xuất hiện trong Bảng khối lượng khi chọn / quét sâu.
 54. **Phòng, phần dữ liệu** (beta.65, cột mốc 2b): đã kiểm bằng mô phỏng (`test_rooms.rb`, `test_dialog_logic.rb`) và Playwright. Chưa xác minh trong SketchUp thật: Tạo phòng từ mặt đang chọn (đọc `Face#outer_loop`, tọa độ thế giới khi mặt nằm trong group đang mở, đổi inch sang mm, mặt có lỗ chỉ lấy vòng ngoài), danh sách phòng còn nguyên sau khi lưu / mở lại file, diện tích / thể tích đúng với phòng thật, gán món theo tâm đáy món. Khối 3D của phòng CHƯA có (plugin `VGD_Room` làm ở bước sau).
-53. **Tầng (Level)** (beta.64, cột mốc 2a): đã kiểm bằng mô phỏng (`test_levels.rb`, `test_dialog_logic.rb`) và Playwright. Chưa xác minh trong SketchUp thật: danh sách tầng còn nguyên sau khi lưu / mở lại file (dictionary `VGD_BIM_MODEL` khóa `levels`), cao độ đáy món (`Table.base_z` từ hộp bao thế giới, đơn vị inch sang mm) cho món nằm trong group đang mở hoặc lồng sâu, gán tầng theo cao độ đúng với model có gốc tọa độ không ở sàn tầng 1, ghi nhãn tầng ở dictionary `VGD_BIM_LOC` của món.
+53. **Tầng (Level)** (beta.64, cột mốc 2a): đã kiểm bằng mô phỏng (`test_levels.rb`, `test_dialog_logic.rb`) và Playwright. Chưa xác minh trong SketchUp thật: danh sách tầng còn nguyên sau khi lưu / mở lại file (dictionary `VGD_BIM_MODEL` khóa `levels`), cao độ đáy món (`Table.base_point` từ hộp bao thế giới, đơn vị inch sang mm) cho món nằm trong group đang mở hoặc lồng sâu, gán tầng theo cao độ đúng với model có gốc tọa độ không ở sàn tầng 1, ghi nhãn tầng ở dictionary `VGD_BIM_LOC` của món.
 52. **Mã đối tượng hàng loạt, ID trùng ở tab Kiểm tra, danh mục mở rộng** (beta.63, cột mốc 1b / 1c): đã kiểm bằng mô phỏng (`test_object_code.rb`, `test_dialog_logic.rb`, `test_core.rb`) và Playwright. Chưa xác minh trong SketchUp thật: ghi trường `code` vào món (dữ liệu VGD) qua hộp Đặt mã đối tượng, cột Mã sửa được bằng nhấp đúp, cảnh báo ID trùng hiện đúng ở tab Kiểm tra khi quét cả model, chọn danh mục mới (Tường, Cửa, ...) ở tab Thông tin. Danh mục mới chưa có luật khối lượng riêng (cột Hạng mục suy ra từ tag vẫn theo nhóm tag).
 51. **VGD ID** (beta.62, cột mốc 1a của `docs/vgd_bim/ROADMAP.md`): đã kiểm bằng mô phỏng (`test_vgd_id.rb`, `test_dialog_logic.rb`) và Playwright (cột, nút Gán, nút Sửa trùng). Chưa xác minh trong SketchUp thật: ghi dictionary `VGD_BIM_ID` vào Group / ComponentInstance và còn sau khi lưu / mở lại file, ID có bị nhân đôi khi copy món (như dự đoán) và nút Sửa trùng xử lý đúng, hoàn tác một bước, món lồng sâu trong group.
 50. **Cột thêm tay** (beta.61): đã kiểm bằng mô phỏng (`test_custom_columns.rb`, `test_dialog_logic.rb`, `test_table.rb`) và Playwright (form, thêm / xóa cột, sửa cột tự nhập). Chưa xác minh trong SketchUp thật: đọc thuộc tính tùy chọn và thuộc tính Dynamic Components của model thật (tên dictionary `dynamic_attributes`, khóa viết thường, giá trị công thức hay đơn vị inch), giá trị lưu ở định nghĩa của component, ghi cột tự nhập vào món (một bước hoàn tác), cột mới tự hiện sau khi thêm.

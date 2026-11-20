@@ -95,10 +95,6 @@ module VGD
           SETTING_SUFFIXES.each_with_object(settings.dup) { |suffix, out| out["image_#{suffix}"] = settings.fetch("#{prefix}_#{suffix}") }
         end
 
-        def self.location_settings(settings)
-          kind_settings(settings, :location)
-        end
-
         # Mỗi bước khôi phục chạy độc lập: một bước lỗi không được làm hỏng các bước sau, cũng không được biến lần chụp
         # đã thành công thành thất bại (lỗi khôi phục chỉ ghi vào capture.log).
         def self.restore(model, view, saved, operation, temp)

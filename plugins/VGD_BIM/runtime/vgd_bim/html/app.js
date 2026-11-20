@@ -1603,7 +1603,6 @@ function openSide(kind,animate=true){
   if(!animate){side.classList.add('open');return;}
   requestAnimationFrame(()=>requestAnimationFrame(()=>side.classList.add('open'))); // hai khung hình để width 0 được vẽ trước khi trượt ra
 }
-const openColumns=(animate=true)=>openSide('columns',animate);
 function closeColumns(animate=true){
   const side=$('col-side');
   if(sideKind())tableState.panel=null;

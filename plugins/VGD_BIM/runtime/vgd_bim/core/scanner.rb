@@ -47,10 +47,6 @@ module VGD
       end
       def self.all_entities; scan_model.map { |r| r[:entity] }.select { |e| Data.supported?(e) }.uniq; end
       def self.all_bim_entities; all_entities.select { |e| Data.has_data?(e) }; end
-      def self.by_category(value); all_bim_entities.select { |e| Data.get(e, :category) == value }; end
-      def self.by_item_type(value); all_bim_entities.select { |e| Data.get(e, :item_type) == value }; end
-      def self.by_zone(value); all_bim_entities.select { |e| Data.get(e, :zone) == value }; end
-      def self.by_floor(value); all_bim_entities.select { |e| Data.get(e, :floor) == value }; end
     end
   end
 end

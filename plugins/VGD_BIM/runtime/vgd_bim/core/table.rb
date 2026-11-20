@@ -290,8 +290,7 @@ module VGD
           rows[i].merge!(mat_code: entry ? entry['code'] : '', mat_price: entry ? entry['price'] : nil, mat_waste: entry ? entry['waste'] : nil, mat_qty: priced[:qty], mat_cost: priced[:cost], mat_note: priced[:note].to_s)
           rows[i][:level_id] = lid
           rows[i][:level] = lid.empty? ? rows[i][:struct_level].to_s : level_names.fetch(lid, '(tầng đã xóa)') # món chưa gán tầng BIM thì hiện tầng của VGD Structure
-          rows[i][:base_z] = base_z(record) # cao độ đáy món (mm, thế giới) để gợi ý tầng
-          rows[i][:base_x], rows[i][:base_y] = base_xy(record) # tâm đáy món (mm, thế giới) để gợi ý phòng
+          rows[i][:base_x], rows[i][:base_y], rows[i][:base_z] = base_point(record) # tâm đáy và cao độ đáy món (mm, thế giới) để gợi ý phòng và tầng
           rid = Rooms.entity_room(record[:entity])
           rows[i][:room_id] = rid
           rows[i][:room] = rid.empty? ? '' : room_names.fetch(rid, '(phòng đã xóa)')
@@ -305,21 +304,14 @@ module VGD
         {rows: rows, records: records, hidden: hidden}
       end
 
-      # Cao độ Z (mm) của đáy hộp bao thế giới của món; không đo được thì nil.
-      def self.base_z(record)
+      # Tâm đáy X, Y và cao độ đáy Z (mm, thế giới) của món, từ MỘT lần tính hộp bao. Không đo được thì [nil, nil, nil].
+      def self.base_point(record)
         box = bounding_box(record)
-        box.empty? ? nil : (box.min.z.to_f * Geometry::INCH_MM).round(1)
+        return [nil, nil, nil] if box.empty?
+        scale = Geometry::INCH_MM
+        [((box.min.x.to_f + box.max.x.to_f) / 2 * scale).round(1), ((box.min.y.to_f + box.max.y.to_f) / 2 * scale).round(1), (box.min.z.to_f * scale).round(1)]
       rescue StandardError
-        nil
-      end
-
-      # Tâm X, Y (mm, thế giới) của hộp bao món; không đo được thì [nil, nil].
-      def self.base_xy(record)
-        box = bounding_box(record)
-        return [nil, nil] if box.empty?
-        [((box.min.x.to_f + box.max.x.to_f) / 2 * Geometry::INCH_MM).round(1), ((box.min.y.to_f + box.max.y.to_f) / 2 * Geometry::INCH_MM).round(1)]
-      rescue StandardError
-        [nil, nil]
+        [nil, nil, nil]
       end
 
       # Bỏ dòng gắn tag loại trừ (tên tag đã chuẩn hóa) và mọi món nằm trong nó. Chỉ xét các đối tượng được đọc (từ path[skip..]),
