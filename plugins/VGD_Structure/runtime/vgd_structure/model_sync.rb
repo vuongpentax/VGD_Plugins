@@ -9,10 +9,11 @@ module VGD
       # Trường quyết định hình dạng của từng loại phần tử: đổi một trường thì phần tử trong model không còn khớp dữ liệu.
       FP_FIELDS = {
         'column' => %i[center w d z0 z1 type_id], 'beam' => %i[dir min max z_top z_bottom type_id], 'wall' => %i[dir min max z_bottom z_top type_id openings],
-        'opening' => %i[kind min max z_bottom z_top type_id flip], 'slab' => %i[min max thickness z_top z_bottom], 'ceiling' => %i[polygon min max thickness z_bottom z_top]
+        'opening' => %i[kind min max z_bottom z_top type_id flip], 'slab' => %i[min max thickness z_top z_bottom], 'ceiling' => %i[polygon min max thickness z_bottom z_top],
+        'stair' => %i[polygon z0 z1 type rails]
       }.freeze
       # Trường chỉ tính khi mục kế hoạch có (phần tử xiên / xoay, P4b-2): mục cũ không có thì vân tay giữ nguyên như bản trước.
-      FP_OPTIONAL = %i[a b rot origin angle polygon holes layers].freeze
+      FP_OPTIONAL = %i[a b rot origin angle polygon holes layers mirror].freeze
       # Loại nhóm trong model <-> kế hoạch (Checker.plan_for) <-> loại trong giao diện (cột, dầm, tường, cửa gộp thành 'opening', sàn, trần).
       PLAN_KINDS = {'columns' => 'column', 'beams' => 'beam', 'walls' => 'wall', 'openings' => 'opening', 'slabs' => 'slab', 'ceilings' => 'ceiling'}.freeze
       UI_KIND = {'column' => 'column', 'beam' => 'beam', 'wall' => 'wall', 'door' => 'opening', 'window' => 'opening', 'slab' => 'slab', 'ceiling' => 'ceiling'}.freeze

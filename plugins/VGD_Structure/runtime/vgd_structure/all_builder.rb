@@ -4,8 +4,8 @@ module VGD
     # có bất kỳ lỗi nào thì không dựng gì cả và báo rõ loại nào, tầng nào lỗi. Chưa xác minh trong SketchUp thật.
     module AllBuilder
       MAX_TOTAL = 20_000
-      KINDS = %w[columns beams walls openings slabs ceilings].freeze
-      LABELS = Checker::KIND_LABELS
+      KINDS = %w[columns beams walls openings slabs ceilings stairs].freeze
+      LABELS = Checker::KIND_LABELS_ALL
       Error = Class.new(ArgumentError)
 
       # Mã tầng cần dựng của từng loại: tầng có lựa chọn loại đó; tầng trên cùng chỉ có sàn.
@@ -30,6 +30,7 @@ module VGD
                  when 'beams' then BeamBuilder.prepare(model, raw_state, ids)
                  when 'walls' then WallBuilder.prepare(model, raw_state, ids)
                  when 'openings' then OpeningBuilder.prepare(model, raw_state, ids)
+                 when 'stairs' then StairBuilder.prepare(model, raw_state, ids)
                  else PlateBuilder.prepare(model, raw_state, ids, kind)
                  end]
         rescue ArgumentError => error
@@ -42,11 +43,14 @@ module VGD
 
       # Trả về {kinds: {loại => Result}, total:, issues: [...]}.
       # retag: {'mã tầng:mã cũ' => 'mã tầng:mã mới'} khi phần tử đổi mã do sửa trong SketchUp (giữ VGD ID).
-      def self.build(model, raw_state, level_ids, only = nil, retag = nil)
+      # adopt: {'erase' => [entityID đối tượng SketchUp đã nhận], 'refs' => {'mã tầng:mã' => entityID}}: xóa đối tượng gốc trong CÙNG thao tác và dựng bản chuẩn giữ VGD ID của nó.
+      def self.build(model, raw_state, level_ids, only = nil, retag = nil, adopt = nil)
         ctx = prepare(model, raw_state, level_ids, only)
         model.start_operation('VGD Structure · Dựng kết cấu', true)
         begin
-          results = IdKeeper.renaming(retag) { apply_all(model, ctx) }
+          taken = adopt ? SuScan.take(model, adopt['erase']) : {}
+          adopted_ids = adopt ? (adopt['refs'] || {}).each_with_object({}) { |(ref, su_id), h| h[ref] = taken[su_id] } : {}
+          results = IdKeeper.renaming(retag, adopted_ids) { apply_all(model, ctx) }
           ModelStore.write(model, raw_state)
           model.commit_operation
         rescue StandardError, ScriptError
@@ -63,6 +67,7 @@ module VGD
                       when 'beams' then BeamBuilder.apply(model, c)
                       when 'walls' then WallBuilder.apply(model, c)
                       when 'openings' then OpeningBuilder.apply(model, c)
+                      when 'stairs' then StairBuilder.apply(model, c)
                       else PlateBuilder.apply(model, c)
                       end
         end

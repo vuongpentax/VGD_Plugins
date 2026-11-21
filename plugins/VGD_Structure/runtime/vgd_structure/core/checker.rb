@@ -4,6 +4,7 @@ module VGD
     # tầng thiếu dữ liệu. Chỉ ĐỌC dữ liệu, không đổi gì. Logic thuần.
     module Checker
       KIND_LABELS = {'columns' => 'Cột', 'beams' => 'Dầm', 'walls' => 'Tường', 'openings' => 'Cửa', 'slabs' => 'Sàn', 'ceilings' => 'Trần'}.freeze
+      KIND_LABELS_ALL = KIND_LABELS.merge('stairs' => 'Cầu thang').freeze # mọi loại có thể dựng (kể cả cầu thang)
 
       # state đã chuẩn hóa. Trả về {levels: [{id, name, top, counts: {loại => số}, errors: [...], warnings: [...]}], errors: số, warnings: số}.
       def self.run(state)
@@ -54,7 +55,7 @@ module VGD
         when 'beams' then BeamPlan.plan(state['grid'], state['types'], state['beam_types'], state['levels'], level_id)
         when 'walls' then WallPlan.plan(state['grid'], state['types'], state['beam_types'], state['wall_types'], state['levels'], level_id, state['opening_types'])
         when 'openings' then OpeningPlan.plan(state['grid'], state['types'], state['beam_types'], state['wall_types'], state['opening_types'], state['levels'], level_id)
-        when 'slabs' then SlabPlan.plan(state['grid'], state['levels'], level_id, state['types'], state['beam_types'])
+        when 'slabs' then SlabPlan.plan(state['grid'], state['levels'], level_id, state['types'], state['beam_types'], state['wall_types'], state['opening_types'])
         else CeilingPlan.plan(state['grid'], state['types'], state['beam_types'], state['wall_types'], state['levels'], level_id, state['opening_types'])
         end
       end

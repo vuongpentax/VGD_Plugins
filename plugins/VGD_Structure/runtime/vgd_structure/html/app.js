@@ -3,7 +3,7 @@
   'use strict';
   var LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'.split(''); // bỏ I và O, giống Grid::LETTERS ở Ruby
   var state = {origin: [0, 0], x: {first: 0, axes: []}, y: {first: 0, axes: []}, scale: 100, both: false, drawn: false, previewOk: false,
-               types: [], beamTypes: [], wallTypes: [], levels: [], level: null, selected: null, drawnLevels: [], drawnBeamLevels: [], selectedBeam: null, drawnWallLevels: [], selectedWall: null, drawnSlabLevels: [], drawnCeilingLevels: [], openingTypes: [], drawnOpeningLevels: [], openWall: null, preview: null, tab: 'grid'};
+               types: [], beamTypes: [], wallTypes: [], levels: [], level: null, selected: null, drawnLevels: [], drawnBeamLevels: [], drawnStairLevels: [], selectedBeam: null, drawnWallLevels: [], selectedWall: null, drawnSlabLevels: [], drawnCeilingLevels: [], openingTypes: [], drawnOpeningLevels: [], openWall: null, preview: null, tab: 'grid'};
   var MODE_P = [['auto', 'Theo quy ước'], ['center', 'Tâm trên trục'], ['min', 'Cạnh nhỏ (nam / tây) tại trục'], ['max', 'Cạnh lớn (bắc / đông) tại trục']];
   var MODE_X = [['auto', 'Theo quy ước'], ['center', 'Tâm trên trục'], ['min', 'Cạnh tây tại trục (cột lùi sang đông)'], ['max', 'Cạnh đông tại trục (cột lùi sang tây)']];
   var MODE_Y = [['auto', 'Theo quy ước'], ['center', 'Tâm trên trục'], ['min', 'Cạnh nam tại trục (cột lùi lên bắc)'], ['max', 'Cạnh bắc tại trục (cột lùi xuống nam)']];
@@ -38,19 +38,23 @@
             status: !!(window.VGDPlan && window.VGDPlan.statusOn && window.VGDPlan.statusOn()),
             types: state.types.map(function (t) { return {id: t.id, name: t.name, w: t.w, d: t.d}; }),
             beam_types: state.beamTypes.map(function (t) { return {id: t.id, name: t.name, w: t.w, h: t.h}; }),
+            stair_types: state.stairTypes && state.stairTypes.length ? state.stairTypes.map(function (t) { return {id: t.id, name: t.name, width: t.width, riser: t.riser, tread: t.tread, rail: t.rail}; }) : undefined, // chưa có loại (trạng thái cũ): Ruby dùng mặc định
             wall_types: state.wallTypes.map(function (t) { return {id: t.id, name: t.name, t: t.t, layers: wallLayers(t).map(function (l) { var o = {fn: l.fn, t: l.t, material: l.material || ''}; if (l.color) o.color = l.color; return o; })}; }),
             opening_types: state.openingTypes.map(function (t) { return {id: t.id, name: t.name, kind: t.kind, w: t.w, h: t.h, sill: t.sill}; }), levels: state.levels.map(toRubyLevel), level: state.level};
   }
   function toRubyLevel(l) {
     return {id: l.id, name: l.name, elevation: l.elevation, screed: l.screed, slab_thickness: l.slab, column_type: l.columnType || null, beam_type: l.beamType || null, wall_type: l.wallType || null, ceiling_height: l.ceilingHeight, ceiling_thickness: l.ceilingThickness,
-            picks: {columns: clonePicks(l.picks), beams: clonePicks(l.beamPicks), walls: clonePicks(l.wallPicks), slabs: clonePicks(l.slabPicks), ceilings: clonePicks(l.ceilingPicks), openings: clonePicks(l.openingPicks)}, notes: JSON.parse(JSON.stringify(l.notes || {}))};
+            floor_layers: (l.floorLayers || []).map(cleanLayer), ceiling_layers: (l.ceilingLayers || []).map(cleanLayer),
+            picks: {columns: clonePicks(l.picks), beams: clonePicks(l.beamPicks), walls: clonePicks(l.wallPicks), slabs: clonePicks(l.slabPicks), ceilings: clonePicks(l.ceilingPicks), openings: clonePicks(l.openingPicks), stairs: clonePicks(l.stairPicks || {})}, notes: JSON.parse(JSON.stringify(l.notes || {})), sections: JSON.parse(JSON.stringify(l.sections || {}))};
   }
+  function cleanLayer(l) { var o = {fn: l.fn, t: l.t, material: l.material || ''}; if (l.color) o.color = l.color; return o; }
   function clonePicks(picks) { var out = {}; Object.keys(picks).forEach(function (k) { out[k] = JSON.parse(JSON.stringify(picks[k])); }); return out; } // sao sâu: phần tử tự do có khóa 'free' lồng nhau
   function fromRubyLevel(l) {
     return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab_thickness, screed: l.screed === undefined ? 50 : l.screed, columnType: l.column_type, beamType: l.beam_type || null, wallType: l.wall_type || null, ceilingHeight: l.ceiling_height, ceilingThickness: l.ceiling_thickness,
+            floorLayers: (l.floor_layers || []).map(function (x) { return {fn: x.fn, t: x.t, material: x.material || '', color: x.color || null}; }), ceilingLayers: (l.ceiling_layers || []).map(function (x) { return {fn: x.fn, t: x.t, material: x.material || '', color: x.color || null}; }),
             picks: clonePicks((l.picks && l.picks.columns) || {}), beamPicks: clonePicks((l.picks && l.picks.beams) || {}), wallPicks: clonePicks((l.picks && l.picks.walls) || {}),
-            slabPicks: clonePicks((l.picks && l.picks.slabs) || {}), ceilingPicks: clonePicks((l.picks && l.picks.ceilings) || {}),
-            openingPicks: clonePicks((l.picks && l.picks.openings) || {}), notes: JSON.parse(JSON.stringify(l.notes || {}))};
+            stairPicks: clonePicks((l.picks && l.picks.stairs) || {}), slabPicks: clonePicks((l.picks && l.picks.slabs) || {}), ceilingPicks: clonePicks((l.picks && l.picks.ceilings) || {}),
+            openingPicks: clonePicks((l.picks && l.picks.openings) || {}), notes: JSON.parse(JSON.stringify(l.notes || {})), sections: JSON.parse(JSON.stringify(l.sections || {}))};
   }
   function rid(prefix) {
     var a = new Uint8Array(4); (window.crypto || {getRandomValues: function (x) { for (var i = 0; i < x.length; i++) x[i] = Math.floor(Math.random() * 256); }}).getRandomValues(a);
@@ -88,7 +92,16 @@
     $('remove').disabled = !state.drawn;
   }
 
+  // Hình sàn / trần thực tế của một ô chưa chọn (lùi theo dầm, cột, tường như lúc dựng) do Ruby tính; cache theo lần đổi dữ liệu để xem trước đúng hình sẽ dựng.
+  var probeCache = {}, probePending = {}, stateRev = 0;
+  function plateProbe(kind, levelId, ref) {
+    var key = kind + '|' + levelId + '|' + ref + '|' + stateRev;
+    if (key in probeCache) return probeCache[key];
+    if (!probePending[key]) { probePending[key] = true; call('plate_probe', {state: payload(), level: levelId, kind: kind, ref: ref, key: key}); }
+    return undefined;
+  }
   function changed(positionsOnly) {
+    stateRev++; probeCache = {}; probePending = {};
     if ($('check-list')) { $('check-list').replaceChildren(); $('check-summary').textContent = ''; }
     if (positionsOnly) refreshPositions();
     clearTimeout(timer);
@@ -183,15 +196,17 @@
   }
   function renderLevels() {
     var table = $('levels-table'); table.replaceChildren();
-    heads(table, ['Tên tầng', 'Cao độ sàn hoàn thiện (mm)', 'Cán nền (mm)', 'Dày sàn (mm)', 'Cao trần (mm)', 'Dày trần (mm)', 'Loại cột mặc định', 'Loại dầm mặc định', 'Loại tường mặc định', 'Ghi chú', '']);
+    heads(table, ['Tên tầng', 'Cao độ sàn hoàn thiện (mm)', 'Cán nền (mm)', 'Dày sàn (mm)', 'Cao trần (mm)', 'Dày trần (mm)', 'Loại cột mặc định', 'Loại dầm mặc định', 'Loại tường mặc định', 'Lớp sàn', 'Lớp trần', 'Ghi chú', '']);
     state.levels.forEach(function (l, i) {
       var row = table.insertRow(), sel = document.createElement('select'), del = document.createElement('button');
       row.insertCell().appendChild(textCell(l.name, function (v) { l.name = v; renderLevelSelects(); }, 'Tên tầng ' + (i + 1)));
       row.insertCell().appendChild(numCell(l.elevation, function (v) { l.elevation = v; refreshLevelNotes(); }, 'Cao độ ' + l.name));
-      row.insertCell().appendChild(numCell(l.screed, function (v) { l.screed = v; refreshLevelNotes(); }, 'Cán nền ' + l.name));
+      var scr = numCell(l.screed, function (v) { l.screed = v; refreshLevelNotes(); }, 'Cán nền ' + l.name); scr.disabled = (l.floorLayers || []).length > 0; if (scr.disabled) scr.title = 'Tổng các lớp sàn (sửa ở nút Lớp sàn)';
+      row.insertCell().appendChild(scr);
       row.insertCell().appendChild(numCell(l.slab, function (v) { l.slab = v; refreshLevelNotes(); }, 'Dày sàn ' + l.name));
       row.insertCell().appendChild(numCell(l.ceilingHeight, function (v) { l.ceilingHeight = v; }, 'Cao trần ' + l.name));
-      row.insertCell().appendChild(numCell(l.ceilingThickness, function (v) { l.ceilingThickness = v; }, 'Dày trần ' + l.name));
+      var cth = numCell(l.ceilingThickness, function (v) { l.ceilingThickness = v; }, 'Dày trần ' + l.name); cth.disabled = (l.ceilingLayers || []).length > 0; if (cth.disabled) cth.title = 'Tổng các lớp trần (sửa ở nút Lớp trần)';
+      row.insertCell().appendChild(cth);
       sel.setAttribute('aria-label', 'Loại cột mặc định ' + l.name);
       sel.append(new Option('Loại đầu danh sách', ''));
       state.types.forEach(function (t) { sel.append(new Option(t.name, t.id)); });
@@ -212,12 +227,70 @@
       wsel.value = l.wallType || '';
       wsel.onchange = function () { l.wallType = wsel.value || null; changed(); };
       row.insertCell().appendChild(wsel);
+      ['floorLayers', 'ceilingLayers'].forEach(function (key) {
+        var btn = document.createElement('button'), list = l[key] || [], total = layersSum(list);
+        btn.type = 'button'; btn.className = 'layers-btn ' + (key === 'floorLayers' ? 'floor-layers' : 'ceiling-layers');
+        btn.textContent = list.length ? list.length + ' lớp · ' + total + ' mm' : 'Thêm lớp';
+        btn.title = key === 'floorLayers' ? 'Lớp hoàn thiện trên sàn kết cấu (gạch lát, vữa cán...): tổng = cán nền' : 'Lớp cấu tạo trần (thạch cao, cách nhiệt...): tổng = dày trần';
+        btn.setAttribute('aria-expanded', String(openLayers && openLayers.id === l.id && openLayers.key === key));
+        btn.onclick = function () { openLayers = openLayers && openLayers.id === l.id && openLayers.key === key ? null : {id: l.id, key: key}; renderLevels(); };
+        row.insertCell().appendChild(btn);
+      });
       var note = row.insertCell(); note.className = 'note'; note.textContent = levelNote(i);
       del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.title = 'Xóa tầng này'; del.disabled = state.levels.length <= 1;
       del.onclick = function () { removeLevel(l.id); };
       row.insertCell().appendChild(del);
     });
-    renderTypes(); renderBeamTypes(); renderWallTypes(); renderOpeningTypes();
+    renderTypes(); renderBeamTypes(); renderWallTypes(); renderOpeningTypes(); renderLevelLayers();
+  }
+  // ---- Lớp hoàn thiện của sàn (trên sàn kết cấu, từ trên xuống) và của trần (từ mặt dưới lên) ----
+  var openLayers = null, FINISH_FN = [['substrate', 'Lớp nền', '#d6cfc0'], ['insulation', 'Cách nhiệt', '#e6d96b'], ['finish', 'Hoàn thiện', '#f1eee6']];
+  function layersSum(list) { return Math.round((list || []).reduce(function (a, l) { return a + (Number(l.t) || 0); }, 0) * 10) / 10; }
+  function syncLevelLayers(l) { // tổng các lớp ĐÈ lên cán nền / dày trần (Ruby cũng làm vậy khi chuẩn hóa)
+    if ((l.floorLayers || []).length) l.screed = layersSum(l.floorLayers);
+    if ((l.ceilingLayers || []).length) l.ceilingThickness = layersSum(l.ceilingLayers);
+  }
+  function refreshLayerButtons(l) {
+    var i = state.levels.indexOf(l), tb = $('levels-table'), f = tb.querySelectorAll('.floor-layers')[i], c = tb.querySelectorAll('.ceiling-layers')[i];
+    if (f) f.textContent = (l.floorLayers || []).length ? l.floorLayers.length + ' lớp · ' + layersSum(l.floorLayers) + ' mm' : 'Thêm lớp';
+    if (c) c.textContent = (l.ceilingLayers || []).length ? l.ceilingLayers.length + ' lớp · ' + layersSum(l.ceilingLayers) + ' mm' : 'Thêm lớp';
+  }
+  function renderLevelLayers() {
+    var box = $('level-layers-editor'); box.replaceChildren();
+    var l = openLayers && state.levels.filter(function (x) { return x.id === openLayers.id; })[0];
+    box.hidden = !l; if (!l) return;
+    var key = openLayers.key, isFloor = key === 'floorLayers', list = l[key] = l[key] || [], head = document.createElement('div'); head.className = 'layers-head';
+    head.textContent = (isFloor ? 'Lớp hoàn thiện sàn của “' : 'Lớp cấu tạo trần của “') + l.name + (isFloor ? '” (từ trên cùng xuống sàn kết cấu; tổng = cán nền)' : '” (từ mặt dưới nhìn thấy lên trên; tổng = dày trần)'); box.appendChild(head);
+    var tbl = document.createElement('table'); tbl.className = 'axes'; box.appendChild(tbl);
+    heads(tbl, ['#', 'Chức năng', 'Dày (mm)', 'Vật liệu', 'Màu', '', '']);
+    list.forEach(function (it, i) {
+      var row = tbl.insertRow(), sel = document.createElement('select'), col = document.createElement('input'), up = document.createElement('button'), del = document.createElement('button');
+      row.insertCell().textContent = String(i + 1);
+      FINISH_FN.forEach(function (f) { sel.append(new Option(f[1], f[0])); }); sel.value = it.fn; sel.setAttribute('aria-label', 'Chức năng lớp ' + (i + 1));
+      sel.onchange = function () { it.fn = sel.value; changed(); renderLevelLayers(); };
+      row.insertCell().appendChild(sel);
+      row.insertCell().appendChild(numCell(it.t, function (v) { it.t = v; syncLevelLayers(l); refreshLayerButtons(l); updateLevelLayerSummary(l, key); }, 'Dày lớp ' + (i + 1)));
+      row.insertCell().appendChild(textCell(it.material || '', function (v) { it.material = v; }, 'Vật liệu lớp ' + (i + 1)));
+      col.type = 'color'; col.value = it.color || (FINISH_FN.filter(function (f) { return f[0] === it.fn; })[0] || FINISH_FN[2])[2]; col.setAttribute('aria-label', 'Màu lớp ' + (i + 1)); col.oninput = function () { it.color = col.value; changed(); };
+      row.insertCell().appendChild(col);
+      up.type = 'button'; up.textContent = '↑'; up.title = 'Chuyển lớp lên'; up.disabled = i === 0;
+      up.onclick = function () { list.splice(i - 1, 0, list.splice(i, 1)[0]); changed(); renderLevelLayers(); };
+      row.insertCell().appendChild(up);
+      del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.title = 'Xóa lớp';
+      del.onclick = function () { list.splice(i, 1); syncLevelLayers(l); if (!list.length) openLayers = null; renderLevels(); changed(); };
+      row.insertCell().appendChild(del);
+    });
+    var add = document.createElement('button'); add.type = 'button'; add.className = 'add'; add.textContent = '+ Thêm lớp'; add.disabled = list.length >= MAX_WALL_LAYERS; add.title = 'Tối đa ' + MAX_WALL_LAYERS + ' lớp';
+    add.onclick = function () { list.push({fn: 'finish', t: isFloor ? 10 : 9, material: '', color: null}); syncLevelLayers(l); renderLevels(); changed(); };
+    box.appendChild(add);
+    var sum = document.createElement('div'); sum.className = 'layers-sum'; sum.id = 'level-layers-sum'; box.appendChild(sum); updateLevelLayerSummary(l, key);
+  }
+  function updateLevelLayerSummary(l, key) {
+    var sum = $('level-layers-sum'); if (!sum) return;
+    var total = layersSum(l[key]), range = key === 'floorLayers' ? [0, 300] : [5, 100], bad = total < range[0] || total > range[1];
+    sum.textContent = 'Tổng bề dày: ' + total + ' mm (' + (key === 'floorLayers' ? 'thành lớp cán nền' : 'thành dày trần') + ', phải từ ' + range[0] + ' đến ' + range[1] + ' mm).'; sum.className = 'layers-sum' + (bad ? ' error' : '');
+    var scr = $('levels-table').querySelectorAll('tr')[state.levels.indexOf(l) + 1];
+    if (scr) { var inputs = scr.querySelectorAll('input[type=number]'); if (inputs[1] && (l.floorLayers || []).length) inputs[1].value = l.screed; if (inputs[4] && (l.ceilingLayers || []).length) inputs[4].value = l.ceilingThickness; }
   }
   function refreshLevelNotes() {
     $('levels-table').querySelectorAll('td.note').forEach(function (cell, i) { cell.textContent = levelNote(i); });
@@ -230,7 +303,7 @@
   function addLevel() {
     var last = state.levels[state.levels.length - 1], n = state.levels.length + 1, name = 'Tầng ' + n, taken = state.levels.map(function (l) { return l.name.toLowerCase(); });
     while (taken.indexOf(name.toLowerCase()) >= 0) name += '*';
-    state.levels.push({id: rid('sl_'), name: name, elevation: Number.isFinite(last.elevation) ? last.elevation + 3600 : 0, screed: 50, slab: 120, columnType: null, beamType: null, wallType: null, ceilingHeight: 2800, ceilingThickness: 9, picks: {}, beamPicks: {}, wallPicks: {}, slabPicks: {}, ceilingPicks: {}, notes: {}, openingPicks: {}});
+    state.levels.push({id: rid('sl_'), name: name, elevation: Number.isFinite(last.elevation) ? last.elevation + 3600 : 0, screed: 50, floorLayers: [], ceilingLayers: [], slab: 120, columnType: null, beamType: null, wallType: null, ceilingHeight: 2800, ceilingThickness: 9, picks: {}, beamPicks: {}, wallPicks: {}, stairPicks: {}, slabPicks: {}, ceilingPicks: {}, notes: {}, openingPicks: {}});
     renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); changed();
   }
   function addType() {
@@ -649,7 +722,7 @@
 
 
   // ---- Tab Tổng hợp và dựng ----
-  var ALL_KINDS = [['columns', 'picks', 'Cột'], ['beams', 'beamPicks', 'Dầm'], ['walls', 'wallPicks', 'Tường'], ['openings', 'openingPicks', 'Cửa'], ['slabs', 'slabPicks', 'Sàn'], ['ceilings', 'ceilingPicks', 'Trần']];
+  var ALL_KINDS = [['columns', 'picks', 'Cột'], ['beams', 'beamPicks', 'Dầm'], ['walls', 'wallPicks', 'Tường'], ['openings', 'openingPicks', 'Cửa'], ['slabs', 'slabPicks', 'Sàn'], ['ceilings', 'ceilingPicks', 'Trần'], ['stairs', 'stairPicks', 'Cầu thang']];
   function renderAllTab() {
     var sel = $('all-level-select'); sel.replaceChildren();
     state.levels.forEach(function (l) { sel.append(new Option(l.name, l.id)); });
@@ -667,7 +740,7 @@
     });
     renderAllButtons();
   }
-  function drawnList(kind) { return {columns: state.drawnLevels, beams: state.drawnBeamLevels, walls: state.drawnWallLevels, openings: state.drawnOpeningLevels, slabs: state.drawnSlabLevels, ceilings: state.drawnCeilingLevels}[kind]; }
+  function drawnList(kind) { return {columns: state.drawnLevels, beams: state.drawnBeamLevels, walls: state.drawnWallLevels, openings: state.drawnOpeningLevels, slabs: state.drawnSlabLevels, ceilings: state.drawnCeilingLevels, stairs: state.drawnStairLevels}[kind] || []; }
   function renderAllButtons() {
     var l = currentLevel();
     var has = function (lv) { return ALL_KINDS.some(function (k) { return Object.keys(lv[k[1]]).length; }); };
@@ -772,15 +845,19 @@
       row.className = 'oprow';
       state.openingTypes.forEach(function (t) { sel.append(new Option((t.kind === 'door' ? 'Cửa đi ' : 'Cửa sổ ') + t.name + ' (' + t.w + '×' + t.h + ')', t.id)); });
       sel.value = e.type; sel.setAttribute('aria-label', 'Loại cửa ' + id);
-      sel.onchange = function () { e.type = sel.value; changed(); };
+      sel.onchange = function () { e.type = sel.value; changed(); renderOpeningEditor(); };
       pos.type = 'number'; pos.step = 'any'; pos.value = e.pos; pos.setAttribute('aria-label', 'Vị trí tâm cửa ' + id);
       pos.oninput = function () { e.pos = pos.value === '' ? NaN : Number(pos.value); changed(); };
       box.type = 'checkbox'; box.checked = !!e.flip; box.setAttribute('aria-label', 'Đổi mặt cánh ' + id);
       box.onchange = function () { e.flip = box.checked; changed(); };
       flip.append(box, document.createTextNode(' Đổi mặt'));
+      var hinge = document.createElement('label'), hbox = document.createElement('input'), isDoor = (state.openingTypes.filter(function (t) { return t.id === e.type; })[0] || {}).kind === 'door';
+      hbox.type = 'checkbox'; hbox.checked = !!e.mirror; hbox.setAttribute('aria-label', 'Bản lề ở cuối cửa ' + id);
+      hbox.onchange = function () { if (hbox.checked) e.mirror = true; else delete e.mirror; changed(); };
+      hinge.append(hbox, document.createTextNode(' Bản lề cuối')); hinge.hidden = !isDoor;
       del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.title = 'Xóa cửa này';
       del.onclick = function () { delete l.openingPicks[id]; renderOpeningEditor(); renderOpeningsButtons(); renderOpeningLevelSelects(); changed(); };
-      row.append(sel, pos, flip, del); list.appendChild(row);
+      row.append(sel, pos, flip, hinge, del); list.appendChild(row);
     });
     if (!list.children.length) { var p = document.createElement('p'); p.className = 'muted small'; p.textContent = 'Tường chưa có cửa. Bấm + Cửa đi hoặc + Cửa sổ.'; list.appendChild(p); }
   }
@@ -826,10 +903,42 @@
     renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); syncPlanLevels(); changed();
   }
 
+  // ---- Bảng thống kê (Schedule) ----
+  var schedData = null, SCHED_KINDS = [['columns', 'Cột'], ['beams', 'Dầm'], ['walls', 'Tường'], ['openings', 'Cửa'], ['slabs', 'Sàn'], ['ceilings', 'Trần']];
+  function requestSchedule() { $('sched-note').textContent = 'Đang tính...'; call('schedule', payload()); }
+  function renderScheduleControls() {
+    var ks = $('sched-kind'), ls = $('sched-level'), kv = ks.value || 'columns', lv = ls.value || '';
+    ks.replaceChildren(); SCHED_KINDS.forEach(function (k) { ks.append(new Option(k[1], k[0])); }); ks.value = kv;
+    ls.replaceChildren(); ls.append(new Option('Tất cả các tầng', '')); state.levels.forEach(function (l) { ls.append(new Option(l.name, l.id)); }); ls.value = state.levels.some(function (l) { return l.id === lv; }) ? lv : '';
+  }
+  function schedRows() { // dòng theo loại và tầng đang lọc, kèm dòng tổng
+    if (!schedData) return null;
+    var sec = schedData.sections.filter(function (s) { return s.kind === $('sched-kind').value; })[0]; if (!sec) return null;
+    var lv = $('sched-level').value, rows = sec.rows.filter(function (r) { return !lv || r.level === lv; });
+    var head = ['Tầng', 'Loại', 'Số lượng'].concat(sec.columns.map(function (c) { return c.label + (c.unit ? ' (' + c.unit + ')' : ''); }));
+    var body = rows.map(function (r) { return [r.level_name, r.type, String(r.count)].concat(sec.columns.map(function (c) { var v = r.values[c.id]; return v === undefined ? '' : String(v); })); });
+    var total = ['Tổng', '', String(rows.reduce(function (a, r) { return a + r.count; }, 0))].concat(sec.columns.map(function (c) { return c.sum ? String(Math.round(rows.reduce(function (a, r) { return a + (Number(r.values[c.id]) || 0); }, 0) * 1000) / 1000) : ''; }));
+    return {head: head, body: body, total: total};
+  }
+  function renderSchedule() {
+    var t = $('sched-table'); t.replaceChildren();
+    var d = schedRows(); if (!d) return;
+    var hr = t.insertRow(); d.head.forEach(function (h) { var th = document.createElement('th'); th.textContent = h; hr.appendChild(th); });
+    d.body.forEach(function (r) { var row = t.insertRow(); r.forEach(function (v) { row.insertCell().textContent = v; }); });
+    if (d.body.length) { var tr = t.insertRow(); tr.className = 'total'; d.total.forEach(function (v) { var c = tr.insertCell(); c.textContent = v; c.style.fontWeight = '600'; }); }
+    var issues = (schedData && schedData.issues) || [];
+    $('sched-note').textContent = d.body.length ? d.body.length + ' dòng.' + (issues.length ? ' Lưu ý: ' + issues.join(' ') : '') : 'Chưa có ' + SCHED_KINDS.filter(function (k) { return k[0] === $('sched-kind').value; })[0][1].toLowerCase() + ' nào được chọn' + (issues.length ? '. ' + issues.join(' ') : '.');
+  }
+  function schedCsv() { var d = schedRows(); if (!d) return ''; return [d.head].concat(d.body, d.body.length ? [d.total] : []).map(function (r) { return r.map(function (v) { return /[\t\n"]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join('\t'); }).join('\n'); }
+  function copySchedule() {
+    var text = schedCsv(), done = function (ok) { $('sched-note').textContent = ok ? 'Đã sao chép bảng (cột cách nhau bằng Tab): dán vào Excel.' : 'Không sao chép được: hãy chọn bảng và sao chép tay.'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(fallbackCopy(text)); }); } else done(fallbackCopy(text));
+  }
+  function fallbackCopy(text) { var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); var ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; } ta.remove(); return ok; }
   function switchTab(tab) {
     state.tab = tab;
     document.querySelectorAll('.tabs button').forEach(function (b) { b.setAttribute('aria-selected', String(b.getAttribute('data-tab') === tab)); });
-    ['grid', 'levels', 'plan', 'columns', 'beams', 'walls', 'openings', 'slabs', 'ceilings', 'all'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
+    ['grid', 'levels', 'plan', 'section', 'elevation', 'columns', 'beams', 'walls', 'openings', 'slabs', 'ceilings', 'schedule', 'all'].forEach(function (t) { $('tab-' + t).hidden = t !== tab; });
     if (tab === 'plan') { syncPlanLevels(); window.VGDPlan.show(); }
     if (tab === 'columns') renderColumnsTab();
     if (tab === 'beams') renderBeamsTab();
@@ -837,22 +946,27 @@
     if (tab === 'openings') renderOpeningsTab();
     CELL_TABS.forEach(function (c) { if (tab === c.kind) renderCellTab(c); });
     if (tab === 'all') renderAllTab();
+    if (tab === 'section') window.VGDSection.show();
+    if (tab === 'elevation') window.VGDElevation.show();
+    if (tab === 'schedule') { renderScheduleControls(); requestSchedule(); }
   }
 
   function receive(event, data) {
     if (event === 'state') {
+      if (data.tag_names && window.VGDPlan && window.VGDPlan.setTagNames) { window.VGDPlan.setTagNames(data.tag_names); window.VGDSection.setTagNames(data.tag_names); window.VGDElevation.setTagNames(data.tag_names); }
       state.origin = data.grid.origin.slice();
       var x = fromAxes(data.grid.x_axes), y = fromAxes(data.grid.y_axes);
       state.x = x; state.y = y; state.scale = data.symbol.scale; state.both = data.symbol.both_ends; state.drawn = data.drawn;
       state.types = data.types.map(function (t) { return {id: t.id, name: t.name, w: t.w, d: t.d}; });
       state.beamTypes = (data.beam_types || []).map(function (t) { return {id: t.id, name: t.name, w: t.w, h: t.h}; });
+      state.stairTypes = (data.stair_types || []).map(function (t) { return {id: t.id, name: t.name, width: t.width, riser: t.riser, tread: t.tread, rail: t.rail}; });
       state.wallTypes = (data.wall_types || []).map(function (t) { return {id: t.id, name: t.name, t: t.t, layers: (t.layers || [{fn: 'structure', t: t.t, material: ''}]).map(function (l) { return {fn: l.fn, t: l.t, material: l.material || '', color: l.color || null}; })}; });
       state.openingTypes = (data.opening_types || []).map(function (t) { return {id: t.id, name: t.name, kind: t.kind, w: t.w, h: t.h, sill: t.sill}; });
       state.drawnOpeningLevels = data.drawn_opening_levels || []; state.openWall = null;
       var keepLevel = data.reload ? state.level : null; // nạp lại do Hoàn tác / Làm lại trong SketchUp: giữ tầng đang xem
       state.levels = data.levels.map(fromRubyLevel); state.level = state.levels[0].id; state.selected = null; state.selectedBeam = null; state.selectedWall = null;
       if (keepLevel && state.levels.some(function (l) { return l.id === keepLevel; })) state.level = keepLevel;
-      state.drawnLevels = data.drawn_levels || []; state.drawnBeamLevels = data.drawn_beam_levels || []; state.drawnWallLevels = data.drawn_wall_levels || []; state.drawnSlabLevels = data.drawn_slab_levels || []; state.drawnCeilingLevels = data.drawn_ceiling_levels || [];
+      state.drawnLevels = data.drawn_levels || []; state.drawnBeamLevels = data.drawn_beam_levels || []; state.drawnStairLevels = data.drawn_stair_levels || []; state.drawnWallLevels = data.drawn_wall_levels || []; state.drawnSlabLevels = data.drawn_slab_levels || []; state.drawnCeilingLevels = data.drawn_ceiling_levels || [];
       $('version').textContent = 'v' + data.version; syncPlanLevels(); undoStack = []; redoStack = []; historyChanged();
       renderAll(); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab();
       message(data.reload ? 'Đã nạp lại dữ liệu theo Hoàn tác / Làm lại trong SketchUp.' : (data.saved ? 'Đã nạp lưới trục lưu trong model.' : 'Lưới mặc định: sửa các số rồi bấm Vẽ lưới trục.'));
@@ -905,7 +1019,7 @@
       state.drawn = data.drawn; renderButtons(); message(data.message);
     } else if (event === 'message') {
       message(data.text, data.error);
-    } else if (event === 'model_selection') { window.VGDPlan.modelSelection(data);
+    } else if (event === 'model_selection') { window.VGDPlan.modelSelection(data); window.VGDSection.modelSelection(data); window.VGDElevation.modelSelection(data);
     } else if (event === 'model_status') { window.VGDPlan.modelStatus(data);
     } else if (event === 'select_result') { window.VGDPlan.selectResult(data);
     } else if (event === 'su_point') { window.VGDPlan.suPoint(data);
@@ -914,7 +1028,16 @@
     } else if (event === 'su_key') { window.VGDPlan.suKey(data.key);
     } else if (event === 'su_text') { window.VGDPlan.suText(data.text);
     } else if (event === 'start_tool') { startDrawTool(data.tool);
+    } else if (event === 'su_objects') {
+      var n = window.VGDPlan.setSuObjects(data), onLevel = (data.objects || []).filter(function (o) { return o.level === state.level; }).length;
+      message('Quét SketchUp: ' + n + ' đối tượng có tag nhận diện (' + onLevel + ' ở tầng đang xem), ' + (data.untagged || 0) + ' đối tượng chưa có tag' + ((data.skipped || []).length ? '; bỏ qua ' + data.skipped.length + ' (nghiêng)' : '') + '.');
+    } else if (event === 'su_import') { applySuImport(data);
+    } else if (event === 'su_tagged') { window.VGDPlan.scanSu();
+    } else if (event === 'section_view') { window.VGDSection.receive(data);
+    } else if (event === 'elevation_view') { window.VGDElevation.receive(data);
     } else if (event === 'su_edit') { applySuEdit(data);
+    } else if (event === 'schedule') { schedData = data; renderSchedule();
+    } else if (event === 'plate_probe') { probeCache[data.key] = data.polygon || false; if (window.VGDPlan && window.VGDPlan.ghostChanged) window.VGDPlan.ghostChanged();
     }
   }
   // ---- Thao tác từ tab Mặt bằng: có hoàn tác / làm lại (chỉ các thay đổi làm trên mặt bằng) ----
@@ -928,12 +1051,13 @@
     rerenderAll(); changed();
   }
   function rerenderAll() {
+    if (window.VGDSection && window.VGDSection.refreshList) window.VGDSection.refreshList();
     renderAll(); renderLevels(); renderColumnsTab(); renderBeamsTab(); renderWallsTab(); renderOpeningsTab(); CELL_TABS.forEach(function (c) { renderCellTab(c); }); renderAllTab(); syncPlanLevels();
   }
   function historyChanged() { window.VGDPlan.refreshHistory(); }
   // ---- Vẽ trực tiếp trong SketchUp: mỗi lần vẽ / sửa xong thì tự dựng lại các loại phần tử đã đổi của tầng đang xem (gom các lần liên tiếp) ----
   var AUTO_BUILD_MS = 250, autoKinds = {}, autoTimer = null;
-  var KIND_BOX = {columns: 'picks', beams: 'beamPicks', walls: 'wallPicks', openings: 'openingPicks', slabs: 'slabPicks', ceilings: 'ceilingPicks'};
+  var KIND_BOX = {columns: 'picks', beams: 'beamPicks', walls: 'wallPicks', openings: 'openingPicks', slabs: 'slabPicks', ceilings: 'ceilingPicks', stairs: 'stairPicks'};
   function levelSig() {
     var l = currentLevel(), out = {}; Object.keys(KIND_BOX).forEach(function (k) { out[k] = JSON.stringify(l[KIND_BOX[k]] || {}); }); return out;
   }
@@ -945,20 +1069,22 @@
     return Object.keys(set);
   }
   var autoRetag = {};
-  function scheduleAutoBuild(kinds, levelId, retag) {
+  var autoAdopt = null;
+  function scheduleAutoBuild(kinds, levelId, retag, adopt) {
+    if (adopt) autoAdopt = autoAdopt ? {erase: autoAdopt.erase.concat(adopt.erase), refs: Object.assign({}, autoAdopt.refs, adopt.refs)} : adopt;
     if (!kinds.length) return;
     kinds.forEach(function (k) { autoKinds[k + '@' + (levelId || state.level)] = levelId || state.level; });
     if (retag) Object.keys(retag).forEach(function (k) { autoRetag[k] = retag[k]; });
     clearTimeout(autoTimer);
     autoTimer = setTimeout(function () {
-      var byLevel = {}; Object.keys(autoKinds).forEach(function (k) { (byLevel[autoKinds[k]] = byLevel[autoKinds[k]] || []).push(k.split('@')[0]); }); autoKinds = {}; var retag = autoRetag; autoRetag = {};
+      var byLevel = {}; Object.keys(autoKinds).forEach(function (k) { (byLevel[autoKinds[k]] = byLevel[autoKinds[k]] || []).push(k.split('@')[0]); }); autoKinds = {}; var retag = autoRetag, adoptNow = autoAdopt; autoRetag = {}; autoAdopt = null;
       Object.keys(byLevel).forEach(function (levelId) {
         var lv = state.levels.filter(function (x) { return x.id === levelId; })[0]; if (!lv) return;
         var build = byLevel[levelId].filter(function (k) { return Object.keys(lv[KIND_BOX[k]] || {}).length; }), gone = byLevel[levelId].filter(function (k) { return !Object.keys(lv[KIND_BOX[k]] || {}).length; });
         gone.forEach(function (k) { // đã xóa hết phần tử loại này: bỏ nhóm tương ứng trong model
           if (k === 'slabs' || k === 'ceilings') call('plates_remove', {kind: k, level: levelId}); else call(k + '_remove', {level: levelId});
         });
-        if (build.length) { message('Đang dựng ' + build.join(', ') + '...'); call('build_all', {state: payload(), levels: [levelId], kinds: build, retag: retag}); }
+        if (build.length) { message('Đang dựng ' + build.join(', ') + '...'); call('build_all', Object.assign({state: payload(), levels: [levelId], kinds: build, retag: retag}, adoptNow ? {adopt: adoptNow} : {})); adoptNow = null; }
       });
     }, AUTO_BUILD_MS);
   }
@@ -986,6 +1112,30 @@
     }
     if (data && data.skipped && data.skipped.length) message('Bỏ qua: ' + data.skipped.join('; ') + '.');
   }
+  // Nhận đối tượng SketchUp thường (bản vá do Ruby tính): thêm loại mới, áp phần tử tự do vào dữ liệu, rồi dựng thay đối tượng gốc trong MỘT thao tác (giữ VGD ID).
+  function applySuImport(data) {
+    var patches = (data && data.patches) || [], adoptedByLevel = {}, adopt = {erase: [], refs: {}};
+    (data.adopted || []).forEach(function (a) { adopt.erase.push(a.su_id); adopt.refs[a.level + ':' + a.ref] = a.su_id; (adoptedByLevel[a.level] = adoptedByLevel[a.level] || {})[a.box] = true; });
+    mutate(function () {
+      var t = data.types || {};
+      (t.types || []).forEach(function (x) { state.types.push({id: x.id, name: x.name, w: x.w, d: x.d}); });
+      (t.beam_types || []).forEach(function (x) { state.beamTypes.push({id: x.id, name: x.name, w: x.w, h: x.h}); });
+      (t.wall_types || []).forEach(function (x) { state.wallTypes.push({id: x.id, name: x.name, t: x.t, layers: (x.layers || []).map(function (l) { return {fn: l.fn, t: l.t, material: l.material || '', color: l.color || null}; })}); });
+      (t.opening_types || []).forEach(function (x) { state.openingTypes.push({id: x.id, name: x.name, kind: x.kind, w: x.w, h: x.h, sill: x.sill}); });
+      patches.forEach(function (p) {
+        var lv = state.levels.filter(function (x) { return x.id === p.level; })[0]; if (!lv) return;
+        Object.keys(p.set || {}).forEach(function (box) { Object.keys(p.set[box]).forEach(function (ref) { lv[SU_BOX[box]][ref] = p.set[box][ref]; }); });
+      });
+    });
+    Object.keys(adoptedByLevel).forEach(function (id, idx) {
+      var lv = state.levels.filter(function (x) { return x.id === id; })[0], set = adoptedByLevel[id];
+      if (set.openings && Object.keys(lv.wallPicks).length) set.walls = true;
+      if (set.walls && Object.keys(lv.openingPicks).length) set.openings = true;
+      scheduleAutoBuild(Object.keys(set), id, null, idx === 0 ? adopt : null);
+    });
+    message('Đã nhận ' + (data.adopted || []).length + ' đối tượng SketchUp về Structure; đang dựng bản chuẩn thay đối tượng gốc.' + ((data.skipped || []).length ? ' Lưu ý: ' + data.skipped.slice(0, 3).join(' ') : ''));
+  }
+  function openSectionView(levelId, id) { switchTab('section'); window.VGDSection.open(levelId, id); }
   function startDrawTool(tool) {
     switchTab('plan'); window.VGDPlan.startDrawTool(tool);
   }
@@ -1006,13 +1156,13 @@
     if (apply) { list.push({name: freeName(dir, list.length), offset: off}); list.sort(function (a, b) { return a.offset - b.offset; }); state[dir] = fromAxes(list); }
     return null;
   }
-  window.VGDS = {startTool: startDrawTool, receive: receive, _state: state, mutate: mutate, undo: undo, redo: redo, history: function () { return {undo: undoStack.length, redo: redoStack.length}; },
+  window.VGDS = {scheduleCsv: schedCsv, startTool: startDrawTool, receive: receive, _state: state, mutate: mutate, undo: undo, redo: redo, history: function () { return {undo: undoStack.length, redo: redoStack.length}; },
     api: {level: currentLevel, isTop: isTop, rid: rid, toAxes: toAxes, allSpans: allSpans, allCells: allCells, allRefs: allRefs, wallOpenings: wallOpenings, addAxis: addAxis, modes: {x: MODE_X, y: MODE_Y, p: MODE_P}}};
-  window.VGDPlanEdit.init({state: state, api: window.VGDS.api, mutate: mutate, say: function (t) { window.VGDPlan.say(t); }, scale: function () { return window.VGDPlan.scale(); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, bounds: function () { return window.VGDPlan.bounds(); }});
+  window.VGDPlanEdit.init({state: state, api: window.VGDS.api, mutate: mutate, probe: plateProbe, say: function (t) { window.VGDPlan.say(t); }, scale: function () { return window.VGDPlan.scale(); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, bounds: function () { return window.VGDPlan.bounds(); }});
   window.VGDPlanNotes.init({state: state, api: window.VGDS.api, mutate: mutate, say: function (t) { window.VGDPlan.say(t); }, scale: function () { return window.VGDPlan.scale(); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); },
     promptText: function (w, initial, done) { window.VGDPlan.promptText(w, initial, done); }});
   // Công cụ vẽ kết cấu (plan_edit) và vẽ 2D / ghi chú (plan_notes) dùng chung một cổng vào cửa sổ mặt bằng: công cụ nào đang chọn thì nhận lệnh.
-  var drawParts = [window.VGDPlanEdit, window.VGDPlanNotes], drawCur = null;
+  var drawParts = [window.VGDPlanEdit, window.VGDPlanNotes, window.VGDPlanSection], drawCur = null;
   var drawTools = {
     handles: function (t) { return drawParts.some(function (x) { return x.handles(t); }); },
     activate: function (t) { drawCur = null; drawParts.forEach(function (x) { x.activate(t); if (!drawCur && x.handles(t)) drawCur = x; }); },
@@ -1024,17 +1174,25 @@
     move: function (w) { if (drawCur) drawCur.move(w); }, click: function (w) { if (drawCur) return drawCur.click(w); },
     hint: function () { return drawCur ? drawCur.hint() : ''; }, ghost: function () { return drawCur ? drawCur.ghost() : []; },
     typed: function (n, cur) { return drawCur && drawCur.typed ? drawCur.typed(n, cur) : false; },
+    flipDoor: function (t, ref, shift) { return window.VGDPlanEdit.flipDoor(t, ref, shift); },
     finish: function () { return drawCur && drawCur.finish ? drawCur.finish() : false; }, undoPoint: function () { return drawCur && drawCur.undoPoint ? drawCur.undoPoint() : false; },
-    propsFor: function (shape) { return shape.kind === 'note' ? window.VGDPlanNotes.propsFor(shape) : window.VGDPlanEdit.propsFor(shape); },
-    remove: function (list) { return window.VGDPlanEdit.remove(list) + window.VGDPlanNotes.remove(list); },
+    typeSelector: function (shape) { return shape.kind === 'note' || shape.kind === 'section' ? null : window.VGDPlanEdit.typeSelector(shape); },
+    propsFor: function (shape) { return shape.kind === 'section' ? window.VGDPlanSection.propsFor(shape) : shape.kind === 'note' ? window.VGDPlanNotes.propsFor(shape) : window.VGDPlanEdit.propsFor(shape); },
+    remove: function (list) { return window.VGDPlanEdit.remove(list) + window.VGDPlanNotes.remove(list) + window.VGDPlanSection.remove(list); },
     debug: function () { var d = window.VGDPlanEdit.debug(); d.notes = window.VGDPlanNotes.debug(); return d; }
   };
+  var axesOf = function () { return {x: toAxes('x').map(function (a) { return {name: a.name, pos: state.origin[0] + a.offset}; }), y: toAxes('y').map(function (a) { return {name: a.name, pos: state.origin[1] + a.offset}; })}; };
+  window.VGDSection.init({state: state, call: call, callSU: call, axes: axesOf});
+  window.VGDElevation.init({state: state, call: call, callSU: call, axes: axesOf});
+  window.VGDPlanSection.init({state: state, api: window.VGDS.api, mutate: mutate, say: function (t) { window.VGDPlan.say(t); }, snapPoint: function (w) { return window.VGDPlan.snapPoint(w); },
+    allSections: function () { var out = []; state.levels.forEach(function (l) { Object.keys(l.sections || {}).forEach(function (id) { out.push({id: id, level: l.id, name: l.sections[id].name}); }); }); return out; },
+    openSection: function (levelId, id) { openSectionView(levelId, id); }, sectionAdded: function () {}});
   window.VGDPlanModify.init({state: state, api: window.VGDS.api, mutate: mutate, scale: function () { return window.VGDPlan.scale(); }, bounds: function () { return window.VGDPlan.bounds(); }, shapeAt: function (w) { return window.VGDPlan.shapeAt(w); }, finish: function () { window.VGDPlan.finish(); },
     snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, lineAt: function (w) { return window.VGDPlan.lineAt(w); }, guides: function () { return window.VGDPlan.guides(); }});
   window.VGDPlan.init({onLevel: setLevelFromPlan, undo: undo, redo: redo, history: window.VGDS.history, edit: drawTools, notes: window.VGDPlanNotes, modify: window.VGDPlanModify, browser: window.VGDPlanBrowser,
-    callSU: call, refresh: function () { changed(); },
+    callSU: call, sections: window.VGDPlanSection, payload: payload, refresh: function () { changed(); },
     buildLevel: function () { message('Đang dựng tầng này vào model...'); call('build_all', {state: payload(), levels: [state.level]}); },
-    allKeys: function (levelId, kind) { var box = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', opening: 'openingPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', note: 'notes'}[kind], l = state.levels.filter(function (x) { return x.id === levelId; })[0]; return l && box ? Object.keys(l[box]) : []; }});
+    allKeys: function (levelId, kind) { var box = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', opening: 'openingPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', stair: 'stairPicks', note: 'notes'}[kind], l = state.levels.filter(function (x) { return x.id === levelId; })[0]; return l && box ? Object.keys(l[box]) : []; }});
   var BROWSER_PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', opening: 'openingPicks'};
   window.VGDPlanBrowser.init({state: state, currentLevel: function () { return state.level; }, axes: toAxes,
     openLevel: function (id) { if (id !== state.level) setLevelFromPlan(id); },
@@ -1122,6 +1280,7 @@
   });
   $('all-level-select').onchange = function () { state.level = $('all-level-select').value; state.selected = null; state.selectedBeam = null; state.selectedWall = null; renderColumnsTab(); renderBeamsTab(); renderWallsTab(); CELL_TABS.forEach(function (x) { renderCellTab(x); }); changed(); renderAllButtons(); };
   $('propose-level').onclick = function () { var p = payload(); p.scope = 'level'; call('propose', p); };
+  $('sched-kind').onchange = renderSchedule; $('sched-level').onchange = renderSchedule; $('sched-refresh').onclick = requestSchedule; $('sched-copy').onclick = copySchedule;
   $('propose-all').onclick = function () { var p = payload(); p.scope = 'all'; call('propose', p); };
   $('run-check').onclick = function () { call('check', payload()); };
   $('build-all-level').onclick = function () { call('build_all', {state: payload(), levels: [state.level]}); };

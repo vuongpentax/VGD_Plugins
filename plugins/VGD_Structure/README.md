@@ -1,4 +1,4 @@
-# VGD Structure 0.22.0-beta.1
+# VGD Structure 0.28.0-beta.8
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
@@ -138,12 +138,18 @@ Sàn và trần cũng: một bước hoàn tác, dựng lại thay nhóm cũ, c�
 - **VGD ID:** phần tử mới dựng nhận VGD ID từ BIM qua cầu nối; **dựng lại giữ nguyên ID** của đúng phần tử (theo mã vị trí), phần tử bị bỏ thì mất ID. Chưa cài BIM thì để trống, BIM gán sau bằng nút Gán VGD ID.
 - **Bảng khối lượng đúng:** mỗi phần tử ghi tên tầng, cao độ tầng, loại và kích thước chính xác để BIM lập bảng (thể tích cột, dầm, sàn; diện tích tường, trần), không đoán từ khối bao. Chọn các nhóm "Cột - Tầng 1", "Dầm - ..."... trong SketchUp rồi mở Bảng khối lượng của BIM: nhóm chứa và lưới trục không thành dòng, các phần tử bên trong là dòng.
 - **Sửa từ BIM:** chọn một dòng trong Bảng khối lượng của BIM, **Công cụ → Sửa bằng plugin dựng hình**: VGD Structure mở đúng tab, tầng và phần tử đó (cần VGD BIM cài và dòng là phần tử do plugin dựng). Khi đã sửa dữ liệu thì dựng lại tại tab tương ứng (ID giữ nguyên).
+- **Mặt cắt 2D từ HÌNH THẬT trong SketchUp (0.27):** công cụ **Mặt cắt** (SE, tab Chú thích): bấm hai điểm của đường cắt rồi bấm phía nhìn. Ruby cắt các mặt thật trong model (nhóm và component lồng nhau, phần tử plugin và đối tượng SketchUp thường), tô phần bị cắt theo loại, vẽ cạnh phía sau trong tầm nhìn, hiện cốt tầng và trục lưới. Bấm một phần để chọn đúng đối tượng trong SketchUp, và ngược lại. Chưa có hatch, che khuất nét, kích thước trên mặt cắt. Chỉ kiểm bằng SketchUp giả lập.
+- **Mặt đứng 2D từ HÌNH THẬT trong SketchUp (0.28):** tab **Mặt đứng**, chọn một trong bốn hướng **Nam, Bắc, Đông, Tây** (nhìn từ phía -Y, +Y, +X, -X của model; giả định hướng Bắc của model là +Y, mặc định của SketchUp). Không cắt, không giới hạn độ sâu. Các mặt được tô từ xa đến gần nên mặt phía trước che mặt phía sau, nhưng không che từng nét riêng. Cốt tầng và trục lưới hiện như mặt cắt; bấm để chọn đối tượng trong SketchUp, và chọn trong SketchUp thì mặt sáng lên. Không lưu dữ liệu: mỗi lần chọn hướng hoặc bấm **Làm mới** là đọc lại model. Chưa làm: che khuất từng nét, hatch, kích thước. Quá 40 000 mặt thì chỉ giữ các mặt gần nhất và báo cắt bớt. Chỉ kiểm bằng SketchUp giả lập.
+
+**Cầu thang (beta.8, chưa hoàn tất):** công cụ **Cầu thang** (phím SR, nhóm Thiết kế, nút trên thanh VGD STR và menu Vẽ trong SketchUp). Có ba dạng trong thanh tùy chọn: **Thẳng** (bấm đáy vế, đỉnh vế), **Chữ L** và **Chữ U** có **chiếu nghỉ** vuông (bấm đáy vế 1, đầu chiếu nghỉ, điểm cuối phía rẽ; mặc định Chữ L). Số bậc tự tính theo cao tầng (cao bậc tối đa 175 mm), hai vế chia đều số bậc, bản bậc không nhỏ hơn 260 mm. Cầu thang **không được đâm vào cột, dầm, tường** của tầng dưới: nếu đâm thì xem trước đỏ, báo rõ và không dựng. Dựng bằng nút Dựng (tag A. STAIR). **Tạm chưa làm:** lan can, khoét ô sàn tầng trên theo cầu thang, chọn cầu thang từ SketchUp, trạng thái lệch/khớp cho cầu thang. Chưa xác minh trong SketchUp thật.
+
+Thanh công cụ **VGD STR** có nút Lưới trục và 7 nút vẽ trực tiếp trong SketchUp (Cột, Dầm, Tường, Cửa đi, Cửa sổ, Sàn, Trần). Icon là SVG theo bộ icon VGD (`assets/icons/draw_*.svg`, khối 3D isometric theo kiểu Revit; quy tắc trong `shared/VGD_ICON_SYSTEM_RULES.md`; sinh bằng `python3 dev/make_draw_icons.py`). Chưa kiểm tra SVG có hiện đúng trên thanh công cụ SketchUp thật.
 
 Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **Tải lại code** nạp lại mã mà không cần mở lại (đóng và mở lại cửa sổ nếu đang mở).
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.22.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.28.0-beta.8.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

@@ -13,6 +13,7 @@ module Geom
   end
   class Vector3d
     attr_reader :x, :y, :z
+    def length; Math.sqrt(@x * @x + @y * @y + @z * @z); end
     def initialize(x, y, z); @x = x.to_f; @y = y.to_f; @z = z.to_f; end
   end
   class Transformation
@@ -25,11 +26,15 @@ module Geom
     # Ghép như SketchUp: áp `other` trước (xoay quanh gốc rồi dời), sau đó áp phép này.
     def *(other)
       cs = Math.cos(@angle); sn = Math.sin(@angle)
+      return Point3d.new(@vector.x + other.x * cs - other.y * sn, @vector.y + other.x * sn + other.y * cs, @vector.z + other.z) if other.is_a?(Point3d)
       ov = other.vector
       Transformation.new(Vector3d.new(@vector.x + ov.x * cs - ov.y * sn, @vector.y + ov.x * sn + ov.y * cs, @vector.z + ov.z), @angle + other.angle)
     end
     def origin; Point3d.new(@vector.x, @vector.y, @vector.z); end
     def xaxis; Vector3d.new(Math.cos(@angle), Math.sin(@angle), 0); end
+    def yaxis; Vector3d.new(-Math.sin(@angle), Math.cos(@angle), 0); end
+    def zaxis; @tilt ? Vector3d.new(Math.sin(@tilt), 0, Math.cos(@tilt)) : Vector3d.new(0, 0, 1); end
+    def with_tilt(deg); @tilt = deg * Math::PI / 180.0; self; end # giả lập đối tượng bị nghiêng
     def rotation_degrees; @angle * 180.0 / Math::PI; end
   end
 end
@@ -40,6 +45,10 @@ module Sketchup
     def alpha; @rgb[3] || 255; end
   end
   class Entity
+    def entityID; @entity_id ||= (Entity.next_id += 1); end
+    def valid?; true; end
+    class << self; attr_accessor :next_id; end
+    self.next_id = 1000
     def attrs; @attrs ||= {}; end
     def set_attribute(dict, key, value); (attrs[dict] ||= {})[key] = value; end
     def get_attribute(dict, key, default = nil); (attrs[dict] || {}).fetch(key, default); end
@@ -48,6 +57,10 @@ module Sketchup
     attr_accessor :layer
     attr_reader :from, :to
     def initialize(from, to); @from = from; @to = to; end
+    def soft?; false; end
+    def smooth?; false; end
+    def hidden?; false; end
+    def valid?; true; end
   end
   class Group < Entity
     attr_accessor :name, :layer, :material
@@ -88,7 +101,15 @@ module Sketchup
     def pushpull(distance); @height = distance; end
     def erase!; @erased = true; end
   end
+  class FakeBounds
+    attr_reader :width, :height, :depth, :center
+    def initialize(w, h, d, center); @width = w; @height = h; @depth = d; @center = center; end
+    def min; Geom::Point3d.new(@center.x - @width / 2.0, @center.y - @height / 2.0, @center.z - @depth / 2.0); end
+    def max; Geom::Point3d.new(@center.x + @width / 2.0, @center.y + @height / 2.0, @center.z + @depth / 2.0); end
+  end
   class ComponentDefinition < Entity
+    attr_accessor :fake_bounds
+    def bounds; @fake_bounds; end
     attr_reader :name, :entities
     def initialize(name); @name = name; @entities = FakeEntities.new; end
     def valid?; true; end
@@ -98,6 +119,8 @@ module Sketchup
     attr_reader :definition, :transformation
     def initialize(definition, transformation, parent = nil); @definition = definition; @transformation = transformation; @parent = parent; @valid = true; end
     def valid?; @valid; end
+    def locked?; false; end
+    attr_accessor :layer, :name
     def erase!; @valid = false; @parent.items.delete(self) if @parent; end
     # Giả lập người dùng dời / xoay thể hiện (Move, Rotate): dời thêm (dx, dy) mm và xoay thêm `deg` quanh gốc của nó.
     def fake_move(dx, dy, deg = 0)
@@ -105,6 +128,7 @@ module Sketchup
       @transformation = Geom::Transformation.new(Geom::Vector3d.new(v.x + dx.mm, v.y + dy.mm, v.z), @transformation.angle + deg * Math::PI / 180.0)
     end
   end
+  ComponentInstance = Instance
   class SelectionObserver; end
   # Vùng chọn giả lập: danh sách entity, có thể gắn observer (gọi lại khi đổi).
   class Selection
@@ -138,6 +162,10 @@ module Sketchup
     def draw_polyline(pts); @draw_calls << [:polyline, pts]; end
     def draw_points(pts, *rest); @draw_calls << [:points, pts]; end
     def draw(mode, pts); @draw_calls << [:draw, pts, mode, drawing_color]; end
+    # Kiểu nét (nét đứt "-", nét liền ""): ghi lại mọi lần đặt để test kiểm tra thứ tự.
+    def line_stipple=(value); @line_stipple = value; (@line_stipple_log ||= []) << value; end
+    def line_stipple; @line_stipple; end
+    def line_stipple_log; @line_stipple_log || []; end
   end
   class Definitions
     attr_reader :list

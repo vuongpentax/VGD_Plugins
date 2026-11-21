@@ -22,13 +22,13 @@ module VGD
               min, max = Geometry.bounds(poly)
               next({ref: o[:id], wall: w[:ref], dir: 'o', kind: o[:kind], type_id: o[:type_id], type_name: o[:type_name], w: o[:w], h: o[:h], sill: o[:sill], pos: o[:pos], flip: o[:flip],
                     thickness: w[:t], along: along.round(2), center: 0.0, origin: origin.map { |v| v.round(2) }, angle: w[:angle], poly: poly, min: min, max: max,
-                    z_bottom: (w[:z_bottom] + o[:z0]).round(2), z_top: (w[:z_bottom] + o[:z1]).round(2)})
+                    z_bottom: (w[:z_bottom] + o[:z0]).round(2), z_top: (w[:z_bottom] + o[:z1]).round(2)}.merge(o[:mirror] ? {mirror: true} : {}))
             end
             plan_min = w[:dir] == 'x' ? [along, w[:center] - w[:t] / 2.0] : [w[:center] - w[:t] / 2.0, along]
             plan_max = w[:dir] == 'x' ? [along + o[:w], w[:center] + w[:t] / 2.0] : [w[:center] + w[:t] / 2.0, along + o[:w]]
             {ref: o[:id], wall: w[:ref], dir: w[:dir], kind: o[:kind], type_id: o[:type_id], type_name: o[:type_name], w: o[:w], h: o[:h], sill: o[:sill], pos: o[:pos], flip: o[:flip],
              thickness: w[:t], along: along.round(2), center: w[:center], min: plan_min.map { |v| v.round(2) }, max: plan_max.map { |v| v.round(2) },
-             z_bottom: (w[:z_bottom] + o[:z0]).round(2), z_top: (w[:z_bottom] + o[:z1]).round(2)}
+             z_bottom: (w[:z_bottom] + o[:z0]).round(2), z_top: (w[:z_bottom] + o[:z1]).round(2)}.merge(o[:mirror] ? {mirror: true} : {})
           end
         end
         order = level['picks']['openings'].keys

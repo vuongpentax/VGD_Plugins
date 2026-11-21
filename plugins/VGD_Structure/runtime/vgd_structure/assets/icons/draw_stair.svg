@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="t">
+  <title id="t">VGD Structure · Cầu thang</title>
+  <g stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.0 13.33 L13.11 19.74 L13.11 11.53 L9.41 9.39 L9.41 12.13 L5.7 9.99 L5.7 12.73 L2.0 10.59 Z" fill="none"/>
+    <path d="M10.89 8.19 L22.0 14.61 L22.0 6.4 L18.3 4.26 L18.3 7.0 L14.59 4.86 L14.59 7.6 L10.89 5.46 Z" fill="none"/>
+    <path d="M10.89 8.19 L2.0 13.33 Z" fill="none"/>
+    <path d="M22.0 14.61 L13.11 19.74 Z" fill="none"/>
+    <path d="M22.0 6.4 L13.11 11.53 Z" fill="none"/>
+    <path d="M18.3 4.26 L9.41 9.39 Z" fill="none"/>
+    <path d="M18.3 7.0 L9.41 12.13 Z" fill="none"/>
+    <path d="M14.59 4.86 L5.7 9.99 Z" fill="none"/>
+    <path d="M14.59 7.6 L5.7 12.73 Z" fill="none"/>
+    <path d="M10.89 5.46 L2.0 10.59 Z" fill="none"/>
+  </g>
+  <g stroke="#B48963" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2.0 10.59 L5.7 12.73" fill="none"/>
+    <path d="M5.7 9.99 L9.41 12.13" fill="none"/>
+    <path d="M9.41 9.39 L13.11 11.53" fill="none"/>
+  </g>
+</svg>

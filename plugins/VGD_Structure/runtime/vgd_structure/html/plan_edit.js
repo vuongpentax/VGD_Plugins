@@ -4,9 +4,9 @@
   'use strict';
   var host = null, S = null, A = null;
   var GOOD = '#2F7BFF', BAD = '#E5484D', TOL_NODE = 14, TOL_COLUMN = 28, TOL_SPAN = 12, OPENING_GAP = 50;
-  var DESIGN = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'door', 'window'];
-  var PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', opening: 'openingPicks'};
-  var opt = {column: {type: '', x: 'auto', y: 'auto', mode: 'grid', rot: '0'}, beam: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, wall: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, door: {type: '', flip: '0'}, window: {type: '', flip: '0'}, grid: {dir: 'x'}, slab: {mode: 'grid', edges: 'free', part: 'outer'}, ceiling: {mode: 'grid', edges: 'free', part: 'outer'}};
+  var DESIGN = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'stair', 'door', 'window'];
+  var PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', opening: 'openingPicks', stair: 'stairPicks'};
+  var opt = {stair: {shape: 'L'}, column: {type: '', x: 'auto', y: 'auto', mode: 'grid', rot: '0'}, beam: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, wall: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, door: {type: '', hand: '0'}, window: {type: '', flip: '0'}, grid: {dir: 'x'}, slab: {mode: 'grid', edges: 'free', part: 'outer'}, ceiling: {mode: 'grid', edges: 'free', part: 'outer'}};
   var tool = null, chain = null, target = null, note = '', ring = null; // ring: đường bao / lỗ đang vẽ của sàn, trần đa giác {pts, part, host}
 
   function lvl() { return A.level(); }
@@ -53,13 +53,14 @@
   var MODE_VALUES = [['grid', 'Theo lưới (giao điểm / nhịp)'], ['free', 'Tự do (bắt điểm bất kỳ)']];
   var ROT_VALUES = [['0', '0°'], ['15', '15°'], ['30', '30°'], ['45', '45°'], ['60', '60°'], ['75', '75°'], ['90', '90°'], ['105', '105°'], ['120', '120°'], ['135', '135°'], ['150', '150°'], ['165', '165°']];
   function isPlate(t) { return t === 'slab' || t === 'ceiling'; }
-  function freeMode(t) { return !!(opt[t] && opt[t].mode === 'free' && (t === 'column' || t === 'beam' || t === 'wall' || isPlate(t))); }
+  function freeMode(t) { if (t === 'stair') return true; return !!(opt[t] && opt[t].mode === 'free' && (t === 'column' || t === 'beam' || t === 'wall' || isPlate(t))); }
   function rotRect(c, w, d, deg) { // hình chữ nhật w × d quanh tâm c, xoay deg độ ngược chiều kim đồng hồ
     var r = deg * Math.PI / 180, cs = Math.cos(r), sn = Math.sin(r);
     return [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]].map(function (p) { return [c[0] + p[0] * cs - p[1] * sn, c[1] + p[0] * sn + p[1] * cs]; });
   }
   function r1(v) { return Math.round(v * 10) / 10; }
   function options(t) {
+    if (t === 'stair') return [{id: 'shape', label: 'Dạng', values: [['straight', 'Thẳng'], ['L', 'Chữ L (có chiếu nghỉ)'], ['U', 'Chữ U (có chiếu nghỉ)']], value: stairShape()}];
     if (isPlate(t) && freeMode(t)) return [{id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'free'}, {id: 'part', label: 'Vẽ', values: [['outer', 'Đường bao'], ['hole', 'Lỗ khoét (điểm đầu nằm trong một ' + (t === 'slab' ? 'sàn' : 'trần') + ' đa giác)']], value: opt[t].part}, {id: 'edges', label: 'Cạnh', values: [['free', 'Tự do'], ['ortho', 'Ngang / dọc']], value: opt[t].edges}];
     if (freeMode(t)) {
       var head = [{id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'free'}, {id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}];
@@ -71,7 +72,7 @@
   function optionsGrid(t) {
     if (t === 'column') return [{id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}, {id: 'x', label: 'Vị trí X', values: modeList('x'), value: opt.column.x}, {id: 'y', label: 'Vị trí Y', values: modeList('y'), value: opt.column.y}];
     if (t === 'beam' || t === 'wall') return [{id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}, {id: 'p', label: 'Vị trí ngang', values: modeList('p'), value: opt[t].p}];
-    if (t === 'door' || t === 'window') return [{id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}, {id: 'flip', label: 'Cánh', values: [['0', 'Mặc định'], ['1', 'Đổi mặt']], value: opt[t].flip}];
+    if (t === 'door' || t === 'window') return [{id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}, t === 'door' ? {id: 'hand', label: 'Bản lề (Space đổi)', values: [['0', 'Đầu tường'], ['1', 'Cuối tường']], value: opt.door.hand} : {id: 'flip', label: 'Cánh', values: [['0', 'Mặc định'], ['1', 'Đổi mặt']], value: opt[t].flip}];
     if (t === 'grid') return [{id: 'dir', label: 'Loại trục', values: [['x', 'Trục đứng (đánh số)'], ['y', 'Trục ngang (đánh chữ)']], value: opt.grid.dir}];
     return [];
   }
@@ -87,7 +88,7 @@
   }
   function blocked(t) {
     if (t === 'slab' || t === 'grid') return '';
-    if (top()) return t === 'ceiling' ? 'Tầng trên cùng chỉ có sàn, không có trần.' : 'Tầng trên cùng chỉ có sàn (không có cột, dầm, tường, cửa).';
+    if (top()) return t === 'ceiling' ? 'Tầng trên cùng chỉ có sàn, không có trần.' : t === 'stair' ? 'Tầng trên cùng không có tầng trên để cầu thang đi lên.' : 'Tầng trên cùng chỉ có sàn (không có cột, dầm, tường, cửa).';
     return '';
   }
   function spansBetween(a, b) {
@@ -118,6 +119,33 @@
     });
     return best;
   }
+  // Phía của con trỏ so với tim tường: > 0 là phía +v (tường ngang: +Y, tường dọc: +X, tường xiên: pháp tuyến trái), < 0 là phía -v. Cửa đi mở về phía con trỏ như Revit.
+  function sideOf(wall, w) {
+    if (wall.dir === 'x') return w[1] - wall.center;
+    if (wall.dir === 'y') return w[0] - wall.center;
+    var len = wall.length, ux = (wall.b[0] - wall.a[0]) / len, uy = (wall.b[1] - wall.a[1]) / len;
+    return -(w[0] - wall.a[0]) * uy + (w[1] - wall.a[1]) * ux;
+  }
+  // Điểm theo (u dọc tường tính từ đầu tường, v vuông góc tim tường) trong tọa độ thế giới, cùng hệ với vẽ cửa trên mặt bằng.
+  function wallPoint(wall, u, v) {
+    if (wall.dir === 'x') return [wall.start + u, wall.center + v];
+    if (wall.dir === 'y') return [wall.center + v, wall.start + u];
+    var len = wall.length, ux = (wall.b[0] - wall.a[0]) / len, uy = (wall.b[1] - wall.a[1]) / len;
+    return [wall.a[0] + ux * u - uy * v, wall.a[1] + uy * u + ux * v];
+  }
+  // Cánh và cung quay của cửa đi (xem trước đúng hướng mở và bản lề sẽ dựng).
+  function swingGhost(wall, type, pos, flip, mirror, color) {
+    var w = type.w, dir = flip ? -1 : 1, hu = mirror ? pos + w / 2 : pos - w / 2, su = mirror ? -1 : 1, g = [], prev = null;
+    g.push({t: 'line', a: wallPoint(wall, hu, 0), b: wallPoint(wall, hu, dir * w), color: color, width: 2.5});
+    for (var k = 0; k <= 12; k++) { var a = k / 12 * Math.PI / 2, p = wallPoint(wall, hu + su * w * Math.cos(a), dir * w * Math.sin(a)); if (prev) g.push({t: 'line', a: prev, b: p, color: color, width: 1, dash: [3, 3]}); prev = p; }
+    return g;
+  }
+  // Space: đặt cửa đi thì đổi bản lề trái / phải; đang chọn một cửa thì đổi bản lề của cửa đó (Shift: đổi hướng mở). Trả về true nếu đã xử lý.
+  function flipDoor(currentTool, ref, shift) {
+    if (ref && lvl().openingPicks[ref]) { edit(function () { var e = lvl().openingPicks[ref]; if (shift) e.flip = !e.flip; else if (e.mirror) delete e.mirror; else e.mirror = true; }); return true; }
+    if (currentTool === 'door') { opt.door.hand = opt.door.hand === '1' ? '0' : '1'; note = 'Bản lề ở ' + (opt.door.hand === '1' ? 'cuối' : 'đầu') + ' tường.'; return true; }
+    return false;
+  }
   // Cửa: tâm cách đầu tường; kiểm tra như WallPlan.place_openings (trong tường, không quá cao, cách cửa khác >= 50 mm).
   function openingCheck(wall, type, pos) {
     if (!wall || !type) return 'Rê lên một tường đã chọn.';
@@ -135,7 +163,7 @@
   // ---- Vẽ TỰ DO (P4b-1): cột đặt tại điểm bất kỳ; dầm, tường chỉ ngang / dọc, đầu mút đúng điểm bấm ----
   function freePoint(w) { var s2 = host.snapPoint(w) || w; return [r1(s2[0]), r1(s2[1])]; }
   // Điểm cuối của dầm / tường tự do: tùy chọn "Hướng": thẳng ngang / dọc, hoặc đúng điểm bắt (xiên).
-  function freeEnd(from, w) { return opt[tool] && opt[tool].angle === 'free' ? freePoint(w) : orthoEnd(from, w); }
+  function freeEnd(from, w) { return tool === 'stair' || (opt[tool] && opt[tool].angle === 'free') ? freePoint(w) : orthoEnd(from, w); }
   function orthoEnd(from, w) { // điểm cuối cùng hàng hoặc cùng cột với điểm đầu (theo phương con trỏ lệch nhiều hơn)
     var p = freePoint(w), horizontal = Math.abs(p[0] - from[0]) >= Math.abs(p[1] - from[1]);
     return horizontal ? [p[0], from[1]] : [from[0], p[1]];
@@ -235,7 +263,55 @@
     if (!chain) { target = {free: freePoint(w), start: true}; return; }
     var end = freeEnd(chain.p, w); target = lengthOf(chain.p, end) >= 100 ? {free: end, end: true} : {free: end, tooShort: true};
   }
+  // Cầu thang (thẳng, chữ L, chữ U có chiếu nghỉ). Dạng thẳng: bấm đáy vế rồi đỉnh vế. Dạng L / U: bấm đáy vế 1, đầu chiếu nghỉ (cuối vế 1), rồi điểm cuối
+  // (phía rẽ). Số bậc, va chạm do Ruby tính (StairPlan / StairPlace). Tối thiểu 600 mm mỗi vế.
+  function stairType() { return (S.stairTypes && S.stairTypes[0]) || null; }
+  function stairShape() { return (opt.stair && opt.stair.shape) || 'straight'; }
+  function stairClick(w) {
+    freeMove(w); if (!target) return;
+    if (!chain) { chain = {free: true, p: target.free, ref: 'tự do'}; return; }
+    var a = chain.p, b = target.free, shape = stairShape();
+    if (shape === 'straight') {
+      if (lengthOf(a, b) < 600) { note = 'Cầu thang tối thiểu 600 mm.'; return; }
+      addStair(a, null, b, shape); note = 'Đã thêm cầu thang thẳng dài ' + lengthOf(a, b) + ' mm (Ruby kiểm tra không đâm vào dầm, tường, cột).'; chain = null; return;
+    }
+    if (!chain.mid) {
+      if (lengthOf(a, b) < 600) { note = 'Vế 1 tối thiểu 600 mm.'; return; }
+      chain.mid = b; note = 'Bấm điểm cuối (phía rẽ) của cầu thang chữ ' + shape + '.'; return;
+    }
+    var mid = chain.mid;
+    if (stairOutline(a, mid, b, shape) === null) { note = 'Điểm cuối phải nằm về một phía, không thẳng hàng với vế 1.'; return; }
+    addStair(a, mid, b, shape); note = 'Đã thêm cầu thang chữ ' + shape + ' (Ruby kiểm tra số bậc và va chạm).'; chain = null;
+  }
+  function addStair(a, mid, b, shape) {
+    var id = A.rid('st_'), type = stairType(), pick = {shape: shape, free: {a: a.slice(), b: b.slice()}};
+    if (mid) pick.free.c = mid.slice();
+    if (type) pick.type = type.id;
+    host.mutate(function () { lvl()[PICKS.stair][id] = pick; });
+    return id;
+  }
+  // Mặt bằng (đa giác) của cầu thang đang vẽ, cùng quy ước với StairPlan (Ruby). null nếu không đủ kích thước.
+  function stairOutline(a, mid, b, shape) {
+    var t = stairType(), w = t ? t.width : 1000, half = w / 2;
+    var L1 = Math.hypot(mid[0] - a[0], mid[1] - a[1]); if (L1 < 1) return null;
+    var ux = (mid[0] - a[0]) / L1, uy = (mid[1] - a[1]) / L1, nx = -uy, ny = ux;
+    var tSide = (b[0] - a[0]) * nx + (b[1] - a[1]) * ny;
+    if (Math.abs(tSide) < half + 600) return null;
+    var sign = tSide > 0 ? 1 : -1, L2 = shape === 'L' ? Math.abs(tSide) - half : L1;
+    if (L2 < 600) return null;
+    var pt = function (s, tt) { tt = sign * tt; return [a[0] + ux * s + nx * tt, a[1] + uy * s + ny * tt]; };
+    if (shape === 'L') return [pt(0, -half), pt(L1 + w, -half), pt(L1 + w, half + L2), pt(L1, half + L2), pt(L1, half), pt(0, half)];
+    return [pt(0, -half), pt(L1 + w, -half), pt(L1 + w, 3 * half), pt(0, 3 * half)];
+  }
+  // Dải bề rộng vế theo loại cầu thang đang dùng (xem trước trên mặt bằng).
+  function stairFootprint(a, b) {
+    var t = stairType(), width = t ? t.width : 1000, L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (L < 1) return null;
+    var ux = (b[0] - a[0]) / L, uy = (b[1] - a[1]) / L, nx = -uy * width / 2, ny = ux * width / 2;
+    return [[a[0] + nx, a[1] + ny], [b[0] + nx, b[1] + ny], [b[0] - nx, b[1] - ny], [a[0] - nx, a[1] - ny]];
+  }
   function freeClick(w) {
+    if (tool === 'stair') { stairClick(w); return; }
     if (isPlate(tool)) { plateClick(w); return; }
     freeMove(w); if (!target) return;
     if (tool === 'column') { var id = addFreeColumn(target.free); note = 'Đã đặt cột tự do tại ' + target.free[0] + ', ' + target.free[1] + ' mm.'; return id; }
@@ -275,7 +351,7 @@
     if (tool === 'slab' || tool === 'ceiling') { var c = cellAt(w); if (c) target = {cell: c, exists: !!lvl()[PICKS[tool]][c.ref]}; return; }
     if (tool === 'door' || tool === 'window') {
       var wall = wallAt(w), type = typeById(tool, currentType(tool));
-      if (wall) { var pos = openingPos(wall, w); target = {wall: wall, type: type, pos: pos, error: openingCheck(wall, type, pos)}; }
+      if (wall) { var pos = openingPos(wall, w); target = {wall: wall, type: type, pos: pos, flip: tool === 'door' ? sideOf(wall, w) < 0 : opt[tool].flip === '1', error: openingCheck(wall, type, pos)}; }
     }
   }
 
@@ -318,7 +394,7 @@
     if (tool === 'door' || tool === 'window') {
       if (target.error) { note = target.error; return; }
       var id = A.rid('op_');
-      host.mutate(function () { lvl().openingPicks[id] = {wall: target.wall.ref, type: target.type.id, pos: target.pos + (target.wall.join_shift || 0), flip: opt[tool].flip === '1'}; });
+      host.mutate(function () { lvl().openingPicks[id] = {wall: target.wall.ref, type: target.type.id, pos: target.pos + (target.wall.join_shift || 0), flip: !!target.flip}; if (tool === 'door' && opt.door.hand === '1') lvl().openingPicks[id].mirror = true; });
       note = 'Đã đặt ' + (tool === 'door' ? 'cửa đi' : 'cửa sổ') + ' ' + target.type.name + ' trên tường ' + target.wall.ref + ', tâm cách đầu tường ' + target.pos + ' mm.';
     }
   }
@@ -328,6 +404,7 @@
     if (note) return note;
     var why = blocked(tool); if (why) return why;
     if (freeMode(tool)) {
+      if (tool === 'stair') return !chain ? 'Cầu thang: bấm đáy vế (điểm đầu).' : chain.mid ? 'Cầu thang chữ ' + stairShape() + ': bấm điểm cuối (phía rẽ). Esc hủy.' : stairShape() === 'straight' ? 'Cầu thang thẳng: bấm đỉnh vế (tối thiểu 600 mm). Esc hủy.' : 'Cầu thang chữ ' + stairShape() + ': bấm đầu chiếu nghỉ (cuối vế 1). Esc hủy.';
       if (isPlate(tool)) {
         var pn = tool === 'slab' ? 'Sàn' : 'Trần';
         if (!ring) return pn + ' đa giác: bấm từng đỉnh của ' + (opt[tool].part === 'hole' ? 'LỖ (đỉnh đầu nằm trong một ' + pn.toLowerCase() + ' đa giác)' : 'đường bao') + '; bấm lại đỉnh đầu hoặc Enter để khép; Backspace bỏ đỉnh cuối; Esc hủy.';
@@ -364,7 +441,7 @@
       if (isPlate(tool)) {
         var pts = (ring ? ring.pts : []).slice();
         if (target && target.free && !target.close) pts.push(target.free);
-        if (pts.length >= 3) g.push({t: 'poly', poly: pts, color: GOOD, alpha: 0.18});
+        if (pts.length >= 3) g.push({t: 'poly', poly: pts, color: GOOD, alpha: 0.18, xray: tool === 'slab'});
         for (var q = 0; q + 1 < pts.length; q++) g.push({t: 'line', a: pts[q], b: pts[q + 1], color: GOOD, width: 3});
         if (target && target.close && ring) g.push({t: 'line', a: ring.pts[ring.pts.length - 1], b: ring.pts[0], color: GOOD, width: 3});
         (ring ? ring.pts : []).forEach(function (pp) { g.push({t: 'dot', p: pp, color: GOOD, r: 4}); });
@@ -376,6 +453,7 @@
           g.push({t: 'poly', poly: rotRect(c, ty.w, ty.d, Number(opt.column.rot) || 0), color: GOOD, alpha: 0.3}); g.push({t: 'dot', p: c, color: GOOD, r: 5}); }
         return g;
       }
+      if (tool === 'stair' && chain && target && target.free) { var fp = chain.mid ? stairOutline(chain.p, chain.mid, target.free, stairShape()) : (stairShape() === 'straight' ? stairFootprint(chain.p, target.free) : null); if (fp) g.push({t: 'poly', poly: fp, color: GOOD, alpha: 0.2}); }
       if (chain) { g.push({t: 'dot', p: chain.p, color: GOOD, r: 5}); }
       if (target && target.free) {
         if (chain) { g.push(solid({t: 'line', a: chain.p, b: target.free, color: target.tooShort ? BAD : GOOD, width: 5, alpha: 0.5}, tool)); if (target.end) g.push({t: 'text', p: target.free, text: lengthOf(chain.p, target.free) + ' mm'}); }
@@ -398,17 +476,24 @@
       else if (target.node) g.push({t: 'dot', p: [target.node.x, target.node.y], color: GOOD, r: 6});
       else if (target.span) { var sp = target.span; g.push(solid({t: 'line', a: sp.dir === 'x' ? [sp.a, sp.axis] : [sp.axis, sp.a], b: sp.dir === 'x' ? [sp.b, sp.axis] : [sp.axis, sp.b], color: target.exists ? BAD : GOOD, width: 5, alpha: 0.5}, tool)); }
     } else if (tool === 'slab' || tool === 'ceiling') {
-      var c = target.cell; g.push({t: 'poly', poly: [[c.x0, c.y0], [c.x1, c.y0], [c.x1, c.y1], [c.x0, c.y1]], color: target.exists ? BAD : GOOD, alpha: 0.2});
+      var c = target.cell, key = tool + 's', real, sec = S.preview && S.preview[key];
+      // Hình THỰC TẾ sẽ dựng (lùi theo dầm, cột, tường): ô đã chọn lấy từ kết quả xem trước; ô chưa chọn nhờ Ruby tính (có thể chưa kịp: tạm hiện cả ô nét đứt).
+      if (target.exists) { var it = sec && sec.items.filter(function (x) { return x.ref === c.ref; })[0]; real = it && it.polygon; }
+      else if (host.probe) real = host.probe(key, lvl().id, c.ref);
+      var full = [[c.x0, c.y0], [c.x1, c.y0], [c.x1, c.y1], [c.x0, c.y1]], unknown = !real && real !== false;
+      g.push({t: 'poly', poly: real || full, color: target.exists || real === false ? BAD : GOOD, alpha: unknown ? 0.08 : 0.2, dash: unknown ? [6, 4] : undefined, xray: tool === 'slab'});
     } else if (target.wall && target.type) {
       var wl = target.wall, along = wl.start + target.pos - target.type.w / 2, h = wl.dir === 'x';
       if (wl.dir === 'o') {
         var ux = (wl.b[0] - wl.a[0]) / wl.length, uy = (wl.b[1] - wl.a[1]) / wl.length, u0 = target.pos - target.type.w / 2, u1 = target.pos + target.type.w / 2, hv = wl.t / 2;
         var at = function (u, v) { return [wl.a[0] + ux * u - uy * v, wl.a[1] + uy * u + ux * v]; };
         g.push({t: 'poly', poly: [at(u0, -hv), at(u1, -hv), at(u1, hv), at(u0, hv)], color: target.error ? BAD : GOOD, alpha: 0.35});
+        if (tool === 'door') g = g.concat(swingGhost(wl, target.type, target.pos, target.flip, opt.door.hand === '1', target.error ? BAD : GOOD));
         return g;
       }
       var min = h ? [along, wl.min[1]] : [wl.min[0], along], max = h ? [along + target.type.w, wl.max[1]] : [wl.max[0], along + target.type.w];
       g.push({t: 'poly', poly: [[min[0], min[1]], [max[0], min[1]], [max[0], max[1]], [min[0], max[1]]], color: target.error ? BAD : GOOD, alpha: 0.35});
+      if (tool === 'door') g = g.concat(swingGhost(wl, target.type, target.pos, target.flip, opt.door.hand === '1', target.error ? BAD : GOOD));
     }
     return g;
   }
@@ -491,7 +576,8 @@
       var kind = (typeById('door', pick.type) ? 'door' : 'window');
       out.push(field('type', 'Loại', 'select', typeValues(kind), pick.type, function (v) { edit(function () { pick.type = v; }); }),
                field('pos', 'Tâm cách đầu tường (mm)', 'number', null, pick.pos, function (v) { if (isFinite(v)) edit(function () { pick.pos = v; }); }),
-               field('flip', 'Đổi mặt cánh', 'checkbox', null, !!pick.flip, function (v) { edit(function () { pick.flip = !!v; }); }));
+               field('flip', kind === 'door' ? 'Đổi hướng mở (sang phía kia của tường)' : 'Đổi mặt cánh', 'checkbox', null, !!pick.flip, function (v) { edit(function () { pick.flip = !!v; }); }));
+      if (kind === 'door') out.push(field('mirror', 'Bản lề ở cuối cửa (trái ↔ phải)', 'checkbox', null, !!pick.mirror, function (v) { edit(function () { if (v) pick.mirror = true; else delete pick.mirror; }); }));
     }
     return out;
   }
@@ -515,6 +601,29 @@
       n += here; if (here) floors++;
     });
     return [n, floors];
+  }
+  // Type Selector kiểu Revit (ô chọn loại ở đầu bảng Thuộc tính): đổi loại của phần tử đang chọn, nhân đôi loại. null nếu phần tử không có loại.
+  var TYPE_PREFIX = {column: 'ct_', beam: 'bt_', wall: 'wt_', opening: 'ot_'}, TYPE_MAX = 50, NAME_MAX = 20;
+  function typeSelector(shape) {
+    var spec = TYPE_SPECS[shape.kind], l = lvl(), box = PICKS[shape.kind] && l[PICKS[shape.kind]], pick = box && box[shape.ref];
+    if (!spec || !pick) return null;
+    var id = shape.kind === 'opening' ? pick.type : window.VGDPlanBrowser.effectiveType(shape.kind, l, pick), list = spec.list(), type = list.filter(function (t) { return t.id === id; })[0];
+    if (!type) return null;
+    var sameKind = function (t) { return shape.kind !== 'opening' || t.kind === type.kind; };
+    var label = function (t) { return t.name + (shape.kind === 'column' ? ' (' + t.w + '×' + t.d + ')' : shape.kind === 'beam' ? ' (' + t.w + '×' + t.h + ')' : shape.kind === 'wall' ? ' (dày ' + t.t + ')' : ' (' + t.w + '×' + t.h + ')'); };
+    return {
+      value: id, values: list.filter(sameKind).map(function (t) { return [t.id, label(t)]; }),
+      apply: function (v) { if (v !== id) edit(function () { pick.type = v; }); },
+      canDuplicate: list.length < TYPE_MAX,
+      duplicate: function () {
+        if (list.length >= TYPE_MAX) { host.say('Tối đa ' + TYPE_MAX + ' loại.'); return; }
+        var names = list.map(function (t) { return t.name.toLowerCase(); }), n = 2, name, base = type.name.replace(/ \(\d+\)$/, ''); // nhân đôi một bản sao thì đánh số tiếp, không chồng thêm hậu tố
+        do { var suffix = ' (' + n + ')'; name = base.slice(0, NAME_MAX - suffix.length) + suffix; n++; } while (names.indexOf(name.toLowerCase()) >= 0);
+        var copy = JSON.parse(JSON.stringify(type)); copy.id = A.rid(TYPE_PREFIX[shape.kind]); copy.name = name;
+        edit(function () { list.push(copy); pick.type = copy.id; });
+        host.say('Đã nhân đôi loại thành “' + name + '” và gán cho phần tử này; sửa kích thước ở mục Thuộc tính của loại.');
+      }
+    };
   }
   function typeFields(shape, pick) {
     var spec = TYPE_SPECS[shape.kind]; if (!spec || !pick) return [];
@@ -565,7 +674,7 @@
   window.VGDPlanEdit = {
     init: function (h) { host = h; S = h.state; A = h.api; },
     handles: handles, activate: activate, cancel: cancel, busy: busy, options: options, setOption: setOption, freeMode: freeMode, typed: typed, finish: finish, undoPoint: undoPoint,
-    move: move, click: click, hint: hint, ghost: ghost, remove: remove, propsFor: propsFor,
+    typeSelector: typeSelector, flipDoor: flipDoor, move: move, click: click, hint: hint, ghost: ghost, remove: remove, propsFor: propsFor,
     debug: function () { return {tool: tool, chain: chain && chain.ref, chainPoint: chain && chain.p, freeTarget: target && target.free, target: target && {ref: target.node && target.node.ref, end: target.end && target.end.ref, refs: target.refs, span: target.span && target.span.ref, cell: target.cell && target.cell.ref, exists: target.exists, error: target.error, pos: target.pos}, note: note, opt: JSON.parse(JSON.stringify(opt))}; }
   };
 })();

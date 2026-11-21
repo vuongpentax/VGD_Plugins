@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="t">
+  <title id="t">VGD Structure · Trần</title>
+  <g stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.57 5.57 L22.0 12.16 L13.43 17.11 L2.0 10.52 Z" fill="none"/>
+    <path d="M22.0 13.48 L13.43 18.43 L13.43 17.11 L22.0 12.16 Z" fill="none"/>
+    <path d="M2.0 11.84 L13.43 18.43 L13.43 17.11 L2.0 10.52 Z" fill="none"/>
+  </g>
+  <g stroke="#B48963" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16.29 8.87 L7.71 13.81" fill="none"/>
+    <path d="M6.29 8.04 L17.71 14.64" fill="none"/>
+  </g>
+</svg>

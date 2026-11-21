@@ -18,12 +18,15 @@
   <button type="button" role="tab" data-tab="grid" aria-selected="true">Lưới trục</button>
   <button type="button" role="tab" data-tab="levels" aria-selected="false">Tầng và loại cột</button>
   <button type="button" role="tab" data-tab="plan" aria-selected="false">Mặt bằng</button>
+  <button type="button" role="tab" data-tab="section" aria-selected="false">Mặt cắt</button>
+  <button type="button" role="tab" data-tab="elevation" aria-selected="false">Mặt đứng</button>
   <button type="button" role="tab" data-tab="columns" aria-selected="false">Cột</button>
   <button type="button" role="tab" data-tab="beams" aria-selected="false">Dầm</button>
   <button type="button" role="tab" data-tab="walls" aria-selected="false">Tường</button>
   <button type="button" role="tab" data-tab="openings" aria-selected="false">Cửa</button>
   <button type="button" role="tab" data-tab="slabs" aria-selected="false">Sàn</button>
   <button type="button" role="tab" data-tab="ceilings" aria-selected="false">Trần</button>
+  <button type="button" role="tab" data-tab="schedule" aria-selected="false">Thống kê</button>
   <button type="button" role="tab" data-tab="all" aria-selected="false">Tổng hợp và dựng</button>
 </nav>
 <main id="tab-grid" class="tab">
@@ -99,6 +102,7 @@
     <fieldset>
       <legend>Tầng (mỗi tầng riêng, cao độ tuyệt đối theo trục Z của model)</legend>
       <table class="axes" id="levels-table"></table>
+      <div id="level-layers-editor" class="layers-editor" hidden></div>
       <button type="button" class="add" id="add-level">+ Thêm tầng</button>
       <p class="muted small">Cao độ là mặt trên sàn của tầng. Cột tầng này chạy từ mặt sàn lên đáy sàn tầng kế trên. Tầng trên cùng (đỉnh nhà, mái) chỉ có sàn, không có cột.</p>
     </fieldset>
@@ -114,6 +118,7 @@
     <aside class="pv-props" id="pv-props" aria-label="Thuộc tính"></aside>
     <div class="pv-body"><canvas id="pv-canvas" tabindex="0" role="img" aria-label="Mặt bằng tầng đang chọn"></canvas></div>
   </div>
+  <div class="pv-viewbar" id="pv-viewbar" role="toolbar" aria-label="Điều khiển khung nhìn"></div>
   <div class="pv-status"><span id="pv-hint"></span><span id="pv-xy"></span><span id="pv-zoom"></span><input id="pv-vcb" type="text" placeholder="Gõ số + Enter" aria-label="Ô nhập số"></div>
 </main>
 <main id="tab-columns" class="tab" hidden>
@@ -360,11 +365,53 @@
   </section>
 </main>
 <footer><div id="message" role="status" aria-live="polite">Sẵn sàng.</div></footer>
+<main id="tab-section" class="tab sec-tab" hidden>
+  <div class="sec-bar">
+    <label>Mặt cắt <select id="sec-select" aria-label="Chọn mặt cắt"></select></label>
+    <button type="button" id="sec-refresh" title="Dựng lại mặt cắt từ hình hiện tại trong SketchUp">Làm mới</button>
+    <button type="button" id="sec-fit" title="Vừa khung">Vừa khung</button>
+    <span id="sec-status" class="muted small" aria-live="polite">Chọn một mặt cắt.</span>
+  </div>
+  <div class="sec-body"><canvas id="sec-canvas" tabindex="0" role="img" aria-label="Mặt cắt 2D"></canvas></div>
+</main>
+<main id="tab-elevation" class="tab sec-tab" hidden>
+  <div class="sec-bar">
+    <span id="elv-dirs" class="elv-dirs" role="group" aria-label="Hướng nhìn mặt đứng">
+      <button type="button" data-dir="south" aria-pressed="false" title="Nhìn từ phía Nam (từ -Y)">Nam</button>
+      <button type="button" data-dir="north" aria-pressed="false" title="Nhìn từ phía Bắc (từ +Y)">Bắc</button>
+      <button type="button" data-dir="east" aria-pressed="false" title="Nhìn từ phía Đông (từ +X)">Đông</button>
+      <button type="button" data-dir="west" aria-pressed="false" title="Nhìn từ phía Tây (từ -X)">Tây</button>
+    </span>
+    <button type="button" id="elv-refresh" title="Dựng lại mặt đứng từ hình hiện tại trong SketchUp">Làm mới</button>
+    <button type="button" id="elv-fit" title="Vừa khung">Vừa khung</button>
+    <span id="elv-status" class="muted small" aria-live="polite">Chọn hướng nhìn: Nam, Bắc, Đông hoặc Tây.</span>
+  </div>
+  <div class="sec-body"><canvas id="elv-canvas" tabindex="0" role="img" aria-label="Mặt đứng 2D"></canvas></div>
+</main>
+<main id="tab-schedule" class="tab" hidden>
+  <section class="form wide" aria-label="Bảng thống kê">
+    <fieldset>
+      <legend>Bảng thống kê (Schedule): số lượng, kích thước, dài, diện tích, thể tích theo tầng và loại</legend>
+      <div class="actions">
+        <label>Loại <select id="sched-kind"></select></label>
+        <label>Tầng <select id="sched-level"></select></label>
+        <button type="button" id="sched-refresh">Làm mới</button>
+        <button type="button" id="sched-copy">Sao chép (dán vào Excel)</button>
+      </div>
+      <p class="muted small">Số liệu tính từ cùng kế hoạch dựng (đã trừ lỗ cửa, đã lùi sàn theo dầm, cột), không cần dựng vào model trước. Chỉ gồm phần tử đã chọn.</p>
+      <table class="axes sched" id="sched-table"></table>
+      <p id="sched-note" class="summary" aria-live="polite"></p>
+    </fieldset>
+  </section>
+</main>
 <script src="plan_edit.js"></script>
 <script src="plan_notes.js"></script>
 <script src="plan_modify.js"></script>
+<script src="plan_section.js"></script>
 <script src="plan_browser.js"></script>
 <script src="plan_view.js"></script>
+<script src="section_view.js"></script>
+<script src="elevation_view.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

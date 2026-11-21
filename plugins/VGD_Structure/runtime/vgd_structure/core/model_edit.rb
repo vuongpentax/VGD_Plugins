@@ -142,6 +142,7 @@ module VGD
           if reversed # hai đầu đổi chỗ khi chuẩn hóa: vị trí cửa tính lại từ đầu mới, đổi mặt cánh
             out['pos'] = (length - e['pos']).round(1)
             out['flip'] = !e['flip']
+            e['mirror'] ? out.delete('mirror') : out['mirror'] = true # đầu đầu và đầu cuối đổi chỗ: bản lề cũng đổi bên
           end
           out
         end

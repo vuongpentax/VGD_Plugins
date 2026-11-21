@@ -9,15 +9,23 @@ module VGD
       PATTERN = /\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/
 
       # Phần tử bị đổi mã vị trí do sửa trong SketchUp (mã cũ => mã mới, cả hai dạng 'mã tầng:mã'): `harvest` khai ID dưới mã mới để dựng lại giữ ID.
-      def self.renaming(map)
+      def self.renaming(map, adopted = nil)
         @renames = map.is_a?(Hash) ? map : {}
+        @adopted = adopted.is_a?(Hash) ? adopted : {} # {'mã tầng:mã' => VGD ID của đối tượng SketchUp vừa được nhận}
         yield
       ensure
         @renames = {}
+        @adopted = {}
       end
 
       # {mã vị trí (VGD_BIM_SOURCE.ref) => VGD ID} của các phần tử trong nhóm sắp bị thay.
       def self.harvest(group)
+        kept = harvest_group(group)
+        (@adopted || {}).each { |ref, id| kept[ref] = id if id.is_a?(String) && id.match?(PATTERN) }
+        kept
+      end
+
+      def self.harvest_group(group)
         return {} unless group
         group.entities.to_a.each_with_object({}) do |entity, out|
           next unless entity.respond_to?(:get_attribute)

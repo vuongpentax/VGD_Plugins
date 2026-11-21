@@ -127,7 +127,7 @@ module VGD
             elsif valid.last && x0 < valid.last[:x1] + MIN_OPENING_GAP - EPS
               issues << "#{label}: chồng hoặc sát cửa #{valid.last[:id]} (cần cách nhau ít nhất #{MIN_OPENING_GAP.to_i} mm), bỏ qua."
             else
-              valid << {id: id, kind: type['kind'], type_id: type['id'], type_name: type['name'], w: type['w'], h: type['h'], sill: type['sill'], pos: e['pos'], flip: e['flip'], x0: x0.round(2), x1: x1.round(2), z0: z0, z1: z1.round(2)}
+              valid << {id: id, kind: type['kind'], type_id: type['id'], type_name: type['name'], w: type['w'], h: type['h'], sill: type['sill'], pos: e['pos'], flip: e['flip'], x0: x0.round(2), x1: x1.round(2), z0: z0, z1: z1.round(2)}.merge(e['mirror'] ? {mirror: true} : {})
             end
           end
           item[:openings] = valid

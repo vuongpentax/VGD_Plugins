@@ -27,7 +27,7 @@ module UI
 end
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
 module VGD; module Structure; VERSION = '9.9.9'; end; end
-%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/levels core/column_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/slab_plan core/ceiling_plan core/proposal core/checker core/model_edit core/state core/preview model_sync edit_sync model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder opening_builder plate_builder all_builder su_tools panel].each { |f| require File.join(ROOT, f) }
+%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/stair_types core/stair_plan core/stair_place core/layer_list core/levels core/column_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/slab_plan core/ceiling_plan core/proposal core/checker core/model_edit core/sketchup_import core/state core/preview model_sync edit_sync su_scan model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder opening_builder plate_builder stair_builder all_builder su_tools panel].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 MS = S::ModelSync
 D = S::Schema::DICTIONARY
@@ -97,6 +97,35 @@ call(dlg, 'su_ghost', {'z' => 0, 'items' => bad_boxes + [box]})
 ok('khối sai (đỉnh không cao hơn đáy, thiếu / sai cao độ, dưới 3 đỉnh, quá 200 đỉnh, tọa độ chữ) bị bỏ, khối đúng giữ', panel.ghost_items.size == 1)
 call(dlg, 'su_ghost', {'z' => 0, 'items' => []})
 
+# ---- Xem trước đúng hình sẽ dựng (sàn, trần): ô chưa chọn ----
+pst = state_with(cols: {'1-A' => {}, '2-A' => {}}, beams: {'x:A:1-2' => {}}, walls: {'x:B:1-2' => {}, 'y:1:A-B' => {}}, slabs: {}, ceilings: {})
+cell = '1-2/A-B'
+full_c = S::Preview.probe('state' => pst, 'level' => LV, 'kind' => 'ceilings', 'ref' => cell)
+picked = deep(pst); picked['levels'][0]['picks']['ceilings'] = {cell => {}}
+built_c = S::CeilingPlan.plan(S::State.normalize!(deep(picked))['grid'], S::State.normalize!(deep(picked))['types'], S::State.normalize!(deep(picked))['beam_types'], S::State.normalize!(deep(picked))['wall_types'], S::State.normalize!(deep(picked))['levels'], LV, S::State.normalize!(deep(picked))['opening_types'])[:items].find { |i| i[:ref] == cell }
+ok('xem trước ô trần chưa chọn = đúng hình trần sẽ dựng nếu chọn ô đó (lùi theo tường)', full_c && built_c && full_c[:polygon] == built_c[:polygon] && full_c[:polygon].size >= 4)
+area = ->(poly) { poly.each_with_index.sum { |p, i| q = poly[(i + 1) % poly.size]; p[0] * q[1] - q[0] * p[1] }.abs / 2.0 }
+cells = S::Grid.cells(pst['grid'])
+whole = cells.find { |c| c[:ref] == cell }
+ok('hình trần thực tế nhỏ hơn cả ô (đã lùi theo tường)', whole && area.call(full_c[:polygon]) < whole[:width] * whole[:depth] - 1)
+slab_probe = S::Preview.probe('state' => pst, 'level' => LV, 'kind' => 'slabs', 'ref' => cell)
+ok('xem trước ô sàn chưa chọn có đa giác', slab_probe && slab_probe[:polygon].size >= 4)
+ok('probe không đổi dữ liệu đưa vào', pst['levels'][0]['picks']['ceilings'].empty? && pst['levels'][0]['picks']['slabs'].empty?)
+bad_probe = [{'state' => pst, 'level' => LV, 'kind' => 'beams', 'ref' => cell}, {'state' => 'x', 'level' => LV, 'kind' => 'slabs', 'ref' => cell}, {'state' => pst, 'level' => 'khong_co', 'kind' => 'slabs', 'ref' => cell}, {'state' => pst, 'level' => LV, 'kind' => 'slabs', 'ref' => 'ô_lạ'}, {'state' => pst, 'level' => 5, 'kind' => 'slabs', 'ref' => cell}]
+ok('probe với loại lạ, state sai, tầng không có, ô lạ, tầng sai kiểu: trả nil, không lỗi', bad_probe.all? { |pl| error_of { S::Preview.probe(pl) }.nil? && S::Preview.probe(pl).nil? })
+call(dlg, 'plate_probe', {'state' => pst, 'level' => LV, 'kind' => 'ceilings', 'ref' => cell, 'key' => 'k1'})
+pr = last_ev(dlg, 'plate_probe')
+ok('callback plate_probe trả key, kind, ref và đa giác cho cửa sổ', pr && pr['key'] == 'k1' && pr['kind'] == 'ceilings' && pr['polygon'].is_a?(Array) && pr['polygon'] == full_c[:polygon])
+
+# ---- Màu xem trước theo theme chung ----
+call(dlg, 'su_ghost', {'z' => 0, 'items' => [{'t' => 'line', 'pts' => [[0, 0], [1000, 0]]}, {'t' => 'line', 'pts' => [[0, 0], [0, 1000]], 'bad' => true}]})
+vc = Sketchup::FakeView.new
+cols = []
+vc.define_singleton_method(:draw_polyline) { |pts| cols << drawing_color.rgb; super(pts) }
+tool.draw(vc)
+ok('màu xem trước: hợp lệ = màu nhấn theme #B48963, sai = màu cảnh báo #A73D36', cols == [[180, 137, 99], [167, 61, 54]])
+call(dlg, 'su_ghost', {'z' => 0, 'items' => []})
+
 # ---- Dựng chỉ loại đã đổi ----
 m = Sketchup::Model.new
 st = state_with
@@ -150,6 +179,17 @@ p5.start_tool('door')
 ok('cửa sổ đã sẵn sàng: gửi ngay start_tool door', last_ev(d5, 'start_tool') == {'tool' => 'door'} && count_ev(d5, 'start_tool') == 2)
 call(d5, 'ready')
 ok('ready lần nữa không gửi lại công cụ đã giao', count_ev(d5, 'start_tool') == 2)
-ok('công cụ không hợp lệ bị từ chối', error_of { p5.start_tool('blob') } && error_of { p5.start_tool("wall'); alert(1);//") } && S::Panel::DRAW_TOOLS == %w[column beam wall door window slab ceiling])
+ok('công cụ không hợp lệ bị từ chối', error_of { p5.start_tool('blob') } && error_of { p5.start_tool("wall'); alert(1);//") } && S::Panel::DRAW_TOOLS == %w[column beam wall door window slab ceiling stair])
+# ---- Sàn kiểu X-ray: mặt rất mờ, viền NÉT ĐỨT (mặt trên, đáy), không vẽ cạnh đứng ----
+xbox = {'t' => 'box', 'pts' => [[0, 0], [2000, 0], [2000, 200], [0, 200]], 'z0' => 0, 'z1' => 120, 'xray' => true}
+call(dlg, 'su_ghost', {'z' => 3600, 'items' => [xbox]})
+vx = Sketchup::FakeView.new; tool.draw(vx)
+xquads = vx.draw_calls.select { |c| c[0] == :draw }; xlines = vx.draw_calls.select { |c| c[0] == :polyline }
+ok('X-ray: mặt bên vẫn tô nhưng mờ hơn khối thường (độ đục thấp hơn GHOST_ALPHA)', xquads.size == 4 && xquads.all? { |c| c[3].alpha < S::PickTool::GHOST_ALPHA })
+ok('X-ray: chỉ vẽ mặt trên và đáy (2 vòng khép kín), KHÔNG vẽ 4 cạnh đứng', xlines.size == 2 && xlines.all? { |c| c[1].size == 5 })
+ok('X-ray: viền là nét đứt (line_stipple "-") khi vẽ, trả về nét liền sau đó', vx.line_stipple_log == ['-', ''])
+ok('khối thường không đổi: vẫn 4 cạnh đứng và nét liền', begin; vb2 = Sketchup::FakeView.new; call(dlg, 'su_ghost', {'z' => 3600, 'items' => [box]}); tool.draw(vb2); vb2.line_stipple_log.empty? && vb2.draw_calls.count { |c| c[0] == :polyline && c[1].size == 2 } == 4; end)
+call(dlg, 'su_ghost', {'z' => 0, 'items' => []})
+
 puts($fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

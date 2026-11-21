@@ -3,6 +3,25 @@ module VGD
     # Dữ liệu xem trước cho giao diện: kế hoạch ký hiệu trục, tóm tắt lưới, và (nếu có) loại cột, tầng, cột của tầng đang xem.
     # Giao diện chỉ vẽ lại kết quả này; mọi kiểm tra và tính toán ở Ruby (một nguồn). Logic thuần.
     module Preview
+      # Hình sàn / trần THỰC TẾ nếu thêm ô `ref` vào lựa chọn của tầng (lùi theo dầm, cột, tường như lúc dựng), để xem trước đúng hình sẽ dựng.
+      # payload: {'state' => dữ liệu giao diện, 'level' =>, 'kind' => 'slabs' | 'ceilings', 'ref' =>}. Trả về {kind:, level:, ref:, polygon:, holes:} hoặc nil nếu ô không dựng được.
+      def self.probe(payload)
+        kind = payload['kind']
+        ref = payload['ref']
+        level_id = payload['level']
+        raise ArgumentError, 'Dữ liệu xem trước ô không hợp lệ.' unless %w[slabs ceilings].include?(kind) && ref.is_a?(String) && level_id.is_a?(String) && payload['state'].is_a?(Hash)
+        raw = JSON.parse(payload['state'].to_json)
+        level = (raw['levels'] || []).find { |l| l['id'] == level_id }
+        return nil unless level && level['picks'].is_a?(Hash)
+        level['picks'][kind] = {} unless level['picks'][kind].is_a?(Hash)
+        level['picks'][kind][ref] ||= {}
+        state = State.normalize!(raw)
+        item = Checker.plan_for(kind, state, level_id)[:items].find { |i| i[:ref] == ref }
+        item && {kind: kind, level: level_id, ref: ref, polygon: item[:polygon], holes: item[:holes]}
+      rescue ArgumentError, KeyError
+        nil
+      end
+
       def self.build(payload)
         grid = Grid.normalize!(payload['grid'])
         options = AxisSymbol.options!(payload['symbol'])
@@ -19,12 +38,13 @@ module VGD
 
       # Phần xem trước loại cột, tầng và cột của tầng đang xem. Lỗi dữ liệu tầng / loại cột báo riêng, không chặn xem trước lưới.
       def self.columns(grid, payload)
-        return {} unless payload.key?('levels') || payload.key?('types') || payload.key?('beam_types') || payload.key?('wall_types') || payload.key?('opening_types')
+        return {} unless payload.key?('levels') || payload.key?('types') || payload.key?('beam_types') || payload.key?('wall_types') || payload.key?('opening_types') || payload.key?('stair_types')
         types = payload['types'].nil? ? ColumnTypes.default : ColumnTypes.normalize!(payload['types'])
         beam_types = payload['beam_types'].nil? ? BeamTypes.default : BeamTypes.normalize!(payload['beam_types'])
         wall_types = payload['wall_types'].nil? ? WallTypes.default : WallTypes.normalize!(payload['wall_types'])
         opening_types = payload['opening_types'].nil? ? OpeningTypes.default : OpeningTypes.normalize!(payload['opening_types'])
-        levels, removed = Levels.normalize!(payload['levels'].nil? ? Levels.default : payload['levels'], grid, types, beam_types, wall_types, opening_types)
+        stair_types = payload['stair_types'].nil? ? StairTypes.default : StairTypes.normalize!(payload['stair_types'])
+        levels, removed = Levels.normalize!(payload['levels'].nil? ? Levels.default : payload['levels'], grid, types, beam_types, wall_types, opening_types, stair_types)
         out = {levels_ok: true, removed: removed}
         begin
           plan = ColumnPlan.plan(grid, types, levels, payload['level'] || levels.first['id'])
@@ -51,26 +71,33 @@ module VGD
         begin
           op = OpeningPlan.plan(grid, types, beam_types, wall_types, opening_types, levels, payload['level'] || levels.first['id'])
           out[:openings] = {level: op[:level]['id'], level_name: op[:level]['name'], count: op[:items].size, issues: op[:issues],
-                            items: op[:items].map { |i| i.slice(:ref, :wall, :dir, :kind, :type_name, :w, :h, :sill, :pos, :flip, :min, :max, :z_bottom, :z_top, :origin, :angle, :poly) }}
+                            items: op[:items].map { |i| i.slice(:ref, :wall, :dir, :kind, :type_name, :w, :h, :sill, :pos, :flip, :mirror, :min, :max, :z_bottom, :z_top, :origin, :angle, :poly) }}
         rescue OpeningPlan::Error, WallPlan::Error, BeamPlan::Error, ColumnPlan::Error => error
           out[:openings_error] = error.message
         end
         begin
-          slab = SlabPlan.plan(grid, levels, level_id, types, beam_types)
+          stairs = StairPlace.plan(grid, types, beam_types, wall_types, stair_types, levels, payload['level'] || levels.first['id'], opening_types)
+          out[:stairs] = {level: stairs[:level]['id'], level_name: stairs[:level]['name'], count: stairs[:items].size, issues: stairs[:issues],
+                          items: stairs[:items].map { |i| i.slice(:ref, :type, :type_name, :a, :b, :polygon, :min, :max, :z0, :z1, :placement, :conflicts).merge(steps: i[:plan][:steps], rails: i[:plan][:rails], count: i[:plan][:count], riser: i[:plan][:riser], tread: i[:plan][:tread]) }}
+        rescue StairPlace::Error, StairPlan::Error, WallPlan::Error, BeamPlan::Error, ColumnPlan::Error => error
+          out[:stairs_error] = error.message
+        end
+        begin
+          slab = SlabPlan.plan(grid, levels, level_id, types, beam_types, wall_types, opening_types)
           out[:slabs] = {level: slab[:level]['id'], level_name: slab[:level]['name'], z_top: slab[:z_top], thickness: slab[:thickness], count: slab[:items].size, issues: slab[:issues],
-                         items: slab[:items].map { |i| i.slice(:ref, :min, :max, :thickness, :z_top, :z_bottom, :area, :polygon, :holes, :placement) }}
+                         items: slab[:items].map { |i| i.slice(:ref, :min, :max, :thickness, :z_top, :z_bottom, :area, :polygon, :holes, :placement, :layers) }}
         rescue SlabPlan::Error => error
           out[:slabs_error] = error.message
         end
         begin
           plan = CeilingPlan.plan(grid, types, beam_types, wall_types, levels, level_id, opening_types)
           out[:ceilings] = {level: plan[:level]['id'], level_name: plan[:level]['name'], z_bottom: plan[:z_bottom], z_top: plan[:z_top], count: plan[:items].size, issues: plan[:issues],
-                            items: plan[:items].map { |i| i.slice(:ref, :polygon, :min, :max, :thickness, :z_bottom, :z_top, :area, :holes, :placement) }}
+                            items: plan[:items].map { |i| i.slice(:ref, :polygon, :min, :max, :thickness, :z_bottom, :z_top, :area, :holes, :placement, :layers) }}
         rescue CeilingPlan::Error, WallPlan::Error, BeamPlan::Error, ColumnPlan::Error => error
           out[:ceilings_error] = error.message
         end
         out
-      rescue ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, OpeningTypes::Error, Levels::Error => error
+      rescue ColumnTypes::Error, BeamTypes::Error, WallTypes::Error, OpeningTypes::Error, StairTypes::Error, Levels::Error => error
         {levels_ok: false, levels_error: error.message}
       end
     end

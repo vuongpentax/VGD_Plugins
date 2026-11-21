@@ -16,7 +16,7 @@ module VGD
 
       def self.plan_for(kind, state, id)
         case kind
-        when 'slabs' then SlabPlan.plan(state['grid'], state['levels'], id, state['types'], state['beam_types'])
+        when 'slabs' then SlabPlan.plan(state['grid'], state['levels'], id, state['types'], state['beam_types'], state['wall_types'], state['opening_types'])
         else CeilingPlan.plan(state['grid'], state['types'], state['beam_types'], state['wall_types'], state['levels'], id, state['opening_types'])
         end
       end
@@ -108,7 +108,7 @@ module VGD
         group.set_attribute(Schema::DICTIONARY, 'plugin_version', VERSION)
         plan[:items].each do |item|
           relative = relative_polygon(item)
-          definition = definition_for(model, spec, relative, item[:thickness], definitions, relative_holes(item))
+          definition = definition_for(model, spec, relative, item[:thickness], definitions, relative_holes(item), item[:layers])
           instance = group.entities.add_instance(definition, Geom::Transformation.new(Geom::Point3d.new(item[:min][0].mm, item[:min][1].mm, item[:z_bottom].mm)))
           instance.name = "#{spec[:name]} #{item[:ref]} (#{plan[:level]['name']})"
           instance.layer = layer
@@ -138,34 +138,62 @@ module VGD
         instance.set_attribute(Schema::DICTIONARY, 'level_name', plan[:level]['name'])
         instance.set_attribute(Schema::DICTIONARY, 'level_elevation', plan[:level]['elevation'])
         instance.set_attribute(Schema::DICTIONARY, 'fp', ModelSync.fingerprint(spec[:kind], item))
-        instance.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('thickness' => item[:thickness], 'area' => item[:area], 'z_top' => item[:z_top]))
+        instance.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate({'thickness' => item[:thickness], 'area' => item[:area], 'z_top' => item[:z_top]}.merge(layer_dims(item))))
       end
 
-      def self.definition_for(model, spec, relative, thickness, definitions, holes = [])
-        key = [relative, thickness, holes]
+      # Khối lượng từng lớp (VGD BIM đọc để bóc): diện tích mặt (m²) và thể tích (m³) = diện tích x bề dày lớp.
+      def self.layer_dims(item)
+        return {} unless item[:layers]
+        area = item[:area].to_f
+        {'layers' => item[:layers].each_with_index.map do |l, i|
+          {'index' => i + 1, 'fn' => l[:fn], 'material' => l[:material], 'thickness' => l[:t], 'area' => area, 'volume' => (area * l[:t] / 1000.0).round(4)}
+        end}
+      end
+
+      def self.definition_for(model, spec, relative, thickness, definitions, holes = [], layers = nil)
+        key = [relative, thickness, holes, layers]
         definitions[key] ||= begin
-          name = if holes.empty? && relative.size <= 12
+          name = if layers
+                   "VGD #{spec[:definition]} #{Digest::SHA1.hexdigest(JSON.generate([relative, holes, thickness, layers]))[0, 12]} lớp #{layers.map { |l| fmt(l[:t]) }.join('_')}"
+                 elsif holes.empty? && relative.size <= 12
                    "VGD #{spec[:definition]} #{relative.flatten.map { |v| fmt(v) }.join('_')}x#{fmt(thickness)}"
                  else # hình nhiều đỉnh hoặc có lỗ: tên ngắn theo mã băm của hình
                    "VGD #{spec[:definition]} #{Digest::SHA1.hexdigest(JSON.generate([relative, holes, thickness]))[0, 12]}"
                  end
           existing = model.definitions[name]
-          existing && existing.valid? ? existing : make_definition(model, spec, name, relative, thickness, holes)
+          existing && existing.valid? ? existing : make_definition(model, spec, name, relative, thickness, holes, layers)
         end
       end
 
       # Mặt đáy (đa giác ngoài), lỗ tạo bằng cách thêm mặt nhỏ bên trong rồi xóa mặt đó, rồi đùn lên theo bề dày. Chưa xác minh trong SketchUp thật (đùn mặt có lỗ).
-      def self.make_definition(model, spec, name, relative, thickness, holes = [])
+      def self.make_definition(model, spec, name, relative, thickness, holes = [], layers = nil)
         definition = model.definitions.add(name)
-        face = definition.entities.add_face(relative.map { |x, y| Geom::Point3d.new(x.mm, y.mm, 0) })
+        if layers # mỗi lớp một Group con xếp chồng từ dưới lên (sàn: kết cấu rồi các lớp hoàn thiện; trần: từ mặt dưới lên)
+          z = 0.0
+          layers.each_with_index do |layer, i|
+            group = definition.entities.add_group
+            group.name = "Lớp #{i + 1} - #{WallTypes::FUNCTIONS[layer[:fn]]}#{layer[:material].empty? ? '' : " (#{layer[:material]})"}"
+            group.set_attribute(Schema::DICTIONARY, 'layer', JSON.generate('index' => i + 1, 'fn' => layer[:fn], 'thickness' => layer[:t], 'material' => layer[:material]))
+            group.material = WallBuilder.layer_material(model, layer)
+            extrude(group.entities, relative, holes, z, layer[:t])
+            z += layer[:t]
+          end
+        else
+          extrude(definition.entities, relative, holes, 0.0, thickness)
+        end
+        definition.set_attribute(Schema::DICTIONARY, 'kind', "#{spec[:kind]}_definition")
+        definition
+      end
+
+      # Mặt (đa giác ngoài, lỗ tạo bằng cách thêm mặt nhỏ rồi xóa) ở độ cao z rồi đùn lên theo bề dày. Chưa xác minh trong SketchUp thật (đùn mặt có lỗ).
+      def self.extrude(entities, relative, holes, z, thickness)
+        face = entities.add_face(relative.map { |x, y| Geom::Point3d.new(x.mm, y.mm, z.mm) })
         holes.each do |ring|
-          inner = definition.entities.add_face(ring.map { |x, y| Geom::Point3d.new(x.mm, y.mm, 0) })
+          inner = entities.add_face(ring.map { |x, y| Geom::Point3d.new(x.mm, y.mm, z.mm) })
           inner.erase! if inner
         end
         face.reverse! if face.normal.z < 0
         face.pushpull(thickness.mm)
-        definition.set_attribute(Schema::DICTIONARY, 'kind', "#{spec[:kind]}_definition")
-        definition
       end
 
       def self.fmt(value)

@@ -8,8 +8,12 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
 (async()=>{
  const browser=await chromium.launch({headless:true,channel:process.env.VGD_BROWSER_CHANNEL||undefined});
  try{
-  const page=await browser.newPage({viewport:{width:1100,height:760}}),errors=[];
+  const page=await browser.newPage({viewport:{width:1100,height:880}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
+  // Nút trong ribbon chỉ bấm được khi tab của nó đang mở: tự mở tab trước khi bấm (như người dùng phải làm).
+  const RB={'#pv-guide-clear':'view','#pv-hide-btn':'view','#pv-isolate-btn':'view','#pv-unhide-btn':'view','#pv-build-btn':'sketchup','#pv-sync-btn':'sketchup','#pv-status-btn':'sketchup','#pv-supick-btn':'sketchup','#pv-sudraw-btn':'sketchup','#pv-suedit-btn':'sketchup'};
+  const TT={select:'modify',pan:'modify',guide:'modify',measure:'modify',wall:'structure',column:'structure',door:'arch'};
+  const _click=page.click.bind(page);page.click=async(sel,...a)=>{const m=/^\[data-tool=(\w+)\]/.exec(sel),tab=RB[sel]||(m&&TT[m[1]]);if(tab)await page.evaluate(t=>window.VGDPlan.ribbonTab(t),tab);return _click(sel,...a);};
   await page.addInitScript(()=>{window.calls=[];window.sketchup=new Proxy({}, {get:(_,name)=>(arg)=>window.calls.push({name,arg})})});
   await page.goto(pathToFileURL(path.resolve(__dirname,'../runtime/vgd_structure/html/index.html')).href);
   const receive=(event,data)=>page.evaluate(([e,d])=>window.VGDS.receive(e,d),[event,data]);
@@ -310,6 +314,29 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok((await last('grid_preview')).levels[0].wall_type===wp1.wall_types[1].id && (await last('grid_preview')).levels[0].beam_type===null,'chọn loại tường mặc định của tầng 1: gửi wall_type (không đổi loại dầm)');
   await page.locator('#wall-types-table button.del').nth(1).click();await wait();
   ok((await last('grid_preview')).wall_types.length===1 && (await last('grid_preview')).levels[0].wall_type===null,'xóa loại tường đang dùng: tầng quay về loại đầu danh sách');
+  // Lớp hoàn thiện của sàn và trần (theo tầng)
+  await receive('state',F.state);await receive('preview',F.preview);await page.click('[data-tab=levels]');await clear();
+  await page.locator('#levels-table tr:nth-child(2) button.floor-layers').click();
+  ok(await page.locator('#level-layers-editor').isVisible() && /Lớp hoàn thiện sàn/.test(await page.locator('#level-layers-editor .layers-head').innerText()) && (await page.locator('#level-layers-editor tr').count())===1,'bấm Lớp sàn: hiện trình sửa lớp hoàn thiện sàn, chưa có lớp nào');
+  await page.click('#level-layers-editor button.add');await wait(300);
+  let fl=(await last('grid_preview')).levels[0];
+  ok(fl.floor_layers.length===1 && fl.floor_layers[0].fn==='finish' && fl.floor_layers[0].t===10 && fl.screed===10 && await page.locator('#levels-table tr:nth-child(2) td:nth-child(3) input').isDisabled(),'thêm lớp: gửi floor_layers (hoàn thiện 10 mm), cán nền = tổng 10 và ô cán nền bị khóa');
+  await page.locator('#level-layers-editor tr:nth-child(2) td:nth-child(3) input').fill('30');
+  await page.locator('#level-layers-editor tr:nth-child(2) td:nth-child(4) input').fill('Gạch lát');
+  await page.click('#level-layers-editor button.add');await wait(200);
+  await page.locator('#level-layers-editor tr:nth-child(3) td:nth-child(2) select').selectOption('substrate');await wait(300);
+  fl=(await last('grid_preview')).levels[0];
+  ok(fl.floor_layers.length===2 && fl.floor_layers[0].t===30 && fl.floor_layers[0].material==='Gạch lát' && fl.floor_layers[1].fn==='substrate' && fl.screed===40 && /40 mm/.test(await page.locator('#level-layers-sum').innerText()) && (await page.locator('#levels-table tr:nth-child(2) td:nth-child(3) input').inputValue())==='40','sửa bề dày, vật liệu, chức năng: tổng 40 mm thành cán nền (hiện trong ô cán nền và tóm tắt)');
+  await page.locator('#levels-table tr:nth-child(2) button.ceiling-layers').click();
+  ok(/Lớp cấu tạo trần/.test(await page.locator('#level-layers-editor .layers-head').innerText()),'bấm Lớp trần: chuyển sang trình sửa lớp trần');
+  await page.click('#level-layers-editor button.add');await wait(300);
+  fl=(await last('grid_preview')).levels[0];
+  ok(fl.ceiling_layers.length===1 && fl.ceiling_layers[0].t===9 && fl.ceiling_thickness===9 && fl.floor_layers.length===2,'lớp trần: gửi ceiling_layers, dày trần = tổng; lớp sàn không bị đổi');
+  const vrl=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vrl.ok,'dữ liệu lớp sàn, trần được Ruby chấp nhận');
+  await page.locator('#level-layers-editor tr:nth-child(2) button.del').click();await wait(300);
+  fl=(await last('grid_preview')).levels[0];
+  ok(fl.ceiling_layers.length===0 && !(await page.locator('#level-layers-editor').isVisible()) && !(await page.locator('#levels-table tr:nth-child(2) td:nth-child(6) input').isDisabled()),'xóa hết lớp trần: trình sửa đóng, ô dày trần dùng lại được');
   await receive('state',F.state);await receive('preview',F.preview);
   await page.click('[data-tab=walls]');
   ok(await page.locator('#tab-walls').isVisible() && !(await page.locator('#tab-beams').isVisible()),'chuyển sang tab Tường');
@@ -512,7 +539,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(await page.locator('#tab-openings').isVisible() && (await page.locator('#opening-wall-ref').innerText())==='x:B:1-2','focus cửa (từ BIM): mở tab Cửa và chọn tường chứa cửa đó');
   await page.click('[data-tab=all]');
   const arr=await page.locator('#all-table tr').evaluateAll(rs=>[...rs[0].querySelectorAll('th')].map(c=>c.textContent));
-  ok(arr.join('|')==='Tầng|Cột|Dầm|Tường|Cửa|Sàn|Trần|Đã dựng','bảng tổng hợp có cột Cửa');
+  ok(arr.join('|')==='Tầng|Cột|Dầm|Tường|Cửa|Sàn|Trần|Cầu thang|Đã dựng','bảng tổng hợp có cột Cửa và Cầu thang');
   await page.click('[data-tab=grid]');
 
   // ===== Tab Tổng hợp và dựng =====
@@ -523,7 +550,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const ar=await allRows();
   ok(ar.length===2 && ar[0][0]==='Tầng 1' && JSON.stringify(ar[0].slice(1,7))==='["2","2","2","2","2","2"]','bảng tổng hợp: tầng 1 có 2 cột, 2 dầm, 2 tường, 2 cửa, 2 sàn, 2 trần theo lựa chọn');
   ok(ar[1][0]==='Tầng 2 (trên cùng: chỉ sàn)' && ar[1][1]==='—' && ar[1][2]==='—' && ar[1][3]==='—' && ar[1][4]==='—' && ar[1][6]==='—' && ar[1][5]==='0','tầng trên cùng: chỉ hiện số sàn, các loại khác là —');
-  ok(ar[0][7]==='—' && await page.locator('#build-all-level').isEnabled() && await page.locator('#build-all-levels').isEnabled(),'chưa dựng gì: cột Đã dựng là —; nút Dựng tất cả bấm được');
+  ok(ar[0][8]==='—' && await page.locator('#build-all-level').isEnabled() && await page.locator('#build-all-levels').isEnabled(),'chưa dựng gì: cột Đã dựng là —; nút Dựng tất cả bấm được');
   await clear();
   await page.click('#propose-level');
   const pl=await last('propose');
@@ -558,7 +585,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(JSON.stringify((await last('build_all')).levels)==='["sl_00000001","sl_00000002"]','Dựng tất cả các tầng: gửi mọi tầng');
   await receive('all_built',{message:'Đã dựng 10 đối tượng trong một bước hoàn tác: 2 cột.',drawn:{columns:['sl_00000001'],beams:['sl_00000001'],walls:[],slabs:['sl_00000001'],ceilings:[]}});
   const ar3=await allRows();
-  ok((await message()).includes('một bước hoàn tác') && ar3[0][7]==='Cột, Dầm, Sàn' && ar3[1][7]==='—','sau khi dựng: cột Đã dựng liệt kê các loại đã dựng của tầng');
+  ok((await message()).includes('một bước hoàn tác') && ar3[0][8]==='Cột, Dầm, Sàn' && ar3[1][8]==='—','sau khi dựng: cột Đã dựng liệt kê các loại đã dựng của tầng');
   await page.click('[data-tab=columns]');
   ok(await page.locator('#remove-cols').isEnabled() && await page.locator('#remove-walls').isDisabled(),'các tab riêng nhận trạng thái đã dựng (xóa cột bấm được, xóa tường khóa)');
   await page.click('[data-tab=grid]');
@@ -597,8 +624,14 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const col=F.preview_all_cells.columns.items[0].center,c0=await pix(col[0],col[1]);
   ok(c0[1]>c0[0] && c0[1]>c0[2] && c0[1]>150,'pixel tại tâm cột có màu xanh lá (cột được vẽ trên canvas)');
   ok(await page.locator('#pv-tabs .pv-tab').count()===F.state.levels.length && (await page.locator('#pv-tabs [aria-selected=true]').getAttribute('data-level'))===F.state.levels[0].id,'tab theo tầng: đủ số tầng, đang chọn tầng hiện hành');
-  ok(await page.locator('#pv-top .pv-ic[data-tool=select]').isEnabled() && await page.locator('#pv-top .pv-ic[data-tool=pan]').isEnabled() && await page.locator('#pv-side .pv-ic:disabled').count()===0 && await page.locator('#pv-side .pv-ic:not(:disabled)').count()===16,'cột công cụ bên trái: 8 công cụ thiết kế và 8 nút vẽ 2D / ghi chú đều dùng được; thanh trên có Chọn và Kéo dùng được');
-  ok(await page.locator('#pv-side .pv-side-grp > i').allInnerTexts().then(a=>a.join('|'))==='Thiết kế|Vẽ 2D|Ghi chú','cột công cụ chia nhóm Thiết kế, Vẽ 2D, Ghi chú');
+  ok(await page.locator('#pv-ribbon .pv-ic[data-tool=select]').isEnabled() && await page.locator('#pv-ribbon .pv-ic[data-tool=pan]').isEnabled() && await page.locator('#pv-ribbon .pv-ic:disabled').count()===0 && await page.locator('#pv-ribbon .pv-ic[data-tool]').count()===33,'ribbon: mọi công cụ (9 thiết kế kể cả Cầu thang, 8 vẽ 2D / ghi chú, Mặt cắt, Chọn, Kéo, Gióng, Đo và nhóm Sửa) đều dùng được');
+  ok(await page.locator('.pv-rb-tab').allInnerTexts().then(a=>a.join('|'))==='Kết cấu|Kiến trúc|Chú thích|Sửa|Xem|SketchUp' && (await page.locator('#pv-side').isHidden()),'ribbon có 6 tab Kết cấu, Kiến trúc, Chú thích, Sửa, Xem, SketchUp; cột công cụ cũ đã ẩn');
+  const panelOf=async tab=>{await page.evaluate(t=>window.VGDPlan.ribbonTab(t),tab);return page.locator('.pv-rb-panel[data-tab='+tab+'] .pv-rb-grp > i').allInnerTexts().then(a=>a.join('|'));};
+  ok((await panelOf('structure'))==='Lưới trục|Kết cấu' && (await panelOf('arch'))==='Cửa' && (await panelOf('annotate'))==='Vẽ 2D|Ghi chú|Mặt cắt' && (await panelOf('modify'))==='Chọn & đo|Sửa' && (await panelOf('view'))==='Đường gióng|Ẩn và cô lập' && (await panelOf('sketchup'))==='Liên kết|Dựng và vẽ trong SketchUp|Đối tượng SketchUp|Tag SketchUp','mỗi tab chia nhóm có tên (nhãn dưới nút) đúng như Revit');
+  await page.evaluate(()=>window.VGDPlan.ribbonTab('structure'));
+  await page.keyboard.press('d');await page.keyboard.press('r');await wait(100);
+  ok((await page.evaluate(()=>window.VGDPlan.ribbonCurrent()))==='arch' && (await page.locator('.pv-rb-tab[aria-selected=true]').innerText())==='Kiến trúc','chọn công cụ Cửa (phím DR): tab Kiến trúc tự mở (tab ngữ cảnh)');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await page.evaluate(()=>window.VGDPlan.ribbonTab('structure'));
   ok((await page.locator('#pv-props').innerText()).includes('Tầng 1') && (await page.locator('#pv-props').innerText()).includes('Cao độ sàn'),'bảng Thuộc tính chưa chọn gì: hiện thông tin tầng');
   // Thu phóng quanh con trỏ: điểm dưới con trỏ đứng yên
   const box=await page.locator('#pv-canvas').boundingBox(),px=box.x+300,py=box.y+200,wBefore=await page.evaluate(([x,y])=>window.VGDPlan.toWorld(x,y),[300,200]);
@@ -810,7 +843,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.keyboard.press('Control+z');pk=await PK('picks');ok(!pk['3-A'] && (await hist()).undo===0,'Ctrl+Z lần nữa: hoàn tác cột 3-A');
   await page.keyboard.press('Control+y');await page.keyboard.press('Control+y');pk=await PK('picks');ok(pk['3-A'] && pk['4-A'] && pk['4-A'].x==='center','Ctrl+Y hai lần: làm lại cả hai cột');
   await page.click('#pv-undo');ok(!(await PK('picks'))['4-A'],'nút Hoàn tác trên thanh trên hoạt động');
-  await page.keyboard.press('Escape');await type('bm');
+  await page.keyboard.press('Escape');await type('bm');await wait(300); // chờ khung vẽ đổi cỡ khi thanh tùy chọn hiện ra
   await clickW(...nodeAt(0,0));ed=(await dbg()).edit;ok(ed.chain==='1-A','dầm: bấm giao điểm đầu 1-A, chờ điểm cuối');
   await hoverW(...nodeAt(2,0));ed=(await dbg()).edit;ok(ed.target && ed.target.end==='3-A' && JSON.stringify(ed.target.refs)==='["x:A:1-2","x:A:2-3"]','rê tới 3-A (cùng hàng): xem trước 2 nhịp x:A:1-2, x:A:2-3');
   await clickW(...nodeAt(2,0));let bp=await PK('beamPicks');
@@ -819,7 +852,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.keyboard.press('Escape');ok((await dbg()).edit.chain===null && (await dbg()).tool==='beam','Esc: kết thúc chuỗi, vẫn ở công cụ Dầm');
   await clickW((gx[2]+gx[3])/2,gy[2]);bp=await PK('beamPicks');ok(bp['x:C:3-4'],'bấm thẳng giữa một nhịp: thêm dầm của nhịp đó');
   await clickW((gx[2]+gx[3])/2,gy[2]);ok(/đã có dầm/.test(await page.locator('#pv-hint').innerText()),'bấm lại nhịp đã có dầm: báo đã có');
-  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await type('wa');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await type('wa');await wait(300);
   await clickW(...nodeAt(3,0));await clickW(...nodeAt(3,2));let wp=await PK('wallPicks');
   ok(wp['y:4:A-B'] && wp['y:4:B-C'],'tường: bấm 4-A rồi 4-C thêm 2 tường cạnh phải');
   await page.keyboard.press('Escape');await page.keyboard.press('Escape');await type('fl');
@@ -901,7 +934,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   // Không chọn gì rồi gõ lệnh
   await typ('mv');ok((await dbgm()).tool==='select' && /chọn phần tử trước/.test(await hintText()),'gõ MV khi chưa chọn gì: báo phải chọn phần tử trước, không vào lệnh');
   await typ('ma');ok((await dbgm()).tool==='match','gõ MA: công cụ Match (không cần chọn trước)');await page.keyboard.press('Escape');await page.keyboard.press('Escape');
-  ok((await page.locator('#pv-top .pv-grp:nth-of-type(2) .pv-ic:disabled').count())===0 && (await page.locator('#pv-top .pv-ic[data-tool=unlock]').count())===1,'nhóm Sửa: mọi lệnh dùng được (Move, Copy, Array, Rotate, Mirror, Offset, Trim, Align, Match, Mở khóa lưới, Xóa)');
+  ok((await page.locator('#pv-ribbon .pv-rb-grp[aria-label=Sửa] .pv-ic:disabled').count())===0 && (await page.locator('#pv-ribbon .pv-ic[data-tool=unlock]').count())===1,'nhóm Sửa: mọi lệnh dùng được (Move, Copy, Array, Rotate, Mirror, Offset, Trim, Align, Match, Mở khóa lưới, Xóa)');
   // Chọn nhịp x:B:1-2 (dầm + tường + 2 cửa)
   await winSpan(wB);let sel=(await dbgm()).selection;
   ok(sel.length===4 && sel.some(x=>/^Dầm x:B:1-2/.test(x)) && sel.some(x=>/^Tường x:B:1-2/.test(x)) && sel.filter(x=>/^Cửa/.test(x)).length===2,'khung trong quanh nhịp x:B:1-2: chọn dầm, tường và 2 cửa');
@@ -1326,6 +1359,9 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await reset();await cl(13500,500);ok((await dbg6()).selected==='Sàn đa giác fs_00000001','bấm vào phần đặc của sàn đa giác: chọn sàn đa giác');
   await reset();await cl(13800,1500);ok((await dbg6()).selected===null,'bấm vào lỗ khoét: không chọn sàn');
   await reset();await cl(14500,7000);ok((await dbg6()).selected==='Trần đa giác fk_00000001','bấm vào trần đa giác: chọn trần đa giác');
+  await reset();await page.evaluate(()=>{const b=document.querySelector('#pv-layers input[data-layer=ceiling]');if(b.checked)b.click();});await wait(80);
+  await page.evaluate(()=>window.VGDPlan.selectKeys('sl_00000001',[{kind:'ceiling',ref:'fk_00000001'}]));await wait(80);
+  ok((await dbg6()).selected==='Trần đa giác fk_00000001' && await page.evaluate(()=>document.querySelector('#pv-layers input[data-layer=ceiling]').checked),'lớp Trần đang tắt: chọn trần từ cây dự án vẫn được (tự bật lớp Trần)');
   // Thuộc tính: nhập từng đỉnh
   await reset();await cl(13500,500);
   ok(await page.locator('#pv-props input[data-field=v0x]').isVisible() && await page.locator('#pv-props input[data-field=v3y]').isVisible(),'chọn sàn đa giác (4 đỉnh): Thuộc tính có ô nhập X, Y từng đỉnh');
@@ -1395,7 +1431,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   if(await page.locator('#pv-browser').isVisible())await page.click('#pv-browser-btn');
   await reset();
   const tools=['line','polyline','rect','circle','arc','dim','text','level'];
-  ok((await Promise.all(tools.map(t=>page.locator('#pv-side .pv-ic[data-tool='+t+']').isEnabled()))).every(Boolean),'8 nút vẽ 2D / ghi chú đều bật');
+  ok((await Promise.all(tools.map(t=>page.locator('#pv-ribbon .pv-ic[data-tool='+t+']').isEnabled()))).every(Boolean),'8 nút vẽ 2D / ghi chú đều bật');
   ok((await dbg7()).counts.note===7,'ghi chú của tầng hiện trên mặt bằng: 7 hình (nét, đa tuyến, tròn, cung, chữ, kích thước, cốt cao độ)');
   // Vẽ lên canvas: đếm điểm ảnh khác nền quanh một điểm thế giới
   const inkAt=(x,y)=>page.evaluate(([x,y])=>{const c=document.getElementById('pv-canvas'),q=window.VGDPlan.toScreen(x,y),d=window.devicePixelRatio||1,ctx=c.getContext('2d'),cx=Math.round(q[0]*d),cy=Math.round(q[1]*d),im=ctx.getImageData(cx-3,cy-3,7,7).data,ref=ctx.getImageData(cx-3,cy-3,1,1).data;let n=0;for(let i=0;i<im.length;i+=4){if(Math.abs(im[i]-ref[0])+Math.abs(im[i+1]-ref[1])+Math.abs(im[i+2]-ref[2])>30)n++;}return n;},[x,y]);
@@ -1565,6 +1601,221 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await reset();await cl(150,150);await page.fill('#pv-props input[data-field=type_d]','450');await page.press('#pv-props input[data-field=type_d]','Tab');await wait(300);
   const vr6=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
   ok(vr6.ok,'dữ liệu loại sau khi sửa được Ruby chấp nhận');
+  // --- Type Selector, Nhân đôi loại, Selection Filter ---
+  await reset();await cl(150,150);await wait(100); // cột 1-A
+  ok(await page.locator('#pv-type-select').isVisible() && (await page.locator('#pv-type-select option').count())>=1 && await page.locator('#pv-type-edit').isVisible() && await page.locator('#pv-type-dup').isVisible(),'chọn cột: đầu bảng Thuộc tính có ô chọn loại (Type Selector), nút Sửa loại và Nhân đôi loại');
+  const nTypes0=(await st()).types.length,nm0=(await st()).types[0].name;
+  await page.click('#pv-type-dup');await wait(150);
+  const afterDup=await st(),colPick=afterDup.levels[0].picks['1-A'];
+  ok(afterDup.types.length===nTypes0+1 && afterDup.types[nTypes0].name===nm0.slice(0,16)+' (2)' && /^ct_[0-9a-f]{8}$/.test(afterDup.types[nTypes0].id) && colPick.type===afterDup.types[nTypes0].id && afterDup.types[nTypes0].w===afterDup.types[0].w,'Nhân đôi loại: tạo loại mới "(2)" cùng kích thước, mã ct_xxxxxxxx, gán cho cột đang chọn');
+  await page.click('#pv-type-dup');await wait(150);
+  ok((await st()).types.length===nTypes0+2 && (await st()).types[nTypes0+1].name===nm0.slice(0,16)+' (3)','nhân đôi lần nữa (nhân đôi một bản sao): đánh số tiếp (3), không chồng hậu tố');
+  const vrd=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vrd.ok,'loại nhân đôi được Ruby chấp nhận');
+  await page.selectOption('#pv-type-select',(await st()).types[0].id);await wait(150);
+  ok((await st()).levels[0].picks['1-A'].type===(await st()).types[0].id,'đổi loại bằng Type Selector: phần tử đổi sang loại đã chọn');
+  await reset();await cl(1800,3600);await wait(100); // tường
+  ok((await page.locator('#pv-type-select option').allInnerTexts().then(a=>a.every(t=>/dày/.test(t)))),'tường: các loại trong Type Selector ghi bề dày');
+  await reset();await cl(1000,3600);await wait(100); // cửa đi
+  const doorTypes=await page.locator('#pv-type-select option').allInnerTexts();
+  ok(doorTypes.length>=1 && doorTypes.every(t=>/\d+×\d+/.test(t)),'cửa: Type Selector liệt kê loại cửa kèm rộng × cao');
+  await reset();await page.keyboard.press('Control+a');await wait(100);
+  ok(await page.locator('#pv-filter').isVisible() && (await page.locator('#pv-filter input[data-filter]').count())>=3,'chọn tất cả: có mục Lọc vùng chọn, mỗi loại phần tử một ô tick');
+  const sel0=(await dbg8()).selection.length;
+  await page.locator('#pv-filter input[data-filter=wall]').uncheck();await wait(100);
+  ok((await dbg8()).selection.length<sel0 && !(await page.locator('#pv-filter input[data-filter=wall]').isChecked()),'bỏ tick Tường: vùng chọn bớt các tường');
+  await page.locator('#pv-filter input[data-filter=wall]').check();await wait(100);
+  ok((await dbg8()).selection.length===sel0,'tick lại Tường: chọn lại đủ như cũ');
+  await reset();
+  // --- View Control Bar ---
+  ok(await page.locator('#pv-viewbar').isVisible() && await page.locator('#pv-vb-scale').isVisible() && await page.locator('#pv-vb-detail').isVisible() && await page.locator('#pv-vb-style').isVisible() && await page.locator('#pv-vb-tags').isVisible(),'View Control Bar dưới khung vẽ: tỉ lệ, chi tiết, kiểu hiển thị, nhãn loại');
+  await page.selectOption('#pv-vb-scale','100');await wait(80);
+  let vb=await dbg8();
+  ok(vb.scaleN===100 && Math.abs(vb.view.s-1/(100*25.4/96))<1e-6,'chọn tỉ lệ 1 : 100: khung vẽ đúng 1 px = 26,46 mm (96 dpi)');
+  await page.selectOption('#pv-vb-scale','50');await wait(80);
+  ok((await dbg8()).scaleN===50,'chọn 1 : 50: phóng to theo tỉ lệ');
+  await page.evaluate(()=>window.VGDPlan.zoomBy&&window.VGDPlan.zoomBy(1.3));await page.mouse.move(500,400);await page.mouse.wheel(0,-300);await wait(150);
+  ok((await page.locator('#pv-vb-scale').inputValue())==='custom','cuộn chuột đổi zoom: ô tỉ lệ về "Tùy chỉnh"');
+  ok((await dbg8()).detail==='medium' && (await dbg8()).vstyle==='color' && (await dbg8()).tagsOn===false,'mặc định: chi tiết Vừa, màu theo loại, nhãn tắt');
+  await page.selectOption('#pv-vb-detail','low');ok((await dbg8()).detail==='low','chi tiết Thấp');
+  await page.selectOption('#pv-vb-style','mono');ok((await dbg8()).vstyle==='mono','kiểu Đơn sắc');
+  await page.selectOption('#pv-vb-style','wire');ok((await dbg8()).vstyle==='wire','kiểu Khung dây');
+  await page.selectOption('#pv-vb-style','color');await page.selectOption('#pv-vb-detail','medium');
+  await page.evaluate(()=>window.VGDPlan.fit&&window.VGDPlan.fit());await page.keyboard.press('z');await page.keyboard.press('e');await wait(150);
+  ok((await dbg8()).tagsDrawn===0,'nhãn tắt: không vẽ nhãn nào');
+  await page.click('#pv-vb-tags');await wait(100);
+  vb=await dbg8();
+  ok(vb.tagsOn===true && vb.tagsDrawn>=4 && (await page.locator('#pv-vb-tags').getAttribute('aria-pressed'))==='true','bật Nhãn loại: vẽ nhãn tên loại cho cột, dầm, tường, cửa đang hiện (>= 4)');
+  await page.click('#pv-layers-btn');await page.locator('#pv-layers input[data-layer=column]').uncheck();await wait(80);
+  const tagsNoCol=(await dbg8()).tagsDrawn;await page.locator('#pv-layers input[data-layer=column]').check();await page.click('#pv-layers-btn');await wait(80);
+  ok(tagsNoCol<vb.tagsDrawn,'tắt lớp Cột: nhãn của cột cũng không vẽ');
+  await page.click('#pv-vb-tags');await page.selectOption('#pv-vb-detail','high');await wait(100);
+  ok((await dbg8()).tagsDrawn>=4,'chi tiết Cao: tự hiện nhãn (kèm mã vị trí) dù nút Nhãn tắt');
+  await page.selectOption('#pv-vb-detail','medium');await reset();
+  // --- Bảng thống kê (Schedule) ---
+  await page.click('[data-tab=schedule]');await wait(100);
+  ok(await page.locator('#tab-schedule').isVisible() && (await calls('schedule')).length>=1 && !!(await last('schedule')).grid,'tab Thống kê: mở thì gửi Ruby dữ liệu hiện tại để tính bảng');
+  await receive('schedule',F.schedule);await wait(80);
+  ok((await page.locator('#sched-kind option').allInnerTexts()).join('|')==='Cột|Dầm|Tường|Cửa|Sàn|Trần','có đủ 6 loại để xem bảng');
+  ok((await page.locator('#sched-table tr').count())===3 && /Tổng/.test(await page.locator('#sched-table tr.total').innerText()) && /Tầng 1/.test(await page.locator('#sched-table tr:nth-child(2)').innerText()),'bảng Cột: dòng tiêu đề, dòng theo tầng và loại, dòng Tổng');
+  await page.selectOption('#sched-kind','openings');await wait(60);
+  ok((await page.locator('#sched-table tr').count())===4 && /Cửa đi|Cửa sổ/.test(await page.locator('#sched-table').innerText()),'bảng Cửa: 2 dòng (cửa đi, cửa sổ) và dòng Tổng');
+  await page.selectOption('#sched-level','sl_00000002');await wait(60);
+  ok((await page.locator('#sched-table tr').count())===1 && /Chưa có cửa/.test(await page.locator('#sched-note').innerText()),'lọc tầng 2 (không có cửa): bảng rỗng và báo "Chưa có cửa nào được chọn"');
+  await page.selectOption('#sched-level','');await page.selectOption('#sched-kind','walls');await wait(60);
+  const csv=await page.evaluate(()=>window.VGDS.scheduleCsv()),lines=csv.split('\n');
+  ok(lines.length===3 && lines[0].split('\t')[0]==='Tầng' && lines[0].includes('Diện tích (trừ cửa) (m²)') && lines[2].startsWith('Tổng'),'CSV (dán Excel): tiêu đề, một dòng tường, dòng Tổng; cột cách nhau bằng Tab');
+  await page.click('#sched-copy');await wait(150);
+  ok((await page.locator('#sched-note').innerText()).length>0,'bấm Sao chép: có thông báo kết quả');
+  await page.click('#sched-refresh');await wait(60);
+  const nsch=(await calls('schedule')).length;
+  ok(nsch>=2,'bấm Làm mới: hỏi Ruby tính lại');
+  await page.click('[data-tab=plan]');await wait(80);
+  // --- Đối tượng SketchUp thường: quét theo tag BIM, hiện trên mặt bằng, nhận về Structure, gán tag ---
+  await reset();await page.evaluate(()=>window.VGDPlan.ribbonTab('sketchup'));
+  ok(await page.locator('#pv-suscan-btn').isVisible() && await page.locator('#pv-suadopt-btn').isVisible() && await page.locator('#pv-tag-kind').isVisible() && await page.locator('#pv-tag-btn').isVisible(),'tab SketchUp: có nút Quét, Nhận, ô chọn tag và nút Gán tag');
+  ok((await page.locator('#pv-tag-kind option').allInnerTexts()).join('|')==='Cột (S. COLUMN)|Dầm (S. BEAM)|Tường (A. WALL)|Bản sàn (S. SLAB)|Trần hoàn thiện (A. FINISHING CEILING)|Cửa đi (A. DOOR)|Cửa sổ (A. WINDOW)','ô chọn tag liệt kê 7 tag theo bộ mẫu BIM kèm tên tag');
+  await clear();await page.click('#pv-suscan-btn');await wait(100);
+  const scanReq=await last('su_scan');
+  ok(!!scanReq && !!scanReq.levels && !!scanReq.grid,'bấm Quét: gửi Ruby dữ liệu hiện tại (để biết tầng của đối tượng)');
+  const suo=[{id:2001,kind:'column',tag:'S. COLUMN',name:'Cột SU',locked:false,center:[8400,3600],size:[300,300,3600],angle:0,z0:-50,z1:3550,level:'sl_00000001',footprint:[[8250,3450],[8550,3450],[8550,3750],[8250,3750]]},{id:2002,kind:'wall',tag:'A. WALL',name:'Tường SU',locked:false,center:[6000,5000],size:[2000,200,3200],angle:0,z0:-50,z1:3150,level:'sl_00000001',footprint:[[5000,4900],[7000,4900],[7000,5100],[5000,5100]]},{id:2003,kind:'beam',tag:'S. BEAM',name:'Dầm tầng 2',locked:false,center:[1000,1000],size:[2000,200,400],angle:0,z0:3150,z1:3550,level:'sl_00000002',footprint:[[0,900],[2000,900],[2000,1100],[0,1100]]}];
+  await receive('su_objects',{objects:suo,untagged:2,skipped:['x: nghiêng']});await wait(100);
+  ok((await dbg8()).suCount===3 && /3 đối tượng có tag nhận diện \(2 ở tầng đang xem\), 2 đối tượng chưa có tag/.test(await page.locator('#message').innerText()),'nhận kết quả quét: lưu 3 đối tượng, báo 2 ở tầng đang xem và 2 chưa có tag');
+  ok((await dbg8()).counts.suobj===2 && (await page.locator('#pv-layers input[data-layer=suobj]').count())===1,'mặt bằng hiện 2 đối tượng SketchUp của tầng 1 (không hiện đối tượng tầng 2); có lớp hiển thị riêng');
+  await clear();await cl(8400,3600);await wait(200);
+  ok(/SketchUp · Cột/.test(await props()) && /Chưa nhận về Structure/.test(await props()) && await page.locator('#pv-adopt-one').isVisible(),'bấm đối tượng SketchUp: Thuộc tính ghi tag, kích thước, trạng thái "Chưa nhận", có nút Nhận đối tượng này');
+  const ps=await last('plan_select');
+  ok(ps && JSON.stringify(ps.items)==='[{"kind":"suobj","ref":"2001"}]','chọn đối tượng SketchUp trên mặt bằng: gửi Ruby chọn đúng đối tượng đó trong SketchUp (kind suobj, id 2001)');
+  await page.keyboard.press('Escape');await receive('model_selection',{items:[{level:null,kind:'suobj',ref:'2002'}],groups:[]});await wait(150);
+  ok(/Tường SU/.test(await props()),'chọn đối tượng trong SketchUp: mặt bằng sáng đúng đối tượng (Tường SU) dù chưa nhận');
+  await cl(8400,3600);await wait(100);
+  await clear();await page.click('#pv-adopt-one');await wait(100);
+  const adReq=await last('su_adopt');
+  ok(adReq && JSON.stringify(adReq.ids)==='[2001]' && !!adReq.state.levels,'nút Nhận đối tượng này: gửi Ruby id đối tượng đang chọn kèm dữ liệu hiện tại');
+  const newCol='fc_00c0ffee',oldTypes=(await st()).types.length;
+  await clear();
+  await receive('su_import',{patches:[{level:'sl_00000001',set:{columns:{[newCol]:{type:'ct_00000001',free:{x:8400,y:3600,rot:0}}}},remove:{},retag:{},kinds:['columns']}],types:{types:[{id:'ct_0badc0de',name:'NHẬN 350x350',w:350,d:350}]},adopted:[{su_id:2001,level:'sl_00000001',box:'columns',ref:newCol}],skipped:[]});await wait(600);
+  const afterImp=await st();
+  ok(afterImp.types.length===oldTypes+1 && afterImp.types[oldTypes].name==='NHẬN 350x350' && !!afterImp.levels[0].picks[newCol] && afterImp.levels[0].picks[newCol].free.x===8400,'nhận đối tượng: thêm loại mới và cột tự do vào dữ liệu');
+  const bAdopt=await last('build_all');
+  ok(bAdopt && JSON.stringify(bAdopt.kinds)==='["columns"]' && JSON.stringify(bAdopt.adopt.erase)==='[2001]' && bAdopt.adopt.refs['sl_00000001:'+newCol]===2001,'tự dựng loại cột kèm adopt: xóa đối tượng gốc 2001 và gắn VGD ID theo mã mới');
+  const vrs=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vrs.ok,'dữ liệu sau khi nhận được Ruby chấp nhận');
+  await clear();await receive('su_tagged',{count:1});await wait(100);
+  ok((await calls('su_scan')).length===1,'gán tag xong: tự quét lại để đối tượng vừa có tag hiện lên');
+  await page.selectOption('#pv-tag-kind','wall');await clear();await page.click('#pv-tag-btn');await wait(60);
+  ok(JSON.stringify(await last('su_tag'))==='{"kind":"wall"}','bấm Gán tag: gửi Ruby loại tag đang chọn (tường)');
+  await page.selectOption('#pv-vb-tagtext','tag');await page.click('#pv-vb-tags');await wait(100);
+  ok((await dbg8()).tagMode==='tag' && (await dbg8()).tagsDrawn>=4,'Nhãn theo Tag BIM: vẽ nhãn là tên tag (S. COLUMN, A. WALL...) trên các phần tử');
+  await page.selectOption('#pv-vb-tagtext','both');await wait(80);
+  ok((await dbg8()).tagMode==='both','Nhãn "Loại + Tag" chọn được');
+  await page.click('#pv-vb-tags');await page.selectOption('#pv-vb-tagtext','type');
+  // --- Mặt cắt: đặt đường cắt trên mặt bằng, xem mặt cắt dựng từ hình trong SketchUp ---
+  await reset();await page.evaluate(()=>window.VGDPlan.ribbonTab('annotate'));
+  ok(await page.locator('.pv-rb-grp[aria-label="Mặt cắt"] .pv-ic[data-tool=section]').isVisible(),'tab Chú thích có nhóm Mặt cắt với công cụ Mặt cắt');
+  await typ('se');await wait(150);
+  ok((await dbg8()).tool==='section' && /Mặt cắt: bấm điểm đầu/.test(await hintT()),'gõ SE: chọn công cụ Mặt cắt, gợi ý bấm điểm đầu');
+  await cl(2000,500);await cl(6000,500);
+  ok(/bấm về PHÍA/.test(await hintT()),'sau hai điểm: gợi ý bấm về phía muốn nhìn');
+  await cl(4000,2500); // phía trên (+Y) của đường cắt nằm ngang từ trái sang phải: pháp tuyến trái của a->b là +Y
+  const secs=await page.evaluate(()=>window.VGDS._state.levels[0].sections),sid=Object.keys(secs)[0];
+  ok(Object.keys(secs).length===1 && /^sc_[0-9a-f]{8}$/.test(sid) && secs[sid].name==='Mặt cắt 1' && secs[sid].dir===1 && secs[sid].depth===6000 && Math.abs(secs[sid].b[0]-secs[sid].a[0])>3000,'bấm điểm thứ ba phía +Y: tạo Mặt cắt 1, dir = 1, tầm nhìn 6000');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await wait(80);await cl(4000,500);await wait(150); // chọn đường cắt
+  ok(/Mặt cắt 1/.test(await props()) && await page.locator('#pv-act-open_section').isVisible() && await page.locator('#pv-props input[data-field=sdepth]').isVisible(),'chọn đường cắt: Thuộc tính có nút Mở mặt cắt, tầm nhìn, đổi phía nhìn');
+  await page.fill('#pv-props input[data-field=sname]','A-A');await page.press('#pv-props input[data-field=sname]','Tab');await wait(120);
+  ok((await page.evaluate(()=>window.VGDS._state.levels[0].sections))[sid].name==='A-A','đổi tên mặt cắt trong Thuộc tính');
+  await page.locator('#pv-props input[data-field=sdir]').check();await wait(120);
+  ok((await page.evaluate(()=>window.VGDS._state.levels[0].sections))[sid].dir===-1,'tick Đổi phía nhìn: dir = -1');
+  const vrsec=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vrsec.ok,'dữ liệu mặt cắt được Ruby chấp nhận');
+  await clear();await page.click('#pv-act-open_section');await wait(150);
+  const sreq=await last('section_build');
+  ok(await page.locator('#tab-section').isVisible() && sreq && sreq.id===sid && sreq.section.name==='A-A' && sreq.section.dir===-1 && sreq.section.depth===6000,'bấm Mở mặt cắt: chuyển sang tab Mặt cắt và gửi Ruby định nghĩa đường cắt để dựng từ hình SketchUp');
+  const L=Math.hypot(secs[sid].b[0]-secs[sid].a[0],secs[sid].b[1]-secs[sid].a[1]);
+  await receive('section_view',{id:sid,name:'A-A',length:L,truncated:false,cut:[{pts:[[900,0],[1100,0],[1100,3000],[900,3000]],closed:true,src:{kind:'wall',level:'sl_00000001',ref:'x:B:1-2',tag:'A. WALL'}},{pts:[[2000,0],[2300,0],[2300,3000],[2000,3000]],closed:true,src:{kind:'suobj',level:null,ref:'2001',tag:'S. COLUMN'}},{pts:[[3000,100],[3500,100]],closed:false,src:{kind:'geom',level:null,ref:null,tag:null}}],beyond:[[[0,0],[500,500]],[[600,0],[600,3000]]]});await wait(150);
+  let sd=await page.evaluate(()=>window.VGDSection.debug());
+  ok(sd.cut===3 && sd.beyond===2 && /3 đường viền, 2 cạnh phía sau/.test(sd.status),'tab Mặt cắt nhận kết quả: 3 đường viền, 2 cạnh phía sau, báo trên thanh trạng thái');
+  ok((await page.locator('#sec-select option').count())>=2,'danh sách mặt cắt có mặt cắt vừa đặt');
+  const scr=await page.evaluate(()=>{const d=window.VGDSection.debug();return d.toScreen(1000,1500);});const bbs=await page.locator('#sec-canvas').boundingBox();
+  await clear();await page.mouse.click(bbs.x+scr[0],bbs.y+scr[1]);await wait(120);
+  const sp=await last('plan_select');
+  ok(sp && sp.items.length===1 && sp.items[0].kind==='wall' && sp.items[0].ref==='x:B:1-2' && sp.level==='sl_00000001' && (await page.evaluate(()=>window.VGDSection.debug())).selected.length===1,'bấm vào phần bị cắt của tường: chọn đúng phần tử tường trong SketchUp và sáng đường viền');
+  const scr2=await page.evaluate(()=>window.VGDSection.debug().toScreen(2150,1500));
+  await clear();await page.mouse.click(bbs.x+scr2[0],bbs.y+scr2[1]);await wait(120);
+  const sp2=await last('plan_select');
+  ok(sp2 && sp2.items[0].kind==='suobj' && sp2.items[0].ref==='2001','bấm vào cột SketchUp thường (suobj): chọn đúng đối tượng theo id SketchUp');
+  const scr3=await page.evaluate(()=>window.VGDSection.debug().toScreen(3250,100));
+  await clear();await page.mouse.click(bbs.x+scr3[0],bbs.y+scr3[1]);await wait(100);
+  ok((await calls('plan_select')).length===0,'bấm vào hình rời (kind geom): không chọn gì trong SketchUp');
+  await receive('model_selection',{items:[{level:null,kind:'suobj',ref:'2001'}],groups:[]});await wait(100);
+  ok((await page.evaluate(()=>window.VGDSection.debug())).selected.some(k=>k.indexOf('suobj')===0),'chọn đối tượng trong SketchUp: đường viền của nó sáng lên trên mặt cắt');
+  const axn=(await page.evaluate(()=>window.VGDSection.debug())).axes;
+  ok(Array.isArray(axn),'trục lưới cắt qua đường cắt được tính để vẽ (danh sách có thể rỗng nếu không cắt qua)');
+  await clear();await page.click('#sec-refresh');await wait(100);
+  ok((await calls('section_build')).length===1,'bấm Làm mới: dựng lại từ SketchUp');
+  await page.click('[data-tab=plan]');await wait(100);
+  await page.evaluate(id=>window.VGDPlan.selectKeys('sl_00000001',[{kind:'section',ref:id}],false),sid);await wait(80);
+  await page.keyboard.press('Delete');await wait(150);
+  ok(Object.keys(await page.evaluate(()=>window.VGDS._state.levels[0].sections)).length===0,'xóa đường cắt trên mặt bằng: dữ liệu mặt cắt mất');
+  await receive('su_objects',{objects:[],untagged:0,skipped:[]});
+  await reset();
+  // --- Mặt cắt: khóa trục (đầu thứ hai chỉ ngang / dọc) và xoay đường cắt bằng Rotate ---
+  await reset();await typ('se');await wait(120);
+  await cl(8000,500);await cl(8500,4000);await cl(8200,2000);await wait(120);
+  const secsX=await page.evaluate(()=>window.VGDS._state.levels[0].sections),idX=Object.keys(secsX).find(k=>secsX[k].a[0]===8000&&secsX[k].a[1]===500);
+  ok(idX && secsX[idX].b[0]===8000 && secsX[idX].b[1]===4000,'khóa trục: kéo đầu thứ hai lệch nhiều theo dọc thì đường cắt thành dọc (b cùng x với a)');
+  // Chọn đường cắt bằng API (bấm trên canvas chưa chọn được đường cắt: ghi nhận là việc còn lại), rồi đưa tiêu điểm vào canvas như khi bấm.
+  // Không gọi reset() ở đây: reset nạp lại trạng thái mẫu (không có đường cắt vừa tạo). Chỉ Esc, rồi gửi xem trước như Ruby sau mỗi thay đổi.
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await receive('preview',F.preview_poly);await wait(80);
+  await page.evaluate(id=>window.VGDPlan.selectKeys('sl_00000001',[{kind:'section',ref:id}],false),idX);await page.evaluate(()=>document.getElementById('pv-canvas').focus());await wait(80);
+  await typ('ro');
+  await page.fill('#pv-options input[data-opt=angle]','90');await page.press('#pv-options input[data-opt=angle]','Tab');await cl(8000,2250);await wait(120);
+  const sr=await page.evaluate(id=>window.VGDS._state.levels[0].sections[id],idX);
+  ok(sr && Math.abs(sr.a[0]-9750)<1 && Math.abs(sr.a[1]-2250)<1 && Math.abs(sr.b[0]-6250)<1 && Math.abs(sr.b[1]-2250)<1,'Rotate 90° quanh tâm: đường cắt xoay đúng, độ dài giữ nguyên (3500 mm)');
+  await reset();
+  // --- Cầu thang: vẽ đáy và đỉnh vế, tối thiểu 600 mm, xem trước, cảnh báo đâm vào tường, xóa ---
+  await reset();await typ('sr');await wait(120);await page.selectOption('#pv-options select[data-opt=shape]','straight');
+  ok((await dbg8()).tool==='stair' && /đáy vế/.test(await hintT()),'gõ SR: chọn công cụ Cầu thang, gợi ý bấm đáy vế');
+  await cl(2000,500);await cl(2000,700);await wait(120);
+  ok(/tối thiểu 600/.test(await hintT()) && Object.keys(await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks)).length===0,'vế dưới 600 mm: báo tối thiểu 600 mm, không thêm cầu thang');
+  await cl(2000,500);await cl(2000,5800);await wait(200);
+  const stx_stP=await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks);
+  ok(Object.keys(stx_stP).length===1 && Object.values(stx_stP)[0].type==='sj_00000001' && Math.abs(Object.values(stx_stP)[0].free.a[0]-2000)<1 && Math.abs(Object.values(stx_stP)[0].free.b[1]-5800)<1,'bấm đáy và đỉnh vế: thêm cầu thang (loại mặc định) với hai đầu đúng chỗ bấm');
+  await reset();await receive('state',F.state_stairs);await receive('preview',F.preview_stairs);await wait(150);
+  const stx_sd=await dbg8();
+  ok(stx_sd.counts.stair===2 && Object.keys(await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks)).length===2,'xem trước cầu thang: 2 cầu thang trên mặt bằng (một sạch, một đâm vào tường)');
+  await page.evaluate(()=>window.VGDPlan.selectKeys('sl_00000001',[{kind:'stair',ref:'st_00000001'}],false));await wait(80);
+  await page.keyboard.press('Delete');await wait(120);
+  ok(!(await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks))['st_00000001'] && (await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks))['st_00000002'],'Delete cầu thang đang chọn: chỉ xóa cầu thang đó');
+  await reset();await receive('state',F.state);await receive('preview',F.preview);await wait(120);
+  
+  // Chữ L: bấm đáy vế, đầu chiếu nghỉ, điểm cuối (phía rẽ) -> lưu shape L, a, c (chiếu nghỉ), b
+  await reset();await typ('sr');await wait(120);
+  await page.selectOption('#pv-options select[data-opt=shape]','L');
+  ok(await page.locator('#pv-options select[data-opt=shape]').inputValue()==='L','chọn dạng Chữ L trong thanh tùy chọn');
+  await cl(2000,500);await cl(5000,500);await wait(100);
+  ok(/điểm cuối/.test(await hintT()),'chữ L: sau đầu chiếu nghỉ, gợi ý bấm điểm cuối (phía rẽ)');
+  await cl(3500,4000);await wait(200);
+  const stL=await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks);
+  ok(Object.values(stL).some(p=>p.shape==='L' && Math.abs(p.free.a[0]-2000)<1 && Math.abs(p.free.c[0]-5000)<1 && Math.abs(p.free.b[1]-4000)<1),'chữ L: lưu dạng L với đáy vế, đầu chiếu nghỉ (c) và điểm cuối (b)');
+// --- Mặt đứng: chọn hướng, dựng từ hình trong SketchUp, bấm chọn đối tượng, nhận chọn từ SketchUp ---
+  await reset();await page.click('.tabs button[data-tab=elevation]');await wait(150);
+  ok(await page.locator('#tab-elevation').isVisible() && /Chọn hướng/.test(await page.locator('#elv-status').innerText()),'tab Mặt đứng: chưa chọn hướng thì yêu cầu chọn hướng nhìn');
+  await page.click('#elv-dirs button[data-dir=south]');await wait(150);
+  const erq=await last('elevation_build');
+  ok(erq && erq.dir==='south' && await page.locator('#elv-dirs button[data-dir=south]').getAttribute('aria-pressed')==='true','bấm Nam: gửi Ruby elevation_build hướng south và đánh dấu nút');
+  await receive('elevation_view',{dir:'south',truncated:false,bounds:{s0:0,s1:4000,z0:0,z1:3000},polys:[{pts:[[0,0],[4000,0],[4000,3000],[0,3000]],holes:[],depth:2000,src:{kind:'wall',level:'sl_00000001',ref:'x:B:1-2',tag:'A. WALL'}},{pts:[[2000,0],[2300,0],[2300,3000],[2000,3000]],holes:[],depth:500,src:{kind:'suobj',level:null,ref:'2001',tag:'S. COLUMN'}}]});await wait(150);
+  ok(/Mặt đứng Nam: 2 mặt/.test(await page.locator('#elv-status').innerText()),'nhận kết quả: báo số mặt');
+  const ecv=await page.locator('#elv-canvas').boundingBox();const ep=await page.evaluate(()=>window.VGDElevation.debug().toScreen(2150,1500));
+  await page.mouse.click(ecv.x+ep[0],ecv.y+ep[1]);await wait(150);
+  const psel=await last('plan_select');
+  ok(psel && psel.items[0].kind==='suobj' && psel.items[0].ref==='2001','bấm cột trên mặt đứng (mặt gần): chọn đúng đối tượng trong SketchUp');
+  await receive('model_selection',{items:[{kind:'suobj',ref:'2001'}]});await wait(100);
+  ok((await page.evaluate(()=>window.VGDElevation.debug().selected)).includes('suobj||2001'),'chọn cột trong SketchUp: mặt cột sáng lên trên mặt đứng');
+  await page.click('#elv-refresh');await wait(150);
+  ok((await calls('elevation_build')).length===2,'bấm Làm mới: dựng lại mặt đứng từ hình hiện tại');
+  await receive('model_selection',{items:[]});await wait(100);
+  await page.click('[data-tab=plan]');await wait(150);
   // --- Ẩn / Cô lập ---
   await reset();const hist0=await page.evaluate(()=>window.VGDS.history().undo),data0=JSON.stringify((await st()).levels);
   await typ('eh');ok(/Hãy chọn phần tử cần ẩn/.test(await hintT()) && (await dbg8()).hidden===0,'EH khi chưa chọn gì: báo, không ẩn');
@@ -1633,8 +1884,53 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.click('[data-tab=plan]');
   if(await page.locator('#pv-browser').isVisible())await page.click('#pv-browser-btn');
   await reset();
+  // Cửa đi mở theo phía con trỏ và bản lề trái / phải (như Revit)
+  await reset();await typ('dr');await clear();
+  const wlx=await page.evaluate(()=>window.VGDS._state.preview.walls.items.find(i=>i.dir==='y')),cyw=wlx.center,kk=0,along=wlx.start+1800,at=(v,u)=>[cyw+v,along+(u||0)];
+  const dghost=(x,y)=>page.evaluate(([a,b])=>{window.VGDPlanEdit.move([a,b]);return window.VGDPlanEdit.ghost();},[x,y]);
+  const leafOf=g=>g.find(i=>i.t==='line' && i.width===2.5);
+  let dgh=await dghost(...at(60)),lf=leafOf(dgh);
+  ok(lf && lf.b[0]>cyw && dgh.filter(i=>i.t==='line' && i.dash).length===12,'đặt cửa đi, con trỏ ở phía +X của tường: cánh và cung quay vẽ về phía +X (tường dọc, 12 đoạn cung)');
+  dgh=await dghost(...at(-60));lf=leafOf(dgh);
+  ok(lf && lf.b[0]<cyw,'con trỏ sang phía -X: cánh và cung quay sang phía -X');
+  const hingeA=lf.a[1];
+  await page.keyboard.press(' ');dgh=await dghost(...at(-60));lf=leafOf(dgh);
+  ok(lf.a[1]>hingeA+100 && /Cuối tường|cuối/.test(await page.locator('#pv-options').innerText()),'Space khi đặt cửa đi: bản lề chuyển sang đầu cuối cửa (và thanh tùy chọn ghi Cuối tường)');
+  await reset();await typ('dr');await page.selectOption('#pv-options select[data-opt=hand]','1');
+  await page.evaluate(([a,b])=>{window.VGDPlanEdit.move([a,b]);window.VGDPlanEdit.click([a,b]);},at(-60));await wait(200);
+  const opn=await page.evaluate(()=>window.VGDS._state.levels[0].openingPicks),nid=Object.keys(opn).filter(k=>!['op_00000001','op_00000002'].includes(k))[0];
+  ok(nid && opn[nid].flip===true && opn[nid].mirror===true,'bấm đặt: cửa mới lưu flip = true (phía con trỏ) và mirror = true (bản lề cuối)');
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  await page.evaluate(id=>window.VGDPlan.selectKeys('sl_00000001',[{kind:'opening',ref:id}],false),'op_00000001');await wait(100);
+  ok(await page.locator('#pv-props input[data-field=mirror]').isVisible() && !(await page.locator('#pv-props input[data-field=mirror]').isChecked()) && !(await page.locator('#pv-props input[data-field=flip]').isChecked()),'chọn cửa đi: Thuộc tính có hai ô đổi hướng mở và bản lề cuối (cửa này đang mặc định)');
+  await page.keyboard.press(' ');await wait(100);
+  ok((await page.evaluate(id=>window.VGDS._state.levels[0].openingPicks[id].mirror,'op_00000001'))===true,'chọn một cửa rồi Space: đổi bản lề sang đầu cuối (mirror = true)');
+  await page.keyboard.press('Shift+ ');await wait(100);
+  ok((await page.evaluate(id=>window.VGDS._state.levels[0].openingPicks[id].flip,'op_00000001'))===true,'Shift+Space: đổi hướng mở sang phía kia (flip = true)');
+  await page.keyboard.press(' ');await wait(100);
+  ok((await page.evaluate(id=>window.VGDS._state.levels[0].openingPicks[id].mirror,'op_00000001'))===undefined,'Space lần nữa: bản lề về đầu tường, bỏ khóa mirror');
+  await page.locator('#pv-props input[data-field=mirror]').check();await wait(150);
+  ok((await page.evaluate(id=>window.VGDS._state.levels[0].openingPicks[id].mirror,'op_00000001'))===true,'tick ô bản lề cuối trong Thuộc tính: lưu mirror');
+  const vrh=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vrh.ok,'dữ liệu cửa có bản lề cuối được Ruby chấp nhận');
+  // Xem trước sàn / trần đúng hình sẽ dựng (Ruby tính cho ô chưa chọn)
+  await reset();await typ('fl');await page.selectOption('#pv-options select[data-opt=mode]','grid');await clear();
+  const pcell=await page.evaluate(()=>window.VGDS.api.allCells().find(c=>!window.VGDS._state.levels[0].slabPicks[c.ref]));
+  await page.evaluate(c=>{window.VGDPlanEdit.move([(c.x0+c.x1)/2,(c.y0+c.y1)/2]);window.VGDPlanEdit.ghost();},pcell);await wait(200);
+  const pq=await calls('plate_probe');
+  ok(pq.length>=1 && pq[0].kind==='slabs' && pq[0].ref===pcell.ref && pq[0].level==='sl_00000001' && !!pq[0].state.levels,'rê trên ô sàn chưa chọn: hỏi Ruby hình thực tế (plate_probe kèm dữ liệu hiện tại)');
+  const unk=await page.evaluate(()=>window.VGDPlanEdit.ghost().find(g=>g.t==='poly'));
+  ok(unk && unk.dash && unk.poly.length===4,'khi chưa có kết quả: tạm hiện cả ô nét đứt');
+  const sm=[[100,100],[200,100],[200,200],[150,230],[100,200]];
+  await receive('plate_probe',{key:pq[pq.length-1].key,kind:'slabs',level:'sl_00000001',ref:pcell.ref,polygon:sm,holes:null});await wait(100);
+  const real=await page.evaluate(()=>window.VGDPlanEdit.ghost().find(g=>g.t==='poly'));
+  ok(real && !real.dash && real.poly.length===5 && real.poly[3][0]===150,'có kết quả từ Ruby: xem trước dùng đúng đa giác thực tế (5 đỉnh), nét liền');
+  await clear();await page.evaluate(c=>{window.VGDPlanEdit.move([(c.x0+c.x1)/2,(c.y0+c.y1)/2]);window.VGDPlanEdit.ghost();},pcell);await wait(150);
+  ok((await calls('plate_probe')).length===0,'cùng ô, dữ liệu không đổi: không hỏi lại Ruby (dùng bộ nhớ đệm)');
+  await reset();
   // Bật / tắt
-  ok(await page.locator('#pv-sudraw-btn').isVisible() && (await page.locator('#pv-sudraw-btn').getAttribute('aria-pressed'))==='false','nút "Vẽ trong SketchUp" có trên thanh trên, mặc định tắt');
+  await page.evaluate(()=>window.VGDPlan.ribbonTab('sketchup'));
+  ok(await page.locator('#pv-sudraw-btn').isVisible() && (await page.locator('#pv-sudraw-btn').getAttribute('aria-pressed'))==='false','nút "Vẽ trong SketchUp" có trong tab SketchUp của ribbon, mặc định tắt');
   await typ('cl');ok((await calls('su_pick_start')).length===0,'chưa bật chế độ SD: chọn công cụ Cột không tự bật công cụ nhận điểm của SketchUp');
   await page.keyboard.press('Escape');await page.keyboard.press('Escape');await clear();
   await typ('sd');ok((await dbg10()).suDraw===true && (await page.locator('#pv-sudraw-btn').getAttribute('aria-pressed'))==='true' && (await calls('su_pick_start')).length===0,'gõ SD: bật chế độ; đang ở công cụ Chọn nên chưa nhận điểm từ SketchUp');
@@ -1694,6 +1990,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   gh=await last('su_ghost');
   const sbox=gh&&gh.items.find(i=>i.t==='box');
   ok(sbox && Math.abs((sbox.z1-sbox.z0)-F.preview.slabs.thickness)<0.01 && sbox.z1===F.preview.slabs.z_top,'vẽ sàn theo ô: xem trước là khối đúng chiều dày sàn, mặt trên tại cốt sàn kết cấu');
+  ok(sbox && sbox.xray===true,'vẽ sàn: xem trước gửi kiểu X-ray (cờ xray) để SketchUp vẽ mặt mờ, viền nét đứt');
   await page.keyboard.press('Escape');await receive('su_key',{key:'Escape'});await wait(80);
   await typ('dr');await receive('su_pick_state',{active:true});await clear();await receive('su_move',{x:3000,y:3600});await wait(250);
   gh=await last('su_ghost');
