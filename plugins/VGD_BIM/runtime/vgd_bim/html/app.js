@@ -421,6 +421,8 @@ function filteredRows(){
 // Ctrl+A = chọn hết các dòng đang hiện; Esc = bỏ chọn. SketchUp chọn theo các đối tượng đó (xem table_select trong dialog.rb).
 // Dòng gộp (Gộp dòng giống nhau) có nhiều đối tượng: chọn dòng gộp là chọn mọi đối tượng của nó.
 const membersOf=row=>row.members||[row.index];
+// Các món đang chọn LÚC BẤM (không dùng danh sách chụp lúc mở bảng nổi, vì chọn thêm dòng không dựng lại bảng nổi). Dòng gộp gửi đủ mọi món đang chọn.
+const selectedIndexes=()=>[...new Set(tableState.displayed.flatMap(r=>membersOf(r).filter(m=>tableState.sel.has(m))))];
 // Số dòng đã chọn hiện ở chân trang, bên phải dòng thông báo (chỗ cố định để chân trang không nhảy chiều cao); chỉ có ở tab Bảng khối lượng và khi có dòng được chọn.
 function updateSelInfo(){
   const el=$('sel-info');if(!el)return;
@@ -1140,8 +1142,8 @@ function codesPanel(){
   const sample=()=>{const n=Number(start.input.value),d=Number(pad.input.value);preview.textContent=Number.isInteger(n)&&Number.isInteger(d)&&d>=1&&d<=6?`Ví dụ: ${prefix.input.value.trim()}${String(n).padStart(d,'0')}, ${prefix.input.value.trim()}${String(n+1).padStart(d,'0')}...`:'';};
   [prefix,start,pad].forEach(f=>f.input.oninput=sample);sample();
   const apply=button('Áp dụng',()=>{
-    if(!picked.length)throw Error('Hãy chọn các dòng cần đặt mã.');
-    call('table_assign_codes',JSON.stringify({indexes:picked.flatMap(r=>r.members.filter(m=>tableState.sel.has(m)).slice(0,1)),prefix:prefix.input.value,start:Number(start.input.value),pad:Number(pad.input.value),overwrite:over.checked}));
+    if(!selectedIndexes().length)throw Error('Hãy chọn các dòng cần đặt mã.');
+    call('table_assign_codes',JSON.stringify({indexes:selectedIndexes(),prefix:prefix.input.value,start:Number(start.input.value),pad:Number(pad.input.value),overwrite:over.checked}));
     tableState.panel=null;tableView(tableState.data);
   },'primary');
   const actions=node('div',undefined,'rename-actions');actions.append(apply,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
@@ -1218,8 +1220,8 @@ function roomsPanel(){
   make.title='Đọc viền (và các lỗ, vd cột) của các mặt sàn nằm ngang đang chọn trong SketchUp, mỗi mặt thành một phòng. Một mặt: tên và mã như đã nhập. Nhiều mặt: tên là tiền tố (Phòng 1, Phòng 2...), không đặt mã. Chỉ lưu dữ liệu, không dựng hình.';
   const picked=tableState.displayed.filter(r=>r.members.some(m=>tableState.sel.has(m)));
   const auto=button('Gán món vào phòng theo vị trí',()=>{
-    if(!picked.length)throw Error('Hãy chọn các dòng cần gán phòng (Ctrl+A chọn hết các dòng đang hiện).');
-    call('table_assign_rooms_auto',JSON.stringify({indexes:picked.flatMap(r=>r.members.filter(m=>tableState.sel.has(m)).slice(0,1))}));
+    if(!selectedIndexes().length)throw Error('Hãy chọn các dòng cần gán phòng (Ctrl+A chọn hết các dòng đang hiện).');
+    call('table_assign_rooms_auto',JSON.stringify({indexes:selectedIndexes()}));
   });auto.id='rm-auto';auto.title='Mỗi món nhận phòng chứa tâm đáy của nó (trong viền và trong khoảng cao của phòng). Chỉ là nhãn, không dời hình.';
   const buildAll=button(`Dựng khối tất cả phòng${rooms.length?` (${rooms.length})`:''}`,()=>call('table_room_build_all',JSON.stringify({})));buildAll.id='rm-build-all';
   buildAll.disabled=!rooms.length;buildAll.title='Dựng (hoặc dựng lại) khối 3D của mọi phòng, một bước hoàn tác cho cả đợt.';
@@ -1255,8 +1257,8 @@ function levelsPanel(){
   });add.id='lv-add';
   const picked=tableState.displayed.filter(r=>r.members.some(m=>tableState.sel.has(m)));
   const auto=button('Gán tầng theo cao độ cho món đang chọn',()=>{
-    if(!picked.length)throw Error('Hãy chọn các dòng cần gán tầng (Ctrl+A chọn hết các dòng đang hiện).');
-    call('table_assign_levels_auto',JSON.stringify({indexes:picked.flatMap(r=>r.members.filter(m=>tableState.sel.has(m)).slice(0,1))}));
+    if(!selectedIndexes().length)throw Error('Hãy chọn các dòng cần gán tầng (Ctrl+A chọn hết các dòng đang hiện).');
+    call('table_assign_levels_auto',JSON.stringify({indexes:selectedIndexes()}));
   },'primary');auto.id='lv-auto';auto.title='Mỗi món nhận tầng cao nhất có cao độ sàn bằng hoặc thấp hơn đáy món (dung sai 50 mm). Chỉ là nhãn, không dời hình.';
   const actions=node('div',undefined,'rename-actions');actions.append(add,auto,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
   p.append(node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán tầng theo cao độ; hoặc nhấp đúp ô Tầng để gán tay.','muted'),actions);

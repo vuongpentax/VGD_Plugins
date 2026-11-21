@@ -2,6 +2,16 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.25: đã kiểm tra tự động
+
+Sửa lỗi người dùng báo: gán tầng theo cao độ không chạy khi chọn tất cả món trong model. Nguyên nhân: bảng nổi lấy các dòng đang chọn lúc MỞ bảng, chọn thêm sau đó không được dùng. Cùng lỗi ở Gán phòng và Đặt mã đối tượng. Dòng gộp chỉ gán cho món đầu tiên.
+
+- `dev/test_ui.cjs`: mở bảng gán tầng khi chọn một dòng, rồi chọn thêm bằng chuột (Shift), bấm gán: gửi đủ `[0,1,2]`. Đã kiểm tra: test thất bại trước khi sửa.
+- Các bộ Playwright khác (ảnh, sheet, tiếng Anh, báo cáo) đạt.
+
+**Chưa xác minh trong SketchUp thật:** gán tầng cho cả model (vài nghìn món) có đủ nhanh và không lỗi trên model thật; dòng gộp trên SketchUp thật.
+**Lưu ý:** dòng chữ đếm "N dòng đang chọn" trong bảng nổi vẫn tính lúc mở; nút đã dùng đúng lựa chọn lúc bấm.
+
 ## Bản 1.1.1-beta.24: đã kiểm tra tự động
 
 Dọn code thừa và gộp tính hộp bao (`Table.base_point`, một lần cho mỗi món).

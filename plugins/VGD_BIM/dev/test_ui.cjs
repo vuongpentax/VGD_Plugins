@@ -493,6 +493,13 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   await page.locator('#lv-auto').click();
   last=await lastCall();
   assert(last.name==='table_assign_levels_auto' && JSON.stringify(last.data.indexes)==='[1,2]','gán theo cao độ: gửi các dòng đang chọn');
+  // Lỗi: bảng gán tầng mở khi chỉ chọn một dòng; sau đó chọn thêm dòng bằng chuột (không dựng lại bảng nổi) thì nút gán phải dùng các dòng đang chọn lúc bấm
+  await page.evaluate(()=>{tableState.sel=new Set([1]);tableState.panel='levels';tableView(tableState.data);});
+  await page.locator('.grid tbody tr[data-index="0"] td[data-key="instance"]').click();
+  await page.locator('.grid tbody tr[data-index="2"] td[data-key="instance"]').click({modifiers:['Shift']});
+  await page.locator('#lv-auto').click();
+  last=await lastCall();
+  assert(last.name==='table_assign_levels_auto' && JSON.stringify(last.data.indexes)==='[0,1,2]','gán tầng theo cao độ: chọn thêm dòng sau khi mở bảng, nút gửi đủ các dòng đang chọn lúc bấm');
   await page.evaluate(()=>{tableState.sel=new Set();tableState.panel=null;tableView(tableState.data);});
   await page.locator('.grid tbody tr[data-index="1"] td[data-key="level"]').dblclick();
   assert(await page.locator('.cell-item',{hasText:'Tầng 2'}).count()===1,'nhấp đúp ô Tầng: menu liệt kê các tầng');

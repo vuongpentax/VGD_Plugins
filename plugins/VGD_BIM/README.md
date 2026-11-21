@@ -1,4 +1,4 @@
-# VGD BIM 1.1.1-beta.24
+# VGD BIM 1.1.1-beta.25
 
 Bản thử của 1.1.1 (bản ổn định gần nhất là 1.1.0). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -45,6 +45,8 @@ Cửa sổ có 5 tab (nút **Preset** cạnh nút Sáng/Tối ở thanh đầu d
 **Sửa lỗi rà soát, nhóm 2** (từ 1.1.1-beta.23): (1) tô màu theo tag (SketchUp) là một bước hoàn tác; (2) diện tích không có mặt thật (VGD Structure) ghi chú "ước tính theo khối bao"; dòng diện tích tường của phòng ghi rõ "chưa trừ cửa"; (3) ghi file (cài đặt, ảnh, luật) an toàn hơn: file cũ không mất nếu đổi tên lỗi; (4) khối phòng được tìm cả trong group lồng nhau, tránh dựng trùng; (5) món không đo được hộp bao khi chụp không còn gọi View#zoom.
 
 **Dọn code** (từ 1.1.1-beta.24): bỏ các hàm không còn dùng (nhóm tìm theo loại, lọc theo tầng / khu vực, một hàm chụp cũ, một hằng giao diện); tính hộp bao của món một lần thay vì hai lần khi dựng bảng. Giao diện và kết quả không đổi.
+
+**Sửa lỗi gán tầng / phòng / mã hàng loạt** (từ 1.1.1-beta.25): các bảng nổi Gán tầng theo cao độ, Gán phòng, Đặt mã đối tượng dùng đúng các dòng đang chọn lúc bấm (trước đây chỉ dùng các dòng đang chọn lúc mở bảng, nên chọn thêm hoặc chọn cả model rồi bấm thì chỉ gán vài món); dòng gộp gán đủ mọi món.
 
 **Nút dán ảnh từ clipboard báo rõ lỗi** (từ 1.1.1-beta.16): khi không đọc được clipboard bằng nút, thông báo ghi kèm lỗi của trình duyệt (ví dụ NotAllowedError) để biết nguyên nhân. Ctrl+V sau khi chọn ô ảnh vẫn dùng được như trước. Nguyên nhân gốc chưa xác định; cần xem thông báo trong SketchUp.
 
