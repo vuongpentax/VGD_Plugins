@@ -16,7 +16,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
  try{
   const page=await browser.newPage({viewport:{width:1100,height:800}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
-  await page.addInitScript(()=>{window.calls=[];window.sketchup=new Proxy({}, {get:(_,name)=>(...args)=>window.calls.push({name,args})})});
+  await page.addInitScript(()=>{try{localStorage.setItem('vgd.bim.tools.open',JSON.stringify({export:true,table:true,data:true,site:true,check:true}));}catch(_){}/* mọi nhóm menu Công cụ mở sẵn để test bấm thẳng; mặc định gập kiểm riêng */window.calls=[];window.sketchup=new Proxy({}, {get:(_,name)=>(...args)=>window.calls.push({name,args})})});
   await page.goto(pathToFileURL(path.resolve(__dirname,'../runtime/vgd_bim/html/index.html')).href);
   const receive=(event,data)=>page.evaluate(([e,d])=>window.VGD.receive(e,d),[event,data]);
   const calls=name=>page.evaluate(n=>window.calls.filter(c=>c.name===n).map(c=>({name:c.name,args:c.args})),name);
@@ -50,7 +50,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await page.locator('nav button').count()===5,'điều hướng còn 5 tab (đã bỏ tab Hình ảnh và Cài đặt)');
   const order=await page.locator('.header-actions > *').evaluateAll(els=>els.map(e=>e.id));
   ok(JSON.stringify(order)==='["preset-btn","theme","gear"]','thanh đầu: nút preset đứng cạnh nút Sáng/Tối, rồi bánh răng');
-  ok((await page.locator('#preset-btn').innerText()).trim()==='Tất cả','nút preset ghi tên preset đang dùng');
+  ok((await page.locator('#preset-btn').innerText()).trim()==='Preset: Tất cả','nút preset ghi tên preset đang dùng');
 
   // ---- Kích thước nút thanh đầu: đúng số đo trong CSS Modus của Auto Info ----
   const box=async sel=>page.locator(sel).evaluate(el=>{const r=el.getBoundingClientRect(),cs=getComputedStyle(el);return {w:r.width,h:r.height,pad:cs.padding,bg:cs.backgroundColor,border:cs.borderTopColor,radius:cs.borderTopLeftRadius,font:cs.fontSize,weight:cs.fontWeight};});
@@ -120,7 +120,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await receive('table',table());
   ok(JSON.stringify(await heights())===JSON.stringify(hKeep),'bảng vẽ lại (chọn đối tượng khác): độ cao hàng giữ nguyên');
   const page2=await browser.newPage({viewport:{width:1100,height:800}});
-  await page2.addInitScript(()=>{window.calls=[];window.sketchup=new Proxy({}, {get:(_,name)=>(...args)=>window.calls.push({name,args})})});
+  await page2.addInitScript(()=>{try{localStorage.setItem('vgd.bim.tools.open',JSON.stringify({export:true,table:true,data:true,site:true,check:true}));}catch(_){}/* mọi nhóm menu Công cụ mở sẵn để test bấm thẳng; mặc định gập kiểm riêng */window.calls=[];window.sketchup=new Proxy({}, {get:(_,name)=>(...args)=>window.calls.push({name,args})})});
   await page2.goto(pathToFileURL(path.resolve(__dirname,'../runtime/vgd_bim/html/index.html')).href);
   const view120={rowHeight:120,preset:'Tất cả',order:F.columns.map(c=>c.key),visible:['ordinal','image','instance','quantity']};
   await page2.evaluate(([c,t])=>{window.VGD.receive('config',c);window.VGD.receive('table',t);},[config('table',{table:{columns:F.columns,presets:F.presets,view:view120}}),table({view:view120})]);
@@ -209,7 +209,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(allVisible && (await page.locator('.grid tbody tr.selected').getAttribute('data-index'))==='15','bấm mũi tên lên 25 lần: bảng cuộn ngược, dòng đang chọn (dòng 15) luôn hiện trọn vẹn');
   await page.waitForTimeout(250);await page.keyboard.press('Escape');
   const lay=await page.evaluate(()=>{
-    const main=document.querySelector('main'),wrap=document.querySelector('.grid-wrap'),bar=document.querySelector('.bottombar');
+    const main=document.querySelector('main'),wrap=document.querySelector('.grid-wrap'),bar=document.querySelector('.sheetbar');
     const before={mainScroll:main.scrollHeight-main.clientHeight,wrapScroll:wrap.scrollHeight-wrap.clientHeight};
     wrap.scrollTop=400;
     const wr=wrap.getBoundingClientRect(),th=document.querySelector('.grid thead tr:first-child th').getBoundingClientRect(),th2=document.querySelector('.grid thead tr.unit-row th').getBoundingClientRect(),foot=document.querySelector('.grid tfoot td').getBoundingClientRect(),br=bar.getBoundingClientRect();
@@ -220,9 +220,9 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(Math.abs(lay.headTop)<=1 && Math.abs(lay.unitGap)<=1,'cuộn xuống: tiêu đề cột và hàng đơn vị vẫn dính ở đầu khung bảng');
   ok(Math.abs(lay.footGap)<=1,'cuộn xuống: dòng tổng cộng vẫn dính ở đáy khung bảng');
   ok(lay.fillGap<=14,'khung bảng kéo dài tới sát chân trang (không để trống khoảng lớn bên dưới)');
-  ok(lay.barInside,'chân trang (các nút gạt) nằm cố định dưới khung bảng, không bị cuộn mất');
+  ok(lay.barInside,'chân bảng (thanh sheet) nằm cố định dưới khung bảng, không bị cuộn mất');
   await openOptions();
-  const sw=await page.locator('.bottombar .sw').first().evaluate(el=>({w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height}));
+  const sw=await page.locator('.menubar .sw').first().evaluate(el=>({w:el.getBoundingClientRect().width,h:el.getBoundingClientRect().height}));
   ok(Math.round(sw.w)===40 && Math.round(sw.h)===22,'nút gạt cùng kích thước với tab Quản lý của Center (40 x 22)');
   await receive('table',table());
   await receive('config',config('information'));
@@ -232,7 +232,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   // ---- Mở lại cửa sổ với cột Diện tích chiếu đang hiện: tự bật công tắc một lần (Ruby mặc định đang tắt) ----
   {
     const fresh=await browser.newPage({viewport:{width:1100,height:800}});
-    await fresh.addInitScript(()=>{window.calls=[];window.sketchup=new Proxy({}, {get:(_,name)=>(...args)=>window.calls.push({name,args})})});
+    await fresh.addInitScript(()=>{try{localStorage.setItem('vgd.bim.tools.open',JSON.stringify({export:true,table:true,data:true,site:true,check:true}));}catch(_){}/* mọi nhóm menu Công cụ mở sẵn để test bấm thẳng; mặc định gập kiểm riêng */window.calls=[];window.sketchup=new Proxy({}, {get:(_,name)=>(...args)=>window.calls.push({name,args})})});
     await fresh.goto(pathToFileURL(path.resolve(__dirname,'../runtime/vgd_bim/html/index.html')).href);
     const rec=(e,d)=>fresh.evaluate(([a,b])=>window.VGD.receive(a,b),[e,d]);
     const saved={preset:'Phòng & Khu vực',order:F.columns.map(c=>c.key),visible:['ordinal','instance','areaProjected'],headers:{},settings:{}};
@@ -247,8 +247,13 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
 
   // ---- Bảng preset ----
   await receive('table',table());await clear();
+  await page.evaluate(()=>{Object.keys(presetGroupOpen).forEach(k=>delete presetGroupOpen[k]);});
   await page.click('#preset-btn');
-  ok(await page.locator('#preset-panel').isVisible() && (await page.locator('#preset-panel h3').allInnerTexts()).join('|')==='Đơn vị|Số đo thân' && (await page.locator('#preset-panel details.pp-group > summary').allInnerTexts()).join('|')==='Hình ảnh|Ảnh vị trí|Ảnh 3|Ảnh 4','bấm nút preset: mở bảng có phần Đơn vị, bốn nhóm ảnh gập được (Hình ảnh, Ảnh vị trí, Ảnh 3, Ảnh 4) và Số đo thân');
+  const ppGroups=await page.locator('#preset-panel details.pp-group').evaluateAll(ds=>ds.map(d=>({open:d.open,title:d.querySelector('summary').firstChild.textContent,sum:(d.querySelector('.pp-sum')||{}).textContent||''})));
+  ok(ppGroups.map(g=>g.title).join('|')==='Đơn vị|Hình ảnh|Ảnh vị trí|Ảnh 3|Ảnh 4|Thư mục ảnh|Số đo thân' && ppGroups.every(g=>!g.open),'bảng preset: mọi nhóm thiết lập gập sẵn (bấm để sổ ra)');
+  ok(ppGroups[0].sum==='mm · m² · m³ · VND' && ppGroups[1].sum==='512×512 · Phối cảnh iso' && ppGroups[6].sum==='bỏ 2 từ khóa','nhóm gập hiện một dòng tóm tắt (đơn vị, cỡ và góc nhìn ảnh, số từ khóa)');
+  await page.evaluate(()=>{['units','image','loc','x1','x2','folder','body'].forEach(k=>{presetGroupOpen[k]=true;});presetPanel($('preset-panel'));});
+  ok(await page.locator('#preset-panel').isVisible() && await page.locator('#preset-panel details.pp-group[open]').count()===7,'bấm nút preset: mở bảng có phần Đơn vị, bốn nhóm ảnh gập được (Hình ảnh, Ảnh vị trí, Ảnh 3, Ảnh 4) và Số đo thân');
   ok(await page.locator('#preset-panel .pp-pick').count()===12 && (await page.locator('#preset-panel .pp-pick.active').innerText())==='Tất cả','bảng preset liệt kê 12 preset, preset đang dùng được tô nổi bật');
   ok(await page.locator('#preset-panel select[aria-label="Chiều dài: đơn vị"]').inputValue()==='mm' && await page.locator('#preset-panel select[aria-label="Chiều dài: số lẻ"]').inputValue()==='0','thiết lập đang dùng hiện đúng trong bảng (mm, 0 số lẻ)');
   ok((await page.locator('#preset-panel select[aria-label="Chiều dài: số lẻ"] option').allInnerTexts()).join(',')==='0,0.0,0.00,0.000,0.0000','số lẻ hiện dạng 0, 0.0, 0.00, ...');
@@ -257,7 +262,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.click('#preset-btn');await page.mouse.click(5,300);
   ok(await page.locator('#preset-panel').isHidden(),'bấm ra ngoài: đóng bảng preset');
   await usePreset('Phòng & Khu vực');
-  ok((await page.locator('#preset-btn').innerText()).trim()==='Phòng & Khu vực' && (await page.locator('#preset-panel .pp-pick.active').innerText())==='Phòng & Khu vực','chọn preset: nút preset và danh sách đổi theo');
+  ok((await page.locator('#preset-btn').innerText()).trim()==='Preset: Phòng & Khu vực' && (await page.locator('#preset-panel .pp-pick.active').innerText())==='Phòng & Khu vực','chọn preset: nút preset và danh sách đổi theo');
   let head=await headText();
   ok(head.includes('Mã phòng') && head.includes('Tên phòng') && head.includes('Diện tích phòng') && head.includes('Rộng') && head.includes('STT'),'preset đặt sẵn tiêu đề cột riêng (Mã phòng, Tên phòng, Diện tích phòng)');
   ok(await cellText(0,'lenX')==='1,20' && await cellText(0,'lenY')==='0,60' && await cellText(0,'areaProjected')==='1,50','preset Phòng & Khu vực: kích thước theo m với 2 số lẻ, diện tích chiếu 1,50');
@@ -279,10 +284,10 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   view=await viewJson();
   ok(view.settings.length_unit==='mm' && view.settings.area_unit==='m2','mọi thay đổi thiết lập được lưu vào trạng thái bảng');
   await clear();await choose('Góc nhìn ảnh','front');await choose('Kiểu hiển thị ảnh','current');await choose('Chiều rộng ảnh',1024);await choose('Chiều cao ảnh',768);await choose('Nền ảnh','white');
-  await page.locator('#preset-panel details.pp-group').nth(1).locator('summary').click();
-  ok(!(await page.locator('#preset-panel details.pp-group').nth(1).evaluate(d=>d.open)) && await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').isHidden(),'gập nhóm Ảnh vị trí: các ô trong nhóm ẩn đi');
-  await page.locator('#preset-panel details.pp-group').nth(1).locator('summary').click();
-  ok(await page.locator('#preset-panel details.pp-group').nth(1).evaluate(d=>d.open) && await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').isVisible(),'mở lại nhóm Ảnh vị trí: các ô hiện lại');
+  await page.locator('#preset-panel details.pp-group[data-group="loc"]').locator('summary').click();
+  ok(!(await page.locator('#preset-panel details.pp-group[data-group="loc"]').evaluate(d=>d.open)) && await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').isHidden(),'gập nhóm Ảnh vị trí: các ô trong nhóm ẩn đi');
+  await page.locator('#preset-panel details.pp-group[data-group="loc"]').locator('summary').click();
+  ok(await page.locator('#preset-panel details.pp-group[data-group="loc"]').evaluate(d=>d.open) && await page.locator('#preset-panel input[aria-label="Vùng nhìn ảnh vị trí (lần)"]').isVisible(),'mở lại nhóm Ảnh vị trí: các ô hiện lại');
   const marginBox=page.locator('#preset-panel input[aria-label="Chừa lề (%)"]');
   ok(await marginBox.inputValue()==='20','ô Chừa lề (%) trong thiết lập ảnh: mặc định 20');
   await marginBox.fill('150');await page.keyboard.press('Tab');
@@ -341,7 +346,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(JSON.stringify(await json('table_preset'))==='{"action":"delete","name":"KL THO"}','nút Xóa preset này: gửi lệnh xóa đúng preset đang chọn');
   await receive('presets',F.presets);
   await usePreset('Nội thất');
-  ok(await page.locator('#preset-panel .pp-edit button').count()===0 && (await page.locator('#preset-panel .pp-edit').innerText()).includes('không sửa hay xóa được'),'preset có sẵn đang chọn: không hiện nút Cập nhật / Xóa, chỉ ghi chú');
+  ok(await page.locator('#preset-panel .pp-edit button').count()===0 && (await page.locator('#preset-panel .pp-edit').innerText()).includes('không sửa, không xóa'),'preset có sẵn đang chọn: không hiện nút Cập nhật / Xóa, chỉ ghi chú');
   ok((await page.locator('#preset-panel .pp-pick.active').innerText())==='Tất cả' || true,'xóa preset đang dùng: chuyển về preset đầu tiên');
   await usePreset('Nội thất');await page.keyboard.press('Escape');
   await page.locator('.grid thead th').nth(2).dblclick();await page.locator('.header-input').fill('Cột tạm');await page.keyboard.press('Enter');
@@ -357,7 +362,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.click('#preset-panel .pp-folder button[aria-label="Mở thư mục ảnh"]');
   ok((await calls('images_open_dir')).length===1 && (await calls('settings_save')).length===0,'nút mở thư mục gọi đúng lệnh, không lưu gì');
   await receive('settings',{settings:{language:'vi'},dir:'D:\\Nha\\bep_VGD_BIM',dir_exists:false,saved:true});
-  ok((await page.locator('#preset-panel .pp-dir').innerText()).includes('chưa có') && await dir.inputValue()==='D:\\Nha\\bep_VGD_BIM' && await page.locator('#preset-panel .pp-folder button[aria-label="Mở thư mục ảnh"]').isDisabled(),'thư mục chưa có: báo sẽ tạo khi chụp ảnh, nút mở bị khóa');
+  ok((await page.locator('#preset-panel .pp-dir').innerText()).includes('sẽ được tạo') && await dir.inputValue()==='D:\\Nha\\bep_VGD_BIM' && await page.locator('#preset-panel .pp-folder button[aria-label="Mở thư mục ảnh"]').isDisabled(),'thư mục chưa có: báo sẽ tạo khi chụp ảnh, nút mở bị khóa');
   await receive('settings',{settings:{language:'vi'},dir:null,dir_exists:false,saved:false});
   ok((await page.locator('#preset-panel .pp-dir').innerText()).includes('Chưa lưu file SketchUp') && (await dir.inputValue())==='','file chưa lưu: báo phải lưu file, ô đường dẫn trống');
   await receive('settings',{settings:{language:'vi'},dir:'C:\\data\\images',dir_exists:true,saved:true});
@@ -397,17 +402,17 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   // ---- Chân trang ----
   await clear();
   await openOptions();
-  ok((await page.locator('.bottombar .sw-label').allInnerTexts()).join('|')==='Thu phóng đối tượng|Cô lập đối tượng chọn|Chọn sâu bên trong|Diện tích chiếu|Bảng tên trên model|Hiển thị dòng tính tổng|Tổng chỉ cấp cao nhất' && await page.locator('.bottombar button[role="switch"]').count()===7,'chân trang: 7 nút gạt (role switch), có Diện tích chiếu và Bảng tên trên model');
+  ok((await page.locator('.menubar .sw-label').allInnerTexts()).join('|')==='Thu phóng đối tượng|Cô lập đối tượng chọn|Chọn sâu bên trong|Bảng tên trên model|Diện tích chiếu|Hiển thị dòng tính tổng|Tổng chỉ cấp cao nhất' && await page.locator('.menubar button[role="switch"]').count()===7,'bảng Tùy chọn: 7 nút gạt (role switch), xếp theo nhóm Khi chọn dòng / Số đo / Dòng tính tổng');
 
   await clear();
   await openOptions();
-  ok((await page.locator('.bottombar .sw').nth(4).getAttribute('aria-checked'))==='true','công tắc Bảng tên trên model: mặc định bật');
+  ok((await page.locator('.menubar .sw').nth(3).getAttribute('aria-checked'))==='true','công tắc Bảng tên trên model: mặc định bật');
   await openOptions();
   await page.getByRole('switch',{name:'Bảng tên trên model'}).click();
   ok(JSON.stringify(await json('table_option'))==='{"label":false}','tắt Bảng tên trên model: gửi label = false cho Ruby');
   await receive('options',{zoom:true,isolate:false,deep:false,projected:false,label:false,isolating:false});
   await openOptions();
-  ok((await page.locator('.bottombar .sw').nth(4).getAttribute('aria-checked'))==='false','Ruby báo tắt: công tắc chuyển sang tắt');
+  ok((await page.locator('.menubar .sw').nth(3).getAttribute('aria-checked'))==='false','Ruby báo tắt: công tắc chuyển sang tắt');
   await openOptions();
   await clear();await page.getByRole('switch',{name:'Bảng tên trên model'}).click();
   ok(JSON.stringify(await json('table_option'))==='{"label":true}','bật lại: gửi label = true');
@@ -415,9 +420,24 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await receive('options',{zoom:true,isolate:false,deep:false,projected:false,label:true,isolating:false});  await page.getByRole('switch',{name:'Diện tích chiếu',exact:true}).click();
   ok(JSON.stringify(await json('table_option'))==='{"projected":true}','công tắc Diện tích chiếu: gửi tuỳ chọn');
   await page.getByRole('button',{name:'Công cụ ▾'}).click();
-  ok((await page.locator('.io-panel button').allInnerTexts()).map(x=>x.replace(/\s+/g,' ').trim()).join('|')==='Cầu nối dữ liệu|Xuất Excel|In PDF|Ghi cách tính vào món đang chọn|Gán VGD ID cho món đang chọn|Sửa VGD ID trùng|Sửa bằng plugin dựng hình|Đặt mã đối tượng hàng loạt...|Quản lý tầng...|Quản lý phòng...|Thư viện vật liệu...|Luật kiểm tra...|So sánh phiên bản...','menu Nhập / Xuất: Cầu nối dữ liệu (để sẵn, chưa dùng được), Xuất Excel, In PDF, Ghi cách tính vào món, nhập / xuất preset');
+  ok((await page.locator('.io-panel button').allInnerTexts()).map(x=>x.replace(/\s+/g,' ').trim()).join('|')==='Cầu nối dữ liệu|Xuất Excel|In PDF|Loại trừ tag|Đổi tên...|Mặt trước...|Ghi cách tính vào món đang chọn|Gán VGD ID cho món đang chọn|Sửa VGD ID trùng|Sửa bằng plugin dựng hình|Đặt mã đối tượng hàng loạt...|Quản lý tầng...|Quản lý phòng...|Thư viện vật liệu...|Luật kiểm tra...|So sánh phiên bản...','menu Nhập / Xuất: Cầu nối dữ liệu (để sẵn, chưa dùng được), Xuất Excel, In PDF, Ghi cách tính vào món, nhập / xuất preset');
   const ioBox=await page.locator('.io-panel').boundingBox(),vp=page.viewportSize();
   ok(ioBox.x>=0 && ioBox.x+ioBox.width<=vp.width && ioBox.y>=0,'menu Nhập / Xuất nằm trọn trong cửa sổ (không bị cắt mép phải)');
+  { // Mặc định (máy chưa lưu gì): menu Công cụ chỉ mở nhóm Xuất, các nhóm khác gập; nằm trọn trong cửa sổ; nhớ nhóm đã mở
+    const plain=await browser.newPage({viewport:{width:860,height:740}});
+    await plain.addInitScript(()=>{window.sketchup=new Proxy({}, {get:()=>()=>{}});});
+    await plain.goto(pathToFileURL(path.resolve(__dirname,'../runtime/vgd_bim/html/index.html')).href);
+    await plain.evaluate(([c,t])=>{window.VGD.receive('config',c);window.VGD.receive('table',t);},[config('table'),table()]);
+    await plain.click('#tools-btn');
+    const secs=await plain.locator('.io-panel details.io-sec').evaluateAll(ds=>ds.map(d=>d.dataset.sec+':'+(d.open?1:0)));
+    const box=await plain.locator('.io-panel').boundingBox();
+    ok(secs.join(',')==='export:1,table:0,data:0,site:0,check:0' && box.y+box.height<=740 && box.y>=0,'menu Công cụ mặc định: chỉ nhóm Xuất mở, nhóm khác gập, nằm trọn trong cửa sổ 860 × 740');
+    await plain.locator('.io-sec[data-sec="site"] > summary').click();
+    await plain.waitForTimeout(80);
+    ok(JSON.parse(await plain.evaluate(()=>localStorage.getItem('vgd.bim.tools.open'))).site===true && await plain.locator('#levels-open').isVisible(),'bấm tiêu đề nhóm: sổ ra và nhớ trên máy này');
+    ok(!(await plain.locator('#exclude-chip').isVisible()) && (await plain.locator('nav#nav').evaluate(n=>n.parentElement.tagName))==='HEADER','không loại trừ tag thì không hiện chip; hàng tab nằm chung hàng đầu');
+    await plain.close();
+  }
   ok(await page.getByRole('button',{name:/Cầu nối dữ liệu/}).isEnabled(),'Cầu nối dữ liệu: nút bấm được (mở hộp nhập từ Excel / CSV)');
   ok(await page.getByRole('button',{name:'Nhập preset (JSON)'}).count()===0,'menu Nhập / Xuất không còn nút nhập / xuất preset JSON');
   await page.click('#preset-btn');
@@ -481,7 +501,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await usePreset('Tất cả').catch(()=>{});await page.keyboard.press('Escape');
   await receive('table',table({options:{zoom:true,isolate:false,deep:false,projected:true,isolating:false}}));
   await openOptions();
-  ok(await page.locator('.bottombar .sw[aria-checked="true"][aria-label="Diện tích chiếu"]').count()===1,'công tắc Diện tích chiếu phản ánh tuỳ chọn Ruby gửi về');
+  ok(await page.locator('.menubar .sw[aria-checked="true"][aria-label="Diện tích chiếu"]').count()===1,'công tắc Diện tích chiếu phản ánh tuỳ chọn Ruby gửi về');
 
   // ---- Thông tin theo đơn vị của preset ----
   await receive('config',config('table'));await receive('table',table());await usePreset('Phòng & Khu vực');await choose('Chiều dài: đơn vị','cm');await choose('Chiều dài: số lẻ',0);await page.keyboard.press('Escape');
@@ -494,13 +514,15 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   const tagRows=table({choices:{tags:['Đá bếp','Tay nắm','Cánh tủ','Phụ kiện'],materials:[],model_tags:['Cánh tủ','Đá bếp','Phụ kiện','Tay nắm']}});
   await receive('config',{...config('table'),app:{settings:{language:'vi',exclude_words:'tay nắm, handle',exclude_tags:['Đá bếp']},dir:'C:\\data\\images',dir_exists:true}});await receive('table',tagRows);
   await clear();
-  ok((await page.locator('#exclude-btn').innerText())==='Loại trừ tag (1)','nút Loại trừ tag hiện số tag đang được loại trừ');
+  ok(await page.locator('#exclude-chip').isVisible() && (await page.locator('#exclude-chip').innerText())==='Loại trừ 1 tag','đang loại trừ tag: chip trên thanh công cụ nhắc số tag (số đo đã khác)');
+  await page.click('#tools-btn');
+  ok((await page.locator('#exclude-btn').innerText()).trim()==='Loại trừ tag (1)','mục Loại trừ tag trong menu Công cụ (nhóm Bảng) hiện số tag đang được loại trừ');
   await page.click('#exclude-btn');await page.waitForTimeout(350);
   ok((await page.locator('.col-side .pop-col').allInnerTexts()).map(x=>x.trim()).join('|')==='Cánh tủ|Đá bếp|Phụ kiện|Tay nắm' && (await page.locator('#col-side').getAttribute('data-kind'))==='exclude','ngăn Loại trừ tag mở ra, liệt kê tag của model theo thứ tự chữ cái');
   ok(await page.locator('.col-side .pop-col').nth(1).locator('input').isChecked() && !(await page.locator('.col-side .pop-col').nth(0).locator('input').isChecked()),'tag đang loại trừ (Đá bếp) được tick sẵn');
   ok((await page.locator('.col-side .badge').innerText())==='1 / 4','huy hiệu đếm tag loại trừ / tổng tag của model'.replace('huy hiệu','huy hiệu'));
   await page.locator('.col-side .pop-col').nth(3).locator('input').click();
-  ok((await page.locator('#exclude-btn').innerText())==='Loại trừ tag (2)' && !(await last('settings_save')),'tick thêm một tag: nút cập nhật số ngay, nhưng chưa gửi lưu (đợi ngừng tick)');
+  ok((await page.locator('#exclude-chip').innerText())==='Loại trừ 2 tag' && !(await last('settings_save')),'tick thêm một tag: chip cập nhật số ngay, nhưng chưa gửi lưu (đợi ngừng tick)');
   await page.waitForTimeout(700);
   ok(JSON.stringify(await json('settings_save'))==='{"exclude_tags":["Đá bếp","Tay nắm"]}','sau khi ngừng tick: gửi một lần settings_save với danh sách tag mới');
   await clear();
@@ -515,13 +537,13 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok((await page.locator('.col-side .pop-col').last().innerText()).includes('Tag cũ (không có trong model)'),'tag đã lưu nhưng không có trong model này vẫn hiện (kèm ghi chú) để bỏ tick được');
   await page.click('#cols-btn');await page.waitForTimeout(100);
   ok((await page.locator('#col-side').getAttribute('data-kind'))==='columns' && (await page.locator('.col-side .pop-col').count())>20 && (await page.locator('#col-side').evaluate(el=>el.classList.contains('open'))),'bấm Chọn cột khi ngăn Loại trừ đang mở: đổi nội dung sang Chọn cột, ngăn vẫn mở');
-  await page.click('#exclude-btn');await page.waitForTimeout(100);
-  ok((await page.locator('#col-side').getAttribute('data-kind'))==='exclude','bấm lại Loại trừ tag: đổi về ngăn Loại trừ');
-  await page.click('#exclude-btn');await page.waitForTimeout(400);
-  ok(!(await page.locator('#col-side').evaluate(el=>el.classList.contains('open'))) && (await page.locator('#exclude-btn').getAttribute('aria-expanded'))==='false','bấm Loại trừ tag khi đang mở: đóng ngăn');
+  await page.click('#exclude-chip');await page.waitForTimeout(100);
+  ok((await page.locator('#col-side').getAttribute('data-kind'))==='exclude','bấm chip Loại trừ: đổi về ngăn Loại trừ');
+  await page.click('#exclude-chip');await page.waitForTimeout(400);
+  ok(!(await page.locator('#col-side').evaluate(el=>el.classList.contains('open'))) && (await page.locator('#exclude-chip').getAttribute('aria-expanded'))==='false','bấm chip Loại trừ khi đang mở: đóng ngăn');
   // Kéo mép phải của ngăn bên để đổi độ rộng (dùng chung hai ngăn, mở lại từ đóng thì về 230 px)
   const sideW=()=>page.locator('.col-side-in').evaluate(el=>Math.round(el.getBoundingClientRect().width));
-  await page.click('#exclude-btn');await page.waitForTimeout(400);
+  await page.click('#exclude-chip');await page.waitForTimeout(400);
   ok(await sideW()===230,'ngăn bên mở ra mặc định rộng 230 px');
   const grip=async dx=>{const b=await page.locator('.cs-grip').boundingBox();const x=b.x+b.width/2,y=b.y+b.height/2;await page.mouse.move(x,y);await page.mouse.down();await page.mouse.move(x+dx/2,y);await page.mouse.move(x+dx,y);await page.mouse.up();};
   await grip(120);
@@ -535,9 +557,9 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok((await page.locator('#col-side').getAttribute('data-kind'))==='columns' && await sideW()===330,'đổi sang Chọn cột khi đang mở: giữ nguyên độ rộng đã kéo');
   ok(await page.locator('.cs-grip').count()===1 && await page.locator('.col-side .pop-col').first().isVisible(),'mỗi ngăn có đúng một tay kéo và danh sách vẫn hiện');
   await page.click('#cols-btn');await page.waitForTimeout(400);
-  await page.click('#exclude-btn');await page.waitForTimeout(400);
+  await page.click('#exclude-chip');await page.waitForTimeout(400);
   ok(await sideW()===230,'đóng rồi mở lại: về 230 px');
-  await page.click('#exclude-btn');await page.waitForTimeout(400);
+  await page.click('#exclude-chip');await page.waitForTimeout(400);
   await receive('config',config('table'));await receive('table',table());await clear();
 
   // ---- Số đo thân: từ khóa loại trừ và công tắc cắt phần nhô nằm trong bảng Preset ----
@@ -563,15 +585,15 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(groups.some(g=>g.includes('Cần duyệt')) && groups.some(g=>g.includes('(Chưa có mặt trước)')) && groups.some(g=>g.includes('Tự động · cao')),'nhóm theo Mặt trước (độ tin cậy): có nhóm Cần duyệt, Tự động · cao, Chưa có mặt trước');
   await page.getByRole('button',{name:/Nhóm: Mặt trước/}).click();await page.getByRole('button',{name:'Không nhóm'}).click();
   await clear();
-  await page.click('#front-btn');
+  await page.click('#tools-btn');await page.click('#front-btn'); // Mặt trước nằm trong menu Công cụ
   ok((await page.locator('.front-panel').innerText()).includes('Chưa chọn dòng nào: phát hiện tự động cho tất cả 3 đối tượng đang hiện.'),'bảng Mặt trước: chưa chọn dòng thì nói rõ phát hiện cho tất cả');
   await page.click('#front-detect');
   ok(JSON.stringify(await json('front_detect'))==='{"indexes":[],"overwrite":false}','Phát hiện tự động khi chưa chọn: gửi indexes rỗng (Ruby lấy mọi dòng), không ghi đè');
   await page.click('#front-camera');
   ok((await message()).includes('Hãy chọn đối tượng trong bảng trước.') && !(await last('front_set')),'đặt tay khi chưa chọn dòng: báo lỗi, không gửi lệnh');
-  await page.click('#front-btn');
+  await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);}); // đóng bảng Mặt trước
   await page.locator('.grid tbody tr').nth(0).locator('td[data-key="instance"]').click();
-  await page.click('#front-btn');
+  await page.click('#tools-btn');await page.click('#front-btn'); // Mặt trước nằm trong menu Công cụ
   ok((await page.locator('.front-panel').innerText()).includes('Áp dụng cho 1 đối tượng đang chọn.'),'bảng Mặt trước: đã chọn dòng thì áp cho dòng đang chọn');
   await page.locator('#front-overwrite').check();await clear();await page.click('#front-detect');
   ok(JSON.stringify(await json('front_detect'))==='{"indexes":[0],"overwrite":true}','Phát hiện cho dòng đang chọn, tick Ghi đè thì gửi overwrite = true');
@@ -595,7 +617,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(!(await page.locator('.front-plan').count()) && await page.locator('#front-align-apply').isDisabled(),'Ruby báo đã áp dụng (cleared): bản xem trước biến mất');
   await receive('front_align_plan',{key:[1],fix:3,instances:3,aligned:0,skipped:0,reasons:[],names:['A']});
   ok(!(await page.locator('.front-plan').count()) && await page.locator('#front-align-apply').isDisabled(),'bản xem trước của dòng khác (đã đổi lựa chọn): không hiện, không cho áp dụng');
-  await page.click('#front-btn');
+  await page.evaluate(()=>{tableState.panel=null;tableView(tableState.data);}); // đóng bảng Mặt trước
   await page.evaluate(()=>{tableState.panel=null;tableState.sel=new Set();tableView(tableState.data);});
 
   // ---- Ngăn Chọn cột: đẩy bảng sang phải, hiệu ứng trượt, kéo đổi chỗ, ô tick, nút gạt ----
@@ -647,15 +669,15 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok((await sideBox()).width===0 && (await gridLeft())===left0 && (await page.locator('.col-side').evaluate(el=>el.childElementCount))===0,'đóng: ngăn thu lại hết, bảng về chỗ cũ');
   // Nút gạt chân trang: cùng một nút, trượt từ từ
   await openOptions();
-  const totalsSwitch=page.locator('.bottombar .sw').nth(5); // Hiển thị dòng tính tổng
+  const totalsSwitch=page.locator('.menubar .sw').nth(5); // Hiển thị dòng tính tổng
   const swBefore=await totalsSwitch.getAttribute('aria-checked');
   await openOptions();
-  await page.evaluate(()=>{window.__sw=document.querySelectorAll('.bottombar .sw')[5];});
+  await page.evaluate(()=>{window.__sw=document.querySelectorAll('.menubar .sw')[5];});
   await totalsSwitch.click();
   await page.waitForTimeout(60);
   const thumb=await page.evaluate(()=>parseFloat(getComputedStyle(window.__sw,'::after').left));
   await openOptions();
-  ok((await totalsSwitch.getAttribute('aria-checked'))!==swBefore && thumb>2 && thumb<20 && await page.evaluate(()=>window.__sw===document.querySelectorAll('.bottombar .sw')[5]),'nút gạt: cùng một phần tử, đầu gạt đang trượt (không nhảy), trạng thái đổi');
+  ok((await totalsSwitch.getAttribute('aria-checked'))!==swBefore && thumb>2 && thumb<20 && await page.evaluate(()=>window.__sw===document.querySelectorAll('.menubar .sw')[5]),'nút gạt: cùng một phần tử, đầu gạt đang trượt (không nhảy), trạng thái đổi');
   await page.waitForTimeout(250);
   await totalsSwitch.click();await page.waitForTimeout(250);
 
@@ -1105,6 +1127,8 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   const droppedMain=await json('image_set');
   ok(droppedMain && droppedMain.pid===502 && !('kind' in droppedMain),'kéo thả vào ô Ảnh món: như cũ, không có loại ảnh (mặc định ảnh món)');
   await page.evaluate(()=>{tableState.panel='capture';tableView(tableState.data);});
+  ok(await page.locator('.capture-panel details.cap-more').count()===1 && !(await page.locator('.capture-panel details.cap-more').evaluate(d=>d.open)) && (await page.locator('.capture-panel .cap-more > summary').innerText()).includes('Ảnh khác') && await page.locator('.capture-panel .cap-place').first().isHidden(),'hộp Cập nhật ảnh: Ảnh vị trí / Ảnh 3 / Ảnh 4 gập sẵn trong "Ảnh khác"');
+  await page.locator('.capture-panel .cap-more > summary').click();
   ok(await page.locator('.capture-panel .cap-place').count()===3 && (await page.locator('.capture-panel .cap-place').first().innerText()).includes('Ảnh vị trí') && (await page.locator('.capture-panel .cap-place').nth(1).innerText()).includes('Ảnh 3') && (await page.locator('.capture-panel .cap-place').nth(2).innerText()).includes('Ảnh 4'),'hộp Cập nhật ảnh có thêm hàng chụp ảnh vị trí trái / phải và hai hàng ảnh 3, ảnh 4');
   await page.locator('#cap-only').uncheck();
   await clear();await page.locator('.capture-panel .cap-place').first().getByRole('button',{name:'◢ Phải'}).click();

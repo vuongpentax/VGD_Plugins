@@ -1042,12 +1042,8 @@ function toolbar(){
   replace.oninput=()=>{tableState.replace=replace.value;};
   replace.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();go.click();}};
   replaceBox.append(replace,go);
-  const group=node('select');group.setAttribute('aria-label','Nhóm hạng mục');group.append(new Option('Tất cả nhóm',''));(d.groups||[]).forEach(g=>group.append(new Option(g,g)));
+  const group=node('select');group.setAttribute('aria-label','Nhóm hạng mục');group.append(new Option('Tất cả hạng mục',''));(d.groups||[]).forEach(g=>group.append(new Option(g,g)));
   group.value=tableState.group;group.onchange=()=>{tableState.group=group.value;renderGrid($('grid-host'));persistView();updateReplaceUi();};
-  const rename=button('Đổi tên',()=>{tableState.panel=tableState.panel==='rename'?null:'rename';tableView(tableState.data);});
-  rename.setAttribute('aria-expanded',String(tableState.panel==='rename'));
-  const front=button('Mặt trước',()=>{tableState.panel=tableState.panel==='front'?null:'front';tableView(tableState.data);});front.id='front-btn';
-  front.setAttribute('aria-expanded',String(tableState.panel==='front'));
   const snap=button('',()=>{tableState.panel=tableState.panel==='capture'?null:'capture';tableView(tableState.data);},'icon-btn');
   snap.append(imageIcon());snap.id='cap-run';snap.title='Cập nhật ảnh';snap.setAttribute('aria-label','Cập nhật ảnh');snap.setAttribute('aria-expanded',String(tableState.panel==='capture'));
   const stop=button('Dừng',()=>call('images_cancel'));stop.id='cap-stop';stop.hidden=true;
@@ -1057,12 +1053,14 @@ function toolbar(){
   grouping.setAttribute('aria-expanded',String(tableState.panel==='group'));
   const groupAnchor=node('div',undefined,'pop-anchor');groupAnchor.append(grouping);
   if(tableState.panel==='group')groupAnchor.append(groupPanel());
+  // Đang loại trừ tag thì số đo đã khác: hiện chip nhắc ngay trên thanh (bấm để mở danh sách). Nút chính nằm trong menu Công cụ.
   const excludeCount=excludedTags().size;
-  const exclude=button(excludeCount?`Loại trừ tag (${excludeCount})`:'Loại trừ tag',toggleExclude);exclude.id='exclude-btn';exclude.title='Chọn các tag không tính vào Rộng / Dài / Cao';
-  exclude.setAttribute('aria-expanded',String(tableState.panel==='exclude'));
+  const excludeChip=button(`Loại trừ ${excludeCount} tag`,toggleExclude,'chip');excludeChip.id='exclude-chip';excludeChip.title='Các tag này không tính vào Rộng / Dài / Cao. Bấm để xem hoặc đổi.';
+  excludeChip.setAttribute('aria-expanded',String(tableState.panel==='exclude'));
   const own=new Set(pidMap().values()),placed=tableState.manual.some(pid=>own.has(pid));
   const unplace=button('Bỏ xếp tay',resetManualOrder);unplace.id='order-reset';unplace.title='Bỏ thứ tự bạn đã kéo, về thứ tự quét ban đầu';
-  bar.append(cols,exclude,searchWrap,replaceBox,group,node('span',undefined,'grow'),rename,front,snap,stop,progress);
+  excludeChip.hidden=!excludeCount;
+  bar.append(cols,searchWrap,replaceBox,group,excludeChip,node('span',undefined,'grow'),snap,stop,progress);
   if(placed)bar.append(unplace);
   bar.append(groupAnchor);
   return bar;
@@ -1363,7 +1361,7 @@ function capturePanel(){
   p.append(onlyLabel,node('p',`Cỡ ${s.image_width} x ${s.image_height}, ${VIEW_LABELS[s.image_view]||s.image_view}. Đổi trong bảng preset.`,'muted'));
   const actions=node('div',undefined,'rename-actions');
   const place=node('div',undefined,'cap-place');
-  place.append(node('span','Ảnh vị trí trong công trình','muted'),button('◣ Trái',()=>{tableState.panel=null;runCapture(targets,imagesState.only,'left','location');tableView(tableState.data);}),button('◢ Phải',()=>{tableState.panel=null;runCapture(targets,imagesState.only,'right','location');tableView(tableState.data);}),button('● Theo preset',()=>{tableState.panel=null;runCapture(targets,imagesState.only,undefined,'location');tableView(tableState.data);}),button('Xem trước',()=>{tableState.panel=null;tableView(tableState.data);runPreview(targets,imagesState.only,undefined,'location');}));
+  place.append(node('span','Ảnh vị trí','muted'),button('◣ Trái',()=>{tableState.panel=null;runCapture(targets,imagesState.only,'left','location');tableView(tableState.data);}),button('◢ Phải',()=>{tableState.panel=null;runCapture(targets,imagesState.only,'right','location');tableView(tableState.data);}),button('● Theo preset',()=>{tableState.panel=null;runCapture(targets,imagesState.only,undefined,'location');tableView(tableState.data);}),button('Xem trước',()=>{tableState.panel=null;tableView(tableState.data);runPreview(targets,imagesState.only,undefined,'location');}));
   place.title='Chụp cảnh quanh món (không cô lập), lưu vào cột Ảnh vị trí: Trái / Phải chụp Iso một lần từ bên đó, Theo preset chụp đúng thiết lập ảnh vị trí của preset (góc nhìn, góc lệch, cỡ ảnh...)';
   actions.append(button('Chụp',()=>{tableState.panel=null;runCapture(targets,imagesState.only);tableView(tableState.data);},'primary'),button('Xem trước',()=>{tableState.panel=null;tableView(tableState.data);runPreview(targets,imagesState.only);}),button('Hủy',()=>{tableState.panel=null;tableView(tableState.data);}));
   const extraRows=[['extra1','Ảnh 3'],['extra2','Ảnh 4']].map(([kind,label])=>{
@@ -1372,7 +1370,11 @@ function capturePanel(){
     row.title='Chụp thêm góc khác của món (cô lập như ảnh chính), lưu vào cột '+label+' theo thiết lập '+label+' của preset (góc nhìn, góc lệch, cỡ ảnh...)';
     return row;
   });
-  p.append(actions,place,...extraRows);
+  // Ảnh vị trí, Ảnh 3, Ảnh 4 ít dùng hơn ảnh chính: gập sẵn trong "Ảnh khác", bấm để sổ ra (nhớ trạng thái trong phiên).
+  const more=node('details',undefined,'cap-more');more.open=!!imagesState.moreOpen;
+  more.addEventListener('toggle',()=>{imagesState.moreOpen=more.open;});
+  more.append(node('summary','Ảnh khác (vị trí, ảnh 3, ảnh 4)'),place,...extraRows);
+  p.append(actions,more);
   return p;
 }
 // ---- Ngăn Chọn cột: trượt ra bên trái và đẩy bảng sang phải (cột đầu không bị che), gọn theo kiểu Auto Info ----
@@ -1560,7 +1562,7 @@ function refreshExcludeUi(){
   const side=$('col-side');
   if(side&&side.dataset.kind==='exclude'&&side.querySelector('.pop-cols'))renderExcludeList(side.querySelector('.pop-cols'));
   updateExcludeCounts();
-  const btn=$('exclude-btn');if(btn){const n=excludedTags().size;btn.textContent=n?`Loại trừ tag (${n})`:'Loại trừ tag';}
+  showExcludeCount(excludedTags().size);
 }
 function updateExcludeCounts(){
   const side=$('col-side');if(!side||side.dataset.kind!=='exclude')return;
@@ -1570,7 +1572,7 @@ function updateExcludeCounts(){
   if(badge)badge.textContent=`${set.size} / ${modelTags().length}`;
   if(all){all.checked=names.length>0&&on===names.length;all.disabled=!names.length;}
   if(label)label.textContent=names.length&&on===names.length?'Bỏ chọn tất cả':'Chọn tất cả';
-  const btn=$('exclude-btn');if(btn)btn.textContent=set.size?`Loại trừ tag (${set.size})`:'Loại trừ tag';
+  showExcludeCount(set.size);
 }
 function buildExcludePanel(side){
   const inner=node('div',undefined,'col-side-in');
@@ -1597,10 +1599,16 @@ function buildExcludePanel(side){
 }
 // ---- Ngăn bên: Chọn cột hoặc Loại trừ tag ----
 const sideKind=()=>tableState.panel==='columns'||tableState.panel==='exclude'?tableState.panel:null;
+// Số tag đang loại trừ: trên chip của thanh công cụ (ẩn khi 0) và mục Loại trừ tag trong menu Công cụ (nếu đang mở).
+function showExcludeCount(n){
+  const chip=$('exclude-chip');if(chip){chip.hidden=!n;chip.textContent=`Loại trừ ${n} tag`;}
+  const item=$('exclude-btn'),text=item&&item.querySelector('.io-text');if(text)text.textContent=n?`Loại trừ tag (${n})`:'Loại trừ tag';
+}
 function markSideButtons(){
   const cols=$('cols-btn'),excl=$('exclude-btn');
   if(cols)cols.setAttribute('aria-expanded',String(tableState.panel==='columns'));
   if(excl)excl.setAttribute('aria-expanded',String(tableState.panel==='exclude'));
+  const chip=$('exclude-chip');if(chip)chip.setAttribute('aria-expanded',String(tableState.panel==='exclude'));
 }
 function buildSide(kind,side){if(kind==='exclude')buildExcludePanel(side);else{buildColumnPanel(side);side.dataset.kind='columns';}}
 function openSide(kind,animate=true){
@@ -1816,8 +1824,17 @@ function bridgePanel(){
   if(f)bridgePreview(box,apply);
   return p;
 }
+// Menu Công cụ chia nhóm gập được để không dài quá cửa sổ: chỉ nhóm Xuất mở sẵn; nhóm đã mở / gập được nhớ trên máy này.
+const IO_OPEN_KEY='vgd.bim.tools.open';
+const ioOpen=(()=>{try{return JSON.parse(localStorage.getItem(IO_OPEN_KEY))||{export:true};}catch(_){return {export:true};}})();
+function ioSection(id,title,items){
+  const sec=node('details',undefined,'io-sec');sec.open=!!ioOpen[id];sec.dataset.sec=id;
+  sec.addEventListener('toggle',()=>{ioOpen[id]=sec.open;try{localStorage.setItem(IO_OPEN_KEY,JSON.stringify(ioOpen));}catch(_){/* không lưu được thì thôi */}});
+  sec.append(node('summary',title,'io-head'),...items);
+  return sec;
+}
 function ioPanel(){
-  const p=node('div',undefined,'popover up right io-panel');
+  const p=node('div',undefined,'popover right io-panel');
   const item=(icon,text,handler,disabledNote)=>{
     const b=node('button',undefined,'pop-pick io-item');b.type='button';
     b.append(menuIcon(IO_ICONS[icon]),node('span',text,'io-text'));
@@ -1825,12 +1842,15 @@ function ioPanel(){
     else b.onclick=()=>{tableState.panel=null;tableView(tableState.data);handler();};
     return b;
   };
-  p.append(node('div','Xuất','io-head'),item('bridge','Cầu nối dữ liệu',()=>{tableState.panel='bridge';tableView(tableState.data);}),item('excel','Xuất Excel',()=>exportTable('xlsx')),item('pdf','In PDF',()=>exportTable('pdf')));
-  p.append(node('div','Mã và dữ liệu món','io-head'));
+  const exportItems=[item('bridge','Cầu nối dữ liệu',()=>{tableState.panel='bridge';tableView(tableState.data);}),item('excel','Xuất Excel',()=>exportTable('xlsx')),item('pdf','In PDF',()=>exportTable('pdf'))];
+  // Công cụ của bảng (trước nằm trên thanh công cụ): loại trừ tag khỏi số đo, đổi tên hàng loạt, nhận mặt trước.
+  const excludeCount=excludedTags().size;
+  const exclude=item('preset',excludeCount?`Loại trừ tag (${excludeCount})`:'Loại trừ tag',toggleExclude);exclude.id='exclude-btn';exclude.title='Chọn các tag không tính vào Rộng / Dài / Cao';
+  const rename=item('calc','Đổi tên...',()=>{tableState.panel='rename';tableView(tableState.data);});rename.id='rename-open';rename.title='Đổi tên hàng loạt các món trong bảng';
+  const front=item('id','Mặt trước...',()=>{tableState.panel='front';tableView(tableState.data);});front.id='front-btn';front.title='Nhận và sửa mặt trước của món (dùng cho Rộng / Sâu và ảnh Chính diện)';
   // Ghi cách tính suy ra từ tag vào các món đang chọn (chỉ điền mục còn trống; một bước hoàn tác). Phải chọn dòng rõ ràng để không ghi hàng loạt nhầm.
   const calc=item('calc','Ghi cách tính vào món đang chọn',()=>{if(!tableState.sel.size)return message('Hãy chọn các dòng cần ghi cách tính (Ctrl+A chọn hết các dòng đang hiện).',true);call('table_commit_calc',JSON.stringify({indexes:[...tableState.sel]}));});
   calc.id='calc-commit';calc.title='Ghi hạng mục, cách tính và đơn vị suy ra từ tag vào các món đang chọn (chỉ điền mục còn trống, không ghi đè dữ liệu đã nhập; một bước hoàn tác)';
-  p.append(calc);
   // VGD ID: mã định danh ổn định của món (xem docs/vgd_bim/ROADMAP.md). Gán chỉ cho món chưa có ID và phải chọn dòng rõ ràng; sửa trùng áp cho cả bảng (món cũ nhất giữ ID).
   const assignIds=item('id','Gán VGD ID cho món đang chọn',()=>{if(!tableState.sel.size)return message('Hãy chọn các dòng cần gán VGD ID (Ctrl+A chọn hết các dòng đang hiện).',true);call('table_assign_ids',JSON.stringify({indexes:[...tableState.sel]}));});
   const codesBtn=item('id','Đặt mã đối tượng hàng loạt...',()=>{tableState.panel='codes';tableView(tableState.data);});
@@ -1855,28 +1875,31 @@ function ioPanel(){
   checksBtn.id='checks-open';checksBtn.title='Đặt luật kiểm tra riêng cho bảng (ví dụ Rộng nhỏ hơn 700 thì cảnh báo, Tầng để trống thì thông tin) rồi chạy và bấm vào kết quả để chọn món';
   const snapBtn=item('id','So sánh phiên bản...',()=>{tableState.panel='snapshots';tableState.snapshotDiff=null;tableState.snapshots=null;call('snapshot_list');tableView(tableState.data);});
   snapBtn.id='snapshots-open';snapBtn.title='Chụp mốc giá trị các món rồi so với bảng hiện tại để biết món nào thêm, xóa hoặc đổi';
-  p.append(assignIds,fixIds,editSource,codesBtn,node('div','Công trình','io-head'),levelsBtn,roomsBtn,node('div','Vật liệu và kiểm tra','io-head'),materialsBtn,checksBtn,snapBtn);
+  p.append(ioSection('export','Xuất',exportItems),ioSection('table','Bảng',[exclude,rename,front]),
+    ioSection('data','Mã và dữ liệu món',[calc,assignIds,fixIds,editSource,codesBtn]),
+    ioSection('site','Công trình',[levelsBtn,roomsBtn]),ioSection('check','Vật liệu và kiểm tra',[materialsBtn,checksBtn,snapBtn]));
   return p;
 }
 // Các công tắc gom vào bảng "Tùy chọn" (thay cho hai hàng công tắc luôn hiện); bảng "Công cụ" là menu nhập / xuất và các hộp dữ liệu.
 function optionsPanel(){
   const options=()=>tableState.data.options;
-  const p=node('div',undefined,'popover up right opts-panel');
+  const p=node('div',undefined,'popover right opts-panel');
   const switches=node('div',undefined,'switches');
   switches.append(node('div','Khi chọn dòng trong bảng','io-head'));
   switches.append(toggleButton('Thu phóng đối tượng',options().zoom,()=>call('table_option',JSON.stringify({zoom:!options().zoom}))));
   switches.append(toggleButton('Cô lập đối tượng chọn',options().isolate,()=>call('table_option',JSON.stringify({isolate:!options().isolate}))));
   switches.append(toggleButton('Chọn sâu bên trong',options().deep,()=>call('table_option',JSON.stringify({deep:!options().deep}))));
-  switches.append(toggleButton('Diện tích chiếu',options().projected,()=>call('table_option',JSON.stringify({projected:!options().projected}))));
   switches.append(toggleButton('Bảng tên trên model',options().label!==false,()=>call('table_option',JSON.stringify({label:options().label===false}))));
+  switches.append(node('div','Số đo','io-head'));
+  switches.append(toggleButton('Diện tích chiếu',options().projected,()=>call('table_option',JSON.stringify({projected:!options().projected}))));
   switches.append(node('div','Dòng tính tổng','io-head'));
   switches.append(toggleButton('Hiển thị dòng tính tổng',tableState.showTotals,()=>{tableState.showTotals=!tableState.showTotals;tableView(tableState.data);}));
   switches.append(toggleButton('Tổng chỉ cấp cao nhất',tableState.onlyTop,()=>{tableState.onlyTop=!tableState.onlyTop;tableView(tableState.data);}));
   p.append(switches);
   return p;
 }
-function bottomBar(){
-  const bar=node('div',undefined,'bottombar');
+function menuBar(){
+  const bar=node('div',undefined,'menubar');
   const menu=node('div',undefined,'footer-menu');
   const opts=button('Tùy chọn ▾',()=>{tableState.panel=tableState.panel==='opts'?null:'opts';tableView(tableState.data);});opts.id='opts-btn';
   opts.title='Thu phóng, cô lập, chọn sâu, diện tích chiếu, bảng tên trên model, dòng tính tổng';
@@ -1890,10 +1913,11 @@ function bottomBar(){
   bar.append(menu);
   return bar;
 }
-// Chân trang đã có thì chỉ đổi trạng thái tại chỗ (công tắc trượt mượt, không bị dựng lại giữa chừng): nút giữ nguyên, công tắc đổi aria-checked, bảng Công cụ vẽ lại.
-function syncBottomBar(view){
-  const fresh=bottomBar(),old=view.querySelector('.bottombar');
-  if(!old){view.append(fresh);return;}
+// Khu menu Tùy chọn / Công cụ cuối thanh trên. Đã có thì chỉ đổi trạng thái tại chỗ (công tắc trượt mượt, không bị dựng lại giữa chừng):
+// nút giữ nguyên, công tắc đổi aria-checked, bảng Công cụ vẽ lại. Trả về khu menu (mới hoặc cũ).
+function syncMenuBar(view){
+  const fresh=menuBar(),old=view.querySelector('.menubar');
+  if(!old)return fresh;
   const oldMenu=old.querySelector('.footer-menu'),freshMenu=fresh.querySelector('.footer-menu');
   const freshButtons=freshMenu.querySelectorAll(':scope>button');
   oldMenu.querySelectorAll(':scope>button').forEach((b,i)=>b.setAttribute('aria-expanded',freshButtons[i].getAttribute('aria-expanded')));
@@ -1906,6 +1930,7 @@ function syncBottomBar(view){
   const oldIo=oldMenu.querySelector('.io-panel'),freshIo=freshMenu.querySelector('.io-panel');
   if(freshIo){if(oldIo)oldIo.replaceWith(freshIo);else oldMenu.append(freshIo);}
   else if(oldIo)oldIo.remove();
+  return old;
 }
 function tableView(data){
   const knownKeys=tableState.data?new Set(tableState.data.columns.map(c=>c.key)):null; // để nhận ra cột thêm tay vừa tạo
@@ -1933,8 +1958,11 @@ function tableView(data){
   }
   const hint=view.querySelector(':scope>.hint');
   if(data.hint){if(hint)hint.textContent=data.hint;else view.prepend(node('p',data.hint,'hint'));}else if(hint)hint.remove();
+  // Thanh trên: thanh công cụ (dựng lại) + khu menu Tùy chọn / Công cụ (giữ nguyên chỗ, không gỡ khỏi trang) + ngăn đang mở.
   const bar=view.querySelector('.toolbar-wrap');
-  bar.replaceChildren(toolbar());
+  [...bar.children].forEach(el=>{if(!el.classList.contains('menubar'))el.remove();});
+  bar.prepend(toolbar());
+  const menu=syncMenuBar(view);if(!menu.parentNode)bar.append(menu);
   if(tableState.panel==='capture')bar.append(capturePanel());
   if(tableState.panel==='codes')bar.append(codesPanel());
   if(tableState.panel==='levels')bar.append(levelsPanel());
@@ -1956,14 +1984,14 @@ function tableView(data){
   const old=host.querySelector('.grid-wrap');const scroll=old?{top:old.scrollTop,left:old.scrollLeft}:null;
   renderGrid(host);
   if(scroll){const wrap=host.querySelector('.grid-wrap');if(wrap){wrap.scrollTop=scroll.top;wrap.scrollLeft=scroll.left;}}
-  syncBottomBar(view);syncSheetBar(view);
+  syncSheetBar(view);
   persistView();updatePresetButton();updateReplaceUi();syncBusy();
   $('primary-actions').replaceChildren(); // bỏ chọn bằng cách bấm vùng trống trong SketchUp hoặc nhấn Esc trong bảng
 }
 // Phần nằm chung trong một tab.
 const TAB_OF={rules:'mapping',validate_model:'mapping',validate_selection:'mapping',export:'scan',convert_selection:'information'};
 window.VGD={receive(event,data){
-  if(event==='config'){syncFile(data);document.body.classList.remove('table-mode');updateSelInfo();if(appliedLanguage&&data.language&&appliedLanguage!==data.language){location.reload();return;}appliedLanguage=data.language||'vi';VGD_I18N.setLanguage(appliedLanguage,data.vi_en);config=data;if(config.table&&!tableState.restored)restoreView({view:config.table.view,columns:config.table.columns,presets:config.table.presets});updatePresetButton();locale=data.locale||locale;$('subtitle').textContent=`${data.version} · ${translated('modes',data.mode)}`;document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===(TAB_OF[data.mode]||data.mode);b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});$('preview').close();$('content').replaceChildren();$('primary-actions').replaceChildren();document.querySelector('main').scrollTop=0;message('Đang đọc dữ liệu…');}
+  if(event==='config'){syncFile(data);document.body.classList.remove('table-mode');updateSelInfo();if(appliedLanguage&&data.language&&appliedLanguage!==data.language){location.reload();return;}appliedLanguage=data.language||'vi';VGD_I18N.setLanguage(appliedLanguage,data.vi_en);config=data;if(config.table&&!tableState.restored)restoreView({view:config.table.view,columns:config.table.columns,presets:config.table.presets});updatePresetButton();locale=data.locale||locale;$('subtitle').textContent=TAB_OF[data.mode]?`${data.version} · ${translated('modes',data.mode)}`:data.version;document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===(TAB_OF[data.mode]||data.mode);b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});$('preview').close();$('content').replaceChildren();$('primary-actions').replaceChildren();document.querySelector('main').scrollTop=0;message('Đang đọc dữ liệu…');}
   if(event==='table'){tableState.manual=Array.isArray(data.row_order)?data.row_order:[];tableState.rename.preview=null;tableState.sel=new Set(Array.isArray(data.selected)?data.selected:[]);if(!tableState.sel.has(tableState.anchor))tableState.anchor=null;} // bảng đổi thì bản xem trước đổi tên cũ không còn đúng
   const renderers={information,scan,scan_pending:scanPending,mapping,validation,rules,tags:tagEditor,table:tableView};if(renderers[event]){renderers[event](data);message('Sẵn sàng.');}
   if(event==='snapshots'){tableState.snapshots=data;if(tableState.panel==='snapshots'&&tableState.data)tableView(tableState.data);}

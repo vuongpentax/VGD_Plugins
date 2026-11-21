@@ -16,7 +16,7 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   const lang=process.argv[2]||'en';
   const page=await browser.newPage({viewport:{width:1100,height:800}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
-  await page.addInitScript(()=>{window.calls=[];window.sketchup=new Proxy({}, {get:(_,name)=>(...args)=>window.calls.push({name,args})})});
+  await page.addInitScript(()=>{try{localStorage.setItem('vgd.bim.tools.open',JSON.stringify({export:true,table:true,data:true,site:true,check:true}));}catch(_){}/* mọi nhóm menu Công cụ mở sẵn để test bấm thẳng; mặc định gập kiểm riêng */window.calls=[];window.sketchup=new Proxy({}, {get:(_,name)=>(...args)=>window.calls.push({name,args})})});
   await page.goto(pathToFileURL(path.resolve(__dirname,'../runtime/vgd_bim/html/index.html')).href);
   const receive=(event,data)=>page.evaluate(([e,d])=>window.VGD.receive(e,d),[event,data]);
   const found=new Map();

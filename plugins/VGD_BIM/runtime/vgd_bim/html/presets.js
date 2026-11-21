@@ -33,7 +33,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&openPanel)closePane
 
 function updatePresetButton(){
   const btn=$('preset-btn');if(!btn)return;
-  btn.textContent=tableState.preset||'Preset';btn.title='Preset: cột, đơn vị và ảnh của bảng';
+  btn.textContent=tableState.preset?`Preset: ${tableState.preset}`:'Preset';btn.title='Preset: cột, đơn vị và ảnh của bảng';
 }
 // Sau khi đổi preset hoặc thiết lập: lưu trạng thái, cập nhật preset tự tạo, vẽ lại bảng nếu đang mở.
 function afterPresetChange(rebuild=true){
@@ -93,48 +93,54 @@ function imageSettingsRows(left,s,c,keys,suffix,withScale){
   fine.append(selectOf(c.backgrounds.map(v=>[v,BACKGROUND_LABELS[v]||v]),s[keys.background],'Nền ảnh'+suffix,v=>setSetting(keys.background,v)),mini('Lề %',marginInput),mini('Lệch °',yaw),mini('Cao °',pitch));
   left.append(fine);
 }
-// Mỗi nhóm thiết lập ảnh gập được (nhớ trạng thái mở / gập khi vẽ lại bảng) để bảng preset không quá dài.
+// Mỗi nhóm thiết lập gập sẵn, chỉ hiện tên và một dòng tóm tắt; bấm để sổ ra (nhớ trạng thái mở / gập khi vẽ lại bảng).
 const presetGroupOpen={};
-function imageGroup(left,title,id,build){
-  const group=node('details',undefined,'pp-group');group.open=presetGroupOpen[id]!==false;
+function settingsGroup(left,title,id,summary,build){
+  const group=node('details',undefined,'pp-group');group.open=presetGroupOpen[id]===true;group.dataset.group=id;
   group.addEventListener('toggle',()=>{presetGroupOpen[id]=group.open;});
-  group.append(node('summary',title));
+  const head=node('summary',title);if(summary)head.append(node('span',summary,'pp-sum'));group.append(head);
   const body=node('div',undefined,'pp-group-body');build(body);group.append(body);left.append(group);
 }
+const imageSummary=(s,p)=>`${s[p+'_width']}×${s[p+'_height']} · ${VIEW_LABELS[s[p+'_view']]||s[p+'_view']}`;
 function presetPanel(panel){
   panel.replaceChildren();
   const s=workSettings(),c=presetChoices(),app=config.app||{settings:{},dir:'',saved:false};
   const grid=node('div',undefined,'pp-grid');
   // ---- Cột trái: thiết lập theo preset ----
   const left=node('div',undefined,'pp-left');
-  left.append(node('h3','Đơn vị'));
-  left.append(unitRow('Chiều dài','length_digits','length_unit',c.length_units));
-  left.append(unitRow('Diện tích','area_digits','area_unit',c.area_units));
-  left.append(unitRow('Thể tích','volume_digits','volume_unit',c.volume_units));
-  const money=node('div',undefined,'pp-row');money.append(node('label','Tiền tệ'),selectOf(c.currencies.map(x=>[x,x]),s.currency,'Tiền tệ',v=>setSetting('currency',v)));left.append(money);
-  const sep=node('div',undefined,'pp-row');sep.append(node('label','Dấu thập phân'),selectOf(c.separators.map(x=>[x,x]),s.decimal_separator,'Dấu thập phân',v=>setSetting('decimal_separator',v)));left.append(sep);
-  imageGroup(left,'Hình ảnh','image',body=>imageSettingsRows(body,s,c,{width:'image_width',height:'image_height',view:'image_view',style:'image_style',background:'image_background',margin:'image_margin',yaw:'image_yaw',pitch:'image_pitch'},''));
+  settingsGroup(left,'Đơn vị','units',[s.length_unit,s.area_unit,s.volume_unit].map(unitLabel).concat(s.currency).join(' · '),body=>{
+    body.append(unitRow('Chiều dài','length_digits','length_unit',c.length_units));
+    body.append(unitRow('Diện tích','area_digits','area_unit',c.area_units));
+    body.append(unitRow('Thể tích','volume_digits','volume_unit',c.volume_units));
+    const money=node('div',undefined,'pp-row');money.append(node('label','Tiền tệ'),selectOf(c.currencies.map(x=>[x,x]),s.currency,'Tiền tệ',v=>setSetting('currency',v)));body.append(money);
+    const sep=node('div',undefined,'pp-row');sep.append(node('label','Dấu thập phân'),selectOf(c.separators.map(x=>[x,x]),s.decimal_separator,'Dấu thập phân',v=>setSetting('decimal_separator',v)));body.append(sep);
+  });
+  settingsGroup(left,'Hình ảnh','image',imageSummary(s,'image'),body=>imageSettingsRows(body,s,c,{width:'image_width',height:'image_height',view:'image_view',style:'image_style',background:'image_background',margin:'image_margin',yaw:'image_yaw',pitch:'image_pitch'},''));
   // Ảnh vị trí (cột Ảnh vị trí) có bộ thiết lập riêng, cùng loại với ảnh chính; thêm ô Vùng nhìn.
-  imageGroup(left,'Ảnh vị trí','loc',body=>imageSettingsRows(body,s,c,{width:'loc_width',height:'loc_height',view:'loc_view',style:'loc_style',background:'loc_background',margin:'loc_margin',yaw:'loc_yaw',pitch:'loc_pitch'},' vị trí',true));
+  settingsGroup(left,'Ảnh vị trí','loc',imageSummary(s,'loc'),body=>imageSettingsRows(body,s,c,{width:'loc_width',height:'loc_height',view:'loc_view',style:'loc_style',background:'loc_background',margin:'loc_margin',yaw:'loc_yaw',pitch:'loc_pitch'},' vị trí',true));
   // Ảnh phụ (cột Ảnh 3, Ảnh 4): chụp thêm góc khác của cùng món, mỗi ảnh một bộ thiết lập riêng cùng loại với ảnh chính.
   ['x1','x2'].forEach((p,i)=>{
-    imageGroup(left,'Ảnh '+(i+3),p,body=>imageSettingsRows(body,s,c,{width:p+'_width',height:p+'_height',view:p+'_view',style:p+'_style',background:p+'_background',margin:p+'_margin',yaw:p+'_yaw',pitch:p+'_pitch'},' '+(i+3)));
+    settingsGroup(left,'Ảnh '+(i+3),p,imageSummary(s,p),body=>imageSettingsRows(body,s,c,{width:p+'_width',height:p+'_height',view:p+'_view',style:p+'_style',background:p+'_background',margin:p+'_margin',yaw:p+'_yaw',pitch:p+'_pitch'},' '+(i+3)));
   });
   // Thư mục ảnh và settings.json nằm cạnh file SketchUp (bep.skp -> bep_VGD_BIM): không chọn tay; gửi file SketchUp kèm thư mục này khi chia sẻ.
-  const folder=node('div',undefined,'pp-row pp-folder');
-  const dir=node('input');dir.type='text';dir.readOnly=true;dir.value=app.dir||'';dir.placeholder='Chưa lưu file SketchUp';dir.setAttribute('aria-label','Thư mục ảnh và cài đặt');
-  dir.title='Thư mục ảnh và cài đặt của file SketchUp này, nằm cạnh file SketchUp. Khi gửi file đi, hãy gửi kèm thư mục này.';
-  const open=button('↗',()=>call('images_open_dir'));open.title='Mở thư mục ảnh';open.setAttribute('aria-label','Mở thư mục ảnh');open.disabled=!app.dir_exists;
-  folder.append(dir,open);left.append(folder);
-  left.append(node('p',app.saved?(app.dir_exists?'Ảnh và cài đặt của file này nằm trong thư mục trên. Khi gửi file SketchUp đi, hãy gửi kèm thư mục này để giữ ảnh, cột và tag loại trừ.':'Thư mục chưa có: sẽ được tạo khi bạn chụp ảnh hoặc đổi cài đặt.'):'Chưa lưu file SketchUp. Hãy lưu file (Ctrl+S): ảnh và cài đặt sẽ nằm trong thư mục cạnh file.','muted pp-dir'));
+  settingsGroup(left,'Thư mục ảnh','folder',app.saved?(app.dir_exists?'đã có':'chưa tạo'):'chưa lưu file',body=>{
+    const folder=node('div',undefined,'pp-row pp-folder');
+    const dir=node('input');dir.type='text';dir.readOnly=true;dir.value=app.dir||'';dir.placeholder='Chưa lưu file SketchUp';dir.setAttribute('aria-label','Thư mục ảnh và cài đặt');
+    dir.title='Thư mục ảnh và cài đặt của file SketchUp này, nằm cạnh file SketchUp. Khi gửi file đi, hãy gửi kèm thư mục này.';
+    const open=button('↗',()=>call('images_open_dir'));open.title='Mở thư mục ảnh';open.setAttribute('aria-label','Mở thư mục ảnh');open.disabled=!app.dir_exists;
+    folder.append(dir,open);body.append(folder);
+    body.append(node('p',app.saved?(app.dir_exists?'Gửi kèm thư mục này khi gửi file SketchUp để giữ ảnh, cột và tag loại trừ.':'Thư mục sẽ được tạo khi bạn chụp ảnh hoặc đổi cài đặt.'):'Chưa lưu file SketchUp. Hãy lưu file (Ctrl+S): ảnh và cài đặt sẽ nằm trong thư mục cạnh file.','muted pp-dir'));
+  });
   // ---- Số đo thân: bỏ tay nắm / phần nhô khỏi Rộng, Dài, Cao (dùng chung mọi preset, chỉ cho Bảng khối lượng) ----
-  left.append(node('h3','Số đo thân'));
-  const words=node('input');words.type='text';words.id='exclude-words';words.value=app.settings.exclude_words||'';words.maxLength=200;words.placeholder='tay nam, handle, knob';words.setAttribute('aria-label','Từ khóa loại trừ khỏi số đo');
-  words.title='Group, component hoặc tag có tên chứa một trong các từ này (cách nhau dấu phẩy, không phân biệt hoa thường và dấu) không được tính vào Rộng / Dài / Cao.';
-  const commitWords=()=>{if(words.value.trim()!==(app.settings.exclude_words||''))call('settings_save',JSON.stringify({exclude_words:words.value.trim()}));};
-  words.onchange=commitWords;words.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commitWords();}};
-  const wordsRow=node('div',undefined,'pp-row pp-folder');wordsRow.append(words);left.append(wordsRow);
-  left.append(node('p','Bỏ khỏi Rộng / Dài / Cao các phần có tên hoặc tag chứa từ khóa (xem cột Ghi chú số đo).','muted pp-note'));
+  const wordList=(app.settings.exclude_words||'').split(',').map(w=>w.trim()).filter(Boolean);
+  settingsGroup(left,'Số đo thân','body',wordList.length?`bỏ ${wordList.length} từ khóa`:'không bỏ gì',body=>{
+    const words=node('input');words.type='text';words.id='exclude-words';words.value=app.settings.exclude_words||'';words.maxLength=200;words.placeholder='tay nam, handle, knob';words.setAttribute('aria-label','Từ khóa loại trừ khỏi số đo');
+    words.title='Group, component hoặc tag có tên chứa một trong các từ này (cách nhau dấu phẩy, không phân biệt hoa thường và dấu) không được tính vào Rộng / Dài / Cao.';
+    const commitWords=()=>{if(words.value.trim()!==(app.settings.exclude_words||''))call('settings_save',JSON.stringify({exclude_words:words.value.trim()}));};
+    words.onchange=commitWords;words.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();commitWords();}};
+    const wordsRow=node('div',undefined,'pp-row pp-folder');wordsRow.append(words);body.append(wordsRow);
+    body.append(node('p','Bỏ khỏi Rộng / Dài / Cao các phần có tên hoặc tag chứa từ khóa (xem cột Ghi chú số đo).','muted pp-note'));
+  });
   // ---- Cột phải: danh sách preset ----
   const right=node('div',undefined,'pp-right');
   const create=node('div',undefined,'pp-new');
@@ -151,7 +157,7 @@ function presetPanel(panel){
   if(selected){
     const edit=node('div',undefined,'pp-new pp-edit');
     edit.append(node('span','Đang chọn: '+selected.name,'pp-edit-name'));
-    if(selected.builtin)edit.append(node('p','Preset có sẵn không sửa hay xóa được. Dùng ↻ ở danh sách để khôi phục.','muted pp-note'));
+    if(selected.builtin)edit.append(node('p','Preset có sẵn: không sửa, không xóa (↻ để khôi phục).','muted pp-note'));
     else edit.append(
       button('Cập nhật từ bảng hiện tại',()=>call('table_preset',JSON.stringify({action:'save',name:selected.name,group:tableState.group,columns:orderedKeys(),headers:tableState.headers,settings:workSettings()}))),
       button('Xóa preset này',()=>call('table_preset',JSON.stringify({action:'delete',name:selected.name})),'danger')
@@ -172,7 +178,7 @@ function presetPanel(panel){
   // Nhập / xuất file JSON của các preset (trước đây ở menu Nhập / Xuất).
   const io=node('div',undefined,'pp-io');
   io.append(button('Nhập preset (JSON)',()=>call('table_preset',JSON.stringify({action:'import'}))),button('Xuất preset (JSON)',()=>call('table_preset',JSON.stringify({action:'export'}))));
-  right.append(list,io,node('p','Preset lưu cột hiển thị, thứ tự, tiêu đề cột, đơn vị và cách chụp ảnh, trên máy này. Đang dùng preset tự tạo thì mọi thay đổi tự cập nhật vào preset đó.','muted'));
+  right.append(list,io,node('p','Preset lưu cột, tiêu đề, đơn vị và cách chụp ảnh trên máy này. Preset tự tạo tự cập nhật khi bạn đổi bảng.','muted'));
   grid.append(left,right);panel.append(grid);
 }
 function languagePanel(panel){

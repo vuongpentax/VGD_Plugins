@@ -2,6 +2,17 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.27: đã kiểm tra tự động
+
+Giao diện gọn: hàng tab chung hàng đầu, Tùy chọn / Công cụ lên thanh trên (bỏ hàng dưới bảng), Đổi tên / Mặt trước / Loại trừ tag vào menu Công cụ (nhóm Bảng), menu Công cụ chia nhóm gập, bảng Preset và hộp Cập nhật ảnh gập sẵn, chữ ngắn hơn.
+
+- `dev/test_ui_images.cjs` (462): nút preset ghi "Preset: <tên>"; bảng Preset có 7 nhóm gập sẵn với dòng tóm tắt đúng (đơn vị, cỡ / góc nhìn ảnh, số từ khóa); thứ tự 7 công tắc Tùy chọn theo nhóm mới; menu Công cụ có nhóm Bảng (Loại trừ tag, Đổi tên..., Mặt trước...); trang sạch: menu Công cụ chỉ mở nhóm Xuất, nằm trọn trong cửa sổ 860 × 740, mở nhóm thì nhớ (localStorage `vgd.bim.tools.open`); chip Loại trừ N tag hiện / cập nhật số khi tick, bấm chip mở / đóng ngăn; hộp Cập nhật ảnh gập "Ảnh khác"; thanh sheet nằm dưới khung bảng.
+- `dev/test_ui.cjs`, `dev/test_ui_sheets.cjs` (97), `dev/test_ui_en.cjs` (tiếng Anh: mọi chữ mới có bản dịch, gồm mẫu "Preset: …", "Loại trừ N tag", "bỏ N từ khóa", tóm tắt ảnh), `dev/test_report_page.cjs`, `ruby dev/run_tests.rb`: đạt.
+- Lưu ý môi trường: `dev/test_storage_replace.rb` cần locale UTF-8 (`LANG=C.UTF-8`) vì so chữ có dấu đọc từ file; CI chạy UTF-8.
+- Đã chụp ảnh trước / sau ở 860 × 740 (Bảng khối lượng, Tùy chọn, Công cụ, Preset).
+
+**Chưa xác minh trong SketchUp thật:** bố cục mới trong HtmlDialog thật (hàng tab chung hàng đầu ở cửa sổ hẹp, menu Công cụ có cuộn khi cửa sổ thấp), nút gạt Tùy chọn trượt mượt khi khu menu nằm trên thanh công cụ.
+
 ## Bản 1.1.1-beta.26: đã kiểm tra tự động
 
 Cao độ sàn phòng theo tầng (phòng chỉ nhập chiều cao; hạ nền khác thì nhập tay).

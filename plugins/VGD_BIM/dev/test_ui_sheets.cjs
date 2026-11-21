@@ -16,7 +16,7 @@ const table=(o={})=>({columns:F.columns,presets:F.presets,groups:F.groups,status
  try{
   const page=await browser.newPage({viewport:{width:1100,height:800}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
-  await page.addInitScript(()=>{window.calls=[];window.sketchup=new Proxy({}, {get:(_,name)=>(...args)=>window.calls.push({name,args})})});
+  await page.addInitScript(()=>{try{localStorage.setItem('vgd.bim.tools.open',JSON.stringify({export:true,table:true,data:true,site:true,check:true}));}catch(_){}/* mọi nhóm menu Công cụ mở sẵn để test bấm thẳng; mặc định gập kiểm riêng */window.calls=[];window.sketchup=new Proxy({}, {get:(_,name)=>(...args)=>window.calls.push({name,args})})});
   await page.goto(pathToFileURL(path.resolve(__dirname,'../runtime/vgd_bim/html/index.html')).href);
   const receive=(event,data)=>page.evaluate(([e,d])=>window.VGD.receive(e,d),[event,data]);
   const calls=name=>page.evaluate(n=>window.calls.filter(c=>c.name===n).map(c=>({name:c.name,args:c.args})),name);
@@ -36,8 +36,8 @@ const table=(o={})=>({columns:F.columns,presets:F.presets,groups:F.groups,status
   // ---- Sheet: thanh dưới chân trang ----
   ok(JSON.stringify(await tabs())==='["Sheet1"]' && await page.locator('.sheetbar .sheet-add').count()===1,'mới mở: có một sheet "Sheet1" và nút + thêm sheet');
   ok((await activeTab())==='Sheet1','sheet đầu tiên đang mở');
-  const box=await page.evaluate(()=>{const b=document.querySelector('.bottombar').getBoundingClientRect(),s=document.querySelector('.sheetbar').getBoundingClientRect(),f=document.querySelector('footer.status-bar,.status-bar').getBoundingClientRect();return {bottombar:b.bottom,sheet:s.top,sheetBottom:s.bottom,status:f.top};});
-  ok(box.sheet>=box.bottombar-1 && box.sheetBottom<=box.status+1,'thanh sheet nằm dưới thanh Tùy chọn / Công cụ, ngay trên thanh trạng thái (chân trang)');
+  const box=await page.evaluate(()=>{const b=document.querySelector('.tv-split').getBoundingClientRect(),s=document.querySelector('.sheetbar').getBoundingClientRect(),f=document.querySelector('footer.status-bar,.status-bar').getBoundingClientRect();return {bottombar:b.bottom,sheet:s.top,sheetBottom:s.bottom,status:f.top};});
+  ok(box.sheet>=box.bottombar-1 && box.sheetBottom<=box.status+1,'thanh sheet nằm dưới khung bảng, ngay trên thanh trạng thái (chân trang)');
 
   // ---- Cột riêng từng sheet ----
   ok((await heads()).includes('Mô tả'),'Sheet1 đang hiện cột Mô tả');
@@ -64,7 +64,7 @@ const table=(o={})=>({columns:F.columns,presets:F.presets,groups:F.groups,status
   // ---- Tag loại trừ riêng từng sheet ----
   await page.locator('.sheetbar .sheet-tab',{hasText:'Sheet1'}).click();await settle(300);
   await clear();
-  await page.click('#exclude-btn');await page.waitForTimeout(350);
+  await page.click('#tools-btn');await page.click('#exclude-btn');await page.waitForTimeout(350); // Loại trừ tag nằm trong menu Công cụ
   await page.locator('.col-side .pop-col',{hasText:'Tường'}).locator('input').click();await page.waitForTimeout(700);
   ok(JSON.stringify(await json('settings_save'))==='{"exclude_tags":["Tường"]}','Sheet1: tick Tường gửi lưu settings_save');
   await receive('config',config('table',{},['Tường']));await receive('table',table());await settle(300);
