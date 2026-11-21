@@ -2,7 +2,7 @@ require 'json'
 
 module VGD
   module Position
-    # Cửa sổ VGD Position (UI::HtmlDialog). Logic dời nằm ở core/position.rb và core/move.rb; file này chỉ nối giao diện với chúng.
+    # Cửa sổ VGD Position (UI::HtmlDialog). Logic nằm ở core/; file này chỉ nối giao diện với chúng.
     # Luôn tính lại từ lựa chọn hiện tại khi xem trước và khi áp dụng (không dùng danh sách cũ của cửa sổ).
     class Panel
       ROOT_HTML = 'html/index.html'.freeze
@@ -18,7 +18,7 @@ module VGD
       def initialize
         @closed = false
         @dialog = ::UI::HtmlDialog.new(dialog_title: 'VGD Position', preferences_key: 'VGD_Position_Panel', scrollable: true, resizable: true,
-                                       width: 440, height: 560, style: ::UI::HtmlDialog::STYLE_DIALOG)
+                                       width: 440, height: 600, style: ::UI::HtmlDialog::STYLE_DIALOG)
         @dialog.set_file(File.join(VGD::Position::ROOT, ROOT_HTML))
         @dialog.add_action_callback('ready') { |_ctx| safely { refresh } }
         @dialog.add_action_callback('refresh') { |_ctx| safely { refresh } }
@@ -31,7 +31,7 @@ module VGD
       def show; @dialog.visible? ? @dialog.bring_to_front : @dialog.show; end
       def closed?; @closed; end
       def close; @dialog.close; end
-      # Không có thao tác nào kéo dài (dời là một lệnh ngắn), nên luôn rảnh khi tải lại code.
+      # Không có thao tác nào kéo dài (biến đổi là một lệnh ngắn), nên luôn rảnh khi tải lại code.
       def busy_reason; nil; end
 
       def selection_changed
@@ -40,37 +40,39 @@ module VGD
       end
 
       def refresh
-        items = Move.items(Sketchup.active_model).map { |item| public_item(item) }
-        emit('items', {items: items, count: items.size})
+        model = Sketchup.active_model
+        unit = Move.length_unit(model)
+        items = Move.items(model).map { |item| public_item(item, unit) }
+        emit('items', {items: items, count: items.size, unit: unit})
       end
 
       def preview(payload)
-        items, plan = plan_for(payload)
+        model = Sketchup.active_model
+        unit = Move.length_unit(model)
+        items = Move.items(model)
+        plan = Plan.build(items, payload, unit)
         moves = plan[:moves].map do |move|
           item = items.find { |i| i[:index] == move[:index] }
-          {index: move[:index], name: item[:name], delta: move[:delta].map { |v| v.round(1) }, target: item[:origin].zip(move[:delta]).map { |a, d| (a + d).round(1) }}
+          {index: move[:index], name: item[:name], text: Plan.describe(item, move[:steps], unit)}
         end
         emit('preview', {moves: moves})
       end
 
       def apply(payload)
-        items, plan = plan_for(payload)
-        count = Move.apply(Sketchup.active_model, plan[:moves], items)
+        model = Sketchup.active_model
+        unit = Move.length_unit(model)
+        items = Move.items(model)
+        plan = Plan.build(items, payload, unit)
+        count = Move.apply(model, plan[:moves], items)
         emit('done', {moved: count})
         refresh
       end
 
       private
 
-      def plan_for(payload)
-        items = Move.items(Sketchup.active_model)
-        values = payload['values'].is_a?(Hash) ? payload['values'] : {}
-        plan = Position.plan(items, values)
-        [items, plan]
-      end
-
-      def public_item(item)
-        {index: item[:index], name: item[:name], origin: item[:origin].map { |v| v.round(1) }, locked: item[:locked]}
+      def public_item(item, unit)
+        origin = item[:origin].map { |v| Units.format_number(v / Units::MM_PER_UNIT.fetch(unit)) }
+        {index: item[:index], name: item[:name], origin: origin, locked: item[:locked]}
       end
 
       def attach

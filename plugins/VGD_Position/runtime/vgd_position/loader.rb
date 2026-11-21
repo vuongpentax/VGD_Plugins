@@ -11,7 +11,7 @@ module VGD
   module Position
     ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze unless defined?(ROOT)
     # Thứ tự nạp code. Dùng chung cho lúc mở SketchUp và lúc "Tải lại code".
-    FILES = %w[core/position core/move ui/panel].freeze
+    FILES = %w[core/units core/position core/transform core/plan core/move ui/panel].freeze
     @log_counts = Hash.new(0)
     def self.log(message)
       return if @log_counts.values.inject(0, :+) >= 100

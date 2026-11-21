@@ -7,21 +7,95 @@
   <section>
     <h2>Món đang chọn</h2>
     <p id="count" class="muted">Đang đọc lựa chọn…</p>
+    <p id="unit" class="muted"></p>
     <ul id="items" class="items"></ul>
   </section>
-  <section>
-    <h2>Dời tới tọa độ (mm)</h2>
-    <p class="muted">Điểm gốc của món đầu tiên trong danh sách sẽ tới đúng X, Y, Z. Các món còn lại dời cùng độ lệch. Chọn một món thì chỉ món đó dời.</p>
-    <div class="xyz">
-      <label class="field">X<input id="x" type="text" inputmode="decimal" placeholder="để trống = giữ"></label>
-      <label class="field">Y<input id="y" type="text" inputmode="decimal" placeholder="để trống = giữ"></label>
-      <label class="field">Z<input id="z" type="text" inputmode="decimal" placeholder="để trống = giữ"></label>
-    </div>
-    <div class="actions">
-      <button id="preview" type="button">Xem trước</button>
-      <button id="apply" type="button" class="primary" disabled>Áp dụng</button>
+
+  <nav class="tabs" role="tablist" aria-label="Công cụ biến đổi">
+    <button type="button" role="tab" class="tab" data-tab="move" aria-selected="true" title="Dời (Move)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg>
+      <span>Dời</span>
+    </button>
+    <button type="button" role="tab" class="tab" data-tab="rotate" aria-selected="false" title="Xoay (Rotate)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v4h-4"/></svg>
+      <span>Xoay</span>
+    </button>
+    <button type="button" role="tab" class="tab" data-tab="scale" aria-selected="false" title="Scale">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="8" width="8" height="8"/><path d="M12 12l8-8M14 4h6v6"/></svg>
+      <span>Scale</span>
+    </button>
+  </nav>
+
+  <div class="pivot-row" id="pivot-row" hidden>
+    <label class="field">Tâm xoay / scale
+      <select id="pivot">
+        <option value="item">Điểm gốc từng món</option>
+        <option value="selection">Tâm của cả lựa chọn</option>
+        <option value="world">Gốc tọa độ thế giới (0, 0, 0)</option>
+      </select>
+    </label>
+  </div>
+
+  <section class="tool" data-tool="move">
+    <p class="muted">Ô để trống là giữ nguyên. Một món: điểm gốc của món tới đúng tọa độ. Nhiều món: món đầu tiên tới tọa độ, cả nhóm dời cùng độ lệch.</p>
+    <div class="pair">
+      <div class="box" data-panel="move_abs">
+        <h3>Tuyệt đối (thế giới)</h3>
+        <label class="row">X <input id="move_abs-x" type="text" inputmode="decimal" data-spin="1" placeholder="giữ"></label>
+        <label class="row">Y <input id="move_abs-y" type="text" inputmode="decimal" data-spin="1" placeholder="giữ"></label>
+        <label class="row">Z <input id="move_abs-z" type="text" inputmode="decimal" data-spin="1" placeholder="giữ"></label>
+        <div class="actions">
+          <button type="button" data-action="preview" data-panel="move_abs">Xem trước</button>
+          <button type="button" class="primary" data-action="apply" data-panel="move_abs" disabled>Áp dụng</button>
+        </div>
+      </div>
+      <div class="box" data-panel="move_off">
+        <h3>Dời tương đối (thế giới)</h3>
+        <label class="row">ΔX <input id="move_off-x" type="text" inputmode="decimal" data-spin="1" placeholder="0"></label>
+        <label class="row">ΔY <input id="move_off-y" type="text" inputmode="decimal" data-spin="1" placeholder="0"></label>
+        <label class="row">ΔZ <input id="move_off-z" type="text" inputmode="decimal" data-spin="1" placeholder="0"></label>
+        <div class="actions">
+          <button type="button" data-action="preview" data-panel="move_off">Xem trước</button>
+          <button type="button" class="primary" data-action="apply" data-panel="move_off" disabled>Áp dụng</button>
+        </div>
+      </div>
     </div>
   </section>
+
+  <section class="tool" data-tool="rotate" hidden>
+    <p class="muted">Xoay quanh trục thế giới, theo thứ tự X rồi Y rồi Z. Góc tính bằng độ.</p>
+    <div class="box" data-panel="rotate">
+      <label class="row">Quanh X (°) <input id="rotate-x" type="text" inputmode="decimal" data-spin="1" placeholder="0"></label>
+      <label class="row">Quanh Y (°) <input id="rotate-y" type="text" inputmode="decimal" data-spin="1" placeholder="0"></label>
+      <label class="row">Quanh Z (°) <input id="rotate-z" type="text" inputmode="decimal" data-spin="1" placeholder="0"></label>
+      <div class="actions">
+        <button type="button" data-action="preview" data-panel="rotate">Xem trước</button>
+        <button type="button" class="primary" data-action="apply" data-panel="rotate" disabled>Áp dụng</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="tool" data-tool="scale" hidden>
+    <div class="segmented" role="radiogroup" aria-label="Kiểu scale">
+      <label><input type="radio" name="scale-mode" value="uniform" checked> Đều</label>
+      <label><input type="radio" name="scale-mode" value="nonuniform"> Không đều</label>
+    </div>
+    <div class="box" data-panel="scale">
+      <div id="scale-uniform">
+        <label class="row">Hệ số (1 = giữ) <input id="scale-u" type="text" inputmode="decimal" data-spin="0.1" placeholder="1"></label>
+      </div>
+      <div id="scale-nonuniform" hidden>
+        <label class="row">Hệ số X <input id="scale-x" type="text" inputmode="decimal" data-spin="0.1" placeholder="1"></label>
+        <label class="row">Hệ số Y <input id="scale-y" type="text" inputmode="decimal" data-spin="0.1" placeholder="1"></label>
+        <label class="row">Hệ số Z <input id="scale-z" type="text" inputmode="decimal" data-spin="0.1" placeholder="1"></label>
+      </div>
+      <div class="actions">
+        <button type="button" data-action="preview" data-panel="scale">Xem trước</button>
+        <button type="button" class="primary" data-action="apply" data-panel="scale" disabled>Áp dụng</button>
+      </div>
+    </div>
+  </section>
+
   <section>
     <h2>Kết quả</h2>
     <div id="result" class="result"></div>

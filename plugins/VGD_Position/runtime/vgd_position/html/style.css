@@ -1,21 +1,48 @@
 /* Chỉ dùng token của theme (vgd-theme.css); không để màu cứng trong file này. */
+[hidden] { display: none !important; }
 body { margin: 0; padding: 16px; background: var(--vgd-bg); color: var(--vgd-text); font: 13px/1.45 Manrope, system-ui, sans-serif; }
 header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 h1 { font-size: 18px; margin: 0; }
-h2 { font-size: 15px; margin: 14px 0 6px; }
+h2 { font-size: 15px; margin: 0 0 6px; }
+h3 { font-size: 13px; margin: 0 0 6px; }
 section { background: var(--vgd-surface); border: 1px solid var(--vgd-border); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
 .muted { color: var(--vgd-muted); margin: 2px 0; }
-.items { list-style: none; margin: 0; padding: 0; max-height: 150px; overflow-y: auto; }
-.items::-webkit-scrollbar { width: 0; height: 10px; }
+.items { list-style: none; margin: 6px 0 0; padding: 0; max-height: 120px; overflow-y: auto; }
 .item { display: flex; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--vgd-border); }
 .item .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .item .pos { color: var(--vgd-muted); font-variant-numeric: tabular-nums; }
 .item.locked .name { color: var(--vgd-muted); }
 .badge { font-size: 11px; color: var(--vgd-danger); }
+
+/* Ba công cụ: giống thanh chọn của 3ds Max, icon + chữ */
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+.tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; }
+.tab svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tab[aria-selected="true"] { background: var(--vgd-accent); border-color: var(--vgd-accent); color: var(--vgd-on-accent); }
+
+.pivot-row { margin-bottom: 10px; }
+.pivot-row .field { margin: 0; }
 .field { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; color: var(--vgd-muted); }
 select, input { font: inherit; color: var(--vgd-text); background: var(--vgd-elevated); border: 1px solid var(--vgd-border); border-radius: 6px; padding: 5px 7px; }
-.xyz { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+select { width: 100%; box-sizing: border-box; }
+
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.box { background: var(--vgd-elevated); border: 1px solid var(--vgd-border); border-radius: 6px; padding: 8px; }
+.row { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 6px; margin: 4px 0; color: var(--vgd-muted); }
+.row input { min-width: 0; width: 100%; box-sizing: border-box; }
+
+/* Ô số: nút ▲▼ bên phải; nhấn giữ để lặp, kéo lên xuống trên ô để đổi nhanh */
+.spin { position: relative; display: block; min-width: 0; }
+.spin input { width: 100%; box-sizing: border-box; padding-right: 22px; font-variant-numeric: tabular-nums; touch-action: none; }
+.arrows { position: absolute; right: 2px; top: 2px; bottom: 2px; width: 18px; display: flex; flex-direction: column; }
+.arrows button { flex: 1; padding: 0; margin: 0; font-size: 8px; line-height: 1; border: 0; background: transparent; color: var(--vgd-muted); cursor: pointer; user-select: none; }
+.arrows button:hover, .arrows button:active { color: var(--vgd-text); }
+
+.segmented { display: flex; gap: 12px; margin-bottom: 8px; }
+.segmented label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+
 .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+.box .actions button { flex: 1; white-space: nowrap; padding: 5px 6px; }
 button { font: inherit; color: var(--vgd-text); background: var(--vgd-elevated); border: 1px solid var(--vgd-border); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
 button:disabled { opacity: .5; cursor: default; }
 button.primary { background: var(--vgd-accent); border-color: var(--vgd-accent); color: var(--vgd-on-accent); }

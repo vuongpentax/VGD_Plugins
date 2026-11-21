@@ -1,46 +1,74 @@
-# Test logic thuần của VGD Position (core/position.rb): đọc ô nhập mm, tính độ dời, chặn món khóa / không đo được.
-# Không cần SketchUp. Chạy: ruby dev/test_position.rb (từ plugins/VGD_Position)
+# Test logic thuần của VGD Position: dời (tuyệt đối, tương đối), xoay và scale theo trục thế giới, tâm xoay / scale,
+# ghép công cụ với ô nhập (core/plan.rb), mô tả xem trước. Không cần SketchUp.
+# Chạy: ruby dev/test_position.rb (từ plugins/VGD_Position)
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 def error_of; yield; nil; rescue StandardError => e; e.message; end
+def near(a, b, tol = 1e-6); a.zip(b).all? { |x, y| (x - y).abs < tol }; end
 ROOT = File.expand_path('../runtime/vgd_position', __dir__)
-require File.join(ROOT, 'core/position')
+%w[core/units core/position core/transform core/plan].each { |f| require File.join(ROOT, f) }
 P = VGD::Position
+T = P::Transform
+PL = P::Plan
 
-ok('ô nhập: số nguyên và số thập phân (dấu chấm hoặc phẩy)', P.parse_mm('1200') == 1200.0 && P.parse_mm('1200,5') == 1200.5 && P.parse_mm(' -3.25 ') == -3.25)
-ok('ô nhập: trống thì là nil (giữ nguyên trục đó)', P.parse_mm('') .nil? && P.parse_mm(nil).nil?)
-ok('ô nhập: chữ, ký hiệu lạ, số mũ bị từ chối', %w[abc 1e3 12a --5 NaN].all? { |t| error_of { P.parse_mm(t) }.to_s.include?('không phải số') })
-ok('ô nhập: vượt giới hạn bị từ chối', error_of { P.parse_mm('1000001') }.to_s.include?('vượt giới hạn'))
-
-# Một món: điểm gốc tới đúng X, Y, Z đã nhập; trục để trống thì giữ nguyên
 one = [{index: 0, name: 'Tủ A', origin: [1000.0, 2000.0, 300.0], locked: false}]
-plan = P.plan(one, {'x' => '1500', 'y' => '', 'z' => nil})
-ok('một món: chỉ X có số thì dời X tới 1500, Y và Z giữ nguyên', plan[:moves] == [{index: 0, delta: [500.0, 0.0, 0.0]}])
-ok('một món: đã đúng vị trí thì báo không cần dời', error_of { P.plan(one, {'x' => '1000', 'y' => '2000', 'z' => '300'}) }.to_s.include?('không cần dời'))
-
-# Nhiều món: cả nhóm dời cùng độ lệch; độ lệch tính từ điểm gốc của món đầu tiên trong lựa chọn
 many = [
   {index: 0, name: 'Tủ A', origin: [0.0, 0.0, 0.0], locked: false},
-  {index: 1, name: 'Tủ B', origin: [500.0, 0.0, 0.0], locked: false},
+  {index: 1, name: 'Tủ B', origin: [1000.0, 0.0, 0.0], locked: false},
 ]
-plan = P.plan(many, {'x' => '100', 'y' => '', 'z' => '-50'})
-ok('nhiều món: cùng độ lệch (100, 0, -50) cho mọi món, tính từ món đầu tiên', plan[:moves] == [{index: 0, delta: [100.0, 0.0, -50.0]}, {index: 1, delta: [100.0, 0.0, -50.0]}])
-plan = P.plan(many, {'x' => '600', 'y' => '', 'z' => ''})
-ok('nhiều món: X = 600 đưa điểm gốc món đầu tiên tới 600, món thứ hai cùng lệch 600', plan[:moves].map { |m| m[:delta][0] } == [600.0, 600.0])
 
-# Chặn: món khóa, món không đo được vị trí, món đầu đã đúng chỗ
-locked = [
-  {index: 0, name: 'Tủ A', origin: [0.0, 0.0, 0.0], locked: false},
-  {index: 1, name: 'Tủ khóa', origin: [0.0, 0.0, 0.0], locked: true},
-]
-ok('có món khóa trong lựa chọn: không dời gì, báo tên món khóa', (err = error_of { P.plan(locked, {'x' => '10'}) }).to_s.include?('Tủ khóa') && err.include?('khóa'))
-ok('một món đang khóa: không dời, báo khóa', error_of { P.plan([locked[1]], {'x' => '10'}) }.to_s.include?('khóa'))
-ok('món không đo được vị trí: không dời, báo lỗi', error_of { P.plan([{index: 0, name: 'Rỗng', origin: nil, locked: false}], {'x' => '10'}) }.to_s.include?('Không đo được'))
-ok('món đầu tiên đã ở vị trí đó: không dời, báo không cần dời', error_of { P.plan(many, {'x' => '0', 'y' => '0', 'z' => '0'}) }.to_s.include?('không cần dời'))
+# Tuyệt đối: điểm gốc món đầu tiên tới đúng tọa độ; trục nil giữ nguyên
+ok('tuyệt đối một món: chỉ X có số thì dời X tới 1500, Y và Z giữ nguyên', P.absolute(one, [1500.0, nil, nil])[:moves] == [{index: 0, steps: [{kind: 'translate', delta: [500.0, 0.0, 0.0]}]}])
+ok('tuyệt đối: đã đúng vị trí thì báo không cần dời', error_of { P.absolute(one, [1000.0, 2000.0, 300.0]) }.to_s.include?('không cần dời'))
+ok('tuyệt đối nhiều món: độ lệch tính từ món đầu, mọi món cùng độ lệch', P.absolute(many, [600.0, nil, nil])[:moves].map { |m| m[:steps][0][:delta] } == [[600.0, 0.0, 0.0], [600.0, 0.0, 0.0]])
 
-# Sai dữ liệu: chưa nhập số nào, chưa chọn món
-ok('chưa nhập tọa độ nào: báo lỗi, không dời', error_of { P.plan(many, {'x' => '', 'y' => '', 'z' => ''}) }.to_s.include?('Hãy nhập'))
-ok('chưa chọn món nào: báo lỗi', error_of { P.plan([], {'x' => '1'}) }.to_s.include?('Chưa chọn'))
-ok('chế độ không còn: chỉ nhận ô X, Y, Z', P.method(:plan).arity == 2)
+# Tương đối: mỗi món dời cùng độ dời; ô trống là 0
+ok('tương đối: cùng độ dời (100, 0, -50) cho mọi món', P.offset(many, [100.0, nil, -50.0])[:moves].map { |m| m[:steps][0][:delta] } == [[100.0, 0.0, -50.0], [100.0, 0.0, -50.0]])
+ok('tương đối: độ dời bằng 0 thì báo không cần dời', error_of { P.offset(many, [0.0, 0.0, 0.0]) }.to_s.include?('không cần dời'))
+
+# Chặn: món khóa, không đo được vị trí, chưa chọn món
+locked = [{index: 0, name: 'Tủ A', origin: [0.0, 0.0, 0.0], locked: false}, {index: 1, name: 'Tủ khóa', origin: [0.0, 0.0, 0.0], locked: true}]
+ok('có món khóa trong lựa chọn: không dời gì, báo tên món khóa', (err = error_of { P.absolute(locked, [10.0, nil, nil]) }).to_s.include?('Tủ khóa') && err.include?('khóa'))
+ok('món không đo được vị trí: báo lỗi', error_of { P.offset([{index: 0, name: 'Rỗng', origin: nil, locked: false}], [10.0, nil, nil]) }.to_s.include?('Không đo được'))
+ok('chưa chọn món nào: báo lỗi', error_of { P.absolute([], [1.0, nil, nil]) }.to_s.include?('Chưa chọn'))
+ok('chưa nhập gì: báo lỗi', error_of { P.offset(many, [nil, nil, nil]) }.to_s.include?('Hãy nhập'))
+
+# Xoay: quanh trục thế giới, quanh tâm chọn được
+rot_world = T.rotate(one, [nil, nil, 90.0], 'world')
+ok('xoay 90° quanh Z, tâm gốc thế giới: điểm (1000, 0, 0) → (0, 1000, 0)', near(T.apply_steps(rot_world[:moves][0][:steps], [1000.0, 0.0, 0.0]), [0.0, 1000.0, 0.0]))
+ok('xoay quanh điểm gốc của món: điểm gốc món đứng yên', near(T.apply_steps(T.rotate(one, [nil, nil, 90.0], 'item')[:moves][0][:steps], one[0][:origin]), one[0][:origin]))
+rot_sel = T.rotate(many, [nil, nil, 180.0], 'selection')
+ok('xoay 180° quanh Z, tâm cả lựa chọn (500, 0, 0): hai món đổi chỗ', near(T.apply_steps(rot_sel[:moves][0][:steps], many[0][:origin]), [1000.0, 0.0, 0.0]) && near(T.apply_steps(rot_sel[:moves][1][:steps], many[1][:origin]), [0.0, 0.0, 0.0]))
+ok('xoay nhiều trục: áp dụng theo thứ tự X rồi Y rồi Z (3 bước)', T.rotate(one, [90.0, 90.0, 90.0], 'world')[:moves][0][:steps].map { |s| s[:axis].index(1.0) } == [0, 1, 2])
+ok('xoay: góc bằng 0 hoặc trống ở mọi trục: báo lỗi', error_of { T.rotate(one, [nil, 0.0, nil], 'world') }.to_s.include?('ít nhất một góc'))
+ok('xoay: góc vượt ±3600° bị từ chối', error_of { T.rotate(one, [4000.0, nil, nil], 'world') }.to_s.include?('vượt giới hạn'))
+ok('tâm xoay không hợp lệ bị từ chối', error_of { T.rotate(one, [nil, nil, 90.0], 'abc') }.to_s.include?('Tâm xoay'))
+
+# Scale: đều và không đều, quanh tâm chọn được
+sc_uniform = T.scale(one, [2.0, 2.0, 2.0], 'world')
+ok('scale đều ×2 quanh gốc thế giới: (1000, 2000, 300) → (2000, 4000, 600)', near(T.apply_steps(sc_uniform[:moves][0][:steps], one[0][:origin]), [2000.0, 4000.0, 600.0]))
+ok('scale quanh điểm gốc của món: điểm gốc đứng yên', near(T.apply_steps(T.scale(one, [2.0, 2.0, 2.0], 'item')[:moves][0][:steps], one[0][:origin]), one[0][:origin]))
+ok('scale không đều [2, 1, 0.5] quanh gốc: (1000, 1000, 1000) → (2000, 1000, 500)', near(T.apply_steps(T.scale(one, [2.0, 1.0, 0.5], 'world')[:moves][0][:steps], [1000.0, 1000.0, 1000.0]), [2000.0, 1000.0, 500.0]))
+ok('scale ×2 quanh tâm cả lựa chọn (500, 0, 0): món (1000, 0, 0) → (1500, 0, 0)', near(T.apply_steps(T.scale(many, [2.0, 2.0, 2.0], 'selection')[:moves][1][:steps], many[1][:origin]), [1500.0, 0.0, 0.0]))
+ok('scale: hệ số 0 hoặc âm bị từ chối', error_of { T.scale(one, [0.0, 1.0, 1.0], 'world') }.to_s.include?('0,001') && error_of { T.scale(one, [-2.0, 1.0, 1.0], 'world') }.to_s.include?('0,001'))
+ok('scale: hệ số 1 ở mọi trục bị báo không đổi', error_of { T.scale(one, [1.0, 1.0, 1.0], 'world') }.to_s.include?('không đổi'))
+ok('scale: hệ số quá lớn bị từ chối', error_of { T.scale(one, [1001.0, 1.0, 1.0], 'world') }.to_s.include?('0,001'))
+
+# Ghép công cụ với ô nhập (đơn vị của file)
+ok('Plan move_abs: "1,5" trong file m là 1500 mm, từ x=1000 nên dời 500 mm', PL.build(one, {'tool' => 'move_abs', 'values' => {'x' => '1,5', 'y' => '', 'z' => ''}}, 'm')[:moves][0][:steps][0][:delta] == [500.0, 0.0, 0.0])
+ok('Plan move_abs: "2m" trong file mm là 2000 mm, từ x=1000 nên dời 1000 mm', PL.build(one, {'tool' => 'move_abs', 'values' => {'x' => '2m', 'y' => '', 'z' => ''}}, 'mm')[:moves][0][:steps][0][:delta] == [1000.0, 0.0, 0.0])
+ok('Plan move_off: "250" trong file mm là dời 250 mm theo X', PL.build(one, {'tool' => 'move_off', 'values' => {'x' => '250', 'y' => '', 'z' => ''}}, 'mm')[:moves][0][:steps][0][:delta] == [250.0, 0.0, 0.0])
+ok('Plan rotate: ô Z = 90, tâm gốc thế giới', (steps = PL.build(one, {'tool' => 'rotate', 'values' => {'x' => '', 'y' => '', 'z' => '90'}, 'pivot' => 'world'}, 'mm')[:moves][0][:steps]).size == 1 && steps[0][:degrees] == 90.0)
+ok('Plan scale đều: ô X = 2 là hệ số chung cho ba trục', PL.build(one, {'tool' => 'scale', 'uniform' => true, 'values' => {'x' => '2', 'y' => '9', 'z' => '9'}, 'pivot' => 'world'}, 'mm')[:moves][0][:steps][0][:factors] == [2.0, 2.0, 2.0])
+ok('Plan scale không đều: ô trống là 1, ô 3 là 3', PL.build(one, {'tool' => 'scale', 'uniform' => false, 'values' => {'x' => '2', 'y' => '', 'z' => '3'}, 'pivot' => 'world'}, 'mm')[:moves][0][:steps][0][:factors] == [2.0, 1.0, 3.0])
+ok('Plan scale đều: ô trống báo lỗi', error_of { PL.build(one, {'tool' => 'scale', 'uniform' => true, 'values' => {'x' => ''}, 'pivot' => 'world'}, 'mm') }.to_s.include?('hệ số'))
+ok('Plan: công cụ lạ bị từ chối', error_of { PL.build(one, {'tool' => 'xoay', 'values' => {}}, 'mm') }.to_s.include?('Công cụ'))
+ok('Plan: ô sai định dạng báo lỗi rõ', error_of { PL.build(one, {'tool' => 'move_off', 'values' => {'x' => 'abc'}}, 'mm') }.to_s.include?('không phải số'))
+
+# Mô tả xem trước: theo đơn vị của file
+desc = PL.describe(one[0], P.absolute(one, [1500.0, nil, nil])[:moves][0][:steps], 'm')
+ok('mô tả: dời ΔX 0.5 m và điểm gốc mới 1.5 m (file m)', desc.include?('ΔX 0.5 m') && desc.include?('(1.5 m, 2 m, 0.3 m)'))
+ok('mô tả: xoay và scale ghi rõ số', PL.describe(one[0], rot_world[:moves][0][:steps], 'mm').include?('xoay 90° quanh Z') && PL.describe(one[0], sc_uniform[:moves][0][:steps], 'mm').include?('scale ×2'))
+
 puts($fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

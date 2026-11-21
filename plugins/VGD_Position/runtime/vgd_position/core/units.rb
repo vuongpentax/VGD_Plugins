@@ -1,0 +1,61 @@
+module VGD
+  module Position
+    # Đơn vị độ dài và số trong ô nhập. Logic thuần, không gọi SketchUp.
+    # Mọi tính toán nội bộ dùng mm. Số không có đơn vị được hiểu theo đơn vị của file SketchUp đang mở.
+    # Gõ thêm đơn vị sau số (1m, 250 mm, 2in) thì số đó dùng đơn vị đã gõ, như ô nhập VCB của SketchUp.
+    module Units
+      MM_PER_UNIT = {'mm' => 1.0, 'cm' => 10.0, 'm' => 1000.0, 'in' => 25.4, 'ft' => 304.8}.freeze
+      # Thứ tự theo chỉ số LengthUnit của SketchUp (model.options['UnitsOptions']['LengthUnit']).
+      MODEL_UNITS = %w[in ft mm cm m].freeze
+      DEFAULT_UNIT = 'mm'
+      LIMIT_MM = 1_000_000.0 # tọa độ / độ dời ngoài ±1 km (mm) là nhập nhầm
+      NUMBER = /\A[+-]?(\d+\.?\d*|\.\d+)\z/.freeze
+      LENGTH = /\A([+-]?(?:\d+\.?\d*|\.\d+))\s*(mm|cm|m|in|ft)?\z/i.freeze
+
+      module_function
+
+      # Tên đơn vị của file theo chỉ số của SketchUp. Chỉ số lạ thì dùng mm.
+      def unit_of_model(index)
+        return DEFAULT_UNIT unless index.is_a?(Integer)
+        MODEL_UNITS.fetch(index, DEFAULT_UNIT)
+      end
+
+      # Ô độ dài → mm. Trống hoặc nil: nil (nghĩa là không nhập). Sai định dạng hoặc vượt giới hạn: báo lỗi.
+      def parse_length(text, default_unit)
+        raw = clean(text)
+        return nil if raw.nil?
+        match = LENGTH.match(raw)
+        raise ArgumentError, "Tọa độ \"#{text}\" không phải số hoặc đơn vị không hỗ trợ." unless match
+        unit = (match[2] || default_unit).downcase
+        mm = Float(match[1]) * MM_PER_UNIT.fetch(unit)
+        raise ArgumentError, "Giá trị vượt giới hạn ±#{LIMIT_MM.to_i} mm." if mm.abs > LIMIT_MM
+        mm
+      end
+
+      # Ô số không có đơn vị (góc, hệ số). Trống hoặc nil: nil. Sai định dạng: báo lỗi.
+      def parse_number(text)
+        raw = clean(text)
+        return nil if raw.nil?
+        raise ArgumentError, "\"#{text}\" không phải số." unless raw.match?(NUMBER)
+        Float(raw)
+      end
+
+      # Số mm → chuỗi hiển thị theo đơn vị đã chọn, tối đa 3 chữ số thập phân, bỏ số 0 thừa.
+      def format_length(mm, unit)
+        "#{format_number(mm / MM_PER_UNIT.fetch(unit))} #{unit}"
+      end
+
+      # Số để hiển thị: tối đa 3 chữ số thập phân, bỏ số 0 thừa (2.500 → 2.5, 3.000 → 3).
+      def format_number(value)
+        text = format('%.3f', value).sub(/\.?0+\z/, '')
+        text.empty? || text == '-0' ? '0' : text
+      end
+
+      def clean(text)
+        return nil if text.nil?
+        raw = text.to_s.strip.tr(',', '.')
+        raw.empty? ? nil : raw
+      end
+    end
+  end
+end

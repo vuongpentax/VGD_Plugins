@@ -1,12 +1,15 @@
+require_relative 'units'
 require_relative 'position'
+require_relative 'transform'
+require_relative 'plan'
 
 module VGD
   module Position
-    # Phần gọi SketchUp của VGD Position: đọc vị trí món, dời món, kiểm tra lại sau khi dời.
-    # Vị trí tính trong hệ thế giới (mm). Món trong group cha đang mở được dời đúng theo hệ thế giới (xem context).
+    # Phần gọi SketchUp của VGD Position: đọc vị trí món, áp dụng các bước dời / xoay / scale, kiểm tra lại sau khi áp dụng.
+    # Vị trí tính trong hệ thế giới (mm). Món trong group cha đang mở được biến đổi đúng theo hệ thế giới (xem context).
     module Move
-      TOLERANCE_MM = 0.01 # sau khi dời, vị trí phải khớp trong 0,01 mm, nếu không thì hủy cả đợt
-      OPERATION_NAME = 'VGD Position · Dời món'.freeze
+      TOLERANCE_MM = 0.01 # sau khi áp dụng, vị trí phải khớp trong 0,01 mm, nếu không thì hủy cả đợt
+      OPERATION_NAME = 'VGD Position · Biến đổi món'.freeze
 
       module_function
 
@@ -17,6 +20,11 @@ module VGD
 
       def locked_context?(model)
         (model.active_path || []).any? { |entity| entity.respond_to?(:locked?) && entity.locked? }
+      end
+
+      # Đơn vị độ dài đang đặt trong file: 'mm', 'cm', 'm', 'in' hoặc 'ft'.
+      def length_unit(model)
+        Units.unit_of_model(model.options['UnitsOptions']['LengthUnit'])
       end
 
       def supported?(entity)
@@ -44,8 +52,8 @@ module VGD
         name.empty? ? '(chưa đặt tên)' : name
       end
 
-      # moves: [{index:, delta: [dx, dy, dz] mm}] từ Position.plan; items: danh sách lấy lúc bấm (items(model)).
-      # Một thao tác hoàn tác cho cả đợt. Kiểm tra khóa trước khi dời và vị trí sau khi dời; sai thì hủy cả đợt, không để model dở.
+      # moves: [{index:, steps:}] từ Plan.build; items: danh sách lấy lúc bấm (items(model)).
+      # Một thao tác hoàn tác cho cả đợt. Kiểm tra khóa trước khi biến đổi và vị trí sau khi biến đổi; sai thì hủy cả đợt, không để model dở.
       def apply(model, moves, items)
         by_index = items.to_h { |item| [item[:index], item] }
         model.start_operation(OPERATION_NAME, true)
@@ -55,11 +63,11 @@ module VGD
             item = by_index.fetch(move[:index]) { raise ArgumentError, 'Danh sách món đã thay đổi. Hãy chọn lại món rồi thử lại.' }
             entity = item[:entity]
             raise ArgumentError, "#{item[:name]} đang bị khóa, không dời được." if entity.locked? || locked_context?(model)
-            move_entity(model, entity, move[:delta])
-            expected = item[:origin].zip(move[:delta]).map { |a, d| a + d }
+            move[:steps].each { |step| apply_step(model, entity, step) }
+            expected = Transform.apply_steps(move[:steps], item[:origin])
             actual = origin_mm(entity, context(model))
             unless actual.zip(expected).all? { |a, e| (a - e).abs <= TOLERANCE_MM }
-              raise ArgumentError, "Vị trí của #{item[:name]} sau khi dời không khớp, đã hủy cả đợt."
+              raise ArgumentError, "Vị trí của #{item[:name]} sau khi biến đổi không khớp, đã hủy cả đợt."
             end
             moved += 1
           end
@@ -71,11 +79,33 @@ module VGD
         end
       end
 
-      # Độ dời (mm, hệ thế giới) đổi sang hệ của group cha rồi tịnh tiến biến đổi của món.
-      def move_entity(model, entity, delta)
-        world = Geom::Vector3d.new(delta[0] / MM_PER_INCH, delta[1] / MM_PER_INCH, delta[2] / MM_PER_INCH)
-        local = context(model).inverse * world
-        entity.transformation = Geom::Transformation.translation(local) * entity.transformation
+      # Một bước biến đổi trong thế giới, đổi sang hệ của group cha rồi nhân vào biến đổi của món.
+      def apply_step(model, entity, step)
+        ctx = context(model)
+        world = world_transformation(step)
+        entity.transformation = ctx.inverse * world * ctx * entity.transformation
+      end
+
+      def world_transformation(step)
+        case step[:kind]
+        when 'translate'
+          Geom::Transformation.translation(vector_in(step[:delta]))
+        when 'rotate'
+          Geom::Transformation.rotation(point_in(step[:pivot]), Geom::Vector3d.new(*step[:axis]), step[:degrees] * Math::PI / 180.0)
+        when 'scale'
+          to_pivot = Geom::Transformation.translation(vector_in(step[:pivot]))
+          from_pivot = Geom::Transformation.translation(vector_in(step[:pivot].map(&:-@)))
+          to_pivot * Geom::Transformation.scaling(*step[:factors]) * from_pivot
+        else raise ArgumentError, 'Bước biến đổi không hợp lệ.'
+        end
+      end
+
+      def vector_in(mm)
+        Geom::Vector3d.new(mm[0] / MM_PER_INCH, mm[1] / MM_PER_INCH, mm[2] / MM_PER_INCH)
+      end
+
+      def point_in(mm)
+        Geom::Point3d.new(mm[0] / MM_PER_INCH, mm[1] / MM_PER_INCH, mm[2] / MM_PER_INCH)
       end
     end
   end
