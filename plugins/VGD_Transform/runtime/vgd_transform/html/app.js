@@ -22,11 +22,27 @@ const COORD_TEXT = { world: 'World', local: 'Local' };
 
 let state = { unit: 'mm', count: 0, origin: null, center: null, scale: null };
 
-function message(text, isError) {
-  const el = $('message');
-  el.textContent = text;
-  el.classList.toggle('error', !!isError);
+// Dòng đáy bảng: ghi chú (data-note) của chỗ đang rê chuột; còn lại hiện thông báo gần nhất (kết quả / lỗi).
+let lastMessage = { text: '', error: false };
+let hovering = null;
+function renderNote() {
+  const el = $('note');
+  const note = hovering && hovering.dataset.note;
+  el.textContent = note || lastMessage.text;
+  el.classList.toggle('error', !note && lastMessage.error);
+  el.classList.toggle('hint', !!note);
 }
+// Thông báo mới được ưu tiên (che ghi chú) cho tới khi chuột rê sang chỗ khác, để không mất kết quả / lỗi sau khi nhấn Enter.
+function message(text, isError) {
+  lastMessage = { text, error: !!isError };
+  hovering = null;
+  renderNote();
+}
+document.addEventListener('pointerover', event => {
+  hovering = event.target.closest ? event.target.closest('[data-note]') : null;
+  renderNote();
+});
+document.documentElement.addEventListener('pointerleave', () => { hovering = null; renderNote(); });
 const fmt = value => (value === null || value === undefined ? '' : String(Number(Number(value).toFixed(3))));
 const boxOf = input => input.closest('.box');
 const panelOf = input => boxOf(input).dataset.panel;
@@ -69,8 +85,15 @@ function renderStatus() {
     full.push(`bỏ qua ${state.skipped} đối tượng không phải group / component`);
   }
   $('status').textContent = short.join(' · ');
-  $('status').title = full.join(' · ');
+  $('status').dataset.note = full.join(' · ');
   $('status').classList.toggle('warn', !!state.skipped || state.unit_known === false);
+}
+// Nút khóa như Lock của SketchUp: khóa hết (ổ đóng, tô màu), không khóa (ổ mở), lẫn lộn (ổ đóng, tô nhạt).
+function renderLock() {
+  const button = $('lock');
+  button.dataset.state = state.lock || 'none';
+  button.disabled = !state.lock;
+  button.setAttribute('aria-pressed', state.lock === 'all' ? 'true' : state.lock === 'mixed' ? 'mixed' : 'false');
 }
 function fillAbsolute() {
   const fill = (panel, values) => ['x', 'y', 'z'].forEach((a, i) => {
@@ -140,6 +163,7 @@ function enhanceSpinner(input) {
   [up, down].forEach(b => { b.type = 'button'; b.tabIndex = -1; });
   up.setAttribute('aria-label', 'Tăng (kéo lên xuống để đổi nhanh, chuột phải về mặc định)');
   down.setAttribute('aria-label', 'Giảm (kéo lên xuống để đổi nhanh, chuột phải về mặc định)');
+  arrows.dataset.note = '▲▼: bấm một bước, giữ để lặp, kéo lên xuống để đổi nhanh (Ctrl ×10, Alt ×0,1); chuột phải về mặc định.';
   arrows.append(up, down);
   wrap.append(input, arrows);
 
@@ -189,6 +213,7 @@ window.VGD = {
     if (event === 'state') {
       state = data;
       renderStatus();
+      renderLock();
       fillAbsolute();
     } else if (event === 'done') {
       const skipped = data.skipped ? ` Bỏ qua ${data.skipped} đối tượng không phải group / component.` : '';
@@ -205,10 +230,10 @@ window.VGD = {
 
 // ----- Tab, lựa chọn, Enter -----
 function showTool(tool) {
-  document.querySelectorAll('.tab').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.tab === tool)));
+  document.querySelectorAll('.tabs .tab').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.tab === tool)));
   document.querySelectorAll('section.tool').forEach(section => { section.hidden = section.dataset.tool !== tool; });
 }
-document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => showTool(tab.dataset.tab)));
+document.querySelectorAll('.tabs .tab').forEach(tab => tab.addEventListener('click', () => showTool(tab.dataset.tab)));
 $('scale-uniform').addEventListener('change', () => {
   $('scale-one').hidden = !scaleUniform();
   $('scale-xyz').hidden = scaleUniform();
@@ -216,6 +241,7 @@ $('scale-uniform').addEventListener('change', () => {
 $('pivot').addEventListener('change', fillAbsolute);
 $('coord').addEventListener('change', updateCoordTitles);
 $('live-label').addEventListener('click', () => $('live').click());
+$('lock').addEventListener('click', () => call('lock'));
 $('live').addEventListener('click', () => {
   const next = !liveOn();
   $('live').setAttribute('aria-checked', String(next));

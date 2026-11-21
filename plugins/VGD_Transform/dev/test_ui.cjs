@@ -37,7 +37,10 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     const state = { unit: 'mm', unit_known: true, count: 2, skipped: 1, origin: [1000, null, 300], center: [1500, 500, 650], scale: [2, 1, 1] };
 
     ok((await callNames()).includes('ready'), 'mở cửa sổ: gửi ready để Ruby gửi trạng thái');
-    ok((await page.locator('.tab svg').count()) === 3 && (await page.locator('.tab[aria-label="Dời (Move)"]').count()) === 1 && (await page.locator('.tab[aria-label="Xoay (Rotate)"]').count()) === 1, 'ba nút công cụ là icon (Dời, Xoay, Scale), có tên cho trình đọc màn hình');
+    ok((await page.locator('#note').innerText()) === '', 'đáy bảng không có chữ mặc định');
+    ok((await page.locator('[title]:not(#theme)').count()) === 0, 'không còn chú thích title (ghi chú chuyển xuống đáy bảng; nút theme do theme chung đặt)');
+    ok(await page.locator('#lock').isDisabled(), 'chưa có trạng thái lựa chọn: nút khóa bị tắt');
+    ok((await page.locator('.tabs .tab svg').count()) === 3 && (await page.locator('.tab[aria-label="Dời (Move)"]').count()) === 1 && (await page.locator('.tab[aria-label="Xoay (Rotate)"]').count()) === 1, 'ba nút công cụ là icon (Dời, Xoay, Scale), có tên cho trình đọc màn hình');
     await receive('tool', { tool: 'scale' });
     ok((await visible('section[data-tool="scale"]')) && (await page.locator('.tab[aria-selected="true"]').getAttribute('data-tab')) === 'scale', 'mở từ nút Scale trên thanh công cụ: cửa sổ chọn sẵn Scale');
     await receive('tool', { tool: 'move' });
@@ -47,8 +50,32 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     ok(liveOff === 'false' && (await page.locator('#live').getAttribute('aria-checked')) === 'true', 'bấm chữ "Trực tiếp" cũng bật / tắt nút gạt');
     await receive('state', state);
     const status = await page.locator('#status').innerText();
-    const statusTitle = await page.locator('#status').getAttribute('title');
+    const statusTitle = await page.locator('#status').getAttribute('data-note');
     ok(status === 'mm · 2 món · bỏ 1' && statusTitle.includes('2 món đang chọn') && statusTitle.includes('bỏ qua 1 đối tượng'), 'dòng trạng thái ngắn (mm · 2 món · bỏ 1), câu đầy đủ khi rê chuột');
+
+    // Ghi chú ở đáy bảng: rê chuột hiện ghi chú, rời đi thì về thông báo
+    await page.hover('.box[data-panel="move_off"] h3');
+    ok((await page.locator('#note').innerText()).startsWith('Tương đối: dời thêm') && (await page.locator('#note').getAttribute('class')).includes('hint'), 'rê chuột lên khung: đáy bảng hiện ghi chú của khung');
+    await page.hover('#pivot');
+    ok((await page.locator('#note').innerText()).startsWith('Tâm:'), 'rê chuột lên ô chọn Tâm: hiện ghi chú Tâm');
+    await page.hover('#move_abs-x');
+    await page.evaluate(() => window.VGD.receive('message', { text: 'Đã biến đổi 1 món.' }));
+    ok((await page.locator('#note').innerText()) === 'Đã biến đổi 1 món.', 'thông báo mới hiện ngay cả khi chuột đang trên khung');
+    await page.hover('.box[data-panel="move_off"] h3');
+    await page.mouse.move(2, 2);
+    ok((await page.locator('#note').innerText()) === 'Đã biến đổi 1 món.', 'rời chuột khỏi chỗ có ghi chú: về thông báo gần nhất');
+
+    // Nút khóa (như Lock của SketchUp)
+    await receive('state', { ...state, lock: 'all' });
+    ok(!(await page.locator('#lock').isDisabled()) && (await page.locator('#lock').getAttribute('aria-pressed')) === 'true' && (await page.locator('#lock').getAttribute('data-state')) === 'all', 'lựa chọn đã khóa hết: nút khóa bật, ổ đóng');
+    await receive('state', { ...state, lock: 'mixed' });
+    ok((await page.locator('#lock').getAttribute('aria-pressed')) === 'mixed', 'lựa chọn lẫn lộn: nút khóa ở trạng thái lẫn lộn');
+    await clear();
+    await page.click('#lock');
+    ok((await callNames()).join(',') === 'lock' && (await visible('section[data-tool="move"]')), 'bấm nút khóa: gửi lệnh lock xuống Ruby, không đổi công cụ đang mở');
+    await receive('state', { ...state, lock: 'none' });
+    ok((await page.locator('#lock').getAttribute('aria-pressed')) === 'false' && (await page.locator('#lock .shackle-open').isVisible()) && !(await page.locator('#lock .shackle-closed').isVisible()), 'không món nào khóa: ổ mở');
+    await page.mouse.move(2, 2);
 
     // Ô Tuyệt đối hiện giá trị hiện tại (như 3ds Max)
     ok((await value('move_abs-x')) === '1000' && (await value('move_abs-y')) === '' && (await value('move_abs-z')) === '300', 'Tuyệt đối, tâm điểm gốc: hiện điểm gốc chung, trục khác nhau để trống');
@@ -57,7 +84,7 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     ok((await value('move_abs-x')) === '1500' && (await value('move_abs-y')) === '500', 'đổi tâm sang cả lựa chọn: ô Tuyệt đối hiện tâm hộp bao');
     ok((await value('scale_abs-x')) === '2' && (await value('scale_abs-y')) === '1', 'Scale tuyệt đối hiện tỉ lệ hiện tại');
     await receive('state', { ...state, unit_known: false, count: 0, skipped: 0, origin: null, center: null, scale: null });
-    ok((await page.locator('#status').getAttribute('title')).includes('tạm dùng mm') && (await page.locator('#status').innerText()).startsWith('mm?') && (await page.locator('#move_abs-x').getAttribute('placeholder')) === '—', 'đơn vị lạ được báo; không chọn món thì ô Tuyệt đối trống');
+    ok((await page.locator('#status').getAttribute('data-note')).includes('tạm dùng mm') && (await page.locator('#status').innerText()).startsWith('mm?') && (await page.locator('#move_abs-x').getAttribute('placeholder')) === '—', 'đơn vị lạ được báo; không chọn món thì ô Tuyệt đối trống');
     await receive('state', state);
 
     // Enter ở ô Tuyệt đối: chỉ gửi ô đã sửa
@@ -67,7 +94,7 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     const abs = await lastCall('apply');
     ok(abs && abs.tool === 'move_abs' && abs.values.x === '0' && abs.values.y === '' && abs.values.z === '' && abs.pivot === 'selection', 'Enter ở Tuyệt đối: gửi ô đã sửa, ô không sửa để trống (giữ), kèm tâm');
     await receive('done', { moved: 2, skipped: 1, tool: 'move_abs' });
-    ok((await page.locator('#message').innerText()) === 'Đã biến đổi 2 món. Bỏ qua 1 đối tượng không phải group / component.', 'sau khi áp dụng: báo số món và số bị bỏ qua');
+    ok((await page.locator('#note').innerText()) === 'Đã biến đổi 2 món. Bỏ qua 1 đối tượng không phải group / component.', 'sau khi áp dụng: báo số món và số bị bỏ qua');
     await receive('state', { ...state, center: [0, 500, 650] });
     ok((await value('move_abs-x')) === '0', 'sau khi áp dụng: ô Tuyệt đối hiện giá trị mới');
 
@@ -136,7 +163,7 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     await receive('state', state);
     await clear();
     await click('move_abs-y', 'up');
-    ok((await page.locator('#message').innerText()).includes('khác nhau') && !(await callNames()).includes('live_start'), 'ô Tuyệt đối "khác nhau": ▲▼ không chạy, nhắc gõ số');
+    ok((await page.locator('#note').innerText()).includes('khác nhau') && !(await callNames()).includes('live_start'), 'ô Tuyệt đối "khác nhau": ▲▼ không chạy, nhắc gõ số');
 
     // Xoay và Scale
     await page.click('.tab[data-tab="rotate"]');
@@ -165,9 +192,9 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
 
     // Thông báo
     await receive('message', { text: 'Độ dời bằng 0, không cần dời.' });
-    ok(!(await page.locator('#message').getAttribute('class')).includes('error'), '"không có gì để làm" hiện như thông báo thường');
+    ok(!(await page.locator('#note').getAttribute('class')).includes('error'), '"không có gì để làm" hiện như thông báo thường');
     await receive('message', { error: 'Tủ A đang khóa.' });
-    ok((await page.locator('#message').getAttribute('class')).includes('error'), 'lỗi hiện màu đỏ');
+    ok((await page.locator('#note').getAttribute('class')).includes('error'), 'lỗi hiện màu đỏ');
     ok((await page.locator('#items').count()) === 0 && (await page.locator('#result').count()) === 0 && (await page.locator('[data-action]').count()) === 0, 'gọn: không danh sách món, không bảng kết quả, không nút Xem trước / Áp dụng');
     ok(errors.length === 0, 'không có lỗi JavaScript' + (errors.length ? ': ' + errors.join(' | ') : ''));
   } finally {

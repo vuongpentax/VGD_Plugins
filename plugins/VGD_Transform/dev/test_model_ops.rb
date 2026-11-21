@@ -184,6 +184,17 @@ nm = Sketchup::Model.new([NoRotateGroup.new('Không xoay', [100.0 / MM, 0.0, 0.0
 ni = M.items(nm)
 ok('SketchUp bỏ mất phần xoay (điểm gốc vẫn đúng): kiểm tra ma trận bắt được, hủy thao tác', error_of { M.apply(nm, RS.rotate(ni, [nil, nil, 45.0], 'item', 'world')[:moves], ni) }.to_s.include?('không khớp') && nm.ops.map(&:first) == [:start, :abort])
 
+# ----- Khóa / mở khóa như Lock của SketchUp -----
+la = Sketchup::Group.new('A', [0.0, 0.0, 0.0]); lb = Sketchup::Group.new('B', [0.0, 0.0, 0.0], locked: true)
+lkm = Sketchup::Model.new([la, lb, Sketchup::Edge.new])
+ok('trạng thái khóa: lẫn lộn / khóa hết / không khóa / chưa chọn', M.lock_state(lkm) == 'mixed' && M.lock_state(Sketchup::Model.new([lb])) == 'all' &&
+   M.lock_state(Sketchup::Model.new([la])) == 'none' && M.lock_state(Sketchup::Model.new([Sketchup::Edge.new])).nil?)
+ok('khóa: mọi group / component đang chọn bị khóa, một bước hoàn tác tên Khóa', M.set_locked(lkm, true) == 2 && la.locked? && lb.locked? && lkm.ops == [[:start, 'VGD Transform · Khóa', false], [:commit]])
+lkm.ops.clear
+ok('mở khóa: mọi món mở khóa, bước hoàn tác tên Mở khóa', M.set_locked(lkm, false) == 2 && !la.locked? && !lb.locked? && lkm.ops[0][1] == 'VGD Transform · Mở khóa')
+ok('khóa khi chưa chọn group / component: báo lỗi, không mở thao tác', error_of { M.set_locked(Sketchup::Model.new([Sketchup::Edge.new]), true) }.to_s.include?('Chưa chọn'))
+ok('món vừa khóa thì không biến đổi được', (M.set_locked(lkm, true) && error_of { M.apply(lkm, TR.offset(M.items(lkm).map { |i| i.merge(locked: false) }, [5.0, nil, nil], 'world')[:moves], M.items(lkm)) }.to_s.include?('đang bị khóa')))
+
 # ----- Kéo trực tiếp: mỗi lần tính từ trạng thái đầu, gộp thành một bước Ctrl+Z -----
 lv = Sketchup::Model.new([Sketchup::Group.new('Kéo', [0.0, 0.0, 0.0])])
 lvi = M.items(lv)

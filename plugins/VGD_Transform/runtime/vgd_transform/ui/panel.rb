@@ -31,13 +31,14 @@ module VGD
         @live = nil
         @ready = false
         @tool = nil
-        # Cửa sổ gọn cỡ Transform Type-In của 3ds Max (320 × 230), để đặt cạnh màn hình. Khóa lưu cỡ mới: không giữ cỡ to của bản cũ.
+        # Cửa sổ gọn cỡ Transform Type-In của 3ds Max (320 × 250), để đặt cạnh màn hình. Khóa lưu cỡ mới: không giữ cỡ to của bản cũ.
         @dialog = ::UI::HtmlDialog.new(dialog_title: 'VGD Transform', preferences_key: 'VGD_Transform_Compact', scrollable: true, resizable: true,
-                                       width: 320, height: 230, min_width: 300, min_height: 200, style: ::UI::HtmlDialog::STYLE_DIALOG)
+                                       width: 320, height: 250, min_width: 300, min_height: 220, style: ::UI::HtmlDialog::STYLE_DIALOG)
         @dialog.set_file(File.join(VGD::Transform::ROOT, ROOT_HTML))
         @dialog.add_action_callback('ready') { |_ctx| safely { @ready = true; emit('tool', {tool: @tool}) if @tool; refresh } }
         @dialog.add_action_callback('refresh') { |_ctx| safely { refresh } }
         @dialog.add_action_callback('apply') { |_ctx, payload| safely { apply(JSON.parse(payload)) } }
+        @dialog.add_action_callback('lock') { |_ctx| safely { toggle_lock } }
         @dialog.add_action_callback('live_start') { |_ctx| safely { live_start } }
         @dialog.add_action_callback('live') { |_ctx, payload| safely { live(JSON.parse(payload)) } }
         @dialog.add_action_callback('live_end') { |_ctx| safely { live_end } }
@@ -70,7 +71,7 @@ module VGD
         model = Sketchup.active_model
         known = ModelOps.length_unit(model)
         unit = known || Units::DEFAULT_UNIT
-        state = {unit: unit, unit_known: !known.nil?, count: 0, skipped: 0, origin: nil, center: nil, scale: nil}
+        state = {unit: unit, unit_known: !known.nil?, count: 0, skipped: 0, origin: nil, center: nil, scale: nil, lock: ModelOps.lock_state(model)}
         if model.selection.size > SUMMARY_LIMIT
           state[:count] = model.selection.size
         else
@@ -87,6 +88,15 @@ module VGD
         plan = Plan.build(items, payload, unit_of(model))
         count = ModelOps.apply(model, plan[:moves], items)
         emit('done', {moved: count, skipped: ModelOps.skipped_count(model, items), tool: payload['tool']})
+        refresh
+      end
+
+      # Nút khóa, như Lock / Unlock của SketchUp: lựa chọn đã khóa hết thì mở khóa, còn lại (chưa khóa hoặc lẫn lộn) thì khóa hết.
+      def toggle_lock
+        model = Sketchup.active_model
+        lock = ModelOps.lock_state(model) != 'all'
+        count = ModelOps.set_locked(model, lock)
+        emit('message', {text: "Đã #{lock ? 'khóa' : 'mở khóa'} #{count} món."})
         refresh
       end
 

@@ -1,9 +1,11 @@
-# VGD Transform 0.1.0 (bản thử beta.7)
+# VGD Transform 0.1.0 (bản thử beta.8)
 
 Dời, xoay và scale group / component bằng số, theo hộp Transform Type-In của 3ds Max.
 
 - Thanh công cụ VGD TRF có ba nút Dời, Xoay, Scale với icon như 3ds Max; mỗi nút mở cửa sổ ở đúng công cụ.
-- Cửa sổ gọn (khoảng 320 × 230) để đặt cạnh màn hình; chọn công cụ bằng icon.
+- Cửa sổ gọn (khoảng 320 × 250) để đặt cạnh màn hình; chọn công cụ bằng icon.
+- Ghi chú và thông báo ở đáy bảng (rê chuột để xem giải thích), không có chữ mặc định.
+- Nút khóa / mở khóa group, component đang chọn như Lock của SketchUp, hoàn tác được.
 - Nhấn Enter là chạy ngay (không có nút Áp dụng), mỗi lần là một bước hoàn tác.
 - Ô Tuyệt đối hiện sẵn giá trị hiện tại và tự cập nhật (đổi lựa chọn, model đổi, Ctrl+Z); chỉ ô đã sửa được áp dụng.
 - Ô Tương đối tự về 0 sau khi áp dụng.

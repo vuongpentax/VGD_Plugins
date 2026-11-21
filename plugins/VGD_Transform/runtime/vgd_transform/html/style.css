@@ -6,7 +6,7 @@ select, input, button { font: inherit; color: var(--vgd-text); }
 select, input { background: var(--vgd-elevated); border: 1px solid var(--vgd-border); border-radius: 4px; }
 :focus-visible { outline: 2px solid var(--vgd-accent); outline-offset: 1px; }
 
-/* Hàng trên: ba nút công cụ (icon như 3ds Max), trạng thái, nút gạt trực tiếp, theme */
+/* Hàng trên: ba nút công cụ (icon như 3ds Max), nút khóa, nút gạt trực tiếp, theme */
 .topbar { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
 .tabs { display: flex; gap: 2px; }
 .tab { width: 30px; height: 26px; padding: 0; display: grid; place-items: center; background: transparent; border: 1px solid transparent; border-radius: 4px; cursor: pointer; color: var(--vgd-text); }
@@ -15,8 +15,16 @@ select, input { background: var(--vgd-elevated); border: 1px solid var(--vgd-bor
 .tab svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .tab svg .accent { fill: var(--vgd-accent); stroke: var(--vgd-accent); }
 .tab svg .accent.soft { fill-opacity: .35; }
-.status { flex: 1; min-width: 0; color: var(--vgd-muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.status.warn { color: var(--vgd-danger); }
+.tab:disabled { opacity: .4; cursor: default; border-color: transparent; }
+.divider { width: 1px; height: 18px; background: var(--vgd-border); }
+.spacer { flex: 1; }
+/* Nút khóa: ổ mở (không khóa), ổ đóng tô màu (khóa hết), ổ đóng tô nhạt (lẫn lộn) */
+.lock .shackle-open, .lock[data-state="all"] .shackle-closed ~ .shackle-open, .lock[data-state="mixed"] .shackle-open { display: none; }
+.lock[data-state="none"] .shackle-open { display: inline; }
+.lock[data-state="none"] .shackle-closed { display: none; }
+.lock[data-state="all"] .body { fill: var(--vgd-accent); fill-opacity: .35; stroke: var(--vgd-accent); }
+.lock[data-state="mixed"] .body { fill: var(--vgd-accent); fill-opacity: .15; }
+.lock[data-state="all"] { border-color: var(--vgd-accent); }
 .live { flex: none; gap: 4px; }
 .live .vgd-switch-label { font-size: 11px; }
 .vgd-theme-btn { flex: none; width: 24px; height: 24px; min-width: 24px; font-size: 12px; }
@@ -42,6 +50,12 @@ h3.head { display: flex; align-items: center; justify-content: space-between; ga
 .arrows button { flex: 1; padding: 0; margin: 0; font-size: 7px; line-height: 1; border: 0; background: transparent; color: var(--vgd-muted); cursor: ns-resize; user-select: none; }
 .arrows button:hover, .arrows button:active { color: var(--vgd-text); }
 
-.message { margin: 5px 0 0; font-size: 11px; color: var(--vgd-muted); }
-.message.error { color: var(--vgd-danger); }
+/* Đáy bảng: trạng thái (đơn vị, số món) và dòng ghi chú / thông báo; giữ chỗ hai dòng để bảng không nhảy khi rê chuột */
+.footer { margin-top: 5px; font-size: 11px; line-height: 1.35; }
+.footer p { margin: 0; }
+.status { color: var(--vgd-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status.warn { color: var(--vgd-danger); }
+.note { min-height: 2.7em; color: var(--vgd-text); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.note.hint { color: var(--vgd-muted); }
+.note.error { color: var(--vgd-danger); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

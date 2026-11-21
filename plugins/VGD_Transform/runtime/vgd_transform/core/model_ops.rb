@@ -13,6 +13,8 @@ module VGD
       TOLERANCE_MM = 0.01       # điểm gốc sau khi áp dụng phải khớp trong 0,01 mm
       MATRIX_TOLERANCE = 1e-6   # phần xoay / scale của ma trận phải khớp tới sai số này
       OPERATION_NAME = 'VGD Transform · Biến đổi món'.freeze
+      LOCK_NAME = 'VGD Transform · Khóa'.freeze
+      UNLOCK_NAME = 'VGD Transform · Mở khóa'.freeze
 
       module_function
 
@@ -38,8 +40,37 @@ module VGD
       def items(model)
         ctx = context(model)
         ancestors_locked = locked_context?(model)
-        model.selection.to_a.select { |entity| supported?(entity) && entity.valid? }.each_with_index.map do |entity, index|
+        selected_instances(model).each_with_index.map do |entity, index|
           read(entity, index, ctx, ancestors_locked)
+        end
+      end
+
+      # Group / component đang chọn (không đọc ma trận), dùng cho khóa / mở khóa.
+      def selected_instances(model)
+        model.selection.to_a.select { |entity| supported?(entity) && entity.valid? }
+      end
+
+      # Trạng thái khóa của lựa chọn, như Lock của SketchUp: 'all' (khóa hết), 'none' (không món nào khóa), 'mixed', hoặc nil (chưa chọn).
+      def lock_state(model)
+        entities = selected_instances(model)
+        return nil if entities.empty?
+        locked = entities.count(&:locked?)
+        locked.zero? ? 'none' : locked == entities.size ? 'all' : 'mixed'
+      end
+
+      # Khóa hoặc mở khóa mọi group / component đang chọn (Entity#locked= của SketchUp), một bước hoàn tác. Trả số món đã đổi.
+      def set_locked(model, locked)
+        entities = selected_instances(model)
+        raise ArgumentError, 'Chưa chọn group hoặc component nào.' if entities.empty?
+        raise ArgumentError, 'Group cha đang mở bị khóa, không đổi được khóa của món bên trong.' if locked_context?(model)
+        model.start_operation(locked ? LOCK_NAME : UNLOCK_NAME, true)
+        begin
+          entities.each { |entity| entity.locked = locked }
+          model.commit_operation
+          entities.size
+        rescue StandardError
+          model.abort_operation
+          raise
         end
       end
 

@@ -2,36 +2,41 @@
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VGD Transform</title>
 <link rel="stylesheet" href="vgd-theme/vgd-theme.css"><link rel="stylesheet" href="vgd-theme/vgd-controls.css"><link rel="stylesheet" href="style.css"></head>
 <body class="vgd-ui">
-<!-- Icon cùng hình với assets/icons/*.svg (thanh công cụ), dùng màu theo theme -->
+<!-- Icon cùng hình với assets/icons/*.svg (thanh công cụ), dùng màu theo theme. Ghi chú (data-note) hiện ở đáy bảng khi rê chuột. -->
 <div class="topbar">
   <nav class="tabs" role="tablist" aria-label="Công cụ biến đổi">
-    <button type="button" role="tab" class="tab" data-tab="move" aria-selected="true" aria-label="Dời (Move)" title="Dời (Move)">
+    <button type="button" role="tab" class="tab" data-tab="move" aria-selected="true" aria-label="Dời (Move)" data-note="Dời (Move): đưa món tới tọa độ, hoặc dời thêm một đoạn.">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5V20.5M3.5 12H20.5M9.5 6L12 3.5L14.5 6M9.5 18L12 20.5L14.5 18M6 9.5L3.5 12L6 14.5M18 9.5L20.5 12L18 14.5"/><circle class="accent" cx="12" cy="12" r="2.2"/></svg>
     </button>
-    <button type="button" role="tab" class="tab" data-tab="rotate" aria-selected="false" aria-label="Xoay (Rotate)" title="Xoay (Rotate)">
+    <button type="button" role="tab" class="tab" data-tab="rotate" aria-selected="false" aria-label="Xoay (Rotate)" data-note="Xoay (Rotate): xoay thêm quanh X, rồi Y, rồi Z.">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-8-8c2.24 0 4.38.89 5.96 2.46L20 8.5"/><path d="M20 4v4.5h-4.5"/><circle class="accent" cx="12" cy="12" r="1.8"/></svg>
     </button>
-    <button type="button" role="tab" class="tab" data-tab="scale" aria-selected="false" aria-label="Scale" title="Scale">
+    <button type="button" role="tab" class="tab" data-tab="scale" aria-selected="false" aria-label="Scale" data-note="Scale: đặt tỉ lệ, nhân hệ số, hoặc đặt kích thước đích.">
       <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" stroke-dasharray="2.4 2.6"/><rect class="accent soft" x="4" y="12" width="8" height="8"/></svg>
     </button>
   </nav>
-  <span id="status" class="status">…</span>
-  <span class="vgd-switch-item live" title="Trực tiếp: món chạy theo khi bấm / kéo ▲▼ (cả lần kéo là một bước Ctrl+Z). Tắt thì ▲▼ chỉ đổi số, nhấn Enter mới áp dụng.">
+  <span class="divider" aria-hidden="true"></span>
+  <button type="button" class="tab lock" id="lock" data-state="none" aria-pressed="false" aria-label="Khóa / mở khóa món đang chọn" disabled
+          data-note="Khóa / mở khóa group, component đang chọn (như Lock của SketchUp). Món khóa không biến đổi được.">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path class="shackle-closed" d="M8 11V8a4 4 0 0 1 8 0v3"/><path class="shackle-open" d="M8 11V8a4 4 0 0 1 7.6-1.7"/><rect class="body" x="5" y="11" width="14" height="9" rx="2"/></svg>
+  </button>
+  <span class="spacer"></span>
+  <span class="vgd-switch-item live" data-note="Trực tiếp: món chạy theo khi bấm, giữ, kéo ▲▼; cả lần kéo là một bước Ctrl+Z. Tắt thì nhấn Enter mới chạy.">
     <button type="button" class="vgd-switch" id="live" role="switch" aria-checked="true" aria-label="Xem trực tiếp khi kéo ▲▼"></button>
     <span class="vgd-switch-label" id="live-label">Trực tiếp</span>
   </span>
-  <button class="vgd-theme-btn" id="theme" type="button" aria-pressed="false"></button>
+  <button class="vgd-theme-btn" id="theme" type="button" aria-pressed="false" data-note="Đổi theme sáng / tối."></button>
 </div>
 
 <div class="settings">
-  <label title="Tâm biến đổi (Use Center của 3ds Max): điểm gốc từng món, tâm hộp bao cả lựa chọn, hoặc gốc tọa độ thế giới">Tâm
+  <label data-note="Tâm: Gốc món = điểm gốc từng món · Tâm chọn = tâm hộp bao cả lựa chọn · Gốc 0,0,0 = gốc thế giới.">Tâm
     <select id="pivot">
       <option value="item">Gốc món</option>
       <option value="selection">Tâm chọn</option>
       <option value="world">Gốc 0,0,0</option>
     </select>
   </label>
-  <label title="Hệ trục cho Tương đối, Xoay, Scale tương đối: trục thế giới (World) hoặc trục riêng của từng món (Local)">Trục
+  <label data-note="Trục cho Tương đối, Xoay, Scale tương đối: World = trục thế giới, Local = trục riêng của từng món.">Trục
     <select id="coord">
       <option value="world">World</option>
       <option value="local">Local</option>
@@ -40,13 +45,13 @@
 </div>
 
 <section class="tool" data-tool="move">
-  <div class="box" data-panel="move_abs" data-kind="absolute" title="Tuyệt đối (thế giới): đưa tâm biến đổi tới đúng tọa độ. Sửa ô rồi nhấn Enter; ô không sửa thì giữ nguyên.">
+  <div class="box" data-panel="move_abs" data-kind="absolute" data-note="Tuyệt đối: đưa tâm tới đúng tọa độ. Sửa ô rồi nhấn Enter; ô không sửa giữ nguyên.">
     <h3>Tuyệt đối · World</h3>
     <label class="row">X <input id="move_abs-x" type="text" inputmode="decimal" data-spin="len" data-default="0"></label>
     <label class="row">Y <input id="move_abs-y" type="text" inputmode="decimal" data-spin="len" data-default="0"></label>
     <label class="row">Z <input id="move_abs-z" type="text" inputmode="decimal" data-spin="len" data-default="0"></label>
   </div>
-  <div class="box" data-panel="move_off" data-kind="offset" title="Tương đối: dời thêm theo hệ trục đã chọn. Nhấn Enter; xong thì ô về 0.">
+  <div class="box" data-panel="move_off" data-kind="offset" data-note="Tương đối: dời thêm theo trục đã chọn, nhấn Enter, xong ô về 0. Gõ 1m, 250mm… để dùng đơn vị khác.">
     <h3 class="coord-title" data-title="Tương đối">Tương đối · World</h3>
     <label class="row">X <input id="move_off-x" type="text" inputmode="decimal" data-spin="len" data-default="" placeholder="0"></label>
     <label class="row">Y <input id="move_off-y" type="text" inputmode="decimal" data-spin="len" data-default="" placeholder="0"></label>
@@ -55,7 +60,7 @@
 </section>
 
 <section class="tool" data-tool="rotate" hidden>
-  <div class="box" data-panel="rotate" data-kind="offset" title="Xoay thêm (độ) quanh X, rồi Y, rồi Z, theo hệ trục và tâm đã chọn. Nhấn Enter; xong thì ô về 0.">
+  <div class="box" data-panel="rotate" data-kind="offset" data-note="Xoay thêm (độ) quanh X, rồi Y, rồi Z, theo trục và tâm đã chọn. Nhấn Enter, xong ô về 0.">
     <h3 class="coord-title" data-title="Xoay (°)">Xoay (°) · World</h3>
     <label class="row">X <input id="rotate-x" type="text" inputmode="decimal" data-spin="1" data-default="" placeholder="0"></label>
     <label class="row">Y <input id="rotate-y" type="text" inputmode="decimal" data-spin="1" data-default="" placeholder="0"></label>
@@ -65,15 +70,15 @@
 </section>
 
 <section class="tool" data-tool="scale" hidden>
-  <div class="box" data-panel="scale_abs" data-kind="absolute" title="Tuyệt đối (trục riêng): tỉ lệ so với definition, 1 = kích thước gốc. Sửa ô rồi nhấn Enter.">
+  <div class="box" data-panel="scale_abs" data-kind="absolute" data-note="Tuyệt đối: tỉ lệ so với definition theo trục riêng (1 = kích thước gốc). Sửa ô rồi nhấn Enter.">
     <h3>Tuyệt đối · Local</h3>
     <label class="row">X <input id="scale_abs-x" type="text" inputmode="decimal" data-spin="0.01" data-default="1"></label>
     <label class="row">Y <input id="scale_abs-y" type="text" inputmode="decimal" data-spin="0.01" data-default="1"></label>
     <label class="row">Z <input id="scale_abs-z" type="text" inputmode="decimal" data-spin="0.01" data-default="1"></label>
   </div>
-  <div class="box" data-panel="scale" data-kind="offset" title="Tương đối: số là hệ số (1 = giữ). Khi bỏ Đều, số có đơn vị (1000mm, 1m) là kích thước đích theo trục đó. Nhấn Enter; xong thì ô về 1.">
+  <div class="box" data-panel="scale" data-kind="offset" data-note="Tương đối: số là hệ số (1 = giữ). Bỏ Đều thì 1000mm, 1m… là kích thước đích theo trục đó. Nhấn Enter.">
     <h3 class="head"><span class="coord-title" data-title="Tương đối">Tương đối · World</span>
-      <label class="uniform" title="Đều: một hệ số cho cả ba trục"><input type="checkbox" class="vgd-checkbox" id="scale-uniform" checked> Đều</label></h3>
+      <label class="uniform" data-note="Đều: một hệ số cho cả ba trục. Bỏ tick để nhập X, Y, Z riêng hoặc kích thước đích."><input type="checkbox" class="vgd-checkbox" id="scale-uniform" checked> Đều</label></h3>
     <div id="scale-one">
       <label class="row">× <input id="scale-u" type="text" inputmode="decimal" data-spin="0.01" data-default="" placeholder="1"></label>
     </div>
@@ -85,7 +90,10 @@
   </div>
 </section>
 
-<p id="message" class="message" role="status" aria-live="polite">Nhập số rồi nhấn Enter.</p>
+<footer class="footer">
+  <p id="status" class="status">…</p>
+  <p id="note" class="note" role="status" aria-live="polite"></p>
+</footer>
 <script src="vgd-theme/vgd-theme.js"></script>
 <script src="app.js"></script>
 </body></html>

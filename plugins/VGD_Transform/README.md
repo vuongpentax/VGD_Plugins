@@ -1,4 +1,4 @@
-# VGD Transform 0.1.0-beta.7
+# VGD Transform 0.1.0-beta.8
 
 > Đổi tên từ **VGD Position**. Trong SketchUp, gỡ bản **VGD Position** cũ (Extension Manager) trước khi cài bản này để tránh hai menu trùng chức năng.
 
@@ -9,9 +9,16 @@ Plugin dời, xoay và scale món (group, component) trong SketchUp bằng số,
 1. Chọn một hoặc nhiều group / component trong SketchUp.
 2. Bấm một trong ba nút **Dời**, **Xoay**, **Scale** trên thanh công cụ **VGD TRF** (icon như 3ds Max): cửa sổ mở ra ở đúng công cụ đó. Hoặc mở **Extensions → VGD → VGD Transform → Mở bảng biến đổi**.
    Muốn mở bằng phím như F12 của 3ds Max: **Window → Preferences → Shortcuts**, tìm "Mở bảng biến đổi" và gán phím.
-3. Cửa sổ gọn (khoảng 320 × 230, cỡ hộp Transform Type-In của 3ds Max) để đặt cạnh màn hình. Hàng trên cùng: ba icon công cụ, dòng trạng thái ngắn (đơn vị file · số món · số đối tượng bị bỏ qua; rê chuột để xem đầy đủ), nút gạt **Trực tiếp**, nút đổi theme.
-4. Chọn công cụ bằng ba icon; chọn **Tâm** và **Trục** (dùng chung cho mọi công cụ). Rê chuột lên khung hoặc ô chọn để xem giải thích.
+3. Cửa sổ gọn (khoảng 320 × 250, cỡ hộp Transform Type-In của 3ds Max) để đặt cạnh màn hình. Hàng trên cùng: ba icon công cụ, nút **khóa**, nút gạt **Trực tiếp**, nút đổi theme. Đáy bảng: dòng trạng thái (đơn vị file · số món · số đối tượng bị bỏ qua) và dòng **ghi chú / thông báo**.
+4. Chọn công cụ bằng ba icon; chọn **Tâm** và **Trục** (dùng chung cho mọi công cụ). Rê chuột lên nút, khung hoặc ô chọn: ghi chú giải thích hiện ở đáy bảng. Sau khi nhấn Enter, đáy bảng báo kết quả hoặc lỗi.
 5. Nhập số rồi nhấn **Enter**. Biến đổi chạy ngay (không có nút Áp dụng); mỗi lần là một bước hoàn tác (Ctrl+Z).
+
+### Khóa (như Lock của SketchUp)
+
+- Nút ổ khóa khóa / mở khóa các group / component đang chọn, giống **Lock / Unlock** trong menu chuột phải của SketchUp (đúng thuộc tính khóa của SketchUp, Ctrl+Z hoàn tác được).
+- Ổ khóa cho biết trạng thái lựa chọn: **mở** (không món nào khóa), **đóng, tô màu** (khóa hết), **đóng, tô nhạt** (lẫn lộn).
+- Bấm khi đã khóa hết thì mở khóa hết; còn lại (chưa khóa hoặc lẫn lộn) thì khóa hết.
+- Món khóa không dời / xoay / scale được (cả bằng plugin này lẫn công cụ của SketchUp).
 
 ### Ô Tuyệt đối và Tương đối (như 3ds Max)
 
@@ -56,7 +63,7 @@ Plugin dời, xoay và scale món (group, component) trong SketchUp bằng số,
 
 ## Giới hạn của bản thử
 
-- Món khóa, hoặc món nằm trong group cha đang bị khóa: **cả đợt không chạy** và cửa sổ báo tên món đó.
+- Món khóa, hoặc món nằm trong group cha đang bị khóa: **cả đợt không chạy** và đáy bảng báo tên món đó. Bấm nút khóa để mở khóa.
 - Cạnh, mặt rời trong lựa chọn không được biến đổi (chỉ group / component); số lượng được báo.
 - Không có xoay tuyệt đối. Không hỗ trợ hệ số âm (lật món). Chưa có chọn tâm bằng cách bấm vào model.
 - Món bị méo (trục không vuông góc) dùng hệ trục riêng có thể bị từ chối khi kiểm tra sau biến đổi.

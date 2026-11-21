@@ -2,6 +2,13 @@
 
 Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**, trừ khi ghi khác.
 
+## Bản 0.1.0-beta.8: đã kiểm tra tự động
+
+- Bản này: nút khóa như Lock của SketchUp; ghi chú và thông báo ở đáy bảng (bỏ `title`, bỏ chữ mặc định); dòng trạng thái xuống đáy; cửa sổ 320 × 250.
+- `dev/test_model_ops.rb`: trạng thái khóa (lẫn lộn / khóa hết / không khóa / chưa chọn); khóa và mở khóa mọi món đang chọn trong một bước hoàn tác đúng tên; chưa chọn thì báo lỗi; món vừa khóa không biến đổi được.
+- `dev/test_ui.cjs` (53): đáy bảng không có chữ mặc định; không còn `title` (trừ nút theme của theme chung); rê chuột hiện ghi chú, rời đi về thông báo; thông báo mới hiện cả khi chuột đang trên khung; nút khóa tắt khi chưa có lựa chọn, hiện đúng ba trạng thái, bấm gửi lệnh `lock` và không đổi công cụ đang mở (lỗi này bắt được nhờ test và đã sửa).
+- Đã chụp ảnh ở 320 × 250, theme sáng và tối: rê chuột lên khung (ghi chú ở đáy), sau khi khóa (ổ đóng, báo "Đã khóa 2 món."). Không tràn, không thanh cuộn.
+
 ## Bản 0.1.0-beta.7: đã kiểm tra tự động
 
 - Bản này: icon Dời / Xoay / Scale (thanh công cụ ba nút, icon trong cửa sổ), bỏ nút Áp dụng, cửa sổ gọn 320 × 230. `dev/test_reload.rb` kiểm tra thanh công cụ có đúng ba nút, icon là file có thật, tải lại không thêm thanh công cụ. `dev/test_ui.cjs` (42) kiểm tra icon công cụ, Ruby chọn sẵn công cụ, không còn nút Áp dụng, dòng trạng thái ngắn, ô Đều. Đã chụp ảnh cửa sổ ở 320 × 230 (ba công cụ, theme sáng và tối: không tràn, không thanh cuộn) và icon ở 16 / 24 / 32 px trên nền thanh công cụ sáng.
@@ -27,5 +34,7 @@ Các mục còn lại giữ như bản beta.6:
 - **Spinner trong HtmlDialog thật:** kéo trên ▲▼ (pointer capture), Ctrl / Alt khi kéo, chuột phải không bật menu của trình duyệt.
 - Biến đổi trong group đang mở và lồng nhiều cấp; Ctrl+Z đúng một bước; không ảnh hưởng món khác.
 - Tải lại code khi cửa sổ đang mở và khi đang kéo (phải bị chặn).
+- **Khóa:** `Entity#locked=` trong SketchUp thật (viền đỏ khi chọn món khóa, Ctrl+Z hoàn tác đúng một bước, công cụ Move của SketchUp không dời được món đã khóa); ổ khóa cập nhật khi khóa / mở khóa bằng menu chuột phải của SketchUp.
+- Ghi chú ở đáy bảng khi rê chuột trong HtmlDialog thật.
 - Icon trên thanh công cụ thật (SVG, cả cỡ nhỏ và lớn), bấm từng nút mở đúng công cụ.
 - Cửa sổ 320 × 230 trong SketchUp thật trên màn FHD 24" (cỡ HtmlDialog có tính thanh tiêu đề hay không, chữ có rõ không).
