@@ -1,0 +1,26 @@
+/* Chỉ dùng token của theme (vgd-theme.css); không để màu cứng trong file này. */
+body { margin: 0; padding: 16px; background: var(--vgd-bg); color: var(--vgd-text); font: 13px/1.45 Manrope, system-ui, sans-serif; }
+header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+h1 { font-size: 18px; margin: 0; }
+h2 { font-size: 15px; margin: 14px 0 6px; }
+section { background: var(--vgd-surface); border: 1px solid var(--vgd-border); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+.muted { color: var(--vgd-muted); margin: 2px 0; }
+.items { list-style: none; margin: 0; padding: 0; max-height: 150px; overflow-y: auto; }
+.items::-webkit-scrollbar { width: 0; height: 10px; }
+.item { display: flex; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--vgd-border); }
+.item .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item .pos { color: var(--vgd-muted); font-variant-numeric: tabular-nums; }
+.item.locked .name { color: var(--vgd-muted); }
+.badge { font-size: 11px; color: var(--vgd-danger); }
+.field { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; color: var(--vgd-muted); }
+select, input { font: inherit; color: var(--vgd-text); background: var(--vgd-elevated); border: 1px solid var(--vgd-border); border-radius: 6px; padding: 5px 7px; }
+.xyz { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+button { font: inherit; color: var(--vgd-text); background: var(--vgd-elevated); border: 1px solid var(--vgd-border); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
+button.primary { background: var(--vgd-accent); border-color: var(--vgd-accent); color: var(--vgd-on-accent); }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--vgd-accent); outline-offset: 1px; }
+.result p { margin: 2px 0; }
+.message { margin: 8px 0 0; }
+.message.error { color: var(--vgd-danger); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

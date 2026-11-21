@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VGD Position</title>
+<link rel="stylesheet" href="vgd-theme/vgd-theme.css"><link rel="stylesheet" href="style.css"></head>
+<body class="vgd-ui">
+<header><h1>VGD Position</h1><button class="vgd-theme-btn" id="theme" type="button" aria-pressed="false"></button></header>
+<main>
+  <section>
+    <h2>Món đang chọn</h2>
+    <p id="count" class="muted">Đang đọc lựa chọn…</p>
+    <ul id="items" class="items"></ul>
+  </section>
+  <section>
+    <h2>Dời tới tọa độ (mm)</h2>
+    <label class="field">Chế độ
+      <select id="mode">
+        <option value="absolute">Đặt điểm gốc tới X, Y, Z (chỉ khi chọn một món)</option>
+        <option value="relative">Dời tương đối ΔX, ΔY, ΔZ (một hoặc nhiều món)</option>
+      </select>
+    </label>
+    <div class="xyz">
+      <label class="field">X<input id="x" type="text" inputmode="decimal" placeholder="để trống = giữ"></label>
+      <label class="field">Y<input id="y" type="text" inputmode="decimal" placeholder="để trống = giữ"></label>
+      <label class="field">Z<input id="z" type="text" inputmode="decimal" placeholder="để trống = giữ"></label>
+    </div>
+    <div class="actions">
+      <button id="preview" type="button">Xem trước</button>
+      <button id="apply" type="button" class="primary" disabled>Áp dụng</button>
+    </div>
+  </section>
+  <section>
+    <h2>Kết quả</h2>
+    <div id="result" class="result"></div>
+    <p id="message" class="message" role="status" aria-live="polite">Sẵn sàng.</p>
+  </section>
+</main>
+<script src="vgd-theme/vgd-theme.js"></script>
+<script src="app.js"></script>
+</body></html>

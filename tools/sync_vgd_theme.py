@@ -21,6 +21,7 @@ TARGETS = [
     'plugins/VGD_Package/VGD_Package/ui',
     'plugins/VGD_Reference/runtime/vgd_reference/ui/web',
     'plugins/VGD_Scenes/runtime/vgd_scenes',
+    'plugins/VGD_Position/runtime/vgd_position/html',
     'plugins/VGD_Structure/runtime/vgd_structure/html',
 ]
 
