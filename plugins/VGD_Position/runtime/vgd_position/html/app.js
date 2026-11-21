@@ -1,5 +1,5 @@
 'use strict';
-// Giao diện VGD Position: danh sách món đang chọn, ô tọa độ X, Y, Z (mm), xem trước rồi mới áp dụng.
+// Giao diện VGD Position: danh sách món đang chọn, ô tọa độ X, Y, Z (mm) của điểm gốc món đầu tiên, xem trước rồi mới áp dụng.
 // Dữ liệu từ Ruby đến qua window.VGD.receive; lệnh đi qua window.sketchup (ui/panel.rb).
 const $ = id => document.getElementById(id);
 const node = (tag, text, cls) => { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (cls) el.className = cls; return el; };
@@ -16,7 +16,7 @@ function setPreviewed(value) {
   $('apply').disabled = !value;
 }
 function payload() {
-  return {mode: $('mode').value, values: {x: $('x').value, y: $('y').value, z: $('z').value}};
+  return {values: {x: $('x').value, y: $('y').value, z: $('z').value}};
 }
 function renderItems(data) {
   const list = $('items');
@@ -28,9 +28,6 @@ function renderItems(data) {
     if (item.locked) li.append(node('span', 'khóa', 'badge'));
     list.append(li);
   });
-  const absolute = $('mode').querySelector('option[value="absolute"]');
-  absolute.disabled = !data.can_absolute;
-  if (!data.can_absolute && $('mode').value === 'absolute') $('mode').value = 'relative';
   $('result').replaceChildren();
   setPreviewed(false);
 }
@@ -38,7 +35,6 @@ function renderPreview(data) {
   const box = $('result');
   box.replaceChildren();
   data.moves.forEach(m => box.append(node('p', `${m.name}: ΔX ${m.delta[0]} · ΔY ${m.delta[1]} · ΔZ ${m.delta[2]} mm, tới (${m.target.join(', ')})`)));
-  data.skipped.forEach(s => box.append(node('p', `Bỏ qua ${s.name}: ${s.reason}`, 'muted')));
   setPreviewed(data.moves.length > 0);
   message(data.moves.length ? `Sẽ dời ${data.moves.length} món. Bấm Áp dụng để thực hiện.` : 'Không có món nào cần dời.');
 }
@@ -50,15 +46,13 @@ window.VGD = {
     else if (event === 'done') {
       $('result').replaceChildren();
       setPreviewed(false);
-      const skipped = data.skipped.length ? ` Bỏ qua ${data.skipped.length} món.` : '';
-      message(`Đã dời ${data.moved} món.${skipped}`);
+      message(`Đã dời ${data.moved} món.`);
     } else if (event === 'message') message(data.error || data.text, !!data.error);
   },
 };
 
-// Mọi thay đổi ô nhập hoặc chế độ thì phải xem trước lại.
-['x', 'y', 'z', 'mode'].forEach(id => $(id).addEventListener('input', () => setPreviewed(false)));
-$('mode').addEventListener('change', () => setPreviewed(false));
+// Mọi thay đổi ô nhập thì phải xem trước lại.
+['x', 'y', 'z'].forEach(id => $(id).addEventListener('input', () => setPreviewed(false)));
 $('preview').addEventListener('click', () => call('preview', payload()));
 $('apply').addEventListener('click', () => { if (previewed) call('apply', payload()); });
 

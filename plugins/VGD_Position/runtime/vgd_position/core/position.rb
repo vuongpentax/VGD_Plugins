@@ -1,12 +1,11 @@
 module VGD
-  # VGD Position: dời món (group / component) tới tọa độ X, Y, Z (mm) hoặc dời tương đối.
-  # Phần này là logic thuần (không gọi SketchUp): đọc ô nhập, tính độ dời, bỏ món khóa. Phần gọi SketchUp ở core/move.rb.
+  # VGD Position: dời món (group / component) tới tọa độ X, Y, Z (mm) của điểm gốc món đầu tiên trong lựa chọn.
+  # Phần này là logic thuần (không gọi SketchUp): đọc ô nhập, tính độ dời, chặn món khóa. Phần gọi SketchUp ở core/move.rb.
   module Position
     MM_PER_INCH = 25.4          # SketchUp tính nội bộ bằng inch
     LIMIT_MM = 1_000_000.0      # tọa độ ngoài ±1 km (mm) là nhập nhầm
     TOLERANCE_MM = 0.05         # lệch dưới 0,05 mm coi là đã đúng vị trí
     NUMBER = /\A[+-]?(\d+\.?\d*|\.\d+)\z/.freeze
-    MODES = %w[absolute relative].freeze
     AXES = %w[x y z].freeze
 
     module_function
@@ -22,38 +21,23 @@ module VGD
       value
     end
 
-    # items: [{index:, name:, origin: [x, y, z] mm hoặc nil, locked: true/false}]
-    # mode: 'absolute' (đặt điểm gốc tới X, Y, Z; trục để trống thì giữ nguyên; chỉ một món) hoặc 'relative' (dời ΔX, ΔY, ΔZ; trống là 0).
-    # values: {'x' => '...', 'y' => '...', 'z' => '...'}.
-    # Trả về {moves: [{index:, delta: [dx, dy, dz] mm}], skipped: [{index:, name:, reason:}]}.
-    def plan(items, mode, values)
-      raise ArgumentError, 'Chế độ dời không hợp lệ.' unless MODES.include?(mode)
+    # items: [{index:, name:, origin: [x, y, z] mm hoặc nil, locked: true/false}], theo thứ tự chọn.
+    # values: {'x' => '...', 'y' => '...', 'z' => '...'}; trục trống thì giữ nguyên.
+    # Cả nhóm dời cùng một độ lệch, tính từ điểm gốc của món đầu tiên: độ lệch = tọa độ nhập - điểm gốc món đầu.
+    # Một món thì đó chính là món đó. Có món khóa hoặc không đo được vị trí thì không dời gì (để nhóm không lệch nhau).
+    # Trả về {moves: [{index:, delta: [dx, dy, dz] mm}]}.
+    def plan(items, values)
       raise ArgumentError, 'Chưa chọn món nào.' if items.empty?
       typed = AXES.map { |axis| parse_mm(values[axis]) }
       raise ArgumentError, 'Hãy nhập ít nhất một tọa độ (X, Y hoặc Z).' if typed.all?(&:nil?)
-      if mode == 'absolute' && items.size > 1
-        raise ArgumentError, 'Chế độ đặt tọa độ chỉ dùng khi chọn đúng một món. Chọn một món, hoặc dùng chế độ dời tương đối.'
-      end
-      moves = []
-      skipped = []
       items.each do |item|
-        next skipped << skip(item, 'đang khóa') if item[:locked]
-        origin = item[:origin]
-        next skipped << skip(item, 'không đo được vị trí') if origin.nil?
-        delta = if mode == 'absolute'
-                  typed.each_with_index.map { |value, i| value.nil? ? 0.0 : value - origin[i] }
-                else
-                  typed.map { |value| value || 0.0 }
-                end
-        next skipped << skip(item, 'đã ở vị trí đó') if delta.all? { |d| d.abs < TOLERANCE_MM }
-        moves << {index: item[:index], delta: delta}
+        raise ArgumentError, "#{item[:name]} đang khóa. Bỏ khóa hoặc bỏ chọn món đó rồi thử lại." if item[:locked]
+        raise ArgumentError, "Không đo được vị trí của #{item[:name]}." if item[:origin].nil?
       end
-      raise ArgumentError, 'Không có món nào cần dời (đã ở vị trí đó, hoặc bị khóa / không đo được vị trí).' if moves.empty?
-      {moves: moves, skipped: skipped}
-    end
-
-    def skip(item, reason)
-      {index: item[:index], name: item[:name], reason: reason}
+      anchor = items.first[:origin]
+      delta = typed.each_with_index.map { |value, i| value.nil? ? 0.0 : value - anchor[i] }
+      raise ArgumentError, 'Món đầu tiên đã ở vị trí đó, không cần dời.' if delta.all? { |d| d.abs < TOLERANCE_MM }
+      {moves: items.map { |item| {index: item[:index], delta: delta} }}
     end
   end
 end

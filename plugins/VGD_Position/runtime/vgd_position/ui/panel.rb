@@ -41,7 +41,7 @@ module VGD
 
       def refresh
         items = Move.items(Sketchup.active_model).map { |item| public_item(item) }
-        emit('items', {items: items, count: items.size, can_absolute: items.size == 1})
+        emit('items', {items: items, count: items.size})
       end
 
       def preview(payload)
@@ -50,13 +50,13 @@ module VGD
           item = items.find { |i| i[:index] == move[:index] }
           {index: move[:index], name: item[:name], delta: move[:delta].map { |v| v.round(1) }, target: item[:origin].zip(move[:delta]).map { |a, d| (a + d).round(1) }}
         end
-        emit('preview', {moves: moves, skipped: plan[:skipped]})
+        emit('preview', {moves: moves})
       end
 
       def apply(payload)
         items, plan = plan_for(payload)
         count = Move.apply(Sketchup.active_model, plan[:moves], items)
-        emit('done', {moved: count, skipped: plan[:skipped]})
+        emit('done', {moved: count})
         refresh
       end
 
@@ -65,7 +65,7 @@ module VGD
       def plan_for(payload)
         items = Move.items(Sketchup.active_model)
         values = payload['values'].is_a?(Hash) ? payload['values'] : {}
-        plan = Position.plan(items, payload['mode'].to_s, values)
+        plan = Position.plan(items, values)
         [items, plan]
       end
 

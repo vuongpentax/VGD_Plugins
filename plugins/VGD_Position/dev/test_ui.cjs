@@ -1,4 +1,4 @@
-// Test giao diện VGD Position (html/index.html, app.js): hiển thị món, món khóa, chế độ, xem trước trước khi áp dụng.
+// Test giao diện VGD Position (html/index.html, app.js): hiển thị món, món khóa, xem trước trước khi áp dụng.
 // Chạy: node dev/test_ui.cjs (từ plugins/VGD_Position). Đặt VGD_PLAYWRIGHT_MODULE nếu Playwright không cài local.
 const path = require('path');
 const { pathToFileURL } = require('url');
@@ -27,12 +27,11 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
 
     await receive('items', {
       items: [{ index: 0, name: 'Tủ A', origin: [1000, 2000, 300], locked: false }, { index: 1, name: 'Tủ khóa', origin: [0, 0, 0], locked: true }],
-      count: 2, can_absolute: false,
+      count: 2,
     });
     ok((await page.locator('#count').innerText()) === '2 món', 'hiển thị số món đang chọn');
     ok((await page.locator('#items li').count()) === 2 && (await page.locator('#items li.locked .badge').innerText()) === 'khóa', 'món khóa được đánh dấu');
-    ok(await page.locator('#mode option[value="absolute"]').evaluate(el => el.disabled), 'nhiều món hoặc không chọn: chế độ tuyệt đối bị khóa');
-    ok((await page.locator('#mode').inputValue()) === 'relative', 'chọn nhiều món: chế độ tự chuyển sang tương đối');
+    ok((await page.locator('#mode').count()) === 0, 'không còn ô chọn chế độ');
     ok(await page.locator('#apply').isDisabled(), 'chưa xem trước: nút Áp dụng bị khóa');
 
     // Xem trước đúng với ô nhập hiện tại
@@ -40,10 +39,10 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     await clear();
     await page.click('#preview');
     const sent = await lastCall('preview');
-    ok(sent && sent.mode === 'relative' && sent.values.x === '1500' && sent.values.y === '' && sent.values.z === '', 'xem trước gửi đúng chế độ và các ô X, Y, Z');
-    await receive('preview', { moves: [{ index: 0, name: 'Tủ A', delta: [500, 0, 0], target: [1500, 2000, 300] }], skipped: [{ index: 1, name: 'Tủ khóa', reason: 'đang khóa' }] });
+    ok(sent && !('mode' in sent) && sent.values.x === '1500' && sent.values.y === '' && sent.values.z === '', 'xem trước gửi đúng các ô X, Y, Z');
+    await receive('preview', { moves: [{ index: 0, name: 'Tủ A', delta: [500, 0, 0], target: [1500, 2000, 300] }, { index: 1, name: 'Tủ B', delta: [500, 0, 0], target: [500, 0, 0] }] });
     ok(!(await page.locator('#apply').isDisabled()), 'sau khi xem trước: nút Áp dụng được bật');
-    ok((await page.locator('#result').innerText()).includes('ΔX 500') && (await page.locator('#result').innerText()).includes('Bỏ qua Tủ khóa'), 'kết quả xem trước hiện độ dời và món bị bỏ qua');
+    ok((await page.locator('#result').innerText()).includes('ΔX 500') && (await page.locator('#result').innerText()).includes('Tủ B'), 'kết quả xem trước hiện độ dời của từng món');
 
     // Đổi ô nhập thì phải xem trước lại
     await page.fill('#y', '10');
@@ -51,12 +50,12 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
 
     // Áp dụng: gửi đúng chế độ và ô nhập lúc xem trước
     await page.click('#preview');
-    await receive('preview', { moves: [{ index: 0, name: 'Tủ A', delta: [500, 10, 0], target: [1500, 2010, 300] }], skipped: [] });
+    await receive('preview', { moves: [{ index: 0, name: 'Tủ A', delta: [500, 10, 0], target: [1500, 2010, 300] }] });
     await clear();
     await page.click('#apply');
     const applied = await lastCall('apply');
     ok(applied && applied.values.x === '1500' && applied.values.y === '10', 'áp dụng gửi đúng các ô đã xem trước');
-    await receive('done', { moved: 1, skipped: [{ index: 1, name: 'Tủ khóa', reason: 'đang khóa' }] });
+    await receive('done', { moved: 1 });
     ok((await page.locator('#message').innerText()).startsWith('Đã dời 1 món.'), 'sau khi dời: báo số món đã dời');
     ok(await page.locator('#apply').isDisabled(), 'sau khi dời: Áp dụng lại bị khóa cho đến khi xem trước lại');
 

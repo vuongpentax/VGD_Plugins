@@ -83,6 +83,15 @@ M.apply(ctx_model, [{index: 0, delta: [0.0, 40.0, 0.0]}], ctx_items)
 w = M.items(ctx_model)[0][:origin]
 ok('dời món trong group cha: thế giới đi đúng 40 mm theo Y, X giữ nguyên 150', (w[0] - 150.0).abs < 0.01 && (w[1] - 40.0).abs < 0.01)
 
+# Nhiều món trong một đợt: mọi món cùng độ dời, một thao tác hoàn tác
+pair = [Sketchup::Group.new('Tủ A', [0.0, 0.0, 0.0]), Sketchup::Group.new('Tủ B', [500.0, 0.0, 0.0])]
+pm = Sketchup::Model.new(pair)
+pi = M.items(pm)
+M.apply(pm, [{index: 0, delta: [100.0, 0.0, 0.0]}, {index: 1, delta: [100.0, 0.0, 0.0]}], pi)
+before_x = pi.map { |i| i[:origin][0] }
+after_x = M.items(pm).map { |i| i[:origin][0] }
+ok('nhiều món: mỗi món dời đúng 100 mm theo X trong một thao tác', after_x.zip(before_x).all? { |a, b| (a - b - 100.0).abs < 0.01 } && pm.ops.map(&:first) == [:start, :commit])
+
 # Món bị khóa: không dời, báo lỗi, không đổi model
 locked_item = Sketchup::Group.new('Khóa', [0.0, 0.0, 0.0], locked: true)
 lm = Sketchup::Model.new([locked_item])

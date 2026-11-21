@@ -36,11 +36,12 @@ Chạy từ `plugins/VGD_Position`:
 ## Quy tắc riêng
 
 - **Dời món là đổi hình học model.** Chỉ đổi `transformation` của instance được chọn (group / component), không đổi định nghĩa, không đổi món khác. Đây là chỗ duy nhất của plugin đổi model.
-- **Xem trước rồi mới áp dụng.** Giao diện chỉ bật nút Áp dụng sau khi xem trước đúng với các ô hiện tại; đổi ô hoặc chế độ thì khóa lại. Ruby luôn tính lại kế hoạch lúc áp dụng (không tin kết quả xem trước cũ).
+- **Xem trước rồi mới áp dụng.** Giao diện chỉ bật nút Áp dụng sau khi xem trước đúng với các ô hiện tại; đổi ô thì khóa lại. Ruby luôn tính lại kế hoạch lúc áp dụng (không tin kết quả xem trước cũ).
 - **Một thao tác hoàn tác cho cả đợt** (`start_operation` / `commit_operation`). Lỗi giữa chừng thì `abort_operation`, không để model dở.
 - **Kiểm tra sau khi dời.** Vị trí sau khi dời phải khớp kế hoạch trong 0,01 mm; không khớp thì hủy cả đợt.
-- **Món khóa và món trong group cha bị khóa** không dời; báo lý do thay vì bỏ qua âm thầm.
+- **Món khóa và món trong group cha bị khóa:** nếu có trong lựa chọn thì cả đợt không dời, báo tên món. Không bỏ qua âm thầm món nào, để nhóm không bị lệch.
 - **Vị trí tính trong hệ thế giới** (mm). Độ dời đổi sang hệ của group cha bằng nghịch đảo biến đổi ngữ cảnh (`Move.context`). Không dùng `Model#edit_transform` (xem CLAUDE.md của BIM về lỗi SketchUp 2024).
-- **Ô nhập (mm):** chấp nhận dấu chấm hoặc phẩy; để trống nghĩa là giữ nguyên trục đó (chế độ đặt tọa độ) hoặc bằng 0 (chế độ dời tương đối). Giới hạn ±1 km.
+- **Ô nhập (mm):** chấp nhận dấu chấm hoặc phẩy; để trống nghĩa là giữ nguyên trục đó. Giới hạn ±1 km.
+- **Nhiều món:** cả nhóm dời cùng một độ lệch, tính từ điểm gốc của món đầu tiên trong lựa chọn (`Position.plan`). Không còn chế độ riêng; số món quyết định cách dời.
 - Phạm vi bản đầu: điểm gốc của món, không xoay. Chưa có lựa chọn "điểm dời" khác (hộp bao, góc).
 - Giao diện chỉ tiếng Việt ở bản đầu. Chuỗi mới phải có bản dịch nếu sau này thêm tiếng Anh.
