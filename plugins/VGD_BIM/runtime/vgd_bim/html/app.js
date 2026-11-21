@@ -1199,15 +1199,23 @@ function roomsPanel(){
     const del=button('×',()=>{rooms.splice(rooms.indexOf(room),1);save();},'cs-del');del.title='Xóa phòng này (món đã gán chỉ hiện "phòng đã xóa", không mất dữ liệu khác)';del.setAttribute('aria-label','Xóa phòng '+room.name);
     top.append(name,number,del);
     const mid=node('div',undefined,'rm-mid');
-    const lv=node('select');lv.setAttribute('aria-label','Tầng của phòng');lv.append(new Option('(Không có tầng)',''));levels.forEach(l=>lv.append(new Option(l.name,l.id)));lv.value=room.level||'';lv.onchange=()=>{room.level=lv.value;save();};
-    mid.append(miniField('Tầng',lv),miniField('Cao mm',fieldInput(room,'height','Chiều cao phòng (mm)','number')),miniField('Cao độ sàn',fieldInput(room,'elevation','Cao độ sàn (mm)','number')));
+    const lv=node('select');lv.setAttribute('aria-label','Tầng của phòng');lv.append(new Option('(Không có tầng)',''));levels.forEach(l=>lv.append(new Option(l.name,l.id)));lv.value=room.level||'';
+    // Cao độ sàn theo tầng của phòng; chỉ phòng hạ nền khác mới nhập tay. Phòng không có tầng thì phải nhập tay.
+    const manual=room.elevation_source==='manual'||!room.level;
+    const hand=node('input');hand.type='checkbox';hand.checked=manual;hand.disabled=!room.level;hand.setAttribute('aria-label','Hạ nền khác (nhập tay cao độ sàn)');
+    hand.title=room.level?'Bật nếu phòng hạ nền khác với tầng: khi đó nhập cao độ sàn tay':'Phòng chưa có tầng: nhập cao độ sàn tay';
+    hand.onchange=()=>{room.elevation_source=hand.checked?'manual':'level';elev.disabled=!hand.checked;save();}; // đổi ngay trên màn hình, không chờ Ruby
+    lv.onchange=()=>{room.level=lv.value;if(!room.level){room.elevation_source='manual';hand.checked=true;hand.disabled=true;elev.disabled=false;}else{hand.disabled=false;}save();};
+    const elev=fieldInput(room,'elevation','Cao độ sàn (mm)','number');elev.disabled=!manual;elev.title=manual?'Cao độ sàn nhập tay':'Theo cao độ của tầng; bật Hạ nền khác để nhập tay';
+    const handLabel=node('label',undefined,'rm-hand');handLabel.append(hand,node('span','Hạ nền khác'));
+    mid.append(miniField('Tầng',lv),miniField('Cao mm',fieldInput(room,'height','Chiều cao phòng (mm)','number')),miniField('Cao độ sàn',elev),handLabel);
     const fin=node('div',undefined,'rm-fin');
     [['finish_floor','Sàn'],['finish_wall','Tường'],['finish_ceiling','Trần']].forEach(([k,t])=>{const i=fieldInput(room,k,'Hoàn thiện '+t.toLowerCase(),'text');i.placeholder='Hoàn thiện '+t.toLowerCase();i.maxLength=60;fin.append(i);});
     const m=room.metrics||{};
     const build=button(room.has_volume?'Dựng lại khối':'Dựng khối',()=>call('table_room_build',JSON.stringify({id:room.id})));build.className='rm-build';
     build.title='Dựng (hoặc dựng lại) khối 3D của phòng: một khối trên tag VGD_ROOMS, một bước hoàn tác.';
     const upd=button('Cập nhật viền từ mặt đang chọn',()=>call('table_room_update_boundary',JSON.stringify({id:room.id})));upd.className='rm-update';
-    upd.title='Thay viền phòng bằng đúng một mặt sàn đang chọn trong SketchUp. Tên, mã, tầng, chiều cao, hoàn thiện giữ nguyên; cao độ sàn theo mặt mới.';
+    upd.title='Thay viền phòng bằng đúng một mặt sàn đang chọn trong SketchUp. Tên, mã, tầng, chiều cao, hoàn thiện giữ nguyên; cao độ sàn chỉ đổi theo mặt với phòng hạ nền (nhập tay).';
     box.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường (chưa trừ cửa) ${m.wall_area} m² · Trần ${m.ceiling_area} m²`+(room.holes&&room.holes.length?` · ${room.holes.length} lỗ (cột, hộp kỹ thuật)`:''),'muted rm-metrics'),build,upd);
     p.append(box);
   });

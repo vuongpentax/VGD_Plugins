@@ -2,6 +2,17 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.26: đã kiểm tra tự động
+
+Cao độ sàn phòng theo tầng (phòng chỉ nhập chiều cao; hạ nền khác thì nhập tay).
+
+- `dev/test_rooms.rb`: nguồn cao độ được giữ / từ chối; cao độ theo tầng bỏ qua số đã lưu; hạ nền dùng cao độ nhập tay; tầng đã xóa giữ cao độ đã lưu; phòng cũ được chuyển đúng (không đổi số liệu); đổi cao độ tầng thì phòng tự đổi; tạo từ mặt chọn tầng sát cao độ; gán món theo cao độ dùng cao độ theo tầng.
+- `dev/test_ui.cjs`: ô cao độ sàn khóa với phòng theo tầng; bật Hạ nền khác mở ô và gửi nguồn nhập tay; bỏ tầng thì bắt buộc nhập tay.
+- Các bộ Playwright khác (ảnh, sheet, tiếng Anh, báo cáo) và test Ruby đầy đủ đạt.
+
+**Chưa xác minh trong SketchUp thật:** tạo phòng từ mặt trên model thật (mặt sát tầng và mặt hạ nền); đổi cao độ tầng rồi kiểm tra khối 3D cần Dựng lại khối.
+**Lưu ý:** khối 3D đã dựng trước đó không tự đổi khi đổi cao độ tầng.
+
 ## Bản 1.1.1-beta.25: đã kiểm tra tự động
 
 Sửa lỗi người dùng báo: gán tầng theo cao độ không chạy khi chọn tất cả món trong model. Nguyên nhân: bảng nổi lấy các dòng đang chọn lúc MỞ bảng, chọn thêm sau đó không được dùng. Cùng lỗi ở Gán phòng và Đặt mã đối tượng. Dòng gộp chỉ gán cho món đầu tiên.

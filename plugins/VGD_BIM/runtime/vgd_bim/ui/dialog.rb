@@ -612,7 +612,7 @@ module VGD
           emit('message', {text: "Đã lưu #{items.size} vật liệu."})
         end
         # Cập nhật viền (và lỗ) của một phòng có sẵn từ đúng MỘT mặt sàn đang chọn. Tên, mã, tầng, chiều cao, hoàn thiện giữ nguyên;
-        # cao độ sàn theo mặt mới. Khối 3D đã dựng không tự đổi: bấm Dựng lại khối. Một bước hoàn tác (Rooms.write).
+        # cao độ sàn chỉ đổi theo mặt với phòng nhập tay; phòng theo tầng giữ cao độ tầng. Khối 3D đã dựng không tự đổi: bấm Dựng lại khối. Một bước hoàn tác (Rooms.write).
         def table_room_update_boundary(payload)
           check_model!
           raise ArgumentError, 'Dữ liệu phòng không hợp lệ.' unless payload.is_a?(Hash) && payload['id'].is_a?(String)
@@ -624,7 +624,8 @@ module VGD
           index = list.index { |room| room['id'] == payload['id'] }
           raise 'Phòng này không còn trong danh sách. Hãy mở lại Quản lý phòng.' unless index
           shape = shapes.first
-          room = list[index].merge('boundary' => shape[:boundary], 'elevation' => shape[:elevation])
+          room = list[index].merge('boundary' => shape[:boundary])
+          room['elevation'] = shape[:elevation] if room['elevation_source'] == 'manual' # phòng theo tầng giữ cao độ của tầng
           room.delete('holes')
           room['holes'] = shape[:holes] unless shape[:holes].empty?
           clean = Rooms.sanitize!(list.each_with_index.map { |item, i| i == index ? room : item })
@@ -704,9 +705,8 @@ module VGD
           raise first_error if shapes.empty?
           shapes.sort_by! { |shape| [shape[:boundary].map(&:first).min, shape[:boundary].map(&:last).min] } # đặt tên theo thứ tự từ trái sang phải
           rooms = Rooms.read(@model)
-          level = payload['level'].to_s
-          level_data = Levels.read(@model).find { |l| l['id'] == level }
-          height = payload['height'].is_a?(Numeric) ? payload['height'] : (level_data ? level_data['height'] : 3000)
+          levels = Levels.read(@model)
+          chosen = payload['level'].to_s
           typed = payload['name'].to_s.strip
           used = rooms.map { |room| room['name'].downcase }
           counter = typed.empty? || shapes.size == 1 ? rooms.size : 0
@@ -721,7 +721,12 @@ module VGD
               end while used.include?(name.downcase)
             end
             used << name.downcase
-            room = {'name' => name, 'number' => shapes.size == 1 ? payload['number'].to_s : '', 'level' => level_data ? level : '', 'height' => height, 'elevation' => shape[:elevation], 'boundary' => shape[:boundary]}
+            # Cao độ sàn theo tầng: tầng đã chọn, hoặc tầng có cao độ sát mặt; không có thì nhập tay theo cao độ mặt (phòng hạ nền khác).
+            placed = levels.find { |l| l['id'] == chosen } ? {'level' => chosen, 'elevation_source' => 'level'} : Rooms.source_for(shape[:elevation], levels)
+            placed_level = levels.find { |l| l['id'] == placed['level'] }
+            height = payload['height'].is_a?(Numeric) ? payload['height'] : (placed_level ? placed_level['height'] : 3000)
+            elevation = placed_level ? placed_level['elevation'] : shape[:elevation]
+            room = {'name' => name, 'number' => shapes.size == 1 ? payload['number'].to_s : '', 'level' => placed['level'], 'elevation_source' => placed['elevation_source'], 'height' => height, 'elevation' => elevation, 'boundary' => shape[:boundary]}
             room['holes'] = shape[:holes] unless shape[:holes].empty?
             room
           end

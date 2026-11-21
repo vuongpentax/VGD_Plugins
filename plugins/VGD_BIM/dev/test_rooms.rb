@@ -124,5 +124,21 @@ plan_holed = RM.plan_auto([{index: 0, x: 1200.0, y: 1200.0, z: 0.0}, {index: 1, 
 ok('gán món theo vị trí: món đặt trong lỗ (cột) không thuộc phòng, món cạnh đó thì có', plan_holed[:assign] == {1 => 'rm_aaaaaaaa'} && plan_holed[:none] == [0])
 ok('lỗ từ vòng trong của mặt: bỏ Z, làm sạch, bỏ vòng không nằm ngang', RM.holes_from_loops([[[1000, 1000, 100], [1400, 1000, 100], [1400, 1400, 100], [1000, 1400, 100]], [[0, 0, 0], [10, 0, 500], [0, 10, 0]]]) == [[[1000.0, 1000.0], [1400.0, 1000.0], [1400.0, 1400.0], [1000.0, 1400.0]]] && RM.holes_from_loops(nil) == [])
 
+# ---- Cao độ sàn theo tầng: phòng chỉ nhập chiều cao; phòng hạ nền khác thì nhập tay (elevation_source = manual) ----
+LV = [{'id' => 'lv_aaaaaaaa', 'name' => 'Tầng 1', 'elevation' => 0.0, 'height' => 3300.0}, {'id' => 'lv_bbbbbbbb', 'name' => 'Tầng 2', 'elevation' => 3300.0, 'height' => 3300.0}]
+theirs = room.merge('level' => 'lv_bbbbbbbb', 'elevation' => 3300.0, 'elevation_source' => 'level')
+ok('nguồn cao độ: level / manual được giữ; khác thì từ chối; thiếu thì là manual', RM.sanitize!([theirs])[0]['elevation_source'] == 'level' && RM.sanitize!([room])[0]['elevation_source'] == 'manual' && error_of { RM.sanitize!([room.merge('elevation_source' => 'abc')]) }.to_s.include?('cao độ'))
+ok('theo tầng: cao độ phòng là cao độ của tầng, bỏ qua số đã lưu', RM.elevation_of({'level' => 'lv_bbbbbbbb', 'elevation_source' => 'level', 'elevation' => 123.0}, LV) == 3300.0)
+ok('hạ nền (manual): dùng cao độ nhập tay, không theo tầng', RM.elevation_of({'level' => 'lv_bbbbbbbb', 'elevation_source' => 'manual', 'elevation' => 3250.0}, LV) == 3250.0)
+ok('không có tầng, hoặc tầng đã xóa: giữ cao độ đã lưu', RM.elevation_of({'level' => '', 'elevation_source' => 'level', 'elevation' => 500.0}, LV) == 500.0 && RM.elevation_of({'level' => 'lv_zzzzzzzz', 'elevation_source' => 'level', 'elevation' => 700.0}, LV) == 700.0)
+legacy_same = RM.resolve([{'level' => 'lv_bbbbbbbb', 'elevation' => 3300.0, 'height' => 3000.0}], LV)[0]
+legacy_other = RM.resolve([{'level' => 'lv_bbbbbbbb', 'elevation' => 3250.0, 'height' => 3000.0}], LV)[0]
+ok('phòng cũ chưa có nguồn: cao độ khớp tầng thì theo tầng; khác thì giữ nhập tay (không đổi số liệu)', legacy_same['elevation_source'] == 'level' && legacy_same['elevation'] == 3300.0 && legacy_other['elevation_source'] == 'manual' && legacy_other['elevation'] == 3250.0)
+moved_levels = [LV[0], LV[1].merge('elevation' => 3400.0)]
+ok('đổi cao độ tầng: phòng theo tầng tự đổi theo, không cần sửa phòng', RM.resolve([theirs], moved_levels)[0]['elevation'] == 3400.0)
+ok('tạo phòng từ mặt: cao độ sát một tầng (sai số 50 mm) thì gán tầng đó; lệch hơn thì nhập tay; không có tầng thì nhập tay', RM.source_for(3320.0, LV) == {'level' => 'lv_bbbbbbbb', 'elevation_source' => 'level'} && RM.source_for(3600.0, LV)['elevation_source'] == 'manual' && RM.source_for(0.0, [])['elevation_source'] == 'manual')
+resolved = RM.resolve([room.merge('id' => 'rm_aaaaaaaa', 'level' => 'lv_bbbbbbbb', 'elevation' => 0.0, 'elevation_source' => 'level')], LV)
+ok('gán món theo cao độ dùng cao độ theo tầng (món ở tầng 2 vào phòng theo tầng 2)', RM.plan_auto([{index: 0, x: 1000.0, y: 1000.0, z: 3300.0, locked: false}], resolved)[:assign] == {0 => 'rm_aaaaaaaa'})
+
 puts($fails.zero? ? "\nTẤT CẢ ĐẠT" : "\n#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

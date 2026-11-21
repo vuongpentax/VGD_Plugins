@@ -24,6 +24,7 @@ module VGD
       LEVEL_FLAT = 1.0    # mm: các điểm của mặt sàn phải cùng cao độ
       TOLERANCE = 50      # mm: món đặt hơi thấp hơn sàn phòng vẫn thuộc phòng
       ID_PATTERN = /\Arm_[0-9a-f]{8}\z/
+      SOURCES = %w[level manual].freeze # nguồn cao độ sàn: theo tầng (mặc định) hoặc nhập tay (hạ nền khác)
       CONTROL = /[\u0000-\u001f\u007f]/
 
       # ---- Hình học (mm) ----
@@ -97,7 +98,9 @@ module VGD
           raise ArgumentError, "Giá trị cao độ sàn của #{name} phải là số từ #{Levels::ELEVATION_RANGE.first} đến #{Levels::ELEVATION_RANGE.last} mm." unless elevation.is_a?(Numeric) && elevation.finite? && Levels::ELEVATION_RANGE.cover?(elevation)
           outline = boundary!(item['boundary'], name)
           holes = holes!(item['holes'], outline, name)
-          room = {'id' => id || "rm_#{SecureRandom.hex(4)}", 'name' => name, 'number' => number, 'level' => level, 'height' => height.round(1).to_f, 'elevation' => elevation.round(1).to_f,
+          source = item.key?('elevation_source') ? item['elevation_source'] : 'manual' # phòng cũ không có nguồn: giữ cao độ đã lưu
+          raise ArgumentError, "Nguồn cao độ sàn của #{name} không hợp lệ." unless SOURCES.include?(source)
+          room = {'id' => id || "rm_#{SecureRandom.hex(4)}", 'name' => name, 'number' => number, 'level' => level, 'height' => height.round(1).to_f, 'elevation' => elevation.round(1).to_f, 'elevation_source' => source,
                   'boundary' => outline, 'finish_floor' => finish!(item['finish_floor'], name), 'finish_wall' => finish!(item['finish_wall'], name),
                   'finish_ceiling' => finish!(item['finish_ceiling'], name)}
           room['holes'] = holes unless holes.empty? # chỉ ghi khi có lỗ: dữ liệu phòng không lỗ giữ nguyên như trước
@@ -167,7 +170,7 @@ module VGD
         return [] unless model.respond_to?(:get_attribute)
         raw = model.get_attribute(DICTIONARY, KEY).to_s
         return [] if raw.empty?
-        sanitize!(JSON.parse(raw))
+        resolve(sanitize!(JSON.parse(raw)), Levels.read(model))
       rescue JSON::ParserError, ArgumentError
         []
       end
@@ -188,6 +191,34 @@ module VGD
       end
 
       # ---- Số đo ----
+      # Cao độ sàn theo tầng: phòng chỉ nhập chiều cao, cao độ lấy từ tầng của phòng; phòng hạ nền khác thì nhập tay (elevation_source = manual).
+      # Tầng đã xóa hoặc phòng không có tầng: giữ cao độ đã lưu.
+      def self.elevation_of(room, levels)
+        return room['elevation'] if room['elevation_source'] == 'manual' || room['level'].to_s.empty?
+        level = levels.find { |item| item['id'] == room['level'] }
+        level ? level['elevation'] : room['elevation']
+      end
+
+      # Áp cao độ thực tế cho mọi phòng (dùng khi đọc). Phòng cũ chưa có nguồn: cao độ đã lưu khớp tầng (sai số 0,5 mm) thì theo tầng, ngược lại nhập tay.
+      def self.resolve(rooms, levels)
+        rooms.map do |room|
+          source = room['elevation_source'] || legacy_source(room, levels)
+          with_source = room.merge('elevation_source' => source)
+          with_source.merge('elevation' => elevation_of(with_source, levels).round(1))
+        end
+      end
+
+      def self.legacy_source(room, levels)
+        level = levels.find { |item| item['id'] == room['level'] }
+        level && (level['elevation'] - room['elevation']).abs <= 0.5 ? 'level' : 'manual'
+      end
+
+      # Nguồn cao độ khi tạo phòng từ mặt ở cao độ z: đúng cao độ một tầng (dung sai tầng) thì theo tầng, không thì nhập tay.
+      def self.source_for(z, levels)
+        level = levels.find { |item| (item['elevation'] - z).abs <= Levels::TOLERANCE }
+        level ? {'level' => level['id'], 'elevation_source' => 'level'} : {'level' => '', 'elevation_source' => 'manual'}
+      end
+
       def self.metrics(room)
         holes = Array(room['holes'])
         area = polygon_area(room['boundary']) - holes.sum { |ring| polygon_area(ring) } # diện tích sàn trừ cột / hộp kỹ thuật

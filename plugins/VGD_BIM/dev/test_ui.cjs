@@ -517,6 +517,18 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   assert((await page.locator('.grid tbody tr[data-index="0"] td[data-key="room"]').innerText()).trim()==='P01 · Phòng khách','cột Phòng hiện mã và tên phòng của món');
   await page.getByRole('button',{name:'Công cụ ▾'}).click();await page.getByRole('button',{name:'Quản lý phòng...'}).click();
   assert(await page.locator('.rooms-panel').isVisible() && await page.locator('.rooms-panel .rm-item').count()===1,'hộp Quản lý phòng hiện đủ các phòng');
+  // Cao độ sàn theo tầng: phòng theo tầng thì ô cao độ khóa, bật "Hạ nền khác" mới nhập tay; phòng chưa có tầng thì phải nhập tay
+  assert(await page.locator('.rooms-panel .rm-item .rm-hand input').isChecked()===false && await page.locator('.rooms-panel .rm-item .rm-hand input').isEnabled() && await page.locator('.rooms-panel .rm-item input[aria-label="Cao độ sàn (mm)"]').isDisabled(),'phòng theo tầng: ô cao độ sàn khóa, Hạ nền khác tắt');
+  await page.locator('.rooms-panel .rm-item .rm-hand input').check();
+  let roomSent=await page.evaluate(()=>window.calls.filter(c=>c.name==='table_rooms').pop());
+  assert(roomSent && JSON.parse(roomSent.args[0]).rooms[0].elevation_source==='manual' && await page.locator('.rooms-panel .rm-item input[aria-label="Cao độ sàn (mm)"]').isEnabled(),'bật Hạ nền khác: gửi nguồn nhập tay và mở ô cao độ sàn');
+  await page.locator('.rooms-panel .rm-item .rm-hand input').uncheck();
+  roomSent=await page.evaluate(()=>window.calls.filter(c=>c.name==='table_rooms').pop());
+  assert(JSON.parse(roomSent.args[0]).rooms[0].elevation_source==='level','tắt Hạ nền khác: trở về theo tầng');
+  await page.evaluate(()=>{window.calls.length=0;});
+  await page.locator('.rooms-panel .rm-item select[aria-label="Tầng của phòng"]').selectOption('');
+  roomSent=await page.evaluate(()=>window.calls.filter(c=>c.name==='table_rooms').pop());
+  assert(JSON.parse(roomSent.args[0]).rooms[0].elevation_source==='manual' && await page.locator('.rooms-panel .rm-item .rm-hand input').isDisabled(),'bỏ tầng của phòng: tự nhập tay và không cho tắt Hạ nền khác');
   assert((await page.locator('.rm-metrics').innerText()).includes('Sàn 12 m²') && (await page.locator('.rm-metrics').innerText()).includes('Thể tích 36 m³'),'phòng hiện diện tích, chu vi, thể tích, tường, trần');
   assert(await page.locator('.rm-build').isEnabled() && (await page.locator('.rm-build').innerText()).trim()==='Dựng khối','phòng chưa có khối: nút Dựng khối bật');
   assert(await page.locator('.rm-update').isEnabled() && (await page.locator('.rm-update').innerText()).trim()==='Cập nhật viền từ mặt đang chọn','phòng: nút Cập nhật viền từ mặt đang chọn bật');
