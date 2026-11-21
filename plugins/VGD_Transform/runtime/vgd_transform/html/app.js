@@ -1,5 +1,5 @@
 'use strict';
-// Giao diện VGD Position: danh sách món đang chọn, ba công cụ Dời / Xoay / Scale, ô số có nút ▲▼ và kéo lên xuống.
+// Giao diện VGD Transform: danh sách món đang chọn, ba công cụ Dời / Xoay / Scale, ô số có nút ▲▼ và kéo lên xuống.
 // Mỗi khung có Xem trước rồi mới Áp dụng; đổi ô thì phải xem trước lại. Ruby đọc chuỗi người dùng nhập và tự đổi đơn vị.
 // Dữ liệu từ Ruby đến qua window.VGD.receive; lệnh đi qua window.sketchup (ui/panel.rb).
 const $ = id => document.getElementById(id);
@@ -170,7 +170,7 @@ document.querySelectorAll('#pivot').forEach(select => select.addEventListener('c
 document.querySelectorAll('input[type="text"][data-spin]').forEach(enhanceSpinner);
 
 document.addEventListener('DOMContentLoaded', () => {
-  VGDTheme.start({key: 'vgd.position.theme', button: $('theme')});
+  VGDTheme.start({key: 'vgd.transform.theme', button: $('theme')});
   showTool(currentTool);
   call('ready');
 });

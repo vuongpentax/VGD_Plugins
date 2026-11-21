@@ -8,15 +8,15 @@ module VGD
 end
 
 module VGD
-  module Position
+  module Transform
     ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze unless defined?(ROOT)
     # Thứ tự nạp code. Dùng chung cho lúc mở SketchUp và lúc "Tải lại code".
-    FILES = %w[core/units core/position core/transform core/plan core/move ui/panel].freeze
+    FILES = %w[core/units core/translate core/steps core/rotate_scale core/plan core/move ui/panel].freeze
     @log_counts = Hash.new(0)
     def self.log(message)
       return if @log_counts.values.inject(0, :+) >= 100
       @log_counts[message] += 1
-      puts "[VGD Position] #{message}" if @log_counts[message] <= 3
+      puts "[VGD Transform] #{message}" if @log_counts[message] <= 3
     end
     def self.open_panel
       if @panel && !@panel.closed?
@@ -32,10 +32,10 @@ module VGD
     def self.reload
       busy = @panel && !@panel.closed? && @panel.busy_reason # đang làm việc dở: không nạp lại, để người dùng chờ xong
       if busy
-        ::UI.messagebox("Tải lại thất bại: VGD Position #{busy}.\n\nHãy chờ xong rồi tải lại code.")
+        ::UI.messagebox("Tải lại thất bại: VGD Transform #{busy}.\n\nHãy chờ xong rồi tải lại code.")
         return false
       end
-      files = [File.join(File.dirname(ROOT), 'vgd_position.rb'), File.join(ROOT, 'loader.rb')] +
+      files = [File.join(File.dirname(ROOT), 'vgd_transform.rb'), File.join(ROOT, 'loader.rb')] +
               FILES.map { |file| File.join(ROOT, "#{file}.rb") }
       files.each { |file| RubyVM::InstructionSequence.compile_file(file) }
       loading = true # từ đây lỗi nghĩa là đã nạp dở, không còn "giữ nguyên bản đang chạy"
@@ -55,7 +55,7 @@ module VGD
         $VERBOSE = verbose
       end
       open_panel if reopen
-      ::UI.messagebox("Đã tải lại VGD Position #{VERSION}.")
+      ::UI.messagebox("Đã tải lại VGD Transform #{VERSION}.")
       true
     rescue ScriptError, StandardError => error
       ::UI.messagebox("Tải lại thất bại:\n#{error.class}: #{error.message}\n\n#{loading ? 'Hãy mở lại SketchUp nếu giao diện báo lỗi.' : 'Bản đang chạy được giữ nguyên.'}")
@@ -64,17 +64,17 @@ module VGD
   end
 end
 
-VGD::Position::FILES.each { |file| require File.join(VGD::Position::ROOT, file) }
+VGD::Transform::FILES.each { |file| require File.join(VGD::Transform::ROOT, file) }
 unless file_loaded?(__FILE__)
-  # Menu Extensions > VGD > VGD Position.
-  vgd_menu = ::VGD.menu.add_submenu('VGD Position')
-  vgd_menu.add_item('Mở bảng vị trí') { VGD::Position.open_panel }
-  vgd_menu.add_item('Tải lại code') { VGD::Position.reload }
-  toolbar = ::UI::Toolbar.new('VGD POS')
-  command = ::UI::Command.new('VGD_POSITION') { VGD::Position.open_panel }
-  command.tooltip = 'VGD_POSITION · Dời món theo tọa độ'
-  command.status_bar_text = 'VGD_POSITION: nhập tọa độ X, Y, Z (mm) để dời món đang chọn'
-  command.small_icon = command.large_icon = File.join(VGD::Position::ROOT, 'assets', 'icons', 'position.svg')
+  # Menu Extensions > VGD > VGD Transform.
+  vgd_menu = ::VGD.menu.add_submenu('VGD Transform')
+  vgd_menu.add_item('Mở bảng biến đổi') { VGD::Transform.open_panel }
+  vgd_menu.add_item('Tải lại code') { VGD::Transform.reload }
+  toolbar = ::UI::Toolbar.new('VGD TRF')
+  command = ::UI::Command.new('VGD_TRANSFORM') { VGD::Transform.open_panel }
+  command.tooltip = 'VGD_TRANSFORM · Dời món theo tọa độ'
+  command.status_bar_text = 'VGD_TRANSFORM: nhập tọa độ X, Y, Z (mm) để dời món đang chọn'
+  command.small_icon = command.large_icon = File.join(VGD::Transform::ROOT, 'assets', 'icons', 'transform.svg')
   toolbar.add_item(command)
   toolbar.restore
   file_loaded(__FILE__)

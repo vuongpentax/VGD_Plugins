@@ -1,10 +1,10 @@
-# Chạy toàn bộ test của VGD Position: cú pháp mọi file Ruby, rồi từng test_*.rb trong một tiến trình riêng.
-# Chạy từ plugins/VGD_Position: ruby dev/run_tests.rb
+# Chạy toàn bộ test của VGD Transform: cú pháp mọi file Ruby, rồi từng test_*.rb trong một tiến trình riêng.
+# Chạy từ plugins/VGD_Transform: ruby dev/run_tests.rb
 require 'rbconfig'
 ROOT = File.expand_path('..', __dir__)
 RUNTIME = File.join(ROOT, 'runtime')
 DEV = __dir__
-TESTS = %w[units position move reload].freeze
+TESTS = %w[units transform move reload].freeze
 failed = []
 syntax = Dir[File.join(RUNTIME, '**', '*.rb')].sort
 syntax.each do |file|

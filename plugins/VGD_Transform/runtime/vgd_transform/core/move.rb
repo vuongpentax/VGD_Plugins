@@ -1,15 +1,16 @@
 require_relative 'units'
-require_relative 'position'
-require_relative 'transform'
+require_relative 'translate'
+require_relative 'rotate_scale'
+require_relative 'steps'
 require_relative 'plan'
 
 module VGD
-  module Position
-    # Phần gọi SketchUp của VGD Position: đọc vị trí món, áp dụng các bước dời / xoay / scale, kiểm tra lại sau khi áp dụng.
+  module Transform
+    # Phần gọi SketchUp của VGD Transform: đọc vị trí món, áp dụng các bước dời / xoay / scale, kiểm tra lại sau khi áp dụng.
     # Vị trí tính trong hệ thế giới (mm). Món trong group cha đang mở được biến đổi đúng theo hệ thế giới (xem context).
     module Move
       TOLERANCE_MM = 0.01 # sau khi áp dụng, vị trí phải khớp trong 0,01 mm, nếu không thì hủy cả đợt
-      OPERATION_NAME = 'VGD Position · Biến đổi món'.freeze
+      OPERATION_NAME = 'VGD Transform · Biến đổi món'.freeze
 
       module_function
 
@@ -34,7 +35,7 @@ module VGD
       # Điểm gốc của món trong thế giới (mm).
       def origin_mm(entity, ctx)
         point = (ctx * entity.transformation).origin
-        [point.x * MM_PER_INCH, point.y * MM_PER_INCH, point.z * MM_PER_INCH]
+        [point.x * Units::MM_PER_INCH, point.y * Units::MM_PER_INCH, point.z * Units::MM_PER_INCH]
       end
 
       # Các món đang chọn: [{index:, name:, origin: [x, y, z] mm, locked:, entity:}]. index là thứ tự trong lựa chọn.
@@ -64,7 +65,7 @@ module VGD
             entity = item[:entity]
             raise ArgumentError, "#{item[:name]} đang bị khóa, không dời được." if entity.locked? || locked_context?(model)
             move[:steps].each { |step| apply_step(model, entity, step) }
-            expected = Transform.apply_steps(move[:steps], item[:origin])
+            expected = Steps.apply_steps(move[:steps], item[:origin])
             actual = origin_mm(entity, context(model))
             unless actual.zip(expected).all? { |a, e| (a - e).abs <= TOLERANCE_MM }
               raise ArgumentError, "Vị trí của #{item[:name]} sau khi biến đổi không khớp, đã hủy cả đợt."
@@ -101,11 +102,11 @@ module VGD
       end
 
       def vector_in(mm)
-        Geom::Vector3d.new(mm[0] / MM_PER_INCH, mm[1] / MM_PER_INCH, mm[2] / MM_PER_INCH)
+        Geom::Vector3d.new(mm[0] / Units::MM_PER_INCH, mm[1] / Units::MM_PER_INCH, mm[2] / Units::MM_PER_INCH)
       end
 
       def point_in(mm)
-        Geom::Point3d.new(mm[0] / MM_PER_INCH, mm[1] / MM_PER_INCH, mm[2] / MM_PER_INCH)
+        Geom::Point3d.new(mm[0] / Units::MM_PER_INCH, mm[1] / Units::MM_PER_INCH, mm[2] / Units::MM_PER_INCH)
       end
     end
   end

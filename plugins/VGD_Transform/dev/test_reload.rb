@@ -1,6 +1,6 @@
-# Test menu, thanh công cụ và "Tải lại code" của VGD Position với SketchUp giả lập:
+# Test menu, thanh công cụ và "Tải lại code" của VGD Transform với SketchUp giả lập:
 # không nhân đôi mục menu khi tải lại nhiều lần; lỗi cú pháp thì giữ nguyên bản đang chạy; đang bận thì không nạp lại.
-# Chạy: ruby dev/test_reload.rb (từ plugins/VGD_Position)
+# Chạy: ruby dev/test_reload.rb (từ plugins/VGD_Transform)
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 def file_loaded?(f); ($loaded_files ||= {})[f]; end
@@ -39,31 +39,31 @@ module UI
 end
 $LOAD_PATH.unshift File.expand_path('stubs', __dir__)
 RUNTIME_DIR = File.expand_path('../runtime', __dir__)
-require File.join(RUNTIME_DIR, 'vgd_position')
-require File.join(RUNTIME_DIR, 'vgd_position', 'loader') # SketchUp nạp loader khi bật extension
+require File.join(RUNTIME_DIR, 'vgd_transform')
+require File.join(RUNTIME_DIR, 'vgd_transform', 'loader') # SketchUp nạp loader khi bật extension
 
 menu = UI::MENU_ROOT['Extensions'].subs['VGD']
-ok('menu Extensions > VGD > VGD Position có đúng hai mục', menu && menu.subs['VGD Position'] && menu.subs['VGD Position'].items.map(&:first) == ['Mở bảng vị trí', 'Tải lại code'])
-ok('không có mục nào ngoài hai mục trên', menu.subs['VGD Position'].items.size == 2)
+ok('menu Extensions > VGD > VGD Transform có đúng hai mục', menu && menu.subs['VGD Transform'] && menu.subs['VGD Transform'].items.map(&:first) == ['Mở bảng vị trí', 'Tải lại code'])
+ok('không có mục nào ngoài hai mục trên', menu.subs['VGD Transform'].items.size == 2)
 
 # Tải lại nhiều lần: không nhân đôi mục menu
-before = menu.subs['VGD Position'].items.size
-3.times { VGD::Position.reload }
-ok('tải lại 3 lần: không nhân đôi mục menu', menu.subs['VGD Position'].items.size == before)
-ok('tải lại thành công: báo đúng chữ chuẩn', $boxes.last == "Đã tải lại VGD Position #{VGD::Position::VERSION}.")
+before = menu.subs['VGD Transform'].items.size
+3.times { VGD::Transform.reload }
+ok('tải lại 3 lần: không nhân đôi mục menu', menu.subs['VGD Transform'].items.size == before)
+ok('tải lại thành công: báo đúng chữ chuẩn', $boxes.last == "Đã tải lại VGD Transform #{VGD::Transform::VERSION}.")
 
 # Đang bận (đang xử lý dở): không nạp lại, báo việc đang làm và hướng dẫn chờ
 class BusyPanel
   def closed?; false; end
   def busy_reason; 'đang xử lý'; end
 end
-VGD::Position.instance_variable_set(:@panel, BusyPanel.new)
+VGD::Transform.instance_variable_set(:@panel, BusyPanel.new)
 loaded = []
 Kernel.send(:alias_method, :__orig_load_for_test, :load)
 Kernel.send(:define_method, :load) { |*args, **kw| loaded << args.first; __orig_load_for_test(*args, **kw) }
-busy_result = VGD::Position.reload
+busy_result = VGD::Transform.reload
 ok('đang bận: không tải lại, báo việc đang làm và hướng dẫn chờ', busy_result == false && $boxes.last.include?('đang xử lý') && $boxes.last.include?('Hãy chờ xong rồi tải lại code.') && loaded.empty?)
-VGD::Position.instance_variable_set(:@panel, nil)
+VGD::Transform.instance_variable_set(:@panel, nil)
 
 # Lỗi cú pháp: chặn trước khi nạp file nào, giữ nguyên bản đang chạy
 orig_compile = RubyVM::InstructionSequence.method(:compile_file)
@@ -72,12 +72,12 @@ RubyVM::InstructionSequence.define_singleton_method(:compile_file) do |path, *re
   orig_compile.call(path, *rest)
 end
 loaded.clear
-result = VGD::Position.reload
+result = VGD::Transform.reload
 RubyVM::InstructionSequence.define_singleton_method(:compile_file) { |path, *rest| orig_compile.call(path, *rest) }
 Kernel.send(:define_method, :load) { |*args, **kw| __orig_load_for_test(*args, **kw) }
 ok('lỗi cú pháp: báo thất bại, giữ nguyên bản đang chạy, không nạp file nào', result == false && $boxes.last.start_with?('Tải lại thất bại') && $boxes.last.include?('giữ nguyên') && loaded.empty?)
-ok('sau lỗi cú pháp: chức năng cũ vẫn chạy', VGD::Position.respond_to?(:open_panel) && VGD::Position::Move.respond_to?(:apply))
+ok('sau lỗi cú pháp: chức năng cũ vẫn chạy', VGD::Transform.respond_to?(:open_panel) && VGD::Transform::Move.respond_to?(:apply))
 
-# Thanh công cụ: đúng tên VGD POS và lệnh VGD_POSITION
+# Thanh công cụ: đúng tên VGD TRF và lệnh VGD_TRANSFORM
 puts $fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI"
 exit($fails.zero? ? 0 : 1)

@@ -1,6 +1,6 @@
-# Đóng gói VGD Position thành .rbz. Từ gốc repo: python plugins/VGD_Position/dev/package.py <phiên bản>
-# <phiên bản> phải khớp VERSION trong runtime/vgd_position/... (xem VERSION trong runtime/vgd_position.rb).
-# Kết quả: plugins/VGD_Position/outputs/local_release_<phiên bản>/VGD_Position_v<phiên bản>.rbz (outputs/ không đưa vào git).
+# Đóng gói VGD Transform thành .rbz. Từ gốc repo: python plugins/VGD_Transform/dev/package.py <phiên bản>
+# <phiên bản> phải khớp VERSION trong runtime/vgd_transform/... (xem VERSION trong runtime/vgd_transform.rb).
+# Kết quả: plugins/VGD_Transform/outputs/local_release_<phiên bản>/VGD_Transform_v<phiên bản>.rbz (outputs/ không đưa vào git).
 from pathlib import Path
 import hashlib
 import re
@@ -16,9 +16,9 @@ def fail(message):
     sys.exit(1)
 
 
-match = re.search(r"VERSION = '(\d+\.\d+\.\d+(?:-(?:alpha|beta)\.\d+)?)'", (runtime / 'vgd_position.rb').read_text(encoding='utf-8'))
+match = re.search(r"VERSION = '(\d+\.\d+\.\d+(?:-(?:alpha|beta)\.\d+)?)'", (runtime / 'vgd_transform.rb').read_text(encoding='utf-8'))
 if not match:
-    fail('Không tìm thấy VERSION hợp lệ trong runtime/vgd_position.rb')
+    fail('Không tìm thấy VERSION hợp lệ trong runtime/vgd_transform.rb')
 version = match.group(1)
 if len(sys.argv) > 1 and sys.argv[1] != version:
     fail(f'VERSION trong mã là {version}, không phải {sys.argv[1]}.')
@@ -27,7 +27,7 @@ if not notes.exists():
     fail(f'Thiếu {notes.name}')
 
 out_dir = root / 'outputs' / f'local_release_{version}'
-target = out_dir / f'VGD_Position_v{version}.rbz'
+target = out_dir / f'VGD_Transform_v{version}.rbz'
 if target.exists():
     fail(f'Đã tồn tại, không ghi đè: {target}')
 out_dir.mkdir(parents=True, exist_ok=True)
@@ -41,7 +41,7 @@ with zipfile.ZipFile(target) as archive:
     if archive.testzip() is not None:
         fail('Gói zip bị lỗi.')
     names = archive.namelist()
-    for required in ['vgd_position.rb', 'vgd_position/loader.rb']:
+    for required in ['vgd_transform.rb', 'vgd_transform/loader.rb']:
         if required not in names:
             fail(f'Gói thiếu {required}')
     for name in names:

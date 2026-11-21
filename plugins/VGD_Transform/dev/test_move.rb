@@ -1,10 +1,10 @@
 # Test phần gọi SketchUp (core/move.rb) với SketchUp giả lập: đọc vị trí món, dời / xoay / scale trong group cha,
 # món khóa, một thao tác hoàn tác, hủy khi vị trí sau biến đổi sai. Biến đổi giả lập bằng ma trận 4×4 (độc lập với công thức trong code).
-# Chạy: ruby dev/test_move.rb (từ plugins/VGD_Position)
+# Chạy: ruby dev/test_move.rb (từ plugins/VGD_Transform)
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 def error_of; yield; nil; rescue StandardError => e; e.message; end
-ROOT = File.expand_path('../runtime/vgd_position', __dir__)
+ROOT = File.expand_path('../runtime/vgd_transform', __dir__)
 
 module Geom
   class Point3d
@@ -98,10 +98,10 @@ module Sketchup
 end
 
 require File.join(ROOT, 'core/move')
-M = VGD::Position::Move
-P = VGD::Position
-T = P::Transform
-MM = P::MM_PER_INCH
+M = VGD::Transform::Move
+P = VGD::Transform
+RS = P::RotateScale
+MM = P::Units::MM_PER_INCH
 def near(a, b, tol = 0.01); a.zip(b).all? { |x, y| (x - y).abs < tol }; end
 
 # Món ở gốc model: tâm (1000, 2000, 300) mm
@@ -115,7 +115,7 @@ ok('đơn vị của file đọc được từ model (2 = mm, 4 = m)', M.length_
 # Dời món ở gốc: +500 mm trên X
 M.apply(model, [{index: 0, steps: [{kind: 'translate', delta: [500.0, 0.0, 0.0]}]}], items)
 ok('dời ở gốc: vị trí sau dời đúng (1500, 2000, 300) mm', near(M.items(model)[0][:origin], [1500.0, 2000.0, 300.0]))
-ok('dời trong một thao tác hoàn tác: start rồi commit, không abort', model.ops.map(&:first) == [:start, :commit] && model.ops[0][1] == 'VGD Position · Biến đổi món')
+ok('dời trong một thao tác hoàn tác: start rồi commit, không abort', model.ops.map(&:first) == [:start, :commit] && model.ops[0][1] == 'VGD Transform · Biến đổi món')
 
 # Dời trong group cha đang mở: cha ở +100 mm X, con ở +50 mm trong cha → thế giới 150 mm. Dời con +40 mm theo Y.
 parent = Sketchup::Group.new('Cha', [100.0 / MM, 0.0, 0.0])
@@ -138,20 +138,20 @@ ok('nhiều món: mỗi món dời đúng 100 mm theo X trong một thao tác', 
 # Xoay 90° quanh Z, tâm gốc thế giới: món ở (1000, 0, 0) → (0, 1000, 0) mm
 rm = Sketchup::Model.new([Sketchup::Group.new('Xoay', [1000.0 / MM, 0.0, 0.0])])
 ri = M.items(rm)
-M.apply(rm, T.rotate(ri, [nil, nil, 90.0], 'world')[:moves], ri)
+M.apply(rm, RS.rotate(ri, [nil, nil, 90.0], 'world')[:moves], ri)
 ok('xoay 90° quanh Z, tâm gốc thế giới: vị trí (0, 1000, 0) mm', near(M.items(rm)[0][:origin], [0.0, 1000.0, 0.0]))
 ok('xoay: một thao tác hoàn tác, không abort', rm.ops.map(&:first) == [:start, :commit])
 
 # Xoay hai món 180° quanh tâm cả lựa chọn (500, 0, 0): đổi chỗ nhau
 sm = Sketchup::Model.new([Sketchup::Group.new('A', [0.0, 0.0, 0.0]), Sketchup::Group.new('B', [1000.0 / MM, 0.0, 0.0])])
 si = M.items(sm)
-M.apply(sm, T.rotate(si, [nil, nil, 180.0], 'selection')[:moves], si)
+M.apply(sm, RS.rotate(si, [nil, nil, 180.0], 'selection')[:moves], si)
 ok('xoay 180° quanh tâm cả lựa chọn: hai món đổi chỗ', near(M.items(sm)[0][:origin], [1000.0, 0.0, 0.0]) && near(M.items(sm)[1][:origin], [0.0, 0.0, 0.0]))
 
 # Scale ×2 đều quanh gốc thế giới: (1000, 2000, 300) → (2000, 4000, 600) mm
 scm = Sketchup::Model.new([Sketchup::Group.new('Tủ', [1000.0 / MM, 2000.0 / MM, 300.0 / MM])])
 sci = M.items(scm)
-M.apply(scm, T.scale(sci, [2.0, 2.0, 2.0], 'world')[:moves], sci)
+M.apply(scm, RS.scale(sci, [2.0, 2.0, 2.0], 'world')[:moves], sci)
 ok('scale ×2 đều: vị trí (2000, 4000, 600) mm', near(M.items(scm)[0][:origin], [2000.0, 4000.0, 600.0]))
 
 # Scale không đều trong group cha: cha ở +100 mm X, con +50 mm trong cha → thế giới (150, 0, 0); scale [2, 1, 0.5] quanh gốc thế giới → (300, 0, 0)
@@ -159,7 +159,7 @@ nested_parent = Sketchup::Group.new('Cha2', [100.0 / MM, 0.0, 0.0])
 nested_child = Sketchup::Group.new('Con2', [50.0 / MM, 0.0, 0.0])
 nm = Sketchup::Model.new([nested_child], [nested_parent])
 ni = M.items(nm)
-M.apply(nm, T.scale(ni, [2.0, 1.0, 0.5], 'world')[:moves], ni)
+M.apply(nm, RS.scale(ni, [2.0, 1.0, 0.5], 'world')[:moves], ni)
 ok('scale không đều trong group cha: (150, 0, 0) → (300, 0, 0) mm', near(M.items(nm)[0][:origin], [300.0, 0.0, 0.0]))
 
 # Món bị khóa: không dời, báo lỗi, không đổi model

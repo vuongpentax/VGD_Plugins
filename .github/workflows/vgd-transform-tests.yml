@@ -1,20 +1,20 @@
-# Chạy test của VGD Position (Ruby, quy ước repo, giao diện Playwright) khi có thay đổi trong plugin hoặc test chung.
+# Chạy test của VGD Transform (Ruby, quy ước repo, giao diện Playwright) khi có thay đổi trong plugin hoặc test chung.
 # Chưa thay thế kiểm tra trong SketchUp thật: xem VALIDATION.md của plugin.
-name: Test VGD Position
+name: Test VGD Transform
 
 on:
   push:
     paths:
-      - 'plugins/VGD_Position/**'
+      - 'plugins/VGD_Transform/**'
       - 'tests/**'
       - 'tools/sync_vgd_theme.py'
-      - '.github/workflows/vgd-position-tests.yml'
+      - '.github/workflows/vgd-transform-tests.yml'
   pull_request:
     paths:
-      - 'plugins/VGD_Position/**'
+      - 'plugins/VGD_Transform/**'
       - 'tests/**'
       - 'tools/sync_vgd_theme.py'
-      - '.github/workflows/vgd-position-tests.yml'
+      - '.github/workflows/vgd-transform-tests.yml'
   workflow_dispatch:
 
 permissions:
@@ -29,8 +29,8 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.3'
-      - name: Test VGD Position (cú pháp, logic, dời, tải lại)
-        working-directory: plugins/VGD_Position
+      - name: Test VGD Transform (cú pháp, logic, dời, tải lại)
+        working-directory: plugins/VGD_Transform
         run: ruby dev/run_tests.rb
       - name: Test quy ước đặt tên và menu
         run: ruby tests/test_vgd_conventions.rb
@@ -50,7 +50,7 @@ jobs:
           npm install --prefix "$RUNNER_TEMP/pw" "playwright@$PLAYWRIGHT_VERSION"
           npx --prefix "$RUNNER_TEMP/pw" playwright install --with-deps chromium
       - name: Chạy test giao diện
-        working-directory: plugins/VGD_Position
+        working-directory: plugins/VGD_Transform
         env:
           VGD_PLAYWRIGHT_MODULE: ${{ runner.temp }}/pw/node_modules/playwright
         run: node dev/test_ui.cjs

@@ -1,8 +1,8 @@
 require 'json'
 
 module VGD
-  module Position
-    # Cửa sổ VGD Position (UI::HtmlDialog). Logic nằm ở core/; file này chỉ nối giao diện với chúng.
+  module Transform
+    # Cửa sổ VGD Transform (UI::HtmlDialog). Logic nằm ở core/; file này chỉ nối giao diện với chúng.
     # Luôn tính lại từ lựa chọn hiện tại khi xem trước và khi áp dụng (không dùng danh sách cũ của cửa sổ).
     class Panel
       ROOT_HTML = 'html/index.html'.freeze
@@ -17,9 +17,9 @@ module VGD
 
       def initialize
         @closed = false
-        @dialog = ::UI::HtmlDialog.new(dialog_title: 'VGD Position', preferences_key: 'VGD_Position_Panel', scrollable: true, resizable: true,
+        @dialog = ::UI::HtmlDialog.new(dialog_title: 'VGD Transform', preferences_key: 'VGD_Transform_Panel', scrollable: true, resizable: true,
                                        width: 440, height: 600, style: ::UI::HtmlDialog::STYLE_DIALOG)
-        @dialog.set_file(File.join(VGD::Position::ROOT, ROOT_HTML))
+        @dialog.set_file(File.join(VGD::Transform::ROOT, ROOT_HTML))
         @dialog.add_action_callback('ready') { |_ctx| safely { refresh } }
         @dialog.add_action_callback('refresh') { |_ctx| safely { refresh } }
         @dialog.add_action_callback('preview') { |_ctx, payload| safely { preview(JSON.parse(payload)) } }
@@ -96,7 +96,7 @@ module VGD
       def safely
         yield
       rescue StandardError => error
-        VGD::Position.log(error.message)
+        VGD::Transform.log(error.message)
         text = error.message.match?(/[À-ỹ]/) ? error.message : 'Không thực hiện được thao tác. Hãy chọn lại món và thử lại.'
         emit('message', {error: text})
       end

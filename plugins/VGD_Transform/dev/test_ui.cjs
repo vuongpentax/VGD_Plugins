@@ -1,5 +1,5 @@
-// Test giao diện VGD Position (html/index.html, app.js): tab Dời / Xoay / Scale, ô số (▲▼, kéo), xem trước trước khi áp dụng.
-// Chạy: node dev/test_ui.cjs (từ plugins/VGD_Position). Đặt VGD_PLAYWRIGHT_MODULE nếu Playwright không cài local.
+// Test giao diện VGD Transform (html/index.html, app.js): tab Dời / Xoay / Scale, ô số (▲▼, kéo), xem trước trước khi áp dụng.
+// Chạy: node dev/test_ui.cjs (từ plugins/VGD_Transform). Đặt VGD_PLAYWRIGHT_MODULE nếu Playwright không cài local.
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { chromium } = require(process.env.VGD_PLAYWRIGHT_MODULE || 'playwright');
@@ -17,7 +17,7 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
       window.calls = [];
       window.sketchup = new Proxy({}, { get: (_, name) => (...args) => window.calls.push({ name, args }) });
     });
-    await page.goto(pathToFileURL(path.resolve(__dirname, '../runtime/vgd_position/html/index.html')).href);
+    await page.goto(pathToFileURL(path.resolve(__dirname, '../runtime/vgd_transform/html/index.html')).href);
     const receive = (event, data) => page.evaluate(([e, d]) => window.VGD.receive(e, d), [event, data]);
     const calls = name => page.evaluate(n => window.calls.filter(c => c.name === n).map(c => JSON.parse(c.args[0] || '""')), name);
     const lastCall = async name => (await calls(name)).pop();

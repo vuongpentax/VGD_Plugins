@@ -1,11 +1,11 @@
 # Test đơn vị và ô nhập (core/units.rb): số có đơn vị, số theo đơn vị của file, dấu phẩy, giới hạn, hiển thị.
-# Không cần SketchUp. Chạy: ruby dev/test_units.rb (từ plugins/VGD_Position)
+# Không cần SketchUp. Chạy: ruby dev/test_units.rb (từ plugins/VGD_Transform)
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 def error_of; yield; nil; rescue StandardError => e; e.message; end
-ROOT = File.expand_path('../runtime/vgd_position', __dir__)
+ROOT = File.expand_path('../runtime/vgd_transform', __dir__)
 require File.join(ROOT, 'core/units')
-U = VGD::Position::Units
+U = VGD::Transform::Units
 
 # Đơn vị file: chỉ số của SketchUp (LengthUnit): 0 in, 1 ft, 2 mm, 3 cm, 4 m
 ok('chỉ số đơn vị của SketchUp: 2 là mm, 4 là m', U.unit_of_model(2) == 'mm' && U.unit_of_model(4) == 'm' && U.unit_of_model(0) == 'in')

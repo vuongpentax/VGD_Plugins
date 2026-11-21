@@ -1,11 +1,13 @@
-# VGD Position 0.1.0-beta.3
+# VGD Transform 0.1.0-beta.4
+
+> Đổi tên từ **VGD Position**. Trong SketchUp, gỡ bản **VGD Position** cũ (Extension Manager) trước khi cài bản này để tránh hai menu trùng chức năng.
 
 Plugin dời, xoay và scale món (group, component) trong SketchUp theo trục thế giới. Cài bằng Extension Manager, khởi động lại SketchUp. Plugin không tự kiểm tra cập nhật; VGD Center báo bản mới.
 
 ## Cách dùng
 
 1. Chọn một hoặc nhiều group / component trong SketchUp.
-2. Mở **Extensions → VGD → VGD Position → Mở bảng vị trí** (hoặc nút **VGD_POSITION** trên thanh công cụ **VGD POS**).
+2. Mở **Extensions → VGD → VGD Transform → Mở bảng biến đổi** (hoặc nút **VGD_TRANSFORM** trên thanh công cụ **VGD TRF**).
 3. Cửa sổ liệt kê món đang chọn, kèm điểm gốc hiện tại theo đơn vị của file. Món khóa được đánh dấu.
 4. Chọn công cụ bằng ba tab: **Dời**, **Xoay**, **Scale**.
 5. Nhập số rồi bấm **Xem trước** để thấy độ dời hoặc góc, và vị trí đích của từng món. Sau đó bấm **Áp dụng**. Nút này chỉ bật khi xem trước đúng với các ô hiện tại. Mỗi đợt biến đổi là một bước hoàn tác (Ctrl+Z).
@@ -56,4 +58,4 @@ Dùng cho Xoay và Scale:
 
 ## Tải lại code
 
-**Extensions → VGD → VGD Position → Tải lại code** nạp lại mã sau khi cài đè bản mới, không cần mở lại SketchUp. Menu và thanh công cụ có hiệu lực đầy đủ sau khi mở lại SketchUp.
+**Extensions → VGD → VGD Transform → Tải lại code** nạp lại mã sau khi cài đè bản mới, không cần mở lại SketchUp. Menu và thanh công cụ có hiệu lực đầy đủ sau khi mở lại SketchUp.

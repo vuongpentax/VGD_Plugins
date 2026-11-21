@@ -1,5 +1,5 @@
 module VGD
-  module Position
+  module Transform
     # Ghép công cụ (Move / Rotate / Scale) với ô nhập: đọc chuỗi người dùng nhập, gọi đúng hàm tính, và tạo dòng mô tả để xem trước.
     # Logic thuần, không gọi SketchUp. Ruby luôn gọi lại hàm này lúc xem trước và lúc áp dụng (không tin kết quả cũ).
     module Plan
@@ -15,17 +15,17 @@ module VGD
         raise ArgumentError, 'Công cụ không hợp lệ.' unless TOOLS.include?(tool)
         values = payload['values'].is_a?(Hash) ? payload['values'] : {}
         case tool
-        when 'move_abs' then Position.absolute(items, lengths(values, unit))
-        when 'move_off' then Position.offset(items, lengths(values, unit))
-        when 'rotate' then Transform.rotate(items, numbers(values), payload['pivot'].to_s)
-        when 'scale' then Transform.scale(items, factors(values, payload['uniform'] ? true : false), payload['pivot'].to_s)
+        when 'move_abs' then Translate.absolute(items, lengths(values, unit))
+        when 'move_off' then Translate.offset(items, lengths(values, unit))
+        when 'rotate' then RotateScale.rotate(items, numbers(values), payload['pivot'].to_s)
+        when 'scale' then RotateScale.scale(items, factors(values, payload['uniform'] ? true : false), payload['pivot'].to_s)
         end
       end
 
       # Mô tả một bước để hiển thị: độ dời / góc / hệ số, và điểm gốc mới của món (theo đơn vị của file).
       def describe(item, steps, unit)
         parts = steps.map { |step| describe_step(step, unit) }
-        target = Transform.apply_steps(steps, item[:origin])
+        target = Steps.apply_steps(steps, item[:origin])
         "#{parts.join(' · ')} → điểm gốc (#{target.map { |v| Units.format_length(v, unit) }.join(', ')})"
       end
 
