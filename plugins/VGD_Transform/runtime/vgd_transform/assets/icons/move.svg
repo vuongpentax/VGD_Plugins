@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="t">
+  <title id="t">VGD Transform · Dời</title>
+  <g stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 3.5V20.5M3.5 12H20.5M9.5 6L12 3.5L14.5 6M9.5 18L12 20.5L14.5 18M6 9.5L3.5 12L6 14.5M18 9.5L20.5 12L18 14.5"/>
+  </g>
+  <circle cx="12" cy="12" r="2.2" fill="#B48963" stroke="#B48963" stroke-width="1.8"/>
+</svg>

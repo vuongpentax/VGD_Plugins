@@ -22,7 +22,8 @@ module Sketchup
 end
 module UI
   class HtmlDialog; STYLE_DIALOG = 1; end
-  class Toolbar; attr_reader :name, :items; def initialize(n); @name = n; @items = []; end; def add_item(i); @items << i; end; def restore; end; end
+  class Toolbar; attr_reader :name, :items; def initialize(n); @name = n; @items = []; UI.toolbars << self; end; def add_item(i); @items << i; end; def restore; end; end
+  def self.toolbars; @toolbars ||= []; end
   class Command; attr_accessor :tooltip, :status_bar_text, :small_icon, :large_icon; def initialize(n, &b); @name = n; @block = b; end; end
   class MenuNode
     attr_reader :name, :items, :subs
@@ -79,6 +80,11 @@ Kernel.send(:define_method, :load) { |*args, **kw| __orig_load_for_test(*args, *
 ok('lỗi cú pháp: báo thất bại, giữ nguyên bản đang chạy, không nạp file nào', result == false && $boxes.last.start_with?('Tải lại thất bại') && $boxes.last.include?('giữ nguyên') && loaded.empty?)
 ok('sau lỗi cú pháp: chức năng cũ vẫn chạy', VGD::Transform.respond_to?(:open_panel) && VGD::Transform::ModelOps.respond_to?(:apply))
 
-# Thanh công cụ: đúng tên VGD TRF và lệnh VGD_TRANSFORM
+# Thanh công cụ VGD TRF: ba nút Dời, Xoay, Scale như 3ds Max, icon là file có thật
+bar = UI.toolbars.find { |t| t.name == 'VGD TRF' }
+names = bar ? bar.items.map { |c| c.instance_variable_get(:@name) } : []
+ok('thanh công cụ VGD TRF có ba nút Dời, Xoay, Scale', names == %w[VGD_TRANSFORM_MOVE VGD_TRANSFORM_ROTATE VGD_TRANSFORM_SCALE])
+ok('icon của ba nút là file SVG có thật', bar && bar.items.all? { |c| c.small_icon.end_with?('.svg') && File.file?(c.small_icon) && c.small_icon == c.large_icon })
+ok('tải lại nhiều lần không thêm thanh công cụ', UI.toolbars.count { |t| t.name == 'VGD TRF' } == 1)
 puts $fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI"
 exit($fails.zero? ? 0 : 1)

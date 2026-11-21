@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="t">
+  <title id="t">VGD Transform · Xoay</title>
+  <g stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M20 12a8 8 0 1 1-8-8c2.24 0 4.38.89 5.96 2.46L20 8.5"/>
+    <path d="M20 4v4.5h-4.5"/>
+  </g>
+  <circle cx="12" cy="12" r="1.8" fill="#B48963" stroke="#B48963" stroke-width="1.8"/>
+</svg>

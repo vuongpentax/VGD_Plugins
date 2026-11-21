@@ -1,48 +1,47 @@
-/* Chỉ dùng token của theme (vgd-theme.css); không để màu cứng trong file này. Nút gạt: vgd-controls.css. */
+/* Chỉ dùng token của theme (vgd-theme.css); không để màu cứng trong file này. Nút gạt, ô tick: vgd-controls.css.
+   Cửa sổ gọn cỡ Transform Type-In của 3ds Max (khoảng 320 × 250) để đặt cạnh màn hình; chữ 12 px vẫn dễ đọc trên màn FHD 24". */
 [hidden] { display: none !important; }
-body { margin: 0; padding: 16px; background: var(--vgd-bg); color: var(--vgd-text); font: 13px/1.45 Manrope, system-ui, sans-serif; }
-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-h1 { font-size: 18px; margin: 0; }
-h3 { font-size: 13px; margin: 0 0 6px; }
-section { background: var(--vgd-surface); border: 1px solid var(--vgd-border); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
-.muted { color: var(--vgd-muted); margin: 2px 0; }
-#status { margin: 0 0 10px; }
+body { margin: 0; padding: 8px; background: var(--vgd-bg); color: var(--vgd-text); font: 12px/1.35 Manrope, system-ui, sans-serif; }
+select, input, button { font: inherit; color: var(--vgd-text); }
+select, input { background: var(--vgd-elevated); border: 1px solid var(--vgd-border); border-radius: 4px; }
+:focus-visible { outline: 2px solid var(--vgd-accent); outline-offset: 1px; }
 
-/* Ba công cụ: giống thanh chọn của 3ds Max, icon + chữ */
-.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
-.tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; }
+/* Hàng trên: ba nút công cụ (icon như 3ds Max), trạng thái, nút gạt trực tiếp, theme */
+.topbar { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+.tabs { display: flex; gap: 2px; }
+.tab { width: 30px; height: 26px; padding: 0; display: grid; place-items: center; background: transparent; border: 1px solid transparent; border-radius: 4px; cursor: pointer; color: var(--vgd-text); }
+.tab:hover { border-color: var(--vgd-border); }
+.tab[aria-selected="true"] { background: var(--vgd-elevated); border-color: var(--vgd-accent); }
 .tab svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.tab[aria-selected="true"] { background: var(--vgd-accent); border-color: var(--vgd-accent); color: var(--vgd-on-accent); }
+.tab svg .accent { fill: var(--vgd-accent); stroke: var(--vgd-accent); }
+.tab svg .accent.soft { fill-opacity: .35; }
+.status { flex: 1; min-width: 0; color: var(--vgd-muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.status.warn { color: var(--vgd-danger); }
+.live { flex: none; gap: 4px; }
+.live .vgd-switch-label { font-size: 11px; }
+.vgd-theme-btn { flex: none; width: 24px; height: 24px; min-width: 24px; font-size: 12px; }
 
 /* Tâm và hệ trục dùng chung cho mọi công cụ */
-.settings { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-.field { display: flex; flex-direction: column; gap: 4px; margin: 0; color: var(--vgd-muted); min-width: 0; }
-.live-row { margin-bottom: 10px; }
-select, input { font: inherit; color: var(--vgd-text); background: var(--vgd-elevated); border: 1px solid var(--vgd-border); border-radius: 6px; padding: 5px 7px; }
-select { width: 100%; box-sizing: border-box; }
+.settings { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+.settings label { display: flex; align-items: center; gap: 5px; color: var(--vgd-muted); min-width: 0; }
+.settings select { flex: 1; min-width: 0; padding: 2px 4px; height: 22px; }
 
-.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.box { background: var(--vgd-elevated); border: 1px solid var(--vgd-border); border-radius: 6px; padding: 8px; min-width: 0; }
-.row { display: grid; grid-template-columns: max-content 1fr; align-items: center; gap: 8px; margin: 4px 0; color: var(--vgd-muted); }
-.row input { min-width: 0; width: 100%; box-sizing: border-box; }
+/* Hai khung cạnh nhau như Absolute / Offset của 3ds Max */
+.tool { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.box { min-width: 0; padding: 5px 6px 4px; border: 1px solid var(--vgd-border); border-radius: 5px; background: var(--vgd-surface); }
+.box.empty { visibility: hidden; }
+h3 { font-size: 11px; font-weight: 600; margin: 0 0 3px; color: var(--vgd-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+h3.head { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.uniform { display: inline-flex; align-items: center; gap: 3px; font-weight: 500; cursor: pointer; flex: none; }
+.row { display: grid; grid-template-columns: 12px 1fr; align-items: center; gap: 5px; margin: 3px 0; color: var(--vgd-muted); }
 
 /* Ô số: nút ▲▼ bên phải; bấm, giữ để lặp, kéo lên xuống trên nút để đổi nhanh, chuột phải về mặc định */
 .spin { position: relative; display: block; min-width: 0; }
-.spin input { width: 100%; box-sizing: border-box; padding-right: 22px; font-variant-numeric: tabular-nums; }
-.arrows { position: absolute; right: 2px; top: 2px; bottom: 2px; width: 18px; display: flex; flex-direction: column; touch-action: none; cursor: ns-resize; }
-.arrows button { flex: 1; padding: 0; margin: 0; font-size: 8px; line-height: 1; border: 0; background: transparent; color: var(--vgd-muted); cursor: ns-resize; user-select: none; }
+.spin input { width: 100%; height: 22px; box-sizing: border-box; padding: 1px 18px 1px 5px; font-variant-numeric: tabular-nums; }
+.arrows { position: absolute; right: 1px; top: 1px; bottom: 1px; width: 15px; display: flex; flex-direction: column; touch-action: none; cursor: ns-resize; }
+.arrows button { flex: 1; padding: 0; margin: 0; font-size: 7px; line-height: 1; border: 0; background: transparent; color: var(--vgd-muted); cursor: ns-resize; user-select: none; }
 .arrows button:hover, .arrows button:active { color: var(--vgd-text); }
 
-.segmented { display: flex; gap: 12px; margin-bottom: 6px; }
-.segmented label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
-.segmented input { accent-color: var(--vgd-accent); }
-
-.actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
-.box .actions button { flex: 1; white-space: nowrap; padding: 5px 6px; }
-button { font: inherit; color: var(--vgd-text); background: var(--vgd-elevated); border: 1px solid var(--vgd-border); border-radius: 6px; padding: 5px 12px; cursor: pointer; }
-button.primary { background: var(--vgd-accent); border-color: var(--vgd-accent); color: var(--vgd-on-accent); }
-button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--vgd-accent); outline-offset: 1px; }
-.hint { color: var(--vgd-muted); margin: 6px 0 0; font-size: 12px; }
-.message { margin: 4px 0 0; }
+.message { margin: 5px 0 0; font-size: 11px; color: var(--vgd-muted); }
 .message.error { color: var(--vgd-danger); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }

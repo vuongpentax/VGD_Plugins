@@ -18,13 +18,12 @@ module VGD
       @log_counts[message] += 1
       puts "[VGD Transform] #{message}" if @log_counts[message] <= 3
     end
-    def self.open_panel
-      if @panel && !@panel.closed?
-        @panel.show
-      else
-        @panel = Panel.new
-        @panel.show
-      end
+    TOOLS = %w[move rotate scale].freeze
+    # Mở cửa sổ (hoặc đưa lên trước), chọn sẵn công cụ nếu có (nút Dời / Xoay / Scale trên thanh công cụ).
+    def self.open_panel(tool = nil)
+      @panel = Panel.new if @panel.nil? || @panel.closed?
+      @panel.select_tool(tool) if TOOLS.include?(tool)
+      @panel.show
     end
     # Nạp lại toàn bộ code của plugin mà không cần mở lại SketchUp.
     # Dùng sau khi cài đè bản mới (.rbz). Menu và thanh công cụ giữ như cũ cho tới lần mở SketchUp sau.
@@ -70,12 +69,17 @@ unless file_loaded?(__FILE__)
   vgd_menu = ::VGD.menu.add_submenu('VGD Transform')
   vgd_menu.add_item('Mở bảng biến đổi') { VGD::Transform.open_panel }
   vgd_menu.add_item('Tải lại code') { VGD::Transform.reload }
+  # Thanh công cụ VGD TRF: ba nút như 3ds Max (Dời, Xoay, Scale), mỗi nút mở cửa sổ ở đúng công cụ.
   toolbar = ::UI::Toolbar.new('VGD TRF')
-  command = ::UI::Command.new('VGD_TRANSFORM') { VGD::Transform.open_panel }
-  command.tooltip = 'VGD_TRANSFORM · Dời, xoay, scale món'
-  command.status_bar_text = 'VGD_TRANSFORM: dời, xoay, scale group / component đang chọn bằng số, theo đơn vị của file'
-  command.small_icon = command.large_icon = File.join(VGD::Transform::ROOT, 'assets', 'icons', 'transform.svg')
-  toolbar.add_item(command)
+  [['move', 'Dời', 'dời group / component đang chọn tới tọa độ hoặc theo độ dời'],
+   ['rotate', 'Xoay', 'xoay group / component đang chọn quanh trục X, Y, Z'],
+   ['scale', 'Scale', 'scale group / component đang chọn theo hệ số, tỉ lệ hoặc kích thước đích']].each do |tool, label, text|
+    command = ::UI::Command.new("VGD_TRANSFORM_#{tool.upcase}") { VGD::Transform.open_panel(tool) }
+    command.tooltip = "VGD Transform · #{label}"
+    command.status_bar_text = "VGD Transform: #{text}, nhập số theo đơn vị của file."
+    command.small_icon = command.large_icon = File.join(VGD::Transform::ROOT, 'assets', 'icons', "#{tool}.svg")
+    toolbar.add_item(command)
+  end
   toolbar.restore
   file_loaded(__FILE__)
 end

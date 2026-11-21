@@ -37,9 +37,18 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     const state = { unit: 'mm', unit_known: true, count: 2, skipped: 1, origin: [1000, null, 300], center: [1500, 500, 650], scale: [2, 1, 1] };
 
     ok((await callNames()).includes('ready'), 'mở cửa sổ: gửi ready để Ruby gửi trạng thái');
+    ok((await page.locator('.tab svg').count()) === 3 && (await page.locator('.tab[aria-label="Dời (Move)"]').count()) === 1 && (await page.locator('.tab[aria-label="Xoay (Rotate)"]').count()) === 1, 'ba nút công cụ là icon (Dời, Xoay, Scale), có tên cho trình đọc màn hình');
+    await receive('tool', { tool: 'scale' });
+    ok((await visible('section[data-tool="scale"]')) && (await page.locator('.tab[aria-selected="true"]').getAttribute('data-tab')) === 'scale', 'mở từ nút Scale trên thanh công cụ: cửa sổ chọn sẵn Scale');
+    await receive('tool', { tool: 'move' });
+    await page.click('#live-label');
+    const liveOff = await page.locator('#live').getAttribute('aria-checked');
+    await page.click('#live-label');
+    ok(liveOff === 'false' && (await page.locator('#live').getAttribute('aria-checked')) === 'true', 'bấm chữ "Trực tiếp" cũng bật / tắt nút gạt');
     await receive('state', state);
     const status = await page.locator('#status').innerText();
-    ok(status.includes('2 món') && status.includes('đơn vị file: mm') && status.includes('bỏ qua 1 đối tượng'), 'dòng trạng thái: số món, đơn vị, số đối tượng bị bỏ qua');
+    const statusTitle = await page.locator('#status').getAttribute('title');
+    ok(status === 'mm · 2 món · bỏ 1' && statusTitle.includes('2 món đang chọn') && statusTitle.includes('bỏ qua 1 đối tượng'), 'dòng trạng thái ngắn (mm · 2 món · bỏ 1), câu đầy đủ khi rê chuột');
 
     // Ô Tuyệt đối hiện giá trị hiện tại (như 3ds Max)
     ok((await value('move_abs-x')) === '1000' && (await value('move_abs-y')) === '' && (await value('move_abs-z')) === '300', 'Tuyệt đối, tâm điểm gốc: hiện điểm gốc chung, trục khác nhau để trống');
@@ -48,7 +57,7 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     ok((await value('move_abs-x')) === '1500' && (await value('move_abs-y')) === '500', 'đổi tâm sang cả lựa chọn: ô Tuyệt đối hiện tâm hộp bao');
     ok((await value('scale_abs-x')) === '2' && (await value('scale_abs-y')) === '1', 'Scale tuyệt đối hiện tỉ lệ hiện tại');
     await receive('state', { ...state, unit_known: false, count: 0, skipped: 0, origin: null, center: null, scale: null });
-    ok((await page.locator('#status').innerText()).includes('tạm dùng mm') && (await page.locator('#move_abs-x').getAttribute('placeholder')) === '—', 'đơn vị lạ được báo; không chọn món thì ô Tuyệt đối trống');
+    ok((await page.locator('#status').getAttribute('title')).includes('tạm dùng mm') && (await page.locator('#status').innerText()).startsWith('mm?') && (await page.locator('#move_abs-x').getAttribute('placeholder')) === '—', 'đơn vị lạ được báo; không chọn món thì ô Tuyệt đối trống');
     await receive('state', state);
 
     // Enter ở ô Tuyệt đối: chỉ gửi ô đã sửa
@@ -64,7 +73,7 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
 
     // Tương đối: hệ trục, Enter, tự về 0
     await page.selectOption('#coord', 'local');
-    ok((await page.locator('[data-panel="move_off"] h3').innerText()) === 'Tương đối (riêng)', 'đổi hệ trục: tiêu đề khung ghi rõ (riêng)');
+    ok((await page.locator('[data-panel="move_off"] h3').innerText()) === 'Tương đối · Local', 'đổi hệ trục: tiêu đề khung ghi Local');
     await page.fill('#move_off-x', '1m');
     await clear();
     await page.press('#move_off-x', 'Enter');
@@ -140,13 +149,14 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     const rot = await lastCall('apply');
     ok(rot && rot.tool === 'rotate' && rot.values.z === '90' && rot.pivot === 'world' && rot.coord === 'local', 'xoay: Enter gửi góc, tâm, hệ trục');
     await page.click('.tab[data-tab="scale"]');
-    ok((await visible('.box[data-panel="scale_abs"]')) && (await visible('#scale-uniform')) && !(await visible('#scale-nonuniform')), 'tab Scale: khung Tuyệt đối và Tương đối (mặc định Đều)');
+    ok((await visible('.box[data-panel="scale_abs"]')) && (await visible('#scale-one')) && !(await visible('#scale-xyz')), 'tab Scale: khung Tuyệt đối và Tương đối (mặc định Đều)');
     await page.fill('#scale_abs-x', '1');
     await clear();
     await page.press('#scale_abs-x', 'Enter');
     const sabs = await lastCall('apply');
     ok(sabs && sabs.tool === 'scale_abs' && sabs.values.x === '1' && sabs.values.y === '', 'scale tuyệt đối: chỉ gửi ô đã sửa');
-    await page.click('input[name="scale-mode"][value="nonuniform"]');
+    await page.uncheck('#scale-uniform');
+    ok((await visible('#scale-xyz')) && !(await visible('#scale-one')), 'bỏ Đều: hiện ba ô X, Y, Z');
     await page.fill('#scale-x', '1000mm');
     await clear();
     await page.press('#scale-x', 'Enter');
@@ -158,7 +168,7 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     ok(!(await page.locator('#message').getAttribute('class')).includes('error'), '"không có gì để làm" hiện như thông báo thường');
     await receive('message', { error: 'Tủ A đang khóa.' });
     ok((await page.locator('#message').getAttribute('class')).includes('error'), 'lỗi hiện màu đỏ');
-    ok((await page.locator('#items').count()) === 0 && (await page.locator('#result').count()) === 0 && (await page.locator('[data-action="preview"]').count()) === 0, 'vẫn gọn: không danh sách món, không bảng kết quả, không nút Xem trước');
+    ok((await page.locator('#items').count()) === 0 && (await page.locator('#result').count()) === 0 && (await page.locator('[data-action]').count()) === 0, 'gọn: không danh sách món, không bảng kết quả, không nút Xem trước / Áp dụng');
     ok(errors.length === 0, 'không có lỗi JavaScript' + (errors.length ? ': ' + errors.join(' | ') : ''));
   } finally {
     await browser.close();

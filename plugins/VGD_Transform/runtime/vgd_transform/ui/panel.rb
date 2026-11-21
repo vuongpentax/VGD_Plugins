@@ -29,10 +29,13 @@ module VGD
       def initialize
         @closed = false
         @live = nil
-        @dialog = ::UI::HtmlDialog.new(dialog_title: 'VGD Transform', preferences_key: 'VGD_Transform_Panel', scrollable: true, resizable: true,
-                                       width: 440, height: 520, style: ::UI::HtmlDialog::STYLE_DIALOG)
+        @ready = false
+        @tool = nil
+        # Cửa sổ gọn cỡ Transform Type-In của 3ds Max (320 × 230), để đặt cạnh màn hình. Khóa lưu cỡ mới: không giữ cỡ to của bản cũ.
+        @dialog = ::UI::HtmlDialog.new(dialog_title: 'VGD Transform', preferences_key: 'VGD_Transform_Compact', scrollable: true, resizable: true,
+                                       width: 320, height: 230, min_width: 300, min_height: 200, style: ::UI::HtmlDialog::STYLE_DIALOG)
         @dialog.set_file(File.join(VGD::Transform::ROOT, ROOT_HTML))
-        @dialog.add_action_callback('ready') { |_ctx| safely { refresh } }
+        @dialog.add_action_callback('ready') { |_ctx| safely { @ready = true; emit('tool', {tool: @tool}) if @tool; refresh } }
         @dialog.add_action_callback('refresh') { |_ctx| safely { refresh } }
         @dialog.add_action_callback('apply') { |_ctx, payload| safely { apply(JSON.parse(payload)) } }
         @dialog.add_action_callback('live_start') { |_ctx| safely { live_start } }
@@ -45,6 +48,12 @@ module VGD
       def show; @dialog.visible? ? @dialog.bring_to_front : @dialog.show; end
       def closed?; @closed; end
       def close; @dialog.close; end
+
+      # Chọn công cụ (move / rotate / scale). Cửa sổ chưa nạp xong thì nhớ lại, gửi khi giao diện báo sẵn sàng.
+      def select_tool(tool)
+        @tool = tool
+        emit('tool', {tool: tool}) if @ready
+      end
 
       # Đang kéo trực tiếp thì không tải lại code (đang giữ trạng thái ban đầu của các món).
       def busy_reason

@@ -1,7 +1,7 @@
 'use strict';
 // Giao diện VGD Transform, theo hộp Transform Type-In của 3ds Max:
 // - ô Tuyệt đối hiện giá trị hiện tại của món, chỉ gửi ô người dùng đã sửa; ô Tương đối về 0 sau khi áp dụng;
-// - Enter trong ô hoặc nút Áp dụng là thực hiện luôn;
+// - Enter trong ô là thực hiện luôn (không có nút Áp dụng, để cửa sổ gọn);
 // - nút ▲▼: bấm, giữ để lặp, kéo lên xuống để đổi nhanh (Ctrl ×10, Alt ×0,1), chuột phải về mặc định;
 // - "Xem trực tiếp khi kéo": món chạy theo ▲▼, cả lần kéo là một bước Ctrl+Z.
 // Ruby đọc chuỗi người dùng nhập và tự đổi đơn vị. Dữ liệu từ Ruby đến qua window.VGD.receive; lệnh đi qua window.sketchup.
@@ -18,7 +18,7 @@ const REPEAT_DELAY_MS = 350;
 const REPEAT_EVERY_MS = 60;
 // Bước của ô độ dài theo đơn vị (khoảng 1 mm)
 const LENGTH_STEP = { mm: 1, cm: 0.1, m: 0.001, in: 0.1, ft: 0.01, yd: 0.01 };
-const COORD_TEXT = { world: 'thế giới', local: 'riêng' };
+const COORD_TEXT = { world: 'World', local: 'Local' };
 
 let state = { unit: 'mm', count: 0, origin: null, center: null, scale: null };
 
@@ -37,7 +37,7 @@ const liveOn = () => $('live').getAttribute('aria-checked') === 'true';
 const xyz = prefix => ({ x: $(`${prefix}-x`).value, y: $(`${prefix}-y`).value, z: $(`${prefix}-z`).value });
 // Ô Tuyệt đối: chỉ gửi ô đã sửa, ô còn lại để trống nghĩa là giữ nguyên (tránh làm tròn số hiển thị dời món).
 const dirtyXyz = prefix => Object.fromEntries(['x', 'y', 'z'].map(a => { const el = $(`${prefix}-${a}`); return [a, el.dataset.dirty ? el.value : '']; }));
-const scaleUniform = () => document.querySelector('input[name="scale-mode"]:checked').value === 'uniform';
+const scaleUniform = () => $('scale-uniform').checked;
 function payloadFor(panel) {
   const pivot = $('pivot').value;
   const coord = $('coord').value;
@@ -59,13 +59,18 @@ function inputsOf(panel) {
 }
 
 // ----- Hiển thị trạng thái và giá trị hiện tại -----
+// Dòng trạng thái ngắn (cửa sổ gọn); câu đầy đủ ở chú thích khi rê chuột.
 function renderStatus() {
-  const parts = [];
-  if (state.count) parts.push(`${state.count} món`);
-  else parts.push('Chưa chọn group / component nào');
-  parts.push(`đơn vị file: ${state.unit}${state.unit_known === false ? ' (SketchUp trả đơn vị lạ, tạm dùng mm)' : ''}`);
-  if (state.skipped) parts.push(`bỏ qua ${state.skipped} đối tượng không phải group / component`);
-  $('status').textContent = parts.join(' · ');
+  const short = [`${state.unit}${state.unit_known === false ? '?' : ''}`, `${state.count || 0} món`];
+  const full = [state.count ? `${state.count} món đang chọn` : 'Chưa chọn group / component nào',
+    `đơn vị file: ${state.unit}${state.unit_known === false ? ' (SketchUp trả đơn vị lạ, tạm dùng mm)' : ''}`];
+  if (state.skipped) {
+    short.push(`bỏ ${state.skipped}`);
+    full.push(`bỏ qua ${state.skipped} đối tượng không phải group / component`);
+  }
+  $('status').textContent = short.join(' · ');
+  $('status').title = full.join(' · ');
+  $('status').classList.toggle('warn', !!state.skipped || state.unit_known === false);
 }
 function fillAbsolute() {
   const fill = (panel, values) => ['x', 'y', 'z'].forEach((a, i) => {
@@ -84,7 +89,7 @@ function resetOffset(panel) {
 }
 function updateCoordTitles() {
   const text = COORD_TEXT[$('coord').value];
-  document.querySelectorAll('.coord-title').forEach(h => { h.textContent = `${h.dataset.title} (${text})`; });
+  document.querySelectorAll('.coord-title').forEach(h => { h.textContent = `${h.dataset.title} · ${text}`; });
 }
 
 // ----- Kéo trực tiếp: gửi tối đa mỗi LIVE_INTERVAL_MS, lần cuối luôn được gửi -----
@@ -190,32 +195,33 @@ window.VGD = {
       message(`Đã biến đổi ${data.moved} món.${skipped}`);
       if (isAbsolute(data.tool)) inputsOf(data.tool).forEach(input => delete input.dataset.dirty);
       else resetOffset(data.tool);
+    } else if (event === 'tool') {
+      showTool(data.tool);
     } else if (event === 'message') {
       message(data.error || data.text, !!data.error);
     }
   },
 };
 
-// ----- Tab, lựa chọn, nút, Enter -----
+// ----- Tab, lựa chọn, Enter -----
 function showTool(tool) {
   document.querySelectorAll('.tab').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.tab === tool)));
   document.querySelectorAll('section.tool').forEach(section => { section.hidden = section.dataset.tool !== tool; });
 }
 document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => showTool(tab.dataset.tab)));
-document.querySelectorAll('input[name="scale-mode"]').forEach(radio => radio.addEventListener('change', () => {
-  $('scale-uniform').hidden = !scaleUniform();
-  $('scale-nonuniform').hidden = scaleUniform();
-}));
+$('scale-uniform').addEventListener('change', () => {
+  $('scale-one').hidden = !scaleUniform();
+  $('scale-xyz').hidden = scaleUniform();
+});
 $('pivot').addEventListener('change', fillAbsolute);
 $('coord').addEventListener('change', updateCoordTitles);
+$('live-label').addEventListener('click', () => $('live').click());
 $('live').addEventListener('click', () => {
   const next = !liveOn();
   $('live').setAttribute('aria-checked', String(next));
   store.set(LIVE_KEY, next ? '1' : '0');
 });
-$('live-label').addEventListener('click', () => $('live').click());
 
-document.querySelectorAll('button[data-action="apply"]').forEach(btn => btn.addEventListener('click', () => apply(btn.dataset.panel)));
 document.querySelectorAll('input[type="text"]').forEach(input => {
   input.addEventListener('input', () => { input.dataset.dirty = '1'; });
   input.addEventListener('keydown', event => {

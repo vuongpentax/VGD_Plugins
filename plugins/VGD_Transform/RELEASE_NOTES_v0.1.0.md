@@ -1,8 +1,10 @@
-# VGD Transform 0.1.0 (bản thử beta.6)
+# VGD Transform 0.1.0 (bản thử beta.7)
 
 Dời, xoay và scale group / component bằng số, theo hộp Transform Type-In của 3ds Max.
 
-- Ba tab Dời, Xoay, Scale; Enter hoặc nút Áp dụng là chạy ngay, mỗi lần là một bước hoàn tác.
+- Thanh công cụ VGD TRF có ba nút Dời, Xoay, Scale với icon như 3ds Max; mỗi nút mở cửa sổ ở đúng công cụ.
+- Cửa sổ gọn (khoảng 320 × 230) để đặt cạnh màn hình; chọn công cụ bằng icon.
+- Nhấn Enter là chạy ngay (không có nút Áp dụng), mỗi lần là một bước hoàn tác.
 - Ô Tuyệt đối hiện sẵn giá trị hiện tại và tự cập nhật (đổi lựa chọn, model đổi, Ctrl+Z); chỉ ô đã sửa được áp dụng.
 - Ô Tương đối tự về 0 sau khi áp dụng.
 - Tâm biến đổi: điểm gốc từng món, tâm hộp bao cả lựa chọn, gốc thế giới. Dời tuyệt đối theo tâm (không còn dựa vào "món đầu tiên").
