@@ -53,7 +53,7 @@ module Geom
   Bounds2d=Struct.new(:x,:y,:width,:height)
 end
 module Sketchup
-  class << self;attr_accessor :active_model,:status_text;end
+  class << self;attr_accessor :active_model,:status_text;attr_writer :version;def version;@version||'22.0.0';end;end
   class Entity
     @@sequence=0
     attr_accessor :layer,:hidden

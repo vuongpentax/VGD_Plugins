@@ -27,19 +27,17 @@ m.active_view.camera=s.camera_copy(live)
 UI.drain
 written=m.active_view.last_written_camera
 assert(events.last[1][:success] && written.eye==saved.eye && near(written.fov,48) && near(written.aspect_ratio,0.75),'Export used uncommitted composition instead of old camera/new frame')
-before=m.active_view.writes.length
-assert(!s::ExportJob.debug_variants,'Debug variants must be off by default')
-s::ExportJob.debug_variants=true
-FileUtils.rm_rf('/tmp/frame-preview-variants'); FileUtils.mkdir_p('/tmp/frame-preview-variants')
-m.shadow_info['DisplayShadows']=false; m.shadow_info['UseSunForAllShading']=false
-saved_camera=s.camera_copy(m.active_view.camera)
-events=[];job=s::ExportJob.new(m,[first],s.options({}),'/tmp/frame-preview-variants',lambda { |event,payload| events << [event,payload] });job.start;UI.tick;UI.drain
-s::ExportJob.debug_variants=false
-new_writes=m.active_view.writes[before..-1].map { |w| File.basename(w[:filename]) }
-assert(events.last[1][:success] && new_writes.length==4,"Expected 1 normal + 3 variant images, got #{new_writes.inspect}")
-assert(new_writes.grep(/V1_khong_khung/).length==1 && new_writes.grep(/V2_bat_bong/).length==1 && new_writes.grep(/V3_sun_shading/).length==1,'Variant file names missing')
-assert(m.shadow_info['DisplayShadows']==false && m.shadow_info['UseSunForAllShading']==false,'Debug variants did not restore shadow settings')
-assert(m.active_view.camera.eye==saved_camera.eye && near(m.active_view.camera.fov,saved_camera.fov),'Debug variants did not restore the camera')
+assert(s.export_camera_aspect(0.75,'22.0.0')==0.75 && s.export_camera_aspect(0.75,'23.1.0')==0.75,'Export dropped the camera frame on SketchUp before 2024')
+assert(%w[24.0.553 25.0.1 26.1.0].all? { |v| s.export_camera_aspect(0.75,v)==0.0 },'SketchUp 2024+ export kept the camera frame (dark image)')
+FileUtils.rm_rf('/tmp/frame-su24-export'); FileUtils.mkdir_p('/tmp/frame-su24-export')
+Sketchup.version='24.0.553'
+camera_before=s.camera_copy(m.active_view.camera)
+events=[];job=s::ExportJob.new(m,[first],s.options({}),'/tmp/frame-su24-export',lambda { |event,payload| events << [event,payload] });job.start;UI.tick;UI.drain
+Sketchup.version=nil
+written=m.active_view.last_written_camera; sized=m.active_view.writes.last
+assert(events.last[1][:success] && written.aspect_ratio==0.0 && written.eye==saved.eye && near(written.fov,48),'SU2024 export wrote a framed camera or changed the composition')
+assert(near(sized[:width].to_f/sized[:height],0.75),'SU2024 export lost the frame ratio in the image size')
+assert(m.active_view.camera.eye==camera_before.eye && near(m.active_view.camera.aspect_ratio,camera_before.aspect_ratio),'SU2024 export did not restore the framed camera')
 s::SceneStore.capture(m,first.persistent_id.to_s)
 assert(first.camera.eye==live.eye && first.camera.target==live.target && near(first.camera.fov,62),'Update did not persist preview')
 assert(controls.state(m)[:sig] == controls.state(m)[:saved_sig], 'Camera capture did not update saved signature')
