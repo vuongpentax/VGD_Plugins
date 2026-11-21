@@ -16,7 +16,7 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 - `core/translate.rb`: dời tuyệt đối và tương đối (tạo bước `translate`). Không gọi SketchUp.
 - `core/rotate_scale.rb`: xoay và scale theo trục thế giới, tâm xoay / scale. Không gọi SketchUp.
 - `core/steps.rb`: định dạng bước biến đổi và công thức áp dụng bước lên điểm (`Steps.apply_steps`) để kiểm tra sau khi áp dụng. Không gọi SketchUp.
-- `core/plan.rb`: ghép công cụ với chuỗi người dùng nhập (`Plan.build`) và tạo dòng mô tả để xem trước (`Plan.describe`). Không gọi SketchUp.
+- `core/plan.rb`: ghép công cụ với chuỗi người dùng nhập (`Plan.build`). Không gọi SketchUp.
 - `core/move.rb`: phần gọi SketchUp (đọc vị trí món trong ngữ cảnh group đang mở, đơn vị của file, áp dụng từng bước, kiểm tra sau khi áp dụng, một thao tác hoàn tác).
 - `ui/panel.rb`: cửa sổ `UI::HtmlDialog` nối giao diện với các file trên. `html/`: giao diện (`index.html`, `app.js`, `style.css`), `vgd-theme/` là bản copy của `shared/vgd-theme` (đồng bộ bằng `tools/sync_vgd_theme.py`).
 - `dev/`: test (`test_units.rb`, `test_transform.rb`, `test_move.rb`, `test_reload.rb`, `test_ui.cjs`), `run_tests.rb`, `package.py`, `stubs/` (giả lập để chạy test ngoài SketchUp).
@@ -41,7 +41,7 @@ Chạy từ `plugins/VGD_Transform`:
 
 - **Mọi biến đổi là đổi hình học model.** Chỉ đổi `transformation` của instance được chọn (group / component), không đổi định nghĩa, không đổi món khác. Đây là chỗ duy nhất của plugin đổi model.
 - **Biến đổi = danh sách bước.** Mỗi món nhận các bước `translate` (dời), `rotate` (xoay quanh trục thế giới đi qua tâm), `scale` (nhân hệ số theo trục thế giới quanh tâm). `Move.apply` áp dụng từng bước rồi kiểm tra điểm gốc bằng `Steps.apply_steps`.
-- **Xem trước rồi mới áp dụng.** Giao diện chỉ bật nút Áp dụng của khung sau khi xem trước đúng với các ô hiện tại; đổi ô thì khóa lại. Ruby luôn tính lại kế hoạch lúc áp dụng (không tin kết quả xem trước cũ).
+- **Áp dụng ngay, không xem trước.** Nhấn Enter trong ô hoặc bấm Áp dụng là biến đổi luôn. Mọi biến đổi là một bước hoàn tác (Ctrl+Z). Không có danh sách món hay bảng kết quả trong cửa sổ, để plugin gọn.
 - **Một thao tác hoàn tác cho cả đợt** (`start_operation` / `commit_operation`). Lỗi giữa chừng thì `abort_operation`, không để model dở.
 - **Kiểm tra sau khi biến đổi.** Điểm gốc sau khi biến đổi phải khớp kế hoạch trong 0,01 mm; không khớp thì hủy cả đợt.
 - **Món khóa và món trong group cha bị khóa:** nếu có trong lựa chọn thì cả đợt không chạy, báo tên món. Không bỏ qua âm thầm món nào, để nhóm không bị lệch.
@@ -49,6 +49,6 @@ Chạy từ `plugins/VGD_Transform`:
 - **Đơn vị:** số không có đơn vị theo đơn vị của file (`Move.length_unit`, đọc từ `model.options['UnitsOptions']['LengthUnit']`: 0 in, 1 ft, 2 mm, 3 cm, 4 m). Gõ thêm đơn vị (mm, cm, m, in, ft) thì số đó dùng đơn vị đã gõ. Mọi tính toán nội bộ dùng mm. Giới hạn ±1 km.
 - **Nhiều món:** cả nhóm dời cùng một độ lệch, tính từ điểm gốc của món đầu tiên trong lựa chọn. Xoay và scale: tâm chọn được (`item`, `selection`, `world`).
 - **Xoay:** các góc nhập được áp dụng theo thứ tự X, Y, Z trên trục thế giới. Chỉ có xoay tương đối (không có góc tuyệt đối, vì SketchUp không cho đọc góc "hiện tại" của group một cách rõ ràng).
-- **Scale:** hệ số tương đối, phải dương (0,001 đến 1000). Hệ số 1 ở mọi trục bị từ chối. Không có scale tuyệt đối vì cùng lý do với xoay. Hệ số âm (lật món) không hỗ trợ.
-- **Giao diện:** ô số có nút ▲▼ (giữ để lặp) và kéo lên xuống trên ô. Ô số không tự parse đơn vị; việc đó do Ruby (`Units`) làm.
+- **Scale:** số không đơn vị là hệ số tương đối, phải dương (0,001 đến 1000). Số có đơn vị (1m, 1000mm) ở ô Không đều là kích thước đích của món theo trục đó: hệ số của từng món = đích / kích thước hiện tại theo trục (đo bằng hộp bao của definition, đổi sang thế giới). Scale đều chỉ nhận hệ số. Hệ số 1 ở mọi trục bị từ chối. Không có scale tuyệt đối vì cùng lý do với xoay. Hệ số âm (lật món) không hỗ trợ.
+- **Giao diện:** ô số có nút ▲▼ (giữ để lặp) và kéo lên xuống trên ô. Ô số không tự parse đơn vị; việc đó do Ruby (`Units`) làm. Không có danh sách món và không có bảng kết quả; Ruby chỉ gửi đơn vị của file (sự kiện `unit`).
 - Giao diện chỉ tiếng Việt ở bản đầu. Chuỗi mới phải có bản dịch nếu sau này thêm tiếng Anh.

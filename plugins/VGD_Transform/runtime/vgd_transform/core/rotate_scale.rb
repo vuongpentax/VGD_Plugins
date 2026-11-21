@@ -43,15 +43,31 @@ module VGD
         {moves: moves}
       end
 
-      # factors: [fX, fY, fZ], mỗi hệ số > 0 (1 = giữ nguyên trục đó). Scale theo trục thế giới.
-      def scale(items, factors, pivot_mode)
+      # specs: [X, Y, Z]. Mỗi ô là một trong ba loại:
+      #   nil: giữ nguyên (hệ số 1); số: hệ số tương đối; {length: mm}: đặt kích thước của món theo trục đó thành đúng số mm này.
+      # Với {length}, hệ số của từng món = kích thước đích / kích thước hiện tại của món theo trục đó (món[:extent]).
+      # Scale theo trục thế giới quanh tâm chọn được; scale theo trục giữ nguyên hộp bao, nên kích thước sau scale đúng bằng đích.
+      def scale(items, specs, pivot_mode)
         Translate.check_items(items)
-        raise ArgumentError, 'Hệ số phải nằm trong khoảng 0,001 đến 1000.' unless factors.all? { |f| f >= SCALE_MIN && f <= SCALE_MAX }
-        raise ArgumentError, 'Hệ số bằng 1 ở mọi trục, không đổi kích thước.' if factors.all? { |f| (f - 1.0).abs < 1e-9 }
         moves = items.map do |item|
+          factors = AXES_INDEX.map { |i| factor_for(specs[i], item, i) }
+          check_factors(factors)
           {index: item[:index], steps: [{kind: 'scale', pivot: pivot_for(items, pivot_mode, item), factors: factors}]}
         end
+        raise ArgumentError, 'Hệ số bằng 1 ở mọi trục, không đổi kích thước.' if moves.all? { |m| m[:steps][0][:factors].all? { |f| (f - 1.0).abs < 1e-9 } }
         {moves: moves}
+      end
+
+      def factor_for(spec, item, axis)
+        return 1.0 if spec.nil?
+        return Float(spec) unless spec.is_a?(Hash)
+        extent = item[:extent][axis]
+        raise ArgumentError, "Không đo được kích thước của #{item[:name]} theo trục #{%w[X Y Z][axis]}." unless extent.positive?
+        spec[:length] / extent
+      end
+
+      def check_factors(factors)
+        raise ArgumentError, 'Hệ số phải nằm trong khoảng 0,001 đến 1000.' unless factors.all? { |f| f >= SCALE_MIN && f <= SCALE_MAX }
       end
     end
   end

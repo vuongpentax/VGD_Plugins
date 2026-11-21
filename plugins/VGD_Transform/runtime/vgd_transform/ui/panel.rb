@@ -22,7 +22,6 @@ module VGD
         @dialog.set_file(File.join(VGD::Transform::ROOT, ROOT_HTML))
         @dialog.add_action_callback('ready') { |_ctx| safely { refresh } }
         @dialog.add_action_callback('refresh') { |_ctx| safely { refresh } }
-        @dialog.add_action_callback('preview') { |_ctx, payload| safely { preview(JSON.parse(payload)) } }
         @dialog.add_action_callback('apply') { |_ctx, payload| safely { apply(JSON.parse(payload)) } }
         @dialog.set_on_closed { @closed = true; detach }
         attach
@@ -40,22 +39,7 @@ module VGD
       end
 
       def refresh
-        model = Sketchup.active_model
-        unit = Move.length_unit(model)
-        items = Move.items(model).map { |item| public_item(item, unit) }
-        emit('items', {items: items, count: items.size, unit: unit})
-      end
-
-      def preview(payload)
-        model = Sketchup.active_model
-        unit = Move.length_unit(model)
-        items = Move.items(model)
-        plan = Plan.build(items, payload, unit)
-        moves = plan[:moves].map do |move|
-          item = items.find { |i| i[:index] == move[:index] }
-          {index: move[:index], name: item[:name], text: Plan.describe(item, move[:steps], unit)}
-        end
-        emit('preview', {moves: moves})
+        emit('unit', {unit: Move.length_unit(Sketchup.active_model)})
       end
 
       def apply(payload)
@@ -69,11 +53,6 @@ module VGD
       end
 
       private
-
-      def public_item(item, unit)
-        origin = item[:origin].map { |v| Units.format_number(v / Units::MM_PER_UNIT.fetch(unit)) }
-        {index: item[:index], name: item[:name], origin: origin, locked: item[:locked]}
-      end
 
       def attach
         @model = Sketchup.active_model

@@ -43,7 +43,7 @@ require File.join(RUNTIME_DIR, 'vgd_transform')
 require File.join(RUNTIME_DIR, 'vgd_transform', 'loader') # SketchUp nạp loader khi bật extension
 
 menu = UI::MENU_ROOT['Extensions'].subs['VGD']
-ok('menu Extensions > VGD > VGD Transform có đúng hai mục', menu && menu.subs['VGD Transform'] && menu.subs['VGD Transform'].items.map(&:first) == ['Mở bảng vị trí', 'Tải lại code'])
+ok('menu Extensions > VGD > VGD Transform có đúng hai mục', menu && menu.subs['VGD Transform'] && menu.subs['VGD Transform'].items.map(&:first) == ['Mở bảng biến đổi', 'Tải lại code'])
 ok('không có mục nào ngoài hai mục trên', menu.subs['VGD Transform'].items.size == 2)
 
 # Tải lại nhiều lần: không nhân đôi mục menu

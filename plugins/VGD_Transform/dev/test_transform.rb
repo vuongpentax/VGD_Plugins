@@ -1,5 +1,5 @@
 # Test logic thuần của VGD Transform: dời (tuyệt đối, tương đối), xoay và scale theo trục thế giới, tâm xoay / scale,
-# ghép công cụ với ô nhập (core/plan.rb), mô tả xem trước. Không cần SketchUp.
+# ghép công cụ với ô nhập (core/plan.rb). Không cần SketchUp.
 # Chạy: ruby dev/test_transform.rb (từ plugins/VGD_Transform)
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
@@ -13,10 +13,10 @@ RS = P::RotateScale
 ST = P::Steps
 PL = P::Plan
 
-one = [{index: 0, name: 'Tủ A', origin: [1000.0, 2000.0, 300.0], locked: false}]
+one = [{index: 0, name: 'Tủ A', origin: [1000.0, 2000.0, 300.0], extent: [1000.0, 1000.0, 1000.0], locked: false}]
 many = [
-  {index: 0, name: 'Tủ A', origin: [0.0, 0.0, 0.0], locked: false},
-  {index: 1, name: 'Tủ B', origin: [1000.0, 0.0, 0.0], locked: false},
+  {index: 0, name: 'Tủ A', origin: [0.0, 0.0, 0.0], extent: [1000.0, 1000.0, 1000.0], locked: false},
+  {index: 1, name: 'Tủ B', origin: [1000.0, 0.0, 0.0], extent: [500.0, 1000.0, 1000.0], locked: false},
 ]
 
 # Tuyệt đối: điểm gốc món đầu tiên tới đúng tọa độ; trục nil giữ nguyên
@@ -29,7 +29,7 @@ ok('tương đối: cùng độ dời (100, 0, -50) cho mọi món', TR.offset(m
 ok('tương đối: độ dời bằng 0 thì báo không cần dời', error_of { TR.offset(many, [0.0, 0.0, 0.0]) }.to_s.include?('không cần dời'))
 
 # Chặn: món khóa, không đo được vị trí, chưa chọn món
-locked = [{index: 0, name: 'Tủ A', origin: [0.0, 0.0, 0.0], locked: false}, {index: 1, name: 'Tủ khóa', origin: [0.0, 0.0, 0.0], locked: true}]
+locked = [{index: 0, name: 'Tủ A', origin: [0.0, 0.0, 0.0], extent: [1.0, 1.0, 1.0], locked: false}, {index: 1, name: 'Tủ khóa', origin: [0.0, 0.0, 0.0], extent: [1.0, 1.0, 1.0], locked: true}]
 ok('có món khóa trong lựa chọn: không dời gì, báo tên món khóa', (err = error_of { TR.absolute(locked, [10.0, nil, nil]) }).to_s.include?('Tủ khóa') && err.include?('khóa'))
 ok('món không đo được vị trí: báo lỗi', error_of { TR.offset([{index: 0, name: 'Rỗng', origin: nil, locked: false}], [10.0, nil, nil]) }.to_s.include?('Không đo được'))
 ok('chưa chọn món nào: báo lỗi', error_of { TR.absolute([], [1.0, nil, nil]) }.to_s.include?('Chưa chọn'))
@@ -68,9 +68,18 @@ ok('Plan: công cụ lạ bị từ chối', error_of { PL.build(one, {'tool' =>
 ok('Plan: ô sai định dạng báo lỗi rõ', error_of { PL.build(one, {'tool' => 'move_off', 'values' => {'x' => 'abc'}}, 'mm') }.to_s.include?('không phải số'))
 
 # Mô tả xem trước: theo đơn vị của file
-desc = PL.describe(one[0], TR.absolute(one, [1500.0, nil, nil])[:moves][0][:steps], 'm')
-ok('mô tả: dời ΔX 0.5 m và điểm gốc mới 1.5 m (file m)', desc.include?('ΔX 0.5 m') && desc.include?('(1.5 m, 2 m, 0.3 m)'))
-ok('mô tả: xoay và scale ghi rõ số', PL.describe(one[0], rot_world[:moves][0][:steps], 'mm').include?('xoay 90° quanh Z') && PL.describe(one[0], sc_uniform[:moves][0][:steps], 'mm').include?('scale ×2'))
 
+# Scale theo kích thước đích (đơn vị): hệ số của từng món = đích / kích thước hiện tại theo trục đó
+sized = [{index: 0, name: 'Tủ', origin: [0.0, 0.0, 0.0], extent: [1000.0, 500.0, 200.0], locked: false}]
+ok('kích thước đích 2000 mm trên X: hệ số X = 2, các trục khác = 1', RS.scale(sized, [{length: 2000.0}, nil, nil], 'world')[:moves][0][:steps][0][:factors] == [2.0, 1.0, 1.0])
+two = [{index: 0, name: 'A', origin: [0.0, 0.0, 0.0], extent: [1000.0, 1000.0, 1000.0], locked: false},
+       {index: 1, name: 'B', origin: [2000.0, 0.0, 0.0], extent: [500.0, 1000.0, 1000.0], locked: false}]
+per_item = RS.scale(two, [{length: 1000.0}, nil, nil], 'item')[:moves].map { |m| m[:steps][0][:factors][0] }
+ok('kích thước đích áp dụng riêng cho từng món: A giữ 1, B tăng gấp đôi', per_item == [1.0, 2.0])
+ok('kích thước đích trên món không đo được (kích thước 0): báo lỗi', error_of { RS.scale([{index: 0, name: 'Rỗng', origin: [0.0, 0.0, 0.0], extent: [0.0, 1.0, 1.0], locked: false}], [{length: 10.0}, nil, nil], 'world') }.to_s.include?('Không đo được kích thước'))
+ok('Plan scale không đều: ô 2000mm là kích thước đích, món 1000 mm thành hệ số 2 trên X', PL.build(one, {'tool' => 'scale', 'uniform' => false, 'values' => {'x' => '2000mm', 'y' => '', 'z' => ''}, 'pivot' => 'world'}, 'm')[:moves][0][:steps][0][:factors] == [2.0, 1.0, 1.0])
+ok('Plan scale không đều: "1m" trên món 1000 mm không đổi gì, báo lỗi', error_of { PL.build(one, {'tool' => 'scale', 'uniform' => false, 'values' => {'x' => '1m', 'y' => '', 'z' => ''}, 'pivot' => 'world'}, 'mm') }.to_s.include?('không đổi kích thước'))
+ok('Plan scale đều: ô có đơn vị bị từ chối, hướng dẫn chọn Không đều', error_of { PL.build(one, {'tool' => 'scale', 'uniform' => true, 'values' => {'x' => '1000mm'}, 'pivot' => 'world'}, 'mm') }.to_s.include?('Không đều'))
+ok('Plan scale đều: hệ số 1.5 vẫn đúng', PL.build(one, {'tool' => 'scale', 'uniform' => true, 'values' => {'x' => '1.5'}, 'pivot' => 'world'}, 'mm')[:moves][0][:steps][0][:factors] == [1.5, 1.5, 1.5])
 puts($fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

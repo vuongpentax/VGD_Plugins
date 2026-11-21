@@ -43,8 +43,16 @@ module VGD
         ctx = context(model)
         ancestors_locked = locked_context?(model)
         model.selection.to_a.select { |entity| supported?(entity) && entity.valid? }.each_with_index.map do |entity, index|
-          {index: index, name: name_of(entity), origin: origin_mm(entity, ctx), locked: ancestors_locked || entity.locked? ? true : false, entity: entity}
+          {index: index, name: name_of(entity), origin: origin_mm(entity, ctx), extent: extent_mm(entity, ctx),
+           locked: ancestors_locked || entity.locked? ? true : false, entity: entity}
         end
+      end
+
+      # Kích thước của món theo trục thế giới (mm): hộp bao của definition, đổi sang thế giới rồi đo từng trục.
+      def extent_mm(entity, ctx)
+        box = entity.definition.bounds
+        corners = (0..7).map { |i| ctx * entity.transformation * box.corner(i) }
+        %i[x y z].map { |axis| values = corners.map(&axis); (values.max - values.min) * Units::MM_PER_INCH }
       end
 
       def name_of(entity)

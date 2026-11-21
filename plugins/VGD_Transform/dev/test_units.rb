@@ -1,4 +1,4 @@
-# Test đơn vị và ô nhập (core/units.rb): số có đơn vị, số theo đơn vị của file, dấu phẩy, giới hạn, hiển thị.
+# Test đơn vị và ô nhập (core/units.rb): số có đơn vị, số theo đơn vị của file, dấu phẩy, giới hạn, ô scale.
 # Không cần SketchUp. Chạy: ruby dev/test_units.rb (từ plugins/VGD_Transform)
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
@@ -27,9 +27,12 @@ ok('vượt giới hạn ±1 km bị từ chối (cả khi gõ đơn vị)', err
 ok('số thường: "15", "-2,5", ".5"', U.parse_number('15') == 15.0 && U.parse_number('-2,5') == -2.5 && U.parse_number('.5') == 0.5)
 ok('số thường: trống là nil, chữ bị từ chối', U.parse_number('').nil? && error_of { U.parse_number('x') }.to_s.include?('không phải số'))
 
-# Hiển thị theo đơn vị của file
-ok('hiển thị: 1500 mm trong file mm là "1500 mm"', U.format_length(1500.0, 'mm') == '1500 mm')
-ok('hiển thị: 1500 mm trong file m là "1.5 m"', U.format_length(1500.0, 'm') == '1.5 m')
-ok('hiển thị: bỏ số 0 thừa, tối đa 3 chữ số', U.format_number(2.5) == '2.5' && U.format_number(3.0) == '3' && U.format_number(1.23456) == '1.235' && U.format_number(-0.0001) == '0')
+# Ô scale: số không đơn vị là hệ số; số có đơn vị là kích thước đích
+ok('ô scale: "1.5" và "1,5" là hệ số', U.parse_scale('1.5') == 1.5 && U.parse_scale('1,5') == 1.5)
+ok('ô scale: "1000mm" là kích thước đích 1000 mm', U.parse_scale('1000mm') == {length: 1000.0})
+ok('ô scale: "1m" là kích thước đích 1000 mm (không phụ thuộc đơn vị file)', U.parse_scale('1m') == {length: 1000.0})
+ok('ô scale: trống là nil', U.parse_scale('') .nil?)
+ok('ô scale: kích thước đích 0 hoặc âm bị từ chối', error_of { U.parse_scale('0m') }.to_s.include?('lớn hơn 0') && error_of { U.parse_scale('-1m') }.to_s.include?('lớn hơn 0'))
+ok('ô scale: vượt giới hạn và đơn vị lạ bị từ chối', error_of { U.parse_scale('2000m') }.to_s.include?('vượt giới hạn') && error_of { U.parse_scale('2km') }.to_s.include?('không phải số'))
 puts($fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

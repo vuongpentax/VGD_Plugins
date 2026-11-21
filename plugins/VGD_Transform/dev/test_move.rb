@@ -72,13 +72,21 @@ module Geom
   end
 end
 
+# Hộp bao giả lập: 8 góc, góc 0 ở gốc, góc 7 ở (size) — đủ để đo kích thước
+class BoundingBox
+  def initialize(size); @size = size; end
+  def corner(i)
+    Geom::Point3d.new(*[0, 1, 2].map { |k| (i >> k) & 1 == 1 ? @size[k] : 0.0 })
+  end
+end
+
 module Sketchup
   class Group
     attr_accessor :transformation, :name, :locked, :valid
-    # shift: tịnh tiến của gốc món (inch, như SketchUp)
-    def initialize(name, shift, locked: false)
+    # shift: tịnh tiến của gốc món (inch, như SketchUp); size: kích thước hộp bao trong definition (inch)
+    def initialize(name, shift, locked: false, size: [0.0, 0.0, 0.0])
       @name = name; @transformation = Geom::Transformation.translation(Geom::Vector3d.new(*shift)); @locked = locked; @valid = true
-      @definition = Struct.new(:name).new("def #{name}")
+      @definition = Struct.new(:name, :bounds).new("def #{name}", BoundingBox.new(size))
     end
     def definition; @definition; end
     def locked?; @locked; end
@@ -97,6 +105,7 @@ module Sketchup
   end
 end
 
+require File.join(ROOT, 'core/units')
 require File.join(ROOT, 'core/move')
 M = VGD::Transform::Move
 P = VGD::Transform
@@ -181,6 +190,23 @@ stubborn = StubbornGroup.new('Cứng đầu', [0.0, 0.0, 0.0])
 sm2 = Sketchup::Model.new([stubborn])
 si2 = M.items(sm2)
 ok('sau biến đổi vị trí không khớp: hủy cả thao tác, báo lỗi', error_of { M.apply(sm2, [{index: 0, steps: [{kind: 'translate', delta: [100.0, 0.0, 0.0]}]}], si2) }.to_s.include?('không khớp') && sm2.ops.map(&:first) == [:start, :abort])
+
+# Kích thước của món đo đúng theo hộp bao (mm)
+sz = Sketchup::Model.new([Sketchup::Group.new('Tủ rộng', [0.0, 0.0, 0.0], size: [1000.0 / MM, 500.0 / MM, 200.0 / MM])])
+ok('kích thước món đo đúng: 1000 x 500 x 200 mm', near(M.items(sz)[0][:extent], [1000.0, 500.0, 200.0]))
+
+# Scale đến kích thước đích: X của tủ 1000 mm thành 1500 mm, các trục khác giữ nguyên
+M.apply(sz, RS.scale(M.items(sz), [{length: 1500.0}, nil, nil], 'world')[:moves], M.items(sz))
+ok('scale đến kích thước đích 1500 mm trên X: kích thước sau scale đúng 1500 x 500 x 200 mm', near(M.items(sz)[0][:extent], [1500.0, 500.0, 200.0]))
+
+# Món trong group cha xoay 90° quanh Z: X thế giới của món = 500 mm; đặt X thành 1000 mm thì hệ số = 2
+rotated_parent = Sketchup::Group.new('Cha xoay', [0.0, 0.0, 0.0])
+rotated_parent.transformation = Geom::Transformation.rotation(Geom::Point3d.new(0, 0, 0), Geom::Vector3d.new(0, 0, 1), Math::PI / 2)
+rotated_child = Sketchup::Group.new('Con', [0.0, 0.0, 0.0], size: [1000.0 / MM, 500.0 / MM, 200.0 / MM])
+rm2 = Sketchup::Model.new([rotated_child], [rotated_parent])
+ok('món trong group xoay: kích thước thế giới theo trục X là 500 mm', near(M.items(rm2)[0][:extent], [500.0, 1000.0, 200.0]))
+M.apply(rm2, RS.scale(M.items(rm2), [{length: 1000.0}, nil, nil], 'world')[:moves], M.items(rm2))
+ok('trong group xoay: đặt X thế giới thành 1000 mm, Y thế giới vẫn 1000 mm', near(M.items(rm2)[0][:extent], [1000.0, 1000.0, 200.0]))
 
 puts($fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)
