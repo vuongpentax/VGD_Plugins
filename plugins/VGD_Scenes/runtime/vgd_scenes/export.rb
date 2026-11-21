@@ -74,6 +74,8 @@ module VGD
           camera.aspect_ratio = frame['aspect']
           @model.active_view.camera = camera
           @model.active_view.refresh
+          # Draw this scene before saving so its lighting and shadows are current, not the previous scene's.
+          @model.active_view.show_frame
           success = @model.active_view.write_image(filename: temporary, width: frame['width'], height: frame['height'],
             antialias: true, compression: 0.95, transparent: extension == 'png' && @opts['format'] == 'png' && @opts['transparent'])
           raise 'SketchUp không ghi được ảnh.' unless success && File.file?(temporary) && File.size(temporary) > 0

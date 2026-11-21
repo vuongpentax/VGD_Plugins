@@ -27,6 +27,8 @@ m.active_view.camera=s.camera_copy(live)
 UI.drain
 written=m.active_view.last_written_camera
 assert(events.last[1][:success] && written.eye==saved.eye && near(written.fov,48) && near(written.aspect_ratio,0.75),'Export used uncommitted composition instead of old camera/new frame')
+frames_seen=m.active_view.frames; write_at=frames_seen.index(:write)
+assert(write_at && write_at>0 && frames_seen[write_at-1]==:show,'Export saved the image without redrawing the scene first')
 s::SceneStore.capture(m,first.persistent_id.to_s)
 assert(first.camera.eye==live.eye && first.camera.target==live.target && near(first.camera.fov,62),'Update did not persist preview')
 assert(controls.state(m)[:sig] == controls.state(m)[:saved_sig], 'Camera capture did not update saved signature')
