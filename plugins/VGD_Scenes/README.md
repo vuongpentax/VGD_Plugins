@@ -1,6 +1,13 @@
-# VGD Scenes 1.6.1 — SketchUp 2022–2026.2
+# VGD Scenes 1.6.2-beta.3 — SketchUp 2022–2026.2
 
-Phiên bản hiện tại 1.6.1, chi tiết ở [RELEASE_NOTES_v1.6.1.md](RELEASE_NOTES_v1.6.1.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); đã được người phát hành dùng thử trong SketchUp. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
+Phiên bản hiện tại 1.6.2-beta.3 là bản thử, sửa lỗi ảnh xuất bị tối trên SketchUp 2024 (xem mục bên dưới). Bản ổn định gần nhất là 1.6.1, chi tiết ở [RELEASE_NOTES_v1.6.1.md](RELEASE_NOTES_v1.6.1.md). Kiểm tra: tự động (cú pháp Ruby, JSON, đóng gói RBZ); đã được người phát hành dùng thử trong SketchUp. Các kết quả PASS, ngày tháng và lượt cài ở các mục lịch sử bên dưới thuộc các bản cũ.
+
+### Sửa ảnh xuất bị tối trên SketchUp 2024+ (1.6.2-beta.3)
+
+- Lỗi: trên SU 2024, mọi scene có khung (camera khóa tỉ lệ `aspect_ratio`) xuất ra ảnh tối như bị phủ lớp xám; scene không khung và SU 2022 xuất bình thường. Nguyên nhân do người dùng xác định bằng thử nghiệm (khung bật/tắt, SU22/SU24).
+- Sửa: từ SU 2024 trở lên, khi xuất plugin không khóa tỉ lệ camera nữa mà để kích thước ảnh (đã mang tỉ lệ khung) quyết định bố cục. SU 2022 và 2023 giữ nguyên cách cũ; SU 2023 chưa được thử nên chưa biết có bị lỗi hay không. Camera và khung của scene trong model không bị đổi.
+- Kiểm tra tự động: `dev/test_frame_camera.rb` (SU 22/23 giữ khung, SU 24/25/26 không khóa tỉ lệ, kích thước ảnh giữ tỉ lệ khung, camera được khôi phục). Test thất bại khi bỏ sửa và đạt khi có sửa.
+- **Chưa xác minh trong SketchUp:** ảnh xuất ra có hết tối hay không, và bố cục có **giống hệt** ảnh xuất từ SU 2022 hay không (cần so một scene, nhất là camera Parallel và camera dọc/vuông). Cần người dùng xuất lại trên SU 2024 và so sánh.
 
 Plugin không hiện popup cập nhật khi khởi động: VGD Center báo bản mới. Cài bản mới qua Extension Manager rồi khởi động lại.
 

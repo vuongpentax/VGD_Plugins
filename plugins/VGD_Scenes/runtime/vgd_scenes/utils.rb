@@ -63,6 +63,12 @@ module VGD
       o
     end
 
+    # SketchUp 2024+ paints its grey frame matte over the whole image written with a fixed camera
+    # aspect ratio, so every framed view comes out dark. The image size already carries the frame ratio.
+    def self.export_camera_aspect(aspect, version = Sketchup.version)
+      version.to_i >= 24 ? 0.0 : aspect
+    end
+
     def self.export_dimensions(frame, scale)
       width = frame['width'] * scale; height = frame['height'] * scale
       unless width.finite? && height.finite? && width >= 0.5 && height >= 0.5 && width < 12000.5 && height < 12000.5

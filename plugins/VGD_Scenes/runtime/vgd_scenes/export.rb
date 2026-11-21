@@ -71,7 +71,7 @@ module VGD
           # Opening the already selected page may leave a live preview intact.
           # Every scene that saves a camera must export that saved composition.
           camera = Scenes.camera_copy(SceneStore.owned?(page) || page.use_camera? ? page.camera : @model.active_view.camera)
-          camera.aspect_ratio = frame['aspect']
+          camera.aspect_ratio = Scenes.export_camera_aspect(frame['aspect'])
           @model.active_view.camera = camera
           @model.active_view.refresh
           success = @model.active_view.write_image(filename: temporary, width: frame['width'], height: frame['height'],
