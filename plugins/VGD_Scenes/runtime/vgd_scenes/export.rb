@@ -74,8 +74,6 @@ module VGD
           camera.aspect_ratio = frame['aspect']
           @model.active_view.camera = camera
           @model.active_view.refresh
-          # Draw this scene before saving so its lighting and shadows are current, not the previous scene's.
-          @model.active_view.show_frame
           success = @model.active_view.write_image(filename: temporary, width: frame['width'], height: frame['height'],
             antialias: true, compression: 0.95, transparent: extension == 'png' && @opts['format'] == 'png' && @opts['transparent'])
           raise 'SketchUp không ghi được ảnh.' unless success && File.file?(temporary) && File.size(temporary) > 0
@@ -85,6 +83,7 @@ module VGD
             output = Scenes.available_path(@destination, format('%02d_%s', @index + 1, page.name), extension)
             FileUtils.mv(temporary, output)
             @files << { page: page.name, path: output, width: frame['width'], height: frame['height'] }
+            write_debug_variants(camera, frame, extension, output) if self.class.debug_variants
           end
         rescue StandardError => e
           @errors << { page: page.name, error: e.message }
@@ -93,6 +92,38 @@ module VGD
         schedule { select_next }
       rescue StandardError => e
         finish(false, e.message)
+      end
+
+      # Temporary diagnosis of dark exports. Off unless the user sets ExportJob.debug_variants = true
+      # in the Ruby Console. Each variant changes one setting, writes an extra image next to the
+      # normal one, then restores the model state.
+      class << self
+        attr_accessor :debug_variants
+      end
+
+      def write_debug_variants(camera, frame, extension, output)
+        view = @model.active_view; info = @model.shadow_info
+        saved = %w[DisplayShadows UseSunForAllShading].map { |key| [key, info[key]] }
+        base = File.join(File.dirname(output), File.basename(output, ".#{extension}"))
+        variants = {
+          'V1_khong_khung' => lambda { |copy| copy.aspect_ratio = 0.0 },
+          'V2_bat_bong' => lambda { |_copy| info['DisplayShadows'] = true },
+          'V3_sun_shading' => lambda { |_copy| info['UseSunForAllShading'] = true }
+        }
+        variants.each do |name, change|
+          begin
+            copy = Scenes.camera_copy(camera)
+            copy.aspect_ratio = frame['aspect']
+            change.call(copy)
+            view.camera = copy; view.refresh
+            view.write_image(filename: "#{base}_#{name}.#{extension}", width: frame['width'], height: frame['height'], antialias: true)
+          rescue StandardError => e
+            @errors << { page: @pages[@index].name, error: "#{name}: #{e.message}" }
+          ensure
+            saved.each { |key, value| info[key] = value if info[key] != value }
+            restored = Scenes.camera_copy(camera); restored.aspect_ratio = frame['aspect']; view.camera = restored
+          end
+        end
       end
 
       def complete

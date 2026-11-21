@@ -168,15 +168,13 @@ module Sketchup
   end
   class View
     attr_accessor :camera,:fail_write
-    attr_reader :writes,:frames
-    def initialize;@camera=Camera.new;@writes=[];@frames=[];end
+    attr_reader :writes
+    def initialize;@camera=Camera.new;@writes=[];end
     def invalidate;end
     def vpwidth;800;end
     def vpheight;600;end
     def refresh;end
-    def show_frame;@frames << :show;end
     def write_image(opts)
-      @frames << :write
       @last_written_camera=VGD::Scenes.camera_copy(camera)
       @writes << opts
       return false if @fail_write

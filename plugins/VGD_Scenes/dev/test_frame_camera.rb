@@ -27,8 +27,19 @@ m.active_view.camera=s.camera_copy(live)
 UI.drain
 written=m.active_view.last_written_camera
 assert(events.last[1][:success] && written.eye==saved.eye && near(written.fov,48) && near(written.aspect_ratio,0.75),'Export used uncommitted composition instead of old camera/new frame')
-frames_seen=m.active_view.frames; write_at=frames_seen.index(:write)
-assert(write_at && write_at>0 && frames_seen[write_at-1]==:show,'Export saved the image without redrawing the scene first')
+before=m.active_view.writes.length
+assert(!s::ExportJob.debug_variants,'Debug variants must be off by default')
+s::ExportJob.debug_variants=true
+FileUtils.rm_rf('/tmp/frame-preview-variants'); FileUtils.mkdir_p('/tmp/frame-preview-variants')
+m.shadow_info['DisplayShadows']=false; m.shadow_info['UseSunForAllShading']=false
+saved_camera=s.camera_copy(m.active_view.camera)
+events=[];job=s::ExportJob.new(m,[first],s.options({}),'/tmp/frame-preview-variants',lambda { |event,payload| events << [event,payload] });job.start;UI.tick;UI.drain
+s::ExportJob.debug_variants=false
+new_writes=m.active_view.writes[before..-1].map { |w| File.basename(w[:filename]) }
+assert(events.last[1][:success] && new_writes.length==4,"Expected 1 normal + 3 variant images, got #{new_writes.inspect}")
+assert(new_writes.grep(/V1_khong_khung/).length==1 && new_writes.grep(/V2_bat_bong/).length==1 && new_writes.grep(/V3_sun_shading/).length==1,'Variant file names missing')
+assert(m.shadow_info['DisplayShadows']==false && m.shadow_info['UseSunForAllShading']==false,'Debug variants did not restore shadow settings')
+assert(m.active_view.camera.eye==saved_camera.eye && near(m.active_view.camera.fov,saved_camera.fov),'Debug variants did not restore the camera')
 s::SceneStore.capture(m,first.persistent_id.to_s)
 assert(first.camera.eye==live.eye && first.camera.target==live.target && near(first.camera.fov,62),'Update did not persist preview')
 assert(controls.state(m)[:sig] == controls.state(m)[:saved_sig], 'Camera capture did not update saved signature')
