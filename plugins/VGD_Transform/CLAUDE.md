@@ -4,27 +4,29 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 
 ## Thông tin plugin
 
-- Tên extension: `VGD Transform` (tên có dấu cách, tiếng Anh không dấu để khớp kiểm tra quy ước). Namespace: `VGD::Transform`. Thư mục nạp: `vgd_transform/`.
+- Tên extension: `VGD Transform` (trước đây là VGD Position). Namespace: `VGD::Transform`. Thư mục nạp: `vgd_transform/`.
 - Loader: `runtime/vgd_transform.rb` (đăng ký extension, nạp `vgd_transform/loader`). Menu: Extensions → VGD → VGD Transform (Mở bảng biến đổi, Tải lại code). Toolbar: `VGD TRF`, lệnh `VGD_TRANSFORM`.
 - Phiên bản: hằng `VERSION` trong `runtime/vgd_transform.rb`. Đóng gói cần `RELEASE_NOTES_v<x.y.z>.md`.
-- SketchUp tối thiểu: 2022. Không lưu dữ liệu vào model (không có dictionary riêng); mọi thay đổi là vị trí, góc hoặc tỉ lệ của group/component.
+- SketchUp tối thiểu: 2022 (Ruby 2.7: không dùng cú pháp chỉ có từ Ruby 3, ví dụ `def f(x) = ...`). Không lưu dữ liệu vào model; mọi thay đổi là `transformation` của group/component.
+- Mục tiêu: giống hộp Transform Type-In của 3ds Max (Absolute / Offset, Use Center, hệ World / Local, spinner).
 
 ## Cấu trúc
 
 - `runtime/vgd_transform.rb`: khai báo extension. `runtime/vgd_transform/loader.rb`: menu, toolbar, Tải lại code, danh sách file `FILES` (dùng chung cho lúc mở SketchUp và lúc tải lại; thứ tự nạp có ý nghĩa vì file sau dùng hằng của file trước).
-- `core/units.rb`: đơn vị và ô nhập (số có đơn vị, số theo đơn vị của file, hiển thị). Không gọi SketchUp.
-- `core/translate.rb`: dời tuyệt đối và tương đối (tạo bước `translate`). Không gọi SketchUp.
-- `core/rotate_scale.rb`: xoay và scale theo trục thế giới, tâm xoay / scale. Không gọi SketchUp.
-- `core/steps.rb`: định dạng bước biến đổi và công thức áp dụng bước lên điểm (`Steps.apply_steps`) để kiểm tra sau khi áp dụng. Không gọi SketchUp.
-- `core/plan.rb`: ghép công cụ với chuỗi người dùng nhập (`Plan.build`). Không gọi SketchUp.
-- `core/move.rb`: phần gọi SketchUp (đọc vị trí món trong ngữ cảnh group đang mở, đơn vị của file, áp dụng từng bước, kiểm tra sau khi áp dụng, một thao tác hoàn tác).
-- `ui/panel.rb`: cửa sổ `UI::HtmlDialog` nối giao diện với các file trên. `html/`: giao diện (`index.html`, `app.js`, `style.css`), `vgd-theme/` là bản copy của `shared/vgd-theme` (đồng bộ bằng `tools/sync_vgd_theme.py`).
-- `dev/`: test (`test_units.rb`, `test_transform.rb`, `test_move.rb`, `test_reload.rb`, `test_ui.cjs`), `run_tests.rb`, `package.py`, `stubs/` (giả lập để chạy test ngoài SketchUp).
+- `core/units.rb`: đơn vị (mm, cm, m, in, ft, yd) và ô nhập: số có đơn vị, số theo đơn vị của file, ô scale (hệ số hoặc kích thước đích).
+- `core/items.rb`: món đang chọn (kiểm tra khóa, tâm biến đổi, hệ trục, giá trị chung), lỗi `NothingToDo`.
+- `core/steps.rb`: định dạng bước biến đổi và công thức áp dụng bước lên điểm (`Steps.apply_steps`).
+- `core/translate.rb`: dời tuyệt đối (theo tâm) và tương đối (World / Local).
+- `core/rotate_scale.rb`: xoay, scale tương đối, scale tuyệt đối (local).
+- `core/plan.rb`: ghép công cụ với chuỗi người dùng nhập (`Plan.build`).
+- `core/model_ops.rb`: phần gọi SketchUp duy nhất (đọc món từ ma trận, áp dụng, kiểm tra, kéo trực tiếp). Các file core khác không gọi SketchUp.
+- `ui/panel.rb`: cửa sổ `UI::HtmlDialog`, observer lựa chọn và model, kéo trực tiếp. `html/`: giao diện (`index.html`, `app.js`, `style.css`), `vgd-theme/` là bản copy của `shared/vgd-theme` (đồng bộ bằng `tools/sync_vgd_theme.py`; dùng `vgd-theme.css` và `vgd-controls.css`).
+- `dev/`: test (`test_units.rb`, `test_transform.rb`, `test_model_ops.rb`, `test_reload.rb`, `test_ui.cjs`), `run_tests.rb`, `package.py`, `stubs/`.
 
 ## Kiểm thử
 
 Chạy từ `plugins/VGD_Transform`:
-- `ruby dev/run_tests.rb`: cú pháp mọi file Ruby, rồi test đơn vị, test logic (dời, xoay, scale, ghép công cụ), test biến đổi với SketchUp giả lập (ma trận 4×4 độc lập với công thức trong code), test tải lại / menu.
+- `ruby dev/run_tests.rb`: cú pháp mọi file Ruby, rồi test đơn vị, test logic (dời, xoay, scale, tâm, hệ trục, ghép công cụ), test phần SketchUp với SketchUp giả lập (ma trận 4×4 độc lập với công thức trong code), test tải lại / menu.
 - `node dev/test_ui.cjs`: Playwright, giao diện (cần Playwright; `VGD_PLAYWRIGHT_MODULE` nếu không cài local).
 - Phần chưa kiểm trong SketchUp thật: xem `VALIDATION.md`.
 
@@ -39,16 +41,18 @@ Chạy từ `plugins/VGD_Transform`:
 
 ## Quy tắc riêng
 
-- **Mọi biến đổi là đổi hình học model.** Chỉ đổi `transformation` của instance được chọn (group / component), không đổi định nghĩa, không đổi món khác. Đây là chỗ duy nhất của plugin đổi model.
-- **Biến đổi = danh sách bước.** Mỗi món nhận các bước `translate` (dời), `rotate` (xoay quanh trục thế giới đi qua tâm), `scale` (nhân hệ số theo trục thế giới quanh tâm). `Move.apply` áp dụng từng bước rồi kiểm tra điểm gốc bằng `Steps.apply_steps`.
-- **Áp dụng ngay, không xem trước.** Nhấn Enter trong ô hoặc bấm Áp dụng là biến đổi luôn. Mọi biến đổi là một bước hoàn tác (Ctrl+Z). Không có danh sách món hay bảng kết quả trong cửa sổ, để plugin gọn.
-- **Một thao tác hoàn tác cho cả đợt** (`start_operation` / `commit_operation`). Lỗi giữa chừng thì `abort_operation`, không để model dở.
-- **Kiểm tra sau khi biến đổi.** Điểm gốc sau khi biến đổi phải khớp kế hoạch trong 0,01 mm; không khớp thì hủy cả đợt.
-- **Món khóa và món trong group cha bị khóa:** nếu có trong lựa chọn thì cả đợt không chạy, báo tên món. Không bỏ qua âm thầm món nào, để nhóm không bị lệch.
-- **Vị trí tính trong hệ thế giới** (mm). Biến đổi đổi sang hệ của group cha bằng `ctx.inverse * W * ctx` (`Move.context`). Không dùng `Model#edit_transform` (xem CLAUDE.md của BIM về lỗi SketchUp 2024).
-- **Đơn vị:** số không có đơn vị theo đơn vị của file (`Move.length_unit`, đọc từ `model.options['UnitsOptions']['LengthUnit']`: 0 in, 1 ft, 2 mm, 3 cm, 4 m). Gõ thêm đơn vị (mm, cm, m, in, ft) thì số đó dùng đơn vị đã gõ. Mọi tính toán nội bộ dùng mm. Giới hạn ±1 km.
-- **Nhiều món:** cả nhóm dời cùng một độ lệch, tính từ điểm gốc của món đầu tiên trong lựa chọn. Xoay và scale: tâm chọn được (`item`, `selection`, `world`).
-- **Xoay:** các góc nhập được áp dụng theo thứ tự X, Y, Z trên trục thế giới. Chỉ có xoay tương đối (không có góc tuyệt đối, vì SketchUp không cho đọc góc "hiện tại" của group một cách rõ ràng).
-- **Scale:** số không đơn vị là hệ số tương đối, phải dương (0,001 đến 1000). Số có đơn vị (1m, 1000mm) ở ô Không đều là kích thước đích của món theo trục đó: hệ số của từng món = đích / kích thước hiện tại theo trục (đo bằng hộp bao của definition, đổi sang thế giới). Scale đều chỉ nhận hệ số. Hệ số 1 ở mọi trục bị từ chối. Không có scale tuyệt đối vì cùng lý do với xoay. Hệ số âm (lật món) không hỗ trợ.
-- **Giao diện:** ô số có nút ▲▼ (giữ để lặp) và kéo lên xuống trên ô. Ô số không tự parse đơn vị; việc đó do Ruby (`Units`) làm. Không có danh sách món và không có bảng kết quả; Ruby chỉ gửi đơn vị của file (sự kiện `unit`).
+- **Mọi biến đổi là đổi hình học model.** Chỉ đổi `transformation` của instance được chọn (group / component), không đổi định nghĩa, không đổi món khác. Cạnh, mặt rời trong lựa chọn không biến đổi; số lượng được báo (`ModelOps.skipped_count`), không bỏ qua âm thầm.
+- **Biến đổi = danh sách bước.** Bước `translate`, `rotate` (trục bất kỳ qua tâm), `scale` (hệ số theo ba trục vuông góc qua tâm). `ModelOps.apply` gộp các bước của một món thành một ma trận và đặt `transformation` đúng một lần.
+- **Kiểm tra sau khi biến đổi, hai cách:** ma trận thế giới phải khớp ma trận đã tính (bắt lỗi xoay / scale), và điểm gốc phải khớp công thức thuần `Steps.apply_steps` (0,01 mm). Sai thì hủy cả đợt.
+- **Một thao tác hoàn tác cho cả đợt.** Kéo trực tiếp: lần cập nhật đầu là thao tác mới, các lần sau `start_operation(..., transparent = true)` để gộp; mỗi lần đặt lại biến đổi lúc bắt đầu kéo rồi tính lại từ đó. `NothingToDo` khi kéo nghĩa là đưa món về trạng thái đầu.
+- **Áp dụng ngay.** Enter trong ô hoặc nút Áp dụng. Không xem trước, không danh sách món, không bảng kết quả.
+- **Ô Tuyệt đối hiện giá trị hiện tại** (Ruby gửi sự kiện `state` khi lựa chọn đổi và khi model đổi, kể cả Ctrl+Z). Giao diện chỉ gửi ô người dùng đã sửa (cờ `dirty`); ô không sửa gửi trống = giữ, để số làm tròn khi hiển thị không dời món. Chọn hơn 500 món thì không đọc giá trị (tránh chậm).
+- **Ô Tương đối về 0 sau khi áp dụng** (kể cả sau khi kéo trực tiếp), như Offset của 3ds Max.
+- **Tâm biến đổi (Use Center):** `item` điểm gốc từng món, `selection` tâm hộp bao hình của cả lựa chọn, `world` gốc thế giới. Dời tuyệt đối: `item` đưa điểm gốc từng món tới tọa độ; `selection` và `world` đưa tâm hộp bao tới tọa độ. Không dùng thứ tự lựa chọn của SketchUp (không đảm bảo là thứ tự bấm chọn).
+- **Hệ trục:** `world` hoặc `local` (trục riêng của từng món, đọc từ ma trận thế giới, chuẩn hóa). Dùng cho Dời tương đối, Xoay, Scale tương đối. Dời tuyệt đối luôn theo thế giới; Scale tuyệt đối luôn theo trục riêng.
+- **Xoay:** góc X, Y, Z áp dụng theo thứ tự; hệ local lấy trục theo hướng món lúc bắt đầu. Không có xoay tuyệt đối (góc Euler của group không duy nhất).
+- **Scale:** tương đối là hệ số (0,001 đến 1000) hoặc kích thước đích có đơn vị (chỉ ở Không đều; world đo hộp bao thế giới, local đo kích thước theo trục riêng). Tuyệt đối: tỉ lệ so với definition = độ dài trục của ma trận thế giới. Không hỗ trợ hệ số âm.
+- **Đơn vị:** `ModelOps.length_unit` đọc `model.options['UnitsOptions']['LengthUnit']` (0 in, 1 ft, 2 mm, 3 cm, 4 m, 5 yd). Chỉ số lạ: báo trên giao diện và dùng mm. Gõ thêm đơn vị sau số thì số đó dùng đơn vị đã gõ. Giới hạn ±1 km.
+- **Ô số (spinner):** ▲▼ bấm một bước, giữ để lặp, kéo lên xuống trên nút để đổi nhanh (Ctrl ×10, Alt ×0,1), chuột phải về mặc định. Kéo trên ô chữ không đổi số. Bước ô độ dài khoảng 1 mm theo đơn vị file.
+- **Tải lại code** bị chặn khi đang kéo trực tiếp (`busy_reason`).
 - Giao diện chỉ tiếng Việt ở bản đầu. Chuỗi mới phải có bản dịch nếu sau này thêm tiếng Anh.

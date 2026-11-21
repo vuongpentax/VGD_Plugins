@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VGD Transform</title>
-<link rel="stylesheet" href="vgd-theme/vgd-theme.css"><link rel="stylesheet" href="style.css"></head>
+<link rel="stylesheet" href="vgd-theme/vgd-theme.css"><link rel="stylesheet" href="vgd-theme/vgd-controls.css"><link rel="stylesheet" href="style.css"></head>
 <body class="vgd-ui">
 <header><h1>VGD Transform</h1><button class="vgd-theme-btn" id="theme" type="button" aria-pressed="false"></button></header>
-<p id="unit" class="muted">Đơn vị của file: …</p>
+<p id="status" class="muted">Đang đọc lựa chọn…</p>
 
 <nav class="tabs" role="tablist" aria-label="Công cụ biến đổi">
   <button type="button" role="tab" class="tab" data-tab="move" aria-selected="true" title="Dời (Move)">
@@ -20,60 +20,83 @@
   </button>
 </nav>
 
-<div class="pivot-row" id="pivot-row" hidden>
-  <label class="field">Tâm xoay / scale
-    <select id="pivot">
+<div class="settings">
+  <label class="field">Tâm
+    <select id="pivot" title="Tâm biến đổi (Use Center của 3ds Max)">
       <option value="item">Điểm gốc từng món</option>
-      <option value="selection">Tâm của cả lựa chọn</option>
-      <option value="world">Gốc tọa độ thế giới (0, 0, 0)</option>
+      <option value="selection">Tâm cả lựa chọn</option>
+      <option value="world">Gốc thế giới (0, 0, 0)</option>
     </select>
   </label>
+  <label class="field">Hệ trục
+    <select id="coord" title="Trục dùng cho Tương đối, Xoay và Scale tương đối">
+      <option value="world">Thế giới (World)</option>
+      <option value="local">Riêng của món (Local)</option>
+    </select>
+  </label>
+</div>
+<div class="vgd-switch-item live-row">
+  <button type="button" class="vgd-switch" id="live" role="switch" aria-checked="true" aria-label="Xem trực tiếp khi kéo"></button>
+  <span class="vgd-switch-label" id="live-label">Xem trực tiếp khi kéo ▲▼</span>
 </div>
 
 <section class="tool" data-tool="move">
   <div class="pair">
-    <div class="box" data-panel="move_abs">
+    <div class="box" data-panel="move_abs" data-kind="absolute">
       <h3>Tuyệt đối (thế giới)</h3>
-      <label class="row">X <input id="move_abs-x" type="text" inputmode="decimal" data-spin="1" placeholder="giữ"></label>
-      <label class="row">Y <input id="move_abs-y" type="text" inputmode="decimal" data-spin="1" placeholder="giữ"></label>
-      <label class="row">Z <input id="move_abs-z" type="text" inputmode="decimal" data-spin="1" placeholder="giữ"></label>
+      <label class="row">X <input id="move_abs-x" type="text" inputmode="decimal" data-spin="len" data-default="0"></label>
+      <label class="row">Y <input id="move_abs-y" type="text" inputmode="decimal" data-spin="len" data-default="0"></label>
+      <label class="row">Z <input id="move_abs-z" type="text" inputmode="decimal" data-spin="len" data-default="0"></label>
       <div class="actions"><button type="button" class="primary" data-action="apply" data-panel="move_abs">Áp dụng</button></div>
     </div>
-    <div class="box" data-panel="move_off">
-      <h3>Dời tương đối (thế giới)</h3>
-      <label class="row">ΔX <input id="move_off-x" type="text" inputmode="decimal" data-spin="1" placeholder="0"></label>
-      <label class="row">ΔY <input id="move_off-y" type="text" inputmode="decimal" data-spin="1" placeholder="0"></label>
-      <label class="row">ΔZ <input id="move_off-z" type="text" inputmode="decimal" data-spin="1" placeholder="0"></label>
+    <div class="box" data-panel="move_off" data-kind="offset">
+      <h3 class="coord-title" data-title="Tương đối">Tương đối (thế giới)</h3>
+      <label class="row">ΔX <input id="move_off-x" type="text" inputmode="decimal" data-spin="len" data-default="" placeholder="0"></label>
+      <label class="row">ΔY <input id="move_off-y" type="text" inputmode="decimal" data-spin="len" data-default="" placeholder="0"></label>
+      <label class="row">ΔZ <input id="move_off-z" type="text" inputmode="decimal" data-spin="len" data-default="" placeholder="0"></label>
       <div class="actions"><button type="button" class="primary" data-action="apply" data-panel="move_off">Áp dụng</button></div>
     </div>
   </div>
 </section>
 
 <section class="tool" data-tool="rotate" hidden>
-  <div class="box" data-panel="rotate">
-    <label class="row">Quanh X (°) <input id="rotate-x" type="text" inputmode="decimal" data-spin="1" placeholder="0"></label>
-    <label class="row">Quanh Y (°) <input id="rotate-y" type="text" inputmode="decimal" data-spin="1" placeholder="0"></label>
-    <label class="row">Quanh Z (°) <input id="rotate-z" type="text" inputmode="decimal" data-spin="1" placeholder="0"></label>
+  <div class="box" data-panel="rotate" data-kind="offset">
+    <h3 class="coord-title" data-title="Xoay tương đối">Xoay tương đối (thế giới)</h3>
+    <label class="row">Quanh X (°) <input id="rotate-x" type="text" inputmode="decimal" data-spin="1" data-default="" placeholder="0"></label>
+    <label class="row">Quanh Y (°) <input id="rotate-y" type="text" inputmode="decimal" data-spin="1" data-default="" placeholder="0"></label>
+    <label class="row">Quanh Z (°) <input id="rotate-z" type="text" inputmode="decimal" data-spin="1" data-default="" placeholder="0"></label>
+    <p class="hint">Áp dụng theo thứ tự X, rồi Y, rồi Z.</p>
     <div class="actions"><button type="button" class="primary" data-action="apply" data-panel="rotate">Áp dụng</button></div>
   </div>
 </section>
 
 <section class="tool" data-tool="scale" hidden>
-  <div class="segmented" role="radiogroup" aria-label="Kiểu scale">
-    <label><input type="radio" name="scale-mode" value="uniform" checked> Đều</label>
-    <label><input type="radio" name="scale-mode" value="nonuniform"> Không đều</label>
-  </div>
-  <div class="box" data-panel="scale">
-    <div id="scale-uniform">
-      <label class="row">Hệ số <input id="scale-u" type="text" inputmode="decimal" data-spin="0.1" placeholder="1"></label>
+  <div class="pair">
+    <div class="box" data-panel="scale_abs" data-kind="absolute">
+      <h3>Tuyệt đối (riêng)</h3>
+      <label class="row">X <input id="scale_abs-x" type="text" inputmode="decimal" data-spin="0.01" data-default="1"></label>
+      <label class="row">Y <input id="scale_abs-y" type="text" inputmode="decimal" data-spin="0.01" data-default="1"></label>
+      <label class="row">Z <input id="scale_abs-z" type="text" inputmode="decimal" data-spin="0.01" data-default="1"></label>
+      <p class="hint">Tỉ lệ so với definition (1 = gốc).</p>
+      <div class="actions"><button type="button" class="primary" data-action="apply" data-panel="scale_abs">Áp dụng</button></div>
     </div>
-    <div id="scale-nonuniform" hidden>
-      <label class="row">X <input id="scale-x" type="text" inputmode="decimal" data-spin="0.1" placeholder="giữ"></label>
-      <label class="row">Y <input id="scale-y" type="text" inputmode="decimal" data-spin="0.1" placeholder="giữ"></label>
-      <label class="row">Z <input id="scale-z" type="text" inputmode="decimal" data-spin="0.1" placeholder="giữ"></label>
+    <div class="box" data-panel="scale" data-kind="offset">
+      <h3 class="coord-title" data-title="Tương đối">Tương đối (thế giới)</h3>
+      <div class="segmented" role="radiogroup" aria-label="Kiểu scale">
+        <label><input type="radio" name="scale-mode" value="uniform" checked> Đều</label>
+        <label><input type="radio" name="scale-mode" value="nonuniform"> Không đều</label>
+      </div>
+      <div id="scale-uniform">
+        <label class="row">Hệ số <input id="scale-u" type="text" inputmode="decimal" data-spin="0.01" data-default="" placeholder="1"></label>
+      </div>
+      <div id="scale-nonuniform" hidden>
+        <label class="row">X <input id="scale-x" type="text" inputmode="decimal" data-spin="0.01" data-default="" placeholder="giữ"></label>
+        <label class="row">Y <input id="scale-y" type="text" inputmode="decimal" data-spin="0.01" data-default="" placeholder="giữ"></label>
+        <label class="row">Z <input id="scale-z" type="text" inputmode="decimal" data-spin="0.01" data-default="" placeholder="giữ"></label>
+      </div>
+      <p class="hint">Số là hệ số. Số có đơn vị (1000mm, 1m) ở Không đều là kích thước đích.</p>
+      <div class="actions"><button type="button" class="primary" data-action="apply" data-panel="scale">Áp dụng</button></div>
     </div>
-    <p class="hint">Số không đơn vị là hệ số (1 = giữ). Số có đơn vị như 1000mm hoặc 1m là kích thước đích của món theo trục đó (chỉ với Không đều).</p>
-    <div class="actions"><button type="button" class="primary" data-action="apply" data-panel="scale">Áp dụng</button></div>
   </div>
 </section>
 

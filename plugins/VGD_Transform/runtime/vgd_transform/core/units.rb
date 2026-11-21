@@ -4,21 +4,21 @@ module VGD
     # Mọi tính toán nội bộ dùng mm. Số không có đơn vị được hiểu theo đơn vị của file SketchUp đang mở.
     # Gõ thêm đơn vị sau số (1m, 250 mm, 2in) thì số đó dùng đơn vị đã gõ, như ô nhập VCB của SketchUp.
     module Units
-      MM_PER_UNIT = {'mm' => 1.0, 'cm' => 10.0, 'm' => 1000.0, 'in' => 25.4, 'ft' => 304.8}.freeze
+      MM_PER_UNIT = {'mm' => 1.0, 'cm' => 10.0, 'm' => 1000.0, 'in' => 25.4, 'ft' => 304.8, 'yd' => 914.4}.freeze
       MM_PER_INCH = MM_PER_UNIT.fetch('in')
-      # Thứ tự theo chỉ số LengthUnit của SketchUp (model.options['UnitsOptions']['LengthUnit']).
-      MODEL_UNITS = %w[in ft mm cm m].freeze
+      # Thứ tự theo chỉ số LengthUnit của SketchUp (model.options['UnitsOptions']['LengthUnit']); yd (5) có từ SketchUp 2020.
+      MODEL_UNITS = %w[in ft mm cm m yd].freeze
       DEFAULT_UNIT = 'mm'
       LIMIT_MM = 1_000_000.0 # tọa độ / độ dời / kích thước ngoài ±1 km (mm) là nhập nhầm
       NUMBER = /\A[+-]?(\d+\.?\d*|\.\d+)\z/.freeze
-      LENGTH = /\A([+-]?(?:\d+\.?\d*|\.\d+))\s*(mm|cm|m|in|ft)?\z/i.freeze
+      LENGTH = /\A([+-]?(?:\d+\.?\d*|\.\d+))\s*(mm|cm|m|in|ft|yd)?\z/i.freeze
 
       module_function
 
-      # Tên đơn vị của file theo chỉ số của SketchUp. Chỉ số lạ thì dùng mm.
+      # Tên đơn vị của file theo chỉ số của SketchUp. Chỉ số lạ thì trả nil (người gọi báo rõ và dùng mm).
       def unit_of_model(index)
-        return DEFAULT_UNIT unless index.is_a?(Integer)
-        MODEL_UNITS.fetch(index, DEFAULT_UNIT)
+        return nil unless index.is_a?(Integer)
+        MODEL_UNITS[index]
       end
 
       # Ô độ dài → mm. Trống hoặc nil: nil (nghĩa là không nhập). Sai định dạng hoặc vượt giới hạn: báo lỗi.

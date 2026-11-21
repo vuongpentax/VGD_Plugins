@@ -1,85 +1,103 @@
-# Test logic thuần của VGD Transform: dời (tuyệt đối, tương đối), xoay và scale theo trục thế giới, tâm xoay / scale,
-# ghép công cụ với ô nhập (core/plan.rb). Không cần SketchUp.
+# Test logic thuần của VGD Transform: món (tâm, hệ trục), dời tuyệt đối / tương đối, xoay, scale tương đối / tuyệt đối,
+# công thức bước biến đổi, ghép công cụ với ô nhập. Không cần SketchUp.
 # Chạy: ruby dev/test_transform.rb (từ plugins/VGD_Transform)
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
-def error_of; yield; nil; rescue StandardError => e; e.message; end
+def error_of; yield; nil; rescue StandardError => e; e; end
 def near(a, b, tol = 1e-6); a.zip(b).all? { |x, y| (x - y).abs < tol }; end
 ROOT = File.expand_path('../runtime/vgd_transform', __dir__)
-%w[core/units core/translate core/steps core/rotate_scale core/plan].each { |f| require File.join(ROOT, f) }
+%w[core/units core/items core/steps core/translate core/rotate_scale core/plan].each { |f| require File.join(ROOT, f) }
 P = VGD::Transform
+IT = P::Items
 TR = P::Translate
 RS = P::RotateScale
 ST = P::Steps
 PL = P::Plan
+W = IT::WORLD_AXES
+Z90 = [[0.0, 1.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 1.0]] # trục riêng của món đã xoay 90° quanh Z
 
-one = [{index: 0, name: 'Tủ A', origin: [1000.0, 2000.0, 300.0], extent: [1000.0, 1000.0, 1000.0], locked: false}]
-many = [
-  {index: 0, name: 'Tủ A', origin: [0.0, 0.0, 0.0], extent: [1000.0, 1000.0, 1000.0], locked: false},
-  {index: 1, name: 'Tủ B', origin: [1000.0, 0.0, 0.0], extent: [500.0, 1000.0, 1000.0], locked: false},
-]
+# Món mẫu: điểm gốc, kích thước theo trục riêng (mm), trục riêng, tỉ lệ. Hộp bao thế giới tính từ 8 góc.
+def make(index, name, origin, size: [1000.0, 1000.0, 1000.0], axes: W, scale: [1.0, 1.0, 1.0], locked: false)
+  corners = [0, 1].product([0, 1], [0, 1]).map { |c| (0..2).map { |k| origin[k] + (0..2).sum { |i| c[i] * size[i] * axes[i][k] } } }
+  {index: index, name: name, origin: origin, size: size, axes: axes, scale: scale, locked: locked,
+   bounds: {min: (0..2).map { |k| corners.map { |p| p[k] }.min }, max: (0..2).map { |k| corners.map { |p| p[k] }.max }}}
+end
+def deltas(plan); plan[:moves].map { |m| m[:steps][0][:delta] }; end
 
-# Tuyệt đối: điểm gốc món đầu tiên tới đúng tọa độ; trục nil giữ nguyên
-ok('tuyệt đối một món: chỉ X có số thì dời X tới 1500, Y và Z giữ nguyên', TR.absolute(one, [1500.0, nil, nil])[:moves] == [{index: 0, steps: [{kind: 'translate', delta: [500.0, 0.0, 0.0]}]}])
-ok('tuyệt đối: đã đúng vị trí thì báo không cần dời', error_of { TR.absolute(one, [1000.0, 2000.0, 300.0]) }.to_s.include?('không cần dời'))
-ok('tuyệt đối nhiều món: độ lệch tính từ món đầu, mọi món cùng độ lệch', TR.absolute(many, [600.0, nil, nil])[:moves].map { |m| m[:steps][0][:delta] } == [[600.0, 0.0, 0.0], [600.0, 0.0, 0.0]])
+one = [make(0, 'Tủ A', [1000.0, 2000.0, 300.0])]
+pair = [make(0, 'A', [0.0, 0.0, 0.0]), make(1, 'B', [2000.0, 0.0, 0.0])] # hộp bao chung 0..3000 trên X, tâm X = 1500
 
-# Tương đối: mỗi món dời cùng độ dời; ô trống là 0
-ok('tương đối: cùng độ dời (100, 0, -50) cho mọi món', TR.offset(many, [100.0, nil, -50.0])[:moves].map { |m| m[:steps][0][:delta] } == [[100.0, 0.0, -50.0], [100.0, 0.0, -50.0]])
-ok('tương đối: độ dời bằng 0 thì báo không cần dời', error_of { TR.offset(many, [0.0, 0.0, 0.0]) }.to_s.include?('không cần dời'))
+# ----- Items -----
+ok('tâm cả lựa chọn = tâm hộp bao hình (không phải tâm các điểm gốc)', near(IT.selection_center(pair), [1500.0, 500.0, 500.0]))
+ok('tâm một món = tâm hộp bao của món', near(IT.selection_center(one), [1500.0, 2500.0, 800.0]))
+ok('tâm theo chế độ: item = điểm gốc, world = (0, 0, 0)', IT.pivot_for(one, 'item', one[0]) == one[0][:origin] && IT.pivot_for(one, 'world', one[0]) == [0.0, 0.0, 0.0])
+ok('tâm / hệ trục không hợp lệ bị từ chối', error_of { IT.pivot_for(one, 'abc', one[0]) }.message.include?('Tâm') && error_of { IT.frame(one[0], 'abc') }.message.include?('Hệ trục'))
+ok('giá trị chung: trục giống nhau giữ số, khác nhau là nil', IT.common(pair, 0.001) { |i| i[:origin] } == [nil, 0.0, 0.0])
+ok('chặn món khóa, món không đo được, lựa chọn rỗng', error_of { IT.check([make(0, 'Tủ khóa', [0.0, 0.0, 0.0], locked: true)]) }.message.include?('Tủ khóa') &&
+   error_of { IT.check([{index: 0, name: 'Rỗng', origin: nil, locked: false}]) }.message.include?('Không đo được') && error_of { IT.check([]) }.message.include?('Chưa chọn'))
 
-# Chặn: món khóa, không đo được vị trí, chưa chọn món
-locked = [{index: 0, name: 'Tủ A', origin: [0.0, 0.0, 0.0], extent: [1.0, 1.0, 1.0], locked: false}, {index: 1, name: 'Tủ khóa', origin: [0.0, 0.0, 0.0], extent: [1.0, 1.0, 1.0], locked: true}]
-ok('có món khóa trong lựa chọn: không dời gì, báo tên món khóa', (err = error_of { TR.absolute(locked, [10.0, nil, nil]) }).to_s.include?('Tủ khóa') && err.include?('khóa'))
-ok('món không đo được vị trí: báo lỗi', error_of { TR.offset([{index: 0, name: 'Rỗng', origin: nil, locked: false}], [10.0, nil, nil]) }.to_s.include?('Không đo được'))
-ok('chưa chọn món nào: báo lỗi', error_of { TR.absolute([], [1.0, nil, nil]) }.to_s.include?('Chưa chọn'))
-ok('chưa nhập gì: báo lỗi', error_of { TR.offset(many, [nil, nil, nil]) }.to_s.include?('Hãy nhập'))
+# ----- Dời tuyệt đối (theo tâm, như 3ds Max) -----
+ok('tuyệt đối một món, tâm điểm gốc: chỉ X = 1500, Y và Z giữ', deltas(TR.absolute(one, [1500.0, nil, nil], 'item')) == [[500.0, 0.0, 0.0]])
+ok('tuyệt đối nhiều món, tâm điểm gốc: mỗi món tới X = 500 (thẳng hàng)', deltas(TR.absolute(pair, [500.0, nil, nil], 'item')) == [[500.0, 0.0, 0.0], [-1500.0, 0.0, 0.0]])
+ok('tuyệt đối, tâm cả lựa chọn: tâm hộp bao (1500) tới X = 0, cả nhóm cùng độ lệch', deltas(TR.absolute(pair, [0.0, nil, nil], 'selection')) == [[-1500.0, 0.0, 0.0], [-1500.0, 0.0, 0.0]])
+ok('tuyệt đối, gốc thế giới: dùng tâm cả lựa chọn như selection', deltas(TR.absolute(pair, [0.0, nil, nil], 'world')) == deltas(TR.absolute(pair, [0.0, nil, nil], 'selection')))
+ok('tuyệt đối đã đúng chỗ: lỗi "không có gì để làm" (NothingToDo)', error_of { TR.absolute(one, [1000.0, 2000.0, 300.0], 'item') }.is_a?(P::NothingToDo))
+ok('tuyệt đối chưa nhập gì: báo hãy nhập', error_of { TR.absolute(one, [nil, nil, nil], 'item') }.message.include?('Hãy nhập'))
 
-# Xoay: quanh trục thế giới, quanh tâm chọn được
-rot_world = RS.rotate(one, [nil, nil, 90.0], 'world')
-ok('xoay 90° quanh Z, tâm gốc thế giới: điểm (1000, 0, 0) → (0, 1000, 0)', near(ST.apply_steps(rot_world[:moves][0][:steps], [1000.0, 0.0, 0.0]), [0.0, 1000.0, 0.0]))
-ok('xoay quanh điểm gốc của món: điểm gốc món đứng yên', near(ST.apply_steps(RS.rotate(one, [nil, nil, 90.0], 'item')[:moves][0][:steps], one[0][:origin]), one[0][:origin]))
-rot_sel = RS.rotate(many, [nil, nil, 180.0], 'selection')
-ok('xoay 180° quanh Z, tâm cả lựa chọn (500, 0, 0): hai món đổi chỗ', near(ST.apply_steps(rot_sel[:moves][0][:steps], many[0][:origin]), [1000.0, 0.0, 0.0]) && near(ST.apply_steps(rot_sel[:moves][1][:steps], many[1][:origin]), [0.0, 0.0, 0.0]))
-ok('xoay nhiều trục: áp dụng theo thứ tự X rồi Y rồi Z (3 bước)', RS.rotate(one, [90.0, 90.0, 90.0], 'world')[:moves][0][:steps].map { |s| s[:axis].index(1.0) } == [0, 1, 2])
-ok('xoay: góc bằng 0 hoặc trống ở mọi trục: báo lỗi', error_of { RS.rotate(one, [nil, 0.0, nil], 'world') }.to_s.include?('ít nhất một góc'))
-ok('xoay: góc vượt ±3600° bị từ chối', error_of { RS.rotate(one, [4000.0, nil, nil], 'world') }.to_s.include?('vượt giới hạn'))
-ok('tâm xoay không hợp lệ bị từ chối', error_of { RS.rotate(one, [nil, nil, 90.0], 'abc') }.to_s.include?('Tâm xoay'))
+# ----- Dời tương đối (World / Local) -----
+ok('tương đối thế giới: cùng độ dời (100, 0, -50)', deltas(TR.offset(pair, [100.0, nil, -50.0], 'world')) == [[100.0, 0.0, -50.0]] * 2)
+turned = [make(0, 'Tủ xoay', [0.0, 0.0, 0.0], axes: Z90)]
+ok('tương đối local: món xoay 90° quanh Z, ΔX riêng 100 = dời Y thế giới 100', near(deltas(TR.offset(turned, [100.0, nil, nil], 'local'))[0], [0.0, 100.0, 0.0]))
+ok('tương đối bằng 0: NothingToDo', error_of { TR.offset(one, [0.0, 0.0, 0.0], 'world') }.is_a?(P::NothingToDo))
 
-# Scale: đều và không đều, quanh tâm chọn được
-sc_uniform = RS.scale(one, [2.0, 2.0, 2.0], 'world')
-ok('scale đều ×2 quanh gốc thế giới: (1000, 2000, 300) → (2000, 4000, 600)', near(ST.apply_steps(sc_uniform[:moves][0][:steps], one[0][:origin]), [2000.0, 4000.0, 600.0]))
-ok('scale quanh điểm gốc của món: điểm gốc đứng yên', near(ST.apply_steps(RS.scale(one, [2.0, 2.0, 2.0], 'item')[:moves][0][:steps], one[0][:origin]), one[0][:origin]))
-ok('scale không đều [2, 1, 0.5] quanh gốc: (1000, 1000, 1000) → (2000, 1000, 500)', near(ST.apply_steps(RS.scale(one, [2.0, 1.0, 0.5], 'world')[:moves][0][:steps], [1000.0, 1000.0, 1000.0]), [2000.0, 1000.0, 500.0]))
-ok('scale ×2 quanh tâm cả lựa chọn (500, 0, 0): món (1000, 0, 0) → (1500, 0, 0)', near(ST.apply_steps(RS.scale(many, [2.0, 2.0, 2.0], 'selection')[:moves][1][:steps], many[1][:origin]), [1500.0, 0.0, 0.0]))
-ok('scale: hệ số 0 hoặc âm bị từ chối', error_of { RS.scale(one, [0.0, 1.0, 1.0], 'world') }.to_s.include?('0,001') && error_of { RS.scale(one, [-2.0, 1.0, 1.0], 'world') }.to_s.include?('0,001'))
-ok('scale: hệ số 1 ở mọi trục bị báo không đổi', error_of { RS.scale(one, [1.0, 1.0, 1.0], 'world') }.to_s.include?('không đổi'))
-ok('scale: hệ số quá lớn bị từ chối', error_of { RS.scale(one, [1001.0, 1.0, 1.0], 'world') }.to_s.include?('0,001'))
+# ----- Xoay -----
+rot = RS.rotate(one, [nil, nil, 90.0], 'world', 'world')
+ok('xoay 90° quanh Z, tâm gốc thế giới: (1000, 0, 0) → (0, 1000, 0)', near(ST.apply_steps(rot[:moves][0][:steps], [1000.0, 0.0, 0.0]), [0.0, 1000.0, 0.0]))
+ok('xoay quanh điểm gốc của món: điểm gốc đứng yên', near(ST.apply_steps(RS.rotate(one, [nil, nil, 90.0], 'item', 'world')[:moves][0][:steps], one[0][:origin]), one[0][:origin]))
+sel = RS.rotate(pair, [nil, nil, 180.0], 'selection', 'world')
+ok('xoay 180° quanh tâm hộp bao (1500, 500): A (0,0) → (3000, 1000)', near(ST.apply_steps(sel[:moves][0][:steps], [0.0, 0.0, 0.0]), [3000.0, 1000.0, 0.0]))
+ok('xoay local: "quanh X" của món xoay 90° là trục Y thế giới', RS.rotate(turned, [30.0, nil, nil], 'item', 'local')[:moves][0][:steps][0][:axis] == [0.0, 1.0, 0.0])
+ok('xoay nhiều trục: thứ tự X, Y, Z', RS.rotate(one, [10.0, 20.0, 30.0], 'world', 'world')[:moves][0][:steps].map { |s| s[:axis] } == W)
+ok('xoay: góc 0 là NothingToDo, trống là báo nhập, vượt giới hạn bị từ chối', error_of { RS.rotate(one, [0.0, nil, nil], 'world', 'world') }.is_a?(P::NothingToDo) &&
+   error_of { RS.rotate(one, [nil, nil, nil], 'world', 'world') }.message.include?('Hãy nhập') && error_of { RS.rotate(one, [4000.0, nil, nil], 'world', 'world') }.message.include?('vượt giới hạn'))
 
-# Ghép công cụ với ô nhập (đơn vị của file)
-ok('Plan move_abs: "1,5" trong file m là 1500 mm, từ x=1000 nên dời 500 mm', PL.build(one, {'tool' => 'move_abs', 'values' => {'x' => '1,5', 'y' => '', 'z' => ''}}, 'm')[:moves][0][:steps][0][:delta] == [500.0, 0.0, 0.0])
-ok('Plan move_abs: "2m" trong file mm là 2000 mm, từ x=1000 nên dời 1000 mm', PL.build(one, {'tool' => 'move_abs', 'values' => {'x' => '2m', 'y' => '', 'z' => ''}}, 'mm')[:moves][0][:steps][0][:delta] == [1000.0, 0.0, 0.0])
-ok('Plan move_off: "250" trong file mm là dời 250 mm theo X', PL.build(one, {'tool' => 'move_off', 'values' => {'x' => '250', 'y' => '', 'z' => ''}}, 'mm')[:moves][0][:steps][0][:delta] == [250.0, 0.0, 0.0])
-ok('Plan rotate: ô Z = 90, tâm gốc thế giới', (steps = PL.build(one, {'tool' => 'rotate', 'values' => {'x' => '', 'y' => '', 'z' => '90'}, 'pivot' => 'world'}, 'mm')[:moves][0][:steps]).size == 1 && steps[0][:degrees] == 90.0)
-ok('Plan scale đều: ô X = 2 là hệ số chung cho ba trục', PL.build(one, {'tool' => 'scale', 'uniform' => true, 'values' => {'x' => '2', 'y' => '9', 'z' => '9'}, 'pivot' => 'world'}, 'mm')[:moves][0][:steps][0][:factors] == [2.0, 2.0, 2.0])
-ok('Plan scale không đều: ô trống là 1, ô 3 là 3', PL.build(one, {'tool' => 'scale', 'uniform' => false, 'values' => {'x' => '2', 'y' => '', 'z' => '3'}, 'pivot' => 'world'}, 'mm')[:moves][0][:steps][0][:factors] == [2.0, 1.0, 3.0])
-ok('Plan scale đều: ô trống báo lỗi', error_of { PL.build(one, {'tool' => 'scale', 'uniform' => true, 'values' => {'x' => ''}, 'pivot' => 'world'}, 'mm') }.to_s.include?('hệ số'))
-ok('Plan: công cụ lạ bị từ chối', error_of { PL.build(one, {'tool' => 'xoay', 'values' => {}}, 'mm') }.to_s.include?('Công cụ'))
-ok('Plan: ô sai định dạng báo lỗi rõ', error_of { PL.build(one, {'tool' => 'move_off', 'values' => {'x' => 'abc'}}, 'mm') }.to_s.include?('không phải số'))
+# ----- Scale tương đối -----
+ok('scale ×2 đều quanh gốc thế giới: (1000, 2000, 300) → (2000, 4000, 600)', near(ST.apply_steps(RS.scale(one, [2.0, 2.0, 2.0], 'world', 'world')[:moves][0][:steps], one[0][:origin]), [2000.0, 4000.0, 600.0]))
+ok('scale quanh điểm gốc món: điểm gốc đứng yên', near(ST.apply_steps(RS.scale(one, [2.0, 2.0, 2.0], 'item', 'world')[:moves][0][:steps], one[0][:origin]), one[0][:origin]))
+local_scale = RS.scale(turned, [2.0, nil, nil], 'item', 'local')[:moves][0][:steps]
+ok('scale local: món xoay 90°, ×2 theo X riêng = kéo dài theo Y thế giới', near(ST.apply_steps(local_scale, [0.0, 100.0, 0.0]), [0.0, 200.0, 0.0]) && near(ST.apply_steps(local_scale, [-100.0, 0.0, 0.0]), [-100.0, 0.0, 0.0]))
+wide = [make(0, 'Tủ', [0.0, 0.0, 0.0], size: [1000.0, 500.0, 200.0], axes: Z90)]
+ok('kích thước đích hệ world đo hộp bao thế giới: X thế giới 500 → 1000 là ×2', RS.scale(wide, [{length: 1000.0}, nil, nil], 'world', 'world')[:moves][0][:steps][0][:factors] == [2.0, 1.0, 1.0])
+ok('kích thước đích hệ local đo theo trục riêng: X riêng 1000 → 1500 là ×1.5', RS.scale(wide, [{length: 1500.0}, nil, nil], 'item', 'local')[:moves][0][:steps][0][:factors] == [1.5, 1.0, 1.0])
+two = [make(0, 'A', [0.0, 0.0, 0.0]), make(1, 'B', [2000.0, 0.0, 0.0], size: [500.0, 1000.0, 1000.0])]
+ok('kích thước đích riêng cho từng món: A giữ 1, B ×2', RS.scale(two, [{length: 1000.0}, nil, nil], 'item', 'world')[:moves].map { |m| m[:steps][0][:factors][0] } == [1.0, 2.0])
+ok('scale: hệ số 0 / âm / quá lớn bị từ chối; hệ số 1 là NothingToDo', error_of { RS.scale(one, [0.0, 1.0, 1.0], 'world', 'world') }.message.include?('0,001') &&
+   error_of { RS.scale(one, [1001.0, 1.0, 1.0], 'world', 'world') }.message.include?('0,001') && error_of { RS.scale(one, [1.0, 1.0, 1.0], 'world', 'world') }.is_a?(P::NothingToDo))
+ok('kích thước đích trên món kích thước 0: báo lỗi', error_of { RS.scale([make(0, 'Phẳng', [0.0, 0.0, 0.0], size: [0.0, 1.0, 1.0])], [{length: 10.0}, nil, nil], 'world', 'world') }.message.include?('Không đo được kích thước'))
 
-# Mô tả xem trước: theo đơn vị của file
+# ----- Scale tuyệt đối (local, so với definition) -----
+big = [make(0, 'Tủ to', [0.0, 0.0, 0.0], scale: [2.0, 1.0, 1.0])]
+ok('scale tuyệt đối: tỉ lệ X đang 2, đặt 1 thì hệ số 0.5 theo trục riêng', RS.absolute_scale(big, [1.0, nil, nil], 'item')[:moves][0][:steps][0][:factors] == [0.5, 1.0, 1.0])
+ok('scale tuyệt đối dùng trục riêng của món', RS.absolute_scale([make(0, 'X', [0.0, 0.0, 0.0], axes: Z90, scale: [2.0, 1.0, 1.0])], [1.0, nil, nil], 'item')[:moves][0][:steps][0][:axes] == Z90)
+ok('scale tuyệt đối đã đúng tỉ lệ: NothingToDo; chưa nhập: báo nhập', error_of { RS.absolute_scale(big, [2.0, 1.0, 1.0], 'item') }.is_a?(P::NothingToDo) && error_of { RS.absolute_scale(big, [nil, nil, nil], 'item') }.message.include?('Hãy nhập'))
 
-# Scale theo kích thước đích (đơn vị): hệ số của từng món = đích / kích thước hiện tại theo trục đó
-sized = [{index: 0, name: 'Tủ', origin: [0.0, 0.0, 0.0], extent: [1000.0, 500.0, 200.0], locked: false}]
-ok('kích thước đích 2000 mm trên X: hệ số X = 2, các trục khác = 1', RS.scale(sized, [{length: 2000.0}, nil, nil], 'world')[:moves][0][:steps][0][:factors] == [2.0, 1.0, 1.0])
-two = [{index: 0, name: 'A', origin: [0.0, 0.0, 0.0], extent: [1000.0, 1000.0, 1000.0], locked: false},
-       {index: 1, name: 'B', origin: [2000.0, 0.0, 0.0], extent: [500.0, 1000.0, 1000.0], locked: false}]
-per_item = RS.scale(two, [{length: 1000.0}, nil, nil], 'item')[:moves].map { |m| m[:steps][0][:factors][0] }
-ok('kích thước đích áp dụng riêng cho từng món: A giữ 1, B tăng gấp đôi', per_item == [1.0, 2.0])
-ok('kích thước đích trên món không đo được (kích thước 0): báo lỗi', error_of { RS.scale([{index: 0, name: 'Rỗng', origin: [0.0, 0.0, 0.0], extent: [0.0, 1.0, 1.0], locked: false}], [{length: 10.0}, nil, nil], 'world') }.to_s.include?('Không đo được kích thước'))
-ok('Plan scale không đều: ô 2000mm là kích thước đích, món 1000 mm thành hệ số 2 trên X', PL.build(one, {'tool' => 'scale', 'uniform' => false, 'values' => {'x' => '2000mm', 'y' => '', 'z' => ''}, 'pivot' => 'world'}, 'm')[:moves][0][:steps][0][:factors] == [2.0, 1.0, 1.0])
-ok('Plan scale không đều: "1m" trên món 1000 mm không đổi gì, báo lỗi', error_of { PL.build(one, {'tool' => 'scale', 'uniform' => false, 'values' => {'x' => '1m', 'y' => '', 'z' => ''}, 'pivot' => 'world'}, 'mm') }.to_s.include?('không đổi kích thước'))
-ok('Plan scale đều: ô có đơn vị bị từ chối, hướng dẫn chọn Không đều', error_of { PL.build(one, {'tool' => 'scale', 'uniform' => true, 'values' => {'x' => '1000mm'}, 'pivot' => 'world'}, 'mm') }.to_s.include?('Không đều'))
-ok('Plan scale đều: hệ số 1.5 vẫn đúng', PL.build(one, {'tool' => 'scale', 'uniform' => true, 'values' => {'x' => '1.5'}, 'pivot' => 'world'}, 'mm')[:moves][0][:steps][0][:factors] == [1.5, 1.5, 1.5])
+# ----- Công thức scale theo trục bất kỳ -----
+ok('scale_point trục thế giới giống công thức cũ', near(ST.scale_point([300.0, 200.0, 100.0], [100.0, 0.0, 0.0], [2.0, 3.0, 0.5], W), [500.0, 600.0, 50.0]))
+
+# ----- Ghép công cụ với ô nhập -----
+build = ->(items, payload, unit = 'mm') { PL.build(items, payload, unit) }
+ok('Plan move_abs: "1,5" trong file m là 1500 mm, tâm điểm gốc', deltas(build.(one, {'tool' => 'move_abs', 'values' => {'x' => '1,5'}, 'pivot' => 'item'}, 'm')) == [[500.0, 0.0, 0.0]])
+ok('Plan move_abs: "2m" trong file mm; thiếu tâm thì mặc định điểm gốc', deltas(build.(one, {'tool' => 'move_abs', 'values' => {'x' => '2m'}})) == [[1000.0, 0.0, 0.0]])
+ok('Plan move_off local: ΔX 100 trên món xoay 90° là Y thế giới', near(deltas(build.(turned, {'tool' => 'move_off', 'values' => {'x' => '100'}, 'coord' => 'local'}))[0], [0.0, 100.0, 0.0]))
+ok('Plan rotate: ô Z = 90, tâm và hệ trục truyền đúng', (st = build.(one, {'tool' => 'rotate', 'values' => {'z' => '90'}, 'pivot' => 'world', 'coord' => 'world'})[:moves][0][:steps]).size == 1 && st[0][:pivot] == [0.0, 0.0, 0.0])
+ok('Plan scale đều: hệ số chung; đơn vị bị từ chối', build.(one, {'tool' => 'scale', 'uniform' => true, 'values' => {'x' => '1.5'}})[:moves][0][:steps][0][:factors] == [1.5, 1.5, 1.5] &&
+   error_of { build.(one, {'tool' => 'scale', 'uniform' => true, 'values' => {'x' => '1000mm'}}) }.message.include?('Không đều'))
+ok('Plan scale không đều: "2000mm" là kích thước đích, món 1000 mm thành ×2', build.(one, {'tool' => 'scale', 'uniform' => false, 'values' => {'x' => '2000mm'}, 'pivot' => 'world'})[:moves][0][:steps][0][:factors] == [2.0, 1.0, 1.0])
+ok('Plan scale_abs: tỉ lệ đích theo ô', build.(big, {'tool' => 'scale_abs', 'values' => {'x' => '1'}})[:moves][0][:steps][0][:factors] == [0.5, 1.0, 1.0])
+ok('Plan: công cụ / tâm / hệ trục lạ bị từ chối', error_of { build.(one, {'tool' => 'xoay'}) }.message.include?('Công cụ') &&
+   error_of { build.(one, {'tool' => 'move_abs', 'values' => {'x' => '1'}, 'pivot' => 'abc'}) }.message.include?('Tâm') &&
+   error_of { build.(one, {'tool' => 'move_off', 'values' => {'x' => '1'}, 'coord' => 'abc'}) }.message.include?('Hệ trục'))
+ok('Plan: ô sai định dạng báo lỗi rõ', error_of { build.(one, {'tool' => 'move_off', 'values' => {'x' => 'abc'}}) }.message.include?('không phải số'))
+
 puts($fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

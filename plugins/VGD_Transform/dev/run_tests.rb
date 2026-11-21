@@ -4,7 +4,7 @@ require 'rbconfig'
 ROOT = File.expand_path('..', __dir__)
 RUNTIME = File.join(ROOT, 'runtime')
 DEV = __dir__
-TESTS = %w[units transform move reload].freeze
+TESTS = %w[units transform model_ops reload].freeze
 failed = []
 syntax = Dir[File.join(RUNTIME, '**', '*.rb')].sort
 syntax.each do |file|

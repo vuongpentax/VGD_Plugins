@@ -13,6 +13,7 @@ end
 module Geom; class Transformation; def initialize(*); end; end; class Vector3d; def initialize(*); end; end; class Point3d; def initialize(*); end; end; end
 module Sketchup
   class SelectionObserver; end
+  class ModelObserver; end
   class Group; end
   class ComponentInstance < Group; end
   class Model; def selection; @selection ||= Struct.new(:x) { def add_observer(*); end; def remove_observer(*); end; def to_a; []; end }.new(nil); end; def active_path; []; end; end
@@ -68,7 +69,7 @@ VGD::Transform.instance_variable_set(:@panel, nil)
 # Lỗi cú pháp: chặn trước khi nạp file nào, giữ nguyên bản đang chạy
 orig_compile = RubyVM::InstructionSequence.method(:compile_file)
 RubyVM::InstructionSequence.define_singleton_method(:compile_file) do |path, *rest|
-  raise SyntaxError, 'lỗi cú pháp giả lập' if path.end_with?('/core/move.rb')
+  raise SyntaxError, 'lỗi cú pháp giả lập' if path.end_with?('/core/model_ops.rb')
   orig_compile.call(path, *rest)
 end
 loaded.clear
@@ -76,7 +77,7 @@ result = VGD::Transform.reload
 RubyVM::InstructionSequence.define_singleton_method(:compile_file) { |path, *rest| orig_compile.call(path, *rest) }
 Kernel.send(:define_method, :load) { |*args, **kw| __orig_load_for_test(*args, **kw) }
 ok('lỗi cú pháp: báo thất bại, giữ nguyên bản đang chạy, không nạp file nào', result == false && $boxes.last.start_with?('Tải lại thất bại') && $boxes.last.include?('giữ nguyên') && loaded.empty?)
-ok('sau lỗi cú pháp: chức năng cũ vẫn chạy', VGD::Transform.respond_to?(:open_panel) && VGD::Transform::Move.respond_to?(:apply))
+ok('sau lỗi cú pháp: chức năng cũ vẫn chạy', VGD::Transform.respond_to?(:open_panel) && VGD::Transform::ModelOps.respond_to?(:apply))
 
 # Thanh công cụ: đúng tên VGD TRF và lệnh VGD_TRANSFORM
 puts $fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI"

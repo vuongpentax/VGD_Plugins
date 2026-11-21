@@ -11,7 +11,7 @@ module VGD
   module Transform
     ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze unless defined?(ROOT)
     # Thứ tự nạp code. Dùng chung cho lúc mở SketchUp và lúc "Tải lại code".
-    FILES = %w[core/units core/translate core/steps core/rotate_scale core/plan core/move ui/panel].freeze
+    FILES = %w[core/units core/items core/steps core/translate core/rotate_scale core/plan core/model_ops ui/panel].freeze
     @log_counts = Hash.new(0)
     def self.log(message)
       return if @log_counts.values.inject(0, :+) >= 100
@@ -72,8 +72,8 @@ unless file_loaded?(__FILE__)
   vgd_menu.add_item('Tải lại code') { VGD::Transform.reload }
   toolbar = ::UI::Toolbar.new('VGD TRF')
   command = ::UI::Command.new('VGD_TRANSFORM') { VGD::Transform.open_panel }
-  command.tooltip = 'VGD_TRANSFORM · Dời món theo tọa độ'
-  command.status_bar_text = 'VGD_TRANSFORM: nhập tọa độ X, Y, Z (mm) để dời món đang chọn'
+  command.tooltip = 'VGD_TRANSFORM · Dời, xoay, scale món'
+  command.status_bar_text = 'VGD_TRANSFORM: dời, xoay, scale group / component đang chọn bằng số, theo đơn vị của file'
   command.small_icon = command.large_icon = File.join(VGD::Transform::ROOT, 'assets', 'icons', 'transform.svg')
   toolbar.add_item(command)
   toolbar.restore

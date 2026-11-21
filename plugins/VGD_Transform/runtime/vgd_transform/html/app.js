@@ -1,43 +1,130 @@
 'use strict';
-// Giao diện VGD Transform: ba công cụ Dời / Xoay / Scale. Nhấn Enter trong ô hoặc bấm Áp dụng là thực hiện luôn.
-// Ô số có nút ▲▼ (giữ để lặp) và kéo lên xuống trên ô. Ruby đọc chuỗi người dùng nhập và tự đổi đơn vị.
-// Dữ liệu từ Ruby đến qua window.VGD.receive; lệnh đi qua window.sketchup (ui/panel.rb).
+// Giao diện VGD Transform, theo hộp Transform Type-In của 3ds Max:
+// - ô Tuyệt đối hiện giá trị hiện tại của món, chỉ gửi ô người dùng đã sửa; ô Tương đối về 0 sau khi áp dụng;
+// - Enter trong ô hoặc nút Áp dụng là thực hiện luôn;
+// - nút ▲▼: bấm, giữ để lặp, kéo lên xuống để đổi nhanh (Ctrl ×10, Alt ×0,1), chuột phải về mặc định;
+// - "Xem trực tiếp khi kéo": món chạy theo ▲▼, cả lần kéo là một bước Ctrl+Z.
+// Ruby đọc chuỗi người dùng nhập và tự đổi đơn vị. Dữ liệu từ Ruby đến qua window.VGD.receive; lệnh đi qua window.sketchup.
 const $ = id => document.getElementById(id);
 const node = (tag, text, cls) => { const el = document.createElement(tag); if (text !== undefined) el.textContent = text; if (cls) el.className = cls; return el; };
 const call = (name, payload) => { if (window.sketchup && window.sketchup[name]) window.sketchup[name](payload === undefined ? '' : JSON.stringify(payload)); };
+const store = { get(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }, set(key, value) { try { localStorage.setItem(key, value); } catch (_) { /* không lưu được thì thôi */ } } };
+
+const LIVE_KEY = 'vgd.transform.live';
+const LIVE_INTERVAL_MS = 40;        // gửi tối đa ~25 lần/giây khi kéo trực tiếp
+const DRAG_PIXELS_PER_STEP = 2;
+const DRAG_START_PIXELS = 3;
+const REPEAT_DELAY_MS = 350;
+const REPEAT_EVERY_MS = 60;
+// Bước của ô độ dài theo đơn vị (khoảng 1 mm)
+const LENGTH_STEP = { mm: 1, cm: 0.1, m: 0.001, in: 0.1, ft: 0.01, yd: 0.01 };
+const COORD_TEXT = { world: 'thế giới', local: 'riêng' };
+
+let state = { unit: 'mm', count: 0, origin: null, center: null, scale: null };
 
 function message(text, isError) {
   const el = $('message');
   el.textContent = text;
   el.classList.toggle('error', !!isError);
 }
+const fmt = value => (value === null || value === undefined ? '' : String(Number(Number(value).toFixed(3))));
+const boxOf = input => input.closest('.box');
+const panelOf = input => boxOf(input).dataset.panel;
+const isAbsolute = panel => document.querySelector(`.box[data-panel="${panel}"]`).dataset.kind === 'absolute';
+const liveOn = () => $('live').getAttribute('aria-checked') === 'true';
 
-// ----- Đọc ô nhập theo từng khung -----
-const xyz = prefix => ({x: $(`${prefix}-x`).value, y: $(`${prefix}-y`).value, z: $(`${prefix}-z`).value});
+// ----- Đọc ô nhập -----
+const xyz = prefix => ({ x: $(`${prefix}-x`).value, y: $(`${prefix}-y`).value, z: $(`${prefix}-z`).value });
+// Ô Tuyệt đối: chỉ gửi ô đã sửa, ô còn lại để trống nghĩa là giữ nguyên (tránh làm tròn số hiển thị dời món).
+const dirtyXyz = prefix => Object.fromEntries(['x', 'y', 'z'].map(a => { const el = $(`${prefix}-${a}`); return [a, el.dataset.dirty ? el.value : '']; }));
 const scaleUniform = () => document.querySelector('input[name="scale-mode"]:checked').value === 'uniform';
 function payloadFor(panel) {
-  if (panel === 'move_abs' || panel === 'move_off') return {tool: panel, values: xyz(panel)};
-  if (panel === 'rotate') return {tool: 'rotate', values: xyz('rotate'), pivot: $('pivot').value};
-  // scale: khung "Đều" chỉ có một ô (hệ số chung), khung "Không đều" có ba ô.
-  if (scaleUniform()) return {tool: 'scale', uniform: true, values: {x: $('scale-u').value}, pivot: $('pivot').value};
-  return {tool: 'scale', uniform: false, values: xyz('scale'), pivot: $('pivot').value};
+  const pivot = $('pivot').value;
+  const coord = $('coord').value;
+  switch (panel) {
+    case 'move_abs': return { tool: panel, values: dirtyXyz(panel), pivot };
+    case 'move_off': return { tool: panel, values: xyz(panel), coord };
+    case 'rotate': return { tool: panel, values: xyz(panel), pivot, coord };
+    case 'scale_abs': return { tool: panel, values: dirtyXyz(panel), pivot };
+    default: return scaleUniform()
+      ? { tool: 'scale', uniform: true, values: { x: $('scale-u').value }, pivot, coord }
+      : { tool: 'scale', uniform: false, values: xyz('scale'), pivot, coord };
+  }
 }
 function apply(panel) {
   call('apply', payloadFor(panel));
 }
+function inputsOf(panel) {
+  return [...document.querySelectorAll(`.box[data-panel="${panel}"] input[type="text"]`)];
+}
 
-// ----- Ô số: nút ▲▼ (giữ để lặp), kéo lên xuống trên ô để đổi nhanh -----
-const DRAG_PIXELS_PER_STEP = 2;
-const DRAG_START_PIXELS = 3;
+// ----- Hiển thị trạng thái và giá trị hiện tại -----
+function renderStatus() {
+  const parts = [];
+  if (state.count) parts.push(`${state.count} món`);
+  else parts.push('Chưa chọn group / component nào');
+  parts.push(`đơn vị file: ${state.unit}${state.unit_known === false ? ' (SketchUp trả đơn vị lạ, tạm dùng mm)' : ''}`);
+  if (state.skipped) parts.push(`bỏ qua ${state.skipped} đối tượng không phải group / component`);
+  $('status').textContent = parts.join(' · ');
+}
+function fillAbsolute() {
+  const fill = (panel, values) => ['x', 'y', 'z'].forEach((a, i) => {
+    const input = $(`${panel}-${a}`);
+    if (input.dataset.dirty && document.activeElement === input) return; // đang gõ thì không ghi đè
+    delete input.dataset.dirty;
+    const value = values ? values[i] : null;
+    input.value = fmt(value);
+    input.placeholder = state.count === 0 ? '—' : (value === null || value === undefined ? 'khác nhau' : '');
+  });
+  fill('move_abs', $('pivot').value === 'item' ? state.origin : state.center);
+  fill('scale_abs', state.scale);
+}
+function resetOffset(panel) {
+  inputsOf(panel).forEach(input => { input.value = input.dataset.default; delete input.dataset.dirty; });
+}
+function updateCoordTitles() {
+  const text = COORD_TEXT[$('coord').value];
+  document.querySelectorAll('.coord-title').forEach(h => { h.textContent = `${h.dataset.title} (${text})`; });
+}
+
+// ----- Kéo trực tiếp: gửi tối đa mỗi LIVE_INTERVAL_MS, lần cuối luôn được gửi -----
+let livePanel = null;
+let liveTimer = null;
+function liveBegin(panel) {
+  livePanel = panel;
+  call('live_start');
+}
+function liveChanged() {
+  if (!livePanel || liveTimer) return;
+  liveTimer = setTimeout(() => { liveTimer = null; if (livePanel) call('live', payloadFor(livePanel)); }, LIVE_INTERVAL_MS);
+}
+function liveEnd() {
+  if (!livePanel) return;
+  clearTimeout(liveTimer);
+  liveTimer = null;
+  const panel = livePanel;
+  call('live', payloadFor(panel));
+  livePanel = null;
+  call('live_end');
+  // Như spinner Offset của 3ds Max: kéo xong thì ô tương đối về 0 (món đã ở chỗ mới)
+  if (isAbsolute(panel)) inputsOf(panel).forEach(input => delete input.dataset.dirty);
+  else resetOffset(panel);
+}
+
+// ----- Ô số -----
 const numberParts = text => {
   const match = /^\s*([+-]?(?:\d+\.?\d*|\.\d+))\s*([a-zA-Z]*)\s*$/.exec(text || '');
-  return match ? {value: Number(match[1]), unit: match[2]} : null;
+  return match ? { value: Number(match[1]), unit: match[2] } : null;
 };
-function stepInput(input, direction) {
-  const step = Number(input.dataset.spin) || 1;
-  const parts = numberParts(input.value) || {value: 0, unit: ''};
-  const next = Number((parts.value + direction * step).toFixed(3));
-  input.value = `${next}${parts.unit}`;
+function stepOf(input, unit, event) {
+  const spin = input.dataset.spin;
+  const base = unit ? (LENGTH_STEP[unit.toLowerCase()] || 1) : spin === 'len' ? (LENGTH_STEP[state.unit] || 1) : Number(spin) || 1;
+  return base * (event.ctrlKey ? 10 : event.altKey ? 0.1 : 1);
+}
+function setValue(input, value, unit) {
+  input.value = `${Number(value.toFixed(4))}${unit}`;
+  input.dataset.dirty = '1';
+  if (livePanel) liveChanged();
 }
 function enhanceSpinner(input) {
   const wrap = node('span', undefined, 'spin');
@@ -45,72 +132,104 @@ function enhanceSpinner(input) {
   const arrows = node('span', undefined, 'arrows');
   const up = node('button', '▲', 'up');
   const down = node('button', '▼', 'down');
-  up.type = down.type = 'button';
-  up.tabIndex = down.tabIndex = -1;
-  up.setAttribute('aria-label', 'Tăng');
-  down.setAttribute('aria-label', 'Giảm');
+  [up, down].forEach(b => { b.type = 'button'; b.tabIndex = -1; });
+  up.setAttribute('aria-label', 'Tăng (kéo lên xuống để đổi nhanh, chuột phải về mặc định)');
+  down.setAttribute('aria-label', 'Giảm (kéo lên xuống để đổi nhanh, chuột phải về mặc định)');
   arrows.append(up, down);
   wrap.append(input, arrows);
-  // Nhấn giữ nút: đổi một bước, sau 350 ms thì lặp mỗi 60 ms cho tới khi thả
+
+  let press = null;
+  const stopRepeat = () => { if (press) { clearTimeout(press.timer); clearInterval(press.timer); press.timer = null; } };
   [[up, 1], [down, -1]].forEach(([button, direction]) => {
-    let timer = null;
-    const stop = () => { clearTimeout(timer); clearInterval(timer); timer = null; };
     button.addEventListener('pointerdown', event => {
+      if (event.button !== 0) return;
       event.preventDefault();
-      stepInput(input, direction);
-      timer = setTimeout(() => { timer = setInterval(() => stepInput(input, direction), 60); }, 350);
+      const parts = numberParts(input.value);
+      if (!parts && input.value.trim() === '' && isAbsolute(panelOf(input)) && state.count > 1) {
+        message('Các món khác nhau trên trục này. Gõ số rồi nhấn Enter.', true);
+        return;
+      }
+      const start = parts || { value: 0, unit: '' };
+      press = { y: event.clientY, start, moved: false, timer: null };
+      if (button.setPointerCapture && event.pointerId !== undefined) { try { button.setPointerCapture(event.pointerId); } catch (_) { /* bỏ qua */ } }
+      if (liveOn()) liveBegin(panelOf(input));
+      const step = () => { const p = numberParts(input.value) || start; setValue(input, p.value + direction * stepOf(input, p.unit, event), p.unit); };
+      step();
+      press.timer = setTimeout(() => { press.timer = setInterval(step, REPEAT_EVERY_MS); }, REPEAT_DELAY_MS);
     });
-    ['pointerup', 'pointerleave', 'pointercancel'].forEach(name => button.addEventListener(name, stop));
+    button.addEventListener('pointermove', event => {
+      if (!press || !(event.buttons & 1)) return;
+      const dy = press.y - event.clientY;
+      if (!press.moved && Math.abs(dy) < DRAG_START_PIXELS) return;
+      press.moved = true;
+      stopRepeat();
+      const steps = Math.round(dy / DRAG_PIXELS_PER_STEP);
+      setValue(input, press.start.value + steps * stepOf(input, press.start.unit, event), press.start.unit);
+    });
+    const release = () => { if (!press) return; stopRepeat(); press = null; liveEnd(); };
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(name => button.addEventListener(name, release));
+    // Chuột phải: về giá trị mặc định (Tuyệt đối dời 0, scale 1; ô tương đối trống = 0)
+    button.addEventListener('contextmenu', event => {
+      event.preventDefault();
+      input.value = input.dataset.default;
+      if (input.dataset.default === '') delete input.dataset.dirty; else input.dataset.dirty = '1';
+      if (liveOn() && isAbsolute(panelOf(input))) apply(panelOf(input));
+    });
   });
-  // Kéo trên ô: giữ chuột rồi trượt lên (tăng) hoặc xuống (giảm)
-  let drag = null;
-  input.addEventListener('pointerdown', event => {
-    const parts = numberParts(input.value);
-    drag = {y: event.clientY, start: parts ? parts.value : 0, unit: parts ? parts.unit : ''};
-  });
-  input.addEventListener('pointermove', event => {
-    if (!drag || event.buttons !== 1) return;
-    const dy = drag.y - event.clientY;
-    if (Math.abs(dy) < DRAG_START_PIXELS) return;
-    const step = Number(input.dataset.spin) || 1;
-    const next = Number((drag.start + Math.round(dy / DRAG_PIXELS_PER_STEP) * step).toFixed(3));
-    input.value = `${next}${drag.unit}`;
-  });
-  ['pointerup', 'pointercancel'].forEach(name => input.addEventListener(name, () => { drag = null; }));
 }
 
 // ----- Dữ liệu từ Ruby -----
 window.VGD = {
   receive(event, data) {
-    if (event === 'unit') $('unit').textContent = `Đơn vị của file: ${data.unit}. Gõ thêm mm, cm, m, in hoặc ft sau số để đổi đơn vị cho số đó.`;
-    else if (event === 'done') message(`Đã biến đổi ${data.moved} món.`);
-    else if (event === 'message') message(data.error || data.text, !!data.error);
+    if (event === 'state') {
+      state = data;
+      renderStatus();
+      fillAbsolute();
+    } else if (event === 'done') {
+      const skipped = data.skipped ? ` Bỏ qua ${data.skipped} đối tượng không phải group / component.` : '';
+      message(`Đã biến đổi ${data.moved} món.${skipped}`);
+      if (isAbsolute(data.tool)) inputsOf(data.tool).forEach(input => delete input.dataset.dirty);
+      else resetOffset(data.tool);
+    } else if (event === 'message') {
+      message(data.error || data.text, !!data.error);
+    }
   },
 };
 
-// ----- Tab, kiểu scale, nút, Enter -----
+// ----- Tab, lựa chọn, nút, Enter -----
 function showTool(tool) {
   document.querySelectorAll('.tab').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.tab === tool)));
   document.querySelectorAll('section.tool').forEach(section => { section.hidden = section.dataset.tool !== tool; });
-  $('pivot-row').hidden = tool === 'move';
 }
 document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => showTool(tab.dataset.tab)));
 document.querySelectorAll('input[name="scale-mode"]').forEach(radio => radio.addEventListener('change', () => {
-  const uniform = scaleUniform();
-  $('scale-uniform').hidden = !uniform;
-  $('scale-nonuniform').hidden = uniform;
+  $('scale-uniform').hidden = !scaleUniform();
+  $('scale-nonuniform').hidden = scaleUniform();
 }));
+$('pivot').addEventListener('change', fillAbsolute);
+$('coord').addEventListener('change', updateCoordTitles);
+$('live').addEventListener('click', () => {
+  const next = !liveOn();
+  $('live').setAttribute('aria-checked', String(next));
+  store.set(LIVE_KEY, next ? '1' : '0');
+});
+$('live-label').addEventListener('click', () => $('live').click());
 
 document.querySelectorAll('button[data-action="apply"]').forEach(btn => btn.addEventListener('click', () => apply(btn.dataset.panel)));
-document.querySelectorAll('input[type="text"]').forEach(input => input.addEventListener('keydown', event => {
-  if (event.key !== 'Enter') return;
-  event.preventDefault();
-  apply(input.closest('.box').dataset.panel);
-}));
+document.querySelectorAll('input[type="text"]').forEach(input => {
+  input.addEventListener('input', () => { input.dataset.dirty = '1'; });
+  input.addEventListener('keydown', event => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    apply(panelOf(input));
+  });
+});
 document.querySelectorAll('input[type="text"][data-spin]').forEach(enhanceSpinner);
 
 document.addEventListener('DOMContentLoaded', () => {
-  VGDTheme.start({key: 'vgd.transform.theme', button: $('theme')});
+  VGDTheme.start({ key: 'vgd.transform.theme', button: $('theme') });
+  if (store.get(LIVE_KEY) === '0') $('live').setAttribute('aria-checked', 'false');
   showTool('move');
+  updateCoordTitles();
   call('ready');
 });

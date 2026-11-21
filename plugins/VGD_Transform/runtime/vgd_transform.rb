@@ -2,7 +2,7 @@ require 'sketchup.rb'
 require 'extensions.rb'
 module VGD
   module Transform
-    VERSION = '0.1.0-beta.5'.freeze
+    VERSION = '0.1.0-beta.6'.freeze
     unless file_loaded?(__FILE__)
       extension = SketchupExtension.new('VGD Transform', 'vgd_transform/loader')
       extension.description = 'Dời, xoay, scale món (group, component) theo trục thế giới, nhập theo đơn vị của file.'
