@@ -1,4 +1,4 @@
-# Danh bạ cầu nối VGD (bridge_version 1). Bản sao GIỐNG HỆT nằm ở mọi plugin dùng cầu nối (VGD_BIM, VGD_Room...) để không phụ thuộc thứ tự nạp:
+# Danh bạ cầu nối VGD (bridge_version 1). Bản sao GIỐNG HỆT nằm ở mọi plugin dùng cầu nối (VGD_BIM, VGD_Structure) để không phụ thuộc thứ tự nạp:
 # plugin nào nạp trước cũng định nghĩa được danh bạ, plugin nạp sau dùng lại. Đặc tả: docs/vgd_bim/BRIDGE.md.
 module VGD
   module Bridge

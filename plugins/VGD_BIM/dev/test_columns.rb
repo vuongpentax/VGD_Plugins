@@ -54,6 +54,7 @@ module VGD; module BIM
     INCH_MM = 25.4
     def self.dimensions(_e, _t, measure: nil); {width: 1000.0, depth: 500.0, height: 2000.0}; end
     def self.definition(e); Defn.new(e); end
+    def self.path_transform(_path); Identity.new; end # không có group đang mở: đơn vị
     class Defn
       def initialize(e); @e = e; end
       def name; @e.name; end

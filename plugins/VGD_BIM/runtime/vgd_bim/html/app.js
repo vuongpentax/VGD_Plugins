@@ -1,5 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
+// Bỏ dấu và chữ hoa / thường để tìm và lọc: "bàn", "BAN", "Ban" đều khớp nhau (đ / Đ thành d). Dùng cho mọi ô tìm.
+const foldText = text => String(text ?? '').normalize('NFD').replace(/\p{Mn}/gu, '').replace(/[đĐ]/g, 'd').toLowerCase();
 let config = {}, locale = {}, appliedLanguage = null;
 const fieldKeys = ['category','item_type','code','description','unit','quantity_method','zone','floor','include_boq','finish_code','manufacturer','model_number','note'];
 const advancedKeys = ['finish_code','manufacturer','model_number','note'];
@@ -86,7 +88,7 @@ function mapping(data) {
   $('content').replaceChildren();subTabs();scanOptionsBar($('content'));const c=card('Phân loại / Chuyển đổi mô hình');c.append(node('p','Chọn một dòng → sửa thông tin → xem trước → xác nhận. Dữ liệu VGD đã có được giữ nguyên. Với vật liệu, chỉ lưu quy tắc phân loại.','hint'));
   const search=node('input');search.type='search';search.placeholder='Tìm tên đối tượng hoặc vật liệu…';search.className='search';c.append(search);
   const body=table(c,['Nguồn','Số lượng / Có thể ghi','Gợi ý hạng mục','Độ tin cậy / Căn cứ','Trạng thái','Thao tác'],data,(r,tr)=>{cell(tr,`${r.source_value||'Chưa đặt tên'} (${r.kind==='material'?'vật liệu':'đối tượng'})`);cell(tr,`${r.instances} / ${r.eligible}`);cell(tr,[translated('category',r.suggestion.data.category),translated('item_type',r.suggestion.data.item_type),translated('quantity_method',r.suggestion.data.quantity_method)].filter(Boolean).join(' / ')||'Chưa có gợi ý');cell(tr,`${translated('confidence',r.suggestion.confidence)} / ${translated('source',r.suggestion.source)}`);cell(tr,badge(r.status||'REVIEW'));const actions=node('div',undefined,'actions');actions.append(button('Chỉnh thông tin',()=>editMapping(r)),button('Bỏ qua',()=>{tr.classList.toggle('ignored')}));cell(tr,actions);});
-  search.oninput=()=>Array.from(body.children).forEach((tr,i)=>{tr.hidden=!data[i].source_value.toLocaleLowerCase('vi').includes(search.value.toLocaleLowerCase('vi'))});
+  search.oninput=()=>Array.from(body.children).forEach((tr,i)=>{tr.hidden=!foldText(data[i].source_value).includes(foldText(search.value))});
 }
 function validation(data) {
   $('content').replaceChildren();subTabs();scope([['Toàn bộ mô hình','validate_model'],['Đối tượng đang chọn','validate_selection']]);const count=s=>data.filter(r=>r.issues.some(i=>i.severity===s)).length;
@@ -120,6 +122,12 @@ function preview(data) {
   if(data.rule)p.append(node('p','Quy tắc phân loại sẽ được lưu để dùng lại.'));
   const dl=node('dl',undefined,'preview-values');Object.entries(data.data).forEach(([key,value])=>dl.append(node('dt',label(key)),node('dd',displayValue(key,value))));p.append(dl,node('p','Giữ nguyên hình học, tên, thẻ và vật liệu.'));$('confirm-preview').disabled=false;$('preview').showModal();
 }
+// Hộp thông báo sau khi xuất Excel. Giao diện chỉ hiện chữ; đường dẫn file do Ruby giữ, các nút chỉ gọi lệnh không kèm đường dẫn.
+function showExportDone(data){
+  $('export-done-text').textContent=data.text||'';
+  $('export-done-path').textContent=data.path||'';
+  $('export-done').showModal();
+}
 // ---- Bảng đối tượng kiểu Auto Info ----
 const tableState={replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',dragKey:null,manual:[],dragRow:null,dragCol:null,sheets:null,sheet:0};
 // Mỗi file SketchUp có cài đặt riêng (settings.json cạnh file): sang file khác thì bỏ trạng thái bảng của file trước, nạp lại của file mới (file mới: mặc định).
@@ -131,7 +139,7 @@ function syncFile(data){
 }
 function resetTableState(){
   clearTimeout(viewTimer);clearTimeout(excludeTimer);
-  Object.assign(tableState,{replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',manual:[],sheets:null,sheet:0,excludeTags:null,excludePending:false,projectedChecked:false});
+  Object.assign(tableState,{lockKey:null,replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',manual:[],sheets:null,sheet:0,excludeTags:null,excludePending:false,projectedChecked:false,snapshots:null,snapshotDiff:null,checkResults:null,bridge:{file:null,match_by:'vgd_id',match_column:'',mapping:{},preview:null,skip:new Set(),shown:200}});
   const view=document.querySelector('.table-view');if(view)view.remove();
 }
 const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total','calc_qty','calc_total','mat_price','mat_waste','mat_qty','mat_cost']);
@@ -225,7 +233,22 @@ function applySheetExclude(s){
 }
 function activateSheet(i){
   const s=tableState.sheets[i];tableState.sheet=i;loadSheet(s);ensureProjected();applySheetExclude(s);
+  applyRowsLock(s.lock||null);
   persistView();tableView(tableState.data);
+}
+// Khóa sheet: khi sheet đang khóa được mở, Ruby giữ đúng các món đã khóa (không theo lựa chọn). tableState.lockKey là khóa đang có trong Ruby (null = theo lựa chọn).
+const lockKeyOf=lock=>lock?JSON.stringify(lock):null;
+function applyRowsLock(lock){
+  const key=lockKeyOf(lock);
+  if(key===tableState.lockKey)return false;
+  tableState.lockKey=key;call('table_lock_apply',JSON.stringify({lock:lock||null}));
+  return true; // Ruby sẽ gửi bảng mới
+}
+function toggleSheetLock(){
+  ensureSheets();const s=tableState.sheets[tableState.sheet];
+  if(!s)return;
+  if(s.lock){s.lock=null;persistView();applyRowsLock(null);if(tableState.data)tableView(tableState.data);return;} // vẽ lại ngay để nút khóa đổi trạng thái
+  call('table_lock',JSON.stringify({action:'on'})); // Ruby trả khóa qua sự kiện sheet_lock
 }
 function switchSheet(i){if(i===tableState.sheet||!tableState.sheets||!tableState.sheets[i])return;stashSheet();activateSheet(i);}
 function uniqueSheetName(base,skip){const used=new Set(tableState.sheets.map((s,i)=>i===skip?'':s.name.toLowerCase()));let name=base,n=2;while(used.has(name.toLowerCase()))name=`${base.slice(0,SHEET_NAME_MAX-6)} (${n++})`;return name;}
@@ -234,7 +257,7 @@ function addSheet(copyOf){
   if(tableState.sheets.length>=SHEET_LIMIT){message(`Tối đa ${SHEET_LIMIT} sheet.`,true);return;}
   const src=copyOf===undefined?tableState.sheets[tableState.sheet]:tableState.sheets[copyOf];
   const base=copyOf===undefined?`Sheet${tableState.sheets.length+1}`:`${src.name} (2)`;
-  tableState.sheets.push({...JSON.parse(JSON.stringify(src)),name:uniqueSheetName(base.slice(0,SHEET_NAME_MAX))});
+  tableState.sheets.push({...JSON.parse(JSON.stringify(src)),lock:null,name:uniqueSheetName(base.slice(0,SHEET_NAME_MAX))});
   activateSheet(tableState.sheets.length-1);
 }
 function renameSheet(i,raw){
@@ -274,19 +297,50 @@ function renameInline(tab,i){
   input.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();finish(true);}else if(e.key==='Escape'){e.preventDefault();finish(false);}};
   input.onblur=()=>finish(true);
 }
+// Kéo đổi chỗ sheet: kéo thả HTML5, đổi chỗ trực tiếp khi kéo, các tab khác trượt bằng FLIP (150 ms), chốt thứ tự khi thả (dragend).
+let dragSheet=null;
+const tabIndex=tab=>Number(tab.dataset.index);
+function moveSheetTab(bar,from,to){
+  const tabs=[...bar.querySelectorAll('.sheet-tab')],moved=tabs[from],active=tableState.sheets[tableState.sheet];
+  const before=new Map(tabs.map(t=>[t,t.getBoundingClientRect().left]));
+  const [sheet]=tableState.sheets.splice(from,1);tableState.sheets.splice(to,0,sheet);
+  tableState.sheet=tableState.sheets.indexOf(active);
+  const order=tabs.filter(t=>t!==moved);order.splice(to,0,moved);
+  const add=bar.querySelector('.sheet-add');
+  order.forEach((t,i)=>{bar.insertBefore(t,add);t.dataset.index=String(i);t.setAttribute('aria-selected',String(i===tableState.sheet));});
+  order.forEach(t=>{
+    const dx=before.get(t)-t.getBoundingClientRect().left;if(!dx)return;
+    t.style.transition='none';t.style.transform=`translateX(${dx}px)`;void t.offsetWidth;
+    t.style.transition='';t.style.transform='';
+  });
+}
+function bindSheetDrag(b){
+  b.draggable=true;
+  b.ondragstart=e=>{dragSheet=tabIndex(b);e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',b.textContent);b.classList.add('dragging');};
+  b.ondragover=e=>{if(dragSheet===null)return;e.preventDefault();e.dataTransfer.dropEffect='move';const to=tabIndex(b);if(to!==dragSheet){moveSheetTab(b.parentNode,dragSheet,to);dragSheet=to;}};
+  b.ondrop=e=>e.preventDefault();
+  b.ondragend=()=>{if(dragSheet===null)return;dragSheet=null;b.classList.remove('dragging');persistView();};
+}
 function sheetBar(){
   ensureSheets();
   const bar=node('div',undefined,'sheetbar');bar.setAttribute('role','tablist');bar.setAttribute('aria-label','Sheet');
   tableState.sheets.forEach((s,i)=>{
     const b=node('button',s.name,'sheet-tab');b.type='button';b.setAttribute('role','tab');b.setAttribute('aria-selected',String(i===tableState.sheet));
-    b.title='Bấm để mở · bấm đúp hoặc F2 để đổi tên · bấm phải để nhân đôi hoặc xóa';
-    b.onclick=()=>switchSheet(i);b.ondblclick=()=>renameInline(b,i);
-    b.oncontextmenu=e=>{e.preventDefault();sheetMenu(e,i,b);};
-    b.onkeydown=e=>{if(e.key==='F2'){e.preventDefault();renameInline(b,i);}};
+    b.dataset.index=String(i);
+    if(s.lock)b.classList.add('locked');
+    b.title='Bấm để mở · kéo để đổi chỗ · bấm đúp hoặc F2 để đổi tên · bấm phải để nhân đôi hoặc xóa';
+    b.onclick=()=>switchSheet(tabIndex(b));b.ondblclick=()=>renameInline(b,tabIndex(b));
+    b.oncontextmenu=e=>{e.preventDefault();sheetMenu(e,tabIndex(b),b);};
+    b.onkeydown=e=>{if(e.key==='F2'){e.preventDefault();renameInline(b,tabIndex(b));}};
+    bindSheetDrag(b);
     bar.append(b);
   });
   const add=node('button','+','sheet-add');add.type='button';add.title='Thêm sheet (sao chép cài đặt của sheet đang mở)';add.setAttribute('aria-label','Thêm sheet');add.onclick=()=>addSheet();
-  bar.append(add);
+  const active=tableState.sheets[tableState.sheet],locked=!!(active&&active.lock);
+  const lock=node('button',locked?'🔒':'🔓','sheet-lock');lock.type='button';lock.setAttribute('aria-pressed',String(locked));
+  lock.title=locked?'Đang khóa: sheet giữ các món đã khóa, không đổi theo lựa chọn. Bấm để mở khóa.':'Khóa sheet này: giữ các món đang có trong bảng, không đổi khi chọn món khác trong SketchUp.';
+  lock.setAttribute('aria-label',locked?'Mở khóa sheet này':'Khóa sheet này');lock.onclick=()=>toggleSheetLock();
+  bar.append(add,lock);
   return bar;
 }
 function syncSheetBar(view){
@@ -311,6 +365,7 @@ function restoreView(data){
   if(Array.isArray(v.sheets)&&v.sheets.length){
     tableState.sheets=v.sheets.map(s=>({...s}));tableState.sheet=Number.isInteger(v.sheet)&&v.sheet>=0&&v.sheet<tableState.sheets.length?v.sheet:0;
     loadSheet(tableState.sheets[tableState.sheet],data.columns);applySheetExclude(tableState.sheets[tableState.sheet]);
+    applyRowsLock(tableState.sheets[tableState.sheet].lock||null);
   }
   tableState.savedView=JSON.stringify(viewState());return true;
 }
@@ -359,13 +414,15 @@ function manualSorted(rows){
   return rows.map(row=>({row,rank:rankOf(row)})).sort((a,b)=>a.rank===b.rank?a.row.index-b.row.index:(a.rank<b.rank?-1:1)).map(k=>k.row);
 }
 function filteredRows(){
-  const q=tableState.search.trim().toLocaleLowerCase('vi');
-  return tableState.data.rows.filter(r=>(!tableState.group||r.tag_group===tableState.group)&&(!q||[r.name,r.definition,r.description,r.tag,r.material].some(v=>String(v||'').toLocaleLowerCase('vi').includes(q))));
+  const q=foldText(tableState.search.trim());
+  return tableState.data.rows.filter(r=>(!tableState.group||r.tag_group===tableState.group)&&(!q||[r.name,r.definition,r.description,r.tag,r.material].some(v=>foldText(v).includes(q))));
 }
 // Chọn dòng kiểu Excel: bấm = một dòng; Ctrl (hoặc Cmd) = thêm / bớt một dòng; Shift = cả dãy từ dòng gốc; Ctrl+Shift = thêm cả dãy;
 // Ctrl+A = chọn hết các dòng đang hiện; Esc = bỏ chọn. SketchUp chọn theo các đối tượng đó (xem table_select trong dialog.rb).
 // Dòng gộp (Gộp dòng giống nhau) có nhiều đối tượng: chọn dòng gộp là chọn mọi đối tượng của nó.
 const membersOf=row=>row.members||[row.index];
+// Các món đang chọn LÚC BẤM (không dùng danh sách chụp lúc mở bảng nổi, vì chọn thêm dòng không dựng lại bảng nổi). Dòng gộp gửi đủ mọi món đang chọn.
+const selectedIndexes=()=>[...new Set(tableState.displayed.flatMap(r=>membersOf(r).filter(m=>tableState.sel.has(m))))];
 // Số dòng đã chọn hiện ở chân trang, bên phải dòng thông báo (chỗ cố định để chân trang không nhảy chiều cao); chỉ có ở tab Bảng khối lượng và khi có dòng được chọn.
 function updateSelInfo(){
   const el=$('sel-info');if(!el)return;
@@ -470,10 +527,13 @@ function suggestBox(input,list){
     hit='';ghost.replaceChildren();
     const v=input.value;
     if(!typing||!v||input.selectionStart!==v.length||input.selectionEnd!==v.length)return;
-    const low=v.toLowerCase(),found=list.find(t=>t.length>v.length&&t.toLowerCase().startsWith(low));
+    // Gợi ý theo chữ đã gõ, không phân biệt hoa thường và dấu; phần còn lại cắt theo chữ gốc (vị trí có thể khác vì bỏ dấu).
+    const low=foldText(v),found=list.find(t=>foldText(t).length>low.length&&foldText(t).startsWith(low));
     if(!found)return;
+    let cut=0;while(cut<found.length&&foldText(found.slice(0,cut))!==low)cut++;
+    if(cut>=found.length)return;
     hit=found;styleGhost();
-    const typed=node('span',v);typed.style.visibility='hidden';ghost.append(typed,node('span',found.slice(v.length),'ac-rest'));
+    const typed=node('span',v);typed.style.visibility='hidden';ghost.append(typed,node('span',found.slice(cut),'ac-rest'));
   };
   input.addEventListener('input',e=>refresh(!/^delete/.test(e.inputType||'')));
   input.addEventListener('blur',()=>{hit='';ghost.replaceChildren();});
@@ -517,9 +577,9 @@ function menuEdit(td,row,col){
   const list=node('div',undefined,'cell-menu-list');
   const pick=value=>{closeMenu();commitEdit(row,field,value);};
   const draw=()=>{
-    const q=search.value.trim().toLocaleLowerCase('vi');
-    const shown=all.filter(item=>!q||item.label.toLocaleLowerCase('vi').includes(q));
-    if(field==='tag'&&q&&!all.some(item=>item.label.toLocaleLowerCase('vi')===q))shown.push({value:search.value.trim(),label:`Tạo tag "${search.value.trim()}"`});
+    const q=foldText(search.value.trim());
+    const shown=all.filter(item=>!q||foldText(item.label).includes(q));
+    if(field==='tag'&&q&&!all.some(item=>foldText(item.label)===q))shown.push({value:search.value.trim(),label:`Tạo tag "${search.value.trim()}"`});
     list.replaceChildren();
     shown.forEach(item=>{
       const line=node('div',undefined,'cell-item'+(item.value===current?' current':''));line.setAttribute('role','option');
@@ -612,11 +672,12 @@ function mergeRows(rows){
   return [...map.values()];
 }
 // Dòng, nhóm và tổng đúng như bảng đang hiện (lọc, gộp, sắp xếp, nhóm theo, cộng tổng chỉ cấp cao nhất). Dùng cho vẽ bảng và xuất Excel / PDF.
-function viewModel(){
+// full = true (xuất): luôn từng món, không gộp dòng; nhóm thu gọn vẫn đủ món (xem exportRows).
+function viewModel(full=false){
   const cols=orderedKeys().map(colByKey).filter(Boolean);
   const filtered=filteredRows();
   const shown=new Set(filtered.map(r=>r.index));
-  const rows=tableState.merge?mergeRows(filtered):filtered;
+  const rows=tableState.merge&&!full?mergeRows(filtered):filtered;
   const placed=manualSorted(rows); // sắp theo cột là sắp ổn định trên thứ tự này nên các dòng bằng nhau giữ thứ tự tay (không có thứ tự tay thì là thứ tự quét)
   const ordered=tableState.sort?[...placed].sort((a,b)=>{const va=sortValue(a,tableState.sort.key),vb=sortValue(b,tableState.sort.key);if(va<vb)return -tableState.sort.dir;if(va>vb)return tableState.sort.dir;return 0;}):placed;
   // Cộng tổng: mặc định chỉ cộng đối tượng cấp cao nhất để không đếm trùng group lồng nhau.
@@ -739,6 +800,7 @@ function renderGrid(host){
   tableState.displayed=visibleRows.map(row=>({index:row.index,members:membersOf(row)})); // thứ tự dòng đang hiện, dùng cho chọn dãy bằng Shift
   closeMenu();
   const hadFocus=!!document.activeElement&&document.activeElement.classList&&document.activeElement.classList.contains('grid-wrap'); // vẽ lại bảng không được làm mất phím mũi tên
+  const oldWrap=host.querySelector('.grid-wrap'),scroll=oldWrap?{top:oldWrap.scrollTop,left:oldWrap.scrollLeft}:null; // giữ vị trí cuộn: sửa tên / ảnh / ô ở dòng dưới không được nhảy về đầu bảng
   host.replaceChildren();
   const wrap=node('div',undefined,'grid-wrap');
   wrap.tabIndex=0;
@@ -856,6 +918,7 @@ function renderGrid(host){
     const tfoot=node('tfoot');tfoot.append(foot);t.append(tfoot);
   }
   wrap.append(t);host.append(wrap);
+  if(scroll){wrap.scrollTop=scroll.top;wrap.scrollLeft=scroll.left;}
   if(hadFocus)wrap.focus({preventScroll:true});
   if(!rows.length)host.append(node('p','Không có đối tượng nào khớp bộ lọc.','empty'));
   fillImages();
@@ -927,16 +990,19 @@ function groupPanel(){
   const box=node('input');box.type='checkbox';box.checked=tableState.merge;
   box.onchange=()=>{tableState.merge=box.checked;renderGrid($('grid-host'));};
   merge.append(box,document.createTextNode(' Gộp dòng giống nhau'));
-  p.append(list,merge,node('p','Chỉ đổi cách hiển thị. Dòng gộp: Số lượng, diện tích, thể tích là tổng của các dòng gộp.','muted'));
+  // Mở / thu gọn mọi nhóm một lượt, khỏi bấm từng nhóm khi có nhiều nhóm.
+  const toggles=node('div');
+  if(tableState.groupBy)toggles.append(button('Mở tất cả nhóm',()=>setAllGroupsClosed(false),'pop-pick'),button('Thu gọn tất cả',()=>setAllGroupsClosed(true),'pop-pick'));
+  p.append(list,toggles,merge,node('p','Chỉ đổi cách hiển thị. Dòng gộp: Số lượng, diện tích, thể tích là tổng của các dòng gộp.','muted'));
   return p;
 }
 // Thay thế hàng loạt: chữ cần tìm là ô Tìm; áp cho các cột Tên, Mô tả, Xuất xứ, Quy cách đang hiện, trong các dòng đang lọc.
 const REPLACE_COLUMNS={instance:'name',description:'description',owner:'owner',size:'size'};
 const replaceFields=()=>orderedKeys().filter(k=>REPLACE_COLUMNS[k]).map(k=>REPLACE_COLUMNS[k]);
 function replaceMatches(){
-  const q=tableState.search.trim().toLocaleLowerCase('vi');if(!q)return 0;
+  const q=foldText(tableState.search.trim());if(!q)return 0;
   const fields=replaceFields();let count=0;
-  filteredRows().forEach(r=>fields.forEach(f=>{if(String(r[f==='name'?'name':f]||'').toLocaleLowerCase('vi').includes(q))count++;}));
+  filteredRows().forEach(r=>fields.forEach(f=>{if(foldText(r[f==='name'?'name':f]).includes(q))count++;}));
   return count;
 }
 function updateReplaceUi(){
@@ -1000,6 +1066,15 @@ function toolbar(){
   if(placed)bar.append(unplace);
   bar.append(groupAnchor);
   return bar;
+}
+// Thu gọn (closed = true) hoặc mở (false) mọi nhóm đang hiện. Chỉ đổi cách xem, không đổi dữ liệu.
+function setAllGroupsClosed(closed){
+  viewModel().sections.forEach(section=>{
+    if(section.label===null)return;
+    const key=`${tableState.groupBy}:${section.label}`;
+    if(closed)tableState.collapsed.add(key);else tableState.collapsed.delete(key);
+  });
+  renderGrid($('grid-host'));
 }
 // Mặt trước: phát hiện tự động (tường + hình học), đặt tay theo hướng nhìn / xoay / đảo, xóa. Chỉ ghi dữ liệu, không đổi hình học.
 tableState.frontOverwrite=false;
@@ -1067,8 +1142,8 @@ function codesPanel(){
   const sample=()=>{const n=Number(start.input.value),d=Number(pad.input.value);preview.textContent=Number.isInteger(n)&&Number.isInteger(d)&&d>=1&&d<=6?`Ví dụ: ${prefix.input.value.trim()}${String(n).padStart(d,'0')}, ${prefix.input.value.trim()}${String(n+1).padStart(d,'0')}...`:'';};
   [prefix,start,pad].forEach(f=>f.input.oninput=sample);sample();
   const apply=button('Áp dụng',()=>{
-    if(!picked.length)throw Error('Hãy chọn các dòng cần đặt mã.');
-    call('table_assign_codes',JSON.stringify({indexes:picked.flatMap(r=>r.members.filter(m=>tableState.sel.has(m)).slice(0,1)),prefix:prefix.input.value,start:Number(start.input.value),pad:Number(pad.input.value),overwrite:over.checked}));
+    if(!selectedIndexes().length)throw Error('Hãy chọn các dòng cần đặt mã.');
+    call('table_assign_codes',JSON.stringify({indexes:selectedIndexes(),prefix:prefix.input.value,start:Number(start.input.value),pad:Number(pad.input.value),overwrite:over.checked}));
     tableState.panel=null;tableView(tableState.data);
   },'primary');
   const actions=node('div',undefined,'rename-actions');actions.append(apply,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
@@ -1108,7 +1183,7 @@ function materialsPanel(){
   return p;
 }
 // Quản lý phòng: dữ liệu phòng (tên, mã, tầng, chiều cao, hoàn thiện) và số đo tính từ viền (diện tích, chu vi, thể tích, tường, trần), lưu trong model.
-// "Tạo phòng từ mặt đang chọn" chỉ ĐỌC viền của mặt sàn đang chọn trong SketchUp; khối 3D do plugin VGD_Room dựng. Ruby kiểm tra lại mọi giá trị.
+// "Tạo phòng từ mặt đang chọn" chỉ ĐỌC viền của mặt sàn đang chọn trong SketchUp. Ruby kiểm tra lại mọi giá trị.
 function roomsPanel(){
   const p=node('div',undefined,'popover right capture-panel rooms-panel');
   const rooms=((tableState.data&&tableState.data.rooms)||[]).map(r=>({...r}));
@@ -1124,15 +1199,24 @@ function roomsPanel(){
     const del=button('×',()=>{rooms.splice(rooms.indexOf(room),1);save();},'cs-del');del.title='Xóa phòng này (món đã gán chỉ hiện "phòng đã xóa", không mất dữ liệu khác)';del.setAttribute('aria-label','Xóa phòng '+room.name);
     top.append(name,number,del);
     const mid=node('div',undefined,'rm-mid');
-    const lv=node('select');lv.setAttribute('aria-label','Tầng của phòng');lv.append(new Option('(Không có tầng)',''));levels.forEach(l=>lv.append(new Option(l.name,l.id)));lv.value=room.level||'';lv.onchange=()=>{room.level=lv.value;save();};
-    mid.append(miniField('Tầng',lv),miniField('Cao mm',fieldInput(room,'height','Chiều cao phòng (mm)','number')),miniField('Cao độ sàn',fieldInput(room,'elevation','Cao độ sàn (mm)','number')));
+    const lv=node('select');lv.setAttribute('aria-label','Tầng của phòng');lv.append(new Option('(Không có tầng)',''));levels.forEach(l=>lv.append(new Option(l.name,l.id)));lv.value=room.level||'';
+    // Cao độ sàn theo tầng của phòng; chỉ phòng hạ nền khác mới nhập tay. Phòng không có tầng thì phải nhập tay.
+    const manual=room.elevation_source==='manual'||!room.level;
+    const hand=node('input');hand.type='checkbox';hand.checked=manual;hand.disabled=!room.level;hand.setAttribute('aria-label','Hạ nền khác (nhập tay cao độ sàn)');
+    hand.title=room.level?'Bật nếu phòng hạ nền khác với tầng: khi đó nhập cao độ sàn tay':'Phòng chưa có tầng: nhập cao độ sàn tay';
+    hand.onchange=()=>{room.elevation_source=hand.checked?'manual':'level';elev.disabled=!hand.checked;save();}; // đổi ngay trên màn hình, không chờ Ruby
+    lv.onchange=()=>{room.level=lv.value;if(!room.level){room.elevation_source='manual';hand.checked=true;hand.disabled=true;elev.disabled=false;}else{hand.disabled=false;}save();};
+    const elev=fieldInput(room,'elevation','Cao độ sàn (mm)','number');elev.disabled=!manual;elev.title=manual?'Cao độ sàn nhập tay':'Theo cao độ của tầng; bật Hạ nền khác để nhập tay';
+    const handLabel=node('label',undefined,'rm-hand');handLabel.append(hand,node('span','Hạ nền khác'));
+    mid.append(miniField('Tầng',lv),miniField('Cao mm',fieldInput(room,'height','Chiều cao phòng (mm)','number')),miniField('Cao độ sàn',elev),handLabel);
     const fin=node('div',undefined,'rm-fin');
     [['finish_floor','Sàn'],['finish_wall','Tường'],['finish_ceiling','Trần']].forEach(([k,t])=>{const i=fieldInput(room,k,'Hoàn thiện '+t.toLowerCase(),'text');i.placeholder='Hoàn thiện '+t.toLowerCase();i.maxLength=60;fin.append(i);});
     const m=room.metrics||{};
-    const hasPlugin=!!(tableState.data.bridge&&tableState.data.bridge.room_volume);
     const build=button(room.has_volume?'Dựng lại khối':'Dựng khối',()=>call('table_room_build',JSON.stringify({id:room.id})));build.className='rm-build';
-    build.disabled=!hasPlugin;build.title=hasPlugin?'Dựng (hoặc dựng lại) khối 3D của phòng bằng plugin VGD Room: một khối trên tag VGD_ROOMS, một bước hoàn tác.':'Cần cài plugin VGD Room (qua VGD Center) để dựng khối phòng.';
-    box.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường ${m.wall_area} m² · Trần ${m.ceiling_area} m²`+(room.holes&&room.holes.length?` · ${room.holes.length} lỗ (cột, hộp kỹ thuật)`:''),'muted rm-metrics'),build);
+    build.title='Dựng (hoặc dựng lại) khối 3D của phòng: một khối trên tag VGD_ROOMS, một bước hoàn tác.';
+    const upd=button('Cập nhật viền từ mặt đang chọn',()=>call('table_room_update_boundary',JSON.stringify({id:room.id})));upd.className='rm-update';
+    upd.title='Thay viền phòng bằng đúng một mặt sàn đang chọn trong SketchUp. Tên, mã, tầng, chiều cao, hoàn thiện giữ nguyên; cao độ sàn chỉ đổi theo mặt với phòng hạ nền (nhập tay).';
+    box.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường (chưa trừ cửa) ${m.wall_area} m² · Trần ${m.ceiling_area} m²`+(room.holes&&room.holes.length?` · ${room.holes.length} lỗ (cột, hộp kỹ thuật)`:''),'muted rm-metrics'),build,upd);
     p.append(box);
   });
   if(!rooms.length)p.append(node('p','Chưa có phòng nào. Chọn một hoặc nhiều mặt sàn trong SketchUp rồi bấm Tạo phòng từ các mặt đang chọn.','muted'));
@@ -1144,12 +1228,11 @@ function roomsPanel(){
   make.title='Đọc viền (và các lỗ, vd cột) của các mặt sàn nằm ngang đang chọn trong SketchUp, mỗi mặt thành một phòng. Một mặt: tên và mã như đã nhập. Nhiều mặt: tên là tiền tố (Phòng 1, Phòng 2...), không đặt mã. Chỉ lưu dữ liệu, không dựng hình.';
   const picked=tableState.displayed.filter(r=>r.members.some(m=>tableState.sel.has(m)));
   const auto=button('Gán món vào phòng theo vị trí',()=>{
-    if(!picked.length)throw Error('Hãy chọn các dòng cần gán phòng (Ctrl+A chọn hết các dòng đang hiện).');
-    call('table_assign_rooms_auto',JSON.stringify({indexes:picked.flatMap(r=>r.members.filter(m=>tableState.sel.has(m)).slice(0,1))}));
+    if(!selectedIndexes().length)throw Error('Hãy chọn các dòng cần gán phòng (Ctrl+A chọn hết các dòng đang hiện).');
+    call('table_assign_rooms_auto',JSON.stringify({indexes:selectedIndexes()}));
   });auto.id='rm-auto';auto.title='Mỗi món nhận phòng chứa tâm đáy của nó (trong viền và trong khoảng cao của phòng). Chỉ là nhãn, không dời hình.';
-  const hasPluginAll=!!(tableState.data.bridge&&tableState.data.bridge.room_volume);
   const buildAll=button(`Dựng khối tất cả phòng${rooms.length?` (${rooms.length})`:''}`,()=>call('table_room_build_all',JSON.stringify({})));buildAll.id='rm-build-all';
-  buildAll.disabled=!hasPluginAll||!rooms.length;buildAll.title=hasPluginAll?'Dựng (hoặc dựng lại) khối 3D của mọi phòng bằng plugin VGD Room, một bước hoàn tác cho cả đợt.':'Cần cài plugin VGD Room (qua VGD Center) để dựng khối phòng.';
+  buildAll.disabled=!rooms.length;buildAll.title='Dựng (hoặc dựng lại) khối 3D của mọi phòng, một bước hoàn tác cho cả đợt.';
   const actions=node('div',undefined,'rename-actions');actions.append(make,buildAll,auto,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
   p.append(create,node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán phòng theo vị trí; hoặc nhấp đúp ô Phòng để gán tay.','muted'),actions);
   return p;
@@ -1182,8 +1265,8 @@ function levelsPanel(){
   });add.id='lv-add';
   const picked=tableState.displayed.filter(r=>r.members.some(m=>tableState.sel.has(m)));
   const auto=button('Gán tầng theo cao độ cho món đang chọn',()=>{
-    if(!picked.length)throw Error('Hãy chọn các dòng cần gán tầng (Ctrl+A chọn hết các dòng đang hiện).');
-    call('table_assign_levels_auto',JSON.stringify({indexes:picked.flatMap(r=>r.members.filter(m=>tableState.sel.has(m)).slice(0,1))}));
+    if(!selectedIndexes().length)throw Error('Hãy chọn các dòng cần gán tầng (Ctrl+A chọn hết các dòng đang hiện).');
+    call('table_assign_levels_auto',JSON.stringify({indexes:selectedIndexes()}));
   },'primary');auto.id='lv-auto';auto.title='Mỗi món nhận tầng cao nhất có cao độ sàn bằng hoặc thấp hơn đáy món (dung sai 50 mm). Chỉ là nhãn, không dời hình.';
   const actions=node('div',undefined,'rename-actions');actions.append(add,auto,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
   p.append(node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán tầng theo cao độ; hoặc nhấp đúp ô Tầng để gán tay.','muted'),actions);
@@ -1227,7 +1310,7 @@ function checksPanel(){
   const columns=((tableState.data&&tableState.data.columns)||[]).filter(c=>!['image','image_location','image_extra1','image_extra2'].includes(c.kind));
   p.append(node('div','Luật kiểm tra','pop-title'),node('p','Mỗi luật kiểm tra một cột của bảng (số đo tính bằng mm). Luật lưu trong file SketchUp, chỉ đọc bảng, không đổi gì trong model.','muted'));
   const rows=node('div',undefined,'ck-rows');
-  const collect=()=>[...rows.querySelectorAll('.ck-item')].map(r=>{const o={name:r.querySelector('.ck-name').value,column:r.querySelector('.ck-col').value,op:r.querySelector('.ck-op').value,value:r.querySelector('.ck-val').value,severity:r.querySelector('.ck-sev').value,message:r.querySelector('.ck-msg').value};if(r.dataset.id)o.id=r.dataset.id;return o;});
+  const collect=()=>[...rows.querySelectorAll('.ck-item')].map(r=>{const o={name:r.querySelector('.ck-name').value,column:r.querySelector('.ck-col').value,op:r.querySelector('.ck-op').value,value:r.querySelector('.ck-val').value,group:r.querySelector('.ck-group').value,severity:r.querySelector('.ck-sev').value,message:r.querySelector('.ck-msg').value};if(r.dataset.id)o.id=r.dataset.id;return o;});
   const save=()=>call('check_rules_save',JSON.stringify({rules:collect()}));
   const select=(cls,options,value,label)=>{const s=node('select',undefined,cls);options.forEach(([v,t])=>s.append(new Option(t,v)));s.value=value;s.setAttribute('aria-label',label);s.onchange=save;return s;};
   const input=(cls,value,label,max)=>{const i=node('input',undefined,cls);i.type='text';i.value=value;i.maxLength=max;i.setAttribute('aria-label',label);i.onchange=save;return i;};
@@ -1238,7 +1321,7 @@ function checksPanel(){
     const sync=()=>{val.hidden=['empty','not_empty'].includes(op.value);};op.addEventListener('change',sync);sync();
     const del=button('×',()=>{r.remove();save();},'cs-del');del.title='Xóa luật này';del.setAttribute('aria-label','Xóa luật '+rule.name);
     const top=node('div',undefined,'ck-top');top.append(input('ck-name',rule.name,'Tên luật',60),del);
-    const mid=node('div',undefined,'ck-mid');mid.append(select('ck-col',columns.map(c=>[c.key,c.label]),rule.column,'Cột'),op,val);
+    const mid=node('div',undefined,'ck-mid');const group=select('ck-group',[['','Tất cả nhóm'],...(tableState.data.groups||[]).map(g=>[g,g])],rule.group||'','Nhóm hạng mục');mid.append(select('ck-col',columns.map(c=>[c.key,c.label]),rule.column,'Cột'),op,val,group);
     const low=node('div',undefined,'ck-low');low.append(select('ck-sev',CHECK_SEVERITIES,rule.severity,'Mức độ'),input('ck-msg',rule.message||'','Lời nhắn (để trống thì dùng tên luật)',120));
     r.append(top,mid,low);rows.append(r);
   };
@@ -1247,7 +1330,7 @@ function checksPanel(){
   const add=button('+ Thêm luật',()=>{
     const first=columns.find(c=>c.kind==='number')||columns[0];
     if(!first)throw Error('Bảng chưa có cột nào để kiểm tra.');
-    call('check_rules_save',JSON.stringify({rules:[...collect(),{name:`Luật ${rules.length+1}`,column:first.key,op:'lt',value:'0',severity:'WARNING',message:''}]}));
+    call('check_rules_save',JSON.stringify({rules:[...collect(),{name:`Luật ${rules.length+1}`,column:first.key,op:'lt',value:'0',group:'',severity:'WARNING',message:''}]}));
   });add.id='ck-add';
   const run=button('Chạy kiểm tra',()=>call('check_rules_run'),'primary');run.id='ck-run';
   const actions=node('div',undefined,'rename-actions');actions.append(add,run,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
@@ -1351,14 +1434,14 @@ function sortableList(list){
   });
 }
 function renderColumnList(list){
-  const q=tableState.colSearch.trim().toLocaleLowerCase('vi');
+  const q=foldText(tableState.colSearch.trim());
   list.replaceChildren();
   tableState.order.forEach(key=>{
     const col=colByKey(key);if(!col)return;
     // Danh sách chọn cột luôn ghi tên chuẩn của cột; tiêu đề riêng của preset (nếu có) chỉ ghi chú thêm, để hai cột không trông trùng tên.
     const standard=withUnit(col.label),custom=tableState.headers&&tableState.headers[col.key];
     const alias=custom&&custom!==standard?custom:'';
-    if(q&&!`${standard} ${alias}`.toLocaleLowerCase('vi').includes(q))return;
+    if(q&&!foldText(`${standard} ${alias}`).includes(q))return;
     const item=node('div',undefined,'pop-col');item.dataset.key=key;
     const box=node('input',undefined,'cb');box.type='checkbox';box.checked=tableState.visible.has(key);
     box.onchange=()=>{if(box.checked)tableState.visible.add(key);else tableState.visible.delete(key);if(box.checked&&key==='areaProjected')ensureProjected();refreshColumns();};
@@ -1456,9 +1539,9 @@ function saveExcluded(){
   updateExcludeCounts();persistView();
 }
 function excludeNames(){
-  const q=tableState.excludeSearch.trim().toLocaleLowerCase('vi');
+  const q=foldText(tableState.excludeSearch.trim());
   const inModel=modelTags(),missing=[...excludedTags()].filter(name=>!inModel.includes(name)).sort((a,b)=>a.localeCompare(b,'vi'));
-  return [...inModel.map(name=>({name,missing:false})),...missing.map(name=>({name,missing:true}))].filter(item=>!q||item.name.toLocaleLowerCase('vi').includes(q));
+  return [...inModel.map(name=>({name,missing:false})),...missing.map(name=>({name,missing:true}))].filter(item=>!q||foldText(item.name).includes(q));
 }
 function renderExcludeList(list){
   list.replaceChildren();
@@ -1530,7 +1613,6 @@ function openSide(kind,animate=true){
   if(!animate){side.classList.add('open');return;}
   requestAnimationFrame(()=>requestAnimationFrame(()=>side.classList.add('open'))); // hai khung hình để width 0 được vẽ trước khi trượt ra
 }
-const openColumns=(animate=true)=>openSide('columns',animate);
 function closeColumns(animate=true){
   const side=$('col-side');
   if(sideKind())tableState.panel=null;
@@ -1592,6 +1674,7 @@ function exportCell(row,col,position){
   if(NUMERIC.has(col.key)){const value=scaledValue(col.key,row[col.key]);return value==null||value===''?null:Number(value);}
   return String(cellText(row,col.key)||'');
 }
+// Xuất luôn đủ mọi món, kể cả nhóm đang thu gọn (thu gọn chỉ là cách xem trên màn hình).
 function exportRows(model){
   const {cols,rows,sections,sumOf,countOf}=model;
   const labelKey=['instance','definition','entity'].find(k=>cols.some(c=>c.key===k));
@@ -1601,7 +1684,6 @@ function exportRows(model){
   sections.forEach(section=>{
     if(section.label!==null){
       out.push({kind:'group',cells:summary(section.rows,exportText(`${section.label} · ${countOf(section.rows)}`))});
-      if(tableState.collapsed.has(`${tableState.groupBy}:${section.label}`))return;
     }
     section.rows.forEach(row=>{position++;out.push({kind:'row',pid:row.pid||null,cells:cols.map(col=>exportCell(row,col,position))});});
   });
@@ -1614,7 +1696,7 @@ const tableWaiters=[];
 const nextTableEvent=(ms=window.tableWaitMs||20000)=>new Promise(resolve=>{let done=false;const finish=arrived=>{if(!done){done=true;resolve(arrived===true);}};tableWaiters.push(()=>finish(true));setTimeout(finish,ms);}); // true khi bảng mới tới, false khi hết thời gian chờ
 function exportLabels(){return {model:exportText('Mô hình'),preset:'Preset',date:exportText('Ngày'),print:exportText('In / Lưu PDF'),reset:exportText('Đặt lại độ rộng cột'),hint:exportText('Kéo mép tiêu đề cột để chỉnh độ rộng.')};}
 function exportSheetData(name){
-  const model=viewModel();
+  const model=viewModel(true);
   return {name,columns:model.cols.map(exportColumn),rows:exportRows(model),...(tableState.rowHeight>0?{row_height:tableState.rowHeight}:{})};
 }
 let exporting=false;
@@ -1632,10 +1714,11 @@ async function exportTable(format){
     message(`Đang chuẩn bị ${sheets.length} sheet để xuất…`);
     for(let i=0;i<sheets.length;i++){
       tableState.sheet=i;loadSheet(sheets[i]);
+      const relocked=applyRowsLock(sheets[i].lock||null); // sheet khóa cần đúng các món đã khóa
       const needsProjected=tableState.visible.has('areaProjected')&&tableState.data.options&&!tableState.data.options.projected;
       const changed=applySheetExclude(sheets[i]);
       if(needsProjected)ensureProjected();
-      if((changed||needsProjected)&&!(await nextTableEvent()))throw new Error(`Hết thời gian chờ tính lại số đo cho sheet “${sheets[i].name}”. Hãy thử xuất lại.`); // Ruby tính lại số đo / diện tích chiếu rồi gửi bảng mới
+      if((changed||needsProjected||relocked)&&!(await nextTableEvent()))throw new Error(`Hết thời gian chờ tính lại số đo cho sheet “${sheets[i].name}”. Hãy thử xuất lại.`); // Ruby tính lại số đo / diện tích chiếu rồi gửi bảng mới
       out.push(exportSheetData(sheets[i].name));
     }
   }catch(error){
@@ -1643,8 +1726,9 @@ async function exportTable(format){
     out.length=0;
   }finally{
     tableState.sheet=original;loadSheet(sheets[original]);
+    const relocked=applyRowsLock(sheets[original].lock||null);
     const changed=applySheetExclude(sheets[original]);
-    if(changed)await nextTableEvent();
+    if(changed||relocked)await nextTableEvent();
     exporting=false;
     tableState.sheets=sheets;persistView();tableView(tableState.data);
   }
@@ -1764,12 +1848,12 @@ function ioPanel(){
   const levelsBtn=item('id','Quản lý tầng...',()=>{tableState.panel='levels';tableView(tableState.data);});
   levelsBtn.id='levels-open';levelsBtn.title='Thêm / sửa tầng của công trình và gán tầng cho món (chỉ là nhãn, không dời hình)';
   const roomsBtn=item('id','Quản lý phòng...',()=>{tableState.panel='rooms';tableView(tableState.data);});
-  roomsBtn.id='rooms-open';roomsBtn.title='Tạo phòng từ mặt sàn đang chọn, sửa tên / mã / tầng / chiều cao / hoàn thiện, xem diện tích, thể tích và gán món vào phòng (chỉ là dữ liệu, hình khối do VGD_Room dựng)';
+  roomsBtn.id='rooms-open';roomsBtn.title='Tạo phòng từ mặt sàn đang chọn, sửa tên / mã / tầng / chiều cao / hoàn thiện, xem diện tích, thể tích và gán món vào phòng (dữ liệu và khối 3D của phòng)';
   const materialsBtn=item('id','Thư viện vật liệu...',()=>{tableState.panel='materials';tableView(tableState.data);});
   materialsBtn.id='materials-open';materialsBtn.title='Thư viện vật liệu (mã, hãng, đơn giá, hao hụt...) nối với vật liệu SketchUp theo tên để tính khối lượng có hao hụt và thành tiền theo vật liệu';
   const checksBtn=item('id','Luật kiểm tra...',()=>{tableState.panel='checks';tableView(tableState.data);});
   checksBtn.id='checks-open';checksBtn.title='Đặt luật kiểm tra riêng cho bảng (ví dụ Rộng nhỏ hơn 700 thì cảnh báo, Tầng để trống thì thông tin) rồi chạy và bấm vào kết quả để chọn món';
-  const snapBtn=item('id','So sánh phiên bản...',()=>{tableState.panel='snapshots';tableState.snapshotDiff=null;call('snapshot_list');tableView(tableState.data);});
+  const snapBtn=item('id','So sánh phiên bản...',()=>{tableState.panel='snapshots';tableState.snapshotDiff=null;tableState.snapshots=null;call('snapshot_list');tableView(tableState.data);});
   snapBtn.id='snapshots-open';snapBtn.title='Chụp mốc giá trị các món rồi so với bảng hiện tại để biết món nào thêm, xóa hoặc đổi';
   p.append(assignIds,fixIds,editSource,codesBtn,node('div','Công trình','io-head'),levelsBtn,roomsBtn,node('div','Vật liệu và kiểm tra','io-head'),materialsBtn,checksBtn,snapBtn);
   return p;
@@ -1886,6 +1970,7 @@ window.VGD={receive(event,data){
   if(event==='snapshot_diff'){tableState.snapshotDiff=data;tableState.panel='snapshots';if(tableState.data)tableView(tableState.data);}
   if(event==='check_results'){tableState.checkResults=data;tableState.panel='checks';if(tableState.data)tableView(tableState.data);}
   if(event==='highlight')highlightRows(data.indexes);
+  if(event==='sheet_lock'){const s=tableState.sheets&&tableState.sheets[tableState.sheet];if(s&&data&&data.lock){s.lock=data.lock;tableState.lockKey=lockKeyOf(data.lock);persistView();if(tableState.data)tableView(tableState.data);}}
   if(event==='options'&&tableState.data){tableState.data.options=data;tableView(tableState.data);}
   if(event==='presets'){
     if(config.table)config.table.presets=data;
@@ -1917,8 +2002,10 @@ window.VGD={receive(event,data){
   if(event==='progress')message(`Đang quét… ${number(data.count,0)} đối tượng hình học.`);
   if(event==='message')message(data.error||data.text,!!data.error);
   if(event==='preview')preview(data);
+  if(event==='export_done')showExportDone(data);
   if(event==='selection'){const text=$('tag-selection-text'),go=$('tag-assign');if(text)text.textContent=`Đang chọn ${data.count} đối tượng hoặc mặt trong SketchUp.`;if(go){go.dataset.count=String(data.count);go.disabled=!data.count;}}
 }};
+$('export-done-close').onclick=()=>$('export-done').close();$('export-done-open').onclick=()=>{$('export-done').close();call('export_open')};$('export-done-folder').onclick=()=>{$('export-done').close();call('export_open_folder')};
 $('cancel-preview').onclick=()=>$('preview').close();$('confirm-preview').onclick=()=>{$('confirm-preview').disabled=true;$('preview').close();call('confirm_convert')};document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>call('open_panel',b.dataset.mode));
 document.addEventListener('vgdtheme',e=>{const dark=e.detail.theme==='dark';document.body.classList.toggle('dark',dark);document.body.classList.toggle('light',!dark);$('brand-logo').src=dark?'../assets/icons/vgd_primary_dark.svg':'../assets/icons/vgd_primary_light.svg';});
 VGDTheme.start({key:'VGD_BIM_theme',button:$('theme')});

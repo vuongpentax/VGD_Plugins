@@ -214,7 +214,7 @@ module VGD
           check_model!
           enabled = payload['enabled']
           raise 'Giá trị không hợp lệ.' unless enabled == true || enabled == false
-          @model.rendering_options['DisplayColorByLayer'] = enabled
+          Data.transaction(@model, 'VGD BIM · Tô màu theo tag') { @model.rendering_options['DisplayColorByLayer'] = enabled }
           emit('tag_tree', tag_tree_state)
         end
 

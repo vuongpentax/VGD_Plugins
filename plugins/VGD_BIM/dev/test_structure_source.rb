@@ -51,6 +51,7 @@ module VGD; module BIM
     # Khối bao giả lập của một tường chạy theo trục Y: lenX = bề dày (200) chứ không phải chiều dài, đúng cái bẫy mà số liệu của plugin sửa.
     def self.dimensions(e, _t, measure: nil); e.get_attribute('test', 'bbox') || {width: 1000.0, depth: 500.0, height: 2000.0}; end
     def self.definition(e); Defn.new(e); end
+    def self.path_transform(_path); Tr.new; end # không có group đang mở: đơn vị
     def self.face_area(*); 0.0; end
     class Defn; def initialize(e); @e = e; end; def name; @e.name; end; def entities; @e.entities; end; def bounds; Box.new; end; def count_instances; 1; end; end
     class Box; def empty?; true; end; end
@@ -113,7 +114,7 @@ ok('đối tượng không phải phần tử: không thêm trường nào', SS.
 
 # Khối lượng trong bảng
 bad_wall = {lenX: 200.0, lenY: 3150.0, lenZ: 3480.0, areaXZ: 0.696}
-ok('tường chạy theo Y: khối bao cho diện tích sai (0,696 m²) nhưng số liệu plugin cho đúng 10,962 m²', Q.amount('area', bad_wall) == [0.696, nil] && Q.amount('area', bad_wall.merge(struct_area: 10.962)) == [10.962, nil])
+ok('tường chạy theo Y: khối bao cho diện tích sai (0,696 m²) nhưng số liệu plugin cho đúng 10,962 m²', Q.amount('area', bad_wall) == [0.696, 'ước tính theo khối bao'] && Q.amount('area', bad_wall.merge(struct_area: 10.962)) == [10.962, nil])
 ok('theo mét dài: ưu tiên chiều dài của plugin; theo thể tích: thể tích chính xác (không ghi chú ước tính)', Q.amount('length', bad_wall.merge(struct_length: 3.15)) == [3.15, nil] && Q.amount('volume', {lenX: 200.0, lenY: 3150.0, lenZ: 3480.0, struct_volume: 2.1924}) == [2.1924, nil])
 ok('không có số liệu của plugin: giữ cách tính cũ (đúng như trước)', Q.amount('length', {lenX: 1200.0}) == [1.2, nil] && Q.amount('volume', {volume: 1.5}) == [1.5, nil])
 tagged = Q.row_fields(bad_wall.merge(struct_kind: 'wall', struct_area: 10.962), 'A. WALL', 'A. ARCHITECTURAL', {}, {})

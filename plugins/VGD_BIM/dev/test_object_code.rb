@@ -26,5 +26,13 @@ ok('mã tối đa 30 ký tự (code của schema dùng chuỗi, giới hạn h�
 
 ok('không trùng mã của món ngoài danh sách đặt (others)', error_of { O.plan([{index: 0, code: '', locked: false}], prefix: 'D', start: 1, pad: 2, others: ['d01']) }.to_s.include?('D01'))
 
+# ---- Sửa tay ô Mã đối tượng trong bảng (check_edit!): không trùng mã của món khác trong bảng, không đặt một mã cho nhiều món ----
+rows = [{index: 0, code: 'TB01'}, {index: 1, code: 'tb02'}, {index: 2, code: ''}]
+ok('sửa tay: mã trùng món khác (khác hoa thường) bị từ chối', error_of { O.check_edit!('TB02', [0], rows) }.to_s.include?('đã có ở món khác'))
+ok('sửa tay: mã mới chưa có trong bảng được nhận', error_of { O.check_edit!('TB03', [2], rows) }.nil?)
+ok('sửa tay: giữ nguyên mã của chính món đó được nhận', error_of { O.check_edit!('TB01', [0], rows) }.nil?)
+ok('sửa tay: xóa mã (rỗng) luôn được nhận, kể cả khi trùng', error_of { O.check_edit!('', [0, 1], rows) }.nil?)
+ok('sửa tay: một mã cho nhiều món cùng lúc bị từ chối', error_of { O.check_edit!('TB09', [0, 2], rows) }.to_s.include?('nhiều món'))
+
 puts($fails.zero? ? "\nTẤT CẢ ĐẠT" : "\n#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

@@ -5,6 +5,11 @@ module VGD
       def self.definition(entity)
         entity.is_a?(Sketchup::Group) ? entity.entities.parent : entity.definition
       end
+      # Biến đổi (cục bộ -> thế giới) của một đường dẫn group: tích các biến đổi từ gốc tới phần tử cuối. Dùng cho group đang mở sửa
+      # (active_path). Không dùng Model#edit_transform: SketchUp có thể báo sai vị trí của món con khi chọn trong group vừa mở.
+      def self.path_transform(path)
+        path.inject(Geom::Transformation.new) { |total, entity| total * entity.transformation }
+      end
       # Local axes dimensions after full occurrence transform; rotation preserves W/D/H.
       # Món đã có mặt trước (xem Front): Rộng là chiều ngang nhìn từ mặt trước, Sâu là chiều theo hướng mặt trước, Cao là Z.
       # Chưa có mặt trước thì Rộng = X cục bộ, Sâu = Y cục bộ như trước.

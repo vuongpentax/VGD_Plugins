@@ -145,9 +145,9 @@ document.addEventListener('paste',e=>{
 async function pasteImageFromClipboard(pid,kind){
   imagesState.last={pid,kind};
   const hint='Không đọc được clipboard bằng nút. Hãy bấm vào ô ảnh rồi nhấn Ctrl+V.';
-  if(!navigator.clipboard||typeof navigator.clipboard.read!=='function')throw Error(hint);
+  if(!navigator.clipboard||typeof navigator.clipboard.read!=='function')throw Error(`${hint} Chi tiết: cửa sổ này không có chức năng đọc clipboard (navigator.clipboard.read).`);
   let items;
-  try{items=await navigator.clipboard.read();}catch(error){throw Error(hint);}
+  try{items=await navigator.clipboard.read();}catch(error){throw Error(`${hint} Chi tiết: ${error&&error.name?error.name:'lỗi'}${error&&error.message?' - '+error.message:''}.`);}
   for(const item of items){
     const type=item.types.find(t=>/^image\//.test(t));
     if(type)return sendImage(pid,await item.getType(type),kind);

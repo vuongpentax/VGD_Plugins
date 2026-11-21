@@ -10,6 +10,16 @@ module VGD
 
       # others: mã của các món khác trong bảng (không nằm trong lần đặt này) để không trùng.
       # items: [{index:, code:, locked:}] theo thứ tự đánh số. Món có mã giữ nguyên (trừ overwrite), món khóa bỏ qua.
+      # Sửa tay ô Mã đối tượng: mã không được trùng mã của món khác trong bảng (không phân biệt hoa thường) và không đặt một mã cho
+      # nhiều món cùng lúc. Mã rỗng (xóa mã) luôn được nhận. indexes: các dòng sẽ đổi; rows: mọi dòng của bảng ({index:, code:}).
+      def self.check_edit!(code, indexes, rows)
+        text = code.to_s.strip
+        return if text.empty?
+        raise ArgumentError, 'Mã này đặt cho nhiều món cùng lúc là trùng. Hãy sửa từng món.' if indexes.size > 1
+        taken = rows.reject { |row| indexes.include?(row[:index]) }.map { |row| row[:code].to_s.downcase }
+        raise ArgumentError, "Mã #{text} đã có ở món khác trong bảng. Hãy chọn mã khác." if taken.include?(text.downcase)
+      end
+
       def self.plan(items, prefix:, start:, pad:, overwrite: false, others: [])
         text = prefix.is_a?(String) ? prefix.strip : ''
         raise ArgumentError, "Hãy nhập tiền tố mã (tối đa #{MAX_PREFIX} ký tự, không có ký tự điều khiển)." if text.empty? || text.length > MAX_PREFIX || text.match?(CONTROL)

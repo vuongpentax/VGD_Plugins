@@ -37,9 +37,25 @@ module VGD
         file = path(name)
         temp = "#{file}.tmp"
         File.open(temp, 'wb') { |f| f.write(JSON.pretty_generate(data)) }
-        File.delete(file) if File.exist?(file)
-        File.rename(temp, file)
+        replace_file(temp, file)
         data
+      end
+
+      # Đổi file tạm thành file chính mà không mất file cũ khi đổi tên lỗi (ví dụ file bị Excel hoặc phần mềm khác giữ): file cũ được
+      # giữ tạm ở .bak, đổi xong mới xóa; lỗi thì trả lại file cũ rồi báo lỗi. Còn .bak mà file chính đã mất (lần trước dở): khôi phục trước.
+      def self.replace_file(temp, final)
+        backup = "#{final}.bak"
+        File.rename(backup, final) if !File.exist?(final) && File.exist?(backup)
+        File.delete(backup) if File.exist?(backup)
+        had_old = File.exist?(final)
+        File.rename(final, backup) if had_old
+        begin
+          File.rename(temp, final)
+        rescue SystemCallError
+          File.rename(backup, final) if had_old && File.exist?(backup)
+          raise
+        end
+        File.delete(backup) if had_old && File.exist?(backup)
       end
     end
   end

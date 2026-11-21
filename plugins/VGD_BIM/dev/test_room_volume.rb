@@ -1,4 +1,4 @@
-# Test dựng khối phòng (runtime/vgd_room/builder.rb) với SketchUp giả lập đơn giản: kiểm tra dữ liệu sai, khối dựng đúng (viền, cao độ, chiều cao,
+# Test dựng khối phòng (runtime/vgd_bim/core/room_volume.rb, nhập từ VGD_Room vào BIM) với SketchUp giả lập đơn giản: kiểm tra dữ liệu sai, khối dựng đúng (viền, cao độ, chiều cao,
 # mặt hướng lên), tag / vật liệu / tên, dữ liệu cầu nối (VGD ID, nguồn), dựng lại giữ ID và thay khối cũ, một thao tác, hủy khi lỗi. Chạy: ruby dev/test_builder.rb
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
@@ -55,11 +55,9 @@ class FakeModel
   def abort_operation; @ops << [:abort]; true; end
 end
 
-ROOT = File.expand_path('../runtime/vgd_room', __dir__)
-module VGD; module Room; VERSION = '0.1.0-beta.2'; end; end # như runtime/vgd_room.rb (không nạp SketchUp thật)
-require File.join(ROOT, 'bridge_registry')
-require File.join(ROOT, 'builder')
-B = VGD::Room::Builder
+module VGD; module BIM; VERSION = '1.1.1-beta.13'; end; end # như runtime/vgd_bim.rb (không nạp SketchUp thật)
+require File.expand_path('../runtime/vgd_bim/core/room_volume', __dir__)
+B = VGD::BIM::RoomVolume
 
 ID = '8a42f1c0-1111-4222-8333-444455556666'.freeze
 ROOM = {'id' => 'rm_aaaaaaaa', 'name' => 'Phòng khách', 'number' => 'P01', 'elevation' => 100.0, 'height' => 2800.0,
@@ -88,15 +86,19 @@ cw_face = cw_group.entities.items.first
 ok('viền đi theo chiều kim đồng hồ: mặt được lật cho hướng lên trước khi đùn', cw_face.normal.z > 0 && cw_face.pushed > 0)
 ok('tên khối, tag VGD_ROOMS, vật liệu trong suốt', group.name == 'Phòng · P01 · Phòng khách' && group.layer.name == 'VGD_ROOMS' && group.material.name == 'VGD_Room' && group.material.alpha < 1.0)
 ok('vật liệu chỉ tạo một lần', (m.materials.items.size == 1))
-ok('dữ liệu cầu nối: VGD ID, plugin, phiên bản, loại phòng, mã phòng BIM', group.get_attribute('VGD_BIM_ID', 'guid') == ID && group.get_attribute('VGD_BIM_SOURCE', 'plugin') == 'vgd_room' && group.get_attribute('VGD_BIM_SOURCE', 'kind') == 'room' && group.get_attribute('VGD_BIM_SOURCE', 'ref') == 'rm_aaaaaaaa' && !group.get_attribute('VGD_BIM_SOURCE', 'plugin_version').to_s.empty? && !group.attrs.key?('VGD_BIM'))
-ok('một thao tác có commit', m.ops == [[:start, 'VGD_Room · Dựng khối phòng'], [:commit]])
+ok('dữ liệu cầu nối: VGD ID, plugin, phiên bản, loại phòng, mã phòng BIM', group.get_attribute('VGD_BIM_ID', 'guid') == ID && group.get_attribute('VGD_BIM_SOURCE', 'plugin') == 'vgd_bim' && group.get_attribute('VGD_BIM_SOURCE', 'kind') == 'room' && group.get_attribute('VGD_BIM_SOURCE', 'ref') == 'rm_aaaaaaaa' && !group.get_attribute('VGD_BIM_SOURCE', 'plugin_version').to_s.empty? && !group.attrs.key?('VGD_BIM'))
+ok('một thao tác có commit', m.ops == [[:start, 'VGD_BIM · Dựng khối phòng'], [:commit]])
 ok('find: tìm khối theo mã phòng; phòng khác thì nil', B.find(m, 'rm_aaaaaaaa').equal?(group) && B.find(m, 'rm_bbbbbbbb').nil? && B.find(Object.new, 'rm_aaaaaaaa').nil?)
+nested_host = Sketchup::Group.new(m); m.entities.items << nested_host
+nested_vol = Sketchup::Group.new(m); nested_vol.set_attribute('VGD_BIM_SOURCE', 'kind', 'room'); nested_vol.set_attribute('VGD_BIM_SOURCE', 'ref', 'rm_cccccccc'); nested_host.entities.items << nested_vol
+ok('find: khối nằm trong group khác vẫn tìm thấy (không dựng trùng)', B.find(m, 'rm_cccccccc').equal?(nested_vol))
+m.entities.items.delete(nested_host) # dọn: các kiểm tra sau đếm khối trong model
 
 # ---- Dựng lại ----
 m.ops.clear
 newer = B.build(m, ROOM.merge('height' => 3000.0, 'name' => 'Khách lớn'), '11111111-2222-4333-8444-555555555555')
 ok('dựng lại: khối cũ bị thay bằng khối mới (chỉ còn một), giữ VGD ID cũ, cập nhật tên', m.entities.items.grep(Sketchup::Group).size == 1 && !group.valid? && newer.get_attribute('VGD_BIM_ID', 'guid') == ID && newer.name == 'Phòng · P01 · Khách lớn' && (newer.entities.items.first.pushed - 3000.0 / 25.4).abs < 1e-9)
-ok('dựng lại cũng chỉ một thao tác', m.ops == [[:start, 'VGD_Room · Dựng khối phòng'], [:commit]])
+ok('dựng lại cũng chỉ một thao tác', m.ops == [[:start, 'VGD_BIM · Dựng khối phòng'], [:commit]])
 newer.locked = true
 m.ops.clear
 ok('khối cũ đang bị khóa: từ chối, hủy thao tác, khối cũ còn nguyên', error_of { B.build(m, ROOM, ID) }.to_s.include?('khóa') && m.ops.last == [:abort] && newer.valid? && m.entities.items.grep(Sketchup::Group).size == 1)
@@ -124,7 +126,7 @@ faces = []
 recorder.entities.define_singleton_method(:add_group) { g = super(); g.entities.define_singleton_method(:add_face) { |pts| f = super(pts); faces << f; f }; g }
 B.build(recorder, ROOM.merge('holes' => [COL]), ID)
 ok('mặt lỗ: bốn điểm ở cao độ sàn, đã bị xóa; mặt ngoài không bị xóa', faces.size == 2 && faces[1].erased && faces[1].points.size == 4 && faces[1].points.all? { |p| (p.z - 100.0 / 25.4).abs < 1e-9 } && !faces[0].erased)
-ok('phòng có lỗ vẫn một thao tác có commit', hm.ops == [[:start, 'VGD_Room · Dựng khối phòng'], [:commit]])
+ok('phòng có lỗ vẫn một thao tác có commit', hm.ops == [[:start, 'VGD_BIM · Dựng khối phòng'], [:commit]])
 
 # ---- Dựng nhiều phòng một lần (một bước hoàn tác) ----
 ID2 = '22222222-3333-4444-8555-666666666666'.freeze
@@ -134,7 +136,7 @@ R3 = ROOM.merge('id' => 'rm_cccccccc', 'name' => 'Bếp', 'number' => '', 'holes
 bm = FakeModel.new
 many = B.build_many(bm, [[ROOM, ID], [R2, ID2], [R3, ID3]])
 ok('dựng ba phòng: ba khối, đúng thứ tự, mỗi khối có VGD ID riêng', many.size == 3 && many.map(&:name) == ['Phòng · P01 · Phòng khách', 'Phòng · P02 · Phòng ngủ', 'Phòng · Bếp'] && many.map { |g| g.get_attribute('VGD_BIM_ID', 'guid') } == [ID, ID2, ID3])
-ok('cả đợt chỉ MỘT thao tác (một bước hoàn tác)', bm.ops == [[:start, 'VGD_Room · Dựng khối nhiều phòng'], [:commit]])
+ok('cả đợt chỉ MỘT thao tác (một bước hoàn tác)', bm.ops == [[:start, 'VGD_BIM · Dựng khối nhiều phòng'], [:commit]])
 ok('phòng có lỗ trong đợt: mặt trong lỗ bị xóa', many[2].entities.items.size == 1)
 bm.ops.clear
 again = B.build_many(bm, [[ROOM.merge('height' => 2500.0), '44444444-5555-4666-8777-888888888888'], [R2, ID2]])
@@ -154,15 +156,6 @@ fm = FakeModel.new
 calls = 0
 fm.entities.define_singleton_method(:add_group) { calls += 1; raise 'SketchUp lỗi' if calls == 2; super() }
 ok('lỗi ở phòng thứ hai: hủy cả đợt', error_of { B.build_many(fm, [[ROOM, ID], [R2, ID2]]) } == 'SketchUp lỗi' && fm.ops.last == [:abort])
-
-# ---- Danh bạ cầu nối ----
-require File.join(ROOT, 'main')
-provider = VGD::Bridge.provider_for('room_volume')
-ok('đăng ký cầu nối: loại room_volume, bridge_version 1, lệnh build và find', provider && provider[:id] == 'vgd_room' && provider[:info][:commands].keys.sort == %w[build build_many find] && provider[:info][:bridge_version] == 1)
-ok('gọi qua cầu nối dựng được khối', VGD::Bridge.call('room_volume', 'build', FakeModel.new, ROOM, ID).is_a?(Sketchup::Group))
-ok('loại không có plugin: báo cần cài', error_of { VGD::Bridge.call('stair', 'build') }.to_s.include?('Chưa cài'))
-ok('đăng ký sai (mã, lệnh không gọi được) bị từ chối', error_of { VGD::Bridge.register('X', provides: [], commands: {}) }.to_s.include?('không hợp lệ') && error_of { VGD::Bridge.register('vgd_x', {provides: [], commands: {'a' => 1}}) }.to_s.include?('không hợp lệ'))
-ok('khác bridge_version: không dùng', (VGD::Bridge.register('vgd_old', {bridge_version: 99, provides: ['wall'], commands: {}}); VGD::Bridge.provider_for('wall').nil?))
 
 puts($fails.zero? ? "\nTẤT CẢ ĐẠT" : "\n#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

@@ -150,4 +150,13 @@ File.write(File.join(SKT, 'a_VGD_BIM', 'settings.json'), JSON.generate('table_vi
 check 'trạng thái đọc từ settings.json cũng được kiểm tra (cột lạ, độ cao quá lớn)', T.view_state(view_a)['rowHeight'] == T::ROW_HEIGHT_MAX
 File.write(File.join(SKT, 'b_VGD_BIM', 'settings.json'), '{ không phải json')
 check 'settings.json hỏng: bỏ qua, về mặc định, không lỗi', T.view_state(view_b) == {}
+# Tâm đáy X, Y và cao độ đáy Z (mm) lấy từ MỘT lần tính hộp bao của món (base_point), không tính lại cho từng giá trị.
+$bb_calls = 0
+orig_bb = T.method(:bounding_box)
+FakeBox = Struct.new(:min, :max) { def empty?; false; end }
+T.define_singleton_method(:bounding_box) { |_rec| $bb_calls += 1; FakeBox.new(BoxPoint.new(10.0, 20.0, 30.0), BoxPoint.new(14.0, 23.0, 32.0)) }
+base = T.base_point(record)
+check 'cao độ đáy và tâm đáy: đúng mm (tâm X 304,8; tâm Y 546,1; đáy Z 762,0)', base == [304.8, 546.1, 762.0]
+check 'cao độ đáy và tâm đáy: chỉ tính hộp bao một lần cho món', $bb_calls == 1
+T.define_singleton_method(:bounding_box) { |rec| orig_bb.call(rec) }
 puts 'Done'

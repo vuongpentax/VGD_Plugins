@@ -57,6 +57,19 @@ ok('tải lại không nhân đôi mục menu', vgd.items.size == count_before)
 loaded = []
 Kernel.send(:alias_method, :__orig_load_for_test, :load)
 Kernel.send(:define_method, :load) { |*args, **kw| loaded << args.first; __orig_load_for_test(*args, **kw) }
+# Đang chụp ảnh hoặc đang vẽ khung xem trước: không tải lại code, báo rõ việc đang làm, không nạp file nào (CLAUDE.md, mục tải lại).
+class BusyPanel
+  def initialize(reason); @reason = reason; end
+  def closed?; false; end
+  def busy_reason; @reason; end
+end
+[['đang chụp ảnh', 'chụp'], ['đang vẽ khung xem trước', 'vẽ']].each do |reason, label|
+  VGD::BIM.instance_variable_set(:@panel, BusyPanel.new(reason))
+  before = loaded.size
+  busy_result = VGD::BIM.reload
+  ok("tải lại khi #{label}: không nạp, báo việc đang làm và hướng dẫn chờ", busy_result == false && $boxes.last.include?(reason) && $boxes.last.include?('Hãy chờ xong rồi tải lại code.') && loaded.size == before)
+end
+VGD::BIM.instance_variable_set(:@panel, nil)
 orig_compile = RubyVM::InstructionSequence.method(:compile_file)
 RubyVM::InstructionSequence.define_singleton_method(:compile_file) do |path, *rest|
   raise SyntaxError, 'lỗi cú pháp giả lập' if path.end_with?('/core/data.rb')

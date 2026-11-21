@@ -123,7 +123,7 @@ Nguồn: README công khai của `github.com/mencom95/vtbim`. Repo đó **chỉ 
 | Bảng thống kê cột, dầm tự cập nhật | VGD BIM đã làm bảng khối lượng; chỉ cần BIM đọc đúng dữ liệu (cột mốc 7); thêm tóm tắt số lượng theo loại trong cửa sổ plugin | cột mốc 7 |
 | Kiểm tra tài liệu (chồng, thiếu) | Thêm **kiểm tra kết cấu** (nhịp ngắn hơn cột, cột lệch lưới, tầng thiếu cao độ) trong xem trước | cột mốc 6 |
 | Nhập DWG / DXF | Đã hoãn (nhập lưới từ CAD) | sau cột mốc 8 |
-| Phòng / vùng | Là việc của VGD Room (có thể dò viền từ tường của plugin này) | ngoài plugin |
+| Phòng / vùng | Là việc của VGD Structure: xác định phòng, kể cả dò viền từ tường (quyết định ngày 18/11/2026; VGD Room đã gỡ) | trong plugin, chưa làm |
 | Mặt bằng, mặt đứng, mặt cắt, trình bày, xuất PDF/DWG, thang, mái, cửa, thiết bị vệ sinh, MCP | Không thuộc phần thô; nếu cần sẽ là plugin / hệ khác | ngoài phạm vi |
 
 Việc cần chủ dự án duyệt trước cột mốc 2: có nhận hai bổ sung "loại phần tử" và "sao chép lựa chọn từ tầng khác" hay không.
@@ -140,7 +140,7 @@ Cấu trúc tính năng lấy từ README công khai của VTBim (chỉ ý tư�
 | 10 | **Hoàn thiện** | Sàn hoàn thiện (lát), tường hoàn thiện (ốp, sơn) bám mặt tường kể cả quanh lỗ cửa, trần hoàn thiện; tag A. FINISHING FLOOR / WALL / CEILING; khối lượng theo vật liệu | test diện tích trừ lỗ, không chồng khối |
 | 11 | Cầu thang và lan can | Thang theo tham số (vế, chiếu nghỉ), lỗ mở sàn cho thang, lan can liên tục | test bậc, lỗ sàn |
 | 12 | Mái | Mái dốc / mái bằng từ viền tường, ban đầu mái phẳng và dốc đơn giản | test độ dốc, viền |
-| 13 | Khác | Vách kính, thiết bị vệ sinh, nhập lưới từ CAD, nối phòng (VGD Room tự dò viền từ tường) | theo từng việc |
+| 13 | Khác | Vách kính, thiết bị vệ sinh, nhập lưới từ CAD, nối phòng (dò viền phòng từ tường, do VGD Structure làm) | theo từng việc |
 | 14 | Phát hành | Catalog Center, hướng dẫn, chốt bản ổn định cho Structure, BIM, Room | quy trình trong `CLAUDE.md` gốc |
 
 Mỗi cột mốc có test và RBZ như trước; phần chỉ kiểm được trong SketchUp thật ghi rõ "chưa xác minh". Cột mốc 8 xong thì dừng cho chủ dự án thử trước khi làm cột mốc 9.

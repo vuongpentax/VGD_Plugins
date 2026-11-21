@@ -1,6 +1,7 @@
 require 'json'
 require 'fileutils'
 require_relative 'settings'
+require_relative 'storage'
 
 module VGD
   module BIM
@@ -147,8 +148,7 @@ module VGD
         FileUtils.mkdir_p(File.dirname(path))
         temp = "#{path}.tmp"
         File.write(temp, JSON.pretty_generate({'schema' => SCHEMA}.merge(data)), encoding: 'UTF-8')
-        File.delete(path) if File.exist?(path)
-        File.rename(temp, path)
+        Storage.replace_file(temp, path)
       rescue SystemCallError => error
         FileUtils.rm_f(temp) if temp
         raise ArgumentError, "Không ghi được #{FILE_NAME}: #{error.message}"

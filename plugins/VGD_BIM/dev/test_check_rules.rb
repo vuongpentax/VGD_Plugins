@@ -61,5 +61,25 @@ m.set_attribute('VGD_BIM_MODEL', 'check_rules', '{hỏng')
 ok('dữ liệu hỏng: coi như chưa có', CR.read(m) == [])
 bad = raises? { CR.write(m, [rule('op' => 'zz')]) }
 ok('ghi dữ liệu sai: lỗi, không mở thao tác', bad && m.ops == [:start, :commit])
+# Điều kiện lọc theo nhóm hạng mục (cột mốc 4)
+GROUPS = ['Cửa', 'Nội thất', 'Chưa phân loại']
+ok('luật có nhóm: giữ nhóm', CR.sanitize!([rule('group' => 'Cửa')], %w[lenX], GROUPS).first['group'] == 'Cửa')
+ok('luật không ghi nhóm: nhóm rỗng (áp cho mọi nhóm)', CR.sanitize!([rule]).first['group'] == '')
+ok('nhóm không có trong danh sách: lỗi', raises? { CR.sanitize!([rule('group' => 'Lạ')], %w[lenX], GROUPS) }.to_s.include?('nhóm món'))
+ok('nhóm quá dài: lỗi', raises? { CR.sanitize!([rule('group' => 'a' * 61)]) }.to_s.include?('tối đa'))
+ok('nhóm sai kiểu: lỗi', raises? { CR.sanitize!([rule('group' => 5)]) }.to_s.include?('phải là chữ'))
+rows_g = [
+  {index: 0, tag_group: 'Cửa', lenX: 600},
+  {index: 1, tag_group: 'Nội thất', lenX: 600},
+  {index: 2, tag_group: 'Cửa', lenX: 900},
+]
+only_door = CR.sanitize!([rule('group' => 'Cửa')], %w[lenX])
+res = CR.evaluate(CR.sanitize!([rule('group' => 'Cửa')], %w[lenX]), rows_g)[:results]
+ok('luật theo nhóm Cửa: chỉ xét dòng nhóm Cửa (dòng 0 vi phạm, dòng 1 không xét)', res.map { |r| r[:index] } == [0])
+res_all = CR.evaluate(CR.sanitize!([rule], %w[lenX]), rows_g)[:results]
+ok('luật không chọn nhóm: xét mọi dòng', res_all.map { |r| r[:index] } == [0, 1])
+ok('luật theo nhóm: không dòng nào thuộc nhóm thì không có kết quả', CR.evaluate(CR.sanitize!([rule('group' => 'Chưa phân loại')], %w[lenX]), rows_g)[:results].empty?)
+ok('luật cũ không có trường nhóm: vẫn áp cho mọi nhóm', CR.evaluate([{'id' => 'ck_0', 'name' => 'x', 'column' => 'lenX', 'op' => 'lt', 'value' => '700', 'severity' => 'WARNING', 'message' => ''}], rows_g)[:results].size == 2)
+
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)

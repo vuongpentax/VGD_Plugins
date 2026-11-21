@@ -1,6 +1,193 @@
 # Kiểm thử
 
-Tóm tắt trạng thái kiểm chứng của VGD_BIM. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
+Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
+
+## Bản 1.1.1-beta.26: đã kiểm tra tự động
+
+Cao độ sàn phòng theo tầng (phòng chỉ nhập chiều cao; hạ nền khác thì nhập tay).
+
+- `dev/test_rooms.rb`: nguồn cao độ được giữ / từ chối; cao độ theo tầng bỏ qua số đã lưu; hạ nền dùng cao độ nhập tay; tầng đã xóa giữ cao độ đã lưu; phòng cũ được chuyển đúng (không đổi số liệu); đổi cao độ tầng thì phòng tự đổi; tạo từ mặt chọn tầng sát cao độ; gán món theo cao độ dùng cao độ theo tầng.
+- `dev/test_ui.cjs`: ô cao độ sàn khóa với phòng theo tầng; bật Hạ nền khác mở ô và gửi nguồn nhập tay; bỏ tầng thì bắt buộc nhập tay.
+- Các bộ Playwright khác (ảnh, sheet, tiếng Anh, báo cáo) và test Ruby đầy đủ đạt.
+
+**Chưa xác minh trong SketchUp thật:** tạo phòng từ mặt trên model thật (mặt sát tầng và mặt hạ nền); đổi cao độ tầng rồi kiểm tra khối 3D cần Dựng lại khối.
+**Lưu ý:** khối 3D đã dựng trước đó không tự đổi khi đổi cao độ tầng.
+
+## Bản 1.1.1-beta.25: đã kiểm tra tự động
+
+Sửa lỗi người dùng báo: gán tầng theo cao độ không chạy khi chọn tất cả món trong model. Nguyên nhân: bảng nổi lấy các dòng đang chọn lúc MỞ bảng, chọn thêm sau đó không được dùng. Cùng lỗi ở Gán phòng và Đặt mã đối tượng. Dòng gộp chỉ gán cho món đầu tiên.
+
+- `dev/test_ui.cjs`: mở bảng gán tầng khi chọn một dòng, rồi chọn thêm bằng chuột (Shift), bấm gán: gửi đủ `[0,1,2]`. Đã kiểm tra: test thất bại trước khi sửa.
+- Các bộ Playwright khác (ảnh, sheet, tiếng Anh, báo cáo) đạt.
+
+**Chưa xác minh trong SketchUp thật:** gán tầng cho cả model (vài nghìn món) có đủ nhanh và không lỗi trên model thật; dòng gộp trên SketchUp thật.
+**Lưu ý:** dòng chữ đếm "N dòng đang chọn" trong bảng nổi vẫn tính lúc mở; nút đã dùng đúng lựa chọn lúc bấm.
+
+## Bản 1.1.1-beta.24: đã kiểm tra tự động
+
+Dọn code thừa và gộp tính hộp bao (`Table.base_point`, một lần cho mỗi món).
+
+- `dev/test_table.rb`: tâm đáy X, Y và cao độ đáy Z đúng mm; chỉ tính hộp bao một lần cho món.
+- Bộ test Ruby đầy đủ (`run_tests.rb`), test quy ước repo, và năm bộ Playwright đều đạt.
+
+**Chưa xác minh trong SketchUp thật:** dựng bảng và gợi ý tầng / phòng trên model thật (kết quả không đổi về logic).
+
+## Bản 1.1.1-beta.23: đã kiểm tra tự động
+
+Nhóm lỗi vừa của đợt rà soát: tô màu tag là thao tác hoàn tác; ghi file an toàn; khối phòng tìm trong group lồng; diện tích ước tính; chụp không zoom khi thiếu hộp bao.
+
+- `dev/test_storage_replace.rb` (mới): thay file cũ, không còn `.bak`, đổi tên lỗi giữ nguyên file cũ, khôi phục `.bak` dở.
+- `dev/test_tag_tree.rb`: tô màu tag là bước hoàn tác.
+- `dev/test_quantity.rb`, `dev/test_structure_source.rb`: diện tích khung bao có ghi chú ước tính; diện tích mặt thật không có ghi chú.
+- `dev/test_room_volume.rb`: tìm khối trong group lồng nhau.
+- `dev/test_capture.rb`: món không đo được hộp bao không gọi `View#zoom`.
+- Playwright: `test_ui_en.cjs` (nhãn tường phòng có bản dịch mới).
+
+**Chưa xác minh trong SketchUp thật:** thao tác hoàn tác của tô màu tag; ghi file khi file đang bị phần mềm khác giữ (đổi tên thật trên Windows); chụp món không có hộp bao.
+
+## Bản 1.1.1-beta.22: đã kiểm tra tự động
+
+Sửa ba lỗi rà soát: vị trí món trong group đang mở, mã đối tượng sửa tay trùng, tải lại code khi đang bận.
+
+- `dev/test_open_group.rb` (mới, đưa vào `run_tests.rb`): tích biến đổi của đường dẫn; quét lựa chọn trong group đang mở cho đúng vị trí (không theo `edit_transform` sai).
+- `dev/test_object_code.rb`: `check_edit!` từ chối mã trùng (khác hoa thường), mã của chính món được giữ, xóa mã luôn được, một mã cho nhiều món bị từ chối.
+- `dev/test_dialog_logic.rb`: sửa tay mã trùng báo lỗi và không mở bước hoàn tác; sửa mã mới được ghi.
+- `dev/test_loader_menu.rb`: tải lại khi đang chụp hoặc đang vẽ không nạp file nào, báo việc đang làm.
+- Các test cũ dùng stub `Geometry` / `Geom::Transformation` đã thêm `path_transform` và phép nhân điểm (đúng như SketchUp thật).
+- Playwright (`test_ui`, `test_ui_images`, `test_ui_sheets`, `test_ui_en`): xem kết quả trong báo cáo cuối lượt.
+
+**Chưa xác minh trong SketchUp thật:** vị trí món trong group đang mở trên SketchUp 2024 / 2025; hộp tải lại khi đang chụp thật; `layers.add` khi tag đã tồn tại.
+
+## Bản 1.1.1-beta.21: đã kiểm tra tự động
+
+Khóa sheet: sheet khóa giữ các món đã khóa, không đổi theo lựa chọn; mở khóa thì theo lựa chọn; xuất nhiều sheet dựng đúng món của từng sheet khóa.
+
+- `dev/test_sheet_lock.rb`: chuỗi mã bền của món lồng, chụp lựa chọn (từ chối rỗng, mã 0, quá nhiều), tìm lại trong model (hai bản sao cùng định nghĩa cho hai món khác nhau), món đã xóa được đếm là thiếu, dữ liệu khóa sai bị từ chối.
+- `dev/test_dialog_logic.rb`: khóa sheet thường theo lựa chọn; mở sheet khóa dùng đúng món đã khóa; chọn món khác không đổi bảng; mở khóa trả về lựa chọn; thao tác sai bị từ chối.
+- `dev/test_sheets.rb`: sheet khóa hợp lệ giữ `lock`, sheet có khóa sai bỏ `lock` nhưng giữ sheet.
+- `dev/test_ui_sheets.cjs`: nút khóa gửi lệnh khóa; Ruby xác nhận thì nút bật, tab có dấu khóa, tên tab không đổi, khóa được lưu; chuyển sang sheet thường gửi bỏ khóa, quay lại gửi lại khóa; bấm mở khóa; sheet mới không kế thừa khóa; xuất nhiều sheet có sheet khóa (Ruby mô phỏng) đủ mọi sheet và dựng lại đúng khóa.
+
+**Chưa xác minh trong SketchUp thật:** `Model#entities` / `definition.entities` khi tìm lại món trong model lớn (thời gian quét một lần khi mở khóa hoặc mở sheet khóa); `persistent_id` giữ nguyên sau khi lưu và mở lại file; kiểm tra khóa và xuất bằng cửa sổ HtmlDialog thật.
+
+## Bản 1.1.1-beta.20: đã kiểm tra tự động
+
+Kéo đổi chỗ tab sheet (HTML5 kéo thả, đổi chỗ khi kéo, tab khác trượt bằng FLIP 150 ms, chốt khi thả).
+
+- `test_ui_sheets.cjs`: kéo tab đầu xuống cuối: các tab khác đang trượt giữa chừng, thứ tự đúng, sheet đang mở không đổi, thứ tự được lưu vào `table_view`, sau đó bấm tab mở đúng sheet.
+- `test_ui_en.cjs`: tooltip sheet có bản dịch EN mới.
+
+**Chưa xác minh trong SketchUp thật:** kéo thả tab sheet trong cửa sổ HtmlDialog thật (CEF).
+
+## Bản 1.1.1-beta.19: đã kiểm tra tự động
+
+Nút **Cập nhật từ bảng hiện tại** và **Xóa preset này** trong khối Đang chọn của bảng Preset (chỉ với preset tự tạo; preset có sẵn chỉ hiện ghi chú).
+
+- `test_ui_images.cjs`: chọn preset tự tạo, bấm Cập nhật thì gửi `save` đúng tên và đúng cột / thiết lập đang hiện; bấm Xóa thì gửi `delete` đúng tên; chọn preset có sẵn thì không có nút nào trong khối và có ghi chú.
+- `test_ui_en.cjs`: chuỗi tiếng Việt mới có bản dịch EN.
+
+**Chưa xác minh trong SketchUp thật:** lưu và xóa preset qua cửa sổ SketchUp thật (lệnh Ruby `table_preset` đã có từ trước, không đổi).
+
+## Bản 1.1.1-beta.18: đã kiểm tra tự động
+
+Các ô tìm chỉ khớp đúng chữ hoa / thường và có dấu. Bản này dùng chung `foldText` (bỏ dấu, đ thành d, chữ thường) cho mọi ô tìm và lọc, kể cả gợi ý khi sửa ô.
+
+- `test_ui.cjs`: `foldText('Bàn ĐÔI Ắ') = 'ban doi a'`; tìm "BAN DOI" thấy đúng dòng "Bàn Đôi"; tìm "ban" vẫn thấy; tìm cột "MO TA" chỉ thấy "Mô tả"; Loại trừ tag tìm "tuong" thấy "000 TUONG" và không thấy "000 CUA". Đã kiểm: trên code trước bản này test báo lỗi.
+- `test_ui_en.cjs`, `test_ui_images.cjs`, `test_ui_sheets.cjs`, `test_report_page.cjs`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** các ô tìm với tiếng Việt có dấu trong cửa sổ SketchUp; gợi ý tự điền khi sửa ô với chữ không dấu.
+
+## Bản 1.1.1-beta.17: đã kiểm tra tự động
+
+Preset JSON không mang định nghĩa cột thêm tay nên file khác không nhận được kiểu cột; khóa `custom_N` khác nghĩa giữa các máy có thể gán nhầm cột.
+
+- `test_preset_custom.rb` (mới): xuất có định nghĩa; nhập vào máy chưa có cột (tạo mới, đổi khóa, giữ tiêu đề); máy đã có đúng định nghĩa (dùng lại); máy có cùng khóa nhưng khác định nghĩa (không gán nhầm); tệp cũ không có định nghĩa (bỏ khóa lạ); định nghĩa sai (từ chối, không lưu gì).
+- Toàn bộ `ruby dev/run_tests.rb` đạt (gồm test preset cũ).
+
+**Chưa xác minh trong SketchUp thật:** xuất / nhập preset giữa hai file SketchUp và hai máy; hộp chọn file trong SketchUp.
+
+## Bản 1.1.1-beta.16: đã kiểm tra tự động
+
+Nút dán ảnh từ clipboard không đọc được clipboard trong SketchUp (đã có từ trước, nguyên nhân chưa rõ). Bản này chỉ làm thông báo rõ hơn để chẩn đoán; chưa sửa nguyên nhân.
+
+- `test_ui_images.cjs`: khi clipboard bị từ chối, thông báo ghi `NotAllowedError`; khi trình duyệt không có API clipboard, thông báo nói rõ nguyên nhân.
+- `test_ui_en.cjs`: câu thông báo mới có bản dịch tiếng Anh.
+
+**Chưa xác minh trong SketchUp thật:** nút dán và thông báo mới trong SketchUp; nguyên nhân gốc vẫn cần xác định từ thông báo đó.
+
+## Bản 1.1.1-beta.15: đã kiểm tra tự động
+
+Sửa: sửa tên, cập nhật ảnh hay sửa một ô làm bảng nhảy lên đầu, mất dấu món đang làm.
+
+- `test_ui.cjs`: đặt bảng cuộn xuống dòng 60 px, vẽ lại bảng, vị trí cuộn vẫn là 60 px. Đã kiểm: bỏ phần giữ vị trí trong `renderGrid` thì test báo lỗi (về 0 px).
+
+**Chưa xác minh trong SketchUp thật:** sửa tên / cập nhật ảnh ở món cuối bảng (món 100) trên model thật; bảng có giữ vị trí.
+
+## Bản 1.1.1-beta.14: đã kiểm tra tự động
+
+Cập nhật viền phòng từ đúng một mặt đang chọn (không cần vẽ lại phòng).
+
+- `test_dialog_logic.rb`: viền và cao độ theo mặt mới; tên, mã, chiều cao giữ nguyên; chọn nhiều mặt bị từ chối và viền không đổi; mã phòng không có thì báo lỗi; dữ liệu gửi lên sai bị từ chối. Viền 4 x 3 m được khôi phục cho các kiểm tra gán món phía sau.
+- `test_ui.cjs`: nút Cập nhật viền gửi đúng mã phòng.
+- Lỗi tìm được khi viết test: file test không nạp `core/room_volume.rb` nên `RoomVolume` không có; đã thêm vào danh sách nạp của test.
+
+**Chưa xác minh trong SketchUp thật:** chọn mặt rồi bấm cập nhật trên model thật; khối 3D cũ không đổi cho đến khi Dựng lại; hoàn tác.
+
+## Bản 1.1.1-beta.13: đã kiểm tra tự động
+
+Nhập VGD Room vào VGD_BIM (dựng khối 3D của phòng) và đổi nút Dựng khối sang gọi trực tiếp `core/room_volume.rb`.
+
+- `test_room_volume.rb` (khôi phục từ bản VGD_Room, đổi sang module của BIM): dữ liệu sai bị từ chối, khối đúng viền / cao độ / chiều cao / hướng, lỗ, tag / vật liệu / tên, VGD ID giữ khi dựng lại, khối khóa, một thao tác cho một và cho cả đợt, hủy khi lỗi.
+- `test_ui.cjs`: nút Dựng khối (đổi thành Dựng lại khối khi đã có khối) và Dựng khối tất cả phòng gửi đúng lệnh.
+- `test_ui_en.cjs`: nhãn tiếng Anh của hai nút.
+
+**Chưa làm:** dò vùng phòng từ tường (đặc tả `docs/vgd_bim/ROOM_FROM_WALLS.md`, còn các điểm D1–D4 cần chốt).
+
+**Chưa xác minh trong SketchUp thật:** khối 3D dựng trên model thật, hoàn tác, khối cũ của VGD_Room bản trước được nhận diện qua `kind = room`.
+
+## Bản 1.1.1-beta.12: đã kiểm tra tự động
+
+Sửa: so sánh phiên bản vẫn dùng mốc / kết quả của file cũ sau khi mở file khác.
+
+- `test_dialog_logic.rb`: thao tác mốc khi model đang mở khác với model của cửa sổ thì nạp lại cửa sổ trước; cùng file thì không nạp lại.
+- `test_ui.cjs`: đổi file (nhận `config` với mã file khác) thì xóa danh sách mốc và kết quả so sánh; bấm So sánh phiên bản xóa danh sách cũ trước khi xin danh sách mới. Đã kiểm: bỏ phần reset thì test báo lỗi.
+
+**Chưa xác minh trong SketchUp thật:** mở file thứ hai trong cùng phiên SketchUp, mở panel So sánh phiên bản: chỉ thấy mốc của file thứ hai.
+
+## Bản 1.1.1-beta.11: đã kiểm tra tự động
+
+Cột mốc 4 (phần): điều kiện lọc theo nhóm hạng mục cho luật kiểm tra.
+
+- `test_check_rules.rb`: luật có nhóm được giữ; nhóm rỗng nghĩa là mọi nhóm; nhóm không có trong danh sách và nhóm sai kiểu bị từ chối; luật chỉ xét dòng đúng nhóm; luật cũ (không có trường nhóm) vẫn áp cho mọi nhóm.
+- `test_ui.cjs`: mỗi luật có ô Nhóm hạng mục, mặc định Tất cả nhóm.
+
+**Chưa xác minh trong SketchUp thật:** ô Nhóm hạng mục trong hộp Luật kiểm tra hiển thị đúng, và kết quả kiểm tra chỉ gồm món đúng nhóm.
+
+## Bản 1.1.1-beta.10: đã kiểm tra tự động
+
+Gỡ plugin VGD_Room và các nút Dựng khối (theo quyết định ngày 18/11/2026: việc xác định phòng do VGD Structure làm).
+
+- `test_dialog_logic.rb`: bỏ bộ kiểm tra dựng khối qua cầu nối (`table_room_build`, `table_room_build_all`). Các kiểm tra còn lại (phòng, tầng, vật liệu, VGD ID, Structure) vẫn đạt.
+- `test_ui.cjs`: bỏ các kiểm tra nút Dựng khối / Dựng khối tất cả phòng. Các kiểm tra phòng khác (sửa, xóa, tạo từ mặt đang chọn, gán theo vị trí) vẫn đạt.
+- `test_ui_en.cjs`: đổi thông báo tạo phòng (không còn câu về VGD_Room).
+- `tests/test_vgd_conventions.rb`: danh sách ngoại lệ "không có mục menu" để rỗng (VGD_Room đã bỏ).
+- `plugins/VGD_Structure/dev/test_bridge.rb`: chỉ so sánh bản sao cầu nối với VGD_BIM (không còn VGD_Room).
+
+**Chưa xác minh trong SketchUp thật:** model cũ có khối phòng do VGD_Room dựng vẫn mở được, không tính khối lượng và không gây lỗi bảng.
+
+## Bản 1.1.1-beta.9: đã kiểm tra tự động
+
+Chạy từ `plugins/VGD_BIM`: `ruby dev/run_tests.rb` (cú pháp `ui/dialog.rb` và các test Ruby) và các bộ Playwright `dev/test_ui.cjs`, `dev/test_ui_images.cjs`, `dev/test_ui_en.cjs`, `dev/test_ui_sheets.cjs`, `dev/test_report_page.cjs`. Đã chạy đủ và đạt.
+
+- `test_ui.cjs` (mới ở beta.9): hộp thông báo sau khi xuất hiện đúng đường dẫn; nền hộp lấy từ token `--surface` của theme chung; Xem ngay gọi `export_open`, Mở thư mục gọi `export_open_folder`, Đóng tắt hộp.
+- `test_ui.cjs` (mới ở beta.8): xuất khi đang gộp dòng và thu gọn nhóm vẫn đủ mọi món; Mở / Thu gọn tất cả.
+- Bản sửa beta.8 đã được bắt bằng test: chạy `test_ui.cjs` với `app.js` của beta.7 dừng đúng ở kiểm tra xuất khi đang gộp dòng.
+
+**Chưa xác minh trong SketchUp thật:**
+- File .xlsx xuất từ bảng đang gộp dòng và thu gọn nhóm có đủ mọi món và tổng đúng.
+- Popover Nhóm theo hiển thị đúng.
+- Hộp thông báo sau khi xuất hiện đúng trong cửa sổ SketchUp, cả hai theme.
+- Nút **Xem ngay** và **Mở thư mục chứa file** (`UI.openURL` với file và thư mục trên Windows) mở đúng file và thư mục.
+- Lệnh `export_open` không nhận đường dẫn từ giao diện; chỉ mở file Ruby đã ghi (chưa có test Ruby riêng cho nhánh này, chỉ kiểm tra bằng đọc mã và cú pháp).
 
 ## Bản 1.1.0-beta.77: đã kiểm tra tự động
 
@@ -96,7 +283,7 @@ Các điểm sau chỉ kiểm được trong SketchUp thật:
 56. **Thư viện vật liệu** (beta.67): đã kiểm bằng mô phỏng (`test_material_library.rb`, `test_table.rb`, `test_dialog_logic.rb`) và Playwright (hộp Thư viện vật liệu, 5 cột vật liệu, tiếng Anh). Chưa xác minh trong SketchUp thật: danh sách vật liệu SketchUp trong ô chọn, nối vật liệu theo tên với món thật, số lượng có hao hụt và thành tiền khớp tay, xuất Excel / PDF có các cột vật liệu.
 55. **Cầu nối và dựng khối phòng bằng VGD Room** (beta.66; plugin `VGD_Room` 0.1.0-beta.1): đã kiểm bằng mô phỏng (`test_dialog_logic.rb`, `test_rooms.rb`, và `plugins/VGD_Room/dev/test_builder.rb` với SketchUp giả lập) và Playwright. Chưa xác minh trong SketchUp thật: hai plugin cùng nạp thì BIM thấy VGD Room qua `VGD::Bridge` (không phụ thuộc thứ tự nạp), `add_face` + `pushpull` dựng đúng khối từ viền thẳng và lõm, mặt hướng lên, tag `VGD_ROOMS` và vật liệu trong suốt, dựng lại thay khối cũ và giữ VGD ID, một bước hoàn tác, khối phòng không xuất hiện trong Bảng khối lượng khi chọn / quét sâu.
 54. **Phòng, phần dữ liệu** (beta.65, cột mốc 2b): đã kiểm bằng mô phỏng (`test_rooms.rb`, `test_dialog_logic.rb`) và Playwright. Chưa xác minh trong SketchUp thật: Tạo phòng từ mặt đang chọn (đọc `Face#outer_loop`, tọa độ thế giới khi mặt nằm trong group đang mở, đổi inch sang mm, mặt có lỗ chỉ lấy vòng ngoài), danh sách phòng còn nguyên sau khi lưu / mở lại file, diện tích / thể tích đúng với phòng thật, gán món theo tâm đáy món. Khối 3D của phòng CHƯA có (plugin `VGD_Room` làm ở bước sau).
-53. **Tầng (Level)** (beta.64, cột mốc 2a): đã kiểm bằng mô phỏng (`test_levels.rb`, `test_dialog_logic.rb`) và Playwright. Chưa xác minh trong SketchUp thật: danh sách tầng còn nguyên sau khi lưu / mở lại file (dictionary `VGD_BIM_MODEL` khóa `levels`), cao độ đáy món (`Table.base_z` từ hộp bao thế giới, đơn vị inch sang mm) cho món nằm trong group đang mở hoặc lồng sâu, gán tầng theo cao độ đúng với model có gốc tọa độ không ở sàn tầng 1, ghi nhãn tầng ở dictionary `VGD_BIM_LOC` của món.
+53. **Tầng (Level)** (beta.64, cột mốc 2a): đã kiểm bằng mô phỏng (`test_levels.rb`, `test_dialog_logic.rb`) và Playwright. Chưa xác minh trong SketchUp thật: danh sách tầng còn nguyên sau khi lưu / mở lại file (dictionary `VGD_BIM_MODEL` khóa `levels`), cao độ đáy món (`Table.base_point` từ hộp bao thế giới, đơn vị inch sang mm) cho món nằm trong group đang mở hoặc lồng sâu, gán tầng theo cao độ đúng với model có gốc tọa độ không ở sàn tầng 1, ghi nhãn tầng ở dictionary `VGD_BIM_LOC` của món.
 52. **Mã đối tượng hàng loạt, ID trùng ở tab Kiểm tra, danh mục mở rộng** (beta.63, cột mốc 1b / 1c): đã kiểm bằng mô phỏng (`test_object_code.rb`, `test_dialog_logic.rb`, `test_core.rb`) và Playwright. Chưa xác minh trong SketchUp thật: ghi trường `code` vào món (dữ liệu VGD) qua hộp Đặt mã đối tượng, cột Mã sửa được bằng nhấp đúp, cảnh báo ID trùng hiện đúng ở tab Kiểm tra khi quét cả model, chọn danh mục mới (Tường, Cửa, ...) ở tab Thông tin. Danh mục mới chưa có luật khối lượng riêng (cột Hạng mục suy ra từ tag vẫn theo nhóm tag).
 51. **VGD ID** (beta.62, cột mốc 1a của `docs/vgd_bim/ROADMAP.md`): đã kiểm bằng mô phỏng (`test_vgd_id.rb`, `test_dialog_logic.rb`) và Playwright (cột, nút Gán, nút Sửa trùng). Chưa xác minh trong SketchUp thật: ghi dictionary `VGD_BIM_ID` vào Group / ComponentInstance và còn sau khi lưu / mở lại file, ID có bị nhân đôi khi copy món (như dự đoán) và nút Sửa trùng xử lý đúng, hoàn tác một bước, món lồng sâu trong group.
 50. **Cột thêm tay** (beta.61): đã kiểm bằng mô phỏng (`test_custom_columns.rb`, `test_dialog_logic.rb`, `test_table.rb`) và Playwright (form, thêm / xóa cột, sửa cột tự nhập). Chưa xác minh trong SketchUp thật: đọc thuộc tính tùy chọn và thuộc tính Dynamic Components của model thật (tên dictionary `dynamic_attributes`, khóa viết thường, giá trị công thức hay đơn vị inch), giá trị lưu ở định nghĩa của component, ghi cột tự nhập vào món (một bước hoàn tác), cột mới tự hiện sau khi thêm.

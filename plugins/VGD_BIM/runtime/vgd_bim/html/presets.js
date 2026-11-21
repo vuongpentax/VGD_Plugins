@@ -146,6 +146,18 @@ function presetPanel(panel){
   },'primary');add.setAttribute('aria-label','Tạo preset từ bảng hiện tại');
   name.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();add.click();}};
   create.append(name,add);right.append(create);
+  // Sửa preset đang chọn: cập nhật từ bảng hiện tại hoặc xóa. Preset có sẵn chỉ xem (khôi phục bằng ↻ ở danh sách).
+  const selected=presetsList().find(p=>p.name===tableState.preset);
+  if(selected){
+    const edit=node('div',undefined,'pp-new pp-edit');
+    edit.append(node('span','Đang chọn: '+selected.name,'pp-edit-name'));
+    if(selected.builtin)edit.append(node('p','Preset có sẵn không sửa hay xóa được. Dùng ↻ ở danh sách để khôi phục.','muted pp-note'));
+    else edit.append(
+      button('Cập nhật từ bảng hiện tại',()=>call('table_preset',JSON.stringify({action:'save',name:selected.name,group:tableState.group,columns:orderedKeys(),headers:tableState.headers,settings:workSettings()}))),
+      button('Xóa preset này',()=>call('table_preset',JSON.stringify({action:'delete',name:selected.name})),'danger')
+    );
+    right.append(edit);
+  }
   const list=node('div',undefined,'pp-list');
   presetsList().forEach(preset=>{
     const line=node('div',undefined,'pp-line');

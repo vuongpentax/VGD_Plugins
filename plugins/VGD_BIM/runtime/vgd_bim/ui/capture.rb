@@ -95,10 +95,6 @@ module VGD
           SETTING_SUFFIXES.each_with_object(settings.dup) { |suffix, out| out["image_#{suffix}"] = settings.fetch("#{prefix}_#{suffix}") }
         end
 
-        def self.location_settings(settings)
-          kind_settings(settings, :location)
-        end
-
         # Mỗi bước khôi phục chạy độc lập: một bước lỗi không được làm hỏng các bước sau, cũng không được biến lần chụp
         # đã thành công thành thất bại (lỗi khôi phục chỉ ghi vào capture.log).
         def self.restore(model, view, saved, operation, temp)
@@ -209,7 +205,7 @@ module VGD
         def self.frame(view, record, size, margin, scale: 1)
           entity = record[:entity]
           bounds = record[:transform] ? Geometry.world_bounds([record]) : entity.bounds
-          return view.zoom(entity) if bounds.empty? # không tính được hộp bao: về cách cũ
+          return if bounds.empty? # không tính được hộp bao: giữ khung đã đặt theo hướng nhìn (không dùng View#zoom: tính theo tọa độ cục bộ)
           low = bounds.min.to_a
           high = bounds.max.to_a
           if scale != 1

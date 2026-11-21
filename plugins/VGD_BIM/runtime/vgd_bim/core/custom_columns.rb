@@ -95,6 +95,60 @@ module VGD
         Storage.write(FILE, {'next' => next_id, 'columns' => list})
       end
 
+      # Hai cột cùng định nghĩa khi cùng kiểu, nhãn, dictionary và thuộc tính (không xét khóa).
+      def self.same_definition?(a, b)
+        %w[kind label dictionary attribute].all? { |field| a[field] == b[field] }
+      end
+
+      # Đưa định nghĩa cột từ tệp preset vào máy: cột đã có đúng định nghĩa thì dùng lại, còn lại tạo cột mới với khóa tiếp theo.
+      # Chỉ tính toán, chưa lưu. Trả về [bảng băm khóa trong tệp => khóa trên máy, danh sách cột, số đếm tiếp theo].
+      def self.plan_adopt(definitions)
+        raise ArgumentError, 'Định nghĩa cột trong tệp preset không hợp lệ.' unless definitions.is_a?(Array)
+        list, next_id = stored
+        map = {}
+        definitions.each do |item|
+          raise ArgumentError, 'Định nghĩa cột trong tệp preset không hợp lệ.' unless item.is_a?(Hash) && item['key'].to_s.match?(KEY_PATTERN)
+          clean = sanitize!(item)
+          found = list.find { |column| same_definition?(column, clean) }
+          if found
+            map[item['key']] = found['key']
+          else
+            raise ArgumentError, "Chỉ thêm tay được tối đa #{MAX_COLUMNS} cột. Hãy xóa bớt cột không dùng." if list.size >= MAX_COLUMNS
+            column = clean.merge('key' => "custom_#{next_id}")
+            list += [column]
+            map[item['key']] = column['key']
+            next_id += 1
+          end
+        end
+        [map, list, next_id]
+      end
+
+      # Tệp preset (định dạng riêng): đưa định nghĩa cột thêm tay vào máy rồi đổi khóa cột của mỗi preset theo đó.
+      # Khóa cột thêm tay không có định nghĩa trong tệp (tệp cũ) thì bỏ, vì khóa chỉ có nghĩa trên máy xuất ra.
+      # Trả về [tệp đã đổi khóa, danh sách cột sau khi nhập, số đếm tiếp theo]. Chưa lưu gì.
+      def self.adopt_from_preset(obj)
+        list, next_id = stored
+        return [obj, list, next_id] unless obj.is_a?(Hash) && obj['format'] == Preset::FORMAT && obj['presets'].is_a?(Array)
+        definitions = obj['presets'].flat_map { |item| item.is_a?(Hash) ? Array(item['custom']) : [] }.uniq { |item| item.is_a?(Hash) ? item['key'] : item }
+        map, list, next_id = plan_adopt(definitions)
+        presets = obj['presets'].map { |item| remap_custom(item, map) }
+        [obj.merge('presets' => presets), list, next_id]
+      end
+
+      def self.remap_custom(item, map)
+        return item unless item.is_a?(Hash)
+        columns = Array(item['columns']).map(&:to_s).filter_map { |key| key.match?(KEY_PATTERN) ? map[key] : key }
+        headers = item['headers']
+        if headers.is_a?(Hash)
+          headers = headers.each_with_object({}) do |(key, value), out|
+            key = key.to_s
+            next out[key] = value unless key.match?(KEY_PATTERN)
+            out[map[key]] = value if map[key]
+          end
+        end
+        item.merge('columns' => columns, 'headers' => headers)
+      end
+
       # Cột để giao diện thêm vào bảng (sau các cột chuẩn). Chỉ cột tự nhập có editable (sửa trong bảng).
       def self.columns
         read.map do |c|

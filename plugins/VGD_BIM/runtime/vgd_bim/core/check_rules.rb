@@ -13,6 +13,7 @@ module VGD
       MAX_NAME = 60
       MAX_VALUE = 80
       MAX_MESSAGE = 120
+      MAX_GROUP = 60
       MAX_RESULTS = 2000
       OPS = %w[lt lte gt gte eq neq empty not_empty contains].freeze
       NUMERIC_OPS = %w[lt lte gt gte].freeze
@@ -35,7 +36,8 @@ module VGD
       end
 
       # Kiểm tra danh sách luật từ giao diện hoặc file; trả về danh sách sạch (mỗi luật có id). column_keys: cột hợp lệ của bảng (nil = không kiểm).
-      def self.sanitize!(list, column_keys = nil)
+      # groups (tùy chọn): danh sách nhóm hạng mục được phép; luật chỉ áp cho nhóm đó (rỗng = mọi nhóm).
+      def self.sanitize!(list, column_keys = nil, groups = nil)
         raise ArgumentError, 'Danh sách luật không hợp lệ.' unless list.is_a?(Array)
         raise ArgumentError, "Chỉ có tối đa #{MAX_RULES} luật." if list.size > MAX_RULES
         list.map do |item|
@@ -52,9 +54,12 @@ module VGD
           value = NO_VALUE_OPS.include?(op) ? '' : text(item['value'].is_a?(Numeric) ? item['value'].to_s : item['value'], MAX_VALUE, "Luật #{name}: giá trị")
           raise ArgumentError, "Luật #{name}: hãy nhập giá trị so sánh." if value.empty? && !NO_VALUE_OPS.include?(op)
           raise ArgumentError, "Luật #{name}: phép so sánh này cần giá trị là số." if NUMERIC_OPS.include?(op) && number(value).nil?
+          raise ArgumentError, "Luật #{name}: nhóm món phải là chữ." unless item['group'].nil? || item['group'].is_a?(String)
+          group = text(item['group'], MAX_GROUP, "Luật #{name}: nhóm món")
+          raise ArgumentError, "Luật #{name}: nhóm món không có trong danh sách." if groups && !group.empty? && !groups.include?(group)
           id = item['id']
           raise ArgumentError, 'Mã luật không hợp lệ.' unless id.nil? || (id.is_a?(String) && id.match?(ID_PATTERN))
-          {'id' => id || "ck_#{SecureRandom.hex(4)}", 'name' => name, 'column' => column, 'op' => op, 'value' => value, 'severity' => severity,
+          {'id' => id || "ck_#{SecureRandom.hex(4)}", 'name' => name, 'column' => column, 'op' => op, 'value' => value, 'severity' => severity, 'group' => group,
            'message' => text(item['message'], MAX_MESSAGE, "Luật #{name}: lời nhắn")}
         end
       end
@@ -116,6 +121,7 @@ module VGD
         rules.each do |rule|
           key = rule['column'].to_sym
           rows.each do |row|
+            next if rule['group'].to_s != '' && row[:tag_group] != rule['group'] # luật chỉ áp cho một nhóm hạng mục
             next unless row.key?(key) && violated?(rule, row[key])
             if results.size >= MAX_RESULTS
               truncated = true

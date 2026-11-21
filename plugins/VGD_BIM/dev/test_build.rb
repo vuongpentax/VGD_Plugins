@@ -38,6 +38,7 @@ module VGD; module BIM
   module Geometry
     def self.dimensions(_e, _t, measure: nil); {width: 1000.0, depth: 500.0, height: 2000.0}; end
     def self.definition(e); Defn.new(e); end
+    def self.path_transform(_path); Tr.new; end # không có group đang mở: đơn vị
     def self.face_area(*); 0.0; end
     class Defn; def initialize(e); @e = e; end; def name; @e.name; end; def entities; @e.entities; end; def bounds; Box.new; end; def count_instances; 1; end; end
     class Box; def empty?; true; end; end

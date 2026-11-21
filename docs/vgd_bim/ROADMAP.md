@@ -1,20 +1,24 @@
-# VGD_BIM — Lộ trình phát triển (đã duyệt ngày 12/11/2026)
+# VGD_BIM — Lộ trình phát triển (duyệt 12/11/2026, cập nhật 19/11/2026)
 
 Tài liệu này là kế hoạch làm việc của plugin `plugins/VGD_BIM`, lập từ bản kế hoạch tổng hợp do chủ dự án soạn (`MASTER_PLAN.md` cùng thư mục, giữ nguyên bản gốc). Mỗi lần làm xong một cột mốc phải cập nhật phần "Trạng thái" bên dưới trong cùng commit. Tài liệu viết cho người không chuyên mã nguồn; thuật ngữ khó có giải thích ngay chỗ dùng.
 
-**Tầm nhìn (chủ dự án, 12/11/2026):** biến SketchUp thành phần mềm **dựng hình và BIM đối tượng**, như Archicad hay Revit: dựng hình bằng các plugin nhỏ, còn VGD_BIM định nghĩa, quản lý và điều khiển thông tin của mọi đối tượng.
+**Đảo quyết định (chủ dự án, 19/11/2026):** VGD Room được nhập lại vào VGD_BIM (không còn plugin riêng), để BIM dựng khối 3D của phòng và khoanh vùng phòng (từ mặt sàn đã chọn và từ tường). BIM tự làm việc dò vùng phòng từ tường; không giao cho VGD Structure và không cần báo Structure. Đặc tả: `docs/vgd_bim/ROOM_FROM_WALLS.md`.
+
+**Phạm vi trước đó (chủ dự án, 18/11/2026) — đã đảo một phần:** VGD_BIM chỉ làm ba việc: **định danh** (VGD ID, mã đối tượng), **tag** (gắn và xếp tag), và **bóc khối lượng cho bảng thống kê** (schedule, kiểm tra, so sánh, xuất). VGD_BIM **không dựng 3D**. Việc dựng hình và xác định không gian (phòng, dò viền từ tường) do **VGD Structure** làm; VGD_BIM đọc dữ liệu đó qua cầu nối và chỉ gọi lệnh sửa của plugin nguồn. **Không liên kết VGD_Cabinet** (bỏ mục 5d). Tầm nhìn cũ được giữ nguyên trong lịch sử và trong `MASTER_PLAN.md`.
+
+**Tầm nhìn cũ (chủ dự án, 12/11/2026, đã thay thế một phần):** biến SketchUp thành phần mềm **dựng hình và BIM đối tượng**, như Archicad hay Revit: dựng hình bằng các plugin nhỏ, còn VGD_BIM định nghĩa, quản lý và điều khiển thông tin của mọi đối tượng.
 
 ## 1. Những điều đã chốt
 
 | Việc | Quyết định |
 |---|---|
-| Thứ tự làm | Danh tính (ID) → Tầng và Phòng → Vật liệu và luật khối lượng → Schedule mẫu và Audit → Type, Classification mở, so sánh hai phiên bản, tích hợp VGD_Cabinet. |
-| Phòng | Có nhãn **và có vùng, có hình, có diện tích**, dựng được thành khối 3D. |
+| Thứ tự làm | Danh tính (ID) → Tầng và Phòng → Vật liệu và luật khối lượng → Schedule mẫu và Audit → Type, Classification mở, so sánh hai phiên bản. |
+| Phòng | Có nhãn, **vùng phòng** (viền), diện tích và **khối 3D** của phòng. Vùng phòng lấy từ mặt sàn đã chọn hoặc dò từ tường (quyết định 19/11/2026). |
 | Người dùng | Nội thất **và** kiến trúc ngay từ đầu. |
 | Tầm nhìn | Về sau làm đủ các tính năng BIM (IFC, Clash, Documentation, 4D, 5D...). Mỗi tính năng lớn có đặc tả riêng trước khi code. |
 | Cách ghi ID | Theo chuẩn của BIM (xem mục 3), không tự bịa kiểu mới. |
-| Giữ một plugin | VGD_BIM vẫn là một plugin, chia module trong `core/`. VGD_Cabinet nối qua dữ liệu chung (dictionary), không gộp mã. |
-| Dựng hình | **BIM không tự dựng hình** (giữ lõi nhẹ). Việc dựng do các plugin nhỏ riêng đảm nhận (tủ, cầu thang, cửa, sàn, tường, phòng... tên plugin chỉ là ví dụ, chưa sản xuất), nối với BIM qua "cầu nối" (mục 1b). **BIM đọc dữ liệu và khi cần sửa thì BIM gọi đúng plugin đã dựng ra đối tượng đó để sửa mô hình**, như Revit / Archicad. Kế hoạch triển khai từng plugin viết khi tới phase của nó. |
+| Giữ một plugin | VGD_BIM vẫn là một plugin, chia module trong `core/`. VGD Room nhập vào VGD_BIM (19/11/2026). Không liên kết VGD_Cabinet (18/11/2026). |
+| Dựng hình | **BIM không tự dựng hình** (giữ lõi nhẹ). Việc dựng do các plugin nhỏ riêng đảm nhận (tủ, cầu thang, cửa, sàn, tường, phòng... tên plugin chỉ là ví dụ, chưa sản xuất), nối với BIM qua "cầu nối" (mục 1b). **BIM đọc dữ liệu và khi cần sửa thì BIM gọi đúng plugin đã dựng ra đối tượng đó để sửa mô hình**, như Revit / Archicad. Kế hoạch triển khai từng plugin viết khi tới phase của nó. Hiện VGD Structure là plugin dựng hình duy nhất đã có. |
 | ID | **VGD ID** (xem mục 3). |
 | Nơi giữ danh bạ plugin | Trong repo (toàn bộ plugin đã nằm trong repo); VGD Center đã giữ danh mục plugin (`shared/vgd-center/catalog.json`) nên mở rộng danh mục đó để khai báo cầu nối. |
 
@@ -22,7 +26,7 @@ Tài liệu này là kế hoạch làm việc của plugin `plugins/VGD_BIM`, l�
 
 ```text
  Plugin dựng hình (nhỏ, riêng)        Cầu nối          VGD_BIM (quản lý)
- Cabinet, thang, cửa, sàn, tường  ──►  hợp đồng dữ liệu ──►  ID, Category, Level, Room,
+ VGD Structure, plugin khác  ──►  hợp đồng dữ liệu ──►  ID, Category, Level, Room,
  (vẽ và sửa hình, tham số riêng)       + lệnh Tạo / Sửa      Material, Quantity, Schedule, Audit
 ```
 
@@ -34,7 +38,7 @@ Nguyên tắc đề xuất cho cầu nối (chi tiết viết thành đặc tả
 4. **Danh bạ plugin (registry):** mỗi plugin khai báo mã, loại đối tượng nó dựng, lệnh Tạo mới và lệnh Sửa đối tượng đã có. BIM hiện nút "Sửa bằng <plugin>" trên dòng của đối tượng đó. VGD Center (đã biết plugin nào được cài) là nơi hợp lý để giữ danh bạ này.
 5. **Có số phiên bản cầu nối** (`bridge_version`); plugin và BIM khác phiên bản thì báo rõ, không đoán.
 6. **Một nguồn sự thật cho hình và tham số:** hình và tham số thuộc plugin dựng; thông tin quản lý (ID, tầng, phòng, vật liệu, khối lượng, trạng thái) thuộc BIM. BIM không sửa tham số hình của plugin khác.
-7. **Phát triển dần:** cột mốc 1 viết đặc tả hợp đồng dữ liệu (ID, Category, nguồn tạo) để mọi plugin dựng hình về sau theo đúng; danh bạ và lệnh Tạo / Sửa (BIM gọi plugin) làm khi có plugin dựng hình đầu tiên (VGD_Cabinet hoặc plugin Phòng ở cột mốc 2, tùy cái nào tới trước). Mục **Công cụ → Cầu nối dữ liệu** của VGD_BIM (từ 1.1.1-beta.5) là chỗ nhập Excel / CSV vào dữ liệu chữ của món theo mẫu 5D Auto Info (khác với "cầu nối" giữa plugin ở đây).
+7. **Phát triển dần:** cột mốc 1 viết đặc tả hợp đồng dữ liệu (ID, Category, nguồn tạo) để mọi plugin dựng hình về sau theo đúng; danh bạ và lệnh Tạo / Sửa (BIM gọi plugin) làm khi có plugin dựng hình đầu tiên (VGD Structure; BIM không dựng hình)òng ở cột mốc 2, tùy cái nào tới trước). Mục **Công cụ → Cầu nối dữ liệu** của VGD_BIM (từ 1.1.1-beta.5) là chỗ nhập Excel / CSV vào dữ liệu chữ của món theo mẫu 5D Auto Info (khác với "cầu nối" giữa plugin ở đây).
 
 Hệ quả cho kế hoạch: tường, sàn, cửa, thang, mái... **không phải việc của VGD_BIM**; mục "công cụ dựng đối tượng kiến trúc có tham số" ở cuối mục 5 được hiểu là các plugin riêng nối qua cầu nối.
 
@@ -61,7 +65,7 @@ Mức: **Có** / **Một phần** / **Rất ít** / **Chưa**.
 | Change Tracking | Chưa | |
 | IFC, Clash, Documentation, 4D | Chưa | |
 | 5D | Một phần | Đơn giá, thành tiền trong bảng. |
-| Tích hợp VGD_Cabinet | Chưa | |
+| Tích hợp VGD_Cabinet | Không làm (quyết định 18/11/2026) | |
 
 ## 3. ID trong BIM hoạt động thế nào (nghiên cứu)
 
@@ -92,7 +96,7 @@ Mức: **Có** / **Một phần** / **Rất ít** / **Chưa**.
 ## 4. Phân loại ưu tiên
 
 - **Ưu tiên 1 (nền tảng):** danh tính, tầng và phòng, vật liệu có dữ liệu, luật khối lượng mở rộng.
-- **Ưu tiên 2:** schedule mẫu, Audit "Fix All" và luật kiểm tra tự đặt, Type / Instance dữ liệu, Classification mở, so sánh hai phiên bản file, tích hợp VGD_Cabinet.
+- **Ưu tiên 2:** schedule mẫu, Audit "Fix All" và luật kiểm tra tự đặt, Type / Instance dữ liệu, Classification mở, so sánh hai phiên bản file.
 - **Ưu tiên 3:** xuất / nhập IFC, Documentation (mặt bằng, mặt cắt, bản vẽ).
 - **Ưu tiên 4:** Clash, 4D, 5D đầy đủ, cộng tác.
 
@@ -108,12 +112,11 @@ Làm: VGD ID, Mã đối tượng, phát hiện và sửa trùng, mở rộng Ca
 - 1c: Category mở rộng + bảng ánh xạ 8 nhóm cũ sang nhóm mới (không mất dữ liệu cũ); migration `schema_version`.
 - Kiểm tra: dữ liệu sai, copy trùng, file cũ không có `guid`, hoàn tác một bước, món khóa.
 
-### Cột mốc 2 — Tầng và Phòng (có hình, 3D)
+### Cột mốc 2 — Tầng và Phòng (có khối 3D và khoanh vùng)
 
 - 2a **Tầng (Level):** danh sách tầng lưu trong model (tên, cao độ, chiều cao). Gán món vào tầng (nhãn, **không dời hình học**). Cột Tầng, nhóm theo tầng, ẩn / hiện theo tầng.
-- 2b **Phòng (Room):** phòng trong BIM là **khoảng không gian (thể tích) được bao bởi sàn, tường, trần**, không phải bản thân tường / sàn / trần (như Room của Revit, Zone của Archicad). Dữ liệu phòng do VGD_BIM quản lý: viền (đa giác), tên, mã, tầng, cao độ trần, vật liệu hoàn thiện của sàn / tường / trần, trạng thái. VGD_BIM tính **diện tích sàn, chu vi, thể tích, diện tích trần, diện tích tường hoàn thiện** (chu vi x cao, trừ ô cửa khi đã có dữ liệu cửa). **Khối 3D của phòng do một plugin nhỏ dựng riêng** (đùn từ viền lên cao độ trần, nằm trên tag riêng, tắt / bật được), BIM điều khiển qua cầu nối; sàn, tường, trần thật là các đối tượng khác do plugin sàn / tường / trần dựng. Cần phiên thiết kế plugin Phòng riêng khi tới cột mốc này.
+- 2b **Phòng (Room):** phòng trong BIM là **khoảng không gian (thể tích) được bao bởi sàn, tường, trần**, không phải bản thân tường / sàn / trần (như Room của Revit, Zone của Archicad). Dữ liệu phòng do VGD_BIM quản lý: viền (đa giác), tên, mã, tầng, cao độ trần, vật liệu hoàn thiện của sàn / tường / trần, trạng thái. VGD_BIM tính **diện tích sàn, chu vi, thể tích, diện tích trần, diện tích tường hoàn thiện** (chu vi x cao, trừ ô cửa khi đã có dữ liệu cửa). **Khối 3D của phòng và khoanh vùng phòng do VGD_BIM làm** (quyết định 19/11/2026): khối là một Group trên tag riêng, đùn từ viền lên chiều cao phòng, dựng lại được và có một bước hoàn tác; vùng phòng lấy từ mặt sàn đã chọn hoặc dò từ tường (đặc tả `docs/vgd_bim/ROOM_FROM_WALLS.md`).
 - 2c **Món thuộc phòng:** tự gợi ý theo vị trí (tâm đáy của món nằm trong viền phòng), người dùng xác nhận, có thể gán tay. Cột Phòng, tổng khối lượng theo phòng, Finish Schedule.
-- Cảnh báo: dựng khối phòng **thêm đối tượng mới vào model của người dùng**. Chỉ tạo khi bấm nút, một bước hoàn tác, đặt trên tag riêng và có thể khóa.
 
 ### Cột mốc 3 — Vật liệu có dữ liệu và luật khối lượng
 
@@ -131,24 +134,22 @@ Trạng thái: 4a đã có sẵn trong preset (Cửa & Cửa sổ, Nội thất,
 - 4b Audit: liệt kê lỗi theo mức INFO / WARNING / ERROR, "Fix All" có xem trước.
 - 4c Luật kiểm tra tự đặt (ví dụ cửa rộng < 700 thì cảnh báo; món chưa có tầng / phòng / ID).
 
-Trạng thái cột mốc 5: so sánh phiên bản (mốc dữ liệu bảng) đã làm ở beta.71; preset Tủ đã thêm. Chưa làm: Type/Instance riêng, Classification mở, tích hợp VGD_Cabinet (cần phiên thiết kế riêng với chủ dự án).
+Trạng thái cột mốc 5: so sánh phiên bản (mốc dữ liệu bảng) đã làm ở beta.71; preset Tủ đã thêm. Chưa làm: Type/Instance riêng, Classification mở. Tích hợp VGD_Cabinet không làm (quyết định 18/11/2026).
 
-### Cột mốc 5 — Type, Classification, so sánh phiên bản, VGD_Cabinet
+### Cột mốc 5 — Type, Classification, so sánh phiên bản
 
 - 5a Type / Instance có dữ liệu Type riêng (sửa Type thì các Instance cập nhật).
 - 5b Classification mở: VGD, IFC, OmniClass, tuỳ chỉnh; ánh xạ giữa các hệ.
 - 5c **So sánh hai phiên bản file** theo VGD ID (thêm / bớt / sửa / không đổi), xuất báo cáo. Giải quyết luôn nhu cầu gửi file đi rồi nhận lại.
-- 5d Tích hợp VGD_Cabinet: tủ tạo ra đã có dữ liệu BIM. Cần phiên thiết kế riêng với chủ dự án trước khi làm.
 
 ### Sau các cột mốc trên (mỗi mục lớn cần đặc tả riêng)
 
-Relationship đầy đủ (Object → Object / Room / Level / Type / Material), xuất / nhập IFC (dùng VGD ID đổi sang `GlobalId`), Documentation (mặt bằng, mặt cắt, mặt đứng, chi tiết, khung tên), Clash Detection, 4D, 5D đầy đủ, cộng tác, công cụ dựng đối tượng kiến trúc có tham số (tường, sàn, cửa, cầu thang).
+Relationship đầy đủ (Object → Object / Room / Level / Type / Material), xuất / nhập IFC (dùng VGD ID đổi sang `GlobalId`), Documentation (mặt bằng, mặt cắt, mặt đứng, chi tiết, khung tên), Clash Detection, 4D, 5D đầy đủ, cộng tác.
 
 ## 6. Rủi ro
 
 - **Ghi thêm dữ liệu vào file SketchUp:** chỉ khi người dùng bấm nút, một bước hoàn tác, không ghi vào món bị khóa.
 - **ID bị nhân đôi khi copy:** xử lý ở cột mốc 1 trước khi làm các phần dựa vào ID (so sánh phiên bản, IFC).
-- **Phòng 3D thêm hình vào model:** xem cảnh báo ở cột mốc 2.
 - **Chưa thử trong SketchUp thật:** nhiều tính năng đã làm vẫn chờ xác nhận (xem `plugins/VGD_BIM/VALIDATION.md`). Mỗi cột mốc cần người dùng thử trước khi sang cột mốc sau.
 - **Dữ liệu cũ:** mọi thay đổi schema phải có chuyển đổi (nguyên tắc 12 của kế hoạch gốc) và không đổi ý nghĩa dữ liệu cũ.
 - **Quy mô:** đây là chương trình nhiều tháng; không làm gộp nhiều cột mốc trong một bản.
@@ -158,20 +159,19 @@ Relationship đầy đủ (Object → Object / Room / Level / Type / Material), 
 1. Cột mốc 1: quy tắc chọn đối tượng giữ ID khi trùng (đề xuất: `persistent_id` nhỏ nhất) có hợp lý không.
 2. Cột mốc 2: viền phòng lấy bằng cách nào là chính: chọn mặt sàn có sẵn, vẽ đa giác, hay tự dò từ các tường vây quanh.
 3. Cột mốc 2: tầng có tự gợi ý theo cao độ Z của món không, hay chỉ gán tay.
-4. Cột mốc 5d: cách VGD_Cabinet và VGD_BIM trao đổi dữ liệu.
-5. ~~Phòng 3D~~ **Đã chốt:** khối phòng do plugin nhỏ dựng riêng, BIM điều khiển (xem cột mốc 2b). Còn mở: tên và phạm vi plugin Phòng (chỉ dựng khối hay cả vẽ viền).
-6. Cầu nối: ai gán VGD ID khi plugin dựng hình tạo đối tượng (đề xuất mục 1b điểm 3); danh bạ mở rộng từ `shared/vgd-center/catalog.json` (đã chốt hướng, còn thiết kế chi tiết).
+4. ~~Phòng 3D~~ **Đảo (19/11/2026):** BIM dựng khối phòng và dò vùng phòng từ tường (xem cột mốc 2b).
+5. Cầu nối: ai gán VGD ID khi plugin dựng hình tạo đối tượng (đề xuất mục 1b điểm 3); danh bạ mở rộng từ `shared/vgd-center/catalog.json` (đã chốt hướng, còn thiết kế chi tiết).
 
 ## 8. Trạng thái
 
 | Cột mốc | Trạng thái |
 |---|---|
 | 1 Danh tính và Category | **Xong ở beta.63** (1a VGD ID, 1b Mã đối tượng hàng loạt và ID trùng ở tab Kiểm tra, 1c danh mục mở rộng). Chủ dự án chốt không làm chuyển đổi dữ liệu cũ nên không đổi `schema_version`; chờ người dùng thử trong SketchUp thật |
-| 2 Tầng và Phòng | Đang làm: 2a Tầng xong (beta.64: danh sách tầng trong model, nhãn ở dictionary `VGD_BIM_LOC`, gợi ý theo cao độ). Câu hỏi mở đã chốt 12/11/2026: viền phòng lấy từ mặt sàn hoặc đa giác đóng được chọn (dò tường làm sau); tầng gợi ý theo Z rồi người dùng xác nhận; khối phòng do plugin `VGD_Room` dựng (chỉ khối), dữ liệu và diện tích do VGD_BIM tính. 2b dữ liệu xong ở beta.65 (danh sách phòng trong model, viền đọc từ mặt sàn, diện tích / chu vi / thể tích / tường / trần, gán món theo vị trí). `VGD_Room` 0.1.0-beta.1 dựng khối phòng và cầu nối `room_volume` xong ở beta.66 (BIM gọi plugin, `docs/vgd_bim/BRIDGE.md`). Còn: nhận viền dò từ tường, mặt có lỗ, lệnh `edit` có giao diện riêng, thêm `VGD_Room` vào catalog của Center khi phát hành |
-| 2c Phòng nhiều mặt (đã làm, chờ thử thật) | BIM 1.1.1-beta.3 + VGD Room 0.1.0-beta.2: tạo nhiều phòng từ nhiều mặt sàn đã chọn, phòng có lỗ (cột), dựng khối tất cả phòng một bước hoàn tác. **Việc tiếp theo (chủ dự án nhắc làm sau khi thử bước này trong SketchUp thật):** dò viền phòng tự động từ tường (cắt model ở độ cao trên đầu cửa ~2,4 m, tìm vùng kín giữa các tường, cho xem trước rồi mới tạo; rủi ro: tường cong, nhóm lồng, chỗ hở lớn); sau đó nhãn và màu theo loại phòng. |
-| 3 Vật liệu và luật khối lượng | Chưa bắt đầu |
-| 4 Schedule, Audit, Validation | Chưa bắt đầu |
-| 5 Type, Classification, so sánh phiên bản, VGD_Cabinet | Chưa bắt đầu |
+| 2 Tầng và Phòng | Đang làm: 2a Tầng xong (beta.64: danh sách tầng trong model, nhãn ở dictionary `VGD_BIM_LOC`, gợi ý theo cao độ). Câu hỏi mở đã chốt 12/11/2026: viền phòng lấy từ mặt sàn hoặc đa giác đóng được chọn (dò tường làm sau); tầng gợi ý theo Z rồi người dùng xác nhận; khối phòng do plugin dựng (chỉ khối; đã gỡ, xem dưới), dữ liệu và diện tích do VGD_BIM tính. 2b dữ liệu xong ở beta.65 (danh sách phòng trong model, viền đọc từ mặt sàn, diện tích / chu vi / thể tích / tường / trần, gán món theo vị trí). `VGD_Room` 0.1.0-beta.1 dựng khối phòng và cầu nối `room_volume` xong ở beta.66; **đã gỡ ở 1.1.1-beta.10** theo quyết định ngày 18/11/2026. Việc dò viền phòng từ tường chuyển sang VGD Structure (quyết định ngày 18/11/2026). Còn: lệnh `edit` có giao diện riêng |
+| 2c Phòng nhiều mặt (đã làm, chờ thử thật) | BIM 1.1.1-beta.3: tạo nhiều phòng từ nhiều mặt sàn đã chọn, phòng có lỗ (cột). Phần dựng khối (VGD Room) đã gỡ ở beta.10. **Việc dò viền phòng từ tường đã chuyển sang VGD Structure** (quyết định ngày 18/11/2026), BIM không làm bước này. Nhãn và màu theo loại phòng vẫn chờ, chưa rõ ai làm. |
+| 3 Vật liệu và luật khối lượng | Làm một phần: 3a, 3b và hao hụt % của 3c (beta.67). Còn: trừ ô cửa / cửa sổ khỏi tường (cần quan hệ món–tường), công thức đơn giản |
+| 4 Schedule, Audit, Validation | Làm một phần: 4a (preset có sẵn), 4b (báo thiếu VGD ID, gán hàng loạt, beta.69), 4c (luật kiểm tra, beta.70). Còn: Fix All cho lỗi khác, điều kiện lọc theo nhóm món |
+| 5 Type, Classification, so sánh phiên bản | Làm một phần: 5c so sánh phiên bản (beta.71), preset Tủ. Còn: 5a Type / Instance, 5b Classification. Không làm VGD_Cabinet (18/11/2026) |
 
 ## 9. Nguồn tham khảo
 

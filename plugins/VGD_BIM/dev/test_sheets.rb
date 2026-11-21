@@ -6,7 +6,7 @@ Dir.mktmpdir do |dir|
   module Sketchup; class Group; end; class ComponentInstance; end; class Face; end; end
   module VGD; module BIM; def self.log(_); end; module Data; end; module Scanner; end; module Geometry; end; end; end
   root = File.expand_path('../runtime/vgd_bim', __dir__)
-  %w[core/storage core/measure core/settings core/locale core/schema core/tags core/preset core/model_settings core/table].each { |f| require File.join(root, f) }
+  %w[core/storage core/measure core/settings core/locale core/schema core/tags core/preset core/model_settings core/sheet_lock core/table].each { |f| require File.join(root, f) }
   $fails = 0
   def ok(name, cond); puts "#{cond ? 'PASS' : 'FAIL'}  #{name}"; $fails += 1 unless cond; end
   T = VGD::BIM::Table
@@ -22,6 +22,8 @@ Dir.mktmpdir do |dir|
   # ---- Làm sạch sheet: dữ liệu sai ----
   ok('không phải mảng: không có sheet', T.clean_sheets(nil) == [] && T.clean_sheets('x') == [] && T.clean_sheets({}) == [])
   ok('mục không phải Hash bị bỏ', T.clean_sheets([1, 'a', nil, {'name' => 'A'}]).map { |s| s['name'] } == ['A'])
+  ok('sheet khóa hợp lệ: giữ lock (chuỗi mã bền)', T.clean_sheets([{'name' => 'K', 'lock' => {'items' => [%w[11 21]]}}]).first['lock'] == {'items' => [%w[11 21]]})
+  ok('sheet khóa sai: bỏ lock, sheet vẫn giữ', (k = T.clean_sheets([{'name' => 'K2', 'lock' => {'items' => [['x']]}}]).first) && k['name'] == 'K2' && !k.key?('lock'))
   ok('tên rỗng: đặt Sheet<số thứ tự>', T.clean_sheets([{'name' => '  '}, {}]).map { |s| s['name'] } == %w[Sheet1 Sheet2])
   ok('tên dài quá 40 ký tự bị cắt', T.clean_sheets([{'name' => 'x' * 80}]).first['name'].length == T::SHEET_NAME_MAX)
   ok("tối đa #{T::SHEET_LIMIT} sheet", T.clean_sheets(Array.new(50) { |i| {'name' => "S#{i}"} }).size == T::SHEET_LIMIT)
