@@ -249,3 +249,7 @@ button.layers-btn { white-space: nowrap; }
 #levels-table input[type=number] { width: 80px; }
 #levels-table select { width: 140px; }
 #levels-table .layers-btn { white-space: nowrap; }
+/* Menu chuột phải của cây dự án (mặt cắt: đổi tên, xóa) */
+.pb-menu { position: fixed; z-index: 50; display: flex; flex-direction: column; gap: 2px; padding: 4px; min-width: 140px; background: var(--vgd-surface); border: 1px solid var(--vgd-border); border-radius: 6px; box-shadow: 0 8px 24px #0004; }
+.pb-menu button { text-align: left; padding: 4px 8px; font-size: 12px; }
+.pb-rename { flex: 1; min-width: 0; height: 22px; font-size: 12px; }

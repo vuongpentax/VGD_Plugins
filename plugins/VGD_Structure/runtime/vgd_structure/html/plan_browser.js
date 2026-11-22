@@ -1,5 +1,6 @@
 // Cây dự án (Project Browser) của tab Mặt bằng, theo cách làm của Revit: tầng → nhóm phần tử → từng phần tử; loại cột / dầm / tường / cửa; lưới trục.
-// Chỉ ĐỌC dữ liệu của cửa sổ (host.state) và nhờ cửa sổ mặt bằng chuyển tầng / chọn phần tử; không tự sửa dữ liệu.
+// Đọc dữ liệu của cửa sổ (host.state) và nhờ cửa sổ chuyển tầng / chọn phần tử / mở view; không tự sửa dữ liệu: đổi tên, xóa mặt cắt đi qua host (mutate ở app.js).
+// Nhánh Bản vẽ (như Views của Revit): mặt bằng từng tầng, bốn mặt đứng, các mặt cắt (chuột phải: đổi tên, xóa), thống kê.
 (function () {
   'use strict';
   var host = null, root = null, filterText = '', open = {};
@@ -104,7 +105,50 @@
       var dli = node(gl, 'ax:' + d[0], d[1], {children: true, count: host.axes(d[0]).length}), aul = el('ul', {role: 'group'}, dli);
       axes.forEach(function (a) { node(aul, 'axis:' + d[0] + ':' + a.name, a.name + ' · ' + a.offset + ' mm', {}); });
     });
+    // Bản vẽ (Views): mở view tương ứng; mặt cắt có menu chuột phải đổi tên / xóa.
+    var views = node(ul, 'views', 'Bản vẽ', {children: true}), vul = el('ul', {role: 'group'}, views);
+    var plans = st.levels.filter(function (lv) { return matches(lv.name) || matches('Mặt bằng'); });
+    if (!filterText || plans.length) {
+      var pli = node(vul, 'vw:plan', 'Mặt bằng', {children: true, count: st.levels.length}), pul = el('ul', {role: 'group'}, pli);
+      plans.forEach(function (lv) { node(pul, 'vp:' + lv.id, 'Mặt bằng ' + lv.name, {current: lv.id === cur, onClick: function () { host.openLevel(lv.id); }}); });
+    }
+    var ELV = [['south', 'Nam'], ['north', 'Bắc'], ['east', 'Đông'], ['west', 'Tây']].filter(function (d) { return matches('Mặt đứng ' + d[1]); });
+    if (!filterText || ELV.length) {
+      var eli = node(vul, 'vw:elev', 'Mặt đứng', {children: true, count: 4}), eul2 = el('ul', {role: 'group'}, eli);
+      ELV.forEach(function (d) { node(eul2, 've:' + d[0], 'Mặt đứng ' + d[1], {onClick: function () { host.openElevation(d[0]); }}); });
+    }
+    var secs = []; st.levels.forEach(function (lv) { Object.keys(lv.sections || {}).forEach(function (id) { secs.push({lv: lv, id: id, name: lv.sections[id].name}); }); });
+    var shownSecs = secs.filter(function (x) { return matches(x.name) || matches('Mặt cắt'); });
+    if (!filterText || shownSecs.length) {
+      var sli = node(vul, 'vw:sec', 'Mặt cắt', {children: true, count: secs.length}), sul = el('ul', {role: 'group'}, sli);
+      shownSecs.forEach(function (x) {
+        var li = node(sul, 'vs:' + x.id, x.name + ' · ' + x.lv.name, {title: 'Bấm để mở mặt cắt; chuột phải: đổi tên, xóa', onClick: function () { host.openSection(x.lv.id, x.id); }});
+        li.firstChild.oncontextmenu = function (e) { e.preventDefault(); sectionMenu(li, x, e.clientX, e.clientY); };
+      });
+      if (!secs.length && !filterText) el('li', {class: 'pb-none', text: 'Chưa có mặt cắt: dùng công cụ Mặt cắt trên mặt bằng.'}, sul);
+    }
+    if (!filterText || matches('Thống kê')) node(vul, 'vw:sched', 'Thống kê', {onClick: function () { host.openTab('schedule'); }});
     if (filterText && !shown && !root.querySelector('.pb-row .pb-label[title*="phần tử ở tầng"]')) el('p', {class: 'pb-empty', text: 'Không có mục nào khớp.'}, root);
+  }
+
+  // Menu chuột phải của mặt cắt trong cây: Đổi tên (ô nhập tại chỗ, Enter lưu, Esc hủy) và Xóa (hoàn tác được). host trả lỗi (chuỗi) nếu tên không hợp lệ.
+  function closeMenu() { var m = document.getElementById('pb-menu'); if (m) m.remove(); }
+  function sectionMenu(li, x, cx, cy) {
+    closeMenu();
+    var menu = el('div', {id: 'pb-menu', class: 'pb-menu', role: 'menu'}, document.body);
+    menu.style.left = cx + 'px'; menu.style.top = cy + 'px';
+    var ren = el('button', {type: 'button', role: 'menuitem', text: 'Đổi tên'}, menu), del = el('button', {type: 'button', role: 'menuitem', text: 'Xóa mặt cắt'}, menu);
+    ren.onclick = function () {
+      closeMenu();
+      var label = li.querySelector('.pb-label'), input = el('input', {type: 'text', class: 'pb-rename', 'aria-label': 'Tên mặt cắt mới', maxlength: '30'});
+      input.value = x.name; label.replaceWith(input); input.focus(); input.select();
+      var done = false, finish = function (save) { if (done) return; done = true; var err = save && input.value.trim() !== x.name ? host.renameSection(x.lv.id, x.id, input.value) : null; if (err) host.say(err); render(); };
+      input.onkeydown = function (e) { e.stopPropagation(); if (e.key === 'Enter') finish(true); else if (e.key === 'Escape') finish(false); };
+      input.onblur = function () { finish(false); };
+    };
+    // Không hỏi lại bằng confirm() (HtmlDialog của SketchUp không chắc có): xóa qua mutate nên hoàn tác được bằng Ctrl+Z.
+    del.onclick = function () { closeMenu(); host.deleteSection(x.lv.id, x.id); host.say('Đã xóa mặt cắt “' + x.name + '”. Ctrl+Z để hoàn tác.'); };
+    setTimeout(function () { document.addEventListener('mousedown', function off(e) { if (!menu.contains(e.target)) { closeMenu(); document.removeEventListener('mousedown', off, true); } }, true); }, 0);
   }
 
   window.VGDPlanBrowser = {

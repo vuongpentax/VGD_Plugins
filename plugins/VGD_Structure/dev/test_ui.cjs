@@ -1774,6 +1774,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   let sd=await page.evaluate(()=>window.VGDSection.debug());
   ok(sd.cut===3 && sd.beyond===2 && /3 đường viền, 2 cạnh phía sau/.test(sd.status),'tab Mặt cắt nhận kết quả: 3 đường viền, 2 cạnh phía sau, báo trên thanh trạng thái');
   ok((await page.locator('#sec-select option').count())>=2,'danh sách mặt cắt có mặt cắt vừa đặt');
+  ok(sd.materials.includes('masonry') && !sd.materials.includes(undefined),'mặt cắt: phần bị cắt của tường hatch kiểu gạch (vật liệu theo loại phần tử)');
   const scr=await page.evaluate(()=>{const d=window.VGDSection.debug();return d.toScreen(1000,1500);});const bbs=await page.locator('#sec-canvas').boundingBox();
   await clear();await page.mouse.click(bbs.x+scr[0],bbs.y+scr[1]);await wait(120);
   const sp=await last('plan_select');
@@ -1852,8 +1853,49 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok((await page.evaluate(()=>window.VGDElevation.debug().selected)).includes('suobj||2001'),'chọn cột trong SketchUp: mặt cột sáng lên trên mặt đứng');
   await page.click('#elv-refresh');await wait(150);
   ok((await calls('elevation_build')).length===2,'bấm Làm mới: dựng lại mặt đứng từ hình hiện tại');
+  // Che khuất theo điểm ảnh (z-buffer): mặt A xiên (độ sâu d = s, trung bình 2000 nên Ruby xếp xa hơn) đứng TRƯỚC mặt B (d = 1000) ở đoạn s 200..600
+  await receive('model_selection',{items:[]});
+  await receive('elevation_view',{dir:'south',truncated:false,bounds:{s0:0,s1:4000,z0:0,z1:3000},polys:[{pts:[[0,0],[4000,0],[4000,3000],[0,3000]],holes:[],depth:2000,plane:[1,0,0],src:{kind:'wall',level:'sl_00000001',ref:'x:A:1-2',tag:'A. WALL'}},{pts:[[200,1000],[600,1000],[600,2000],[200,2000]],holes:[],depth:1000,plane:[0,0,1000],src:{kind:'suobj',level:null,ref:'3001',tag:'S. COLUMN'}}]});await wait(150);
+  const zp=await page.evaluate(()=>window.VGDElevation.debug().toScreen(400,1500));await clear();
+  await page.mouse.click(ecv.x+zp[0],ecv.y+zp[1]);await wait(150);
+  ok((await last('plan_select')).items[0].ref==='x:A:1-2','mặt xiên đứng trước mặt nhỏ (dù trung bình xa hơn): bấm vào chọn đúng mặt nhìn thấy (z-buffer), không chọn mặt bị che');
+  const lum=async(sx,sz,dx)=>page.evaluate(([sx,sz,dx])=>{const c=document.getElementById('elv-canvas'),p=window.VGDElevation.debug().toScreen(sx,sz),r=window.devicePixelRatio||1,d=c.getContext('2d').getImageData(Math.round((p[0]+dx)*r),Math.round(p[1]*r),1,1).data;return (d[0]+d[1]+d[2])/3;},[sx,sz,dx]);
+  ok(Math.min(await lum(0,1500,-1),await lum(0,1500,0),await lum(0,1500,1))<110 && (await lum(2000,1500,0))>130,'nét viền ngoài (mép mặt giáp nền) đậm, bên trong mặt là màu tô nhạt');
   await receive('model_selection',{items:[]});await wait(100);
   await page.click('[data-tab=plan]');await wait(150);
+  // --- Ký hiệu mặt đứng trên mặt bằng: bốn ký hiệu, bấm thì mở mặt đứng hướng đó ---
+  const marks=await page.evaluate(()=>window.VGDPlan.elevationMarks());
+  ok(marks.length===4 && JSON.stringify(marks.map(m=>m.dir).sort())==='["east","north","south","west"]','mặt bằng có bốn ký hiệu mặt đứng quanh khung lưới');
+  const pcv=await page.locator('#pv-canvas').boundingBox(),mE=marks.find(m=>m.dir==='east');await clear();
+  await page.mouse.click(pcv.x+mE.x,pcv.y+mE.y);await wait(200);
+  ok(await page.locator('#tab-elevation').isVisible() && (await last('elevation_build')).dir==='east' && await page.locator('#elv-dirs button[data-dir=east]').getAttribute('aria-pressed')==='true','bấm ký hiệu Đông: mở tab Mặt đứng hướng Đông');
+  await page.click('[data-tab=plan]');await wait(150);
+  // --- Cây dự án: nhánh Bản vẽ (mặt bằng, mặt đứng, mặt cắt: đổi tên, xóa; thống kê) ---
+  await page.evaluate(()=>window.VGDS.mutate(()=>{window.VGDS._state.levels[0].sections={sc_0000abcd:{name:'B-B',a:[0,0],b:[5000,0],dir:1,depth:6000}};}));await wait(150);
+  const pb=sel=>page.locator(`#pv-browser [data-node="${sel}"] > .pb-row`);
+  const pbHidden=await page.locator('#pv-browser').isHidden();if(pbHidden)await page.click('#pv-browser-btn');
+  await pb('views').locator('.pb-label').click();
+  ok(await pb('vw:plan').isVisible() && await pb('vw:elev').isVisible() && await pb('vw:sec').isVisible() && await pb('vw:sched').isVisible(),'cây dự án có nhánh Bản vẽ: Mặt bằng, Mặt đứng, Mặt cắt, Thống kê');
+  await pb('vw:elev').locator('.pb-label').click();await clear();await pb('ve:west').locator('.pb-label').click();await wait(200);
+  ok(await page.locator('#tab-elevation').isVisible() && (await last('elevation_build')).dir==='west','bấm Mặt đứng Tây trong cây: mở tab Mặt đứng hướng Tây');
+  await page.click('[data-tab=plan]');await wait(150);
+  await pb('vw:sec').locator('.pb-label').click();
+  ok((await pb('vs:sc_0000abcd').innerText()).includes('B-B'),'nhánh Mặt cắt liệt kê mặt cắt của mọi tầng');
+  await pb('vs:sc_0000abcd').click({button:'right'});
+  ok(await page.locator('#pb-menu').isVisible(),'chuột phải mặt cắt: hiện menu Đổi tên / Xóa');
+  await page.locator('#pb-menu button',{hasText:'Đổi tên'}).click();
+  await page.locator('#pv-browser input.pb-rename').fill('C-C');await page.locator('#pv-browser input.pb-rename').press('Enter');await wait(150);
+  ok((await st()).levels[0].sections.sc_0000abcd.name==='C-C','đổi tên mặt cắt từ cây: lưu tên mới');
+  await pb('vs:sc_0000abcd').click({button:'right'});await page.locator('#pb-menu button',{hasText:'Đổi tên'}).click();
+  await page.locator('#pv-browser input.pb-rename').fill('');await page.locator('#pv-browser input.pb-rename').press('Enter');await wait(150);
+  ok((await st()).levels[0].sections.sc_0000abcd.name==='C-C','tên rỗng: không đổi');
+  await pb('vs:sc_0000abcd').click({button:'right'});await page.locator('#pb-menu button',{hasText:'Xóa mặt cắt'}).click();await wait(150);
+  ok(!((await st()).levels[0].sections||{}).sc_0000abcd,'xóa mặt cắt từ cây');
+  await page.evaluate(()=>window.VGDS.undo());await wait(150);
+  ok(((await st()).levels[0].sections||{}).sc_0000abcd,'Ctrl+Z (hoàn tác): mặt cắt trở lại');
+  await pb('vw:sched').locator('.pb-label').click();await wait(150);
+  ok(await page.locator('#tab-schedule').isVisible(),'bấm Thống kê trong cây: mở tab Thống kê');
+  await page.click('[data-tab=plan]');await wait(150);if(pbHidden)await page.click('#pv-browser-btn');
   // --- Ẩn / Cô lập ---
   await reset();const hist0=await page.evaluate(()=>window.VGDS.history().undo),data0=JSON.stringify((await st()).levels);
   await typ('eh');ok(/Hãy chọn phần tử cần ẩn/.test(await hintT()) && (await dbg8()).hidden===0,'EH khi chưa chọn gì: báo, không ẩn');

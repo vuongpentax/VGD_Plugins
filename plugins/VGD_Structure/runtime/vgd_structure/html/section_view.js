@@ -1,4 +1,5 @@
-// Tab Mặt cắt: xem mặt cắt 2D dựng từ HÌNH THẬT trong SketchUp (Ruby: SuSection / SectionGeometry). Cửa sổ chỉ vẽ kết quả: các đường viền phần bị cắt (tô theo loại),
+// Tab Mặt cắt: xem mặt cắt 2D dựng từ HÌNH THẬT trong SketchUp (Ruby: SuSection / SectionGeometry). Cửa sổ chỉ vẽ kết quả: các đường viền phần bị cắt (tô nhạt theo loại,
+// hatch theo vật liệu: bê tông, gạch, hoàn thiện; viền cắt nét đậm), cốt tầng có ký hiệu, kích thước chiều cao tầng / tổng và khoảng trục (VGDMarks),
 // cạnh phía sau mặt cắt (nét mảnh), đường cốt tầng và trục lưới cắt qua. Bấm một đường viền thì chọn đúng đối tượng đó trong SketchUp (cùng cách với mặt bằng),
 // và chọn trong SketchUp thì đường viền sáng lên. Không sửa dữ liệu.
 (function () {
@@ -7,14 +8,15 @@
   var cur = null;                 // {levelId, id}: mặt cắt đang xem
   var result = null;              // kết quả Ruby: {length, cut, beyond, truncated, name}
   var view = {cx: 0, cy: 0, s: 0.1}, drag = null, selected = {}, tagNames = {};
-  var COLORS = {column: '#66DD00', beam: '#00AABA', wall: '#FF9966', slab: '#BA3300', ceiling: '#9900FF', door: '#FF7766', window: '#CCBAED', opening: '#FF7766', suobj: '#8A93A0', geom: '#666666'};
+  var COLORS = {column: '#66DD00', beam: '#00AABA', wall: '#FF9966', slab: '#BA3300', ceiling: '#9900FF', door: '#FF7766', window: '#CCBAED', opening: '#FF7766', suobj: '#8A93A0', geom: '#666666', footing: '#999999', roof: '#FF6600', stair: '#FFBA00'};
   var TAG_KIND = function (tag) { var k = null; Object.keys(tagNames).forEach(function (kind) { if (String(tagNames[kind]).toLowerCase() === String(tag || '').toLowerCase()) k = kind; }); return k; };
 
   function $(id) { return document.getElementById(id); }
   function css(name, fb) { var v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); return v || fb; }
   function toScreen(s, z) { return [(s - view.cx) * view.s + size.w / 2, size.h / 2 - (z - view.cy) * view.s]; }
   function toWorld(px, py) { return [(px - size.w / 2) / view.s + view.cx, (size.h / 2 - py) / view.s + view.cy]; }
-  function colorOf(src) { var k = src.kind === 'suobj' ? (TAG_KIND(src.tag) || 'suobj') : src.kind; return COLORS[k] || COLORS.geom; }
+  function kindOf(src) { return src.kind === 'suobj' ? (TAG_KIND(src.tag) || 'suobj') : src.kind; }
+  function colorOf(src) { return COLORS[kindOf(src)] || COLORS.geom; }
   function keyOf(src) { return src.kind + '|' + (src.level || '') + '|' + (src.ref || ''); }
 
   function sectionDef() { var l = S.levels.filter(function (x) { return x.id === (cur && cur.levelId); })[0]; return l && l.sections && l.sections[cur.id]; }
@@ -48,8 +50,7 @@
     return [Math.min.apply(null, xs), z0, Math.max.apply(null, xs), z1];
   }
   function fit() {
-    var b = bounds(), w = Math.max(b[2] - b[0], 1), h = Math.max(b[3] - b[1], 1), pad = 50;
-    view.s = Math.min(5, Math.max(0.001, Math.min((size.w - 2 * pad) / w, (size.h - 2 * pad) / h))); view.cx = (b[0] + b[2]) / 2; view.cy = (b[1] + b[3]) / 2;
+    var f = VGDMarks.fit(bounds(), size); view.s = f.s; view.cx = f.cx; view.cy = f.cy; // chừa lề cho kích thước, ký hiệu cốt và trục
   }
   function resize() {
     if (!canvas) return; var r = canvas.parentNode.getBoundingClientRect(); size.dpr = window.devicePixelRatio || 1;
@@ -71,16 +72,11 @@
     ctx.fillStyle = bg; ctx.fillRect(0, 0, size.w, size.h);
     if (!result) { ctx.fillStyle = muted; ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText(cur ? 'Đang chờ kết quả từ SketchUp...' : 'Chọn hoặc đặt một mặt cắt trên mặt bằng.', size.w / 2, size.h / 2); return; }
     var left = toWorld(0, 0)[0], right = toWorld(size.w, 0)[0];
-    // cốt tầng (hoàn thiện nét liền, kết cấu nét đứt mảnh)
-    S.levels.forEach(function (l) {
-      [[l.elevation, [], 1, l.name + '  ' + (l.elevation >= 0 ? '+' : '') + (l.elevation / 1000).toFixed(3)], [l.elevation - (l.screed || 0), [4, 4], 0.6, '']].forEach(function (x) {
-        var a = toScreen(left, x[0]), b = toScreen(right, x[0]); ctx.strokeStyle = muted; ctx.globalAlpha = 0.6; ctx.lineWidth = x[2]; ctx.setLineDash(x[1]); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
-        if (x[3]) { ctx.fillStyle = muted; ctx.font = '11px sans-serif'; ctx.textAlign = 'left'; ctx.fillText(x[3], 6, a[1] - 3); }
-      });
-    });
+    var lv = {levels: S.levels, toScreen: toScreen, left: left, right: right, width: size.w, ink: ink, muted: muted};
+    VGDMarks.levels(ctx, Object.assign({part: 'lines'}, lv));
     // trục lưới
     axesCrossing().forEach(function (a) {
-      var top = toScreen(a.s, bounds()[3] + 800), bot = toScreen(a.s, bounds()[1] - 300);
+      var top = toScreen(a.s, bounds()[3] + 800), bot = toScreen(a.s, bounds()[1] - 300); top[1] = Math.max(top[1], 24); // vòng tên trục luôn trong khung nhìn
       ctx.strokeStyle = '#BA00CC'; ctx.globalAlpha = 0.5; ctx.setLineDash([10, 3, 2, 3]); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(top[0], top[1]); ctx.lineTo(bot[0], bot[1]); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
       ctx.beginPath(); ctx.arc(top[0], top[1] - 11, 10, 0, Math.PI * 2); ctx.fillStyle = bg; ctx.fill(); ctx.strokeStyle = '#BA00CC'; ctx.stroke(); ctx.fillStyle = ink; ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(a.name, top[0], top[1] - 11); ctx.textBaseline = 'alphabetic';
     });
@@ -92,9 +88,14 @@
     result.cut.forEach(function (l) {
       var col = colorOf(l.src), on = selected[keyOf(l.src)];
       ctx.beginPath(); l.pts.forEach(function (p, i) { var q = toScreen(p[0], p[1]); if (i) ctx.lineTo(q[0], q[1]); else ctx.moveTo(q[0], q[1]); }); if (l.closed) ctx.closePath();
-      if (l.closed) { ctx.globalAlpha = on ? 0.85 : 0.55; ctx.fillStyle = col; ctx.fill(); ctx.globalAlpha = 1; }
-      ctx.lineWidth = on ? 3 : 1.6; ctx.strokeStyle = on ? accent : ink; ctx.stroke();
+      if (l.closed) {
+        ctx.globalAlpha = on ? 0.7 : 0.35; ctx.fillStyle = col; ctx.fill(); ctx.globalAlpha = 1;
+        var pat = VGDMarks.hatch(ctx, kindOf(l.src), ink); if (pat) { ctx.fillStyle = pat; ctx.fill(); }
+      }
+      ctx.lineWidth = on ? 3 : 2; ctx.strokeStyle = on ? accent : ink; ctx.stroke(); // nét cắt đậm, cạnh phía sau mảnh
     });
+    if (result.cut.length || result.beyond.length) { var bb = bounds(); VGDMarks.dimensions(ctx, {levels: S.levels, bounds: bb, axes: axesCrossing(), toScreen: toScreen, color: muted}); }
+    VGDMarks.levels(ctx, Object.assign({part: 'labels'}, lv));
     ctx.fillStyle = muted; ctx.font = '11px sans-serif'; ctx.textAlign = 'right'; ctx.fillText('1 px = ' + (1 / view.s).toFixed(1) + ' mm', size.w - 8, size.h - 6);
   }
 
@@ -135,6 +136,6 @@
       selected = {}; ((data && data.items) || []).forEach(function (i) { selected[i.kind + '|' + (i.level || '') + '|' + i.ref] = true; if (i.kind === 'suobj') selected[i.kind + '||' + i.ref] = true; });
       if (result) result.cut.forEach(function (l) { if (l.src.kind === 'suobj' && selected['suobj||' + l.src.ref]) selected[keyOf(l.src)] = true; }); draw();
     },
-    debug: function () { return {cur: cur, cut: result ? result.cut.length : 0, beyond: result ? result.beyond.length : 0, selected: Object.keys(selected), view: {cx: view.cx, cy: view.cy, s: view.s}, size: size, status: $('sec-status').textContent, axes: axesCrossing().map(function (a) { return a.name; }), toScreen: toScreen}; }
+    debug: function () { return {materials: result ? result.cut.filter(function (l) { return l.closed; }).map(function (l) { return VGDMarks.material(kindOf(l.src)); }) : [], cur: cur, cut: result ? result.cut.length : 0, beyond: result ? result.beyond.length : 0, selected: Object.keys(selected), view: {cx: view.cx, cy: view.cy, s: view.s}, size: size, status: $('sec-status').textContent, axes: axesCrossing().map(function (a) { return a.name; }), toScreen: toScreen}; }
   };
 })();

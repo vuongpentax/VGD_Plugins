@@ -1272,7 +1272,7 @@
     openSection: function (levelId, id) { openSectionView(levelId, id); }, sectionAdded: function () {}});
   window.VGDPlanModify.init({state: state, api: window.VGDS.api, mutate: mutate, scale: function () { return window.VGDPlan.scale(); }, bounds: function () { return window.VGDPlan.bounds(); }, shapeAt: function (w) { return window.VGDPlan.shapeAt(w); }, finish: function () { window.VGDPlan.finish(); },
     snapPoint: function (w) { return window.VGDPlan.snapPoint(w); }, lineAt: function (w) { return window.VGDPlan.lineAt(w); }, guides: function () { return window.VGDPlan.guides(); }});
-  window.VGDPlan.init({onLevel: setLevelFromPlan, undo: undo, redo: redo, history: window.VGDS.history, edit: drawTools, notes: window.VGDPlanNotes, modify: window.VGDPlanModify, browser: window.VGDPlanBrowser,
+  window.VGDPlan.init({onLevel: setLevelFromPlan, undo: undo, redo: redo, openElevation: function (d) { switchTab('elevation'); window.VGDElevation.open(d); }, history: window.VGDS.history, edit: drawTools, notes: window.VGDPlanNotes, modify: window.VGDPlanModify, browser: window.VGDPlanBrowser,
     callSU: call, sections: window.VGDPlanSection, payload: payload, refresh: function () { changed(); },
     buildLevel: function () { message('Đang dựng tầng này vào model...'); call('build_all', {state: payload(), levels: [state.level]}); },
     allKeys: function (levelId, kind) { var box = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', opening: 'openingPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', stair: 'stairPicks', note: 'notes'}[kind], l = state.levels.filter(function (x) { return x.id === levelId; })[0]; return l && box ? Object.keys(l[box]) : []; }});
@@ -1280,6 +1280,20 @@
   window.VGDPlanBrowser.init({state: state, currentLevel: function () { return state.level; }, axes: toAxes,
     openLevel: function (id) { if (id !== state.level) setLevelFromPlan(id); },
     selectElement: function (levelId, kind, ref) { window.VGDPlan.selectKeys(levelId, [{kind: kind, ref: ref}]); },
+    openElevation: function (d) { switchTab('elevation'); window.VGDElevation.open(d); },
+    openSection: function (levelId, id) { openSectionView(levelId, id); },
+    openTab: function (t) { switchTab(t); },
+    say: function (t) { window.VGDPlan.say(t); },
+    // Đổi tên / xóa mặt cắt từ cây dự án: cùng quy tắc tên với bảng Thuộc tính (plan_section.js: 1 đến 30 ký tự, không trùng) và Levels.sections! ở Ruby.
+    renameSection: function (levelId, id, name) {
+      var v = String(name).trim(), l = state.levels.filter(function (x) { return x.id === levelId; })[0];
+      if (!l || !l.sections || !l.sections[id]) return 'Mặt cắt không còn.';
+      if (!v || v.length > 30 || /[\u0000-\u001f\u007f]/.test(v)) return 'Tên mặt cắt từ 1 đến 30 ký tự.';
+      var dup = state.levels.some(function (x) { return Object.keys(x.sections || {}).some(function (k) { return k !== id && x.sections[k].name.toLowerCase() === v.toLowerCase(); }); });
+      if (dup) return 'Tên mặt cắt “' + v + '” đã có.';
+      mutate(function () { l.sections[id].name = v; }); return null;
+    },
+    deleteSection: function (levelId, id) { var l = state.levels.filter(function (x) { return x.id === levelId; })[0]; if (l && l.sections && l.sections[id]) mutate(function () { delete l.sections[id]; }); },
     selectType: function (kind, typeId) {
       var l = currentLevel(), box = l[BROWSER_PICKS[kind]] || {};
       var keys = Object.keys(box).filter(function (ref) { return window.VGDPlanBrowser.effectiveType(kind, l, box[ref]) === typeId; }).map(function (ref) { return {kind: kind, ref: ref}; });

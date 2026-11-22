@@ -49,5 +49,16 @@ ok('tên hướng nhận cả dạng Symbol', EG.view!(:south) == EG.view!('sout
 r = EG.project(EG.view!('south'), [rect_y(0.04, 0.02, 1000.06, 0.01, 3000.04, 'x')])[:polys].first
 ok('tọa độ làm tròn một chữ số thập phân', r[:pts] == [[0.0, 0.0], [1000.1, 0.0], [1000.1, 3000.0], [0.0, 3000.0]])
 
+# Mặt phẳng độ sâu (cho che khuất theo từng điểm ảnh ở giao diện): d = a * s + b * z + c đúng tại mọi đỉnh, kể cả mặt xiên.
+slant = {'outer' => [[0, 1000, 0], [4000, 5000, 0], [4000, 5000, 3000], [0, 1000, 3000]], 'loops' => [], src: {kind: 'wall'}}
+pl = EG.project(EG.view!('south'), [slant])[:polys].first
+a, b, c = pl[:plane]
+ok('mặt xiên 45° nhìn từ Nam: độ sâu tăng theo s (a = 1), không đổi theo z, đúng tại mọi đỉnh', (a - 1).abs < 1e-6 && b.abs < 1e-6 && slant['outer'].all? { |x, y, z| (a * x + b * z + c - y).abs < 1e-3 })
+flat = EG.project(EG.view!('east'), [{'outer' => [[5000, 0, 0], [5000, 3000, 0], [5000, 3000, 2000], [5000, 0, 2000]], 'loops' => [], src: {kind: 'wall'}}])[:polys].first
+ok('mặt song song mặt nhìn: độ sâu là hằng số', flat[:plane][0].abs < 1e-9 && flat[:plane][1].abs < 1e-9 && (flat[:plane][2] + 5000).abs < 1e-3)
+roof = {'outer' => [[0, 0, 3000], [6000, 0, 3000], [6000, 3000, 4732], [0, 3000, 4732]], 'loops' => [], src: {kind: 'roof'}}
+rp = EG.project(EG.view!('south'), [roof])[:polys].first
+ok('mặt mái nghiêng nhìn từ Nam: độ sâu tăng theo cao độ', rp[:plane][1] > 0 && roof['outer'].all? { |x, y, z| (rp[:plane][0] * x + rp[:plane][1] * z + rp[:plane][2] - y).abs < 1e-2 })
+
 puts $fails.zero? ? "\nTất cả PASS" : "\n#{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)

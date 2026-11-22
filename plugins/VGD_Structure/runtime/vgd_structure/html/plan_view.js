@@ -743,7 +743,7 @@
     if (visible.wall) section('walls').forEach(function (i) { if (hid('wall', i.ref)) return; fillStroke(i.poly || rectPoly(i.min, i.max), COLORS.wall, 0.8, null, 1); if (detail !== 'low' && vstyle === 'color') drawWallLayers(i); });
     if (visible.opening) section('openings').forEach(function (i) { if (!hid('opening', i.ref)) drawOpening(i, bg); });
     if (visible.column) section('columns').forEach(function (i) { if (hid('column', i.ref)) return; fillStroke(i.poly || rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), COLORS.column, 0.9, null, 1.5); });
-    if (visible.grid) drawGrid(ink);
+    if (visible.grid) { drawGrid(ink); drawElevationMarks(ink); }
     drawTags(ink);
     if (visible.section && sections) sections.draw({ctx: ctx, toScreen: toScreen, scale: view.s, hidden: function (id) { return hid('section', id); }});
     if (visible.note && notes) notes.draw({ctx: ctx, toScreen: toScreen, scale: view.s, hidden: function (id) { return hid('note', id); }});
@@ -865,6 +865,24 @@
       else { ctx.fillStyle = css('--vgd-surface', '#fff'); ctx.fill(); ctx.lineWidth = 1.8; ctx.strokeStyle = st === 'missing' ? '#E5484D' : '#8A93A0'; ctx.stroke(); }
     });
   }
+  // Ký hiệu mặt đứng (kiểu Revit): bốn ký hiệu quanh khung lưới, tam giác chỉ hướng nhìn vào công trình; bấm thì mở mặt đứng hướng đó (opts.openElevation).
+  // Cách khung lưới ít nhất 4500 mm và 120 px để không đè ký hiệu trục; ra ngoài khung nhìn thì nằm sát mép khung. Vị trí màn hình lưu ở elvMarks để bắt bấm.
+  var elvMarks = [], ELV_OFFSET = 4500;
+  function drawElevationMarks(ink) {
+    elvMarks = [];
+    if (!data || !data.bounds || !opts.openElevation) return;
+    var b = data.bounds, off = Math.max(ELV_OFFSET, 120 / view.s), cx = (b[0] + b[2]) / 2, cy = (b[1] + b[3]) / 2, r = 11;
+    [['south', [cx, b[1] - off], [0, 1], 'Nam'], ['north', [cx, b[3] + off], [0, -1], 'Bắc'], ['west', [b[0] - off, cy], [1, 0], 'Tây'], ['east', [b[2] + off, cy], [-1, 0], 'Đông']].forEach(function (m) {
+      var p = toScreen(m[1][0], m[1][1]), q = toScreen(m[1][0] + m[2][0], m[1][1] + m[2][1]), e = 30; // ngoài khung nhìn thì kéo vào sát mép (không đổi vừa khung)
+      p = [Math.min(Math.max(p[0], e + 22), size.w - e - 22), Math.min(Math.max(p[1], e), size.h - e)]; // lề ngang chừa chỗ cho chữ Tây / Đông q = [p[0] + (q[0] - toScreen(m[1][0], m[1][1])[0]), p[1] + (q[1] - toScreen(m[1][0], m[1][1])[1])];
+      var len = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1, d = [(q[0] - p[0]) / len, (q[1] - p[1]) / len], n = [-d[1], d[0]];
+      ctx.beginPath(); ctx.arc(p[0], p[1], r, 0, Math.PI * 2); ctx.fillStyle = css('--vgd-surface', '#fff'); ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = ink; ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(p[0] + d[0] * (r + 9), p[1] + d[1] * (r + 9)); ctx.lineTo(p[0] + n[0] * r, p[1] + n[1] * r); ctx.lineTo(p[0] - n[0] * r, p[1] - n[1] * r); ctx.closePath(); ctx.fillStyle = ink; ctx.fill();
+      ctx.font = '10px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(m[3], p[0] - d[0] * (r + 18), p[1] - d[1] * (r + 9)); ctx.textBaseline = 'alphabetic';
+      elvMarks.push({dir: m[0], x: p[0], y: p[1]});
+    });
+  }
+  function elevationMarkAt(pt) { var hit = null; elvMarks.forEach(function (m) { if (Math.hypot(pt[0] - m.x, pt[1] - m.y) <= 16) hit = m.dir; }); return hit; }
   function drawGrid(ink) {
     ctx.save(); ctx.strokeStyle = COLORS.grid; ctx.lineWidth = 1; ctx.globalAlpha = 0.7; ctx.setLineDash([14, 3, 2, 3]);
     data.axes.forEach(function (a) { var p = toScreen(a.line[0][0], a.line[0][1]), q = toScreen(a.line[1][0], a.line[1][1]); ctx.beginPath(); ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]); ctx.stroke(); });
@@ -983,6 +1001,8 @@
     if (drag) { drag = null; try { canvas.releasePointerCapture(e.pointerId); } catch (x) { /* đã thả */ } canvas.style.cursor = tool === 'pan' ? 'grab' : 'default'; return; }
     if (press) {
       var mode = press.mode; press = null;
+      var mark = !box && elevationMarkAt(point(e));
+      if (mark) { try { canvas.releasePointerCapture(e.pointerId); } catch (x) { /* đã thả */ } opts.openElevation(mark); return; }
       if (box) { selectBox(box, mode); box = null; } else selectAt(world(e), mode);
       try { canvas.releasePointerCapture(e.pointerId); } catch (x) { /* đã thả */ }
       draw(); renderProps(); notifySelection();
@@ -1036,6 +1056,7 @@
   }
 
   var api = {
+    elevationMarks: function () { return elvMarks.map(function (m) { return {dir: m.dir, x: m.x, y: m.y}; }); },
     init: function (options) {
       opts = options; sections = options.sections || null; if (!opts.payload) opts.payload = function () { return {}; }; edit = options.edit || null; notes = options.notes || null; modify = options.modify || null; root = $('tab-plan'); canvas = $('pv-canvas'); ctx = canvas.getContext('2d');
       status = {xy: $('pv-xy'), hint: $('pv-hint'), zoom: $('pv-zoom')};

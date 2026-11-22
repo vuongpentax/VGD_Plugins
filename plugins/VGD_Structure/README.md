@@ -1,8 +1,15 @@
-# VGD Structure 0.29.0-beta.1
+# VGD Structure 0.29.0-beta.2
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
+
+**0.29.0-beta.2: mặt đứng, mặt cắt, cây dự án**
+- **Mặt đứng che khuất đúng:** mỗi điểm ảnh lấy mặt gần nhất (z-buffer), nên mặt chồng nhau một phần không còn vẽ sai. Nét đậm nhạt như bản vẽ: viền ngoài đậm, ranh giới hai đối tượng vừa, nếp trong cùng đối tượng mảnh. Kéo / cuộn hiện ảnh tạm, dừng tay mới vẽ lại chính xác (model lớn mất vài trăm ms).
+- **Cốt tầng và kích thước** trên mặt đứng và mặt cắt: ký hiệu cốt (tam giác, ±0.000, +3.600 và tên tầng) ở mép phải, chuỗi chiều cao tầng và tổng chiều cao bên trái, khoảng trục và tổng chiều dài phía dưới; "Vừa khung" chừa lề cho các ký hiệu này.
+- **Mặt cắt rõ hơn (H9):** phần bị cắt tô nhạt kèm **hatch theo vật liệu** (bê tông: cột, dầm, sàn, móng, mái, cầu thang; gạch: tường; hoàn thiện: trần), viền cắt nét đậm.
+- **Ký hiệu mặt đứng trên mặt bằng:** bốn ký hiệu Nam / Bắc / Đông / Tây quanh khung lưới (ra ngoài khung nhìn thì nằm sát mép); bấm vào là mở mặt đứng hướng đó.
+- **Cây dự án có nhánh Bản vẽ** (như Views của Revit): Mặt bằng từng tầng, bốn Mặt đứng, các Mặt cắt (bấm để mở; chuột phải: Đổi tên, Xóa, hoàn tác được bằng Ctrl+Z), Thống kê.
 
 **0.29.0-beta.1: móng, mái, lỗ sàn cầu thang** (kế hoạch hoàn thiện `docs/vgd_structure/PLAN.md` mục 13).
 - **Móng đơn:** bảng Tầng có cột **Móng đơn**: bật rồi nhập dài × rộng × dày; mọi cột của tầng đó có một **đế móng** ngay dưới chân cột (tâm trùng tâm cột, cột xoay 90° thì đế đổi chiều, xoay góc khác thì đế xoay theo). Cách dùng: thêm một **tầng móng** dưới tầng trệt (ví dụ cao độ -1500, cán nền 0): cột của tầng móng là **cổ cột**, dầm của tầng móng là **giằng móng** (đỉnh giằng bằng mặt sàn trệt theo quy tắc dầm đã có). Đề xuất tự động cho tầng móng chỉ gồm cột và dầm. Đế chồng nhau hoặc nhỏ hơn cột thì cảnh báo. Tag S. FOOTING, BIM tính thể tích.
@@ -155,7 +162,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.29.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.29.0-beta.2.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

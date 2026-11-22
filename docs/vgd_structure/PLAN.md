@@ -207,7 +207,7 @@ Mỗi cột mốc có test và RBZ beta để thử. Chưa phát hành.
 | H6 | Lỗ sàn tổng quát | Khoét lỗ khi cầu thang vắt qua nhiều ô sàn (cắt đa giác), lỗ kỹ thuật vẽ tay trên sàn theo ô. | chưa làm |
 | H7 | Lan can liên tục và vách kính | Lan can theo mép sàn / chiếu nghỉ, vách kính như tường mỏng có khung. | chưa làm |
 | H8 | Phòng | Dò vùng phòng từ tường (đặc tả `docs/vgd_bim/ROOM_FROM_WALLS.md`), hoàn thiện theo phòng. | chưa làm |
-| H9 | Mặt đứng / mặt cắt rõ hơn | Che khuất nét, hatch theo loại, ghi kích thước và cao độ tự động trên mặt cắt. | chưa làm |
+| H9 | Mặt đứng / mặt cắt rõ hơn | Che khuất nét, hatch theo loại, ghi kích thước và cao độ tự động trên mặt cắt. | ĐÃ LÀM 0.29.0-beta.2 (chủ dự án yêu cầu 22/11/2026): mặt đứng z-buffer + nét đậm nhạt, cốt tầng, kích thước, ký hiệu mặt đứng trên mặt bằng; mặt cắt hatch theo vật liệu, nét cắt đậm, cốt, kích thước; cây dự án có nhánh Bản vẽ. Chưa: che khuất cạnh phía sau trong mặt cắt |
 | H10 | Phát hành | Thêm vào catalog VGD Center, hướng dẫn, chốt bản ổn định. Chỉ làm khi chủ dự án đã thử trong SketchUp thật và đồng ý. | chưa làm |
 
 **Thứ tự đề xuất sau 0.29.0:** chủ dự án thử H1–H3 trong SketchUp thật trước (mái dựng bằng mặt 3D nghiêng, lỗ sàn, đế móng đều chưa xác minh), rồi H4 → H5 → H6 → H7; H8, H9 làm khi khung nhà đã ổn.

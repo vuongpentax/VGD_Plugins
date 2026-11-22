@@ -35,11 +35,32 @@ module VGD
             pts: pts.map { |s, z, _| [s.round(1), z.round(1)] },
             holes: (face['loops'] || []).map { |ring| ring.map { |p| local(view, p).then { |s, z, _| [s.round(1), z.round(1)] } } },
             depth: (pts.sum { |_, _, d| d } / pts.size).round(1),
+            plane: plane(pts),
             src: face[:src]
           }
         end
         polys.sort_by! { |poly| -poly[:depth] }
         {polys: polys, bounds: bounds(polys)}
+      end
+
+      # Mặt phẳng độ sâu của mặt: [a, b, c] với d = a * s + b * z + c tại MỌI điểm của mặt (mặt phẳng nên d tuyến tính theo s, z).
+      # Giao diện dùng để che khuất theo từng điểm ảnh (z-buffer) thay vì chỉ sắp theo độ sâu trung bình (sai khi hai mặt chồng một phần).
+      # Pháp tuyến theo Newell (ổn định với đa giác nhiều đỉnh); mặt gần như nhìn thẳng cạnh đã bị bỏ trước đó nên thành phần d của pháp tuyến khác 0.
+      def self.plane(pts)
+        nx = nz = nd = 0.0
+        pts.each_with_index do |(s0, z0, d0), i|
+          s1, z1, d1 = pts[(i + 1) % pts.size]
+          nx += (z0 - z1) * (d0 + d1)
+          nz += (d0 - d1) * (s0 + s1)
+          nd += (s0 - s1) * (z0 + z1)
+        end
+        return [0.0, 0.0, (pts.sum { |_, _, d| d } / pts.size).round(3)] if nd.abs < EPS
+        cs = pts.sum { |p| p[0] } / pts.size
+        cz = pts.sum { |p| p[1] } / pts.size
+        cd = pts.sum { |p| p[2] } / pts.size
+        a = -nx / nd
+        b = -nz / nd
+        [a.round(6), b.round(6), (cd - a * cs - b * cz).round(3)]
       end
 
       # Diện tích có dấu theo công thức đa giác (mm²); chỉ dùng để bỏ mặt suy biến.
