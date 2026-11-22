@@ -2,6 +2,14 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.32: đã kiểm tra tự động
+
+Đọc móng và mái do VGD Structure 0.29.0-beta.1 dựng (`core/structure_source.rb`): kind `footing` (dims như cột, tính thể tích), `roof` (diện tích nghiêng, thể tích = diện tích x dày), nhóm chứa `footings`, `roofs`.
+
+- `dev/test_structure_source.rb`: thêm kiểm tra đế móng 1200 x 1000 x 400 (0,48 m³) và tấm mái 50 m² dày 100 (5 m³), cách tính mặc định, nhóm chứa. `ruby dev/run_tests.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** bảng khối lượng với móng, mái dựng thật.
+
 ## Bản 1.1.1-beta.31: đã kiểm tra tự động
 
 Rà lại beta.28–30, sửa lỗi (mỗi lỗi có test tái hiện viết trước khi sửa):

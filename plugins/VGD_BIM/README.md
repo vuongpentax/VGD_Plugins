@@ -1,4 +1,4 @@
-# VGD BIM 1.1.1-beta.31
+# VGD BIM 1.1.1-beta.32
 
 Bản thử của 1.1.1 (bản ổn định gần nhất là 1.1.0). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 

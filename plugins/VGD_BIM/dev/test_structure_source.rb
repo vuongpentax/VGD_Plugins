@@ -90,6 +90,12 @@ ok('nhóm chứa (columns, beams, walls, slabs, ceilings) và lưới trục (gr
 
 # Số liệu
 ok('cột 300 x 300 cao 3480: thể tích 0,3132 m³, diện tích mặt bằng 0,09 m², cao 3,48 m', SS.row_fields(col).values_at(:struct_volume, :struct_area, :struct_length) == [0.3132, 0.09, 3.48])
+foot = element('footing', {'w' => 1200, 'd' => 1000, 'height' => 400})
+ok('đế móng 1200 x 1000 dày 400 (VGD Structure): là phần tử, thể tích 0,48 m³, mặc định tính theo thể tích; nhóm móng là container',
+   SS.element?(foot) && SS.row_fields(foot).values_at(:struct_volume, :struct_area) == [0.48, 1.2] && SS.default_method('footing') == 'volume' && SS.container?(container('footings', [])))
+roof = element('roof', {'thickness' => 100, 'area' => 50.0, 'slope' => 30})
+ok('tấm mái (VGD Structure): diện tích nghiêng 50 m², thể tích 5 m³, mặc định tính theo diện tích; nhóm mái là container',
+   SS.element?(roof) && SS.row_fields(roof).values_at(:struct_area, :struct_volume) == [50.0, 5.0] && SS.default_method('roof') == 'area' && SS.container?(container('roofs', [])))
 beam = element('beam', {'w' => 200, 'h' => 400, 'length' => 3900}, ref: 'sl_00000001:x:B:2-3')
 ok('dầm 200 x 400 dài 3900: thể tích 0,312 m³, dài 3,9 m', SS.row_fields(beam).values_at(:struct_volume, :struct_length) == [0.312, 3.9])
 wall = element('wall', {'thickness' => 200, 'height' => 3480, 'length' => 3150, 'under_beam' => false}, bbox: {width: 200.0, depth: 3150.0, height: 3480.0})

@@ -9,12 +9,12 @@ module VGD
       SOURCE_DICTIONARY = 'VGD_BIM_SOURCE'.freeze
       STRUCT_DICTIONARY = 'VGD_STRUCT'.freeze
       PLUGIN = 'vgd_structure'.freeze
-      KINDS = %w[column beam wall slab ceiling door window].freeze
+      KINDS = %w[column beam wall slab ceiling door window footing roof].freeze
       # Nhóm chứa các phần tử (mỗi tầng một nhóm theo loại) và nhóm lưới trục: không phải món, không tính khối lượng.
-      CONTAINER_KINDS = %w[columns beams walls slabs ceilings grid].freeze
+      CONTAINER_KINDS = %w[columns beams walls slabs ceilings footings roofs grid].freeze
       MAX_VALUE = 1.0e9
       # Cách tính khi món không có tag cho biết (tag S. COLUMN, A. WALL... đã có cách tính theo từ khóa của tên tag).
-      DEFAULT_METHOD = {'column' => 'volume', 'beam' => 'volume', 'wall' => 'area', 'slab' => 'volume', 'ceiling' => 'area', 'door' => 'count', 'window' => 'count'}.freeze
+      DEFAULT_METHOD = {'column' => 'volume', 'beam' => 'volume', 'wall' => 'area', 'slab' => 'volume', 'ceiling' => 'area', 'door' => 'count', 'window' => 'count', 'footing' => 'volume', 'roof' => 'area'}.freeze
 
       def self.element?(entity)
         entity.respond_to?(:get_attribute) && entity.get_attribute(SOURCE_DICTIONARY, 'plugin') == PLUGIN && KINDS.include?(entity.get_attribute(SOURCE_DICTIONARY, 'kind'))
@@ -54,7 +54,7 @@ module VGD
       def self.quantities(kind, dims)
         n = ->(key) { v = dims[key]; v.is_a?(Numeric) && v.to_f.finite? && v.to_f.positive? && v.to_f < MAX_VALUE ? v.to_f : nil }
         case kind
-        when 'column'
+        when 'column', 'footing' # đế móng ghi dims cùng khóa với cột (VGD Structure FootingBuilder)
           w, d, h = n.call('w'), n.call('d'), n.call('height')
           [w && d ? round(w * d / 1.0e6) : nil, w && d && h ? round(w * d * h / 1.0e9) : nil, h ? round(h / 1000.0) : nil]
         when 'beam'
