@@ -114,6 +114,10 @@ module VGD
           entry['sections'] = sections unless sections.empty?
           entry['floor_layers'] = floor_layers unless floor_layers.empty?
           entry['ceiling_layers'] = ceiling_layers unless ceiling_layers.empty?
+          footing = footing!(level['footing'], name)
+          entry['footing'] = footing if footing
+          roof = roof!(level['roof'], name)
+          entry['roof'] = roof if roof
           entry
         end
         names = out.map { |l| l['name'].downcase }
@@ -121,6 +125,52 @@ module VGD
         raise Error, "Tên tầng “#{dup['name']}” bị trùng." if dup
         raise Error, 'Mã tầng bị trùng.' if out.map { |l| l['id'] }.uniq.size != out.size
         [out, removed]
+      end
+
+      # Đế móng đơn dưới mọi cột của tầng (tầng móng): {'l' => dài theo X, 'w' => rộng theo Y, 'h' => dày} mm; nil = không có móng.
+      # Đế đặt ngay dưới chân cột (đỉnh đế = chân cột), tâm trùng tâm cột, xoay theo cột (FootingPlan).
+      FOOTING_SIZE = (300.0..8000.0).freeze
+      FOOTING_THICKNESS = (150.0..2500.0).freeze
+      def self.footing!(raw, level_name)
+        return nil if raw.nil?
+        raise Error, "Tầng “#{level_name}”: dữ liệu móng không hợp lệ." unless raw.is_a?(Hash)
+        out = {}
+        {'l' => ['dài móng', FOOTING_SIZE], 'w' => ['rộng móng', FOOTING_SIZE], 'h' => ['dày móng', FOOTING_THICKNESS]}.each do |key, (label, range)|
+          value = raw[key]
+          raise Error, "Tầng “#{level_name}”: #{label} từ #{range.min.to_i} đến #{range.max.to_i} mm." unless number?(value) && range.cover?(value.to_f)
+          out[key] = value.to_f.round(1)
+        end
+        out
+      end
+
+      # Mái của tầng (RoofPlan): phủ khung lưới (trục biên là đường mép mái) cộng phần chìa `overhang`.
+      # shape: flat (mái bằng), shed (một dốc, `dir` x+ x- y+ y- là hướng dốc LÊN), gable (hai dốc, `dir` x / y là phương của nóc).
+      # slope độ (mái dốc 1..60; mái bằng bỏ qua), thickness mm (vuông góc mặt mái), base mm (đáy mái tại đường mép so với cao độ tầng).
+      ROOF_SHAPES = %w[flat shed gable].freeze
+      ROOF_DIRS = {'shed' => %w[x+ x- y+ y-], 'gable' => %w[x y]}.freeze
+      ROOF_SLOPE = (1.0..60.0).freeze
+      ROOF_THICKNESS = (20.0..500.0).freeze
+      ROOF_OVERHANG = (0.0..2000.0).freeze
+      ROOF_BASE = (-5000.0..10_000.0).freeze
+      def self.roof!(raw, level_name)
+        return nil if raw.nil?
+        who = "Tầng “#{level_name}”: mái"
+        raise Error, "#{who} không hợp lệ." unless raw.is_a?(Hash)
+        shape = raw['shape']
+        raise Error, "#{who}: kiểu mái phải là #{ROOF_SHAPES.join(', ')}." unless ROOF_SHAPES.include?(shape)
+        num = lambda do |key, range, label, default|
+          value = raw.key?(key) ? raw[key] : default
+          raise Error, "#{who}: #{label} từ #{range.min.to_i} đến #{range.max.to_i}." unless number?(value) && range.cover?(value.to_f)
+          value.to_f.round(1)
+        end
+        out = {'shape' => shape, 'thickness' => num.call('thickness', ROOF_THICKNESS, 'dày mái (mm)', 120), 'overhang' => num.call('overhang', ROOF_OVERHANG, 'chìa mái (mm)', 600),
+               'base' => num.call('base', ROOF_BASE, 'cao độ chân mái so với cốt tầng (mm)', 0)}
+        unless shape == 'flat'
+          out['slope'] = num.call('slope', ROOF_SLOPE, 'độ dốc (độ)', 30)
+          raise Error, "#{who}: hướng phải là #{ROOF_DIRS[shape].join(', ')}." unless ROOF_DIRS[shape].include?(raw['dir'])
+          out['dir'] = raw['dir']
+        end
+        out
       end
 
       def self.number?(value)

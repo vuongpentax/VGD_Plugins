@@ -53,6 +53,23 @@ module VGD
         rescue ColumnPlan::Error => error
           out[:columns_error] = error.message
         end
+        # Mái (tầng có khai báo mái): hình chiếu từng tấm và cao độ nóc, cùng nguồn RoofPlan với lúc dựng.
+        if (Levels.find(levels, payload['level'] || levels.first['id']) || {})['roof']
+          roof = RoofPlan.plan(grid, levels, payload['level'] || levels.first['id'])
+          out[:roofs] = {level: roof[:level]['id'], z_base: roof[:z_base], ridge: roof[:ridge], issues: roof[:issues], count: roof[:items].size,
+                         items: roof[:items].map { |i| i.slice(:ref, :poly, :top, :slope, :shape, :area, :thickness) }}
+        end
+        # Đế móng (tầng có khai báo móng): cùng nguồn FootingPlan với lúc dựng.
+        level_id = payload['level'] || levels.first['id']
+        if (Levels.find(levels, level_id) || {})['footing']
+          begin
+            plan = FootingPlan.plan(grid, types, levels, level_id)
+            out[:footings] = {level: plan[:level]['id'], z_top: plan[:z_top], h: plan[:h], issues: plan[:issues], count: plan[:items].size,
+                              items: plan[:items].map { |i| i.slice(:ref, :center, :w, :d, :h, :z0, :z1, :rot, :poly) }}
+          rescue FootingPlan::Error, ColumnPlan::Error => error
+            out[:footings_error] = error.message
+          end
+        end
         begin
           plan = BeamPlan.plan(grid, types, beam_types, levels, payload['level'] || levels.first['id'])
           out[:beams] = {level: plan[:level]['id'], level_name: plan[:level]['name'], z_top: plan[:z_top], issues: plan[:issues], count: plan[:items].size,
@@ -83,7 +100,7 @@ module VGD
           out[:stairs_error] = error.message
         end
         begin
-          slab = SlabPlan.plan(grid, levels, level_id, types, beam_types, wall_types, opening_types)
+          slab = SlabPlan.plan(grid, levels, level_id, types, beam_types, wall_types, opening_types, stair_types)
           out[:slabs] = {level: slab[:level]['id'], level_name: slab[:level]['name'], z_top: slab[:z_top], thickness: slab[:thickness], count: slab[:items].size, issues: slab[:issues],
                          items: slab[:items].map { |i| i.slice(:ref, :min, :max, :thickness, :z_top, :z_bottom, :area, :polygon, :holes, :placement, :layers) }}
         rescue SlabPlan::Error => error

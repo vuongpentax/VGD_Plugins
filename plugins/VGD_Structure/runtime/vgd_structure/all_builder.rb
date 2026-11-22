@@ -4,7 +4,7 @@ module VGD
     # có bất kỳ lỗi nào thì không dựng gì cả và báo rõ loại nào, tầng nào lỗi. Chưa xác minh trong SketchUp thật.
     module AllBuilder
       MAX_TOTAL = 20_000
-      KINDS = %w[columns beams walls openings slabs ceilings stairs].freeze
+      KINDS = %w[columns footings beams walls openings slabs ceilings stairs roofs].freeze
       LABELS = Checker::KIND_LABELS_ALL
       Error = Class.new(ArgumentError)
 
@@ -14,7 +14,16 @@ module VGD
         last = state['levels'].last['id']
         KINDS.each_with_object({}) do |kind, out|
           next if only && !only.include?(kind)
-          ids = state['levels'].select { |l| level_ids.include?(l['id']) && !l['picks'][kind].empty? && (kind == 'slabs' || l['id'] != last) }.map { |l| l['id'] }
+          # Móng không có lựa chọn riêng: tầng có khai báo `footing` và có cột (đế đặt dưới chân cột).
+          # Mái: tầng có khai báo `roof`, kể cả tầng trên cùng.
+          picked = lambda do |l|
+            case kind
+            when 'footings' then l['footing'] && !l['picks']['columns'].empty?
+            when 'roofs' then l['roof']
+            else !l['picks'][kind].empty?
+            end
+          end
+          ids = state['levels'].select { |l| level_ids.include?(l['id']) && picked.call(l) && (%w[slabs roofs].include?(kind) || l['id'] != last) }.map { |l| l['id'] }
           out[kind] = ids unless ids.empty?
         end
       end
@@ -31,6 +40,8 @@ module VGD
                  when 'walls' then WallBuilder.prepare(model, raw_state, ids)
                  when 'openings' then OpeningBuilder.prepare(model, raw_state, ids)
                  when 'stairs' then StairBuilder.prepare(model, raw_state, ids)
+                 when 'footings' then FootingBuilder.prepare(model, raw_state, ids)
+                 when 'roofs' then RoofBuilder.prepare(model, raw_state, ids)
                  else PlateBuilder.prepare(model, raw_state, ids, kind)
                  end]
         rescue ArgumentError => error
@@ -68,6 +79,8 @@ module VGD
                       when 'walls' then WallBuilder.apply(model, c)
                       when 'openings' then OpeningBuilder.apply(model, c)
                       when 'stairs' then StairBuilder.apply(model, c)
+                      when 'footings' then FootingBuilder.apply(model, c)
+                      when 'roofs' then RoofBuilder.apply(model, c)
                       else PlateBuilder.apply(model, c)
                       end
         end

@@ -1,8 +1,14 @@
-# VGD Structure 0.28.0-beta.8
+# VGD Structure 0.29.0-beta.1
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
+
+**0.29.0-beta.1: móng, mái, lỗ sàn cầu thang** (kế hoạch hoàn thiện `docs/vgd_structure/PLAN.md` mục 13).
+- **Móng đơn:** bảng Tầng có cột **Móng đơn**: bật rồi nhập dài × rộng × dày; mọi cột của tầng đó có một **đế móng** ngay dưới chân cột (tâm trùng tâm cột, cột xoay 90° thì đế đổi chiều, xoay góc khác thì đế xoay theo). Cách dùng: thêm một **tầng móng** dưới tầng trệt (ví dụ cao độ -1500, cán nền 0): cột của tầng móng là **cổ cột**, dầm của tầng móng là **giằng móng** (đỉnh giằng bằng mặt sàn trệt theo quy tắc dầm đã có). Đề xuất tự động cho tầng móng chỉ gồm cột và dầm. Đế chồng nhau hoặc nhỏ hơn cột thì cảnh báo. Tag S. FOOTING, BIM tính thể tích.
+- **Mái:** bảng Tầng có cột **Mái**: mái bằng, một dốc (hướng dốc lên ±X / ±Y) hoặc hai dốc (nóc song song X hoặc Y, ở giữa khung), độ dốc, dày, chìa mái, cao độ chân mái so với cốt tầng. Mái phủ khung lưới (trục biên là mép mái) cộng phần chìa; mỗi tấm mái là khối kín dựng bằng mặt 3D. Tag A. ROOF, BIM tính diện tích nghiêng và thể tích. Chưa có mái bốn dốc, tường thu hồi, mái theo đường bao bất kỳ.
+- **Lỗ sàn cầu thang:** sàn tầng trên tự khoét lỗ đúng hình cầu thang của tầng dưới khi cầu thang nằm trọn trong một tấm sàn (diện tích sàn trừ lỗ); cầu thang vắt qua mép tấm sàn thì cảnh báo (hãy bỏ ô sàn đó hoặc vẽ sàn đa giác).
+- Mặt bằng vẽ đế móng (nét đứt xám) và viền mái (nét đứt cam); lớp hiển thị có thêm Móng, Mái. Dựng tất cả gồm cả móng và mái trong một bước hoàn tác. Bảng Tầng cuộn ngang thay vì bóp nhỏ ô nhập.
 
 **Cột mốc P1 đến P6, P4b-1, P4b-2, P4b-3 và P5b: tab Mặt bằng, phần tử tự do (kể cả xiên), liên kết SketchUp** (cửa sổ vẽ mặt bằng, giai đoạn 2, `docs/vgd_structure/PLAN.md` mục 12). **Xem, chọn, bắt điểm, đo, đường gióng và VẼ KẾT CẤU** (P3, kiểu Revit); dữ liệu ghi vào lựa chọn của tầng, muốn ra model vẫn bấm Dựng. Bố cục theo cửa sổ mặt bằng của VTBim: thanh trên (hoàn tác, Chọn và đo, Sửa, Bắt điểm, Xóa đường gióng, Hiển thị lớp, Vừa khung, ẩn / hiện Thuộc tính), **tab theo từng tầng**, cột công cụ bên trái chia nhóm (Thiết kế, Vẽ 2D, Ghi chú), bảng **Thuộc tính**, thanh trạng thái (gợi ý, tọa độ mm, tỉ lệ, ô gõ số). Canvas vẽ lưới trục, sàn, trần (mặc định ẩn), dầm, tường, cửa (có cánh mở), cột.
 - **Phím tắt kiểu Revit:** gõ **liên tiếp các chữ, không giữ phím** (ví dụ WA = Tường, ZE = vừa khung, ME = đo, RP = đường gióng, SO = bật / tắt bắt điểm, PP = bảng Thuộc tính, VG = hiển thị lớp, KS = bảng phím tắt; lệnh vẽ và sửa như WA, DR, WN, CL, BM, GR, MV, CO, RO, MM, OF, TR, DE, LI, DI, TX, EL đã có phím nhưng chưa chạy, báo rõ). Gõ sai chữ thứ hai thì chữ đó được tính là chữ đầu của phím mới; phím là phần đầu của phím khác (ví dụ M và MV) thì chờ khoảng 1 giây rồi chạy. **Bảng phím tắt (nút bàn phím hoặc KS) sửa được**, không cho trùng phím, nút "Đặt lại mặc định"; phím lưu theo máy (localStorage của cửa sổ, chưa xác minh trong SketchUp thật). Cột "Nguồn": "Revit" là phím mặc định của Revit **theo trí nhớ, chưa đối chiếu với Revit cài trên máy** (sai thì sửa trong bảng), "Tự đặt" là lệnh Revit không có phím mặc định (sàn, trần, polyline, chữ nhật, đường tròn, cung).
@@ -149,7 +155,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.28.0-beta.8.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.29.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

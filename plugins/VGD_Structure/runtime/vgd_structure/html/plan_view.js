@@ -3,8 +3,8 @@
 (function () {
   'use strict';
   // Màu theo bộ tag mẫu của VGD BIM.
-  var COLORS = {column: '#66DD00', beam: '#00AABA', wall: '#FF9966', slab: '#BA3300', ceiling: '#9900FF', stair: '#FFBA00', door: '#FF7766', window: '#CCBAED', grid: '#BA00CC', suobj: '#8A93A0', section: '#D9534F'};
-  var LAYERS = [['grid', 'Lưới trục'], ['slab', 'Sàn'], ['ceiling', 'Trần'], ['stair', 'Cầu thang'], ['beam', 'Dầm'], ['wall', 'Tường'], ['opening', 'Cửa'], ['column', 'Cột'], ['suobj', 'Đối tượng SketchUp chưa nhận'], ['section', 'Mặt cắt'], ['note', 'Ghi chú và nét 2D']];
+  var COLORS = {column: '#66DD00', beam: '#00AABA', wall: '#FF9966', slab: '#BA3300', ceiling: '#9900FF', stair: '#FFBA00', door: '#FF7766', window: '#CCBAED', grid: '#BA00CC', suobj: '#8A93A0', section: '#D9534F', footing: '#999999', roof: '#FF6600'};
+  var LAYERS = [['grid', 'Lưới trục'], ['footing', 'Móng'], ['slab', 'Sàn'], ['roof', 'Mái'], ['ceiling', 'Trần'], ['stair', 'Cầu thang'], ['beam', 'Dầm'], ['wall', 'Tường'], ['opening', 'Cửa'], ['column', 'Cột'], ['suobj', 'Đối tượng SketchUp chưa nhận'], ['section', 'Mặt cắt'], ['note', 'Ghi chú và nét 2D']];
   // Biểu tượng tự vẽ (nét 24 × 24). Bố cục theo cửa sổ mặt bằng của VTBim: thanh trên (chọn, sửa), cột công cụ bên trái, tab theo tầng, bảng thuộc tính, thanh trạng thái.
   var ICON = {
     hide: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12ZM3 3l18 18', isolate: 'M12 2l9 5v10l-9 5-9-5V7ZM12 8v8M8 12h8',
@@ -64,7 +64,7 @@
   var badgesDrawn = 0, syncOn = true, statusOn = true, suPicking = false, lastSent = '', lastFromSU = false, modelStatus = null, pendingSelect = null, pendingDim = null, edit = null, notes = null, modify = null, lastDims = [], dimHits = [], dimInput = null, selLevel = null, opts2 = null, hoverCount = 0, keymap = {}, chord = '', chordTimer = null, tabIdx = 0, hoverSig = '', guides = {}, measure = null, draft = null, snap = null, snapOn = true, note = '', press = null, box = null, shiftKey = false;
   var SNAP_PX = 10, DRAG_PX = 4, LIVE_EDIT = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'stair', 'door', 'window', 'delete', 'move', 'copy', 'array', 'mirror', 'match', 'offset', 'align', 'trim', 'rotate', 'unlock', 'section', 'line', 'polyline', 'rect', 'circle', 'arc', 'dim', 'text', 'level'];
   var view = {cx: 0, cy: 0, s: 0.05}, data = null, boundsKey = '', fitted = false, tool = 'select', shapes = [], hover = null, cursor = null, drag = null;
-  var visible = {grid: true, slab: true, ceiling: false, stair: true, beam: true, wall: true, opening: true, column: true, suobj: true, section: true, note: true};
+  var visible = {grid: true, footing: true, roof: true, slab: true, ceiling: false, stair: true, beam: true, wall: true, opening: true, column: true, suobj: true, section: true, note: true};
   var size = {w: 300, h: 200, dpr: 1};
 
   function $(id) { return document.getElementById(id); }
@@ -232,6 +232,7 @@
       title = lv ? lv.name : 'Mặt bằng';
       rows = lv ? [['Cao độ sàn hoàn thiện', lv.elevation + ' mm'], ['Cán nền', lv.screed + ' mm'], ['Mặt sàn kết cấu', Math.round((lv.elevation - lv.screed) * 10) / 10 + ' mm'], ['Dày sàn', lv.slab + ' mm']] : [];
       var counts = {}; shapes.forEach(function (x) { counts[x.layer] = (counts[x.layer] || 0) + 1; });
+      counts.footing = section('footings').length; counts.roof = section('roofs').length; // móng, mái chưa là hình chọn được: đếm từ xem trước của Ruby
       LAYERS.forEach(function (l) { if (l[0] !== 'grid') rows.push([l[1], String(counts[l[0]] || 0)]); });
     }
     if (statusOn && modelStatus && modelStatus.level === currentId) {
@@ -269,7 +270,7 @@
       }
     }
     if (!shape) {
-      var issues = []; ['columns', 'beams', 'walls', 'openings', 'slabs', 'ceilings', 'stairs'].forEach(function (k) { if (data && data[k] && data[k].issues) issues = issues.concat(data[k].issues); });
+      var issues = []; ['columns', 'footings', 'roofs', 'beams', 'walls', 'openings', 'slabs', 'ceilings', 'stairs'].forEach(function (k) { if (data && data[k] && data[k].issues) issues = issues.concat(data[k].issues); });
       if (issues.length) { el('h3', {text: 'Cảnh báo (' + issues.length + ')', class: 'pv-edit-h'}, box); var ul = el('ul', {class: 'pv-issues'}, box); issues.slice(0, 8).forEach(function (m) { el('li', {text: m}, ul); }); }
     }
   }
@@ -731,6 +732,10 @@
     ctx.fillStyle = bg; ctx.fillRect(0, 0, size.w, size.h);
     if (!data || !data.ok) { ctx.fillStyle = muted; ctx.font = '13px sans-serif'; ctx.textAlign = 'center'; ctx.fillText((data && data.error) || 'Chưa có lưới trục hợp lệ.', size.w / 2, size.h / 2); updateStatus(); return; }
     if (visible.suobj) suObjs.filter(function (o) { return o.level === currentId && !hid('suobj', String(o.id)); }).forEach(function (o) { fillStroke(o.footprint, COLORS[o.kind === 'door' || o.kind === 'window' ? o.kind : o.kind] || COLORS.suobj, 0.1, [4, 3], 1.2); });
+    // Đế móng (tầng móng): nét đứt xám dưới cột, chỉ để xem (chưa chọn được trên mặt bằng); hình từ FootingPlan của Ruby.
+    if (visible.footing) section('footings').forEach(function (i) { fillStroke(i.poly || rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), COLORS.footing, 0.1, [4, 3], 1); });
+    // Mái (tầng có khai báo mái): viền tấm mái nét đứt cam, đường nóc là cạnh chung của hai tấm (vẽ chồng hai viền); chỉ để xem.
+    if (visible.roof) section('roofs').forEach(function (i) { fillStroke(i.poly, COLORS.roof, 0.06, [8, 4], 1.5); });
     if (visible.slab) section('slabs').forEach(function (i) { if (hid('slab', i.ref)) return; fillStroke(i.polygon || rectPoly(i.min, i.max), COLORS.slab, 0.12, null, 1, i.holes); });
     if (visible.stair) section('stairs').forEach(function (i) { if (hid('stair', i.ref)) return; var bad = !!(i.conflicts && i.conflicts.length); fillStroke(i.polygon, bad ? themeColor(GHOST_BAD) : COLORS.stair, bad ? 0.22 : 0.12, bad ? null : [5, 4], bad ? 2 : 1, null); (i.steps || []).forEach(function (st) { fillStroke(st.poly, COLORS.stair, 0.05, null, 0.5, null); }); });
     if (visible.ceiling) section('ceilings').forEach(function (i) { if (hid('ceiling', i.ref)) return; fillStroke(i.polygon, COLORS.ceiling, 0.08, [5, 4], 1, i.holes); });

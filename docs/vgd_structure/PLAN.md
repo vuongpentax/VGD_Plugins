@@ -187,3 +187,27 @@ Mỗi cột mốc có test và RBZ beta để thử. Chưa phát hành.
 **Rủi ro:** thay đổi lớn, chạm nhiều Ruby đã chạy ổn; mọi phần dựng hình xiên, đùn đa giác, lỗ cửa xiên **chưa kiểm được trong SketchUp thật**; dữ liệu đã lưu phải mở lại đúng sau khi nâng cấp; số mã phần tử tự do (id) cần ổn định để VGD ID và BIM không đổi khi dựng lại.
 
 **Câu hỏi cần chủ dự án quyết định trước khi làm:** (a) có làm theo hai bước (vuông góc rồi xiên) hay một lần; (b) cột lệch trục có cần xoay không; (c) sàn, trần đa giác có nằm trong P4b hay để sau; (d) phần tử tự do và theo lưới có được trộn trong một tầng không (đề xuất: có).
+
+
+## 13. Kế hoạch hoàn thiện (chủ dự án giao toàn quyền 22/11/2026)
+
+**Mục đích:** dựng nhanh khung nhà như một Revit cơ bản để vẽ chi tiết tiếp. Phần thô: móng, cột, dầm, sàn, mái. Hoàn thiện cơ bản: tường, trần, sàn hoàn thiện, cửa đi, cửa sổ, cầu thang. Cửa sổ plugin hiện 2D (mặt bằng, mặt đứng, mặt cắt); 3D là model SketchUp, hai bên tương tác.
+
+**Rà soát (22/11/2026, bản 0.28.0-beta.8):** đã có lưới trục, tầng, cột, dầm, tường nhiều lớp và nối góc, cửa đi / cửa sổ, sàn và trần (theo ô và đa giác, lớp hoàn thiện), cầu thang thẳng / L / U, mặt bằng kiểu Revit (vẽ, sửa, cây dự án, thuộc tính, ghi chú), mặt cắt và mặt đứng đọc từ model thật, thống kê, chọn hai chiều với SketchUp, vẽ và sửa trực tiếp trong SketchUp, nhận đối tượng SketchUp thường, nối VGD BIM. Test: toàn bộ Ruby đạt, 816 kiểm tra giao diện đạt. **Còn thiếu so với mục đích:** móng, mái, lỗ sàn cho cầu thang.
+
+**Cách làm:** mỗi đợt theo đúng mô hình có sẵn (dữ liệu kiểm ở `Levels`, kế hoạch thuần ở `core/*_plan.rb`, builder `prepare` / `apply`, xem trước, `AllBuilder`, BIM đọc `dims`), test Ruby + test giao diện viết cùng lúc, mỗi đợt một RBZ beta. Phần chỉ kiểm được trong SketchUp thật ghi "chưa xác minh".
+
+| # | Đợt | Nội dung | Trạng thái |
+|---|---|---|---|
+| H1 | Móng đơn | Tầng có `footing` (dài × rộng × dày): đế dưới mọi cột của tầng. Tầng móng là tầng thường dưới tầng trệt: cột = cổ cột, dầm = giằng móng; đề xuất cho tầng móng chỉ cột + dầm. BIM tính thể tích. | ĐÃ LÀM 0.29.0-beta.1 |
+| H2 | Lỗ sàn cầu thang | Sàn tầng trên tự khoét theo cầu thang tầng dưới khi cầu thang nằm trọn trong một tấm sàn; vắt mép thì cảnh báo. | ĐÃ LÀM 0.29.0-beta.1 |
+| H3 | Mái | Mái bằng / một dốc / hai dốc phủ khung lưới + chìa; dốc, hướng, dày, chân mái. BIM tính diện tích nghiêng, thể tích. | ĐÃ LÀM 0.29.0-beta.1 |
+| H4 | Móng băng, móng riêng từng cột | Đế dưới tường tầng móng (móng băng); loại móng có tên và chọn loại riêng cho từng cột (như loại cột) khi cần cột biên / giữa khác nhau; đế giật cấp. | chưa làm |
+| H5 | Mái đầy đủ hơn | Mái bốn dốc trên khung chữ nhật, tường thu hồi (tường tam giác dưới mái hai dốc), mái theo đường bao vẽ trên mặt bằng (đa giác), xà gồ / bản mái nhìn được trên mặt cắt. | chưa làm |
+| H6 | Lỗ sàn tổng quát | Khoét lỗ khi cầu thang vắt qua nhiều ô sàn (cắt đa giác), lỗ kỹ thuật vẽ tay trên sàn theo ô. | chưa làm |
+| H7 | Lan can liên tục và vách kính | Lan can theo mép sàn / chiếu nghỉ, vách kính như tường mỏng có khung. | chưa làm |
+| H8 | Phòng | Dò vùng phòng từ tường (đặc tả `docs/vgd_bim/ROOM_FROM_WALLS.md`), hoàn thiện theo phòng. | chưa làm |
+| H9 | Mặt đứng / mặt cắt rõ hơn | Che khuất nét, hatch theo loại, ghi kích thước và cao độ tự động trên mặt cắt. | chưa làm |
+| H10 | Phát hành | Thêm vào catalog VGD Center, hướng dẫn, chốt bản ổn định. Chỉ làm khi chủ dự án đã thử trong SketchUp thật và đồng ý. | chưa làm |
+
+**Thứ tự đề xuất sau 0.29.0:** chủ dự án thử H1–H3 trong SketchUp thật trước (mái dựng bằng mặt 3D nghiêng, lỗ sàn, đế móng đều chưa xác minh), rồi H4 → H5 → H6 → H7; H8, H9 làm khi khung nhà đã ổn.

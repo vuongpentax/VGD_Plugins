@@ -241,3 +241,11 @@ button.layers-btn { white-space: nowrap; }
 .sec-bar { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-bottom: 1px solid var(--vgd-border); flex-wrap: wrap; }
 .sec-body { flex: 1; min-height: 0; position: relative; background: var(--vgd-surface); }
 .sec-body canvas { display: block; touch-action: none; }
+/* Bảng tầng nhiều cột: cuộn ngang thay vì bóp nhỏ ô nhập (ô tên, cao độ phải đọc được số) */
+.levels-fieldset { min-width: 0; } /* fieldset mặc định không co hẹp hơn nội dung */
+.levels-scroll { overflow-x: auto; }
+#levels-table { width: max-content; min-width: 100%; }
+#levels-table input[type=text] { width: 110px; }
+#levels-table input[type=number] { width: 80px; }
+#levels-table select { width: 140px; }
+#levels-table .layers-btn { white-space: nowrap; }
