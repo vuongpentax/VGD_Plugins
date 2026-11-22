@@ -82,6 +82,11 @@ col_cut = r2[:cut].find { |c| c[:src][:kind] == 'suobj' }
 ok('cắt qua cột SketchUp thường (phép dời 3000, 1000): có đường viền, nguồn suobj mang id SketchUp và tag', col_cut && col_cut[:closed] && col_cut[:src][:ref] == col.entityID.to_s && col_cut[:src][:tag] == 'S. COLUMN')
 ok('cột cắt đúng chỗ: s = (y - (-500)) từ 1350 đến 1650 (cột 300 quanh y = 1000), z 0..3000', col_cut[:pts].map(&:first).minmax == [1350.0, 1650.0] && col_cut[:pts].map(&:last).minmax == [0.0, 3000.0])
 ok('cắt ngoài mọi vật (x = 9000): không có đường viền', SS.build($model, {'a' => [9000, -500], 'b' => [9000, 1500], 'dir' => 1, 'depth' => 100})[:cut].empty?)
+# Chỉ phần nằm trong ĐOẠN đường cắt vẽ trên mặt bằng mới bị cắt (và được hatch): vật trên phần kéo dài của đường cắt thì không.
+short = SS.build($model, {'a' => [2000, -1000], 'b' => [2000, -500], 'dir' => 1, 'depth' => 100})
+ok('đường cắt dừng trước tường (đoạn y -1000..-500, tường ở y -100..100): tường không bị cắt dù nằm trên phần kéo dài', short[:cut].empty?)
+half = SS.build($model, {'a' => [2000, -1000], 'b' => [2000, 0], 'dir' => 1, 'depth' => 100})
+ok('đường cắt dừng giữa tường (tới y = 0): chỉ phần tường trong đoạn bị cắt, s 900..1000', half[:cut].size == 1 && half[:cut][0][:pts].map(&:first).minmax == [900.0, 1000.0])
 back = SS.build($model, {'a' => [-500, -1000], 'b' => [-500, 1000], 'dir' => -1, 'depth' => 1000})
 ok('nhìn từ x = -500 về +X tầm 1000: thấy cạnh đầu tường, không có đường cắt', back[:cut].empty? && back[:beyond].size >= 4)
 none = SS.build($model, {'a' => [-500, -1000], 'b' => [-500, 1000], 'dir' => 1, 'depth' => 1000})

@@ -16,7 +16,7 @@ module VGD
         cut = []
         beyond = []
         sources[:items].each do |src|
-          SectionGeometry.loops(SectionGeometry.cut_faces(plane, src[:faces])).each { |l| cut << l.merge(src: src[:meta]) }
+          SectionGeometry.crop(SectionGeometry.loops(SectionGeometry.cut_faces(plane, src[:faces])), plane.length).each { |l| cut << l.merge(src: src[:meta]) }
           beyond.concat(SectionGeometry.beyond(plane, src[:edges]))
         end
         beyond = beyond.first(MAX_BEYOND)

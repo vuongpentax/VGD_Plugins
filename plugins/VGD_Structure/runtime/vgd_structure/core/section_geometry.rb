@@ -91,6 +91,74 @@ module VGD
         out
       end
 
+      # Chỉ giữ phần đường viền nằm trong ĐOẠN đường cắt đã vẽ (0 <= s <= length): mặt phẳng cắt dài vô hạn, nhưng vật chỉ nằm trên phần kéo dài
+      # của đường cắt không được coi là bị cắt (không hatch). Đường viền khép kín xén theo dải bằng Sutherland - Hodgman (vẫn khép kín); đường hở xén từng đoạn.
+      def self.crop(loops, length)
+        loops.flat_map do |l|
+          if l[:closed]
+            ring = clip_half(clip_half(l[:pts], 0.0, 1), length, -1)
+            next [] if ring.size < 3 || polygon_area(ring) < EPS
+            [{pts: ring.map { |s, z| [s.round(1), z.round(1)] }, closed: true}]
+          else
+            open_crop(l[:pts], length)
+          end
+        end
+      end
+
+      # Xén đa giác theo nửa mặt phẳng sign * (s - bound) >= 0.
+      def self.clip_half(ring, bound, sign)
+        inside = ->(p) { sign * (p[0] - bound) >= -EPS }
+        ring.each_with_index.each_with_object([]) do |(p, i), out|
+          q = ring[(i + 1) % ring.size]
+          out << p if inside.call(p)
+          next if inside.call(p) == inside.call(q)
+          k = (bound - p[0]) / (q[0] - p[0]).to_f
+          out << [bound, p[1] + (q[1] - p[1]) * k]
+        end
+      end
+
+      def self.polygon_area(ring)
+        ring.each_with_index.sum { |(s0, z0), i| s1, z1 = ring[(i + 1) % ring.size]; s0 * z1 - s1 * z0 }.abs / 2.0
+      end
+
+      # Đường hở: xén từng đoạn theo [0, length], tách thành nhiều đường khi đi ra ngoài dải.
+      def self.open_crop(pts, length)
+        out = []
+        cur = []
+        pts.each_cons(2) do |p, q|
+          k0, k1 = 0.0, 1.0
+          ds = (q[0] - p[0]).to_f # số thực: chia số nguyên sai điểm xén
+          if ds.abs < EPS # đoạn đứng: giữ nguyên nếu nằm trong dải, không thì bỏ
+            unless p[0] >= -EPS && p[0] <= length + EPS
+              out << cur if cur.size > 1
+              cur = []
+              next
+            end
+          else
+            a, b = [(0 - p[0]) / ds, (length - p[0]) / ds].minmax
+            k0 = [k0, a].max
+            k1 = [k1, b].min
+            if k0 >= k1
+              out << cur if cur.size > 1
+              cur = []
+              next
+            end
+          end
+          a2 = [p[0] + ds * k0, p[1] + (q[1] - p[1]) * k0]
+          b2 = [p[0] + ds * k1, p[1] + (q[1] - p[1]) * k1]
+          if cur.empty? || (cur.last[0] - a2[0]).abs + (cur.last[1] - a2[1]).abs > EPS
+            out << cur if cur.size > 1
+            cur = [a2]
+          end
+          cur << b2
+          next if k1 >= 1.0 - EPS
+          out << cur
+          cur = []
+        end
+        out << cur if cur.size > 1
+        out.map { |c| {pts: c.map { |s, z| [s.round(1), z.round(1)] }, closed: false} }
+      end
+
       # Cạnh nằm phía sau mặt cắt (trong tầm nhìn): cắt cạnh theo khoảng 0 <= dir * t <= depth rồi chiếu lên (s, z). Trả về [[[s0, z0], [s1, z1]]...].
       def self.beyond(plane, edges)
         edges.filter_map do |p, q|

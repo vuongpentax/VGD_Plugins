@@ -1,5 +1,6 @@
 # VGD Structure 0.29.0 (beta)
 
+- **Mặt cắt chỉ cắt trong đoạn đã vẽ (beta.3):** chỉ phần nằm trong đoạn đường cắt trên mặt bằng mới bị cắt và hatch; trước đây vật nằm trên phần kéo dài của đường cắt cũng bị cắt nhầm.
 - **Mặt đứng che khuất đúng, nét đậm nhạt (beta.2):** z-buffer theo điểm ảnh thay cho tô theo độ sâu trung bình; viền ngoài đậm, ranh giới đối tượng vừa, nếp trong mảnh. Kéo / cuộn mượt (ảnh tạm), dừng tay mới vẽ lại.
 - **Cốt tầng và kích thước trên mặt đứng, mặt cắt (beta.2):** ký hiệu cốt ±0.000, chuỗi chiều cao tầng, tổng chiều cao, khoảng trục, tổng chiều dài.
 - **Mặt cắt có hatch theo vật liệu (beta.2):** bê tông, gạch, hoàn thiện; viền cắt nét đậm.

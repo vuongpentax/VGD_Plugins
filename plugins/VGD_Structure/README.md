@@ -1,8 +1,10 @@
-# VGD Structure 0.29.0-beta.2
+# VGD Structure 0.29.0-beta.3
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
+
+**0.29.0-beta.3:** mặt cắt chỉ cắt (và hatch) phần nằm trong ĐOẠN đường cắt vẽ trên mặt bằng; vật nằm trên phần kéo dài của đường cắt không còn bị coi là bị cắt (trước đây mặt phẳng cắt dài vô hạn). Chỉ phần bị cắt mới hatch; vật phía sau là nét mảnh, không hatch.
 
 **0.29.0-beta.2: mặt đứng, mặt cắt, cây dự án**
 - **Mặt đứng che khuất đúng:** mỗi điểm ảnh lấy mặt gần nhất (z-buffer), nên mặt chồng nhau một phần không còn vẽ sai. Nét đậm nhạt như bản vẽ: viền ngoài đậm, ranh giới hai đối tượng vừa, nếp trong cùng đối tượng mảnh. Kéo / cuộn hiện ảnh tạm, dừng tay mới vẽ lại chính xác (model lớn mất vài trăm ms).
@@ -162,7 +164,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.29.0-beta.2.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.29.0-beta.3.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 
