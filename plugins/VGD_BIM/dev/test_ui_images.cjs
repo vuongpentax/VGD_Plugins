@@ -889,9 +889,9 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await page.locator('#tag-pane-model').isVisible() && await treeRows().count()===3,'cây mặc định gập: chỉ hiện thư mục cấp gốc và tag ở gốc (2 thư mục + Untagged)');
   ok((await rowOf('folder',1).innerText()).includes('3 tag') && (await rowOf('folder',2).innerText()).includes('1 tag'),'mỗi thư mục ghi số tag bên trong (kể cả thư mục con)');
   await rowOf('folder',1).locator('.tm-caret').click();
-  ok((await treeRows().evaluateAll(rows=>rows.map(r=>r.querySelector('.tm-name').textContent))).join('|')==='A. ARCHITECTURAL|Con|A. WALL|A. WINDOW|S. STRUCTURAL|Untagged','mở thư mục: hiện thư mục con và tag bên trong, theo thứ tự chữ cái')
+  ok((await treeRows().evaluateAll(rows=>rows.map(r=>r.querySelector('.tm-name').textContent))).join('|')==='Untagged|A. ARCHITECTURAL|Con|A. WALL|A. WINDOW|S. STRUCTURAL','mở thư mục: hiện thư mục con và tag bên trong, theo thứ tự chữ cái; Untagged luôn ở đầu')
   await rowOf('folder',3).locator('.tm-caret').click();
-  ok((await treeRows().evaluateAll(rows=>rows.map(r=>r.querySelector('.tm-name').textContent))).join('|')==='A. ARCHITECTURAL|Con|A. DOOR|A. WALL|A. WINDOW|S. STRUCTURAL|Untagged','thứ tự: thư mục con trước, rồi tag; mỗi cấp xếp theo tên');
+  ok((await treeRows().evaluateAll(rows=>rows.map(r=>r.querySelector('.tm-name').textContent))).join('|')==='Untagged|A. ARCHITECTURAL|Con|A. DOOR|A. WALL|A. WINDOW|S. STRUCTURAL','thứ tự: thư mục con trước, rồi tag; mỗi cấp xếp theo tên');
   ok(await rowOf('tag',11).evaluate(el=>el.classList.contains('dim')) && await rowOf('folder',2).evaluate(el=>el.classList.contains('dim')),'tag và thư mục đang ẩn hiện mờ');
   await rowOf('folder',2).locator('.tm-caret').click();
   ok(await rowOf('tag',13).evaluate(el=>el.classList.contains('dim')),'tag đang bật nhưng nằm trong thư mục bị ẩn: cũng mờ (không thấy được trong model)');
@@ -925,7 +925,14 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await treeRows().count()===8,'Mở hết: mở mọi thư mục');
   await page.getByRole('button',{name:'Gập hết'}).click();
   ok(await treeRows().count()===3,'Gập hết: về cấp gốc');
+  ok(await page.locator('#tag-tree-refresh').isHidden() && await page.locator('#tag-tree-excel').isHidden(),'Làm mới, Nhập Excel, Tô màu theo tag gom vào menu Thêm (ẩn khi chưa mở)');
+  await page.click('#tag-tree-more');
+  ok(await page.locator('#tag-tree-more').getAttribute('aria-expanded')==='true' && await page.locator('#tag-tree-refresh').isVisible(),'bấm Thêm: mở danh sách lệnh');
+  await page.click('#tag-tree-list');
+  ok(await page.locator('#tag-tree-refresh').isHidden() && await page.locator('#tag-tree-more').getAttribute('aria-expanded')==='false','bấm ra ngoài: menu Thêm đóng');
+  await page.click('#tag-tree-more');
   await clear();await page.getByRole('button',{name:'Làm mới'}).click();
+  ok(await page.locator('#tag-tree-refresh').isHidden(),'bấm một lệnh trong menu Thêm: menu tự đóng');
   ok((await calls('tm_refresh')).length===1,'nút Làm mới: xin Ruby đọc lại danh sách');
   await receive('tag_tree',{...TREE,layers:[...TREE.layers,{id:15,name:'Moi',visible:true,folder_id:null}]});
   ok(await rowOf('tag',15).count()===1,'nhận danh sách mới từ Ruby: vẽ lại, giữ ô tìm và các thư mục đã mở');
@@ -941,11 +948,11 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await clear();await rowOf('tag',11).locator('select.tm-style').selectOption('Dashed Line');
   ok(JSON.stringify(await json('tm_line_style'))==='{"id":11,"style":"Dashed Line"}','đổi kiểu nét: gửi mã tag và tên kiểu');
   ok(await page.locator('#tag-tree-colorbytag').getAttribute('aria-pressed')==='false','nút Tô màu theo tag: chưa bật thì không nhấn');
-  await clear();await page.locator('#tag-tree-colorbytag').click();
+  await clear();await page.click('#tag-tree-more');await page.locator('#tag-tree-colorbytag').click();
   ok(JSON.stringify(await json('tm_color_by_tag'))==='{"enabled":true}','bấm Tô màu theo tag: gửi lệnh bật');
   await receive('tag_tree',{...STYLED,color_by_tag:true});
   ok(await page.locator('#tag-tree-colorbytag').getAttribute('aria-pressed')==='true','đang bật: nút ở trạng thái nhấn');
-  await clear();await page.locator('#tag-tree-colorbytag').click();
+  await clear();await page.click('#tag-tree-more');await page.locator('#tag-tree-colorbytag').click();
   ok(JSON.stringify(await json('tm_color_by_tag'))==='{"enabled":false}','bấm lại khi đang bật: gửi lệnh tắt');
   await receive('tag_tree',{...STYLED,styles_supported:false,line_styles:[]});
   ok(await page.locator('select.tm-style').count()===0 && await page.locator('input[type=color]').count()===2,'SketchUp cũ không có kiểu nét: ẩn ô kiểu nét, vẫn có ô màu');
@@ -1003,7 +1010,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   // Nhập tag từ Excel: xem trước rồi nhập
   await page.click('#tag-tab-model');
   await receive('tag_tree',{...TREE,styles_supported:false,pinned:[],recent:[]});
-  await clear();await page.locator('#tag-tree-excel').click();
+  await clear();await page.click('#tag-tree-more');await page.locator('#tag-tree-excel').click();
   ok((await calls('tm_excel_open')).length===1,'nút Nhập Excel: gửi lệnh chọn file .xlsx');
   const EXCEL={file:'tags.xlsx',styles_supported:true,folders_supported:true,more_warnings:2,warnings:['Dòng 7: tag "A. WALL" bị trùng, bỏ qua.'],rows:[{name:'NEW. ONE',color:'#ff0000',style:'Dash',folder:'A. ARCHITECTURAL',exists:false},{name:'A. DOOR',color:null,style:'',folder:'',exists:true},{name:'NEW. TWO',color:'#00ff88',style:'',folder:'Thu muc',exists:false}]};
   await page.click('#tag-tab-set');
@@ -1066,6 +1073,51 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await receive('tag_tree',{...TREE,styles_supported:false,pinned:[],recent:[]});
   await receive('tag_tree',{supported:true,isolated:null,folders:[],layers:[]});
   ok((await page.locator('#tag-tree-list').innerText()).includes('chưa có tag nào'),'model không có tag: báo trống');
+  // Tag mặc định (Layer0) hiện tên Untagged ở đầu; chuột phải vào tag: hiện / ẩn ở mọi scene, loại trừ scene
+  const SCENES=[{name:'Mặt bằng',saves_tags:true,hidden:[10]},{name:'Mặt đứng',saves_tags:true,hidden:[]},{name:'Phối cảnh',saves_tags:false,hidden:[]}];
+  await receive('tag_tree',{supported:true,isolated:null,folders:[{id:1,name:'A. ARCHITECTURAL',visible:true,parent_id:null}],pinned:[],recent:[],scenes:SCENES,
+    layers:[{id:20,name:'Zeta',visible:true,folder_id:null},{id:10,name:'A. WALL',visible:true,folder_id:null},{id:14,name:'Layer0',visible:true,folder_id:null,default:true}]});
+  ok((await treeRows().evaluateAll(rows=>rows.map(r=>r.querySelector('.tm-name').textContent))).join('|')==='Untagged|A. ARCHITECTURAL|A. WALL|Zeta','tag mặc định Layer0 hiện tên Untagged và đứng đầu, rồi thư mục, rồi tag');
+  await page.locator('#tag-pane-model input[type=search]').fill('untag');
+  ok(await treeRows().count()===1 && await rowOf('tag',14).count()===1,'tìm "untag" ra tag mặc định');
+  await page.locator('#tag-pane-model input[type=search]').fill('');
+  const menu=page.locator('#tag-scene-menu');
+  await rowOf('tag',10).locator('.tm-name').click({button:'right'});
+  ok(await menu.isVisible() && (await menu.innerText()).includes('A. WALL') && (await menu.innerText()).includes('Đang hiện ở 1 / 2 scene'),'chuột phải vào tag: mở menu theo scene, đếm scene đang hiện (chỉ tính scene lưu tag)');
+  ok(await menu.locator('details').evaluate(d=>!d.open) && (await menu.locator('summary').innerText())==='Loại trừ scene (0)','danh sách loại trừ gập sẵn');
+  await menu.locator('summary').click();
+  ok((await menu.locator('.tm-menu-scene').allInnerTexts()).map(t=>t.replace(/\s+/g,' ').trim()).join('|')==='Mặt bằng đang ẩn|Mặt đứng đang hiện|Phối cảnh không lưu tag','mỗi scene ghi trạng thái của tag; scene không lưu tag ghi rõ');
+  ok(await menu.locator('.tm-menu-scene input').nth(2).isDisabled(),'scene không lưu tag: không tick loại trừ được');
+  await menu.getByLabel('Mặt bằng').check();
+  ok((await menu.locator('summary').innerText())==='Loại trừ scene (1)','tick scene: đếm số scene loại trừ');
+  await clear();await menu.getByRole('button',{name:'Hiện ở mọi scene'}).click();
+  ok(JSON.stringify(await json('tm_scene_visibility'))==='{"id":10,"visible":true,"exclude":["Mặt bằng"]}' && await menu.count()===0,'Hiện ở mọi scene: gửi mã tag, visible và scene loại trừ; menu đóng');
+  await rowOf('tag',20).locator('.tm-name').click({button:'right'});
+  ok(await menu.locator('details').evaluate(d=>d.open) && await menu.getByLabel('Mặt bằng').isChecked(),'danh sách loại trừ nhớ trong phiên cho tag khác (mở sẵn khi có scene loại trừ)');
+  await menu.getByLabel('Mặt bằng').uncheck();
+  await clear();await menu.getByRole('button',{name:'Ẩn ở mọi scene'}).click();
+  ok(JSON.stringify(await json('tm_scene_visibility'))==='{"id":20,"visible":false,"exclude":[]}','Ẩn ở mọi scene: gửi visible false');
+  await rowOf('tag',10).locator('.tm-name').click({button:'right'});
+  await page.keyboard.press('Escape');
+  ok(await menu.count()===0,'Esc đóng menu');
+  await rowOf('tag',10).locator('.tm-name').click({button:'right'});
+  await page.mouse.click(5,5);
+  ok(await menu.count()===0,'bấm ra ngoài: đóng menu');
+  await rowOf('tag',14).locator('.tm-name').click({button:'right'});
+  ok((await menu.innerText()).includes('Untagged luôn hiện') && await menu.getByRole('button',{name:'Ẩn ở mọi scene'}).count()===0,'tag mặc định: chỉ báo luôn hiện, không có nút ẩn');
+  await page.keyboard.press('Escape');
+  await receive('tag_tree',{supported:true,isolated:null,folders:[],pinned:[],recent:[],scenes:[],layers:[{id:10,name:'A. WALL',visible:true,folder_id:null}]});
+  await rowOf('tag',10).locator('.tm-name').click({button:'right'});
+  ok((await menu.innerText()).includes('Model chưa có scene nào') && await menu.getByRole('button',{name:'Hiện ở mọi scene'}).count()===0,'model chưa có scene: báo, không có nút');
+  await receive('tag_tree',{supported:true,isolated:null,folders:[],pinned:[],recent:[],scenes:[],layers:[{id:10,name:'A. WALL',visible:true,folder_id:null}]});
+  ok(await menu.count()===0,'nhận danh sách mới từ Ruby: đóng menu đang mở (dữ liệu cũ)');
+  await page.click('#tag-tab-set');
+  ok(await page.getByRole('button',{name:'Nhập JSON'}).isHidden(),'Bộ tag: nhập / xuất gom vào menu Nhập / xuất');
+  await page.click('#tag-set-io');
+  await clear();await page.getByRole('button',{name:'Xuất JSON'}).click();
+  ok(JSON.stringify((await last('export_tags')).args)==='["json"]' && await page.getByRole('button',{name:'Xuất JSON'}).isHidden(),'menu Nhập / xuất: gửi đúng lệnh rồi đóng');
+  await page.click('#tag-tab-model');
+
   ok(await page.locator('#tag-assign').isVisible(),'thanh Gán tag vẫn thấy ở tab Trong model');
 
   // ---- Cột Ảnh vị trí: ảnh cảnh quanh món trong công trình ----

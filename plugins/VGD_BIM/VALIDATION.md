@@ -2,6 +2,17 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.28: đã kiểm tra tự động
+
+Soạn tag: tag mặc định hiện tên Untagged và đứng đầu; chuột phải vào tag để hiện / ẩn ở mọi scene, có danh sách scene loại trừ; gom lệnh ít dùng vào nút Thêm ▾ và Nhập / xuất ▾.
+
+- `dev/test_tag_tree.rb`: cờ `default` cho Untagged / Layer0; danh sách scene (lưu tag hay không, tag đang ẩn); `tm_scene_visibility` ẩn / hiện ở mọi scene, giữ nguyên scene loại trừ, bỏ qua scene không lưu tag, không đổi hiển thị model khi scene đang mở bị loại trừ, từ chối Untagged, scene không có, giá trị sai.
+- `dev/test_ui_images.cjs` (483): thứ tự Untagged → thư mục → tag; tìm "untag"; menu chuột phải (đếm scene đang hiện, trạng thái từng scene, scene không lưu tag không tick được, gửi đúng `{id, visible, exclude}`, nhớ loại trừ trong phiên, Esc / bấm ra ngoài / dữ liệu mới thì đóng, Untagged và model chưa có scene không có nút); menu Thêm và Nhập / xuất mở / đóng đúng.
+- `dev/test_ui_en.cjs` (chữ mới và thông báo Ruby mới có bản dịch), `dev/test_ui.cjs`, `dev/test_ui_sheets.cjs`, `dev/test_report_page.cjs`, `ruby dev/run_tests.rb`: đạt.
+- Đã chụp ảnh ở 860 × 640 (menu chuột phải, Thêm ▾, Nhập / xuất ▾).
+
+**Chưa xác minh trong SketchUp thật:** `Page#set_visibility` trên model có scene thật (scene lưu / không lưu Visible Tags, scene đang mở bị loại trừ), hoàn tác một bước; menu chuột phải trong HtmlDialog thật (CEF có thể hiện menu mặc định nếu không chặn được).
+
 ## Bản 1.1.1-beta.27: đã kiểm tra tự động
 
 Giao diện gọn: hàng tab chung hàng đầu, Tùy chọn / Công cụ lên thanh trên (bỏ hàng dưới bảng), Đổi tên / Mặt trước / Loại trừ tag vào menu Công cụ (nhóm Bảng), menu Công cụ chia nhóm gập, bảng Preset và hộp Cập nhật ảnh gập sẵn, chữ ngắn hơn.

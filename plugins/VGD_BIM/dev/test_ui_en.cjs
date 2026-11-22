@@ -66,6 +66,16 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await receive('tag_excel',{file:'tags.xlsx',styles_supported:true,folders_supported:true,more_warnings:3,warnings:['Dòng 4: thiếu tên tag, bỏ qua.','Dòng 5: tên tag quá dài (tối đa 60 ký tự), bỏ qua.','Dòng 6: Untagged là tag mặc định của SketchUp, bỏ qua.','Dòng 7: tag "A. WALL" bị trùng, bỏ qua.','Dòng 8: màu "xanh" không đọc được, bỏ qua màu.','Dòng 9: tên thư mục không hợp lệ, bỏ thư mục.'],rows:[{name:'A. WALL',color:'#ff0000',style:'Dash',folder:'A. ARCHITECTURAL',exists:false},{name:'A. DOOR',color:null,style:'',folder:'',exists:true}]});await scan('Soạn tag (nhập Excel)');
   await page.locator('#tag-excel-actions').getByRole('button').last().click();
   await page.locator('#tag-pane-model input[type=search]').fill('wall');await scan('Soạn tag (trong model, tìm)');await page.locator('#tag-pane-model input[type=search]').fill('zzz');await scan('Soạn tag (trong model, không khớp)');
+  await page.locator('#tag-pane-model input[type=search]').fill('');
+  await receive('tag_tree',{supported:true,isolated:null,folders:[],pinned:[],recent:[],scenes:[{name:'S1',saves_tags:true,hidden:[10]},{name:'S2',saves_tags:true,hidden:[]},{name:'S3',saves_tags:false,hidden:[]}],
+    layers:[{id:10,name:'A. WALL',visible:true,folder_id:null},{id:14,name:'Layer0',visible:true,folder_id:null,default:true}]});
+  await page.click('#tag-tree-more');await scan('Soạn tag (menu Thêm)');await page.keyboard.press('Escape');
+  await page.locator('.tm-row[data-id="10"] .tm-name').click({button:'right'});await page.locator('#tag-scene-menu summary').click();await page.locator('#tag-scene-menu input').first().check();await scan('Soạn tag (chuột phải: theo scene)');
+  await page.keyboard.press('Escape');await page.locator('.tm-row[data-id="14"] .tm-name').click({button:'right'});await scan('Soạn tag (chuột phải: Untagged)');await page.keyboard.press('Escape');
+  await receive('tag_tree',{supported:true,isolated:null,folders:[],pinned:[],recent:[],scenes:[],layers:[{id:10,name:'A. WALL',visible:true,folder_id:null}]});
+  await page.locator('.tm-row[data-id="10"] .tm-name').click({button:'right'});await scan('Soạn tag (chuột phải: chưa có scene)');await page.keyboard.press('Escape');
+  await messages(['Đã ẩn tag A. WALL ở 3 scene.','Đã hiện tag A. WALL ở 2 scene. Giữ nguyên 1 scene loại trừ.','Đã ẩn tag A. WALL ở 1 scene. Giữ nguyên 1 scene loại trừ. Bỏ qua 2 scene không lưu hiển thị tag (S2, S3).',
+    'Đã hiện tag A. WALL ở 0 scene. Bỏ qua 1 scene không lưu hiển thị tag (S3).','Tag Untagged luôn hiện, không ẩn được.','Giá trị hiển thị không hợp lệ.','Danh sách scene loại trừ không hợp lệ.','Không có scene: S9. Hãy làm mới danh sách.']);
   await receive('tag_tree',{supported:false,isolated:null,folders:[],layers:[]});await scan('Soạn tag (trong model, SketchUp cũ)');
   await page.click('#tag-tab-set');
   await page.locator('.tag-group summary').first().click();await scan('Soạn tag (mở nhóm)');

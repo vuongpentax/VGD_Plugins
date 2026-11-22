@@ -294,5 +294,48 @@ old_excel = Probe.new(OldModel.new(OldTags.new([FTag.new(1, 'A')])))
 old_excel.tm_excel_apply('rows' => [{'name' => 'B', 'color' => '#010203', 'style' => 'Dash', 'folder' => 'F'}])
 ok('SketchUp cũ không có thư mục / kiểu nét: vẫn tạo tag và đặt màu, bỏ qua thư mục, không lỗi', old_excel.model_layers_names == %w[A B] && old_excel.last('tag_excel') == {cleared: true})
 
+# ---- Tag mặc định (Untagged / Layer0) và hiển thị tag theo scene (chuột phải vào tag) ----
+model, probe, tags, = world
+state = probe.tag_tree_state
+ok('tag mặc định được đánh dấu default (Untagged / Layer0), tag khác không', state[:layers].map { |l| l[:default] } == [false, false, false, true])
+l0 = FModel.new(FTags.new([FTag.new(50, 'B'), FTag.new(51, 'Layer0')], []))
+ok('tên Layer0 (tên thật của SketchUp) cũng là tag mặc định', Probe.new(l0).tag_tree_state[:layers].map { |l| [l[:name], l[:default]] } == [['B', false], ['Layer0', true]])
+ok('model không có scene (SketchUp giả lập không có pages): danh sách scene rỗng', state[:scenes] == [])
+
+class FPage
+  attr_reader :name
+  def initialize(name, hidden = [], saves = true); @name = name; @hidden = hidden; @saves = saves; end
+  def use_hidden_layers?; @saves; end
+  def layers; @hidden; end
+  def set_visibility(layer, visible); visible ? @hidden.delete(layer) : (@hidden << layer unless @hidden.include?(layer)); self; end
+end
+class FPages
+  include Enumerable
+  attr_accessor :selected_page
+  def initialize(list); @list = list; @selected_page = list.first; end
+  def each(&block); @list.each(&block); end
+  def to_a; @list.dup; end
+end
+model, probe, tags, = world
+wall = tags[0]
+pages = FPages.new([FPage.new('Scene 1'), FPage.new('Scene 2', [tags[1]]), FPage.new('Scene 3', [], false)])
+model.define_singleton_method(:pages) { pages }
+scenes = probe.tag_tree_state[:scenes]
+ok('danh sách scene: tên, có lưu hiển thị tag không, tag đang ẩn trong scene', scenes == [{name: 'Scene 1', saves_tags: true, hidden: []}, {name: 'Scene 2', saves_tags: true, hidden: [11]}, {name: 'Scene 3', saves_tags: false, hidden: []}])
+$transactions.clear
+probe.tm_scene_visibility('id' => 10, 'visible' => false, 'exclude' => ['Scene 2'])
+p1, p2, p3 = pages.to_a
+ok('ẩn tag ở mọi scene: scene 1 ẩn tag, scene 2 (loại trừ) giữ nguyên, scene 3 (không lưu tag) bỏ qua', p1.layers == [wall] && p2.layers == [tags[1]] && p3.layers == [])
+ok('ẩn tag ở mọi scene: hiển thị hiện tại của model cũng ẩn (scene đang chọn không bị loại trừ), một bước hoàn tác', !wall.visible? && $transactions == ['VGD BIM · Ẩn tag ở mọi scene'])
+ok('báo kết quả: số scene đã đổi, số scene loại trừ, scene không lưu tag', probe.messages.last == 'Đã ẩn tag A. WALL ở 1 scene. Giữ nguyên 1 scene loại trừ. Bỏ qua 1 scene không lưu hiển thị tag (Scene 3).')
+probe.tm_scene_visibility('id' => 10, 'visible' => true, 'exclude' => [])
+ok('hiện tag ở mọi scene: bỏ tag khỏi danh sách ẩn của mọi scene có lưu tag, model hiện lại', p1.layers.empty? && p2.layers == [tags[1]] && wall.visible?)
+pages.selected_page = p2
+probe.tm_scene_visibility('id' => 10, 'visible' => false, 'exclude' => ['Scene 2'])
+ok('scene đang chọn nằm trong loại trừ: hiển thị hiện tại của model giữ nguyên', wall.visible? && p1.layers == [wall])
+ok('Untagged không ẩn được; scene lạ, giá trị sai bị từ chối', error_of { probe.tm_scene_visibility('id' => 13, 'visible' => false) }.include?('Untagged') &&
+   error_of { probe.tm_scene_visibility('id' => 10, 'visible' => false, 'exclude' => ['Không có']) }.include?('Không có scene') &&
+   error_of { probe.tm_scene_visibility('id' => 10, 'visible' => 'x') }.include?('không hợp lệ'))
+
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)

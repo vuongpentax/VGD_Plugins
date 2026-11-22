@@ -22,6 +22,7 @@ module VGD
           @dialog.add_action_callback('tm_pin') { |_ctx, payload| safely { tm_pin(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_move') { |_ctx, payload| safely { tm_move(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_color_by_tag') { |_ctx, payload| safely { tm_color_by_tag(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tm_scene_visibility') { |_ctx, payload| safely { tm_scene_visibility(JSON.parse(payload)) } }
         end
 
         # Dữ liệu gửi cho giao diện: {supported:, folders: [...], layers: [...], isolated: {kind, id, name} hoặc nil}
@@ -29,7 +30,8 @@ module VGD
           layers, folders = tag_tree_read
           tree = {supported: folders_supported?,
                   folders: folders.map { |item| item.slice(:id, :name, :visible, :parent_id) },
-                  layers: layers.map { |item| item.slice(:id, :name, :visible, :folder_id, :color, :line_style) },
+                  layers: layers.map { |item| item.slice(:id, :name, :visible, :folder_id, :color, :line_style, :default) },
+                  scenes: scene_list,
                   styles_supported: line_styles_supported?, line_styles: line_style_names, color_by_tag: color_by_tag?,
                   pinned: Settings.read['pinned_tags'], recent: Settings.read['recent_tags'],
                   isolated: nil}
@@ -39,6 +41,56 @@ module VGD
 
         def tm_refresh
           check_model!
+          emit('tag_tree', tag_tree_state)
+        end
+
+        # Scene của model: tên, có lưu hiển thị tag không (Properties to save: Visible Tags) và mã các tag đang ẩn trong scene.
+        def scene_list
+          return [] unless @model.respond_to?(:pages)
+          @model.pages.to_a.map do |page|
+            saves = page.respond_to?(:use_hidden_layers?) ? page.use_hidden_layers? : true
+            {name: page.name.to_s, saves_tags: saves ? true : false, hidden: page.layers.to_a.map(&:persistent_id)}
+          end
+        end
+
+        # Hiện hoặc ẩn một tag ở mọi scene (chuột phải vào tag), trừ các scene loại trừ (giữ nguyên tag ở scene đó).
+        # payload: {'id' => persistent_id của tag, 'visible' => true / false, 'exclude' => [tên scene]}.
+        # Scene không lưu hiển thị tag thì bỏ qua (không tự bật thuộc tính đó, vì nó đổi cách scene giữ mọi tag khác).
+        # Hiển thị hiện tại của model cũng đổi theo, trừ khi scene đang chọn nằm trong danh sách loại trừ. Một bước hoàn tác.
+        def tm_scene_visibility(payload)
+          check_model!
+          id = tm_id(payload)
+          visible = payload['visible']
+          raise 'Giá trị hiển thị không hợp lệ.' unless visible == true || visible == false
+          exclude = payload['exclude'] || []
+          raise 'Danh sách scene loại trừ không hợp lệ.' unless exclude.is_a?(Array) && exclude.all? { |name| name.is_a?(String) }
+          layers, = tag_tree_read
+          item = layers.find { |entry| entry[:id] == id }
+          raise 'Không tìm thấy tag này. Hãy làm mới danh sách.' unless item
+          raise 'Tag Untagged luôn hiện, không ẩn được.' if item[:default]
+          pages = @model.respond_to?(:pages) ? @model.pages.to_a : []
+          names = pages.map { |page| page.name.to_s }
+          unknown = exclude - names
+          raise "Không có scene: #{unknown.join(', ')}. Hãy làm mới danh sách." unless unknown.empty?
+          applied = []
+          unsaved = []
+          Data.transaction(@model, visible ? 'VGD BIM · Hiện tag ở mọi scene' : 'VGD BIM · Ẩn tag ở mọi scene') do
+            pages.each do |page|
+              next if exclude.include?(page.name.to_s)
+              if page.respond_to?(:use_hidden_layers?) && !page.use_hidden_layers?
+                unsaved << page.name.to_s
+                next
+              end
+              page.set_visibility(item[:object], visible)
+              applied << page.name.to_s
+            end
+            current = pages.empty? ? nil : @model.pages.selected_page
+            item[:object].visible = visible unless current && exclude.include?(current.name.to_s)
+          end
+          text = "Đã #{visible ? 'hiện' : 'ẩn'} tag #{item[:name]} ở #{applied.size} scene."
+          text += " Giữ nguyên #{exclude.size} scene loại trừ." unless exclude.empty?
+          text += " Bỏ qua #{unsaved.size} scene không lưu hiển thị tag (#{unsaved.first(3).join(', ')}#{unsaved.size > 3 ? '...' : ''})." unless unsaved.empty?
+          emit('message', {text: text})
           emit('tag_tree', tag_tree_state)
         end
 
@@ -329,7 +381,7 @@ module VGD
             parent = layer.respond_to?(:folder) ? layer.folder : nil
             style = line_styles_supported? && layer.line_style ? layer.line_style.name.to_s : ''
             {id: layer.persistent_id, name: layer.name.to_s, visible: layer.visible?, folder_id: parent ? parent.persistent_id : nil,
-             color: TagTree.hex_color(layer.color.to_a), line_style: style, object: layer}
+             color: TagTree.hex_color(layer.color.to_a), line_style: style, default: UNTAGGED_NAMES.include?(layer.name.to_s), object: layer}
           end
           [layers, folders]
         end
