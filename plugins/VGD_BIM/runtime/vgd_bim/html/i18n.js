@@ -262,7 +262,17 @@ const VGD_I18N=(()=>{
     'File Excel không có dữ liệu.':'The Excel file has no data.','Không tìm thấy dòng tiêu đề. Dòng đầu của bảng cần có cột "Name" (hoặc "Tên tag").':'No header row was found. The table needs a column named "Name" (or "Tag name") in its first row.','File không có tag nào để nhập.':'The file has no tags to import.','Danh sách tag không hợp lệ.':'The tag list is not valid.',
     'Tên tag không được để trống.':'The tag name cannot be empty.',
     'Trong model':'In model',
-    'Mắt: ẩn / hiện · Nút tròn: cô lập, bấm lại để trả như cũ · Chuột phải vào tag: hiện / ẩn ở mọi scene. Mỗi thao tác hoàn tác được.':'Eye: hide / show · Round button: isolate, click again to restore · Right-click a tag: show / hide it in every scene. Each action can be undone.',
+    'Mắt: ẩn / hiện · Nút tròn: cô lập, bấm lại để trả như cũ · Nhấp đúp tên: đổi tên · Chuột phải: hiện / ẩn ở mọi scene, việc với thư mục. Mỗi thao tác hoàn tác được.':'Eye: hide / show · Round button: isolate, click again to restore · Double-click a name: rename · Right-click: show / hide in every scene, folder actions. Each action can be undone.',
+    'Chế độ thu gọn':'Compact mode','Ẩn ô màu và kiểu nét để danh sách gọn hơn':'Hide the color and line style boxes for a shorter list','Danh sách loại trừ...':'Exclusion list...','Danh sách loại trừ':'Exclusion list',
+    'Tạo ▾':'New ▾','Tag mới':'New tag','Tạo':'Create','Thư mục mới':'New folder','Bật tất cả tag':'Turn on all tags','Tắt tất cả tag':'Turn off all tags','Bật tất cả thư mục':'Turn on all folders','Tắt tất cả thư mục':'Turn off all folders',
+    'Rã thư mục':'Explode folder','Đưa tag và thư mục con ra ngoài rồi bỏ thư mục này':'Move the tags and subfolders out, then remove this folder','Tạo tag trong thư mục':'New tag in this folder','Tạo thư mục con':'New subfolder',
+    'Scene được tick giữ nguyên thư mục này.':'Ticked scenes keep this folder as it is.','Tên thư mục mới':'New folder name','Tên tag mới':'New tag name','Ở ngoài cùng':'At the top level','Hãy nhập tên thư mục.':'Enter a folder name.','Hãy nhập tên tag.':'Enter a tag name.',
+    'Ví dụ: old, tạm, z_':'For example: old, temp, z_','Từ khóa loại trừ':'Exclusion keywords','Bỏ loại trừ':'Clear exclusions',
+    'Tag và thư mục có tên chứa một trong các từ này (cách nhau bằng dấu phẩy) không hiện trong danh sách. Chỉ ẩn khỏi danh sách, không đổi model; lưu trên máy, dùng cho mọi model.':'Tags and folders whose names contain any of these words (separated by commas) are not shown in the list. This only hides them from the list and does not change the model; it is saved on this computer and used for every model.',
+    'Tên không đổi.':'The name did not change.','Đã lưu danh sách loại trừ.':'Exclusion list saved.','Đã bỏ danh sách loại trừ.':'Exclusion list cleared.','Tag Untagged không đổi tên được.':'The Untagged tag cannot be renamed.',
+    'Loại mục không hợp lệ.':'Invalid item type.','Tên không hợp lệ.':'Invalid name.','Phiên bản SketchUp này chưa ẩn / hiện thư mục theo scene được (cần SketchUp 2021 trở lên).':'This SketchUp version cannot show / hide folders per scene (SketchUp 2021 or later is needed).',
+    'Mọi tag đã hiện sẵn.':'All tags are already shown.','Mọi tag đã ẩn sẵn.':'All tags are already hidden.','Mọi thư mục đã hiện sẵn.':'All folders are already shown.','Mọi thư mục đã ẩn sẵn.':'All folders are already hidden.',
+    'Tên tag quá dài (tối đa 60 ký tự).':'The tag name is too long (60 characters at most).','Tên thư mục quá dài (tối đa 60 ký tự).':'The folder name is too long (60 characters at most).',
     'Bộ tag lưu trên máy, dùng cho mọi model; tên không phân biệt hoa thường. Excel dùng file CSV UTF-8.':'The tag set is saved on this computer and used for every model; names are not case sensitive. Excel uses UTF-8 CSV files.',
     'Thêm ▾':'More ▾','Nhập / xuất ▾':'Import / export ▾','Hiển thị tag theo scene':'Tag visibility by scene','Untagged luôn hiện ở mọi scene.':'Untagged is always shown in every scene.',
     'Model chưa có scene nào.':'The model has no scenes yet.','Tag Untagged luôn hiện, không ẩn được.':'The Untagged tag is always shown and cannot be hidden.','Giá trị hiển thị không hợp lệ.':'Invalid visibility value.','Danh sách scene loại trừ không hợp lệ.':'Invalid list of excluded scenes.','Hiện ở mọi scene':'Show in all scenes','Ẩn ở mọi scene':'Hide in all scenes','không lưu tag':'tags not saved',
@@ -561,8 +571,17 @@ const VGD_I18N=(()=>{
   rule(/^Mỗi luật tối đa (\d+) từ khóa, mỗi từ khóa không quá (\d+) ký tự\.$/,(m,a,b)=>`Each rule allows at most ${a} keywords of ${b} characters.`);
   rule(/^(\d+) đối tượng( · .*)?$/,(m,n,rest)=>`${plural(n,'object','objects')}${rest||''}`);
   rule(/^Nhập (\d+) cụm \((\d+) tag\)$/,(m,a,b)=>`Import ${plural(a,'cluster','clusters')} (${plural(b,'tag','tags')})`);
-  rule(/^Đã (hiện|ẩn) tag (.+) ở (\d+) scene\.(?: Giữ nguyên (\d+) scene loại trừ\.)?(?: Bỏ qua (\d+) scene không lưu hiển thị tag \((.*)\)\.)?$/,(m,act,name,n,kept,skipped,list)=>
-    `${act==='hiện'?'Showed':'Hid'} tag ${name} in ${n} scenes.${kept?` Kept ${kept} excluded scenes.`:''}${skipped?` Skipped ${skipped} scenes that do not save tag visibility (${list}).`:''}`);
+  rule(/^Đã (bật|tắt) (\d+) (tag|thư mục)\.$/,(m,act,n,kind)=>`Turned ${act==='bật'?'on':'off'} ${n} ${kind==='tag'?'tags':'folders'}.`);
+  rule(/^Danh sách loại trừ đang ẩn (\d+) mục$/,(m,n)=>`The exclusion list hides ${n} items`);
+  rule(/^Trong thư mục (.+)$/,(m,name)=>`In folder ${name}`);
+  rule(/^Đã tạo (tag|thư mục) "(.*?)"( trong thư mục "(.*)")?\.$/,(m,kind,name,inside,folder)=>`Created ${kind==='tag'?'tag':'folder'} "${name}"${inside?` in folder "${folder}"`:''}.`);
+  rule(/^Đã đổi tên (tag|thư mục) "(.*)" thành "(.*)"\.$/,(m,kind,a,b)=>`Renamed ${kind==='tag'?'tag':'folder'} "${a}" to "${b}".`);
+  rule(/^Đã rã thư mục "(.*)": (\d+) tag và (\d+) thư mục con chuyển ra (thư mục "(.*)"|ngoài cùng)\.$/,(m,name,t,f,where,parent)=>`Exploded folder "${name}": ${t} tags and ${f} subfolders moved ${parent!==undefined?`to folder "${parent}"`:'to the top level'}.`);
+  rule(/^Đã có tag "(.*)" trong model\.$/,(m,name)=>`Tag "${name}" already exists in the model.`);
+  rule(/^Đã có thư mục "(.*)" ở đây\.$/,(m,name)=>`Folder "${name}" already exists here.`);
+  rule(/^Tên "(.*)" là tên tag mặc định của SketchUp, hãy chọn tên khác\.$/,(m,name)=>`"${name}" is the SketchUp default tag name; choose another name.`);
+  rule(/^Đã (hiện|ẩn) (tag|thư mục) (.+) ở (\d+) scene\.(?: Giữ nguyên (\d+) scene loại trừ\.)?(?: Bỏ qua (\d+) scene không lưu hiển thị tag \((.*)\)\.)?$/,(m,act,kind,name,n,kept,skipped,list)=>
+    `${act==='hiện'?'Showed':'Hid'} ${kind==='tag'?'tag':'folder'} ${name} in ${n} scenes.${kept?` Kept ${kept} excluded scenes.`:''}${skipped?` Skipped ${skipped} scenes that do not save tag visibility (${list}).`:''}`);
   rule(/^Không có scene: (.*)\. Hãy làm mới danh sách\.$/,(m,list)=>`No such scene: ${list}. Refresh the list.`);
   rule(/^Đã chuyển tag "(.*)" (vào thư mục "(.*)"|ra ngoài thư mục)\.$/,(m,name,where,folder)=>`Moved tag "${name}" ${folder?`into folder "${folder}"`:'out of its folder'}.`);
   rule(/^Đã lấy tag "(.*)"\. Chọn đối tượng rồi bấm Gán tag để gán\.$/,(m,name)=>`Picked up tag "${name}". Select objects and click Assign tag to assign it.`);

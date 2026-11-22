@@ -2,6 +2,16 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.29: đã kiểm tra tự động
+
+Soạn tag, đợt A + B so với Auto Tag: tạo tag / thư mục, đổi tên bằng nhấp đúp, rã thư mục, bật / tắt tất cả tag hoặc thư mục, thư mục theo scene, danh sách loại trừ, chế độ thu gọn.
+
+- `dev/test_tag_tree.rb`: `tm_all_visible` (Untagged giữ hiện, không tạo bước hoàn tác khi không có gì đổi, SketchUp cũ báo rõ); `tm_create` (tag ở gốc / trong thư mục, thư mục gốc / con, tên trùng tag hoặc thư mục cùng cấp, rỗng, quá dài, Untagged / Layer0, thư mục lạ); `tm_rename` (tag, thư mục, ghim / gần đây theo tên mới, đổi hoa thường của chính nó, Untagged, trùng tên); `tm_explode` (thư mục con lên thư mục cha, thư mục gốc ra ngoài cùng); `tm_hide_words` (lưu, giới hạn từ khóa, xóa trống); `tm_scene_visibility` với thư mục (`Page#layer_folders`, SketchUp cũ báo rõ). `dev/test_settings.rb`: thêm mục `tag_hide_words`.
+- `dev/test_ui_images.cjs` (507): ô tạo (gốc, trong thư mục, tên trống), menu chuột phải của thư mục (scene, tạo bên trong, rã), nhấp đúp đổi tên (Enter, Esc, Untagged không đổi), Bật / Tắt tất cả, Chế độ thu gọn (nhớ localStorage), danh sách loại trừ (ẩn thư mục cả nội dung, không phân biệt hoa thường / dấu, đếm mục ẩn, sửa và lưu).
+- `dev/test_ui_en.cjs`, `dev/test_ui.cjs`, `dev/test_ui_sheets.cjs`, `dev/test_report_page.cjs`, `ruby dev/run_tests.rb`, `ruby tests/test_vgd_conventions.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** `LayerFolder#add_folder` / `Layers#add_folder` nhận thư mục có sẵn để chuyển chỗ và `remove_folder` (Rã thư mục; bản giả lập làm theo tài liệu API), `LayerFolder#name=` / `Layer#name=`, `Page#layer_folders` và `Page#set_visibility` với thư mục, nhấp đúp đổi tên trong HtmlDialog thật.
+
 ## Bản 1.1.1-beta.28: đã kiểm tra tự động
 
 Soạn tag: tag mặc định hiện tên Untagged và đứng đầu; chuột phải vào tag để hiện / ẩn ở mọi scene, có danh sách scene loại trừ; gom lệnh ít dùng vào nút Thêm ▾ và Nhập / xuất ▾.

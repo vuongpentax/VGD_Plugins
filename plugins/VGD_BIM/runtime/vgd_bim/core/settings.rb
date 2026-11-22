@@ -15,7 +15,9 @@ module VGD
         'exclude_tags' => [], # tên các tag loại khỏi số đo (chọn bằng bảng tick trong Bảng khối lượng)
         # Tab Soạn tag > Trong model: tag ghim (người dùng tự ghim) và tag vừa gán gần đây (tự cập nhật khi gán, mới nhất đứng đầu)
         'pinned_tags' => [],
-        'recent_tags' => []
+        'recent_tags' => [],
+        # Soạn tag > Trong model: tag / thư mục có tên chứa các từ này không hiện trong danh sách (chỉ ẩn khỏi danh sách, không đổi model)
+        'tag_hide_words' => ''
       }.freeze
       RECENT_LIMIT = 8
       LANGUAGES = %w[vi en].freeze
@@ -75,7 +77,7 @@ module VGD
         when 'image_dir' then directory(value)
         when 'exclude_tags', 'pinned_tags' then Measure.parse_tags(value)
         when 'recent_tags' then Measure.parse_tags(value).first(RECENT_LIMIT)
-        when 'exclude_words'
+        when 'exclude_words', 'tag_hide_words'
           Measure.parse_words(value) # chỉ để kiểm tra; lưu nguyên chữ người dùng gõ
           value.to_s.strip
         end

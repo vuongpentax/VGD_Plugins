@@ -74,6 +74,19 @@ const rows=[0,1,2].map(i=>({index:i,entity_type:i?'Thành phần':'Nhóm',defini
   await page.keyboard.press('Escape');await page.locator('.tm-row[data-id="14"] .tm-name').click({button:'right'});await scan('Soạn tag (chuột phải: Untagged)');await page.keyboard.press('Escape');
   await receive('tag_tree',{supported:true,isolated:null,folders:[],pinned:[],recent:[],scenes:[],layers:[{id:10,name:'A. WALL',visible:true,folder_id:null}]});
   await page.locator('.tm-row[data-id="10"] .tm-name').click({button:'right'});await scan('Soạn tag (chuột phải: chưa có scene)');await page.keyboard.press('Escape');
+  await receive('tag_tree',{supported:true,isolated:null,folders:[{id:1,name:'A. ARCH',visible:true,parent_id:null},{id:2,name:'z_old',visible:true,parent_id:null}],pinned:[],recent:[],hide_words:'old',
+    scenes:[{name:'S1',saves_tags:true,hidden:[],hidden_folders:[1]}],layers:[{id:10,name:'A. WALL',visible:true,folder_id:1}]});
+  await page.click('#tag-tree-new');await scan('Soạn tag (menu Tạo)');await page.getByRole('button',{name:/^(Tag mới|New tag)$/}).click();await scan('Soạn tag (ô tạo tag)');
+  await page.locator('.tm-row[data-kind=folder][data-id="1"] .tm-name').click({button:'right'});await scan('Soạn tag (chuột phải: thư mục)');
+  await page.getByRole('button',{name:/^(Tạo thư mục con|New subfolder)$/}).click();await scan('Soạn tag (ô tạo thư mục con)');await page.keyboard.press('Escape');
+  await page.locator('.tm-row[data-kind=folder][data-id="1"] .tm-name').dblclick();await scan('Soạn tag (đổi tên)');await page.keyboard.press('Escape');
+  await page.click('#tag-tree-more');await page.click('#tag-tree-hide');await scan('Soạn tag (danh sách loại trừ)');
+  await page.click('#tag-tree-more');await page.click('#tag-tree-compact');await scan('Soạn tag (thu gọn)');await page.click('#tag-tree-more');await page.click('#tag-tree-compact');
+  await messages(['Đã tắt 3 tag.','Đã bật 1 thư mục.','Mọi tag đã hiện sẵn.','Mọi thư mục đã ẩn sẵn.','Đã tạo tag "A. ROOF" trong thư mục "A. ARCH".','Đã tạo thư mục "X".','Đã đổi tên tag "A" thành "B".','Đã đổi tên thư mục "A" thành "B".','Tên không đổi.',
+    'Đã rã thư mục "Con": 1 tag và 0 thư mục con chuyển ra thư mục "A. ARCH".','Đã rã thư mục "A": 2 tag và 1 thư mục con chuyển ra ngoài cùng.','Đã lưu danh sách loại trừ.','Đã bỏ danh sách loại trừ.',
+    'Đã có tag "A. WALL" trong model.','Đã có thư mục "Con" ở đây.','Hãy nhập tên tag.','Hãy nhập tên thư mục.','Tên tag quá dài (tối đa 60 ký tự).','Tên thư mục quá dài (tối đa 60 ký tự).','Tên "layer0" là tên tag mặc định của SketchUp, hãy chọn tên khác.',
+    'Tag Untagged không đổi tên được.','Loại mục không hợp lệ.','Tên không hợp lệ.','Đã ẩn thư mục A. ARCH ở 2 scene. Giữ nguyên 1 scene loại trừ.','Phiên bản SketchUp này chưa ẩn / hiện thư mục theo scene được (cần SketchUp 2021 trở lên).',
+    'Không tìm thấy thư mục này. Hãy làm mới danh sách.']);
   await messages(['Đã ẩn tag A. WALL ở 3 scene.','Đã hiện tag A. WALL ở 2 scene. Giữ nguyên 1 scene loại trừ.','Đã ẩn tag A. WALL ở 1 scene. Giữ nguyên 1 scene loại trừ. Bỏ qua 2 scene không lưu hiển thị tag (S2, S3).',
     'Đã hiện tag A. WALL ở 0 scene. Bỏ qua 1 scene không lưu hiển thị tag (S3).','Tag Untagged luôn hiện, không ẩn được.','Giá trị hiển thị không hợp lệ.','Danh sách scene loại trừ không hợp lệ.','Không có scene: S9. Hãy làm mới danh sách.']);
   await receive('tag_tree',{supported:false,isolated:null,folders:[],layers:[]});await scan('Soạn tag (trong model, SketchUp cũ)');

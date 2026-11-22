@@ -1091,12 +1091,12 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await menu.getByLabel('Mặt bằng').check();
   ok((await menu.locator('summary').innerText())==='Loại trừ scene (1)','tick scene: đếm số scene loại trừ');
   await clear();await menu.getByRole('button',{name:'Hiện ở mọi scene'}).click();
-  ok(JSON.stringify(await json('tm_scene_visibility'))==='{"id":10,"visible":true,"exclude":["Mặt bằng"]}' && await menu.count()===0,'Hiện ở mọi scene: gửi mã tag, visible và scene loại trừ; menu đóng');
+  ok(JSON.stringify(await json('tm_scene_visibility'))==='{"kind":"tag","id":10,"visible":true,"exclude":["Mặt bằng"]}' && await menu.count()===0,'Hiện ở mọi scene: gửi mã tag, visible và scene loại trừ; menu đóng');
   await rowOf('tag',20).locator('.tm-name').click({button:'right'});
   ok(await menu.locator('details').evaluate(d=>d.open) && await menu.getByLabel('Mặt bằng').isChecked(),'danh sách loại trừ nhớ trong phiên cho tag khác (mở sẵn khi có scene loại trừ)');
   await menu.getByLabel('Mặt bằng').uncheck();
   await clear();await menu.getByRole('button',{name:'Ẩn ở mọi scene'}).click();
-  ok(JSON.stringify(await json('tm_scene_visibility'))==='{"id":20,"visible":false,"exclude":[]}','Ẩn ở mọi scene: gửi visible false');
+  ok(JSON.stringify(await json('tm_scene_visibility'))==='{"kind":"tag","id":20,"visible":false,"exclude":[]}','Ẩn ở mọi scene: gửi visible false');
   await rowOf('tag',10).locator('.tm-name').click({button:'right'});
   await page.keyboard.press('Escape');
   ok(await menu.count()===0,'Esc đóng menu');
@@ -1117,6 +1117,67 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await clear();await page.getByRole('button',{name:'Xuất JSON'}).click();
   ok(JSON.stringify((await last('export_tags')).args)==='["json"]' && await page.getByRole('button',{name:'Xuất JSON'}).isHidden(),'menu Nhập / xuất: gửi đúng lệnh rồi đóng');
   await page.click('#tag-tab-model');
+  // Tạo, đổi tên, rã thư mục, bật / tắt tất cả, danh sách loại trừ, chế độ thu gọn, thư mục theo scene
+  const T2={supported:true,isolated:null,styles_supported:true,line_styles:['Solid Line'],pinned:[],recent:[],hide_words:'',
+    scenes:[{name:'S1',saves_tags:true,hidden:[],hidden_folders:[1]},{name:'S2',saves_tags:true,hidden:[],hidden_folders:[]}],
+    folders:[{id:1,name:'A. ARCHITECTURAL',visible:true,parent_id:null},{id:2,name:'z_old',visible:true,parent_id:null}],
+    layers:[{id:10,name:'A. WALL',visible:true,folder_id:1,color:'#ff0000',line_style:''},{id:11,name:'Tam old',visible:true,folder_id:null,color:'#00ff00',line_style:''},{id:12,name:'B',visible:true,folder_id:2,color:'#0000ff',line_style:''},{id:14,name:'Layer0',default:true,visible:true,folder_id:null,color:'#ffffff',line_style:''}]};
+  await receive('tag_tree',T2);
+  const treeNames=()=>treeRows().evaluateAll(rows=>rows.map(r=>r.querySelector('.tm-name')?r.querySelector('.tm-name').textContent:'(input)'));
+  await page.click('#tag-tree-new');await clear();await page.getByRole('button',{name:'Tag mới'}).click();
+  const createBox=page.locator('#tag-tree-create');
+  ok(await createBox.isVisible() && (await createBox.innerText()).includes('Ở ngoài cùng'),'Tạo ▾ → Tag mới: mở ô nhập tên ở gốc');
+  await createBox.locator('input').fill('  ');await createBox.locator('input').press('Enter');
+  ok((await calls('tm_create')).length===0 && (await message()).includes('Hãy nhập tên tag'),'tên trống: không gửi, báo nhập tên');
+  await createBox.locator('input').fill('A. ROOF');await createBox.locator('input').press('Enter');
+  ok(JSON.stringify(await json('tm_create'))==='{"kind":"tag","name":"A. ROOF","folder_id":null}' && await createBox.isHidden(),'Enter: gửi tạo tag ở gốc, đóng ô nhập');
+  await rowOf('folder',1).locator('.tm-name').click({button:'right'});
+  ok((await menu.innerText()).includes('Đang hiện ở 1 / 2 scene') && (await menu.innerText()).includes('Rã thư mục'),'chuột phải vào thư mục: trạng thái theo scene của thư mục và các lệnh thư mục');
+  await clear();await menu.getByRole('button',{name:'Ẩn ở mọi scene'}).click();
+  ok(JSON.stringify(await json('tm_scene_visibility'))==='{"kind":"folder","id":1,"visible":false,"exclude":[]}','thư mục: ẩn ở mọi scene gửi kind folder');
+  await rowOf('folder',1).locator('.tm-name').click({button:'right'});
+  await menu.getByRole('button',{name:'Tạo thư mục con'}).click();
+  ok(await menu.count()===0 && (await createBox.innerText()).includes('Trong thư mục A. ARCHITECTURAL'),'Tạo thư mục con: đóng menu, mở ô nhập kèm tên thư mục cha');
+  await clear();await createBox.locator('input').fill('Con moi');await page.click('#tag-create-go');
+  ok(JSON.stringify(await json('tm_create'))==='{"kind":"folder","name":"Con moi","folder_id":1}','bấm Tạo: gửi tạo thư mục con');
+  ok(await rowOf('tag',10).count()===1,'tạo trong thư mục: tự mở thư mục đó để thấy mục mới');
+  await page.locator('#tag-tree-create').evaluate(el=>{el.hidden=true;});
+  await rowOf('folder',1).locator('.tm-name').click({button:'right'});
+  await clear();await menu.getByRole('button',{name:'Rã thư mục'}).click();
+  ok(JSON.stringify(await json('tm_explode'))==='{"id":1}' && await menu.count()===0,'Rã thư mục: gửi mã thư mục');
+  // Đổi tên bằng nhấp đúp
+  await rowOf('tag',10).locator('.tm-name').dblclick();
+  const ren=page.locator('#tag-tree-list input.tm-rename');
+  ok(await ren.count()===1 && await ren.inputValue()==='A. WALL','nhấp đúp tên tag: thành ô nhập với tên hiện tại');
+  await clear();await ren.fill('A. TUONG');await ren.press('Enter');
+  ok(JSON.stringify(await json('tm_rename'))==='{"kind":"tag","id":10,"name":"A. TUONG"}' && await ren.count()===0,'Enter: gửi đổi tên, bỏ ô nhập');
+  await rowOf('folder',1).locator('.tm-name').dblclick();
+  await clear();await ren.fill('Khac');await ren.press('Escape');
+  ok((await calls('tm_rename')).length===0 && await ren.count()===0,'Esc: hủy đổi tên thư mục, không gửi');
+  await rowOf('tag',14).locator('.tm-name').dblclick();
+  ok(await ren.count()===0,'Untagged: không đổi tên được');
+  // Bật / tắt tất cả, thu gọn, loại trừ
+  await page.click('#tag-tree-more');await clear();await page.getByRole('button',{name:'Tắt tất cả thư mục'}).click();
+  ok(JSON.stringify(await json('tm_all_visible'))==='{"kind":"folder","visible":false}','Thêm → Tắt tất cả thư mục');
+  await page.click('#tag-tree-more');await clear();await page.getByRole('button',{name:'Bật tất cả tag'}).click();
+  ok(JSON.stringify(await json('tm_all_visible'))==='{"kind":"tag","visible":true}','Thêm → Bật tất cả tag');
+  ok(await rowOf('tag',11).locator('input[type=color]').isVisible(),'mặc định: có ô màu');
+  await page.click('#tag-tree-more');await page.click('#tag-tree-compact');
+  ok(await rowOf('tag',11).locator('input[type=color]').isHidden() && await page.locator('#tag-tree-compact').getAttribute('aria-pressed')==='true' && await page.evaluate(()=>localStorage.getItem('vgd.bim.tags.compact'))==='1','Chế độ thu gọn: ẩn ô màu, nút nhấn, nhớ trên máy');
+  await page.click('#tag-tree-more');await page.click('#tag-tree-compact');
+  ok(await rowOf('tag',11).locator('input[type=color]').isVisible(),'tắt thu gọn: hiện lại ô màu');
+  await receive('tag_tree',{...T2,hide_words:'old'});
+  ok((await treeNames()).join('|')==='Untagged|A. ARCHITECTURAL|A. WALL' && await rowOf('folder',2).count()===0 && await rowOf('tag',11).count()===0,'danh sách loại trừ "old": ẩn thư mục z_old (cả nội dung) và tag Tam old; Untagged luôn hiện');
+  ok((await page.locator('#tag-tree-hidden').innerText()).includes('Danh sách loại trừ đang ẩn 2 mục'),'ghi số mục đang ẩn theo danh sách loại trừ');
+  await page.locator('#tag-tree-hidden').getByRole('button',{name:'Sửa'}).click();
+  const hideCard=page.locator('#tag-hide-card');
+  ok(await hideCard.isVisible() && await hideCard.locator('input').inputValue()==='old','Sửa: mở hộp danh sách loại trừ với từ khóa hiện tại');
+  await clear();await hideCard.locator('input').fill('old, tạm');await page.click('#tag-hide-save');
+  ok(JSON.stringify(await json('tm_hide_words'))==='{"words":"old, tạm"}' && await hideCard.isHidden(),'Lưu: gửi danh sách loại trừ');
+  await receive('tag_tree',{...T2,hide_words:'TAM'});
+  ok(await rowOf('tag',11).count()===0,'loại trừ không phân biệt hoa thường và dấu');
+  await receive('tag_tree',{...T2});
+  ok(await page.locator('#tag-tree-hidden').isHidden() && await rowOf('tag',11).count()===1,'không có từ loại trừ: hiện đủ, không có dòng báo');
 
   ok(await page.locator('#tag-assign').isVisible(),'thanh Gán tag vẫn thấy ở tab Trong model');
 

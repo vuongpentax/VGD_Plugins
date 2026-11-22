@@ -44,16 +44,22 @@ ok('changes: chỉ liệt kê mục có hiển thị khác hiện tại', T.chan
 
 # ---- Phần gọi SketchUp (giả lập) ----
 class FFolder
-  attr_reader :persistent_id, :name, :folders
-  attr_accessor :folder
+  attr_reader :persistent_id, :folders
+  attr_accessor :folder, :name
+  # add_folder: tên -> thư mục con mới; thư mục có sẵn -> chuyển vào đây (như LayerFolder#add_folder của SketchUp)
+  def add_folder(arg)
+    return FFolder.new(400 + @folders.size, arg, true, self) unless arg.is_a?(FFolder)
+    (arg.folder ? arg.folder.folders : $root_folders).delete(arg); arg.folder = self; @folders << arg; arg
+  end
+  def remove_folder(f); raise 'không phải thư mục con' unless @folders.delete(f); end
   def initialize(id, name, visible = true, parent = nil); @persistent_id = id; @name = name; @visible = visible; @folders = []; @folder = parent; parent.folders << self if parent; end
   def visible?; @visible; end
   def visible=(v); @visible = v; end
 end
 class FStyle; attr_reader :name; def initialize(name); @name = name; end; end
 class FTag
-  attr_reader :persistent_id, :name
-  attr_accessor :folder, :color, :line_style
+  attr_reader :persistent_id
+  attr_accessor :folder, :color, :line_style, :name
   def initialize(id, name, visible = true, folder = nil); @persistent_id = id; @name = name; @visible = visible; @folder = folder; @color = Sketchup::Color.new(10, 20, 30); @line_style = nil; end
   def visible?; @visible; end
   def visible=(v); @visible = v; end
@@ -66,7 +72,12 @@ class FTags
   def to_a; @list.dup; end
   def [](index); @list[index]; end
   def add(name); tag = FTag.new(100 + @list.size, name); @list << tag; tag; end
-  def add_folder(name); folder = FFolder.new(200 + @folders.size, name); @folders << folder; folder; end
+  def add_folder(arg)
+    return (@folders << FFolder.new(200 + @folders.size, arg)).last unless arg.is_a?(FFolder)
+    arg.folder.folders.delete(arg) if arg.folder
+    arg.folder = nil; @folders << arg; arg
+  end
+  def remove_folder(f); raise 'không phải thư mục gốc' unless @folders.delete(f); end
   def remove(layer); @removed = (@removed || []) << layer; @list.delete(layer); end
   def removed; @removed || []; end
 end
@@ -100,6 +111,7 @@ def world
   fa = FFolder.new(1, 'A. ARCHITECTURAL'); fa1 = FFolder.new(2, 'Con', true, fa); fb = FFolder.new(3, 'S. STRUCTURAL')
   tags = [FTag.new(10, 'A. WALL', true, fa1), FTag.new(11, 'A. DOOR', true, fa), FTag.new(12, 'S. BEAM', false, fb), FTag.new(13, 'Untagged', true, nil)]
   model = FModel.new(FTags.new(tags, [fa, fb]))
+  $root_folders = model.layers.folders
   [model, Probe.new(model), tags, [fa, fa1, fb]]
 end
 
@@ -321,7 +333,7 @@ wall = tags[0]
 pages = FPages.new([FPage.new('Scene 1'), FPage.new('Scene 2', [tags[1]]), FPage.new('Scene 3', [], false)])
 model.define_singleton_method(:pages) { pages }
 scenes = probe.tag_tree_state[:scenes]
-ok('danh sách scene: tên, có lưu hiển thị tag không, tag đang ẩn trong scene', scenes == [{name: 'Scene 1', saves_tags: true, hidden: []}, {name: 'Scene 2', saves_tags: true, hidden: [11]}, {name: 'Scene 3', saves_tags: false, hidden: []}])
+ok('danh sách scene: tên, có lưu hiển thị tag không, tag đang ẩn trong scene', scenes == [{name: 'Scene 1', saves_tags: true, hidden: [], hidden_folders: []}, {name: 'Scene 2', saves_tags: true, hidden: [11], hidden_folders: []}, {name: 'Scene 3', saves_tags: false, hidden: [], hidden_folders: []}])
 $transactions.clear
 probe.tm_scene_visibility('id' => 10, 'visible' => false, 'exclude' => ['Scene 2'])
 p1, p2, p3 = pages.to_a
@@ -336,6 +348,101 @@ ok('scene đang chọn nằm trong loại trừ: hiển thị hiện tại của
 ok('Untagged không ẩn được; scene lạ, giá trị sai bị từ chối', error_of { probe.tm_scene_visibility('id' => 13, 'visible' => false) }.include?('Untagged') &&
    error_of { probe.tm_scene_visibility('id' => 10, 'visible' => false, 'exclude' => ['Không có']) }.include?('Không có scene') &&
    error_of { probe.tm_scene_visibility('id' => 10, 'visible' => 'x') }.include?('không hợp lệ'))
+
+# ---- Bật / tắt tất cả, tạo, đổi tên, rã thư mục, danh sách loại trừ, thư mục theo scene ----
+model, probe, tags, fold = world
+$transactions.clear
+probe.tm_all_visible('kind' => 'tag', 'visible' => false)
+ok('tắt tất cả tag: mọi tag ẩn trừ Untagged, một bước hoàn tác, báo số tag đã đổi', tags[0..1].none?(&:visible?) && tags[3].visible? && $transactions == ['VGD BIM · Tắt tất cả tag'] && probe.messages.last == 'Đã tắt 2 tag.')
+probe.tm_all_visible('kind' => 'tag', 'visible' => true)
+ok('bật tất cả tag: cả tag đang ẩn từ trước', tags.all?(&:visible?) && probe.messages.last == 'Đã bật 3 tag.')
+probe.tm_all_visible('kind' => 'tag', 'visible' => true)
+ok('bật khi mọi tag đã hiện: không tạo bước hoàn tác', $transactions.size == 2 && probe.messages.last == 'Mọi tag đã hiện sẵn.')
+probe.tm_all_visible('kind' => 'folder', 'visible' => false)
+ok('tắt tất cả thư mục (kể cả thư mục con)', fold.none?(&:visible?) && $transactions.last == 'VGD BIM · Tắt tất cả thư mục')
+ok('tm_all_visible: dữ liệu sai bị từ chối', error_of { probe.tm_all_visible('kind' => 'x', 'visible' => true) }.include?('không hợp lệ') && error_of { probe.tm_all_visible('kind' => 'tag', 'visible' => 1) }.include?('không hợp lệ'))
+ok('SketchUp cũ không có thư mục: tắt tất cả thư mục báo rõ', error_of { Probe.new(OldModel.new(OldTags.new([FTag.new(1, 'A')]))).tm_all_visible('kind' => 'folder', 'visible' => false) }.include?('2021'))
+
+model, probe, tags, fold = world
+$transactions.clear
+probe.tm_create('kind' => 'tag', 'name' => '  A.   ROOF ', 'folder_id' => 1)
+roof = model.layers.to_a.last
+ok('tạo tag trong thư mục: bỏ khoảng trắng thừa, nằm trong thư mục, một bước hoàn tác', roof.name == 'A. ROOF' && roof.folder.equal?(fold[0]) && $transactions == ['VGD BIM · Tạo tag'] && probe.messages.last == 'Đã tạo tag "A. ROOF" trong thư mục "A. ARCHITECTURAL".')
+probe.tm_create('kind' => 'tag', 'name' => 'Moi', 'folder_id' => nil)
+ok('tạo tag ở gốc', model.layers.to_a.last.name == 'Moi' && model.layers.to_a.last.folder.nil?)
+probe.tm_create('kind' => 'folder', 'name' => 'Con 2', 'folder_id' => 1)
+ok('tạo thư mục con', fold[0].folders.map(&:name) == ['Con', 'Con 2'] && $transactions.last == 'VGD BIM · Tạo thư mục')
+probe.tm_create('kind' => 'folder', 'name' => 'Z. KHAC', 'folder_id' => nil)
+ok('tạo thư mục ở gốc', model.layers.folders.map(&:name).last == 'Z. KHAC')
+ok('tạo: tên trùng tag (không phân biệt hoa thường), trùng thư mục cùng cấp, rỗng, quá dài, Untagged / Layer0, thư mục lạ bị từ chối',
+   error_of { probe.tm_create('kind' => 'tag', 'name' => 'a. wall', 'folder_id' => nil) }.include?('Đã có tag "A. WALL"') &&
+   error_of { probe.tm_create('kind' => 'folder', 'name' => 'con', 'folder_id' => 1) }.include?('Đã có thư mục') &&
+   error_of { probe.tm_create('kind' => 'tag', 'name' => '  ', 'folder_id' => nil) }.include?('Hãy nhập tên tag') &&
+   error_of { probe.tm_create('kind' => 'tag', 'name' => 'x' * 61, 'folder_id' => nil) }.include?('quá dài') &&
+   error_of { probe.tm_create('kind' => 'tag', 'name' => 'layer0', 'folder_id' => nil) }.include?('mặc định') &&
+   error_of { probe.tm_create('kind' => 'tag', 'name' => 'B', 'folder_id' => 99) }.include?('làm mới') &&
+   error_of { probe.tm_create('kind' => 'tag', 'name' => 7, 'folder_id' => nil) }.include?('không hợp lệ'))
+probe.tm_create('kind' => 'folder', 'name' => 'Con', 'folder_id' => nil)
+ok('tên thư mục trùng ở cấp khác vẫn tạo được', model.layers.folders.map(&:name).last == 'Con')
+
+model, probe, tags, fold = world
+VGD::BIM::Settings.update('pinned_tags' => ['A. WALL'], 'recent_tags' => ['A. DOOR', 'A. WALL'])
+$transactions.clear
+probe.tm_rename('kind' => 'tag', 'id' => 10, 'name' => 'A. TUONG')
+ok('đổi tên tag: một bước hoàn tác, ghim và gần đây theo tên mới', tags[0].name == 'A. TUONG' && $transactions == ['VGD BIM · Đổi tên tag'] &&
+   VGD::BIM::Settings.read['pinned_tags'] == ['A. TUONG'] && VGD::BIM::Settings.read['recent_tags'] == ['A. DOOR', 'A. TUONG'] && probe.messages.last == 'Đã đổi tên tag "A. WALL" thành "A. TUONG".')
+probe.tm_rename('kind' => 'tag', 'id' => 10, 'name' => 'a. tuong')
+ok('đổi tên chỉ khác hoa thường của chính nó: được', tags[0].name == 'a. tuong')
+probe.tm_rename('kind' => 'folder', 'id' => 2, 'name' => 'Con moi')
+ok('đổi tên thư mục', fold[1].name == 'Con moi' && $transactions.last == 'VGD BIM · Đổi tên thư mục')
+before = $transactions.size
+probe.tm_rename('kind' => 'folder', 'id' => 2, 'name' => 'Con moi')
+ok('tên không đổi: không tạo bước hoàn tác', $transactions.size == before && probe.messages.last == 'Tên không đổi.')
+ok('đổi tên: Untagged, tên trùng tag khác, thư mục trùng cùng cấp bị từ chối',
+   error_of { probe.tm_rename('kind' => 'tag', 'id' => 13, 'name' => 'X') }.include?('Untagged') &&
+   error_of { probe.tm_rename('kind' => 'tag', 'id' => 10, 'name' => 'A. DOOR') }.include?('Đã có tag') &&
+   error_of { probe.tm_rename('kind' => 'folder', 'id' => 3, 'name' => 'a. architectural') }.include?('Đã có thư mục') && fold[2].name == 'S. STRUCTURAL')
+VGD::BIM::Settings.update('pinned_tags' => [], 'recent_tags' => [])
+
+model, probe, tags, fold = world
+fa, fa1, fb = fold
+fa1.add_folder('Chau')
+$transactions.clear
+probe.tm_explode('id' => 2)
+ok('rã thư mục con: tag và thư mục cháu chuyển lên thư mục cha, thư mục bị bỏ, một bước hoàn tác',
+   tags[0].folder.equal?(fa) && fa.folders.map(&:name) == ['Chau'] && $transactions == ['VGD BIM · Rã thư mục'] && probe.messages.last == 'Đã rã thư mục "Con": 1 tag và 1 thư mục con chuyển ra thư mục "A. ARCHITECTURAL".')
+probe.tm_explode('id' => 1)
+ok('rã thư mục gốc: nội dung ra ngoài cùng', tags[0].folder.nil? && tags[1].folder.nil? && model.layers.folders.map(&:name) == ['S. STRUCTURAL', 'Chau'] && probe.messages.last.end_with?('chuyển ra ngoài cùng.'))
+ok('rã thư mục: mã lạ bị từ chối', error_of { probe.tm_explode('id' => 99) }.include?('làm mới'))
+
+model, probe, = world
+probe.tm_hide_words('words' => 'old, tạm')
+ok('danh sách loại trừ: lưu trên máy, gửi kèm cây', VGD::BIM::Settings.read['tag_hide_words'] == 'old, tạm' && probe.last('tag_tree')[:hide_words] == 'old, tạm' && probe.messages.last == 'Đã lưu danh sách loại trừ.')
+ok('danh sách loại trừ sai bị từ chối, giữ bản cũ', error_of { probe.tm_hide_words('words' => (1..13).map { |i| "w#{i}" }.join(',')) }.include?('Tối đa') && error_of { probe.tm_hide_words('words' => 5) }.include?('không hợp lệ') && VGD::BIM::Settings.read['tag_hide_words'] == 'old, tạm')
+probe.tm_hide_words('words' => '')
+ok('xóa trống: bỏ loại trừ', VGD::BIM::Settings.read['tag_hide_words'] == '' && probe.messages.last == 'Đã bỏ danh sách loại trừ.')
+
+class FPage2 < FPage
+  def initialize(name, folders = [], saves = true); super(name, [], saves); @folders = folders; end
+  def layer_folders; @folders; end
+  def set_visibility(item, visible)
+    return super unless item.is_a?(FFolder)
+    visible ? @folders.delete(item) : (@folders << item unless @folders.include?(item)); self
+  end
+end
+model, probe, tags, fold = world
+pages = FPages.new([FPage2.new('S1'), FPage2.new('S2', [fold[2]])])
+model.define_singleton_method(:pages) { pages }
+ok('danh sách scene có thư mục đang ẩn', probe.tag_tree_state[:scenes].map { |sc| sc[:hidden_folders] } == [[], [3]])
+$transactions.clear
+probe.tm_scene_visibility('kind' => 'folder', 'id' => 1, 'visible' => false, 'exclude' => ['S2'])
+ok('ẩn thư mục ở mọi scene trừ scene loại trừ, model ẩn theo, một bước hoàn tác', pages.to_a[0].layer_folders == [fold[0]] && pages.to_a[1].layer_folders == [fold[2]] && !fold[0].visible? &&
+   $transactions == ['VGD BIM · Ẩn thư mục ở mọi scene'] && probe.messages.last == 'Đã ẩn thư mục A. ARCHITECTURAL ở 1 scene. Giữ nguyên 1 scene loại trừ.')
+model2, probe2, = world
+old_pages = FPages.new([FPage.new('S1')])
+model2.define_singleton_method(:pages) { old_pages }
+ok('SketchUp cũ (scene không có thư mục): báo rõ, không đổi gì', error_of { probe2.tm_scene_visibility('kind' => 'folder', 'id' => 1, 'visible' => false) }.include?('2021') && old_pages.to_a[0].layers.empty?)
+ok('loại mục lạ bị từ chối', error_of { probe.tm_scene_visibility('kind' => 'x', 'id' => 1, 'visible' => false) }.include?('không hợp lệ'))
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)

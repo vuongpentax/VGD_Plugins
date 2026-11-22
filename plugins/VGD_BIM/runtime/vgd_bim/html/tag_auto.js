@@ -278,7 +278,8 @@ function tagSetPane(data,pane){
 }
 
 // ---- Tab nhỏ "Trong model": cây thư mục tag / tag của model đang mở, mắt ẩn / hiện, cô lập, tìm kiếm ----
-const treeState={data:null,open:new Set(),query:'',focus:'',dragging:null,exclude:new Set()};
+const COMPACT_KEY='vgd.bim.tags.compact'; // chế độ thu gọn (ẩn ô màu, kiểu nét): tiện ích riêng của máy, lưu ở localStorage
+const treeState={data:null,open:new Set(),query:'',focus:'',dragging:null,exclude:new Set(),compact:(()=>{try{return localStorage.getItem(COMPACT_KEY)==='1';}catch(_){return false;}})()};
 const TREE_ICONS={
   eye:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>',
   eyeOff:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7c2.4 0 4.4.8 6 1.8M23 12s-4 7-11 7c-2.4 0-4.4-.8-6-1.8"/><path d="M3 3l18 18"/></svg>',
@@ -304,15 +305,24 @@ function tagTreePane(pane){
   colorByTag.title='Bật / tắt chế độ tô màu theo tag của SketchUp (Color by Tag)';colorByTag.setAttribute('aria-pressed','false');
   const excel=button('Nhập Excel',()=>call('tm_excel_open'),'sm');excel.id='tag-tree-excel';excel.title='Nhập tag (kèm màu, kiểu nét, thư mục) từ file Excel .xlsx';
   const sample=button('Lấy mẫu',()=>call('tm_sample'),'sm');sample.id='tag-tree-sample';sample.title='Bấm vào một đối tượng trong view để lấy tag của nó (Esc để hủy)';
-  bar.append(search,expand,collapse,sample,moreMenu('Thêm','tag-tree-more',[refresh,excel,colorByTag]));
+  const compact=button('Chế độ thu gọn',()=>{treeState.compact=!treeState.compact;try{localStorage.setItem(COMPACT_KEY,treeState.compact?'1':'0');}catch(_){}paintTagTree();},'sm');
+  compact.id='tag-tree-compact';compact.title='Ẩn ô màu và kiểu nét để danh sách gọn hơn';
+  const hide=button('Danh sách loại trừ...',openHideCard,'sm');hide.id='tag-tree-hide';
+  const all=(kind,visible,label)=>button(label,()=>call('tm_all_visible',JSON.stringify({kind,visible})),'sm');
+  const create=moreMenu('Tạo','tag-tree-new',[button('Tag mới',()=>openCreate('tag',null),'sm'),button('Thư mục mới',()=>openCreate('folder',null),'sm')]);
+  bar.append(search,expand,collapse,sample,create,moreMenu('Thêm','tag-tree-more',[refresh,excel,colorByTag,compact,hide,null,
+    all('tag',true,'Bật tất cả tag'),all('tag',false,'Tắt tất cả tag'),all('folder',true,'Bật tất cả thư mục'),all('folder',false,'Tắt tất cả thư mục')]));
   const chips=node('div',undefined,'tm-chip-area');chips.id='tag-tree-chips';
   const rootDrop=node('div','Thả vào đây để đưa tag ra ngoài thư mục (gốc)','tm-root-drop');rootDrop.id='tag-tree-rootdrop';rootDrop.hidden=true;
   acceptTagDrop(rootDrop,null);
   const banner=node('div',undefined,'tm-banner');banner.id='tag-tree-banner';banner.hidden=true;
   const del=node('div',undefined,'tm-delete');del.id='tag-tree-delete';del.hidden=true;
   const excelCard=node('div',undefined,'tm-excel');excelCard.id='tag-excel-card';excelCard.hidden=true;
+  const hideCard=node('div',undefined,'tm-excel');hideCard.id='tag-hide-card';hideCard.hidden=true;
+  const createRow=node('div',undefined,'tm-create');createRow.id='tag-tree-create';createRow.hidden=true;
+  const hidden=node('div',undefined,'muted tm-hidden');hidden.id='tag-tree-hidden';hidden.hidden=true;
   const list=node('div',undefined,'tag-scroll tm-list');list.id='tag-tree-list';
-  pane.append(bar,chips,rootDrop,banner,del,excelCard,list,node('p','Mắt: ẩn / hiện · Nút tròn: cô lập, bấm lại để trả như cũ · Chuột phải vào tag: hiện / ẩn ở mọi scene. Mỗi thao tác hoàn tác được.','muted tag-note'));
+  pane.append(bar,chips,rootDrop,banner,del,excelCard,hideCard,createRow,hidden,list,node('p','Mắt: ẩn / hiện · Nút tròn: cô lập, bấm lại để trả như cũ · Nhấp đúp tên: đổi tên · Chuột phải: hiện / ẩn ở mọi scene, việc với thư mục. Mỗi thao tác hoàn tác được.','muted tag-note'));
   paintTagTree();
 }
 
@@ -321,6 +331,8 @@ function paintTagTree(){
   if(!list)return;
   const data=treeState.data,scroll=list.scrollTop;
   const cbt=$('tag-tree-colorbytag');if(cbt)cbt.setAttribute('aria-pressed',String(!!(data&&data.color_by_tag)));
+  const cmp=$('tag-tree-compact');if(cmp)cmp.setAttribute('aria-pressed',String(treeState.compact));
+  list.classList.toggle('compact',treeState.compact);
   list.replaceChildren();banner.replaceChildren();banner.hidden=true;
   if(!data){list.append(node('p','Model chưa có tag nào.','muted'));return;}
   if(data.isolated){
@@ -330,6 +342,12 @@ function paintTagTree(){
   if(!data.supported)list.append(node('p','Phiên bản SketchUp này chưa có thư mục tag (cần SketchUp 2021 trở lên). Chỉ hiện danh sách tag.','muted'));
   paintTreeChips(data);
   const q=foldText(treeState.query.trim());
+  // Danh sách loại trừ: tag / thư mục có tên chứa từ khóa không hiện (thư mục ẩn thì ẩn cả nội dung); Untagged luôn hiện.
+  const words=String(data.hide_words||'').split(/[,;\n]/).map(w=>foldText(w).replace(/\s+/g,' ').trim()).filter(Boolean);
+  const hiddenByWords=name=>words.some(w=>foldText(name).includes(w));
+  const hiddenCount=data.folders.filter(f=>hiddenByWords(f.name)).length+data.layers.filter(l=>!isDefaultTag(l)&&hiddenByWords(l.name)).length;
+  const hiddenLine=$('tag-tree-hidden');
+  if(hiddenLine){hiddenLine.replaceChildren();hiddenLine.hidden=!hiddenCount;if(hiddenCount)hiddenLine.append(node('span',`Danh sách loại trừ đang ẩn ${hiddenCount} mục`),button('Sửa',openHideCard,'sm'));}
   const folderById=new Map(data.folders.map(f=>[f.id,f]));
   const childFolders=new Map(),childLayers=new Map();
   data.folders.forEach(f=>{const key=f.parent_id===null||!folderById.has(f.parent_id)?null:f.parent_id;(childFolders.get(key)||childFolders.set(key,[]).get(key)).push(f);});
@@ -338,9 +356,10 @@ function paintTagTree(){
   // Mục nào hiện khi tìm: tag khớp tên, thư mục khớp tên (hiện cả nội dung), hoặc thư mục có mục con khớp.
   const shows=new Map();
   const folderShows=(folder,parentMatch)=>{
+    if(hiddenByWords(folder.name)){shows.set(`f${folder.id}`,false);return false;}
     const self=!q||foldText(folder.name).includes(q)||parentMatch;
     const kids=(childFolders.get(folder.id)||[]).map(f=>folderShows(f,self));
-    const mine=(childLayers.get(folder.id)||[]).filter(l=>self||foldText(tagLabel(l)).includes(q));
+    const mine=(childLayers.get(folder.id)||[]).filter(l=>!hiddenByWords(l.name)&&(self||foldText(tagLabel(l)).includes(q)));
     const visible=self||kids.some(Boolean)||mine.length>0;
     shows.set(`f${folder.id}`,visible);mine.forEach(l=>shows.set(`l${l.id}`,true));
     return visible;
@@ -359,10 +378,12 @@ function paintTagTree(){
     const noun=isFolder?'thư mục':'tag';
     row.append(treeButton(item.visible?'eye':'eyeOff',item.visible?`Ẩn ${noun}`:`Hiện ${noun}`,()=>call('tm_visible',JSON.stringify({kind,id,visible:!item.visible})),item.visible?'on':'off'));
     const label=isFolder?item.name:tagLabel(item),name=node('span',label,'tm-name'+(isFolder?' folder':''));name.title=label;row.append(name);
+    row.oncontextmenu=e=>{e.preventDefault();openTreeMenu(kind,item,e.clientX,e.clientY);};
+    if(isFolder)name.ondblclick=()=>startRename(kind,item,name);
     if(!isFolder&&data.supported)row.title='Bấm tên để chọn tag cho nút Gán tag · kéo thả vào thư mục để chuyển';
     if(!isFolder){
-      name.onclick=()=>selectAssignTag(item.name);
-      row.oncontextmenu=e=>{e.preventDefault();openSceneMenu(item,e.clientX,e.clientY);};
+      // Bấm một lần: chọn tag cho nút Gán tag (vẽ lại danh sách); lần bấm thứ hai liền sau (nhấp đúp) rơi vào dòng mới vẽ: đổi tên.
+      name.onclick=e=>{if(e.detail>=2&&!isDefaultTag(item))startRename(kind,item,name);else selectAssignTag(item.name);};
       if(treeState.focus&&treeState.focus===item.name)row.classList.add('focus');
       if(data.supported&&!UNTAGGED_TREE.includes(item.name)){
         row.draggable=true;
@@ -402,7 +423,7 @@ function paintTagTree(){
     (childFolders.get(folder.id)||[]).slice().sort(byName).forEach(f=>addFolder(f,depth+1,hidden));
     (childLayers.get(folder.id)||[]).filter(l=>shows.get(`l${l.id}`)).slice().sort(byName).forEach(l=>addRow('tag',l,depth+1,hidden));
   };
-  const rootLayers=(childLayers.get(null)||[]).filter(l=>!q||foldText(tagLabel(l)).includes(q));
+  const rootLayers=(childLayers.get(null)||[]).filter(l=>(isDefaultTag(l)||!hiddenByWords(l.name))&&(!q||foldText(tagLabel(l)).includes(q)));
   rootLayers.filter(isDefaultTag).forEach(l=>addRow('tag',l,0,false)); // Untagged luôn ở đầu danh sách
   (childFolders.get(null)||[]).slice().sort(byName).forEach(f=>addFolder(f,0,false));
   rootLayers.filter(l=>!isDefaultTag(l)).sort(byName).forEach(l=>addRow('tag',l,0,false));
@@ -418,24 +439,26 @@ function moreMenu(label,id,items){
   const wrap=node('span',undefined,'tm-more'),list=node('div',undefined,'tm-more-list');list.hidden=true;
   const toggle=button(`${label} ▾`,()=>{list.hidden=!list.hidden;toggle.setAttribute('aria-expanded',String(!list.hidden));},'sm');
   toggle.id=id;toggle.setAttribute('aria-haspopup','true');toggle.setAttribute('aria-expanded','false');
-  items.forEach(b=>{b.addEventListener('click',()=>{list.hidden=true;toggle.setAttribute('aria-expanded','false');});list.append(b);});
+  items.forEach(b=>{if(!b){list.append(node('hr',undefined,'tm-more-sep'));return;}b.addEventListener('click',()=>{list.hidden=true;toggle.setAttribute('aria-expanded','false');});list.append(b);});
   wrap.append(toggle,list);return wrap;
 }
 // Chuột phải vào tag: hiện / ẩn tag đó ở mọi scene. Scene tick trong "Loại trừ scene" giữ nguyên tag (danh sách nhớ trong phiên, dùng cho mọi tag).
 // Scene không lưu hiển thị tag thì Ruby bỏ qua, ở đây không cho tick. Ruby: tm_scene_visibility (một bước hoàn tác).
-function closeSceneMenu(){const menu=$('tag-scene-menu');if(menu)menu.remove();}
-function openSceneMenu(item,x,y){
-  closeSceneMenu();
+function closeTreeMenu(){const menu=$('tag-scene-menu');if(menu)menu.remove();}
+// Chuột phải vào dòng tag hoặc thư mục. Thư mục có thêm: tạo tag / thư mục con bên trong, rã thư mục.
+function openTreeMenu(kind,item,x,y){
+  closeTreeMenu();
+  const isFolder=kind==='folder',hiddenIn=s=>(isFolder?s.hidden_folders:s.hidden)||[];
   const scenes=(treeState.data&&treeState.data.scenes)||[],names=new Set(scenes.map(s=>s.name));
   treeState.exclude=new Set([...treeState.exclude].filter(n=>names.has(n)));
   const menu=node('div',undefined,'tm-menu');menu.id='tag-scene-menu';menu.setAttribute('role','dialog');menu.setAttribute('aria-label','Hiển thị tag theo scene');
-  menu.append(node('div',tagLabel(item),'tm-menu-title'));
-  if(isDefaultTag(item))menu.append(node('p','Untagged luôn hiện ở mọi scene.','muted'));
+  menu.append(node('div',isFolder?item.name:tagLabel(item),'tm-menu-title'));
+  if(!isFolder&&isDefaultTag(item))menu.append(node('p','Untagged luôn hiện ở mọi scene.','muted'));
   else if(!scenes.length)menu.append(node('p','Model chưa có scene nào.','muted'));
   else{
-    const saved=scenes.filter(s=>s.saves_tags),shown=saved.filter(s=>!s.hidden.includes(item.id)).length;
+    const saved=scenes.filter(s=>s.saves_tags),shown=saved.filter(s=>!hiddenIn(s).includes(item.id)).length;
     menu.append(node('p',`Đang hiện ở ${shown} / ${saved.length} scene`,'muted'));
-    const send=visible=>{closeSceneMenu();call('tm_scene_visibility',JSON.stringify({id:item.id,visible,exclude:[...treeState.exclude]}));};
+    const send=visible=>{closeTreeMenu();call('tm_scene_visibility',JSON.stringify({kind,id:item.id,visible,exclude:[...treeState.exclude]}));};
     const acts=node('div',undefined,'tm-menu-acts');acts.append(button('Hiện ở mọi scene',()=>send(true),'sm'),button('Ẩn ở mọi scene',()=>send(false),'sm'));menu.append(acts);
     const details=node('details',undefined,'tm-menu-ex'),summary=node('summary');details.open=treeState.exclude.size>0;
     const count=()=>{summary.textContent=`Loại trừ scene (${treeState.exclude.size})`;};count();
@@ -443,20 +466,66 @@ function openSceneMenu(item,x,y){
     scenes.forEach(s=>{
       const row=node('label',undefined,'tm-menu-scene'),box=node('input',undefined,'cb');box.type='checkbox';box.checked=treeState.exclude.has(s.name);box.disabled=!s.saves_tags;
       box.onchange=()=>{if(box.checked)treeState.exclude.add(s.name);else treeState.exclude.delete(s.name);count();};
-      row.append(box,node('span',s.name,'tm-menu-name'),node('span',!s.saves_tags?'không lưu tag':s.hidden.includes(item.id)?'đang ẩn':'đang hiện','muted'));
+      row.append(box,node('span',s.name,'tm-menu-name'),node('span',!s.saves_tags?'không lưu tag':hiddenIn(s).includes(item.id)?'đang ẩn':'đang hiện','muted'));
       list.append(row);
     });
-    details.append(summary,list,node('p','Scene được tick giữ nguyên tag này.','muted'));menu.append(details);
+    details.append(summary,list,node('p',isFolder?'Scene được tick giữ nguyên thư mục này.':'Scene được tick giữ nguyên tag này.','muted'));menu.append(details);
+  }
+  if(isFolder){
+    const acts=node('div',undefined,'tm-menu-col');
+    const explode=button('Rã thư mục',()=>{closeTreeMenu();call('tm_explode',JSON.stringify({id:item.id}));},'sm');explode.title='Đưa tag và thư mục con ra ngoài rồi bỏ thư mục này';
+    acts.append(button('Tạo tag trong thư mục',()=>openCreate('tag',item),'sm'),button('Tạo thư mục con',()=>openCreate('folder',item),'sm'),explode);
+    menu.append(acts);
   }
   document.body.append(menu);
   const box=menu.getBoundingClientRect();
   menu.style.left=`${Math.max(8,Math.min(x,innerWidth-box.width-8))}px`;menu.style.top=`${Math.max(8,Math.min(y,innerHeight-box.height-8))}px`;
 }
 document.addEventListener('mousedown',e=>{
-  const menu=$('tag-scene-menu');if(menu&&!menu.contains(e.target))closeSceneMenu();
+  const menu=$('tag-scene-menu');if(menu&&!menu.contains(e.target))closeTreeMenu();
   document.querySelectorAll('.tm-more').forEach(more=>{if(!more.contains(e.target)){const list=more.querySelector('.tm-more-list');if(list&&!list.hidden){list.hidden=true;more.querySelector('button').setAttribute('aria-expanded','false');}}});
 },true);
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSceneMenu();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTreeMenu();});
+// Ô tạo tag / thư mục (ở gốc hoặc trong một thư mục) phía trên danh sách. Enter tạo, Esc hủy. Ruby kiểm tra lại tên (tm_create).
+function openCreate(kind,folder){
+  const box=$('tag-tree-create');if(!box)return;
+  closeTreeMenu();box.hidden=false;box.replaceChildren();
+  const close=()=>{box.hidden=true;box.replaceChildren();};
+  const input=node('input');input.type='text';input.maxLength=60;input.placeholder=kind==='folder'?'Tên thư mục mới':'Tên tag mới';input.setAttribute('aria-label',input.placeholder);
+  const go=()=>{
+    if(!input.value.trim())return message(kind==='folder'?'Hãy nhập tên thư mục.':'Hãy nhập tên tag.',true);
+    if(folder)treeState.open.add(folder.id);
+    close();call('tm_create',JSON.stringify({kind,name:input.value,folder_id:folder?folder.id:null}));
+  };
+  input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();go();}else if(e.key==='Escape')close();};
+  const go1=button('Tạo',go,'sm primary');go1.id='tag-create-go';
+  box.append(node('span',folder?`Trong thư mục ${folder.name}`:'Ở ngoài cùng','muted'),input,go1,button('Hủy',close,'sm'));
+  input.focus();
+}
+// Đổi tên tại chỗ: tên thành ô nhập, Enter lưu (tm_rename), Esc hoặc bấm ra ngoài thì hủy.
+function startRename(kind,item,nameEl){
+  const input=node('input',undefined,'tm-rename');input.type='text';input.value=item.name;input.maxLength=60;input.setAttribute('aria-label',kind==='folder'?'Tên thư mục mới':'Tên tag mới');
+  let done=false;
+  const finish=save=>{if(done)return;done=true;const name=input.value.trim();if(save&&name&&name!==item.name)call('tm_rename',JSON.stringify({kind,id:item.id,name}));paintTagTree();};
+  input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();finish(true);}else if(e.key==='Escape')finish(false);};
+  input.onblur=()=>finish(false);input.onclick=e=>e.stopPropagation();
+  const row=nameEl.closest('.tm-row');if(row)row.draggable=false;
+  nameEl.replaceWith(input);input.focus();input.select();
+}
+// Danh sách loại trừ (lưu trên máy qua tm_hide_words): chỉ ẩn khỏi danh sách, không đổi model.
+function openHideCard(){
+  const box=$('tag-hide-card');if(!box)return;
+  box.hidden=false;box.replaceChildren();
+  const close=()=>{box.hidden=true;box.replaceChildren();};
+  const input=node('input');input.type='text';input.maxLength=200;input.value=(treeState.data&&treeState.data.hide_words)||'';input.placeholder='Ví dụ: old, tạm, z_';input.setAttribute('aria-label','Từ khóa loại trừ');
+  const save=()=>{close();call('tm_hide_words',JSON.stringify({words:input.value}));};
+  input.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();save();}};
+  const actions=node('div',undefined,'actions');
+  const ok=button('Lưu',save,'primary');ok.id='tag-hide-save';
+  actions.append(ok,button('Bỏ loại trừ',()=>{input.value='';save();}),button('Đóng',close));
+  box.append(node('b','Danh sách loại trừ'),node('p','Tag và thư mục có tên chứa một trong các từ này (cách nhau bằng dấu phẩy) không hiện trong danh sách. Chỉ ẩn khỏi danh sách, không đổi model; lưu trên máy, dùng cho mọi model.','muted'),input,actions);
+  input.focus();
+}
 const pinnedKeys=data=>new Set((data.pinned||[]).map(foldText));
 // Chọn tag cho nút Gán tag (ô chọn tag ở đầu tab): thêm vào ô nếu tag chưa có trong bộ tag đã lưu; đánh dấu dòng trong danh sách.
 function selectAssignTag(name){
@@ -584,4 +653,4 @@ function paintTagExcelActions(){
   actions.append(go,button('Chọn tất cả',()=>{data.rows.forEach((_,i)=>excelState.selected.add(i));paintTagExcel();}),button('Bỏ chọn',()=>{excelState.selected.clear();paintTagExcel();}),
     button('Hủy',()=>{excelState.data=null;const box=$('tag-excel-card');box.hidden=true;box.replaceChildren();}));
 }
-function receiveTagTree(data){closeSceneMenu();treeState.data=data;paintTagTree();}
+function receiveTagTree(data){closeTreeMenu();treeState.data=data;paintTagTree();}

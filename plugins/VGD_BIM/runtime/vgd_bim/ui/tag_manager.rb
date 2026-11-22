@@ -23,6 +23,11 @@ module VGD
           @dialog.add_action_callback('tm_move') { |_ctx, payload| safely { tm_move(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_color_by_tag') { |_ctx, payload| safely { tm_color_by_tag(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_scene_visibility') { |_ctx, payload| safely { tm_scene_visibility(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tm_all_visible') { |_ctx, payload| safely { tm_all_visible(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tm_create') { |_ctx, payload| safely { tm_create(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tm_rename') { |_ctx, payload| safely { tm_rename(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tm_explode') { |_ctx, payload| safely { tm_explode(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tm_hide_words') { |_ctx, payload| safely { tm_hide_words(JSON.parse(payload)) } }
         end
 
         # Dữ liệu gửi cho giao diện: {supported:, folders: [...], layers: [...], isolated: {kind, id, name} hoặc nil}
@@ -31,7 +36,7 @@ module VGD
           tree = {supported: folders_supported?,
                   folders: folders.map { |item| item.slice(:id, :name, :visible, :parent_id) },
                   layers: layers.map { |item| item.slice(:id, :name, :visible, :folder_id, :color, :line_style, :default) },
-                  scenes: scene_list,
+                  scenes: scene_list, hide_words: Settings.read['tag_hide_words'],
                   styles_supported: line_styles_supported?, line_styles: line_style_names, color_by_tag: color_by_tag?,
                   pinned: Settings.read['pinned_tags'], recent: Settings.read['recent_tags'],
                   isolated: nil}
@@ -49,12 +54,14 @@ module VGD
           return [] unless @model.respond_to?(:pages)
           @model.pages.to_a.map do |page|
             saves = page.respond_to?(:use_hidden_layers?) ? page.use_hidden_layers? : true
-            {name: page.name.to_s, saves_tags: saves ? true : false, hidden: page.layers.to_a.map(&:persistent_id)}
+            folders = page.respond_to?(:layer_folders) ? page.layer_folders.to_a.map(&:persistent_id) : []
+            {name: page.name.to_s, saves_tags: saves ? true : false, hidden: page.layers.to_a.map(&:persistent_id), hidden_folders: folders}
           end
         end
 
-        # Hiện hoặc ẩn một tag ở mọi scene (chuột phải vào tag), trừ các scene loại trừ (giữ nguyên tag ở scene đó).
-        # payload: {'id' => persistent_id của tag, 'visible' => true / false, 'exclude' => [tên scene]}.
+        # Hiện hoặc ẩn một tag hoặc thư mục ở mọi scene (chuột phải vào dòng), trừ các scene loại trừ (giữ nguyên ở scene đó).
+        # payload: {'kind' => 'tag' (mặc định) | 'folder', 'id' => persistent_id, 'visible' => true / false, 'exclude' => [tên scene]}.
+        # Thư mục cần Page#layer_folders (SketchUp 2021 trở lên).
         # Scene không lưu hiển thị tag thì bỏ qua (không tự bật thuộc tính đó, vì nó đổi cách scene giữ mọi tag khác).
         # Hiển thị hiện tại của model cũng đổi theo, trừ khi scene đang chọn nằm trong danh sách loại trừ. Một bước hoàn tác.
         def tm_scene_visibility(payload)
@@ -64,17 +71,20 @@ module VGD
           raise 'Giá trị hiển thị không hợp lệ.' unless visible == true || visible == false
           exclude = payload['exclude'] || []
           raise 'Danh sách scene loại trừ không hợp lệ.' unless exclude.is_a?(Array) && exclude.all? { |name| name.is_a?(String) }
-          layers, = tag_tree_read
-          item = layers.find { |entry| entry[:id] == id }
-          raise 'Không tìm thấy tag này. Hãy làm mới danh sách.' unless item
+          folder = payload['kind'] == 'folder'
+          raise 'Loại mục không hợp lệ.' unless folder || [nil, 'tag'].include?(payload['kind'])
+          layers, folders = tag_tree_read
+          item = (folder ? folders : layers).find { |entry| entry[:id] == id }
+          raise "Không tìm thấy #{folder ? 'thư mục' : 'tag'} này. Hãy làm mới danh sách." unless item
           raise 'Tag Untagged luôn hiện, không ẩn được.' if item[:default]
           pages = @model.respond_to?(:pages) ? @model.pages.to_a : []
+          raise 'Phiên bản SketchUp này chưa ẩn / hiện thư mục theo scene được (cần SketchUp 2021 trở lên).' if folder && pages.any? { |page| !page.respond_to?(:layer_folders) }
           names = pages.map { |page| page.name.to_s }
           unknown = exclude - names
           raise "Không có scene: #{unknown.join(', ')}. Hãy làm mới danh sách." unless unknown.empty?
           applied = []
           unsaved = []
-          Data.transaction(@model, visible ? 'VGD BIM · Hiện tag ở mọi scene' : 'VGD BIM · Ẩn tag ở mọi scene') do
+          Data.transaction(@model, "VGD BIM · #{visible ? 'Hiện' : 'Ẩn'} #{folder ? 'thư mục' : 'tag'} ở mọi scene") do
             pages.each do |page|
               next if exclude.include?(page.name.to_s)
               if page.respond_to?(:use_hidden_layers?) && !page.use_hidden_layers?
@@ -87,11 +97,110 @@ module VGD
             current = pages.empty? ? nil : @model.pages.selected_page
             item[:object].visible = visible unless current && exclude.include?(current.name.to_s)
           end
-          text = "Đã #{visible ? 'hiện' : 'ẩn'} tag #{item[:name]} ở #{applied.size} scene."
+          text = "Đã #{visible ? 'hiện' : 'ẩn'} #{folder ? 'thư mục' : 'tag'} #{item[:name]} ở #{applied.size} scene."
           text += " Giữ nguyên #{exclude.size} scene loại trừ." unless exclude.empty?
           text += " Bỏ qua #{unsaved.size} scene không lưu hiển thị tag (#{unsaved.first(3).join(', ')}#{unsaved.size > 3 ? '...' : ''})." unless unsaved.empty?
           emit('message', {text: text})
           emit('tag_tree', tag_tree_state)
+        end
+
+        # Bật / tắt tất cả tag hoặc tất cả thư mục. payload: {'kind' => 'tag' | 'folder', 'visible' => true / false}. Untagged luôn hiện. Một bước hoàn tác.
+        def tm_all_visible(payload)
+          check_model!
+          folder = tm_kind(payload) == 'folder'
+          visible = payload['visible']
+          raise 'Giá trị hiển thị không hợp lệ.' unless visible == true || visible == false
+          raise 'Phiên bản SketchUp này chưa có thư mục tag (cần SketchUp 2021 trở lên).' if folder && !folders_supported?
+          layers, folders = tag_tree_read
+          items = (folder ? folders : layers).reject { |item| item[:default] || item[:visible] == visible }
+          noun = folder ? 'thư mục' : 'tag'
+          return emit('message', {text: "Mọi #{noun} đã #{visible ? 'hiện' : 'ẩn'} sẵn."}) if items.empty?
+          Data.transaction(@model, "VGD BIM · #{visible ? 'Bật' : 'Tắt'} tất cả #{noun}") { items.each { |item| item[:object].visible = visible } }
+          emit('tag_tree', tag_tree_state)
+          emit('message', {text: "Đã #{visible ? 'bật' : 'tắt'} #{items.size} #{noun}."})
+        end
+
+        # Tạo tag hoặc thư mục, ở gốc hoặc trong một thư mục. payload: {'kind' => 'tag' | 'folder', 'name' => tên, 'folder_id' => persistent_id hoặc nil}.
+        # Tên tag không được trùng tag khác (không phân biệt hoa thường); tên thư mục không trùng thư mục cùng cấp. Một bước hoàn tác.
+        def tm_create(payload)
+          check_model!
+          folder = tm_kind(payload) == 'folder'
+          name = tm_clean_name(payload['name'], folder)
+          raw = payload['folder_id']
+          raise 'Mã thư mục không hợp lệ.' unless raw.nil? || raw.is_a?(Integer)
+          raise 'Phiên bản SketchUp này chưa có thư mục tag (cần SketchUp 2021 trở lên).' if (folder || raw) && !folders_supported?
+          layers, folders = tag_tree_read
+          parent = raw.nil? ? nil : (folders.find { |entry| entry[:id] == raw } or raise 'Không tìm thấy thư mục này. Hãy làm mới danh sách.')
+          if folder
+            raise "Đã có thư mục \"#{name}\" ở đây." if folders.any? { |entry| entry[:parent_id] == raw && Tags.key(entry[:name]) == Tags.key(name) }
+          elsif (same = layers.find { |entry| Tags.key(entry[:name]) == Tags.key(name) })
+            raise "Đã có tag \"#{same[:name]}\" trong model."
+          end
+          Data.transaction(@model, "VGD BIM · Tạo #{folder ? 'thư mục' : 'tag'}") do
+            if folder
+              (parent ? parent[:object] : @model.layers).add_folder(name)
+            else
+              layer = @model.layers.add(name)
+              layer.folder = parent[:object] if parent
+            end
+          end
+          emit('tag_tree', tag_tree_state)
+          where = parent ? " trong thư mục \"#{parent[:name]}\"" : ''
+          emit('message', {text: "Đã tạo #{folder ? 'thư mục' : 'tag'} \"#{name}\"#{where}."})
+        end
+
+        # Đổi tên tag hoặc thư mục (nhấp đúp vào tên). payload: {'kind' => 'tag' | 'folder', 'id' => persistent_id, 'name' => tên mới}.
+        # Untagged không đổi tên được; tên tag không trùng tag khác. Ghim / gần đây theo tên mới. Một bước hoàn tác.
+        def tm_rename(payload)
+          check_model!
+          folder = tm_kind(payload) == 'folder'
+          id = tm_id(payload)
+          name = tm_clean_name(payload['name'], folder)
+          layers, folders = tag_tree_read
+          item = (folder ? folders : layers).find { |entry| entry[:id] == id }
+          raise "Không tìm thấy #{folder ? 'thư mục' : 'tag'} này. Hãy làm mới danh sách." unless item
+          raise 'Tag Untagged không đổi tên được.' if item[:default]
+          return emit('message', {text: 'Tên không đổi.'}) if item[:name] == name
+          if folder
+            raise "Đã có thư mục \"#{name}\" ở đây." if folders.any? { |entry| entry[:id] != id && entry[:parent_id] == item[:parent_id] && Tags.key(entry[:name]) == Tags.key(name) }
+          elsif (same = layers.find { |entry| entry[:id] != id && Tags.key(entry[:name]) == Tags.key(name) })
+            raise "Đã có tag \"#{same[:name]}\" trong model."
+          end
+          Data.transaction(@model, "VGD BIM · Đổi tên #{folder ? 'thư mục' : 'tag'}") { item[:object].name = name }
+          tm_rename_saved(item[:name], name) unless folder
+          emit('tag_tree', tag_tree_state)
+          emit('message', {text: "Đã đổi tên #{folder ? 'thư mục' : 'tag'} \"#{item[:name]}\" thành \"#{name}\"."})
+        end
+
+        # Rã thư mục: đưa mọi tag và thư mục con ra thư mục cha (hoặc ra gốc) rồi bỏ thư mục. Không đổi tag hay đối tượng nào khác.
+        # payload: {'id' => persistent_id của thư mục}. Một bước hoàn tác.
+        def tm_explode(payload)
+          check_model!
+          raise 'Phiên bản SketchUp này chưa có thư mục tag (cần SketchUp 2021 trở lên).' unless folders_supported?
+          id = tm_id(payload)
+          layers, folders = tag_tree_read
+          item = folders.find { |entry| entry[:id] == id } or raise 'Không tìm thấy thư mục này. Hãy làm mới danh sách.'
+          parent = folders.find { |entry| entry[:id] == item[:parent_id] }
+          container = parent ? parent[:object] : @model.layers
+          kids = folders.select { |entry| entry[:parent_id] == id }
+          tags = layers.select { |entry| entry[:folder_id] == id }
+          Data.transaction(@model, 'VGD BIM · Rã thư mục') do
+            tags.each { |entry| entry[:object].folder = parent && parent[:object] }
+            kids.each { |entry| container.add_folder(entry[:object]) } # add_folder nhận thư mục có sẵn thì chuyển nó sang chỗ mới
+            container.remove_folder(item[:object])
+          end
+          emit('tag_tree', tag_tree_state)
+          where = parent ? "thư mục \"#{parent[:name]}\"" : 'ngoài cùng'
+          emit('message', {text: "Đã rã thư mục \"#{item[:name]}\": #{tags.size} tag và #{kids.size} thư mục con chuyển ra #{where}."})
+        end
+
+        # Danh sách loại trừ: tag và thư mục có tên chứa một từ trong danh sách không hiện ở cây (chỉ ẩn khỏi danh sách, không đổi model).
+        # Lưu trên máy, dùng cho mọi model. payload: {'words' => 'từ 1, từ 2'} (rỗng = bỏ loại trừ).
+        def tm_hide_words(payload)
+          raise 'Danh sách loại trừ không hợp lệ.' unless payload['words'].is_a?(String)
+          Settings.update('tag_hide_words' => payload['words'])
+          emit('tag_tree', tag_tree_state)
+          emit('message', {text: payload['words'].strip.empty? ? 'Đã bỏ danh sách loại trừ.' : 'Đã lưu danh sách loại trừ.'})
         end
 
         # payload: {'kind' => 'tag' | 'folder', 'id' => persistent_id, 'visible' => true / false}
@@ -335,6 +444,32 @@ module VGD
           Settings.set_pinned(name, false)
           recent = Settings.read['recent_tags'].reject { |item| Measure.normalize(item) == Measure.normalize(name) }
           Settings.update('recent_tags' => recent)
+        end
+
+        def tm_kind(payload)
+          kind = payload['kind'].to_s
+          raise 'Loại mục không hợp lệ.' unless %w[tag folder].include?(kind)
+          kind
+        end
+
+        # Tên tag / thư mục người dùng gõ: bỏ khoảng trắng thừa, không rỗng, không quá dài, không dùng tên của tag mặc định.
+        def tm_clean_name(raw, folder)
+          raise 'Tên không hợp lệ.' unless raw.is_a?(String)
+          name = raw.strip.gsub(/\s+/, ' ')
+          noun = folder ? 'thư mục' : 'tag'
+          raise "Hãy nhập tên #{noun}." if name.empty?
+          raise "Tên #{noun} quá dài (tối đa #{Tags::MAX_NAME} ký tự)." if name.length > Tags::MAX_NAME
+          raise "Tên \"#{name}\" là tên tag mặc định của SketchUp, hãy chọn tên khác." if UNTAGGED_NAMES.any? { |item| Tags.key(item) == Tags.key(name) }
+          name
+        end
+
+        # Tag đổi tên: ghim và gần đây theo tên mới.
+        def tm_rename_saved(old_name, new_name)
+          key = Measure.normalize(old_name)
+          data = Settings.read
+          pinned = data['pinned_tags'].map { |item| Measure.normalize(item) == key ? new_name : item }
+          recent = data['recent_tags'].map { |item| Measure.normalize(item) == key ? new_name : item }
+          Settings.update('pinned_tags' => pinned, 'recent_tags' => recent) unless pinned == data['pinned_tags'] && recent == data['recent_tags']
         end
 
         def tm_id(payload)
