@@ -1066,6 +1066,15 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await page.locator('#tag-paint-banner').isHidden() && await page.locator('#tag-tree-paint').getAttribute('aria-pressed')==='false','đã thoát: ẩn thanh đổ tag, nút bỏ nhấn');
   await clear();await rowOf('tag',10).locator('.tm-name').click();
   ok((await calls('tm_paint_tag')).length===0,'đã thoát: bấm tên tag không gửi lệnh đổ');
+  // Lỗi tìm thấy khi rà lại: trạng thái công cụ khi dựng lại tab (mở lại cửa sổ) và tên Layer0 lộ ra ở chip / ô Gán tag
+  await receive('tags',{groups:F.groups,tags:[],selection:2,rules:AUTO_RULES,catalog:CATALOG,folder_rules:FOLDER_RULES,tree:{...TREE,styles_supported:false,pinned:['Layer0'],recent:['Layer0']},paint:{active:true,name:'A. WALL'}});
+  ok(await page.locator('#tag-paint-banner').isVisible() && (await page.locator('#tag-paint-banner').innerText()).includes('A. WALL') && await page.locator('#tag-tree-paint').getAttribute('aria-pressed')==='true','dựng lại tab khi công cụ đang bật (mở lại cửa sổ): hiện thanh đổ tag theo trạng thái Ruby');
+  ok((await page.locator('#tag-tree-chips').innerText()).includes('Untagged') && !(await page.locator('#tag-tree-chips').innerText()).includes('Layer0'),'chip ghim / gần đây của tag mặc định ghi Untagged, không ghi Layer0');
+  ok(await rowOf('tag',14).getByRole('button',{name:/Ghim tag|Bỏ ghim tag/}).count()===0,'dòng Untagged không có nút ghim');
+  await receive('tags',{groups:F.groups,tags:[],selection:2,rules:AUTO_RULES,catalog:CATALOG,folder_rules:FOLDER_RULES,tree:{...TREE,styles_supported:false,layers:[...TREE.layers.filter(l=>l.id!==14),{id:14,name:'Layer0',default:true,visible:true,folder_id:null}],pinned:[],recent:[]},paint:{active:false,name:''}});
+  ok(await page.locator('#tag-paint-banner').isHidden(),'dựng lại tab khi công cụ đã tắt: không có thanh đổ tag');
+  await rowOf('tag',14).locator('.tm-name').click();
+  ok(await page.locator('#tag-pick').inputValue()==='Layer0' && (await page.locator('#tag-pick option:checked').innerText())==='Untagged','bấm Untagged: ô Gán tag hiện chữ Untagged (giá trị vẫn là tag mặc định)');
   // Xóa tag có gán lại
   await clear();await rowOf('tag',12).getByRole('button',{name:/Xóa tag \(/}).click();
   ok(JSON.stringify(await json('tm_delete_preview'))==='{"id":12}','nút thùng rác trên dòng tag: xin Ruby đếm số đối tượng đang dùng tag');

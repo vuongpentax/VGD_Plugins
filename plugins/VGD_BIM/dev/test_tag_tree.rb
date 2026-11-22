@@ -301,6 +301,53 @@ ok('đang mở sửa một group: đổ cho đối tượng ở cấp đang mở
 probe.tm_paint_stop
 VGD::BIM::Settings.update('pinned_tags' => [], 'recent_tags' => [])
 
+# ---- Lỗi tìm thấy khi rà lại (viết test tái hiện trước khi sửa) ----
+# 1. Công cụ cũ báo "đã thoát" muộn không được làm tắt phiên mới.
+model, probe, tags, sel = paint_world
+probe.tm_paint_start('name' => 'A. WALL'); old_tool = model.tool
+probe.tm_paint_stop
+probe.tm_paint_start('name' => 'A. DOOR'); new_tool = model.tool
+old_tool.instance_variable_set(:@finished, false); old_tool.deactivate(nil)
+ok('công cụ cũ báo thoát muộn: phiên mới vẫn bật, Color by Tag vẫn bật', probe.send(:paint_active?) && model.tool.equal?(new_tool) && model.rendering_options['DisplayColorByLayer'] == true)
+x = FEnt.new(tags[2])
+old_tool.instance_variable_set(:@finished, false)
+old_tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[x]]))
+ok('công cụ cũ không đổ được tag nữa', x.layer.equal?(tags[2]))
+probe.tm_paint_stop
+# 2. Đổ ghi vào đúng file đã bật công cụ, kể cả khi cửa sổ đã chuyển sang file khác.
+model, probe, tags, sel = paint_world
+probe.tm_paint_start('name' => 'A. WALL'); tool = model.tool
+other, = paint_world
+probe.instance_variable_set(:@model, other)
+y = FEnt.new(tags[2])
+tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[y]]))
+ok('đổi file khi đang bật: tag lấy từ file đã bật công cụ, không tạo tag ở file khác', y.layer.equal?(tags[0]) && other.layers.to_a.none? { |l| l.name == 'A. WALL' && !l.equal?(other.layers.to_a[0]) } && other.layers.to_a.size == 4)
+probe.instance_variable_set(:@model, model)
+probe.tm_paint_stop
+# 3. Đóng cửa sổ: thoát công cụ, trả Color by Tag; mở lại cửa sổ thì biết trạng thái công cụ.
+model, probe, tags, sel = paint_world
+probe.tm_paint_start('name' => 'A. WALL')
+ok('trạng thái công cụ gửi kèm khi dựng lại tab (tag_paint_state)', probe.tag_paint_state == {active: true, name: 'A. WALL'})
+probe.tm_paint_shutdown
+ok('đóng cửa sổ: thoát công cụ, trả Color by Tag', model.tool.nil? && model.rendering_options['DisplayColorByLayer'] == false && !probe.send(:paint_active?) && probe.tag_paint_state == {active: false, name: ''})
+# 4. Bấm Tô màu theo tag trong lúc đổ: thoát công cụ giữ lựa chọn của người dùng.
+model, probe, tags, sel = paint_world
+probe.tm_paint_start('name' => 'A. WALL')
+probe.tm_color_by_tag('enabled' => true)
+probe.tm_paint_stop
+ok('bật Tô màu theo tag trong lúc đổ: thoát vẫn giữ bật', model.rendering_options['DisplayColorByLayer'] == true)
+# 5. Đổ cho cả lựa chọn gồm cả cạnh (edge) và mọi thứ có tag trong lựa chọn.
+model, probe, tags, sel = paint_world
+probe.define_singleton_method(:taggable_selection) { [] } # Gán tag bỏ cạnh; đổ tag không dùng bộ lọc này
+probe.tm_paint_start('name' => 'A. WALL')
+edge = FEnt.new(tags[2]); face = FEnt.new(tags[2])
+sel.instance_variable_set(:@list, [edge, face])
+model.tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[edge]]))
+ok('bấm vào cạnh đang chọn: đổ cho cả lựa chọn, kể cả cạnh', edge.layer.equal?(tags[0]) && face.layer.equal?(tags[0]))
+probe.tm_paint_stop
+VGD::BIM::Settings.update('pinned_tags' => [], 'recent_tags' => [])
+
+
 # ---- Xóa tag có gán lại ----
 def del_world
   model, probe, live, fold = world

@@ -2,6 +2,21 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.31: đã kiểm tra tự động
+
+Rà lại beta.28–30, sửa lỗi (mỗi lỗi có test tái hiện viết trước khi sửa):
+
+- Công cụ hút / đổ cũ báo thoát muộn từng tắt phiên mới (và trả Color by Tag sai lúc): mọi lời gọi lại mang theo công cụ, công cụ cũ bị bỏ qua (`paint_tool?`).
+- Đổi file SketchUp khi đang bật công cụ: đổ tag từng ghi theo file của cửa sổ; nay luôn ghi vào file đã bật công cụ (`@paint[:model]`, `tm_default_layer`).
+- Đóng cửa sổ khi đang đổ: công cụ từng chạy tiếp, Color by Tag còn bật, mở lại cửa sổ thì nút báo sai trạng thái; nay đóng cửa sổ là thoát công cụ (`tm_paint_shutdown`) và dữ liệu tab gửi kèm trạng thái công cụ (`paint`).
+- Bấm Tô màu theo tag trong lúc đổ: thoát công cụ từng ghi đè lựa chọn của người dùng; nay giữ.
+- Đổ cho cả lựa chọn từng bỏ cạnh (dùng bộ lọc của Gán tag), kể cả khi bấm đúng vào cạnh; nay đổ cho mọi thứ có tag trong lựa chọn.
+- Tên Layer0 lộ ở chip ghim / gần đây và ô Gán tag: nay ghi Untagged; dòng Untagged không còn nút ghim.
+
+Kiểm tra: `dev/test_tag_tree.rb` (thêm 7 kiểm tra), `dev/test_ui_images.cjs` (520), `dev/test_ui_en.cjs`, `dev/test_ui.cjs`, `dev/test_ui_sheets.cjs`, `dev/test_report_page.cjs`, `ruby dev/run_tests.rb`, `ruby tests/test_vgd_conventions.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** như beta.30; thêm: `select_tool(nil)` trong lúc đóng cửa sổ.
+
 ## Bản 1.1.1-beta.30: đã kiểm tra tự động
 
 Công cụ Hút / đổ tag (như Paint Bucket), thay Lấy mẫu; bật Color by Tag trong lúc dùng.

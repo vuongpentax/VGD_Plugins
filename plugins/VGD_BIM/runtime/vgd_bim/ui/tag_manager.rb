@@ -309,9 +309,10 @@ module VGD
           return tm_paint_stop if paint_active?
           name = tm_paint_name(payload['name'])
           release_preview if respond_to?(:release_preview, true) # khung đánh dấu của bảng không được che hay chiếm chuột của công cụ
-          tool = TagPaintTool.new(name, on_paint: ->(entity, mode) { safely { tm_paint_apply(entity, mode) } },
-                                        on_sample: ->(entity) { safely { tm_paint_sample(entity) } },
-                                        on_done: -> { safely { tm_paint_done } })
+          # Mỗi lời gọi lại mang theo chính công cụ: công cụ cũ (đã thay) báo muộn thì bị bỏ qua, không đụng phiên đang dùng.
+          tool = TagPaintTool.new(name, on_paint: ->(entity, mode) { safely { tm_paint_apply(entity, mode, tool) } },
+                                        on_sample: ->(entity) { safely { tm_paint_sample(entity, tool) } },
+                                        on_done: -> { safely { tm_paint_done(tool) } })
           @paint = {model: @model, tool: tool, color_by_tag: color_by_tag?}
           tm_set_color_by_tag(@model, true)
           @model.select_tool(tool)
@@ -321,8 +322,25 @@ module VGD
 
         def tm_paint_stop
           return emit('tag_paint', {active: false, name: ''}) unless paint_active?
+          tool = @paint[:tool]
           @paint[:model].select_tool(nil) # SketchUp gọi deactivate -> tm_paint_done
-          tm_paint_done
+          tm_paint_done(tool)
+        end
+
+        # Cửa sổ đóng: thoát công cụ và trả Color by Tag, không gửi gì cho giao diện (cửa sổ đã đóng).
+        def tm_paint_shutdown
+          return unless @paint
+          paint = @paint
+          @paint = nil # công cụ báo thoát sau đó (deactivate) bị bỏ qua
+          paint[:model].select_tool(nil)
+          tm_set_color_by_tag(paint[:model], false) unless paint[:color_by_tag]
+        rescue StandardError => error
+          BIM.log("Thoát công cụ hút / đổ tag khi đóng cửa sổ lỗi: #{error.message}")
+        end
+
+        # Trạng thái công cụ gửi kèm dữ liệu tab Soạn tag (mở lại cửa sổ / dựng lại tab vẫn biết công cụ đang bật).
+        def tag_paint_state
+          tm_paint_state
         end
 
         # Đổi tag để đổ khi đang dùng công cụ (bấm tên tag trong danh sách hoặc đổi ô Gán tag). payload: {'name' => tên tag}
@@ -333,7 +351,8 @@ module VGD
         end
 
         # Hút: lấy tag của đối tượng vừa bấm làm tag để đổ; giao diện chọn tag đó trong danh sách (sự kiện tag_sample).
-        def tm_paint_sample(entity)
+        def tm_paint_sample(entity, tool = nil)
+          return if tool && !paint_tool?(tool)
           name = entity && entity.layer ? entity.layer.name.to_s : ''
           name = 'Untagged' if UNTAGGED_NAMES.include?(name)
           @paint[:tool].tag_name = name if paint_active? && !name.empty?
@@ -341,28 +360,30 @@ module VGD
           emit('tag_sample', {name: name})
         end
 
-        # Đổ: mode :single (đối tượng được bấm), :instances (mọi bản sao cùng định nghĩa, Shift), :selection (cả lựa chọn, như Paint Bucket).
-        # Bỏ qua đối tượng bị khóa; tag chưa có trong model thì tạo (trừ Untagged); mỗi lần bấm là một bước hoàn tác.
-        def tm_paint_apply(entity, mode)
-          return unless paint_active?
+        # Đổ: mode :single (đối tượng được bấm), :instances (mọi bản sao cùng định nghĩa, Shift), :selection (mọi thứ có tag trong lựa
+        # chọn, kể cả cạnh, như Paint Bucket). Bỏ qua đối tượng bị khóa; tag chưa có trong model thì tạo (trừ Untagged); mỗi lần bấm là
+        # một bước hoàn tác. Luôn ghi vào file đã bật công cụ (@paint[:model]), kể cả khi cửa sổ đã chuyển sang file khác.
+        def tm_paint_apply(entity, mode, tool = nil)
+          return unless paint_active? && (tool.nil? || paint_tool?(tool))
+          model = @paint[:model]
           name = @paint[:tool].tag_name
           items = case mode
                   when :instances then entity.definition.instances.to_a
-                  when :selection then taggable_selection
+                  when :selection then model.selection.to_a + [entity]
                   else [entity]
                   end
           items = items.select { |item| item.respond_to?(:layer) && (!item.respond_to?(:valid?) || item.valid?) }.uniq
           locked, free = items.partition { |item| item.respond_to?(:locked?) && item.locked? }
           untagged = UNTAGGED_NAMES.include?(name)
-          layer = untagged ? untagged_layer : Tags.find_layer(@model, name)
+          layer = untagged ? tm_default_layer(model) : Tags.find_layer(model, name)
           targets = layer ? free.reject { |item| item.layer == layer } : free
           unless targets.empty?
-            Data.transaction(@model, 'VGD BIM · Đổ tag') do
-              layer ||= @model.layers.add(Tags.normalize_name(name))
+            Data.transaction(model, 'VGD BIM · Đổ tag') do
+              layer ||= model.layers.add(Tags.normalize_name(name))
               targets.each { |item| item.layer = layer }
             end
             Settings.touch_recent(name) unless untagged
-            emit('tag_tree', tag_tree_state)
+            emit('tag_tree', tag_tree_state) if model.equal?(@model)
           end
           text = "Đã đổ tag #{name} cho #{targets.size} đối tượng."
           text += " Đã đúng tag sẵn: #{free.size - targets.size}." if free.size > targets.size
@@ -372,8 +393,8 @@ module VGD
         end
 
         # Công cụ đã bị gỡ (Esc, chọn công cụ khác, bấm lại nút): trả Color by Tag như trước khi bật công cụ.
-        def tm_paint_done
-          return unless @paint
+        def tm_paint_done(tool = nil)
+          return unless @paint && (tool.nil? || paint_tool?(tool))
           paint = @paint
           @paint = nil
           tm_set_color_by_tag(paint[:model], paint[:color_by_tag]) unless paint[:color_by_tag]
@@ -445,6 +466,7 @@ module VGD
           enabled = payload['enabled']
           raise 'Giá trị không hợp lệ.' unless enabled == true || enabled == false
           Data.transaction(@model, 'VGD BIM · Tô màu theo tag') { @model.rendering_options['DisplayColorByLayer'] = enabled }
+          @paint[:color_by_tag] = enabled if paint_active? && @paint[:model].equal?(@model) # thoát công cụ đổ tag giữ lựa chọn này
           emit('tag_tree', tag_tree_state)
         end
 
@@ -567,6 +589,15 @@ module VGD
 
         def paint_active?
           !@paint.nil?
+        end
+
+        def paint_tool?(tool)
+          paint_active? && @paint[:tool].equal?(tool)
+        end
+
+        # Tag mặc định (Untagged / Layer0) của một model.
+        def tm_default_layer(model)
+          model.layers.to_a.find { |layer| UNTAGGED_NAMES.include?(layer.name.to_s) } || model.layers[0]
         end
 
         def tm_paint_state

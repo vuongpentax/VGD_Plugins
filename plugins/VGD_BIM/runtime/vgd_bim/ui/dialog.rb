@@ -117,7 +117,7 @@ module VGD
           register_front_callbacks
           register_tag_auto_callbacks
           register_tag_manager_callbacks
-          @dialog.set_on_closed { @closed = true; @capture[:cancel] = true if @capture; @ready = false; @generation += 1; cleanup_table_view; detach; ::UI.stop_timer(@selection_timer) if @selection_timer }
+          @dialog.set_on_closed { @closed = true; @capture[:cancel] = true if @capture; @ready = false; @generation += 1; cleanup_table_view; tm_paint_shutdown; detach; ::UI.stop_timer(@selection_timer) if @selection_timer }
         end
         def show; @dialog.visible? ? @dialog.bring_to_front : @dialog.show; end
         def visible?; @dialog.visible?; end
@@ -1367,7 +1367,7 @@ module VGD
             layer = Tags.find_layer(@model, tag['name'])
             tag.merge('in_model' => !layer.nil?, 'visible' => layer ? layer.visible? : true)
           end
-          {tags: tags, groups: Tags::GROUPS, selection: taggable_selection.size, rules: TagRules.load, catalog: TagCatalog.summary, folder_rules: FolderRules.load, tree: tag_tree_state}
+          {tags: tags, groups: Tags::GROUPS, selection: taggable_selection.size, rules: TagRules.load, catalog: TagCatalog.summary, folder_rules: FolderRules.load, tree: tag_tree_state, paint: tag_paint_state}
         end
         def assign_tag(payload)
           check_model!

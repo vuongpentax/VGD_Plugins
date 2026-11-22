@@ -202,6 +202,7 @@ function tagEditor(data){
   TAG_TABS.forEach(([key])=>{const pane=node('div',undefined,'tag-pane');pane.id=`tag-pane-${key}`;pane.setAttribute('role','tabpanel');panes[key]=pane;});
   $('content').append(head,panes.model,panes.set,panes.auto,panes.lib);
   if(data.tree)treeState.data=data.tree;
+  if(data.paint){paintState.active=!!data.paint.active;paintState.name=data.paint.name||'';} // mở lại cửa sổ khi công cụ hút / đổ đang bật
   tagTreePane(panes.model);
   tagSetPane(data,panes.set);
   autoTagCard(data,panes.auto);
@@ -411,7 +412,7 @@ function paintTagTree(){
         row.append(style);
       }else row.append(node('span',undefined,'tm-pad-style'));
     }
-    if(!isFolder){
+    if(!isFolder&&!isDefaultTag(item)){
       const pinned=pinnedKeys(data).has(foldText(item.name));
       row.append(treeButton(pinned?'pinOn':'pin',pinned?'Bỏ ghim tag':'Ghim tag',()=>call('tm_pin',JSON.stringify({name:item.name,pinned:!pinned})),pinned?'on':''));
     }
@@ -537,7 +538,7 @@ function selectAssignTag(name){
   if(paintState.active)call('tm_paint_tag',JSON.stringify({name}));
   const pick=$('tag-pick'),go=$('tag-assign');
   if(pick){
-    if(![...pick.options].some(o=>o.value===name))pick.insertBefore(new Option(name,name),pick.firstChild);
+    if(![...pick.options].some(o=>o.value===name))pick.insertBefore(new Option(UNTAGGED_TREE.includes(name)?'Untagged':name,name),pick.firstChild);
     pick.value=name;
     if(go)go.disabled=go.dataset.count==='0'||!pick.options.length;
   }
@@ -555,7 +556,7 @@ function paintTreeChips(data){
     const row=node('div',undefined,'tm-chips');row.append(node('span',label,'muted tm-chips-label'));
     names.forEach(name=>{
       const chip=node('span',undefined,'tm-chip'+(exists.has(foldText(name))?'':' missing')+(treeState.focus===name?' focus':''));
-      const pick=node('button',name,'tm-chip-name');pick.type='button';pick.title='Chọn tag này cho nút Gán tag';pick.onclick=()=>selectAssignTag(name);
+      const pick=node('button',UNTAGGED_TREE.includes(name)?'Untagged':name,'tm-chip-name');pick.type='button';pick.title='Chọn tag này cho nút Gán tag';pick.onclick=()=>selectAssignTag(name);
       const pin=treeButton(isPinned?'pinOn':'pin',isPinned?'Bỏ ghim tag':'Ghim tag',()=>call('tm_pin',JSON.stringify({name,pinned:!isPinned})),isPinned?'on':'');
       chip.append(pick,pin);row.append(chip);
     });
