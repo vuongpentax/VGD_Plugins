@@ -1038,19 +1038,34 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await exCard.isHidden(),'Ruby báo đã nhập xong: đóng thẻ xem trước');
   await receive('tag_excel',EXCEL);await exCard.getByRole('button',{name:'Hủy'}).click();
   ok(await exCard.isHidden() && (await calls('tm_excel_apply')).length===1,'Hủy: đóng thẻ, không nhập gì thêm');
-  // Lấy mẫu tag bằng công cụ bấm vào đối tượng
+  // Hút / đổ tag (như Paint Bucket)
   await receive('tag_tree',{...TREE,styles_supported:false,pinned:[],recent:[]});
-  await clear();await page.locator('#tag-tree-sample').click();
-  ok((await calls('tm_sample')).length===1,'nút Lấy mẫu: gửi lệnh bật công cụ lấy mẫu');
+  await page.locator('#tag-pick').selectOption({index:0});const firstTag=await page.locator('#tag-pick').inputValue();
+  await clear();await page.locator('#tag-tree-paint').click();
+  ok(JSON.stringify(await json('tm_paint_start'))===JSON.stringify({name:firstTag}),'nút Hút / đổ tag: bật công cụ với tag đang chọn ở ô Gán tag');
+  ok(await page.locator('#tag-paint-banner').isHidden() && await page.locator('#tag-tree-paint').getAttribute('aria-pressed')==='false','chưa nhận trạng thái từ Ruby: chưa hiện thanh đổ tag');
+  await receive('tag_paint',{active:true,name:''});
+  ok(await page.locator('#tag-paint-banner').isVisible() && (await page.locator('#tag-paint-banner').innerText()).includes('Chưa có tag để đổ') && await page.locator('#tag-tree-paint').getAttribute('aria-pressed')==='true','đang bật, chưa có tag: thanh báo hướng dẫn hút tag, nút ở trạng thái nhấn');
   await page.click('#tag-tab-set');
-  await receive('tag_sample',{name:'A. DOOR'});
-  ok(await page.locator('#tag-pane-model').isVisible() && await page.locator('#tag-pick').inputValue()==='A. DOOR','lấy mẫu xong: chuyển về tab Trong model và chọn tag đó trong ô Gán tag');
-  ok(await rowOf('tag',12).evaluate(el=>el.classList.contains('focus')) && await rowOf('tag',12).isVisible(),'lấy mẫu xong: mở các thư mục chứa tag (A. ARCHITECTURAL > Con) và sáng dòng tag');
-  ok((await message()).includes('Đã lấy tag "A. DOOR"'),'lấy mẫu xong: báo đã lấy tag');
+  await receive('tag_paint',{active:true,name:'A. DOOR'});await receive('tag_sample',{name:'A. DOOR'});
+  ok(await page.locator('#tag-pane-model').isVisible() && await page.locator('#tag-pick').inputValue()==='A. DOOR','hút tag: chuyển về tab Trong model và chọn tag đó trong ô Gán tag');
+  ok(await rowOf('tag',12).evaluate(el=>el.classList.contains('focus')) && await rowOf('tag',12).isVisible(),'hút tag: mở các thư mục chứa tag (A. ARCHITECTURAL > Con) và sáng dòng tag');
+  ok((await message()).includes('Đã hút tag "A. DOOR"') && (await page.locator('#tag-paint-banner').innerText()).includes('Đang đổ tag: A. DOOR'),'hút tag: báo đã hút, thanh ghi tag đang đổ');
+  ok((await calls('tm_paint_tag')).length===0,'hút tag (Ruby đã biết tag mới): không gửi ngược lại');
+  await clear();await rowOf('tag',10).locator('.tm-name').click();
+  ok(JSON.stringify(await json('tm_paint_tag'))==='{"name":"A. WALL"}','đang bật công cụ: bấm tên tag trong danh sách thì đổi tag để đổ');
+  await clear();await page.locator('#tag-pick').selectOption('A. DOOR');
+  ok(JSON.stringify(await json('tm_paint_tag'))==='{"name":"A. DOOR"}','đang bật công cụ: đổi ô Gán tag cũng đổi tag để đổ');
   await receive('tag_sample',{name:'Untagged'});
-  ok((await message()).includes('chưa có tag') && await page.locator('#tag-pick').inputValue()==='A. DOOR','lấy mẫu đối tượng Untagged: báo chưa có tag, không đổi ô Gán tag');
+  ok((await message()).includes('bỏ tag') && await page.locator('#tag-pick').inputValue()==='A. DOOR','hút Untagged: báo bấm để bỏ tag, không đổi ô Gán tag');
   await receive('tag_sample',{name:''});
   ok((await message()).includes('Không bấm trúng'),'bấm vào chỗ trống: báo không bấm trúng đối tượng');
+  await clear();await page.click('#tag-paint-stop');
+  ok((await calls('tm_paint_stop')).length===1,'nút Thoát: gửi lệnh thoát công cụ');
+  await receive('tag_paint',{active:false,name:''});
+  ok(await page.locator('#tag-paint-banner').isHidden() && await page.locator('#tag-tree-paint').getAttribute('aria-pressed')==='false','đã thoát: ẩn thanh đổ tag, nút bỏ nhấn');
+  await clear();await rowOf('tag',10).locator('.tm-name').click();
+  ok((await calls('tm_paint_tag')).length===0,'đã thoát: bấm tên tag không gửi lệnh đổ');
   // Xóa tag có gán lại
   await clear();await rowOf('tag',12).getByRole('button',{name:/Xóa tag \(/}).click();
   ok(JSON.stringify(await json('tm_delete_preview'))==='{"id":12}','nút thùng rác trên dòng tag: xin Ruby đếm số đối tượng đang dùng tag');

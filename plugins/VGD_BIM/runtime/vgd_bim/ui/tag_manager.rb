@@ -14,7 +14,9 @@ module VGD
           @dialog.add_action_callback('tm_isolate') { |_ctx, payload| safely { tm_isolate(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_color') { |_ctx, payload| safely { tm_color(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_line_style') { |_ctx, payload| safely { tm_line_style(JSON.parse(payload)) } }
-          @dialog.add_action_callback('tm_sample') { |_ctx, _payload| safely { tm_sample } }
+          @dialog.add_action_callback('tm_paint_start') { |_ctx, payload| safely { tm_paint_start(JSON.parse(payload)) } }
+          @dialog.add_action_callback('tm_paint_stop') { |_ctx, _payload| safely { tm_paint_stop } }
+          @dialog.add_action_callback('tm_paint_tag') { |_ctx, payload| safely { tm_paint_tag(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_delete_preview') { |_ctx, payload| safely { tm_delete_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_delete') { |_ctx, payload| safely { tm_delete(JSON.parse(payload)) } }
           @dialog.add_action_callback('tm_excel_open') { |_ctx, _payload| safely { tm_excel_open } }
@@ -299,17 +301,84 @@ module VGD
           emit('message', {text: text})
         end
 
-        # Công cụ lấy mẫu: bấm vào đối tượng trong view để lấy tag, kết quả gửi cho giao diện (sự kiện tag_sample) để chọn sẵn trong ô Gán tag.
-        def tm_sample
+        # Công cụ hút / đổ tag (TagPaintTool, như Paint Bucket). payload: {'name' => tag đang chọn ở ô Gán tag, rỗng = hút trước}.
+        # Trong lúc dùng bật Color by Tag để thấy tag; thoát công cụ thì trả Color by Tag về như trước (không qua bước hoàn tác).
+        # Bấm lại khi đang bật thì thoát.
+        def tm_paint_start(payload)
           check_model!
-          release_preview if respond_to?(:release_preview, true) # khung đánh dấu của bảng không được che hay chiếm chuột của công cụ lấy mẫu
-          @sample_tool = TagSampleTool.new(->(name) { safely { tm_sampled(name) } }, -> { @sample_tool = nil })
-          @model.select_tool(@sample_tool)
-          emit('message', {text: 'Bấm vào một đối tượng trong view để lấy tag của nó (Esc để hủy).'})
+          return tm_paint_stop if paint_active?
+          name = tm_paint_name(payload['name'])
+          release_preview if respond_to?(:release_preview, true) # khung đánh dấu của bảng không được che hay chiếm chuột của công cụ
+          tool = TagPaintTool.new(name, on_paint: ->(entity, mode) { safely { tm_paint_apply(entity, mode) } },
+                                        on_sample: ->(entity) { safely { tm_paint_sample(entity) } },
+                                        on_done: -> { safely { tm_paint_done } })
+          @paint = {model: @model, tool: tool, color_by_tag: color_by_tag?}
+          tm_set_color_by_tag(@model, true)
+          @model.select_tool(tool)
+          emit('tag_paint', tm_paint_state)
+          emit('tag_tree', tag_tree_state)
         end
 
-        def tm_sampled(name)
-          emit('tag_sample', {name: name.to_s})
+        def tm_paint_stop
+          return emit('tag_paint', {active: false, name: ''}) unless paint_active?
+          @paint[:model].select_tool(nil) # SketchUp gọi deactivate -> tm_paint_done
+          tm_paint_done
+        end
+
+        # Đổi tag để đổ khi đang dùng công cụ (bấm tên tag trong danh sách hoặc đổi ô Gán tag). payload: {'name' => tên tag}
+        def tm_paint_tag(payload)
+          return unless paint_active?
+          @paint[:tool].tag_name = tm_paint_name(payload['name'])
+          emit('tag_paint', tm_paint_state)
+        end
+
+        # Hút: lấy tag của đối tượng vừa bấm làm tag để đổ; giao diện chọn tag đó trong danh sách (sự kiện tag_sample).
+        def tm_paint_sample(entity)
+          name = entity && entity.layer ? entity.layer.name.to_s : ''
+          name = 'Untagged' if UNTAGGED_NAMES.include?(name)
+          @paint[:tool].tag_name = name if paint_active? && !name.empty?
+          emit('tag_paint', tm_paint_state) if paint_active?
+          emit('tag_sample', {name: name})
+        end
+
+        # Đổ: mode :single (đối tượng được bấm), :instances (mọi bản sao cùng định nghĩa, Shift), :selection (cả lựa chọn, như Paint Bucket).
+        # Bỏ qua đối tượng bị khóa; tag chưa có trong model thì tạo (trừ Untagged); mỗi lần bấm là một bước hoàn tác.
+        def tm_paint_apply(entity, mode)
+          return unless paint_active?
+          name = @paint[:tool].tag_name
+          items = case mode
+                  when :instances then entity.definition.instances.to_a
+                  when :selection then taggable_selection
+                  else [entity]
+                  end
+          items = items.select { |item| item.respond_to?(:layer) && (!item.respond_to?(:valid?) || item.valid?) }.uniq
+          locked, free = items.partition { |item| item.respond_to?(:locked?) && item.locked? }
+          untagged = UNTAGGED_NAMES.include?(name)
+          layer = untagged ? untagged_layer : Tags.find_layer(@model, name)
+          targets = layer ? free.reject { |item| item.layer == layer } : free
+          unless targets.empty?
+            Data.transaction(@model, 'VGD BIM · Đổ tag') do
+              layer ||= @model.layers.add(Tags.normalize_name(name))
+              targets.each { |item| item.layer = layer }
+            end
+            Settings.touch_recent(name) unless untagged
+            emit('tag_tree', tag_tree_state)
+          end
+          text = "Đã đổ tag #{name} cho #{targets.size} đối tượng."
+          text += " Đã đúng tag sẵn: #{free.size - targets.size}." if free.size > targets.size
+          text += " Bỏ qua #{locked.size} đối tượng bị khóa." unless locked.empty?
+          text += ' Tag này đang tắt hiển thị nên các đối tượng sẽ bị ẩn.' if layer && !targets.empty? && !layer.visible?
+          emit('message', {text: text})
+        end
+
+        # Công cụ đã bị gỡ (Esc, chọn công cụ khác, bấm lại nút): trả Color by Tag như trước khi bật công cụ.
+        def tm_paint_done
+          return unless @paint
+          paint = @paint
+          @paint = nil
+          tm_set_color_by_tag(paint[:model], paint[:color_by_tag]) unless paint[:color_by_tag]
+          emit('tag_paint', {active: false, name: ''})
+          emit('tag_tree', tag_tree_state) if paint[:model].equal?(@model)
         end
 
         # Xóa tag có gán lại, bước 1: đếm số đối tượng (kể cả bên trong group / component) đang dùng tag, để giao diện hỏi lại trước khi xóa.
@@ -494,6 +563,28 @@ module VGD
 
         def folders_supported?
           @model.layers.respond_to?(:folders)
+        end
+
+        def paint_active?
+          !@paint.nil?
+        end
+
+        def tm_paint_state
+          {active: paint_active?, name: paint_active? ? @paint[:tool].tag_name : ''}
+        end
+
+        def tm_paint_name(raw)
+          raise 'Tên tag không hợp lệ.' unless raw.nil? || raw.is_a?(String)
+          name = raw.to_s.strip.gsub(/\s+/, ' ')
+          raise "Tên tag quá dài (tối đa #{Tags::MAX_NAME} ký tự)." if name.length > Tags::MAX_NAME
+          UNTAGGED_NAMES.include?(name) ? 'Untagged' : name
+        end
+
+        # Bật / tắt Color by Tag khi bật / thoát công cụ hút / đổ tag: chỉ là cách xem, không ghi thành bước hoàn tác.
+        def tm_set_color_by_tag(model, value)
+          model.rendering_options['DisplayColorByLayer'] = value
+        rescue StandardError => error
+          BIM.log("Không đổi được Color by Tag: #{error.message}")
         end
 
         def isolation_active?

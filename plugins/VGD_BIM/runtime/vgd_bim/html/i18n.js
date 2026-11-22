@@ -248,11 +248,11 @@ const VGD_I18N=(()=>{
     'Đã ghim':'Pinned','Gần đây':'Recent','Ghim tag':'Pin tag','Bỏ ghim tag':'Unpin tag','Chọn tag này cho nút Gán tag':'Choose this tag for the Assign tag button',
     'Bấm tên để chọn tag cho nút Gán tag · kéo thả vào thư mục để chuyển':'Click the name to choose the tag for the Assign tag button · drag and drop onto a folder to move it','Thả vào đây để đưa tag ra ngoài thư mục (gốc)':'Drop here to move the tag out of its folder (root)',
     'Tag đã nằm sẵn ở đó.':'The tag is already there.','Tag Untagged không xếp vào thư mục được.':'The Untagged tag cannot be placed in a folder.','Mã thư mục không hợp lệ.':'The folder id is not valid.',
-    'Lấy mẫu':'Sample','Bấm vào một đối tượng trong view để lấy tag của nó (Esc để hủy)':'Click an object in the view to pick up its tag (Esc to cancel)','Xóa tag (các đối tượng đang dùng sẽ chuyển sang tag khác)':'Delete tag (objects using it are moved to another tag)',
-    'Không bấm trúng đối tượng nào.':'No object was clicked.','Đối tượng này chưa có tag (Untagged).':'This object has no tag (Untagged).',
+    'Xóa tag (các đối tượng đang dùng sẽ chuyển sang tag khác)':'Delete tag (objects using it are moved to another tag)',
+    'Không bấm trúng đối tượng nào.':'No object was clicked.',
     'Chuyển các đối tượng sang tag:':'Move the objects to tag:','Chuyển các đối tượng sang tag':'Move the objects to tag','Untagged (không có tag)':'Untagged (no tag)','Xóa tag':'Delete tag',
     'Không đối tượng nào bị xóa: chỉ đổi tag của chúng rồi gỡ tag.':'No object is deleted: their tag is changed and then the tag is removed.',
-    'Bấm vào một đối tượng trong view để lấy tag của nó (Esc để hủy).':'Click an object in the view to pick up its tag (Esc to cancel).',
+    
     'Mã tag nhận không hợp lệ.':'The receiving tag id is not valid.','Không tìm thấy tag nhận. Hãy làm mới danh sách.':'The receiving tag was not found. Refresh the list.','Tag nhận phải khác tag cần xóa.':'The receiving tag must differ from the tag to delete.','Tag Untagged không xóa được.':'The Untagged tag cannot be deleted.',
     'Nhập Excel':'Import Excel','Nhập tag (kèm màu, kiểu nét, thư mục) từ file Excel .xlsx':'Import tags (with color, line style and folder) from an Excel .xlsx file','Nhập tag từ Excel':'Import tags from Excel','Đã có':'Exists','Màu':'Color','Thư mục':'Folder',
     'Cập nhật cả tag đã có (màu, kiểu nét, thư mục); mặc định chỉ tạo tag mới':'Also update tags that already exist (color, line style, folder); by default only new tags are created',
@@ -264,7 +264,10 @@ const VGD_I18N=(()=>{
     'Trong model':'In model',
     'Mắt: ẩn / hiện · Nút tròn: cô lập, bấm lại để trả như cũ · Nhấp đúp tên: đổi tên · Chuột phải: hiện / ẩn ở mọi scene, việc với thư mục. Mỗi thao tác hoàn tác được.':'Eye: hide / show · Round button: isolate, click again to restore · Double-click a name: rename · Right-click: show / hide in every scene, folder actions. Each action can be undone.',
     'Chế độ thu gọn':'Compact mode','Ẩn ô màu và kiểu nét để danh sách gọn hơn':'Hide the color and line style boxes for a shorter list','Danh sách loại trừ...':'Exclusion list...','Danh sách loại trừ':'Exclusion list',
-    'Tạo ▾':'New ▾','Tag mới':'New tag','Tạo':'Create','Thư mục mới':'New folder','Bật tất cả tag':'Turn on all tags','Tắt tất cả tag':'Turn off all tags','Bật tất cả thư mục':'Turn on all folders','Tắt tất cả thư mục':'Turn off all folders',
+    'Tạo ▾':'New ▾','Tag mới':'New tag','Hút / đổ tag':'Pick / paint tag','Bấm: đổ tag đang chọn · Alt + bấm: hút tag · Shift + bấm: mọi bản sao cùng component · Bấm vào món đang chọn: đổ cho cả lựa chọn. Trong lúc dùng, SketchUp bật Color by Tag.':'Click: paint the selected tag · Alt + click: pick a tag · Shift + click: every copy of the component · Click an object in the selection: paint the whole selection. SketchUp turns on Color by Tag while the tool is in use.',
+    'Đang đổ tag:':'Painting tag:','Chưa có tag để đổ: Alt + bấm vào đối tượng để hút tag.':'No tag to paint yet: Alt + click an object to pick its tag.','Thoát':'Exit',
+    'Bấm: đổ · Alt + bấm: hút · Shift + bấm: mọi bản sao · Bấm món đang chọn: cả lựa chọn · Esc trong SketchUp: thoát':'Click: paint · Alt + click: pick · Shift + click: every copy · Click a selected object: whole selection · Esc in SketchUp: exit',
+    'Đã hút Untagged: bấm vào đối tượng để bỏ tag của nó.':'Picked Untagged: click an object to remove its tag.','Tên tag không hợp lệ.':'Invalid tag name.','Tạo':'Create','Thư mục mới':'New folder','Bật tất cả tag':'Turn on all tags','Tắt tất cả tag':'Turn off all tags','Bật tất cả thư mục':'Turn on all folders','Tắt tất cả thư mục':'Turn off all folders',
     'Rã thư mục':'Explode folder','Đưa tag và thư mục con ra ngoài rồi bỏ thư mục này':'Move the tags and subfolders out, then remove this folder','Tạo tag trong thư mục':'New tag in this folder','Tạo thư mục con':'New subfolder',
     'Scene được tick giữ nguyên thư mục này.':'Ticked scenes keep this folder as it is.','Tên thư mục mới':'New folder name','Tên tag mới':'New tag name','Ở ngoài cùng':'At the top level','Hãy nhập tên thư mục.':'Enter a folder name.','Hãy nhập tên tag.':'Enter a tag name.',
     'Ví dụ: old, tạm, z_':'For example: old, temp, z_','Từ khóa loại trừ':'Exclusion keywords','Bỏ loại trừ':'Clear exclusions',
@@ -571,6 +574,9 @@ const VGD_I18N=(()=>{
   rule(/^Mỗi luật tối đa (\d+) từ khóa, mỗi từ khóa không quá (\d+) ký tự\.$/,(m,a,b)=>`Each rule allows at most ${a} keywords of ${b} characters.`);
   rule(/^(\d+) đối tượng( · .*)?$/,(m,n,rest)=>`${plural(n,'object','objects')}${rest||''}`);
   rule(/^Nhập (\d+) cụm \((\d+) tag\)$/,(m,a,b)=>`Import ${plural(a,'cluster','clusters')} (${plural(b,'tag','tags')})`);
+  rule(/^Đã hút tag "(.*)"\. Bấm vào đối tượng để đổ\.$/,(m,name)=>`Picked tag "${name}". Click objects to paint it.`);
+  rule(/^Đã đổ tag (.+?) cho (\d+) đối tượng\.(?: Đã đúng tag sẵn: (\d+)\.)?(?: Bỏ qua (\d+) đối tượng bị khóa\.)?( Tag này đang tắt hiển thị nên các đối tượng sẽ bị ẩn\.)?$/,(m,name,n,same,locked,hidden)=>
+    `Painted tag ${name} on ${n} objects.${same?` Already tagged: ${same}.`:''}${locked?` Skipped ${locked} locked objects.`:''}${hidden?' This tag is turned off, so the objects will be hidden.':''}`);
   rule(/^Đã (bật|tắt) (\d+) (tag|thư mục)\.$/,(m,act,n,kind)=>`Turned ${act==='bật'?'on':'off'} ${n} ${kind==='tag'?'tags':'folders'}.`);
   rule(/^Danh sách loại trừ đang ẩn (\d+) mục$/,(m,n)=>`The exclusion list hides ${n} items`);
   rule(/^Trong thư mục (.+)$/,(m,name)=>`In folder ${name}`);
@@ -584,7 +590,6 @@ const VGD_I18N=(()=>{
     `${act==='hiện'?'Showed':'Hid'} ${kind==='tag'?'tag':'folder'} ${name} in ${n} scenes.${kept?` Kept ${kept} excluded scenes.`:''}${skipped?` Skipped ${skipped} scenes that do not save tag visibility (${list}).`:''}`);
   rule(/^Không có scene: (.*)\. Hãy làm mới danh sách\.$/,(m,list)=>`No such scene: ${list}. Refresh the list.`);
   rule(/^Đã chuyển tag "(.*)" (vào thư mục "(.*)"|ra ngoài thư mục)\.$/,(m,name,where,folder)=>`Moved tag "${name}" ${folder?`into folder "${folder}"`:'out of its folder'}.`);
-  rule(/^Đã lấy tag "(.*)"\. Chọn đối tượng rồi bấm Gán tag để gán\.$/,(m,name)=>`Picked up tag "${name}". Select objects and click Assign tag to assign it.`);
   rule(/^: (\d+) đối tượng đang dùng tag này$/,(m,n)=>`: ${plural(n,'object uses','objects use')} this tag`);
   rule(/^Đã xóa tag "([^"]*)"\.( Đã chuyển (\d+) đối tượng sang tag "([^"]*)"\.)?( Các đối tượng đang dùng tag này đã về Untagged\.)?$/,(m,name,moved,n,target,back)=>`Deleted tag "${name}".${moved?` Moved ${plural(n,'object','objects')} to tag "${target}".`:''}${back?' The objects that used this tag are now Untagged.':''}`);
   rule(/^Nhập (\d+) tag$/,(m,n)=>`Import ${plural(n,'tag','tags')}`);

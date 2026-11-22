@@ -189,7 +189,7 @@ function tagEditor(data){
   // Gán tag cho đối tượng đang chọn: luôn thấy ở đầu trang, không phải cuộn tới.
   const assign=node('div',undefined,'tag-assign');
   const info=node('span',`Đang chọn ${data.selection} đối tượng hoặc mặt trong SketchUp.`,'tag-selection');info.id='tag-selection-text';
-  const pick=node('select');pick.id='tag-pick';pick.setAttribute('aria-label','Chọn tag');
+  const pick=node('select');pick.id='tag-pick';pick.setAttribute('aria-label','Chọn tag');pick.onchange=()=>{if(paintState.active)call('tm_paint_tag',JSON.stringify({name:pick.value}));};
   (data.tags||[]).forEach(tag=>pick.append(new Option(tag.name,tag.name)));
   const go=button('Gán tag',()=>{if(!pick.value)throw Error('Hãy lưu bộ tag trước, rồi chọn tag để gán.');call('assign_tag',JSON.stringify({name:pick.value}));},'primary');
   go.id='tag-assign';go.dataset.count=String(data.selection);go.disabled=!data.selection||!(data.tags||[]).length;
@@ -304,7 +304,9 @@ function tagTreePane(pane){
   const colorByTag=button('Tô màu theo tag',()=>call('tm_color_by_tag',JSON.stringify({enabled:!(treeState.data&&treeState.data.color_by_tag)})),'sm');colorByTag.id='tag-tree-colorbytag';
   colorByTag.title='Bật / tắt chế độ tô màu theo tag của SketchUp (Color by Tag)';colorByTag.setAttribute('aria-pressed','false');
   const excel=button('Nhập Excel',()=>call('tm_excel_open'),'sm');excel.id='tag-tree-excel';excel.title='Nhập tag (kèm màu, kiểu nét, thư mục) từ file Excel .xlsx';
-  const sample=button('Lấy mẫu',()=>call('tm_sample'),'sm');sample.id='tag-tree-sample';sample.title='Bấm vào một đối tượng trong view để lấy tag của nó (Esc để hủy)';
+  // Hút / đổ tag (như Paint Bucket): bấm lại khi đang bật thì thoát. Tag để đổ = tag đang chọn ở ô Gán tag.
+  const sample=button('Hút / đổ tag',()=>call('tm_paint_start',JSON.stringify({name:paintTagName()})),'sm');sample.id='tag-tree-paint';
+  sample.title='Bấm: đổ tag đang chọn · Alt + bấm: hút tag · Shift + bấm: mọi bản sao cùng component · Bấm vào món đang chọn: đổ cho cả lựa chọn. Trong lúc dùng, SketchUp bật Color by Tag.';
   const compact=button('Chế độ thu gọn',()=>{treeState.compact=!treeState.compact;try{localStorage.setItem(COMPACT_KEY,treeState.compact?'1':'0');}catch(_){}paintTagTree();},'sm');
   compact.id='tag-tree-compact';compact.title='Ẩn ô màu và kiểu nét để danh sách gọn hơn';
   const hide=button('Danh sách loại trừ...',openHideCard,'sm');hide.id='tag-tree-hide';
@@ -312,6 +314,7 @@ function tagTreePane(pane){
   const create=moreMenu('Tạo','tag-tree-new',[button('Tag mới',()=>openCreate('tag',null),'sm'),button('Thư mục mới',()=>openCreate('folder',null),'sm')]);
   bar.append(search,expand,collapse,sample,create,moreMenu('Thêm','tag-tree-more',[refresh,excel,colorByTag,compact,hide,null,
     all('tag',true,'Bật tất cả tag'),all('tag',false,'Tắt tất cả tag'),all('folder',true,'Bật tất cả thư mục'),all('folder',false,'Tắt tất cả thư mục')]));
+  const paintBar=node('div',undefined,'tm-banner tm-paint');paintBar.id='tag-paint-banner';paintBar.hidden=true;
   const chips=node('div',undefined,'tm-chip-area');chips.id='tag-tree-chips';
   const rootDrop=node('div','Thả vào đây để đưa tag ra ngoài thư mục (gốc)','tm-root-drop');rootDrop.id='tag-tree-rootdrop';rootDrop.hidden=true;
   acceptTagDrop(rootDrop,null);
@@ -322,8 +325,9 @@ function tagTreePane(pane){
   const createRow=node('div',undefined,'tm-create');createRow.id='tag-tree-create';createRow.hidden=true;
   const hidden=node('div',undefined,'muted tm-hidden');hidden.id='tag-tree-hidden';hidden.hidden=true;
   const list=node('div',undefined,'tag-scroll tm-list');list.id='tag-tree-list';
-  pane.append(bar,chips,rootDrop,banner,del,excelCard,hideCard,createRow,hidden,list,node('p','Mắt: ẩn / hiện · Nút tròn: cô lập, bấm lại để trả như cũ · Nhấp đúp tên: đổi tên · Chuột phải: hiện / ẩn ở mọi scene, việc với thư mục. Mỗi thao tác hoàn tác được.','muted tag-note'));
+  pane.append(bar,paintBar,chips,rootDrop,banner,del,excelCard,hideCard,createRow,hidden,list,node('p','Mắt: ẩn / hiện · Nút tròn: cô lập, bấm lại để trả như cũ · Nhấp đúp tên: đổi tên · Chuột phải: hiện / ẩn ở mọi scene, việc với thư mục. Mỗi thao tác hoàn tác được.','muted tag-note'));
   paintTagTree();
+  paintPaintBanner();
 }
 
 function paintTagTree(){
@@ -530,6 +534,7 @@ const pinnedKeys=data=>new Set((data.pinned||[]).map(foldText));
 // Chọn tag cho nút Gán tag (ô chọn tag ở đầu tab): thêm vào ô nếu tag chưa có trong bộ tag đã lưu; đánh dấu dòng trong danh sách.
 function selectAssignTag(name){
   treeState.focus=name;
+  if(paintState.active)call('tm_paint_tag',JSON.stringify({name}));
   const pick=$('tag-pick'),go=$('tag-assign');
   if(pick){
     if(![...pick.options].some(o=>o.value===name))pick.insertBefore(new Option(name,name),pick.firstChild);
@@ -570,11 +575,29 @@ function acceptTagDrop(el,folderId){
     if(id!==null)call('tm_move',JSON.stringify({id,folder_id:folderId}));
   });
 }
-// Lấy mẫu: Ruby gửi tên tag của đối tượng vừa bấm trong view. Chọn tag đó cho nút Gán tag, mở các thư mục chứa nó và sáng dòng.
+// Công cụ hút / đổ tag: Ruby báo trạng thái (tag_paint: đang bật?, tag đang đổ) và tag vừa hút (tag_sample).
+const paintState={active:false,name:''};
+const paintTagName=()=>{const pick=$('tag-pick');return (pick&&pick.value)||treeState.focus||'';};
+function receiveTagPaint(data){
+  paintState.active=!!data.active;paintState.name=data.name||'';
+  paintPaintBanner();
+}
+function paintPaintBanner(){
+  const bar=$('tag-paint-banner'),btn=$('tag-tree-paint');
+  if(btn)btn.setAttribute('aria-pressed',String(paintState.active));
+  if(!bar)return;
+  bar.replaceChildren();bar.hidden=!paintState.active;
+  if(!paintState.active)return;
+  const head=node('span');
+  if(paintState.name)head.append(node('span','Đang đổ tag: '),node('b',paintState.name));else head.append(node('span','Chưa có tag để đổ: Alt + bấm vào đối tượng để hút tag.'));
+  const stop=button('Thoát',()=>call('tm_paint_stop'),'sm');stop.id='tag-paint-stop';
+  bar.append(head,node('span','Bấm: đổ · Alt + bấm: hút · Shift + bấm: mọi bản sao · Bấm món đang chọn: cả lựa chọn · Esc trong SketchUp: thoát','muted tm-paint-hint'),stop);
+}
+// Hút tag: chọn tag đó trong danh sách (mở các thư mục chứa nó, sáng dòng) để thấy tag đang đổ.
 function receiveTagSample(data){
   const name=data.name||'';
   if(!name)return message('Không bấm trúng đối tượng nào.',true);
-  if(UNTAGGED_TREE.includes(name))return message('Đối tượng này chưa có tag (Untagged).',true);
+  if(UNTAGGED_TREE.includes(name))return message('Đã hút Untagged: bấm vào đối tượng để bỏ tag của nó.');
   selectTagTab('model');
   const tree=treeState.data;
   if(tree){
@@ -582,9 +605,12 @@ function receiveTagSample(data){
     let folder=layer?tree.folders.find(f=>f.id===layer.folder_id):null;
     while(folder){treeState.open.add(folder.id);folder=tree.folders.find(f=>f.id===folder.parent_id);}
   }
-  selectAssignTag(name);
+  treeState.focus=name;
+  const pick=$('tag-pick');
+  if(pick){if(![...pick.options].some(o=>o.value===name))pick.insertBefore(new Option(name,name),pick.firstChild);pick.value=name;}
+  paintTagTree();
   const row=document.querySelector('#tag-tree-list .tm-row.focus');if(row&&row.scrollIntoView)row.scrollIntoView({block:'nearest'});
-  message(`Đã lấy tag "${name}". Chọn đối tượng rồi bấm Gán tag để gán.`);
+  message(`Đã hút tag "${name}". Bấm vào đối tượng để đổ.`);
 }
 // Xóa tag có gán lại: Ruby đếm số đối tượng đang dùng tag (tag_delete_preview), rồi người dùng chọn tag nhận và xác nhận ở đây.
 function receiveTagDeletePreview(data){

@@ -2,6 +2,16 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.30: đã kiểm tra tự động
+
+Công cụ Hút / đổ tag (như Paint Bucket), thay Lấy mẫu; bật Color by Tag trong lúc dùng.
+
+- `dev/test_tag_tree.rb`: bật công cụ (Color by Tag bật, không thành bước hoàn tác); bấm đổ đối tượng ở cấp đang mở, không vào bên trong, một bước hoàn tác; bấm lại món đúng tag không tạo bước hoàn tác; Alt + bấm hút (cả chỗ trống); Shift + bấm mọi bản sao, bỏ bản khóa; bấm món trong lựa chọn đổ cả lựa chọn, món ngoài chỉ món đó; tag chưa có được tạo, ghi gần đây; đổ Untagged; báo tag đang tắt; Esc trả Color by Tag như trước, deactivate sau đó không báo hai lần; bấm nút lần nữa thì thoát và giữ Color by Tag đã bật từ trước; tên sai bị từ chối; đang mở group thì đổ ở cấp đó.
+- `dev/test_ui_images.cjs` (515): nút gửi tag ở ô Gán tag; thanh đổ tag theo trạng thái Ruby; hút tag chọn đúng tag, mở thư mục; bấm tên tag hoặc đổi ô Gán tag khi đang bật thì đổi tag để đổ, đã thoát thì không; Thoát.
+- `dev/test_ui_en.cjs`, `dev/test_ui.cjs`, `dev/test_ui_sheets.cjs`, `dev/test_report_page.cjs`, `ruby dev/run_tests.rb`, `ruby tests/test_vgd_conventions.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** cờ Alt / Shift của `onLButtonDown` (Alt trên Windows có thể làm thanh menu của SketchUp nhận phím), đổi `DisplayColorByLayer` ngoài thao tác có tạo bước hoàn tác hay không, `Group#definition.instances` cho Shift + bấm group, trạng thái thanh trạng thái (status bar).
+
 ## Bản 1.1.1-beta.29: đã kiểm tra tự động
 
 Soạn tag, đợt A + B so với Auto Tag: tạo tag / thư mục, đổi tên bằng nhấp đúp, rã thư mục, bật / tắt tất cả tag hoặc thư mục, thư mục theo scene, danh sách loại trừ, chế độ thu gọn.

@@ -202,7 +202,6 @@ ok('tm_move: tag / thư mục không có hoặc mã sai bị từ chối, không
 old_move = Probe.new(OldModel.new(OldTags.new([FTag.new(1, 'A')])))
 ok('SketchUp cũ không có thư mục tag: tm_move báo lỗi rõ', error_of { old_move.tm_move('id' => 1, 'folder_id' => nil) }.include?('cần SketchUp 2021'))
 
-# ---- Công cụ lấy mẫu tag ----
 class FEnt; attr_accessor :layer; def initialize(layer = nil); @layer = layer; end; end
 class FPick
   def initialize(paths); @paths = paths; end
@@ -215,29 +214,92 @@ class FPickView
   def initialize(model, paths); @model = model; @paths = paths; end
   def pick_helper; FPick.new(@paths); end
 end
-model, probe, tags, fold = world
-model.active_path = []
-probe.tm_sample
+# ---- Công cụ hút / đổ tag (như Paint Bucket) ----
+class FEnt
+  attr_accessor :locked, :definition
+  def locked?; @locked; end
+  def valid?; true; end
+end
+class FDef; attr_reader :instances; def initialize; @instances = []; end; end
+class FSel
+  def initialize(list); @list = list; end
+  def include?(e); @list.include?(e); end
+  def to_a; @list.dup; end
+end
+ALT = VGD::BIM::UI::TagPaintTool::ALT
+SHIFT = VGD::BIM::UI::TagPaintTool::SHIFT
+def paint_world
+  model, probe, tags, fold = world
+  model.active_path = []
+  sel = FSel.new([])
+  model.define_singleton_method(:selection) { sel }
+  probe.define_singleton_method(:taggable_selection) { @model.selection.to_a }
+  [model, probe, tags, sel]
+end
+model, probe, tags, sel = paint_world
+$transactions.clear
+probe.tm_paint_start('name' => 'A. WALL')
 tool = model.tool
-ok('tm_sample: chọn công cụ lấy mẫu, bỏ khung đánh dấu của bảng, báo hướng dẫn', tool.is_a?(VGD::BIM::UI::TagSampleTool) && probe.instance_variable_get(:@released) && probe.messages.last.include?('lấy tag'))
-wall_part = FEnt.new(tags[0]); group = FEnt.new(tags[1])
-tool.onLButtonDown(0, 10, 10, FPickView.new(model, [[group, wall_part]]))
-ok('bấm vào đối tượng: lấy tag của đối tượng ở cấp hiện tại (không chọn sâu), gửi cho giao diện, rồi thoát công cụ', probe.last('tag_sample') == {name: 'A. DOOR'} && model.tool.nil?)
-probe.tm_sample
-model.tool.onLButtonDown(0, 10, 10, FPickView.new(model, [[FEnt.new(tags[3])]]))
-ok('đối tượng chưa có tag (Untagged): gửi tên Untagged để giao diện báo', probe.last('tag_sample') == {name: 'Untagged'})
-probe.tm_sample
-model.tool.onLButtonDown(0, 10, 10, FPickView.new(model, []))
-ok('bấm vào chỗ trống: gửi tên rỗng, vẫn thoát công cụ', probe.last('tag_sample') == {name: ''} && model.tool.nil?)
+ok('bật công cụ: chọn công cụ hút / đổ, bỏ khung đánh dấu, bật Color by Tag (không thành bước hoàn tác), báo giao diện',
+   tool.is_a?(VGD::BIM::UI::TagPaintTool) && probe.instance_variable_get(:@released) && model.rendering_options['DisplayColorByLayer'] == true &&
+   $transactions.empty? && probe.last('tag_paint') == {active: true, name: 'A. WALL'} && probe.last('tag_tree')[:color_by_tag] == true)
+door = FEnt.new(tags[1]); inner = FEnt.new(tags[2])
+tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[door, inner]]))
+ok('bấm: đổ tag lên đối tượng ở cấp đang mở (không vào bên trong), một bước hoàn tác, công cụ ở lại', door.layer.equal?(tags[0]) && inner.layer.equal?(tags[2]) &&
+   $transactions == ['VGD BIM · Đổ tag'] && model.tool.equal?(tool) && probe.messages.last == 'Đã đổ tag A. WALL cho 1 đối tượng.')
+tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[door]]))
+ok('bấm lại món đã đúng tag: không tạo bước hoàn tác', $transactions.size == 1 && probe.messages.last == 'Đã đổ tag A. WALL cho 0 đối tượng. Đã đúng tag sẵn: 1.')
+beam = FEnt.new(tags[2])
+tool.onLButtonDown(ALT, 1, 1, FPickView.new(model, [[beam]]))
+ok('Alt + bấm: hút tag của đối tượng làm tag để đổ, không đổi model, báo giao diện', tool.tag_name == 'S. BEAM' && beam.layer.equal?(tags[2]) && $transactions.size == 1 &&
+   probe.last('tag_paint') == {active: true, name: 'S. BEAM'} && probe.last('tag_sample') == {name: 'S. BEAM'})
+tool.onLButtonDown(ALT, 1, 1, FPickView.new(model, []))
+ok('Alt + bấm chỗ trống: báo không trúng, giữ tag đang đổ', tool.tag_name == 'S. BEAM' && probe.last('tag_sample') == {name: ''})
+defn = FDef.new; copies = Array.new(3) { e = FEnt.new(tags[0]); e.definition = defn; defn.instances << e; e }; copies[2].locked = true
+tool.onLButtonDown(SHIFT, 1, 1, FPickView.new(model, [[copies[0]]]))
+ok('Shift + bấm: đổ cho mọi bản sao cùng component, bỏ qua bản bị khóa, một bước hoàn tác', copies[0..1].all? { |c| c.layer.equal?(tags[2]) } && copies[2].layer.equal?(tags[0]) &&
+   $transactions.size == 2 && probe.messages.last.start_with?('Đã đổ tag S. BEAM cho 2 đối tượng. Bỏ qua 1 đối tượng bị khóa.'))
+a = FEnt.new(tags[0]); b = FEnt.new(tags[1]); c = FEnt.new(tags[1])
+sel.instance_variable_set(:@list, [a, b])
+tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[b]]))
+ok('bấm vào món đang nằm trong lựa chọn: đổ cho cả lựa chọn (như Paint Bucket)', a.layer.equal?(tags[2]) && b.layer.equal?(tags[2]) && probe.messages.last.start_with?('Đã đổ tag S. BEAM cho 2 đối tượng.'))
+tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[c]]))
+ok('bấm vào món ngoài lựa chọn: chỉ đổ cho món đó', c.layer.equal?(tags[2]))
+probe.tm_paint_tag('name' => 'A. ROOF')
+tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[c]]))
+ok('đổi tag để đổ từ danh sách; tag chưa có trong model thì tạo trong cùng bước hoàn tác, ghi vào gần đây',
+   c.layer.name == 'A. ROOF' && $transactions.last == 'VGD BIM · Đổ tag' && probe.last('tag_paint') == {active: true, name: 'A. ROOF'} && VGD::BIM::Settings.read['recent_tags'].first == 'A. ROOF')
+probe.tm_paint_tag('name' => 'Layer0')
+tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[c]]))
+ok('đổ Untagged (tên Layer0 đổi thành Untagged): bỏ tag của đối tượng, không tạo tag mới', tool.tag_name == 'Untagged' && c.layer.equal?(tags[3]))
+tags[1].visible = false
+probe.tm_paint_tag('name' => 'A. DOOR')
+tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[c]]))
+ok('đổ tag đang tắt: báo đối tượng sẽ bị ẩn', probe.messages.last.include?('sẽ bị ẩn'))
+tool.onCancel(0, FPickView.new(model, []))
+ok('Esc: thoát công cụ, trả Color by Tag như trước (đang tắt), báo giao diện', model.tool.nil? && model.rendering_options['DisplayColorByLayer'] == false && probe.last('tag_paint') == {active: false, name: ''})
+tool.deactivate(nil)
+ok('SketchUp gọi deactivate sau Esc: không báo hai lần', probe.events.count { |e, p| e == 'tag_paint' && !p[:active] } == 1)
+
+model, probe, tags, sel = paint_world
+model.rendering_options['DisplayColorByLayer'] = true
+probe.tm_paint_start('name' => '')
+tool = model.tool
+pick = FEnt.new(tags[1])
+tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[pick]]))
+ok('chưa có tag để đổ: bấm thường cũng là hút, không đổi đối tượng', tool.tag_name == 'A. DOOR' && pick.layer.equal?(tags[1]) && probe.last('tag_sample') == {name: 'A. DOOR'})
+probe.tm_paint_start('name' => 'x')
+ok('bấm nút lần nữa khi đang bật: thoát; Color by Tag đã bật từ trước thì giữ bật', model.tool.nil? && model.rendering_options['DisplayColorByLayer'] == true && probe.last('tag_paint') == {active: false, name: ''})
+probe.tm_paint_stop
+ok('thoát khi không bật: chỉ báo trạng thái tắt', probe.last('tag_paint') == {active: false, name: ''})
+ok('tên tag sai bị từ chối, không bật công cụ', error_of { probe.tm_paint_start('name' => 5) }.include?('không hợp lệ') && error_of { probe.tm_paint_start('name' => 'x' * 61) }.include?('quá dài') && model.tool.nil?)
+probe.tm_paint_start('name' => 'A. WALL')
 model.active_path = [Object.new]
-probe.tm_sample
-model.tool.onLButtonDown(0, 10, 10, FPickView.new(model, [[Object.new, FEnt.new(tags[2])]]))
-ok('đang mở sửa một group: lấy đối tượng ở cấp đang mở (phần tử thứ hai của đường dẫn)', probe.last('tag_sample') == {name: 'S. BEAM'})
-model.active_path = []
-events_before = probe.events.size
-probe.tm_sample
-model.tool.onCancel(0, FPickView.new(model, []))
-ok('Esc hủy: không gửi gì, thoát công cụ', probe.events.size == events_before + 1 && model.tool.nil?)
+w = FEnt.new(tags[2])
+model.tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[Object.new, w]]))
+ok('đang mở sửa một group: đổ cho đối tượng ở cấp đang mở', w.layer.equal?(tags[0]))
+probe.tm_paint_stop
+VGD::BIM::Settings.update('pinned_tags' => [], 'recent_tags' => [])
 
 # ---- Xóa tag có gán lại ----
 def del_world
