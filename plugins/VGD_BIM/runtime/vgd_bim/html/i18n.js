@@ -307,7 +307,7 @@ const VGD_I18N=(()=>{
     'Cao độ sàn nhập tay':'Floor level entered by hand','Theo cao độ của tầng; bật Hạ nền khác để nhập tay':'Follows the level elevation; turn on Lower floor to enter it by hand',
     'Cao độ sàn (mm)':'Floor level (mm)',
     'Thay viền phòng bằng đúng một mặt sàn đang chọn trong SketchUp. Tên, mã, tầng, chiều cao, hoàn thiện giữ nguyên; cao độ sàn chỉ đổi theo mặt với phòng hạ nền (nhập tay).':'Replace the room outline with exactly one selected floor face in SketchUp. Name, code, level, height and finishes are kept; the floor level changes with the face only for rooms with a lowered floor (entered by hand).',
-    'Quản lý phòng...':'Manage rooms...','Quản lý phòng':'Manage rooms','Phòng':'Room','Tên phòng':'Room name','Mã phòng':'Room code','Mã':'Code','Tầng của phòng':'Room level','Chiều cao phòng (mm)':'Room height (mm)','Cao độ sàn (mm)':'Floor elevation (mm)','Hoàn thiện sàn':'Floor finish','Hoàn thiện tường':'Wall finish','Hoàn thiện trần':'Ceiling finish','Tên phòng mới':'New room name','Mã phòng mới':'New room code','Tầng của phòng mới':'New room level','(Không có phòng)':'(No room)','(Chưa gán phòng)':'(No room assigned)','(phòng đã xóa)':'(deleted room)',
+    'Quản lý phòng...':'Manage rooms...','Tất cả tầng':'All levels','Chưa có tầng':'No level yet','Tìm theo tên hoặc mã':'Search by name or code','Tìm phòng':'Search rooms','Lọc theo tầng':'Filter by level','Thu gọn tất cả':'Collapse all','Mở tất cả':'Expand all','Quản lý phòng':'Manage rooms','Phòng':'Room','Tên phòng':'Room name','Mã phòng':'Room code','Mã':'Code','Tầng của phòng':'Room level','Chiều cao phòng (mm)':'Room height (mm)','Cao độ sàn (mm)':'Floor elevation (mm)','Hoàn thiện sàn':'Floor finish','Hoàn thiện tường':'Wall finish','Hoàn thiện trần':'Ceiling finish','Tên phòng mới':'New room name','Mã phòng mới':'New room code','Tầng của phòng mới':'New room level','(Không có phòng)':'(No room)','(Chưa gán phòng)':'(No room assigned)','(phòng đã xóa)':'(deleted room)',
     'Tạo phòng từ các mặt đang chọn':'Create rooms from selected faces','Tên phòng mới (nhiều mặt: tiền tố, vd Phòng)':'New room name (several faces: prefix, e.g. Room)',
     'Chưa có phòng nào. Chọn một hoặc nhiều mặt sàn trong SketchUp rồi bấm Tạo phòng từ các mặt đang chọn.':'No rooms yet. Select one or more floor faces in SketchUp, then click Create rooms from selected faces.',
     'Đọc viền (và các lỗ, vd cột) của các mặt sàn nằm ngang đang chọn trong SketchUp, mỗi mặt thành một phòng. Một mặt: tên và mã như đã nhập. Nhiều mặt: tên là tiền tố (Phòng 1, Phòng 2...), không đặt mã. Chỉ lưu dữ liệu, không dựng hình.':'Reads the outline (and holes, e.g. columns) of the selected horizontal floor faces in SketchUp, one room per face. One face: name and code as typed. Several faces: the name is a prefix (Room 1, Room 2...), no code. Data only, no geometry is built.',
@@ -408,6 +408,9 @@ const VGD_I18N=(()=>{
   const rule=(re,fn)=>patterns.push([re,fn]);
   rule(/^Đang hiện ở (\d+) \/ (\d+) scene$/,m=>`Shown in ${m[1]} / ${m[2]} scenes`);
   rule(/^Loại trừ scene \((\d+)\)$/,m=>`Excluded scenes (${m[1]})`);
+  rule(/^Hiển thị (\d+) \/ (\d+) phòng\.$/,(m,a,b)=>`Showing ${a} / ${b} rooms.`);
+  rule(/^(.+?) · (.+?) · (.+?) · ([\d.,]+) m²$/,(m,a,b,c,d)=>`${a} · ${b} · ${T(c)} · ${d} m²`);
+  rule(/^Mở hoặc thu gọn phòng (.+)$/,(m,a)=>`Expand or collapse room ${a}`);
   let lang='vi',names={};
   const N=(group,value)=>((names[group]||{})[value])||value;
   const lower=s=>s.toLocaleLowerCase('en');

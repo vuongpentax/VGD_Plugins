@@ -561,6 +561,37 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
     await receive('table',saved.data);
     await page.evaluate(p=>{tableState.panel=p;tableView(tableState.data);},saved.panel);
   }
+  // Đợt 1 quản lý phòng: tìm theo tên / mã (không phân biệt hoa thường, dấu), lọc theo tầng, thu gọn từng phòng (giữ khi bảng làm mới)
+  {
+    const saved=await page.evaluate(()=>({data:JSON.parse(JSON.stringify(tableState.data)),panel:tableState.panel}));
+    const many=Array.from({length:12},(_,i)=>({...rms[0],id:`rm_${(i+1).toString(16).padStart(8,'0')}`,name:`Phòng ${i+1}`,number:`P${String(i+1).padStart(2,'0')}`,level:i%2===0?'lv_aaaaaaaa':''}));
+    const manyPayload=(list)=>({...tablePayload,rooms:list,levels:lvls,columns:[...tablePayload.columns,roomCol],rows:tableRows.map(r=>({...r,room:'',room_id:''})),choices:{...(tablePayload.choices||{}),tags:[],materials:[],model_tags:[],rooms:[]}});
+    await receive('table',manyPayload(many));
+    await page.evaluate(()=>{tableState.roomsView=undefined;tableState.panel='rooms';tableView(tableState.data);});
+    assert(await page.locator('.rooms-panel .rm-item').count()===12 && (await page.locator('.rm-count').innerText()).includes('12 / 12'),'đợt 1: hộp hiện đủ 12 phòng và đếm "Hiển thị 12 / 12"');
+    await page.locator('.rooms-panel input[type=search]').fill('p03');
+    assert(await page.locator('.rooms-panel .rm-item:visible').count()===1 && (await page.locator('.rm-count').innerText()).includes('1 / 12'),'tìm theo mã "p03": chỉ hiện đúng một phòng');
+    await page.locator('.rooms-panel input[type=search]').fill('phong 12');
+    assert(await page.locator('.rooms-panel .rm-item:visible').count()===1,'tìm "phong 12" (không dấu, không phân biệt hoa thường) khớp "Phòng 12"');
+    await page.locator('.rooms-panel input[type=search]').fill('');
+    await page.locator('.rooms-panel select[aria-label="Lọc theo tầng"]').selectOption('none');
+    assert(await page.locator('.rooms-panel .rm-item:visible').count()===6,'lọc "Chưa có tầng": hiện 6 phòng không có tầng');
+    await page.locator('.rooms-panel select[aria-label="Lọc theo tầng"]').selectOption('lv_aaaaaaaa');
+    assert(await page.locator('.rooms-panel .rm-item:visible').count()===6,'lọc theo tầng 1: hiện 6 phòng của tầng đó');
+    await page.locator('.rooms-panel select[aria-label="Lọc theo tầng"]').selectOption('');
+    const firstToggle=page.locator('.rooms-panel .rm-item').first().locator('.rm-toggle');
+    await firstToggle.click();
+    assert(await page.locator('.rooms-panel .rm-item').first().locator('.rm-body').isHidden(),'bấm ▾ của một phòng: thu gọn phòng đó');
+    await receive('table',manyPayload(many));
+    assert(await page.locator('.rooms-panel .rm-item').first().locator('.rm-body').isHidden(),'phòng đã thu gọn vẫn thu gọn sau khi bảng làm mới');
+    await page.locator('.rooms-panel .rm-collapse-all').click();
+    assert(await page.locator('.rooms-panel .rm-item .rm-body:visible').count()===12 && (await page.locator('.rooms-panel .rm-collapse-all').innerText()).trim()==='Thu gọn tất cả','khi còn phòng thu gọn, nút là "Mở tất cả": bấm thì mọi phòng mở ra, nút đổi thành "Thu gọn tất cả"');
+    await page.locator('.rooms-panel .rm-collapse-all').click();
+    assert(await page.locator('.rooms-panel .rm-item .rm-body:visible').count()===0 && (await page.locator('.rooms-panel .rm-collapse-all').innerText()).trim()==='Mở tất cả','bấm "Thu gọn tất cả": mọi phòng thu gọn, nút đổi thành "Mở tất cả"');
+    await page.evaluate(()=>{tableState.roomsView=undefined;});
+    await receive('table',saved.data);
+    await page.evaluate(p=>{tableState.panel=p;tableView(tableState.data);},saved.panel);
+  }
   await page.locator('.rm-name').fill('Phòng khách lớn');await page.locator('.rm-name').blur();
   last=await lastCall();
   assert(last.name==='table_rooms' && last.data.rooms.length===1 && last.data.rooms[0].name==='Phòng khách lớn' && last.data.rooms[0].id==='rm_aaaaaaaa' && last.data.rooms[0].boundary.length===4 && !('metrics' in last.data.rooms[0]),'sửa tên phòng: gửi cả danh sách kèm id và viền, không gửi số đo tính sẵn');
