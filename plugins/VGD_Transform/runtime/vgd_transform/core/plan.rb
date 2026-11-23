@@ -3,7 +3,7 @@ module VGD
     # Ghép công cụ với ô nhập: đọc chuỗi người dùng nhập và gọi đúng hàm tính. Logic thuần, không gọi SketchUp.
     # payload: {'tool' =>, 'values' => {x, y, z}, 'pivot' => item|selection|world, 'coord' => world|local, 'uniform' =>}.
     module Plan
-      TOOLS = %w[move_abs move_off rotate scale scale_abs].freeze
+      TOOLS = %w[move_abs move_off rotate rotate_abs scale scale_abs].freeze
 
       module_function
 
@@ -18,6 +18,7 @@ module VGD
         when 'move_abs' then Translate.absolute(items, lengths(values, unit), pivot)
         when 'move_off' then Translate.offset(items, lengths(values, unit), coord)
         when 'rotate' then RotateScale.rotate(items, numbers(values), pivot, coord)
+        when 'rotate_abs' then RotateScale.absolute_rotate(items, numbers(values), pivot)
         when 'scale' then RotateScale.scale(items, scale_specs(values, payload['uniform'] ? true : false), pivot, coord)
         when 'scale_abs' then RotateScale.absolute_scale(items, numbers(values), pivot)
         end

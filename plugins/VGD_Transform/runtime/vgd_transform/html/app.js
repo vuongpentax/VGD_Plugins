@@ -60,6 +60,7 @@ function payloadFor(panel) {
   switch (panel) {
     case 'move_abs': return { tool: panel, values: dirtyXyz(panel), pivot };
     case 'move_off': return { tool: panel, values: xyz(panel), coord };
+    case 'rotate_abs': return { tool: panel, values: dirtyXyz(panel), pivot };
     case 'rotate': return { tool: panel, values: xyz(panel), pivot, coord };
     case 'scale_abs': return { tool: panel, values: dirtyXyz(panel), pivot };
     default: return scaleUniform()
@@ -105,6 +106,7 @@ function fillAbsolute() {
     input.placeholder = state.count === 0 ? '—' : (value === null || value === undefined ? 'khác nhau' : '');
   });
   fill('move_abs', $('pivot').value === 'item' ? state.origin : state.center);
+  fill('rotate_abs', state.angles);
   fill('scale_abs', state.scale);
 }
 function resetOffset(panel) {

@@ -263,6 +263,17 @@ rot = RS.rotate(rli, [nil, nil, 45.0], 'item', 'world')[:moves]
 ok('nhịp kéo thường không kiểm lại ma trận (đỡ tốn thời gian)', error_of { M.apply_live(rm_live, rot, rli, rlo) }.nil?)
 ok('nhịp cuối (check: true) kiểm lại ma trận và bắt được lỗi', error_of { M.apply_live(rm_live, rot, rli, rlo, check: true) }.to_s.include?('không khớp'))
 
+# ----- Góc hiện tại của món (cho ô Xoay tuyệt đối) đọc từ ma trận thế giới -----
+em = Sketchup::Model.new([rotated_z(Sketchup::Group.new('Quay 90', [0.0, 0.0, 0.0]), 90.0), Sketchup::Group.new('Thẳng', [1.0, 0.0, 0.0])])
+ei = M.items(em)
+ok('đọc món: món xoay 90° quanh Z có góc (0, 0, 90), món chưa xoay có góc (0, 0, 0)', near(ei[0][:euler], [0.0, 0.0, 90.0], 1e-6) && near(ei[1][:euler], [0.0, 0.0, 0.0], 1e-6))
+
+am_rot = Sketchup::Model.new([rotated_z(Sketchup::Group.new('Quay 90', [3.0, 4.0, 0.0]), 90.0)])
+ai_rot = M.items(am_rot)
+M.apply(am_rot, RS.absolute_rotate(ai_rot, [0.0, 0.0, 0.0], 'item')[:moves], ai_rot)
+after_rot = M.items(am_rot)[0]
+ok('xoay tuyệt đối 0 trong SketchUp giả lập: món về hướng gốc (góc 0, 0, 0), điểm gốc đứng yên, qua được kiểm tra ma trận', near(after_rot[:euler], [0.0, 0.0, 0.0], 1e-6) && near(after_rot[:origin], ai_rot[0][:origin], 0.01))
+
 # ----- Panel: luồng kéo trực tiếp (gộp giá trị theo nhịp hẹn giờ, một thao tác mở suốt, thả / đóng cửa sổ) với HtmlDialog và hẹn giờ giả lập -----
 require 'json'
 module Sketchup

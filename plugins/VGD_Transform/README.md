@@ -1,4 +1,4 @@
-# VGD Transform 0.1.0-beta.12
+# VGD Transform 0.1.0-beta.13
 
 > Đổi tên từ **VGD Position**. Trong SketchUp, gỡ bản **VGD Position** cũ (Extension Manager) trước khi cài bản này để tránh hai menu trùng chức năng.
 
@@ -35,7 +35,8 @@ Plugin dời, xoay và scale món (group, component) trong SketchUp bằng số,
 ### Xoay
 
 - Nhập góc (độ) quanh X, Y, Z theo hệ trục đã chọn, quanh tâm đã chọn. Các góc áp dụng theo thứ tự **X, rồi Y, rồi Z**; hệ trục riêng lấy theo hướng của món lúc bắt đầu.
-- Chỉ có xoay tương đối (góc xoay "hiện tại" của một group không xác định duy nhất).
+- **Tuyệt đối (thế giới):** hiện góc X, Y, Z hiện tại của món (xoay X, rồi Y, rồi Z quanh trục thế giới, cùng quy ước với xoay tương đối). Gõ **0** (hoặc **bấm chuột phải ▲▼**) rồi Enter để quay món về **hướng gốc**: trục riêng của món song song với trục thế giới, điểm gốc đứng yên (theo tâm đã chọn). Ô nào không sửa thì giữ góc hiện tại. Nhiều món đang quay khác nhau thì mỗi món về hướng gốc của riêng nó.
+- Giới hạn: một món xoay gần 90° quanh Y thì góc X và Z không tách được (hiện X = 0, góc còn lại dồn vào Z). "Hướng gốc" là hướng song song trục thế giới, không phải hướng lúc món được tạo (SketchUp không lưu hướng đó).
 
 ### Scale
 

@@ -2,6 +2,17 @@
 
 Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**, trừ khi ghi khác.
 
+## Bản 0.1.0-beta.13: đã kiểm tra tự động
+
+Xoay tuyệt đối (mới): tab Xoay có khung Tuyệt đối (°) hiện góc X, Y, Z hiện tại của món (`Items.euler_degrees`, quy ước R = Rz·Ry·Rx, khớp công cụ Xoay), gõ góc (0 là quay về hướng gốc: trục riêng song song trục thế giới) hoặc bấm chuột phải ▲▼ để về 0. `RotateScale.absolute_rotate` tính cho mỗi món phép xoay đưa hướng hiện tại về hướng đích (ma trận 3×3 thuần Ruby, trục / góc xoay, có xử lý góc 180°), bước `rotate` quanh tâm đã chọn nên đi qua cùng kiểm tra ma trận / điểm gốc. Ô không sửa giữ góc hiện tại. Kéo ▲▼ trực tiếp dùng được (công cụ `rotate_abs` trong `Plan`).
+
+- `dev/test_transform.rb`: góc hiện tại (không xoay, Z 90°, xoay (30, 20, 40) rồi đọc lại đúng, gimbal lock), về hướng gốc cho món xoay nhiều trục, điểm gốc đứng yên, chỉ đổi ô Z giữ X, Y, trường hợp 180°, nhiều món xoay khác nhau, NothingToDo, giới hạn góc, ghép công cụ `rotate_abs`.
+- `dev/test_model_ops.rb`: đọc góc từ ma trận món; xoay tuyệt đối 0 qua `ModelOps.apply` với SketchUp giả lập (món về góc 0, điểm gốc đứng yên, qua kiểm tra ma trận).
+- `dev/test_ui.cjs` (68): khung Tuyệt đối trong tab Xoay hiện góc, ô "khác nhau", Enter chỉ gửi ô đã sửa, chuột phải ▲▼ về 0 và áp dụng ngay.
+- `ruby dev/run_tests.rb` và `tests/test_vgd_conventions.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** góc hiện tại đọc từ món lồng nhiều cấp và món có scale không đều; hành vi gần gimbal lock; "hướng gốc" ở đây là song song trục thế giới (không phải hướng lúc món được tạo, SketchUp không lưu).
+
 ## Bản 0.1.0-beta.12: đã kiểm tra tự động
 
 Gõ số, Enter, rồi gõ số khác: số mới thay hẳn số cũ. Trước đây ô giữ lại số vừa áp dụng (ô Tuyệt đối hiện giá trị mới) nên gõ tiếp bị nối đuôi (200 Enter, 300 ra 200300). Sau Enter ô được đánh dấu `dataset.fresh`; phím gõ tiếp theo (ký tự, Backspace, Delete) chọn hết nội dung cũ rồi gõ đè; bấm chuột vào ô, phím mũi tên, Home, End, Tab, Esc hoặc rời ô thì bỏ đánh dấu (sửa tiếp trong số cũ). Phím có Ctrl / Alt / Meta không tính.

@@ -92,7 +92,7 @@ module VGD
                   max: %i[x y z].map { |a| corners.map(&a).max * Units::MM_PER_INCH }}
         local = %i[x y z].map { |a| box.max.send(a) - box.min.send(a) }
         {index: index, name: name_of(entity), entity: entity, locked: ancestors_locked || entity.locked? ? true : false,
-         origin: m[12, 3].map { |v| v * Units::MM_PER_INCH }, axes: axes, scale: scale, bounds: bounds,
+         origin: m[12, 3].map { |v| v * Units::MM_PER_INCH }, axes: axes, euler: Items.euler_degrees(axes), scale: scale, bounds: bounds,
          size: local.zip(scale).map { |l, s| l * s * Units::MM_PER_INCH }}
       end
 

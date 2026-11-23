@@ -229,6 +229,26 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     await page.press('#rotate-z', 'Enter');
     const rot = await lastCall('apply');
     ok(rot && rot.tool === 'rotate' && rot.values.z === '90' && rot.pivot === 'world' && rot.coord === 'local', 'xoay: Enter gửi góc, tâm, hệ trục');
+    // Xoay tuyệt đối: hiện góc hiện tại của món; gõ 0 hoặc bấm chuột phải ▲▼ để quay về hướng gốc
+    ok(await visible('.box[data-panel="rotate_abs"]'), 'tab Xoay: có khung Tuyệt đối (góc hiện tại của món)');
+    await receive('state', { ...state, angles: [30, 20, 40] });
+    ok((await value('rotate_abs-x')) === '30' && (await value('rotate_abs-y')) === '20' && (await value('rotate_abs-z')) === '40', 'xoay tuyệt đối: ô hiện góc X, Y, Z hiện tại của món');
+    await receive('state', { ...state, angles: [30, null, 40] });
+    ok((await page.locator('#rotate_abs-y').getAttribute('placeholder')) === 'khác nhau', 'xoay tuyệt đối: các món khác nhau ở trục nào thì ô trục đó ghi "khác nhau"');
+    await receive('state', { ...state, angles: [30, 20, 40] });
+    await page.fill('#rotate_abs-z', '0');
+    await clear();
+    await page.press('#rotate_abs-z', 'Enter');
+    const rabs = await lastCall('apply');
+    ok(rabs && rabs.tool === 'rotate_abs' && rabs.values.z === '0' && rabs.values.x === '' && rabs.values.y === '' && rabs.pivot === 'world', 'xoay tuyệt đối: Enter chỉ gửi ô đã sửa (Z = 0), ô khác để trống = giữ góc');
+    await receive('done', { moved: 1, skipped: 0, tool: 'rotate_abs' });
+    await receive('state', { ...state, angles: [30, 20, 0] });
+    await clear();
+    await rightClick('rotate_abs-x', 'up');
+    const rabsReset = await lastCall('apply');
+    ok((await value('rotate_abs-x')) === '0' && rabsReset && rabsReset.tool === 'rotate_abs' && rabsReset.values.x === '0', 'chuột phải ▲▼ ở ô Xoay tuyệt đối: về 0 và áp dụng ngay (quay về hướng gốc theo trục đó)');
+    await receive('done', { moved: 1, skipped: 0, tool: 'rotate_abs' });
+    await receive('state', { ...state, angles: [0, 20, 0] });
     await page.click('.tab[data-tab="scale"]');
     ok((await visible('.box[data-panel="scale_abs"]')) && (await visible('#scale-one')) && !(await visible('#scale-xyz')), 'tab Scale: khung Tuyệt đối và Tương đối (mặc định Đều)');
     await page.fill('#scale_abs-x', '1');

@@ -9,6 +9,7 @@ module VGD
       SUMMARY_LIMIT = 500 # chọn nhiều hơn số này thì không đọc giá trị hiện tại (tránh chậm khi model thay đổi liên tục)
       ORIGIN_TOLERANCE_MM = 0.001
       SCALE_TOLERANCE = 1e-6
+      ANGLE_TOLERANCE_DEG = 0.01
       LIVE_MIN_GAP_SECONDS = 0.016 # khoảng tối thiểu giữa hai lần áp dụng khi kéo (~60 lần/giây); giá trị đến nhanh hơn thì chỉ giữ giá trị mới nhất
 
       class SelectionObserver < Sketchup::SelectionObserver
@@ -74,7 +75,7 @@ module VGD
         model = Sketchup.active_model
         known = ModelOps.length_unit(model)
         unit = known || Units::DEFAULT_UNIT
-        state = {unit: unit, unit_known: !known.nil?, count: 0, skipped: 0, origin: nil, center: nil, scale: nil, lock: ModelOps.lock_state(model)}
+        state = {unit: unit, unit_known: !known.nil?, count: 0, skipped: 0, origin: nil, center: nil, scale: nil, angles: nil, lock: ModelOps.lock_state(model)}
         if model.selection.size > SUMMARY_LIMIT
           state[:count] = model.selection.size
         else
@@ -214,7 +215,8 @@ module VGD
         {count: items.size,
          origin: to_unit.call(Items.common(items, ORIGIN_TOLERANCE_MM) { |item| item[:origin] }),
          center: to_unit.call(Items.selection_center(items)),
-         scale: Items.common(items, SCALE_TOLERANCE) { |item| item[:scale] }.map { |v| v&.round(6) }}
+         scale: Items.common(items, SCALE_TOLERANCE) { |item| item[:scale] }.map { |v| v&.round(6) },
+         angles: Items.common(items, ANGLE_TOLERANCE_DEG) { |item| item[:euler] }.map { |v| v&.round(4) }}
       end
 
       def attach
