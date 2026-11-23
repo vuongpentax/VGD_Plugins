@@ -9,6 +9,7 @@ module VGD
       SUMMARY_LIMIT = 500 # chọn nhiều hơn số này thì không đọc giá trị hiện tại (tránh chậm khi model thay đổi liên tục)
       ORIGIN_TOLERANCE_MM = 0.001
       SCALE_TOLERANCE = 1e-6
+      LIVE_FLUSH_SECONDS = 0.016 # nhịp áp dụng giá trị kéo vào model (~60 lần/giây); giá trị đến nhanh hơn thì chỉ giữ giá trị mới nhất
 
       class SelectionObserver < Sketchup::SelectionObserver
         def initialize(panel); @panel = panel; end
@@ -42,7 +43,7 @@ module VGD
         @dialog.add_action_callback('live_start') { |_ctx| safely { live_start } }
         @dialog.add_action_callback('live') { |_ctx, payload| safely { live(JSON.parse(payload)) } }
         @dialog.add_action_callback('live_end') { |_ctx| safely { live_end } }
-        @dialog.set_on_closed { @closed = true; @live = nil; detach }
+        @dialog.set_on_closed { @closed = true; abort_live; detach }
         attach
       end
 
@@ -100,35 +101,70 @@ module VGD
         refresh
       end
 
-      # Kéo trực tiếp (như spinner của 3ds Max): nhớ biến đổi ban đầu, mỗi lần cập nhật tính lại từ đó, gộp thành một bước Ctrl+Z.
+      # Kéo trực tiếp (như spinner của 3ds Max): mở MỘT thao tác suốt lần kéo, nhớ biến đổi ban đầu, mỗi nhịp tính lại từ đó rồi chỉ ghi biến đổi
+      # (không mở / đóng thao tác mỗi nhịp), thả nút thì đóng thành một bước Ctrl+Z. Giá trị từ giao diện được gộp (chỉ giá trị mới nhất) và áp dụng theo nhịp hẹn giờ.
       def live_start
-        items = ModelOps.items(Sketchup.active_model)
-        @live = {items: items, originals: items.to_h { |item| [item[:entity], item[:entity].transformation] }, applied: false}
+        model = Sketchup.active_model
+        items = ModelOps.items(model)
+        ModelOps.begin_live(model)
+        @live = {model: model, items: items, originals: items.to_h { |item| [item[:entity], item[:entity].transformation] },
+                 changed: false, queue: LiveQueue.new, timer: nil}
       end
 
-      # Mỗi lần xử lý xong (kể cả lỗi) báo `live_ack` để giao diện gửi tiếp giá trị mới nhất; không báo thì giao diện dồn hàng đợi và kéo bị trễ.
+      # Chỉ nhận giá trị và hẹn giờ (việc nhẹ); việc ghi vào model làm ở flush_live.
       def live(payload)
-        if @live
-          model = Sketchup.active_model
-          begin
-            plan = Plan.build(@live[:items], payload, unit_of(model))
-            ModelOps.apply(model, plan[:moves], @live[:items], transparent: @live[:applied], restore: @live[:originals])
-            @live[:applied] = true
-          rescue NothingToDo
-            # Giá trị kéo về 0 (hoặc hệ số 1): đưa món về như lúc bắt đầu kéo.
-            ModelOps.restore(model, @live[:originals]) if @live[:applied]
-          rescue StandardError
-            @live = nil
-            raise
-          end
-        end
-      ensure
-        emit('live_ack', {})
+        return unless @live
+        return unless @live[:queue].push(payload)
+        @live[:timer] = ::UI.start_timer(LIVE_FLUSH_SECONDS, false) { safely { flush_live } }
+      end
+
+      def flush_live
+        return unless @live
+        @live[:timer] = nil
+        payload = @live[:queue].take
+        apply_live_payload(payload) if payload
       end
 
       def live_end
+        return unless @live
+        ::UI.stop_timer(@live[:timer]) if @live[:timer]
+        @live[:timer] = nil
+        payload = @live[:queue].take
+        apply_live_payload(payload) if payload
+        live = @live
         @live = nil
+        ModelOps.finish_live(live[:model], live[:changed])
         refresh
+      rescue StandardError
+        abort_live
+        raise
+      end
+
+      def abort_live
+        live = @live
+        @live = nil
+        return unless live
+        ::UI.stop_timer(live[:timer]) if live[:timer]
+        ModelOps.finish_live(live[:model], false)
+      rescue StandardError
+        nil
+      end
+
+      def apply_live_payload(payload)
+        model = @live[:model]
+        begin
+          plan = Plan.build(@live[:items], payload, unit_of(model))
+          ModelOps.apply_live(model, plan[:moves], @live[:items], @live[:originals])
+          @live[:changed] = true
+        rescue NothingToDo
+          # Giá trị kéo về 0 (hoặc hệ số 1): đưa món về như lúc bắt đầu kéo.
+          ModelOps.restore_entities(@live[:originals])
+          @live[:changed] = false
+        end
+        model.active_view.invalidate
+      rescue StandardError
+        abort_live
+        raise
       end
 
       private

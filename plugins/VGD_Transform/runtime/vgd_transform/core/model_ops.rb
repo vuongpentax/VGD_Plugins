@@ -108,16 +108,9 @@ module VGD
       # restore: {entity => biến đổi lúc bắt đầu kéo}; mỗi lần cập nhật tính từ trạng thái ban đầu đó (ghi biến đổi mới một lần, không ghi lại
       # trạng thái đầu trước); món không còn trong danh sách bước thì được đưa về trạng thái đầu.
       def apply(model, moves, items, transparent: false, restore: nil)
-        by_index = items.to_h { |item| [item[:index], item] }
         model.start_operation(OPERATION_NAME, true, false, transparent)
         begin
-          moved = {}
-          moves.each do |move|
-            item = by_index.fetch(move[:index]) { raise ArgumentError, 'Danh sách món đã thay đổi. Hãy chọn lại món rồi thử lại.' }
-            apply_move(model, item, move[:steps], restore && restore[item[:entity]])
-            moved[item[:entity]] = true
-          end
-          restore&.each { |entity, transformation| entity.transformation = transformation if entity.valid? && !moved[entity] }
+          apply_moves(model, moves, items, restore)
           model.commit_operation
           moves.size
         rescue StandardError
@@ -126,10 +119,42 @@ module VGD
         end
       end
 
+      # Ghi biến đổi của các món (không mở / đóng thao tác): dùng trong apply và trong lúc kéo trực tiếp.
+      def apply_moves(model, moves, items, restore)
+        by_index = items.to_h { |item| [item[:index], item] }
+        moved = {}
+        moves.each do |move|
+          item = by_index.fetch(move[:index]) { raise ArgumentError, 'Danh sách món đã thay đổi. Hãy chọn lại món rồi thử lại.' }
+          apply_move(model, item, move[:steps], restore && restore[item[:entity]])
+          moved[item[:entity]] = true
+        end
+        restore&.each { |entity, transformation| entity.transformation = transformation if entity.valid? && !moved[entity] }
+      end
+
+      # Kéo trực tiếp: một thao tác MỞ SUỐT lần kéo (begin_live), mỗi nhịp chỉ ghi biến đổi (apply_live), thả nút thì đóng (finish_live).
+      # Không mở / đóng thao tác mỗi nhịp: mỗi lần đóng làm SketchUp ghi bước hoàn tác và báo mọi observer của mọi plugin, rất nặng khi kéo.
+      def begin_live(model)
+        model.start_operation(OPERATION_NAME, false)
+      end
+
+      def apply_live(model, moves, items, originals)
+        apply_moves(model, moves, items, originals)
+      end
+
+      # Đưa các món về biến đổi lúc bắt đầu kéo (giá trị kéo trở về 0), trong thao tác đang mở.
+      def restore_entities(originals)
+        originals.each { |entity, transformation| entity.transformation = transformation if entity.valid? }
+      end
+
+      # changed: còn thay đổi so với lúc bắt đầu kéo thì đóng (một bước Ctrl+Z), không thì hủy để không để lại bước trống.
+      def finish_live(model, changed)
+        changed ? model.commit_operation : model.abort_operation
+      end
+
       # Đưa các món về biến đổi lúc bắt đầu kéo (khi giá trị kéo trở về 0), gộp vào thao tác trước đó.
       def restore(model, originals)
         model.start_operation(OPERATION_NAME, true, false, true)
-        originals.each { |entity, transformation| entity.transformation = transformation if entity.valid? }
+        restore_entities(originals)
         model.commit_operation
       end
 

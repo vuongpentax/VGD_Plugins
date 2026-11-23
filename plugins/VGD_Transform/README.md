@@ -1,4 +1,4 @@
-# VGD Transform 0.1.0-beta.9
+# VGD Transform 0.1.0-beta.10
 
 > Đổi tên từ **VGD Position**. Trong SketchUp, gỡ bản **VGD Position** cũ (Extension Manager) trước khi cài bản này để tránh hai menu trùng chức năng.
 

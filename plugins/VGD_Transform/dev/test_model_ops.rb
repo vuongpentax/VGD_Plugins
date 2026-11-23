@@ -219,5 +219,105 @@ M.apply(pm, both, pi, restore: po)
 M.apply(pm, [both.first], pi, transparent: true, restore: po)
 ok('kéo trực tiếp: món không còn trong danh sách bước trở về vị trí đầu', near(M.items(pm)[1][:origin], pi[1][:origin]) && near(M.items(pm)[0][:origin], [50.0, 0.0, 0.0]))
 
+# ----- Kéo trực tiếp trong MỘT thao tác mở suốt lần kéo (không mở / đóng thao tác mỗi nhịp) -----
+lm = Sketchup::Model.new([Sketchup::Group.new('Live', [0.0, 0.0, 0.0])])
+li = M.items(lm)
+lo = li.to_h { |i| [i[:entity], i[:entity].transformation] }
+M.begin_live(lm)
+M.apply_live(lm, TR.offset(li, [100.0, nil, nil], 'world')[:moves], li, lo)
+M.apply_live(lm, TR.offset(li, [150.0, nil, nil], 'world')[:moves], li, lo)
+ok('kéo trực tiếp: chỉ một thao tác được mở, các nhịp không mở / đóng thêm', lm.ops == [[:start, 'VGD Transform · Biến đổi món', false]])
+ok('kéo trực tiếp: mỗi nhịp tính từ trạng thái đầu (150, không phải 250)', near(M.items(lm)[0][:origin], [150.0, 0.0, 0.0]))
+ok('kéo trực tiếp: mỗi nhịp ghi biến đổi một lần', lm.selection.first.sets == 2)
+M.restore_entities(lo)
+ok('kéo về 0: món trở lại vị trí đầu, không mở thao tác mới', near(M.items(lm)[0][:origin], [0.0, 0.0, 0.0]) && lm.ops.size == 1)
+M.finish_live(lm, true)
+ok('thả nút có thay đổi: đóng thao tác một lần (một bước Ctrl+Z)', lm.ops.last == [:commit] && lm.ops.size == 2)
+am = Sketchup::Model.new([Sketchup::Group.new('Live', [0.0, 0.0, 0.0])])
+M.begin_live(am)
+M.finish_live(am, false)
+ok('thả nút khi không còn thay đổi: hủy thao tác, không để lại bước Ctrl+Z trống', am.ops.last == [:abort])
+bad = Sketchup::Model.new([Sketchup::Group.new('Khóa', [0.0, 0.0, 0.0], locked: true)])
+bi = M.items(bad)
+M.begin_live(bad)
+ok('kéo trực tiếp món khóa: báo lỗi', error_of { M.apply_live(bad, TR.offset(bi.map { |i| i.merge(locked: false) }, [5.0, nil, nil], 'world')[:moves], bi, {}) }.to_s.include?('đang bị khóa'))
+
+# ----- Panel: luồng kéo trực tiếp (gộp giá trị theo nhịp hẹn giờ, một thao tác mở suốt, thả / đóng cửa sổ) với HtmlDialog và hẹn giờ giả lập -----
+require 'json'
+module Sketchup
+  class SelectionObserver; end
+  class ModelObserver; end
+  def self.active_model; $panel_model; end
+end
+module UI
+  class HtmlDialog
+    STYLE_DIALOG = 1
+    attr_reader :callbacks, :scripts
+    def initialize(*); @callbacks = {}; @scripts = []; end
+    def set_file(*); end
+    def add_action_callback(name, &block); @callbacks[name] = block; end
+    def set_on_closed(&block); @on_closed = block; end
+    def execute_script(script); @scripts << script; end
+    def visible?; false; end
+    def show; end
+    def bring_to_front; end
+    def close; @on_closed&.call; end
+  end
+  @timers = {}
+  @next_timer = 0
+  def self.start_timer(_seconds, _repeat = false, &block); @next_timer += 1; @timers[@next_timer] = block; @next_timer; end
+  def self.stop_timer(id); @timers.delete(id); end
+  def self.timers; @timers; end
+  def self.run_timers; list = @timers.values; @timers.clear; list.each(&:call); end
+end
+module VGD::Transform
+  ROOT = ::ROOT unless const_defined?(:ROOT, false)
+  def self.log(*); end
+end
+require File.join(ROOT, 'core/live_queue')
+require File.join(ROOT, 'ui/panel')
+
+def panel_model(shift)
+  model = Sketchup::Model.new([Sketchup::Group.new('P', [shift, 0.0, 0.0])])
+  def model.add_observer(*); end
+  def model.remove_observer(*); end
+  def model.active_view; @view ||= Struct.new(:count) { def invalidate; self.count = (count || 0) + 1; end }.new(0); end
+  model.selection.define_singleton_method(:add_observer) { |*| }
+  model.selection.define_singleton_method(:remove_observer) { |*| }
+  model
+end
+def live_payload(x); {'tool' => 'move_off', 'values' => {'x' => x.to_s}, 'pivot' => 'item', 'coord' => 'world'}; end
+def panel_call(dialog, name, payload = nil); dialog.callbacks[name].call(nil, payload && JSON.generate(payload)); end
+
+$panel_model = panel_model(0.0)
+panel = VGD::Transform::Panel.new
+dlg = panel.instance_variable_get(:@dialog)
+panel_call(dlg, 'live_start')
+ok('panel: bắt đầu kéo mở đúng một thao tác', $panel_model.ops == [[:start, 'VGD Transform · Biến đổi món', false]] && !panel.busy_reason.nil?)
+[100, 110, 120].each { |x| panel_call(dlg, 'live', live_payload(x)) }
+ok('panel: nhiều giá trị đến nhanh chỉ hẹn giờ một lần và chưa đụng model', UI.timers.size == 1 && near(M.items($panel_model)[0][:origin], [0.0, 0.0, 0.0]))
+UI.run_timers
+ok('panel: đến nhịp chỉ áp dụng giá trị mới nhất (120), không mở thao tác thêm', near(M.items($panel_model)[0][:origin], [120.0, 0.0, 0.0]) && $panel_model.ops.size == 1)
+panel_call(dlg, 'live', live_payload(200))
+panel_call(dlg, 'live_end')
+ok('panel: thả nút áp dụng giá trị cuối (200) rồi đóng một lần, hẹn giờ còn lại bị hủy', near(M.items($panel_model)[0][:origin], [200.0, 0.0, 0.0]) && $panel_model.ops.last == [:commit] && $panel_model.ops.size == 2 && UI.timers.empty? && panel.busy_reason.nil?)
+
+$panel_model = panel_model(0.0)
+panel = VGD::Transform::Panel.new
+dlg = panel.instance_variable_get(:@dialog)
+panel_call(dlg, 'live_start')
+panel_call(dlg, 'live', live_payload(0))
+panel_call(dlg, 'live_end')
+ok('panel: kéo về 0 rồi thả: hủy thao tác, không để lại bước Ctrl+Z trống', $panel_model.ops.last == [:abort] && near(M.items($panel_model)[0][:origin], [0.0, 0.0, 0.0]))
+
+$panel_model = panel_model(0.0)
+panel = VGD::Transform::Panel.new
+dlg = panel.instance_variable_get(:@dialog)
+panel_call(dlg, 'live_start')
+panel_call(dlg, 'live', live_payload(50))
+UI.run_timers
+dlg.close
+ok('panel: đóng cửa sổ giữa lúc kéo: hủy thao tác đang mở', $panel_model.ops.last == [:abort] && panel.busy_reason.nil?)
+
 puts($fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

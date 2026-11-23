@@ -2,6 +2,17 @@
 
 Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**, trừ khi ghi khác.
 
+## Bản 0.1.0-beta.10: đã kiểm tra tự động
+
+Kéo mũi tên ▲▼ xem trực tiếp (bản beta.9 chưa đủ mượt so với lệnh Move của SketchUp, đã bỏ cách gửi có xác nhận `live_ack`): (1) cả lần kéo là MỘT thao tác mở suốt (`ModelOps.begin_live` / `apply_live` / `finish_live`), không `start_operation` / `commit_operation` mỗi nhịp, vì mỗi lần đóng ghi bước hoàn tác và báo `onTransactionCommit` cho mọi observer của mọi plugin đang nạp; (2) giá trị từ giao diện được gộp (`LiveQueue`, chỉ giữ giá trị mới nhất) và áp dụng theo nhịp hẹn giờ 16 ms; (3) mỗi nhịp mỗi món ghi biến đổi một lần; (4) mỗi nhịp gọi `View#invalidate`; (5) thả nút: có thay đổi thì đóng thành một bước Ctrl+Z, không còn thay đổi thì hủy (không để bước trống); đóng cửa sổ hoặc lỗi giữa lúc kéo thì hủy thao tác đang mở.
+
+- `dev/test_live_queue.rb` (mới): chỉ giữ giá trị mới nhất, chỉ hẹn giờ một lần cho nhiều giá trị.
+- `dev/test_model_ops.rb`: một thao tác mở suốt, các nhịp không mở / đóng thêm, ghi biến đổi một lần mỗi nhịp, về 0 không mở thao tác mới, đóng / hủy đúng; luồng Panel với HtmlDialog và hẹn giờ giả lập (gộp giá trị, thả nút áp dụng giá trị cuối và đóng một lần, kéo về 0 rồi thả thì hủy, đóng cửa sổ giữa lúc kéo thì hủy).
+- `dev/test_ui.cjs` (56): hai giá trị kéo trong một nhịp chỉ gửi giá trị mới nhất; không còn `live_ack`.
+- `ruby dev/run_tests.rb` và `tests/test_vgd_conventions.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật (rủi ro chính của bản này):** (a) độ mượt thực tế so với lệnh Move; (b) khung nhìn có vẽ lại đều khi thao tác đang mở (đã dùng `start_operation(name, false)` và `View#invalidate`, chưa chạy thật); (c) `UI.start_timer` 16 ms có đều không; (d) hoàn tác một lần sau khi thả.
+
 ## Bản 0.1.0-beta.9: đã kiểm tra tự động
 
 Kéo mũi tên ▲▼ xem trực tiếp trong SketchUp mượt hơn: (1) giao diện chỉ gửi một cập nhật tại một lúc, giá trị kéo mới dồn lại và được gửi khi Ruby báo xong (`live_ack`), nên không dồn hàng đợi gây trễ; khoảng cách tối thiểu giữa hai lần gửi 16 ms (trước 40 ms cố định); nếu Ruby không báo trong 1 giây thì gửi tiếp; (2) `ModelOps.apply` với `restore:` ghi biến đổi của mỗi món đúng một lần mỗi nhịp (trước ghi lại trạng thái đầu rồi mới ghi vị trí mới); món không còn trong danh sách bước vẫn được đưa về trạng thái đầu.
@@ -35,7 +46,7 @@ Các mục còn lại giữ như bản beta.6:
 
 ## Chưa xác minh trong SketchUp thật
 
-- **Kéo trực tiếp (beta.9 đã đổi cách gửi và ghi, cần thử lại):** món chạy mượt khi kéo ▲▼; cả lần kéo là một bước Ctrl+Z (`start_operation` với `transparent`); tốc độ khi chọn nhiều món.
+- **Kéo trực tiếp (beta.10 đổi sang một thao tác mở suốt, cần thử lại kỹ):** món chạy mượt khi kéo ▲▼; cả lần kéo là một bước Ctrl+Z (`start_operation` với `transparent`); tốc độ khi chọn nhiều món.
 - **Ô Tuyệt đối tự cập nhật:** sau Ctrl+Z, sau khi dùng công cụ Move của SketchUp (`ModelObserver#onTransactionCommit/Undo/Redo`); không làm chậm SketchUp khi vẽ.
 - **Đọc ma trận:** `Transformation#to_a` theo cột (trục X ở 0..2, gốc ở 12..14); trục riêng và tỉ lệ đọc đúng với món đã xoay / scale / lồng nhiều cấp.
 - **Đơn vị:** chỉ số `LengthUnit` 0–5 (đặc biệt yd) trong SketchUp thật.
