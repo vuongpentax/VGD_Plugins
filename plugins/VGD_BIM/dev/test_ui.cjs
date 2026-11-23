@@ -613,6 +613,26 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
     assert(bulkRooms.slice(0,3).every(r=>r.level==='lv_bbbbbbbb' && r.height===3300 && r.finish_floor==='Gỗ') && bulkRooms[3].level==='' && bulkRooms[3].height===3000 && bulkRooms.length===12,'áp dụng hàng loạt: 3 phòng đã chọn đổi tầng, chiều cao, hoàn thiện sàn trong một lần gửi; phòng khác giữ nguyên');
     await page.locator('.rooms-panel .rm-bulk-clear').click();
     assert((await page.locator('.rooms-panel .rm-picked').innerText()).includes('0') && await page.locator('.rooms-panel .rm-pick input:checked').count()===0,'bỏ chọn: không còn phòng nào được chọn');
+    // Đợt 4: gợi ý mã cho phòng đã chọn còn trống mã, theo tiền tố và tầng (WC-T1-01); mã đã có không bị đổi, mã mới không trùng
+    const codeless=many.map((r,i)=>(i===0||i===2)?{...r,number:''}:r);
+    await receive('table',manyPayload(codeless));
+    await page.evaluate(()=>{tableState.panel='rooms';tableView(tableState.data);});
+    await page.locator('.rooms-panel .rm-item').nth(0).locator('.rm-pick input').check();
+    await page.locator('.rooms-panel .rm-item').nth(1).locator('.rm-pick input').check();
+    await page.locator('.rooms-panel .rm-item').nth(2).locator('.rm-pick input').check();
+    await page.locator('.rooms-panel .rm-code-prefix').fill('WC');
+    await page.locator('.rooms-panel .rm-code-suggest').click();
+    const codeSent=await page.evaluate(()=>window.calls.filter(c=>c.name==='table_rooms').pop());
+    const codeRooms=codeSent?JSON.parse(codeSent.args[0]).rooms:[];
+    assert(codeRooms[0].number==='WC-T1-01' && codeRooms[2].number==='WC-T1-02' && codeRooms[1].number==='P02','gợi ý mã: phòng trống mã nhận WC-T1-01, WC-T1-02 theo tầng; phòng đã có mã P02 giữ nguyên');
+    await page.locator('.rooms-panel .rm-bulk-clear').click();
+    // Đợt 5: danh sách cần kiểm tra (thiếu tầng hoặc thiếu mã); bấm một dòng để mở đúng phòng đó
+    await receive('table',manyPayload(codeless));
+    await page.evaluate(()=>{tableState.panel='rooms';tableView(tableState.data);});
+    assert(await page.locator('.rooms-panel .rm-issue').count()===8 && (await page.locator('.rooms-panel .rm-issues-title').innerText()).includes('8'),'cần kiểm tra: liệt kê 8 phòng thiếu tầng hoặc thiếu mã (2 thiếu mã, 6 thiếu tầng)');
+    await page.locator('.rooms-panel .rm-issue').first().click();
+    assert(await page.locator('.rooms-panel .rm-item').first().locator('.rm-body').isVisible(),'bấm một dòng cần kiểm tra: mở đúng phòng (hiện phần chi tiết)');
+    await receive('table',manyPayload(many));
     await page.evaluate(()=>{tableState.roomsView=undefined;});
     await receive('table',saved.data);
     await page.evaluate(p=>{tableState.panel=p;tableView(tableState.data);},saved.panel);
