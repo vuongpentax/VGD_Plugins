@@ -9,7 +9,7 @@ begin
   preview = S::Preview.build(raw)
   free = state['levels'].sum { |l| %w[columns beams walls].sum { |k| l['picks'][k].count { |_r, v| v.key?('free') } } }
   issues = %w[columns beams walls openings].flat_map { |k| (preview[k.to_sym] && preview[k.to_sym][:issues]) || [] }
-  puts JSON.generate(ok: preview[:ok] != false, error: preview[:error], free: free, removed: state['removed'], issues: issues, walls: ((preview[:walls] || {})[:items] || []).map { |i| [i[:ref], i[:start], i[:finish], i[:joined], i[:join]] }, notes: state['levels'].map { |l| l['notes'] }, free_plates: %w[slabs ceilings].sum { |k| ((preview[k.to_sym] || {})[:items] || []).count { |i| i[:placement] == 'free' } }, free_items: %w[columns beams walls].sum { |k| ((preview[k.to_sym] || {})[:items] || []).count { |i| i[:placement] == 'free' } })
+  puts JSON.generate(ok: preview[:ok] != false, error: preview[:error], free: free, removed: state['removed'], issues: issues, walls: ((preview[:walls] || {})[:items] || []).map { |i| [i[:ref], i[:start], i[:finish], i[:joined], i[:join]] }, notes: state['levels'].map { |l| l['notes'] }, free_plates: %w[slabs ceilings].sum { |k| ((preview[k.to_sym] || {})[:items] || []).count { |i| i[:placement] == 'free' } }, footings: ((preview[:footings] || {})[:items] || []).map { |i| [i[:ref], i[:kind]] }, footing_issues: (preview[:footings] || {})[:issues] || [], free_items: %w[columns beams walls].sum { |k| ((preview[k.to_sym] || {})[:items] || []).count { |i| i[:placement] == 'free' } })
 rescue ArgumentError => e
   puts JSON.generate(ok: false, error: e.message)
 end

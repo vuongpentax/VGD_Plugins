@@ -129,18 +129,71 @@ module VGD
 
       # Đế móng đơn dưới mọi cột của tầng (tầng móng): {'l' => dài theo X, 'w' => rộng theo Y, 'h' => dày} mm; nil = không có móng.
       # Đế đặt ngay dưới chân cột (đỉnh đế = chân cột), tâm trùng tâm cột, xoay theo cột (FootingPlan).
+      # Khóa TÙY CHỌN (H4, chỉ lưu khi có nên dữ liệu cũ không đổi):
+      #   'step' {'l', 'w', 'h'}: giật cấp, bậc trên (dày `step.h`) đặt trên bậc dưới (dày `h`), không lớn hơn bậc dưới; tổng dày = h + step.h.
+      #   'types' [{'name', 'l', 'w', 'h', 'step'?}] loại móng có tên (tên duy nhất), 'assign' {mã cột => tên loại}: cột không gán dùng kích thước mặc định.
+      #     Mã cột không còn thì giữ nguyên trong dữ liệu, FootingPlan bỏ qua và cảnh báo.
+      #   'strip' {'w', 'h'}: móng băng dưới mọi tường của tầng (WallPlan), đỉnh = chân tường, tâm theo trục tường.
       FOOTING_SIZE = (300.0..8000.0).freeze
       FOOTING_THICKNESS = (150.0..2500.0).freeze
+      FOOTING_STEP_THICKNESS = (100.0..2500.0).freeze # dày bậc trên của móng giật cấp
+      FOOTING_STRIP_W = (200.0..3000.0).freeze        # rộng đế móng băng; dày móng băng dùng FOOTING_THICKNESS
+      MAX_FOOTING_TYPES = 12
+      MAX_FOOTING_NAME = 20
       def self.footing!(raw, level_name)
         return nil if raw.nil?
-        raise Error, "Tầng “#{level_name}”: dữ liệu móng không hợp lệ." unless raw.is_a?(Hash)
-        out = {}
-        {'l' => ['dài móng', FOOTING_SIZE], 'w' => ['rộng móng', FOOTING_SIZE], 'h' => ['dày móng', FOOTING_THICKNESS]}.each do |key, (label, range)|
-          value = raw[key]
-          raise Error, "Tầng “#{level_name}”: #{label} từ #{range.min.to_i} đến #{range.max.to_i} mm." unless number?(value) && range.cover?(value.to_f)
-          out[key] = value.to_f.round(1)
+        who = "Tầng “#{level_name}”"
+        raise Error, "#{who}: dữ liệu móng không hợp lệ." unless raw.is_a?(Hash)
+        out = footing_size!(raw, who)
+        unless raw['types'].nil? || raw['types'] == []
+          list = raw['types']
+          raise Error, "#{who}: danh sách loại móng không hợp lệ (tối đa #{MAX_FOOTING_TYPES})." unless list.is_a?(Array) && list.size <= MAX_FOOTING_TYPES
+          out['types'] = list.map do |t|
+            raise Error, "#{who}: loại móng không hợp lệ." unless t.is_a?(Hash)
+            name = t['name'].is_a?(String) ? t['name'].strip : ''
+            raise Error, "#{who}: tên loại móng từ 1 đến #{MAX_FOOTING_NAME} ký tự, không có ký tự điều khiển." if name.empty? || name.length > MAX_FOOTING_NAME || name.match?(CONTROL)
+            {'name' => name}.merge(footing_size!(t, "#{who}: loại móng “#{name}”"))
+          end
+          names = out['types'].map { |t| t['name'].downcase }
+          dup = out['types'].find { |t| names.count(t['name'].downcase) > 1 }
+          raise Error, "#{who}: tên loại móng “#{dup['name']}” bị trùng." if dup
+        end
+        unless raw['assign'].nil? || raw['assign'] == {}
+          assign = raw['assign']
+          raise Error, "#{who}: bảng gán loại móng cho cột không hợp lệ." unless assign.is_a?(Hash) && assign.size <= ColumnPlan::MAX_COLUMNS
+          known = (out['types'] || []).map { |t| t['name'] }
+          out['assign'] = assign.each_with_object({}) do |(ref, name), h|
+            raise Error, "#{who}: mã cột #{ref.inspect} trong bảng gán loại móng không hợp lệ." unless ref.is_a?(String) && !ref.empty? && ref.length <= 40 && !ref.match?(CONTROL)
+            raise Error, "#{who}: cột #{ref} gán loại móng #{name.inspect} không có trong danh sách loại móng." unless name.is_a?(String) && known.include?(name.strip)
+            h[ref] = name.strip
+          end
+        end
+        unless raw['strip'].nil?
+          strip = raw['strip']
+          raise Error, "#{who}: dữ liệu móng băng không hợp lệ." unless strip.is_a?(Hash)
+          out['strip'] = {'w' => footing_number!(strip['w'], FOOTING_STRIP_W, "#{who}: rộng móng băng"), 'h' => footing_number!(strip['h'], FOOTING_THICKNESS, "#{who}: dày móng băng")}
         end
         out
+      end
+
+      # Kích thước một móng (mặc định hoặc một loại): {'l', 'w', 'h'} và bậc trên 'step' nếu có (không lớn hơn bậc dưới).
+      def self.footing_size!(raw, who)
+        out = {}
+        {'l' => ['dài móng', FOOTING_SIZE], 'w' => ['rộng móng', FOOTING_SIZE], 'h' => ['dày móng', FOOTING_THICKNESS]}.each do |key, (label, range)|
+          out[key] = footing_number!(raw[key], range, "#{who}: #{label}")
+        end
+        return out if raw['step'].nil?
+        step = raw['step']
+        raise Error, "#{who}: dữ liệu giật cấp không hợp lệ." unless step.is_a?(Hash)
+        out['step'] = {'l' => footing_number!(step['l'], FOOTING_SIZE, "#{who}: dài bậc trên"), 'w' => footing_number!(step['w'], FOOTING_SIZE, "#{who}: rộng bậc trên"),
+                       'h' => footing_number!(step['h'], FOOTING_STEP_THICKNESS, "#{who}: dày bậc trên")}
+        raise Error, "#{who}: bậc trên (#{out['step']['l']}x#{out['step']['w']}) phải nhỏ hơn hoặc bằng bậc dưới (#{out['l']}x#{out['w']})." if out['step']['l'] > out['l'] || out['step']['w'] > out['w']
+        out
+      end
+
+      def self.footing_number!(value, range, label)
+        raise Error, "#{label} từ #{range.min.to_i} đến #{range.max.to_i} mm." unless number?(value) && range.cover?(value.to_f)
+        value.to_f.round(1)
       end
 
       # Mái của tầng (RoofPlan): phủ khung lưới (trục biên là đường mép mái) cộng phần chìa `overhang`.

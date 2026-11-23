@@ -205,6 +205,11 @@ main.plan-tab[hidden] { display: none; }
 .layers-head { margin-bottom: 6px; font-weight: 600; }
 .layers-sum { margin-top: 6px; color: var(--vgd-muted, #666); }
 .layers-sum.error { color: var(--vgd-danger, #c0392b); }
+/* Móng của tầng: móng băng, bảng gán loại móng cho từng cột (gói dòng, không làm rộng bảng tầng) */
+#level-footing-editor label.footing-strip { display: inline-flex; align-items: center; gap: 4px; margin: 8px 10px 0 0; }
+#footing-assign { margin-top: 8px; }
+#footing-assign .footing-assign-item { display: inline-flex; align-items: center; gap: 4px; margin: 2px 10px 2px 0; font-size: 12px; white-space: nowrap; }
+#footing-assign select { width: auto; height: 26px; }
 button.layers-btn { white-space: nowrap; }
 
 /* Ribbon theo tab (kiểu Revit): hàng tab, rồi các nhóm có tên với nhãn dưới nút */

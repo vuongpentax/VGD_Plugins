@@ -44,14 +44,14 @@
   }
   function toRubyLevel(l) {
     return {id: l.id, name: l.name, elevation: l.elevation, screed: l.screed, slab_thickness: l.slab, column_type: l.columnType || null, beam_type: l.beamType || null, wall_type: l.wallType || null, ceiling_height: l.ceilingHeight, ceiling_thickness: l.ceilingThickness,
-            floor_layers: (l.floorLayers || []).map(cleanLayer), ceiling_layers: (l.ceilingLayers || []).map(cleanLayer), footing: l.footing ? {l: l.footing.l, w: l.footing.w, h: l.footing.h} : undefined, roof: l.roof ? JSON.parse(JSON.stringify(l.roof)) : undefined,
+            floor_layers: (l.floorLayers || []).map(cleanLayer), ceiling_layers: (l.ceilingLayers || []).map(cleanLayer), footing: l.footing ? footingToRuby(l.footing) : undefined, roof: l.roof ? JSON.parse(JSON.stringify(l.roof)) : undefined,
             picks: {columns: clonePicks(l.picks), beams: clonePicks(l.beamPicks), walls: clonePicks(l.wallPicks), slabs: clonePicks(l.slabPicks), ceilings: clonePicks(l.ceilingPicks), openings: clonePicks(l.openingPicks), stairs: clonePicks(l.stairPicks || {})}, notes: JSON.parse(JSON.stringify(l.notes || {})), sections: JSON.parse(JSON.stringify(l.sections || {}))};
   }
   function cleanLayer(l) { var o = {fn: l.fn, t: l.t, material: l.material || ''}; if (l.color) o.color = l.color; return o; }
   function clonePicks(picks) { var out = {}; Object.keys(picks).forEach(function (k) { out[k] = JSON.parse(JSON.stringify(picks[k])); }); return out; } // sao sâu: phần tử tự do có khóa 'free' lồng nhau
   function fromRubyLevel(l) {
     return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab_thickness, screed: l.screed === undefined ? 50 : l.screed, columnType: l.column_type, beamType: l.beam_type || null, wallType: l.wall_type || null, ceilingHeight: l.ceiling_height, ceilingThickness: l.ceiling_thickness,
-            footing: l.footing ? {l: l.footing.l, w: l.footing.w, h: l.footing.h} : null, roof: l.roof ? JSON.parse(JSON.stringify(l.roof)) : null,
+            footing: l.footing ? footingFromRuby(l.footing) : null, roof: l.roof ? JSON.parse(JSON.stringify(l.roof)) : null,
             floorLayers: (l.floor_layers || []).map(function (x) { return {fn: x.fn, t: x.t, material: x.material || '', color: x.color || null}; }), ceilingLayers: (l.ceiling_layers || []).map(function (x) { return {fn: x.fn, t: x.t, material: x.material || '', color: x.color || null}; }),
             picks: clonePicks((l.picks && l.picks.columns) || {}), beamPicks: clonePicks((l.picks && l.picks.beams) || {}), wallPicks: clonePicks((l.picks && l.picks.walls) || {}),
             stairPicks: clonePicks((l.picks && l.picks.stairs) || {}), slabPicks: clonePicks((l.picks && l.picks.slabs) || {}), ceilingPicks: clonePicks((l.picks && l.picks.ceilings) || {}),
@@ -298,32 +298,145 @@
     keys.forEach(function (k) { row.insertCell().appendChild(numCell(l.roof[k], function (v) { l.roof[k] = v; check(); }, ROOF_RANGES[k][2] + ' ' + l.name)); });
     box.appendChild(sum); check();
   }
-  // ---- Móng đơn của tầng: {l, w, h} mm (khoảng khớp Levels::FOOTING_SIZE / FOOTING_THICKNESS ở Ruby) ----
-  var openFooting = null, FOOTING_SIZE = [300, 8000], FOOTING_THICKNESS = [150, 2500];
-  function footingLabel(l) { return l.footing ? l.footing.l + '×' + l.footing.w + '×' + l.footing.h : 'Không'; }
+  // ---- Móng của tầng: {l, w, h} mm mặc định cho mọi cột; tùy chọn step (giật cấp), types + assign (loại móng riêng từng cột), strip (móng băng dưới tường).
+  // Khoảng khớp Levels::FOOTING_SIZE / FOOTING_THICKNESS / FOOTING_STEP_THICKNESS / FOOTING_STRIP_W / MAX_FOOTING_TYPES / MAX_FOOTING_NAME ở Ruby.
+  // Trong giao diện loại móng có khóa riêng `k` (assign trỏ tới `k`) để đổi tên loại không làm mất phần gán; gửi Ruby thì đổi về tên.
+  var openFooting = null, FOOTING_SIZE = [300, 8000], FOOTING_THICKNESS = [150, 2500], FOOTING_STEP_THICKNESS = [100, 2500], FOOTING_STRIP_W = [200, 3000], MAX_FOOTING_TYPES = 12, MAX_FOOTING_NAME = 20;
+  function footingSize(src) { var o = {l: src.l, w: src.w, h: src.h}; if (src.step) o.step = {l: src.step.l, w: src.step.w, h: src.step.h}; return o; }
+  function footingToRuby(f) {
+    var o = footingSize(f), types = f.types || [], names = {};
+    if (types.length) o.types = types.map(function (t) { names[t.k] = t.name; return Object.assign({name: t.name}, footingSize(t)); });
+    var assign = {};
+    Object.keys(f.assign || {}).forEach(function (ref) { if (names[f.assign[ref]] !== undefined) assign[ref] = names[f.assign[ref]]; });
+    if (Object.keys(assign).length) o.assign = assign;
+    if (f.strip) o.strip = {w: f.strip.w, h: f.strip.h};
+    return o;
+  }
+  function footingFromRuby(f) {
+    var o = footingSize(f), keys = {};
+    o.types = (f.types || []).map(function (t, i) { var k = 'ft' + (i + 1); keys[t.name] = k; return Object.assign({k: k, name: t.name}, footingSize(t)); });
+    o.assign = {};
+    Object.keys(f.assign || {}).forEach(function (ref) { if (keys[f.assign[ref]]) o.assign[ref] = keys[f.assign[ref]]; });
+    if (f.strip) o.strip = {w: f.strip.w, h: f.strip.h};
+    return o;
+  }
+  function footingLabel(l) {
+    if (!l.footing) return 'Không';
+    var f = l.footing, n = (f.types || []).length;
+    return f.l + '×' + f.w + '×' + f.h + (f.step ? ' · giật cấp' : '') + (n ? ' · ' + n + ' loại' : '') + (f.strip ? ' · băng' : '');
+  }
+  function footingProblems(f) {
+    var out = [], inRange = function (v, r) { return v >= r[0] && v <= r[1]; };
+    var size = function (src, who) {
+      [['l', FOOTING_SIZE, 'Dài'], ['w', FOOTING_SIZE, 'Rộng'], ['h', FOOTING_THICKNESS, 'Dày']].forEach(function (k) { if (!inRange(src[k[0]], k[1])) out.push(who + k[2] + ' phải từ ' + k[1][0] + ' đến ' + k[1][1] + ' mm.'); });
+      if (!src.step) return;
+      [['l', FOOTING_SIZE, 'Dài bậc trên'], ['w', FOOTING_SIZE, 'Rộng bậc trên'], ['h', FOOTING_STEP_THICKNESS, 'Dày bậc trên']].forEach(function (k) { if (!inRange(src.step[k[0]], k[1])) out.push(who + k[2] + ' phải từ ' + k[1][0] + ' đến ' + k[1][1] + ' mm.'); });
+      if (src.step.l > src.l || src.step.w > src.w) out.push(who + 'bậc trên phải nhỏ hơn hoặc bằng bậc dưới.');
+    };
+    size(f, '');
+    var seen = {};
+    (f.types || []).forEach(function (t, i) {
+      var name = (t.name || '').trim(), low = name.toLowerCase();
+      if (!name || name.length > MAX_FOOTING_NAME) out.push('Tên loại móng thứ ' + (i + 1) + ' từ 1 đến ' + MAX_FOOTING_NAME + ' ký tự.');
+      else if (seen[low]) out.push('Tên loại móng “' + name + '” bị trùng.');
+      seen[low] = true;
+      size(t, 'Loại “' + name + '”: ');
+    });
+    if (f.strip) {
+      if (!inRange(f.strip.w, FOOTING_STRIP_W)) out.push('Rộng móng băng phải từ ' + FOOTING_STRIP_W[0] + ' đến ' + FOOTING_STRIP_W[1] + ' mm.');
+      if (!inRange(f.strip.h, FOOTING_THICKNESS)) out.push('Dày móng băng phải từ ' + FOOTING_THICKNESS[0] + ' đến ' + FOOTING_THICKNESS[1] + ' mm.');
+    }
+    return out;
+  }
   function renderLevelFooting() {
     var box = $('level-footing-editor'); box.replaceChildren();
     var l = openFooting && state.levels.filter(function (x) { return x.id === openFooting; })[0];
     box.hidden = !l; if (!l) return;
     var head = document.createElement('div'); head.className = 'layers-head';
-    head.textContent = 'Móng đơn của “' + l.name + '”: đế hình hộp dưới chân mọi cột của tầng, tâm trùng tâm cột, đỉnh đế = chân cột. Đặt tầng móng dưới tầng trệt: cột của tầng móng là cổ cột, dầm là giằng móng.';
+    head.textContent = 'Móng của “' + l.name + '”: đế hình hộp dưới chân mọi cột của tầng, tâm trùng tâm cột, đỉnh đế = chân cột. Đặt tầng móng dưới tầng trệt: cột của tầng móng là cổ cột, dầm là giằng móng. Có thể thêm loại móng riêng cho từng cột, giật cấp và móng băng dưới tường.';
     box.appendChild(head);
     var lab = document.createElement('label'), on = document.createElement('input'); on.type = 'checkbox'; on.checked = !!l.footing; on.id = 'footing-on';
     on.onchange = function () { l.footing = on.checked ? {l: 1200, w: 1200, h: 400} : null; renderLevels(); changed(); };
     lab.append(on, document.createTextNode(' Có móng đơn dưới cột')); box.appendChild(lab);
     if (!l.footing) return;
-    var tbl = document.createElement('table'); tbl.className = 'axes'; box.appendChild(tbl);
-    heads(tbl, ['Dài theo X (mm)', 'Rộng theo Y (mm)', 'Dày (mm)']);
-    var row = tbl.insertRow(), sum = document.createElement('div'); sum.className = 'layers-sum'; sum.id = 'footing-sum';
+    var f = l.footing; f.types = f.types || []; f.assign = f.assign || {};
+    var sum = document.createElement('div'); sum.className = 'layers-sum'; sum.id = 'footing-sum';
     var check = function () {
-      var f = l.footing, bad = [['l', FOOTING_SIZE, 'Dài'], ['w', FOOTING_SIZE, 'Rộng'], ['h', FOOTING_THICKNESS, 'Dày']].filter(function (k) { var v = f[k[0]]; return !(v >= k[1][0] && v <= k[1][1]); });
-      sum.textContent = bad.length ? bad.map(function (k) { return k[2] + ' phải từ ' + k[1][0] + ' đến ' + k[1][1] + ' mm.'; }).join(' ') : 'Cột xoay 90° thì đế đổi chỗ dài và rộng; cột xoay góc khác thì đế xoay theo.';
+      var bad = footingProblems(f);
+      sum.textContent = bad.length ? bad.join(' ') : 'Cột xoay 90° thì đế đổi chỗ dài và rộng; cột xoay góc khác thì đế xoay theo. Giật cấp: bậc trên đặt trên bậc dưới, tổng dày = hai bậc.';
       sum.className = 'layers-sum' + (bad.length ? ' error' : '');
       var b = $('levels-table').querySelectorAll('.footing-btn')[state.levels.indexOf(l)]; if (b) b.textContent = footingLabel(l);
     };
-    [['l', 'Dài móng'], ['w', 'Rộng móng'], ['h', 'Dày móng']].forEach(function (k) {
-      row.insertCell().appendChild(numCell(l.footing[k[0]], function (v) { l.footing[k[0]] = v; check(); }, k[1] + ' ' + l.name));
+    var refresh = function () { renderLevels(); changed(); };
+    // Bảng kích thước: hàng đầu là móng mặc định (mọi cột không gán loại), các hàng sau là loại móng có tên.
+    var tbl = document.createElement('table'); tbl.className = 'axes'; tbl.id = 'footing-types'; box.appendChild(tbl);
+    heads(tbl, ['Loại', 'Dài X (mm)', 'Rộng Y (mm)', 'Dày (mm)', 'Giật cấp', 'Dài bậc trên', 'Rộng bậc trên', 'Dày bậc trên', '']);
+    var sizeRow = function (src, labels, nameCell, onDelete) {
+      var row = tbl.insertRow(); row.appendChild(nameCell);
+      [['l', labels[0]], ['w', labels[1]], ['h', labels[2]]].forEach(function (k) { row.insertCell().appendChild(numCell(src[k[0]], function (v) { src[k[0]] = v; check(); }, k[1])); });
+      var st = document.createElement('input'); st.type = 'checkbox'; st.checked = !!src.step; st.className = 'footing-step'; st.setAttribute('aria-label', labels[3]);
+      st.onchange = function () { if (st.checked) src.step = {l: Math.max(FOOTING_SIZE[0], src.l - 400), w: Math.max(FOOTING_SIZE[0], src.w - 400), h: 300}; else delete src.step; refresh(); };
+      row.insertCell().appendChild(st);
+      [['l', 'Dài bậc trên '], ['w', 'Rộng bậc trên '], ['h', 'Dày bậc trên ']].forEach(function (k) {
+        var cell = row.insertCell();
+        if (src.step) cell.appendChild(numCell(src.step[k[0]], function (v) { src.step[k[0]] = v; check(); }, k[1] + labels[4]));
+      });
+      var cell = row.insertCell();
+      if (onDelete) { var del = document.createElement('button'); del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.title = 'Xóa loại móng này (cột đã gán quay về móng mặc định)'; del.onclick = onDelete; cell.appendChild(del); }
+    };
+    var defName = document.createElement('td'); defName.textContent = 'Mặc định';
+    sizeRow(f, ['Dài móng ' + l.name, 'Rộng móng ' + l.name, 'Dày móng ' + l.name, 'Giật cấp móng mặc định ' + l.name, 'móng mặc định ' + l.name], defName, null);
+    f.types.forEach(function (t, i) {
+      var nameCell = document.createElement('td'), name = document.createElement('input');
+      name.type = 'text'; name.value = t.name; name.maxLength = MAX_FOOTING_NAME; name.className = 'footing-type-name'; name.setAttribute('aria-label', 'Tên loại móng ' + (i + 1));
+      name.oninput = function () { t.name = name.value; check(); renderFootingAssign(); changed(); };
+      nameCell.appendChild(name);
+      sizeRow(t, ['Dài loại móng ' + (i + 1), 'Rộng loại móng ' + (i + 1), 'Dày loại móng ' + (i + 1), 'Giật cấp loại móng ' + (i + 1), 'loại móng ' + (i + 1)], nameCell, function () {
+        f.types.splice(i, 1);
+        Object.keys(f.assign).forEach(function (ref) { if (f.assign[ref] === t.k) delete f.assign[ref]; });
+        refresh();
+      });
     });
+    var add = document.createElement('button'); add.type = 'button'; add.className = 'add'; add.id = 'footing-add-type'; add.textContent = '+ Thêm loại móng';
+    add.disabled = f.types.length >= MAX_FOOTING_TYPES; add.title = 'Loại móng có tên (tối đa ' + MAX_FOOTING_TYPES + '), rồi chọn loại cho từng cột ở bảng dưới';
+    add.onclick = function () {
+      var used = {}, n = 1, k = 1;
+      f.types.forEach(function (t) { used[t.name.trim().toLowerCase()] = true; used['#' + t.k] = true; });
+      while (used['m' + n]) n++;
+      while (used['#ft' + k]) k++;
+      f.types.push({k: 'ft' + k, name: 'M' + n, l: f.l, w: f.w, h: f.h}); refresh();
+    };
+    box.appendChild(add);
+    // Móng băng dưới mọi tường của tầng.
+    var slab = document.createElement('label'), son = document.createElement('input'); son.type = 'checkbox'; son.checked = !!f.strip; son.id = 'footing-strip-on';
+    son.onchange = function () { if (son.checked) f.strip = {w: 600, h: 300}; else delete f.strip; refresh(); };
+    slab.className = 'footing-strip'; slab.append(son, document.createTextNode(' Móng băng dưới tường')); box.appendChild(slab);
+    if (f.strip) {
+      [['w', 'Rộng móng băng', 'rộng'], ['h', 'Dày móng băng', 'dày']].forEach(function (k) {
+        var span = document.createElement('label'); span.className = 'footing-strip'; span.append(document.createTextNode(' ' + k[2] + ' '));
+        var input = numCell(f.strip[k[0]], function (v) { f.strip[k[0]] = v; check(); }, k[1] + ' ' + l.name); input.style.width = '80px';
+        span.appendChild(input); box.appendChild(span);
+      });
+    }
+    var assignBox = document.createElement('div'); assignBox.id = 'footing-assign'; box.appendChild(assignBox);
+    function renderFootingAssign() {
+      assignBox.replaceChildren();
+      if (!f.types.length) return;
+      var title = document.createElement('div'); title.className = 'layers-head'; title.textContent = 'Loại móng của từng cột (không chọn thì dùng móng mặc định):'; assignBox.appendChild(title);
+      var refs = Object.keys(l.picks || {}), stale = Object.keys(f.assign).filter(function (r) { return refs.indexOf(r) < 0; });
+      refs.concat(stale).forEach(function (ref) {
+        var item = document.createElement('label'); item.className = 'footing-assign-item';
+        var sel = document.createElement('select'); sel.setAttribute('aria-label', 'Loại móng cột ' + ref);
+        sel.append(new Option('Mặc định', ''));
+        f.types.forEach(function (t) { sel.append(new Option(t.name, t.k)); });
+        sel.value = f.assign[ref] || '';
+        sel.onchange = function () { if (sel.value) f.assign[ref] = sel.value; else delete f.assign[ref]; renderFootingAssign(); check(); changed(); };
+        item.append(document.createTextNode(ref + (refs.indexOf(ref) < 0 ? ' (không còn)' : '') + ' '), sel);
+        assignBox.appendChild(item);
+      });
+      if (!refs.length && !stale.length) assignBox.appendChild(document.createTextNode('Tầng chưa có cột nào.'));
+    }
+    renderFootingAssign();
     box.appendChild(sum); check();
   }
   // ---- Lớp hoàn thiện của sàn (trên sàn kết cấu, từ trên xuống) và của trần (từ mặt dưới lên) ----

@@ -63,10 +63,10 @@ module VGD
         level_id = payload['level'] || levels.first['id']
         if (Levels.find(levels, level_id) || {})['footing']
           begin
-            plan = FootingPlan.plan(grid, types, levels, level_id)
+            plan = FootingPlan.plan(grid, types, levels, level_id, beam_types, wall_types, opening_types)
             out[:footings] = {level: plan[:level]['id'], z_top: plan[:z_top], h: plan[:h], issues: plan[:issues], count: plan[:items].size,
-                              items: plan[:items].map { |i| i.slice(:ref, :center, :w, :d, :h, :z0, :z1, :rot, :poly) }}
-          rescue FootingPlan::Error, ColumnPlan::Error => error
+                              items: plan[:items].map { |i| i.slice(:ref, :kind, :center, :w, :d, :h, :z0, :z1, :rot, :poly) }}
+          rescue FootingPlan::Error, ColumnPlan::Error, BeamPlan::Error, WallPlan::Error => error
             out[:footings_error] = error.message
           end
         end

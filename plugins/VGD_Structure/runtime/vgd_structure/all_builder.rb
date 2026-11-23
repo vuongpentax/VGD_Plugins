@@ -14,11 +14,11 @@ module VGD
         last = state['levels'].last['id']
         KINDS.each_with_object({}) do |kind, out|
           next if only && !only.include?(kind)
-          # Móng không có lựa chọn riêng: tầng có khai báo `footing` và có cột (đế đặt dưới chân cột).
+          # Móng không có lựa chọn riêng: tầng có khai báo `footing` và có cột (đế đặt dưới chân cột), hoặc có móng băng và có tường.
           # Mái: tầng có khai báo `roof`, kể cả tầng trên cùng.
           picked = lambda do |l|
             case kind
-            when 'footings' then l['footing'] && !l['picks']['columns'].empty?
+            when 'footings' then l['footing'] && (!l['picks']['columns'].empty? || (l['footing']['strip'] && !l['picks']['walls'].empty?))
             when 'roofs' then l['roof']
             else !l['picks'][kind].empty?
             end

@@ -1,8 +1,10 @@
-# VGD Structure 0.29.0-beta.3
+# VGD Structure 0.30.0-beta.1
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
+
+**0.30.0-beta.1 (đợt H4): móng băng, loại móng riêng từng cột, móng giật cấp.** Bảng Tầng → nút Móng: tick "Giật cấp" để đế hai bậc; "+ Thêm loại móng" rồi chọn loại cho từng cột (cột biên / giữa khác nhau); tick "Móng băng dưới tường" (rộng, dày) để có dải móng dưới mọi tường tầng móng, tự chạy giữa các đế cột nên không chồng khối. Tường xiên chưa hỗ trợ. Chưa thử trong SketchUp thật.
 
 **0.29.0-beta.3:** mặt cắt chỉ cắt (và hatch) phần nằm trong ĐOẠN đường cắt vẽ trên mặt bằng; vật nằm trên phần kéo dài của đường cắt không còn bị coi là bị cắt (trước đây mặt phẳng cắt dài vô hạn). Chỉ phần bị cắt mới hatch; vật phía sau là nét mảnh, không hatch.
 
@@ -164,7 +166,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.29.0-beta.3.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.30.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

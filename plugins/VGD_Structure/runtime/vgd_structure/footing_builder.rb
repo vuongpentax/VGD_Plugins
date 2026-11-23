@@ -1,6 +1,6 @@
 module VGD
   module Structure
-    # Dựng đế móng đơn theo kế hoạch (FootingPlan): mỗi tầng móng một Group "Móng - <tên tầng>" trên tag S. FOOTING, chứa các ComponentInstance
+    # Dựng đế móng (đế đơn, bậc trên của móng giật cấp, đoạn móng băng) theo kế hoạch (FootingPlan): mỗi tầng móng một Group "Móng - <tên tầng>" trên tag S. FOOTING, chứa các ComponentInstance
     # dùng chung định nghĩa theo (dài x rộng x dày). Cùng mô hình prepare / apply với các builder khác (AllBuilder gộp một bước hoàn tác).
     # Chưa xác minh trong SketchUp thật: chỉ kiểm bằng giả lập.
     module FootingBuilder
@@ -13,8 +13,8 @@ module VGD
         raise FootingPlan::Error, 'Hãy chọn ít nhất một tầng để dựng móng.' unless level_ids.is_a?(Array) && !level_ids.empty?
         ids = level_ids.uniq.select { |id| (Levels.find(state['levels'], id) || {})['footing'] }
         raise FootingPlan::Error, 'Các tầng đã chọn chưa khai báo móng.' if ids.empty?
-        plans = ids.map { |id| FootingPlan.plan(state['grid'], state['types'], state['levels'], id) }
-        raise FootingPlan::Error, 'Tầng móng chưa có cột nào: móng đặt dưới chân cột.' if plans.all? { |plan| plan[:items].empty? }
+        plans = ids.map { |id| FootingPlan.plan(state['grid'], state['types'], state['levels'], id, state['beam_types'], state['wall_types'], state['opening_types']) }
+        raise FootingPlan::Error, 'Tầng móng chưa có cột nào (hoặc tường khi bật móng băng): móng đặt dưới chân cột và dưới tường.' if plans.all? { |plan| plan[:items].empty? }
         locked = plans.map { |plan| find(model, plan[:level]['id']) }.compact.find(&:locked?)
         raise FootingPlan::Error, "Nhóm “#{locked.name}” đang bị khóa. Hãy mở khóa rồi dựng lại." if locked
         {state: state, plans: plans, total: plans.sum { |plan| plan[:items].size }}
@@ -89,14 +89,23 @@ module VGD
             existing && existing.valid? ? existing : make_definition(model, name, item)
           end
           instance = group.entities.add_instance(definition, Placement.transformation(item, item[:center][0], item[:center][1], item[:z0]))
-          instance.name = "Móng #{item[:ref]} (#{plan[:level]['name']})"
+          instance.name = "#{label(item)} (#{plan[:level]['name']})"
           instance.layer = layer
           tag_instance(instance, plan, item)
           IdKeeper.assign(instance, instance.get_attribute('VGD_BIM_SOURCE', 'ref'), kept)
         end
       end
 
+      def self.label(item)
+        case item[:kind]
+        when 'step' then "Móng #{item[:column]} bậc trên"
+        when 'strip' then "Móng băng #{item[:wall]}"
+        else "Móng #{item[:ref]}"
+        end
+      end
+
       # Dữ liệu cho VGD BIM (SPEC mục 2): dims cùng khóa với cột (w, d, height) để BIM tính thể tích như cột.
+      # Móng băng: w = bề rộng đế, d = chiều dài đoạn, height = dày (w x d x height vẫn là thể tích).
       def self.tag_instance(instance, plan, item)
         instance.set_attribute('VGD_BIM_SOURCE', 'plugin', Schema::PLUGIN_ID)
         instance.set_attribute('VGD_BIM_SOURCE', 'plugin_version', VERSION)
@@ -106,8 +115,13 @@ module VGD
         instance.set_attribute(Schema::DICTIONARY, 'level_name', plan[:level]['name'])
         instance.set_attribute(Schema::DICTIONARY, 'level_elevation', plan[:level]['elevation'])
         instance.set_attribute(Schema::DICTIONARY, 'fp', ModelSync.fingerprint('footing', item))
-        instance.set_attribute(Schema::DICTIONARY, 'type', "Móng #{ColumnBuilder.fmt(item[:w])}x#{ColumnBuilder.fmt(item[:d])}x#{ColumnBuilder.fmt(item[:h])}")
-        instance.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('w' => item[:w], 'd' => item[:d], 'height' => item[:h]))
+        if item[:kind] == 'strip'
+          instance.set_attribute(Schema::DICTIONARY, 'type', "Móng băng #{ColumnBuilder.fmt(item[:width])}x#{ColumnBuilder.fmt(item[:h])}")
+          instance.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('w' => item[:width], 'd' => item[:length], 'height' => item[:h]))
+        else
+          instance.set_attribute(Schema::DICTIONARY, 'type', item[:type_name] || "Móng #{ColumnBuilder.fmt(item[:w])}x#{ColumnBuilder.fmt(item[:d])}x#{ColumnBuilder.fmt(item[:h])}")
+          instance.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('w' => item[:w], 'd' => item[:d], 'height' => item[:h]))
+        end
       end
 
       def self.make_definition(model, name, item)

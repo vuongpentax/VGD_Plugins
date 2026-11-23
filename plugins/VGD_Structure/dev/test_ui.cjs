@@ -352,6 +352,44 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(ft.footing.l===1500 && ft.footing.h===500 && !/phải từ/.test(await page.locator('#footing-sum').innerText()),'sửa kích thước: gửi đúng số');
   const vft=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
   ok(vft.ok,'dữ liệu móng được Ruby chấp nhận');
+  // H4: giật cấp, loại móng riêng từng cột, móng băng (khoảng khớp Levels ở Ruby; dữ liệu qua ui_validate.rb)
+  await page.locator('#level-footing-editor input[aria-label^="Giật cấp móng mặc định"]').check();await wait(300);
+  ft=(await last('grid_preview')).levels[0];
+  ok(JSON.stringify(ft.footing.step)==='{"l":1100,"w":800,"h":300}' && (await page.locator('#level-footing-editor input[aria-label^="Dày bậc trên móng mặc định"]').count())===1 && /giật cấp/.test(await page.locator('#levels-table tr:nth-child(2) button.footing-btn').innerText()),'giật cấp móng mặc định: gửi bậc trên mặc định (nhỏ hơn bậc dưới 400 mm, dày 300), nút ghi giật cấp');
+  await page.locator('#level-footing-editor input[aria-label^="Dài bậc trên móng mặc định"]').fill('2000');await wait(300);
+  ok(/bậc trên phải nhỏ hơn hoặc bằng bậc dưới/.test(await page.locator('#footing-sum').innerText()),'bậc trên lớn hơn bậc dưới: báo sớm như Ruby');
+  await page.locator('#level-footing-editor input[aria-label^="Dài bậc trên móng mặc định"]').fill('900');await page.locator('#level-footing-editor input[aria-label^="Dày bậc trên móng mặc định"]').fill('50');await wait(300);
+  ok(/Dày bậc trên phải từ 100 đến 2500/.test(await page.locator('#footing-sum').innerText()),'dày bậc trên ngoài khoảng: báo đúng khoảng của Ruby');
+  await page.locator('#level-footing-editor input[aria-label^="Dày bậc trên móng mặc định"]').fill('250');await wait(200);
+  ok((await page.locator('#footing-assign select').count())===0,'chưa có loại móng: chưa hiện bảng gán loại cho cột');
+  await page.click('#footing-add-type');await wait(300);
+  ft=(await last('grid_preview')).levels[0];
+  ok(ft.footing.types.length===1 && ft.footing.types[0].name==='M1' && ft.footing.types[0].l===1500 && ft.footing.assign===undefined && (await page.locator('#footing-assign select').count())===2,'thêm loại móng: M1 chép kích thước mặc định, chưa gán; hiện ô chọn loại cho từng cột (2 cột)');
+  await page.locator('#footing-assign select[aria-label="Loại móng cột 2-B"]').selectOption({label:'M1'});await wait(300);
+  ok(JSON.stringify((await last('grid_preview')).levels[0].footing.assign)==='{"2-B":"M1"}','chọn loại cho cột 2-B: gửi assign theo tên loại');
+  await page.locator('#level-footing-editor input[aria-label="Tên loại móng 1"]').fill('Biên');await page.locator('#level-footing-editor input[aria-label="Dài loại móng 1"]').fill('1800');await wait(300);
+  ft=(await last('grid_preview')).levels[0];
+  ok(ft.footing.types[0].name==='Biên' && ft.footing.types[0].l===1800 && JSON.stringify(ft.footing.assign)==='{"2-B":"Biên"}' && (await page.locator('#footing-assign select[aria-label="Loại móng cột 2-B"] option:checked').innerText())==='Biên','đổi tên loại: cột đã gán đi theo tên mới, sửa kích thước loại');
+  await page.click('#footing-add-type');await wait(200);
+  await page.locator('#level-footing-editor input[aria-label="Tên loại móng 2"]').fill('biên');await wait(300);
+  ok(/bị trùng/.test(await page.locator('#footing-sum').innerText()),'tên loại trùng (không phân biệt hoa thường): báo sớm như Ruby');
+  await page.locator('#footing-types tr:nth-child(4) button.del').click();await wait(300);
+  ok((await last('grid_preview')).levels[0].footing.types.length===1,'xóa loại thứ hai');
+  await page.check('#footing-strip-on');await wait(300);
+  ft=(await last('grid_preview')).levels[0];
+  ok(JSON.stringify(ft.footing.strip)==='{"w":600,"h":300}' && /băng/.test(await page.locator('#levels-table tr:nth-child(2) button.footing-btn').innerText()),'bật móng băng: gửi strip mặc định rộng 600, dày 300');
+  await page.locator('#level-footing-editor input[aria-label^="Rộng móng băng"]').fill('100');await wait(300);
+  ok(/Rộng móng băng phải từ 200 đến 3000/.test(await page.locator('#footing-sum').innerText()),'rộng móng băng ngoài khoảng: báo đúng khoảng của Ruby');
+  await page.locator('#level-footing-editor input[aria-label^="Rộng móng băng"]').fill('500');await wait(300);
+  ok(!/phải|trùng/.test(await page.locator('#footing-sum').innerText()),'sửa lại đúng khoảng: hết báo lỗi');
+  const gp4=await last('grid_preview');gp4.level=gp4.levels[0].id; // xem trước của tầng móng (tầng đang xem có thể là tầng khác)
+  const vf4=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(gp4),encoding:'utf8'}));
+  ok(vf4.ok && !vf4.footings.some(f=>f[0]==='2-B:b2') && vf4.footings.some(f=>f[0]==='1-A:b2' && f[1]==='step') && vf4.footings.filter(f=>f[1]==='pad').length===2 && vf4.footings.filter(f=>f[1]==='strip').map(f=>f[0]).join()==='x:B:1-2:s1,y:2:A-B:s1' && vf4.footing_issues.length===0,'dữ liệu loại móng, giật cấp, móng băng được Ruby chấp nhận (cột gán loại không giật cấp, băng dưới hai tường của tầng, không cảnh báo chồng)');
+  await page.locator('#footing-types tr:nth-child(3) button.del').click();await wait(300);
+  ft=(await last('grid_preview')).levels[0];
+  ok(ft.footing.types===undefined && ft.footing.assign===undefined && (await page.locator('#footing-assign select').count())===0,'xóa loại cuối: bỏ types và assign khỏi dữ liệu, cột về móng mặc định');
+  await page.uncheck('#footing-strip-on');await page.locator('#level-footing-editor input[aria-label^="Giật cấp móng mặc định"]').uncheck();await wait(300);
+  ok(JSON.stringify((await last('grid_preview')).levels[0].footing)==='{"l":1500,"w":1200,"h":500}','tắt móng băng và giật cấp: dữ liệu về đúng dạng cũ (chỉ l, w, h)');
   await page.uncheck('#footing-on');await wait(300);
   ok((await last('grid_preview')).levels[0].footing===undefined && (await page.locator('#levels-table tr:nth-child(2) button.footing-btn').innerText())==='Không','tắt móng: bỏ khóa footing khỏi dữ liệu');
   // Mái của tầng: chọn kiểu, hướng, độ dốc; dữ liệu được Ruby chấp nhận
