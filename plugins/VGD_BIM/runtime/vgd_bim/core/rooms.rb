@@ -77,14 +77,11 @@ module VGD
       def self.sanitize!(list)
         raise ArgumentError, 'Danh sách phòng không hợp lệ.' unless list.is_a?(Array)
         raise ArgumentError, "Chỉ có tối đa #{MAX_ROOMS} phòng." if list.size > MAX_ROOMS
-        names = {}
         numbers = {}
         list.map do |item|
           raise ArgumentError, 'Danh sách phòng không hợp lệ.' unless item.is_a?(Hash)
           name = item['name'].is_a?(String) ? item['name'].strip : ''
           raise ArgumentError, "Hãy nhập tên phòng (tối đa #{MAX_NAME} ký tự, không có ký tự điều khiển)." if name.empty? || name.length > MAX_NAME || name.match?(CONTROL)
-          raise ArgumentError, "Tên phòng trùng nhau: #{name}." if names[name.downcase]
-          names[name.downcase] = true
           number = text!(item['number'], "Giá trị mã phòng của #{name}")
           raise ArgumentError, "Mã phòng trùng nhau: #{number}." if !number.empty? && numbers[number.downcase]
           numbers[number.downcase] = true

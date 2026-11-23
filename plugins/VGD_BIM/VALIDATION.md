@@ -2,6 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.34: đã kiểm tra tự động
+
+Quản lý phòng: tên phòng được phép trùng (vd hai "Vệ sinh" trong cùng một tầng hoặc khác tầng); mã phòng vẫn không được trùng trong toàn model (không phân biệt hoa thường, mã rỗng không tính).
+
+- `dev/test_rooms.rb`: tên trùng với mã khác được nhận; mã trùng vẫn bị từ chối (trước khi sửa: tên trùng bị từ chối, kiểm tra đỏ).
+- `ruby dev/run_tests.rb` và `dev/test_dialog_logic.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** nhập hai phòng cùng tên, khác mã trong hộp Quản lý phòng.
+
 ## Bản 1.1.1-beta.33: đã kiểm tra tự động
 
 Quản lý phòng: sửa tên / mã / tầng của một phòng làm hộp quay về phòng đầu tiên sau mỗi lần nhập (bảng được dựng lại làm mất vị trí cuộn). Giờ hộp giữ vị trí cuộn khi bảng làm mới.
