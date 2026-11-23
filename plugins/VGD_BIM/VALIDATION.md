@@ -2,6 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.37: đã kiểm tra tự động
+
+Quản lý phòng, đợt 3: chọn từng phòng (ô chọn), "Chọn tất cả đang hiện", "Bỏ chọn"; đổi tầng, chiều cao và hoàn thiện sàn / tường / trần cho các phòng đã chọn bằng một lần gửi (Ruby kiểm tra cả danh sách, một bước hoàn tác). Ô để trống thì giữ nguyên. Chưa xóa được một hoàn thiện đã có bằng ô trống.
+
+- `dev/test_ui.cjs`: chọn ba phòng, đổi tầng, chiều cao, hoàn thiện sàn; kiểm tra gói gửi đi đúng và phòng khác giữ nguyên; bỏ chọn. Đạt.
+- `dev/test_ui_en.cjs`, `test_ui_images.cjs`, `test_ui_sheets.cjs`, `test_report_page.cjs`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** hoàn tác một lần đổi hàng loạt trong SketchUp.
+
 ## Bản 1.1.1-beta.36: đã kiểm tra tự động
 
 Quản lý phòng, đợt 2: "Nhóm theo tầng" chia danh sách theo từng tầng, mỗi nhóm ghi số phòng, gập / mở được; nhóm không còn phòng khớp tìm kiếm thì ẩn. Phòng có tầng đã xóa hoặc chưa có tầng nằm chung nhóm "Chưa có tầng". Chỉ đổi cách hiển thị.
