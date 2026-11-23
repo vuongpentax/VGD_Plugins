@@ -588,6 +588,17 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
     assert(await page.locator('.rooms-panel .rm-item .rm-body:visible').count()===12 && (await page.locator('.rooms-panel .rm-collapse-all').innerText()).trim()==='Thu gọn tất cả','khi còn phòng thu gọn, nút là "Mở tất cả": bấm thì mọi phòng mở ra, nút đổi thành "Thu gọn tất cả"');
     await page.locator('.rooms-panel .rm-collapse-all').click();
     assert(await page.locator('.rooms-panel .rm-item .rm-body:visible').count()===0 && (await page.locator('.rooms-panel .rm-collapse-all').innerText()).trim()==='Mở tất cả','bấm "Thu gọn tất cả": mọi phòng thu gọn, nút đổi thành "Mở tất cả"');
+    // Đợt 2: nhóm theo tầng (gập được, đếm số phòng, nhóm không còn phòng nào khi lọc thì ẩn)
+    await page.locator('.rooms-panel .rm-group-tick input').check();
+    assert(await page.locator('.rooms-panel .rm-group').count()===2 && (await page.locator('.rooms-panel .rm-group-head').first().innerText()).includes('6 phòng'),'nhóm theo tầng: hai nhóm (Tầng 1 và Chưa có tầng), mỗi nhóm ghi số phòng');
+    await page.locator('.rooms-panel .rm-group-head').first().locator('.rm-toggle').click();
+    assert(await page.locator('.rooms-panel .rm-group').first().locator('.rm-group-body').isHidden() && await page.locator('.rooms-panel .rm-item:visible').count()===6,'gập nhóm Tầng 1: ẩn 6 phòng của tầng đó, còn 6 phòng nhóm chưa có tầng');
+    await page.locator('.rooms-panel .rm-group-head').first().locator('.rm-toggle').click();
+    await page.locator('.rooms-panel input[type=search]').fill('p03');
+    assert(await page.locator('.rooms-panel .rm-group:visible').count()===1,'tìm "p03": nhóm không còn phòng nào khớp bị ẩn');
+    await page.locator('.rooms-panel input[type=search]').fill('');
+    await page.locator('.rooms-panel .rm-group-tick input').uncheck();
+    assert(await page.locator('.rooms-panel .rm-group').count()===0 && await page.locator('.rooms-panel .rm-item').count()===12,'bỏ nhóm theo tầng: trở về danh sách phẳng 12 phòng');
     await page.evaluate(()=>{tableState.roomsView=undefined;});
     await receive('table',saved.data);
     await page.evaluate(p=>{tableState.panel=p;tableView(tableState.data);},saved.panel);

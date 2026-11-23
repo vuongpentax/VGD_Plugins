@@ -2,6 +2,16 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.36: đã kiểm tra tự động
+
+Quản lý phòng, đợt 2: "Nhóm theo tầng" chia danh sách theo từng tầng, mỗi nhóm ghi số phòng, gập / mở được; nhóm không còn phòng khớp tìm kiếm thì ẩn. Phòng có tầng đã xóa hoặc chưa có tầng nằm chung nhóm "Chưa có tầng". Chỉ đổi cách hiển thị.
+
+- `dev/test_ui.cjs`: hai nhóm với số phòng, gập một nhóm, tìm theo mã ẩn nhóm không khớp, bỏ nhóm thì về danh sách phẳng. Đạt.
+- `dev/test_ui_en.cjs`: chuỗi mới có bản dịch. Đạt.
+- `dev/test_ui_images.cjs`, `test_ui_sheets.cjs`, `test_report_page.cjs`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** bố cục nhóm trong hộp Quản lý phòng.
+
 ## Bản 1.1.1-beta.35: đã kiểm tra tự động
 
 Quản lý phòng, đợt 1 (gọn cho nhiều phòng): ô tìm theo tên hoặc mã (không phân biệt hoa thường, dấu), lọc theo tầng (gồm "Chưa có tầng"), mỗi phòng có hàng tóm tắt và nút ▾ / ▸ để thu gọn, nút "Thu gọn tất cả" / "Mở tất cả", đếm "Hiển thị X / Y phòng". Tìm và lọc chỉ ẩn hàng trên màn hình, không đổi dữ liệu. Trạng thái tìm, lọc và thu gọn giữ khi bảng làm mới.

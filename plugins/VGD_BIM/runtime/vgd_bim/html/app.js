@@ -1190,16 +1190,34 @@ function roomsPanel(){
   const save=()=>call('table_rooms',JSON.stringify({rooms:rooms.map(({metrics,...rest})=>rest)}));
   const fieldInput=(room,key,label,type,width)=>{const i=node('input');i.type=type;i.value=room[key]??'';i.setAttribute('aria-label',label);i.title=label;if(width)i.style.width=width;i.onchange=()=>{room[key]=type==='number'?Number(i.value):i.value;save();};return i;};
   // Tìm, lọc và thu gọn (đợt 1): trạng thái nhớ trong tableState.roomsView, dựng lại bảng vẫn giữ.
-  const roomsView=tableState.roomsView||(tableState.roomsView={q:'',level:'',collapsed:new Set()});
+  const roomsView=tableState.roomsView||(tableState.roomsView={q:'',level:'',collapsed:new Set(),collapsedLevels:new Set(),group:false});
   const levelName=id=>{const l=levels.find(x=>x.id===id);return l?l.name:'Chưa có tầng';};
+  // Nhóm theo tầng (đợt 2): phòng của tầng đã xóa hoặc chưa gán tầng nằm chung nhóm "Chưa có tầng".
+  const groupKey=room=>levels.some(l=>l.id===room.level)?room.level:'';
+  const setGroupCollapsed=(group,flag)=>{const body=group.querySelector('.rm-group-body');const gt=group.querySelector('.rm-group-head .rm-toggle');body.hidden=flag;gt.textContent=flag?'▸':'▾';gt.setAttribute('aria-expanded',String(!flag));flag?roomsView.collapsedLevels.add(group.dataset.key):roomsView.collapsedLevels.delete(group.dataset.key);};
   const allRoomBoxes=()=>[...p.querySelectorAll('.rm-item')];
   const setRoomCollapsed=(box,flag)=>{const body=box.querySelector('.rm-body');const toggle=box.querySelector('.rm-toggle');body.hidden=flag;toggle.textContent=flag?'▸':'▾';toggle.setAttribute('aria-expanded',String(!flag));flag?roomsView.collapsed.add(box.dataset.id):roomsView.collapsed.delete(box.dataset.id);};
   const search=node('input');search.type='search';search.placeholder='Tìm theo tên hoặc mã';search.value=roomsView.q;search.setAttribute('aria-label','Tìm phòng');search.oninput=()=>applyRoomsView();
   const levelFilter=node('select');levelFilter.setAttribute('aria-label','Lọc theo tầng');levelFilter.append(new Option('Tất cả tầng',''),new Option('Chưa có tầng','none'));levels.forEach(l=>levelFilter.append(new Option(l.name,l.id)));levelFilter.value=roomsView.level;levelFilter.onchange=()=>applyRoomsView();
   const countLine=node('p',undefined,'muted rm-count');
   const collapseAll=button(roomsView.collapsed.size?'Mở tất cả':'Thu gọn tất cả',()=>{const collapse=collapseAll.textContent==='Thu gọn tất cả';allRoomBoxes().forEach(box=>setRoomCollapsed(box,collapse));collapseAll.textContent=collapse?'Mở tất cả':'Thu gọn tất cả';});collapseAll.className='rm-collapse-all';
-  const viewRow=node('div',undefined,'rm-view');viewRow.append(search,levelFilter,collapseAll);
+  const groupTick=node('input');groupTick.type='checkbox';groupTick.checked=!!roomsView.group;groupTick.onchange=()=>{roomsView.group=groupTick.checked;tableView(tableState.data);};
+  const groupLabel=node('label',undefined,'rm-group-tick');groupLabel.append(groupTick,node('span','Nhóm theo tầng'));
+  const viewRow=node('div',undefined,'rm-view');viewRow.append(search,levelFilter,collapseAll,groupLabel);
   p.append(viewRow,countLine);
+  const hosts=new Map();
+  if(roomsView.group){
+    [...levels.map(l=>({key:l.id,title:l.name})),{key:'',title:'Chưa có tầng'}].forEach(({key,title})=>{
+      const count=rooms.filter(r=>groupKey(r)===key).length;
+      if(!count)return;
+      const group=node('div',undefined,'rm-group');group.dataset.key=key;
+      const gt=button('▾',()=>setGroupCollapsed(group,!body.hidden));gt.className='rm-toggle';gt.setAttribute('aria-label','Mở hoặc thu gọn nhóm '+title);
+      const head=node('div',undefined,'rm-group-head');head.append(gt,node('span',`${title} · ${count} phòng`,'rm-group-title'));
+      const body=node('div',undefined,'rm-group-body');
+      group.append(head,body);p.append(group);setGroupCollapsed(group,roomsView.collapsedLevels.has(key));
+      hosts.set(key,body);
+    });
+  }
   const applyRoomsView=()=>{
     roomsView.q=search.value;roomsView.level=levelFilter.value;
     const q=foldText(search.value.trim());
@@ -1211,6 +1229,7 @@ function roomsPanel(){
       box.hidden=!(byText&&byLevel);
       if(!box.hidden)shown++;
     });
+    p.querySelectorAll('.rm-group').forEach(group=>{group.hidden=![...group.querySelectorAll('.rm-item')].some(box=>!box.hidden);});
     countLine.textContent=`Hiển thị ${shown} / ${rooms.length} phòng.`;
   };
   rooms.forEach(room=>{
@@ -1242,7 +1261,7 @@ function roomsPanel(){
     const toggle=button('▾',()=>setRoomCollapsed(box,!body.hidden));toggle.className='rm-toggle';toggle.setAttribute('aria-label','Mở hoặc thu gọn phòng '+room.name);
     const head=node('div',undefined,'rm-head');head.append(toggle,node('span',`${room.name} · ${room.number||'—'} · ${levelName(room.level)} · ${m.area??0} m²`,'rm-summary'));
     box.append(head,body);
-    p.append(box);
+    (hosts.get(groupKey(room))||p).append(box);
     setRoomCollapsed(box,roomsView.collapsed.has(room.id));
   });
   if(!rooms.length)p.append(node('p','Chưa có phòng nào. Chọn một hoặc nhiều mặt sàn trong SketchUp rồi bấm Tạo phòng từ các mặt đang chọn.','muted'));
