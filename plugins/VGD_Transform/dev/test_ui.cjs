@@ -159,6 +159,21 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     await click('move_abs-x', 'up');
     const liveAbs = await lastCall('live');
     ok(liveAbs && liveAbs.tool === 'move_abs' && liveAbs.values.x === '1501' && liveAbs.values.y === '', 'xem trực tiếp ở Tuyệt đối (tâm cả lựa chọn 1500): gửi 1501, chỉ ô đang kéo');
+    // Kéo trực tiếp có xác nhận: chỉ một cập nhật đang chờ Ruby; giá trị mới dồn lại, gửi giá trị mới nhất khi Ruby báo xong (live_ack)
+    await clear();
+    await pointer('move_off-x', 'up', 'pointerdown');
+    await page.waitForTimeout(100);
+    await pointer('move_off-x', 'up', 'pointermove', { clientY: 90 });
+    await pointer('move_off-x', 'up', 'pointermove', { clientY: 80 });
+    await page.waitForTimeout(150);
+    const liveCount = () => page.evaluate(() => window.calls.filter(c => c.name === 'live').length);
+    ok((await liveCount()) === 1, 'đang chờ Ruby xử lý: giá trị kéo mới dồn lại, chưa gửi thêm');
+    await receive('live_ack', {});
+    await page.waitForTimeout(150);
+    const latest = await lastCall('live');
+    ok((await liveCount()) === 2 && latest.values.x === '10', 'Ruby báo xong (live_ack): gửi đúng một cập nhật với giá trị mới nhất (10)');
+    await pointer('move_off-x', 'up', 'pointerup');
+    ok((await callNames()).slice(-2).join(',') === 'live,live_end', 'thả nút: gửi giá trị cuối rồi live_end, không chờ xác nhận');
     await page.selectOption('#pivot', 'item');
     await receive('state', state);
     await clear();

@@ -203,8 +203,21 @@ M.apply(lv, TR.offset(lvi, [100.0, nil, nil], 'world')[:moves], lvi, transparent
 M.apply(lv, TR.offset(lvi, [150.0, nil, nil], 'world')[:moves], lvi, transparent: true, restore: originals)
 ok('kéo trực tiếp: lần sau tính từ trạng thái đầu (150, không phải 250)', near(M.items(lv)[0][:origin], [150.0, 0.0, 0.0]))
 ok('kéo trực tiếp: lần đầu là bước mới, các lần sau gộp vào (transparent)', lv.ops.select { |o| o[0] == :start }.map { |o| o[2] } == [false, true])
+sets_before = lv.selection.first.sets
+M.apply(lv, TR.offset(lvi, [120.0, nil, nil], 'world')[:moves], lvi, transparent: true, restore: originals)
+ok('kéo trực tiếp: mỗi nhịp ghi biến đổi của món đúng một lần (không ghi lại vị trí đầu rồi mới ghi vị trí mới)', lv.selection.first.sets - sets_before == 1)
+ok('kéo trực tiếp: vẫn tính từ trạng thái đầu (120)', near(M.items(lv)[0][:origin], [120.0, 0.0, 0.0]))
 M.restore(lv, originals)
 ok('kéo về 0: món trở lại vị trí đầu, gộp vào cùng bước Ctrl+Z', near(M.items(lv)[0][:origin], [0.0, 0.0, 0.0]) && lv.ops[-2][2] == true)
+
+# Món có trong bản đầu nhưng không còn trong danh sách bước thì về vị trí đầu (như khi đặt lại trước rồi áp dụng)
+pm = Sketchup::Model.new([Sketchup::Group.new('A', [0.0, 0.0, 0.0]), Sketchup::Group.new('B', [10.0, 0.0, 0.0])])
+pi = M.items(pm)
+po = pi.to_h { |i| [i[:entity], i[:entity].transformation] }
+both = TR.offset(pi, [50.0, nil, nil], 'world')[:moves]
+M.apply(pm, both, pi, restore: po)
+M.apply(pm, [both.first], pi, transparent: true, restore: po)
+ok('kéo trực tiếp: món không còn trong danh sách bước trở về vị trí đầu', near(M.items(pm)[1][:origin], pi[1][:origin]) && near(M.items(pm)[0][:origin], [50.0, 0.0, 0.0]))
 
 puts($fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

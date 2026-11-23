@@ -11,7 +11,8 @@ const call = (name, payload) => { if (window.sketchup && window.sketchup[name]) 
 const store = { get(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }, set(key, value) { try { localStorage.setItem(key, value); } catch (_) { /* không lưu được thì thôi */ } } };
 
 const LIVE_KEY = 'vgd.transform.live';
-const LIVE_INTERVAL_MS = 40;        // gửi tối đa ~25 lần/giây khi kéo trực tiếp
+const LIVE_INTERVAL_MS = 16;        // khoảng cách tối thiểu giữa hai lần gửi khi kéo trực tiếp
+const LIVE_ACK_TIMEOUT_MS = 1000;  // Ruby không báo xong trong khoảng này thì coi như mất và gửi tiếp
 const DRAG_PIXELS_PER_STEP = 2;
 const DRAG_START_PIXELS = 3;
 const REPEAT_DELAY_MS = 350;
@@ -115,21 +116,46 @@ function updateCoordTitles() {
   document.querySelectorAll('.coord-title').forEach(h => { h.textContent = `${h.dataset.title} · ${text}`; });
 }
 
-// ----- Kéo trực tiếp: gửi tối đa mỗi LIVE_INTERVAL_MS, lần cuối luôn được gửi -----
+// ----- Kéo trực tiếp: chỉ một cập nhật chờ Ruby tại một lúc; giá trị mới dồn lại, Ruby báo xong (live_ack) thì gửi giá trị mới nhất -----
 let livePanel = null;
 let liveTimer = null;
+let liveWaiting = false;   // đã gửi một cập nhật, chưa nhận live_ack
+let livePending = false;   // có giá trị mới trong lúc chờ
+let liveWatch = null;
 function liveBegin(panel) {
   livePanel = panel;
+  liveWaiting = false;
+  livePending = false;
   call('live_start');
+}
+function liveSend() {
+  liveTimer = null;
+  if (!livePanel) return;
+  if (liveWaiting) { livePending = true; return; }
+  liveWaiting = true;
+  livePending = false;
+  clearTimeout(liveWatch);
+  liveWatch = setTimeout(liveAcked, LIVE_ACK_TIMEOUT_MS);
+  call('live', payloadFor(livePanel));
+}
+function liveAcked() {
+  clearTimeout(liveWatch);
+  liveWatch = null;
+  liveWaiting = false;
+  if (livePending && livePanel) liveChanged();
 }
 function liveChanged() {
   if (!livePanel || liveTimer) return;
-  liveTimer = setTimeout(() => { liveTimer = null; if (livePanel) call('live', payloadFor(livePanel)); }, LIVE_INTERVAL_MS);
+  liveTimer = setTimeout(liveSend, LIVE_INTERVAL_MS);
 }
 function liveEnd() {
   if (!livePanel) return;
   clearTimeout(liveTimer);
+  clearTimeout(liveWatch);
   liveTimer = null;
+  liveWatch = null;
+  liveWaiting = false;
+  livePending = false;
   const panel = livePanel;
   call('live', payloadFor(panel));
   livePanel = null;
@@ -220,6 +246,8 @@ window.VGD = {
       message(`Đã biến đổi ${data.moved} món.${skipped}`);
       if (isAbsolute(data.tool)) inputsOf(data.tool).forEach(input => delete input.dataset.dirty);
       else resetOffset(data.tool);
+    } else if (event === 'live_ack') {
+      liveAcked();
     } else if (event === 'tool') {
       showTool(data.tool);
     } else if (event === 'message') {

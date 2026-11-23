@@ -106,20 +106,24 @@ module VGD
         @live = {items: items, originals: items.to_h { |item| [item[:entity], item[:entity].transformation] }, applied: false}
       end
 
+      # Mỗi lần xử lý xong (kể cả lỗi) báo `live_ack` để giao diện gửi tiếp giá trị mới nhất; không báo thì giao diện dồn hàng đợi và kéo bị trễ.
       def live(payload)
-        return unless @live
-        model = Sketchup.active_model
-        begin
-          plan = Plan.build(@live[:items], payload, unit_of(model))
-          ModelOps.apply(model, plan[:moves], @live[:items], transparent: @live[:applied], restore: @live[:originals])
-          @live[:applied] = true
-        rescue NothingToDo
-          # Giá trị kéo về 0 (hoặc hệ số 1): đưa món về như lúc bắt đầu kéo.
-          ModelOps.restore(model, @live[:originals]) if @live[:applied]
-        rescue StandardError
-          @live = nil
-          raise
+        if @live
+          model = Sketchup.active_model
+          begin
+            plan = Plan.build(@live[:items], payload, unit_of(model))
+            ModelOps.apply(model, plan[:moves], @live[:items], transparent: @live[:applied], restore: @live[:originals])
+            @live[:applied] = true
+          rescue NothingToDo
+            # Giá trị kéo về 0 (hoặc hệ số 1): đưa món về như lúc bắt đầu kéo.
+            ModelOps.restore(model, @live[:originals]) if @live[:applied]
+          rescue StandardError
+            @live = nil
+            raise
+          end
         end
+      ensure
+        emit('live_ack', {})
       end
 
       def live_end

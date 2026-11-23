@@ -2,6 +2,16 @@
 
 Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**, trừ khi ghi khác.
 
+## Bản 0.1.0-beta.9: đã kiểm tra tự động
+
+Kéo mũi tên ▲▼ xem trực tiếp trong SketchUp mượt hơn: (1) giao diện chỉ gửi một cập nhật tại một lúc, giá trị kéo mới dồn lại và được gửi khi Ruby báo xong (`live_ack`), nên không dồn hàng đợi gây trễ; khoảng cách tối thiểu giữa hai lần gửi 16 ms (trước 40 ms cố định); nếu Ruby không báo trong 1 giây thì gửi tiếp; (2) `ModelOps.apply` với `restore:` ghi biến đổi của mỗi món đúng một lần mỗi nhịp (trước ghi lại trạng thái đầu rồi mới ghi vị trí mới); món không còn trong danh sách bước vẫn được đưa về trạng thái đầu.
+
+- `dev/test_model_ops.rb`: mỗi nhịp kéo ghi `transformation` một lần, vẫn tính từ trạng thái đầu, món không còn trong danh sách bước về vị trí đầu (trước khi sửa: ghi hai lần, kiểm tra đỏ).
+- `dev/test_ui.cjs` (56): đang chờ Ruby thì giá trị mới dồn lại, chưa gửi thêm; `live_ack` thì gửi đúng một cập nhật với giá trị mới nhất; thả nút gửi giá trị cuối rồi `live_end` không chờ xác nhận (trước khi sửa: kiểm tra đỏ).
+- `ruby dev/run_tests.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** độ mượt khi kéo thực tế (chưa đo được ngoài SketchUp); `emit` `live_ack` qua `execute_script` mỗi nhịp có làm chậm không.
+
 ## Bản 0.1.0-beta.8: đã kiểm tra tự động
 
 - Bản này: nút khóa như Lock của SketchUp; ghi chú và thông báo ở đáy bảng (bỏ `title`, bỏ chữ mặc định); dòng trạng thái xuống đáy; cửa sổ 320 × 250.
@@ -25,7 +35,7 @@ Các mục còn lại giữ như bản beta.6:
 
 ## Chưa xác minh trong SketchUp thật
 
-- **Kéo trực tiếp:** món chạy mượt khi kéo ▲▼; cả lần kéo là một bước Ctrl+Z (`start_operation` với `transparent`); tốc độ khi chọn nhiều món.
+- **Kéo trực tiếp (beta.9 đã đổi cách gửi và ghi, cần thử lại):** món chạy mượt khi kéo ▲▼; cả lần kéo là một bước Ctrl+Z (`start_operation` với `transparent`); tốc độ khi chọn nhiều món.
 - **Ô Tuyệt đối tự cập nhật:** sau Ctrl+Z, sau khi dùng công cụ Move của SketchUp (`ModelObserver#onTransactionCommit/Undo/Redo`); không làm chậm SketchUp khi vẽ.
 - **Đọc ma trận:** `Transformation#to_a` theo cột (trục X ở 0..2, gốc ở 12..14); trục riêng và tỉ lệ đọc đúng với món đã xoay / scale / lồng nhiều cấp.
 - **Đơn vị:** chỉ số `LengthUnit` 0–5 (đặc biệt yd) trong SketchUp thật.

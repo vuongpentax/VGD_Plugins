@@ -105,16 +105,19 @@ module VGD
       # moves: [{index:, steps:}] từ Plan.build; items: danh sách lấy lúc bấm (items(model)).
       # Một thao tác hoàn tác cho cả đợt; mỗi món đặt biến đổi đúng một lần rồi kiểm tra ma trận và điểm gốc; sai thì hủy cả đợt.
       # transparent: gộp vào thao tác trước đó (kéo trực tiếp: nhiều lần cập nhật thành một bước Ctrl+Z).
-      # restore: {entity => biến đổi lúc bắt đầu kéo}; đặt lại trước khi áp dụng, để mỗi lần cập nhật tính từ trạng thái ban đầu.
+      # restore: {entity => biến đổi lúc bắt đầu kéo}; mỗi lần cập nhật tính từ trạng thái ban đầu đó (ghi biến đổi mới một lần, không ghi lại
+      # trạng thái đầu trước); món không còn trong danh sách bước thì được đưa về trạng thái đầu.
       def apply(model, moves, items, transparent: false, restore: nil)
         by_index = items.to_h { |item| [item[:index], item] }
         model.start_operation(OPERATION_NAME, true, false, transparent)
         begin
-          restore&.each { |entity, transformation| entity.transformation = transformation if entity.valid? }
+          moved = {}
           moves.each do |move|
             item = by_index.fetch(move[:index]) { raise ArgumentError, 'Danh sách món đã thay đổi. Hãy chọn lại món rồi thử lại.' }
-            apply_move(model, item, move[:steps])
+            apply_move(model, item, move[:steps], restore && restore[item[:entity]])
+            moved[item[:entity]] = true
           end
+          restore&.each { |entity, transformation| entity.transformation = transformation if entity.valid? && !moved[entity] }
           model.commit_operation
           moves.size
         rescue StandardError
@@ -130,11 +133,12 @@ module VGD
         model.commit_operation
       end
 
-      def apply_move(model, item, steps)
+      # base: biến đổi gốc của món (kéo trực tiếp); không có thì lấy biến đổi hiện tại.
+      def apply_move(model, item, steps, base = nil)
         entity = item[:entity]
         raise ArgumentError, "#{item[:name]} đang bị khóa, không biến đổi được." if entity.locked? || locked_context?(model)
         ctx = context(model)
-        before = ctx * entity.transformation
+        before = ctx * (base || entity.transformation)
         expected = composite(steps) * before
         entity.transformation = ctx.inverse * expected
         verify(item, steps, ctx * entity.transformation, expected)
