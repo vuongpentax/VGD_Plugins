@@ -1,4 +1,4 @@
-# VGD Transform 0.1.0 (bản thử beta.10)
+# VGD Transform 0.1.0 (bản thử beta.11)
 
 Dời, xoay và scale group / component bằng số, theo hộp Transform Type-In của 3ds Max.
 
@@ -6,7 +6,8 @@ Dời, xoay và scale group / component bằng số, theo hộp Transform Type-I
 - Cửa sổ gọn (khoảng 320 × 250) để đặt cạnh màn hình; chọn công cụ bằng icon.
 - Ghi chú và thông báo ở đáy bảng (rê chuột để xem giải thích), không có chữ mặc định.
 - Nút khóa / mở khóa group, component đang chọn như Lock của SketchUp, hoàn tác được.
-- Kéo mũi tên ▲▼ xem trực tiếp trong SketchUp mượt hơn: cả lần kéo là một thao tác mở suốt (không ghi bước hoàn tác và không báo mọi plugin khác mỗi nhịp), mỗi nhịp chỉ áp dụng giá trị mới nhất, mỗi món chỉ ghi biến đổi một lần. Chưa đo được độ mượt ngoài SketchUp.
+- Kéo mũi tên ▲▼ xem trực tiếp trong SketchUp mượt hơn: cả lần kéo là một thao tác mở suốt (không ghi bước hoàn tác và không báo mọi plugin khác mỗi nhịp); giá trị đầu tiên áp dụng ngay, các giá trị đến dồn lại chỉ giữ giá trị mới nhất; mỗi nhịp đọc ít thông tin từ SketchUp hơn và chỉ kiểm lại ma trận ở lần cuối. Kéo xong có dòng báo số nhịp và thời gian trung bình (để chỉnh tiếp độ mượt). Chưa đo được độ mượt ngoài SketchUp.
+- Ctrl+Z / Ctrl+Y bấm trong cửa sổ VGD Transform giờ hoàn tác / làm lại trong SketchUp ngay (không cần bấm ra khung nhìn trước). Ô đang gõ dở thì Ctrl+Z vẫn hoàn tác chữ.
 - Nhấn Enter là chạy ngay (không có nút Áp dụng), mỗi lần là một bước hoàn tác.
 - Ô Tuyệt đối hiện sẵn giá trị hiện tại và tự cập nhật (đổi lựa chọn, model đổi, Ctrl+Z); chỉ ô đã sửa được áp dụng.
 - Ô Tương đối tự về 0 sau khi áp dụng.

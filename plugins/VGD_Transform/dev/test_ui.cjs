@@ -174,6 +174,19 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     ok(!(await callNames()).includes('live_ack'), 'không có xác nhận từng nhịp giữa giao diện và Ruby');
     await pointer('move_off-x', 'up', 'pointerup');
     ok((await callNames()).slice(-2).join(',') === 'live,live_end', 'thả nút: gửi giá trị cuối rồi live_end');
+    // Ctrl+Z / Ctrl+Y trong cửa sổ: giao cho SketchUp (phím tắt không tới SketchUp khi tiêu điểm ở cửa sổ này); ô đang gõ dở thì để trình duyệt hoàn tác chữ
+    await clear();
+    await page.keyboard.press('Control+z');
+    await page.keyboard.press('Control+y');
+    await page.keyboard.press('Control+Shift+z');
+    ok((await callNames()).join(',') === 'undo,redo,redo', 'Ctrl+Z gửi undo, Ctrl+Y và Ctrl+Shift+Z gửi redo');
+    await clear();
+    await page.focus('#move_off-x');
+    await page.keyboard.type('5');
+    await page.keyboard.press('Control+z');
+    ok(!(await callNames()).includes('undo'), 'đang gõ dở trong ô số: Ctrl+Z để cho trình duyệt hoàn tác chữ, không gửi undo');
+    await page.fill('#move_off-x', '');
+    await page.evaluate(() => { const input = document.getElementById('move_off-x'); delete input.dataset.dirty; input.blur(); });
     await page.selectOption('#pivot', 'item');
     await receive('state', state);
     await clear();

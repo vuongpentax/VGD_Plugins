@@ -120,12 +120,16 @@ module VGD
       end
 
       # Ghi biến đổi của các món (không mở / đóng thao tác): dùng trong apply và trong lúc kéo trực tiếp.
-      def apply_moves(model, moves, items, restore)
+      # Ngữ cảnh (group cha đang mở) và trạng thái khóa của nó đọc MỘT lần cho cả đợt (mỗi lần đọc là một lời gọi API của SketchUp).
+      # check: kiểm tra khóa từng món và kiểm lại ma trận / điểm gốc sau khi ghi; nhịp kéo trực tiếp bỏ qua, nhịp cuối thì kiểm.
+      def apply_moves(model, moves, items, restore, check: true)
         by_index = items.to_h { |item| [item[:index], item] }
+        ctx = context(model)
+        blocked = locked_context?(model)
         moved = {}
         moves.each do |move|
           item = by_index.fetch(move[:index]) { raise ArgumentError, 'Danh sách món đã thay đổi. Hãy chọn lại món rồi thử lại.' }
-          apply_move(model, item, move[:steps], restore && restore[item[:entity]])
+          apply_move(model, item, move[:steps], restore && restore[item[:entity]], ctx: ctx, blocked: blocked, check: check)
           moved[item[:entity]] = true
         end
         restore&.each { |entity, transformation| entity.transformation = transformation if entity.valid? && !moved[entity] }
@@ -137,8 +141,9 @@ module VGD
         model.start_operation(OPERATION_NAME, false)
       end
 
-      def apply_live(model, moves, items, originals)
-        apply_moves(model, moves, items, originals)
+      # check: true ở nhịp cuối (lúc thả nút) để kiểm lại như áp dụng thường; các nhịp giữa bỏ qua cho nhẹ.
+      def apply_live(model, moves, items, originals, check: false)
+        apply_moves(model, moves, items, originals, check: check)
       end
 
       # Đưa các món về biến đổi lúc bắt đầu kéo (giá trị kéo trở về 0), trong thao tác đang mở.
@@ -158,15 +163,16 @@ module VGD
         model.commit_operation
       end
 
-      # base: biến đổi gốc của món (kéo trực tiếp); không có thì lấy biến đổi hiện tại.
-      def apply_move(model, item, steps, base = nil)
+      # base: biến đổi gốc của món (kéo trực tiếp); không có thì lấy biến đổi hiện tại. ctx, blocked: đã đọc sẵn (xem apply_moves).
+      def apply_move(model, item, steps, base = nil, ctx: nil, blocked: nil, check: true)
         entity = item[:entity]
-        raise ArgumentError, "#{item[:name]} đang bị khóa, không biến đổi được." if entity.locked? || locked_context?(model)
-        ctx = context(model)
+        ctx ||= context(model)
+        blocked = locked_context?(model) if blocked.nil?
+        raise ArgumentError, "#{item[:name]} đang bị khóa, không biến đổi được." if blocked || (check && entity.locked?)
         before = ctx * (base || entity.transformation)
         expected = composite(steps) * before
         entity.transformation = ctx.inverse * expected
-        verify(item, steps, ctx * entity.transformation, expected)
+        verify(item, steps, ctx * entity.transformation, expected) if check
       end
 
       # Kiểm tra hai cách: ma trận thế giới phải đúng như đã tính (bắt lỗi xoay / scale sai),

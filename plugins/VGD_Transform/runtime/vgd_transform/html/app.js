@@ -228,6 +228,19 @@ window.VGD = {
   },
 };
 
+// ----- Ctrl+Z / Ctrl+Y: SketchUp không nhận phím tắt khi tiêu điểm ở cửa sổ này nên chuyển lệnh sang Ruby. Ô đang có chữ gõ dở thì để trình duyệt hoàn tác chữ. -----
+document.addEventListener('keydown', event => {
+  if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+  const key = event.key.toLowerCase();
+  const undo = key === 'z' && !event.shiftKey;
+  const redo = key === 'y' || (key === 'z' && event.shiftKey);
+  if (!undo && !redo) return;
+  const field = document.activeElement;
+  if (field && field.matches && field.matches('input') && field.dataset.dirty) return;
+  event.preventDefault();
+  call(undo ? 'undo' : 'redo');
+});
+
 // ----- Tab, lựa chọn, Enter -----
 function showTool(tool) {
   document.querySelectorAll('.tabs .tab').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.tab === tool)));

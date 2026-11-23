@@ -240,7 +240,28 @@ ok('thả nút khi không còn thay đổi: hủy thao tác, không để lại 
 bad = Sketchup::Model.new([Sketchup::Group.new('Khóa', [0.0, 0.0, 0.0], locked: true)])
 bi = M.items(bad)
 M.begin_live(bad)
-ok('kéo trực tiếp món khóa: báo lỗi', error_of { M.apply_live(bad, TR.offset(bi.map { |i| i.merge(locked: false) }, [5.0, nil, nil], 'world')[:moves], bi, {}) }.to_s.include?('đang bị khóa'))
+ok('kéo trực tiếp món bị khóa giữa chừng: nhịp cuối (check: true) báo lỗi, thao tác bị hủy', error_of { M.apply_live(bad, TR.offset(bi.map { |i| i.merge(locked: false) }, [5.0, nil, nil], 'world')[:moves], bi, {}, check: true) }.to_s.include?('đang bị khóa'))
+
+# ----- Mỗi nhịp kéo gọi ít API SketchUp: đọc ngữ cảnh một lần cho cả đợt, kiểm tra lại ma trận chỉ ở lần cuối -----
+class CountingModel < Sketchup::Model
+  attr_accessor :path_reads
+  def active_path; @path_reads = (@path_reads || 0) + 1; super; end
+end
+cm = CountingModel.new(Array.new(5) { |i| Sketchup::Group.new("G#{i}", [i.to_f, 0.0, 0.0]) })
+ci = M.items(cm)
+co = ci.to_h { |i| [i[:entity], i[:entity].transformation] }
+M.begin_live(cm)
+cm.path_reads = 0
+M.apply_live(cm, TR.offset(ci, [10.0, nil, nil], 'world')[:moves], ci, co)
+ok('mỗi nhịp kéo đọc active_path không quá 2 lần dù có 5 món (không đọc lại cho từng món)', cm.path_reads <= 2)
+ok('nhịp kéo vẫn đặt đúng vị trí cho cả 5 món', ci.all? { |i| near(M.items(cm).find { |x| x[:entity] == i[:entity] }[:origin], [i[:origin][0] + 10.0, 0.0, 0.0]) })
+rm_live = Sketchup::Model.new([NoRotateGroup.new('Không xoay', [100.0 / MM, 0.0, 0.0])])
+rli = M.items(rm_live)
+rlo = rli.to_h { |i| [i[:entity], i[:entity].transformation] }
+M.begin_live(rm_live)
+rot = RS.rotate(rli, [nil, nil, 45.0], 'item', 'world')[:moves]
+ok('nhịp kéo thường không kiểm lại ma trận (đỡ tốn thời gian)', error_of { M.apply_live(rm_live, rot, rli, rlo) }.nil?)
+ok('nhịp cuối (check: true) kiểm lại ma trận và bắt được lỗi', error_of { M.apply_live(rm_live, rot, rli, rlo, check: true) }.to_s.include?('không khớp'))
 
 # ----- Panel: luồng kéo trực tiếp (gộp giá trị theo nhịp hẹn giờ, một thao tác mở suốt, thả / đóng cửa sổ) với HtmlDialog và hẹn giờ giả lập -----
 require 'json'
@@ -289,35 +310,60 @@ end
 def live_payload(x); {'tool' => 'move_off', 'values' => {'x' => x.to_s}, 'pivot' => 'item', 'coord' => 'world'}; end
 def panel_call(dialog, name, payload = nil); dialog.callbacks[name].call(nil, payload && JSON.generate(payload)); end
 
-$panel_model = panel_model(0.0)
-panel = VGD::Transform::Panel.new
-dlg = panel.instance_variable_get(:@dialog)
+def panel_with_clock(model)
+  $panel_model = model
+  $clock = 10.0
+  panel = VGD::Transform::Panel.new
+  panel.define_singleton_method(:live_now) { $clock }
+  [panel, panel.instance_variable_get(:@dialog)]
+end
+
+panel, dlg = panel_with_clock(panel_model(0.0))
 panel_call(dlg, 'live_start')
 ok('panel: bắt đầu kéo mở đúng một thao tác', $panel_model.ops == [[:start, 'VGD Transform · Biến đổi món', false]] && !panel.busy_reason.nil?)
-[100, 110, 120].each { |x| panel_call(dlg, 'live', live_payload(x)) }
-ok('panel: nhiều giá trị đến nhanh chỉ hẹn giờ một lần và chưa đụng model', UI.timers.size == 1 && near(M.items($panel_model)[0][:origin], [0.0, 0.0, 0.0]))
+panel_call(dlg, 'live', live_payload(100))
+ok('panel: giá trị đầu tiên áp dụng NGAY (không chờ nhịp hẹn giờ)', near(M.items($panel_model)[0][:origin], [100.0, 0.0, 0.0]) && UI.timers.empty?)
+$clock += 0.002
+panel_call(dlg, 'live', live_payload(110))
+$clock += 0.002
+panel_call(dlg, 'live', live_payload(120))
+ok('panel: giá trị đến dồn trong một nhịp chỉ hẹn giờ một lần và chưa đụng model', UI.timers.size == 1 && near(M.items($panel_model)[0][:origin], [100.0, 0.0, 0.0]))
+$clock += 0.02
 UI.run_timers
 ok('panel: đến nhịp chỉ áp dụng giá trị mới nhất (120), không mở thao tác thêm', near(M.items($panel_model)[0][:origin], [120.0, 0.0, 0.0]) && $panel_model.ops.size == 1)
+$clock += 0.5
 panel_call(dlg, 'live', live_payload(200))
 panel_call(dlg, 'live_end')
 ok('panel: thả nút áp dụng giá trị cuối (200) rồi đóng một lần, hẹn giờ còn lại bị hủy', near(M.items($panel_model)[0][:origin], [200.0, 0.0, 0.0]) && $panel_model.ops.last == [:commit] && $panel_model.ops.size == 2 && UI.timers.empty? && panel.busy_reason.nil?)
+ok('panel: kéo xong báo số nhịp và thời gian trung bình để biết chỗ nào chậm', dlg.scripts.any? { |script| script.include?('nhịp') && script.include?('ms') })
 
-$panel_model = panel_model(0.0)
-panel = VGD::Transform::Panel.new
-dlg = panel.instance_variable_get(:@dialog)
+panel, dlg = panel_with_clock(panel_model(0.0))
 panel_call(dlg, 'live_start')
 panel_call(dlg, 'live', live_payload(0))
 panel_call(dlg, 'live_end')
 ok('panel: kéo về 0 rồi thả: hủy thao tác, không để lại bước Ctrl+Z trống', $panel_model.ops.last == [:abort] && near(M.items($panel_model)[0][:origin], [0.0, 0.0, 0.0]))
 
-$panel_model = panel_model(0.0)
-panel = VGD::Transform::Panel.new
-dlg = panel.instance_variable_get(:@dialog)
+panel, dlg = panel_with_clock(panel_model(0.0))
 panel_call(dlg, 'live_start')
 panel_call(dlg, 'live', live_payload(50))
-UI.run_timers
 dlg.close
 ok('panel: đóng cửa sổ giữa lúc kéo: hủy thao tác đang mở', $panel_model.ops.last == [:abort] && panel.busy_reason.nil?)
+
+# Ctrl+Z / Ctrl+Y trong cửa sổ: giao cho SketchUp (phím tắt không tới SketchUp khi tiêu điểm đang ở cửa sổ này)
+$undo_calls = []
+module Sketchup
+  def self.undo; $undo_calls << :undo; end
+  def self.send_action(action); $undo_calls << action; true; end
+end
+panel, dlg = panel_with_clock(panel_model(0.0))
+panel_call(dlg, 'undo')
+panel_call(dlg, 'redo')
+ok('panel: lệnh undo / redo từ cửa sổ gọi Hoàn tác / Làm lại của SketchUp', $undo_calls == [:undo, 'editRedo:'])
+$undo_calls.clear
+panel_call(dlg, 'live_start')
+panel_call(dlg, 'undo')
+ok('panel: đang kéo thì bỏ qua Ctrl+Z (thao tác còn mở)', $undo_calls.empty?)
+panel_call(dlg, 'live_end')
 
 puts($fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

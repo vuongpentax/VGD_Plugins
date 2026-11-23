@@ -2,6 +2,16 @@
 
 Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**, trừ khi ghi khác.
 
+## Bản 0.1.0-beta.11: đã kiểm tra tự động
+
+Hai việc: (1) kéo ▲▼ mượt hơn nữa; (2) Ctrl+Z ngay sau khi xong lệnh. (1) Bản beta.10 đã dùng một thao tác mở suốt; bản này thêm: giá trị kéo đầu tiên áp dụng NGAY (không chờ nhịp hẹn giờ 16 ms), các giá trị dồn trong 16 ms chỉ giữ giá trị mới nhất; mỗi nhịp đọc ngữ cảnh (`active_path`) một lần cho cả đợt thay vì hai lần cho mỗi món; nhịp giữa bỏ qua kiểm tra khóa từng món và kiểm lại ma trận (làm ở nhịp cuối khi thả nút, sai thì hủy cả thao tác); kéo xong báo số nhịp, thời gian Ruby trung bình và lâu nhất mỗi nhịp để biết chỗ chậm. (2) Phím tắt không tới SketchUp khi tiêu điểm còn ở cửa sổ plugin, nên Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z trong cửa sổ gọi `Sketchup.undo` / `Sketchup.send_action('editRedo:')` qua Ruby; ô đang gõ dở (`dirty`) thì để trình duyệt hoàn tác chữ; đang kéo thì bỏ qua.
+
+- `dev/test_model_ops.rb`: mỗi nhịp đọc `active_path` không quá 2 lần dù có 5 món; nhịp thường không kiểm ma trận, nhịp cuối `check: true` bắt được lỗi; Panel: giá trị đầu áp dụng ngay, dồn trong nhịp chỉ hẹn giờ một lần, kéo xong có dòng báo nhịp và ms, undo / redo gọi đúng, đang kéo thì bỏ qua undo (đồng hồ và hẹn giờ giả lập). Các kiểm tra mới đỏ trước khi sửa.
+- `dev/test_ui.cjs` (58): Ctrl+Z gửi `undo`, Ctrl+Y và Ctrl+Shift+Z gửi `redo`; ô đang gõ dở thì Ctrl+Z không gửi `undo`.
+- `ruby dev/run_tests.rb` và `tests/test_vgd_conventions.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật (rủi ro chính):** (a) độ mượt thực tế và số liệu dòng báo sau khi kéo; (b) `Sketchup.undo` gọi từ cửa sổ có hoàn tác đúng một bước vừa làm không; (c) `Sketchup.send_action('editRedo:')` có chạy trên Windows không (chưa biết; nếu không chạy thì Ctrl+Y trong cửa sổ không làm gì, dùng Ctrl+Y ở khung nhìn); (d) khung nhìn có vẽ lại đều khi thao tác đang mở.
+
 ## Bản 0.1.0-beta.10: đã kiểm tra tự động
 
 Kéo mũi tên ▲▼ xem trực tiếp (bản beta.9 chưa đủ mượt so với lệnh Move của SketchUp, đã bỏ cách gửi có xác nhận `live_ack`): (1) cả lần kéo là MỘT thao tác mở suốt (`ModelOps.begin_live` / `apply_live` / `finish_live`), không `start_operation` / `commit_operation` mỗi nhịp, vì mỗi lần đóng ghi bước hoàn tác và báo `onTransactionCommit` cho mọi observer của mọi plugin đang nạp; (2) giá trị từ giao diện được gộp (`LiveQueue`, chỉ giữ giá trị mới nhất) và áp dụng theo nhịp hẹn giờ 16 ms; (3) mỗi nhịp mỗi món ghi biến đổi một lần; (4) mỗi nhịp gọi `View#invalidate`; (5) thả nút: có thay đổi thì đóng thành một bước Ctrl+Z, không còn thay đổi thì hủy (không để bước trống); đóng cửa sổ hoặc lỗi giữa lúc kéo thì hủy thao tác đang mở.
@@ -46,7 +56,7 @@ Các mục còn lại giữ như bản beta.6:
 
 ## Chưa xác minh trong SketchUp thật
 
-- **Kéo trực tiếp (beta.10 đổi sang một thao tác mở suốt, cần thử lại kỹ):** món chạy mượt khi kéo ▲▼; cả lần kéo là một bước Ctrl+Z (`start_operation` với `transparent`); tốc độ khi chọn nhiều món.
+- **Kéo trực tiếp (beta.11: một thao tác mở suốt, áp dụng ngay giá trị đầu, Ctrl+Z trong cửa sổ; cần thử lại kỹ):** món chạy mượt khi kéo ▲▼; cả lần kéo là một bước Ctrl+Z (`start_operation` với `transparent`); tốc độ khi chọn nhiều món.
 - **Ô Tuyệt đối tự cập nhật:** sau Ctrl+Z, sau khi dùng công cụ Move của SketchUp (`ModelObserver#onTransactionCommit/Undo/Redo`); không làm chậm SketchUp khi vẽ.
 - **Đọc ma trận:** `Transformation#to_a` theo cột (trục X ở 0..2, gốc ở 12..14); trục riêng và tỉ lệ đọc đúng với món đã xoay / scale / lồng nhiều cấp.
 - **Đơn vị:** chỉ số `LengthUnit` 0–5 (đặc biệt yd) trong SketchUp thật.
