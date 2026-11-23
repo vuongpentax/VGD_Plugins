@@ -1960,13 +1960,14 @@ function tableView(data){
   if(data.hint){if(hint)hint.textContent=data.hint;else view.prepend(node('p',data.hint,'hint'));}else if(hint)hint.remove();
   // Thanh trên: thanh công cụ (dựng lại) + khu menu Tùy chọn / Công cụ (giữ nguyên chỗ, không gỡ khỏi trang) + ngăn đang mở.
   const bar=view.querySelector('.toolbar-wrap');
+  const roomsScroll=bar.querySelector('.rooms-panel')?.scrollTop||0;
   [...bar.children].forEach(el=>{if(!el.classList.contains('menubar'))el.remove();});
   bar.prepend(toolbar());
   const menu=syncMenuBar(view);if(!menu.parentNode)bar.append(menu);
   if(tableState.panel==='capture')bar.append(capturePanel());
   if(tableState.panel==='codes')bar.append(codesPanel());
   if(tableState.panel==='levels')bar.append(levelsPanel());
-  if(tableState.panel==='rooms')bar.append(roomsPanel());
+  if(tableState.panel==='rooms'){const panel=roomsPanel();bar.append(panel);panel.scrollTop=roomsScroll;}
   if(tableState.panel==='materials')bar.append(materialsPanel());
   if(tableState.panel==='checks')bar.append(checksPanel());
   if(tableState.panel==='snapshots')bar.append(snapshotsPanel());

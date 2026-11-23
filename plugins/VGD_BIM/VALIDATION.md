@@ -2,6 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.33: đã kiểm tra tự động
+
+Quản lý phòng: sửa tên / mã / tầng của một phòng làm hộp quay về phòng đầu tiên sau mỗi lần nhập (bảng được dựng lại làm mất vị trí cuộn). Giờ hộp giữ vị trí cuộn khi bảng làm mới.
+
+- `dev/test_ui.cjs`: thêm kiểm tra 12 phòng, cuộn xuống cuối, sửa tên phòng cuối, vị trí cuộn không đổi và tên mới hiện đúng (trước khi sửa: cuộn 2194 về 0, kiểm tra đỏ).
+- `dev/test_ui.cjs`, `test_ui_images.cjs`, `test_ui_sheets.cjs`, `test_ui_en.cjs`, `test_report_page.cjs`: đạt. `ruby dev/run_tests.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** nhập tên phòng trong hộp Quản lý phòng với model thật.
+
 ## Bản 1.1.1-beta.32: đã kiểm tra tự động
 
 Đọc móng và mái do VGD Structure 0.29.0-beta.1 dựng (`core/structure_source.rb`): kind `footing` (dims như cột, tính thể tích), `roof` (diện tích nghiêng, thể tích = diện tích x dày), nhóm chứa `footings`, `roofs`.

@@ -543,6 +543,24 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   assert(last.name==='table_room_build' && last.data.id==='rm_aaaaaaaa','bấm Dựng khối: gửi mã phòng cho Ruby');
   await page.evaluate(()=>{tableState.data.rooms[0].has_volume=true;tableState.panel='rooms';tableView(tableState.data);});
   assert((await page.locator('.rm-build').innerText()).trim()==='Dựng lại khối','phòng đã có khối: nút đổi thành Dựng lại khối');
+  // Sửa tên một phòng ở cuối danh sách: Ruby trả bảng mới, hộp Quản lý phòng phải GIỮ vị trí cuộn (không nhảy về phòng đầu)
+  {
+    const saved=await page.evaluate(()=>({data:JSON.parse(JSON.stringify(tableState.data)),panel:tableState.panel}));
+    const many=Array.from({length:12},(_,i)=>({...rms[0],id:`rm_${(i+1).toString(16).padStart(8,'0')}`,name:`Phòng ${i+1}`,number:`P${String(i+1).padStart(2,'0')}`}));
+    const manyPayload=(list)=>({...tablePayload,rooms:list,levels:lvls,columns:[...tablePayload.columns,roomCol],rows:tableRows.map(r=>({...r,room:'',room_id:''})),choices:{...(tablePayload.choices||{}),tags:[],materials:[],model_tags:[],rooms:[]}});
+    await receive('table',manyPayload(many));
+    await page.evaluate(()=>{tableState.panel='rooms';tableView(tableState.data);});
+    await page.evaluate(()=>{const p=document.querySelector('.rooms-panel');p.scrollTop=p.scrollHeight;});
+    const before=await page.evaluate(()=>document.querySelector('.rooms-panel').scrollTop);
+    assert(before>0,'hộp Quản lý phòng cuộn được (đã xuống cuối danh sách)');
+    await page.locator('.rooms-panel .rm-item').nth(11).locator('.rm-name').evaluate(el=>{el.value='Phòng mới';el.dispatchEvent(new Event('change'));});
+    await receive('table',manyPayload(many.map((r,i)=>i===11?{...r,name:'Phòng mới'}:r)));
+    const after=await page.evaluate(()=>document.querySelector('.rooms-panel')?document.querySelector('.rooms-panel').scrollTop:-1);
+    assert(Math.abs(after-before)<=2,`sau khi nhập tên, hộp Quản lý phòng giữ vị trí cuộn (trước ${before}, sau ${after})`);
+    assert((await page.locator('.rooms-panel .rm-item').nth(11).locator('.rm-name').inputValue())==='Phòng mới','phòng cuối hiện tên vừa nhập sau khi bảng được làm mới');
+    await receive('table',saved.data);
+    await page.evaluate(p=>{tableState.panel=p;tableView(tableState.data);},saved.panel);
+  }
   await page.locator('.rm-name').fill('Phòng khách lớn');await page.locator('.rm-name').blur();
   last=await lastCall();
   assert(last.name==='table_rooms' && last.data.rooms.length===1 && last.data.rooms[0].name==='Phòng khách lớn' && last.data.rooms[0].id==='rm_aaaaaaaa' && last.data.rooms[0].boundary.length===4 && !('metrics' in last.data.rooms[0]),'sửa tên phòng: gửi cả danh sách kèm id và viền, không gửi số đo tính sẵn');
