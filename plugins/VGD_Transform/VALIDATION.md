@@ -2,6 +2,15 @@
 
 Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**, trừ khi ghi khác.
 
+## Bản 0.1.0-beta.12: đã kiểm tra tự động
+
+Gõ số, Enter, rồi gõ số khác: số mới thay hẳn số cũ. Trước đây ô giữ lại số vừa áp dụng (ô Tuyệt đối hiện giá trị mới) nên gõ tiếp bị nối đuôi (200 Enter, 300 ra 200300). Sau Enter ô được đánh dấu `dataset.fresh`; phím gõ tiếp theo (ký tự, Backspace, Delete) chọn hết nội dung cũ rồi gõ đè; bấm chuột vào ô, phím mũi tên, Home, End, Tab, Esc hoặc rời ô thì bỏ đánh dấu (sửa tiếp trong số cũ). Phím có Ctrl / Alt / Meta không tính.
+
+- `dev/test_ui.cjs` (63): 200 Enter rồi gõ 300 ra 300 (trước khi sửa ra 200300, kiểm tra đỏ); Enter lần hai gửi 300; Backspace ngay sau Enter xóa cả số; điều hướng bằng End rồi gõ giữ số cũ (3005).
+- `ruby dev/run_tests.rb` và `tests/test_vgd_conventions.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** hành vi trong trình duyệt của SketchUp (CEF) với bộ gõ tiếng Việt; chỉ kiểm bằng Chromium của Playwright.
+
 ## Bản 0.1.0-beta.11: đã kiểm tra tự động
 
 Hai việc: (1) kéo ▲▼ mượt hơn nữa; (2) Ctrl+Z ngay sau khi xong lệnh. (1) Bản beta.10 đã dùng một thao tác mở suốt; bản này thêm: giá trị kéo đầu tiên áp dụng NGAY (không chờ nhịp hẹn giờ 16 ms), các giá trị dồn trong 16 ms chỉ giữ giá trị mới nhất; mỗi nhịp đọc ngữ cảnh (`active_path`) một lần cho cả đợt thay vì hai lần cho mỗi món; nhịp giữa bỏ qua kiểm tra khóa từng món và kiểm lại ma trận (làm ở nhịp cuối khi thả nút, sai thì hủy cả thao tác); kéo xong báo số nhịp, thời gian Ruby trung bình và lâu nhất mỗi nhịp để biết chỗ chậm. (2) Phím tắt không tới SketchUp khi tiêu điểm còn ở cửa sổ plugin, nên Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z trong cửa sổ gọi `Sketchup.undo` / `Sketchup.send_action('editRedo:')` qua Ruby; ô đang gõ dở (`dirty`) thì để trình duyệt hoàn tác chữ; đang kéo thì bỏ qua.

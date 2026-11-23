@@ -261,13 +261,24 @@ $('live').addEventListener('click', () => {
   store.set(LIVE_KEY, next ? '1' : '0');
 });
 
+// Sau Enter, ô được đánh dấu "mới" (dataset.fresh): phím gõ tiếp theo (chữ, số, Backspace, Delete) thay hẳn nội dung cũ, như hộp số của 3ds Max.
+// Bấm chuột vào ô hoặc phím điều hướng (mũi tên, Home, End, Tab) thì bỏ đánh dấu để sửa tiếp trong số cũ.
+const TYPING_KEYS = new Set(['Backspace', 'Delete']);
 document.querySelectorAll('input[type="text"]').forEach(input => {
   input.addEventListener('input', () => { input.dataset.dirty = '1'; });
   input.addEventListener('keydown', event => {
-    if (event.key !== 'Enter') return;
-    event.preventDefault();
-    apply(panelOf(input));
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      input.dataset.fresh = '1';
+      apply(panelOf(input));
+      return;
+    }
+    if (!input.dataset.fresh || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.key.length === 1 || TYPING_KEYS.has(event.key)) { input.select(); delete input.dataset.fresh; }
+    else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Tab', 'Escape'].includes(event.key)) delete input.dataset.fresh;
   });
+  input.addEventListener('pointerdown', () => { delete input.dataset.fresh; });
+  input.addEventListener('blur', () => { delete input.dataset.fresh; });
 });
 document.querySelectorAll('input[type="text"][data-spin]').forEach(enhanceSpinner);
 

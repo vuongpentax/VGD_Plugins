@@ -98,6 +98,32 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     await receive('state', { ...state, center: [0, 500, 650] });
     ok((await value('move_abs-x')) === '0', 'sau khi áp dụng: ô Tuyệt đối hiện giá trị mới');
 
+    // Nhập số, Enter, rồi gõ số khác: số mới thay hẳn số cũ (200 Enter, gõ 300 Enter -> 300, không phải 200300)
+    await page.fill('#move_abs-x', '200');
+    await page.keyboard.press('Enter');
+    await receive('done', { moved: 2, skipped: 0, tool: 'move_abs' });
+    await receive('state', { ...state, center: [200, 500, 650] });
+    ok((await value('move_abs-x')) === '200', 'sau Enter: ô Tuyệt đối hiện giá trị đã áp dụng (200)');
+    await page.keyboard.type('300');
+    ok((await value('move_abs-x')) === '300', 'gõ số mới ngay sau Enter: thay hẳn số cũ (300, không phải 200300)');
+    await clear();
+    await page.keyboard.press('Enter');
+    const again = await lastCall('apply');
+    ok(again && again.values.x === '300', 'Enter lần hai gửi đúng số mới (300)');
+    await receive('done', { moved: 2, skipped: 0, tool: 'move_abs' });
+    await receive('state', { ...state, center: [300, 500, 650] });
+    await page.keyboard.press('Backspace');
+    ok((await value('move_abs-x')) === '', 'bấm Backspace ngay sau Enter: xóa cả số cũ để nhập lại');
+    await page.fill('#move_abs-x', '300');
+    await page.keyboard.press('Enter');
+    await receive('done', { moved: 2, skipped: 0, tool: 'move_abs' });
+    await receive('state', { ...state, center: [300, 500, 650] });
+    await page.keyboard.press('End');
+    await page.keyboard.type('5');
+    ok((await value('move_abs-x')) === '3005', 'đã điều hướng bằng phím (End) sau Enter: giữ số cũ để sửa tiếp (3005)');
+    await receive('state', { ...state, center: [0, 500, 650] });
+    await page.evaluate(() => { const input = document.getElementById('move_abs-x'); delete input.dataset.dirty; input.value = '0'; input.blur(); });
+
     // Tương đối: hệ trục, Enter, tự về 0
     await page.selectOption('#coord', 'local');
     ok((await page.locator('[data-panel="move_off"] h3').innerText()) === 'Tương đối · Local', 'đổi hệ trục: tiêu đề khung ghi Local');
