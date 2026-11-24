@@ -4,7 +4,7 @@ VGD Cabinet Draw là extension SketchUp (2022 trở lên) cho quy trình dựng 
 
 Extension đăng ký độc lập với VGD_Cabinet (cũ, ở `plugins/VGD_Cabinet`): dùng dictionary model `VGD_Cabinet_Draw` và thư mục dữ liệu `%APPDATA%/VGD/SketchUp/VGD_Cabinet_Draw`, không đọc dictionary hay preset của bản cũ.
 
-**Trạng thái:** bản 1.0.1 (ổn định), kế tiếp 1.0.0 (cùng mã với beta.70, tên extension "VGD Cabinet Draw"); xem `RELEASE_NOTES_v1.0.1.md` cho thay đổi so với 1.0.0. Kiểm thử tự động bằng giả lập SketchUp (`test/`); chưa kiểm thử thủ công đầy đủ trong SketchUp thật, chỉ có vài mục người dùng đã xác nhận (xem "Điều chưa kiểm chứng").
+**Trạng thái:** bản 1.0.1 (ổn định), bản trước là 1.0.0 (cùng mã với beta.70, tên extension "VGD Cabinet Draw"); xem `RELEASE_NOTES_v1.0.1.md` cho thay đổi so với 1.0.0. Kiểm thử tự động bằng giả lập SketchUp (`test/`); chưa kiểm thử thủ công đầy đủ trong SketchUp thật, chỉ có vài mục người dùng đã xác nhận (xem "Điều chưa kiểm chứng").
 
 ## Cài và đóng gói
 
@@ -82,7 +82,8 @@ Menu chuột phải **VGD Cabinet** có thêm các lệnh theo đối tượng (
 
 - Chạy từ thư mục `test/`, mỗi file một lệnh, ví dụ `ruby test_build.rb`. Có 25 file `test_*.rb` (giả lập SketchUp trong `mock_su.rb`). Mặc định test trỏ tới `../runtime/vgd_cabinet_draw`; riêng `test_back_modes.rb`, `test_panel_model.rb`, `test_rails.rb` bắt buộc truyền đường dẫn: `ruby test_rails.rb ../runtime/vgd_cabinet_draw`.
 - Công cụ chẩn đoán chỉ đọc, chạy trong Ruby Console của SketchUp thật: `dev/check_parts_solid.rb` (tấm có là khối kín không), `dev/check_feature_sizes.rb` (chi tiết nhỏ có giữ mm sau Scale), `dev/dump_part_structure.rb` (cấu trúc một tấm).
-- `dev/native_smoke.rb` chỉ chạy trong SketchUp thật; chưa đối chiếu với bản hiện tại.
+- `dev/native_smoke.rb` chỉ chạy trong SketchUp thật; chưa đối chiếu với bản hiện tại Hiện file này còn so `VERSION` với `'1.0.0-beta.1'`, lệch với 1.0.1: cần sửa trước khi chạy trong SketchUp thật.
+- Rà soát tối ưu (không đổi mã): đã xem `tools.rb` và `rebuild.rb`. Không có đoạn lặp đáng gộp (không có khối mã giống nhau lặp từ 3 lần); các phương thức dài nhất là `drawer_plan` (86 dòng) và `rebuild_preview` (50 dòng). Chỗ còn lại chủ yếu là gọi API SketchUp (`entities.to_a`, bounds), mà container không có SketchUp để đo hay kiểm hành vi, nên giữ nguyên để không rủi ro đổi hành vi. File khác chưa rà.
 
 ## Điều chưa kiểm chứng
 
