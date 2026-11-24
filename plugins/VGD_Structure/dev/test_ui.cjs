@@ -1876,6 +1876,12 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok((await page.evaluate(()=>window.VGDSection.debug())).selected.some(k=>k.indexOf('suobj')===0),'chọn đối tượng trong SketchUp: đường viền của nó sáng lên trên mặt cắt');
   const axn=(await page.evaluate(()=>window.VGDSection.debug())).axes;
   ok(Array.isArray(axn),'trục lưới cắt qua đường cắt được tính để vẽ (danh sách có thể rỗng nếu không cắt qua)');
+  // Mái (H5d): tấm mái bị cắt hatch như bê tông, sáng đường viền khi bấm nhưng chưa chọn được trong SketchUp
+  await receive('section_view',{id:sid,name:'A-A',length:L,truncated:false,cut:[{pts:[[900,0],[5100,2400],[5100,2500],[900,100]],closed:true,src:{kind:'roof',level:'sl_00000002',ref:'roof_1',tag:'A. ROOF'}}],beyond:[]});await wait(150);
+  ok((await page.evaluate(()=>window.VGDSection.debug())).materials.includes('concrete'),'mặt cắt: phần bị cắt của tấm mái hatch kiểu bê tông (vật liệu theo loại roof)');
+  const scr5=await page.evaluate(()=>window.VGDSection.debug().toScreen(3000,1250));
+  await clear();await page.mouse.click(bbs.x+scr5[0],bbs.y+scr5[1]);await wait(120);
+  ok((await calls('plan_select')).length===0 && (await page.evaluate(()=>window.VGDSection.debug())).selected.length===1,'bấm vào tấm mái trên mặt cắt: sáng đường viền, không gửi chọn sang SketchUp (mái chưa chọn được)');
   await clear();await page.click('#sec-refresh');await wait(100);
   ok((await calls('section_build')).length===1,'bấm Làm mới: dựng lại từ SketchUp');
   await page.click('[data-tab=plan]');await wait(100);

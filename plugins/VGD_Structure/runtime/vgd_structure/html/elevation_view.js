@@ -162,7 +162,7 @@
   }
   function selectSrc(src) {
     selected = {}; if (src) selected[keyOf(src)] = true; draw();
-    if (!src || src.kind === 'geom' || !host.callSU) return;
+    if (!src || src.kind === 'geom' || src.kind === 'roof' || !host.callSU) return; // hình rời và mái: chưa chọn được trong SketchUp (Ruby chỉ nhận loại trong SELECT_KINDS)
     host.callSU('plan_select', {level: src.level || S.level, items: [{kind: src.kind, ref: String(src.ref)}]});
   }
   function bind() {

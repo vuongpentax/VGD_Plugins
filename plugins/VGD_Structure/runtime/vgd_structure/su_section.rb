@@ -8,6 +8,8 @@ module VGD
       MAX_EDGES = 120_000
       MAX_BEYOND = 40_000   # số đoạn cạnh phía sau gửi cho cửa sổ
       MAX_POLYS = 40_000    # số mặt gửi cho cửa sổ mặt đứng (giữ các mặt gần nhất khi quá nhiều)
+      # Loại phần tử hiện trên mặt cắt / mặt đứng: loại của mặt bằng (UI_KIND) và mái (tấm mái cho hatch và màu riêng; chưa chọn được từ mặt cắt, xem ModelSync::PLAN_KINDS).
+      SECTION_KIND = ModelSync::UI_KIND.merge('roof' => 'roof').freeze
 
       # section: {'a' => [x, y], 'b' => [x, y], 'dir' => 1 | -1, 'depth' => mm}. Trả về {length:, cut: [{pts:, closed:, src:}], beyond: [[[s,z],[s,z]]...], truncated: bool, faces:, edges:}.
       def self.build(model, section)
@@ -71,7 +73,7 @@ module VGD
       # Nguồn của một nhóm / component: phần tử plugin (VGD_BIM_SOURCE), đối tượng SketchUp thường (theo id), hoặc :container nếu chỉ là nhóm chứa của plugin.
       def self.meta_for(e)
         if e.get_attribute('VGD_BIM_SOURCE', 'plugin') == Schema::PLUGIN_ID
-          kind = ModelSync::UI_KIND[e.get_attribute('VGD_BIM_SOURCE', 'kind').to_s]
+          kind = SECTION_KIND[e.get_attribute('VGD_BIM_SOURCE', 'kind').to_s]
           level, ref = e.get_attribute('VGD_BIM_SOURCE', 'ref').to_s.split(':', 2)
           return {kind: kind, level: level, ref: ref, tag: e.layer && e.layer.name}
         end
