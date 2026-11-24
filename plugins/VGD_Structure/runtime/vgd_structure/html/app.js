@@ -257,6 +257,7 @@
   }
   // ---- Mái của tầng: khoảng khớp Levels::ROOF_* ở Ruby ----
   var openRoof = null, ROOF_SHAPES = [['flat', 'Mái bằng'], ['shed', 'Một dốc'], ['gable', 'Hai dốc'], ['hip', 'Bốn dốc'], ['outline', 'Theo đường bao']], ROOF_DIRS = {shed: [['x+', 'Dốc lên theo +X'], ['x-', 'Dốc lên theo -X'], ['y+', 'Dốc lên theo +Y'], ['y-', 'Dốc lên theo -Y']], gable: [['x', 'Nóc song song trục X'], ['y', 'Nóc song song trục Y']]};
+  var PURLIN_SECTIONS = ['40x80', '50x100', '50x120', '60x120'], PURLIN_SPACINGS = [600, 800, 1000];
   var ROOF_RANGES = {slope: [1, 60, 'Độ dốc (độ)'], thickness: [20, 500, 'Dày mái (mm)'], overhang: [0, 2000, 'Chìa mái (mm)'], base: [-5000, 10000, 'Chân mái so với cốt tầng (mm)']};
   function roofLabel(l) { if (!l.roof) return 'Không'; var n = ROOF_SHAPES.filter(function (s) { return s[0] === l.roof.shape; })[0][1]; return l.roof.shape === 'flat' ? n : n + ' ' + l.roof.slope + '°'; }
   function renderLevelRoof() {
@@ -273,7 +274,7 @@
     shape.onchange = function () {
       var old = l.roof || {thickness: 120, overhang: 600, base: 0};
       if (!shape.value) l.roof = null;
-      else { l.roof = {shape: shape.value, thickness: old.thickness, overhang: old.overhang, base: old.base}; if (shape.value !== 'flat') { l.roof.slope = old.slope || 30; if (ROOF_DIRS[shape.value]) l.roof.dir = ROOF_DIRS[shape.value][0][0]; } if (shape.value === 'outline') l.roof.points = old.points || frameCorners(); } if (ROOF_DIRS[shape.value] && old.gable_wall) l.roof.gable_wall = old.gable_wall;
+      else { l.roof = {shape: shape.value, thickness: old.thickness, overhang: old.overhang, base: old.base}; if (shape.value !== 'flat') { l.roof.slope = old.slope || 30; if (ROOF_DIRS[shape.value]) l.roof.dir = ROOF_DIRS[shape.value][0][0]; } if (shape.value === 'outline') l.roof.points = old.points || frameCorners(); } if (ROOF_DIRS[shape.value] && old.gable_wall) l.roof.gable_wall = old.gable_wall; if (ROOF_DIRS[shape.value] && old.purlin) l.roof.purlin = old.purlin;
       renderLevels(); changed();
     };
     box.appendChild(shape);
@@ -299,6 +300,24 @@
         gtype.value = l.roof.gable_wall.type;
         gtype.onchange = function () { l.roof.gable_wall.type = gtype.value; changed(); };
         box.appendChild(gtype);
+      }
+      // Xà gồ: tùy chọn của mái một dốc / hai dốc; tiết diện và khoảng cách (theo mặt dốc) chọn từ danh sách
+      var pwrap = document.createElement('label'); pwrap.className = 'layers-head';
+      var pcheck = document.createElement('input'); pcheck.type = 'checkbox'; pcheck.id = 'roof-purlin'; pcheck.checked = !!l.roof.purlin;
+      pwrap.append(pcheck, document.createTextNode(' Xà gồ (dưới tấm mái, song song đường đồng mức)'));
+      pcheck.onchange = function () {
+        if (pcheck.checked) l.roof.purlin = {section: '50x100', spacing: 800}; else delete l.roof.purlin;
+        renderLevelRoof(); changed();
+      };
+      box.appendChild(pwrap);
+      if (l.roof.purlin) {
+        var psec = document.createElement('select'); psec.id = 'roof-purlin-section'; psec.setAttribute('aria-label', 'Tiết diện xà gồ');
+        PURLIN_SECTIONS.forEach(function (v) { psec.append(new Option(v.replace('x', ' × ') + ' mm', v)); }); psec.value = l.roof.purlin.section;
+        psec.onchange = function () { l.roof.purlin.section = psec.value; changed(); };
+        var pgap = document.createElement('select'); pgap.id = 'roof-purlin-spacing'; pgap.setAttribute('aria-label', 'Khoảng cách xà gồ theo mặt dốc');
+        PURLIN_SPACINGS.forEach(function (v) { pgap.append(new Option('Cách nhau ' + v + ' mm', String(v))); }); pgap.value = String(l.roof.purlin.spacing);
+        pgap.onchange = function () { l.roof.purlin.spacing = Number(pgap.value); changed(); };
+        box.append(psec, pgap);
       }
     }
     if (l.roof.shape === 'outline') roofPicker(l, box);

@@ -12,7 +12,8 @@ module VGD
         'opening' => %i[kind min max z_bottom z_top type_id flip], 'slab' => %i[min max thickness z_top z_bottom], 'ceiling' => %i[polygon min max thickness z_bottom z_top],
         'stair' => %i[polygon z0 z1 type rails],
         'footing' => %i[center w d h z0],
-        'roof' => %i[top tv]
+        'roof' => %i[top tv],
+        'purlin' => %i[start finish w h]
       }.freeze
       # Trường chỉ tính khi mục kế hoạch có (phần tử xiên / xoay, P4b-2): mục cũ không có thì vân tay giữ nguyên như bản trước.
       FP_OPTIONAL = %i[a b rot origin angle polygon holes layers mirror].freeze

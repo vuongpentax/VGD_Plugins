@@ -1,10 +1,12 @@
-# VGD Structure 0.30.0-beta.5
+# VGD Structure 0.30.0-beta.6
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
 
-**0.30.0-beta.5 (đợt H5d, phần 1): mái hiện trên mặt cắt.** Tấm mái bị mặt cắt cắt nay là phần tử loại **mái** (trước đây bị coi là hình lạ): đường viền cắt nét đậm, **hatch bê tông** như sàn, màu riêng (cam) trên mặt cắt và mặt đứng, cạnh tấm mái phía sau vẫn được chiếu. Bấm vào tấm mái trên mặt cắt chỉ sáng đường viền, chưa chọn được đối tượng trong SketchUp. **Xà gồ chưa làm** (chủ dự án chốt 24/11/2026: làm sau, là phần tử BIM thật, chỉ mái một dốc và hai dốc, thông số tiết diện và khoảng cách). Chưa thử trong SketchUp thật.
+**0.30.0-beta.6 (đợt H5d, phần 2): xà gồ.** Tùy chọn của mái **một dốc** và **hai dốc** (bảng Tầng → nút Mái → tick "Xà gồ"): chọn **tiết diện** (40 × 80, 50 × 100, 50 × 120, 60 × 120 mm; mặc định 50 × 100) và **khoảng cách** tối đa theo mặt dốc (600, 800, 1000 mm; mặc định 800). Xà gồ là phần tử BIM thật (khối 3D, tag S. BEAM, loại "Xà gồ 50×100", vật liệu gỗ mặc định): chạy **song song đường đồng mức** (song song nóc), nằm **dưới tấm mái** (mặt trên chạm mặt dưới tấm mái), dài **suốt tấm kể cả phần chìa**; số lượng tự động, chia đều theo mặt dốc (không vượt khoảng cách đã chọn), xà gồ đầu và cuối cách mép tấm nửa bề rộng. Mặt bằng vẽ **tim xà gồ nét đứt mảnh**; mặt cắt vẽ xà gồ màu vàng sẫm, chưa hatch, chưa chọn được trong SketchUp. Mái bốn dốc, mái bằng và mái theo đường bao không có xà gồ. Chưa thử trong SketchUp thật.
+
+**0.30.0-beta.5 (đợt H5d, phần 1): mái hiện trên mặt cắt.** Tấm mái bị mặt cắt cắt nay là phần tử loại **mái** (trước đây bị coi là hình lạ): đường viền cắt nét đậm, **hatch bê tông** như sàn, màu riêng (cam) trên mặt cắt và mặt đứng, cạnh tấm mái phía sau vẫn được chiếu. Bấm vào tấm mái trên mặt cắt chỉ sáng đường viền, chưa chọn được đối tượng trong SketchUp. Xà gồ làm ở beta.6. Chưa thử trong SketchUp thật.
 
 **0.30.0-beta.4 (đợt H5c): mái theo đường bao.** Bảng Tầng → nút Mái → kiểu "Theo đường bao": bấm các **giao điểm lưới** theo thứ tự quanh đường bao (đỉnh cuối bấm lại để bỏ; "Xóa hết", "Lấy khung bao"). Chỉ nhận **đa giác lồi** (hình chữ nhật, hình thang, tam giác, ngũ giác / lục giác lồi...); chữ L, T, U và đa giác lõm chưa hỗ trợ và bị từ chối kèm thông báo. **Mọi cạnh cùng một độ dốc**: mỗi cạnh một tấm, độ cao = dốc x khoảng cách tới cạnh gần nhất, nên khung chữ nhật cho kết quả như mái bốn dốc. Đỉnh thẳng hàng trên một cạnh được bỏ; chiều nhập (cùng hay ngược chiều kim đồng hồ) đều được. Chìa mái, dày, chân mái như các kiểu khác. **Không có tường thu hồi** cho kiểu này. Chưa làm: dốc riêng từng cạnh, đầu hồi cục bộ, nhập tọa độ tự do. Chưa thử trong SketchUp thật.
 
@@ -174,7 +176,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.30.0-beta.5.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.30.0-beta.6.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

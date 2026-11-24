@@ -3,7 +3,8 @@ module VGD
     # Dựng mái theo kế hoạch (RoofPlan): mỗi tầng có mái một Group "Mái - <tên tầng>" trên tag A. ROOF; mỗi tấm mái là một Group con gồm mặt trên,
     # mặt dưới (dời xuống tv theo phương đứng) và các mặt bên (bốn, hoặc ba với tấm tam giác của mái bốn dốc), dựng bằng add_face (không pushpull mặt nghiêng). Cùng mô hình prepare / apply.
     # Tường thu hồi (nếu bật): mỗi tường là một Group con của nhóm mái, tag A. WALL, kind wall trong VGD_BIM_SOURCE, dựng bằng add_face từ biên dạng (không pushpull).
-    # Chưa xác minh trong SketchUp thật: chiều pháp tuyến các mặt, mặt nghiêng, khối tường thu hồi.
+    # Xà gồ (mái một dốc, hai dốc): mỗi xà gồ là một Group con của nhóm mái.
+    # Chưa xác minh trong SketchUp thật: chiều pháp tuyến các mặt, mặt nghiêng, khối tường thu hồi, khối xà gồ nghiêng.
     module RoofBuilder
       GROUP_KIND = 'roofs'.freeze
       Result = Struct.new(:levels, :total, :removed_orphans, :locked_orphans, :issues)
@@ -16,7 +17,7 @@ module VGD
         plans = ids.map { |id| RoofPlan.plan(state['grid'], state['levels'], id, state['wall_types']) }
         locked = plans.map { |plan| find(model, plan[:level]['id']) }.compact.find(&:locked?)
         raise RoofPlan::Error, "Nhóm “#{locked.name}” đang bị khóa. Hãy mở khóa rồi dựng lại." if locked
-        {state: state, plans: plans, total: plans.sum { |plan| plan[:items].size + plan[:gables].size }}
+        {state: state, plans: plans, total: plans.sum { |plan| plan[:items].size + plan[:gables].size + plan[:purlins].size }}
       end
 
       def self.apply(model, ctx)
@@ -31,7 +32,7 @@ module VGD
         orphans = groups(model).reject { |g| valid.include?(g.get_attribute(Schema::DICTIONARY, 'level')) }
         locked, free = orphans.partition(&:locked?)
         free.each(&:erase!)
-        Result.new(ctx[:plans].map { |plan| {name: plan[:level]['name'], count: plan[:items].size, gables: plan[:gables].size} }, ctx[:total], free.size, locked.size, ctx[:plans].flat_map { |plan| plan[:issues] })
+        Result.new(ctx[:plans].map { |plan| {name: plan[:level]['name'], count: plan[:items].size, gables: plan[:gables].size, purlins: plan[:purlins].size} }, ctx[:total], free.size, locked.size, ctx[:plans].flat_map { |plan| plan[:issues] })
       end
 
       def self.build(model, raw_state, level_ids)
@@ -91,6 +92,7 @@ module VGD
           IdKeeper.assign(plate, plate.get_attribute('VGD_BIM_SOURCE', 'ref'), kept)
         end
         draw_gables(model, group, plan, kept)
+        draw_purlins(model, group, plan, kept)
       end
 
       EDGE_NAMES = {'south' => 'nam', 'east' => 'đông', 'north' => 'bắc', 'west' => 'tây'}.freeze
@@ -118,6 +120,43 @@ module VGD
           tag_gable(wall, plan, gable)
           IdKeeper.assign(wall, wall.get_attribute('VGD_BIM_SOURCE', 'ref'), kept)
         end
+      end
+
+      WOOD_COLOR = [190, 150, 100].freeze
+
+      # Xà gồ: mỗi xà gồ là một Group con (khối lăng trụ giữa hai tiết diện đầu cuối, dựng bằng add_face), tag S. BEAM, kind beam trong VGD_BIM_SOURCE (BIM tính thể tích = rộng x cao x dài),
+      # đánh dấu part = purlin để mặt cắt phân biệt với dầm bê tông. Vật liệu gỗ mặc định cho xà gồ.
+      def self.draw_purlins(model, group, plan, kept)
+        return if plan[:purlins].empty?
+        layer = TagStore.ensure(model, Schema::TAGS['beam'])
+        material = model.materials['VGD Gỗ xà gồ'] || model.materials.add('VGD Gỗ xà gồ').tap { |m| m.color = Sketchup::Color.new(*WOOD_COLOR) }
+        plan[:purlins].each do |purlin|
+          piece = group.entities.add_group
+          piece.name = "Xà gồ #{purlin[:ref]} (#{plan[:level]['name']})"
+          piece.layer = layer
+          a = purlin[:start].map { |x, y, z| Geom::Point3d.new(x.mm, y.mm, z.mm) }
+          b = purlin[:finish].map { |x, y, z| Geom::Point3d.new(x.mm, y.mm, z.mm) }
+          piece.entities.add_face(a)
+          piece.entities.add_face(b.reverse)
+          a.size.times { |i| j = (i + 1) % a.size; piece.entities.add_face([a[i], a[j], b[j], b[i]]) }
+          piece.material = material
+          tag_purlin(piece, plan, purlin)
+          IdKeeper.assign(piece, piece.get_attribute('VGD_BIM_SOURCE', 'ref'), kept)
+        end
+      end
+
+      def self.tag_purlin(piece, plan, purlin)
+        piece.set_attribute('VGD_BIM_SOURCE', 'plugin', Schema::PLUGIN_ID)
+        piece.set_attribute('VGD_BIM_SOURCE', 'plugin_version', VERSION)
+        piece.set_attribute('VGD_BIM_SOURCE', 'kind', 'beam')
+        piece.set_attribute('VGD_BIM_SOURCE', 'ref', "#{plan[:level]['id']}:#{purlin[:ref]}")
+        piece.set_attribute(Schema::DICTIONARY, 'part', 'purlin')
+        piece.set_attribute(Schema::DICTIONARY, 'level', plan[:level]['id'])
+        piece.set_attribute(Schema::DICTIONARY, 'level_name', plan[:level]['name'])
+        piece.set_attribute(Schema::DICTIONARY, 'level_elevation', plan[:level]['elevation'])
+        piece.set_attribute(Schema::DICTIONARY, 'fp', ModelSync.fingerprint('purlin', purlin))
+        piece.set_attribute(Schema::DICTIONARY, 'type', "Xà gồ #{purlin[:w]}×#{purlin[:h]}")
+        piece.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('w' => purlin[:w], 'h' => purlin[:h], 'length' => purlin[:length]))
       end
 
       # Đa giác biên dạng: đáy (hai góc dưới ở mặt sàn), rồi đáy mái từ cuối về đầu; bỏ đỉnh trùng khi đáy mái ngang mặt sàn.

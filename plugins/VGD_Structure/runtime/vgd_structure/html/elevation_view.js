@@ -14,7 +14,7 @@
   function settle(ms) { quick = true; clearTimeout(quickTimer); quickTimer = setTimeout(function () { quick = false; draw(); }, ms); }
   // Hướng nhìn: nhãn, và cách đổi tọa độ trục lưới sang ngang s (s = dấu * tọa độ trục). Giả định hướng Bắc của model là +Y (mặc định SketchUp).
   var DIRS = {south: {label: 'Nam', axis: 'x', sign: 1}, north: {label: 'Bắc', axis: 'x', sign: -1}, west: {label: 'Tây', axis: 'y', sign: -1}, east: {label: 'Đông', axis: 'y', sign: 1}};
-  var COLORS = {column: '#66DD00', beam: '#00AABA', wall: '#FF9966', slab: '#BA3300', ceiling: '#9900FF', door: '#FF7766', window: '#CCBAED', opening: '#FF7766', suobj: '#8A93A0', geom: '#666666', footing: '#999999', roof: '#FF6600', stair: '#FFBA00'};
+  var COLORS = {column: '#66DD00', beam: '#00AABA', wall: '#FF9966', slab: '#BA3300', ceiling: '#9900FF', door: '#FF7766', window: '#CCBAED', opening: '#FF7766', suobj: '#8A93A0', geom: '#666666', footing: '#999999', roof: '#FF6600', stair: '#FFBA00', purlin: '#B8860B'};
   var TAG_KIND = function (tag) { var k = null; Object.keys(tagNames).forEach(function (kind) { if (String(tagNames[kind]).toLowerCase() === String(tag || '').toLowerCase()) k = kind; }); return k; };
 
   function $(id) { return document.getElementById(id); }
@@ -162,7 +162,7 @@
   }
   function selectSrc(src) {
     selected = {}; if (src) selected[keyOf(src)] = true; draw();
-    if (!src || src.kind === 'geom' || src.kind === 'roof' || !host.callSU) return; // hình rời và mái: chưa chọn được trong SketchUp (Ruby chỉ nhận loại trong SELECT_KINDS)
+    if (!src || src.kind === 'geom' || src.kind === 'roof' || src.kind === 'purlin' || !host.callSU) return; // hình rời, mái và xà gồ: chưa chọn được trong SketchUp (Ruby chỉ nhận loại trong SELECT_KINDS)
     host.callSU('plan_select', {level: src.level || S.level, items: [{kind: src.kind, ref: String(src.ref)}]});
   }
   function bind() {

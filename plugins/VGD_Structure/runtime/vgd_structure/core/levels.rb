@@ -202,6 +202,9 @@ module VGD
       # slope độ (mái dốc 1..60; mái bằng bỏ qua), thickness mm (vuông góc mặt mái), base mm (đáy mái tại đường mép so với cao độ tầng).
       ROOF_SHAPES = %w[flat shed gable hip outline].freeze
       ROOF_POINTS = (3..64).freeze
+      # Xà gồ (chỉ mái một dốc và hai dốc): tiết diện chọn từ danh sách (rộng theo mặt dốc x cao vuông góc mặt dốc, mm) và khoảng cách tối đa giữa tim xà gồ theo mặt dốc (mm).
+      PURLIN_SECTIONS = {'40x80' => [40, 80], '50x100' => [50, 100], '50x120' => [50, 120], '60x120' => [60, 120]}.freeze
+      PURLIN_SPACINGS = [600, 800, 1000].freeze
       ROOF_DIRS = {'shed' => %w[x+ x- y+ y-], 'gable' => %w[x y]}.freeze
       ROOF_SLOPE = (1.0..60.0).freeze
       ROOF_THICKNESS = (20.0..500.0).freeze
@@ -239,6 +242,16 @@ module VGD
           gable = raw['gable_wall']
           raise Error, "#{who}: tường thu hồi phải có loại tường." unless gable.is_a?(Hash) && gable['type'].is_a?(String) && !gable['type'].empty?
           out['gable_wall'] = {'type' => gable['type']}
+        end
+        # Xà gồ (chỉ mái một dốc và hai dốc; kiểu khác bỏ qua): {} hoặc thiếu khóa thì lấy mặc định 50x100, 800 mm.
+        if ROOF_DIRS.key?(shape) && !raw['purlin'].nil?
+          purlin = raw['purlin']
+          raise Error, "#{who}: xà gồ phải là một nhóm thông số." unless purlin.is_a?(Hash)
+          section = purlin.fetch('section', '50x100')
+          raise Error, "#{who}: tiết diện xà gồ phải là #{PURLIN_SECTIONS.keys.join(', ')}." unless PURLIN_SECTIONS.key?(section)
+          spacing = purlin.fetch('spacing', 800)
+          raise Error, "#{who}: khoảng cách xà gồ phải là #{PURLIN_SPACINGS.join(', ')} mm." unless number?(spacing) && PURLIN_SPACINGS.include?(spacing.to_i) && spacing.to_i == spacing
+          out['purlin'] = {'section' => section, 'spacing' => spacing.to_i}
         end
         out
       end

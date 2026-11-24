@@ -152,6 +152,15 @@ r1 = rr2[:cut].find { |c| c[:src][:ref] == 'roof_1' }
 r2c = rr2[:cut].find { |c| c[:src][:ref] == 'roof_2' }
 ok('tấm mái dốc đúng: s theo mặt bằng (chìa 600, nóc giữa khung), đỉnh cao nhất bằng nóc của kế hoạch', r1[:pts].map(&:first).minmax == [900.0, 5100.0] && r2c[:pts].map(&:first).minmax == [5100.0, 9300.0] && [r1, r2c].all? { |c| (c[:pts].map(&:last).max - ridge).abs < 0.1 })
 
+# Xà gồ (BIM kind beam, part purlin): mặt cắt gán loại purlin để tô màu / hatch gỗ riêng và không chọn nhầm như dầm
+pm = Sketchup::Model.new
+roof_state['levels'][-1]['roof']['purlin'] = {'section' => '50x100', 'spacing' => 800}
+S::RoofBuilder.build(pm, roof_state, [roof_level])
+pr = SS.build(pm, {'a' => [6300, -1500], 'b' => [6300, 8700], 'dir' => 1, 'depth' => 500})
+purlin_cut = pr[:cut].select { |c| c[:src][:kind] == 'purlin' }
+ok('cắt vuông góc nóc mái có xà gồ: xà gồ là đường viền kín 4 đỉnh, loại purlin, tag S. BEAM, mã xà gồ', purlin_cut.size >= 2 && purlin_cut.all? { |c| c[:closed] && c[:pts].size == 4 && c[:src][:tag] == 'S. BEAM' && c[:src][:ref].start_with?('purlin_') } &&
+   pr[:cut].none? { |c| c[:src][:kind] == 'beam' })
+
 # ---- Callback section_build ----
 panel = S::Panel.new; dlg = panel.instance_variable_get(:@dialog); panel.show; call(dlg, 'ready')
 call(dlg, 'section_build', {'id' => 'sc_00000001', 'section' => {'name' => 'A-A', 'a' => [2000, -1000], 'b' => [2000, 1000], 'dir' => 1, 'depth' => 1500}})

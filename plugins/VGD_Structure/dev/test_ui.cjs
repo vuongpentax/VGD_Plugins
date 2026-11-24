@@ -430,6 +430,25 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.locator('#roof-shape').selectOption('hip');await wait(300);
   rf=(await last('grid_preview')).levels.slice(-1)[0].roof;
   ok(rf.shape==='hip' && !rf.gable_wall,'đổi sang bốn dốc: bỏ tường thu hồi');
+  // Xà gồ: tùy chọn của mái một dốc và hai dốc; tiết diện và khoảng cách chọn từ danh sách
+  ok((await page.locator('#roof-purlin').count())===0,'mái bốn dốc: không có tùy chọn xà gồ');
+  await page.locator('#roof-shape').selectOption('gable');await wait(300);
+  ok((await page.locator('#roof-purlin').isVisible()) && !(await page.locator('#roof-purlin').isChecked()) && (await page.locator('#roof-purlin-section').count())===0,'mái hai dốc: có ô Xà gồ, chưa tick, chưa hiện ô tiết diện và khoảng cách');
+  await page.locator('#roof-purlin').check();await wait(300);
+  rf=(await last('grid_preview')).levels.slice(-1)[0].roof;
+  ok(rf.purlin && rf.purlin.section==='50x100' && rf.purlin.spacing===800 && (await page.locator('#roof-purlin-section').isVisible()) && (await page.locator('#roof-purlin-spacing').isVisible()),'tick Xà gồ: gửi purlin mặc định 50x100 / 800, hiện hai ô chọn');
+  ok((await page.locator('#roof-purlin-section option').allInnerTexts()).join('|')==='40 × 80 mm|50 × 100 mm|50 × 120 mm|60 × 120 mm' && (await page.locator('#roof-purlin-spacing option').count())===3,'danh sách tiết diện (4) và khoảng cách (600 / 800 / 1000)');
+  await page.locator('#roof-purlin-section').selectOption('60x120');await page.locator('#roof-purlin-spacing').selectOption('1000');await wait(300);
+  rf=(await last('grid_preview')).levels.slice(-1)[0].roof;
+  ok(rf.purlin.section==='60x120' && rf.purlin.spacing===1000,'đổi tiết diện và khoảng cách: gửi đúng giá trị (khoảng cách là số)');
+  const vpu=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vpu.ok,'dữ liệu mái có xà gồ được Ruby chấp nhận');
+  await page.locator('#roof-shape').selectOption('shed');await wait(300);
+  rf=(await last('grid_preview')).levels.slice(-1)[0].roof;
+  ok(rf.shape==='shed' && rf.purlin && rf.purlin.section==='60x120' && (await page.locator('#roof-purlin').isChecked()),'đổi sang một dốc: giữ xà gồ');
+  await page.locator('#roof-shape').selectOption('hip');await wait(300);
+  rf=(await last('grid_preview')).levels.slice(-1)[0].roof;
+  ok(rf.shape==='hip' && !rf.purlin,'đổi sang bốn dốc: bỏ xà gồ');
   // Mái theo đường bao: chọn đỉnh lưới (đa giác lồi), mặc định là bốn góc khung
   await page.locator('#roof-shape').selectOption('outline');await wait(300);
   rf=(await last('grid_preview')).levels.slice(-1)[0].roof;

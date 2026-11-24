@@ -38,8 +38,9 @@ module VGD
         issues = []
         ridge = items.map { |i| i[:top].map(&:last).max }.max
         issues << "Nóc mái cao #{(ridge - zb).round} mm so với chân mái: kiểm tra lại độ dốc." if ridge - zb > 15_000
+        purlins = roof['purlin'] ? purlins(roof['purlin'], items) : []
         gables = roof['gable_wall'] ? gable_walls(level, roof, items, [x0, y0, x1, y1], tv, wall_types || WallTypes.default) : []
-        {level: level, z_base: zb, ridge: ridge, items: items, gables: gables, issues: issues}
+        {level: level, z_base: zb, ridge: ridge, items: items, gables: gables, purlins: purlins, issues: issues}
       end
 
       GABLE_EDGES = {'south' => [[0, 1], 1.0, [0.0, 1.0]], 'east' => [[1, 2], 1.0, [-1.0, 0.0]], 'north' => [[2, 3], 1.0, [0.0, -1.0]], 'west' => [[3, 0], 1.0, [1.0, 0.0]]}.freeze
@@ -84,15 +85,54 @@ module VGD
         ((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])).abs < 0.05 * (r[0] - p[0]).abs
       end
 
-      # Mặt phẳng z = f(x, y) qua ba đỉnh đầu của một tấm mái (đỉnh liên tiếp đầu tiên không thẳng hàng).
-      def self.plane_of(top)
+      # Độ nghiêng [ca, cb] của mặt phẳng z = z0 + ca.(x - x0) + cb.(y - y0) qua ba đỉnh đầu của một tấm mái (đỉnh liên tiếp đầu tiên không thẳng hàng).
+      def self.gradient(top)
         p0, p1, p2 = top[0], top[1], top[2]
         ux, uy, uz = p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]
         vx, vy, vz = p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]
         det = ux * vy - uy * vx
-        ca = (uz * vy - uy * vz) / det
-        cb = (ux * vz - uz * vx) / det
+        [(uz * vy - uy * vz) / det, (ux * vz - uz * vx) / det]
+      end
+
+      # Mặt phẳng z = f(x, y) của một tấm mái.
+      def self.plane_of(top)
+        p0 = top[0]
+        ca, cb = gradient(top)
         ->(x, y) { p0[2] + ca * (x - p0[0]) + cb * (y - p0[1]) }
+      end
+
+      # Xà gồ dưới từng tấm mái (mái một dốc, hai dốc): chạy song song đường đồng mức, dài suốt tấm (kể cả phần chìa), mặt trên chạm mặt dưới tấm mái.
+      # Cách nhau theo MẶT DỐC tối đa `spacing`, chia đều; xà gồ đầu và cuối cách mép tấm nửa bề rộng. Mỗi xà gồ: hai tiết diện đầu cuối (4 đỉnh 3D, mm) và tim trên mặt bằng.
+      def self.purlins(setting, items)
+        w, h = Levels::PURLIN_SECTIONS.fetch(setting['section'])
+        items.each_with_index.flat_map do |item, i|
+          ca, cb = gradient(item[:top])
+          mag = Math.hypot(ca, cb)
+          next [] if mag < 1e-9
+          gx, gy = ca / mag, cb / mag # hướng dốc lên (mặt bằng); trục xà gồ vuông góc
+          ax, ay = -gy, gx
+          theta = Math.atan(mag)
+          ss = item[:poly].map { |x, y| x * gx + y * gy }
+          as = item[:poly].map { |x, y| x * ax + y * ay }
+          usable = (ss.max - ss.min) / Math.cos(theta) - w
+          next [] if usable <= 0
+          count = (usable / setting['spacing'].to_f - 1e-9).ceil + 1
+          step = usable / (count - 1)
+          z_of = ->(s) { item[:top][0][2] + mag * (s - (item[:top][0][0] * gx + item[:top][0][1] * gy)) - item[:tv] }
+          (0...count).map do |k|
+            centre = ss.min + (w / 2.0 + k * step) * Math.cos(theta) # tim xà gồ theo phương dốc (mặt bằng)
+            zc = z_of.call(centre)
+            corners = [[-1, 0], [1, 0], [1, -1], [-1, -1]].map do |du, dn| # trên-trái, trên-phải, dưới-phải, dưới-trái theo mặt cắt ngang
+              dist = du * w / 2.0
+              [centre + dist * Math.cos(theta) + dn * h * -Math.sin(theta), zc + dist * Math.sin(theta) + dn * h * Math.cos(theta)]
+            end
+            quad = lambda do |a|
+              corners.map { |s, z| [(s * gx + a * ax).round(2), (s * gy + a * ay).round(2), z.round(2)] }
+            end
+            {ref: "purlin_#{i + 1}_#{k + 1}", plate: item[:ref], section: setting['section'], w: w, h: h, length: (as.max - as.min).round(2),
+             start: quad.call(as.min), finish: quad.call(as.max), line: [[(centre * gx + as.min * ax).round(2), (centre * gy + as.min * ay).round(2)], [(centre * gx + as.max * ax).round(2), (centre * gy + as.max * ay).round(2)]]}
+          end
+        end
       end
 
       # Phần đoạn a -> b nằm trong đa giác LỒI ngược chiều kim đồng hồ (Cyrus - Beck): [t0, t1] trong [0, 1] hoặc nil.

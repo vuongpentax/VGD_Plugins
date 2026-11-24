@@ -8,7 +8,7 @@ module VGD
       MAX_EDGES = 120_000
       MAX_BEYOND = 40_000   # số đoạn cạnh phía sau gửi cho cửa sổ
       MAX_POLYS = 40_000    # số mặt gửi cho cửa sổ mặt đứng (giữ các mặt gần nhất khi quá nhiều)
-      # Loại phần tử hiện trên mặt cắt / mặt đứng: loại của mặt bằng (UI_KIND) và mái (tấm mái cho hatch và màu riêng; chưa chọn được từ mặt cắt, xem ModelSync::PLAN_KINDS).
+      # Loại phần tử hiện trên mặt cắt / mặt đứng: loại của mặt bằng (UI_KIND) và mái (tấm mái cho hatch và màu riêng; xà gồ là 'purlin' lấy từ part = purlin; hai loại này chưa chọn được từ mặt cắt, xem ModelSync::PLAN_KINDS).
       SECTION_KIND = ModelSync::UI_KIND.merge('roof' => 'roof').freeze
 
       # section: {'a' => [x, y], 'b' => [x, y], 'dir' => 1 | -1, 'depth' => mm}. Trả về {length:, cut: [{pts:, closed:, src:}], beyond: [[[s,z],[s,z]]...], truncated: bool, faces:, edges:}.
@@ -74,6 +74,7 @@ module VGD
       def self.meta_for(e)
         if e.get_attribute('VGD_BIM_SOURCE', 'plugin') == Schema::PLUGIN_ID
           kind = SECTION_KIND[e.get_attribute('VGD_BIM_SOURCE', 'kind').to_s]
+          kind = 'purlin' if e.get_attribute(Schema::DICTIONARY, 'part') == 'purlin' # xà gồ (BIM kind beam): màu và hatch gỗ riêng, chưa chọn được từ mặt cắt
           level, ref = e.get_attribute('VGD_BIM_SOURCE', 'ref').to_s.split(':', 2)
           return {kind: kind, level: level, ref: ref, tag: e.layer && e.layer.name}
         end

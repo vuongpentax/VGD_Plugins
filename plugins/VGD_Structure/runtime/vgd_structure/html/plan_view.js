@@ -3,7 +3,7 @@
 (function () {
   'use strict';
   // Màu theo bộ tag mẫu của VGD BIM.
-  var COLORS = {column: '#66DD00', beam: '#00AABA', wall: '#FF9966', slab: '#BA3300', ceiling: '#9900FF', stair: '#FFBA00', door: '#FF7766', window: '#CCBAED', grid: '#BA00CC', suobj: '#8A93A0', section: '#D9534F', footing: '#999999', roof: '#FF6600'};
+  var COLORS = {column: '#66DD00', beam: '#00AABA', wall: '#FF9966', slab: '#BA3300', ceiling: '#9900FF', stair: '#FFBA00', door: '#FF7766', window: '#CCBAED', grid: '#BA00CC', suobj: '#8A93A0', section: '#D9534F', footing: '#999999', roof: '#FF6600', purlin: '#B8860B'};
   var LAYERS = [['grid', 'Lưới trục'], ['footing', 'Móng'], ['slab', 'Sàn'], ['roof', 'Mái'], ['ceiling', 'Trần'], ['stair', 'Cầu thang'], ['beam', 'Dầm'], ['wall', 'Tường'], ['opening', 'Cửa'], ['column', 'Cột'], ['suobj', 'Đối tượng SketchUp chưa nhận'], ['section', 'Mặt cắt'], ['note', 'Ghi chú và nét 2D']];
   // Biểu tượng tự vẽ (nét 24 × 24). Bố cục theo cửa sổ mặt bằng của VTBim: thanh trên (chọn, sửa), cột công cụ bên trái, tab theo tầng, bảng thuộc tính, thanh trạng thái.
   var ICON = {
@@ -736,6 +736,11 @@
     if (visible.footing) section('footings').forEach(function (i) { fillStroke(i.poly || rectPoly([i.center[0] - i.w / 2, i.center[1] - i.d / 2], [i.center[0] + i.w / 2, i.center[1] + i.d / 2]), COLORS.footing, 0.1, [4, 3], 1); });
     // Mái (tầng có khai báo mái): viền tấm mái nét đứt cam, đường nóc là cạnh chung của hai tấm (vẽ chồng hai viền); chỉ để xem.
     if (visible.roof) section('roofs').forEach(function (i) { fillStroke(i.poly, COLORS.roof, 0.06, [8, 4], 1.5); });
+    // Xà gồ (mái một dốc / hai dốc): tim xà gồ nét đứt mảnh, cùng nhóm hiện / ẩn với mái; chỉ để xem.
+    if (visible.roof && data.roofs && data.roofs.purlins) data.roofs.purlins.forEach(function (q) {
+      var a = toScreen(q.a[0], q.a[1]), b = toScreen(q.b[0], q.b[1]);
+      ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineWidth = 0.6; ctx.strokeStyle = vstyle === 'color' ? COLORS.purlin : css('--vgd-text', '#222'); ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+    });
     if (visible.slab) section('slabs').forEach(function (i) { if (hid('slab', i.ref)) return; fillStroke(i.polygon || rectPoly(i.min, i.max), COLORS.slab, 0.12, null, 1, i.holes); });
     if (visible.stair) section('stairs').forEach(function (i) { if (hid('stair', i.ref)) return; var bad = !!(i.conflicts && i.conflicts.length); fillStroke(i.polygon, bad ? themeColor(GHOST_BAD) : COLORS.stair, bad ? 0.22 : 0.12, bad ? null : [5, 4], bad ? 2 : 1, null); (i.steps || []).forEach(function (st) { fillStroke(st.poly, COLORS.stair, 0.05, null, 0.5, null); }); });
     if (visible.ceiling) section('ceilings').forEach(function (i) { if (hid('ceiling', i.ref)) return; fillStroke(i.polygon, COLORS.ceiling, 0.08, [5, 4], 1, i.holes); });

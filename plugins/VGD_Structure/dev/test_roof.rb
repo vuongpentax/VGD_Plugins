@@ -205,6 +205,52 @@ og = mo.entities.grep(Sketchup::Group).find { |x| x.get_attribute(D, 'kind') == 
 oplates = og.entities.grep(Sketchup::Group)
 ok('dựng mái theo đường bao: bốn tấm, mỗi tấm là khối kín (hai mặt đầu + một mặt cho mỗi cạnh)', oplates.map { |pl| pl.entities.grep(Sketchup::Face).size } == outline_plan(TRAP)[:items].map { |it| it[:poly].size + 2 })
 ok('dựng mái theo đường bao: kiểu "Mái theo đường bao", dữ liệu BIM đủ dày và diện tích', oplates.all? { |pl| pl.get_attribute(D, 'type') == 'Mái theo đường bao' && JSON.parse(pl.get_attribute(D, 'dims'))['area'] > 0 })
+# ---- Xà gồ (H5d phần 2): chỉ mái một dốc và hai dốc; song song đường đồng mức, dưới tấm mái, cách nhau theo mặt dốc ----
+PUR = {'section' => '50x100', 'spacing' => 800}
+pur_of = ->(r) { norm(roof_state(r))['levels'][-1]['roof']['purlin'] }
+ok('xà gồ: bỏ trống thì không có khóa; chỉ nhận một dốc / hai dốc; điền mặc định 50x100 / 800',
+   pur_of.call('shape' => 'gable', 'slope' => 30, 'dir' => 'x').nil? && pur_of.call('shape' => 'gable', 'slope' => 30, 'dir' => 'x', 'purlin' => {}) == PUR &&
+   pur_of.call('shape' => 'hip', 'slope' => 30, 'purlin' => PUR).nil? && pur_of.call('shape' => 'flat', 'purlin' => PUR).nil?)
+ok('xà gồ: tiết diện và khoảng cách sai bị từ chối',
+   bad.call('shape' => 'shed', 'slope' => 30, 'dir' => 'x+', 'purlin' => {'section' => '30x30'}).include?('tiết diện') && bad.call('shape' => 'shed', 'slope' => 30, 'dir' => 'x+', 'purlin' => {'spacing' => 700}).include?('khoảng cách') &&
+   bad.call('shape' => 'shed', 'slope' => 30, 'dir' => 'x+', 'purlin' => 5).include?('xà gồ'))
+pg = plan_of('shape' => 'gable', 'slope' => 30, 'dir' => 'x', 'thickness' => 100, 'purlin' => PUR)
+ps = pg[:purlins]
+ok('xà gồ mái hai dốc: có xà gồ ở cả hai tấm, tiết diện 50 x 100, tên mã duy nhất', ps.any? && ps.map { |q| q[:plate] }.uniq.sort == %w[roof_1 roof_2] && ps.map { |q| q[:ref] }.uniq.size == ps.size && ps.all? { |q| q[:w] == 50 && q[:h] == 100 })
+ok('xà gồ chạy dọc nóc (phương X): dài bằng khung cộng hai phần chìa, mọi đầu cùng X', ps.all? { |q| near(q[:length], X1 - X0 + 1200, 0.1) && [q[:start], q[:finish]].all? { |e| e.all? { |pt| near(pt[0], e[0][0]) } } && [q[:start][0][0], q[:finish][0][0]].sort.zip([X0 - 600, X1 + 600]).all? { |a, b| near(a, b) } })
+tile = pg[:items][0]
+mine = ps.select { |q| q[:plate] == tile[:ref] }
+cos = Math.cos(30 * Math::PI / 180)
+slope_len = (tile[:poly].map { |pt| pt[1] }.max - tile[:poly].map { |pt| pt[1] }.min) / cos
+n_exp = ((slope_len - 50) / 800.0).ceil + 1
+ok('xà gồ: số lượng tự động theo khoảng cách tối đa theo mặt dốc', mine.size == n_exp)
+tplane = S::RoofPlan.plane_of(tile[:top])
+ok('xà gồ nằm dưới tấm mái: hai đỉnh trên chạm mặt dưới tấm mái (cách mặt trên đúng bề dày tv theo phương đứng)',
+   mine.all? { |q| (q[:start][0..1] + q[:finish][0..1]).all? { |pt| near(pt[2], tplane.call(pt[0], pt[1]) - tile[:tv], 0.1) } })
+ok('xà gồ: mặt cắt ngang đúng 50 theo mặt dốc và 100 vuông góc mặt dốc',
+   mine.all? { |q| a, b, c, d = q[:start]; near(Math.sqrt((b[0]-a[0])**2 + (b[1]-a[1])**2 + (b[2]-a[2])**2), 50, 0.1) && near(Math.sqrt((d[0]-a[0])**2 + (d[1]-a[1])**2 + (d[2]-a[2])**2), 100, 0.1) })
+ys = mine.map { |q| q[:line][0][1] }.sort
+steps = ys.each_cons(2).map { |a, b| (b - a) / cos }
+ymin, ymax = tile[:poly].map { |pt| pt[1] }.minmax
+ok('xà gồ: khoảng cách theo mặt dốc đều và không vượt 800 mm; xà gồ đầu và cuối cách mép tấm đúng nửa bề rộng (25 mm)',
+   steps.all? { |d| d <= 800.1 && near(d, steps[0], 0.2) } && near((ys.first - ymin) / cos, 25, 0.2) && near((ymax - ys.last) / cos, 25, 0.2))
+sp = plan_of('shape' => 'shed', 'slope' => 20, 'dir' => 'x+', 'purlin' => {'section' => '60x120', 'spacing' => 600})
+ok('xà gồ mái một dốc: song song cạnh Y (vuông góc hướng dốc), tiết diện 60 x 120, dài bằng khung cộng chìa', sp[:purlins].any? && sp[:purlins].all? { |q| q[:w] == 60 && q[:h] == 120 && near(q[:length], Y1 - Y0 + 1200, 0.1) && [q[:start], q[:finish]].all? { |e| e.all? { |pt| near(pt[1], e[0][1]) } } })
+ok('không bật xà gồ hoặc mái bốn dốc / bằng: không có xà gồ', plan_of('shape' => 'gable', 'slope' => 30, 'dir' => 'x')[:purlins].empty? && plan_of('shape' => 'hip', 'slope' => 30)[:purlins].empty? && plan_of('shape' => 'flat')[:purlins].empty?)
+mp = Sketchup::Model.new
+S::RoofBuilder.build(mp, roof_state('shape' => 'gable', 'slope' => 30, 'dir' => 'x', 'thickness' => 100, 'purlin' => PUR), [lid])
+pgrp = mp.entities.grep(Sketchup::Group).find { |x| x.get_attribute(D, 'kind') == 'roofs' }
+pur = pgrp.entities.grep(Sketchup::Group).select { |x| x.get_attribute(D, 'part') == 'purlin' }
+ok('dựng xà gồ: mỗi xà gồ là một khối kín 6 mặt trong nhóm mái, tag S. BEAM, đủ số lượng theo kế hoạch', pur.size == ps.size && pur.all? { |x| x.entities.grep(Sketchup::Face).size == 6 && x.layer.name == 'S. BEAM' })
+pd = JSON.parse(pur[0].get_attribute(D, 'dims'))
+ok('dữ liệu BIM của xà gồ: kind beam, kiểu "Xà gồ 50×100", rộng / cao / dài, vân tay, vật liệu gỗ',
+   pur[0].get_attribute('VGD_BIM_SOURCE', 'kind') == 'beam' && pur[0].get_attribute(D, 'type') == 'Xà gồ 50×100' && pd == {'w' => 50, 'h' => 100, 'length' => ps[0][:length]} &&
+   pur[0].get_attribute(D, 'fp').is_a?(String) && pur[0].material && pur[0].material.name.include?('xà gồ'))
+ok('dựng lại bỏ xà gồ: xà gồ cũ bị thay, không còn xà gồ', (S::RoofBuilder.build(mp, roof_state('shape' => 'gable', 'slope' => 30, 'dir' => 'x', 'thickness' => 100), [lid]) &&
+   mp.entities.grep(Sketchup::Group).find { |x| x.get_attribute(D, 'kind') == 'roofs' }.entities.grep(Sketchup::Group).none? { |x| x.get_attribute(D, 'part') == 'purlin' }))
+pvp = S::Preview.build(roof_state('shape' => 'gable', 'slope' => 30, 'dir' => 'x', 'purlin' => PUR).merge('level' => lid))
+ok('xem trước có xà gồ: danh sách đoạn tim xà gồ trên mặt bằng, cùng số lượng với lúc dựng', pvp[:roofs][:purlins].size == ps.size && pvp[:roofs][:purlins].all? { |q| q[:a].size == 2 && q[:b].size == 2 })
+
 all = S::AllBuilder.build(m, roof_state('shape' => 'flat'), [lid])
 ok('dựng tất cả có mái ở tầng trên cùng; dựng lại thay nhóm cũ', all[:kinds].key?('roofs') && m.entities.grep(Sketchup::Group).count { |x| x.get_attribute(D, 'kind') == 'roofs' } == 1)
 ok('tầng chưa khai báo mái: dựng mái báo lỗi', error_of { S::RoofBuilder.build(Sketchup::Model.new, S::State.default, [lid]) }.include?('chưa khai báo mái'))
