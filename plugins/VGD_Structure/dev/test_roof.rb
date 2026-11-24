@@ -105,6 +105,68 @@ ok('mái một dốc lên theo +Y: tường thu hồi ở hai cạnh tây và đ
 ok('không bật tường thu hồi: không có tường nào; mái bằng, bốn dốc cũng không có', plan_of('shape' => 'gable', 'slope' => 30, 'dir' => 'x')[:gables].empty? && plan_of(gw('shape' => 'flat'))[:gables].empty? && plan_of(gw('shape' => 'hip', 'slope' => 30))[:gables].empty?)
 ok('loại tường không tồn tại: báo lỗi rõ', error_of { n = norm(roof_state(gw('shape' => 'gable', 'slope' => 30, 'dir' => 'x'))); n['levels'][-1]['roof']['gable_wall'] = {'type' => 'wt_zzzzzzzz'}; S::RoofPlan.plan(n['grid'], n['levels'], n['levels'][-1]['id'], n['wall_types']) }.include?('loại tường'))
 
+# ---- Mái theo đường bao (H5c): đa giác LỒI theo các đỉnh lưới, mọi cạnh cùng độ dốc; mặt mái = bao dưới của các mặt phẳng dốc từ từng cạnh ----
+def outline(points, extra = {}); {'shape' => 'outline', 'slope' => 30, 'points' => points, 'thickness' => 100, 'overhang' => 0}.merge(extra); end
+def kept_points(raw); norm(roof_state(raw))['levels'][-1]['roof']; end
+TRAP = %w[1-A 4-A 3-C 2-C].freeze      # hình thang (đáy dài 12600, đỉnh 4200)
+HEXA = %w[2-A 3-A 4-B 3-C 2-C 1-B].freeze
+ol = kept_points(outline(TRAP, 'dir' => 'x', 'gable_wall' => {'type' => WT}))
+ok('mái theo đường bao: giữ danh sách đỉnh và độ dốc; bỏ hướng và tường thu hồi', ol['points'] == TRAP && ol['slope'] == 30.0 && !ol.key?('dir') && !ol.key?('gable_wall'))
+ok('mái theo đường bao: đường bao thiếu, dưới 3 đỉnh, trùng đỉnh, không phải mã chữ bị từ chối',
+   %w[points].all? { bad.call(outline(nil)).include?('đường bao') } && bad.call(outline(%w[1-A 4-A])).include?('đường bao') && bad.call(outline(%w[1-A 4-A 1-A])).include?('trùng') &&
+   bad.call(outline(['1-A', 4, '3-C'])).include?('đường bao') && bad.call(outline('1-A 4-A 3-C')).include?('đường bao') && bad.call(outline(%w[1-A 4-A 4-C], 'slope' => 0)).include?('độ dốc'))
+def outline_plan(points, extra = {})
+  n = norm(roof_state(outline(points, extra)))
+  S::RoofPlan.plan(n['grid'], n['levels'], n['levels'][-1]['id'])
+end
+# Khoảng cách có dấu (dương ở trong) từ điểm tới các đường chứa cạnh đa giác lồi ngược chiều kim đồng hồ, tính độc lập với mã kế hoạch.
+def edge_distances(ring, x, y)
+  ring.each_index.map do |i|
+    ax, ay = ring[i]; bx, by = ring[(i + 1) % ring.size]
+    ((bx - ax) * (y - ay) - (by - ay) * (x - ax)) / Math.hypot(bx - ax, by - ay)
+  end
+end
+def coords(points); i = S::Grid.intersections(S::State.default['grid']).to_h { |p| [p[:ref], [p[:x], p[:y]]] }; points.map { |r| i[r] }; end
+tp = outline_plan(TRAP, 'overhang' => 600)
+ring = coords(TRAP)
+ok('mái theo đường bao hình thang: bốn tấm, mọi đỉnh nằm đúng trên mặt dốc (cao độ = chân + dày + dốc x khoảng cách tới đường cạnh gần nhất)',
+   tp[:items].size == 4 && tp[:items].all? { |it| it[:top].all? { |x, y, z| near(z, TOP + tv + edge_distances(ring, x, y).min * t, 0.1) } })
+# Diện tích đa giác sau khi chìa ra o theo mọi cạnh (góc nhọn nối bằng đường chéo phân giác): S + P.o + o^2 . tổng tan(góc ngoài / 2)
+def offset_area(ring, o)
+  n = ring.size
+  area = ring.each_index.sum { |i| ax, ay = ring[i]; bx, by = ring[(i + 1) % n]; ax * by - bx * ay } / 2.0
+  per = ring.each_index.sum { |i| Math.hypot(ring[(i + 1) % n][0] - ring[i][0], ring[(i + 1) % n][1] - ring[i][1]) }
+  turn = ring.each_index.sum do |i|
+    p0, p1, p2 = ring[i - 1], ring[i], ring[(i + 1) % n]
+    ang = Math.atan2((p1[0] - p0[0]) * (p2[1] - p1[1]) - (p1[1] - p0[1]) * (p2[0] - p1[0]), (p1[0] - p0[0]) * (p2[0] - p1[0]) + (p1[1] - p0[1]) * (p2[1] - p1[1]))
+    Math.tan(ang / 2)
+  end
+  area + per * o + o * o * turn
+end
+ok('mái theo đường bao hình thang: các tấm phủ kín đường bao cộng chìa, không chồng nhau trên mặt bằng', near(tp[:items].sum { |it| poly_area(it[:poly]) }, offset_area(ring, 600), 200.0))
+ok('mái theo đường bao: diện tích nghiêng của mỗi tấm = diện tích mặt bằng / cos(dốc); kiểu là outline', tp[:items].all? { |it| near(it[:area], poly_area(it[:poly]) / 1e6 / Math.cos(Math::PI / 6), 0.002) && it[:shape] == 'outline' })
+rect = outline_plan(%w[1-A 4-A 4-C 1-C], 'overhang' => 600)
+hp6 = plan_of('shape' => 'hip', 'slope' => 30, 'thickness' => 100, 'overhang' => 600)
+ok('đường bao là khung chữ nhật: giống mái bốn dốc (cùng nóc, cùng tổng diện tích, cùng số tấm)', rect[:items].size == 4 && near(rect[:ridge], hp6[:ridge], 0.1) && near(rect[:items].sum { |it| it[:area] }, hp6[:items].sum { |it| it[:area] }, 0.01) && rect[:items].map { |it| it[:poly].size }.sort == hp6[:items].map { |it| it[:poly].size }.sort)
+hx = outline_plan(HEXA, 'overhang' => 300)
+hring = coords(HEXA)
+ok('mái theo đường bao lục giác lồi: sáu tấm, đỉnh nằm đúng mặt dốc, phủ kín đường bao cộng chìa', hx[:items].size == 6 && hx[:items].all? { |it| it[:top].all? { |x, y, z| near(z, TOP + tv + edge_distances(hring, x, y).min * t, 0.1) } } && near(hx[:items].sum { |it| poly_area(it[:poly]) }, offset_area(hring, 300), 200.0))
+tri = outline_plan(%w[1-A 4-A 1-C])
+ok('mái theo đường bao hình tam giác: ba tấm', tri[:items].size == 3 && tri[:items].all? { |it| it[:poly].size >= 3 })
+cw = outline_plan(TRAP.reverse, 'overhang' => 600)
+ok('đường bao nhập theo chiều kim đồng hồ: vẫn dựng như ngược chiều (cùng tổng diện tích và nóc)', cw[:items].size == 4 && near(cw[:items].sum { |it| it[:area] }, tp[:items].sum { |it| it[:area] }, 0.01) && near(cw[:ridge], tp[:ridge], 0.1))
+col = outline_plan(%w[1-A 2-A 4-A 4-C 1-C])
+ok('đỉnh nằm thẳng hàng trên một cạnh (2-A): bỏ đi, kết quả như khung chữ nhật', col[:items].size == 4 && near(col[:ridge], outline_plan(%w[1-A 4-A 4-C 1-C])[:ridge], 0.1))
+ok('mọi tấm mái theo đường bao không có ba đỉnh liên tiếp thẳng hàng (mặt phẳng luôn xác định)', [tp, hx, rect, tri].all? { |pl| pl[:items].all? { |it| it[:poly].each_index.all? { |i| a, b, c = it[:poly][i - 1], it[:poly][i], it[:poly][(i + 1) % it[:poly].size]; ((b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])).abs > 1.0 } } })
+err = ->(points) { error_of { outline_plan(points) }.to_s }
+ok('đường bao lõm (chữ L) bị từ chối, nêu rõ chỉ nhận đa giác lồi', err.call(%w[1-A 3-A 3-B 4-B 4-C 1-C]).include?('lồi'))
+ok('đường bao tự cắt (hình nơ) bị từ chối; hình nơ đối xứng (diện tích ròng 0) cũng bị từ chối', err.call(%w[1-A 4-B 2-C 3-A]).include?('lồi') && err.call(%w[1-A 4-C 4-A 1-C]).include?('đa giác'))
+ok('đường bao có đỉnh không còn trên lưới bị từ chối, nêu mã đỉnh', err.call(%w[1-A 9-A 4-C]).include?('9-A'))
+ok('đường bao ba đỉnh thẳng hàng (không có diện tích) bị từ chối', err.call(%w[1-A 2-A 3-A]).include?('đường bao'))
+ok('mái theo đường bao: không có tường thu hồi dù khai báo', outline_plan(TRAP, 'gable_wall' => {'type' => WT})[:gables].empty?)
+pvo = S::Preview.build(roof_state(outline(TRAP)).merge('level' => S::State.default['levels'][-1]['id']))
+ok('xem trước mái theo đường bao: bốn tấm có đa giác', pvo[:roofs] && pvo[:roofs][:count] == 4 && pvo[:roofs][:items].all? { |i| i[:poly].size >= 3 })
+
 # ---- Xem trước ----
 pv = S::Preview.build(roof_state('shape' => 'gable', 'slope' => 30, 'dir' => 'x').merge('level' => S::State.default['levels'][-1]['id']))
 ok('xem trước tầng có mái: hai tấm kèm nóc', pv[:roofs] && pv[:roofs][:count] == 2 && pv[:roofs][:ridge] > pv[:roofs][:z_base])
@@ -137,6 +199,12 @@ gd = JSON.parse(gwalls[0].get_attribute(D, 'dims'))
 ok('dữ liệu BIM của tường thu hồi: kind wall, dày theo loại tường, dài x cao trung bình = diện tích biên dạng', gd['thickness'] == 200.0 && gd['length'] > 0 && gd['height'] > 0 && gwalls[0].get_attribute('VGD_BIM_SOURCE', 'ref').include?('gable') && gwalls[0].get_attribute(D, 'type').include?('thu hồi'))
 ok('dựng lại mái bỏ tick tường thu hồi: tường cũ bị thay, không còn tường', (S::RoofBuilder.build(mg, roof_state('shape' => 'gable', 'slope' => 30, 'dir' => 'x', 'thickness' => 100), [lid]) &&
    mg.entities.grep(Sketchup::Group).find { |x| x.get_attribute(D, 'kind') == 'roofs' }.entities.grep(Sketchup::Group).count { |x| x.get_attribute('VGD_BIM_SOURCE', 'kind') == 'wall' }.zero?))
+mo = Sketchup::Model.new
+S::RoofBuilder.build(mo, roof_state(outline(TRAP)), [lid])
+og = mo.entities.grep(Sketchup::Group).find { |x| x.get_attribute(D, 'kind') == 'roofs' }
+oplates = og.entities.grep(Sketchup::Group)
+ok('dựng mái theo đường bao: bốn tấm, mỗi tấm là khối kín (hai mặt đầu + một mặt cho mỗi cạnh)', oplates.map { |pl| pl.entities.grep(Sketchup::Face).size } == outline_plan(TRAP)[:items].map { |it| it[:poly].size + 2 })
+ok('dựng mái theo đường bao: kiểu "Mái theo đường bao", dữ liệu BIM đủ dày và diện tích', oplates.all? { |pl| pl.get_attribute(D, 'type') == 'Mái theo đường bao' && JSON.parse(pl.get_attribute(D, 'dims'))['area'] > 0 })
 all = S::AllBuilder.build(m, roof_state('shape' => 'flat'), [lid])
 ok('dựng tất cả có mái ở tầng trên cùng; dựng lại thay nhóm cũ', all[:kinds].key?('roofs') && m.entities.grep(Sketchup::Group).count { |x| x.get_attribute(D, 'kind') == 'roofs' } == 1)
 ok('tầng chưa khai báo mái: dựng mái báo lỗi', error_of { S::RoofBuilder.build(Sketchup::Model.new, S::State.default, [lid]) }.include?('chưa khai báo mái'))

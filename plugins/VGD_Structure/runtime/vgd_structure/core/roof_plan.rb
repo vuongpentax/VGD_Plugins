@@ -7,7 +7,8 @@ module VGD
     # Mái hai dốc: hai tấm gặp nhau ở nóc, không chồng nhau trên mặt bằng. Mái bốn dốc (hip): cùng một độ dốc cho bốn phía, bốn tấm nam, đông, bắc, tây (hình thang hoặc tam giác);
     # nóc là đoạn nằm giữa khung theo phương dài, dài (dài - rộng), hoặc một điểm nếu khung vuông.
     # Tường thu hồi (`roof['gable_wall']`): giao của mặt phẳng đứng ở mỗi cạnh biên khung với ĐÁY mái; chỉ cạnh nào đáy mái đổi độ cao dọc cạnh mới có tường (đầu hồi mái hai dốc, hai cạnh
-    # song song hướng dốc của mái một dốc), nên không mã hóa riêng "tam giác" hay "hình thang". Tường đứng trên mặt sàn kết cấu của tầng, mặt ngoài trùng trục biên. Chưa làm: mái theo đường bao bất kỳ.
+    # song song hướng dốc của mái một dốc), nên không mã hóa riêng "tam giác" hay "hình thang". Tường đứng trên mặt sàn kết cấu của tầng, mặt ngoài trùng trục biên.
+    # Mái theo đường bao (`outline`): đa giác LỒI nối các giao điểm lưới, cùng một độ dốc cho mọi cạnh, mỗi cạnh một tấm; không có tường thu hồi. Chưa làm: đa giác lõm, dốc riêng từng cạnh.
     module RoofPlan
       Error = Class.new(ArgumentError)
 
@@ -24,6 +25,7 @@ module VGD
                 when 'flat' then [[rect_corners(x0 - o, y0 - o, x1 + o, y1 + o), ->(_x, _y) { 0.0 }]]
                 when 'shed' then [[rect_corners(x0 - o, y0 - o, x1 + o, y1 + o), rise_of(roof['dir'], x0, y0, x1, y1)]]
                 when 'hip' then hip(x0, y0, x1, y1, o)
+                when 'outline' then outline(grid, roof['points'], o, level['name'])
                 else gable(roof['dir'], x0, y0, x1, y1, o)
                 end
         items = parts.each_with_index.map do |(corners, rise), i|
@@ -163,6 +165,85 @@ module VGD
                   [[sw, se, a], [se, ne, b, a], [ne, nw, b], [nw, sw, a, b]]
                 end
         sides.map { |corners| [dedupe(corners), rise] }
+      end
+
+      # Mái theo đường bao: độ cao tại điểm bất kỳ = dốc x khoảng cách CÓ DẤU tới đường chứa cạnh GẦN NHẤT (phần chìa ra ngoài có khoảng cách âm, như mái bốn dốc).
+      # Mỗi cạnh một tấm = vùng đa giác (đã chìa ra o) mà cạnh đó gần nhất; vùng này lồi nên cắt từng nửa mặt phẳng "khoảng cách tới cạnh i <= tới cạnh j".
+      # Khung chữ nhật cho kết quả như mái bốn dốc. Trả về [[đỉnh tấm, hàm độ cao]] theo thứ tự các cạnh.
+      def self.outline(grid, refs, o, level_name)
+        ring = outline_ring(grid, refs, level_name)
+        lines = ring.each_index.map do |i|
+          a, b = ring[i], ring[(i + 1) % ring.size]
+          len = Math.hypot(b[0] - a[0], b[1] - a[1])
+          nx, ny = -(b[1] - a[1]) / len, (b[0] - a[0]) / len # pháp tuyến hướng vào trong (đa giác ngược chiều kim đồng hồ)
+          [nx, ny, nx * a[0] + ny * a[1]]
+        end
+        around = lines.each_index.map do |i|
+          n1, n2 = lines[i - 1], lines[i]
+          det = n1[0] * n2[1] - n1[1] * n2[0]
+          c1, c2 = n1[2] - o, n2[2] - o
+          [(c1 * n2[1] - c2 * n1[1]) / det, (n1[0] * c2 - n2[0] * c1) / det] # giao của hai đường cạnh đã dời ra ngoài o
+        end
+        lines.each_with_index.filter_map do |(nx, ny, c), i|
+          face = lines.each_with_index.reduce(around) do |poly, ((mx, my, d), j)|
+            j == i ? poly : clip_half(poly, mx - nx, my - ny, c - d) # khoảng cách tới cạnh j - tới cạnh i >= 0
+          end
+          face = drop_collinear(dedupe(face))
+          next if face.size < 3 || polygon_area(face) < 1.0
+          [face, ->(x, y) { nx * x + ny * y - c }]
+        end
+      end
+
+      # Đỉnh đường bao (tọa độ thế giới, ngược chiều kim đồng hồ, không có đỉnh thẳng hàng). Báo lỗi nếu mã không còn trên lưới hoặc đa giác không lồi.
+      def self.outline_ring(grid, refs, level_name)
+        who = "Tầng “#{level_name}”: mái theo đường bao"
+        known = Grid.intersections(grid).to_h { |i| [i[:ref], [i[:x], i[:y]]] }
+        ring = refs.map { |r| known[r] or raise Error, "#{who}: đỉnh #{r} không còn trên lưới." }
+        ring.reverse! if signed_area(ring).negative?
+        raise Error, "#{who}: các đỉnh phải tạo thành một đa giác lồi có diện tích (không tự cắt)." if signed_area(ring) < 1.0
+        n = ring.size
+        keep = ring.each_index.reject do |i|
+          a, b, c = ring[i - 1], ring[i], ring[(i + 1) % n]
+          cross = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])
+          dot = (b[0] - a[0]) * (c[0] - b[0]) + (b[1] - a[1]) * (c[1] - b[1])
+          next false unless cross.abs < 1e-9 * Math.hypot(b[0] - a[0], b[1] - a[1]) * Math.hypot(c[0] - b[0], c[1] - b[1])
+          raise Error, "#{who}: đường bao gấp ngược lại tại đỉnh #{refs[i]}." if dot.negative?
+          true # đỉnh nằm thẳng hàng trên cạnh: bỏ
+        end
+        ring = keep.map { |i| ring[i] }
+        raise Error, "#{who}: cần ít nhất ba đỉnh không thẳng hàng." if ring.size < 3
+        n = ring.size
+        turns = ring.each_index.map do |i|
+          a, b, c = ring[i - 1], ring[i], ring[(i + 1) % n]
+          Math.atan2((b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]), (b[0] - a[0]) * (c[0] - b[0]) + (b[1] - a[1]) * (c[1] - b[1]))
+        end
+        raise Error, "#{who}: chỉ nhận đa giác lồi (không lõm, không tự cắt). Hãy chọn lại đỉnh." unless turns.all?(&:positive?) && (turns.sum - 2 * Math::PI).abs < 1e-6
+        ring
+      end
+
+      def self.signed_area(poly)
+        poly.each_with_index.sum { |(x, y), i| nx, ny = poly[(i + 1) % poly.size]; x * ny - nx * y } / 2.0
+      end
+
+      # Phần đa giác lồi nằm ở phía a.x + b.y + c >= 0 (Sutherland - Hodgman, một nửa mặt phẳng).
+      def self.clip_half(poly, a, b, c)
+        poly.each_with_index.flat_map do |p, i|
+          q = poly[(i + 1) % poly.size]
+          fp, fq = a * p[0] + b * p[1] + c, a * q[0] + b * q[1] + c
+          out = fp >= -1e-6 ? [p] : []
+          out << [p[0] + (q[0] - p[0]) * fp / (fp - fq), p[1] + (q[1] - p[1]) * fp / (fp - fq)] if (fp > 1e-6 && fq < -1e-6) || (fp < -1e-6 && fq > 1e-6)
+          out
+        end
+      end
+
+      # Bỏ đỉnh nằm trên đoạn nối hai đỉnh kề (cách đường thẳng chưa tới 0,01 mm): mặt phẳng của tấm xác định từ ba đỉnh đầu nên không được thẳng hàng.
+      def self.drop_collinear(points)
+        n = points.size
+        points.each_index.reject do |i|
+          a, b, c = points[i - 1], points[i], points[(i + 1) % n]
+          len = Math.hypot(c[0] - a[0], c[1] - a[1])
+          len < 0.01 || ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])).abs / len < 0.01
+        end.map { |i| points[i] }
       end
 
       # Bỏ đỉnh trùng liên tiếp (khung vuông: hai đầu nóc trùng nhau).

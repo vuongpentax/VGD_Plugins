@@ -1,8 +1,10 @@
-# VGD Structure 0.30.0-beta.3
+# VGD Structure 0.30.0-beta.4
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
+
+**0.30.0-beta.4 (đợt H5c): mái theo đường bao.** Bảng Tầng → nút Mái → kiểu "Theo đường bao": bấm các **giao điểm lưới** theo thứ tự quanh đường bao (đỉnh cuối bấm lại để bỏ; "Xóa hết", "Lấy khung bao"). Chỉ nhận **đa giác lồi** (hình chữ nhật, hình thang, tam giác, ngũ giác / lục giác lồi...); chữ L, T, U và đa giác lõm chưa hỗ trợ và bị từ chối kèm thông báo. **Mọi cạnh cùng một độ dốc**: mỗi cạnh một tấm, độ cao = dốc x khoảng cách tới cạnh gần nhất, nên khung chữ nhật cho kết quả như mái bốn dốc. Đỉnh thẳng hàng trên một cạnh được bỏ; chiều nhập (cùng hay ngược chiều kim đồng hồ) đều được. Chìa mái, dày, chân mái như các kiểu khác. **Không có tường thu hồi** cho kiểu này. Chưa làm: dốc riêng từng cạnh, đầu hồi cục bộ, nhập tọa độ tự do. Chưa thử trong SketchUp thật.
 
 **0.30.0-beta.3 (đợt H5b): tường thu hồi.** Bảng Tầng → nút Mái (mái một dốc hoặc hai dốc) → tick **Tường thu hồi** và chọn loại tường (dày theo loại). Tường là giao của mặt phẳng đứng ở mỗi cạnh biên khung với **đáy mái**, nên chỉ cạnh nào đáy mái đổi độ cao mới có tường: hai đầu hồi tam giác của mái hai dốc, hai cạnh song song hướng dốc (hình thang) của mái một dốc; cạnh mái hiên, đầu cao, đầu thấp không có. Tường đứng trên mặt sàn kết cấu của tầng, mặt ngoài trùng trục biên, là Group con của nhóm mái (tag A. WALL, BIM tính như tường). Tường đặc, chưa có lỗ: cửa, ô thoáng đầu hồi làm riêng. Mái bằng và bốn dốc không có tường thu hồi. Chưa thử trong SketchUp thật.
 
@@ -21,7 +23,7 @@ Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) th
 
 **0.29.0-beta.1: móng, mái, lỗ sàn cầu thang** (kế hoạch hoàn thiện `docs/vgd_structure/PLAN.md` mục 13).
 - **Móng đơn:** bảng Tầng có cột **Móng đơn**: bật rồi nhập dài × rộng × dày; mọi cột của tầng đó có một **đế móng** ngay dưới chân cột (tâm trùng tâm cột, cột xoay 90° thì đế đổi chiều, xoay góc khác thì đế xoay theo). Cách dùng: thêm một **tầng móng** dưới tầng trệt (ví dụ cao độ -1500, cán nền 0): cột của tầng móng là **cổ cột**, dầm của tầng móng là **giằng móng** (đỉnh giằng bằng mặt sàn trệt theo quy tắc dầm đã có). Đề xuất tự động cho tầng móng chỉ gồm cột và dầm. Đế chồng nhau hoặc nhỏ hơn cột thì cảnh báo. Tag S. FOOTING, BIM tính thể tích.
-- **Mái:** bảng Tầng có cột **Mái**: mái bằng, một dốc (hướng dốc lên ±X / ±Y), hai dốc (nóc song song X hoặc Y, ở giữa khung) hoặc bốn dốc (cùng độ dốc bốn phía), độ dốc, dày, chìa mái, cao độ chân mái so với cốt tầng. Mái phủ khung lưới (trục biên là mép mái) cộng phần chìa; mỗi tấm mái là khối kín dựng bằng mặt 3D. Tag A. ROOF, BIM tính diện tích nghiêng và thể tích. Chưa có mái bốn dốc, tường thu hồi, mái theo đường bao bất kỳ.
+- **Mái:** bảng Tầng có cột **Mái**: mái bằng, một dốc (hướng dốc lên ±X / ±Y), hai dốc (nóc song song X hoặc Y, ở giữa khung) bốn dốc (cùng độ dốc bốn phía) hoặc theo đường bao (đa giác lồi nối các giao điểm lưới, cùng độ dốc mọi cạnh), độ dốc, dày, chìa mái, cao độ chân mái so với cốt tầng. Mái phủ khung lưới (hoặc đường bao) (trục biên là mép mái) cộng phần chìa; mỗi tấm mái là khối kín dựng bằng mặt 3D. Tag A. ROOF, BIM tính diện tích nghiêng và thể tích. Tường thu hồi chỉ có ở mái một dốc và hai dốc. Chưa có mái theo đường bao lõm (chữ L, T), dốc riêng từng cạnh.
 - **Lỗ sàn cầu thang:** sàn tầng trên tự khoét lỗ đúng hình cầu thang của tầng dưới khi cầu thang nằm trọn trong một tấm sàn (diện tích sàn trừ lỗ); cầu thang vắt qua mép tấm sàn thì cảnh báo (hãy bỏ ô sàn đó hoặc vẽ sàn đa giác).
 - Mặt bằng vẽ đế móng (nét đứt xám) và viền mái (nét đứt cam); lớp hiển thị có thêm Móng, Mái. Dựng tất cả gồm cả móng và mái trong một bước hoàn tác. Bảng Tầng cuộn ngang thay vì bóp nhỏ ô nhập.
 
@@ -170,7 +172,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.30.0-beta.3.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.30.0-beta.4.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

@@ -430,6 +430,32 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.locator('#roof-shape').selectOption('hip');await wait(300);
   rf=(await last('grid_preview')).levels.slice(-1)[0].roof;
   ok(rf.shape==='hip' && !rf.gable_wall,'đổi sang bốn dốc: bỏ tường thu hồi');
+  // Mái theo đường bao: chọn đỉnh lưới (đa giác lồi), mặc định là bốn góc khung
+  await page.locator('#roof-shape').selectOption('outline');await wait(300);
+  rf=(await last('grid_preview')).levels.slice(-1)[0].roof;
+  const frameRefs=rf.points;
+  ok(rf.shape==='outline' && rf.slope===22 && Array.isArray(frameRefs) && frameRefs.length===4 && !('dir' in rf) && !rf.gable_wall && (await roofBtn.innerText())==='Theo đường bao 22°' && await page.locator('#roof-pick').isVisible(),'chọn Theo đường bao: mặc định bốn góc khung lưới, giữ độ dốc, không gửi hướng, hiện hình chọn đỉnh');
+  ok((await page.locator('#roof-gable').count())===0 && (await page.locator('#roof-dir').count())===0,'mái theo đường bao: không có ô hướng, không có tùy chọn tường thu hồi');
+  ok((await page.locator('.roof-pt.on').count())===4 && /Đường bao: .* → .*/.test(await page.locator('#roof-points').innerText()),'bốn đỉnh khung được tô và liệt kê theo thứ tự');
+  const vol=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vol.ok,'dữ liệu mái theo đường bao được Ruby chấp nhận');
+  await page.locator('#roof-points-clear').click();await wait(300);
+  ok((await last('grid_preview')).levels.slice(-1)[0].roof.points.length===0 && /Chọn ít nhất 3 đỉnh/.test(await page.locator('#roof-sum').innerText()),'Xóa hết: đường bao rỗng, báo cần ít nhất 3 đỉnh');
+  const pt=(ref)=>page.locator(`.roof-pt[data-ref="${ref}"]`);
+  for(const ref of frameRefs.slice(0,3)){await pt(ref).click();await wait(150);}
+  ok(JSON.stringify((await last('grid_preview')).levels.slice(-1)[0].roof.points)===JSON.stringify(frameRefs.slice(0,3)) && !/Chọn ít nhất|lồi/.test(await page.locator('#roof-sum').innerText()),'bấm ba giao điểm: gửi ba đỉnh theo thứ tự bấm, không báo lỗi (tam giác lồi)');
+  await pt(frameRefs[0]).click();await wait(200);
+  ok((await last('grid_preview')).levels.slice(-1)[0].roof.points.length===3,'bấm đỉnh không phải đỉnh cuối: không đổi (chỉ bỏ được đỉnh cuối)');
+  await pt(frameRefs[2]).click();await wait(250);
+  ok((await last('grid_preview')).levels.slice(-1)[0].roof.points.length===2 && /Chọn ít nhất 3 đỉnh/.test(await page.locator('#roof-sum').innerText()),'bấm lại đỉnh cuối: bỏ đỉnh đó');
+  await page.locator('#roof-points-clear').click();await wait(250);
+  for(const i of [0,2,1,3]){await pt(frameRefs[i]).click();await wait(150);}
+  ok(/lồi/.test(await page.locator('#roof-sum').innerText()) && await page.locator('#roof-sum').evaluate(e=>e.classList.contains('error')),'đường bao tự cắt (hình nơ): báo chỉ nhận đa giác lồi');
+  await page.locator('#roof-points-frame').click();await wait(300);
+  ok(JSON.stringify((await last('grid_preview')).levels.slice(-1)[0].roof.points)===JSON.stringify(frameRefs) && !/lồi/.test(await page.locator('#roof-sum').innerText()),'Lấy khung bao: trở về bốn góc khung, hết báo lỗi');
+  await page.locator('#roof-shape').selectOption('gable');await wait(300);
+  rf=(await last('grid_preview')).levels.slice(-1)[0].roof;
+  ok(rf.shape==='gable' && !('points' in rf) && (await page.locator('#roof-pick').count())===0,'đổi sang hai dốc: bỏ đường bao, ẩn hình chọn đỉnh');
   await page.locator('#roof-shape').selectOption('flat');await wait(300);
   rf=(await last('grid_preview')).levels.slice(-1)[0].roof;
   ok(rf.shape==='flat' && rf.slope===undefined && rf.dir===undefined && (await page.locator('#roof-dir').count())===0,'mái bằng: không gửi dốc, hướng; ẩn ô hướng');

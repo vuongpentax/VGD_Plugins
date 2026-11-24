@@ -152,7 +152,7 @@ module VGD
         plate.set_attribute(Schema::DICTIONARY, 'level_name', plan[:level]['name'])
         plate.set_attribute(Schema::DICTIONARY, 'level_elevation', plan[:level]['elevation'])
         plate.set_attribute(Schema::DICTIONARY, 'fp', ModelSync.fingerprint('roof', item))
-        plate.set_attribute(Schema::DICTIONARY, 'type', "Mái #{{'flat' => 'bằng', 'shed' => 'một dốc', 'gable' => 'hai dốc', 'hip' => 'bốn dốc'}[item[:shape]]}")
+        plate.set_attribute(Schema::DICTIONARY, 'type', "Mái #{{'flat' => 'bằng', 'shed' => 'một dốc', 'gable' => 'hai dốc', 'hip' => 'bốn dốc', 'outline' => 'theo đường bao'}[item[:shape]]}")
         plate.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('thickness' => item[:thickness], 'area' => item[:area], 'slope' => item[:slope]))
       end
     end

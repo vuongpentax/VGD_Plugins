@@ -211,6 +211,15 @@ main.plan-tab[hidden] { display: none; }
 #footing-assign .footing-assign-item { display: inline-flex; align-items: center; gap: 4px; margin: 2px 10px 2px 0; font-size: 12px; white-space: nowrap; }
 #footing-assign select { width: auto; height: 26px; }
 button.layers-btn { white-space: nowrap; }
+/* Chọn đỉnh lưới cho đường bao mái theo đường bao */
+.roof-pick { display: block; width: 100%; max-width: 420px; height: auto; margin: 6px 0; }
+.roof-pick-axis { stroke: var(--vgd-border, #bbb); stroke-width: 12; stroke-dasharray: 60 60; }
+.roof-pick-name { fill: var(--vgd-muted, #666); }
+.roof-pick-area { fill: var(--vgd-tint, rgba(180, 137, 99, .18)); stroke: var(--vgd-accent, #b48963); stroke-width: 28; stroke-linejoin: round; }
+.roof-pt { fill: var(--vgd-surface, #fff); stroke: var(--vgd-accent, #b48963); stroke-width: 18; cursor: pointer; }
+.roof-pt.on { fill: var(--vgd-accent, #b48963); }
+.roof-pt:hover, .roof-pt:focus { stroke-width: 36; outline: none; }
+.roof-pick-num { fill: #fff; pointer-events: none; font-weight: 600; }
 
 /* Ribbon theo tab (kiểu Revit): hàng tab, rồi các nhóm có tên với nhãn dưới nút */
 .pv-ribbon { background: var(--vgd-surface); border-bottom: 1px solid var(--vgd-border); }

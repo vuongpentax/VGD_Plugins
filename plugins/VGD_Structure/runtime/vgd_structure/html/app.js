@@ -244,7 +244,7 @@
       fbtn.onclick = function () { openFooting = openFooting === l.id ? null : l.id; renderLevels(); };
       row.insertCell().appendChild(fbtn);
       var rbtn = document.createElement('button'); rbtn.type = 'button'; rbtn.className = 'layers-btn roof-btn';
-      rbtn.textContent = roofLabel(l); rbtn.title = 'Mái phủ khung lưới của tầng này (mái bằng, một dốc, hai dốc, bốn dốc), có phần chìa; mái một dốc và hai dốc có tùy chọn tường thu hồi';
+      rbtn.textContent = roofLabel(l); rbtn.title = 'Mái phủ khung lưới của tầng này (mái bằng, một dốc, hai dốc, bốn dốc, theo đường bao đa giác lồi), có phần chìa; mái một dốc và hai dốc có tùy chọn tường thu hồi';
       rbtn.setAttribute('aria-expanded', String(openRoof === l.id));
       rbtn.onclick = function () { openRoof = openRoof === l.id ? null : l.id; renderLevels(); };
       row.insertCell().appendChild(rbtn);
@@ -256,7 +256,7 @@
     renderTypes(); renderBeamTypes(); renderWallTypes(); renderOpeningTypes(); renderLevelLayers(); renderLevelFooting(); renderLevelRoof();
   }
   // ---- Mái của tầng: khoảng khớp Levels::ROOF_* ở Ruby ----
-  var openRoof = null, ROOF_SHAPES = [['flat', 'Mái bằng'], ['shed', 'Một dốc'], ['gable', 'Hai dốc'], ['hip', 'Bốn dốc']], ROOF_DIRS = {shed: [['x+', 'Dốc lên theo +X'], ['x-', 'Dốc lên theo -X'], ['y+', 'Dốc lên theo +Y'], ['y-', 'Dốc lên theo -Y']], gable: [['x', 'Nóc song song trục X'], ['y', 'Nóc song song trục Y']]};
+  var openRoof = null, ROOF_SHAPES = [['flat', 'Mái bằng'], ['shed', 'Một dốc'], ['gable', 'Hai dốc'], ['hip', 'Bốn dốc'], ['outline', 'Theo đường bao']], ROOF_DIRS = {shed: [['x+', 'Dốc lên theo +X'], ['x-', 'Dốc lên theo -X'], ['y+', 'Dốc lên theo +Y'], ['y-', 'Dốc lên theo -Y']], gable: [['x', 'Nóc song song trục X'], ['y', 'Nóc song song trục Y']]};
   var ROOF_RANGES = {slope: [1, 60, 'Độ dốc (độ)'], thickness: [20, 500, 'Dày mái (mm)'], overhang: [0, 2000, 'Chìa mái (mm)'], base: [-5000, 10000, 'Chân mái so với cốt tầng (mm)']};
   function roofLabel(l) { if (!l.roof) return 'Không'; var n = ROOF_SHAPES.filter(function (s) { return s[0] === l.roof.shape; })[0][1]; return l.roof.shape === 'flat' ? n : n + ' ' + l.roof.slope + '°'; }
   function renderLevelRoof() {
@@ -273,7 +273,7 @@
     shape.onchange = function () {
       var old = l.roof || {thickness: 120, overhang: 600, base: 0};
       if (!shape.value) l.roof = null;
-      else { l.roof = {shape: shape.value, thickness: old.thickness, overhang: old.overhang, base: old.base}; if (shape.value !== 'flat') { l.roof.slope = old.slope || 30; if (ROOF_DIRS[shape.value]) l.roof.dir = ROOF_DIRS[shape.value][0][0]; } } if (ROOF_DIRS[shape.value] && old.gable_wall) l.roof.gable_wall = old.gable_wall;
+      else { l.roof = {shape: shape.value, thickness: old.thickness, overhang: old.overhang, base: old.base}; if (shape.value !== 'flat') { l.roof.slope = old.slope || 30; if (ROOF_DIRS[shape.value]) l.roof.dir = ROOF_DIRS[shape.value][0][0]; } if (shape.value === 'outline') l.roof.points = old.points || frameCorners(); } if (ROOF_DIRS[shape.value] && old.gable_wall) l.roof.gable_wall = old.gable_wall;
       renderLevels(); changed();
     };
     box.appendChild(shape);
@@ -301,18 +301,77 @@
         box.appendChild(gtype);
       }
     }
+    if (l.roof.shape === 'outline') roofPicker(l, box);
     var keys = (l.roof.shape === 'flat' ? [] : ['slope']).concat(['thickness', 'overhang', 'base']);
     var tbl = document.createElement('table'); tbl.className = 'axes'; box.appendChild(tbl);
     heads(tbl, keys.map(function (k) { return ROOF_RANGES[k][2]; }));
     var row = tbl.insertRow(), sum = document.createElement('div'); sum.className = 'layers-sum'; sum.id = 'roof-sum';
     var check = function () {
       var bad = keys.filter(function (k) { var v = l.roof[k], r = ROOF_RANGES[k]; return !(v >= r[0] && v <= r[1]); });
-      sum.textContent = bad.length ? bad.map(function (k) { var r = ROOF_RANGES[k]; return r[2] + ' phải từ ' + r[0] + ' đến ' + r[1] + '.'; }).join(' ') : ({gable: 'Mái hai dốc: nóc ở giữa khung.', hip: 'Mái bốn dốc: cùng độ dốc bốn phía, nóc là đoạn giữa khung theo phương dài (một điểm nếu khung vuông).'}[l.roof.shape] || '') + (l.roof.gable_wall ? ' Tường thu hồi dựng trên mặt sàn kết cấu tới đáy mái, mặt ngoài trùng trục biên.' : '');
-      sum.className = 'layers-sum' + (bad.length ? ' error' : '');
+      var problem = l.roof.shape === 'outline' ? outlineProblem(l.roof.points || []) : '';
+      sum.textContent = bad.length ? bad.map(function (k) { var r = ROOF_RANGES[k]; return r[2] + ' phải từ ' + r[0] + ' đến ' + r[1] + '.'; }).join(' ') : problem ? problem : ({outline: 'Mái theo đường bao: cùng độ dốc mọi cạnh, mỗi cạnh một tấm, nóc nằm ở giữa đa giác; không có tường thu hồi.', gable: 'Mái hai dốc: nóc ở giữa khung.', hip: 'Mái bốn dốc: cùng độ dốc bốn phía, nóc là đoạn giữa khung theo phương dài (một điểm nếu khung vuông).'}[l.roof.shape] || '') + (l.roof.gable_wall ? ' Tường thu hồi dựng trên mặt sàn kết cấu tới đáy mái, mặt ngoài trùng trục biên.' : '');
+      sum.className = 'layers-sum' + (bad.length || problem ? ' error' : '');
       var b = $('levels-table').querySelectorAll('.roof-btn')[state.levels.indexOf(l)]; if (b) b.textContent = roofLabel(l);
     };
     keys.forEach(function (k) { row.insertCell().appendChild(numCell(l.roof[k], function (v) { l.roof[k] = v; check(); }, ROOF_RANGES[k][2] + ' ' + l.name)); });
     box.appendChild(sum); check();
+  }
+  // ---- Đường bao của mái theo đường bao: danh sách mã giao điểm lưới (như 1-A), đa giác LỒI. Bấm giao điểm để thêm đỉnh, bấm đỉnh cuối để bỏ. Ruby kiểm lại (RoofPlan.outline_ring). ----
+  function gridPoints() {
+    var xs = toAxes('x'), ys = toAxes('y'), pts = {};
+    xs.forEach(function (ax) { ys.forEach(function (ay) { pts[ax.name + '-' + ay.name] = [ax.offset, ay.offset]; }); });
+    return {xs: xs, ys: ys, pts: pts};
+  }
+  function frameCorners() {
+    var g = gridPoints(), fx = g.xs[0].name, lx = g.xs[g.xs.length - 1].name, fy = g.ys[0].name, ly = g.ys[g.ys.length - 1].name;
+    return [fx + '-' + fy, lx + '-' + fy, lx + '-' + ly, fx + '-' + ly];
+  }
+  function outlineProblem(points) {
+    if (points.length < 3) return 'Chọn ít nhất 3 đỉnh lưới.';
+    var all = gridPoints().pts, missing = points.filter(function (r) { return !all[r]; });
+    if (missing.length) return 'Đỉnh ' + missing.join(', ') + ' không còn trên lưới.';
+    var ring = points.map(function (r) { return all[r]; }), n = ring.length, turns = [], area = 0;
+    ring.forEach(function (b, i) {
+      var a = ring[(i + n - 1) % n], c = ring[(i + 1) % n], ex = b[0] - a[0], ey = b[1] - a[1], fx = c[0] - b[0], fy = c[1] - b[1];
+      area += b[0] * c[1] - c[0] * b[1];
+      if (Math.abs(ex * fy - ey * fx) >= 1e-9 * Math.hypot(ex, ey) * Math.hypot(fx, fy)) turns.push(Math.atan2(ex * fy - ey * fx, ex * fx + ey * fy));
+      else if (ex * fx + ey * fy < 0) turns.push(NaN); // gấp ngược lại
+    });
+    if (Math.abs(area) < 2) return 'Các đỉnh phải tạo thành đa giác lồi có diện tích (không tự cắt).';
+    var sign = area > 0 ? 1 : -1, total = turns.reduce(function (sum, t) { return sum + t; }, 0);
+    if (turns.length < 3 || turns.some(function (t) { return !(t * sign > 0); }) || Math.abs(Math.abs(total) - 2 * Math.PI) > 1e-6) return 'Chỉ nhận đa giác lồi (không lõm, không tự cắt, không gấp ngược). Hãy chọn lại đỉnh.';
+    return '';
+  }
+  function roofPicker(l, box) {
+    var g = gridPoints(), ns = 'http://www.w3.org/2000/svg', pad = 700, x0 = g.xs[0].offset, x1 = g.xs[g.xs.length - 1].offset, y0 = g.ys[0].offset, y1 = g.ys[g.ys.length - 1].offset;
+    var w = x1 - x0 + 2 * pad, h = y1 - y0 + 2 * pad, r = Math.max(w, h) / 50, points = l.roof.points || (l.roof.points = []);
+    var svg = document.createElementNS(ns, 'svg'); svg.setAttribute('id', 'roof-pick'); svg.setAttribute('class', 'roof-pick'); svg.setAttribute('viewBox', [x0 - pad, -(y1 + pad), w, h].join(' '));
+    svg.setAttribute('role', 'group'); svg.setAttribute('aria-label', 'Chọn các đỉnh lưới của đường bao mái');
+    function el(tag, attrs, text) { var e = document.createElementNS(ns, tag); Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); }); if (text !== undefined) e.textContent = text; svg.appendChild(e); return e; }
+    g.xs.forEach(function (a) { el('line', {x1: a.offset, y1: -y0, x2: a.offset, y2: -y1, class: 'roof-pick-axis'}); el('text', {x: a.offset, y: -(y1 + pad / 2), 'text-anchor': 'middle', 'font-size': r * 1.4, class: 'roof-pick-name'}, a.name); });
+    g.ys.forEach(function (a) { el('line', {x1: x0, y1: -a.offset, x2: x1, y2: -a.offset, class: 'roof-pick-axis'}); el('text', {x: x0 - pad / 2, y: -a.offset + r * 0.5, 'text-anchor': 'middle', 'font-size': r * 1.4, class: 'roof-pick-name'}, a.name); });
+    var ring = points.filter(function (ref) { return g.pts[ref]; }).map(function (ref) { return g.pts[ref][0] + ',' + -g.pts[ref][1]; }).join(' ');
+    if (points.length >= 3) el('polygon', {points: ring, class: 'roof-pick-area'}); else if (points.length === 2) el('polyline', {points: ring, class: 'roof-pick-area'});
+    function toggle(ref) {
+      var at = points.indexOf(ref);
+      if (at < 0) points.push(ref); else if (at === points.length - 1) points.pop(); else return;
+      renderLevelRoof(); changed();
+    }
+    g.xs.forEach(function (ax) { g.ys.forEach(function (ay) {
+      var ref = ax.name + '-' + ay.name, at = points.indexOf(ref), dot = el('circle', {cx: ax.offset, cy: -ay.offset, r: r, class: 'roof-pt' + (at >= 0 ? ' on' : ''), 'data-ref': ref, tabindex: 0, role: 'button', 'aria-label': 'Đỉnh ' + ref});
+      dot.onclick = function () { toggle(ref); };
+      dot.onkeydown = function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(ref); } };
+      if (at >= 0) el('text', {x: ax.offset, y: -ay.offset + r * 0.45, 'text-anchor': 'middle', 'font-size': r * 1.3, class: 'roof-pick-num'}, String(at + 1));
+    }); });
+    box.appendChild(svg);
+    var bar = document.createElement('div'); bar.className = 'layers-head';
+    var list = document.createElement('span'); list.id = 'roof-points'; list.textContent = points.length ? 'Đường bao: ' + points.join(' → ') : 'Bấm các giao điểm lưới theo thứ tự quanh đường bao.';
+    var clear = document.createElement('button'); clear.type = 'button'; clear.id = 'roof-points-clear'; clear.className = 'layers-btn'; clear.textContent = 'Xóa hết';
+    clear.onclick = function () { l.roof.points = []; renderLevelRoof(); changed(); };
+    var frame = document.createElement('button'); frame.type = 'button'; frame.id = 'roof-points-frame'; frame.className = 'layers-btn'; frame.textContent = 'Lấy khung bao';
+    frame.onclick = function () { l.roof.points = frameCorners(); renderLevelRoof(); changed(); };
+    bar.append(list, document.createTextNode(' '), clear, document.createTextNode(' '), frame);
+    box.appendChild(bar);
   }
   // ---- Móng của tầng: {l, w, h} mm mặc định cho mọi cột; tùy chọn step (giật cấp), types + assign (loại móng riêng từng cột), strip (móng băng dưới tường).
   // Khoảng khớp Levels::FOOTING_SIZE / FOOTING_THICKNESS / FOOTING_STEP_THICKNESS / FOOTING_STRIP_W / MAX_FOOTING_TYPES / MAX_FOOTING_NAME ở Ruby.

@@ -197,9 +197,11 @@ module VGD
       end
 
       # Mái của tầng (RoofPlan): phủ khung lưới (trục biên là đường mép mái) cộng phần chìa `overhang`.
-      # shape: flat (mái bằng), shed (một dốc, `dir` x+ x- y+ y- là hướng dốc LÊN), gable (hai dốc, `dir` x / y là phương của nóc), hip (bốn dốc, cùng độ dốc, không có hướng).
+      # shape: flat (mái bằng), shed (một dốc, `dir` x+ x- y+ y- là hướng dốc LÊN), gable (hai dốc, `dir` x / y là phương của nóc), hip (bốn dốc, cùng độ dốc, không có hướng),
+      # outline (theo đường bao: `points` là mã các giao điểm lưới (ví dụ '1-A') của một đa giác LỒI, cùng độ dốc mọi cạnh, không có hướng; mã có còn trên lưới và đa giác có lồi do RoofPlan kiểm).
       # slope độ (mái dốc 1..60; mái bằng bỏ qua), thickness mm (vuông góc mặt mái), base mm (đáy mái tại đường mép so với cao độ tầng).
-      ROOF_SHAPES = %w[flat shed gable hip].freeze
+      ROOF_SHAPES = %w[flat shed gable hip outline].freeze
+      ROOF_POINTS = (3..64).freeze
       ROOF_DIRS = {'shed' => %w[x+ x- y+ y-], 'gable' => %w[x y]}.freeze
       ROOF_SLOPE = (1.0..60.0).freeze
       ROOF_THICKNESS = (20.0..500.0).freeze
@@ -224,6 +226,13 @@ module VGD
             raise Error, "#{who}: hướng phải là #{ROOF_DIRS[shape].join(', ')}." unless ROOF_DIRS[shape].include?(raw['dir'])
             out['dir'] = raw['dir']
           end
+        end
+        if shape == 'outline'
+          points = raw['points']
+          raise Error, "#{who}: đường bao cần từ #{ROOF_POINTS.min} đến #{ROOF_POINTS.max} đỉnh lưới (mã như 1-A)." unless points.is_a?(Array) && ROOF_POINTS.cover?(points.size) && points.all? { |p| p.is_a?(String) && !p.strip.empty? }
+          points = points.map(&:strip)
+          raise Error, "#{who}: đường bao có đỉnh trùng nhau (#{points.find { |p| points.count(p) > 1 }})." unless points.uniq.size == points.size
+          out['points'] = points
         end
         # Tường thu hồi (chỉ mái một dốc và hai dốc; kiểu khác bỏ qua): {'type' => mã loại tường}. Loại tường có tồn tại hay không do RoofPlan kiểm.
         if ROOF_DIRS.key?(shape) && !raw['gable_wall'].nil?
