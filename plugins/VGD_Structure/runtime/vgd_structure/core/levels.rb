@@ -225,6 +225,12 @@ module VGD
             out['dir'] = raw['dir']
           end
         end
+        # Tường thu hồi (chỉ mái một dốc và hai dốc; kiểu khác bỏ qua): {'type' => mã loại tường}. Loại tường có tồn tại hay không do RoofPlan kiểm.
+        if ROOF_DIRS.key?(shape) && !raw['gable_wall'].nil?
+          gable = raw['gable_wall']
+          raise Error, "#{who}: tường thu hồi phải có loại tường." unless gable.is_a?(Hash) && gable['type'].is_a?(String) && !gable['type'].empty?
+          out['gable_wall'] = {'type' => gable['type']}
+        end
         out
       end
 

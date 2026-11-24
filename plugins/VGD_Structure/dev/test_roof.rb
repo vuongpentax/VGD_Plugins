@@ -80,6 +80,31 @@ tall['grid']['x_axes'] = [{'name' => '1', 'offset' => 0.0}, {'name' => '2', 'off
 tl = (n = norm(tall); S::RoofPlan.plan(n['grid'], n['levels'], n['levels'][-1]['id']))
 ok('mái bốn dốc, khung rộng hơn dài theo Y: nóc chạy theo phương Y, nam và bắc là tam giác', tl[:items].map { |it| it[:poly].size } == [3, 4, 3, 4])
 
+# ---- Tường thu hồi (H5b): giao của mặt phẳng đứng ở biên khung với ĐÁY mái; chỉ ở cạnh mà đáy mái đổi độ cao dọc cạnh (đầu hồi, hai bên mái một dốc) ----
+WT = S::State.default['wall_types'][0]['id']
+SCREED = S::State.default['levels'][-1]['screed']
+FLOOR = TOP - SCREED
+def gw(r); r.merge('gable_wall' => {'type' => WT}); end
+ok('tường thu hồi: giữ ở mái hai dốc và một dốc; bỏ ở mái bằng và bốn dốc', norm(roof_state(gw('shape' => 'gable', 'slope' => 30, 'dir' => 'x')))['levels'][-1]['roof']['gable_wall'] == {'type' => WT} &&
+   norm(roof_state(gw('shape' => 'shed', 'slope' => 30, 'dir' => 'x+')))['levels'][-1]['roof']['gable_wall'] == {'type' => WT} &&
+   !norm(roof_state(gw('shape' => 'flat')))['levels'][-1]['roof'].key?('gable_wall') && !norm(roof_state(gw('shape' => 'hip', 'slope' => 30)))['levels'][-1]['roof'].key?('gable_wall'))
+ok('tường thu hồi: dữ liệu sai (không phải bảng, thiếu loại) bị từ chối', bad.call('shape' => 'gable', 'slope' => 30, 'dir' => 'x', 'gable_wall' => 'x').include?('tường thu hồi') && bad.call('shape' => 'gable', 'slope' => 30, 'dir' => 'x', 'gable_wall' => {}).include?('tường thu hồi'))
+gwp = plan_of(gw('shape' => 'gable', 'slope' => 30, 'dir' => 'x', 'thickness' => 100, 'overhang' => 600))
+ok('mái hai dốc có tường thu hồi: hai tường ở hai đầu hồi (tây và đông), không có ở hai cạnh mái hiên', gwp[:gables].map { |g| g[:edge] } == %w[east west] || gwp[:gables].map { |g| g[:edge] }.sort == %w[east west])
+g_west = gwp[:gables].find { |g| g[:edge] == 'west' }
+g_east = gwp[:gables].find { |g| g[:edge] == 'east' }
+under0 = TOP + tv - tv # đáy mái tại mép (cao độ tầng + chân mái 0)
+ok('đầu hồi: biên dạng là tam giác theo đáy mái (thấp ở hai góc, cao nhất ở nóc giữa khung)', g_west[:profile].size == 3 && near(g_west[:profile][0][1], TOP) && near(g_west[:profile][1][1], TOP + (Y1 - Y0) / 2.0 * t) && near(g_west[:profile][2][1], TOP) && near(g_west[:profile][1][0], (Y1 - Y0) / 2.0))
+ok('đầu hồi: nằm trên trục biên, mặt ngoài trùng trục (tường tây chiếm x từ X0 vào trong, tường đông từ X1 lùi vào), dày theo loại tường', near(g_west[:a][0], X0) && g_west[:inward] == [1.0, 0.0] && near(g_east[:a][0], X1) && g_east[:inward] == [-1.0, 0.0] && g_west[:t] == 200.0)
+tri = (Y1 - Y0) * ((Y1 - Y0) / 2.0 * t) / 2.0 / 1e6 + (Y1 - Y0) * (TOP - FLOOR) / 1e6
+ok('đầu hồi: diện tích biên dạng = đáy chữ nhật (từ mặt sàn kết cấu tới đáy mái ở hai góc) + tam giác phía trên; chiều cao trung bình x dài = diện tích', near(g_west[:area], tri, 0.01) && near(g_west[:height] * g_west[:length] / 1e6, g_west[:area], 0.01) && near(g_west[:floor], FLOOR))
+shw = plan_of(gw('shape' => 'shed', 'slope' => 30, 'dir' => 'x+', 'thickness' => 100, 'overhang' => 0))
+ok('mái một dốc lên theo +X: tường thu hồi ở hai cạnh song song hướng dốc (nam và bắc), hình thang; đầu cao và đầu thấp không sinh tường', shw[:gables].map { |g| g[:edge] }.sort == %w[north south] && shw[:gables].all? { |g| g[:profile].size == 2 && near((g[:profile][1][1] - g[:profile][0][1]).abs, (X1 - X0) * t, 0.5) })
+shy = plan_of(gw('shape' => 'shed', 'slope' => 30, 'dir' => 'y+', 'thickness' => 100, 'overhang' => 0))
+ok('mái một dốc lên theo +Y: tường thu hồi ở hai cạnh tây và đông', shy[:gables].map { |g| g[:edge] }.sort == %w[east west])
+ok('không bật tường thu hồi: không có tường nào; mái bằng, bốn dốc cũng không có', plan_of('shape' => 'gable', 'slope' => 30, 'dir' => 'x')[:gables].empty? && plan_of(gw('shape' => 'flat'))[:gables].empty? && plan_of(gw('shape' => 'hip', 'slope' => 30))[:gables].empty?)
+ok('loại tường không tồn tại: báo lỗi rõ', error_of { n = norm(roof_state(gw('shape' => 'gable', 'slope' => 30, 'dir' => 'x'))); n['levels'][-1]['roof']['gable_wall'] = {'type' => 'wt_zzzzzzzz'}; S::RoofPlan.plan(n['grid'], n['levels'], n['levels'][-1]['id'], n['wall_types']) }.include?('loại tường'))
+
 # ---- Xem trước ----
 pv = S::Preview.build(roof_state('shape' => 'gable', 'slope' => 30, 'dir' => 'x').merge('level' => S::State.default['levels'][-1]['id']))
 ok('xem trước tầng có mái: hai tấm kèm nóc', pv[:roofs] && pv[:roofs][:count] == 2 && pv[:roofs][:ridge] > pv[:roofs][:z_base])
@@ -103,6 +128,15 @@ hg = mh.entities.grep(Sketchup::Group).find { |x| x.get_attribute(D, 'kind') == 
 hplates = hg.entities.grep(Sketchup::Group)
 ok('dựng mái bốn dốc: bốn tấm, hình thang có 6 mặt, tam giác có 5 mặt (trên, dưới, các mặt bên)', hplates.size == 4 && hplates.map { |pl| pl.entities.grep(Sketchup::Face).size } == [6, 5, 6, 5])
 ok('dựng mái bốn dốc: kiểu "Mái bốn dốc", dữ liệu BIM đủ dày và diện tích', hplates.all? { |pl| pl.get_attribute(D, 'type') == 'Mái bốn dốc' && JSON.parse(pl.get_attribute(D, 'dims'))['area'] > 0 })
+mg = Sketchup::Model.new
+S::RoofBuilder.build(mg, roof_state(gw('shape' => 'gable', 'slope' => 30, 'dir' => 'x', 'thickness' => 100)), [lid])
+gg = mg.entities.grep(Sketchup::Group).find { |x| x.get_attribute(D, 'kind') == 'roofs' }
+gwalls = gg.entities.grep(Sketchup::Group).select { |x| x.get_attribute('VGD_BIM_SOURCE', 'kind') == 'wall' }
+ok('dựng tường thu hồi: hai tường nằm trong nhóm mái, tag A. WALL, mỗi tường là khối kín (hai mặt đầu hồi + một mặt cho mỗi cạnh biên dạng)', gwalls.size == 2 && gwalls.all? { |x| x.layer.name == 'A. WALL' && x.entities.grep(Sketchup::Face).size == 2 + 5 })
+gd = JSON.parse(gwalls[0].get_attribute(D, 'dims'))
+ok('dữ liệu BIM của tường thu hồi: kind wall, dày theo loại tường, dài x cao trung bình = diện tích biên dạng', gd['thickness'] == 200.0 && gd['length'] > 0 && gd['height'] > 0 && gwalls[0].get_attribute('VGD_BIM_SOURCE', 'ref').include?('gable') && gwalls[0].get_attribute(D, 'type').include?('thu hồi'))
+ok('dựng lại mái bỏ tick tường thu hồi: tường cũ bị thay, không còn tường', (S::RoofBuilder.build(mg, roof_state('shape' => 'gable', 'slope' => 30, 'dir' => 'x', 'thickness' => 100), [lid]) &&
+   mg.entities.grep(Sketchup::Group).find { |x| x.get_attribute(D, 'kind') == 'roofs' }.entities.grep(Sketchup::Group).count { |x| x.get_attribute('VGD_BIM_SOURCE', 'kind') == 'wall' }.zero?))
 all = S::AllBuilder.build(m, roof_state('shape' => 'flat'), [lid])
 ok('dựng tất cả có mái ở tầng trên cùng; dựng lại thay nhóm cũ', all[:kinds].key?('roofs') && m.entities.grep(Sketchup::Group).count { |x| x.get_attribute(D, 'kind') == 'roofs' } == 1)
 ok('tầng chưa khai báo mái: dựng mái báo lỗi', error_of { S::RoofBuilder.build(Sketchup::Model.new, S::State.default, [lid]) }.include?('chưa khai báo mái'))

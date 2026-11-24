@@ -55,8 +55,8 @@ module VGD
         end
         # Mái (tầng có khai báo mái): hình chiếu từng tấm và cao độ nóc, cùng nguồn RoofPlan với lúc dựng.
         if (Levels.find(levels, payload['level'] || levels.first['id']) || {})['roof']
-          roof = RoofPlan.plan(grid, levels, payload['level'] || levels.first['id'])
-          out[:roofs] = {level: roof[:level]['id'], z_base: roof[:z_base], ridge: roof[:ridge], issues: roof[:issues], count: roof[:items].size,
+          roof = RoofPlan.plan(grid, levels, payload['level'] || levels.first['id'], wall_types)
+          out[:roofs] = {level: roof[:level]['id'], z_base: roof[:z_base], ridge: roof[:ridge], issues: roof[:issues], count: roof[:items].size, gables: roof[:gables].size,
                          items: roof[:items].map { |i| i.slice(:ref, :poly, :top, :slope, :shape, :area, :thickness) }}
         end
         # Đế móng (tầng có khai báo móng): cùng nguồn FootingPlan với lúc dựng.

@@ -415,6 +415,21 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(/Mái bốn dốc/.test(await page.locator('#roof-sum').innerText()),'dòng ghi chú mô tả mái bốn dốc (nóc giữa khung)');
   const vhip=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
   ok(vhip.ok,'dữ liệu mái bốn dốc được Ruby chấp nhận');
+  // Tường thu hồi: tùy chọn của mái một dốc và hai dốc, chọn loại tường
+  ok((await page.locator('#roof-gable').count())===0,'mái bốn dốc: không có tùy chọn tường thu hồi');
+  await page.locator('#roof-shape').selectOption('gable');await wait(300);
+  ok((await page.locator('#roof-gable').isVisible()) && !(await page.locator('#roof-gable').isChecked()) && (await page.locator('#roof-gable-type').count())===0,'mái hai dốc: có ô Tường thu hồi, chưa tick, chưa hiện ô chọn loại tường');
+  await page.locator('#roof-gable').check();await wait(300);
+  rf=(await last('grid_preview')).levels.slice(-1)[0].roof;
+  ok(rf.gable_wall && typeof rf.gable_wall.type==='string' && (await page.locator('#roof-gable-type').isVisible()),'tick Tường thu hồi: gửi gable_wall với loại tường đầu tiên, hiện ô chọn loại tường');
+  const vgw=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vgw.ok,'dữ liệu mái có tường thu hồi được Ruby chấp nhận');
+  await page.locator('#roof-shape').selectOption('shed');await wait(300);
+  rf=(await last('grid_preview')).levels.slice(-1)[0].roof;
+  ok(rf.shape==='shed' && rf.gable_wall && (await page.locator('#roof-gable').isChecked()),'đổi sang một dốc: giữ tường thu hồi');
+  await page.locator('#roof-shape').selectOption('hip');await wait(300);
+  rf=(await last('grid_preview')).levels.slice(-1)[0].roof;
+  ok(rf.shape==='hip' && !rf.gable_wall,'đổi sang bốn dốc: bỏ tường thu hồi');
   await page.locator('#roof-shape').selectOption('flat');await wait(300);
   rf=(await last('grid_preview')).levels.slice(-1)[0].roof;
   ok(rf.shape==='flat' && rf.slope===undefined && rf.dir===undefined && (await page.locator('#roof-dir').count())===0,'mái bằng: không gửi dốc, hướng; ẩn ô hướng');

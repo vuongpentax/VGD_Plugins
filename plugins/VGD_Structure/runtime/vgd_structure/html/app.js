@@ -244,7 +244,7 @@
       fbtn.onclick = function () { openFooting = openFooting === l.id ? null : l.id; renderLevels(); };
       row.insertCell().appendChild(fbtn);
       var rbtn = document.createElement('button'); rbtn.type = 'button'; rbtn.className = 'layers-btn roof-btn';
-      rbtn.textContent = roofLabel(l); rbtn.title = 'Mái phủ khung lưới của tầng này (mái bằng, một dốc, hai dốc), có phần chìa';
+      rbtn.textContent = roofLabel(l); rbtn.title = 'Mái phủ khung lưới của tầng này (mái bằng, một dốc, hai dốc, bốn dốc), có phần chìa; mái một dốc và hai dốc có tùy chọn tường thu hồi';
       rbtn.setAttribute('aria-expanded', String(openRoof === l.id));
       rbtn.onclick = function () { openRoof = openRoof === l.id ? null : l.id; renderLevels(); };
       row.insertCell().appendChild(rbtn);
@@ -273,7 +273,7 @@
     shape.onchange = function () {
       var old = l.roof || {thickness: 120, overhang: 600, base: 0};
       if (!shape.value) l.roof = null;
-      else { l.roof = {shape: shape.value, thickness: old.thickness, overhang: old.overhang, base: old.base}; if (shape.value !== 'flat') { l.roof.slope = old.slope || 30; if (ROOF_DIRS[shape.value]) l.roof.dir = ROOF_DIRS[shape.value][0][0]; } }
+      else { l.roof = {shape: shape.value, thickness: old.thickness, overhang: old.overhang, base: old.base}; if (shape.value !== 'flat') { l.roof.slope = old.slope || 30; if (ROOF_DIRS[shape.value]) l.roof.dir = ROOF_DIRS[shape.value][0][0]; } } if (ROOF_DIRS[shape.value] && old.gable_wall) l.roof.gable_wall = old.gable_wall;
       renderLevels(); changed();
     };
     box.appendChild(shape);
@@ -284,6 +284,22 @@
       ROOF_DIRS[l.roof.shape].forEach(function (d) { dir.append(new Option(d[1], d[0])); }); dir.value = l.roof.dir;
       dir.onchange = function () { l.roof.dir = dir.value; changed(); };
       box.appendChild(dir);
+      // Tường thu hồi: tùy chọn của mái một dốc / hai dốc; loại tường chọn từ danh sách loại tường (dày theo loại)
+      var gwrap = document.createElement('label'); gwrap.className = 'layers-head';
+      var gcheck = document.createElement('input'); gcheck.type = 'checkbox'; gcheck.id = 'roof-gable'; gcheck.checked = !!l.roof.gable_wall;
+      gwrap.append(gcheck, document.createTextNode(' Tường thu hồi (cắt theo đáy mái)'));
+      gcheck.onchange = function () {
+        if (gcheck.checked) l.roof.gable_wall = {type: state.wallTypes[0].id}; else delete l.roof.gable_wall;
+        renderLevelRoof(); changed();
+      };
+      box.appendChild(gwrap);
+      if (l.roof.gable_wall) {
+        var gtype = document.createElement('select'); gtype.id = 'roof-gable-type'; gtype.setAttribute('aria-label', 'Loại tường thu hồi');
+        state.wallTypes.forEach(function (t) { gtype.append(new Option(t.name + ' (' + t.t + ' mm)', t.id)); });
+        gtype.value = l.roof.gable_wall.type;
+        gtype.onchange = function () { l.roof.gable_wall.type = gtype.value; changed(); };
+        box.appendChild(gtype);
+      }
     }
     var keys = (l.roof.shape === 'flat' ? [] : ['slope']).concat(['thickness', 'overhang', 'base']);
     var tbl = document.createElement('table'); tbl.className = 'axes'; box.appendChild(tbl);
@@ -291,7 +307,7 @@
     var row = tbl.insertRow(), sum = document.createElement('div'); sum.className = 'layers-sum'; sum.id = 'roof-sum';
     var check = function () {
       var bad = keys.filter(function (k) { var v = l.roof[k], r = ROOF_RANGES[k]; return !(v >= r[0] && v <= r[1]); });
-      sum.textContent = bad.length ? bad.map(function (k) { var r = ROOF_RANGES[k]; return r[2] + ' phải từ ' + r[0] + ' đến ' + r[1] + '.'; }).join(' ') : ({gable: 'Mái hai dốc: nóc ở giữa khung.', hip: 'Mái bốn dốc: cùng độ dốc bốn phía, nóc là đoạn giữa khung theo phương dài (một điểm nếu khung vuông).'}[l.roof.shape] || '') + ' Chưa có tường thu hồi.';
+      sum.textContent = bad.length ? bad.map(function (k) { var r = ROOF_RANGES[k]; return r[2] + ' phải từ ' + r[0] + ' đến ' + r[1] + '.'; }).join(' ') : ({gable: 'Mái hai dốc: nóc ở giữa khung.', hip: 'Mái bốn dốc: cùng độ dốc bốn phía, nóc là đoạn giữa khung theo phương dài (một điểm nếu khung vuông).'}[l.roof.shape] || '') + (l.roof.gable_wall ? ' Tường thu hồi dựng trên mặt sàn kết cấu tới đáy mái, mặt ngoài trùng trục biên.' : '');
       sum.className = 'layers-sum' + (bad.length ? ' error' : '');
       var b = $('levels-table').querySelectorAll('.roof-btn')[state.levels.indexOf(l)]; if (b) b.textContent = roofLabel(l);
     };
@@ -761,6 +777,7 @@
   }
   function removeWallType(id) {
     state.wallTypes = state.wallTypes.filter(function (t) { return t.id !== id; });
+    state.levels.forEach(function (lv) { if (lv.roof && lv.roof.gable_wall && lv.roof.gable_wall.type === id) lv.roof.gable_wall.type = state.wallTypes[0].id; }); // tường thu hồi dùng loại vừa xóa: chuyển sang loại đầu
     state.levels.forEach(function (l) {
       if (l.wallType === id) l.wallType = null;
       Object.keys(l.wallPicks).forEach(function (ref) { if (l.wallPicks[ref].type === id) delete l.wallPicks[ref].type; });

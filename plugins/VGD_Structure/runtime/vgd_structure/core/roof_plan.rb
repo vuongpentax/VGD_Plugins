@@ -5,11 +5,13 @@ module VGD
     # mặt mái dốc lên theo khoảng cách d tới đường mép (d âm ở phần chìa): mặt trên z = z_b + tv + d * tan(dốc), tv = dày / cos(dốc) là bề dày theo phương đứng.
     # Mỗi mặt mái là một tấm: đa giác MẶT TRÊN 3D (4 đỉnh, mm) đùn xuống tv theo phương đứng (nên thể tích = diện tích nghiêng x dày).
     # Mái hai dốc: hai tấm gặp nhau ở nóc, không chồng nhau trên mặt bằng. Mái bốn dốc (hip): cùng một độ dốc cho bốn phía, bốn tấm nam, đông, bắc, tây (hình thang hoặc tam giác);
-    # nóc là đoạn nằm giữa khung theo phương dài, dài (dài - rộng), hoặc một điểm nếu khung vuông. Chưa làm: tường thu hồi, mái theo đường bao bất kỳ.
+    # nóc là đoạn nằm giữa khung theo phương dài, dài (dài - rộng), hoặc một điểm nếu khung vuông.
+    # Tường thu hồi (`roof['gable_wall']`): giao của mặt phẳng đứng ở mỗi cạnh biên khung với ĐÁY mái; chỉ cạnh nào đáy mái đổi độ cao dọc cạnh mới có tường (đầu hồi mái hai dốc, hai cạnh
+    # song song hướng dốc của mái một dốc), nên không mã hóa riêng "tam giác" hay "hình thang". Tường đứng trên mặt sàn kết cấu của tầng, mặt ngoài trùng trục biên. Chưa làm: mái theo đường bao bất kỳ.
     module RoofPlan
       Error = Class.new(ArgumentError)
 
-      def self.plan(grid, levels, level_id)
+      def self.plan(grid, levels, level_id, wall_types = nil)
         level = Levels.find(levels, level_id) or raise Error, 'Tầng không tồn tại.'
         roof = level['roof'] or raise Error, "Tầng “#{level['name']}” chưa khai báo mái."
         x0, y0, x1, y1 = Grid.bounds(grid)
@@ -34,7 +36,82 @@ module VGD
         issues = []
         ridge = items.map { |i| i[:top].map(&:last).max }.max
         issues << "Nóc mái cao #{(ridge - zb).round} mm so với chân mái: kiểm tra lại độ dốc." if ridge - zb > 15_000
-        {level: level, z_base: zb, ridge: ridge, items: items, issues: issues}
+        gables = roof['gable_wall'] ? gable_walls(level, roof, items, [x0, y0, x1, y1], tv, wall_types || WallTypes.default) : []
+        {level: level, z_base: zb, ridge: ridge, items: items, gables: gables, issues: issues}
+      end
+
+      GABLE_EDGES = {'south' => [[0, 1], 1.0, [0.0, 1.0]], 'east' => [[1, 2], 1.0, [-1.0, 0.0]], 'north' => [[2, 3], 1.0, [0.0, -1.0]], 'west' => [[3, 0], 1.0, [1.0, 0.0]]}.freeze
+      EDGE_FLAT_MM = 1.0   # đáy mái lệch dưới 1 mm dọc cạnh coi là phẳng (cạnh mái hiên, đầu cao, đầu thấp: không có tường thu hồi)
+
+      # Tường thu hồi theo từng cạnh biên khung (nam, đông, bắc, tây, đi ngược chiều kim đồng hồ): biên dạng đỉnh = đáy mái dọc cạnh.
+      def self.gable_walls(level, roof, items, bounds, tv, wall_types)
+        type = wall_types.find { |t| t['id'] == roof['gable_wall']['type'] } or raise Error, "Tầng “#{level['name']}”: loại tường của tường thu hồi không tồn tại."
+        x0, y0, x1, y1 = bounds
+        corners = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
+        floor = Levels.structure_top(level)
+        GABLE_EDGES.filter_map do |edge, (ends, _, inward)|
+          a, b = corners[ends[0]], corners[ends[1]]
+          length = Math.hypot(b[0] - a[0], b[1] - a[1])
+          profile = edge_profile(items, a, b, length, tv)
+          next if profile.size < 2
+          zs = profile.map(&:last)
+          next if zs.max - zs.min < EDGE_FLAT_MM || zs.max <= floor + EDGE_FLAT_MM
+          heights = profile.map { |_, z| [z - floor, 0.0].max }
+          area = profile.each_cons(2).each_with_index.sum { |((s0, _), (s1, _)), i| (s1 - s0) * (heights[i] + heights[i + 1]) / 2.0 }
+          {ref: "gable_#{edge}", edge: edge, a: a.map { |v| v.round(2) }, b: b.map { |v| v.round(2) }, inward: inward, t: type['t'], type_id: type['id'], type_name: type['name'],
+           profile: profile, floor: floor, length: length.round(2), height: (area / length).round(1), area: (area / 1_000_000.0).round(4)}
+        end
+      end
+
+      # Đáy mái dọc đoạn a -> b: [[s mm tính từ a, cao độ đáy]] tăng dần theo s. Cắt đoạn qua từng tấm (đa giác lồi) rồi nội suy theo mặt phẳng của tấm.
+      def self.edge_profile(items, a, b, length, tv)
+        points = {}
+        items.each do |item|
+          clip = clip_segment(a, b, item[:poly]) or next
+          plane = plane_of(item[:top])
+          clip.each do |t|
+            x, y = a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t
+            points[(t * length).round(1)] = (plane.call(x, y) - tv).round(1)
+          end
+        end
+        list = points.sort.map { |s, z| [s, z] }
+        list.reject.with_index { |(s, z), i| i.positive? && i < list.size - 1 && collinear?(list[i - 1], [s, z], list[i + 1]) }
+      end
+
+      def self.collinear?(p, q, r)
+        ((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])).abs < 0.05 * (r[0] - p[0]).abs
+      end
+
+      # Mặt phẳng z = f(x, y) qua ba đỉnh đầu của một tấm mái (đỉnh liên tiếp đầu tiên không thẳng hàng).
+      def self.plane_of(top)
+        p0, p1, p2 = top[0], top[1], top[2]
+        ux, uy, uz = p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]
+        vx, vy, vz = p2[0] - p0[0], p2[1] - p0[1], p2[2] - p0[2]
+        det = ux * vy - uy * vx
+        ca = (uz * vy - uy * vz) / det
+        cb = (ux * vz - uz * vx) / det
+        ->(x, y) { p0[2] + ca * (x - p0[0]) + cb * (y - p0[1]) }
+      end
+
+      # Phần đoạn a -> b nằm trong đa giác LỒI ngược chiều kim đồng hồ (Cyrus - Beck): [t0, t1] trong [0, 1] hoặc nil.
+      def self.clip_segment(a, b, poly)
+        t0, t1 = 0.0, 1.0
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        poly.each_with_index do |p, i|
+          q = poly[(i + 1) % poly.size]
+          ex, ey = q[0] - p[0], q[1] - p[1]
+          len = Math.hypot(ex, ey)
+          nx, ny = -ey / len, ex / len
+          num = nx * (a[0] - p[0]) + ny * (a[1] - p[1])
+          den = nx * dx + ny * dy
+          if den.abs < 1e-9
+            return nil if num < -0.01
+          else
+            t = -num / den
+            den.positive? ? t0 = [t0, t].max : t1 = [t1, t].min
+          end
+        end
+        t1 > t0 + 1e-9 ? [t0, t1] : nil
       end
 
       def self.rect_corners(ax, ay, bx, by)

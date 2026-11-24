@@ -1,8 +1,10 @@
-# VGD Structure 0.30.0-beta.2
+# VGD Structure 0.30.0-beta.3
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
+
+**0.30.0-beta.3 (đợt H5b): tường thu hồi.** Bảng Tầng → nút Mái (mái một dốc hoặc hai dốc) → tick **Tường thu hồi** và chọn loại tường (dày theo loại). Tường là giao của mặt phẳng đứng ở mỗi cạnh biên khung với **đáy mái**, nên chỉ cạnh nào đáy mái đổi độ cao mới có tường: hai đầu hồi tam giác của mái hai dốc, hai cạnh song song hướng dốc (hình thang) của mái một dốc; cạnh mái hiên, đầu cao, đầu thấp không có. Tường đứng trên mặt sàn kết cấu của tầng, mặt ngoài trùng trục biên, là Group con của nhóm mái (tag A. WALL, BIM tính như tường). Tường đặc, chưa có lỗ: cửa, ô thoáng đầu hồi làm riêng. Mái bằng và bốn dốc không có tường thu hồi. Chưa thử trong SketchUp thật.
 
 **0.30.0-beta.2 (đợt H5a): mái bốn dốc.** Bảng Tầng → nút Mái → kiểu "Bốn dốc": cùng một độ dốc cho bốn phía, bốn tấm (nam, đông, bắc, tây), nóc là đoạn nằm giữa khung theo phương dài (một điểm nếu khung vuông); độ dốc, dày, chìa, chân mái như các kiểu khác. Tường thu hồi, mái theo đường bao và xà gồ chưa làm (H5b, H5c, H5d). Chưa thử trong SketchUp thật.
 
@@ -168,7 +170,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.30.0-beta.2.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.30.0-beta.3.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 
