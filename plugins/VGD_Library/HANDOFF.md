@@ -68,3 +68,5 @@ Sau khi cập nhật, lưu bản vẽ, đóng tất cả cửa sổ SketchUp r�
 - Đợt 1 (baseline test): ĐÃ LÀM. Mã 1.2.1; test quy ước, tải lại code, engine, advanced, preferences/timers, online errors đạt. `npm test` chưa chạy (chưa cài node_modules). Chưa kiểm trong SketchUp.
 - Đợt 2 (tài liệu): ĐÃ LÀM phần HANDOFF.md (baseline 1.2.1). `FEATURE_PARITY.md` vẫn ghi đối chiếu 1.1.2-beta.1: chưa đối chiếu lại với 1.2.1.
 - Đợt 3 (`pixels.rb`): ĐÃ LÀM. Có `dev/test_pixels.rb` (14 kiểm tra giữ hành vi, kết quả giống hệt trước khi sửa). Thay đổi: bỏ truy cập lặp trong `gray`, bỏ bảng `visited` thừa khi xóa nền, bỏ cấp phát trung gian trong `simplify_line`. Chưa kiểm trong SketchUp.
+- Đợt 4 (`main.rb`): ĐÃ XEM, không cần sửa. File chỉ điều phối SketchUp (menu, hộp thoại, timer quét); không có vòng lặp nặng hay đoạn lặp đáng gộp, và thứ tự đăng ký menu/toolbar cần giữ nguyên.
+- Còn lại (chưa làm): advanced.rb, catalog.rb, tools.rb, online.rb, storage.rb, geometry.rb, models.rb, shell_sync.rb, materials.rb, drive.rb, seamless.rb, dialog.js.
