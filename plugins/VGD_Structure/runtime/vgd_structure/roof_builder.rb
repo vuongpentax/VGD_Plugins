@@ -1,7 +1,7 @@
 module VGD
   module Structure
     # Dựng mái theo kế hoạch (RoofPlan): mỗi tầng có mái một Group "Mái - <tên tầng>" trên tag A. ROOF; mỗi tấm mái là một Group con gồm mặt trên,
-    # mặt dưới (dời xuống tv theo phương đứng) và bốn mặt bên, dựng bằng add_face (không pushpull mặt nghiêng). Cùng mô hình prepare / apply.
+    # mặt dưới (dời xuống tv theo phương đứng) và các mặt bên (bốn, hoặc ba với tấm tam giác của mái bốn dốc), dựng bằng add_face (không pushpull mặt nghiêng). Cùng mô hình prepare / apply.
     # Chưa xác minh trong SketchUp thật: chiều pháp tuyến các mặt, mặt nghiêng.
     module RoofBuilder
       GROUP_KIND = 'roofs'.freeze
@@ -85,7 +85,7 @@ module VGD
           bottom = item[:top].map { |x, y, z| Geom::Point3d.new(x.mm, y.mm, (z - item[:tv]).mm) }
           plate.entities.add_face(top)
           plate.entities.add_face(bottom.reverse)
-          4.times { |i| j = (i + 1) % 4; plate.entities.add_face([bottom[i], bottom[j], top[j], top[i]]) }
+          top.size.times { |i| j = (i + 1) % top.size; plate.entities.add_face([bottom[i], bottom[j], top[j], top[i]]) } # 3 (tam giác) hoặc 4 mặt bên
           tag_instance(plate, plan, item)
           IdKeeper.assign(plate, plate.get_attribute('VGD_BIM_SOURCE', 'ref'), kept)
         end
@@ -101,7 +101,7 @@ module VGD
         plate.set_attribute(Schema::DICTIONARY, 'level_name', plan[:level]['name'])
         plate.set_attribute(Schema::DICTIONARY, 'level_elevation', plan[:level]['elevation'])
         plate.set_attribute(Schema::DICTIONARY, 'fp', ModelSync.fingerprint('roof', item))
-        plate.set_attribute(Schema::DICTIONARY, 'type', "Mái #{{'flat' => 'bằng', 'shed' => 'một dốc', 'gable' => 'hai dốc'}[item[:shape]]}")
+        plate.set_attribute(Schema::DICTIONARY, 'type', "Mái #{{'flat' => 'bằng', 'shed' => 'một dốc', 'gable' => 'hai dốc', 'hip' => 'bốn dốc'}[item[:shape]]}")
         plate.set_attribute(Schema::DICTIONARY, 'dims', JSON.generate('thickness' => item[:thickness], 'area' => item[:area], 'slope' => item[:slope]))
       end
     end

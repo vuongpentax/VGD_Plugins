@@ -1,8 +1,10 @@
-# VGD Structure 0.30.0-beta.1
+# VGD Structure 0.30.0-beta.2
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
+
+**0.30.0-beta.2 (đợt H5a): mái bốn dốc.** Bảng Tầng → nút Mái → kiểu "Bốn dốc": cùng một độ dốc cho bốn phía, bốn tấm (nam, đông, bắc, tây), nóc là đoạn nằm giữa khung theo phương dài (một điểm nếu khung vuông); độ dốc, dày, chìa, chân mái như các kiểu khác. Tường thu hồi, mái theo đường bao và xà gồ chưa làm (H5b, H5c, H5d). Chưa thử trong SketchUp thật.
 
 **0.30.0-beta.1 (đợt H4): móng băng, loại móng riêng từng cột, móng giật cấp.** Bảng Tầng → nút Móng: tick "Giật cấp" để đế hai bậc; "+ Thêm loại móng" rồi chọn loại cho từng cột (cột biên / giữa khác nhau); tick "Móng băng dưới tường" (rộng, dày) để có dải móng dưới mọi tường tầng móng, tự chạy giữa các đế cột nên không chồng khối. Tường xiên chưa hỗ trợ. Chưa thử trong SketchUp thật.
 
@@ -17,7 +19,7 @@ Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) th
 
 **0.29.0-beta.1: móng, mái, lỗ sàn cầu thang** (kế hoạch hoàn thiện `docs/vgd_structure/PLAN.md` mục 13).
 - **Móng đơn:** bảng Tầng có cột **Móng đơn**: bật rồi nhập dài × rộng × dày; mọi cột của tầng đó có một **đế móng** ngay dưới chân cột (tâm trùng tâm cột, cột xoay 90° thì đế đổi chiều, xoay góc khác thì đế xoay theo). Cách dùng: thêm một **tầng móng** dưới tầng trệt (ví dụ cao độ -1500, cán nền 0): cột của tầng móng là **cổ cột**, dầm của tầng móng là **giằng móng** (đỉnh giằng bằng mặt sàn trệt theo quy tắc dầm đã có). Đề xuất tự động cho tầng móng chỉ gồm cột và dầm. Đế chồng nhau hoặc nhỏ hơn cột thì cảnh báo. Tag S. FOOTING, BIM tính thể tích.
-- **Mái:** bảng Tầng có cột **Mái**: mái bằng, một dốc (hướng dốc lên ±X / ±Y) hoặc hai dốc (nóc song song X hoặc Y, ở giữa khung), độ dốc, dày, chìa mái, cao độ chân mái so với cốt tầng. Mái phủ khung lưới (trục biên là mép mái) cộng phần chìa; mỗi tấm mái là khối kín dựng bằng mặt 3D. Tag A. ROOF, BIM tính diện tích nghiêng và thể tích. Chưa có mái bốn dốc, tường thu hồi, mái theo đường bao bất kỳ.
+- **Mái:** bảng Tầng có cột **Mái**: mái bằng, một dốc (hướng dốc lên ±X / ±Y), hai dốc (nóc song song X hoặc Y, ở giữa khung) hoặc bốn dốc (cùng độ dốc bốn phía), độ dốc, dày, chìa mái, cao độ chân mái so với cốt tầng. Mái phủ khung lưới (trục biên là mép mái) cộng phần chìa; mỗi tấm mái là khối kín dựng bằng mặt 3D. Tag A. ROOF, BIM tính diện tích nghiêng và thể tích. Chưa có mái bốn dốc, tường thu hồi, mái theo đường bao bất kỳ.
 - **Lỗ sàn cầu thang:** sàn tầng trên tự khoét lỗ đúng hình cầu thang của tầng dưới khi cầu thang nằm trọn trong một tấm sàn (diện tích sàn trừ lỗ); cầu thang vắt qua mép tấm sàn thì cảnh báo (hãy bỏ ô sàn đó hoặc vẽ sàn đa giác).
 - Mặt bằng vẽ đế móng (nét đứt xám) và viền mái (nét đứt cam); lớp hiển thị có thêm Móng, Mái. Dựng tất cả gồm cả móng và mái trong một bước hoàn tác. Bảng Tầng cuộn ngang thay vì bóp nhỏ ô nhập.
 
@@ -166,7 +168,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.30.0-beta.1.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.30.0-beta.2.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

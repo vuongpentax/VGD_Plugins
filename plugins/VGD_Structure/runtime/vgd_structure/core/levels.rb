@@ -197,9 +197,9 @@ module VGD
       end
 
       # Mái của tầng (RoofPlan): phủ khung lưới (trục biên là đường mép mái) cộng phần chìa `overhang`.
-      # shape: flat (mái bằng), shed (một dốc, `dir` x+ x- y+ y- là hướng dốc LÊN), gable (hai dốc, `dir` x / y là phương của nóc).
+      # shape: flat (mái bằng), shed (một dốc, `dir` x+ x- y+ y- là hướng dốc LÊN), gable (hai dốc, `dir` x / y là phương của nóc), hip (bốn dốc, cùng độ dốc, không có hướng).
       # slope độ (mái dốc 1..60; mái bằng bỏ qua), thickness mm (vuông góc mặt mái), base mm (đáy mái tại đường mép so với cao độ tầng).
-      ROOF_SHAPES = %w[flat shed gable].freeze
+      ROOF_SHAPES = %w[flat shed gable hip].freeze
       ROOF_DIRS = {'shed' => %w[x+ x- y+ y-], 'gable' => %w[x y]}.freeze
       ROOF_SLOPE = (1.0..60.0).freeze
       ROOF_THICKNESS = (20.0..500.0).freeze
@@ -220,8 +220,10 @@ module VGD
                'base' => num.call('base', ROOF_BASE, 'cao độ chân mái so với cốt tầng (mm)', 0)}
         unless shape == 'flat'
           out['slope'] = num.call('slope', ROOF_SLOPE, 'độ dốc (độ)', 30)
-          raise Error, "#{who}: hướng phải là #{ROOF_DIRS[shape].join(', ')}." unless ROOF_DIRS[shape].include?(raw['dir'])
-          out['dir'] = raw['dir']
+          if ROOF_DIRS.key?(shape)
+            raise Error, "#{who}: hướng phải là #{ROOF_DIRS[shape].join(', ')}." unless ROOF_DIRS[shape].include?(raw['dir'])
+            out['dir'] = raw['dir']
+          end
         end
         out
       end

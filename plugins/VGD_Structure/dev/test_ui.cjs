@@ -408,6 +408,13 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(rf.dir==='y' && rf.slope===22,'đổi hướng và độ dốc: gửi đúng');
   const vrf=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
   ok(vrf.ok,'dữ liệu mái được Ruby chấp nhận');
+  // Mái bốn dốc: chọn kiểu, không có ô hướng, giữ độ dốc, Ruby chấp nhận
+  await page.locator('#roof-shape').selectOption('hip');await wait(300);
+  rf=(await last('grid_preview')).levels.slice(-1)[0].roof;
+  ok(rf && rf.shape==='hip' && rf.slope===22 && !('dir' in rf) && (await page.locator('#roof-dir').count())===0 && (await roofBtn.innerText())==='Bốn dốc 22°','chọn Bốn dốc: giữ độ dốc, không có ô hướng, không gửi hướng, nút ghi Bốn dốc 22°');
+  ok(/Mái bốn dốc/.test(await page.locator('#roof-sum').innerText()),'dòng ghi chú mô tả mái bốn dốc (nóc giữa khung)');
+  const vhip=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vhip.ok,'dữ liệu mái bốn dốc được Ruby chấp nhận');
   await page.locator('#roof-shape').selectOption('flat');await wait(300);
   rf=(await last('grid_preview')).levels.slice(-1)[0].roof;
   ok(rf.shape==='flat' && rf.slope===undefined && rf.dir===undefined && (await page.locator('#roof-dir').count())===0,'mái bằng: không gửi dốc, hướng; ẩn ô hướng');

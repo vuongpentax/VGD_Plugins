@@ -256,7 +256,7 @@
     renderTypes(); renderBeamTypes(); renderWallTypes(); renderOpeningTypes(); renderLevelLayers(); renderLevelFooting(); renderLevelRoof();
   }
   // ---- Mái của tầng: khoảng khớp Levels::ROOF_* ở Ruby ----
-  var openRoof = null, ROOF_SHAPES = [['flat', 'Mái bằng'], ['shed', 'Một dốc'], ['gable', 'Hai dốc']], ROOF_DIRS = {shed: [['x+', 'Dốc lên theo +X'], ['x-', 'Dốc lên theo -X'], ['y+', 'Dốc lên theo +Y'], ['y-', 'Dốc lên theo -Y']], gable: [['x', 'Nóc song song trục X'], ['y', 'Nóc song song trục Y']]};
+  var openRoof = null, ROOF_SHAPES = [['flat', 'Mái bằng'], ['shed', 'Một dốc'], ['gable', 'Hai dốc'], ['hip', 'Bốn dốc']], ROOF_DIRS = {shed: [['x+', 'Dốc lên theo +X'], ['x-', 'Dốc lên theo -X'], ['y+', 'Dốc lên theo +Y'], ['y-', 'Dốc lên theo -Y']], gable: [['x', 'Nóc song song trục X'], ['y', 'Nóc song song trục Y']]};
   var ROOF_RANGES = {slope: [1, 60, 'Độ dốc (độ)'], thickness: [20, 500, 'Dày mái (mm)'], overhang: [0, 2000, 'Chìa mái (mm)'], base: [-5000, 10000, 'Chân mái so với cốt tầng (mm)']};
   function roofLabel(l) { if (!l.roof) return 'Không'; var n = ROOF_SHAPES.filter(function (s) { return s[0] === l.roof.shape; })[0][1]; return l.roof.shape === 'flat' ? n : n + ' ' + l.roof.slope + '°'; }
   function renderLevelRoof() {
@@ -273,13 +273,13 @@
     shape.onchange = function () {
       var old = l.roof || {thickness: 120, overhang: 600, base: 0};
       if (!shape.value) l.roof = null;
-      else { l.roof = {shape: shape.value, thickness: old.thickness, overhang: old.overhang, base: old.base}; if (shape.value !== 'flat') { l.roof.slope = old.slope || 30; l.roof.dir = ROOF_DIRS[shape.value][0][0]; } }
+      else { l.roof = {shape: shape.value, thickness: old.thickness, overhang: old.overhang, base: old.base}; if (shape.value !== 'flat') { l.roof.slope = old.slope || 30; if (ROOF_DIRS[shape.value]) l.roof.dir = ROOF_DIRS[shape.value][0][0]; } }
       renderLevels(); changed();
     };
     box.appendChild(shape);
     if (!l.roof) return;
     [['thickness', 120], ['overhang', 600], ['base', 0]].concat(l.roof.shape === 'flat' ? [] : [['slope', 30]]).forEach(function (d) { if (typeof l.roof[d[0]] !== 'number') l.roof[d[0]] = d[1]; }); // như mặc định của Levels.roof!
-    if (l.roof.shape !== 'flat') {
+    if (ROOF_DIRS[l.roof.shape]) {
       var dir = document.createElement('select'); dir.id = 'roof-dir'; dir.setAttribute('aria-label', 'Hướng mái');
       ROOF_DIRS[l.roof.shape].forEach(function (d) { dir.append(new Option(d[1], d[0])); }); dir.value = l.roof.dir;
       dir.onchange = function () { l.roof.dir = dir.value; changed(); };
@@ -291,7 +291,7 @@
     var row = tbl.insertRow(), sum = document.createElement('div'); sum.className = 'layers-sum'; sum.id = 'roof-sum';
     var check = function () {
       var bad = keys.filter(function (k) { var v = l.roof[k], r = ROOF_RANGES[k]; return !(v >= r[0] && v <= r[1]); });
-      sum.textContent = bad.length ? bad.map(function (k) { var r = ROOF_RANGES[k]; return r[2] + ' phải từ ' + r[0] + ' đến ' + r[1] + '.'; }).join(' ') : 'Mái hai dốc: nóc ở giữa khung. Chưa có mái bốn dốc và tường thu hồi.';
+      sum.textContent = bad.length ? bad.map(function (k) { var r = ROOF_RANGES[k]; return r[2] + ' phải từ ' + r[0] + ' đến ' + r[1] + '.'; }).join(' ') : ({gable: 'Mái hai dốc: nóc ở giữa khung.', hip: 'Mái bốn dốc: cùng độ dốc bốn phía, nóc là đoạn giữa khung theo phương dài (một điểm nếu khung vuông).'}[l.roof.shape] || '') + ' Chưa có tường thu hồi.';
       sum.className = 'layers-sum' + (bad.length ? ' error' : '');
       var b = $('levels-table').querySelectorAll('.roof-btn')[state.levels.indexOf(l)]; if (b) b.textContent = roofLabel(l);
     };

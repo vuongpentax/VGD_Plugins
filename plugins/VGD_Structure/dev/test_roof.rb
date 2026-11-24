@@ -32,7 +32,7 @@ ok('mái bằng: điền mặc định dày 120, chìa 600, chân 0; không có 
 ok('mái dốc hợp lệ: giữ dốc và hướng', norm(roof_state('shape' => 'gable', 'slope' => 25, 'dir' => 'x'))['levels'][-1]['roof'].values_at('slope', 'dir') == [25.0, 'x'])
 bad = ->(r) { error_of { norm(roof_state(r)) }.to_s }
 ok('dữ liệu mái sai bị từ chối: kiểu lạ, dốc 0 / 70, hướng sai theo kiểu, dày quá mỏng, chìa quá xa',
-   bad.call('shape' => 'hip').include?('kiểu mái') && bad.call('shape' => 'shed', 'slope' => 0, 'dir' => 'x+').include?('độ dốc') && bad.call('shape' => 'shed', 'slope' => 70, 'dir' => 'x+').include?('độ dốc') &&
+   bad.call('shape' => 'dome').include?('kiểu mái') && bad.call('shape' => 'shed', 'slope' => 0, 'dir' => 'x+').include?('độ dốc') && bad.call('shape' => 'shed', 'slope' => 70, 'dir' => 'x+').include?('độ dốc') &&
    bad.call('shape' => 'gable', 'slope' => 30, 'dir' => 'x+').include?('hướng') && bad.call('shape' => 'flat', 'thickness' => 5).include?('dày mái') && bad.call('shape' => 'flat', 'overhang' => 5000).include?('chìa mái'))
 
 # ---- Kế hoạch ----
@@ -57,6 +57,29 @@ ok('mái hai dốc nóc theo Y: chia khung theo X ở giữa', gy[:items].map { 
 ok('base: chân mái nâng lên theo cao độ khai báo', plan_of('shape' => 'flat', 'base' => 300, 'thickness' => 100)[:items][0][:top].all? { |p| near(p[2], TOP + 400) })
 ok('tầng chưa khai báo mái: báo lỗi rõ', error_of { n = norm(S::State.default); S::RoofPlan.plan(n['grid'], n['levels'], n['levels'][-1]['id']) }.include?('chưa khai báo mái'))
 
+# ---- Mái bốn dốc (hip): bốn tấm, cùng độ dốc, nóc là đoạn ngắn hơn khung (hoặc một điểm nếu khung vuông) ----
+def poly_area(poly); poly.each_with_index.sum { |(x, y), i| nx, ny = poly[(i + 1) % poly.size]; x * ny - nx * y }.abs / 2.0; end
+hp_roof = norm(roof_state('shape' => 'hip', 'slope' => 30, 'dir' => 'x'))['levels'][-1]['roof']
+ok('mái bốn dốc: có độ dốc, không có hướng (hướng gửi kèm bị bỏ)', hp_roof['slope'] == 30.0 && !hp_roof.key?('dir'))
+ok('mái bốn dốc: độ dốc 0 hoặc 70 bị từ chối', bad.call('shape' => 'hip', 'slope' => 0).include?('độ dốc') && bad.call('shape' => 'hip', 'slope' => 70).include?('độ dốc'))
+hp = plan_of('shape' => 'hip', 'slope' => 30, 'thickness' => 100, 'overhang' => 600)
+mid = (Y1 - Y0) / 2.0
+ok('mái bốn dốc: bốn tấm theo thứ tự nam, đông, bắc, tây; nam và bắc là hình thang, đông và tây là tam giác (khung dài hơn rộng)', hp[:items].map { |it| it[:ref] } == %w[roof_1 roof_2 roof_3 roof_4] && hp[:items].map { |it| it[:poly].size } == [4, 3, 4, 3])
+ok('mái bốn dốc: bốn tấm phủ kín khung cộng chìa, không chồng nhau trên mặt bằng', near(hp[:items].sum { |it| poly_area(it[:poly]) }, (X1 - X0 + 1200) * (Y1 - Y0 + 1200), 1.0))
+all_ok = hp[:items].all? { |it| it[:top].all? { |x, y, z| near(z, TOP + tv + [x - X0, X1 - x, y - Y0, Y1 - y].min * t, 0.1) } }
+ok('mái bốn dốc: mọi đỉnh nằm đúng trên mặt dốc (cao độ = chân + dày + dốc x khoảng cách tới mép gần nhất)', all_ok)
+ridge_pts = hp[:items].flat_map { |it| it[:top] }.select { |_, _, z| near(z, TOP + tv + mid * t, 0.1) }.map { |x, y, _| [x.round(1), y.round(1)] }.uniq.sort
+ok('mái bốn dốc: nóc là đoạn dài (X1 - X0) - (Y1 - Y0) nằm giữa khung theo phương dài', ridge_pts == [[(X0 + mid).round(1), ((Y0 + Y1) / 2.0).round(1)], [(X1 - mid).round(1), ((Y0 + Y1) / 2.0).round(1)]] && near(hp[:ridge], TOP + tv + mid * t))
+ok('mái bốn dốc: diện tích nghiêng = diện tích mặt bằng của tấm / cos(dốc)', hp[:items].all? { |it| near(it[:area], poly_area(it[:poly]) / 1e6 / Math.cos(Math::PI / 6), 0.002) })
+sq_state = roof_state('shape' => 'hip', 'slope' => 30, 'thickness' => 100, 'overhang' => 0)
+sq_state['grid']['y_axes'] = [{'name' => 'A', 'offset' => 0.0}, {'name' => 'B', 'offset' => 4200.0}, {'name' => 'C', 'offset' => 8400.0}, {'name' => 'D', 'offset' => 12600.0}]
+sq = (n = norm(sq_state); S::RoofPlan.plan(n['grid'], n['levels'], n['levels'][-1]['id']))
+ok('mái bốn dốc, khung vuông: bốn tam giác gặp nhau ở một điểm nóc', sq[:items].map { |it| it[:poly].size } == [3, 3, 3, 3] && sq[:items].flat_map { |it| it[:top] }.select { |_, _, z| near(z, sq[:ridge], 0.1) }.map { |x, y, _| [x.round(1), y.round(1)] }.uniq == [[6300.0, 6300.0]])
+tall = roof_state('shape' => 'hip', 'slope' => 30, 'thickness' => 100, 'overhang' => 0)
+tall['grid']['x_axes'] = [{'name' => '1', 'offset' => 0.0}, {'name' => '2', 'offset' => 4200.0}]
+tl = (n = norm(tall); S::RoofPlan.plan(n['grid'], n['levels'], n['levels'][-1]['id']))
+ok('mái bốn dốc, khung rộng hơn dài theo Y: nóc chạy theo phương Y, nam và bắc là tam giác', tl[:items].map { |it| it[:poly].size } == [3, 4, 3, 4])
+
 # ---- Xem trước ----
 pv = S::Preview.build(roof_state('shape' => 'gable', 'slope' => 30, 'dir' => 'x').merge('level' => S::State.default['levels'][-1]['id']))
 ok('xem trước tầng có mái: hai tấm kèm nóc', pv[:roofs] && pv[:roofs][:count] == 2 && pv[:roofs][:ridge] > pv[:roofs][:z_base])
@@ -74,6 +97,12 @@ zs = faces[0].points.map { |p| (p.z * MM).round(1) }
 ok('mặt trên đúng cao độ mép thấp (phần chìa) và nóc', zs.min.round == (TOP + tv - 600 * t).round && zs.max.round == ridge.round)
 dims = JSON.parse(plates[0].get_attribute(D, 'dims'))
 ok('dữ liệu BIM: kind roof, dày, diện tích nghiêng, vân tay', plates[0].get_attribute('VGD_BIM_SOURCE', 'kind') == 'roof' && dims['thickness'] == 100.0 && dims['area'] > 0 && plates[0].get_attribute(D, 'fp').is_a?(String))
+mh = Sketchup::Model.new
+S::RoofBuilder.build(mh, roof_state('shape' => 'hip', 'slope' => 30, 'thickness' => 100), [lid])
+hg = mh.entities.grep(Sketchup::Group).find { |x| x.get_attribute(D, 'kind') == 'roofs' }
+hplates = hg.entities.grep(Sketchup::Group)
+ok('dựng mái bốn dốc: bốn tấm, hình thang có 6 mặt, tam giác có 5 mặt (trên, dưới, các mặt bên)', hplates.size == 4 && hplates.map { |pl| pl.entities.grep(Sketchup::Face).size } == [6, 5, 6, 5])
+ok('dựng mái bốn dốc: kiểu "Mái bốn dốc", dữ liệu BIM đủ dày và diện tích', hplates.all? { |pl| pl.get_attribute(D, 'type') == 'Mái bốn dốc' && JSON.parse(pl.get_attribute(D, 'dims'))['area'] > 0 })
 all = S::AllBuilder.build(m, roof_state('shape' => 'flat'), [lid])
 ok('dựng tất cả có mái ở tầng trên cùng; dựng lại thay nhóm cũ', all[:kinds].key?('roofs') && m.entities.grep(Sketchup::Group).count { |x| x.get_attribute(D, 'kind') == 'roofs' } == 1)
 ok('tầng chưa khai báo mái: dựng mái báo lỗi', error_of { S::RoofBuilder.build(Sketchup::Model.new, S::State.default, [lid]) }.include?('chưa khai báo mái'))

@@ -203,7 +203,7 @@ Mỗi cột mốc có test và RBZ beta để thử. Chưa phát hành.
 | H2 | Lỗ sàn cầu thang | Sàn tầng trên tự khoét theo cầu thang tầng dưới khi cầu thang nằm trọn trong một tấm sàn; vắt mép thì cảnh báo. | ĐÃ LÀM 0.29.0-beta.1 |
 | H3 | Mái | Mái bằng / một dốc / hai dốc phủ khung lưới + chìa; dốc, hướng, dày, chân mái. BIM tính diện tích nghiêng, thể tích. | ĐÃ LÀM 0.29.0-beta.1 |
 | H4 | Móng băng, móng riêng từng cột | Đế dưới tường tầng móng (móng băng); loại móng có tên và chọn loại riêng cho từng cột (như loại cột) khi cần cột biên / giữa khác nhau; đế giật cấp. | ĐÃ LÀM 0.30.0-beta.1 (băng bỏ qua tường xiên; chưa thử SketchUp thật) |
-| H5a | Mái bốn dốc | Mái bốn dốc trên khung chữ nhật, cùng một độ dốc cho cả bốn phía; nóc là đoạn ngắn hơn khung (hoặc một điểm nếu khung vuông). | chưa làm |
+| H5a | Mái bốn dốc | Mái bốn dốc trên khung chữ nhật, cùng một độ dốc cho cả bốn phía; nóc là đoạn ngắn hơn khung (hoặc một điểm nếu khung vuông). | ĐÃ LÀM 0.30.0-beta.2 (kiểu `hip`, bốn tấm; chưa thử SketchUp thật) |
 | H5b | Tường thu hồi | Tường tam giác dưới mái hai dốc, cắt theo mặt mái. | chưa làm |
 | H5c | Mái theo đường bao | Mái vẽ theo đường bao đa giác trên mặt bằng. | chưa làm |
 | H5d | Xà gồ / bản mái | Xà gồ / bản mái nhìn được trên mặt cắt. | chưa làm |
