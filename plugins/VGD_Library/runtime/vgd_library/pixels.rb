@@ -69,9 +69,10 @@ module VGD
       end
 
       def self.gray(image)
+        rgba = image.rgba
         Array.new(image.width * image.height) do |i|
           at = i * 4
-          (image.rgba[at] * 0.2126 + image.rgba[at + 1] * 0.7152 + image.rgba[at + 2] * 0.0722) / 255.0
+          (rgba[at] * 0.2126 + rgba[at + 1] * 0.7152 + rgba[at + 2] * 0.0722) / 255.0
         end
       end
 
@@ -215,11 +216,9 @@ module VGD
           queue = []
           h.times { |y| queue.concat([y * w, y * w + w - 1]) }
           w.times { |x| queue.concat([x, (h - 1) * w + x]) }
-          visited = {}
           until queue.empty?
             i = queue.pop
-            next if visited[i] || labels[i] != bg[0]
-            visited[i] = true
+            next unless labels[i] == bg[0] # ô đã xóa thành nil nên không bị duyệt lại
             labels[i] = nil
             x, y = i % w, i / w
             queue << i - 1 if x > 0
@@ -271,7 +270,8 @@ module VGD
         a, b = points.first, points.last
         dx, dy = b[0] - a[0], b[1] - a[1]
         length_sq = dx * dx + dy * dy
-        distances = points.each_with_index.drop(1).take(points.size - 2).map do |p, i|
+        distances = (1...points.size - 1).map do |i|
+          p = points[i]
           t = length_sq.zero? ? 0 : [[((p[0] - a[0]) * dx + (p[1] - a[1]) * dy).to_f / length_sq, 0].max, 1].min
           [Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy), i]
         end

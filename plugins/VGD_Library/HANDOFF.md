@@ -1,6 +1,6 @@
 # Bàn giao VGD_Library
 
-Baseline source 1.1.2-beta.6 từ worktree cabinet-v2. Artifact local mới nhất tìm thấy là beta.5; catalog quảng bá beta.6 nhưng chưa tìm được RBZ/source ZIP tương ứng để xác minh. Không coi source beta.6 này là bản phát hành đã kiểm chứng. Đợt chuyển repository chỉ đối chiếu source/checksum; chưa chạy lại test tự động hoặc kiểm thử native SketchUp. Các kết quả PASS bên dưới thuộc lịch sử workspace nguồn.
+Baseline hiện tại: bản 1.2.1 (VERSION trong `runtime/vgd_library.rb`, `dev/package.json`, README và `RELEASE_NOTES_v1.2.1.md` khớp nhau). Test tự động (tải lại code, engine, advanced, preferences/timers, online errors) đạt trong container; chưa kiểm thử native SketchUp ngoài các mục người phát hành đã dùng thử ở bản 1.2.1. Các kết quả PASS và ngày tháng ở các mục lịch sử bên dưới thuộc các bản cũ (1.1.x).
 
 Cập nhật ngày 05/10/2026, bản 1.1.2-beta.3. Người dùng chọn VGD độc lập rồi yêu cầu mọi nhóm chức năng thấy trong N-TEXTURE RBZ, kể cả model. Kho Drive chỉ vật liệu; người dùng sẽ giải nén/sắp xếp sau. Không tổ chức lại kho.
 
@@ -62,3 +62,9 @@ Sau khi cập nhật, lưu bản vẽ, đóng tất cả cửa sổ SketchUp r�
 - `Online.parse_catalog` báo lỗi HTML/JSON/schema bằng câu ngắn; áp dụng manifest, import và update. Không cache HTML. Footer cố định 38px, thông báo/tooltip tối đa 500 ký tự; UI và Ruby đều chặn raw HTML. Sidebar có scroll để các nút vẫn truy cập được khi cửa sổ nhỏ.
 - Ruby regression dùng phản hồi Drive thật đã tải ở outputs (fallback HTML fixture trên máy khác), kiểm tra migration/dedupe/offline/no HTTP/no picker/valid source vẫn tải/scan complete. UI kiểm tra HTML thật và thông báo dài tại 1120×760 và 720×600, kể cả ghi trực tiếp DOM bỏ qua feedback để kiểm chứng CSS. `outputs/drive_error_fixed.png` là ảnh UI mô phỏng, không phải ảnh SketchUp native.
 - `dev/apply_hotfix.ps1` cập nhật 9 file cài đặt SU2022, sao lưu vào workspace và kiểm tra SHA-256. Cần lưu và đóng tất cả cửa sổ SketchUp rồi mở lại; không tự tắt ứng dụng đang có bản vẽ.
+
+## Tiến độ chuẩn repo và tối ưu (nhánh claude/vgd-library-standards)
+
+- Đợt 1 (baseline test): ĐÃ LÀM. Mã 1.2.1; test quy ước, tải lại code, engine, advanced, preferences/timers, online errors đạt. `npm test` chưa chạy (chưa cài node_modules). Chưa kiểm trong SketchUp.
+- Đợt 2 (tài liệu): ĐÃ LÀM phần HANDOFF.md (baseline 1.2.1). `FEATURE_PARITY.md` vẫn ghi đối chiếu 1.1.2-beta.1: chưa đối chiếu lại với 1.2.1.
+- Đợt 3 (`pixels.rb`): ĐÃ LÀM. Có `dev/test_pixels.rb` (14 kiểm tra giữ hành vi, kết quả giống hệt trước khi sửa). Thay đổi: bỏ truy cập lặp trong `gray`, bỏ bảng `visited` thừa khi xóa nền, bỏ cấp phát trung gian trong `simplify_line`. Chưa kiểm trong SketchUp.
