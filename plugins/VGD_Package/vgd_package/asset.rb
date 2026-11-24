@@ -13,10 +13,11 @@ module VGD
         @texture = texture
         @current_path = safe_filename(texture)
         @filename = @current_path.to_s.empty? ? '' : File.basename(@current_path)
-        @filesize = file_exists? ? File.size(@current_path) : nil
-        @sha256 = file_exists? ? Digest::SHA256.file(@current_path).hexdigest : nil
+        present = file_exists?
+        @filesize = present ? File.size(@current_path) : nil
+        @sha256 = present ? Digest::SHA256.file(@current_path).hexdigest : nil
         @exportable = texture.respond_to?(:write)
-        @status = if file_exists?
+        @status = if present
                     'OK'
                   elsif @exportable && safe_valid_texture?
                     'EMBEDDED'

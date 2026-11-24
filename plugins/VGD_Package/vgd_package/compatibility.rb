@@ -54,23 +54,18 @@ module VGD
       end
 
       def capabilities(model = nil)
-        materials = model && model.materials ? model.materials.to_a : []
+        pbr_api = begin
+          materials = model && model.materials ? model.materials.to_a : []
+          pbr_texture_api?(materials)
+        rescue StandardError
+          false
+        end
         {
           'sketchup_version' => version,
           'sketchup_year' => year_version,
           'supported' => supported?,
           'native_texture' => native_texture?,
-          'native_pbr_api' => pbr_texture_api?(materials),
-          'pbr_channels' => available_pbr_channels,
-          'enscape' => 'read_only_inspection'
-        }
-      rescue StandardError
-        {
-          'sketchup_version' => version,
-          'sketchup_year' => year_version,
-          'supported' => supported?,
-          'native_texture' => native_texture?,
-          'native_pbr_api' => false,
+          'native_pbr_api' => pbr_api,
           'pbr_channels' => available_pbr_channels,
           'enscape' => 'read_only_inspection'
         }

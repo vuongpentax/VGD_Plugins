@@ -17,7 +17,8 @@ Quy tắc chung của repo: xem `CLAUDE.md` ở gốc repo. File này chỉ ghi 
 ## Kiểm thử
 
 - Tải lại code: `ruby test/test_reload.rb` (chạy từ `plugins/VGD_Package`; giả lập SketchUp, kiểm tra mục menu, không nhân đôi giao diện, lỗi file giữ bản đang chạy).
-- Chưa có test tự động trong repo. Theo `vgd_package/README.md` đã kiểm tra cú pháp JavaScript, cấu trúc RBZ, tài nguyên giao diện và SHA-256; chưa chạy smoke test trong SketchUp.
+- Quét và tương thích API: `ruby test/test_scan.rb` (giả lập SketchUp; kiểm tra `Compatibility`, `Asset`, `Scanner`, adapter texture).
+- Theo `vgd_package/README.md` đã kiểm tra cú pháp JavaScript, cấu trúc RBZ, tài nguyên giao diện và SHA-256; chưa chạy smoke test trong SketchUp.
 - Khi thêm hoặc sửa chức năng, ghi rõ cách kiểm tra đã dùng và phần chưa xác minh.
 
 ## Đóng gói
