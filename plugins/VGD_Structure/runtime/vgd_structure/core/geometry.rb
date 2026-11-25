@@ -77,6 +77,27 @@ module VGD
         (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
       end
 
+      # Cắt đa giác (bất kỳ, không tự cắt) bằng hộp trục [min, max] theo Sutherland-Hodgman: phần nằm trong hộp, làm tròn 0,01 mm; rỗng nếu nằm ngoài hộp.
+      # Đa giác lõm bị hộp tách thành nhiều mảnh sẽ ra vòng có đoạn nối suy biến: nơi gọi kiểm tra `simple_ring?`.
+      def self.clip_to_box(poly, min, max)
+        edges = [[0, min[0], true], [0, max[0], false], [1, min[1], true], [1, max[1], false]] # [trục, giá trị biên, giữ phía lớn hơn?]
+        edges.reduce(poly) do |ring, (axis, limit, keep_above)|
+          inside = ->(p) { keep_above ? p[axis] >= limit : p[axis] <= limit }
+          ring.each_with_index.flat_map do |cur, i|
+            prev = ring[i - 1]
+            cross = lambda do
+              t = (limit - prev[axis]) / (cur[axis] - prev[axis]).to_f
+              [prev[0] + (cur[0] - prev[0]) * t, prev[1] + (cur[1] - prev[1]) * t].tap { |pt| pt[axis] = limit }
+            end
+            if inside.call(cur)
+              inside.call(prev) ? [cur] : [cross.call, cur]
+            else
+              inside.call(prev) ? [cross.call] : []
+            end
+          end
+        end.then { |ring| round_poly(clean_ring(ring)) }
+      end
+
       # Hai đoạn chạm nhau (kể cả chạm đầu mút hoặc chồng cùng đường).
       def self.segments_touch?(a, b, c, d)
         d1 = orient(a, b, c)

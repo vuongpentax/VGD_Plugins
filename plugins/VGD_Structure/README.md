@@ -1,8 +1,10 @@
-# VGD Structure 0.30.0-beta.6
+# VGD Structure 0.30.0-beta.7
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
+
+**0.30.0-beta.7 (đợt H6): lỗ sàn tổng quát.** (1) **Cầu thang vắt qua nhiều ô sàn** nay được khoét tự động **từng ô**: phần cầu thang lọt vào mỗi tấm sàn thành một lỗ của tấm đó (trước đây chỉ cảnh báo); lỗ chạm mép tấm thì thành chỗ khuyết ở mép. Tấm sàn bị khoét góc theo cột, sàn đa giác hoặc đã có lỗ chồng lên thì vẫn chỉ cảnh báo. (2) **Lỗ kỹ thuật** (hộp kỹ thuật, ống): bảng Tầng → nút **Lỗ sàn** → "+ Thêm lỗ kỹ thuật"; mỗi lỗ là **hình chữ nhật giữa hai giao điểm lưới chéo nhau** (ví dụ 2-B và 3-C), **lùi vào trong** theo từng cạnh (trái, dưới, phải, trên; mm, 0 đến 5000; lỗ sau khi lùi mỗi cạnh ≥ 100 mm; tối đa 30 lỗ mỗi tầng). Lỗ trải qua nhiều ô sàn thì khoét từng ô; lỗ không rơi vào tấm sàn nào thì cảnh báo; lỗ phủ hết một ô thì ô sàn đó bị bỏ (có cảnh báo). Diện tích sàn đã trừ lỗ (BIM bóc đúng). Dữ liệu cũ không đổi (khóa `slab_holes` chỉ lưu khi có lỗ). **Chưa xác minh trong SketchUp thật:** dựng sàn có lỗ chạm mép tấm hoặc chia tấm làm hai (chỗ khuyết ở mép).
 
 **0.30.0-beta.6 (đợt H5d, phần 2): xà gồ.** Tùy chọn của mái **một dốc** và **hai dốc** (bảng Tầng → nút Mái → tick "Xà gồ"): chọn **tiết diện** (40 × 80, 50 × 100, 50 × 120, 60 × 120 mm; mặc định 50 × 100) và **khoảng cách** tối đa theo mặt dốc (600, 800, 1000 mm; mặc định 800). Xà gồ là phần tử BIM thật (khối 3D, tag S. BEAM, loại "Xà gồ 50×100", vật liệu gỗ mặc định): chạy **song song đường đồng mức** (song song nóc), nằm **dưới tấm mái** (mặt trên chạm mặt dưới tấm mái), dài **suốt tấm kể cả phần chìa**; số lượng tự động, chia đều theo mặt dốc (không vượt khoảng cách đã chọn), xà gồ đầu và cuối cách mép tấm nửa bề rộng. Mặt bằng vẽ **tim xà gồ nét đứt mảnh**; mặt cắt vẽ xà gồ màu vàng sẫm, chưa hatch, chưa chọn được trong SketchUp. Mái bốn dốc, mái bằng và mái theo đường bao không có xà gồ. Chưa thử trong SketchUp thật.
 
@@ -28,7 +30,7 @@ Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) th
 **0.29.0-beta.1: móng, mái, lỗ sàn cầu thang** (kế hoạch hoàn thiện `docs/vgd_structure/PLAN.md` mục 13).
 - **Móng đơn:** bảng Tầng có cột **Móng đơn**: bật rồi nhập dài × rộng × dày; mọi cột của tầng đó có một **đế móng** ngay dưới chân cột (tâm trùng tâm cột, cột xoay 90° thì đế đổi chiều, xoay góc khác thì đế xoay theo). Cách dùng: thêm một **tầng móng** dưới tầng trệt (ví dụ cao độ -1500, cán nền 0): cột của tầng móng là **cổ cột**, dầm của tầng móng là **giằng móng** (đỉnh giằng bằng mặt sàn trệt theo quy tắc dầm đã có). Đề xuất tự động cho tầng móng chỉ gồm cột và dầm. Đế chồng nhau hoặc nhỏ hơn cột thì cảnh báo. Tag S. FOOTING, BIM tính thể tích.
 - **Mái:** bảng Tầng có cột **Mái**: mái bằng, một dốc (hướng dốc lên ±X / ±Y), hai dốc (nóc song song X hoặc Y, ở giữa khung) bốn dốc (cùng độ dốc bốn phía) hoặc theo đường bao (đa giác lồi nối các giao điểm lưới, cùng độ dốc mọi cạnh), độ dốc, dày, chìa mái, cao độ chân mái so với cốt tầng. Mái phủ khung lưới (hoặc đường bao) (trục biên là mép mái) cộng phần chìa; mỗi tấm mái là khối kín dựng bằng mặt 3D. Tag A. ROOF, BIM tính diện tích nghiêng và thể tích. Tường thu hồi chỉ có ở mái một dốc và hai dốc. Chưa có mái theo đường bao lõm (chữ L, T), dốc riêng từng cạnh.
-- **Lỗ sàn cầu thang:** sàn tầng trên tự khoét lỗ đúng hình cầu thang của tầng dưới khi cầu thang nằm trọn trong một tấm sàn (diện tích sàn trừ lỗ); cầu thang vắt qua mép tấm sàn thì cảnh báo (hãy bỏ ô sàn đó hoặc vẽ sàn đa giác).
+- **Lỗ sàn cầu thang:** sàn tầng trên tự khoét lỗ đúng hình cầu thang của tầng dưới khi cầu thang nằm trọn trong một tấm sàn (diện tích sàn trừ lỗ); cầu thang vắt qua nhiều ô thì khoét từng ô (từ beta.7); chỉ cảnh báo khi tấm sàn bị khoét góc, là đa giác hoặc đã có lỗ chồng lên.
 - Mặt bằng vẽ đế móng (nét đứt xám) và viền mái (nét đứt cam); lớp hiển thị có thêm Móng, Mái. Dựng tất cả gồm cả móng và mái trong một bước hoàn tác. Bảng Tầng cuộn ngang thay vì bóp nhỏ ô nhập.
 
 **Cột mốc P1 đến P6, P4b-1, P4b-2, P4b-3 và P5b: tab Mặt bằng, phần tử tự do (kể cả xiên), liên kết SketchUp** (cửa sổ vẽ mặt bằng, giai đoạn 2, `docs/vgd_structure/PLAN.md` mục 12). **Xem, chọn, bắt điểm, đo, đường gióng và VẼ KẾT CẤU** (P3, kiểu Revit); dữ liệu ghi vào lựa chọn của tầng, muốn ra model vẫn bấm Dựng. Bố cục theo cửa sổ mặt bằng của VTBim: thanh trên (hoàn tác, Chọn và đo, Sửa, Bắt điểm, Xóa đường gióng, Hiển thị lớp, Vừa khung, ẩn / hiện Thuộc tính), **tab theo từng tầng**, cột công cụ bên trái chia nhóm (Thiết kế, Vẽ 2D, Ghi chú), bảng **Thuộc tính**, thanh trạng thái (gợi ý, tọa độ mm, tỉ lệ, ô gõ số). Canvas vẽ lưới trục, sàn, trần (mặc định ẩn), dầm, tường, cửa (có cánh mở), cột.
@@ -176,7 +178,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.30.0-beta.6.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.30.0-beta.7.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

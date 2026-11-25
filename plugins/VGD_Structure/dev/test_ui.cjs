@@ -392,6 +392,31 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   ok(JSON.stringify((await last('grid_preview')).levels[0].footing)==='{"l":1500,"w":1200,"h":500}','tắt móng băng và giật cấp: dữ liệu về đúng dạng cũ (chỉ l, w, h)');
   await page.uncheck('#footing-on');await wait(300);
   ok((await last('grid_preview')).levels[0].footing===undefined && (await page.locator('#levels-table tr:nth-child(2) button.footing-btn').innerText())==='Không','tắt móng: bỏ khóa footing khỏi dữ liệu');
+  // Lỗ kỹ thuật qua sàn của tầng (H6): thêm, sửa lùi, báo sớm lỗi, xóa; dữ liệu được Ruby chấp nhận
+  const holeRow=await page.locator('#levels-table tr').count();
+  const holeBtn=page.locator(`#levels-table tr:nth-child(${holeRow}) button.holes-btn`);
+  ok((await holeBtn.innerText())==='Không','bảng tầng: cột Lỗ sàn ghi Không');
+  await holeBtn.click();
+  ok(await page.locator('#level-holes-editor').isVisible() && /Chưa có lỗ kỹ thuật/.test(await page.locator('#holes-sum').innerText()),'bấm: mở hộp lỗ kỹ thuật, chưa có lỗ');
+  await page.locator('#add-hole').click();await wait(300);
+  let sh=(await last('grid_preview')).levels.slice(-1)[0].slab_holes;
+  const shId=sh && Object.keys(sh)[0];
+  ok(shId && /^sh_[0-9a-f]{8}$/.test(shId) && sh[shId].a==='1-A' && sh[shId].b==='2-B' && JSON.stringify(sh[shId].inset)==='{"l":100,"b":100,"r":100,"t":100}' && (await holeBtn.innerText())==='1 lỗ','thêm lỗ: gửi giao điểm 1-A và 2-B, lùi 100 mỗi cạnh, nút ghi 1 lỗ');
+  const vh=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vh.ok,'dữ liệu lỗ kỹ thuật được Ruby chấp nhận');
+  await page.locator('#level-holes-editor input[aria-label^="Lùi trái"]').fill('6000');await wait(300);
+  ok(/lùi mỗi cạnh phải từ 0 đến 5000/.test(await page.locator('#holes-sum').innerText()),'lùi ngoài khoảng: báo sớm đúng khoảng của Ruby');
+  await page.locator('#level-holes-editor input[aria-label^="Lùi trái"]').fill('2000');await page.locator('#level-holes-editor input[aria-label^="Lùi phải"]').fill('2200');await wait(300);
+  ok(/nhỏ hơn 100 mm/.test(await page.locator('#holes-sum').innerText()),'lùi làm lỗ nhỏ hơn 100 mm: báo sớm');
+  await page.locator('#level-holes-editor input[aria-label^="Lùi trái"]').fill('100');await page.locator('#level-holes-editor input[aria-label^="Lùi phải"]').fill('100');
+  await page.locator('#level-holes-editor select.hole-b').selectOption('2-A');await wait(300);
+  ok(/nằm chéo nhau/.test(await page.locator('#holes-sum').innerText()),'hai giao điểm cùng hàng: báo phải nằm chéo nhau');
+  await page.locator('#level-holes-editor select.hole-b').selectOption('2-C');await wait(300);
+  sh=(await last('grid_preview')).levels.slice(-1)[0].slab_holes;
+  ok(sh[shId].b==='2-C' && sh[shId].inset.l===100 && !(await page.locator('#holes-sum').getAttribute('class')).includes('error'),'đổi giao điểm 2 sang 2-C: hợp lệ, lùi trái về 100');
+  await page.locator('#level-holes-editor button.del').click();await wait(300);
+  ok((await last('grid_preview')).levels.slice(-1)[0].slab_holes===undefined && (await holeBtn.innerText())==='Không','xóa lỗ: bỏ khóa slab_holes khỏi dữ liệu');
+  await holeBtn.click();
   // Mái của tầng: chọn kiểu, hướng, độ dốc; dữ liệu được Ruby chấp nhận
   const lastRow=await page.locator('#levels-table tr').count();
   const roofBtn=page.locator(`#levels-table tr:nth-child(${lastRow}) button.roof-btn`);

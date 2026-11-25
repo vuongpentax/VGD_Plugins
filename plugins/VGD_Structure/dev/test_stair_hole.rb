@@ -1,5 +1,5 @@
 # Test khoét lỗ sàn cho cầu thang (core/slab_plan.rb stair_holes!): cầu thang tầng dưới nằm trọn trong một tấm sàn tầng trên thì sàn có lỗ đúng hình cầu thang,
-# diện tích trừ lỗ, xem trước và dựng có lỗ; cầu thang vắt qua mép tấm thì chỉ cảnh báo. Chạy: ruby dev/test_stair_hole.rb
+# diện tích trừ lỗ, xem trước và dựng có lỗ; cầu thang vắt qua mép tấm thì khoét từng tấm. Chạy: ruby dev/test_stair_hole.rb
 require 'json'
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
@@ -29,7 +29,7 @@ ok('diện tích sàn trừ diện tích lỗ', (item[:area] - (S::Geometry.area
 ok('không cảnh báo khi khoét được', plan[:issues].none? { |m| m.include?('Cầu thang') })
 cells = S::Grid.cells(S::State.default['grid']).each_with_object({}) { |c, h| h[c[:ref]] = {} }
 cp = slab_plan(state(cells))
-ok('cầu thang vắt qua nhiều ô sàn: không khoét, cảnh báo rõ', cp[:items].none? { |i| i[:stair_holes] } && cp[:issues].any? { |m| m.include?('st_00000001') && m.include?('chưa khoét') })
+ok('cầu thang vắt qua nhiều ô sàn: khoét từng ô (chi tiết trong test_slab_holes.rb), không cảnh báo', cp[:items].count { |i| i[:stair_holes] } == 2 && cp[:issues].none? { |m| m.include?('Cầu thang') })
 none = slab_plan(state('fs_00000001' => {'free' => {'poly' => [[10_000, 10_000], [12_000, 10_000], [12_000, 12_000], [10_000, 12_000]]}}))
 ok('tấm sàn không chạm cầu thang: không lỗ, không cảnh báo', none[:items][0][:holes].empty? && none[:issues].none? { |m| m.include?('Cầu thang') })
 lvl1 = S::State.normalize!(state('fs_00000001' => {'free' => {'poly' => BIG}}))

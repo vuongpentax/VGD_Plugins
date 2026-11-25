@@ -33,6 +33,10 @@ module VGD
       NOTE_TYPES = %w[line poly circle arc text dim mark].freeze
       SECTION_ID = /\Asc_[0-9a-f]{8}\z/ # mã mặt cắt
       MAX_SECTIONS = 30
+      SLAB_HOLE_ID = /\Ash_[0-9a-f]{8}\z/ # mã lỗ kỹ thuật của sàn
+      MAX_SLAB_HOLES = 30
+      SLAB_HOLE_INSET = (0.0..5000.0) # mm, lùi mỗi cạnh (trái l, dưới b, phải r, trên t) vào trong hình chữ nhật 2 giao điểm
+      MIN_SLAB_HOLE = 100.0 # cạnh lỗ nhỏ nhất sau khi lùi (mm)
       STAIR_ID = /\Ast_[0-9a-f]{8}\z/ # mã cầu thang (cầu thang tự do)
       MAX_STAIRS = 50
       SECTION_DEPTH = (100.0..100_000.0)
@@ -108,10 +112,12 @@ module VGD
           notes = notes!(level['notes'], name)
           sections = sections!(level['sections'], name)
           stairs = stairs!((raw || {})['stairs'], stair_types, name)
-          removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k + dropped_o
+          slab_holes, dropped_h = slab_holes!(level['slab_holes'], grid, name)
+          removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k + dropped_o + dropped_h
           entry = {'id' => id, 'name' => name, 'elevation' => elevation, 'screed' => screed.to_f.round(1), 'slab_thickness' => slab.to_f.round(1), 'ceiling_height' => ceiling_height.to_f.round(1), 'ceiling_thickness' => ceiling_thickness.to_f.round(1),
            'column_type' => type_id, 'beam_type' => beam_type, 'wall_type' => wall_type, 'picks' => {'columns' => columns, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings, 'openings' => openings, 'stairs' => stairs}, 'notes' => notes}
           entry['sections'] = sections unless sections.empty?
+          entry['slab_holes'] = slab_holes unless slab_holes.empty?
           entry['floor_layers'] = floor_layers unless floor_layers.empty?
           entry['ceiling_layers'] = ceiling_layers unless ceiling_layers.empty?
           footing = footing!(level['footing'], name)
@@ -418,6 +424,49 @@ module VGD
           end
           out[ref] = {'type' => type, 'shape' => shape, 'free' => free}
         end
+      end
+
+      # Lỗ kỹ thuật của sàn tầng (H6): {mã => {'a' => giao điểm, 'b' => giao điểm chéo, 'inset' => {'l','b','r','t'}}}. Hình chữ nhật nằm giữa hai giao điểm lưới,
+      # lùi vào trong mỗi cạnh theo `inset` (mm). Giao điểm không còn trên lưới thì bỏ lỗ (đếm vào số mục bị bỏ). Trả về [lỗ, số lỗ bị bỏ].
+      def self.slab_holes!(raw, grid, level_name)
+        return [{}, 0] if raw.nil?
+        raise Error, "Tầng “#{level_name}”: dữ liệu lỗ kỹ thuật của sàn không hợp lệ." unless raw.is_a?(Hash)
+        raise Error, "Tầng “#{level_name}”: quá nhiều lỗ kỹ thuật (tối đa #{MAX_SLAB_HOLES})." if raw.size > MAX_SLAB_HOLES
+        nodes = Grid.intersections(grid).each_with_object({}) { |n, h| h[n[:ref]] = n }
+        dropped = 0
+        out = raw.each_with_object({}) do |(id, hole), result|
+          raise Error, "Tầng “#{level_name}”: mã lỗ kỹ thuật #{id.inspect} không hợp lệ." unless id.is_a?(String) && id.match?(SLAB_HOLE_ID)
+          who = "Tầng “#{level_name}”: lỗ kỹ thuật #{id}"
+          raise Error, "#{who} không hợp lệ." unless hole.is_a?(Hash) && (hole.keys - %w[a b inset]).empty?
+          a, b = hole['a'], hole['b']
+          raise Error, "#{who}: cần hai giao điểm lưới (a, b)." unless a.is_a?(String) && b.is_a?(String)
+          inset = slab_hole_inset!(hole['inset'], who)
+          unless nodes.key?(a) && nodes.key?(b)
+            dropped += 1
+            next
+          end
+          raise Error, "#{who}: hai giao điểm phải nằm chéo nhau (khác cả trục đứng lẫn trục ngang)." if nodes[a][:xn] == nodes[b][:xn] || nodes[a][:yn] == nodes[b][:yn]
+          raise Error, "#{who}: sau khi lùi, lỗ nhỏ hơn #{MIN_SLAB_HOLE.to_i} mm." unless slab_hole_box(nodes[a], nodes[b], inset)
+          result[id] = {'a' => a, 'b' => b, 'inset' => inset}
+        end
+        [out, dropped]
+      end
+
+      def self.slab_hole_inset!(raw, who)
+        raise Error, "#{who}: lùi phải là {l, b, r, t} (mm)." unless raw.nil? || (raw.is_a?(Hash) && (raw.keys - %w[l b r t]).empty?)
+        %w[l b r t].to_h do |k|
+          v = (raw || {}).fetch(k, 0)
+          raise Error, "#{who}: lùi cạnh #{k} từ #{SLAB_HOLE_INSET.min.to_i} đến #{SLAB_HOLE_INSET.max.to_i} mm." unless number?(v) && SLAB_HOLE_INSET.cover?(v.to_f)
+          [k, v.to_f.round(1)]
+        end
+      end
+
+      # Hình chữ nhật của lỗ kỹ thuật: [[x0, y0], [x1, y1]] sau khi lùi, hoặc nil nếu một cạnh nhỏ hơn MIN_SLAB_HOLE. na, nb: giao điểm của Grid.intersections.
+      def self.slab_hole_box(na, nb, inset)
+        x0, x1 = [na[:x], nb[:x]].minmax
+        y0, y1 = [na[:y], nb[:y]].minmax
+        box = [[x0 + inset['l'], y0 + inset['b']], [x1 - inset['r'], y1 - inset['t']]]
+        box[1][0] - box[0][0] >= MIN_SLAB_HOLE && box[1][1] - box[0][1] >= MIN_SLAB_HOLE ? box.map { |p| p.map { |v| v.round(2) } } : nil
       end
 
       def self.sections!(raw, level_name)

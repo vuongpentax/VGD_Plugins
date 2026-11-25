@@ -39,6 +39,7 @@ module VGD
           items << Plates.free_item(ref, free, thickness: thickness, z_top: z_top, z_bottom: z_bottom)
         end
         stair_holes!(items, below_stairs(grid, types, beam_types, wall_types, stair_types, opening_types, levels, level_id, issues), issues)
+        tech_holes!(items, grid, level, issues)
         unless (level['floor_layers'] || []).empty? # sàn kết cấu rồi các lớp hoàn thiện xếp LÊN trên (danh sách của tầng đi từ trên xuống nên đảo lại)
           layers = [{fn: 'structure', t: thickness, material: '', color: WallTypes::DEFAULT_COLORS['structure']}] + LayerList.for_plan(level['floor_layers']).reverse
           items.each { |i| i[:layers] = layers }
@@ -74,25 +75,58 @@ module VGD
         []
       end
 
-      # Khoét lỗ cầu thang: cầu thang nằm TRỌN trong một tấm sàn (không chạm mép, không chạm lỗ có sẵn) thì thêm lỗ đúng hình cầu thang và trừ diện tích;
-      # cầu thang vắt qua mép tấm hoặc nằm giữa hai tấm thì chưa khoét được (không cắt đa giác) nên chỉ CẢNH BÁO.
+      MIN_CUT_AREA = 100.0 # mm2: phần lỗ lọt vào tấm sàn nhỏ hơn mức này coi như chỉ chạm mép, bỏ qua
+
+      # Khoét lỗ cầu thang của tầng dưới đi lên qua sàn này: cầu thang vắt qua nhiều tấm thì khoét từng tấm phần nằm trong tấm đó (cut_holes!).
       def self.stair_holes!(items, stairs, issues)
-        stairs.each do |ref, poly|
-          host = items.find do |i|
-            ring = Plates.ring_of(i)
-            holes = i[:holes] || []
-            poly.all? { |v| Geometry.inside_ring?(v, ring) && !Geometry.point_on_ring?(v, ring) } &&
-              poly.each_with_index.none? { |a, k| ring.each_with_index.any? { |c, j| Geometry.segments_cross?(a, poly[(k + 1) % poly.size], c, ring[(j + 1) % ring.size]) } } &&
-              holes.none? { |h| Geometry.regions_overlap?(poly, [], h, []) }
-          end
-          if host
-            host[:holes] = (host[:holes] || []) + [poly]
-            host[:area] = (host[:area] - Geometry.area(poly) / 1_000_000.0).round(3)
-            (host[:stair_holes] ||= []) << ref
-          elsif items.any? { |i| Geometry.regions_overlap?(Plates.ring_of(i), i[:holes] || [], poly, []) }
-            issues << "Cầu thang #{ref} tầng dưới vắt qua mép tấm sàn: chưa khoét được lỗ sàn, hãy bỏ ô sàn đó hoặc vẽ sàn đa giác có lỗ."
-          end
+        cut_holes!(items, stairs, :stair_holes, 'Cầu thang', issues)
+      end
+
+      # Lỗ kỹ thuật của tầng (level['slab_holes']): hình chữ nhật theo 2 giao điểm lưới + lùi mỗi cạnh, khoét từng tấm như cầu thang; lỗ không rơi vào tấm nào thì báo.
+      def self.tech_holes!(items, grid, level, issues)
+        nodes = Grid.intersections(grid).each_with_object({}) { |n, h| h[n[:ref]] = n }
+        shapes = (level['slab_holes'] || {}).filter_map do |id, hole|
+          box = nodes.key?(hole['a']) && nodes.key?(hole['b']) && Levels.slab_hole_box(nodes[hole['a']], nodes[hole['b']], hole['inset'])
+          box && [id, [box[0], [box[1][0], box[0][1]], box[1], [box[0][0], box[1][1]]]]
         end
+        cut_holes!(items, shapes, :tech_holes, 'Lỗ kỹ thuật', issues, warn_unused: true)
+      end
+
+      # Cắt hình `poly` theo từng tấm: phần nằm trong hộp bao của tấm thành một lỗ của tấm đó (lỗ có thể chạm mép tấm, khi đó thành chỗ khuyết ở mép).
+      # Phần cắt không nằm trọn trong tấm (tấm bị khoét góc, tấm đa giác, chồng lỗ khác) thì không khoét mà CẢNH BÁO. Lỗ phủ hết một tấm thì bỏ tấm đó (cảnh báo).
+      # Trừ diện tích và ghi mã vào item[key]. Hình chưa chạm tấm nào: chỉ báo khi warn_unused.
+      def self.cut_holes!(items, shapes, key, label, issues, warn_unused: false)
+        shapes.each do |ref, poly|
+          used = false
+          items.each do |item|
+            piece = Geometry.clip_to_box(poly, item[:min], item[:max])
+            next if piece.size < 3 || Geometry.area(piece) < MIN_CUT_AREA
+            used = true
+            unless Geometry.simple_ring?(piece) && fits_in?(item, piece)
+              issues << "#{label} #{ref} cắt qua sàn #{item[:ref]} nhưng chưa khoét được lỗ (sàn bị khoét góc, là đa giác hoặc đã có lỗ chồng lên): hãy bỏ ô sàn đó hoặc vẽ sàn đa giác có lỗ."
+              next
+            end
+            item[:holes] = (item[:holes] || []) + [piece]
+            item[:area] = (item[:area] - Geometry.area(piece) / 1_000_000.0).round(3)
+            (item[key] ||= []) << ref
+          end
+          issues << "#{label} #{ref} không nằm trên tấm sàn nào của tầng." if warn_unused && !used
+        end
+        void = items.select { |i| i[:area] <= 0.0005 }
+        void.each { |i| issues << "Sàn #{i[:ref]} bị lỗ khoét trùm hết, bỏ qua." }
+        items.reject! { |i| void.include?(i) }
+      end
+
+      # Hình `piece` nằm trọn trong miền của tấm (vòng ngoài, trừ lỗ có sẵn): đỉnh và trung điểm cạnh không nằm ngoài vòng, không cắt cạnh vòng,
+      # không có đỉnh vòng nào chui vào trong hình, không chồng lỗ có sẵn.
+      def self.fits_in?(item, piece)
+        ring = Plates.ring_of(item)
+        on_or_in = ->(pt) { Geometry.inside_ring?(pt, ring) || Geometry.point_on_ring?(pt, ring) }
+        mids = piece.each_with_index.map { |a, k| b = piece[(k + 1) % piece.size]; [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0] }
+        (piece + mids).all?(&on_or_in) &&
+          piece.each_with_index.none? { |a, k| ring.each_with_index.any? { |c, j| Geometry.segments_cross?(a, piece[(k + 1) % piece.size], c, ring[(j + 1) % ring.size]) } } &&
+          ring.none? { |v| Geometry.inside_ring?(v, piece) } &&
+          (item[:holes] || []).none? { |h| Geometry.regions_overlap?(piece, [], h, []) }
       end
 
       # Cột, dầm, tường TỰ DO của tầng dưới nằm trong tấm sàn: sàn chưa lùi theo chúng nên chỉ báo.
