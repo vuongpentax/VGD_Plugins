@@ -1,8 +1,10 @@
-# VGD Structure 0.30.0-beta.7
+# VGD Structure 0.30.0-beta.8
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
+
+**0.30.0-beta.8 (đợt H7): vách kính.** Phần tử mới **vách kính khung nhôm** (bảng Tầng → nút **Vách kính** → "+ Thêm vách kính"): mỗi vách nằm trên **một nhịp lưới**, đứng trên mặt sàn kết cấu (như tường); bạn chọn **nhịp**, nhập **chiều cao** (500 đến 6000 mm, mặc định 2800) và **bề rộng tối đa một tấm kính** (300 đến 3000 mm, mặc định 1200). Số tấm tự chia đều sao cho mỗi tấm không rộng quá giới hạn. **Khung nhôm** (thanh ngang đáy và đỉnh, hai thanh đứng biên, các thanh đứng giữa; thanh 50 × 80 mm) và **tấm kính** (dày 8 mm) dựng thành **hai nhóm riêng** với vật liệu riêng (nhôm, kính trong suốt) để VGD BIM bóc tách riêng: khung theo chiều dài thanh × tiết diện, kính theo diện tích × bề dày. Dựng bằng nút Dựng tất cả (tầng trên cùng không có vách kính, như cột, dầm, tường). Mỗi nhịp tối đa một vách; vách trùng nhịp đã chọn tường thì cảnh báo; mặt bằng vẽ dải xanh theo nhịp (lớp "Vách kính"). Kích thước khung và kính là hằng số cố định (chưa chỉnh được). **Lan can liên tục chưa làm** (chủ dự án hẹn làm sau). Dữ liệu cũ không đổi (khóa `glass_walls` chỉ lưu khi có vách). **Chưa xác minh:** dựng trong SketchUp thật (mặt khung có lỗ, vật liệu trong suốt); VGD BIM chưa kiểm tra cách đọc nhóm kind window có part glass_frame / glass.
 
 **0.30.0-beta.7 (đợt H6): lỗ sàn tổng quát.** (1) **Cầu thang vắt qua nhiều ô sàn** nay được khoét tự động **từng ô**: phần cầu thang lọt vào mỗi tấm sàn thành một lỗ của tấm đó (trước đây chỉ cảnh báo); lỗ chạm mép tấm thì thành chỗ khuyết ở mép. Tấm sàn bị khoét góc theo cột, sàn đa giác hoặc đã có lỗ chồng lên thì vẫn chỉ cảnh báo. (2) **Lỗ kỹ thuật** (hộp kỹ thuật, ống): bảng Tầng → nút **Lỗ sàn** → "+ Thêm lỗ kỹ thuật"; mỗi lỗ là **hình chữ nhật giữa hai giao điểm lưới chéo nhau** (ví dụ 2-B và 3-C), **lùi vào trong** theo từng cạnh (trái, dưới, phải, trên; mm, 0 đến 5000; lỗ sau khi lùi mỗi cạnh ≥ 100 mm; tối đa 30 lỗ mỗi tầng). Lỗ trải qua nhiều ô sàn thì khoét từng ô; lỗ không rơi vào tấm sàn nào thì cảnh báo; lỗ phủ hết một ô thì ô sàn đó bị bỏ (có cảnh báo). Diện tích sàn đã trừ lỗ (BIM bóc đúng). Dữ liệu cũ không đổi (khóa `slab_holes` chỉ lưu khi có lỗ). **Chưa xác minh trong SketchUp thật:** dựng sàn có lỗ chạm mép tấm hoặc chia tấm làm hai (chỗ khuyết ở mép).
 
@@ -178,7 +180,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.30.0-beta.7.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.30.0-beta.8.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

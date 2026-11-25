@@ -192,7 +192,7 @@ module Sketchup
   end
   class Material
     attr_reader :name
-    attr_accessor :color
+    attr_accessor :color, :alpha
     def initialize(name); @name = name; end
     def valid?; true; end
   end

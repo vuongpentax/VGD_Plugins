@@ -4,7 +4,7 @@ module VGD
     # có bất kỳ lỗi nào thì không dựng gì cả và báo rõ loại nào, tầng nào lỗi. Chưa xác minh trong SketchUp thật.
     module AllBuilder
       MAX_TOTAL = 20_000
-      KINDS = %w[columns footings beams walls openings slabs ceilings stairs roofs].freeze
+      KINDS = %w[columns footings beams walls openings slabs ceilings stairs roofs glass_walls].freeze
       LABELS = Checker::KIND_LABELS_ALL
       Error = Class.new(ArgumentError)
 
@@ -20,6 +20,7 @@ module VGD
             case kind
             when 'footings' then l['footing'] && (!l['picks']['columns'].empty? || (l['footing']['strip'] && !l['picks']['walls'].empty?))
             when 'roofs' then l['roof']
+            when 'glass_walls' then !(l['glass_walls'] || {}).empty?
             else !l['picks'][kind].empty?
             end
           end
@@ -42,6 +43,7 @@ module VGD
                  when 'stairs' then StairBuilder.prepare(model, raw_state, ids)
                  when 'footings' then FootingBuilder.prepare(model, raw_state, ids)
                  when 'roofs' then RoofBuilder.prepare(model, raw_state, ids)
+                 when 'glass_walls' then GlassWallBuilder.prepare(model, raw_state, ids)
                  else PlateBuilder.prepare(model, raw_state, ids, kind)
                  end]
         rescue ArgumentError => error
@@ -81,6 +83,7 @@ module VGD
                       when 'stairs' then StairBuilder.apply(model, c)
                       when 'footings' then FootingBuilder.apply(model, c)
                       when 'roofs' then RoofBuilder.apply(model, c)
+                      when 'glass_walls' then GlassWallBuilder.apply(model, c)
                       else PlateBuilder.apply(model, c)
                       end
         end

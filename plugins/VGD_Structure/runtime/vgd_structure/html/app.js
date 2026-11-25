@@ -44,14 +44,14 @@
   }
   function toRubyLevel(l) {
     return {id: l.id, name: l.name, elevation: l.elevation, screed: l.screed, slab_thickness: l.slab, column_type: l.columnType || null, beam_type: l.beamType || null, wall_type: l.wallType || null, ceiling_height: l.ceilingHeight, ceiling_thickness: l.ceilingThickness,
-            floor_layers: (l.floorLayers || []).map(cleanLayer), ceiling_layers: (l.ceilingLayers || []).map(cleanLayer), footing: l.footing ? footingToRuby(l.footing) : undefined, roof: l.roof ? JSON.parse(JSON.stringify(l.roof)) : undefined, slab_holes: Object.keys(l.slabHoles || {}).length ? JSON.parse(JSON.stringify(l.slabHoles)) : undefined,
+            floor_layers: (l.floorLayers || []).map(cleanLayer), ceiling_layers: (l.ceilingLayers || []).map(cleanLayer), footing: l.footing ? footingToRuby(l.footing) : undefined, roof: l.roof ? JSON.parse(JSON.stringify(l.roof)) : undefined, slab_holes: Object.keys(l.slabHoles || {}).length ? JSON.parse(JSON.stringify(l.slabHoles)) : undefined, glass_walls: Object.keys(l.glassWalls || {}).length ? JSON.parse(JSON.stringify(l.glassWalls)) : undefined,
             picks: {columns: clonePicks(l.picks), beams: clonePicks(l.beamPicks), walls: clonePicks(l.wallPicks), slabs: clonePicks(l.slabPicks), ceilings: clonePicks(l.ceilingPicks), openings: clonePicks(l.openingPicks), stairs: clonePicks(l.stairPicks || {})}, notes: JSON.parse(JSON.stringify(l.notes || {})), sections: JSON.parse(JSON.stringify(l.sections || {}))};
   }
   function cleanLayer(l) { var o = {fn: l.fn, t: l.t, material: l.material || ''}; if (l.color) o.color = l.color; return o; }
   function clonePicks(picks) { var out = {}; Object.keys(picks).forEach(function (k) { out[k] = JSON.parse(JSON.stringify(picks[k])); }); return out; } // sao sâu: phần tử tự do có khóa 'free' lồng nhau
   function fromRubyLevel(l) {
     return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab_thickness, screed: l.screed === undefined ? 50 : l.screed, columnType: l.column_type, beamType: l.beam_type || null, wallType: l.wall_type || null, ceilingHeight: l.ceiling_height, ceilingThickness: l.ceiling_thickness,
-            footing: l.footing ? footingFromRuby(l.footing) : null, roof: l.roof ? JSON.parse(JSON.stringify(l.roof)) : null, slabHoles: JSON.parse(JSON.stringify(l.slab_holes || {})),
+            footing: l.footing ? footingFromRuby(l.footing) : null, roof: l.roof ? JSON.parse(JSON.stringify(l.roof)) : null, slabHoles: JSON.parse(JSON.stringify(l.slab_holes || {})), glassWalls: JSON.parse(JSON.stringify(l.glass_walls || {})),
             floorLayers: (l.floor_layers || []).map(function (x) { return {fn: x.fn, t: x.t, material: x.material || '', color: x.color || null}; }), ceilingLayers: (l.ceiling_layers || []).map(function (x) { return {fn: x.fn, t: x.t, material: x.material || '', color: x.color || null}; }),
             picks: clonePicks((l.picks && l.picks.columns) || {}), beamPicks: clonePicks((l.picks && l.picks.beams) || {}), wallPicks: clonePicks((l.picks && l.picks.walls) || {}),
             stairPicks: clonePicks((l.picks && l.picks.stairs) || {}), slabPicks: clonePicks((l.picks && l.picks.slabs) || {}), ceilingPicks: clonePicks((l.picks && l.picks.ceilings) || {}),
@@ -197,7 +197,7 @@
   }
   function renderLevels() {
     var table = $('levels-table'); table.replaceChildren();
-    heads(table, ['Tên tầng', 'Cao độ sàn hoàn thiện (mm)', 'Cán nền (mm)', 'Dày sàn (mm)', 'Cao trần (mm)', 'Dày trần (mm)', 'Loại cột mặc định', 'Loại dầm mặc định', 'Loại tường mặc định', 'Lớp sàn', 'Lớp trần', 'Móng đơn', 'Mái', 'Lỗ sàn', 'Ghi chú', '']);
+    heads(table, ['Tên tầng', 'Cao độ sàn hoàn thiện (mm)', 'Cán nền (mm)', 'Dày sàn (mm)', 'Cao trần (mm)', 'Dày trần (mm)', 'Loại cột mặc định', 'Loại dầm mặc định', 'Loại tường mặc định', 'Lớp sàn', 'Lớp trần', 'Móng đơn', 'Mái', 'Lỗ sàn', 'Vách kính', 'Ghi chú', '']);
     state.levels.forEach(function (l, i) {
       var row = table.insertRow(), sel = document.createElement('select'), del = document.createElement('button');
       row.insertCell().appendChild(textCell(l.name, function (v) { l.name = v; renderLevelSelects(); }, 'Tên tầng ' + (i + 1)));
@@ -253,12 +253,17 @@
       hbtn.setAttribute('aria-expanded', String(openHoles === l.id));
       hbtn.onclick = function () { openHoles = openHoles === l.id ? null : l.id; renderLevels(); };
       row.insertCell().appendChild(hbtn);
+      var gbtn = document.createElement('button'); gbtn.type = 'button'; gbtn.className = 'layers-btn glass-btn';
+      gbtn.textContent = glassLabel(l); gbtn.title = 'Vách kính khung nhôm trên nhịp lưới của tầng này: chọn nhịp, nhập chiều cao, chia tấm theo bề rộng tối đa';
+      gbtn.setAttribute('aria-expanded', String(openGlass === l.id));
+      gbtn.onclick = function () { openGlass = openGlass === l.id ? null : l.id; renderLevels(); };
+      row.insertCell().appendChild(gbtn);
       var note = row.insertCell(); note.className = 'note'; note.textContent = levelNote(i);
       del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.title = 'Xóa tầng này'; del.disabled = state.levels.length <= 1;
       del.onclick = function () { removeLevel(l.id); };
       row.insertCell().appendChild(del);
     });
-    renderTypes(); renderBeamTypes(); renderWallTypes(); renderOpeningTypes(); renderLevelLayers(); renderLevelFooting(); renderLevelRoof(); renderLevelHoles();
+    renderTypes(); renderBeamTypes(); renderWallTypes(); renderOpeningTypes(); renderLevelLayers(); renderLevelFooting(); renderLevelRoof(); renderLevelHoles(); renderLevelGlass();
   }
   // ---- Mái của tầng: khoảng khớp Levels::ROOF_* ở Ruby ----
   var openRoof = null, ROOF_SHAPES = [['flat', 'Mái bằng'], ['shed', 'Một dốc'], ['gable', 'Hai dốc'], ['hip', 'Bốn dốc'], ['outline', 'Theo đường bao']], ROOF_DIRS = {shed: [['x+', 'Dốc lên theo +X'], ['x-', 'Dốc lên theo -X'], ['y+', 'Dốc lên theo +Y'], ['y-', 'Dốc lên theo -Y']], gable: [['x', 'Nóc song song trục X'], ['y', 'Nóc song song trục Y']]};
@@ -388,6 +393,61 @@
     add.onclick = function () {
       var g = gridPoints(); holes[rid('sh_')] = {a: g.xs[0].name + '-' + g.ys[0].name, b: g.xs[1].name + '-' + g.ys[1].name, inset: {l: 100, b: 100, r: 100, t: 100}};
       renderLevels(); changed();
+    };
+    box.appendChild(add); box.appendChild(sum); check();
+  }
+  // ---- Vách kính của tầng (H7): chọn nhịp lưới, cao, bề rộng tối đa một tấm; khoảng khớp Levels::GLASS_* ở Ruby. Khung nhôm và tấm kính do Ruby tính (GlassWallPlan). ----
+  var openGlass = null, GLASS_MAX = 40, GLASS_HEIGHT = [500, 6000], GLASS_PANE = [300, 3000];
+  function glassLabel(l) { var n = Object.keys(l.glassWalls || {}).length; return n ? n + ' vách' : 'Không'; }
+  function spanChoices() {
+    var g = gridPoints(), out = [];
+    g.ys.forEach(function (ay) { for (var i = 0; i + 1 < g.xs.length; i++) out.push(['x:' + ay.name + ':' + g.xs[i].name + '-' + g.xs[i + 1].name, 'Trục ' + ay.name + ': ' + g.xs[i].name + '–' + g.xs[i + 1].name + ' (' + (g.xs[i + 1].offset - g.xs[i].offset) + ' mm)']); });
+    g.xs.forEach(function (ax) { for (var i = 0; i + 1 < g.ys.length; i++) out.push(['y:' + ax.name + ':' + g.ys[i].name + '-' + g.ys[i + 1].name, 'Trục ' + ax.name + ': ' + g.ys[i].name + '–' + g.ys[i + 1].name + ' (' + (g.ys[i + 1].offset - g.ys[i].offset) + ' mm)']); });
+    return out;
+  }
+  function renderLevelGlass() {
+    var box = $('level-glass-editor'); box.replaceChildren();
+    var l = openGlass && state.levels.filter(function (x) { return x.id === openGlass; })[0];
+    box.hidden = !l; if (!l) return;
+    var walls = l.glassWalls || (l.glassWalls = {}), ids = Object.keys(walls), choices = spanChoices();
+    var head = document.createElement('div'); head.className = 'layers-head';
+    head.textContent = 'Vách kính của “' + l.name + '”: mỗi vách nằm trên một nhịp lưới, đứng trên mặt sàn kết cấu. Khung nhôm (thanh ngang đáy và đỉnh, thanh đứng biên và giữa) và các tấm kính dựng thành hai nhóm riêng để BIM bóc tách; số tấm tự chia sao cho mỗi tấm không rộng quá giới hạn.';
+    box.appendChild(head);
+    var sum = document.createElement('div'); sum.className = 'layers-sum'; sum.id = 'glass-sum';
+    var check = function () {
+      var used = {}, msgs = [];
+      ids.forEach(function (id, i) {
+        var w = walls[id];
+        if (used[w.span]) msgs.push('Vách ' + (i + 1) + ': nhịp đã có vách kính khác.'); used[w.span] = true;
+        if (!(w.height >= GLASS_HEIGHT[0] && w.height <= GLASS_HEIGHT[1])) msgs.push('Vách ' + (i + 1) + ': cao từ ' + GLASS_HEIGHT[0] + ' đến ' + GLASS_HEIGHT[1] + ' mm.');
+        if (!(w.pane_max >= GLASS_PANE[0] && w.pane_max <= GLASS_PANE[1])) msgs.push('Vách ' + (i + 1) + ': bề rộng tối đa một tấm kính từ ' + GLASS_PANE[0] + ' đến ' + GLASS_PANE[1] + ' mm.');
+        if (!choices.some(function (c) { return c[0] === w.span; })) msgs.push('Vách ' + (i + 1) + ': nhịp không còn trên lưới (vách sẽ bị bỏ).');
+      });
+      sum.textContent = msgs.length ? msgs.join(' ') : ids.length ? 'Vách trùng nhịp đã chọn tường thì chồng nhau (có cảnh báo khi kiểm tra). Dựng bằng nút Dựng tất cả.' : 'Chưa có vách kính.';
+      sum.className = 'layers-sum' + (msgs.length ? ' error' : '');
+      var b = $('levels-table').querySelectorAll('.glass-btn')[state.levels.indexOf(l)]; if (b) b.textContent = glassLabel(l);
+    };
+    if (ids.length) {
+      var tbl = document.createElement('table'); tbl.className = 'axes'; box.appendChild(tbl);
+      heads(tbl, ['Nhịp', 'Cao (mm)', 'Rộng tối đa một tấm (mm)', '']);
+      ids.forEach(function (id, i) {
+        var w = walls[id], row = tbl.insertRow(), sel = document.createElement('select');
+        sel.setAttribute('aria-label', 'Nhịp của vách kính ' + (i + 1) + ' ' + l.name); sel.className = 'glass-span';
+        (choices.some(function (c) { return c[0] === w.span; }) ? choices : [[w.span, w.span + ' (không còn)']].concat(choices)).forEach(function (c) { sel.append(new Option(c[1], c[0])); }); sel.value = w.span;
+        sel.onchange = function () { w.span = sel.value; check(); changed(); };
+        row.insertCell().appendChild(sel);
+        row.insertCell().appendChild(numCell(w.height, function (v) { w.height = v; check(); }, 'Cao vách kính ' + (i + 1) + ' ' + l.name));
+        row.insertCell().appendChild(numCell(w.pane_max, function (v) { w.pane_max = v; check(); }, 'Rộng tối đa một tấm kính ' + (i + 1) + ' ' + l.name));
+        var del = document.createElement('button'); del.type = 'button'; del.className = 'del'; del.textContent = '×'; del.title = 'Xóa vách kính này';
+        del.onclick = function () { delete walls[id]; renderLevels(); changed(); };
+        row.insertCell().appendChild(del);
+      });
+    }
+    var add = document.createElement('button'); add.type = 'button'; add.className = 'add'; add.id = 'add-glass'; add.textContent = '+ Thêm vách kính'; add.disabled = ids.length >= GLASS_MAX;
+    add.onclick = function () {
+      var used = ids.map(function (id) { return walls[id].span; }), free = choices.filter(function (c) { return used.indexOf(c[0]) < 0; })[0];
+      if (!free) { message('Mọi nhịp đã có vách kính.', true); return; }
+      walls[rid('gw_')] = {span: free[0], height: 2800, pane_max: 1200}; renderLevels(); changed();
     };
     box.appendChild(add); box.appendChild(sum); check();
   }
@@ -1090,7 +1150,7 @@
   function drawnList(kind) { return {columns: state.drawnLevels, beams: state.drawnBeamLevels, walls: state.drawnWallLevels, openings: state.drawnOpeningLevels, slabs: state.drawnSlabLevels, ceilings: state.drawnCeilingLevels, stairs: state.drawnStairLevels}[kind] || []; }
   function renderAllButtons() {
     var l = currentLevel();
-    var has = function (lv) { return ALL_KINDS.some(function (k) { return Object.keys(lv[k[1]]).length; }); };
+    var has = function (lv) { return ALL_KINDS.some(function (k) { return Object.keys(lv[k[1]]).length; }) || Object.keys(lv.glassWalls || {}).length > 0; }; // vách kính không có lựa chọn riêng nên tính thêm
     $('build-all-level').disabled = !state.previewOk || !has(l);
     $('build-all-levels').disabled = !state.previewOk || !state.levels.some(has);
   }

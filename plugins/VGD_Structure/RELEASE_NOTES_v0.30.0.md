@@ -9,6 +9,7 @@
 - **Mái trên mặt cắt (H5d phần 1, beta.5):** tấm mái bị cắt có nét cắt đậm, hatch bê tông và màu riêng trên mặt cắt và mặt đứng; bấm chỉ sáng đường viền (chưa chọn được trong SketchUp).
 - **Xà gồ (H5d phần 2, beta.6):** tùy chọn của mái một dốc và hai dốc; tiết diện (40×80, 50×100, 50×120, 60×120) và khoảng cách theo mặt dốc (600 / 800 / 1000 mm). Xà gồ là phần tử BIM thật (kind beam, loại "Xà gồ 50×100"), song song nóc, dưới tấm mái, dài suốt tấm kể cả chìa, số lượng tự động; mặt bằng vẽ tim nét đứt mảnh.
 - **Lỗ sàn tổng quát (H6, beta.7):** cầu thang vắt qua nhiều ô sàn được khoét tự động từng ô (trước đây chỉ cảnh báo). Thêm **lỗ kỹ thuật** chữ nhật theo hai giao điểm lưới chéo nhau + lùi mỗi cạnh (bảng Tầng → nút Lỗ sàn), khoét từng ô sàn; lỗ phủ hết ô thì bỏ ô đó, lỗ không trúng sàn nào thì cảnh báo. Tối đa 30 lỗ mỗi tầng.
+- **Vách kính (H7, beta.8):** vách khung nhôm trên một nhịp lưới (bảng Tầng → nút Vách kính): chọn nhịp, nhập cao và bề rộng tối đa một tấm kính; tự chia tấm. Khung nhôm (thanh 50×80) và tấm kính (dày 8 mm) là hai nhóm riêng, vật liệu riêng, để BIM bóc tách riêng. Lan can liên tục chưa làm.
 - Dữ liệu cũ không đổi (khóa mới chỉ lưu khi dùng). VGD BIM không cần sửa: thể tích móng băng, bậc tính như cột.
 
 Kiểm tra: test Ruby toàn bộ đạt (mới `dev/test_footing_strip.rb`, 41 kiểm tra), test giao diện 869 đạt (beta.3), test quy ước đạt. **Chưa thử trong SketchUp thật:** dựng móng băng / giật cấp, chỗ hở nhỏ cạnh đế cột hẹp hơn băng.

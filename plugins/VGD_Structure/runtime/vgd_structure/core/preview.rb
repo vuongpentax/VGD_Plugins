@@ -59,6 +59,12 @@ module VGD
           out[:roofs] = {level: roof[:level]['id'], z_base: roof[:z_base], ridge: roof[:ridge], issues: roof[:issues], count: roof[:items].size, gables: roof[:gables].size, purlins: roof[:purlins].map { |q| {ref: q[:ref], a: q[:line][0], b: q[:line][1]} },
                          items: roof[:items].map { |i| i.slice(:ref, :poly, :top, :slope, :shape, :area, :thickness) }}
         end
+        # Vách kính (tầng có khai báo): hai đầu nhịp, số tấm và kích thước, cùng nguồn GlassWallPlan với lúc dựng.
+        glass_level = Levels.find(levels, payload['level'] || levels.first['id'])
+        if glass_level && !(glass_level['glass_walls'] || {}).empty?
+          glass = GlassWallPlan.plan(grid, levels, glass_level['id'])
+          out[:glass_walls] = {level: glass_level['id'], issues: glass[:issues], count: glass[:items].size, items: glass[:items].map { |i| i.slice(:ref, :span, :a, :b, :min, :max, :length, :height, :count, :pane_w, :pane_h) }}
+        end
         # Đế móng (tầng có khai báo móng): cùng nguồn FootingPlan với lúc dựng.
         level_id = payload['level'] || levels.first['id']
         if (Levels.find(levels, level_id) || {})['footing']

@@ -417,6 +417,32 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.locator('#level-holes-editor button.del').click();await wait(300);
   ok((await last('grid_preview')).levels.slice(-1)[0].slab_holes===undefined && (await holeBtn.innerText())==='Không','xóa lỗ: bỏ khóa slab_holes khỏi dữ liệu');
   await holeBtn.click();
+  // Vách kính của tầng (H7): thêm, sửa, báo sớm lỗi, xem trước, xóa; dữ liệu được Ruby chấp nhận
+  const glassRow=await page.locator('#levels-table tr').count();
+  const glassBtn=page.locator(`#levels-table tr:nth-child(${glassRow}) button.glass-btn`);
+  ok((await glassBtn.innerText())==='Không','bảng tầng: cột Vách kính ghi Không');
+  await glassBtn.click();
+  ok(await page.locator('#level-glass-editor').isVisible() && /Chưa có vách kính/.test(await page.locator('#glass-sum').innerText()),'bấm: mở hộp vách kính, chưa có vách');
+  await page.locator('#add-glass').click();await wait(300);
+  let gw=(await last('grid_preview')).levels.slice(-1)[0].glass_walls;
+  const gwId=gw && Object.keys(gw)[0];
+  ok(gwId && /^gw_[0-9a-f]{8}$/.test(gwId) && gw[gwId].span==='x:A:1-2' && gw[gwId].height===2800 && gw[gwId].pane_max===1200 && (await glassBtn.innerText())==='1 vách','thêm vách: nhịp đầu tiên của lưới, cao 2800, tấm tối đa 1200, nút ghi 1 vách');
+  const vg=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(await last('grid_preview')),encoding:'utf8'}));
+  ok(vg.ok,'dữ liệu vách kính được Ruby chấp nhận');
+  await page.locator('#level-glass-editor input[aria-label^="Cao vách kính"]').fill('100');await wait(300);
+  ok(/cao từ 500 đến 6000/.test(await page.locator('#glass-sum').innerText()),'cao ngoài khoảng: báo sớm đúng khoảng của Ruby');
+  await page.locator('#level-glass-editor input[aria-label^="Cao vách kính"]').fill('3000');await page.locator('#level-glass-editor input[aria-label^="Rộng tối đa"]').fill('2000');await wait(300);
+  gw=(await last('grid_preview')).levels.slice(-1)[0].glass_walls;
+  ok(gw[gwId].height===3000 && gw[gwId].pane_max===2000 && !(await page.locator('#glass-sum').getAttribute('class')).includes('error'),'sửa cao và rộng tối đa: gửi đúng giá trị, hết báo lỗi');
+  await page.locator('#add-glass').click();await wait(300);
+  gw=(await last('grid_preview')).levels.slice(-1)[0].glass_walls;
+  ok(Object.keys(gw).length===2 && new Set(Object.values(gw).map(w=>w.span)).size===2 && (await glassBtn.innerText())==='2 vách','thêm vách thứ hai: chọn nhịp chưa dùng');
+  await page.locator('#level-glass-editor select.glass-span').nth(1).selectOption(gw[gwId].span);await wait(300);
+  ok(/nhịp đã có vách kính khác/.test(await page.locator('#glass-sum').innerText()),'hai vách cùng nhịp: báo sớm');
+  await page.locator('#level-glass-editor button.del').nth(1).click();await wait(300);
+  await page.locator('#level-glass-editor button.del').click();await wait(300);
+  ok((await last('grid_preview')).levels.slice(-1)[0].glass_walls===undefined && (await glassBtn.innerText())==='Không','xóa hết vách: bỏ khóa glass_walls khỏi dữ liệu');
+  await glassBtn.click();
   // Mái của tầng: chọn kiểu, hướng, độ dốc; dữ liệu được Ruby chấp nhận
   const lastRow=await page.locator('#levels-table tr').count();
   const roofBtn=page.locator(`#levels-table tr:nth-child(${lastRow}) button.roof-btn`);

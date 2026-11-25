@@ -4,7 +4,7 @@ module VGD
     # tầng thiếu dữ liệu. Chỉ ĐỌC dữ liệu, không đổi gì. Logic thuần.
     module Checker
       KIND_LABELS = {'columns' => 'Cột', 'beams' => 'Dầm', 'walls' => 'Tường', 'openings' => 'Cửa', 'slabs' => 'Sàn', 'ceilings' => 'Trần'}.freeze
-      KIND_LABELS_ALL = KIND_LABELS.merge('stairs' => 'Cầu thang', 'footings' => 'Móng', 'roofs' => 'Mái').freeze # mọi loại có thể dựng (kể cả cầu thang)
+      KIND_LABELS_ALL = KIND_LABELS.merge('stairs' => 'Cầu thang', 'footings' => 'Móng', 'roofs' => 'Mái', 'glass_walls' => 'Vách kính').freeze # mọi loại có thể dựng (kể cả cầu thang)
 
       # state đã chuẩn hóa. Trả về {levels: [{id, name, top, counts: {loại => số}, errors: [...], warnings: [...]}], errors: số, warnings: số}.
       def self.run(state)
@@ -25,7 +25,7 @@ module VGD
             row[:warnings].concat(slab[:issues].map { |m| "Sàn: #{m}" }) if slab
             next row
           end
-          if level['picks'].values.all?(&:empty?)
+          if level['picks'].values.all?(&:empty?) && (level['glass_walls'] || {}).empty?
             row[:warnings] << 'Tầng chưa chọn cột, dầm, tường, sàn hay trần nào.'
             next row
           end
@@ -36,6 +36,7 @@ module VGD
           slabs = plan.call('slabs', 'Sàn')
           ceilings = plan.call('ceilings', 'Trần')
           { 'Cột' => columns, 'Dầm' => beams, 'Tường' => walls, 'Cửa' => openings, 'Sàn' => slabs, 'Trần' => ceilings }.each { |label, p| row[:warnings].concat(p[:issues].map { |m| "#{label}: #{m}" }) if p }
+          row[:warnings].concat(GlassWallPlan.plan(grid, state['levels'], level['id'])[:issues].map { |m| "Vách kính: #{m}" }) unless (level['glass_walls'] || {}).empty?
           if beams
             column_refs = level['picks']['columns']
             beams[:items].each do |b|

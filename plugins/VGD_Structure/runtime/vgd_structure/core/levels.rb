@@ -35,6 +35,12 @@ module VGD
       MAX_SECTIONS = 30
       SLAB_HOLE_ID = /\Ash_[0-9a-f]{8}\z/ # mã lỗ kỹ thuật của sàn
       MAX_SLAB_HOLES = 30
+      GLASS_WALL_ID = /\Agw_[0-9a-f]{8}\z/ # mã vách kính
+      MAX_GLASS_WALLS = 40
+      GLASS_HEIGHT = (500.0..6000.0)  # cao vách kính (mm)
+      GLASS_PANE_MAX = (300.0..3000.0) # bề rộng tối đa một tấm kính (mm)
+      DEFAULT_GLASS_HEIGHT = 2800.0
+      DEFAULT_GLASS_PANE_MAX = 1200.0
       SLAB_HOLE_INSET = (0.0..5000.0) # mm, lùi mỗi cạnh (trái l, dưới b, phải r, trên t) vào trong hình chữ nhật 2 giao điểm
       MIN_SLAB_HOLE = 100.0 # cạnh lỗ nhỏ nhất sau khi lùi (mm)
       STAIR_ID = /\Ast_[0-9a-f]{8}\z/ # mã cầu thang (cầu thang tự do)
@@ -113,11 +119,13 @@ module VGD
           sections = sections!(level['sections'], name)
           stairs = stairs!((raw || {})['stairs'], stair_types, name)
           slab_holes, dropped_h = slab_holes!(level['slab_holes'], grid, name)
-          removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k + dropped_o + dropped_h
+          glass_walls, dropped_g = glass_walls!(level['glass_walls'], span_refs, name)
+          removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k + dropped_o + dropped_h + dropped_g
           entry = {'id' => id, 'name' => name, 'elevation' => elevation, 'screed' => screed.to_f.round(1), 'slab_thickness' => slab.to_f.round(1), 'ceiling_height' => ceiling_height.to_f.round(1), 'ceiling_thickness' => ceiling_thickness.to_f.round(1),
            'column_type' => type_id, 'beam_type' => beam_type, 'wall_type' => wall_type, 'picks' => {'columns' => columns, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings, 'openings' => openings, 'stairs' => stairs}, 'notes' => notes}
           entry['sections'] = sections unless sections.empty?
           entry['slab_holes'] = slab_holes unless slab_holes.empty?
+          entry['glass_walls'] = glass_walls unless glass_walls.empty?
           entry['floor_layers'] = floor_layers unless floor_layers.empty?
           entry['ceiling_layers'] = ceiling_layers unless ceiling_layers.empty?
           footing = footing!(level['footing'], name)
@@ -448,6 +456,33 @@ module VGD
           raise Error, "#{who}: hai giao điểm phải nằm chéo nhau (khác cả trục đứng lẫn trục ngang)." if nodes[a][:xn] == nodes[b][:xn] || nodes[a][:yn] == nodes[b][:yn]
           raise Error, "#{who}: sau khi lùi, lỗ nhỏ hơn #{MIN_SLAB_HOLE.to_i} mm." unless slab_hole_box(nodes[a], nodes[b], inset)
           result[id] = {'a' => a, 'b' => b, 'inset' => inset}
+        end
+        [out, dropped]
+      end
+
+      # Vách kính của tầng (H7): {mã => {'span' => mã nhịp lưới, 'height' => cao (mm), 'pane_max' => rộng tối đa một tấm (mm)}}. Mỗi nhịp tối đa một vách.
+      # Nhịp không còn trên lưới thì bỏ vách (đếm vào số mục bị bỏ). Trả về [vách, số vách bị bỏ].
+      def self.glass_walls!(raw, span_refs, level_name)
+        return [{}, 0] if raw.nil?
+        raise Error, "Tầng “#{level_name}”: dữ liệu vách kính không hợp lệ." unless raw.is_a?(Hash)
+        raise Error, "Tầng “#{level_name}”: quá nhiều vách kính (tối đa #{MAX_GLASS_WALLS})." if raw.size > MAX_GLASS_WALLS
+        dropped = 0
+        used = []
+        out = raw.each_with_object({}) do |(id, gw), result|
+          raise Error, "Tầng “#{level_name}”: mã vách kính #{id.inspect} không hợp lệ." unless id.is_a?(String) && id.match?(GLASS_WALL_ID)
+          who = "Tầng “#{level_name}”: vách kính #{id}"
+          raise Error, "#{who} không hợp lệ." unless gw.is_a?(Hash) && (gw.keys - %w[span height pane_max]).empty? && gw['span'].is_a?(String)
+          height = gw.key?('height') ? gw['height'] : DEFAULT_GLASS_HEIGHT
+          raise Error, "#{who}: cao từ #{GLASS_HEIGHT.min.to_i} đến #{GLASS_HEIGHT.max.to_i} mm." unless number?(height) && GLASS_HEIGHT.cover?(height.to_f)
+          pane_max = gw.key?('pane_max') ? gw['pane_max'] : DEFAULT_GLASS_PANE_MAX
+          raise Error, "#{who}: bề rộng tối đa một tấm kính từ #{GLASS_PANE_MAX.min.to_i} đến #{GLASS_PANE_MAX.max.to_i} mm." unless number?(pane_max) && GLASS_PANE_MAX.cover?(pane_max.to_f)
+          unless span_refs.include?(gw['span'])
+            dropped += 1
+            next
+          end
+          raise Error, "#{who}: nhịp #{gw['span']} đã có vách kính khác (mỗi nhịp tối đa một vách)." if used.include?(gw['span'])
+          used << gw['span']
+          result[id] = {'span' => gw['span'], 'height' => height.to_f.round(1), 'pane_max' => pane_max.to_f.round(1)}
         end
         [out, dropped]
       end
