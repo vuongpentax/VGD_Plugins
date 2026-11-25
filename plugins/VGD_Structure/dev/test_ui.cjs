@@ -443,6 +443,37 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.locator('#level-glass-editor button.del').click();await wait(300);
   ok((await last('grid_preview')).levels.slice(-1)[0].glass_walls===undefined && (await glassBtn.innerText())==='Không','xóa hết vách: bỏ khóa glass_walls khỏi dữ liệu');
   await glassBtn.click();
+  // Phòng của tầng (H8): thêm, chọn ô, báo sớm lỗi, lớp riêng, xem trước, xóa; dữ liệu được Ruby chấp nhận
+  const roomBtn=page.locator(`#levels-table tr:nth-child(${glassRow}) button.rooms-btn`);
+  ok((await roomBtn.innerText())==='Không','bảng tầng: cột Phòng ghi Không');
+  await roomBtn.click();
+  ok(await page.locator('#level-rooms-editor').isVisible() && /Chưa có phòng/.test(await page.locator('#rooms-sum').innerText()),'bấm: mở hộp phòng, chưa có phòng');
+  await page.locator('#add-room').click();await wait(300);
+  let rms=(await last('grid_preview')).levels.slice(-1)[0].rooms;
+  const rmId=Object.keys(rms||{})[0];
+  ok(rmId && /^rm_[0-9a-f]{8}$/.test(rmId) && rms[rmId].name==='Phòng 1' && rms[rmId].cells.length===1 && (await roomBtn.innerText())==='1 phòng','thêm phòng: một ô đầu tiên của lưới, nút ghi 1 phòng');
+  const firstCell=rms[rmId].cells[0];
+  await page.locator('#level-rooms-editor button.room-cell:not(.on):not([disabled])').nth(1).click();await wait(300);
+  ok(/liền nhau/.test(await page.locator('#rooms-sum').innerText()),'hai ô không chung cạnh: báo sớm');
+  await page.locator(`#level-rooms-editor button.room-cell.on:not([data-ref="${firstCell}"])`).click();await wait(300);
+  ok(!(await page.locator('#rooms-sum').getAttribute('class')).includes('error'),'bỏ ô lệch: hết báo lỗi');
+  await page.locator('#level-rooms-editor input.room-name').fill('Khách');await wait(300);
+  rms=(await last('grid_preview')).levels.slice(-1)[0].rooms;
+  ok(rms[rmId].name==='Khách','đổi tên phòng: gửi đúng tên');
+  await page.locator('#level-rooms-editor .room-layers button.add').first().click();await wait(300);
+  rms=(await last('grid_preview')).levels.slice(-1)[0].rooms;
+  ok(rms[rmId].floor_layers && rms[rmId].floor_layers.length===1 && rms[rmId].floor_layers[0].t===10 && rms[rmId].ceiling_layers===undefined,'thêm lớp sàn riêng: gửi lớp 10 mm, không đụng lớp trần');
+  await page.locator('#add-room').click();await wait(300);
+  rms=(await last('grid_preview')).levels.slice(-1)[0].rooms;
+  const ids2=Object.keys(rms);
+  ok(ids2.length===2 && !rms[ids2[1]].cells.includes(firstCell) && (await roomBtn.innerText())==='2 phòng','thêm phòng thứ hai: ô chưa thuộc phòng nào');
+  await page.locator('#level-rooms-editor input.room-name').nth(1).fill('khách');await wait(300);
+  ok(/tên bị trùng/.test(await page.locator('#rooms-sum').innerText()),'hai phòng trùng tên (không phân biệt hoa thường): báo sớm');
+  await page.locator('#level-rooms-editor .room-card button.del').nth(0).click();await wait(300);
+  ok(Object.keys((await last('grid_preview')).levels.slice(-1)[0].rooms||{}).length===1 && (await roomBtn.innerText())==='1 phòng','xóa phòng đầu: còn 1 phòng');
+  await page.locator('#level-rooms-editor .room-card button.del').nth(0).click();await wait(300);
+  ok((await last('grid_preview')).levels.slice(-1)[0].rooms===undefined && (await roomBtn.innerText())==='Không','xóa hết phòng: bỏ khóa rooms khỏi dữ liệu');
+  await roomBtn.click();
   // Mái của tầng: chọn kiểu, hướng, độ dốc; dữ liệu được Ruby chấp nhận
   const lastRow=await page.locator('#levels-table tr').count();
   const roofBtn=page.locator(`#levels-table tr:nth-child(${lastRow}) button.roof-btn`);
@@ -1850,7 +1881,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.click('[data-tab=schedule]');await wait(100);
   ok(await page.locator('#tab-schedule').isVisible() && (await calls('schedule')).length>=1 && !!(await last('schedule')).grid,'tab Thống kê: mở thì gửi Ruby dữ liệu hiện tại để tính bảng');
   await receive('schedule',F.schedule);await wait(80);
-  ok((await page.locator('#sched-kind option').allInnerTexts()).join('|')==='Cột|Dầm|Tường|Cửa|Sàn|Trần','có đủ 6 loại để xem bảng');
+  ok((await page.locator('#sched-kind option').allInnerTexts()).join('|')==='Cột|Dầm|Tường|Cửa|Sàn|Trần|Phòng','có đủ 7 loại để xem bảng');
   ok((await page.locator('#sched-table tr').count())===3 && /Tổng/.test(await page.locator('#sched-table tr.total').innerText()) && /Tầng 1/.test(await page.locator('#sched-table tr:nth-child(2)').innerText()),'bảng Cột: dòng tiêu đề, dòng theo tầng và loại, dòng Tổng');
   await page.selectOption('#sched-kind','openings');await wait(60);
   ok((await page.locator('#sched-table tr').count())===4 && /Cửa đi|Cửa sổ/.test(await page.locator('#sched-table').innerText()),'bảng Cửa: 2 dòng (cửa đi, cửa sổ) và dòng Tổng');

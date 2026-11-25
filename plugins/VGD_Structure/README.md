@@ -1,8 +1,10 @@
-# VGD Structure 0.30.0-beta.8
+# VGD Structure 0.30.0-beta.9
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
+
+**0.30.0-beta.9 (đợt H8): phòng.** Tầng có thêm **phòng** (bảng Tầng → nút **Phòng** → "+ Thêm phòng"): mỗi phòng là một nhóm **ô lưới liền nhau** (chung cạnh) do bạn bấm chọn, mỗi ô thuộc tối đa một phòng, tối đa 60 phòng mỗi tầng. Phòng có **tên** (1 đến 30 ký tự, không trùng trong tầng) và hiện **tên + diện tích** trên mặt bằng (lớp Phòng) và trong bảng thống kê (mục Phòng). Phòng có thể có **lớp hoàn thiện sàn** và **lớp cấu tạo trần riêng** (cùng khoảng tổng dày với lớp chung của tầng: sàn 0 đến 300 mm, trần 5 đến 100 mm), thay lớp chung ở các ô của phòng. Đường biên phòng trùng cạnh ô lưới nên sàn và trần chia theo ô, không cần cắt thêm. Lớp sàn riêng đặt trên mặt kết cấu sàn nên tổng dày khác nhau thì cao độ hoàn thiện giữa các phòng khác nhau; tổng dày trần riêng chưa được kiểm so với tầng trên. Phòng chưa là khối 3D và chưa dò từ tường. **Mới chạy test tự động với SketchUp giả lập, chưa thử trong SketchUp thật.** Dữ liệu cũ không đổi (khóa `rooms` chỉ lưu khi có phòng).
 
 **0.30.0-beta.8 (đợt H7): vách kính.** Phần tử mới **vách kính khung nhôm** (bảng Tầng → nút **Vách kính** → "+ Thêm vách kính"): mỗi vách nằm trên **một nhịp lưới**, đứng trên mặt sàn kết cấu (như tường); bạn chọn **nhịp**, nhập **chiều cao** (500 đến 6000 mm, mặc định 2800) và **bề rộng tối đa một tấm kính** (300 đến 3000 mm, mặc định 1200). Số tấm tự chia đều sao cho mỗi tấm không rộng quá giới hạn. **Khung nhôm** (thanh ngang đáy và đỉnh, hai thanh đứng biên, các thanh đứng giữa; thanh 50 × 80 mm) và **tấm kính** (dày 8 mm) dựng thành **hai nhóm riêng** với vật liệu riêng (nhôm, kính trong suốt) để VGD BIM bóc tách riêng: khung theo chiều dài thanh × tiết diện, kính theo diện tích × bề dày. Dựng bằng nút Dựng tất cả (tầng trên cùng không có vách kính, như cột, dầm, tường). Mỗi nhịp tối đa một vách; vách trùng nhịp đã chọn tường thì cảnh báo; mặt bằng vẽ dải xanh theo nhịp (lớp "Vách kính"). Kích thước khung và kính là hằng số cố định (chưa chỉnh được). **Lan can liên tục chưa làm** (chủ dự án hẹn làm sau). Dữ liệu cũ không đổi (khóa `glass_walls` chỉ lưu khi có vách). **Chưa xác minh:** dựng trong SketchUp thật (mặt khung có lỗ, vật liệu trong suốt); VGD BIM chưa kiểm tra cách đọc nhóm kind window có part glass_frame / glass.
 
@@ -180,7 +182,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.30.0-beta.8.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.30.0-beta.9.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

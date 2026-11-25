@@ -35,6 +35,8 @@ module VGD
       MAX_SECTIONS = 30
       SLAB_HOLE_ID = /\Ash_[0-9a-f]{8}\z/ # mã lỗ kỹ thuật của sàn
       MAX_SLAB_HOLES = 30
+      ROOM_ID = /\Arm_[0-9a-f]{8}\z/ # mã phòng
+      MAX_ROOMS = 60
       GLASS_WALL_ID = /\Agw_[0-9a-f]{8}\z/ # mã vách kính
       MAX_GLASS_WALLS = 40
       GLASS_HEIGHT = (500.0..6000.0)  # cao vách kính (mm)
@@ -120,12 +122,14 @@ module VGD
           stairs = stairs!((raw || {})['stairs'], stair_types, name)
           slab_holes, dropped_h = slab_holes!(level['slab_holes'], grid, name)
           glass_walls, dropped_g = glass_walls!(level['glass_walls'], span_refs, name)
-          removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k + dropped_o + dropped_h + dropped_g
+          rooms, dropped_r = rooms!(level['rooms'], grid, name)
+          removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k + dropped_o + dropped_h + dropped_g + dropped_r
           entry = {'id' => id, 'name' => name, 'elevation' => elevation, 'screed' => screed.to_f.round(1), 'slab_thickness' => slab.to_f.round(1), 'ceiling_height' => ceiling_height.to_f.round(1), 'ceiling_thickness' => ceiling_thickness.to_f.round(1),
            'column_type' => type_id, 'beam_type' => beam_type, 'wall_type' => wall_type, 'picks' => {'columns' => columns, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings, 'openings' => openings, 'stairs' => stairs}, 'notes' => notes}
           entry['sections'] = sections unless sections.empty?
           entry['slab_holes'] = slab_holes unless slab_holes.empty?
           entry['glass_walls'] = glass_walls unless glass_walls.empty?
+          entry['rooms'] = rooms unless rooms.empty?
           entry['floor_layers'] = floor_layers unless floor_layers.empty?
           entry['ceiling_layers'] = ceiling_layers unless ceiling_layers.empty?
           footing = footing!(level['footing'], name)
@@ -485,6 +489,67 @@ module VGD
           result[id] = {'span' => gw['span'], 'height' => height.to_f.round(1), 'pane_max' => pane_max.to_f.round(1)}
         end
         [out, dropped]
+      end
+
+      # Phòng của tầng (H8): {mã => {'name', 'cells' => [mã ô lưới], 'floor_layers'?, 'ceiling_layers'?}}. Phòng là một nhóm ô LIỀN NHAU (chung cạnh), mỗi ô thuộc tối đa một phòng.
+      # Lớp hoàn thiện sàn / trần riêng của phòng (cùng quy tắc `LayerList`) thay lớp chung của tầng cho các ô của phòng; chỉ lưu khi có.
+      # Ô không còn trên lưới thì bỏ khỏi phòng; phòng hết ô thì bỏ (đếm vào số mục bị bỏ). Trả về [phòng, số mục bị bỏ].
+      def self.rooms!(raw, grid, level_name)
+        return [{}, 0] if raw.nil?
+        raise Error, "Tầng “#{level_name}”: dữ liệu phòng không hợp lệ." unless raw.is_a?(Hash)
+        raise Error, "Tầng “#{level_name}”: quá nhiều phòng (tối đa #{MAX_ROOMS})." if raw.size > MAX_ROOMS
+        cells = Grid.cells(grid)
+        order = cells.map { |c| c[:ref] }
+        owner = {}
+        names = []
+        dropped = 0
+        out = raw.each_with_object({}) do |(id, room), result|
+          raise Error, "Tầng “#{level_name}”: mã phòng #{id.inspect} không hợp lệ." unless id.is_a?(String) && id.match?(ROOM_ID)
+          who = "Tầng “#{level_name}”: phòng #{id}"
+          raise Error, "#{who} không hợp lệ." unless room.is_a?(Hash) && (room.keys - %w[name cells floor_layers ceiling_layers]).empty? && room['cells'].is_a?(Array) && room['cells'].all?(String)
+          label = room['name'].is_a?(String) ? room['name'].strip : ''
+          raise Error, "#{who}: tên từ 1 đến #{MAX_NAME} ký tự, không có ký tự điều khiển." if label.empty? || label.length > MAX_NAME || label.match?(CONTROL)
+          raise Error, "#{who}: tên “#{label}” bị trùng." if names.include?(label.downcase)
+          raise Error, "#{who}: ô bị lặp trong phòng." if room['cells'].uniq.size != room['cells'].size
+          floor_layers, ceiling_layers = begin
+            [LayerList.normalize!(room['floor_layers'], 'sàn', SCREED_RANGE), LayerList.normalize!(room['ceiling_layers'], 'trần', CEILING_THICKNESS_RANGE)]
+          rescue Error => error
+            raise Error, "#{who}: #{error.message}"
+          end
+          kept = room['cells'].select { |c| order.include?(c) }
+          dropped += room['cells'].size - kept.size
+          if kept.empty?
+            dropped += 1
+            next
+          end
+          kept.each do |c|
+            raise Error, "#{who}: ô #{c} đã thuộc phòng khác (mỗi ô tối đa một phòng)." if owner.key?(c)
+            owner[c] = id
+          end
+          raise Error, "#{who}: các ô của phòng phải liền nhau (chung cạnh)." unless rooms_connected?(cells.select { |c| kept.include?(c[:ref]) })
+          names << label.downcase
+          entry = {'name' => label, 'cells' => kept.sort_by { |c| order.index(c) }}
+          entry['floor_layers'] = floor_layers unless floor_layers.empty?
+          entry['ceiling_layers'] = ceiling_layers unless ceiling_layers.empty?
+          result[id] = entry
+        end
+        [out, dropped]
+      end
+
+      # Các ô (Grid.cells) tạo thành MỘT vùng liền nhau: hai ô liền khi chung một đoạn cạnh dài hơn 0.
+      def self.rooms_connected?(list)
+        touch = lambda do |a, b|
+          x = [a[:max][0], b[:max][0]].min - [a[:min][0], b[:min][0]].max
+          y = [a[:max][1], b[:max][1]].min - [a[:min][1], b[:min][1]].max
+          (x.abs < 1e-6 && y > 1e-6) || (y.abs < 1e-6 && x > 1e-6)
+        end
+        seen = [list.first]
+        queue = [list.first]
+        until queue.empty?
+          cur = queue.shift
+          list.each { |c| next if seen.include?(c) || !touch.call(cur, c); seen << c; queue << c }
+        end
+        seen.size == list.size
       end
 
       def self.slab_hole_inset!(raw, who)

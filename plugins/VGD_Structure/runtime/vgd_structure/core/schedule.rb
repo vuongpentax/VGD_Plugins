@@ -41,7 +41,31 @@ module VGD
           cols.select { |c| c[:sum] }.each { |c| total[c[:id]] = rows.sum { |r| r[:values][c[:id]].to_f }.round(3) }
           {kind: kind, label: LABELS[kind], columns: cols, rows: rows, total: total}
         end
+        rooms = rooms_section(state)
+        sections << rooms if rooms
         {sections: sections, issues: issues}
+      end
+
+      ROOM_COLUMNS = [['cells', 'Số ô lưới', '', true], ['grid_area', 'Diện tích theo ô lưới', 'm²', true], ['floor_area', 'Diện tích sàn kết cấu', 'm²', true]].freeze
+
+      # Mục Phòng (H8): chỉ có khi có tầng khai báo phòng nên bảng thống kê cũ không đổi. Mỗi phòng một dòng; diện tích sàn lấy từ kế hoạch sàn (0 nếu phòng chưa có sàn).
+      def self.rooms_section(state)
+        rows = state['levels'].flat_map do |level|
+          next [] if (level['rooms'] || {}).empty?
+          slabs = begin
+            Checker.plan_for('slabs', state, level['id'])[:items]
+          rescue ArgumentError
+            nil
+          end
+          RoomPlan.plan(state['grid'], state['levels'], level['id'], slabs)[:items].map do |r|
+            {level: level['id'], level_name: level['name'], type: r[:name], count: 1, values: {'cells' => r[:cells].size, 'grid_area' => r[:area_grid], 'floor_area' => r[:floor_area].to_f}}
+          end
+        end
+        return nil if rows.empty?
+        cols = ROOM_COLUMNS.map { |id, label, unit, sum| {id: id, label: label, unit: unit, sum: sum} }
+        total = {count: rows.size}
+        cols.each { |c| total[c[:id]] = rows.sum { |r| r[:values][c[:id]].to_f }.round(3) }
+        {kind: 'rooms', label: 'Phòng', columns: cols, rows: rows, total: total}
       end
 
       # [khóa gom nhóm, tên loại, các ô cố định (không cộng dồn)].

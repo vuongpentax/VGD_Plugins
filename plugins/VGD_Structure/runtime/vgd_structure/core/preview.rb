@@ -65,6 +65,16 @@ module VGD
           glass = GlassWallPlan.plan(grid, levels, glass_level['id'])
           out[:glass_walls] = {level: glass_level['id'], issues: glass[:issues], count: glass[:items].size, items: glass[:items].map { |i| i.slice(:ref, :span, :a, :b, :min, :max, :length, :height, :count, :pane_w, :pane_h) }}
         end
+        # Phòng (tầng có khai báo phòng): ô, nhãn, diện tích lưới và diện tích sàn (từ cùng kế hoạch sàn với lúc dựng).
+        if glass_level && !(glass_level['rooms'] || {}).empty?
+          slab_items = begin
+            SlabPlan.plan(grid, levels, glass_level['id'], types, beam_types, wall_types, opening_types, stair_types)[:items]
+          rescue ArgumentError
+            nil
+          end
+          rooms = RoomPlan.plan(grid, levels, glass_level['id'], slab_items)
+          out[:rooms] = {level: glass_level['id'], issues: rooms[:issues], count: rooms[:items].size, items: rooms[:items].map { |i| i.slice(:ref, :name, :cells, :rects, :label, :area_grid, :floor_area) }}
+        end
         # Đế móng (tầng có khai báo móng): cùng nguồn FootingPlan với lúc dựng.
         level_id = payload['level'] || levels.first['id']
         if (Levels.find(levels, level_id) || {})['footing']

@@ -1,7 +1,7 @@
 # Dữ liệu thật từ Ruby cho test giao diện (trạng thái, xem trước lưới / cột, kết quả tạo trục từ nhịp). In JSON ra stdout.
 require 'json'
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
-%w[core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/stair_types core/stair_plan core/stair_place core/layer_list core/levels core/column_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/slab_plan core/ceiling_plan core/proposal core/checker core/schedule core/model_edit core/state core/preview].each { |f| require File.join(ROOT, f) }
+%w[core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/stair_types core/stair_plan core/stair_place core/layer_list core/levels core/column_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/room_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/schedule core/model_edit core/state core/preview].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 state = S::State.default
 state['stair_types'] = S::StairTypes.default # trạng thái mặc định chưa có loại cầu thang

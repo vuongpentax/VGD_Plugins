@@ -40,9 +40,12 @@ module VGD
         end
         stair_holes!(items, below_stairs(grid, types, beam_types, wall_types, stair_types, opening_types, levels, level_id, issues), issues)
         tech_holes!(items, grid, level, issues)
-        unless (level['floor_layers'] || []).empty? # sàn kết cấu rồi các lớp hoàn thiện xếp LÊN trên (danh sách của tầng đi từ trên xuống nên đảo lại)
-          layers = [{fn: 'structure', t: thickness, material: '', color: WallTypes::DEFAULT_COLORS['structure']}] + LayerList.for_plan(level['floor_layers']).reverse
-          items.each { |i| i[:layers] = layers }
+        # sàn kết cấu rồi các lớp hoàn thiện xếp LÊN trên (danh sách đi từ trên xuống nên đảo lại); ô thuộc phòng có lớp riêng thì dùng lớp của phòng (H8)
+        rooms = RoomPlan.by_cell(level)
+        items.each do |i|
+          list = (rooms[i[:ref]] || [nil, {}])[1]['floor_layers'] || level['floor_layers']
+          next if list.nil? || list.empty?
+          i[:layers] = [{fn: 'structure', t: thickness, material: '', color: WallTypes::DEFAULT_COLORS['structure']}] + LayerList.for_plan(list).reverse
         end
         issues.concat(Plates.overlap_issues(items, 'Sàn'))
         issues.concat(free_overlaps(items, columns, beams, walls))
