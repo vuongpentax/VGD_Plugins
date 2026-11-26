@@ -1670,6 +1670,7 @@
     hint: function () { return drawCur ? drawCur.hint() : ''; }, ghost: function () { return drawCur ? drawCur.ghost() : []; },
     typed: function (n, cur) { return drawCur && drawCur.typed ? drawCur.typed(n, cur) : false; },
     flipDoor: function (t, ref, shift) { return window.VGDPlanEdit.flipDoor(t, ref, shift); },
+    cycleAlign: function (t) { return window.VGDPlanEdit.cycleAlign(t); },
     finish: function () { return drawCur && drawCur.finish ? drawCur.finish() : false; }, undoPoint: function () { return drawCur && drawCur.undoPoint ? drawCur.undoPoint() : false; },
     typeSelector: function (shape) { return shape.kind === 'note' || shape.kind === 'section' ? null : window.VGDPlanEdit.typeSelector(shape); },
     propsFor: function (shape) { return shape.kind === 'section' ? window.VGDPlanSection.propsFor(shape) : shape.kind === 'note' ? window.VGDPlanNotes.propsFor(shape) : window.VGDPlanEdit.propsFor(shape); },

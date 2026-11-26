@@ -1394,6 +1394,29 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await cl(9500,4000);await cl(7000,4000);wp=await get('wallPicks');
   ok(Object.values(wp).some(w=>w.free && JSON.stringify(w.free)===JSON.stringify({a:[7000,4000],b:[9500,4000]})),'vẽ từ phải sang trái: đầu a vẫn là đầu nhỏ hơn (cùng quy ước với Ruby)');
   await page.keyboard.press('Escape');await cl(6000,3000);await cl(6050,3000);ok(/ngắn/.test(await hintT()) && freeKeys(await get('wallPicks'),'fw_').length===nw.length+3,'đoạn ngắn hơn 100 mm: báo và không thêm');
+  // --- Đường bấm (trục vẽ) của tường tự do: tim / mép trái / mép phải, Tab đổi, góc chuỗi gặp nhau ---
+  await page.keyboard.press('Escape');await typ('wa');await wait(60);
+  const wT=await page.evaluate(()=>{const S=window.VGDS._state,id=S.levels[0].wallType,ty=(S.wallTypes||[]).find(x=>x.id===id)||S.wallTypes[0];return ty.t;});
+  const wBefore=freeKeys(await get('wallPicks'),'fw_').length;
+  ok(await page.locator('#pv-options select[data-opt=align]').isVisible() && (await page.locator('#pv-options select[data-opt=align]').inputValue())==='c','tường tự do: thanh tùy chọn có "Đường bấm là", mặc định Tim');
+  await page.evaluate(()=>{document.activeElement&&document.activeElement.blur();});await page.keyboard.press('Tab');await wait(60);
+  ok((await page.locator('#pv-options select[data-opt=align]').inputValue())==='l' && /mép trái/.test(await hintT()),'Tab: đổi đường bấm sang Mép trái, ô tùy chọn và gợi ý đổi theo');
+  const rawPt=()=>page.evaluate(()=>window.VGDPlan.debug().edit.chainPoint);
+  await cl(6000,1500);const P1=await rawPt();await hv(9000,1500);
+  const gh=await page.evaluate(()=>window.VGDPlanEdit.ghost().filter(g=>g.t==='line'&&g.thick).map(g=>({a:g.a,b:g.b,thick:g.thick})));
+  ok(gh.length===1 && Math.abs(gh[0].a[1]-(P1[1]-wT/2))<0.2 && gh[0].thick===wT,'xem trước: thân tường dịch sang phải hướng vẽ nửa bề dày (mép trái nằm đúng đường bấm)');
+  await cl(9000,1500);const P2=await rawPt();await hv(P2[0],P2[1]+1800);const P3=await page.evaluate(()=>window.VGDPlan.debug().edit.freeTarget);await cl(P2[0],P2[1]+1800);
+  let wq=await get('wallPicks'),nq=freeKeys(wq,'fw_').filter(k=>!['fw_00000001','fw_00000002'].includes(k)&&wq[k].free.a[1]<P1[1]+900&&wq[k].free.a[1]>P1[1]-900&&wq[k].free.a[0]>P1[0]-300);
+  const corner=[P2[0]+wT/2,P1[1]-wT/2];
+  const hw=nq.map(k=>wq[k].free);
+  ok(hw.length===2 && hw.some(f=>Math.abs(f.a[0]-P1[0])<0.2&&Math.abs(f.a[1]-corner[1])<0.2&&Math.abs(f.b[0]-corner[0])<0.2&&Math.abs(f.b[1]-corner[1])<0.2) && hw.some(f=>Math.abs(f.a[0]-corner[0])<0.2&&Math.abs(f.a[1]-corner[1])<0.2&&Math.abs(f.b[0]-corner[0])<0.2&&Math.abs(f.b[1]-P3[1])<0.2),'chuỗi mép trái: hai đoạn gặp nhau đúng giao điểm hai đường tim ('+corner.join(', ')+'), góc không hở');
+  await page.keyboard.press('Escape');await page.keyboard.press('Control+z');await page.keyboard.press('Control+z');
+  ok(freeKeys(await get('wallPicks'),'fw_').length===wBefore,'hoàn tác hai đoạn: bỏ cả hai (một lần mỗi đoạn, kể cả phần chỉnh góc)');
+  await page.keyboard.press('Tab');await wait(60);await cl(P1[0],P1[1]);await cl(P2[0],P2[1]);wq=await get('wallPicks');
+  ok(Object.values(wq).some(w=>w.free&&Math.abs(w.free.a[1]-(P1[1]+wT/2))<0.2&&Math.abs(w.free.b[1]-(P1[1]+wT/2))<0.2&&Math.abs(w.free.a[0]-P1[0])<0.2),'Mép phải: thân tường nằm bên trái hướng vẽ (tim lệch +nửa bề dày khi vẽ sang đông)');
+  await page.keyboard.press('Escape');await page.keyboard.press('Control+z');
+  await page.keyboard.press('Tab');await wait(60);ok((await page.locator('#pv-options select[data-opt=align]').inputValue())==='c','Tab lần nữa: về Tim');
+  ok(freeKeys(await get('wallPicks'),'fw_').length===wBefore,'dọn các tường thử đường bấm: số tường tự do về như cũ');
   // --- Gửi Ruby: dữ liệu tự do hợp lệ ---
   await clear();await cl(6000,3000);await cl(8000,3000);await wait(300);
   const payload=await last('grid_preview');
@@ -2013,6 +2036,16 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await cl(2000,500);await cl(2000,5800);await wait(200);
   const stx_stP=await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks);
   ok(Object.keys(stx_stP).length===1 && Object.values(stx_stP)[0].type==='sj_00000001' && Math.abs(Object.values(stx_stP)[0].free.a[0]-2000)<1 && Math.abs(Object.values(stx_stP)[0].free.b[1]-5800)<1,'bấm đáy và đỉnh vế: thêm cầu thang (loại mặc định) với hai đầu đúng chỗ bấm');
+  // Đường bấm của cầu thang: mép phải hướng vẽ lên phía +Y thì thân lùi sang -X nửa bề rộng
+  const stW=await page.evaluate(()=>window.VGDS._state.stairTypes[0].width);
+  await reset();await typ('sr');await wait(120);await page.selectOption('#pv-options select[data-opt=shape]','straight');await page.selectOption('#pv-options select[data-opt=align]','r');
+  await cl(2000,500);await page.mouse.move(...(await sc(2000,5800)));await wait(60);
+  const sgh=await page.evaluate(()=>window.VGDPlanEdit.ghost().filter(g=>g.t==='poly').map(g=>g.poly));
+  ok(sgh.length===1 && sgh[0].every(p=>p[0]>=2000-stW-0.2 && p[0]<=2000+0.2),'cầu thang đường bấm mép phải: xem trước nằm lệch về một phía đường bấm, mép trùng đường bấm');
+  await cl(2000,5800);
+  const stA=Object.values(await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks));
+  ok(stA.length===1 && Math.abs(stA[0].free.a[0]-(2000-stW/2))<0.2 && Math.abs(stA[0].free.b[0]-(2000-stW/2))<0.2 && stA[0].free.a[1]===500,'cầu thang mép phải: lưu theo đường tim, dịch -X nửa bề rộng ('+(2000-stW/2)+')');
+  await page.selectOption('#pv-options select[data-opt=align]','c');await page.keyboard.press('Escape');
   await reset();await receive('state',F.state_stairs);await receive('preview',F.preview_stairs);await wait(150);
   const stx_sd=await dbg8();
   ok(stx_sd.counts.stair===2 && Object.keys(await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks)).length===2,'xem trước cầu thang: 2 cầu thang trên mặt bằng (một sạch, một đâm vào tường)');

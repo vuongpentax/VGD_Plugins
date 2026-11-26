@@ -790,7 +790,7 @@
     if (ed()) ed().ghost().forEach(function (g) {
       ctx.save(); ctx.globalAlpha = g.alpha || 1; ctx.strokeStyle = themeColor(g.color); ctx.fillStyle = themeColor(g.color); ctx.lineWidth = g.width || 1.5; ctx.setLineDash(g.dash || []);
       if (g.t === 'poly') { path(g.poly); ctx.fill(); ctx.globalAlpha = 1; ctx.stroke(); }
-      else if (g.t === 'line') { var a = toScreen(g.a[0], g.a[1]), b = toScreen(g.b[0], g.b[1]); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+      else if (g.t === 'line') { var strip = g.thick ? ghostStrip(g.a, g.b, g.thick) : null; if (strip) { ctx.save(); ctx.globalAlpha = 0.3; path(strip); ctx.fill(); ctx.restore(); } var a = toScreen(g.a[0], g.a[1]), b = toScreen(g.b[0], g.b[1]); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
       else if (g.t === 'dot') { var c0 = toScreen(g.p[0], g.p[1]); ctx.beginPath(); ctx.arc(c0[0], c0[1], g.r || 4, 0, Math.PI * 2); ctx.fill(); }
       ctx.restore();
       if (g.t === 'text') { var q = toScreen(g.p[0], g.p[1]); tag(g.text, q[0] + 10, q[1] - 14, bg, ink, themeColor(g.color) || GUIDE_COLOR); }
@@ -1066,6 +1066,7 @@
       resetChord(); note = '';
       if (draft || measure || box || (edit && edit.busy()) || (modify && modify.busy())) { draft = null; measure = null; box = null; press = null; if (edit) edit.cancel(); if (modify) modify.cancel(); if (modify && modify.handles(tool) && !modify.active()) setTool('select'); draw(); } else { if (suPicking) opts.callSU('su_pick_stop', ''); setTool('select'); selection = []; renderProps(); draw(); notifySelection(); }
     } else if (k === 'Tab') {
+      if (edit && edit.cycleAlign && edit.cycleAlign(tool)) { renderOptions(); draw(); e.preventDefault(); return; } // đổi đường bấm (tim / mép trái / mép phải) khi vẽ dầm, tường, cầu thang tự do
       if (tool === 'select' && cursor) {
         var n = pickAll(cursor[0], cursor[1]).length; if (n > 1) { tabIdx = (tabIdx + (e.shiftKey ? -1 : 1) + n) % n; hover = pickAt(cursor[0], cursor[1]); renderProps(); draw(); e.preventDefault(); }
       }

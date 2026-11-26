@@ -6,7 +6,7 @@
   var GOOD = '#2F7BFF', BAD = '#E5484D', TOL_NODE = 14, TOL_COLUMN = 28, TOL_SPAN = 12, OPENING_GAP = 50;
   var DESIGN = ['grid', 'column', 'beam', 'wall', 'slab', 'ceiling', 'stair', 'door', 'window'];
   var PICKS = {column: 'picks', beam: 'beamPicks', wall: 'wallPicks', slab: 'slabPicks', ceiling: 'ceilingPicks', opening: 'openingPicks', stair: 'stairPicks'};
-  var opt = {stair: {shape: 'L'}, column: {type: '', x: 'auto', y: 'auto', mode: 'grid', rot: '0'}, beam: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, wall: {type: '', p: 'auto', mode: 'grid', angle: 'ortho'}, door: {type: '', hand: '0'}, window: {type: '', flip: '0'}, grid: {dir: 'x'}, slab: {mode: 'grid', edges: 'free', part: 'outer'}, ceiling: {mode: 'grid', edges: 'free', part: 'outer'}};
+  var opt = {stair: {shape: 'L', align: 'c'}, column: {type: '', x: 'auto', y: 'auto', mode: 'grid', rot: '0'}, beam: {type: '', p: 'auto', mode: 'grid', angle: 'ortho', align: 'c'}, wall: {type: '', p: 'auto', mode: 'grid', angle: 'ortho', align: 'c'}, door: {type: '', hand: '0'}, window: {type: '', flip: '0'}, grid: {dir: 'x'}, slab: {mode: 'grid', edges: 'free', part: 'outer'}, ceiling: {mode: 'grid', edges: 'free', part: 'outer'}};
   var tool = null, chain = null, target = null, note = '', ring = null; // ring: đường bao / lỗ đang vẽ của sàn, trần đa giác {pts, part, host}
 
   function lvl() { return A.level(); }
@@ -59,11 +59,42 @@
     return [[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]].map(function (p) { return [c[0] + p[0] * cs - p[1] * sn, c[1] + p[0] * sn + p[1] * cs]; });
   }
   function r1(v) { return Math.round(v * 10) / 10; }
+  // ---- Đường bấm (trục vẽ) của dầm, tường, cầu thang tự do: điểm bấm là tim hoặc là mép trái / mép phải của phần tử (nhìn theo hướng vẽ).
+  // Dữ liệu vẫn lưu theo đường tim: chỉ dịch đoạn bấm sang bên một nửa bề rộng, nên Ruby và dữ liệu cũ không đổi.
+  var ALIGN_VALUES = [['c', 'Tim (giữa)'], ['l', 'Mép trái'], ['r', 'Mép phải']];
+  function alignOption(t) { return {id: 'align', label: 'Đường bấm là (Tab đổi)', values: ALIGN_VALUES, value: alignOf(t)}; }
+  function alignOf(t) { var v = opt[t] && opt[t].align; return v === 'l' || v === 'r' ? v : 'c'; }
+  function alignName(al) { return {c: 'tim', l: 'mép trái', r: 'mép phải'}[al]; }
+  function widthOf(t) {
+    if (t === 'stair') { var st = stairType(); return st ? st.width : 1000; }
+    var ty = typeById(t, currentType(t) || (t === 'beam' ? lvl().beamType : lvl().wallType)) || typesFor(t)[0];
+    return ty ? (t === 'wall' ? ty.t : ty.w) : 0;
+  }
+  // Vector dịch từ đường bấm from→to sang đường tim: mép trái thì thân phần tử nằm bên phải hướng vẽ (và ngược lại).
+  function shiftVec(from, to, width, al) {
+    var L = Math.hypot(to[0] - from[0], to[1] - from[1]);
+    if (al === 'c' || !(L > 0.5) || !(width > 0)) return [0, 0];
+    var k = (al === 'l' ? -1 : 1) * width / 2 / L;
+    return [-(to[1] - from[1]) * k, (to[0] - from[0]) * k];
+  }
+  function shiftPt(p, v) { return [r1(p[0] + v[0]), r1(p[1] + v[1])]; }
+  function cycleAlign(t) {
+    if (!opt[t] || (t !== 'beam' && t !== 'wall' && t !== 'stair') || !freeMode(t)) return false;
+    var next = {c: 'l', l: 'r', r: 'c'}[alignOf(t)]; opt[t].align = next;
+    note = 'Đường bấm là ' + alignName(next) + ' của ' + (t === 'stair' ? 'cầu thang' : t === 'beam' ? 'dầm' : 'tường') + '.'; return true;
+  }
+  // Giao điểm hai đường thẳng (p1→p2 và p3→p4); null nếu gần song song.
+  function lineMeet(p1, p2, p3, p4) {
+    var d1x = p2[0] - p1[0], d1y = p2[1] - p1[1], d2x = p4[0] - p3[0], d2y = p4[1] - p3[1], den = d1x * d2y - d1y * d2x, l1 = Math.hypot(d1x, d1y), l2 = Math.hypot(d2x, d2y);
+    if (!(l1 > 0) || !(l2 > 0) || Math.abs(den) / (l1 * l2) < 0.17) return null;
+    var t = ((p3[0] - p1[0]) * d2y - (p3[1] - p1[1]) * d2x) / den; return [r1(p1[0] + d1x * t), r1(p1[1] + d1y * t)];
+  }
   function options(t) {
-    if (t === 'stair') return [{id: 'shape', label: 'Dạng', values: [['straight', 'Thẳng'], ['L', 'Chữ L (có chiếu nghỉ)'], ['U', 'Chữ U (có chiếu nghỉ)']], value: stairShape()}];
+    if (t === 'stair') return [{id: 'shape', label: 'Dạng', values: [['straight', 'Thẳng'], ['L', 'Chữ L (có chiếu nghỉ)'], ['U', 'Chữ U (có chiếu nghỉ)']], value: stairShape()}, alignOption('stair')];
     if (isPlate(t) && freeMode(t)) return [{id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'free'}, {id: 'part', label: 'Vẽ', values: [['outer', 'Đường bao'], ['hole', 'Lỗ khoét (điểm đầu nằm trong một ' + (t === 'slab' ? 'sàn' : 'trần') + ' đa giác)']], value: opt[t].part}, {id: 'edges', label: 'Cạnh', values: [['free', 'Tự do'], ['ortho', 'Ngang / dọc']], value: opt[t].edges}];
     if (freeMode(t)) {
       var head = [{id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'free'}, {id: 'type', label: 'Loại', values: typeValues(t), value: currentType(t)}];
+      if (t !== 'column') head.push(alignOption(t));
       return t === 'column' ? head.concat([{id: 'rot', label: 'Xoay', values: ROT_VALUES, value: String(opt.column.rot)}]) : head.concat([{id: 'angle', label: 'Hướng', values: [['ortho', 'Ngang / dọc (tự giữ thẳng)'], ['free', 'Góc bất kỳ (xiên)']], value: opt[t].angle}]);
     }
     if (t === 'column' || t === 'beam' || t === 'wall' || isPlate(t)) { var m = {id: 'mode', label: 'Vị trí', values: MODE_VALUES, value: 'grid'}, rest = optionsGrid(t); return [m].concat(rest); }
@@ -175,13 +206,28 @@
     host.mutate(function () { lvl().picks[id] = pick; });
     return id;
   }
-  function addFreeLinear(t, a, b) {
+  function addFreeLinear(t, a, b, fix) {
     // đầu a luôn là đầu bên trái, đứng dọc thì đầu thấp (cùng quy ước với Ruby)
     var ortho = a[0] === b[0] || a[1] === b[1];
     if (ortho ? (b[0] - a[0]) + (b[1] - a[1]) < 0 : b[0] < a[0]) { var sw = a; a = b; b = sw; }
     var id = A.rid(t === 'beam' ? 'fb_' : 'fw_'), type = currentType(t), pick = {free: {a: a.slice(), b: b.slice()}};
     if (type) pick.type = type;
-    host.mutate(function () { lvl()[PICKS[t]][id] = pick; });
+    host.mutate(function () { lvl()[PICKS[t]][id] = pick; if (fix) fix(); });
+    return id;
+  }
+  // Thêm đoạn dầm / tường tự do từ điểm bấm a đến b (đã tính đường bấm). Chuỗi nối tiếp có đường bấm lệch tim thì kéo hai đầu gặp nhau
+  // tại giao điểm của hai đường tim để góc không hở hoặc chồng. Trả về mã phần tử.
+  function commitLinear(t, a, b) {
+    var al = alignOf(t), w = widthOf(t), v = shiftVec(a, b, w, al), sa = shiftPt(a, v), sb = shiftPt(b, v), fix = null, prev = chain && chain.prev;
+    if (al !== 'c' && prev && prev.t === t) {
+      var m = lineMeet(prev.sa, prev.sb, sa, sb);
+      if (m && Math.hypot(m[0] - a[0], m[1] - a[1]) <= 4 * Math.max(w, 100) && lengthOf(m, sb) >= 100 && lengthOf(prev.sa, m) >= 100) {
+        var pe = prev.sb, pid = prev.id; sa = m;
+        fix = function () { var f = lvl()[PICKS[t]][pid] && lvl()[PICKS[t]][pid].free; if (!f) return; ['a', 'b'].forEach(function (k) { if (Math.hypot(f[k][0] - pe[0], f[k][1] - pe[1]) < 0.6) f[k] = m.slice(); }); };
+      }
+    }
+    var id = addFreeLinear(t, sa, sb, fix);
+    chain = {free: true, p: b, ref: 'tự do', prev: {t: t, id: id, sa: sa, sb: sb}};
     return id;
   }
   // ---- Sàn, trần ĐA GIÁC (P4b-3): bấm từng đỉnh; bấm lại đỉnh đầu hoặc Enter để khép; Backspace bỏ đỉnh cuối ----
@@ -284,6 +330,7 @@
     addStair(a, mid, b, shape); note = 'Đã thêm cầu thang chữ ' + shape + ' (Ruby kiểm tra số bậc và va chạm).'; chain = null;
   }
   function addStair(a, mid, b, shape) {
+    var v = shiftVec(a, mid || b, widthOf('stair'), alignOf('stair')); a = shiftPt(a, v); b = shiftPt(b, v); if (mid) mid = shiftPt(mid, v);
     var id = A.rid('st_'), type = stairType(), pick = {shape: shape, free: {a: a.slice(), b: b.slice()}};
     if (mid) pick.free.c = mid.slice();
     if (type) pick.type = type.id;
@@ -318,7 +365,7 @@
     if (!chain) { chain = {free: true, p: target.free, ref: 'tự do'}; return; }
     if (target.tooShort) { note = 'Đoạn quá ngắn (tối thiểu 100 mm).'; return; }
     var a = chain.p, b = target.free, label = tool === 'beam' ? 'dầm' : 'tường';
-    addFreeLinear(tool, a, b); note = 'Đã thêm ' + label + ' tự do dài ' + lengthOf(a, b) + ' mm.'; chain = {free: true, p: b, ref: 'tự do'};
+    commitLinear(tool, a, b); note = 'Đã thêm ' + label + ' tự do dài ' + lengthOf(a, b) + ' mm (đường bấm là ' + alignName(alignOf(tool)) + ').';
   }
   // Gõ số + Enter khi đang kéo dầm / tường tự do: đoạn dài đúng n mm theo hướng con trỏ.
   function typed(n, cursor) {
@@ -328,7 +375,7 @@
     var c = cursor || chain.p, horizontal = Math.abs(c[0] - chain.p[0]) >= Math.abs(c[1] - chain.p[1]), sign = (horizontal ? c[0] - chain.p[0] : c[1] - chain.p[1]) >= 0 ? 1 : -1;
     var b = horizontal ? [r1(chain.p[0] + sign * n), chain.p[1]] : [chain.p[0], r1(chain.p[1] + sign * n)];
     if (opt[tool].angle === 'free') { var dx = c[0] - chain.p[0], dy = c[1] - chain.p[1], dl = Math.hypot(dx, dy) || 1; b = [r1(chain.p[0] + dx / dl * n), r1(chain.p[1] + dy / dl * n)]; } // xiên: đúng hướng con trỏ
-    addFreeLinear(tool, chain.p, b); note = 'Đã thêm ' + (tool === 'beam' ? 'dầm' : 'tường') + ' tự do dài ' + n + ' mm.'; chain = {free: true, p: b, ref: 'tự do'};
+    commitLinear(tool, chain.p, b); note = 'Đã thêm ' + (tool === 'beam' ? 'dầm' : 'tường') + ' tự do dài ' + n + ' mm (đường bấm là ' + alignName(alignOf(tool)) + ').';
     return true;
   }
   function activate(t) { tool = DESIGN.indexOf(t) >= 0 ? t : null; chain = null; ring = null; target = null; note = ''; }
@@ -453,10 +500,20 @@
           g.push({t: 'poly', poly: rotRect(c, ty.w, ty.d, Number(opt.column.rot) || 0), color: GOOD, alpha: 0.3}); g.push({t: 'dot', p: c, color: GOOD, r: 5}); }
         return g;
       }
-      if (tool === 'stair' && chain && target && target.free) { var fp = chain.mid ? stairOutline(chain.p, chain.mid, target.free, stairShape()) : (stairShape() === 'straight' ? stairFootprint(chain.p, target.free) : null); if (fp) g.push({t: 'poly', poly: fp, color: GOOD, alpha: 0.2}); }
+      if (tool === 'stair' && chain && target && target.free) {
+        var sv = shiftVec(chain.p, chain.mid || target.free, widthOf('stair'), alignOf('stair')), sa0 = shiftPt(chain.p, sv), sb0 = shiftPt(target.free, sv), sm0 = chain.mid && shiftPt(chain.mid, sv);
+        var fp = chain.mid ? stairOutline(sa0, sm0, sb0, stairShape()) : (stairShape() === 'straight' ? stairFootprint(sa0, sb0) : stairFootprint(sa0, sb0));
+        if (fp) g.push({t: 'poly', poly: fp, color: GOOD, alpha: 0.2});
+        if (alignOf('stair') !== 'c') g.push({t: 'line', a: chain.p, b: chain.mid || target.free, color: GOOD, width: 1.5, dash: [6, 4]}); // đường bấm
+      }
       if (chain) { g.push({t: 'dot', p: chain.p, color: GOOD, r: 5}); }
       if (target && target.free) {
-        if (chain) { g.push(solid({t: 'line', a: chain.p, b: target.free, color: target.tooShort ? BAD : GOOD, width: 5, alpha: 0.5}, tool)); if (target.end) g.push({t: 'text', p: target.free, text: lengthOf(chain.p, target.free) + ' mm'}); }
+        if (chain) {
+          var lv2 = (tool === 'beam' || tool === 'wall') ? shiftVec(chain.p, target.free, widthOf(tool), alignOf(tool)) : [0, 0];
+          g.push(solid({t: 'line', a: shiftPt(chain.p, lv2), b: shiftPt(target.free, lv2), color: target.tooShort ? BAD : GOOD, width: 2, alpha: 0.5}, tool));
+          if (lv2[0] || lv2[1]) g.push({t: 'line', a: chain.p, b: target.free, color: target.tooShort ? BAD : GOOD, width: 1.5, dash: [6, 4]}); // đường bấm
+          if (target.end) g.push({t: 'text', p: target.free, text: lengthOf(chain.p, target.free) + ' mm'});
+        }
         g.push({t: 'dot', p: target.free, color: target.tooShort ? BAD : GOOD, r: 5});
       }
       return g;
@@ -674,7 +731,7 @@
   window.VGDPlanEdit = {
     init: function (h) { host = h; S = h.state; A = h.api; },
     handles: handles, activate: activate, cancel: cancel, busy: busy, options: options, setOption: setOption, freeMode: freeMode, typed: typed, finish: finish, undoPoint: undoPoint,
-    typeSelector: typeSelector, flipDoor: flipDoor, move: move, click: click, hint: hint, ghost: ghost, remove: remove, propsFor: propsFor,
+    typeSelector: typeSelector, flipDoor: flipDoor, cycleAlign: cycleAlign, move: move, click: click, hint: hint, ghost: ghost, remove: remove, propsFor: propsFor,
     debug: function () { return {tool: tool, chain: chain && chain.ref, chainPoint: chain && chain.p, freeTarget: target && target.free, target: target && {ref: target.node && target.node.ref, end: target.end && target.end.ref, refs: target.refs, span: target.span && target.span.ref, cell: target.cell && target.cell.ref, exists: target.exists, error: target.error, pos: target.pos}, note: note, opt: JSON.parse(JSON.stringify(opt))}; }
   };
 })();
