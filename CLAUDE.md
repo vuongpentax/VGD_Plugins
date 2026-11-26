@@ -37,6 +37,8 @@ Tất cả plugin SketchUp dùng thực tế phải nằm trong thư mục `plug
 
 Mỗi plugin nên được tổ chức tương đối độc lập. Danh sách plugin hiện có xem trực tiếp trong `plugins/`.
 
+Đồ thị mã nguồn (Graphify, chỉ code, tạo bằng `graphify update .` trong thư mục plugin): mỗi plugin có `plugins/<tên>/graphify-out/GRAPH_REPORT.md` (tóm tắt) và `graph.json` (truy vấn bằng `graphify query "<câu hỏi>"`). Đồ thị đúng tại thời điểm tạo và không tự cập nhật: sau thay đổi code lớn, chạy lại `graphify update .` rồi commit hai file này. Nút trùng tên lớp có sẵn của Ruby / SketchUp (`Dir`, `Group`...) bị gộp lại, đừng coi là liên kết kiến trúc. Không commit `cache/`, `graph.html`, `manifest.json` (dựng lại được).
+
 Mỗi plugin tự giữ test và script hỗ trợ trong thư mục riêng của nó (thường là `dev/`); `tests/` ở gốc dành cho kiểm thử dùng chung toàn repo; hiện có `tests/test_vgd_conventions.rb` (kiểm tra quy ước đặt tên và menu bên dưới, chạy `ruby tests/test_vgd_conventions.rb` từ gốc repo).
 
 Không tự tạo plugin mới nếu chưa được yêu cầu hoặc chưa thực sự được chuyển vào.
