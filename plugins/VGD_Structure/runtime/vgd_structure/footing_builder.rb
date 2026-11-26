@@ -11,10 +11,10 @@ module VGD
       def self.prepare(model, raw_state, level_ids)
         state = State.normalize!(raw_state)
         raise FootingPlan::Error, 'Hãy chọn ít nhất một tầng để dựng móng.' unless level_ids.is_a?(Array) && !level_ids.empty?
-        ids = level_ids.uniq.select { |id| (Levels.find(state['levels'], id) || {})['footing'] }
+        ids = level_ids.uniq.select { |id| l = Levels.find(state['levels'], id) || {}; l['footing'] || !(l['free_footings'] || {}).empty? }
         raise FootingPlan::Error, 'Các tầng đã chọn chưa khai báo móng.' if ids.empty?
         plans = ids.map { |id| FootingPlan.plan(state['grid'], state['types'], state['levels'], id, state['beam_types'], state['wall_types'], state['opening_types']) }
-        raise FootingPlan::Error, 'Tầng móng chưa có cột nào (hoặc tường khi bật móng băng): móng đặt dưới chân cột và dưới tường.' if plans.all? { |plan| plan[:items].empty? }
+        raise FootingPlan::Error, 'Tầng móng chưa có cột nào (hoặc tường khi bật móng băng) và chưa vẽ móng tự do: móng theo lưới đặt dưới chân cột và dưới tường.' if plans.all? { |plan| plan[:items].empty? }
         locked = plans.map { |plan| find(model, plan[:level]['id']) }.compact.find(&:locked?)
         raise FootingPlan::Error, "Nhóm “#{locked.name}” đang bị khóa. Hãy mở khóa rồi dựng lại." if locked
         {state: state, plans: plans, total: plans.sum { |plan| plan[:items].size }}
@@ -30,7 +30,7 @@ module VGD
           draw_level(model, plan, layer, definitions, kept) unless plan[:items].empty?
         end
         # Nhóm móng của tầng không còn, hoặc tầng đã bỏ khai báo móng: dọn đi (bỏ qua nhóm bị khóa).
-        valid = ctx[:state]['levels'].select { |l| l['footing'] }.map { |l| l['id'] }
+        valid = ctx[:state]['levels'].select { |l| l['footing'] || !(l['free_footings'] || {}).empty? }.map { |l| l['id'] }
         orphans = groups(model).reject { |g| valid.include?(g.get_attribute(Schema::DICTIONARY, 'level')) }
         locked, free = orphans.partition(&:locked?)
         free.each(&:erase!)
@@ -99,7 +99,7 @@ module VGD
       def self.label(item)
         case item[:kind]
         when 'step' then "Móng #{item[:column]} bậc trên"
-        when 'strip' then "Móng băng #{item[:wall]}"
+        when 'strip' then item[:free] ? "Móng băng tự do #{item[:ref]}" : "Móng băng #{item[:wall]}"
         else "Móng #{item[:ref]}"
         end
       end

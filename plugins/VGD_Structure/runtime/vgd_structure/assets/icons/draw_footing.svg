@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" role="img" aria-labelledby="t">
+  <title id="t">VGD Structure · Móng</title>
+  <g stroke="#292B2D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.57 4.99 L22.0 11.59 L13.43 16.54 L2.0 9.94 Z" fill="none"/>
+    <path d="M22.0 14.23 L13.43 19.18 L13.43 16.54 L22.0 11.59 Z" fill="none"/>
+    <path d="M2.0 12.58 L13.43 19.18 L13.43 16.54 L2.0 9.94 Z" fill="none"/>
+    <path d="M12.0 4.82 L15.43 6.8 L12.0 8.78 L8.57 6.8 Z" fill="none"/>
+    <path d="M15.43 10.76 L12.0 12.74 L12.0 8.78 L15.43 6.8 Z" fill="none"/>
+    <path d="M8.57 10.76 L12.0 12.74 L12.0 8.78 L8.57 6.8 Z" fill="none"/>
+  </g>
+  <g stroke="#B48963" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12.0 4.82 L15.43 6.8 L12.0 8.78 L8.57 6.8 Z" fill="#B48963" fill-opacity="0.35"/>
+  </g>
+</svg>

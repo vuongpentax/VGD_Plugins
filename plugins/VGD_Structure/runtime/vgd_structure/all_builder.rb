@@ -18,7 +18,7 @@ module VGD
           # Mái: tầng có khai báo `roof`, kể cả tầng trên cùng.
           picked = lambda do |l|
             case kind
-            when 'footings' then l['footing'] && (!l['picks']['columns'].empty? || (l['footing']['strip'] && !l['picks']['walls'].empty?))
+            when 'footings' then !(l['free_footings'] || {}).empty? || (l['footing'] && (!l['picks']['columns'].empty? || (l['footing']['strip'] && !l['picks']['walls'].empty?)))
             when 'roofs' then l['roof']
             when 'glass_walls' then !(l['glass_walls'] || {}).empty?
             else !l['picks'][kind].empty?

@@ -44,14 +44,14 @@
   }
   function toRubyLevel(l) {
     return {id: l.id, name: l.name, elevation: l.elevation, screed: l.screed, slab_thickness: l.slab, column_type: l.columnType || null, beam_type: l.beamType || null, wall_type: l.wallType || null, ceiling_height: l.ceilingHeight, ceiling_thickness: l.ceilingThickness,
-            floor_layers: (l.floorLayers || []).map(cleanLayer), ceiling_layers: (l.ceilingLayers || []).map(cleanLayer), footing: l.footing ? footingToRuby(l.footing) : undefined, roof: l.roof ? JSON.parse(JSON.stringify(l.roof)) : undefined, slab_holes: Object.keys(l.slabHoles || {}).length ? JSON.parse(JSON.stringify(l.slabHoles)) : undefined, glass_walls: Object.keys(l.glassWalls || {}).length ? JSON.parse(JSON.stringify(l.glassWalls)) : undefined, rooms: Object.keys(l.rooms || {}).length ? JSON.parse(JSON.stringify(l.rooms)) : undefined,
+            floor_layers: (l.floorLayers || []).map(cleanLayer), ceiling_layers: (l.ceilingLayers || []).map(cleanLayer), footing: l.footing ? footingToRuby(l.footing) : undefined, roof: l.roof ? JSON.parse(JSON.stringify(l.roof)) : undefined, slab_holes: Object.keys(l.slabHoles || {}).length ? JSON.parse(JSON.stringify(l.slabHoles)) : undefined, free_footings: Object.keys(l.freeFootings || {}).length ? JSON.parse(JSON.stringify(l.freeFootings)) : undefined, glass_walls: Object.keys(l.glassWalls || {}).length ? JSON.parse(JSON.stringify(l.glassWalls)) : undefined, rooms: Object.keys(l.rooms || {}).length ? JSON.parse(JSON.stringify(l.rooms)) : undefined,
             picks: {columns: clonePicks(l.picks), beams: clonePicks(l.beamPicks), walls: clonePicks(l.wallPicks), slabs: clonePicks(l.slabPicks), ceilings: clonePicks(l.ceilingPicks), openings: clonePicks(l.openingPicks), stairs: clonePicks(l.stairPicks || {})}, notes: JSON.parse(JSON.stringify(l.notes || {})), sections: JSON.parse(JSON.stringify(l.sections || {}))};
   }
   function cleanLayer(l) { var o = {fn: l.fn, t: l.t, material: l.material || ''}; if (l.color) o.color = l.color; return o; }
   function clonePicks(picks) { var out = {}; Object.keys(picks).forEach(function (k) { out[k] = JSON.parse(JSON.stringify(picks[k])); }); return out; } // sao sâu: phần tử tự do có khóa 'free' lồng nhau
   function fromRubyLevel(l) {
     return {id: l.id, name: l.name, elevation: l.elevation, slab: l.slab_thickness, screed: l.screed === undefined ? 50 : l.screed, columnType: l.column_type, beamType: l.beam_type || null, wallType: l.wall_type || null, ceilingHeight: l.ceiling_height, ceilingThickness: l.ceiling_thickness,
-            footing: l.footing ? footingFromRuby(l.footing) : null, roof: l.roof ? JSON.parse(JSON.stringify(l.roof)) : null, slabHoles: JSON.parse(JSON.stringify(l.slab_holes || {})), glassWalls: JSON.parse(JSON.stringify(l.glass_walls || {})), rooms: JSON.parse(JSON.stringify(l.rooms || {})),
+            footing: l.footing ? footingFromRuby(l.footing) : null, roof: l.roof ? JSON.parse(JSON.stringify(l.roof)) : null, slabHoles: JSON.parse(JSON.stringify(l.slab_holes || {})), glassWalls: JSON.parse(JSON.stringify(l.glass_walls || {})), freeFootings: JSON.parse(JSON.stringify(l.free_footings || {})), rooms: JSON.parse(JSON.stringify(l.rooms || {})),
             floorLayers: (l.floor_layers || []).map(function (x) { return {fn: x.fn, t: x.t, material: x.material || '', color: x.color || null}; }), ceilingLayers: (l.ceiling_layers || []).map(function (x) { return {fn: x.fn, t: x.t, material: x.material || '', color: x.color || null}; }),
             picks: clonePicks((l.picks && l.picks.columns) || {}), beamPicks: clonePicks((l.picks && l.picks.beams) || {}), wallPicks: clonePicks((l.picks && l.picks.walls) || {}),
             stairPicks: clonePicks((l.picks && l.picks.stairs) || {}), slabPicks: clonePicks((l.picks && l.picks.slabs) || {}), ceilingPicks: clonePicks((l.picks && l.picks.ceilings) || {}),
@@ -1238,7 +1238,7 @@
   function drawnList(kind) { return {columns: state.drawnLevels, beams: state.drawnBeamLevels, walls: state.drawnWallLevels, openings: state.drawnOpeningLevels, slabs: state.drawnSlabLevels, ceilings: state.drawnCeilingLevels, stairs: state.drawnStairLevels}[kind] || []; }
   function renderAllButtons() {
     var l = currentLevel();
-    var has = function (lv) { return ALL_KINDS.some(function (k) { return Object.keys(lv[k[1]]).length; }) || Object.keys(lv.glassWalls || {}).length > 0; }; // vách kính không có lựa chọn riêng nên tính thêm
+    var has = function (lv) { return ALL_KINDS.some(function (k) { return Object.keys(lv[k[1]]).length; }) || Object.keys(lv.glassWalls || {}).length > 0 || Object.keys(lv.freeFootings || {}).length > 0; }; // vách kính, móng tự do không có lựa chọn riêng nên tính thêm
     $('build-all-level').disabled = !state.previewOk || !has(l);
     $('build-all-levels').disabled = !state.previewOk || !state.levels.some(has);
   }
@@ -1552,7 +1552,7 @@
   function historyChanged() { window.VGDPlan.refreshHistory(); }
   // ---- Vẽ trực tiếp trong SketchUp: mỗi lần vẽ / sửa xong thì tự dựng lại các loại phần tử đã đổi của tầng đang xem (gom các lần liên tiếp) ----
   var AUTO_BUILD_MS = 250, autoKinds = {}, autoTimer = null;
-  var KIND_BOX = {columns: 'picks', beams: 'beamPicks', walls: 'wallPicks', openings: 'openingPicks', slabs: 'slabPicks', ceilings: 'ceilingPicks', stairs: 'stairPicks'};
+  var KIND_BOX = {columns: 'picks', beams: 'beamPicks', walls: 'wallPicks', openings: 'openingPicks', slabs: 'slabPicks', ceilings: 'ceilingPicks', stairs: 'stairPicks', footings: 'freeFootings'};
   function levelSig() {
     var l = currentLevel(), out = {}; Object.keys(KIND_BOX).forEach(function (k) { out[k] = JSON.stringify(l[KIND_BOX[k]] || {}); }); return out;
   }
@@ -1575,7 +1575,7 @@
       var byLevel = {}; Object.keys(autoKinds).forEach(function (k) { (byLevel[autoKinds[k]] = byLevel[autoKinds[k]] || []).push(k.split('@')[0]); }); autoKinds = {}; var retag = autoRetag, adoptNow = autoAdopt; autoRetag = {}; autoAdopt = null;
       Object.keys(byLevel).forEach(function (levelId) {
         var lv = state.levels.filter(function (x) { return x.id === levelId; })[0]; if (!lv) return;
-        var build = byLevel[levelId].filter(function (k) { return Object.keys(lv[KIND_BOX[k]] || {}).length; }), gone = byLevel[levelId].filter(function (k) { return !Object.keys(lv[KIND_BOX[k]] || {}).length; });
+        var build = byLevel[levelId].filter(function (k) { return Object.keys(lv[KIND_BOX[k]] || {}).length || (k === 'footings' && lv.footing); }), gone = byLevel[levelId].filter(function (k) { return k !== 'footings' && !Object.keys(lv[KIND_BOX[k]] || {}).length; }); // móng chưa có lệnh gỡ nhóm: xóa hết móng tự do thì nhóm cũ giữ nguyên đến lần dựng móng sau
         gone.forEach(function (k) { // đã xóa hết phần tử loại này: bỏ nhóm tương ứng trong model
           if (k === 'slabs' || k === 'ceilings') call('plates_remove', {kind: k, level: levelId}); else call(k + '_remove', {level: levelId});
         });

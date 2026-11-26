@@ -77,11 +77,11 @@ module VGD
         end
         # Đế móng (tầng có khai báo móng): cùng nguồn FootingPlan với lúc dựng.
         level_id = payload['level'] || levels.first['id']
-        if (Levels.find(levels, level_id) || {})['footing']
+        if (lf = Levels.find(levels, level_id) || {}) && (lf['footing'] || !(lf['free_footings'] || {}).empty?)
           begin
             plan = FootingPlan.plan(grid, types, levels, level_id, beam_types, wall_types, opening_types)
             out[:footings] = {level: plan[:level]['id'], z_top: plan[:z_top], h: plan[:h], issues: plan[:issues], count: plan[:items].size,
-                              items: plan[:items].map { |i| i.slice(:ref, :kind, :center, :w, :d, :h, :z0, :z1, :rot, :poly) }}
+                              items: plan[:items].map { |i| i.slice(:ref, :kind, :center, :w, :d, :h, :z0, :z1, :rot, :poly, :free, :a, :b, :width) }}
           rescue FootingPlan::Error, ColumnPlan::Error, BeamPlan::Error, WallPlan::Error => error
             out[:footings_error] = error.message
           end

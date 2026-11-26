@@ -14,17 +14,19 @@ module VGD
 
       def self.plan(grid, types, levels, level_id, beam_types = BeamTypes.default, wall_types = WallTypes.default, opening_types = OpeningTypes.default)
         level = Levels.find(levels, level_id) or raise Error, 'Tầng không tồn tại.'
-        footing = level['footing'] or raise Error, "Tầng “#{level['name']}” chưa khai báo móng."
+        footing = level['footing']
+        free = level['free_footings'] || {}
+        raise Error, "Tầng “#{level['name']}” chưa khai báo móng." if footing.nil? && free.empty?
         columns = ColumnPlan.plan(grid, types, levels, level_id)
         z_top = columns[:z0]
-        named = (footing['types'] || []).each_with_object({}) { |t, h| h[t['name']] = t }
-        assign = footing['assign'] || {}
+        named = ((footing || {})['types'] || []).each_with_object({}) { |t, h| h[t['name']] = t }
+        assign = (footing || {})['assign'] || {}
         issues = []
         refs = columns[:items].map { |c| c[:ref] }
         assign.each { |ref, name| issues << "Móng loại “#{name}” gán cho cột #{ref} nhưng cột này không còn: bỏ qua." unless refs.include?(ref) }
         pads = []
         steps = []
-        columns[:items].each do |col|
+        (footing ? columns[:items] : []).each do |col|
           spec = named[assign[col[:ref]]] || footing
           step = spec['step']
           step_h = step ? step['h'] : 0.0
@@ -35,15 +37,47 @@ module VGD
           top = step ? steps.last : pad
           issues << "Móng #{col[:ref]} #{step ? '(bậc trên) ' : ''}nhỏ hơn tiết diện cột (#{col[:w].round}x#{col[:d].round} mm)." if top[:w] < top[:column_w] || top[:d] < top[:column_d]
         end
-        ColumnPlan.overlaps(pads).each { |a, b| issues << "Móng #{a[:ref]} và #{b[:ref]} chồng lên nhau: nên gộp thành móng chung hoặc giảm kích thước." }
+        free_pads, free_strips = free_items(free, z_top)
+        ColumnPlan.overlaps(pads + free_pads).each { |a, b| issues << "Móng #{a[:ref]} và #{b[:ref]} chồng lên nhau: nên gộp thành móng chung hoặc giảm kích thước." }
         strips = []
-        if footing['strip']
+        if footing && footing['strip']
           walls = WallPlan.plan(grid, types, beam_types, wall_types, levels, level_id, opening_types)[:items]
           issues << "Móng băng: tầng “#{level['name']}” chưa có tường nào nên chưa có đế băng." if walls.empty?
           strips = strip_items(walls, pads, footing['strip'], z_top, issues)
         end
-        h = footing['h'] + (footing['step'] ? footing['step']['h'] : 0.0)
-        {level: level, z_top: z_top, h: h, items: pads + steps + strips, issues: issues}
+        h = footing ? footing['h'] + (footing['step'] ? footing['step']['h'] : 0.0) : 0.0
+        h = ([h] + (free_pads + free_strips).map { |i| i[:h] }).max
+        {level: level, z_top: z_top, h: h, items: pads + steps + strips + free_pads + free_strips, issues: issues}
+      end
+
+      # Móng vẽ tự do (level['free_footings']): đỉnh móng = chân cột của tầng (z_top). Móng đơn quanh tâm (x, y), xoay 90 độ đổi chỗ dài / rộng, góc khác thì đế xoay theo.
+      # Móng băng theo đường tim a-b: ngang / dọc như đoạn băng dưới tường, xiên thì xoay quanh tâm đoạn. Trả về [móng đơn, móng băng].
+      def self.free_items(free, z_top)
+        pads = []
+        strips = []
+        free.each do |id, f|
+          if f['kind'] == 'pad'
+            rot = f['rot'].to_f
+            rot90 = (rot % 180) == 90
+            bw, bd = rot90 ? [f['w'], f['l']] : [f['l'], f['w']]
+            item = {ref: id, kind: 'pad', free: true, center: [f['x'], f['y']], w: bw, d: bd, h: f['h'], z0: (z_top - f['h']).round(1), z1: z_top.round(1), placement: 'free'}
+            item.merge!(rot: rot, poly: Geometry.round_poly(Geometry.rotated_rect(item[:center], bw, bd, rot))) if rot != 0 && !rot90
+            pads << item
+          else
+            a, b = f['a'], f['b']
+            length = Math.hypot(b[0] - a[0], b[1] - a[1])
+            center = [((a[0] + b[0]) / 2.0).round(2), ((a[1] + b[1]) / 2.0).round(2)]
+            along = a[1] == b[1] ? 'x' : a[0] == b[0] ? 'y' : 'o'
+            bw, bd = along == 'y' ? [f['w'], length.round(2)] : [length.round(2), f['w']]
+            item = {ref: id, kind: 'strip', free: true, along: along, center: center, w: bw, d: bd, h: f['h'], width: f['w'], length: length.round(2), z0: (z_top - f['h']).round(1), z1: z_top.round(1), placement: 'free', a: a, b: b}
+            if along == 'o'
+              rot = Geometry.angle(a, b).round(4)
+              item.merge!(rot: rot, poly: Geometry.round_poly(Geometry.rotated_rect(center, bw, bd, rot)))
+            end
+            strips << item
+          end
+        end
+        [pads, strips]
       end
 
       # Một khối đế dưới cột `col`: dài l theo trục x riêng của cột, rộng w theo trục y riêng, đỉnh tại z1, dày h.

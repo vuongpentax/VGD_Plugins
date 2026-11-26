@@ -123,6 +123,7 @@ module VGD
           slab_holes, dropped_h = slab_holes!(level['slab_holes'], grid, name)
           glass_walls, dropped_g = glass_walls!(level['glass_walls'], span_refs, name)
           rooms, dropped_r = rooms!(level['rooms'], grid, name)
+          free_footings = free_footings!(level['free_footings'], name)
           removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k + dropped_o + dropped_h + dropped_g + dropped_r
           entry = {'id' => id, 'name' => name, 'elevation' => elevation, 'screed' => screed.to_f.round(1), 'slab_thickness' => slab.to_f.round(1), 'ceiling_height' => ceiling_height.to_f.round(1), 'ceiling_thickness' => ceiling_thickness.to_f.round(1),
            'column_type' => type_id, 'beam_type' => beam_type, 'wall_type' => wall_type, 'picks' => {'columns' => columns, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings, 'openings' => openings, 'stairs' => stairs}, 'notes' => notes}
@@ -130,6 +131,7 @@ module VGD
           entry['slab_holes'] = slab_holes unless slab_holes.empty?
           entry['glass_walls'] = glass_walls unless glass_walls.empty?
           entry['rooms'] = rooms unless rooms.empty?
+          entry['free_footings'] = free_footings unless free_footings.empty?
           entry['floor_layers'] = floor_layers unless floor_layers.empty?
           entry['ceiling_layers'] = ceiling_layers unless ceiling_layers.empty?
           footing = footing!(level['footing'], name)
@@ -158,6 +160,8 @@ module VGD
       FOOTING_STRIP_W = (200.0..3000.0).freeze        # rộng đế móng băng; dày móng băng dùng FOOTING_THICKNESS
       MAX_FOOTING_TYPES = 12
       MAX_FOOTING_NAME = 20
+      FREE_FOOTING_ID = /\Aff_[0-9a-f]{8}\z/ # mã móng vẽ tự do (không theo cột / tường của lưới)
+      MAX_FREE_FOOTINGS = 200
       def self.footing!(raw, level_name)
         return nil if raw.nil?
         who = "Tầng “#{level_name}”"
@@ -462,6 +466,44 @@ module VGD
           result[id] = {'a' => a, 'b' => b, 'inset' => inset}
         end
         [out, dropped]
+      end
+
+      # Móng vẽ tự do của tầng: {mã ff_xxxxxxxx => móng đơn {'kind' => 'pad', 'x', 'y', 'rot'?, 'l', 'w', 'h'} (dài l theo trục x riêng, rộng w, dày h, tâm tại x, y)
+      # hoặc móng băng {'kind' => 'strip', 'a' => [x, y], 'b' => [x, y], 'w' (rộng), 'h' (dày)} theo ĐƯỜNG TIM a-b (ngang, dọc hoặc xiên)}.
+      # Cùng khoảng giá trị với móng theo cột / tường (FOOTING_SIZE, FOOTING_STRIP_W, FOOTING_THICKNESS); đầu mút móng băng chuẩn hóa như tường tự do.
+      def self.free_footings!(raw, level_name)
+        return {} if raw.nil?
+        raise Error, "Tầng “#{level_name}”: dữ liệu móng tự do không hợp lệ." unless raw.is_a?(Hash)
+        raise Error, "Tầng “#{level_name}”: quá nhiều móng tự do (tối đa #{MAX_FREE_FOOTINGS})." if raw.size > MAX_FREE_FOOTINGS
+        raw.each_with_object({}) do |(id, f), out|
+          raise Error, "Tầng “#{level_name}”: mã móng tự do #{id.inspect} không hợp lệ." unless id.is_a?(String) && id.match?(FREE_FOOTING_ID)
+          who = "Tầng “#{level_name}”: móng tự do #{id}"
+          raise Error, "#{who} không hợp lệ." unless f.is_a?(Hash)
+          range = lambda do |key, span, label|
+            v = f[key]
+            raise Error, "#{who}: #{label} từ #{span.min.to_i} đến #{span.max.to_i} mm." unless number?(v) && span.cover?(v.to_f)
+            v.to_f.round(1)
+          end
+          case f['kind']
+          when 'pad'
+            raise Error, "#{who} có khóa lạ." unless (f.keys - %w[kind x y rot l w h]).empty?
+            rot = f.key?('rot') ? f['rot'] : 0
+            raise Error, "#{who}: góc xoay phải là số độ (từ -360 đến 360)." unless number?(rot) && rot.abs <= 360
+            rot = (rot.to_f % 360).round(2)
+            rot = rot.to_i if rot == rot.to_i
+            xy = %w[x y].map do |k|
+              raise Error, "#{who}: tọa độ phải là số (mm), không quá #{FREE_LIMIT.to_i}." unless number?(f[k]) && f[k].abs <= FREE_LIMIT
+              f[k].to_f.round(1)
+            end
+            out[id] = {'kind' => 'pad', 'x' => xy[0], 'y' => xy[1], 'rot' => rot, 'l' => range.call('l', FOOTING_SIZE, 'dài'), 'w' => range.call('w', FOOTING_SIZE, 'rộng'), 'h' => range.call('h', FOOTING_THICKNESS, 'dày')}
+          when 'strip'
+            raise Error, "#{who} có khóa lạ." unless (f.keys - %w[kind a b w h]).empty?
+            line = free_pick!({'a' => f['a'], 'b' => f['b']}, 'móng băng', id, level_name)
+            out[id] = {'kind' => 'strip', 'a' => line['a'], 'b' => line['b'], 'w' => range.call('w', FOOTING_STRIP_W, 'rộng'), 'h' => range.call('h', FOOTING_THICKNESS, 'dày')}
+          else
+            raise Error, "#{who}: loại phải là pad (móng đơn) hoặc strip (móng băng)."
+          end
+        end
       end
 
       # Vách kính của tầng (H7): {mã => {'span' => mã nhịp lưới, 'height' => cao (mm), 'pane_max' => rộng tối đa một tấm (mm)}}. Mỗi nhịp tối đa một vách.

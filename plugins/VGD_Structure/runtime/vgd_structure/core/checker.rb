@@ -25,7 +25,7 @@ module VGD
             row[:warnings].concat(slab[:issues].map { |m| "Sàn: #{m}" }) if slab
             next row
           end
-          if level['picks'].values.all?(&:empty?) && (level['glass_walls'] || {}).empty?
+          if level['picks'].values.all?(&:empty?) && (level['glass_walls'] || {}).empty? && (level['free_footings'] || {}).empty?
             row[:warnings] << 'Tầng chưa chọn cột, dầm, tường, sàn hay trần nào.'
             next row
           end

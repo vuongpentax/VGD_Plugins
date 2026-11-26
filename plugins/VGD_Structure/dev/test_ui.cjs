@@ -849,7 +849,7 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   const col=F.preview_all_cells.columns.items[0].center,c0=await pix(col[0],col[1]);
   ok(c0[1]>c0[0] && c0[1]>c0[2] && c0[1]>150,'pixel tại tâm cột có màu xanh lá (cột được vẽ trên canvas)');
   ok(await page.locator('#pv-tabs .pv-tab').count()===F.state.levels.length && (await page.locator('#pv-tabs [aria-selected=true]').getAttribute('data-level'))===F.state.levels[0].id,'tab theo tầng: đủ số tầng, đang chọn tầng hiện hành');
-  ok(await page.locator('#pv-ribbon .pv-ic[data-tool=select]').isEnabled() && await page.locator('#pv-ribbon .pv-ic[data-tool=pan]').isEnabled() && await page.locator('#pv-ribbon .pv-ic:disabled').count()===0 && await page.locator('#pv-ribbon .pv-ic[data-tool]').count()===33,'ribbon: mọi công cụ (9 thiết kế kể cả Cầu thang, 8 vẽ 2D / ghi chú, Mặt cắt, Chọn, Kéo, Gióng, Đo và nhóm Sửa) đều dùng được');
+  ok(await page.locator('#pv-ribbon .pv-ic[data-tool=select]').isEnabled() && await page.locator('#pv-ribbon .pv-ic[data-tool=pan]').isEnabled() && await page.locator('#pv-ribbon .pv-ic:disabled').count()===0 && await page.locator('#pv-ribbon .pv-ic[data-tool]').count()===34,'ribbon: mọi công cụ (10 thiết kế kể cả Cầu thang, Móng, 8 vẽ 2D / ghi chú, Mặt cắt, Chọn, Kéo, Gióng, Đo và nhóm Sửa) đều dùng được');
   ok(await page.locator('.pv-rb-tab').allInnerTexts().then(a=>a.join('|'))==='Kết cấu|Kiến trúc|Chú thích|Sửa|Xem|SketchUp' && (await page.locator('#pv-side').isHidden()),'ribbon có 6 tab Kết cấu, Kiến trúc, Chú thích, Sửa, Xem, SketchUp; cột công cụ cũ đã ẩn');
   const panelOf=async tab=>{await page.evaluate(t=>window.VGDPlan.ribbonTab(t),tab);return page.locator('.pv-rb-panel[data-tab='+tab+'] .pv-rb-grp > i').allInnerTexts().then(a=>a.join('|'));};
   ok((await panelOf('structure'))==='Lưới trục|Kết cấu' && (await panelOf('arch'))==='Cửa' && (await panelOf('annotate'))==='Vẽ 2D|Ghi chú|Mặt cắt' && (await panelOf('modify'))==='Chọn & đo|Sửa' && (await panelOf('view'))==='Đường gióng|Ẩn và cô lập' && (await panelOf('sketchup'))==='Liên kết|Dựng và vẽ trong SketchUp|Đối tượng SketchUp|Tag SketchUp','mỗi tab chia nhóm có tên (nhãn dưới nút) đúng như Revit');
@@ -1417,6 +1417,51 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await page.keyboard.press('Escape');await page.keyboard.press('Control+z');
   await page.keyboard.press('Tab');await wait(60);ok((await page.locator('#pv-options select[data-opt=align]').inputValue())==='c','Tab lần nữa: về Tim');
   ok(freeKeys(await get('wallPicks'),'fw_').length===wBefore,'dọn các tường thử đường bấm: số tường tự do về như cũ');
+  // --- Móng vẽ tự do: móng đơn tại một điểm, móng băng hai điểm (đường bấm tim / mép), kiểm tra khoảng, xóa ---
+  await page.keyboard.press('Escape');await typ('ft');await wait(80);
+  const fget=()=>page.evaluate(()=>JSON.parse(JSON.stringify(window.VGDS._state.levels[0].freeFootings||{})));
+  const ff0=Object.keys(await fget()).length;
+  ok((await dbg4()).tool==='footing' && /móng đơn/i.test(await hintT()),'gõ FT: chọn công cụ Móng (mặc định móng đơn), gợi ý bấm một điểm');
+  ok(await page.locator('#pv-options select[data-opt=kind]').isVisible() && (await page.locator('#pv-options select[data-opt=kind]').inputValue())==='pad' && await page.locator('#pv-options input[data-opt=l]').isVisible(),'thanh tùy chọn móng: kiểu, dài, rộng, dày, xoay');
+  await hv(3000,2000);
+  const fgh=await page.evaluate(()=>window.VGDPlanEdit.ghost().filter(g=>g.t==='poly').map(g=>g.poly));
+  ok(fgh.length===1 && fgh[0].length===4,'xem trước móng đơn: một hình chữ nhật theo kích thước tùy chọn');
+  await page.fill('#pv-options input[data-opt=l]','100');await page.press('#pv-options input[data-opt=l]','Tab');await page.evaluate(()=>document.getElementById('pv-canvas').focus());
+  await cl(3000,2000);
+  ok(/Dài phải từ 300/.test(await hintT()) && Object.keys(await fget()).length===ff0,'móng đơn dài 100 mm (ngoài 300–8000): báo lỗi, không thêm');
+  await page.fill('#pv-options input[data-opt=l]','1500');await page.press('#pv-options input[data-opt=l]','Tab');await page.selectOption('#pv-options select[data-opt=rot]','30');await page.evaluate(()=>document.getElementById('pv-canvas').focus());
+  await cl(3000,2000);
+  let fq=await fget(),fk=Object.keys(fq).filter(k=>k.startsWith('ff_'));
+  ok(fk.length===ff0+1 && fq[fk[0]].kind==='pad' && fq[fk[0]].l===1500 && fq[fk[0]].w===1000 && fq[fk[0]].h===400 && fq[fk[0]].rot===30,'bấm một điểm: thêm móng đơn 1500 × 1000 × 400, xoay 30°, id ff_');
+  await page.keyboard.press('Control+z');
+  ok(Object.keys(await fget()).length===ff0,'hoàn tác: bỏ móng đơn (một lần)');
+  // Móng băng, đường bấm mép trái (Tab), chạy ngang
+  await page.selectOption('#pv-options select[data-opt=kind]','strip');await wait(60);
+  ok(await page.locator('#pv-options select[data-opt=align]').isVisible() && await page.locator('#pv-options input[data-opt=sw]').isVisible() && !(await page.locator('#pv-options input[data-opt=l]').count()),'móng băng: tùy chọn rộng, dày, hướng, đường bấm (không còn dài / rộng / xoay của móng đơn)');
+  await page.evaluate(()=>{document.activeElement&&document.activeElement.blur();});await page.keyboard.press('Tab');await wait(60);
+  ok((await page.locator('#pv-options select[data-opt=align]').inputValue())==='l','Tab: đổi đường bấm móng băng sang Mép trái');
+  await cl(6000,6000);const FP1=await rawPt();await hv(9000,6000);
+  const fgs=await page.evaluate(()=>window.VGDPlanEdit.ghost().filter(g=>g.t==='line'&&g.thick).map(g=>({a:g.a,b:g.b,thick:g.thick})));
+  ok(fgs.length===1 && fgs[0].thick===600 && Math.abs(fgs[0].a[1]-(FP1[1]-300))<0.2,'xem trước móng băng: dải rộng 600, dịch -300 theo mép trái');
+  await cl(9000,6000);await wait(80);
+  fq=await fget();fk=Object.keys(fq).filter(k=>fq[k].kind==='strip');
+  ok(fk.length===1 && fq[fk[0]].w===600 && fq[fk[0]].h===300 && Math.abs(fq[fk[0]].a[1]-(FP1[1]-300))<0.2 && Math.abs(fq[fk[0]].b[1]-(FP1[1]-300))<0.2 && fq[fk[0]].a[0]<fq[fk[0]].b[0],'móng băng: lưu đường tim đã dịch nửa bề rộng, đầu a bên trái');
+  await page.keyboard.press('Escape');
+  // Ruby chấp nhận dữ liệu móng tự do và đưa vào xem trước
+  await clear();
+  await page.keyboard.press('Escape');await typ('ft');await wait(60);await page.selectOption('#pv-options select[data-opt=kind]','pad');await page.evaluate(()=>document.getElementById('pv-canvas').focus());await cl(3000,2000);await wait(300);
+  const fpay=await last('grid_preview');
+  const vfp=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_validate.rb')],{input:JSON.stringify(fpay),encoding:'utf8'}));
+  ok(vfp.ok && vfp.error===null && vfp.free_footings===2 && vfp.footing_preview && vfp.footing_preview.items.filter(i=>i.free).length===2,'dữ liệu móng tự do được Ruby chấp nhận: 2 móng tự do thành mục xem trước');
+  // Mặt bằng hiện và chọn / xóa được móng tự do
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');await receive('preview',Object.assign({},F.preview_free,{footings:vfp.footing_preview}));await wait(120);
+  const fdb=await page.evaluate(()=>window.VGDPlan.debug());
+  ok(fdb.counts.footing===2,'mặt bằng có 2 hình móng tự do chọn được');
+  const fref=Object.keys(await fget()).find(k=>k.startsWith('ff_'));
+  await page.evaluate(r=>window.VGDPlan.selectKeys('sl_00000001',[{kind:'footing',ref:r}],false),fref);await wait(80);
+  await page.keyboard.press('Delete');await wait(120);
+  ok(!(await fget())[fref] && Object.keys(await fget()).length===1,'Delete móng tự do đang chọn: chỉ xóa móng đó');
+  await clear();
   // --- Gửi Ruby: dữ liệu tự do hợp lệ ---
   await clear();await cl(6000,3000);await cl(8000,3000);await wait(300);
   const payload=await last('grid_preview');
