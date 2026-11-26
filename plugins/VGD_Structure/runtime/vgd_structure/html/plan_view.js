@@ -14,7 +14,7 @@
     offset: 'M4 21V7h14M8 21V11h10', trim: 'M6 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM6 15a3 3 0 1 0 0 6 3 3 0 0 0 0-6ZM8.5 7.5L21 18M8.5 16.5L21 6',
     eraser: 'M3 17l9-9 7 7-5 5H6ZM8 12l7 7M3 22h18', delete: 'M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v8M14 10v8',
     grid: 'M3 8h18M3 16h18M8 3v18M16 3v18', column: 'M9 2h6v20H9Z', beam: 'M2 9h20v6H2Z', wall: 'M3 6l18-4v15L3 22Z', slab: 'M2 13l10-6 10 5-11 7Z',
-    ceiling: 'M2 6h20M2 16h20M6 6v10M12 6v10M18 6v10', door: 'M7 3l11-2v21H7ZM10 12h1', window: 'M4 4l16-2v18L4 22ZM12 3v18M4 12l16-2',
+    ceiling: 'M2 6h20M2 16h20M6 6v10M12 6v10M18 6v10', stair: 'M3 21h5v-5h5v-5h5V6h3v15Z', footing: 'M2 20h20v-4H2ZM9 16V4h6v12', door: 'M7 3l11-2v21H7ZM10 12h1', window: 'M4 4l16-2v18L4 22ZM12 3v18M4 12l16-2',
     line: 'M4 20L20 4', polyline: 'M3 18l6-10 5 7 7-11', rect: 'M3 6h18v12H3Z', circle: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z', arc: 'M4 18a10 10 0 0 1 16 0',
     dim: 'M3 8v8M21 8v8M3 12h18M6 10l-3 2 3 2M18 10l3 2-3 2', text: 'M5 5h14M12 5v14M9 19h6', level: 'M12 3l5 8h-10ZM4 18h16M4 21h16',
     copy: 'M3 3h11v11H3ZM8 8h13v13H8', keys: 'M2 6h20v12H2ZM6 10h1M10 10h1M14 10h1M18 10h1M7 14h10',
@@ -729,6 +729,27 @@
     ctx.globalAlpha = alpha; ctx.fillStyle = color; if (alpha > 0) ctx.fill('evenodd'); ctx.globalAlpha = 1;
     ctx.setLineDash(dash || []); ctx.lineWidth = width || 1; ctx.strokeStyle = color; ctx.stroke(); ctx.setLineDash([]);
   }
+  // Ký hiệu hướng lên của cầu thang: đường tim đi qua tâm bậc đầu, chiếu nghỉ (nếu có), bậc cuối; mũi tên ở bậc cuối, chấm ở bậc đầu, chữ "LÊN" ở bậc đầu.
+  function stairPath(i) {
+    var st = i.steps || []; if (!st.length) return null;
+    var centre = function (s) { var x = 0, y = 0; s.poly.forEach(function (p) { x += p[0]; y += p[1]; }); return [x / s.poly.length, y / s.poly.length]; };
+    var pts = [centre(st[0])], land = st.filter(function (s) { return s.landing; })[0];
+    if (land) pts.push(centre(land));
+    pts.push(centre(st[st.length - 1]));
+    return pts;
+  }
+  function drawStairArrow(i) {
+    var pts = stairPath(i); if (!pts || pts.length < 2) return;
+    var q = pts.map(function (p) { return toScreen(p[0], p[1]); }), n = q.length, color = vstyle === 'color' ? '#B07A00' : css('--vgd-text', '#222');
+    var dx = q[n - 1][0] - q[n - 2][0], dy = q[n - 1][1] - q[n - 2][1], len = Math.hypot(dx, dy); if (!(len > 6)) return;
+    var ux = dx / len, uy = dy / len;
+    ctx.save(); ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = 1.2; ctx.globalAlpha = 0.9;
+    ctx.beginPath(); q.forEach(function (p, k) { if (k) ctx.lineTo(p[0], p[1]); else ctx.moveTo(p[0], p[1]); }); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(q[n - 1][0], q[n - 1][1]); ctx.lineTo(q[n - 1][0] - ux * 9 + uy * 4, q[n - 1][1] - uy * 9 - ux * 4); ctx.lineTo(q[n - 1][0] - ux * 9 - uy * 4, q[n - 1][1] - uy * 9 + ux * 4); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.arc(q[0][0], q[0][1], 2.5, 0, Math.PI * 2); ctx.fill();
+    if (detail !== 'low') { ctx.font = '10px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillText('LÊN', q[0][0] + 6, q[0][1] - 6); }
+    ctx.restore();
+  }
   function draw() {
     if (!ctx) return;
     ctx.setTransform(size.dpr, 0, 0, size.dpr, 0, 0);
@@ -758,7 +779,7 @@
       ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); ctx.restore();
     });
     if (visible.slab) section('slabs').forEach(function (i) { if (hid('slab', i.ref)) return; fillStroke(i.polygon || rectPoly(i.min, i.max), COLORS.slab, 0.12, null, 1, i.holes); });
-    if (visible.stair) section('stairs').forEach(function (i) { if (hid('stair', i.ref)) return; var bad = !!(i.conflicts && i.conflicts.length); fillStroke(i.polygon, bad ? themeColor(GHOST_BAD) : COLORS.stair, bad ? 0.22 : 0.12, bad ? null : [5, 4], bad ? 2 : 1, null); (i.steps || []).forEach(function (st) { fillStroke(st.poly, COLORS.stair, 0.05, null, 0.5, null); }); });
+    if (visible.stair) section('stairs').forEach(function (i) { if (hid('stair', i.ref)) return; var bad = !!(i.conflicts && i.conflicts.length); fillStroke(i.polygon, bad ? themeColor(GHOST_BAD) : COLORS.stair, bad ? 0.22 : 0.12, bad ? null : [5, 4], bad ? 2 : 1, null); (i.steps || []).forEach(function (st) { fillStroke(st.poly, COLORS.stair, 0.05, null, 0.5, null); }); drawStairArrow(i); });
     if (visible.ceiling) section('ceilings').forEach(function (i) { if (hid('ceiling', i.ref)) return; fillStroke(i.polygon, COLORS.ceiling, 0.08, [5, 4], 1, i.holes); });
     if (visible.beam) section('beams').forEach(function (i) { if (hid('beam', i.ref)) return; fillStroke(i.poly || rectPoly(i.min, i.max), COLORS.beam, 0.25, [6, 3], 1); });
     if (visible.wall) section('walls').forEach(function (i) { if (hid('wall', i.ref)) return; fillStroke(i.poly || rectPoly(i.min, i.max), COLORS.wall, 0.8, null, 1); if (detail !== 'low' && vstyle === 'color') drawWallLayers(i); });
@@ -1171,7 +1192,7 @@
     // Dùng cho test: trạng thái xem và số phần tử đang vẽ.
     debug: function () {
       var counts = {}; shapes.forEach(function (s) { counts[s.layer] = (counts[s.layer] || 0) + 1; });
-      return {view: {cx: view.cx, cy: view.cy, s: view.s}, size: size, tool: tool, counts: counts, hover: hover && hover.text, selected: selection.length === 1 ? selection[0].title : (selection.length ? selection.length + ' phần tử' : null), selection: selection.map(function (x) { return x.title; }), snap: snap && {p: snap.p, text: snap.text, rank: snap.rank}, guides: levelGuides().length, guideLines: levelGuides().map(function (g) { return {p: g.p, d: g.d}; }), measure: measure && {a: measure.a, b: measure.b, done: measure.done}, draft: draft && (draft.ref ? 'ref' : 'first'), browserOpen: !$('pv-browser').hidden, hidden: hiddenCount, hiddenMode: hiddenMode, suDraw: suDraw, snapOn: snapOn, sync: syncOn, statusOn: statusOn, suPicking: suPicking, detail: detail, tagMode: tagMode, suCount: suObjs.length, vstyle: vstyle, tagsOn: tagsOn, tagsDrawn: tagsDrawn, scaleN: Math.round(currentScaleN()), badges: badgeCounts(), badgesDrawn: badgesDrawn, modelStatusLevel: modelStatus && modelStatus.level, lastSent: lastSent, edit: edit && edit.debug(), modify: modify && modify.debug(), dims: dimHits.length, dimHits: dimHits.map(function (h) { return {x: h.x, y: h.y, w: h.w, h: h.h, id: h.dim.id, value: h.dim.value}; }), dimList: lastDims.map(function (d) { return {id: d.id, value: d.value, editable: d.editable}; }), chord: chord, keymap: Object.assign({}, keymap), tabIdx: tabIdx, hoverCount: hoverCount, level: currentId, tabs: levelList.length, visible: Object.assign({}, visible), axes: data && data.ok ? data.axes.length : 0};
+      return {stairPaths: section('stairs').map(stairPath), view: {cx: view.cx, cy: view.cy, s: view.s}, size: size, tool: tool, counts: counts, hover: hover && hover.text, selected: selection.length === 1 ? selection[0].title : (selection.length ? selection.length + ' phần tử' : null), selection: selection.map(function (x) { return x.title; }), snap: snap && {p: snap.p, text: snap.text, rank: snap.rank}, guides: levelGuides().length, guideLines: levelGuides().map(function (g) { return {p: g.p, d: g.d}; }), measure: measure && {a: measure.a, b: measure.b, done: measure.done}, draft: draft && (draft.ref ? 'ref' : 'first'), browserOpen: !$('pv-browser').hidden, hidden: hiddenCount, hiddenMode: hiddenMode, suDraw: suDraw, snapOn: snapOn, sync: syncOn, statusOn: statusOn, suPicking: suPicking, detail: detail, tagMode: tagMode, suCount: suObjs.length, vstyle: vstyle, tagsOn: tagsOn, tagsDrawn: tagsDrawn, scaleN: Math.round(currentScaleN()), badges: badgeCounts(), badgesDrawn: badgesDrawn, modelStatusLevel: modelStatus && modelStatus.level, lastSent: lastSent, edit: edit && edit.debug(), modify: modify && modify.debug(), dims: dimHits.length, dimHits: dimHits.map(function (h) { return {x: h.x, y: h.y, w: h.w, h: h.h, id: h.dim.id, value: h.dim.value}; }), dimList: lastDims.map(function (d) { return {id: d.id, value: d.value, editable: d.editable}; }), chord: chord, keymap: Object.assign({}, keymap), tabIdx: tabIdx, hoverCount: hoverCount, level: currentId, tabs: levelList.length, visible: Object.assign({}, visible), axes: data && data.ok ? data.axes.length : 0};
     },
     toScreen: toScreen, toWorld: toWorld, promptText: promptText
   };

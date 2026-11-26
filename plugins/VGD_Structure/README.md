@@ -1,8 +1,10 @@
-# VGD Structure 0.30.0-beta.9
+# VGD Structure 0.30.0-beta.10
 
 Plugin SketchUp dựng **phần thô** (cột, dầm, tường, sàn, trần) theo **lưới trục** và **tầng**, nối với VGD BIM để tính khối lượng. Kế hoạch: `docs/vgd_structure/PLAN.md`. Đặc tả dữ liệu: `docs/vgd_structure/SPEC.md`.
 
 ## Trạng thái
+
+**0.30.0-beta.10 (đợt vẽ móng, trục vẽ, hiển thị mặt bằng).** (1) **Công cụ Móng** (phím tắt **FT**, nút Móng ở ribbon Kết cấu, menu và thanh công cụ SketchUp): **móng đơn** bấm một điểm (dài × rộng × dày, xoay) hoặc **móng băng** bấm hai điểm (rộng, dày; đoạn thẳng hoặc xiên, nối chuỗi). Móng vẽ ra là phần tử tự do của tầng (mã `ff_`), chọn và xóa được trên mặt bằng, không cần khai báo móng theo cột; tầng chỉ có móng tự do vẫn dựng được. Khoảng hợp lệ: móng đơn dài, rộng 300 đến 8000 mm, dày 150 đến 2500 mm; móng băng rộng 200 đến 3000 mm. (2) **Trục vẽ cho tường, dầm, móng băng, cầu thang tự do**: thanh tùy chọn có "Đường bấm là" (Tim / Mép trái / Mép phải, phím **Tab** đổi nhanh); điểm bấm là mép của phần tử thay vì tim, nên đặt sát cột, tường dễ hơn. Chuỗi tường, dầm nối nhau vẫn khép góc. (3) **Hiển thị mặt bằng:** cầu thang có ký hiệu hướng lên (đường tim, mũi tên, chữ LÊN); nút Cầu thang và Móng ở ribbon có biểu tượng; móng tự do hiện và chọn được. (4) **Sửa lỗi:** "Dựng tất cả" báo lỗi khi dựng móng, mái, vách kính (lỗi `nil.size` trong `Panel#build_all`), nên trước đây các loại này có thể không dựng được bằng nút đó. Kiểm tra tự động: test Ruby và test giao diện đạt. **Chưa thử trong SketchUp thật:** dựng móng tự do, vẽ trực tiếp trong SketchUp với đường bấm lệch tim.
 
 **0.30.0-beta.9 (đợt H8): phòng.** Tầng có thêm **phòng** (bảng Tầng → nút **Phòng** → "+ Thêm phòng"): mỗi phòng là một nhóm **ô lưới liền nhau** (chung cạnh) do bạn bấm chọn, mỗi ô thuộc tối đa một phòng, tối đa 60 phòng mỗi tầng. Phòng có **tên** (1 đến 30 ký tự, không trùng trong tầng) và hiện **tên + diện tích** trên mặt bằng (lớp Phòng) và trong bảng thống kê (mục Phòng). Phòng có thể có **lớp hoàn thiện sàn** và **lớp cấu tạo trần riêng** (cùng khoảng tổng dày với lớp chung của tầng: sàn 0 đến 300 mm, trần 5 đến 100 mm), thay lớp chung ở các ô của phòng. Đường biên phòng trùng cạnh ô lưới nên sàn và trần chia theo ô, không cần cắt thêm. Lớp sàn riêng đặt trên mặt kết cấu sàn nên tổng dày khác nhau thì cao độ hoàn thiện giữa các phòng khác nhau; tổng dày trần riêng chưa được kiểm so với tầng trên. Phòng chưa là khối 3D và chưa dò từ tường. **Mới chạy test tự động với SketchUp giả lập, chưa thử trong SketchUp thật.** Dữ liệu cũ không đổi (khóa `rooms` chỉ lưu khi có phòng).
 
@@ -182,7 +184,7 @@ Menu và thanh công cụ chỉ có hiệu lực sau khi mở lại SketchUp; **
 
 ## Cài đặt
 
-Cài file `VGD_Structure_v0.30.0-beta.9.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
+Cài file `VGD_Structure_v0.30.0-beta.10.rbz` bằng Extension Manager của SketchUp (SketchUp 2022 trở lên), rồi mở lại SketchUp.
 
 ## Kiểm thử
 

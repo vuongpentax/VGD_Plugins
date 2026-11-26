@@ -2094,6 +2094,14 @@ const F=JSON.parse(execFileSync('ruby',[path.resolve(__dirname,'ui_fixture.rb')]
   await reset();await receive('state',F.state_stairs);await receive('preview',F.preview_stairs);await wait(150);
   const stx_sd=await dbg8();
   ok(stx_sd.counts.stair===2 && Object.keys(await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks)).length===2,'xem trước cầu thang: 2 cầu thang trên mặt bằng (một sạch, một đâm vào tường)');
+  // Ký hiệu hướng lên: đường tim từ tâm bậc đầu tới tâm bậc cuối (thêm điểm chiếu nghỉ khi có); biểu tượng công cụ Cầu thang và Móng có hình
+  const sp8=(await dbg8()).stairPaths;
+  const stp=F.preview_stairs.stairs.items[0],ctr=s=>[s.poly.reduce((a,p)=>a+p[0],0)/s.poly.length,s.poly.reduce((a,p)=>a+p[1],0)/s.poly.length];
+  ok(sp8.length===2 && sp8[0].length===2 && Math.abs(sp8[0][0][0]-ctr(stp.steps[0])[0])<0.01 && Math.abs(sp8[0][1][1]-ctr(stp.steps[stp.steps.length-1])[1])<0.01,'cầu thang thẳng: ký hiệu hướng lên đi từ bậc đầu tới bậc cuối');
+  const pv3=JSON.parse(JSON.stringify(F.preview_stairs));pv3.stairs.items[0].steps.splice(2,0,Object.assign({},pv3.stairs.items[0].steps[1],{landing:true}));await receive('preview',pv3);await wait(100);
+  ok((await dbg8()).stairPaths[0].length===3,'cầu thang có chiếu nghỉ: đường hướng lên đi qua tâm chiếu nghỉ (3 điểm)');
+  await receive('preview',F.preview_stairs);await wait(80);
+  ok(await page.locator('#pv-ribbon .pv-ic[data-tool=stair] svg path').count()>0 && await page.locator('#pv-ribbon .pv-ic[data-tool=footing] svg path').count()>0,'ribbon: nút Cầu thang và Móng có biểu tượng hình (không chỉ chữ phím tắt)');
   await page.evaluate(()=>window.VGDPlan.selectKeys('sl_00000001',[{kind:'stair',ref:'st_00000001'}],false));await wait(80);
   await page.keyboard.press('Delete');await wait(120);
   ok(!(await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks))['st_00000001'] && (await page.evaluate(()=>window.VGDS._state.levels[0].stairPicks))['st_00000002'],'Delete cầu thang đang chọn: chỉ xóa cầu thang đó');
