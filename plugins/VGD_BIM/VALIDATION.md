@@ -2,7 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.49: đã kiểm tra tự động
+## Bản 1.1.1-beta.50: đã kiểm tra tự động
+
+Beta.50: `RoomVolume.create_volume` dựng khối phòng bằng cạnh thay vì mặt đùn: `add_edges` cho viền sàn và viền trần, `add_line` cho cạnh đứng ở mỗi góc, làm tương tự cho viền từng lỗ; không còn mặt, không còn vật liệu trong suốt. Nếu SketchUp tự sinh mặt từ cạnh khép kín thì xóa mặt rồi kiểm tra còn đủ cạnh, không đủ thì báo lỗi và hủy thao tác (khối cũ còn nguyên). Tag `VGD_ROOMS` mới tạo có màu xanh nhạt.
+
+- `dev/test_room_volume.rb` (viết lại): 12 cạnh cho phòng bốn góc, không có mặt; viền sàn / trần đúng cao độ và chiều cao, cạnh đứng đúng từng góc; chiều viền không ảnh hưởng; phòng có hai lỗ ra 36 cạnh; mô phỏng SketchUp tự sinh mặt (mặt bị xóa, cạnh còn) và xóa mặt làm mất cạnh (báo lỗi, hủy thao tác); tag màu mới và giữ màu cũ; dựng lại giữ VGD ID; một thao tác; dựng nhiều phòng. Đạt. `ruby dev/run_tests.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật (điểm cần thử đầu tiên):** `Entities#add_edges` / `add_line` có tự tạo mặt từ cạnh khép kín không, và `Entities#erase_entities` trên mặt có giữ lại cạnh không (nếu SketchUp xóa luôn cạnh, nút Dựng khối sẽ báo \"Không tạo được khung dây\", khi đó cần đổi cách dựng); mặt cắt có hết bị tô kín; khung dây dễ chọn bằng chuột hay khó chọn (khối chỉ chọn được bằng cạnh); màu cạnh theo tag khi bật Tô màu theo tag.
+
+### Bản 1.1.1-beta.49 (trước đó)
 
 Beta.49: nhấn Alt trong công cụ hút / đổ tag làm Windows mở thanh menu của SketchUp (Alt nhấn rồi thả mà không có phím nào xen giữa). Mỗi lần nhấn Alt (qua phím hoặc qua cờ chuột) công cụ gọi `PasteKeys.cancel_alt_menu` gửi một phím không gán (VK 0xE8, nhấn rồi thả) bằng `keybd_event` để Windows coi Alt đã đi kèm phím khác, không mở menu. Cùng điều kiện an toàn với cách dán ảnh: chỉ Windows, chỉ khi cửa sổ đang chọn thuộc tiến trình SketchUp; lỗi thì bỏ qua, công cụ vẫn chạy.
 

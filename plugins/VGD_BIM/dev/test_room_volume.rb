@@ -1,5 +1,5 @@
-# Test dựng khối phòng (runtime/vgd_bim/core/room_volume.rb, nhập từ VGD_Room vào BIM) với SketchUp giả lập đơn giản: kiểm tra dữ liệu sai, khối dựng đúng (viền, cao độ, chiều cao,
-# mặt hướng lên), tag / vật liệu / tên, dữ liệu cầu nối (VGD ID, nguồn), dựng lại giữ ID và thay khối cũ, một thao tác, hủy khi lỗi. Chạy: ruby dev/test_builder.rb
+# Test dựng khối phòng dạng KHUNG DÂY (runtime/vgd_bim/core/room_volume.rb, nhập từ VGD_Room vào BIM) với SketchUp giả lập đơn giản: kiểm tra dữ liệu sai, khung dây đúng (viền sàn, viền trần, cạnh đứng,
+# cao độ, chiều cao, không có mặt nào), tag / tên, dữ liệu cầu nối (VGD ID, nguồn), dựng lại giữ ID và thay khối cũ, một thao tác, hủy khi lỗi. Chạy: ruby dev/test_builder.rb
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 def error_of; yield; nil; rescue StandardError => e; e.message; end
@@ -22,6 +22,10 @@ module Sketchup
     def erase!; @erased = true; @model.entities.items.delete(self); true; end
     def valid?; !@erased; end
   end
+  class Edge
+    attr_reader :start_point, :end_point
+    def initialize(a, b); @start_point = a; @end_point = b; end
+  end
   class Face
     attr_reader :points, :pushed, :erased
     def initialize(points, entities = nil); @points = points; @flipped = false; @pushed = nil; @entities = entities; @erased = false; end
@@ -43,8 +47,33 @@ class FakeEntities
     @items << face; face
   end
   def to_a; @items.dup; end
+  def grep(klass); @items.grep(klass); end
+  # Giả lập SketchUp: auto_faces = true thì cạnh khép kín (vòng phẳng) sinh mặt; kills_edges = true thì xóa mặt kéo theo xóa cạnh
+  attr_accessor :auto_faces, :kills_edges
+  def add_edges(points)
+    edges = points.each_cons(2).map { |a, b| e = Sketchup::Edge.new(a, b); @items << e; e }
+    @items << Sketchup::Face.new(points, self) if @auto_faces && points.first.equal?(points.last)
+    edges
+  end
+  def add_line(a, b); e = Sketchup::Edge.new(a, b); @items << e; e; end
+  def erase_entities(list)
+    Array(list).each do |item|
+      @items.delete(item)
+      @items.reject! { |other| other.is_a?(Sketchup::Edge) } if @kills_edges && item.is_a?(Sketchup::Face)
+    end
+  end
 end
-class FakeLayers; def initialize; @names = {}; end; def add(name); @names[name] ||= Struct.new(:name).new(name); end; attr_reader :names; end
+class FakeTag
+  attr_reader :name
+  attr_accessor :color
+  def initialize(name); @name = name; end
+end
+class FakeLayers
+  def initialize; @names = {}; end
+  def add(name); @names[name] ||= FakeTag.new(name); end
+  def to_a; @names.values; end
+  attr_reader :names
+end
 class FakeMaterial; attr_accessor :color, :alpha; attr_reader :name; def initialize(name); @name = name; end; end
 class FakeMaterials; def initialize; @items = {}; end; def [](name); @items[name]; end; def add(name); @items[name] = FakeMaterial.new(name); end; attr_reader :items; end
 class FakeModel
@@ -77,15 +106,23 @@ ok('dữ liệu sai không mở thao tác, không thêm hình', m.ops.empty? && 
 
 # ---- Dựng khối ----
 group = B.build(m, ROOM, ID)
-face = group.entities.items.first
-ok('dựng một Group có mặt ở cao độ sàn (mm đổi sang inch), đúng viền', group.is_a?(Sketchup::Group) && face.points.size == 4 && face.points.all? { |p| (p.z - 100.0 / 25.4).abs < 1e-9 } && (face.points[1].x - 4000.0 / 25.4).abs < 1e-9 && (face.points[2].y - 3000.0 / 25.4).abs < 1e-9)
-ok('đùn lên đúng chiều cao (inch)', (face.pushed - 2800.0 / 25.4).abs < 1e-9)
+edges = group.entities.items
+floor_z = 100.0 / 25.4
+top_z = (100.0 + 2800.0) / 25.4
+ok('dựng một Group chỉ có cạnh (12 cạnh), không có mặt nào: mặt cắt của SketchUp không bị tô kín', group.is_a?(Sketchup::Group) && edges.size == 12 && edges.all? { |e| e.is_a?(Sketchup::Edge) } && group.entities.grep(Sketchup::Face).empty?)
+floor_ring = edges.select { |e| [e.start_point.z, e.end_point.z].all? { |z| (z - floor_z).abs < 1e-9 } }
+top_ring = edges.select { |e| [e.start_point.z, e.end_point.z].all? { |z| (z - top_z).abs < 1e-9 } }
+verticals = edges - floor_ring - top_ring
+ok('viền sàn ở cao độ sàn, viền trần ở cao độ sàn + chiều cao (mm đổi sang inch), đúng viền', floor_ring.size == 4 && top_ring.size == 4 && floor_ring.flat_map { |e| [e.start_point.x, e.end_point.x] }.max.then { |x| (x - 4000.0 / 25.4).abs < 1e-9 } && floor_ring.flat_map { |e| [e.start_point.y, e.end_point.y] }.max.then { |y| (y - 3000.0 / 25.4).abs < 1e-9 })
+ok('bốn cạnh đứng nối đúng từng góc sàn lên trần', verticals.size == 4 && verticals.all? { |e| (e.start_point.x - e.end_point.x).abs < 1e-9 && (e.start_point.y - e.end_point.y).abs < 1e-9 && (e.start_point.z - floor_z).abs < 1e-9 && (e.end_point.z - top_z).abs < 1e-9 })
 cw = ROOM.merge('boundary' => ROOM['boundary'].reverse)
 cw_group = B.build(FakeModel.new, cw, ID)
-cw_face = cw_group.entities.items.first
-ok('viền đi theo chiều kim đồng hồ: mặt được lật cho hướng lên trước khi đùn', cw_face.normal.z > 0 && cw_face.pushed > 0)
-ok('tên khối, tag VGD_ROOMS, vật liệu trong suốt', group.name == 'Phòng · P01 · Phòng khách' && group.layer.name == 'VGD_ROOMS' && group.material.name == 'VGD_Room' && group.material.alpha < 1.0)
-ok('vật liệu chỉ tạo một lần', (m.materials.items.size == 1))
+ok('viền đi theo chiều kim đồng hồ: vẫn đủ 12 cạnh (chiều viền không còn ảnh hưởng)', cw_group.entities.items.size == 12 && cw_group.entities.grep(Sketchup::Face).empty?)
+ok('tên khối, tag VGD_ROOMS, không có vật liệu (khung dây chỉ có cạnh)', group.name == 'Phòng · P01 · Phòng khách' && group.layer.name == 'VGD_ROOMS' && group.material.nil? && m.materials.items.empty?)
+ok('tag VGD_ROOMS mới tạo có màu xanh nhạt', group.layer.color == B::TAG_COLOR)
+mine = FakeModel.new
+mine.layers.add('VGD_ROOMS').color = [1, 2, 3]
+ok('tag VGD_ROOMS đã có: giữ nguyên màu của người dùng', B.build(mine, ROOM, ID).layer.color == [1, 2, 3])
 ok('dữ liệu cầu nối: VGD ID, plugin, phiên bản, loại phòng, mã phòng BIM', group.get_attribute('VGD_BIM_ID', 'guid') == ID && group.get_attribute('VGD_BIM_SOURCE', 'plugin') == 'vgd_bim' && group.get_attribute('VGD_BIM_SOURCE', 'kind') == 'room' && group.get_attribute('VGD_BIM_SOURCE', 'ref') == 'rm_aaaaaaaa' && !group.get_attribute('VGD_BIM_SOURCE', 'plugin_version').to_s.empty? && !group.attrs.key?('VGD_BIM'))
 ok('một thao tác có commit', m.ops == [[:start, 'VGD_BIM · Dựng khối phòng'], [:commit]])
 ok('find: tìm khối theo mã phòng; phòng khác thì nil', B.find(m, 'rm_aaaaaaaa').equal?(group) && B.find(m, 'rm_bbbbbbbb').nil? && B.find(Object.new, 'rm_aaaaaaaa').nil?)
@@ -97,7 +134,7 @@ m.entities.items.delete(nested_host) # dọn: các kiểm tra sau đếm khối 
 # ---- Dựng lại ----
 m.ops.clear
 newer = B.build(m, ROOM.merge('height' => 3000.0, 'name' => 'Khách lớn'), '11111111-2222-4333-8444-555555555555')
-ok('dựng lại: khối cũ bị thay bằng khối mới (chỉ còn một), giữ VGD ID cũ, cập nhật tên', m.entities.items.grep(Sketchup::Group).size == 1 && !group.valid? && newer.get_attribute('VGD_BIM_ID', 'guid') == ID && newer.name == 'Phòng · P01 · Khách lớn' && (newer.entities.items.first.pushed - 3000.0 / 25.4).abs < 1e-9)
+ok('dựng lại: khối cũ bị thay bằng khối mới (chỉ còn một), giữ VGD ID cũ, cập nhật tên', m.entities.items.grep(Sketchup::Group).size == 1 && !group.valid? && newer.get_attribute('VGD_BIM_ID', 'guid') == ID && newer.name == 'Phòng · P01 · Khách lớn' && newer.entities.items.map { |e| [e.start_point.z, e.end_point.z] }.flatten.max.then { |z| (z - (100.0 + 3000.0) / 25.4).abs < 1e-9 })
 ok('dựng lại cũng chỉ một thao tác', m.ops == [[:start, 'VGD_BIM · Dựng khối phòng'], [:commit]])
 newer.locked = true
 m.ops.clear
@@ -117,15 +154,19 @@ hole_bad = ->(holes) { error_of { B.build(hm, ROOM.merge('holes' => holes), ID) 
 ok('lỗ không phải mảng / lỗ ít hơn 3 điểm / điểm không phải số: từ chối', %w[x].all? { |v| hole_bad.call(v).to_s.include?('lỗ') } && hole_bad.call([[[0, 0], [1, 1]]]).to_s.include?('lỗ') && hole_bad.call([[[0, 0], [1, 'a'], [2, 3]]]).to_s.include?('lỗ') && hole_bad.call(['abc']).to_s.include?('lỗ'))
 ok("quá #{B::MAX_HOLES} lỗ hoặc lỗ quá nhiều điểm: từ chối", hole_bad.call(Array.new(B::MAX_HOLES + 1) { COL }).to_s.include?('lỗ') && hole_bad.call([Array.new(B::MAX_POINTS + 1) { |i| [i * 10.0, (i * i % 97) * 10.0] }]).to_s.include?('lỗ'))
 ok('lỗ sai không mở thao tác, không thêm hình', hm.ops.empty? && hm.entities.items.empty?)
-ok('lỗ rỗng hoặc không có: vẫn dựng như phòng thường', B.build(FakeModel.new, ROOM.merge('holes' => []), ID).entities.items.size == 1 && B.build(FakeModel.new, ROOM.merge('holes' => nil), ID).entities.items.size == 1)
+ok('lỗ rỗng hoặc không có: vẫn dựng như phòng thường (12 cạnh)', B.build(FakeModel.new, ROOM.merge('holes' => []), ID).entities.items.size == 12 && B.build(FakeModel.new, ROOM.merge('holes' => nil), ID).entities.items.size == 12)
 holed = B.build(hm, ROOM.merge('holes' => [COL, COL2]), ID)
-outer = holed.entities.items.first
-ok('phòng có hai lỗ: mặt viền ngoài được đùn, mặt trong các lỗ bị xóa (còn lại đúng một mặt)', holed.entities.items.size == 1 && outer.points.size == 4 && !outer.pushed.nil? && (outer.pushed - 2800.0 / 25.4).abs < 1e-9)
-recorder = FakeModel.new
-faces = []
-recorder.entities.define_singleton_method(:add_group) { g = super(); g.entities.define_singleton_method(:add_face) { |pts| f = super(pts); faces << f; f }; g }
-B.build(recorder, ROOM.merge('holes' => [COL]), ID)
-ok('mặt lỗ: bốn điểm ở cao độ sàn, đã bị xóa; mặt ngoài không bị xóa', faces.size == 2 && faces[1].erased && faces[1].points.size == 4 && faces[1].points.all? { |p| (p.z - 100.0 / 25.4).abs < 1e-9 } && !faces[0].erased)
+ok('phòng có hai lỗ: khung dây của viền ngoài (12 cạnh) cộng mỗi lỗ 12 cạnh = 36 cạnh, không có mặt', holed.entities.items.size == 36 && holed.entities.grep(Sketchup::Face).empty?)
+hole_pts = holed.entities.items.flat_map { |e| [e.start_point, e.end_point] }
+ok('viền các lỗ nằm đúng chỗ (có điểm ở góc lỗ thứ nhất và thứ hai)', hole_pts.any? { |p| (p.x - 1000.0 / 25.4).abs < 1e-9 && (p.y - 1000.0 / 25.4).abs < 1e-9 } && hole_pts.any? { |p| (p.x - 2900.0 / 25.4).abs < 1e-9 && (p.y - 1900.0 / 25.4).abs < 1e-9 })
+# SketchUp tự sinh mặt từ cạnh khép kín: mặt bị xóa, cạnh còn nguyên
+auto = FakeModel.new
+auto.entities.define_singleton_method(:add_group) { g = super(); g.entities.auto_faces = true; g }
+auto_group = B.build(auto, ROOM, ID)
+ok('SketchUp tự sinh mặt từ cạnh khép kín: mặt bị xóa, 12 cạnh còn nguyên', auto_group.entities.grep(Sketchup::Face).empty? && auto_group.entities.grep(Sketchup::Edge).size == 12)
+lost = FakeModel.new
+lost.entities.define_singleton_method(:add_group) { g = super(); g.entities.auto_faces = true; g.entities.kills_edges = true; g }
+ok('xóa mặt kéo theo mất cạnh: báo lỗi rõ, hủy thao tác (không để lại khối hỏng)', error_of { B.build(lost, ROOM, ID) }.to_s.include?('khung dây') && lost.ops.last == [:abort])
 ok('phòng có lỗ vẫn một thao tác có commit', hm.ops == [[:start, 'VGD_BIM · Dựng khối phòng'], [:commit]])
 
 # ---- Dựng nhiều phòng một lần (một bước hoàn tác) ----
@@ -137,10 +178,10 @@ bm = FakeModel.new
 many = B.build_many(bm, [[ROOM, ID], [R2, ID2], [R3, ID3]])
 ok('dựng ba phòng: ba khối, đúng thứ tự, mỗi khối có VGD ID riêng', many.size == 3 && many.map(&:name) == ['Phòng · P01 · Phòng khách', 'Phòng · P02 · Phòng ngủ', 'Phòng · Bếp'] && many.map { |g| g.get_attribute('VGD_BIM_ID', 'guid') } == [ID, ID2, ID3])
 ok('cả đợt chỉ MỘT thao tác (một bước hoàn tác)', bm.ops == [[:start, 'VGD_BIM · Dựng khối nhiều phòng'], [:commit]])
-ok('phòng có lỗ trong đợt: mặt trong lỗ bị xóa', many[2].entities.items.size == 1)
+ok('phòng có lỗ trong đợt: khung dây có thêm viền lỗ (24 cạnh)', many[2].entities.items.size == 24)
 bm.ops.clear
 again = B.build_many(bm, [[ROOM.merge('height' => 2500.0), '44444444-5555-4666-8777-888888888888'], [R2, ID2]])
-ok('dựng lại cả đợt: khối cũ bị thay (còn đúng 3 khối), giữ VGD ID cũ, một thao tác', bm.entities.items.grep(Sketchup::Group).size == 3 && again[0].get_attribute('VGD_BIM_ID', 'guid') == ID && again[0].entities.items.first.pushed - 2500.0 / 25.4 < 1e-9 && bm.ops.size == 2)
+ok('dựng lại cả đợt: khối cũ bị thay (còn đúng 3 khối), giữ VGD ID cũ, một thao tác', bm.entities.items.grep(Sketchup::Group).size == 3 && again[0].get_attribute('VGD_BIM_ID', 'guid') == ID && again[0].entities.items.map { |e| [e.start_point.z, e.end_point.z] }.flatten.max.then { |z| (z - (100.0 + 2500.0) / 25.4).abs < 1e-9 } && bm.ops.size == 2)
 sm = FakeModel.new
 bad_items = [[[ROOM, ID], [ROOM.merge('id' => 'rm_zz'), ID2]], [[ROOM, ID], [R2, 'abc']], [[ROOM, ID], [ROOM, ID2]], [], 'x', [[ROOM]], Array.new(B::MAX_BATCH + 1) { [ROOM, ID] }]
 errors = bad_items.map { |items| error_of { B.build_many(sm, items) } }

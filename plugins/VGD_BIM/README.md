@@ -1,4 +1,4 @@
-# VGD BIM 1.1.1-beta.49
+# VGD BIM 1.1.1-beta.50
 
 Bản thử của 1.1.1 (bản ổn định gần nhất là 1.1.0). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -68,7 +68,7 @@ Cửa sổ có 5 tab (nút **Preset** cạnh nút Sáng/Tối ở thanh đầu d
 
 **Cập nhật viền phòng** (từ 1.1.1-beta.14): trong **Quản lý phòng**, chọn đúng một mặt sàn trong SketchUp, rồi bấm **Cập nhật viền từ mặt đang chọn** ở phòng cần sửa. Viền (và lỗ) của phòng được thay bằng mặt đó; tên, mã, tầng, chiều cao, hoàn thiện giữ nguyên, cao độ sàn theo mặt mới. Nếu phòng đã có khối 3D thì bấm **Dựng lại khối**. Một bước hoàn tác. Chưa kiểm thử trong SketchUp thật.
 
-**Khối 3D của phòng trong VGD_BIM** (từ 1.1.1-beta.13): plugin VGD Room được nhập vào VGD_BIM. Trong **Quản lý phòng**, bấm **Dựng khối** ở một phòng hoặc **Dựng khối tất cả phòng** để dựng khối 3D (Group trên tag `VGD_ROOMS`, vật liệu trong suốt). Dựng lại giữ VGD ID; mỗi lần dựng là một bước hoàn tác. Không cần cài VGD Room nữa. Chưa kiểm thử trong SketchUp thật.
+**Khối 3D của phòng trong VGD_BIM** (từ 1.1.1-beta.13): plugin VGD Room được nhập vào VGD_BIM. Trong **Quản lý phòng**, bấm **Dựng khối** ở một phòng hoặc **Dựng khối tất cả phòng** để dựng khối 3D của phòng (Group trên tag `VGD_ROOMS`). **Từ beta.50 khối là KHUNG DÂY** (chỉ có cạnh, không có mặt): viền sàn, viền trần, cạnh đứng ở mỗi góc và viền các lỗ của phòng; nhờ vậy mặt cắt (section plane) của SketchUp không bị khối đặc tô kín hay cắt. Tag `VGD_ROOMS` mới tạo có màu xanh nhạt (hiện khi bật Tô màu theo tag; tag đã có giữ màu của bạn). Khối đặc dựng từ bản cũ giữ nguyên cho tới khi bấm **Dựng lại khối** (hoặc **Dựng khối tất cả phòng**), lúc đó đổi sang khung dây và giữ VGD ID. Số đo của phòng (diện tích, thể tích...) tính từ viền đã lưu nên không đổi. Dựng lại giữ VGD ID; mỗi lần dựng là một bước hoàn tác. Không cần cài VGD Room nữa. Chưa kiểm thử trong SketchUp thật.
 
 **So sánh phiên bản theo file** (từ 1.1.1-beta.12): mốc, kết quả so sánh, luật kiểm tra và tùy chọn bảng luôn theo file SketchUp đang mở. Mở file khác thì các mục này về mặc định của file đó (không còn thấy mốc của file trước). Chưa kiểm thử trong SketchUp thật.
 

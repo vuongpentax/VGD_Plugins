@@ -8,7 +8,7 @@ Người dùng khoanh vùng một phòng theo hai cách:
 - **Từ mặt sàn đã chọn** (đã có từ 1.1.1-beta.3): chọn mặt sàn, tạo phòng.
 - **Từ tường** (mới): chọn các tường bao quanh, BIM tìm các vùng kín giữa tường, cho xem trước rồi mới tạo phòng.
 
-Mỗi phòng có thể dựng **khối 3D** (đã có trong VGD_Room, nay nhập vào BIM): khối đùn từ viền phòng lên chiều cao phòng.
+Mỗi phòng có thể dựng **khối 3D** (đã có trong VGD_Room, nay nhập vào BIM): khung dây (chỉ cạnh) của viền phòng từ sàn lên trần (từ 1.1.1-beta.50, để mặt cắt SketchUp không bị ảnh hưởng).
 
 ## 2. Khối 3D của phòng (nhập từ VGD_Room)
 
