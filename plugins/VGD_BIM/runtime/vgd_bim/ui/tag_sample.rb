@@ -9,6 +9,11 @@ module VGD
       class TagPaintTool
         ALT = defined?(ALT_MODIFIER_MASK) ? ALT_MODIFIER_MASK : 32
         SHIFT = defined?(CONSTRAIN_MODIFIER_MASK) ? CONSTRAIN_MODIFIER_MASK : 4
+        ALT_KEY = defined?(ALT_MODIFIER_KEY) ? ALT_MODIFIER_KEY : 18
+
+        # Con trỏ riêng để phân biệt với trỏ chuột thường: ống hút khi bấm là HÚT (giữ Alt, hoặc chưa có tag để đổ), thùng sơn khi bấm là ĐỔ.
+        # [tên file SVG trong assets/cursors, điểm nóng x, y]. Chỉ tạo trên Windows như VGD Reference; nền tảng khác giữ con trỏ mặc định.
+        CURSORS = {sample: ['tag_sample.svg', 4, 27], paint: ['tag_paint.svg', 5, 27]}.freeze
 
         attr_reader :tag_name
 
@@ -40,6 +45,31 @@ module VGD
           done
         end
 
+        def onMouseMove(flags, _x, _y, _view)
+          @alt = (flags & ALT) != 0
+        end
+
+        def onKeyDown(key, _repeat, _flags, _view)
+          @alt = true if key == ALT_KEY
+        end
+
+        def onKeyUp(key, _repeat, _flags, _view)
+          @alt = false if key == ALT_KEY
+        end
+
+        # Đặt con trỏ theo việc bấm sẽ làm; trả về true khi đã đặt, false để SketchUp dùng con trỏ mặc định.
+        def onSetCursor
+          id = cursor(sampling? ? :sample : :paint)
+          id ? ::UI.set_cursor(id) : false
+        rescue StandardError => error
+          BIM.log("Đặt con trỏ hút / đổ tag lỗi: #{error.message}")
+          false
+        end
+
+        def sampling?
+          @alt == true || @tag_name.empty?
+        end
+
         def onLButtonDown(flags, x, y, view)
           return if @finished
           entity = entity_at(view, x, y)
@@ -60,6 +90,16 @@ module VGD
         end
 
         private
+
+        def cursor(kind)
+          return nil unless Sketchup.platform == :platform_win
+          @cursors ||= {}
+          @cursors[kind] ||= begin
+            file, hot_x, hot_y = CURSORS.fetch(kind)
+            path = File.join(File.expand_path('../assets/cursors', __dir__), file)
+            ::UI.create_cursor(path, hot_x, hot_y) if File.exist?(path)
+          end
+        end
 
         def paint_mode(entity, flags, model)
           return :instances if (flags & SHIFT) != 0 && entity.respond_to?(:definition)

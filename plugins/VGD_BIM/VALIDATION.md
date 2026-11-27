@@ -2,7 +2,16 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.39: đã kiểm tra tự động
+## Bản 1.1.1-beta.40: đã kiểm tra tự động
+
+Beta.39: nút Loại trừ tag luôn hiện trên thanh công cụ của Bảng khối lượng. Beta.40: con trỏ riêng cho công cụ hút / đổ tag.
+
+- `dev/test_tag_tree.rb`: con trỏ thùng sơn khi có tag để đổ, ống hút khi giữ Alt (qua `onMouseMove`, `onKeyDown`, `onKeyUp`) hoặc chưa có tag; tạo một lần rồi dùng lại; điểm nóng đúng; không phải Windows thì không tạo (trả false); hai file SVG 32 x 32 có trong plugin. Đạt.
+- `dev/test_ui_images.cjs`: nút Loại trừ tag hiện cả khi chưa loại trừ tag nào (chữ "Loại trừ tag"), có số khi đang loại trừ. Cùng `test_ui.cjs`, `test_ui_sheets.cjs`, `test_ui_en.cjs`, `test_report_page.cjs`, `ruby dev/run_tests.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** `UI.create_cursor` với file SVG và điểm nóng (đầu ống hút, giọt sơn) trên Windows (cách làm giống VGD Reference); con trỏ đổi đúng lúc giữ / thả Alt; macOS chưa có con trỏ riêng (dùng con trỏ mặc định); vị trí nút Loại trừ tag trên thanh trong cửa sổ thật.
+
+## Bản 1.1.1-beta.38: đã kiểm tra tự động
 
 Quản lý phòng, đợt 4 và 5. Đợt 4: "Gợi ý mã cho phòng đã chọn" điền mã cho phòng đã chọn còn trống mã theo tiền tố và tầng (vd WC-T1-01), không đổi mã đã có, không trùng mã có sẵn. Đợt 5: mục "Cần kiểm tra" liệt kê phòng thiếu tầng hoặc thiếu mã; bấm một dòng để mở đúng phòng. Phòng chưa dựng khối 3D chỉ được đếm.
 

@@ -553,5 +553,37 @@ model2.define_singleton_method(:pages) { old_pages }
 ok('SketchUp cũ (scene không có thư mục): báo rõ, không đổi gì', error_of { probe2.tm_scene_visibility('kind' => 'folder', 'id' => 1, 'visible' => false) }.include?('2021') && old_pages.to_a[0].layers.empty?)
 ok('loại mục lạ bị từ chối', error_of { probe.tm_scene_visibility('kind' => 'x', 'id' => 1, 'visible' => false) }.include?('không hợp lệ'))
 
+# ---- Con trỏ riêng của công cụ hút / đổ tag (chỉ Windows; nền tảng khác dùng con trỏ mặc định) ----
+$cursor_log = []
+module ::UI
+  def self.create_cursor(path, x, y); $cursor_log << [:create, File.basename(path), x, y]; "cur_#{File.basename(path, '.svg')}"; end
+  def self.set_cursor(id); $cursor_log << [:set, id]; true; end
+end
+class << Sketchup; attr_accessor :fake_platform; def platform; fake_platform || :platform_win; end; end
+model_c, probe_c, = paint_world
+probe_c.tm_paint_start('name' => 'A. WALL')
+tool_c = model_c.tool
+ok('con trỏ khi có tag để đổ: thùng sơn (tag_paint.svg), điểm nóng ở giọt sơn, tạo một lần', tool_c.onSetCursor == true && $cursor_log == [[:create, 'tag_paint.svg', 5, 27], [:set, 'cur_tag_paint']])
+tool_c.onSetCursor
+ok('con trỏ chỉ tạo một lần rồi dùng lại', $cursor_log.count { |e| e[0] == :create } == 1)
+tool_c.onMouseMove(ALT, 1, 1, nil)
+$cursor_log.clear; tool_c.onSetCursor
+ok('giữ Alt (qua onMouseMove): đổi sang ống hút (tag_sample.svg), điểm nóng ở đầu ống', $cursor_log == [[:create, 'tag_sample.svg', 4, 27], [:set, 'cur_tag_sample']])
+tool_c.onMouseMove(0, 1, 1, nil)
+$cursor_log.clear; tool_c.onSetCursor
+ok('thả Alt: về thùng sơn', $cursor_log == [[:set, 'cur_tag_paint']])
+tool_c.onKeyDown(VGD::BIM::UI::TagPaintTool::ALT_KEY, 1, 0, nil)
+$cursor_log.clear; tool_c.onSetCursor
+ok('nhấn phím Alt (onKeyDown): ống hút; nhả phím (onKeyUp): thùng sơn', $cursor_log == [[:set, 'cur_tag_sample']] && (tool_c.onKeyUp(VGD::BIM::UI::TagPaintTool::ALT_KEY, 1, 0, nil) || true) && !tool_c.sampling?)
+tool_e = VGD::BIM::UI::TagPaintTool.new('', on_paint: ->(*) {}, on_sample: ->(*) {}, on_done: -> {})
+$cursor_log.clear; tool_e.onSetCursor
+ok('chưa có tag để đổ: bấm là hút nên hiện ống hút', $cursor_log.last == [:set, 'cur_tag_sample'])
+Sketchup.fake_platform = :platform_osx
+$cursor_log.clear
+tool_m = VGD::BIM::UI::TagPaintTool.new('X', on_paint: ->(*) {}, on_sample: ->(*) {}, on_done: -> {})
+ok('không phải Windows: không tạo con trỏ, trả false để dùng con trỏ mặc định', tool_m.onSetCursor == false && $cursor_log.empty?)
+Sketchup.fake_platform = nil
+ok('hai file con trỏ SVG có trong plugin, kích thước 32 x 32', VGD::BIM::UI::TagPaintTool::CURSORS.values.all? { |f, *| File.read(File.join(ROOT, 'assets', 'cursors', f)).include?('width="32" height="32"') })
+
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)
