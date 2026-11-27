@@ -1,6 +1,6 @@
 # VGD_BIM — Phòng: khối 3D và khoanh vùng từ tường (đặc tả, cột mốc 2)
 
-Trạng thái: **đã chốt hướng ngày 19/11/2026** (chủ dự án: BIM làm cả khối 3D và dò vùng phòng từ tường; không giao VGD Structure). Mục 5 còn điểm mở cần chốt trước khi code phần dò.
+Trạng thái: **đã chốt hướng ngày 19/11/2026** (chủ dự án: BIM làm cả khối 3D và dò vùng phòng từ tường; không giao VGD Structure). **Phần dò đã làm từ 1.1.1-beta.51** (các điểm D1–D4 ở mục 5 đã chốt theo đề xuất); chưa kiểm chứng trong SketchUp thật.
 
 ## 1. Mục tiêu
 
@@ -41,9 +41,9 @@ Mỗi phòng có thể dựng **khối 3D** (đã có trong VGD_Room, nay nhập
 - Phần đọc SketchUp (tường đang chọn, giao tuyến, tọa độ thế giới qua `context_transform`) nằm trong `core/room_detect_probe.rb` và `ui/dialog.rb`.
 - Viền ra đúng định dạng `Rooms.boundary!`; viền tự cắt hoặc quá nhỏ bị từ chối như cũ.
 
-## 5. Điểm còn mở (cần chốt trước khi code phần dò)
+## 5. Điểm đã chốt (D1–D4, theo đề xuất, đã làm ở 1.1.1-beta.51)
 
-| Mã | Câu hỏi | Đề xuất |
+| Mã | Câu hỏi | Quyết định |
 |---|---|---|
 | D1 | Chọn tường: chỉ đang chọn, hay toàn bộ tường của tầng? | Đang chọn (nhẹ, dễ kiểm soát). |
 | D2 | Độ cao cắt mặc định | 2400 mm, người dùng đổi trong hộp xem trước. |
@@ -59,6 +59,14 @@ Mỗi phòng có thể dựng **khối 3D** (đã có trong VGD_Room, nay nhập
 | Khoảng hở lớn | Vùng không kín bị loại và báo; không gộp với bên ngoài. |
 | Phòng hẹp bị coi là tường | Ngưỡng D3 có chú thích, chỉnh được; test riêng cho hành lang hẹp. |
 | Khối 3D chồng lên model người dùng | Chỉ dựng khi bấm, trên tag riêng, một bước hoàn tác, không đè khối bị khóa. |
+
+## 6b. Cách làm trong mã (1.1.1-beta.51)
+
+- Độ cao cắt tính **từ chân tường thấp nhất** của các mặt đứng đang chọn (không phải từ gốc Z), cao độ sàn của phòng lấy theo chân tường đó.
+- Giao tuyến mỗi mặt đứng: các điểm cắt của mọi vòng (kể cả lỗ cửa) sắp dọc theo đường giao rồi ghép đôi theo quy tắc chẵn lẻ, nên cửa thấp hơn độ cao cắt để tường liền, cửa cao hơn để lại khe.
+- Đồ thị phẳng: gộp điểm trong 1 mm; bỏ đầu cụt lặp lại (đếm thành `open_ends` để cảnh báo); duyệt mặt bằng cách rẽ trái nhất; cụm tường nằm trong mặt của cụm khác thành lỗ.
+- Lọc: vùng nhỏ hơn 0,2 m², vùng có bề rộng (bao lồi, hoặc độ dày trung bình 2 x diện tích / chu vi khi có lỗ, để bắt vành giữa hai lớp tường) nhỏ hơn ngưỡng, vùng viền hoặc lỗ không qua `Rooms.boundary!` / `Rooms.holes!`.
+- Xem trước và tạo đều dò lại; vùng đã tích nhận diện bằng dấu `tâm làm tròn 10 mm : diện tích cm²`.
 
 ## 7. Kiểm chứng dự kiến
 

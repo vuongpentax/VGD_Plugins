@@ -1,5 +1,6 @@
 # VGD_BIM 1.1.1
 
+- **Dò phòng từ tường (beta.51):** trong **Quản lý phòng**, chọn các tường rồi bấm **Dò phòng từ tường đang chọn**: plugin cắt tường ở độ cao cắt (mặc định 2400 mm từ chân tường, chỉnh được), tìm các vùng kín giữa tường, cho xem trước với ô tích từng vùng rồi tạo phòng một bước hoàn tác. Bỏ ruột tường (vùng hẹp dưới 350 mm, chỉnh được), vùng không kín được báo kèm số đầu tường hở, cột đứng một mình thành lỗ. Chỉ đọc, không sửa tường.
 - **Giao diện gọn:** hàng tab chung hàng đầu; thanh công cụ chỉ còn nút dùng thường xuyên (Chọn cột, Tìm, Lọc, Ảnh, Nhóm theo, Tùy chọn, Công cụ); Đổi tên, Mặt trước, Loại trừ tag vào **Công cụ → Bảng**; menu Công cụ, bảng Preset và hộp Cập nhật ảnh **gập sẵn**, bấm để sổ ra; đang loại trừ tag thì có chip nhắc trên thanh công cụ; bỏ hàng nút phía dưới bảng.
 - **Loại trừ tag luôn hiện (beta.39):** nút Loại trừ tag nằm cố định trên thanh công cụ của Bảng khối lượng (trước đây chỉ hiện khi đã loại trừ tag); bấm để mở danh sách tag, đang loại trừ thì ghi số tag.
 - **Kiểu nét tag bằng ký hiệu (beta.42):** trong Soạn tag, ô kiểu nét hiện ký hiệu (liền, gạch, chấm, gạch chấm, gạch hai chấm, gạch ba chấm) thay cho chữ; bấm để chọn từ danh sách ký hiệu, rê chuột xem tên kiểu.

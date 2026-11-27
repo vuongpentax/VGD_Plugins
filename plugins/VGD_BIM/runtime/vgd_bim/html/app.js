@@ -139,7 +139,7 @@ function syncFile(data){
 }
 function resetTableState(){
   clearTimeout(viewTimer);clearTimeout(excludeTimer);
-  Object.assign(tableState,{lockKey:null,replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',manual:[],sheets:null,sheet:0,excludeTags:null,excludePending:false,projectedChecked:false,snapshots:null,snapshotDiff:null,checkResults:null,bridge:{file:null,match_by:'vgd_id',match_column:'',mapping:{},preview:null,skip:new Set(),shown:200}});
+  Object.assign(tableState,{lockKey:null,replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',manual:[],sheets:null,sheet:0,excludeTags:null,excludePending:false,projectedChecked:false,snapshots:null,snapshotDiff:null,checkResults:null,roomsDetect:null,bridge:{file:null,match_by:'vgd_id',match_column:'',mapping:{},preview:null,skip:new Set(),shown:200}});
   const view=document.querySelector('.table-view');if(view)view.remove();
 }
 const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total','calc_qty','calc_total','mat_price','mat_waste','mat_qty','mat_cost']);
@@ -1344,6 +1344,38 @@ function roomsPanel(){
   const create=node('div',undefined,'rm-new');create.append(newName,newNumber,newLevel);
   const make=button('Tạo phòng từ các mặt đang chọn',()=>call('table_room_from_selection',JSON.stringify({name:newName.value,number:newNumber.value,level:newLevel.value})),'primary');make.id='rm-make';
   make.title='Đọc viền (và các lỗ, vd cột) của các mặt sàn nằm ngang đang chọn trong SketchUp, mỗi mặt thành một phòng. Một mặt: tên và mã như đã nhập. Nhiều mặt: tên là tiền tố (Phòng 1, Phòng 2...), không đặt mã. Chỉ lưu dữ liệu, không dựng hình.';
+  // Dò phòng từ tường (core/room_detect.rb): xem trước các vùng kín giữa tường đang chọn, tích bỏ vùng không muốn, rồi tạo. Kết quả nhớ trong tableState.roomsDetect.
+  const dt=tableState.roomsDetect||(tableState.roomsDetect={cut:2400,minWidth:350,result:null,keep:new Set()});
+  const cutInput=node('input');cutInput.type='number';cutInput.min='100';cutInput.max='20000';cutInput.step='50';cutInput.value=dt.cut;cutInput.id='rm-cut';cutInput.setAttribute('aria-label','Độ cao cắt (mm)');cutInput.onchange=()=>{dt.cut=Number(cutInput.value);};
+  const widthInput=node('input');widthInput.type='number';widthInput.min='50';widthInput.max='5000';widthInput.step='10';widthInput.value=dt.minWidth;widthInput.id='rm-minw';widthInput.setAttribute('aria-label','Bề rộng tối thiểu (mm)');widthInput.onchange=()=>{dt.minWidth=Number(widthInput.value);};
+  const detectArgs=()=>{dt.cut=Number(cutInput.value);dt.minWidth=Number(widthInput.value);return {cut:dt.cut,min_width:dt.minWidth};};
+  const detectBtn=button('Dò phòng từ tường đang chọn',()=>{dt.result=null;call('table_room_detect',JSON.stringify(detectArgs()));},'primary');detectBtn.id='rm-detect';
+  detectBtn.title='Chọn các tường (Group / Component) rồi bấm. Mặt phẳng nằm ngang ở độ cao cắt (tính từ chân tường thấp nhất) cắt tường thành các đoạn; vùng kín giữa các đoạn là phòng. Chỉ đọc, không đổi tường, không thêm hình.';
+  const detect=node('div',undefined,'rm-detect');
+  detect.append(node('div','Dò phòng từ tường','pop-title'),node('p','Chọn các tường trong SketchUp rồi bấm Dò. Độ cao cắt nên cao hơn đỉnh cửa đi để tường liền mạch.','muted'));
+  const detectRow=node('div',undefined,'rm-mid');detectRow.append(miniField('Độ cao cắt (mm)',cutInput),miniField('Bề rộng tối thiểu (mm)',widthInput));
+  detect.append(detectRow,detectBtn);
+  if(dt.result){
+    const res=dt.result;
+    detect.append(node('p',`Đọc ${res.walls} mặt tường ở độ cao cắt ${res.cut} mm (tường cao ${res.height} mm). Tìm được ${res.regions.length} vùng kín.`,'muted rm-detect-info'));
+    const list=node('div',undefined,'rm-detect-list');
+    res.regions.forEach((region,i)=>{
+      const tick=node('input');tick.type='checkbox';tick.checked=dt.keep.has(region.sig);tick.setAttribute('aria-label','Tạo phòng cho vùng '+(i+1));
+      tick.onchange=()=>{tick.checked?dt.keep.add(region.sig):dt.keep.delete(region.sig);applyBtn.disabled=!dt.keep.size;applyBtn.textContent=`Tạo ${dt.keep.size} phòng từ các vùng đã tích`;};
+      const row=node('label',undefined,'rm-detect-row');
+      row.append(tick,node('span',`Vùng ${i+1} · ${region.area} m² · rộng ${region.width} mm · tâm (${region.center[0]}, ${region.center[1]})`+(region.holes?` · ${region.holes} lỗ`:'')));
+      list.append(row);
+    });
+    detect.append(list);
+    res.dropped.forEach(d=>detect.append(node('p',`Bỏ ${d.count>1?d.count+' ':''}${d.text}.`,'muted rm-detect-dropped')));
+    res.warnings.forEach(w=>detect.append(node('p',w,'rm-detect-warn')));
+  }
+  const applyBtn=button(`Tạo ${dt.keep.size} phòng từ các vùng đã tích`,()=>{
+    if(!dt.keep.size)throw Error('Hãy tích ít nhất một vùng để tạo phòng.');
+    call('table_room_detect_apply',JSON.stringify({...detectArgs(),keep:[...dt.keep],name:newName.value,level:newLevel.value}));
+  });applyBtn.id='rm-detect-apply';applyBtn.disabled=!(dt.result&&dt.keep.size);applyBtn.hidden=!(dt.result&&dt.result.regions.length);
+  applyBtn.title='Dò lại tường đang chọn rồi tạo phòng cho các vùng đã tích: tên theo ô Tên phòng mới ở trên (tiền tố, vd Phòng 1, Phòng 2), tầng theo ô tầng, cao độ sàn lấy theo chân tường. Một bước hoàn tác, không đổi tường.';
+  detect.append(applyBtn);
   const picked=tableState.displayed.filter(r=>r.members.some(m=>tableState.sel.has(m)));
   const auto=button('Gán món vào phòng theo vị trí',()=>{
     if(!selectedIndexes().length)throw Error('Hãy chọn các dòng cần gán phòng (Ctrl+A chọn hết các dòng đang hiện).');
@@ -1352,7 +1384,7 @@ function roomsPanel(){
   const buildAll=button(`Dựng khối tất cả phòng${rooms.length?` (${rooms.length})`:''}`,()=>call('table_room_build_all',JSON.stringify({})));buildAll.id='rm-build-all';
   buildAll.disabled=!rooms.length;buildAll.title='Dựng (hoặc dựng lại) khối 3D của mọi phòng, một bước hoàn tác cho cả đợt.';
   const actions=node('div',undefined,'rename-actions');actions.append(make,buildAll,auto,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
-  p.append(create,node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán phòng theo vị trí; hoặc nhấp đúp ô Phòng để gán tay.','muted'),actions);
+  p.append(create,detect,node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán phòng theo vị trí; hoặc nhấp đúp ô Phòng để gán tay.','muted'),actions);
   applyRoomsView();
   return p;
 }
@@ -2112,6 +2144,8 @@ window.VGD={receive(event,data){
   if(event==='config'){syncFile(data);document.body.classList.remove('table-mode');updateSelInfo();if(appliedLanguage&&data.language&&appliedLanguage!==data.language){location.reload();return;}appliedLanguage=data.language||'vi';VGD_I18N.setLanguage(appliedLanguage,data.vi_en);config=data;if(config.table&&!tableState.restored)restoreView({view:config.table.view,columns:config.table.columns,presets:config.table.presets});updatePresetButton();locale=data.locale||locale;$('subtitle').textContent=TAB_OF[data.mode]?`${data.version} · ${translated('modes',data.mode)}`:data.version;document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===(TAB_OF[data.mode]||data.mode);b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});$('preview').close();$('content').replaceChildren();$('primary-actions').replaceChildren();document.querySelector('main').scrollTop=0;message('Đang đọc dữ liệu…');}
   if(event==='table'){tableState.manual=Array.isArray(data.row_order)?data.row_order:[];tableState.rename.preview=null;tableState.sel=new Set(Array.isArray(data.selected)?data.selected:[]);if(!tableState.sel.has(tableState.anchor))tableState.anchor=null;} // bảng đổi thì bản xem trước đổi tên cũ không còn đúng
   const renderers={information,scan,scan_pending:scanPending,mapping,validation,rules,tags:tagEditor,table:tableView};if(renderers[event]){renderers[event](data);message('Sẵn sàng.');}
+  if(event==='room_detect'){const dt=tableState.roomsDetect||(tableState.roomsDetect={cut:2400,minWidth:350,result:null,keep:new Set()});dt.result=data;dt.cut=data.cut;dt.minWidth=data.min_width;dt.keep=new Set(data.regions.map(r=>r.sig));if(tableState.panel==='rooms'&&tableState.data)tableView(tableState.data);}
+  if(event==='room_detect_done'){const dt=tableState.roomsDetect;if(dt){dt.result=null;dt.keep=new Set();}if(tableState.panel==='rooms'&&tableState.data)tableView(tableState.data);}
   if(event==='snapshots'){tableState.snapshots=data;if(tableState.panel==='snapshots'&&tableState.data)tableView(tableState.data);}
   if(event==='snapshot_diff'){tableState.snapshotDiff=data;tableState.panel='snapshots';if(tableState.data)tableView(tableState.data);}
   if(event==='check_results'){tableState.checkResults=data;tableState.panel='checks';if(tableState.data)tableView(tableState.data);}

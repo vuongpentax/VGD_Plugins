@@ -98,6 +98,8 @@ module VGD
           @dialog.add_action_callback('material_library_save') { |_ctx, payload| safely { material_library_save(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_rooms') { |_ctx, payload| safely { table_rooms(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_from_selection') { |_ctx, payload| safely { table_room_from_selection(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_room_detect') { |_ctx, payload| safely { table_room_detect(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_room_detect_apply') { |_ctx, payload| safely { table_room_detect_apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_assign_rooms_auto') { |_ctx, payload| safely { table_assign_rooms_auto(JSON.parse(payload)) } }
           @dialog.add_action_callback('snapshot_list') { |_ctx| safely { snapshot_list } }
           @dialog.add_action_callback('snapshot_save') { |_ctx, payload| safely { snapshot_save(JSON.parse(payload)) } }
@@ -705,12 +707,29 @@ module VGD
           raise first_error if shapes.empty?
           shapes.sort_by! { |shape| [shape[:boundary].map(&:first).min, shape[:boundary].map(&:last).min] } # đặt tên theo thứ tự từ trái sang phải
           rooms = Rooms.read(@model)
+          created = rooms_from_shapes(rooms, shapes, payload)
+          clean = Rooms.sanitize!(rooms + created)
+          Rooms.write(@model, clean)
+          table_build
+          fresh = clean.last(created.size)
+          area = fresh.sum { |room| Rooms.metrics(room)[:area] }.round(3)
+          notes = []
+          notes << "bỏ qua #{skipped} mặt không dùng được (không nằm ngang)" if skipped.positive?
+          holed = fresh.count { |room| room['holes'] }
+          notes << "#{holed} phòng có lỗ" if holed.positive?
+          note = notes.empty? ? '' : " (#{notes.join('; ')})"
+          text = fresh.size == 1 ? "Đã tạo phòng #{fresh.first['name']} từ mặt đang chọn (diện tích #{area} m²).#{note}" : "Đã tạo #{fresh.size} phòng từ #{faces.size} mặt đang chọn (tổng diện tích #{area} m²).#{note}"
+          emit('message', {text: text})
+        end
+        # Phòng mới (chưa ghi) từ các hình {boundary:, holes:, elevation:}: đặt tên, tầng, chiều cao, cao độ sàn. Dùng chung cho tạo từ mặt và dò từ tường.
+        # rooms: danh sách phòng hiện có (để không trùng tên). payload: 'name', 'number' (chỉ khi một hình), 'level', 'height'.
+        def rooms_from_shapes(rooms, shapes, payload)
           levels = Levels.read(@model)
           chosen = payload['level'].to_s
           typed = payload['name'].to_s.strip
           used = rooms.map { |room| room['name'].downcase }
           counter = typed.empty? || shapes.size == 1 ? rooms.size : 0
-          created = shapes.map do |shape|
+          shapes.map do |shape|
             if shapes.size == 1 && !typed.empty?
               name = typed
             else
@@ -730,18 +749,68 @@ module VGD
             room['holes'] = shape[:holes] unless shape[:holes].empty?
             room
           end
+        end
+        # Dò vùng phòng từ các tường đang chọn (core/room_detect_probe.rb đọc, core/room_detect.rb tính): CHỈ ĐỌC, không đổi tường, không thêm hình.
+        # payload: {'cut' => độ cao cắt mm từ chân tường (mặc định 2400), 'min_width' => bề rộng tối thiểu mm (mặc định 350)}. Trả về
+        # [kết quả RoomDetect, số liệu đọc tường, độ cao cắt, bề rộng tối thiểu].
+        def detect_rooms_from_selection(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu dò phòng không hợp lệ.' unless payload.is_a?(Hash)
+          cut = payload['cut'].nil? ? RoomDetectProbe::DEFAULT_CUT : payload['cut']
+          width = payload['min_width'].nil? ? RoomDetect::MIN_WIDTH : payload['min_width']
+          raise ArgumentError, "Độ cao cắt phải là số từ #{RoomDetectProbe::MIN_CUT.round} đến #{RoomDetectProbe::MAX_CUT.round} mm." unless cut.is_a?(Numeric) && cut.finite? && cut.between?(RoomDetectProbe::MIN_CUT, RoomDetectProbe::MAX_CUT)
+          raise ArgumentError, 'Bề rộng tối thiểu phải là số từ 50 đến 5000 mm.' unless width.is_a?(Numeric) && width.finite? && width.between?(50, 5000)
+          entities = @model.selection.to_a
+          raise 'Hãy chọn các tường (Group hoặc Component) trong SketchUp rồi bấm Dò phòng.' if entities.empty?
+          read = RoomDetectProbe.read(entities, context_transform, cut)
+          raise 'Trong phần đang chọn không có mặt đứng nào (tường). Hãy chọn các Group / Component tường.' if read[:faces].zero?
+          if read[:walls].zero?
+            raise "Mặt phẳng cắt (cao #{cut.round} mm) nằm trên đỉnh tường (tường cao #{(read[:top] - read[:floor]).round} mm). Hãy giảm độ cao cắt."
+          end
+          [RoomDetect.detect(read[:segments], min_width: width), read, cut, width]
+        end
+        # Xem trước các vùng dò được (chưa tạo gì). Gửi giao diện sự kiện 'room_detect'.
+        def table_room_detect(payload)
+          result, read, cut, width = detect_rooms_from_selection(payload)
+          by_kind = result[:dropped].group_by { |item| item[:kind] }
+          dropped = by_kind.flat_map do |kind, items|
+            case kind
+            when :thin then [{count: items.size, text: "vùng hẹp hơn #{width.round} mm (ruột tường, khe giữa hai lớp tường)"}]
+            when :small then [{count: items.size, text: 'vùng diện tích quá nhỏ (mảnh vụn ở góc tường)'}]
+            else items.map { |item| {count: 1, text: "vùng quanh (#{item[:center][0].round}, #{item[:center][1].round}) mm: viền hoặc lỗ không hợp lệ (quá nhiều điểm, tự cắt nhau hoặc cột dính sát tường)"} }
+            end
+          end
+          warnings = []
+          warnings << "Có #{result[:open_ends]} đầu tường hở (đầu tường lơ lửng hoặc khe cửa): phòng không khép kín sẽ không được tạo. Nếu là cửa đi, hãy tăng độ cao cắt cao hơn đỉnh cửa." if result[:open_ends].positive?
+          warnings << "Chỉ đọc #{RoomDetectProbe::MAX_FACES} mặt đầu tiên của phần đang chọn (model quá nặng): hãy chọn ít tường hơn." if read[:truncated]
+          warnings << 'Không dò được vùng kín nào. Kiểm tra tường có khép kín không, hoặc thử đổi độ cao cắt.' if result[:regions].empty?
+          emit('room_detect', {
+            regions: result[:regions].map { |region| {sig: region[:sig], area: (region[:area] / 1.0e6).round(3), width: region[:width].round, center: region[:center].map { |v| v.round }, holes: region[:holes].size, points: region[:boundary].size, boundary: region[:boundary].map { |pt| pt.map { |v| v.round(1) } }} },
+            dropped: dropped, warnings: warnings, open_ends: result[:open_ends], walls: read[:walls], cut: cut, min_width: width,
+            floor: read[:floor].round(1), height: (read[:top] - read[:floor]).round
+          })
+        end
+        # Tạo phòng từ các vùng đã tích. Dò lại ngay lúc này (tường có thể đã đổi từ lúc xem trước) và chỉ tạo vùng còn khớp dấu nhận dạng với vùng đã chọn.
+        # payload: như table_room_detect cộng 'keep' => [dấu nhận dạng], 'name' (tiền tố tên), 'level' (id tầng), 'height' (mm). Một bước hoàn tác.
+        def table_room_detect_apply(payload)
+          keep = payload.is_a?(Hash) ? payload['keep'] : nil
+          raise ArgumentError, 'Hãy tích ít nhất một vùng để tạo phòng.' unless keep.is_a?(Array) && keep.any? && keep.all? { |sig| sig.is_a?(String) }
+          result, read, = detect_rooms_from_selection(payload)
+          chosen = result[:regions].select { |region| keep.include?(region[:sig]) }
+          raise 'Các vùng đã tích không còn khớp với tường hiện tại. Hãy bấm Dò phòng lại.' if chosen.empty?
+          shapes = chosen.map { |region| {boundary: region[:boundary], holes: region[:holes], elevation: read[:floor].round(1)} }
+          shapes.sort_by! { |shape| [shape[:boundary].map(&:first).min, shape[:boundary].map(&:last).min] }
+          rooms = Rooms.read(@model)
+          created = rooms_from_shapes(rooms, shapes, payload.merge('number' => ''))
           clean = Rooms.sanitize!(rooms + created)
           Rooms.write(@model, clean)
           table_build
           fresh = clean.last(created.size)
           area = fresh.sum { |room| Rooms.metrics(room)[:area] }.round(3)
-          notes = []
-          notes << "bỏ qua #{skipped} mặt không dùng được (không nằm ngang)" if skipped.positive?
-          holed = fresh.count { |room| room['holes'] }
-          notes << "#{holed} phòng có lỗ" if holed.positive?
-          note = notes.empty? ? '' : " (#{notes.join('; ')})"
-          text = fresh.size == 1 ? "Đã tạo phòng #{fresh.first['name']} từ mặt đang chọn (diện tích #{area} m²).#{note}" : "Đã tạo #{fresh.size} phòng từ #{faces.size} mặt đang chọn (tổng diện tích #{area} m²).#{note}"
-          emit('message', {text: text})
+          missing = keep.size - chosen.size
+          note = missing.positive? ? " (#{missing} vùng đã tích không còn khớp nên bị bỏ qua)" : ''
+          emit('message', {text: "Đã tạo #{fresh.size} phòng từ tường (tổng diện tích #{area} m², cao độ sàn #{read[:floor].round} mm theo chân tường thấp nhất).#{note}"})
+          emit('room_detect_done', {created: fresh.size})
         end
         # Gán món vào phòng theo vị trí (tâm đáy món trong viền và trong khoảng cao của phòng). Nhãn, không dời hình. Một bước hoàn tác.
         def table_assign_rooms_auto(payload)

@@ -2,7 +2,18 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.50: đã kiểm tra tự động
+## Bản 1.1.1-beta.51: đã kiểm tra tự động
+
+Beta.51: dò vùng phòng từ tường. `core/room_detect.rb` (thuật toán thuần: tách đoạn tại giao điểm / chạm chữ T / đoạn chồng nhau, bỏ đầu cụt, duyệt mặt của đồ thị phẳng, cụm tường nằm trong mặt của cụm khác thành lỗ, lọc vùng nhỏ và vùng hẹp), `core/room_detect_probe.rb` (đọc mặt đứng của đối tượng đang chọn, đi sâu group / component, cắt ở độ cao cắt bằng quy tắc chẵn lẻ nên lỗ cửa bị cắt qua để lại khe), lệnh `table_room_detect` (xem trước, chỉ đọc) và `table_room_detect_apply` (dò lại rồi tạo vùng đã tích, một bước hoàn tác), phần giao diện trong **Quản lý phòng**.
+
+- `dev/test_room_detect.rb`: hình chữ nhật, đoạn chia nhỏ / chồng nhau, vách ngăn (hai phòng), tường dày hai lớp (ruột tường bị bỏ), hai lớp lồng nhau (vành bị bỏ nhờ độ dày trung bình), đầu hở (phòng không kín không thành vùng, báo số đầu hở), tường thừa nhô ra / nhô vào, khe cửa nối hai phòng, cột đứng một mình thành lỗ (qua `Rooms.holes!`), tam giác, hành lang hẹp theo ngưỡng, sai số dưới 1 mm khép kín, hở 5 mm không khép, hai phòng chạm góc, lưới 3 x 2, dấu nhận dạng ổn định, dữ liệu sai bị từ chối.
+- `dev/test_room_detect_probe.rb` (model giả lập): bốn mặt tường, cao độ cắt tính từ chân tường, cắt cao hơn tường, lỗ cửa thấp / cao hơn mặt cắt, bỏ mặt nằm ngang, group và component lồng có dời chỗ, ngữ cảnh group đang mở, đối tượng / tag ẩn bị bỏ, quá nhiều mặt, mặt lõm, mặt nghiêng nhẹ.
+- `dev/test_dialog_logic.rb`: lỗi khi chưa chọn / chọn mặt sàn / cắt cao hơn tường / tham số sai; xem trước không đổi model; tạo chỉ vùng được tích, dấu nhận dạng không còn khớp thì báo dò lại, tên và cao độ sàn đúng.
+- `dev/test_ui.cjs`, `dev/test_ui_en.cjs`: mặc định 2400 / 350, gửi tham số đã sửa, vùng tích sẵn, bỏ tích cập nhật nút, chỉ gửi vùng đã tích, xóa kết quả sau khi tạo, bản dịch Anh.
+
+**Chưa xác minh trong SketchUp thật:** giao tuyến trên model thật (tường có cửa, tường cong, group lồng nhau), hiệu năng với model lớn (giới hạn 30.000 mặt và 2.500 đoạn), hoàn tác một bước. Test ngoài SketchUp chỉ dùng model giả lập. Khi chạy `ruby dev/run_tests.rb` trong môi trường không đặt `LANG` UTF-8, `dev/test_storage_replace.rb` báo lỗi 3 mục do so chuỗi tiếng Việt khác mã hóa (đặt `LANG=C.UTF-8` thì đạt; có từ trước, không do bản này).
+
+## Bản 1.1.1-beta.50 (trước đó)
 
 Beta.50: `RoomVolume.create_volume` dựng khối phòng bằng cạnh thay vì mặt đùn: `add_edges` cho viền sàn và viền trần, `add_line` cho cạnh đứng ở mỗi góc, làm tương tự cho viền từng lỗ; không còn mặt, không còn vật liệu trong suốt. Nếu SketchUp tự sinh mặt từ cạnh khép kín thì xóa mặt rồi kiểm tra còn đủ cạnh, không đủ thì báo lỗi và hủy thao tác (khối cũ còn nguyên). Tag `VGD_ROOMS` mới tạo có màu xanh nhạt.
 

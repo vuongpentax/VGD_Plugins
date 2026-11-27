@@ -1,4 +1,4 @@
-# VGD BIM 1.1.1-beta.50
+# VGD BIM 1.1.1-beta.51
 
 Bản thử của 1.1.1 (bản ổn định gần nhất là 1.1.0). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -65,6 +65,8 @@ Cửa sổ có 5 tab (nút **Preset** cạnh nút Sáng/Tối ở thanh đầu d
 **Nút dán ảnh từ clipboard** (sửa ở beta.46, thêm cách 1 ở beta.47, cách 2 ở beta.48): nút thử lần lượt bốn cách. (1) **Lệnh dán của trình duyệt**, như nhấn Ctrl+V; (2) **Ruby gửi phím Ctrl+V của Windows** tới cửa sổ BIM (chỉ khi cửa sổ đang có tiêu điểm và cửa sổ đang chọn thuộc chính SketchUp; ảnh đi qua đúng đường Ctrl+V thật, không cần quyền; không có phím thì chuyển ngay sang cách sau, chờ tối đa 1,2 giây); (3) API đọc clipboard của cửa sổ, chờ tối đa 1,5 giây; (4) nếu cả ba bị chặn thì báo "Đang đọc ảnh trong clipboard…" và nhờ Ruby đọc bằng PowerShell có sẵn của Windows (chỉ khi bấm nút, chỉ đọc clipboard, ảnh tối đa 20 MB, quá 10 giây thì dừng). Ảnh được thu nhỏ vừa cỡ ảnh của preset và lưu như ảnh dán thường. Clipboard không có ảnh thì báo rõ. Cách 2 và 4 chỉ có trên Windows (macOS dùng Ctrl+V). Ctrl+V sau khi chọn ô ảnh vẫn dùng được như trước.
 
 **Giữ vị trí cuộn của bảng** (từ 1.1.1-beta.15): sửa tên, cập nhật ảnh hay sửa một ô không còn làm bảng nhảy lên đầu; bạn vẫn ở đúng dòng đang làm. Chưa kiểm thử trong SketchUp thật.
+
+**Dò phòng từ tường** (từ 1.1.1-beta.51): trong **Quản lý phòng**, chọn các tường (Group / Component) trong SketchUp rồi bấm **Dò phòng từ tường đang chọn**. Plugin cắt tường bằng một mặt phẳng nằm ngang ở **Độ cao cắt** (mặc định 2400 mm tính từ chân tường thấp nhất, nên cao hơn đỉnh cửa đi để tường liền mạch) và tìm các vùng kín giữa tường. Danh sách vùng hiện ra (diện tích, bề rộng, số lỗ) với ô tích sẵn; bỏ tích vùng không cần rồi bấm **Tạo … phòng từ các vùng đã tích** (tên theo ô Tên phòng mới làm tiền tố, tầng theo ô tầng, cao độ sàn lấy theo chân tường, một bước hoàn tác). Vùng hẹp hơn **Bề rộng tối thiểu** (mặc định 350 mm, là ruột tường) bị bỏ; vùng không kín (có chỗ hở tường, ví dụ cửa đi thấp hơn độ cao cắt) không thành phòng và được báo kèm số đầu tường hở; cột đứng một mình trong phòng thành lỗ. Chỉ đọc: không sửa tường, không thêm hình. Chưa kiểm thử trong SketchUp thật.
 
 **Cập nhật viền phòng** (từ 1.1.1-beta.14): trong **Quản lý phòng**, chọn đúng một mặt sàn trong SketchUp, rồi bấm **Cập nhật viền từ mặt đang chọn** ở phòng cần sửa. Viền (và lỗ) của phòng được thay bằng mặt đó; tên, mã, tầng, chiều cao, hoàn thiện giữ nguyên, cao độ sàn theo mặt mới. Nếu phòng đã có khối 3D thì bấm **Dựng lại khối**. Một bước hoàn tác. Chưa kiểm thử trong SketchUp thật.
 
