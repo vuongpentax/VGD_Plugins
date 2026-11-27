@@ -1053,13 +1053,12 @@ function toolbar(){
   grouping.setAttribute('aria-expanded',String(tableState.panel==='group'));
   const groupAnchor=node('div',undefined,'pop-anchor');groupAnchor.append(grouping);
   if(tableState.panel==='group')groupAnchor.append(groupPanel());
-  // Đang loại trừ tag thì số đo đã khác: hiện chip nhắc ngay trên thanh (bấm để mở danh sách). Nút chính nằm trong menu Công cụ.
+  // Nút Loại trừ tag luôn hiện trên thanh (bấm để mở danh sách); đang loại trừ thì kèm số tag vì số đo đã khác. Mục trong menu Công cụ vẫn giữ.
   const excludeCount=excludedTags().size;
-  const excludeChip=button(`Loại trừ ${excludeCount} tag`,toggleExclude,'chip');excludeChip.id='exclude-chip';excludeChip.title='Các tag này không tính vào Rộng / Dài / Cao. Bấm để xem hoặc đổi.';
+  const excludeChip=button(excludeCount?`Loại trừ ${excludeCount} tag`:'Loại trừ tag',toggleExclude,'chip');excludeChip.id='exclude-chip';excludeChip.title='Các tag này không tính vào Rộng / Dài / Cao. Bấm để xem hoặc đổi.';
   excludeChip.setAttribute('aria-expanded',String(tableState.panel==='exclude'));
   const own=new Set(pidMap().values()),placed=tableState.manual.some(pid=>own.has(pid));
   const unplace=button('Bỏ xếp tay',resetManualOrder);unplace.id='order-reset';unplace.title='Bỏ thứ tự bạn đã kéo, về thứ tự quét ban đầu';
-  excludeChip.hidden=!excludeCount;
   bar.append(cols,searchWrap,replaceBox,group,excludeChip,node('span',undefined,'grow'),snap,stop,progress);
   if(placed)bar.append(unplace);
   bar.append(groupAnchor);
@@ -1723,7 +1722,7 @@ function buildExcludePanel(side){
 const sideKind=()=>tableState.panel==='columns'||tableState.panel==='exclude'?tableState.panel:null;
 // Số tag đang loại trừ: trên chip của thanh công cụ (ẩn khi 0) và mục Loại trừ tag trong menu Công cụ (nếu đang mở).
 function showExcludeCount(n){
-  const chip=$('exclude-chip');if(chip){chip.hidden=!n;chip.textContent=`Loại trừ ${n} tag`;}
+  const chip=$('exclude-chip');if(chip)chip.textContent=n?`Loại trừ ${n} tag`:'Loại trừ tag';
   const item=$('exclude-btn'),text=item&&item.querySelector('.io-text');if(text)text.textContent=n?`Loại trừ tag (${n})`:'Loại trừ tag';
 }
 function markSideButtons(){

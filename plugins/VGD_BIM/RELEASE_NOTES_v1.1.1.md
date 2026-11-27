@@ -1,6 +1,7 @@
 # VGD_BIM 1.1.1
 
 - **Giao diện gọn:** hàng tab chung hàng đầu; thanh công cụ chỉ còn nút dùng thường xuyên (Chọn cột, Tìm, Lọc, Ảnh, Nhóm theo, Tùy chọn, Công cụ); Đổi tên, Mặt trước, Loại trừ tag vào **Công cụ → Bảng**; menu Công cụ, bảng Preset và hộp Cập nhật ảnh **gập sẵn**, bấm để sổ ra; đang loại trừ tag thì có chip nhắc trên thanh công cụ; bỏ hàng nút phía dưới bảng.
+- **Loại trừ tag luôn hiện (beta.39):** nút Loại trừ tag nằm cố định trên thanh công cụ của Bảng khối lượng (trước đây chỉ hiện khi đã loại trừ tag); bấm để mở danh sách tag, đang loại trừ thì ghi số tag.
 - **Soạn tag gọn hơn, hiển thị tag theo scene:** tag mặc định luôn tên **Untagged** và đứng đầu danh sách (không còn hiện Layer0). Bấm chuột phải vào một tag: **Hiện ở mọi scene** / **Ẩn ở mọi scene**, mở **Loại trừ scene** để giữ nguyên tag ở scene cần giữ; scene không lưu hiển thị tag được bỏ qua và ghi rõ. Một bước hoàn tác. Lệnh ít dùng gom vào nút **Thêm ▾** và **Nhập / xuất ▾**.
 - **Đọc móng và mái của VGD Structure:** bảng khối lượng nhận đế móng (tính thể tích) và tấm mái (diện tích nghiêng, thể tích) do VGD Structure 0.29 dựng.
 - **Hút / đổ tag như Paint Bucket:** nút **Hút / đổ tag** (thay Lấy mẫu): bấm = đổ tag đang chọn, Alt + bấm = hút tag, Shift + bấm = mọi bản sao cùng component, bấm vào món đang chọn = cả lựa chọn. Trong lúc dùng SketchUp bật Color by Tag, thoát thì trả lại như trước. Mỗi lần bấm là một bước hoàn tác, bỏ qua đối tượng khóa.

@@ -435,7 +435,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
     await plain.locator('.io-sec[data-sec="site"] > summary').click();
     await plain.waitForTimeout(80);
     ok(JSON.parse(await plain.evaluate(()=>localStorage.getItem('vgd.bim.tools.open'))).site===true && await plain.locator('#levels-open').isVisible(),'bấm tiêu đề nhóm: sổ ra và nhớ trên máy này');
-    ok(!(await plain.locator('#exclude-chip').isVisible()) && (await plain.locator('nav#nav').evaluate(n=>n.parentElement.tagName))==='HEADER','không loại trừ tag thì không hiện chip; hàng tab nằm chung hàng đầu');
+    ok(await plain.locator('#exclude-chip').isVisible() && (await plain.locator('#exclude-chip').innerText())==='Loại trừ tag' && (await plain.locator('nav#nav').evaluate(n=>n.parentElement.tagName))==='HEADER','chưa loại trừ tag: nút Loại trừ tag vẫn hiện trên thanh công cụ (không kèm số); hàng tab nằm chung hàng đầu');
     await plain.close();
   }
   ok(await page.getByRole('button',{name:/Cầu nối dữ liệu/}).isEnabled(),'Cầu nối dữ liệu: nút bấm được (mở hộp nhập từ Excel / CSV)');

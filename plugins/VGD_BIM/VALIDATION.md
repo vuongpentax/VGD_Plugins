@@ -2,7 +2,7 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.38: đã kiểm tra tự động
+## Bản 1.1.1-beta.39: đã kiểm tra tự động
 
 Quản lý phòng, đợt 4 và 5. Đợt 4: "Gợi ý mã cho phòng đã chọn" điền mã cho phòng đã chọn còn trống mã theo tiền tố và tầng (vd WC-T1-01), không đổi mã đã có, không trùng mã có sẵn. Đợt 5: mục "Cần kiểm tra" liệt kê phòng thiếu tầng hoặc thiếu mã; bấm một dòng để mở đúng phòng. Phòng chưa dựng khối 3D chỉ được đếm.
 
