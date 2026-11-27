@@ -13,7 +13,7 @@ module VGD
 
         # Con trỏ riêng để phân biệt với trỏ chuột thường: ống hút khi bấm là HÚT (giữ Alt, hoặc chưa có tag để đổ), thùng sơn khi bấm là ĐỔ.
         # [tên file SVG trong assets/cursors, điểm nóng x, y]. Chỉ tạo trên Windows như VGD Reference; nền tảng khác giữ con trỏ mặc định.
-        CURSORS = {sample: ['tag_sample.svg', 4, 27], paint: ['tag_paint.svg', 5, 27]}.freeze
+        CURSORS = {sample: ['tag_sample.svg', 6, 26], paint: ['tag_paint.svg', 5, 26]}.freeze
 
         attr_reader :tag_name
 

@@ -2,9 +2,9 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.40: đã kiểm tra tự động
+## Bản 1.1.1-beta.41: đã kiểm tra tự động
 
-Beta.39: nút Loại trừ tag luôn hiện trên thanh công cụ của Bảng khối lượng. Beta.40: con trỏ riêng cho công cụ hút / đổ tag.
+Beta.39: nút Loại trừ tag luôn hiện trên thanh công cụ của Bảng khối lượng. Beta.40: con trỏ riêng cho công cụ hút / đổ tag. Beta.41: vẽ lại hai con trỏ theo mẫu con trỏ 5D AutoTag người dùng cung cấp (ống hút kèm vòng tròn, thùng sơn kèm giọt sơn, viền trắng), điểm nóng ở tâm vòng và giọt sơn.
 
 - `dev/test_tag_tree.rb`: con trỏ thùng sơn khi có tag để đổ, ống hút khi giữ Alt (qua `onMouseMove`, `onKeyDown`, `onKeyUp`) hoặc chưa có tag; tạo một lần rồi dùng lại; điểm nóng đúng; không phải Windows thì không tạo (trả false); hai file SVG 32 x 32 có trong plugin. Đạt.
 - `dev/test_ui_images.cjs`: nút Loại trừ tag hiện cả khi chưa loại trừ tag nào (chữ "Loại trừ tag"), có số khi đang loại trừ. Cùng `test_ui.cjs`, `test_ui_sheets.cjs`, `test_ui_en.cjs`, `test_report_page.cjs`, `ruby dev/run_tests.rb`: đạt.

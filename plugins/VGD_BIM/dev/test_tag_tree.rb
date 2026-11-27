@@ -563,12 +563,12 @@ class << Sketchup; attr_accessor :fake_platform; def platform; fake_platform || 
 model_c, probe_c, = paint_world
 probe_c.tm_paint_start('name' => 'A. WALL')
 tool_c = model_c.tool
-ok('con trỏ khi có tag để đổ: thùng sơn (tag_paint.svg), điểm nóng ở giọt sơn, tạo một lần', tool_c.onSetCursor == true && $cursor_log == [[:create, 'tag_paint.svg', 5, 27], [:set, 'cur_tag_paint']])
+ok('con trỏ khi có tag để đổ: thùng sơn (tag_paint.svg), điểm nóng ở giọt sơn, tạo một lần', tool_c.onSetCursor == true && $cursor_log == [[:create, 'tag_paint.svg', 5, 26], [:set, 'cur_tag_paint']])
 tool_c.onSetCursor
 ok('con trỏ chỉ tạo một lần rồi dùng lại', $cursor_log.count { |e| e[0] == :create } == 1)
 tool_c.onMouseMove(ALT, 1, 1, nil)
 $cursor_log.clear; tool_c.onSetCursor
-ok('giữ Alt (qua onMouseMove): đổi sang ống hút (tag_sample.svg), điểm nóng ở đầu ống', $cursor_log == [[:create, 'tag_sample.svg', 4, 27], [:set, 'cur_tag_sample']])
+ok('giữ Alt (qua onMouseMove): đổi sang ống hút (tag_sample.svg), điểm nóng ở đầu ống', $cursor_log == [[:create, 'tag_sample.svg', 6, 26], [:set, 'cur_tag_sample']])
 tool_c.onMouseMove(0, 1, 1, nil)
 $cursor_log.clear; tool_c.onSetCursor
 ok('thả Alt: về thùng sơn', $cursor_log == [[:set, 'cur_tag_paint']])
