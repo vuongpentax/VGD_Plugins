@@ -177,7 +177,9 @@ module VGD
           @held[name] = true
           @pressed_at[name] = now
           case name
-          when :alt then toggle_mode
+          when :alt
+            PasteKeys.cancel_alt_menu # Alt dùng cho công cụ: không để Windows mở thanh menu của SketchUp khi thả Alt
+            toggle_mode
           when :ctrl then @level = LEVELS[(LEVELS.index(@level) + 1) % LEVELS.size]
           end
           true

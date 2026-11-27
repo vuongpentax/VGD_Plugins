@@ -13,9 +13,13 @@ unless P.windows?
   error = error_of { P.press_ctrl_v }
   check 'không phải Windows: báo lỗi, không gửi phím', error && error.message.include?('Windows')
 end
+sent = nil
+check 'chặn thanh menu khi nhấn Alt: chỉ gửi một phím không gán (nhấn rồi thả)', P.cancel_alt_menu(sender: ->(keys) { sent = keys }) == true && sent == [[0xE8, 0], [0xE8, 2]]
+check 'bản gửi lỗi thì trả false, không ném lỗi (không làm hỏng công cụ)', P.cancel_alt_menu(sender: ->(_k) { raise 'x' }) == false
+check 'không phải Windows và không có bản gửi: trả false, không gửi gì', P.windows? || P.cancel_alt_menu == false
 src = File.read(File.expand_path('../runtime/vgd_bim/core/paste_keys.rb', __dir__))
 check 'chỉ gửi khi cửa sổ đang chọn thuộc tiến trình SketchUp (không gửi phím vào ứng dụng khác)', src.include?('GetWindowThreadProcessId') && src.include?('owner == Process.pid')
-check 'chỉ gửi tổ hợp Ctrl+V, không có phím khác', src.scan(/VK_\w+ = 0x\h+/).size == 2
+check 'chỉ có ba mã phím: Ctrl, V và phím không gán', src.scan(/VK_\w+ = 0x\h+/).size == 3
 
 puts $fails.zero? ? 'Done' : "#{$fails} lỗi"
 exit($fails.zero? ? 0 : 1)

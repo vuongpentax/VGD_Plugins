@@ -2,7 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.48: đã kiểm tra tự động
+## Bản 1.1.1-beta.49: đã kiểm tra tự động
+
+Beta.49: nhấn Alt trong công cụ hút / đổ tag làm Windows mở thanh menu của SketchUp (Alt nhấn rồi thả mà không có phím nào xen giữa). Mỗi lần nhấn Alt (qua phím hoặc qua cờ chuột) công cụ gọi `PasteKeys.cancel_alt_menu` gửi một phím không gán (VK 0xE8, nhấn rồi thả) bằng `keybd_event` để Windows coi Alt đã đi kèm phím khác, không mở menu. Cùng điều kiện an toàn với cách dán ảnh: chỉ Windows, chỉ khi cửa sổ đang chọn thuộc tiến trình SketchUp; lỗi thì bỏ qua, công cụ vẫn chạy.
+
+- `dev/test_tag_tree.rb`: nhấn Alt gửi phím chặn menu đúng một lần và vẫn đổi chế độ; giữ Alt (phím lặp) không gửi thêm; Ctrl không gửi; Alt báo qua cờ chuột cũng gửi một lần. `dev/test_paste_keys.rb`: gửi đúng một phím không gán, lỗi thì trả false không ném lỗi, không phải Windows thì không gửi. `ruby dev/run_tests.rb`, `test_ui*.cjs`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** thanh menu có thật sự không bật nữa khi thả Alt (cách làm dựa vào hành vi chuẩn của Windows: menu chỉ mở nếu không có phím nào xen giữa lúc nhấn và thả Alt); phím 0xE8 không gây hiệu ứng phụ trong SketchUp; thời điểm gửi phím so với việc SketchUp xử lý Alt.
+
+### Bản 1.1.1-beta.48 (trước đó)
 
 Beta.48: thêm cách 2 cho nút dán ảnh: Ruby gửi phím Ctrl+V của Windows (`core/paste_keys.rb`, Fiddle gọi `keybd_event`, lệnh `image_paste_keys`, sự kiện `paste_keys`; `injectedPaste` ở `html/images.js`) để cửa sổ xử lý như người dùng nhấn Ctrl+V thật. Chỉ gửi khi trang đang có tiêu điểm (`document.hasFocus()`) và cửa sổ đang chọn thuộc tiến trình SketchUp (`GetForegroundWindow` + `GetWindowThreadProcessId`); chỉ gửi tổ hợp Ctrl+V.
 

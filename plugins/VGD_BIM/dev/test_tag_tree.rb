@@ -20,6 +20,7 @@ require 'tmpdir'
 ENV['VGD_BIM_DATA_DIR'] ||= Dir.mktmpdir('vgd_bim_tag_tree')
 %w[storage measure settings tags xlsx_reader tag_excel].each { |f| require File.join(ROOT, "core/#{f}") }
 require File.join(ROOT, 'core/tag_tree')
+require File.join(ROOT, 'core/paste_keys')
 require File.join(ROOT, 'ui/bounds_preview')
 require File.join(ROOT, 'ui/tag_sample')
 require File.join(ROOT, 'ui/tag_manager')
@@ -756,6 +757,23 @@ broken.define_singleton_method(:screen_coords) { |_p| raise 'lỗi chiếu' }
 t3.onMouseMove(0, 5, 5, broken); broken.calls.clear
 ok('lỗi khi chiếu khung: không làm hỏng công cụ (không ném lỗi)', error_of { t3.draw(broken) }.nil?)
 probe.tm_paint_stop
+
+# ---- Alt không được mở thanh menu của SketchUp ----
+$menu_cancels = 0
+real_cancel = VGD::BIM::PasteKeys.method(:cancel_alt_menu)
+VGD::BIM::PasteKeys.define_singleton_method(:cancel_alt_menu) { |**| $menu_cancels += 1; true }
+tm = VGD::BIM::UI::TagPaintTool.new('X', on_paint: ->(*) {}, on_sample: ->(*) {}, on_done: -> {})
+tm.onKeyDown(VGD::BIM::UI::TagPaintTool::ALT_KEY, 1, 0, nil)
+ok('nhấn Alt: gửi phím chặn thanh menu của SketchUp một lần và vẫn đổi chế độ', $menu_cancels == 1 && tm.sampling?)
+tm.onKeyDown(VGD::BIM::UI::TagPaintTool::ALT_KEY, 2, 0, nil); tm.onKeyDown(VGD::BIM::UI::TagPaintTool::ALT_KEY, 3, 0, nil)
+ok('giữ Alt (phím lặp): không gửi thêm', $menu_cancels == 1)
+tm.onKeyUp(VGD::BIM::UI::TagPaintTool::ALT_KEY, 1, 0, nil)
+tm.onKeyDown(VGD::BIM::UI::TagPaintTool::CTRL_KEY, 1, 0, nil); tm.onKeyUp(VGD::BIM::UI::TagPaintTool::CTRL_KEY, 1, 0, nil)
+ok('nhấn Ctrl: không gửi phím chặn menu (Ctrl không mở menu)', $menu_cancels == 1)
+tm2 = VGD::BIM::UI::TagPaintTool.new('X', on_paint: ->(*) {}, on_sample: ->(*) {}, on_done: -> {})
+tm2.onMouseMove(VGD::BIM::UI::TagPaintTool::ALT_MASK, 1, 1, FDrawView.new(model, []))
+ok('Alt chỉ báo qua cờ chuột (onKeyDown chưa tới): cũng chặn menu một lần', $menu_cancels == 2 && tm2.sampling?)
+VGD::BIM::PasteKeys.define_singleton_method(:cancel_alt_menu) { |**kw| real_cancel.call(**kw) }
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)

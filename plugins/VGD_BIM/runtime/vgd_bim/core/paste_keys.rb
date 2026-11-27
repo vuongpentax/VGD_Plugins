@@ -9,6 +9,7 @@ module VGD
     module PasteKeys
       VK_CONTROL = 0x11
       VK_V = 0x56
+      VK_UNASSIGNED = 0xE8 # phím không gán: Windows coi Alt đã đi kèm một phím khác nên không mở thanh menu khi thả Alt
       KEYUP = 0x02
 
       def self.windows?
@@ -23,6 +24,18 @@ module VGD
         end
         sender.call([[VK_CONTROL, 0], [VK_V, 0], [VK_V, KEYUP], [VK_CONTROL, KEYUP]])
         true
+      end
+
+      # Gọi khi người dùng đang giữ Alt cho một việc khác (công cụ hút / đổ tag): gửi thêm một phím không gán để Windows không mở thanh menu
+      # của SketchUp khi thả Alt (Windows chỉ mở menu nếu Alt được nhấn rồi thả mà không có phím nào xen giữa). Không phải Windows hoặc
+      # lỗi thì trả false, không ném lỗi.
+      def self.cancel_alt_menu(sender: nil)
+        return false unless sender || windows?
+        (sender || method(:send_win32)).call([[VK_UNASSIGNED, 0], [VK_UNASSIGNED, KEYUP]])
+        true
+      rescue StandardError => error
+        BIM.log("Không chặn được thanh menu khi nhấn Alt: #{error.message}")
+        false
       end
 
       def self.send_win32(keys)
