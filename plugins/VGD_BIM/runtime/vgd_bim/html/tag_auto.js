@@ -364,7 +364,7 @@ function tagTreePane(pane){
   const excel=button('Nhập Excel',()=>call('tm_excel_open'),'sm');excel.id='tag-tree-excel';excel.title='Nhập tag (kèm màu, kiểu nét, thư mục) từ file Excel .xlsx';
   // Hút / đổ tag (như Paint Bucket): bấm lại khi đang bật thì thoát. Tag để đổ = tag đang chọn ở ô Gán tag.
   const sample=button('Hút / đổ tag',()=>call('tm_paint_start',JSON.stringify({name:paintTagName()})),'sm');sample.id='tag-tree-paint';
-  sample.title='Bấm: đổ tag đang chọn · Alt + bấm: hút tag · Shift + bấm: mọi bản sao cùng component · Bấm vào món đang chọn: đổ cho cả lựa chọn. Trong lúc dùng, SketchUp bật Color by Tag.';
+  sample.title='Bấm: đổ tag đang chọn · Alt: đổi giữa hút và đổ · Ctrl: đổi cấp đối tượng (nhóm trên cùng / trong cùng / mặt) · Shift + bấm: mọi bản sao cùng component · Bấm vào món đang chọn: đổ cho cả lựa chọn. Trong lúc dùng, SketchUp bật Color by Tag.';
   const compact=button('Chế độ thu gọn',()=>{treeState.compact=!treeState.compact;try{localStorage.setItem(COMPACT_KEY,treeState.compact?'1':'0');}catch(_){}paintTagTree();},'sm');
   compact.id='tag-tree-compact';compact.title='Ẩn ô màu và kiểu nét để danh sách gọn hơn';
   const hide=button('Danh sách loại trừ...',openHideCard,'sm');hide.id='tag-tree-hide';
@@ -649,9 +649,9 @@ function paintPaintBanner(){
   bar.replaceChildren();bar.hidden=!paintState.active;
   if(!paintState.active)return;
   const head=node('span');
-  if(paintState.name)head.append(node('span','Đang đổ tag: '),node('b',paintState.name));else head.append(node('span','Chưa có tag để đổ: Alt + bấm vào đối tượng để hút tag.'));
+  if(paintState.name)head.append(node('span','Đang đổ tag: '),node('b',paintState.name));else head.append(node('span','Chưa có tag để đổ: bấm vào đối tượng để hút tag.'));
   const stop=button('Thoát',()=>call('tm_paint_stop'),'sm');stop.id='tag-paint-stop';
-  bar.append(head,node('span','Bấm: đổ · Alt + bấm: hút · Shift + bấm: mọi bản sao · Bấm món đang chọn: cả lựa chọn · Esc trong SketchUp: thoát','muted tm-paint-hint'),stop);
+  bar.append(head,node('span','Bấm: đổ · Alt: hút / đổ · Ctrl: đổi cấp đối tượng · Shift + bấm: mọi bản sao · Bấm món đang chọn: cả lựa chọn · Esc trong SketchUp: thoát','muted tm-paint-hint'),stop);
 }
 // Hút tag: chọn tag đó trong danh sách (mở các thư mục chứa nó, sáng dòng) để thấy tag đang đổ.
 function receiveTagSample(data){

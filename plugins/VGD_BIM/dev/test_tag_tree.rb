@@ -226,7 +226,8 @@ class FSel
   def include?(e); @list.include?(e); end
   def to_a; @list.dup; end
 end
-ALT = VGD::BIM::UI::TagPaintTool::ALT
+ALT_KEY = VGD::BIM::UI::TagPaintTool::ALT_KEY
+CTRL_KEY = VGD::BIM::UI::TagPaintTool::CTRL_KEY
 SHIFT = VGD::BIM::UI::TagPaintTool::SHIFT
 def paint_world
   model, probe, tags, fold = world
@@ -250,11 +251,19 @@ ok('bấm: đổ tag lên đối tượng ở cấp đang mở (không vào bên
 tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[door]]))
 ok('bấm lại món đã đúng tag: không tạo bước hoàn tác', $transactions.size == 1 && probe.messages.last == 'Đã đổ tag A. WALL cho 0 đối tượng. Đã đúng tag sẵn: 1.')
 beam = FEnt.new(tags[2])
-tool.onLButtonDown(ALT, 1, 1, FPickView.new(model, [[beam]]))
-ok('Alt + bấm: hút tag của đối tượng làm tag để đổ, không đổi model, báo giao diện', tool.tag_name == 'S. BEAM' && beam.layer.equal?(tags[2]) && $transactions.size == 1 &&
-   probe.last('tag_paint') == {active: true, name: 'S. BEAM'} && probe.last('tag_sample') == {name: 'S. BEAM'})
-tool.onLButtonDown(ALT, 1, 1, FPickView.new(model, []))
-ok('Alt + bấm chỗ trống: báo không trúng, giữ tag đang đổ', tool.tag_name == 'S. BEAM' && probe.last('tag_sample') == {name: ''})
+tool.onKeyDown(ALT_KEY, 1, 0, nil)
+ok('Alt: đổi sang chế độ hút', tool.sampling?)
+tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[beam]]))
+ok('chế độ hút: bấm lấy tag của đối tượng làm tag để đổ, không đổi model, báo giao diện, tự về chế độ đổ', tool.tag_name == 'S. BEAM' && beam.layer.equal?(tags[2]) && $transactions.size == 1 &&
+   probe.last('tag_paint') == {active: true, name: 'S. BEAM'} && probe.last('tag_sample') == {name: 'S. BEAM'} && !tool.sampling?)
+tool.onKeyDown(ALT_KEY, 1, 0, nil)
+tool.onKeyDown(ALT_KEY, 2, 0, nil)
+ok('giữ phím Alt (lần lặp) không đổi chế độ lại', tool.sampling?)
+tool.onLButtonDown(0, 1, 1, FPickView.new(model, []))
+ok('chế độ hút bấm chỗ trống: báo không trúng, giữ tag đang đổ', tool.tag_name == 'S. BEAM' && probe.last('tag_sample') == {name: ''})
+tool.onKeyDown(ALT_KEY, 1, 0, nil)
+tool.onKeyDown(ALT_KEY, 1, 0, nil)
+ok('Alt hai lần: về đúng chế độ đổ (hút xong luôn về chế độ đổ)', !tool.sampling?)
 defn = FDef.new; copies = Array.new(3) { e = FEnt.new(tags[0]); e.definition = defn; defn.instances << e; e }; copies[2].locked = true
 tool.onLButtonDown(SHIFT, 1, 1, FPickView.new(model, [[copies[0]]]))
 ok('Shift + bấm: đổ cho mọi bản sao cùng component, bỏ qua bản bị khóa, một bước hoàn tác', copies[0..1].all? { |c| c.layer.equal?(tags[2]) } && copies[2].layer.equal?(tags[0]) &&
@@ -553,37 +562,101 @@ model2.define_singleton_method(:pages) { old_pages }
 ok('SketchUp cũ (scene không có thư mục): báo rõ, không đổi gì', error_of { probe2.tm_scene_visibility('kind' => 'folder', 'id' => 1, 'visible' => false) }.include?('2021') && old_pages.to_a[0].layers.empty?)
 ok('loại mục lạ bị từ chối', error_of { probe.tm_scene_visibility('kind' => 'x', 'id' => 1, 'visible' => false) }.include?('không hợp lệ'))
 
-# ---- Con trỏ riêng của công cụ hút / đổ tag (chỉ Windows; nền tảng khác dùng con trỏ mặc định) ----
-$cursor_log = []
-module ::UI
-  def self.create_cursor(path, x, y); $cursor_log << [:create, File.basename(path), x, y]; "cur_#{File.basename(path, '.svg')}"; end
-  def self.set_cursor(id); $cursor_log << [:set, id]; true; end
+# ---- Cách hoạt động như 5D Auto Tag: cấp đối tượng (Ctrl), hút tag đang hiển thị, nhãn cạnh con trỏ ----
+module Geom; class Point3d; attr_reader :x, :y; def initialize(x, y, _z); @x = x; @y = y; end; end; end unless defined?(Geom::Point3d)
+class FDrawView < FPickView
+  attr_reader :calls
+  def initialize(model, paths, measure: true)
+    super(model, paths); @calls = []; @measure = measure
+    define_singleton_method(:text_bounds) { |_p, text, _o| Struct.new(:width, :height).new(text.length * 6.5, 12.2) } if measure
+  end
+  def drawing_color=(c); @calls << [:color, c]; end
+  def line_width=(w); @calls << [:width, w]; end
+  def draw2d(mode, pts); @calls << [:draw2d, mode, pts.map { |p| [p.x, p.y] }]; end
+  def draw_text(pt, text, opts); @calls << [:text, text, pt.x, pt.y, opts]; end
+  def invalidate; @calls << [:invalidate]; end
 end
-class << Sketchup; attr_accessor :fake_platform; def platform; fake_platform || :platform_win; end; end
-model_c, probe_c, = paint_world
-probe_c.tm_paint_start('name' => 'A. WALL')
-tool_c = model_c.tool
-ok('con trỏ khi có tag để đổ: thùng sơn (tag_paint.svg), điểm nóng ở giọt sơn, tạo một lần', tool_c.onSetCursor == true && $cursor_log == [[:create, 'tag_paint.svg', 5, 26], [:set, 'cur_tag_paint']])
-tool_c.onSetCursor
-ok('con trỏ chỉ tạo một lần rồi dùng lại', $cursor_log.count { |e| e[0] == :create } == 1)
-tool_c.onMouseMove(ALT, 1, 1, nil)
-$cursor_log.clear; tool_c.onSetCursor
-ok('giữ Alt (qua onMouseMove): đổi sang ống hút (tag_sample.svg), điểm nóng ở đầu ống', $cursor_log == [[:create, 'tag_sample.svg', 6, 26], [:set, 'cur_tag_sample']])
-tool_c.onMouseMove(0, 1, 1, nil)
-$cursor_log.clear; tool_c.onSetCursor
-ok('thả Alt: về thùng sơn', $cursor_log == [[:set, 'cur_tag_paint']])
-tool_c.onKeyDown(VGD::BIM::UI::TagPaintTool::ALT_KEY, 1, 0, nil)
-$cursor_log.clear; tool_c.onSetCursor
-ok('nhấn phím Alt (onKeyDown): ống hút; nhả phím (onKeyUp): thùng sơn', $cursor_log == [[:set, 'cur_tag_sample']] && (tool_c.onKeyUp(VGD::BIM::UI::TagPaintTool::ALT_KEY, 1, 0, nil) || true) && !tool_c.sampling?)
-tool_e = VGD::BIM::UI::TagPaintTool.new('', on_paint: ->(*) {}, on_sample: ->(*) {}, on_done: -> {})
-$cursor_log.clear; tool_e.onSetCursor
-ok('chưa có tag để đổ: bấm là hút nên hiện ống hút', $cursor_log.last == [:set, 'cur_tag_sample'])
-Sketchup.fake_platform = :platform_osx
-$cursor_log.clear
-tool_m = VGD::BIM::UI::TagPaintTool.new('X', on_paint: ->(*) {}, on_sample: ->(*) {}, on_done: -> {})
-ok('không phải Windows: không tạo con trỏ, trả false để dùng con trỏ mặc định', tool_m.onSetCursor == false && $cursor_log.empty?)
-Sketchup.fake_platform = nil
-ok('hai file con trỏ SVG có trong plugin, kích thước 32 x 32', VGD::BIM::UI::TagPaintTool::CURSORS.values.all? { |f, *| File.read(File.join(ROOT, 'assets', 'cursors', f)).include?('width="32" height="32"') })
+model, probe, tags, sel = paint_world
+probe.tm_paint_start('name' => 'A. WALL')
+tool = model.tool
+ok('con trỏ dùng mặc định của SketchUp: công cụ không đặt con trỏ riêng, không còn file con trỏ', !tool.respond_to?(:onSetCursor) && !Dir.exist?(File.join(ROOT, 'assets', 'cursors')))
+ok('mới bật công cụ có tag: chế độ đổ, cấp trên cùng', !tool.sampling? && tool.level == :top)
+g1 = FEnt.new(tags[0]); g1.definition = FDef.new
+g2 = FEnt.new(tags[3]); g2.definition = FDef.new
+face = FEnt.new(tags[3])
+view = FPickView.new(model, [[g1, g2, face]])
+tool.onLButtonDown(0, 1, 1, view)
+ok('cấp trên cùng: đổ cho group ngoài cùng', g1.layer.equal?(tags[0]) && g2.layer.equal?(tags[3]) && probe.messages.last.start_with?('Đã đổ tag A. WALL cho 0') && probe.messages.last.include?('Đã đúng tag sẵn: 1'))
+probe.tm_paint_tag('name' => 'S. BEAM')
+tool.onKeyDown(CTRL_KEY, 1, 0, nil)
+ok('Ctrl: đổi sang cấp trong cùng', tool.level == :deepest)
+tool.onLButtonDown(0, 1, 1, view)
+ok('cấp trong cùng: đổ cho group trong cùng (không phải group ngoài, không phải mặt)', g2.layer.equal?(tags[2]) && g1.layer.equal?(tags[0]) && face.layer.equal?(tags[3]))
+tool.onKeyDown(CTRL_KEY, 2, 0, nil)
+ok('giữ phím Ctrl (lần lặp) không đổi cấp', tool.level == :deepest)
+tool.onKeyDown(CTRL_KEY, 1, 0, nil)
+ok('Ctrl lần nữa: cấp mặt / cạnh', tool.level == :face)
+tool.onLButtonDown(0, 1, 1, view)
+ok('cấp mặt / cạnh: đổ cho phần tử trong cùng', face.layer.equal?(tags[2]) && g1.layer.equal?(tags[0]))
+tool.onKeyDown(CTRL_KEY, 1, 0, nil)
+ok('Ctrl lần nữa: quay về cấp trên cùng', tool.level == :top)
+tool.onKeyDown(CTRL_KEY, 1, 0, nil); tool.onKeyDown(CTRL_KEY, 1, 0, nil)
+solo = FEnt.new(tags[3])
+tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[solo]]))
+ok('cấp trong cùng khi chỉ có một mặt (không có group): đổ cho chính mặt đó', tool.level == :face && solo.layer.equal?(tags[2]))
+# Hút: tag đang hiển thị = tag của phần tử trong cùng có tag, kể cả tag con
+tool.onKeyDown(CTRL_KEY, 1, 0, nil)
+inner_tag = FEnt.new(tags[1]); inner_tag.definition = FDef.new
+outer = FEnt.new(tags[0]); outer.definition = FDef.new
+leaf = FEnt.new(tags[3])
+tool.onKeyDown(ALT_KEY, 1, 0, nil)
+tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[outer, inner_tag, leaf]]))
+ok('hút: lấy tag con bên trong đang hiển thị (mặt Untagged trong group tag A. DOOR trong group A. WALL -> A. DOOR)', tool.tag_name == 'A. DOOR' && probe.last('tag_sample') == {name: 'A. DOOR'})
+tool.onKeyDown(ALT_KEY, 1, 0, nil)
+untagged_group = FEnt.new(tags[0]); untagged_group.definition = FDef.new
+tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[untagged_group, FEnt.new(tags[3])]]))
+ok('hút: mặt Untagged trong group có tag lấy tag của group', tool.tag_name == 'A. WALL')
+tool.onKeyDown(ALT_KEY, 1, 0, nil)
+tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[FEnt.new(tags[3])]]))
+ok('hút: đối tượng không có tag nào lấy Untagged', tool.tag_name == 'Untagged' && probe.last('tag_sample') == {name: 'Untagged'})
+# Nhãn cạnh con trỏ
+tool.onKeyDown(ALT_KEY, 1, 0, nil) # đang đổ -> hút
+keys_view = FDrawView.new(model, [])
+sample_view = FDrawView.new(model, [[FEnt.new(tags[2])]])
+tool.onMouseMove(0, 100, 50, sample_view)
+sample_view.calls.clear; tool.draw(sample_view)
+texts = sample_view.calls.select { |c| c[0] == :text }
+ok('chế độ hút: nhãn ghi tên tag đang hiển thị, đặt lệch khỏi con trỏ', texts.map { |c| c[1] } == ['S. BEAM'] && texts[0][2] > 100 && texts[0][3] > 50)
+colors = sample_view.calls.select { |c| c[0] == :color }.map { |c| c[1].to_a[0, 3] }
+ok('chế độ hút: có ô màu tag (10, 20, 30) bên phải nhãn', colors.include?([10, 20, 30]) && sample_view.calls.count { |c| c[0] == :draw2d && c[1] == 7 } == 2)
+empty_view = FDrawView.new(model, []); tool.onMouseMove(0, 100, 50, empty_view); empty_view.calls.clear; tool.draw(empty_view)
+ok('chế độ hút: chuột ở chỗ trống thì không vẽ nhãn', empty_view.calls.none? { |c| c[0] == :text })
+probe.tm_paint_tag('name' => 'A. DOOR')
+tool.onKeyDown(ALT_KEY, 1, 0, keys_view)
+paint_view = FDrawView.new(model, [])
+tool.onMouseMove(0, 100, 50, paint_view); paint_view.calls.clear; tool.draw(paint_view)
+ok('chế độ đổ: nhãn trắng ghi tên tag sẽ đổ và nhãn đen ghi cấp đối tượng', paint_view.calls.select { |c| c[0] == :text }.map { |c| c[1] } == ['A. DOOR', 'Nhóm / comp trên cùng'])
+ok('chế độ đổ: có ô màu nhỏ ở góc nhãn', paint_view.calls.select { |c| c[0] == :color }.map { |c| c[1].to_a[0, 3] }.include?([10, 20, 30]))
+tool.onKeyDown(CTRL_KEY, 1, 0, paint_view)
+paint_view.calls.clear; tool.draw(paint_view)
+ok('đổi cấp bằng Ctrl: nhãn đen đổi theo', paint_view.calls.select { |c| c[0] == :text }.map { |c| c[1] } == ['A. DOOR', 'Nhóm / comp trong cùng'])
+nm_view = FDrawView.new(model, [], measure: false)
+tool.onMouseMove(0, 10, 10, nm_view); nm_view.calls.clear; tool.draw(nm_view)
+ok('SketchUp không có View#text_bounds: ước lượng bề rộng chữ, vẫn vẽ', nm_view.calls.count { |c| c[0] == :text } == 2)
+# Chưa có tag để đổ: bắt đầu ở chế độ hút, Alt không chuyển sang đổ
+probe.tm_paint_stop
+probe.tm_paint_start('name' => '')
+tool = model.tool
+ok('chưa có tag để đổ: bắt đầu ở chế độ hút', tool.sampling?)
+tool.onKeyDown(ALT_KEY, 1, 0, keys_view)
+ok('chưa có tag để đổ: Alt không chuyển sang đổ (tránh đổ tag rỗng)', tool.sampling?)
+statuses = []
+Sketchup.define_singleton_method(:status_text=) { |t| statuses << t } unless Sketchup.respond_to?(:status_text=)
+tool.onKeyDown(CTRL_KEY, 1, 0, keys_view)
+probe.tm_paint_tag('name' => 'A. WALL')
+tool.onKeyDown(ALT_KEY, 1, 0, keys_view)
+ok('dòng trạng thái ghi cách dùng (Alt, Ctrl, Esc)', statuses.empty? || (statuses.last.include?('Alt') && statuses.last.include?('Ctrl') && statuses.last.include?('Esc')))
+probe.tm_paint_stop
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)

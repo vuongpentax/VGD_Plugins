@@ -2,16 +2,24 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.42: đã kiểm tra tự động
+## Bản 1.1.1-beta.43: đã kiểm tra tự động
+
+Beta.43: công cụ hút / đổ tag bỏ con trỏ riêng (xóa hai file SVG), làm theo cách dùng của 5D AutoTag: Alt đổi giữa hút và đổ, Ctrl đổi cấp đối tượng (trên cùng / trong cùng / mặt-cạnh), hút lấy tag đang hiển thị (kể cả tag con), nhãn tên + màu tag cạnh con trỏ vẽ bằng `View#draw2d` / `draw_text`.
+
+- `dev/test_tag_tree.rb`: Alt đổi chế độ (giữ phím không đổi lặp), hút xong tự về đổ, chưa có tag thì bắt đầu ở hút và Alt không chuyển sang đổ; Ctrl đổi cấp theo vòng, đổ đúng đối tượng ở từng cấp (group ngoài cùng, group trong cùng, mặt; không có group thì chính mặt); hút lấy tag con đang hiển thị, mặt Untagged trong group lấy tag của group, không có tag lấy Untagged; nhãn chế độ hút (tên + ô màu) và chế độ đổ (tên + ô màu + nhãn đen cấp), chuột ở chỗ trống không vẽ nhãn, khi không có `View#text_bounds` thì ước lượng; không còn con trỏ riêng. Đạt. `test_ui.cjs`, `test_ui_en.cjs` (câu hướng dẫn mới đã dịch), `ruby dev/run_tests.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** phím Alt / Ctrl có tới `onKeyDown` đúng một lần mỗi lần nhấn trên Windows (Alt có thể bị thanh menu của SketchUp lấy); `View#text_bounds` có trong SketchUp 2022 không (nếu không, bề rộng nhãn là ước lượng); hình dạng nhãn vẽ bằng `draw2d` / `draw_text` và việc nhãn cập nhật kịp khi rê chuột; tag đang hiển thị của mặt không có tag nằm trong group có tag (SketchUp tô theo tag của group hay của chính mặt) khớp với cách hút; Ctrl có làm SketchUp đổi sang chế độ sao chép của công cụ khác không.
+
+### Bản 1.1.1-beta.42 (trước đó)
 
 Beta.42: ô kiểu nét của tag hiện ký hiệu (nét liền, gạch, chấm, gạch chấm, gạch hai chấm, gạch ba chấm) thay cho chữ; `dev/test_ui_images.cjs` kiểm tra ký hiệu từng kiểu (số đoạn nét), tên lạ hiện chữ, gợi ý là tên kiểu, bấm chọn gửi `tm_line_style`, chọn lại kiểu đang dùng không gửi gì, Esc đóng, bảng nhập Excel hiện ký hiệu; `test_ui_en.cjs` (nhãn "Kiểu nét: ..." đã dịch) và các bộ khác đạt. **Chưa xác minh trong SketchUp thật:** tên kiểu nét thật của model có được nhận đúng ký hiệu không (nhận theo từ khóa tiếng Anh), danh sách hiện đúng vị trí trong cửa sổ thật.
 
 Beta.39: nút Loại trừ tag luôn hiện trên thanh công cụ của Bảng khối lượng. Beta.40: con trỏ riêng cho công cụ hút / đổ tag. Beta.41: vẽ lại hai con trỏ theo mẫu con trỏ 5D AutoTag người dùng cung cấp (ống hút kèm vòng tròn, thùng sơn kèm giọt sơn, viền trắng), điểm nóng ở tâm vòng và giọt sơn.
 
-- `dev/test_tag_tree.rb`: con trỏ thùng sơn khi có tag để đổ, ống hút khi giữ Alt (qua `onMouseMove`, `onKeyDown`, `onKeyUp`) hoặc chưa có tag; tạo một lần rồi dùng lại; điểm nóng đúng; không phải Windows thì không tạo (trả false); hai file SVG 32 x 32 có trong plugin. Đạt.
+- `dev/test_tag_tree.rb` (beta.40-41, con trỏ riêng): đã bỏ ở beta.43.
 - `dev/test_ui_images.cjs`: nút Loại trừ tag hiện cả khi chưa loại trừ tag nào (chữ "Loại trừ tag"), có số khi đang loại trừ. Cùng `test_ui.cjs`, `test_ui_sheets.cjs`, `test_ui_en.cjs`, `test_report_page.cjs`, `ruby dev/run_tests.rb`: đạt.
 
-**Chưa xác minh trong SketchUp thật:** `UI.create_cursor` với file SVG và điểm nóng (đầu ống hút, giọt sơn) trên Windows (cách làm giống VGD Reference); con trỏ đổi đúng lúc giữ / thả Alt; macOS chưa có con trỏ riêng (dùng con trỏ mặc định); vị trí nút Loại trừ tag trên thanh trong cửa sổ thật.
+**Chưa xác minh trong SketchUp thật:** vị trí nút Loại trừ tag trên thanh trong cửa sổ thật.
 
 ## Bản 1.1.1-beta.38: đã kiểm tra tự động
 
