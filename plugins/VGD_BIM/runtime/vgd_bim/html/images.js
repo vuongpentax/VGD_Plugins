@@ -141,8 +141,8 @@ document.addEventListener('paste',e=>{
   if(!target)return message('Hãy chọn đúng một đối tượng (hoặc bấm vào ô ảnh của nó) rồi dán ảnh.',true);
   guarded(sendImage(target.pid,item.getAsFile(),target.kind));
 });
-// Nút dán trên ô ảnh, thử lần lượt: (1) lệnh dán của trình duyệt như Ctrl+V (nativePaste); (2) API clipboard của cửa sổ (readWebClipboard);
-// (3) cửa sổ SketchUp chặn cả hai (lỗi, không có, hoặc không trả lời): nhờ Ruby đọc clipboard của Windows (lệnh image_clipboard);
+// Nút dán trên ô ảnh, thử lần lượt: (1) lệnh dán của trình duyệt như Ctrl+V (nativePaste); (2) Ruby gửi phím Ctrl+V (injectedPaste);
+// (3) API clipboard của cửa sổ (readWebClipboard); (4) cửa sổ SketchUp chặn cả hai (lỗi, không có, hoặc không trả lời): nhờ Ruby đọc clipboard của Windows (lệnh image_clipboard);
 // Ruby gửi lại PNG qua sự kiện clipboard_image. Nhớ ô này làm nơi nhận để Ctrl+V cũng dán vào đúng ô.
 const CLIPBOARD_WAIT_MS=1500; // API clipboard của cửa sổ có thể chờ cấp quyền mãi mà không trả lời
 async function readWebClipboard(){
@@ -164,9 +164,23 @@ function nativePaste(){
   box.remove();if(previous&&typeof previous.focus==='function')previous.focus();
   return imagesState.pasteSeen;
 }
+// Cách 2 của nút dán: nhờ Ruby gửi phím Ctrl+V của Windows tới cửa sổ này (nút vừa được bấm nên cửa sổ đang có tiêu điểm); sự kiện paste
+// ở trên xử lý ảnh như khi người dùng tự nhấn. Trả true nếu sự kiện paste đã tới; false nếu Ruby không gửi được hoặc quá giờ.
+const KEYS_WAIT_MS=1200;
+function injectedPaste(){
+  return new Promise(resolve=>{
+    if(!document.hasFocus()){resolve(false);return;} // cửa sổ không có tiêu điểm: phím sẽ rơi vào chỗ khác, không gửi
+    imagesState.pasteSeen=false;imagesState.buttonPaste=true;
+    const timer=setTimeout(()=>finish(false),KEYS_WAIT_MS),poll=setInterval(()=>{if(imagesState.pasteSeen)finish(true);},40);
+    function finish(result){clearTimeout(timer);clearInterval(poll);imagesState.keysDone=null;imagesState.buttonPaste=false;resolve(result);}
+    imagesState.keysDone=ok=>{if(!ok)finish(false);};
+    call('image_paste_keys');
+  });
+}
 async function pasteImageFromClipboard(pid,kind){
   imagesState.last={pid,kind};
   if(nativePaste())return;
+  if(await injectedPaste())return;
   const items=await readWebClipboard();
   if(items===null){
     message('Đang đọc ảnh trong clipboard…');

@@ -1528,6 +1528,28 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
   await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_clipboard'));
   ok(true,'lệnh dán của trình duyệt bị chặn: chuyển sang cách tiếp theo (API clipboard rồi Ruby)');
+  // Cách 2 của nút dán: Ruby gửi phím Ctrl+V (image_paste_keys), sự kiện paste tới như người dùng tự nhấn
+  const pngPaste=()=>page.evaluate(async()=>{
+    const blob=await (await fetch('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')).blob();
+    const data=new DataTransfer();data.items.add(new File([blob],'a.png',{type:'image/png'}));
+    (document.activeElement||document.body).dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));
+  });
+  await fakeNativePaste('off');await fakeClipboard('denied');
+  await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_paste_keys'));
+  await receive('paste_keys',{ok:true});await pngPaste();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_set'));
+  setNow=await json('image_set');
+  ok(setNow&&setNow.pid===901&&!(await calls('image_clipboard')).length,'Ruby gửi được phím Ctrl+V và sự kiện paste tới: dán đúng món, không chạy tiếp cách sau (PowerShell)');
+  await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_paste_keys'));
+  await receive('paste_keys',{ok:false});
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_clipboard'),null,{timeout:6000});
+  ok(true,'Ruby báo không gửi được phím (không phải Windows, Fiddle lỗi, cửa sổ lạ): chuyển ngay sang cách sau, không đợi hết giờ');
+  await clear();await mainCell(1).hover();await pasteBtn(mainCell(1)).click();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_paste_keys'));
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_clipboard'),null,{timeout:6000});
+  ok(true,'phím đã gửi nhưng không có sự kiện paste nào tới (quá 1,2 giây): chuyển sang cách sau');
   // Ctrl+V: ô ảnh vị trí vừa bấm là nơi nhận; bấm chỗ khác thì về món đang chọn
   const firePaste=()=>page.evaluate(async()=>{
     const blob=await (await fetch('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')).blob();

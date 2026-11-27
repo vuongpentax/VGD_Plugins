@@ -51,7 +51,7 @@ module VGD; module BIM; def self.log(m); end
   module UI; end
 end; end
 ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
-%w[core/storage core/settings core/images core/clipboard_image core/row_order core/preset core/photo_settings core/material_library core/check_rules core/snapshots core/bridge core/levels core/rooms core/table_report core/measure_probe].each { |f| require File.join(ROOT, f) }
+%w[core/storage core/settings core/images core/clipboard_image core/paste_keys core/row_order core/preset core/photo_settings core/material_library core/check_rules core/snapshots core/bridge core/levels core/rooms core/table_report core/measure_probe].each { |f| require File.join(ROOT, f) }
 module VGD; module BIM; module UI
   module Capture
     ISO_SIDES = %w[right left].freeze
@@ -587,6 +587,18 @@ d = make_dialog
 d.safely { d.image_clipboard('pid' => 901) }
 ok('clipboard không có ảnh: báo cho người dùng bằng thông báo lỗi', error_of(d).to_s.include?('chưa có ảnh') && events(d, 'clipboard_image').empty?)
 VGD::BIM::ClipboardImage.define_singleton_method(:read_png) { |**kw| real_read_png.call(**kw) }
+
+# ---- Nút dán: Ruby gửi phím Ctrl+V ----
+d = make_dialog
+real_press = VGD::BIM::PasteKeys.method(:press_ctrl_v)
+VGD::BIM::PasteKeys.define_singleton_method(:press_ctrl_v) { |**| true }
+d.safely { d.image_paste_keys }
+ok('gửi phím Ctrl+V thành công: báo giao diện ok', events(d, 'paste_keys').last == {'ok' => true})
+VGD::BIM::PasteKeys.define_singleton_method(:press_ctrl_v) { |**| raise 'Cửa sổ đang chọn không thuộc SketchUp, không gửi phím.' }
+d = make_dialog
+d.safely { d.image_paste_keys }
+ok('gửi phím lỗi: báo giao diện ok = false (để chuyển cách khác), không ném lỗi ra ngoài', events(d, 'paste_keys').last == {'ok' => false} && error_of(d).nil?)
+VGD::BIM::PasteKeys.define_singleton_method(:press_ctrl_v) { |**kw| real_press.call(**kw) }
 
 File.delete(html_path) if File.file?(html_path)
 

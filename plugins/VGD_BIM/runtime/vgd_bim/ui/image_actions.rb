@@ -22,6 +22,7 @@ module VGD
           @dialog.add_action_callback('image_item_save') { |_ctx, payload| safely { image_item_save(JSON.parse(payload)) } }
           @dialog.add_action_callback('images_cancel') { |_ctx| safely { @capture[:cancel] = true if @capture } }
           @dialog.add_action_callback('image_set') { |_ctx, payload| safely { image_set(JSON.parse(payload)) } }
+          @dialog.add_action_callback('image_paste_keys') { |_ctx| safely { image_paste_keys } }
           @dialog.add_action_callback('image_clipboard') { |_ctx, payload| safely { image_clipboard(JSON.parse(payload)) } }
           @dialog.add_action_callback('image_delete') { |_ctx, pid| safely { image_delete(pid) } }
           @dialog.add_action_callback('image_location_delete') { |_ctx, pid| safely { image_delete(pid, :location) } }
@@ -236,6 +237,17 @@ module VGD
           Images.write(@model, pid, Images.decode_png(payload['full']), kind)
           emit('images_changed', {items: [image_change(pid, true, Images.info(@model, pid, Images.dir(@model), kind)[:stamp], kind)]})
           emit('message', {text: 'Đã lưu ảnh cho đối tượng.'})
+        end
+
+        # Nút dán ảnh, cách "bấm Ctrl+V thay người dùng": gửi phím Ctrl+V (Windows) tới cửa sổ đang chọn; giao diện nhận ảnh qua sự kiện paste
+        # như khi nhấn Ctrl+V thật. Báo kết quả gửi phím bằng sự kiện paste_keys để giao diện biết có nên chuyển sang cách khác.
+        def image_paste_keys
+          check_model!
+          PasteKeys.press_ctrl_v
+          emit('paste_keys', {ok: true})
+        rescue StandardError => error
+          BIM.log("Gửi phím Ctrl+V lỗi: #{error.message}")
+          emit('paste_keys', {ok: false})
         end
 
         # Nút dán ảnh khi cửa sổ web không đọc được clipboard: Ruby đọc ảnh trong clipboard (Windows, ClipboardImage) rồi gửi PNG cho giao diện

@@ -1,4 +1,4 @@
-# VGD BIM 1.1.1-beta.47
+# VGD BIM 1.1.1-beta.48
 
 Bản thử của 1.1.1 (bản ổn định gần nhất là 1.1.0). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -62,7 +62,7 @@ Cửa sổ có 5 tab (nút **Preset** cạnh nút Sáng/Tối ở thanh đầu d
 
 **Cao độ sàn phòng theo tầng** (từ 1.1.1-beta.26): phòng không nhập cao độ nữa, cao độ sàn lấy theo cao độ của tầng; phòng chỉ nhập chiều cao. Phòng hạ nền khác so với tầng: bật ô **Hạ nền khác** rồi nhập cao độ sàn tay. Đổi cao độ tầng thì các phòng theo tầng tự đổi; khối 3D đã dựng cần bấm **Dựng lại khối**. Tạo phòng từ mặt: nếu mặt sát cao độ một tầng thì gán tầng đó, không thì nhập tay. Phòng cũ giữ đúng số liệu cũ.
 
-**Nút dán ảnh từ clipboard** (sửa ở beta.46, thêm cách 1 ở beta.47): nút thử lần lượt ba cách. (1) **Lệnh dán của trình duyệt**, như nhấn Ctrl+V (chạy được thì dùng luôn, không cần quyền, không chạy chương trình ngoài); (2) API đọc clipboard của cửa sổ, chờ tối đa 1,5 giây; (3) nếu cả hai bị SketchUp chặn thì báo "Đang đọc ảnh trong clipboard…" và nhờ Ruby đọc bằng PowerShell có sẵn của Windows (chỉ khi bấm nút, chỉ đọc clipboard, ảnh tối đa 20 MB, quá 10 giây thì dừng). Ảnh được thu nhỏ vừa cỡ ảnh của preset và lưu như ảnh dán thường. Clipboard không có ảnh thì báo rõ. Cách 3 chỉ có trên Windows (macOS dùng Ctrl+V). Ctrl+V sau khi chọn ô ảnh vẫn dùng được như trước.
+**Nút dán ảnh từ clipboard** (sửa ở beta.46, thêm cách 1 ở beta.47, cách 2 ở beta.48): nút thử lần lượt bốn cách. (1) **Lệnh dán của trình duyệt**, như nhấn Ctrl+V; (2) **Ruby gửi phím Ctrl+V của Windows** tới cửa sổ BIM (chỉ khi cửa sổ đang có tiêu điểm và cửa sổ đang chọn thuộc chính SketchUp; ảnh đi qua đúng đường Ctrl+V thật, không cần quyền; không có phím thì chuyển ngay sang cách sau, chờ tối đa 1,2 giây); (3) API đọc clipboard của cửa sổ, chờ tối đa 1,5 giây; (4) nếu cả ba bị chặn thì báo "Đang đọc ảnh trong clipboard…" và nhờ Ruby đọc bằng PowerShell có sẵn của Windows (chỉ khi bấm nút, chỉ đọc clipboard, ảnh tối đa 20 MB, quá 10 giây thì dừng). Ảnh được thu nhỏ vừa cỡ ảnh của preset và lưu như ảnh dán thường. Clipboard không có ảnh thì báo rõ. Cách 2 và 4 chỉ có trên Windows (macOS dùng Ctrl+V). Ctrl+V sau khi chọn ô ảnh vẫn dùng được như trước.
 
 **Giữ vị trí cuộn của bảng** (từ 1.1.1-beta.15): sửa tên, cập nhật ảnh hay sửa một ô không còn làm bảng nhảy lên đầu; bạn vẫn ở đúng dòng đang làm. Chưa kiểm thử trong SketchUp thật.
 

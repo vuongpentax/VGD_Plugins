@@ -2,7 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.47: đã kiểm tra tự động
+## Bản 1.1.1-beta.48: đã kiểm tra tự động
+
+Beta.48: thêm cách 2 cho nút dán ảnh: Ruby gửi phím Ctrl+V của Windows (`core/paste_keys.rb`, Fiddle gọi `keybd_event`, lệnh `image_paste_keys`, sự kiện `paste_keys`; `injectedPaste` ở `html/images.js`) để cửa sổ xử lý như người dùng nhấn Ctrl+V thật. Chỉ gửi khi trang đang có tiêu điểm (`document.hasFocus()`) và cửa sổ đang chọn thuộc tiến trình SketchUp (`GetForegroundWindow` + `GetWindowThreadProcessId`); chỉ gửi tổ hợp Ctrl+V.
+
+- `dev/test_paste_keys.rb` (mới, bản gửi giả, KHÔNG gửi phím thật): đúng thứ tự phím, lỗi được báo ra, không phải Windows thì từ chối, mã có kiểm tra tiến trình sở hữu cửa sổ, chỉ có hai mã phím. `dev/test_image_actions.rb`: `image_paste_keys` báo ok / không ok. `dev/test_ui_images.cjs`: Ruby gửi phím rồi sự kiện paste tới thì dán đúng món và không chạy các cách sau; Ruby báo không gửi được thì chuyển ngay; phím gửi mà không có paste nào tới (quá 1,2 giây) thì chuyển. `ruby dev/run_tests.rb`, `test_ui.cjs`, `test_ui_en.cjs`: đạt.
+
+**Chưa xác minh trong SketchUp thật (rủi ro cao hơn các cách trước):** Ruby của SketchUp có nạp được `fiddle` và gọi `user32` không; phím Ctrl+V được gửi có tới trang BIM và sinh sự kiện paste ảnh không; nếu tiêu điểm không đúng cửa sổ BIM thì phím có thể rơi vào cửa sổ SketchUp chính (Ctrl+V trong SketchUp dán nội dung đã copy trong SketchUp), nên đã chặn bằng kiểm tra tiêu điểm của trang trước khi gửi, nhưng chưa thử thực tế; phần mềm diệt virus có thể coi `keybd_event` là đáng ngờ.
+
+### Bản 1.1.1-beta.47 (trước đó)
 
 Beta.47: nút dán ảnh thử trước hết lệnh dán của trình duyệt (`document.execCommand('paste')` vào một ô `contenteditable` tạm, như nhấn Ctrl+V; `nativePaste` ở `html/images.js`), sau đó mới tới API clipboard (1,5 giây) rồi PowerShell của beta.46.
 

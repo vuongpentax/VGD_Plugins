@@ -2138,6 +2138,7 @@ window.VGD={receive(event,data){
   if(event==='preview_done')receivePreviewDone(data);
   if(event==='image_data')receiveImageData(data);
   if(event==='clipboard_image')receiveClipboardImage(data);
+  if(event==='paste_keys'&&imagesState.keysDone)imagesState.keysDone(!!data.ok);
   if(event==='tag_rules')receiveTagRules(data);
   if(event==='tag_auto_plan')receiveTagAutoPlan(data);
   if(event==='tag_tree')receiveTagTree(data);
