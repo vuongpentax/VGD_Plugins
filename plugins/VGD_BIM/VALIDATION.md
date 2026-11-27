@@ -2,7 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.44: đã kiểm tra tự động
+## Bản 1.1.1-beta.45: đã kiểm tra tự động
+
+Beta.45: bỏ ô chọn độ cao hàng (Hàng: Vừa / Gọn / Thoáng) khỏi ngăn Chọn cột (đã có Ctrl + lăn chuột); sửa nút Xóa sheet bị chữ đỏ trên nền đỏ.
+
+- `dev/test_ui_images.cjs`: ngăn Chọn cột không còn ô chọn độ cao hàng. `dev/test_ui_sheets.cjs`: tương phản chữ / nền của nút Xóa sheet đủ đọc ở trạng thái thường và sau lần bấm đầu (kiểm tra này báo lỗi với CSS cũ, đạt với CSS mới). `test_ui.cjs`, `test_ui_en.cjs`, `ruby dev/run_tests.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** hiển thị nút Xóa sheet trong cửa sổ HtmlDialog thật. Bảng đã lưu với mật độ hàng Gọn / Thoáng vẫn giữ mật độ đó (không còn ô để đổi lại; Ctrl + lăn chuột đặt độ cao hàng riêng thay thế).
+
+### Bản 1.1.1-beta.44 (trước đó)
 
 Beta.44: (1) đổi chế độ bằng Alt mượt hơn: nhận phím qua cả `onKeyDown` lẫn cờ phím của sự kiện chuột, cùng một lần nhấn không tính hai lần, lần thả bị mất không bắt nhấn hai lần; (2) tô sáng đối tượng sắp được đổ theo cấp (khung bao group / component, hoặc mặt và cạnh), chiếu lên màn hình bằng cách chung với khung đánh dấu của bảng (`OutlineDrawing`, xử lý cả lúc mở sửa group); (3) nhãn trên con trỏ và dòng trạng thái bằng tiếng Anh theo 5D AutoTag; chỉ tính màu tag một lần thay vì mỗi lần rê chuột.
 

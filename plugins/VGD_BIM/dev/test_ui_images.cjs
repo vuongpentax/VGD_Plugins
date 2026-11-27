@@ -633,7 +633,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   const open=await sideBox(),left1=await gridLeft();
   ok(open.width===230 && left1>=open.right && left1-left0>=230,'mở xong: bảng bị đẩy sang phải, cột đầu tiên không bị ngăn che (bảng bắt đầu sau ngăn)');
   ok(await page.locator('.col-side .pop-col').count()===(await page.evaluate(()=>tableState.data.columns.length)) && (await page.locator('#cols-btn').getAttribute('aria-expanded'))==='true','ngăn liệt kê đủ cột; nút Chọn cột báo đang mở');
-  ok(await page.evaluate(()=>{const d=document.querySelector('.col-side .pop-density').getBoundingClientRect(),i=document.querySelector('.col-side-in').getBoundingClientRect();return d.bottom<=i.bottom+0.5&&d.height>=24;}),'ngăn Chọn cột: ô Độ cao hàng ở đáy hiện trọn, không bị cắt');
+  ok(await page.evaluate(()=>!document.querySelector('.pop-density')&&[...document.querySelectorAll('.col-side option')].length===0),'ngăn Chọn cột: không còn ô chọn độ cao hàng (đã có Ctrl + lăn chuột)');
   const itemH=await page.locator('.col-side .pop-col').first().evaluate(el=>el.getBoundingClientRect().height);
   ok(itemH<=28,'danh sách gọn: mỗi cột cao tối đa 28px (đo được '+itemH+'px)');
   // Ô tick: bật / tắt cột không dựng lại ngăn (cùng phần tử, vị trí cuộn giữ nguyên), bảng cập nhật ngay

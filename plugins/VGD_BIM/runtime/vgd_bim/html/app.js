@@ -1642,11 +1642,7 @@ function buildColumnPanel(side){
   const list=node('div',undefined,'pop-cols');
   search.oninput=()=>{tableState.colSearch=search.value;renderColumnList(list);};
   renderColumnList(list);
-  const density=node('select');density.setAttribute('aria-label','Độ cao hàng');density.className='pop-density';
-  [['','Hàng: Vừa'],['dense','Hàng: Gọn'],['roomy','Hàng: Thoáng']].forEach(([v,t])=>density.append(new Option(t,v)));
-  density.value=tableState.density;density.onchange=()=>{tableState.density=density.value;tableState.rowHeight=0;renderGrid($('grid-host'));persistView();};
-  density.title='Giữ Ctrl và lăn chuột giữa trên bảng để đổi độ cao hàng (ảnh to ra theo).'; // gợi ý, không chiếm chỗ của danh sách cột
-  inner.append(head,formHost,bar,list,density,sideGrip(side));
+  inner.append(head,formHost,bar,list,sideGrip(side));
   side.replaceChildren(inner);
   updateColumnCounts();
 }
