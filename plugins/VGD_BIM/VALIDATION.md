@@ -2,7 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.46: đã kiểm tra tự động
+## Bản 1.1.1-beta.47: đã kiểm tra tự động
+
+Beta.47: nút dán ảnh thử trước hết lệnh dán của trình duyệt (`document.execCommand('paste')` vào một ô `contenteditable` tạm, như nhấn Ctrl+V; `nativePaste` ở `html/images.js`), sau đó mới tới API clipboard (1,5 giây) rồi PowerShell của beta.46.
+
+- `dev/test_ui_images.cjs`: lệnh dán giả lập chạy được thì lưu luôn đúng món và loại ảnh, không gọi API clipboard hay Ruby; ô tạm được gỡ; clipboard chỉ có chữ thì báo chưa có ảnh, không lưu, không gọi Ruby; lệnh dán bị chặn thì chuyển sang cách tiếp theo. Các test beta.46 vẫn đạt. `ruby dev/run_tests.rb`, `test_ui.cjs`, `test_ui_en.cjs`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** cửa sổ SketchUp có cho `document.execCommand('paste')` chạy không (trình duyệt thường chặn lệnh này vì lý do bảo mật; nếu bị chặn thì tự chuyển sang cách tiếp theo); phần PowerShell như ghi ở beta.46 bên dưới.
+
+### Bản 1.1.1-beta.46 (trước đó)
 
 Beta.46: sửa nút dán ảnh từ clipboard không phản hồi (Ctrl+V vẫn tốt). Nút thử API clipboard của cửa sổ web tối đa 1,5 giây (chờ quyền mãi cũng không treo); lỗi, không có API hoặc không trả lời thì Ruby đọc ảnh clipboard bằng PowerShell (`core/clipboard_image.rb`, lệnh `image_clipboard`), gửi PNG về giao diện (sự kiện `clipboard_image`) để thu nhỏ và lưu bằng `image_set`.
 

@@ -1499,6 +1499,35 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_set'));
   setNow=await json('image_set');
   ok(setNow&&setNow.pid===902&&setNow.kind==='location'&&typeof setNow.full==='string'&&setNow.full.length>20,'Ruby gửi ảnh clipboard: lưu thành ảnh vị trí của đúng món');
+  // Cách 1 của nút dán: lệnh dán của trình duyệt (như Ctrl+V)
+  const fakeNativePaste=mode=>page.evaluate(mode=>{
+    window.__execCalls=0;
+    document.execCommand=cmd=>{
+      if(cmd!=='paste')return false;
+      window.__execCalls++;
+      if(mode==='off')return false;
+      const data=new DataTransfer();
+      if(mode==='image'){const bin=atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');data.items.add(new File([Uint8Array.from(bin,c=>c.charCodeAt(0))],'a.png',{type:'image/png'}));}
+      else data.setData('text/plain','chữ');
+      (document.activeElement||document.body).dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));
+      return true;
+    };
+  },mode);
+  await fakeClipboard('denied');
+  await fakeNativePaste('image');
+  await locCell(1).hover();await clear();await pasteBtn(locCell(1)).click();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_set'));
+  setNow=await json('image_set');
+  ok(setNow&&setNow.pid===901&&setNow.kind==='location'&&!(await calls('image_clipboard')).length&&await page.evaluate(()=>window.__execCalls)===1,'nút dán: lệnh dán của trình duyệt chạy được thì dùng luôn (như Ctrl+V), đúng món và loại ảnh, không cần API clipboard hay Ruby');
+  ok(await page.evaluate(()=>!document.querySelector('[contenteditable]')),'ô tạm của lệnh dán được gỡ sau khi dán');
+  await fakeNativePaste('text');
+  await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
+  await page.waitForFunction(()=>document.querySelector('#message').innerText.includes('chưa có ảnh'));
+  ok(!(await calls('image_set')).length&&!(await calls('image_clipboard')).length,'lệnh dán chạy nhưng clipboard chỉ có chữ: báo chưa có ảnh, không lưu, không gọi Ruby');
+  await fakeNativePaste('off');
+  await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_clipboard'));
+  ok(true,'lệnh dán của trình duyệt bị chặn: chuyển sang cách tiếp theo (API clipboard rồi Ruby)');
   // Ctrl+V: ô ảnh vị trí vừa bấm là nơi nhận; bấm chỗ khác thì về món đang chọn
   const firePaste=()=>page.evaluate(async()=>{
     const blob=await (await fetch('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')).blob();

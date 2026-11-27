@@ -133,15 +133,16 @@ function pasteTargetPid(){
 }
 document.addEventListener('paste',e=>{
   if(e.target.closest&&e.target.closest('input,textarea,select'))return;
+  imagesState.pasteSeen=true; // nút dán dùng để biết lệnh dán của trình duyệt có chạy không (nativePaste)
   const item=[...(e.clipboardData?e.clipboardData.items:[])].find(i=>i.kind==='file'&&/^image\//.test(i.type));
-  if(!item)return;
+  if(!item){if(imagesState.buttonPaste)message('Trong clipboard chưa có ảnh. Hãy chụp màn hình hoặc copy ảnh rồi bấm lại.',true);return;}
   e.preventDefault();
   const target=imagesState.last||(pasteTargetPid()?{pid:pasteTargetPid(),kind:'full'}:null);
   if(!target)return message('Hãy chọn đúng một đối tượng (hoặc bấm vào ô ảnh của nó) rồi dán ảnh.',true);
   guarded(sendImage(target.pid,item.getAsFile(),target.kind));
 });
-// Nút dán trên ô ảnh: đọc ảnh đang có trong clipboard (chụp màn hình, hoặc copy ảnh) bằng API clipboard của cửa sổ rồi lưu cho món.
-// Cửa sổ SketchUp có thể chặn API này (lỗi, không có, hoặc không trả lời): khi đó nhờ Ruby đọc clipboard của Windows (lệnh image_clipboard);
+// Nút dán trên ô ảnh, thử lần lượt: (1) lệnh dán của trình duyệt như Ctrl+V (nativePaste); (2) API clipboard của cửa sổ (readWebClipboard);
+// (3) cửa sổ SketchUp chặn cả hai (lỗi, không có, hoặc không trả lời): nhờ Ruby đọc clipboard của Windows (lệnh image_clipboard);
 // Ruby gửi lại PNG qua sự kiện clipboard_image. Nhớ ô này làm nơi nhận để Ctrl+V cũng dán vào đúng ô.
 const CLIPBOARD_WAIT_MS=1500; // API clipboard của cửa sổ có thể chờ cấp quyền mãi mà không trả lời
 async function readWebClipboard(){
@@ -150,8 +151,22 @@ async function readWebClipboard(){
     return await Promise.race([navigator.clipboard.read(),new Promise((_,stop)=>setTimeout(()=>stop(Error('timeout')),CLIPBOARD_WAIT_MS))]);
   }catch(error){return null;}
 }
+// Cách 1 của nút dán: ra lệnh dán của trình duyệt (như nhấn Ctrl+V) vào một ô tạm đang được chọn. Chạy được thì sự kiện paste ở trên
+// xử lý ảnh (hoặc báo clipboard không có ảnh) và trả true; cửa sổ không cho lệnh này thì trả false để thử cách tiếp theo.
+function nativePaste(){
+  const box=node('div');box.contentEditable='true';box.setAttribute('aria-hidden','true');
+  box.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0';
+  document.body.append(box);
+  const previous=document.activeElement;
+  imagesState.pasteSeen=false;imagesState.buttonPaste=true;
+  try{box.focus();document.execCommand('paste');}catch(error){/* cửa sổ không cho: thử cách khác */}
+  imagesState.buttonPaste=false;
+  box.remove();if(previous&&typeof previous.focus==='function')previous.focus();
+  return imagesState.pasteSeen;
+}
 async function pasteImageFromClipboard(pid,kind){
   imagesState.last={pid,kind};
+  if(nativePaste())return;
   const items=await readWebClipboard();
   if(items===null){
     message('Đang đọc ảnh trong clipboard…');
