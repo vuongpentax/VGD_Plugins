@@ -2,7 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.43: đã kiểm tra tự động
+## Bản 1.1.1-beta.44: đã kiểm tra tự động
+
+Beta.44: (1) đổi chế độ bằng Alt mượt hơn: nhận phím qua cả `onKeyDown` lẫn cờ phím của sự kiện chuột, cùng một lần nhấn không tính hai lần, lần thả bị mất không bắt nhấn hai lần; (2) tô sáng đối tượng sắp được đổ theo cấp (khung bao group / component, hoặc mặt và cạnh), chiếu lên màn hình bằng cách chung với khung đánh dấu của bảng (`OutlineDrawing`, xử lý cả lúc mở sửa group); (3) nhãn trên con trỏ và dòng trạng thái bằng tiếng Anh theo 5D AutoTag; chỉ tính màu tag một lần thay vì mỗi lần rê chuột.
+
+- `dev/test_tag_tree.rb`: Alt / Ctrl qua cờ chuột, báo trùng phím + cờ chỉ tính một lần, thả rồi nhấn lại đổi tiếp, lần thả bị mất vẫn tính lần nhấn sau (đồng hồ giả); tô sáng khung bao đúng vị trí thế giới ở cấp trên cùng và trong cùng (cộng dồn biến đổi các group), mặt / cạnh (tam giác và cạnh), không tô ở chế độ hút và khi chuột ở chỗ trống, lỗi chiếu không làm hỏng công cụ; chữ tiếng Anh của nhãn và dòng trạng thái. Đạt.
+
+**Chưa xác minh trong SketchUp thật:** nguyên nhân thật khiến Alt đôi lúc phải nhấn hai lần (nghi thanh menu Windows lấy phím Alt khi thả; cách sửa mới chưa thử); đường pick (`PickHelper#path_at`) có gồm các group đang mở không (công cụ dựa vào đó để chọn cấp và tính vị trí tô sáng); khung tô sáng đúng vị trí khi đang mở sửa group và khi camera phối cảnh; tốc độ khi rê chuột trên model lớn (mỗi lần rê chế độ đổ có một lần pick và tính lại khung, mặt lớn có nhiều tam giác); `Face#mesh`, `View#text_bounds` ở SketchUp 2022.
+
+### Bản 1.1.1-beta.43 (trước đó)
 
 Beta.43: công cụ hút / đổ tag bỏ con trỏ riêng (xóa hai file SVG), làm theo cách dùng của 5D AutoTag: Alt đổi giữa hút và đổ, Ctrl đổi cấp đối tượng (trên cùng / trong cùng / mặt-cạnh), hút lấy tag đang hiển thị (kể cả tag con), nhãn tên + màu tag cạnh con trỏ vẽ bằng `View#draw2d` / `draw_text`.
 

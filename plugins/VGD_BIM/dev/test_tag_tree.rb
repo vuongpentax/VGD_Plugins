@@ -5,7 +5,7 @@ $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 def error_of; yield; nil; rescue StandardError => e; e.message; end
 module Sketchup; class Group; end; class ComponentInstance; end; class Face; end
-  class Color; attr_reader :r, :g, :b; def initialize(r, g, b); @r = r; @g = g; @b = b; end; def to_a; [@r, @g, @b, 255]; end; end
+  class Color; attr_reader :r, :g, :b; def initialize(r, g, b, a = 255); @r = r; @g = g; @b = b; @a = a; end; def to_a; [@r, @g, @b, 255]; end; end
 end
 module VGD; module BIM
   def self.log(_m); end
@@ -20,6 +20,7 @@ require 'tmpdir'
 ENV['VGD_BIM_DATA_DIR'] ||= Dir.mktmpdir('vgd_bim_tag_tree')
 %w[storage measure settings tags xlsx_reader tag_excel].each { |f| require File.join(ROOT, "core/#{f}") }
 require File.join(ROOT, 'core/tag_tree')
+require File.join(ROOT, 'ui/bounds_preview')
 require File.join(ROOT, 'ui/tag_sample')
 require File.join(ROOT, 'ui/tag_manager')
 T = VGD::BIM::TagTree
@@ -229,6 +230,7 @@ end
 ALT_KEY = VGD::BIM::UI::TagPaintTool::ALT_KEY
 CTRL_KEY = VGD::BIM::UI::TagPaintTool::CTRL_KEY
 SHIFT = VGD::BIM::UI::TagPaintTool::SHIFT
+def tap_key(tool, key, view = nil); tool.onKeyDown(key, 1, 0, view); tool.onKeyUp(key, 1, 0, view); end
 def paint_world
   model, probe, tags, fold = world
   model.active_path = []
@@ -251,18 +253,19 @@ ok('bấm: đổ tag lên đối tượng ở cấp đang mở (không vào bên
 tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[door]]))
 ok('bấm lại món đã đúng tag: không tạo bước hoàn tác', $transactions.size == 1 && probe.messages.last == 'Đã đổ tag A. WALL cho 0 đối tượng. Đã đúng tag sẵn: 1.')
 beam = FEnt.new(tags[2])
-tool.onKeyDown(ALT_KEY, 1, 0, nil)
+tap_key(tool, ALT_KEY)
 ok('Alt: đổi sang chế độ hút', tool.sampling?)
 tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[beam]]))
 ok('chế độ hút: bấm lấy tag của đối tượng làm tag để đổ, không đổi model, báo giao diện, tự về chế độ đổ', tool.tag_name == 'S. BEAM' && beam.layer.equal?(tags[2]) && $transactions.size == 1 &&
    probe.last('tag_paint') == {active: true, name: 'S. BEAM'} && probe.last('tag_sample') == {name: 'S. BEAM'} && !tool.sampling?)
 tool.onKeyDown(ALT_KEY, 1, 0, nil)
 tool.onKeyDown(ALT_KEY, 2, 0, nil)
+tool.onKeyUp(ALT_KEY, 1, 0, nil)
 ok('giữ phím Alt (lần lặp) không đổi chế độ lại', tool.sampling?)
 tool.onLButtonDown(0, 1, 1, FPickView.new(model, []))
 ok('chế độ hút bấm chỗ trống: báo không trúng, giữ tag đang đổ', tool.tag_name == 'S. BEAM' && probe.last('tag_sample') == {name: ''})
-tool.onKeyDown(ALT_KEY, 1, 0, nil)
-tool.onKeyDown(ALT_KEY, 1, 0, nil)
+tap_key(tool, ALT_KEY)
+tap_key(tool, ALT_KEY)
 ok('Alt hai lần: về đúng chế độ đổ (hút xong luôn về chế độ đổ)', !tool.sampling?)
 defn = FDef.new; copies = Array.new(3) { e = FEnt.new(tags[0]); e.definition = defn; defn.instances << e; e }; copies[2].locked = true
 tool.onLButtonDown(SHIFT, 1, 1, FPickView.new(model, [[copies[0]]]))
@@ -588,39 +591,37 @@ view = FPickView.new(model, [[g1, g2, face]])
 tool.onLButtonDown(0, 1, 1, view)
 ok('cấp trên cùng: đổ cho group ngoài cùng', g1.layer.equal?(tags[0]) && g2.layer.equal?(tags[3]) && probe.messages.last.start_with?('Đã đổ tag A. WALL cho 0') && probe.messages.last.include?('Đã đúng tag sẵn: 1'))
 probe.tm_paint_tag('name' => 'S. BEAM')
-tool.onKeyDown(CTRL_KEY, 1, 0, nil)
+tap_key(tool, CTRL_KEY, nil)
 ok('Ctrl: đổi sang cấp trong cùng', tool.level == :deepest)
 tool.onLButtonDown(0, 1, 1, view)
 ok('cấp trong cùng: đổ cho group trong cùng (không phải group ngoài, không phải mặt)', g2.layer.equal?(tags[2]) && g1.layer.equal?(tags[0]) && face.layer.equal?(tags[3]))
-tool.onKeyDown(CTRL_KEY, 2, 0, nil)
-ok('giữ phím Ctrl (lần lặp) không đổi cấp', tool.level == :deepest)
-tool.onKeyDown(CTRL_KEY, 1, 0, nil)
-ok('Ctrl lần nữa: cấp mặt / cạnh', tool.level == :face)
+tool.onKeyDown(CTRL_KEY, 1, 0, nil); tool.onKeyDown(CTRL_KEY, 2, 0, nil); tool.onKeyDown(CTRL_KEY, 3, 0, nil); tool.onKeyUp(CTRL_KEY, 1, 0, nil)
+ok('Ctrl: nhấn và giữ (phím lặp) chỉ đổi cấp một lần, sang cấp mặt / cạnh', tool.level == :face)
 tool.onLButtonDown(0, 1, 1, view)
 ok('cấp mặt / cạnh: đổ cho phần tử trong cùng', face.layer.equal?(tags[2]) && g1.layer.equal?(tags[0]))
-tool.onKeyDown(CTRL_KEY, 1, 0, nil)
+tap_key(tool, CTRL_KEY, nil)
 ok('Ctrl lần nữa: quay về cấp trên cùng', tool.level == :top)
-tool.onKeyDown(CTRL_KEY, 1, 0, nil); tool.onKeyDown(CTRL_KEY, 1, 0, nil)
+tap_key(tool, CTRL_KEY, nil); tap_key(tool, CTRL_KEY, nil)
 solo = FEnt.new(tags[3])
 tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[solo]]))
 ok('cấp trong cùng khi chỉ có một mặt (không có group): đổ cho chính mặt đó', tool.level == :face && solo.layer.equal?(tags[2]))
 # Hút: tag đang hiển thị = tag của phần tử trong cùng có tag, kể cả tag con
-tool.onKeyDown(CTRL_KEY, 1, 0, nil)
+tap_key(tool, CTRL_KEY, nil)
 inner_tag = FEnt.new(tags[1]); inner_tag.definition = FDef.new
 outer = FEnt.new(tags[0]); outer.definition = FDef.new
 leaf = FEnt.new(tags[3])
-tool.onKeyDown(ALT_KEY, 1, 0, nil)
+tap_key(tool, ALT_KEY, nil)
 tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[outer, inner_tag, leaf]]))
 ok('hút: lấy tag con bên trong đang hiển thị (mặt Untagged trong group tag A. DOOR trong group A. WALL -> A. DOOR)', tool.tag_name == 'A. DOOR' && probe.last('tag_sample') == {name: 'A. DOOR'})
-tool.onKeyDown(ALT_KEY, 1, 0, nil)
+tap_key(tool, ALT_KEY, nil)
 untagged_group = FEnt.new(tags[0]); untagged_group.definition = FDef.new
 tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[untagged_group, FEnt.new(tags[3])]]))
 ok('hút: mặt Untagged trong group có tag lấy tag của group', tool.tag_name == 'A. WALL')
-tool.onKeyDown(ALT_KEY, 1, 0, nil)
+tap_key(tool, ALT_KEY, nil)
 tool.onLButtonDown(0, 1, 1, FPickView.new(model, [[FEnt.new(tags[3])]]))
 ok('hút: đối tượng không có tag nào lấy Untagged', tool.tag_name == 'Untagged' && probe.last('tag_sample') == {name: 'Untagged'})
 # Nhãn cạnh con trỏ
-tool.onKeyDown(ALT_KEY, 1, 0, nil) # đang đổ -> hút
+tap_key(tool, ALT_KEY, nil) # đang đổ -> hút
 keys_view = FDrawView.new(model, [])
 sample_view = FDrawView.new(model, [[FEnt.new(tags[2])]])
 tool.onMouseMove(0, 100, 50, sample_view)
@@ -632,14 +633,14 @@ ok('chế độ hút: có ô màu tag (10, 20, 30) bên phải nhãn', colors.in
 empty_view = FDrawView.new(model, []); tool.onMouseMove(0, 100, 50, empty_view); empty_view.calls.clear; tool.draw(empty_view)
 ok('chế độ hút: chuột ở chỗ trống thì không vẽ nhãn', empty_view.calls.none? { |c| c[0] == :text })
 probe.tm_paint_tag('name' => 'A. DOOR')
-tool.onKeyDown(ALT_KEY, 1, 0, keys_view)
+tap_key(tool, ALT_KEY, keys_view)
 paint_view = FDrawView.new(model, [])
 tool.onMouseMove(0, 100, 50, paint_view); paint_view.calls.clear; tool.draw(paint_view)
-ok('chế độ đổ: nhãn trắng ghi tên tag sẽ đổ và nhãn đen ghi cấp đối tượng', paint_view.calls.select { |c| c[0] == :text }.map { |c| c[1] } == ['A. DOOR', 'Nhóm / comp trên cùng'])
+ok('chế độ đổ: nhãn trắng ghi tên tag sẽ đổ và nhãn đen ghi cấp đối tượng', paint_view.calls.select { |c| c[0] == :text }.map { |c| c[1] } == ['A. DOOR', 'Top level group/comp'])
 ok('chế độ đổ: có ô màu nhỏ ở góc nhãn', paint_view.calls.select { |c| c[0] == :color }.map { |c| c[1].to_a[0, 3] }.include?([10, 20, 30]))
-tool.onKeyDown(CTRL_KEY, 1, 0, paint_view)
+tap_key(tool, CTRL_KEY, paint_view)
 paint_view.calls.clear; tool.draw(paint_view)
-ok('đổi cấp bằng Ctrl: nhãn đen đổi theo', paint_view.calls.select { |c| c[0] == :text }.map { |c| c[1] } == ['A. DOOR', 'Nhóm / comp trong cùng'])
+ok('đổi cấp bằng Ctrl: nhãn đen đổi theo', paint_view.calls.select { |c| c[0] == :text }.map { |c| c[1] } == ['A. DOOR', 'Deepest group/comp'])
 nm_view = FDrawView.new(model, [], measure: false)
 tool.onMouseMove(0, 10, 10, nm_view); nm_view.calls.clear; tool.draw(nm_view)
 ok('SketchUp không có View#text_bounds: ước lượng bề rộng chữ, vẫn vẽ', nm_view.calls.count { |c| c[0] == :text } == 2)
@@ -648,14 +649,112 @@ probe.tm_paint_stop
 probe.tm_paint_start('name' => '')
 tool = model.tool
 ok('chưa có tag để đổ: bắt đầu ở chế độ hút', tool.sampling?)
-tool.onKeyDown(ALT_KEY, 1, 0, keys_view)
+tap_key(tool, ALT_KEY, keys_view)
 ok('chưa có tag để đổ: Alt không chuyển sang đổ (tránh đổ tag rỗng)', tool.sampling?)
 statuses = []
 Sketchup.define_singleton_method(:status_text=) { |t| statuses << t } unless Sketchup.respond_to?(:status_text=)
-tool.onKeyDown(CTRL_KEY, 1, 0, keys_view)
+tap_key(tool, CTRL_KEY, keys_view)
 probe.tm_paint_tag('name' => 'A. WALL')
-tool.onKeyDown(ALT_KEY, 1, 0, keys_view)
-ok('dòng trạng thái ghi cách dùng (Alt, Ctrl, Esc)', statuses.empty? || (statuses.last.include?('Alt') && statuses.last.include?('Ctrl') && statuses.last.include?('Esc')))
+tap_key(tool, ALT_KEY, keys_view)
+ok('dòng trạng thái đúng chữ của 5D Auto Tag (tiếng Anh): hút và đổ', statuses.include?('Click object to get sample tag') && statuses.last == "Click object to set tag | Press 'ALT': Sample mode | Press 'CTRL': switch between object types")
+probe.tm_paint_stop
+
+# ---- Phím Alt / Ctrl qua cờ của chuột, chống nhấn hai lần, và tô sáng đối tượng sắp đổ ----
+ALT_MASK = VGD::BIM::UI::TagPaintTool::ALT_MASK
+CTRL_MASK = VGD::BIM::UI::TagPaintTool::CTRL_MASK
+model, probe, tags, sel = paint_world
+probe.tm_paint_start('name' => 'A. WALL')
+tool = model.tool
+kv = FDrawView.new(model, [])
+tool.onMouseMove(ALT_MASK, 5, 5, kv)
+ok('Alt giữ trong cờ chuột mà onKeyDown chưa tới: vẫn đổi sang chế độ hút', tool.sampling?)
+tool.onMouseMove(ALT_MASK, 6, 6, kv); tool.onKeyDown(VGD::BIM::UI::TagPaintTool::ALT_KEY, 1, ALT_MASK, kv)
+ok('cùng một lần nhấn báo qua cả cờ chuột lẫn phím: chỉ đổi một lần', tool.sampling?)
+tool.onKeyUp(VGD::BIM::UI::TagPaintTool::ALT_KEY, 1, 0, kv); tool.onMouseMove(0, 7, 7, kv)
+tool.onMouseMove(ALT_MASK, 8, 8, kv)
+ok('thả rồi nhấn lại: đổi về chế độ đổ', !tool.sampling?)
+tool.onMouseMove(0, 9, 9, kv)
+tool.onMouseMove(CTRL_MASK, 9, 9, kv)
+ok('Ctrl qua cờ chuột: đổi cấp một lần', tool.level == :deepest)
+tool.onMouseMove(0, 9, 9, kv)
+# Lần thả bị mất (thanh menu Windows lấy phím Alt): nhấn lần sau vẫn tính
+t2 = VGD::BIM::UI::TagPaintTool.new('X', on_paint: ->(*) {}, on_sample: ->(*) {}, on_done: -> {})
+clock = 0.0
+t2.define_singleton_method(:now) { clock }
+t2.onKeyDown(VGD::BIM::UI::TagPaintTool::ALT_KEY, 1, 0, nil)
+ok('Alt nhấn lần 1: chế độ hút', t2.sampling?)
+clock += 1.0
+t2.onKeyDown(VGD::BIM::UI::TagPaintTool::ALT_KEY, 1, 0, nil)
+ok('lần thả bị mất, nhấn lần 2 sau đó: vẫn đổi (về chế độ đổ), không phải nhấn hai lần', !t2.sampling?)
+clock += 0.1
+t2.onKeyDown(VGD::BIM::UI::TagPaintTool::ALT_KEY, 1, 0, nil)
+ok('báo trùng trong khoảng rất ngắn (phím + cờ chuột) không đổi lại', !t2.sampling?)
+
+# Tô sáng
+module Geom
+  class Point3d
+    attr_reader :z
+    def initialize(x, y, z = 0); @x = x; @y = y; @z = z; end
+    def transform(t); t.apply(self); end
+  end
+  class Transformation
+    attr_reader :d
+    def initialize(d = [0, 0, 0]); @d = d; end
+    def *(other); Transformation.new(@d.zip(other.d).map { |a, b| a + b }); end
+    def apply(p); Point3d.new(p.x + @d[0], p.y + @d[1], p.z + @d[2]); end
+  end
+end
+GL_LINES = 1 unless defined?(GL_LINES)
+GL_TRIANGLES = 4 unless defined?(GL_TRIANGLES)
+class FBounds
+  def empty?; false; end
+  def corner(i); Geom::Point3d.new((i & 1).zero? ? 0 : 2, (i & 2).zero? ? 0 : 3, (i & 4).zero? ? 0 : 4); end
+end
+class FBox < FEnt
+  attr_reader :transformation
+  def initialize(layer, move); super(layer); @transformation = Geom::Transformation.new(move); @definition = Struct.new(:bounds).new(FBounds.new); end
+end
+class FEdge
+  attr_reader :start, :end
+  def initialize(a, b); @start = Struct.new(:position).new(a); @end = Struct.new(:position).new(b); end
+end
+class FFace < FEnt
+  def mesh; Struct.new(:points, :polygons).new([Geom::Point3d.new(0, 0, 0), Geom::Point3d.new(1, 0, 0), Geom::Point3d.new(0, 1, 0)], [[1, 2, -3]]); end
+  def edges; [FEdge.new(Geom::Point3d.new(0, 0, 0), Geom::Point3d.new(1, 0, 0)), FEdge.new(Geom::Point3d.new(1, 0, 0), Geom::Point3d.new(0, 1, 0))]; end
+end
+class FHView < FDrawView
+  def camera; Struct.new(:perspective?).new(false); end
+  def screen_coords(p); Struct.new(:x, :y).new(p.x, p.y); end
+end
+model.define_singleton_method(:edit_transform) { Struct.new(:to_a).new([1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0]) }
+gb1 = FBox.new(tags[0], [10, 0, 0]); gb2 = FBox.new(tags[3], [0, 5, 0]); gface = FFace.new(tags[3])
+hv = FHView.new(model, [[gb1, gb2, gface]])
+def shape_calls(view, mode); view.calls.select { |c| c[0] == :draw2d && c[1] == mode }; end
+t3 = VGD::BIM::UI::TagPaintTool.new('A. WALL', on_paint: ->(*) {}, on_sample: ->(*) {}, on_done: -> {})
+t3.onMouseMove(0, 50, 50, hv); hv.calls.clear; t3.draw(hv)
+lines = shape_calls(hv, 1); tris = shape_calls(hv, 4)
+ok('cấp trên cùng: tô sáng khung bao của group ngoài cùng (12 cạnh, 12 tam giác), đúng vị trí thế giới', lines.size == 1 && lines[0][2].size == 24 && lines[0][2].map(&:first).uniq.sort == [10, 12] && tris.size == 1 && tris[0][2].size == 36)
+ok('tô sáng dùng nét dày và màu nhấn, vẽ trước nhãn', hv.calls.include?([:width, 3]) && hv.calls.index { |c| c[0] == :draw2d && c[1] == 1 } < hv.calls.index { |c| c[0] == :text })
+t3.onKeyDown(CTRL_KEY, 1, 0, hv); t3.onKeyUp(CTRL_KEY, 1, 0, hv); hv.calls.clear; t3.draw(hv)
+lines = shape_calls(hv, 1)
+ok('Ctrl sang cấp trong cùng: khung chuyển sang group trong cùng (cộng dồn vị trí các cấp)', lines[0][2].map(&:first).uniq.sort == [10, 12] && lines[0][2].map(&:last).uniq.sort == [5, 8])
+t3.onKeyDown(CTRL_KEY, 1, 0, hv); t3.onKeyUp(CTRL_KEY, 1, 0, hv); hv.calls.clear; t3.draw(hv)
+lines = shape_calls(hv, 1); tris = shape_calls(hv, 4)
+ok('Ctrl sang cấp mặt / cạnh: tô sáng đúng mặt (tam giác của lưới, các cạnh) theo vị trí các group chứa nó', tris[0][2].size == 3 && tris[0][2][0] == [10, 5] && lines[0][2].size == 4 && lines[0][2][0] == [10, 5])
+edge_view = FHView.new(model, [[FBox.new(tags[0], [1, 1, 0]), FEdge.new(Geom::Point3d.new(0, 0, 0), Geom::Point3d.new(2, 0, 0)).tap { |e| e.define_singleton_method(:layer) { tags[3] } }]], measure: false)
+t3.onMouseMove(0, 5, 5, edge_view); edge_view.calls.clear; t3.draw(edge_view)
+ok('cấp mặt / cạnh với một cạnh: chỉ vẽ một đoạn, không tô', shape_calls(edge_view, 1).size == 1 && shape_calls(edge_view, 1)[0][2].size == 2 && shape_calls(edge_view, 4).empty?)
+empty_hv = FHView.new(model, [])
+t3.onMouseMove(0, 5, 5, empty_hv); empty_hv.calls.clear; t3.draw(empty_hv)
+ok('chuột ở chỗ trống: không tô sáng nhưng vẫn có nhãn', shape_calls(empty_hv, 1).empty? && empty_hv.calls.any? { |c| c[0] == :text })
+sample_t = VGD::BIM::UI::TagPaintTool.new('', on_paint: ->(*) {}, on_sample: ->(*) {}, on_done: -> {})
+sample_t.onMouseMove(0, 50, 50, hv); hv.calls.clear; sample_t.draw(hv)
+ok('chế độ hút: không tô sáng cấp đổ', shape_calls(hv, 1).empty? && shape_calls(hv, 4).empty?)
+t3.onKeyDown(CTRL_KEY, 1, 0, hv); t3.onKeyUp(CTRL_KEY, 1, 0, hv)
+broken = FHView.new(model, [[FBox.new(tags[0], [0, 0, 0])]])
+broken.define_singleton_method(:screen_coords) { |_p| raise 'lỗi chiếu' }
+t3.onMouseMove(0, 5, 5, broken); broken.calls.clear
+ok('lỗi khi chiếu khung: không làm hỏng công cụ (không ném lỗi)', error_of { t3.draw(broken) }.nil?)
 probe.tm_paint_stop
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
