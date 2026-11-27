@@ -939,13 +939,21 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await receive('tag_tree',{supported:false,isolated:null,folders:[],layers:[{id:1,name:'Tag',visible:true,folder_id:null}]});
   ok((await page.locator('#tag-tree-list').innerText()).includes('cần SketchUp 2021') && await treeRows().count()===1,'SketchUp cũ không có thư mục tag: báo rõ và vẫn liệt kê tag');
   // Màu, kiểu nét, tô màu theo tag
-  const STYLED={supported:true,styles_supported:true,line_styles:['Solid Line','Dashed Line'],color_by_tag:false,isolated:null,folders:[],layers:[{id:10,name:'A. WALL',visible:true,folder_id:null,color:'#c0392b',line_style:'Solid Line'},{id:11,name:'A. DOOR',visible:true,folder_id:null,color:'#2980b9',line_style:''}]};
+  const STYLED={supported:true,styles_supported:true,line_styles:['Solid Line','Dashed Line','Dotted Line','Dash-Dot Line','Dash-Double-Dot Line','Dash-Triple-Dot Line','Kiểu lạ'],color_by_tag:false,isolated:null,folders:[],layers:[{id:10,name:'A. WALL',visible:true,folder_id:null,color:'#c0392b',line_style:'Solid Line'},{id:11,name:'A. DOOR',visible:true,folder_id:null,color:'#2980b9',line_style:''}]};
   await receive('tag_tree',STYLED);
-  ok(await rowOf('tag',10).locator('input[type=color]').inputValue()==='#c0392b' && await rowOf('tag',10).locator('select.tm-style').inputValue()==='Solid Line' && await rowOf('tag',11).locator('select.tm-style').inputValue()==='','mỗi tag có ô màu và ô kiểu nét đúng giá trị (kiểu chưa đặt hiện mặc định)');
-  ok((await rowOf('tag',10).locator('select.tm-style option').allInnerTexts()).join('|')==='Solid Line|Dashed Line' && (await rowOf('tag',11).locator('select.tm-style option').allInnerTexts()).join('|')==='(mặc định)|Solid Line|Dashed Line','danh sách kiểu nét lấy từ model');
+  const styleBtn=id=>rowOf('tag',id).locator('button.tm-style');
+  ok(await rowOf('tag',10).locator('input[type=color]').inputValue()==='#c0392b' && await styleBtn(10).getAttribute('title')==='Solid Line' && await styleBtn(10).locator('svg.ls-icon').count()===1 && (await styleBtn(10).innerText()).trim()==='' && await styleBtn(11).getAttribute('title')==='(mặc định)' && (await styleBtn(11).innerText()).trim()==='—','mỗi tag có ô màu và ô kiểu nét hiện bằng ký hiệu, không chữ (kiểu chưa đặt hiện dấu —, gợi ý "(mặc định)")');
+  await styleBtn(10).click();
+  const opts=page.locator('#tag-style-menu .ls-opt');
+  ok(await opts.count()===7 && JSON.stringify(await opts.evaluateAll(l=>l.map(o=>o.title)))===JSON.stringify(['Solid Line','Dashed Line','Dotted Line','Dash-Dot Line','Dash-Double-Dot Line','Dash-Triple-Dot Line','Kiểu lạ']) && await opts.nth(0).evaluate(o=>o.classList.contains('cur')),'bấm ô kiểu nét: danh sách kiểu của model, mỗi kiểu một ký hiệu, kiểu đang dùng được đánh dấu');
+  ok(JSON.stringify(await opts.evaluateAll(l=>l.map(o=>o.querySelectorAll('svg.ls-icon line').length)))==='[1,3,9,5,6,5,0]' && (await opts.nth(6).innerText()).trim()==='Kiểu lạ','ký hiệu đúng từng kiểu (liền, gạch, chấm, gạch chấm, gạch hai chấm, gạch ba chấm); tên lạ không nhận ra thì hiện chữ');
+  await page.keyboard.press('Escape');
+  ok(await page.locator('#tag-style-menu').count()===0,'Esc đóng danh sách kiểu nét');
+  await clear();await styleBtn(10).click();await opts.nth(0).click();
+  ok(!(await last('tm_line_style')) && await page.locator('#tag-style-menu').count()===0,'chọn lại đúng kiểu đang dùng: không gửi gì, danh sách đóng');
   await clear();await rowOf('tag',10).locator('input[type=color]').evaluate(el=>{el.value='#00ff88';el.dispatchEvent(new Event('change',{bubbles:true}));});
   ok(JSON.stringify(await json('tm_color'))==='{"id":10,"color":"#00ff88"}','đổi màu: gửi mã tag và màu #rrggbb');
-  await clear();await rowOf('tag',11).locator('select.tm-style').selectOption('Dashed Line');
+  await clear();await styleBtn(11).click();await opts.nth(1).click();
   ok(JSON.stringify(await json('tm_line_style'))==='{"id":11,"style":"Dashed Line"}','đổi kiểu nét: gửi mã tag và tên kiểu');
   ok(await page.locator('#tag-tree-colorbytag').getAttribute('aria-pressed')==='false','nút Tô màu theo tag: chưa bật thì không nhấn');
   await clear();await page.click('#tag-tree-more');await page.locator('#tag-tree-colorbytag').click();
@@ -955,7 +963,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await clear();await page.click('#tag-tree-more');await page.locator('#tag-tree-colorbytag').click();
   ok(JSON.stringify(await json('tm_color_by_tag'))==='{"enabled":false}','bấm lại khi đang bật: gửi lệnh tắt');
   await receive('tag_tree',{...STYLED,styles_supported:false,line_styles:[]});
-  ok(await page.locator('select.tm-style').count()===0 && await page.locator('input[type=color]').count()===2,'SketchUp cũ không có kiểu nét: ẩn ô kiểu nét, vẫn có ô màu');
+  ok(await page.locator('button.tm-style').count()===0 && await page.locator('input[type=color]').count()===2,'SketchUp cũ không có kiểu nét: ẩn ô kiểu nét, vẫn có ô màu');
   // Ghim, gần đây, chọn tag cho nút Gán tag, kéo thả vào thư mục
   await page.click('#tag-tab-model');
   await receive('tag_tree',{...TREE,pinned:['A. WALL','Khong co'],recent:['A. DOOR','A. WALL'],color_by_tag:false,styles_supported:false});
@@ -1019,7 +1027,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await page.locator('#tag-pane-model').isVisible() && await exCard.isVisible(),'nhận bản xem trước Excel: chuyển về tab Trong model và hiện thẻ xem trước');
   const exText=await exCard.innerText();
   ok(exText.includes('tags.xlsx') && exText.includes('3 dòng · 1 đã có trong model') && exText.includes('"A. WALL" bị trùng') && exText.includes('và 2 cảnh báo khác'),'thẻ xem trước: tên file, số dòng và số tag đã có, cảnh báo');
-  ok(await exCard.locator('tbody tr').count()===3 && (await exCard.locator('tbody tr').nth(0).innerText()).includes('#ff0000') && (await exCard.locator('tbody tr').nth(0).innerText()).includes('Dash') && (await exCard.locator('tbody tr').nth(1).innerText()).includes('Đã có') && (await exCard.locator('tbody tr').nth(2).innerText()).includes('Mới'),'bảng xem trước: tên, màu, kiểu nét, thư mục và trạng thái Mới / Đã có');
+  ok(await exCard.locator('tbody tr').count()===3 && (await exCard.locator('tbody tr').nth(0).innerText()).includes('#ff0000') && (await exCard.locator('tbody tr').nth(0).locator('svg.ls-icon').count())===1 && (await exCard.locator('tbody tr').nth(1).innerText()).includes('Đã có') && (await exCard.locator('tbody tr').nth(2).innerText()).includes('Mới'),'bảng xem trước: tên, màu, kiểu nét, thư mục và trạng thái Mới / Đã có');
   ok(await exCard.locator('tbody input.cb:checked').count()===3 && (await page.locator('#tag-excel-import').innerText())==='Nhập 3 tag','mặc định tick hết các dòng, nút Nhập ghi số tag');
   await exCard.locator('tbody tr').nth(1).locator('input.cb').uncheck();
   ok((await page.locator('#tag-excel-import').innerText())==='Nhập 2 tag','bỏ tick một dòng: nút Nhập cập nhật số tag');

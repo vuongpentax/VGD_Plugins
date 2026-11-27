@@ -1,17 +1,17 @@
-# Graph Report - VGD_BIM  (2026-11-26)
+# Graph Report - VGD_BIM  (2026-11-27)
 
 ## Corpus Check
-- 153 files · ~269,427 words
+- 153 files · ~271,281 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 7 file(s) not represented in the graph (top: .css 3, (none) 2, .woff2 2)
 
 ## Summary
-- 3276 nodes · 5638 edges · 239 communities (143 shown, 96 thin omitted)
+- 3293 nodes · 5665 edges · 239 communities (137 shown, 102 thin omitted)
 - Extraction: 96% EXTRACTED · 4% INFERRED · 0% AMBIGUOUS · INFERRED: 215 edges (avg confidence: 0.87)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6808f66b`
+- Built from commit: `6cc5233e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -86,10 +86,9 @@
 - Hướng dẫn kiểm tra VGD BIM trên SketchUp (bản 1.1.1-beta.24)
 - .read
 - VGD::BIM::Quantity
-- .read
+- .normalize
 - VGD::BIM::VgdId
 - .selection_changed
-- .run
 - test_capture.rb
 - test_front.rb
 - View
@@ -99,8 +98,8 @@
 - test_ui_images.cjs
 - test_ui_sheets.cjs
 - VGD::BIM::UI::FrontActions
-- .normalize
-- .part_of
+- .shoot
+- Sketchup::Camera
 - VGD::BIM::RoomVolume
 - toolbar
 - Sketchup::Group
@@ -119,7 +118,6 @@
 - Probe
 - VGD::BIM
 - VGD::BIM::CheckRules
-- VGD::BIM::MaterialLibrary
 - VGD::BIM::StructureSource
 - DimBox
 - UI
@@ -149,7 +147,7 @@
 - VGD::BIM::PhotoSettings
 - VGD::BIM::Scanner
 - Sketchup::Group
-- FrontDef
+- Geom::Point3d
 - Sketchup
 - VGD::BIM::Geometry::Defn
 - FakeSel
@@ -187,7 +185,7 @@
 - VGD::Bridge
 - .plan
 - .table_assign_codes
-- VGD::BIM::SheetLock
+- Geom::Vector3d
 - VGD::BIM::TagCatalog
 - 14. quantity_method
 - Sketchup
@@ -250,7 +248,7 @@
 4. `tableView()` - 48 edges
 5. `call()` - 41 edges
 6. `VGD::BIM::Table` - 36 edges
-7. `Kiểm thử` - 34 edges
+7. `Kiểm thử` - 35 edges
 8. `button()` - 33 edges
 9. `renderGrid()` - 33 edges
 10. `Quy tắc riêng` - 29 edges
@@ -260,17 +258,17 @@
   VALIDATION.md → runtime/vgd_bim/html/app.js
 - `Bản 1.1.1-beta.15: đã kiểm tra tự động` --references--> `renderGrid()`  [INFERRED]
   VALIDATION.md → runtime/vgd_bim/html/app.js
-- `Quy tắc riêng` --references--> `Overlay`  [INFERRED]
-  CLAUDE.md → dev/test_overlay.rb
 - `Quy tắc riêng` --references--> `foldText()`  [INFERRED]
   CLAUDE.md → runtime/vgd_bim/html/app.js
 - `Quy tắc riêng` --references--> `codesPanel()`  [INFERRED]
+  CLAUDE.md → runtime/vgd_bim/html/app.js
+- `Quy tắc riêng` --references--> `materialsPanel()`  [INFERRED]
   CLAUDE.md → runtime/vgd_bim/html/app.js
 
 ## Import Cycles
 - None detected.
 
-## Communities (239 total, 96 thin omitted)
+## Communities (239 total, 102 thin omitted)
 
 ### Community 0 - "VGD::BIM::UI::TagManager"
 Cohesion: 0.06
@@ -280,13 +278,9 @@ Nodes (13): FakeDefinition, FakeItem, FakeModel, VGD, VGD::BIM, VGD::BIM::TagExc
 Cohesion: 0.02
 Nodes (85): 10. item_type, 11. code, 12. description, 13. unit, 15. zone, 16. floor, 17. include_boq, 18. finish_code (+77 more)
 
-### Community 2 - "VGD::BIM::Images"
-Cohesion: 0.05
-Nodes (13): FakeView, Geom, Geom::Point3d, Geom::Vector3d, Sketchup::Camera, VGD_BIM 1.1.0, VGD, VGD::BIM (+5 more)
-
 ### Community 3 - "tag_auto.js"
-Cohesion: 0.07
-Nodes (58): acceptTagDrop(), AUTO_BASED, AUTO_SCOPE, autoTagCard(), byName(), catalogCard(), catalogState, closeTreeMenu() (+50 more)
+Cohesion: 0.06
+Nodes (64): acceptTagDrop(), AUTO_BASED, AUTO_SCOPE, autoTagCard(), byName(), catalogCard(), catalogState, closeStyleMenu() (+56 more)
 
 ### Community 4 - "app.js"
 Cohesion: 0.05
@@ -310,7 +304,7 @@ Nodes (45): badge(), bridgeOptions(), bridgePanel(), bridgePreview(), button(), 
 
 ### Community 10 - ".check_model!"
 Cohesion: 0.09
-Nodes (3): VGD, VGD::BIM, VGD::BIM::MappingRules
+Nodes (9): VGD, VGD::BIM, VGD::BIM::Schema, VGD, VGD::BIM, VGD::BIM::Converter, VGD, VGD::BIM (+1 more)
 
 ### Community 11 - "test_tag_folders.rb"
 Cohesion: 0.05
@@ -345,7 +339,7 @@ Cohesion: 0.08
 Nodes (9): VGD, VGD::BIM, VGD::BIM::DataBridge, VGD::BIM::DataBridge::Error, VGD::BIM::Table::Extras, VGD, VGD::BIM, VGD::BIM::XlsxReader (+1 more)
 
 ### Community 19 - "VGD::BIM::Rooms"
-Cohesion: 0.11
+Cohesion: 0.12
 Nodes (3): VGD, VGD::BIM, VGD::BIM::Rooms
 
 ### Community 20 - "VGD::BIM::UI::OutlineDrawing"
@@ -362,11 +356,7 @@ Nodes (14): BoxBounds, BoxEntity, BoxPoint, FakeBox, Sketchup, Sketchup::Compone
 
 ### Community 23 - "Kiểm thử"
 Cohesion: 0.06
-Nodes (31): Bản 1.1.1-beta.10: đã kiểm tra tự động, Bản 1.1.1-beta.11: đã kiểm tra tự động, Bản 1.1.1-beta.12: đã kiểm tra tự động, Bản 1.1.1-beta.13: đã kiểm tra tự động, Bản 1.1.1-beta.14: đã kiểm tra tự động, Bản 1.1.1-beta.15: đã kiểm tra tự động, Bản 1.1.1-beta.16: đã kiểm tra tự động, Bản 1.1.1-beta.17: đã kiểm tra tự động (+23 more)
-
-### Community 24 - "VGD::BIM::Table"
-Cohesion: 0.10
-Nodes (3): VGD, VGD::BIM, VGD::BIM::Table
+Nodes (32): Bản 1.1.1-beta.10: đã kiểm tra tự động, Bản 1.1.1-beta.11: đã kiểm tra tự động, Bản 1.1.1-beta.12: đã kiểm tra tự động, Bản 1.1.1-beta.13: đã kiểm tra tự động, Bản 1.1.1-beta.14: đã kiểm tra tự động, Bản 1.1.1-beta.15: đã kiểm tra tự động, Bản 1.1.1-beta.16: đã kiểm tra tự động, Bản 1.1.1-beta.17: đã kiểm tra tự động (+24 more)
 
 ### Community 27 - "message"
 Cohesion: 0.13
@@ -386,18 +376,14 @@ Nodes (11): Geom, Geom::Transformation, Sketchup, Sketchup::ComponentInstance, S
 
 ### Community 31 - ".validation_assign_ids"
 Cohesion: 0.11
-Nodes (9): VGD, VGD::BIM, VGD::BIM::Detector, VGD, VGD::BIM, VGD::BIM::Mapping, VGD, VGD::BIM (+1 more)
+Nodes (10): VGDBIMNativeTest, VGD, VGD::BIM, VGD::BIM::Detector, VGD, VGD::BIM, VGD::BIM::Mapping, VGD (+2 more)
 
 ### Community 32 - "UI::HtmlDialog"
 Cohesion: 0.09
 Nodes (5): Sketchup, Sketchup::Selection, Sketchup::SelectionObserver, UI, UI::HtmlDialog
 
-### Community 33 - "VGD::BIM::CustomColumns"
-Cohesion: 0.16
-Nodes (3): VGD, VGD::BIM, VGD::BIM::CustomColumns
-
 ### Community 34 - "VGD::BIM::Preset"
-Cohesion: 0.16
+Cohesion: 0.19
 Nodes (3): VGD, VGD::BIM, VGD::BIM::Preset
 
 ### Community 35 - "tableView"
@@ -429,16 +415,24 @@ Cohesion: 0.14
 Nodes (4): Geom, Geom::Point3d, Geom::Transformation, Geom::Vector3d
 
 ### Community 42 - "test_tag_tree.rb"
-Cohesion: 0.14
-Nodes (8): del_world(), excel_world(), FDef, FEnt, FSel, OldModel, paint_world(), world()
+Cohesion: 0.11
+Nodes (9): del_world(), excel_world(), FDef, FEnt, FSel, OldModel, paint_world(), ::UI (+1 more)
 
 ### Community 43 - "VGD::BIM::Tags"
 Cohesion: 0.13
 Nodes (5): EditLayer, EditLayers, EditMat, EditModel, VGD::BIM::Tags
 
 ### Community 45 - "VGD::BIM::TagRules"
-Cohesion: 0.18
+Cohesion: 0.23
 Nodes (3): VGD, VGD::BIM, VGD::BIM::TagRules
+
+### Community 46 - "VGD::BIM::ModelSettings"
+Cohesion: 0.24
+Nodes (3): VGD, VGD::BIM, VGD::BIM::ModelSettings
+
+### Community 47 - "VGD::BIM::Tags"
+Cohesion: 0.18
+Nodes (3): VGD, VGD::BIM, VGD::BIM::Tags
 
 ### Community 48 - "VGD::BIM::Geometry"
 Cohesion: 0.20
@@ -452,12 +446,16 @@ Nodes (7): FakeView, LogicModel, RBox, RPoint, WDefinition, WEntities, WLocalBou
 Cohesion: 0.12
 Nodes (16): Bóc khối lượng nhanh (Bảng khối lượng), Các cột mới của Bảng khối lượng, Cửa sổ và cập nhật, Gắn dữ liệu hạng mục (Thông tin), Gắn tag tự động theo tên, Mặt trước của món (bản thử), Preset, đơn vị và ảnh (nút Preset ở thanh đầu), Quy tắc phân loại (+8 more)
 
+### Community 52 - "VGD::BIM::Front"
+Cohesion: 0.16
+Nodes (3): VGD, VGD::BIM, VGD::BIM::Front
+
 ### Community 53 - "VGD::BIM::Rename"
 Cohesion: 0.21
 Nodes (3): VGD, VGD::BIM, VGD::BIM::Rename
 
 ### Community 54 - "VGD::BIM::UI::TagPaintTool"
-Cohesion: 0.18
+Cohesion: 0.13
 Nodes (4): VGD, VGD::BIM, VGD::BIM::UI, VGD::BIM::UI::TagPaintTool
 
 ### Community 55 - "make_preview.py"
@@ -481,7 +479,7 @@ Cohesion: 0.13
 Nodes (3): FakeModel, VGD, VGD::BIM
 
 ### Community 60 - "VGD::BIM::FrontProbe"
-Cohesion: 0.24
+Cohesion: 0.22
 Nodes (3): VGD, VGD::BIM, VGD::BIM::FrontProbe
 
 ### Community 61 - "FakeAttrs"
@@ -509,32 +507,28 @@ Cohesion: 0.14
 Nodes (13): 0. Chuẩn bị (làm một lần), 10. Kết thúc: sao lưu và ghi lại, 1. Cài đặt và cơ bản (ưu tiên cao), 2. Bảng khối lượng: sửa dữ liệu và tìm kiếm, 3. Sheet: thêm, kéo đổi chỗ, khóa (ưu tiên cao), 4. Xuất Excel và PDF (ưu tiên cao), 5. Preset (ưu tiên trung bình), 6. Ảnh (ưu tiên trung bình) (+5 more)
 
 ### Community 68 - ".read"
-Cohesion: 0.22
+Cohesion: 0.27
 Nodes (3): VGD, VGD::BIM, VGD::BIM::Levels
 
 ### Community 69 - "VGD::BIM::Quantity"
-Cohesion: 0.23
+Cohesion: 0.26
 Nodes (3): VGD, VGD::BIM, VGD::BIM::Quantity
 
-### Community 70 - ".read"
-Cohesion: 0.29
-Nodes (3): VGD, VGD::BIM, VGD::BIM::Settings
+### Community 70 - ".normalize"
+Cohesion: 0.06
+Nodes (17): VGD, VGD::BIM, VGD::BIM::MaterialLibrary, VGD, VGD::BIM, VGD::BIM::MeasureProbe, VGD::BIM::MeasureProbe::Context, VGD::BIM::MeasureProbe::Part (+9 more)
 
 ### Community 71 - "VGD::BIM::VgdId"
-Cohesion: 0.26
+Cohesion: 0.24
 Nodes (3): VGD, VGD::BIM, VGD::BIM::VgdId
 
 ### Community 72 - ".selection_changed"
-Cohesion: 0.18
+Cohesion: 0.21
 Nodes (4): VGD, VGD::BIM, VGD::BIM::UI, VGD::BIM::UI::SelectionObserver
 
-### Community 73 - ".run"
-Cohesion: 0.24
-Nodes (4): VGDBIMNativeTest, VGD, VGD::BIM, VGD::BIM::Converter
-
 ### Community 74 - "test_capture.rb"
-Cohesion: 0.22
-Nodes (6): empty?(), shoot(), shoot_location(), shoot_preview(), shoot_with_camera(), world()
+Cohesion: 0.17
+Nodes (8): empty?(), FrontDef, shoot(), shoot_front(), shoot_location(), shoot_preview(), shoot_with_camera(), world()
 
 ### Community 75 - "test_front.rb"
 Cohesion: 0.17
@@ -564,14 +558,6 @@ Nodes (8): {chromium}, {execFileSync}, F, fs, path, {pathToFileURL}, presets, ro
 Cohesion: 0.17
 Nodes (10): {chromium}, {execFileSync}, F, fs, NAMES, path, {pathToFileURL}, presets (+2 more)
 
-### Community 83 - ".normalize"
-Cohesion: 0.23
-Nodes (4): VGD::BIM::MeasureProbe::Context, VGD, VGD::BIM, VGD::BIM::Measure
-
-### Community 84 - ".part_of"
-Cohesion: 0.24
-Nodes (4): VGD, VGD::BIM, VGD::BIM::MeasureProbe, VGD::BIM::MeasureProbe::Part
-
 ### Community 85 - "VGD::BIM::RoomVolume"
 Cohesion: 0.27
 Nodes (3): VGD, VGD::BIM, VGD::BIM::RoomVolume
@@ -589,7 +575,7 @@ Cohesion: 0.17
 Nodes (5): VGD, VGD::BIM, VGD::BIM::Data, VGD::BIM::Scanner, VGD::BIM::UI
 
 ### Community 90 - "VGD::BIM::FolderRules"
-Cohesion: 0.24
+Cohesion: 0.26
 Nodes (3): VGD, VGD::BIM, VGD::BIM::FolderRules
 
 ### Community 92 - "VGD::BIM"
@@ -624,12 +610,8 @@ Nodes (9): Sketchup, Sketchup::ComponentInstance, Sketchup::Face, Sketchup::Grou
 Cohesion: 0.31
 Nodes (3): VGD, VGD::BIM, VGD::BIM::CheckRules
 
-### Community 103 - "VGD::BIM::MaterialLibrary"
-Cohesion: 0.27
-Nodes (3): VGD, VGD::BIM, VGD::BIM::MaterialLibrary
-
 ### Community 104 - "VGD::BIM::StructureSource"
-Cohesion: 0.24
+Cohesion: 0.21
 Nodes (3): VGD, VGD::BIM, VGD::BIM::StructureSource
 
 ### Community 106 - "UI"
@@ -642,7 +624,7 @@ Nodes (3): FakeBounds, Layer, VGD::BIM::Geometry
 
 ### Community 110 - "VGD BIM 1.1.1-beta.38"
 Cohesion: 0.20
-Nodes (8): API, Cài đặt, Dữ liệu lưu trên máy, Kiểm thử, Preset, đơn vị và ảnh, Sử dụng, VGD BIM 1.1.1-beta.38, Ý nghĩa dữ liệu và giới hạn
+Nodes (8): API, Cài đặt, Dữ liệu lưu trên máy, Kiểm thử, Preset, đơn vị và ảnh, Sử dụng, VGD BIM 1.1.1-beta.42, Ý nghĩa dữ liệu và giới hạn
 
 ### Community 111 - "VGD::BIM::LegacyMigration"
 Cohesion: 0.33
@@ -653,7 +635,7 @@ Cohesion: 0.36
 Nodes (3): VGD, VGD::BIM, VGD::BIM::RowOrder
 
 ### Community 113 - ".write"
-Cohesion: 0.27
+Cohesion: 0.31
 Nodes (3): VGD, VGD::BIM, VGD::BIM::Storage
 
 ### Community 114 - "VGD::BIM::ViewFit"
@@ -689,16 +671,12 @@ Cohesion: 0.22
 Nodes (4): {chromium}, fs, path, {pathToFileURL}
 
 ### Community 130 - "VGD::BIM::PhotoSettings"
-Cohesion: 0.31
+Cohesion: 0.27
 Nodes (3): VGD, VGD::BIM, VGD::BIM::PhotoSettings
 
 ### Community 131 - "VGD::BIM::Scanner"
 Cohesion: 0.28
 Nodes (3): VGD, VGD::BIM, VGD::BIM::Scanner
-
-### Community 133 - "FrontDef"
-Cohesion: 0.25
-Nodes (3): FrontDef, shoot_front(), VGD::BIM::Geometry
 
 ### Community 134 - "Sketchup"
 Cohesion: 0.25
@@ -757,15 +735,11 @@ Cohesion: 0.33
 Nodes (3): VGD, VGD::BIM, VGD::BIM::FrontAlign
 
 ### Community 172 - ".table_assign_codes"
-Cohesion: 0.29
+Cohesion: 0.33
 Nodes (3): VGD, VGD::BIM, VGD::BIM::ObjectCode
 
-### Community 173 - "VGD::BIM::SheetLock"
-Cohesion: 0.33
-Nodes (3): VGD, VGD::BIM, VGD::BIM::SheetLock
-
 ### Community 174 - "VGD::BIM::TagCatalog"
-Cohesion: 0.29
+Cohesion: 0.22
 Nodes (3): VGD, VGD::BIM, VGD::BIM::TagCatalog
 
 ### Community 175 - "14. quantity_method"
@@ -797,8 +771,8 @@ Cohesion: 0.33
 Nodes (4): VGD, VGD::BIM, VGD::BIM::Data, VGD::BIM::UI
 
 ### Community 196 - "VGD::BIM"
-Cohesion: 0.40
-Nodes (3): VGD, VGD::BIM, VGD::BIM::Table
+Cohesion: 0.22
+Nodes (4): VGD, VGD::BIM, VGD::BIM::Geometry, VGD::BIM::Table
 
 ### Community 198 - "VGD::BIM"
 Cohesion: 0.40
@@ -822,7 +796,7 @@ Nodes (4): Sketchup, Sketchup::ComponentInstance, Sketchup::Face, Sketchup::Grou
 
 ### Community 212 - "VGD"
 Cohesion: 0.50
-Nodes (3): VGD, VGD::BIM, VGD::BIM::Schema
+Nodes (3): VGD, VGD::BIM, VGD::BIM::UI
 
 ### Community 213 - "VGD"
 Cohesion: 0.50
@@ -845,22 +819,22 @@ Cohesion: 0.67
 Nodes (3): 78. Recommended User Workflow, File VGD, File đối tác
 
 ## Knowledge Gaps
-- **96 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **102 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `VGD::BIM::UI::Dialog` connect `VGD::BIM::UI::Dialog` to `VGD::BIM::UI::TagManager`, `.read`, `VGD::BIM::Snapshots`, `.selection_changed`, `.run`, `.check_model!`, `.read`, `.table_assign_codes`, `test_front_actions.rb`, `VGD::BIM::UI::FrontActions`, `VGD::BIM`, `VGD::BIM::Rooms`, `VGD::BIM::UI::ImageActions`, `.emit`, `.validation_assign_ids`?**
-  _High betweenness centrality (0.166) - this node is a cross-community bridge._
+- **Why does `VGD::BIM::UI::Dialog` connect `VGD::BIM::UI::Dialog` to `VGD::BIM::UI::TagManager`, `.read`, `VGD::BIM::Snapshots`, `.selection_changed`, `.emit`, `.check_model!`, `.settings_save`, `VGD::BIM::VgdId`, `test_front_actions.rb`, `VGD::BIM::TagCatalog`, `VGD::BIM::UI::FrontActions`, `VGD::BIM`, `VGD::BIM::Rooms`, `VGD::BIM::UI::ImageActions`, `.emit`, `.validation_assign_ids`?**
+  _High betweenness centrality (0.160) - this node is a cross-community bridge._
 - **Are the 2 inferred relationships involving `tableView()` (e.g. with `Quy tắc riêng` and `receive()`) actually correct?**
   _`tableView()` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **Should `VGD::BIM::UI::TagManager` be split into smaller, more focused modules?**
   _Cohesion score 0.05873340143003064 - nodes in this community are weakly interconnected._
 - **Why does `Overlay` connect `UI` to `test_overlay.rb`, `VGD::BIM::UI::OutlineDrawing`, `Quy tắc riêng`?**
-  _High betweenness centrality (0.131) - this node is a cross-community bridge._
+  _High betweenness centrality (0.134) - this node is a cross-community bridge._
 - **Should `SPECIFICATION.md` be split into smaller, more focused modules?**
   _Cohesion score 0.023255813953488372 - nodes in this community are weakly interconnected._
 - **Why does `Quy tắc riêng` connect `Quy tắc riêng` to `tableView`, `tag_auto.js`, `units.js`, `images.js`, `node`, `UI`, `toolbar`?**
-  _High betweenness centrality (0.112) - this node is a cross-community bridge._
-- **Should `VGD::BIM::Images` be split into smaller, more focused modules?**
-  _Cohesion score 0.05189189189189189 - nodes in this community are weakly interconnected._
+  _High betweenness centrality (0.123) - this node is a cross-community bridge._
+- **Should `tag_auto.js` be split into smaller, more focused modules?**
+  _Cohesion score 0.06394230769230769 - nodes in this community are weakly interconnected._

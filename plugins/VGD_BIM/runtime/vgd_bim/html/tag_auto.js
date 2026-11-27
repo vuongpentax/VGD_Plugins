@@ -281,6 +281,63 @@ function tagSetPane(data,pane){
 // ---- Tab nhỏ "Trong model": cây thư mục tag / tag của model đang mở, mắt ẩn / hiện, cô lập, tìm kiếm ----
 const COMPACT_KEY='vgd.bim.tags.compact'; // chế độ thu gọn (ẩn ô màu, kiểu nét): tiện ích riêng của máy, lưu ở localStorage
 const treeState={data:null,open:new Set(),query:'',focus:'',dragging:null,exclude:new Set(),compact:(()=>{try{return localStorage.getItem(COMPACT_KEY)==='1';}catch(_){return false;}})()};
+// ---- Kiểu nét của tag: ký hiệu thay cho chữ (nét liền, gạch, gạch chấm, gạch hai chấm, gạch ba chấm, chấm) ----
+// Mỗi kiểu là các đoạn [x1, x2] trên khung 0..114,8 theo mẫu nét: gạch dài 28,3, cách 14,2, chấm 2,8 (chấm ngắn được nới ra khi vẽ để dễ thấy).
+const LINE_PATTERNS={
+  solid:[[0,114.8]],
+  dash:[[0,28.3],[42.5,70.9],[85,113.4]],
+  dash_dot:[[0,14.2],[26.9,29.8],[42.5,70.9],[83.6,86.5],[99.2,113.4]],
+  dash_double_dot:[[0,14.2],[26.9,29.8],[41.1,43.9],[56.7,85],[97.8,100.6],[112,114.8]],
+  dash_triple_dot:[[0,28.3],[41.1,43.9],[55.3,58.1],[69.4,72.3],[85,113.4]],
+  dot:[[1.4,4.2],[15.6,18.4],[29.8,32.6],[44,46.8],[58.2,61],[72.4,75.2],[86.6,89.4],[100.8,103.6],[113,114.8]]
+};
+// Nhận kiểu từ TÊN kiểu nét trong model (không phân biệt hoa thường và dấu, "Dash-Dot Line", "Dotted Line"...). Tên lạ: null (hiện chữ).
+// Cách nhận theo từ khóa tiếng Anh của SketchUp; chưa đối chiếu với tên kiểu nét thật trong SketchUp.
+function lineKind(name){
+  const t=foldText(name||'');
+  if(!t)return null;
+  const dash=/dash/.test(t),dot=/dot/.test(t);
+  if(dash&&/triple/.test(t))return 'dash_triple_dot';
+  if(dash&&/double/.test(t))return 'dash_double_dot';
+  if(dash&&dot)return 'dash_dot';
+  if(dash)return 'dash';
+  if(dot)return 'dot';
+  if(/solid/.test(t))return 'solid';
+  return null;
+}
+function lineSvg(kind){
+  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
+  svg.setAttribute('viewBox','0 -8.2 114.8 16.4');svg.setAttribute('width','56');svg.setAttribute('height','8');svg.setAttribute('class','ls-icon');svg.setAttribute('aria-hidden','true');
+  LINE_PATTERNS[kind].forEach(([a,b])=>{
+    const mid=(a+b)/2,half=Math.max((b-a)/2,2.5); // đoạn quá ngắn (chấm) nới thành vuông 5 x 5
+    const line=document.createElementNS(ns,'line');
+    line.setAttribute('x1',String(Math.max(0,mid-half)));line.setAttribute('x2',String(Math.min(114.8,mid+half)));line.setAttribute('y1','0');line.setAttribute('y2','0');
+    line.setAttribute('stroke','currentColor');line.setAttribute('stroke-width','5');line.setAttribute('stroke-linecap','butt');
+    svg.append(line);
+  });
+  return svg;
+}
+// Ký hiệu của một kiểu nét, hoặc chữ nếu không nhận ra tên; chưa đặt kiểu thì hiện dấu —.
+function lineStyleView(name){
+  const kind=lineKind(name);
+  if(kind)return lineSvg(kind);
+  return node('span',name||'—','ls-text');
+}
+function closeStyleMenu(){const menu=$('tag-style-menu');if(menu)menu.remove();}
+function openStyleMenu(button,current,styles,pick){
+  closeStyleMenu();
+  const menu=node('div',undefined,'ls-menu');menu.id='tag-style-menu';menu.setAttribute('role','listbox');menu.setAttribute('aria-label','Kiểu nét');
+  styles.forEach(name=>{
+    const opt=node('button',undefined,'ls-opt'+(name===current?' cur':''));opt.type='button';opt.setAttribute('role','option');opt.setAttribute('aria-selected',String(name===current));
+    opt.title=name;opt.setAttribute('aria-label',name);opt.append(lineStyleView(name));
+    opt.onclick=()=>{closeStyleMenu();if(name!==current)pick(name);};
+    menu.append(opt);
+  });
+  document.body.append(menu);
+  const at=button.getBoundingClientRect(),box=menu.getBoundingClientRect();
+  menu.style.left=`${Math.max(8,Math.min(at.left,innerWidth-box.width-8))}px`;
+  menu.style.top=`${at.bottom+box.height+8>innerHeight?Math.max(8,at.top-box.height-2):at.bottom+2}px`;
+}
 const TREE_ICONS={
   eye:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>',
   eyeOff:'<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7c2.4 0 4.4.8 6 1.8M23 12s-4 7-11 7c-2.4 0-4.4-.8-6-1.8"/><path d="M3 3l18 18"/></svg>',
@@ -404,11 +461,12 @@ function paintTagTree(){
       color.onchange=()=>call('tm_color',JSON.stringify({id,color:color.value}));
       row.append(color);
       if(data.styles_supported){
-        const style=node('select',undefined,'tm-style');style.setAttribute('aria-label','Kiểu nét');style.title='Kiểu nét';
+        // Kiểu nét hiện bằng ký hiệu (không chữ); bấm mở danh sách ký hiệu của các kiểu trong model, tên kiểu ở gợi ý khi rê chuột.
+        const style=node('button',undefined,'tm-style');style.type='button';style.setAttribute('aria-haspopup','listbox');
+        style.title=item.line_style||'(mặc định)';style.setAttribute('aria-label',item.line_style?`Kiểu nét: ${item.line_style}`:'Kiểu nét');
+        style.append(lineStyleView(item.line_style));
         const styles=data.line_styles.includes(item.line_style)||!item.line_style?data.line_styles:[item.line_style,...data.line_styles];
-        if(!item.line_style)style.append(new Option('(mặc định)',''));
-        styles.forEach(name=>style.append(new Option(name,name)));style.value=item.line_style||'';
-        style.onchange=()=>{if(style.value)call('tm_line_style',JSON.stringify({id,style:style.value}));};
+        style.onclick=()=>{if($('tag-style-menu')){closeStyleMenu();return;}openStyleMenu(style,item.line_style||'',styles,name=>call('tm_line_style',JSON.stringify({id,style:name})));};
         row.append(style);
       }else row.append(node('span',undefined,'tm-pad-style'));
     }
@@ -488,9 +546,10 @@ function openTreeMenu(kind,item,x,y){
 }
 document.addEventListener('mousedown',e=>{
   const menu=$('tag-scene-menu');if(menu&&!menu.contains(e.target))closeTreeMenu();
+  const styleMenu=$('tag-style-menu');if(styleMenu&&!styleMenu.contains(e.target)&&!(e.target.closest&&e.target.closest('.tm-style')))closeStyleMenu();
   document.querySelectorAll('.tm-more').forEach(more=>{if(!more.contains(e.target)){const list=more.querySelector('.tm-more-list');if(list&&!list.hidden){list.hidden=true;more.querySelector('button').setAttribute('aria-expanded','false');}}});
 },true);
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeTreeMenu();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeTreeMenu();closeStyleMenu();}});
 // Ô tạo tag / thư mục (ở gốc hoặc trong một thư mục) phía trên danh sách. Enter tạo, Esc hủy. Ruby kiểm tra lại tên (tm_create).
 function openCreate(kind,folder){
   const box=$('tag-tree-create');if(!box)return;
@@ -657,7 +716,7 @@ function paintTagExcel(){
     cell(tr,box1);cell(tr,row.name);
     const swatch=node('span',undefined,'tm-swatch');if(row.color)swatch.style.background=row.color;
     const colorCell=node('span');colorCell.append(swatch,node('span',row.color||'—','muted'));cell(tr,colorCell);
-    cell(tr,row.style||'—');cell(tr,row.folder||'—');
+    const styleCell=lineStyleView(row.style);if(row.style)styleCell.title=row.style;cell(tr,styleCell);cell(tr,row.folder||'—');
     cell(tr,node('span',row.exists?'Đã có':'Mới',row.exists?'muted':''));
     tbody.append(tr);
   });

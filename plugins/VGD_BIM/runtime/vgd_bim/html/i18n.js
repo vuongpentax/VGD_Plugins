@@ -608,6 +608,7 @@ const VGD_I18N=(()=>{
   rule(/^Quá nhiều tag \(tối đa (\d+)\)\.$/,(m,n)=>`Too many tags (${n} at most).`);
   rule(/^Tên tag không hợp lệ: (.*)$/,(m,t)=>`The tag name is not valid: ${t}`);
   rule(/^Màu của tag "(.*)" không hợp lệ\.$/,(m,t)=>`The color of tag "${t}" is not valid.`);
+  rule(/^Kiểu nét: (.*)$/,(m,n)=>`Line style: ${n}`);
   rule(/^Kiểu nét của tag "(.*)" không hợp lệ\.$/,(m,t)=>`The line style of tag "${t}" is not valid.`);
   rule(/^Tên thư mục của tag "(.*)" không hợp lệ\.$/,(m,t)=>`The folder name of tag "${t}" is not valid.`);
   rule(/^thiếu tên tag, bỏ qua\.$/,()=>'missing tag name, skipped.');

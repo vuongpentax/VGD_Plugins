@@ -2,7 +2,9 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.41: đã kiểm tra tự động
+## Bản 1.1.1-beta.42: đã kiểm tra tự động
+
+Beta.42: ô kiểu nét của tag hiện ký hiệu (nét liền, gạch, chấm, gạch chấm, gạch hai chấm, gạch ba chấm) thay cho chữ; `dev/test_ui_images.cjs` kiểm tra ký hiệu từng kiểu (số đoạn nét), tên lạ hiện chữ, gợi ý là tên kiểu, bấm chọn gửi `tm_line_style`, chọn lại kiểu đang dùng không gửi gì, Esc đóng, bảng nhập Excel hiện ký hiệu; `test_ui_en.cjs` (nhãn "Kiểu nét: ..." đã dịch) và các bộ khác đạt. **Chưa xác minh trong SketchUp thật:** tên kiểu nét thật của model có được nhận đúng ký hiệu không (nhận theo từ khóa tiếng Anh), danh sách hiện đúng vị trí trong cửa sổ thật.
 
 Beta.39: nút Loại trừ tag luôn hiện trên thanh công cụ của Bảng khối lượng. Beta.40: con trỏ riêng cho công cụ hút / đổ tag. Beta.41: vẽ lại hai con trỏ theo mẫu con trỏ 5D AutoTag người dùng cung cấp (ống hút kèm vòng tròn, thùng sơn kèm giọt sơn, viền trắng), điểm nóng ở tâm vòng và giọt sơn.
 
