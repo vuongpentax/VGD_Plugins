@@ -49,6 +49,7 @@ Mỗi plugin có `plugins/<tên>/graphify-out/GRAPH_REPORT.md` (tóm tắt các 
 - Đồ thị chỉ để **định vị**. Trước khi sửa vẫn phải đọc đúng các file sẽ sửa; không dựa vào đồ thị để biết hành vi, quy ước hay quyết định (xem `CLAUDE.md` của plugin và `docs/`).
 - Công cụ `graphify` được cài sẵn bởi setup script của environment VGD_Plugins. Thiếu thì cài bằng `uv tool install graphifyy`. File `graph.json` và `GRAPH_REPORT.md` vẫn đọc được bình thường không cần công cụ.
 - Đồ thị đúng tại thời điểm tạo, không tự cập nhật. **Sau khi sửa code của một plugin** (thêm, xóa hoặc đổi tên hàm, lớp, file), chạy `graphify update .` trong thư mục plugin đó rồi commit `graph.json` và `GRAPH_REPORT.md` cùng commit sửa code hoặc ngay sau đó (mất khoảng 1 đến 4 phút). Sửa nhỏ không đổi cấu trúc thì không cần.
+- Kiểm tra tự động: `ruby tests/check_graphs.rb` (từ gốc repo) so lần commit đồ thị với code. File code thêm, xóa, đổi tên sau lần đó thì báo đồ thị CŨ (thoát mã 1): phải chạy `graphify update .` trong plugin rồi commit lại. File chỉ sửa nội dung thì chỉ nhắc. Chạy lệnh này trước khi commit cuối của một phiên có sửa code plugin.
 - Nút trùng tên lớp có sẵn của Ruby / SketchUp (`Dir`, `Group`, `SelectionObserver`...) bị gộp lại, không coi là liên kết kiến trúc. Hai số liệu "cầu nối" của các nút đó trong báo cáo không đáng tin.
 - Không commit `cache/`, `graph.html`, `manifest.json` (dựng lại được); dùng `git add -f` cho hai file cần commit vì thư mục có thể bị loại trừ cục bộ.
 
