@@ -1480,14 +1480,25 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(!(await calls('image_set')).length,'clipboard không có ảnh: báo rõ, không lưu gì');
   await fakeClipboard('denied');
   await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
-  await page.waitForFunction(()=>document.querySelector('#message').innerText.includes('Ctrl+V'));
-  ok(!(await calls('image_set')).length,'không đọc được clipboard bằng nút (từ chối quyền): hướng dẫn nhấn Ctrl+V, không lưu gì');
-  ok((await page.locator('#message').innerText()).includes('NotAllowedError'),'từ chối quyền: thông báo ghi rõ lỗi của trình duyệt (NotAllowedError)');
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_clipboard'));
+  let clip=await json('image_clipboard');
+  ok(clip&&clip.pid===901&&!('kind' in clip)&&!(await calls('image_set')).length,'web từ chối quyền đọc clipboard: nhờ Ruby đọc clipboard của Windows (không im lặng), chưa lưu gì');
+  ok((await page.locator('#message').innerText()).includes('Đang đọc ảnh trong clipboard'),'có báo đang đọc clipboard');
   await fakeClipboard('missing');
+  await locCell(2).hover();await clear();await pasteBtn(locCell(2)).click();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_clipboard'));
+  clip=await json('image_clipboard');
+  ok(clip&&clip.pid===902&&clip.kind==='location','cửa sổ không có API clipboard: nhờ Ruby đọc, đúng món và đúng loại ảnh (vị trí)');
+  await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{value:{read:()=>new Promise(()=>{})},configurable:true});});
   await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
-  await page.waitForFunction(()=>document.querySelector('#message').innerText.includes('Ctrl+V'));
-  ok(!(await calls('image_set')).length,'cửa sổ không có API clipboard: hướng dẫn nhấn Ctrl+V');
-  ok((await page.locator('#message').innerText()).includes('không có chức năng đọc clipboard'),'không có API clipboard: thông báo nói rõ nguyên nhân');
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_clipboard'),null,{timeout:6000});
+  ok(true,'API clipboard không bao giờ trả lời (chờ quyền): sau ít giây vẫn nhờ Ruby đọc, nút không im lặng');
+  // Ruby gửi lại PNG đã đọc: giao diện thu nhỏ và lưu như ảnh dán thường
+  await clear();
+  await receive('clipboard_image',{pid:902,kind:'location',png:'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='});
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_set'));
+  setNow=await json('image_set');
+  ok(setNow&&setNow.pid===902&&setNow.kind==='location'&&typeof setNow.full==='string'&&setNow.full.length>20,'Ruby gửi ảnh clipboard: lưu thành ảnh vị trí của đúng món');
   // Ctrl+V: ô ảnh vị trí vừa bấm là nơi nhận; bấm chỗ khác thì về món đang chọn
   const firePaste=()=>page.evaluate(async()=>{
     const blob=await (await fetch('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')).blob();

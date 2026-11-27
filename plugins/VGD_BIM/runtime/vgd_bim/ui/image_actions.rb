@@ -22,6 +22,7 @@ module VGD
           @dialog.add_action_callback('image_item_save') { |_ctx, payload| safely { image_item_save(JSON.parse(payload)) } }
           @dialog.add_action_callback('images_cancel') { |_ctx| safely { @capture[:cancel] = true if @capture } }
           @dialog.add_action_callback('image_set') { |_ctx, payload| safely { image_set(JSON.parse(payload)) } }
+          @dialog.add_action_callback('image_clipboard') { |_ctx, payload| safely { image_clipboard(JSON.parse(payload)) } }
           @dialog.add_action_callback('image_delete') { |_ctx, pid| safely { image_delete(pid) } }
           @dialog.add_action_callback('image_location_delete') { |_ctx, pid| safely { image_delete(pid, :location) } }
           Images::EXTRA_KINDS.each { |kind| @dialog.add_action_callback("image_#{kind}_delete") { |_ctx, pid| safely { image_delete(pid, kind) } } }
@@ -235,6 +236,18 @@ module VGD
           Images.write(@model, pid, Images.decode_png(payload['full']), kind)
           emit('images_changed', {items: [image_change(pid, true, Images.info(@model, pid, Images.dir(@model), kind)[:stamp], kind)]})
           emit('message', {text: 'Đã lưu ảnh cho đối tượng.'})
+        end
+
+        # Nút dán ảnh khi cửa sổ web không đọc được clipboard: Ruby đọc ảnh trong clipboard (Windows, ClipboardImage) rồi gửi PNG cho giao diện
+        # (sự kiện clipboard_image); giao diện thu nhỏ và lưu như ảnh dán thường (image_set). payload: {'pid', 'kind'}.
+        def image_clipboard(payload)
+          check_model!
+          pid = known_pid!(payload['pid'])
+          kind = capture_kind!(payload['kind'])
+          png = ClipboardImage.read_png
+          emit('clipboard_image', {pid: pid, kind: kind.to_s, png: Base64.strict_encode64(png)})
+        rescue ClipboardImage::Empty => error
+          emit('message', {error: error.message})
         end
 
         # Một mục của sự kiện images_changed: url là đường dẫn file ảnh gốc (kèm mốc thời gian để làm mới), nil khi không còn ảnh.

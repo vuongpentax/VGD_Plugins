@@ -1,4 +1,4 @@
-# VGD BIM 1.1.1-beta.45
+# VGD BIM 1.1.1-beta.46
 
 Bản thử của 1.1.1 (bản ổn định gần nhất là 1.1.0). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -62,7 +62,7 @@ Cửa sổ có 5 tab (nút **Preset** cạnh nút Sáng/Tối ở thanh đầu d
 
 **Cao độ sàn phòng theo tầng** (từ 1.1.1-beta.26): phòng không nhập cao độ nữa, cao độ sàn lấy theo cao độ của tầng; phòng chỉ nhập chiều cao. Phòng hạ nền khác so với tầng: bật ô **Hạ nền khác** rồi nhập cao độ sàn tay. Đổi cao độ tầng thì các phòng theo tầng tự đổi; khối 3D đã dựng cần bấm **Dựng lại khối**. Tạo phòng từ mặt: nếu mặt sát cao độ một tầng thì gán tầng đó, không thì nhập tay. Phòng cũ giữ đúng số liệu cũ.
 
-**Nút dán ảnh từ clipboard báo rõ lỗi** (từ 1.1.1-beta.16): khi không đọc được clipboard bằng nút, thông báo ghi kèm lỗi của trình duyệt (ví dụ NotAllowedError) để biết nguyên nhân. Ctrl+V sau khi chọn ô ảnh vẫn dùng được như trước. Nguyên nhân gốc chưa xác định; cần xem thông báo trong SketchUp.
+**Nút dán ảnh từ clipboard** (sửa ở beta.46, Windows): cửa sổ SketchUp có thể chặn hoặc không trả lời khi đọc clipboard, nên nút bấm không có phản hồi. Nay nút thử đọc bằng cửa sổ web trong tối đa 1,5 giây; không được thì báo "Đang đọc ảnh trong clipboard…" và nhờ Ruby đọc ảnh bằng PowerShell có sẵn của Windows (chỉ chạy khi bấm nút, chỉ đọc clipboard, ảnh tối đa 20 MB, quá 10 giây thì dừng); ảnh được thu nhỏ vừa cỡ ảnh của preset và lưu như ảnh dán thường. Clipboard không có ảnh thì báo rõ. macOS chưa hỗ trợ nút này (dùng Ctrl+V). Ctrl+V sau khi chọn ô ảnh vẫn dùng được như trước.
 
 **Giữ vị trí cuộn của bảng** (từ 1.1.1-beta.15): sửa tên, cập nhật ảnh hay sửa một ô không còn làm bảng nhảy lên đầu; bạn vẫn ở đúng dòng đang làm. Chưa kiểm thử trong SketchUp thật.
 

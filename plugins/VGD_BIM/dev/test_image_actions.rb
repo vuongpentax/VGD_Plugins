@@ -51,7 +51,7 @@ module VGD; module BIM; def self.log(m); end
   module UI; end
 end; end
 ROOT = File.expand_path('../runtime/vgd_bim', __dir__)
-%w[core/storage core/settings core/images core/row_order core/preset core/photo_settings core/material_library core/check_rules core/snapshots core/bridge core/levels core/rooms core/table_report core/measure_probe].each { |f| require File.join(ROOT, f) }
+%w[core/storage core/settings core/images core/clipboard_image core/row_order core/preset core/photo_settings core/material_library core/check_rules core/snapshots core/bridge core/levels core/rooms core/table_report core/measure_probe].each { |f| require File.join(ROOT, f) }
 module VGD; module BIM; module UI
   module Capture
     ISO_SIDES = %w[right left].freeze
@@ -568,6 +568,26 @@ d.safely { d.image_set('pid' => 901, 'kind' => 'location', 'full' => [PNG].pack(
 ok('dán ảnh vị trí: ghi vào file _loc và báo ảnh đổi loại location', File.exist?(I.path($model, 901, :location)) && events(d, 'images_changed').last['items'][0]['kind'] == 'location' && events(d, 'images_changed').last['items'][0]['url'].include?('_loc.png'))
 d.safely { d.image_delete(901, :location) }
 ok('xóa ảnh vị trí: chỉ xóa file _loc, báo ảnh đổi loại location', !File.exist?(I.path($model, 901, :location)) && events(d, 'images_changed').last['items'] == [{'pid' => 901, 'kind' => 'location', 'has' => false, 'stamp' => 0, 'url' => nil}])
+# ---- Nút dán: Ruby đọc clipboard khi cửa sổ web không đọc được ----
+d = make_dialog
+clip_bytes = PNG
+real_read_png = VGD::BIM::ClipboardImage.method(:read_png)
+VGD::BIM::ClipboardImage.define_singleton_method(:read_png) { |**| clip_bytes }
+d.safely { d.image_clipboard('pid' => 901, 'kind' => 'location') }
+sent = events(d, 'clipboard_image').last
+ok('nút dán qua Ruby: gửi PNG của clipboard về giao diện, kèm đúng món và loại ảnh', sent && sent['pid'] == 901 && sent['kind'] == 'location' && Base64.decode64(sent['png']) == PNG)
+ok('nút dán qua Ruby: chưa lưu gì (giao diện thu nhỏ rồi lưu bằng image_set)', !File.exist?(I.path($model, 901, :location)))
+d = make_dialog
+d.safely { d.image_clipboard('pid' => 5555) }
+ok('nút dán: mã không có trong bảng bị từ chối, không đọc clipboard', error_of(d).to_s.include?('không còn trong bảng') && events(d, 'clipboard_image').empty?)
+d.safely { d.image_clipboard('pid' => 901, 'kind' => 'khac') }
+ok('nút dán: loại ảnh lạ bị từ chối', error_of(d).to_s.include?('Loại ảnh'))
+VGD::BIM::ClipboardImage.define_singleton_method(:read_png) { |**| raise VGD::BIM::ClipboardImage::Empty, 'Trong clipboard chưa có ảnh. Hãy chụp màn hình hoặc copy ảnh rồi bấm lại.' }
+d = make_dialog
+d.safely { d.image_clipboard('pid' => 901) }
+ok('clipboard không có ảnh: báo cho người dùng bằng thông báo lỗi', error_of(d).to_s.include?('chưa có ảnh') && events(d, 'clipboard_image').empty?)
+VGD::BIM::ClipboardImage.define_singleton_method(:read_png) { |**kw| real_read_png.call(**kw) }
+
 File.delete(html_path) if File.file?(html_path)
 
 puts $fails.zero? ? 'Done' : "#{$fails} lỗi"

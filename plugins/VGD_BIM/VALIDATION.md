@@ -2,7 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.45: đã kiểm tra tự động
+## Bản 1.1.1-beta.46: đã kiểm tra tự động
+
+Beta.46: sửa nút dán ảnh từ clipboard không phản hồi (Ctrl+V vẫn tốt). Nút thử API clipboard của cửa sổ web tối đa 1,5 giây (chờ quyền mãi cũng không treo); lỗi, không có API hoặc không trả lời thì Ruby đọc ảnh clipboard bằng PowerShell (`core/clipboard_image.rb`, lệnh `image_clipboard`), gửi PNG về giao diện (sự kiện `clipboard_image`) để thu nhỏ và lưu bằng `image_set`.
+
+- `dev/test_clipboard_image.rb` (mới, runner giả, KHÔNG chạy PowerShell thật): trả đúng bytes PNG, xóa file tạm, clipboard không có ảnh, PowerShell lỗi (chỉ dòng lỗi đầu), không có file, không phải PNG, quá lớn, không phải Windows thì báo dùng Ctrl+V; đường dẫn file đích đi bằng biến môi trường, lệnh chỉ đọc clipboard. `dev/test_image_actions.rb`: `image_clipboard` gửi đúng món / loại ảnh, từ chối mã lạ / loại lạ, báo lỗi khi không có ảnh, chưa lưu gì. `dev/test_ui_images.cjs`: web từ chối / không có API / không trả lời (chờ quá giờ) đều chuyển sang nhờ Ruby và có thông báo; Ruby gửi ảnh thì lưu đúng món, đúng loại ảnh. `ruby dev/run_tests.rb`, `test_ui.cjs`, `test_ui_en.cjs`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** việc chạy `powershell.exe` thật từ SketchUp (có thể hiện cửa sổ console chớp nhanh; phần mềm diệt virus có thể cảnh báo); `Clipboard.GetImage` lấy được ảnh chụp bằng Win+Shift+S và ảnh copy từ trình duyệt / Paint (ảnh có nền trong suốt có thể mất độ trong); thời gian chờ lần đầu; macOS chưa hỗ trợ.
+
+### Bản 1.1.1-beta.45 (trước đó)
 
 Beta.45: bỏ ô chọn độ cao hàng (Hàng: Vừa / Gọn / Thoáng) khỏi ngăn Chọn cột (đã có Ctrl + lăn chuột); sửa nút Xóa sheet bị chữ đỏ trên nền đỏ.
 

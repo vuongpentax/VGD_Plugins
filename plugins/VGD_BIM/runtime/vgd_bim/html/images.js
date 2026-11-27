@@ -141,18 +141,33 @@ document.addEventListener('paste',e=>{
   guarded(sendImage(target.pid,item.getAsFile(),target.kind));
 });
 // Nút dán trên ô ảnh: đọc ảnh đang có trong clipboard (chụp màn hình, hoặc copy ảnh) bằng API clipboard của cửa sổ rồi lưu cho món.
-// Cửa sổ không cho đọc clipboard bằng nút (hoặc người dùng từ chối quyền) thì nhớ ô này làm nơi nhận và hướng dẫn nhấn Ctrl+V.
+// Cửa sổ SketchUp có thể chặn API này (lỗi, không có, hoặc không trả lời): khi đó nhờ Ruby đọc clipboard của Windows (lệnh image_clipboard);
+// Ruby gửi lại PNG qua sự kiện clipboard_image. Nhớ ô này làm nơi nhận để Ctrl+V cũng dán vào đúng ô.
+const CLIPBOARD_WAIT_MS=1500; // API clipboard của cửa sổ có thể chờ cấp quyền mãi mà không trả lời
+async function readWebClipboard(){
+  if(!navigator.clipboard||typeof navigator.clipboard.read!=='function')return null;
+  try{
+    return await Promise.race([navigator.clipboard.read(),new Promise((_,stop)=>setTimeout(()=>stop(Error('timeout')),CLIPBOARD_WAIT_MS))]);
+  }catch(error){return null;}
+}
 async function pasteImageFromClipboard(pid,kind){
   imagesState.last={pid,kind};
-  const hint='Không đọc được clipboard bằng nút. Hãy bấm vào ô ảnh rồi nhấn Ctrl+V.';
-  if(!navigator.clipboard||typeof navigator.clipboard.read!=='function')throw Error(`${hint} Chi tiết: cửa sổ này không có chức năng đọc clipboard (navigator.clipboard.read).`);
-  let items;
-  try{items=await navigator.clipboard.read();}catch(error){throw Error(`${hint} Chi tiết: ${error&&error.name?error.name:'lỗi'}${error&&error.message?' - '+error.message:''}.`);}
+  const items=await readWebClipboard();
+  if(items===null){
+    message('Đang đọc ảnh trong clipboard…');
+    call('image_clipboard',JSON.stringify(kind&&kind!=='full'?{pid,kind}:{pid}));
+    return;
+  }
   for(const item of items){
     const type=item.types.find(t=>/^image\//.test(t));
     if(type)return sendImage(pid,await item.getType(type),kind);
   }
   throw Error('Trong clipboard chưa có ảnh. Hãy chụp màn hình hoặc copy ảnh rồi bấm lại.');
+}
+// Ruby đã đọc ảnh trong clipboard thay cửa sổ: lưu như ảnh dán thường (thu nhỏ theo thiết lập của đúng loại ảnh).
+function receiveClipboardImage(data){
+  const bytes=Uint8Array.from(atob(data.png||''),c=>c.charCodeAt(0));
+  guarded(sendImage(data.pid,new Blob([bytes],{type:'image/png'}),data.kind||'full'));
 }
 
 // ---- Chụp ảnh: chỉ khi người dùng bấm ----
