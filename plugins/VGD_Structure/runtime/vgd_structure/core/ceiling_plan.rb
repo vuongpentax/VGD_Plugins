@@ -42,9 +42,16 @@ module VGD
           Plates.free_item(ref, pick['free'], thickness: level['ceiling_thickness'], z_bottom: z_bottom, z_top: z_top)
         end
         items.concat(free_ceilings)
-        unless (level['ceiling_layers'] || []).empty? # lớp cấu tạo trần, từ mặt dưới (nhìn thấy) lên
-          layers = LayerList.for_plan(level['ceiling_layers'])
-          items.each { |i| i[:layers] = layers }
+        # lớp cấu tạo trần, từ mặt dưới (nhìn thấy) lên; ô thuộc phòng có lớp trần riêng thì dùng lớp của phòng và dày theo tổng lớp đó (H8)
+        rooms = RoomPlan.by_cell(level)
+        items.each do |i|
+          own = (rooms[i[:ref]] || [nil, {}])[1]['ceiling_layers']
+          list = own || level['ceiling_layers']
+          next if list.nil? || list.empty?
+          i[:layers] = LayerList.for_plan(list)
+          next unless own
+          i[:thickness] = LayerList.total(own)
+          i[:z_top] = (i[:z_bottom] + i[:thickness]).round(1)
         end
         issues.concat(Plates.overlap_issues(items, 'Trần'))
         solids = column_plan[:items].map { |c| [ColumnPlan.polygon(c), "cột #{c[:ref]}"] } + walls.values.map { |w| [Plates.ring_of(w), "tường #{w[:ref]}"] }

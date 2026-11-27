@@ -1,7 +1,7 @@
 module VGD
   module Structure
     # Đề xuất bán tự động (đã chốt 17/11/2026): với một tầng, chọn sẵn cột ở mọi giao điểm, dầm ở mọi nhịp, tường ở các nhịp BIÊN, sàn và trần ở mọi ô.
-    # Tầng trên cùng chỉ đề xuất sàn. KHÔNG phá dữ liệu: chỉ THÊM phần còn thiếu, giữ nguyên lựa chọn đã có (kể cả loại và kiểu đặt riêng).
+    # Tầng trên cùng chỉ đề xuất sàn; tầng móng (có `footing`) chỉ đề xuất cột và dầm (cổ cột, giằng móng). KHÔNG phá dữ liệu: chỉ THÊM phần còn thiếu, giữ nguyên lựa chọn đã có (kể cả loại và kiểu đặt riêng).
     # Logic thuần; người dùng bỏ hoặc thêm từng cái ở các tab sau đó rồi mới dựng.
     module Proposal
       KINDS = %w[columns beams walls slabs ceilings].freeze
@@ -18,7 +18,8 @@ module VGD
         last = out.last['id']
         level_ids.uniq.each do |id|
           level = Levels.find(out, id)
-          kinds = id == last ? %w[slabs] : KINDS
+          # Tầng móng (có khai báo `footing`): chỉ cổ cột và giằng móng (dầm), không tường, sàn, trần.
+          kinds = if id == last then %w[slabs] elsif level['footing'] then %w[columns beams] else KINDS end
           kinds.each do |kind|
             picks = (level['picks'][kind] ||= {})
             refs[kind].each do |ref|

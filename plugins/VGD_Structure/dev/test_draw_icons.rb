@@ -4,7 +4,7 @@
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 ICONS = File.expand_path('../runtime/vgd_structure/assets/icons', __dir__)
-TOOLS = %w[column beam wall door window slab ceiling stair]
+TOOLS = %w[column beam wall door window slab ceiling stair footing]
 LOADER = File.read(File.expand_path('../runtime/vgd_structure/loader.rb', __dir__), encoding: 'UTF-8')
 TOOLS.each do |tool|
   file = File.join(ICONS, "draw_#{tool}.svg")
@@ -19,6 +19,6 @@ TOOLS.each do |tool|
 end
 ok('loader dùng SVG cho cả hai cỡ (không còn PNG)', LOADER.include?("draw_\#{tool}.svg") && !LOADER.include?('.png'))
 keys = LOADER.scan(/\['(\w+)', '[^']*'\]/).flatten & TOOLS
-ok('loader đăng ký đủ 7 nút vẽ, cùng khóa với bộ icon', keys.sort == TOOLS.sort)
+ok('loader đăng ký đủ 9 nút vẽ, cùng khóa với bộ icon', keys.sort == TOOLS.sort)
 puts($fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

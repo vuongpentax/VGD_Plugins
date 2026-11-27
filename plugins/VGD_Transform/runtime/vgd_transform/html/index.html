@@ -60,13 +60,18 @@
 </section>
 
 <section class="tool" data-tool="rotate" hidden>
+  <div class="box" data-panel="rotate_abs" data-kind="absolute" data-note="Tuyệt đối: góc hiện tại của món theo trục thế giới (xoay X, rồi Y, rồi Z). Gõ 0 hoặc bấm chuột phải ▲▼ để quay về hướng gốc (trục riêng song song trục thế giới). Sửa ô rồi nhấn Enter; ô không sửa giữ góc.">
+    <h3>Tuyệt đối (°) · World</h3>
+    <label class="row">X <input id="rotate_abs-x" type="text" inputmode="decimal" data-spin="1" data-default="0"></label>
+    <label class="row">Y <input id="rotate_abs-y" type="text" inputmode="decimal" data-spin="1" data-default="0"></label>
+    <label class="row">Z <input id="rotate_abs-z" type="text" inputmode="decimal" data-spin="1" data-default="0"></label>
+  </div>
   <div class="box" data-panel="rotate" data-kind="offset" data-note="Xoay thêm (độ) quanh X, rồi Y, rồi Z, theo trục và tâm đã chọn. Nhấn Enter, xong ô về 0.">
     <h3 class="coord-title" data-title="Xoay (°)">Xoay (°) · World</h3>
     <label class="row">X <input id="rotate-x" type="text" inputmode="decimal" data-spin="1" data-default="" placeholder="0"></label>
     <label class="row">Y <input id="rotate-y" type="text" inputmode="decimal" data-spin="1" data-default="" placeholder="0"></label>
     <label class="row">Z <input id="rotate-z" type="text" inputmode="decimal" data-spin="1" data-default="" placeholder="0"></label>
   </div>
-  <div class="box empty" aria-hidden="true"></div>
 </section>
 
 <section class="tool" data-tool="scale" hidden>

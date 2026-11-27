@@ -99,10 +99,15 @@
       <table class="axes" id="opening-types-table"></table>
       <button type="button" class="add" id="add-opening-type">+ Thêm loại cửa</button>
     </fieldset>
-    <fieldset>
+    <fieldset class="levels-fieldset">
       <legend>Tầng (mỗi tầng riêng, cao độ tuyệt đối theo trục Z của model)</legend>
-      <table class="axes" id="levels-table"></table>
+      <div class="levels-scroll"><table class="axes" id="levels-table"></table></div>
       <div id="level-layers-editor" class="layers-editor" hidden></div>
+      <div id="level-footing-editor" class="layers-editor" hidden></div>
+      <div id="level-roof-editor" class="layers-editor" hidden></div>
+      <div id="level-holes-editor" class="layers-editor" hidden></div>
+      <div id="level-glass-editor" class="layers-editor" hidden></div>
+      <div id="level-rooms-editor" class="layers-editor" hidden></div>
       <button type="button" class="add" id="add-level">+ Thêm tầng</button>
       <p class="muted small">Cao độ là mặt trên sàn của tầng. Cột tầng này chạy từ mặt sàn lên đáy sàn tầng kế trên. Tầng trên cùng (đỉnh nhà, mái) chỉ có sàn, không có cột.</p>
     </fieldset>
@@ -410,6 +415,7 @@
 <script src="plan_section.js"></script>
 <script src="plan_browser.js"></script>
 <script src="plan_view.js"></script>
+<script src="marks2d.js"></script>
 <script src="section_view.js"></script>
 <script src="elevation_view.js"></script>
 <script src="app.js"></script>

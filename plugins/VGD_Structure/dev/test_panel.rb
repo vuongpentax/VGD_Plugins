@@ -21,7 +21,7 @@ module UI
 end
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
 module VGD; module Structure; VERSION = '9.9.9'; end; end
-%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/stair_types core/stair_plan core/stair_place core/layer_list core/levels core/column_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/slab_plan core/ceiling_plan core/proposal core/checker core/model_edit core/sketchup_import core/state core/preview model_sync edit_sync su_scan model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder opening_builder plate_builder stair_builder all_builder su_tools panel].each { |f| require File.join(ROOT, f) }
+%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/stair_types core/stair_plan core/stair_place core/layer_list core/levels core/column_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/room_plan core/footing_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/model_edit core/sketchup_import core/state core/preview model_sync edit_sync su_scan model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder opening_builder plate_builder stair_builder footing_builder all_builder su_tools panel].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 $model = Sketchup::Model.new
 panel = S::Panel.new
@@ -247,6 +247,13 @@ call(dlg, 'build_all', {'state' => full_state, 'levels' => ['sl_00000001', 'sl_0
 ba = last_event(dlg, 'all_built')
 names = $model.entities.grep(Sketchup::Group).map(&:name)
 ok('dựng tất cả: thông báo một bước hoàn tác, đủ nhóm cột / dầm / tường / sàn / trần tầng 1, danh sách đã dựng', ba['message'].include?('một bước hoàn tác') && ba['message'].include?('12 cột') && ba['drawn']['columns'] == ['sl_00000001'] && ba['drawn']['slabs'].sort == ['sl_00000001'] && ['Cột - Tầng 1', 'Dầm - Tầng 1', 'Tường - Tầng 1', 'Sàn - Tầng 1', 'Trần - Tầng 1'].all? { |n| names.include?(n) })
+# Hồi quy: dựng tất cả cho tầng có móng (kind không nằm trong picks) từng gây NoMethodError khi đếm số đối tượng.
+foot_state = JSON.parse(JSON.generate(full_state))
+foot_state['levels'][0]['footing'] = {'l' => 1200, 'w' => 1000, 'h' => 400}
+call(dlg, 'build_all', {'state' => foot_state, 'levels' => ['sl_00000001'], 'kinds' => %w[footings]})
+fb = last_event(dlg, 'all_built')
+ok('dựng tất cả loại móng (kind không thuộc picks): đếm không lỗi, báo đã dựng móng', fb && fb['message'].include?('móng'))
+$model.entities.grep(Sketchup::Group).select { |g| g.get_attribute('VGD_STRUCT', 'kind') == 'footings' }.each(&:erase!) # dọn để các phần sau đếm đúng
 call(dlg, 'build_all', {'state' => full_state, 'levels' => []})
 ok('dựng tất cả không chọn tầng: báo lỗi', last_event(dlg, 'message')['error'] == true)
 call(dlg, 'build_all', {'state' => 'x', 'levels' => ['sl_00000001']})

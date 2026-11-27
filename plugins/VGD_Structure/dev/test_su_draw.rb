@@ -27,7 +27,7 @@ module UI
 end
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
 module VGD; module Structure; VERSION = '9.9.9'; end; end
-%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/stair_types core/stair_plan core/stair_place core/layer_list core/levels core/column_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/slab_plan core/ceiling_plan core/proposal core/checker core/model_edit core/sketchup_import core/state core/preview model_sync edit_sync su_scan model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder opening_builder plate_builder stair_builder all_builder su_tools panel].each { |f| require File.join(ROOT, f) }
+%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/stair_types core/stair_plan core/stair_place core/layer_list core/levels core/column_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/room_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/model_edit core/sketchup_import core/state core/preview model_sync edit_sync su_scan model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder opening_builder plate_builder stair_builder all_builder su_tools panel].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 MS = S::ModelSync
 D = S::Schema::DICTIONARY
@@ -179,7 +179,7 @@ p5.start_tool('door')
 ok('cửa sổ đã sẵn sàng: gửi ngay start_tool door', last_ev(d5, 'start_tool') == {'tool' => 'door'} && count_ev(d5, 'start_tool') == 2)
 call(d5, 'ready')
 ok('ready lần nữa không gửi lại công cụ đã giao', count_ev(d5, 'start_tool') == 2)
-ok('công cụ không hợp lệ bị từ chối', error_of { p5.start_tool('blob') } && error_of { p5.start_tool("wall'); alert(1);//") } && S::Panel::DRAW_TOOLS == %w[column beam wall door window slab ceiling stair])
+ok('công cụ không hợp lệ bị từ chối', error_of { p5.start_tool('blob') } && error_of { p5.start_tool("wall'); alert(1);//") } && S::Panel::DRAW_TOOLS == %w[column beam wall door window slab ceiling stair footing])
 # ---- Sàn kiểu X-ray: mặt rất mờ, viền NÉT ĐỨT (mặt trên, đáy), không vẽ cạnh đứng ----
 xbox = {'t' => 'box', 'pts' => [[0, 0], [2000, 0], [2000, 200], [0, 200]], 'z0' => 0, 'z1' => 120, 'xray' => true}
 call(dlg, 'su_ghost', {'z' => 3600, 'items' => [xbox]})

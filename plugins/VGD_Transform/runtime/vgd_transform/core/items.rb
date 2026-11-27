@@ -48,6 +48,22 @@ module VGD
         end
       end
 
+      # Ba góc (độ) quanh X, rồi Y, rồi Z (trục thế giới) tạo ra hướng của món: R = Rz * Ry * Rx, cột của R là ba trục riêng (axes).
+      # Cùng quy ước với công cụ Xoay (xoay X, rồi Y, rồi Z), nên xoay (30, 20, 40) rồi đọc lại ra đúng (30, 20, 40).
+      # Quanh Y gần ±90° (gimbal lock) góc X và Z không tách được: lấy X = 0 và dồn hết vào Z.
+      def euler_degrees(axes)
+        sin_beta = [[-axes[0][2], 1.0].min, -1.0].max
+        beta = Math.asin(sin_beta)
+        if Math.cos(beta).abs > 1e-6
+          alpha = Math.atan2(axes[1][2], axes[2][2])
+          gamma = Math.atan2(axes[0][1], axes[0][0])
+        else
+          alpha = 0.0
+          gamma = Math.atan2(-axes[1][0], axes[1][1])
+        end
+        [alpha, beta, gamma].map { |radians| radians * 180.0 / Math::PI }
+      end
+
       # Giá trị chung của mọi món theo từng trục (nil nếu các món khác nhau trên trục đó). Dùng để hiện ô Tuyệt đối.
       def common(items, tolerance)
         return [nil, nil, nil] if items.empty?

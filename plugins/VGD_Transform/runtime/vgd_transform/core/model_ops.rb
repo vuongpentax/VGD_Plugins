@@ -92,7 +92,7 @@ module VGD
                   max: %i[x y z].map { |a| corners.map(&a).max * Units::MM_PER_INCH }}
         local = %i[x y z].map { |a| box.max.send(a) - box.min.send(a) }
         {index: index, name: name_of(entity), entity: entity, locked: ancestors_locked || entity.locked? ? true : false,
-         origin: m[12, 3].map { |v| v * Units::MM_PER_INCH }, axes: axes, scale: scale, bounds: bounds,
+         origin: m[12, 3].map { |v| v * Units::MM_PER_INCH }, axes: axes, euler: Items.euler_degrees(axes), scale: scale, bounds: bounds,
          size: local.zip(scale).map { |l, s| l * s * Units::MM_PER_INCH }}
       end
 
@@ -105,16 +105,12 @@ module VGD
       # moves: [{index:, steps:}] từ Plan.build; items: danh sách lấy lúc bấm (items(model)).
       # Một thao tác hoàn tác cho cả đợt; mỗi món đặt biến đổi đúng một lần rồi kiểm tra ma trận và điểm gốc; sai thì hủy cả đợt.
       # transparent: gộp vào thao tác trước đó (kéo trực tiếp: nhiều lần cập nhật thành một bước Ctrl+Z).
-      # restore: {entity => biến đổi lúc bắt đầu kéo}; đặt lại trước khi áp dụng, để mỗi lần cập nhật tính từ trạng thái ban đầu.
+      # restore: {entity => biến đổi lúc bắt đầu kéo}; mỗi lần cập nhật tính từ trạng thái ban đầu đó (ghi biến đổi mới một lần, không ghi lại
+      # trạng thái đầu trước); món không còn trong danh sách bước thì được đưa về trạng thái đầu.
       def apply(model, moves, items, transparent: false, restore: nil)
-        by_index = items.to_h { |item| [item[:index], item] }
         model.start_operation(OPERATION_NAME, true, false, transparent)
         begin
-          restore&.each { |entity, transformation| entity.transformation = transformation if entity.valid? }
-          moves.each do |move|
-            item = by_index.fetch(move[:index]) { raise ArgumentError, 'Danh sách món đã thay đổi. Hãy chọn lại món rồi thử lại.' }
-            apply_move(model, item, move[:steps])
-          end
+          apply_moves(model, moves, items, restore)
           model.commit_operation
           moves.size
         rescue StandardError
@@ -123,21 +119,60 @@ module VGD
         end
       end
 
+      # Ghi biến đổi của các món (không mở / đóng thao tác): dùng trong apply và trong lúc kéo trực tiếp.
+      # Ngữ cảnh (group cha đang mở) và trạng thái khóa của nó đọc MỘT lần cho cả đợt (mỗi lần đọc là một lời gọi API của SketchUp).
+      # check: kiểm tra khóa từng món và kiểm lại ma trận / điểm gốc sau khi ghi; nhịp kéo trực tiếp bỏ qua, nhịp cuối thì kiểm.
+      def apply_moves(model, moves, items, restore, check: true)
+        by_index = items.to_h { |item| [item[:index], item] }
+        ctx = context(model)
+        blocked = locked_context?(model)
+        moved = {}
+        moves.each do |move|
+          item = by_index.fetch(move[:index]) { raise ArgumentError, 'Danh sách món đã thay đổi. Hãy chọn lại món rồi thử lại.' }
+          apply_move(model, item, move[:steps], restore && restore[item[:entity]], ctx: ctx, blocked: blocked, check: check)
+          moved[item[:entity]] = true
+        end
+        restore&.each { |entity, transformation| entity.transformation = transformation if entity.valid? && !moved[entity] }
+      end
+
+      # Kéo trực tiếp: một thao tác MỞ SUỐT lần kéo (begin_live), mỗi nhịp chỉ ghi biến đổi (apply_live), thả nút thì đóng (finish_live).
+      # Không mở / đóng thao tác mỗi nhịp: mỗi lần đóng làm SketchUp ghi bước hoàn tác và báo mọi observer của mọi plugin, rất nặng khi kéo.
+      def begin_live(model)
+        model.start_operation(OPERATION_NAME, false)
+      end
+
+      # check: true ở nhịp cuối (lúc thả nút) để kiểm lại như áp dụng thường; các nhịp giữa bỏ qua cho nhẹ.
+      def apply_live(model, moves, items, originals, check: false)
+        apply_moves(model, moves, items, originals, check: check)
+      end
+
+      # Đưa các món về biến đổi lúc bắt đầu kéo (giá trị kéo trở về 0), trong thao tác đang mở.
+      def restore_entities(originals)
+        originals.each { |entity, transformation| entity.transformation = transformation if entity.valid? }
+      end
+
+      # changed: còn thay đổi so với lúc bắt đầu kéo thì đóng (một bước Ctrl+Z), không thì hủy để không để lại bước trống.
+      def finish_live(model, changed)
+        changed ? model.commit_operation : model.abort_operation
+      end
+
       # Đưa các món về biến đổi lúc bắt đầu kéo (khi giá trị kéo trở về 0), gộp vào thao tác trước đó.
       def restore(model, originals)
         model.start_operation(OPERATION_NAME, true, false, true)
-        originals.each { |entity, transformation| entity.transformation = transformation if entity.valid? }
+        restore_entities(originals)
         model.commit_operation
       end
 
-      def apply_move(model, item, steps)
+      # base: biến đổi gốc của món (kéo trực tiếp); không có thì lấy biến đổi hiện tại. ctx, blocked: đã đọc sẵn (xem apply_moves).
+      def apply_move(model, item, steps, base = nil, ctx: nil, blocked: nil, check: true)
         entity = item[:entity]
-        raise ArgumentError, "#{item[:name]} đang bị khóa, không biến đổi được." if entity.locked? || locked_context?(model)
-        ctx = context(model)
-        before = ctx * entity.transformation
+        ctx ||= context(model)
+        blocked = locked_context?(model) if blocked.nil?
+        raise ArgumentError, "#{item[:name]} đang bị khóa, không biến đổi được." if blocked || (check && entity.locked?)
+        before = ctx * (base || entity.transformation)
         expected = composite(steps) * before
         entity.transformation = ctx.inverse * expected
-        verify(item, steps, ctx * entity.transformation, expected)
+        verify(item, steps, ctx * entity.transformation, expected) if check
       end
 
       # Kiểm tra hai cách: ma trận thế giới phải đúng như đã tính (bắt lỗi xoay / scale sai),

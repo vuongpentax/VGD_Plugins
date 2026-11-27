@@ -10,7 +10,11 @@ module VGD
       FP_FIELDS = {
         'column' => %i[center w d z0 z1 type_id], 'beam' => %i[dir min max z_top z_bottom type_id], 'wall' => %i[dir min max z_bottom z_top type_id openings],
         'opening' => %i[kind min max z_bottom z_top type_id flip], 'slab' => %i[min max thickness z_top z_bottom], 'ceiling' => %i[polygon min max thickness z_bottom z_top],
-        'stair' => %i[polygon z0 z1 type rails]
+        'stair' => %i[polygon z0 z1 type rails],
+        'footing' => %i[center w d h z0],
+        'roof' => %i[top tv],
+        'glass_wall' => %i[span length height count pane_w pane_h z0],
+        'purlin' => %i[start finish w h]
       }.freeze
       # Trường chỉ tính khi mục kế hoạch có (phần tử xiên / xoay, P4b-2): mục cũ không có thì vân tay giữ nguyên như bản trước.
       FP_OPTIONAL = %i[a b rot origin angle polygon holes layers mirror].freeze

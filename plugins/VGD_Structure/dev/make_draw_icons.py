@@ -85,6 +85,13 @@ def icon(key):
         main += [front, back]
         main += [[(x, 0, z), (x, 6, z)] for x, z in profile]
         accent += [([(0, 6, 1.6), (2.5, 6, 1.6)], False), ([(2.5, 6, 3.2), (5, 6, 3.2)], False), ([(5, 6, 4.8), (7.5, 6, 4.8)], False)]
+    elif key == 'footing':
+        # Đế móng đơn (bản rộng, thấp) với cổ cột nhỏ phía trên: cổ cột là nét nhấn.
+        b = box(0, 8, 0, 6, 0, 1.6)
+        main += [b['top'], b['right'], b['front']]
+        n = box(2.8, 5.2, 1.8, 4.2, 1.6, 4)
+        main += [n['top'], n['right'], n['front']]
+        accent.append((n['top'], True))
     else:
         raise KeyError(key)
     return main, accent
@@ -127,7 +134,7 @@ def svg_of(key, title):
             '  </g>\n</svg>\n')
 
 
-TITLES = {'column': 'Cột', 'beam': 'Dầm', 'wall': 'Tường', 'door': 'Cửa đi', 'window': 'Cửa sổ', 'slab': 'Sàn', 'ceiling': 'Trần', 'stair': 'Cầu thang'}
+TITLES = {'column': 'Cột', 'beam': 'Dầm', 'wall': 'Tường', 'door': 'Cửa đi', 'window': 'Cửa sổ', 'slab': 'Sàn', 'ceiling': 'Trần', 'stair': 'Cầu thang', 'footing': 'Móng'}
 
 
 def main():

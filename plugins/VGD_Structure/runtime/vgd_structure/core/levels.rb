@@ -33,6 +33,18 @@ module VGD
       NOTE_TYPES = %w[line poly circle arc text dim mark].freeze
       SECTION_ID = /\Asc_[0-9a-f]{8}\z/ # mã mặt cắt
       MAX_SECTIONS = 30
+      SLAB_HOLE_ID = /\Ash_[0-9a-f]{8}\z/ # mã lỗ kỹ thuật của sàn
+      MAX_SLAB_HOLES = 30
+      ROOM_ID = /\Arm_[0-9a-f]{8}\z/ # mã phòng
+      MAX_ROOMS = 60
+      GLASS_WALL_ID = /\Agw_[0-9a-f]{8}\z/ # mã vách kính
+      MAX_GLASS_WALLS = 40
+      GLASS_HEIGHT = (500.0..6000.0)  # cao vách kính (mm)
+      GLASS_PANE_MAX = (300.0..3000.0) # bề rộng tối đa một tấm kính (mm)
+      DEFAULT_GLASS_HEIGHT = 2800.0
+      DEFAULT_GLASS_PANE_MAX = 1200.0
+      SLAB_HOLE_INSET = (0.0..5000.0) # mm, lùi mỗi cạnh (trái l, dưới b, phải r, trên t) vào trong hình chữ nhật 2 giao điểm
+      MIN_SLAB_HOLE = 100.0 # cạnh lỗ nhỏ nhất sau khi lùi (mm)
       STAIR_ID = /\Ast_[0-9a-f]{8}\z/ # mã cầu thang (cầu thang tự do)
       MAX_STAIRS = 50
       SECTION_DEPTH = (100.0..100_000.0)
@@ -108,12 +120,24 @@ module VGD
           notes = notes!(level['notes'], name)
           sections = sections!(level['sections'], name)
           stairs = stairs!((raw || {})['stairs'], stair_types, name)
-          removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k + dropped_o
+          slab_holes, dropped_h = slab_holes!(level['slab_holes'], grid, name)
+          glass_walls, dropped_g = glass_walls!(level['glass_walls'], span_refs, name)
+          rooms, dropped_r = rooms!(level['rooms'], grid, name)
+          free_footings = free_footings!(level['free_footings'], name)
+          removed += dropped_c + dropped_b + dropped_w + dropped_s + dropped_k + dropped_o + dropped_h + dropped_g + dropped_r
           entry = {'id' => id, 'name' => name, 'elevation' => elevation, 'screed' => screed.to_f.round(1), 'slab_thickness' => slab.to_f.round(1), 'ceiling_height' => ceiling_height.to_f.round(1), 'ceiling_thickness' => ceiling_thickness.to_f.round(1),
            'column_type' => type_id, 'beam_type' => beam_type, 'wall_type' => wall_type, 'picks' => {'columns' => columns, 'beams' => beams, 'walls' => walls, 'slabs' => slabs, 'ceilings' => ceilings, 'openings' => openings, 'stairs' => stairs}, 'notes' => notes}
           entry['sections'] = sections unless sections.empty?
+          entry['slab_holes'] = slab_holes unless slab_holes.empty?
+          entry['glass_walls'] = glass_walls unless glass_walls.empty?
+          entry['rooms'] = rooms unless rooms.empty?
+          entry['free_footings'] = free_footings unless free_footings.empty?
           entry['floor_layers'] = floor_layers unless floor_layers.empty?
           entry['ceiling_layers'] = ceiling_layers unless ceiling_layers.empty?
+          footing = footing!(level['footing'], name)
+          entry['footing'] = footing if footing
+          roof = roof!(level['roof'], name)
+          entry['roof'] = roof if roof
           entry
         end
         names = out.map { |l| l['name'].downcase }
@@ -121,6 +145,137 @@ module VGD
         raise Error, "Tên tầng “#{dup['name']}” bị trùng." if dup
         raise Error, 'Mã tầng bị trùng.' if out.map { |l| l['id'] }.uniq.size != out.size
         [out, removed]
+      end
+
+      # Đế móng đơn dưới mọi cột của tầng (tầng móng): {'l' => dài theo X, 'w' => rộng theo Y, 'h' => dày} mm; nil = không có móng.
+      # Đế đặt ngay dưới chân cột (đỉnh đế = chân cột), tâm trùng tâm cột, xoay theo cột (FootingPlan).
+      # Khóa TÙY CHỌN (H4, chỉ lưu khi có nên dữ liệu cũ không đổi):
+      #   'step' {'l', 'w', 'h'}: giật cấp, bậc trên (dày `step.h`) đặt trên bậc dưới (dày `h`), không lớn hơn bậc dưới; tổng dày = h + step.h.
+      #   'types' [{'name', 'l', 'w', 'h', 'step'?}] loại móng có tên (tên duy nhất), 'assign' {mã cột => tên loại}: cột không gán dùng kích thước mặc định.
+      #     Mã cột không còn thì giữ nguyên trong dữ liệu, FootingPlan bỏ qua và cảnh báo.
+      #   'strip' {'w', 'h'}: móng băng dưới mọi tường của tầng (WallPlan), đỉnh = chân tường, tâm theo trục tường.
+      FOOTING_SIZE = (300.0..8000.0).freeze
+      FOOTING_THICKNESS = (150.0..2500.0).freeze
+      FOOTING_STEP_THICKNESS = (100.0..2500.0).freeze # dày bậc trên của móng giật cấp
+      FOOTING_STRIP_W = (200.0..3000.0).freeze        # rộng đế móng băng; dày móng băng dùng FOOTING_THICKNESS
+      MAX_FOOTING_TYPES = 12
+      MAX_FOOTING_NAME = 20
+      FREE_FOOTING_ID = /\Aff_[0-9a-f]{8}\z/ # mã móng vẽ tự do (không theo cột / tường của lưới)
+      MAX_FREE_FOOTINGS = 200
+      def self.footing!(raw, level_name)
+        return nil if raw.nil?
+        who = "Tầng “#{level_name}”"
+        raise Error, "#{who}: dữ liệu móng không hợp lệ." unless raw.is_a?(Hash)
+        out = footing_size!(raw, who)
+        unless raw['types'].nil? || raw['types'] == []
+          list = raw['types']
+          raise Error, "#{who}: danh sách loại móng không hợp lệ (tối đa #{MAX_FOOTING_TYPES})." unless list.is_a?(Array) && list.size <= MAX_FOOTING_TYPES
+          out['types'] = list.map do |t|
+            raise Error, "#{who}: loại móng không hợp lệ." unless t.is_a?(Hash)
+            name = t['name'].is_a?(String) ? t['name'].strip : ''
+            raise Error, "#{who}: tên loại móng từ 1 đến #{MAX_FOOTING_NAME} ký tự, không có ký tự điều khiển." if name.empty? || name.length > MAX_FOOTING_NAME || name.match?(CONTROL)
+            {'name' => name}.merge(footing_size!(t, "#{who}: loại móng “#{name}”"))
+          end
+          names = out['types'].map { |t| t['name'].downcase }
+          dup = out['types'].find { |t| names.count(t['name'].downcase) > 1 }
+          raise Error, "#{who}: tên loại móng “#{dup['name']}” bị trùng." if dup
+        end
+        unless raw['assign'].nil? || raw['assign'] == {}
+          assign = raw['assign']
+          raise Error, "#{who}: bảng gán loại móng cho cột không hợp lệ." unless assign.is_a?(Hash) && assign.size <= ColumnPlan::MAX_COLUMNS
+          known = (out['types'] || []).map { |t| t['name'] }
+          out['assign'] = assign.each_with_object({}) do |(ref, name), h|
+            raise Error, "#{who}: mã cột #{ref.inspect} trong bảng gán loại móng không hợp lệ." unless ref.is_a?(String) && !ref.empty? && ref.length <= 40 && !ref.match?(CONTROL)
+            raise Error, "#{who}: cột #{ref} gán loại móng #{name.inspect} không có trong danh sách loại móng." unless name.is_a?(String) && known.include?(name.strip)
+            h[ref] = name.strip
+          end
+        end
+        unless raw['strip'].nil?
+          strip = raw['strip']
+          raise Error, "#{who}: dữ liệu móng băng không hợp lệ." unless strip.is_a?(Hash)
+          out['strip'] = {'w' => footing_number!(strip['w'], FOOTING_STRIP_W, "#{who}: rộng móng băng"), 'h' => footing_number!(strip['h'], FOOTING_THICKNESS, "#{who}: dày móng băng")}
+        end
+        out
+      end
+
+      # Kích thước một móng (mặc định hoặc một loại): {'l', 'w', 'h'} và bậc trên 'step' nếu có (không lớn hơn bậc dưới).
+      def self.footing_size!(raw, who)
+        out = {}
+        {'l' => ['dài móng', FOOTING_SIZE], 'w' => ['rộng móng', FOOTING_SIZE], 'h' => ['dày móng', FOOTING_THICKNESS]}.each do |key, (label, range)|
+          out[key] = footing_number!(raw[key], range, "#{who}: #{label}")
+        end
+        return out if raw['step'].nil?
+        step = raw['step']
+        raise Error, "#{who}: dữ liệu giật cấp không hợp lệ." unless step.is_a?(Hash)
+        out['step'] = {'l' => footing_number!(step['l'], FOOTING_SIZE, "#{who}: dài bậc trên"), 'w' => footing_number!(step['w'], FOOTING_SIZE, "#{who}: rộng bậc trên"),
+                       'h' => footing_number!(step['h'], FOOTING_STEP_THICKNESS, "#{who}: dày bậc trên")}
+        raise Error, "#{who}: bậc trên (#{out['step']['l']}x#{out['step']['w']}) phải nhỏ hơn hoặc bằng bậc dưới (#{out['l']}x#{out['w']})." if out['step']['l'] > out['l'] || out['step']['w'] > out['w']
+        out
+      end
+
+      def self.footing_number!(value, range, label)
+        raise Error, "#{label} từ #{range.min.to_i} đến #{range.max.to_i} mm." unless number?(value) && range.cover?(value.to_f)
+        value.to_f.round(1)
+      end
+
+      # Mái của tầng (RoofPlan): phủ khung lưới (trục biên là đường mép mái) cộng phần chìa `overhang`.
+      # shape: flat (mái bằng), shed (một dốc, `dir` x+ x- y+ y- là hướng dốc LÊN), gable (hai dốc, `dir` x / y là phương của nóc), hip (bốn dốc, cùng độ dốc, không có hướng),
+      # outline (theo đường bao: `points` là mã các giao điểm lưới (ví dụ '1-A') của một đa giác LỒI, cùng độ dốc mọi cạnh, không có hướng; mã có còn trên lưới và đa giác có lồi do RoofPlan kiểm).
+      # slope độ (mái dốc 1..60; mái bằng bỏ qua), thickness mm (vuông góc mặt mái), base mm (đáy mái tại đường mép so với cao độ tầng).
+      ROOF_SHAPES = %w[flat shed gable hip outline].freeze
+      ROOF_POINTS = (3..64).freeze
+      # Xà gồ (chỉ mái một dốc và hai dốc): tiết diện chọn từ danh sách (rộng theo mặt dốc x cao vuông góc mặt dốc, mm) và khoảng cách tối đa giữa tim xà gồ theo mặt dốc (mm).
+      PURLIN_SECTIONS = {'40x80' => [40, 80], '50x100' => [50, 100], '50x120' => [50, 120], '60x120' => [60, 120]}.freeze
+      PURLIN_SPACINGS = [600, 800, 1000].freeze
+      ROOF_DIRS = {'shed' => %w[x+ x- y+ y-], 'gable' => %w[x y]}.freeze
+      ROOF_SLOPE = (1.0..60.0).freeze
+      ROOF_THICKNESS = (20.0..500.0).freeze
+      ROOF_OVERHANG = (0.0..2000.0).freeze
+      ROOF_BASE = (-5000.0..10_000.0).freeze
+      def self.roof!(raw, level_name)
+        return nil if raw.nil?
+        who = "Tầng “#{level_name}”: mái"
+        raise Error, "#{who} không hợp lệ." unless raw.is_a?(Hash)
+        shape = raw['shape']
+        raise Error, "#{who}: kiểu mái phải là #{ROOF_SHAPES.join(', ')}." unless ROOF_SHAPES.include?(shape)
+        num = lambda do |key, range, label, default|
+          value = raw.key?(key) ? raw[key] : default
+          raise Error, "#{who}: #{label} từ #{range.min.to_i} đến #{range.max.to_i}." unless number?(value) && range.cover?(value.to_f)
+          value.to_f.round(1)
+        end
+        out = {'shape' => shape, 'thickness' => num.call('thickness', ROOF_THICKNESS, 'dày mái (mm)', 120), 'overhang' => num.call('overhang', ROOF_OVERHANG, 'chìa mái (mm)', 600),
+               'base' => num.call('base', ROOF_BASE, 'cao độ chân mái so với cốt tầng (mm)', 0)}
+        unless shape == 'flat'
+          out['slope'] = num.call('slope', ROOF_SLOPE, 'độ dốc (độ)', 30)
+          if ROOF_DIRS.key?(shape)
+            raise Error, "#{who}: hướng phải là #{ROOF_DIRS[shape].join(', ')}." unless ROOF_DIRS[shape].include?(raw['dir'])
+            out['dir'] = raw['dir']
+          end
+        end
+        if shape == 'outline'
+          points = raw['points']
+          raise Error, "#{who}: đường bao cần từ #{ROOF_POINTS.min} đến #{ROOF_POINTS.max} đỉnh lưới (mã như 1-A)." unless points.is_a?(Array) && ROOF_POINTS.cover?(points.size) && points.all? { |p| p.is_a?(String) && !p.strip.empty? }
+          points = points.map(&:strip)
+          raise Error, "#{who}: đường bao có đỉnh trùng nhau (#{points.find { |p| points.count(p) > 1 }})." unless points.uniq.size == points.size
+          out['points'] = points
+        end
+        # Tường thu hồi (chỉ mái một dốc và hai dốc; kiểu khác bỏ qua): {'type' => mã loại tường}. Loại tường có tồn tại hay không do RoofPlan kiểm.
+        if ROOF_DIRS.key?(shape) && !raw['gable_wall'].nil?
+          gable = raw['gable_wall']
+          raise Error, "#{who}: tường thu hồi phải có loại tường." unless gable.is_a?(Hash) && gable['type'].is_a?(String) && !gable['type'].empty?
+          out['gable_wall'] = {'type' => gable['type']}
+        end
+        # Xà gồ (chỉ mái một dốc và hai dốc; kiểu khác bỏ qua): {} hoặc thiếu khóa thì lấy mặc định 50x100, 800 mm.
+        if ROOF_DIRS.key?(shape) && !raw['purlin'].nil?
+          purlin = raw['purlin']
+          raise Error, "#{who}: xà gồ phải là một nhóm thông số." unless purlin.is_a?(Hash)
+          section = purlin.fetch('section', '50x100')
+          raise Error, "#{who}: tiết diện xà gồ phải là #{PURLIN_SECTIONS.keys.join(', ')}." unless PURLIN_SECTIONS.key?(section)
+          spacing = purlin.fetch('spacing', 800)
+          raise Error, "#{who}: khoảng cách xà gồ phải là #{PURLIN_SPACINGS.join(', ')} mm." unless number?(spacing) && PURLIN_SPACINGS.include?(spacing.to_i) && spacing.to_i == spacing
+          out['purlin'] = {'section' => section, 'spacing' => spacing.to_i}
+        end
+        out
       end
 
       def self.number?(value)
@@ -285,6 +440,175 @@ module VGD
           end
           out[ref] = {'type' => type, 'shape' => shape, 'free' => free}
         end
+      end
+
+      # Lỗ kỹ thuật của sàn tầng (H6): {mã => {'a' => giao điểm, 'b' => giao điểm chéo, 'inset' => {'l','b','r','t'}}}. Hình chữ nhật nằm giữa hai giao điểm lưới,
+      # lùi vào trong mỗi cạnh theo `inset` (mm). Giao điểm không còn trên lưới thì bỏ lỗ (đếm vào số mục bị bỏ). Trả về [lỗ, số lỗ bị bỏ].
+      def self.slab_holes!(raw, grid, level_name)
+        return [{}, 0] if raw.nil?
+        raise Error, "Tầng “#{level_name}”: dữ liệu lỗ kỹ thuật của sàn không hợp lệ." unless raw.is_a?(Hash)
+        raise Error, "Tầng “#{level_name}”: quá nhiều lỗ kỹ thuật (tối đa #{MAX_SLAB_HOLES})." if raw.size > MAX_SLAB_HOLES
+        nodes = Grid.intersections(grid).each_with_object({}) { |n, h| h[n[:ref]] = n }
+        dropped = 0
+        out = raw.each_with_object({}) do |(id, hole), result|
+          raise Error, "Tầng “#{level_name}”: mã lỗ kỹ thuật #{id.inspect} không hợp lệ." unless id.is_a?(String) && id.match?(SLAB_HOLE_ID)
+          who = "Tầng “#{level_name}”: lỗ kỹ thuật #{id}"
+          raise Error, "#{who} không hợp lệ." unless hole.is_a?(Hash) && (hole.keys - %w[a b inset]).empty?
+          a, b = hole['a'], hole['b']
+          raise Error, "#{who}: cần hai giao điểm lưới (a, b)." unless a.is_a?(String) && b.is_a?(String)
+          inset = slab_hole_inset!(hole['inset'], who)
+          unless nodes.key?(a) && nodes.key?(b)
+            dropped += 1
+            next
+          end
+          raise Error, "#{who}: hai giao điểm phải nằm chéo nhau (khác cả trục đứng lẫn trục ngang)." if nodes[a][:xn] == nodes[b][:xn] || nodes[a][:yn] == nodes[b][:yn]
+          raise Error, "#{who}: sau khi lùi, lỗ nhỏ hơn #{MIN_SLAB_HOLE.to_i} mm." unless slab_hole_box(nodes[a], nodes[b], inset)
+          result[id] = {'a' => a, 'b' => b, 'inset' => inset}
+        end
+        [out, dropped]
+      end
+
+      # Móng vẽ tự do của tầng: {mã ff_xxxxxxxx => móng đơn {'kind' => 'pad', 'x', 'y', 'rot'?, 'l', 'w', 'h'} (dài l theo trục x riêng, rộng w, dày h, tâm tại x, y)
+      # hoặc móng băng {'kind' => 'strip', 'a' => [x, y], 'b' => [x, y], 'w' (rộng), 'h' (dày)} theo ĐƯỜNG TIM a-b (ngang, dọc hoặc xiên)}.
+      # Cùng khoảng giá trị với móng theo cột / tường (FOOTING_SIZE, FOOTING_STRIP_W, FOOTING_THICKNESS); đầu mút móng băng chuẩn hóa như tường tự do.
+      def self.free_footings!(raw, level_name)
+        return {} if raw.nil?
+        raise Error, "Tầng “#{level_name}”: dữ liệu móng tự do không hợp lệ." unless raw.is_a?(Hash)
+        raise Error, "Tầng “#{level_name}”: quá nhiều móng tự do (tối đa #{MAX_FREE_FOOTINGS})." if raw.size > MAX_FREE_FOOTINGS
+        raw.each_with_object({}) do |(id, f), out|
+          raise Error, "Tầng “#{level_name}”: mã móng tự do #{id.inspect} không hợp lệ." unless id.is_a?(String) && id.match?(FREE_FOOTING_ID)
+          who = "Tầng “#{level_name}”: móng tự do #{id}"
+          raise Error, "#{who} không hợp lệ." unless f.is_a?(Hash)
+          range = lambda do |key, span, label|
+            v = f[key]
+            raise Error, "#{who}: #{label} từ #{span.min.to_i} đến #{span.max.to_i} mm." unless number?(v) && span.cover?(v.to_f)
+            v.to_f.round(1)
+          end
+          case f['kind']
+          when 'pad'
+            raise Error, "#{who} có khóa lạ." unless (f.keys - %w[kind x y rot l w h]).empty?
+            rot = f.key?('rot') ? f['rot'] : 0
+            raise Error, "#{who}: góc xoay phải là số độ (từ -360 đến 360)." unless number?(rot) && rot.abs <= 360
+            rot = (rot.to_f % 360).round(2)
+            rot = rot.to_i if rot == rot.to_i
+            xy = %w[x y].map do |k|
+              raise Error, "#{who}: tọa độ phải là số (mm), không quá #{FREE_LIMIT.to_i}." unless number?(f[k]) && f[k].abs <= FREE_LIMIT
+              f[k].to_f.round(1)
+            end
+            out[id] = {'kind' => 'pad', 'x' => xy[0], 'y' => xy[1], 'rot' => rot, 'l' => range.call('l', FOOTING_SIZE, 'dài'), 'w' => range.call('w', FOOTING_SIZE, 'rộng'), 'h' => range.call('h', FOOTING_THICKNESS, 'dày')}
+          when 'strip'
+            raise Error, "#{who} có khóa lạ." unless (f.keys - %w[kind a b w h]).empty?
+            line = free_pick!({'a' => f['a'], 'b' => f['b']}, 'móng băng', id, level_name)
+            out[id] = {'kind' => 'strip', 'a' => line['a'], 'b' => line['b'], 'w' => range.call('w', FOOTING_STRIP_W, 'rộng'), 'h' => range.call('h', FOOTING_THICKNESS, 'dày')}
+          else
+            raise Error, "#{who}: loại phải là pad (móng đơn) hoặc strip (móng băng)."
+          end
+        end
+      end
+
+      # Vách kính của tầng (H7): {mã => {'span' => mã nhịp lưới, 'height' => cao (mm), 'pane_max' => rộng tối đa một tấm (mm)}}. Mỗi nhịp tối đa một vách.
+      # Nhịp không còn trên lưới thì bỏ vách (đếm vào số mục bị bỏ). Trả về [vách, số vách bị bỏ].
+      def self.glass_walls!(raw, span_refs, level_name)
+        return [{}, 0] if raw.nil?
+        raise Error, "Tầng “#{level_name}”: dữ liệu vách kính không hợp lệ." unless raw.is_a?(Hash)
+        raise Error, "Tầng “#{level_name}”: quá nhiều vách kính (tối đa #{MAX_GLASS_WALLS})." if raw.size > MAX_GLASS_WALLS
+        dropped = 0
+        used = []
+        out = raw.each_with_object({}) do |(id, gw), result|
+          raise Error, "Tầng “#{level_name}”: mã vách kính #{id.inspect} không hợp lệ." unless id.is_a?(String) && id.match?(GLASS_WALL_ID)
+          who = "Tầng “#{level_name}”: vách kính #{id}"
+          raise Error, "#{who} không hợp lệ." unless gw.is_a?(Hash) && (gw.keys - %w[span height pane_max]).empty? && gw['span'].is_a?(String)
+          height = gw.key?('height') ? gw['height'] : DEFAULT_GLASS_HEIGHT
+          raise Error, "#{who}: cao từ #{GLASS_HEIGHT.min.to_i} đến #{GLASS_HEIGHT.max.to_i} mm." unless number?(height) && GLASS_HEIGHT.cover?(height.to_f)
+          pane_max = gw.key?('pane_max') ? gw['pane_max'] : DEFAULT_GLASS_PANE_MAX
+          raise Error, "#{who}: bề rộng tối đa một tấm kính từ #{GLASS_PANE_MAX.min.to_i} đến #{GLASS_PANE_MAX.max.to_i} mm." unless number?(pane_max) && GLASS_PANE_MAX.cover?(pane_max.to_f)
+          unless span_refs.include?(gw['span'])
+            dropped += 1
+            next
+          end
+          raise Error, "#{who}: nhịp #{gw['span']} đã có vách kính khác (mỗi nhịp tối đa một vách)." if used.include?(gw['span'])
+          used << gw['span']
+          result[id] = {'span' => gw['span'], 'height' => height.to_f.round(1), 'pane_max' => pane_max.to_f.round(1)}
+        end
+        [out, dropped]
+      end
+
+      # Phòng của tầng (H8): {mã => {'name', 'cells' => [mã ô lưới], 'floor_layers'?, 'ceiling_layers'?}}. Phòng là một nhóm ô LIỀN NHAU (chung cạnh), mỗi ô thuộc tối đa một phòng.
+      # Lớp hoàn thiện sàn / trần riêng của phòng (cùng quy tắc `LayerList`) thay lớp chung của tầng cho các ô của phòng; chỉ lưu khi có.
+      # Ô không còn trên lưới thì bỏ khỏi phòng; phòng hết ô thì bỏ (đếm vào số mục bị bỏ). Trả về [phòng, số mục bị bỏ].
+      def self.rooms!(raw, grid, level_name)
+        return [{}, 0] if raw.nil?
+        raise Error, "Tầng “#{level_name}”: dữ liệu phòng không hợp lệ." unless raw.is_a?(Hash)
+        raise Error, "Tầng “#{level_name}”: quá nhiều phòng (tối đa #{MAX_ROOMS})." if raw.size > MAX_ROOMS
+        cells = Grid.cells(grid)
+        order = cells.map { |c| c[:ref] }
+        owner = {}
+        names = []
+        dropped = 0
+        out = raw.each_with_object({}) do |(id, room), result|
+          raise Error, "Tầng “#{level_name}”: mã phòng #{id.inspect} không hợp lệ." unless id.is_a?(String) && id.match?(ROOM_ID)
+          who = "Tầng “#{level_name}”: phòng #{id}"
+          raise Error, "#{who} không hợp lệ." unless room.is_a?(Hash) && (room.keys - %w[name cells floor_layers ceiling_layers]).empty? && room['cells'].is_a?(Array) && room['cells'].all?(String)
+          label = room['name'].is_a?(String) ? room['name'].strip : ''
+          raise Error, "#{who}: tên từ 1 đến #{MAX_NAME} ký tự, không có ký tự điều khiển." if label.empty? || label.length > MAX_NAME || label.match?(CONTROL)
+          raise Error, "#{who}: tên “#{label}” bị trùng." if names.include?(label.downcase)
+          raise Error, "#{who}: ô bị lặp trong phòng." if room['cells'].uniq.size != room['cells'].size
+          floor_layers, ceiling_layers = begin
+            [LayerList.normalize!(room['floor_layers'], 'sàn', SCREED_RANGE), LayerList.normalize!(room['ceiling_layers'], 'trần', CEILING_THICKNESS_RANGE)]
+          rescue Error => error
+            raise Error, "#{who}: #{error.message}"
+          end
+          kept = room['cells'].select { |c| order.include?(c) }
+          dropped += room['cells'].size - kept.size
+          if kept.empty?
+            dropped += 1
+            next
+          end
+          kept.each do |c|
+            raise Error, "#{who}: ô #{c} đã thuộc phòng khác (mỗi ô tối đa một phòng)." if owner.key?(c)
+            owner[c] = id
+          end
+          raise Error, "#{who}: các ô của phòng phải liền nhau (chung cạnh)." unless rooms_connected?(cells.select { |c| kept.include?(c[:ref]) })
+          names << label.downcase
+          entry = {'name' => label, 'cells' => kept.sort_by { |c| order.index(c) }}
+          entry['floor_layers'] = floor_layers unless floor_layers.empty?
+          entry['ceiling_layers'] = ceiling_layers unless ceiling_layers.empty?
+          result[id] = entry
+        end
+        [out, dropped]
+      end
+
+      # Các ô (Grid.cells) tạo thành MỘT vùng liền nhau: hai ô liền khi chung một đoạn cạnh dài hơn 0.
+      def self.rooms_connected?(list)
+        touch = lambda do |a, b|
+          x = [a[:max][0], b[:max][0]].min - [a[:min][0], b[:min][0]].max
+          y = [a[:max][1], b[:max][1]].min - [a[:min][1], b[:min][1]].max
+          (x.abs < 1e-6 && y > 1e-6) || (y.abs < 1e-6 && x > 1e-6)
+        end
+        seen = [list.first]
+        queue = [list.first]
+        until queue.empty?
+          cur = queue.shift
+          list.each { |c| next if seen.include?(c) || !touch.call(cur, c); seen << c; queue << c }
+        end
+        seen.size == list.size
+      end
+
+      def self.slab_hole_inset!(raw, who)
+        raise Error, "#{who}: lùi phải là {l, b, r, t} (mm)." unless raw.nil? || (raw.is_a?(Hash) && (raw.keys - %w[l b r t]).empty?)
+        %w[l b r t].to_h do |k|
+          v = (raw || {}).fetch(k, 0)
+          raise Error, "#{who}: lùi cạnh #{k} từ #{SLAB_HOLE_INSET.min.to_i} đến #{SLAB_HOLE_INSET.max.to_i} mm." unless number?(v) && SLAB_HOLE_INSET.cover?(v.to_f)
+          [k, v.to_f.round(1)]
+        end
+      end
+
+      # Hình chữ nhật của lỗ kỹ thuật: [[x0, y0], [x1, y1]] sau khi lùi, hoặc nil nếu một cạnh nhỏ hơn MIN_SLAB_HOLE. na, nb: giao điểm của Grid.intersections.
+      def self.slab_hole_box(na, nb, inset)
+        x0, x1 = [na[:x], nb[:x]].minmax
+        y0, y1 = [na[:y], nb[:y]].minmax
+        box = [[x0 + inset['l'], y0 + inset['b']], [x1 - inset['r'], y1 - inset['t']]]
+        box[1][0] - box[0][0] >= MIN_SLAB_HOLE && box[1][1] - box[0][1] >= MIN_SLAB_HOLE ? box.map { |p| p.map { |v| v.round(2) } } : nil
       end
 
       def self.sections!(raw, level_name)

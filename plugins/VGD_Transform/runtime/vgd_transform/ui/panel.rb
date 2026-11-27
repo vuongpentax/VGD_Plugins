@@ -9,6 +9,8 @@ module VGD
       SUMMARY_LIMIT = 500 # chọn nhiều hơn số này thì không đọc giá trị hiện tại (tránh chậm khi model thay đổi liên tục)
       ORIGIN_TOLERANCE_MM = 0.001
       SCALE_TOLERANCE = 1e-6
+      ANGLE_TOLERANCE_DEG = 0.01
+      LIVE_MIN_GAP_SECONDS = 0.016 # khoảng tối thiểu giữa hai lần áp dụng khi kéo (~60 lần/giây); giá trị đến nhanh hơn thì chỉ giữ giá trị mới nhất
 
       class SelectionObserver < Sketchup::SelectionObserver
         def initialize(panel); @panel = panel; end
@@ -42,7 +44,9 @@ module VGD
         @dialog.add_action_callback('live_start') { |_ctx| safely { live_start } }
         @dialog.add_action_callback('live') { |_ctx, payload| safely { live(JSON.parse(payload)) } }
         @dialog.add_action_callback('live_end') { |_ctx| safely { live_end } }
-        @dialog.set_on_closed { @closed = true; @live = nil; detach }
+        @dialog.add_action_callback('undo') { |_ctx| safely { history(:undo) } }
+        @dialog.add_action_callback('redo') { |_ctx| safely { history(:redo) } }
+        @dialog.set_on_closed { @closed = true; abort_live; detach }
         attach
       end
 
@@ -71,7 +75,7 @@ module VGD
         model = Sketchup.active_model
         known = ModelOps.length_unit(model)
         unit = known || Units::DEFAULT_UNIT
-        state = {unit: unit, unit_known: !known.nil?, count: 0, skipped: 0, origin: nil, center: nil, scale: nil, lock: ModelOps.lock_state(model)}
+        state = {unit: unit, unit_known: !known.nil?, count: 0, skipped: 0, origin: nil, center: nil, scale: nil, angles: nil, lock: ModelOps.lock_state(model)}
         if model.selection.size > SUMMARY_LIMIT
           state[:count] = model.selection.size
         else
@@ -100,34 +104,104 @@ module VGD
         refresh
       end
 
-      # Kéo trực tiếp (như spinner của 3ds Max): nhớ biến đổi ban đầu, mỗi lần cập nhật tính lại từ đó, gộp thành một bước Ctrl+Z.
+      # Ctrl+Z / Ctrl+Y bấm trong cửa sổ này: SketchUp không nhận phím tắt khi tiêu điểm đang ở cửa sổ, nên giao diện chuyển lệnh sang đây.
+      # Đang kéo thì bỏ qua (thao tác còn mở).
+      def history(kind)
+        return if @live
+        kind == :undo ? Sketchup.undo : Sketchup.send_action('editRedo:')
+      end
+
+      # Kéo trực tiếp (như spinner của 3ds Max): mở MỘT thao tác suốt lần kéo, nhớ biến đổi ban đầu, mỗi nhịp tính lại từ đó rồi chỉ ghi biến đổi
+      # (không mở / đóng thao tác mỗi nhịp), thả nút thì đóng thành một bước Ctrl+Z. Giá trị đầu tiên của mỗi nhịp áp dụng NGAY (không chờ hẹn giờ);
+      # giá trị đến dồn trong khoảng LIVE_MIN_GAP_SECONDS chỉ giữ giá trị mới nhất, áp dụng khi hết khoảng đó. Thả nút kiểm lại ma trận một lần.
       def live_start
-        items = ModelOps.items(Sketchup.active_model)
-        @live = {items: items, originals: items.to_h { |item| [item[:entity], item[:entity].transformation] }, applied: false}
+        model = Sketchup.active_model
+        items = ModelOps.items(model)
+        ModelOps.begin_live(model)
+        @live = {model: model, items: items, originals: items.to_h { |item| [item[:entity], item[:entity].transformation] },
+                 changed: false, queue: LiveQueue.new, timer: nil, last: nil, last_payload: nil, ticks: 0, total: 0.0, worst: 0.0}
       end
 
       def live(payload)
         return unless @live
-        model = Sketchup.active_model
-        begin
-          plan = Plan.build(@live[:items], payload, unit_of(model))
-          ModelOps.apply(model, plan[:moves], @live[:items], transparent: @live[:applied], restore: @live[:originals])
-          @live[:applied] = true
-        rescue NothingToDo
-          # Giá trị kéo về 0 (hoặc hệ số 1): đưa món về như lúc bắt đầu kéo.
-          ModelOps.restore(model, @live[:originals]) if @live[:applied]
-        rescue StandardError
-          @live = nil
-          raise
+        now = live_now
+        gap = @live[:last] ? now - @live[:last] : LIVE_MIN_GAP_SECONDS
+        if @live[:timer].nil? && gap >= LIVE_MIN_GAP_SECONDS
+          apply_live_payload(payload)
+        elsif @live[:queue].push(payload)
+          @live[:timer] = ::UI.start_timer([LIVE_MIN_GAP_SECONDS - gap, 0.001].max, false) { safely { flush_live } }
         end
       end
 
+      def flush_live
+        return unless @live
+        @live[:timer] = nil
+        payload = @live[:queue].take
+        apply_live_payload(payload) if payload
+      end
+
       def live_end
+        return unless @live
+        ::UI.stop_timer(@live[:timer]) if @live[:timer]
+        @live[:timer] = nil
+        final = @live[:queue].take || @live[:last_payload]
+        apply_live_payload(final, check: true) if final
+        live = @live
         @live = nil
+        ModelOps.finish_live(live[:model], live[:changed])
+        emit('message', {text: live_report(live)}) if live[:ticks].positive?
         refresh
+      rescue StandardError
+        abort_live
+        raise
+      end
+
+      def abort_live
+        live = @live
+        @live = nil
+        return unless live
+        ::UI.stop_timer(live[:timer]) if live[:timer]
+        ModelOps.finish_live(live[:model], false)
+      rescue StandardError
+        nil
+      end
+
+      # check: true ở lần cuối (thả nút): kiểm lại ma trận và điểm gốc như áp dụng thường.
+      def apply_live_payload(payload, check: false)
+        model = @live[:model]
+        started = live_now
+        begin
+          plan = Plan.build(@live[:items], payload, unit_of(model))
+          ModelOps.apply_live(model, plan[:moves], @live[:items], @live[:originals], check: check)
+          @live[:changed] = true
+        rescue NothingToDo
+          # Giá trị kéo về 0 (hoặc hệ số 1): đưa món về như lúc bắt đầu kéo.
+          ModelOps.restore_entities(@live[:originals])
+          @live[:changed] = false
+        end
+        model.active_view.invalidate
+        @live[:last_payload] = payload
+        elapsed = live_now - started
+        @live[:ticks] += 1
+        @live[:total] += elapsed
+        @live[:worst] = elapsed if elapsed > @live[:worst]
+        @live[:last] = live_now
+      rescue StandardError
+        abort_live
+        raise
+      end
+
+      # Báo cáo ngắn sau mỗi lần kéo (thời gian Ruby áp dụng mỗi nhịp) để biết chỗ nào chậm khi chỉnh độ mượt.
+      def live_report(live)
+        average = (live[:total] / live[:ticks] * 1000).round(1)
+        "Kéo xong: #{live[:ticks]} nhịp, trung bình #{average} ms mỗi nhịp (lâu nhất #{(live[:worst] * 1000).round(1)} ms)."
       end
 
       private
+
+      def live_now
+        Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      end
 
       def unit_of(model)
         ModelOps.length_unit(model) || Units::DEFAULT_UNIT
@@ -141,7 +215,8 @@ module VGD
         {count: items.size,
          origin: to_unit.call(Items.common(items, ORIGIN_TOLERANCE_MM) { |item| item[:origin] }),
          center: to_unit.call(Items.selection_center(items)),
-         scale: Items.common(items, SCALE_TOLERANCE) { |item| item[:scale] }.map { |v| v&.round(6) }}
+         scale: Items.common(items, SCALE_TOLERANCE) { |item| item[:scale] }.map { |v| v&.round(6) },
+         angles: Items.common(items, ANGLE_TOLERANCE_DEG) { |item| item[:euler] }.map { |v| v&.round(4) }}
       end
 
       def attach

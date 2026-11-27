@@ -3,7 +3,7 @@
 $fails = 0
 def ok(name, cond); puts(cond ? "PASS  #{name}" : "FAIL  #{name}"); $fails += 1 unless cond; end
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
-%w[schema grid axis_symbol geometry column_types beam_types wall_types opening_types stair_types stair_plan stair_place layer_list levels column_plan beam_plan wall_joins wall_plan opening_plan plates slab_plan ceiling_plan state].each { |f| require File.join(ROOT, 'core', f) }
+%w[schema grid axis_symbol geometry column_types beam_types wall_types opening_types stair_types stair_plan stair_place layer_list levels column_plan beam_plan wall_joins wall_plan opening_plan plates room_plan slab_plan ceiling_plan state].each { |f| require File.join(ROOT, 'core', f) }
 S = VGD::Structure
 L = S::Levels
 grid = S::Grid.default

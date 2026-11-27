@@ -2,6 +2,70 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.38: đã kiểm tra tự động
+
+Quản lý phòng, đợt 4 và 5. Đợt 4: "Gợi ý mã cho phòng đã chọn" điền mã cho phòng đã chọn còn trống mã theo tiền tố và tầng (vd WC-T1-01), không đổi mã đã có, không trùng mã có sẵn. Đợt 5: mục "Cần kiểm tra" liệt kê phòng thiếu tầng hoặc thiếu mã; bấm một dòng để mở đúng phòng. Phòng chưa dựng khối 3D chỉ được đếm.
+
+- `dev/test_ui.cjs`: gợi ý mã WC-T1-01 / WC-T1-02 và giữ mã P02; liệt kê 8 phòng cần kiểm tra; bấm mở đúng phòng. Đạt.
+- `dev/test_ui_en.cjs`, `test_ui_images.cjs`, `test_ui_sheets.cjs`, `test_report_page.cjs`: đạt. `ruby dev/run_tests.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** bố cục các mục mới trong hộp Quản lý phòng với model thật.
+
+## Bản 1.1.1-beta.37: đã kiểm tra tự động
+
+Quản lý phòng, đợt 3: chọn từng phòng (ô chọn), "Chọn tất cả đang hiện", "Bỏ chọn"; đổi tầng, chiều cao và hoàn thiện sàn / tường / trần cho các phòng đã chọn bằng một lần gửi (Ruby kiểm tra cả danh sách, một bước hoàn tác). Ô để trống thì giữ nguyên. Chưa xóa được một hoàn thiện đã có bằng ô trống.
+
+- `dev/test_ui.cjs`: chọn ba phòng, đổi tầng, chiều cao, hoàn thiện sàn; kiểm tra gói gửi đi đúng và phòng khác giữ nguyên; bỏ chọn. Đạt.
+- `dev/test_ui_en.cjs`, `test_ui_images.cjs`, `test_ui_sheets.cjs`, `test_report_page.cjs`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** hoàn tác một lần đổi hàng loạt trong SketchUp.
+
+## Bản 1.1.1-beta.36: đã kiểm tra tự động
+
+Quản lý phòng, đợt 2: "Nhóm theo tầng" chia danh sách theo từng tầng, mỗi nhóm ghi số phòng, gập / mở được; nhóm không còn phòng khớp tìm kiếm thì ẩn. Phòng có tầng đã xóa hoặc chưa có tầng nằm chung nhóm "Chưa có tầng". Chỉ đổi cách hiển thị.
+
+- `dev/test_ui.cjs`: hai nhóm với số phòng, gập một nhóm, tìm theo mã ẩn nhóm không khớp, bỏ nhóm thì về danh sách phẳng. Đạt.
+- `dev/test_ui_en.cjs`: chuỗi mới có bản dịch. Đạt.
+- `dev/test_ui_images.cjs`, `test_ui_sheets.cjs`, `test_report_page.cjs`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** bố cục nhóm trong hộp Quản lý phòng.
+
+## Bản 1.1.1-beta.35: đã kiểm tra tự động
+
+Quản lý phòng, đợt 1 (gọn cho nhiều phòng): ô tìm theo tên hoặc mã (không phân biệt hoa thường, dấu), lọc theo tầng (gồm "Chưa có tầng"), mỗi phòng có hàng tóm tắt và nút ▾ / ▸ để thu gọn, nút "Thu gọn tất cả" / "Mở tất cả", đếm "Hiển thị X / Y phòng". Tìm và lọc chỉ ẩn hàng trên màn hình, không đổi dữ liệu. Trạng thái tìm, lọc và thu gọn giữ khi bảng làm mới.
+
+- `dev/test_ui.cjs`: tìm "p03" và "phong 12", lọc không tầng và theo tầng, thu gọn một phòng và giữ sau khi làm mới, nút thu gọn / mở tất cả. Đạt.
+- `dev/test_ui_en.cjs`: chuỗi mới có bản dịch Anh. Đạt.
+- `dev/test_ui_images.cjs`, `test_ui_sheets.cjs`, `test_report_page.cjs`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** bố cục hộp Quản lý phòng khi có nhiều phòng.
+
+## Bản 1.1.1-beta.34: đã kiểm tra tự động
+
+Quản lý phòng: tên phòng được phép trùng (vd hai "Vệ sinh" trong cùng một tầng hoặc khác tầng); mã phòng vẫn không được trùng trong toàn model (không phân biệt hoa thường, mã rỗng không tính).
+
+- `dev/test_rooms.rb`: tên trùng với mã khác được nhận; mã trùng vẫn bị từ chối (trước khi sửa: tên trùng bị từ chối, kiểm tra đỏ).
+- `ruby dev/run_tests.rb` và `dev/test_dialog_logic.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** nhập hai phòng cùng tên, khác mã trong hộp Quản lý phòng.
+
+## Bản 1.1.1-beta.33: đã kiểm tra tự động
+
+Quản lý phòng: sửa tên / mã / tầng của một phòng làm hộp quay về phòng đầu tiên sau mỗi lần nhập (bảng được dựng lại làm mất vị trí cuộn). Giờ hộp giữ vị trí cuộn khi bảng làm mới.
+
+- `dev/test_ui.cjs`: thêm kiểm tra 12 phòng, cuộn xuống cuối, sửa tên phòng cuối, vị trí cuộn không đổi và tên mới hiện đúng (trước khi sửa: cuộn 2194 về 0, kiểm tra đỏ).
+- `dev/test_ui.cjs`, `test_ui_images.cjs`, `test_ui_sheets.cjs`, `test_ui_en.cjs`, `test_report_page.cjs`: đạt. `ruby dev/run_tests.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** nhập tên phòng trong hộp Quản lý phòng với model thật.
+
+## Bản 1.1.1-beta.32: đã kiểm tra tự động
+
+Đọc móng và mái do VGD Structure 0.29.0-beta.1 dựng (`core/structure_source.rb`): kind `footing` (dims như cột, tính thể tích), `roof` (diện tích nghiêng, thể tích = diện tích x dày), nhóm chứa `footings`, `roofs`.
+
+- `dev/test_structure_source.rb`: thêm kiểm tra đế móng 1200 x 1000 x 400 (0,48 m³) và tấm mái 50 m² dày 100 (5 m³), cách tính mặc định, nhóm chứa. `ruby dev/run_tests.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** bảng khối lượng với móng, mái dựng thật.
+
 ## Bản 1.1.1-beta.31: đã kiểm tra tự động
 
 Rà lại beta.28–30, sửa lỗi (mỗi lỗi có test tái hiện viết trước khi sửa):

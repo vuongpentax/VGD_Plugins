@@ -245,7 +245,7 @@ module VGD
       end
 
       # Menu SketchUp "Vẽ trong SketchUp": mở cửa sổ ở tab Mặt bằng, chọn công cụ vẽ và bật chế độ vẽ trong SketchUp (chờ cửa sổ sẵn sàng nếu mới mở).
-      DRAW_TOOLS = %w[column beam wall door window slab ceiling stair].freeze
+      DRAW_TOOLS = %w[column beam wall door window slab ceiling stair footing].freeze
       def start_tool(tool)
         raise ArgumentError, 'Công cụ vẽ không hợp lệ.' unless DRAW_TOOLS.include?(tool)
         @pending_tool = tool
@@ -437,7 +437,7 @@ module VGD
         raise ArgumentError, 'Danh sách loại cần dựng không hợp lệ.' unless only.nil? || (only.is_a?(Array) && only.all? { |k| AllBuilder::KINDS.include?(k) })
         if ids.is_a?(Array) && state.is_a?(Hash)
           clean = State.normalize!(state)
-          total = AllBuilder.targets(clean, ids, only).sum { |kind, level_ids| level_ids.sum { |id| Levels.find(clean['levels'], id)['picks'][kind].size } }
+          total = AllBuilder.targets(clean, ids, only).sum { |kind, level_ids| level_ids.sum { |id| (Levels.find(clean['levels'], id)['picks'][kind] || {}).size } }
           if total > CONFIRM_COLUMNS && ::UI.messagebox("Sẽ dựng khoảng #{total} đối tượng (cột, dầm, tường, sàn, trần). Tiếp tục?", MB_YESNO) != IDYES
             return emit('message', {text: 'Đã hủy, chưa dựng gì.'})
           end

@@ -24,7 +24,7 @@ module UI
 end
 ROOT = File.expand_path('../runtime/vgd_structure', __dir__)
 module VGD; module Structure; VERSION = '9.9.9'; end; end
-%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/stair_types core/stair_plan core/stair_place core/layer_list core/levels core/column_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/slab_plan core/ceiling_plan core/proposal core/checker core/model_edit core/section_geometry core/sketchup_import core/state core/preview model_sync edit_sync su_scan su_section su_scan model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder opening_builder plate_builder stair_builder all_builder su_tools panel].each { |f| require File.join(ROOT, f) }
+%w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/stair_types core/stair_plan core/stair_place core/layer_list core/levels core/column_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/room_plan core/slab_plan core/ceiling_plan core/proposal core/checker core/model_edit core/section_geometry core/sketchup_import core/state core/roof_plan core/preview model_sync edit_sync su_scan su_section su_scan model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder opening_builder plate_builder stair_builder roof_builder all_builder su_tools panel].each { |f| require File.join(ROOT, f) }
 S = VGD::Structure
 MS = S::ModelSync
 D = S::Schema::DICTIONARY
@@ -82,6 +82,11 @@ col_cut = r2[:cut].find { |c| c[:src][:kind] == 'suobj' }
 ok('cắt qua cột SketchUp thường (phép dời 3000, 1000): có đường viền, nguồn suobj mang id SketchUp và tag', col_cut && col_cut[:closed] && col_cut[:src][:ref] == col.entityID.to_s && col_cut[:src][:tag] == 'S. COLUMN')
 ok('cột cắt đúng chỗ: s = (y - (-500)) từ 1350 đến 1650 (cột 300 quanh y = 1000), z 0..3000', col_cut[:pts].map(&:first).minmax == [1350.0, 1650.0] && col_cut[:pts].map(&:last).minmax == [0.0, 3000.0])
 ok('cắt ngoài mọi vật (x = 9000): không có đường viền', SS.build($model, {'a' => [9000, -500], 'b' => [9000, 1500], 'dir' => 1, 'depth' => 100})[:cut].empty?)
+# Chỉ phần nằm trong ĐOẠN đường cắt vẽ trên mặt bằng mới bị cắt (và được hatch): vật trên phần kéo dài của đường cắt thì không.
+short = SS.build($model, {'a' => [2000, -1000], 'b' => [2000, -500], 'dir' => 1, 'depth' => 100})
+ok('đường cắt dừng trước tường (đoạn y -1000..-500, tường ở y -100..100): tường không bị cắt dù nằm trên phần kéo dài', short[:cut].empty?)
+half = SS.build($model, {'a' => [2000, -1000], 'b' => [2000, 0], 'dir' => 1, 'depth' => 100})
+ok('đường cắt dừng giữa tường (tới y = 0): chỉ phần tường trong đoạn bị cắt, s 900..1000', half[:cut].size == 1 && half[:cut][0][:pts].map(&:first).minmax == [900.0, 1000.0])
 back = SS.build($model, {'a' => [-500, -1000], 'b' => [-500, 1000], 'dir' => -1, 'depth' => 1000})
 ok('nhìn từ x = -500 về +X tầm 1000: thấy cạnh đầu tường, không có đường cắt', back[:cut].empty? && back[:beyond].size >= 4)
 none = SS.build($model, {'a' => [-500, -1000], 'b' => [-500, 1000], 'dir' => 1, 'depth' => 1000})
@@ -131,6 +136,30 @@ ok('quá 30 mặt cắt: từ chối', (begin; LV2.sections!((1..31).to_h { |i| 
 stx = S::State.default; stx['levels'][0]['sections'] = good
 nx = S::State.normalize!(stx)
 ok('State.normalize! giữ mặt cắt của tầng; tầng không có thì không có khóa', nx['levels'][0]['sections'].keys == ['sc_00000001'] && !nx['levels'][1].key?('sections'))
+
+# ---- Mái (H5d): tấm mái bị cắt là phần tử plugin loại roof, kèm nguồn (loại, tầng, mã, tag) để hatch và tô màu theo loại ----
+rm = Sketchup::Model.new
+roof_state = S::State.default
+roof_level = roof_state['levels'][-1]['id']
+roof_state['levels'][-1]['roof'] = {'shape' => 'gable', 'slope' => 30, 'dir' => 'x', 'thickness' => 100, 'overhang' => 600}
+S::RoofBuilder.build(rm, roof_state, [roof_level])
+rn = S::State.normalize!(Marshal.load(Marshal.dump(roof_state)))
+ridge = S::RoofPlan.plan(rn['grid'], rn['levels'], roof_level)[:ridge]
+rr2 = SS.build(rm, {'a' => [6300, -1500], 'b' => [6300, 8700], 'dir' => 1, 'depth' => 500})
+ok('cắt vuông góc nóc mái hai dốc: hai đường viền khép kín (hai tấm), mỗi tấm 4 đỉnh', rr2[:cut].size == 2 && rr2[:cut].all? { |c| c[:closed] && c[:pts].size == 4 })
+ok('đường viền tấm mái mang nguồn loại roof, tầng, mã tấm, tag A. ROOF', rr2[:cut].map { |c| c[:src] }.sort_by { |x| x[:ref] } == [{kind: 'roof', level: roof_level, ref: 'roof_1', tag: 'A. ROOF'}, {kind: 'roof', level: roof_level, ref: 'roof_2', tag: 'A. ROOF'}])
+r1 = rr2[:cut].find { |c| c[:src][:ref] == 'roof_1' }
+r2c = rr2[:cut].find { |c| c[:src][:ref] == 'roof_2' }
+ok('tấm mái dốc đúng: s theo mặt bằng (chìa 600, nóc giữa khung), đỉnh cao nhất bằng nóc của kế hoạch', r1[:pts].map(&:first).minmax == [900.0, 5100.0] && r2c[:pts].map(&:first).minmax == [5100.0, 9300.0] && [r1, r2c].all? { |c| (c[:pts].map(&:last).max - ridge).abs < 0.1 })
+
+# Xà gồ (BIM kind beam, part purlin): mặt cắt gán loại purlin để tô màu / hatch gỗ riêng và không chọn nhầm như dầm
+pm = Sketchup::Model.new
+roof_state['levels'][-1]['roof']['purlin'] = {'section' => '50x100', 'spacing' => 800}
+S::RoofBuilder.build(pm, roof_state, [roof_level])
+pr = SS.build(pm, {'a' => [6300, -1500], 'b' => [6300, 8700], 'dir' => 1, 'depth' => 500})
+purlin_cut = pr[:cut].select { |c| c[:src][:kind] == 'purlin' }
+ok('cắt vuông góc nóc mái có xà gồ: xà gồ là đường viền kín 4 đỉnh, loại purlin, tag S. BEAM, mã xà gồ', purlin_cut.size >= 2 && purlin_cut.all? { |c| c[:closed] && c[:pts].size == 4 && c[:src][:tag] == 'S. BEAM' && c[:src][:ref].start_with?('purlin_') } &&
+   pr[:cut].none? { |c| c[:src][:kind] == 'beam' })
 
 # ---- Callback section_build ----
 panel = S::Panel.new; dlg = panel.instance_variable_get(:@dialog); panel.show; call(dlg, 'ready')

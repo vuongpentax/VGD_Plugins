@@ -64,5 +64,11 @@ slant = SG.beyond(SG.plane([0, 0], [1000, 0], 1, 300), [[[200, -500, 0], [200, 5
 ok('cạnh xuyên qua mặt cắt được cắt theo tầm nhìn 0..300: chỉ giữ phần t từ 0 đến 300 (s = 200, z từ 500 đến 800)', slant == [[[200.0, 500.0], [200.0, 800.0]]])
 ok('cạnh song song mặt cắt trong tầm nhìn: giữ nguyên; ngoài tầm nhìn: bỏ', SG.beyond(SG.plane([0, 0], [1000, 0], 1, 300), [[[0, 100, 500], [800, 100, 500]], [[0, 400, 500], [800, 400, 500]]]) == [[[0.0, 500.0], [800.0, 500.0]]])
 
+# Xén theo đoạn đường cắt (0 <= s <= length): chỉ phần nằm trong đoạn vẽ trên mặt bằng mới bị cắt
+cr = SG.crop([{pts: [[-500, 0], [1500, 0], [1500, 3000], [-500, 3000]], closed: true}], 1000)
+ok('đường viền khép kín vắt qua hai đầu đoạn: xén còn s 0..1000, vẫn khép kín', cr.size == 1 && cr[0][:closed] && cr[0][:pts].map(&:first).minmax == [0.0, 1000.0] && cr[0][:pts].map(&:last).minmax == [0.0, 3000.0])
+ok('đường viền nằm ngoài đoạn: bỏ hẳn', SG.crop([{pts: [[1200, 0], [1500, 0], [1500, 300], [1200, 300]], closed: true}], 1000).empty?)
+op = SG.crop([{pts: [[-200, 0], [300, 0], [300, 100], [1400, 100], [1400, 200], [800, 200]], closed: false}], 1000)
+ok('đường hở đi ra ngoài rồi vào lại: tách thành hai đường, mỗi đường nằm trong đoạn', op.size == 2 && op.all? { |l| !l[:closed] && l[:pts].all? { |s, _| s >= 0 && s <= 1000 } } && op[0][:pts].first == [0.0, 0.0])
 puts($fails.zero? ? 'TẤT CẢ ĐẠT' : "#{$fails} LỖI")
 exit($fails.zero? ? 0 : 1)

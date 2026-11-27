@@ -11,7 +11,7 @@ module VGD
   module Transform
     ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze unless defined?(ROOT)
     # Thứ tự nạp code. Dùng chung cho lúc mở SketchUp và lúc "Tải lại code".
-    FILES = %w[core/units core/items core/steps core/translate core/rotate_scale core/plan core/model_ops ui/panel].freeze
+    FILES = %w[core/units core/items core/steps core/translate core/rotate_scale core/plan core/live_queue core/model_ops ui/panel].freeze
     @log_counts = Hash.new(0)
     def self.log(message)
       return if @log_counts.values.inject(0, :+) >= 100

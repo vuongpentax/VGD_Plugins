@@ -53,6 +53,39 @@ module VGD
         rescue ColumnPlan::Error => error
           out[:columns_error] = error.message
         end
+        # Mái (tầng có khai báo mái): hình chiếu từng tấm và cao độ nóc, cùng nguồn RoofPlan với lúc dựng.
+        if (Levels.find(levels, payload['level'] || levels.first['id']) || {})['roof']
+          roof = RoofPlan.plan(grid, levels, payload['level'] || levels.first['id'], wall_types)
+          out[:roofs] = {level: roof[:level]['id'], z_base: roof[:z_base], ridge: roof[:ridge], issues: roof[:issues], count: roof[:items].size, gables: roof[:gables].size, purlins: roof[:purlins].map { |q| {ref: q[:ref], a: q[:line][0], b: q[:line][1]} },
+                         items: roof[:items].map { |i| i.slice(:ref, :poly, :top, :slope, :shape, :area, :thickness) }}
+        end
+        # Vách kính (tầng có khai báo): hai đầu nhịp, số tấm và kích thước, cùng nguồn GlassWallPlan với lúc dựng.
+        glass_level = Levels.find(levels, payload['level'] || levels.first['id'])
+        if glass_level && !(glass_level['glass_walls'] || {}).empty?
+          glass = GlassWallPlan.plan(grid, levels, glass_level['id'])
+          out[:glass_walls] = {level: glass_level['id'], issues: glass[:issues], count: glass[:items].size, items: glass[:items].map { |i| i.slice(:ref, :span, :a, :b, :min, :max, :length, :height, :count, :pane_w, :pane_h) }}
+        end
+        # Phòng (tầng có khai báo phòng): ô, nhãn, diện tích lưới và diện tích sàn (từ cùng kế hoạch sàn với lúc dựng).
+        if glass_level && !(glass_level['rooms'] || {}).empty?
+          slab_items = begin
+            SlabPlan.plan(grid, levels, glass_level['id'], types, beam_types, wall_types, opening_types, stair_types)[:items]
+          rescue ArgumentError
+            nil
+          end
+          rooms = RoomPlan.plan(grid, levels, glass_level['id'], slab_items)
+          out[:rooms] = {level: glass_level['id'], issues: rooms[:issues], count: rooms[:items].size, items: rooms[:items].map { |i| i.slice(:ref, :name, :cells, :rects, :label, :area_grid, :floor_area) }}
+        end
+        # Đế móng (tầng có khai báo móng): cùng nguồn FootingPlan với lúc dựng.
+        level_id = payload['level'] || levels.first['id']
+        if (lf = Levels.find(levels, level_id) || {}) && (lf['footing'] || !(lf['free_footings'] || {}).empty?)
+          begin
+            plan = FootingPlan.plan(grid, types, levels, level_id, beam_types, wall_types, opening_types)
+            out[:footings] = {level: plan[:level]['id'], z_top: plan[:z_top], h: plan[:h], issues: plan[:issues], count: plan[:items].size,
+                              items: plan[:items].map { |i| i.slice(:ref, :kind, :center, :w, :d, :h, :z0, :z1, :rot, :poly, :free, :a, :b, :width) }}
+          rescue FootingPlan::Error, ColumnPlan::Error, BeamPlan::Error, WallPlan::Error => error
+            out[:footings_error] = error.message
+          end
+        end
         begin
           plan = BeamPlan.plan(grid, types, beam_types, levels, payload['level'] || levels.first['id'])
           out[:beams] = {level: plan[:level]['id'], level_name: plan[:level]['name'], z_top: plan[:z_top], issues: plan[:issues], count: plan[:items].size,
@@ -83,7 +116,7 @@ module VGD
           out[:stairs_error] = error.message
         end
         begin
-          slab = SlabPlan.plan(grid, levels, level_id, types, beam_types, wall_types, opening_types)
+          slab = SlabPlan.plan(grid, levels, level_id, types, beam_types, wall_types, opening_types, stair_types)
           out[:slabs] = {level: slab[:level]['id'], level_name: slab[:level]['name'], z_top: slab[:z_top], thickness: slab[:thickness], count: slab[:items].size, issues: slab[:issues],
                          items: slab[:items].map { |i| i.slice(:ref, :min, :max, :thickness, :z_top, :z_bottom, :area, :polygon, :holes, :placement, :layers) }}
         rescue SlabPlan::Error => error

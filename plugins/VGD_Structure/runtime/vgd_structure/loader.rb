@@ -10,7 +10,7 @@ module VGD
   module Structure
     ROOT = File.dirname(__FILE__.dup.force_encoding(Encoding::UTF_8)).freeze unless defined?(ROOT)
     # Thứ tự nạp code. Dùng chung cho lúc mở SketchUp và lúc "Tải lại code".
-    FILES = %w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/layer_list core/levels core/column_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/slab_plan core/ceiling_plan core/proposal core/checker core/schedule core/model_edit core/section_geometry core/elevation_geometry core/stair_types core/stair_plan core/stair_place core/sketchup_import core/state core/preview model_sync edit_sync su_scan su_section model_store tag_store grid_tag grid_builder column_builder beam_builder wall_builder opening_builder plate_builder stair_builder all_builder su_tools panel].freeze
+    FILES = %w[bridge_registry id_keeper core/schema core/grid core/axis_symbol core/geometry placement core/column_types core/beam_types core/wall_types core/opening_types core/layer_list core/levels core/column_plan core/footing_plan core/roof_plan core/glass_wall_plan core/room_plan core/beam_plan core/wall_joins core/wall_plan core/opening_plan core/plates core/slab_plan core/ceiling_plan core/proposal core/checker core/schedule core/model_edit core/section_geometry core/elevation_geometry core/stair_types core/stair_plan core/stair_place core/sketchup_import core/state core/preview model_sync edit_sync su_scan su_section model_store tag_store grid_tag grid_builder column_builder footing_builder roof_builder glass_wall_builder beam_builder wall_builder opening_builder plate_builder stair_builder all_builder su_tools panel].freeze
 
     # Lý do đang bận (không cho tải lại code), hoặc nil. Chưa có thao tác vẽ / dựng nào ở cột mốc 0; cột mốc sau cập nhật khi có.
     def self.busy_reason
@@ -89,7 +89,7 @@ unless file_loaded?(__FILE__)
   menu = ::VGD.menu.add_submenu('VGD Structure')
   menu.add_item('Lưới trục') { VGD::Structure.open_panel }
   draw_menu = menu.add_submenu('Vẽ trong SketchUp')
-  [['Cột', 'column'], ['Dầm', 'beam'], ['Tường', 'wall'], ['Cửa đi', 'door'], ['Cửa sổ', 'window'], ['Sàn', 'slab'], ['Trần', 'ceiling'], ['Cầu thang', 'stair']].each do |label, tool|
+  [['Cột', 'column'], ['Dầm', 'beam'], ['Tường', 'wall'], ['Cửa đi', 'door'], ['Cửa sổ', 'window'], ['Sàn', 'slab'], ['Trần', 'ceiling'], ['Cầu thang', 'stair'], ['Móng', 'footing']].each do |label, tool|
     draw_menu.add_item(label) { VGD::Structure.start_draw(tool) }
   end
   menu.add_item('Tải lại code') { VGD::Structure.reload }
@@ -100,7 +100,7 @@ unless file_loaded?(__FILE__)
   command.small_icon = command.large_icon = File.join(VGD::Structure::ROOT, 'assets', 'icons', 'grid.svg')
   toolbar.add_item(command)
   # Nút vẽ trực tiếp trong SketchUp (cùng lệnh với menu Vẽ trong SketchUp): icon SVG theo bộ icon VGD (xem shared/VGD_ICON_SYSTEM_RULES.md).
-  [['column', 'Cột'], ['beam', 'Dầm'], ['wall', 'Tường'], ['door', 'Cửa đi'], ['window', 'Cửa sổ'], ['slab', 'Sàn'], ['ceiling', 'Trần'], ['stair', 'Cầu thang']].each do |tool, label|
+  [['column', 'Cột'], ['beam', 'Dầm'], ['wall', 'Tường'], ['door', 'Cửa đi'], ['window', 'Cửa sổ'], ['slab', 'Sàn'], ['ceiling', 'Trần'], ['stair', 'Cầu thang'], ['footing', 'Móng']].each do |tool, label|
     draw_command = ::UI::Command.new("VGD Structure · Vẽ #{label.downcase}") { VGD::Structure.start_draw(tool) }
     draw_command.tooltip = "VGD Structure · Vẽ #{label.downcase}"
     draw_command.status_bar_text = "VGD Structure: vẽ #{label.downcase} trực tiếp trong SketchUp"

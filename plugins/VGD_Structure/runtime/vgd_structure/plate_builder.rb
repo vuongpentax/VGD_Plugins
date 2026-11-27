@@ -16,7 +16,7 @@ module VGD
 
       def self.plan_for(kind, state, id)
         case kind
-        when 'slabs' then SlabPlan.plan(state['grid'], state['levels'], id, state['types'], state['beam_types'], state['wall_types'], state['opening_types'])
+        when 'slabs' then SlabPlan.plan(state['grid'], state['levels'], id, state['types'], state['beam_types'], state['wall_types'], state['opening_types'], state['stair_types'])
         else CeilingPlan.plan(state['grid'], state['types'], state['beam_types'], state['wall_types'], state['levels'], id, state['opening_types'])
         end
       end
@@ -187,13 +187,16 @@ module VGD
 
       # Mặt (đa giác ngoài, lỗ tạo bằng cách thêm mặt nhỏ rồi xóa) ở độ cao z rồi đùn lên theo bề dày. Chưa xác minh trong SketchUp thật (đùn mặt có lỗ).
       def self.extrude(entities, relative, holes, z, thickness)
-        face = entities.add_face(relative.map { |x, y| Geom::Point3d.new(x.mm, y.mm, z.mm) })
+        entities.add_face(relative.map { |x, y| Geom::Point3d.new(x.mm, y.mm, z.mm) })
         holes.each do |ring|
           inner = entities.add_face(ring.map { |x, y| Geom::Point3d.new(x.mm, y.mm, z.mm) })
           inner.erase! if inner
         end
-        face.reverse! if face.normal.z < 0
-        face.pushpull(thickness.mm)
+        # Lỗ chạm mép tấm có thể chia mặt thành nhiều mảnh: đùn mọi mảnh còn lại (lấy danh sách trước khi đùn vì đùn sinh thêm mặt bên).
+        entities.grep(Sketchup::Face).each do |face|
+          face.reverse! if face.normal.z < 0
+          face.pushpull(thickness.mm)
+        end
       end
 
       def self.fmt(value)

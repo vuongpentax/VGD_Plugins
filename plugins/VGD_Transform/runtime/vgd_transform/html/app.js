@@ -11,7 +11,7 @@ const call = (name, payload) => { if (window.sketchup && window.sketchup[name]) 
 const store = { get(key) { try { return localStorage.getItem(key); } catch (_) { return null; } }, set(key, value) { try { localStorage.setItem(key, value); } catch (_) { /* không lưu được thì thôi */ } } };
 
 const LIVE_KEY = 'vgd.transform.live';
-const LIVE_INTERVAL_MS = 40;        // gửi tối đa ~25 lần/giây khi kéo trực tiếp
+const LIVE_INTERVAL_MS = 16;        // khoảng cách tối thiểu giữa hai lần gửi khi kéo trực tiếp (Ruby chỉ giữ giá trị mới nhất)
 const DRAG_PIXELS_PER_STEP = 2;
 const DRAG_START_PIXELS = 3;
 const REPEAT_DELAY_MS = 350;
@@ -60,6 +60,7 @@ function payloadFor(panel) {
   switch (panel) {
     case 'move_abs': return { tool: panel, values: dirtyXyz(panel), pivot };
     case 'move_off': return { tool: panel, values: xyz(panel), coord };
+    case 'rotate_abs': return { tool: panel, values: dirtyXyz(panel), pivot };
     case 'rotate': return { tool: panel, values: xyz(panel), pivot, coord };
     case 'scale_abs': return { tool: panel, values: dirtyXyz(panel), pivot };
     default: return scaleUniform()
@@ -105,6 +106,7 @@ function fillAbsolute() {
     input.placeholder = state.count === 0 ? '—' : (value === null || value === undefined ? 'khác nhau' : '');
   });
   fill('move_abs', $('pivot').value === 'item' ? state.origin : state.center);
+  fill('rotate_abs', state.angles);
   fill('scale_abs', state.scale);
 }
 function resetOffset(panel) {
@@ -115,7 +117,7 @@ function updateCoordTitles() {
   document.querySelectorAll('.coord-title').forEach(h => { h.textContent = `${h.dataset.title} · ${text}`; });
 }
 
-// ----- Kéo trực tiếp: gửi tối đa mỗi LIVE_INTERVAL_MS, lần cuối luôn được gửi -----
+// ----- Kéo trực tiếp: gửi tối đa mỗi LIVE_INTERVAL_MS, lần cuối luôn được gửi (Ruby gộp, chỉ áp dụng giá trị mới nhất) -----
 let livePanel = null;
 let liveTimer = null;
 function liveBegin(panel) {
@@ -228,6 +230,19 @@ window.VGD = {
   },
 };
 
+// ----- Ctrl+Z / Ctrl+Y: SketchUp không nhận phím tắt khi tiêu điểm ở cửa sổ này nên chuyển lệnh sang Ruby. Ô đang có chữ gõ dở thì để trình duyệt hoàn tác chữ. -----
+document.addEventListener('keydown', event => {
+  if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+  const key = event.key.toLowerCase();
+  const undo = key === 'z' && !event.shiftKey;
+  const redo = key === 'y' || (key === 'z' && event.shiftKey);
+  if (!undo && !redo) return;
+  const field = document.activeElement;
+  if (field && field.matches && field.matches('input') && field.dataset.dirty) return;
+  event.preventDefault();
+  call(undo ? 'undo' : 'redo');
+});
+
 // ----- Tab, lựa chọn, Enter -----
 function showTool(tool) {
   document.querySelectorAll('.tabs .tab').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.tab === tool)));
@@ -248,13 +263,24 @@ $('live').addEventListener('click', () => {
   store.set(LIVE_KEY, next ? '1' : '0');
 });
 
+// Sau Enter, ô được đánh dấu "mới" (dataset.fresh): phím gõ tiếp theo (chữ, số, Backspace, Delete) thay hẳn nội dung cũ, như hộp số của 3ds Max.
+// Bấm chuột vào ô hoặc phím điều hướng (mũi tên, Home, End, Tab) thì bỏ đánh dấu để sửa tiếp trong số cũ.
+const TYPING_KEYS = new Set(['Backspace', 'Delete']);
 document.querySelectorAll('input[type="text"]').forEach(input => {
   input.addEventListener('input', () => { input.dataset.dirty = '1'; });
   input.addEventListener('keydown', event => {
-    if (event.key !== 'Enter') return;
-    event.preventDefault();
-    apply(panelOf(input));
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      input.dataset.fresh = '1';
+      apply(panelOf(input));
+      return;
+    }
+    if (!input.dataset.fresh || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.key.length === 1 || TYPING_KEYS.has(event.key)) { input.select(); delete input.dataset.fresh; }
+    else if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Tab', 'Escape'].includes(event.key)) delete input.dataset.fresh;
   });
+  input.addEventListener('pointerdown', () => { delete input.dataset.fresh; });
+  input.addEventListener('blur', () => { delete input.dataset.fresh; });
 });
 document.querySelectorAll('input[type="text"][data-spin]').forEach(enhanceSpinner);
 

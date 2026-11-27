@@ -98,6 +98,32 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     await receive('state', { ...state, center: [0, 500, 650] });
     ok((await value('move_abs-x')) === '0', 'sau khi áp dụng: ô Tuyệt đối hiện giá trị mới');
 
+    // Nhập số, Enter, rồi gõ số khác: số mới thay hẳn số cũ (200 Enter, gõ 300 Enter -> 300, không phải 200300)
+    await page.fill('#move_abs-x', '200');
+    await page.keyboard.press('Enter');
+    await receive('done', { moved: 2, skipped: 0, tool: 'move_abs' });
+    await receive('state', { ...state, center: [200, 500, 650] });
+    ok((await value('move_abs-x')) === '200', 'sau Enter: ô Tuyệt đối hiện giá trị đã áp dụng (200)');
+    await page.keyboard.type('300');
+    ok((await value('move_abs-x')) === '300', 'gõ số mới ngay sau Enter: thay hẳn số cũ (300, không phải 200300)');
+    await clear();
+    await page.keyboard.press('Enter');
+    const again = await lastCall('apply');
+    ok(again && again.values.x === '300', 'Enter lần hai gửi đúng số mới (300)');
+    await receive('done', { moved: 2, skipped: 0, tool: 'move_abs' });
+    await receive('state', { ...state, center: [300, 500, 650] });
+    await page.keyboard.press('Backspace');
+    ok((await value('move_abs-x')) === '', 'bấm Backspace ngay sau Enter: xóa cả số cũ để nhập lại');
+    await page.fill('#move_abs-x', '300');
+    await page.keyboard.press('Enter');
+    await receive('done', { moved: 2, skipped: 0, tool: 'move_abs' });
+    await receive('state', { ...state, center: [300, 500, 650] });
+    await page.keyboard.press('End');
+    await page.keyboard.type('5');
+    ok((await value('move_abs-x')) === '3005', 'đã điều hướng bằng phím (End) sau Enter: giữ số cũ để sửa tiếp (3005)');
+    await receive('state', { ...state, center: [0, 500, 650] });
+    await page.evaluate(() => { const input = document.getElementById('move_abs-x'); delete input.dataset.dirty; input.value = '0'; input.blur(); });
+
     // Tương đối: hệ trục, Enter, tự về 0
     await page.selectOption('#coord', 'local');
     ok((await page.locator('[data-panel="move_off"] h3').innerText()) === 'Tương đối · Local', 'đổi hệ trục: tiêu đề khung ghi Local');
@@ -159,6 +185,34 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     await click('move_abs-x', 'up');
     const liveAbs = await lastCall('live');
     ok(liveAbs && liveAbs.tool === 'move_abs' && liveAbs.values.x === '1501' && liveAbs.values.y === '', 'xem trực tiếp ở Tuyệt đối (tâm cả lựa chọn 1500): gửi 1501, chỉ ô đang kéo');
+    // Kéo trực tiếp: nhiều giá trị trong cùng một nhịp chỉ gửi giá trị mới nhất (Ruby cũng gộp lại), không chờ xác nhận từng nhịp
+    await clear();
+    await pointer('move_off-x', 'up', 'pointerdown');
+    await page.waitForTimeout(100);
+    await page.evaluate(() => {
+      const arrow = document.getElementById('move_off-x').parentElement.querySelector('button.up');
+      for (const y of [90, 80]) arrow.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, pointerId: 1, buttons: 1, clientY: y }));
+    });
+    await page.waitForTimeout(100);
+    const liveCount = () => page.evaluate(() => window.calls.filter(c => c.name === 'live').length);
+    const latest = await lastCall('live');
+    ok((await liveCount()) === 2 && latest.values.x === '10', 'hai giá trị kéo trong một nhịp: chỉ gửi một cập nhật với giá trị mới nhất (10)');
+    ok(!(await callNames()).includes('live_ack'), 'không có xác nhận từng nhịp giữa giao diện và Ruby');
+    await pointer('move_off-x', 'up', 'pointerup');
+    ok((await callNames()).slice(-2).join(',') === 'live,live_end', 'thả nút: gửi giá trị cuối rồi live_end');
+    // Ctrl+Z / Ctrl+Y trong cửa sổ: giao cho SketchUp (phím tắt không tới SketchUp khi tiêu điểm ở cửa sổ này); ô đang gõ dở thì để trình duyệt hoàn tác chữ
+    await clear();
+    await page.keyboard.press('Control+z');
+    await page.keyboard.press('Control+y');
+    await page.keyboard.press('Control+Shift+z');
+    ok((await callNames()).join(',') === 'undo,redo,redo', 'Ctrl+Z gửi undo, Ctrl+Y và Ctrl+Shift+Z gửi redo');
+    await clear();
+    await page.focus('#move_off-x');
+    await page.keyboard.type('5');
+    await page.keyboard.press('Control+z');
+    ok(!(await callNames()).includes('undo'), 'đang gõ dở trong ô số: Ctrl+Z để cho trình duyệt hoàn tác chữ, không gửi undo');
+    await page.fill('#move_off-x', '');
+    await page.evaluate(() => { const input = document.getElementById('move_off-x'); delete input.dataset.dirty; input.blur(); });
     await page.selectOption('#pivot', 'item');
     await receive('state', state);
     await clear();
@@ -175,6 +229,26 @@ const ok = (cond, msg) => { console.log((cond ? 'PASS  ' : 'FAIL  ') + msg); if 
     await page.press('#rotate-z', 'Enter');
     const rot = await lastCall('apply');
     ok(rot && rot.tool === 'rotate' && rot.values.z === '90' && rot.pivot === 'world' && rot.coord === 'local', 'xoay: Enter gửi góc, tâm, hệ trục');
+    // Xoay tuyệt đối: hiện góc hiện tại của món; gõ 0 hoặc bấm chuột phải ▲▼ để quay về hướng gốc
+    ok(await visible('.box[data-panel="rotate_abs"]'), 'tab Xoay: có khung Tuyệt đối (góc hiện tại của món)');
+    await receive('state', { ...state, angles: [30, 20, 40] });
+    ok((await value('rotate_abs-x')) === '30' && (await value('rotate_abs-y')) === '20' && (await value('rotate_abs-z')) === '40', 'xoay tuyệt đối: ô hiện góc X, Y, Z hiện tại của món');
+    await receive('state', { ...state, angles: [30, null, 40] });
+    ok((await page.locator('#rotate_abs-y').getAttribute('placeholder')) === 'khác nhau', 'xoay tuyệt đối: các món khác nhau ở trục nào thì ô trục đó ghi "khác nhau"');
+    await receive('state', { ...state, angles: [30, 20, 40] });
+    await page.fill('#rotate_abs-z', '0');
+    await clear();
+    await page.press('#rotate_abs-z', 'Enter');
+    const rabs = await lastCall('apply');
+    ok(rabs && rabs.tool === 'rotate_abs' && rabs.values.z === '0' && rabs.values.x === '' && rabs.values.y === '' && rabs.pivot === 'world', 'xoay tuyệt đối: Enter chỉ gửi ô đã sửa (Z = 0), ô khác để trống = giữ góc');
+    await receive('done', { moved: 1, skipped: 0, tool: 'rotate_abs' });
+    await receive('state', { ...state, angles: [30, 20, 0] });
+    await clear();
+    await rightClick('rotate_abs-x', 'up');
+    const rabsReset = await lastCall('apply');
+    ok((await value('rotate_abs-x')) === '0' && rabsReset && rabsReset.tool === 'rotate_abs' && rabsReset.values.x === '0', 'chuột phải ▲▼ ở ô Xoay tuyệt đối: về 0 và áp dụng ngay (quay về hướng gốc theo trục đó)');
+    await receive('done', { moved: 1, skipped: 0, tool: 'rotate_abs' });
+    await receive('state', { ...state, angles: [0, 20, 0] });
     await page.click('.tab[data-tab="scale"]');
     ok((await visible('.box[data-panel="scale_abs"]')) && (await visible('#scale-one')) && !(await visible('#scale-xyz')), 'tab Scale: khung Tuyệt đối và Tương đối (mặc định Đều)');
     await page.fill('#scale_abs-x', '1');

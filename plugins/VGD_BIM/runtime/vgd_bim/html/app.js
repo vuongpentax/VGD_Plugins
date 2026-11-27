@@ -1189,6 +1189,120 @@ function roomsPanel(){
   p.append(node('div','Quản lý phòng','pop-title'));
   const save=()=>call('table_rooms',JSON.stringify({rooms:rooms.map(({metrics,...rest})=>rest)}));
   const fieldInput=(room,key,label,type,width)=>{const i=node('input');i.type=type;i.value=room[key]??'';i.setAttribute('aria-label',label);i.title=label;if(width)i.style.width=width;i.onchange=()=>{room[key]=type==='number'?Number(i.value):i.value;save();};return i;};
+  // Tìm, lọc và thu gọn (đợt 1): trạng thái nhớ trong tableState.roomsView, dựng lại bảng vẫn giữ.
+  const roomsView=tableState.roomsView||(tableState.roomsView={q:'',level:'',collapsed:new Set(),collapsedLevels:new Set(),group:false,picked:new Set()});
+  const levelName=id=>{const l=levels.find(x=>x.id===id);return l?l.name:'Chưa có tầng';};
+  // Nhóm theo tầng (đợt 2): phòng của tầng đã xóa hoặc chưa gán tầng nằm chung nhóm "Chưa có tầng".
+  const groupKey=room=>levels.some(l=>l.id===room.level)?room.level:'';
+  const setGroupCollapsed=(group,flag)=>{const body=group.querySelector('.rm-group-body');const gt=group.querySelector('.rm-group-head .rm-toggle');body.hidden=flag;gt.textContent=flag?'▸':'▾';gt.setAttribute('aria-expanded',String(!flag));flag?roomsView.collapsedLevels.add(group.dataset.key):roomsView.collapsedLevels.delete(group.dataset.key);};
+  const allRoomBoxes=()=>[...p.querySelectorAll('.rm-item')];
+  const setRoomCollapsed=(box,flag)=>{const body=box.querySelector('.rm-body');const toggle=box.querySelector('.rm-toggle');body.hidden=flag;toggle.textContent=flag?'▸':'▾';toggle.setAttribute('aria-expanded',String(!flag));flag?roomsView.collapsed.add(box.dataset.id):roomsView.collapsed.delete(box.dataset.id);};
+  const search=node('input');search.type='search';search.placeholder='Tìm theo tên hoặc mã';search.value=roomsView.q;search.setAttribute('aria-label','Tìm phòng');search.oninput=()=>applyRoomsView();
+  const levelFilter=node('select');levelFilter.setAttribute('aria-label','Lọc theo tầng');levelFilter.append(new Option('Tất cả tầng',''),new Option('Chưa có tầng','none'));levels.forEach(l=>levelFilter.append(new Option(l.name,l.id)));levelFilter.value=roomsView.level;levelFilter.onchange=()=>applyRoomsView();
+  const countLine=node('p',undefined,'muted rm-count');
+  const collapseAll=button(roomsView.collapsed.size?'Mở tất cả':'Thu gọn tất cả',()=>{const collapse=collapseAll.textContent==='Thu gọn tất cả';allRoomBoxes().forEach(box=>setRoomCollapsed(box,collapse));collapseAll.textContent=collapse?'Mở tất cả':'Thu gọn tất cả';});collapseAll.className='rm-collapse-all';
+  const groupTick=node('input');groupTick.type='checkbox';groupTick.checked=!!roomsView.group;groupTick.onchange=()=>{roomsView.group=groupTick.checked;tableView(tableState.data);};
+  const groupLabel=node('label',undefined,'rm-group-tick');groupLabel.append(groupTick,node('span','Nhóm theo tầng'));
+  const viewRow=node('div',undefined,'rm-view');viewRow.append(search,levelFilter,collapseAll,groupLabel);
+  p.append(viewRow,countLine);
+  // Chọn nhiều phòng và đổi hàng loạt (đợt 3): mọi thay đổi gom vào rooms rồi gửi một lần, Ruby kiểm tra cả danh sách.
+  const pickedCount=node('span',undefined,'rm-picked');
+  const updatePicked=()=>{const n=rooms.filter(r=>roomsView.picked.has(r.id)).length;pickedCount.textContent=`Đã chọn ${n} phòng`;applyBulk.disabled=!n;};
+  const pickShown=button('Chọn tất cả đang hiện',()=>{allRoomBoxes().filter(b=>!b.hidden).forEach(b=>{roomsView.picked.add(b.dataset.id);b.querySelector('.rm-pick input').checked=true;});updatePicked();});
+  const clearPick=button('Bỏ chọn',()=>{roomsView.picked.clear();allRoomBoxes().forEach(b=>{b.querySelector('.rm-pick input').checked=false;});updatePicked();});clearPick.className='rm-bulk-clear';
+  const levelPick=node('select');levelPick.className='rm-bulk-level';levelPick.setAttribute('aria-label','Tầng cho phòng đã chọn');levelPick.append(new Option('Giữ nguyên tầng','keep'),new Option('(Không có tầng)',''));levels.forEach(l=>levelPick.append(new Option(l.name,l.id)));
+  const heightPick=node('input');heightPick.type='number';heightPick.min='1';heightPick.className='rm-bulk-height';heightPick.placeholder='Cao (mm)';heightPick.setAttribute('aria-label','Chiều cao cho phòng đã chọn (mm)');
+  const finishKeys=['finish_floor','finish_wall','finish_ceiling'];
+  const finishPicks=[['rm-bulk-finish-floor','Sàn'],['rm-bulk-finish-wall','Tường'],['rm-bulk-finish-ceiling','Trần']].map(([cls,t])=>{const i=node('input');i.type='text';i.maxLength=60;i.className=cls;i.placeholder=t+' (giữ nguyên)';i.setAttribute('aria-label','Hoàn thiện '+t.toLowerCase()+' cho phòng đã chọn');return i;});
+  const applyBulk=button('Áp dụng cho phòng đã chọn',()=>{
+    const targets=rooms.filter(r=>roomsView.picked.has(r.id));
+    if(!targets.length)throw Error('Hãy chọn ít nhất một phòng.');
+    targets.forEach(room=>{
+      if(levelPick.value!=='keep'){room.level=levelPick.value;if(!room.level)room.elevation_source='manual';}
+      if(heightPick.value!=='')room.height=Number(heightPick.value);
+      finishPicks.forEach((input,i)=>{if(input.value!=='')room[finishKeys[i]]=input.value;});
+    });
+    save();
+  });applyBulk.className='rm-bulk-apply';
+  // Gợi ý mã (đợt 4): chỉ điền phòng đã chọn còn trống mã; mã dạng tiền tố-T<tầng>-số (tầng không có thì bỏ phần T), không trùng mã có sẵn.
+  const codePrefix=node('input');codePrefix.type='text';codePrefix.maxLength=20;codePrefix.className='rm-code-prefix';codePrefix.placeholder='Tiền tố mã (vd WC)';codePrefix.setAttribute('aria-label','Tiền tố mã gợi ý');
+  const suggestCodes=button('Gợi ý mã cho phòng đã chọn',()=>{
+    const prefix=codePrefix.value.trim();
+    if(!roomsView.picked.size)throw Error('Hãy chọn ít nhất một phòng.');
+    if(!prefix)throw Error('Hãy nhập tiền tố mã (vd WC).');
+    const targets=rooms.filter(r=>roomsView.picked.has(r.id)&&!String(r.number||'').trim());
+    if(!targets.length)throw Error('Các phòng đã chọn đều đã có mã.');
+    const taken=new Set(rooms.map(r=>String(r.number||'').trim().toLowerCase()).filter(Boolean));
+    const nextSeq=new Map();
+    targets.forEach(room=>{
+      const level=levels.find(l=>l.id===room.level);
+      const digits=level?(level.name.match(/\d+/)||[])[0]:undefined;
+      const base=`${prefix}${level?`-T${digits||levels.indexOf(level)+1}`:''}`;
+      let seq=nextSeq.get(base)||1,code;
+      do{code=`${base}-${String(seq).padStart(2,'0')}`;seq++;}while(taken.has(code.toLowerCase()));
+      nextSeq.set(base,seq);taken.add(code.toLowerCase());room.number=code;
+    });
+    save();
+  });suggestCodes.className='rm-code-suggest';
+  const bulkRow=node('div',undefined,'rm-bulk');bulkRow.append(pickedCount,pickShown,clearPick,levelPick,heightPick,...finishPicks,codePrefix,suggestCodes,applyBulk);
+  p.append(bulkRow);
+  updatePicked();
+  // Cần kiểm tra (đợt 5): phòng thiếu tầng hoặc thiếu mã; bấm một dòng để mở đúng phòng. Phòng chưa dựng khối chỉ đếm, không liệt kê.
+  const issues=rooms.flatMap(room=>{
+    const list=[];
+    if(!room.level)list.push('thiếu tầng');
+    if(!String(room.number||'').trim())list.push('thiếu mã');
+    return list.length?[{room,list}]:[];
+  });
+  const noVolume=rooms.filter(room=>!room.has_volume).length;
+  if(issues.length||noVolume){
+    const issueBox=node('div',undefined,'rm-issues');
+    if(issues.length)issueBox.append(node('div',`Cần kiểm tra (${issues.length} phòng)`,'rm-issues-title'));
+    issues.forEach(({room,list})=>{
+      const item=button(`${room.name} — ${list.join(', ')}`,()=>goToRoom(room.id));item.className='rm-issue';
+      issueBox.append(item);
+    });
+    if(noVolume)issueBox.append(node('p',`${noVolume} phòng chưa dựng khối 3D.`,'muted rm-issues-note'));
+    p.append(issueBox);
+  }
+  const goToRoom=id=>{
+    const box=allRoomBoxes().find(b=>b.dataset.id===id);
+    if(!box)return;
+    roomsView.q='';search.value='';roomsView.level='';levelFilter.value='';
+    applyRoomsView();
+    const group=box.closest('.rm-group');
+    if(group&&group.querySelector('.rm-group-body').hidden)setGroupCollapsed(group,false);
+    setRoomCollapsed(box,false);
+    box.scrollIntoView({block:'center'});
+    box.querySelector('.rm-name').focus();
+  };
+  const hosts=new Map();
+  if(roomsView.group){
+    [...levels.map(l=>({key:l.id,title:l.name})),{key:'',title:'Chưa có tầng'}].forEach(({key,title})=>{
+      const count=rooms.filter(r=>groupKey(r)===key).length;
+      if(!count)return;
+      const group=node('div',undefined,'rm-group');group.dataset.key=key;
+      const gt=button('▾',()=>setGroupCollapsed(group,!body.hidden));gt.className='rm-toggle';gt.setAttribute('aria-label','Mở hoặc thu gọn nhóm '+title);
+      const head=node('div',undefined,'rm-group-head');head.append(gt,node('span',`${title} · ${count} phòng`,'rm-group-title'));
+      const body=node('div',undefined,'rm-group-body');
+      group.append(head,body);p.append(group);setGroupCollapsed(group,roomsView.collapsedLevels.has(key));
+      hosts.set(key,body);
+    });
+  }
+  const applyRoomsView=()=>{
+    roomsView.q=search.value;roomsView.level=levelFilter.value;
+    const q=foldText(search.value.trim());
+    let shown=0;
+    allRoomBoxes().forEach(box=>{
+      const room=rooms.find(r=>r.id===box.dataset.id);
+      const byText=!q||foldText(`${room.name} ${room.number||''}`).includes(q);
+      const byLevel=!levelFilter.value||(levelFilter.value==='none'?!room.level:room.level===levelFilter.value);
+      box.hidden=!(byText&&byLevel);
+      if(!box.hidden)shown++;
+    });
+    p.querySelectorAll('.rm-group').forEach(group=>{group.hidden=![...group.querySelectorAll('.rm-item')].some(box=>!box.hidden);});
+    countLine.textContent=`Hiển thị ${shown} / ${rooms.length} phòng.`;
+  };
   rooms.forEach(room=>{
     const box=node('div',undefined,'rm-item');box.dataset.id=room.id;
     const top=node('div',undefined,'rm-top');
@@ -1214,8 +1328,15 @@ function roomsPanel(){
     build.title='Dựng (hoặc dựng lại) khối 3D của phòng: một khối trên tag VGD_ROOMS, một bước hoàn tác.';
     const upd=button('Cập nhật viền từ mặt đang chọn',()=>call('table_room_update_boundary',JSON.stringify({id:room.id})));upd.className='rm-update';
     upd.title='Thay viền phòng bằng đúng một mặt sàn đang chọn trong SketchUp. Tên, mã, tầng, chiều cao, hoàn thiện giữ nguyên; cao độ sàn chỉ đổi theo mặt với phòng hạ nền (nhập tay).';
-    box.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường (chưa trừ cửa) ${m.wall_area} m² · Trần ${m.ceiling_area} m²`+(room.holes&&room.holes.length?` · ${room.holes.length} lỗ (cột, hộp kỹ thuật)`:''),'muted rm-metrics'),build,upd);
-    p.append(box);
+    const body=node('div',undefined,'rm-body');body.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường (chưa trừ cửa) ${m.wall_area} m² · Trần ${m.ceiling_area} m²`+(room.holes&&room.holes.length?` · ${room.holes.length} lỗ (cột, hộp kỹ thuật)`:''),'muted rm-metrics'),build,upd);
+    const toggle=button('▾',()=>setRoomCollapsed(box,!body.hidden));toggle.className='rm-toggle';toggle.setAttribute('aria-label','Mở hoặc thu gọn phòng '+room.name);
+    const pick=node('input');pick.type='checkbox';pick.checked=roomsView.picked.has(room.id);pick.setAttribute('aria-label','Chọn phòng '+room.name);
+    pick.onchange=()=>{pick.checked?roomsView.picked.add(room.id):roomsView.picked.delete(room.id);updatePicked();};
+    const pickWrap=node('label',undefined,'rm-pick');pickWrap.append(pick);
+    const head=node('div',undefined,'rm-head');head.append(pickWrap,toggle,node('span',`${room.name} · ${room.number||'—'} · ${levelName(room.level)} · ${m.area??0} m²`,'rm-summary'));
+    box.append(head,body);
+    (hosts.get(groupKey(room))||p).append(box);
+    setRoomCollapsed(box,roomsView.collapsed.has(room.id));
   });
   if(!rooms.length)p.append(node('p','Chưa có phòng nào. Chọn một hoặc nhiều mặt sàn trong SketchUp rồi bấm Tạo phòng từ các mặt đang chọn.','muted'));
   const newName=node('input');newName.type='text';newName.placeholder='Tên phòng mới (nhiều mặt: tiền tố, vd Phòng)';newName.maxLength=60;newName.setAttribute('aria-label','Tên phòng mới');
@@ -1233,6 +1354,7 @@ function roomsPanel(){
   buildAll.disabled=!rooms.length;buildAll.title='Dựng (hoặc dựng lại) khối 3D của mọi phòng, một bước hoàn tác cho cả đợt.';
   const actions=node('div',undefined,'rename-actions');actions.append(make,buildAll,auto,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
   p.append(create,node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán phòng theo vị trí; hoặc nhấp đúp ô Phòng để gán tay.','muted'),actions);
+  applyRoomsView();
   return p;
 }
 // Quản lý tầng: tên, cao độ sàn và chiều cao (mm) của từng tầng, lưu trong model (chỉ nhãn, không dời hình học); gán tầng theo cao độ cho các dòng đang chọn.
@@ -1960,13 +2082,14 @@ function tableView(data){
   if(data.hint){if(hint)hint.textContent=data.hint;else view.prepend(node('p',data.hint,'hint'));}else if(hint)hint.remove();
   // Thanh trên: thanh công cụ (dựng lại) + khu menu Tùy chọn / Công cụ (giữ nguyên chỗ, không gỡ khỏi trang) + ngăn đang mở.
   const bar=view.querySelector('.toolbar-wrap');
+  const roomsScroll=bar.querySelector('.rooms-panel')?.scrollTop||0;
   [...bar.children].forEach(el=>{if(!el.classList.contains('menubar'))el.remove();});
   bar.prepend(toolbar());
   const menu=syncMenuBar(view);if(!menu.parentNode)bar.append(menu);
   if(tableState.panel==='capture')bar.append(capturePanel());
   if(tableState.panel==='codes')bar.append(codesPanel());
   if(tableState.panel==='levels')bar.append(levelsPanel());
-  if(tableState.panel==='rooms')bar.append(roomsPanel());
+  if(tableState.panel==='rooms'){const panel=roomsPanel();bar.append(panel);panel.scrollTop=roomsScroll;}
   if(tableState.panel==='materials')bar.append(materialsPanel());
   if(tableState.panel==='checks')bar.append(checksPanel());
   if(tableState.panel==='snapshots')bar.append(snapshotsPanel());

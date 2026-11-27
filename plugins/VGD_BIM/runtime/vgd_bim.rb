@@ -2,7 +2,7 @@ require 'sketchup.rb'
 require 'extensions.rb'
 module VGD
   module BIM
-    VERSION = '1.1.1-beta.31'.freeze
+    VERSION = '1.1.1-beta.38'.freeze
     unless file_loaded?(__FILE__)
       extension = SketchupExtension.new('VGD BIM', 'vgd_bim/loader')
       extension.description = 'Dữ liệu BIM, phân loại mô hình, kiểm tra và xuất báo cáo tiếng Việt.'
