@@ -316,7 +316,8 @@ const VGD_I18N=(()=>{
     'Tối đa 50 tag cửa, mỗi tên không quá 100 ký tự.':'At most 50 opening tags, each name at most 100 characters.',
     // --- Công thức khối lượng ---
     'Theo công thức':'By formula','(Rộng + Sâu) x 2':'(Width + Depth) x 2','Theo công thức…':'By formula…','Công thức khối lượng':'Quantity formula','Đơn vị của công thức':'Formula unit','Hãy nhập công thức.':'Enter a formula.',
-    'Dùng Rộng, Sâu, Cao (m), Diện tích (m²), Thể tích (m³), các phép + − x / và ngoặc. Mọi món cùng tag dùng chung công thức.':'Use Width, Depth, Height (m), Area (m²), Volume (m³), the operators + − x / and brackets. All items with the same tag share the formula.',
+    'Dùng Rộng, Sâu, Cao (m), Diện tích (m²), Thể tích (m³), các phép + − x / và ngoặc, so sánh (= <> < > <= >=) và hàm như Excel: ROUND, ROUNDUP, ROUNDDOWN, CEILING, MIN, MAX, IF, ABS, SQRT, PI (đối số ngăn bằng ;). Ví dụ ROUNDUP(Rộng / 0,6; 0). Mọi món cùng tag dùng chung công thức; xuất Excel giữ nguyên công thức.':'Use Width, Depth, Height (m), Area (m²), Volume (m³), the operators + − x / and brackets, comparisons (= <> < > <= >=) and Excel functions: ROUND, ROUNDUP, ROUNDDOWN, CEILING, MIN, MAX, IF, ABS, SQRT, PI (separate arguments with ;). Example ROUNDUP(Width / 0.6; 0). All items with the same tag share the formula; Excel export keeps the formula.',
+    '(cột gốc)':'(base column)','Dấu ";" chỉ dùng để ngăn các đối số của hàm.':'The ";" sign only separates function arguments.','CEILING: số dương cần bội số dương':'CEILING: a positive number needs a positive multiple','SQRT: căn bậc hai của số âm':'SQRT: square root of a negative number',
     'công thức chia cho 0':'the formula divides by 0','Công thức dài tối đa 200 ký tự.':'The formula is at most 200 characters.','Công thức thiếu dấu ngoặc đóng ")".':'The formula is missing a closing bracket ")".',
     'Công thức có dấu ngoặc đóng ")" thừa.':'The formula has an extra closing bracket ")".','Công thức chưa xong (thiếu số hoặc số đo ở cuối).':'The formula is not finished (a number or measurement is missing at the end).','Công thức lồng ngoặc quá sâu.':'The formula has too many nested brackets.',
     'Đơn vị của công thức không hợp lệ.':'Invalid formula unit.','Dữ liệu công thức không hợp lệ.':'Invalid formula data.',
@@ -595,6 +596,9 @@ const VGD_I18N=(()=>{
   rule(/^Không biết số đo "(.*)"\. Dùng: Rộng, Sâu, Cao, Diện tích, Thể tích\.$/,(m,w)=>`Unknown measurement "${w}". Use: Width, Depth, Height, Area, Volume.`);
   rule(/^Công thức có ký tự không dùng được: "(.*)"\.$/,(m,c)=>`The formula has a character that cannot be used: "${c}".`);
   rule(/^Công thức sai ở "(.*)"\.$/,(m,c)=>`The formula is wrong at "${c}".`);
+  rule(/^Hàm ([A-Z]+) cần (\d+(?: đến \d+)?) đối số, ngăn bằng dấu ";" \(đang có (\d+)\)\.$/,(m,f,n,k)=>`The function ${f} needs ${n.replace(' đến ',' to ')} arguments, separated by ";" (it has ${k}).`);
+  rule(/^Sau tên hàm ([A-Z]+) cần dấu ngoặc "\("\.$/,(m,f)=>`The function name ${f} must be followed by "(".`);
+  rule(/^Hàm ([A-Z]+) thiếu dấu ngoặc đóng "\)"\.$/,(m,f)=>`The function ${f} is missing a closing bracket ")".`);
   rule(/^Số không hợp lệ ở "(.*)"\.$/,(m,c)=>`Invalid number at "${c}".`);
   rule(/^Đã đặt cách tính (.+) cho (\d+) tag: (.*)\.$/,(m,method,n,tags)=>`Set the calculation ${METHOD_EN[method]||method} for ${plural(n,'tag','tags')}: ${tags}.`);
   rule(/^Đã bỏ cách tính riêng của (\d+) tag, tính theo từ khóa \/ nhóm tag\.$/,(m,n)=>`Removed the own calculation of ${plural(n,'tag','tags')}; they follow keywords / tag groups.`);

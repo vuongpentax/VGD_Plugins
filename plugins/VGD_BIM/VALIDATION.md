@@ -2,7 +2,17 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.53: đã kiểm tra tự động
+## Bản 1.1.1-beta.54: đã kiểm tra tự động
+
+Beta.54: xuất Excel ghi ô tính toán thành công thức. `core/xlsx_formulas.rb` (dựng công thức theo khóa cột và dữ liệu tính của dòng: diện tích X*Z / X*Y, thành tiền, khối lượng tính theo cách tính và theo công thức tag, hao hụt, tiền vật liệu, SUBTOTAL cho nhóm / tổng, bỏ dòng không được cộng; không bao giờ chép chữ người dùng vào công thức), `core/xlsx.rb` (ô `<f>` kèm số đã tính, `calcPr fullCalcOnLoad`), `core/table_report.rb` (kiểm tra `key`, `si`, `calc`), `core/formula.rb` (so sánh, hàm ROUND / ROUNDUP / ROUNDDOWN / CEILING / MIN / MAX / IF / ABS / SQRT / PI tính bằng BigDecimal như Excel, `to_excel`), giao diện gửi khóa cột, hệ số đổi đơn vị, dữ liệu tính và tự thêm cột gốc ở cuối file Excel.
+
+- `dev/test_xlsx_formulas.rb`: dữ liệu sai bị từ chối (khóa lạ, hệ số âm, cách tính lạ, đơn vị chèn chữ, số đo không phải số); từng công thức của dòng; số chính xác giữ là số; thiếu cột gốc thì không dựng công thức; ô nhóm / tổng SUBTOTAL nhiều khoảng, bỏ dòng con; khối lượng khác đơn vị không cộng; ô chữ không thành công thức; **mở bằng LibreOffice (headless) tính lại từ công thức và so số** (diện tích, thành tiền, công thức tag ROUNDUP, hao hụt, tiền vật liệu, tổng nhóm, tổng cộng). Máy không có LibreOffice thì phần này báo bỏ qua.
+- `dev/test_formula.rb`: thêm hàm Excel (làm tròn nửa lên, ROUNDUP không sai số dấu phẩy động, ROUND số chữ số âm, CEILING kể cả số âm / bội 0, MIN / MAX, IF chỉ tính nhánh chọn, so sánh, ABS / SQRT / PI), lỗi số đối số và ngoặc, hàm lạ bị từ chối, dịch sang công thức Excel.
+- `dev/test_ui.cjs`, `dev/test_ui_en.cjs`: xuất Excel gửi khóa / hệ số / dữ liệu tính, cột gốc đang ẩn thêm ở cuối có nhãn (cột gốc), PDF không thêm; bản dịch Anh.
+
+**Chưa xác minh trong Excel và SketchUp thật:** mở file bằng Microsoft Excel (tính lại khi mở, dấu ngăn đối số theo vùng), file nhiều sheet, bảng rất lớn (SUBTOTAL quá 200 khoảng thì ghi số).
+
+## Bản 1.1.1-beta.53 (trước đó)
 
 Beta.53: công thức khối lượng theo tag. `core/formula.rb` (tự đọc từng ký hiệu và tính trên cây phép tính, không chạy mã Ruby; chỉ số, + - * / và ngoặc, các số đo Rộng / Sâu / Cao / Diện tích / Thể tích, tối đa 200 ký tự và 20 lớp ngoặc), `Quantity` (cách tính `formula` chỉ đặt theo tag, lưu trong `tag_quantity.json` dạng `{method, formula, unit}`, dòng có `calc_unit` và `calc_formula`), `MaterialLibrary.cost(unit:)`, lệnh `table_calc_formula`, ô nhập công thức ở cột Cách tính, dòng tổng cộng theo đơn vị.
 

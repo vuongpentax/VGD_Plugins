@@ -40,6 +40,31 @@ ok 'hai số đo liền nhau không có phép tính', bad.call('Rộng Cao', 'sa
 ok 'ngoặc lồng quá sâu', bad.call('(' * 25 + '1' + ')' * 25, 'quá sâu')
 ok 'số sai', bad.call('1.2.3', 'sai ở')
 
+# 2b. Hàm Excel: tính như Excel, báo lỗi số đối số, dịch sang công thức Excel
+ok 'dấu = đầu như Excel được bỏ qua', calc.call('=Rộng*2') == [2.4, nil]
+ok 'ROUND(2,675; 2) làm tròn nửa lên như Excel', calc.call('ROUND(2,675; 2)') == [2.68, nil] && calc.call('ROUND(-2,5; 0)') == [-3.0, nil]
+ok 'ROUNDUP / ROUNDDOWN không bị sai số dấu phẩy động', calc.call('ROUNDUP(1.1 * 10; 0)') == [11.0, nil] && calc.call('ROUNDUP(Rộng / 0,5; 0)') == [3.0, nil] && calc.call('ROUNDDOWN(-1,99; 0)') == [-1.0, nil]
+ok 'ROUND số chữ số âm (làm tròn hàng chục)', calc.call('ROUND(1234; -2)') == [1200.0, nil]
+ok 'CEILING theo bội số', calc.call('CEILING(Rộng; 0,5)') == [1.5, nil] && calc.call('CEILING(-2,5; 1)') == [-2.0, nil] && calc.call('CEILING(Rộng; 0)') == [0.0, nil]
+ok 'CEILING số dương với bội số âm: không xác định (như #NUM! của Excel)', calc.call('CEILING(Rộng; -1)')[0].nil?
+ok 'MIN / MAX nhiều đối số', calc.call('MAX(Rộng; Sâu; Cao)') == [2.0, nil] && calc.call('MIN(Rộng, Sâu)') == [0.6, nil]
+ok 'IF với so sánh, chỉ tính nhánh được chọn', calc.call('IF(Rộng > 1; Rộng * 2; Rộng / 0)') == [2.4, nil] && calc.call('IF(Rộng <= 1; 1; 0)') == [0.0, nil] && calc.call('IF(Cao = 2; 5)') == [5.0, nil] && calc.call('IF(Cao <> 2; 5)') == [0.0, nil]
+ok 'so sánh đứng riêng ra 1 / 0', calc.call('(Rộng >= 1,2) + 1') == [2.0, nil]
+ok 'ABS, SQRT, PI', calc.call('ABS(Sâu - Rộng)') == [0.6, nil] && calc.call('SQRT(Diện tích * 6)') == [3.7947, nil] && calc.call('PI() * 2') == [6.2832, nil]
+ok 'SQRT số âm: không xác định', calc.call('SQRT(-1)') == [nil, 'SQRT: căn bậc hai của số âm']
+ok 'tên hàm không phân biệt hoa thường', calc.call('roundup(Rộng; 0)') == [2.0, nil]
+ok 'sai số đối số: nói rõ cần bao nhiêu và dùng ;', bad.call('ROUND(Rộng)', 'ROUND cần 2 đối số') && bad.call('ROUND(1,5)', 'ROUND cần 2 đối số') && bad.call('PI(1)', 'PI cần 0 đối số')
+ok 'thiếu ngoặc sau tên hàm', bad.call('ROUND Rộng', 'cần dấu ngoặc') && bad.call('MAX(Rộng; Cao', 'thiếu dấu ngoặc đóng')
+ok 'dấu ; ngoài hàm', bad.call('Rộng; Cao', 'ngăn các đối số')
+ok 'hàm lạ vẫn bị từ chối', bad.call('SUM(Rộng)', 'Không biết số đo "sum"') && bad.call('INDIRECT("A1")', 'Không biết số đo')
+ok 'hai số đo liền nhau: báo đúng tên', bad.call('Rộng Cao', 'sai ở "Cao"')
+refs = {w: 'C5*0.001', d: 'D5*0.001', h: 'E5*0.001', area: 'F5', volume: 'G5'}
+xl = ->(text) { F.to_excel(F.parse!(text), refs) }
+ok 'dịch sang Excel: số đo thành ô của dòng', xl.call('(Rộng + Sâu) x 2') == '(((C5*0.001)+(D5*0.001))*2)'
+ok 'dịch sang Excel: hàm, dấu phẩy chuẩn, số thập phân dấu chấm', xl.call('ROUNDUP(Rộng / 0,6; 0)') == 'ROUNDUP(((C5*0.001)/0.6),0)'
+ok 'dịch sang Excel: so sánh thành 1 / 0, IF giữ nguyên', xl.call('IF(Cao > 2; Diện tích; 0)') == 'IF((((E5*0.001)>2)*1),(F5),0)'
+ok 'dịch sang Excel: số âm, PI, số rất nhỏ', xl.call('-Thể tích * PI() + 0,00001') == '(((-(G5))*PI())+1E-05)'
+
 # 3. Ghi đè theo tag bằng công thức (lưu trên máy) và dòng của bảng
 Q.set_override('A. SKIRTING', 'formula', formula: '(Rộng + Sâu) x 2', unit: 'm')
 own = Q.overrides[Q.key('A. SKIRTING')]

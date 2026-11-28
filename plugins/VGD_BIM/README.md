@@ -1,4 +1,4 @@
-# VGD BIM 1.1.1-beta.53
+# VGD BIM 1.1.1-beta.54
 
 Bản thử của 1.1.1 (bản ổn định gần nhất là 1.1.0). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -65,6 +65,17 @@ Cửa sổ có 5 tab (nút **Preset** cạnh nút Sáng/Tối ở thanh đầu d
 **Nút dán ảnh từ clipboard** (sửa ở beta.46, thêm cách 1 ở beta.47, cách 2 ở beta.48): nút thử lần lượt bốn cách. (1) **Lệnh dán của trình duyệt**, như nhấn Ctrl+V; (2) **Ruby gửi phím Ctrl+V của Windows** tới cửa sổ BIM (chỉ khi cửa sổ đang có tiêu điểm và cửa sổ đang chọn thuộc chính SketchUp; ảnh đi qua đúng đường Ctrl+V thật, không cần quyền; không có phím thì chuyển ngay sang cách sau, chờ tối đa 1,2 giây); (3) API đọc clipboard của cửa sổ, chờ tối đa 1,5 giây; (4) nếu cả ba bị chặn thì báo "Đang đọc ảnh trong clipboard…" và nhờ Ruby đọc bằng PowerShell có sẵn của Windows (chỉ khi bấm nút, chỉ đọc clipboard, ảnh tối đa 20 MB, quá 10 giây thì dừng). Ảnh được thu nhỏ vừa cỡ ảnh của preset và lưu như ảnh dán thường. Clipboard không có ảnh thì báo rõ. Cách 2 và 4 chỉ có trên Windows (macOS dùng Ctrl+V). Ctrl+V sau khi chọn ô ảnh vẫn dùng được như trước.
 
 **Giữ vị trí cuộn của bảng** (từ 1.1.1-beta.15): sửa tên, cập nhật ảnh hay sửa một ô không còn làm bảng nhảy lên đầu; bạn vẫn ở đúng dòng đang làm. Chưa kiểm thử trong SketchUp thật.
+
+**Xuất Excel giữ công thức** (từ 1.1.1-beta.54): file Excel không còn là số chết. Các ô tính toán được ghi thành công thức Excel tham chiếu ô của cùng dòng, nên sửa Rộng, Dài, Cao, Đơn giá, Số lượng, Hao hụt hay Đơn giá vật liệu trên Excel là kết quả tự tính lại:
+- Diện tích (X*Z) = Rộng x Cao, Diện tích (X*Y) = Rộng x Dài (đổi đúng đơn vị đang hiện: mm, cm, m...).
+- Thành tiền = Đơn giá x Số lượng; Thành tiền (theo khối lượng tính) = Đơn giá x Khối lượng tính.
+- Khối lượng tính theo cách tính của dòng: theo diện tích (ô Diện tích X*Z, hoặc Rộng x Cao), theo mét dài (Rộng), theo thể tích khối bao (Rộng x Dài x Cao), theo công thức của tag (dịch nguyên sang công thức Excel). Theo cái, thể tích khối kín và số đo chính xác của VGD Structure giữ là số (không tính lại từ kích thước được).
+- Khối lượng có hao hụt = Khối lượng tính x (1 + Hao hụt / 100); Thành tiền theo vật liệu = Khối lượng có hao hụt x Đơn giá vật liệu (chỉ khi đơn vị vật liệu trùng đơn vị tính).
+- Dòng nhóm và dòng tổng dùng `SUBTOTAL(9, ...)`: lọc trên Excel vẫn cộng đúng, và vẫn bỏ dòng con của món cha có trong bảng như plugin. Khối lượng tính của nhóm chỉ cộng khi mọi dòng cùng đơn vị.
+- Cột gốc mà công thức cần nhưng đang ẩn trong bảng (ví dụ Đơn giá, Rộng, Cao) được tự thêm ở cuối file Excel, tiêu đề ghi *(cột gốc)*; bảng trong plugin và file PDF không đổi.
+- File lưu sẵn kết quả đã tính và yêu cầu Excel tính lại khi mở. Lưu ý: một số trình xem (xem trước trên điện thoại, LibreOffice với thiết lập mặc định) hiện số đã lưu chứ không tính lại; sửa ô là công thức chạy.
+
+Công thức theo tag dùng thêm được **so sánh** (`= <> < > <= >=`) và **hàm như Excel**: `ROUND`, `ROUNDUP`, `ROUNDDOWN`, `CEILING`, `MIN`, `MAX`, `IF`, `ABS`, `SQRT`, `PI`, đối số ngăn bằng `;` như Excel tiếng Việt (ví dụ `ROUNDUP(Rộng / 0,6; 0)` để đếm số tấm, `IF(Cao > 3; Diện tích x 1,1; Diện tích)`). Có thể gõ dấu `=` ở đầu như Excel. Hàm tính trong plugin đúng như Excel (làm tròn nửa lên, không bị sai số dấu phẩy động). Chưa kiểm thử trong SketchUp và Excel thật (đã kiểm tính lại bằng LibreOffice).
 
 **Công thức khối lượng theo tag** (từ 1.1.1-beta.53): trong Bảng khối lượng, nhấp đúp ô **Cách tính** rồi chọn **Theo công thức…**, nhập công thức và chọn đơn vị (m, m², m³, cái, bộ, lô, kg). Công thức dùng **Rộng**, **Sâu**, **Cao** (mét), **Diện tích** (m², như cách tính theo diện tích), **Thể tích** (m³), các phép `+ - x /` (nhân viết `x`, `×` hay `*`), ngoặc và số thập phân (dấu chấm hoặc phẩy); không phân biệt hoa thường, có dấu hay không dấu, viết tiếng Anh `Width`, `Depth`, `Height`, `Area`, `Volume` cũng được. Ví dụ: len chân tường `(Rộng + Sâu) x 2` (m), sơn hai mặt `Diện tích x 2` (m²). Mọi món cùng tag dùng chung công thức; công thức lưu trên máy như các cách tính đặt theo tag khác, không ghi vào model. Công thức sai bị từ chối kèm lời báo chỗ sai; thiếu số đo hoặc chia cho 0 thì ô Khối lượng tính để trống, rê chuột xem lý do. Dòng tổng cộng theo từng đơn vị. Thành tiền theo vật liệu chỉ tính khi đơn vị vật liệu trùng đơn vị của công thức. Ghi cách tính vào món chỉ ghi đơn vị (dữ liệu chuẩn không có cách tính "công thức"). Chưa kiểm thử trong SketchUp thật.
 

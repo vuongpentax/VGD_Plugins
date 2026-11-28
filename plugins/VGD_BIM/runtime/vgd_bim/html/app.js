@@ -623,7 +623,7 @@ function formulaEdit(td,row){
   };
   input.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();apply();}else if(e.key==='Escape'){e.preventDefault();closeMenu();}};
   const actions=node('div',undefined,'rename-actions');actions.append(button('Áp dụng',apply,'primary'),button('Hủy',closeMenu));
-  box.append(node('div','Công thức cho tag '+(row.tag||''),'pop-title'),input,unit,node('p','Dùng Rộng, Sâu, Cao (m), Diện tích (m²), Thể tích (m³), các phép + − x / và ngoặc. Mọi món cùng tag dùng chung công thức.','muted formula-help'),actions);
+  box.append(node('div','Công thức cho tag '+(row.tag||''),'pop-title'),input,unit,node('p','Dùng Rộng, Sâu, Cao (m), Diện tích (m²), Thể tích (m³), các phép + − x / và ngoặc, so sánh (= <> < > <= >=) và hàm như Excel: ROUND, ROUNDUP, ROUNDDOWN, CEILING, MIN, MAX, IF, ABS, SQRT, PI (đối số ngăn bằng ;). Ví dụ ROUNDUP(Rộng / 0,6; 0). Mọi món cùng tag dùng chung công thức; xuất Excel giữ nguyên công thức.','muted formula-help'),actions);
   document.body.append(box);cellMenu=box;
   const rect=td.getBoundingClientRect();
   box.style.width='300px';
@@ -719,7 +719,8 @@ function viewModel(full=false){
     ordered.forEach(row=>{const label=groupLabel(row,tableState.groupBy);if(!map.has(label))map.set(label,[]);map.get(label).push(row);});
     sections=[...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],'vi',{numeric:true})).map(([label,list])=>({label,rows:list}));
   }
-  return {cols,rows,sections,sumOf,countOf,calcText};
+  const isCounted=r=>!(tableState.onlyTop&&r.parents.some(p=>shown.has(p)));
+  return {cols,rows,sections,sumOf,countOf,calcText,isCounted};
 }
 // Kéo tiêu đề cột để dời chỗ ngay trên bảng (cùng thứ tự với bảng Chọn cột): các cột đang hiện chiếm lại đúng những chỗ của chúng, cột ẩn giữ nguyên chỗ.
 function columnDrag(th,col,host){
@@ -1866,10 +1867,44 @@ function toggleButton(text,on,handler){
 // Xuất Excel / PDF: gửi cho Ruby đúng bảng đang hiện (cột, thứ tự, tiêu đề, đơn vị, dòng đã lọc / sắp xếp / nhóm, dòng tổng).
 // Ô số gửi dạng số đã đổi sang đơn vị của preset, chưa làm tròn (Excel tự định dạng theo số lẻ của cột). Chữ dịch theo ngôn ngữ đang dùng.
 const exportText=text=>VGD_I18N.language==='en'?VGD_I18N.translateText(text):text;
-function exportColumn(col){
+// Hệ số đổi số đang hiện của cột về m / m² / m³ (Ruby dựng công thức Excel theo đơn vị chuẩn, core/xlsx_formulas.rb).
+function siFactor(key){
+  const s=workSettings();
+  if(LEN_KEYS.has(key))return 1/((LENGTH_FACTORS[s.length_unit]||1)*1000);
+  if(AREA_KEYS.has(key))return 1/(AREA_FACTORS[s.area_unit]||1);
+  if(key==='volume')return 1/(VOLUME_FACTORS[s.volume_unit]||1);
+  return 1;
+}
+function exportColumn(col,base){
   const type=col.key==='ordinal'?'ordinal':isImageColumn(col)?'image':NUMERIC.has(col.key)?'number':col.key==='url'?'link':'text';
   const imageKind=col.kind==='image_location'?{image_kind:'location'}:IMAGE_EXTRA_KINDS[col.kind]?{image_kind:IMAGE_EXTRA_KINDS[col.kind]}:{};
-  return {...imageKind,label:exportText(colLabel(col)),unit:exportText(unitTextOf(col.key)||''),type,digits:type==='number'?digitsFor(col.key):0,width:Math.min(2000,Math.max(20,Math.round(widthOf(col.key))))}; // độ rộng cột đang chỉnh trên màn hình, dùng làm tỉ lệ ban đầu của trang in
+  return {...imageKind,key:col.key,si:siFactor(col.key),label:exportText(colLabel(col))+(base?' '+exportText('(cột gốc)'):''),unit:exportText(unitTextOf(col.key)||''),type,digits:type==='number'?digitsFor(col.key):0,width:Math.min(2000,Math.max(20,Math.round(widthOf(col.key))))}; // độ rộng cột đang chỉnh trên màn hình, dùng làm tỉ lệ ban đầu của trang in
+}
+// Excel ghi ô tính toán thành công thức tham chiếu các cột gốc (Rộng, Cao, Đơn giá, Hao hụt...). Cột gốc đang ẩn được thêm vào cuối file Excel (chỉ Excel, không PDF)
+// để công thức luôn có ô để tham chiếu và người dùng sửa được trên Excel.
+const FORMULA_NEEDS={areaXZ:['lenX','lenZ'],areaXY:['lenX','lenY'],total:['price','quantity'],calc_total:['price','calc_qty'],mat_qty:['calc_qty','mat_waste'],mat_cost:['mat_qty','mat_price']};
+const numOrNull=v=>typeof v==='number'&&isFinite(v)?v:null;
+function calcNeeds(row){
+  const m=row.calc_method;
+  if(m==='area')return numOrNull(row.struct_area)!=null?[]:['lenX','lenZ'];
+  if(m==='length')return numOrNull(row.struct_length)!=null?[]:['lenX'];
+  if(m==='volume')return numOrNull(row.struct_volume)>0||numOrNull(row.volume)>0?[]:['lenX','lenY','lenZ'];
+  if(m==='formula')return ['lenX','lenY','lenZ'];
+  return [];
+}
+function exportColumnsFor(cols,rows){
+  const keys=new Set(cols.map(c=>c.key)),extra=[];
+  const add=k=>{if(!keys.has(k)&&colByKey(k)){keys.add(k);extra.push(k);return true;}return false;};
+  let grew=true;
+  while(grew){
+    grew=false;
+    [...keys].forEach(k=>{(FORMULA_NEEDS[k]||[]).forEach(n=>{if(add(n))grew=true;});if(k==='calc_qty')rows.forEach(r=>calcNeeds(r).forEach(n=>{if(add(n))grew=true;}));});
+  }
+  return [...cols,...extra.map(colByKey)].map((col,i)=>({col,base:i>=cols.length}));
+}
+// Dữ liệu tính của dòng gửi kèm để Ruby dựng công thức khối lượng (cùng cách tính với Quantity của Ruby).
+function exportCalc(row,counted){
+  return {method:row.calc_method||'',formula:row.calc_formula||null,unit:calcUnit(row)||'',struct_area:numOrNull(row.struct_area),struct_volume:numOrNull(row.struct_volume),struct_length:numOrNull(row.struct_length),volume:numOrNull(row.volume),counted,mat_ok:row.mat_waste!=null,mat_unit_ok:row.mat_unit_ok===true};
 }
 function exportCell(row,col,position){
   if(col.key==='ordinal')return position;
@@ -1878,8 +1913,8 @@ function exportCell(row,col,position){
   return String(cellText(row,col.key)||'');
 }
 // Xuất luôn đủ mọi món, kể cả nhóm đang thu gọn (thu gọn chỉ là cách xem trên màn hình).
-function exportRows(model){
-  const {cols,rows,sections,sumOf,countOf}=model;
+function exportRows(model,cols=model.cols){
+  const {rows,sections,sumOf,countOf,isCounted}=model;
   const labelKey=['instance','definition','entity'].find(k=>cols.some(c=>c.key===k));
   const labelIndex=Math.max(0,cols.findIndex(col=>col.key===labelKey));
   const summary=(list,text)=>cols.map((col,i)=>i===labelIndex?text:col.kind==='sum'?Number(scaledValue(col.key,sumOf(list,col.key))):null);
@@ -1888,7 +1923,7 @@ function exportRows(model){
     if(section.label!==null){
       out.push({kind:'group',cells:summary(section.rows,exportText(`${section.label} · ${countOf(section.rows)}`))});
     }
-    section.rows.forEach(row=>{position++;out.push({kind:'row',pid:row.pid||null,cells:cols.map(col=>exportCell(row,col,position))});});
+    section.rows.forEach(row=>{position++;out.push({kind:'row',pid:row.pid||null,cells:cols.map(col=>exportCell(row,col,position)),calc:exportCalc(row,isCounted(row))});});
   });
   if(tableState.showTotals)out.push({kind:'total',cells:summary(rows,exportText(`Tổng cộng · ${countOf(rows)} đối tượng`))});
   return out;
@@ -1898,9 +1933,11 @@ function exportRows(model){
 const tableWaiters=[];
 const nextTableEvent=(ms=window.tableWaitMs||20000)=>new Promise(resolve=>{let done=false;const finish=arrived=>{if(!done){done=true;resolve(arrived===true);}};tableWaiters.push(()=>finish(true));setTimeout(finish,ms);}); // true khi bảng mới tới, false khi hết thời gian chờ
 function exportLabels(){return {model:exportText('Mô hình'),preset:'Preset',date:exportText('Ngày'),print:exportText('In / Lưu PDF'),reset:exportText('Đặt lại độ rộng cột'),hint:exportText('Kéo mép tiêu đề cột để chỉnh độ rộng.')};}
-function exportSheetData(name){
+function exportSheetData(name,format){
   const model=viewModel(true);
-  return {name,columns:model.cols.map(exportColumn),rows:exportRows(model),...(tableState.rowHeight>0?{row_height:tableState.rowHeight}:{})};
+  const list=format==='xlsx'?exportColumnsFor(model.cols,model.rows):model.cols.map(col=>({col,base:false}));
+  const cols=list.map(item=>item.col);
+  return {name,columns:list.map(item=>exportColumn(item.col,item.base)),rows:exportRows(model,cols),...(tableState.rowHeight>0?{row_height:tableState.rowHeight}:{})};
 }
 let exporting=false;
 async function exportTable(format){
@@ -1908,7 +1945,7 @@ async function exportTable(format){
   ensureSheets();stashSheet();
   const base={format,title:exportText('Bảng khối lượng'),preset:tableState.preset||'',decimal_separator:workSettings().decimal_separator,labels:exportLabels()};
   if(tableState.sheets.length<2){
-    const one=exportSheetData(null);
+    const one=exportSheetData(null,format);
     return call('table_export',JSON.stringify({...base,...(one.row_height?{row_height:one.row_height}:{}),columns:one.columns,rows:one.rows}));
   }
   exporting=true;
@@ -1922,7 +1959,7 @@ async function exportTable(format){
       const changed=applySheetExclude(sheets[i]);
       if(needsProjected)ensureProjected();
       if((changed||needsProjected||relocked)&&!(await nextTableEvent()))throw new Error(`Hết thời gian chờ tính lại số đo cho sheet “${sheets[i].name}”. Hãy thử xuất lại.`); // Ruby tính lại số đo / diện tích chiếu rồi gửi bảng mới
-      out.push(exportSheetData(sheets[i].name));
+      out.push(exportSheetData(sheets[i].name,format));
     }
   }catch(error){
     failure=error.message;

@@ -2,6 +2,7 @@ require 'cgi'
 require 'tmpdir'
 require_relative 'images'
 require_relative 'xlsx'
+require_relative 'xlsx_formulas'
 
 module VGD
   module BIM
@@ -82,7 +83,13 @@ module VGD
           raise ArgumentError, "Độ rộng cột phải là số từ #{MIN_WIDTH} đến #{MAX_WIDTH}." unless width.nil? || (width.is_a?(Numeric) && width.finite? && width.between?(MIN_WIDTH, MAX_WIDTH))
           kind = col['image_kind'].to_s
           raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless kind.empty? || Images::KINDS.key?(kind.to_sym)
-          {label: text!(col['label'], 200), unit: text!(col['unit'], 20), type: col['type'], digits: digits, width: width, image_kind: kind.empty? ? :full : kind.to_sym}
+          key = col['key']
+          raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless key.nil? || (key.is_a?(String) && key.match?(XlsxFormulas::KEY))
+          si = col['si'].nil? ? 1.0 : col['si']
+          raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless si.is_a?(Numeric) && si.finite? && si.positive? && si < 1.0e9
+          # key / si: khóa cột của Bảng khối lượng và hệ số đổi số đang hiện về m / m² / m³, để Excel ghi ô tính toán thành công thức (core/xlsx_formulas.rb)
+          {label: text!(col['label'], 200), unit: text!(col['unit'], 20), type: col['type'], digits: digits, width: width, image_kind: kind.empty? ? :full : kind.to_sym,
+           key: key, si: si.to_f}
         end
       end
 
@@ -92,7 +99,7 @@ module VGD
           raise ArgumentError, 'Dữ liệu bảng không hợp lệ.' unless row.is_a?(Hash) && KINDS.include?(row['kind']) && row['cells'].is_a?(Array) && row['cells'].size == width
           pid = row['pid'].nil? ? nil : Images.id!(row['pid'])
           cells = row['cells'].map { |value| cell!(value) }
-          {kind: row['kind'], pid: pid, cells: cells, image: nil, images: {}}
+          {kind: row['kind'], pid: pid, cells: cells, image: nil, images: {}, calc: row['kind'] == 'row' ? XlsxFormulas.meta!(row['calc']) : nil}
         end
       end
 

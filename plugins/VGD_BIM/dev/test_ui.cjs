@@ -348,6 +348,15 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   assert((await page.locator('#formula-text').inputValue())==='Thể tích * 2'&&(await page.locator('#formula-unit').inputValue())==='kg','Formula box must open with the current formula and unit');
   await page.keyboard.press('Escape');
   await page.evaluate(()=>{const r=tableState.data.rows;Object.assign(r[3],{calc_method:'volume',calc_formula:undefined,calc_unit:undefined,calc_qty:1.234,calc_source:'keyword'});tableView(tableState.data);});
+  // Xuất Excel: gửi khóa cột, hệ số đơn vị và dữ liệu tính của dòng; cột gốc đang ẩn (Đơn giá, Rộng, Cao, Dài) tự thêm ở cuối, PDF thì không
+  await page.evaluate(()=>{const d=tableState.data;['lenX','lenY','lenZ'].forEach(k=>d.columns.push({key:k,label:k,kind:'number'}));d.columns.push({key:'price',label:'Đơn giá',kind:'number',editable:'price'});d.rows.forEach(r=>Object.assign(r,{lenX:1200,lenY:600,lenZ:2000}));});
+  const xl=await page.evaluate(()=>exportSheetData(null,'xlsx')),pdfSheet=await page.evaluate(()=>exportSheetData(null,'pdf'));
+  const xlKeys=xl.columns.map(c=>c.key),shownKeys=pdfSheet.columns.map(c=>c.key);
+  assert(JSON.stringify(xlKeys.slice(0,shownKeys.length))===JSON.stringify(shownKeys)&&['price','lenX','lenZ','lenY'].every(k=>xlKeys.slice(shownKeys.length).includes(k))&&xlKeys.length===shownKeys.length+4,'Excel export must append the hidden base columns at the end: '+JSON.stringify(xlKeys));
+  assert(xl.columns.slice(shownKeys.length).every(c=>c.label.endsWith('(cột gốc)'))&&pdfSheet.columns.every(c=>!c.label.includes('cột gốc')),'Base columns must be labelled (cột gốc) and only in Excel');
+  assert(xl.columns.find(c=>c.key==='lenX').si===0.001&&xl.columns.find(c=>c.key==='calc_qty').si===1,'Columns must carry the factor to metres');
+  const xlRow=xl.rows.find(r=>r.kind==='row'&&r.calc&&r.calc.method==='area');
+  assert(xlRow&&xlRow.calc.unit==='m2'&&xlRow.calc.counted===true&&xlRow.cells.length===xl.columns.length&&typeof xlRow.cells[xlKeys.indexOf('lenX')]==='number','Rows must carry calculation data and values for the base columns');
   // Ghi cách tính vào món: phải chọn dòng
   await page.evaluate(()=>{tableState.sel=new Set();tableView(tableState.data);});
   await page.getByRole('button',{name:'Công cụ ▾'}).click();
