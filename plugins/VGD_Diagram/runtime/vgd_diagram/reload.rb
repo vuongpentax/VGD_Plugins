@@ -8,7 +8,7 @@ reopen = defined?(VGD::Diagram::Dialog) && VGD::Diagram::Dialog.visible?
 VGD::Diagram::Dialog.close if defined?(VGD::Diagram::Dialog)
 # Bỏ hằng số cũ để nạp lại đúng giá trị mới (tránh cảnh báo khi định nghĩa lại).
 VGD::Diagram.send(:remove_const, :VERSION) if VGD::Diagram.const_defined?(:VERSION, false)
-[VGD::Diagram::Tree, VGD::Diagram::ModelIO, VGD::Diagram::Scene, VGD::Diagram::Dialog].each do |mod|
+[VGD::Diagram::Tree, VGD::Diagram::ModelIO, VGD::Diagram::Scene, VGD::Diagram::Dialog, VGD::Diagram::Ffmpeg].each do |mod|
   mod.constants(false).each { |name| mod.send(:remove_const, name) }
 end
 files[0..-2].each { |path| load path }
