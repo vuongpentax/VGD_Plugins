@@ -2,7 +2,16 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.57: đã kiểm tra tự động
+## Bản 1.1.1-beta.58: đã kiểm tra tự động
+
+Beta.58: sửa lỗi chủ dự án báo ở beta.57: cửa sổ Soạn tag vài giây sau tự hiện Bảng khối lượng. Nguyên nhân: `config` của cửa sổ Soạn tag cũng làm giao diện chạy `restoreView`; với file có sheet khóa, `applyRowsLock` gọi `table_lock_apply` (và `applySheetExclude` gọi `settings_save`), Ruby dựng bảng trong cửa sổ Soạn tag. Sửa: không `restoreView` khi `config.window = 'tags'`, và `UI::Dialog#table_build` bỏ qua ở cửa sổ Soạn tag.
+
+- `dev/test_ui.cjs`: cửa sổ Soạn tag nhận trạng thái bảng có sheet khóa và tag loại trừ mà không gửi `table_lock_apply` hay `settings_save` (đã thử bỏ bản sửa: test báo lỗi đúng hai lệnh này).
+- `dev/test_dialog.rb`: `table_build` ở cửa sổ Soạn tag không gửi gì.
+
+**Chưa xác minh trong SketchUp thật:** mở Soạn tag ở file có sheet khóa, có và không có cửa sổ chính đang mở.
+
+## Bản 1.1.1-beta.57 (trước đó)
 
 Beta.57: Soạn tag thành cửa sổ riêng (`UI::Dialog.new('tags', :tags)`, `VGD::BIM.open_tags`), thanh công cụ có thêm nút Đổi tên / Soạn tag (`assets/icons/rename.svg`, `tag.svg`), menu có mục Soạn tag; ghi ở cửa sổ Soạn tag / Đổi tên báo `VGD::BIM.model_edited` để Bảng khối lượng đọc lại (gom bằng hẹn giờ 0,3 giây).
 

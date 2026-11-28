@@ -40,6 +40,10 @@ assert(UI::HtmlDialog.instances.size == before + 1, 'Mở Soạn tag lần hai t
 tags_dialog = UI::HtmlDialog.instances.last
 tags_dialog.trigger('open_panel', 'table')
 assert(tags.instance_variable_get(:@mode) == 'tags', 'Cửa sổ Soạn tag chuyển sang chức năng khác')
+# Cửa sổ Soạn tag không bao giờ dựng Bảng khối lượng (beta.57: sheet khóa làm bảng hiện đè lên Soạn tag).
+count = tags_dialog.scripts.size
+tags.table_build
+assert(tags_dialog.scripts.size == count, 'Cửa sổ Soạn tag vẫn dựng Bảng khối lượng')
 # Cửa sổ Soạn tag ghi vào model: Bảng khối lượng ở cửa sổ chính đọc lại (gom lại bằng hẹn giờ).
 reloaded = 0
 main.define_singleton_method(:reload_table) { reloaded += 1 }

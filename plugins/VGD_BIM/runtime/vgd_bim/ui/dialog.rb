@@ -455,6 +455,7 @@ module VGD
         end
 
         def table_build
+          return if @kind == :tags # cửa sổ Soạn tag không có Bảng khối lượng (lỗi beta.57: khóa sheet làm bảng hiện đè lên Soạn tag)
           current_model = Sketchup.active_model
           if @table_model && !@table_model.equal?(current_model)
             @table_model = current_model
