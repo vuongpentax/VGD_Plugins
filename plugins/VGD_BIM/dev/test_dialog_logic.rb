@@ -41,7 +41,7 @@ $transactions = []
 $writes = []
 $vgd_data = {}
 require File.join(ROOT, 'core/settings')
-%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/material_library core/check_rules core/snapshots core/bridge core/levels core/rooms core/room_volume core/sheet_lock].each { |f| require File.join(ROOT, f) }
+%w[core/measure core/schema core/formula core/quantity core/custom_columns core/vgd_id core/object_code core/material_library core/check_rules core/snapshots core/bridge core/levels core/room_openings core/rooms core/opening_probe core/room_detect core/room_detect_probe core/room_volume core/sheet_lock].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
@@ -596,6 +596,14 @@ ok('dòng chưa có tag: báo cần gắn tag trước', bad.call({'indexes' => 
 ok('cách tính lạ bị từ chối, không đổi ghi đè', bad.call({'indexes' => [0], 'field' => 'calc_method', 'value' => 'zzz'}).to_s.include?('Cách tính') && VGD::BIM::Quantity.overrides == overrides_before)
 ok('đối tượng bị khóa vẫn đổi được cách tính theo tag (không ghi vào món)', (cd.table_edit({'indexes' => [2], 'field' => 'calc_method', 'value' => 'volume'}); VGD::BIM::Quantity.overrides[VGD::BIM::Quantity.key('I. CHAIR')] == 'volume'))
 VGD::BIM::Quantity.set_override('I. CHAIR', '')
+# Công thức theo tag (lưu trên máy, không ghi vào món)
+ccalls.clear
+cd.table_calc_formula({'indexes' => [0, 1], 'formula' => '(Rộng + Sâu) x 2', 'unit' => 'm'})
+ok('đặt công thức cho tag của các dòng: lưu kèm đơn vị, không ghi vào món, báo công thức', VGD::BIM::Quantity.overrides[VGD::BIM::Quantity.key('A. DOOR')] == {'method' => 'formula', 'formula' => '(Rộng + Sâu) x 2', 'unit' => 'm'} && $writes.empty? && ccalls.any? { |c| c[0] == 'message' && c[1][:text].include?('theo công thức (Rộng + Sâu) x 2 (m)') })
+ok('công thức sai: báo lỗi, không đổi tag nào', bad_formula = (begin; cd.table_calc_formula({'indexes' => [2], 'formula' => 'Rộng ^ 2', 'unit' => 'm'}); nil; rescue StandardError => e; e.message; end).to_s.include?('không dùng được') && !VGD::BIM::Quantity.overrides.key?(VGD::BIM::Quantity.key('I. CHAIR')))
+ok('dữ liệu công thức sai bị từ chối', (begin; cd.table_calc_formula({'indexes' => [0]}); nil; rescue StandardError => e; e.message; end).to_s.include?('không hợp lệ'))
+ok('chọn công thức qua ô Cách tính mà không có công thức: báo nhập công thức', bad.call({'indexes' => [0], 'field' => 'calc_method', 'value' => 'formula'}).to_s.include?('Hãy nhập công thức'))
+VGD::BIM::Quantity.set_override('A. WALL', ''); VGD::BIM::Quantity.set_override('A. DOOR', '')
 # Ghi vào món
 $transactions.clear; $writes.clear; ccalls.clear
 $vgd_data[cents[1]] = {category: 'furniture', quantity_method: '', unit: '', include_boq: true} # món đã có dữ liệu, còn trống cách tính
@@ -783,6 +791,59 @@ ok('gán tay qua ô Phòng: nhãn phòng, không đụng dữ liệu VGD', VGD::
 ok('phòng không có trong danh sách: từ chối', bad_room.call { rd2.table_edit({'indexes' => [1], 'field' => 'room', 'value' => 'rm_deadbeef'}) }.to_s.include?('không còn trong danh sách'))
 rd2.table_edit({'indexes' => [1], 'field' => 'room', 'value' => ''})
 ok('bỏ phòng bằng giá trị rỗng', VGD::BIM::Rooms.entity_room(rme[1]) == '')
+# Trừ cửa khỏi tường theo tag cửa (đọc cửa đã thử riêng ở test_room_openings.rb; ở đây giả lập kết quả đọc)
+OpeningLayer = Struct.new(:name)
+rmm.define_singleton_method(:layers) { [OpeningLayer.new('Untagged'), OpeningLayer.new('A. DOOR')] }
+opening_scan = {openings: [{x: 2000, y: -100, z0: 0, z1: 2100, width: 900, height: 2100, exact: false}, {x: 20_000, y: 0, z0: 0, z1: 2100, width: 900, height: 2100, exact: true}], truncated: false}
+VGD::BIM::OpeningProbe.define_singleton_method(:collect) { |_model, tags| $opening_tags = tags; opening_scan }
+ok('trừ cửa: chưa chọn tag thì báo lỗi', bad_room.call { rd2.table_room_openings({'tags' => []}) }.to_s.include?('ít nhất một tag'))
+ok('trừ cửa: tag không có trong model thì báo lỗi', bad_room.call { rd2.table_room_openings({'tags' => ['Không có']}) }.to_s.include?('không có tag'))
+ok('trừ cửa: dữ liệu sai bị từ chối', bad_room.call { rd2.table_room_openings('x') }.to_s.include?('không hợp lệ'))
+rd2.table_room_openings({'tags' => ['A. DOOR']})
+trimmed = VGD::BIM::Rooms.read(rmm)[0]
+ok('trừ cửa: phòng ghi 1 cửa 1,89 m2 kèm tag đã chọn', trimmed['openings'] == {'count' => 1, 'area' => 1.89, 'estimated' => 1, 'tags' => ['A. DOOR']} && $opening_tags == ['A. DOOR'])
+ok('trừ cửa: tường còn 14 x 2,8 - 1,89 = 37,31 m2', VGD::BIM::Rooms.metrics(trimmed)[:wall_area] == 37.31)
+ok('trừ cửa: báo số cửa tìm thấy, cửa không sát phòng nào và cửa ước tính', rd2.rcalls.last[1][:text].include?('tìm thấy 2 cửa') && rd2.rcalls.last[1][:text].include?('1 cửa không nằm sát phòng nào') && rd2.rcalls.last[1][:text].include?('ước tính'))
+rd2.table_rooms({'rooms' => VGD::BIM::Rooms.read(rmm).map { |r| r.merge('height' => 2800) }})
+ok('sửa phòng ở giao diện (gửi cả danh sách) vẫn giữ số cửa đã trừ', VGD::BIM::Rooms.read(rmm)[0]['openings'] && VGD::BIM::Rooms.read(rmm)[0]['openings']['count'] == 1)
+rmm.selection.items = [RoomFace.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 0], [0, 3000, 0]])]
+rd2.table_room_update_boundary({'id' => VGD::BIM::Rooms.read(rmm)[0]['id']})
+ok('cập nhật viền: bỏ số cửa đã trừ và nhắc trừ lại', !VGD::BIM::Rooms.read(rmm)[0].key?('openings') && rd2.rcalls.last[1][:text].include?('Trừ cửa khỏi tường lại'))
+# Dò phòng từ tường (chỉ đọc; tạo phòng chỉ khi áp dụng, một bước hoàn tác)
+class WallFace < Sketchup::Face
+  def initialize(x0, y0, x1, y1, h = 2800); @pts = [[x0, y0, 0], [x1, y1, 0], [x1, y1, h], [x0, y0, h]]; end
+  def outer_loop; @loop ||= RoomLoop.new(@pts); end
+  def loops; [outer_loop]; end
+end
+box_walls = ->(x0, y0, x1, y1, h = 2800) { [WallFace.new(x0, y0, x1, y0, h), WallFace.new(x1, y0, x1, y1, h), WallFace.new(x1, y1, x0, y1, h), WallFace.new(x0, y1, x0, y0, h)] }
+rmm.selection.items = []
+ok('dò phòng khi chưa chọn gì: báo lỗi', bad_room.call { rd2.table_room_detect({}) }.to_s.include?('chọn các tường'))
+class FloorOnly < RoomFace; def loops; [outer_loop]; end; end
+rmm.selection.items = [FloorOnly.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 0], [0, 3000, 0]])]
+ok('dò phòng: chọn mặt sàn (không có mặt đứng) báo lỗi', bad_room.call { rd2.table_room_detect({}) }.to_s.include?('không có mặt đứng'))
+rmm.selection.items = box_walls.call(0, 0, 4000, 3000, 2000)
+ok('dò phòng: cắt cao hơn tường thì báo lỗi, nói rõ chiều cao tường', bad_room.call { rd2.table_room_detect({'cut' => 2400}) }.to_s.include?('nằm trên đỉnh tường'))
+ok('dò phòng: độ cao cắt sai bị từ chối', bad_room.call { rd2.table_room_detect({'cut' => 'x'}) }.to_s.include?('Độ cao cắt') && bad_room.call { rd2.table_room_detect({'cut' => 0}) }.to_s.include?('Độ cao cắt') && bad_room.call { rd2.table_room_detect({'min_width' => 5}) }.to_s.include?('Bề rộng'))
+ok('dò phòng: dữ liệu gửi lên sai bị từ chối', bad_room.call { rd2.table_room_detect('x') }.to_s.include?('không hợp lệ'))
+rmm.selection.items = box_walls.call(0, 0, 8000, 3000) + [WallFace.new(4000, 0, 4000, 3000)]
+before = VGD::BIM::Rooms.read(rmm).size
+rd2.rcalls.clear
+rd2.table_room_detect({})
+detect = rd2.rcalls.find { |c| c[0] == 'room_detect' }[1]
+ok('dò phòng: xem trước hai vùng 12 m2, chưa tạo phòng nào, không đổi model', detect[:regions].size == 2 && detect[:regions].all? { |r| r[:area] == 12.0 } && VGD::BIM::Rooms.read(rmm).size == before)
+ok('dò phòng: có dấu nhận dạng riêng, độ cao cắt mặc định 2400 và chiều cao tường', detect[:regions].map { |r| r[:sig] }.uniq.size == 2 && detect[:cut] == 2400.0 && detect[:height] == 2800)
+sigs = detect[:regions].map { |r| r[:sig] }
+ok('tạo từ vùng dò: thiếu danh sách tích bị từ chối', bad_room.call { rd2.table_room_detect_apply({'keep' => []}) }.to_s.include?('tích ít nhất') && bad_room.call { rd2.table_room_detect_apply({}) }.to_s.include?('tích ít nhất'))
+ok('tạo từ vùng dò: dấu nhận dạng không còn khớp thì báo dò lại', bad_room.call { rd2.table_room_detect_apply({'keep' => ['0:0:1']}) }.to_s.include?('Dò phòng lại'))
+$transactions.clear
+rd2.table_room_detect_apply({'keep' => [sigs[0]], 'name' => 'Sảnh', 'height' => 2800})
+made = VGD::BIM::Rooms.read(rmm)
+ok('tạo từ vùng dò: chỉ tạo vùng được tích, tên theo ô nhập', made.size == before + 1 && made.last['name'] == 'Sảnh' && made.last['height'] == 2800.0)
+ok('tạo từ vùng dò: viền đúng 4 x 3 m, cao độ sàn theo chân tường (0)', made.last['boundary'].map { |pt| pt.map(&:round) }.sort == [[0, 0], [0, 3000], [4000, 0], [4000, 3000]].sort && made.last['elevation'].round == 0)
+ok('tạo từ vùng dò: báo diện tích 12 m2', rd2.rcalls.last(2).any? { |c| c[0] == 'message' && c[1][:text].include?('12.0') })
+rd2.table_room_detect_apply({'keep' => sigs})
+ok('tạo cả hai vùng: tên mặc định tăng dần, không trùng', VGD::BIM::Rooms.read(rmm).map { |r| r['name'] }.uniq.size == VGD::BIM::Rooms.read(rmm).size)
+rd2.table_rooms({'rooms' => VGD::BIM::Rooms.read(rmm).first(1)}) # trả danh sách phòng về như trước cho các kiểm tra sau
 # Thư viện vật liệu: lưu trên máy, kiểm tra lại dữ liệu
 ok('lưu vật liệu sai dữ liệu: từ chối, thư viện không đổi', bad_room.call { rd2.material_library_save({'items' => [{'name' => '', 'unit' => 'm2'}]}) }.to_s.include?('tên vật liệu') && bad_room.call { rd2.material_library_save('x') }.to_s.include?('không hợp lệ') && VGD::BIM::MaterialLibrary.read.empty?)
 rd2.material_library_save({'items' => [{'name' => 'MFC Oak', 'code' => 'MFC01', 'unit' => 'm2', 'price' => 285_000, 'waste' => 5, 'sketchup_material' => 'Gỗ sồi'}]})

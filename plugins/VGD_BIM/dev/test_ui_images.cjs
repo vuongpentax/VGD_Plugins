@@ -47,7 +47,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
 
   // ---- Thanh đầu và điều hướng ----
   await receive('config',config('table'));await receive('table',table());
-  ok(await page.locator('nav button').count()===5,'điều hướng còn 5 tab (đã bỏ tab Hình ảnh và Cài đặt)');
+  ok(await page.locator('nav button').count()===4,'điều hướng còn 4 tab (đã bỏ tab Hình ảnh, Cài đặt; Soạn tag thành cửa sổ riêng)');
   const order=await page.locator('.header-actions > *').evaluateAll(els=>els.map(e=>e.id));
   ok(JSON.stringify(order)==='["preset-btn","theme","gear"]','thanh đầu: nút preset đứng cạnh nút Sáng/Tối, rồi bánh răng');
   ok((await page.locator('#preset-btn').innerText()).trim()==='Preset: Tất cả','nút preset ghi tên preset đang dùng');
@@ -420,7 +420,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await receive('options',{zoom:true,isolate:false,deep:false,projected:false,label:true,isolating:false});  await page.getByRole('switch',{name:'Diện tích chiếu',exact:true}).click();
   ok(JSON.stringify(await json('table_option'))==='{"projected":true}','công tắc Diện tích chiếu: gửi tuỳ chọn');
   await page.getByRole('button',{name:'Công cụ ▾'}).click();
-  ok((await page.locator('.io-panel button').allInnerTexts()).map(x=>x.replace(/\s+/g,' ').trim()).join('|')==='Cầu nối dữ liệu|Xuất Excel|In PDF|Loại trừ tag|Đổi tên...|Mặt trước...|Ghi cách tính vào món đang chọn|Gán VGD ID cho món đang chọn|Sửa VGD ID trùng|Sửa bằng plugin dựng hình|Đặt mã đối tượng hàng loạt...|Quản lý tầng...|Quản lý phòng...|Thư viện vật liệu...|Luật kiểm tra...|So sánh phiên bản...','menu Nhập / Xuất: Cầu nối dữ liệu (để sẵn, chưa dùng được), Xuất Excel, In PDF, Ghi cách tính vào món, nhập / xuất preset');
+  ok((await page.locator('.io-panel button').allInnerTexts()).map(x=>x.replace(/\s+/g,' ').trim()).join('|')==='Cầu nối dữ liệu|Xuất Excel|In PDF|Loại trừ tag|Đổi tên...|Đổi tên theo mẫu...|Mặt trước...|Ghi cách tính vào món đang chọn|Gán VGD ID cho món đang chọn|Sửa VGD ID trùng|Sửa bằng plugin dựng hình|Đặt mã đối tượng hàng loạt...|Quản lý tầng...|Quản lý phòng...|Thư viện vật liệu...|Luật kiểm tra...|So sánh phiên bản...','menu Nhập / Xuất: Cầu nối dữ liệu (để sẵn, chưa dùng được), Xuất Excel, In PDF, Ghi cách tính vào món, nhập / xuất preset');
   const ioBox=await page.locator('.io-panel').boundingBox(),vp=page.viewportSize();
   ok(ioBox.x>=0 && ioBox.x+ioBox.width<=vp.width && ioBox.y>=0,'menu Nhập / Xuất nằm trọn trong cửa sổ (không bị cắt mép phải)');
   { // Mặc định (máy chưa lưu gì): menu Công cụ chỉ mở nhóm Xuất, các nhóm khác gập; nằm trọn trong cửa sổ; nhớ nhóm đã mở
@@ -435,7 +435,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
     await plain.locator('.io-sec[data-sec="site"] > summary').click();
     await plain.waitForTimeout(80);
     ok(JSON.parse(await plain.evaluate(()=>localStorage.getItem('vgd.bim.tools.open'))).site===true && await plain.locator('#levels-open').isVisible(),'bấm tiêu đề nhóm: sổ ra và nhớ trên máy này');
-    ok(!(await plain.locator('#exclude-chip').isVisible()) && (await plain.locator('nav#nav').evaluate(n=>n.parentElement.tagName))==='HEADER','không loại trừ tag thì không hiện chip; hàng tab nằm chung hàng đầu');
+    ok(await plain.locator('#exclude-chip').isVisible() && (await plain.locator('#exclude-chip').innerText())==='Loại trừ tag' && (await plain.locator('nav#nav').evaluate(n=>n.parentElement.tagName))==='HEADER','chưa loại trừ tag: nút Loại trừ tag vẫn hiện trên thanh công cụ (không kèm số); hàng tab nằm chung hàng đầu');
     await plain.close();
   }
   ok(await page.getByRole('button',{name:/Cầu nối dữ liệu/}).isEnabled(),'Cầu nối dữ liệu: nút bấm được (mở hộp nhập từ Excel / CSV)');
@@ -633,7 +633,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   const open=await sideBox(),left1=await gridLeft();
   ok(open.width===230 && left1>=open.right && left1-left0>=230,'mở xong: bảng bị đẩy sang phải, cột đầu tiên không bị ngăn che (bảng bắt đầu sau ngăn)');
   ok(await page.locator('.col-side .pop-col').count()===(await page.evaluate(()=>tableState.data.columns.length)) && (await page.locator('#cols-btn').getAttribute('aria-expanded'))==='true','ngăn liệt kê đủ cột; nút Chọn cột báo đang mở');
-  ok(await page.evaluate(()=>{const d=document.querySelector('.col-side .pop-density').getBoundingClientRect(),i=document.querySelector('.col-side-in').getBoundingClientRect();return d.bottom<=i.bottom+0.5&&d.height>=24;}),'ngăn Chọn cột: ô Độ cao hàng ở đáy hiện trọn, không bị cắt');
+  ok(await page.evaluate(()=>!document.querySelector('.pop-density')&&[...document.querySelectorAll('.col-side option')].length===0),'ngăn Chọn cột: không còn ô chọn độ cao hàng (đã có Ctrl + lăn chuột)');
   const itemH=await page.locator('.col-side .pop-col').first().evaluate(el=>el.getBoundingClientRect().height);
   ok(itemH<=28,'danh sách gọn: mỗi cột cao tối đa 28px (đo được '+itemH+'px)');
   // Ô tick: bật / tắt cột không dựng lại ngăn (cùng phần tử, vị trí cuộn giữ nguyên), bảng cập nhật ngay
@@ -939,13 +939,21 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await receive('tag_tree',{supported:false,isolated:null,folders:[],layers:[{id:1,name:'Tag',visible:true,folder_id:null}]});
   ok((await page.locator('#tag-tree-list').innerText()).includes('cần SketchUp 2021') && await treeRows().count()===1,'SketchUp cũ không có thư mục tag: báo rõ và vẫn liệt kê tag');
   // Màu, kiểu nét, tô màu theo tag
-  const STYLED={supported:true,styles_supported:true,line_styles:['Solid Line','Dashed Line'],color_by_tag:false,isolated:null,folders:[],layers:[{id:10,name:'A. WALL',visible:true,folder_id:null,color:'#c0392b',line_style:'Solid Line'},{id:11,name:'A. DOOR',visible:true,folder_id:null,color:'#2980b9',line_style:''}]};
+  const STYLED={supported:true,styles_supported:true,line_styles:['Solid Line','Dashed Line','Dotted Line','Dash-Dot Line','Dash-Double-Dot Line','Dash-Triple-Dot Line','Kiểu lạ'],color_by_tag:false,isolated:null,folders:[],layers:[{id:10,name:'A. WALL',visible:true,folder_id:null,color:'#c0392b',line_style:'Solid Line'},{id:11,name:'A. DOOR',visible:true,folder_id:null,color:'#2980b9',line_style:''}]};
   await receive('tag_tree',STYLED);
-  ok(await rowOf('tag',10).locator('input[type=color]').inputValue()==='#c0392b' && await rowOf('tag',10).locator('select.tm-style').inputValue()==='Solid Line' && await rowOf('tag',11).locator('select.tm-style').inputValue()==='','mỗi tag có ô màu và ô kiểu nét đúng giá trị (kiểu chưa đặt hiện mặc định)');
-  ok((await rowOf('tag',10).locator('select.tm-style option').allInnerTexts()).join('|')==='Solid Line|Dashed Line' && (await rowOf('tag',11).locator('select.tm-style option').allInnerTexts()).join('|')==='(mặc định)|Solid Line|Dashed Line','danh sách kiểu nét lấy từ model');
+  const styleBtn=id=>rowOf('tag',id).locator('button.tm-style');
+  ok(await rowOf('tag',10).locator('input[type=color]').inputValue()==='#c0392b' && await styleBtn(10).getAttribute('title')==='Solid Line' && await styleBtn(10).locator('svg.ls-icon').count()===1 && (await styleBtn(10).innerText()).trim()==='' && await styleBtn(11).getAttribute('title')==='(mặc định)' && (await styleBtn(11).innerText()).trim()==='—','mỗi tag có ô màu và ô kiểu nét hiện bằng ký hiệu, không chữ (kiểu chưa đặt hiện dấu —, gợi ý "(mặc định)")');
+  await styleBtn(10).click();
+  const opts=page.locator('#tag-style-menu .ls-opt');
+  ok(await opts.count()===7 && JSON.stringify(await opts.evaluateAll(l=>l.map(o=>o.title)))===JSON.stringify(['Solid Line','Dashed Line','Dotted Line','Dash-Dot Line','Dash-Double-Dot Line','Dash-Triple-Dot Line','Kiểu lạ']) && await opts.nth(0).evaluate(o=>o.classList.contains('cur')),'bấm ô kiểu nét: danh sách kiểu của model, mỗi kiểu một ký hiệu, kiểu đang dùng được đánh dấu');
+  ok(JSON.stringify(await opts.evaluateAll(l=>l.map(o=>o.querySelectorAll('svg.ls-icon line').length)))==='[1,3,9,5,6,5,0]' && (await opts.nth(6).innerText()).trim()==='Kiểu lạ','ký hiệu đúng từng kiểu (liền, gạch, chấm, gạch chấm, gạch hai chấm, gạch ba chấm); tên lạ không nhận ra thì hiện chữ');
+  await page.keyboard.press('Escape');
+  ok(await page.locator('#tag-style-menu').count()===0,'Esc đóng danh sách kiểu nét');
+  await clear();await styleBtn(10).click();await opts.nth(0).click();
+  ok(!(await last('tm_line_style')) && await page.locator('#tag-style-menu').count()===0,'chọn lại đúng kiểu đang dùng: không gửi gì, danh sách đóng');
   await clear();await rowOf('tag',10).locator('input[type=color]').evaluate(el=>{el.value='#00ff88';el.dispatchEvent(new Event('change',{bubbles:true}));});
   ok(JSON.stringify(await json('tm_color'))==='{"id":10,"color":"#00ff88"}','đổi màu: gửi mã tag và màu #rrggbb');
-  await clear();await rowOf('tag',11).locator('select.tm-style').selectOption('Dashed Line');
+  await clear();await styleBtn(11).click();await opts.nth(1).click();
   ok(JSON.stringify(await json('tm_line_style'))==='{"id":11,"style":"Dashed Line"}','đổi kiểu nét: gửi mã tag và tên kiểu');
   ok(await page.locator('#tag-tree-colorbytag').getAttribute('aria-pressed')==='false','nút Tô màu theo tag: chưa bật thì không nhấn');
   await clear();await page.click('#tag-tree-more');await page.locator('#tag-tree-colorbytag').click();
@@ -955,7 +963,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   await clear();await page.click('#tag-tree-more');await page.locator('#tag-tree-colorbytag').click();
   ok(JSON.stringify(await json('tm_color_by_tag'))==='{"enabled":false}','bấm lại khi đang bật: gửi lệnh tắt');
   await receive('tag_tree',{...STYLED,styles_supported:false,line_styles:[]});
-  ok(await page.locator('select.tm-style').count()===0 && await page.locator('input[type=color]').count()===2,'SketchUp cũ không có kiểu nét: ẩn ô kiểu nét, vẫn có ô màu');
+  ok(await page.locator('button.tm-style').count()===0 && await page.locator('input[type=color]').count()===2,'SketchUp cũ không có kiểu nét: ẩn ô kiểu nét, vẫn có ô màu');
   // Ghim, gần đây, chọn tag cho nút Gán tag, kéo thả vào thư mục
   await page.click('#tag-tab-model');
   await receive('tag_tree',{...TREE,pinned:['A. WALL','Khong co'],recent:['A. DOOR','A. WALL'],color_by_tag:false,styles_supported:false});
@@ -1019,7 +1027,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(await page.locator('#tag-pane-model').isVisible() && await exCard.isVisible(),'nhận bản xem trước Excel: chuyển về tab Trong model và hiện thẻ xem trước');
   const exText=await exCard.innerText();
   ok(exText.includes('tags.xlsx') && exText.includes('3 dòng · 1 đã có trong model') && exText.includes('"A. WALL" bị trùng') && exText.includes('và 2 cảnh báo khác'),'thẻ xem trước: tên file, số dòng và số tag đã có, cảnh báo');
-  ok(await exCard.locator('tbody tr').count()===3 && (await exCard.locator('tbody tr').nth(0).innerText()).includes('#ff0000') && (await exCard.locator('tbody tr').nth(0).innerText()).includes('Dash') && (await exCard.locator('tbody tr').nth(1).innerText()).includes('Đã có') && (await exCard.locator('tbody tr').nth(2).innerText()).includes('Mới'),'bảng xem trước: tên, màu, kiểu nét, thư mục và trạng thái Mới / Đã có');
+  ok(await exCard.locator('tbody tr').count()===3 && (await exCard.locator('tbody tr').nth(0).innerText()).includes('#ff0000') && (await exCard.locator('tbody tr').nth(0).locator('svg.ls-icon').count())===1 && (await exCard.locator('tbody tr').nth(1).innerText()).includes('Đã có') && (await exCard.locator('tbody tr').nth(2).innerText()).includes('Mới'),'bảng xem trước: tên, màu, kiểu nét, thư mục và trạng thái Mới / Đã có');
   ok(await exCard.locator('tbody input.cb:checked').count()===3 && (await page.locator('#tag-excel-import').innerText())==='Nhập 3 tag','mặc định tick hết các dòng, nút Nhập ghi số tag');
   await exCard.locator('tbody tr').nth(1).locator('input.cb').uncheck();
   ok((await page.locator('#tag-excel-import').innerText())==='Nhập 2 tag','bỏ tick một dòng: nút Nhập cập nhật số tag');
@@ -1472,14 +1480,76 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
   ok(!(await calls('image_set')).length,'clipboard không có ảnh: báo rõ, không lưu gì');
   await fakeClipboard('denied');
   await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
-  await page.waitForFunction(()=>document.querySelector('#message').innerText.includes('Ctrl+V'));
-  ok(!(await calls('image_set')).length,'không đọc được clipboard bằng nút (từ chối quyền): hướng dẫn nhấn Ctrl+V, không lưu gì');
-  ok((await page.locator('#message').innerText()).includes('NotAllowedError'),'từ chối quyền: thông báo ghi rõ lỗi của trình duyệt (NotAllowedError)');
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_clipboard'));
+  let clip=await json('image_clipboard');
+  ok(clip&&clip.pid===901&&!('kind' in clip)&&!(await calls('image_set')).length,'web từ chối quyền đọc clipboard: nhờ Ruby đọc clipboard của Windows (không im lặng), chưa lưu gì');
+  ok((await page.locator('#message').innerText()).includes('Đang đọc ảnh trong clipboard'),'có báo đang đọc clipboard');
   await fakeClipboard('missing');
+  await locCell(2).hover();await clear();await pasteBtn(locCell(2)).click();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_clipboard'));
+  clip=await json('image_clipboard');
+  ok(clip&&clip.pid===902&&clip.kind==='location','cửa sổ không có API clipboard: nhờ Ruby đọc, đúng món và đúng loại ảnh (vị trí)');
+  await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{value:{read:()=>new Promise(()=>{})},configurable:true});});
   await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
-  await page.waitForFunction(()=>document.querySelector('#message').innerText.includes('Ctrl+V'));
-  ok(!(await calls('image_set')).length,'cửa sổ không có API clipboard: hướng dẫn nhấn Ctrl+V');
-  ok((await page.locator('#message').innerText()).includes('không có chức năng đọc clipboard'),'không có API clipboard: thông báo nói rõ nguyên nhân');
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_clipboard'),null,{timeout:6000});
+  ok(true,'API clipboard không bao giờ trả lời (chờ quyền): sau ít giây vẫn nhờ Ruby đọc, nút không im lặng');
+  // Ruby gửi lại PNG đã đọc: giao diện thu nhỏ và lưu như ảnh dán thường
+  await clear();
+  await receive('clipboard_image',{pid:902,kind:'location',png:'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='});
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_set'));
+  setNow=await json('image_set');
+  ok(setNow&&setNow.pid===902&&setNow.kind==='location'&&typeof setNow.full==='string'&&setNow.full.length>20,'Ruby gửi ảnh clipboard: lưu thành ảnh vị trí của đúng món');
+  // Cách 1 của nút dán: lệnh dán của trình duyệt (như Ctrl+V)
+  const fakeNativePaste=mode=>page.evaluate(mode=>{
+    window.__execCalls=0;
+    document.execCommand=cmd=>{
+      if(cmd!=='paste')return false;
+      window.__execCalls++;
+      if(mode==='off')return false;
+      const data=new DataTransfer();
+      if(mode==='image'){const bin=atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');data.items.add(new File([Uint8Array.from(bin,c=>c.charCodeAt(0))],'a.png',{type:'image/png'}));}
+      else data.setData('text/plain','chữ');
+      (document.activeElement||document.body).dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));
+      return true;
+    };
+  },mode);
+  await fakeClipboard('denied');
+  await fakeNativePaste('image');
+  await locCell(1).hover();await clear();await pasteBtn(locCell(1)).click();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_set'));
+  setNow=await json('image_set');
+  ok(setNow&&setNow.pid===901&&setNow.kind==='location'&&!(await calls('image_clipboard')).length&&await page.evaluate(()=>window.__execCalls)===1,'nút dán: lệnh dán của trình duyệt chạy được thì dùng luôn (như Ctrl+V), đúng món và loại ảnh, không cần API clipboard hay Ruby');
+  ok(await page.evaluate(()=>!document.querySelector('[contenteditable]')),'ô tạm của lệnh dán được gỡ sau khi dán');
+  await fakeNativePaste('text');
+  await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
+  await page.waitForFunction(()=>document.querySelector('#message').innerText.includes('chưa có ảnh'));
+  ok(!(await calls('image_set')).length&&!(await calls('image_clipboard')).length,'lệnh dán chạy nhưng clipboard chỉ có chữ: báo chưa có ảnh, không lưu, không gọi Ruby');
+  await fakeNativePaste('off');
+  await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_clipboard'));
+  ok(true,'lệnh dán của trình duyệt bị chặn: chuyển sang cách tiếp theo (API clipboard rồi Ruby)');
+  // Cách 2 của nút dán: Ruby gửi phím Ctrl+V (image_paste_keys), sự kiện paste tới như người dùng tự nhấn
+  const pngPaste=()=>page.evaluate(async()=>{
+    const blob=await (await fetch('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')).blob();
+    const data=new DataTransfer();data.items.add(new File([blob],'a.png',{type:'image/png'}));
+    (document.activeElement||document.body).dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));
+  });
+  await fakeNativePaste('off');await fakeClipboard('denied');
+  await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_paste_keys'));
+  await receive('paste_keys',{ok:true});await pngPaste();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_set'));
+  setNow=await json('image_set');
+  ok(setNow&&setNow.pid===901&&!(await calls('image_clipboard')).length,'Ruby gửi được phím Ctrl+V và sự kiện paste tới: dán đúng món, không chạy tiếp cách sau (PowerShell)');
+  await mainCell(1).hover();await clear();await pasteBtn(mainCell(1)).click();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_paste_keys'));
+  await receive('paste_keys',{ok:false});
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_clipboard'),null,{timeout:6000});
+  ok(true,'Ruby báo không gửi được phím (không phải Windows, Fiddle lỗi, cửa sổ lạ): chuyển ngay sang cách sau, không đợi hết giờ');
+  await clear();await mainCell(1).hover();await pasteBtn(mainCell(1)).click();
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_paste_keys'));
+  await page.waitForFunction(()=>window.calls.some(c=>c.name==='image_clipboard'),null,{timeout:6000});
+  ok(true,'phím đã gửi nhưng không có sự kiện paste nào tới (quá 1,2 giây): chuyển sang cách sau');
   // Ctrl+V: ô ảnh vị trí vừa bấm là nơi nhận; bấm chỗ khác thì về món đang chọn
   const firePaste=()=>page.evaluate(async()=>{
     const blob=await (await fetch('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==')).blob();

@@ -23,8 +23,10 @@ module VGD
         MODES = %w[table information scan mapping rules validate_model validate_selection tags].freeze
         # Tên cũ vẫn mở được, chuyển về tab đã gộp.
         ALIASES = {'export' => 'scan', 'convert_selection' => 'information'}.freeze
-        def initialize(mode)
-          @mode = mode
+        # kind :main = cửa sổ chính (4 tab); :tags = cửa sổ Soạn tag riêng (chỉ tab Soạn tag, mở bằng VGD::BIM.open_tags).
+        def initialize(mode, kind = :main)
+          @kind = kind
+          @mode = kind == :tags ? 'tags' : mode
           @records = []
           @rows = []
           @targets = []
@@ -41,7 +43,11 @@ module VGD
           @preview = nil
           @ready = false
           @closed = false
-          @dialog = ::UI::HtmlDialog.new(dialog_title: 'VGD_BIM · Dữ liệu mô hình', preferences_key: 'VGD_BIM_Workspace', scrollable: true, resizable: true, width: 860, height: 740, style: ::UI::HtmlDialog::STYLE_DIALOG)
+          @dialog = if kind == :tags
+                      ::UI::HtmlDialog.new(dialog_title: 'VGD BIM · Soạn tag', preferences_key: 'VGD_BIM_Tags', scrollable: true, resizable: true, width: 640, height: 740, style: ::UI::HtmlDialog::STYLE_DIALOG)
+                    else
+                      ::UI::HtmlDialog.new(dialog_title: 'VGD_BIM · Dữ liệu mô hình', preferences_key: 'VGD_BIM_Workspace', scrollable: true, resizable: true, width: 860, height: 740, style: ::UI::HtmlDialog::STYLE_DIALOG)
+                    end
           @dialog.set_file(File.join(BIM::ROOT, 'html', 'index.html'))
           @dialog.add_action_callback('ready') { |_ctx| safely { @ready = true; refresh } }
           @dialog.add_action_callback('open_panel') { |_ctx, mode| safely { switch_mode(mode) } }
@@ -95,9 +101,14 @@ module VGD
           @dialog.add_action_callback('table_clear') { |_ctx| safely { table_clear } }
           @dialog.add_action_callback('rename_preview') { |_ctx, payload| safely { rename_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { rename_apply(JSON.parse(payload)) } }
+          @dialog.add_action_callback('open_rename') { |_ctx| safely { BIM.open_rename } }
           @dialog.add_action_callback('material_library_save') { |_ctx, payload| safely { material_library_save(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_rooms') { |_ctx, payload| safely { table_rooms(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_from_selection') { |_ctx, payload| safely { table_room_from_selection(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_calc_formula') { |_ctx, payload| safely { table_calc_formula(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_room_openings') { |_ctx, payload| safely { table_room_openings(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_room_detect') { |_ctx, payload| safely { table_room_detect(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_room_detect_apply') { |_ctx, payload| safely { table_room_detect_apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_assign_rooms_auto') { |_ctx, payload| safely { table_assign_rooms_auto(JSON.parse(payload)) } }
           @dialog.add_action_callback('snapshot_list') { |_ctx| safely { snapshot_list } }
           @dialog.add_action_callback('snapshot_save') { |_ctx, payload| safely { snapshot_save(JSON.parse(payload)) } }
@@ -132,12 +143,16 @@ module VGD
         def switch_mode(mode)
           mode = ALIASES.fetch(mode, mode)
           raise ArgumentError, 'Tính năng không hợp lệ.' unless MODES.include?(mode)
+          return BIM.open_tags if mode == 'tags' && @kind != :tags # Soạn tag nằm ở cửa sổ riêng
+          return if @kind == :tags # cửa sổ Soạn tag chỉ có Soạn tag
           @mode = mode
           @scan_armed = false
           refresh if @ready
         end
         def safely
+          before = Data.serial if @kind == :tags
           yield
+          model_edited if before && Data.serial != before
         rescue StandardError => error
           BIM.log(error.message)
           text = error.message.match?(/[À-ỹ]/) ? error.message : 'Không thực hiện được thao tác. Hãy làm mới dữ liệu và thử lại.'
@@ -197,7 +212,7 @@ module VGD
           cleanup_table_view unless @mode == 'table'
           @model = Sketchup.active_model
           language = Settings.read['language']
-          emit('config', {mode: @mode, version: BIM::VERSION, language: language, file: file_identity, app: settings_payload, preset_info: {defaults: Preset::DEFAULT_SETTINGS, choices: Preset.choices},
+          emit('config', {mode: @mode, window: @kind.to_s, version: BIM::VERSION, language: language, file: file_identity, app: settings_payload, preset_info: {defaults: Preset::DEFAULT_SETTINGS, choices: Preset.choices},
                          table: {columns: Table.columns, presets: Table.presets, view: Table.view_state(@model)}, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.ui_dictionary(language), vi_en: (language == 'en' ? Locale.vi_en_names : nil), scan_options: {scope: @scan_options[:scope], faces: faces?}})
           if %w[information tags table].include?(@mode)
             @observer = SelectionObserver.new(self)
@@ -440,6 +455,7 @@ module VGD
         end
 
         def table_build
+          return if @kind == :tags # cửa sổ Soạn tag không có Bảng khối lượng (lỗi beta.57: khóa sheet làm bảng hiện đè lên Soạn tag)
           current_model = Sketchup.active_model
           if @table_model && !@table_model.equal?(current_model)
             @table_model = current_model
@@ -628,10 +644,12 @@ module VGD
           room['elevation'] = shape[:elevation] if room['elevation_source'] == 'manual' # phòng theo tầng giữ cao độ của tầng
           room.delete('holes')
           room['holes'] = shape[:holes] unless shape[:holes].empty?
+          had_openings = room.delete('openings') # viền đổi thì số cửa đã trừ không còn đúng: bỏ, người dùng bấm Trừ cửa lại
           clean = Rooms.sanitize!(list.each_with_index.map { |item, i| i == index ? room : item })
           Rooms.write(@model, clean)
           table_build
           note = RoomVolume.find(@model, room['id']).nil? ? '' : ' Khối 3D đã dựng chưa đổi: bấm Dựng lại khối.'
+          note += ' Số cửa đã trừ khỏi tường được bỏ: bấm Trừ cửa khỏi tường lại.' if had_openings
           emit('message', {text: "Đã cập nhật viền phòng #{room['name']} (diện tích #{Rooms.metrics(room)[:area]} m²).#{note}"})
         end
         def selected_faces
@@ -705,12 +723,29 @@ module VGD
           raise first_error if shapes.empty?
           shapes.sort_by! { |shape| [shape[:boundary].map(&:first).min, shape[:boundary].map(&:last).min] } # đặt tên theo thứ tự từ trái sang phải
           rooms = Rooms.read(@model)
+          created = rooms_from_shapes(rooms, shapes, payload)
+          clean = Rooms.sanitize!(rooms + created)
+          Rooms.write(@model, clean)
+          table_build
+          fresh = clean.last(created.size)
+          area = fresh.sum { |room| Rooms.metrics(room)[:area] }.round(3)
+          notes = []
+          notes << "bỏ qua #{skipped} mặt không dùng được (không nằm ngang)" if skipped.positive?
+          holed = fresh.count { |room| room['holes'] }
+          notes << "#{holed} phòng có lỗ" if holed.positive?
+          note = notes.empty? ? '' : " (#{notes.join('; ')})"
+          text = fresh.size == 1 ? "Đã tạo phòng #{fresh.first['name']} từ mặt đang chọn (diện tích #{area} m²).#{note}" : "Đã tạo #{fresh.size} phòng từ #{faces.size} mặt đang chọn (tổng diện tích #{area} m²).#{note}"
+          emit('message', {text: text})
+        end
+        # Phòng mới (chưa ghi) từ các hình {boundary:, holes:, elevation:}: đặt tên, tầng, chiều cao, cao độ sàn. Dùng chung cho tạo từ mặt và dò từ tường.
+        # rooms: danh sách phòng hiện có (để không trùng tên). payload: 'name', 'number' (chỉ khi một hình), 'level', 'height'.
+        def rooms_from_shapes(rooms, shapes, payload)
           levels = Levels.read(@model)
           chosen = payload['level'].to_s
           typed = payload['name'].to_s.strip
           used = rooms.map { |room| room['name'].downcase }
           counter = typed.empty? || shapes.size == 1 ? rooms.size : 0
-          created = shapes.map do |shape|
+          shapes.map do |shape|
             if shapes.size == 1 && !typed.empty?
               name = typed
             else
@@ -730,18 +765,98 @@ module VGD
             room['holes'] = shape[:holes] unless shape[:holes].empty?
             room
           end
+        end
+        # Trừ cửa đi / cửa sổ khỏi diện tích tường của MỌI phòng (core/room_openings.rb, core/opening_probe.rb). payload: {'tags' => [tên tag cửa]}.
+        # Tìm cửa trong cả model trên các tag đã chọn (chỉ khi bấm nút, chỉ đọc), ghép cửa vào phòng có viền sát cửa, ghi số cửa và diện tích vào từng phòng.
+        # Phòng không có cửa nào cũng được ghi (0 cửa) để biết đã trừ. Không đổi cửa, tường hay hình học. Một bước hoàn tác (Rooms.write).
+        def table_room_openings(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu trừ cửa không hợp lệ.' unless payload.is_a?(Hash)
+          tags = RoomOpenings.tags!(payload['tags'])
+          rooms = Rooms.read(@model)
+          raise 'Chưa có phòng nào. Hãy tạo phòng trước.' if rooms.empty?
+          missing = tags - @model.layers.to_a.map { |layer| layer.name.to_s }
+          raise "Model không có tag: #{missing.first(5).join(', ')}." if missing.size == tags.size
+          scan = OpeningProbe.collect(@model, tags)
+          plan = RoomOpenings.match(scan[:openings], rooms)
+          updated = rooms.map do |room|
+            entry = plan[:rooms][room['id']] || {'count' => 0, 'area' => 0.0, 'estimated' => 0}
+            room.merge('openings' => entry.merge('tags' => tags))
+          end
+          Rooms.write(@model, updated)
+          table_build
+          counted = plan[:rooms].values.sum { |entry| entry['count'] }
+          area = plan[:rooms].values.sum { |entry| entry['area'] }.round(3)
+          notes = []
+          notes << "#{plan[:unmatched]} cửa không nằm sát phòng nào" if plan[:unmatched].positive?
+          estimated = plan[:rooms].values.sum { |entry| entry['estimated'] }
+          notes << "#{estimated} lượt cửa ước tính theo khung bao" if estimated.positive?
+          notes << "tag không có trong model: #{missing.join(', ')}" unless missing.empty?
+          notes << "chỉ duyệt #{OpeningProbe::MAX_VISITS} đối tượng đầu tiên (model quá lớn)" if scan[:truncated]
+          note = notes.empty? ? '' : " (#{notes.join('; ')})"
+          emit('message', {text: "Đã trừ cửa khỏi tường: tìm thấy #{scan[:openings].size} cửa, trừ #{counted} lượt ở #{plan[:rooms].size} phòng, tổng #{area} m².#{note}"})
+        end
+        # Dò vùng phòng từ các tường đang chọn (core/room_detect_probe.rb đọc, core/room_detect.rb tính): CHỈ ĐỌC, không đổi tường, không thêm hình.
+        # payload: {'cut' => độ cao cắt mm từ chân tường (mặc định 2400), 'min_width' => bề rộng tối thiểu mm (mặc định 350)}. Trả về
+        # [kết quả RoomDetect, số liệu đọc tường, độ cao cắt, bề rộng tối thiểu].
+        def detect_rooms_from_selection(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu dò phòng không hợp lệ.' unless payload.is_a?(Hash)
+          cut = payload['cut'].nil? ? RoomDetectProbe::DEFAULT_CUT : payload['cut']
+          width = payload['min_width'].nil? ? RoomDetect::MIN_WIDTH : payload['min_width']
+          raise ArgumentError, "Độ cao cắt phải là số từ #{RoomDetectProbe::MIN_CUT.round} đến #{RoomDetectProbe::MAX_CUT.round} mm." unless cut.is_a?(Numeric) && cut.finite? && cut.between?(RoomDetectProbe::MIN_CUT, RoomDetectProbe::MAX_CUT)
+          raise ArgumentError, 'Bề rộng tối thiểu phải là số từ 50 đến 5000 mm.' unless width.is_a?(Numeric) && width.finite? && width.between?(50, 5000)
+          entities = @model.selection.to_a
+          raise 'Hãy chọn các tường (Group hoặc Component) trong SketchUp rồi bấm Dò phòng.' if entities.empty?
+          read = RoomDetectProbe.read(entities, context_transform, cut)
+          raise 'Trong phần đang chọn không có mặt đứng nào (tường). Hãy chọn các Group / Component tường.' if read[:faces].zero?
+          if read[:walls].zero?
+            raise "Mặt phẳng cắt (cao #{cut.round} mm) nằm trên đỉnh tường (tường cao #{(read[:top] - read[:floor]).round} mm). Hãy giảm độ cao cắt."
+          end
+          [RoomDetect.detect(read[:segments], min_width: width), read, cut, width]
+        end
+        # Xem trước các vùng dò được (chưa tạo gì). Gửi giao diện sự kiện 'room_detect'.
+        def table_room_detect(payload)
+          result, read, cut, width = detect_rooms_from_selection(payload)
+          by_kind = result[:dropped].group_by { |item| item[:kind] }
+          dropped = by_kind.flat_map do |kind, items|
+            case kind
+            when :thin then [{count: items.size, text: "vùng hẹp hơn #{width.round} mm (ruột tường, khe giữa hai lớp tường)"}]
+            when :small then [{count: items.size, text: 'vùng diện tích quá nhỏ (mảnh vụn ở góc tường)'}]
+            else items.map { |item| {count: 1, text: "vùng quanh (#{item[:center][0].round}, #{item[:center][1].round}) mm: viền hoặc lỗ không hợp lệ (quá nhiều điểm, tự cắt nhau hoặc cột dính sát tường)"} }
+            end
+          end
+          warnings = []
+          warnings << "Có #{result[:open_ends]} đầu tường hở (đầu tường lơ lửng hoặc khe cửa): phòng không khép kín sẽ không được tạo. Nếu là cửa đi, hãy tăng độ cao cắt cao hơn đỉnh cửa." if result[:open_ends].positive?
+          warnings << "Chỉ đọc #{RoomDetectProbe::MAX_FACES} mặt đầu tiên của phần đang chọn (model quá nặng): hãy chọn ít tường hơn." if read[:truncated]
+          warnings << 'Không dò được vùng kín nào. Kiểm tra tường có khép kín không, hoặc thử đổi độ cao cắt.' if result[:regions].empty?
+          emit('room_detect', {
+            regions: result[:regions].map { |region| {sig: region[:sig], area: (region[:area] / 1.0e6).round(3), width: region[:width].round, center: region[:center].map { |v| v.round }, holes: region[:holes].size, points: region[:boundary].size, boundary: region[:boundary].map { |pt| pt.map { |v| v.round(1) } }} },
+            dropped: dropped, warnings: warnings, open_ends: result[:open_ends], walls: read[:walls], cut: cut, min_width: width,
+            floor: read[:floor].round(1), height: (read[:top] - read[:floor]).round
+          })
+        end
+        # Tạo phòng từ các vùng đã tích. Dò lại ngay lúc này (tường có thể đã đổi từ lúc xem trước) và chỉ tạo vùng còn khớp dấu nhận dạng với vùng đã chọn.
+        # payload: như table_room_detect cộng 'keep' => [dấu nhận dạng], 'name' (tiền tố tên), 'level' (id tầng), 'height' (mm). Một bước hoàn tác.
+        def table_room_detect_apply(payload)
+          keep = payload.is_a?(Hash) ? payload['keep'] : nil
+          raise ArgumentError, 'Hãy tích ít nhất một vùng để tạo phòng.' unless keep.is_a?(Array) && keep.any? && keep.all? { |sig| sig.is_a?(String) }
+          result, read, = detect_rooms_from_selection(payload)
+          chosen = result[:regions].select { |region| keep.include?(region[:sig]) }
+          raise 'Các vùng đã tích không còn khớp với tường hiện tại. Hãy bấm Dò phòng lại.' if chosen.empty?
+          shapes = chosen.map { |region| {boundary: region[:boundary], holes: region[:holes], elevation: read[:floor].round(1)} }
+          shapes.sort_by! { |shape| [shape[:boundary].map(&:first).min, shape[:boundary].map(&:last).min] }
+          rooms = Rooms.read(@model)
+          created = rooms_from_shapes(rooms, shapes, payload.merge('number' => ''))
           clean = Rooms.sanitize!(rooms + created)
           Rooms.write(@model, clean)
           table_build
           fresh = clean.last(created.size)
           area = fresh.sum { |room| Rooms.metrics(room)[:area] }.round(3)
-          notes = []
-          notes << "bỏ qua #{skipped} mặt không dùng được (không nằm ngang)" if skipped.positive?
-          holed = fresh.count { |room| room['holes'] }
-          notes << "#{holed} phòng có lỗ" if holed.positive?
-          note = notes.empty? ? '' : " (#{notes.join('; ')})"
-          text = fresh.size == 1 ? "Đã tạo phòng #{fresh.first['name']} từ mặt đang chọn (diện tích #{area} m²).#{note}" : "Đã tạo #{fresh.size} phòng từ #{faces.size} mặt đang chọn (tổng diện tích #{area} m²).#{note}"
-          emit('message', {text: text})
+          missing = keep.size - chosen.size
+          note = missing.positive? ? " (#{missing} vùng đã tích không còn khớp nên bị bỏ qua)" : ''
+          emit('message', {text: "Đã tạo #{fresh.size} phòng từ tường (tổng diện tích #{area} m², cao độ sàn #{read[:floor].round} mm theo chân tường thấp nhất).#{note}"})
+          emit('room_detect_done', {created: fresh.size})
         end
         # Gán món vào phòng theo vị trí (tâm đáy món trong viền và trong khoảng cao của phòng). Nhãn, không dời hình. Một bước hoàn tác.
         def table_assign_rooms_auto(payload)
@@ -888,13 +1003,20 @@ module VGD
         end
         # Đổi cách tính theo TAG của các dòng đã chọn (lưu trên máy, mọi món cùng tag đổi theo); không ghi vào món nên cả món bị khóa cũng đổi được.
         # Giá trị rỗng: bỏ cách tính riêng của tag (về theo từ khóa / nhóm tag).
-        def table_calc_method(indexes, value)
+        def table_calc_method(indexes, value, formula: nil, unit: nil)
           tags = indexes.map { |index| @table_rows.fetch(index)[:tag].to_s }.reject(&:empty?).uniq
           raise 'Món chưa có tag nên không đặt cách tính theo tag được. Hãy gắn tag trước, hoặc dùng Ghi cách tính vào món.' if tags.empty?
-          tags.each { |tag| Quantity.set_override(tag, value) }
+          value == Quantity::FORMULA ? Quantity.formula_override(formula, unit) : nil # kiểm tra trước khi ghi tag đầu tiên
+          tags.each { |tag| Quantity.set_override(tag, value, formula: formula, unit: unit) }
           table_build
-          text = value.empty? ? "Đã bỏ cách tính riêng của #{tags.size} tag, tính theo từ khóa / nhóm tag." : "Đã đặt cách tính #{Quantity::LABELS.fetch(value)} cho #{tags.size} tag: #{tags.first(3).join(', ')}#{tags.size > 3 ? '…' : ''}."
+          label = value == Quantity::FORMULA ? "theo công thức #{formula.strip} (#{unit})" : Quantity::LABELS[value]
+          text = value.empty? ? "Đã bỏ cách tính riêng của #{tags.size} tag, tính theo từ khóa / nhóm tag." : "Đã đặt cách tính #{label} cho #{tags.size} tag: #{tags.first(3).join(', ')}#{tags.size > 3 ? '…' : ''}."
           emit('message', {text: text})
+        end
+        # Đặt công thức khối lượng cho tag của các dòng (core/formula.rb). payload: {'indexes', 'formula', 'unit'}. Chỉ lưu trên máy, không đổi model.
+        def table_calc_formula(payload)
+          raise ArgumentError, 'Dữ liệu công thức không hợp lệ.' unless payload.is_a?(Hash) && payload['formula'].is_a?(String) && payload['unit'].is_a?(String)
+          table_calc_method(table_indexes(payload), Quantity::FORMULA, formula: payload['formula'], unit: payload['unit'])
         end
         # Ghi cách tính suy ra từ tag vào chính các món (nút "Ghi cách tính vào món"): chỉ điền các mục dữ liệu chuẩn còn trống (hạng mục, cách tính, đơn vị),
         # không ghi đè gì người dùng đã nhập; bỏ qua món bị khóa; cả đợt là một bước hoàn tác. payload: {'indexes' => [các dòng]}.
@@ -911,7 +1033,7 @@ module VGD
               row = @table_rows.fetch(index)
               entity = record[:entity]
               has_data = Data.has_data?(entity)
-              values = Quantity.commit_values(Data.read(entity), has_data, {category: row[:calc_category], method: row[:calc_method]})
+              values = Quantity.commit_values(Data.read(entity), has_data, {category: row[:calc_category], method: row[:calc_method], unit: row[:calc_unit]})
               next if values.empty?
               Data.write(entity, values, has_data ? Data.source(entity) : 'MAPPED')
               written += 1
@@ -1202,6 +1324,14 @@ module VGD
           text += " Bỏ qua #{plan[:counts][:locked]} đối tượng bị khóa." if plan[:counts][:locked] > 0
           text += " Có #{plan[:counts][:duplicate]} dòng trùng tên." if plan[:counts][:duplicate] > 0
           emit('message', {text: text})
+        end
+        # Cửa sổ khác (Đổi tên, Soạn tag) vừa sửa model: bảng đang hiện thì đọc lại để thấy tên / tag mới.
+        def reload_table
+          safely { table_build } if @ready && @mode == 'table' && @dialog.visible? && @table_records
+        end
+        # Cửa sổ Soạn tag vừa ghi vào model (gán tag, đổ tag, xóa tag...): báo để Bảng khối lượng đọc lại.
+        def model_edited
+          BIM.model_edited
         end
         def table_clear
           check_model!

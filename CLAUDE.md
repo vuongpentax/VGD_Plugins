@@ -57,6 +57,7 @@ Mỗi plugin có `plugins/<tên>/graphify-out/GRAPH_REPORT.md` (tóm tắt các 
 
 - Tên extension: `VGD Tên` (có dấu cách, không dùng gạch dưới). Loader và thư mục mã viết thường: `vgd_ten.rb`, `vgd_ten/`.
 - Toolbar: tên rút gọn `VGD XXX` (3 chữ in hoa, ví dụ `VGD CAB`). Plugin không có toolbar thì bỏ qua.
+- Nút toolbar mở hộp thoại (`UI::HtmlDialog`) là nút bật / tắt (chủ dự án yêu cầu): bấm khi hộp thoại đang đóng thì mở, bấm lại khi hộp thoại đó đang mở thì đóng. Áp dụng cho nút mới và khi sửa toolbar của plugin; nút chạy công cụ vẽ hay lệnh không có hộp thoại thì không áp dụng.
 - Menu: chỉ có **một** menu `Extensions → VGD`, bên trong mỗi plugin có menu con riêng tên đầy đủ (kể cả plugin chỉ có một lệnh). SketchUp không gộp menu trùng tên, nên plugin **không được tự gọi** `add_submenu('VGD')`; phải dùng `::VGD.menu`. Mỗi plugin tự chép đoạn sau ở đầu file nạp menu (ngoài mọi `module` khác, vì plugin độc lập không dùng chung mã):
 
 ```ruby

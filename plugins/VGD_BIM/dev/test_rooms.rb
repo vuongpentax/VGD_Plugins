@@ -75,7 +75,8 @@ ok('ghi lỗi: hủy thao tác và báo lỗi', error_of { RM.write(bad, [room])
 
 # ---- Số đo ----
 metrics = RM.metrics(saved[0])
-ok('số đo: diện tích sàn 12 m2, chu vi 14 m, thể tích 36 m3, tường (chu vi x cao) 42 m2, trần 12 m2', metrics == {area: 12.0, perimeter: 14.0, volume: 36.0, wall_area: 42.0, ceiling_area: 12.0})
+ok('số đo: diện tích sàn 12 m2, chu vi 14 m, thể tích 36 m3, tường (chu vi x cao) 42 m2, trần 12 m2', metrics.slice(:area, :perimeter, :volume, :wall_area, :ceiling_area) == {area: 12.0, perimeter: 14.0, volume: 36.0, wall_area: 42.0, ceiling_area: 12.0})
+ok('số đo: chưa trừ cửa thì tường gộp bằng tường, không có số cửa', metrics[:wall_gross] == 42.0 && metrics[:openings_area] == 0.0 && metrics[:openings_count].nil?)
 ok('số đo làm tròn 3 chữ số (tam giác 3,333 m: 5,554 m2)', RM.metrics(RM.sanitize!([room.merge('boundary' => [[0, 0], [3333, 0], [3333, 3333]])]).first)[:area] == 5.554)
 
 # ---- Món thuộc phòng ----

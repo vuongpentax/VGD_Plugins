@@ -163,7 +163,6 @@ body.table-mode .grid-wrap{flex:1 1 auto;min-height:0;max-height:none}
 .search-icon{position:absolute;right:8px;color:var(--muted);font-size:15px;pointer-events:none;line-height:1}
 .icon-btn{min-width:34px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center}
 .sw-label{font-size:11px}
-.pop-density{width:100%;margin-top:8px;height:28px}
 
 /* Nút trên thanh đầu: đúng số đo trong CSS Modus của Auto Info.
    Nút biểu tượng = .btn-icon-only (2rem x 2rem, padding 7px 5px, nền trong suốt, bo .25rem); nút Preset = .btn (chữ .875rem đậm, padding .1875rem 1rem, line-height 1.75, bo .25rem) có mũi tên CSS như .dropdown-toggle::after. */
@@ -209,7 +208,6 @@ body.light #theme{--theme-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://w
 .col-side .pop-col .cs-alias{color:var(--muted);font-size:10px;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .col-side .pop-col .drag{cursor:grab;padding:0 2px;font-size:14px}
 .pop-col.dragging{opacity:.5;background:var(--soft)}
-.col-side .pop-density{margin-top:2px;height:26px;font-size:12px}
 .col-side .badge{font-size:10px}
 /* Ô tick tự vẽ: nền và dấu tick chuyển mượt khi bật / tắt */
 .cb{appearance:none;-webkit-appearance:none;flex:none;width:15px;height:15px;min-height:0;margin:0;padding:0;border:1.5px solid var(--muted);border-radius:4px;background:transparent;display:inline-grid;place-content:center;cursor:pointer;transition:background .15s ease,border-color .15s ease}
@@ -255,7 +253,7 @@ body.light #theme{--theme-icon:url("data:image/svg+xml;utf8,<svg xmlns='http://w
 .tm-row{display:flex;align-items:center;gap:4px;min-height:28px;padding:1px 8px;border-bottom:1px solid var(--border);font-size:12px}.tm-row:hover{background:var(--soft)}.tm-row.dim .tm-name{color:var(--muted)}.tm-row.dim .tm-name:not(.folder){text-decoration:line-through}.tm-row.isolated{background:var(--soft);box-shadow:inset 3px 0 0 var(--accent)}
 .tm-caret{flex:none;width:16px;min-height:0;padding:0;border:0;background:transparent;color:var(--muted);font-size:12px;text-align:center}.tm-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tm-name.folder{font-weight:700}.tm-count{flex:none;font-size:11px}
 .tm-btn{flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;min-height:0;padding:0;border:0;background:transparent;color:var(--muted)}.tm-btn:hover{background:transparent;color:var(--accent-dark)}.tm-btn.on{color:var(--text)}.tm-btn.iso{opacity:.45}.tm-row:hover .tm-btn.iso,.tm-row.isolated .tm-btn.iso{opacity:1}.tm-row.isolated .tm-btn.iso{color:var(--accent-dark)}
-.tm-color{flex:none;width:26px;height:22px;padding:0;border:1px solid var(--border);border-radius:4px;background:transparent;cursor:pointer}.tm-style{flex:none;width:112px;height:24px;padding:0 4px;font-size:11px}.tm-pad{flex:none;width:26px}.tm-pad-style{flex:none;width:112px}
+.tm-color{flex:none;width:26px;height:22px;padding:0;border:1px solid var(--border);border-radius:4px;background:transparent;cursor:pointer}.tm-style{flex:none;display:inline-flex;align-items:center;justify-content:center;width:112px;height:24px;min-height:0;padding:0 4px;font-size:11px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text);cursor:pointer}.tm-style:hover{border-color:var(--accent)}.ls-icon{display:block;flex:none}.ls-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}.ls-menu{position:fixed;z-index:50;display:flex;flex-direction:column;gap:2px;padding:4px;background:var(--surface);border:1px solid var(--border);border-radius:6px;box-shadow:0 10px 30px #0005}.ls-opt{display:flex;align-items:center;justify-content:center;width:112px;height:26px;min-height:0;padding:0 6px;border:0;border-radius:4px;background:transparent;color:var(--text);font-size:11px;cursor:pointer}.ls-opt:hover,.ls-opt.cur{background:var(--accent-soft,#b4896333)}.tm-pad{flex:none;width:26px}.tm-pad-style{flex:none;width:112px}
 .cap-place{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}.cap-place .muted{flex:1 1 100%;font-size:11px}
 
 /* Tag ghim / gần đây, kéo thả tag vào thư mục */
@@ -325,7 +323,8 @@ button.danger{background:var(--danger,#b3412d);border-color:var(--danger,#b3412d
 .sheet-add{padding:4px 10px;font-size:15px;line-height:1}
 .sheet-tab:focus-visible,.sheet-add:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .sheet-rename{flex:none;width:150px;height:26px;margin-top:2px;box-sizing:border-box;font-size:12px}
-.sheet-menu button.danger{color:var(--danger,#d9534f)}
+.sheet-menu button.danger{background:transparent;color:var(--danger,#d9534f);border-color:var(--danger,#d9534f)}
+.sheet-menu button.danger:hover,.sheet-menu button.danger[data-sure]{background:var(--danger,#b3412d);color:#fff;filter:none}
 /* Ngăn Cập nhật ảnh: Ảnh vị trí / Ảnh 3 / Ảnh 4 gập sẵn */
 .cap-more{margin-top:8px;border-top:1px solid var(--border);padding-top:6px}.cap-more>summary{cursor:pointer;font-size:12px;color:var(--muted);list-style:none}.cap-more>summary::-webkit-details-marker{display:none}.cap-more>summary::before{content:'▸ '}.cap-more[open]>summary::before{content:'▾ '}
 .tm-more{position:relative;display:inline-flex}.tm-more-list{position:absolute;top:calc(100% + 4px);right:0;z-index:30;display:flex;flex-direction:column;gap:4px;min-width:170px;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 10px 30px #0005}.tm-more-list[hidden]{display:none}.tm-more-list button{width:100%;justify-content:flex-start;text-align:left}
@@ -333,3 +332,8 @@ button.danger{background:var(--danger,#b3412d);border-color:var(--danger,#b3412d
 .tm-more-sep{width:100%;margin:2px 0;border:0;border-top:1px solid var(--border)}.tm-list.compact .tm-color,.tm-list.compact .tm-style,.tm-list.compact .tm-pad,.tm-list.compact .tm-pad-style{display:none}.tm-menu-col{display:flex;flex-direction:column;gap:4px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}.tm-menu-col button{justify-content:flex-start;text-align:left}
 .tm-create{display:flex;gap:6px;align-items:center;margin:0 0 8px}.tm-create[hidden]{display:none}.tm-create input{flex:1;min-width:120px;height:28px}.tm-hidden{display:flex;gap:8px;align-items:center;margin:0 0 6px;font-size:11px}.tm-hidden[hidden]{display:none}#tag-hide-card input{width:100%;height:28px;margin-bottom:6px}#tag-hide-card p{margin:4px 0 6px;font-size:11px}.tm-rename{flex:1;min-width:0;height:24px;padding:1px 6px;font-size:12px}
 .tm-paint{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;margin:0 0 8px}.tm-paint .tm-paint-hint{flex:1 1 260px;font-size:11px}
+
+.rm-detect,.rm-openings{border:1px solid var(--border);border-radius:6px;padding:6px;margin:6px 0;display:grid;gap:4px}.rm-detect .rm-mid .f-mini{flex:1 1 0;min-width:0}.rm-detect-list,.rm-openings-list{display:grid;gap:2px;max-height:180px;overflow:auto}.rm-detect-row,.rm-open-row{display:flex;align-items:center;gap:6px}.rm-detect-warn{margin:0;color:var(--danger)}.rm-detect-info,.rm-detect-dropped{margin:0}
+.formula-menu{max-height:none;gap:4px}.formula-menu select{height:30px}.formula-help{margin:2px 0}
+/* Cửa sổ Soạn tag riêng (VGD::BIM.open_tags): chỉ một chức năng nên ẩn thanh tab và nút Preset của Bảng khối lượng. */
+.tags-window nav,.tags-window #preset-btn{display:none}

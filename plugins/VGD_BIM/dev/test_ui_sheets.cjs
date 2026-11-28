@@ -104,12 +104,16 @@ const table=(o={})=>({columns:F.columns,presets:F.presets,groups:F.groups,status
   ok(await page.locator('.sheet-rename').count()===1,'F2 trên tab sheet cũng mở ô đổi tên');await page.keyboard.press('Escape');await settle();
   await page.locator('.sheetbar .sheet-tab',{hasText:'Sheet2'}).click({button:'right'});
   ok(await page.locator('.sheet-menu button').allInnerTexts().then(t=>t.join('|')==='Đổi tên|Nhân đôi|Xóa sheet'),'bấm phải vào tab: menu Đổi tên / Nhân đôi / Xóa sheet');
+  const delContrast=()=>page.evaluate(()=>{const b=[...document.querySelectorAll('.sheet-menu button')].find(x=>/Xóa sheet|Bấm lần nữa/.test(x.textContent)),cs=getComputedStyle(b);const rgb=c=>(c.match(/[\d.]+/g)||[]).slice(0,4).map(Number);const lum=([r,g,bl])=>{const f=v=>{v/=255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4)};return 0.2126*f(r)+0.7152*f(g)+0.0722*f(bl)};let bg=rgb(cs.backgroundColor);if(bg.length===4&&bg[3]===0){let n=b.parentElement;while(n&&(()=>{const q=rgb(getComputedStyle(n).backgroundColor);return q.length===4&&q[3]===0;})())n=n.parentElement;bg=rgb(getComputedStyle(n||document.body).backgroundColor);}const fg=rgb(cs.color);const a=lum(fg),c=lum(bg);return (Math.max(a,c)+0.05)/(Math.min(a,c)+0.05);});
+  ok(await delContrast()>=3,'nút Xóa sheet: chữ đọc được (tương phản chữ / nền đủ lớn)');
   await page.locator('.sheet-menu button',{hasText:'Nhân đôi'}).click();await settle(300);
   ok((await tabs()).join('|')==='Sheet1|Sheet2|Tủ bếp|Sheet2 (2)' && (await activeTab())==='Sheet2 (2)','Nhân đôi: thêm "Sheet2 (2)" và mở sheet đó');
   ok((await page.inputValue('input[placeholder^="Tìm kiếm"]'))==='Bàn','sheet nhân đôi giữ bộ lọc của sheet gốc');
   await page.locator('.sheetbar .sheet-tab',{hasText:'Sheet2 (2)'}).click({button:'right'});
   await page.locator('.sheet-menu button',{hasText:'Xóa sheet'}).click();
   ok((await tabs()).includes('Sheet2 (2)') && await page.locator('.sheet-menu button',{hasText:'Bấm lần nữa để xóa'}).count()===1,'Xóa sheet cần bấm hai lần (lần đầu chỉ hỏi lại)');
+  await settle(400);
+  ok(await delContrast()>=3,'nút Xóa sheet sau lần bấm đầu (đỏ đặc): chữ đọc được');
   await page.locator('.sheet-menu button',{hasText:'Bấm lần nữa để xóa'}).click();await settle(300);
   ok((await tabs()).join('|')==='Sheet1|Sheet2|Tủ bếp' && (await message()).includes('Đã xóa sheet'),'bấm lần hai: xóa sheet');
   ok((await activeTab())==='Tủ bếp','xóa sheet đang mở (cuối danh sách): chuyển sang sheet kề bên');

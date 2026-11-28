@@ -364,6 +364,12 @@ module VGD
         # chọn, kể cả cạnh, như Paint Bucket). Bỏ qua đối tượng bị khóa; tag chưa có trong model thì tạo (trừ Untagged); mỗi lần bấm là
         # một bước hoàn tác. Luôn ghi vào file đã bật công cụ (@paint[:model]), kể cả khi cửa sổ đã chuyển sang file khác.
         def tm_paint_apply(entity, mode, tool = nil)
+          before = Data.serial if @kind == :tags
+          tm_paint_write(entity, mode, tool)
+          model_edited if before && Data.serial != before # công cụ đổ tag gọi thẳng, không qua safely
+        end
+
+        def tm_paint_write(entity, mode, tool)
           return unless paint_active? && (tool.nil? || paint_tool?(tool))
           model = @paint[:model]
           name = @paint[:tool].tag_name

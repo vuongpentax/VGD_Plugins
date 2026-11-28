@@ -1,0 +1,95 @@
+/* Cửa sổ Đổi tên (rename.html). Token màu và công tắc: vgd-theme.css, vgd-controls.css. */
+  :root { --row-h: 26px; --head-h: 28px; --line: var(--vgd-border); }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { display: flex; flex-direction: column; overflow: hidden; }
+  button, input { font: inherit; color: inherit; }
+
+  /* ---- Thanh tiêu đề nhỏ ---- */
+  .rn-top { flex: none; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; background: var(--vgd-surface); border-top: 3px solid var(--vgd-accent); border-bottom: 1px solid var(--line); }
+  .rn-title { font-weight: 700; }
+  .rn-scope { color: var(--vgd-muted); font-size: 12px; }
+  .rn-top .rn-icon { margin-left: auto; }
+  .rn-icon { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--vgd-muted); cursor: pointer; display: grid; place-items: center; }
+  .rn-icon:hover { background: var(--vgd-elevated); color: var(--vgd-text); }
+  .rn-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ---- Bảng tên ---- */
+  .rn-list { flex: 1 1 0; min-height: 120px; display: flex; flex-direction: column; background: var(--vgd-surface); }
+  .rn-head, .rn-row { flex: none; display: flex; align-items: center; border-bottom: 0.5px solid var(--line); }
+  .rn-head { height: var(--head-h); background: var(--vgd-elevated); font-weight: 600; font-size: 12px; user-select: none; }
+  .rn-row { height: var(--row-h); font-size: 12px; cursor: default; }
+  .rn-row:hover { background: var(--vgd-tint); }
+  .rn-row.sel, .rn-row.sel:hover { background: color-mix(in srgb, var(--vgd-accent) 22%, var(--vgd-surface)); }
+  .c-id { flex: none; width: 40px; text-align: center; color: var(--vgd-muted); }
+  .c-name, .c-new { flex: 1 1 50%; min-width: 0; height: 100%; display: flex; align-items: center; gap: 6px; padding: 0 10px; border-left: 0.5px solid var(--line); }
+  .rn-head .c-name, .rn-head .c-new { cursor: pointer; }
+  .sort { font-size: 9px; color: var(--vgd-muted); }
+  .txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ph { color: var(--vgd-muted); font-style: italic; }
+  .cnt { flex: none; color: var(--vgd-muted); font-size: 11px; }
+  .fold { flex: none; width: 14px; color: var(--vgd-muted); cursor: pointer; text-align: center; transition: transform 150ms var(--vgd-ease); }
+  .fold.open { transform: rotate(90deg); }
+  .kid .c-name { padding-left: 30px; }
+  .new { font-weight: 600; color: var(--vgd-accent-strong); }
+  .same { color: var(--vgd-muted); }
+  .bad { color: var(--vgd-danger); }
+  .num { opacity: .55; }
+  .copy { display: none; margin-left: auto; flex: none; width: 14px; height: 14px; color: var(--vgd-muted); cursor: pointer; }
+  .c-name:hover .copy { display: block; }
+  .copy svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .hbtns { margin-left: auto; display: flex; gap: 4px; }
+  .hbtn { height: 18px; padding: 0 5px; border: 1px solid var(--line); border-radius: 4px; background: var(--vgd-surface); color: var(--vgd-muted); font-size: 10px; font-weight: 700; cursor: pointer; transition: background 150ms ease, color 150ms ease; }
+  .hbtn[aria-pressed="true"] { background: var(--vgd-accent); border-color: var(--vgd-accent); color: var(--vgd-on-accent); }
+  .rn-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+  .rn-row input.edit { width: 100%; height: 100%; border: 0; background: transparent; font-weight: 600; outline: none; }
+  .rn-empty { padding: 24px; text-align: center; color: var(--vgd-muted); }
+
+  /* ---- Chân bảng: Thay / Bằng, Tự động, Áp dụng ---- */
+  .rn-foot { flex: none; display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 10px; flex-wrap: wrap; background: var(--vgd-elevated); border-top: 0.5px solid var(--line); }
+  .swap { flex: 1 1 150px; display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .swap input { flex: 1 1 0; min-width: 0; height: 26px; padding: 0 10px; border: 1px solid var(--line); border-radius: 13px; background: var(--vgd-surface); outline: none; }
+  .swap input:focus { border-color: var(--vgd-accent); }
+  .swap .arrow { flex: none; color: var(--vgd-muted); }
+  .auto { flex: none; display: flex; align-items: center; gap: 12px; }
+  .auto-title { font-size: 12px; font-weight: 600; }
+  .apply { flex: none; min-width: 120px; height: 30px; padding: 0 14px; border: 1px solid var(--vgd-accent); border-radius: 15px; background: var(--vgd-accent); color: var(--vgd-on-accent); font-weight: 700; cursor: pointer; }
+  .apply:disabled { opacity: .45; cursor: default; }
+
+  /* ---- Thanh kéo chia đôi ---- */
+  .rn-split { flex: none; height: 6px; cursor: row-resize; background: var(--vgd-bg); border-top: 0.5px solid var(--line); border-bottom: 0.5px solid var(--line); }
+  .rn-split:hover, body.resizing .rn-split { background: var(--vgd-tint); }
+  body.resizing, body.resizing * { cursor: row-resize !important; user-select: none; }
+
+  /* ---- Các danh sách tên để ghép ---- */
+  .rn-sets { flex: none; height: 210px; display: flex; min-height: 90px; background: var(--vgd-bg); }
+  .set { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; padding: 8px; border-left: 0.5px solid var(--line); }
+  .set:first-child { border-left: 0; }
+  .set-title { flex: none; display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 12px; font-weight: 700; }
+  .set-title .cnt { font-weight: 400; }
+  .set-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 4px; }
+  .chip { position: relative; display: inline-flex; align-items: center; max-width: 100%; height: 24px; padding: 0 22px 0 8px; border: 1px solid var(--line); border-radius: 4px; background: var(--vgd-surface); font-size: 12px; cursor: pointer; transition: border-color 150ms ease, background 150ms ease; }
+  .chip:hover { border-color: var(--vgd-accent); }
+  .chip.on { background: var(--vgd-tint); border-color: var(--vgd-accent); }
+  .chip .txt { max-width: 160px; }
+  .chip .x { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); border: 0; padding: 0; background: transparent; color: var(--vgd-muted); cursor: pointer; font-size: 13px; line-height: 1; }
+  .chip .x:hover { color: var(--vgd-danger); }
+  .set-empty { color: var(--vgd-muted); font-size: 12px; margin: auto; }
+  .entry { flex: none; display: flex; align-items: center; gap: 4px; height: 26px; margin-top: 6px; padding: 0 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--vgd-surface); }
+  .entry:focus-within { border-color: var(--vgd-accent); }
+  .entry input { flex: 1 1 auto; min-width: 0; height: 100%; border: 0; background: transparent; outline: none; font-size: 12px; }
+  .entry button { border: 0; background: transparent; color: var(--vgd-muted); cursor: pointer; font-size: 15px; padding: 0 2px; }
+  .entry button:hover { color: var(--vgd-text); }
+
+  .rn-status { flex: none; height: 24px; display: flex; align-items: center; padding: 0 10px; font-size: 12px; color: var(--vgd-muted); background: var(--vgd-surface); border-top: 0.5px solid var(--line); }
+  .tip { position: fixed; z-index: 50; padding: 3px 7px; border-radius: 4px; background: rgba(0,0,0,.82); color: #fff; font-size: 11px; pointer-events: none; white-space: nowrap; }
+  .rn-status.err { color: var(--vgd-danger); }
+  .lock { color: var(--vgd-muted); font-style: italic; }
+  .set-hint { font-weight: 400; color: var(--vgd-muted); font-size: 11px; }
+  .copy:hover { color: var(--vgd-accent); }
+  .entry .add, .entry .clr { flex: none; }
+  .entry .add { font-weight: 700; }
+  .entry .clr { font-size: 14px; }
+  .entry button:disabled { opacity: .35; cursor: default; }
+  .entry button:disabled:hover { color: var(--vgd-muted); }
+  .cnt.shared { padding: 0 5px; border: 1px solid var(--line); border-radius: 8px; font-size: 10px; }

@@ -2,6 +2,170 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.1-beta.59: đã kiểm tra tự động
+
+Beta.59: nút trên thanh công cụ là nút bật / tắt (`VGD::BIM.toggle_window`, quy tắc chung mới trong `CLAUDE.md` gốc của repo).
+
+- `dev/test_loader_menu.rb`: mỗi nút (Bảng khối lượng, Đổi tên, Soạn tag) mở khi cửa sổ đóng, bấm lại khi cửa sổ đang mở thì đóng mà không mở thêm, bấm tiếp thì mở lại.
+
+**Chưa xác minh trong SketchUp thật:** bấm nút khi cửa sổ đang mở nhưng bị cửa sổ khác che (vẫn tính là đang mở nên sẽ đóng).
+
+## Bản 1.1.1-beta.58 (trước đó)
+
+Beta.58: sửa lỗi chủ dự án báo ở beta.57: cửa sổ Soạn tag vài giây sau tự hiện Bảng khối lượng. Nguyên nhân: `config` của cửa sổ Soạn tag cũng làm giao diện chạy `restoreView`; với file có sheet khóa, `applyRowsLock` gọi `table_lock_apply` (và `applySheetExclude` gọi `settings_save`), Ruby dựng bảng trong cửa sổ Soạn tag. Sửa: không `restoreView` khi `config.window = 'tags'`, và `UI::Dialog#table_build` bỏ qua ở cửa sổ Soạn tag.
+
+- `dev/test_ui.cjs`: cửa sổ Soạn tag nhận trạng thái bảng có sheet khóa và tag loại trừ mà không gửi `table_lock_apply` hay `settings_save` (đã thử bỏ bản sửa: test báo lỗi đúng hai lệnh này).
+- `dev/test_dialog.rb`: `table_build` ở cửa sổ Soạn tag không gửi gì.
+
+**Chưa xác minh trong SketchUp thật:** mở Soạn tag ở file có sheet khóa, có và không có cửa sổ chính đang mở.
+
+## Bản 1.1.1-beta.57 (trước đó)
+
+Beta.57: Soạn tag thành cửa sổ riêng (`UI::Dialog.new('tags', :tags)`, `VGD::BIM.open_tags`), thanh công cụ có thêm nút Đổi tên / Soạn tag (`assets/icons/rename.svg`, `tag.svg`), menu có mục Soạn tag; ghi ở cửa sổ Soạn tag / Đổi tên báo `VGD::BIM.model_edited` để Bảng khối lượng đọc lại (gom bằng hẹn giờ 0,3 giây).
+
+- `dev/test_loader_menu.rb`: menu có Soạn tag; thanh công cụ có ba nút đúng thứ tự, mỗi nút có file icon SVG có thật, bấm mở đúng cửa sổ; tải lại code đóng rồi mở lại cửa sổ Soạn tag đang mở.
+- `dev/test_dialog.rb` (qua `test_bim.rb`): lệnh cũ mở Soạn tag tạo cửa sổ riêng, không chuyển cửa sổ chính, không tạo cửa sổ thứ hai, cửa sổ Soạn tag không chuyển sang chức năng khác; hai lần ghi ở cửa sổ Soạn tag làm bảng đọc lại đúng một lần, cửa sổ chính không tự báo.
+- `dev/test_ui.cjs`: cửa sổ chính có 4 tab, không còn Soạn tag; cửa sổ Soạn tag ẩn thanh tab và nút Preset.
+
+**Chưa xác minh trong SketchUp thật:** hai nút mới trên thanh công cụ (chỉ hiện sau khi mở lại SketchUp; icon SVG ở cỡ nhỏ / lớn), hai cửa sổ mở cùng lúc (vị trí, cỡ được nhớ riêng), công cụ hút / đổ tag chạy từ cửa sổ riêng, bảng tự đọc lại sau khi gán / đổ tag.
+
+## Bản 1.1.1-beta.56 (trước đó)
+
+Beta.56: cửa sổ Đổi tên có Chọn sâu, bấm dòng chọn món trong SketchUp, ô nhập Tiền tố / Tên / Hậu tố đổi ngay. `ui/rename_window.rb` nhớ các món gốc người dùng chọn (`@roots`), dựng danh sách từ đó (sâu: duyệt định nghĩa, bỏ món đang ẩn, mỗi món một dòng, đánh dấu món trong định nghĩa có nhiều bản sao), bỏ qua lựa chọn do chính cửa sổ đặt (`@own_pick`).
+
+- `dev/test_rename_window.rb`: bấm dòng chọn đúng món, danh sách không thu lại; chọn lại trong SketchUp thì danh sách theo vùng chọn mới; dữ liệu chọn sai bị từ chối; chọn sâu thêm món bên trong (bỏ món ẩn), cấp lồng, nhãn dùng chung; bấm món bên trong mở group cha rồi chọn; đổi tên món bên trong; tắt chọn sâu về đúng món đã chọn; bật Ẩn không làm danh sách đọc lại.
+- `dev/test_ui_rename.cjs`: bấm dòng gửi đúng các món; ô nhập hiện giá trị của dòng đang chọn, gõ đổi ngay mà không mất con trỏ, + tắt khi đã có trong mẫu, + lưu mẫu, × xóa chữ và bỏ phần đó; không còn chữ "Thêm"; công tắc Chọn sâu gửi Ruby, dòng phạm vi, nhãn dùng chung, bản dịch tiếng Anh.
+
+**Chưa xác minh trong SketchUp thật:** bấm dòng mở group cha (`active_path`) và chọn món trong SketchUp 2022+, chọn sâu với model lớn (tối đa 2.000 dòng), đổi tên món trong component dùng chung, bộ gõ tiếng Việt trong ba ô nhập.
+
+## Bản 1.1.1-beta.55 (trước đó)
+
+Beta.55: cửa sổ Đổi tên riêng. `core/rename_list.rb` (kiểm tra danh sách tên gửi lên, mẫu tên trên máy) và `ui/rename_window.rb` (cửa sổ `UI::HtmlDialog` riêng theo vùng chọn của SketchUp, một bước hoàn tác, ẩn món vừa đổi tên); giao diện `html/rename.html`, `rename.js`, `rename.css`.
+
+- `dev/test_rename_window.rb`: tên trống / quá 200 ký tự / có ký tự điều khiển / món lạ / gửi trùng / quá số món bị từ chối; mẫu tên làm sạch và đọc lại đúng tiếng Việt; cửa sổ gửi các món đang chọn (bỏ mặt, báo khóa, cả khi đang mở trong group khóa), tự cập nhật khi chọn lại, áp dụng một bước hoàn tác, món khóa / đã xóa / file khác không đổi gì, bật Ẩn thì ẩn và bỏ khỏi vùng chọn, mở file khác thì gắn sang file mới, đóng cửa sổ bỏ mọi observer.
+- `dev/test_loader_menu.rb`: menu có **Đổi tên**; tải lại code đóng rồi mở lại cửa sổ Đổi tên đang mở, không tự mở khi đang đóng.
+- `dev/test_ui_rename.cjs` (mới, có trong CI): gom món cùng định nghĩa, tiền tố + tên + hậu tố, đánh số khi trùng, bấm lại mẫu để bỏ, nhấp đúp gõ tay, Thay → Bằng, viết hoa, dữ liệu gửi khi Áp dụng (không gửi món khóa), thêm / xóa / lưu mẫu, giữ tên chưa áp dụng khi vùng chọn đổi, bản dịch tiếng Anh của mọi chữ và thông báo.
+- `dev/test_ui.cjs`, `dev/test_ui_images.cjs`: mục **Đổi tên...** của Công cụ mở cửa sổ riêng, **Đổi tên theo mẫu...** vẫn mở bảng cũ.
+
+**Chưa xác minh trong SketchUp thật:** cửa sổ mở / đóng / tải lại code trong SketchUp, theo vùng chọn khi chọn nhiều món hoặc chọn trong group đang mở, ẩn món sau khi đổi tên và hoàn tác, mở file khác khi cửa sổ đang mở, bộ gõ tiếng Việt trong ô nhập, vị trí và cỡ cửa sổ được nhớ.
+
+## Bản 1.1.1-beta.54 (trước đó)
+
+Beta.54: xuất Excel ghi ô tính toán thành công thức. `core/xlsx_formulas.rb` (dựng công thức theo khóa cột và dữ liệu tính của dòng: diện tích X*Z / X*Y, thành tiền, khối lượng tính theo cách tính và theo công thức tag, hao hụt, tiền vật liệu, SUBTOTAL cho nhóm / tổng, bỏ dòng không được cộng; không bao giờ chép chữ người dùng vào công thức), `core/xlsx.rb` (ô `<f>` kèm số đã tính, `calcPr fullCalcOnLoad`), `core/table_report.rb` (kiểm tra `key`, `si`, `calc`), `core/formula.rb` (so sánh, hàm ROUND / ROUNDUP / ROUNDDOWN / CEILING / MIN / MAX / IF / ABS / SQRT / PI tính bằng BigDecimal như Excel, `to_excel`), giao diện gửi khóa cột, hệ số đổi đơn vị, dữ liệu tính và tự thêm cột gốc ở cuối file Excel.
+
+- `dev/test_xlsx_formulas.rb`: dữ liệu sai bị từ chối (khóa lạ, hệ số âm, cách tính lạ, đơn vị chèn chữ, số đo không phải số); từng công thức của dòng; số chính xác giữ là số; thiếu cột gốc thì không dựng công thức; ô nhóm / tổng SUBTOTAL nhiều khoảng, bỏ dòng con; khối lượng khác đơn vị không cộng; ô chữ không thành công thức; **mở bằng LibreOffice (headless) tính lại từ công thức và so số** (diện tích, thành tiền, công thức tag ROUNDUP, hao hụt, tiền vật liệu, tổng nhóm, tổng cộng). Máy không có LibreOffice thì phần này báo bỏ qua.
+- `dev/test_formula.rb`: thêm hàm Excel (làm tròn nửa lên, ROUNDUP không sai số dấu phẩy động, ROUND số chữ số âm, CEILING kể cả số âm / bội 0, MIN / MAX, IF chỉ tính nhánh chọn, so sánh, ABS / SQRT / PI), lỗi số đối số và ngoặc, hàm lạ bị từ chối, dịch sang công thức Excel.
+- `dev/test_ui.cjs`, `dev/test_ui_en.cjs`: xuất Excel gửi khóa / hệ số / dữ liệu tính, cột gốc đang ẩn thêm ở cuối có nhãn (cột gốc), PDF không thêm; bản dịch Anh.
+
+**Chưa xác minh trong Excel và SketchUp thật:** mở file bằng Microsoft Excel (tính lại khi mở, dấu ngăn đối số theo vùng), file nhiều sheet, bảng rất lớn (SUBTOTAL quá 200 khoảng thì ghi số).
+
+## Bản 1.1.1-beta.53 (trước đó)
+
+Beta.53: công thức khối lượng theo tag. `core/formula.rb` (tự đọc từng ký hiệu và tính trên cây phép tính, không chạy mã Ruby; chỉ số, + - * / và ngoặc, các số đo Rộng / Sâu / Cao / Diện tích / Thể tích, tối đa 200 ký tự và 20 lớp ngoặc), `Quantity` (cách tính `formula` chỉ đặt theo tag, lưu trong `tag_quantity.json` dạng `{method, formula, unit}`, dòng có `calc_unit` và `calc_formula`), `MaterialLibrary.cost(unit:)`, lệnh `table_calc_formula`, ô nhập công thức ở cột Cách tính, dòng tổng cộng theo đơn vị.
+
+- `dev/test_formula.rb`: tính đúng (thứ tự phép tính, không dấu, `x` / `×`, dấu phẩy thập phân, số âm, tên tiếng Anh), thiếu số đo và chia cho 0 không ra số, công thức sai bị từ chối (ký tự lạ, mã Ruby, ngoặc thiếu / thừa, số đo lạ, lồng quá sâu), lưu kèm đơn vị, dòng của bảng, dữ liệu trong món vẫn thắng, file hỏng bỏ mục sai, ghi vào món chỉ ghi đơn vị, thành tiền theo vật liệu.
+- `dev/test_dialog_logic.rb`: đặt công thức cho tag của các dòng, công thức sai không đổi tag nào, dữ liệu sai bị từ chối.
+- `dev/test_ui.cjs`, `dev/test_ui_en.cjs`: menu có Theo công thức…, ô nhập không gửi khi trống, gửi công thức + đơn vị, dòng công thức hiện đơn vị riêng và số lẻ theo đơn vị, chú thích có công thức, dòng tổng theo đơn vị, mở lại hiện công thức cũ, bản dịch Anh.
+
+**Chưa xác minh trong SketchUp thật:** gõ công thức trong cửa sổ SketchUp (bộ gõ tiếng Việt), số đo của món thật.
+
+## Bản 1.1.1-beta.52 (trước đó)
+
+Beta.52: trừ cửa khỏi tường của phòng theo tag cửa do người dùng chọn. `core/room_openings.rb` (ghép cửa với phòng: tâm cửa cách cạnh viền / lỗ không quá `REACH` = 400 mm và khoảng cao chồng lên phòng; cửa cao hơn trần chỉ trừ phần trong phòng; kiểm tra tag và dữ liệu `openings` lưu trong phòng), `core/opening_probe.rb` (duyệt model tìm group / component trên tag cửa, không đi vào bên trong cửa, định nghĩa không chứa cửa chỉ duyệt một lần, giới hạn 200.000 đối tượng; cửa VGD Structure dùng `dims` w, h), `Rooms.metrics` (`wall_gross`, `openings_area`, `openings_count`, `wall_area` đã trừ, không âm), lệnh `table_room_openings`, hộp Trừ cửa khỏi tường trong **Quản lý phòng**.
+
+- `dev/test_room_openings.rb`: cửa tường ngoài chỉ trừ cho một phòng, cửa tường chung trừ cho hai phòng, món xa tường / ở tầng khác không trừ, cửa cao hơn trần, cửa sát lỗ, lưu và đọc lại `openings`, số đo đã trừ / chưa trừ, dữ liệu sai bị từ chối, danh sách tag; đọc cửa trong model giả lập (cửa trong group, cửa xoay 90 độ, cửa VGD Structure, bản sao trùng chỗ, tủ không phải cửa), giới hạn duyệt, định nghĩa không có cửa chỉ duyệt một lần.
+- `dev/test_rooms.rb`: số đo phòng chưa trừ cửa giữ nguyên.
+- `dev/test_dialog_logic.rb`: lỗi khi chưa chọn tag / tag không có / dữ liệu sai; ghi số cửa vào phòng, tường đã trừ; thông báo cửa không sát phòng và cửa ước tính; lưu phòng ở giao diện giữ số cửa; cập nhật viền bỏ số cửa và nhắc trừ lại.
+- `dev/test_ui.cjs`, `dev/test_ui_en.cjs`: nút tắt khi chưa tick, gửi đúng tag, số đo ghi đã trừ, tick sẵn theo lần trước, bản dịch Anh.
+
+**Chưa xác minh trong SketchUp thật:** cửa trong model thật (component cửa tải về, cửa lồng nhiều cấp, cửa xoay góc lẻ: khung bao có thể lớn hơn cửa), ngưỡng 400 mm với tường dày hơn 600 mm, thời gian duyệt model lớn, hoàn tác.
+
+## Bản 1.1.1-beta.51 (trước đó)
+
+Beta.51: dò vùng phòng từ tường. `core/room_detect.rb` (thuật toán thuần: tách đoạn tại giao điểm / chạm chữ T / đoạn chồng nhau, bỏ đầu cụt, duyệt mặt của đồ thị phẳng, cụm tường nằm trong mặt của cụm khác thành lỗ, lọc vùng nhỏ và vùng hẹp), `core/room_detect_probe.rb` (đọc mặt đứng của đối tượng đang chọn, đi sâu group / component, cắt ở độ cao cắt bằng quy tắc chẵn lẻ nên lỗ cửa bị cắt qua để lại khe), lệnh `table_room_detect` (xem trước, chỉ đọc) và `table_room_detect_apply` (dò lại rồi tạo vùng đã tích, một bước hoàn tác), phần giao diện trong **Quản lý phòng**.
+
+- `dev/test_room_detect.rb`: hình chữ nhật, đoạn chia nhỏ / chồng nhau, vách ngăn (hai phòng), tường dày hai lớp (ruột tường bị bỏ), hai lớp lồng nhau (vành bị bỏ nhờ độ dày trung bình), đầu hở (phòng không kín không thành vùng, báo số đầu hở), tường thừa nhô ra / nhô vào, khe cửa nối hai phòng, cột đứng một mình thành lỗ (qua `Rooms.holes!`), tam giác, hành lang hẹp theo ngưỡng, sai số dưới 1 mm khép kín, hở 5 mm không khép, hai phòng chạm góc, lưới 3 x 2, dấu nhận dạng ổn định, dữ liệu sai bị từ chối.
+- `dev/test_room_detect_probe.rb` (model giả lập): bốn mặt tường, cao độ cắt tính từ chân tường, cắt cao hơn tường, lỗ cửa thấp / cao hơn mặt cắt, bỏ mặt nằm ngang, group và component lồng có dời chỗ, ngữ cảnh group đang mở, đối tượng / tag ẩn bị bỏ, quá nhiều mặt, mặt lõm, mặt nghiêng nhẹ.
+- `dev/test_dialog_logic.rb`: lỗi khi chưa chọn / chọn mặt sàn / cắt cao hơn tường / tham số sai; xem trước không đổi model; tạo chỉ vùng được tích, dấu nhận dạng không còn khớp thì báo dò lại, tên và cao độ sàn đúng.
+- `dev/test_ui.cjs`, `dev/test_ui_en.cjs`: mặc định 2400 / 350, gửi tham số đã sửa, vùng tích sẵn, bỏ tích cập nhật nút, chỉ gửi vùng đã tích, xóa kết quả sau khi tạo, bản dịch Anh.
+
+**Chưa xác minh trong SketchUp thật:** giao tuyến trên model thật (tường có cửa, tường cong, group lồng nhau), hiệu năng với model lớn (giới hạn 30.000 mặt và 2.500 đoạn), hoàn tác một bước. Test ngoài SketchUp chỉ dùng model giả lập. Khi chạy `ruby dev/run_tests.rb` trong môi trường không đặt `LANG` UTF-8, `dev/test_storage_replace.rb` báo lỗi 3 mục do so chuỗi tiếng Việt khác mã hóa (đặt `LANG=C.UTF-8` thì đạt; có từ trước, không do bản này).
+
+## Bản 1.1.1-beta.50 (trước đó)
+
+Beta.50: `RoomVolume.create_volume` dựng khối phòng bằng cạnh thay vì mặt đùn: `add_edges` cho viền sàn và viền trần, `add_line` cho cạnh đứng ở mỗi góc, làm tương tự cho viền từng lỗ; không còn mặt, không còn vật liệu trong suốt. Nếu SketchUp tự sinh mặt từ cạnh khép kín thì xóa mặt rồi kiểm tra còn đủ cạnh, không đủ thì báo lỗi và hủy thao tác (khối cũ còn nguyên). Tag `VGD_ROOMS` mới tạo có màu xanh nhạt.
+
+- `dev/test_room_volume.rb` (viết lại): 12 cạnh cho phòng bốn góc, không có mặt; viền sàn / trần đúng cao độ và chiều cao, cạnh đứng đúng từng góc; chiều viền không ảnh hưởng; phòng có hai lỗ ra 36 cạnh; mô phỏng SketchUp tự sinh mặt (mặt bị xóa, cạnh còn) và xóa mặt làm mất cạnh (báo lỗi, hủy thao tác); tag màu mới và giữ màu cũ; dựng lại giữ VGD ID; một thao tác; dựng nhiều phòng. Đạt. `ruby dev/run_tests.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật (điểm cần thử đầu tiên):** `Entities#add_edges` / `add_line` có tự tạo mặt từ cạnh khép kín không, và `Entities#erase_entities` trên mặt có giữ lại cạnh không (nếu SketchUp xóa luôn cạnh, nút Dựng khối sẽ báo \"Không tạo được khung dây\", khi đó cần đổi cách dựng); mặt cắt có hết bị tô kín; khung dây dễ chọn bằng chuột hay khó chọn (khối chỉ chọn được bằng cạnh); màu cạnh theo tag khi bật Tô màu theo tag.
+
+### Bản 1.1.1-beta.49 (trước đó)
+
+Beta.49: nhấn Alt trong công cụ hút / đổ tag làm Windows mở thanh menu của SketchUp (Alt nhấn rồi thả mà không có phím nào xen giữa). Mỗi lần nhấn Alt (qua phím hoặc qua cờ chuột) công cụ gọi `PasteKeys.cancel_alt_menu` gửi một phím không gán (VK 0xE8, nhấn rồi thả) bằng `keybd_event` để Windows coi Alt đã đi kèm phím khác, không mở menu. Cùng điều kiện an toàn với cách dán ảnh: chỉ Windows, chỉ khi cửa sổ đang chọn thuộc tiến trình SketchUp; lỗi thì bỏ qua, công cụ vẫn chạy.
+
+- `dev/test_tag_tree.rb`: nhấn Alt gửi phím chặn menu đúng một lần và vẫn đổi chế độ; giữ Alt (phím lặp) không gửi thêm; Ctrl không gửi; Alt báo qua cờ chuột cũng gửi một lần. `dev/test_paste_keys.rb`: gửi đúng một phím không gán, lỗi thì trả false không ném lỗi, không phải Windows thì không gửi. `ruby dev/run_tests.rb`, `test_ui*.cjs`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** thanh menu có thật sự không bật nữa khi thả Alt (cách làm dựa vào hành vi chuẩn của Windows: menu chỉ mở nếu không có phím nào xen giữa lúc nhấn và thả Alt); phím 0xE8 không gây hiệu ứng phụ trong SketchUp; thời điểm gửi phím so với việc SketchUp xử lý Alt.
+
+### Bản 1.1.1-beta.48 (trước đó)
+
+Beta.48: thêm cách 2 cho nút dán ảnh: Ruby gửi phím Ctrl+V của Windows (`core/paste_keys.rb`, Fiddle gọi `keybd_event`, lệnh `image_paste_keys`, sự kiện `paste_keys`; `injectedPaste` ở `html/images.js`) để cửa sổ xử lý như người dùng nhấn Ctrl+V thật. Chỉ gửi khi trang đang có tiêu điểm (`document.hasFocus()`) và cửa sổ đang chọn thuộc tiến trình SketchUp (`GetForegroundWindow` + `GetWindowThreadProcessId`); chỉ gửi tổ hợp Ctrl+V.
+
+- `dev/test_paste_keys.rb` (mới, bản gửi giả, KHÔNG gửi phím thật): đúng thứ tự phím, lỗi được báo ra, không phải Windows thì từ chối, mã có kiểm tra tiến trình sở hữu cửa sổ, chỉ có hai mã phím. `dev/test_image_actions.rb`: `image_paste_keys` báo ok / không ok. `dev/test_ui_images.cjs`: Ruby gửi phím rồi sự kiện paste tới thì dán đúng món và không chạy các cách sau; Ruby báo không gửi được thì chuyển ngay; phím gửi mà không có paste nào tới (quá 1,2 giây) thì chuyển. `ruby dev/run_tests.rb`, `test_ui.cjs`, `test_ui_en.cjs`: đạt.
+
+**Chưa xác minh trong SketchUp thật (rủi ro cao hơn các cách trước):** Ruby của SketchUp có nạp được `fiddle` và gọi `user32` không; phím Ctrl+V được gửi có tới trang BIM và sinh sự kiện paste ảnh không; nếu tiêu điểm không đúng cửa sổ BIM thì phím có thể rơi vào cửa sổ SketchUp chính (Ctrl+V trong SketchUp dán nội dung đã copy trong SketchUp), nên đã chặn bằng kiểm tra tiêu điểm của trang trước khi gửi, nhưng chưa thử thực tế; phần mềm diệt virus có thể coi `keybd_event` là đáng ngờ.
+
+### Bản 1.1.1-beta.47 (trước đó)
+
+Beta.47: nút dán ảnh thử trước hết lệnh dán của trình duyệt (`document.execCommand('paste')` vào một ô `contenteditable` tạm, như nhấn Ctrl+V; `nativePaste` ở `html/images.js`), sau đó mới tới API clipboard (1,5 giây) rồi PowerShell của beta.46.
+
+- `dev/test_ui_images.cjs`: lệnh dán giả lập chạy được thì lưu luôn đúng món và loại ảnh, không gọi API clipboard hay Ruby; ô tạm được gỡ; clipboard chỉ có chữ thì báo chưa có ảnh, không lưu, không gọi Ruby; lệnh dán bị chặn thì chuyển sang cách tiếp theo. Các test beta.46 vẫn đạt. `ruby dev/run_tests.rb`, `test_ui.cjs`, `test_ui_en.cjs`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** cửa sổ SketchUp có cho `document.execCommand('paste')` chạy không (trình duyệt thường chặn lệnh này vì lý do bảo mật; nếu bị chặn thì tự chuyển sang cách tiếp theo); phần PowerShell như ghi ở beta.46 bên dưới.
+
+### Bản 1.1.1-beta.46 (trước đó)
+
+Beta.46: sửa nút dán ảnh từ clipboard không phản hồi (Ctrl+V vẫn tốt). Nút thử API clipboard của cửa sổ web tối đa 1,5 giây (chờ quyền mãi cũng không treo); lỗi, không có API hoặc không trả lời thì Ruby đọc ảnh clipboard bằng PowerShell (`core/clipboard_image.rb`, lệnh `image_clipboard`), gửi PNG về giao diện (sự kiện `clipboard_image`) để thu nhỏ và lưu bằng `image_set`.
+
+- `dev/test_clipboard_image.rb` (mới, runner giả, KHÔNG chạy PowerShell thật): trả đúng bytes PNG, xóa file tạm, clipboard không có ảnh, PowerShell lỗi (chỉ dòng lỗi đầu), không có file, không phải PNG, quá lớn, không phải Windows thì báo dùng Ctrl+V; đường dẫn file đích đi bằng biến môi trường, lệnh chỉ đọc clipboard. `dev/test_image_actions.rb`: `image_clipboard` gửi đúng món / loại ảnh, từ chối mã lạ / loại lạ, báo lỗi khi không có ảnh, chưa lưu gì. `dev/test_ui_images.cjs`: web từ chối / không có API / không trả lời (chờ quá giờ) đều chuyển sang nhờ Ruby và có thông báo; Ruby gửi ảnh thì lưu đúng món, đúng loại ảnh. `ruby dev/run_tests.rb`, `test_ui.cjs`, `test_ui_en.cjs`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** việc chạy `powershell.exe` thật từ SketchUp (có thể hiện cửa sổ console chớp nhanh; phần mềm diệt virus có thể cảnh báo); `Clipboard.GetImage` lấy được ảnh chụp bằng Win+Shift+S và ảnh copy từ trình duyệt / Paint (ảnh có nền trong suốt có thể mất độ trong); thời gian chờ lần đầu; macOS chưa hỗ trợ.
+
+### Bản 1.1.1-beta.45 (trước đó)
+
+Beta.45: bỏ ô chọn độ cao hàng (Hàng: Vừa / Gọn / Thoáng) khỏi ngăn Chọn cột (đã có Ctrl + lăn chuột); sửa nút Xóa sheet bị chữ đỏ trên nền đỏ.
+
+- `dev/test_ui_images.cjs`: ngăn Chọn cột không còn ô chọn độ cao hàng. `dev/test_ui_sheets.cjs`: tương phản chữ / nền của nút Xóa sheet đủ đọc ở trạng thái thường và sau lần bấm đầu (kiểm tra này báo lỗi với CSS cũ, đạt với CSS mới). `test_ui.cjs`, `test_ui_en.cjs`, `ruby dev/run_tests.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** hiển thị nút Xóa sheet trong cửa sổ HtmlDialog thật. Bảng đã lưu với mật độ hàng Gọn / Thoáng vẫn giữ mật độ đó (không còn ô để đổi lại; Ctrl + lăn chuột đặt độ cao hàng riêng thay thế).
+
+### Bản 1.1.1-beta.44 (trước đó)
+
+Beta.44: (1) đổi chế độ bằng Alt mượt hơn: nhận phím qua cả `onKeyDown` lẫn cờ phím của sự kiện chuột, cùng một lần nhấn không tính hai lần, lần thả bị mất không bắt nhấn hai lần; (2) tô sáng đối tượng sắp được đổ theo cấp (khung bao group / component, hoặc mặt và cạnh), chiếu lên màn hình bằng cách chung với khung đánh dấu của bảng (`OutlineDrawing`, xử lý cả lúc mở sửa group); (3) nhãn trên con trỏ và dòng trạng thái bằng tiếng Anh theo 5D AutoTag; chỉ tính màu tag một lần thay vì mỗi lần rê chuột.
+
+- `dev/test_tag_tree.rb`: Alt / Ctrl qua cờ chuột, báo trùng phím + cờ chỉ tính một lần, thả rồi nhấn lại đổi tiếp, lần thả bị mất vẫn tính lần nhấn sau (đồng hồ giả); tô sáng khung bao đúng vị trí thế giới ở cấp trên cùng và trong cùng (cộng dồn biến đổi các group), mặt / cạnh (tam giác và cạnh), không tô ở chế độ hút và khi chuột ở chỗ trống, lỗi chiếu không làm hỏng công cụ; chữ tiếng Anh của nhãn và dòng trạng thái. Đạt.
+
+**Chưa xác minh trong SketchUp thật:** nguyên nhân thật khiến Alt đôi lúc phải nhấn hai lần (nghi thanh menu Windows lấy phím Alt khi thả; cách sửa mới chưa thử); đường pick (`PickHelper#path_at`) có gồm các group đang mở không (công cụ dựa vào đó để chọn cấp và tính vị trí tô sáng); khung tô sáng đúng vị trí khi đang mở sửa group và khi camera phối cảnh; tốc độ khi rê chuột trên model lớn (mỗi lần rê chế độ đổ có một lần pick và tính lại khung, mặt lớn có nhiều tam giác); `Face#mesh`, `View#text_bounds` ở SketchUp 2022.
+
+### Bản 1.1.1-beta.43 (trước đó)
+
+Beta.43: công cụ hút / đổ tag bỏ con trỏ riêng (xóa hai file SVG), làm theo cách dùng của 5D AutoTag: Alt đổi giữa hút và đổ, Ctrl đổi cấp đối tượng (trên cùng / trong cùng / mặt-cạnh), hút lấy tag đang hiển thị (kể cả tag con), nhãn tên + màu tag cạnh con trỏ vẽ bằng `View#draw2d` / `draw_text`.
+
+- `dev/test_tag_tree.rb`: Alt đổi chế độ (giữ phím không đổi lặp), hút xong tự về đổ, chưa có tag thì bắt đầu ở hút và Alt không chuyển sang đổ; Ctrl đổi cấp theo vòng, đổ đúng đối tượng ở từng cấp (group ngoài cùng, group trong cùng, mặt; không có group thì chính mặt); hút lấy tag con đang hiển thị, mặt Untagged trong group lấy tag của group, không có tag lấy Untagged; nhãn chế độ hút (tên + ô màu) và chế độ đổ (tên + ô màu + nhãn đen cấp), chuột ở chỗ trống không vẽ nhãn, khi không có `View#text_bounds` thì ước lượng; không còn con trỏ riêng. Đạt. `test_ui.cjs`, `test_ui_en.cjs` (câu hướng dẫn mới đã dịch), `ruby dev/run_tests.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** phím Alt / Ctrl có tới `onKeyDown` đúng một lần mỗi lần nhấn trên Windows (Alt có thể bị thanh menu của SketchUp lấy); `View#text_bounds` có trong SketchUp 2022 không (nếu không, bề rộng nhãn là ước lượng); hình dạng nhãn vẽ bằng `draw2d` / `draw_text` và việc nhãn cập nhật kịp khi rê chuột; tag đang hiển thị của mặt không có tag nằm trong group có tag (SketchUp tô theo tag của group hay của chính mặt) khớp với cách hút; Ctrl có làm SketchUp đổi sang chế độ sao chép của công cụ khác không.
+
+### Bản 1.1.1-beta.42 (trước đó)
+
+Beta.42: ô kiểu nét của tag hiện ký hiệu (nét liền, gạch, chấm, gạch chấm, gạch hai chấm, gạch ba chấm) thay cho chữ; `dev/test_ui_images.cjs` kiểm tra ký hiệu từng kiểu (số đoạn nét), tên lạ hiện chữ, gợi ý là tên kiểu, bấm chọn gửi `tm_line_style`, chọn lại kiểu đang dùng không gửi gì, Esc đóng, bảng nhập Excel hiện ký hiệu; `test_ui_en.cjs` (nhãn "Kiểu nét: ..." đã dịch) và các bộ khác đạt. **Chưa xác minh trong SketchUp thật:** tên kiểu nét thật của model có được nhận đúng ký hiệu không (nhận theo từ khóa tiếng Anh), danh sách hiện đúng vị trí trong cửa sổ thật.
+
+Beta.39: nút Loại trừ tag luôn hiện trên thanh công cụ của Bảng khối lượng. Beta.40: con trỏ riêng cho công cụ hút / đổ tag. Beta.41: vẽ lại hai con trỏ theo mẫu con trỏ 5D AutoTag người dùng cung cấp (ống hút kèm vòng tròn, thùng sơn kèm giọt sơn, viền trắng), điểm nóng ở tâm vòng và giọt sơn.
+
+- `dev/test_tag_tree.rb` (beta.40-41, con trỏ riêng): đã bỏ ở beta.43.
+- `dev/test_ui_images.cjs`: nút Loại trừ tag hiện cả khi chưa loại trừ tag nào (chữ "Loại trừ tag"), có số khi đang loại trừ. Cùng `test_ui.cjs`, `test_ui_sheets.cjs`, `test_ui_en.cjs`, `test_report_page.cjs`, `ruby dev/run_tests.rb`: đạt.
+
+**Chưa xác minh trong SketchUp thật:** vị trí nút Loại trừ tag trên thanh trong cửa sổ thật.
+
 ## Bản 1.1.1-beta.38: đã kiểm tra tự động
 
 Quản lý phòng, đợt 4 và 5. Đợt 4: "Gợi ý mã cho phòng đã chọn" điền mã cho phòng đã chọn còn trống mã theo tiền tố và tầng (vd WC-T1-01), không đổi mã đã có, không trùng mã có sẵn. Đợt 5: mục "Cần kiểm tra" liệt kê phòng thiếu tầng hoặc thiếu mã; bấm một dòng để mở đúng phòng. Phòng chưa dựng khối 3D chỉ được đếm.

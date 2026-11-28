@@ -133,26 +133,70 @@ function pasteTargetPid(){
 }
 document.addEventListener('paste',e=>{
   if(e.target.closest&&e.target.closest('input,textarea,select'))return;
+  imagesState.pasteSeen=true; // nút dán dùng để biết lệnh dán của trình duyệt có chạy không (nativePaste)
   const item=[...(e.clipboardData?e.clipboardData.items:[])].find(i=>i.kind==='file'&&/^image\//.test(i.type));
-  if(!item)return;
+  if(!item){if(imagesState.buttonPaste)message('Trong clipboard chưa có ảnh. Hãy chụp màn hình hoặc copy ảnh rồi bấm lại.',true);return;}
   e.preventDefault();
   const target=imagesState.last||(pasteTargetPid()?{pid:pasteTargetPid(),kind:'full'}:null);
   if(!target)return message('Hãy chọn đúng một đối tượng (hoặc bấm vào ô ảnh của nó) rồi dán ảnh.',true);
   guarded(sendImage(target.pid,item.getAsFile(),target.kind));
 });
-// Nút dán trên ô ảnh: đọc ảnh đang có trong clipboard (chụp màn hình, hoặc copy ảnh) bằng API clipboard của cửa sổ rồi lưu cho món.
-// Cửa sổ không cho đọc clipboard bằng nút (hoặc người dùng từ chối quyền) thì nhớ ô này làm nơi nhận và hướng dẫn nhấn Ctrl+V.
+// Nút dán trên ô ảnh, thử lần lượt: (1) lệnh dán của trình duyệt như Ctrl+V (nativePaste); (2) Ruby gửi phím Ctrl+V (injectedPaste);
+// (3) API clipboard của cửa sổ (readWebClipboard); (4) cửa sổ SketchUp chặn cả hai (lỗi, không có, hoặc không trả lời): nhờ Ruby đọc clipboard của Windows (lệnh image_clipboard);
+// Ruby gửi lại PNG qua sự kiện clipboard_image. Nhớ ô này làm nơi nhận để Ctrl+V cũng dán vào đúng ô.
+const CLIPBOARD_WAIT_MS=1500; // API clipboard của cửa sổ có thể chờ cấp quyền mãi mà không trả lời
+async function readWebClipboard(){
+  if(!navigator.clipboard||typeof navigator.clipboard.read!=='function')return null;
+  try{
+    return await Promise.race([navigator.clipboard.read(),new Promise((_,stop)=>setTimeout(()=>stop(Error('timeout')),CLIPBOARD_WAIT_MS))]);
+  }catch(error){return null;}
+}
+// Cách 1 của nút dán: ra lệnh dán của trình duyệt (như nhấn Ctrl+V) vào một ô tạm đang được chọn. Chạy được thì sự kiện paste ở trên
+// xử lý ảnh (hoặc báo clipboard không có ảnh) và trả true; cửa sổ không cho lệnh này thì trả false để thử cách tiếp theo.
+function nativePaste(){
+  const box=node('div');box.contentEditable='true';box.setAttribute('aria-hidden','true');
+  box.style.cssText='position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0';
+  document.body.append(box);
+  const previous=document.activeElement;
+  imagesState.pasteSeen=false;imagesState.buttonPaste=true;
+  try{box.focus();document.execCommand('paste');}catch(error){/* cửa sổ không cho: thử cách khác */}
+  imagesState.buttonPaste=false;
+  box.remove();if(previous&&typeof previous.focus==='function')previous.focus();
+  return imagesState.pasteSeen;
+}
+// Cách 2 của nút dán: nhờ Ruby gửi phím Ctrl+V của Windows tới cửa sổ này (nút vừa được bấm nên cửa sổ đang có tiêu điểm); sự kiện paste
+// ở trên xử lý ảnh như khi người dùng tự nhấn. Trả true nếu sự kiện paste đã tới; false nếu Ruby không gửi được hoặc quá giờ.
+const KEYS_WAIT_MS=1200;
+function injectedPaste(){
+  return new Promise(resolve=>{
+    if(!document.hasFocus()){resolve(false);return;} // cửa sổ không có tiêu điểm: phím sẽ rơi vào chỗ khác, không gửi
+    imagesState.pasteSeen=false;imagesState.buttonPaste=true;
+    const timer=setTimeout(()=>finish(false),KEYS_WAIT_MS),poll=setInterval(()=>{if(imagesState.pasteSeen)finish(true);},40);
+    function finish(result){clearTimeout(timer);clearInterval(poll);imagesState.keysDone=null;imagesState.buttonPaste=false;resolve(result);}
+    imagesState.keysDone=ok=>{if(!ok)finish(false);};
+    call('image_paste_keys');
+  });
+}
 async function pasteImageFromClipboard(pid,kind){
   imagesState.last={pid,kind};
-  const hint='Không đọc được clipboard bằng nút. Hãy bấm vào ô ảnh rồi nhấn Ctrl+V.';
-  if(!navigator.clipboard||typeof navigator.clipboard.read!=='function')throw Error(`${hint} Chi tiết: cửa sổ này không có chức năng đọc clipboard (navigator.clipboard.read).`);
-  let items;
-  try{items=await navigator.clipboard.read();}catch(error){throw Error(`${hint} Chi tiết: ${error&&error.name?error.name:'lỗi'}${error&&error.message?' - '+error.message:''}.`);}
+  if(nativePaste())return;
+  if(await injectedPaste())return;
+  const items=await readWebClipboard();
+  if(items===null){
+    message('Đang đọc ảnh trong clipboard…');
+    call('image_clipboard',JSON.stringify(kind&&kind!=='full'?{pid,kind}:{pid}));
+    return;
+  }
   for(const item of items){
     const type=item.types.find(t=>/^image\//.test(t));
     if(type)return sendImage(pid,await item.getType(type),kind);
   }
   throw Error('Trong clipboard chưa có ảnh. Hãy chụp màn hình hoặc copy ảnh rồi bấm lại.');
+}
+// Ruby đã đọc ảnh trong clipboard thay cửa sổ: lưu như ảnh dán thường (thu nhỏ theo thiết lập của đúng loại ảnh).
+function receiveClipboardImage(data){
+  const bytes=Uint8Array.from(atob(data.png||''),c=>c.charCodeAt(0));
+  guarded(sendImage(data.pid,new Blob([bytes],{type:'image/png'}),data.kind||'full'));
 }
 
 // ---- Chụp ảnh: chỉ khi người dùng bấm ----

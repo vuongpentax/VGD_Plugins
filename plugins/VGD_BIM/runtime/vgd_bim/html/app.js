@@ -139,15 +139,19 @@ function syncFile(data){
 }
 function resetTableState(){
   clearTimeout(viewTimer);clearTimeout(excludeTimer);
-  Object.assign(tableState,{lockKey:null,replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',manual:[],sheets:null,sheet:0,excludeTags:null,excludePending:false,projectedChecked:false,snapshots:null,snapshotDiff:null,checkResults:null,bridge:{file:null,match_by:'vgd_id',match_column:'',mapping:{},preview:null,skip:new Set(),shown:200}});
+  Object.assign(tableState,{lockKey:null,replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',manual:[],sheets:null,sheet:0,excludeTags:null,excludePending:false,projectedChecked:false,snapshots:null,snapshotDiff:null,checkResults:null,roomsDetect:null,roomsOpenings:null,bridge:{file:null,match_by:'vgd_id',match_column:'',mapping:{},preview:null,skip:new Set(),shown:200}});
   const view=document.querySelector('.table-view');if(view)view.remove();
 }
 const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total','calc_qty','calc_total','mat_price','mat_waste','mat_qty','mat_cost']);
 // Khối lượng tính theo tag (xem core/quantity.rb): nhãn cách tính, đơn vị và số lẻ cố định theo từng cách (m, m², m³ không đổi theo đơn vị của preset).
-const METHOD_LABELS={count:'Theo cái',area:'Theo diện tích',length:'Theo mét dài',volume:'Theo thể tích',none:'Không tính'};
-const CALC_UNIT={count:'cái',area:'m²',length:'m',volume:'m³'};
-const CALC_DIGITS={count:0,area:2,length:2,volume:3};
-const CALC_ORDER=['count','area','length','volume'];
+const METHOD_LABELS={count:'Theo cái',area:'Theo diện tích',length:'Theo mét dài',volume:'Theo thể tích',none:'Không tính',formula:'Theo công thức'};
+// Đơn vị của Khối lượng tính (mã schema): cách tính có sẵn suy ra từ cách tính, công thức theo tag mang đơn vị người dùng chọn (row.calc_unit).
+const METHOD_UNIT={count:'pcs',area:'m2',length:'m',volume:'m3'};
+const UNIT_TEXT={pcs:'cái',m2:'m²',m:'m',m3:'m³',set:'bộ',lot:'lô',kg:'kg'};
+const UNIT_DIGITS={pcs:0,m2:2,m:2,m3:3,set:2,lot:2,kg:2};
+const UNIT_ORDER=['pcs','m2','m','m3','set','lot','kg'];
+const calcUnit=row=>row.calc_method==='formula'?row.calc_unit:METHOD_UNIT[row.calc_method];
+const calcDigits=row=>UNIT_DIGITS[calcUnit(row)]??0;
 const CATEGORY_LABELS={architecture:'Kiến trúc',finish:'Hoàn thiện',furniture:'Nội thất',electrical:'Điện',equipment:'Thiết bị',plumbing:'Cấp thoát nước',hvac:'Điều hòa / Thông gió',other:'Khác',wall:'Tường',floor:'Sàn',ceiling:'Trần',door:'Cửa đi',window:'Cửa sổ',column:'Cột',beam:'Dầm',stair:'Cầu thang',cabinet:'Tủ',sanitary:'Thiết bị vệ sinh',lighting:'Chiếu sáng',generic:'Chung'};
 const CALC_SOURCES={item:'Theo dữ liệu đã ghi trong món',tag:'Theo cách tính bạn đặt cho tag',keyword:'Theo từ khóa trong tên tag',group:'Theo nhóm tag',default:'Mặc định (theo cái)'};
 // Cột ảnh phụ (Ảnh 3, Ảnh 4): kind của cột => loại ảnh (xem images.js).
@@ -400,7 +404,7 @@ function cellText(row,key){
     case 'measure_note':return row.measure_note||'';
     case 'calc_category':return CATEGORY_LABELS[row.calc_category]||'';
     case 'calc_method':return METHOD_LABELS[row.calc_method]||'';
-    case 'calc_unit':return CALC_UNIT[row.calc_method]||'';
+    case 'calc_unit':return UNIT_TEXT[calcUnit(row)]||'';
     default:return key.startsWith('custom_')&&row[key]!=null?String(row[key]):''; // cột thêm tay: chữ do Ruby đọc sẵn
   }
 }
@@ -563,7 +567,7 @@ function inlineEdit(td,row,col){
 function menuItems(field){
   const d=tableState.data,choices=d.choices||{tags:[],materials:[]};
   if(field==='status')return Object.entries(d.statuses||{}).map(([value,label])=>({value,label}));
-  if(field==='calc_method')return [{value:'',label:'Theo từ khóa / nhóm tag (bỏ cách tính riêng)'},...Object.entries(METHOD_LABELS).map(([value,label])=>({value,label}))];
+  if(field==='calc_method')return [{value:'',label:'Theo từ khóa / nhóm tag (bỏ cách tính riêng)'},...Object.entries(METHOD_LABELS).map(([value,label])=>({value,label:value==='formula'?'Theo công thức…':label}))];
   if(field==='room')return [{value:'',label:'(Không có phòng)'},...(choices.rooms||[])];
   if(field==='level')return [{value:'',label:'(Không có tầng)'},...(choices.levels||[])];
   if(field==='tag')return [{value:'',label:'(Không có tag)'},...choices.tags.map(name=>({value:name,label:name}))];
@@ -575,7 +579,7 @@ function menuEdit(td,row,col){
   const menu=node('div',undefined,'cell-menu');menu.setAttribute('role','listbox');
   const search=node('input');search.type='search';search.placeholder='Tìm...';search.setAttribute('aria-label','Tìm trong danh sách');
   const list=node('div',undefined,'cell-menu-list');
-  const pick=value=>{closeMenu();commitEdit(row,field,value);};
+  const pick=value=>{closeMenu();if(field==='calc_method'&&value==='formula')formulaEdit(td,row);else commitEdit(row,field,value);};
   const draw=()=>{
     const q=foldText(search.value.trim());
     const shown=all.filter(item=>!q||foldText(item.label).includes(q));
@@ -605,6 +609,28 @@ function menuEdit(td,row,col){
   document.addEventListener('mousedown',outsideMenu,true);
   search.focus();
   const currentLine=list.querySelector('.current');if(currentLine)currentLine.scrollIntoView({block:'nearest'});
+}
+// Công thức khối lượng cho tag của dòng (core/formula.rb): ô công thức + đơn vị, gửi table_calc_formula; Ruby kiểm tra lại và báo lỗi rõ.
+function formulaEdit(td,row){
+  closeMenu();
+  const box=node('div',undefined,'cell-menu formula-menu');
+  const input=node('input');input.type='text';input.maxLength=200;input.value=row.calc_formula||'';input.placeholder='(Rộng + Sâu) x 2';input.setAttribute('aria-label','Công thức khối lượng');input.id='formula-text';
+  const unit=node('select');unit.setAttribute('aria-label','Đơn vị của công thức');unit.id='formula-unit';
+  UNIT_ORDER.forEach(code=>unit.append(new Option(UNIT_TEXT[code],code)));unit.value=row.calc_method==='formula'&&row.calc_unit?row.calc_unit:'m';
+  const apply=()=>{
+    const text=input.value.trim();if(!text)return message('Hãy nhập công thức.',true);
+    closeMenu();call('table_calc_formula',JSON.stringify({indexes:editTargets(row),formula:text,unit:unit.value}));
+  };
+  input.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();apply();}else if(e.key==='Escape'){e.preventDefault();closeMenu();}};
+  const actions=node('div',undefined,'rename-actions');actions.append(button('Áp dụng',apply,'primary'),button('Hủy',closeMenu));
+  box.append(node('div','Công thức cho tag '+(row.tag||''),'pop-title'),input,unit,node('p','Dùng Rộng, Sâu, Cao (m), Diện tích (m²), Thể tích (m³), các phép + − x / và ngoặc, so sánh (= <> < > <= >=) và hàm như Excel: ROUND, ROUNDUP, ROUNDDOWN, CEILING, MIN, MAX, IF, ABS, SQRT, PI (đối số ngăn bằng ;). Ví dụ ROUNDUP(Rộng / 0,6; 0). Mọi món cùng tag dùng chung công thức; xuất Excel giữ nguyên công thức.','muted formula-help'),actions);
+  document.body.append(box);cellMenu=box;
+  const rect=td.getBoundingClientRect();
+  box.style.width='300px';
+  box.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-box.offsetWidth-8))+'px';
+  box.style.top=(window.innerHeight-rect.bottom>=box.offsetHeight||rect.top<box.offsetHeight?rect.bottom:rect.top-box.offsetHeight)+'px';
+  document.addEventListener('mousedown',outsideMenu,true);
+  input.focus();
 }
 function editCell(td,row,col){
   if(!col.editable)return;
@@ -685,7 +711,7 @@ function viewModel(full=false){
   const sumOf=(list,key)=>counted(list).reduce((s,r)=>s+(typeof r[key]==='number'?r[key]:0),0);
   const countOf=list=>counted(list).reduce((s,r)=>s+membersOf(r).length,0);
   // Khối lượng tính cộng theo từng đơn vị (m², cái... không cộng lẫn nhau): "4,25 m² · 3 cái"
-  const calcText=list=>{const by={};counted(list).forEach(r=>{if(r.calc_qty!=null&&CALC_UNIT[r.calc_method])by[r.calc_method]=(by[r.calc_method]||0)+r.calc_qty;});return CALC_ORDER.filter(k=>by[k]!=null).map(k=>`${fmt(by[k],CALC_DIGITS[k])} ${exportText(CALC_UNIT[k])}`).join(' · ');}; // đơn vị dịch theo ngôn ngữ đang dùng
+  const calcText=list=>{const by={};counted(list).forEach(r=>{const u=calcUnit(r);if(r.calc_qty!=null&&UNIT_TEXT[u])by[u]=(by[u]||0)+r.calc_qty;});return UNIT_ORDER.filter(k=>by[k]!=null).map(k=>`${fmt(by[k],UNIT_DIGITS[k])} ${exportText(UNIT_TEXT[k])}`).join(' · ');}; // đơn vị dịch theo ngôn ngữ đang dùng
   // Danh sách theo thứ tự hiển thị: các nhóm (nếu có) rồi các dòng của nhóm chưa thu gọn.
   let sections=[{label:null,rows:ordered}];
   if(tableState.groupBy){
@@ -693,7 +719,8 @@ function viewModel(full=false){
     ordered.forEach(row=>{const label=groupLabel(row,tableState.groupBy);if(!map.has(label))map.set(label,[]);map.get(label).push(row);});
     sections=[...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],'vi',{numeric:true})).map(([label,list])=>({label,rows:list}));
   }
-  return {cols,rows,sections,sumOf,countOf,calcText};
+  const isCounted=r=>!(tableState.onlyTop&&r.parents.some(p=>shown.has(p)));
+  return {cols,rows,sections,sumOf,countOf,calcText,isCounted};
 }
 // Kéo tiêu đề cột để dời chỗ ngay trên bảng (cùng thứ tự với bảng Chọn cột): các cột đang hiện chiếm lại đúng những chỗ của chúng, cột ẩn giữ nguyên chỗ.
 function columnDrag(th,col,host){
@@ -889,7 +916,7 @@ function renderGrid(host){
         else if(col.kind==='image')imageCell(td,row);
         else if(col.kind==='image_location')imageCell(td,row,'location');
         else if(IMAGE_EXTRA_KINDS[col.kind])imageCell(td,row,IMAGE_EXTRA_KINDS[col.kind]);
-        else if(NUMERIC.has(col.key)){td.textContent=fmt(scaledValue(col.key,row[col.key]),(col.key==='calc_qty'||col.key==='mat_qty')?(CALC_DIGITS[row.calc_method]||0):col.key==='mat_waste'?1:digitsFor(col.key));td.className='num';}
+        else if(NUMERIC.has(col.key)){td.textContent=fmt(scaledValue(col.key,row[col.key]),(col.key==='calc_qty'||col.key==='mat_qty')?calcDigits(row):col.key==='mat_waste'?1:digitsFor(col.key));td.className='num';}
         else if(col.key==='url'){
           td.append(node('span',row.url,'cell-url'));
           if(row.url){const open=node('button','↗','cell-open');open.type='button';open.title='Mở link';open.setAttribute('aria-label','Mở link');open.onclick=e=>{e.stopPropagation();call('open_url',row.url);};open.ondblclick=e=>e.stopPropagation();td.append(open);}
@@ -898,7 +925,7 @@ function renderGrid(host){
         if(col.key==='front_state'&&row.front_note)td.title=row.front_note; // lý do tự động chọn mặt trước, để duyệt
         if(col.key==='vgd_id'&&row.vgd_id)td.title=row.vgd_id;
         if(col.key==='mat_cost'&&row.mat_note)td.title=exportText(row.mat_note);
-        if(col.key.startsWith('calc_')&&row.calc_source)td.title=exportText(CALC_SOURCES[row.calc_source]||'')+(row.calc_note?' · '+exportText(row.calc_note):'')+(col.key==='calc_method'?'. '+exportText('Nhấp đúp để đổi cách tính của tag này.'):''); // vì sao ra cách tính này (dịch từng phần theo ngôn ngữ)
+        if(col.key.startsWith('calc_')&&row.calc_source)td.title=exportText(CALC_SOURCES[row.calc_source]||'')+(row.calc_formula?' · '+exportText('Công thức: '+row.calc_formula):'')+(row.calc_note?' · '+exportText(row.calc_note):'')+(col.key==='calc_method'?'. '+exportText('Nhấp đúp để đổi cách tính của tag này.'):''); // vì sao ra cách tính này (dịch từng phần theo ngôn ngữ)
         tr.append(td);
       });
       rowGrip(tr,row,section,pids,host);
@@ -1053,13 +1080,12 @@ function toolbar(){
   grouping.setAttribute('aria-expanded',String(tableState.panel==='group'));
   const groupAnchor=node('div',undefined,'pop-anchor');groupAnchor.append(grouping);
   if(tableState.panel==='group')groupAnchor.append(groupPanel());
-  // Đang loại trừ tag thì số đo đã khác: hiện chip nhắc ngay trên thanh (bấm để mở danh sách). Nút chính nằm trong menu Công cụ.
+  // Nút Loại trừ tag luôn hiện trên thanh (bấm để mở danh sách); đang loại trừ thì kèm số tag vì số đo đã khác. Mục trong menu Công cụ vẫn giữ.
   const excludeCount=excludedTags().size;
-  const excludeChip=button(`Loại trừ ${excludeCount} tag`,toggleExclude,'chip');excludeChip.id='exclude-chip';excludeChip.title='Các tag này không tính vào Rộng / Dài / Cao. Bấm để xem hoặc đổi.';
+  const excludeChip=button(excludeCount?`Loại trừ ${excludeCount} tag`:'Loại trừ tag',toggleExclude,'chip');excludeChip.id='exclude-chip';excludeChip.title='Các tag này không tính vào Rộng / Dài / Cao. Bấm để xem hoặc đổi.';
   excludeChip.setAttribute('aria-expanded',String(tableState.panel==='exclude'));
   const own=new Set(pidMap().values()),placed=tableState.manual.some(pid=>own.has(pid));
   const unplace=button('Bỏ xếp tay',resetManualOrder);unplace.id='order-reset';unplace.title='Bỏ thứ tự bạn đã kéo, về thứ tự quét ban đầu';
-  excludeChip.hidden=!excludeCount;
   bar.append(cols,searchWrap,replaceBox,group,excludeChip,node('span',undefined,'grow'),snap,stop,progress);
   if(placed)bar.append(unplace);
   bar.append(groupAnchor);
@@ -1328,7 +1354,7 @@ function roomsPanel(){
     build.title='Dựng (hoặc dựng lại) khối 3D của phòng: một khối trên tag VGD_ROOMS, một bước hoàn tác.';
     const upd=button('Cập nhật viền từ mặt đang chọn',()=>call('table_room_update_boundary',JSON.stringify({id:room.id})));upd.className='rm-update';
     upd.title='Thay viền phòng bằng đúng một mặt sàn đang chọn trong SketchUp. Tên, mã, tầng, chiều cao, hoàn thiện giữ nguyên; cao độ sàn chỉ đổi theo mặt với phòng hạ nền (nhập tay).';
-    const body=node('div',undefined,'rm-body');body.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường (chưa trừ cửa) ${m.wall_area} m² · Trần ${m.ceiling_area} m²`+(room.holes&&room.holes.length?` · ${room.holes.length} lỗ (cột, hộp kỹ thuật)`:''),'muted rm-metrics'),build,upd);
+    const body=node('div',undefined,'rm-body');body.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường ${m.openings_count==null?`(chưa trừ cửa) ${m.wall_area} m²`:`${m.wall_area} m² (đã trừ ${m.openings_count} cửa, ${m.openings_area} m²)`} · Trần ${m.ceiling_area} m²`+(room.holes&&room.holes.length?` · ${room.holes.length} lỗ (cột, hộp kỹ thuật)`:''),'muted rm-metrics'),build,upd);
     const toggle=button('▾',()=>setRoomCollapsed(box,!body.hidden));toggle.className='rm-toggle';toggle.setAttribute('aria-label','Mở hoặc thu gọn phòng '+room.name);
     const pick=node('input');pick.type='checkbox';pick.checked=roomsView.picked.has(room.id);pick.setAttribute('aria-label','Chọn phòng '+room.name);
     pick.onchange=()=>{pick.checked?roomsView.picked.add(room.id):roomsView.picked.delete(room.id);updatePicked();};
@@ -1345,6 +1371,58 @@ function roomsPanel(){
   const create=node('div',undefined,'rm-new');create.append(newName,newNumber,newLevel);
   const make=button('Tạo phòng từ các mặt đang chọn',()=>call('table_room_from_selection',JSON.stringify({name:newName.value,number:newNumber.value,level:newLevel.value})),'primary');make.id='rm-make';
   make.title='Đọc viền (và các lỗ, vd cột) của các mặt sàn nằm ngang đang chọn trong SketchUp, mỗi mặt thành một phòng. Một mặt: tên và mã như đã nhập. Nhiều mặt: tên là tiền tố (Phòng 1, Phòng 2...), không đặt mã. Chỉ lưu dữ liệu, không dựng hình.';
+  // Trừ cửa khỏi tường (core/room_openings.rb): người dùng tick các tag của cửa đi / cửa sổ, Ruby tìm cửa trên các tag đó trong model và trừ cho mọi phòng.
+  const op=tableState.roomsOpenings||(tableState.roomsOpenings={tags:new Set(rooms.flatMap(r=>(r.openings&&r.openings.tags)||[]))});
+  const opBox=node('div',undefined,'rm-openings');
+  opBox.append(node('div','Trừ cửa khỏi tường','pop-title'),node('p','Tick các tag của cửa đi / cửa sổ rồi bấm Trừ cửa. Cửa nằm sát viền phòng được trừ khỏi diện tích tường của phòng đó (cửa giữa hai phòng trừ cho cả hai). Cửa của VGD Structure dùng số đo lỗ, cửa khác ước tính theo khung bao.','muted'));
+  const opList=node('div',undefined,'rm-openings-list');
+  const tagNames=modelTags();
+  const opBtn=button('',()=>{
+    if(!op.tags.size)throw Error('Hãy chọn ít nhất một tag của cửa đi / cửa sổ.');
+    call('table_room_openings',JSON.stringify({tags:[...op.tags]}));
+  },'primary');opBtn.id='rm-openings';
+  const syncOp=()=>{opBtn.textContent=`Trừ cửa khỏi tường (${op.tags.size} tag)`;opBtn.disabled=!op.tags.size||!rooms.length;};
+  tagNames.forEach(name=>{
+    const tick=node('input');tick.type='checkbox';tick.checked=op.tags.has(name);tick.setAttribute('aria-label','Tag cửa '+name);
+    tick.onchange=()=>{tick.checked?op.tags.add(name):op.tags.delete(name);syncOp();};
+    const row=node('label',undefined,'rm-open-row');row.append(tick,node('span',name));opList.append(row);
+  });
+  if(!tagNames.length)opList.append(node('p','Model chưa có tag nào. Hãy đặt tag cho cửa đi / cửa sổ trước.','muted'));
+  syncOp();
+  opBtn.title='Tìm trong cả model các group / component nằm trên các tag đã tick (chỉ đọc, chỉ khi bấm), ghép mỗi cửa vào phòng có viền sát cửa rồi ghi số cửa và diện tích vào phòng. Một bước hoàn tác, không đổi cửa hay tường.';
+  opBox.append(opList,opBtn);
+  // Dò phòng từ tường (core/room_detect.rb): xem trước các vùng kín giữa tường đang chọn, tích bỏ vùng không muốn, rồi tạo. Kết quả nhớ trong tableState.roomsDetect.
+  const dt=tableState.roomsDetect||(tableState.roomsDetect={cut:2400,minWidth:350,result:null,keep:new Set()});
+  const cutInput=node('input');cutInput.type='number';cutInput.min='100';cutInput.max='20000';cutInput.step='50';cutInput.value=dt.cut;cutInput.id='rm-cut';cutInput.setAttribute('aria-label','Độ cao cắt (mm)');cutInput.onchange=()=>{dt.cut=Number(cutInput.value);};
+  const widthInput=node('input');widthInput.type='number';widthInput.min='50';widthInput.max='5000';widthInput.step='10';widthInput.value=dt.minWidth;widthInput.id='rm-minw';widthInput.setAttribute('aria-label','Bề rộng tối thiểu (mm)');widthInput.onchange=()=>{dt.minWidth=Number(widthInput.value);};
+  const detectArgs=()=>{dt.cut=Number(cutInput.value);dt.minWidth=Number(widthInput.value);return {cut:dt.cut,min_width:dt.minWidth};};
+  const detectBtn=button('Dò phòng từ tường đang chọn',()=>{dt.result=null;call('table_room_detect',JSON.stringify(detectArgs()));},'primary');detectBtn.id='rm-detect';
+  detectBtn.title='Chọn các tường (Group / Component) rồi bấm. Mặt phẳng nằm ngang ở độ cao cắt (tính từ chân tường thấp nhất) cắt tường thành các đoạn; vùng kín giữa các đoạn là phòng. Chỉ đọc, không đổi tường, không thêm hình.';
+  const detect=node('div',undefined,'rm-detect');
+  detect.append(node('div','Dò phòng từ tường','pop-title'),node('p','Chọn các tường trong SketchUp rồi bấm Dò. Độ cao cắt nên cao hơn đỉnh cửa đi để tường liền mạch.','muted'));
+  const detectRow=node('div',undefined,'rm-mid');detectRow.append(miniField('Độ cao cắt (mm)',cutInput),miniField('Bề rộng tối thiểu (mm)',widthInput));
+  detect.append(detectRow,detectBtn);
+  if(dt.result){
+    const res=dt.result;
+    detect.append(node('p',`Đọc ${res.walls} mặt tường ở độ cao cắt ${res.cut} mm (tường cao ${res.height} mm). Tìm được ${res.regions.length} vùng kín.`,'muted rm-detect-info'));
+    const list=node('div',undefined,'rm-detect-list');
+    res.regions.forEach((region,i)=>{
+      const tick=node('input');tick.type='checkbox';tick.checked=dt.keep.has(region.sig);tick.setAttribute('aria-label','Tạo phòng cho vùng '+(i+1));
+      tick.onchange=()=>{tick.checked?dt.keep.add(region.sig):dt.keep.delete(region.sig);applyBtn.disabled=!dt.keep.size;applyBtn.textContent=`Tạo ${dt.keep.size} phòng từ các vùng đã tích`;};
+      const row=node('label',undefined,'rm-detect-row');
+      row.append(tick,node('span',`Vùng ${i+1} · ${region.area} m² · rộng ${region.width} mm · tâm (${region.center[0]}, ${region.center[1]})`+(region.holes?` · ${region.holes} lỗ`:'')));
+      list.append(row);
+    });
+    detect.append(list);
+    res.dropped.forEach(d=>detect.append(node('p',`Bỏ ${d.count>1?d.count+' ':''}${d.text}.`,'muted rm-detect-dropped')));
+    res.warnings.forEach(w=>detect.append(node('p',w,'rm-detect-warn')));
+  }
+  const applyBtn=button(`Tạo ${dt.keep.size} phòng từ các vùng đã tích`,()=>{
+    if(!dt.keep.size)throw Error('Hãy tích ít nhất một vùng để tạo phòng.');
+    call('table_room_detect_apply',JSON.stringify({...detectArgs(),keep:[...dt.keep],name:newName.value,level:newLevel.value}));
+  });applyBtn.id='rm-detect-apply';applyBtn.disabled=!(dt.result&&dt.keep.size);applyBtn.hidden=!(dt.result&&dt.result.regions.length);
+  applyBtn.title='Dò lại tường đang chọn rồi tạo phòng cho các vùng đã tích: tên theo ô Tên phòng mới ở trên (tiền tố, vd Phòng 1, Phòng 2), tầng theo ô tầng, cao độ sàn lấy theo chân tường. Một bước hoàn tác, không đổi tường.';
+  detect.append(applyBtn);
   const picked=tableState.displayed.filter(r=>r.members.some(m=>tableState.sel.has(m)));
   const auto=button('Gán món vào phòng theo vị trí',()=>{
     if(!selectedIndexes().length)throw Error('Hãy chọn các dòng cần gán phòng (Ctrl+A chọn hết các dòng đang hiện).');
@@ -1353,7 +1431,7 @@ function roomsPanel(){
   const buildAll=button(`Dựng khối tất cả phòng${rooms.length?` (${rooms.length})`:''}`,()=>call('table_room_build_all',JSON.stringify({})));buildAll.id='rm-build-all';
   buildAll.disabled=!rooms.length;buildAll.title='Dựng (hoặc dựng lại) khối 3D của mọi phòng, một bước hoàn tác cho cả đợt.';
   const actions=node('div',undefined,'rename-actions');actions.append(make,buildAll,auto,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
-  p.append(create,node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán phòng theo vị trí; hoặc nhấp đúp ô Phòng để gán tay.','muted'),actions);
+  p.append(create,detect,opBox,node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán phòng theo vị trí; hoặc nhấp đúp ô Phòng để gán tay.','muted'),actions);
   applyRoomsView();
   return p;
 }
@@ -1643,11 +1721,7 @@ function buildColumnPanel(side){
   const list=node('div',undefined,'pop-cols');
   search.oninput=()=>{tableState.colSearch=search.value;renderColumnList(list);};
   renderColumnList(list);
-  const density=node('select');density.setAttribute('aria-label','Độ cao hàng');density.className='pop-density';
-  [['','Hàng: Vừa'],['dense','Hàng: Gọn'],['roomy','Hàng: Thoáng']].forEach(([v,t])=>density.append(new Option(t,v)));
-  density.value=tableState.density;density.onchange=()=>{tableState.density=density.value;tableState.rowHeight=0;renderGrid($('grid-host'));persistView();};
-  density.title='Giữ Ctrl và lăn chuột giữa trên bảng để đổi độ cao hàng (ảnh to ra theo).'; // gợi ý, không chiếm chỗ của danh sách cột
-  inner.append(head,formHost,bar,list,density,sideGrip(side));
+  inner.append(head,formHost,bar,list,sideGrip(side));
   side.replaceChildren(inner);
   updateColumnCounts();
 }
@@ -1723,7 +1797,7 @@ function buildExcludePanel(side){
 const sideKind=()=>tableState.panel==='columns'||tableState.panel==='exclude'?tableState.panel:null;
 // Số tag đang loại trừ: trên chip của thanh công cụ (ẩn khi 0) và mục Loại trừ tag trong menu Công cụ (nếu đang mở).
 function showExcludeCount(n){
-  const chip=$('exclude-chip');if(chip){chip.hidden=!n;chip.textContent=`Loại trừ ${n} tag`;}
+  const chip=$('exclude-chip');if(chip)chip.textContent=n?`Loại trừ ${n} tag`:'Loại trừ tag';
   const item=$('exclude-btn'),text=item&&item.querySelector('.io-text');if(text)text.textContent=n?`Loại trừ tag (${n})`:'Loại trừ tag';
 }
 function markSideButtons(){
@@ -1793,10 +1867,44 @@ function toggleButton(text,on,handler){
 // Xuất Excel / PDF: gửi cho Ruby đúng bảng đang hiện (cột, thứ tự, tiêu đề, đơn vị, dòng đã lọc / sắp xếp / nhóm, dòng tổng).
 // Ô số gửi dạng số đã đổi sang đơn vị của preset, chưa làm tròn (Excel tự định dạng theo số lẻ của cột). Chữ dịch theo ngôn ngữ đang dùng.
 const exportText=text=>VGD_I18N.language==='en'?VGD_I18N.translateText(text):text;
-function exportColumn(col){
+// Hệ số đổi số đang hiện của cột về m / m² / m³ (Ruby dựng công thức Excel theo đơn vị chuẩn, core/xlsx_formulas.rb).
+function siFactor(key){
+  const s=workSettings();
+  if(LEN_KEYS.has(key))return 1/((LENGTH_FACTORS[s.length_unit]||1)*1000);
+  if(AREA_KEYS.has(key))return 1/(AREA_FACTORS[s.area_unit]||1);
+  if(key==='volume')return 1/(VOLUME_FACTORS[s.volume_unit]||1);
+  return 1;
+}
+function exportColumn(col,base){
   const type=col.key==='ordinal'?'ordinal':isImageColumn(col)?'image':NUMERIC.has(col.key)?'number':col.key==='url'?'link':'text';
   const imageKind=col.kind==='image_location'?{image_kind:'location'}:IMAGE_EXTRA_KINDS[col.kind]?{image_kind:IMAGE_EXTRA_KINDS[col.kind]}:{};
-  return {...imageKind,label:exportText(colLabel(col)),unit:exportText(unitTextOf(col.key)||''),type,digits:type==='number'?digitsFor(col.key):0,width:Math.min(2000,Math.max(20,Math.round(widthOf(col.key))))}; // độ rộng cột đang chỉnh trên màn hình, dùng làm tỉ lệ ban đầu của trang in
+  return {...imageKind,key:col.key,si:siFactor(col.key),label:exportText(colLabel(col))+(base?' '+exportText('(cột gốc)'):''),unit:exportText(unitTextOf(col.key)||''),type,digits:type==='number'?digitsFor(col.key):0,width:Math.min(2000,Math.max(20,Math.round(widthOf(col.key))))}; // độ rộng cột đang chỉnh trên màn hình, dùng làm tỉ lệ ban đầu của trang in
+}
+// Excel ghi ô tính toán thành công thức tham chiếu các cột gốc (Rộng, Cao, Đơn giá, Hao hụt...). Cột gốc đang ẩn được thêm vào cuối file Excel (chỉ Excel, không PDF)
+// để công thức luôn có ô để tham chiếu và người dùng sửa được trên Excel.
+const FORMULA_NEEDS={areaXZ:['lenX','lenZ'],areaXY:['lenX','lenY'],total:['price','quantity'],calc_total:['price','calc_qty'],mat_qty:['calc_qty','mat_waste'],mat_cost:['mat_qty','mat_price']};
+const numOrNull=v=>typeof v==='number'&&isFinite(v)?v:null;
+function calcNeeds(row){
+  const m=row.calc_method;
+  if(m==='area')return numOrNull(row.struct_area)!=null?[]:['lenX','lenZ'];
+  if(m==='length')return numOrNull(row.struct_length)!=null?[]:['lenX'];
+  if(m==='volume')return numOrNull(row.struct_volume)>0||numOrNull(row.volume)>0?[]:['lenX','lenY','lenZ'];
+  if(m==='formula')return ['lenX','lenY','lenZ'];
+  return [];
+}
+function exportColumnsFor(cols,rows){
+  const keys=new Set(cols.map(c=>c.key)),extra=[];
+  const add=k=>{if(!keys.has(k)&&colByKey(k)){keys.add(k);extra.push(k);return true;}return false;};
+  let grew=true;
+  while(grew){
+    grew=false;
+    [...keys].forEach(k=>{(FORMULA_NEEDS[k]||[]).forEach(n=>{if(add(n))grew=true;});if(k==='calc_qty')rows.forEach(r=>calcNeeds(r).forEach(n=>{if(add(n))grew=true;}));});
+  }
+  return [...cols,...extra.map(colByKey)].map((col,i)=>({col,base:i>=cols.length}));
+}
+// Dữ liệu tính của dòng gửi kèm để Ruby dựng công thức khối lượng (cùng cách tính với Quantity của Ruby).
+function exportCalc(row,counted){
+  return {method:row.calc_method||'',formula:row.calc_formula||null,unit:calcUnit(row)||'',struct_area:numOrNull(row.struct_area),struct_volume:numOrNull(row.struct_volume),struct_length:numOrNull(row.struct_length),volume:numOrNull(row.volume),counted,mat_ok:row.mat_waste!=null,mat_unit_ok:row.mat_unit_ok===true};
 }
 function exportCell(row,col,position){
   if(col.key==='ordinal')return position;
@@ -1805,8 +1913,8 @@ function exportCell(row,col,position){
   return String(cellText(row,col.key)||'');
 }
 // Xuất luôn đủ mọi món, kể cả nhóm đang thu gọn (thu gọn chỉ là cách xem trên màn hình).
-function exportRows(model){
-  const {cols,rows,sections,sumOf,countOf}=model;
+function exportRows(model,cols=model.cols){
+  const {rows,sections,sumOf,countOf,isCounted}=model;
   const labelKey=['instance','definition','entity'].find(k=>cols.some(c=>c.key===k));
   const labelIndex=Math.max(0,cols.findIndex(col=>col.key===labelKey));
   const summary=(list,text)=>cols.map((col,i)=>i===labelIndex?text:col.kind==='sum'?Number(scaledValue(col.key,sumOf(list,col.key))):null);
@@ -1815,7 +1923,7 @@ function exportRows(model){
     if(section.label!==null){
       out.push({kind:'group',cells:summary(section.rows,exportText(`${section.label} · ${countOf(section.rows)}`))});
     }
-    section.rows.forEach(row=>{position++;out.push({kind:'row',pid:row.pid||null,cells:cols.map(col=>exportCell(row,col,position))});});
+    section.rows.forEach(row=>{position++;out.push({kind:'row',pid:row.pid||null,cells:cols.map(col=>exportCell(row,col,position)),calc:exportCalc(row,isCounted(row))});});
   });
   if(tableState.showTotals)out.push({kind:'total',cells:summary(rows,exportText(`Tổng cộng · ${countOf(rows)} đối tượng`))});
   return out;
@@ -1825,9 +1933,11 @@ function exportRows(model){
 const tableWaiters=[];
 const nextTableEvent=(ms=window.tableWaitMs||20000)=>new Promise(resolve=>{let done=false;const finish=arrived=>{if(!done){done=true;resolve(arrived===true);}};tableWaiters.push(()=>finish(true));setTimeout(finish,ms);}); // true khi bảng mới tới, false khi hết thời gian chờ
 function exportLabels(){return {model:exportText('Mô hình'),preset:'Preset',date:exportText('Ngày'),print:exportText('In / Lưu PDF'),reset:exportText('Đặt lại độ rộng cột'),hint:exportText('Kéo mép tiêu đề cột để chỉnh độ rộng.')};}
-function exportSheetData(name){
+function exportSheetData(name,format){
   const model=viewModel(true);
-  return {name,columns:model.cols.map(exportColumn),rows:exportRows(model),...(tableState.rowHeight>0?{row_height:tableState.rowHeight}:{})};
+  const list=format==='xlsx'?exportColumnsFor(model.cols,model.rows):model.cols.map(col=>({col,base:false}));
+  const cols=list.map(item=>item.col);
+  return {name,columns:list.map(item=>exportColumn(item.col,item.base)),rows:exportRows(model,cols),...(tableState.rowHeight>0?{row_height:tableState.rowHeight}:{})};
 }
 let exporting=false;
 async function exportTable(format){
@@ -1835,7 +1945,7 @@ async function exportTable(format){
   ensureSheets();stashSheet();
   const base={format,title:exportText('Bảng khối lượng'),preset:tableState.preset||'',decimal_separator:workSettings().decimal_separator,labels:exportLabels()};
   if(tableState.sheets.length<2){
-    const one=exportSheetData(null);
+    const one=exportSheetData(null,format);
     return call('table_export',JSON.stringify({...base,...(one.row_height?{row_height:one.row_height}:{}),columns:one.columns,rows:one.rows}));
   }
   exporting=true;
@@ -1849,7 +1959,7 @@ async function exportTable(format){
       const changed=applySheetExclude(sheets[i]);
       if(needsProjected)ensureProjected();
       if((changed||needsProjected||relocked)&&!(await nextTableEvent()))throw new Error(`Hết thời gian chờ tính lại số đo cho sheet “${sheets[i].name}”. Hãy thử xuất lại.`); // Ruby tính lại số đo / diện tích chiếu rồi gửi bảng mới
-      out.push(exportSheetData(sheets[i].name));
+      out.push(exportSheetData(sheets[i].name,format));
     }
   }catch(error){
     failure=error.message;
@@ -1968,7 +2078,8 @@ function ioPanel(){
   // Công cụ của bảng (trước nằm trên thanh công cụ): loại trừ tag khỏi số đo, đổi tên hàng loạt, nhận mặt trước.
   const excludeCount=excludedTags().size;
   const exclude=item('preset',excludeCount?`Loại trừ tag (${excludeCount})`:'Loại trừ tag',toggleExclude);exclude.id='exclude-btn';exclude.title='Chọn các tag không tính vào Rộng / Dài / Cao';
-  const rename=item('calc','Đổi tên...',()=>{tableState.panel='rename';tableView(tableState.data);});rename.id='rename-open';rename.title='Đổi tên hàng loạt các món trong bảng';
+  const renameWin=item('calc','Đổi tên...',()=>call('open_rename'));renameWin.id='rename-window';renameWin.title='Mở cửa sổ Đổi tên riêng cho các món đang chọn trong SketchUp (vẫn dùng được khi đóng bảng)';
+  const rename=item('calc','Đổi tên theo mẫu...',()=>{tableState.panel='rename';tableView(tableState.data);});rename.id='rename-open';rename.title='Đổi tên hàng loạt các món trong bảng';
   const front=item('id','Mặt trước...',()=>{tableState.panel='front';tableView(tableState.data);});front.id='front-btn';front.title='Nhận và sửa mặt trước của món (dùng cho Rộng / Sâu và ảnh Chính diện)';
   // Ghi cách tính suy ra từ tag vào các món đang chọn (chỉ điền mục còn trống; một bước hoàn tác). Phải chọn dòng rõ ràng để không ghi hàng loạt nhầm.
   const calc=item('calc','Ghi cách tính vào món đang chọn',()=>{if(!tableState.sel.size)return message('Hãy chọn các dòng cần ghi cách tính (Ctrl+A chọn hết các dòng đang hiện).',true);call('table_commit_calc',JSON.stringify({indexes:[...tableState.sel]}));});
@@ -1997,7 +2108,7 @@ function ioPanel(){
   checksBtn.id='checks-open';checksBtn.title='Đặt luật kiểm tra riêng cho bảng (ví dụ Rộng nhỏ hơn 700 thì cảnh báo, Tầng để trống thì thông tin) rồi chạy và bấm vào kết quả để chọn món';
   const snapBtn=item('id','So sánh phiên bản...',()=>{tableState.panel='snapshots';tableState.snapshotDiff=null;tableState.snapshots=null;call('snapshot_list');tableView(tableState.data);});
   snapBtn.id='snapshots-open';snapBtn.title='Chụp mốc giá trị các món rồi so với bảng hiện tại để biết món nào thêm, xóa hoặc đổi';
-  p.append(ioSection('export','Xuất',exportItems),ioSection('table','Bảng',[exclude,rename,front]),
+  p.append(ioSection('export','Xuất',exportItems),ioSection('table','Bảng',[exclude,renameWin,rename,front]),
     ioSection('data','Mã và dữ liệu món',[calc,assignIds,fixIds,editSource,codesBtn]),
     ioSection('site','Công trình',[levelsBtn,roomsBtn]),ioSection('check','Vật liệu và kiểm tra',[materialsBtn,checksBtn,snapBtn]));
   return p;
@@ -2114,9 +2225,11 @@ function tableView(data){
 // Phần nằm chung trong một tab.
 const TAB_OF={rules:'mapping',validate_model:'mapping',validate_selection:'mapping',export:'scan',convert_selection:'information'};
 window.VGD={receive(event,data){
-  if(event==='config'){syncFile(data);document.body.classList.remove('table-mode');updateSelInfo();if(appliedLanguage&&data.language&&appliedLanguage!==data.language){location.reload();return;}appliedLanguage=data.language||'vi';VGD_I18N.setLanguage(appliedLanguage,data.vi_en);config=data;if(config.table&&!tableState.restored)restoreView({view:config.table.view,columns:config.table.columns,presets:config.table.presets});updatePresetButton();locale=data.locale||locale;$('subtitle').textContent=TAB_OF[data.mode]?`${data.version} · ${translated('modes',data.mode)}`:data.version;document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===(TAB_OF[data.mode]||data.mode);b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});$('preview').close();$('content').replaceChildren();$('primary-actions').replaceChildren();document.querySelector('main').scrollTop=0;message('Đang đọc dữ liệu…');}
+  if(event==='config'){syncFile(data);document.body.classList.remove('table-mode');updateSelInfo();if(appliedLanguage&&data.language&&appliedLanguage!==data.language){location.reload();return;}appliedLanguage=data.language||'vi';VGD_I18N.setLanguage(appliedLanguage,data.vi_en);config=data;if(config.table&&!tableState.restored&&data.window!=='tags')restoreView({view:config.table.view,columns:config.table.columns,presets:config.table.presets});updatePresetButton();locale=data.locale||locale;$('subtitle').textContent=data.window==='tags'?`${data.version} · ${translated('modes','tags')}`:TAB_OF[data.mode]?`${data.version} · ${translated('modes',data.mode)}`:data.version;document.body.classList.toggle('tags-window',data.window==='tags'); /* cửa sổ Soạn tag riêng: không có thanh tab, Preset, và không nạp trạng thái bảng (sheet khóa sẽ gọi Ruby dựng bảng đè lên Soạn tag) */document.querySelectorAll('[data-mode]').forEach(b=>{const active=b.dataset.mode===(TAB_OF[data.mode]||data.mode);b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});$('preview').close();$('content').replaceChildren();$('primary-actions').replaceChildren();document.querySelector('main').scrollTop=0;message('Đang đọc dữ liệu…');}
   if(event==='table'){tableState.manual=Array.isArray(data.row_order)?data.row_order:[];tableState.rename.preview=null;tableState.sel=new Set(Array.isArray(data.selected)?data.selected:[]);if(!tableState.sel.has(tableState.anchor))tableState.anchor=null;} // bảng đổi thì bản xem trước đổi tên cũ không còn đúng
   const renderers={information,scan,scan_pending:scanPending,mapping,validation,rules,tags:tagEditor,table:tableView};if(renderers[event]){renderers[event](data);message('Sẵn sàng.');}
+  if(event==='room_detect'){const dt=tableState.roomsDetect||(tableState.roomsDetect={cut:2400,minWidth:350,result:null,keep:new Set()});dt.result=data;dt.cut=data.cut;dt.minWidth=data.min_width;dt.keep=new Set(data.regions.map(r=>r.sig));if(tableState.panel==='rooms'&&tableState.data)tableView(tableState.data);}
+  if(event==='room_detect_done'){const dt=tableState.roomsDetect;if(dt){dt.result=null;dt.keep=new Set();}if(tableState.panel==='rooms'&&tableState.data)tableView(tableState.data);}
   if(event==='snapshots'){tableState.snapshots=data;if(tableState.panel==='snapshots'&&tableState.data)tableView(tableState.data);}
   if(event==='snapshot_diff'){tableState.snapshotDiff=data;tableState.panel='snapshots';if(tableState.data)tableView(tableState.data);}
   if(event==='check_results'){tableState.checkResults=data;tableState.panel='checks';if(tableState.data)tableView(tableState.data);}
@@ -2142,6 +2255,8 @@ window.VGD={receive(event,data){
   if(event==='preview_progress')receivePreviewProgress(data);
   if(event==='preview_done')receivePreviewDone(data);
   if(event==='image_data')receiveImageData(data);
+  if(event==='clipboard_image')receiveClipboardImage(data);
+  if(event==='paste_keys'&&imagesState.keysDone)imagesState.keysDone(!!data.ok);
   if(event==='tag_rules')receiveTagRules(data);
   if(event==='tag_auto_plan')receiveTagAutoPlan(data);
   if(event==='tag_tree')receiveTagTree(data);

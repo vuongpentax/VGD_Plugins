@@ -115,12 +115,12 @@ Làm: VGD ID, Mã đối tượng, phát hiện và sửa trùng, mở rộng Ca
 ### Cột mốc 2 — Tầng và Phòng (có khối 3D và khoanh vùng)
 
 - 2a **Tầng (Level):** danh sách tầng lưu trong model (tên, cao độ, chiều cao). Gán món vào tầng (nhãn, **không dời hình học**). Cột Tầng, nhóm theo tầng, ẩn / hiện theo tầng.
-- 2b **Phòng (Room):** phòng trong BIM là **khoảng không gian (thể tích) được bao bởi sàn, tường, trần**, không phải bản thân tường / sàn / trần (như Room của Revit, Zone của Archicad). Dữ liệu phòng do VGD_BIM quản lý: viền (đa giác), tên, mã, tầng, cao độ trần, vật liệu hoàn thiện của sàn / tường / trần, trạng thái. VGD_BIM tính **diện tích sàn, chu vi, thể tích, diện tích trần, diện tích tường hoàn thiện** (chu vi x cao, trừ ô cửa khi đã có dữ liệu cửa). **Khối 3D của phòng và khoanh vùng phòng do VGD_BIM làm** (quyết định 19/11/2026): khối là một Group trên tag riêng, đùn từ viền lên chiều cao phòng, dựng lại được và có một bước hoàn tác; vùng phòng lấy từ mặt sàn đã chọn hoặc dò từ tường (đặc tả `docs/vgd_bim/ROOM_FROM_WALLS.md`).
+- 2b **Phòng (Room):** phòng trong BIM là **khoảng không gian (thể tích) được bao bởi sàn, tường, trần**, không phải bản thân tường / sàn / trần (như Room của Revit, Zone của Archicad). Dữ liệu phòng do VGD_BIM quản lý: viền (đa giác), tên, mã, tầng, cao độ trần, vật liệu hoàn thiện của sàn / tường / trần, trạng thái. VGD_BIM tính **diện tích sàn, chu vi, thể tích, diện tích trần, diện tích tường hoàn thiện** (chu vi x cao, trừ ô cửa khi đã có dữ liệu cửa). **Khối 3D của phòng và khoanh vùng phòng do VGD_BIM làm** (quyết định 19/11/2026): khối là một Group trên tag riêng, đùn từ viền lên chiều cao phòng, dựng lại được và có một bước hoàn tác; vùng phòng lấy từ mặt sàn đã chọn hoặc dò từ tường (đặc tả `docs/vgd_bim/ROOM_FROM_WALLS.md`). Khối 3D là khung dây từ 1.1.1-beta.50; dò vùng từ tường đã làm ở 1.1.1-beta.51 (chưa kiểm chứng trong SketchUp thật).
 - 2c **Món thuộc phòng:** tự gợi ý theo vị trí (tâm đáy của món nằm trong viền phòng), người dùng xác nhận, có thể gán tay. Cột Phòng, tổng khối lượng theo phòng, Finish Schedule.
 
 ### Cột mốc 3 — Vật liệu có dữ liệu và luật khối lượng
 
-Trạng thái: 3a, 3b và hao hụt % của 3c đã làm (beta.67). Còn lại của 3c: trừ ô cửa / cửa sổ (cần quan hệ món–tường) và công thức đơn giản.
+Trạng thái: 3a, 3b và hao hụt % của 3c đã làm (beta.67). Trừ ô cửa / cửa sổ khỏi tường của phòng đã làm ở 1.1.1-beta.52 (theo tag cửa người dùng chọn, cửa ghép với phòng theo vị trí sát viền; chờ thử thật). Công thức đơn giản theo tag đã làm ở 1.1.1-beta.53 (chờ thử thật). Cột mốc 3 xong phần mã.
 
 - 3a Thư viện vật liệu (mã, tên, hãng, sản phẩm, độ dày, đơn vị, đơn giá, quy cách), lưu trên máy, nhập / xuất; nối với vật liệu SketchUp theo tên.
 - 3b Nối vật liệu → khối lượng → thành tiền.
@@ -162,14 +162,18 @@ Relationship đầy đủ (Object → Object / Room / Level / Type / Material), 
 4. ~~Phòng 3D~~ **Đảo (19/11/2026):** BIM dựng khối phòng và dò vùng phòng từ tường (xem cột mốc 2b).
 5. Cầu nối: ai gán VGD ID khi plugin dựng hình tạo đối tượng (đề xuất mục 1b điểm 3); danh bạ mở rộng từ `shared/vgd-center/catalog.json` (đã chốt hướng, còn thiết kế chi tiết).
 
+## 7b. Việc nhắc chủ dự án xử lý sau
+
+1. **Nút toolbar bật / tắt cho các plugin khác** (ghi 28/11/2026): quy tắc chung mới trong `CLAUDE.md` gốc: nút toolbar mở hộp thoại thì bấm lại để đóng. VGD BIM đã làm ở 1.1.1-beta.59. Các plugin có toolbar chưa rà: Structure, Dim, Scenes, Library, Transform, Reference, Image Importer, Cabinet Draw, Center. Khi xử lý: xem nút nào mở hộp thoại, sửa thành bật / tắt, tăng phiên bản và gửi bản thử từng plugin.
+
 ## 8. Trạng thái
 
 | Cột mốc | Trạng thái |
 |---|---|
 | 1 Danh tính và Category | **Xong ở beta.63** (1a VGD ID, 1b Mã đối tượng hàng loạt và ID trùng ở tab Kiểm tra, 1c danh mục mở rộng). Chủ dự án chốt không làm chuyển đổi dữ liệu cũ nên không đổi `schema_version`; chờ người dùng thử trong SketchUp thật |
 | 2 Tầng và Phòng | Đang làm: 2a Tầng xong (beta.64: danh sách tầng trong model, nhãn ở dictionary `VGD_BIM_LOC`, gợi ý theo cao độ). Câu hỏi mở đã chốt 12/11/2026: viền phòng lấy từ mặt sàn hoặc đa giác đóng được chọn (dò tường làm sau); tầng gợi ý theo Z rồi người dùng xác nhận; khối phòng do plugin dựng (chỉ khối; đã gỡ, xem dưới), dữ liệu và diện tích do VGD_BIM tính. 2b dữ liệu xong ở beta.65 (danh sách phòng trong model, viền đọc từ mặt sàn, diện tích / chu vi / thể tích / tường / trần, gán món theo vị trí). `VGD_Room` 0.1.0-beta.1 dựng khối phòng và cầu nối `room_volume` xong ở beta.66; **đã gỡ ở 1.1.1-beta.10** theo quyết định ngày 18/11/2026. Việc dò viền phòng từ tường chuyển sang VGD Structure (quyết định ngày 18/11/2026). Còn: lệnh `edit` có giao diện riêng |
-| 2c Phòng nhiều mặt (đã làm, chờ thử thật) | BIM 1.1.1-beta.3: tạo nhiều phòng từ nhiều mặt sàn đã chọn, phòng có lỗ (cột). Phần dựng khối (VGD Room) đã gỡ ở beta.10. **Việc dò viền phòng từ tường đã chuyển sang VGD Structure** (quyết định ngày 18/11/2026), BIM không làm bước này. Nhãn và màu theo loại phòng vẫn chờ, chưa rõ ai làm. |
-| 3 Vật liệu và luật khối lượng | Làm một phần: 3a, 3b và hao hụt % của 3c (beta.67). Còn: trừ ô cửa / cửa sổ khỏi tường (cần quan hệ món–tường), công thức đơn giản |
+| 2c Phòng nhiều mặt (đã làm, chờ thử thật) | BIM 1.1.1-beta.3: tạo nhiều phòng từ nhiều mặt sàn đã chọn, phòng có lỗ (cột). Phần dựng khối (VGD Room) đã gỡ ở beta.10 rồi **nhập lại vào BIM ở beta.13** (khung dây từ beta.50). **Dò viền phòng từ tường do BIM làm** (quyết định 19/11/2026 đảo quyết định 18/11/2026; làm ở beta.51, chờ thử thật). Nhãn và màu theo loại phòng vẫn chờ, chưa rõ ai làm. |
+| 3 Vật liệu và luật khối lượng | Làm một phần: 3a, 3b và hao hụt % của 3c (beta.67); trừ ô cửa / cửa sổ khỏi tường của phòng (1.1.1-beta.52, theo tag cửa) và công thức đơn giản theo tag (1.1.1-beta.53); xong phần mã, chờ thử thật |
 | 4 Schedule, Audit, Validation | Làm một phần: 4a (preset có sẵn), 4b (báo thiếu VGD ID, gán hàng loạt, beta.69), 4c (luật kiểm tra, beta.70). Còn: Fix All cho lỗi khác, điều kiện lọc theo nhóm món |
 | 5 Type, Classification, so sánh phiên bản | Làm một phần: 5c so sánh phiên bản (beta.71), preset Tủ. Còn: 5a Type / Instance, 5b Classification. Không làm VGD_Cabinet (18/11/2026) |
 

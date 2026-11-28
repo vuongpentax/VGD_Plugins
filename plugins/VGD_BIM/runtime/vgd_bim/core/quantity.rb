@@ -10,7 +10,10 @@ module VGD
       METHODS = %w[count area length volume none].freeze
       SCHEMA_UNIT = {'count' => 'pcs', 'area' => 'm2', 'length' => 'm', 'volume' => 'm3'}.freeze
       FILE = 'tag_quantity'.freeze
-      LABELS = {'count' => 'theo cái', 'area' => 'theo diện tích', 'length' => 'theo mét dài', 'volume' => 'theo thể tích', 'none' => 'không tính'}.freeze
+      LABELS = {'count' => 'theo cái', 'area' => 'theo diện tích', 'length' => 'theo mét dài', 'volume' => 'theo thể tích', 'none' => 'không tính', 'formula' => 'theo công thức'}.freeze
+      # Công thức do người dùng đặt cho tag (core/formula.rb): chỉ đặt được theo tag, kết quả mang đơn vị người dùng chọn (mã đơn vị của schema).
+      FORMULA = 'formula'.freeze
+      FORMULA_UNITS = (Schema::UNITS - ['none']).freeze
 
       # Nhóm tag (18 cụm Auto Tag) => [hạng mục, cách tính]. Nhóm chỉ để định hướng: tag nào khác ý thì đổi riêng theo tag.
       GROUP_DEFAULTS = {
@@ -45,6 +48,7 @@ module VGD
         from_item = item_method(item[:quantity_method])
         return {category: category, method: from_item, source: 'item'} if from_item
         own = overrides[key(tag)]
+        return {category: category, method: FORMULA, source: 'tag', formula: own['formula'], unit: own['unit']} if own.is_a?(Hash)
         return {category: category, method: own, source: 'tag'} if METHODS.include?(own)
         word = key(tag).split(/[^a-z0-9]+/).find { |token| KEYWORDS.key?(token) }
         return {category: category, method: KEYWORDS.fetch(word), source: 'keyword'} if word
@@ -93,27 +97,56 @@ module VGD
         found = resolve(tag, group, item, overrides)
         kind_method = StructureSource.default_method(row[:struct_kind]) if defined?(StructureSource)
         found = found.merge(method: kind_method, source: 'structure') if kind_method && found[:source] == 'default' # phần tử của VGD Structure không có tag cho biết cách tính
-        qty, note = amount(found[:method], row)
+        qty, note = found[:method] == FORMULA ? formula_amount(found[:formula], row) : amount(found[:method], row)
         price = number(row[:price])
         {calc_category: found[:category], calc_method: found[:method], calc_source: found[:source], calc_qty: qty,
-         calc_total: price && qty ? (price * qty).round(2) : nil, calc_note: note}
+         calc_total: price && qty ? (price * qty).round(2) : nil, calc_note: note,
+         calc_unit: found[:method] == FORMULA ? found[:unit] : SCHEMA_UNIT[found[:method]], calc_formula: found[:formula]}
+      end
+
+      # Khối lượng theo công thức: Rộng / Sâu / Cao là mét (lenX / lenY / lenZ), Diện tích và Thể tích lấy như cách tính theo diện tích / thể tích
+      # (có thể là ước tính theo khối bao). Cây phép tính nhớ theo chữ công thức để không đọc lại ở mỗi dòng.
+      def self.formula_amount(text, row)
+        @trees ||= {}
+        @trees.clear if @trees.size > 200
+        tree = @trees[text] ||= Formula.parse!(text)
+        metre = ->(key) { number(row[key]) && row[key] / 1000.0 }
+        area = amount('area', row)
+        volume = amount('volume', row)
+        qty, note = Formula.evaluate(tree, {w: metre.call(:lenX), d: metre.call(:lenY), h: metre.call(:lenZ), area: area[0], volume: volume[0]})
+        rough = [(area[1] if Formula.variables(tree).include?(:area)), (volume[1] if Formula.variables(tree).include?(:volume))].compact.uniq
+        [qty, note || rough.first]
+      rescue ArgumentError => error
+        [nil, error.message]
       end
 
       # ---- Ghi đè theo tag (lưu trên máy, dùng cho mọi model) ----
       def self.overrides
         raw = Storage.read(FILE)
         tags = raw.is_a?(Hash) && raw['tags'].is_a?(Hash) ? raw['tags'] : {}
-        tags.each_with_object({}) { |(name, method), out| out[name.to_s] = method if METHODS.include?(method) }
+        tags.each_with_object({}) do |(name, method), out|
+          if METHODS.include?(method) then out[name.to_s] = method
+          elsif method.is_a?(Hash) && (clean = formula_override(method['formula'], method['unit']) rescue nil) then out[name.to_s] = clean
+          end
+        end
       end
 
-      # method rỗng nghĩa là bỏ ghi đè của tag (về theo từ khóa / nhóm).
-      def self.set_override(tag, method)
+      # Ghi đè bằng công thức: kiểm tra công thức và đơn vị, trả về mục lưu được.
+      def self.formula_override(formula, unit)
+        Formula.parse!(formula)
+        raise ArgumentError, 'Đơn vị của công thức không hợp lệ.' unless FORMULA_UNITS.include?(unit)
+        {'method' => FORMULA, 'formula' => formula.strip, 'unit' => unit}
+      end
+
+      # method rỗng nghĩa là bỏ ghi đè của tag (về theo từ khóa / nhóm). method 'formula' cần formula (chữ công thức) và unit (mã đơn vị).
+      def self.set_override(tag, method, formula: nil, unit: nil)
         name = key(tag)
         raise ArgumentError, 'Món chưa có tag nên không đặt cách tính theo tag được. Hãy gắn tag trước.' if name.empty?
         method = method.to_s
-        raise ArgumentError, 'Cách tính không hợp lệ.' unless method.empty? || METHODS.include?(method)
+        raise ArgumentError, 'Cách tính không hợp lệ.' unless method.empty? || METHODS.include?(method) || method == FORMULA
+        entry = method == FORMULA ? formula_override(formula, unit) : method
         current = overrides
-        method.empty? ? current.delete(name) : current[name] = method
+        method.empty? ? current.delete(name) : current[name] = entry
         Storage.write(FILE, {'tags' => current})
         current
       end
@@ -124,6 +157,8 @@ module VGD
         values[:category] = derived[:category] if item[:category].to_s.empty?
         if derived[:method] == 'none'
           values[:include_boq] = false unless has_data # món đã có dữ liệu thì không đổi ý người dùng về BOQ
+        elsif derived[:method] == FORMULA # schema không có cách tính "công thức": chỉ ghi đơn vị
+          values[:unit] = derived[:unit] if item[:unit].to_s.empty? && FORMULA_UNITS.include?(derived[:unit])
         else
           values[:quantity_method] = derived[:method] if item[:quantity_method].to_s.empty?
           values[:unit] = SCHEMA_UNIT.fetch(derived[:method]) if item[:unit].to_s.empty?

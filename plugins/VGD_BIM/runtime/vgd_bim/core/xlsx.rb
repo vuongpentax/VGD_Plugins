@@ -1,5 +1,6 @@
 require 'zlib'
 require 'cgi'
+require_relative 'xlsx_formulas'
 
 module VGD
   module BIM
@@ -179,11 +180,14 @@ module VGD
         pictures = []   # {pid, col, row, w, h, dx, dy} (px)
         hyperlinks = []
         row_points = image_row_points(report)
+        sheet = XlsxFormulas::Sheet.new(columns)
+        numbers = report[:rows].each_index.map { |n| first_data + n } # số dòng Excel của từng dòng báo cáo
         row_number = first_data - 1
-        report[:rows].each do |row|
+        report[:rows].each_with_index do |row, position|
           row_number += 1
           cells = []
           height = nil
+          formulas = formulas_for(sheet, report[:rows], numbers, position)
           columns.each_with_index do |col, i|
             value = row[:cells][i]
             base = {border: row[:kind] == 'total' ? 2 : 1, fill: row[:kind] == 'row' ? 0 : (row[:kind] == 'group' ? 3 : 2), font: row[:kind] == 'row' ? Styles::FONT_NORMAL : Styles::FONT_BOLD}
@@ -196,6 +200,8 @@ module VGD
               fit = fit_image(image[:width], image[:height], image_box(report, col_px, row_points))
               pictures << {pid: image[:key], col: i, row: row_number - 1, w: fit[0], h: fit[1], dx: [(col_px - fit[0]) / 2, 0].max, dy: [(row_px(row_points) - fit[1]) / 2, 0].max}
               height = row_points
+            elsif formulas[i]
+              cells << formula_cell(row_number, i, formulas[i], value, styles.xf(**base, format: number_format(col[:digits]), h: 'right'))
             elsif value.is_a?(Numeric) && col[:type] == 'ordinal'
               cells << number_cell(row_number, i, value, styles.xf(**base, h: 'center'))
             elsif value.is_a?(Numeric)
@@ -213,6 +219,30 @@ module VGD
         last_row = [row_number, first_data].max
         {xml: sheet_xml(report, columns, sheet_rows, header_row, first_data, last_row, hyperlinks, !pictures.empty?), header_row: header_row, title_last: header_row + (units_row ? 1 : 0),
          pictures: pictures, hyperlinks: hyperlinks}
+      end
+
+      # Công thức Excel của một dòng báo cáo ({số cột => công thức}): dòng món theo cách tính, dòng nhóm / tổng là SUBTOTAL của các dòng nó cộng
+      # (nhóm: các dòng món ngay sau nó tới nhóm kế tiếp; tổng: mọi dòng món), chỉ ở cột cộng được (XlsxFormulas::SUM_KEYS); Khối lượng tính
+      # (giao diện không gửi tổng vì có thể khác đơn vị) có công thức khi các dòng cùng đơn vị.
+      def self.formulas_for(sheet, rows, numbers, position)
+        row = rows[position]
+        return XlsxFormulas.row_formulas(sheet, row[:calc], numbers[position]) if row[:kind] == 'row'
+        members = if row[:kind] == 'group'
+                    rows[(position + 1)..].take_while { |r| r[:kind] == 'row' }.each_with_index.map { |r, k| [numbers[position + 1 + k], r[:calc]] }
+                  else
+                    rows.each_with_index.select { |r, _k| r[:kind] == 'row' }.map { |r, k| [numbers[k], r[:calc]] }
+                  end
+        row[:cells].each_index.each_with_object({}) do |i, out|
+          key = sheet.key_at(i)
+          next unless key && !row[:cells][i].is_a?(String) # ô chữ (nhãn nhóm) giữ nguyên
+          formula = XlsxFormulas.summary_formula(sheet, key, members)
+          out[i] = formula if formula
+        end
+      end
+
+      def self.formula_cell(row, col, formula, value, style)
+        cached = value.is_a?(Numeric) ? "<v>#{value.is_a?(Integer) ? value : format('%.12g', value.to_f)}</v>" : ''
+        %(<c r="#{column_letter(col)}#{row}" s="#{style}"><f>#{xml_text(formula)}</f>#{cached}</c>)
       end
 
       # Tên sheet hợp lệ cho Excel (bỏ ký tự cấm, tối đa 31 ký tự), không trùng nhau (không phân biệt hoa thường): trùng thì thêm " (2)", " (3)".
@@ -334,7 +364,7 @@ module VGD
           %(<definedName name="_xlnm.Print_Titles" localSheetId="#{i}">#{xml_text(quoted)}!$#{title_rows[i][0]}:$#{title_rows[i][1]}</definedName>)
         end.join
         %(<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="#{NS_MAIN}" xmlns:r="#{NS_REL}"><bookViews><workbookView/></bookViews>) +
-          %(<sheets>#{sheets}</sheets><definedNames>#{titles}</definedNames></workbook>)
+          %(<sheets>#{sheets}</sheets><definedNames>#{titles}</definedNames><calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>)
       end
 
       # has_pictures: mảng theo từng sheet, true nếu sheet đó có bản vẽ ảnh.

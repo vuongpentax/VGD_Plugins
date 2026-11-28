@@ -1,11 +1,12 @@
 module VGD
   module BIM
-    # Khối 3D của phòng (nhập từ VGD_Room vào VGD_BIM, 1.1.1-beta.13): mặt ở cao độ sàn theo viền, đùn lên đúng chiều cao.
-    # Khối là một Group trên tag VGD_ROOMS, vật liệu trong suốt; mang VGD_BIM_ID.guid (VGD ID, dựng lại thì giữ ID cũ)
-    # và VGD_BIM_SOURCE (kind = room, ref = mã phòng). Khối do VGD_Room bản cũ dựng cũng được nhận diện qua kind / ref.
+    # Khối 3D của phòng (nhập từ VGD_Room vào VGD_BIM, 1.1.1-beta.13): từ 1.1.1-beta.50 là KHUNG DÂY (chỉ có cạnh, không có mặt) để mặt cắt
+    # (section plane) của SketchUp không bị khối đặc tô kín hay cắt: viền sàn, viền trần và cạnh đứng ở mỗi góc (cả viền các lỗ).
+    # Khối là một Group trên tag VGD_ROOMS; mang VGD_BIM_ID.guid (VGD ID, dựng lại thì giữ ID cũ)
+    # và VGD_BIM_SOURCE (kind = room, ref = mã phòng). Khối đặc do bản cũ dựng cũng được nhận diện qua kind / ref và bị thay bằng khung dây khi dựng lại.
     module RoomVolume
       TAG = 'VGD_ROOMS'.freeze
-      MATERIAL = 'VGD_Room'.freeze
+      TAG_COLOR = [110, 160, 210].freeze # màu tag VGD_ROOMS khi mới tạo (hiện khi bật Tô màu theo tag); tag đã có thì giữ màu của người dùng
       ID_DICTIONARY = 'VGD_BIM_ID'.freeze
       SOURCE_DICTIONARY = 'VGD_BIM_SOURCE'.freeze
       MM_PER_INCH = 25.4
@@ -62,16 +63,26 @@ module VGD
         nil
       end
 
-      def self.material_for(model)
-        material = model.materials[MATERIAL]
-        return material if material
-        material = model.materials.add(MATERIAL)
-        material.color = [110, 160, 210]
-        material.alpha = 0.25
-        material
+      # Tag VGD_ROOMS; mới tạo thì đặt màu xanh nhạt, đã có thì giữ nguyên màu.
+      def self.tag_for(model)
+        existed = model.layers.to_a.any? { |layer| layer.name == TAG }
+        layer = model.layers.add(TAG)
+        layer.color = TAG_COLOR unless existed
+        layer
+      end
+
+      # Khung dây của một vòng (viền ngoài hoặc viền lỗ): viền ở sàn, viền ở trần và cạnh đứng ở mỗi góc. Trả về số cạnh dự kiến.
+      def self.add_wire(entities, ring, z_floor, z_top)
+        floor = ring.map { |x, y| Geom::Point3d.new(x / MM_PER_INCH, y / MM_PER_INCH, z_floor) }
+        ceiling = ring.map { |x, y| Geom::Point3d.new(x / MM_PER_INCH, y / MM_PER_INCH, z_top) }
+        entities.add_edges(floor + [floor.first])
+        entities.add_edges(ceiling + [ceiling.first])
+        floor.each_index { |i| entities.add_line(floor[i], ceiling[i]) }
+        ring.size * 3
       end
 
       # Dựng một khối phòng BÊN TRONG thao tác đang mở (không tự mở / đóng thao tác). Dữ liệu đã được kiểm tra. Trả về Group.
+      # Khối chỉ có cạnh: nếu SketchUp tự tạo mặt từ các cạnh khép kín thì xóa mặt; không còn đủ cạnh thì báo lỗi (thao tác bị hủy, khối cũ còn nguyên).
       def self.create_volume(model, room, vgd_id)
         old = find(model, room['id'])
         kept_id = ''
@@ -81,15 +92,14 @@ module VGD
           old.erase!
         end
         group = model.entities.add_group
-        z = room['elevation'] / MM_PER_INCH
-        to_points = ->(ring) { ring.map { |x, y| Geom::Point3d.new(x / MM_PER_INCH, y / MM_PER_INCH, z) } }
-        face = group.entities.add_face(to_points.call(room['boundary']))
-        Array(room['holes']).each { |ring| group.entities.add_face(to_points.call(ring)).erase! } # mặt trong viền lỗ bị xóa: để lại lỗ trên mặt sàn
-        face.reverse! if face.normal.z < 0 # đùn theo pháp tuyến: mặt phải hướng lên
-        face.pushpull(room['height'] / MM_PER_INCH)
+        z_floor = room['elevation'] / MM_PER_INCH
+        z_top = z_floor + room['height'] / MM_PER_INCH
+        expected = ([room['boundary']] + Array(room['holes'])).sum { |ring| add_wire(group.entities, ring, z_floor, z_top) }
+        faces = group.entities.grep(Sketchup::Face)
+        group.entities.erase_entities(faces) unless faces.empty?
+        raise 'Không tạo được khung dây của phòng (SketchUp không giữ đủ cạnh).' if group.entities.grep(Sketchup::Edge).size < expected
         group.name = label(room)
-        group.layer = model.layers.add(TAG)
-        group.material = material_for(model)
+        group.layer = tag_for(model)
         group.set_attribute(ID_DICTIONARY, 'guid', kept_id.match?(GUID) ? kept_id : vgd_id)
         group.set_attribute(SOURCE_DICTIONARY, 'plugin', 'vgd_bim')
         group.set_attribute(SOURCE_DICTIONARY, 'plugin_version', BIM::VERSION)
