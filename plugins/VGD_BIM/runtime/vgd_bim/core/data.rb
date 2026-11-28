@@ -19,12 +19,14 @@ module VGD
         begin
           result = yield
           model.commit_operation
+          @serial = serial + 1 # số lần ghi đã xong, để cửa sổ khác biết model vừa đổi (Dialog#safely của cửa sổ Soạn tag)
           result
         rescue StandardError
           model.abort_operation
           raise
         end
       end
+      def self.serial; @serial || 0; end
       def self.write(entity, values, source)
         raise ArgumentError, 'Đối tượng không hỗ trợ dữ liệu VGD hoặc không còn tồn tại.' unless supported?(entity) && entity.valid?
         raise ArgumentError, 'Đối tượng đang bị khóa.' if entity.locked?

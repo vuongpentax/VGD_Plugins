@@ -24,6 +24,7 @@ module VGD
       @presets ||= JSON.parse(File.read(File.join(ROOT, 'config', 'presets.json'), encoding: 'UTF-8'))
     end
     def self.open_panel(mode)
+      return open_tags if mode == 'tags' # Soạn tag nằm ở cửa sổ riêng
       if @panel && !@panel.closed?
         @panel.switch_mode(mode)
       else
@@ -36,15 +37,23 @@ module VGD
       @rename = UI::RenameWindow.new if @rename.nil? || @rename.closed?
       @rename.show
     end
-    # Cửa sổ Đổi tên vừa đổi tên các món: Bảng khối lượng đang mở thì đọc lại để hiện tên mới.
-    def self.names_changed
-      @panel.names_changed if @panel && !@panel.closed?
+    # Cửa sổ Soạn tag riêng (ui/dialog.rb với kind :tags): mở từ menu, thanh công cụ, vẫn dùng được khi đã đóng cửa sổ chính.
+    def self.open_tags
+      @tags = UI::Dialog.new('tags', :tags) if @tags.nil? || @tags.closed?
+      @tags.show
+    end
+    # Cửa sổ Đổi tên / Soạn tag vừa ghi vào model: Bảng khối lượng đang mở thì đọc lại để hiện tên, tag mới.
+    # Gom các lần ghi liên tiếp (đổ tag nhiều lần) thành một lần đọc lại.
+    def self.model_edited
+      return unless @panel && !@panel.closed?
+      ::UI.stop_timer(@edit_timer) if @edit_timer
+      @edit_timer = ::UI.start_timer(0.3, false) { @edit_timer = nil; @panel.reload_table if @panel && !@panel.closed? }
     end
     # Nạp lại toàn bộ code của plugin mà không cần mở lại SketchUp.
     # Dùng sau khi cài đè bản mới (.rbz). Menu và thanh công cụ giữ như cũ cho tới lần mở SketchUp sau.
     # Kiểm tra cú pháp cả bộ file trước: có lỗi thì giữ nguyên bản đang chạy.
     def self.reload
-      busy = @panel && !@panel.closed? && @panel.busy_reason # đang chụp ảnh / vẽ khung: không nạp lại, để người dùng chờ xong
+      busy = [@panel, @tags].find { |window| window && !window.closed? && window.busy_reason }&.busy_reason # đang chụp ảnh / vẽ khung: không nạp lại, để người dùng chờ xong
       if busy
         ::UI.messagebox("Tải lại thất bại: VGD BIM #{busy}.\n\nHãy chờ xong rồi tải lại code.")
         return false
@@ -55,7 +64,8 @@ module VGD
       loading = true # từ đây lỗi nghĩa là đã nạp dở, không còn "giữ nguyên bản đang chạy"
       reopen = @panel && !@panel.closed?
       reopen_rename = @rename && !@rename.closed?
-      [reopen && @panel, reopen_rename && @rename].each do |window|
+      reopen_tags = @tags && !@tags.closed?
+      [reopen && @panel, reopen_rename && @rename, reopen_tags && @tags].each do |window|
         next unless window
         begin
           window.close
@@ -65,6 +75,7 @@ module VGD
       end
       @panel = nil
       @rename = nil
+      @tags = nil
       @presets = nil
       @log_counts = Hash.new(0)
       verbose = $VERBOSE
@@ -76,6 +87,7 @@ module VGD
       end
       open_panel('table') if reopen
       open_rename if reopen_rename
+      open_tags if reopen_tags
       ::UI.messagebox("Đã tải lại VGD BIM #{VERSION}.")
       true
     rescue ScriptError, StandardError => error
@@ -90,6 +102,7 @@ unless file_loaded?(__FILE__)
   vgd_menu = ::VGD.menu.add_submenu('VGD BIM')
   vgd_menu.add_item('Mở bảng khối lượng') { VGD::BIM.open_panel('table') }
   vgd_menu.add_item('Đổi tên') { VGD::BIM.open_rename }
+  vgd_menu.add_item('Soạn tag') { VGD::BIM.open_tags }
   vgd_menu.add_item('Tải lại code') { VGD::BIM.reload }
   ::UI.add_context_menu_handler do |context|
     if Sketchup.active_model.selection.any? { |e| VGD::BIM::Data.supported?(e) }
@@ -102,6 +115,15 @@ unless file_loaded?(__FILE__)
   command.status_bar_text = 'VGD_BIM: mở bảng khối lượng của đối tượng đang chọn'
   command.small_icon = command.large_icon = File.join(VGD::BIM::ROOT, 'assets', 'icons', 'information.svg')
   toolbar.add_item(command)
+  # Hai cửa sổ dùng nhiều: Đổi tên và Soạn tag (icon assets/icons/rename.svg, tag.svg theo chuẩn icon VGD).
+  [['VGD_BIM_Rename', 'VGD_BIM · Đổi tên', 'VGD_BIM: đổi tên các group / component đang chọn', 'rename', -> { VGD::BIM.open_rename }],
+   ['VGD_BIM_Tags', 'VGD_BIM · Soạn tag', 'VGD_BIM: soạn, gán và quản lý tag', 'tag', -> { VGD::BIM.open_tags }]].each do |name, tip, status, icon, action|
+    item = ::UI::Command.new(name) { action.call }
+    item.tooltip = tip
+    item.status_bar_text = status
+    item.small_icon = item.large_icon = File.join(VGD::BIM::ROOT, 'assets', 'icons', "#{icon}.svg")
+    toolbar.add_item(item)
+  end
   toolbar.restore
   file_loaded(__FILE__)
 end

@@ -27,8 +27,8 @@ module UI
     def visible?; false; end
     def show; end
   end
-  class Toolbar; def initialize(n); @name = n; end; def add_item(*); end; def restore; end; end
-  class Command; attr_accessor :tooltip, :status_bar_text, :small_icon, :large_icon; def initialize(n, &b); @name = n; end; end
+  class Toolbar; attr_reader :items; def initialize(n); @name = n; @items = []; ($toolbars ||= []) << self; end; def add_item(c); @items << c; end; def restore; end; end
+  class Command; attr_accessor :tooltip, :status_bar_text, :small_icon, :large_icon; attr_reader :block; def initialize(n, &b); @name = n; @block = b; end; end
   class MenuNode
     attr_reader :name, :items, :subs
     def initialize(name); @name = name; @items = []; @subs = {}; end
@@ -51,7 +51,7 @@ loader = File.expand_path('../runtime/vgd_bim/loader.rb', __dir__)
 $opened = []
 require loader rescue (puts "load error: #{$!.class}: #{$!.message}"; raise)
 vgd = UI::MENU_ROOT['Extensions'].subs['VGD'].subs['VGD BIM']
-ok('menu Extensions > VGD > VGD BIM: Mở bảng khối lượng, Đổi tên và Tải lại code', vgd && vgd.items.map(&:first) == ['Mở bảng khối lượng', 'Đổi tên', 'Tải lại code'])
+ok('menu Extensions > VGD > VGD BIM: Mở bảng khối lượng, Đổi tên, Soạn tag và Tải lại code', vgd && vgd.items.map(&:first) == ['Mở bảng khối lượng', 'Đổi tên', 'Soạn tag', 'Tải lại code'])
 ok('menu VGD BIM không có submenu', vgd && vgd.subs.empty?)
 VGD::BIM.define_singleton_method(:open_panel) { |mode| $opened << mode }
 vgd.items.find { |n, _| n == 'Mở bảng khối lượng' }[1].call
@@ -59,6 +59,17 @@ ok('bấm Mở bảng khối lượng mở thẳng bảng khối lượng', $ope
 VGD::BIM.define_singleton_method(:open_rename) { $opened << 'rename' }
 vgd.items.find { |n, _| n == 'Đổi tên' }[1].call
 ok('bấm Đổi tên mở cửa sổ Đổi tên riêng', $opened == ['table', 'rename'])
+VGD::BIM.define_singleton_method(:open_tags) { $opened << 'tags' }
+vgd.items.find { |n, _| n == 'Soạn tag' }[1].call
+ok('bấm Soạn tag mở cửa sổ Soạn tag riêng', $opened.last == 'tags')
+buttons = $toolbars.first.items
+ok('thanh công cụ VGD BIM: Bảng khối lượng, Đổi tên, Soạn tag', buttons.map(&:tooltip) == ['VGD_BIM · Bảng khối lượng', 'VGD_BIM · Đổi tên', 'VGD_BIM · Soạn tag'])
+ok('mỗi nút có file icon SVG có thật', buttons.all? { |b| b.small_icon == b.large_icon && b.small_icon.end_with?('.svg') && File.file?(b.small_icon) })
+$opened.clear
+buttons[1].block.call
+buttons[2].block.call
+ok('bấm nút Đổi tên / Soạn tag trên thanh công cụ mở đúng cửa sổ', $opened == ['rename', 'tags'])
+VGD::BIM.singleton_class.send(:remove_method, :open_tags)
 ok('phiên bản theo chuẩn repo x.y.z hoặc x.y.z-beta.N, không có chữ v', VGD::BIM::VERSION.match?(/\A\d+\.\d+\.\d+(-beta\.\d+)?\z/))
 # Tải lại code: thành công, và lỗi cú pháp được chặn trước khi nạp (giữ nguyên bản đang chạy).
 reload_item = vgd.items.find { |n, _| n == 'Tải lại code' }
@@ -88,6 +99,7 @@ class RenameStub
   def initialize; @closes = 0; end
   def closed?; @closes > 0; end
   def close; @closes += 1; end
+  def busy_reason; nil; end
 end
 VGD::BIM.singleton_class.send(:remove_method, :open_rename)
 stub = RenameStub.new
@@ -99,6 +111,11 @@ VGD::BIM.instance_variable_set(:@rename, nil)
 $dialogs.clear
 VGD::BIM.reload
 ok('tải lại khi cửa sổ Đổi tên đang đóng: không tự mở', $dialogs.empty?)
+VGD::BIM.instance_variable_set(:@tags, RenameStub.new)
+$dialogs.clear
+VGD::BIM.reload
+ok('tải lại: đóng rồi mở lại cửa sổ Soạn tag đang mở', $dialogs == ['VGD BIM · Soạn tag'])
+VGD::BIM.instance_variable_set(:@tags, nil)
 loaded.clear
 orig_compile = RubyVM::InstructionSequence.method(:compile_file)
 RubyVM::InstructionSequence.define_singleton_method(:compile_file) do |path, *rest|

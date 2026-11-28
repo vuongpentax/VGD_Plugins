@@ -72,10 +72,10 @@ module VGD
     VERSION = '9.9.9-test'.freeze
     ROOT = ::ROOT
     $logs = []
-    $names_changed = 0
+    $model_edited = 0
     $transactions = []
     def self.log(message); $logs << message; end
-    def self.names_changed; $names_changed += 1; end
+    def self.model_edited; $model_edited += 1; end
     module Settings; def self.read; {'language' => 'vi'}; end; end
     module Data
       def self.supported?(e); e.is_a?(Sketchup::Group) || e.is_a?(Sketchup::ComponentInstance); end
@@ -171,7 +171,7 @@ dialog.trigger('rename_apply', JSON.generate({'changes' => [{'id' => 1, 'name' =
 ok('áp dụng: đổi tên các món, một bước hoàn tác', a.name == 'Tủ bếp trên 01' && b.name == 'Tủ bếp trên 02' && $transactions == ['VGD_BIM · Đổi tên'])
 ok('không bật Ẩn: món vẫn hiện, vẫn được chọn', !a.hidden && model.selection.include?(a))
 ok('áp dụng xong: gửi lại danh sách với tên mới, báo kết quả, Bảng khối lượng đọc lại',
-   events(dialog, 'items').last['items'].first['name'] == 'Tủ bếp trên 01' && events(dialog, 'applied').last['text'].start_with?('Đã đổi tên 2 món.') && $names_changed == 1)
+   events(dialog, 'items').last['items'].first['name'] == 'Tủ bếp trên 01' && events(dialog, 'applied').last['text'].start_with?('Đã đổi tên 2 món.') && $model_edited == 1)
 dialog.trigger('rename_apply', JSON.generate({'changes' => [{'id' => 1, 'name' => 'Tủ A'}], 'hide' => true}))
 UI.run_timers
 ok('bật Ẩn: món vừa đổi tên bị ẩn và rời vùng chọn, danh sách còn món chưa đổi',

@@ -47,7 +47,7 @@ const PNG1='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAA
 
   // ---- Thanh đầu và điều hướng ----
   await receive('config',config('table'));await receive('table',table());
-  ok(await page.locator('nav button').count()===5,'điều hướng còn 5 tab (đã bỏ tab Hình ảnh và Cài đặt)');
+  ok(await page.locator('nav button').count()===4,'điều hướng còn 4 tab (đã bỏ tab Hình ảnh, Cài đặt; Soạn tag thành cửa sổ riêng)');
   const order=await page.locator('.header-actions > *').evaluateAll(els=>els.map(e=>e.id));
   ok(JSON.stringify(order)==='["preset-btn","theme","gear"]','thanh đầu: nút preset đứng cạnh nút Sáng/Tối, rồi bánh răng');
   ok((await page.locator('#preset-btn').innerText()).trim()==='Preset: Tất cả','nút preset ghi tên preset đang dùng');

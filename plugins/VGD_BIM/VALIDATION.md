@@ -2,7 +2,17 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.56: đã kiểm tra tự động
+## Bản 1.1.1-beta.57: đã kiểm tra tự động
+
+Beta.57: Soạn tag thành cửa sổ riêng (`UI::Dialog.new('tags', :tags)`, `VGD::BIM.open_tags`), thanh công cụ có thêm nút Đổi tên / Soạn tag (`assets/icons/rename.svg`, `tag.svg`), menu có mục Soạn tag; ghi ở cửa sổ Soạn tag / Đổi tên báo `VGD::BIM.model_edited` để Bảng khối lượng đọc lại (gom bằng hẹn giờ 0,3 giây).
+
+- `dev/test_loader_menu.rb`: menu có Soạn tag; thanh công cụ có ba nút đúng thứ tự, mỗi nút có file icon SVG có thật, bấm mở đúng cửa sổ; tải lại code đóng rồi mở lại cửa sổ Soạn tag đang mở.
+- `dev/test_dialog.rb` (qua `test_bim.rb`): lệnh cũ mở Soạn tag tạo cửa sổ riêng, không chuyển cửa sổ chính, không tạo cửa sổ thứ hai, cửa sổ Soạn tag không chuyển sang chức năng khác; hai lần ghi ở cửa sổ Soạn tag làm bảng đọc lại đúng một lần, cửa sổ chính không tự báo.
+- `dev/test_ui.cjs`: cửa sổ chính có 4 tab, không còn Soạn tag; cửa sổ Soạn tag ẩn thanh tab và nút Preset.
+
+**Chưa xác minh trong SketchUp thật:** hai nút mới trên thanh công cụ (chỉ hiện sau khi mở lại SketchUp; icon SVG ở cỡ nhỏ / lớn), hai cửa sổ mở cùng lúc (vị trí, cỡ được nhớ riêng), công cụ hút / đổ tag chạy từ cửa sổ riêng, bảng tự đọc lại sau khi gán / đổ tag.
+
+## Bản 1.1.1-beta.56 (trước đó)
 
 Beta.56: cửa sổ Đổi tên có Chọn sâu, bấm dòng chọn món trong SketchUp, ô nhập Tiền tố / Tên / Hậu tố đổi ngay. `ui/rename_window.rb` nhớ các món gốc người dùng chọn (`@roots`), dựng danh sách từ đó (sâu: duyệt định nghĩa, bỏ món đang ẩn, mỗi món một dòng, đánh dấu món trong định nghĩa có nhiều bản sao), bỏ qua lựa chọn do chính cửa sổ đặt (`@own_pick`).
 

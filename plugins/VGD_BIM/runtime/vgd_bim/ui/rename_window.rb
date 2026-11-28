@@ -195,7 +195,7 @@ module VGD
             @model.selection.remove(entities)
           end
           push_items
-          BIM.names_changed
+          BIM.model_edited
           text = "Đã đổi tên #{targets.size} món"
           text += hide ? ' và ẩn đi (Edit > Unhide để hiện lại).' : '.'
           emit('applied', {count: targets.size, hidden: hide ? targets.size : 0, text: "#{text} Bấm Ctrl+Z để hoàn tác."})

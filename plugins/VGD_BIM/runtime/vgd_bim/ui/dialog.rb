@@ -23,8 +23,10 @@ module VGD
         MODES = %w[table information scan mapping rules validate_model validate_selection tags].freeze
         # Tên cũ vẫn mở được, chuyển về tab đã gộp.
         ALIASES = {'export' => 'scan', 'convert_selection' => 'information'}.freeze
-        def initialize(mode)
-          @mode = mode
+        # kind :main = cửa sổ chính (4 tab); :tags = cửa sổ Soạn tag riêng (chỉ tab Soạn tag, mở bằng VGD::BIM.open_tags).
+        def initialize(mode, kind = :main)
+          @kind = kind
+          @mode = kind == :tags ? 'tags' : mode
           @records = []
           @rows = []
           @targets = []
@@ -41,7 +43,11 @@ module VGD
           @preview = nil
           @ready = false
           @closed = false
-          @dialog = ::UI::HtmlDialog.new(dialog_title: 'VGD_BIM · Dữ liệu mô hình', preferences_key: 'VGD_BIM_Workspace', scrollable: true, resizable: true, width: 860, height: 740, style: ::UI::HtmlDialog::STYLE_DIALOG)
+          @dialog = if kind == :tags
+                      ::UI::HtmlDialog.new(dialog_title: 'VGD BIM · Soạn tag', preferences_key: 'VGD_BIM_Tags', scrollable: true, resizable: true, width: 640, height: 740, style: ::UI::HtmlDialog::STYLE_DIALOG)
+                    else
+                      ::UI::HtmlDialog.new(dialog_title: 'VGD_BIM · Dữ liệu mô hình', preferences_key: 'VGD_BIM_Workspace', scrollable: true, resizable: true, width: 860, height: 740, style: ::UI::HtmlDialog::STYLE_DIALOG)
+                    end
           @dialog.set_file(File.join(BIM::ROOT, 'html', 'index.html'))
           @dialog.add_action_callback('ready') { |_ctx| safely { @ready = true; refresh } }
           @dialog.add_action_callback('open_panel') { |_ctx, mode| safely { switch_mode(mode) } }
@@ -137,12 +143,16 @@ module VGD
         def switch_mode(mode)
           mode = ALIASES.fetch(mode, mode)
           raise ArgumentError, 'Tính năng không hợp lệ.' unless MODES.include?(mode)
+          return BIM.open_tags if mode == 'tags' && @kind != :tags # Soạn tag nằm ở cửa sổ riêng
+          return if @kind == :tags # cửa sổ Soạn tag chỉ có Soạn tag
           @mode = mode
           @scan_armed = false
           refresh if @ready
         end
         def safely
+          before = Data.serial if @kind == :tags
           yield
+          model_edited if before && Data.serial != before
         rescue StandardError => error
           BIM.log(error.message)
           text = error.message.match?(/[À-ỹ]/) ? error.message : 'Không thực hiện được thao tác. Hãy làm mới dữ liệu và thử lại.'
@@ -202,7 +212,7 @@ module VGD
           cleanup_table_view unless @mode == 'table'
           @model = Sketchup.active_model
           language = Settings.read['language']
-          emit('config', {mode: @mode, version: BIM::VERSION, language: language, file: file_identity, app: settings_payload, preset_info: {defaults: Preset::DEFAULT_SETTINGS, choices: Preset.choices},
+          emit('config', {mode: @mode, window: @kind.to_s, version: BIM::VERSION, language: language, file: file_identity, app: settings_payload, preset_info: {defaults: Preset::DEFAULT_SETTINGS, choices: Preset.choices},
                          table: {columns: Table.columns, presets: Table.presets, view: Table.view_state(@model)}, fields: Schema::FIELDS, categories: Schema::CATEGORIES, units: Schema::UNITS, methods: Schema::METHODS, presets: BIM.presets, locale: Locale.ui_dictionary(language), vi_en: (language == 'en' ? Locale.vi_en_names : nil), scan_options: {scope: @scan_options[:scope], faces: faces?}})
           if %w[information tags table].include?(@mode)
             @observer = SelectionObserver.new(self)
@@ -1314,9 +1324,13 @@ module VGD
           text += " Có #{plan[:counts][:duplicate]} dòng trùng tên." if plan[:counts][:duplicate] > 0
           emit('message', {text: text})
         end
-        # Cửa sổ Đổi tên đã đổi tên các món: bảng đang hiện thì đọc lại để thấy tên mới.
-        def names_changed
+        # Cửa sổ khác (Đổi tên, Soạn tag) vừa sửa model: bảng đang hiện thì đọc lại để thấy tên / tag mới.
+        def reload_table
           safely { table_build } if @ready && @mode == 'table' && @dialog.visible? && @table_records
+        end
+        # Cửa sổ Soạn tag vừa ghi vào model (gán tag, đổ tag, xóa tag...): báo để Bảng khối lượng đọc lại.
+        def model_edited
+          BIM.model_edited
         end
         def table_clear
           check_model!

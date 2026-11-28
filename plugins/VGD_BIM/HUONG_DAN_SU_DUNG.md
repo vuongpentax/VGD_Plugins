@@ -1,6 +1,6 @@
 # VGD_BIM — Hướng dẫn nhanh
 
-Mở bằng **Extensions → VGD → VGD BIM → Mở bảng khối lượng**: cửa sổ mở thẳng tab **Bảng khối lượng**. Cửa sổ có 5 tab: Bảng khối lượng · Thông tin · Quét & xuất · Phân loại · Soạn tag. Mọi tab nằm trong cùng một cửa sổ.
+Mở bằng **Extensions → VGD → VGD BIM → Mở bảng khối lượng**: cửa sổ mở thẳng tab **Bảng khối lượng**. Cửa sổ chính có 4 tab: Bảng khối lượng · Thông tin · Quét & xuất · Phân loại. **Đổi tên** và **Soạn tag** là hai cửa sổ riêng, mở bằng nút trên thanh công cụ VGD BIM hoặc menu **Extensions → VGD → VGD BIM** (nút trên thanh công cụ hiện sau khi mở lại SketchUp).
 
 ## Bóc khối lượng nhanh (Bảng khối lượng)
 
@@ -165,7 +165,7 @@ Gõ chữ vào ô **Tìm kiếm** thì hiện thêm ô **Thay bằng** và nút 
 
 ## Soạn tag
 
-Tab **Soạn tag** để soạn bộ tag theo 18 nhóm của 5D Auto Tag (A. ARCHITECTURAL, S. STRUCTURAL, I. INTERIOR, E. ELECTRICAL, ... bấm ô Nhóm để xem đủ), có thẻ **Thư viện tag mẫu (Auto Tag)**: tick các cụm cần dùng (mỗi cụm kèm số tag, bấm tên cụm để xem tag) rồi bấm **Nhập**: tag được thêm vào bộ tag và tạo sẵn trong model (Ctrl+Z hoàn tác một lần), dùng được ngay cho Gán tag và luật gắn tag tự động. Nhóm cũ của các bản trước (Phần thô, Hoàn thiện, Đồ rời, Thiết bị, Khác) tự đổi sang nhóm mới tương ứng. Soạn bộ tag riêng, gán tag cho group, component hoặc mặt đang chọn, và xuất / nhập bộ tag bằng CSV (mở được trong Excel) hoặc JSON. Khi nhập, chọn thay thế toàn bộ hoặc gộp vào bộ hiện có. Bộ tag lưu trên máy này.
+Cửa sổ **Soạn tag** (nút trên thanh công cụ hoặc **Extensions → VGD → VGD BIM → Soạn tag**, trước beta.57 là một tab của cửa sổ chính) để soạn bộ tag theo 18 nhóm của 5D Auto Tag (A. ARCHITECTURAL, S. STRUCTURAL, I. INTERIOR, E. ELECTRICAL, ... bấm ô Nhóm để xem đủ), có thẻ **Thư viện tag mẫu (Auto Tag)**: tick các cụm cần dùng (mỗi cụm kèm số tag, bấm tên cụm để xem tag) rồi bấm **Nhập**: tag được thêm vào bộ tag và tạo sẵn trong model (Ctrl+Z hoàn tác một lần), dùng được ngay cho Gán tag và luật gắn tag tự động. Nhóm cũ của các bản trước (Phần thô, Hoàn thiện, Đồ rời, Thiết bị, Khác) tự đổi sang nhóm mới tương ứng. Soạn bộ tag riêng, gán tag cho group, component hoặc mặt đang chọn, và xuất / nhập bộ tag bằng CSV (mở được trong Excel) hoặc JSON. Khi nhập, chọn thay thế toàn bộ hoặc gộp vào bộ hiện có. Bộ tag lưu trên máy này.
 
 ### Gắn tag tự động theo tên
 
