@@ -649,16 +649,100 @@
     return orthoCamera(center, radius, [1, -1, 1], [0, 0, 1], aspect);
   }
 
-  // Quay video: mỗi bước cấu kiện của bước bay vào chỗ, các bước trước đã xám, rồi giữ hình hoàn chỉnh.
-  function exportVideo(format) {
-    if (recording) return;
+  // Chuẩn bị bộ vẽ video: renderer, canvas khung hình, camera iso. Trả về null nếu không xuất được (đã báo lỗi).
+  function prepareVideo() {
     if (!view || view.parts.length === 0) {
       setStatus('Chưa có mô hình để xuất video.', true);
-      return;
+      return null;
     }
     var orders = stepOrders();
     if (orders.length === 0) {
       setStatus('Chưa có bước lắp để xuất video. Nhập hoặc đề xuất thứ tự trước.', true);
+      return null;
+    }
+    var renderer = new THREE.WebGLRenderer({
+      canvas: document.createElement('canvas'),
+      antialias: true,
+      preserveDrawingBuffer: true
+    });
+    renderer.setPixelRatio(1);
+    renderer.setSize(VIDEO_W, VIDEO_H, false);
+    renderer.setClearColor(0xffffff, 1);
+    var canvas = document.createElement('canvas');
+    canvas.width = VIDEO_W;
+    canvas.height = VIDEO_H;
+    var stepSpan = MOVE_SECONDS + HOLD_SECONDS;
+    return {
+      renderer: renderer,
+      glCanvas: renderer.domElement,
+      canvas: canvas,
+      ctx: canvas.getContext('2d'),
+      camera: isoFrame(VIDEO_W / VIDEO_H),
+      arrows: [],
+      lastIndex: -1,
+      orders: orders,
+      stepSpan: stepSpan,
+      total: orders.length * stepSpan + END_HOLD_SECONDS
+    };
+  }
+
+  function disposeVideo(s) {
+    clearArrows(s.arrows);
+    if (view) restoreParts();
+    s.renderer.dispose();
+  }
+
+  // Vẽ khung hình ở thời điểm t (giây) vào canvas của s: cấu kiện của bước bay vào chỗ,
+  // các bước trước đã xám, rồi giữ hình hoàn chỉnh ở cuối.
+  function drawTimelineFrame(t, s) {
+    var orders = s.orders;
+    var index = Math.floor(t / s.stepSpan);
+    var isDone = index >= orders.length;
+    var k = isDone ? null : orders[index];
+    var isPast = function (part) { return part.order === null || part.order === undefined || (k !== null && part.order < k); };
+    var isNow = function (part) { return k !== null && part.order === k; };
+
+    if (index !== s.lastIndex) {
+      clearArrows(s.arrows);
+      s.lastIndex = index;
+    }
+    if (isDone) {
+      placeParts(function () { return 0; });
+      showParts(function () { return true; });
+      colorParts(function () { return FACE_COLOR; });
+    } else {
+      var p = clamp((t - index * s.stepSpan) / MOVE_SECONDS, 0, 1);
+      var ease = 1 - (1 - p) * (1 - p);
+      placeParts(function (part) { return isNow(part) ? 1 - ease : 0; });
+      showParts(function (part) { return isPast(part) || isNow(part); });
+      colorParts(function (part) { return isNow(part) ? HOT_COLOR : PAST_COLOR; });
+      if (p < ARROW_UNTIL && s.arrows.length === 0) {
+        view.parts.forEach(function (part) { if (isNow(part)) addArrow(part, s.arrows); });
+      }
+      if (p >= ARROW_UNTIL) clearArrows(s.arrows);
+    }
+
+    s.renderer.render(view.scene, s.camera);
+    var ctx = s.ctx;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, VIDEO_W, VIDEO_H);
+    ctx.drawImage(s.glCanvas, 0, 0);
+    if (!isDone) {
+      labels.filter(function (item) { return isNow(item.part); })
+        .forEach(function (item) { drawTag(ctx, s.camera, item); });
+      var names = view.parts.filter(isNow).map(function (part) { return part.name; });
+      var unique = names.filter(function (name, i) { return names.indexOf(name) === i; });
+      drawCaption(ctx, ('Bước ' + k + ': ' + unique.join(', ')).slice(0, 90));
+    } else {
+      drawCaption(ctx, 'Lắp ráp hoàn chỉnh');
+    }
+  }
+
+  // Quay video (WebM hoặc MP4) bằng MediaRecorder theo thời gian thực.
+  function exportVideo(format) {
+    if (recording) return;
+    if (format === 'png') {
+      exportFrames();
       return;
     }
     if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
@@ -672,113 +756,78 @@
         : 'Trình duyệt này không quay được video.', true);
       return;
     }
+    var s = prepareVideo();
+    if (!s) return;
 
-    var renderer = null;
-    var arrows = [];
     var chunks = [];
-    var recorder = null;
     var frameId = null;
     try {
-      renderer = new THREE.WebGLRenderer({
-        canvas: document.createElement('canvas'),
-        antialias: true,
-        preserveDrawingBuffer: true
-      });
-      renderer.setPixelRatio(1);
-      renderer.setSize(VIDEO_W, VIDEO_H, false);
-      renderer.setClearColor(0xffffff, 1);
-      var glCanvas = renderer.domElement;
-      var rec = document.createElement('canvas');
-      rec.width = VIDEO_W;
-      rec.height = VIDEO_H;
-      var ctx = rec.getContext('2d');
-      var camera = isoFrame(VIDEO_W / VIDEO_H);
-
-      var stepSpan = MOVE_SECONDS + HOLD_SECONDS;
-      var total = orders.length * stepSpan + END_HOLD_SECONDS;
-      var startedAt = 0;
-      var lastIndex = -1;
-
-      recorder = new MediaRecorder(rec.captureStream(VIDEO_FPS), { mimeType: mime, videoBitsPerSecond: 4000000 });
+      var recorder = new MediaRecorder(s.canvas.captureStream(VIDEO_FPS), { mimeType: mime, videoBitsPerSecond: 4000000 });
       recorder.ondataavailable = function (event) {
         if (event.data && event.data.size) chunks.push(event.data);
       };
       recorder.onstop = function () {
         recording = false;
-        clearArrows(arrows);
-        restoreParts();
-        renderer.dispose();
+        disposeVideo(s);
         var blob = new Blob(chunks, { type: mime.split(';')[0] });
         var reader = new FileReader();
         reader.onload = function () {
           send('save_video', { data: reader.result, ext: format });
-          setStatus('Đã quay video lắp ráp (' + orders.length + ' bước).');
+          setStatus('Đã quay video lắp ráp (' + s.orders.length + ' bước).');
         };
         reader.readAsDataURL(blob);
       };
 
       recording = true;
-      startedAt = performance.now();
+      var startedAt = performance.now();
       recorder.start();
-
-      var drawFrame = function (now) {
+      var tick = function (now) {
         var t = (now - startedAt) / 1000;
-        if (t >= total) {
+        if (t >= s.total) {
           recorder.stop();
           return;
         }
-        var index = Math.floor(t / stepSpan);
-        var isDone = index >= orders.length;
-        var k = isDone ? null : orders[index];
-        var isPast = function (part) { return part.order === null || part.order === undefined || (k !== null && part.order < k); };
-        var isNow = function (part) { return k !== null && part.order === k; };
-
-        if (index !== lastIndex) {
-          clearArrows(arrows);
-          lastIndex = index;
-        }
-        var p = 1;
-        if (isDone) {
-          placeParts(function () { return 0; });
-          showParts(function () { return true; });
-          colorParts(function () { return FACE_COLOR; });
-        } else {
-          p = clamp((t - index * stepSpan) / MOVE_SECONDS, 0, 1);
-          var ease = 1 - (1 - p) * (1 - p);
-          placeParts(function (part) { return isNow(part) ? 1 - ease : 0; });
-          showParts(function (part) { return isPast(part) || isNow(part); });
-          colorParts(function (part) { return isNow(part) ? HOT_COLOR : PAST_COLOR; });
-          if (p < ARROW_UNTIL && arrows.length === 0) {
-            view.parts.forEach(function (part) { if (isNow(part)) addArrow(part, arrows); });
-          }
-          if (p >= ARROW_UNTIL) clearArrows(arrows);
-        }
-
-        renderer.render(view.scene, camera);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, VIDEO_W, VIDEO_H);
-        ctx.drawImage(glCanvas, 0, 0);
-        if (!isDone) {
-          labels.filter(function (item) { return isNow(item.part); })
-            .forEach(function (item) { drawTag(ctx, camera, item); });
-          var names = view.parts.filter(isNow).map(function (part) { return part.name; });
-          var unique = names.filter(function (name, i) { return names.indexOf(name) === i; });
-          drawCaption(ctx, ('Bước ' + k + ': ' + unique.join(', ')).slice(0, 90));
-        } else {
-          drawCaption(ctx, 'Lắp ráp hoàn chỉnh');
-        }
-        frameId = requestAnimationFrame(drawFrame);
+        drawTimelineFrame(t, s);
+        frameId = requestAnimationFrame(tick);
       };
-      frameId = requestAnimationFrame(drawFrame);
+      frameId = requestAnimationFrame(tick);
       setStatus('Đang quay video lắp ráp...');
     } catch (error) {
       recording = false;
       if (frameId) cancelAnimationFrame(frameId);
-      clearArrows(arrows);
-      if (view) restoreParts();
-      if (renderer) renderer.dispose();
+      disposeVideo(s);
       setStatus('Quay video thất bại: ' + error.message, true);
     }
+  }
+
+  // Xuất chuỗi khung hình PNG đánh số (30 khung mỗi giây), để đổi sang MP4 bằng ffmpeg trên máy.
+  // Không dùng MediaRecorder nên chạy được trên mọi phiên bản SketchUp.
+  function exportFrames() {
+    var s = prepareVideo();
+    if (!s) return;
+    var frameCount = Math.ceil(s.total * VIDEO_FPS);
+    var index = 0;
+    recording = true;
+    setStatus('Đang xuất ' + frameCount + ' khung hình...');
+    var next = function () {
+      try {
+        if (index >= frameCount) {
+          recording = false;
+          disposeVideo(s);
+          send('video_done', { count: frameCount, fps: VIDEO_FPS });
+          return;
+        }
+        drawTimelineFrame(index / VIDEO_FPS, s);
+        send('save_frame', { index: index + 1, data: s.canvas.toDataURL('image/png') });
+        index += 1;
+        setTimeout(next, 0);
+      } catch (error) {
+        recording = false;
+        disposeVideo(s);
+        setStatus('Xuất khung hình thất bại: ' + error.message, true);
+      }
+    };
+    next();
   }
 
   // ---------- Cầu nối với Ruby ----------

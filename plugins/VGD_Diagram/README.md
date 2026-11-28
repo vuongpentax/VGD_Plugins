@@ -1,8 +1,20 @@
-# VGD Diagram 0.7.0-beta.1
+# VGD Diagram 0.8.0-beta.1
 
 Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các cấu kiện, số lượng và thứ tự lắp, để khách hàng và thợ lắp đặt dễ hiểu mô hình.
 
 ## Trạng thái
+
+**0.8.0-beta.1 (video MP4 qua chuỗi khung hình PNG).** Thay đổi so với 0.7.0-beta.1:
+
+- **Chọn PNG (chuỗi khung hình) trong ô định dạng video:** plugin ghi từng khung hình thành file PNG đánh số (`<tên>-khung-00001.png`...), 30 khung mỗi giây, cùng nội dung video lắp ráp. Không cần MediaRecorder, nên chạy được trên mọi phiên bản SketchUp, kể cả khi trình duyệt không quay được MP4.
+- **Đổi sang MP4 trên máy:** sau khi xuất, thông báo hiện lệnh ffmpeg. Chạy trong thư mục chứa các khung hình (cần cài ffmpeg một lần):
+
+```bash
+ffmpeg -framerate 30 -i lap-rap-khung-%05d.png -c:v libx264 -pix_fmt yuv420p lap-rap.mp4
+```
+
+- **Đã kiểm tra:** chuỗi khung hình xuất từ plugin đổi thành MP4 H.264 1280×720 bằng đúng lệnh trên (trong môi trường kiểm tra).
+- **Chưa kiểm tra trong SketchUp thật.**
 
 **0.7.0-beta.1 (chọn định dạng khi lưu).** Thay đổi so với 0.6.0-beta.1:
 

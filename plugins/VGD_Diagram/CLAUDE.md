@@ -44,6 +44,7 @@
 - Tối đa 15 nhãn trên một ảnh (`MAX_TAGS` trong `dialog.js`).
 - Video lắp ráp quay bằng `MediaRecorder` từ canvas trong giao diện. Định dạng do người dùng chọn (mp4 hoặc webm); mp4 chỉ dùng khi trình duyệt hỗ trợ, không tự đổi. Đuôi file trong hộp lưu quyết định định dạng (`Dialog::resolve_format`, test ở `dev/test_formats.rb`).
 - Ảnh xuất: png hoặc jpg, chọn như video.
+- Video dạng PNG (chuỗi khung hình) không dùng MediaRecorder: `exportFrames` gửi từng khung qua `save_frame`, kết thúc bằng `video_done` (`Dialog#finish_frames`).
 - Mọi lần ghi model phải nằm trong `start_operation` / `commit_operation`, lỗi thì `abort_operation`.
 - Không tải lại code khi đang ghi (`Dialog.busy?`).
 - Kết quả kiểm thử trong SketchUp thật phải ghi là "chưa xác minh" cho đến khi có người thử trên SketchUp.

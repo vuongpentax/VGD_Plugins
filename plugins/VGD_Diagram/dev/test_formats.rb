@@ -28,6 +28,8 @@ check 'không có đuôi thì dùng định dạng đã chọn', D.resolve_forma
 check 'đuôi không hỗ trợ thì báo rõ các định dạng được phép', raises?('Chọn: png, jpg') { D.resolve_format('/tmp/a/anh.gif', %w[png jpg], 'png') }
 check 'đuôi video sai với nhóm ảnh thì báo lỗi', raises?('không được hỗ trợ') { D.resolve_format('/tmp/a/x.mp4', %w[png jpg], 'png') }
 
+check 'video: đuôi png chọn chuỗi khung hình', D.resolve_format('/tmp/a/khung.png', %w[mp4 webm png], 'mp4') == ['/tmp/a/khung.png', 'png']
+
 puts
 puts $fail.empty? ? "TẤT CẢ ĐẠT (#{$pass})" : "CÓ #{$fail.size} LỖI: #{$fail.inspect}"
 exit($fail.empty? ? 0 : 1)

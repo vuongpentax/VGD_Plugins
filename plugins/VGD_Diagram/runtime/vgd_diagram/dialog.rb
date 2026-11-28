@@ -38,6 +38,8 @@ module VGD
         callback('export_done') { finish_export }
         callback('export_video') { |json| start_video(JSON.parse(json || '{}')) }
         callback('save_video') { |json| save_video(JSON.parse(json)) }
+        callback('save_frame') { |json| save_frame(JSON.parse(json)) }
+        callback('video_done') { |json| finish_frames(JSON.parse(json)) }
         @dlg.show
       end
 
@@ -130,7 +132,7 @@ module VGD
 
       # Xuất ảnh các góc: giao diện vẽ bằng three.js (style mặc định SketchUp giả lập), rồi gửi từng ảnh về đây ghi ra file.
       IMAGE_FORMATS = %w[png jpg].freeze
-      VIDEO_FORMATS = %w[mp4 webm].freeze
+      VIDEO_FORMATS = %w[mp4 webm png].freeze
 
       # Đuôi file người dùng gõ trong hộp lưu quyết định định dạng; không gõ thì dùng định dạng đã chọn.
       # Trả về [đường dẫn đã chuẩn hóa, định dạng].
@@ -165,8 +167,34 @@ module VGD
         chosen = UI.savepanel('Lưu video lắp ráp', '', "#{base_name(model)}-lap-rap.#{fallback}")
         return unless chosen
         path, format = resolve_format(chosen, VIDEO_FORMATS, fallback)
+        if format == 'png'
+          # Chuỗi khung hình: mỗi khung là một file PNG đánh số, ghi trong thư mục đã chọn.
+          @video = { 'frames' => true, 'folder' => File.dirname(path), 'base' => File.basename(path, '.png'), 'count' => 0 }
+          send_js('onVideo', 'format' => 'png')
+          return
+        end
         @video = { 'path' => path, 'format' => format }
         send_js('onVideo', 'format' => format)
+      end
+
+      def save_frame(payload)
+        raise 'Chưa chọn nơi lưu khung hình.' unless @video && @video['frames']
+        index = Integer(payload.fetch('index'))
+        path = File.join(@video['folder'], "%s-khung-%05d.png" % [@video['base'], index])
+        data = payload.fetch('data').sub(%r{\Adata:image/png;base64,}, '')
+        busy { File.binwrite(path, Base64.decode64(data)) }
+        @video['count'] += 1
+      end
+
+      def finish_frames(payload)
+        video = @video
+        @video = nil
+        return unless video && video['frames']
+        count = payload.fetch('count')
+        fps = payload.fetch('fps')
+        name = "#{video['base']}-khung-%05d.png"
+        send_js('onToast', 'message' => "Đã xuất #{video['count']} khung hình vào #{video['folder']}. " \
+          "Đổi sang MP4: ffmpeg -framerate #{fps} -i \"#{name}\" -c:v libx264 -pix_fmt yuv420p #{video['base']}.mp4 (#{count} khung)")
       end
 
       def save_video(payload)

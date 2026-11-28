@@ -251,6 +251,22 @@ function check(name, ok) {
     (await page.locator('#status').textContent()).includes('không quay được MP4') &&
     !(await page.evaluate(() => window.__calls)).some((c) => c.name === 'save_video'));
 
+  // ---- Chuỗi khung hình PNG (để đổi sang MP4 bằng ffmpeg trên máy) ----
+  await page.evaluate((data) => window.VGD.onScene(data), scene);
+  await page.evaluate(() => { window.__calls = []; });
+  await page.evaluate(() => window.VGD.onVideo({ format: 'png' }));
+  let frameDone = null;
+  for (let i = 0; i < 480 && !frameDone; i++) {
+    await page.waitForTimeout(250);
+    frameDone = (await page.evaluate(() => window.__calls)).find((c) => c.name === 'video_done');
+  }
+  const frameCalls = (await page.evaluate(() => window.__calls)).filter((c) => c.name === 'save_frame').map((c) => JSON.parse(c.args[0]));
+  const expectedFrames = Math.ceil((2 * (0.9 + 0.7) + 2) * 30);
+  check('khung hình: số khung đúng (thời lượng × 30 khung/giây)', frameCalls.length === expectedFrames);
+  check('khung hình: đánh số 1, 2, 3... và là PNG',
+    frameCalls.every((f, i) => f.index === i + 1) && frameCalls.every((f) => f.data.startsWith('data:image/png;base64,')));
+  check('khung hình: báo xong với số khung và fps', !!frameDone && JSON.parse(frameDone.args[0]).fps === 30);
+
   check('không có lỗi JavaScript trên trang', errors.length === 0);
   await browser.close();
   console.log('');
