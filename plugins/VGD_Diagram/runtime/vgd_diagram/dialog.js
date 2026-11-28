@@ -1,15 +1,27 @@
 // Giao diện VGD Diagram: cây cấu kiện (bên trái) và mô hình 3D (bên phải).
-// Ruby gọi VGD.onTree / onScene / onToast / onError; giao diện gọi sketchup.<tên>(JSON).
+// Ruby gọi VGD.onTree / onScene / onSuggested / onExport / onToast / onError; giao diện gọi sketchup.<tên>(JSON).
 (function () {
   'use strict';
   var MAX_ORDER = 9999;
   var EXPLODE = 0.9;      // mức tách tối đa: cấu kiện cách tâm mô hình thêm 90% khoảng cách của nó
   var STAGGER = 0.35;     // giây giữa hai cấu kiện khi phát lắp ráp
   var DURATION = 0.7;     // giây để một cấu kiện lắp vào
-  var BASE_COLOR = 0xcbbfae;
-  var HOT_COLOR = 0xe8a25e;
+  // Style mặc định của SketchUp (giả lập): mặt xám trắng, cạnh đen, nền trắng khi xuất ảnh.
+  var FACE_COLOR = 0xf2f2f0;
+  var EDGE_COLOR = 0x1a1a1a;
+  var HOT_COLOR = 0xe8a25e;   // màu tô sáng khi trỏ vào dòng cây
+  var EDGE_ANGLE = 30;        // cạnh được vẽ khi hai mặt gấp nhau quá 30 độ
+  var EXPORT_W = 1600;
+  var EXPORT_H = 1200;
+  var EXPORT_VIEWS = [
+    { key: 'truoc', dir: [0, -1, 0], up: [0, 0, 1] },
+    { key: 'phai', dir: [1, 0, 0], up: [0, 0, 1] },
+    { key: 'tren', dir: [0, 0, 1], up: [0, 1, 0] },
+    { key: 'iso', dir: [1, -1, 1], up: [0, 0, 1] }
+  ];
 
   var pending = {};       // key -> chuỗi người dùng nhập (chưa lưu)
+  var entries = {};       // key -> {input, original, mixed}: ô nhập thứ tự của từng nhóm
   var tree = document.getElementById('tree');
   var status = document.getElementById('status');
   var saveButton = document.getElementById('save');
@@ -18,6 +30,7 @@
   var playButton = document.getElementById('play');
   var viewMessage = document.getElementById('view-msg');
   var canvas = document.getElementById('view');
+  var emptyMessage = document.getElementById('empty');
 
   var view = null;        // khung 3D: renderer, scene, camera, parts, góc nhìn
   var playing = null;     // {start, count} khi đang phát lắp ráp
@@ -55,6 +68,21 @@
     return number >= 1 && number <= MAX_ORDER ? value : null;
   }
 
+  // Ghi giá trị một ô nhập vào danh sách chưa lưu và đổi màu viền. Trả về true nếu hợp lệ.
+  function applyOrder(entry, text) {
+    var checked = checkOrder(text);
+    entry.input.classList.toggle('invalid', checked === null);
+    entry.input.classList.toggle('changed', checked !== null && checked !== entry.original);
+    if (checked === null) {
+      setStatus('Thứ tự phải là số từ 1 đến ' + MAX_ORDER + ', hoặc để trống.', true);
+      return false;
+    }
+    if (checked === entry.original && !entry.mixed) delete pending[entry.key];
+    else pending[entry.key] = checked;
+    updateSave();
+    return true;
+  }
+
   // Mọi khóa của nhóm và các nhóm con (để tô sáng cả cụm khi trỏ vào).
   function idsOf(node) {
     var ids = node.ids.slice();
@@ -89,18 +117,10 @@
     order.placeholder = node.mixed ? 'nhiều số' : '—';
     var original = node.order === null || node.order === undefined ? '' : String(node.order);
     order.value = original;
+    var entry = { key: node.key, input: order, original: original, mixed: !!node.mixed };
+    entries[node.key] = entry;
     order.oninput = function () {
-      var checked = checkOrder(order.value);
-      order.classList.toggle('invalid', checked === null);
-      order.classList.toggle('changed', checked !== null && checked !== original);
-      if (checked === null) {
-        setStatus('Thứ tự phải là số từ 1 đến ' + MAX_ORDER + ', hoặc để trống.', true);
-        return;
-      }
-      if (checked === original && !node.mixed) delete pending[node.key];
-      else pending[node.key] = checked;
-      setStatus('');
-      updateSave();
+      if (applyOrder(entry, order.value)) setStatus('');
     };
 
     var badge = null;
@@ -251,6 +271,8 @@
       view.scene.remove(part.mesh);
       part.geometry.dispose();
       part.material.dispose();
+      part.edges.geometry.dispose();
+      part.edges.material.dispose();
     });
     view.parts = [];
   }
@@ -277,8 +299,13 @@
       var center = entry.geometry.boundingBox.getCenter(new THREE.Vector3());
       entry.geometry.translate(-center.x, -center.y, -center.z);
       entry.geometry.computeVertexNormals();
-      var material = new THREE.MeshLambertMaterial({ color: BASE_COLOR, side: THREE.DoubleSide });
+      var material = new THREE.MeshLambertMaterial({ color: FACE_COLOR, side: THREE.DoubleSide });
       var mesh = new THREE.Mesh(entry.geometry, material);
+      // Cạnh đen như SketchUp: vẽ các cạnh gấp góc lớn hơn EDGE_ANGLE độ.
+      var edgeGeometry = new THREE.EdgesGeometry(entry.geometry, EDGE_ANGLE);
+      var edgeMaterial = new THREE.LineBasicMaterial({ color: EDGE_COLOR });
+      var edges = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+      mesh.add(edges);
       view.scene.add(mesh);
       view.parts.push({
         id: entry.data.id,
@@ -287,6 +314,7 @@
         mesh: mesh,
         geometry: entry.geometry,
         material: material,
+        edges: edges,
         center: center
       });
     });
@@ -359,7 +387,7 @@
     if (!view) return;
     view.parts.forEach(function (part) {
       var on = !!ids && part.id !== null && part.id !== undefined && ids.indexOf(part.id) !== -1;
-      part.material.color.setHex(on ? HOT_COLOR : BASE_COLOR);
+      part.material.color.setHex(on ? HOT_COLOR : FACE_COLOR);
     });
   }
 
@@ -374,28 +402,121 @@
     view.renderer.render(view.scene, view.camera);
   }
 
+  // ---------- Xuất ảnh các góc ----------
+
+  // Vẽ nhãn số lên ảnh xuất (vị trí theo camera của góc đang xuất).
+  function drawTags(ctx, camera) {
+    var anchor = new THREE.Vector3();
+    labels.forEach(function (item) {
+      anchor.copy(item.part.mesh.position).project(camera);
+      if (anchor.z < -1 || anchor.z > 1) return;
+      var x = (anchor.x + 1) / 2 * EXPORT_W;
+      var y = (1 - anchor.y) / 2 * EXPORT_H;
+      ctx.beginPath();
+      ctx.arc(x, y, 22, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#B48963';
+      ctx.stroke();
+      ctx.fillStyle = '#222222';
+      ctx.font = 'bold 24px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(item.el.textContent, x, y + 1);
+    });
+  }
+
+  // Vẽ bốn góc chuẩn bằng phối cảnh song song (camera trực giao), rồi gửi từng ảnh về Ruby ghi ra file.
+  // Ảnh theo trạng thái khung 3D hiện tại (kể cả mức tách rời).
+  function exportImages() {
+    if (!view || view.parts.length === 0) {
+      setStatus('Chưa có mô hình để xuất.', true);
+      return;
+    }
+    var renderer = null;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        canvas: document.createElement('canvas'),
+        antialias: true,
+        preserveDrawingBuffer: true
+      });
+      renderer.setPixelRatio(1);
+      renderer.setSize(EXPORT_W, EXPORT_H, false);
+      renderer.setClearColor(0xffffff, 1);
+      var glCanvas = renderer.domElement;
+      var out = document.createElement('canvas');
+      out.width = EXPORT_W;
+      out.height = EXPORT_H;
+      var ctx = out.getContext('2d');
+
+      var box = new THREE.Box3();
+      view.parts.forEach(function (part) { box.expandByObject(part.mesh); });
+      var center = box.getCenter(new THREE.Vector3());
+      var radius = Math.max(box.getSize(new THREE.Vector3()).length() / 2 * 1.1, 1);
+      var aspect = EXPORT_W / EXPORT_H;
+
+      EXPORT_VIEWS.forEach(function (spec) {
+        var camera = new THREE.OrthographicCamera(-radius * aspect, radius * aspect, radius, -radius, 0.1, radius * 10);
+        var dir = new THREE.Vector3().fromArray(spec.dir).normalize();
+        camera.up.fromArray(spec.up);
+        camera.position.copy(center).addScaledVector(dir, radius * 4);
+        camera.lookAt(center);
+        camera.updateMatrixWorld();
+        renderer.render(view.scene, camera);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, EXPORT_W, EXPORT_H);
+        ctx.drawImage(glCanvas, 0, 0);
+        drawTags(ctx, camera);
+        send('save_image', { key: spec.key, data: out.toDataURL('image/png') });
+      });
+      send('export_done');
+      setStatus('Đã xuất ảnh các góc.');
+    } catch (error) {
+      setStatus('Xuất ảnh thất bại: ' + error.message, true);
+    } finally {
+      if (renderer) renderer.dispose();
+    }
+  }
+
   // ---------- Cầu nối với Ruby ----------
 
   window.VGD = {
     onTree: function (data) {
       pending = {};
+      entries = {};
       updateSave();
       tree.textContent = '';
       var nodes = data.nodes || [];
       treeNodes = nodes;
       rebuildLabels();
-      document.getElementById('empty').hidden = nodes.length > 0;
+      emptyMessage.textContent = data.message || 'Model chưa có nhóm hoặc component nào.';
+      emptyMessage.hidden = nodes.length > 0 && !data.message;
       nodes.forEach(function (node) { renderNode(node, tree); });
-      setStatus('');
+      if (!data.message) setStatus('');
     },
     onScene: function (data) {
       setModel(data);
+    },
+    onSuggested: function (data) {
+      var count = 0;
+      (data.changes || []).forEach(function (change) {
+        var entry = entries[change.key];
+        if (!entry) return;
+        entry.input.value = String(change.order);
+        if (applyOrder(entry, entry.input.value)) count += 1;
+      });
+      setStatus('Đã đề xuất thứ tự cho ' + count + ' nhóm (từ dưới lên, theo từng lớp). Kiểm tra rồi bấm Lưu thứ tự.');
+    },
+    onExport: function () {
+      exportImages();
     },
     onToast: function (data) { setStatus(data.message, false); },
     onError: function (data) { setStatus(data.message, true); }
   };
 
   window.VGD.refresh = function () { send('refresh'); };
+  window.VGD.suggestOrders = function () { send('suggest_orders'); };
   window.VGD.exportSvg = function () { send('export'); };
   window.VGD.exportViews = function () { send('export_views'); };
   window.VGD.saveOrders = function () {
@@ -426,7 +547,8 @@
         return [part.mesh.position.x, part.mesh.position.y, part.mesh.position.z];
       }) : [],
       playing: !!playing,
-      slider: Number(slider.value)
+      slider: Number(slider.value),
+      labels: labels.length
     };
   };
 

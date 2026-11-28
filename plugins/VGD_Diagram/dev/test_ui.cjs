@@ -159,6 +159,34 @@ function check(name, ok) {
   check('số nhãn: nhãn di chuyển khi tách rời', before.join('|') !== after.join('|'));
   check('số nhãn: nhãn có toạ độ hợp lệ', after.every((p) => /^-?[\d.]+px -?[\d.]+px$/.test(p) || p === ' '));
 
+  // ---- Đề xuất thứ tự, phạm vi trống, xuất ảnh các góc ----
+  await page.evaluate((data) => window.VGD.onTree(data), sample);
+  await page.evaluate(() => { window.__calls = []; });
+  await page.locator('button', { hasText: 'Đề xuất thứ tự' }).click();
+  check('đề xuất: gửi suggest_orders về Ruby', (await page.evaluate(() => window.__calls)).some((c) => c.name === 'suggest_orders'));
+  await page.evaluate(() => window.VGD.onSuggested({ changes: [{ key: 51, order: 1 }, { key: 52, order: 2 }] }));
+  const values = await page.locator('input.order').evaluateAll((els) => els.map((el) => el.value));
+  check('đề xuất: điền số vào ô nhập (Đáy = 1, Cánh = 2)', values[1] === '1' && values[2] === '2');
+  check('đề xuất: chưa lưu, nút Lưu thứ tự mở để kiểm tra', !(await page.locator('#save').isDisabled()));
+  check('đề xuất: báo số nhóm đã điền', (await page.locator('#status').textContent()).includes('cho 2 nhóm'));
+
+  await page.evaluate(() => window.VGD.onTree({ nodes: [], message: 'Hãy chọn đối tượng trong model rồi bấm Làm mới.' }));
+  check('phạm vi trống: hiện hướng dẫn chọn đối tượng',
+    (await page.locator('#empty').textContent()).includes('Hãy chọn đối tượng') && (await page.locator('#empty').isVisible()));
+  await page.evaluate((data) => window.VGD.onTree(data), sample);
+
+  // Xuất ảnh các góc: giao diện vẽ 4 góc, gửi từng ảnh PNG về Ruby, rồi báo xong
+  await page.evaluate((data) => window.VGD.onScene(data), scene);
+  await page.evaluate(() => { window.__calls = []; });
+  await page.evaluate(() => window.VGD.onExport({ base: 'thu' }));
+  const shots = (await page.evaluate(() => window.__calls)).filter((c) => c.name === 'save_image').map((c) => JSON.parse(c.args[0]));
+  check('xuất ảnh: có đúng 4 góc truoc, phai, tren, iso',
+    shots.map((s) => s.key).join(',') === 'truoc,phai,tren,iso');
+  check('xuất ảnh: mỗi ảnh là PNG có dữ liệu',
+    shots.every((s) => s.data.startsWith('data:image/png;base64,') && s.data.length > 5000));
+  check('xuất ảnh: báo xong (export_done)', (await page.evaluate(() => window.__calls)).some((c) => c.name === 'export_done'));
+  check('xuất ảnh: không lỗi khi vẽ', !(await page.locator('#status').textContent()).includes('thất bại'));
+
   check('không có lỗi JavaScript trên trang', errors.length === 0);
   await browser.close();
   console.log('');

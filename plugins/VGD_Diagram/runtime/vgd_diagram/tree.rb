@@ -113,6 +113,15 @@ module VGD
         end
       end
 
+      # Đề xuất thứ tự cho từng lớp group: các nhóm cùng cấp được đánh 1, 2, 3... từ dưới lên
+      # (theo z thấp nhất, rồi x, y, tên). positions: {key => [z, x, y]}. Trả về {key => số thứ tự}.
+      def suggest(nodes, positions, result = {})
+        ordered = nodes.sort_by { |node| positions.fetch(node['key'], [0.0, 0.0, 0.0]) + [node['name']] }
+        ordered.each_with_index { |node, index| result[node['key']] = index + 1 }
+        nodes.each { |node| suggest(node['children'], positions, result) }
+        result
+      end
+
       # Bảng danh sách CSV (UTF-8 có BOM để Excel đọc đúng tiếng Việt) của các nhóm đã được đánh số.
       def csv(nodes)
         lines = ['Số,Tên,Số lượng,Thứ tự lắp']

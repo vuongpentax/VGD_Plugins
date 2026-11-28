@@ -175,6 +175,10 @@ check 'vượt giới hạn: dừng ở đúng giới hạn và báo truncated',
 S.send(:remove_const, :MAX_TRIANGLES)
 S.const_set(:MAX_TRIANGLES, 100_000)
 
+# 5b. Hình học của một danh sách thực thể (phạm vi đã chọn) giống hình học cả model khi danh sách là toàn bộ
+check 'phạm vi đã chọn: build_from(danh sách) cho cùng kết quả với build(model)',
+      S.build_from([quad]) == S.build(Sketchup::FakeModel.new([quad]))
+
 # 6. Mô hình rỗng
 empty = S.build(Sketchup::FakeModel.new([]))
 check 'mô hình rỗng: không có mảnh nào', empty['parts'].empty? && empty['triangles'] == 0

@@ -4,32 +4,34 @@ Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các c
 
 ## Trạng thái
 
-**0.3.0-beta.1 (nhãn số và xuất ảnh các góc).** Đã có: cây cấu kiện theo cấp, gom cấu kiện giống nhau kèm số lượng, nhập thứ tự lắp, chọn cấu kiện trong model khi bấm tên, xuất SVG, khung mô hình 3D (xoay, phóng to), thanh **Tách rời**, **Phát lắp ráp**. Mới ở 0.3.0-beta.1:
+**0.4.0-beta.1 (phạm vi theo đối tượng đã chọn, đề xuất thứ tự, xuất ảnh bằng style mặc định).** Thay đổi so với 0.3.0-beta.1:
 
-- **Số nhãn:** mỗi nhóm có hình học được đánh số 1, 2, 3... theo thứ tự cây. Số hiện ở cây (huy hiệu) và trên mô hình 3D (nhãn), khớp nhau.
-- **Xuất ảnh các góc:** bốn ảnh PNG (Trước, Phải, Trên, Iso) do chính SketchUp vẽ theo style đang bật, phối cảnh song song. Kèm file CSV `danh-sach` gồm số, tên, số lượng, thứ tự lắp. Nhãn số không nằm trong ảnh, mà nằm trong file CSV.
-
-- **Đã kiểm tra tự động:** logic gom nhóm, sắp thứ tự, số trùng, đánh số và CSV, đọc/ghi model giả lập, lấy hình học 3D, xuất ảnh (camera đổi tạm rồi trả lại), menu và Tải lại code, giao diện, khung 3D và nhãn số trong Chromium (`dev/`).
-- **Chưa kiểm tra trong SketchUp thật.** Cần thử trên SketchUp 2022 (Windows): khung 3D (WebGL), và đặc biệt `View#write_image` với tham số dạng vị trí (tên file, rộng, cao, khử răng cưa, nén). Mình viết theo kiến thức API, chưa đối chiếu được tài liệu chính thức trong môi trường này.
-- **Chưa làm:** sơ đồ mũi tên hướng lắp (như ảnh sách hướng dẫn), SVG vector đúng style SketchUp (API chưa có cách rõ ràng).
+- **Phạm vi:** sơ đồ, mô hình 3D và xuất ảnh chỉ làm việc với **đối tượng đang chọn** trong model, không phải cả model. Đổi lựa chọn thì bấm **Làm mới** để cập nhật.
+- **Đề xuất thứ tự:** điền sẵn số lắp cho mọi nhóm, theo từng lớp group (cùng cấp đánh 1, 2, 3... từ dưới lên, theo độ cao thấp nhất của nhóm). Chưa lưu: kiểm tra rồi bấm **Lưu thứ tự**.
+- **Xuất ảnh các góc:** vẽ bằng three.js theo **style mặc định SketchUp giả lập** (mặt xám trắng, cạnh đen, nền trắng), phối cảnh song song, kèm nhãn số. Không còn dùng `View#write_image` nên không phụ thuộc camera hay style của SketchUp.
+- **Đã kiểm tra tự động:** logic gom nhóm, sắp thứ tự, đề xuất theo lớp, số trùng, đánh số và CSV, đọc/ghi model giả lập, lấy hình học, menu và Tải lại code, giao diện, khung 3D, nhãn số và xuất 4 ảnh trong Chromium (`dev/`).
+- **Chưa kiểm tra trong SketchUp thật.** Cần thử trên SketchUp 2022 (Windows), đặc biệt khung 3D (WebGL) trong hộp thoại SketchUp.
+- **Chưa làm:** sơ đồ mũi tên hướng lắp, SVG vector đúng style SketchUp, dùng đúng style đang bật của model.
 
 ## Cách dùng
 
-1. Mở model có các nhóm (Group) hoặc component lồng nhau.
-2. Bấm **Extensions → VGD → VGD Diagram → VGD Diagram** hoặc nút trên thanh **VGD DGM**.
+1. Chọn đối tượng (nhóm hoặc component) trong model.
+2. Bấm **Extensions → VGD → VGD Diagram → VGD Diagram** hoặc nút trên thanh **VGD DGM**, rồi bấm **Làm mới**.
 3. Cây hiện các cấu kiện ở cấp đầu, bên trong là cấu kiện con.
    - Bấm tên để chọn các bản đó trong model.
    - Nhập thứ tự lắp (số nguyên 1 đến 9999) rồi bấm **Lưu thứ tự**. Có thể dùng Ctrl+Z để hoàn tác.
+   - Hoặc bấm **Đề xuất thứ tự** để điền sẵn theo lớp group, rồi kiểm tra và lưu.
    - Số thứ tự chỉ cần không trùng giữa các cấu kiện **cùng cấp**.
-4. **Xuất SVG** lưu sơ đồ thành file ảnh vector.
-5. **Xuất ảnh các góc** chọn một thư mục. Plugin lưu 4 ảnh PNG (Trước, Phải, Trên, Iso) và file `danh-sach.csv`. Camera của khung nhìn được đổi tạm rồi trả lại như cũ.
+4. **Xuất SVG** lưu sơ đồ thành file ảnh vector (vẽ bằng plugin).
+5. **Xuất ảnh các góc** chọn một thư mục. Plugin lưu 4 ảnh PNG (Trước, Phải, Trên, Iso) có nhãn số và file `danh-sach.csv`. Ảnh theo trạng thái mô hình 3D hiện tại (kể cả mức tách rời).
 
-## Mô hình 3D (mới ở 0.2.0-beta.1)
+## Mô hình 3D
 
-- Hình học lấy từ các mặt trong model đang mở, chỉ đọc. Model không bị đổi khi tách rời hay phát lắp ráp.
+- Hình học lấy từ các mặt của đối tượng đã chọn, chỉ đọc. Model không bị đổi khi tách rời hay phát lắp ráp.
 - **Tách rời:** mỗi mảnh di chuyển ra xa tâm mô hình theo tỉ lệ với khoảng cách của nó. Đây là cách tách theo hướng tâm, chưa phải tách theo trục như ảnh mẫu.
 - **Phát lắp ráp:** các cấu kiện có thứ tự lắp được lắp lần lượt từ 1 đến hết. Cấu kiện chưa có thứ tự theo thanh trượt.
-- Khi bấm tên hoặc trỏ vào một dòng trong cây, các cấu kiện thuộc dòng đó được tô màu cam trong khung 3D.
+- Số nhãn hiện trên cây và trên mô hình, khớp nhau. Mỗi nhóm có hình học một nhãn, đặt trên cấu kiện đầu tiên của nhóm.
+- Khi bấm tên hoặc trỏ vào một dòng trong cây, các cấu kiện thuộc dòng đó được tô màu cam.
 - Giới hạn: tối đa 100.000 tam giác. Mô hình lớn hơn sẽ bị cắt bớt và có thông báo.
 - Thư viện three.js r150.1 (MIT) nằm trong `runtime/vgd_diagram/vendor/`, không cần mạng.
 

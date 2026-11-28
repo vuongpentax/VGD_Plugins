@@ -4,9 +4,10 @@
 <header><div class="brand"><b>VGD</b><span>Diagram</span></div><button id="theme" class="vgd-theme-btn" type="button" aria-pressed="false"></button></header>
 <main>
   <section class="side" aria-label="Sơ đồ cây">
-    <p class="hint">Bấm tên để chọn trong model. Nhập thứ tự lắp (1, 2, 3...) rồi bấm <b>Lưu thứ tự</b>. Số thứ tự chỉ cần không trùng giữa các cấu kiện cùng cấp.</p>
+    <p class="hint">Chọn đối tượng trong model rồi bấm <b>Làm mới</b> để đưa vào sơ đồ (đổi lựa chọn thì bấm Làm mới lại). <b>Đề xuất thứ tự</b> điền số lắp theo từng lớp group, từ dưới lên; sửa rồi bấm <b>Lưu thứ tự</b>.</p>
     <div class="toolbar">
       <button type="button" class="quiet" onclick="VGD.refresh()">Làm mới</button>
+      <button type="button" class="quiet" onclick="VGD.suggestOrders()">Đề xuất thứ tự</button>
       <button type="button" class="quiet" onclick="VGD.exportSvg()">Xuất SVG</button>
       <button type="button" class="quiet" onclick="VGD.exportViews()">Xuất ảnh các góc</button>
     </div>

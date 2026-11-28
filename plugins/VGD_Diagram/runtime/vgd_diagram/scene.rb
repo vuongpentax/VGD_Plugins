@@ -13,8 +13,13 @@ module VGD
       # Trả về {'parts' => [{id, name, order, positions}], 'triangles' => n, 'truncated' => bool}.
       # positions: số nguyên mm, theo bộ ba đỉnh (x, y, z) của từng tam giác.
       def build(model)
+        build_from(model.entities)
+      end
+
+      # Hình học của một danh sách thực thể (phạm vi đã chọn).
+      def build_from(entities)
         state = { 'parts' => [], 'triangles' => 0, 'truncated' => false }
-        collect(model.entities, Geom::Transformation.new, nil, state)
+        collect(entities, Geom::Transformation.new, nil, state)
         state
       end
 

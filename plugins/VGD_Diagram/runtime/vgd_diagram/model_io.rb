@@ -9,7 +9,26 @@ module VGD
       KEY_ORDER = 'order'.freeze
 
       def read_tree(model)
-        Tree.build(raw_level(model.entities))
+        read_entities(model.entities)
+      end
+
+      # Cây của một danh sách thực thể (phạm vi đã chọn trong model).
+      def read_entities(entities)
+        Tree.build(raw_level(entities))
+      end
+
+      # Vị trí [z thấp nhất, x, y] của từng nhóm (hợp các bản của nhóm), để đề xuất thứ tự từ dưới lên.
+      def node_positions(model, nodes, positions = {})
+        nodes.each do |node|
+          box = Geom::BoundingBox.new
+          node['ids'].each do |id|
+            entity = model.find_entity_by_id(id)
+            box.add(entity.bounds) if entity
+          end
+          positions[node['key']] = [box.min.z, box.min.x, box.min.y] unless box.empty?
+          node_positions(model, node['children'], positions)
+        end
+        positions
       end
 
       def raw_level(entities)

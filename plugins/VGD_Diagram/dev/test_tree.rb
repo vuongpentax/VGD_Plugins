@@ -206,6 +206,23 @@ check 'CSV: tên có dấu phẩy được đặt trong ngoặc kép', csv.inclu
 check 'CSV: chỉ liệt kê nhóm được đánh số (1 tiêu đề + 3 dòng)', csv.split("\r\n").size == 4
 check 'CSV: nhóm không có hình học không xuất hiện', !csv.include?('Tủ')
 
+# 8c. Đề xuất thứ tự theo lớp group: từ dưới lên, mỗi lớp đánh lại từ 1
+layered = T.build([raw(80, 'Nóc', nil), raw(81, 'Đáy', nil), raw(82, 'Giữa', nil, [raw(83, 'Cao', nil), raw(84, 'Thấp', nil)])])
+positions = { 80 => [900.0, 0.0, 0.0], 81 => [0.0, 0.0, 0.0], 82 => [400.0, 0.0, 0.0] }
+key_of = ->(id) { T.find(layered, id)['key'] }
+positions[key_of.call(83)] = [700.0, 0.0, 0.0]
+positions[key_of.call(84)] = [100.0, 0.0, 0.0]
+suggested = T.suggest(layered, positions)
+check 'đề xuất: lớp ngoài sắp từ thấp lên cao (Đáy 1, Giữa 2, Nóc 3)',
+      suggested[key_of.call(81)] == 1 && suggested[key_of.call(82)] == 2 && suggested[key_of.call(80)] == 3
+check 'đề xuất: lớp con đánh lại từ 1 (Thấp 1, Cao 2)',
+      suggested[key_of.call(84)] == 1 && suggested[key_of.call(83)] == 2
+tied = T.build([raw(90, 'B'), raw(91, 'A')])
+tie_keys = tied.map { |n| n['key'] }
+check 'đề xuất: cùng vị trí thì theo tên',
+      T.suggest(tied, { 90 => [0.0, 0.0, 0.0], 91 => [0.0, 0.0, 0.0] }).values.sort == [1, 2] &&
+      T.suggest(tied, { 90 => [0.0, 0.0, 0.0], 91 => [0.0, 0.0, 0.0] })[91] == 1
+
 # 9. Đọc cây từ model giả lập
 body_def = Sketchup::ComponentDefinition.new('Thân tủ', [])
 inner = Sketchup::Group.new(101, 'Đáy')
