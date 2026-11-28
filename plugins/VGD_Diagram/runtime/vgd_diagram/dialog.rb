@@ -135,9 +135,14 @@ module VGD
         send_js('onExport', 'base' => @export['base'])
       end
 
+      # Tên ảnh chỉ gồm chữ thường, số và dấu gạch ngang (ví dụ truoc, cum-01, buoc-02).
+      IMAGE_KEY = /\A[a-z]+(-\d+)?\z/
+
       def save_image(payload)
         raise 'Chưa chọn thư mục xuất ảnh.' unless @export
-        path = File.join(@export['folder'], "#{@export['base']}-#{payload.fetch('key')}.png")
+        key = payload.fetch('key')
+        raise ArgumentError, "Tên ảnh không hợp lệ: #{key}" unless IMAGE_KEY.match?(key)
+        path = File.join(@export['folder'], "#{@export['base']}-#{key}.png")
         data = payload.fetch('data').sub(/\Adata:image\/png;base64,/, '')
         busy { File.binwrite(path, Base64.decode64(data)) }
         @export['files'] << path

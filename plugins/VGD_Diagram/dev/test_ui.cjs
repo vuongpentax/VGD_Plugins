@@ -175,17 +175,34 @@ function check(name, ok) {
     (await page.locator('#empty').textContent()).includes('Hãy chọn đối tượng') && (await page.locator('#empty').isVisible()));
   await page.evaluate((data) => window.VGD.onTree(data), sample);
 
-  // Xuất ảnh các góc: giao diện vẽ 4 góc, gửi từng ảnh PNG về Ruby, rồi báo xong
+  // Xuất: 4 góc chuẩn, theo cụm, theo bước lắp. Cây có số nhãn để có nhãn trên ảnh.
+  const exportTree = {
+    nodes: [
+      { key: 100, name: 'Tủ', count: 1, ids: [100], order: null, mixed: false, number: null, children: [
+        { key: 51, name: 'Đáy', count: 1, ids: [51], order: 1, mixed: false, number: 1, children: [] },
+        { key: 52, name: 'Cánh', count: 1, ids: [52], order: 2, mixed: false, number: 2, children: [] }
+      ] },
+      { key: 200, name: 'Chân', count: 1, ids: [200], order: null, mixed: false, number: 3, children: [] }
+    ]
+  };
+  await page.evaluate((data) => window.VGD.onTree(data), exportTree);
   await page.evaluate((data) => window.VGD.onScene(data), scene);
   await page.evaluate(() => { window.__calls = []; });
   await page.evaluate(() => window.VGD.onExport({ base: 'thu' }));
   const shots = (await page.evaluate(() => window.__calls)).filter((c) => c.name === 'save_image').map((c) => JSON.parse(c.args[0]));
-  check('xuất ảnh: có đúng 4 góc truoc, phai, tren, iso',
-    shots.map((s) => s.key).join(',') === 'truoc,phai,tren,iso');
-  check('xuất ảnh: mỗi ảnh là PNG có dữ liệu',
+  const keys = shots.map((s) => s.key).join(',');
+  check('xuất: đủ ảnh 4 góc, theo cụm (cum-01, cum-02) và theo bước (buoc-01, buoc-02)',
+    keys === 'truoc,phai,tren,iso,cum-01,cum-02,buoc-01,buoc-02');
+  check('xuất: mỗi ảnh là PNG có dữ liệu',
     shots.every((s) => s.data.startsWith('data:image/png;base64,') && s.data.length > 5000));
-  check('xuất ảnh: báo xong (export_done)', (await page.evaluate(() => window.__calls)).some((c) => c.name === 'export_done'));
-  check('xuất ảnh: không lỗi khi vẽ', !(await page.locator('#status').textContent()).includes('thất bại'));
+  const bySteps = shots.filter((s) => s.key.startsWith('buoc-'));
+  check('xuất: ảnh các bước khác nhau (mỗi bước hiện thêm cấu kiện)', bySteps.length === 2 && bySteps[0].data !== bySteps[1].data);
+  check('xuất: báo xong (export_done)', (await page.evaluate(() => window.__calls)).some((c) => c.name === 'export_done'));
+  check('xuất: không lỗi khi vẽ', !(await page.locator('#status').textContent()).includes('thất bại'));
+
+  // Kiểm tra: Chân chưa có thứ tự lắp -> cảnh báo
+  await page.evaluate(() => window.VGD.checkDiagram());
+  check('kiểm tra: cảnh báo nhóm chưa có thứ tự', (await page.locator('#status').textContent()).includes('chưa có thứ tự lắp'));
 
   check('không có lỗi JavaScript trên trang', errors.length === 0);
   await browser.close();

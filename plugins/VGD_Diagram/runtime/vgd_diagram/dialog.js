@@ -13,6 +13,8 @@
   var EDGE_ANGLE = 30;        // cạnh được vẽ khi hai mặt gấp nhau quá 30 độ
   var EXPORT_W = 1600;
   var EXPORT_H = 1200;
+  var MAX_TAGS = 15;      // số nhãn tối đa trên một ảnh
+  var PAST_COLOR = 0xcfcfcb; // màu cấu kiện đã lắp ở bước trước
   var EXPORT_VIEWS = [
     { key: 'truoc', dir: [0, -1, 0], up: [0, 0, 1] },
     { key: 'phai', dir: [1, 0, 0], up: [0, 0, 1] },
@@ -402,39 +404,139 @@
     view.renderer.render(view.scene, view.camera);
   }
 
-  // ---------- Xuất ảnh các góc ----------
+  // ---------- Xuất ảnh: góc chuẩn, cụm, từng bước ----------
 
-  // Vẽ nhãn số lên ảnh xuất (vị trí theo camera của góc đang xuất).
-  function drawTags(ctx, camera) {
-    var anchor = new THREE.Vector3();
-    labels.forEach(function (item) {
-      anchor.copy(item.part.mesh.position).project(camera);
-      if (anchor.z < -1 || anchor.z > 1) return;
-      var x = (anchor.x + 1) / 2 * EXPORT_W;
-      var y = (1 - anchor.y) / 2 * EXPORT_H;
-      ctx.beginPath();
-      ctx.arc(x, y, 22, 0, Math.PI * 2);
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = '#B48963';
-      ctx.stroke();
-      ctx.fillStyle = '#222222';
-      ctx.font = 'bold 24px Arial, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(item.el.textContent, x, y + 1);
+  function padNumber(n) {
+    return n < 10 ? '0' + n : String(n);
+  }
+
+  // Vẽ một nhãn số lên ảnh xuất (vị trí theo camera của ảnh đang xuất).
+  function drawTag(ctx, camera, item) {
+    var anchor = new THREE.Vector3().copy(item.part.mesh.position).project(camera);
+    if (anchor.z < -1 || anchor.z > 1) return;
+    var x = (anchor.x + 1) / 2 * EXPORT_W;
+    var y = (1 - anchor.y) / 2 * EXPORT_H;
+    ctx.beginPath();
+    ctx.arc(x, y, 22, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#B48963';
+    ctx.stroke();
+    ctx.fillStyle = '#222222';
+    ctx.font = 'bold 24px Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(item.el.textContent, x, y + 1);
+  }
+
+  // Chú thích dưới ảnh (tên cụm hoặc bước).
+  function drawCaption(ctx, text) {
+    ctx.fillStyle = '#222222';
+    ctx.font = 'bold 26px Arial, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(text, 30, EXPORT_H - 24);
+  }
+
+  // Đặt mỗi cấu kiện ở vị trí lắp (t = 0) hoặc tách ra (t = 1). tFor(part) trả về 0 hoặc 1.
+  function placeParts(tFor) {
+    view.parts.forEach(function (part) {
+      var offset = part.center.clone().sub(view.center).multiplyScalar(EXPLODE * tFor(part));
+      part.mesh.position.copy(part.center).add(offset);
     });
   }
 
-  // Vẽ bốn góc chuẩn bằng phối cảnh song song (camera trực giao), rồi gửi từng ảnh về Ruby ghi ra file.
-  // Ảnh theo trạng thái khung 3D hiện tại (kể cả mức tách rời).
+  function showParts(predicate) {
+    view.parts.forEach(function (part) { part.mesh.visible = !!predicate(part); });
+  }
+
+  function colorParts(colorFor) {
+    view.parts.forEach(function (part) { part.material.color.setHex(colorFor(part)); });
+  }
+
+  function restoreParts() {
+    view.parts.forEach(function (part) {
+      part.mesh.visible = true;
+      part.material.color.setHex(FACE_COLOR);
+    });
+  }
+
+  // Mũi tên từ vị trí tách ra tới vị trí lắp của cấu kiện (chiều lắp).
+  function addArrow(part, arrows) {
+    var from = part.mesh.position.clone();
+    var direction = part.center.clone().sub(from);
+    var length = direction.length();
+    if (length < 1) return;
+    var arrow = new THREE.ArrowHelper(direction.clone().normalize(), from, length * 0.9, HOT_COLOR,
+      Math.min(length * 0.25, 150), Math.min(length * 0.12, 80));
+    view.scene.add(arrow);
+    arrows.push(arrow);
+  }
+
+  function clearArrows(arrows) {
+    arrows.forEach(function (arrow) {
+      view.scene.remove(arrow);
+      arrow.line.geometry.dispose();
+      arrow.line.material.dispose();
+      arrow.cone.geometry.dispose();
+      arrow.cone.material.dispose();
+    });
+    arrows.length = 0;
+  }
+
+  // Các số thứ tự đã đặt, tăng dần. Mỗi số là một bước lắp.
+  function stepOrders() {
+    var seen = {};
+    view.parts.forEach(function (part) {
+      if (part.order !== null && part.order !== undefined) seen[part.order] = true;
+    });
+    return Object.keys(seen).map(Number).sort(function (a, b) { return a - b; });
+  }
+
+  function orthoCamera(center, radius, dir, up) {
+    var aspect = EXPORT_W / EXPORT_H;
+    var camera = new THREE.OrthographicCamera(-radius * aspect, radius * aspect, radius, -radius, 0.1, radius * 10);
+    var direction = new THREE.Vector3().fromArray(dir).normalize();
+    camera.up.fromArray(up);
+    camera.position.copy(center).addScaledVector(direction, radius * 4);
+    camera.lookAt(center);
+    camera.updateMatrixWorld();
+    return camera;
+  }
+
+  // Vẽ một ảnh: nền trắng, hình 3D, nhãn (nếu có) và chú thích (nếu có), rồi gửi về Ruby.
+  function captureView(ctx, out, renderer, glCanvas, camera, key, tagItems, caption) {
+    renderer.render(view.scene, camera);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, EXPORT_W, EXPORT_H);
+    ctx.drawImage(glCanvas, 0, 0);
+    tagItems.forEach(function (item) { drawTag(ctx, camera, item); });
+    if (caption) drawCaption(ctx, caption);
+    send('save_image', { key: key, data: out.toDataURL('image/png') });
+  }
+
+  // Cảnh báo về mô hình sơ đồ (dùng cho nút Kiểm tra và sau khi xuất).
+  function diagramWarnings() {
+    var warnings = [];
+    var unassigned = labels.filter(function (item) { return item.part.order === null || item.part.order === undefined; }).length;
+    if (unassigned) warnings.push(unassigned + ' nhóm chưa có thứ tự lắp.');
+    if (labels.length > MAX_TAGS) warnings.push('Tổng quan có ' + labels.length + ' nhãn (tối đa ' + MAX_TAGS + '), nên xuất theo cụm.');
+    stepOrders().forEach(function (k) {
+      var count = labels.filter(function (item) { return item.part.order === k; }).length;
+      if (count > MAX_TAGS) warnings.push('Bước ' + k + ' có ' + count + ' nhãn, nên tách bước.');
+    });
+    return warnings;
+  }
+
+  // Xuất: 4 góc chuẩn (tổng quan), từng cụm (iso), từng bước lắp (iso). Mỗi ảnh gửi về Ruby ghi ra file.
   function exportImages() {
     if (!view || view.parts.length === 0) {
       setStatus('Chưa có mô hình để xuất.', true);
       return;
     }
     var renderer = null;
+    var arrows = [];
     try {
       renderer = new THREE.WebGLRenderer({
         canvas: document.createElement('canvas'),
@@ -450,31 +552,62 @@
       out.height = EXPORT_H;
       var ctx = out.getContext('2d');
 
+      // 1. Tổng quan: bốn góc chuẩn theo trạng thái hiện tại của khung 3D.
       var box = new THREE.Box3();
       view.parts.forEach(function (part) { box.expandByObject(part.mesh); });
       var center = box.getCenter(new THREE.Vector3());
       var radius = Math.max(box.getSize(new THREE.Vector3()).length() / 2 * 1.1, 1);
-      var aspect = EXPORT_W / EXPORT_H;
-
       EXPORT_VIEWS.forEach(function (spec) {
-        var camera = new THREE.OrthographicCamera(-radius * aspect, radius * aspect, radius, -radius, 0.1, radius * 10);
-        var dir = new THREE.Vector3().fromArray(spec.dir).normalize();
-        camera.up.fromArray(spec.up);
-        camera.position.copy(center).addScaledVector(dir, radius * 4);
-        camera.lookAt(center);
-        camera.updateMatrixWorld();
-        renderer.render(view.scene, camera);
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, EXPORT_W, EXPORT_H);
-        ctx.drawImage(glCanvas, 0, 0);
-        drawTags(ctx, camera);
-        send('save_image', { key: spec.key, data: out.toDataURL('image/png') });
+        var camera = orthoCamera(center, radius, spec.dir, spec.up);
+        captureView(ctx, out, renderer, glCanvas, camera, spec.key, labels, null);
       });
+
+      // Khung chung cho cụm và bước: lấy theo bố cục đã tách, để mọi ảnh cùng tỉ lệ.
+      placeParts(function () { return 1; });
+      var exploded = new THREE.Box3();
+      view.parts.forEach(function (part) { exploded.expandByObject(part.mesh); });
+      var isoCenter = exploded.getCenter(new THREE.Vector3());
+      var isoRadius = Math.max(exploded.getSize(new THREE.Vector3()).length() / 2 * 1.1, 1);
+      var iso = orthoCamera(isoCenter, isoRadius, [1, -1, 1], [0, 0, 1]);
+
+      // 2. Theo cụm: mỗi nhóm cấp đầu một ảnh, chỉ hiện cấu kiện của cụm đó ở vị trí lắp.
+      treeNodes.forEach(function (node, index) {
+        var ids = idsOf(node);
+        var members = view.parts.filter(function (part) { return ids.indexOf(part.id) !== -1; });
+        if (members.length === 0) return;
+        placeParts(function () { return 0; });
+        showParts(function (part) { return members.indexOf(part) !== -1; });
+        colorParts(function () { return FACE_COLOR; });
+        var tags = labels.filter(function (item) { return members.indexOf(item.part) !== -1; });
+        captureView(ctx, out, renderer, glCanvas, iso, 'cum-' + padNumber(index + 1), tags, 'Cụm: ' + node.name);
+        restoreParts();
+      });
+
+      // 3. Theo bước: mỗi số thứ tự là một bước. Đã lắp: xám; bước này: cam + mũi tên; chưa lắp: ẩn.
+      stepOrders().forEach(function (k) {
+        var isPast = function (part) { return part.order === null || part.order === undefined || part.order < k; };
+        var isNow = function (part) { return part.order === k; };
+        placeParts(function (part) { return isNow(part) ? 1 : 0; });
+        showParts(function (part) { return isPast(part) || isNow(part); });
+        colorParts(function (part) { return isNow(part) ? HOT_COLOR : PAST_COLOR; });
+        view.parts.forEach(function (part) { if (isNow(part)) addArrow(part, arrows); });
+        var names = view.parts.filter(isNow).map(function (part) { return part.name; });
+        var unique = names.filter(function (name, i) { return names.indexOf(name) === i; });
+        var caption = ('Bước ' + k + ': ' + unique.join(', ')).slice(0, 90);
+        var tags = labels.filter(function (item) { return isNow(item.part); });
+        captureView(ctx, out, renderer, glCanvas, iso, 'buoc-' + padNumber(k), tags, caption);
+        clearArrows(arrows);
+        restoreParts();
+      });
+
       send('export_done');
-      setStatus('Đã xuất ảnh các góc.');
+      var warnings = diagramWarnings();
+      setStatus('Đã xuất ảnh.' + (warnings.length ? ' Cảnh báo: ' + warnings.join(' ') : ''), warnings.length > 0);
     } catch (error) {
       setStatus('Xuất ảnh thất bại: ' + error.message, true);
     } finally {
+      clearArrows(arrows);
+      if (view) restoreParts();
       if (renderer) renderer.dispose();
     }
   }
@@ -519,6 +652,10 @@
   window.VGD.suggestOrders = function () { send('suggest_orders'); };
   window.VGD.exportSvg = function () { send('export'); };
   window.VGD.exportViews = function () { send('export_views'); };
+  window.VGD.checkDiagram = function () {
+    var warnings = diagramWarnings();
+    setStatus(warnings.length ? 'Cảnh báo: ' + warnings.join(' ') : 'Không có cảnh báo.', warnings.length > 0);
+  };
   window.VGD.saveOrders = function () {
     var items = Object.keys(pending).map(function (key) {
       var value = pending[key];
