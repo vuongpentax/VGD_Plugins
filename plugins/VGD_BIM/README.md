@@ -1,6 +1,6 @@
-# VGD BIM 1.1.1-beta.59
+# VGD BIM 1.1.1
 
-Bản thử của 1.1.1 (bản ổn định gần nhất là 1.1.0). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
+Bản ổn định 1.1.1 (chốt 28/11/2026 sau khi chủ dự án thử bản 1.1.1-beta.59; file cài `VGD_BIM_v1.1.1.rbz`). Thay đổi so với 1.1.0: `RELEASE_NOTES_v1.1.1.md`. Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
 Plugin **VGD_BIM** cho SketchUp 2022+ / Windows: bóc khối lượng từ group / component, gắn dữ liệu hạng mục, quét và xuất báo cáo CSV mở được trong Excel. Namespace `VGD::BIM`; dữ liệu Group/ComponentInstance lưu trong dictionary `VGD_BIM` của file SKP. Giao diện dùng **một cửa sổ duy nhất**, màu nâu đồng bộ các plugin VGD, nhãn và thông báo tiếng Việt. Đọc [hướng dẫn sử dụng](HUONG_DAN_SU_DUNG.md) để bắt đầu.
 
