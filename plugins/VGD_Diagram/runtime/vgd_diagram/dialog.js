@@ -41,6 +41,7 @@
   var canvas = document.getElementById('view');
   var emptyMessage = document.getElementById('empty');
   var imageFormat = document.getElementById('image-format');
+  var ffmpegInput = document.getElementById('ffmpeg-path');
   var videoFormat = document.getElementById('video-format');
 
   var view = null;        // khung 3D: renderer, scene, camera, parts, góc nhìn
@@ -655,8 +656,9 @@
       setStatus('Chưa có mô hình để xuất video.', true);
       return null;
     }
-    var orders = stepOrders();
-    if (orders.length === 0) {
+    // Cùng danh sách và cùng thứ tự với "Phát lắp ráp" trong khung 3D, để video khớp với bản xem trước.
+    var ordered = orderedParts();
+    if (ordered.length === 0) {
       setStatus('Chưa có bước lắp để xuất video. Nhập hoặc đề xuất thứ tự trước.', true);
       return null;
     }
@@ -671,7 +673,7 @@
     var canvas = document.createElement('canvas');
     canvas.width = VIDEO_W;
     canvas.height = VIDEO_H;
-    var stepSpan = MOVE_SECONDS + HOLD_SECONDS;
+    var finish = (ordered.length - 1) * STAGGER + DURATION;
     return {
       renderer: renderer,
       glCanvas: renderer.domElement,
@@ -679,10 +681,10 @@
       ctx: canvas.getContext('2d'),
       camera: isoFrame(VIDEO_W / VIDEO_H),
       arrows: [],
-      lastIndex: -1,
-      orders: orders,
-      stepSpan: stepSpan,
-      total: orders.length * stepSpan + END_HOLD_SECONDS
+      arrowParts: [],
+      ordered: ordered,
+      finish: finish,
+      total: finish + END_HOLD_SECONDS
     };
   }
 
@@ -692,34 +694,36 @@
     s.renderer.dispose();
   }
 
-  // Vẽ khung hình ở thời điểm t (giây) vào canvas của s: cấu kiện của bước bay vào chỗ,
-  // các bước trước đã xám, rồi giữ hình hoàn chỉnh ở cuối.
-  function drawTimelineFrame(t, s) {
-    var orders = s.orders;
-    var index = Math.floor(t / s.stepSpan);
-    var isDone = index >= orders.length;
-    var k = isDone ? null : orders[index];
-    var isPast = function (part) { return part.order === null || part.order === undefined || (k !== null && part.order < k); };
-    var isNow = function (part) { return k !== null && part.order === k; };
+  // Vị trí t của một cấu kiện ở thời điểm tVideo (giây), đúng công thức của "Phát lắp ráp":
+  // cấu kiện có thứ tự bay vào theo thứ tự xếp hạng, cấu kiện chưa có thứ tự ở vị trí lắp.
+  function videoT(part, s, tVideo) {
+    var rank = s.ordered.indexOf(part);
+    if (rank < 0) return 0;
+    var p = clamp((tVideo - rank * STAGGER) / DURATION, 0, 1);
+    return (1 - p) * (1 - p);
+  }
 
-    if (index !== s.lastIndex) {
+  // Vẽ khung hình ở thời điểm t (giây) vào canvas của s, theo đúng chuyển động của bản xem trước.
+  // Mũi tên và chú thích chỉ là phần thêm: mũi tên khi cấu kiện bắt đầu bay, chú thích là cấu kiện đang bay.
+  function drawTimelineFrame(t, s) {
+    placeParts(function (part) { return videoT(part, s, t); });
+    showParts(function () { return true; });
+    colorParts(function () { return FACE_COLOR; });
+
+    var flying = s.ordered.filter(function (part) {
+      var p = clamp((t - s.ordered.indexOf(part) * STAGGER) / DURATION, 0, 1);
+      return p > 0 && p < 1;
+    });
+    var arrowing = s.ordered.filter(function (part) {
+      var p = clamp((t - s.ordered.indexOf(part) * STAGGER) / DURATION, 0, 1);
+      return p > 0 && p < ARROW_UNTIL;
+    });
+    var changed = arrowing.length !== s.arrowParts.length ||
+      arrowing.some(function (part, i) { return part !== s.arrowParts[i]; });
+    if (changed) {
       clearArrows(s.arrows);
-      s.lastIndex = index;
-    }
-    if (isDone) {
-      placeParts(function () { return 0; });
-      showParts(function () { return true; });
-      colorParts(function () { return FACE_COLOR; });
-    } else {
-      var p = clamp((t - index * s.stepSpan) / MOVE_SECONDS, 0, 1);
-      var ease = 1 - (1 - p) * (1 - p);
-      placeParts(function (part) { return isNow(part) ? 1 - ease : 0; });
-      showParts(function (part) { return isPast(part) || isNow(part); });
-      colorParts(function (part) { return isNow(part) ? HOT_COLOR : PAST_COLOR; });
-      if (p < ARROW_UNTIL && s.arrows.length === 0) {
-        view.parts.forEach(function (part) { if (isNow(part)) addArrow(part, s.arrows); });
-      }
-      if (p >= ARROW_UNTIL) clearArrows(s.arrows);
+      arrowing.forEach(function (part) { addArrow(part, s.arrows); });
+      s.arrowParts = arrowing;
     }
 
     s.renderer.render(view.scene, s.camera);
@@ -727,13 +731,12 @@
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, VIDEO_W, VIDEO_H);
     ctx.drawImage(s.glCanvas, 0, 0);
-    if (!isDone) {
-      labels.filter(function (item) { return isNow(item.part); })
-        .forEach(function (item) { drawTag(ctx, s.camera, item); });
-      var names = view.parts.filter(isNow).map(function (part) { return part.name; });
+    labels.forEach(function (item) { drawTag(ctx, s.camera, item); });
+    if (flying.length) {
+      var names = flying.map(function (part) { return part.name; });
       var unique = names.filter(function (name, i) { return names.indexOf(name) === i; });
-      drawCaption(ctx, ('Bước ' + k + ': ' + unique.join(', ')).slice(0, 90));
-    } else {
+      drawCaption(ctx, ('Đang lắp: ' + unique.join(', ')).slice(0, 90));
+    } else if (t >= s.finish) {
       drawCaption(ctx, 'Lắp ráp hoàn chỉnh');
     }
   }
@@ -773,7 +776,7 @@
         var reader = new FileReader();
         reader.onload = function () {
           send('save_video', { data: reader.result, ext: format });
-          setStatus('Đã quay video lắp ráp (' + s.orders.length + ' bước).');
+          setStatus('Đã quay video lắp ráp (' + s.ordered.length + ' cấu kiện có thứ tự).');
         };
         reader.readAsDataURL(blob);
       };
@@ -865,6 +868,9 @@
     onVideo: function (data) {
       exportVideo(data.format || 'mp4');
     },
+    onSettings: function (data) {
+      ffmpegInput.value = data.ffmpegPath || '';
+    },
     onToast: function (data) { setStatus(data.message, false); },
     onError: function (data) { setStatus(data.message, true); }
   };
@@ -874,6 +880,8 @@
   window.VGD.exportSvg = function () { send('export'); };
   window.VGD.exportViews = function () { send('export_views', { format: imageFormat.value }); };
   window.VGD.exportVideo = function () { send('export_video', { format: videoFormat.value }); };
+  window.VGD.saveFfmpeg = function () { send('save_ffmpeg', { path: ffmpegInput.value }); };
+  window.VGD.pickFfmpeg = function () { send('pick_ffmpeg'); };
   window.VGD.checkDiagram = function () {
     var warnings = diagramWarnings();
     setStatus(warnings.length ? 'Cảnh báo: ' + warnings.join(' ') : 'Không có cảnh báo.', warnings.length > 0);
@@ -907,7 +915,8 @@
       }) : [],
       playing: !!playing,
       slider: Number(slider.value),
-      labels: labels.length
+      labels: labels.length,
+      ordered: orderedParts().map(function (part) { return part.id; })
     };
   };
 

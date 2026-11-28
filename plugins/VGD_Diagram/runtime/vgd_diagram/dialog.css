@@ -48,3 +48,7 @@ button:disabled{opacity:.45;cursor:default}
 .badge{min-width:20px;height:20px;line-height:20px;text-align:center;padding:0 5px;border-radius:10px;border:1px solid var(--vgd-accent);color:var(--vgd-accent-strong);font-size:12px;font-weight:600;flex:none}
 .labels{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .tag{position:absolute;transform:translate(-50%,-50%);min-width:22px;height:22px;line-height:22px;text-align:center;padding:0 6px;border-radius:11px;background:var(--vgd-surface);border:1px solid var(--vgd-accent);color:var(--vgd-text);font-size:12px;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+
+.ffmpeg-row{display:flex;align-items:center;gap:6px}
+.ffmpeg-row label{color:var(--vgd-muted);font-size:12px;flex:none}
+.ffmpeg-row input[type=text]{flex:1;min-width:0;padding:5px 8px;border-radius:6px;border:1px solid var(--vgd-border);background:var(--vgd-input);color:var(--vgd-text);font:inherit;font-size:12px}

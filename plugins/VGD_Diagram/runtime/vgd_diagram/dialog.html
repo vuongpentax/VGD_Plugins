@@ -33,6 +33,12 @@
         <button type="button" id="play" class="quiet" onclick="VGD.play()" disabled>Phát lắp ráp</button>
         <button type="button" class="quiet" onclick="VGD.reset()">Đặt lại</button>
       </div>
+      <div class="ffmpeg-row">
+        <label for="ffmpeg-path">ffmpeg</label>
+        <input type="text" id="ffmpeg-path" placeholder="Đường dẫn tới ffmpeg.exe (để trống = tìm trong PATH)" aria-label="Đường dẫn ffmpeg">
+        <button type="button" class="quiet" onclick="VGD.pickFfmpeg()">Chọn...</button>
+        <button type="button" class="quiet" onclick="VGD.saveFfmpeg()">Lưu</button>
+      </div>
       <p class="hint small">Kéo chuột để xoay, cuộn để phóng to hoặc thu nhỏ. Phát lắp ráp: các cấu kiện có thứ tự được lắp lần lượt.</p>
     </div>
   </section>

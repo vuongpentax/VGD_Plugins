@@ -219,7 +219,9 @@ function check(name, ok) {
   check('video: dữ liệu là video (mp4 hoặc webm) có nội dung',
     !!videoPayload && /^data:video\/(mp4|webm)/.test(videoPayload.data) && videoPayload.data.length > 5000);
   check('video: đuôi file hợp lệ', !!videoPayload && ['mp4', 'webm'].includes(videoPayload.ext));
-  check('video: báo đã quay (có số bước)', (await page.locator('#status').textContent()).includes('2 bước'));
+  check('video: báo đã quay (có số cấu kiện có thứ tự)', (await page.locator('#status').textContent()).includes('2 cấu kiện'));
+  const orderedIds = (await dbg()).ordered;
+  check('video: thứ tự bay giống khung 3D (51 trước 52)', JSON.stringify(orderedIds) === JSON.stringify([51, 52]));
 
   // Không có bước lắp: không quay, báo rõ
   await page.evaluate(() => window.VGD.onScene({ truncated: false, parts: [{ id: 1, name: 'A', order: null, positions: [0, 0, 0, 1, 0, 0, 0, 1, 0] }] }));
@@ -261,11 +263,23 @@ function check(name, ok) {
     frameDone = (await page.evaluate(() => window.__calls)).find((c) => c.name === 'video_done');
   }
   const frameCalls = (await page.evaluate(() => window.__calls)).filter((c) => c.name === 'save_frame').map((c) => JSON.parse(c.args[0]));
-  const expectedFrames = Math.ceil((2 * (0.9 + 0.7) + 2) * 30);
+  // Cùng công thức với "Phát lắp ráp": (số cấu kiện có thứ tự - 1) * 0.35 + 0.7 giây, cộng 2 giây giữ hình cuối.
+  const expectedFrames = Math.ceil(((2 - 1) * 0.35 + 0.7 + 2) * 30);
   check('khung hình: số khung đúng (thời lượng × 30 khung/giây)', frameCalls.length === expectedFrames);
   check('khung hình: đánh số 1, 2, 3... và là PNG',
     frameCalls.every((f, i) => f.index === i + 1) && frameCalls.every((f) => f.data.startsWith('data:image/png;base64,')));
   check('khung hình: báo xong với số khung và fps', !!frameDone && JSON.parse(frameDone.args[0]).fps === 30);
+
+  // ---- Ô đường dẫn ffmpeg: hiện giá trị đã lưu, lưu/chọn gửi về Ruby ----
+  await page.evaluate(() => { window.__calls = []; window.VGD.onSettings({ ffmpegPath: 'C:/ffmpeg/bin/ffmpeg.exe' }); });
+  check('ffmpeg: hiện đường dẫn đã lưu', (await page.locator('#ffmpeg-path').inputValue()) === 'C:/ffmpeg/bin/ffmpeg.exe');
+  await page.locator('#ffmpeg-path').fill('D:/tools/ffmpeg.exe');
+  await page.locator('button', { hasText: 'Lưu' }).first().click();
+  const saveCall = (await page.evaluate(() => window.__calls)).find((c) => c.name === 'save_ffmpeg');
+  check('ffmpeg: nút Lưu gửi đường dẫn về Ruby', !!saveCall && JSON.parse(saveCall.args[0]).path === 'D:/tools/ffmpeg.exe');
+  await page.evaluate(() => { window.__calls = []; });
+  await page.locator('button', { hasText: 'Chọn' }).first().click();
+  check('ffmpeg: nút Chọn gửi yêu cầu mở hộp thoại', (await page.evaluate(() => window.__calls)).some((c) => c.name === 'pick_ffmpeg'));
 
   check('không có lỗi JavaScript trên trang', errors.length === 0);
   await browser.close();

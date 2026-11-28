@@ -27,10 +27,34 @@ module VGD
         nil
       end
 
-      # Hỏi người dùng chọn file ffmpeg và nhớ lại cho lần sau. Trả về nil nếu bấm Hủy.
+      # Hỏi người dùng chọn file ffmpeg rồi lưu lại. Trả về nil nếu bấm Hủy.
       def choose
         path = UI.openpanel('Chọn file ffmpeg', '', 'ffmpeg|ffmpeg.exe||')
         return nil unless path
+        save_path(path)
+      end
+
+      # Kiểm tra file có đúng là ffmpeg và có bộ mã hóa libx264 không. Trả về thông báo lỗi, hoặc nil nếu đạt.
+      def problem_with(path)
+        return 'Không tìm thấy file này.' unless File.file?(path)
+        version, status = Open3.capture2e(path, '-version')
+        return 'File này không chạy được như ffmpeg.' unless status.success? && version.include?('ffmpeg version')
+        encoders, _status = Open3.capture2e(path, '-hide_banner', '-encoders')
+        return 'ffmpeg này không có bộ mã hóa libx264 (cần để ghép MP4).' unless encoders.include?('libx264')
+        nil
+      rescue SystemCallError => error
+        "Không chạy được file này: #{error.message}"
+      end
+
+      # Lưu đường dẫn ffmpeg cho lần sau. Chuỗi rỗng là xóa cài đặt. Ném ArgumentError nếu file không dùng được.
+      def save_path(path)
+        path = path.to_s.strip
+        if path.empty?
+          Sketchup.write_default(SECTION, SETTING, '')
+          return nil
+        end
+        problem = problem_with(path)
+        raise ArgumentError, problem if problem
         Sketchup.write_default(SECTION, SETTING, path)
         path
       end

@@ -1,8 +1,16 @@
-# VGD Diagram 0.9.0-beta.1
+# VGD Diagram 0.10.0-beta.1
 
 Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các cấu kiện, số lượng và thứ tự lắp, để khách hàng và thợ lắp đặt dễ hiểu mô hình.
 
 ## Trạng thái
+
+**0.10.0-beta.1 (ô đường dẫn ffmpeg, video khớp thứ tự lắp).** Thay đổi so với 0.9.0-beta.1:
+
+- **Ô đường dẫn ffmpeg:** nhập hoặc dán đường dẫn tới `ffmpeg.exe` rồi bấm **Lưu**. Bấm **Chọn...** để chọn bằng hộp thoại. Plugin kiểm tra file đúng là ffmpeg và có bộ mã hóa `libx264`, rồi nhớ lại cho lần sau. Để trống rồi bấm Lưu để xóa cài đặt.
+- **Video khớp với "Phát lắp ráp":** trước đây video gom các cấu kiện cùng số thứ tự bay cùng lúc và ẩn cấu kiện chưa đến bước. Bây giờ video dùng đúng thứ tự và thời gian của bản xem trước: từng cấu kiện bay vào lần lượt theo thứ tự, mọi cấu kiện đều hiện từ đầu. Mũi tên và chú thích "Đang lắp" là phần thêm.
+- **Ảnh theo bước** (`buoc-NN`) vẫn gom các cấu kiện cùng số thứ tự vào một bước, như thiết kế.
+- **Đã kiểm tra tự động:** Chromium (57/57, gồm thứ tự bay và ô ffmpeg), ffmpeg thật (14/14, gồm lưu, từ chối file sai và xóa đường dẫn), Ruby.
+- **Chưa kiểm tra trong SketchUp thật.**
 
 **0.9.0-beta.1 (tự ghép MP4 bằng ffmpeg).** Thay đổi so với 0.8.0-beta.1:
 

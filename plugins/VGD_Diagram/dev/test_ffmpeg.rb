@@ -138,6 +138,33 @@ Dir.mktmpdir do |dir|
   check('ghép lỗi trong luồng: báo lỗi, không hỏi xóa', $sent.any? { |fn, _| fn == 'onError' } && $answers.empty? && $boxes.none? { |t| t.include?('Xóa') })
 end
 
+# 9. Đường dẫn ffmpeg nhập tay: lưu file đúng, từ chối file sai, xóa được
+ffmpeg_path = `which ffmpeg`.strip
+Dir.mktmpdir do |dir|
+  fake = File.join(dir, 'ffmpeg.exe')
+  File.write(fake, "#!/bin/sh\necho 'khong phai ffmpeg'\n")
+  File.chmod(0o755, fake)
+  $defaults.delete(['VGD_Diagram', 'ffmpeg_path'])
+  saved = F.save_path(ffmpeg_path)
+  check('đường dẫn: lưu được ffmpeg thật và đọc lại được', saved == ffmpeg_path && F.saved_path == ffmpeg_path)
+  rejected = begin
+    F.save_path(fake)
+    false
+  rescue ArgumentError => error
+    error.message.include?('ffmpeg')
+  end
+  check('đường dẫn: từ chối file không phải ffmpeg, giữ nguyên đường dẫn cũ', rejected && F.saved_path == ffmpeg_path)
+  missing = begin
+    F.save_path(File.join(dir, 'khong-co.exe'))
+    false
+  rescue ArgumentError => error
+    error.message.include?('Không tìm thấy')
+  end
+  check('đường dẫn: báo khi file không tồn tại', missing)
+  F.save_path('')
+  check('đường dẫn: để trống là xóa cài đặt', F.saved_path.nil?)
+end
+
 puts
 puts $fail.empty? ? "TẤT CẢ ĐẠT (#{$pass})" : "CÓ #{$fail.size} LỖI: #{$fail.inspect}"
 exit($fail.empty? ? 0 : 1)

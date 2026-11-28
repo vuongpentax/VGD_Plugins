@@ -28,7 +28,7 @@ module VGD
                                   width: 980, height: 680, min_width: 360, min_height: 480,
                                   resizable: true, style: UI::HtmlDialog::STYLE_DIALOG)
         @dlg.set_file(File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'dialog.html'))
-        callback('ready') { refresh_scope && push_tree }
+        callback('ready') { refresh_scope && push_tree && push_settings }
         callback('refresh') { refresh_scope && push_tree }
         callback('select') { |json| select_group(JSON.parse(json).fetch('key')) }
         callback('save_orders') { |json| save_orders(JSON.parse(json).fetch('changes')) }
@@ -40,6 +40,8 @@ module VGD
         callback('export_video') { |json| start_video(JSON.parse(json || '{}')) }
         callback('save_video') { |json| save_video(JSON.parse(json)) }
         callback('save_frame') { |json| save_frame(JSON.parse(json)) }
+        callback('save_ffmpeg') { |json| save_ffmpeg(JSON.parse(json)) }
+        callback('pick_ffmpeg') { pick_ffmpeg }
         callback('video_done') { |json| finish_frames(JSON.parse(json)) }
         @dlg.show
       end
@@ -186,6 +188,23 @@ module VGD
         busy { File.binwrite(path, Base64.decode64(data)) }
         @video['count'] += 1
         @video['files'] << path
+      end
+
+      # Cài đặt ffmpeg: đường dẫn nhập tay hoặc chọn bằng hộp thoại, được nhớ cho lần sau.
+      def push_settings
+        send_js('onSettings', 'ffmpegPath' => Ffmpeg.saved_path.to_s)
+      end
+
+      def save_ffmpeg(payload)
+        saved = Ffmpeg.save_path(payload.fetch('path'))
+        push_settings
+        send_js('onToast', 'message' => saved ? "Đã lưu ffmpeg: #{saved}" : 'Đã xóa đường dẫn ffmpeg đã lưu.')
+      end
+
+      def pick_ffmpeg
+        chosen = Ffmpeg.choose
+        push_settings
+        send_js('onToast', 'message' => "Đã lưu ffmpeg: #{chosen}") if chosen
       end
 
       # Sau khi xuất xong chuỗi khung hình: nếu có ffmpeg thì hỏi ghép MP4, rồi hỏi xóa ảnh.
