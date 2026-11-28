@@ -1,11 +1,8 @@
 # encoding: UTF-8
 require 'sketchup.rb'
 require 'json'
-require_relative 'version'
-require_relative 'tree'
-require_relative 'model_io'
-require_relative 'scene'
-require_relative 'dialog'
+require_relative 'code_files'
+VGD::Diagram::CODE_FILES.each { |name| require_relative name unless name == 'main' }
 
 # Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).
 module VGD
@@ -20,6 +17,11 @@ module VGD
 
     def show_dialog
       Dialog.show
+    end
+
+    # Nút toolbar là nút bật / tắt (quy tắc chung của repo): đang mở thì đóng, đang đóng thì mở. Mục menu chỉ mở.
+    def toggle_dialog
+      Dialog.visible? ? Dialog.close : Dialog.show
     end
 
     # reload.rb kiểm tra cú pháp cả bộ file trước khi nạp nên lỗi cú pháp không làm hỏng bản đang chạy.
@@ -39,15 +41,20 @@ module VGD
 
     unless @registered
       icon = File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'diagram.svg')
-      @command = UI::Command.new('VGD Diagram') { show_dialog }
-      @command.small_icon = @command.large_icon = icon
-      @command.tooltip = 'VGD Diagram'
-      @command.status_bar_text = 'Sơ đồ cây lắp ráp: cấu kiện, số lượng và thứ tự lắp.'
+      new_command = lambda do |&action|
+        command = UI::Command.new('VGD Diagram', &action)
+        command.small_icon = command.large_icon = icon
+        command.tooltip = 'VGD Diagram'
+        command.status_bar_text = 'Sơ đồ cây lắp ráp: cấu kiện, số lượng và thứ tự lắp.'
+        command
+      end
+      @command = new_command.call { show_dialog }
+      @toolbar_command = new_command.call { toggle_dialog }
       menu = ::VGD.menu.add_submenu('VGD Diagram')
       menu.add_item(@command)
       menu.add_item('Tải lại code') { reload_extension }
       @toolbar = UI::Toolbar.new('VGD DGM')
-      @toolbar.add_item(@command)
+      @toolbar.add_item(@toolbar_command)
       # Lần đầu cài thì hiện thanh công cụ; các lần sau giữ trạng thái người dùng đã chọn.
       @toolbar.get_last_state == TB_NEVER_SHOWN ? @toolbar.show : @toolbar.restore
       @registered = true

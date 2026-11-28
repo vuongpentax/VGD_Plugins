@@ -66,6 +66,10 @@ module Sketchup
       @items = []
     end
 
+    def to_a
+      @items.dup
+    end
+
     def add(list)
       @items.concat(Array(list))
     end
@@ -263,6 +267,24 @@ check 'lỗi khi ghi: hủy thao tác (abort) và báo lỗi ra ngoài', failed
 sel_model = Sketchup::FakeModel.new([cab1, cab2])
 count = M.select(sel_model, [100, 103, 999])
 check 'chọn: bỏ id đã mất, chọn đủ bản còn lại', count == 2 && sel_model.selection.items == [cab1, cab2]
+
+# 13. Vùng làm việc gắn với đúng file SketchUp lúc bấm Làm mới. entityID chỉ có nghĩa trong một model:
+# đổi sang file khác khi hộp thoại còn mở thì không được trỏ nhầm đối tượng trùng số của file mới.
+require 'dialog'
+D = VGD::Diagram::Dialog
+model_a = Sketchup::FakeModel.new([cab1, cab2])
+model_a.selection.add([cab1])
+other_cab = Sketchup::Group.new(cab1.entityID, 'Tủ của file khác') # cùng entityID với cab1, nằm ở model khác
+model_b = Sketchup::FakeModel.new([other_cab])
+$active_model = model_a
+Sketchup.define_singleton_method(:active_model) { $active_model }
+D.refresh_scope
+check 'vùng làm việc: lấy đúng đối tượng đang chọn của model hiện tại', D.scope_entities(model_a) == [cab1]
+$active_model = model_b
+check 'đổi sang file khác: vùng làm việc cũ không trỏ nhầm đối tượng trùng entityID', D.scope_entities(model_b).empty?
+check 'đổi sang file khác: thông báo yêu cầu chọn lại rồi Làm mới', D.scope_message(D.scope_entities(model_b), []).include?('Làm mới')
+$active_model = model_a
+check 'quay lại file cũ: vùng làm việc vẫn còn', D.scope_entities(model_a) == [cab1]
 
 puts
 puts $fail.empty? ? "TẤT CẢ ĐẠT (#{$pass})" : "CÓ #{$fail.size} LỖI: #{$fail.inspect}"

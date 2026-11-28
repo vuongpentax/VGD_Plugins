@@ -676,6 +676,13 @@
     return camera;
   }
 
+  // Renderer tạm của một lần xuất: dispose không trả context WebGL, mà trình duyệt chỉ cho khoảng 16 context cùng lúc
+  // (vượt thì mất context cũ nhất, tức khung 3D chính). Nên buộc trả context ngay khi xuất xong.
+  function releaseRenderer(renderer) {
+    renderer.dispose();
+    renderer.forceContextLoss();
+  }
+
   // Vẽ một ảnh: nền trắng, hình 3D, nhãn (nếu có) và chú thích (nếu có), rồi gửi về Ruby.
   function captureView(ctx, out, renderer, glCanvas, camera, key, tagItems, caption) {
     renderer.render(view.scene, camera);
@@ -780,7 +787,7 @@
     } finally {
       clearArrows(arrows);
       if (view) restoreParts();
-      if (renderer) renderer.dispose();
+      if (renderer) releaseRenderer(renderer);
     }
   }
 
@@ -848,7 +855,7 @@
   function disposeVideo(s) {
     clearArrows(s.arrows);
     if (view) restoreParts();
-    s.renderer.dispose();
+    releaseRenderer(s.renderer);
   }
 
   // Vị trí t của một cấu kiện ở thời điểm tVideo (giây), đúng công thức của "Phát lắp ráp":

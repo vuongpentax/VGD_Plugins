@@ -26,7 +26,7 @@ module VGD
           return
         end
         @dlg = UI::HtmlDialog.new(dialog_title: 'VGD Diagram', preferences_key: 'VGDDiagram',
-                                  width: 980, height: 680, min_width: 360, min_height: 480,
+                                  width: 980, height: 680, min_width: 720, min_height: 560,
                                   resizable: true, style: UI::HtmlDialog::STYLE_DIALOG)
         @dlg.set_file(File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'dialog.html'))
         callback('ready') do
@@ -69,11 +69,15 @@ module VGD
       # Phạm vi = các đối tượng đang chọn trong model lúc bấm Làm mới.
       # Đổi lựa chọn trong model thì phải bấm Làm mới để cập nhật.
       def refresh_scope
-        @scope_ids = Sketchup.active_model.selection.to_a.map(&:entityID)
+        @scope_model = Sketchup.active_model
+        @scope_ids = @scope_model.selection.to_a.map(&:entityID)
         true
       end
 
+      # entityID chỉ có nghĩa trong đúng model lúc bấm Làm mới. Đã đổi sang file SketchUp khác thì phạm vi cũ bị bỏ
+      # (không tìm theo số trong model mới, vì có thể trùng số với đối tượng khác).
       def scope_entities(model)
+        return [] unless @scope_model.equal?(model)
         (@scope_ids || []).map { |id| model.find_entity_by_id(id) }.compact
       end
 
@@ -160,7 +164,7 @@ module VGD
         path, format = resolve_format(chosen, IMAGE_FORMATS, fallback)
         @export = {
           'folder' => File.dirname(path),
-          'base' => File.basename(path, ".#{format}"),
+          'base' => File.basename(path, File.extname(path)),
           'format' => format,
           'files' => []
         }
@@ -178,7 +182,7 @@ module VGD
         path, format = resolve_format(chosen, VIDEO_FORMATS, fallback)
         if format == 'png'
           # Chuỗi khung hình: mỗi khung là một file PNG đánh số, ghi trong thư mục đã chọn.
-          @video = { 'frames' => true, 'folder' => File.dirname(path), 'base' => File.basename(path, '.png'), 'count' => 0, 'files' => [] }
+          @video = { 'frames' => true, 'folder' => File.dirname(path), 'base' => File.basename(path, File.extname(path)), 'count' => 0, 'files' => [] }
           send_js('onVideo', 'format' => 'png')
           return
         end
@@ -233,7 +237,7 @@ module VGD
         return unless video && video['frames']
         fps = payload.fetch('fps')
         frames = video['files']
-        pattern = File.join(video['folder'], "#{video['base']}-khung-%05d.png")
+        pattern = Ffmpeg.frame_pattern(video['folder'], video['base'])
         output = File.join(video['folder'], "#{video['base']}.mp4")
         exe = Ffmpeg.executable || offer_ffmpeg
         unless exe

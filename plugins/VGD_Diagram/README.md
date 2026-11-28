@@ -1,8 +1,24 @@
-# VGD Diagram 0.10.4-beta.1
+# VGD Diagram 0.10.5-beta.1
 
 Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các cấu kiện, số lượng và thứ tự lắp, để khách hàng và thợ lắp đặt dễ hiểu mô hình.
 
 ## Trạng thái
+
+**0.10.5-beta.1 (rà soát lỗi, theo chuẩn repo, bố cục giao diện).** Thay đổi so với 0.10.4-beta.1:
+
+- **Sửa lỗi tên file:** gõ đuôi viết hoa trong hộp lưu (`Anh.PNG`) không còn làm tên ảnh thành `Anh.PNG-truoc.png`.
+- **Sửa lỗi ghép MP4:** tên file hoặc thư mục có dấu `%` (ví dụ `tu 50%`) trước đây làm ffmpeg không mở được chuỗi khung hình; nay ghép được.
+- **Đổi file SketchUp khi hộp thoại đang mở:** vùng làm việc cũ không còn trỏ nhầm đối tượng của file mới (phải chọn lại rồi bấm Làm mới).
+- **Xuất ảnh và video nhiều lần:** trả hẳn context WebGL sau mỗi lần xuất, để không mất khung 3D chính vì vượt giới hạn của trình duyệt. Chưa kiểm tra trong SketchUp thật.
+- **Nút trên thanh VGD DGM là nút bật / tắt:** bấm khi hộp thoại đang đóng thì mở, bấm lại thì đóng. Mục menu vẫn chỉ mở.
+- **Một danh sách file nạp** (`runtime/vgd_diagram/code_files.rb`) dùng cho cả lúc mở SketchUp và Tải lại code; có test chặn quên file.
+- **Icon** theo quy tắc icon của repo (nét 1,8 px, nét chính than `#292B2D`, điểm nhấn `#B48963`). Chưa xem trên thanh công cụ SketchUp thật.
+- **Giao diện:** sắp xếp lại theo nhóm chức năng. Cột trái: Làm mới, Đề xuất thứ tự, Kiểm tra, cây cấu kiện, rồi Lưu thứ tự ngay dưới cây. Cột phải: khung 3D, Tách rời, hàng Phát lắp ráp / Đặt lại và nhóm **Xuất** (SVG, Ảnh, Video; ô chọn định dạng ghép liền với nút), mục gập **Ghép MP4 bằng ffmpeg**. Gợi ý xoay / phóng nằm ở chân cửa sổ cho đến khi có thông báo.
+- **Theme:** ô chọn, ô nhập, thanh trượt, ô tick và nút theo token và chuẩn điều khiển chung (`vgd-controls.css`); trước đây dùng token `--vgd-input` không tồn tại nên ô nhập không có nền. Có viền focus 2 px.
+- **Cỡ cửa sổ:** tối thiểu 720 × 560 (trước là 360 × 480, ở cỡ nhỏ bố cục bị vỡ). Cỡ mặc định 980 × 680 giữ nguyên.
+- **Đồ thị mã nguồn** (`graphify-out/`) loại thư viện three.js (`.graphifyignore`), chỉ còn mã của plugin.
+- **Kiểm tra tự động:** `dev/test_tree.rb` 46, `dev/test_reload.rb` 27, `dev/test_scene.rb` 11, `dev/test_formats.rb` 6, `dev/test_ffmpeg.rb` 47 (ffmpeg thật), `dev/test_ui.cjs` 103 (Chromium: gồm bố cục ở 980×680, 720×560, 1280×800, sáng và tối, và giải phóng WebGL). Đã xem ảnh chụp giao diện ở cả hai theme.
+- **Chưa kiểm tra trong SketchUp thật** (bố cục trong HtmlDialog, nút bật / tắt, icon, cỡ tối thiểu).
 
 **0.10.4-beta.1 (tách rời theo cụm: hướng, khoảng cách và góc nhìn).** Thay đổi so với 0.10.3-beta.1:
 
@@ -15,7 +31,6 @@ Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các c
 - **Kiểm tra tự động:** Chromium (`dev/test_ui.cjs`, 72/72), gồm danh sách, hướng riêng, "Giữ nguyên", khoảng cách nhập tay, bật/tắt Tự động và góc camera. Đã xem ảnh tủ mẫu 6 tấm tách 100 % trong Chromium: các tấm không chồng nhau.
 - **Chưa kiểm tra trong SketchUp thật.**
 
-**0.10.3-beta.1 (bỏ MP4 khi quay trực tiếp; sửa lỗi xuất WebM; báo lỗi ffmpeg chi tiết).** Thay đổi so với 0.10.2-beta.1:
 **0.10.3-beta.1 (bỏ MP4 khi quay trực tiếp; sửa lỗi xuất WebM; báo lỗi ffmpeg chi tiết hơn).** Thay đổi so với 0.10.2-beta.1:
 
 - **Bỏ MP4 trong danh sách video:** trình duyệt SketchUp không quay được MP4, nên tùy chọn này đã bỏ. Danh sách còn **WebM** (quay trực tiếp) và **PNG (chuỗi khung hình)**. Muốn có MP4 thì chọn PNG rồi ghép bằng ffmpeg.
@@ -100,20 +115,20 @@ ffmpeg -framerate 30 -i lap-rap-khung-%05d.png -c:v libx264 -pix_fmt yuv420p lap
 ## Cách dùng
 
 1. Chọn đối tượng (nhóm hoặc component) trong model.
-2. Bấm **Extensions → VGD → VGD Diagram → VGD Diagram** hoặc nút trên thanh **VGD DGM**, rồi bấm **Làm mới**.
+2. Bấm **Extensions → VGD → VGD Diagram → VGD Diagram** (chỉ mở) hoặc nút trên thanh **VGD DGM** (bấm lần nữa thì đóng), rồi bấm **Làm mới**.
 3. Cây hiện các cấu kiện ở cấp đầu, bên trong là cấu kiện con.
    - Bấm tên để chọn các bản đó trong model.
    - Nhập thứ tự lắp (số nguyên 1 đến 9999) rồi bấm **Lưu thứ tự**. Có thể dùng Ctrl+Z để hoàn tác.
    - Hoặc bấm **Đề xuất thứ tự** để điền sẵn theo lớp group, rồi kiểm tra và lưu.
    - Số thứ tự chỉ cần không trùng giữa các cấu kiện **cùng cấp**.
-4. **Xuất SVG** lưu sơ đồ thành file ảnh vector (vẽ bằng plugin).
-5. **Xuất ảnh** chọn một thư mục. Plugin lưu:
+4. Nhóm **Xuất** dưới khung 3D: **SVG** lưu sơ đồ thành file ảnh vector (vẽ bằng plugin).
+5. **Ảnh** chọn nơi lưu. Plugin lưu:
    - 4 ảnh tổng quan (`truoc`, `phai`, `tren`, `iso`) theo trạng thái mô hình 3D hiện tại;
    - ảnh theo cụm (`cum-01`...), mỗi nhóm cấp đầu một ảnh;
    - ảnh theo bước (`buoc-01`...), mỗi số thứ tự lắp một ảnh;
    - file `danh-sach.csv`.
 6. **Kiểm tra** báo các điều cần sửa trước khi xuất (nhóm chưa có thứ tự, quá nhiều nhãn trên một ảnh).
-7. **Định dạng:** chọn PNG hoặc JPG (ảnh) và MP4 hoặc WebM (video) cạnh nút tương ứng; hoặc gõ đuôi file trong hộp lưu.
+7. **Định dạng:** chọn PNG hoặc JPG (ảnh), WebM hoặc PNG chuỗi khung hình (video) ở ô liền bên nút **Ảnh** / **Video**; hoặc gõ đuôi file trong hộp lưu. Muốn có MP4: chọn PNG chuỗi khung hình, plugin ghép bằng ffmpeg (đặt đường dẫn trong mục gập **Ghép MP4 bằng ffmpeg**).
 
 ## Mô hình 3D
 
@@ -146,6 +161,8 @@ Chạy từ thư mục `plugins/VGD_Diagram`:
 ruby dev/test_tree.rb
 ruby dev/test_reload.rb
 ruby dev/test_scene.rb
+ruby dev/test_formats.rb
+ruby dev/test_ffmpeg.rb   # cần ffmpeg trong PATH
 node dev/test_ui.cjs
 ```
 

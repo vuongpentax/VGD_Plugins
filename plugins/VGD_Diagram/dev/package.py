@@ -20,6 +20,7 @@ version = match.group(1)
 
 runtime_files = [
     'vgd_diagram.rb',
+    'vgd_diagram/code_files.rb',
     'vgd_diagram/version.rb',
     'vgd_diagram/tree.rb',
     'vgd_diagram/model_io.rb',

@@ -289,6 +289,28 @@ Dir.mktmpdir do |dir|
   call.call('save_video', JSON.generate('ext' => 'webm', 'data' => "data:video/webm;base64,#{Base64.strict_encode64(webm_bytes)}"))
   check('callback save_video: ghi đúng file .webm', File.binread(File.join(dir, 'clip-webm.webm')) == webm_bytes)
   check('callback save_video: báo đã lưu', $sent.any? { |fn, d| fn == 'onToast' && d['message'].include?('clip-webm.webm') })
+
+  # Đuôi viết hoa trong hộp lưu (Anh.PNG): phần tên không được dính đuôi.
+  $sent.clear
+  $savepanel_path = File.join(dir, 'Anh.PNG')
+  call.call('export_views', '{"format":"png"}')
+  call.call('save_image', JSON.generate('key' => 'truoc', 'data' => "data:image/png;base64,#{png_b64}"))
+  check('đuôi .PNG viết hoa: ảnh xuất ra tên Anh-truoc.png, không dính đuôi', File.file?(File.join(dir, 'Anh-truoc.png')))
+  call.call('export_done', '{}')
+
+  # Đuôi .PNG viết hoa ở video chuỗi khung hình, kèm dấu % trong tên thư mục và tên file:
+  # mẫu khung hình của ffmpeg dùng % nên phải thoát thành %%.
+  special = File.join(dir, 'tu 50%')
+  Dir.mkdir(special)
+  $sent.clear
+  $savepanel_path = File.join(special, 'Bep 100%.PNG')
+  call.call('export_video', '{"format":"png"}')
+  3.times { |i| call.call('save_frame', JSON.generate('index' => i + 1, 'data' => "data:image/png;base64,#{png_b64}")) }
+  check('khung hình: tên có đuôi .PNG viết hoa vẫn đúng Bep 100%-khung-00001.png', File.file?(File.join(special, 'Bep 100%-khung-00001.png')))
+  $answers = [IDNO]
+  call.call('video_done', '{"count":3,"fps":30}')
+  check('dấu % trong tên file và thư mục: ghép được MP4', File.size?(File.join(special, 'Bep 100%.mp4')).to_i > 0)
+  check('dấu % trong tên: không xóa khung khi người dùng chọn giữ', Dir.glob(File.join(special, '*.png')).size == 3)
 end
 
 puts

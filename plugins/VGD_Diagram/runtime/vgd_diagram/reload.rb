@@ -1,9 +1,21 @@
 # encoding: UTF-8
 require 'sketchup.rb'
 dir = __dir__.dup.force_encoding(Encoding::UTF_8)
-files = %w[version tree model_io scene ffmpeg dialog main].map { |name| File.join(dir, name + '.rb') }
-# Kiểm tra cú pháp cả bộ file trước: lỗi ở đây thì không file nào được nạp.
-files.each { |path| RubyVM::InstructionSequence.compile_file(path) }
+list_file = File.join(dir, 'code_files.rb')
+# Kiểm tra cú pháp cả bộ file trước: lỗi ở đây thì không file nào được nạp. Danh sách file đọc lại từ đĩa (bản mới có
+# thể thêm file); nếu bước kiểm tra lỗi thì trả danh sách cũ để bản đang chạy giữ nguyên.
+RubyVM::InstructionSequence.compile_file(list_file)
+old_list = VGD::Diagram::CODE_FILES
+VGD::Diagram.send(:remove_const, :CODE_FILES)
+begin
+  load list_file
+  files = VGD::Diagram::CODE_FILES.map { |name| File.join(dir, name + '.rb') }
+  files.each { |path| RubyVM::InstructionSequence.compile_file(path) }
+rescue ScriptError, StandardError
+  VGD::Diagram.send(:remove_const, :CODE_FILES) if VGD::Diagram.const_defined?(:CODE_FILES, false)
+  VGD::Diagram.const_set(:CODE_FILES, old_list)
+  raise
+end
 reopen = defined?(VGD::Diagram::Dialog) && VGD::Diagram::Dialog.visible?
 VGD::Diagram::Dialog.close if defined?(VGD::Diagram::Dialog)
 # Bỏ hằng số cũ để nạp lại đúng giá trị mới (tránh cảnh báo khi định nghĩa lại).

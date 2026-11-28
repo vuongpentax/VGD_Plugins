@@ -90,6 +90,12 @@ module VGD
         path
       end
 
+      # Mẫu tên khung hình cho ffmpeg (-i): "<tên>-khung-%05d.png" trong thư mục. ffmpeg hiểu % là chỗ đánh số nên
+      # dấu % trong thư mục hoặc tên file người dùng đặt phải thoát thành %%.
+      def frame_pattern(folder, base)
+        File.join(folder.to_s.gsub('%', '%%'), "#{base.to_s.gsub('%', '%%')}-khung-%05d.png")
+      end
+
       # Ghép khung hình thành MP4. Trả về [thành công?, thông báo lỗi].
       # frame_pattern ví dụ: "/thu-muc/lap-rap-khung-%05d.png".
       def encode(exe, frame_pattern, fps, output)

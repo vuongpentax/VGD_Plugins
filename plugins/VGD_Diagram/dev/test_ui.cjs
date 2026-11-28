@@ -33,6 +33,14 @@ function check(name, ok) {
     window.sketchup = new Proxy({}, {
       get: (_t, name) => (...args) => window.__calls.push({ name, args })
     });
+    // Ghi lại mọi context WebGL được tạo (cái đầu tiên là khung 3D chính) để kiểm tra việc giải phóng sau khi xuất.
+    window.__gl = [];
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (type, ...rest) {
+      const context = originalGetContext.call(this, type, ...rest);
+      if (context && /webgl/.test(type) && !window.__gl.includes(context)) window.__gl.push(context);
+      return context;
+    };
   });
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -258,6 +266,10 @@ function check(name, ok) {
   check('xuất: ảnh các bước khác nhau (mỗi bước hiện thêm cấu kiện)', bySteps.length === 2 && bySteps[0].data !== bySteps[1].data);
   check('xuất: báo xong (export_done)', (await page.evaluate(() => window.__calls)).some((c) => c.name === 'export_done'));
   check('xuất: không lỗi khi vẽ', !(await page.locator('#status').textContent()).includes('thất bại'));
+  // Mỗi lần xuất tạo một WebGL riêng; phải giải phóng hẳn (trình duyệt chỉ cho khoảng 16 context, vượt thì mất context cũ nhất = khung 3D chính).
+  const glAfterImages = await page.evaluate(() => window.__gl.map((gl) => gl.isContextLost()));
+  check('xuất ảnh: giải phóng WebGL của lần xuất, khung 3D chính vẫn sống',
+    glAfterImages.length >= 2 && glAfterImages[0] === false && glAfterImages.slice(1).every((lost) => lost === true));
 
   // Kiểm tra: Chân chưa có thứ tự lắp -> cảnh báo
   await page.evaluate(() => window.VGD.checkDiagram());
@@ -281,6 +293,9 @@ function check(name, ok) {
   check('video: báo đã quay (có số cấu kiện có thứ tự)', (await page.locator('#status').textContent()).includes('2 cấu kiện'));
   const orderedIds = (await dbg()).ordered;
   check('video: thứ tự bay giống khung 3D (51 trước 52)', JSON.stringify(orderedIds) === JSON.stringify([51, 52]));
+  const glAfterVideo = await page.evaluate(() => window.__gl.map((gl) => gl.isContextLost()));
+  check('quay video: giải phóng WebGL, khung 3D chính vẫn sống',
+    glAfterVideo[0] === false && glAfterVideo.slice(1).every((lost) => lost === true));
 
   // Không có bước lắp: không quay, báo rõ
   await page.evaluate(() => window.VGD.onScene({ truncated: false, parts: [{ id: 1, name: 'A', order: null, positions: [0, 0, 0, 1, 0, 0, 0, 1, 0] }] }));
@@ -333,13 +348,17 @@ function check(name, ok) {
 
   // ---- Ô đường dẫn ffmpeg: hiện giá trị đã lưu, lưu/chọn gửi về Ruby ----
   await page.evaluate(() => { window.__calls = []; window.VGD.onSettings({ ffmpegPath: 'C:/ffmpeg/bin/ffmpeg.exe' }); });
+  check('ffmpeg: mục gập "Ghép MP4 bằng ffmpeg" mặc định đóng, ô đường dẫn chưa hiện',
+    (await page.locator('details.ffmpeg-box').evaluate((el) => !el.open)) && !(await page.locator('#ffmpeg-path').isVisible()));
+  await page.locator('details.ffmpeg-box summary').click();
+  check('ffmpeg: mở mục gập thì hiện ô đường dẫn', await page.locator('#ffmpeg-path').isVisible());
   check('ffmpeg: hiện đường dẫn đã lưu', (await page.locator('#ffmpeg-path').inputValue()) === 'C:/ffmpeg/bin/ffmpeg.exe');
   await page.locator('#ffmpeg-path').fill('D:/tools/ffmpeg.exe');
-  await page.locator('button', { hasText: 'Lưu' }).first().click();
+  await page.locator('#ffmpeg-save').click();
   const saveCall = (await page.evaluate(() => window.__calls)).find((c) => c.name === 'save_ffmpeg');
   check('ffmpeg: nút Lưu gửi đường dẫn về Ruby', !!saveCall && JSON.parse(saveCall.args[0]).path === 'D:/tools/ffmpeg.exe');
   await page.evaluate(() => { window.__calls = []; });
-  await page.locator('button', { hasText: 'Chọn' }).first().click();
+  await page.locator('#ffmpeg-pick').click();
   check('ffmpeg: nút Chọn gửi yêu cầu mở hộp thoại', (await page.evaluate(() => window.__calls)).some((c) => c.name === 'pick_ffmpeg'));
 
   // ---- Số phiên bản dưới logo: Ruby gửi onVersion khi sẵn sàng ----
@@ -351,6 +370,81 @@ function check(name, ok) {
       const ver = document.getElementById('ver').getBoundingClientRect();
       return ver.top >= brand.bottom - 1;
     }));
+
+  // ---- Bố cục và theme (chặn tái phát lỗi vỡ bố cục khi hẹp, token không tồn tại, ô chọn kiểu mặc định) ----
+  const fs = require('fs');
+  const themeCss = fs.readFileSync(path.resolve(__dirname, '../runtime/vgd_diagram/vgd-theme/vgd-theme.css'), 'utf8');
+  const dialogCss = fs.readFileSync(path.resolve(__dirname, '../runtime/vgd_diagram/dialog.css'), 'utf8');
+  const defined = new Set([...themeCss.matchAll(/(--vgd-[a-z-]+)\s*:/g)].map((m) => m[1]));
+  const used = [...new Set([...dialogCss.matchAll(/var\((--vgd-[a-z-]+)/g)].map((m) => m[1]))];
+  const missing = used.filter((name) => !defined.has(name));
+  check('theme: mọi token --vgd-* dùng trong dialog.css đều có trong vgd-theme.css' + (missing.length ? ' (thiếu ' + missing.join(', ') + ')' : ''), missing.length === 0);
+  check('theme: dialog.css không có màu hex cứng', !/#[0-9a-fA-F]{3,8}\b/.test(dialogCss));
+  check('theme: nạp chuẩn điều khiển dùng chung vgd-controls.css',
+    await page.evaluate(() => [...document.styleSheets].some((sheet) => (sheet.href || '').endsWith('vgd-theme/vgd-controls.css'))));
+
+  await page.evaluate((data) => window.VGD.onTree(data), sample);
+  await page.evaluate((data) => window.VGD.onScene(data), scene);
+  for (const [width, height] of [[980, 680], [720, 560], [1280, 800]]) {
+    await page.setViewportSize({ width, height });
+    await page.waitForTimeout(250);
+    const lay = await page.evaluate(() => {
+      const box = (selector) => document.querySelector(selector).getBoundingClientRect();
+      const controls = box('.view-controls');
+      const stray = [...document.querySelectorAll('.view-controls button, .view-controls select, .view-controls input, .view-controls summary')]
+        .filter((el) => el.offsetParent !== null)
+        .filter((el) => { const r = el.getBoundingClientRect(); return r.right > controls.right + 1 || r.left < controls.left - 1; })
+        .map((el) => el.id || el.textContent.trim());
+      const root = document.documentElement;
+      return {
+        overflowX: root.scrollWidth > innerWidth, overflowY: root.scrollHeight > innerHeight,
+        tree: box('.tree-wrap').height, stage: box('.view-stage').height, stray: stray,
+        saveInSide: document.querySelector('.side').contains(document.getElementById('save')),
+        saveBelowTree: box('#save').top >= box('.tree-wrap').bottom - 1,
+        saveLeftOfView: box('#save').right <= box('.view').left + 1,
+        footerInView: box('footer').bottom <= innerHeight + 1
+      };
+    });
+    const tag = width + 'x' + height;
+    check('bố cục ' + tag + ': không tràn trang', !lay.overflowX && !lay.overflowY);
+    check('bố cục ' + tag + ': danh sách cây còn đủ chỗ (>= 120 px) và khung 3D (>= 170 px)', lay.tree >= 120 && lay.stage >= 170);
+    check('bố cục ' + tag + ': không điều khiển nào bị cắt mép' + (lay.stray.length ? ' (' + lay.stray.join(', ') + ')' : ''), lay.stray.length === 0);
+    check('bố cục ' + tag + ': Lưu thứ tự nằm dưới danh sách ở cột trái', lay.saveInSide && lay.saveBelowTree && lay.saveLeftOfView);
+    check('bố cục ' + tag + ': chân cửa sổ nằm trong khung nhìn', lay.footerInView);
+  }
+
+  const parts = await page.evaluate(() => [...document.querySelectorAll('.combo')].map((combo) => {
+    const kids = [...combo.children].map((el) => el.tagName);
+    const [button, select] = combo.children;
+    return { kids: kids.join(','), sameRow: Math.abs(button.getBoundingClientRect().top - select.getBoundingClientRect().top) < 3,
+             touching: Math.abs(button.getBoundingClientRect().right - select.getBoundingClientRect().left) < 2 };
+  }));
+  check('xuất: ô chọn định dạng ghép liền với nút Ảnh và nút Video', parts.length === 2 && parts.every((c) => c.kids === 'BUTTON,SELECT' && c.sameRow && c.touching));
+
+  const themed = async (colorScheme) => {
+    await page.emulateMedia({ colorScheme });
+    await page.evaluate(() => localStorage.removeItem('vgd.diagram.theme'));
+    await page.reload();
+    return page.evaluate(() => {
+      const probe = (token) => { const el = document.createElement('div'); el.style.background = 'var(' + token + ')'; document.body.append(el); const c = getComputedStyle(el).backgroundColor; el.remove(); return c; };
+      const style = (selector, prop) => getComputedStyle(document.querySelector(selector))[prop];
+      return {
+        selectBg: style('#explode-dir', 'backgroundColor'), surface: probe('--vgd-surface'),
+        bg: probe('--vgd-bg'), body: style('body', 'backgroundColor'),
+        selectAppearance: style('#explode-dir', 'appearance'), checkAppearance: style('#explode-auto', 'appearance'),
+        saveBg: style('#save', 'backgroundColor'), accent: probe('--vgd-accent'),
+        quietBg: style('.toolbar button', 'backgroundColor'), elevated: probe('--vgd-elevated')
+      };
+    });
+  };
+  for (const scheme of ['light', 'dark']) {
+    const t = await themed(scheme);
+    check('theme ' + scheme + ': nền cửa sổ theo token', t.body === t.bg);
+    check('theme ' + scheme + ': ô chọn có nền theo token (không trong suốt, không kiểu mặc định)', t.selectBg === t.surface && t.selectAppearance === 'none');
+    check('theme ' + scheme + ': ô tick dùng kiểu chung (appearance none)', t.checkAppearance === 'none');
+    check('theme ' + scheme + ': nút chính dùng màu nhấn, nút phụ dùng nền trung tính', t.saveBg === t.accent && t.quietBg === t.elevated);
+  }
+  await page.emulateMedia({ colorScheme: 'light' });
 
   check('không có lỗi JavaScript trên trang', errors.length === 0);
   await browser.close();
