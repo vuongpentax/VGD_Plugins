@@ -90,6 +90,49 @@ function check(name, ok) {
   await page.locator('input.order').nth(0).fill('abc');
   check('nhập chữ: ô đỏ', await page.locator('input.order').nth(0).evaluate((el) => el.classList.contains('invalid')));
 
+  // ---- Khung 3D: vẽ mô hình, tách rời, phát lắp ráp theo thứ tự ----
+  const scene = {
+    truncated: false,
+    parts: [
+      { id: 51, name: 'Đáy', order: 1, positions: [0, 0, 0, 100, 0, 0, 0, 100, 0] },
+      { id: 52, name: 'Cánh', order: 2, positions: [500, 0, 0, 600, 0, 0, 500, 100, 0] },
+      { id: 200, name: 'Chân', order: null, positions: [0, 500, 0, 100, 500, 0, 0, 600, 0] }
+    ]
+  };
+  await page.evaluate((data) => window.VGD.onScene(data), scene);
+  const dbg = () => page.evaluate(() => window.VGD.__debug());
+  let state = await dbg();
+  check('3D: vẽ đủ 3 mảnh', state.parts === 3);
+  check('3D: canvas có kích thước', await page.locator('#view').evaluate((el) => el.clientWidth > 0 && el.clientHeight > 0));
+  check('3D: nút Phát lắp ráp mở khi có cấu kiện có thứ tự', !(await page.locator('#play').isDisabled()));
+
+  const centerOf = (positions) => positions.map((p) => Math.hypot(p[0], p[1], p[2]));
+  await page.locator('#explode').fill('0');
+  const assembled = await dbg();
+  await page.locator('#explode').fill('100');
+  const exploded = await dbg();
+  const grew = exploded.positions.every((p, i) => Math.hypot(...p) > Math.hypot(...assembled.positions[i]) - 1e-6);
+  check('3D: kéo tách rời làm các mảnh ra xa tâm', grew && exploded.slider === 100);
+  check('3D: tách rời 0 đưa mảnh về vị trí lắp', assembled.slider === 0);
+
+  await page.locator('#explode').fill('0');
+  await page.locator('#play').click();
+  state = await dbg();
+  check('phát lắp ráp: đang chạy', state.playing === true);
+  await page.waitForTimeout(2500);
+  state = await dbg();
+  check('phát lắp ráp: kết thúc và thanh trượt về 0', state.playing === false && state.slider === 0);
+  const afterPlay = await dbg();
+  check('phát lắp ráp: các mảnh đã về đúng vị trí lắp',
+    afterPlay.positions.every((p, i) => Math.hypot(...p) - Math.hypot(...assembled.positions[i]) < 1e-3));
+
+  // Không có mảnh nào có thứ tự: nút phát bị khóa
+  await page.evaluate(() => window.VGD.onScene({ truncated: false, parts: [{ id: 1, name: 'A', order: null, positions: [0, 0, 0, 1, 0, 0, 0, 1, 0] }] }));
+  check('không có thứ tự: nút Phát lắp ráp bị khóa', await page.locator('#play').isDisabled());
+  await page.evaluate(() => window.VGD.onScene({ truncated: true, parts: [] }));
+  check('mô hình rỗng: thông báo không có hình học',
+    (await page.locator('#view-msg').textContent()).includes('chưa có hình học'));
+
   check('không có lỗi JavaScript trên trang', errors.length === 0);
   await browser.close();
   console.log('');

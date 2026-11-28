@@ -1,14 +1,14 @@
-# VGD Diagram 0.1.0-beta.1
+# VGD Diagram 0.2.0-beta.1
 
 Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các cấu kiện, số lượng và thứ tự lắp, để khách hàng và thợ lắp đặt dễ hiểu mô hình.
 
 ## Trạng thái
 
-**0.1.0-beta.1 (bản thử đầu tiên).** Đã có: cây cấu kiện theo cấp, gom cấu kiện giống nhau kèm số lượng, nhập thứ tự lắp, chọn cấu kiện trong model khi bấm tên, xuất SVG.
+**0.2.0-beta.1 (thêm mô hình 3D).** Đã có: cây cấu kiện theo cấp, gom cấu kiện giống nhau kèm số lượng, nhập thứ tự lắp, chọn cấu kiện trong model khi bấm tên, xuất SVG. Mới: khung mô hình 3D bên phải (xoay, phóng to), thanh **Tách rời** để tách các cấu kiện ra khỏi tâm, và **Phát lắp ráp** để các cấu kiện có thứ tự lắp lần lượt về đúng vị trí.
 
-- **Đã kiểm tra tự động:** logic gom nhóm, sắp thứ tự, kiểm tra số trùng, đọc/ghi model giả lập, menu và nút Tải lại code, giao diện hộp thoại trong Chromium (`dev/`).
-- **Chưa kiểm tra trong SketchUp thật.** Cần thử trên SketchUp 2022 (Windows) trước khi tin cậy.
-- **Chưa làm:** sơ đồ mũi tên thứ tự lắp (bước B), xuất PNG.
+- **Đã kiểm tra tự động:** logic gom nhóm, sắp thứ tự, kiểm tra số trùng, đọc/ghi model giả lập, lấy hình học 3D từ model giả lập, menu và nút Tải lại code, giao diện hộp thoại và khung 3D trong Chromium (`dev/`).
+- **Chưa kiểm tra trong SketchUp thật.** Cần thử trên SketchUp 2022 (Windows) trước khi tin cậy. Đặc biệt: khung 3D (WebGL) trong hộp thoại SketchUp có chạy không.
+- **Chưa làm:** sơ đồ mũi tên thứ tự lắp, xuất PNG.
 
 ## Cách dùng
 
@@ -19,6 +19,15 @@ Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các c
    - Nhập thứ tự lắp (số nguyên 1 đến 9999) rồi bấm **Lưu thứ tự**. Có thể dùng Ctrl+Z để hoàn tác.
    - Số thứ tự chỉ cần không trùng giữa các cấu kiện **cùng cấp**.
 4. **Xuất SVG** lưu sơ đồ thành file ảnh vector.
+
+## Mô hình 3D (mới ở 0.2.0-beta.1)
+
+- Hình học lấy từ các mặt trong model đang mở, chỉ đọc. Model không bị đổi khi tách rời hay phát lắp ráp.
+- **Tách rời:** mỗi mảnh di chuyển ra xa tâm mô hình theo tỉ lệ với khoảng cách của nó. Đây là cách tách theo hướng tâm, chưa phải tách theo trục như ảnh mẫu.
+- **Phát lắp ráp:** các cấu kiện có thứ tự lắp được lắp lần lượt từ 1 đến hết. Cấu kiện chưa có thứ tự theo thanh trượt.
+- Khi bấm tên hoặc trỏ vào một dòng trong cây, các cấu kiện thuộc dòng đó được tô màu cam trong khung 3D.
+- Giới hạn: tối đa 100.000 tam giác. Mô hình lớn hơn sẽ bị cắt bớt và có thông báo.
+- Thư viện three.js r150.1 (MIT) nằm trong `runtime/vgd_diagram/vendor/`, không cần mạng.
 
 ## Quy tắc gom và thứ tự (giả định cần xác nhận)
 
@@ -40,6 +49,7 @@ Chạy từ thư mục `plugins/VGD_Diagram`:
 ```bash
 ruby dev/test_tree.rb
 ruby dev/test_reload.rb
+ruby dev/test_scene.rb
 node dev/test_ui.cjs
 ```
 

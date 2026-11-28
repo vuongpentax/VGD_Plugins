@@ -3,17 +3,38 @@
 <body class="vgd-ui">
 <header><div class="brand"><b>VGD</b><span>Diagram</span></div><button id="theme" class="vgd-theme-btn" type="button" aria-pressed="false"></button></header>
 <main>
-  <p class="hint">Bấm tên để chọn trong model. Nhập thứ tự lắp (1, 2, 3...) rồi bấm <b>Lưu thứ tự</b>. Số thứ tự chỉ cần không trùng giữa các cấu kiện cùng cấp.</p>
-  <div class="toolbar">
-    <button type="button" class="quiet" onclick="VGD.refresh()">Làm mới</button>
-    <button type="button" class="quiet" onclick="VGD.exportSvg()">Xuất SVG</button>
-  </div>
-  <div class="tree-wrap"><ul id="tree" class="tree"></ul><p id="empty" class="empty" hidden>Model chưa có nhóm hoặc component nào.</p></div>
+  <section class="side" aria-label="Sơ đồ cây">
+    <p class="hint">Bấm tên để chọn trong model. Nhập thứ tự lắp (1, 2, 3...) rồi bấm <b>Lưu thứ tự</b>. Số thứ tự chỉ cần không trùng giữa các cấu kiện cùng cấp.</p>
+    <div class="toolbar">
+      <button type="button" class="quiet" onclick="VGD.refresh()">Làm mới</button>
+      <button type="button" class="quiet" onclick="VGD.exportSvg()">Xuất SVG</button>
+    </div>
+    <div class="tree-wrap"><ul id="tree" class="tree"></ul><p id="empty" class="empty" hidden>Model chưa có nhóm hoặc component nào.</p></div>
+  </section>
+  <section class="view" aria-label="Mô hình 3D">
+    <div class="view-stage">
+      <canvas id="view" aria-label="Mô hình 3D của đối tượng"></canvas>
+      <p id="view-msg" class="view-msg" role="status"></p>
+    </div>
+    <div class="view-controls">
+      <div class="explode-row">
+        <label for="explode">Tách rời</label>
+        <input type="range" id="explode" min="0" max="100" value="0" aria-label="Tách rời các cấu kiện">
+        <span id="explode-value" class="count">0 %</span>
+      </div>
+      <div class="toolbar">
+        <button type="button" id="play" class="quiet" onclick="VGD.play()" disabled>Phát lắp ráp</button>
+        <button type="button" class="quiet" onclick="VGD.reset()">Đặt lại</button>
+      </div>
+      <p class="hint small">Kéo chuột để xoay, cuộn để phóng to hoặc thu nhỏ. Phát lắp ráp: các cấu kiện có thứ tự được lắp lần lượt.</p>
+    </div>
+  </section>
 </main>
 <footer>
   <span id="status" class="status" role="status" aria-live="polite"></span>
   <button type="button" id="save" disabled onclick="VGD.saveOrders()">Lưu thứ tự</button>
 </footer>
+<script src="vendor/three.min.js"></script>
 <script src="vgd-theme/vgd-theme.js"></script>
 <script src="dialog.js"></script>
 </body></html>

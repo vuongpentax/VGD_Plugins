@@ -23,7 +23,7 @@ module VGD
           return
         end
         @dlg = UI::HtmlDialog.new(dialog_title: 'VGD Diagram', preferences_key: 'VGDDiagram',
-                                  width: 480, height: 640, min_width: 320, min_height: 400,
+                                  width: 980, height: 680, min_width: 360, min_height: 480,
                                   resizable: true, style: UI::HtmlDialog::STYLE_DIALOG)
         @dlg.set_file(File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'dialog.html'))
         callback('ready') { push_tree }
@@ -49,7 +49,9 @@ module VGD
       end
 
       def push_tree
-        send_js('onTree', 'nodes' => ModelIO.read_tree(Sketchup.active_model))
+        model = Sketchup.active_model
+        send_js('onTree', 'nodes' => ModelIO.read_tree(model))
+        send_js('onScene', Scene.build(model))
       end
 
       def select_group(key)
