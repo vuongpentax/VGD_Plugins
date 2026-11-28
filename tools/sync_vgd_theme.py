@@ -16,6 +16,7 @@ TARGETS = [
     'plugins/VGD_Cabinet_Draw/runtime/VGD_Cabinet_Draw',
     'plugins/VGD_Center/VGD_Center',
     'plugins/VGD_Dim/runtime/VGD_Dim',
+    'plugins/VGD_Diagram/runtime/vgd_diagram',
     'plugins/VGD_Image_Importer/runtime/vgd_image_importer',
     'plugins/VGD_Library/runtime/vgd_library',
     'plugins/VGD_Package/VGD_Package/ui',

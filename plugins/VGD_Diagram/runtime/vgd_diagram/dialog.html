@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VGD Diagram</title><link rel="stylesheet" href="vgd-theme/vgd-theme.css"><link rel="stylesheet" href="dialog.css"></head>
+<body class="vgd-ui">
+<header><div class="brand-block"><div class="brand"><b>VGD</b><span>Diagram</span></div><small id="ver" class="ver" aria-label="Phiên bản plugin"></small></div><button id="theme" class="vgd-theme-btn" type="button" aria-pressed="false"></button></header>
+<main>
+  <section class="side" aria-label="Sơ đồ cây">
+    <p class="hint">Chọn đối tượng trong model rồi bấm <b>Làm mới</b> để đưa vào sơ đồ (đổi lựa chọn thì bấm Làm mới lại). <b>Đề xuất thứ tự</b> điền số lắp theo từng lớp group, từ dưới lên; sửa rồi bấm <b>Lưu thứ tự</b>.</p>
+    <div class="toolbar">
+      <button type="button" class="quiet" onclick="VGD.refresh()">Làm mới</button>
+      <button type="button" class="quiet" onclick="VGD.suggestOrders()">Đề xuất thứ tự</button>
+      <button type="button" class="quiet" onclick="VGD.exportSvg()">Xuất SVG</button>
+      <button type="button" class="quiet" onclick="VGD.checkDiagram()">Kiểm tra</button>
+      <button type="button" class="quiet" onclick="VGD.exportViews()">Xuất ảnh</button>
+      <select id="image-format" aria-label="Định dạng ảnh"><option value="png">PNG</option><option value="jpg">JPG</option></select>
+      <button type="button" class="quiet" onclick="VGD.exportVideo()">Xuất video</button>
+        <select id="video-format" aria-label="Định dạng video"><option value="webm">WebM</option><option value="png">PNG (chuỗi khung hình)</option></select>
+    </div>
+    <div class="tree-wrap"><ul id="tree" class="tree"></ul><p id="empty" class="empty" hidden>Model chưa có nhóm hoặc component nào.</p></div>
+  </section>
+  <section class="view" aria-label="Mô hình 3D">
+    <div class="view-stage">
+      <canvas id="view" aria-label="Mô hình 3D của đối tượng"></canvas>
+      <div id="labels" class="labels" aria-hidden="true"></div>
+      <p id="view-msg" class="view-msg" role="status"></p>
+    </div>
+    <div class="view-controls">
+      <div class="explode-row">
+        <label for="explode">Tách rời</label>
+        <input type="range" id="explode" min="0" max="100" value="0" aria-label="Tách rời các cấu kiện">
+        <span id="explode-value" class="count">0 %</span>
+      </div>
+      <div class="toolbar">
+        <button type="button" id="play" class="quiet" onclick="VGD.play()" disabled>Phát lắp ráp</button>
+        <button type="button" class="quiet" onclick="VGD.reset()">Đặt lại</button>
+      </div>
+      <div class="ffmpeg-row">
+        <label for="ffmpeg-path">ffmpeg</label>
+        <input type="text" id="ffmpeg-path" placeholder="Đường dẫn tới ffmpeg.exe hoặc thư mục chứa nó (để trống = tìm trong PATH)" aria-label="Đường dẫn ffmpeg">
+        <button type="button" class="quiet" onclick="VGD.pickFfmpeg()">Chọn...</button>
+        <button type="button" class="quiet" onclick="VGD.saveFfmpeg()">Lưu</button>
+      </div>
+      <p class="hint small">Kéo chuột để xoay, cuộn để phóng to hoặc thu nhỏ. Phát lắp ráp: các cấu kiện có thứ tự được lắp lần lượt.</p>
+    </div>
+  </section>
+</main>
+<footer>
+  <span id="status" class="status" role="status" aria-live="polite"></span>
+  <button type="button" id="save" disabled onclick="VGD.saveOrders()">Lưu thứ tự</button>
+</footer>
+<script src="vendor/three.min.js"></script>
+<script src="vgd-theme/vgd-theme.js"></script>
+<script src="dialog.js"></script>
+</body></html>
