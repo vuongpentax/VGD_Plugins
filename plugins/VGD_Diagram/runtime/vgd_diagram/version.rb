@@ -1,6 +1,6 @@
 # encoding: UTF-8
 module VGD
   module Diagram
-    VERSION = '0.10.2-beta.1'.freeze unless const_defined?(:VERSION, false)
+    VERSION = '0.10.3-beta.1'.freeze unless const_defined?(:VERSION, false)
   end
 end

@@ -62,11 +62,17 @@ module VGD
       def problem_with(path)
         return 'Không tìm thấy file ffmpeg.exe tại đường dẫn này. Hãy chọn file ffmpeg.exe hoặc thư mục chứa nó.' unless File.file?(path)
         version, status = Open3.capture2e(path, '-version')
-        return 'File này không chạy được như ffmpeg.' unless status.success? && version.include?('ffmpeg version')
+        return "File này không phải ffmpeg (#{describe_run(version, status)})." unless status.success? && version.include?('ffmpeg version')
         return 'ffmpeg này không có bộ mã hóa H.264 (libx264) hay MPEG-4, nên không ghép được MP4.' unless encoder_for(path)
         nil
       rescue SystemCallError => error
         "Không chạy được file này: #{error.message}"
+      end
+
+      # Mã thoát và dòng đầu kết quả khi chạy thử, để báo lỗi cho người dùng biết vì sao.
+      def describe_run(output, status)
+        first_line = output.to_s.scrub.lines.map(&:strip).reject(&:empty?).first
+        "mã thoát #{status.exitstatus.inspect}, kết quả: #{first_line ? first_line[0, 160] : 'không có'}"
       end
 
       # Lưu đường dẫn ffmpeg cho lần sau (nhận file hoặc thư mục). Chuỗi rỗng là xóa cài đặt.

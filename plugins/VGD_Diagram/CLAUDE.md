@@ -44,7 +44,7 @@
 - Xuất ảnh vẽ bằng three.js (style mặc định SketchUp giả lập), không gọi API camera/`write_image` của SketchUp.
 - Tên ảnh xuất chỉ gồm chữ thường, số và gạch ngang (kiểm tra ở `Dialog::IMAGE_KEY`).
 - Tối đa 15 nhãn trên một ảnh (`MAX_TAGS` trong `dialog.js`).
-- Video lắp ráp quay bằng `MediaRecorder` từ canvas trong giao diện. Định dạng do người dùng chọn (mp4 hoặc webm); mp4 chỉ dùng khi trình duyệt hỗ trợ, không tự đổi. Đuôi file trong hộp lưu quyết định định dạng (`Dialog::resolve_format`, test ở `dev/test_formats.rb`).
+- Video lắp ráp quay bằng `MediaRecorder` từ canvas trong giao diện. Định dạng quay trực tiếp là webm (`VIDEO_EXT`); MP4 không quay trực tiếp, chỉ có qua chuỗi khung PNG rồi ghép bằng ffmpeg. Hàm lưu: `Dialog#save_video`. Đuôi file trong hộp lưu quyết định định dạng (`Dialog::resolve_format`, test ở `dev/test_formats.rb`).
 - Ảnh xuất: png hoặc jpg, chọn như video.
 - Đường dẫn ffmpeg lưu bằng `Sketchup.write_default` (`ffmpeg.rb#save_path`). Người dùng có thể nhập file hoặc thư mục (`ffmpeg.rb#resolve` tìm `ffmpeg.exe` trong thư mục, hoặc `bin\ffmpeg.exe`); chỉ lưu file vượt qua kiểm tra `-version` và có bộ mã hóa `libx264` hoặc `mpeg4` (`ENCODERS`, ưu tiên `libx264`).
 - `ffmpeg.rb` gọi ffmpeg bằng danh sách tham số (không qua shell). Chỉ chạy file ffmpeg đã chọn hoặc lệnh `ffmpeg` trong PATH. Chỉ xóa khung hình do plugin vừa xuất, và chỉ sau khi người dùng xác nhận và ghép thành công.

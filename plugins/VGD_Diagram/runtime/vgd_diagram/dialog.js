@@ -628,11 +628,9 @@
 
   // ---------- Xuất video lắp ráp theo bước ----------
 
-  // Định dạng video trình duyệt quay được: MP4 nếu có, không thì WebM.
-  function pickVideoType(format) {
-    var candidates = format === 'mp4'
-      ? ['video/mp4']
-      : ['video/webm;codecs=vp9', 'video/webm'];
+  // Định dạng WebM mà trình duyệt quay được. (MP4 không quay trực tiếp: dùng chuỗi khung PNG rồi ghép bằng ffmpeg.)
+  function pickVideoType() {
+    var candidates = ['video/webm;codecs=vp9', 'video/webm'];
     for (var i = 0; i < candidates.length; i++) {
       if (MediaRecorder.isTypeSupported(candidates[i])) return candidates[i];
     }
@@ -752,11 +750,9 @@
       setStatus('Trình duyệt này không quay được video.', true);
       return;
     }
-    var mime = pickVideoType(format);
+    var mime = pickVideoType();
     if (!mime) {
-      setStatus(format === 'mp4'
-        ? 'Trình duyệt này không quay được MP4. Hãy chọn WebM rồi xuất lại.'
-        : 'Trình duyệt này không quay được video.', true);
+      setStatus('Trình duyệt này không quay được video WebM.', true);
       return;
     }
     var s = prepareVideo();
@@ -866,7 +862,7 @@
       exportImages(data.format || 'png');
     },
     onVideo: function (data) {
-      exportVideo(data.format || 'mp4');
+      exportVideo(data.format || 'webm');
     },
     onSettings: function (data) {
       ffmpegInput.value = data.ffmpegPath || '';

@@ -141,7 +141,7 @@ module VGD
 
       # Xuất ảnh các góc: giao diện vẽ bằng three.js (style mặc định SketchUp giả lập), rồi gửi từng ảnh về đây ghi ra file.
       IMAGE_FORMATS = %w[png jpg].freeze
-      VIDEO_FORMATS = %w[mp4 webm png].freeze
+      VIDEO_FORMATS = %w[webm png].freeze
 
       # Đuôi file người dùng gõ trong hộp lưu quyết định định dạng; không gõ thì dùng định dạng đã chọn.
       # Trả về [đường dẫn đã chuẩn hóa, định dạng].
@@ -168,11 +168,11 @@ module VGD
       end
 
       # Video lắp ráp: chọn thư mục, giao diện quay rồi gửi file về đây.
-      VIDEO_EXT = %w[mp4 webm].freeze
+      VIDEO_EXT = %w[webm].freeze
 
       def start_video(payload)
         model = Sketchup.active_model
-        fallback = VIDEO_FORMATS.include?(payload['format']) ? payload['format'] : 'mp4'
+        fallback = VIDEO_FORMATS.include?(payload['format']) ? payload['format'] : 'webm'
         chosen = UI.savepanel('Lưu video lắp ráp', '', "#{base_name(model)}-lap-rap.#{fallback}")
         return unless chosen
         path, format = resolve_format(chosen, VIDEO_FORMATS, fallback)
@@ -194,6 +194,18 @@ module VGD
         busy { File.binwrite(path, Base64.decode64(data)) }
         @video['count'] += 1
         @video['files'] << path
+      end
+
+      # Video WebM quay trong giao diện: ghi file vào đường dẫn người dùng đã chọn khi bắt đầu xuất.
+      def save_video(payload)
+        raise 'Chưa chọn nơi lưu video.' unless @video && @video['path']
+        ext = payload.fetch('ext')
+        raise ArgumentError, "Định dạng video không khớp: #{ext}" unless VIDEO_EXT.include?(ext) && ext == @video['format']
+        path = @video['path']
+        data = payload.fetch('data').sub(%r{\Adata:video/[a-z0-9.+-]+;base64,}, '')
+        busy { File.binwrite(path, Base64.decode64(data)) }
+        @video = nil
+        send_js('onToast', 'message' => "Đã lưu video: #{path}")
       end
 
       # Cài đặt ffmpeg: đường dẫn nhập tay hoặc chọn bằng hộp thoại, được nhớ cho lần sau.

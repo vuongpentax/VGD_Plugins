@@ -269,6 +269,26 @@ Dir.mktmpdir do |dir|
   check('callback video_done: ghép được MP4 bằng ffmpeg thật', File.size?(File.join(dir, 'clip.mp4')).to_i > 0)
   check('callback video_done: xóa khung khi đồng ý', Dir.glob(File.join(dir, 'clip-khung-*.png')).empty?)
   check('callback video_done: báo kết quả cho giao diện', $sent.any? { |fn, _| fn == 'onToast' })
+
+  # Video WebM: không có đuôi thì thêm .webm; đuôi mp4 bị từ chối; ext không khớp bị từ chối; ghi đúng file
+  $sent.clear
+  $savepanel_path = File.join(dir, 'clip-webm')
+  call.call('export_video', '{"format":"webm"}')
+  check('callback export_video (webm): không có đuôi thì thêm .webm', $sent.any? { |fn, d| fn == 'onVideo' && d['format'] == 'webm' })
+  $sent.clear
+  $savepanel_path = File.join(dir, 'clip-mp4.mp4')
+  call.call('export_video', '{"format":"webm"}')
+  check('callback export_video: đuôi .mp4 bị từ chối', $sent.any? { |fn, _| fn == 'onError' })
+  $sent.clear
+  $savepanel_path = File.join(dir, 'clip-webm')
+  call.call('export_video', '{"format":"webm"}')
+  $sent.clear
+  call.call('save_video', JSON.generate('ext' => 'mp4', 'data' => 'data:video/mp4;base64,AAAA'))
+  check('callback save_video: ext không khớp thì báo onError và không ghi', $sent.any? { |fn, _| fn == 'onError' } && !File.exist?(File.join(dir, 'clip-webm.webm')))
+  webm_bytes = 'du-lieu-webm-gia-lap'
+  call.call('save_video', JSON.generate('ext' => 'webm', 'data' => "data:video/webm;base64,#{Base64.strict_encode64(webm_bytes)}"))
+  check('callback save_video: ghi đúng file .webm', File.binread(File.join(dir, 'clip-webm.webm')) == webm_bytes)
+  check('callback save_video: báo đã lưu', $sent.any? { |fn, d| fn == 'onToast' && d['message'].include?('clip-webm.webm') })
 end
 
 puts
@@ -313,6 +333,13 @@ Dir.mktmpdir do |dir|
     true
   end
   check('không bộ mã hóa: không lưu đường dẫn', rejected && F.saved_path.nil?)
+
+  # File không phải ffmpeg: thông báo phải nêu mã thoát và dòng đầu kết quả
+  notff = File.join(dir, 'khong-phai.exe')
+  File.write(notff, "#!/bin/sh\necho 'chay thu sai'\nexit 3\n")
+  File.chmod(0o755, notff)
+  message = F.problem_with(notff).to_s
+  check('báo lỗi: nêu mã thoát và dòng đầu kết quả', message.include?('mã thoát 3') && message.include?('chay thu sai'))
 end
 $defaults.delete(['VGD_Diagram', 'ffmpeg_path'])
 

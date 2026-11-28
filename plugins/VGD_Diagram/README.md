@@ -1,8 +1,16 @@
-# VGD Diagram 0.10.2-beta.1
+# VGD Diagram 0.10.3-beta.1
 
 Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các cấu kiện, số lượng và thứ tự lắp, để khách hàng và thợ lắp đặt dễ hiểu mô hình.
 
 ## Trạng thái
+
+**0.10.3-beta.1 (bỏ MP4 khi quay trực tiếp; sửa lỗi xuất WebM; báo lỗi ffmpeg chi tiết hơn).** Thay đổi so với 0.10.2-beta.1:
+
+- **Bỏ MP4 trong danh sách video:** trình duyệt SketchUp không quay được MP4, nên tùy chọn này đã bỏ. Danh sách còn **WebM** (quay trực tiếp) và **PNG (chuỗi khung hình)**. Muốn có MP4 thì chọn PNG rồi ghép bằng ffmpeg.
+- **Sửa lỗi xuất WebM:** bản 0.10.2-beta.1 gọi hàm lưu video nhưng hàm đó bị thiếu, nên báo `undefined method 'save_video'`. Đã bổ sung và có test.
+- **Báo lỗi ffmpeg chi tiết hơn:** khi file không chạy được như ffmpeg, thông báo nêu mã thoát và dòng đầu kết quả, để biết vì sao.
+- **Kiểm tra tự động:** ffmpeg thật (`dev/test_ffmpeg.rb`, 43/43), gồm luồng lưu WebM và báo lỗi chi tiết. Chromium (`dev/test_ui.cjs`, 60/60).
+- **Chưa kiểm tra trong SketchUp thật.**
 
 **0.10.2-beta.1 (ffmpeg: nhập thư mục, dự phòng MPEG-4; hiện số phiên bản).** Thay đổi so với 0.10.1-beta.1:
 
@@ -49,7 +57,7 @@ ffmpeg -framerate 30 -i lap-rap-khung-%05d.png -c:v libx264 -pix_fmt yuv420p lap
 
 **0.7.0-beta.1 (chọn định dạng khi lưu).** Thay đổi so với 0.6.0-beta.1:
 
-- **Hộp lưu:** xuất ảnh và video mở hộp chọn nơi lưu và tên file. Đuôi file bạn gõ quyết định định dạng: ảnh là `.png` hoặc `.jpg`, video là `.mp4` hoặc `.webm`. Không gõ đuôi thì dùng định dạng đã chọn cạnh nút.
+- **Hộp lưu:** xuất ảnh và video mở hộp chọn nơi lưu và tên file. Đuôi file bạn gõ quyết định định dạng: ảnh là `.png` hoặc `.jpg`, video là `.webm` hoặc `.png` (chuỗi khung hình). Không gõ đuôi thì dùng định dạng đã chọn cạnh nút.
 - **MP4:** chỉ xuất được khi trình duyệt trong SketchUp hỗ trợ quay MP4. Nếu không, plugin báo rõ và bạn chọn WebM. Plugin không tự đổi sang WebM.
 - **Chưa có:** GIF, và chuyển đổi video sang định dạng khác ngoài trình duyệt.
 - **Chưa kiểm tra trong SketchUp thật.**
@@ -57,7 +65,7 @@ ffmpeg -framerate 30 -i lap-rap-khung-%05d.png -c:v libx264 -pix_fmt yuv420p lap
 **0.6.0-beta.1 (xuất video lắp ráp).** Thay đổi so với 0.5.0-beta.1:
 
 - **Xuất video:** quay video 1280×720, 30 fps, theo góc iso. Mỗi bước: cấu kiện của bước bay vào chỗ, các bước trước đã xám, bước hiện tại tô cam kèm mũi tên và chú thích. Cuối video giữ hình lắp hoàn chỉnh 2 giây. Mỗi bước khoảng 1,6 giây.
-- **Định dạng:** MP4 nếu trình duyệt quay được; không thì WebM. File lưu là `<tên>-lap-rap.mp4` hoặc `.webm`.
+- **Định dạng:** WebM, quay trực tiếp trong SketchUp. File lưu là `<tên>-lap-rap.webm`. MP4 chỉ có khi chọn PNG (chuỗi khung hình) rồi ghép bằng ffmpeg.
 - **Chưa kiểm tra trong SketchUp thật:** việc quay video (MediaRecorder) có chạy trong SketchUp 2022 không chưa biết; đã kiểm tra trong Chromium (đầu ra MP4/VP9, đúng trình tự bước).
 
 **0.5.0-beta.1 (xuất theo cụm và theo bước lắp, cảnh báo).** Thay đổi so với 0.4.0-beta.1:

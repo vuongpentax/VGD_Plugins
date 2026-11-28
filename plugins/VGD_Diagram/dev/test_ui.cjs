@@ -216,9 +216,9 @@ function check(name, ok) {
   }
   const videoPayload = video ? JSON.parse(video.args[0]) : null;
   check('video: quay xong và gửi về Ruby', !!videoPayload);
-  check('video: dữ liệu là video (mp4 hoặc webm) có nội dung',
-    !!videoPayload && /^data:video\/(mp4|webm)/.test(videoPayload.data) && videoPayload.data.length > 5000);
-  check('video: đuôi file hợp lệ', !!videoPayload && ['mp4', 'webm'].includes(videoPayload.ext));
+  check('video: dữ liệu là WebM có nội dung',
+    !!videoPayload && /^data:video\/webm/.test(videoPayload.data) && videoPayload.data.length > 5000);
+  check('video: đuôi file là webm', !!videoPayload && videoPayload.ext === 'webm');
   check('video: báo đã quay (có số cấu kiện có thứ tự)', (await page.locator('#status').textContent()).includes('2 cấu kiện'));
   const orderedIds = (await dbg()).ordered;
   check('video: thứ tự bay giống khung 3D (51 trước 52)', JSON.stringify(orderedIds) === JSON.stringify([51, 52]));
@@ -248,9 +248,11 @@ function check(name, ok) {
   check('định dạng: quay WebM khi chọn WebM', !!webm && JSON.parse(webm.args[0]).ext === 'webm');
 
   await page.evaluate(() => { window.__calls = []; window.MediaRecorder.isTypeSupported = () => false; });
-  await page.evaluate(() => window.VGD.onVideo({ format: 'mp4' }));
-  check('định dạng: MP4 không được hỗ trợ thì báo rõ, không tự đổi sang WebM',
-    (await page.locator('#status').textContent()).includes('không quay được MP4') &&
+  check('định dạng: danh sách video không còn MP4',
+    (await page.locator('#video-format option').allTextContents()).join(',') === 'WebM,PNG (chuỗi khung hình)');
+  await page.evaluate(() => window.VGD.onVideo({ format: 'webm' }));
+  check('định dạng: WebM không được hỗ trợ thì báo rõ, không lưu',
+    (await page.locator('#status').textContent()).includes('không quay được video WebM') &&
     !(await page.evaluate(() => window.__calls)).some((c) => c.name === 'save_video'));
 
   // ---- Chuỗi khung hình PNG (để đổi sang MP4 bằng ffmpeg trên máy) ----
