@@ -3,9 +3,19 @@
 (function () {
   'use strict';
   var MAX_ORDER = 9999;
-  var EXPLODE = 0.9;      // mức tách tối đa: cấu kiện cách tâm mô hình thêm 90% khoảng cách của nó
+  var EXPLODE = 0.9;      // hệ số đẩy cụm ra khỏi tâm mô hình khi tách tự động (xem explodeDistance)
   var STAGGER = 0.35;     // giây giữa hai cấu kiện khi phát lắp ráp
   var DURATION = 0.7;     // giây để một cấu kiện lắp vào
+  var PRESET_PHI = 1.1;   // độ cao camera khi chọn một góc nhìn có sẵn
+  var AXES = {            // hướng tách cố định (SketchUp: Z hướng lên, Y là chiều sâu)
+    front: [0, -1, 0], back: [0, 1, 0], left: [-1, 0, 0], right: [1, 0, 0], up: [0, 0, 1], down: [0, 0, -1]
+  };
+  var VIEWPOINTS = {      // góc nhìn có sẵn: góc phương vị của camera (theta)
+    front_left: -3 * Math.PI / 4,
+    front_right: -Math.PI / 4,
+    back_left: 3 * Math.PI / 4,
+    back_right: Math.PI / 4
+  };
   // Style mặc định của SketchUp (giả lập): mặt xám trắng, cạnh đen, nền trắng khi xuất ảnh.
   var FACE_COLOR = 0xf2f2f0;
   var EDGE_COLOR = 0x1a1a1a;
@@ -43,6 +53,11 @@
   var imageFormat = document.getElementById('image-format');
   var ffmpegInput = document.getElementById('ffmpeg-path');
   var videoFormat = document.getElementById('video-format');
+  var partSelect = document.getElementById('explode-part');
+  var dirSelect = document.getElementById('explode-dir');
+  var viewpointSelect = document.getElementById('viewpoint');
+  var distanceInput = document.getElementById('explode-distance');
+  var autoInput = document.getElementById('explode-auto');
 
   var view = null;        // khung 3D: renderer, scene, camera, parts, góc nhìn
   var playing = null;     // {start, count} khi đang phát lắp ráp
@@ -51,6 +66,7 @@
   var labels = [];        // {el, part}: nhãn số đặt trên mô hình 3D
   var recording = false;  // đang quay video
   var imageMime = 'image/png'; // định dạng ảnh đang xuất (PNG hoặc JPEG)
+  var explodeSettings = {};    // id cấu kiện -> {dir, distance}: hướng và khoảng cách tách riêng từng cụm
 
   function send(name, data) {
     if (window.sketchup && window.sketchup[name]) window.sketchup[name](JSON.stringify(data || {}));
@@ -289,6 +305,7 @@
       part.edges.material.dispose();
     });
     view.parts = [];
+    fillPartSelect();
   }
 
   function setModel(data) {
@@ -329,15 +346,18 @@
         geometry: entry.geometry,
         material: material,
         edges: edges,
-        center: center
+        center: center,
+        size: entry.geometry.boundingBox.getSize(new THREE.Vector3())
       });
     });
     view.target.copy(box.getCenter(new THREE.Vector3()));
     view.center.copy(view.target);
     // Lùi camera đủ xa để mô hình vẫn vừa khung khi đã tách rời hết.
-    view.dist = Math.max(box.getSize(new THREE.Vector3()).length() * 2.3, 500);
+    view.span = box.getSize(new THREE.Vector3()).length();
+    view.dist = Math.max(view.span * 2.3, 500);
     setViewMessage(data.truncated ? 'Mô hình quá lớn: chỉ hiện một phần hình học.' : '');
     updatePlayButton();
+    fillPartSelect();
     updatePositions();
     rebuildLabels();
   }
@@ -352,14 +372,154 @@
     return slider.value / 100;
   }
 
+  // Cài đặt tách riêng của một cấu kiện: hướng ('auto', 'still' hoặc một trục) và khoảng cách mm (null = tự động).
+  function settingsOf(part) {
+    var key = String(part.id);
+    if (!explodeSettings[key]) explodeSettings[key] = { dir: 'auto', distance: null };
+    return explodeSettings[key];
+  }
+
+  // Hướng tách đơn vị. 'auto' là hướng từ tâm mô hình ra cụm; 'still' là không tách (trả về null).
+  function explodeDirection(part, dir) {
+    if (dir === 'still') return null;
+    if (dir === 'auto') {
+      var radial = part.center.clone().sub(view.center);
+      return radial.lengthSq() > 1e-6 ? radial.normalize() : new THREE.Vector3(0, 0, 1);
+    }
+    var axis = AXES[dir];
+    return new THREE.Vector3(axis[0], axis[1], axis[2]);
+  }
+
+  // Khoảng cách tách (mm) khi ở 100 %. Tự động: đẩy cụm ra khỏi tâm, cộng nửa kích thước
+  // của chính cụm theo hướng tách (để không lọt vào cụm gần nó) và một khoảng hở nhỏ
+  // (5 % kích thước mô hình) để cụm mỏng vẫn rời hẳn khỏi chỗ cũ.
+  function explodeDistance(part, direction, setting) {
+    if (setting.distance !== null) return setting.distance;
+    var outward = part.center.clone().sub(view.center).dot(direction);
+    var half = 0.5 * (Math.abs(part.size.x * direction.x) + Math.abs(part.size.y * direction.y) +
+      Math.abs(part.size.z * direction.z));
+    return EXPLODE * Math.max(0, outward) + half + 0.05 * view.span;
+  }
+
+  // Độ dịch chuyển của một cấu kiện với mức tách t (0 = đã lắp, 1 = tách hết).
+  function explodedOffset(part, t) {
+    var setting = settingsOf(part);
+    var direction = explodeDirection(part, setting.dir);
+    if (!direction || t <= 0) return new THREE.Vector3();
+    return direction.multiplyScalar(explodeDistance(part, direction, setting) * t);
+  }
+
+  // Khoảng cách hiển thị (mm) của một cấu kiện: số nhập tay, hoặc số tính tự động.
+  function displayDistance(part) {
+    var setting = settingsOf(part);
+    var direction = explodeDirection(part, setting.dir);
+    return direction ? explodeDistance(part, direction, setting) : 0;
+  }
+
   function updatePositions() {
     if (!view) return;
     view.parts.forEach(function (part) {
-      var offset = part.center.clone().sub(view.center).multiplyScalar(EXPLODE * partT(part));
-      part.mesh.position.copy(part.center).add(offset);
+      part.mesh.position.copy(part.center).add(explodedOffset(part, partT(part)));
     });
     sliderValue.textContent = slider.value + ' %';
   }
+
+  // ---------- Điều khiển tách: cụm, hướng, khoảng cách, góc nhìn ----------
+
+  // Các cấu kiện đang được chỉnh: 'all' là tất cả, còn lại là chỉ số trong view.parts.
+  function scopeParts() {
+    if (!view) return [];
+    if (partSelect.value === 'all') return view.parts;
+    var part = view.parts[Number(partSelect.value)];
+    return part ? [part] : [];
+  }
+
+  function fillPartSelect() {
+    partSelect.textContent = '';
+    var hasParts = !!view && view.parts.length > 0;
+    if (hasParts) {
+      partSelect.append(new Option('Tất cả', 'all'));
+      view.parts.forEach(function (part, index) {
+        partSelect.append(new Option((index + 1) + '. ' + (part.name || 'Cấu kiện'), String(index)));
+      });
+      partSelect.value = 'all';
+    }
+    partSelect.disabled = !hasParts;
+    refreshExplodeControls();
+  }
+
+  // Đưa hướng tách, khoảng cách và ô tự động về đúng trạng thái của cụm đang chọn.
+  function refreshExplodeControls() {
+    var parts = scopeParts();
+    var hasParts = parts.length > 0;
+    dirSelect.disabled = !hasParts;
+    distanceInput.disabled = !hasParts || autoInput.checked;
+    autoInput.disabled = !hasParts;
+    viewpointSelect.disabled = !view;
+
+    var dirs = parts.map(function (part) { return settingsOf(part).dir; });
+    var mixed = dirs.some(function (dir) { return dir !== dirs[0]; });
+    var mixedOption = dirSelect.querySelector('option[value="mixed"]');
+    if (mixed && !mixedOption) {
+      mixedOption = new Option('Nhiều hướng', 'mixed');
+      mixedOption.disabled = true;
+      dirSelect.append(mixedOption);
+    }
+    if (!mixed && mixedOption) mixedOption.remove();
+    dirSelect.value = mixed ? 'mixed' : (dirs[0] || 'auto');
+
+    var autoAll = parts.every(function (part) { return settingsOf(part).distance === null; });
+    var autoSome = parts.some(function (part) { return settingsOf(part).distance === null; });
+    autoInput.checked = autoAll;
+    autoInput.indeterminate = autoSome && !autoAll;
+    // Một cụm: hiện đúng khoảng cách (mm). Nhiều cụm: để trống, vì mỗi cụm có số riêng.
+    if (parts.length === 1) {
+      distanceInput.value = String(Math.round(displayDistance(parts[0])));
+      distanceInput.placeholder = '';
+    } else {
+      distanceInput.value = '';
+      distanceInput.placeholder = autoAll ? 'Tự động' : 'Nhiều giá trị';
+    }
+    distanceInput.disabled = !hasParts || autoInput.checked;
+  }
+
+  // Áp dụng thay đổi cho cụm đang chọn; sau đó cập nhật ô và vị trí.
+  function changeScope(change) {
+    scopeParts().forEach(function (part) { change(settingsOf(part), part); });
+    refreshExplodeControls();
+    updatePositions();
+  }
+
+  function bindExplodeControls() {
+    dirSelect.addEventListener('change', function () {
+      if (dirSelect.value === 'mixed') return;
+      changeScope(function (setting) { setting.dir = dirSelect.value; });
+    });
+    partSelect.addEventListener('change', refreshExplodeControls);
+    autoInput.addEventListener('change', function () {
+      if (autoInput.checked) {
+        changeScope(function (setting) { setting.distance = null; });
+        return;
+      }
+      // Bỏ tự động: lấy đúng khoảng cách hiện tại làm điểm xuất phát để nhập tay.
+      changeScope(function (setting, part) { setting.distance = Math.round(displayDistance(part)); });
+    });
+    distanceInput.addEventListener('change', function () {
+      var value = parseFloat(distanceInput.value);
+      if (!isFinite(value) || value < 0) {
+        refreshExplodeControls();
+        return;
+      }
+      changeScope(function (setting) { setting.distance = value; });
+    });
+    viewpointSelect.addEventListener('change', function () {
+      var theta = VIEWPOINTS[viewpointSelect.value];
+      if (theta === undefined || !view) return;
+      view.theta = theta;
+      view.phi = PRESET_PHI;
+    });
+  }
+  bindExplodeControls();
 
   function orderedParts() {
     return view ? view.parts.filter(function (part) { return part.order !== null && part.order !== undefined; })
@@ -454,8 +614,7 @@
   // Đặt mỗi cấu kiện ở vị trí lắp (t = 0) hoặc tách ra (t = 1). tFor(part) trả về 0 hoặc 1.
   function placeParts(tFor) {
     view.parts.forEach(function (part) {
-      var offset = part.center.clone().sub(view.center).multiplyScalar(EXPLODE * tFor(part));
-      part.mesh.position.copy(part.center).add(offset);
+      part.mesh.position.copy(part.center).add(explodedOffset(part, tFor(part)));
     });
   }
 
@@ -915,7 +1074,17 @@
       playing: !!playing,
       slider: Number(slider.value),
       labels: labels.length,
-      ordered: orderedParts().map(function (part) { return part.id; })
+      ordered: orderedParts().map(function (part) { return part.id; }),
+      // Vị trí camera so với tâm nhìn, và độ dịch chuyển của từng cụm khi tách hết (100 %).
+      camera: view ? [
+        view.camera.position.x - view.target.x,
+        view.camera.position.y - view.target.y,
+        view.camera.position.z - view.target.z
+      ] : [],
+      offsets: view ? view.parts.map(function (part) {
+        var offset = explodedOffset(part, 1);
+        return [offset.x, offset.y, offset.z];
+      }) : []
     };
   };
 

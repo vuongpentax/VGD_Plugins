@@ -1,9 +1,21 @@
-# VGD Diagram 0.10.3-beta.1
+# VGD Diagram 0.10.4-beta.1
 
 Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các cấu kiện, số lượng và thứ tự lắp, để khách hàng và thợ lắp đặt dễ hiểu mô hình.
 
 ## Trạng thái
 
+**0.10.4-beta.1 (tách rời theo cụm: hướng, khoảng cách và góc nhìn).** Thay đổi so với 0.10.3-beta.1:
+
+- **Cụm:** chọn "Tất cả" hoặc từng cấu kiện trong danh sách (đánh số theo thứ tự trong model).
+- **Hướng tách:** Tự động (đẩy ra từ tâm mô hình), Giữ nguyên (cụm không di chuyển), Trước, Sau, Trái, Phải, Lên, Xuống. Chọn "Tất cả" thì đổi hướng cho mọi cụm; nếu các cụm đang khác hướng, ô hiện "Nhiều hướng".
+- **Khoảng cách (mm):** nhập tay khoảng cách tách của cụm đang chọn, hoặc bật **Tự động** để plugin tính. Số mm là khoảng cách khi thanh "Tách rời" ở 100 %.
+- **Góc nhìn:** Góc đang xem, Trước trái, Trước phải, Sau trái, Sau phải. Có thể vẫn xoay chuột sau khi chọn.
+- **Canh khoảng cách:** tách tự động giờ tính theo kích thước của từng cụm (cộng nửa kích thước theo hướng tách và một khe hở nhỏ 5 % kích thước mô hình), nên các cụm tách ra không còn chồng lên nhau như trước.
+- **Ảnh xuất và video** dùng cùng công thức tách nên khớp với khung 3D.
+- **Kiểm tra tự động:** Chromium (`dev/test_ui.cjs`, 72/72), gồm danh sách, hướng riêng, "Giữ nguyên", khoảng cách nhập tay, bật/tắt Tự động và góc camera. Đã xem ảnh tủ mẫu 6 tấm tách 100 % trong Chromium: các tấm không chồng nhau.
+- **Chưa kiểm tra trong SketchUp thật.**
+
+**0.10.3-beta.1 (bỏ MP4 khi quay trực tiếp; sửa lỗi xuất WebM; báo lỗi ffmpeg chi tiết).** Thay đổi so với 0.10.2-beta.1:
 **0.10.3-beta.1 (bỏ MP4 khi quay trực tiếp; sửa lỗi xuất WebM; báo lỗi ffmpeg chi tiết hơn).** Thay đổi so với 0.10.2-beta.1:
 
 - **Bỏ MP4 trong danh sách video:** trình duyệt SketchUp không quay được MP4, nên tùy chọn này đã bỏ. Danh sách còn **WebM** (quay trực tiếp) và **PNG (chuỗi khung hình)**. Muốn có MP4 thì chọn PNG rồi ghép bằng ffmpeg.
@@ -106,7 +118,7 @@ ffmpeg -framerate 30 -i lap-rap-khung-%05d.png -c:v libx264 -pix_fmt yuv420p lap
 ## Mô hình 3D
 
 - Hình học lấy từ các mặt của đối tượng đã chọn, chỉ đọc. Model không bị đổi khi tách rời hay phát lắp ráp.
-- **Tách rời:** mỗi mảnh di chuyển ra xa tâm mô hình theo tỉ lệ với khoảng cách của nó. Đây là cách tách theo hướng tâm, chưa phải tách theo trục như ảnh mẫu.
+- **Tách rời:** mặc định (Hướng tách "Tự động") mỗi cụm đi ra xa tâm mô hình, cộng nửa kích thước của cụm và một khe hở nhỏ. Có thể đặt hướng tách cố định (Trước, Sau, Trái, Phải, Lên, Xuống) hoặc Giữ nguyên cho từng cụm, và nhập khoảng cách tay (mm). Khi chọn một hướng cố định, cụm nằm phía ngược với hướng đó vẫn chỉ được đẩy đi theo kích thước của chính nó.
 - **Phát lắp ráp:** các cấu kiện có thứ tự lắp được lắp lần lượt từ 1 đến hết. Cấu kiện chưa có thứ tự theo thanh trượt.
 - Số nhãn hiện trên cây và trên mô hình, khớp nhau. Mỗi nhóm có hình học một nhãn, đặt trên cấu kiện đầu tiên của nhóm.
 - Khi bấm tên hoặc trỏ vào một dòng trong cây, các cấu kiện thuộc dòng đó được tô màu cam.

@@ -46,6 +46,7 @@
 - Tối đa 15 nhãn trên một ảnh (`MAX_TAGS` trong `dialog.js`).
 - Video lắp ráp quay bằng `MediaRecorder` từ canvas trong giao diện. Định dạng quay trực tiếp là webm (`VIDEO_EXT`); MP4 không quay trực tiếp, chỉ có qua chuỗi khung PNG rồi ghép bằng ffmpeg. Hàm lưu: `Dialog#save_video`. Đuôi file trong hộp lưu quyết định định dạng (`Dialog::resolve_format`, test ở `dev/test_formats.rb`).
 - Ảnh xuất: png hoặc jpg, chọn như video.
+- Tách rời (`dialog.js`): vị trí mọi cụm luôn qua `explodedOffset` (khung 3D, ảnh xuất, video dùng chung). Hướng và khoảng cách riêng từng cụm lưu trong `explodeSettings` theo id, chỉ trong phiên mở hộp thoại; khoảng cách `null` là tự động.
 - Đường dẫn ffmpeg lưu bằng `Sketchup.write_default` (`ffmpeg.rb#save_path`). Người dùng có thể nhập file hoặc thư mục (`ffmpeg.rb#resolve` tìm `ffmpeg.exe` trong thư mục, hoặc `bin\ffmpeg.exe`); chỉ lưu file vượt qua kiểm tra `-version` và có bộ mã hóa `libx264` hoặc `mpeg4` (`ENCODERS`, ưu tiên `libx264`).
 - `ffmpeg.rb` gọi ffmpeg bằng danh sách tham số (không qua shell). Chỉ chạy file ffmpeg đã chọn hoặc lệnh `ffmpeg` trong PATH. Chỉ xóa khung hình do plugin vừa xuất, và chỉ sau khi người dùng xác nhận và ghép thành công.
 - Video dạng PNG (chuỗi khung hình) không dùng MediaRecorder: `exportFrames` gửi từng khung qua `save_frame`, kết thúc bằng `video_done` (`Dialog#finish_frames`).
