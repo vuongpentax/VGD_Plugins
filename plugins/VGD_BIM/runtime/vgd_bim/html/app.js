@@ -144,10 +144,14 @@ function resetTableState(){
 }
 const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total','calc_qty','calc_total','mat_price','mat_waste','mat_qty','mat_cost']);
 // Khối lượng tính theo tag (xem core/quantity.rb): nhãn cách tính, đơn vị và số lẻ cố định theo từng cách (m, m², m³ không đổi theo đơn vị của preset).
-const METHOD_LABELS={count:'Theo cái',area:'Theo diện tích',length:'Theo mét dài',volume:'Theo thể tích',none:'Không tính'};
-const CALC_UNIT={count:'cái',area:'m²',length:'m',volume:'m³'};
-const CALC_DIGITS={count:0,area:2,length:2,volume:3};
-const CALC_ORDER=['count','area','length','volume'];
+const METHOD_LABELS={count:'Theo cái',area:'Theo diện tích',length:'Theo mét dài',volume:'Theo thể tích',none:'Không tính',formula:'Theo công thức'};
+// Đơn vị của Khối lượng tính (mã schema): cách tính có sẵn suy ra từ cách tính, công thức theo tag mang đơn vị người dùng chọn (row.calc_unit).
+const METHOD_UNIT={count:'pcs',area:'m2',length:'m',volume:'m3'};
+const UNIT_TEXT={pcs:'cái',m2:'m²',m:'m',m3:'m³',set:'bộ',lot:'lô',kg:'kg'};
+const UNIT_DIGITS={pcs:0,m2:2,m:2,m3:3,set:2,lot:2,kg:2};
+const UNIT_ORDER=['pcs','m2','m','m3','set','lot','kg'];
+const calcUnit=row=>row.calc_method==='formula'?row.calc_unit:METHOD_UNIT[row.calc_method];
+const calcDigits=row=>UNIT_DIGITS[calcUnit(row)]??0;
 const CATEGORY_LABELS={architecture:'Kiến trúc',finish:'Hoàn thiện',furniture:'Nội thất',electrical:'Điện',equipment:'Thiết bị',plumbing:'Cấp thoát nước',hvac:'Điều hòa / Thông gió',other:'Khác',wall:'Tường',floor:'Sàn',ceiling:'Trần',door:'Cửa đi',window:'Cửa sổ',column:'Cột',beam:'Dầm',stair:'Cầu thang',cabinet:'Tủ',sanitary:'Thiết bị vệ sinh',lighting:'Chiếu sáng',generic:'Chung'};
 const CALC_SOURCES={item:'Theo dữ liệu đã ghi trong món',tag:'Theo cách tính bạn đặt cho tag',keyword:'Theo từ khóa trong tên tag',group:'Theo nhóm tag',default:'Mặc định (theo cái)'};
 // Cột ảnh phụ (Ảnh 3, Ảnh 4): kind của cột => loại ảnh (xem images.js).
@@ -400,7 +404,7 @@ function cellText(row,key){
     case 'measure_note':return row.measure_note||'';
     case 'calc_category':return CATEGORY_LABELS[row.calc_category]||'';
     case 'calc_method':return METHOD_LABELS[row.calc_method]||'';
-    case 'calc_unit':return CALC_UNIT[row.calc_method]||'';
+    case 'calc_unit':return UNIT_TEXT[calcUnit(row)]||'';
     default:return key.startsWith('custom_')&&row[key]!=null?String(row[key]):''; // cột thêm tay: chữ do Ruby đọc sẵn
   }
 }
@@ -563,7 +567,7 @@ function inlineEdit(td,row,col){
 function menuItems(field){
   const d=tableState.data,choices=d.choices||{tags:[],materials:[]};
   if(field==='status')return Object.entries(d.statuses||{}).map(([value,label])=>({value,label}));
-  if(field==='calc_method')return [{value:'',label:'Theo từ khóa / nhóm tag (bỏ cách tính riêng)'},...Object.entries(METHOD_LABELS).map(([value,label])=>({value,label}))];
+  if(field==='calc_method')return [{value:'',label:'Theo từ khóa / nhóm tag (bỏ cách tính riêng)'},...Object.entries(METHOD_LABELS).map(([value,label])=>({value,label:value==='formula'?'Theo công thức…':label}))];
   if(field==='room')return [{value:'',label:'(Không có phòng)'},...(choices.rooms||[])];
   if(field==='level')return [{value:'',label:'(Không có tầng)'},...(choices.levels||[])];
   if(field==='tag')return [{value:'',label:'(Không có tag)'},...choices.tags.map(name=>({value:name,label:name}))];
@@ -575,7 +579,7 @@ function menuEdit(td,row,col){
   const menu=node('div',undefined,'cell-menu');menu.setAttribute('role','listbox');
   const search=node('input');search.type='search';search.placeholder='Tìm...';search.setAttribute('aria-label','Tìm trong danh sách');
   const list=node('div',undefined,'cell-menu-list');
-  const pick=value=>{closeMenu();commitEdit(row,field,value);};
+  const pick=value=>{closeMenu();if(field==='calc_method'&&value==='formula')formulaEdit(td,row);else commitEdit(row,field,value);};
   const draw=()=>{
     const q=foldText(search.value.trim());
     const shown=all.filter(item=>!q||foldText(item.label).includes(q));
@@ -605,6 +609,28 @@ function menuEdit(td,row,col){
   document.addEventListener('mousedown',outsideMenu,true);
   search.focus();
   const currentLine=list.querySelector('.current');if(currentLine)currentLine.scrollIntoView({block:'nearest'});
+}
+// Công thức khối lượng cho tag của dòng (core/formula.rb): ô công thức + đơn vị, gửi table_calc_formula; Ruby kiểm tra lại và báo lỗi rõ.
+function formulaEdit(td,row){
+  closeMenu();
+  const box=node('div',undefined,'cell-menu formula-menu');
+  const input=node('input');input.type='text';input.maxLength=200;input.value=row.calc_formula||'';input.placeholder='(Rộng + Sâu) x 2';input.setAttribute('aria-label','Công thức khối lượng');input.id='formula-text';
+  const unit=node('select');unit.setAttribute('aria-label','Đơn vị của công thức');unit.id='formula-unit';
+  UNIT_ORDER.forEach(code=>unit.append(new Option(UNIT_TEXT[code],code)));unit.value=row.calc_method==='formula'&&row.calc_unit?row.calc_unit:'m';
+  const apply=()=>{
+    const text=input.value.trim();if(!text)return message('Hãy nhập công thức.',true);
+    closeMenu();call('table_calc_formula',JSON.stringify({indexes:editTargets(row),formula:text,unit:unit.value}));
+  };
+  input.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter'){e.preventDefault();apply();}else if(e.key==='Escape'){e.preventDefault();closeMenu();}};
+  const actions=node('div',undefined,'rename-actions');actions.append(button('Áp dụng',apply,'primary'),button('Hủy',closeMenu));
+  box.append(node('div','Công thức cho tag '+(row.tag||''),'pop-title'),input,unit,node('p','Dùng Rộng, Sâu, Cao (m), Diện tích (m²), Thể tích (m³), các phép + − x / và ngoặc. Mọi món cùng tag dùng chung công thức.','muted formula-help'),actions);
+  document.body.append(box);cellMenu=box;
+  const rect=td.getBoundingClientRect();
+  box.style.width='300px';
+  box.style.left=Math.max(8,Math.min(rect.left,window.innerWidth-box.offsetWidth-8))+'px';
+  box.style.top=(window.innerHeight-rect.bottom>=box.offsetHeight||rect.top<box.offsetHeight?rect.bottom:rect.top-box.offsetHeight)+'px';
+  document.addEventListener('mousedown',outsideMenu,true);
+  input.focus();
 }
 function editCell(td,row,col){
   if(!col.editable)return;
@@ -685,7 +711,7 @@ function viewModel(full=false){
   const sumOf=(list,key)=>counted(list).reduce((s,r)=>s+(typeof r[key]==='number'?r[key]:0),0);
   const countOf=list=>counted(list).reduce((s,r)=>s+membersOf(r).length,0);
   // Khối lượng tính cộng theo từng đơn vị (m², cái... không cộng lẫn nhau): "4,25 m² · 3 cái"
-  const calcText=list=>{const by={};counted(list).forEach(r=>{if(r.calc_qty!=null&&CALC_UNIT[r.calc_method])by[r.calc_method]=(by[r.calc_method]||0)+r.calc_qty;});return CALC_ORDER.filter(k=>by[k]!=null).map(k=>`${fmt(by[k],CALC_DIGITS[k])} ${exportText(CALC_UNIT[k])}`).join(' · ');}; // đơn vị dịch theo ngôn ngữ đang dùng
+  const calcText=list=>{const by={};counted(list).forEach(r=>{const u=calcUnit(r);if(r.calc_qty!=null&&UNIT_TEXT[u])by[u]=(by[u]||0)+r.calc_qty;});return UNIT_ORDER.filter(k=>by[k]!=null).map(k=>`${fmt(by[k],UNIT_DIGITS[k])} ${exportText(UNIT_TEXT[k])}`).join(' · ');}; // đơn vị dịch theo ngôn ngữ đang dùng
   // Danh sách theo thứ tự hiển thị: các nhóm (nếu có) rồi các dòng của nhóm chưa thu gọn.
   let sections=[{label:null,rows:ordered}];
   if(tableState.groupBy){
@@ -889,7 +915,7 @@ function renderGrid(host){
         else if(col.kind==='image')imageCell(td,row);
         else if(col.kind==='image_location')imageCell(td,row,'location');
         else if(IMAGE_EXTRA_KINDS[col.kind])imageCell(td,row,IMAGE_EXTRA_KINDS[col.kind]);
-        else if(NUMERIC.has(col.key)){td.textContent=fmt(scaledValue(col.key,row[col.key]),(col.key==='calc_qty'||col.key==='mat_qty')?(CALC_DIGITS[row.calc_method]||0):col.key==='mat_waste'?1:digitsFor(col.key));td.className='num';}
+        else if(NUMERIC.has(col.key)){td.textContent=fmt(scaledValue(col.key,row[col.key]),(col.key==='calc_qty'||col.key==='mat_qty')?calcDigits(row):col.key==='mat_waste'?1:digitsFor(col.key));td.className='num';}
         else if(col.key==='url'){
           td.append(node('span',row.url,'cell-url'));
           if(row.url){const open=node('button','↗','cell-open');open.type='button';open.title='Mở link';open.setAttribute('aria-label','Mở link');open.onclick=e=>{e.stopPropagation();call('open_url',row.url);};open.ondblclick=e=>e.stopPropagation();td.append(open);}
@@ -898,7 +924,7 @@ function renderGrid(host){
         if(col.key==='front_state'&&row.front_note)td.title=row.front_note; // lý do tự động chọn mặt trước, để duyệt
         if(col.key==='vgd_id'&&row.vgd_id)td.title=row.vgd_id;
         if(col.key==='mat_cost'&&row.mat_note)td.title=exportText(row.mat_note);
-        if(col.key.startsWith('calc_')&&row.calc_source)td.title=exportText(CALC_SOURCES[row.calc_source]||'')+(row.calc_note?' · '+exportText(row.calc_note):'')+(col.key==='calc_method'?'. '+exportText('Nhấp đúp để đổi cách tính của tag này.'):''); // vì sao ra cách tính này (dịch từng phần theo ngôn ngữ)
+        if(col.key.startsWith('calc_')&&row.calc_source)td.title=exportText(CALC_SOURCES[row.calc_source]||'')+(row.calc_formula?' · '+exportText('Công thức: '+row.calc_formula):'')+(row.calc_note?' · '+exportText(row.calc_note):'')+(col.key==='calc_method'?'. '+exportText('Nhấp đúp để đổi cách tính của tag này.'):''); // vì sao ra cách tính này (dịch từng phần theo ngôn ngữ)
         tr.append(td);
       });
       rowGrip(tr,row,section,pids,host);

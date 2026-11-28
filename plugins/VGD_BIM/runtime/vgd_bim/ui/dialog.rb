@@ -98,6 +98,7 @@ module VGD
           @dialog.add_action_callback('material_library_save') { |_ctx, payload| safely { material_library_save(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_rooms') { |_ctx, payload| safely { table_rooms(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_from_selection') { |_ctx, payload| safely { table_room_from_selection(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_calc_formula') { |_ctx, payload| safely { table_calc_formula(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_openings') { |_ctx, payload| safely { table_room_openings(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_detect') { |_ctx, payload| safely { table_room_detect(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_detect_apply') { |_ctx, payload| safely { table_room_detect_apply(JSON.parse(payload)) } }
@@ -990,13 +991,20 @@ module VGD
         end
         # Đổi cách tính theo TAG của các dòng đã chọn (lưu trên máy, mọi món cùng tag đổi theo); không ghi vào món nên cả món bị khóa cũng đổi được.
         # Giá trị rỗng: bỏ cách tính riêng của tag (về theo từ khóa / nhóm tag).
-        def table_calc_method(indexes, value)
+        def table_calc_method(indexes, value, formula: nil, unit: nil)
           tags = indexes.map { |index| @table_rows.fetch(index)[:tag].to_s }.reject(&:empty?).uniq
           raise 'Món chưa có tag nên không đặt cách tính theo tag được. Hãy gắn tag trước, hoặc dùng Ghi cách tính vào món.' if tags.empty?
-          tags.each { |tag| Quantity.set_override(tag, value) }
+          value == Quantity::FORMULA ? Quantity.formula_override(formula, unit) : nil # kiểm tra trước khi ghi tag đầu tiên
+          tags.each { |tag| Quantity.set_override(tag, value, formula: formula, unit: unit) }
           table_build
-          text = value.empty? ? "Đã bỏ cách tính riêng của #{tags.size} tag, tính theo từ khóa / nhóm tag." : "Đã đặt cách tính #{Quantity::LABELS.fetch(value)} cho #{tags.size} tag: #{tags.first(3).join(', ')}#{tags.size > 3 ? '…' : ''}."
+          label = value == Quantity::FORMULA ? "theo công thức #{formula.strip} (#{unit})" : Quantity::LABELS[value]
+          text = value.empty? ? "Đã bỏ cách tính riêng của #{tags.size} tag, tính theo từ khóa / nhóm tag." : "Đã đặt cách tính #{label} cho #{tags.size} tag: #{tags.first(3).join(', ')}#{tags.size > 3 ? '…' : ''}."
           emit('message', {text: text})
+        end
+        # Đặt công thức khối lượng cho tag của các dòng (core/formula.rb). payload: {'indexes', 'formula', 'unit'}. Chỉ lưu trên máy, không đổi model.
+        def table_calc_formula(payload)
+          raise ArgumentError, 'Dữ liệu công thức không hợp lệ.' unless payload.is_a?(Hash) && payload['formula'].is_a?(String) && payload['unit'].is_a?(String)
+          table_calc_method(table_indexes(payload), Quantity::FORMULA, formula: payload['formula'], unit: payload['unit'])
         end
         # Ghi cách tính suy ra từ tag vào chính các món (nút "Ghi cách tính vào món"): chỉ điền các mục dữ liệu chuẩn còn trống (hạng mục, cách tính, đơn vị),
         # không ghi đè gì người dùng đã nhập; bỏ qua món bị khóa; cả đợt là một bước hoàn tác. payload: {'indexes' => [các dòng]}.
@@ -1013,7 +1021,7 @@ module VGD
               row = @table_rows.fetch(index)
               entity = record[:entity]
               has_data = Data.has_data?(entity)
-              values = Quantity.commit_values(Data.read(entity), has_data, {category: row[:calc_category], method: row[:calc_method]})
+              values = Quantity.commit_values(Data.read(entity), has_data, {category: row[:calc_category], method: row[:calc_method], unit: row[:calc_unit]})
               next if values.empty?
               Data.write(entity, values, has_data ? Data.source(entity) : 'MAPPED')
               written += 1

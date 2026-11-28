@@ -2,7 +2,17 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.52: đã kiểm tra tự động
+## Bản 1.1.1-beta.53: đã kiểm tra tự động
+
+Beta.53: công thức khối lượng theo tag. `core/formula.rb` (tự đọc từng ký hiệu và tính trên cây phép tính, không chạy mã Ruby; chỉ số, + - * / và ngoặc, các số đo Rộng / Sâu / Cao / Diện tích / Thể tích, tối đa 200 ký tự và 20 lớp ngoặc), `Quantity` (cách tính `formula` chỉ đặt theo tag, lưu trong `tag_quantity.json` dạng `{method, formula, unit}`, dòng có `calc_unit` và `calc_formula`), `MaterialLibrary.cost(unit:)`, lệnh `table_calc_formula`, ô nhập công thức ở cột Cách tính, dòng tổng cộng theo đơn vị.
+
+- `dev/test_formula.rb`: tính đúng (thứ tự phép tính, không dấu, `x` / `×`, dấu phẩy thập phân, số âm, tên tiếng Anh), thiếu số đo và chia cho 0 không ra số, công thức sai bị từ chối (ký tự lạ, mã Ruby, ngoặc thiếu / thừa, số đo lạ, lồng quá sâu), lưu kèm đơn vị, dòng của bảng, dữ liệu trong món vẫn thắng, file hỏng bỏ mục sai, ghi vào món chỉ ghi đơn vị, thành tiền theo vật liệu.
+- `dev/test_dialog_logic.rb`: đặt công thức cho tag của các dòng, công thức sai không đổi tag nào, dữ liệu sai bị từ chối.
+- `dev/test_ui.cjs`, `dev/test_ui_en.cjs`: menu có Theo công thức…, ô nhập không gửi khi trống, gửi công thức + đơn vị, dòng công thức hiện đơn vị riêng và số lẻ theo đơn vị, chú thích có công thức, dòng tổng theo đơn vị, mở lại hiện công thức cũ, bản dịch Anh.
+
+**Chưa xác minh trong SketchUp thật:** gõ công thức trong cửa sổ SketchUp (bộ gõ tiếng Việt), số đo của món thật.
+
+## Bản 1.1.1-beta.52 (trước đó)
 
 Beta.52: trừ cửa khỏi tường của phòng theo tag cửa do người dùng chọn. `core/room_openings.rb` (ghép cửa với phòng: tâm cửa cách cạnh viền / lỗ không quá `REACH` = 400 mm và khoảng cao chồng lên phòng; cửa cao hơn trần chỉ trừ phần trong phòng; kiểm tra tag và dữ liệu `openings` lưu trong phòng), `core/opening_probe.rb` (duyệt model tìm group / component trên tag cửa, không đi vào bên trong cửa, định nghĩa không chứa cửa chỉ duyệt một lần, giới hạn 200.000 đối tượng; cửa VGD Structure dùng `dims` w, h), `Rooms.metrics` (`wall_gross`, `openings_area`, `openings_count`, `wall_area` đã trừ, không âm), lệnh `table_room_openings`, hộp Trừ cửa khỏi tường trong **Quản lý phòng**.
 

@@ -41,7 +41,7 @@ $transactions = []
 $writes = []
 $vgd_data = {}
 require File.join(ROOT, 'core/settings')
-%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/material_library core/check_rules core/snapshots core/bridge core/levels core/room_openings core/rooms core/opening_probe core/room_detect core/room_detect_probe core/room_volume core/sheet_lock].each { |f| require File.join(ROOT, f) }
+%w[core/measure core/schema core/formula core/quantity core/custom_columns core/vgd_id core/object_code core/material_library core/check_rules core/snapshots core/bridge core/levels core/room_openings core/rooms core/opening_probe core/room_detect core/room_detect_probe core/room_volume core/sheet_lock].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
@@ -596,6 +596,14 @@ ok('dòng chưa có tag: báo cần gắn tag trước', bad.call({'indexes' => 
 ok('cách tính lạ bị từ chối, không đổi ghi đè', bad.call({'indexes' => [0], 'field' => 'calc_method', 'value' => 'zzz'}).to_s.include?('Cách tính') && VGD::BIM::Quantity.overrides == overrides_before)
 ok('đối tượng bị khóa vẫn đổi được cách tính theo tag (không ghi vào món)', (cd.table_edit({'indexes' => [2], 'field' => 'calc_method', 'value' => 'volume'}); VGD::BIM::Quantity.overrides[VGD::BIM::Quantity.key('I. CHAIR')] == 'volume'))
 VGD::BIM::Quantity.set_override('I. CHAIR', '')
+# Công thức theo tag (lưu trên máy, không ghi vào món)
+ccalls.clear
+cd.table_calc_formula({'indexes' => [0, 1], 'formula' => '(Rộng + Sâu) x 2', 'unit' => 'm'})
+ok('đặt công thức cho tag của các dòng: lưu kèm đơn vị, không ghi vào món, báo công thức', VGD::BIM::Quantity.overrides[VGD::BIM::Quantity.key('A. DOOR')] == {'method' => 'formula', 'formula' => '(Rộng + Sâu) x 2', 'unit' => 'm'} && $writes.empty? && ccalls.any? { |c| c[0] == 'message' && c[1][:text].include?('theo công thức (Rộng + Sâu) x 2 (m)') })
+ok('công thức sai: báo lỗi, không đổi tag nào', bad_formula = (begin; cd.table_calc_formula({'indexes' => [2], 'formula' => 'Rộng ^ 2', 'unit' => 'm'}); nil; rescue StandardError => e; e.message; end).to_s.include?('không dùng được') && !VGD::BIM::Quantity.overrides.key?(VGD::BIM::Quantity.key('I. CHAIR')))
+ok('dữ liệu công thức sai bị từ chối', (begin; cd.table_calc_formula({'indexes' => [0]}); nil; rescue StandardError => e; e.message; end).to_s.include?('không hợp lệ'))
+ok('chọn công thức qua ô Cách tính mà không có công thức: báo nhập công thức', bad.call({'indexes' => [0], 'field' => 'calc_method', 'value' => 'formula'}).to_s.include?('Hãy nhập công thức'))
+VGD::BIM::Quantity.set_override('A. WALL', ''); VGD::BIM::Quantity.set_override('A. DOOR', '')
 # Ghi vào món
 $transactions.clear; $writes.clear; ccalls.clear
 $vgd_data[cents[1]] = {category: 'furniture', quantity_method: '', unit: '', include_boq: true} # món đã có dữ liệu, còn trống cách tính

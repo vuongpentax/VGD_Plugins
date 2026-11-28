@@ -334,3 +334,4 @@ button.danger{background:var(--danger,#b3412d);border-color:var(--danger,#b3412d
 .tm-paint{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;margin:0 0 8px}.tm-paint .tm-paint-hint{flex:1 1 260px;font-size:11px}
 
 .rm-detect,.rm-openings{border:1px solid var(--border);border-radius:6px;padding:6px;margin:6px 0;display:grid;gap:4px}.rm-detect .rm-mid .f-mini{flex:1 1 0;min-width:0}.rm-detect-list,.rm-openings-list{display:grid;gap:2px;max-height:180px;overflow:auto}.rm-detect-row,.rm-open-row{display:flex;align-items:center;gap:6px}.rm-detect-warn{margin:0;color:var(--danger)}.rm-detect-info,.rm-detect-dropped{margin:0}
+.formula-menu{max-height:none;gap:4px}.formula-menu select{height:30px}.formula-help{margin:2px 0}

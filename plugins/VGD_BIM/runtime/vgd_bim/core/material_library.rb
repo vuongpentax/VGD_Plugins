@@ -95,11 +95,12 @@ module VGD
 
       # Khối lượng có hao hụt và thành tiền theo vật liệu của một dòng: method / qty lấy từ cột Khối lượng tính.
       # Thành tiền chỉ tính khi đơn vị vật liệu trùng đơn vị tính (m2 / m / m3 / cái); khác đơn vị thì ghi chú, không đoán quy đổi.
-      def self.cost(entry, method, qty)
+      # unit: đơn vị của khối lượng theo công thức (mã đơn vị schema); cách tính có sẵn thì lấy theo cách tính.
+      def self.cost(entry, method, qty, unit: nil)
         none = {qty: nil, cost: nil, note: nil}
-        return none unless entry && qty.is_a?(Numeric) && Quantity::SCHEMA_UNIT.key?(method)
+        calc_unit = method == Quantity::FORMULA ? unit : Quantity::SCHEMA_UNIT[method]
+        return none unless entry && qty.is_a?(Numeric) && calc_unit
         with_waste = (qty * (1 + entry['waste'] / 100.0)).round(3)
-        calc_unit = Quantity::SCHEMA_UNIT[method]
         return {qty: with_waste, cost: nil, note: 'Vật liệu chưa có đơn giá'} if entry['price'].nil?
         return {qty: with_waste, cost: nil, note: "Đơn vị vật liệu (#{entry['unit']}) khác đơn vị tính (#{calc_unit})"} unless entry['unit'] == calc_unit
         {qty: with_waste, cost: (with_waste * entry['price']).round(2), note: nil}

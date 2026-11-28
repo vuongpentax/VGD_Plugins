@@ -314,6 +314,12 @@ const VGD_I18N=(()=>{
     'Tìm trong cả model các group / component nằm trên các tag đã tick (chỉ đọc, chỉ khi bấm), ghép mỗi cửa vào phòng có viền sát cửa rồi ghi số cửa và diện tích vào phòng. Một bước hoàn tác, không đổi cửa hay tường.':'Finds the groups / components on the ticked tags in the whole model (read-only, only when clicked), matches each opening to the rooms whose outline is next to it, then stores the opening count and area in the rooms. One undo step, doors and walls are not changed.',
     'Hãy chọn ít nhất một tag của cửa đi / cửa sổ.':'Select at least one door / window tag.','Danh sách tag cửa không hợp lệ.':'Invalid list of opening tags.','Không chọn được tag Untagged làm tag cửa.':'Untagged cannot be used as an opening tag.','Dữ liệu trừ cửa không hợp lệ.':'Invalid opening deduction data.','Chưa có phòng nào. Hãy tạo phòng trước.':'There are no rooms yet. Create rooms first.',
     'Tối đa 50 tag cửa, mỗi tên không quá 100 ký tự.':'At most 50 opening tags, each name at most 100 characters.',
+    // --- Công thức khối lượng ---
+    'Theo công thức':'By formula','(Rộng + Sâu) x 2':'(Width + Depth) x 2','Theo công thức…':'By formula…','Công thức khối lượng':'Quantity formula','Đơn vị của công thức':'Formula unit','Hãy nhập công thức.':'Enter a formula.',
+    'Dùng Rộng, Sâu, Cao (m), Diện tích (m²), Thể tích (m³), các phép + − x / và ngoặc. Mọi món cùng tag dùng chung công thức.':'Use Width, Depth, Height (m), Area (m²), Volume (m³), the operators + − x / and brackets. All items with the same tag share the formula.',
+    'công thức chia cho 0':'the formula divides by 0','Công thức dài tối đa 200 ký tự.':'The formula is at most 200 characters.','Công thức thiếu dấu ngoặc đóng ")".':'The formula is missing a closing bracket ")".',
+    'Công thức có dấu ngoặc đóng ")" thừa.':'The formula has an extra closing bracket ")".','Công thức chưa xong (thiếu số hoặc số đo ở cuối).':'The formula is not finished (a number or measurement is missing at the end).','Công thức lồng ngoặc quá sâu.':'The formula has too many nested brackets.',
+    'Đơn vị của công thức không hợp lệ.':'Invalid formula unit.','Dữ liệu công thức không hợp lệ.':'Invalid formula data.',
     // --- Dò phòng từ tường ---
     'Dò phòng từ tường':'Detect rooms from walls','Dò phòng từ tường đang chọn':'Detect rooms from selected walls','Độ cao cắt (mm)':'Cut height (mm)','Bề rộng tối thiểu (mm)':'Minimum width (mm)',
     'Chọn các tường trong SketchUp rồi bấm Dò. Độ cao cắt nên cao hơn đỉnh cửa đi để tường liền mạch.':'Select the walls in SketchUp, then click Detect. The cut height should be above the door heads so the walls stay continuous.',
@@ -580,6 +586,16 @@ const VGD_I18N=(()=>{
   rule(/^Đã tạo trang báo cáo (\d+) dòng và mở trong trình duyệt\. Khi cần in, bấm nút In \/ Lưu PDF trên trang rồi chọn Lưu thành PDF\.$/,(m,n)=>`Created a report page with ${plural(n,'row','rows')} and opened it in the browser. When you want to print, click the Print / Save PDF button on the page, then choose Save as PDF.`);
   rule(/^Đã xuất quy tắc: (.*)$/,(m,p)=>`Exported rules: ${p}`);
   const METHOD_EN={'theo cái':'by piece','theo diện tích':'by area','theo mét dài':'by length','theo thể tích':'by volume','không tính':'not counted'};
+  // Công thức khối lượng: tên số đo tiếng Việt trong công thức hiện theo tiếng Anh (Ruby nhận cả hai cách viết)
+  const formulaEn=text=>String(text).replace(/Diện tích|Dien tich/gi,'Area').replace(/Thể tích|The tich/gi,'Volume').replace(/Rộng|Rong/gi,'Width').replace(/Sâu|Sau/gi,'Depth').replace(/Cao/gi,'Height');
+  rule(/^Đã đặt cách tính theo công thức (.+) \(([^()]+)\) cho (\d+) tag: (.*)\.$/,(m,f,u,n,tags)=>`Set the calculation by formula ${formulaEn(f)} (${({'bộ':'set','lô':'lot','cái':'pcs'})[u]||u}) for ${plural(n,'tag','tags')}: ${tags}.`);
+  rule(/^Công thức cho tag (.*)$/,(m,t)=>`Formula for tag ${t}`);
+  rule(/^Công thức: (.*)$/,(m,f)=>`Formula: ${formulaEn(f)}`);
+  rule(/^thiếu số đo (.+)$/,(m,list)=>`missing measurement ${formulaEn(list)}`);
+  rule(/^Không biết số đo "(.*)"\. Dùng: Rộng, Sâu, Cao, Diện tích, Thể tích\.$/,(m,w)=>`Unknown measurement "${w}". Use: Width, Depth, Height, Area, Volume.`);
+  rule(/^Công thức có ký tự không dùng được: "(.*)"\.$/,(m,c)=>`The formula has a character that cannot be used: "${c}".`);
+  rule(/^Công thức sai ở "(.*)"\.$/,(m,c)=>`The formula is wrong at "${c}".`);
+  rule(/^Số không hợp lệ ở "(.*)"\.$/,(m,c)=>`Invalid number at "${c}".`);
   rule(/^Đã đặt cách tính (.+) cho (\d+) tag: (.*)\.$/,(m,method,n,tags)=>`Set the calculation ${METHOD_EN[method]||method} for ${plural(n,'tag','tags')}: ${tags}.`);
   rule(/^Đã bỏ cách tính riêng của (\d+) tag, tính theo từ khóa \/ nhóm tag\.$/,(m,n)=>`Removed the own calculation of ${plural(n,'tag','tags')}; they follow keywords / tag groups.`);
   rule(/^Đã ghi cách tính vào (\d+) món\.(?: (\d+) món đã đủ dữ liệu\.)?(?: Bỏ qua (\d+) món bị khóa\.)?$/,(m,n,full,locked)=>`Wrote the calculation into ${plural(n,'item','items')}.${full?` ${plural(full,'item','items')} already had complete data.`:''}${locked?` Skipped ${plural(locked,'locked item','locked items')}.`:''}`);

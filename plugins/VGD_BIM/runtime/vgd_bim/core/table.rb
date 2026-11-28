@@ -286,7 +286,7 @@ module VGD
         records.each_with_index do |record, i|
           lid = Levels.entity_level(record[:entity])
           entry = MaterialLibrary.find(library, rows[i][:material])
-          priced = MaterialLibrary.cost(entry, rows[i][:calc_method], rows[i][:calc_qty])
+          priced = MaterialLibrary.cost(entry, rows[i][:calc_method], rows[i][:calc_qty], unit: rows[i][:calc_unit])
           rows[i].merge!(mat_code: entry ? entry['code'] : '', mat_price: entry ? entry['price'] : nil, mat_waste: entry ? entry['waste'] : nil, mat_qty: priced[:qty], mat_cost: priced[:cost], mat_note: priced[:note].to_s)
           rows[i][:level_id] = lid
           rows[i][:level] = lid.empty? ? rows[i][:struct_level].to_s : level_names.fetch(lid, '(tầng đã xóa)') # món chưa gán tầng BIM thì hiện tầng của VGD Structure
