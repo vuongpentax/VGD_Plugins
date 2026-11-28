@@ -37,8 +37,10 @@ const TEMPLATES={prefix:['PK'],name:['Tủ bếp trên','Bàn ăn'],suffix:['g�
         ok('chưa chọn dòng: bấm mẫu Tên đặt cho 5 món không khóa, trùng tên được đánh số',(await page.locator('#apply').innerText())==='Áp dụng (5)');
         await page.locator('#reset').click();
         ok('↺ bỏ hết tên mới chưa áp dụng',await page.locator('#apply').isDisabled());
-        // Chọn dòng Tủ bếp (3 món), đặt tiền tố + tên + hậu tố.
+        // Chọn dòng Tủ bếp (3 món): chọn luôn 3 món đó trong SketchUp; đặt tiền tố + tên + hậu tố.
         await page.locator('.rn-row').first().click();
+        const picked=await last('rename_pick');
+        ok('bấm dòng: gửi Ruby chọn các món của dòng trong SketchUp',picked&&JSON.stringify(JSON.parse(picked[1]).ids)==='[11,12,13]');
         await page.locator('.set').nth(0).locator('.chip',{hasText:'PK'}).click();
         await page.locator('.set').nth(1).locator('.chip',{hasText:'Tủ bếp trên'}).click();
         await page.locator('.set').nth(2).locator('.chip',{hasText:'gỗ sồi'}).click();
@@ -51,6 +53,20 @@ const TEMPLATES={prefix:['PK'],name:['Tủ bếp trên','Bàn ăn'],suffix:['g�
         ok('chip đang dùng cho mọi món chọn được tô',await page.locator('.set').nth(2).locator('.chip.on').count()===1);
         await page.locator('.set').nth(2).locator('.chip',{hasText:'gỗ sồi'}).click();
         ok('bấm lại mẫu đang dùng thì bỏ',(await page.locator('.rn-row.kid .c-new').first().innerText())==='PK Tủ bếp trên 01');
+        // Ô nhập: hiện phần của dòng đang chọn, gõ là đổi ngay, × xóa chữ trong ô, + lưu vào mẫu.
+        const box=i=>page.locator('.set').nth(i).locator('.entry');
+        ok('ô Tiền tố / Tên hiện giá trị của các món đang chọn',(await box(0).locator('input').inputValue())==='PK'&&(await box(1).locator('input').inputValue())==='Tủ bếp trên');
+        ok('ô không có chữ "Thêm", + và × có sẵn trong ô',(await box(0).locator('input').getAttribute('placeholder'))==='Tiền tố'&&(await box(0).locator('button.add').count())===1&&(await box(0).locator('button.clr').count())===1);
+        ok('+ tắt khi chữ đã có trong mẫu',await box(0).locator('button.add').isDisabled());
+        await box(0).locator('input').fill('PB');
+        ok('gõ tiền tố: tên mới đổi ngay',(await page.locator('.rn-row.kid .c-new').first().innerText())==='PB Tủ bếp trên 01');
+        ok('đang gõ: con trỏ vẫn ở ô',await box(0).locator('input').evaluate(e=>document.activeElement===e));
+        await box(0).locator('button.add').click();
+        let savedPrefix=JSON.parse((await last('rename_templates'))[1]);
+        ok('+ lưu chữ trong ô vào mẫu',savedPrefix.prefix.includes('PB'));
+        await box(0).locator('button.clr').click();
+        ok('× xóa chữ trong ô và bỏ tiền tố',(await box(0).locator('input').inputValue())===''&&(await page.locator('.rn-row.kid .c-new').first().innerText())==='Tủ bếp trên 01');
+        await box(0).locator('input').fill('PK');
         // Nhấp đúp sửa tay phần tên của một món.
         await page.locator('.rn-row',{hasText:'Ban an 1m6'}).dblclick();
         await page.locator('input.edit').fill('Bàn ăn 1m6');await page.locator('input.edit').press('Enter');
@@ -73,12 +89,13 @@ const TEMPLATES={prefix:['PK'],name:['Tủ bếp trên','Bàn ăn'],suffix:['g�
         ok('sau Áp dụng: bỏ tên mới đã ghi, báo kết quả',(await page.locator('#apply').isDisabled())&&(await page.locator('#status').innerText()).startsWith('Đã đổi tên 5 món'));
         await receive('items',{total:ITEMS.length,items:ITEMS});
         // Mẫu tên: thêm, trùng, xóa; gửi Ruby lưu.
-        await page.fill('.set:nth-child(3) .entry input','sơn trắng');await page.press('.set:nth-child(3) .entry input','Enter');
+        await page.locator('.rn-row',{hasText:'Ban an 1m6'}).click();
+        await page.fill('.set:nth-child(3) .entry input','sơn trắng');await page.locator('.set:nth-child(3) .entry button.add').click();
         let saved=JSON.parse((await last('rename_templates'))[1]);
         ok('thêm mẫu hậu tố gửi Ruby lưu',JSON.stringify(saved.suffix)===JSON.stringify(['gỗ sồi','sơn trắng']));
         await page.locator('.set').nth(0).locator('.chip',{hasText:'PK'}).locator('.x').click();
         saved=JSON.parse((await last('rename_templates'))[1]);
-        ok('xóa mẫu tiền tố gửi Ruby lưu',saved.prefix.length===0);
+        ok('xóa mẫu tiền tố gửi Ruby lưu',!saved.prefix.includes('PK'));
         await page.locator('.rn-row',{hasText:'Kệ tivi'}).hover();await page.locator('.rn-row',{hasText:'Kệ tivi'}).locator('.copy').click();
         saved=JSON.parse((await last('rename_templates'))[1]);
         ok('biểu tượng lưu tên hiện tại vào mẫu Tên',saved.name.includes('Kệ tivi'));
@@ -93,6 +110,16 @@ const TEMPLATES={prefix:['PK'],name:['Tủ bếp trên','Bàn ăn'],suffix:['g�
         await receive('items',{total:0,items:[]});
         ok('không chọn gì: hướng dẫn chọn trong SketchUp',(await page.locator('.rn-empty').count())===1);
         await receive('items',{total:ITEMS.length,items:ITEMS});
+        // Chọn sâu: gửi Ruby, nhớ trên máy; món bên trong thụt cấp, món trong bản sao dùng chung được đánh dấu.
+        await page.locator('#auto-deep').click();
+        ok('bật Chọn sâu: gửi Ruby đọc lại danh sách',(await last('rename_deep'))[1]==='true');
+        await receive('items',{total:2,deep:true,items:[{id:70,name:'Tủ',definition:'Tủ',def_id:7,level:0,locked:false,shared:false},{id:71,name:'Cánh',definition:'Cánh',def_id:8,level:1,locked:false,shared:true}]});
+        ok('chọn sâu: dòng phạm vi ghi gồm cả món bên trong',(await page.locator('#scope').innerText())==='2 món, gồm cả món bên trong');
+        ok('món trong bản sao dùng chung có nhãn dùng chung',(await page.locator('.rn-row',{hasText:'Cánh'}).locator('.shared').count())===1);
+        await receive('items',{total:2000,more:true,deep:true,items:ITEMS});
+        ok('quá nhiều món: báo đang hiện các món đầu',(await page.locator('#scope').innerText())==='Đang hiện 6 món đầu tiên');
+        await page.locator('#auto-deep').click();
+        await receive('items',{total:ITEMS.length,items:ITEMS});
       }else{
         await page.locator('.rn-row').first().click();
         await page.locator('.set').nth(1).locator('.chip').first().click();
@@ -105,14 +132,17 @@ const TEMPLATES={prefix:['PK'],name:['Tủ bếp trên','Bàn ăn'],suffix:['g�
         for(const text of ['Đã đổi tên 5 món và ẩn đi (Edit > Unhide để hiện lại). Bấm Ctrl+Z để hoàn tác.','Đã đổi tên 2 món. Bấm Ctrl+Z để hoàn tác.','Danh sách đã cũ. Hãy chọn lại các món trong SketchUp.',
           'Có món bị khóa, không đổi tên được. Hãy mở khóa hoặc bỏ chọn món đó.','Có món không còn trong model. Hãy chọn lại các món cần đổi tên.','Đã mở file SketchUp khác. Hãy chọn lại các món cần đổi tên.',
           'Tên mới không được để trống.','Tên mới dài quá 200 ký tự.','Tên mới có ký tự điều khiển.','Dữ liệu đổi tên không hợp lệ.','Không có món nào cần đổi tên.','Không lưu được mẫu tên trên máy này.',
-          'Không thực hiện được thao tác. Hãy chọn lại các món và thử lại.']){
+          'Không thực hiện được thao tác. Hãy chọn lại các món và thử lại.','Các món nằm ở cấp lồng khác nhau nên SketchUp chỉ chọn món cuối.','Dữ liệu chọn món không hợp lệ.']){
           await receive('message',{text});await page.waitForTimeout(10);
           const shown=await page.locator('#status').innerText();
           if(VIET.test(shown))fail('[en] chưa dịch thông báo: '+shown);
         }
         pass('[en] đã thử dịch các thông báo của Ruby');
-        await receive('items',{total:3000,items:ITEMS});await page.waitForTimeout(20);
+        await receive('items',{total:3000,more:true,items:ITEMS});await page.waitForTimeout(20);
         ok('[en] dịch dòng phạm vi khi bị cắt bớt',!VIET.test(await page.locator('#scope').innerText()));
+        await receive('items',{total:2,deep:true,items:[{id:70,name:'Tủ',definition:'Tủ',def_id:7,level:0,locked:false,shared:false},{id:71,name:'Cánh',definition:'Cánh',def_id:8,level:1,locked:false,shared:true}]});
+        await page.locator('#auto-deep').click();await page.locator('#auto-deep').click();await page.waitForTimeout(20);
+        ok('[en] dịch phạm vi chọn sâu, nhãn dùng chung, thông báo chọn sâu',!VIET.test(await page.locator('#scope').innerText())&&!VIET.test(await page.locator('#status').innerText())&&!VIET.test(await page.locator('.shared').innerText())&&!VIET.test(await page.locator('.shared').getAttribute('title')));
         await receive('items',{total:ITEMS.length,items:ITEMS});
       }
       ok(`[${lang}] không có lỗi JavaScript`+(errors.length?': '+errors.join(' | '):''),errors.length===0);

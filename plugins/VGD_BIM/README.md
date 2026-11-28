@@ -1,4 +1,4 @@
-# VGD BIM 1.1.1-beta.55
+# VGD BIM 1.1.1-beta.56
 
 Bản thử của 1.1.1 (bản ổn định gần nhất là 1.1.0). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -68,9 +68,11 @@ Cửa sổ có 5 tab (nút **Preset** cạnh nút Sáng/Tối ở thanh đầu d
 
 **Cửa sổ Đổi tên riêng** (từ 1.1.1-beta.55): mở bằng **Extensions → VGD → VGD BIM → Đổi tên** hoặc **Công cụ → Bảng → Đổi tên...** của Bảng khối lượng. Cửa sổ đứng riêng, vẫn dùng được khi đã đóng Bảng khối lượng.
 - Danh sách là các group / component **đang chọn trong SketchUp**, tự cập nhật khi chọn lại. Các món cùng định nghĩa (bản sao của cùng component hoặc group) gom thành một dòng, bấm **›** để mở ra từng món.
-- Tên mới = **Tiền tố + Tên + Hậu tố**, cách nhau một dấu cách. Bấm một mẫu ở ba cột dưới (**Tiền tố**, **Tên**, **Hậu tố**) để đặt phần đó cho các dòng đang chọn (chưa chọn dòng nào thì cho mọi dòng); bấm lại mẫu đang dùng để bỏ. Phần **Tên** để trống thì giữ tên hiện tại. Nhấp đúp ô **Tên mới** để gõ tay phần Tên.
+- **Bấm một dòng** thì món đó được chọn luôn trong SketchUp (món nằm bên trong group thì SketchUp mở group cha); danh sách giữ nguyên. Chọn nhiều dòng ở các cấp lồng khác nhau thì SketchUp chỉ chọn được món cuối (từ 1.1.1-beta.56).
+- **Chọn sâu** (cạnh công tắc Ẩn, từ beta.56): danh sách có thêm mọi group / component nằm bên trong các món đang chọn (món đang ẩn bị bỏ), món bên trong thụt vào theo cấp. Món nằm trong component / group có nhiều bản sao có nhãn **dùng chung**: đổi tên món đó là đổi ở mọi bản sao.
+- Tên mới = **Tiền tố + Tên + Hậu tố**, cách nhau một dấu cách. Mỗi cột dưới có một ô nhập **[+] [chữ] [×]**: gõ vào ô là tên mới của các dòng đang chọn đổi ngay (chưa chọn dòng nào thì mọi dòng), **×** xóa chữ trong ô, **+** lưu chữ trong ô vào mẫu. Bấm một mẫu thì điền vào ô; bấm lại mẫu đang dùng để bỏ. Ô ghi **Nhiều giá trị** khi các dòng đang chọn khác nhau. Phần **Tên** để trống thì giữ tên hiện tại. Nhấp đúp ô **Tên mới** cũng gõ tay được phần Tên. Xong thì bấm **Áp dụng**.
 - **Thay → Bằng** đổi chữ trong tên; **AA** viết hoa; **123** thêm 01, 02... vào cuối khi nhiều món cùng tên mới (bật sẵn); **↺** bỏ tên mới chưa áp dụng.
-- Mẫu tên **lưu trên máy này** (`rename_templates.json` trong thư mục dữ liệu của plugin), dùng chung cho mọi file SketchUp: gõ vào ô **Thêm ...** rồi Enter, bấm **×** để xóa, hoặc bấm biểu tượng cạnh tên hiện tại để lưu tên đó vào mẫu Tên.
+- Mẫu tên **lưu trên máy này** (`rename_templates.json` trong thư mục dữ liệu của plugin), dùng chung cho mọi file SketchUp: gõ vào ô rồi bấm **+**, bấm **×** trên mẫu để xóa mẫu, hoặc bấm biểu tượng cạnh tên hiện tại để lưu tên đó vào mẫu Tên.
 - **Áp dụng (n)** đổi tên n món trong một bước hoàn tác (Ctrl+Z). Món bị khóa không đổi. Chỉ đổi tên đối tượng, không đổi tên định nghĩa dùng chung.
 - **Tự động: Ẩn**: bật thì món vừa đổi tên được **ẩn trong SketchUp** và rời vùng chọn, để không đặt nhầm lần nữa. Hiện lại bằng **Edit → Unhide** (hoặc Ctrl+Z ngay sau khi áp dụng).
 

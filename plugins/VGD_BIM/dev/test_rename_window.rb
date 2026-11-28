@@ -18,6 +18,8 @@ module Sketchup
     def add_observer(o); @observers << o; end
     def remove_observer(o); @observers.delete(o); end
     def remove(list); list.each { |e| delete(e) }; changed; end
+    def add(*list); concat(list.flatten); changed; end
+    def clear; super; changed; end
     def changed; @observers.each { |o| o.onSelectionBulkChange(self) }; end
   end
   class Model
@@ -32,12 +34,16 @@ module Sketchup
     def remove_observer(o); @observers.delete(o); end
   end
 end
-Definition = Struct.new(:name, :entityID)
+class Definition
+  attr_reader :name, :entityID, :entities, :instances
+  def initialize(name, id); @name = name; @entityID = id; @entities = []; @instances = []; end
+end
 class FakeEntity < Sketchup::Group
   attr_accessor :name, :hidden, :locked, :valid
   attr_reader :entityID, :definition
-  def initialize(id, name, definition, locked: false); @entityID = id; @name = name; @definition = definition; @locked = locked; @valid = true; @hidden = false; end
+  def initialize(id, name, definition, locked: false); @entityID = id; @name = name; @definition = definition; @locked = locked; @valid = true; @hidden = false; definition.instances << self; end
   def locked?; @locked; end
+  def hidden?; @hidden; end
   def valid?; @valid; end
 end
 module UI
@@ -171,6 +177,48 @@ UI.run_timers
 ok('bật Ẩn: món vừa đổi tên bị ẩn và rời vùng chọn, danh sách còn món chưa đổi',
    a.name == 'Tủ A' && a.hidden && !model.selection.include?(a) && events(dialog, 'items').last['items'].map { |i| i['id'] } == [2, 3] && $transactions.size == 2)
 ok('bật Ẩn: thông báo cách hiện lại', events(dialog, 'applied').last['text'].include?('Edit > Unhide'))
+ok('bật Ẩn: lựa chọn do cửa sổ đặt không làm đọc lại danh sách', events(dialog, 'items').last['items'].map { |i| i['id'] } == [2, 3])
+
+# Bấm dòng: chọn món đó trong SketchUp, danh sách giữ nguyên
+model.selection.replace([a, b, c])
+a.hidden = false
+model.selection.changed
+UI.run_timers
+dialog.trigger('rename_pick', JSON.generate({'ids' => [2]}))
+count = events(dialog, 'items').size
+UI.run_timers
+ok('bấm dòng: SketchUp chọn đúng món đó, danh sách không bị thu lại', model.selection.to_a == [b] && events(dialog, 'items').size == count)
+model.selection.replace([c])
+model.selection.changed
+UI.run_timers
+ok('người dùng chọn lại trong SketchUp: danh sách theo vùng chọn mới', events(dialog, 'items').last['items'].map { |i| i['id'] } == [3])
+dialog.trigger('rename_pick', JSON.generate({'ids' => 'x'}))
+ok('dữ liệu chọn món sai: báo lỗi', events(dialog, 'message').last['error'] == 'Dữ liệu chọn món không hợp lệ.')
+
+# Chọn sâu
+shell_def = Definition.new('Tủ', 400)
+door_def = Definition.new('Cánh', 500)
+shell = FakeEntity.new(40, 'Tủ áo', shell_def)
+FakeEntity.new(41, 'Tủ áo 2', shell_def) # bản sao thứ hai: con bên trong là dùng chung
+leaf = FakeEntity.new(42, '', door_def)
+ghost = FakeEntity.new(43, 'Ẩn', door_def)
+ghost.hidden = true
+shell_def.entities.concat([leaf, ghost, :edge])
+model.selection.replace([shell])
+model.selection.changed
+UI.run_timers
+dialog.trigger('rename_deep', 'true')
+deep = events(dialog, 'items').last
+ok('chọn sâu: thêm món bên trong (bỏ món đang ẩn), ghi cấp lồng và nhãn dùng chung',
+   deep['deep'] == true && deep['items'].map { |i| [i['id'], i['level'], i['shared']] } == [[40, 0, false], [42, 1, true]])
+dialog.trigger('rename_pick', JSON.generate({'ids' => [42]}))
+UI.run_timers
+ok('bấm món bên trong: mở group cha rồi chọn món, danh sách giữ nguyên', model.active_path == [shell] && model.selection.to_a == [leaf] && events(dialog, 'items').last['items'].size == 2)
+dialog.trigger('rename_apply', JSON.generate({'changes' => [{'id' => 42, 'name' => 'Cánh trái'}]}))
+ok('chọn sâu: đổi tên được món bên trong', leaf.name == 'Cánh trái')
+dialog.trigger('rename_deep', 'false')
+ok('tắt chọn sâu: về đúng các món đã chọn', events(dialog, 'items').last['items'].map { |i| i['id'] } == [40])
+model.active_path = nil
 # Mẫu tên lưu từ giao diện
 dialog.trigger('rename_templates', JSON.generate({'prefix' => ['T1'], 'name' => ['Kệ'], 'suffix' => [' gỗ ', 'gỗ']}))
 ok('lưu mẫu tên từ giao diện: làm sạch, ghi file, gửi lại', L.templates == {'prefix' => ['T1'], 'name' => ['Kệ'], 'suffix' => ['gỗ']} && events(dialog, 'templates').last['suffix'] == ['gỗ'])
@@ -178,8 +226,9 @@ ok('lưu mẫu tên từ giao diện: làm sạch, ghi file, gửi lại', L.tem
 other = Sketchup::Model.new
 other.selection.replace([FakeEntity.new(50, 'Ghế', Definition.new('Ghế', 300))])
 Sketchup.active_model = other
-dialog.trigger('rename_apply', JSON.generate({'changes' => [{'id' => 2, 'name' => 'X'}]}))
-ok('file khác đang mở: không ghi vào file mới, báo chọn lại', events(dialog, 'message').last['error'].include?('file SketchUp khác') && $transactions.size == 2)
+written = $transactions.size
+dialog.trigger('rename_apply', JSON.generate({'changes' => [{'id' => 40, 'name' => 'X'}]}))
+ok('file khác đang mở: không ghi vào file mới, báo chọn lại', events(dialog, 'message').last['error'].include?('file SketchUp khác') && $transactions.size == written)
 Sketchup.observers.first.onOpenModel(other)
 ok('mở file khác: gắn vào vùng chọn của file mới và gửi danh sách mới',
    model.selection.observers.empty? && other.selection.observers.size == 1 && events(dialog, 'items').last['items'].map { |i| i['id'] } == [50])

@@ -47,7 +47,7 @@
 
   /* ---- Chân bảng: Thay / Bằng, Tự động, Áp dụng ---- */
   .rn-foot { flex: none; display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 6px 10px; flex-wrap: wrap; background: var(--vgd-elevated); border-top: 0.5px solid var(--line); }
-  .swap { flex: 1 1 260px; display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .swap { flex: 1 1 150px; display: flex; align-items: center; gap: 6px; min-width: 0; }
   .swap input { flex: 1 1 0; min-width: 0; height: 26px; padding: 0 10px; border: 1px solid var(--line); border-radius: 13px; background: var(--vgd-surface); outline: none; }
   .swap input:focus { border-color: var(--vgd-accent); }
   .swap .arrow { flex: none; color: var(--vgd-muted); }
@@ -87,3 +87,9 @@
   .lock { color: var(--vgd-muted); font-style: italic; }
   .set-hint { font-weight: 400; color: var(--vgd-muted); font-size: 11px; }
   .copy:hover { color: var(--vgd-accent); }
+  .entry .add, .entry .clr { flex: none; }
+  .entry .add { font-weight: 700; }
+  .entry .clr { font-size: 14px; }
+  .entry button:disabled { opacity: .35; cursor: default; }
+  .entry button:disabled:hover { color: var(--vgd-muted); }
+  .cnt.shared { padding: 0 5px; border: 1px solid var(--line); border-radius: 8px; font-size: 10px; }

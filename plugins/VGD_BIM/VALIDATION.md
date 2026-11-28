@@ -2,7 +2,16 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.55: đã kiểm tra tự động
+## Bản 1.1.1-beta.56: đã kiểm tra tự động
+
+Beta.56: cửa sổ Đổi tên có Chọn sâu, bấm dòng chọn món trong SketchUp, ô nhập Tiền tố / Tên / Hậu tố đổi ngay. `ui/rename_window.rb` nhớ các món gốc người dùng chọn (`@roots`), dựng danh sách từ đó (sâu: duyệt định nghĩa, bỏ món đang ẩn, mỗi món một dòng, đánh dấu món trong định nghĩa có nhiều bản sao), bỏ qua lựa chọn do chính cửa sổ đặt (`@own_pick`).
+
+- `dev/test_rename_window.rb`: bấm dòng chọn đúng món, danh sách không thu lại; chọn lại trong SketchUp thì danh sách theo vùng chọn mới; dữ liệu chọn sai bị từ chối; chọn sâu thêm món bên trong (bỏ món ẩn), cấp lồng, nhãn dùng chung; bấm món bên trong mở group cha rồi chọn; đổi tên món bên trong; tắt chọn sâu về đúng món đã chọn; bật Ẩn không làm danh sách đọc lại.
+- `dev/test_ui_rename.cjs`: bấm dòng gửi đúng các món; ô nhập hiện giá trị của dòng đang chọn, gõ đổi ngay mà không mất con trỏ, + tắt khi đã có trong mẫu, + lưu mẫu, × xóa chữ và bỏ phần đó; không còn chữ "Thêm"; công tắc Chọn sâu gửi Ruby, dòng phạm vi, nhãn dùng chung, bản dịch tiếng Anh.
+
+**Chưa xác minh trong SketchUp thật:** bấm dòng mở group cha (`active_path`) và chọn món trong SketchUp 2022+, chọn sâu với model lớn (tối đa 2.000 dòng), đổi tên món trong component dùng chung, bộ gõ tiếng Việt trong ba ô nhập.
+
+## Bản 1.1.1-beta.55 (trước đó)
 
 Beta.55: cửa sổ Đổi tên riêng. `core/rename_list.rb` (kiểm tra danh sách tên gửi lên, mẫu tên trên máy) và `ui/rename_window.rb` (cửa sổ `UI::HtmlDialog` riêng theo vùng chọn của SketchUp, một bước hoàn tác, ẩn món vừa đổi tên); giao diện `html/rename.html`, `rename.js`, `rename.css`.
 

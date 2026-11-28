@@ -2,12 +2,13 @@
 // Cửa sổ Đổi tên (rename.html). Ruby (ui/rename_window.rb) gửi các món đang chọn trong SketchUp ('items'), mẫu tên ('config', 'templates');
 // giao diện ghép tên mới = tiền tố + tên + hậu tố (cách nhau một dấu cách), Thay → Bằng, CHỮ HOA, số thứ tự khi trùng, rồi gửi 'rename_apply'.
 // Tên phần "tên" để trống thì lấy tên hiện tại. Mọi phần tính ở đây chỉ để xem trước và gửi đi; Ruby kiểm tra lại trước khi ghi.
+// Ba ô nhập Tiền tố / Tên / Hậu tố đổi ngay tên mới của các dòng đang chọn (chưa chọn dòng nào thì mọi dòng); bấm dòng thì Ruby chọn món đó trong SketchUp.
 const MAX_NAME = 200;          // như Rename::MAX_NAME
 const MAX_TEMPLATE = 100;      // như RenameList::MAX_TEMPLATE
 const PARTS = [{key: 'prefix', title: 'Tiền tố'}, {key: 'name', title: 'Tên'}, {key: 'suffix', title: 'Hậu tố'}];
 const OPTIONS_KEY = 'VGD_BIM_rename_options';
-const state = {items: [], total: 0, parts: new Map(), sel: new Set(), open: new Set(), last: null, edit: null, sort: null, desc: false,
-  upper: false, numbered: true, hide: false, templates: {prefix: [], name: [], suffix: []}};
+const state = {items: [], total: 0, more: false, parts: new Map(), sel: new Set(), open: new Set(), last: null, edit: null, sort: null, desc: false,
+  upper: false, numbered: true, hide: false, deep: false, templates: {prefix: [], name: [], suffix: []}};
 
 const $ = id => document.getElementById(id);
 const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; };
@@ -15,10 +16,10 @@ function call(name, ...args) { if (window.sketchup && window.sketchup[name]) win
 function status(text, error) { const s = $('status'); s.textContent = text; s.classList.toggle('err', !!error); }
 
 function loadOptions() {
-  try { const o = JSON.parse(localStorage.getItem(OPTIONS_KEY) || '{}'); ['upper', 'numbered', 'hide'].forEach(k => { if (typeof o[k] === 'boolean') state[k] = o[k]; }); } catch (_) { /* không đọc được thì dùng mặc định */ }
+  try { const o = JSON.parse(localStorage.getItem(OPTIONS_KEY) || '{}'); ['upper', 'numbered', 'hide', 'deep'].forEach(k => { if (typeof o[k] === 'boolean') state[k] = o[k]; }); } catch (_) { /* không đọc được thì dùng mặc định */ }
 }
 function saveOptions() {
-  try { localStorage.setItem(OPTIONS_KEY, JSON.stringify({upper: state.upper, numbered: state.numbered, hide: state.hide})); } catch (_) { /* không lưu được thì thôi */ }
+  try { localStorage.setItem(OPTIONS_KEY, JSON.stringify({upper: state.upper, numbered: state.numbered, hide: state.hide, deep: state.deep})); } catch (_) { /* không lưu được thì thôi */ }
 }
 
 // ---- Tên mới ----
@@ -82,6 +83,7 @@ function targets() {
   return [...out.values()];
 }
 
+const SHARED_NOTE = 'Món nằm trong component / group có nhiều bản sao: đổi tên sẽ đổi ở mọi bản sao.';
 const SAVE_ICON = '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="14" height="14" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>';
 function newCell(row, plan) {
   const cell = el('span', 'c-new'), list = itemsOf(row);
@@ -123,6 +125,8 @@ function render() {
     const current = rowName(row);
     name.append(el('span', 'txt' + (current ? '' : ' ph'), current || 'Chưa đặt tên'));
     if (row.kids) name.append(el('span', 'cnt', String(row.kids.length)));
+    else if (row.item.level > 0 && !row.kid) name.style.paddingLeft = `${10 + Math.min(row.item.level, 6) * 14}px`; // món bên trong (Chọn sâu) thụt theo cấp
+    if (itemsOf(row).some(item => item.shared)) { const mark = el('span', 'cnt shared', 'dùng chung'); mark.title = SHARED_NOTE; name.append(mark); }
     if (current && !row.kids) {
       const save = el('span', 'copy'); save.title = 'Lưu tên này vào mẫu Tên'; save.innerHTML = SAVE_ICON;
       save.onclick = e => { e.stopPropagation(); addTemplate('name', current); };
@@ -136,12 +140,13 @@ function render() {
   $('apply').textContent = changes ? `Áp dụng (${changes})` : 'Áp dụng';
   $('apply').disabled = !changes;
   $('scope').textContent = !state.total ? 'Chưa chọn món nào trong SketchUp'
-    : state.total > state.items.length ? `Đang hiện ${state.items.length} / ${state.total} món đang chọn` : `${state.total} món đang chọn trong SketchUp`;
+    : state.more ? `Đang hiện ${state.items.length} món đầu tiên` : state.deep ? `${state.total} món, gồm cả món bên trong` : `${state.total} món đang chọn trong SketchUp`;
   $('sort-name').textContent = state.sort === 'name' ? (state.desc ? '▼' : '▲') : '';
   $('sort-new').textContent = state.sort === 'new' ? (state.desc ? '▼' : '▲') : '';
   $('upper').setAttribute('aria-pressed', String(state.upper));
   $('numbered').setAttribute('aria-pressed', String(state.numbered));
   $('auto-hide').setAttribute('aria-checked', String(state.hide));
+  $('auto-deep').setAttribute('aria-checked', String(state.deep));
   renderSets();
 }
 function pick(row, e) {
@@ -156,7 +161,13 @@ function pick(row, e) {
     state.sel = new Set([row.key]);
     state.last = row.key;
   }
+  selectionChanged();
+}
+// Dòng chọn đổi: tô lại và chọn các món đó trong SketchUp (Ruby giữ nguyên danh sách).
+function selectionChanged() {
   paintSelection();
+  const ids = [...new Set(visibleRows(proposals()).filter(r => state.sel.has(r.key)).flatMap(r => itemsOf(r).map(item => item.id)))];
+  if (ids.length) call('rename_pick', JSON.stringify({ids}));
 }
 // Chỉ tô lại dòng đang chọn và mẫu tên, không vẽ lại danh sách (vẽ lại giữa hai lần bấm làm mất nhấp đúp).
 function paintSelection() {
@@ -175,6 +186,11 @@ function useTemplate(key, word) {
   const part = PARTS.find(p => p.key === key).title.toLowerCase();
   status(all ? `Đã bỏ ${part} "${word}" của ${list.length} món.` : `Đã đặt ${part} "${word}" cho ${list.length} món. Bấm Áp dụng để ghi vào model.`);
 }
+// Gõ vào ô Tiền tố / Tên / Hậu tố: đổi ngay phần đó của các món đang chọn.
+function typePart(key, value) {
+  targets().forEach(item => setPart(item.id, key, value));
+  render();
+}
 function addTemplate(key, raw) {
   const word = String(raw || '').trim();
   if (!word) return;
@@ -186,19 +202,38 @@ function addTemplate(key, raw) {
 }
 function removeTemplate(key, word) { state.templates[key] = state.templates[key].filter(w => w !== word); saveTemplates(); }
 function saveTemplates() { call('rename_templates', JSON.stringify(state.templates)); render(); }
-function renderSets() {
-  const host = $('sets'), list = targets();
-  const focus = document.activeElement && document.activeElement.dataset ? document.activeElement.dataset.part : null;
-  const drafts = {};
-  host.querySelectorAll('input[data-part]').forEach(input => { drafts[input.dataset.part] = input.value; });
-  host.replaceChildren();
+// Khung ba cột dựng một lần (ô nhập giữ con trỏ khi gõ); renderSets chỉ cập nhật mẫu, số đếm và giá trị ô.
+function buildSets() {
+  const host = $('sets');
   PARTS.forEach(part => {
-    const words = state.templates[part.key] || [];
-    const box = el('div', 'set');
-    const title = el('div', 'set-title', part.title); title.append(el('span', 'cnt', String(words.length)));
-    const chips = el('div', 'set-list');
+    const box = el('div', 'set'); box.dataset.part = part.key;
+    const title = el('div', 'set-title', part.title); title.append(el('span', 'cnt'));
+    const entry = el('div', 'entry');
+    const add = el('button', 'add', '+'); add.type = 'button'; add.title = 'Lưu vào mẫu'; add.setAttribute('aria-label', `Lưu ${part.title.toLowerCase()} vào mẫu`);
+    const input = el('input'); input.type = 'text'; input.maxLength = MAX_TEMPLATE; input.spellcheck = false; input.autocomplete = 'off'; input.dataset.part = part.key;
+    input.setAttribute('aria-label', part.title);
+    const clear = el('button', 'clr', '×'); clear.type = 'button'; clear.title = 'Xóa chữ trong ô'; clear.setAttribute('aria-label', `Xóa ${part.title.toLowerCase()}`);
+    add.onclick = () => addTemplate(part.key, input.value);
+    clear.onmousedown = e => e.preventDefault(); // không lấy mất con trỏ của ô
+    clear.onclick = () => { input.value = ''; typePart(part.key, ''); };
+    input.oninput = () => typePart(part.key, input.value);
+    input.onkeydown = e => e.stopPropagation();
+    entry.append(add, input, clear);
+    box.append(title, el('div', 'set-list'), entry);
+    host.append(box);
+  });
+}
+function renderSets() {
+  const list = targets();
+  PARTS.forEach(part => {
+    const box = $('sets').querySelector(`.set[data-part="${part.key}"]`), words = state.templates[part.key] || [];
+    const values = [...new Set(list.map(item => partsOf(item.id)[part.key]))];
+    const common = values.length === 1 ? values[0] : (values.length ? null : '');
+    box.querySelector('.set-title .cnt').textContent = String(words.length);
+    const chips = box.querySelector('.set-list');
+    chips.replaceChildren();
     words.forEach(word => {
-      const on = list.length > 0 && list.every(item => partsOf(item.id)[part.key] === word);
+      const on = common === word && word !== '';
       const chip = el('div', 'chip' + (on ? ' on' : '')); chip.title = on ? 'Bấm lại để bỏ khỏi các món đang chọn' : 'Bấm để đặt cho các món đang chọn';
       chip.append(el('span', 'txt', word));
       const x = el('button', 'x', '×'); x.type = 'button'; x.title = 'Xóa khỏi mẫu'; x.setAttribute('aria-label', 'Xóa khỏi mẫu');
@@ -207,16 +242,12 @@ function renderSets() {
       chips.append(chip);
     });
     if (!words.length) chips.append(el('div', 'set-empty', 'Chưa có mẫu nào'));
-    const entry = el('div', 'entry');
-    const add = el('button', '', '+'); add.type = 'button'; add.title = 'Thêm vào mẫu'; add.setAttribute('aria-label', 'Thêm vào mẫu');
-    const input = el('input'); input.type = 'text'; input.maxLength = MAX_TEMPLATE; input.spellcheck = false; input.dataset.part = part.key;
-    input.placeholder = `Thêm ${part.title.toLowerCase()}...`; input.setAttribute('aria-label', `Thêm ${part.title.toLowerCase()}`);
-    input.value = drafts[part.key] || '';
-    const keep = () => { const v = input.value; input.value = ''; addTemplate(part.key, v); };
-    add.onclick = keep; input.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') keep(); };
-    entry.append(add, input);
-    box.append(title, chips, entry); host.append(box);
-    if (focus === part.key) setTimeout(() => input.focus(), 0);
+    const input = box.querySelector('input');
+    if (document.activeElement !== input) input.value = common || '';
+    input.placeholder = common === null ? 'Nhiều giá trị' : part.title;
+    const text = input.value.trim();
+    box.querySelector('.add').disabled = !text || words.includes(text);
+    box.querySelector('.clr').disabled = !input.value && common !== null;
   });
 }
 
@@ -233,11 +264,13 @@ window.VGD = {receive(event, data) {
     if (typeof VGD_I18N !== 'undefined') VGD_I18N.setLanguage(data.language || 'vi'); // VGD_I18N là const của i18n.js, không nằm trên window
     state.templates = Object.assign({prefix: [], name: [], suffix: []}, data.templates || {});
     render();
+    if (state.deep) call('rename_deep', 'true'); // Chọn sâu nhớ trên máy: báo Ruby đọc lại danh sách
   }
   if (event === 'templates') { state.templates = Object.assign({prefix: [], name: [], suffix: []}, data || {}); render(); }
   if (event === 'items') {
     state.items = Array.isArray(data.items) ? data.items : [];
     state.total = data.total || state.items.length;
+    state.more = data.more === true;
     const ids = new Set(state.items.map(item => item.id));
     [...state.parts.keys()].forEach(id => { if (!ids.has(id)) state.parts.delete(id); });
     const keys = new Set(rows().flatMap(r => [r.key, ...(r.kids || []).map(item => 'i' + item.id)]));
@@ -249,6 +282,7 @@ window.VGD = {receive(event, data) {
   if (event === 'message') status(data.error || data.text || '', !!data.error);
 }};
 
+$('auto-deep').onclick = () => { state.deep = !state.deep; saveOptions(); render(); call('rename_deep', JSON.stringify(state.deep)); status(state.deep ? 'Chọn sâu: danh sách có cả group / component nằm bên trong các món đang chọn.' : 'Danh sách chỉ có đúng các món đang chọn.'); };
 $('upper').onclick = () => { state.upper = !state.upper; saveOptions(); render(); };
 $('numbered').onclick = () => { state.numbered = !state.numbered; saveOptions(); render(); };
 $('auto-hide').onclick = () => { state.hide = !state.hide; saveOptions(); render(); status(state.hide ? 'Đổi tên xong sẽ ẩn các món đó trong SketchUp (Edit > Unhide để hiện lại).' : 'Đổi tên xong các món vẫn hiện như cũ.'); };
@@ -264,7 +298,7 @@ $('sort-by-name').onclick = () => sortBy('name');
 $('sort-by-new').onclick = () => sortBy('new');
 document.addEventListener('keydown', e => {
   if (e.target.closest && e.target.closest('input')) return;
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') { e.preventDefault(); state.sel = new Set(visibleRows(proposals()).filter(r => !r.kid).map(r => r.key)); paintSelection(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') { e.preventDefault(); state.sel = new Set(visibleRows(proposals()).filter(r => !r.kid).map(r => r.key)); selectionChanged(); }
   if (e.key === 'Escape' && state.sel.size) { state.sel.clear(); paintSelection(); }
 });
 // Kéo thanh chia để đổi chiều cao vùng mẫu tên ở dưới.
@@ -277,5 +311,6 @@ $('split').onmousedown = e => {
 };
 if (window.VGDTheme) VGDTheme.start({key: 'VGD_BIM_theme', button: $('theme')});
 loadOptions();
+buildSets();
 render();
 call('ready');

@@ -10,12 +10,18 @@ module VGD
         def onActivateModel(_model); @window.model_changed; end
       end
 
-      # Cửa sổ Đổi tên độc lập (html/rename.html), dùng được cả khi đã đóng Bảng khối lượng. Danh sách là các group / component đang chọn
-      # trong SketchUp, tự cập nhật khi chọn lại. Mỗi lần Áp dụng là một bước hoàn tác; bật "Ẩn" thì món vừa đổi tên được ẩn đi (Edit > Unhide để hiện lại).
-      # Chỉ đổi tên đối tượng (instance), không đổi tên định nghĩa dùng chung. Logic kiểm tra và mẫu tên: core/rename_list.rb.
+      # Cửa sổ Đổi tên độc lập (html/rename.html), dùng được cả khi đã đóng Bảng khối lượng. Danh sách là các group / component người dùng
+      # chọn trong SketchUp (bật "Chọn sâu" thì thêm mọi group / component lồng bên trong), tự cập nhật khi người dùng chọn lại. Bấm dòng trong
+      # cửa sổ thì chọn món đó trong SketchUp mà danh sách giữ nguyên (lựa chọn do chính cửa sổ đặt được bỏ qua, `@own_pick`).
+      # Mỗi lần Áp dụng là một bước hoàn tác; bật "Ẩn" thì món vừa đổi tên được ẩn đi (Edit > Unhide để hiện lại) và rời danh sách.
+      # Chỉ đổi tên đối tượng (instance), không đổi tên định nghĩa. Logic kiểm tra và mẫu tên: core/rename_list.rb.
       class RenameWindow
         def initialize
+          @records = []
           @items = {}
+          @roots = []
+          @root_path = []
+          @deep = false
           @ready = false
           @closed = false
           @dialog = ::UI::HtmlDialog.new(dialog_title: 'VGD BIM · Đổi tên', preferences_key: 'VGD_BIM_Rename', scrollable: false, resizable: true,
@@ -24,6 +30,8 @@ module VGD
           @dialog.add_action_callback('ready') { |_ctx| safely { ready } }
           @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('rename_templates') { |_ctx, payload| safely { save_templates(JSON.parse(payload)) } }
+          @dialog.add_action_callback('rename_deep') { |_ctx, payload| safely { set_deep(JSON.parse(payload)) } }
+          @dialog.add_action_callback('rename_pick') { |_ctx, payload| safely { pick(JSON.parse(payload)) } }
           @dialog.set_on_closed { closed }
         end
 
@@ -35,14 +43,15 @@ module VGD
         def selection_changed
           return unless @ready
           ::UI.stop_timer(@timer) if @timer
-          @timer = ::UI.start_timer(0.05, false) { safely { push_items if @ready } }
+          @timer = ::UI.start_timer(0.05, false) { safely { follow_selection if @ready } }
         end
 
         def model_changed
           return unless @ready
           safely do
             attach
-            push_items
+            @own_pick = nil
+            follow_selection
           end
         end
 
@@ -56,7 +65,7 @@ module VGD
             @app_observer = RenameAppObserver.new(self)
             Sketchup.add_observer(@app_observer)
           end
-          push_items
+          follow_selection
         end
 
         def closed
@@ -85,35 +94,106 @@ module VGD
           @observer = nil
         end
 
-        def ancestor_locked?
-          (@model.active_path || []).any?(&:locked?)
+        # Người dùng chọn trong SketchUp: lấy làm gốc của danh sách. Lựa chọn do cửa sổ vừa đặt (bấm dòng, ẩn sau khi đổi tên) thì bỏ qua.
+        def follow_selection
+          @model ||= Sketchup.active_model
+          current = @model ? @model.selection.to_a : []
+          return if @own_pick && current.size == @own_pick.size && (current - @own_pick).empty?
+          @own_pick = nil
+          @roots = current.select { |entity| Data.supported?(entity) && entity.valid? }
+          @root_path = @model ? (@model.active_path || []) : []
+          rebuild
+        end
+
+        def set_deep(value)
+          @deep = value == true
+          rebuild
+        end
+
+        # Danh sách từ các món gốc: không sâu thì đúng các món đã chọn, sâu thì thêm mọi group / component bên trong (bỏ món đang ẩn,
+        # mỗi định nghĩa không duyệt vào chính nó, món trong định nghĩa dùng chung chỉ một dòng). Lấy tối đa MAX_ITEMS + 1 dòng để biết còn nữa.
+        def rebuild
+          locked = @root_path.any?(&:locked?)
+          records = []
+          seen = {}
+          if @deep
+            collect(@roots, @root_path, locked, [], records, seen, true)
+          else
+            @roots.each do |entity|
+              break if records.size > RenameList::MAX_ITEMS
+              records << {entity: entity, path: @root_path + [entity], locked: locked || entity.locked?, shared: false}
+            end
+          end
+          @more = records.size > RenameList::MAX_ITEMS
+          @records = records.first(RenameList::MAX_ITEMS)
+          push_items
+        end
+
+        def collect(entities, path, locked, definitions, out, seen, root)
+          entities.each do |entity|
+            return if out.size > RenameList::MAX_ITEMS
+            next unless Data.supported?(entity) && entity.valid?
+            next if !root && entity.hidden?
+            current = path + [entity]
+            current_locked = locked || entity.locked?
+            unless seen[entity.entityID]
+              seen[entity.entityID] = true
+              out << {entity: entity, path: current, locked: current_locked, shared: definitions.any? { |definition| definition.instances.size > 1 }}
+            end
+            definition = entity.definition
+            next if definitions.include?(definition)
+            collect(definition.entities, current, current_locked, definitions + [definition], out, seen, false)
+          end
         end
 
         def push_items
-          @model = Sketchup.active_model unless @model
-          picked = @model ? @model.selection.to_a.select { |entity| Data.supported?(entity) && entity.valid? } : []
-          shown = picked.first(RenameList::MAX_ITEMS)
-          locked = @model ? ancestor_locked? : false
-          @items = shown.to_h { |entity| [entity.entityID, entity] }
-          emit('items', {total: picked.size, items: shown.map do |entity|
-            {id: entity.entityID, name: entity.name.to_s, definition: entity.definition.name.to_s, def_id: entity.definition.entityID, locked: locked || entity.locked?}
+          @items = @records.to_h { |record| [record[:entity].entityID, record] }
+          emit('items', {total: @records.size, more: @more ? true : false, deep: @deep, items: @records.map do |record|
+            entity = record[:entity]
+            {id: entity.entityID, name: entity.name.to_s, definition: entity.definition.name.to_s, def_id: entity.definition.entityID,
+             level: record[:path].size - @root_path.size - 1, locked: record[:locked] || entity.locked?, shared: record[:shared]}
           end})
+        end
+
+        # Bấm dòng trong cửa sổ: chọn các món đó trong SketchUp (mở group cha nếu món nằm bên trong). Món ở các cấp lồng khác nhau thì
+        # SketchUp chỉ chọn được món cuối. Danh sách giữ nguyên.
+        def pick(payload)
+          return unless @model && @model.equal?(Sketchup.active_model)
+          ids = payload.is_a?(Hash) ? payload['ids'] : nil
+          raise ArgumentError, 'Dữ liệu chọn món không hợp lệ.' unless ids.is_a?(Array) && ids.size <= RenameList::MAX_ITEMS && ids.all? { |id| id.is_a?(Integer) }
+          records = ids.map { |id| @items[id] }.compact
+          return if records.empty?
+          raise 'Có món không còn trong model. Hãy chọn lại các món cần đổi tên.' unless records.all? { |record| record[:path].all?(&:valid?) }
+          parents = records.first[:path][0...-1]
+          mirrored = records.all? { |record| record[:path][0...-1] == parents } ? records : [records.last]
+          parents = mirrored.first[:path][0...-1]
+          @model.active_path = parents unless (@model.active_path || []) == parents
+          @own_pick = mirrored.map { |record| record[:entity] }
+          @model.selection.clear
+          @model.selection.add(*@own_pick)
+          emit('message', {text: 'Các món nằm ở cấp lồng khác nhau nên SketchUp chỉ chọn món cuối.'}) if mirrored.size < records.size
         end
 
         def apply(payload)
           raise 'Đã mở file SketchUp khác. Hãy chọn lại các món cần đổi tên.' unless @model && @model.equal?(Sketchup.active_model)
           changes = RenameList.changes!(payload, @items)
           targets = changes.map { |id, name| [@items.fetch(id), name] }
-          raise 'Có món không còn trong model. Hãy chọn lại các món cần đổi tên.' unless targets.all? { |entity, _| entity.valid? }
-          raise 'Có món bị khóa, không đổi tên được. Hãy mở khóa hoặc bỏ chọn món đó.' if ancestor_locked? || targets.any? { |entity, _| entity.locked? }
+          raise 'Có món không còn trong model. Hãy chọn lại các món cần đổi tên.' unless targets.all? { |record, _| record[:path].all?(&:valid?) }
+          raise 'Có món bị khóa, không đổi tên được. Hãy mở khóa hoặc bỏ chọn món đó.' if targets.any? { |record, _| record[:locked] || record[:entity].locked? }
           hide = payload['hide'] == true
+          entities = targets.map { |record, _| record[:entity] }
           Data.transaction(@model, 'VGD_BIM · Đổi tên') do
-            targets.each do |entity, name|
-              entity.name = name
-              entity.hidden = true if hide
+            targets.each do |record, name|
+              record[:entity].name = name
+              record[:entity].hidden = true if hide
             end
           end
-          @model.selection.remove(targets.map(&:first)) if hide # món đã ẩn không còn nằm trong vùng chọn, danh sách chỉ còn món chưa đặt tên
+          if hide # món đã ẩn rời danh sách và vùng chọn; danh sách chỉ còn món chưa đặt tên
+            @records.reject! { |record| entities.include?(record[:entity]) }
+            @roots -= entities
+            @own_pick = @model.selection.to_a - entities
+            @model.selection.remove(entities)
+          end
           push_items
           BIM.names_changed
           text = "Đã đổi tên #{targets.size} món"

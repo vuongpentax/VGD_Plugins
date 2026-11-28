@@ -37,11 +37,13 @@ Mở bằng **Extensions → VGD → VGD BIM → Mở bảng khối lượng**: 
 Mở bằng **Extensions → VGD → VGD BIM → Đổi tên** hoặc **Công cụ → Bảng → Đổi tên...** trong Bảng khối lượng. Cửa sổ đứng riêng, đóng Bảng khối lượng vẫn dùng được.
 
 1. Chọn các group / component cần đặt tên trong SketchUp. Danh sách tự cập nhật theo vùng chọn. Các bản sao của cùng một component / group gom thành một dòng, bấm **›** để mở ra.
-2. Bấm chọn dòng trong danh sách (Ctrl / Shift để chọn nhiều, Ctrl+A chọn hết, Esc bỏ chọn). Không chọn dòng nào thì thao tác áp cho mọi dòng.
-3. Bấm mẫu ở ba cột dưới: **Tiền tố**, **Tên**, **Hậu tố**. Tên mới = tiền tố + tên + hậu tố. Bấm lại mẫu đang dùng để bỏ. Nhấp đúp ô **Tên mới** để gõ tay phần Tên.
-4. Thêm mẫu: gõ vào ô **Thêm ...** dưới mỗi cột rồi Enter. Mẫu lưu trên máy này và dùng lại cho mọi file. Bấm **×** để xóa mẫu.
+2. Bấm chọn dòng trong danh sách (Ctrl / Shift để chọn nhiều, Ctrl+A chọn hết, Esc bỏ chọn). Món của dòng được chọn luôn trong SketchUp để bạn thấy nó ở đâu; danh sách giữ nguyên. Không chọn dòng nào thì thao tác áp cho mọi dòng.
+3. Gõ vào ô **Tiền tố**, **Tên**, **Hậu tố** dưới mỗi cột: cột Tên mới đổi ngay khi gõ. Hoặc bấm một mẫu để điền vào ô; bấm lại mẫu đang dùng để bỏ. **×** cuối ô xóa chữ trong ô. Nhấp đúp ô **Tên mới** cũng gõ tay được phần Tên.
+4. Lưu mẫu: gõ chữ vào ô rồi bấm **+** đầu ô. Mẫu lưu trên máy này và dùng lại cho mọi file. Bấm **×** trên mẫu để xóa mẫu.
 5. Cần thì dùng **Thay → Bằng**, **AA** (viết hoa), **123** (thêm 01, 02... khi nhiều món cùng tên mới), **↺** (bỏ tên mới chưa áp dụng).
 6. Bấm **Áp dụng (n)**. Cả lần là một bước hoàn tác (Ctrl+Z). Món bị khóa không đổi.
+
+**Chọn sâu**: bật thì danh sách có thêm các group / component nằm bên trong món đang chọn. Món có nhãn **dùng chung** nằm trong component / group có nhiều bản sao: đổi tên nó là đổi ở mọi bản sao.
 
 **Tự động: Ẩn**: bật thì món vừa đổi tên được ẩn trong SketchUp để không đặt nhầm lần nữa, danh sách chỉ còn món chưa đặt. Làm xong, hiện lại bằng **Edit → Unhide → All** (Hiện tất cả).
 
