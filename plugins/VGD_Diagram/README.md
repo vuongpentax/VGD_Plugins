@@ -1,8 +1,14 @@
-# VGD Diagram 0.5.0-beta.1
+# VGD Diagram 0.6.0-beta.1
 
 Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các cấu kiện, số lượng và thứ tự lắp, để khách hàng và thợ lắp đặt dễ hiểu mô hình.
 
 ## Trạng thái
+
+**0.6.0-beta.1 (xuất video lắp ráp).** Thay đổi so với 0.5.0-beta.1:
+
+- **Xuất video:** quay video 1280×720, 30 fps, theo góc iso. Mỗi bước: cấu kiện của bước bay vào chỗ, các bước trước đã xám, bước hiện tại tô cam kèm mũi tên và chú thích. Cuối video giữ hình lắp hoàn chỉnh 2 giây. Mỗi bước khoảng 1,6 giây.
+- **Định dạng:** MP4 nếu trình duyệt quay được; không thì WebM. File lưu là `<tên>-lap-rap.mp4` hoặc `.webm`.
+- **Chưa kiểm tra trong SketchUp thật:** việc quay video (MediaRecorder) có chạy trong SketchUp 2022 không chưa biết; đã kiểm tra trong Chromium (đầu ra MP4/VP9, đúng trình tự bước).
 
 **0.5.0-beta.1 (xuất theo cụm và theo bước lắp, cảnh báo).** Thay đổi so với 0.4.0-beta.1:
 

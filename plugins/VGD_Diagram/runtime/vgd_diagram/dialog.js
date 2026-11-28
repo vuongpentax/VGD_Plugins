@@ -15,6 +15,13 @@
   var EXPORT_H = 1200;
   var MAX_TAGS = 15;      // số nhãn tối đa trên một ảnh
   var PAST_COLOR = 0xcfcfcb; // màu cấu kiện đã lắp ở bước trước
+  var VIDEO_W = 1280;
+  var VIDEO_H = 720;
+  var VIDEO_FPS = 30;
+  var MOVE_SECONDS = 0.9;    // thời gian một cấu kiện bay vào chỗ
+  var HOLD_SECONDS = 0.7;    // thời gian giữ hình sau mỗi bước
+  var END_HOLD_SECONDS = 2;  // thời gian giữ hình lắp hoàn chỉnh ở cuối video
+  var ARROW_UNTIL = 0.8;     // mũi tên hiện trong 80% đầu của mỗi bước
   var EXPORT_VIEWS = [
     { key: 'truoc', dir: [0, -1, 0], up: [0, 0, 1] },
     { key: 'phai', dir: [1, 0, 0], up: [0, 0, 1] },
@@ -39,6 +46,7 @@
   var treeNodes = [];     // cây hiện tại (có số nhãn)
   var labelLayer = document.getElementById('labels');
   var labels = [];        // {el, part}: nhãn số đặt trên mô hình 3D
+  var recording = false;  // đang quay video
 
   function send(name, data) {
     if (window.sketchup && window.sketchup[name]) window.sketchup[name](JSON.stringify(data || {}));
@@ -494,8 +502,8 @@
     return Object.keys(seen).map(Number).sort(function (a, b) { return a - b; });
   }
 
-  function orthoCamera(center, radius, dir, up) {
-    var aspect = EXPORT_W / EXPORT_H;
+  function orthoCamera(center, radius, dir, up, aspect) {
+    aspect = aspect || EXPORT_W / EXPORT_H;
     var camera = new THREE.OrthographicCamera(-radius * aspect, radius * aspect, radius, -radius, 0.1, radius * 10);
     var direction = new THREE.Vector3().fromArray(dir).normalize();
     camera.up.fromArray(up);
@@ -612,6 +620,159 @@
     }
   }
 
+
+  // ---------- Xuất video lắp ráp theo bước ----------
+
+  // Định dạng video trình duyệt quay được: MP4 nếu có, không thì WebM.
+  function pickVideoType() {
+    var candidates = ['video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+    for (var i = 0; i < candidates.length; i++) {
+      if (MediaRecorder.isTypeSupported(candidates[i])) return candidates[i];
+    }
+    return null;
+  }
+
+  // Khung iso theo bố cục đã tách, để mọi bước cùng tỉ lệ.
+  function isoFrame(aspect) {
+    placeParts(function () { return 1; });
+    var box = new THREE.Box3();
+    view.parts.forEach(function (part) { box.expandByObject(part.mesh); });
+    var center = box.getCenter(new THREE.Vector3());
+    var radius = Math.max(box.getSize(new THREE.Vector3()).length() / 2 * 1.1, 1);
+    placeParts(function () { return 0; });
+    return orthoCamera(center, radius, [1, -1, 1], [0, 0, 1], aspect);
+  }
+
+  // Quay video: mỗi bước cấu kiện của bước bay vào chỗ, các bước trước đã xám, rồi giữ hình hoàn chỉnh.
+  function exportVideo() {
+    if (recording) return;
+    if (!view || view.parts.length === 0) {
+      setStatus('Chưa có mô hình để xuất video.', true);
+      return;
+    }
+    var orders = stepOrders();
+    if (orders.length === 0) {
+      setStatus('Chưa có bước lắp để xuất video. Nhập hoặc đề xuất thứ tự trước.', true);
+      return;
+    }
+    if (!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream) {
+      setStatus('Trình duyệt này không quay được video.', true);
+      return;
+    }
+    var mime = pickVideoType();
+    if (!mime) {
+      setStatus('Không có định dạng video phù hợp để quay.', true);
+      return;
+    }
+
+    var renderer = null;
+    var arrows = [];
+    var chunks = [];
+    var recorder = null;
+    var frameId = null;
+    try {
+      renderer = new THREE.WebGLRenderer({
+        canvas: document.createElement('canvas'),
+        antialias: true,
+        preserveDrawingBuffer: true
+      });
+      renderer.setPixelRatio(1);
+      renderer.setSize(VIDEO_W, VIDEO_H, false);
+      renderer.setClearColor(0xffffff, 1);
+      var glCanvas = renderer.domElement;
+      var rec = document.createElement('canvas');
+      rec.width = VIDEO_W;
+      rec.height = VIDEO_H;
+      var ctx = rec.getContext('2d');
+      var camera = isoFrame(VIDEO_W / VIDEO_H);
+
+      var stepSpan = MOVE_SECONDS + HOLD_SECONDS;
+      var total = orders.length * stepSpan + END_HOLD_SECONDS;
+      var startedAt = 0;
+      var lastIndex = -1;
+
+      recorder = new MediaRecorder(rec.captureStream(VIDEO_FPS), { mimeType: mime, videoBitsPerSecond: 4000000 });
+      recorder.ondataavailable = function (event) {
+        if (event.data && event.data.size) chunks.push(event.data);
+      };
+      recorder.onstop = function () {
+        recording = false;
+        clearArrows(arrows);
+        restoreParts();
+        renderer.dispose();
+        var blob = new Blob(chunks, { type: mime.split(';')[0] });
+        var reader = new FileReader();
+        reader.onload = function () {
+          send('save_video', { data: reader.result, ext: mime.indexOf('mp4') !== -1 ? 'mp4' : 'webm' });
+          setStatus('Đã quay video lắp ráp (' + orders.length + ' bước).');
+        };
+        reader.readAsDataURL(blob);
+      };
+
+      recording = true;
+      startedAt = performance.now();
+      recorder.start();
+
+      var drawFrame = function (now) {
+        var t = (now - startedAt) / 1000;
+        if (t >= total) {
+          recorder.stop();
+          return;
+        }
+        var index = Math.floor(t / stepSpan);
+        var isDone = index >= orders.length;
+        var k = isDone ? null : orders[index];
+        var isPast = function (part) { return part.order === null || part.order === undefined || (k !== null && part.order < k); };
+        var isNow = function (part) { return k !== null && part.order === k; };
+
+        if (index !== lastIndex) {
+          clearArrows(arrows);
+          lastIndex = index;
+        }
+        var p = 1;
+        if (isDone) {
+          placeParts(function () { return 0; });
+          showParts(function () { return true; });
+          colorParts(function () { return FACE_COLOR; });
+        } else {
+          p = clamp((t - index * stepSpan) / MOVE_SECONDS, 0, 1);
+          var ease = 1 - (1 - p) * (1 - p);
+          placeParts(function (part) { return isNow(part) ? 1 - ease : 0; });
+          showParts(function (part) { return isPast(part) || isNow(part); });
+          colorParts(function (part) { return isNow(part) ? HOT_COLOR : PAST_COLOR; });
+          if (p < ARROW_UNTIL && arrows.length === 0) {
+            view.parts.forEach(function (part) { if (isNow(part)) addArrow(part, arrows); });
+          }
+          if (p >= ARROW_UNTIL) clearArrows(arrows);
+        }
+
+        renderer.render(view.scene, camera);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, VIDEO_W, VIDEO_H);
+        ctx.drawImage(glCanvas, 0, 0);
+        if (!isDone) {
+          labels.filter(function (item) { return isNow(item.part); })
+            .forEach(function (item) { drawTag(ctx, camera, item); });
+          var names = view.parts.filter(isNow).map(function (part) { return part.name; });
+          var unique = names.filter(function (name, i) { return names.indexOf(name) === i; });
+          drawCaption(ctx, ('Bước ' + k + ': ' + unique.join(', ')).slice(0, 90));
+        } else {
+          drawCaption(ctx, 'Lắp ráp hoàn chỉnh');
+        }
+        frameId = requestAnimationFrame(drawFrame);
+      };
+      frameId = requestAnimationFrame(drawFrame);
+      setStatus('Đang quay video lắp ráp...');
+    } catch (error) {
+      recording = false;
+      if (frameId) cancelAnimationFrame(frameId);
+      clearArrows(arrows);
+      if (view) restoreParts();
+      if (renderer) renderer.dispose();
+      setStatus('Quay video thất bại: ' + error.message, true);
+    }
+  }
+
   // ---------- Cầu nối với Ruby ----------
 
   window.VGD = {
@@ -644,6 +805,9 @@
     onExport: function () {
       exportImages();
     },
+    onVideo: function () {
+      exportVideo();
+    },
     onToast: function (data) { setStatus(data.message, false); },
     onError: function (data) { setStatus(data.message, true); }
   };
@@ -652,6 +816,7 @@
   window.VGD.suggestOrders = function () { send('suggest_orders'); };
   window.VGD.exportSvg = function () { send('export'); };
   window.VGD.exportViews = function () { send('export_views'); };
+  window.VGD.exportVideo = function () { send('export_video'); };
   window.VGD.checkDiagram = function () {
     var warnings = diagramWarnings();
     setStatus(warnings.length ? 'Cảnh báo: ' + warnings.join(' ') : 'Không có cảnh báo.', warnings.length > 0);

@@ -36,6 +36,8 @@ module VGD
         callback('export_views') { start_export }
         callback('save_image') { |json| save_image(JSON.parse(json)) }
         callback('export_done') { finish_export }
+        callback('export_video') { start_video }
+        callback('save_video') { |json| save_video(JSON.parse(json)) }
         @dlg.show
       end
 
@@ -133,6 +135,28 @@ module VGD
         return unless folder
         @export = { 'folder' => folder, 'base' => base_name(model), 'files' => [] }
         send_js('onExport', 'base' => @export['base'])
+      end
+
+      # Video lắp ráp: chọn thư mục, giao diện quay rồi gửi file về đây.
+      VIDEO_EXT = %w[mp4 webm].freeze
+
+      def start_video
+        model = Sketchup.active_model
+        folder = UI.select_directory(title: 'Chọn thư mục lưu video', directory: '')
+        return unless folder
+        @video = { 'folder' => folder, 'base' => base_name(model) }
+        send_js('onVideo', 'base' => @video['base'])
+      end
+
+      def save_video(payload)
+        raise 'Chưa chọn thư mục lưu video.' unless @video
+        ext = payload.fetch('ext')
+        raise ArgumentError, "Định dạng video không hợp lệ: #{ext}" unless VIDEO_EXT.include?(ext)
+        path = File.join(@video['folder'], "#{@video['base']}-lap-rap.#{ext}")
+        data = payload.fetch('data').sub(%r{\Adata:video/[a-z0-9.+;=-]+;base64,}, '')
+        busy { File.binwrite(path, Base64.decode64(data)) }
+        @video = nil
+        send_js('onToast', 'message' => "Đã xuất video: #{path}")
       end
 
       # Tên ảnh chỉ gồm chữ thường, số và dấu gạch ngang (ví dụ truoc, cum-01, buoc-02).

@@ -204,6 +204,31 @@ function check(name, ok) {
   await page.evaluate(() => window.VGD.checkDiagram());
   check('kiểm tra: cảnh báo nhóm chưa có thứ tự', (await page.locator('#status').textContent()).includes('chưa có thứ tự lắp'));
 
+  // ---- Xuất video lắp ráp: quay thật trong trình duyệt, rồi kiểm tra dữ liệu ----
+  await page.evaluate((data) => window.VGD.onTree(data), exportTree);
+  await page.evaluate((data) => window.VGD.onScene(data), scene);
+  await page.evaluate(() => { window.__calls = []; });
+  await page.evaluate(() => window.VGD.onVideo({ base: 'thu' }));
+  let video = null;
+  for (let i = 0; i < 80 && !video; i++) {
+    await page.waitForTimeout(250);
+    video = (await page.evaluate(() => window.__calls)).find((c) => c.name === 'save_video');
+  }
+  const videoPayload = video ? JSON.parse(video.args[0]) : null;
+  check('video: quay xong và gửi về Ruby', !!videoPayload);
+  check('video: dữ liệu là video (mp4 hoặc webm) có nội dung',
+    !!videoPayload && /^data:video\/(mp4|webm)/.test(videoPayload.data) && videoPayload.data.length > 5000);
+  check('video: đuôi file hợp lệ', !!videoPayload && ['mp4', 'webm'].includes(videoPayload.ext));
+  check('video: báo đã quay (có số bước)', (await page.locator('#status').textContent()).includes('2 bước'));
+
+  // Không có bước lắp: không quay, báo rõ
+  await page.evaluate(() => window.VGD.onScene({ truncated: false, parts: [{ id: 1, name: 'A', order: null, positions: [0, 0, 0, 1, 0, 0, 0, 1, 0] }] }));
+  await page.evaluate(() => { window.__calls = []; });
+  await page.evaluate(() => window.VGD.onVideo({ base: 'thu' }));
+  check('video: không có bước lắp thì báo và không quay',
+    (await page.locator('#status').textContent()).includes('Chưa có bước lắp') &&
+    !(await page.evaluate(() => window.__calls)).some((c) => c.name === 'save_video'));
+
   check('không có lỗi JavaScript trên trang', errors.length === 0);
   await browser.close();
   console.log('');
