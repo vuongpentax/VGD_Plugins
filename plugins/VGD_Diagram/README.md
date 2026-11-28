@@ -1,8 +1,16 @@
-# VGD Diagram 0.10.1-beta.1
+# VGD Diagram 0.10.2-beta.1
 
 Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các cấu kiện, số lượng và thứ tự lắp, để khách hàng và thợ lắp đặt dễ hiểu mô hình.
 
 ## Trạng thái
+
+**0.10.2-beta.1 (ffmpeg: nhập thư mục, dự phòng MPEG-4; hiện số phiên bản).** Thay đổi so với 0.10.1-beta.1:
+
+- **Nhập thư mục:** ô đường dẫn và nút **Chọn...** nhận cả thư mục chứa ffmpeg, ví dụ `C:\Program Files\ShareX`. Plugin tự tìm `ffmpeg.exe` trong thư mục đó (hoặc trong `bin\`) và nhớ đường dẫn file đã tìm được. Nếu không thấy, thông báo nêu rõ đường dẫn đã kiểm tra.
+- **Dự phòng MPEG-4:** một số ffmpeg (ví dụ bản đi kèm phần mềm khác) không có bộ mã hóa `libx264`. Khi đó plugin dùng `mpeg4` và vẫn ghép ra file `.mp4`. Chất lượng và độ nén có thể kém hơn H.264. Nếu ffmpeg không có cả hai, plugin báo rõ và không ghép.
+- **Số phiên bản:** dưới logo trong hộp thoại có dòng `Phiên bản …` để biết đang chạy bản nào.
+- **Kiểm tra tự động:** ffmpeg thật (`dev/test_ffmpeg.rb`, 37/37): nhập thư mục, dự phòng mpeg4 với ffmpeg giả lập thiếu libx264, trường hợp không có bộ mã hóa nào, số phiên bản gửi về giao diện. Chromium (`dev/test_ui.cjs`, 59/59): nhãn phiên bản dưới logo.
+- **Chưa kiểm tra trong SketchUp thật**, đặc biệt đường dẫn thư mục có khoảng trắng và tiếng Việt trên Windows.
 
 **0.10.1-beta.1 (sửa lỗi ô đường dẫn ffmpeg không hiện khi mở).** Thay đổi so với 0.10.0-beta.1:
 

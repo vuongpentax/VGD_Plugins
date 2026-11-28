@@ -4,6 +4,7 @@
 
 - Tên extension: `VGD Diagram`; loader `runtime/vgd_diagram.rb`; mã trong `runtime/vgd_diagram/`.
 - Toolbar: `VGD DGM`. Menu con: `Extensions → VGD → VGD Diagram`, có mục `Tải lại code`.
+- Số phiên bản hiện dưới logo trong hộp thoại: Ruby gửi `onVersion` khi `ready`.
 - Phiên bản: `runtime/vgd_diagram/version.rb`; README phải khớp khi đổi.
 - Mục tiêu: sơ đồ cây lắp ráp, mô hình 3D tách rời và nhãn số cho khách hàng và thợ lắp đặt. Chưa làm: sơ đồ mũi tên hướng lắp, SVG vector, dùng đúng style đang bật của model.
 
@@ -45,7 +46,7 @@
 - Tối đa 15 nhãn trên một ảnh (`MAX_TAGS` trong `dialog.js`).
 - Video lắp ráp quay bằng `MediaRecorder` từ canvas trong giao diện. Định dạng do người dùng chọn (mp4 hoặc webm); mp4 chỉ dùng khi trình duyệt hỗ trợ, không tự đổi. Đuôi file trong hộp lưu quyết định định dạng (`Dialog::resolve_format`, test ở `dev/test_formats.rb`).
 - Ảnh xuất: png hoặc jpg, chọn như video.
-- Đường dẫn ffmpeg lưu bằng `Sketchup.write_default` (`ffmpeg.rb#save_path`), chỉ lưu khi file vượt qua kiểm tra `-version` và `libx264`.
+- Đường dẫn ffmpeg lưu bằng `Sketchup.write_default` (`ffmpeg.rb#save_path`). Người dùng có thể nhập file hoặc thư mục (`ffmpeg.rb#resolve` tìm `ffmpeg.exe` trong thư mục, hoặc `bin\ffmpeg.exe`); chỉ lưu file vượt qua kiểm tra `-version` và có bộ mã hóa `libx264` hoặc `mpeg4` (`ENCODERS`, ưu tiên `libx264`).
 - `ffmpeg.rb` gọi ffmpeg bằng danh sách tham số (không qua shell). Chỉ chạy file ffmpeg đã chọn hoặc lệnh `ffmpeg` trong PATH. Chỉ xóa khung hình do plugin vừa xuất, và chỉ sau khi người dùng xác nhận và ghép thành công.
 - Video dạng PNG (chuỗi khung hình) không dùng MediaRecorder: `exportFrames` gửi từng khung qua `save_frame`, kết thúc bằng `video_done` (`Dialog#finish_frames`).
 - Mọi lần ghi model phải nằm trong `start_operation` / `commit_operation`, lỗi thì `abort_operation`.

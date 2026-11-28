@@ -871,6 +871,9 @@
     onSettings: function (data) {
       ffmpegInput.value = data.ffmpegPath || '';
     },
+    onVersion: function (data) {
+      document.getElementById('ver').textContent = 'Phiên bản ' + data.version;
+    },
     onToast: function (data) { setStatus(data.message, false); },
     onError: function (data) { setStatus(data.message, true); }
   };

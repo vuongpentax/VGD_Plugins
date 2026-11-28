@@ -226,6 +226,8 @@ $sent.clear
 ready.call(nil, nil)
 settings = $sent.find { |fn, _| fn == 'onSettings' }
 check('mở hộp thoại: giao diện nhận đường dẫn ffmpeg đã lưu (onSettings)', !settings.nil? && settings[1]['ffmpegPath'] == ffmpeg_path)
+version_sent = $sent.find { |fn, _| fn == 'onVersion' }
+check('mở hộp thoại: giao diện nhận số phiên bản (onVersion)', !version_sent.nil? && version_sent[1]['version'] == VGD::Diagram::VERSION)
 
 # 11. Các callback đi đúng đường đi thật: payload là chuỗi JSON như SketchUp gửi
 dlg = D.instance_variable_get(:@dlg)
@@ -270,5 +272,49 @@ Dir.mktmpdir do |dir|
 end
 
 puts
+# 12. Nhập thư mục (ví dụ C:\Program Files\ShareX), dự phòng mpeg4 khi thiếu libx264, và không có bộ mã hóa nào
+ffmpeg_real = `which ffmpeg`.strip
+Dir.mktmpdir do |dir|
+  bin = File.join(dir, 'bin')
+  Dir.mkdir(bin)
+  File.symlink(ffmpeg_real, File.join(bin, 'ffmpeg.exe'))
+  check('thư mục: tìm được bin\ffmpeg.exe trong thư mục đã nhập', F.resolve(dir) == File.join(bin, 'ffmpeg.exe'))
+  check('thư mục: nhận đường dẫn file và đường dẫn có dấu ngoặc kép', F.resolve(File.join(bin, 'ffmpeg.exe')) == File.join(bin, 'ffmpeg.exe') && F.resolve("\"#{bin}\"") == File.join(bin, 'ffmpeg.exe'))
+  empty = File.join(dir, 'trong')
+  Dir.mkdir(empty)
+  check('thư mục: thư mục không có ffmpeg thì không tìm thấy', F.resolve(empty).nil?)
+  check('thư mục: chuỗi rỗng không tìm thấy', F.resolve('  ').nil?)
+
+  F.save_path(dir)
+  check('thư mục: lưu đường dẫn file, không lưu thư mục', F.saved_path == File.join(bin, 'ffmpeg.exe'))
+  F.save_path('')
+
+  # Wrapper giả lập ffmpeg không có libx264: danh sách bộ mã hóa bỏ libx264 (và mpeg4 nếu cần)
+  wrap = File.join(dir, 'wrap-no-x264.sh')
+  File.write(wrap, "#!/bin/sh\nif [ \"$1\" = \"-hide_banner\" ] && [ \"$2\" = \"-encoders\" ]; then\n  \"#{ffmpeg_real}\" -hide_banner -encoders | grep -v libx264\n  exit 0\nfi\nexec \"#{ffmpeg_real}\" \"$@\"\n")
+  File.chmod(0o755, wrap)
+  check('mpeg4: ffmpeg thiếu libx264 chọn bộ mã hóa mpeg4', F.encoder_for(wrap)&.first == 'mpeg4')
+  check('mpeg4: file này vẫn được chấp nhận', F.problem_with(wrap).nil?)
+  make_frames(dir, 'mp4', 12)
+  mp4_out = File.join(dir, 'mp4.mp4')
+  ok, error = F.encode(wrap, File.join(dir, 'mp4-khung-%05d.png'), 30, mp4_out)
+  check('mpeg4: ghép được MP4 khi thiếu libx264', ok && File.size?(mp4_out).to_i > 0 && error.empty?)
+
+  wrap_none = File.join(dir, 'wrap-none.sh')
+  File.write(wrap_none, "#!/bin/sh\nif [ \"$1\" = \"-hide_banner\" ] && [ \"$2\" = \"-encoders\" ]; then\n  \"#{ffmpeg_real}\" -hide_banner -encoders | grep -v -e libx264 -e mpeg4\n  exit 0\nfi\nexec \"#{ffmpeg_real}\" \"$@\"\n")
+  File.chmod(0o755, wrap_none)
+  check('không bộ mã hóa: báo rõ thiếu libx264 và MPEG-4', F.problem_with(wrap_none).to_s.include?('libx264'))
+  ok_none, _error = F.encode(wrap_none, File.join(dir, 'mp4-khung-%05d.png'), 30, File.join(dir, 'none.mp4'))
+  check('không bộ mã hóa: không ghép và không tạo file', !ok_none && !File.exist?(File.join(dir, 'none.mp4')))
+  rejected = begin
+    F.save_path(wrap_none)
+    false
+  rescue ArgumentError
+    true
+  end
+  check('không bộ mã hóa: không lưu đường dẫn', rejected && F.saved_path.nil?)
+end
+$defaults.delete(['VGD_Diagram', 'ffmpeg_path'])
+
 puts $fail.empty? ? "TẤT CẢ ĐẠT (#{$pass})" : "CÓ #{$fail.size} LỖI: #{$fail.inspect}"
 exit($fail.empty? ? 0 : 1)

@@ -281,6 +281,16 @@ function check(name, ok) {
   await page.locator('button', { hasText: 'Chọn' }).first().click();
   check('ffmpeg: nút Chọn gửi yêu cầu mở hộp thoại', (await page.evaluate(() => window.__calls)).some((c) => c.name === 'pick_ffmpeg'));
 
+  // ---- Số phiên bản dưới logo: Ruby gửi onVersion khi sẵn sàng ----
+  await page.evaluate(() => window.VGD.onVersion({ version: '0.10.2-beta.1' }));
+  check('phiên bản: hiện số phiên bản dưới logo', (await page.locator('#ver').textContent()) === 'Phiên bản 0.10.2-beta.1');
+  check('phiên bản: nhãn nằm dưới dòng logo VGD Diagram',
+    await page.evaluate(() => {
+      const brand = document.querySelector('.brand').getBoundingClientRect();
+      const ver = document.getElementById('ver').getBoundingClientRect();
+      return ver.top >= brand.bottom - 1;
+    }));
+
   check('không có lỗi JavaScript trên trang', errors.length === 0);
   await browser.close();
   console.log('');

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VGD Diagram</title><link rel="stylesheet" href="vgd-theme/vgd-theme.css"><link rel="stylesheet" href="dialog.css"></head>
 <body class="vgd-ui">
-<header><div class="brand"><b>VGD</b><span>Diagram</span></div><button id="theme" class="vgd-theme-btn" type="button" aria-pressed="false"></button></header>
+<header><div class="brand-block"><div class="brand"><b>VGD</b><span>Diagram</span></div><small id="ver" class="ver" aria-label="Phiên bản plugin"></small></div><button id="theme" class="vgd-theme-btn" type="button" aria-pressed="false"></button></header>
 <main>
   <section class="side" aria-label="Sơ đồ cây">
     <p class="hint">Chọn đối tượng trong model rồi bấm <b>Làm mới</b> để đưa vào sơ đồ (đổi lựa chọn thì bấm Làm mới lại). <b>Đề xuất thứ tự</b> điền số lắp theo từng lớp group, từ dưới lên; sửa rồi bấm <b>Lưu thứ tự</b>.</p>
@@ -35,7 +35,7 @@
       </div>
       <div class="ffmpeg-row">
         <label for="ffmpeg-path">ffmpeg</label>
-        <input type="text" id="ffmpeg-path" placeholder="Đường dẫn tới ffmpeg.exe (để trống = tìm trong PATH)" aria-label="Đường dẫn ffmpeg">
+        <input type="text" id="ffmpeg-path" placeholder="Đường dẫn tới ffmpeg.exe hoặc thư mục chứa nó (để trống = tìm trong PATH)" aria-label="Đường dẫn ffmpeg">
         <button type="button" class="quiet" onclick="VGD.pickFfmpeg()">Chọn...</button>
         <button type="button" class="quiet" onclick="VGD.saveFfmpeg()">Lưu</button>
       </div>

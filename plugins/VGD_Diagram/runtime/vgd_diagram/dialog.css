@@ -3,6 +3,8 @@ html,body{margin:0;height:100%;background:var(--vgd-bg);color:var(--vgd-text);fo
 body{display:flex;flex-direction:column}
 header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--vgd-border)}
 .brand{display:flex;gap:8px;align-items:baseline}
+.brand-block{display:flex;flex-direction:column;gap:2px}
+.ver{color:var(--vgd-muted);font-size:11px}
 .brand b{color:var(--vgd-accent-strong);letter-spacing:.08em}
 main{flex:1;display:grid;grid-template-columns:minmax(260px,340px) 1fr;gap:12px;min-height:0;padding:10px 14px}
 .side,.view{display:flex;flex-direction:column;min-height:0;gap:8px}

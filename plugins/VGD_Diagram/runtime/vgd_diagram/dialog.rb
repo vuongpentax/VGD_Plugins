@@ -1,6 +1,7 @@
 # encoding: UTF-8
 require 'base64'
 require_relative 'ffmpeg'
+require_relative 'version'
 module VGD
   module Diagram
     module Dialog
@@ -32,6 +33,7 @@ module VGD
           refresh_scope
           push_tree
           push_settings
+          send_js('onVersion', 'version' => VERSION)
         end
         callback('refresh') { refresh_scope && push_tree }
         callback('select') { |json| select_group(JSON.parse(json).fetch('key')) }
