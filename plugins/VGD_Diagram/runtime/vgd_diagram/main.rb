@@ -5,6 +5,7 @@ require_relative 'version'
 require_relative 'tree'
 require_relative 'model_io'
 require_relative 'scene'
+require_relative 'views'
 require_relative 'dialog'
 
 # Menu Extensions > VGD dùng chung: mọi plugin VGD lấy cùng một menu (SketchUp không gộp các menu trùng tên).

@@ -192,6 +192,20 @@ check 'SVG có số thứ tự và số lượng', svg.include?('1. Thân') && s
 check 'SVG thoát ký tự đặc biệt', svg.include?('Đáy &lt;lớn&gt;') && svg.include?('Cánh &amp; kính') && !svg.include?('<lớn>')
 check 'SVG cho model rỗng vẫn hợp lệ', T.svg([]).include?('Chưa có cấu kiện nào')
 
+# 8b. Đánh số nhóm có hình học và bảng CSV (thứ tự cây: 'Chân' trước 'Tủ' vì sắp theo tên)
+numbered_src = T.build([raw(70, 'Tủ', nil, [raw(71, 'Cánh', nil), raw(72, 'Cánh, lớn', 2)]), raw(73, 'Chân')])
+numbered = T.number(numbered_src, [71, 72, 73])
+cabinet = numbered.find { |n| n['name'] == 'Tủ' }
+check 'đánh số: nhóm cha không có hình học thì không được số', cabinet['number'].nil?
+check 'đánh số: Chân (đứng đầu cây) được số 1', numbered.find { |n| n['name'] == 'Chân' }['number'] == 1
+check 'đánh số: các nhóm con được số 2 và 3 theo thứ tự cây',
+      cabinet['children'].map { |n| n['number'] } == [2, 3]
+csv = T.csv(numbered)
+check 'CSV: có BOM và dòng tiêu đề', csv.start_with?("\uFEFFSố,Tên,Số lượng,Thứ tự lắp\r\n")
+check 'CSV: tên có dấu phẩy được đặt trong ngoặc kép', csv.include?('"Cánh, lớn"')
+check 'CSV: chỉ liệt kê nhóm được đánh số (1 tiêu đề + 3 dòng)', csv.split("\r\n").size == 4
+check 'CSV: nhóm không có hình học không xuất hiện', !csv.include?('Tủ')
+
 # 9. Đọc cây từ model giả lập
 body_def = Sketchup::ComponentDefinition.new('Thân tủ', [])
 inner = Sketchup::Group.new(101, 'Đáy')

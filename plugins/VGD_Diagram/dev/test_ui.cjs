@@ -133,6 +133,32 @@ function check(name, ok) {
   check('mô hình rỗng: thông báo không có hình học',
     (await page.locator('#view-msg').textContent()).includes('chưa có hình học'));
 
+  // ---- Số nhãn: trên cây (badge) và trên mô hình 3D (tag), khớp nhau ----
+  const numbered = {
+    nodes: [
+      { key: 100, name: 'Tủ', count: 1, ids: [100], order: null, mixed: false, number: null, children: [
+        { key: 51, name: 'Đáy', count: 1, ids: [51], order: 1, mixed: false, number: 1, children: [] },
+        { key: 52, name: 'Cánh', count: 1, ids: [52], order: 2, mixed: false, number: 2, children: [] }
+      ] },
+      { key: 200, name: 'Chân', count: 1, ids: [200], order: null, mixed: false, number: 3, children: [] }
+    ]
+  };
+  await page.evaluate((data) => window.VGD.onTree(data), numbered);
+  await page.evaluate((data) => window.VGD.onScene(data), scene);
+  check('số nhãn: cây có 3 badge (nhóm không có hình học không có số)', (await page.locator('.badge').count()) === 3);
+  const tagTexts = await page.locator('#labels .tag').allTextContents();
+  check('số nhãn: trên mô hình có 3 nhãn 1, 2, 3', tagTexts.join(',') === '1,2,3');
+  const tagPos = async () => page.locator('#labels .tag').evaluateAll((els) => els.map((el) => el.style.left + ' ' + el.style.top));
+  // Nhãn đổi vị trí ở vòng lặp khung hình, nên chờ vài khung trước khi đọc.
+  await page.locator('#explode').fill('0');
+  await page.waitForTimeout(300);
+  const before = await tagPos();
+  await page.locator('#explode').fill('100');
+  await page.waitForTimeout(300);
+  const after = await tagPos();
+  check('số nhãn: nhãn di chuyển khi tách rời', before.join('|') !== after.join('|'));
+  check('số nhãn: nhãn có toạ độ hợp lệ', after.every((p) => /^-?[\d.]+px -?[\d.]+px$/.test(p) || p === ' '));
+
   check('không có lỗi JavaScript trên trang', errors.length === 0);
   await browser.close();
   console.log('');

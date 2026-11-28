@@ -1,14 +1,17 @@
-# VGD Diagram 0.2.0-beta.1
+# VGD Diagram 0.3.0-beta.1
 
 Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các cấu kiện, số lượng và thứ tự lắp, để khách hàng và thợ lắp đặt dễ hiểu mô hình.
 
 ## Trạng thái
 
-**0.2.0-beta.1 (thêm mô hình 3D).** Đã có: cây cấu kiện theo cấp, gom cấu kiện giống nhau kèm số lượng, nhập thứ tự lắp, chọn cấu kiện trong model khi bấm tên, xuất SVG. Mới: khung mô hình 3D bên phải (xoay, phóng to), thanh **Tách rời** để tách các cấu kiện ra khỏi tâm, và **Phát lắp ráp** để các cấu kiện có thứ tự lắp lần lượt về đúng vị trí.
+**0.3.0-beta.1 (nhãn số và xuất ảnh các góc).** Đã có: cây cấu kiện theo cấp, gom cấu kiện giống nhau kèm số lượng, nhập thứ tự lắp, chọn cấu kiện trong model khi bấm tên, xuất SVG, khung mô hình 3D (xoay, phóng to), thanh **Tách rời**, **Phát lắp ráp**. Mới ở 0.3.0-beta.1:
 
-- **Đã kiểm tra tự động:** logic gom nhóm, sắp thứ tự, kiểm tra số trùng, đọc/ghi model giả lập, lấy hình học 3D từ model giả lập, menu và nút Tải lại code, giao diện hộp thoại và khung 3D trong Chromium (`dev/`).
-- **Chưa kiểm tra trong SketchUp thật.** Cần thử trên SketchUp 2022 (Windows) trước khi tin cậy. Đặc biệt: khung 3D (WebGL) trong hộp thoại SketchUp có chạy không.
-- **Chưa làm:** sơ đồ mũi tên thứ tự lắp, xuất PNG.
+- **Số nhãn:** mỗi nhóm có hình học được đánh số 1, 2, 3... theo thứ tự cây. Số hiện ở cây (huy hiệu) và trên mô hình 3D (nhãn), khớp nhau.
+- **Xuất ảnh các góc:** bốn ảnh PNG (Trước, Phải, Trên, Iso) do chính SketchUp vẽ theo style đang bật, phối cảnh song song. Kèm file CSV `danh-sach` gồm số, tên, số lượng, thứ tự lắp. Nhãn số không nằm trong ảnh, mà nằm trong file CSV.
+
+- **Đã kiểm tra tự động:** logic gom nhóm, sắp thứ tự, số trùng, đánh số và CSV, đọc/ghi model giả lập, lấy hình học 3D, xuất ảnh (camera đổi tạm rồi trả lại), menu và Tải lại code, giao diện, khung 3D và nhãn số trong Chromium (`dev/`).
+- **Chưa kiểm tra trong SketchUp thật.** Cần thử trên SketchUp 2022 (Windows): khung 3D (WebGL), và đặc biệt `View#write_image` với tham số dạng vị trí (tên file, rộng, cao, khử răng cưa, nén). Mình viết theo kiến thức API, chưa đối chiếu được tài liệu chính thức trong môi trường này.
+- **Chưa làm:** sơ đồ mũi tên hướng lắp (như ảnh sách hướng dẫn), SVG vector đúng style SketchUp (API chưa có cách rõ ràng).
 
 ## Cách dùng
 
@@ -19,6 +22,7 @@ Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các c
    - Nhập thứ tự lắp (số nguyên 1 đến 9999) rồi bấm **Lưu thứ tự**. Có thể dùng Ctrl+Z để hoàn tác.
    - Số thứ tự chỉ cần không trùng giữa các cấu kiện **cùng cấp**.
 4. **Xuất SVG** lưu sơ đồ thành file ảnh vector.
+5. **Xuất ảnh các góc** chọn một thư mục. Plugin lưu 4 ảnh PNG (Trước, Phải, Trên, Iso) và file `danh-sach.csv`. Camera của khung nhìn được đổi tạm rồi trả lại như cũ.
 
 ## Mô hình 3D (mới ở 0.2.0-beta.1)
 

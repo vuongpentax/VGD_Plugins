@@ -21,6 +21,9 @@
 
   var view = null;        // khung 3D: renderer, scene, camera, parts, góc nhìn
   var playing = null;     // {start, count} khi đang phát lắp ráp
+  var treeNodes = [];     // cây hiện tại (có số nhãn)
+  var labelLayer = document.getElementById('labels');
+  var labels = [];        // {el, part}: nhãn số đặt trên mô hình 3D
 
   function send(name, data) {
     if (window.sketchup && window.sketchup[name]) window.sketchup[name](JSON.stringify(data || {}));
@@ -100,7 +103,13 @@
       updateSave();
     };
 
-    row.append(name, count, order);
+    var badge = null;
+    if (node.number) {
+      badge = document.createElement('span');
+      badge.className = 'badge';
+      badge.textContent = String(node.number);
+    }
+    row.append(badge || document.createTextNode(''), name, count, order);
     item.append(row);
     if (node.children && node.children.length) {
       var children = document.createElement('ul');
@@ -194,7 +203,49 @@
     c.lookAt(t);
   }
 
+  // Các nhóm có số nhãn (theo thứ tự cây).
+  function numberedNodes(nodes, out) {
+    nodes.forEach(function (node) {
+      if (node.number) out.push(node);
+      numberedNodes(node.children || [], out);
+    });
+    return out;
+  }
+
+  // Đặt nhãn số lên cấu kiện đầu tiên của mỗi nhóm có số.
+  function rebuildLabels() {
+    labelLayer.textContent = '';
+    labels = [];
+    if (!view) return;
+    numberedNodes(treeNodes, []).forEach(function (node) {
+      var part = view.parts.filter(function (p) { return node.ids.indexOf(p.id) !== -1; })[0];
+      if (!part) return;
+      var el = document.createElement('div');
+      el.className = 'tag';
+      el.textContent = String(node.number);
+      labelLayer.append(el);
+      labels.push({ el: el, part: part });
+    });
+  }
+
+  // Đổi vị trí nhãn theo camera: nhãn ở sau camera thì ẩn.
+  function updateLabels() {
+    var width = canvas.clientWidth;
+    var height = canvas.clientHeight;
+    var anchor = new THREE.Vector3();
+    labels.forEach(function (item) {
+      anchor.copy(item.part.mesh.position).project(view.camera);
+      var visible = anchor.z > -1 && anchor.z < 1;
+      item.el.style.display = visible ? '' : 'none';
+      if (!visible) return;
+      item.el.style.left = ((anchor.x + 1) / 2 * width) + 'px';
+      item.el.style.top = ((1 - anchor.y) / 2 * height) + 'px';
+    });
+  }
+
   function clearParts() {
+    labelLayer.textContent = '';
+    labels = [];
     if (!view) return;
     view.parts.forEach(function (part) {
       view.scene.remove(part.mesh);
@@ -246,6 +297,7 @@
     setViewMessage(data.truncated ? 'Mô hình quá lớn: chỉ hiện một phần hình học.' : '');
     updatePlayButton();
     updatePositions();
+    rebuildLabels();
   }
 
   // Vị trí t của một cấu kiện: 1 = đang tách hết, 0 = đã lắp. Khi phát lắp ráp thì theo thứ tự.
@@ -316,7 +368,9 @@
     if (!view) return;
     if (playing) advancePlayback();
     placeCamera();
+    view.camera.updateMatrixWorld();
     updatePositions();
+    updateLabels();
     view.renderer.render(view.scene, view.camera);
   }
 
@@ -328,6 +382,8 @@
       updateSave();
       tree.textContent = '';
       var nodes = data.nodes || [];
+      treeNodes = nodes;
+      rebuildLabels();
       document.getElementById('empty').hidden = nodes.length > 0;
       nodes.forEach(function (node) { renderNode(node, tree); });
       setStatus('');
@@ -341,6 +397,7 @@
 
   window.VGD.refresh = function () { send('refresh'); };
   window.VGD.exportSvg = function () { send('export'); };
+  window.VGD.exportViews = function () { send('export_views'); };
   window.VGD.saveOrders = function () {
     var items = Object.keys(pending).map(function (key) {
       var value = pending[key];

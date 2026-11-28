@@ -100,6 +100,37 @@ module VGD
         end
       end
 
+      # Gán số 1, 2, 3... (theo thứ tự cây, từ trên xuống) cho các nhóm có hình học trong model.
+      # Nhóm không có hình học (ví dụ Group chỉ chứa nhóm con) không được số. Trả về bản sao cây.
+      def number(nodes, geometry_ids, counter = [0])
+        nodes.map do |node|
+          label_no = nil
+          if (node['ids'] & geometry_ids).any?
+            counter[0] += 1
+            label_no = counter[0]
+          end
+          node.merge('number' => label_no, 'children' => number(node['children'], geometry_ids, counter))
+        end
+      end
+
+      # Bảng danh sách CSV (UTF-8 có BOM để Excel đọc đúng tiếng Việt) của các nhóm đã được đánh số.
+      def csv(nodes)
+        lines = ['Số,Tên,Số lượng,Thứ tự lắp']
+        numbered_list(nodes).each do |node|
+          lines << [node['number'], node['name'], node['count'], node['order']].map { |value| csv_cell(value) }.join(',')
+        end
+        "﻿" + lines.join("\r\n") + "\r\n"
+      end
+
+      def numbered_list(nodes)
+        nodes.flat_map { |node| (node['number'] ? [node] : []) + numbered_list(node['children']) }
+      end
+
+      def csv_cell(value)
+        text = value.to_s
+        text.match?(/[",\r\n]/) ? %("#{text.gsub('"', '""')}") : text
+      end
+
       def label(node)
         text = node['order'] ? "#{node['order']}. #{node['name']}" : node['name']
         node['count'] > 1 ? "#{text} × #{node['count']}" : text

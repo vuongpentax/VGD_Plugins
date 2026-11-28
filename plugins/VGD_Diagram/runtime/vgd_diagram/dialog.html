@@ -8,12 +8,14 @@
     <div class="toolbar">
       <button type="button" class="quiet" onclick="VGD.refresh()">Làm mới</button>
       <button type="button" class="quiet" onclick="VGD.exportSvg()">Xuất SVG</button>
+      <button type="button" class="quiet" onclick="VGD.exportViews()">Xuất ảnh các góc</button>
     </div>
     <div class="tree-wrap"><ul id="tree" class="tree"></ul><p id="empty" class="empty" hidden>Model chưa có nhóm hoặc component nào.</p></div>
   </section>
   <section class="view" aria-label="Mô hình 3D">
     <div class="view-stage">
       <canvas id="view" aria-label="Mô hình 3D của đối tượng"></canvas>
+      <div id="labels" class="labels" aria-hidden="true"></div>
       <p id="view-msg" class="view-msg" role="status"></p>
     </div>
     <div class="view-controls">

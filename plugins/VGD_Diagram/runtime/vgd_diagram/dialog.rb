@@ -31,6 +31,7 @@ module VGD
         callback('select') { |json| select_group(JSON.parse(json).fetch('key')) }
         callback('save_orders') { |json| save_orders(JSON.parse(json).fetch('changes')) }
         callback('export') { export_svg }
+        callback('export_views') { export_views }
         @dlg.show
       end
 
@@ -50,8 +51,31 @@ module VGD
 
       def push_tree
         model = Sketchup.active_model
-        send_js('onTree', 'nodes' => ModelIO.read_tree(model))
-        send_js('onScene', Scene.build(model))
+        scene = Scene.build(model)
+        send_js('onTree', 'nodes' => numbered_tree(model, scene))
+        send_js('onScene', scene)
+      end
+
+      # Cây có số nhãn cho các nhóm có hình học; khớp với số hiện trên mô hình 3D.
+      def numbered_tree(model, scene = Scene.build(model))
+        ids = scene['parts'].map { |part| part['id'] }.compact
+        Tree.number(ModelIO.read_tree(model), ids)
+      end
+
+      # Ghi ảnh các góc chuẩn (PNG của SketchUp) và bảng CSV vào một thư mục người dùng chọn.
+      def export_views
+        model = Sketchup.active_model
+        folder = UI.select_directory(title: 'Chọn thư mục lưu ảnh và danh sách', directory: '')
+        return unless folder
+        base = base_name(model)
+        files = busy { Views.export(model, folder, base) }
+        csv_path = File.join(folder, "#{base}-danh-sach.csv")
+        busy { File.write(csv_path, Tree.csv(numbered_tree(model)), mode: 'wb') }
+        send_js('onToast', 'message' => "Đã xuất #{files.size} ảnh và danh sách vào #{folder}.")
+      end
+
+      def base_name(model)
+        model.path.to_s.empty? ? 'so-do' : File.basename(model.path, '.skp')
       end
 
       def select_group(key)
