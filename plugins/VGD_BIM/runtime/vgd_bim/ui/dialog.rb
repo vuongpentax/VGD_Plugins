@@ -1325,6 +1325,10 @@ module VGD
           text += " Có #{plan[:counts][:duplicate]} dòng trùng tên." if plan[:counts][:duplicate] > 0
           emit('message', {text: text})
         end
+        # Lệnh menu "Hút / đổ tag" khi cửa sổ Soạn tag đang mở (VGD::BIM.toggle_tag_paint): bật / thoát công cụ như nút trong cửa sổ.
+        def paint_shortcut(name)
+          safely { tm_paint_start('name' => name) }
+        end
         # Cửa sổ khác (Đổi tên, Soạn tag) vừa sửa model: bảng đang hiện thì đọc lại để thấy tên / tag mới.
         def reload_table
           safely { table_build } if @ready && @mode == 'table' && @dialog.visible? && @table_records

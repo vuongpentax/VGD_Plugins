@@ -43,6 +43,8 @@ Mở bằng **Extensions → VGD → VGD BIM → Đổi tên** hoặc **Công c�
 5. Cần thì dùng **Thay → Bằng**, **AA** (viết hoa), **123** (thêm 01, 02... khi nhiều món cùng tên mới), **↺** (bỏ tên mới chưa áp dụng).
 6. Bấm **Áp dụng (n)**. Cả lần là một bước hoàn tác (Ctrl+Z). Món bị khóa không đổi.
 
+**Phím tắt cho hút / đổ tag**: vào **Window → Preferences → Shortcuts**, gõ "Hút" vào ô lọc, chọn **Extensions/VGD/VGD BIM/Hút / đổ tag**, bấm vào ô **Add Shortcut**, nhấn phím muốn dùng rồi bấm **+**. Nhấn phím đó là bật công cụ với tag vừa dùng gần nhất, nhấn lại để thoát (không cần mở cửa sổ Soạn tag).
+
 **Chọn sâu**: bật thì danh sách có thêm các group / component nằm bên trong món đang chọn. Món có nhãn **dùng chung** nằm trong component / group có nhiều bản sao: đổi tên nó là đổi ở mọi bản sao.
 
 **Tự động: Ẩn**: bật thì món vừa đổi tên được ẩn trong SketchUp để không đặt nhầm lần nữa, danh sách chỉ còn món chưa đặt. Làm xong, hiện lại bằng **Edit → Unhide → All** (Hiện tất cả).

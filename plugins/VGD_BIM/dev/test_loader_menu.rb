@@ -51,7 +51,7 @@ loader = File.expand_path('../runtime/vgd_bim/loader.rb', __dir__)
 $opened = []
 require loader rescue (puts "load error: #{$!.class}: #{$!.message}"; raise)
 vgd = UI::MENU_ROOT['Extensions'].subs['VGD'].subs['VGD BIM']
-ok('menu Extensions > VGD > VGD BIM: Mở bảng khối lượng, Đổi tên, Soạn tag và Tải lại code', vgd && vgd.items.map(&:first) == ['Mở bảng khối lượng', 'Đổi tên', 'Soạn tag', 'Tải lại code'])
+ok('menu Extensions > VGD > VGD BIM: Mở bảng khối lượng, Đổi tên, Soạn tag, Hút / đổ tag và Tải lại code', vgd && vgd.items.map(&:first) == ['Mở bảng khối lượng', 'Đổi tên', 'Soạn tag', 'Hút / đổ tag', 'Tải lại code'])
 ok('menu VGD BIM không có submenu', vgd && vgd.subs.empty?)
 VGD::BIM.define_singleton_method(:open_panel) { |mode| $opened << mode }
 vgd.items.find { |n, _| n == 'Mở bảng khối lượng' }[1].call
@@ -62,6 +62,10 @@ ok('bấm Đổi tên mở cửa sổ Đổi tên riêng', $opened == ['table', 
 VGD::BIM.define_singleton_method(:open_tags) { $opened << 'tags' }
 vgd.items.find { |n, _| n == 'Soạn tag' }[1].call
 ok('bấm Soạn tag mở cửa sổ Soạn tag riêng', $opened.last == 'tags')
+VGD::BIM.define_singleton_method(:toggle_tag_paint) { $opened << 'paint' }
+vgd.items.find { |n, _| n == 'Hút / đổ tag' }[1].call
+ok('mục Hút / đổ tag (đặt phím tắt được) bật công cụ', $opened.last == 'paint')
+VGD::BIM.singleton_class.send(:remove_method, :toggle_tag_paint)
 buttons = $toolbars.first.items
 ok('thanh công cụ VGD BIM: Bảng khối lượng, Đổi tên, Soạn tag', buttons.map(&:tooltip) == ['VGD_BIM · Bảng khối lượng', 'VGD_BIM · Đổi tên', 'VGD_BIM · Soạn tag'])
 ok('mỗi nút có file icon SVG có thật', buttons.all? { |b| b.small_icon == b.large_icon && b.small_icon.end_with?('.svg') && File.file?(b.small_icon) })

@@ -2,6 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.2-beta.2: đã kiểm tra tự động
+
+Mục menu **Hút / đổ tag** (`VGD::BIM.toggle_tag_paint`) để đặt phím tắt (SketchUp chỉ cho đặt phím tắt cho lệnh có trong menu). Tag = tag gần đây đầu tiên còn có trong file (`recent_tags`), không có thì chế độ hút. Cửa sổ Soạn tag đang đóng: `ui/tag_paint_runner.rb` (`UI::TagPaintRunner` dùng lại phần hút / đổ của `TagManager`, không gửi gì cho cửa sổ); đang mở: `UI::Dialog#paint_shortcut`. Mở cửa sổ Soạn tag hoặc tải lại code thì công cụ bật bằng phím tắt thoát trước.
+
+- `dev/test_tag_tree.rb`: phím tắt khi cửa sổ đóng bật công cụ đổ với tag đã cho và Color by Tag, đổ được (một bước hoàn tác, Bảng khối lượng được báo), bấm lại thì thoát và trả Color by Tag, chưa có tag thì ở chế độ hút, dừng thì thoát công cụ.
+- `dev/test_loader_menu.rb`: menu có mục Hút / đổ tag, bấm gọi đúng lệnh.
+
+**Chưa xác minh trong SketchUp thật:** mục mới trong Window → Preferences → Shortcuts và phím tắt đã đặt, bật / thoát công cụ bằng phím tắt khi cửa sổ Soạn tag đóng và khi đang mở.
+
 ## Bản 1.1.2-beta.1: đã kiểm tra tự động
 
 Sửa lỗi chủ dự án báo: công cụ hút / đổ tag không hiện con trỏ nào trong vùng vẽ (Windows). Nguyên nhân: từ 1.1.1-beta.43 `TagPaintTool` không còn `onSetCursor`. Sửa: dùng lại hai file con trỏ SVG của beta.41 (ống hút, thùng sơn) qua `UI.create_cursor` / `UI.set_cursor`, chỉ Windows. Không dùng mã con trỏ có sẵn của SketchUp (không được công bố, mã sai có thể làm SketchUp văng).

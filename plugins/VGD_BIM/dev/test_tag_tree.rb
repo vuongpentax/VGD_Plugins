@@ -11,6 +11,7 @@ module VGD; module BIM
   def self.log(_m); end
   module Data
     def self.transaction(_model, name = nil); $transactions << name; yield; end
+    def self.serial; $transactions.size; end # như Data.serial thật: số lần ghi đã xong
   end
   module UI; end
 end; end
@@ -24,6 +25,7 @@ require File.join(ROOT, 'core/paste_keys')
 require File.join(ROOT, 'ui/bounds_preview')
 require File.join(ROOT, 'ui/tag_sample')
 require File.join(ROOT, 'ui/tag_manager')
+require File.join(ROOT, 'ui/tag_paint_runner')
 T = VGD::BIM::TagTree
 
 # ---- Logic thuần ----
@@ -794,6 +796,25 @@ ok('hai file con trỏ có trong plugin', %w[tag_sample tag_paint].all? { |f| Fi
 platform = :platform_osx
 mac = VGD::BIM::UI::TagPaintTool.new('X', on_paint: ->(*) {}, on_sample: ->(*) {}, on_done: -> {})
 ok('máy Mac: để SketchUp tự chọn con trỏ (SVG chỉ dùng trên Windows)', mac.onSetCursor == false)
+
+# ---- Lệnh menu "Hút / đổ tag" khi cửa sổ Soạn tag đang đóng (UI::TagPaintRunner, đặt phím tắt được) ----
+model, _probe, tags, _sel = paint_world
+$edited = 0
+VGD::BIM.define_singleton_method(:model_edited) { $edited += 1 }
+Sketchup.define_singleton_method(:active_model) { model }
+runner = VGD::BIM::UI::TagPaintRunner.new
+runner.toggle('A. WALL')
+rt = model.tool
+ok('phím tắt (cửa sổ đóng): bật công cụ đổ với tag gần nhất, bật Color by Tag', runner.active? && rt.is_a?(VGD::BIM::UI::TagPaintTool) && rt.tag_name == 'A. WALL' && !rt.sampling? && model.rendering_options['DisplayColorByLayer'] == true)
+target = FEnt.new(tags[3]); target.definition = FDef.new
+rt.onLButtonDown(0, 1, 1, FPickView.new(model, [[target]]))
+ok('phím tắt: bấm đối tượng là đổ tag, một bước hoàn tác, Bảng khối lượng được báo đọc lại', target.layer.equal?(tags[0]) && $transactions.last == 'VGD BIM · Đổ tag' && $edited == 1)
+runner.toggle('A. WALL')
+ok('bấm phím tắt lần nữa: thoát công cụ, trả lại Color by Tag', !runner.active? && model.tool.nil? && model.rendering_options['DisplayColorByLayer'] == false)
+runner.toggle('')
+ok('chưa có tag gần đây: bắt đầu ở chế độ hút', runner.active? && model.tool.sampling?)
+runner.stop
+ok('dừng (mở cửa sổ Soạn tag / tải lại code): thoát công cụ', !runner.active? && model.tool.nil?)
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)

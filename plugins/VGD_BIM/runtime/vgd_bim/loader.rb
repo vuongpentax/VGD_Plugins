@@ -13,7 +13,7 @@ module VGD
     # Thứ tự nạp code. Dùng chung cho lúc mở SketchUp và lúc "Tải lại code".
     FILES = %w[core/locale core/schema core/storage core/settings core/model_settings core/images core/clipboard_image core/paste_keys core/legacy_migration core/row_order core/sheet_lock core/data core/tags core/geometry core/view_fit core/scanner core/preset core/photo_settings core/front core/front_probe core/front_align core/measure core/measure_probe core/tag_rules core/tag_catalog core/folder_rules core/tag_tree core/xlsx_reader core/tag_excel core/formula core/quantity core/material_library core/check_rules core/snapshots core/custom_columns core/vgd_id core/object_code core/bridge core/bridge_provider core/levels core/room_openings core/rooms core/opening_probe core/room_detect core/room_detect_probe core/room_volume core/structure_source core/table core/data_bridge core/rename core/rename_list core/validator
                intake/mapping_rules intake/detector intake/raw_scanner intake/mapping intake/converter core/report_exporter core/xlsx_formulas core/table_report
-               ui/bounds_preview ui/capture ui/image_actions ui/front_actions ui/tag_auto ui/tag_sample ui/tag_manager ui/dialog ui/rename_window].freeze
+               ui/bounds_preview ui/capture ui/image_actions ui/front_actions ui/tag_auto ui/tag_sample ui/tag_manager ui/tag_paint_runner ui/dialog ui/rename_window].freeze
     @log_counts = Hash.new(0)
     def self.log(message)
       return if @log_counts.values.inject(0, :+) >= 100
@@ -39,6 +39,7 @@ module VGD
     end
     # Cửa sổ Soạn tag riêng (ui/dialog.rb với kind :tags): mở từ menu, thanh công cụ, vẫn dùng được khi đã đóng cửa sổ chính.
     def self.open_tags
+      @paint_runner.stop if @paint_runner && @paint_runner.active? # công cụ bật bằng phím tắt nhường cho cửa sổ (không hai nơi cùng giữ công cụ)
       @tags = UI::Dialog.new('tags', :tags) if @tags.nil? || @tags.closed?
       @tags.show
     end
@@ -48,6 +49,16 @@ module VGD
       return unless @panel && !@panel.closed?
       ::UI.stop_timer(@edit_timer) if @edit_timer
       @edit_timer = ::UI.start_timer(0.3, false) { @edit_timer = nil; @panel.reload_table if @panel && !@panel.closed? }
+    end
+    # Lệnh menu "Hút / đổ tag" (đặt phím tắt trong Window > Preferences > Shortcuts): bật công cụ với tag dùng gần nhất có trong model
+    # (chưa có thì bắt đầu ở chế độ hút), bấm lại khi đang chạy thì thoát. Không mở cửa sổ Soạn tag; cửa sổ đang mở thì công cụ chạy qua cửa sổ.
+    def self.toggle_tag_paint
+      return @paint_runner.toggle('') if @paint_runner && @paint_runner.active?
+      model = Sketchup.active_model
+      return unless model
+      name = Array(Settings.read['recent_tags']).find { |tag| Tags.find_layer(model, tag) }.to_s
+      return @tags.paint_shortcut(name) if @tags && !@tags.closed?
+      (@paint_runner ||= UI::TagPaintRunner.new).toggle(name)
     end
     # Nút trên thanh công cụ (quy tắc chung của repo): cửa sổ đang mở thì bấm lại để đóng, đang đóng thì mở.
     # name: :table (cửa sổ chính, mở ở Bảng khối lượng), :rename, :tags. Mục menu vẫn chỉ mở.
@@ -80,6 +91,8 @@ module VGD
           nil
         end
       end
+      @paint_runner.stop if @paint_runner # công cụ hút / đổ tag bật bằng phím tắt: thoát trước khi nạp lại
+      @paint_runner = nil
       @panel = nil
       @rename = nil
       @tags = nil
@@ -110,6 +123,7 @@ unless file_loaded?(__FILE__)
   vgd_menu.add_item('Mở bảng khối lượng') { VGD::BIM.open_panel('table') }
   vgd_menu.add_item('Đổi tên') { VGD::BIM.open_rename }
   vgd_menu.add_item('Soạn tag') { VGD::BIM.open_tags }
+  vgd_menu.add_item('Hút / đổ tag') { VGD::BIM.toggle_tag_paint }
   vgd_menu.add_item('Tải lại code') { VGD::BIM.reload }
   ::UI.add_context_menu_handler do |context|
     if Sketchup.active_model.selection.any? { |e| VGD::BIM::Data.supported?(e) }
