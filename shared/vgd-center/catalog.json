@@ -239,7 +239,7 @@
       "id": "bim",
       "name": "VGD BIM",
       "extension_name": "VGD BIM",
-      "version": "1.1.0",
+      "version": "1.1.1",
       "release_channel": "stable",
       "description": "Bảng khối lượng, ảnh món, đổi tên và quản lý tag cho dữ liệu mô hình nội thất.",
       "guide": true,
@@ -247,16 +247,23 @@
       "guide_url": "https://vuongpentax.github.io/VGD_Plugins/guides/bim/",
       "minimum_sketchup": "22.0.0",
       "download": {
-        "filename": "VGD_BIM_v1.1.0.rbz",
-        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-bim-v1.1.0/VGD_BIM_v1.1.0.rbz",
-        "size": 331009,
-        "sha256": "e1e90dea8179ac4738eb43f50d4247b1026ae2928dbe12761a15e74c81732a2b"
+        "filename": "VGD_BIM_v1.1.1.rbz",
+        "url": "https://github.com/vuongpentax/VGD_Plugins/releases/download/vgd-bim-v1.1.1/VGD_BIM_v1.1.1.rbz",
+        "size": 448383,
+        "sha256": "f846f4f7c2ac2a71124179bb070952490f9812ab14e884d9c1df75e96ae65cb1"
       },
       "allowed_paths": [
         "vgd_bim.rb",
         "vgd_bim/"
       ],
       "releases": [
+        {
+          "version": "1.1.1",
+          "release_channel": "stable",
+          "published_at": "2026-11-28",
+          "tag": "vgd-bim-v1.1.1",
+          "url": "https://github.com/vuongpentax/VGD_Plugins/releases/tag/vgd-bim-v1.1.1"
+        },
         {
           "version": "1.1.0",
           "release_channel": "stable",
