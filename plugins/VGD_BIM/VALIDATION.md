@@ -2,6 +2,14 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
+## Bản 1.1.2-beta.1: đã kiểm tra tự động
+
+Sửa lỗi chủ dự án báo: công cụ hút / đổ tag không hiện con trỏ nào trong vùng vẽ (Windows). Nguyên nhân: từ 1.1.1-beta.43 `TagPaintTool` không còn `onSetCursor`. Sửa: dùng lại hai file con trỏ SVG của beta.41 (ống hút, thùng sơn) qua `UI.create_cursor` / `UI.set_cursor`, chỉ Windows. Không dùng mã con trỏ có sẵn của SketchUp (không được công bố, mã sai có thể làm SketchUp văng).
+
+- `dev/test_tag_tree.rb`: chế độ hút đặt con trỏ ống hút, chế độ đổ đặt con trỏ thùng sơn (đúng file, điểm nóng), mỗi con trỏ tạo một lần, hai file có trong plugin, máy Mac để SketchUp tự chọn.
+
+**Chưa xác minh trong SketchUp thật:** con trỏ hiện ra và đổi khi nhấn Alt, điểm nóng (đầu ống hút / giọt sơn) trúng đúng đối tượng, cỡ con trỏ trên màn hình độ phân giải cao.
+
 ## Bản 1.1.1 (ổn định, chốt 28/11/2026)
 
 Cùng mã với 1.1.1-beta.59, chỉ đổi số phiên bản. Chủ dự án đã thử bản beta.59 trong SketchUp và chốt phát hành. Đã chạy lại đủ test tự động của plugin trước khi đóng gói (`dev/run_tests.rb` và các bộ Playwright). Những mục "chưa xác minh" ghi ở từng bản beta bên dưới là danh sách tự động ghi lúc làm, không phải biên bản thử của chủ dự án.

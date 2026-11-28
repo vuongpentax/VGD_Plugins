@@ -1,7 +1,8 @@
 module VGD
   module BIM
     module UI
-      # Công cụ hút / đổ tag, cách dùng giống công cụ của 5D Auto Tag: dùng con trỏ mặc định của SketchUp, tên và màu tag hiện cạnh con trỏ,
+      # Công cụ hút / đổ tag, cách dùng giống công cụ của 5D Auto Tag: con trỏ ống hút / thùng sơn (assets/cursors, chủ dự án chọn ở 1.1.2-beta.1
+      # vì không đặt con trỏ thì SketchUp không vẽ con trỏ nào), tên và màu tag hiện cạnh con trỏ,
       # đối tượng sẽ được đổ tag được tô sáng (khung + màu nhạt) để biết đang ở cấp nào. Chữ trên con trỏ và dòng trạng thái dùng tiếng Anh
       # như 5D Auto Tag.
       # Chế độ đổ: bấm = đổ tag hiện tại lên đối tượng; Alt = đổi sang chế độ hút (và ngược lại); Ctrl = đổi cấp đối tượng
@@ -19,6 +20,10 @@ module VGD
         # Phím đổi chế độ: [phím, cờ của chuột]. Cả hai đường đều được dùng vì có máy SketchUp không gửi onKeyDown đủ lần cho phím Alt.
         RETRIGGER_SECONDS = 0.35
         MODIFIERS = {alt: [ALT_KEY, ALT_MASK], ctrl: [CTRL_KEY, CTRL_MASK]}.freeze
+
+        # Con trỏ theo việc bấm sẽ làm: ống hút khi HÚT, thùng sơn khi ĐỔ. [tên file SVG trong assets/cursors, điểm nóng x, y] (điểm nóng là
+        # vòng tròn / giọt sơn ở góc dưới trái). SVG chỉ dùng được trên Windows như VGD Reference; máy khác để SketchUp tự chọn con trỏ.
+        CURSORS = {sample: ['tag_sample.svg', 6, 26], paint: ['tag_paint.svg', 5, 26]}.freeze
 
         # Các cấp đối tượng, thứ tự đổi bằng Ctrl; chữ hiện trong nhãn đen cạnh con trỏ (tiếng Anh như 5D Auto Tag).
         LEVELS = [:top, :deepest, :face].freeze
@@ -134,6 +139,15 @@ module VGD
           BIM.log("Thoát công cụ hút / đổ tag lỗi: #{error.message}")
         end
 
+        # Đặt con trỏ theo chế độ; true khi đã đặt, false để SketchUp tự chọn (máy không phải Windows hoặc thiếu file).
+        def onSetCursor
+          id = cursor(@sample_mode ? :sample : :paint)
+          id ? ::UI.set_cursor(id) : false
+        rescue StandardError => error
+          log_draw_error("Đặt con trỏ hút / đổ tag lỗi: #{error.message}")
+          false
+        end
+
         # Chế độ hút: nhãn tên + màu tag đang hiển thị của đối tượng dưới con trỏ. Chế độ đổ: tô sáng đối tượng sẽ được đổ, nhãn tên tag
         # sẽ đổ (ô màu nhỏ ở góc) và nhãn đen ghi cấp đối tượng.
         def draw(view)
@@ -155,6 +169,15 @@ module VGD
         end
 
         private
+
+        def cursor(kind)
+          return nil unless Sketchup.platform == :platform_win
+          @cursors ||= {}
+          return @cursors[kind] if @cursors.key?(kind)
+          file, hot_x, hot_y = CURSORS.fetch(kind)
+          path = File.join(File.expand_path('../assets/cursors', __dir__), file)
+          @cursors[kind] = File.exist?(path) ? ::UI.create_cursor(path, hot_x, hot_y) : nil
+        end
 
         def modifier_for(key)
           found = MODIFIERS.find { |_name, (code, _mask)| code == key }

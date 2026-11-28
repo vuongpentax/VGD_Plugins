@@ -583,7 +583,7 @@ end
 model, probe, tags, sel = paint_world
 probe.tm_paint_start('name' => 'A. WALL')
 tool = model.tool
-ok('con trỏ dùng mặc định của SketchUp: công cụ không đặt con trỏ riêng, không còn file con trỏ', !tool.respond_to?(:onSetCursor) && !Dir.exist?(File.join(ROOT, 'assets', 'cursors')))
+ok('công cụ tự đặt con trỏ (không đặt thì SketchUp không vẽ con trỏ nào, lỗi trước 1.1.2-beta.1)', tool.respond_to?(:onSetCursor))
 ok('mới bật công cụ có tag: chế độ đổ, cấp trên cùng', !tool.sampling? && tool.level == :top)
 g1 = FEnt.new(tags[0]); g1.definition = FDef.new
 g2 = FEnt.new(tags[3]); g2.definition = FDef.new
@@ -774,6 +774,26 @@ tm2 = VGD::BIM::UI::TagPaintTool.new('X', on_paint: ->(*) {}, on_sample: ->(*) {
 tm2.onMouseMove(VGD::BIM::UI::TagPaintTool::ALT_MASK, 1, 1, FDrawView.new(model, []))
 ok('Alt chỉ báo qua cờ chuột (onKeyDown chưa tới): cũng chặn menu một lần', $menu_cancels == 2 && tm2.sampling?)
 VGD::BIM::PasteKeys.define_singleton_method(:cancel_alt_menu) { |**kw| real_cancel.call(**kw) }
+
+# ---- Con trỏ: ống hút khi hút, thùng sơn khi đổ (1.1.2-beta.1: không đặt con trỏ thì SketchUp không vẽ con trỏ nào) ----
+$cursors_made = []
+$cursor_set = []
+module ::UI; end unless defined?(::UI)
+::UI.define_singleton_method(:create_cursor) { |path, x, y| $cursors_made << [File.basename(path), x, y]; 900 + $cursors_made.size }
+::UI.define_singleton_method(:set_cursor) { |id| $cursor_set << id; true }
+platform = :platform_win
+Sketchup.define_singleton_method(:platform) { platform }
+cur = VGD::BIM::UI::TagPaintTool.new('', on_paint: ->(*) {}, on_sample: ->(*) {}, on_done: -> {})
+ok('chưa có tag: con trỏ ống hút (file có thật, điểm nóng ở vòng hút)', cur.onSetCursor == true && $cursors_made.last == ['tag_sample.svg', 6, 26] && $cursor_set.last == 901)
+cur.tag_name = 'A. WALL'
+cur.instance_variable_set(:@sample_mode, false)
+ok('chế độ đổ: con trỏ thùng sơn', cur.onSetCursor == true && $cursors_made.last == ['tag_paint.svg', 5, 26] && $cursor_set.last == 902)
+cur.onSetCursor
+ok('mỗi con trỏ chỉ tạo một lần', $cursors_made.size == 2 && $cursor_set.last == 902)
+ok('hai file con trỏ có trong plugin', %w[tag_sample tag_paint].all? { |f| File.file?(File.join(ROOT, 'assets/cursors', "#{f}.svg")) })
+platform = :platform_osx
+mac = VGD::BIM::UI::TagPaintTool.new('X', on_paint: ->(*) {}, on_sample: ->(*) {}, on_done: -> {})
+ok('máy Mac: để SketchUp tự chọn con trỏ (SVG chỉ dùng trên Windows)', mac.onSetCursor == false)
 
 puts $fails.zero? ? 'Done: tất cả PASS' : "Done: #{$fails} FAIL"
 exit($fails.zero? ? 0 : 1)
