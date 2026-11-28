@@ -162,6 +162,10 @@ Relationship đầy đủ (Object → Object / Room / Level / Type / Material), 
 4. ~~Phòng 3D~~ **Đảo (19/11/2026):** BIM dựng khối phòng và dò vùng phòng từ tường (xem cột mốc 2b).
 5. Cầu nối: ai gán VGD ID khi plugin dựng hình tạo đối tượng (đề xuất mục 1b điểm 3); danh bạ mở rộng từ `shared/vgd-center/catalog.json` (đã chốt hướng, còn thiết kế chi tiết).
 
+## 7b. Việc nhắc chủ dự án xử lý sau
+
+1. **Nút toolbar bật / tắt cho các plugin khác** (ghi 28/11/2026): quy tắc chung mới trong `CLAUDE.md` gốc: nút toolbar mở hộp thoại thì bấm lại để đóng. VGD BIM đã làm ở 1.1.1-beta.59. Các plugin có toolbar chưa rà: Structure, Dim, Scenes, Library, Transform, Reference, Image Importer, Cabinet Draw, Center. Khi xử lý: xem nút nào mở hộp thoại, sửa thành bật / tắt, tăng phiên bản và gửi bản thử từng plugin.
+
 ## 8. Trạng thái
 
 | Cột mốc | Trạng thái |
