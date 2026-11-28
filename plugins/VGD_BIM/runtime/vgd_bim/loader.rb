@@ -49,6 +49,13 @@ module VGD
       ::UI.stop_timer(@edit_timer) if @edit_timer
       @edit_timer = ::UI.start_timer(0.3, false) { @edit_timer = nil; @panel.reload_table if @panel && !@panel.closed? }
     end
+    # Nút trên thanh công cụ (quy tắc chung của repo): cửa sổ đang mở thì bấm lại để đóng, đang đóng thì mở.
+    # name: :table (cửa sổ chính, mở ở Bảng khối lượng), :rename, :tags. Mục menu vẫn chỉ mở.
+    def self.toggle_window(name)
+      window = {table: @panel, rename: @rename, tags: @tags}.fetch(name)
+      return window.close if window && !window.closed? && window.visible?
+      {table: -> { open_panel('table') }, rename: -> { open_rename }, tags: -> { open_tags }}.fetch(name).call
+    end
     # Nạp lại toàn bộ code của plugin mà không cần mở lại SketchUp.
     # Dùng sau khi cài đè bản mới (.rbz). Menu và thanh công cụ giữ như cũ cho tới lần mở SketchUp sau.
     # Kiểm tra cú pháp cả bộ file trước: có lỗi thì giữ nguyên bản đang chạy.
@@ -110,14 +117,14 @@ unless file_loaded?(__FILE__)
     end
   end
   toolbar = ::UI::Toolbar.new('VGD BIM')
-  command = ::UI::Command.new('VGD_BIM') { VGD::BIM.open_panel('table') }
+  command = ::UI::Command.new('VGD_BIM') { VGD::BIM.toggle_window(:table) }
   command.tooltip = 'VGD_BIM · Bảng khối lượng'
   command.status_bar_text = 'VGD_BIM: mở bảng khối lượng của đối tượng đang chọn'
   command.small_icon = command.large_icon = File.join(VGD::BIM::ROOT, 'assets', 'icons', 'information.svg')
   toolbar.add_item(command)
   # Hai cửa sổ dùng nhiều: Đổi tên và Soạn tag (icon assets/icons/rename.svg, tag.svg theo chuẩn icon VGD).
-  [['VGD_BIM_Rename', 'VGD_BIM · Đổi tên', 'VGD_BIM: đổi tên các group / component đang chọn', 'rename', -> { VGD::BIM.open_rename }],
-   ['VGD_BIM_Tags', 'VGD_BIM · Soạn tag', 'VGD_BIM: soạn, gán và quản lý tag', 'tag', -> { VGD::BIM.open_tags }]].each do |name, tip, status, icon, action|
+  [['VGD_BIM_Rename', 'VGD_BIM · Đổi tên', 'VGD_BIM: đổi tên các group / component đang chọn', 'rename', -> { VGD::BIM.toggle_window(:rename) }],
+   ['VGD_BIM_Tags', 'VGD_BIM · Soạn tag', 'VGD_BIM: soạn, gán và quản lý tag', 'tag', -> { VGD::BIM.toggle_window(:tags) }]].each do |name, tip, status, icon, action|
     item = ::UI::Command.new(name) { action.call }
     item.tooltip = tip
     item.status_bar_text = status

@@ -2,7 +2,15 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.58: đã kiểm tra tự động
+## Bản 1.1.1-beta.59: đã kiểm tra tự động
+
+Beta.59: nút trên thanh công cụ là nút bật / tắt (`VGD::BIM.toggle_window`, quy tắc chung mới trong `CLAUDE.md` gốc của repo).
+
+- `dev/test_loader_menu.rb`: mỗi nút (Bảng khối lượng, Đổi tên, Soạn tag) mở khi cửa sổ đóng, bấm lại khi cửa sổ đang mở thì đóng mà không mở thêm, bấm tiếp thì mở lại.
+
+**Chưa xác minh trong SketchUp thật:** bấm nút khi cửa sổ đang mở nhưng bị cửa sổ khác che (vẫn tính là đang mở nên sẽ đóng).
+
+## Bản 1.1.1-beta.58 (trước đó)
 
 Beta.58: sửa lỗi chủ dự án báo ở beta.57: cửa sổ Soạn tag vài giây sau tự hiện Bảng khối lượng. Nguyên nhân: `config` của cửa sổ Soạn tag cũng làm giao diện chạy `restoreView`; với file có sheet khóa, `applyRowsLock` gọi `table_lock_apply` (và `applySheetExclude` gọi `settings_save`), Ruby dựng bảng trong cửa sổ Soạn tag. Sửa: không `restoreView` khi `config.window = 'tags'`, và `UI::Dialog#table_build` bỏ qua ở cửa sổ Soạn tag.
 

@@ -69,6 +69,26 @@ $opened.clear
 buttons[1].block.call
 buttons[2].block.call
 ok('bấm nút Đổi tên / Soạn tag trên thanh công cụ mở đúng cửa sổ', $opened == ['rename', 'tags'])
+buttons[0].block.call
+ok('bấm nút Bảng khối lượng khi cửa sổ đang đóng: mở Bảng khối lượng', $opened.last == 'table')
+# Bấm lại nút khi cửa sổ đang mở: đóng cửa sổ đó, không mở thêm.
+class ToggleStub
+  attr_reader :closes
+  def initialize(visible); @visible = visible; @closes = 0; end
+  def closed?; @closes > 0; end
+  def visible?; @visible; end
+  def close; @closes += 1; end
+end
+[[:@panel, 0, 'table'], [:@rename, 1, 'rename'], [:@tags, 2, 'tags']].each do |ivar, index, label|
+  open_window = ToggleStub.new(true)
+  VGD::BIM.instance_variable_set(ivar, open_window)
+  $opened.clear
+  buttons[index].block.call
+  ok("bấm lại nút #{label} khi cửa sổ đang mở: đóng cửa sổ, không mở thêm", open_window.closes == 1 && $opened.empty?)
+  buttons[index].block.call
+  ok("bấm nút #{label} lần nữa (cửa sổ đã đóng): mở lại", $opened == [label])
+  VGD::BIM.instance_variable_set(ivar, nil)
+end
 VGD::BIM.singleton_class.send(:remove_method, :open_tags)
 ok('phiên bản theo chuẩn repo x.y.z hoặc x.y.z-beta.N, không có chữ v', VGD::BIM::VERSION.match?(/\A\d+\.\d+\.\d+(-beta\.\d+)?\z/))
 # Tải lại code: thành công, và lỗi cú pháp được chặn trước khi nạp (giữ nguyên bản đang chạy).

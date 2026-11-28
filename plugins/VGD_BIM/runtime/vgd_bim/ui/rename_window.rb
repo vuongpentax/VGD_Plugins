@@ -38,6 +38,7 @@ module VGD
         def show; @dialog.visible? ? @dialog.bring_to_front : @dialog.show; end
         def close; @dialog.close; end
         def closed?; @closed; end
+        def visible?; @dialog.visible?; end
 
         # Gom nhiều sự kiện chọn liên tiếp thành một lần đọc.
         def selection_changed

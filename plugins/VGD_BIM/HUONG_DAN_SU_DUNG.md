@@ -1,6 +1,6 @@
 # VGD_BIM — Hướng dẫn nhanh
 
-Mở bằng **Extensions → VGD → VGD BIM → Mở bảng khối lượng**: cửa sổ mở thẳng tab **Bảng khối lượng**. Cửa sổ chính có 4 tab: Bảng khối lượng · Thông tin · Quét & xuất · Phân loại. **Đổi tên** và **Soạn tag** là hai cửa sổ riêng, mở bằng nút trên thanh công cụ VGD BIM hoặc menu **Extensions → VGD → VGD BIM** (nút trên thanh công cụ hiện sau khi mở lại SketchUp).
+Mở bằng **Extensions → VGD → VGD BIM → Mở bảng khối lượng**: cửa sổ mở thẳng tab **Bảng khối lượng**. Cửa sổ chính có 4 tab: Bảng khối lượng · Thông tin · Quét & xuất · Phân loại. **Đổi tên** và **Soạn tag** là hai cửa sổ riêng, mở bằng nút trên thanh công cụ VGD BIM hoặc menu **Extensions → VGD → VGD BIM** (nút trên thanh công cụ hiện sau khi mở lại SketchUp). Bấm lại nút trên thanh công cụ khi cửa sổ đang mở thì cửa sổ đóng.
 
 ## Bóc khối lượng nhanh (Bảng khối lượng)
 

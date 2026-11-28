@@ -1,4 +1,4 @@
-# VGD BIM 1.1.1-beta.58
+# VGD BIM 1.1.1-beta.59
 
 Bản thử của 1.1.1 (bản ổn định gần nhất là 1.1.0). Cài bản mới bằng Extension Manager rồi khởi động lại SketchUp. Plugin không tự hiện popup cập nhật: VGD Center báo bản mới.
 
@@ -22,7 +22,7 @@ Hoặc chạy `dev/deploy.ps1` để cài nguồn runtime vào Plugins của Ske
 - Nút **Loại trừ tag** luôn nằm trên thanh công cụ, cạnh Chọn cột (bấm để mở danh sách tag); đang loại trừ thì nút ghi **Loại trừ N tag**, vì số đo đã khác.
 - Không còn hàng Tùy chọn / Công cụ phía dưới bảng: dưới bảng chỉ còn thanh sheet và thanh trạng thái.
 
-**Ba cửa sổ riêng, ba nút trên thanh công cụ VGD BIM** (từ 1.1.1-beta.57): **Bảng khối lượng** (cửa sổ chính), **Đổi tên** và **Soạn tag**, mỗi cái một nút trên thanh công cụ và một mục trong **Extensions → VGD → VGD BIM**. Đổi tên và Soạn tag là cửa sổ đứng riêng, mở cùng lúc với cửa sổ chính được, đóng cửa sổ chính vẫn dùng được. Sửa tên hoặc tag ở hai cửa sổ này thì Bảng khối lượng đang mở tự đọc lại. Nút mới trên thanh công cụ chỉ hiện sau khi **mở lại SketchUp** (Tải lại code không thêm nút); nếu thanh công cụ cũ không hiện nút mới, bật lại nó ở **View → Toolbars → VGD BIM**.
+**Ba cửa sổ riêng, ba nút trên thanh công cụ VGD BIM** (từ 1.1.1-beta.57): **Bảng khối lượng** (cửa sổ chính), **Đổi tên** và **Soạn tag**, mỗi cái một nút trên thanh công cụ và một mục trong **Extensions → VGD → VGD BIM**. Đổi tên và Soạn tag là cửa sổ đứng riêng, mở cùng lúc với cửa sổ chính được, đóng cửa sổ chính vẫn dùng được. Sửa tên hoặc tag ở hai cửa sổ này thì Bảng khối lượng đang mở tự đọc lại. Ba nút là nút bật / tắt (từ beta.59): bấm khi cửa sổ đang đóng thì mở, bấm lại khi cửa sổ đang mở thì đóng (nút Bảng khối lượng đóng cửa sổ chính dù đang ở tab nào). Mục trong menu vẫn chỉ mở. Nút mới trên thanh công cụ chỉ hiện sau khi **mở lại SketchUp** (Tải lại code không thêm nút); nếu thanh công cụ cũ không hiện nút mới, bật lại nó ở **View → Toolbars → VGD BIM**.
 
 Cửa sổ chính có 4 tab (nút **Preset** cạnh nút Sáng/Tối ở thanh đầu dùng chung cho mọi tab); **Soạn tag** (mục 5 dưới đây) từ beta.57 là cửa sổ riêng:
 
