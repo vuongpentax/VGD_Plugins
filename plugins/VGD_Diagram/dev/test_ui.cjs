@@ -126,6 +126,65 @@ function check(name, ok) {
   check('phát lắp ráp: các mảnh đã về đúng vị trí lắp',
     afterPlay.positions.every((p, i) => Math.hypot(...p) - Math.hypot(...assembled.positions[i]) < 1e-3));
 
+  // ---- Tách theo cụm: danh sách, hướng tách riêng, khoảng cách nhập tay / tự động, góc nhìn ----
+  const optionTexts = (selector) => page.locator(selector + ' option').allTextContents();
+  check('cụm: danh sách có "Tất cả" và đủ 3 cấu kiện',
+    JSON.stringify(await optionTexts('#explode-part')) === JSON.stringify(['Tất cả', '1. Đáy', '2. Cánh', '3. Chân']));
+  check('hướng tách: đủ 8 lựa chọn đúng thứ tự',
+    JSON.stringify(await optionTexts('#explode-dir')) === JSON.stringify(['Tự động', 'Giữ nguyên', 'Trước', 'Sau', 'Trái', 'Phải', 'Lên', 'Xuống']));
+  check('góc nhìn: đủ 5 lựa chọn',
+    JSON.stringify(await optionTexts('#viewpoint')) === JSON.stringify(['Góc đang xem', 'Trước trái', 'Trước phải', 'Sau trái', 'Sau phải']));
+
+  await page.selectOption('#explode-part', '1');
+  await page.selectOption('#explode-dir', 'left');
+  await page.locator('#explode').fill('100');
+  let tilt = await dbg();
+  const cánh = tilt.offsets[1];
+  check('hướng Trái: cụm Cánh chỉ tách theo -X', cánh[0] < -1 && Math.abs(cánh[1]) < 1e-6 && Math.abs(cánh[2]) < 1e-6);
+
+  await page.selectOption('#explode-part', '2');
+  await page.selectOption('#explode-dir', 'still');
+  tilt = await dbg();
+  check('Giữ nguyên: cụm Chân không di chuyển', tilt.offsets[2].every((v) => Math.abs(v) < 1e-6));
+
+  await page.selectOption('#explode-part', '0');
+  await page.selectOption('#explode-dir', 'front');
+  await page.locator('#explode-auto').uncheck();
+  await page.locator('#explode-distance').fill('150');
+  await page.locator('#explode-distance').dispatchEvent('change');
+  tilt = await dbg();
+  check('khoảng cách nhập tay 150 mm: cụm Đáy tách đúng 150 mm theo -Y',
+    Math.abs(tilt.offsets[0][1] + 150) < 1e-6 && Math.abs(tilt.offsets[0][0]) < 1e-6);
+  check('khoảng cách nhập tay: ô hiện 150', (await page.locator('#explode-distance').inputValue()) === '150');
+
+  await page.locator('#explode-auto').check();
+  tilt = await dbg();
+  check('bật Tự động: khoảng cách không còn là 150 mm và ô bị khóa',
+    Math.abs(Math.hypot(...tilt.offsets[0]) - 150) > 1 && (await page.locator('#explode-distance').isDisabled()));
+
+  await page.selectOption('#explode-part', 'all');
+  check('Tất cả với nhiều hướng khác nhau: hiện "Nhiều hướng"',
+    (await page.locator('#explode-dir').inputValue()) === 'mixed');
+  await page.selectOption('#explode-dir', 'up');
+  tilt = await dbg();
+  check('Tất cả đổi sang Lên: mọi cụm tách theo +Z',
+    tilt.offsets.every((o) => o[2] > 0 && Math.abs(o[0]) < 1e-6 && Math.abs(o[1]) < 1e-6));
+
+  await page.selectOption('#viewpoint', 'front_left');
+  await page.waitForTimeout(120);
+  tilt = await dbg();
+  check('góc Trước trái: camera ở phía -X, -Y', tilt.camera[0] < -1 && tilt.camera[1] < -1);
+  await page.selectOption('#viewpoint', 'back_right');
+  await page.waitForTimeout(120);
+  tilt = await dbg();
+  check('góc Sau phải: camera ở phía +X, +Y', tilt.camera[0] > 1 && tilt.camera[1] > 1);
+
+  // Trả về mặc định để các phần sau của kiểm thử không bị ảnh hưởng.
+  await page.selectOption('#explode-part', 'all');
+  await page.selectOption('#explode-dir', 'auto');
+  await page.selectOption('#viewpoint', 'current');
+  await page.locator('#explode').fill('0');
+
   // Không có mảnh nào có thứ tự: nút phát bị khóa
   await page.evaluate(() => window.VGD.onScene({ truncated: false, parts: [{ id: 1, name: 'A', order: null, positions: [0, 0, 0, 1, 0, 0, 0, 1, 0] }] }));
   check('không có thứ tự: nút Phát lắp ráp bị khóa', await page.locator('#play').isDisabled());

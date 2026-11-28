@@ -29,6 +29,28 @@
         <input type="range" id="explode" min="0" max="100" value="0" aria-label="Tách rời các cấu kiện">
         <span id="explode-value" class="count">0 %</span>
       </div>
+      <div class="explode-options">
+        <label>Cụm<select id="explode-part" aria-label="Cụm cần chỉnh" disabled></select></label>
+        <label>Hướng tách<select id="explode-dir" aria-label="Hướng tách cho cụm đã chọn" disabled>
+          <option value="auto">Tự động</option>
+          <option value="still">Giữ nguyên</option>
+          <option value="front">Trước</option>
+          <option value="back">Sau</option>
+          <option value="left">Trái</option>
+          <option value="right">Phải</option>
+          <option value="up">Lên</option>
+          <option value="down">Xuống</option>
+        </select></label>
+        <label>Góc nhìn<select id="viewpoint" aria-label="Góc nhìn" disabled>
+          <option value="current">Góc đang xem</option>
+          <option value="front_left">Trước trái</option>
+          <option value="front_right">Trước phải</option>
+          <option value="back_left">Sau trái</option>
+          <option value="back_right">Sau phải</option>
+        </select></label>
+        <label>Khoảng cách (mm)<input type="number" id="explode-distance" min="0" step="1" aria-label="Khoảng cách tách (mm)" disabled></label>
+        <label class="explode-auto"><input type="checkbox" id="explode-auto" checked disabled> Tự động</label>
+      </div>
       <div class="toolbar">
         <button type="button" id="play" class="quiet" onclick="VGD.play()" disabled>Phát lắp ráp</button>
         <button type="button" class="quiet" onclick="VGD.reset()">Đặt lại</button>
