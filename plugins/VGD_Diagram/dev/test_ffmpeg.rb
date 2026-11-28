@@ -1,12 +1,21 @@
 # encoding: UTF-8
 # Kiểm tra ghép MP4 và xóa khung hình (ffmpeg.rb, dialog.rb: finish_frames) bằng ffmpeg thật trên máy.
 # Chạy từ plugins/VGD_Diagram: ruby dev/test_ffmpeg.rb  (cần ffmpeg trong PATH)
+require 'json'
+require 'base64'
 require 'tmpdir'
 require 'fileutils'
 require 'open3'
 
 $LOADED_FEATURES << 'sketchup.rb'
 $defaults = {}
+module Geom
+  class Transformation
+    def initialize(*); end
+    def *(other); self; end
+  end
+end
+
 module Sketchup
   def self.read_default(section, key, default = nil)
     $defaults.fetch([section, key], default)
@@ -31,10 +40,17 @@ module UI
   end
 
   def self.openpanel(*)
-    nil
+    $open_path
+  end
+
+  def self.savepanel(*)
+    $savepanel_path
   end
 end
 
+require File.expand_path('../runtime/vgd_diagram/tree', __dir__)
+require File.expand_path('../runtime/vgd_diagram/model_io', __dir__)
+require File.expand_path('../runtime/vgd_diagram/scene', __dir__)
 require File.expand_path('../runtime/vgd_diagram/dialog', __dir__)
 require File.expand_path('../runtime/vgd_diagram/ffmpeg', __dir__)
 
@@ -50,7 +66,8 @@ end
 
 # Ghi lại thông báo gửi về giao diện thay vì gửi thật (không có hộp thoại trong test).
 $sent = []
-D.define_singleton_method(:send_js) { |fn, data| $sent << [fn, data] }
+# Giống SketchUp: execute_script không trả về giá trị dùng được (nil).
+D.define_singleton_method(:send_js) { |fn, data| $sent << [fn, data]; nil }
 
 ffmpeg_ok = system('ffmpeg', '-version', out: File::NULL, err: File::NULL)
 abort 'Cần ffmpeg trong PATH để chạy test này.' unless ffmpeg_ok
@@ -163,6 +180,93 @@ Dir.mktmpdir do |dir|
   check('đường dẫn: báo khi file không tồn tại', missing)
   F.save_path('')
   check('đường dẫn: để trống là xóa cài đặt', F.saved_path.nil?)
+end
+
+# 10. Mở hộp thoại (đường đi thật của callback 'ready'): phải gửi đường dẫn ffmpeg đã lưu về giao diện
+module UI
+  class HtmlDialog
+    STYLE_DIALOG = 0
+    attr_reader :callbacks
+    def initialize(*)
+      @callbacks = {}
+      @visible = false
+    end
+    def set_file(*); end
+    def add_action_callback(name, &block)
+      @callbacks[name] = block
+    end
+    def execute_script(*); nil; end
+    def show; @visible = true; end
+    def visible?; @visible; end
+    def bring_to_front; end
+    def close; @visible = false; end
+  end
+end
+
+module Sketchup
+  class FakeSelection
+    def to_a; []; end
+  end
+  class FakeModel
+    def selection; FakeSelection.new; end
+    def entities; []; end
+    def path; ''; end
+    def find_entity_by_id(_id); nil; end
+  end
+  def self.active_model
+    @model ||= FakeModel.new
+  end
+end
+
+F.save_path(ffmpeg_path) # mục 9 đã xóa đường dẫn; lưu lại để kiểm tra đúng cái đang có
+D.send(:remove_instance_variable, :@dlg) if D.instance_variable_defined?(:@dlg)
+D.show
+ready = D.instance_variable_get(:@dlg).callbacks['ready']
+$sent.clear
+ready.call(nil, nil)
+settings = $sent.find { |fn, _| fn == 'onSettings' }
+check('mở hộp thoại: giao diện nhận đường dẫn ffmpeg đã lưu (onSettings)', !settings.nil? && settings[1]['ffmpegPath'] == ffmpeg_path)
+
+# 11. Các callback đi đúng đường đi thật: payload là chuỗi JSON như SketchUp gửi
+dlg = D.instance_variable_get(:@dlg)
+call = ->(name, json) { dlg.callbacks.fetch(name).call(nil, json) }
+Dir.mktmpdir do |dir|
+  png = File.join(dir, 'mau.png')
+  abort 'không tạo được PNG mẫu' unless system('ffmpeg', '-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=red:s=64x48', '-frames:v', '1', png)
+  png_b64 = Base64.strict_encode64(File.binread(png))
+
+  $sent.clear
+  call.call('save_ffmpeg', JSON.generate('path' => ffmpeg_path))
+  check('callback save_ffmpeg: lưu đường dẫn thật', F.saved_path == ffmpeg_path)
+
+  $sent.clear
+  call.call('save_ffmpeg', JSON.generate('path' => File.join(dir, 'khong-co.exe')))
+  check('callback save_ffmpeg: đường dẫn sai thì báo onError', $sent.any? { |fn, _| fn == 'onError' })
+
+  $sent.clear
+  $open_path = ffmpeg_path
+  call.call('pick_ffmpeg', '{}')
+  check('callback pick_ffmpeg: chọn file, lưu và gửi onSettings', F.saved_path == ffmpeg_path && $sent.any? { |fn, _| fn == 'onSettings' })
+
+  $sent.clear
+  $savepanel_path = File.join(dir, 'anh.jpg')
+  call.call('export_views', '{"format":"jpg"}')
+  check('callback export_views: mở hộp lưu và báo onExport jpg', $sent.any? { |fn, d| fn == 'onExport' && d['format'] == 'jpg' })
+  call.call('save_image', JSON.generate('key' => 'truoc', 'data' => "data:image/jpeg;base64,#{png_b64}"))
+  check('callback save_image: ghi ảnh .jpg đúng tên', File.file?(File.join(dir, 'anh-truoc.jpg')))
+
+  $sent.clear
+  $savepanel_path = File.join(dir, 'clip.png')
+  call.call('export_video', '{"format":"png"}')
+  check('callback export_video (png): báo onVideo png', $sent.any? { |fn, d| fn == 'onVideo' && d['format'] == 'png' })
+  3.times { |i| call.call('save_frame', JSON.generate('index' => i + 1, 'data' => "data:image/png;base64,#{png_b64}")) }
+  check('callback save_frame: ghi đủ 3 khung PNG', (1..3).all? { |i| File.file?(File.join(dir, format('clip-khung-%05d.png', i))) })
+  $answers = [IDYES, IDYES]
+  $sent.clear
+  call.call('video_done', '{"count":3,"fps":30}')
+  check('callback video_done: ghép được MP4 bằng ffmpeg thật', File.size?(File.join(dir, 'clip.mp4')).to_i > 0)
+  check('callback video_done: xóa khung khi đồng ý', Dir.glob(File.join(dir, 'clip-khung-*.png')).empty?)
+  check('callback video_done: báo kết quả cho giao diện', $sent.any? { |fn, _| fn == 'onToast' })
 end
 
 puts

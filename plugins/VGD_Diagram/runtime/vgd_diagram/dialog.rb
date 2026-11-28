@@ -28,7 +28,11 @@ module VGD
                                   width: 980, height: 680, min_width: 360, min_height: 480,
                                   resizable: true, style: UI::HtmlDialog::STYLE_DIALOG)
         @dlg.set_file(File.join(__dir__.dup.force_encoding(Encoding::UTF_8), 'dialog.html'))
-        callback('ready') { refresh_scope && push_tree && push_settings }
+        callback('ready') do
+          refresh_scope
+          push_tree
+          push_settings
+        end
         callback('refresh') { refresh_scope && push_tree }
         callback('select') { |json| select_group(JSON.parse(json).fetch('key')) }
         callback('save_orders') { |json| save_orders(JSON.parse(json).fetch('changes')) }

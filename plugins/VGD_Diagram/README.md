@@ -1,8 +1,14 @@
-# VGD Diagram 0.10.0-beta.1
+# VGD Diagram 0.10.1-beta.1
 
 Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các cấu kiện, số lượng và thứ tự lắp, để khách hàng và thợ lắp đặt dễ hiểu mô hình.
 
 ## Trạng thái
+
+**0.10.1-beta.1 (sửa lỗi ô đường dẫn ffmpeg không hiện khi mở).** Thay đổi so với 0.10.0-beta.1:
+
+- **Sửa:** khi mở hộp thoại, đường dẫn ffmpeg đã lưu không được gửi về ô nhập, vì một chuỗi lệnh dừng sớm. Đường dẫn vẫn được dùng khi ghép MP4; chỉ có ô hiển thị bị trống.
+- **Kiểm tra thêm:** test đi qua các callback với payload JSON như SketchUp gửi, gồm lưu/chọn ffmpeg, xuất ảnh JPG, xuất khung PNG và ghép MP4 (`dev/test_ffmpeg.rb`, 25/25).
+- **Chưa kiểm tra trong SketchUp thật.**
 
 **0.10.0-beta.1 (ô đường dẫn ffmpeg, video khớp thứ tự lắp).** Thay đổi so với 0.9.0-beta.1:
 
