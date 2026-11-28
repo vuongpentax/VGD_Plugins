@@ -2,7 +2,18 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.54: đã kiểm tra tự động
+## Bản 1.1.1-beta.55: đã kiểm tra tự động
+
+Beta.55: cửa sổ Đổi tên riêng. `core/rename_list.rb` (kiểm tra danh sách tên gửi lên, mẫu tên trên máy) và `ui/rename_window.rb` (cửa sổ `UI::HtmlDialog` riêng theo vùng chọn của SketchUp, một bước hoàn tác, ẩn món vừa đổi tên); giao diện `html/rename.html`, `rename.js`, `rename.css`.
+
+- `dev/test_rename_window.rb`: tên trống / quá 200 ký tự / có ký tự điều khiển / món lạ / gửi trùng / quá số món bị từ chối; mẫu tên làm sạch và đọc lại đúng tiếng Việt; cửa sổ gửi các món đang chọn (bỏ mặt, báo khóa, cả khi đang mở trong group khóa), tự cập nhật khi chọn lại, áp dụng một bước hoàn tác, món khóa / đã xóa / file khác không đổi gì, bật Ẩn thì ẩn và bỏ khỏi vùng chọn, mở file khác thì gắn sang file mới, đóng cửa sổ bỏ mọi observer.
+- `dev/test_loader_menu.rb`: menu có **Đổi tên**; tải lại code đóng rồi mở lại cửa sổ Đổi tên đang mở, không tự mở khi đang đóng.
+- `dev/test_ui_rename.cjs` (mới, có trong CI): gom món cùng định nghĩa, tiền tố + tên + hậu tố, đánh số khi trùng, bấm lại mẫu để bỏ, nhấp đúp gõ tay, Thay → Bằng, viết hoa, dữ liệu gửi khi Áp dụng (không gửi món khóa), thêm / xóa / lưu mẫu, giữ tên chưa áp dụng khi vùng chọn đổi, bản dịch tiếng Anh của mọi chữ và thông báo.
+- `dev/test_ui.cjs`, `dev/test_ui_images.cjs`: mục **Đổi tên...** của Công cụ mở cửa sổ riêng, **Đổi tên theo mẫu...** vẫn mở bảng cũ.
+
+**Chưa xác minh trong SketchUp thật:** cửa sổ mở / đóng / tải lại code trong SketchUp, theo vùng chọn khi chọn nhiều món hoặc chọn trong group đang mở, ẩn món sau khi đổi tên và hoàn tác, mở file khác khi cửa sổ đang mở, bộ gõ tiếng Việt trong ô nhập, vị trí và cỡ cửa sổ được nhớ.
+
+## Bản 1.1.1-beta.54 (trước đó)
 
 Beta.54: xuất Excel ghi ô tính toán thành công thức. `core/xlsx_formulas.rb` (dựng công thức theo khóa cột và dữ liệu tính của dòng: diện tích X*Z / X*Y, thành tiền, khối lượng tính theo cách tính và theo công thức tag, hao hụt, tiền vật liệu, SUBTOTAL cho nhóm / tổng, bỏ dòng không được cộng; không bao giờ chép chữ người dùng vào công thức), `core/xlsx.rb` (ô `<f>` kèm số đã tính, `calcPr fullCalcOnLoad`), `core/table_report.rb` (kiểm tra `key`, `si`, `calc`), `core/formula.rb` (so sánh, hàm ROUND / ROUNDUP / ROUNDDOWN / CEILING / MIN / MAX / IF / ABS / SQRT / PI tính bằng BigDecimal như Excel, `to_excel`), giao diện gửi khóa cột, hệ số đổi đơn vị, dữ liệu tính và tự thêm cột gốc ở cuối file Excel.
 

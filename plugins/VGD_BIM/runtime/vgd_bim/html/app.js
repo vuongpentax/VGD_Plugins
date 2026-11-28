@@ -2078,7 +2078,8 @@ function ioPanel(){
   // Công cụ của bảng (trước nằm trên thanh công cụ): loại trừ tag khỏi số đo, đổi tên hàng loạt, nhận mặt trước.
   const excludeCount=excludedTags().size;
   const exclude=item('preset',excludeCount?`Loại trừ tag (${excludeCount})`:'Loại trừ tag',toggleExclude);exclude.id='exclude-btn';exclude.title='Chọn các tag không tính vào Rộng / Dài / Cao';
-  const rename=item('calc','Đổi tên...',()=>{tableState.panel='rename';tableView(tableState.data);});rename.id='rename-open';rename.title='Đổi tên hàng loạt các món trong bảng';
+  const renameWin=item('calc','Đổi tên...',()=>call('open_rename'));renameWin.id='rename-window';renameWin.title='Mở cửa sổ Đổi tên riêng cho các món đang chọn trong SketchUp (vẫn dùng được khi đóng bảng)';
+  const rename=item('calc','Đổi tên theo mẫu...',()=>{tableState.panel='rename';tableView(tableState.data);});rename.id='rename-open';rename.title='Đổi tên hàng loạt các món trong bảng';
   const front=item('id','Mặt trước...',()=>{tableState.panel='front';tableView(tableState.data);});front.id='front-btn';front.title='Nhận và sửa mặt trước của món (dùng cho Rộng / Sâu và ảnh Chính diện)';
   // Ghi cách tính suy ra từ tag vào các món đang chọn (chỉ điền mục còn trống; một bước hoàn tác). Phải chọn dòng rõ ràng để không ghi hàng loạt nhầm.
   const calc=item('calc','Ghi cách tính vào món đang chọn',()=>{if(!tableState.sel.size)return message('Hãy chọn các dòng cần ghi cách tính (Ctrl+A chọn hết các dòng đang hiện).',true);call('table_commit_calc',JSON.stringify({indexes:[...tableState.sel]}));});
@@ -2107,7 +2108,7 @@ function ioPanel(){
   checksBtn.id='checks-open';checksBtn.title='Đặt luật kiểm tra riêng cho bảng (ví dụ Rộng nhỏ hơn 700 thì cảnh báo, Tầng để trống thì thông tin) rồi chạy và bấm vào kết quả để chọn món';
   const snapBtn=item('id','So sánh phiên bản...',()=>{tableState.panel='snapshots';tableState.snapshotDiff=null;tableState.snapshots=null;call('snapshot_list');tableView(tableState.data);});
   snapBtn.id='snapshots-open';snapBtn.title='Chụp mốc giá trị các món rồi so với bảng hiện tại để biết món nào thêm, xóa hoặc đổi';
-  p.append(ioSection('export','Xuất',exportItems),ioSection('table','Bảng',[exclude,rename,front]),
+  p.append(ioSection('export','Xuất',exportItems),ioSection('table','Bảng',[exclude,renameWin,rename,front]),
     ioSection('data','Mã và dữ liệu món',[calc,assignIds,fixIds,editSource,codesBtn]),
     ioSection('site','Công trình',[levelsBtn,roomsBtn]),ioSection('check','Vật liệu và kiểm tra',[materialsBtn,checksBtn,snapBtn]));
   return p;

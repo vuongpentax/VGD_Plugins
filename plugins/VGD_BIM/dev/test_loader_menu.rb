@@ -9,6 +9,7 @@ class SketchupExtension
 end
 module Sketchup
   class SelectionObserver; end
+  class AppObserver; end
   class Group; end; class ComponentInstance < Group; end; class Face; end; class Color; def initialize(*); end; end
   class Model; def selection; Struct.new(:x) { def any?; false; end; def to_a; []; end }.new(nil); end; end
   def self.register_extension(*); true; end
@@ -17,7 +18,15 @@ module Sketchup
   def self.write_default(*); true; end
 end
 module UI
-  class HtmlDialog; STYLE_DIALOG = 1; end
+  class HtmlDialog
+    STYLE_DIALOG = 1
+    def initialize(options); ($dialogs ||= []) << options[:dialog_title]; end
+    def set_file(*); end
+    def add_action_callback(*); end
+    def set_on_closed(*); end
+    def visible?; false; end
+    def show; end
+  end
   class Toolbar; def initialize(n); @name = n; end; def add_item(*); end; def restore; end; end
   class Command; attr_accessor :tooltip, :status_bar_text, :small_icon, :large_icon; def initialize(n, &b); @name = n; end; end
   class MenuNode
@@ -42,11 +51,14 @@ loader = File.expand_path('../runtime/vgd_bim/loader.rb', __dir__)
 $opened = []
 require loader rescue (puts "load error: #{$!.class}: #{$!.message}"; raise)
 vgd = UI::MENU_ROOT['Extensions'].subs['VGD'].subs['VGD BIM']
-ok('menu Extensions > VGD > VGD BIM: Mở bảng khối lượng và Tải lại code', vgd && vgd.items.map(&:first) == ['Mở bảng khối lượng', 'Tải lại code'])
+ok('menu Extensions > VGD > VGD BIM: Mở bảng khối lượng, Đổi tên và Tải lại code', vgd && vgd.items.map(&:first) == ['Mở bảng khối lượng', 'Đổi tên', 'Tải lại code'])
 ok('menu VGD BIM không có submenu', vgd && vgd.subs.empty?)
 VGD::BIM.define_singleton_method(:open_panel) { |mode| $opened << mode }
 vgd.items.find { |n, _| n == 'Mở bảng khối lượng' }[1].call
 ok('bấm Mở bảng khối lượng mở thẳng bảng khối lượng', $opened == ['table'])
+VGD::BIM.define_singleton_method(:open_rename) { $opened << 'rename' }
+vgd.items.find { |n, _| n == 'Đổi tên' }[1].call
+ok('bấm Đổi tên mở cửa sổ Đổi tên riêng', $opened == ['table', 'rename'])
 ok('phiên bản theo chuẩn repo x.y.z hoặc x.y.z-beta.N, không có chữ v', VGD::BIM::VERSION.match?(/\A\d+\.\d+\.\d+(-beta\.\d+)?\z/))
 # Tải lại code: thành công, và lỗi cú pháp được chặn trước khi nạp (giữ nguyên bản đang chạy).
 reload_item = vgd.items.find { |n, _| n == 'Tải lại code' }
@@ -70,6 +82,24 @@ end
   ok("tải lại khi #{label}: không nạp, báo việc đang làm và hướng dẫn chờ", busy_result == false && $boxes.last.include?(reason) && $boxes.last.include?('Hãy chờ xong rồi tải lại code.') && loaded.size == before)
 end
 VGD::BIM.instance_variable_set(:@panel, nil)
+# Cửa sổ Đổi tên đang mở: tải lại thì đóng rồi mở lại (đang đóng thì không mở).
+class RenameStub
+  attr_reader :closes
+  def initialize; @closes = 0; end
+  def closed?; @closes > 0; end
+  def close; @closes += 1; end
+end
+VGD::BIM.singleton_class.send(:remove_method, :open_rename)
+stub = RenameStub.new
+VGD::BIM.instance_variable_set(:@rename, stub)
+$dialogs = []
+reloaded = VGD::BIM.reload
+ok('tải lại: đóng cửa sổ Đổi tên đang mở rồi mở lại', reloaded == true && stub.closes == 1 && $dialogs == ['VGD BIM · Đổi tên'] && !VGD::BIM.instance_variable_get(:@rename).closed?)
+VGD::BIM.instance_variable_set(:@rename, nil)
+$dialogs.clear
+VGD::BIM.reload
+ok('tải lại khi cửa sổ Đổi tên đang đóng: không tự mở', $dialogs.empty?)
+loaded.clear
 orig_compile = RubyVM::InstructionSequence.method(:compile_file)
 RubyVM::InstructionSequence.define_singleton_method(:compile_file) do |path, *rest|
   raise SyntaxError, 'lỗi cú pháp giả lập' if path.end_with?('/core/data.rb')

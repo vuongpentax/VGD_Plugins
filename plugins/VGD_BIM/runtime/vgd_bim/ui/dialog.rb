@@ -95,6 +95,7 @@ module VGD
           @dialog.add_action_callback('table_clear') { |_ctx| safely { table_clear } }
           @dialog.add_action_callback('rename_preview') { |_ctx, payload| safely { rename_preview(JSON.parse(payload)) } }
           @dialog.add_action_callback('rename_apply') { |_ctx, payload| safely { rename_apply(JSON.parse(payload)) } }
+          @dialog.add_action_callback('open_rename') { |_ctx| safely { BIM.open_rename } }
           @dialog.add_action_callback('material_library_save') { |_ctx, payload| safely { material_library_save(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_rooms') { |_ctx, payload| safely { table_rooms(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_from_selection') { |_ctx, payload| safely { table_room_from_selection(JSON.parse(payload)) } }
@@ -1312,6 +1313,10 @@ module VGD
           text += " Bỏ qua #{plan[:counts][:locked]} đối tượng bị khóa." if plan[:counts][:locked] > 0
           text += " Có #{plan[:counts][:duplicate]} dòng trùng tên." if plan[:counts][:duplicate] > 0
           emit('message', {text: text})
+        end
+        # Cửa sổ Đổi tên đã đổi tên các món: bảng đang hiện thì đọc lại để thấy tên mới.
+        def names_changed
+          safely { table_build } if @ready && @mode == 'table' && @dialog.visible? && @table_records
         end
         def table_clear
           check_model!

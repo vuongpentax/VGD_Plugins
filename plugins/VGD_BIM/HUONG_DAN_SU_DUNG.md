@@ -32,11 +32,24 @@ Mở bằng **Extensions → VGD → VGD BIM → Mở bảng khối lượng**: 
 7a. **Thêm cột thủ công**: bấm **+** ở đầu ngăn Chọn cột rồi chọn kiểu. **Thuộc tính tùy chọn**: nhập tên dictionary và tên thuộc tính, cột hiện giá trị đó của từng món (thiếu thì lấy ở định nghĩa); chỉ đọc. **Thuộc tính động**: nhập tên thuộc tính của Dynamic Components (ví dụ `price`, chữ thường); chỉ đọc. **Cột tự nhập**: chữ tự do của bạn, nhấp đúp ô để gõ (lưu trong dữ liệu riêng của bảng ở từng món, một bước hoàn tác, bỏ qua món bị khóa). Cột mới hiện ngay ở cuối bảng và nằm trong preset tự tạo đang dùng; nhấp đúp tiêu đề để đổi tên hiển thị. Nút × cạnh tên cột trong danh sách xóa cột (dữ liệu đã nhập trong các món vẫn còn). Tối đa 20 cột thêm tay; danh sách cột lưu trên máy này (không theo từng file SketchUp), preset xuất sang máy khác sẽ không có định nghĩa cột đó.
 8. **Độ cao hàng**: giữ Ctrl và lăn chuột giữa trên bảng để tăng / giảm độ cao hàng (28 đến 640 px); mọi hàng cao đều nhau, cột Ảnh tự rộng theo để ảnh to ra thật sự (vẫn kéo tay đổi độ rộng cột được), độ cao được nhớ cho lần mở sau. Ảnh trong bảng là ảnh gốc đã chụp. Rê chuột vào ô ảnh sẽ hiện các nút nhỏ: **◣** chụp góc Iso từ bên trái, **◢** chụp góc Iso từ bên phải (cho món sát tường hoặc chữ L mà góc mặc định chỉ thấy lưng; chụp đúng một lần cho dòng đó, kể cả dòng chưa có ảnh), **↻** chụp lại theo thiết lập của preset, **⋯** chọn file ảnh, **×** xóa ảnh. Ô **Chừa lề (%)** trong bảng Preset → Hình ảnh chỉnh khoảng chừa quanh món khi chụp Iso / Chính diện (0 = ôm sát, mặc định 20). Chọn lại "Hàng: Gọn / Vừa / Thoáng" ở Chọn cột thì về độ cao theo mật độ. Số dòng đang chọn hiện ở chân trang, dưới dòng thông báo. Danh sách **Chọn cột** luôn ghi tên chuẩn của cột; nếu preset đổi tiêu đề thì có ghi chú "hiện trong bảng: ..." bên cạnh. Tuỳ chọn ở thanh công cụ: **Thu phóng**, **Cô lập đối tượng chọn** (tạm ẩn các đối tượng khác; tắt tuỳ chọn hoặc đóng cửa sổ để hiện lại, và đừng lưu file khi đang cô lập), **Chọn sâu bên trong** (đọc cả group / component nằm bên trong), dòng **Tổng cộng**, **Tổng chỉ cấp cao nhất** (không cộng trùng group lồng nhau).
 
-## Đổi tên hàng loạt
+## Cửa sổ Đổi tên
+
+Mở bằng **Extensions → VGD → VGD BIM → Đổi tên** hoặc **Công cụ → Bảng → Đổi tên...** trong Bảng khối lượng. Cửa sổ đứng riêng, đóng Bảng khối lượng vẫn dùng được.
+
+1. Chọn các group / component cần đặt tên trong SketchUp. Danh sách tự cập nhật theo vùng chọn. Các bản sao của cùng một component / group gom thành một dòng, bấm **›** để mở ra.
+2. Bấm chọn dòng trong danh sách (Ctrl / Shift để chọn nhiều, Ctrl+A chọn hết, Esc bỏ chọn). Không chọn dòng nào thì thao tác áp cho mọi dòng.
+3. Bấm mẫu ở ba cột dưới: **Tiền tố**, **Tên**, **Hậu tố**. Tên mới = tiền tố + tên + hậu tố. Bấm lại mẫu đang dùng để bỏ. Nhấp đúp ô **Tên mới** để gõ tay phần Tên.
+4. Thêm mẫu: gõ vào ô **Thêm ...** dưới mỗi cột rồi Enter. Mẫu lưu trên máy này và dùng lại cho mọi file. Bấm **×** để xóa mẫu.
+5. Cần thì dùng **Thay → Bằng**, **AA** (viết hoa), **123** (thêm 01, 02... khi nhiều món cùng tên mới), **↺** (bỏ tên mới chưa áp dụng).
+6. Bấm **Áp dụng (n)**. Cả lần là một bước hoàn tác (Ctrl+Z). Món bị khóa không đổi.
+
+**Tự động: Ẩn**: bật thì món vừa đổi tên được ẩn trong SketchUp để không đặt nhầm lần nữa, danh sách chỉ còn món chưa đặt. Làm xong, hiện lại bằng **Edit → Unhide → All** (Hiện tất cả).
+
+## Đổi tên theo mẫu (bảng cũ)
 
 Các bảng nổi (Đổi tên, Mặt trước, Cập nhật ảnh, Nhóm theo, Tùy chọn, Công cụ) và ngăn Chọn cột / Loại trừ tag tự đóng khi bạn bấm ra ngoài hoặc mở bảng khác. Riêng Đổi tên, Mặt trước, Cập nhật ảnh vẫn giữ nguyên khi bạn bấm chọn dòng trong bảng.
 
-1. Trong tab **Bảng khối lượng**, chọn các dòng cần đặt tên (Ctrl / Shift như trên) rồi bấm **Đổi tên**. Panel ghi rõ áp dụng cho bao nhiêu dòng; chưa chọn dòng nào thì áp cho mọi dòng trong bảng.
+1. Trong tab **Bảng khối lượng**, chọn các dòng cần đặt tên (Ctrl / Shift như trên) rồi bấm **Công cụ → Bảng → Đổi tên theo mẫu...**. Panel ghi rõ áp dụng cho bao nhiêu dòng; chưa chọn dòng nào thì áp cho mọi dòng trong bảng.
 2. Nhập **Mẫu tên**, ví dụ `Cửa-{số}` hoặc `{phân loại}-{số}`. Bấm các nút `{tên}`, `{họ}`, `{phân loại}`, `{nhóm}`, `{số}` để chèn: tên hiện tại, tên định nghĩa, phân loại, nhóm hạng mục, số thứ tự.
 3. Cần thì **Tìm** / **Thay bằng**, **Tiền tố** / **Hậu tố**, **Kiểu chữ**. Với số thứ tự, chọn **Số bắt đầu**, **Số chữ số** (ví dụ 2 thì ra 01, 02), **Bước nhảy** và **Đánh số theo**: thứ tự trong bảng, vị trí (X rồi Y rồi Z) hoặc tên hiện tại.
 4. Bấm **Xem trước** để xem tên cũ và tên mới. Dòng bị khóa được bỏ qua, tên trùng nhau được đánh dấu. Sửa bất kỳ ô nào thì phải xem trước lại.

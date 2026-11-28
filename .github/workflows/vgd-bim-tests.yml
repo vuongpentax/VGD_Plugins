@@ -55,7 +55,7 @@ jobs:
         env:
           VGD_PLAYWRIGHT_MODULE: ${{ runner.temp }}/pw/node_modules/playwright
         run: |
-          for test in test_ui test_ui_images test_ui_sheets test_ui_en test_report_page; do
+          for test in test_ui test_ui_images test_ui_sheets test_ui_en test_ui_rename test_report_page; do
             echo "== $test"
             node "dev/$test.cjs"
           done
