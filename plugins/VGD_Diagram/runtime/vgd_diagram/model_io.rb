@@ -32,7 +32,22 @@ module VGD
       end
 
       def raw_level(entities)
-        entities.select { |entity| instance?(entity) }.map { |entity| raw_node(entity) }
+        entities.select { |entity| instance?(entity) && visible?(entity) }.map { |entity| raw_node(entity) }
+      end
+
+      # Đối tượng đang thấy trong SketchUp: không bị ẩn (Edit > Hide), tag đang bật, và các thư mục chứa tag đều đang bật.
+      # Sơ đồ chỉ gồm những gì đang thấy; muốn đưa đối tượng ẩn vào thì hiện lại rồi bấm Làm mới.
+      def visible?(entity)
+        return false if entity.hidden?
+        layer = entity.layer
+        return true unless layer
+        return false unless layer.visible?
+        folder = layer.folder
+        while folder
+          return false unless folder.visible?
+          folder = folder.folder
+        end
+        true
       end
 
       def raw_node(entity)
@@ -60,20 +75,29 @@ module VGD
 
       # tree: cây vừa đọc, dùng để tìm các bản của từng nhóm. changes: {key => số thứ tự hoặc nil}.
       # Gọi Tree.plan trước để kiểm tra; hàm này ghi trong một thao tác để Undo được.
+      # Bản bị khóa không bị ghi. Trả về {saved: số bản đã ghi, skipped: số bản khóa bị bỏ qua}.
       def apply_orders(model, tree, changes)
+        saved = 0
+        skipped = 0
         model.start_operation('VGD Diagram: thứ tự lắp', true)
         changes.each do |key, order|
           Tree.find(tree, key)['ids'].each do |id|
             entity = model.find_entity_by_id(id)
             next unless entity # cấu kiện đã bị xóa sau khi đọc cây
+            if entity.locked?
+              skipped += 1
+              next
+            end
             if order
               entity.set_attribute(DICT, KEY_ORDER, order)
             else
               entity.delete_attribute(DICT, KEY_ORDER)
             end
+            saved += 1
           end
         end
         model.commit_operation
+        { saved: saved, skipped: skipped }
       rescue StandardError
         model.abort_operation
         raise

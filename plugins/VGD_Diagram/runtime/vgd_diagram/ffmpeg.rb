@@ -2,12 +2,21 @@
 # Ghép chuỗi khung hình PNG thành MP4 bằng ffmpeg đã cài trên máy người dùng.
 # Chương trình được gọi bằng danh sách tham số (không qua shell). Chỉ chạy file ffmpeg người dùng đã chọn
 # hoặc lệnh ffmpeg trong PATH.
+# Ghép chạy NỀN, không chặn SketchUp: start_encode chạy ffmpeg bằng Process.spawn (ghi tiến trình và thông báo ra file
+# tạm), người gọi hỏi poll theo bộ hẹn giờ của SketchUp. Không dùng luồng Ruby (luồng trong SketchUp chỉ chạy khi
+# giao diện rảnh) và không đọc ống (ống đầy thì ffmpeg bị kẹt).
 require 'open3'
+require 'tmpdir'
 
 module VGD
   module Diagram
     module Ffmpeg
       extend self
+
+      # Quá số giây này mà số khung ghép được không tăng thì coi là ffmpeg đứng và dừng.
+      STALL_SECONDS = 120
+      # Một lần ghép: pid, file tiến trình và file thông báo (tạm), file MP4 đầu ra, tổng số khung, số khung mới nhất.
+      Job = Struct.new(:pid, :progress_path, :log_path, :output, :total, :last_frame, :last_change)
 
       SECTION = 'VGD_Diagram'.freeze
       SETTING = 'ffmpeg_path'.freeze
@@ -96,17 +105,88 @@ module VGD
         File.join(folder.to_s.gsub('%', '%%'), "#{base.to_s.gsub('%', '%%')}-khung-%05d.png")
       end
 
-      # Ghép khung hình thành MP4. Trả về [thành công?, thông báo lỗi].
-      # frame_pattern ví dụ: "/thu-muc/lap-rap-khung-%05d.png".
-      def encode(exe, frame_pattern, fps, output)
+      # Bắt đầu ghép khung hình thành MP4 và trả về ngay một Job (không chờ ffmpeg).
+      # frame_pattern ví dụ: "/thu-muc/lap-rap-khung-%05d.png"; total là số khung (để tính phần trăm).
+      # Ném ArgumentError nếu ffmpeg không có bộ mã hóa phù hợp, SystemCallError nếu không chạy được file.
+      def start_encode(exe, frame_pattern, fps, output, total)
         _name, codec_args = encoder_for(exe)
-        return [false, 'ffmpeg không có bộ mã hóa phù hợp.'] unless codec_args
-        output_text, status = Open3.capture2e(exe, '-y', '-framerate', fps.to_s, '-i', frame_pattern,
-                                              *codec_args, output)
-        ok = status.success? && File.size?(output).to_i.positive?
-        [ok, ok ? '' : output_text.lines.last(5).join]
-      rescue SystemCallError => error
-        [false, error.message]
+        raise ArgumentError, 'ffmpeg không có bộ mã hóa phù hợp.' unless codec_args
+        stem = File.join(Dir.tmpdir, "vgd_diagram_ffmpeg_#{Process.pid}_#{Time.now.to_i}_#{rand(1_000_000)}")
+        progress = "#{stem}.progress"
+        log = "#{stem}.log"
+        pid = Process.spawn(exe, '-y', '-nostdin', '-hide_banner', '-nostats', '-progress', progress,
+                            '-framerate', fps.to_s, '-i', frame_pattern, *codec_args, output,
+                            in: File::NULL, %i[out err] => log)
+        Job.new(pid, progress, log, output, total.to_i, 0, Time.now)
+      end
+
+      # Hỏi tình trạng. Trả về {state: :running, frame: n}, hoặc khi đã kết thúc {state: :done | :stalled, ok:, error:, frame:}.
+      # Kết thúc thì file tạm đã được xóa; ghép lỗi hoặc bị dừng thì file MP4 dở cũng bị xóa.
+      def poll(job, stall: STALL_SECONDS)
+        frame = last_frame(job.progress_path)
+        if frame > job.last_frame
+          job.last_frame = frame
+          job.last_change = Time.now
+        end
+        status = begin
+          Process.wait2(job.pid, Process::WNOHANG)&.last
+        rescue Errno::ECHILD
+          :gone # tiến trình đã được thu dọn nơi khác: xét theo file đầu ra
+        end
+        if status
+          ok = (status == :gone || status.success?) && File.size?(job.output).to_i.positive?
+          error = ok ? '' : message_from(job.log_path)
+          finish(job, keep_output: ok)
+          return { state: :done, ok: ok, error: error, frame: job.last_frame }
+        end
+        return { state: :running, frame: job.last_frame } if Time.now - job.last_change <= stall
+        cancel(job)
+        { state: :stalled, ok: false, frame: job.last_frame,
+          error: "ffmpeg không có tiến triển trong #{stall} giây nên đã dừng." }
+      end
+
+      # Dừng ffmpeg (nếu còn chạy), xóa file MP4 dở và file tạm.
+      def cancel(job)
+        begin
+          Process.kill('KILL', job.pid)
+        rescue Errno::ESRCH, Errno::EPERM
+          nil
+        end
+        begin
+          Process.wait(job.pid)
+        rescue Errno::ECHILD
+          nil
+        end
+        finish(job, keep_output: false)
+      end
+
+      # Số khung mới nhất ffmpeg báo trong file tiến trình (chỉ đọc phần cuối file). 0 nếu chưa có.
+      def last_frame(path)
+        size = File.size?(path).to_i
+        return 0 if size.zero?
+        text = File.open(path, 'rb') do |file|
+          file.seek([size - 4096, 0].max)
+          file.read
+        end
+        text.scan(/^frame=(\d+)/).flatten.last.to_i
+      rescue SystemCallError
+        0
+      end
+
+      # 5 dòng cuối thông báo của ffmpeg, để báo lỗi cho người dùng.
+      def message_from(log_path)
+        return '' unless File.file?(log_path)
+        File.binread(log_path).force_encoding(Encoding::UTF_8).scrub.lines.last(5).join
+      rescue SystemCallError
+        ''
+      end
+
+      def finish(job, keep_output:)
+        paths = [job.progress_path, job.log_path]
+        paths << job.output unless keep_output
+        paths.each { |path| File.delete(path) if File.file?(path) }
+      rescue SystemCallError
+        nil
       end
 
       # Xóa đúng các file khung hình đã được tạo trong lần xuất này. Trả về số file đã xóa.

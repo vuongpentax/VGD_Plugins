@@ -50,6 +50,11 @@ module Sketchup
     end
 
     attr_reader :name
+    attr_accessor :hidden, :layer
+
+    def hidden?
+      @hidden ? true : false
+    end
 
     def get_attribute(dict, key)
       @attributes[[dict, key]]
@@ -103,10 +108,32 @@ module Sketchup
     end
   end
 
+  class LayerFolder
+    attr_accessor :folder
+
+    def initialize(visible = true, folder = nil)
+      @visible = visible
+      @folder = folder
+    end
+
+    def visible?
+      @visible
+    end
+  end
+
+  class Layer < LayerFolder
+  end
+
   class Face
+    attr_accessor :hidden, :layer
+
     def initialize(points, polygons)
       @points = points
       @polygons = polygons
+    end
+
+    def hidden?
+      @hidden ? true : false
     end
 
     def mesh(_flags = 0)
@@ -123,6 +150,7 @@ module Sketchup
   end
 end
 
+require 'tree'
 require 'model_io'
 require 'scene'
 
@@ -178,6 +206,43 @@ S.const_set(:MAX_TRIANGLES, 100_000)
 # 5b. Hình học của một danh sách thực thể (phạm vi đã chọn) giống hình học cả model khi danh sách là toàn bộ
 check 'phạm vi đã chọn: build_from(danh sách) cho cùng kết quả với build(model)',
       S.build_from([quad]) == S.build(Sketchup::FakeModel.new([quad]))
+
+# 5c. Đối tượng đang ẩn hoặc nằm trên tag tắt không có trong sơ đồ (cả khung 3D lẫn cây), để khớp những gì đang thấy trong SketchUp
+def tri(id_offset = 0)
+  Sketchup::Face.new([P.new(0, 0, id_offset), P.new(1, 0, id_offset), P.new(0, 1, id_offset)], [[1, 2, 3]])
+end
+
+visible_group = Sketchup::Group.new(20, 'Hiện', [tri])
+hidden_group = Sketchup::Group.new(21, 'Ẩn', [tri(1)])
+hidden_group.hidden = true
+off_group = Sketchup::Group.new(22, 'Tag tắt', [tri(2)])
+off_group.layer = Sketchup::Layer.new(false)
+on_group = Sketchup::Group.new(23, 'Tag bật', [tri(3)])
+on_group.layer = Sketchup::Layer.new(true)
+folder_group = Sketchup::Group.new(24, 'Thư mục ẩn', [tri(4)])
+folder_group.layer = Sketchup::Layer.new(true, Sketchup::LayerFolder.new(true, Sketchup::LayerFolder.new(false)))
+folder_ok = Sketchup::Group.new(25, 'Thư mục hiện', [tri(5)])
+folder_ok.layer = Sketchup::Layer.new(true, Sketchup::LayerFolder.new(true))
+all = [visible_group, hidden_group, off_group, on_group, folder_group, folder_ok]
+shown = S.build_from(all)['parts'].map { |part| part['name'] }.sort
+check 'ẩn: khung 3D chỉ có đối tượng hiện (tag bật, thư mục hiện vẫn có)', shown == ['Hiện', 'Tag bật', 'Thư mục hiện'].sort
+tree_names = VGD::Diagram::ModelIO.read_entities(all).map { |node| node['name'] }.sort
+check 'ẩn: cây cũng chỉ có đối tượng hiện, khớp khung 3D', tree_names == shown
+
+inner_hidden = Sketchup::Group.new(31, 'Con ẩn', [tri(6)])
+inner_hidden.hidden = true
+inner_ok = Sketchup::Group.new(32, 'Con hiện', [tri(7)])
+parent_group = Sketchup::Group.new(30, 'Cha', [inner_hidden, inner_ok])
+check 'ẩn: con ẩn trong group hiện bị bỏ, con hiện còn', S.build_from([parent_group])['parts'].map { |part| part['name'] } == ['Con hiện']
+check 'ẩn: cây của group cha chỉ còn con hiện',
+      VGD::Diagram::ModelIO.read_entities([parent_group]).first['children'].map { |node| node['name'] } == ['Con hiện']
+
+hidden_face = tri(8)
+hidden_face.hidden = true
+off_face = tri(9)
+off_face.layer = Sketchup::Layer.new(false)
+mixed = Sketchup::Group.new(33, 'Có mặt ẩn', [tri(10), hidden_face, off_face])
+check 'ẩn: mặt ẩn và mặt trên tag tắt không vào khung 3D (còn 1 tam giác)', S.build_from([mixed])['triangles'] == 1
 
 # 6. Mô hình rỗng
 empty = S.build(Sketchup::FakeModel.new([]))

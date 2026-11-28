@@ -52,7 +52,7 @@
           <button type="button" id="play" title="Các cấu kiện có thứ tự được lắp lần lượt" onclick="VGD.play()" disabled>Phát lắp ráp</button>
           <button type="button" onclick="VGD.reset()">Đặt lại</button>
         </div>
-        <div class="action-group" role="group" aria-label="Xuất">
+        <div class="action-group export-group" role="group" aria-label="Xuất">
           <span class="group-label">Xuất</span>
           <button type="button" onclick="VGD.exportSvg()">SVG</button>
           <span class="combo"><button type="button" onclick="VGD.exportViews()">Ảnh</button><select id="image-format" aria-label="Định dạng ảnh"><option value="png">PNG</option><option value="jpg">JPG</option></select></span>
@@ -74,6 +74,12 @@
 </main>
 <footer>
   <span id="status" class="status" role="status" aria-live="polite"></span>
+  <div id="encode-row" class="encode-row" hidden>
+    <span id="encode-label" class="group-label">Đang ghép MP4</span>
+    <progress id="encode-progress" max="100" value="0" aria-labelledby="encode-label"></progress>
+    <span id="encode-percent" class="count">0 %</span>
+    <button type="button" id="encode-cancel" onclick="VGD.cancelEncode()">Hủy</button>
+  </div>
 </footer>
 <script src="vendor/three.min.js"></script>
 <script src="vgd-theme/vgd-theme.js"></script>

@@ -36,8 +36,8 @@ main{flex:1;display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr)
 .explode-row input[type=range]{flex:1;min-width:0;accent-color:var(--vgd-accent)}
 .explode-row .count{min-width:40px;text-align:right}
 
-footer{display:flex;align-items:center;gap:10px;padding:8px 14px;min-height:20px;border-top:1px solid var(--vgd-border)}
-.status{color:var(--vgd-muted);min-height:1em}
+footer{display:flex;align-items:center;gap:10px;padding:8px 14px;min-height:22px;border-top:1px solid var(--vgd-border)}
+.status{flex:1;min-width:0;color:var(--vgd-muted);min-height:1em}
 .status:empty::before{content:"Kéo chuột trong khung 3D để xoay, cuộn để phóng to hoặc thu nhỏ."} /* gợi ý mặc định, mất đi khi có thông báo */
 .status.error{color:var(--vgd-danger)}
 
@@ -85,3 +85,13 @@ input::placeholder{color:var(--vgd-muted)}
 .ffmpeg-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 .ffmpeg-row label{color:var(--vgd-muted);font-size:12px;flex:none}
 .ffmpeg-row input[type=text]{flex:1}
+
+/* Ghép MP4 chạy nền: thanh tiến trình và nút Hủy nằm ở chân cửa sổ (không thêm chiều cao); đang ghép thì khóa nhóm Xuất. */
+.encode-row{display:flex;align-items:center;gap:8px;flex:none;width:300px;height:22px}
+.encode-row[hidden]{display:none}
+.encode-row progress{flex:1;min-width:0;height:8px;appearance:none;-webkit-appearance:none;border:0;border-radius:4px;background:var(--vgd-elevated)}
+.encode-row progress::-webkit-progress-bar{background:var(--vgd-elevated);border-radius:4px}
+.encode-row progress::-webkit-progress-value{background:var(--vgd-accent);border-radius:4px;transition:width var(--vgd-dur-panel) ease}
+.encode-row button{padding:2px 10px;font-size:12px}
+.encoding .export-group{pointer-events:none;opacity:.45}
+.encoding .status:empty::before{content:none} /* đang ghép: bỏ gợi ý mặc định để chân cửa sổ không xuống dòng */

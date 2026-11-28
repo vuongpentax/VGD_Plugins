@@ -12,7 +12,12 @@ module VGD
       end
 
       def busy?
-        @busy ? true : false
+        @busy || encoding? ? true : false
+      end
+
+      # Đang ghép MP4 ở nền (ffmpeg chạy, bộ hẹn giờ hỏi tiến trình).
+      def encoding?
+        !@encode.nil?
       end
 
       def close
@@ -49,6 +54,7 @@ module VGD
         callback('save_ffmpeg') { |json| save_ffmpeg(JSON.parse(json)) }
         callback('pick_ffmpeg') { pick_ffmpeg }
         callback('video_done') { |json| finish_frames(JSON.parse(json)) }
+        callback('cancel_encode') { cancel_encode }
         @dlg.show
       end
 
@@ -130,9 +136,14 @@ module VGD
         changes = items.to_h { |item| [item.fetch('key'), item.fetch('order')] }
         tree = scope_tree(model)
         normalized = Tree.plan(tree, changes)
-        busy { ModelIO.apply_orders(model, tree, normalized) }
+        result = busy { ModelIO.apply_orders(model, tree, normalized) }
         push_tree
-        send_js('onToast', 'message' => 'Đã lưu thứ tự lắp. Dùng Ctrl+Z để hoàn tác.')
+        send_js('onToast', 'message' => save_message(result))
+      end
+
+      def save_message(result)
+        return 'Đã lưu thứ tự lắp. Dùng Ctrl+Z để hoàn tác.' if result[:skipped].zero?
+        "Đã lưu thứ tự lắp. Bỏ qua #{result[:skipped]} đối tượng bị khóa (mở khóa rồi lưu lại). Dùng Ctrl+Z để hoàn tác."
       end
 
       def export_svg
@@ -156,7 +167,14 @@ module VGD
         [path, ext]
       end
 
+      ENCODING_MESSAGE = 'Đang ghép MP4. Hãy chờ xong hoặc bấm Hủy.'.freeze
+
+      def ensure_not_encoding!
+        raise ENCODING_MESSAGE if encoding?
+      end
+
       def start_export(payload)
+        ensure_not_encoding!
         model = Sketchup.active_model
         fallback = IMAGE_FORMATS.include?(payload['format']) ? payload['format'] : 'png'
         chosen = UI.savepanel('Lưu ảnh các góc, cụm và bước', '', "#{base_name(model)}.#{fallback}")
@@ -171,10 +189,13 @@ module VGD
         send_js('onExport', 'format' => format)
       end
 
+      ENCODE_INTERVAL = 0.3 # giây giữa hai lần hỏi tiến trình ghép MP4
+
       # Video lắp ráp: chọn thư mục, giao diện quay rồi gửi file về đây.
       VIDEO_EXT = %w[webm].freeze
 
       def start_video(payload)
+        ensure_not_encoding!
         model = Sketchup.active_model
         fallback = VIDEO_FORMATS.include?(payload['format']) ? payload['format'] : 'webm'
         chosen = UI.savepanel('Lưu video lắp ráp', '', "#{base_name(model)}-lap-rap.#{fallback}")
@@ -249,17 +270,71 @@ module VGD
           send_js('onToast', 'message' => "Giữ nguyên #{File.basename(output)}. Ảnh khung hình vẫn ở #{video['folder']}.")
           return
         end
-        ok, error_text = busy { Ffmpeg.encode(exe, pattern, fps, output) }
-        unless ok
-          send_js('onError', 'message' => "Ghép MP4 thất bại, ảnh khung hình được giữ lại. #{error_text}")
+        begin
+          job = Ffmpeg.start_encode(exe, pattern, fps, output, frames.size)
+        rescue ArgumentError, SystemCallError => error
+          send_js('onError', 'message' => "Ghép MP4 thất bại, ảnh khung hình được giữ lại. #{error.message}")
           return
         end
-        if UI.messagebox("Đã tạo #{File.basename(output)}.\nXóa #{frames.size} ảnh khung hình đã xuất?", MB_YESNO) == IDYES
-          removed = busy { Ffmpeg.delete_frames(frames) }
-          send_js('onToast', 'message' => "Đã tạo #{File.basename(output)} và xóa #{removed} ảnh khung hình.")
-        else
-          send_js('onToast', 'message' => "Đã tạo #{File.basename(output)}. Giữ lại #{frames.size} ảnh khung hình.")
+        @encode = { 'job' => job, 'output' => output, 'frames' => frames }
+        send_js('onEncode', 'state' => 'running', 'percent' => 0, 'name' => File.basename(output))
+        @encode_timer = UI.start_timer(ENCODE_INTERVAL, true) { poll_encode }
+      end
+
+      # Bộ hẹn giờ gọi hàm này mỗi ENCODE_INTERVAL giây khi đang ghép: báo phần trăm, hoặc xử lý kết quả khi ffmpeg xong.
+      # Đóng hộp thoại giữa chừng thì dừng ghép (không để ffmpeg chạy mồ côi). Lỗi bất ngờ cũng dừng, để bộ hẹn giờ
+      # không báo lỗi lặp lại mỗi lần.
+      def poll_encode
+        encode = @encode
+        return unless encode
+        unless visible?
+          cancel_encode('Đã đóng hộp thoại nên dừng ghép MP4. Ảnh khung hình được giữ lại.')
+          return
         end
+        result = Ffmpeg.poll(encode['job'])
+        if result[:state] == :running
+          total = encode['job'].total
+          percent = total.positive? ? [result[:frame] * 100 / total, 99].min : 0
+          send_js('onEncode', 'state' => 'running', 'percent' => percent, 'name' => File.basename(encode['output']))
+        else
+          finish_encode(encode, result)
+        end
+      rescue StandardError => error
+        cancel_encode("Ghép MP4 gặp lỗi: #{error.message}. Ảnh khung hình được giữ lại.", error: true)
+      end
+
+      def finish_encode(encode, result)
+        clear_encode
+        unless result[:ok]
+          send_js('onEncode', 'state' => 'error', 'percent' => 0)
+          send_js('onError', 'message' => "Ghép MP4 thất bại, ảnh khung hình được giữ lại. #{result[:error]}")
+          return
+        end
+        send_js('onEncode', 'state' => 'done', 'percent' => 100, 'name' => File.basename(encode['output']))
+        name = File.basename(encode['output'])
+        frames = encode['frames']
+        if UI.messagebox("Đã tạo #{name}.\nXóa #{frames.size} ảnh khung hình đã xuất?", MB_YESNO) == IDYES
+          removed = busy { Ffmpeg.delete_frames(frames) }
+          send_js('onToast', 'message' => "Đã tạo #{name} và xóa #{removed} ảnh khung hình.")
+        else
+          send_js('onToast', 'message' => "Đã tạo #{name}. Giữ lại #{frames.size} ảnh khung hình.")
+        end
+      end
+
+      # Hủy ghép (nút Hủy, hoặc đóng hộp thoại): dừng ffmpeg, xóa MP4 dở, giữ ảnh khung hình.
+      def cancel_encode(message = nil, error: false)
+        encode = @encode
+        return unless encode
+        clear_encode
+        Ffmpeg.cancel(encode['job'])
+        send_js('onEncode', 'state' => 'cancelled', 'percent' => 0)
+        send_js(error ? 'onError' : 'onToast', 'message' => message || 'Đã hủy ghép MP4. Ảnh khung hình được giữ lại.')
+      end
+
+      def clear_encode
+        UI.stop_timer(@encode_timer) if @encode_timer
+        @encode_timer = nil
+        @encode = nil
       end
 
       # Chưa có ffmpeg: hỏi người dùng chọn file. Trả về đường dẫn hoặc nil.

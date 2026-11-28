@@ -58,6 +58,10 @@
   var viewpointSelect = document.getElementById('viewpoint');
   var distanceInput = document.getElementById('explode-distance');
   var autoInput = document.getElementById('explode-auto');
+  var encodeRow = document.getElementById('encode-row');
+  var encodeProgress = document.getElementById('encode-progress');
+  var encodePercent = document.getElementById('encode-percent');
+  var encodeLabel = document.getElementById('encode-label');
 
   var view = null;        // khung 3D: renderer, scene, camera, parts, góc nhìn
   var playing = null;     // {start, count} khi đang phát lắp ráp
@@ -1030,6 +1034,17 @@
     onVideo: function (data) {
       exportVideo(data.format || 'webm');
     },
+    // Ghép MP4 chạy nền: Ruby báo phần trăm; xong, hủy hoặc lỗi thì ẩn thanh tiến trình.
+    onEncode: function (data) {
+      var running = data.state === 'running';
+      var percent = Math.max(0, Math.min(100, Number(data.percent) || 0));
+      encodeRow.hidden = !running;
+      document.body.classList.toggle('encoding', running);
+      if (!running) return;
+      encodeProgress.value = percent;
+      encodePercent.textContent = percent + ' %';
+      encodeLabel.textContent = 'Đang ghép ' + (data.name || 'MP4');
+    },
     onSettings: function (data) {
       ffmpegInput.value = data.ffmpegPath || '';
     },
@@ -1047,6 +1062,7 @@
   window.VGD.exportVideo = function () { send('export_video', { format: videoFormat.value }); };
   window.VGD.saveFfmpeg = function () { send('save_ffmpeg', { path: ffmpegInput.value }); };
   window.VGD.pickFfmpeg = function () { send('pick_ffmpeg'); };
+  window.VGD.cancelEncode = function () { send('cancel_encode'); };
   window.VGD.checkDiagram = function () {
     var warnings = diagramWarnings();
     setStatus(warnings.length ? 'Cảnh báo: ' + warnings.join(' ') : 'Không có cảnh báo.', warnings.length > 0);

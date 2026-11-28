@@ -1,0 +1,67 @@
+# Chạy test của VGD Diagram (Ruby kèm ffmpeg thật, quy ước repo, giao diện Playwright) khi có thay đổi trong plugin hoặc test chung.
+# Chưa thay thế kiểm tra trong SketchUp thật: xem mục "Chưa kiểm tra trong SketchUp thật" của README plugin.
+name: Test VGD Diagram
+
+on:
+  push:
+    paths:
+      - 'plugins/VGD_Diagram/**'
+      - 'tests/**'
+      - 'tools/sync_vgd_theme.py'
+      - '.github/workflows/vgd-diagram-tests.yml'
+  pull_request:
+    paths:
+      - 'plugins/VGD_Diagram/**'
+      - 'tests/**'
+      - 'tools/sync_vgd_theme.py'
+      - '.github/workflows/vgd-diagram-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ruby:
+    name: Test Ruby, ffmpeg và quy ước repo
+    runs-on: ubuntu-latest
+    env:
+      LANG: C.UTF-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+      - name: Cài ffmpeg (test ghép MP4 dùng ffmpeg thật)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+      - name: Test VGD Diagram (logic, tải lại, hình học, định dạng, ffmpeg)
+        working-directory: plugins/VGD_Diagram
+        run: |
+          ruby dev/test_tree.rb
+          ruby dev/test_reload.rb
+          ruby dev/test_scene.rb
+          ruby dev/test_formats.rb
+          ruby dev/test_ffmpeg.rb
+      - name: Test quy ước đặt tên và menu
+        run: ruby tests/test_vgd_conventions.rb
+
+  giao-dien:
+    name: Test giao diện (Playwright)
+    runs-on: ubuntu-latest
+    env:
+      PLAYWRIGHT_VERSION: '1.63.0'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Cài Playwright và trình duyệt
+        run: |
+          npm install --prefix "$RUNNER_TEMP/pw" "playwright@$PLAYWRIGHT_VERSION"
+          npx --prefix "$RUNNER_TEMP/pw" playwright install --with-deps chromium
+      - name: Chạy test giao diện
+        working-directory: plugins/VGD_Diagram
+        env:
+          VGD_PLAYWRIGHT_MODULE: ${{ runner.temp }}/pw/node_modules/playwright
+        run: node dev/test_ui.cjs

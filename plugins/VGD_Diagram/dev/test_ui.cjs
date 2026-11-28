@@ -1,7 +1,7 @@
 // Kiểm tra giao diện hộp thoại VGD Diagram trong Chromium (không có SketchUp).
-// Chạy từ plugins/VGD_Diagram: node dev/test_ui.cjs
+// Chạy từ plugins/VGD_Diagram: node dev/test_ui.cjs (đặt VGD_PLAYWRIGHT_MODULE nếu Playwright không cài local)
 const path = require('path');
-const { chromium } = require('playwright');
+const { chromium } = require(process.env.VGD_PLAYWRIGHT_MODULE || 'playwright');
 
 const dialog = 'file://' + path.resolve(__dirname, '../runtime/vgd_diagram/dialog.html');
 const sample = {
@@ -361,6 +361,40 @@ function check(name, ok) {
   await page.locator('#ffmpeg-pick').click();
   check('ffmpeg: nút Chọn gửi yêu cầu mở hộp thoại', (await page.evaluate(() => window.__calls)).some((c) => c.name === 'pick_ffmpeg'));
 
+  // ---- Ghép MP4 chạy nền: thanh tiến trình và nút Hủy ở chân cửa sổ ----
+  const enc = () => page.evaluate(() => {
+    const row = document.getElementById('encode-row');
+    const exp = getComputedStyle(document.querySelector('.export-group')).pointerEvents;
+    return { shown: !row.hidden && row.offsetParent !== null, value: Number(document.getElementById('encode-progress').value),
+             percent: document.getElementById('encode-percent').textContent, label: document.getElementById('encode-label').textContent,
+             exportPointer: exp, footerH: document.querySelector('footer').getBoundingClientRect().height,
+             exportInView: (() => { const r = document.querySelector('.export-group').getBoundingClientRect(); const f = document.querySelector('footer').getBoundingClientRect(); return r.bottom <= f.top + 1; })(), overflow: document.documentElement.scrollHeight > innerHeight };
+  });
+  await page.setViewportSize({ width: 720, height: 560 });
+  await page.evaluate(() => window.VGD.onToast({ message: '' })); // ô trạng thái trống: hiện gợi ý mặc định (trường hợp chật nhất)
+  await page.waitForTimeout(150);
+  const idle = await enc();
+  check('ghép nền: chưa ghép thì thanh tiến trình ẩn', idle.shown === false && idle.exportPointer !== 'none');
+  await page.evaluate(() => window.VGD.onEncode({ state: 'running', percent: 40, name: 'mau.mp4' }));
+  const running = await enc();
+  check('ghép nền: đang ghép thì hiện thanh tiến trình đúng phần trăm và tên file',
+    running.shown && running.value === 40 && running.percent === '40 %' && running.label.includes('mau.mp4'));
+  check('ghép nền: đang ghép thì khóa nhóm Xuất (chuột không bấm được)', running.exportPointer === 'none');
+  check('ghép nền: thanh tiến trình không làm chân cửa sổ cao thêm và không tràn trang',
+    Math.abs(running.footerH - idle.footerH) <= 2 && !running.overflow);
+  check('ghép nền: nhóm Xuất vẫn nằm trọn trong khung nhìn ở 720 x 560 khi đang ghép', running.exportInView);
+  await page.evaluate(() => window.VGD.onEncode({ state: 'running', percent: 75, name: 'mau.mp4' }));
+  check('ghép nền: cập nhật phần trăm mới', (await enc()).value === 75);
+  await page.evaluate(() => { window.__calls = []; });
+  await page.locator('#encode-cancel').click();
+  check('ghép nền: nút Hủy gửi cancel_encode về Ruby', (await page.evaluate(() => window.__calls)).some((c) => c.name === 'cancel_encode'));
+  for (const state of ['done', 'cancelled', 'error']) {
+    await page.evaluate(() => window.VGD.onEncode({ state: 'running', percent: 10, name: 'mau.mp4' }));
+    await page.evaluate((st) => window.VGD.onEncode({ state: st, percent: 0, name: 'mau.mp4' }), state);
+    const ended = await enc();
+    check('ghép nền: trạng thái ' + state + ' thì ẩn thanh tiến trình và mở lại nhóm Xuất', !ended.shown && ended.exportPointer !== 'none');
+  }
+
   // ---- Số phiên bản dưới logo: Ruby gửi onVersion khi sẵn sàng ----
   await page.evaluate(() => window.VGD.onVersion({ version: '0.10.2-beta.1' }));
   check('phiên bản: hiện số phiên bản dưới logo', (await page.locator('#ver').textContent()) === 'Phiên bản 0.10.2-beta.1');
@@ -373,12 +407,13 @@ function check(name, ok) {
 
   // ---- Bố cục và theme (chặn tái phát lỗi vỡ bố cục khi hẹp, token không tồn tại, ô chọn kiểu mặc định) ----
   const fs = require('fs');
-  const themeCss = fs.readFileSync(path.resolve(__dirname, '../runtime/vgd_diagram/vgd-theme/vgd-theme.css'), 'utf8');
+  const themeDir = path.resolve(__dirname, '../runtime/vgd_diagram/vgd-theme');
+  const themeCss = fs.readFileSync(path.join(themeDir, 'vgd-theme.css'), 'utf8') + fs.readFileSync(path.join(themeDir, 'vgd-controls.css'), 'utf8');
   const dialogCss = fs.readFileSync(path.resolve(__dirname, '../runtime/vgd_diagram/dialog.css'), 'utf8');
   const defined = new Set([...themeCss.matchAll(/(--vgd-[a-z-]+)\s*:/g)].map((m) => m[1]));
   const used = [...new Set([...dialogCss.matchAll(/var\((--vgd-[a-z-]+)/g)].map((m) => m[1]))];
   const missing = used.filter((name) => !defined.has(name));
-  check('theme: mọi token --vgd-* dùng trong dialog.css đều có trong vgd-theme.css' + (missing.length ? ' (thiếu ' + missing.join(', ') + ')' : ''), missing.length === 0);
+  check('theme: mọi token --vgd-* dùng trong dialog.css đều có trong vgd-theme.css hoặc vgd-controls.css' + (missing.length ? ' (thiếu ' + missing.join(', ') + ')' : ''), missing.length === 0);
   check('theme: dialog.css không có màu hex cứng', !/#[0-9a-fA-F]{3,8}\b/.test(dialogCss));
   check('theme: nạp chuẩn điều khiển dùng chung vgd-controls.css',
     await page.evaluate(() => [...document.styleSheets].some((sheet) => (sheet.href || '').endsWith('vgd-theme/vgd-controls.css'))));

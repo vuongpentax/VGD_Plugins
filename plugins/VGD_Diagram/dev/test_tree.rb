@@ -7,7 +7,15 @@ $LOAD_PATH.unshift File.expand_path('../runtime/vgd_diagram', __dir__)
 module Sketchup
   class Entity
     attr_reader :entityID, :attributes
-    attr_accessor :name
+    attr_accessor :name, :hidden, :layer, :locked
+
+    def hidden?
+      @hidden ? true : false
+    end
+
+    def locked?
+      @locked ? true : false
+    end
 
     def initialize(id, name = '')
       @entityID = id
@@ -285,6 +293,32 @@ check 'đổi sang file khác: vùng làm việc cũ không trỏ nhầm đối 
 check 'đổi sang file khác: thông báo yêu cầu chọn lại rồi Làm mới', D.scope_message(D.scope_entities(model_b), []).include?('Làm mới')
 $active_model = model_a
 check 'quay lại file cũ: vùng làm việc vẫn còn', D.scope_entities(model_a) == [cab1]
+
+# 14. Đối tượng bị khóa: Lưu thứ tự bỏ qua và báo, không ghi lên đối tượng khóa
+lock_def = Sketchup::ComponentDefinition.new('Khóa', [])
+free = Sketchup::ComponentInstance.new(400, lock_def, 'Khóa')
+locked = Sketchup::ComponentInstance.new(401, lock_def, 'Khóa')
+locked.locked = true
+lock_model = Sketchup::FakeModel.new([free, locked])
+lock_tree = M.read_tree(lock_model)
+lock_result = M.apply_orders(lock_model, lock_tree, { lock_tree.first['key'] => 5 })
+check 'khóa: bản không khóa nhận thứ tự', free.get_attribute(M::DICT, M::KEY_ORDER) == 5
+check 'khóa: bản bị khóa không bị ghi', locked.get_attribute(M::DICT, M::KEY_ORDER).nil?
+check 'khóa: trả số bản đã ghi và số bản bỏ qua', lock_result == { saved: 1, skipped: 1 }
+check 'khóa: vẫn là một thao tác Undo', lock_model.log == [[:start, 'VGD Diagram: thứ tự lắp'], [:commit]]
+check 'khóa: thông báo nêu số đối tượng bị khóa và cách xử lý',
+      D.save_message(lock_result).include?('1 đối tượng bị khóa') && D.save_message(lock_result).include?('mở khóa')
+check 'khóa: không có đối tượng khóa thì thông báo như cũ', D.save_message({ saved: 2, skipped: 0 }) == 'Đã lưu thứ tự lắp. Dùng Ctrl+Z để hoàn tác.'
+
+# 15. CSV: tên bắt đầu bằng = + - @ không được thành công thức khi mở bằng Excel (thêm dấu nháy đơn phía trước)
+risky_ids = [500, 501, 502, 503, 504]
+risky = T.number(T.build([raw(500, '=SUM(A1)'), raw(501, '+84 Chân'), raw(502, '-Tủ'), raw(503, '@Ngoài'), raw(504, 'Bình thường')]), risky_ids)
+risky_csv = T.csv(risky)
+check 'CSV: tên bắt đầu bằng = + - @ có dấu nháy đơn phía trước',
+      ["'=SUM(A1)", "'+84 Chân", "'-Tủ", "'@Ngoài"].all? { |cell| risky_csv.include?(",#{cell},") }
+check 'CSV: không còn ô nào bắt đầu bằng = + - @', ['=SUM(A1)', '+84 Chân', '-Tủ', '@Ngoài'].none? { |cell| risky_csv.include?(",#{cell},") }
+check 'CSV: tên bình thường giữ nguyên', risky_csv.include?(',Bình thường,')
+check 'CSV: tên nguy hiểm có dấu phẩy vẫn đặt trong ngoặc kép', T.csv(T.number(T.build([raw(510, '=a,b')]), [510])).include?("\"'=a,b\"")
 
 puts
 puts $fail.empty? ? "TẤT CẢ ĐẠT (#{$pass})" : "CÓ #{$fail.size} LỖI: #{$fail.inspect}"

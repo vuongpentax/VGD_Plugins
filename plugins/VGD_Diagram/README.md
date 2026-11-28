@@ -1,8 +1,18 @@
-# VGD Diagram 0.10.5-beta.1
+# VGD Diagram 0.10.6-beta.1
 
 Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các cấu kiện, số lượng và thứ tự lắp, để khách hàng và thợ lắp đặt dễ hiểu mô hình.
 
 ## Trạng thái
+
+**0.10.6-beta.1 (bỏ qua đối tượng ẩn, ghép MP4 chạy nền, CSV an toàn, đối tượng khóa, CI).** Thay đổi so với 0.10.5-beta.1:
+
+- **Đối tượng ẩn:** cây và khung 3D chỉ gồm những gì đang thấy trong SketchUp: bỏ qua đối tượng ẩn (Edit > Hide), đối tượng trên tag đã tắt và trên tag nằm trong thư mục tag đã tắt (kể cả con và mặt bên trong). Muốn đưa vào sơ đồ thì hiện lại rồi bấm **Làm mới**.
+- **Ghép MP4 chạy nền:** SketchUp không còn đứng khi ghép. Chân cửa sổ hiện thanh tiến trình, phần trăm và nút **Hủy**; nhóm Xuất bị khóa trong lúc ghép. Hủy, đóng hộp thoại hoặc ffmpeg đứng (120 giây không thêm khung nào) thì ffmpeg bị dừng, file MP4 dở bị xóa, ảnh khung hình được giữ lại. Đang ghép thì không tải lại code. Cách làm: `Process.spawn` ghi tiến trình ra file tạm, bộ hẹn giờ của SketchUp đọc mỗi 0,3 giây (không dùng luồng Ruby).
+- **Đối tượng bị khóa:** **Lưu thứ tự** không ghi lên đối tượng bị khóa và báo "Bỏ qua N đối tượng bị khóa (mở khóa rồi lưu lại)".
+- **CSV an toàn:** tên bắt đầu bằng `=`, `+`, `-`, `@` được thêm dấu nháy đơn phía trước trong file CSV để Excel không hiểu là công thức. Tên trong model không đổi.
+- **CI:** `.github/workflows/vgd-diagram-tests.yml` chạy test Ruby (cài ffmpeg thật), quy ước repo và giao diện Playwright khi đẩy code có thay đổi trong plugin.
+- **Kiểm tra tự động:** `dev/test_tree.rb` 56, `dev/test_reload.rb` 27, `dev/test_scene.rb` 16, `dev/test_formats.rb` 6, `dev/test_ffmpeg.rb` 66 (ffmpeg thật, gồm hủy, ffmpeg đứng, đóng hộp thoại), `dev/test_ui.cjs` 113 (Chromium). Test giao diện đã được thử phá để chắc bắt đúng lỗi; đã xem ảnh chụp trạng thái đang ghép ở cả hai theme.
+- **Chưa kiểm tra trong SketchUp thật:** ghép nền trên Windows (`Process.spawn`, `Process.wait2` không chặn, bộ hẹn giờ, có thể thấy cửa sổ dòng lệnh đen trong lúc ghép), cách nhận biết ẩn / tag / thư mục tag (`Layer#visible?`, `Layer#folder`), ghi thuộc tính lên đối tượng khóa, và các mục của 0.10.5-beta.1 (bố cục trong HtmlDialog, nút bật / tắt, icon, giải phóng WebGL).
 
 **0.10.5-beta.1 (rà soát lỗi, theo chuẩn repo, bố cục giao diện).** Thay đổi so với 0.10.4-beta.1:
 
@@ -128,11 +138,11 @@ ffmpeg -framerate 30 -i lap-rap-khung-%05d.png -c:v libx264 -pix_fmt yuv420p lap
    - ảnh theo bước (`buoc-01`...), mỗi số thứ tự lắp một ảnh;
    - file `danh-sach.csv`.
 6. **Kiểm tra** báo các điều cần sửa trước khi xuất (nhóm chưa có thứ tự, quá nhiều nhãn trên một ảnh).
-7. **Định dạng:** chọn PNG hoặc JPG (ảnh), WebM hoặc PNG chuỗi khung hình (video) ở ô liền bên nút **Ảnh** / **Video**; hoặc gõ đuôi file trong hộp lưu. Muốn có MP4: chọn PNG chuỗi khung hình, plugin ghép bằng ffmpeg (đặt đường dẫn trong mục gập **Ghép MP4 bằng ffmpeg**).
+7. **Định dạng:** chọn PNG hoặc JPG (ảnh), WebM hoặc PNG chuỗi khung hình (video) ở ô liền bên nút **Ảnh** / **Video**; hoặc gõ đuôi file trong hộp lưu. Muốn có MP4: chọn PNG chuỗi khung hình, plugin ghép bằng ffmpeg ở nền (đặt đường dẫn trong mục gập **Ghép MP4 bằng ffmpeg**; xem tiến trình và bấm **Hủy** ở chân cửa sổ).
 
 ## Mô hình 3D
 
-- Hình học lấy từ các mặt của đối tượng đã chọn, chỉ đọc. Model không bị đổi khi tách rời hay phát lắp ráp.
+- Hình học lấy từ các mặt của đối tượng đã chọn, chỉ đọc. Model không bị đổi khi tách rời hay phát lắp ráp. Đối tượng đang ẩn hoặc trên tag đã tắt không có trong sơ đồ.
 - **Tách rời:** mặc định (Hướng tách "Tự động") mỗi cụm đi ra xa tâm mô hình, cộng nửa kích thước của cụm và một khe hở nhỏ. Có thể đặt hướng tách cố định (Trước, Sau, Trái, Phải, Lên, Xuống) hoặc Giữ nguyên cho từng cụm, và nhập khoảng cách tay (mm). Khi chọn một hướng cố định, cụm nằm phía ngược với hướng đó vẫn chỉ được đẩy đi theo kích thước của chính nó.
 - **Phát lắp ráp:** các cấu kiện có thứ tự lắp được lắp lần lượt từ 1 đến hết. Cấu kiện chưa có thứ tự theo thanh trượt.
 - Số nhãn hiện trên cây và trên mô hình, khớp nhau. Mỗi nhóm có hình học một nhãn, đặt trên cấu kiện đầu tiên của nhóm.
@@ -145,7 +155,7 @@ ffmpeg -framerate 30 -i lap-rap-khung-%05d.png -c:v libx264 -pix_fmt yuv420p lap
 - Các cấu kiện **cùng tên và cùng cấu trúc con** được gom thành một dòng kèm số lượng (ví dụ "Chân × 4").
 - Dòng con chỉ hiện theo **một bản đại diện**. Khi bấm một dòng, chỉ các bản thuộc đại diện đó được chọn.
 - Thứ tự lắp lưu thành thuộc tính trong model (dictionary `VGD_Diagram`, khóa `order`). Thứ tự áp cho mọi bản trong nhóm. Khi các bản có thứ tự khác nhau, ô hiện "nhiều số".
-- Plugin **chỉ đọc** hình học. Chỉ thêm/xóa thuộc tính thứ tự khi bạn bấm Lưu thứ tự.
+- Plugin **chỉ đọc** hình học. Chỉ thêm/xóa thuộc tính thứ tự khi bạn bấm Lưu thứ tự, và bỏ qua đối tượng bị khóa.
 
 ## Cài đặt và tải lại
 

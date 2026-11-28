@@ -24,10 +24,10 @@ module VGD
       end
 
       def collect(entities, transform, owner, state)
-        faces = entities.select { |entity| entity.is_a?(Sketchup::Face) }
+        faces = entities.select { |entity| entity.is_a?(Sketchup::Face) && ModelIO.visible?(entity) }
         add_part(owner, faces, transform, state) unless faces.empty?
         entities.each do |entity|
-          next unless ModelIO.instance?(entity)
+          next unless ModelIO.instance?(entity) && ModelIO.visible?(entity)
           return if state['truncated']
           collect(ModelIO.children_entities(entity), transform * entity.transformation, entity, state)
         end

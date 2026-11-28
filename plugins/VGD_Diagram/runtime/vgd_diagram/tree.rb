@@ -135,8 +135,10 @@ module VGD
         nodes.flat_map { |node| (node['number'] ? [node] : []) + numbered_list(node['children']) }
       end
 
+      # Ô bắt đầu bằng = + - @ (hoặc tab, xuống dòng) bị Excel hiểu là công thức: thêm dấu nháy đơn phía trước.
       def csv_cell(value)
         text = value.to_s
+        text = "'#{text}" if text.match?(/\A[=+\-@\t\r]/)
         text.match?(/[",\r\n]/) ? %("#{text.gsub('"', '""')}") : text
       end
 
