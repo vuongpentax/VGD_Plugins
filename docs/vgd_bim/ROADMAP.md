@@ -120,7 +120,7 @@ Làm: VGD ID, Mã đối tượng, phát hiện và sửa trùng, mở rộng Ca
 
 ### Cột mốc 3 — Vật liệu có dữ liệu và luật khối lượng
 
-Trạng thái: 3a, 3b và hao hụt % của 3c đã làm (beta.67). Còn lại của 3c: trừ ô cửa / cửa sổ (cần quan hệ món–tường) và công thức đơn giản.
+Trạng thái: 3a, 3b và hao hụt % của 3c đã làm (beta.67). Trừ ô cửa / cửa sổ khỏi tường của phòng đã làm ở 1.1.1-beta.52 (theo tag cửa người dùng chọn, cửa ghép với phòng theo vị trí sát viền; chờ thử thật). Còn lại của 3c: công thức đơn giản.
 
 - 3a Thư viện vật liệu (mã, tên, hãng, sản phẩm, độ dày, đơn vị, đơn giá, quy cách), lưu trên máy, nhập / xuất; nối với vật liệu SketchUp theo tên.
 - 3b Nối vật liệu → khối lượng → thành tiền.
@@ -169,7 +169,7 @@ Relationship đầy đủ (Object → Object / Room / Level / Type / Material), 
 | 1 Danh tính và Category | **Xong ở beta.63** (1a VGD ID, 1b Mã đối tượng hàng loạt và ID trùng ở tab Kiểm tra, 1c danh mục mở rộng). Chủ dự án chốt không làm chuyển đổi dữ liệu cũ nên không đổi `schema_version`; chờ người dùng thử trong SketchUp thật |
 | 2 Tầng và Phòng | Đang làm: 2a Tầng xong (beta.64: danh sách tầng trong model, nhãn ở dictionary `VGD_BIM_LOC`, gợi ý theo cao độ). Câu hỏi mở đã chốt 12/11/2026: viền phòng lấy từ mặt sàn hoặc đa giác đóng được chọn (dò tường làm sau); tầng gợi ý theo Z rồi người dùng xác nhận; khối phòng do plugin dựng (chỉ khối; đã gỡ, xem dưới), dữ liệu và diện tích do VGD_BIM tính. 2b dữ liệu xong ở beta.65 (danh sách phòng trong model, viền đọc từ mặt sàn, diện tích / chu vi / thể tích / tường / trần, gán món theo vị trí). `VGD_Room` 0.1.0-beta.1 dựng khối phòng và cầu nối `room_volume` xong ở beta.66; **đã gỡ ở 1.1.1-beta.10** theo quyết định ngày 18/11/2026. Việc dò viền phòng từ tường chuyển sang VGD Structure (quyết định ngày 18/11/2026). Còn: lệnh `edit` có giao diện riêng |
 | 2c Phòng nhiều mặt (đã làm, chờ thử thật) | BIM 1.1.1-beta.3: tạo nhiều phòng từ nhiều mặt sàn đã chọn, phòng có lỗ (cột). Phần dựng khối (VGD Room) đã gỡ ở beta.10 rồi **nhập lại vào BIM ở beta.13** (khung dây từ beta.50). **Dò viền phòng từ tường do BIM làm** (quyết định 19/11/2026 đảo quyết định 18/11/2026; làm ở beta.51, chờ thử thật). Nhãn và màu theo loại phòng vẫn chờ, chưa rõ ai làm. |
-| 3 Vật liệu và luật khối lượng | Làm một phần: 3a, 3b và hao hụt % của 3c (beta.67). Còn: trừ ô cửa / cửa sổ khỏi tường (cần quan hệ món–tường), công thức đơn giản |
+| 3 Vật liệu và luật khối lượng | Làm một phần: 3a, 3b và hao hụt % của 3c (beta.67); trừ ô cửa / cửa sổ khỏi tường của phòng (1.1.1-beta.52, theo tag cửa, chờ thử thật). Còn: công thức đơn giản |
 | 4 Schedule, Audit, Validation | Làm một phần: 4a (preset có sẵn), 4b (báo thiếu VGD ID, gán hàng loạt, beta.69), 4c (luật kiểm tra, beta.70). Còn: Fix All cho lỗi khác, điều kiện lọc theo nhóm món |
 | 5 Type, Classification, so sánh phiên bản | Làm một phần: 5c so sánh phiên bản (beta.71), preset Tủ. Còn: 5a Type / Instance, 5b Classification. Không làm VGD_Cabinet (18/11/2026) |
 

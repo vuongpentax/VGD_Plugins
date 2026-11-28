@@ -98,6 +98,7 @@ module VGD
           @dialog.add_action_callback('material_library_save') { |_ctx, payload| safely { material_library_save(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_rooms') { |_ctx, payload| safely { table_rooms(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_from_selection') { |_ctx, payload| safely { table_room_from_selection(JSON.parse(payload)) } }
+          @dialog.add_action_callback('table_room_openings') { |_ctx, payload| safely { table_room_openings(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_detect') { |_ctx, payload| safely { table_room_detect(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_room_detect_apply') { |_ctx, payload| safely { table_room_detect_apply(JSON.parse(payload)) } }
           @dialog.add_action_callback('table_assign_rooms_auto') { |_ctx, payload| safely { table_assign_rooms_auto(JSON.parse(payload)) } }
@@ -630,10 +631,12 @@ module VGD
           room['elevation'] = shape[:elevation] if room['elevation_source'] == 'manual' # phòng theo tầng giữ cao độ của tầng
           room.delete('holes')
           room['holes'] = shape[:holes] unless shape[:holes].empty?
+          had_openings = room.delete('openings') # viền đổi thì số cửa đã trừ không còn đúng: bỏ, người dùng bấm Trừ cửa lại
           clean = Rooms.sanitize!(list.each_with_index.map { |item, i| i == index ? room : item })
           Rooms.write(@model, clean)
           table_build
           note = RoomVolume.find(@model, room['id']).nil? ? '' : ' Khối 3D đã dựng chưa đổi: bấm Dựng lại khối.'
+          note += ' Số cửa đã trừ khỏi tường được bỏ: bấm Trừ cửa khỏi tường lại.' if had_openings
           emit('message', {text: "Đã cập nhật viền phòng #{room['name']} (diện tích #{Rooms.metrics(room)[:area]} m²).#{note}"})
         end
         def selected_faces
@@ -749,6 +752,36 @@ module VGD
             room['holes'] = shape[:holes] unless shape[:holes].empty?
             room
           end
+        end
+        # Trừ cửa đi / cửa sổ khỏi diện tích tường của MỌI phòng (core/room_openings.rb, core/opening_probe.rb). payload: {'tags' => [tên tag cửa]}.
+        # Tìm cửa trong cả model trên các tag đã chọn (chỉ khi bấm nút, chỉ đọc), ghép cửa vào phòng có viền sát cửa, ghi số cửa và diện tích vào từng phòng.
+        # Phòng không có cửa nào cũng được ghi (0 cửa) để biết đã trừ. Không đổi cửa, tường hay hình học. Một bước hoàn tác (Rooms.write).
+        def table_room_openings(payload)
+          check_model!
+          raise ArgumentError, 'Dữ liệu trừ cửa không hợp lệ.' unless payload.is_a?(Hash)
+          tags = RoomOpenings.tags!(payload['tags'])
+          rooms = Rooms.read(@model)
+          raise 'Chưa có phòng nào. Hãy tạo phòng trước.' if rooms.empty?
+          missing = tags - @model.layers.to_a.map { |layer| layer.name.to_s }
+          raise "Model không có tag: #{missing.first(5).join(', ')}." if missing.size == tags.size
+          scan = OpeningProbe.collect(@model, tags)
+          plan = RoomOpenings.match(scan[:openings], rooms)
+          updated = rooms.map do |room|
+            entry = plan[:rooms][room['id']] || {'count' => 0, 'area' => 0.0, 'estimated' => 0}
+            room.merge('openings' => entry.merge('tags' => tags))
+          end
+          Rooms.write(@model, updated)
+          table_build
+          counted = plan[:rooms].values.sum { |entry| entry['count'] }
+          area = plan[:rooms].values.sum { |entry| entry['area'] }.round(3)
+          notes = []
+          notes << "#{plan[:unmatched]} cửa không nằm sát phòng nào" if plan[:unmatched].positive?
+          estimated = plan[:rooms].values.sum { |entry| entry['estimated'] }
+          notes << "#{estimated} lượt cửa ước tính theo khung bao" if estimated.positive?
+          notes << "tag không có trong model: #{missing.join(', ')}" unless missing.empty?
+          notes << "chỉ duyệt #{OpeningProbe::MAX_VISITS} đối tượng đầu tiên (model quá lớn)" if scan[:truncated]
+          note = notes.empty? ? '' : " (#{notes.join('; ')})"
+          emit('message', {text: "Đã trừ cửa khỏi tường: tìm thấy #{scan[:openings].size} cửa, trừ #{counted} lượt ở #{plan[:rooms].size} phòng, tổng #{area} m².#{note}"})
         end
         # Dò vùng phòng từ các tường đang chọn (core/room_detect_probe.rb đọc, core/room_detect.rb tính): CHỈ ĐỌC, không đổi tường, không thêm hình.
         # payload: {'cut' => độ cao cắt mm từ chân tường (mặc định 2400), 'min_width' => bề rộng tối thiểu mm (mặc định 350)}. Trả về

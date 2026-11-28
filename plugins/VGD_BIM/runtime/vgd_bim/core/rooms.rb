@@ -1,4 +1,5 @@
 require 'json'
+require_relative 'room_openings'
 require 'securerandom'
 require_relative 'levels'
 
@@ -101,6 +102,8 @@ module VGD
                   'boundary' => outline, 'finish_floor' => finish!(item['finish_floor'], name), 'finish_wall' => finish!(item['finish_wall'], name),
                   'finish_ceiling' => finish!(item['finish_ceiling'], name)}
           room['holes'] = holes unless holes.empty? # chỉ ghi khi có lỗ: dữ liệu phòng không lỗ giữ nguyên như trước
+          openings = RoomOpenings.record!(item['openings'], name) # cửa đã trừ khỏi tường (bấm Trừ cửa khỏi tường); chỉ ghi khi đã trừ
+          room['openings'] = openings if openings
           room
         end
       end
@@ -220,8 +223,12 @@ module VGD
         holes = Array(room['holes'])
         area = polygon_area(room['boundary']) - holes.sum { |ring| polygon_area(ring) } # diện tích sàn trừ cột / hộp kỹ thuật
         perimeter = polygon_perimeter(room['boundary']) + holes.sum { |ring| polygon_perimeter(ring) } # chu vi gồm cả chu vi lỗ (tường quanh cột)
+        gross = perimeter * room['height'] / 1.0e6
+        openings = room['openings']
+        open_area = openings ? openings['area'] : 0.0
         {area: (area / 1.0e6).round(3), perimeter: (perimeter / 1000.0).round(3), volume: (area * room['height'] / 1.0e9).round(3),
-         wall_area: (perimeter * room['height'] / 1.0e6).round(3), ceiling_area: (area / 1.0e6).round(3)}
+         wall_area: [gross - open_area, 0.0].max.round(3), wall_gross: gross.round(3), openings_area: open_area.round(3),
+         openings_count: openings ? openings['count'] : nil, ceiling_area: (area / 1.0e6).round(3)}
       end
 
       # ---- Khối phòng do plugin dựng từ bản trước (cầu nối room_volume đã gỡ ở 1.1.1-beta.10): không tính khối lượng; giữ để file cũ vẫn đúng ----

@@ -139,7 +139,7 @@ function syncFile(data){
 }
 function resetTableState(){
   clearTimeout(viewTimer);clearTimeout(excludeTimer);
-  Object.assign(tableState,{lockKey:null,replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',manual:[],sheets:null,sheet:0,excludeTags:null,excludePending:false,projectedChecked:false,snapshots:null,snapshotDiff:null,checkResults:null,roomsDetect:null,bridge:{file:null,match_by:'vgd_id',match_column:'',mapping:{},preview:null,skip:new Set(),shown:200}});
+  Object.assign(tableState,{lockKey:null,replace:'',headers:{},settings:null,shownRows:[],restored:false,savedView:'',data:null,preset:'Tất cả',group:'',search:'',order:[],visible:new Set(),sort:null,widths:{},onlyTop:true,showTotals:true,density:'',rowHeight:0,sel:new Set(),anchor:null,displayed:[],groupBy:'',merge:false,collapsed:new Set(),panel:null,colSearch:'',manual:[],sheets:null,sheet:0,excludeTags:null,excludePending:false,projectedChecked:false,snapshots:null,snapshotDiff:null,checkResults:null,roomsDetect:null,roomsOpenings:null,bridge:{file:null,match_by:'vgd_id',match_column:'',mapping:{},preview:null,skip:new Set(),shown:200}});
   const view=document.querySelector('.table-view');if(view)view.remove();
 }
 const NUMERIC=new Set(['lenX','lenY','lenZ','areaXZ','areaXY','areaFace','areaProjected','volume','quantity','price','total','calc_qty','calc_total','mat_price','mat_waste','mat_qty','mat_cost']);
@@ -1327,7 +1327,7 @@ function roomsPanel(){
     build.title='Dựng (hoặc dựng lại) khối 3D của phòng: một khối trên tag VGD_ROOMS, một bước hoàn tác.';
     const upd=button('Cập nhật viền từ mặt đang chọn',()=>call('table_room_update_boundary',JSON.stringify({id:room.id})));upd.className='rm-update';
     upd.title='Thay viền phòng bằng đúng một mặt sàn đang chọn trong SketchUp. Tên, mã, tầng, chiều cao, hoàn thiện giữ nguyên; cao độ sàn chỉ đổi theo mặt với phòng hạ nền (nhập tay).';
-    const body=node('div',undefined,'rm-body');body.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường (chưa trừ cửa) ${m.wall_area} m² · Trần ${m.ceiling_area} m²`+(room.holes&&room.holes.length?` · ${room.holes.length} lỗ (cột, hộp kỹ thuật)`:''),'muted rm-metrics'),build,upd);
+    const body=node('div',undefined,'rm-body');body.append(top,mid,fin,node('p',`Sàn ${m.area} m² · Chu vi ${m.perimeter} m · Thể tích ${m.volume} m³ · Tường ${m.openings_count==null?`(chưa trừ cửa) ${m.wall_area} m²`:`${m.wall_area} m² (đã trừ ${m.openings_count} cửa, ${m.openings_area} m²)`} · Trần ${m.ceiling_area} m²`+(room.holes&&room.holes.length?` · ${room.holes.length} lỗ (cột, hộp kỹ thuật)`:''),'muted rm-metrics'),build,upd);
     const toggle=button('▾',()=>setRoomCollapsed(box,!body.hidden));toggle.className='rm-toggle';toggle.setAttribute('aria-label','Mở hoặc thu gọn phòng '+room.name);
     const pick=node('input');pick.type='checkbox';pick.checked=roomsView.picked.has(room.id);pick.setAttribute('aria-label','Chọn phòng '+room.name);
     pick.onchange=()=>{pick.checked?roomsView.picked.add(room.id):roomsView.picked.delete(room.id);updatePicked();};
@@ -1344,6 +1344,26 @@ function roomsPanel(){
   const create=node('div',undefined,'rm-new');create.append(newName,newNumber,newLevel);
   const make=button('Tạo phòng từ các mặt đang chọn',()=>call('table_room_from_selection',JSON.stringify({name:newName.value,number:newNumber.value,level:newLevel.value})),'primary');make.id='rm-make';
   make.title='Đọc viền (và các lỗ, vd cột) của các mặt sàn nằm ngang đang chọn trong SketchUp, mỗi mặt thành một phòng. Một mặt: tên và mã như đã nhập. Nhiều mặt: tên là tiền tố (Phòng 1, Phòng 2...), không đặt mã. Chỉ lưu dữ liệu, không dựng hình.';
+  // Trừ cửa khỏi tường (core/room_openings.rb): người dùng tick các tag của cửa đi / cửa sổ, Ruby tìm cửa trên các tag đó trong model và trừ cho mọi phòng.
+  const op=tableState.roomsOpenings||(tableState.roomsOpenings={tags:new Set(rooms.flatMap(r=>(r.openings&&r.openings.tags)||[]))});
+  const opBox=node('div',undefined,'rm-openings');
+  opBox.append(node('div','Trừ cửa khỏi tường','pop-title'),node('p','Tick các tag của cửa đi / cửa sổ rồi bấm Trừ cửa. Cửa nằm sát viền phòng được trừ khỏi diện tích tường của phòng đó (cửa giữa hai phòng trừ cho cả hai). Cửa của VGD Structure dùng số đo lỗ, cửa khác ước tính theo khung bao.','muted'));
+  const opList=node('div',undefined,'rm-openings-list');
+  const tagNames=modelTags();
+  const opBtn=button('',()=>{
+    if(!op.tags.size)throw Error('Hãy chọn ít nhất một tag của cửa đi / cửa sổ.');
+    call('table_room_openings',JSON.stringify({tags:[...op.tags]}));
+  },'primary');opBtn.id='rm-openings';
+  const syncOp=()=>{opBtn.textContent=`Trừ cửa khỏi tường (${op.tags.size} tag)`;opBtn.disabled=!op.tags.size||!rooms.length;};
+  tagNames.forEach(name=>{
+    const tick=node('input');tick.type='checkbox';tick.checked=op.tags.has(name);tick.setAttribute('aria-label','Tag cửa '+name);
+    tick.onchange=()=>{tick.checked?op.tags.add(name):op.tags.delete(name);syncOp();};
+    const row=node('label',undefined,'rm-open-row');row.append(tick,node('span',name));opList.append(row);
+  });
+  if(!tagNames.length)opList.append(node('p','Model chưa có tag nào. Hãy đặt tag cho cửa đi / cửa sổ trước.','muted'));
+  syncOp();
+  opBtn.title='Tìm trong cả model các group / component nằm trên các tag đã tick (chỉ đọc, chỉ khi bấm), ghép mỗi cửa vào phòng có viền sát cửa rồi ghi số cửa và diện tích vào phòng. Một bước hoàn tác, không đổi cửa hay tường.';
+  opBox.append(opList,opBtn);
   // Dò phòng từ tường (core/room_detect.rb): xem trước các vùng kín giữa tường đang chọn, tích bỏ vùng không muốn, rồi tạo. Kết quả nhớ trong tableState.roomsDetect.
   const dt=tableState.roomsDetect||(tableState.roomsDetect={cut:2400,minWidth:350,result:null,keep:new Set()});
   const cutInput=node('input');cutInput.type='number';cutInput.min='100';cutInput.max='20000';cutInput.step='50';cutInput.value=dt.cut;cutInput.id='rm-cut';cutInput.setAttribute('aria-label','Độ cao cắt (mm)');cutInput.onchange=()=>{dt.cut=Number(cutInput.value);};
@@ -1384,7 +1404,7 @@ function roomsPanel(){
   const buildAll=button(`Dựng khối tất cả phòng${rooms.length?` (${rooms.length})`:''}`,()=>call('table_room_build_all',JSON.stringify({})));buildAll.id='rm-build-all';
   buildAll.disabled=!rooms.length;buildAll.title='Dựng (hoặc dựng lại) khối 3D của mọi phòng, một bước hoàn tác cho cả đợt.';
   const actions=node('div',undefined,'rename-actions');actions.append(make,buildAll,auto,button('Đóng',()=>{tableState.panel=null;tableView(tableState.data);}));
-  p.append(create,detect,node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán phòng theo vị trí; hoặc nhấp đúp ô Phòng để gán tay.','muted'),actions);
+  p.append(create,detect,opBox,node('p',picked.length?`${picked.length} dòng đang chọn.`:'Chọn dòng để gán phòng theo vị trí; hoặc nhấp đúp ô Phòng để gán tay.','muted'),actions);
   applyRoomsView();
   return p;
 }

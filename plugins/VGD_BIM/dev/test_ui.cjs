@@ -665,6 +665,18 @@ const assert=(value,message)=>{if(!value)throw Error(message)};
   await page.locator('#rm-auto').click();
   last=await lastCall();
   assert(last.name==='table_assign_rooms_auto' && JSON.stringify(last.data.indexes)==='[0,1]','gán theo vị trí: gửi các dòng đang chọn');
+  // Trừ cửa khỏi tường: tick tag cửa rồi gửi; số đo ghi đã trừ bao nhiêu cửa
+  await page.evaluate(()=>{tableState.data.choices=Object.assign({},tableState.data.choices,{model_tags:['A. DOOR','A. WINDOW','F. CABINET']});tableState.roomsOpenings=null;tableState.panel='rooms';tableView(tableState.data);});
+  assert(await page.locator('#rm-openings').isDisabled() && (await page.locator('#rm-openings').innerText()).includes('(0 tag)'),'trừ cửa: chưa tick tag thì nút tắt');
+  await page.getByLabel('Tag cửa A. DOOR').check();await page.getByLabel('Tag cửa A. WINDOW').check();
+  assert((await page.locator('#rm-openings').innerText()).includes('(2 tag)'),'trừ cửa: nút ghi số tag đã tick');
+  await page.locator('#rm-openings').click();
+  last=await lastCall();
+  assert(last.name==='table_room_openings' && JSON.stringify(last.data.tags)==='["A. DOOR","A. WINDOW"]','trừ cửa: gửi đúng các tag đã tick');
+  await page.evaluate(()=>{tableState.data.rooms[0].openings={count:2,area:3.78,estimated:1,tags:['A. DOOR']};tableState.data.rooms[0].metrics=Object.assign({},tableState.data.rooms[0].metrics,{wall_area:38.22,openings_count:2,openings_area:3.78});tableState.roomsOpenings=null;tableState.panel='rooms';tableView(tableState.data);});
+  assert((await page.locator('.rm-metrics').first().innerText()).includes('đã trừ 2 cửa, 3.78 m²'),'đã trừ cửa: số đo ghi số cửa và diện tích đã trừ');
+  assert(await page.getByLabel('Tag cửa A. DOOR').isChecked() && !(await page.getByLabel('Tag cửa A. WINDOW').isChecked()),'mở lại: tag cửa tick sẵn theo lần trừ trước');
+  await page.evaluate(()=>{delete tableState.data.rooms[0].openings;tableState.data.rooms[0].metrics.openings_count=null;tableState.roomsOpenings=null;tableState.panel='rooms';tableView(tableState.data);});
   // Dò phòng từ tường: gửi độ cao cắt / bề rộng, hiện vùng dò được (tích sẵn), bỏ tích một vùng, tạo chỉ các vùng đã tích
   assert(await page.locator('#rm-detect').isVisible() && (await page.locator('#rm-cut').inputValue())==='2400' && (await page.locator('#rm-minw').inputValue())==='350','dò phòng: mặc định cao 2400, rộng tối thiểu 350');
   assert(await page.locator('#rm-detect-apply').isHidden(),'chưa dò: chưa có nút tạo');

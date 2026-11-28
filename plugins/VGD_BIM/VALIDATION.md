@@ -2,7 +2,18 @@
 
 Tóm tắt trạng thái kiểm chứng của VGD_BIM. Các bước kiểm tra trên SketchUp thật (làm theo thứ tự, ghi kết quả) nằm ở `KIEM_TRA_TREN_SKETCHUP.md`. Mọi kết quả dưới đây là **mô phỏng ngoài SketchUp**; chưa có kiểm chứng nào của bản 1.1.0 trong SketchUp thật.
 
-## Bản 1.1.1-beta.51: đã kiểm tra tự động
+## Bản 1.1.1-beta.52: đã kiểm tra tự động
+
+Beta.52: trừ cửa khỏi tường của phòng theo tag cửa do người dùng chọn. `core/room_openings.rb` (ghép cửa với phòng: tâm cửa cách cạnh viền / lỗ không quá `REACH` = 400 mm và khoảng cao chồng lên phòng; cửa cao hơn trần chỉ trừ phần trong phòng; kiểm tra tag và dữ liệu `openings` lưu trong phòng), `core/opening_probe.rb` (duyệt model tìm group / component trên tag cửa, không đi vào bên trong cửa, định nghĩa không chứa cửa chỉ duyệt một lần, giới hạn 200.000 đối tượng; cửa VGD Structure dùng `dims` w, h), `Rooms.metrics` (`wall_gross`, `openings_area`, `openings_count`, `wall_area` đã trừ, không âm), lệnh `table_room_openings`, hộp Trừ cửa khỏi tường trong **Quản lý phòng**.
+
+- `dev/test_room_openings.rb`: cửa tường ngoài chỉ trừ cho một phòng, cửa tường chung trừ cho hai phòng, món xa tường / ở tầng khác không trừ, cửa cao hơn trần, cửa sát lỗ, lưu và đọc lại `openings`, số đo đã trừ / chưa trừ, dữ liệu sai bị từ chối, danh sách tag; đọc cửa trong model giả lập (cửa trong group, cửa xoay 90 độ, cửa VGD Structure, bản sao trùng chỗ, tủ không phải cửa), giới hạn duyệt, định nghĩa không có cửa chỉ duyệt một lần.
+- `dev/test_rooms.rb`: số đo phòng chưa trừ cửa giữ nguyên.
+- `dev/test_dialog_logic.rb`: lỗi khi chưa chọn tag / tag không có / dữ liệu sai; ghi số cửa vào phòng, tường đã trừ; thông báo cửa không sát phòng và cửa ước tính; lưu phòng ở giao diện giữ số cửa; cập nhật viền bỏ số cửa và nhắc trừ lại.
+- `dev/test_ui.cjs`, `dev/test_ui_en.cjs`: nút tắt khi chưa tick, gửi đúng tag, số đo ghi đã trừ, tick sẵn theo lần trước, bản dịch Anh.
+
+**Chưa xác minh trong SketchUp thật:** cửa trong model thật (component cửa tải về, cửa lồng nhiều cấp, cửa xoay góc lẻ: khung bao có thể lớn hơn cửa), ngưỡng 400 mm với tường dày hơn 600 mm, thời gian duyệt model lớn, hoàn tác.
+
+## Bản 1.1.1-beta.51 (trước đó)
 
 Beta.51: dò vùng phòng từ tường. `core/room_detect.rb` (thuật toán thuần: tách đoạn tại giao điểm / chạm chữ T / đoạn chồng nhau, bỏ đầu cụt, duyệt mặt của đồ thị phẳng, cụm tường nằm trong mặt của cụm khác thành lỗ, lọc vùng nhỏ và vùng hẹp), `core/room_detect_probe.rb` (đọc mặt đứng của đối tượng đang chọn, đi sâu group / component, cắt ở độ cao cắt bằng quy tắc chẵn lẻ nên lỗ cửa bị cắt qua để lại khe), lệnh `table_room_detect` (xem trước, chỉ đọc) và `table_room_detect_apply` (dò lại rồi tạo vùng đã tích, một bước hoàn tác), phần giao diện trong **Quản lý phòng**.
 

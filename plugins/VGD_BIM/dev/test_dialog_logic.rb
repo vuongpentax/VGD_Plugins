@@ -41,7 +41,7 @@ $transactions = []
 $writes = []
 $vgd_data = {}
 require File.join(ROOT, 'core/settings')
-%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/material_library core/check_rules core/snapshots core/bridge core/levels core/rooms core/room_detect core/room_detect_probe core/room_volume core/sheet_lock].each { |f| require File.join(ROOT, f) }
+%w[core/measure core/schema core/quantity core/custom_columns core/vgd_id core/object_code core/material_library core/check_rules core/snapshots core/bridge core/levels core/room_openings core/rooms core/opening_probe core/room_detect core/room_detect_probe core/room_volume core/sheet_lock].each { |f| require File.join(ROOT, f) }
 require File.join(ROOT, 'core/preset')
 require File.join(ROOT, 'core/geometry')
 require File.join(ROOT, 'core/view_fit')
@@ -783,6 +783,24 @@ ok('gán tay qua ô Phòng: nhãn phòng, không đụng dữ liệu VGD', VGD::
 ok('phòng không có trong danh sách: từ chối', bad_room.call { rd2.table_edit({'indexes' => [1], 'field' => 'room', 'value' => 'rm_deadbeef'}) }.to_s.include?('không còn trong danh sách'))
 rd2.table_edit({'indexes' => [1], 'field' => 'room', 'value' => ''})
 ok('bỏ phòng bằng giá trị rỗng', VGD::BIM::Rooms.entity_room(rme[1]) == '')
+# Trừ cửa khỏi tường theo tag cửa (đọc cửa đã thử riêng ở test_room_openings.rb; ở đây giả lập kết quả đọc)
+OpeningLayer = Struct.new(:name)
+rmm.define_singleton_method(:layers) { [OpeningLayer.new('Untagged'), OpeningLayer.new('A. DOOR')] }
+opening_scan = {openings: [{x: 2000, y: -100, z0: 0, z1: 2100, width: 900, height: 2100, exact: false}, {x: 20_000, y: 0, z0: 0, z1: 2100, width: 900, height: 2100, exact: true}], truncated: false}
+VGD::BIM::OpeningProbe.define_singleton_method(:collect) { |_model, tags| $opening_tags = tags; opening_scan }
+ok('trừ cửa: chưa chọn tag thì báo lỗi', bad_room.call { rd2.table_room_openings({'tags' => []}) }.to_s.include?('ít nhất một tag'))
+ok('trừ cửa: tag không có trong model thì báo lỗi', bad_room.call { rd2.table_room_openings({'tags' => ['Không có']}) }.to_s.include?('không có tag'))
+ok('trừ cửa: dữ liệu sai bị từ chối', bad_room.call { rd2.table_room_openings('x') }.to_s.include?('không hợp lệ'))
+rd2.table_room_openings({'tags' => ['A. DOOR']})
+trimmed = VGD::BIM::Rooms.read(rmm)[0]
+ok('trừ cửa: phòng ghi 1 cửa 1,89 m2 kèm tag đã chọn', trimmed['openings'] == {'count' => 1, 'area' => 1.89, 'estimated' => 1, 'tags' => ['A. DOOR']} && $opening_tags == ['A. DOOR'])
+ok('trừ cửa: tường còn 14 x 2,8 - 1,89 = 37,31 m2', VGD::BIM::Rooms.metrics(trimmed)[:wall_area] == 37.31)
+ok('trừ cửa: báo số cửa tìm thấy, cửa không sát phòng nào và cửa ước tính', rd2.rcalls.last[1][:text].include?('tìm thấy 2 cửa') && rd2.rcalls.last[1][:text].include?('1 cửa không nằm sát phòng nào') && rd2.rcalls.last[1][:text].include?('ước tính'))
+rd2.table_rooms({'rooms' => VGD::BIM::Rooms.read(rmm).map { |r| r.merge('height' => 2800) }})
+ok('sửa phòng ở giao diện (gửi cả danh sách) vẫn giữ số cửa đã trừ', VGD::BIM::Rooms.read(rmm)[0]['openings'] && VGD::BIM::Rooms.read(rmm)[0]['openings']['count'] == 1)
+rmm.selection.items = [RoomFace.new([[0, 0, 0], [4000, 0, 0], [4000, 3000, 0], [0, 3000, 0]])]
+rd2.table_room_update_boundary({'id' => VGD::BIM::Rooms.read(rmm)[0]['id']})
+ok('cập nhật viền: bỏ số cửa đã trừ và nhắc trừ lại', !VGD::BIM::Rooms.read(rmm)[0].key?('openings') && rd2.rcalls.last[1][:text].include?('Trừ cửa khỏi tường lại'))
 # Dò phòng từ tường (chỉ đọc; tạo phòng chỉ khi áp dụng, một bước hoàn tác)
 class WallFace < Sketchup::Face
   def initialize(x0, y0, x1, y1, h = 2800); @pts = [[x0, y0, 0], [x1, y1, 0], [x1, y1, h], [x0, y0, h]]; end
