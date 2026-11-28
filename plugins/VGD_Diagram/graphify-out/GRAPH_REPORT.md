@@ -1,7 +1,7 @@
 # Graph Report - VGD_Diagram  (2026-11-28)
 
 ## Corpus Check
-- 21 files · ~33,971 words
+- 21 files · ~34,167 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 3 file(s) not represented in the graph (top: .woff2 2, (none) 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `6667470f`
+- Built from commit: `c2a8b3fa`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -25,7 +25,7 @@
 - menu
 - test_ui.cjs
 - vgd-theme.js
-- VGD Diagram 0.3.0-beta.1
+- VGD Diagram 0.5.0-beta.1
 - three.min.js
 - dialog.js
 - VGD
@@ -191,9 +191,9 @@ Nodes (4): { chromium }, failed, path, sample
 Cohesion: 0.54
 Nodes (7): apply(), current(), readSaved(), root(), start(), systemIsDark(), writeSaved()
 
-### Community 9 - "VGD Diagram 0.3.0-beta.1"
+### Community 9 - "VGD Diagram 0.5.0-beta.1"
 Cohesion: 0.25
-Nodes (7): Cài đặt và tải lại, Cách dùng, Kiểm thử, Mô hình 3D, Quy tắc gom và thứ tự (giả định cần xác nhận), Trạng thái, VGD Diagram 0.3.0-beta.1
+Nodes (7): Cài đặt và tải lại, Cách dùng, Kiểm thử, Mô hình 3D, Quy tắc gom và thứ tự (giả định cần xác nhận), Trạng thái, VGD Diagram 0.5.0-beta.1
 
 ### Community 11 - "three.min.js"
 Cohesion: 0.02

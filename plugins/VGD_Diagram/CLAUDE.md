@@ -39,6 +39,8 @@
 - Chỉ đọc hình học model. Không sửa, xóa, di chuyển cấu kiện. Chỉ ghi thuộc tính `VGD_Diagram`, và chỉ khi người dùng bấm Lưu.
 - Phạm vi làm việc là các đối tượng đã chọn lúc bấm Làm mới (`Dialog@scope_ids`). Không tự cập nhật khi đổi lựa chọn.
 - Xuất ảnh vẽ bằng three.js (style mặc định SketchUp giả lập), không gọi API camera/`write_image` của SketchUp.
+- Tên ảnh xuất chỉ gồm chữ thường, số và gạch ngang (kiểm tra ở `Dialog::IMAGE_KEY`).
+- Tối đa 15 nhãn trên một ảnh (`MAX_TAGS` trong `dialog.js`).
 - Mọi lần ghi model phải nằm trong `start_operation` / `commit_operation`, lỗi thì `abort_operation`.
 - Không tải lại code khi đang ghi (`Dialog.busy?`).
 - Kết quả kiểm thử trong SketchUp thật phải ghi là "chưa xác minh" cho đến khi có người thử trên SketchUp.

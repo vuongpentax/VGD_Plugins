@@ -1,8 +1,16 @@
-# VGD Diagram 0.3.0-beta.1
+# VGD Diagram 0.5.0-beta.1
 
 Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các cấu kiện, số lượng và thứ tự lắp, để khách hàng và thợ lắp đặt dễ hiểu mô hình.
 
 ## Trạng thái
+
+**0.5.0-beta.1 (xuất theo cụm và theo bước lắp, cảnh báo).** Thay đổi so với 0.4.0-beta.1:
+
+- **Xuất theo cụm:** mỗi nhóm cấp đầu một ảnh iso (`cum-01`, `cum-02`...), chỉ hiện cấu kiện của cụm đó.
+- **Xuất theo bước:** mỗi số thứ tự lắp là một bước (`buoc-01`, `buoc-02`...). Cấu kiện đã lắp xám, cấu kiện của bước này tô cam kèm mũi tên chiều lắp, cấu kiện chưa lắp bị ẩn, có chú thích tên bước.
+- **Cảnh báo:** nút **Kiểm tra** báo nhóm chưa có thứ tự, ảnh quá 15 nhãn, hoặc bước quá nhiều nhãn. Khi xuất cũng hiện cảnh báo tương tự.
+- **Đã kiểm tra tự động:** Chromium 42/42 (gồm xuất đủ ảnh theo góc, cụm, bước, và cảnh báo).
+- **Chưa kiểm tra trong SketchUp thật.**
 
 **0.4.0-beta.1 (phạm vi theo đối tượng đã chọn, đề xuất thứ tự, xuất ảnh bằng style mặc định).** Thay đổi so với 0.3.0-beta.1:
 
@@ -23,7 +31,12 @@ Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các c
    - Hoặc bấm **Đề xuất thứ tự** để điền sẵn theo lớp group, rồi kiểm tra và lưu.
    - Số thứ tự chỉ cần không trùng giữa các cấu kiện **cùng cấp**.
 4. **Xuất SVG** lưu sơ đồ thành file ảnh vector (vẽ bằng plugin).
-5. **Xuất ảnh các góc** chọn một thư mục. Plugin lưu 4 ảnh PNG (Trước, Phải, Trên, Iso) có nhãn số và file `danh-sach.csv`. Ảnh theo trạng thái mô hình 3D hiện tại (kể cả mức tách rời).
+5. **Xuất ảnh** chọn một thư mục. Plugin lưu:
+   - 4 ảnh tổng quan (`truoc`, `phai`, `tren`, `iso`) theo trạng thái mô hình 3D hiện tại;
+   - ảnh theo cụm (`cum-01`...), mỗi nhóm cấp đầu một ảnh;
+   - ảnh theo bước (`buoc-01`...), mỗi số thứ tự lắp một ảnh;
+   - file `danh-sach.csv`.
+6. **Kiểm tra** báo các điều cần sửa trước khi xuất (nhóm chưa có thứ tự, quá nhiều nhãn trên một ảnh).
 
 ## Mô hình 3D
 
