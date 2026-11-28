@@ -22,6 +22,7 @@
 - `ruby dev/test_tree.rb`: logic và model giả lập.
 - `ruby dev/test_reload.rb`: menu, toolbar, tải lại nhiều lần, lỗi cú pháp.
 - `ruby dev/test_scene.rb`: lấy hình học 3D từ model giả lập.
+- `ruby dev/test_formats.rb`: đuôi file và định dạng khi lưu.
 - `node dev/test_ui.cjs`: giao diện, khung 3D, nhãn số, đề xuất thứ tự, xuất ảnh, cụm, bước và quay video trong Chromium (Playwright có sẵn; WebGL chạy bằng swiftshader).
 - `ruby tests/test_vgd_conventions.rb` (từ gốc repo) sau khi đổi tên, menu, toolbar.
 
@@ -41,7 +42,8 @@
 - Xuất ảnh vẽ bằng three.js (style mặc định SketchUp giả lập), không gọi API camera/`write_image` của SketchUp.
 - Tên ảnh xuất chỉ gồm chữ thường, số và gạch ngang (kiểm tra ở `Dialog::IMAGE_KEY`).
 - Tối đa 15 nhãn trên một ảnh (`MAX_TAGS` trong `dialog.js`).
-- Video lắp ráp quay bằng `MediaRecorder` từ canvas trong giao diện; định dạng mp4 nếu có, không thì webm. Tên file kiểm tra ở `Dialog::VIDEO_EXT`.
+- Video lắp ráp quay bằng `MediaRecorder` từ canvas trong giao diện. Định dạng do người dùng chọn (mp4 hoặc webm); mp4 chỉ dùng khi trình duyệt hỗ trợ, không tự đổi. Đuôi file trong hộp lưu quyết định định dạng (`Dialog::resolve_format`, test ở `dev/test_formats.rb`).
+- Ảnh xuất: png hoặc jpg, chọn như video.
 - Mọi lần ghi model phải nằm trong `start_operation` / `commit_operation`, lỗi thì `abort_operation`.
 - Không tải lại code khi đang ghi (`Dialog.busy?`).
 - Kết quả kiểm thử trong SketchUp thật phải ghi là "chưa xác minh" cho đến khi có người thử trên SketchUp.

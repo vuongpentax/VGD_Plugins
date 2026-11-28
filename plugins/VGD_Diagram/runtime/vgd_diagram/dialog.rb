@@ -33,10 +33,10 @@ module VGD
         callback('save_orders') { |json| save_orders(JSON.parse(json).fetch('changes')) }
         callback('suggest_orders') { suggest_orders }
         callback('export') { export_svg }
-        callback('export_views') { start_export }
+        callback('export_views') { |json| start_export(JSON.parse(json || '{}')) }
         callback('save_image') { |json| save_image(JSON.parse(json)) }
         callback('export_done') { finish_export }
-        callback('export_video') { start_video }
+        callback('export_video') { |json| start_video(JSON.parse(json || '{}')) }
         callback('save_video') { |json| save_video(JSON.parse(json)) }
         @dlg.show
       end
@@ -129,32 +129,52 @@ module VGD
       end
 
       # Xuất ảnh các góc: giao diện vẽ bằng three.js (style mặc định SketchUp giả lập), rồi gửi từng ảnh về đây ghi ra file.
-      def start_export
+      IMAGE_FORMATS = %w[png jpg].freeze
+      VIDEO_FORMATS = %w[mp4 webm].freeze
+
+      # Đuôi file người dùng gõ trong hộp lưu quyết định định dạng; không gõ thì dùng định dạng đã chọn.
+      # Trả về [đường dẫn đã chuẩn hóa, định dạng].
+      def resolve_format(path, allowed, fallback)
+        ext = File.extname(path).delete('.').downcase
+        return ["#{path}.#{fallback}", fallback] if ext.empty?
+        raise ArgumentError, "Định dạng .#{ext} không được hỗ trợ. Chọn: #{allowed.join(', ')}." unless allowed.include?(ext)
+        [path, ext]
+      end
+
+      def start_export(payload)
         model = Sketchup.active_model
-        folder = UI.select_directory(title: 'Chọn thư mục lưu ảnh và danh sách', directory: '')
-        return unless folder
-        @export = { 'folder' => folder, 'base' => base_name(model), 'files' => [] }
-        send_js('onExport', 'base' => @export['base'])
+        fallback = IMAGE_FORMATS.include?(payload['format']) ? payload['format'] : 'png'
+        chosen = UI.savepanel('Lưu ảnh các góc, cụm và bước', '', "#{base_name(model)}.#{fallback}")
+        return unless chosen
+        path, format = resolve_format(chosen, IMAGE_FORMATS, fallback)
+        @export = {
+          'folder' => File.dirname(path),
+          'base' => File.basename(path, ".#{format}"),
+          'format' => format,
+          'files' => []
+        }
+        send_js('onExport', 'format' => format)
       end
 
       # Video lắp ráp: chọn thư mục, giao diện quay rồi gửi file về đây.
       VIDEO_EXT = %w[mp4 webm].freeze
 
-      def start_video
+      def start_video(payload)
         model = Sketchup.active_model
-        folder = UI.select_directory(title: 'Chọn thư mục lưu video', directory: '')
-        return unless folder
-        @video = { 'folder' => folder, 'base' => base_name(model) }
-        send_js('onVideo', 'base' => @video['base'])
+        fallback = VIDEO_FORMATS.include?(payload['format']) ? payload['format'] : 'mp4'
+        chosen = UI.savepanel('Lưu video lắp ráp', '', "#{base_name(model)}-lap-rap.#{fallback}")
+        return unless chosen
+        path, format = resolve_format(chosen, VIDEO_FORMATS, fallback)
+        @video = { 'path' => path, 'format' => format }
+        send_js('onVideo', 'format' => format)
       end
 
       def save_video(payload)
-        raise 'Chưa chọn thư mục lưu video.' unless @video
-        ext = payload.fetch('ext')
-        raise ArgumentError, "Định dạng video không hợp lệ: #{ext}" unless VIDEO_EXT.include?(ext)
-        path = File.join(@video['folder'], "#{@video['base']}-lap-rap.#{ext}")
+        raise 'Chưa chọn nơi lưu video.' unless @video
+        raise ArgumentError, 'Trình duyệt quay ra định dạng khác với định dạng đã chọn.' unless payload.fetch('ext') == @video['format']
         data = payload.fetch('data').sub(%r{\Adata:video/[a-z0-9.+;=-]+;base64,}, '')
-        busy { File.binwrite(path, Base64.decode64(data)) }
+        busy { File.binwrite(@video['path'], Base64.decode64(data)) }
+        path = @video['path']
         @video = nil
         send_js('onToast', 'message' => "Đã xuất video: #{path}")
       end
@@ -163,11 +183,12 @@ module VGD
       IMAGE_KEY = /\A[a-z]+(-\d+)?\z/
 
       def save_image(payload)
-        raise 'Chưa chọn thư mục xuất ảnh.' unless @export
+        raise 'Chưa chọn nơi lưu ảnh.' unless @export
         key = payload.fetch('key')
         raise ArgumentError, "Tên ảnh không hợp lệ: #{key}" unless IMAGE_KEY.match?(key)
-        path = File.join(@export['folder'], "#{@export['base']}-#{key}.png")
-        data = payload.fetch('data').sub(/\Adata:image\/png;base64,/, '')
+        ext = @export['format']
+        path = File.join(@export['folder'], "#{@export['base']}-#{key}.#{ext}")
+        data = payload.fetch('data').sub(%r{\Adata:image/[a-z]+;base64,}, '')
         busy { File.binwrite(path, Base64.decode64(data)) }
         @export['files'] << path
       end

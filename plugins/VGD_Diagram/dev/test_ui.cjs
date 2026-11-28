@@ -229,6 +229,28 @@ function check(name, ok) {
     (await page.locator('#status').textContent()).includes('Chưa có bước lắp') &&
     !(await page.evaluate(() => window.__calls)).some((c) => c.name === 'save_video'));
 
+  // ---- Định dạng khi lưu: JPG cho ảnh, WebM cho video, MP4 khi trình duyệt không hỗ trợ ----
+  await page.evaluate((data) => window.VGD.onScene(data), scene);
+  await page.evaluate(() => { window.__calls = []; });
+  await page.evaluate(() => window.VGD.onExport({ format: 'jpg' }));
+  const jpgShots = (await page.evaluate(() => window.__calls)).filter((c) => c.name === 'save_image').map((c) => JSON.parse(c.args[0]));
+  check('định dạng: xuất JPG cho ảnh', jpgShots.length > 0 && jpgShots.every((s) => s.data.startsWith('data:image/jpeg;base64,')));
+
+  await page.evaluate(() => { window.__calls = []; });
+  await page.evaluate(() => window.VGD.onVideo({ format: 'webm' }));
+  let webm = null;
+  for (let i = 0; i < 80 && !webm; i++) {
+    await page.waitForTimeout(250);
+    webm = (await page.evaluate(() => window.__calls)).find((c) => c.name === 'save_video');
+  }
+  check('định dạng: quay WebM khi chọn WebM', !!webm && JSON.parse(webm.args[0]).ext === 'webm');
+
+  await page.evaluate(() => { window.__calls = []; window.MediaRecorder.isTypeSupported = () => false; });
+  await page.evaluate(() => window.VGD.onVideo({ format: 'mp4' }));
+  check('định dạng: MP4 không được hỗ trợ thì báo rõ, không tự đổi sang WebM',
+    (await page.locator('#status').textContent()).includes('không quay được MP4') &&
+    !(await page.evaluate(() => window.__calls)).some((c) => c.name === 'save_video'));
+
   check('không có lỗi JavaScript trên trang', errors.length === 0);
   await browser.close();
   console.log('');

@@ -40,6 +40,8 @@
   var viewMessage = document.getElementById('view-msg');
   var canvas = document.getElementById('view');
   var emptyMessage = document.getElementById('empty');
+  var imageFormat = document.getElementById('image-format');
+  var videoFormat = document.getElementById('video-format');
 
   var view = null;        // khung 3D: renderer, scene, camera, parts, góc nhìn
   var playing = null;     // {start, count} khi đang phát lắp ráp
@@ -47,6 +49,7 @@
   var labelLayer = document.getElementById('labels');
   var labels = [];        // {el, part}: nhãn số đặt trên mô hình 3D
   var recording = false;  // đang quay video
+  var imageMime = 'image/png'; // định dạng ảnh đang xuất (PNG hoặc JPEG)
 
   function send(name, data) {
     if (window.sketchup && window.sketchup[name]) window.sketchup[name](JSON.stringify(data || {}));
@@ -521,7 +524,7 @@
     ctx.drawImage(glCanvas, 0, 0);
     tagItems.forEach(function (item) { drawTag(ctx, camera, item); });
     if (caption) drawCaption(ctx, caption);
-    send('save_image', { key: key, data: out.toDataURL('image/png') });
+    send('save_image', { key: key, data: out.toDataURL(imageMime, 0.92) });
   }
 
   // Cảnh báo về mô hình sơ đồ (dùng cho nút Kiểm tra và sau khi xuất).
@@ -538,11 +541,12 @@
   }
 
   // Xuất: 4 góc chuẩn (tổng quan), từng cụm (iso), từng bước lắp (iso). Mỗi ảnh gửi về Ruby ghi ra file.
-  function exportImages() {
+  function exportImages(format) {
     if (!view || view.parts.length === 0) {
       setStatus('Chưa có mô hình để xuất.', true);
       return;
     }
+    imageMime = format === 'jpg' ? 'image/jpeg' : 'image/png';
     var renderer = null;
     var arrows = [];
     try {
@@ -624,8 +628,10 @@
   // ---------- Xuất video lắp ráp theo bước ----------
 
   // Định dạng video trình duyệt quay được: MP4 nếu có, không thì WebM.
-  function pickVideoType() {
-    var candidates = ['video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+  function pickVideoType(format) {
+    var candidates = format === 'mp4'
+      ? ['video/mp4']
+      : ['video/webm;codecs=vp9', 'video/webm'];
     for (var i = 0; i < candidates.length; i++) {
       if (MediaRecorder.isTypeSupported(candidates[i])) return candidates[i];
     }
@@ -644,7 +650,7 @@
   }
 
   // Quay video: mỗi bước cấu kiện của bước bay vào chỗ, các bước trước đã xám, rồi giữ hình hoàn chỉnh.
-  function exportVideo() {
+  function exportVideo(format) {
     if (recording) return;
     if (!view || view.parts.length === 0) {
       setStatus('Chưa có mô hình để xuất video.', true);
@@ -659,9 +665,11 @@
       setStatus('Trình duyệt này không quay được video.', true);
       return;
     }
-    var mime = pickVideoType();
+    var mime = pickVideoType(format);
     if (!mime) {
-      setStatus('Không có định dạng video phù hợp để quay.', true);
+      setStatus(format === 'mp4'
+        ? 'Trình duyệt này không quay được MP4. Hãy chọn WebM rồi xuất lại.'
+        : 'Trình duyệt này không quay được video.', true);
       return;
     }
 
@@ -703,7 +711,7 @@
         var blob = new Blob(chunks, { type: mime.split(';')[0] });
         var reader = new FileReader();
         reader.onload = function () {
-          send('save_video', { data: reader.result, ext: mime.indexOf('mp4') !== -1 ? 'mp4' : 'webm' });
+          send('save_video', { data: reader.result, ext: format });
           setStatus('Đã quay video lắp ráp (' + orders.length + ' bước).');
         };
         reader.readAsDataURL(blob);
@@ -802,11 +810,11 @@
       });
       setStatus('Đã đề xuất thứ tự cho ' + count + ' nhóm (từ dưới lên, theo từng lớp). Kiểm tra rồi bấm Lưu thứ tự.');
     },
-    onExport: function () {
-      exportImages();
+    onExport: function (data) {
+      exportImages(data.format || 'png');
     },
-    onVideo: function () {
-      exportVideo();
+    onVideo: function (data) {
+      exportVideo(data.format || 'mp4');
     },
     onToast: function (data) { setStatus(data.message, false); },
     onError: function (data) { setStatus(data.message, true); }
@@ -815,8 +823,8 @@
   window.VGD.refresh = function () { send('refresh'); };
   window.VGD.suggestOrders = function () { send('suggest_orders'); };
   window.VGD.exportSvg = function () { send('export'); };
-  window.VGD.exportViews = function () { send('export_views'); };
-  window.VGD.exportVideo = function () { send('export_video'); };
+  window.VGD.exportViews = function () { send('export_views', { format: imageFormat.value }); };
+  window.VGD.exportVideo = function () { send('export_video', { format: videoFormat.value }); };
   window.VGD.checkDiagram = function () {
     var warnings = diagramWarnings();
     setStatus(warnings.length ? 'Cảnh báo: ' + warnings.join(' ') : 'Không có cảnh báo.', warnings.length > 0);

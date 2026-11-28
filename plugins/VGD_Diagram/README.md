@@ -1,8 +1,15 @@
-# VGD Diagram 0.6.0-beta.1
+# VGD Diagram 0.7.0-beta.1
 
 Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các cấu kiện, số lượng và thứ tự lắp, để khách hàng và thợ lắp đặt dễ hiểu mô hình.
 
 ## Trạng thái
+
+**0.7.0-beta.1 (chọn định dạng khi lưu).** Thay đổi so với 0.6.0-beta.1:
+
+- **Hộp lưu:** xuất ảnh và video mở hộp chọn nơi lưu và tên file. Đuôi file bạn gõ quyết định định dạng: ảnh là `.png` hoặc `.jpg`, video là `.mp4` hoặc `.webm`. Không gõ đuôi thì dùng định dạng đã chọn cạnh nút.
+- **MP4:** chỉ xuất được khi trình duyệt trong SketchUp hỗ trợ quay MP4. Nếu không, plugin báo rõ và bạn chọn WebM. Plugin không tự đổi sang WebM.
+- **Chưa có:** GIF, và chuyển đổi video sang định dạng khác ngoài trình duyệt.
+- **Chưa kiểm tra trong SketchUp thật.**
 
 **0.6.0-beta.1 (xuất video lắp ráp).** Thay đổi so với 0.5.0-beta.1:
 
@@ -43,6 +50,7 @@ Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các c
    - ảnh theo bước (`buoc-01`...), mỗi số thứ tự lắp một ảnh;
    - file `danh-sach.csv`.
 6. **Kiểm tra** báo các điều cần sửa trước khi xuất (nhóm chưa có thứ tự, quá nhiều nhãn trên một ảnh).
+7. **Định dạng:** chọn PNG hoặc JPG (ảnh) và MP4 hoặc WebM (video) cạnh nút tương ứng; hoặc gõ đuôi file trong hộp lưu.
 
 ## Mô hình 3D
 
