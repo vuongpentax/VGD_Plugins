@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>VGD Diagram</title><link rel="stylesheet" href="vgd-theme/vgd-theme.css"><link rel="stylesheet" href="dialog.css"></head>
+<body class="vgd-ui">
+<header><div class="brand"><b>VGD</b><span>Diagram</span></div><button id="theme" class="vgd-theme-btn" type="button" aria-pressed="false"></button></header>
+<main>
+  <p class="hint">Bấm tên để chọn trong model. Nhập thứ tự lắp (1, 2, 3...) rồi bấm <b>Lưu thứ tự</b>. Số thứ tự chỉ cần không trùng giữa các cấu kiện cùng cấp.</p>
+  <div class="toolbar">
+    <button type="button" class="quiet" onclick="VGD.refresh()">Làm mới</button>
+    <button type="button" class="quiet" onclick="VGD.exportSvg()">Xuất SVG</button>
+  </div>
+  <div class="tree-wrap"><ul id="tree" class="tree"></ul><p id="empty" class="empty" hidden>Model chưa có nhóm hoặc component nào.</p></div>
+</main>
+<footer>
+  <span id="status" class="status" role="status" aria-live="polite"></span>
+  <button type="button" id="save" disabled onclick="VGD.saveOrders()">Lưu thứ tự</button>
+</footer>
+<script src="vgd-theme/vgd-theme.js"></script>
+<script src="dialog.js"></script>
+</body></html>
