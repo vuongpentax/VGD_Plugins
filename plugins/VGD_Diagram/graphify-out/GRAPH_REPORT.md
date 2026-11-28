@@ -1,17 +1,17 @@
 # Graph Report - VGD_Diagram  (2026-11-28)
 
 ## Corpus Check
-- 22 files · ~36,762 words
+- 24 files · ~38,197 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 3 file(s) not represented in the graph (top: .woff2 2, (none) 1)
 
 ## Summary
-- 1957 nodes · 3543 edges · 124 communities (48 shown, 76 thin omitted)
+- 1975 nodes · 3563 edges · 127 communities (52 shown, 75 thin omitted)
 - Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 321 edges (avg confidence: 0.85)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `446eb14e`
+- Built from commit: `4b1c5ab3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -21,11 +21,11 @@
 - VGD::Diagram::Tree
 - VGD::Diagram::Dialog
 - VGD::Diagram::ModelIO
-- .setValues
+- ol
 - menu
 - test_ui.cjs
 - vgd-theme.js
-- VGD Diagram 0.8.0-beta.1
+- VGD Diagram 0.9.0-beta.1
 - three.min.js
 - dialog.js
 - VGD
@@ -38,7 +38,7 @@
 - je
 - We
 - fi
-- .setAttribute
+- Wn
 - _i
 - Lu
 - nn
@@ -55,7 +55,7 @@
 - Ln
 - qi
 - bt
-- kh
+- br
 - ji
 - Ma
 - hc
@@ -65,8 +65,8 @@
 - $n
 - So
 - ql
-- e
-- br
+- .constructor
+- .finish_frames
 - eu
 - ui
 - vo
@@ -74,7 +74,9 @@
 - go
 - s
 - Bl
+- .updateWorldMatrix
 - constructor
+- .fromBufferAttribute
 - dh
 - nh
 - .copy
@@ -84,8 +86,8 @@
 - ho
 - _deactivateAction
 - .copy
-- .set
-- updateMatrixWorld
+- Dr
+- test_ffmpeg.rb
 - Qo
 - rn
 - Ge
@@ -98,25 +100,29 @@
 - .constructor
 - pl
 - Lh
-- load
+- Tr
 - El
-- ja
+- .constructor
 - Hl
 - mh
 - test_formats.rb
 - uu
 - Es
 - isEmpty
-- gi
+- no
 - Wl
+- load
 - jh
-- .raycast
 - Le
-- Vn
+- Oe
 - Ic
+- .parse
+- t
 - Ou
+- .toJSON
 - tu
 - VGD
+- Sl
 - copy
 - $l
 - ou
@@ -125,7 +131,7 @@
 - Vc
 - Zl
 - Ll
-- Oe
+- $c
 - .constructor
 
 ## God Nodes (most connected - your core abstractions)
@@ -147,7 +153,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (124 total, 76 thin omitted)
+## Communities (127 total, 75 thin omitted)
 
 ### Community 0 - "Sketchup"
 Cohesion: 0.08
@@ -158,16 +164,12 @@ Cohesion: 0.07
 Nodes (6): Sketchup, UI, UI::Command, UI::HtmlDialog, UI::Menu, UI::Toolbar
 
 ### Community 2 - "VGD::Diagram::Tree"
-Cohesion: 0.16
+Cohesion: 0.15
 Nodes (3): VGD, VGD::Diagram, VGD::Diagram::Tree
 
 ### Community 4 - "VGD::Diagram::ModelIO"
 Cohesion: 0.22
 Nodes (3): VGD, VGD::Diagram, VGD::Diagram::ModelIO
-
-### Community 5 - ".setValues"
-Cohesion: 0.15
-Nodes (4): Bn, ol, rh, Zc
 
 ### Community 6 - "menu"
 Cohesion: 0.29
@@ -181,33 +183,33 @@ Nodes (4): { chromium }, failed, path, sample
 Cohesion: 0.54
 Nodes (7): apply(), current(), readSaved(), root(), start(), systemIsDark(), writeSaved()
 
-### Community 9 - "VGD Diagram 0.8.0-beta.1"
+### Community 9 - "VGD Diagram 0.9.0-beta.1"
 Cohesion: 0.25
-Nodes (7): Cài đặt và tải lại, Cách dùng, Kiểm thử, Mô hình 3D, Quy tắc gom và thứ tự (giả định cần xác nhận), Trạng thái, VGD Diagram 0.8.0-beta.1
+Nodes (7): Cài đặt và tải lại, Cách dùng, Kiểm thử, Mô hình 3D, Quy tắc gom và thứ tự (giả định cần xác nhận), Trạng thái, VGD Diagram 0.9.0-beta.1
 
 ### Community 11 - "three.min.js"
 Cohesion: 0.02
-Nodes (16): at(), clampPoint(), closestPointToPoint(), closestPointToPointParameter(), delta(), disconnect(), distanceToPoint(), getAverageFrequency() (+8 more)
+Nodes (10): clampPoint(), disconnect(), distanceToPoint(), getAverageFrequency(), getFrequencyData(), setFromObject(), setTime(), Sh (+2 more)
 
 ### Community 12 - "dialog.js"
 Cohesion: 0.08
 Nodes (55): Cấu trúc, Kiểm thử, Quy tắc riêng, Thông tin plugin, Tài liệu đọc trước khi sửa, VGD Diagram — hướng dẫn cho Claude, Đóng gói, addArrow() (+47 more)
 
 ### Community 16 - "ns"
-Cohesion: 0.06
-Nodes (18): as(), Dr, fr, gr(), ls(), no(), T(), w() (+10 more)
+Cohesion: 0.10
+Nodes (13): as(), fr, gr(), ls(), ns, os(), pr, ss() (+5 more)
 
 ### Community 18 - "gh"
-Cohesion: 0.17
+Cohesion: 0.18
 Nodes (5): bh, gh, oh(), sh(), vh
 
-### Community 20 - "Ru"
-Cohesion: 0.07
-Nodes (7): clone(), c(), l(), o(), t(), Ru, r()
+### Community 21 - "je"
+Cohesion: 0.09
+Nodes (4): g(), je, mo(), xr()
 
-### Community 24 - ".setAttribute"
-Cohesion: 0.07
-Nodes (12): Fc, p(), Gc, Hc, Jl, v(), x(), a() (+4 more)
+### Community 24 - "Wn"
+Cohesion: 0.08
+Nodes (7): Fc, Gc, Hc, jc, Jl, Wn, zr
 
 ### Community 26 - "Lu"
 Cohesion: 0.08
@@ -225,6 +227,10 @@ Nodes (11): Geom, Geom::Point3d, Geom::Transformation, Sketchup, Sketchup::Compo
 Cohesion: 0.09
 Nodes (7): ch(), fo(), _h, hh(), lh(), Th(), wh
 
+### Community 32 - "Gn"
+Cohesion: 0.09
+Nodes (3): Gn, Hn, Vn
+
 ### Community 33 - "zn"
 Cohesion: 0.08
 Nodes (5): ii(), On(), Ue(), ze(), zn
@@ -233,9 +239,21 @@ Nodes (5): ii(), On(), Ue(), ze(), zn
 Cohesion: 0.15
 Nodes (23): Be(), ei(), hi, Je(), so(), A(), b(), C() (+15 more)
 
+### Community 37 - "Pn"
+Cohesion: 0.09
+Nodes (5): Bn, eh, Pn, to, Zc
+
+### Community 38 - "Ln"
+Cohesion: 0.09
+Nodes (6): l(), Ln, mr(), na(), sc, e()
+
 ### Community 40 - "bt"
 Cohesion: 0.07
-Nodes (21): ao(), cs(), ds(), Ga(), At(), bt(), g(), Hr() (+13 more)
+Nodes (21): ao(), cs(), ds(), Ga(), At(), bt(), Hr(), hs() (+13 more)
+
+### Community 41 - "br"
+Cohesion: 0.09
+Nodes (3): br, kh, oo
 
 ### Community 43 - "Ma"
 Cohesion: 0.12
@@ -250,16 +268,24 @@ Cohesion: 0.16
 Nodes (13): bindSkeletons(), Fe(), Jo, loadAsync(), parse(), parseAnimations(), parseAsync(), parseImages() (+5 more)
 
 ### Community 48 - "$n"
-Cohesion: 0.09
-Nodes (9): fc(), fs(), gs(), jc, ms(), $n, w(), Oc (+1 more)
+Cohesion: 0.08
+Nodes (11): fc(), p(), fs(), gs(), v(), ms(), $n, w() (+3 more)
 
 ### Community 50 - "ql"
 Cohesion: 0.05
 Nodes (8): ac, n(), kl, Mo, Ne(), Nl, ql, toShapes()
 
-### Community 51 - "e"
-Cohesion: 0.22
-Nodes (5): l(), mr(), na(), sc, e()
+### Community 51 - ".constructor"
+Cohesion: 0.15
+Nodes (3): Oc, a(), o()
+
+### Community 52 - ".finish_frames"
+Cohesion: 0.25
+Nodes (3): VGD, VGD::Diagram, VGD::Diagram::Ffmpeg
+
+### Community 55 - "vo"
+Cohesion: 0.13
+Nodes (4): add(), updateMatrixWorld(), vo, wr
 
 ### Community 57 - "go"
 Cohesion: 0.19
@@ -282,8 +308,8 @@ Cohesion: 0.27
 Nodes (10): _deactivateAction(), existingAction(), _removeInactiveAction(), _removeInactiveBinding(), _removeInactiveBindingsForAction(), _takeBackAction(), _takeBackBinding(), uncacheAction() (+2 more)
 
 ### Community 71 - ".copy"
-Cohesion: 0.11
-Nodes (6): ih, kc, Oh, qc, setFromCenterAndSize(), th
+Cohesion: 0.16
+Nodes (4): kc, qc, setFromCenterAndSize(), th
 
 ### Community 77 - "VGD::Diagram::Scene"
 Cohesion: 0.31
@@ -294,31 +320,19 @@ Cohesion: 0.25
 Nodes (8): _activateAction(), _addInactiveAction(), _addInactiveBinding(), _bindAction(), clipAction(), _isActiveAction(), _lendAction(), _lendBinding()
 
 ### Community 79 - "mi"
-Cohesion: 0.14
+Cohesion: 0.17
 Nodes (4): di(), mi, vi, xi
 
 ### Community 80 - "parseObject"
 Cohesion: 0.20
-Nodes (3): parseObject(), xo, Zh
+Nodes (3): _o, parseObject(), Zh
 
 ### Community 84 - ".constructor"
 Cohesion: 0.28
 Nodes (5): Nr(), C(), E(), L(), uo
 
-### Community 86 - "Lh"
-Cohesion: 0.13
-Nodes (3): iu, Lh, parseGeometries()
-
-### Community 87 - "load"
-Cohesion: 0.18
-Nodes (3): Ar, load(), Tr
-
-### Community 90 - "ja"
-Cohesion: 0.50
-Nodes (3): ja(), qa(), Xa()
-
 ### Community 92 - "mh"
-Cohesion: 0.25
+Cohesion: 0.20
 Nodes (3): _lendControlInterpolant(), mh, yh
 
 ### Community 96 - "Es"
@@ -329,9 +343,17 @@ Nodes (7): ea(), Es(), ia(), ks(), qs(), $s(), ta()
 Cohesion: 0.29
 Nodes (7): expandByPoint(), getCenter(), getSize(), intersect(), isEmpty(), makeEmpty(), setFromPoints()
 
-### Community 98 - "gi"
-Cohesion: 0.32
-Nodes (3): gi, S(), rs()
+### Community 98 - "no"
+Cohesion: 0.19
+Nodes (7): gi, no(), S(), T(), w(), Qa, rs()
+
+### Community 104 - "Oe"
+Cohesion: 0.29
+Nodes (7): at(), closestPointToPoint(), closestPointToPointParameter(), delta(), Oe(), setFromCartesianCoords(), setFromVector3()
+
+### Community 107 - "t"
+Cohesion: 0.70
+Nodes (4): c(), l(), o(), t()
 
 ### Community 108 - "Ou"
 Cohesion: 0.67
@@ -342,22 +364,22 @@ Cohesion: 0.67
 Nodes (3): copy(), dispose(), setSize()
 
 ## Knowledge Gaps
-- **76 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **75 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `$e` connect `$e` to `three.min.js`, `ns`, `.setAttribute`, `_i`, `al`, `xn`, `Ln`, `kh`, `ji`, `$n`, `So`, `ql`, `e`, `vo`, `go`, `s`, `constructor`, `.fromBufferAttribute`, `.copy`, `ho`, `.copy`, `.set`, `qh`, `.constructor`, `Lh`, `ja`, `jh`, `.raycast`?**
-  _High betweenness centrality (0.094) - this node is a cross-community bridge._
+- **Why does `$e` connect `$e` to `three.min.js`, `ns`, `Wn`, `_i`, `al`, `xn`, `Pn`, `Ln`, `bt`, `br`, `ji`, `$n`, `ql`, `.constructor`, `vo`, `go`, `s`, `constructor`, `.fromBufferAttribute`, `.copy`, `ho`, `.copy`, `qh`, `.constructor`, `.constructor`, `jh`, `.raycast`, `.parse`?**
+  _High betweenness centrality (0.102) - this node is a cross-community bridge._
 - **Should `Sketchup` be split into smaller, more focused modules?**
   _Cohesion score 0.07671957671957672 - nodes in this community are weakly interconnected._
-- **Why does `We` connect `We` to `Oe`, `three.min.js`, `ns`, `.setAttribute`, `al`, `Gn`, `Pn`, `Ln`, `xl`, `$n`, `e`, `Bo`, `s`, `nh`, `.copy`, `fh`, `.copy`, `mi`, `qh`, `El`, `.divideScalar`, `ja`, `Wl`, `jh`, `.fromArray`?**
-  _High betweenness centrality (0.051) - this node is a cross-community bridge._
+- **Why does `We` connect `We` to `$c`, `three.min.js`, `Wn`, `al`, `Gn`, `Pn`, `Ln`, `bt`, `xl`, `$n`, `.constructor`, `Bo`, `s`, `nh`, `.copy`, `fh`, `.copy`, `mi`, `qh`, `El`, `.divideScalar`, `no`, `Wl`, `load`, `jh`?**
+  _High betweenness centrality (0.053) - this node is a cross-community bridge._
 - **Should `UI::HtmlDialog` be split into smaller, more focused modules?**
   _Cohesion score 0.06896551724137931 - nodes in this community are weakly interconnected._
-- **Why does `xn` connect `xn` to `.constructor`, `three.min.js`, `ns`, `Ke`, `Ru`, `vu`, `.copy`, `e`, `vo`, `Bo`, `.updateWorldMatrix`, `nh`, `ho`, `updateMatrixWorld`, `Qo`, `parseObject`, `pl`, `.raycast`, `Le`, `.add`?**
-  _High betweenness centrality (0.044) - this node is a cross-community bridge._
+- **Why does `xn` connect `xn` to `.constructor`, `three.min.js`, `ns`, `Ke`, `vu`, `Ln`, `.copy`, `vo`, `Bo`, `.updateWorldMatrix`, `nh`, `ho`, `Qo`, `parseObject`, `pl`, `mh`, `Le`, `.toJSON`, `.add`, `Sl`?**
+  _High betweenness centrality (0.051) - this node is a cross-community bridge._
+- **Should `VGD::Diagram::Tree` be split into smaller, more focused modules?**
+  _Cohesion score 0.14855072463768115 - nodes in this community are weakly interconnected._
 - **Should `three.min.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.023650262780697564 - nodes in this community are weakly interconnected._
-- **Should `dialog.js` be split into smaller, more focused modules?**
-  _Cohesion score 0.08333333333333333 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.024350205198358413 - nodes in this community are weakly interconnected._

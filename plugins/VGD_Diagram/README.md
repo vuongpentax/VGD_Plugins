@@ -1,8 +1,17 @@
-# VGD Diagram 0.8.0-beta.1
+# VGD Diagram 0.9.0-beta.1
 
 Plugin SketchUp vẽ **sơ đồ cây lắp ráp** của đối tượng: các cấu kiện, số lượng và thứ tự lắp, để khách hàng và thợ lắp đặt dễ hiểu mô hình.
 
 ## Trạng thái
+
+**0.9.0-beta.1 (tự ghép MP4 bằng ffmpeg).** Thay đổi so với 0.8.0-beta.1:
+
+- **Tự ghép:** sau khi xuất chuỗi khung hình PNG, plugin dùng ffmpeg trên máy để ghép thành MP4 (`<tên>.mp4`) trong cùng thư mục. Lệnh ffmpeg được gọi bằng danh sách tham số, không qua shell.
+- **Tìm ffmpeg:** plugin dùng ffmpeg trong PATH, hoặc file bạn đã chọn trước đó. Nếu chưa có, plugin hỏi bạn chọn file `ffmpeg.exe` và nhớ lại cho lần sau. Cài ffmpeg một lần, ví dụ từ trang chính thức của ffmpeg.
+- **Xác nhận trước khi xóa:** sau khi ghép thành công, plugin hỏi có xóa các ảnh khung hình không. Chỉ xóa đúng các ảnh vừa xuất trong lần đó. Nếu ghép lỗi thì giữ lại ảnh.
+- **Ghi đè:** nếu MP4 cùng tên đã có, plugin hỏi trước khi ghi đè.
+- **Đã kiểm tra tự động:** ffmpeg thật trên máy kiểm tra (`dev/test_ffmpeg.rb`, 10/10): ghép, xóa đúng file, từ chối và giữ lại ảnh, báo khi chưa có ffmpeg.
+- **Chưa kiểm tra trong SketchUp thật**, đặc biệt việc gọi ffmpeg.exe trên Windows và đường dẫn có tiếng Việt.
 
 **0.8.0-beta.1 (video MP4 qua chuỗi khung hình PNG).** Thay đổi so với 0.7.0-beta.1:
 

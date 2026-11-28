@@ -24,6 +24,7 @@ runtime_files = [
     'vgd_diagram/tree.rb',
     'vgd_diagram/model_io.rb',
     'vgd_diagram/scene.rb',
+    'vgd_diagram/ffmpeg.rb',
     'vgd_diagram/dialog.rb',
     'vgd_diagram/dialog.html',
     'vgd_diagram/dialog.css',

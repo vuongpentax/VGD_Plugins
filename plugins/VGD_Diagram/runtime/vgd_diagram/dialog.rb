@@ -1,5 +1,6 @@
 # encoding: UTF-8
 require 'base64'
+require_relative 'ffmpeg'
 module VGD
   module Diagram
     module Dialog
@@ -169,7 +170,7 @@ module VGD
         path, format = resolve_format(chosen, VIDEO_FORMATS, fallback)
         if format == 'png'
           # Chuỗi khung hình: mỗi khung là một file PNG đánh số, ghi trong thư mục đã chọn.
-          @video = { 'frames' => true, 'folder' => File.dirname(path), 'base' => File.basename(path, '.png'), 'count' => 0 }
+          @video = { 'frames' => true, 'folder' => File.dirname(path), 'base' => File.basename(path, '.png'), 'count' => 0, 'files' => [] }
           send_js('onVideo', 'format' => 'png')
           return
         end
@@ -184,27 +185,46 @@ module VGD
         data = payload.fetch('data').sub(%r{\Adata:image/png;base64,}, '')
         busy { File.binwrite(path, Base64.decode64(data)) }
         @video['count'] += 1
+        @video['files'] << path
       end
 
+      # Sau khi xuất xong chuỗi khung hình: nếu có ffmpeg thì hỏi ghép MP4, rồi hỏi xóa ảnh.
+      # Ảnh chỉ bị xóa khi người dùng đồng ý và ghép MP4 đã thành công.
       def finish_frames(payload)
         video = @video
         @video = nil
         return unless video && video['frames']
-        count = payload.fetch('count')
         fps = payload.fetch('fps')
-        name = "#{video['base']}-khung-%05d.png"
-        send_js('onToast', 'message' => "Đã xuất #{video['count']} khung hình vào #{video['folder']}. " \
-          "Đổi sang MP4: ffmpeg -framerate #{fps} -i \"#{name}\" -c:v libx264 -pix_fmt yuv420p #{video['base']}.mp4 (#{count} khung)")
+        frames = video['files']
+        pattern = File.join(video['folder'], "#{video['base']}-khung-%05d.png")
+        output = File.join(video['folder'], "#{video['base']}.mp4")
+        exe = Ffmpeg.executable || offer_ffmpeg
+        unless exe
+          send_js('onToast', 'message' => "Đã xuất #{frames.size} khung hình vào #{video['folder']}. " \
+            "Chưa có ffmpeg nên chưa ghép MP4. Xem hướng dẫn trong README.")
+          return
+        end
+        if File.exist?(output) && UI.messagebox("File #{File.basename(output)} đã có. Ghi đè?", MB_YESNO) != IDYES
+          send_js('onToast', 'message' => "Giữ nguyên #{File.basename(output)}. Ảnh khung hình vẫn ở #{video['folder']}.")
+          return
+        end
+        ok, error_text = busy { Ffmpeg.encode(exe, pattern, fps, output) }
+        unless ok
+          send_js('onError', 'message' => "Ghép MP4 thất bại, ảnh khung hình được giữ lại. #{error_text}")
+          return
+        end
+        if UI.messagebox("Đã tạo #{File.basename(output)}.\nXóa #{frames.size} ảnh khung hình đã xuất?", MB_YESNO) == IDYES
+          removed = busy { Ffmpeg.delete_frames(frames) }
+          send_js('onToast', 'message' => "Đã tạo #{File.basename(output)} và xóa #{removed} ảnh khung hình.")
+        else
+          send_js('onToast', 'message' => "Đã tạo #{File.basename(output)}. Giữ lại #{frames.size} ảnh khung hình.")
+        end
       end
 
-      def save_video(payload)
-        raise 'Chưa chọn nơi lưu video.' unless @video
-        raise ArgumentError, 'Trình duyệt quay ra định dạng khác với định dạng đã chọn.' unless payload.fetch('ext') == @video['format']
-        data = payload.fetch('data').sub(%r{\Adata:video/[a-z0-9.+;=-]+;base64,}, '')
-        busy { File.binwrite(@video['path'], Base64.decode64(data)) }
-        path = @video['path']
-        @video = nil
-        send_js('onToast', 'message' => "Đã xuất video: #{path}")
+      # Chưa có ffmpeg: hỏi người dùng chọn file. Trả về đường dẫn hoặc nil.
+      def offer_ffmpeg
+        return nil unless UI.messagebox('Chưa tìm thấy ffmpeg. Chọn file ffmpeg để tự ghép MP4?', MB_YESNO) == IDYES
+        Ffmpeg.choose
       end
 
       # Tên ảnh chỉ gồm chữ thường, số và dấu gạch ngang (ví dụ truoc, cum-01, buoc-02).

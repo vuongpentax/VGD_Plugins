@@ -1,7 +1,7 @@
 # encoding: UTF-8
 require 'sketchup.rb'
 dir = __dir__.dup.force_encoding(Encoding::UTF_8)
-files = %w[version tree model_io scene dialog main].map { |name| File.join(dir, name + '.rb') }
+files = %w[version tree model_io scene ffmpeg dialog main].map { |name| File.join(dir, name + '.rb') }
 # Kiểm tra cú pháp cả bộ file trước: lỗi ở đây thì không file nào được nạp.
 files.each { |path| RubyVM::InstructionSequence.compile_file(path) }
 reopen = defined?(VGD::Diagram::Dialog) && VGD::Diagram::Dialog.visible?
